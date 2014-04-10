@@ -1,7 +1,5 @@
 package lex
 
-import "fmt"
-
 func Keyword(s string) Token {
 	return keywords[s]
 }
@@ -11,11 +9,7 @@ func (t Token) IsInfix() bool {
 }
 
 func (t Token) String() string {
-	s, ok := tostring[t]
-	if ok {
-		return s
-	}
-	return fmt.Sprint(int(t))
+	return tostring[t]
 }
 
 var tostring = map[Token]string{
