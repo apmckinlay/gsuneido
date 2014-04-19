@@ -197,7 +197,7 @@ func (lxr *lexer) next() Token {
 	case '.':
 		if lxr.match('.') {
 			return RANGETO
-		} else if unicode.IsDigit(lxr.peek()) {
+		} else if isDigit(lxr.peek()) {
 			return lxr.number()
 		} else {
 			return DOT
