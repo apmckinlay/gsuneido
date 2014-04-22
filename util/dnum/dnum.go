@@ -3,8 +3,8 @@
 package float10
 
 import (
-	"bits"
 	"errors"
+	"gsuneido/util/bits"
 	"math"
 	"strconv"
 	"strings"
@@ -12,7 +12,7 @@ import (
 
 // value is -1^sign * coef * 10^exp
 // zeroed value = 0
-type Float10 struct {
+type Dnum struct {
 	coef uint64
 	sign int8
 	exp  int8
@@ -25,20 +25,20 @@ const (
 )
 
 var (
-	Zero     = Float10{}
-	Inf      = Float10{exp: INF_EXP}
-	MinusInf = Float10{sign: NEGATIVE, exp: INF_EXP}
+	Zero     = Dnum{}
+	Inf      = Dnum{exp: INF_EXP}
+	MinusInf = Dnum{sign: NEGATIVE, exp: INF_EXP}
 )
 
-// Parse convert a string to a Float10
-func Parse(s string) (Float10, error) {
+// Parse convert a string to a Dnum
+func Parse(s string) (Dnum, error) {
 	if len(s) < 1 {
-		return Zero, errors.New("cannot convert empty string to Float10")
+		return Zero, errors.New("cannot convert empty string to Dnum")
 	}
 	if s == "0" {
 		return Zero, nil
 	}
-	var f Float10
+	var f Dnum
 	i := 0
 	if s[i] == '+' {
 		i++
@@ -90,11 +90,11 @@ func spanDigits(s string) string {
 	return s[:i]
 }
 
-// String converts a Float10 to a string.
+// String converts a Dnum to a string.
 // It will avoid scientific notation
 // adding up to 4 zeroes at the end or 3 zeroes at the beginning.
 // If the exponent is 0 it will print the number as an integer.
-func (f Float10) String() string {
+func (f Dnum) String() string {
 	if f == Zero {
 		return "0"
 	}
@@ -130,7 +130,7 @@ func (f Float10) String() string {
 	return sign + digits + sexp
 }
 
-func (f Float10) Float64() float64 {
+func (f Dnum) Float64() float64 {
 	if f.IsInf() {
 		return math.Inf(-int(f.sign))
 	}
@@ -142,7 +142,7 @@ func (f Float10) Float64() float64 {
 	return g * e
 }
 
-func FromFloat64(f float64) Float10 {
+func FromFloat64(f float64) Dnum {
 	switch {
 	case math.IsInf(f, +1):
 		return Inf
@@ -159,20 +159,20 @@ func FromFloat64(f float64) Float10 {
 	return g
 }
 
-func (f Float10) Uint64() (uint64, error) {
+func (f Dnum) Uint64() (uint64, error) {
 	if f.sign == NEGATIVE {
-		return 0, errors.New("can't convert negative Float10 to uint64")
+		return 0, errors.New("can't convert negative Dnum to uint64")
 	}
 	return f.toInt()
 }
 
-func (f Float10) Int64() (int64, error) {
+func (f Dnum) Int64() (int64, error) {
 	ui, err := f.toInt()
 	if err != nil {
 		return 0, err
 	}
 	if (ui & (uint64(1) << 63)) != 0 {
-		return 0, errors.New("Float10 outside int64 range")
+		return 0, errors.New("Dnum outside int64 range")
 	}
 	n := int64(ui)
 	if f.sign == NEGATIVE {
@@ -185,13 +185,13 @@ func (f Float10) Int64() (int64, error) {
 // if exponent is too small return 0
 // if exponent is too large return error
 // result does not include sign
-func (f Float10) toInt() (uint64, error) {
+func (f Dnum) toInt() (uint64, error) {
 	for f.exp > 0 && f.shiftLeft() {
 	}
 	for f.exp < 0 && f.shiftRight() {
 	}
 	if f.exp > 0 {
-		return 0, errors.New("Float10 outside uint64 range")
+		return 0, errors.New("Dnum outside uint64 range")
 	} else if f.exp < 0 {
 		return 0, nil
 	} else {
@@ -201,15 +201,15 @@ func (f Float10) toInt() (uint64, error) {
 
 // arithmetic operations -------------------------------------------------------
 
-func (f Float10) Neg() Float10 {
+func (f Dnum) Neg() Dnum {
 	if f == Zero {
 		return Zero
 	} else {
-		return Float10{f.coef, f.sign ^ 1, f.exp}
+		return Dnum{f.coef, f.sign ^ 1, f.exp}
 	}
 }
 
-func Cmp(x, y Float10) int {
+func Cmp(x, y Dnum) int {
 	switch {
 	case x == y:
 		return 0
@@ -228,7 +228,7 @@ func Cmp(x, y Float10) int {
 	}
 }
 
-func Add(x, y Float10) Float10 {
+func Add(x, y Dnum) Dnum {
 	switch {
 	case x == Zero:
 		return y
@@ -257,7 +257,7 @@ func Add(x, y Float10) Float10 {
 	}
 }
 
-func Sub(x, y Float10) Float10 {
+func Sub(x, y Dnum) Dnum {
 	switch {
 	case x == Zero:
 		return y.Neg()
@@ -286,11 +286,11 @@ func Sub(x, y Float10) Float10 {
 	}
 }
 
-func uadd(x, y Float10) Float10 {
+func uadd(x, y Dnum) Dnum {
 	sign := x.sign
 	align(&x, &y)
 	if x.coef == 0 {
-		return Float10{y.coef, sign, y.exp}
+		return Dnum{y.coef, sign, y.exp}
 	}
 	coef := x.coef + y.coef
 	if coef < x.coef || coef < y.coef { // overflow
@@ -301,7 +301,7 @@ func uadd(x, y Float10) Float10 {
 	return result(coef, sign, int(x.exp))
 }
 
-func align(x, y *Float10) (flipped int8) {
+func align(x, y *Dnum) (flipped int8) {
 	if x.exp == y.exp {
 		return
 	}
@@ -317,7 +317,7 @@ func align(x, y *Float10) (flipped int8) {
 }
 
 // returns true if it was able to shift (losslessly)
-func (f *Float10) shiftLeft() bool {
+func (f *Dnum) shiftLeft() bool {
 	if !mul10safe(f.coef) {
 		return false
 	}
@@ -337,7 +337,7 @@ func mul10safe(n uint64) bool {
 
 // NOTE: may lose precision and round
 // returns false only if coef is 0
-func (f *Float10) shiftRight() bool {
+func (f *Dnum) shiftRight() bool {
 	if f.coef == 0 {
 		return false
 	}
@@ -353,18 +353,18 @@ func (f *Float10) shiftRight() bool {
 	return true
 }
 
-func result(coef uint64, sign int8, exp int) Float10 {
+func result(coef uint64, sign int8, exp int) Dnum {
 	switch {
 	case exp >= INF_EXP:
 		return inf(sign)
 	case exp < math.MinInt8 || coef == 0:
 		return Zero
 	default:
-		return Float10{coef, sign, int8(exp)}
+		return Dnum{coef, sign, int8(exp)}
 	}
 }
 
-func usub(x, y Float10) Float10 {
+func usub(x, y Dnum) Dnum {
 	sign := x.sign
 	sign ^= align(&x, &y)
 	if x.coef < y.coef {
@@ -374,7 +374,7 @@ func usub(x, y Float10) Float10 {
 	return result(x.coef-y.coef, sign, int(x.exp))
 }
 
-func Mul(x, y Float10) Float10 {
+func Mul(x, y Dnum) Dnum {
 	sign := x.sign ^ y.sign
 	switch {
 	case x == Zero || y == Zero:
@@ -408,7 +408,7 @@ func Mul(x, y Float10) Float10 {
 
 // makes coef as small as possible (losslessly)
 // i.e. trim trailing zero decimal digits
-func (f *Float10) minCoef() {
+func (f *Dnum) minCoef() {
 	for f.coef > 0 && f.coef%10 == 0 {
 		f.shiftRight()
 	}
@@ -416,12 +416,12 @@ func (f *Float10) minCoef() {
 
 // makes coef as large as possible (losslessly)
 // i.e. trim leading zero decimal digits
-func (f *Float10) maxCoef() {
+func (f *Dnum) maxCoef() {
 	for f.shiftLeft() {
 	}
 }
 
-func (f *Float10) split() (lo, hi uint64) {
+func (f *Dnum) split() (lo, hi uint64) {
 	const HI5 = 0x1f << 59
 	for f.coef&HI5 != 0 {
 		f.shiftRight()
@@ -430,7 +430,7 @@ func (f *Float10) split() (lo, hi uint64) {
 	return f.coef % NINE, f.coef / NINE
 }
 
-func Div(x, y Float10) Float10 {
+func Div(x, y Dnum) Dnum {
 	sign := x.sign ^ y.sign
 	switch {
 	case x == Zero:
@@ -453,7 +453,7 @@ func Div(x, y Float10) Float10 {
 	return longDiv(x, y)
 }
 
-func longDiv(x, y Float10) Float10 {
+func longDiv(x, y Dnum) Dnum {
 	// shift y so it is just less than x
 	xdiv10 := x.coef / 10
 	for y.coef < xdiv10 && y.shiftLeft() {
@@ -500,11 +500,11 @@ func shift(x, y uint64) (x2, y2 uint64) {
 	return x, y
 }
 
-func (f Float10) IsInf() bool {
+func (f Dnum) IsInf() bool {
 	return f.exp == INF_EXP
 }
 
-func inf(sign int8) Float10 {
+func inf(sign int8) Dnum {
 	switch sign {
 	case POSITIVE:
 		return Inf

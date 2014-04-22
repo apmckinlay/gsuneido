@@ -2,7 +2,7 @@ package float10
 
 import (
 	"fmt"
-	. "hamcrest"
+	. "gsuneido/util/hamcrest"
 	"math"
 	"strconv"
 	"testing"
@@ -12,13 +12,13 @@ func Test_String(t *testing.T) {
 	assert := Assert(t)
 	assert.That(Zero.String(), Equals("0"))
 	assert.That(Inf.String(), Equals("inf"))
-	assert.That(Float10{123, 0, 0}.String(), Equals("123"))
-	assert.That(Float10{123000, 0, -3}.String(), Equals("123"))
+	assert.That(Dnum{123, 0, 0}.String(), Equals("123"))
+	assert.That(Dnum{123000, 0, -3}.String(), Equals("123"))
 }
 
 func Test_Parse(t *testing.T) {
 	assert := Assert(t)
-	test := func(s string, expected Float10) {
+	test := func(s string, expected Dnum) {
 		f := parse(s)
 		assert.That(f, Equals(expected))
 	}
@@ -27,7 +27,7 @@ func Test_Parse(t *testing.T) {
 }
 
 // for testing - accepts "inf" and "-inf", panics on error
-func parse(s string) Float10 {
+func parse(s string) Dnum {
 	switch s {
 	case "inf":
 		return Inf
@@ -46,27 +46,27 @@ func parse(s string) Float10 {
 
 func TestConvert(t *testing.T) {
 	assert := Assert(t)
-	test := func(s string, f Float10) {
+	test := func(s string, f Dnum) {
 		g := parse(s)
 		assert.That(g, Equals(f).Comment("from "+s))
 		assert.That(f.String(), Equals(s))
 	}
 	test("0", Zero)
 
-	test("123", Float10{123, 0, 0})
-	test("-123", Float10{123, 1, 0})
+	test("123", Dnum{123, 0, 0})
+	test("-123", Dnum{123, 1, 0})
 
-	test("10000", Float10{10000, 0, 0})
-	test("1e5", Float10{1, 0, 5})
+	test("10000", Dnum{10000, 0, 0})
+	test("1e5", Dnum{1, 0, 5})
 
-	test(".1234", Float10{1234, 0, -4})
-	test(".0001", Float10{1, 0, -4})
-	test("1e-5", Float10{1, 0, -5})
+	test(".1234", Dnum{1234, 0, -4})
+	test(".0001", Dnum{1, 0, -4})
+	test("1e-5", Dnum{1, 0, -5})
 
-	test("123.4", Float10{1234, 0, -1})
-	test("1.234", Float10{1234, 0, -3})
+	test("123.4", Dnum{1234, 0, -1})
+	test("1.234", Dnum{1234, 0, -3})
 
-	test("12345678912345678912", Float10{12345678912345678912, 0, 0})
+	test("12345678912345678912", Dnum{12345678912345678912, 0, 0})
 }
 
 func Test_Neg(t *testing.T) {
@@ -192,7 +192,7 @@ func Test_Mul(t *testing.T) {
 }
 
 func Test_split(t *testing.T) {
-	f := Float10{123456789987654321, 0, 0}
+	f := Dnum{123456789987654321, 0, 0}
 	lo, hi := f.split()
 	Assert(t).That(lo, Equals(uint64(987654321)))
 	Assert(t).That(hi, Equals(uint64(123456789)))
@@ -274,9 +274,9 @@ func Test_ToInt(t *testing.T) {
 	}
 	test("123", "123")
 	test("-123", "-123")
-	test("1e99", "Float10 outside uint64 range")
-	test("9223372036854775807", "9223372036854775807")          // max int64
-	test("18446744073709551615", "Float10 outside int64 range") // max uint64
+	test("1e99", "Dnum outside uint64 range")
+	test("9223372036854775807", "9223372036854775807")       // max int64
+	test("18446744073709551615", "Dnum outside int64 range") // max uint64
 }
 
 func Test_ToUint(t *testing.T) {
@@ -295,18 +295,18 @@ func Test_ToUint(t *testing.T) {
 		assert.That(z, Equals(nexpected))
 	}
 	test("123", "123")
-	test("1e99", "Float10 outside uint64 range")
-	test("-123", "can't convert negative Float10 to uint64")
+	test("1e99", "Dnum outside uint64 range")
+	test("-123", "can't convert negative Dnum to uint64")
 	test("9223372036854775807", "9223372036854775807")   // max int64
 	test("18446744073709551615", "18446744073709551615") // max uint64
 }
 
-var bench Float10
+var bench Dnum
 
 func BenchmarkAdd(b *testing.B) {
 	x := parse("11111111111111111111")
 	y := parse("2222222222222222222e-4")
-	var z Float10
+	var z Dnum
 	for n := 0; n < b.N; n++ {
 		z = Add(x, y)
 	}
@@ -316,7 +316,7 @@ func BenchmarkAdd(b *testing.B) {
 func BenchmarkDiv(b *testing.B) {
 	x := parse("11")
 	y := parse("17")
-	var z Float10
+	var z Dnum
 	for n := 0; n < b.N; n++ {
 		z = Div(x, y)
 	}

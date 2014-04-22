@@ -1,7 +1,7 @@
 package charmatch
 
 import (
-	. "hamcrest"
+	. "gsuneido/util/hamcrest"
 	"testing"
 )
 

@@ -1,7 +1,7 @@
 package stor
 
 import (
-	. "hamcrest"
+	. "gsuneido/util/hamcrest"
 	"os"
 	"testing"
 )
