@@ -29,7 +29,19 @@ var (
 	Zero     = Dnum{}
 	Inf      = Dnum{exp: INF_EXP}
 	MinusInf = Dnum{sign: NEGATIVE, exp: INF_EXP}
+	MaxInt32 = Dnum{math.MaxInt32, POSITIVE, 0}
+	MinInt32 = Dnum{abs(math.MinInt32), NEGATIVE, 0}
+
+	OutsideRange = errors.New("outside range")
 )
+
+func abs(n int32) uint64 {
+	n64 := int64(n)
+	if n64 < 0 {
+		n64 = -n64
+	}
+	return uint64(n64)
+}
 
 // Parse convert a string to a Dnum
 func Parse(s string) (Dnum, error) {
@@ -92,9 +104,9 @@ func spanDigits(s string) string {
 }
 
 // String converts a Dnum to a string.
-// It will avoid scientific notation
-// adding up to 4 zeroes at the end or 3 zeroes at the beginning.
 // If the exponent is 0 it will print the number as an integer.
+// Otherwise it will try to avoid scientific notation
+// adding up to 4 zeroes at the end or 3 zeroes at the beginning.
 func (f Dnum) String() string {
 	if f == Zero {
 		return "0"
@@ -162,20 +174,41 @@ func FromFloat64(f float64) Dnum {
 
 func (f Dnum) Uint64() (uint64, error) {
 	if f.sign == NEGATIVE {
-		return 0, errors.New("can't convert negative Dnum to uint64")
+		return 0, OutsideRange
 	}
-	return f.toInt()
+	return f.toUint()
 }
 
 func (f Dnum) Int64() (int64, error) {
-	ui, err := f.toInt()
+	ui, err := f.toUint()
 	if err != nil {
 		return 0, err
 	}
-	if (ui & (uint64(1) << 63)) != 0 {
-		return 0, errors.New("Dnum outside int64 range")
+	if f.sign == POSITIVE && ui > math.MaxInt64 {
+		return math.MaxInt32, OutsideRange
+	}
+	if f.sign == NEGATIVE && ui > -math.MinInt64 {
+		return math.MinInt32, OutsideRange
 	}
 	n := int64(ui)
+	if f.sign == NEGATIVE {
+		n = -n
+	}
+	return n, nil
+}
+
+func (f Dnum) Int32() (int32, error) {
+	ui, err := f.toUint()
+	if err != nil {
+		return 0, err
+	}
+	if f.sign == POSITIVE && ui > math.MaxInt32 {
+		return math.MaxInt32, OutsideRange
+	}
+	if f.sign == NEGATIVE && ui > -math.MinInt32 {
+		return math.MinInt32, OutsideRange
+	}
+	n := int32(ui)
 	if f.sign == NEGATIVE {
 		n = -n
 	}
@@ -186,17 +219,29 @@ func (f Dnum) Int64() (int64, error) {
 // if exponent is too small return 0
 // if exponent is too large return error
 // result does not include sign
-func (f Dnum) toInt() (uint64, error) {
+func (f Dnum) toUint() (uint64, error) {
 	for f.exp > 0 && f.shiftLeft() {
 	}
 	for f.exp < 0 && f.shiftRight() {
 	}
 	if f.exp > 0 {
-		return 0, errors.New("Dnum outside uint64 range")
+		return 0, OutsideRange
 	} else if f.exp < 0 {
 		return 0, nil
 	} else {
 		return f.coef, nil
+	}
+}
+
+// Sign returns -1 for negative, 0 for zero, and +1 for positive
+func (f Dnum) Sign() int {
+	switch {
+	case f == Zero:
+		return 0
+	case f.sign == NEGATIVE:
+		return -1
+	default:
+		return +1
 	}
 }
 

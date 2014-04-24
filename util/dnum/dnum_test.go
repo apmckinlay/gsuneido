@@ -243,7 +243,7 @@ func Test_toInt(t *testing.T) {
 	assert := Assert(t)
 	test := func(x string, expected uint64) {
 		f := parse(x)
-		z, err := f.toInt()
+		z, err := f.toUint()
 		if err != nil {
 			z = math.MaxUint64
 		}
@@ -274,9 +274,9 @@ func Test_ToInt(t *testing.T) {
 	}
 	test("123", "123")
 	test("-123", "-123")
-	test("1e99", "Dnum outside uint64 range")
-	test("9223372036854775807", "9223372036854775807")       // max int64
-	test("18446744073709551615", "Dnum outside int64 range") // max uint64
+	test("1e99", "outside range")
+	test("9223372036854775807", "9223372036854775807") // max int64
+	test("18446744073709551615", "outside range")      // max uint64
 }
 
 func Test_ToUint(t *testing.T) {
@@ -295,8 +295,8 @@ func Test_ToUint(t *testing.T) {
 		assert.That(z, Equals(nexpected))
 	}
 	test("123", "123")
-	test("1e99", "Dnum outside uint64 range")
-	test("-123", "can't convert negative Dnum to uint64")
+	test("1e99", "outside range")
+	test("-123", "outside range")
 	test("9223372036854775807", "9223372036854775807")   // max int64
 	test("18446744073709551615", "18446744073709551615") // max uint64
 }
