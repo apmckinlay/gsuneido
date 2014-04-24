@@ -24,18 +24,8 @@ func TestStringGet(t *testing.T) {
 
 func TestPanics(t *testing.T) {
 	v := IntVal(123)
-	VerifyPanic(t, func() { v.Get(v) }, "number does not support get")
+	Assert(t).That(func() { v.Get(v) }, Panics("number does not support get"))
 
 	var ob Object
-	VerifyPanic(t, func() { ob.ToInt() }, "cannot convert object to integer")
-}
-
-func VerifyPanic(t *testing.T, f func(), expected string) {
-	defer func() {
-		if e := recover(); e != nil {
-			Assert(t).That(e, Equals(expected))
-		}
-	}()
-	f()
-	panic("expected exception")
+	Assert(t).That(func() { ob.ToInt() }, Panics("cannot convert object to integer"))
 }

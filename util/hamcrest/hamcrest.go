@@ -72,6 +72,25 @@ func Equals(expected interface{}) tester {
 	}
 }
 
+type runnable func()
+
+func Panics(expected string) tester {
+	return func(f interface{}) (result string) {
+		defer func() {
+			if e := recover(); e != nil {
+				if e == expected {
+					result = ""
+				} else {
+					result = fmt.Sprintf("expected panic of '%v' but got '%v'",
+						expected, e)
+				}
+			}
+		}()
+		f.(func())()
+		return fmt.Sprintf("expected panic of '%v' but it did not panic", expected)
+	}
+}
+
 // Comment decorates a tester to add extra text to error messages
 func (test tester) Comment(items ...interface{}) tester {
 	return func(actual interface{}) string {

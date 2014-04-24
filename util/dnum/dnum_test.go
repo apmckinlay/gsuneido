@@ -19,8 +19,8 @@ func Test_String(t *testing.T) {
 func Test_Parse(t *testing.T) {
 	assert := Assert(t)
 	test := func(s string, expected Dnum) {
-		f := parse(s)
-		assert.That(f, Equals(expected))
+		dn := parse(s)
+		assert.That(dn, Equals(expected))
 	}
 	test("0e4", Zero)
 	test("-0", Zero)
@@ -46,10 +46,10 @@ func parse(s string) Dnum {
 
 func TestConvert(t *testing.T) {
 	assert := Assert(t)
-	test := func(s string, f Dnum) {
+	test := func(s string, dn Dnum) {
 		g := parse(s)
-		assert.That(g, Equals(f).Comment("from "+s))
-		assert.That(f.String(), Equals(s))
+		assert.That(g, Equals(dn).Comment("from "+s))
+		assert.That(dn.String(), Equals(s))
 	}
 	test("0", Zero)
 
@@ -192,8 +192,8 @@ func Test_Mul(t *testing.T) {
 }
 
 func Test_split(t *testing.T) {
-	f := Dnum{123456789987654321, 0, 0}
-	lo, hi := f.split()
+	dn := Dnum{123456789987654321, 0, 0}
+	lo, hi := dn.split()
 	Assert(t).That(lo, Equals(uint64(987654321)))
 	Assert(t).That(hi, Equals(uint64(123456789)))
 }
@@ -225,10 +225,10 @@ func Test_Div(t *testing.T) {
 
 func Test_float64_convert(t *testing.T) {
 	assert := Assert(t)
-	cvt := func(f float64) {
-		f10 := FromFloat64(f)
+	cvt := func(dn float64) {
+		f10 := FromFloat64(dn)
 		f2 := f10.Float64()
-		assert.That(f2, Equals(f))
+		assert.That(f2, Equals(dn))
 	}
 	cvt(0.0)
 	cvt(123.0)
@@ -242,8 +242,8 @@ func Test_float64_convert(t *testing.T) {
 func Test_toInt(t *testing.T) {
 	assert := Assert(t)
 	test := func(x string, expected uint64) {
-		f := parse(x)
-		z, err := f.toUint()
+		dn := parse(x)
+		z, err := dn.toUint()
 		if err != nil {
 			z = math.MaxUint64
 		}
@@ -260,8 +260,8 @@ func Test_toInt(t *testing.T) {
 func Test_ToInt(t *testing.T) {
 	assert := Assert(t)
 	test := func(x string, expected string) {
-		f := parse(x)
-		z, err := f.Int64()
+		dn := parse(x)
+		z, err := dn.Int64()
 		if err != nil {
 			assert.That(err.Error(), Equals(expected))
 			return
@@ -282,8 +282,8 @@ func Test_ToInt(t *testing.T) {
 func Test_ToUint(t *testing.T) {
 	assert := Assert(t)
 	test := func(x string, expected string) {
-		f := parse(x)
-		z, err := f.Uint64()
+		dn := parse(x)
+		z, err := dn.Uint64()
 		if err != nil {
 			assert.That(err.Error(), Equals(expected))
 			return
