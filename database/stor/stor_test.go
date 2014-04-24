@@ -1,9 +1,9 @@
 package stor
 
 import (
-	. "gsuneido/util/hamcrest"
 	"os"
 	"testing"
+	. "github.com/apmckinlay/gsuneido/util/hamcrest"
 )
 
 func TestAlloc(t *testing.T) {

@@ -2,7 +2,7 @@ package lex
 
 import "testing"
 
-import . "gsuneido/util/hamcrest"
+import . "github.com/apmckinlay/gsuneido/util/hamcrest"
 
 func TestKeywords(t *testing.T) {
 	Assert(t).That(Keyword("forever"), Equals(FOREVER))

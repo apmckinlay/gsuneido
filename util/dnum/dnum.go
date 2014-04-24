@@ -1,13 +1,14 @@
-// Package float10 implements decimal floating point numbers
+// Package dnum implements decimal floating point numbers
 // using uint64 to hold the coefficient.
-package float10
+package dnum
 
 import (
 	"errors"
-	"gsuneido/util/bits"
 	"math"
 	"strconv"
 	"strings"
+
+	"github.com/apmckinlay/gsuneido/util/bits"
 )
 
 // value is -1^sign * coef * 10^exp
@@ -149,7 +150,7 @@ func FromFloat64(f float64) Dnum {
 	case math.IsInf(f, -1):
 		return MinusInf
 	case math.IsNaN(f):
-		panic("float10.FromFloat64 can't convert NaN")
+		panic("dnum.FromFloat64 can't convert NaN")
 	}
 	s := strconv.FormatFloat(f, 'g', -1, 64)
 	g, err := Parse(s)

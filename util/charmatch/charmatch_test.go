@@ -1,8 +1,8 @@
 package charmatch
 
 import (
-	. "gsuneido/util/hamcrest"
 	"testing"
+	. "github.com/apmckinlay/gsuneido/util/hamcrest"
 )
 
 func TestIs(t *testing.T) {

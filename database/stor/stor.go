@@ -2,7 +2,7 @@
 // Storage is chunked. Allocations may not straddle chunks.
 package stor
 
-import . "gsuneido/util/verify"
+import . "github.com/apmckinlay/gsuneido/util/verify"
 
 // Adr is an int32 value specifying an int64 offset within storage
 // int64 values are aligned and shifted to fit into int32

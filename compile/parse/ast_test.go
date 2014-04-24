@@ -2,7 +2,7 @@ package parse
 
 import "fmt"
 import "strings"
-import "gsuneido/compile/lex"
+import "github.com/apmckinlay/gsuneido/compile/lex"
 
 func ExampleAst_String() {
 	fmt.Println(&AstNode{})

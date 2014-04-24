@@ -2,8 +2,9 @@ package parse
 
 import (
 	"bytes"
-	"gsuneido/compile/lex"
 	"strings"
+
+	"github.com/apmckinlay/gsuneido/compile/lex"
 )
 
 type AstNode struct {

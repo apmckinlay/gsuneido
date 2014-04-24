@@ -1,11 +1,11 @@
-package float10
+package dnum
 
 import (
 	"fmt"
-	. "gsuneido/util/hamcrest"
 	"math"
 	"strconv"
 	"testing"
+	. "github.com/apmckinlay/gsuneido/util/hamcrest"
 )
 
 func Test_String(t *testing.T) {

@@ -1,7 +1,7 @@
 package bits
 
 import "testing"
-import . "gsuneido/util/hamcrest"
+import . "github.com/apmckinlay/gsuneido/util/hamcrest"
 
 func Test_String(t *testing.T) {
 	assert := Assert(t)
