@@ -7,12 +7,14 @@ import (
 	"github.com/apmckinlay/gsuneido/compile/lex"
 )
 
+// AstNode is the node type for an AST returned by parse
 type AstNode struct {
 	token    lex.Token
 	value    string
 	children []AstNode
 }
 
+// String formats a tree of AstNode's in a relatively compact form
 func (a *AstNode) String() string {
 	return string(a.bytes(0))
 }

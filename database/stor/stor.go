@@ -1,8 +1,12 @@
-// stor is used to access physical storage.
-// Storage is chunked. Allocations may not straddle chunks.
+/*
+Package stor is used to access physical storage,
+normally by memory mapped file access.
+
+Storage is chunked. Allocations may not straddle chunks.
+*/
 package stor
 
-import . "github.com/apmckinlay/gsuneido/util/verify"
+import "github.com/apmckinlay/gsuneido/util/verify"
 
 // Adr is an int32 value specifying an int64 offset within storage
 // int64 values are aligned and shifted to fit into int32
@@ -28,7 +32,7 @@ const ALIGN = 8
 
 // Alloc allocates n bytes of storage and returns its Adr
 func (s *stor) Alloc(n int) Adr {
-	Verify(n < int(s.chunksize))
+	verify.That(n < int(s.chunksize))
 	n = Align(n)
 
 	// if insufficient room in this chunk, advance to next

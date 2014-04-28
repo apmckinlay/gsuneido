@@ -1,4 +1,6 @@
-// Package lex implements the lexical scanner for Suneido
+/*
+Package lex implements the lexical scanner for Suneido
+*/
 package lex
 
 import (

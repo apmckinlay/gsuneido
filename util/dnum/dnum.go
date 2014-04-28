@@ -1,5 +1,7 @@
-// Package dnum implements decimal floating point numbers
-// using uint64 to hold the coefficient.
+/*
+Package dnum implements decimal floating point numbers
+using uint64 to hold the coefficient.
+*/
 package dnum
 
 import (
@@ -559,4 +561,9 @@ func inf(sign int8) Dnum {
 	default:
 		panic("invalid sign")
 	}
+}
+
+func (dn Dnum) Hash() uint32 {
+	return uint32(dn.coef>>32) ^ uint32(dn.coef) ^
+		uint32(dn.sign)<<16 ^ uint32(dn.exp)<<8
 }

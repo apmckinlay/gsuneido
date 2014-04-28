@@ -1,6 +1,8 @@
 /*
-hamcrest implements very basic hamcrest style asserts
-for example:
+Package hamcrest implements very basic hamcrest style asserts
+
+For example:
+
 	func TestStuff(t *testing.T) {
 		Assert(t).That(2 * 4, Equals(6))
 	}

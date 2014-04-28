@@ -1,4 +1,4 @@
-package charmatch
+package cmatch
 
 import (
 	"testing"

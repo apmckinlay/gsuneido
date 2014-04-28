@@ -4,13 +4,13 @@ import "fmt"
 import "testing"
 import . "github.com/apmckinlay/gsuneido/util/hamcrest"
 
-func IntConvert() {
+func ExampleIntConvert() {
 	v := IntVal(123)
 	fmt.Printf("%d %s\n", v.ToInt(), v.ToStr())
 	// Output: 123 123
 }
 
-func StrConvert() {
+func ExampleStrConvert() {
 	v := StrVal("123")
 	fmt.Printf("%d %s\n", v.ToInt(), v.ToStr())
 	// Output: 123 123

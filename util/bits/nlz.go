@@ -1,6 +1,7 @@
 package bits
 
 // Nlz returns the number of leading zero bits
+//
 // Algorithm from Hacker's Delight by Henry Warren
 func Nlz(x uint64) int {
 	if x == 0 {

@@ -1,13 +1,19 @@
 package lex
 
+// Token is returned by Lexer to identify the type of token
+type Token int
+
+// Keyword returns the token for a string it is a keyword, else NIL
 func Keyword(s string) Token {
 	return keywords[s]
 }
 
+// IsInfix returns whether or not a token is an infix operator
 func (t Token) IsInfix() bool {
 	return infix[t]
 }
 
+// String returns a name for tokens that do not have a string value
 func (t Token) String() string {
 	return tostring[t]
 }
@@ -20,8 +26,6 @@ var tostring = map[Token]string{
 	COMMENT:    "COMMENT",
 	NEWLINE:    "NEWLINE",
 }
-
-type Token int
 
 const (
 	NIL Token = iota
