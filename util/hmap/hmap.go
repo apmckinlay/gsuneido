@@ -149,23 +149,24 @@ func (hm *Hmap) grow() {
 // Del removes a key (and its value)
 // returning true if the key was found or false if it wasn't
 // NOTE: Does not shrink the Hmap
-func (hm *Hmap) Del(key Key) bool {
+func (hm *Hmap) Del(key Key) (val interface{}) {
 	if hm.size == 0 {
-		return false
+		return
 	}
 	b, top := hm.hash(key)
 	for buck := &hm.buckets[b]; buck != nil; buck = buck.overflow {
 		for i := 0; i < bucketsize; i++ {
 			if buck.tophash[i] == top && key.Equals(buck.keys[i]) {
 				buck.tophash[i] = 0
+				val = buck.vals[i]
 				buck.vals[i] = nil
 				hm.version++
 				hm.size--
-				return true
+				return
 			}
 		}
 	}
-	return false
+	return
 }
 
 type Iter struct {

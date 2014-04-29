@@ -40,7 +40,10 @@ func (sv StrVal) Hash2() uint32 {
 }
 
 func (sv StrVal) Equals(other interface{}) bool {
-	return sv == other.(StrVal)
+	if s2, ok := other.(StrVal); ok {
+		return sv == s2
+	}
+	return false
 }
 
 var _ Value = StrVal("") // confirm it implements Value

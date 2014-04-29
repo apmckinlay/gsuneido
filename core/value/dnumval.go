@@ -38,7 +38,10 @@ func (dn DnumVal) Hash2() uint32 {
 }
 
 func (dn DnumVal) Equals(other interface{}) bool {
-	return 0 == dnum.Cmp(dnum.Dnum(dn), other.(dnum.Dnum))
+	if d2, ok := other.(DnumVal); ok {
+		return 0 == dnum.Cmp(dnum.Dnum(dn), dnum.Dnum(d2))
+	}
+	return false
 }
 
 var _ Value = DnumVal{} // confirm it implements Value

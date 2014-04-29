@@ -51,3 +51,29 @@ func TestObjectAsKey(t *testing.T) {
 	ob.Put(&Object{}, IntVal(123))
 	Assert(t).That(ob.Get(&Object{}), Equals(IntVal(123)))
 }
+
+func TestMigrate(t *testing.T) {
+	ob := Object{}
+	for i := 1; i < 5; i++ {
+		ob.Put(IntVal(i), IntVal(i))
+	}
+	Assert(t).That(ob.HashSize(), Equals(4))
+	Assert(t).That(ob.ListSize(), Equals(0))
+	ob.Add(IntVal(0))
+	Assert(t).That(ob.HashSize(), Equals(0))
+	Assert(t).That(ob.ListSize(), Equals(5))
+}
+
+func TestPut(t *testing.T) {
+	ob := Object{}
+	ob.Put(IntVal(1), IntVal(1)) // put
+	Assert(t).That(ob.HashSize(), Equals(1))
+	Assert(t).That(ob.ListSize(), Equals(0))
+	ob.Put(IntVal(0), IntVal(0)) // add + migrate
+	Assert(t).That(ob.HashSize(), Equals(0))
+	Assert(t).That(ob.ListSize(), Equals(2))
+	ob.Put(IntVal(0), IntVal(10)) // set
+	ob.Put(IntVal(1), IntVal(11)) // set
+	Assert(t).That(ob.Get(IntVal(0)), Equals(IntVal(10)))
+	Assert(t).That(ob.Get(IntVal(1)), Equals(IntVal(11)))
+}

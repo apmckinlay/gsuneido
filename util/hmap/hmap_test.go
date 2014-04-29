@@ -35,8 +35,12 @@ func TestRandom(t *testing.T) {
 	rand.Seed(1)
 	for i := 0; i < N; i++ {
 		n := rand.Int31n(N)
-		found := hm.Del(ik(n))
-		Assert(t).That(found, Equals(nums[n] != -1))
+		v := hm.Del(ik(n))
+		if nums[n] == -1 {
+			Assert(t).That(v, Equals(nil))
+		} else {
+			Assert(t).That(v, Equals(nums[n]))
+		}
 		nums[n] = -1
 	}
 	Assert(t).That(hm.Size(), Equals(0))

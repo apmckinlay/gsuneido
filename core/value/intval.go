@@ -34,7 +34,10 @@ func (iv IntVal) Hash2() uint32 {
 }
 
 func (iv IntVal) Equals(other interface{}) bool {
-	return iv == other.(IntVal)
+	if i2, ok := other.(IntVal); ok {
+		return iv == i2
+	}
+	return false
 }
 
 var _ Value = IntVal(0) // confirm it implements Value

@@ -1,6 +1,3 @@
-// Object is a Suneido object
-// i.e. a container with both list and hash members
-
 package value
 
 import (
@@ -11,6 +8,8 @@ import (
 )
 import "unicode"
 
+// Object is a Suneido object
+// i.e. a container with both list and hash members
 type Object struct {
 	list     []Value
 	hash     *hmap.Hmap
@@ -34,6 +33,16 @@ func (ob *Object) Get(key Value) Value {
 }
 
 func (ob *Object) Put(key Value, val Value) {
+	if iv, ok := key.(IntVal); ok {
+		i := int(iv)
+		if i == ob.ListSize() {
+			ob.Add(val)
+			return
+		} else if 0 <= i && i < ob.ListSize() {
+			ob.list[i] = val
+			return
+		}
+	}
 	ob.ensureHash()
 	ob.hash.Put(key, val)
 }
@@ -83,7 +92,16 @@ func (ob *Object) ensureHash() {
 }
 
 func (ob *Object) migrate() {
-	// TODO
+	if ob.hash == nil {
+		return
+	}
+	for {
+		x := ob.hash.Del(IntVal(ob.ListSize()))
+		if x == nil {
+			break
+		}
+		ob.list = append(ob.list, x.(Value))
+	}
 }
 
 func (ob *Object) String() string {
