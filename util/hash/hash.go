@@ -13,10 +13,19 @@ const (
 	prime32  = 16777619
 )
 
-func Hash(s string) uint32 {
+func HashString(s string) uint32 {
 	hash := uint32(offset32)
 	for i := 0; i < len(s); i++ {
 		hash ^= uint32(s[i])
+		hash *= prime32
+	}
+	return hash
+}
+
+func HashBytes(bytes []byte) uint32 {
+	hash := uint32(offset32)
+	for _, b := range bytes {
+		hash ^= uint32(b)
 		hash *= prime32
 	}
 	return hash

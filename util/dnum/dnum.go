@@ -29,10 +29,9 @@ const (
 
 var (
 	Zero     = Dnum{}
+	One      = Dnum{1, POSITIVE, 0}
 	Inf      = Dnum{exp: INF_EXP}
 	MinusInf = Dnum{sign: NEGATIVE, exp: INF_EXP}
-	MaxInt32 = Dnum{math.MaxInt32, POSITIVE, 0}
-	MinInt32 = Dnum{abs(math.MinInt32), NEGATIVE, 0}
 
 	OutsideRange = errors.New("outside range")
 )
@@ -232,6 +231,17 @@ func (dn Dnum) toUint() (uint64, error) {
 		return 0, nil
 	} else {
 		return dn.coef, nil
+	}
+}
+
+func FromInt64(n int64) Dnum {
+	switch {
+	case n > 0:
+		return Dnum{uint64(n), POSITIVE, 0}
+	case n < 0:
+		return Dnum{uint64(-n), NEGATIVE, 0}
+	default:
+		return Zero
 	}
 }
 

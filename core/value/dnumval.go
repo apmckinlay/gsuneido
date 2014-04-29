@@ -8,9 +8,13 @@ import (
 
 type DnumVal dnum.Dnum
 
-func (dn DnumVal) ToInt() int {
+func (dn DnumVal) ToInt() int32 {
 	n, _ := dnum.Dnum(dn).Int32()
-	return int(n)
+	return n
+}
+
+func (dn DnumVal) ToDnum() dnum.Dnum {
+	return dnum.Dnum(dn)
 }
 
 func (dn DnumVal) ToStr() string {

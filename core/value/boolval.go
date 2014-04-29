@@ -1,5 +1,7 @@
 package value
 
+import "github.com/apmckinlay/gsuneido/util/dnum"
+
 // BoolVal is a boolean Value
 type BoolVal bool
 
@@ -8,11 +10,19 @@ var (
 	False = BoolVal(false)
 )
 
-func (bv BoolVal) ToInt() int {
+func (bv BoolVal) ToInt() int32 {
 	if bv == true {
 		return 1
 	} else {
 		return 0
+	}
+}
+
+func (bv BoolVal) ToDnum() dnum.Dnum {
+	if bv == true {
+		return dnum.One
+	} else {
+		return dnum.Zero
 	}
 }
 

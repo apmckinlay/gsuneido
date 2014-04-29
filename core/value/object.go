@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"reflect"
 
+	"github.com/apmckinlay/gsuneido/util/dnum"
 	"github.com/apmckinlay/gsuneido/util/hmap"
 )
 import "unicode"
@@ -47,8 +48,12 @@ func (ob *Object) Put(key Value, val Value) {
 	ob.hash.Put(key, val)
 }
 
-func (ob *Object) ToInt() int {
+func (ob *Object) ToInt() int32 {
 	panic("cannot convert object to integer")
+}
+
+func (ob *Object) ToDnum() dnum.Dnum {
+	panic("cannot convert object to number")
 }
 
 func (ob *Object) ToStr() string {
@@ -178,6 +183,6 @@ func (ob *Object) Hash2() uint32 {
 }
 
 func (ob *Object) Equals(other interface{}) bool {
-	// TODO probably want to implement this myself in terms of Equals
+	// TODO implement this in terms of Equals
 	return reflect.DeepEqual(ob, other)
 }

@@ -1,12 +1,20 @@
 package value
 
-import "strconv"
+import (
+	"strconv"
+
+	"github.com/apmckinlay/gsuneido/util/dnum"
+)
 
 // IntVal is an integer Value
 type IntVal int32
 
-func (iv IntVal) ToInt() int {
-	return int(iv)
+func (iv IntVal) ToInt() int32 {
+	return int32(iv)
+}
+
+func (iv IntVal) ToDnum() dnum.Dnum {
+	return dnum.FromInt64(int64(iv))
 }
 
 func (iv IntVal) ToStr() string {
