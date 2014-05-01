@@ -2,7 +2,6 @@ package value
 
 import (
 	"bytes"
-	"reflect"
 
 	"github.com/apmckinlay/gsuneido/util/dnum"
 	"github.com/apmckinlay/gsuneido/util/hmap"
@@ -157,7 +156,7 @@ func isIdentifier(s string) bool {
 }
 
 func (ob *Object) Hash() uint32 {
-	hash := ob.Hash2()
+	hash := ob.hash2()
 	if ob.ListSize() > 0 {
 		hash = 31*hash + ob.list[0].Hash()
 	}
@@ -168,14 +167,15 @@ func (ob *Object) Hash() uint32 {
 			if k == nil {
 				break
 			}
-			hash = 31*hash + k.(Value).Hash2()
-			hash = 31*hash + v.(Value).Hash2()
+			hash = 31*hash + k.(Value).hash2()
+			hash = 31*hash + v.(Value).hash2()
 		}
 	}
 	return hash
 }
 
-func (ob *Object) Hash2() uint32 {
+// hash2 is shallow so prevents infinite recursion
+func (ob *Object) hash2() uint32 {
 	hash := uint32(17)
 	hash = 31*hash + uint32(ob.HashSize())
 	hash = 31*hash + uint32(ob.ListSize())
@@ -183,6 +183,54 @@ func (ob *Object) Hash2() uint32 {
 }
 
 func (ob *Object) Equals(other interface{}) bool {
-	// TODO implement this in terms of Equals
-	return reflect.DeepEqual(ob, other)
+	ob2, ok := other.(*Object)
+	if !ok {
+		return false
+	}
+	return equals2(ob, ob2, pairs([]pair{}))
+}
+
+func equals2(x *Object, y *Object, inProgress pairs) bool {
+	if x == y { // pointer comparison
+		return true // same object
+	}
+	if x.ListSize() != y.ListSize() || x.HashSize() != y.HashSize() {
+		return false
+	}
+	if inProgress.contains(x, y) {
+		return true
+	}
+	inProgress.push(x, y)
+	defer inProgress.pop()
+	for i := 0; i < x.ListSize(); i++ {
+		if !equals3(x.list[i], y.list[i], inProgress) {
+			return false
+		}
+	}
+	if x.HashSize() > 0 {
+		iter := x.hash.Iter()
+		for {
+			k, v := iter.Next()
+			if k == nil {
+				break
+			}
+			if !equals3(v.(Value), y.hash.Get(k).(Value), inProgress) {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+func equals3(x Value, y Value, inProgress pairs) bool {
+	xo, xok := x.(*Object)
+	if !xok {
+		return x.Equals(y)
+	}
+	yo, yok := y.(*Object)
+	if !yok {
+		return false
+	}
+	return equals2(xo, yo, inProgress)
+
 }

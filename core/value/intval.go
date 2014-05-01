@@ -37,7 +37,7 @@ func (iv IntVal) Hash() uint32 {
 	return uint32(iv)
 }
 
-func (iv IntVal) Hash2() uint32 {
+func (iv IntVal) hash2() uint32 {
 	return iv.Hash()
 }
 

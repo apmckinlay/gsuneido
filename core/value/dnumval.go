@@ -37,7 +37,7 @@ func (dn DnumVal) Hash() uint32 {
 	return dnum.Dnum(dn).Hash()
 }
 
-func (dn DnumVal) Hash2() uint32 {
+func (dn DnumVal) hash2() uint32 {
 	return dn.Hash()
 }
 

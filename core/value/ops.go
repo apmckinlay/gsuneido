@@ -54,3 +54,7 @@ func Cat(x Value, y Value) Value {
 		}
 	}
 }
+
+func BitNot(x Value) Value {
+	return IntVal(^x.ToInt())
+}

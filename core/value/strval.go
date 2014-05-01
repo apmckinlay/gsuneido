@@ -43,7 +43,7 @@ func (sv StrVal) Hash() uint32 {
 	return hash.HashString(string(sv))
 }
 
-func (sv StrVal) Hash2() uint32 {
+func (sv StrVal) hash2() uint32 {
 	return sv.Hash()
 }
 

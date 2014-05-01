@@ -82,7 +82,7 @@ func (cv CatVal) Hash() uint32 {
 	return hash.HashBytes(cv.b.a[:cv.n])
 }
 
-func (cv CatVal) Hash2() uint32 {
+func (cv CatVal) hash2() uint32 {
 	return cv.Hash()
 }
 

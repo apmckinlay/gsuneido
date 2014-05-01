@@ -77,3 +77,33 @@ func TestPut(t *testing.T) {
 	Assert(t).That(ob.Get(IntVal(0)), Equals(IntVal(10)))
 	Assert(t).That(ob.Get(IntVal(1)), Equals(IntVal(11)))
 }
+
+func TestEquals(t *testing.T) {
+	x := &Object{}
+	y := &Object{}
+	eq(t, x, y)
+	x.Add(IntVal(1))
+	neq(t, x, y)
+	y.Add(IntVal(1))
+	eq(t, x, y)
+	x.Put(IntVal(4), IntVal(6))
+	neq(t, x, y)
+	y.Put(IntVal(4), IntVal(7))
+	neq(t, x, y)
+	y.Put(IntVal(4), IntVal(6))
+	eq(t, x, y)
+	x.Put(IntVal(9), x) // recursive
+	neq(t, x, y)
+	y.Put(IntVal(9), y)
+	eq(t, x, y)
+}
+
+func eq(t *testing.T, x Value, y Value) {
+	Assert(t).True(x.Equals(y))
+	Assert(t).True(y.Equals(x))
+}
+
+func neq(t *testing.T, x Value, y Value) {
+	Assert(t).False(x.Equals(y))
+	Assert(t).False(y.Equals(x))
+}

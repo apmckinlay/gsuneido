@@ -50,7 +50,7 @@ func (bv BoolVal) Hash() uint32 {
 	return uint32(bv.ToInt())
 }
 
-func (bv BoolVal) Hash2() uint32 {
+func (bv BoolVal) hash2() uint32 {
 	return bv.Hash()
 }
 

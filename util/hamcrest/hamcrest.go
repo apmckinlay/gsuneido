@@ -28,6 +28,18 @@ func Assert(t testing) Asserter {
 
 type tester func(interface{}) string
 
+func (a Asserter) True(b bool) {
+	if b != true {
+		a.Fail("expected true but it was false")
+	}
+}
+
+func (a Asserter) False(b bool) {
+	if b != false {
+		a.Fail("expected false but it was true")
+	}
+}
+
 func (a Asserter) That(actual interface{}, test tester) {
 	err := test(actual)
 	if err != "" {

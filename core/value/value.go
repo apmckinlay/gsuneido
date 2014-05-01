@@ -17,6 +17,8 @@ type Value interface {
 	Put(key Value, val Value)
 	String() string
 	hmap.Key
-	// Hash2 is used by object to shallow hash contents
-	Hash2() uint32
+	// hash2 is used by object to shallow hash contents
+	hash2() uint32
+
+	// TODO add lookup that returns method
 }
