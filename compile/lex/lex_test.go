@@ -17,15 +17,15 @@ func TestIsInfix(t *testing.T) {
 func TestLexer(t *testing.T) {
 	assert := Assert(t)
 	assert.That(first("forever"),
-		Equals(Item{IDENTIFIER, FOREVER, "forever"}))
+		Equals(Item{IDENTIFIER, "forever", FOREVER}))
 	assert.That(first("foo"),
-		Equals(Item{IDENTIFIER, NIL, "foo"}))
+		Equals(Item{IDENTIFIER, "foo", NIL}))
 	assert.That(first("is"),
-		Equals(Item{IDENTIFIER, IS, "is"}))
+		Equals(Item{IDENTIFIER, "is", IS}))
 	assert.That(first("is:"),
-		Equals(Item{IDENTIFIER, NIL, "is"}))
+		Equals(Item{IDENTIFIER, "is", NIL}))
 	assert.That(first("\\"),
-		Equals(Item{ERROR, NIL, "\\"}))
+		Equals(Item{ERROR, "\\", NIL}))
 
 	check(assert, "f()", IDENTIFIER, L_PAREN, R_PAREN)
 
@@ -77,4 +77,17 @@ func check(assert Asserter, source string, expected ...Token) {
 		assert.That(tok, Equals(expected[i]).Comment(i, item))
 		i++
 	}
+}
+
+func TestAhead(t *testing.T) {
+	lxr := Lexer("a=1")
+	Assert(t).That(lxr.Ahead(0), Equals(Item{IDENTIFIER, "a", NIL}))
+	Assert(t).That(lxr.Ahead(1), Equals(Item{EQ, "=", NIL}))
+	Assert(t).That(lxr.Ahead(2), Equals(Item{NUMBER, "1", NIL}))
+	Assert(t).That(lxr.Ahead(3).token, Equals(EOF))
+
+	Assert(t).That(lxr.Next(), Equals(Item{IDENTIFIER, "a", NIL}))
+	Assert(t).That(lxr.Next(), Equals(Item{EQ, "=", NIL}))
+	Assert(t).That(lxr.Next(), Equals(Item{NUMBER, "1", NIL}))
+	Assert(t).That(lxr.Next().token, Equals(EOF))
 }
