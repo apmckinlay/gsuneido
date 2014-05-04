@@ -187,7 +187,7 @@ func (ob *Object) Equals(other interface{}) bool {
 	if !ok {
 		return false
 	}
-	return equals2(ob, ob2, pairs([]pair{}))
+	return equals2(ob, ob2, newpairs())
 }
 
 func equals2(x *Object, y *Object, inProgress pairs) bool {
@@ -200,8 +200,7 @@ func equals2(x *Object, y *Object, inProgress pairs) bool {
 	if inProgress.contains(x, y) {
 		return true
 	}
-	inProgress.push(x, y)
-	defer inProgress.pop()
+	inProgress.push(x, y) // no need to pop due to pass by value
 	for i := 0; i < x.ListSize(); i++ {
 		if !equals3(x.list[i], y.list[i], inProgress) {
 			return false
