@@ -1,7 +1,7 @@
 /*
 Package lex implements the lexical scanner for Suneido
 
-The lexer is designed so the sequence of values returned
+The Lexer is designed so the sequence of values returned
 forms the complete source.
 */
 package lex
@@ -13,26 +13,26 @@ import (
 	"unicode/utf8"
 )
 
-type lexer struct {
+type Lexer struct {
 	src   string
 	si    int
 	ahead []Item
 }
 
 // Lexer returns a new instance
-func Lexer(src string) *lexer {
-	return &lexer{src: src}
+func NewLexer(src string) *Lexer {
+	return &Lexer{src: src}
 }
 
-// Item is the return value from lexer.Next
+// Item is the return value from Lexer.Next
 type Item struct {
-	token   Token
-	value   string
-	keyword Token
+	Token   Token
+	Value   string
+	Keyword Token
 }
 
 // Next returns the next Item
-func (lxr *lexer) Next() Item {
+func (lxr *Lexer) Next() Item {
 	if len(lxr.ahead) > 0 {
 		item := lxr.ahead[0]
 		lxr.ahead = lxr.ahead[1:]
@@ -44,10 +44,10 @@ func (lxr *lexer) Next() Item {
 // Ahead provides lookahead, 0 is the next item
 //
 // items are buffered so they can be used by Next
-func (lxr *lexer) Ahead(i int) Item {
+func (lxr *Lexer) Ahead(i int) Item {
 	for len(lxr.ahead) < i+1 {
 		item := lxr.next()
-		if item.token == EOF {
+		if item.Token == EOF {
 			return item
 		}
 		lxr.ahead = append(lxr.ahead, item)
@@ -55,7 +55,7 @@ func (lxr *lexer) Ahead(i int) Item {
 	return lxr.ahead[i]
 }
 
-func (lxr *lexer) next() Item {
+func (lxr *Lexer) next() Item {
 	start, c := lxr.read()
 	switch c {
 	case eof:
@@ -226,7 +226,7 @@ func (lxr *lexer) next() Item {
 	return Item{ERROR, string(c), NIL}
 }
 
-func (lxr *lexer) whitespace(start int, c rune) Item {
+func (lxr *Lexer) whitespace(start int, c rune) Item {
 	si := start
 	result := WHITESPACE
 	for ; isSpace(c); si, c = lxr.read() {
@@ -238,20 +238,20 @@ func (lxr *lexer) whitespace(start int, c rune) Item {
 	return Item{result, lxr.src[start:lxr.si], NIL}
 }
 
-func (lxr *lexer) lineComment(start int) Item {
+func (lxr *Lexer) lineComment(start int) Item {
 
 	return Item{COMMENT, lxr.matchUntil(start, "\n"), NIL}
 }
 
-func (lxr *lexer) spanComment(start int) Item {
+func (lxr *Lexer) spanComment(start int) Item {
 	return Item{COMMENT, lxr.matchUntil(start, "*/"), NIL}
 }
 
-func (lxr *lexer) rawString(start int) Item {
+func (lxr *Lexer) rawString(start int) Item {
 	return Item{STRING, lxr.matchUntil(start, "`"), NIL}
 }
 
-func (lxr *lexer) quotedString(start int, quote rune) Item {
+func (lxr *Lexer) quotedString(start int, quote rune) Item {
 	var buf bytes.Buffer
 	lxr.match(quote)
 	for c := lxr.read1(); c != eof && c != quote; c = lxr.read1() {
@@ -260,7 +260,7 @@ func (lxr *lexer) quotedString(start int, quote rune) Item {
 	return Item{STRING, buf.String(), NIL}
 }
 
-func (lxr *lexer) doesc(c rune) rune {
+func (lxr *Lexer) doesc(c rune) rune {
 	if c != '\\' {
 		return c
 	}
@@ -316,7 +316,7 @@ func isHexDigit(r rune) bool {
 	return strings.ContainsRune(hexDigits, r)
 }
 
-func (lxr *lexer) number(start int) Item {
+func (lxr *Lexer) number(start int) Item {
 	lxr.matchOneOf("+-")
 	// Is it hex?
 	digits := "0123456789"
@@ -334,7 +334,7 @@ func (lxr *lexer) number(start int) Item {
 	return Item{NUMBER, lxr.src[start:lxr.si], NIL}
 }
 
-func (lxr *lexer) identifier(start int) Item {
+func (lxr *Lexer) identifier(start int) Item {
 	lxr.matchWhile(isIdentChar)
 	if !lxr.match('?') {
 		lxr.match('!')
@@ -349,12 +349,12 @@ func (lxr *lexer) identifier(start int) Item {
 
 const eof = -1
 
-func (lxr *lexer) read() (int, rune) {
+func (lxr *Lexer) read() (int, rune) {
 	si := lxr.si
 	return si, lxr.read1()
 }
 
-func (lxr *lexer) read1() rune {
+func (lxr *Lexer) read1() rune {
 	if lxr.si >= len(lxr.src) {
 		return eof
 	}
@@ -363,13 +363,13 @@ func (lxr *lexer) read1() rune {
 	return c
 }
 
-func (lxr *lexer) peek() rune {
+func (lxr *Lexer) peek() rune {
 	si, c := lxr.read()
 	lxr.si = si
 	return c
 }
 
-func (lxr *lexer) match(c rune) bool {
+func (lxr *Lexer) match(c rune) bool {
 	si, c2 := lxr.read()
 	if c == c2 {
 		return true
@@ -378,7 +378,7 @@ func (lxr *lexer) match(c rune) bool {
 	return false
 }
 
-func (lxr *lexer) matchOneOf(valid string) bool {
+func (lxr *Lexer) matchOneOf(valid string) bool {
 	si, c := lxr.read()
 	if strings.ContainsRune(valid, c) {
 		return true
@@ -387,7 +387,7 @@ func (lxr *lexer) matchOneOf(valid string) bool {
 	return false
 }
 
-func (lxr *lexer) matchRunOf(valid string) {
+func (lxr *Lexer) matchRunOf(valid string) {
 	for {
 		si, c := lxr.read()
 		if !strings.ContainsRune(valid, c) {
@@ -397,7 +397,7 @@ func (lxr *lexer) matchRunOf(valid string) {
 	}
 }
 
-func (lxr *lexer) matchWhile(f func(c rune) bool) {
+func (lxr *Lexer) matchWhile(f func(c rune) bool) {
 	for {
 		si, c := lxr.read()
 		if !f(c) {
@@ -407,7 +407,7 @@ func (lxr *lexer) matchWhile(f func(c rune) bool) {
 	}
 }
 
-func (lxr *lexer) matchUntil(start int, s string) string {
+func (lxr *Lexer) matchUntil(start int, s string) string {
 	for lxr.read1() != eof && !strings.HasSuffix(lxr.src[:lxr.si], s) {
 	}
 	return lxr.src[start:lxr.si]

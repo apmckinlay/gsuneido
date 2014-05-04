@@ -3,13 +3,13 @@ package interp
 import (
 	"testing"
 
-	"github.com/apmckinlay/gsuneido/core/value"
 	. "github.com/apmckinlay/gsuneido/util/hamcrest"
+	"github.com/apmckinlay/gsuneido/value"
 )
 
 func TestInterp(t *testing.T) {
-	code := []byte{PUSHINT, 3, PUSHINT, 5, ADD, RETURN}
-	fn := Function{code: code}
+	code := []byte{PUSHINT, 3 << 1, PUSHINT, 5 << 1, ADD, RETURN}
+	fn := &Function{Code: code}
 	th := Thread{}
 	result := th.Call(fn, SimpleArgSpecs[0])
 	Assert(t).That(result, Equals(value.IntVal(8)))

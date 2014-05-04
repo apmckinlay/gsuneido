@@ -1,6 +1,6 @@
 package interp
 
-import . "github.com/apmckinlay/gsuneido/core/value"
+import . "github.com/apmckinlay/gsuneido/value"
 
 type Thread struct {
 	// frames are the Frame's making up the call stack.
@@ -25,11 +25,11 @@ func (t *Thread) Pop() Value {
 // Call executes a Function and returns the result.
 // The arguments must be already on the stack as per the ArgSpec.
 // On return, the arguments are removed from the stack.
-func (t *Thread) Call(fn Function, as ArgSpec) Value {
+func (t *Thread) Call(fn *Function, as ArgSpec) Value {
 	defer func(sp int) { t.stack = t.stack[:sp] }(len(t.stack) - as.Nargs())
 	t.args(fn, as)
-	base := len(t.stack) - fn.nparams
-	for i := fn.nparams; i < fn.nlocals; i++ {
+	base := len(t.stack) - fn.Nparams
+	for i := fn.Nparams; i < fn.Nlocals; i++ {
 		t.Push(nil)
 	}
 	frame := Frame{fn: fn, ip: 0, locals: t.stack[base:]}
@@ -41,8 +41,8 @@ func (t *Thread) Call(fn Function, as ArgSpec) Value {
 // args converts the arguments on the stack as per the ArgSpec
 // into the parameters expected by the function.
 // On return, the stack is guaranteed to match the Function.
-func (t *Thread) args(fn Function, as ArgSpec) {
-	if fn.nparams == as.N_unnamed() {
+func (t *Thread) args(fn *Function, as ArgSpec) {
+	if fn.Nparams == as.N_unnamed() {
 		return // simple fast path
 	}
 	panic("not implemented") // TODO

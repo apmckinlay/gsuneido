@@ -1,7 +1,13 @@
 package interp
 
 const (
-	RETURN  = 0
-	PUSHINT = 1
-	ADD     = 2
+	RETURN = iota
+	PUSHINT
+	PUSHVAL
+	ADD
+	SUB
+	CAT
+	MUL
+	DIV
+	MOD
 )

@@ -15,6 +15,15 @@ func Add(x Value, y Value) Value {
 	return DnumToValue(dnum.Add(x.ToDnum(), y.ToDnum()))
 }
 
+func Sub(x Value, y Value) Value {
+	if xi, xok := x.(IntVal); xok {
+		if yi, yok := y.(IntVal); yok {
+			return Int64ToValue(int64(xi) - int64(yi))
+		}
+	}
+	return DnumToValue(dnum.Sub(x.ToDnum(), y.ToDnum()))
+}
+
 // Int64ToValue returns an IntVal if it fits, else a DnumVal
 func Int64ToValue(n int64) Value {
 	if math.MinInt32 < n && n < math.MaxInt32 {

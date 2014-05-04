@@ -6,19 +6,19 @@ import "github.com/apmckinlay/gsuneido/compile/lex"
 
 func ExampleAst_String() {
 	fmt.Println(&AstNode{})
-	fmt.Println(&AstNode{token: lex.COMMENT, value: "/* ... */"})
-	fmt.Println(&AstNode{token: lex.IDENTIFIER, value: "foo"})
+	fmt.Println(&AstNode{Token: lex.COMMENT, Value: "/* ... */"})
+	fmt.Println(&AstNode{Token: lex.IDENTIFIER, Value: "foo"})
 	a := AstNode{lex.ADD, "+", []AstNode{
-		AstNode{token: lex.IDENTIFIER, value: "foo"},
-		AstNode{token: lex.NUMBER, value: "123"},
+		AstNode{Token: lex.IDENTIFIER, Value: "foo"},
+		AstNode{Token: lex.NUMBER, Value: "123"},
 	}}
-	longid := AstNode{token: lex.IDENTIFIER,
-		value: strings.Repeat("verylong", 10)}
+	longid := AstNode{Token: lex.IDENTIFIER,
+		Value: strings.Repeat("verylong", 10)}
 	fmt.Println(&a)
 	fmt.Println(&AstNode{lex.MUL, "*", []AstNode{
 		a,
 		AstNode{lex.DIV, "/", []AstNode{
-			AstNode{token: lex.NUMBER, value: "123"}, longid}},
+			AstNode{Token: lex.NUMBER, Value: "123"}, longid}},
 		longid,
 	}})
 	// Output:
