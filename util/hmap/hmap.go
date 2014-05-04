@@ -8,9 +8,6 @@ http://golang.org/src/pkg/runtime/hashmap.c
 package hmap
 
 import (
-	"fmt"
-	"io"
-
 	"github.com/apmckinlay/gsuneido/util/bits"
 	"github.com/apmckinlay/gsuneido/util/verify"
 )
@@ -139,6 +136,7 @@ func (hm *Hmap) grow() {
 			for i := 0; i < bucketsize; i++ {
 				if buck.tophash[i] != 0 {
 					hm.Put(buck.keys[i], buck.vals[i])
+					// NOTE: could use a specialized insert without dup checking
 				}
 			}
 		}
@@ -204,24 +202,5 @@ func (it *Iter) Next() (key Key, val interface{}) {
 			return nil, nil // end
 		}
 		it.buck = &it.hmap.buckets[it.b]
-	}
-}
-
-func (hm *Hmap) dump(w io.Writer) {
-	fmt.Fprintf(w, "Hmap capacity %v size %v\n", len(hm.buckets)*load, hm.size)
-	for b := 0; b < len(hm.buckets); b++ {
-		before := fmt.Sprint("[", b, "] ")
-		after := ""
-		for buck := &hm.buckets[b]; buck != nil; buck = buck.overflow {
-			for i := 0; i < bucketsize; i++ {
-				if buck.tophash[i] != 0 {
-					fmt.Fprint(w, before, buck.keys[i], ":", buck.vals[i])
-					before = " "
-					after = "\n"
-				}
-			}
-			before = ", "
-		}
-		fmt.Fprint(w, after)
 	}
 }
