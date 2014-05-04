@@ -61,4 +61,19 @@ func (bv BoolVal) Equals(other interface{}) bool {
 	return false
 }
 
+func (bv BoolVal) PackSize() int {
+	return 1
+}
+
+func (bv BoolVal) Pack(buf []byte) []byte {
+	i := len(buf)
+	buf = buf[:i+1]
+	if bv == true {
+		buf[i] = TRUE
+	} else {
+		buf[i] = FALSE
+	}
+	return buf
+}
+
 var _ Value = BoolVal(true) // confirm it implements Value

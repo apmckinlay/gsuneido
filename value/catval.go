@@ -87,11 +87,38 @@ func (cv CatVal) hash2() uint32 {
 }
 
 func (cv CatVal) Equals(other interface{}) bool {
-	// TODO StrVal
-	if s2, ok := other.(CatVal); ok {
-		return cv == s2
+	if c2, ok := other.(CatVal); ok {
+		return cv == c2
+	}
+	if s2, ok := other.(StrVal); ok && cv.n == len(s2) {
+		for i := 0; i < cv.n; i++ {
+			if cv.b.a[i] != string(s2)[i] {
+				return false
+			}
+			return true
+		}
 	}
 	return false
+}
+
+func (cv CatVal) PackSize() int {
+	if cv.n == 0 {
+		return 0
+	} else {
+		return 1 + cv.n
+	}
+}
+
+func (cv CatVal) Pack(buf []byte) []byte {
+	n := cv.n
+	if n == 0 {
+		return buf
+	}
+	i := len(buf)
+	buf = buf[:i+1+n]
+	buf[i] = STRING
+	copy(buf[i+1:], cv.b.a[:cv.n])
+	return buf
 }
 
 var _ Value = CatVal{} // confirm it implements Value

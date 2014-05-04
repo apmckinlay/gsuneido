@@ -29,17 +29,18 @@ func Int64ToValue(n int64) Value {
 	if math.MinInt32 < n && n < math.MaxInt32 {
 		return IntVal(int32(n))
 	} else {
-		return DnumVal(dnum.FromInt64(n))
+		return DnumVal{dnum.FromInt64(n)}
 	}
 }
 
 // DnumToValue returns an IntVal if it fits, else a DnumVal
 func DnumToValue(dn dnum.Dnum) Value {
-	if n, err := dn.Int32(); err == nil {
-		return IntVal(n)
-	} else {
-		return DnumVal(dn)
+	if dn.IsInt() {
+		if n, err := dn.Int32(); err == nil {
+			return IntVal(n)
+		}
 	}
+	return DnumVal{dn}
 }
 
 const SMALL = 256

@@ -1,8 +1,10 @@
 package value
 
-import "fmt"
-import "testing"
-import . "github.com/apmckinlay/gsuneido/util/hamcrest"
+import (
+	"fmt"
+	"testing"
+	. "github.com/apmckinlay/gsuneido/util/hamcrest"
+)
 
 func ExampleIntConvert() {
 	v := IntVal(123)

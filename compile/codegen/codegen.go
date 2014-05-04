@@ -28,14 +28,19 @@ func (cg *cgen) gen(ast parse.AstNode) {
 	fmt.Println("gen", ast.String())
 	switch ast.Token {
 	case NUMBER:
-		n, _ := strconv.ParseInt(ast.Value, 10, 32)
-		cg.emit(i.PUSHINT)
-		cg.code = varint.EncodeInt32(int32(n), cg.code)
+		n, err := strconv.ParseInt(ast.Value, 0, 32)
+		if err == nil {
+			cg.emit(i.PUSHINT)
+			cg.code = varint.EncodeInt32(int32(n), cg.code)
+		} else {
+			v, err := value.ParseNum(ast.Value)
+			if err != nil {
+				panic("invalid number: " + ast.Value)
+			}
+			cg.value(v)
+		}
 	case STRING:
-		cg.emit(i.PUSHVAL)
-		i := len(cg.values)
-		cg.values = append(cg.values, value.StrVal(ast.Value))
-		cg.code = varint.EncodeUint32(uint32(i), cg.code)
+		cg.value(value.StrVal(ast.Value))
 	case ADD:
 		cg.binop(ast, i.ADD)
 	case SUB:
@@ -51,6 +56,14 @@ func (cg *cgen) gen(ast parse.AstNode) {
 	default:
 		panic("not implemented")
 	}
+}
+
+func (cg *cgen) value(v value.Value) {
+	cg.emit(i.PUSHVAL)
+	// TODO reuse duplicates
+	i := len(cg.values)
+	cg.values = append(cg.values, v)
+	cg.code = varint.EncodeUint32(uint32(i), cg.code)
 }
 
 func (cg *cgen) binop(ast parse.AstNode, op byte) {

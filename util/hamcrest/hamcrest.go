@@ -26,7 +26,7 @@ func Assert(t testing) Asserter {
 	return Asserter{t}
 }
 
-type tester func(interface{}) string
+type Tester func(interface{}) string
 
 func (a Asserter) True(b bool) {
 	if b != true {
@@ -40,7 +40,7 @@ func (a Asserter) False(b bool) {
 	}
 }
 
-func (a Asserter) That(actual interface{}, test tester) {
+func (a Asserter) That(actual interface{}, test Tester) {
 	err := test(actual)
 	if err != "" {
 		a.Fail(err)
@@ -77,7 +77,7 @@ func getLocation() (file string, line int) {
 
 // Equals checks that the actual value is equal to the expected value
 // using reflect.DeepEquals
-func Equals(expected interface{}) tester {
+func Equals(expected interface{}) Tester {
 	return func(actual interface{}) string {
 		if reflect.DeepEqual(expected, actual) {
 			return ""
@@ -88,7 +88,7 @@ func Equals(expected interface{}) tester {
 
 type runnable func()
 
-func Panics(expected string) tester {
+func Panics(expected string) Tester {
 	return func(f interface{}) (result string) {
 		defer func() {
 			if e := recover(); e != nil {
@@ -105,8 +105,8 @@ func Panics(expected string) tester {
 	}
 }
 
-// Comment decorates a tester to add extra text to error messages
-func (test tester) Comment(items ...interface{}) tester {
+// Comment decorates a Tester to add extra text to error messages
+func (test Tester) Comment(items ...interface{}) Tester {
 	return func(actual interface{}) string {
 		err := test(actual)
 		if err == "" {

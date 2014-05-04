@@ -36,6 +36,14 @@ var (
 	OutsideRange = errors.New("outside range")
 )
 
+func NewDnum(neg bool, coef uint64, exp int8) Dnum {
+	if neg {
+		return Dnum{coef, NEGATIVE, exp}
+	} else {
+		return Dnum{coef, POSITIVE, exp}
+	}
+}
+
 func abs(n int32) uint64 {
 	n64 := int64(n)
 	if n64 < 0 {
@@ -223,8 +231,13 @@ func (dn Dnum) Int32() (int32, error) {
 func (dn Dnum) toUint() (uint64, error) {
 	for dn.exp > 0 && dn.shiftLeft() {
 	}
-	for dn.exp < 0 && dn.shiftRight() {
+	roundup := false
+	for dn.exp < 0 && dn.shiftRight(&roundup) {
 	}
+	if roundup {
+		dn.coef++
+	}
+
 	if dn.exp > 0 {
 		return 0, OutsideRange
 	} else if dn.exp < 0 {
@@ -255,6 +268,24 @@ func (dn Dnum) Sign() int {
 	default:
 		return +1
 	}
+}
+
+func (dn Dnum) Coef() uint64 {
+	return dn.coef
+}
+
+func (dn Dnum) Exp() int {
+	return int(dn.exp)
+}
+
+func (dn Dnum) IsInt() bool {
+	coef := dn.coef
+	exp := dn.exp
+	for exp < 0 && coef%10 == 0 {
+		coef /= 10
+		exp++
+	}
+	return exp >= 0
 }
 
 // arithmetic operations -------------------------------------------------------
@@ -352,8 +383,15 @@ func uadd(x, y Dnum) Dnum {
 	}
 	coef := x.coef + y.coef
 	if coef < x.coef || coef < y.coef { // overflow
-		x.shiftRight()
-		y.shiftRight()
+		roundup := false
+		x.shiftRight(&roundup)
+		if roundup {
+			x.coef++
+		}
+		y.shiftRight(&roundup)
+		if roundup {
+			y.coef++
+		}
 		coef = x.coef + y.coef
 	}
 	return result(coef, sign, int(x.exp))
@@ -369,7 +407,11 @@ func align(x, y *Dnum) (flipped int8) {
 	}
 	for y.exp > x.exp && y.shiftLeft() {
 	}
-	for y.exp > x.exp && x.shiftRight() {
+	roundup := false
+	for y.exp > x.exp && x.shiftRight(&roundup) {
+	}
+	if roundup {
+		x.coef++
 	}
 	return
 }
@@ -393,17 +435,18 @@ func mul10safe(n uint64) bool {
 	return (n & HI4) == 0
 }
 
+// BUG rounds incorrectly if used repeatedly
+// e.g. 123.456 will round to 124
+
 // NOTE: may lose precision and round
 // returns false only if coef is 0
-func (dn *Dnum) shiftRight() bool {
+func (dn *Dnum) shiftRight(roundup *bool) bool {
+	*roundup = false
 	if dn.coef == 0 {
 		return false
 	}
-	roundup := (dn.coef % 10) >= 5
+	*roundup = (dn.coef % 10) >= 5
 	dn.coef /= 10
-	if roundup {
-		dn.coef++ // can't overflow
-	}
 	// don't increment past max
 	if dn.exp < math.MaxInt8 {
 		dn.exp++
@@ -467,8 +510,12 @@ func Mul(x, y Dnum) Dnum {
 // makes coef as small as possible (losslessly)
 // i.e. trim trailing zero decimal digits
 func (dn *Dnum) minCoef() {
+	roundup := false
 	for dn.coef > 0 && dn.coef%10 == 0 {
-		dn.shiftRight()
+		dn.shiftRight(&roundup)
+	}
+	if roundup {
+		dn.coef++
 	}
 }
 
@@ -481,8 +528,12 @@ func (dn *Dnum) maxCoef() {
 
 func (dn *Dnum) split() (lo, hi uint64) {
 	const HI5 = 0x1f << 59
+	roundup := false
 	for dn.coef&HI5 != 0 {
-		dn.shiftRight()
+		dn.shiftRight(&roundup)
+	}
+	if roundup {
+		dn.coef++
 	}
 	const NINE = 1000000000
 	return dn.coef % NINE, dn.coef / NINE

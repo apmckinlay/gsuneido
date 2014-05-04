@@ -9,6 +9,8 @@ import (
 // IntVal is an integer Value
 type IntVal int32
 
+var _ Value = IntVal(0) // confirm it implements Value
+
 func (iv IntVal) ToInt() int32 {
 	return int32(iv)
 }
@@ -48,4 +50,32 @@ func (iv IntVal) Equals(other interface{}) bool {
 	return false
 }
 
-var _ Value = IntVal(0) // confirm it implements Value
+func (iv IntVal) Sign() int {
+	if iv < 0 {
+		return -1
+	} else if iv > 0 {
+		return 1
+	} else {
+		return 0
+	}
+}
+
+func (iv IntVal) Exp() int {
+	return 0
+}
+
+func (iv IntVal) Coef() uint64 {
+	if int32(iv) >= 0 {
+		return uint64(iv)
+	} else {
+		return uint64(-int64(iv))
+	}
+}
+
+func (iv IntVal) PackSize() int {
+	return packSizeNum(iv)
+}
+
+func (iv IntVal) Pack(buf []byte) []byte {
+	return packNum(iv, buf)
+}

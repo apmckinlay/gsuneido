@@ -255,6 +255,7 @@ func Test_toInt(t *testing.T) {
 	test(".000123e6", 123)
 	test("1e-99", 0)
 	test("1e99", math.MaxUint64)
+	test("123.456", 123)
 }
 
 func Test_ToInt(t *testing.T) {
