@@ -86,6 +86,16 @@ func Equals(expected interface{}) Tester {
 	}
 }
 
+func NotEquals(expected interface{}) Tester {
+	return func(actual interface{}) string {
+		if !reflect.DeepEqual(expected, actual) {
+			return ""
+		}
+		return fmt.Sprintf("expected %v not equal to %v but it was",
+			expected, actual)
+	}
+}
+
 type runnable func()
 
 func Panics(expected string) Tester {
