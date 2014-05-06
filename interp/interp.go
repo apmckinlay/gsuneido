@@ -2,8 +2,6 @@
 package interp
 
 import (
-	"fmt"
-
 	"github.com/apmckinlay/gsuneido/util/varint"
 	. "github.com/apmckinlay/gsuneido/value"
 )
@@ -12,7 +10,7 @@ func (t *Thread) Interp() Value {
 	fr := &t.frames[len(t.frames)-1]
 	code := fr.fn.Code
 	for {
-		fmt.Println("stack", t.stack)
+		//fmt.Println("stack", t.stack)
 		op := code[fr.ip]
 		fr.ip++
 		switch op {

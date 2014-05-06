@@ -1,7 +1,6 @@
 package codegen
 
 import (
-	"fmt"
 	"strconv"
 
 	. "github.com/apmckinlay/gsuneido/compile/lex"
@@ -12,7 +11,7 @@ import (
 )
 
 func Codegen(ast parse.AstNode) *i.Function {
-	fmt.Println("codegen", ast.String())
+	//fmt.Println("codegen", ast.String())
 	cg := cgen{}
 	cg.gen(ast)
 	cg.emit(i.RETURN)
@@ -25,7 +24,7 @@ type cgen struct {
 }
 
 func (cg *cgen) gen(ast parse.AstNode) {
-	fmt.Println("gen", ast.String())
+	//fmt.Println("gen", ast.String())
 	switch ast.Token {
 	case NUMBER:
 		n, err := strconv.ParseInt(ast.Value, 0, 32)
@@ -60,10 +59,19 @@ func (cg *cgen) gen(ast parse.AstNode) {
 
 func (cg *cgen) value(v value.Value) {
 	cg.emit(i.PUSHVAL)
-	// TODO reuse duplicates
+	i := cg.valueIndex(v)
+	cg.code = varint.EncodeUint32(uint32(i), cg.code)
+}
+
+func (cg *cgen) valueIndex(v value.Value) int {
+	for i, v2 := range cg.values {
+		if v.Equals(v2) {
+			return i
+		}
+	}
 	i := len(cg.values)
 	cg.values = append(cg.values, v)
-	cg.code = varint.EncodeUint32(uint32(i), cg.code)
+	return i
 }
 
 func (cg *cgen) binop(ast parse.AstNode, op byte) {

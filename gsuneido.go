@@ -33,8 +33,9 @@ func eval(line string) {
 	ast := parse.Parse(line).(parse.AstNode)
 	fmt.Println("ast", ast.String())
 	fn := codegen.Codegen(ast)
-	fmt.Println(fn.Code)
+	//fmt.Println(fn.Code)
+	interp.Disasm(os.Stdout, fn)
 	th := interp.Thread{}
 	result := th.Call(fn, interp.SimpleArgSpecs[0])
-	fmt.Println("> ", result)
+	fmt.Println(result)
 }

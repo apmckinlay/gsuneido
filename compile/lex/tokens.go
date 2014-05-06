@@ -1,7 +1,7 @@
 package lex
 
 // Token is returned by Lexer to identify the type of token
-type Token int
+type Token byte
 
 // Keyword returns the token for a string it is a keyword, else NIL
 func Keyword(s string) Token {

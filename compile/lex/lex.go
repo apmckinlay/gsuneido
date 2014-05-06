@@ -26,9 +26,15 @@ func NewLexer(src string) *Lexer {
 
 // Item is the return value from Lexer.Next
 type Item struct {
-	Token   Token
 	Value   string
+	Token   Token
 	Keyword Token
+	// NOTE: put Token's last to reduce padding
+	// TODO: add position
+}
+
+func it(tok Token, val string) Item {
+	return Item{val, tok, NIL}
 }
 
 // Next returns the next Item
@@ -59,120 +65,120 @@ func (lxr *Lexer) next() Item {
 	start, c := lxr.read()
 	switch c {
 	case eof:
-		return Item{EOF, "EOF", NIL}
+		return it(EOF, "EOF")
 	case '#':
-		return Item{HASH, "#", NIL}
+		return it(HASH, "#")
 	case '(':
-		return Item{L_PAREN, "(", NIL}
+		return it(L_PAREN, "(")
 	case ')':
-		return Item{R_PAREN, ")", NIL}
+		return it(R_PAREN, ")")
 	case ',':
-		return Item{COMMA, ",", NIL}
+		return it(COMMA, ",")
 	case ';':
-		return Item{SEMICOLON, ";", NIL}
+		return it(SEMICOLON, ";")
 	case '?':
-		return Item{Q_MARK, ";", NIL}
+		return it(Q_MARK, ";")
 	case '@':
-		return Item{AT, "@", NIL}
+		return it(AT, "@")
 	case '[':
-		return Item{L_BRACKET, "[", NIL}
+		return it(L_BRACKET, "[")
 	case ']':
-		return Item{R_BRACKET, "]", NIL}
+		return it(R_BRACKET, "]")
 	case '{':
-		return Item{L_CURLY, "{", NIL}
+		return it(L_CURLY, "{")
 	case '}':
-		return Item{R_CURLY, "}", NIL}
+		return it(R_CURLY, "}")
 	case '~':
-		return Item{BITNOT, "~", NIL}
+		return it(BITNOT, "~")
 	case ':':
 		if lxr.match(':') {
-			return Item{RANGELEN, "::", NIL}
+			return it(RANGELEN, "::")
 		} else {
-			return Item{COLON, ":", NIL}
+			return it(COLON, ":")
 		}
 	case '=':
 		if lxr.match('=') {
-			return Item{IS, "==", NIL}
+			return it(IS, "==")
 		} else {
 			if lxr.match('~') {
-				return Item{MATCH, "=~", NIL}
+				return it(MATCH, "=~")
 			} else {
-				return Item{EQ, "=", NIL}
+				return it(EQ, "=")
 			}
 		}
 	case '!':
 		if lxr.match('=') {
-			return Item{ISNT, "!=", NIL}
+			return it(ISNT, "!=")
 		} else {
 			if lxr.match('~') {
-				return Item{MATCHNOT, "!~", NIL}
+				return it(MATCHNOT, "!~")
 			} else {
-				return Item{NOT, "!", NIL}
+				return it(NOT, "!")
 			}
 		}
 	case '<':
 		if lxr.match('<') {
 			if lxr.match('=') {
-				return Item{LSHIFTEQ, "<<=", NIL}
+				return it(LSHIFTEQ, "<<=")
 			} else {
-				return Item{LSHIFT, "<<", NIL}
+				return it(LSHIFT, "<<")
 			}
 		} else if lxr.match('>') {
-			return Item{ISNT, "<>", NIL}
+			return it(ISNT, "<>")
 		} else if lxr.match('=') {
-			return Item{LTE, "<=", NIL}
+			return it(LTE, "<=")
 		} else {
-			return Item{LT, "<", NIL}
+			return it(LT, "<")
 		}
 	case '>':
 		if lxr.match('>') {
 			if lxr.match('=') {
-				return Item{RSHIFTEQ, ">>=", NIL}
+				return it(RSHIFTEQ, ">>=")
 			} else {
-				return Item{RSHIFT, ">>", NIL}
+				return it(RSHIFT, ">>")
 			}
 		} else if lxr.match('=') {
-			return Item{GTE, ">=", NIL}
+			return it(GTE, ">=")
 		} else {
-			return Item{GT, ">", NIL}
+			return it(GT, ">")
 		}
 	case '|':
 		if lxr.match('|') {
-			return Item{OR, "||", NIL}
+			return it(OR, "||")
 		} else if lxr.match('=') {
-			return Item{BITOREQ, "|=", NIL}
+			return it(BITOREQ, "|=")
 		} else {
-			return Item{BITOR, "|", NIL}
+			return it(BITOR, "|")
 		}
 	case '&':
 		if lxr.match('&') {
-			return Item{AND, "&&", NIL}
+			return it(AND, "&&")
 		} else if lxr.match('=') {
-			return Item{BITANDEQ, "&=", NIL}
+			return it(BITANDEQ, "&=")
 		} else {
-			return Item{BITAND, "&", NIL}
+			return it(BITAND, "&")
 		}
 	case '^':
 		if lxr.match('=') {
-			return Item{BITXOREQ, "^=", NIL}
+			return it(BITXOREQ, "^=")
 		} else {
-			return Item{BITXOR, "^", NIL}
+			return it(BITXOR, "^")
 		}
 	case '-':
 		if lxr.match('-') {
-			return Item{DEC, "--", NIL}
+			return it(DEC, "--")
 		} else if lxr.match('=') {
-			return Item{SUBEQ, "-=", NIL}
+			return it(SUBEQ, "-=")
 		} else {
-			return Item{SUB, "-", NIL}
+			return it(SUB, "-")
 		}
 	case '+':
 		if lxr.match('+') {
-			return Item{INC, "++", NIL}
+			return it(INC, "++")
 		} else if lxr.match('=') {
-			return Item{ADDEQ, "+=", NIL}
+			return it(ADDEQ, "+=")
 		} else {
-			return Item{ADD, "+", NIL}
+			return it(ADD, "+")
 		}
 	case '/':
 		if lxr.match('/') {
@@ -180,27 +186,27 @@ func (lxr *Lexer) next() Item {
 		} else if lxr.match('*') {
 			return lxr.spanComment(start)
 		} else if lxr.match('=') {
-			return Item{DIVEQ, "/=", NIL}
+			return it(DIVEQ, "/=")
 		} else {
-			return Item{DIV, "/", NIL}
+			return it(DIV, "/")
 		}
 	case '*':
 		if lxr.match('=') {
-			return Item{MULEQ, "*=", NIL}
+			return it(MULEQ, "*=")
 		} else {
-			return Item{MUL, "*", NIL}
+			return it(MUL, "*")
 		}
 	case '%':
 		if lxr.match('=') {
-			return Item{MODEQ, "%=", NIL}
+			return it(MODEQ, "%=")
 		} else {
-			return Item{MOD, "%", NIL}
+			return it(MOD, "%")
 		}
 	case '$':
 		if lxr.match('=') {
-			return Item{CATEQ, "$=", NIL}
+			return it(CATEQ, "$=")
 		} else {
-			return Item{CAT, "$", NIL}
+			return it(CAT, "$")
 		}
 	case '`':
 		return lxr.rawString(start)
@@ -208,11 +214,11 @@ func (lxr *Lexer) next() Item {
 		return lxr.quotedString(start, c)
 	case '.':
 		if lxr.match('.') {
-			return Item{RANGETO, "..", NIL}
+			return it(RANGETO, "..")
 		} else if isDigit(lxr.peek()) {
 			return lxr.number(start)
 		} else {
-			return Item{DOT, ".", NIL}
+			return it(DOT, ".")
 		}
 	case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
 		return lxr.number(start)
@@ -223,7 +229,7 @@ func (lxr *Lexer) next() Item {
 			return lxr.identifier(start)
 		}
 	}
-	return Item{ERROR, string(c), NIL}
+	return it(ERROR, string(c))
 }
 
 func (lxr *Lexer) whitespace(start int, c rune) Item {
@@ -235,20 +241,20 @@ func (lxr *Lexer) whitespace(start int, c rune) Item {
 		}
 	}
 	lxr.si = si
-	return Item{result, lxr.src[start:lxr.si], NIL}
+	return it(result, lxr.src[start:lxr.si])
 }
 
 func (lxr *Lexer) lineComment(start int) Item {
 
-	return Item{COMMENT, lxr.matchUntil(start, "\n"), NIL}
+	return it(COMMENT, lxr.matchUntil(start, "\n"))
 }
 
 func (lxr *Lexer) spanComment(start int) Item {
-	return Item{COMMENT, lxr.matchUntil(start, "*/"), NIL}
+	return it(COMMENT, lxr.matchUntil(start, "*/"))
 }
 
 func (lxr *Lexer) rawString(start int) Item {
-	return Item{STRING, lxr.matchUntil(start, "`"), NIL}
+	return it(STRING, lxr.matchUntil(start, "`"))
 }
 
 func (lxr *Lexer) quotedString(start int, quote rune) Item {
@@ -257,7 +263,7 @@ func (lxr *Lexer) quotedString(start int, quote rune) Item {
 	for c := lxr.read1(); c != eof && c != quote; c = lxr.read1() {
 		buf.WriteRune(lxr.doesc(c))
 	}
-	return Item{STRING, buf.String(), NIL}
+	return it(STRING, buf.String())
 }
 
 func (lxr *Lexer) doesc(c rune) rune {
@@ -331,7 +337,7 @@ func (lxr *Lexer) number(start int) Item {
 		lxr.matchOneOf("+-")
 		lxr.matchRunOf("0123456789")
 	}
-	return Item{NUMBER, lxr.src[start:lxr.si], NIL}
+	return it(NUMBER, lxr.src[start:lxr.si])
 }
 
 func (lxr *Lexer) identifier(start int) Item {
@@ -344,7 +350,7 @@ func (lxr *Lexer) identifier(start int) Item {
 	if lxr.peek() != ':' {
 		keyword = Keyword(value)
 	}
-	return Item{IDENTIFIER, value, keyword}
+	return Item{value, IDENTIFIER, keyword}
 }
 
 const eof = -1
