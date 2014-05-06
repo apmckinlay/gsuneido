@@ -47,6 +47,8 @@ func Unpack(buf []byte) Value {
 		return True
 	case STRING:
 		return UnpackStrVal(buf[1:])
+	case DATE:
+		return UnpackDate(buf[1:])
 	case PLUS, MINUS:
 		return UnpackNumber(rbuf{buf})
 	default:
@@ -76,18 +78,33 @@ func (rb *rbuf) remaining() int {
 
 // support functions -----------------------------------------------------------
 
-// func packInt32(n int32, b []byte) []byte {
-// 	// complement leading bit to ensure correct unsigned compare
-// 	i := len(b)
-// 	b = b[:i+4]
-// 	b[i] = byte(n)
-// 	b[i+1] = byte(n >> 8)
-// 	b[i+2] = byte(n >> 16)
-// 	b[i+3] = byte(n>>24) ^ 0x80
-// 	return b
-// }
+func packInt32(n int32, b []byte) []byte {
+	// complement leading bit to ensure correct unsigned compare
+	i := len(b)
+	b = b[:i+4]
+	b[i] = byte(n)
+	b[i+1] = byte(n >> 8)
+	b[i+2] = byte(n >> 16)
+	b[i+3] = byte(n>>24) ^ 0x80
+	return b
+}
 
-// func unpackInt32(b []byte) int32 {
-// 	n := int32(b[3]^0x80)<<24 | int32(b[2])<<16 | int32(b[1])<<8 | int32(b[0])
-// 	return n
-// }
+func unpackInt32(b []byte) int32 {
+	n := int32(b[3]^0x80)<<24 | int32(b[2])<<16 | int32(b[1])<<8 | int32(b[0])
+	return n
+}
+
+func packUint32(n uint32, b []byte) []byte {
+	i := len(b)
+	b = b[:i+4]
+	b[i] = byte(n)
+	b[i+1] = byte(n >> 8)
+	b[i+2] = byte(n >> 16)
+	b[i+3] = byte(n >> 24)
+	return b
+}
+
+func unpackUint32(b []byte) uint32 {
+	n := uint32(b[3])<<24 | uint32(b[2])<<16 | uint32(b[1])<<8 | uint32(b[0])
+	return n
+}
