@@ -13,7 +13,7 @@ import (
 )
 
 /*
-Date is a Value that matches the cSuneido date.
+Date is a Suneido date/time Value
 
 Represents a readable "local" date and time.
 Does not take into account time zones or daylight savings.
@@ -155,12 +155,6 @@ func (d Date) TypeName() string {
 	return "Date"
 }
 
-// SuValue lookup(method string) {
-// 	return DateMethods.lookup(method)
-// }
-
-// validation
-
 func valid(yr int, mon int, day int, hr int, min int, sec int, ms int) bool {
 	if !YEAR.valid(yr) || !MONTH.valid(mon) || !DAY.valid(day) ||
 		!HOUR.valid(hr) || !MINUTE.valid(min) ||
@@ -190,12 +184,11 @@ func UnpackDate(buf []byte) Date {
 	return Date{date, time}
 }
 
-/* BiasUTC returns the offset from local to UTC in minutes */
-func BiasUTC() int {
-	local := gotime.Now()
-	utc := local.UTC()
-	d := local.Sub(utc)
-	return int(d / gotime.Minute)
+/* OffsetUTC returns the offset from local to UTC in minutes */
+func OffsetUTC() int {
+	t := gotime.Now()
+	_, offset := t.Zone()
+	return -offset / 60
 }
 
 // getters
@@ -228,7 +221,7 @@ func (d Date) Millisecond() int {
 	return int(d.time & 0x3ff)
 }
 
-func (d Date) plus(yr int, mon int, day int, hr int, min int, sec int, ms int) Date {
+func (d Date) Plus(yr int, mon int, day int, hr int, min int, sec int, ms int) Date {
 	yr += d.Year()
 	mon += d.Month()
 	day += d.Day()
@@ -758,6 +751,8 @@ var (
 	MILLISECOND = minmax{0, 999}
 	UNK         = minmax{0, 0}
 )
+
+// Value interface
 
 func (d Date) Get(key Value) Value {
 	panic("date does not support get")

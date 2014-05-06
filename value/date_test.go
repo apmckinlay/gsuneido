@@ -88,7 +88,7 @@ func TestDatePlus(t *testing.T) {
 		hour int, minute int, second int, ms int, expected string) {
 		d := DateFromLiteral(s)
 		e := DateFromLiteral(expected)
-		Assert(t).That(d.plus(year, month, day, hour, minute, second, ms),
+		Assert(t).That(d.Plus(year, month, day, hour, minute, second, ms),
 			Equals(e))
 	}
 	//						   y  m  d  h  m  s  ms
