@@ -7,8 +7,8 @@ import (
 	"github.com/apmckinlay/gsuneido/util/hash"
 )
 
-// CatVal is used to optimize string concatenation
-type CatVal struct {
+// SuConcat is used to optimize string concatenation
+type SuConcat struct {
 	b *shared
 	n int
 }
@@ -18,15 +18,15 @@ type shared struct {
 	// MAYBE have a string
 }
 
-func NewCatVal() CatVal {
-	return CatVal{b: &shared{}}
+func NewSuConcat() SuConcat {
+	return SuConcat{b: &shared{}}
 }
 
-func (cv CatVal) Len() int {
+func (cv SuConcat) Len() int {
 	return cv.n
 }
 
-func (cv CatVal) Add(s string) CatVal {
+func (cv SuConcat) Add(s string) SuConcat {
 	bb := cv.b
 	if len(bb.a) != cv.n {
 		// another reference has appended their own stuff so make our own buf
@@ -34,10 +34,10 @@ func (cv CatVal) Add(s string) CatVal {
 		bb = &shared{a}
 	}
 	bb.a = append(bb.a, s...)
-	return CatVal{bb, cv.n + len(s)}
+	return SuConcat{bb, cv.n + len(s)}
 }
 
-func (cv CatVal) AddCatVal(cv2 CatVal) CatVal {
+func (cv SuConcat) AddSuConcat(cv2 SuConcat) SuConcat {
 	// avoid converting cv2 to string
 	bb := cv.b
 	if len(bb.a) != cv.n {
@@ -46,15 +46,15 @@ func (cv CatVal) AddCatVal(cv2 CatVal) CatVal {
 		bb = &shared{a}
 	}
 	bb.a = append(bb.a, cv2.b.a...)
-	return CatVal{bb, cv.n + cv2.Len()}
+	return SuConcat{bb, cv.n + cv2.Len()}
 }
 
-func (cv CatVal) ToInt() int32 {
+func (cv SuConcat) ToInt() int32 {
 	i, _ := strconv.ParseInt(cv.ToStr(), 0, 32)
 	return int32(i)
 }
 
-func (cv CatVal) ToDnum() dnum.Dnum {
+func (cv SuConcat) ToDnum() dnum.Dnum {
 	dn, err := dnum.Parse(cv.ToStr())
 	if err != nil {
 		panic("can't convert this string to a number")
@@ -62,35 +62,35 @@ func (cv CatVal) ToDnum() dnum.Dnum {
 	return dn
 }
 
-func (cv CatVal) ToStr() string {
+func (cv SuConcat) ToStr() string {
 	return string(cv.b.a[:cv.n])
 }
 
-func (cv CatVal) String() string {
+func (cv SuConcat) String() string {
 	return "'" + cv.ToStr() + "'"
 }
 
-func (cv CatVal) Get(key Value) Value {
-	return StrVal(string(cv.b.a[:cv.n][key.ToInt()]))
+func (cv SuConcat) Get(key Value) Value {
+	return SuStr(string(cv.b.a[:cv.n][key.ToInt()]))
 }
 
-func (cv CatVal) Put(key Value, val Value) {
+func (cv SuConcat) Put(key Value, val Value) {
 	panic("strings do not support put")
 }
 
-func (cv CatVal) Hash() uint32 {
+func (cv SuConcat) Hash() uint32 {
 	return hash.HashBytes(cv.b.a[:cv.n])
 }
 
-func (cv CatVal) hash2() uint32 {
+func (cv SuConcat) hash2() uint32 {
 	return cv.Hash()
 }
 
-func (cv CatVal) Equals(other interface{}) bool {
-	if c2, ok := other.(CatVal); ok {
+func (cv SuConcat) Equals(other interface{}) bool {
+	if c2, ok := other.(SuConcat); ok {
 		return cv == c2
 	}
-	if s2, ok := other.(StrVal); ok && cv.n == len(s2) {
+	if s2, ok := other.(SuStr); ok && cv.n == len(s2) {
 		for i := 0; i < cv.n; i++ {
 			if cv.b.a[i] != string(s2)[i] {
 				return false
@@ -101,7 +101,7 @@ func (cv CatVal) Equals(other interface{}) bool {
 	return false
 }
 
-func (cv CatVal) PackSize() int {
+func (cv SuConcat) PackSize() int {
 	if cv.n == 0 {
 		return 0
 	} else {
@@ -109,7 +109,7 @@ func (cv CatVal) PackSize() int {
 	}
 }
 
-func (cv CatVal) Pack(buf []byte) []byte {
+func (cv SuConcat) Pack(buf []byte) []byte {
 	n := cv.n
 	if n == 0 {
 		return buf
@@ -121,4 +121,4 @@ func (cv CatVal) Pack(buf []byte) []byte {
 	return buf
 }
 
-var _ Value = CatVal{} // confirm it implements Value
+var _ Value = SuConcat{} // confirm it implements Value

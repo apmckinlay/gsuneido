@@ -12,5 +12,5 @@ func TestInterp(t *testing.T) {
 	fn := &Function{Code: code}
 	th := Thread{}
 	result := th.Call(fn, SimpleArgSpecs[0])
-	Assert(t).That(result, Equals(value.IntVal(8)))
+	Assert(t).That(result, Equals(value.SuInt(8)))
 }

@@ -4,18 +4,18 @@ import "testing"
 import . "github.com/apmckinlay/gsuneido/util/hamcrest"
 
 func TestBasic(t *testing.T) {
-	ob := Object{}
+	ob := SuObject{}
 	Assert(t).That(ob.String(), Equals("#()"))
 	Assert(t).That(ob.Size(), Equals(0))
-	iv := IntVal(123)
+	iv := SuInt(123)
 	ob.Add(iv)
 	Assert(t).That(ob.Size(), Equals(1))
 	Assert(t).That(ob.String(), Equals("#(123)"))
-	sv := StrVal("hello")
+	sv := SuStr("hello")
 	ob.Add(sv)
 	Assert(t).That(ob.Size(), Equals(2))
-	Assert(t).That(ob.Get(IntVal(0)), Equals(iv))
-	Assert(t).That(ob.Get(IntVal(1)), Equals(sv))
+	Assert(t).That(ob.Get(SuInt(0)), Equals(iv))
+	Assert(t).That(ob.Get(SuInt(1)), Equals(sv))
 
 	ob.Put(sv, iv)
 	Assert(t).That(ob.String(), Equals("#(123, 'hello', hello: 123)"))
@@ -25,8 +25,8 @@ func TestBasic(t *testing.T) {
 
 func TestString(t *testing.T) {
 	test := func(k string, expected string) {
-		ob := Object{}
-		ob.Put(StrVal(k), IntVal(123))
+		ob := SuObject{}
+		ob.Put(SuStr(k), SuInt(123))
 		Assert(t).That(ob.String(), Equals(expected))
 	}
 	test("foo", "#(foo: 123)")
@@ -47,54 +47,54 @@ func Test_isIdentifier(t *testing.T) {
 }
 
 func TestObjectAsKey(t *testing.T) {
-	ob := Object{}
-	ob.Put(&Object{}, IntVal(123))
-	Assert(t).That(ob.Get(&Object{}), Equals(IntVal(123)))
+	ob := SuObject{}
+	ob.Put(&SuObject{}, SuInt(123))
+	Assert(t).That(ob.Get(&SuObject{}), Equals(SuInt(123)))
 }
 
 func TestMigrate(t *testing.T) {
-	ob := Object{}
+	ob := SuObject{}
 	for i := 1; i < 5; i++ {
-		ob.Put(IntVal(i), IntVal(i))
+		ob.Put(SuInt(i), SuInt(i))
 	}
 	Assert(t).That(ob.HashSize(), Equals(4))
 	Assert(t).That(ob.ListSize(), Equals(0))
-	ob.Add(IntVal(0))
+	ob.Add(SuInt(0))
 	Assert(t).That(ob.HashSize(), Equals(0))
 	Assert(t).That(ob.ListSize(), Equals(5))
 }
 
 func TestPut(t *testing.T) {
-	ob := Object{}
-	ob.Put(IntVal(1), IntVal(1)) // put
+	ob := SuObject{}
+	ob.Put(SuInt(1), SuInt(1)) // put
 	Assert(t).That(ob.HashSize(), Equals(1))
 	Assert(t).That(ob.ListSize(), Equals(0))
-	ob.Put(IntVal(0), IntVal(0)) // add + migrate
+	ob.Put(SuInt(0), SuInt(0)) // add + migrate
 	Assert(t).That(ob.HashSize(), Equals(0))
 	Assert(t).That(ob.ListSize(), Equals(2))
-	ob.Put(IntVal(0), IntVal(10)) // set
-	ob.Put(IntVal(1), IntVal(11)) // set
-	Assert(t).That(ob.Get(IntVal(0)), Equals(IntVal(10)))
-	Assert(t).That(ob.Get(IntVal(1)), Equals(IntVal(11)))
+	ob.Put(SuInt(0), SuInt(10)) // set
+	ob.Put(SuInt(1), SuInt(11)) // set
+	Assert(t).That(ob.Get(SuInt(0)), Equals(SuInt(10)))
+	Assert(t).That(ob.Get(SuInt(1)), Equals(SuInt(11)))
 }
 
 func TestEquals(t *testing.T) {
-	x := &Object{}
-	y := &Object{}
+	x := &SuObject{}
+	y := &SuObject{}
 	eq(t, x, y)
-	x.Add(IntVal(1))
+	x.Add(SuInt(1))
 	neq(t, x, y)
-	y.Add(IntVal(1))
+	y.Add(SuInt(1))
 	eq(t, x, y)
-	x.Put(IntVal(4), IntVal(6))
+	x.Put(SuInt(4), SuInt(6))
 	neq(t, x, y)
-	y.Put(IntVal(4), IntVal(7))
+	y.Put(SuInt(4), SuInt(7))
 	neq(t, x, y)
-	y.Put(IntVal(4), IntVal(6))
+	y.Put(SuInt(4), SuInt(6))
 	eq(t, x, y)
-	x.Put(IntVal(9), x) // recursive
+	x.Put(SuInt(9), x) // recursive
 	neq(t, x, y)
-	y.Put(IntVal(9), y)
+	y.Put(SuInt(9), y)
 	eq(t, x, y)
 }
 

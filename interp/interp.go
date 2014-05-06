@@ -15,7 +15,7 @@ func (t *Thread) Interp() Value {
 		fr.ip++
 		switch op {
 		case PUSHINT:
-			t.Push(IntVal(fetchInt(code, &fr.ip)))
+			t.Push(SuInt(fetchInt(code, &fr.ip)))
 		case PUSHVAL:
 			t.Push(fr.fn.Values[fetchUint(code, &fr.ip)])
 		case ADD:

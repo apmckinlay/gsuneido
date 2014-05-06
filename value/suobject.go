@@ -8,18 +8,19 @@ import (
 )
 import "unicode"
 
-// Object is a Suneido object
+// SuObject is a Suneido object
+//
 // i.e. a container with both list and hash members
-type Object struct {
+type SuObject struct {
 	list     []Value
 	hash     *hmap.Hmap
 	readonly bool
 }
 
-var _ Value = &Object{} // confirm it implements Value
+var _ Value = &SuObject{} // confirm it implements Value
 
-func (ob *Object) Get(key Value) Value {
-	if iv, ok := key.(IntVal); ok {
+func (ob *SuObject) Get(key Value) Value {
+	if iv, ok := key.(SuInt); ok {
 		i := int(iv)
 		if 0 <= i && i <= ob.ListSize() {
 			return ob.list[i]
@@ -32,8 +33,8 @@ func (ob *Object) Get(key Value) Value {
 	}
 }
 
-func (ob *Object) Put(key Value, val Value) {
-	if iv, ok := key.(IntVal); ok {
+func (ob *SuObject) Put(key Value, val Value) {
+	if iv, ok := key.(SuInt); ok {
 		i := int(iv)
 		if i == ob.ListSize() {
 			ob.Add(val)
@@ -47,23 +48,23 @@ func (ob *Object) Put(key Value, val Value) {
 	ob.hash.Put(key, val)
 }
 
-func (ob *Object) ToInt() int32 {
+func (ob *SuObject) ToInt() int32 {
 	panic("cannot convert object to integer")
 }
 
-func (ob *Object) ToDnum() dnum.Dnum {
+func (ob *SuObject) ToDnum() dnum.Dnum {
 	panic("cannot convert object to number")
 }
 
-func (ob *Object) ToStr() string {
+func (ob *SuObject) ToStr() string {
 	panic("cannot convert object to string")
 }
 
-func (ob *Object) ListSize() int {
+func (ob *SuObject) ListSize() int {
 	return len(ob.list)
 }
 
-func (ob *Object) HashSize() int {
+func (ob *SuObject) HashSize() int {
 	if ob.hash == nil {
 		return 0
 	} else {
@@ -72,35 +73,35 @@ func (ob *Object) HashSize() int {
 }
 
 // Size returns the number of values in the object
-func (ob *Object) Size() int {
+func (ob *SuObject) Size() int {
 	return ob.ListSize() + ob.HashSize()
 }
 
 // Add appends a value to the list portion
-func (ob *Object) Add(val Value) {
+func (ob *SuObject) Add(val Value) {
 	ob.mustBeMutable()
 	ob.list = append(ob.list, val)
 	ob.migrate()
 }
 
-func (ob *Object) mustBeMutable() {
+func (ob *SuObject) mustBeMutable() {
 	if ob.readonly {
 		panic("cannot modify readonly object")
 	}
 }
 
-func (ob *Object) ensureHash() {
+func (ob *SuObject) ensureHash() {
 	if ob.hash == nil {
 		ob.hash = hmap.NewHmap(0)
 	}
 }
 
-func (ob *Object) migrate() {
+func (ob *SuObject) migrate() {
 	if ob.hash == nil {
 		return
 	}
 	for {
-		x := ob.hash.Del(IntVal(ob.ListSize()))
+		x := ob.hash.Del(SuInt(ob.ListSize()))
 		if x == nil {
 			break
 		}
@@ -108,7 +109,7 @@ func (ob *Object) migrate() {
 	}
 }
 
-func (ob *Object) String() string {
+func (ob *SuObject) String() string {
 	var buf bytes.Buffer
 	buf.WriteString("#(")
 	for _, v := range ob.list {
@@ -122,7 +123,7 @@ func (ob *Object) String() string {
 			if k == nil {
 				break
 			}
-			if ks, ok := k.(StrVal); ok && isIdentifier(string(ks)) {
+			if ks, ok := k.(SuStr); ok && isIdentifier(string(ks)) {
 				buf.WriteString(string(ks))
 			} else {
 				buf.WriteString(k.(Value).String())
@@ -155,7 +156,7 @@ func isIdentifier(s string) bool {
 	return true
 }
 
-func (ob *Object) Hash() uint32 {
+func (ob *SuObject) Hash() uint32 {
 	hash := ob.hash2()
 	if ob.ListSize() > 0 {
 		hash = 31*hash + ob.list[0].Hash()
@@ -175,22 +176,22 @@ func (ob *Object) Hash() uint32 {
 }
 
 // hash2 is shallow so prevents infinite recursion
-func (ob *Object) hash2() uint32 {
+func (ob *SuObject) hash2() uint32 {
 	hash := uint32(17)
 	hash = 31*hash + uint32(ob.HashSize())
 	hash = 31*hash + uint32(ob.ListSize())
 	return hash
 }
 
-func (ob *Object) Equals(other interface{}) bool {
-	ob2, ok := other.(*Object)
+func (ob *SuObject) Equals(other interface{}) bool {
+	ob2, ok := other.(*SuObject)
 	if !ok {
 		return false
 	}
 	return equals2(ob, ob2, newpairs())
 }
 
-func equals2(x *Object, y *Object, inProgress pairs) bool {
+func equals2(x *SuObject, y *SuObject, inProgress pairs) bool {
 	if x == y { // pointer comparison
 		return true // same object
 	}
@@ -222,11 +223,11 @@ func equals2(x *Object, y *Object, inProgress pairs) bool {
 }
 
 func equals3(x Value, y Value, inProgress pairs) bool {
-	xo, xok := x.(*Object)
+	xo, xok := x.(*SuObject)
 	if !xok {
 		return x.Equals(y)
 	}
-	yo, yok := y.(*Object)
+	yo, yok := y.(*SuObject)
 	if !yok {
 		return false
 	}

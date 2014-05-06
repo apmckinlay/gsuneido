@@ -9,9 +9,9 @@ import (
 )
 
 func TestPack(t *testing.T) {
-	cv := NewCatVal().Add("foo").Add("bar")
-	values := []Packable{False, True, StrVal(""), StrVal("foo"), cv,
-		IntVal(0), IntVal(1), IntVal(-1), dv("123.456"), dv(".1"), dv("-1e22")}
+	cv := NewSuConcat().Add("foo").Add("bar")
+	values := []Packable{False, True, SuStr(""), SuStr("foo"), cv,
+		SuInt(0), SuInt(1), SuInt(-1), dv("123.456"), dv(".1"), dv("-1e22")}
 	for _, v := range values {
 		Assert(t).That(Unpack(Pack(v)), EqVal(v))
 	}
@@ -52,7 +52,7 @@ func TestPackNum(t *testing.T) {
 	test("-99e7", 2, 124, 255, 246, 220, 215)
 }
 
-func dv(s string) DnumVal {
+func dv(s string) SuDnum {
 	dn, _ := dnum.Parse(s)
-	return DnumVal{dn}
+	return SuDnum{dn}
 }

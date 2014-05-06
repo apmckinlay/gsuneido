@@ -39,7 +39,7 @@ func (cg *cgen) gen(ast parse.AstNode) {
 			cg.value(v)
 		}
 	case STRING:
-		cg.value(value.StrVal(ast.Value))
+		cg.value(value.SuStr(ast.Value))
 	case ADD:
 		cg.binop(ast, i.ADD)
 	case SUB:

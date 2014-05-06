@@ -13,7 +13,7 @@ import (
 )
 
 /*
-Date is a Suneido date/time Value
+SuDate is a Suneido date/time Value
 
 Represents a readable "local" date and time.
 Does not take into account time zones or daylight savings.
@@ -22,19 +22,19 @@ It is designed to be efficient to pack and unpack
 and to convert to human readable formats.
 (Calculations are less common.)
 */
-type Date struct {
+type SuDate struct {
 	// 21 bits for year, 4 bits for month (1-12), 5 bits for day (1-31)
 	date uint32
 	// 10 bits for hour, 6 bits for minute, 6 bits for second, 10 bits for ms
 	time uint32
 }
 
-var NilDate = Date{}
+var NilDate = SuDate{}
 
 var _ Value = NilDate // confirm it implements Value
 
-func DateTime(date uint32, time uint32) Date {
-	d := Date{date, time}
+func DateTime(date uint32, time uint32) SuDate {
+	d := SuDate{date, time}
 	if !valid(d.Year(), d.Month(), d.Day(),
 		d.Hour(), d.Minute(), d.Second(), d.Millisecond()) {
 		return NilDate
@@ -42,8 +42,8 @@ func DateTime(date uint32, time uint32) Date {
 	return d
 }
 
-// NewDate returns a Date value, month is 1-12, day is 1-31
-func NewDate(yr int, mon int, day int, hr int, min int, sec int, ms int) Date {
+// NewDate returns a SuDate value, month is 1-12, day is 1-31
+func NewDate(yr int, mon int, day int, hr int, min int, sec int, ms int) SuDate {
 	if !valid(yr, mon, day, hr, min, sec, ms) {
 		return NilDate
 	}
@@ -52,14 +52,14 @@ func NewDate(yr int, mon int, day int, hr int, min int, sec int, ms int) Date {
 	return DateTime(date, time)
 }
 
-/* Now returns a Date for the current local date & time */
-func Now() Date {
+/* Now returns a SuDate for the current local date & time */
+func Now() SuDate {
 	return fromTime(gotime.Now())
 }
 
-// FromLiteral returns a Date from the Suneido literal format
+// FromLiteral returns a SuDate from the Suneido literal format
 // i.e. yyyymmdd[.hhmm[ss[mmm]]]
-func DateFromLiteral(s string) Date {
+func DateFromLiteral(s string) SuDate {
 	if s[0] == '#' {
 		s = s[1:]
 	}
@@ -98,12 +98,12 @@ func nsub(s string, from int, to int) int {
 	return i
 }
 
-func fromTime(t gotime.Time) Date {
+func fromTime(t gotime.Time) SuDate {
 	return NewDate(t.Year(), int(t.Month()), t.Day(),
 		t.Hour(), t.Minute(), t.Second(), t.Nanosecond()/1000000)
 }
 
-func (d Date) String() string {
+func (d SuDate) String() string {
 	if d.time == 0 {
 		return fmt.Sprintf("#%04d%02d%02d", d.Year(), d.Month(), d.Day())
 	}
@@ -119,25 +119,25 @@ func (d Date) String() string {
 	return s
 }
 
-func (d Date) Equals(other interface{}) bool {
-	if d2, ok := other.(Date); ok {
+func (d SuDate) Equals(other interface{}) bool {
+	if d2, ok := other.(SuDate); ok {
 		return d == d2
 	}
 	return false
 }
 
-func (d Date) Hash() uint32 {
+func (d SuDate) Hash() uint32 {
 	h := uint32(17)
 	h = 31*h + d.date
 	h = 31*h + d.time
 	return h
 }
 
-func (d Date) hash2() uint32 {
+func (d SuDate) hash2() uint32 {
 	return d.Hash()
 }
 
-func (d Date) CompareTo(d2 Date) int {
+func (d SuDate) CompareTo(d2 SuDate) int {
 	if d.date < d2.date {
 		return -1
 	} else if d.date > d2.date {
@@ -151,8 +151,8 @@ func (d Date) CompareTo(d2 Date) int {
 	}
 }
 
-func (d Date) TypeName() string {
-	return "Date"
+func (d SuDate) TypeName() string {
+	return "SuDate"
 }
 
 func valid(yr int, mon int, day int, hr int, min int, sec int, ms int) bool {
@@ -161,27 +161,27 @@ func valid(yr int, mon int, day int, hr int, min int, sec int, ms int) bool {
 		!SECOND.valid(sec) || !MILLISECOND.valid(ms) {
 		return false
 	}
-	t := gotime.Date(yr, gotime.Month(mon), day, 0, 0, 0, 0, gotime.Local)
+	t := goTime(yr, mon, day, 0, 0, 0, 0)
 	return t.Year() == yr && int(t.Month()) == mon && t.Day() == day
 }
 
 // Packable
 
-func (d Date) PackSize() int {
+func (d SuDate) PackSize() int {
 	return 9
 }
 
-func (d Date) Pack(buf []byte) []byte {
+func (d SuDate) Pack(buf []byte) []byte {
 	buf = append(buf, DATE)
 	buf = packUint32(d.date, buf)
 	buf = packUint32(d.time, buf)
 	return buf
 }
 
-func UnpackDate(buf []byte) Date {
+func UnpackDate(buf []byte) SuDate {
 	date := unpackUint32(buf)
 	time := unpackUint32(buf[4:])
-	return Date{date, time}
+	return SuDate{date, time}
 }
 
 /* OffsetUTC returns the offset from local to UTC in minutes */
@@ -193,35 +193,35 @@ func OffsetUTC() int {
 
 // getters
 
-func (d Date) Year() int {
+func (d SuDate) Year() int {
 	return int(d.date >> 9)
 }
 
-func (d Date) Month() int {
+func (d SuDate) Month() int {
 	return int((d.date >> 5) & 0xf)
 }
 
-func (d Date) Day() int {
+func (d SuDate) Day() int {
 	return int(d.date & 0x1f)
 }
 
-func (d Date) Hour() int {
+func (d SuDate) Hour() int {
 	return int(d.time >> 22)
 }
 
-func (d Date) Minute() int {
+func (d SuDate) Minute() int {
 	return int((d.time >> 16) & 0x3f)
 }
 
-func (d Date) Second() int {
+func (d SuDate) Second() int {
 	return int((d.time >> 10) & 0x3f)
 }
 
-func (d Date) Millisecond() int {
+func (d SuDate) Millisecond() int {
 	return int(d.time & 0x3ff)
 }
 
-func (d Date) Plus(yr int, mon int, day int, hr int, min int, sec int, ms int) Date {
+func (d SuDate) Plus(yr int, mon int, day int, hr int, min int, sec int, ms int) SuDate {
 	yr += d.Year()
 	mon += d.Month()
 	day += d.Day()
@@ -232,22 +232,22 @@ func (d Date) Plus(yr int, mon int, day int, hr int, min int, sec int, ms int) D
 	return normalize(yr, mon, day, hr, min, sec, ms)
 }
 
-func normalize(yr int, mon int, day int, hr int, min int, sec int, ms int) Date {
+func normalize(yr int, mon int, day int, hr int, min int, sec int, ms int) SuDate {
 	t := goTime(yr, mon, day, hr, min, sec, ms)
 	return fromGoTime(t)
 }
 
 // WeekDay returns the day of the week - Sun is 0, Sat is 6
-func (d Date) WeekDay() int {
+func (d SuDate) WeekDay() int {
 	return int(d.toGoTime().Weekday())
 }
 
 // MinusDays returns the difference between two Dates in days
-func (d Date) MinusDays(other Date) int {
+func (d SuDate) MinusDays(other SuDate) int {
 	return (int)(d.jday() - other.jday())
 }
 
-func (d Date) jday() int64 {
+func (d SuDate) jday() int64 {
 	return julianDayNumber(d.Year(), d.Month(), d.Day())
 }
 
@@ -264,7 +264,7 @@ func julianDayNumber(year, month, day int) int64 {
 // MinusMs returns the difference between two Dates in milliseconds
 //
 // WARNING: doing this around daylight savings changes may be problematic
-func (d Date) MinusMs(other Date) int64 {
+func (d SuDate) MinusMs(other SuDate) int64 {
 	if d.date == other.date {
 		return d.timeAsMs() - other.timeAsMs()
 	} else {
@@ -272,17 +272,17 @@ func (d Date) MinusMs(other Date) int64 {
 	}
 }
 
-func (d Date) timeAsMs() int64 {
+func (d SuDate) timeAsMs() int64 {
 	return int64(d.Millisecond()) +
 		int64(1000)*int64(d.Second()+60*(d.Minute()+60*d.Hour()))
 }
 
 // Time() returns the time in milliseconds since 1 Jan 1970
-func (d Date) unix() int64 {
+func (d SuDate) unix() int64 {
 	return d.toGoTime().UnixNano() / 1000000
 }
 
-func (d Date) toGoTime() gotime.Time {
+func (d SuDate) toGoTime() gotime.Time {
 	return goTime(d.Year(), d.Month(), d.Day(),
 		d.Hour(), d.Minute(), d.Second(), d.Millisecond())
 }
@@ -291,13 +291,13 @@ func goTime(yr int, mon int, day int, hr int, min int, sec int, ms int) gotime.T
 	return gotime.Date(yr, gotime.Month(mon), day, hr, min, sec, ms*1000000, gotime.Local)
 }
 
-func fromGoTime(t gotime.Time) Date {
+func fromGoTime(t gotime.Time) SuDate {
 	return NewDate(t.Year(), int(t.Month()), t.Day(),
 		t.Hour(), t.Minute(), t.Second(), t.Nanosecond()/1000000)
 }
 
 // Format converts the date to a string in the specified format
-func (d Date) Format(fmt string) string {
+func (d SuDate) Format(fmt string) string {
 	fmtlen := len(fmt)
 	dst := new(bytes.Buffer)
 	dst.Grow(fmtlen)
@@ -413,10 +413,10 @@ var days = []string{
 	"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday",
 	"Saturday"}
 
-// Parse converts a human readable date to a Date.
+// Parse converts a human readable date to a SuDate.
 //
 // Returns NilDate if it fails.
-func ParseDate(s string, order string) Date {
+func ParseDate(s string, order string) SuDate {
 	NOTSET := 9999
 	year := NOTSET
 	month := 0
@@ -754,22 +754,22 @@ var (
 
 // Value interface
 
-func (d Date) Get(key Value) Value {
+func (d SuDate) Get(key Value) Value {
 	panic("date does not support get")
 }
 
-func (d Date) Put(key Value, val Value) {
+func (d SuDate) Put(key Value, val Value) {
 	panic("date does not support put")
 }
 
-func (d Date) ToInt() int32 {
+func (d SuDate) ToInt() int32 {
 	panic("cannot convert date to integer")
 }
 
-func (d Date) ToDnum() dnum.Dnum {
+func (d SuDate) ToDnum() dnum.Dnum {
 	panic("cannot convert date to number")
 }
 
-func (d Date) ToStr() string {
+func (d SuDate) ToStr() string {
 	panic("cannot convert date to string")
 }

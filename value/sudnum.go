@@ -1,4 +1,4 @@
-// StrVal is a string Value
+// SuStr is a string Value
 
 package value
 
@@ -9,59 +9,59 @@ import (
 	"github.com/apmckinlay/gsuneido/util/verify"
 )
 
-type DnumVal struct {
+type SuDnum struct {
 	dnum.Dnum
 	// use an anonymous member in a struct to include the methods from Dnum
 }
 
-var _ Value = DnumVal{} // confirm it implements Value
+var _ Value = SuDnum{} // confirm it implements Value
 
 func ParseNum(s string) (Value, error) {
 	dn, err := dnum.Parse(s)
 	return DnumToValue(dn), err
 }
 
-func (dn DnumVal) ToInt() int32 {
+func (dn SuDnum) ToInt() int32 {
 	n, _ := dn.Int32()
 	return n
 }
 
-func (dn DnumVal) ToDnum() dnum.Dnum {
+func (dn SuDnum) ToDnum() dnum.Dnum {
 	return dn.Dnum
 }
 
-func (dn DnumVal) ToStr() string {
+func (dn SuDnum) ToStr() string {
 	return dn.Dnum.String()
 }
 
-func (dn DnumVal) String() string {
+func (dn SuDnum) String() string {
 	return dn.Dnum.String()
 }
 
-func (dn DnumVal) Get(key Value) Value {
+func (dn SuDnum) Get(key Value) Value {
 	panic("number does not support get")
 }
 
-func (dn DnumVal) Put(key Value, val Value) {
+func (dn SuDnum) Put(key Value, val Value) {
 	panic("number does not support put")
 }
 
-func (dn DnumVal) hash2() uint32 {
+func (dn SuDnum) hash2() uint32 {
 	return dn.Hash()
 }
 
-func (dn DnumVal) Equals(other interface{}) bool {
-	if d2, ok := other.(DnumVal); ok {
+func (dn SuDnum) Equals(other interface{}) bool {
+	if d2, ok := other.(SuDnum); ok {
 		return 0 == dnum.Cmp(dn.Dnum, d2.Dnum)
 	}
 	return false
 }
 
-func (dn DnumVal) PackSize() int {
+func (dn SuDnum) PackSize() int {
 	return packSizeNum(dn)
 }
 
-func (dn DnumVal) Pack(buf []byte) []byte {
+func (dn SuDnum) Pack(buf []byte) []byte {
 	return packNum(dn, buf)
 }
 
@@ -177,14 +177,14 @@ func digit(sign int, coef uint64) uint16 {
 func UnpackNumber(buf rbuf) Value {
 	neg := buf.get() == MINUS
 	if buf.remaining() == 0 {
-		return IntVal(0)
+		return SuInt(0)
 	}
 	e := buf.get()
 	if e == 0 {
-		return DnumVal{dnum.MinusInf}
+		return SuDnum{dnum.MinusInf}
 	}
 	if e == 255 {
-		return DnumVal{dnum.Inf}
+		return SuDnum{dnum.Inf}
 	}
 	if neg {
 		e = ^e
@@ -193,7 +193,7 @@ func UnpackNumber(buf rbuf) Value {
 	exp = (exp - buf.remaining()/2) * 4
 	coef := unpackCoef(buf, neg)
 	if coef == 0 {
-		return IntVal(0)
+		return SuInt(0)
 	}
 	if 10 >= exp && exp > 0 {
 		for ; exp > 0 && coef < math.MaxUint64/10; exp-- {
@@ -202,12 +202,12 @@ func UnpackNumber(buf rbuf) Value {
 	}
 	if exp == 0 && 0 <= coef && coef <= math.MaxInt32 {
 		if neg {
-			return IntVal(-int32(coef))
+			return SuInt(-int32(coef))
 		} else {
-			return IntVal(int32(coef))
+			return SuInt(int32(coef))
 		}
 	} else {
-		return DnumVal{dnum.NewDnum(neg, coef, int8(exp))}
+		return SuDnum{dnum.NewDnum(neg, coef, int8(exp))}
 	}
 }
 

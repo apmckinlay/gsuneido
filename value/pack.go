@@ -38,7 +38,7 @@ NOTE: The correct buffer length is required.
 */
 func Unpack(buf []byte) Value {
 	if len(buf) == 0 {
-		return StrVal("")
+		return SuStr("")
 	}
 	switch buf[0] {
 	case FALSE:
@@ -46,7 +46,7 @@ func Unpack(buf []byte) Value {
 	case TRUE:
 		return True
 	case STRING:
-		return UnpackStrVal(buf[1:])
+		return UnpackSuStr(buf[1:])
 	case DATE:
 		return UnpackDate(buf[1:])
 	case PLUS, MINUS:

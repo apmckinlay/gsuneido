@@ -7,27 +7,27 @@ import (
 )
 
 func ExampleIntConvert() {
-	v := IntVal(123)
+	v := SuInt(123)
 	fmt.Printf("%d %s\n", v.ToInt(), v.ToStr())
 	// Output: 123 123
 }
 
 func ExampleStrConvert() {
-	v := StrVal("123")
+	v := SuStr("123")
 	fmt.Printf("%d %s\n", v.ToInt(), v.ToStr())
 	// Output: 123 123
 }
 
 func TestStringGet(t *testing.T) {
-	var v Value = StrVal("hello")
-	v = v.Get(IntVal(1))
-	Assert(t).That(v, Equals(Value(StrVal("e"))))
+	var v Value = SuStr("hello")
+	v = v.Get(SuInt(1))
+	Assert(t).That(v, Equals(Value(SuStr("e"))))
 }
 
 func TestPanics(t *testing.T) {
-	v := IntVal(123)
+	v := SuInt(123)
 	Assert(t).That(func() { v.Get(v) }, Panics("number does not support get"))
 
-	var ob Object
+	var ob SuObject
 	Assert(t).That(func() { ob.ToInt() }, Panics("cannot convert object to integer"))
 }

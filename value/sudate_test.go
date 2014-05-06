@@ -1,8 +1,10 @@
 package value
 
-import "testing"
+import (
+	"testing"
 
-import . "github.com/apmckinlay/gsuneido/util/hamcrest"
+	. "github.com/apmckinlay/gsuneido/util/hamcrest"
+)
 
 func TestOne(t *testing.T) {
 	test := func(year int, month int, day int,
