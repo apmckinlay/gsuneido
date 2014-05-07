@@ -234,3 +234,15 @@ func equals3(x Value, y Value, inProgress pairs) bool {
 	return equals2(xo, yo, inProgress)
 
 }
+
+func (_ SuObject) TypeName() string {
+	return "Object"
+}
+
+func (_ SuObject) order() ordering {
+	return OrdObject
+}
+
+func (d SuObject) cmp(other Value) int {
+	panic("SuObject cmp not implemented")
+}

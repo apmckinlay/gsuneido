@@ -68,3 +68,23 @@ func Cat(x Value, y Value) Value {
 func BitNot(x Value) Value {
 	return SuInt(^x.ToInt())
 }
+
+func Cmp(x Value, y Value) int {
+	xo := x.order()
+	yo := y.order()
+	if xo != yo {
+		return cmpInt(int(xo), int(yo))
+	}
+	return x.cmp(y)
+}
+
+func cmpInt(x int, y int) int {
+	switch {
+	case x < y:
+		return -1
+	case x > y:
+		return +1
+	default:
+		return 0
+	}
+}

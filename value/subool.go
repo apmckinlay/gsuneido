@@ -5,70 +5,72 @@ import "github.com/apmckinlay/gsuneido/util/dnum"
 // SuBool is a boolean Value
 type SuBool bool
 
+var _ Value = SuBool(true) // confirm it implements Value
+
 var (
 	True  = SuBool(true)
 	False = SuBool(false)
 )
 
-func (bv SuBool) ToInt() int32 {
-	if bv == true {
+func (b SuBool) ToInt() int32 {
+	if b == true {
 		return 1
 	} else {
 		return 0
 	}
 }
 
-func (bv SuBool) ToDnum() dnum.Dnum {
-	if bv == true {
+func (b SuBool) ToDnum() dnum.Dnum {
+	if b == true {
 		return dnum.One
 	} else {
 		return dnum.Zero
 	}
 }
 
-func (bv SuBool) ToStr() string {
-	if bv == true {
+func (b SuBool) ToStr() string {
+	if b == true {
 		return "true"
 	} else {
 		return "false"
 	}
 }
 
-func (bv SuBool) String() string {
-	return bv.ToStr()
+func (b SuBool) String() string {
+	return b.ToStr()
 }
 
-func (bv SuBool) Get(key Value) Value {
+func (b SuBool) Get(key Value) Value {
 	panic("boolean does not support get")
 }
 
-func (bv SuBool) Put(key Value, val Value) {
+func (b SuBool) Put(key Value, val Value) {
 	panic("boolean does not support put")
 }
 
-func (bv SuBool) Hash() uint32 {
-	return uint32(bv.ToInt())
+func (b SuBool) Hash() uint32 {
+	return uint32(b.ToInt())
 }
 
-func (bv SuBool) hash2() uint32 {
-	return bv.Hash()
+func (b SuBool) hash2() uint32 {
+	return b.Hash()
 }
 
-func (bv SuBool) Equals(other interface{}) bool {
+func (b SuBool) Equals(other interface{}) bool {
 	if b2, ok := other.(SuBool); ok {
-		return bv == b2
+		return b == b2
 	}
 	return false
 }
 
-func (bv SuBool) PackSize() int {
+func (b SuBool) PackSize() int {
 	return 1
 }
 
-func (bv SuBool) Pack(buf []byte) []byte {
+func (b SuBool) Pack(buf []byte) []byte {
 	i := len(buf)
 	buf = buf[:i+1]
-	if bv == true {
+	if b == true {
 		buf[i] = TRUE
 	} else {
 		buf[i] = FALSE
@@ -76,4 +78,14 @@ func (bv SuBool) Pack(buf []byte) []byte {
 	return buf
 }
 
-var _ Value = SuBool(true) // confirm it implements Value
+func (_ SuBool) TypeName() string {
+	return "Boolean"
+}
+
+func (_ SuBool) order() ordering {
+	return OrdBool
+}
+
+func (b SuBool) cmp(other Value) int {
+	return int(b.ToInt() - other.(SuBool).ToInt())
+}

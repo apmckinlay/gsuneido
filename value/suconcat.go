@@ -18,81 +18,83 @@ type shared struct {
 	// MAYBE have a string
 }
 
+var _ Value = SuConcat{} // confirm it implements Value
+
 func NewSuConcat() SuConcat {
 	return SuConcat{b: &shared{}}
 }
 
-func (cv SuConcat) Len() int {
-	return cv.n
+func (c SuConcat) Len() int {
+	return c.n
 }
 
-func (cv SuConcat) Add(s string) SuConcat {
-	bb := cv.b
-	if len(bb.a) != cv.n {
+func (c SuConcat) Add(s string) SuConcat {
+	bb := c.b
+	if len(bb.a) != c.n {
 		// another reference has appended their own stuff so make our own buf
-		a := append(make([]byte, 0, cv.n+len(s)), bb.a[:cv.n]...)
+		a := append(make([]byte, 0, c.n+len(s)), bb.a[:c.n]...)
 		bb = &shared{a}
 	}
 	bb.a = append(bb.a, s...)
-	return SuConcat{bb, cv.n + len(s)}
+	return SuConcat{bb, c.n + len(s)}
 }
 
-func (cv SuConcat) AddSuConcat(cv2 SuConcat) SuConcat {
+func (c SuConcat) AddSuConcat(cv2 SuConcat) SuConcat {
 	// avoid converting cv2 to string
-	bb := cv.b
-	if len(bb.a) != cv.n {
+	bb := c.b
+	if len(bb.a) != c.n {
 		// another reference has appended their own stuff so make our own buf
-		a := append(make([]byte, 0, cv.n+cv2.Len()), bb.a[:cv.n]...)
+		a := append(make([]byte, 0, c.n+cv2.Len()), bb.a[:c.n]...)
 		bb = &shared{a}
 	}
 	bb.a = append(bb.a, cv2.b.a...)
-	return SuConcat{bb, cv.n + cv2.Len()}
+	return SuConcat{bb, c.n + cv2.Len()}
 }
 
-func (cv SuConcat) ToInt() int32 {
-	i, _ := strconv.ParseInt(cv.ToStr(), 0, 32)
+func (c SuConcat) ToInt() int32 {
+	i, _ := strconv.ParseInt(c.ToStr(), 0, 32)
 	return int32(i)
 }
 
-func (cv SuConcat) ToDnum() dnum.Dnum {
-	dn, err := dnum.Parse(cv.ToStr())
+func (c SuConcat) ToDnum() dnum.Dnum {
+	dn, err := dnum.Parse(c.ToStr())
 	if err != nil {
 		panic("can't convert this string to a number")
 	}
 	return dn
 }
 
-func (cv SuConcat) ToStr() string {
-	return string(cv.b.a[:cv.n])
+func (c SuConcat) ToStr() string {
+	return string(c.b.a[:c.n])
 }
 
-func (cv SuConcat) String() string {
-	return "'" + cv.ToStr() + "'"
+func (c SuConcat) String() string {
+	return "'" + c.ToStr() + "'"
 }
 
-func (cv SuConcat) Get(key Value) Value {
-	return SuStr(string(cv.b.a[:cv.n][key.ToInt()]))
+func (c SuConcat) Get(key Value) Value {
+	return SuStr(string(c.b.a[:c.n][key.ToInt()]))
 }
 
-func (cv SuConcat) Put(key Value, val Value) {
+func (c SuConcat) Put(key Value, val Value) {
 	panic("strings do not support put")
 }
 
-func (cv SuConcat) Hash() uint32 {
-	return hash.HashBytes(cv.b.a[:cv.n])
+func (c SuConcat) Hash() uint32 {
+	return hash.HashBytes(c.b.a[:c.n])
 }
 
-func (cv SuConcat) hash2() uint32 {
-	return cv.Hash()
+func (c SuConcat) hash2() uint32 {
+	return c.Hash()
 }
 
-func (cv SuConcat) Equals(other interface{}) bool {
+func (c SuConcat) Equals(other interface{}) bool {
 	if c2, ok := other.(SuConcat); ok {
-		return cv == c2
+		return c == c2
 	}
-	if s2, ok := other.(SuStr); ok && cv.n == len(s2) {
-		for i := 0; i < cv.n; i++ {
-			if cv.b.a[i] != string(s2)[i] {
+	if s2, ok := other.(SuStr); ok && c.n == len(s2) {
+		for i := 0; i < c.n; i++ {
+			if c.b.a[i] != string(s2)[i] {
 				return false
 			}
 			return true
@@ -101,24 +103,45 @@ func (cv SuConcat) Equals(other interface{}) bool {
 	return false
 }
 
-func (cv SuConcat) PackSize() int {
-	if cv.n == 0 {
+func (c SuConcat) PackSize() int {
+	if c.n == 0 {
 		return 0
 	} else {
-		return 1 + cv.n
+		return 1 + c.n
 	}
 }
 
-func (cv SuConcat) Pack(buf []byte) []byte {
-	n := cv.n
+func (c SuConcat) Pack(buf []byte) []byte {
+	n := c.n
 	if n == 0 {
 		return buf
 	}
 	i := len(buf)
 	buf = buf[:i+1+n]
 	buf[i] = STRING
-	copy(buf[i+1:], cv.b.a[:cv.n])
+	copy(buf[i+1:], c.b.a[:c.n])
 	return buf
 }
 
-var _ Value = SuConcat{} // confirm it implements Value
+func (_ SuConcat) TypeName() string {
+	return "String"
+}
+
+func (_ SuConcat) order() ordering {
+	return OrdStr
+}
+
+func (c SuConcat) cmp(other Value) int {
+	// COULD optimize this to not convert Concat to string
+	s1 := c.ToStr()
+	s2 := other.ToStr()
+	switch {
+	case s1 < s2:
+		return -1
+	case s1 > s2:
+		return +1
+	default:
+		return 0
+	}
+
+}

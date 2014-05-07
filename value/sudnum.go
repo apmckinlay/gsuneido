@@ -34,10 +34,6 @@ func (dn SuDnum) ToStr() string {
 	return dn.Dnum.String()
 }
 
-func (dn SuDnum) String() string {
-	return dn.Dnum.String()
-}
-
 func (dn SuDnum) Get(key Value) Value {
 	panic("number does not support get")
 }
@@ -53,6 +49,8 @@ func (dn SuDnum) hash2() uint32 {
 func (dn SuDnum) Equals(other interface{}) bool {
 	if d2, ok := other.(SuDnum); ok {
 		return 0 == dnum.Cmp(dn.Dnum, d2.Dnum)
+	} else if si, ok := other.(SuInt); ok {
+		return 0 == dnum.Cmp(dn.Dnum, si.ToDnum())
 	}
 	return false
 }
@@ -67,7 +65,6 @@ func (dn SuDnum) Pack(buf []byte) []byte {
 
 // packing - ugly because of compatibility with cSuneido
 
-//
 type Num interface {
 	Sign() int
 	Exp() int
@@ -221,4 +218,20 @@ func unpackCoef(buf rbuf, neg bool) uint64 {
 		n = n*10000 + uint64(x)
 	}
 	return n
+}
+
+func (_ SuDnum) TypeName() string {
+	return "Number"
+}
+
+func (_ SuDnum) order() ordering {
+	return OrdNum
+}
+
+func (x SuDnum) cmp(other Value) int {
+	if y, ok := other.(SuDnum); ok {
+		return dnum.Cmp(x.Dnum, y.Dnum)
+	} else {
+		return dnum.Cmp(x.Dnum, y.ToDnum())
+	}
 }

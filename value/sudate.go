@@ -137,24 +137,6 @@ func (d SuDate) hash2() uint32 {
 	return d.Hash()
 }
 
-func (d SuDate) CompareTo(d2 SuDate) int {
-	if d.date < d2.date {
-		return -1
-	} else if d.date > d2.date {
-		return +1
-	} else if d.time < d2.time {
-		return -1
-	} else if d.time > d2.time {
-		return +1
-	} else {
-		return 0
-	}
-}
-
-func (d SuDate) TypeName() string {
-	return "SuDate"
-}
-
 func valid(yr int, mon int, day int, hr int, min int, sec int, ms int) bool {
 	if !YEAR.valid(yr) || !MONTH.valid(mon) || !DAY.valid(day) ||
 		!HOUR.valid(hr) || !MINUTE.valid(min) ||
@@ -772,4 +754,27 @@ func (d SuDate) ToDnum() dnum.Dnum {
 
 func (d SuDate) ToStr() string {
 	panic("cannot convert date to string")
+}
+
+func (_ SuDate) TypeName() string {
+	return "Date"
+}
+
+func (_ SuDate) order() ordering {
+	return OrdDate
+}
+
+func (d SuDate) cmp(other Value) int {
+	d2 := other.(SuDate)
+	if d.date < d2.date {
+		return -1
+	} else if d.date > d2.date {
+		return +1
+	} else if d.time < d2.time {
+		return -1
+	} else if d.time > d2.time {
+		return +1
+	} else {
+		return 0
+	}
 }

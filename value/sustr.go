@@ -12,50 +12,50 @@ type SuStr string
 
 var _ Value = SuStr("") // confirm it implements Value
 
-func (sv SuStr) ToInt() int32 {
-	i, _ := strconv.ParseInt(string(sv), 0, 32)
+func (ss SuStr) ToInt() int32 {
+	i, _ := strconv.ParseInt(string(ss), 0, 32)
 	return int32(i)
 }
 
-func (sv SuStr) ToDnum() dnum.Dnum {
-	dn, err := dnum.Parse(string(sv))
+func (ss SuStr) ToDnum() dnum.Dnum {
+	dn, err := dnum.Parse(string(ss))
 	if err != nil {
 		panic("can't convert this string to a number")
 	}
 	return dn
 }
 
-func (sv SuStr) ToStr() string {
-	return string(sv)
+func (ss SuStr) ToStr() string {
+	return string(ss)
 }
 
-func (sv SuStr) String() string {
-	return "'" + string(sv) + "'"
+func (ss SuStr) String() string {
+	return "'" + string(ss) + "'"
 }
 
-func (sv SuStr) Get(key Value) Value {
-	return SuStr(string(sv)[key.ToInt()])
+func (ss SuStr) Get(key Value) Value {
+	return SuStr(string(ss)[key.ToInt()])
 }
 
-func (sv SuStr) Put(key Value, val Value) {
+func (ss SuStr) Put(key Value, val Value) {
 	panic("strings do not support put")
 }
 
-func (sv SuStr) Hash() uint32 {
-	return hash.HashString(string(sv))
+func (ss SuStr) Hash() uint32 {
+	return hash.HashString(string(ss))
 }
 
-func (sv SuStr) hash2() uint32 {
-	return sv.Hash()
+func (ss SuStr) hash2() uint32 {
+	return ss.Hash()
 }
 
-func (sv SuStr) Equals(other interface{}) bool {
+func (ss SuStr) Equals(other interface{}) bool {
 	if s2, ok := other.(SuStr); ok {
-		return sv == s2
+		return ss == s2
 	}
-	if cv, ok := other.(SuConcat); ok && cv.n == len(sv) {
+	if cv, ok := other.(SuConcat); ok && cv.n == len(ss) {
 		for i := 0; i < cv.n; i++ {
-			if cv.b.a[i] != string(sv)[i] {
+			if cv.b.a[i] != string(ss)[i] {
 				return false
 			}
 			return true
@@ -64,26 +64,49 @@ func (sv SuStr) Equals(other interface{}) bool {
 	return false
 }
 
-func (sv SuStr) PackSize() int {
-	if len(sv) == 0 {
+func (ss SuStr) PackSize() int {
+	if len(ss) == 0 {
 		return 0
 	} else {
-		return 1 + len(sv)
+		return 1 + len(ss)
 	}
 }
 
-func (sv SuStr) Pack(buf []byte) []byte {
-	n := len(sv)
+func (ss SuStr) Pack(buf []byte) []byte {
+	n := len(ss)
 	if n == 0 {
 		return buf
 	}
 	i := len(buf)
 	buf = buf[:i+1+n]
 	buf[i] = STRING
-	copy(buf[i+1:], string(sv))
+	copy(buf[i+1:], string(ss))
 	return buf
 }
 
 func UnpackSuStr(buf []byte) Value {
 	return SuStr(string(buf))
+}
+
+func (_ SuStr) TypeName() string {
+	return "String"
+}
+
+func (_ SuStr) order() ordering {
+	return OrdStr
+}
+
+func (c SuStr) cmp(other Value) int {
+	// COULD optimize this to not convert Concat to string
+	s1 := c.ToStr()
+	s2 := other.ToStr()
+	switch {
+	case s1 < s2:
+		return -1
+	case s1 > s2:
+		return +1
+	default:
+		return 0
+	}
+
 }

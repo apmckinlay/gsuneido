@@ -11,71 +11,89 @@ type SuInt int32
 
 var _ Value = SuInt(0) // confirm it implements Value
 
-func (iv SuInt) ToInt() int32 {
-	return int32(iv)
+func (si SuInt) ToInt() int32 {
+	return int32(si)
 }
 
-func (iv SuInt) ToDnum() dnum.Dnum {
-	return dnum.FromInt64(int64(iv))
+func (si SuInt) ToDnum() dnum.Dnum {
+	return dnum.FromInt64(int64(si))
 }
 
-func (iv SuInt) ToStr() string {
-	return strconv.Itoa(int(iv))
+func (si SuInt) ToStr() string {
+	return strconv.Itoa(int(si))
 }
 
-func (iv SuInt) String() string {
-	return iv.ToStr()
+func (si SuInt) String() string {
+	return si.ToStr()
 }
 
-func (iv SuInt) Get(key Value) Value {
+func (si SuInt) Get(key Value) Value {
 	panic("number does not support get")
 }
 
-func (iv SuInt) Put(key Value, val Value) {
+func (si SuInt) Put(key Value, val Value) {
 	panic("number does not support put")
 }
 
-func (iv SuInt) Hash() uint32 {
-	return uint32(iv)
+func (si SuInt) Hash() uint32 {
+	return uint32(si)
 }
 
-func (iv SuInt) hash2() uint32 {
-	return iv.Hash()
+func (si SuInt) hash2() uint32 {
+	return si.Hash()
 }
 
-func (iv SuInt) Equals(other interface{}) bool {
+func (si SuInt) Equals(other interface{}) bool {
 	if i2, ok := other.(SuInt); ok {
-		return iv == i2
+		return si == i2
+	} else if dn, ok := other.(SuDnum); ok {
+		return 0 == dnum.Cmp(si.ToDnum(), dn.Dnum)
 	}
 	return false
 }
 
-func (iv SuInt) Sign() int {
-	if iv < 0 {
+func (si SuInt) Sign() int {
+	if si < 0 {
 		return -1
-	} else if iv > 0 {
+	} else if si > 0 {
 		return 1
 	} else {
 		return 0
 	}
 }
 
-func (iv SuInt) Exp() int {
+func (si SuInt) Exp() int {
 	return 0
 }
 
-func (iv SuInt) Coef() uint64 {
-	if int32(iv) >= 0 {
-		return uint64(iv)
+func (si SuInt) Coef() uint64 {
+	if int32(si) >= 0 {
+		return uint64(si)
 	} else {
-		return uint64(-int64(iv))
+		return uint64(-int64(si))
 	}
 }
 
-func (iv SuInt) PackSize() int {
-	return packSizeNum(iv)
+func (si SuInt) PackSize() int {
+	return packSizeNum(si)
 }
 
-func (iv SuInt) Pack(buf []byte) []byte {
-	return packNum(iv, buf)
+func (si SuInt) Pack(buf []byte) []byte {
+	return packNum(si, buf)
+}
+
+func (_ SuInt) TypeName() string {
+	return "Number"
+}
+
+func (_ SuInt) order() ordering {
+	return OrdNum
+}
+
+func (x SuInt) cmp(other Value) int {
+	if y, ok := other.(SuInt); ok {
+		return cmpInt(int(x.ToInt()), int(y.ToInt()))
+	} else {
+		return dnum.Cmp(x.ToDnum(), other.ToDnum())
+	}
 }
