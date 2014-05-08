@@ -24,6 +24,20 @@ func Sub(x Value, y Value) Value {
 	return DnumToValue(dnum.Sub(x.ToDnum(), y.ToDnum()))
 }
 
+func Uplus(x Value) Value {
+	if xi, ok := x.(SuInt); ok {
+		return Int64ToValue(int64(xi))
+	}
+	return SuDnum{x.ToDnum()}
+}
+
+func Uminus(x Value) Value {
+	if xi, ok := x.(SuInt); ok {
+		return Int64ToValue(-int64(xi))
+	}
+	return DnumToValue(x.ToDnum().Neg())
+}
+
 // Int64ToValue returns an SuInt if it fits, else a SuDnum
 func Int64ToValue(n int64) Value {
 	if math.MinInt32 < n && n < math.MaxInt32 {

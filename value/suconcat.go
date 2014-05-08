@@ -8,6 +8,8 @@ import (
 )
 
 // SuConcat is used to optimize string concatenation
+//
+// NOTE: Not thread safe
 type SuConcat struct {
 	b *shared
 	n int
@@ -15,7 +17,7 @@ type SuConcat struct {
 
 type shared struct {
 	a []byte
-	// MAYBE have a string
+	// MAYBE have a string to cache?
 }
 
 var _ Value = SuConcat{} // confirm it implements Value

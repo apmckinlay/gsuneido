@@ -2,15 +2,17 @@ package value
 
 import (
 	"bytes"
+	"unicode"
 
 	"github.com/apmckinlay/gsuneido/util/dnum"
 	"github.com/apmckinlay/gsuneido/util/hmap"
 )
-import "unicode"
 
 // SuObject is a Suneido object
 //
 // i.e. a container with both list and hash members
+//
+// NOTE: Not thread safe
 type SuObject struct {
 	list     []Value
 	hash     *hmap.Hmap
@@ -244,5 +246,5 @@ func (_ SuObject) order() ordering {
 }
 
 func (d SuObject) cmp(other Value) int {
-	panic("SuObject cmp not implemented")
+	panic("SuObject cmp not implemented") // TODO
 }

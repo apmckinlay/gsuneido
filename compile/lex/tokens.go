@@ -1,7 +1,7 @@
 package lex
 
 // Token is returned by Lexer to identify the type of token
-type Token byte
+type Token uint8
 
 // Keyword returns the token for a string it is a keyword, else NIL
 func Keyword(s string) Token {
@@ -169,23 +169,8 @@ const (
 	VIEW
 	WHERE
 	// for AST
-	ARG
-	ASSIGNOP
-	BINARYOP
-	BLOCK
-	CALL
-	DATE
-	FOR_IN
-	MEMBER
-	METHOD
-	OBJECT
-	POSTINCDEC
-	PREINCDEC
-	RECORD
-	RVALUE
-	SELFREF
-	SUBSCRIPT
-	SYMBOL
+	PARAMS
+	STATEMENTS
 )
 
 var keywords = map[string]Token{

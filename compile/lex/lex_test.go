@@ -17,15 +17,19 @@ func TestIsInfix(t *testing.T) {
 func TestLexer(t *testing.T) {
 	assert := Assert(t)
 	assert.That(first("function"),
-		Equals(Item{"function", IDENTIFIER, FUNCTION}))
+		Equals(Item{"function", 0, IDENTIFIER, FUNCTION}))
 	assert.That(first("foo"),
-		Equals(Item{"foo", IDENTIFIER, NIL}))
+		Equals(Item{"foo", 0, IDENTIFIER, NIL}))
 	assert.That(first("is"),
-		Equals(Item{"is", IDENTIFIER, IS}))
+		Equals(Item{"is", 0, IDENTIFIER, IS}))
 	assert.That(first("is:"),
-		Equals(Item{"is", IDENTIFIER, NIL}))
+		Equals(Item{"is", 0, IDENTIFIER, NIL}))
+	assert.That(first("'hello'"),
+		Equals(Item{"hello", 0, STRING, NIL}))
+	assert.That(first("'foo\\'bar'"),
+		Equals(Item{"foo'bar", 0, STRING, STRING}))
 	assert.That(first("\\"),
-		Equals(Item{"\\", ERROR, NIL}))
+		Equals(Item{"\\", 0, ERROR, NIL}))
 
 	check(assert, "f()", IDENTIFIER, L_PAREN, R_PAREN)
 
@@ -53,6 +57,8 @@ func TestLexer(t *testing.T) {
 		IDENTIFIER, NUMBER, CAT, NUMBER, ADD, NUMBER, IDENTIFIER,
 		EQ, NUMBER, IDENTIFIER, ADDEQ, NUMBER, NUMBER, MOD, NUMBER,
 		COMMENT, COMMENT)
+
+	check(assert, "4-1", NUMBER, SUB, NUMBER)
 }
 
 func first(src string) Item {
@@ -64,30 +70,25 @@ func check(assert Asserter, source string, expected ...Token) {
 	for i := 0; i < len(expected); {
 		item := lexer.Next()
 		if item.Token == EOF {
+			assert.That(i, Equals(len(expected)-1).Comment("too few tokens"))
 			break
 		} else if item.Token == WHITESPACE || item.Token == NEWLINE {
 			continue
 		}
-		tok := item.Token
-		if item.Keyword != NIL {
-			tok = item.Keyword
-		} else {
-			tok = item.Token
-		}
-		assert.That(tok, Equals(expected[i]).Comment(i, item))
+		assert.That(item.KeyTok(), Equals(expected[i]).Comment(i, item))
 		i++
 	}
 }
 
 func TestAhead(t *testing.T) {
 	lxr := NewLexer("a=1")
-	Assert(t).That(lxr.Ahead(0), Equals(it(IDENTIFIER, "a")))
-	Assert(t).That(lxr.Ahead(2), Equals(it(NUMBER, "1")))
-	Assert(t).That(lxr.Ahead(1), Equals(it(EQ, "=")))
+	Assert(t).That(lxr.Ahead(0), Equals(it(IDENTIFIER, 0, "a")))
+	Assert(t).That(lxr.Ahead(2), Equals(it(NUMBER, 2, "1")))
+	Assert(t).That(lxr.Ahead(1), Equals(it(EQ, 1, "=")))
 	Assert(t).That(lxr.Ahead(3).Token, Equals(EOF))
 
-	Assert(t).That(lxr.Next(), Equals(it(IDENTIFIER, "a")))
-	Assert(t).That(lxr.Next(), Equals(it(EQ, "=")))
-	Assert(t).That(lxr.Next(), Equals(it(NUMBER, "1")))
+	Assert(t).That(lxr.Next(), Equals(it(IDENTIFIER, 0, "a")))
+	Assert(t).That(lxr.Next(), Equals(it(EQ, 1, "=")))
+	Assert(t).That(lxr.Next(), Equals(it(NUMBER, 2, "1")))
 	Assert(t).That(lxr.Next().Token, Equals(EOF))
 }

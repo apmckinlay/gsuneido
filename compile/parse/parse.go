@@ -11,20 +11,21 @@ builder is used by the parser to build the AST.
 It is primarily needed because expression parsing
 is shared between code and queries, but with a different AST type.
 */
-type builder func(Token, string, ...T) T
+type builder func(Item, ...T) T
 
 type T interface{}
 
 func Parse(s string) T {
 	lxr := NewLexer(s)
-	p := parser{lxr, astBuilder, lxr.Next()}
+	p := parser{lxr: lxr, bld: astBuilder, Item: lxr.Next()}
 	return p.parseConstant()
 }
 
 type parser struct {
 	lxr *Lexer
 	bld builder
-	it  Item
+	Item
+	nest int
 }
 
 func (p *parser) parseConstant() T {
@@ -32,66 +33,126 @@ func (p *parser) parseConstant() T {
 }
 
 func (p *parser) function() T {
+	it := p.Item
 	p.match(FUNCTION)
 	p.match(L_PAREN)
 	p.match(R_PAREN)
+	body := p.compound()
+	return p.bld(it, p.bld(Item{Token: PARAMS}), body)
+}
+
+func (p *parser) compound() T {
 	p.match(L_CURLY)
-	result := p.expression()
-	p.match(R_CURLY)
-	return result
+	return p.evalMatch(p.statements(), R_CURLY)
+}
+
+func (p *parser) statements() T {
+	list := []T{}
+	for p.Token != R_CURLY {
+		stmt := p.statement()
+		//fmt.Println("stmt:", stmt)
+		if stmt != nil {
+			list = append(list, stmt)
+		}
+	}
+	return p.bld(Item{Token: STATEMENTS}, list...)
+}
+
+func (p *parser) statement() T {
+	if p.Token == L_CURLY {
+		return p.compound()
+	} else if p.matchIf(SEMICOLON) {
+		return nil
+	}
+	// TODO other statement types
+	return p.expression()
 }
 
 func (p *parser) expression() T {
-	x := p.primary()
-	for p.it.Token == ADD || p.it.Token == SUB || p.it.Token == CAT {
-		it := p.it
-		p.next(false)
-		x = p.bld(it.Token, it.Value, x, p.primary())
+	x := p.unary()
+	for p.Token == ADD || p.Token == SUB || p.Token == CAT {
+		it := p.Item
+		p.next()
+		x = p.bld(it, x, p.unary())
 	}
 	return x
 }
 
-func (p *parser) primary() T {
-	switch p.it.Token {
-	case NUMBER:
-		return p.matchReturn(p.bld(NUMBER, p.it.Value), NUMBER)
-	case STRING:
-		return p.matchReturn(p.bld(STRING, p.it.Value), STRING)
+func (p *parser) unary() T {
+	switch p.Token {
+	case ADD, SUB, NOT, BITNOT:
+		it := p.Item
+		p.next()
+		return p.bld(it, p.unary())
 	default:
-		panic("unexpected " + p.it.Value)
+		return p.term()
 	}
+}
+
+func (p *parser) term() T {
+	term := p.primary()
+	if p.Token == EQ {
+		it := p.Item
+		p.next()
+		expr := p.expression()
+		term = p.bld(it, term, expr)
+	}
+	return term
+}
+
+func (p *parser) primary() T {
+	switch p.Token {
+	case NUMBER, STRING, IDENTIFIER:
+		return p.evalNext(p.bld(p.Item))
+	case L_PAREN:
+		p.next()
+		return p.evalMatch(p.expression(), R_PAREN)
+	}
+	panic("unexpected " + p.Value)
 }
 
 // support methods -------------------------------------------------------------
 
 func (p *parser) match(tok Token) {
-	if tok == p.it.Token || tok == p.it.Keyword {
-		p.next(false)
+	if tok == p.Token || tok == p.Keyword {
+		p.next()
 		return
 	}
-	panic("unexpected " + p.it.Value)
+	panic("unexpected " + p.Value)
 }
 
 func (p *parser) matchIf(tok Token) bool {
-	if tok == p.it.Token || tok == p.it.Keyword {
-		p.next(false)
+	if tok == p.Token || tok == p.Keyword {
+		p.next()
 		return true
 	}
 	return false
 }
 
-func (p *parser) matchReturn(result T, tok Token) T {
+func (p *parser) evalMatch(result T, tok Token) T {
 	p.match(tok)
 	return result
 }
 
-func (p *parser) next(skipnewlines bool) {
+func (p *parser) evalNext(result T) T {
+	p.next()
+	return result
+}
+
+// next advances to the next non-white token, tracking nesting
+// NOTE: it does NOT skip newlines
+func (p *parser) next() {
 	for {
-		p.it = p.lxr.Next()
-		if p.it.Token == COMMENT || p.it.Token == WHITESPACE ||
-			(skipnewlines && p.it.Token == NEWLINE) {
+		p.Item = p.lxr.Next()
+		switch p.Token {
+		case COMMENT, WHITESPACE:
 			continue
+		case L_CURLY, L_PAREN, L_BRACKET:
+			p.nest++
+		case R_CURLY, R_PAREN, R_BRACKET:
+			p.nest--
 		}
 		break
 	}
+	//fmt.Println("item:", p.Item)
 }

@@ -5,22 +5,27 @@ import "strings"
 import "github.com/apmckinlay/gsuneido/compile/lex"
 
 func ExampleAst_String() {
-	fmt.Println(&AstNode{})
-	fmt.Println(&AstNode{Token: lex.COMMENT, Value: "/* ... */"})
-	fmt.Println(&AstNode{Token: lex.IDENTIFIER, Value: "foo"})
-	a := AstNode{lex.ADD, "+", []AstNode{
-		AstNode{Token: lex.IDENTIFIER, Value: "foo"},
-		AstNode{Token: lex.NUMBER, Value: "123"},
-	}}
-	longid := AstNode{Token: lex.IDENTIFIER,
-		Value: strings.Repeat("verylong", 10)}
+	ast := func(tok lex.Token, val string, children ...AstNode) AstNode {
+		return AstNode{lex.Item{Token: tok, Value: val}, children}
+	}
+	a := AstNode{}
 	fmt.Println(&a)
-	fmt.Println(&AstNode{lex.MUL, "*", []AstNode{
+	a = ast(lex.COMMENT, "/* ... */")
+	fmt.Println(&a)
+	a = ast(lex.IDENTIFIER, "foo")
+	fmt.Println(&a)
+	a = ast(lex.ADD, "+",
+		ast(lex.IDENTIFIER, "foo"),
+		ast(lex.NUMBER, "123"))
+	fmt.Println(&a)
+	longid := ast(lex.IDENTIFIER, strings.Repeat("verylong", 10))
+	a = ast(lex.MUL, "*",
 		a,
-		AstNode{lex.DIV, "/", []AstNode{
-			AstNode{Token: lex.NUMBER, Value: "123"}, longid}},
+		ast(lex.DIV, "/",
+			ast(lex.NUMBER, "123"), longid),
 		longid,
-	}})
+	)
+	fmt.Println(&a)
 	// Output:
 	// NIL
 	// COMMENT

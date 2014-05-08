@@ -9,8 +9,7 @@ import (
 
 // AstNode is the node type for an AST returned by parse
 type AstNode struct {
-	Token    lex.Token
-	Value    string
+	lex.Item
 	Children []AstNode
 }
 
@@ -24,7 +23,11 @@ const maxline = 60 // allow for indenting
 func (a *AstNode) bytes(indent int) []byte {
 	buf := bytes.Buffer{}
 	if len(a.Children) == 0 {
-		a.tokval(&buf)
+		if a.Token.String() == "" && a.Value == "" {
+			buf.WriteString("()")
+		} else {
+			a.tokval(&buf)
+		}
 	} else {
 		n := 0
 		children := [][]byte{}
@@ -68,10 +71,10 @@ func (a *AstNode) tokval(buf *bytes.Buffer) {
 	}
 }
 
-func astBuilder(tok lex.Token, val string, nodes ...T) T {
+func astBuilder(item lex.Item, nodes ...T) T {
 	children := []AstNode{}
 	for _, node := range nodes {
 		children = append(children, node.(AstNode))
 	}
-	return AstNode{tok, val, children}
+	return AstNode{item, children}
 }

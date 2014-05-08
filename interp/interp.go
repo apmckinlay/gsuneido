@@ -18,17 +18,35 @@ func (t *Thread) Interp() Value {
 			t.Push(SuInt(fetchInt(code, &fr.ip)))
 		case PUSHVAL:
 			t.Push(fr.fn.Values[fetchUint(code, &fr.ip)])
+		case LOADVAR:
+			idx := fetchUint(code, &fr.ip)
+			val := fr.locals[idx]
+			if val == nil {
+				panic("uninitialized variable: " + fr.fn.Strings[idx])
+			}
+			t.Push(val)
+		case STORVAR:
+			fr.locals[fetchUint(code, &fr.ip)] = t.Pop()
 		case ADD:
 			t.binop(Add)
 		case SUB:
 			t.binop(Sub)
 		case CAT:
 			t.binop(Cat)
+		case UPLUS:
+			t.unop(Uplus)
+		case UMINUS:
+			t.unop(Uminus)
 		case RETURN:
 			return t.Pop()
 		}
 	}
 	return nil
+}
+
+func (t *Thread) unop(op func(Value) Value) {
+	x := t.Pop()
+	t.Push(op(x))
 }
 
 func (t *Thread) binop(op func(Value, Value) Value) {
