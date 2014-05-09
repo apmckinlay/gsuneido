@@ -7,9 +7,9 @@ import (
 	"runtime/debug"
 	"strings"
 
-	"github.com/apmckinlay/gsuneido/compile/codegen"
-	"github.com/apmckinlay/gsuneido/compile/parse"
+	"github.com/apmckinlay/gsuneido/compile"
 	"github.com/apmckinlay/gsuneido/interp"
+	"github.com/apmckinlay/gsuneido/value"
 )
 
 func main() {
@@ -28,17 +28,15 @@ func main() {
 	}
 }
 
-func eval(line string) {
+func eval(src string) {
 	defer func() {
 		if e := recover(); e != nil {
 			debug.PrintStack()
 			fmt.Println("ERROR:", e)
 		}
 	}()
-	line = "function () { " + strings.TrimSpace(line) + "}"
-	ast := parse.Parse(line).(parse.AstNode)
-	fmt.Println("ast", ast.String())
-	fn := codegen.Codegen(ast)
+	src = "function () { " + strings.TrimSpace(src) + "}"
+	fn := compile.Constant(src).(*value.SuFunc)
 	interp.Disasm(os.Stdout, fn)
 	th := interp.Thread{}
 	result := th.Call(fn, interp.SimpleArgSpecs[0])

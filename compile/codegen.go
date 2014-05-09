@@ -1,21 +1,20 @@
-package codegen
+package compile
 
 import (
 	"strconv"
 
-	. "github.com/apmckinlay/gsuneido/compile/lex"
-	"github.com/apmckinlay/gsuneido/compile/parse"
 	i "github.com/apmckinlay/gsuneido/interp"
 	"github.com/apmckinlay/gsuneido/util/varint"
 	"github.com/apmckinlay/gsuneido/value"
 )
 
-func Codegen(ast parse.AstNode) *i.Function {
+// codegen compiles a Function from an Ast
+func codegen(ast Ast) *value.SuFunc {
 	//fmt.Println("codegen", ast.String())
 	cg := cgen{}
 	cg.gen(ast)
 	cg.emit(i.RETURN)
-	return &i.Function{
+	return &value.SuFunc{
 		Code:    cg.code,
 		Values:  cg.values,
 		Strings: cg.strings,
@@ -29,7 +28,7 @@ type cgen struct {
 	strings []string
 }
 
-func (cg *cgen) gen(ast parse.AstNode) {
+func (cg *cgen) gen(ast Ast) {
 	//fmt.Println("gen", ast.String())
 	switch ast.KeyTok() {
 	case FUNCTION:
@@ -39,6 +38,8 @@ func (cg *cgen) gen(ast parse.AstNode) {
 		for _, stmt := range ast.Children {
 			cg.gen(stmt)
 		}
+	case EXPRESSION:
+		cg.gen(ast.Children[0])
 	case NUMBER:
 		n, err := strconv.ParseInt(ast.Value, 0, 32)
 		if err == nil {
@@ -70,7 +71,7 @@ func (cg *cgen) gen(ast parse.AstNode) {
 		cg.binop(ast, i.MOD)
 	case IDENTIFIER:
 		if isLocal(ast.Value) {
-			cg.emit(i.LOADVAR)
+			cg.emit(i.LOAD)
 			cg.emitUint(cg.local(ast.Value))
 		} else {
 			panic("not implemented")
@@ -79,7 +80,7 @@ func (cg *cgen) gen(ast parse.AstNode) {
 		id := ast.Children[0]
 		if isLocal(id.Value) {
 			cg.gen(ast.Children[1]) // expr
-			cg.emit(i.STORVAR)
+			cg.emit(i.STORE)
 			cg.emitUint(cg.local(id.Value))
 		} else {
 			panic("not implemented")
@@ -120,7 +121,7 @@ func (cg *cgen) local(s string) int {
 }
 
 // ubinop is called for ops that can be unary or binary
-func (cg *cgen) ubinop(ast parse.AstNode, uop, bop byte) {
+func (cg *cgen) ubinop(ast Ast, uop, bop byte) {
 	if len(ast.Children) == 1 {
 		cg.unop(ast, uop)
 	} else {
@@ -128,12 +129,12 @@ func (cg *cgen) ubinop(ast parse.AstNode, uop, bop byte) {
 	}
 }
 
-func (cg *cgen) unop(ast parse.AstNode, op byte) {
+func (cg *cgen) unop(ast Ast, op byte) {
 	cg.gen(ast.Children[0])
 	cg.emit(op)
 }
 
-func (cg *cgen) binop(ast parse.AstNode, op byte) {
+func (cg *cgen) binop(ast Ast, op byte) {
 	cg.gen(ast.Children[0])
 	cg.gen(ast.Children[1])
 	cg.emit(op)

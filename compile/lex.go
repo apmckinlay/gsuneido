@@ -1,10 +1,4 @@
-/*
-Package lex implements the lexical scanner for Suneido
-
-The Lexer is designed so the sequence of values returned
-forms the complete source.
-*/
-package lex
+package compile
 
 import (
 	"bytes"
@@ -14,6 +8,12 @@ import (
 	"unicode/utf8"
 )
 
+/*
+Lexer implements the lexical scanner for Suneido
+
+It is designed so the sequence of values returned
+forms the complete source.
+*/
 type Lexer struct {
 	src   string
 	si    int

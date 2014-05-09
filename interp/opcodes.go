@@ -10,8 +10,8 @@ const (
 	MUL
 	DIV
 	MOD
-	STORVAR
-	LOADVAR
+	STORE
+	LOAD
 	UPLUS
 	UMINUS
 )

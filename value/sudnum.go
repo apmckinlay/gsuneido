@@ -224,7 +224,7 @@ func (_ SuDnum) TypeName() string {
 	return "Number"
 }
 
-func (_ SuDnum) order() ordering {
+func (_ SuDnum) order() Order {
 	return OrdNum
 }
 

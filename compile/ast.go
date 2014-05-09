@@ -1,26 +1,24 @@
-package parse
+package compile
 
 import (
 	"bytes"
 	"strings"
-
-	"github.com/apmckinlay/gsuneido/compile/lex"
 )
 
-// AstNode is the node type for an AST returned by parse
-type AstNode struct {
-	lex.Item
-	Children []AstNode
+// Ast is the node type for an AST returned by parse
+type Ast struct {
+	Item
+	Children []Ast
 }
 
-// String formats a tree of AstNode's in a relatively compact form
-func (a *AstNode) String() string {
+// String formats a tree of Ast's in a relatively compact form
+func (a *Ast) String() string {
 	return string(a.bytes(0))
 }
 
 const maxline = 60 // allow for indenting
 
-func (a *AstNode) bytes(indent int) []byte {
+func (a *Ast) bytes(indent int) []byte {
 	buf := bytes.Buffer{}
 	if len(a.Children) == 0 {
 		if a.Token.String() == "" && a.Value == "" {
@@ -63,7 +61,7 @@ func (a *AstNode) bytes(indent int) []byte {
 	return buf.Bytes()
 }
 
-func (a *AstNode) tokval(buf *bytes.Buffer) {
+func (a *Ast) tokval(buf *bytes.Buffer) {
 	if ts := a.Token.String(); ts != "" {
 		buf.WriteString(ts)
 	} else if a.Value != "" {
@@ -71,10 +69,14 @@ func (a *AstNode) tokval(buf *bytes.Buffer) {
 	}
 }
 
-func astBuilder(item lex.Item, nodes ...T) T {
-	children := []AstNode{}
+func ast(item Item, children ...Ast) Ast {
+	return Ast{item, children}
+}
+
+func astBuilder(item Item, nodes ...T) T {
+	children := []Ast{}
 	for _, node := range nodes {
-		children = append(children, node.(AstNode))
+		children = append(children, node.(Ast))
 	}
-	return AstNode{item, children}
+	return Ast{item, children}
 }

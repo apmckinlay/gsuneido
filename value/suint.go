@@ -86,7 +86,7 @@ func (_ SuInt) TypeName() string {
 	return "Number"
 }
 
-func (_ SuInt) order() ordering {
+func (_ SuInt) order() Order {
 	return OrdNum
 }
 

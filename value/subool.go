@@ -82,7 +82,7 @@ func (_ SuBool) TypeName() string {
 	return "Boolean"
 }
 
-func (_ SuBool) order() ordering {
+func (_ SuBool) order() Order {
 	return OrdBool
 }
 

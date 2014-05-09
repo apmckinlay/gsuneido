@@ -18,14 +18,14 @@ func (t *Thread) Interp() Value {
 			t.Push(SuInt(fetchInt(code, &fr.ip)))
 		case PUSHVAL:
 			t.Push(fr.fn.Values[fetchUint(code, &fr.ip)])
-		case LOADVAR:
+		case LOAD:
 			idx := fetchUint(code, &fr.ip)
 			val := fr.locals[idx]
 			if val == nil {
 				panic("uninitialized variable: " + fr.fn.Strings[idx])
 			}
 			t.Push(val)
-		case STORVAR:
+		case STORE:
 			fr.locals[fetchUint(code, &fr.ip)] = t.Pop()
 		case ADD:
 			t.binop(Add)

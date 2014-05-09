@@ -21,19 +21,19 @@ type Value interface {
 	// hash2 is used by object to shallow hash contents
 	hash2() uint32
 	TypeName() string
-	order() ordering
+	order() Order
 	// cmp returns -1 for <, 0 for ==, +1 for >
 	cmp(other Value) int // ops Cmp ensures other has same ordering
 
 	// TODO add lookup that returns method
 }
 
-type ordering int
+type Order int
 
 const (
-	OrdBool ordering = iota
-	OrdNum           // SuInt, SuDnum
-	OrdStr           // SuStr, SuConcat
+	OrdBool Order = iota
+	OrdNum        // SuInt, SuDnum
+	OrdStr        // SuStr, SuConcat
 	OrdDate
 	OrdObject
 	OrdOther

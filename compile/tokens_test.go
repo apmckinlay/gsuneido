@@ -1,4 +1,4 @@
-package lex
+package compile
 
 import "fmt"
 

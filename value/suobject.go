@@ -241,7 +241,7 @@ func (_ SuObject) TypeName() string {
 	return "Object"
 }
 
-func (_ SuObject) order() ordering {
+func (_ SuObject) order() Order {
 	return OrdObject
 }
 

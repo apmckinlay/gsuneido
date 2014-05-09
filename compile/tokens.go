@@ -1,4 +1,4 @@
-package lex
+package compile
 
 // Token is returned by Lexer to identify the type of token
 type Token uint8
@@ -25,6 +25,9 @@ var tostring = map[Token]string{
 	WHITESPACE: "WHITESPACE",
 	COMMENT:    "COMMENT",
 	NEWLINE:    "NEWLINE",
+
+	STATEMENTS: "STATEMENTS",
+	EXPRESSION: "EXPRESSION",
 }
 
 const (
@@ -171,6 +174,7 @@ const (
 	// for AST
 	PARAMS
 	STATEMENTS
+	EXPRESSION
 )
 
 var keywords = map[string]Token{

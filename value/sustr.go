@@ -92,7 +92,7 @@ func (_ SuStr) TypeName() string {
 	return "String"
 }
 
-func (_ SuStr) order() ordering {
+func (_ SuStr) order() Order {
 	return OrdStr
 }
 

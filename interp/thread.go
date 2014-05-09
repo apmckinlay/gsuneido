@@ -22,10 +22,10 @@ func (t *Thread) Pop() Value {
 	return x
 }
 
-// Call executes a Function and returns the result.
+// Call executes a SuFunc and returns the result.
 // The arguments must be already on the stack as per the ArgSpec.
 // On return, the arguments are removed from the stack.
-func (t *Thread) Call(fn *Function, as ArgSpec) Value {
+func (t *Thread) Call(fn *SuFunc, as ArgSpec) Value {
 	defer func(sp int) { t.stack = t.stack[:sp] }(len(t.stack) - as.Nargs())
 	t.args(fn, as)
 	base := len(t.stack) - fn.Nparams
@@ -40,8 +40,8 @@ func (t *Thread) Call(fn *Function, as ArgSpec) Value {
 
 // args converts the arguments on the stack as per the ArgSpec
 // into the parameters expected by the function.
-// On return, the stack is guaranteed to match the Function.
-func (t *Thread) args(fn *Function, as ArgSpec) {
+// On return, the stack is guaranteed to match the SuFunc.
+func (t *Thread) args(fn *SuFunc, as ArgSpec) {
 	if fn.Nparams == as.N_unnamed() {
 		return // simple fast path
 	}

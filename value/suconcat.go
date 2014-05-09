@@ -129,7 +129,7 @@ func (_ SuConcat) TypeName() string {
 	return "String"
 }
 
-func (_ SuConcat) order() ordering {
+func (_ SuConcat) order() Order {
 	return OrdStr
 }
 

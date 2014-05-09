@@ -760,7 +760,7 @@ func (_ SuDate) TypeName() string {
 	return "Date"
 }
 
-func (_ SuDate) order() ordering {
+func (_ SuDate) order() Order {
 	return OrdDate
 }
 
