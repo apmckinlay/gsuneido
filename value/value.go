@@ -38,3 +38,5 @@ const (
 	OrdObject
 	OrdOther
 )
+
+var NilVal Value

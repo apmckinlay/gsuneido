@@ -2,7 +2,6 @@ package compile
 
 import (
 	"bytes"
-	"fmt"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -349,17 +348,14 @@ func isHexDigit(r rune) bool {
 func (lxr *Lexer) number(start int) Item {
 	// Is it hex?
 	digits := "0123456789"
-	if lxr.match('0') && lxr.matchOneOf("xX") {
-		fmt.Println("hex")
+	if lxr.src[start] == '0' && lxr.matchOneOf("xX") {
 		digits = hexDigits
 	}
 	lxr.matchRunOf(digits)
 	if lxr.match('.') {
-		fmt.Println("dot")
 		lxr.matchRunOf(digits)
 	}
 	if lxr.matchOneOf("eE") {
-		fmt.Println("exp")
 		lxr.matchOneOf("+-")
 		lxr.matchRunOf("0123456789")
 	}

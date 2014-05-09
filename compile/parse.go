@@ -1,5 +1,7 @@
 package compile
 
+import "fmt"
+
 func newParser(src string) *parser {
 	lxr := NewLexer(src)
 	return &parser{lxr: lxr, Item: lxr.Next()}
@@ -13,19 +15,30 @@ type parser struct {
 }
 
 func (p *parser) match(tok Token) {
-	if tok == p.Token || tok == p.Keyword {
-		p.next()
-		return
+	if tok != p.Token && tok != p.Keyword {
+		p.error("expecting", tok)
 	}
-	panic("unexpected " + p.Value)
+	p.next()
 }
 
 func (p *parser) matchIf(tok Token) bool {
-	if tok == p.Token || tok == p.Keyword {
-		p.next()
-		return true
+	if tok != p.Token && tok != p.Keyword {
+		return false
 	}
-	return false
+	p.next()
+	return true
+}
+
+func (p *parser) matchSkipNewlines(tok Token) {
+	if tok != p.Token && tok != p.Keyword {
+		p.error("expecting", tok)
+	}
+	for {
+		p.next()
+		if p.Token != NEWLINE {
+			break
+		}
+	}
 }
 
 func (p *parser) evalMatch(result T, tok Token) T {
@@ -59,4 +72,10 @@ func (p *parser) next() {
 		p.Value = p.Value[1:]
 	}
 	//fmt.Println("item:", p.Item)
+}
+
+// returns string so it can be called inside panic
+// so compiler knows we don't return
+func (p *parser) error(args ...interface{}) string {
+	panic("syntax error" + fmt.Sprint(args...))
 }

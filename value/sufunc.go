@@ -80,7 +80,7 @@ func (f *SuFunc) Pack(buf []byte) []byte {
 }
 
 func (_ *SuFunc) TypeName() string {
-	return "SuFunc"
+	return "Function"
 }
 
 func (_ *SuFunc) order() Order {

@@ -1,8 +1,9 @@
 package compile
 
-import "testing"
-
-import . "github.com/apmckinlay/gsuneido/util/hamcrest"
+import (
+	"testing"
+	. "github.com/apmckinlay/gsuneido/util/hamcrest"
+)
 
 func TestKeywords(t *testing.T) {
 	Assert(t).That(Keyword("forever"), Equals(FOREVER))
@@ -24,6 +25,8 @@ func TestLexer(t *testing.T) {
 		Equals(Item{"is", 0, IDENTIFIER, IS}))
 	assert.That(first("is:"),
 		Equals(Item{"is", 0, IDENTIFIER, NIL}))
+	assert.That(first("0xff"),
+		Equals(Item{"0xff", 0, NUMBER, NIL}))
 	assert.That(first("'hello'"),
 		Equals(Item{"hello", 0, STRING, NIL}))
 	assert.That(first("'foo\\'bar'"),
