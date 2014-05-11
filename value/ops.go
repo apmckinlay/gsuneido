@@ -6,6 +6,30 @@ import (
 	"github.com/apmckinlay/gsuneido/util/dnum"
 )
 
+func Is(x Value, y Value) Value {
+	return SuBool(x.Equals(y))
+}
+
+func Isnt(x Value, y Value) Value {
+	return SuBool(!x.Equals(y))
+}
+
+func Lt(x Value, y Value) Value {
+	return SuBool(x.cmp(y) < 0)
+}
+
+func Lte(x Value, y Value) Value {
+	return SuBool(x.cmp(y) <= 0)
+}
+
+func Gt(x Value, y Value) Value {
+	return SuBool(x.cmp(y) > 0)
+}
+
+func Gte(x Value, y Value) Value {
+	return SuBool(x.cmp(y) >= 0)
+}
+
 func Add(x Value, y Value) Value {
 	if xi, xok := x.(SuInt); xok {
 		if yi, yok := y.(SuInt); yok {
@@ -24,11 +48,50 @@ func Sub(x Value, y Value) Value {
 	return DnumToValue(dnum.Sub(x.ToDnum(), y.ToDnum()))
 }
 
-func Uplus(x Value) Value {
-	if xi, ok := x.(SuInt); ok {
-		return Int64ToValue(int64(xi))
+func Mul(x Value, y Value) Value {
+	if xi, xok := x.(SuInt); xok {
+		if yi, yok := y.(SuInt); yok {
+			return Int64ToValue(int64(xi) * int64(yi))
+		}
 	}
-	return SuDnum{x.ToDnum()}
+	return DnumToValue(dnum.Mul(x.ToDnum(), y.ToDnum()))
+}
+
+func Div(x Value, y Value) Value {
+	return DnumToValue(dnum.Div(x.ToDnum(), y.ToDnum()))
+}
+
+func Mod(x Value, y Value) Value {
+	return Int64ToValue(int64(x.ToInt()) % int64(y.ToInt()))
+}
+
+func Lshift(x Value, y Value) Value {
+	return Int64ToValue(int64(uint64(x.ToInt()) << uint64(y.ToInt())))
+}
+
+func Rshift(x Value, y Value) Value {
+	return Int64ToValue(int64(uint64(x.ToInt()) >> uint64(y.ToInt())))
+}
+
+func Bitor(x Value, y Value) Value {
+	return Int64ToValue(int64(uint64(x.ToInt()) | uint64(y.ToInt())))
+}
+
+func Bitand(x Value, y Value) Value {
+	return Int64ToValue(int64(uint64(x.ToInt()) & uint64(y.ToInt())))
+}
+
+func Bitxor(x Value, y Value) Value {
+	return Int64ToValue(int64(uint64(x.ToInt()) ^ uint64(y.ToInt())))
+}
+
+func Uplus(x Value) Value {
+	if _, ok := x.(SuInt); ok {
+		return x
+	} else if _, ok := x.(SuDnum); ok {
+		return x
+	}
+	return DnumToValue(x.ToDnum())
 }
 
 func Uminus(x Value) Value {

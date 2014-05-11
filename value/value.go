@@ -6,7 +6,12 @@ e.g. SuBool, SuInt, SuStr, etc.
 */
 package value
 
-import "github.com/apmckinlay/gsuneido/util/dnum"
+import (
+	"errors"
+	"strconv"
+
+	"github.com/apmckinlay/gsuneido/util/dnum"
+)
 
 // Value is used to reference a Suneido value
 type Value interface {
@@ -40,3 +45,15 @@ const (
 )
 
 var NilVal Value
+
+func NumFromString(s string) (Value, error) {
+	n, err := strconv.ParseInt(s, 0, 32)
+	if err == nil {
+		return SuInt(n), nil
+	}
+	dn, err := dnum.Parse(s)
+	if err == nil {
+		return DnumToValue(dn), nil
+	}
+	return NilVal, errors.New("invalid number: " + s)
+}

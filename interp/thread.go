@@ -22,6 +22,10 @@ func (t *Thread) Pop() Value {
 	return x
 }
 
+func (t *Thread) Top() Value {
+	return t.stack[len(t.stack)-1]
+}
+
 // Call executes a SuFunc and returns the result.
 // The arguments must be already on the stack as per the ArgSpec.
 // On return, the arguments are removed from the stack.

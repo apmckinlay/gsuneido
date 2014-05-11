@@ -1,6 +1,10 @@
 package compile
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/apmckinlay/gsuneido/util/verify"
+)
 
 func newParser(src string) *parser {
 	lxr := NewLexer(src)
@@ -51,8 +55,14 @@ func (p *parser) evalNext(result T) T {
 	return result
 }
 
+func (p *parser) nextSkipNewlines() {
+	p.next()
+	for p.Token == NEWLINE {
+		p.next()
+	}
+}
+
 // next advances to the next non-white token, tracking nesting
-// NOTE: it does NOT skip newlines
 func (p *parser) next() {
 	for {
 		p.Item = p.lxr.Next()
@@ -66,12 +76,30 @@ func (p *parser) next() {
 		}
 		break
 	}
+	verify.That(p.nest >= -1) // final curly on compound will go to -1
+	for p.Token == NEWLINE &&
+		(p.nest > 0 || binop(p.lxr.Ahead(0))) {
+		p.Item = p.lxr.Next()
+	}
 	if p.Token == STRING && p.Keyword != STRING {
 		// make a copy of strings that are slices of the source
 		p.Value = " " + p.Value
 		p.Value = p.Value[1:]
 	}
 	//fmt.Println("item:", p.Item)
+}
+
+func binop(it Item) bool {
+	switch it.KeyTok() {
+	// NOTE: not ADD or SUB because they can be unary
+	case AND, OR, CAT, MUL, DIV, MOD,
+		EQ, ADDEQ, SUBEQ, CATEQ, MULEQ, DIVEQ, MODEQ,
+		BITAND, BITOR, BITXOR, BITANDEQ, BITOREQ, BITXOREQ,
+		GT, GTE, LT, LTE, LSHIFT, LSHIFTEQ, RSHIFT, RSHIFTEQ,
+		IS, ISNT, MATCH, MATCHNOT, Q_MARK:
+		return true
+	}
+	return false
 }
 
 // returns string so it can be called inside panic

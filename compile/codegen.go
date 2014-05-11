@@ -1,8 +1,6 @@
 package compile
 
 import (
-	"strconv"
-
 	i "github.com/apmckinlay/gsuneido/interp"
 	"github.com/apmckinlay/gsuneido/util/varint"
 	"github.com/apmckinlay/gsuneido/value"
@@ -33,30 +31,44 @@ func (cg *cgen) gen(ast Ast) {
 	switch ast.KeyTok() {
 	case FUNCTION:
 		// TODO params
-		cg.gen(ast.Children[1]) // statements
-	case STATEMENTS:
-		for _, stmt := range ast.Children {
+		stmts := ast.Children[1].Children
+		for si, stmt := range stmts {
 			cg.gen(stmt)
+			if si < len(stmts)-1 {
+				cg.emit(i.POP)
+			}
 		}
 	case EXPRESSION:
 		cg.gen(ast.Children[0])
 	case NUMBER:
-		n, err := strconv.ParseInt(ast.Value, 0, 32)
-		if err == nil {
-			cg.emit(i.PUSHINT)
-			cg.code = varint.EncodeInt32(int32(n), cg.code)
+		val, err := value.NumFromString(ast.Value)
+		if err != nil {
+			panic("invalid number: " + ast.Value)
+		}
+		if si, ok := val.(value.SuInt); ok {
+			cg.emit(i.INT)
+			cg.code = varint.EncodeInt32(int32(si), cg.code)
 		} else {
-			v, err := value.ParseNum(ast.Value)
-			if err != nil {
-				panic("invalid number: " + ast.Value)
-			}
-			cg.value(v)
+			cg.emit(i.VALUE)
+			cg.emitUint(cg.value(val))
 		}
 	case STRING:
 		// TODO: copy so no ref to source
-		cg.emit(i.PUSHVAL)
+		cg.emit(i.VALUE)
 		i := cg.value(value.SuStr(ast.Value))
 		cg.emitUint(i)
+	case IS:
+		cg.binop(ast, i.IS)
+	case ISNT:
+		cg.binop(ast, i.ISNT)
+	case LT:
+		cg.binop(ast, i.LT)
+	case LTE:
+		cg.binop(ast, i.LTE)
+	case GT:
+		cg.binop(ast, i.GT)
+	case GTE:
+		cg.binop(ast, i.GTE)
 	case ADD:
 		cg.ubinop(ast, i.UPLUS, i.ADD)
 	case SUB:
@@ -69,6 +81,16 @@ func (cg *cgen) gen(ast Ast) {
 		cg.binop(ast, i.DIV)
 	case MOD:
 		cg.binop(ast, i.MOD)
+	case LSHIFT:
+		cg.binop(ast, i.LSHIFT)
+	case RSHIFT:
+		cg.binop(ast, i.RSHIFT)
+	case BITOR:
+		cg.binop(ast, i.BITOR)
+	case BITAND:
+		cg.binop(ast, i.BITAND)
+	case BITXOR:
+		cg.binop(ast, i.BITXOR)
 	case IDENTIFIER:
 		if isLocal(ast.Value) {
 			cg.emit(i.LOAD)
@@ -141,6 +163,8 @@ func (cg *cgen) binop(ast Ast, op byte) {
 }
 
 func (cg *cgen) emit(b ...byte) {
+	// TODO merge pop with previous instruction
+	// TODO detect pop after side effect free instruction
 	cg.code = append(cg.code, b...)
 }
 

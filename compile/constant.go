@@ -1,11 +1,6 @@
 package compile
 
-import (
-	"strconv"
-
-	"github.com/apmckinlay/gsuneido/util/dnum"
-	v "github.com/apmckinlay/gsuneido/value"
-)
+import v "github.com/apmckinlay/gsuneido/value"
 
 // Constant compiles a Suneido constant (e.g. a library record)
 // to a Suneido Value
@@ -66,16 +61,11 @@ func (p *parser) string() v.Value {
 func (p *parser) number() v.Value {
 	s := p.Value
 	p.match(NUMBER)
-
-	n, err := strconv.ParseInt(s, 0, 32)
-	if err == nil {
-		return v.SuInt(n)
+	val, err := v.NumFromString(s)
+	if err != nil {
+		panic(p.error("invalid number", s))
 	}
-	dn, err := dnum.Parse(s)
-	if err == nil {
-		return v.DnumToValue(dn)
-	}
-	panic(p.error("invalid number", s))
+	return val
 }
 
 func (p *parser) date() v.Value {

@@ -8,7 +8,7 @@ import (
 )
 
 func TestInterp(t *testing.T) {
-	code := []byte{PUSHINT, 3 << 1, PUSHINT, 5 << 1, ADD, RETURN}
+	code := []byte{INT, 3 << 1, INT, 5 << 1, ADD, RETURN}
 	fn := &value.SuFunc{Code: code}
 	th := Thread{}
 	result := th.Call(fn, SimpleArgSpecs[0])

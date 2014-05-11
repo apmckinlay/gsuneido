@@ -2,6 +2,9 @@
 package interp
 
 import (
+	"fmt"
+	"os"
+
 	"github.com/apmckinlay/gsuneido/util/varint"
 	. "github.com/apmckinlay/gsuneido/value"
 )
@@ -9,14 +12,18 @@ import (
 func (t *Thread) Interp() Value {
 	fr := &t.frames[len(t.frames)-1]
 	code := fr.fn.Code
+	sp := len(t.stack)
 	for {
-		//fmt.Println("stack", t.stack)
+		fmt.Println("stack:", t.stack[sp:])
+		disasm1(os.Stdout, fr.fn, fr.ip)
 		op := code[fr.ip]
 		fr.ip++
 		switch op {
-		case PUSHINT:
+		case POP:
+			t.Pop()
+		case INT:
 			t.Push(SuInt(fetchInt(code, &fr.ip)))
-		case PUSHVAL:
+		case VALUE:
 			t.Push(fr.fn.Values[fetchUint(code, &fr.ip)])
 		case LOAD:
 			idx := fetchUint(code, &fr.ip)
@@ -26,19 +33,52 @@ func (t *Thread) Interp() Value {
 			}
 			t.Push(val)
 		case STORE:
-			fr.locals[fetchUint(code, &fr.ip)] = t.Pop()
+			fr.locals[fetchUint(code, &fr.ip)] = t.Top()
+		case IS:
+			t.binop(Is)
+		case ISNT:
+			t.binop(Isnt)
+		case LT:
+			t.binop(Lt)
+		case LTE:
+			t.binop(Lte)
+		case GT:
+			t.binop(Gt)
+		case GTE:
+			t.binop(Gte)
 		case ADD:
 			t.binop(Add)
 		case SUB:
 			t.binop(Sub)
 		case CAT:
 			t.binop(Cat)
+		case MUL:
+			t.binop(Mul)
+		case DIV:
+			t.binop(Div)
+		case MOD:
+			t.binop(Mod)
+		case LSHIFT:
+			t.binop(Lshift)
+		case RSHIFT:
+			t.binop(Rshift)
+		case BITOR:
+			t.binop(Bitor)
+		case BITAND:
+			t.binop(Bitand)
+		case BITXOR:
+			t.binop(Bitxor)
 		case UPLUS:
 			t.unop(Uplus)
 		case UMINUS:
 			t.unop(Uminus)
 		case RETURN:
-			return t.Pop()
+			if len(t.stack) > sp {
+				return t.Pop()
+			}
+			return nil
+		default:
+			panic("invalid op code")
 		}
 	}
 	return nil

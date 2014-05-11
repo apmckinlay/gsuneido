@@ -24,14 +24,12 @@ func (p *parser) compound() Ast {
 func (p *parser) statements() Ast {
 	list := []Ast{}
 	for p.Token != R_CURLY {
-		if p.matchIf(SEMICOLON) {
+		if p.matchIf(NEWLINE) || p.matchIf(SEMICOLON) {
 			continue
 		}
 		stmt := p.statement()
 		//fmt.Println("stmt:", stmt)
-		if stmt.Token != NIL {
-			list = append(list, stmt)
-		}
+		list = append(list, stmt)
 	}
 	return ast(Item{Token: STATEMENTS}, list...)
 }
@@ -41,5 +39,7 @@ func (p *parser) statement() Ast {
 		return p.compound()
 	}
 	// TODO other statement types
+	defer func(prev int) { p.nest = prev }(p.nest)
+	p.nest = 0
 	return expression(p, astBuilder).(Ast)
 }

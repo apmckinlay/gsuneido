@@ -2,14 +2,27 @@ package interp
 
 const (
 	RETURN = iota
-	PUSHINT
-	PUSHVAL
+	POP
+	INT
+	VALUE
+	IS
+	ISNT
+	LT
+	LTE
+	GT
+	GTE
 	ADD
 	SUB
 	CAT
 	MUL
 	DIV
 	MOD
+	LSHIFT
+	RSHIFT
+	BITOR
+	BITAND
+	BITXOR
+	BITNOT
 	STORE
 	LOAD
 	UPLUS

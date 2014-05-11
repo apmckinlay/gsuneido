@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"reflect"
 	"runtime/debug"
 	"strings"
 
@@ -18,12 +19,19 @@ func main() {
 	} else {
 		r := bufio.NewReader(os.Stdin)
 		for {
-			fmt.Print("> ")
-			line, err := r.ReadString('\n')
-			if err != nil || line == "q\n" {
-				break
+			src := ""
+			for {
+				line, err := r.ReadString('\n')
+				line = strings.TrimRight(line, " \t\r\n")
+				if err != nil || line == "q" {
+					return
+				}
+				if line == "" {
+					break
+				}
+				src += line + "\n"
 			}
-			eval(line)
+			eval(src)
 		}
 	}
 }
@@ -35,10 +43,11 @@ func eval(src string) {
 			fmt.Println("ERROR:", e)
 		}
 	}()
-	src = "function () { " + strings.TrimSpace(src) + "}"
+	src = "function () {\n" + src + "\n}"
 	fn := compile.Constant(src).(*value.SuFunc)
-	interp.Disasm(os.Stdout, fn)
+	//	interp.Disasm(os.Stdout, fn)
 	th := interp.Thread{}
 	result := th.Call(fn, interp.SimpleArgSpecs[0])
-	fmt.Println(">>>", result)
+	fmt.Println(">>>", result, "("+reflect.TypeOf(result).String()+")")
+	fmt.Println()
 }
