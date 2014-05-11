@@ -48,6 +48,10 @@ func eval(src string) {
 	//	interp.Disasm(os.Stdout, fn)
 	th := interp.Thread{}
 	result := th.Call(fn, interp.SimpleArgSpecs[0])
-	fmt.Println(">>>", result, "("+reflect.TypeOf(result).String()+")")
+	fmt.Print(">>> ", result)
+	if result != nil {
+		fmt.Print(" (" + reflect.TypeOf(result).String() + ")")
+	}
+	fmt.Println()
 	fmt.Println()
 }

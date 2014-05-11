@@ -39,7 +39,26 @@ func (p *parser) statement() Ast {
 		return p.compound()
 	}
 	// TODO other statement types
+	switch p.KeyTok() {
+	case RETURN:
+		return p.returnStmt()
+	default:
+		return p.exprStmt()
+	}
+}
+
+func (p *parser) returnStmt() Ast {
+	item := p.Item
+	p.matchKeepNL(RETURN)
+	switch p.Token {
+	case NEWLINE, SEMICOLON, R_CURLY:
+		return ast(item)
+	}
+	return ast(item, p.exprStmt())
+}
+
+func (p *parser) exprStmt() Ast {
 	defer func(prev int) { p.nest = prev }(p.nest)
 	p.nest = 0
-	return expression(p, astBuilder).(Ast)
+	return ast(Item{Token: EXPRESSION}, expression(p, astBuilder).(Ast))
 }

@@ -4,15 +4,21 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/apmckinlay/gsuneido/util/verify"
 	"github.com/apmckinlay/gsuneido/value"
 )
 
 var asm = []string{
-	"return", "pop", "int", "value",
-	"is", "isnt", "lt", "lte", "gt", "gte",
+	"return", "pop", "dup", "int", "value",
+	"is", "isnt", "match", "matchnot", "lt", "lte", "gt", "gte",
 	"add", "sub", "cat", "mul", "div", "mod",
 	"lshift", "rshift", "bitor", "bitand", "bitxor",
-	"store", "load", "uplus", "uminus",
+	"bitnot", "not", "uplus", "uminus",
+	"store", "load",
+}
+
+func init() {
+	verify.That(asm[LOAD] == "load")
 }
 
 func Disasm(w io.Writer, fn *value.SuFunc) {

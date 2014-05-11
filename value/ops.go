@@ -85,6 +85,19 @@ func Bitxor(x Value, y Value) Value {
 	return Int64ToValue(int64(uint64(x.ToInt()) ^ uint64(y.ToInt())))
 }
 
+func Bitnot(x Value) Value {
+	return Int64ToValue(^int64(x.ToInt()))
+}
+
+func Not(x Value) Value {
+	if x == True {
+		return False
+	} else if x == False {
+		return True
+	}
+	panic("not requires boolean")
+}
+
 func Uplus(x Value) Value {
 	if _, ok := x.(SuInt); ok {
 		return x

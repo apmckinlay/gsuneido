@@ -21,17 +21,14 @@ func (t *Thread) Interp() Value {
 		switch op {
 		case POP:
 			t.Pop()
+		case DUP:
+			t.Push(t.Top())
 		case INT:
 			t.Push(SuInt(fetchInt(code, &fr.ip)))
 		case VALUE:
 			t.Push(fr.fn.Values[fetchUint(code, &fr.ip)])
 		case LOAD:
-			idx := fetchUint(code, &fr.ip)
-			val := fr.locals[idx]
-			if val == nil {
-				panic("uninitialized variable: " + fr.fn.Strings[idx])
-			}
-			t.Push(val)
+			t.Push(t.load(fr, fetchUint(code, &fr.ip)))
 		case STORE:
 			fr.locals[fetchUint(code, &fr.ip)] = t.Top()
 		case IS:
@@ -68,6 +65,10 @@ func (t *Thread) Interp() Value {
 			t.binop(Bitand)
 		case BITXOR:
 			t.binop(Bitxor)
+		case BITNOT:
+			t.unop(Bitnot)
+		case NOT:
+			t.unop(Not)
 		case UPLUS:
 			t.unop(Uplus)
 		case UMINUS:
@@ -82,6 +83,14 @@ func (t *Thread) Interp() Value {
 		}
 	}
 	return nil
+}
+
+func (t *Thread) load(fr *Frame, idx uint32) Value {
+	val := fr.locals[idx]
+	if val == nil {
+		panic("uninitialized variable: " + fr.fn.Strings[idx])
+	}
+	return val
 }
 
 func (t *Thread) unop(op func(Value) Value) {

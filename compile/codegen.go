@@ -1,14 +1,18 @@
 package compile
 
 import (
+	"fmt"
+
 	i "github.com/apmckinlay/gsuneido/interp"
 	"github.com/apmckinlay/gsuneido/util/varint"
 	"github.com/apmckinlay/gsuneido/value"
 )
 
+// TODO fold constant expressions
+
 // codegen compiles a Function from an Ast
 func codegen(ast Ast) *value.SuFunc {
-	//fmt.Println("codegen", ast.String())
+	fmt.Println("codegen", ast.String())
 	cg := cgen{}
 	cg.gen(ast)
 	cg.emit(i.RETURN)
@@ -31,15 +35,21 @@ func (cg *cgen) gen(ast Ast) {
 	switch ast.KeyTok() {
 	case FUNCTION:
 		// TODO params
-		stmts := ast.Children[1].Children
+		stmts := ast.second().Children
 		for si, stmt := range stmts {
 			cg.gen(stmt)
 			if si < len(stmts)-1 {
 				cg.emit(i.POP)
 			}
 		}
+		// TODO add return if that wasn't last statement
+	case RETURN:
+		if len(ast.Children) == 1 {
+			cg.gen(ast.first())
+		}
+		cg.emit(i.RETURN)
 	case EXPRESSION:
-		cg.gen(ast.Children[0])
+		cg.gen(ast.first())
 	case NUMBER:
 		val, err := value.NumFromString(ast.Value)
 		if err != nil {
@@ -47,7 +57,7 @@ func (cg *cgen) gen(ast Ast) {
 		}
 		if si, ok := val.(value.SuInt); ok {
 			cg.emit(i.INT)
-			cg.code = varint.EncodeInt32(int32(si), cg.code)
+			cg.emitInt(int(si))
 		} else {
 			cg.emit(i.VALUE)
 			cg.emitUint(cg.value(val))
@@ -57,56 +67,45 @@ func (cg *cgen) gen(ast Ast) {
 		cg.emit(i.VALUE)
 		i := cg.value(value.SuStr(ast.Value))
 		cg.emitUint(i)
-	case IS:
-		cg.binop(ast, i.IS)
-	case ISNT:
-		cg.binop(ast, i.ISNT)
-	case LT:
-		cg.binop(ast, i.LT)
-	case LTE:
-		cg.binop(ast, i.LTE)
-	case GT:
-		cg.binop(ast, i.GT)
-	case GTE:
-		cg.binop(ast, i.GTE)
+	case NOT:
+		cg.unop(ast, i.NOT)
 	case ADD:
 		cg.ubinop(ast, i.UPLUS, i.ADD)
 	case SUB:
 		cg.ubinop(ast, i.UMINUS, i.SUB)
-	case CAT:
-		cg.binop(ast, i.CAT)
-	case MUL:
-		cg.binop(ast, i.MUL)
-	case DIV:
-		cg.binop(ast, i.DIV)
-	case MOD:
-		cg.binop(ast, i.MOD)
-	case LSHIFT:
-		cg.binop(ast, i.LSHIFT)
-	case RSHIFT:
-		cg.binop(ast, i.RSHIFT)
-	case BITOR:
-		cg.binop(ast, i.BITOR)
-	case BITAND:
-		cg.binop(ast, i.BITAND)
-	case BITXOR:
-		cg.binop(ast, i.BITXOR)
+	case IS, ISNT, MATCH, MATCHNOT, LT, LTE, GT, GTE,
+		CAT, MUL, DIV, MOD, LSHIFT, RSHIFT, BITOR, BITAND, BITXOR:
+		cg.binop(ast, i.IS+byte(ast.Token-IS))
+	case BITNOT:
+		cg.unop(ast, i.BITNOT)
 	case IDENTIFIER:
-		if isLocal(ast.Value) {
-			cg.emit(i.LOAD)
-			cg.emitUint(cg.local(ast.Value))
-		} else {
-			panic("not implemented")
-		}
+		cg.rvalue(ast)
 	case EQ:
-		id := ast.Children[0]
-		if isLocal(id.Value) {
-			cg.gen(ast.Children[1]) // expr
-			cg.emit(i.STORE)
-			cg.emitUint(cg.local(id.Value))
-		} else {
-			panic("not implemented")
-		}
+		cg.gen(ast.second())
+		cg.store(cg.lvalue(ast.first()))
+	case ADDEQ, SUBEQ, CATEQ, MULEQ, DIVEQ, MODEQ,
+		LSHIFTEQ, RSHIFTEQ, BITOREQ, BITANDEQ, BITXOREQ:
+		ref := cg.lvalue(ast.first())
+		cg.load(ref)
+		cg.gen(ast.second())
+		cg.emit(i.ADD + byte(ast.Token-ADDEQ))
+		cg.store(ref)
+	case INC, DEC:
+		ref := cg.lvalue(ast.first())
+		cg.load(ref)
+		cg.emit(i.INT)
+		cg.emitInt(1)
+		cg.emit(i.ADD + byte(ast.Token-INC))
+		cg.store(ref)
+	case POSTINC, POSTDEC:
+		ref := cg.lvalue(ast.first())
+		cg.load(ref)
+		cg.emit(i.DUP)
+		cg.emit(i.INT)
+		cg.emitInt(1)
+		cg.emit(i.ADD + byte(ast.Token-POSTINC))
+		cg.store(ref)
+		cg.emit(i.POP)
 	default:
 		panic("not implemented" + ast.String())
 	}
@@ -123,6 +122,33 @@ func (cg *cgen) value(v value.Value) int {
 	i := len(cg.values)
 	cg.values = append(cg.values, v)
 	return i
+}
+
+func (cg *cgen) rvalue(ast Ast) {
+	if isLocal(ast.Value) {
+		cg.emit(i.LOAD)
+		cg.emitUint(cg.local(ast.Value))
+	} else {
+		panic("not implemented")
+	}
+}
+
+func (cg *cgen) lvalue(ast Ast) int {
+	if ast.Token == IDENTIFIER && isLocal(ast.Value) {
+		return cg.local(ast.Value)
+	} else {
+		panic("not implemented")
+	}
+}
+
+func (cg *cgen) load(ref int) {
+	cg.emit(i.LOAD)
+	cg.emitUint(ref)
+}
+
+func (cg *cgen) store(ref int) {
+	cg.emit(i.STORE)
+	cg.emitUint(ref)
 }
 
 func isLocal(s string) bool {
@@ -152,22 +178,25 @@ func (cg *cgen) ubinop(ast Ast, uop, bop byte) {
 }
 
 func (cg *cgen) unop(ast Ast, op byte) {
-	cg.gen(ast.Children[0])
+	cg.gen(ast.first())
 	cg.emit(op)
 }
 
 func (cg *cgen) binop(ast Ast, op byte) {
-	cg.gen(ast.Children[0])
-	cg.gen(ast.Children[1])
+	cg.gen(ast.first())
+	cg.gen(ast.second())
 	cg.emit(op)
 }
 
 func (cg *cgen) emit(b ...byte) {
-	// TODO merge pop with previous instruction
 	// TODO detect pop after side effect free instruction
 	cg.code = append(cg.code, b...)
 }
 
 func (cg *cgen) emitUint(i int) {
 	cg.code = varint.EncodeUint32(uint32(i), cg.code)
+}
+
+func (cg *cgen) emitInt(i int) {
+	cg.code = varint.EncodeInt32(int32(i), cg.code)
 }

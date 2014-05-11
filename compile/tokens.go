@@ -22,12 +22,12 @@ var tostring = map[Token]string{
 	NIL:        "NIL",
 	EOF:        "EOF",
 	ERROR:      "ERROR",
-	WHITESPACE: "WHITESPACE",
+	WHITESPACE: "WHITE",
 	COMMENT:    "COMMENT",
 	NEWLINE:    "NEWLINE",
 
-	STATEMENTS: "STATEMENTS",
-	EXPRESSION: "EXPRESSION",
+	STATEMENTS: "STMTS",
+	EXPRESSION: "EXPR",
 }
 
 const (
@@ -62,10 +62,6 @@ const (
 	LTE
 	GT
 	GTE
-	NOT
-	INC
-	DEC
-	BITNOT
 	ADD
 	SUB
 	CAT
@@ -77,8 +73,12 @@ const (
 	BITOR
 	BITAND
 	BITXOR
+	NOT
+	INC
+	DEC // must be after INC
+	BITNOT
 	EQ
-	ADDEQ
+	ADDEQ // opEQ's must be in same order as op's
 	SUBEQ
 	CATEQ
 	MULEQ
@@ -175,6 +175,8 @@ const (
 	PARAMS
 	STATEMENTS
 	EXPRESSION
+	POSTINC
+	POSTDEC
 )
 
 var keywords = map[string]Token{

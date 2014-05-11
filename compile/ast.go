@@ -80,3 +80,11 @@ func astBuilder(item Item, nodes ...T) T {
 	}
 	return Ast{item, children}
 }
+
+func (a *Ast) first() Ast {
+	return a.Children[0]
+}
+
+func (a *Ast) second() Ast {
+	return a.Children[1]
+}

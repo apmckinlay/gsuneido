@@ -3,16 +3,19 @@ package interp
 const (
 	RETURN = iota
 	POP
+	DUP
 	INT
 	VALUE
 	IS
 	ISNT
+	MATCH
+	MATCHNOT
 	LT
 	LTE
 	GT
 	GTE
 	ADD
-	SUB
+	SUB // must be after ADD
 	CAT
 	MUL
 	DIV
@@ -23,8 +26,9 @@ const (
 	BITAND
 	BITXOR
 	BITNOT
-	STORE
-	LOAD
+	NOT
 	UPLUS
 	UMINUS
+	STORE
+	LOAD
 )

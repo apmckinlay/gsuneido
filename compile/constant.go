@@ -53,7 +53,7 @@ func (p *parser) string() v.Value {
 		if p.Token != CAT || p.lxr.Ahead(0).Token != STRING {
 			break
 		}
-		p.matchSkipNewlines(CAT)
+		p.nextSkipNL()
 	}
 	return v.SuStr(s)
 }
