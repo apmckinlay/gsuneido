@@ -23,7 +23,7 @@ func (p *parser) constant() v.Value {
 			ast := p.function()
 			return codegen(ast)
 		default:
-			s := p.Value
+			s := p.Text
 			p.next()
 			return v.SuStr(s)
 		}
@@ -45,7 +45,7 @@ func (p *parser) constant() v.Value {
 		case L_PAREN, L_CURLY, L_BRACKET:
 			return p.object()
 		default:
-			panic("not implemented #" + p.Value)
+			panic("not implemented #" + p.Text)
 		}
 	case L_PAREN, L_CURLY, L_BRACKET:
 		return p.object()
@@ -56,7 +56,7 @@ func (p *parser) constant() v.Value {
 func (p *parser) string() v.Value {
 	s := ""
 	for {
-		s += p.Value
+		s += p.Text
 		p.match(STRING)
 		if p.Token != CAT || p.lxr.Ahead(0).Token != STRING {
 			break
@@ -67,7 +67,7 @@ func (p *parser) string() v.Value {
 }
 
 func (p *parser) number() v.Value {
-	s := p.Value
+	s := p.Text
 	p.match(NUMBER)
 	val, err := v.NumFromString(s)
 	if err != nil {
@@ -77,7 +77,7 @@ func (p *parser) number() v.Value {
 }
 
 func (p *parser) date() v.Value {
-	s := p.Value
+	s := p.Text
 	p.match(NUMBER)
 	date := v.DateFromLiteral(s)
 	if date == v.NilDate {

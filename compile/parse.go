@@ -116,8 +116,8 @@ func (p *parser) nextKeepNL() {
 	verify.That(p.nest >= -1) // final curly on compound will go to -1
 	if p.Token == STRING && p.Keyword != STRING {
 		// make a copy of strings that are slices of the source
-		p.Value = " " + p.Value
-		p.Value = p.Value[1:]
+		p.Text = " " + p.Text
+		p.Text = p.Text[1:]
 	}
 	//fmt.Println("item:", p.Item)
 }

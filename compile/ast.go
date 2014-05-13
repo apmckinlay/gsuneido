@@ -10,7 +10,7 @@ import (
 // Ast is the node type for an AST returned by parse
 type Ast struct {
 	Item
-	val      value.Value
+	value    value.Value
 	Children []Ast
 }
 
@@ -24,7 +24,7 @@ const maxline = 60 // allow for indenting
 func (a *Ast) bytes(indent int) []byte {
 	buf := bytes.Buffer{}
 	if len(a.Children) == 0 {
-		if a.Token.String() == "" && a.Value == "" && a.val == nil {
+		if a.Token.String() == "" && a.Text == "" && a.value == nil {
 			buf.WriteString("()")
 		} else {
 			a.tokval(&buf)
@@ -67,10 +67,10 @@ func (a *Ast) bytes(indent int) []byte {
 func (a *Ast) tokval(buf *bytes.Buffer) {
 	if ts := a.Token.String(); ts != "" {
 		buf.WriteString(a.Token.String())
-	} else if a.val != nil {
-		buf.WriteString(a.val.String())
-	} else if a.Value != "" {
-		buf.WriteString(a.Value)
+	} else if a.value != nil {
+		buf.WriteString(a.value.String())
+	} else if a.Text != "" {
+		buf.WriteString(a.Text)
 	}
 }
 
@@ -90,7 +90,7 @@ func astBuilder(item Item, nodes ...T) T {
 	for _, node := range nodes {
 		children = append(children, node.(Ast))
 	}
-	return Ast{Item: item, val: val, Children: children}
+	return Ast{Item: item, value: val, Children: children}
 }
 
 func (a *Ast) first() Ast {

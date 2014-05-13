@@ -41,10 +41,10 @@ func (cg *cgen) gen(ast Ast) {
 	case EXPRESSION:
 		cg.gen(ast.first())
 	case NUMBER:
-		cg.number(ast.Value)
+		cg.number(ast.Text)
 	case STRING:
 		cg.emit(i.VALUE)
-		i := cg.value(value.SuStr(ast.Value))
+		i := cg.value(value.SuStr(ast.Text))
 		cg.emitUint(i)
 	case TRUE:
 		cg.emit(i.TRUE)
@@ -52,7 +52,7 @@ func (cg *cgen) gen(ast Ast) {
 		cg.emit(i.FALSE)
 	case VALUE:
 		cg.emit(i.VALUE)
-		i := cg.value(ast.val)
+		i := cg.value(ast.value)
 		cg.emitUint(i)
 	case NOT:
 		cg.unop(ast, i.NOT)
@@ -138,17 +138,17 @@ func (cg *cgen) value(v value.Value) int {
 }
 
 func (cg *cgen) rvalue(ast Ast) {
-	if isLocal(ast.Value) {
+	if isLocal(ast.Text) {
 		cg.emit(i.LOAD)
-		cg.emitUint(cg.local(ast.Value))
+		cg.emitUint(cg.local(ast.Text))
 	} else {
 		panic("not implemented")
 	}
 }
 
 func (cg *cgen) lvalue(ast Ast) int {
-	if ast.Token == IDENTIFIER && isLocal(ast.Value) {
-		return cg.local(ast.Value)
+	if ast.Token == IDENTIFIER && isLocal(ast.Text) {
+		return cg.local(ast.Text)
 	} else {
 		panic("not implemented")
 	}

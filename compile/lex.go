@@ -26,7 +26,7 @@ func NewLexer(src string) *Lexer {
 
 // Item is the return value from Lexer.Next
 type Item struct {
-	Value   string
+	Text    string
 	Pos     int32
 	Token   Token
 	Keyword Token
@@ -239,8 +239,8 @@ func (lxr *Lexer) next() Item {
 	return it(ERROR)
 }
 
-func it(tok Token, pos int, val string) Item {
-	return Item{val, int32(pos), tok, NIL}
+func it(tok Token, pos int, txt string) Item {
+	return Item{txt, int32(pos), tok, NIL}
 }
 
 func (lxr *Lexer) whitespace(start int, c rune) Item {

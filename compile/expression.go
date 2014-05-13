@@ -158,5 +158,5 @@ func (p *parser) primary() T {
 		p.next()
 		return p.evalMatch(p.expr(), R_PAREN)
 	}
-	panic("unexpected " + p.Value)
+	panic("unexpected " + p.Text)
 }
