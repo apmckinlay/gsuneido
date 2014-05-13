@@ -12,16 +12,16 @@ type Packable interface {
 // except for the special case of a zero length string
 // which is encoded as a zero length buffer.
 const (
-	FALSE = iota
-	TRUE
-	MINUS
-	PLUS
-	STRING
-	DATE
-	OBJECT
-	RECORD
-	FUNCTION
-	CLASS
+	PACK_FALSE = iota
+	PACK_TRUE
+	PACK_MINUS
+	PACK_PLUS
+	PACK_STRING
+	PACK_DATE
+	PACK_OBJECT
+	PACK_RECORD
+	PACK_FUNCTION
+	PACK_CLASS
 	// NOTE: this order is significant, it determines sorting
 )
 
@@ -41,15 +41,15 @@ func Unpack(buf []byte) Value {
 		return SuStr("")
 	}
 	switch buf[0] {
-	case FALSE:
+	case PACK_FALSE:
 		return False
-	case TRUE:
+	case PACK_TRUE:
 		return True
-	case STRING:
+	case PACK_STRING:
 		return UnpackSuStr(buf[1:])
-	case DATE:
+	case PACK_DATE:
 		return UnpackDate(buf[1:])
-	case PLUS, MINUS:
+	case PACK_PLUS, PACK_MINUS:
 		return UnpackNumber(rbuf{buf})
 	default:
 		panic("invalid pack tag")

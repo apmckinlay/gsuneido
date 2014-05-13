@@ -23,6 +23,10 @@ func (t *Thread) Interp() Value {
 			t.Pop()
 		case DUP:
 			t.Push(t.Top())
+		case TRUE:
+			t.Push(True)
+		case FALSE:
+			t.Push(False)
 		case INT:
 			t.Push(SuInt(fetchInt(code, &fr.ip)))
 		case VALUE:

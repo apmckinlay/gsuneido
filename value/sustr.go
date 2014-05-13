@@ -79,7 +79,7 @@ func (ss SuStr) Pack(buf []byte) []byte {
 	}
 	i := len(buf)
 	buf = buf[:i+1+n]
-	buf[i] = STRING
+	buf[i] = PACK_STRING
 	copy(buf[i+1:], string(ss))
 	return buf
 }

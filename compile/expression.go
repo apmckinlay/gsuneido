@@ -142,8 +142,18 @@ func (p *parser) term() T {
 
 func (p *parser) primary() T {
 	switch p.Token {
-	case NUMBER, STRING, IDENTIFIER:
+	case IDENTIFIER:
+		switch p.Keyword {
+		case TRUE, FALSE:
+			return p.evalNext(p.bld(p.Item))
+		default:
+			return p.evalNext(p.bld(p.Item))
+		}
+	case NUMBER, STRING:
 		return p.evalNext(p.bld(p.Item))
+	case HASH:
+		val := p.constant()
+		return p.bld(Item{Token: VALUE}, val)
 	case L_PAREN:
 		p.next()
 		return p.evalMatch(p.expr(), R_PAREN)

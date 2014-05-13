@@ -9,12 +9,6 @@ func TestKeywords(t *testing.T) {
 	Assert(t).That(Keyword("forever"), Equals(FOREVER))
 }
 
-func TestIsInfix(t *testing.T) {
-	assert := Assert(t)
-	assert.That(ADD.IsInfix(), Equals(true))
-	assert.That(FOREVER.IsInfix(), Equals(false))
-}
-
 func TestLexer(t *testing.T) {
 	assert := Assert(t)
 	assert.That(first("function"),

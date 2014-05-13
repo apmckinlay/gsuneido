@@ -120,9 +120,9 @@ func packshorts(n uint64) int {
 func packNum(num Num, buf []byte) []byte {
 	sign := num.Sign()
 	if sign >= 0 {
-		buf = append(buf, PLUS)
+		buf = append(buf, PACK_PLUS)
 	} else {
-		buf = append(buf, MINUS)
+		buf = append(buf, PACK_MINUS)
 	}
 	coef := num.Coef()
 	if coef == 0 {
@@ -172,7 +172,7 @@ func digit(sign int, coef uint64) uint16 {
 }
 
 func UnpackNumber(buf rbuf) Value {
-	neg := buf.get() == MINUS
+	neg := buf.get() == PACK_MINUS
 	if buf.remaining() == 0 {
 		return SuInt(0)
 	}

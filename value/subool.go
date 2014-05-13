@@ -71,9 +71,9 @@ func (b SuBool) Pack(buf []byte) []byte {
 	i := len(buf)
 	buf = buf[:i+1]
 	if b == true {
-		buf[i] = TRUE
+		buf[i] = PACK_TRUE
 	} else {
-		buf[i] = FALSE
+		buf[i] = PACK_FALSE
 	}
 	return buf
 }

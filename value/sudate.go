@@ -154,7 +154,7 @@ func (d SuDate) PackSize() int {
 }
 
 func (d SuDate) Pack(buf []byte) []byte {
-	buf = append(buf, DATE)
+	buf = append(buf, PACK_DATE)
 	buf = packUint32(d.date, buf)
 	buf = packUint32(d.time, buf)
 	return buf

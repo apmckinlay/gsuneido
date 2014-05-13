@@ -8,9 +8,17 @@ func Keyword(s string) Token {
 	return keywords[s]
 }
 
-// IsInfix returns whether or not a token is an infix operator
-func (t Token) IsInfix() bool {
-	return infix[t]
+func (t Token) closing() Token {
+	switch t {
+	case L_PAREN:
+		return R_PAREN
+	case L_CURLY:
+		return R_CURLY
+	case L_BRACKET:
+		return R_BRACKET
+	default:
+		panic("invalid closing")
+	}
 }
 
 // String returns a name for tokens that do not have a string value
@@ -28,6 +36,8 @@ var tostring = map[Token]string{
 
 	STATEMENTS: "STMTS",
 	EXPRESSION: "EXPR",
+	POSTINC:    "POSTINC",
+	POSTDEC:    "POSTDEC",
 }
 
 const (
@@ -177,6 +187,7 @@ const (
 	EXPRESSION
 	POSTINC
 	POSTDEC
+	VALUE
 )
 
 var keywords = map[string]Token{

@@ -1,8 +1,6 @@
 package compile
 
 import (
-	"fmt"
-
 	i "github.com/apmckinlay/gsuneido/interp"
 	"github.com/apmckinlay/gsuneido/util/varint"
 	"github.com/apmckinlay/gsuneido/value"
@@ -12,7 +10,7 @@ import (
 
 // codegen compiles a Function from an Ast
 func codegen(ast Ast) *value.SuFunc {
-	fmt.Println("codegen", ast.String())
+	//fmt.Println("codegen", ast.String())
 	cg := cgen{}
 	cg.gen(ast)
 	cg.emit(i.RETURN)
@@ -34,15 +32,7 @@ func (cg *cgen) gen(ast Ast) {
 	//fmt.Println("gen", ast.String())
 	switch ast.KeyTok() {
 	case FUNCTION:
-		// TODO params
-		stmts := ast.second().Children
-		for si, stmt := range stmts {
-			cg.gen(stmt)
-			if si < len(stmts)-1 {
-				cg.emit(i.POP)
-			}
-		}
-		// TODO add return if that wasn't last statement
+		cg.function(ast)
 	case RETURN:
 		if len(ast.Children) == 1 {
 			cg.gen(ast.first())
@@ -51,21 +41,18 @@ func (cg *cgen) gen(ast Ast) {
 	case EXPRESSION:
 		cg.gen(ast.first())
 	case NUMBER:
-		val, err := value.NumFromString(ast.Value)
-		if err != nil {
-			panic("invalid number: " + ast.Value)
-		}
-		if si, ok := val.(value.SuInt); ok {
-			cg.emit(i.INT)
-			cg.emitInt(int(si))
-		} else {
-			cg.emit(i.VALUE)
-			cg.emitUint(cg.value(val))
-		}
+		cg.number(ast.Value)
 	case STRING:
-		// TODO: copy so no ref to source
 		cg.emit(i.VALUE)
 		i := cg.value(value.SuStr(ast.Value))
+		cg.emitUint(i)
+	case TRUE:
+		cg.emit(i.TRUE)
+	case FALSE:
+		cg.emit(i.FALSE)
+	case VALUE:
+		cg.emit(i.VALUE)
+		i := cg.value(ast.val)
 		cg.emitUint(i)
 	case NOT:
 		cg.unop(ast, i.NOT)
@@ -75,7 +62,7 @@ func (cg *cgen) gen(ast Ast) {
 		cg.ubinop(ast, i.UMINUS, i.SUB)
 	case IS, ISNT, MATCH, MATCHNOT, LT, LTE, GT, GTE,
 		CAT, MUL, DIV, MOD, LSHIFT, RSHIFT, BITOR, BITAND, BITXOR:
-		cg.binop(ast, i.IS+byte(ast.Token-IS))
+		cg.binop(ast, i.IS+byte(ast.KeyTok()-IS))
 	case BITNOT:
 		cg.unop(ast, i.BITNOT)
 	case IDENTIFIER:
@@ -108,6 +95,32 @@ func (cg *cgen) gen(ast Ast) {
 		cg.emit(i.POP)
 	default:
 		panic("not implemented" + ast.String())
+	}
+}
+
+func (cg *cgen) function(ast Ast) {
+	// TODO params
+	stmts := ast.second().Children
+	for si, stmt := range stmts {
+		cg.gen(stmt)
+		if si < len(stmts)-1 {
+			cg.emit(i.POP)
+		}
+	}
+	// TODO add return if that wasn't last statement
+}
+
+func (cg *cgen) number(s string) {
+	val, err := value.NumFromString(s)
+	if err != nil {
+		panic("invalid number: " + s)
+	}
+	if si, ok := val.(value.SuInt); ok {
+		cg.emit(i.INT)
+		cg.emitInt(int(si))
+	} else {
+		cg.emit(i.VALUE)
+		cg.emitUint(cg.value(val))
 	}
 }
 

@@ -14,14 +14,18 @@ func (p *parser) constant() v.Value {
 	case IDENTIFIER:
 		switch p.Keyword {
 		case TRUE:
+			p.next()
 			return v.True
 		case FALSE:
+			p.next()
 			return v.False
 		case FUNCTION:
 			ast := p.function()
 			return codegen(ast)
 		default:
-			panic("constant: not implemented: " + p.Value)
+			s := p.Value
+			p.next()
+			return v.SuStr(s)
 		}
 	case STRING:
 		return p.string()
@@ -38,9 +42,13 @@ func (p *parser) constant() v.Value {
 		switch p.Token {
 		case NUMBER:
 			return p.date()
+		case L_PAREN, L_CURLY, L_BRACKET:
+			return p.object()
 		default:
 			panic("not implemented #" + p.Value)
 		}
+	case L_PAREN, L_CURLY, L_BRACKET:
+		return p.object()
 	}
 	panic(p.error("invalid constant"))
 }
@@ -76,4 +84,66 @@ func (p *parser) date() v.Value {
 		p.error("invalid date", s)
 	}
 	return date
+}
+
+func (p *parser) object() v.Value {
+	closing := p.Token.closing()
+	p.next()
+	return p.memberList(closing)
+}
+
+func (p *parser) memberList(closing Token) v.Value {
+	ob := &v.SuObject{}
+	for p.Token != closing {
+		p.member(ob, closing)
+		if p.Token == COMMA || p.Token == SEMICOLON {
+			p.next()
+		}
+	}
+	p.next()
+	return ob
+}
+
+func (p *parser) member(ob *v.SuObject, closing Token) {
+	mem := p.memberName()
+	val := p.memberValue(mem, closing)
+	if mem == nil {
+		ob.Add(val)
+	} else {
+		ob.Put(mem, val)
+	}
+}
+
+func (p *parser) memberName() v.Value {
+	if p.isMemberName() {
+		return p.constant()
+		// does not absorb COLON
+	}
+	return nil
+}
+
+func (p *parser) isMemberName() bool {
+	i := 0
+	tok := p.Token
+	if tok == ADD || tok == SUB || tok == HASH {
+		tok = p.lxr.Ahead(0).Token
+		i = 1
+	}
+	if (tok == IDENTIFIER || tok == STRING || tok == NUMBER) &&
+		p.lxr.Ahead(i).Token == COLON {
+		return true
+	}
+	return false
+}
+
+func (p *parser) memberValue(mem v.Value, closing Token) v.Value {
+	if mem != nil {
+		if p.Token == COLON {
+			p.next()
+		}
+		if p.Token == COMMA || p.Token == closing {
+			return v.True
+		}
+	}
+	return p.constant()
 }

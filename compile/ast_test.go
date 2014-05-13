@@ -7,7 +7,7 @@ import (
 
 func ExampleAst_String() {
 	ast := func(tok Token, val string, children ...Ast) Ast {
-		return Ast{Item{Token: tok, Value: val}, children}
+		return Ast{Item: Item{Token: tok, Value: val}, Children: children}
 	}
 	a := Ast{}
 	fmt.Println(&a)

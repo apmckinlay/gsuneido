@@ -31,4 +31,6 @@ const (
 	UMINUS
 	STORE
 	LOAD
+	TRUE
+	FALSE
 )

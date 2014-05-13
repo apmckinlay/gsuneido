@@ -125,5 +125,5 @@ func (p *parser) nextKeepNL() {
 // returns string so it can be called inside panic
 // so compiler knows we don't return
 func (p *parser) error(args ...interface{}) string {
-	panic("syntax error" + fmt.Sprint(args...))
+	panic("syntax error " + fmt.Sprint(args...))
 }

@@ -3,11 +3,14 @@ package compile
 import (
 	"bytes"
 	"strings"
+
+	"github.com/apmckinlay/gsuneido/value"
 )
 
 // Ast is the node type for an AST returned by parse
 type Ast struct {
 	Item
+	val      value.Value
 	Children []Ast
 }
 
@@ -21,7 +24,7 @@ const maxline = 60 // allow for indenting
 func (a *Ast) bytes(indent int) []byte {
 	buf := bytes.Buffer{}
 	if len(a.Children) == 0 {
-		if a.Token.String() == "" && a.Value == "" {
+		if a.Token.String() == "" && a.Value == "" && a.val == nil {
 			buf.WriteString("()")
 		} else {
 			a.tokval(&buf)
@@ -63,22 +66,31 @@ func (a *Ast) bytes(indent int) []byte {
 
 func (a *Ast) tokval(buf *bytes.Buffer) {
 	if ts := a.Token.String(); ts != "" {
-		buf.WriteString(ts)
+		buf.WriteString(a.Token.String())
+	} else if a.val != nil {
+		buf.WriteString(a.val.String())
 	} else if a.Value != "" {
 		buf.WriteString(a.Value)
 	}
 }
 
 func ast(item Item, children ...Ast) Ast {
-	return Ast{item, children}
+	return Ast{Item: item, Children: children}
 }
 
 func astBuilder(item Item, nodes ...T) T {
+	var val value.Value
+	if len(nodes) >= 1 {
+		if v, ok := nodes[0].(value.Value); ok {
+			val = v
+			nodes = nodes[1:]
+		}
+	}
 	children := []Ast{}
 	for _, node := range nodes {
 		children = append(children, node.(Ast))
 	}
-	return Ast{item, children}
+	return Ast{Item: item, val: val, Children: children}
 }
 
 func (a *Ast) first() Ast {

@@ -130,8 +130,11 @@ func (ob *SuObject) String() string {
 			} else {
 				buf.WriteString(k.(Value).String())
 			}
-			buf.WriteString(": ")
-			buf.WriteString(v.(Value).String())
+			buf.WriteString(":")
+			if v != True {
+				buf.WriteString(" ")
+				buf.WriteString(v.(Value).String())
+			}
 			buf.WriteString(", ")
 		}
 	}

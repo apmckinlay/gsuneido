@@ -14,7 +14,7 @@ var asm = []string{
 	"add", "sub", "cat", "mul", "div", "mod",
 	"lshift", "rshift", "bitor", "bitand", "bitxor",
 	"bitnot", "not", "uplus", "uminus",
-	"store", "load",
+	"store", "load", "true", "false",
 }
 
 func init() {
@@ -30,6 +30,9 @@ func Disasm(w io.Writer, fn *value.SuFunc) {
 func disasm1(w io.Writer, fn *value.SuFunc, i int) int {
 	op := fn.Code[i]
 	i++
+	if int(op) >= len(asm) {
+		fmt.Fprintln(w, "bad op", op)
+	}
 	fmt.Fprintf(w, "%d %s ", i, asm[op])
 	switch op {
 	case INT:

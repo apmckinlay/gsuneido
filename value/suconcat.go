@@ -120,7 +120,7 @@ func (c SuConcat) Pack(buf []byte) []byte {
 	}
 	i := len(buf)
 	buf = buf[:i+1+n]
-	buf[i] = STRING
+	buf[i] = PACK_STRING
 	copy(buf[i+1:], c.b.a[:c.n])
 	return buf
 }
