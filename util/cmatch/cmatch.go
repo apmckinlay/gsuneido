@@ -14,6 +14,7 @@ type CharMatch func(rune) bool
 
 // Predefined CharMatch's
 var (
+	NONE   CharMatch = func(_ rune) bool { return false }
 	SPACE  CharMatch = AnyOf(" \t\r\n")
 	DIGIT  CharMatch = InRange('0', '9')
 	LETTER CharMatch = unicode.IsLetter
@@ -48,6 +49,11 @@ func (cm CharMatch) Negate() CharMatch {
 
 // Or returns a CharMatch that matches any character that matches either CharMatch
 func (cm1 CharMatch) Or(cm2 CharMatch) CharMatch {
+	if cm1 == nil {
+		return cm2
+	} else if cm2 == nil {
+		return cm1
+	}
 	return func(c rune) bool { return cm1.Match(c) || cm2.Match(c) }
 }
 

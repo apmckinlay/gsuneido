@@ -102,7 +102,7 @@ func Panics(expected string) Tester {
 	return func(f interface{}) (result string) {
 		defer func() {
 			if e := recover(); e != nil {
-				if e == expected {
+				if strings.Contains(e.(string), expected) {
 					result = ""
 				} else {
 					result = fmt.Sprintf("expected panic of '%v' but got '%v'",
