@@ -1,5 +1,10 @@
 package compile
 
+import (
+	"math"
+	"strconv"
+)
+
 /*
 expression parses a Suneido expression
 and builds an AST using the supplied builder
@@ -8,6 +13,7 @@ it takes an existing parser since it is embedded
 and not used standalone
 
 expression is used by both function and query parsers
+(with different builder's)
 */
 func expression(p *parser, b builder) T {
 	p.bld = b
@@ -119,6 +125,8 @@ func (p *parser) unary() T {
 	}
 }
 
+var int_max_str = strconv.Itoa(math.MaxInt32)
+
 func (p *parser) term() T {
 	var preincdec Item
 	if p.Token == INC || p.Token == DEC {
@@ -126,6 +134,37 @@ func (p *parser) term() T {
 		p.next()
 	}
 	term := p.primary()
+	for p.Token == DOT || p.Token == L_BRACKET || p.Token == L_PAREN {
+		if p.Token == DOT {
+			dot := p.Item
+			p.nextSkipNL()
+			id := p.Item
+			p.match(IDENTIFIER)
+			term = p.bld(dot, term, p.bld(id))
+		} else if p.Token == L_BRACKET {
+			sub := p.Item
+			p.next()
+			var expr T
+			if p.Token == RANGETO || p.Token == RANGELEN {
+				expr = p.bld(Item{Token: NUMBER, Text: "0"})
+			} else {
+				expr = p.expr()
+			}
+			if p.Token == RANGETO || p.Token == RANGELEN {
+				rtype := p.Item
+				p.next()
+				var expr2 T
+				if p.Token == R_BRACKET {
+					expr2 = p.bld(Item{Token: NUMBER, Text: int_max_str})
+				} else {
+					expr2 = p.expr()
+				}
+				expr = p.bld(rtype, expr, expr2)
+			}
+			term = p.bld(sub, term, expr)
+			p.match(R_BRACKET)
+		}
+	}
 	if preincdec.Token != NIL {
 		return p.bld(preincdec, term)
 	} else if EQ <= p.Token && p.Token <= BITXOREQ { // TODO assignment operators
