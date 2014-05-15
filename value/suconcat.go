@@ -20,7 +20,8 @@ type shared struct {
 	// MAYBE have a string to cache?
 }
 
-var _ Value = SuConcat{} // confirm it implements Value
+var _ Value = SuConcat{}
+var _ Packable = SuConcat{}
 
 func NewSuConcat() SuConcat {
 	return SuConcat{b: &shared{}}
@@ -114,14 +115,8 @@ func (c SuConcat) PackSize() int {
 }
 
 func (c SuConcat) Pack(buf []byte) []byte {
-	n := c.n
-	if n == 0 {
-		return buf
-	}
-	i := len(buf)
-	buf = buf[:i+1+n]
-	buf[i] = PACK_STRING
-	copy(buf[i+1:], c.b.a[:c.n])
+	buf = append(buf, PACK_STRING)
+	buf = append(buf, c.b.a[:c.n]...)
 	return buf
 }
 

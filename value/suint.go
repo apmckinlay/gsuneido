@@ -9,7 +9,8 @@ import (
 // SuInt is an integer Value
 type SuInt int32
 
-var _ Value = SuInt(0) // confirm it implements Value
+var _ Value = SuInt(0)
+var _ Packable = SuInt(0)
 
 func (si SuInt) ToInt() int32 {
 	return int32(si)

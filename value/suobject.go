@@ -19,7 +19,9 @@ type SuObject struct {
 	readonly bool
 }
 
-var _ Value = &SuObject{} // confirm it implements Value
+var _ Value = &SuObject{}
+
+//TODO var _ Packable = &SuObject{}
 
 func (ob *SuObject) Get(key Value) Value {
 	if iv, ok := key.(SuInt); ok {

@@ -14,7 +14,8 @@ type SuDnum struct {
 	// use an anonymous member in a struct to include the methods from Dnum
 }
 
-var _ Value = SuDnum{} // confirm it implements Value
+var _ Value = SuDnum{}
+var _ Packable = SuDnum{}
 
 func ParseNum(s string) (Value, error) {
 	dn, err := dnum.Parse(s)

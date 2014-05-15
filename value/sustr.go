@@ -10,7 +10,8 @@ import (
 // SuStr is a string Value
 type SuStr string
 
-var _ Value = SuStr("") // confirm it implements Value
+var _ Value = SuStr("")
+var _ Packable = SuStr("")
 
 func (ss SuStr) ToInt() int32 {
 	i, _ := strconv.ParseInt(string(ss), 0, 32)
@@ -73,14 +74,11 @@ func (ss SuStr) PackSize() int {
 }
 
 func (ss SuStr) Pack(buf []byte) []byte {
-	n := len(ss)
-	if n == 0 {
+	if len(ss) == 0 {
 		return buf
 	}
-	i := len(buf)
-	buf = buf[:i+1+n]
-	buf[i] = PACK_STRING
-	copy(buf[i+1:], string(ss))
+	buf = append(buf, PACK_STRING)
+	buf = append(buf, string(ss)...)
 	return buf
 }
 

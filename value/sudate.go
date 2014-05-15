@@ -31,7 +31,8 @@ type SuDate struct {
 
 var NilDate = SuDate{}
 
-var _ Value = NilDate // confirm it implements Value
+var _ Value = NilDate
+var _ Packable = NilDate
 
 func DateTime(date uint32, time uint32) SuDate {
 	d := SuDate{date, time}

@@ -5,7 +5,8 @@ import "github.com/apmckinlay/gsuneido/util/dnum"
 // SuBool is a boolean Value
 type SuBool bool
 
-var _ Value = SuBool(true) // confirm it implements Value
+var _ Value = True
+var _ Packable = True
 
 var (
 	True  = SuBool(true)
@@ -68,12 +69,10 @@ func (b SuBool) PackSize() int {
 }
 
 func (b SuBool) Pack(buf []byte) []byte {
-	i := len(buf)
-	buf = buf[:i+1]
 	if b == true {
-		buf[i] = PACK_TRUE
+		buf = append(buf, PACK_TRUE)
 	} else {
-		buf[i] = PACK_FALSE
+		buf = append(buf, PACK_FALSE)
 	}
 	return buf
 }
