@@ -8,6 +8,8 @@ import (
 	. "github.com/apmckinlay/gsuneido/util/hamcrest"
 )
 
+// TODO test comparison/ordering of packed values
+
 func TestPack(t *testing.T) {
 	cv := NewSuConcat().Add("foo").Add("bar")
 	values := []Packable{False, True, SuStr(""), SuStr("foo"), cv,
@@ -26,12 +28,12 @@ func EqVal(expected interface{}) Tester {
 	}
 }
 
-// func TestPackInt32(t *testing.T) {
-// 	buf := make([]byte, 0, 4)
-// 	for _, n := range []int32{0, -1, 1, 999999, -999999} {
-// 		Assert(t).That(unpackInt32(packInt32(n, buf)), Equals(n))
-// 	}
-// }
+func TestPackInt32(t *testing.T) {
+	buf := make([]byte, 0, 4)
+	for _, n := range []int32{0, -1, 1, 999999, -999999} {
+		Assert(t).That(unpackInt32(packInt32(n, buf)), Equals(n))
+	}
+}
 
 func TestPackNum(t *testing.T) {
 	test := func(s string, b ...byte) {
