@@ -87,8 +87,8 @@ func (_ SuInt) TypeName() string {
 	return "Number"
 }
 
-func (_ SuInt) order() Order {
-	return OrdNum
+func (_ SuInt) order() ord {
+	return ordNum
 }
 
 func (x SuInt) cmp(other Value) int {

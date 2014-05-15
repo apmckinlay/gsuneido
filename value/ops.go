@@ -133,9 +133,9 @@ func DnumToValue(dn dnum.Dnum) Value {
 	return SuDnum{dn}
 }
 
-const SMALL = 256
-
 func Cat(x Value, y Value) Value {
+	const SMALL = 256
+
 	xc, xcok := x.(SuConcat)
 	yc, ycok := y.(SuConcat)
 	if xcok && ycok {

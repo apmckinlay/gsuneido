@@ -246,8 +246,8 @@ func (_ SuObject) TypeName() string {
 	return "Object"
 }
 
-func (_ SuObject) order() Order {
-	return OrdObject
+func (_ SuObject) order() ord {
+	return ordObject
 }
 
 func (d SuObject) cmp(other Value) int {

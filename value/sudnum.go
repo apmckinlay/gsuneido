@@ -66,18 +66,18 @@ func (dn SuDnum) Pack(buf []byte) []byte {
 
 // packing - ugly because of compatibility with cSuneido
 
-type Num interface {
+type num interface {
 	Sign() int
 	Exp() int
 	Coef() uint64
 }
 
-func packSizeNum(num Num) int {
-	coef := num.Coef()
+func packSizeNum(n num) int {
+	coef := n.Coef()
 	if coef == 0 {
 		return 1
 	}
-	exp := num.Exp()
+	exp := n.Exp()
 	exp, coef = adjustNum(exp, coef)
 	ps := packshorts(coef)
 	exp = exp/4 + ps
@@ -87,11 +87,11 @@ func packSizeNum(num Num) int {
 	return 2 /* tag and exponent */ + 2*ps
 }
 
-// 16 digits - maximum precision that cSuneido handles
-const MAX_PREC = 9999999999999999
-const MAX_PREC_DIV_10 = 999999999999999
-
 func adjustNum(exp int, coef uint64) (int, uint64) {
+	// 16 digits - maximum precision that cSuneido handles
+	const MAX_PREC = 9999999999999999
+	const MAX_PREC_DIV_10 = 999999999999999
+
 	// strip trailing zeroes
 	for (coef % 10) == 0 {
 		coef /= 10
@@ -118,18 +118,18 @@ func packshorts(n uint64) int {
 	return i
 }
 
-func packNum(num Num, buf []byte) []byte {
-	sign := num.Sign()
+func packNum(n num, buf []byte) []byte {
+	sign := n.Sign()
 	if sign >= 0 {
-		buf = append(buf, PACK_PLUS)
+		buf = append(buf, packPlus)
 	} else {
-		buf = append(buf, PACK_MINUS)
+		buf = append(buf, packMinus)
 	}
-	coef := num.Coef()
+	coef := n.Coef()
 	if coef == 0 {
 		return buf
 	}
-	exp := num.Exp()
+	exp := n.Exp()
 	exp, coef = adjustNum(exp, coef)
 	exp = exp/4 + packshorts(coef)
 	if exp >= math.MaxInt8 {
@@ -173,7 +173,7 @@ func digit(sign int, coef uint64) uint16 {
 }
 
 func UnpackNumber(buf rbuf) Value {
-	neg := buf.get() == PACK_MINUS
+	neg := buf.get() == packMinus
 	if buf.remaining() == 0 {
 		return SuInt(0)
 	}
@@ -225,8 +225,8 @@ func (_ SuDnum) TypeName() string {
 	return "Number"
 }
 
-func (_ SuDnum) order() Order {
-	return OrdNum
+func (_ SuDnum) order() ord {
+	return ordNum
 }
 
 func (x SuDnum) cmp(other Value) int {

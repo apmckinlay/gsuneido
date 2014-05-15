@@ -115,7 +115,7 @@ func (c SuConcat) PackSize() int {
 }
 
 func (c SuConcat) Pack(buf []byte) []byte {
-	buf = append(buf, PACK_STRING)
+	buf = append(buf, packString)
 	buf = append(buf, c.b.a[:c.n]...)
 	return buf
 }
@@ -124,8 +124,8 @@ func (_ SuConcat) TypeName() string {
 	return "String"
 }
 
-func (_ SuConcat) order() Order {
-	return OrdStr
+func (_ SuConcat) order() ord {
+	return ordStr
 }
 
 func (c SuConcat) cmp(other Value) int {

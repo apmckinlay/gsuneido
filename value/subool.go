@@ -70,9 +70,9 @@ func (b SuBool) PackSize() int {
 
 func (b SuBool) Pack(buf []byte) []byte {
 	if b == true {
-		buf = append(buf, PACK_TRUE)
+		buf = append(buf, packTrue)
 	} else {
-		buf = append(buf, PACK_FALSE)
+		buf = append(buf, packFalse)
 	}
 	return buf
 }
@@ -81,8 +81,8 @@ func (_ SuBool) TypeName() string {
 	return "Boolean"
 }
 
-func (_ SuBool) order() Order {
-	return OrdBool
+func (_ SuBool) order() ord {
+	return ordBool
 }
 
 func (b SuBool) cmp(other Value) int {

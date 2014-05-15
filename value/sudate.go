@@ -139,9 +139,9 @@ func (d SuDate) hash2() uint32 {
 }
 
 func valid(yr int, mon int, day int, hr int, min int, sec int, ms int) bool {
-	if !YEAR.valid(yr) || !MONTH.valid(mon) || !DAY.valid(day) ||
-		!HOUR.valid(hr) || !MINUTE.valid(min) ||
-		!SECOND.valid(sec) || !MILLISECOND.valid(ms) {
+	if !mmYear.valid(yr) || !mmMonth.valid(mon) || !mmDay.valid(day) ||
+		!mmHour.valid(hr) || !mmMinute.valid(min) ||
+		!mmSecond.valid(sec) || !mmMillisecond.valid(ms) {
 		return false
 	}
 	t := goTime(yr, mon, day, 0, 0, 0, 0)
@@ -155,7 +155,7 @@ func (d SuDate) PackSize() int {
 }
 
 func (d SuDate) Pack(buf []byte) []byte {
-	buf = append(buf, PACK_DATE)
+	buf = append(buf, packDate)
 	buf = packUint32(d.date, buf)
 	buf = packUint32(d.time, buf)
 	return buf
@@ -440,7 +440,7 @@ func ParseDate(s string, order string) SuDate {
 				}
 			}
 			if i < 12 {
-				typ[ntokens] = MONTH
+				typ[ntokens] = mmMonth
 				tokens[ntokens] = i + 1
 				ntokens++
 			} else if next == "Am" || next == "Pm" {
@@ -526,7 +526,7 @@ func ParseDate(s string, order string) SuDate {
 				// date
 				tokens[ntokens] = n
 				if prev == '\'' {
-					typ[ntokens] = YEAR
+					typ[ntokens] = mmYear
 				}
 				ntokens++
 			}
@@ -555,15 +555,15 @@ func ParseDate(s string, order string) SuDate {
 		for t = 0; t < len(p) && t < ntokens; t++ {
 			var part minmax
 			if p[t] == 'y' {
-				part = YEAR
+				part = mmYear
 			} else if p[t] == 'm' {
-				part = MONTH
+				part = mmMonth
 			} else if p[t] == 'd' {
-				part = DAY
+				part = mmDay
 			} else {
 				panic("shouldn't reach here")
 			}
-			if (typ[t] != UNK && typ[t] != part) ||
+			if (typ[t] != mmUnknown && typ[t] != part) ||
 				tokens[t] < part.min || tokens[t] > part.max {
 				break
 			}
@@ -725,14 +725,14 @@ func (m minmax) valid(n int) bool {
 }
 
 var (
-	YEAR        = minmax{0, 3000}
-	MONTH       = minmax{1, 12}
-	DAY         = minmax{1, 31}
-	HOUR        = minmax{0, 23}
-	MINUTE      = minmax{0, 59}
-	SECOND      = minmax{0, 59}
-	MILLISECOND = minmax{0, 999}
-	UNK         = minmax{0, 0}
+	mmYear        = minmax{0, 3000}
+	mmMonth       = minmax{1, 12}
+	mmDay         = minmax{1, 31}
+	mmHour        = minmax{0, 23}
+	mmMinute      = minmax{0, 59}
+	mmSecond      = minmax{0, 59}
+	mmMillisecond = minmax{0, 999}
+	mmUnknown     = minmax{0, 0}
 )
 
 // Value interface
@@ -761,8 +761,8 @@ func (_ SuDate) TypeName() string {
 	return "Date"
 }
 
-func (_ SuDate) order() Order {
-	return OrdDate
+func (_ SuDate) order() ord {
+	return ordDate
 }
 
 func (d SuDate) cmp(other Value) int {

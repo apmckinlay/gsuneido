@@ -25,6 +25,9 @@ func NewLexer(src string) *Lexer {
 }
 
 // Item is the return value from Lexer.Next
+//
+// For keywords, Token is IDENTIFIER, Keyword is the particular keyword token.
+// When Token is STRING, if Keyword is STRING it means Text is not a slice of the source.
 type Item struct {
 	Text    string
 	Pos     int32
@@ -51,9 +54,9 @@ func (lxr *Lexer) Next() Item {
 	return lxr.next()
 }
 
-// Ahead provides lookahead, 0 is the next item
+// Ahead provides lookahead, 0 is the next item.
 //
-// items are buffered so they can be used by Next
+// Items are buffered so they can be used by Next
 func (lxr *Lexer) Ahead(i int) Item {
 	for len(lxr.ahead) < i+1 {
 		item := lxr.next()

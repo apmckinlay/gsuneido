@@ -83,8 +83,8 @@ func (_ *SuFunc) TypeName() string {
 	return "Function"
 }
 
-func (_ *SuFunc) order() Order {
-	return OrdOther
+func (_ *SuFunc) order() ord {
+	return ordOther
 }
 
 func (f *SuFunc) cmp(other Value) int {

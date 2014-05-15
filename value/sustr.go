@@ -77,7 +77,7 @@ func (ss SuStr) Pack(buf []byte) []byte {
 	if len(ss) == 0 {
 		return buf
 	}
-	buf = append(buf, PACK_STRING)
+	buf = append(buf, packString)
 	buf = append(buf, string(ss)...)
 	return buf
 }
@@ -90,8 +90,8 @@ func (_ SuStr) TypeName() string {
 	return "String"
 }
 
-func (_ SuStr) order() Order {
-	return OrdStr
+func (_ SuStr) order() ord {
+	return ordStr
 }
 
 func (c SuStr) cmp(other Value) int {

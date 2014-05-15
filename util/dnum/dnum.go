@@ -1,6 +1,9 @@
 /*
-Package dnum implements decimal floating point numbers
-using uint64 to hold the coefficient.
+Package dnum implements decimal floating point numbers.
+
+Uses uint64 to hold the coefficient and int8 for exponent.
+
+Value is -1^sign * coef * 10^exp, zeroed value is 0.
 */
 package dnum
 
@@ -13,8 +16,6 @@ import (
 	"github.com/apmckinlay/gsuneido/util/bits"
 )
 
-// value is -1^sign * coef * 10^exp
-// zeroed value = 0
 type Dnum struct {
 	coef uint64
 	sign int8
@@ -22,25 +23,25 @@ type Dnum struct {
 }
 
 const (
-	POSITIVE = 0
-	NEGATIVE = 1
-	INF_EXP  = math.MaxInt8
+	signPos = 0
+	signNeg = 1
+	expInf  = math.MaxInt8
 )
 
 var (
 	Zero     = Dnum{}
-	One      = Dnum{1, POSITIVE, 0}
-	Inf      = Dnum{exp: INF_EXP}
-	MinusInf = Dnum{sign: NEGATIVE, exp: INF_EXP}
+	One      = Dnum{1, signPos, 0}
+	Inf      = Dnum{exp: expInf}
+	MinusInf = Dnum{sign: signNeg, exp: expInf}
 
 	OutsideRange = errors.New("outside range")
 )
 
 func NewDnum(neg bool, coef uint64, exp int8) Dnum {
 	if neg {
-		return Dnum{coef, NEGATIVE, exp}
+		return Dnum{coef, signNeg, exp}
 	} else {
-		return Dnum{coef, POSITIVE, exp}
+		return Dnum{coef, signPos, exp}
 	}
 }
 
@@ -65,7 +66,7 @@ func Parse(s string) (Dnum, error) {
 	if s[i] == '+' {
 		i++
 	} else if s[i] == '-' {
-		dn.sign = NEGATIVE
+		dn.sign = signNeg
 		i++
 	}
 	before := spanDigits(s[i:])
@@ -121,10 +122,10 @@ func (dn Dnum) String() string {
 		return "0"
 	}
 	sign := ""
-	if dn.sign == NEGATIVE {
+	if dn.sign == signNeg {
 		sign = "-"
 	}
-	if dn.exp == INF_EXP {
+	if dn.exp == expInf {
 		return sign + "inf"
 	}
 	exp := int(dn.exp)
@@ -157,7 +158,7 @@ func (dn Dnum) Float64() float64 {
 		return math.Inf(-int(dn.sign))
 	}
 	g := float64(dn.coef)
-	if dn.sign == NEGATIVE {
+	if dn.sign == signNeg {
 		g = -g
 	}
 	e := math.Pow10(int(dn.exp))
@@ -182,7 +183,7 @@ func FromFloat64(dn float64) Dnum {
 }
 
 func (dn Dnum) Uint64() (uint64, error) {
-	if dn.sign == NEGATIVE {
+	if dn.sign == signNeg {
 		return 0, OutsideRange
 	}
 	return dn.toUint()
@@ -193,14 +194,14 @@ func (dn Dnum) Int64() (int64, error) {
 	if err != nil {
 		return 0, err
 	}
-	if dn.sign == POSITIVE && ui > math.MaxInt64 {
+	if dn.sign == signPos && ui > math.MaxInt64 {
 		return math.MaxInt32, OutsideRange
 	}
-	if dn.sign == NEGATIVE && ui > -math.MinInt64 {
+	if dn.sign == signNeg && ui > -math.MinInt64 {
 		return math.MinInt32, OutsideRange
 	}
 	n := int64(ui)
-	if dn.sign == NEGATIVE {
+	if dn.sign == signNeg {
 		n = -n
 	}
 	return n, nil
@@ -211,14 +212,14 @@ func (dn Dnum) Int32() (int32, error) {
 	if err != nil {
 		return 0, err
 	}
-	if dn.sign == POSITIVE && ui > math.MaxInt32 {
+	if dn.sign == signPos && ui > math.MaxInt32 {
 		return math.MaxInt32, OutsideRange
 	}
-	if dn.sign == NEGATIVE && ui > -math.MinInt32 {
+	if dn.sign == signNeg && ui > -math.MinInt32 {
 		return math.MinInt32, OutsideRange
 	}
 	n := int32(ui)
-	if dn.sign == NEGATIVE {
+	if dn.sign == signNeg {
 		n = -n
 	}
 	return n, nil
@@ -250,9 +251,9 @@ func (dn Dnum) toUint() (uint64, error) {
 func FromInt64(n int64) Dnum {
 	switch {
 	case n > 0:
-		return Dnum{uint64(n), POSITIVE, 0}
+		return Dnum{uint64(n), signPos, 0}
 	case n < 0:
-		return Dnum{uint64(-n), NEGATIVE, 0}
+		return Dnum{uint64(-n), signNeg, 0}
 	default:
 		return Zero
 	}
@@ -263,7 +264,7 @@ func (dn Dnum) Sign() int {
 	switch {
 	case dn == Zero:
 		return 0
-	case dn.sign == NEGATIVE:
+	case dn.sign == signNeg:
 		return -1
 	default:
 		return +1
@@ -310,7 +311,7 @@ func Cmp(x, y Dnum) int {
 	switch d := Sub(x, y); {
 	case d == Zero:
 		return 0
-	case d.sign == NEGATIVE:
+	case d.sign == signNeg:
 		return -1
 	default:
 		return +1
@@ -429,9 +430,9 @@ func (dn *Dnum) shiftLeft() bool {
 	return true
 }
 
-const HI4 = 0xf << 60
-
 func mul10safe(n uint64) bool {
+	const HI4 = 0xf << 60
+
 	return (n & HI4) == 0
 }
 
@@ -456,7 +457,7 @@ func (dn *Dnum) shiftRight(roundup *bool) bool {
 
 func result(coef uint64, sign int8, exp int) Dnum {
 	switch {
-	case exp >= INF_EXP:
+	case exp >= expInf:
 		return inf(sign)
 	case exp < math.MinInt8 || coef == 0:
 		return Zero
@@ -481,14 +482,14 @@ func Mul(x, y Dnum) Dnum {
 	case x == Zero || y == Zero:
 		return Zero
 	case x.IsInf() || y.IsInf():
-		return result(0, sign, INF_EXP)
+		return result(0, sign, expInf)
 	}
 	x.minCoef()
 	y.minCoef()
 	if bits.Nlz(x.coef)+bits.Nlz(y.coef) >= 64 {
 		// coef won't overflow
-		if int(x.exp)+int(y.exp) >= INF_EXP {
-			return result(0, sign, INF_EXP)
+		if int(x.exp)+int(y.exp) >= expInf {
+			return result(0, sign, expInf)
 		}
 		return result(x.coef*y.coef, sign, int(x.exp)+int(y.exp))
 	}
@@ -610,14 +611,14 @@ func shift(x, y uint64) (x2, y2 uint64) {
 }
 
 func (dn Dnum) IsInf() bool {
-	return dn.exp == INF_EXP
+	return dn.exp == expInf
 }
 
 func inf(sign int8) Dnum {
 	switch sign {
-	case POSITIVE:
+	case signPos:
 		return Inf
-	case NEGATIVE:
+	case signNeg:
 		return MinusInf
 	default:
 		panic("invalid sign")

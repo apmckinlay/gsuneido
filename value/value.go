@@ -26,22 +26,22 @@ type Value interface {
 	// hash2 is used by object to shallow hash contents
 	hash2() uint32
 	TypeName() string
-	order() Order
+	order() ord
 	// cmp returns -1 for <, 0 for ==, +1 for >
 	cmp(other Value) int // ops Cmp ensures other has same ordering
 
 	// TODO add lookup that returns method
 }
 
-type Order int
+type ord int
 
 const (
-	OrdBool Order = iota
-	OrdNum        // SuInt, SuDnum
-	OrdStr        // SuStr, SuConcat
-	OrdDate
-	OrdObject
-	OrdOther
+	ordBool ord = iota
+	ordNum      // SuInt, SuDnum
+	ordStr      // SuStr, SuConcat
+	ordDate
+	ordObject
+	ordOther
 )
 
 var NilVal Value
