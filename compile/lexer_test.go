@@ -10,27 +10,37 @@ func TestKeywords(t *testing.T) {
 }
 
 func TestLexer(t *testing.T) {
-	assert := Assert(t)
-	assert.That(first("function"),
-		Equals(Item{"function", 0, IDENTIFIER, FUNCTION}))
-	assert.That(first("foo"),
-		Equals(Item{"foo", 0, IDENTIFIER, NIL}))
-	assert.That(first("is"),
-		Equals(Item{"is", 0, IDENTIFIER, IS}))
-	assert.That(first("is:"),
-		Equals(Item{"is", 0, IDENTIFIER, NIL}))
-	assert.That(first("0xff"),
-		Equals(Item{"0xff", 0, NUMBER, NIL}))
-	assert.That(first("'hello'"),
-		Equals(Item{"hello", 0, STRING, NIL}))
-	assert.That(first("'foo\\'bar'"),
-		Equals(Item{"foo'bar", 0, STRING, STRING}))
-	assert.That(first("\\"),
-		Equals(Item{"\\", 0, ERROR, NIL}))
+	first := func(src string, text string, id, kw Token) {
+		Assert(t).That(NewLexer(src).Next(),
+			Equals(Item{text, 0, id, kw}))
+	}
+	first("function", "function", IDENTIFIER, FUNCTION)
+	first("foo", "foo", IDENTIFIER, NIL)
+	first("is", "is", IDENTIFIER, IS)
+	first("is:", "is", IDENTIFIER, NIL)
+	first("0xff", "0xff", NUMBER, NIL)
+	first("'hello'", "hello", STRING, NIL)
+	first("'foo\\'bar'", "foo'bar", STRING, STRING)
+	first("\\", "\\", ERROR, NIL)
+	first("//foo\nbar", "//foo", COMMENT, NIL) // not including newline
 
-	check(assert, "f()", IDENTIFIER, L_PAREN, R_PAREN)
-
-	check(assert, `and break 
+	check := func(source string, expected ...Token) {
+		lexer := NewLexer(source)
+		for i := 0; i < len(expected); {
+			item := lexer.Next()
+			if item.Token == EOF {
+				Assert(t).That(i, Equals(len(expected)-1).Comment("too few tokens"))
+				break
+			} else if item.Token == WHITESPACE || item.Token == NEWLINE {
+				continue
+			}
+			Assert(t).That(item.KeyTok(), Equals(expected[i]).Comment(i, item))
+			i++
+		}
+	}
+	check("f()", IDENTIFIER, L_PAREN, R_PAREN)
+	check("4-1", NUMBER, SUB, NUMBER)
+	check(`and break 
 		case catch continue class callback default dll do
 		else for forever function if is isnt or not
 		new switch struct super return throw try while
@@ -54,27 +64,6 @@ func TestLexer(t *testing.T) {
 		IDENTIFIER, NUMBER, CAT, NUMBER, ADD, NUMBER, IDENTIFIER,
 		EQ, NUMBER, IDENTIFIER, ADDEQ, NUMBER, NUMBER, MOD, NUMBER,
 		COMMENT, COMMENT)
-
-	check(assert, "4-1", NUMBER, SUB, NUMBER)
-}
-
-func first(src string) Item {
-	return NewLexer(src).Next()
-}
-
-func check(assert Asserter, source string, expected ...Token) {
-	lexer := NewLexer(source)
-	for i := 0; i < len(expected); {
-		item := lexer.Next()
-		if item.Token == EOF {
-			assert.That(i, Equals(len(expected)-1).Comment("too few tokens"))
-			break
-		} else if item.Token == WHITESPACE || item.Token == NEWLINE {
-			continue
-		}
-		assert.That(item.KeyTok(), Equals(expected[i]).Comment(i, item))
-		i++
-	}
 }
 
 func TestAhead(t *testing.T) {
