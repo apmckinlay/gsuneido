@@ -259,7 +259,15 @@ func (lxr *Lexer) whitespace(start int, c rune) Item {
 }
 
 func (lxr *Lexer) lineComment(start int) Item {
-	return it(COMMENT, start, lxr.matchUntil(start, "\n"))
+	// does NOT absorb newline
+	for {
+		si, c := lxr.read()
+		if c == eof || c == '\n' {
+			lxr.si = si
+			break
+		}
+	}
+	return it(COMMENT, start, lxr.src[start:lxr.si])
 }
 
 func (lxr *Lexer) spanComment(start int) Item {
