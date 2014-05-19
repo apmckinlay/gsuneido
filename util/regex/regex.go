@@ -10,6 +10,7 @@ import (
 
 	"github.com/apmckinlay/gsuneido/util/cmatch"
 	"github.com/apmckinlay/gsuneido/util/ints"
+	"github.com/apmckinlay/gsuneido/util/ptest"
 	"github.com/apmckinlay/gsuneido/util/verify"
 )
 
@@ -937,3 +938,27 @@ func (e Right) String() string {
 }
 
 var RIGHT0 = Right{idx: 0}
+
+// ptest support ---------------------------------------------------------------
+
+// pt_match is a ptest for matching
+// simple usage is two arguments, string and pattern
+// an optional third argument can be "false" for matches that should fail
+// or additional arguments can specify \0, \1, ...
+func pt_match(args []string) bool {
+	var res Result
+	pat := Compile(args[1])
+	result := pat.FirstMatch(args[0], 0, &res)
+	if len(args) > 2 {
+		if args[2] == "false" {
+			result = !result
+		} else {
+			for i, e := range args[2:] {
+				result = result && (e == args[0][res.pos[i]:res.end[i]])
+			}
+		}
+	}
+	return result
+}
+
+var _ = ptest.Add("regex_match", pt_match)

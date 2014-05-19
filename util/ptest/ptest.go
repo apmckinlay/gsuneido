@@ -1,0 +1,132 @@
+/*
+Package ptest runs test cases listed in text files.
+
+This is so the same test cases can be shared between cSuneido, jSuneido,
+gSuneido, && from within Suneido.
+
+Uses compile.Lexer to parse the test files.
+*/
+package ptest
+
+import (
+	"fmt"
+	"io/ioutil"
+	"strings"
+
+	c "github.com/apmckinlay/gsuneido/compile"
+)
+
+type parser struct {
+	lxr *c.Lexer
+	c.Item
+}
+
+var tdir string
+
+func testdir() string {
+	if tdir == "" {
+		// first time, read and cache
+		src, err := ioutil.ReadFile("../../ptestdir.txt")
+		if err != nil {
+			panic("can't read ../../ptestdir.txt")
+		}
+		tdir = strings.TrimSpace(string(src))
+	}
+	return tdir
+}
+
+func RunFile(filename string) bool {
+	src, err := ioutil.ReadFile(testdir() + filename)
+	if err != nil {
+		panic("can't read " + testdir() + filename)
+	}
+	lxr := c.NewLexer(string(src))
+	item := lxr.Next()
+	p := parser{lxr, item}
+	return p.run()
+}
+
+func (p *parser) run() bool {
+	ok := true
+	for p.Token != c.EOF {
+		ok = ok && p.run1()
+	}
+	return ok
+}
+
+func (p *parser) run1() bool {
+	p.match(c.AT, false) // '@'
+	name := p.Text
+	p.match(c.IDENTIFIER, true)
+	fmt.Println(name + ":")
+	test, present := testmap[name]
+	if !present {
+		fmt.Println("\tMISSING")
+		test = func(args []string) bool { return true }
+	}
+	ok := true
+	for p.Token != c.EOF && p.Token != c.AT {
+		row := []string{}
+		raw := []string{} // for error messages
+		for {
+			text := p.Text
+			raw = append(raw, text)
+			if len(text) >= 2 && (text[0] == '"' || text[0] == '`' || text[0] == '\'') {
+				text = text[1 : len(text)-1]
+			}
+			row = append(row, text)
+			p.next(false)
+			if p.Text == "," {
+				p.next(true)
+			}
+			if p.Token == c.EOF || p.Token == c.NEWLINE {
+				break
+			}
+		}
+		if !test(row) {
+			ok = false
+			fmt.Println("\tFAILED: ", raw)
+		}
+		p.next(true)
+	}
+	if ok {
+		fmt.Println("\tok")
+	}
+	return ok
+}
+
+func (p *parser) match(expected c.Token, skip bool) {
+	if p.Token != expected && p.Keyword != expected {
+		panic("syntax error on " + p.Text)
+	}
+	p.next(skip)
+}
+
+func (p *parser) next(skip bool) {
+	for {
+		p.Item = p.lxr.Next()
+		switch p.Token {
+		case c.NEWLINE:
+			if !skip {
+				return
+			}
+		case c.WHITESPACE, c.COMMENT:
+			continue
+		default:
+			return
+		}
+	}
+}
+
+type testfn func([]string) bool
+
+var testmap = make(map[string]testfn)
+
+// Add is used to add test functions
+//
+// Other packages normally add tests in their init
+// or by e.g. var _ = ptest.Add(...)
+func Add(name string, fn testfn) string {
+	testmap[name] = fn
+	return name
+}
