@@ -10,13 +10,13 @@ import (
 )
 
 var asm = []string{
-	"return", "pop", "dup", "dup2", "int", "value",
+	"return", "pop", "dup", "dup2", "dupx2", "int", "value",
 	"is", "isnt", "match", "matchnot", "lt", "lte", "gt", "gte",
 	"add", "sub", "cat", "mul", "div", "mod",
 	"lshift", "rshift", "bitor", "bitand", "bitxor",
 	"bitnot", "not", "uplus", "uminus",
 	"load", "store", "dyload", "get", "put", "global",
-	"true", "false",
+	"true", "false", "zero", "one", "emptystr",
 }
 
 func init() {

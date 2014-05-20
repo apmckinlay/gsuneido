@@ -26,9 +26,15 @@ var tdir string
 func testdir() string {
 	if tdir == "" {
 		// first time, read and cache
-		src, err := ioutil.ReadFile("../../ptestdir.txt")
+		src, err := ioutil.ReadFile("ptestdir.txt")
 		if err != nil {
-			panic("can't read ../../ptestdir.txt")
+			src, err = ioutil.ReadFile("../ptestdir.txt")
+			if err != nil {
+				src, err = ioutil.ReadFile("../../ptestdir.txt")
+				if err != nil {
+					panic("can't find ptestdir.txt")
+				}
+			}
 		}
 		tdir = strings.TrimSpace(string(src))
 	}
@@ -64,15 +70,15 @@ func (p *parser) run1() bool {
 		fmt.Println("\tMISSING")
 		test = func(args []string) bool { return true }
 	}
+	n := 0
 	ok := true
 	for p.Token != c.EOF && p.Token != c.AT {
 		row := []string{}
-		raw := []string{} // for error messages
 		for {
 			text := p.Text
-			raw = append(raw, text)
-			if len(text) >= 2 && (text[0] == '"' || text[0] == '`' || text[0] == '\'') {
-				text = text[1 : len(text)-1]
+			if p.Token == c.SUB || p.Token == c.ADD {
+				p.next(false)
+				text += p.Text
 			}
 			row = append(row, text)
 			p.next(false)
@@ -85,12 +91,13 @@ func (p *parser) run1() bool {
 		}
 		if !test(row) {
 			ok = false
-			fmt.Println("\tFAILED: ", raw)
+			fmt.Println("\tFAILED: ", row)
 		}
 		p.next(true)
+		n++
 	}
 	if ok {
-		fmt.Println("\tok")
+		fmt.Printf("\tok (%d)\n", n)
 	}
 	return ok
 }

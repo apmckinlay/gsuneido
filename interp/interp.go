@@ -2,8 +2,6 @@
 package interp
 
 import (
-	"fmt"
-
 	"github.com/apmckinlay/gsuneido/interp/globals"
 	"github.com/apmckinlay/gsuneido/util/varint"
 	. "github.com/apmckinlay/gsuneido/value"
@@ -14,9 +12,9 @@ func (t *Thread) Interp() Value {
 	code := fr.fn.Code
 	sp := len(t.stack)
 	for fr.ip < len(code) {
-		fmt.Println("stack:", t.stack[sp:])
-		_, da := Disasm1(fr.fn, fr.ip)
-		fmt.Printf("%d: %s\n", fr.ip, da)
+		// fmt.Println("stack:", t.stack[sp:])
+		// _, da := Disasm1(fr.fn, fr.ip)
+		// fmt.Printf("%d: %s\n", fr.ip, da)
 		op := code[fr.ip]
 		fr.ip++
 		switch op {
@@ -26,10 +24,18 @@ func (t *Thread) Interp() Value {
 			t.Push(t.Top())
 		case DUP2:
 			t.Dup2() // dup top two, used to dup member lvalues
+		case DUPX2:
+			t.Dupx2() // dup top under next two, used for post inc/dec
 		case TRUE:
 			t.Push(True)
 		case FALSE:
 			t.Push(False)
+		case ZERO:
+			t.Push(SuInt(0))
+		case ONE:
+			t.Push(SuInt(1))
+		case EMPTYSTR:
+			t.Push(SuStr(""))
 		case INT:
 			t.Push(SuInt(fetchInt(code, &fr.ip)))
 		case VALUE:

@@ -86,17 +86,17 @@ func (cg *cgen) expr(ast Ast) {
 		cg.store(ref)
 	case INC, DEC:
 		ref := cg.lvalue(ast.first())
+		cg.dupLvalue(ref)
 		cg.load(ref)
-		cg.emit(i.INT)
-		cg.emitInt(1)
+		cg.emit(i.ONE)
 		cg.emit(i.ADD + byte(ast.Token-INC))
 		cg.store(ref)
 	case POSTINC, POSTDEC:
 		ref := cg.lvalue(ast.first())
+		cg.dupLvalue(ref)
 		cg.load(ref)
-		cg.emit(i.DUP)
-		cg.emit(i.INT)
-		cg.emitInt(1)
+		cg.dupUnderLvalue(ref)
+		cg.emit(i.ONE)
 		cg.emit(i.ADD + byte(ast.Token-POSTINC))
 		cg.store(ref)
 		cg.emit(i.POP)
@@ -118,6 +118,12 @@ func (cg *cgen) emitValue(val value.Value) {
 		cg.emit(i.TRUE)
 	} else if val == value.False {
 		cg.emit(i.FALSE)
+	} else if val == value.SuInt(0) {
+		cg.emit(i.ZERO)
+	} else if val == value.SuInt(1) {
+		cg.emit(i.ONE)
+	} else if val == value.SuStr("") {
+		cg.emit(i.EMPTYSTR)
 	} else if si, ok := val.(value.SuInt); ok {
 		cg.emit(i.INT)
 		cg.emitInt(int(si))
@@ -198,6 +204,14 @@ func (cg *cgen) store(ref int) {
 func (cg *cgen) dupLvalue(ref int) {
 	if ref == MEM_REF {
 		cg.emit(i.DUP2)
+	}
+}
+
+func (cg *cgen) dupUnderLvalue(ref int) {
+	if ref == MEM_REF {
+		cg.emit(i.DUPX2)
+	} else {
+		cg.emit(i.DUP)
 	}
 }
 

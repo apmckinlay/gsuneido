@@ -27,7 +27,14 @@ func (t *Thread) Top() v.Value {
 }
 
 func (t *Thread) Dup2() {
-	t.stack = append(t.stack, t.stack[len(t.stack)-1], t.stack[len(t.stack)-2])
+	t.stack = append(t.stack, t.stack[len(t.stack)-2], t.stack[len(t.stack)-1])
+}
+
+func (t *Thread) Dupx2() {
+	n := len(t.stack)
+	t.stack = append(t.stack, nil)
+	copy(t.stack[n-2:], t.stack[n-3:])
+	t.stack[n-3] = t.Top()
 }
 
 // Call executes a SuFunc and returns the result.

@@ -5,6 +5,7 @@ const (
 	POP
 	DUP
 	DUP2
+	DUPX2
 	INT
 	VALUE
 	IS
@@ -38,4 +39,7 @@ const (
 	GLOBAL
 	TRUE
 	FALSE
+	ZERO
+	ONE
+	EMPTYSTR
 )
