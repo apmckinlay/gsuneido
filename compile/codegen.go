@@ -2,6 +2,7 @@ package compile
 
 import (
 	i "github.com/apmckinlay/gsuneido/interp"
+	"github.com/apmckinlay/gsuneido/interp/globals"
 	"github.com/apmckinlay/gsuneido/util/varint"
 	"github.com/apmckinlay/gsuneido/util/verify"
 	"github.com/apmckinlay/gsuneido/value"
@@ -147,10 +148,11 @@ func (cg *cgen) identifier(ast Ast) {
 		} else {
 			cg.emit(i.LOAD)
 		}
+		cg.emitUint(cg.name(ast.Text))
 	} else {
 		cg.emit(i.GLOBAL)
+		cg.emitUint(globals.NameNum(ast.Text))
 	}
-	cg.emitUint(cg.name(ast.Text))
 }
 
 const MEM_REF = -1

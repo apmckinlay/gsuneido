@@ -10,8 +10,11 @@ import (
 
 	"github.com/apmckinlay/gsuneido/compile"
 	"github.com/apmckinlay/gsuneido/interp"
+	"github.com/apmckinlay/gsuneido/interp/globals"
 	"github.com/apmckinlay/gsuneido/value"
 )
+
+var _ = globals.Add("Suneido", new(value.SuObject))
 
 func main() {
 	if len(os.Args) > 1 {

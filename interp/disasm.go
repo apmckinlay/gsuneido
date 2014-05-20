@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io"
 
+	"github.com/apmckinlay/gsuneido/interp/globals"
 	"github.com/apmckinlay/gsuneido/util/verify"
 	"github.com/apmckinlay/gsuneido/value"
 )
@@ -45,10 +46,12 @@ func Disasm1(fn *value.SuFunc, i int) (int, string) {
 	case VALUE:
 		v := fn.Values[fetchUint(fn.Code, &i)]
 		s += fmt.Sprintf(" %v", v)
-	case LOAD, STORE, DYLOAD, GLOBAL:
+	case LOAD, STORE, DYLOAD:
 		idx := fetchUint(fn.Code, &i)
-		varname := fn.Strings[idx]
-		s += " " + varname
+		s += " " + fn.Strings[idx]
+	case GLOBAL:
+		idx := fetchUint(fn.Code, &i)
+		s += " " + globals.NumName(int(idx))
 	}
 	return i, s
 }
