@@ -4,6 +4,7 @@ const (
 	RETURN = iota
 	POP
 	DUP
+	DUP2
 	INT
 	VALUE
 	IS
@@ -29,8 +30,12 @@ const (
 	NOT
 	UPLUS
 	UMINUS
-	STORE
 	LOAD
+	STORE
+	DYLOAD
+	GET
+	PUT
+	GLOBAL
 	TRUE
 	FALSE
 )

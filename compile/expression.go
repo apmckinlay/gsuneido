@@ -16,6 +16,8 @@ expression is used by both function and query parsers
 (with different builder's)
 */
 func expression(p *parser, b builder) T {
+	defer func(prev int) { p.nest = prev }(p.nest)
+	p.nest = 0
 	p.bld = b
 	return p.expr()
 }
@@ -134,7 +136,7 @@ func (p *parser) term() T {
 		p.next()
 	}
 	term := p.primary()
-	for p.Token == DOT || p.Token == L_BRACKET || p.Token == L_PAREN {
+	for p.Token == DOT || p.Token == L_BRACKET {
 		if p.Token == DOT {
 			dot := p.Item
 			p.nextSkipNL()

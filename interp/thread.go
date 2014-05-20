@@ -26,6 +26,10 @@ func (t *Thread) Top() v.Value {
 	return t.stack[len(t.stack)-1]
 }
 
+func (t *Thread) Dup2() {
+	t.stack = append(t.stack, t.stack[len(t.stack)-1], t.stack[len(t.stack)-2])
+}
+
 // Call executes a SuFunc and returns the result.
 // The arguments must be already on the stack as per the ArgSpec.
 // On return, the arguments are removed from the stack.

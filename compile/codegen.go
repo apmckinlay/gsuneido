@@ -3,57 +3,61 @@ package compile
 import (
 	i "github.com/apmckinlay/gsuneido/interp"
 	"github.com/apmckinlay/gsuneido/util/varint"
+	"github.com/apmckinlay/gsuneido/util/verify"
 	"github.com/apmckinlay/gsuneido/value"
 )
-
-// TODO fold constant expressions
 
 // codegen compiles a Function from an Ast
 func codegen(ast Ast) *value.SuFunc {
 	//fmt.Println("codegen", ast.String())
 	cg := cgen{}
-	cg.gen(ast)
-	cg.emit(i.RETURN)
+	cg.function(ast)
 	return &value.SuFunc{
 		Code:    cg.code,
 		Values:  cg.values,
-		Strings: cg.strings,
-		Nlocals: len(cg.strings), // ultimately WRONG!
+		Strings: cg.names,
+		Nlocals: len(cg.names),
 	}
 }
 
 type cgen struct {
-	code    []byte
-	values  []value.Value
-	strings []string
+	code   []byte
+	values []value.Value
+	names  []string
 }
 
-func (cg *cgen) gen(ast Ast) {
-	//fmt.Println("gen", ast.String())
+func (cg *cgen) function(ast Ast) {
+	verify.That(ast.Keyword == FUNCTION)
+	// TODO params
+	stmts := ast.second().Children
+	for si, stmt := range stmts {
+		cg.statement(stmt, si == len(stmts)-1)
+	}
+}
+
+func (cg *cgen) statement(ast Ast, lastStmt bool) {
 	switch ast.KeyTok() {
-	case FUNCTION:
-		cg.function(ast)
 	case RETURN:
 		if len(ast.Children) == 1 {
-			cg.gen(ast.first())
+			cg.expr(ast.first())
 		}
-		cg.emit(i.RETURN)
+		if !lastStmt {
+			cg.emit(i.RETURN)
+		}
 	case EXPRESSION:
-		cg.gen(ast.first())
-	case NUMBER:
-		cg.number(ast.Text)
-	case STRING:
-		cg.emit(i.VALUE)
-		i := cg.value(value.SuStr(ast.Text))
-		cg.emitUint(i)
-	case TRUE:
-		cg.emit(i.TRUE)
-	case FALSE:
-		cg.emit(i.FALSE)
+		cg.expr(ast.first())
+		if !lastStmt {
+			cg.emit(i.POP)
+		}
+	default:
+		panic("bad statement: " + ast.String())
+	}
+}
+
+func (cg *cgen) expr(ast Ast) {
+	switch ast.KeyTok() {
 	case VALUE:
-		cg.emit(i.VALUE)
-		i := cg.value(ast.value)
-		cg.emitUint(i)
+		cg.emitValue(ast.value)
 	case NOT:
 		cg.unop(ast, i.NOT)
 	case ADD:
@@ -66,15 +70,17 @@ func (cg *cgen) gen(ast Ast) {
 	case BITNOT:
 		cg.unop(ast, i.BITNOT)
 	case IDENTIFIER:
-		cg.rvalue(ast)
+		cg.identifier(ast)
 	case EQ:
-		cg.gen(ast.second())
-		cg.store(cg.lvalue(ast.first()))
+		ref := cg.lvalue(ast.first())
+		cg.expr(ast.second())
+		cg.store(ref)
 	case ADDEQ, SUBEQ, CATEQ, MULEQ, DIVEQ, MODEQ,
 		LSHIFTEQ, RSHIFTEQ, BITOREQ, BITANDEQ, BITXOREQ:
 		ref := cg.lvalue(ast.first())
+		cg.dupLvalue(ref)
 		cg.load(ref)
-		cg.gen(ast.second())
+		cg.expr(ast.second())
 		cg.emit(i.ADD + byte(ast.Token-ADDEQ))
 		cg.store(ref)
 	case INC, DEC:
@@ -93,34 +99,31 @@ func (cg *cgen) gen(ast Ast) {
 		cg.emit(i.ADD + byte(ast.Token-POSTINC))
 		cg.store(ref)
 		cg.emit(i.POP)
+	case DOT: // a.b
+		cg.expr(ast.first())
+		cg.emitValue(value.SuStr(ast.second().Text))
+		cg.emit(i.GET)
+	case L_BRACKET: // a[b]
+		cg.expr(ast.first())
+		cg.expr(ast.second())
+		cg.emit(i.GET)
 	default:
-		panic("not implemented" + ast.String())
+		panic("bad expression: " + ast.String())
 	}
 }
 
-func (cg *cgen) function(ast Ast) {
-	// TODO params
-	stmts := ast.second().Children
-	for si, stmt := range stmts {
-		cg.gen(stmt)
-		if si < len(stmts)-1 {
-			cg.emit(i.POP)
-		}
-	}
-	// TODO add return if that wasn't last statement
-}
-
-func (cg *cgen) number(s string) {
-	val, err := value.NumFromString(s)
-	if err != nil {
-		panic("invalid number: " + s)
-	}
-	if si, ok := val.(value.SuInt); ok {
+func (cg *cgen) emitValue(val value.Value) {
+	if val == value.True {
+		cg.emit(i.TRUE)
+	} else if val == value.False {
+		cg.emit(i.FALSE)
+	} else if si, ok := val.(value.SuInt); ok {
 		cg.emit(i.INT)
 		cg.emitInt(int(si))
 	} else {
 		cg.emit(i.VALUE)
-		cg.emitUint(cg.value(val))
+		vi := cg.value(val)
+		cg.emitUint(vi)
 	}
 }
 
@@ -137,51 +140,84 @@ func (cg *cgen) value(v value.Value) int {
 	return i
 }
 
-func (cg *cgen) rvalue(ast Ast) {
+func (cg *cgen) identifier(ast Ast) {
 	if isLocal(ast.Text) {
-		cg.emit(i.LOAD)
-		cg.emitUint(cg.local(ast.Text))
+		if ast.Text[0] == '_' {
+			cg.emit(i.DYLOAD)
+		} else {
+			cg.emit(i.LOAD)
+		}
 	} else {
-		panic("not implemented")
+		cg.emit(i.GLOBAL)
 	}
+	cg.emitUint(cg.name(ast.Text))
 }
+
+const MEM_REF = -1
 
 func (cg *cgen) lvalue(ast Ast) int {
 	if ast.Token == IDENTIFIER && isLocal(ast.Text) {
-		return cg.local(ast.Text)
+		return cg.name(ast.Text)
+	} else if ast.Token == DOT {
+		cg.expr(ast.first())
+		cg.emitValue(value.SuStr(ast.second().Text))
+		return MEM_REF
+	} else if ast.Token == L_BRACKET {
+		cg.expr(ast.first())
+		cg.expr(ast.second())
+		return MEM_REF
 	} else {
-		panic("not implemented")
+		panic("invalid lvalue: " + ast.String())
 	}
 }
 
 func (cg *cgen) load(ref int) {
-	cg.emit(i.LOAD)
-	cg.emitUint(ref)
+	if ref == MEM_REF {
+		cg.emit(i.GET)
+	} else {
+		if cg.names[ref][0] == '_' {
+			cg.emit(i.DYLOAD)
+		} else {
+			cg.emit(i.LOAD)
+		}
+		cg.emitUint(ref)
+	}
 }
 
 func (cg *cgen) store(ref int) {
-	cg.emit(i.STORE)
-	cg.emitUint(ref)
+	if ref == MEM_REF {
+		cg.emit(i.PUT)
+	} else {
+		cg.emit(i.STORE)
+		cg.emitUint(ref)
+	}
 }
 
+func (cg *cgen) dupLvalue(ref int) {
+	if ref == MEM_REF {
+		cg.emit(i.DUP2)
+	}
+}
+
+// includes dynamic
 func isLocal(s string) bool {
-	return 'a' <= s[0] && s[0] <= 'z'
+	return ('a' <= s[0] && s[0] <= 'z') || s[0] == '_'
 }
 
-// local returns the index for a local variable
-func (cg *cgen) local(s string) int {
-	for i, s2 := range cg.strings {
+// name returns the index for a name variable
+func (cg *cgen) name(s string) int {
+	for i, s2 := range cg.names {
 		if s == s2 {
 			return i
 		}
 	}
-	i := len(cg.strings)
+	i := len(cg.names)
 	// TODO intern to avoid ref to source
-	cg.strings = append(cg.strings, s)
+	cg.names = append(cg.names, s)
 	return i
 }
 
-// ubinop is called for ops that can be unary or binary
+// ubinop is for ops that can be unary or binary (add, sub)
 func (cg *cgen) ubinop(ast Ast, uop, bop byte) {
 	if len(ast.Children) == 1 {
 		cg.unop(ast, uop)
@@ -191,16 +227,17 @@ func (cg *cgen) ubinop(ast Ast, uop, bop byte) {
 }
 
 func (cg *cgen) unop(ast Ast, op byte) {
-	cg.gen(ast.first())
+	cg.expr(ast.first())
 	cg.emit(op)
 }
 
 func (cg *cgen) binop(ast Ast, op byte) {
-	cg.gen(ast.first())
-	cg.gen(ast.second())
+	cg.expr(ast.first())
+	cg.expr(ast.second())
 	cg.emit(op)
 }
 
+// emit is used to append an op code
 func (cg *cgen) emit(b ...byte) {
 	// TODO detect pop after side effect free instruction
 	cg.code = append(cg.code, b...)

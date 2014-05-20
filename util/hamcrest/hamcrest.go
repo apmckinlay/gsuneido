@@ -82,7 +82,7 @@ func Equals(expected interface{}) Tester {
 		if reflect.DeepEqual(expected, actual) {
 			return ""
 		}
-		return fmt.Sprintf("expected %v but got %v", expected, actual)
+		return fmt.Sprintf("expected: %#v but got: %#v", expected, actual)
 	}
 }
 

@@ -9,43 +9,46 @@ import (
 )
 
 var asm = []string{
-	"return", "pop", "dup", "int", "value",
+	"return", "pop", "dup", "dup2", "int", "value",
 	"is", "isnt", "match", "matchnot", "lt", "lte", "gt", "gte",
 	"add", "sub", "cat", "mul", "div", "mod",
 	"lshift", "rshift", "bitor", "bitand", "bitxor",
 	"bitnot", "not", "uplus", "uminus",
-	"store", "load", "true", "false",
+	"load", "store", "dyload", "get", "put", "global",
+	"true", "false",
 }
 
 func init() {
-	verify.That(asm[LOAD] == "load")
+	verify.That(asm[FALSE] == "false")
 }
 
 func Disasm(w io.Writer, fn *value.SuFunc) {
+	var s string
 	for i := 0; i < len(fn.Code); {
-		i = disasm1(w, fn, i)
+		j := i
+		i, s = Disasm1(fn, i)
+		fmt.Fprintf(w, "%d: %s\n", j, s)
 	}
 }
 
-func disasm1(w io.Writer, fn *value.SuFunc, i int) int {
+func Disasm1(fn *value.SuFunc, i int) (int, string) {
 	op := fn.Code[i]
 	i++
 	if int(op) >= len(asm) {
-		fmt.Fprintln(w, "bad op", op)
+		return i, fmt.Sprintf("bad op %d", op)
 	}
-	fmt.Fprintf(w, "%d %s ", i, asm[op])
+	s := asm[op]
 	switch op {
 	case INT:
 		n := fetchInt(fn.Code, &i)
-		fmt.Fprintf(w, "%d", n)
+		s += fmt.Sprintf(" %d", n)
 	case VALUE:
 		v := fn.Values[fetchUint(fn.Code, &i)]
-		fmt.Fprintf(w, "%v", v)
-	case STORE, LOAD:
+		s += fmt.Sprintf(" %v", v)
+	case LOAD, STORE, DYLOAD, GLOBAL:
 		idx := fetchUint(fn.Code, &i)
 		varname := fn.Strings[idx]
-		fmt.Fprintf(w, "%s (%d)", varname, idx)
+		s += " " + varname
 	}
-	fmt.Fprintf(w, "\n")
-	return i
+	return i, s
 }

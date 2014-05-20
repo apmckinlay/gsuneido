@@ -75,7 +75,7 @@ func (a *Ast) tokval(buf *bytes.Buffer) {
 }
 
 func ast(item Item, children ...Ast) Ast {
-	return Ast{Item: item, Children: children}
+	return fold(item, nil, children)
 }
 
 func astBuilder(item Item, nodes ...T) T {
@@ -90,7 +90,7 @@ func astBuilder(item Item, nodes ...T) T {
 	for _, node := range nodes {
 		children = append(children, node.(Ast))
 	}
-	return Ast{Item: item, value: val, Children: children}
+	return fold(item, val, children)
 }
 
 func (a *Ast) first() Ast {
@@ -99,4 +99,116 @@ func (a *Ast) first() Ast {
 
 func (a *Ast) second() Ast {
 	return a.Children[1]
+}
+
+func fold(item Item, val value.Value, children []Ast) (x Ast) {
+	//defer func() { fmt.Println("fold:", x) }()
+	ast := Ast{item, val, children}
+	if ast.isConstant() {
+		return valAst(ast.toVal())
+	}
+	if len(children) == 0 {
+		return ast
+	}
+	for _, c := range children {
+		if !c.isConstant() {
+			return ast
+		}
+	}
+	switch item.KeyTok() {
+	case ADD:
+		val = ast.ubop(value.Uplus, value.Add)
+	case SUB:
+		val = ast.ubop(value.Uminus, value.Sub)
+	case IS:
+		val = ast.binop(value.Is)
+	case ISNT:
+		val = ast.binop(value.Isnt)
+	case LT:
+		val = ast.binop(value.Lt)
+	case LTE:
+		val = ast.binop(value.Lte)
+	case GT:
+		val = ast.binop(value.Gt)
+	case GTE:
+		val = ast.binop(value.Gte)
+	case CAT:
+		val = ast.binop(value.Cat)
+	case MUL:
+		val = ast.binop(value.Mul)
+	case DIV:
+		val = ast.binop(value.Div)
+	case MOD:
+		val = ast.binop(value.Mod)
+	case LSHIFT:
+		val = ast.binop(value.Lshift)
+	case RSHIFT:
+		val = ast.binop(value.Rshift)
+	case BITOR:
+		val = ast.binop(value.Bitor)
+	case BITAND:
+		val = ast.binop(value.Bitand)
+	case BITXOR:
+		val = ast.binop(value.Bitxor)
+	case BITNOT:
+		val = ast.unop(value.Bitnot)
+	case NOT:
+		val = ast.unop(value.Not)
+	default:
+		return ast
+	}
+	return valAst(val)
+}
+
+type uopfn func(value.Value) value.Value
+type bopfn func(value.Value, value.Value) value.Value
+
+func (a *Ast) unop(uop uopfn) value.Value {
+	return uop(a.Children[0].toVal())
+}
+
+func (a *Ast) binop(bop bopfn) value.Value {
+	return bop(a.Children[0].toVal(), a.Children[1].toVal())
+}
+
+func (a *Ast) ubop(uop uopfn, bop bopfn) value.Value {
+	if len(a.Children) == 1 {
+		return uop(a.Children[0].toVal())
+	} else {
+		return bop(a.Children[0].toVal(), a.Children[1].toVal())
+	}
+}
+
+func valAst(val value.Value) Ast {
+	return Ast{Item: Item{Token: VALUE}, value: val}
+}
+
+func (a *Ast) isConstant() bool {
+	switch a.KeyTok() {
+	case NUMBER, STRING, TRUE, FALSE, VALUE:
+		return true
+	default:
+		return false
+	}
+}
+
+func (a *Ast) toVal() value.Value {
+	switch a.KeyTok() {
+	case NUMBER:
+		val, err := value.NumFromString(a.Text)
+		if err != nil {
+			panic("invalid number: " + a.Text)
+		}
+		return val
+	case STRING:
+		return value.SuStr(a.Text)
+	case TRUE:
+		return value.True
+	case FALSE:
+		return value.False
+	case VALUE:
+		return a.value
+	default:
+		panic("bad toVal")
+	}
 }

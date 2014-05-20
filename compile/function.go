@@ -54,11 +54,13 @@ func (p *parser) returnStmt() Ast {
 	case NEWLINE, SEMICOLON, R_CURLY:
 		return ast(item)
 	}
-	return ast(item, p.exprStmt())
+	return ast(item, p.exprAst())
 }
 
 func (p *parser) exprStmt() Ast {
-	defer func(prev int) { p.nest = prev }(p.nest)
-	p.nest = 0
-	return ast(Item{Token: EXPRESSION}, expression(p, astBuilder).(Ast))
+	return ast(Item{Token: EXPRESSION}, p.exprAst())
+}
+
+func (p *parser) exprAst() Ast {
+	return expression(p, astBuilder).(Ast)
 }

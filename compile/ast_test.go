@@ -3,6 +3,10 @@ package compile
 import (
 	"fmt"
 	"strings"
+	"testing"
+
+	. "github.com/apmckinlay/gsuneido/util/hamcrest"
+	"github.com/apmckinlay/gsuneido/value"
 )
 
 func ExampleAst_String() {
@@ -38,4 +42,9 @@ func ExampleAst_String() {
 	//         123
 	//         verylongverylongverylongverylongverylongverylongverylongverylongverylongverylong)
 	//     verylongverylongverylongverylongverylongverylongverylongverylongverylongverylong)
+}
+
+func TestFold(t *testing.T) {
+	Assert(t).That(fold(Item{Token: IDENTIFIER, Keyword: TRUE}, nil, nil),
+		Equals(Ast{Item: Item{Token: VALUE}, value: value.True}))
 }

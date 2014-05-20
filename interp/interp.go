@@ -3,7 +3,6 @@ package interp
 
 import (
 	"fmt"
-	"os"
 
 	"github.com/apmckinlay/gsuneido/util/varint"
 	. "github.com/apmckinlay/gsuneido/value"
@@ -13,9 +12,10 @@ func (t *Thread) Interp() Value {
 	fr := &t.frames[len(t.frames)-1]
 	code := fr.fn.Code
 	sp := len(t.stack)
-	for {
+	for fr.ip < len(code) {
 		fmt.Println("stack:", t.stack[sp:])
-		disasm1(os.Stdout, fr.fn, fr.ip)
+		_, da := Disasm1(fr.fn, fr.ip)
+		fmt.Printf("%d: %s\n", fr.ip, da)
 		op := code[fr.ip]
 		fr.ip++
 		switch op {
@@ -23,6 +23,8 @@ func (t *Thread) Interp() Value {
 			t.Pop()
 		case DUP:
 			t.Push(t.Top())
+		case DUP2:
+			t.Dup2() // dup top two, used to dup member lvalues
 		case TRUE:
 			t.Push(True)
 		case FALSE:
@@ -35,6 +37,21 @@ func (t *Thread) Interp() Value {
 			t.Push(t.load(fr, fetchUint(code, &fr.ip)))
 		case STORE:
 			fr.locals[fetchUint(code, &fr.ip)] = t.Top()
+		case DYLOAD:
+			i := fetchUint(code, &fr.ip)
+			if fr.locals[i] == nil {
+				t.dyload(fr, i)
+			}
+			t.Push(fr.locals[i])
+		case GET:
+			m := t.Pop()
+			ob := t.Pop()
+			t.Push(ob.Get(m))
+		case PUT:
+			val := t.Pop()
+			m := t.Pop()
+			ob := t.Pop()
+			ob.Put(m, val)
 		case IS:
 			t.binop(Is)
 		case ISNT:
@@ -78,13 +95,13 @@ func (t *Thread) Interp() Value {
 		case UMINUS:
 			t.unop(Uminus)
 		case RETURN:
-			if len(t.stack) > sp {
-				return t.Pop()
-			}
-			return nil
+			break
 		default:
 			panic("invalid op code")
 		}
+	}
+	if len(t.stack) > sp {
+		return t.Pop()
 	}
 	return nil
 }
@@ -95,6 +112,20 @@ func (t *Thread) load(fr *Frame, idx uint32) Value {
 		panic("uninitialized variable: " + fr.fn.Strings[idx])
 	}
 	return val
+}
+
+func (t *Thread) dyload(fr *Frame, idx uint32) {
+	name := fr.fn.Strings[idx]
+	for i := len(t.frames) - 1; i > 0; i-- {
+		fr2 := t.frames[i]
+		for j, s := range fr2.fn.Strings {
+			if s == name {
+				fr.locals[idx] = fr2.locals[j]
+				return
+			}
+		}
+	}
+	panic("uninitialized variable: " + name)
 }
 
 func (t *Thread) unop(op func(Value) Value) {
