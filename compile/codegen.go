@@ -60,16 +60,22 @@ func (cg *cgen) expr(ast Ast) {
 	case VALUE:
 		cg.emitValue(ast.value)
 	case NOT:
-		cg.unop(ast, i.NOT)
+		cg.unary(ast, i.NOT)
 	case ADD:
-		cg.ubinop(ast, i.UPLUS, i.ADD)
+		if len(ast.Children) == 1 {
+			cg.unary(ast, i.UPLUS)
+		} else {
+			cg.nary(ast, i.ADD)
+		}
 	case SUB:
-		cg.ubinop(ast, i.UMINUS, i.SUB)
+		cg.unary(ast, i.UMINUS) // binary sub handled by add
+	case MUL: // also handles div
+		cg.nary(ast, i.MUL)
 	case IS, ISNT, MATCH, MATCHNOT, LT, LTE, GT, GTE,
-		CAT, MUL, DIV, MOD, LSHIFT, RSHIFT, BITOR, BITAND, BITXOR:
-		cg.binop(ast, i.IS+byte(ast.KeyTok()-IS))
+		CAT, MOD, LSHIFT, RSHIFT, BITOR, BITAND, BITXOR:
+		cg.nary(ast, i.IS+byte(ast.KeyTok()-IS))
 	case BITNOT:
-		cg.unop(ast, i.BITNOT)
+		cg.unary(ast, i.BITNOT)
 	case IDENTIFIER:
 		cg.identifier(ast)
 	case EQ:
@@ -233,26 +239,21 @@ func (cg *cgen) name(s string) int {
 	return i
 }
 
-// ubinop is for ops that can be unary or n-ary (add, sub)
-func (cg *cgen) ubinop(ast Ast, uop, bop byte) {
-	if len(ast.Children) == 1 {
-		cg.unop(ast, uop)
-	} else {
-		cg.binop(ast, bop)
-	}
-}
-
-func (cg *cgen) unop(ast Ast, op byte) {
+func (cg *cgen) unary(ast Ast, op byte) {
+	verify.That(len(ast.Children) == 1)
 	cg.expr(ast.first())
 	cg.emit(op)
 }
 
-func (cg *cgen) binop(ast Ast, op byte) {
+func (cg *cgen) nary(ast Ast, op byte) {
 	cg.expr(ast.first())
 	for _, a := range ast.Children[1:] {
 		if op == i.ADD && a.Token == SUB && len(a.Children) == 1 {
 			cg.expr(a.first())
 			cg.emit(i.SUB)
+		} else if op == i.MUL && a.Token == DIV && len(a.Children) == 1 {
+			cg.expr(a.first())
+			cg.emit(i.DIV)
 		} else {
 			cg.expr(a)
 			cg.emit(op)

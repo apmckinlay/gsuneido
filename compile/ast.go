@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"strings"
 
+	"github.com/apmckinlay/gsuneido/util/verify"
 	"github.com/apmckinlay/gsuneido/value"
 )
 
@@ -116,9 +117,9 @@ func fold(item Item, val value.Value, children []Ast) (x Ast) {
 	}
 	switch item.KeyTok() {
 	case ADD:
-		return ast.nary(value.Add)
+		return ast.nary(value.Add, value.SuInt(0))
 	case SUB:
-		val = ast.ubop(value.Uminus, value.Sub)
+		val = ast.unop(value.Uminus)
 	case IS:
 		val = ast.binop(value.Is)
 	case ISNT:
@@ -134,9 +135,7 @@ func fold(item Item, val value.Value, children []Ast) (x Ast) {
 	case CAT:
 		val = ast.binop(value.Cat)
 	case MUL:
-		val = ast.binop(value.Mul)
-	case DIV:
-		val = ast.binop(value.Div)
+		return ast.nary(value.Mul, value.SuInt(1))
 	case MOD:
 		val = ast.binop(value.Mod)
 	case LSHIFT:
@@ -162,7 +161,8 @@ func fold(item Item, val value.Value, children []Ast) (x Ast) {
 func countConstant(children []Ast) int {
 	n := 0
 	for _, c := range children {
-		if c.isConstant() {
+		if c.isConstant() ||
+			(c.Token == DIV && c.Children[0].isConstant()) {
 			n++
 		}
 	}
@@ -173,6 +173,7 @@ type uopfn func(value.Value) value.Value
 type bopfn func(value.Value, value.Value) value.Value
 
 func (a *Ast) unop(uop uopfn) value.Value {
+	verify.That(len(a.Children) == 1)
 	return uop(a.Children[0].toVal())
 }
 
@@ -192,11 +193,13 @@ func (a *Ast) ubop(uop uopfn, bop bopfn) value.Value {
 	}
 }
 
-func (a *Ast) nary(bop bopfn) Ast {
-	var k value.Value = value.SuInt(0)
+func (a *Ast) nary(bop bopfn, identity value.Value) Ast {
+	var k value.Value = identity
 	i := 0
 	for _, c := range a.Children {
-		if c.isConstant() {
+		if c.Token == DIV && c.Children[0].isConstant() {
+			k = value.Div(k, c.Children[0].toVal())
+		} else if c.isConstant() {
 			k = bop(k, c.toVal())
 		} else {
 			a.Children[i] = c

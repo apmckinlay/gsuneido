@@ -33,11 +33,22 @@ func TestCodegen(t *testing.T) {
 	test("a", "load a")
 	test("_a", "dyload _a")
 	test("G", "global G")
+
 	test("a + b", "load a, load b, add")
 	test("a - b", "load a, load b, sub")
 	test("a + b + c", "load a, load b, add, load c, add")
 	test("a + b - c", "load a, load b, add, load c, sub")
 	test("a - b - c", "load a, load b, sub, load c, sub")
+
+	test("a * b", "load a, load b, mul")
+	test("a / b", "load a, load b, div")
+	test("a * b * c", "load a, load b, mul, load c, mul")
+	test("a * b / c", "load a, load b, mul, load c, div")
+	test("a / b / c", "load a, load b, div, load c, div")
+
+	test("a % b", "load a, load b, mod")
+	test("a % b % c", "load a, load b, mod, load c, mod")
+
 	test("a is true", "load a, true, is")
 	test("s = 'hello'", "value 'hello', store s")
 	test("_dyn = 123", "int 123, store _dyn")

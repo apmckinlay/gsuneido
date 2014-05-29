@@ -107,6 +107,7 @@ func (p *parser) catExpr() T {
 	return x
 }
 
+// e.g. a + b - c + d => (+ a b (- c) d)
 func (p *parser) addExpr() T {
 	list := []T{p.mulExpr()}
 	for p.Token == ADD || p.Token == SUB {
@@ -124,15 +125,29 @@ func (p *parser) addExpr() T {
 	return p.bld(Item{Token: ADD, Text: "+"}, list...)
 }
 
-// TODO use a list to allow combining all constants (need reciprocal like uminus)
+// e.g. a * b / c d => (* a b (/ c) d)
 func (p *parser) mulExpr() T {
-	x := p.unary()
+	list := []T{p.unary()}
 	for p.Token == MUL || p.Token == DIV || p.Token == MOD {
 		it := p.Item
 		p.nextSkipNL()
-		x = p.bld(it, x, p.unary())
+		next := p.unary()
+		switch it.Token {
+		case MUL:
+			list = append(list, next)
+		case DIV:
+			list = append(list, p.bld(it, next))
+		case MOD:
+			if len(list) > 1 {
+				list = []T{p.bld(Item{Token: MUL, Text: "*"}, list...)}
+			}
+			list[0] = p.bld(it, list[0], next)
+		}
 	}
-	return x
+	if len(list) == 1 {
+		return list[0]
+	}
+	return p.bld(Item{Token: MUL, Text: "*"}, list...)
 }
 
 func (p *parser) unary() T {
