@@ -436,9 +436,6 @@ func mul10safe(n uint64) bool {
 	return (n & HI4) == 0
 }
 
-// BUG rounds incorrectly if used repeatedly
-// e.g. 123.456 will round to 124
-
 // NOTE: may lose precision and round
 // returns false only if coef is 0
 func (dn *Dnum) shiftRight(roundup *bool) bool {
@@ -479,6 +476,10 @@ func usub(x, y Dnum) Dnum {
 func Mul(x, y Dnum) Dnum {
 	sign := x.sign ^ y.sign
 	switch {
+	case x == One:
+		return y
+	case y == One:
+		return x
 	case x == Zero || y == Zero:
 		return Zero
 	case x.IsInf() || y.IsInf():
@@ -488,9 +489,6 @@ func Mul(x, y Dnum) Dnum {
 	y.minCoef()
 	if bits.Nlz(x.coef)+bits.Nlz(y.coef) >= 64 {
 		// coef won't overflow
-		if int(x.exp)+int(y.exp) >= expInf {
-			return result(0, sign, expInf)
-		}
 		return result(x.coef*y.coef, sign, int(x.exp)+int(y.exp))
 	}
 	// drop 5 least significant bits off x and y
@@ -500,11 +498,11 @@ func Mul(x, y Dnum) Dnum {
 	// and multiply separately guaranteed not to overflow
 	xlo, xhi := x.split()
 	ylo, yhi := y.split()
-	exp := x.exp + y.exp
-	r1 := result(xlo*ylo, sign, int(exp))
-	r2 := result(xlo*yhi, sign, int(exp)+9)
-	r3 := result(xhi*ylo, sign, int(exp)+9)
-	r4 := result(xhi*yhi, sign, int(exp)+18)
+	exp := int(x.exp) + int(y.exp)
+	r1 := result(xlo*ylo, sign, exp)
+	r2 := result(xlo*yhi, sign, exp+9)
+	r3 := result(xhi*ylo, sign, exp+9)
+	r4 := result(xhi*yhi, sign, exp+18)
 	return Add(r1, Add(r2, Add(r3, r4)))
 }
 
@@ -543,6 +541,8 @@ func (dn *Dnum) split() (lo, hi uint64) {
 func Div(x, y Dnum) Dnum {
 	sign := x.sign ^ y.sign
 	switch {
+	case y == One:
+		return x
 	case x == Zero:
 		return Zero
 	case y == Zero || x.IsInf():
@@ -550,64 +550,40 @@ func Div(x, y Dnum) Dnum {
 	case y.IsInf():
 		return Zero
 	}
-	if x.coef%y.coef == 0 {
-		// divides evenly
-		return result(x.coef/y.coef, sign, int(x.exp)-int(y.exp))
-	}
-	x.maxCoef()
-	y.minCoef()
-	if x.coef%y.coef == 0 {
-		// divides evenly
-		return result(x.coef/y.coef, sign, int(x.exp)-int(y.exp))
-	}
-	return longDiv(x, y)
+	coef, exp := div2(x.Coef(), y.Coef())
+	return result(coef, x.sign^y.sign, int(x.exp)-int(y.exp)+exp)
 }
 
-func longDiv(x, y Dnum) Dnum {
-	// shift y so it is just less than x
-	xdiv10 := x.coef / 10
-	for y.coef < xdiv10 && y.shiftLeft() {
+func div2(x, y uint64) (uint64, int) {
+	exp := 0
+	for y%10 == 0 {
+		y /= 10
+		exp--
 	}
-	exp := int(x.exp) - int(y.exp)
-	rem := x.coef
-	ycoef := y.coef
-	coef := uint64(0)
-	// each iteration calculates one digit of the result
-	for rem != 0 && mul10safe(coef) {
-		// shift so y is less than the remainder
-		for ycoef > rem {
-			rem, ycoef = shift(rem, ycoef)
-			coef *= 10
+	var z uint64
+	for x > 0 {
+		// shift x left as far as possible
+		for mul10safe(x) && mul10safe(z) {
+			x *= 10
+			z *= 10
 			exp--
 		}
-		if ycoef == 0 {
+		for x < y {
+			if !mul10safe(z) {
+				return z, exp
+			}
+			y /= 10
+			z *= 10
+			exp--
+		}
+		q := (x / y)
+		if q == 0 {
 			break
 		}
-		// subtract repeatedly
-		for rem >= ycoef {
-			rem -= ycoef
-			coef++
-		}
+		z += q
+		x %= y
 	}
-	// round final digit
-	if 2*rem >= ycoef {
-		coef++
-	}
-	return result(coef, x.sign^y.sign, exp)
-}
-
-// shift x left (preferably) or y right
-func shift(x, y uint64) (x2, y2 uint64) {
-	if mul10safe(x) {
-		x *= 10
-	} else {
-		roundup := (y % 10) >= 5
-		y /= 10
-		if roundup {
-			y++
-		}
-	}
-	return x, y
+	return z, exp
 }
 
 func (dn Dnum) IsInf() bool {
