@@ -96,17 +96,20 @@ func (p *parser) shiftExpr() T {
 	return x
 }
 
-// COULD use a list to allow combining any contiguous constants
+// e.g. a $ b $ c => ($ a b c)
 func (p *parser) catExpr() T {
-	x := p.addExpr()
+	list := []T{p.addExpr()}
 	for p.Token == CAT {
-		it := p.Item
 		p.nextSkipNL()
-		x = p.bld(it, x, p.addExpr())
+		list = append(list, p.addExpr())
 	}
-	return x
+	if len(list) == 1 {
+		return list[0]
+	}
+	return p.bld(Item{Token: CAT, Text: "$"}, list...)
 }
 
+// convert to a sequence of additions so it's commutative for folding
 // e.g. a + b - c + d => (+ a b (- c) d)
 func (p *parser) addExpr() T {
 	list := []T{p.mulExpr()}
@@ -125,6 +128,7 @@ func (p *parser) addExpr() T {
 	return p.bld(Item{Token: ADD, Text: "+"}, list...)
 }
 
+// convert mul & div to a sequence of mul so it's commutative for folding
 // e.g. a * b / c d => (* a b (/ c) d)
 func (p *parser) mulExpr() T {
 	list := []T{p.unary()}

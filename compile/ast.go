@@ -108,16 +108,12 @@ func fold(item Item, val value.Value, children []Ast) (x Ast) {
 	if ast.isConstant() {
 		return valAst(ast.toVal())
 	}
-	if len(children) == 0 {
-		return ast
-	}
-	cc := countConstant(children)
-	if cc != len(children) && cc < 2 {
+	if !ast.foldable() {
 		return ast
 	}
 	switch item.KeyTok() {
 	case ADD:
-		return ast.nary(value.Add, value.SuInt(0))
+		return ast.commutative(value.Add, value.SuInt(0))
 	case SUB:
 		val = ast.unop(value.Uminus)
 	case IS:
@@ -133,9 +129,9 @@ func fold(item Item, val value.Value, children []Ast) (x Ast) {
 	case GTE:
 		val = ast.binop(value.Gte)
 	case CAT:
-		val = ast.binop(value.Cat)
+		return ast.foldCat()
 	case MUL:
-		return ast.nary(value.Mul, value.SuInt(1))
+		return ast.commutative(value.Mul, value.SuInt(1))
 	case MOD:
 		val = ast.binop(value.Mod)
 	case LSHIFT:
@@ -158,6 +154,26 @@ func fold(item Item, val value.Value, children []Ast) (x Ast) {
 	return valAst(val)
 }
 
+func (a *Ast) foldable() bool {
+	if len(a.Children) == 0 {
+		return false
+	}
+	if a.Token == CAT {
+		prev := false
+		for _, c := range a.Children {
+			cur := c.isConstant()
+			if cur && prev {
+				return true
+			}
+			prev = cur
+		}
+		return false
+	} else {
+		cc := countConstant(a.Children)
+		return cc == len(a.Children) || cc >= 2
+	}
+}
+
 func countConstant(children []Ast) int {
 	n := 0
 	for _, c := range children {
@@ -178,6 +194,7 @@ func (a *Ast) unop(uop uopfn) value.Value {
 }
 
 func (a *Ast) binop(bop bopfn) value.Value {
+	verify.That(len(a.Children) == 2)
 	return bop(a.Children[0].toVal(), a.Children[1].toVal())
 }
 
@@ -193,8 +210,9 @@ func (a *Ast) ubop(uop uopfn, bop bopfn) value.Value {
 	}
 }
 
-func (a *Ast) nary(bop bopfn, identity value.Value) Ast {
-	var k value.Value = identity
+// for add and mul
+func (a *Ast) commutative(bop bopfn, identity value.Value) Ast {
+	k := identity
 	i := 0
 	for _, c := range a.Children {
 		if c.Token == DIV && c.Children[0].isConstant() {
@@ -211,6 +229,36 @@ func (a *Ast) nary(bop bopfn, identity value.Value) Ast {
 	}
 	a.Children[i] = valAst(k)
 	a.Children = a.Children[:i+1]
+	return *a
+}
+
+// cat is not commutative
+func (a *Ast) foldCat() Ast {
+	empty := value.SuStr("")
+	var k value.Value = empty
+	i := 0
+	for _, c := range a.Children {
+		if c.isConstant() {
+			k = value.Cat(k, c.toVal())
+		} else {
+			if k != empty {
+				k = value.SuStr(k.ToStr()) // ensure not Concat
+				a.Children[i] = valAst(k)
+				k = empty
+				i++
+			}
+			a.Children[i] = c
+			i++
+		}
+	}
+	k = value.SuStr(k.ToStr()) // ensure not Concat
+	if i == 0 {                // all constant
+		return valAst(k)
+	} else if k != empty {
+		a.Children[i] = valAst(k)
+		i++
+	}
+	a.Children = a.Children[:i]
 	return *a
 }
 
