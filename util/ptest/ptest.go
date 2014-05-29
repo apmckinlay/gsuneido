@@ -26,17 +26,18 @@ var tdir string
 func testdir() string {
 	if tdir == "" {
 		// first time, read and cache
-		src, err := ioutil.ReadFile("ptestdir.txt")
-		if err != nil {
-			src, err = ioutil.ReadFile("../ptestdir.txt")
-			if err != nil {
-				src, err = ioutil.ReadFile("../../ptestdir.txt")
-				if err != nil {
-					panic("can't find ptestdir.txt")
-				}
+		file := "ptestdir.txt"
+		for i := 0; ; i++ {
+			src, err := ioutil.ReadFile(file)
+			if err == nil {
+				tdir = strings.TrimSpace(string(src))
+				break
 			}
+			if i > 8 {
+				panic("can't find ptestdir.txt")
+			}
+			file = "../" + file
 		}
-		tdir = strings.TrimSpace(string(src))
 	}
 	return tdir
 }
