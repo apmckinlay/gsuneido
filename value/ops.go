@@ -58,6 +58,9 @@ func Mul(x Value, y Value) Value {
 }
 
 func Div(x Value, y Value) Value {
+	// TODO check if it's worth trying int division first
+	// i.e. if x and y are ints and x % y == 0, then return x / y
+	// could instrument existing suneido to see how common this is
 	return DnumToValue(dnum.Div(x.ToDnum(), y.ToDnum()))
 }
 
