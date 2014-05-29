@@ -110,14 +110,13 @@ func fold(item Item, val value.Value, children []Ast) (x Ast) {
 	if len(children) == 0 {
 		return ast
 	}
-	for _, c := range children {
-		if !c.isConstant() {
-			return ast
-		}
+	cc := countConstant(children)
+	if cc != len(children) && cc < 2 {
+		return ast
 	}
 	switch item.KeyTok() {
 	case ADD:
-		val = ast.ubop(value.Uplus, value.Add)
+		return ast.nary(value.Add)
 	case SUB:
 		val = ast.ubop(value.Uminus, value.Sub)
 	case IS:
@@ -160,6 +159,16 @@ func fold(item Item, val value.Value, children []Ast) (x Ast) {
 	return valAst(val)
 }
 
+func countConstant(children []Ast) int {
+	n := 0
+	for _, c := range children {
+		if c.isConstant() {
+			n++
+		}
+	}
+	return n
+}
+
 type uopfn func(value.Value) value.Value
 type bopfn func(value.Value, value.Value) value.Value
 
@@ -175,8 +184,31 @@ func (a *Ast) ubop(uop uopfn, bop bopfn) value.Value {
 	if len(a.Children) == 1 {
 		return uop(a.Children[0].toVal())
 	} else {
-		return bop(a.Children[0].toVal(), a.Children[1].toVal())
+		result := a.Children[0].toVal()
+		for _, c := range a.Children[1:] {
+			result = bop(result, c.toVal())
+		}
+		return result
 	}
+}
+
+func (a *Ast) nary(bop bopfn) Ast {
+	var k value.Value = value.SuInt(0)
+	i := 0
+	for _, c := range a.Children {
+		if c.isConstant() {
+			k = bop(k, c.toVal())
+		} else {
+			a.Children[i] = c
+			i++
+		}
+	}
+	if i == 0 { // all constant
+		return valAst(k)
+	}
+	a.Children[i] = valAst(k)
+	a.Children = a.Children[:i+1]
+	return *a
 }
 
 func valAst(val value.Value) Ast {

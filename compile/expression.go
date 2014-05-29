@@ -87,8 +87,19 @@ func (p *parser) cmpExpr() T {
 }
 
 func (p *parser) shiftExpr() T {
-	x := p.addExpr()
+	x := p.catExpr()
 	for p.Token == LSHIFT || p.Token == RSHIFT {
+		it := p.Item
+		p.nextSkipNL()
+		x = p.bld(it, x, p.catExpr())
+	}
+	return x
+}
+
+// COULD use a list to allow combining any contiguous constants
+func (p *parser) catExpr() T {
+	x := p.addExpr()
+	for p.Token == CAT {
 		it := p.Item
 		p.nextSkipNL()
 		x = p.bld(it, x, p.addExpr())
@@ -97,15 +108,23 @@ func (p *parser) shiftExpr() T {
 }
 
 func (p *parser) addExpr() T {
-	x := p.mulExpr()
-	for p.Token == ADD || p.Token == SUB || p.Token == CAT {
+	list := []T{p.mulExpr()}
+	for p.Token == ADD || p.Token == SUB {
 		it := p.Item
 		p.nextSkipNL()
-		x = p.bld(it, x, p.mulExpr())
+		next := p.mulExpr()
+		if it.Token == SUB {
+			next = p.bld(it, next)
+		}
+		list = append(list, next)
 	}
-	return x
+	if len(list) == 1 {
+		return list[0]
+	}
+	return p.bld(Item{Token: ADD, Text: "+"}, list...)
 }
 
+// TODO use a list to allow combining all constants (need reciprocal like uminus)
 func (p *parser) mulExpr() T {
 	x := p.unary()
 	for p.Token == MUL || p.Token == DIV || p.Token == MOD {

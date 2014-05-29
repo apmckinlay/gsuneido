@@ -233,7 +233,7 @@ func (cg *cgen) name(s string) int {
 	return i
 }
 
-// ubinop is for ops that can be unary or binary (add, sub)
+// ubinop is for ops that can be unary or n-ary (add, sub)
 func (cg *cgen) ubinop(ast Ast, uop, bop byte) {
 	if len(ast.Children) == 1 {
 		cg.unop(ast, uop)
@@ -249,8 +249,15 @@ func (cg *cgen) unop(ast Ast, op byte) {
 
 func (cg *cgen) binop(ast Ast, op byte) {
 	cg.expr(ast.first())
-	cg.expr(ast.second())
-	cg.emit(op)
+	for _, a := range ast.Children[1:] {
+		if op == i.ADD && a.Token == SUB && len(a.Children) == 1 {
+			cg.expr(a.first())
+			cg.emit(i.SUB)
+		} else {
+			cg.expr(a)
+			cg.emit(op)
+		}
+	}
 }
 
 // emit is used to append an op code
