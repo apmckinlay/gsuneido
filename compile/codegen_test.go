@@ -74,4 +74,9 @@ func TestCodegen(t *testing.T) {
 	test("a ? b : c", "load a, qmark 10, load b, jump 12, load c")
 
 	test("a in (4,5,6)", "load a, int 4, in 15, int 5, in 15, int 6, is")
+
+	test("while (a) b", "jump 6, load b, pop, load a, tjump 3")
+
+	test("if (a) b", "load a, fjump 8, load b, pop")
+	test("if (a) b else c", "load a, fjump 11, load b, pop, jump 14, load c, pop")
 }

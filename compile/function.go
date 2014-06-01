@@ -42,9 +42,40 @@ func (p *parser) statement() Ast {
 	switch p.KeyTok() {
 	case RETURN:
 		return p.returnStmt()
+	case IF:
+		return p.ifStmt()
+	case WHILE:
+		return p.whileStmt()
 	default:
 		return p.exprStmt()
 	}
+}
+
+func (p *parser) ifStmt() Ast {
+	it, expr := p.ctrlExpr()
+	t := p.statement()
+	if p.Keyword == ELSE {
+		p.nextSkipNL()
+		f := p.statement()
+		return ast(it, expr, t, f)
+	}
+	return ast(it, expr, t)
+}
+
+func (p *parser) whileStmt() Ast {
+	it, expr := p.ctrlExpr()
+	body := p.statement()
+	return ast(it, expr, body)
+}
+
+func (p *parser) ctrlExpr() (Item, Ast) {
+	it := p.Item
+	p.nextSkipNL()
+	expr := p.exprAst()
+	if p.Token == NEWLINE {
+		p.nextSkipNL()
+	}
+	return it, expr
 }
 
 func (p *parser) returnStmt() Ast {

@@ -66,3 +66,20 @@ func TestParseExpression(t *testing.T) {
 
 	test("a in (1,2,3)", "(in a 1 2 3)")
 }
+
+func TestParseStatement(t *testing.T) {
+	test := func(src string, expected string) {
+		ast := ParseFunction("function () {\n" + src + "\n}")
+		ast = ast.second()
+		s := ast.String()
+		s = s[7 : len(s)-1]
+		Assert(t).That(s, Equals(expected))
+	}
+	test("while (a) { b }", "(while a (STMTS (EXPR b)))")
+	test("while a { b }", "(while a (STMTS (EXPR b)))")
+	test("while (a)\nb", "(while a (EXPR b))")
+	test("while a\nb", "(while a (EXPR b))")
+
+	test("if (a) b", "(if a (EXPR b))")
+	test("if (a) b else c", "(if a (EXPR b) (EXPR c))")
+}

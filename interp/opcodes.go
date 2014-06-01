@@ -46,6 +46,8 @@ const (
 	AND
 	BOOL
 	Q_MARK
-	JUMP
 	IN
+	JUMP
+	TJUMP
+	FJUMP
 )

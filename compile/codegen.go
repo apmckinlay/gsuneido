@@ -38,6 +38,10 @@ func (cg *cgen) function(ast Ast) {
 
 func (cg *cgen) statement(ast Ast, lastStmt bool) {
 	switch ast.KeyTok() {
+	case STATEMENTS:
+		for _, a := range ast.Children {
+			cg.statement(a, lastStmt)
+		}
 	case RETURN:
 		if len(ast.Children) == 1 {
 			cg.expr(ast.first())
@@ -50,9 +54,37 @@ func (cg *cgen) statement(ast Ast, lastStmt bool) {
 		if !lastStmt {
 			cg.emit(i.POP)
 		}
+	case IF:
+		cg.ifStmt(ast)
+	case WHILE:
+		cg.whileStmt(ast)
+	// TODO break, continue
 	default:
 		panic("bad statement: " + ast.String())
 	}
+}
+
+func (cg *cgen) ifStmt(ast Ast) {
+	cg.expr(ast.first())
+	f := cg.emitJump(i.FJUMP, -1)
+	cg.statement(ast.second(), false)
+	if len(ast.Children) == 3 {
+		end := cg.emitJump(i.JUMP, -1)
+		cg.placeLabel(f)
+		cg.statement(ast.third(), false)
+		cg.placeLabel(end)
+	} else {
+		cg.placeLabel(f)
+	}
+}
+
+func (cg *cgen) whileStmt(ast Ast) {
+	test := cg.emitJump(i.JUMP, -1)
+	loop := cg.label()
+	cg.statement(ast.second(), false)
+	cg.placeLabel(test)
+	cg.expr(ast.first())
+	cg.emitJump(i.TJUMP, loop-len(cg.code)-3)
 }
 
 func (cg *cgen) expr(ast Ast) {
@@ -115,38 +147,50 @@ func (cg *cgen) expr(ast Ast) {
 		cg.expr(ast.second())
 		cg.emit(i.GET)
 	case AND, OR:
-		label := -1
-		cg.expr(ast.first())
-		for _, a := range ast.Children[1:] {
-			label = cg.emitJump(tok2op[ast.Keyword], label)
-			cg.expr(a)
-		}
-		cg.emit(i.BOOL)
-		cg.placeLabel(label)
+		cg.andorExpr(ast)
 	case Q_MARK:
-		f, end := -1, -1
-		cg.expr(ast.first())
-		f = cg.emitJump(i.Q_MARK, f)
-		cg.expr(ast.second())
-		end = cg.emitJump(i.JUMP, end)
-		cg.placeLabel(f)
-		cg.expr(ast.third())
-		cg.placeLabel(end)
+		cg.qcExpr(ast)
 	case IN:
-		end := -1
-		cg.expr(ast.first())
-		for j, a := range ast.Children[1:] {
-			cg.expr(a)
-			if j < len(ast.Children)-2 {
-				end = cg.emitJump(i.IN, end)
-			} else {
-				cg.emit(i.IS)
-			}
-		}
-		cg.placeLabel(end)
+		cg.inExpr(ast)
 	default:
 		panic("bad expression: " + ast.String())
 	}
+}
+
+func (cg *cgen) andorExpr(ast Ast) {
+	label := -1
+	cg.expr(ast.first())
+	for _, a := range ast.Children[1:] {
+		label = cg.emitJump(tok2op[ast.Keyword], label)
+		cg.expr(a)
+	}
+	cg.emit(i.BOOL)
+	cg.placeLabel(label)
+}
+
+func (cg *cgen) qcExpr(ast Ast) {
+	f, end := -1, -1
+	cg.expr(ast.first())
+	f = cg.emitJump(i.Q_MARK, f)
+	cg.expr(ast.second())
+	end = cg.emitJump(i.JUMP, end)
+	cg.placeLabel(f)
+	cg.expr(ast.third())
+	cg.placeLabel(end)
+}
+
+func (cg *cgen) inExpr(ast Ast) {
+	end := -1
+	cg.expr(ast.first())
+	for j, a := range ast.Children[1:] {
+		cg.expr(a)
+		if j < len(ast.Children)-2 {
+			end = cg.emitJump(i.IN, end)
+		} else {
+			cg.emit(i.IS)
+		}
+	}
+	cg.placeLabel(end)
 }
 
 var tok2op = map[Token]byte{
@@ -314,6 +358,10 @@ func (cg *cgen) emitJump(op byte, label int) int {
 	adr := len(cg.code)
 	cg.emit(op, byte(label>>8), byte(label))
 	return adr
+}
+
+func (cg *cgen) label() int {
+	return len(cg.code)
 }
 
 func (cg *cgen) placeLabel(i int) {

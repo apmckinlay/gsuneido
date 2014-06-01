@@ -113,6 +113,18 @@ func (t *Thread) Interp() Value {
 			t.topbool()
 		case JUMP:
 			jump(code, &fr.ip)
+		case TJUMP:
+			if t.popbool() {
+				jump(code, &fr.ip)
+			} else {
+				fr.ip += 2
+			}
+		case FJUMP:
+			if !t.popbool() {
+				jump(code, &fr.ip)
+			} else {
+				fr.ip += 2
+			}
 		case AND:
 			if !t.topbool() {
 				jump(code, &fr.ip)
