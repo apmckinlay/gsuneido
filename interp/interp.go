@@ -109,6 +109,40 @@ func (t *Thread) Interp() Value {
 			t.unop(Uplus)
 		case UMINUS:
 			t.unop(Uminus)
+		case BOOL:
+			t.topbool()
+		case JUMP:
+			jump(code, &fr.ip)
+		case AND:
+			if !t.topbool() {
+				jump(code, &fr.ip)
+			} else {
+				fr.ip += 2
+				t.Pop()
+			}
+		case OR:
+			if t.topbool() {
+				jump(code, &fr.ip)
+			} else {
+				fr.ip += 2
+				t.Pop()
+			}
+		case Q_MARK:
+			if !t.popbool() {
+				jump(code, &fr.ip)
+			} else {
+				fr.ip += 2
+			}
+		case IN:
+			y := t.Pop()
+			x := t.Pop()
+			if x.Equals(y) {
+				t.Push(True)
+				jump(code, &fr.ip)
+			} else {
+				fr.ip += 2
+				t.Push(x)
+			}
 		case RETURN:
 			break
 		default:
@@ -119,6 +153,28 @@ func (t *Thread) Interp() Value {
 		return t.Pop()
 	}
 	return nil
+}
+
+func (t *Thread) topbool() bool {
+	switch t.Top() {
+	case True:
+		return true
+	case False:
+		return false
+	default:
+		panic("conditionals require true or false")
+	}
+}
+
+func (t *Thread) popbool() bool {
+	switch t.Pop() {
+	case True:
+		return true
+	case False:
+		return false
+	default:
+		panic("conditionals require true or false")
+	}
 }
 
 func (t *Thread) load(fr *Frame, idx uint32) Value {
@@ -162,4 +218,8 @@ func fetchInt(code []byte, ip *int) (i int32) {
 func fetchUint(code []byte, ip *int) (i uint32) {
 	i, *ip = varint.DecodeUint32(code, *ip)
 	return i
+}
+
+func jump(code []byte, ip *int) {
+	*ip += 2 + int(int16(uint16(code[*ip])<<8+uint16(code[*ip+1])))
 }

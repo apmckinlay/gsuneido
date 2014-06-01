@@ -27,13 +27,70 @@ type builder func(Item, ...T) T
 type T interface{}
 
 func (p *parser) expr() T {
-	return p.bitorExpr()
+	return p.qcExpr()
 }
 
-// TODO ?:
-// TODO and
-// TODO or
-// TODO in
+func (p *parser) qcExpr() T {
+	e := p.orExpr()
+	if p.Token != Q_MARK {
+		return e
+	}
+	it := p.Item
+	p.nest++
+	p.match(Q_MARK)
+	t := p.expr()
+	p.match(COLON)
+	p.nest--
+	f := p.expr()
+	return p.bld(it, e, t, f)
+}
+
+func (p *parser) orExpr() T {
+	x := p.andExpr()
+	if p.KeyTok() != OR {
+		return x
+	}
+	it := p.Item
+	list := []T{x}
+	for p.KeyTok() == OR {
+		p.nextSkipNL()
+		list = append(list, p.andExpr())
+	}
+	return p.bld(it, list...)
+}
+
+func (p *parser) andExpr() T {
+	x := p.inExpr()
+	if p.KeyTok() != AND {
+		return x
+	}
+	it := p.Item
+	list := []T{x}
+	for p.KeyTok() == AND {
+		p.nextSkipNL()
+		list = append(list, p.inExpr())
+	}
+	return p.bld(it, list...)
+}
+
+func (p *parser) inExpr() T {
+	x := p.bitorExpr()
+	if p.KeyTok() != IN {
+		return x
+	}
+	it := p.Item
+	p.next()
+	list := []T{x}
+	p.match(L_PAREN)
+	for p.Token != R_PAREN {
+		list = append(list, p.expr())
+		if p.Token == COMMA {
+			p.next()
+		}
+	}
+	p.match(R_PAREN)
+	return p.bld(it, list...)
+}
 
 func (p *parser) bitorExpr() T {
 	x := p.bitxorExpr()
@@ -98,15 +155,17 @@ func (p *parser) shiftExpr() T {
 
 // e.g. a $ b $ c => ($ a b c)
 func (p *parser) catExpr() T {
-	list := []T{p.addExpr()}
+	x := p.addExpr()
+	if p.Token != CAT {
+		return x
+	}
+	it := p.Item
+	list := []T{x}
 	for p.Token == CAT {
 		p.nextSkipNL()
 		list = append(list, p.addExpr())
 	}
-	if len(list) == 1 {
-		return list[0]
-	}
-	return p.bld(Item{Token: CAT, Text: "$"}, list...)
+	return p.bld(it, list...)
 }
 
 // convert to a sequence of additions so it's commutative for folding

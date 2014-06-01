@@ -42,4 +42,10 @@ const (
 	ZERO
 	ONE
 	EMPTYSTR
+	OR
+	AND
+	BOOL
+	Q_MARK
+	JUMP
+	IN
 )

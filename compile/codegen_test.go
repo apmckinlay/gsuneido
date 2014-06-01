@@ -66,4 +66,12 @@ func TestCodegen(t *testing.T) {
 
 	Assert(t).That(func() { codegen(ParseFunction("function () { G = 1 }")) },
 		Panics("invalid lvalue"))
+
+	test("a and b", "load a, and 8, load b, bool")
+	test("a or b", "load a, or 8, load b, bool")
+	test("a or b or c", "load a, or 13, load b, or 13, load c, bool")
+
+	test("a ? b : c", "load a, qmark 10, load b, jump 12, load c")
+
+	test("a in (4,5,6)", "load a, int 4, in 15, int 5, in 15, int 6, is")
 }

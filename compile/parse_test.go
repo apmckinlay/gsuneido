@@ -56,4 +56,13 @@ func TestParseExpression(t *testing.T) {
 	test("a = 123", "(= a 123)")
 	test("a += 123", "(+= a 123)")
 	test("+ - ! ~ x", "(+ (- (! (~ x))))")
+
+	test("a and b", "(and a b)")
+	test("a and b and c", "(and a b c)")
+	test("a or b", "(or a b)")
+	test("a or b or c", "(or a b c)")
+
+	test("a ? b : c", "(? a b c)")
+
+	test("a in (1,2,3)", "(in a 1 2 3)")
 }

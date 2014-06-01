@@ -114,9 +114,44 @@ func (cg *cgen) expr(ast Ast) {
 		cg.expr(ast.first())
 		cg.expr(ast.second())
 		cg.emit(i.GET)
+	case AND, OR:
+		label := -1
+		cg.expr(ast.first())
+		for _, a := range ast.Children[1:] {
+			label = cg.emitJump(tok2op[ast.Keyword], label)
+			cg.expr(a)
+		}
+		cg.emit(i.BOOL)
+		cg.placeLabel(label)
+	case Q_MARK:
+		f, end := -1, -1
+		cg.expr(ast.first())
+		f = cg.emitJump(i.Q_MARK, f)
+		cg.expr(ast.second())
+		end = cg.emitJump(i.JUMP, end)
+		cg.placeLabel(f)
+		cg.expr(ast.third())
+		cg.placeLabel(end)
+	case IN:
+		end := -1
+		cg.expr(ast.first())
+		for j, a := range ast.Children[1:] {
+			cg.expr(a)
+			if j < len(ast.Children)-2 {
+				end = cg.emitJump(i.IN, end)
+			} else {
+				cg.emit(i.IS)
+			}
+		}
+		cg.placeLabel(end)
 	default:
 		panic("bad expression: " + ast.String())
 	}
+}
+
+var tok2op = map[Token]byte{
+	AND: i.AND,
+	OR:  i.OR,
 }
 
 func (cg *cgen) emitValue(val value.Value) {
@@ -273,4 +308,24 @@ func (cg *cgen) emitUint(i int) {
 
 func (cg *cgen) emitInt(i int) {
 	cg.code = varint.EncodeInt32(int32(i), cg.code)
+}
+
+func (cg *cgen) emitJump(op byte, label int) int {
+	adr := len(cg.code)
+	cg.emit(op, byte(label>>8), byte(label))
+	return adr
+}
+
+func (cg *cgen) placeLabel(i int) {
+	var adr, next int
+	for ; i >= 0; i = next {
+		next = int(cg.target(i))
+		adr = len(cg.code) - (i + 3) // convert to relative offset
+		cg.code[i+1] = byte(adr >> 8)
+		cg.code[i+2] = byte(adr)
+	}
+}
+
+func (cg *cgen) target(i int) int16 {
+	return int16(uint16(cg.code[i+1])<<8 | uint16(cg.code[i+2]))
 }
