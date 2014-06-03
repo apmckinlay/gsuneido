@@ -175,6 +175,8 @@ func (t *Thread) Interp() Value {
 			}
 		case RETURN:
 			break
+		case THROW:
+			panic(t.Pop())
 		default:
 			panic("invalid op code")
 		}

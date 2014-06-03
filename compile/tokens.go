@@ -35,7 +35,6 @@ var tostring = map[Token]string{
 	NEWLINE:    "NEWLINE",
 
 	STATEMENTS: "STMTS",
-	EXPRESSION: "EXPR",
 	POSTINC:    "POSTINC",
 	POSTDEC:    "POSTDEC",
 }
@@ -184,7 +183,6 @@ const (
 	// for AST
 	PARAMS
 	STATEMENTS
-	EXPRESSION
 	POSTINC
 	POSTDEC
 	VALUE

@@ -51,20 +51,21 @@ func (cg *cgen) statement(ast Ast, lastStmt bool) {
 		if !lastStmt {
 			cg.emit(i.RETURN)
 		}
-	case EXPRESSION:
-		cg.expr(ast.first())
-		if !lastStmt {
-			cg.emit(i.POP)
-		}
 	case IF:
 		cg.ifStmt(ast)
 	case SWITCH:
 		cg.switchStmt(ast)
 	case WHILE:
 		cg.whileStmt(ast)
+	case THROW:
+		cg.expr(ast.first())
+		cg.emit(i.THROW)
 	// TODO break, continue
-	default:
-		panic("bad statement: " + ast.String())
+	default: // expression
+		cg.expr(ast)
+		if !lastStmt {
+			cg.emit(i.POP)
+		}
 	}
 }
 
@@ -105,7 +106,8 @@ func (cg *cgen) switchStmt(ast Ast) {
 	if len(ast.Children) == 3 {
 		cg.statement(ast.third(), false)
 	} else {
-		//TODO throw "unhandled switch value"
+		cg.emitValue(value.SuStr("unhandled switch value"))
+		cg.emit(i.THROW)
 	}
 	cg.placeLabel(end)
 }

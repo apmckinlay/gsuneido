@@ -60,6 +60,11 @@ func TestCodegen(t *testing.T) {
 	test("++a.b", "load a, value 'b', dup2, get, one, add, put")
 	test("a.b++", "load a, value 'b', dup2, get, dupx2, one, add, put, pop")
 
+	test("return", "")
+	test("return 123", "int 123")
+
+	test("throw 'fubar'", "value 'fubar', throw")
+
 	Assert(t).That(func() { codegen(ParseFunction("function () { G = 1 }")) },
 		Panics("invalid lvalue"))
 }
@@ -139,8 +144,10 @@ func TestControl(t *testing.T) {
 		2: nejump 11
 		5: load b
 		7: pop
-		8: jump 12
-		11: pop`)
+		8: jump 15
+		11: pop
+		12: value 'unhandled switch value'
+		14: throw`)
 	test("switch a { case 1,2: b case 3: c default: d }", `
 		0: load a
 		2: one

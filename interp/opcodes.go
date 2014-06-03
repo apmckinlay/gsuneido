@@ -52,4 +52,5 @@ const (
 	FJUMP
 	EQJUMP
 	NEJUMP
+	THROW
 )

@@ -74,27 +74,30 @@ func TestParseStatement(t *testing.T) {
 		ast = ast.first()  // statements
 		s := ast.String()
 		//fmt.Println(s)
-		Assert(t).That(s, Equals(expected))
+		Assert(t).That(s, Like(expected))
 	}
-	test("while (a) { b }", "(while a (STMTS (EXPR b)))")
-	test("while a { b }", "(while a (STMTS (EXPR b)))")
-	test("while (a)\nb", "(while a (EXPR b))")
-	test("while a\nb", "(while a (EXPR b))")
+	test("return", "return")
+	test("return a + b", "(return (+ a b))")
+	test("while (a) { b }", "(while a (STMTS b))")
+	test("while a { b }", "(while a (STMTS b))")
+	test("while (a)\nb", "(while a b)")
+	test("while a\nb", "(while a b)")
 	test("while a\n;", "(while a NIL)")
 
-	test("if (a) b", "(if a (EXPR b))")
-	test("if (a) b else c", "(if a (EXPR b) (EXPR c))")
+	test("if (a) b", "(if a b)")
+	test("if (a) b else c", "(if a b c)")
 
 	test("switch { case 1: b }",
-		"(switch true (cases ( (vals 1) (STMTS (EXPR b)))))")
+		"(switch true (cases ( (vals 1) (STMTS b))))")
 	test(`switch { 
 		case x < 3: return -1
 		}`,
 		"(switch true (cases ( (vals (< x 3)) (STMTS (return -1)))))")
-	test("switch a { case 1,2: b case 3: c default: d }", `(switch
-    a
-    (cases
-        ( (vals 1 2) (STMTS (EXPR b)))
-        ( (vals 3) (STMTS (EXPR c))))
-    (STMTS (EXPR d)))`)
+	test("switch a { case 1,2: b case 3: c default: d }", `
+		(switch a
+		    (cases
+		    	( (vals 1 2) (STMTS b)) 
+				( (vals 3) (STMTS c))) 
+		    (STMTS d))`)
+	test("throw 'fubar'", "(throw 'fubar')")
 }

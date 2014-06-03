@@ -56,6 +56,8 @@ func (p *parser) statement() Ast {
 		return p.switchStmt()
 	case WHILE:
 		return p.whileStmt()
+	case THROW:
+		return p.throwStmt()
 	default:
 		return p.exprStmt()
 	}
@@ -142,19 +144,21 @@ func (p *parser) returnStmt() Ast {
 	if p.matchIf(NEWLINE) || p.matchIf(SEMICOLON) || p.Token == R_CURLY {
 		return ast(item)
 	}
-	result := ast(item, p.exprAst())
+	return ast(item, p.exprStmt())
+}
+
+func (p *parser) exprStmt() Ast {
+	result := p.exprAst()
 	for p.Token == SEMICOLON || p.Token == NEWLINE {
 		p.next()
 	}
 	return result
 }
 
-func (p *parser) exprStmt() Ast {
-	result := ast(Item{Token: EXPRESSION}, p.exprAst())
-	for p.Token == SEMICOLON || p.Token == NEWLINE {
-		p.next()
-	}
-	return result
+func (p *parser) throwStmt() Ast {
+	item := p.Item
+	p.matchSkipNL(THROW)
+	return ast(item, p.exprStmt())
 }
 
 func (p *parser) exprAst() Ast {
