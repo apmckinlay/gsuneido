@@ -78,6 +78,7 @@ func TestParseStatement(t *testing.T) {
 	}
 	test("return", "return")
 	test("return a + b", "(return (+ a b))")
+	test("forever\na", "(forever a)")
 	test("while (a) { b }", "(while a (STMTS b))")
 	test("while a { b }", "(while a (STMTS b))")
 	test("while (a)\nb", "(while a b)")
@@ -100,4 +101,7 @@ func TestParseStatement(t *testing.T) {
 				( (vals 3) (STMTS c))) 
 		    (STMTS d))`)
 	test("throw 'fubar'", "(throw 'fubar')")
+
+	test("break", "break")
+	test("continue", "continue")
 }

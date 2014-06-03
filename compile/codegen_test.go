@@ -83,26 +83,30 @@ func TestControl(t *testing.T) {
 		0: load a
 		2: and 8
 		5: load b
-		7: bool`)
+		7: bool
+		8:`)
 	test("a or b", `
 		0: load a
 		2: or 8
 		5: load b
-		7: bool`)
+		7: bool
+		8:`)
 	test("a or b or c", `
 		0: load a
 		2: or 13
 		5: load b
 		7: or 13
 		10: load c
-		12: bool`)
+		12: bool
+		13:`)
 
 	test("a ? b : c", `
 		0: load a
 		2: qmark 10
 		5: load b
 		7: jump 12
-		10: load c`)
+		10: load c
+		12:`)
 
 	test("a in (4,5,6)", `
 		0: load a
@@ -111,24 +115,28 @@ func TestControl(t *testing.T) {
 		7: int 5
 		9: in 15
 		12: int 6
-		14: is`)
+		14: is
+		15:`)
 
 	test("while (a) b", `
 		0: jump 6
 		3: load b
 		5: pop
 		6: load a
-		8: tjump 3`)
+		8: tjump 3
+		11:`)
 	test("while a\n;", `
 		0: jump 3
 		3: load a
-		5: tjump 3`)
+		5: tjump 3
+		8:`)
 
 	test("if (a) b", `
 		0: load a
 		2: fjump 8
 		5: load b
-		7: pop`)
+		7: pop
+		8:`)
 	test("if (a) b else c", `
 		0: load a
 		2: fjump 11
@@ -136,7 +144,8 @@ func TestControl(t *testing.T) {
 		7: pop
 		8: jump 14
 		11: load c
-		13: pop`)
+		13: pop
+		14:`)
 
 	test("switch { case 1: b }", `
 		0: true
@@ -147,7 +156,8 @@ func TestControl(t *testing.T) {
 		8: jump 15
 		11: pop
 		12: value 'unhandled switch value'
-		14: throw`)
+		14: throw
+		15:`)
 	test("switch a { case 1,2: b case 3: c default: d }", `
 		0: load a
 		2: one
@@ -164,5 +174,20 @@ func TestControl(t *testing.T) {
 		25: jump 32
 		28: pop
 		29: load d
-		31: pop`)
+		31: pop
+		32:`)
+
+	test("forever { break }", `
+		0: jump 6
+		3: jump 0
+		6:`)
+	test("while a { b; break; continue }", `
+		0: jump 12
+		3: load b
+		5: pop
+		6: jump 17
+		9: jump 0
+		12: load a
+		14: tjump 3
+		17:`)
 }

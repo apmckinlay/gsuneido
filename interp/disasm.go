@@ -32,6 +32,7 @@ func Disasm(w io.Writer, fn *value.SuFunc) {
 		i, s = Disasm1(fn, i)
 		fmt.Fprintf(w, "%d: %s\n", j, s)
 	}
+	fmt.Fprintf(w, "%d:\n", len(fn.Code))
 }
 
 func Disasm1(fn *value.SuFunc, i int) (int, string) {

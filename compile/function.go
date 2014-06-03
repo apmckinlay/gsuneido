@@ -54,10 +54,17 @@ func (p *parser) statement() Ast {
 		return p.ifStmt()
 	case SWITCH:
 		return p.switchStmt()
+	case FOREVER:
+		return p.foreverStmt()
 	case WHILE:
 		return p.whileStmt()
 	case THROW:
 		return p.throwStmt()
+	case BREAK, CONTINUE:
+		it := p.Item
+		p.next()
+		p.matchIf(SEMICOLON)
+		return ast(it)
 	default:
 		return p.exprStmt()
 	}
@@ -119,6 +126,13 @@ func (p *parser) switchBody() Ast {
 		stmts = append(stmts, p.statement())
 	}
 	return ast(code, stmts...)
+}
+
+func (p *parser) foreverStmt() Ast {
+	it := p.Item
+	p.match(FOREVER)
+	body := p.statement()
+	return ast(it, body)
 }
 
 func (p *parser) whileStmt() Ast {

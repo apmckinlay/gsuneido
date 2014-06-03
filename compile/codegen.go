@@ -32,15 +32,15 @@ func (cg *cgen) function(ast Ast) {
 	// TODO params
 	stmts := ast.second().Children
 	for si, stmt := range stmts {
-		cg.statement(stmt, si == len(stmts)-1)
+		cg.statement(stmt, nil, si == len(stmts)-1)
 	}
 }
 
-func (cg *cgen) statement(ast Ast, lastStmt bool) {
+func (cg *cgen) statement(ast Ast, labels *Labels, lastStmt bool) {
 	switch ast.KeyTok() {
 	case STATEMENTS:
 		for _, a := range ast.Children {
-			cg.statement(a, lastStmt)
+			cg.statement(a, labels, lastStmt)
 		}
 	case NIL:
 		// no code
@@ -52,15 +52,26 @@ func (cg *cgen) statement(ast Ast, lastStmt bool) {
 			cg.emit(i.RETURN)
 		}
 	case IF:
-		cg.ifStmt(ast)
+		cg.ifStmt(ast, labels)
 	case SWITCH:
-		cg.switchStmt(ast)
+		cg.switchStmt(ast, labels)
+	case FOREVER:
+		cg.foreverStmt(ast)
 	case WHILE:
 		cg.whileStmt(ast)
 	case THROW:
 		cg.expr(ast.first())
 		cg.emit(i.THROW)
-	// TODO break, continue
+	case BREAK:
+		if labels == nil {
+			panic("break can only be used within a loop")
+		}
+		labels.brk = cg.emitJump(i.JUMP, labels.brk)
+	case CONTINUE:
+		if labels == nil {
+			panic("continue can only be used within a loop")
+		}
+		cg.emitBwdJump(i.JUMP, labels.cont)
 	default: // expression
 		cg.expr(ast)
 		if !lastStmt {
@@ -69,21 +80,21 @@ func (cg *cgen) statement(ast Ast, lastStmt bool) {
 	}
 }
 
-func (cg *cgen) ifStmt(ast Ast) {
+func (cg *cgen) ifStmt(ast Ast, labels *Labels) {
 	cg.expr(ast.first())
 	f := cg.emitJump(i.FJUMP, -1)
-	cg.statement(ast.second(), false)
+	cg.statement(ast.second(), labels, false)
 	if len(ast.Children) == 3 {
 		end := cg.emitJump(i.JUMP, -1)
 		cg.placeLabel(f)
-		cg.statement(ast.third(), false)
+		cg.statement(ast.third(), labels, false)
 		cg.placeLabel(end)
 	} else {
 		cg.placeLabel(f)
 	}
 }
 
-func (cg *cgen) switchStmt(ast Ast) {
+func (cg *cgen) switchStmt(ast Ast, labels *Labels) {
 	cg.expr(ast.first())
 	end := -1
 	for _, c := range ast.second().Children {
@@ -98,13 +109,13 @@ func (cg *cgen) switchStmt(ast Ast) {
 			}
 		}
 		cg.placeLabel(caseBody)
-		cg.statement(c.second(), false)
+		cg.statement(c.second(), labels, false)
 		end = cg.emitJump(i.JUMP, end)
 		cg.placeLabel(afterCase)
 	}
 	cg.emit(i.POP)
 	if len(ast.Children) == 3 {
-		cg.statement(ast.third(), false)
+		cg.statement(ast.third(), labels, false)
 	} else {
 		cg.emitValue(value.SuStr("unhandled switch value"))
 		cg.emit(i.THROW)
@@ -112,14 +123,25 @@ func (cg *cgen) switchStmt(ast Ast) {
 	cg.placeLabel(end)
 }
 
-func (cg *cgen) whileStmt(ast Ast) {
-	test := cg.emitJump(i.JUMP, -1)
-	loop := cg.label()
-	cg.statement(ast.second(), false)
-	cg.placeLabel(test)
-	cg.expr(ast.first())
-	cg.emitJump(i.TJUMP, loop-len(cg.code)-3)
+func (cg *cgen) foreverStmt(ast Ast) {
+	labels := cg.newLabels()
+	cg.statement(ast.first(), labels, false)
+	cg.emitJump(i.JUMP, labels.cont-len(cg.code)-3)
+	cg.placeLabel(labels.brk)
 }
+
+func (cg *cgen) whileStmt(ast Ast) {
+	labels := cg.newLabels()
+	cond := cg.emitJump(i.JUMP, -1)
+	loop := cg.label()
+	cg.statement(ast.second(), labels, false)
+	cg.placeLabel(cond)
+	cg.expr(ast.first())
+	cg.emitBwdJump(i.TJUMP, loop)
+	cg.placeLabel(labels.brk)
+}
+
+// expressions -----------------------------------------------------------------
 
 func (cg *cgen) expr(ast Ast) {
 	switch ast.KeyTok() {
@@ -374,6 +396,8 @@ func (cg *cgen) nary(ast Ast, op byte) {
 	}
 }
 
+// helpers ---------------------------------------------------------------------
+
 // emit is used to append an op code
 func (cg *cgen) emit(b ...byte) {
 	// TODO detect pop after side effect free instruction
@@ -394,6 +418,10 @@ func (cg *cgen) emitJump(op byte, label int) int {
 	return adr
 }
 
+func (cg *cgen) emitBwdJump(op byte, label int) {
+	cg.emitJump(op, label-len(cg.code)-3)
+}
+
 func (cg *cgen) label() int {
 	return len(cg.code)
 }
@@ -410,4 +438,13 @@ func (cg *cgen) placeLabel(i int) {
 
 func (cg *cgen) target(i int) int16 {
 	return int16(uint16(cg.code[i+1])<<8 | uint16(cg.code[i+2]))
+}
+
+type Labels struct {
+	brk  int // chained forward jump
+	cont int // backward jump
+}
+
+func (cg *cgen) newLabels() *Labels {
+	return &Labels{-1, cg.label()}
 }
