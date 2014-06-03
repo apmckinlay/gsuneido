@@ -104,4 +104,6 @@ func TestParseStatement(t *testing.T) {
 
 	test("break", "break")
 	test("continue", "continue")
+
+	test("do a while b", "(do a b)")
 }

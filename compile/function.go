@@ -58,6 +58,8 @@ func (p *parser) statement() Ast {
 		return p.foreverStmt()
 	case WHILE:
 		return p.whileStmt()
+	case DO:
+		return p.dowhileStmt()
 	case THROW:
 		return p.throwStmt()
 	case BREAK, CONTINUE:
@@ -139,6 +141,18 @@ func (p *parser) whileStmt() Ast {
 	it, expr := p.ctrlExpr()
 	body := p.statement()
 	return ast(it, expr, body)
+}
+
+func (p *parser) dowhileStmt() Ast {
+	it := p.Item
+	p.match(DO)
+	body := p.statement()
+	p.match(WHILE)
+	expr := p.exprAst()
+	if p.Token == NEWLINE {
+		p.nextSkipNL()
+	}
+	return ast(it, body, expr)
 }
 
 // used by if and while

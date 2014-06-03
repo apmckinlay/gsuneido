@@ -190,4 +190,11 @@ func TestControl(t *testing.T) {
 		12: load a
 		14: tjump 3
 		17:`)
+
+	test("do a while b", `
+		0: load a
+		2: pop
+		3: load b
+		5: tjump 0
+		8:`)
 }

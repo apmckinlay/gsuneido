@@ -59,6 +59,8 @@ func (cg *cgen) statement(ast Ast, labels *Labels, lastStmt bool) {
 		cg.foreverStmt(ast)
 	case WHILE:
 		cg.whileStmt(ast)
+	case DO:
+		cg.dowhileStmt(ast)
 	case THROW:
 		cg.expr(ast.first())
 		cg.emit(i.THROW)
@@ -138,6 +140,14 @@ func (cg *cgen) whileStmt(ast Ast) {
 	cg.placeLabel(cond)
 	cg.expr(ast.first())
 	cg.emitBwdJump(i.TJUMP, loop)
+	cg.placeLabel(labels.brk)
+}
+
+func (cg *cgen) dowhileStmt(ast Ast) {
+	labels := cg.newLabels()
+	cg.statement(ast.first(), labels, false)
+	cg.expr(ast.second())
+	cg.emitBwdJump(i.TJUMP, labels.cont)
 	cg.placeLabel(labels.brk)
 }
 
