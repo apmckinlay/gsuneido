@@ -18,6 +18,7 @@ var asm = []string{
 	"load", "store", "dyload", "get", "put", "global",
 	"true", "false", "zero", "one", "emptystr",
 	"or", "and", "bool", "qmark", "in", "jump", "tjump", "fjump",
+	"eqjump", "nejump",
 }
 
 func init() {
@@ -53,7 +54,7 @@ func Disasm1(fn *value.SuFunc, i int) (int, string) {
 	case GLOBAL:
 		idx := fetchUint(fn.Code, &i)
 		s += " " + globals.NumName(int(idx))
-	case JUMP, TJUMP, FJUMP, AND, OR, Q_MARK, IN:
+	case JUMP, TJUMP, FJUMP, AND, OR, Q_MARK, IN, EQJUMP, NEJUMP:
 		ip := i
 		i += 2
 		jump(fn.Code, &ip)

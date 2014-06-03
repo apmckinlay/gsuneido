@@ -188,6 +188,7 @@ const (
 	POSTINC
 	POSTDEC
 	VALUE
+	INTERNAL
 )
 
 var keywords = map[string]Token{

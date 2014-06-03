@@ -1,6 +1,7 @@
 package compile
 
 import (
+	"bytes"
 	"strings"
 	"testing"
 
@@ -20,11 +21,6 @@ func TestCodegen(t *testing.T) {
 		}
 		Assert(t).That(strings.Join(da, ", "), Equals(expected))
 	}
-	// folding
-	test("1 + 2 + 3", "int 6")
-	test("1 << 4", "int 16")
-	test("'foo' $ 'bar'", "value 'foobar'")
-
 	test("", "")
 	test("return", "")
 	test("return true", "true")
@@ -66,17 +62,100 @@ func TestCodegen(t *testing.T) {
 
 	Assert(t).That(func() { codegen(ParseFunction("function () { G = 1 }")) },
 		Panics("invalid lvalue"))
+}
 
-	test("a and b", "load a, and 8, load b, bool")
-	test("a or b", "load a, or 8, load b, bool")
-	test("a or b or c", "load a, or 13, load b, or 13, load c, bool")
+func TestControl(t *testing.T) {
+	test := func(src, expected string) {
+		ast := ParseFunction("function () {\n" + src + "\n}")
+		fn := codegen(ast)
+		buf := new(bytes.Buffer)
+		interp.Disasm(buf, fn)
+		s := buf.String()
+		Assert(t).That(s, Like(expected).Comment(src))
+	}
 
-	test("a ? b : c", "load a, qmark 10, load b, jump 12, load c")
+	test("a and b", `
+		0: load a
+		2: and 8
+		5: load b
+		7: bool`)
+	test("a or b", `
+		0: load a
+		2: or 8
+		5: load b
+		7: bool`)
+	test("a or b or c", `
+		0: load a
+		2: or 13
+		5: load b
+		7: or 13
+		10: load c
+		12: bool`)
 
-	test("a in (4,5,6)", "load a, int 4, in 15, int 5, in 15, int 6, is")
+	test("a ? b : c", `
+		0: load a
+		2: qmark 10
+		5: load b
+		7: jump 12
+		10: load c`)
 
-	test("while (a) b", "jump 6, load b, pop, load a, tjump 3")
+	test("a in (4,5,6)", `
+		0: load a
+		2: int 4
+		4: in 15
+		7: int 5
+		9: in 15
+		12: int 6
+		14: is`)
 
-	test("if (a) b", "load a, fjump 8, load b, pop")
-	test("if (a) b else c", "load a, fjump 11, load b, pop, jump 14, load c, pop")
+	test("while (a) b", `
+		0: jump 6
+		3: load b
+		5: pop
+		6: load a
+		8: tjump 3`)
+	test("while a\n;", `
+		0: jump 3
+		3: load a
+		5: tjump 3`)
+
+	test("if (a) b", `
+		0: load a
+		2: fjump 8
+		5: load b
+		7: pop`)
+	test("if (a) b else c", `
+		0: load a
+		2: fjump 11
+		5: load b
+		7: pop
+		8: jump 14
+		11: load c
+		13: pop`)
+
+	test("switch { case 1: b }", `
+		0: true
+		1: one
+		2: nejump 11
+		5: load b
+		7: pop
+		8: jump 12
+		11: pop`)
+	test("switch a { case 1,2: b case 3: c default: d }", `
+		0: load a
+		2: one
+		3: eqjump 11
+		6: int 2
+		8: nejump 17
+		11: load b
+		13: pop
+		14: jump 32
+		17: int 3
+		19: nejump 28
+		22: load c
+		24: pop
+		25: jump 32
+		28: pop
+		29: load d
+		31: pop`)
 }

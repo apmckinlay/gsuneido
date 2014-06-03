@@ -10,7 +10,10 @@ For example:
 package hamcrest
 
 import "fmt"
-import "reflect"
+import (
+	"reflect"
+	"regexp"
+)
 import "runtime"
 import "strings"
 
@@ -95,6 +98,26 @@ func NotEquals(expected interface{}) Tester {
 			expected, actual)
 	}
 }
+
+func Like(expected interface{}) Tester {
+	return func(actual interface{}) string {
+		if like(expected.(string), actual.(string)) {
+			return ""
+		}
+		return fmt.Sprintf("expected: %s\nbut got: %s", expected, actual)
+	}
+}
+
+func like(expected, actual string) bool {
+	return canon(actual) == canon(expected)
+}
+
+func canon(s string) string {
+	s = strings.TrimSpace(s)
+	return rxlike.ReplaceAllString(s, " ")
+}
+
+var rxlike = regexp.MustCompile("[ \t\r\n]+")
 
 type runnable func()
 

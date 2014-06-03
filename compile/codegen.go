@@ -42,6 +42,8 @@ func (cg *cgen) statement(ast Ast, lastStmt bool) {
 		for _, a := range ast.Children {
 			cg.statement(a, lastStmt)
 		}
+	case NIL:
+		// no code
 	case RETURN:
 		if len(ast.Children) == 1 {
 			cg.expr(ast.first())
@@ -56,6 +58,8 @@ func (cg *cgen) statement(ast Ast, lastStmt bool) {
 		}
 	case IF:
 		cg.ifStmt(ast)
+	case SWITCH:
+		cg.switchStmt(ast)
 	case WHILE:
 		cg.whileStmt(ast)
 	// TODO break, continue
@@ -76,6 +80,34 @@ func (cg *cgen) ifStmt(ast Ast) {
 	} else {
 		cg.placeLabel(f)
 	}
+}
+
+func (cg *cgen) switchStmt(ast Ast) {
+	cg.expr(ast.first())
+	end := -1
+	for _, c := range ast.second().Children {
+		caseBody, afterCase := -1, -1
+		values := c.first().Children
+		for v, val := range values {
+			cg.expr(val)
+			if v < len(values)-1 {
+				caseBody = cg.emitJump(i.EQJUMP, -1)
+			} else {
+				afterCase = cg.emitJump(i.NEJUMP, -1)
+			}
+		}
+		cg.placeLabel(caseBody)
+		cg.statement(c.second(), false)
+		end = cg.emitJump(i.JUMP, end)
+		cg.placeLabel(afterCase)
+	}
+	cg.emit(i.POP)
+	if len(ast.Children) == 3 {
+		cg.statement(ast.third(), false)
+	} else {
+		//TODO throw "unhandled switch value"
+	}
+	cg.placeLabel(end)
 }
 
 func (cg *cgen) whileStmt(ast Ast) {

@@ -380,7 +380,7 @@ func (lxr *Lexer) identifier(start int) Item {
 	}
 	value := lxr.src[start:lxr.si]
 	keyword := NIL
-	if lxr.peek() != ':' {
+	if lxr.peek() != ':' || value == "default" {
 		keyword = Keyword(value)
 	}
 	return Item{value, int32(start), IDENTIFIER, keyword}

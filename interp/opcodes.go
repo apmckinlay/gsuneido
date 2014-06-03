@@ -50,4 +50,6 @@ const (
 	JUMP
 	TJUMP
 	FJUMP
+	EQJUMP
+	NEJUMP
 )

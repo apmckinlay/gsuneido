@@ -155,6 +155,24 @@ func (t *Thread) Interp() Value {
 				fr.ip += 2
 				t.Push(x)
 			}
+		case EQJUMP:
+			y := t.Pop()
+			x := t.Pop()
+			if x.Equals(y) {
+				jump(code, &fr.ip)
+			} else {
+				fr.ip += 2
+				t.Push(x)
+			}
+		case NEJUMP:
+			y := t.Pop()
+			x := t.Pop()
+			if !x.Equals(y) {
+				t.Push(x)
+				jump(code, &fr.ip)
+			} else {
+				fr.ip += 2
+			}
 		case RETURN:
 			break
 		default:

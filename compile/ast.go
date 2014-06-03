@@ -79,6 +79,10 @@ func ast(item Item, children ...Ast) Ast {
 	return fold(item, nil, children)
 }
 
+func ast2(name string, children ...Ast) Ast {
+	return fold(Item{Token: INTERNAL, Text: name}, nil, children)
+}
+
 func astBuilder(item Item, nodes ...T) T {
 	var val value.Value
 	if len(nodes) >= 1 {
