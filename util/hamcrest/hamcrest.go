@@ -114,6 +114,7 @@ func like(expected, actual string) bool {
 
 func canon(s string) string {
 	s = strings.TrimSpace(s)
+	// can't use tr because it causes cycle in imports
 	return rxlike.ReplaceAllString(s, " ")
 }
 
