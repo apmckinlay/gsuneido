@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	. "github.com/apmckinlay/gsuneido/lexer"
 	. "github.com/apmckinlay/gsuneido/util/hamcrest"
 	"github.com/apmckinlay/gsuneido/value"
 )

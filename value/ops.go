@@ -4,6 +4,7 @@ import (
 	"math"
 
 	"github.com/apmckinlay/gsuneido/util/dnum"
+	"github.com/apmckinlay/gsuneido/util/regex"
 )
 
 func Is(x Value, y Value) Value {
@@ -180,4 +181,8 @@ func cmpInt(x int, y int) int {
 	default:
 		return 0
 	}
+}
+
+func Match(x Value, y regex.Pattern) SuBool {
+	return SuBool(y.Matches(x.ToStr()))
 }

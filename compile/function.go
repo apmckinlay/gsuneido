@@ -1,5 +1,7 @@
 package compile
 
+import . "github.com/apmckinlay/gsuneido/lexer"
+
 func ParseFunction(src string) Ast {
 	p := newParser(src)
 	return p.function()

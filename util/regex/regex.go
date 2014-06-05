@@ -134,6 +134,11 @@ type Pattern struct {
 	pat []Element
 }
 
+func (p Pattern) Matches(s string) bool {
+	var result Result
+	return p.FirstMatch(s, 0, &result)
+}
+
 // FirstMatch finds the first match in the string at or after pos.
 // Returns true if a match is found, else false.
 func (p Pattern) FirstMatch(s string, pos int, result *Result) bool {

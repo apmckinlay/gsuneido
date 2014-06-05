@@ -10,7 +10,7 @@ import (
 func TestInterp(t *testing.T) {
 	code := []byte{INT, 3 << 1, INT, 5 << 1, ADD, RETURN}
 	fn := &value.SuFunc{Code: code}
-	th := Thread{}
+	th := NewThread()
 	result := th.Call(fn, SimpleArgSpecs[0])
 	Assert(t).That(result, Equals(value.SuInt(8)))
 }

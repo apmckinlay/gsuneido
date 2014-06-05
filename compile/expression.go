@@ -3,6 +3,7 @@ package compile
 import (
 	"math"
 	"strconv"
+	. "github.com/apmckinlay/gsuneido/lexer"
 )
 
 /*

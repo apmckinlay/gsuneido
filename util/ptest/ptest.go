@@ -13,7 +13,7 @@ import (
 	"io/ioutil"
 	"strings"
 
-	c "github.com/apmckinlay/gsuneido/compile"
+	c "github.com/apmckinlay/gsuneido/lexer"
 )
 
 type parser struct {

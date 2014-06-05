@@ -88,3 +88,11 @@ func (_ SuBool) order() ord {
 func (b SuBool) cmp(other Value) int {
 	return int(b.ToInt() - other.(SuBool).ToInt())
 }
+
+func (b SuBool) Not() SuBool {
+	if b == True {
+		return False
+	} else {
+		return True
+	}
+}

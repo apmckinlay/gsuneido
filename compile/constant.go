@@ -1,6 +1,9 @@
 package compile
 
-import v "github.com/apmckinlay/gsuneido/value"
+import (
+	. "github.com/apmckinlay/gsuneido/lexer"
+	v "github.com/apmckinlay/gsuneido/value"
+)
 
 // Constant compiles a Suneido constant (e.g. a library record)
 // to a Suneido Value
@@ -87,7 +90,7 @@ func (p *parser) date() v.Value {
 }
 
 func (p *parser) object() v.Value {
-	closing := p.Token.closing()
+	closing := p.Token.Closing()
 	p.next()
 	return p.memberList(closing)
 }

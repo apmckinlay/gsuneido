@@ -15,7 +15,7 @@ func pt_execute(args []string) bool {
 	src := "function () {\n" + args[0] + "\n}"
 	//fmt.Println(src)
 	fn := compile.Constant(src).(*value.SuFunc)
-	th := interp.Thread{}
+	th := interp.NewThread()
 	result := th.Call(fn, interp.SimpleArgSpecs[0])
 	expected := "true"
 	if len(args) > 1 {

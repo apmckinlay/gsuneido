@@ -71,6 +71,14 @@ func (t *Thread) Interp() Value {
 			t.binop(Is)
 		case ISNT:
 			t.binop(Isnt)
+		case MATCH:
+			pat := t.rxcache.Get(t.Pop().ToStr())
+			s := t.Pop()
+			t.Push(Match(s, pat))
+		case MATCHNOT:
+			pat := t.rxcache.Get(t.Pop().ToStr())
+			s := t.Pop()
+			t.Push(Match(s, pat).Not())
 		case LT:
 			t.binop(Lt)
 		case LTE:

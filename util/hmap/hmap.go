@@ -4,6 +4,7 @@ but that allows any key that has Hash and Equals methods.
 
 Based on the Go map implementation:
 http://golang.org/src/pkg/runtime/hashmap.c
+Without incremental resizing.
 */
 package hmap
 

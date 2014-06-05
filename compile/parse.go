@@ -3,6 +3,7 @@ package compile
 import (
 	"fmt"
 
+	. "github.com/apmckinlay/gsuneido/lexer"
 	"github.com/apmckinlay/gsuneido/util/verify"
 )
 

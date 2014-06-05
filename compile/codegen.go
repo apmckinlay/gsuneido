@@ -3,6 +3,7 @@ package compile
 import (
 	i "github.com/apmckinlay/gsuneido/interp"
 	"github.com/apmckinlay/gsuneido/interp/globals"
+	. "github.com/apmckinlay/gsuneido/lexer"
 	"github.com/apmckinlay/gsuneido/util/varint"
 	"github.com/apmckinlay/gsuneido/util/verify"
 	"github.com/apmckinlay/gsuneido/value"

@@ -8,7 +8,7 @@ func Keyword(s string) Token {
 	return keywords[s]
 }
 
-func (t Token) closing() Token {
+func (t Token) Closing() Token {
 	switch t {
 	case L_PAREN:
 		return R_PAREN

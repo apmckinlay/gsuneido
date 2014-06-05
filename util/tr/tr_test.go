@@ -7,11 +7,13 @@ import (
 )
 
 func Test_makset(t *testing.T) {
-	Assert(t).That(makset(""), Equals(""))
-	Assert(t).That(makset("foo"), Equals("foo"))
-	Assert(t).That(makset("-foo"), Equals("-foo"))
-	Assert(t).That(makset("foo-"), Equals("foo-"))
-	Assert(t).That(makset("-0-9-"), Equals("-0123456789-"))
+	test := func(s, expected string) {
+		Assert(t).That(string(Set("")), Equals(""))
+	}
+	test("foo", "foo")
+	test("-foo", "-foo")
+	test("foo-", "foo-")
+	test("-0-9-", "-0123456789-")
 }
 
 func TestPtest(t *testing.T) {

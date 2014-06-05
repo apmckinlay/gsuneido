@@ -1,6 +1,10 @@
 package interp
 
-import v "github.com/apmckinlay/gsuneido/value"
+import (
+	"github.com/apmckinlay/gsuneido/util/regex"
+	"github.com/apmckinlay/gsuneido/util/tr"
+	v "github.com/apmckinlay/gsuneido/value"
+)
 
 type Thread struct {
 	// frames are the Frame's making up the call stack.
@@ -8,7 +12,15 @@ type Thread struct {
 	frames []Frame
 	// stack is the Value stack for arguments and expressions.
 	// The end of the slice is the top of the stack.
-	stack []v.Value
+	stack   []v.Value
+	rxcache *regex.LruMapCache
+	trcache *tr.LruMapCache
+}
+
+func NewThread() *Thread {
+	return &Thread{
+		rxcache: regex.NewLruMapCache(100, regex.Compile),
+		trcache: tr.NewLruMapCache(100, tr.Set)}
 }
 
 func (t *Thread) Push(x v.Value) {
