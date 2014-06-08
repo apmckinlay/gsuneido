@@ -62,6 +62,8 @@ func (p *parser) statement() Ast {
 		return p.whileStmt()
 	case DO:
 		return p.dowhileStmt()
+	case FOR:
+		return p.forStmt()
 	case THROW:
 		return p.throwStmt()
 	case BREAK, CONTINUE:
@@ -155,6 +157,87 @@ func (p *parser) dowhileStmt() Ast {
 		p.nextSkipNL()
 	}
 	return ast(it, body, expr)
+}
+
+func (p *parser) forStmt() Ast {
+	it := p.Item
+	forIn := p.isForIn()
+	p.match(FOR)
+	if forIn {
+		return p.forIn(it)
+	} else {
+		return p.forClassic(it)
+	}
+}
+
+func (p *parser) isForIn() bool {
+	i := 0
+	//fmt.Println("isForIn", p.lxr.Ahead(i), p.lxr.Ahead(i+1), p.lxr.Ahead(i+2))
+	for ; skip(p.lxr.Ahead(i)); i++ {
+	}
+	//fmt.Println("isForIn2", p.lxr.Ahead(i), p.lxr.Ahead(i+1), p.lxr.Ahead(i+2))
+	if p.lxr.Ahead(i).Token == L_PAREN {
+		i++
+	}
+	for ; skip(p.lxr.Ahead(i)); i++ {
+	}
+	if p.lxr.Ahead(i).Token != IDENTIFIER {
+		return false
+	}
+	for i++; skip(p.lxr.Ahead(i)); i++ {
+	}
+	//fmt.Println("SHOULD BE IN", p.lxr.Ahead(i))
+	return p.lxr.Ahead(i).Keyword == IN
+}
+
+func skip(it Item) bool {
+	return it.Token == WHITESPACE || it.Token == NEWLINE || it.Token == COMMENT
+}
+
+func (p *parser) forIn(it Item) Ast {
+	it.Token = FOR_IN
+	parens := p.matchIf(L_PAREN)
+	id := p.Text
+	p.match(IDENTIFIER)
+	p.matchSkipNL(IN)
+	if !parens {
+		defer func(prev int) { p.nest = prev }(p.nest)
+		p.nest = 0
+	}
+	expr := p.exprAst()
+	if parens {
+		p.match(R_PAREN)
+	} else {
+		p.matchIf(NEWLINE)
+	}
+	body := p.statement()
+	return ast(it, ast2(id), expr, body)
+}
+
+func (p *parser) forClassic(it Item) Ast {
+	p.match(L_PAREN)
+	init := p.optExprList(SEMICOLON)
+	p.match(SEMICOLON)
+	cond := p.exprAst()
+	p.match(SEMICOLON)
+	incr := p.optExprList(R_PAREN)
+	p.match(R_PAREN)
+	body := p.statement()
+	return ast(it, init, cond, incr, body)
+}
+
+func (p *parser) optExprList(after Token) Ast {
+	ast := ast2("exprs")
+	if p.Token != after {
+		for {
+			ast.Children = append(ast.Children, p.exprAst())
+			if p.Token != COMMA {
+				break
+			}
+			p.next()
+		}
+	}
+	return ast
 }
 
 // used by if and while

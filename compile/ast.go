@@ -111,6 +111,10 @@ func (a *Ast) third() Ast {
 	return a.Children[2]
 }
 
+func (a *Ast) fourth() Ast {
+	return a.Children[3]
+}
+
 func fold(item Item, val value.Value, children []Ast) (x Ast) {
 	//defer func() { fmt.Println("fold:", x) }()
 	ast := Ast{item, val, children}

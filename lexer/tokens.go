@@ -37,6 +37,7 @@ var tostring = map[Token]string{
 	STATEMENTS: "STMTS",
 	POSTINC:    "POSTINC",
 	POSTDEC:    "POSTDEC",
+	FOR_IN:     "FOR_IN",
 }
 
 const (
@@ -187,6 +188,7 @@ const (
 	POSTDEC
 	VALUE
 	INTERNAL
+	FOR_IN
 )
 
 var keywords = map[string]Token{

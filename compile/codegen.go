@@ -62,6 +62,8 @@ func (cg *cgen) statement(ast Ast, labels *Labels, lastStmt bool) {
 		cg.whileStmt(ast)
 	case DO:
 		cg.dowhileStmt(ast)
+	case FOR:
+		cg.forStmt(ast)
 	case THROW:
 		cg.expr(ast.first())
 		cg.emit(i.THROW)
@@ -150,6 +152,26 @@ func (cg *cgen) dowhileStmt(ast Ast) {
 	cg.expr(ast.second())
 	cg.emitBwdJump(i.TJUMP, labels.cont)
 	cg.placeLabel(labels.brk)
+}
+
+func (cg *cgen) forStmt(ast Ast) {
+	cg.exprList(ast.first().Children) // init
+	labels := cg.newLabels()
+	cond := cg.emitJump(i.JUMP, -1)
+	loop := cg.label()
+	cg.statement(ast.fourth(), labels, false) // body
+	cg.exprList(ast.third().Children)         // increment
+	cg.placeLabel(cond)
+	cg.expr(ast.second()) // condition
+	cg.emitBwdJump(i.TJUMP, loop)
+	cg.placeLabel(labels.brk)
+}
+
+func (cg *cgen) exprList(list []Ast) {
+	for _, expr := range list {
+		cg.expr(expr)
+		cg.emit(i.POP)
+	}
 }
 
 // expressions -----------------------------------------------------------------

@@ -106,4 +106,11 @@ func TestParseStatement(t *testing.T) {
 	test("continue", "continue")
 
 	test("do a while b", "(do a b)")
+
+	test("for x in ob\na", "(FOR_IN x ob a)")
+	test("for x in ob { a }", "(FOR_IN x ob (STMTS a))")
+	test("for (x in ob) a", "(FOR_IN x ob a)")
+
+	test("for (i = 0; i < 9; ++i) X",
+		"(for (exprs (= i 0)) (< i 9) (exprs (++ i)) X)")
 }
