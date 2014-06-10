@@ -14,9 +14,18 @@ func newParser(src string) *parser {
 
 type parser struct {
 	lxr *Lexer
+	// Item is the current lexical token etc.
 	Item
+	// nest is used by parse.go to track nesting
+	// in order to skip newlines within e.g. parenthesis
 	nest int
-	bld  builder // used by expression
+	// bld is used by expression.go
+	// it is needed because expressions are shared by both language and queries
+	bld builder
+	// expectingCompound is used to differentiate control statement body vs. block
+	// e.g. if expr {...}
+	// set by function.go used by expression.go
+	expectingCompound bool
 }
 
 /*

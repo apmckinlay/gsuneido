@@ -225,6 +225,8 @@ func (p *parser) unary() T {
 	}
 }
 
+// TODO new expr
+
 var int_max_str = strconv.Itoa(math.MaxInt32)
 
 func (p *parser) term() T {
@@ -234,13 +236,18 @@ func (p *parser) term() T {
 		p.next()
 	}
 	term := p.primary()
-	for p.Token == DOT || p.Token == L_BRACKET {
+	for p.Token == DOT || p.Token == L_BRACKET || p.Token == L_PAREN ||
+		(p.Token == L_CURLY && !p.expectingCompound) {
 		if p.Token == DOT {
 			dot := p.Item
 			p.nextSkipNL()
 			id := p.Item
 			p.match(IDENTIFIER)
 			term = p.bld(dot, term, p.bld(id))
+			if !p.expectingCompound &&
+				p.Token == NEWLINE && p.lxr.AheadSkip(0).Token == L_CURLY {
+				p.match(NEWLINE)
+			}
 		} else if p.Token == L_BRACKET {
 			sub := p.Item
 			p.next()
@@ -263,11 +270,13 @@ func (p *parser) term() T {
 			}
 			term = p.bld(sub, term, expr)
 			p.match(R_BRACKET)
+		} else if p.Token == L_PAREN || p.Token == L_CURLY {
+			term = p.bld(call, term, p.arguments())
 		}
 	}
 	if preincdec.Token != NIL {
 		return p.bld(preincdec, term)
-	} else if EQ <= p.Token && p.Token <= BITXOREQ { // TODO assignment operators
+	} else if EQ <= p.Token && p.Token <= BITXOREQ {
 		it := p.Item
 		p.nextSkipNL()
 		expr := p.expr()
@@ -278,6 +287,8 @@ func (p *parser) term() T {
 	}
 	return term
 }
+
+var call = Item{Token: INTERNAL, Text: "call"}
 
 func (p *parser) primary() T {
 	switch p.Token {
@@ -296,6 +307,113 @@ func (p *parser) primary() T {
 	case L_PAREN:
 		p.next()
 		return p.evalMatch(p.expr(), R_PAREN)
+	case L_CURLY:
+		return p.block()
 	}
 	panic("unexpected '" + p.Text + "'")
+}
+
+func (p *parser) arguments() T {
+	var args []T
+	if p.matchIf(L_PAREN) {
+		if p.matchIf(AT) {
+			return p.atArgument()
+		} else {
+			args = p.argumentList(R_PAREN)
+		}
+	}
+	if p.Token == NEWLINE &&
+		!p.expectingCompound && p.lxr.AheadSkip(0).Token == L_CURLY {
+		p.match(NEWLINE)
+	}
+	if p.Token == L_CURLY {
+		args = append(args, p.bld(blockArg, p.block()))
+	}
+	return p.bld(argList, args...)
+}
+
+var argList = Item{Token: INTERNAL, Text: "args"}
+var atArg = Item{Token: INTERNAL, Text: "atArg"}
+var noKeyword = Item{Token: INTERNAL, Text: "noKwd"}
+var trueItem = Item{Token: TRUE, Text: "true"}
+var blockArg = Item{Token: IDENTIFIER, Text: "blockArg"}
+var blockItem = Item{Token: INTERNAL, Text: "block"}
+var blockParams = Item{Token: INTERNAL, Text: "blockParams"}
+var zeroItem = Item{Token: NUMBER, Text: "0"}
+
+func (p *parser) atArgument() T {
+	n := zeroItem
+	if p.matchIf(ADD) {
+		n = p.Item
+		p.match(NUMBER)
+	}
+	expr := p.expr()
+	p.match(R_PAREN)
+	return p.bld(atArg, p.bld(n), expr)
+}
+
+func (p *parser) argumentList(closing Token) []T {
+	var args []T
+	keyword := noKeyword
+	for p.Token != closing {
+		if p.lxr.AheadSkip(0).Token == COLON {
+			keyword = p.keyword()
+		} else if keyword != noKeyword {
+			p.error("un-named arguments must come before named arguments")
+		}
+
+		trueDefault := (keyword != noKeyword &&
+			(p.Token == COMMA || p.Token == closing ||
+				p.lxr.AheadSkip(0).Token == COLON))
+
+		var val T
+		if trueDefault {
+			val = p.bld(trueItem)
+		} else {
+			val = p.expr()
+		}
+		args = append(args, p.bld(keyword, val))
+		p.matchIf(COMMA)
+	}
+	p.match(closing)
+	return args
+}
+
+func (p *parser) keyword() Item {
+	switch p.Token {
+	case STRING, IDENTIFIER, NUMBER:
+		break
+	default:
+		p.error("invalid keyword")
+	}
+	keyword := p.Item
+	p.next()
+	p.match(COLON)
+	return keyword
+}
+
+func (p *parser) block() T {
+	p.match(L_CURLY)
+	params := p.blockParams()
+	statements := p.statements()
+	p.match(R_CURLY)
+	return p.bld(blockItem, params, statements)
+}
+
+func (p *parser) blockParams() T {
+	var params []T
+	if p.matchIf(BITOR) {
+		if p.matchIf(AT) {
+			params = append(params, p.bld(Item{Token: INTERNAL, Text: "@" + p.Text}))
+			p.match(IDENTIFIER)
+		} else {
+			for p.Token == IDENTIFIER {
+				params = append(params, p.bld(p.Item))
+				p.match(IDENTIFIER)
+				p.matchIf(COMMA)
+			}
+		}
+		p.match(BITOR)
+	}
+	return p.bld(blockParams, params...)
 }

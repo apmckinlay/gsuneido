@@ -77,7 +77,7 @@ func (p *parser) statement() Ast {
 }
 
 func (p *parser) ifStmt() Ast {
-	it, expr := p.ctrlExpr()
+	it, expr := p.ctrlExpr(IF)
 	t := p.statement()
 	if p.Keyword == ELSE {
 		p.nextSkipNL()
@@ -94,7 +94,7 @@ func (p *parser) switchStmt() Ast {
 	if p.Token == L_CURLY {
 		expr = ast(Item{Token: TRUE})
 	} else {
-		expr = p.exprAst()
+		expr = p.exprExpecting(true)
 		if p.Token == NEWLINE {
 			p.nextSkipNL()
 		}
@@ -141,7 +141,7 @@ func (p *parser) foreverStmt() Ast {
 }
 
 func (p *parser) whileStmt() Ast {
-	it, expr := p.ctrlExpr()
+	it, expr := p.ctrlExpr(WHILE)
 	body := p.statement()
 	return ast(it, expr, body)
 }
@@ -150,11 +150,7 @@ func (p *parser) dowhileStmt() Ast {
 	it := p.Item
 	p.match(DO)
 	body := p.statement()
-	p.match(WHILE)
-	expr := p.exprAst()
-	if p.Token == NEWLINE {
-		p.nextSkipNL()
-	}
+	_, expr := p.ctrlExpr(WHILE)
 	return ast(it, body, expr)
 }
 
@@ -171,23 +167,13 @@ func (p *parser) forStmt() Ast {
 
 func (p *parser) isForIn() bool {
 	i := 0
-	for ; skip(p.lxr.Ahead(i)); i++ {
-	}
-	if p.lxr.Ahead(i).Token == L_PAREN {
+	if p.lxr.AheadSkip(i).Token == L_PAREN {
 		i++
 	}
-	for ; skip(p.lxr.Ahead(i)); i++ {
-	}
-	if p.lxr.Ahead(i).Token != IDENTIFIER {
+	if p.lxr.AheadSkip(i).Token != IDENTIFIER {
 		return false
 	}
-	for i++; skip(p.lxr.Ahead(i)); i++ {
-	}
-	return p.lxr.Ahead(i).Keyword == IN
-}
-
-func skip(it Item) bool {
-	return it.Token == WHITESPACE || it.Token == NEWLINE || it.Token == COMMENT
+	return p.lxr.AheadSkip(i+1).Keyword == IN
 }
 
 func (p *parser) forIn(it Item) Ast {
@@ -200,7 +186,7 @@ func (p *parser) forIn(it Item) Ast {
 		defer func(prev int) { p.nest = prev }(p.nest)
 		p.nest = 0
 	}
-	expr := p.exprAst()
+	expr := p.exprExpecting(!parens)
 	if parens {
 		p.match(R_PAREN)
 	} else {
@@ -236,15 +222,25 @@ func (p *parser) optExprList(after Token) Ast {
 	return ast
 }
 
-// used by if and while
-func (p *parser) ctrlExpr() (Item, Ast) {
+// used by if, while, and do-while
+func (p *parser) ctrlExpr(tok Token) (Item, Ast) {
 	it := p.Item
-	p.nextSkipNL()
-	expr := p.exprAst()
-	if p.Token == NEWLINE {
-		p.nextSkipNL()
+	p.matchSkipNL(tok)
+	parens := p.matchIf(L_PAREN)
+	expr := p.exprExpecting(!parens)
+	if parens {
+		p.match(R_PAREN)
+	} else {
+		p.matchIf(NEWLINE)
 	}
 	return it, expr
+}
+
+func (p *parser) exprExpecting(expecting bool) Ast {
+	p.expectingCompound = expecting
+	expr := p.exprAst()
+	p.expectingCompound = false
+	return expr
 }
 
 func (p *parser) returnStmt() Ast {

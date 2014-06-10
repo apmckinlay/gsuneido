@@ -68,6 +68,24 @@ func (lxr *Lexer) Ahead(i int) Item {
 	return lxr.ahead[i]
 }
 
+// AheadSkip provides lookahead like Ahead
+// but skips WHITESPACE, NEWLINE, and COMMENT
+func (lxr *Lexer) AheadSkip(i int) Item {
+	for j := 0; ; j++ {
+		switch it := lxr.Ahead(j); it.Token {
+		case WHITESPACE, NEWLINE, COMMENT:
+			continue
+		case EOF:
+			return it
+		default:
+			if i <= 0 {
+				return it
+			}
+			i--
+		}
+	}
+}
+
 func (lxr *Lexer) next() Item {
 	start, c := lxr.read()
 	it := func(tok Token) Item {
@@ -369,6 +387,9 @@ func (lxr *Lexer) number(start int) Item {
 	if lxr.matchOneOf("eE") {
 		lxr.matchOneOf("+-")
 		lxr.matchRunOf("0123456789")
+	}
+	if lxr.src[lxr.si-1] == '.' {
+		lxr.si-- // don't absorb trailing dot
 	}
 	return it(NUMBER, start, lxr.src[start:lxr.si])
 }

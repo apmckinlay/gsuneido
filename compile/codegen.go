@@ -1,5 +1,11 @@
 package compile
 
+/* TODO
+- blocks
+- try catch
+- function callsd
+*/
+
 import (
 	i "github.com/apmckinlay/gsuneido/interp"
 	"github.com/apmckinlay/gsuneido/interp/globals"

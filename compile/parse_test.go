@@ -65,6 +65,29 @@ func TestParseExpression(t *testing.T) {
 	test("a ? b : c", "(? a b c)")
 
 	test("a in (1,2,3)", "(in a 1 2 3)")
+
+	test("a.b", "(. a b)")
+	test("a[b]", "([ a b)")
+	test("a[1..]", "([ a (.. 1 2147483647))")
+	test("a[1..2]", "([ a (.. 1 2))")
+	test("a[..2]", "([ a (.. 0 2))")
+	test("a[1::]", "([ a (:: 1 2147483647))")
+	test("a[1::2]", "([ a (:: 1 2))")
+	test("a[::2]", "([ a (:: 0 2))")
+
+	test("b = { }", "(= b (block blockParams STMTS))")
+	test("b = {|a,b| a; b }", "(= b (block (blockParams a b) (STMTS a b)))")
+	test("b = {|@a| a }", "(= b (block (blockParams @a) (STMTS a)))")
+
+	test("f()", "(call f args)")
+	test("f(a, b)", "(call f (args (noKwd a) (noKwd b)))")
+	test("f(@a)", "(call f (atArg 0 a))")
+	test("f(@+1 a)", "(call f (atArg 1 a))")
+	test("f(a:)", "(call f (args (a true)))")
+	test("f(a: 1, b: 2)", "(call f (args (a 1) (b 2)))")
+	test("f(1, a: 2)", "(call f (args (noKwd 1) (a 2)))")
+	test("f(){ b }", "(call f (args (blockArg (block blockParams (STMTS b)))))")
+	test("f({ b })", "(call f (args (noKwd (block blockParams (STMTS b)))))")
 }
 
 func TestParseStatement(t *testing.T) {

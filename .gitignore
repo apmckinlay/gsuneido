@@ -219,3 +219,5 @@ gsuneido
 *.exe
 
 ptestdir.txt
+
+*.out

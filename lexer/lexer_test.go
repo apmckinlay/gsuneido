@@ -40,6 +40,7 @@ func TestLexer(t *testing.T) {
 	}
 	check("f()", IDENTIFIER, L_PAREN, R_PAREN)
 	check("4-1", NUMBER, SUB, NUMBER)
+	check("[1..]", L_BRACKET, NUMBER, RANGETO, R_BRACKET)
 	check(`and break 
 		case catch continue class callback default dll do
 		else for forever function if is isnt or not
@@ -77,4 +78,12 @@ func TestAhead(t *testing.T) {
 	Assert(t).That(lxr.Next(), Equals(it(EQ, 1, "=")))
 	Assert(t).That(lxr.Next(), Equals(it(NUMBER, 2, "1")))
 	Assert(t).That(lxr.Next().Token, Equals(EOF))
+}
+
+func TestAheadSkip(t *testing.T) {
+	lxr := NewLexer(" a \n= /**/ 1 ")
+	Assert(t).That(lxr.AheadSkip(0), Equals(it(IDENTIFIER, 1, "a")))
+	Assert(t).That(lxr.AheadSkip(2), Equals(it(NUMBER, 11, "1")))
+	Assert(t).That(lxr.AheadSkip(1), Equals(it(EQ, 4, "=")))
+	Assert(t).That(lxr.AheadSkip(3).Token, Equals(EOF))
 }

@@ -211,18 +211,6 @@ func (a *Ast) binop(bop bopfn) value.Value {
 	return bop(a.Children[0].toVal(), a.Children[1].toVal())
 }
 
-func (a *Ast) ubop(uop uopfn, bop bopfn) value.Value {
-	if len(a.Children) == 1 {
-		return uop(a.Children[0].toVal())
-	} else {
-		result := a.Children[0].toVal()
-		for _, c := range a.Children[1:] {
-			result = bop(result, c.toVal())
-		}
-		return result
-	}
-}
-
 // for add and mul
 func (a *Ast) commutative(bop bopfn, identity value.Value) Ast {
 	k := identity
