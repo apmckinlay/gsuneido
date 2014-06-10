@@ -30,7 +30,6 @@ func (p *parser) statements() Ast {
 			continue
 		}
 		stmt := p.statement()
-		//fmt.Println("stmt:", stmt)
 		list = append(list, stmt)
 	}
 	return ast(code, list...)
@@ -48,7 +47,6 @@ func (p *parser) statement() Ast {
 	if p.matchIf(SEMICOLON) {
 		return ast(Item{})
 	}
-	// TODO other statement types
 	switch p.Keyword {
 	case RETURN:
 		return p.returnStmt()
@@ -104,7 +102,7 @@ func (p *parser) switchStmt() Ast {
 	p.nextSkipNL()
 	var cases []Ast
 	for p.matchIf(CASE) {
-		cases = p.switchCase(cases)
+		cases = append(cases, p.switchCase())
 	}
 	result := ast(it, expr, ast2("cases", cases...))
 	if p.matchIf(DEFAULT) {
@@ -114,7 +112,7 @@ func (p *parser) switchStmt() Ast {
 	return result
 }
 
-func (p *parser) switchCase(cases []Ast) []Ast {
+func (p *parser) switchCase() Ast {
 	var values []Ast
 	for {
 		values = append(values, p.exprAst())
@@ -123,8 +121,7 @@ func (p *parser) switchCase(cases []Ast) []Ast {
 		}
 	}
 	body := p.switchBody()
-	c := ast(Item{Token: CASE}, ast2("vals", values...), body)
-	return append(cases, c)
+	return ast(Item{Token: CASE}, ast2("vals", values...), body)
 }
 
 func (p *parser) switchBody() Ast {
@@ -174,10 +171,8 @@ func (p *parser) forStmt() Ast {
 
 func (p *parser) isForIn() bool {
 	i := 0
-	//fmt.Println("isForIn", p.lxr.Ahead(i), p.lxr.Ahead(i+1), p.lxr.Ahead(i+2))
 	for ; skip(p.lxr.Ahead(i)); i++ {
 	}
-	//fmt.Println("isForIn2", p.lxr.Ahead(i), p.lxr.Ahead(i+1), p.lxr.Ahead(i+2))
 	if p.lxr.Ahead(i).Token == L_PAREN {
 		i++
 	}
@@ -188,7 +183,6 @@ func (p *parser) isForIn() bool {
 	}
 	for i++; skip(p.lxr.Ahead(i)); i++ {
 	}
-	//fmt.Println("SHOULD BE IN", p.lxr.Ahead(i))
 	return p.lxr.Ahead(i).Keyword == IN
 }
 
