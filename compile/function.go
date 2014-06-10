@@ -66,6 +66,8 @@ func (p *parser) statement() Ast {
 		return p.forStmt()
 	case THROW:
 		return p.throwStmt()
+	case TRY:
+		return p.tryStmt()
 	case BREAK, CONTINUE:
 		it := p.Item
 		p.next()
@@ -272,6 +274,35 @@ func (p *parser) throwStmt() Ast {
 	item := p.Item
 	p.matchSkipNL(THROW)
 	return ast(item, p.exprStmt())
+}
+
+func (p *parser) tryStmt() Ast {
+	item := p.Item
+	p.matchSkipNL(TRY)
+	try := p.statement()
+	if p.Keyword != CATCH {
+		return ast(item, try)
+	} else {
+		catch := p.catch()
+		return ast(item, try, catch)
+	}
+}
+
+func (p *parser) catch() Ast {
+	item := p.Item
+	p.matchSkipNL(CATCH)
+	var children []Ast
+	if p.matchIf(L_PAREN) {
+		children = append(children, ast(p.Item))
+		p.match(IDENTIFIER)
+		if p.matchIf(COMMA) {
+			children = append(children, ast(p.Item))
+			p.match(STRING)
+		}
+		p.match(R_PAREN)
+	}
+	children = append(children, p.statement())
+	return ast(item, children...)
 }
 
 func (p *parser) exprAst() Ast {

@@ -113,4 +113,9 @@ func TestParseStatement(t *testing.T) {
 
 	test("for (i = 0; i < 9; ++i) X",
 		"(for (exprs (= i 0)) (< i 9) (exprs (++ i)) X)")
+
+	test("try x", "(try x)")
+	test("try x catch y", "(try x (catch y))")
+	test("try x catch (e) y", "(try x (catch e y))")
+	test("try x catch (e, 'err') y", "(try x (catch e 'err' y))")
 }
