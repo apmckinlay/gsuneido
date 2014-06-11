@@ -17,7 +17,7 @@ const (
 	GT
 	GTE
 	ADD
-	SUB // must be after ADD
+	SUB
 	CAT
 	MUL
 	DIV

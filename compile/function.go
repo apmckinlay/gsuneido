@@ -66,7 +66,7 @@ func (p *parser) statements() Ast {
 	return ast(code, list...)
 }
 
-var code = Item{Token: STATEMENTS}
+var code = Item{Token: L_CURLY, Text: "STMTS"}
 
 func (p *parser) statement() Ast {
 	if p.Token == NEWLINE {
@@ -76,7 +76,7 @@ func (p *parser) statement() Ast {
 		return p.compound()
 	}
 	if p.matchIf(SEMICOLON) {
-		return ast(Item{})
+		return ast(code)
 	}
 	switch p.Keyword {
 	case RETURN:
@@ -208,7 +208,7 @@ func (p *parser) isForIn() bool {
 }
 
 func (p *parser) forIn(it Item) Ast {
-	it.Token = FOR_IN
+	it.Text = "for-in"
 	parens := p.matchIf(L_PAREN)
 	id := p.Text
 	p.match(IDENTIFIER)

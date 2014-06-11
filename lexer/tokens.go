@@ -8,36 +8,17 @@ func Keyword(s string) Token {
 	return keywords[s]
 }
 
-func (t Token) Closing() Token {
-	switch t {
-	case L_PAREN:
-		return R_PAREN
-	case L_CURLY:
-		return R_CURLY
-	case L_BRACKET:
-		return R_BRACKET
-	default:
-		panic("invalid closing")
-	}
-}
-
 // String returns a name for tokens that do not have a string value
 func (t Token) String() string {
 	return tostring[t]
 }
 
 var tostring = map[Token]string{
-	NIL:        "NIL",
 	EOF:        "EOF",
 	ERROR:      "ERROR",
 	WHITESPACE: "WHITE",
 	COMMENT:    "COMMENT",
 	NEWLINE:    "NEWLINE",
-
-	STATEMENTS: "STMTS",
-	POSTINC:    "POSTINC",
-	POSTDEC:    "POSTDEC",
-	FOR_IN:     "FOR_IN",
 }
 
 const (
@@ -85,10 +66,10 @@ const (
 	BITXOR
 	NOT
 	INC
-	DEC // must be after INC
+	DEC
 	BITNOT
 	EQ
-	ADDEQ // opEQ's must be in same order as op's
+	ADDEQ
 	SUBEQ
 	CATEQ
 	MULEQ
@@ -181,13 +162,6 @@ const (
 	UPDATES
 	VIEW
 	WHERE
-	// for AST
-	STATEMENTS
-	POSTINC
-	POSTDEC
-	VALUE
-	INTERNAL
-	FOR_IN
 )
 
 var keywords = map[string]Token{
@@ -236,23 +210,4 @@ var keywords = map[string]Token{
 	"void":     VOID,
 	"while":    WHILE,
 	"xor":      ISNT,
-}
-
-var infix = map[Token]bool{
-	AND:      true,
-	OR:       true,
-	Q_MARK:   true,
-	MATCH:    true,
-	MATCHNOT: true,
-	ADD:      true,
-	SUB:      true,
-	CAT:      true,
-	MUL:      true,
-	DIV:      true,
-	MOD:      true,
-	LSHIFT:   true,
-	RSHIFT:   true,
-	BITOR:    true,
-	BITAND:   true,
-	BITXOR:   true,
 }

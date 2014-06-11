@@ -85,11 +85,11 @@ func ast(item Item, children ...Ast) Ast {
 }
 
 func ast2(name string, children ...Ast) Ast {
-	return fold(Item{Token: INTERNAL, Text: name}, nil, children)
+	return fold(Item{Text: name}, nil, children)
 }
 
 func astVal(name string, val value.Value) Ast {
-	return fold(Item{Token: INTERNAL, Text: name}, val, []Ast{})
+	return fold(Item{Text: name}, val, []Ast{})
 }
 
 func astBuilder(item Item, nodes ...T) T {
@@ -272,19 +272,22 @@ func (a *Ast) foldCat() Ast {
 }
 
 func valAst(val value.Value) Ast {
-	return Ast{Item: Item{Token: VALUE}, value: val}
+	return Ast{value: val}
 }
 
 func (a *Ast) isConstant() bool {
 	switch a.KeyTok() {
-	case NUMBER, STRING, TRUE, FALSE, VALUE:
+	case NUMBER, STRING, TRUE, FALSE:
 		return true
 	default:
-		return false
+		return a.value != nil && a.Text == ""
 	}
 }
 
 func (a *Ast) toVal() value.Value {
+	if a.value != nil {
+		return a.value
+	}
 	switch a.KeyTok() {
 	case NUMBER:
 		val, err := value.NumFromString(a.Text)
@@ -298,8 +301,6 @@ func (a *Ast) toVal() value.Value {
 		return value.True
 	case FALSE:
 		return value.False
-	case VALUE:
-		return a.value
 	default:
 		panic("bad toVal")
 	}

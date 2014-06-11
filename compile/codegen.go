@@ -34,6 +34,24 @@ type cgen struct {
 	names  []string
 }
 
+var tok2op = map[Token]byte{
+	AND:      i.AND,
+	OR:       i.OR,
+	INC:      i.ADD,
+	DEC:      i.SUB,
+	ADDEQ:    i.ADD,
+	SUBEQ:    i.SUB,
+	CATEQ:    i.CAT,
+	MULEQ:    i.MUL,
+	DIVEQ:    i.DIV,
+	MODEQ:    i.MOD,
+	LSHIFTEQ: i.LSHIFT,
+	RSHIFTEQ: i.RSHIFT,
+	BITOREQ:  i.BITOR,
+	BITANDEQ: i.BITAND,
+	BITXOREQ: i.BITXOR,
+}
+
 func (cg *cgen) function(ast Ast) {
 	verify.That(ast.Keyword == FUNCTION)
 	// TODO params
@@ -45,12 +63,10 @@ func (cg *cgen) function(ast Ast) {
 
 func (cg *cgen) statement(ast Ast, labels *Labels, lastStmt bool) {
 	switch ast.KeyTok() {
-	case STATEMENTS:
+	case L_CURLY:
 		for _, a := range ast.Children {
 			cg.statement(a, labels, lastStmt)
 		}
-	case NIL:
-		// no code
 	case RETURN:
 		if len(ast.Children) == 1 {
 			cg.expr(ast.first())
@@ -69,7 +85,11 @@ func (cg *cgen) statement(ast Ast, labels *Labels, lastStmt bool) {
 	case DO:
 		cg.dowhileStmt(ast)
 	case FOR:
-		cg.forStmt(ast)
+		if ast.Text == "in" {
+			panic("not implemented") // TODO
+		} else {
+			cg.forStmt(ast)
+		}
 	case THROW:
 		cg.expr(ast.first())
 		cg.emit(i.THROW)
@@ -184,8 +204,6 @@ func (cg *cgen) exprList(list []Ast) {
 
 func (cg *cgen) expr(ast Ast) {
 	switch ast.KeyTok() {
-	case VALUE:
-		cg.emitValue(ast.value)
 	case NOT:
 		cg.unary(ast, i.NOT)
 	case ADD:
@@ -215,24 +233,23 @@ func (cg *cgen) expr(ast Ast) {
 		cg.dupLvalue(ref)
 		cg.load(ref)
 		cg.expr(ast.second())
-		cg.emit(i.ADD + byte(ast.Token-ADDEQ))
+		cg.emit(tok2op[ast.Token])
 		cg.store(ref)
 	case INC, DEC:
 		ref := cg.lvalue(ast.first())
 		cg.dupLvalue(ref)
 		cg.load(ref)
-		cg.emit(i.ONE)
-		cg.emit(i.ADD + byte(ast.Token-INC))
-		cg.store(ref)
-	case POSTINC, POSTDEC:
-		ref := cg.lvalue(ast.first())
-		cg.dupLvalue(ref)
-		cg.load(ref)
-		cg.dupUnderLvalue(ref)
-		cg.emit(i.ONE)
-		cg.emit(i.ADD + byte(ast.Token-POSTINC))
-		cg.store(ref)
-		cg.emit(i.POP)
+		if ast.Text == "post" {
+			cg.dupUnderLvalue(ref)
+			cg.emit(i.ONE)
+			cg.emit(tok2op[ast.Token])
+			cg.store(ref)
+			cg.emit(i.POP)
+		} else {
+			cg.emit(i.ONE)
+			cg.emit(tok2op[ast.Token])
+			cg.store(ref)
+		}
 	case DOT: // a.b
 		cg.expr(ast.first())
 		cg.emitValue(value.SuStr(ast.second().Text))
@@ -248,6 +265,10 @@ func (cg *cgen) expr(ast Ast) {
 	case IN:
 		cg.inExpr(ast)
 	default:
+		if ast.value != nil {
+			cg.emitValue(ast.value)
+			return
+		}
 		panic("bad expression: " + ast.String())
 	}
 }
@@ -286,11 +307,6 @@ func (cg *cgen) inExpr(ast Ast) {
 		}
 	}
 	cg.placeLabel(end)
-}
-
-var tok2op = map[Token]byte{
-	AND: i.AND,
-	OR:  i.OR,
 }
 
 func (cg *cgen) emitValue(val value.Value) {

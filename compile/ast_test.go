@@ -1,8 +1,6 @@
 package compile
 
 import (
-	"fmt"
-	"strings"
 	"testing"
 
 	. "github.com/apmckinlay/gsuneido/lexer"
@@ -10,42 +8,23 @@ import (
 	"github.com/apmckinlay/gsuneido/value"
 )
 
-func ExampleAst_String() {
-	ast := func(tok Token, txt string, children ...Ast) Ast {
+func TestAstString(t *testing.T) {
+	test := func(ast Ast, expected string) {
+		Assert(t).That(ast.String(), Equals(expected))
+	}
+	a := func(tok Token, txt string, children ...Ast) Ast {
 		return Ast{Item: Item{Token: tok, Text: txt}, Children: children}
 	}
-	a := Ast{}
-	fmt.Println(&a)
-	a = ast(COMMENT, "/* ... */")
-	fmt.Println(&a)
-	a = ast(IDENTIFIER, "foo")
-	fmt.Println(&a)
-	a = ast(ADD, "+",
-		ast(IDENTIFIER, "foo"),
-		ast(NUMBER, "123"))
-	fmt.Println(&a)
-	longid := ast(IDENTIFIER, strings.Repeat("verylong", 10))
-	a = ast(MUL, "*",
-		a,
-		ast(DIV, "/",
-			ast(NUMBER, "123"), longid),
-		longid,
-	)
-	fmt.Println(&a)
-	// Output:
-	// NIL
-	// COMMENT
-	// foo
-	// (+ foo 123)
-	// (*
-	//     (+ foo 123)
-	//     (/
-	//         123
-	//         verylongverylongverylongverylongverylongverylongverylongverylongverylongverylong)
-	//     verylongverylongverylongverylongverylongverylongverylongverylongverylongverylong)
+	test(Ast{}, "()")
+	test(Ast{Item: Item{Token: EOF}}, "EOF")
+	test(a(COMMENT, "/* ... */"), "COMMENT")
+	test(a(IDENTIFIER, "foo"), "foo")
+	test(Ast{value: value.SuInt(123)}, "123")
+	test(Ast{Item: Item{Text: "foo"}}, "foo")
+	test(Ast{Item: Item{Text: "num"}, value: value.SuInt(123)}, "(num 123)")
 }
 
 func TestFold(t *testing.T) {
 	Assert(t).That(fold(Item{Token: IDENTIFIER, Keyword: TRUE}, nil, nil),
-		Equals(Ast{Item: Item{Token: VALUE}, value: value.True}))
+		Equals(Ast{value: value.True}))
 }

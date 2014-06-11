@@ -298,13 +298,13 @@ func (p *parser) term(newTerm bool) T {
 		expr := p.expr()
 		return p.bld(it, term, expr)
 	} else if p.Token == INC || p.Token == DEC {
-		p.Token += POSTINC - INC
+		p.Text = "post"
 		return p.evalNext(p.bld(p.Item, term))
 	}
 	return term
 }
 
-var call = Item{Token: INTERNAL, Text: "call"}
+var call = Item{Text: "call"}
 
 func (p *parser) primary() T {
 	switch p.Token {
@@ -319,7 +319,7 @@ func (p *parser) primary() T {
 		return p.evalNext(p.bld(p.Item))
 	case HASH:
 		val := p.constant()
-		return p.bld(Item{Token: VALUE}, val)
+		return p.bld(Item{}, val)
 	case L_PAREN:
 		p.next()
 		return p.evalMatch(p.expr(), R_PAREN)
@@ -348,13 +348,13 @@ func (p *parser) arguments() T {
 	return p.bld(argList, args...)
 }
 
-var argList = Item{Token: INTERNAL, Text: "args"}
-var atArg = Item{Token: INTERNAL, Text: "atArg"}
-var noKeyword = Item{Token: INTERNAL, Text: "noKwd"}
+var argList = Item{Text: "args"}
+var atArg = Item{Text: "atArg"}
+var noKeyword = Item{Text: "noKwd"}
 var trueItem = Item{Token: TRUE, Text: "true"}
 var blockArg = Item{Token: IDENTIFIER, Text: "blockArg"}
-var blockItem = Item{Token: INTERNAL, Text: "block"}
-var blockParams = Item{Token: INTERNAL, Text: "blockParams"}
+var blockItem = Item{Text: "block"}
+var blockParams = Item{Text: "blockParams"}
 var zeroItem = Item{Token: NUMBER, Text: "0"}
 
 func (p *parser) atArgument() T {
@@ -420,7 +420,7 @@ func (p *parser) blockParams() T {
 	var params []T
 	if p.matchIf(BITOR) {
 		if p.matchIf(AT) {
-			params = append(params, p.bld(Item{Token: INTERNAL, Text: "@" + p.Text}))
+			params = append(params, p.bld(Item{Text: "@" + p.Text}))
 			p.match(IDENTIFIER)
 		} else {
 			for p.Token == IDENTIFIER {

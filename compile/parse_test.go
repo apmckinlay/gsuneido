@@ -52,7 +52,7 @@ func TestParseExpression(t *testing.T) {
 	test("a * b * c", "(* a b c)")
 	test("a * b / c", "(* a b (/ c))")
 	test("++a", "(++ a)")
-	test("a--", "(POSTDEC a)")
+	test("a--", "(post a)")
 	test("a = 123", "(= a 123)")
 	test("a += 123", "(+= a 123)")
 	test("+ - ! ~ x", "(+ (- (! (~ x))))")
@@ -123,7 +123,7 @@ func TestParseStatements(t *testing.T) {
 	test("while a { b }", "(while a (STMTS b))")
 	test("while (a)\nb", "(while a b)")
 	test("while a\nb", "(while a b)")
-	test("while a\n;", "(while a NIL)")
+	test("while a\n;", "(while a STMTS)")
 
 	test("if (a) b", "(if a b)")
 	test("if (a) b else c", "(if a b c)")
@@ -147,9 +147,9 @@ func TestParseStatements(t *testing.T) {
 
 	test("do a while b", "(do a b)")
 
-	test("for x in ob\na", "(FOR_IN x ob a)")
-	test("for x in ob { a }", "(FOR_IN x ob (STMTS a))")
-	test("for (x in ob) a", "(FOR_IN x ob a)")
+	test("for x in ob\na", "(for-in x ob a)")
+	test("for x in ob { a }", "(for-in x ob (STMTS a))")
+	test("for (x in ob) a", "(for-in x ob a)")
 
 	test("for (i = 0; i < 9; ++i) X",
 		"(for (exprs (= i 0)) (< i 9) (exprs (++ i)) X)")

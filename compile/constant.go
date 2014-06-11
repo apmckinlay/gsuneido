@@ -89,10 +89,16 @@ func (p *parser) date() v.Value {
 	return date
 }
 
+var closing = map[Token]Token{
+	L_PAREN:   R_PAREN,
+	L_CURLY:   R_CURLY,
+	L_BRACKET: R_BRACKET,
+}
+
 func (p *parser) object() v.Value {
-	closing := p.Token.Closing()
+	close := closing[p.Token]
 	p.next()
-	return p.memberList(closing)
+	return p.memberList(close)
 }
 
 func (p *parser) memberList(closing Token) v.Value {
