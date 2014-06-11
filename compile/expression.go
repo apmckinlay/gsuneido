@@ -220,16 +220,29 @@ func (p *parser) unary() T {
 		item := p.Item
 		p.next()
 		return p.bld(item, p.unary())
+	case NEW:
+		return p.newExpr()
 	default:
-		return p.term()
+		return p.term(false)
 	}
 }
 
-// TODO new expr
+func (p *parser) newExpr() T {
+	it := p.Item
+	p.match(NEW)
+	term := p.term(true)
+	var args T
+	if p.Token == L_PAREN {
+		args = p.arguments()
+	} else {
+		args = p.bld(argList)
+	}
+	return p.bld(it, term, args)
+}
 
 var int_max_str = strconv.Itoa(math.MaxInt32)
 
-func (p *parser) term() T {
+func (p *parser) term(newTerm bool) T {
 	var preincdec Item
 	if p.Token == INC || p.Token == DEC {
 		preincdec = p.Item
@@ -238,6 +251,9 @@ func (p *parser) term() T {
 	term := p.primary()
 	for p.Token == DOT || p.Token == L_BRACKET || p.Token == L_PAREN ||
 		(p.Token == L_CURLY && !p.expectingCompound) {
+		if newTerm && p.Token == L_PAREN {
+			return term
+		}
 		if p.Token == DOT {
 			dot := p.Item
 			p.nextSkipNL()

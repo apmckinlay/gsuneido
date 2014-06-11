@@ -88,6 +88,10 @@ func TestParseExpression(t *testing.T) {
 	test("f(1, a: 2)", "(call f (args (noKwd 1) (a 2)))")
 	test("f(){ b }", "(call f (args (blockArg (block blockParams (STMTS b)))))")
 	test("f({ b })", "(call f (args (noKwd (block blockParams (STMTS b)))))")
+
+	test("new c", "(new c args)")
+	test("new a.c", "(new (. a c) args)")
+	test("new c(a, b)", "(new c (args (noKwd a) (noKwd b)))")
 }
 
 func TestParseStatement(t *testing.T) {
