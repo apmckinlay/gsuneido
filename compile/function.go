@@ -10,10 +10,41 @@ func ParseFunction(src string) Ast {
 func (p *parser) function() Ast {
 	it := p.Item
 	p.match(FUNCTION)
-	p.match(L_PAREN)
-	p.match(R_PAREN)
+	params := p.params()
 	body := p.compound()
-	return ast(it, ast(Item{Token: PARAMS}), body)
+	return ast(it, params, body)
+}
+
+func (p *parser) params() Ast {
+	p.match(L_PAREN)
+	var params []Ast
+	if p.matchIf(AT) {
+		params = append(params, ast2("@"+p.Text))
+		p.match(IDENTIFIER)
+	} else {
+		defs := false
+		for p.Token != R_PAREN {
+			dot := p.matchIf(DOT)
+			name := p.Text
+			if dot {
+				name = "." + name
+			}
+			p.match(IDENTIFIER)
+			if p.matchIf(EQ) {
+				defs = true
+				def := p.constant()
+				params = append(params, astVal(name, def))
+			} else {
+				if defs {
+					p.error("default parameters must come last")
+				}
+				params = append(params, ast2(name))
+			}
+			p.matchIf(COMMA)
+		}
+	}
+	p.matchSkipNL(R_PAREN)
+	return ast2("params", params...)
 }
 
 func (p *parser) compound() Ast {

@@ -94,7 +94,20 @@ func TestParseExpression(t *testing.T) {
 	test("new c(a, b)", "(new c (args (noKwd a) (noKwd b)))")
 }
 
-func TestParseStatement(t *testing.T) {
+func TestParseFunction(t *testing.T) {
+	test := func(src, expected string) {
+		result := ParseFunction(src)
+		Assert(t).That(result.String(), Equals(expected))
+	}
+	test("function () { }", "(function params STMTS)")
+	test("function (@a) { }", "(function (params @a) STMTS)")
+	test("function (a, b) { }", "(function (params a b) STMTS)")
+	test("function (a, b = 1) { }", "(function (params a (b 1)) STMTS)")
+	test("function (a = 1) { }", "(function (params (a 1)) STMTS)")
+	test("function (a, b = 1) { }", "(function (params a (b 1)) STMTS)")
+}
+
+func TestParseStatements(t *testing.T) {
 	test := func(src string, expected string) {
 		ast := ParseFunction("function () {\n" + src + "\n}")
 		ast = ast.second() // function

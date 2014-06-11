@@ -70,7 +70,11 @@ func (a *Ast) tokval(buf *bytes.Buffer) {
 	if ts := a.Token.String(); ts != "" {
 		buf.WriteString(a.Token.String())
 	} else if a.value != nil {
-		buf.WriteString(a.value.String())
+		if a.Text != "" {
+			buf.WriteString("(" + a.Text + " " + a.value.String() + ")")
+		} else {
+			buf.WriteString(a.value.String())
+		}
 	} else if a.Text != "" {
 		buf.WriteString(a.Text)
 	}
@@ -82,6 +86,10 @@ func ast(item Item, children ...Ast) Ast {
 
 func ast2(name string, children ...Ast) Ast {
 	return fold(Item{Token: INTERNAL, Text: name}, nil, children)
+}
+
+func astVal(name string, val value.Value) Ast {
+	return fold(Item{Token: INTERNAL, Text: name}, val, []Ast{})
 }
 
 func astBuilder(item Item, nodes ...T) T {
