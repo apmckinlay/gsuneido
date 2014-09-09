@@ -104,7 +104,7 @@ func Parse(s string) (Dnum, error) {
 	return dn, nil
 }
 
-// spanDigits returns the number of leading digits
+// spanDigits returns the leading span of digits
 func spanDigits(s string) string {
 	i := 0
 	for i < len(s) && '0' <= s[i] && s[i] <= '9' {
@@ -303,9 +303,9 @@ func Cmp(x, y Dnum) int {
 	switch {
 	case x == y:
 		return 0
-	case x == MinusInf, y == Inf:
+	case x.sign == signNeg && y.sign == signPos:
 		return -1
-	case x == Inf, y == MinusInf:
+	case x.sign == signPos && y.sign == signNeg:
 		return 1
 	}
 	switch d := Sub(x, y); {
