@@ -1,5 +1,8 @@
 package compile
 
+// TODO
+// - class
+
 import (
 	. "github.com/apmckinlay/gsuneido/lexer"
 	v "github.com/apmckinlay/gsuneido/value"
