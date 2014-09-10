@@ -376,10 +376,13 @@ func Sub(x, y Dnum) Dnum {
 }
 
 func uadd(x, y Dnum) Dnum {
-	sign := x.sign
 	align(&x, &y)
+	// align may make coef 0 if exp is too different
 	if x.coef == 0 {
-		return Dnum{y.coef, sign, y.exp}
+		return Dnum{y.coef, x.sign, y.exp}
+	}
+	if y.coef == 0 {
+		return Dnum{x.coef, y.sign, x.exp}
 	}
 	coef := x.coef + y.coef
 	if coef < x.coef || coef < y.coef { // overflow
@@ -394,17 +397,15 @@ func uadd(x, y Dnum) Dnum {
 		}
 		coef = x.coef + y.coef
 	}
-	return result(coef, sign, int(x.exp))
+	return result(coef, x.sign, int(x.exp))
 }
 
-func align(x, y *Dnum) (flipped int8) {
-	flipped = 1
+func align(x, y *Dnum) {
 	if x.exp == y.exp {
 		return
 	}
 	if x.exp > y.exp {
-		*x, *y = *y, *x // swap
-		flipped = -1
+		x, y = y, x // swap
 	}
 	for y.exp > x.exp && y.shiftLeft() {
 	}
@@ -414,7 +415,6 @@ func align(x, y *Dnum) (flipped int8) {
 	if roundup {
 		x.coef++
 	}
-	return
 }
 
 // returns true if it was able to shift (losslessly)
@@ -464,8 +464,8 @@ func result(coef uint64, sign int8, exp int) Dnum {
 }
 
 func usub(x, y Dnum) Dnum {
+	align(&x, &y)
 	sign := x.sign
-	sign *= align(&x, &y)
 	if x.coef < y.coef {
 		x, y = y, x
 		sign *= -1 // flip sign
