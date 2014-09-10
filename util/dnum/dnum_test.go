@@ -13,8 +13,8 @@ func Test_String(t *testing.T) {
 	assert := Assert(t)
 	assert.That(Zero.String(), Equals("0"))
 	assert.That(Inf.String(), Equals("inf"))
-	assert.That(Dnum{123, 0, 0}.String(), Equals("123"))
-	assert.That(Dnum{123000, 0, -3}.String(), Equals("123"))
+	assert.That(Dnum{123, signPos, 0}.String(), Equals("123"))
+	assert.That(Dnum{123000, signPos, -3}.String(), Equals("123"))
 }
 
 func Test_Parse(t *testing.T) {
@@ -54,20 +54,20 @@ func TestConvert(t *testing.T) {
 	}
 	test("0", Zero)
 
-	test("123", Dnum{123, 0, 0})
-	test("-123", Dnum{123, 1, 0})
+	test("123", Dnum{123, signPos, 0})
+	test("-123", Dnum{123, signNeg, 0})
 
-	test("10000", Dnum{10000, 0, 0})
-	test("1e5", Dnum{1, 0, 5})
+	test("10000", Dnum{10000, signPos, 0})
+	test("1e5", Dnum{1, signPos, 5})
 
-	test(".1234", Dnum{1234, 0, -4})
-	test(".0001", Dnum{1, 0, -4})
-	test("1e-5", Dnum{1, 0, -5})
+	test(".1234", Dnum{1234, signPos, -4})
+	test(".0001", Dnum{1, signPos, -4})
+	test("1e-5", Dnum{1, signPos, -5})
 
-	test("123.4", Dnum{1234, 0, -1})
-	test("1.234", Dnum{1234, 0, -3})
+	test("123.4", Dnum{1234, signPos, -1})
+	test("1.234", Dnum{1234, signPos, -3})
 
-	test("12345678912345678912", Dnum{12345678912345678912, 0, 0})
+	test("12345678912345678912", Dnum{12345678912345678912, signPos, 0})
 }
 
 func Test_Neg(t *testing.T) {
@@ -211,7 +211,7 @@ func Test_Div(t *testing.T) {
 	div("0", "0", "0")
 	div("123", "0", "inf")
 	div("123", "inf", "0")
-	div("inf", "inf", "inf")
+	div("inf", "inf", "1")
 	div("1e99", "1e-99", "inf") // exp overflow
 	div("1e-99", "1e99", "0")   // exp underflow
 	// divides evenly

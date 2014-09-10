@@ -3,7 +3,7 @@ Package dnum implements decimal floating point numbers.
 
 Uses uint64 to hold the coefficient and int8 for exponent.
 
-Value is -1^sign * coef * 10^exp, zeroed value is 0.
+Value is sign * coef * 10^exp, zeroed value is 0.
 */
 package dnum
 
@@ -23,16 +23,17 @@ type Dnum struct {
 }
 
 const (
-	signPos = 0
-	signNeg = 1
-	expInf  = math.MaxInt8
+	signPos  = +1
+	signZero = 0
+	signNeg  = -1
+	expInf   = math.MaxInt8
 )
 
 var (
 	Zero     = Dnum{}
 	One      = Dnum{1, signPos, 0}
-	Inf      = Dnum{exp: expInf}
-	MinusInf = Dnum{sign: signNeg, exp: expInf}
+	Inf      = Dnum{math.MaxUint64, signPos, expInf}
+	MinusInf = Dnum{math.MaxUint64, signNeg, expInf}
 
 	OutsideRange = errors.New("outside range")
 )
@@ -62,6 +63,7 @@ func Parse(s string) (Dnum, error) {
 		return Zero, nil
 	}
 	var dn Dnum
+	dn.sign = signPos
 	i := 0
 	if s[i] == '+' {
 		i++
@@ -155,7 +157,7 @@ func (dn Dnum) String() string {
 
 func (dn Dnum) Float64() float64 {
 	if dn.IsInf() {
-		return math.Inf(-int(dn.sign))
+		return math.Inf(int(dn.sign))
 	}
 	g := float64(dn.coef)
 	if dn.sign == signNeg {
@@ -261,14 +263,7 @@ func FromInt64(n int64) Dnum {
 
 // Sign returns -1 for negative, 0 for zero, and +1 for positive
 func (dn Dnum) Sign() int {
-	switch {
-	case dn == Zero:
-		return 0
-	case dn.sign == signNeg:
-		return -1
-	default:
-		return +1
-	}
+	return int(dn.sign)
 }
 
 func (dn Dnum) Coef() uint64 {
@@ -292,21 +287,25 @@ func (dn Dnum) IsInt() bool {
 // arithmetic operations -------------------------------------------------------
 
 func (dn Dnum) Neg() Dnum {
+	return Dnum{dn.coef, -dn.sign, dn.exp}
+}
+
+func (dn Dnum) Abs() Dnum {
 	if dn == Zero {
 		return Zero
 	} else {
-		return Dnum{dn.coef, dn.sign ^ 1, dn.exp}
+		return Dnum{dn.coef, signPos, dn.exp}
 	}
 }
 
 func Cmp(x, y Dnum) int {
 	switch {
+	case x.sign < y.sign:
+		return -1
+	case x.sign > y.sign:
+		return 1
 	case x == y:
 		return 0
-	case x.sign == signNeg && y.sign == signPos:
-		return -1
-	case x.sign == signPos && y.sign == signNeg:
-		return 1
 	}
 	switch d := Sub(x, y); {
 	case d == Zero:
@@ -399,12 +398,13 @@ func uadd(x, y Dnum) Dnum {
 }
 
 func align(x, y *Dnum) (flipped int8) {
+	flipped = 1
 	if x.exp == y.exp {
 		return
 	}
 	if x.exp > y.exp {
 		*x, *y = *y, *x // swap
-		flipped = 1
+		flipped = -1
 	}
 	for y.exp > x.exp && y.shiftLeft() {
 	}
@@ -465,16 +465,16 @@ func result(coef uint64, sign int8, exp int) Dnum {
 
 func usub(x, y Dnum) Dnum {
 	sign := x.sign
-	sign ^= align(&x, &y)
+	sign *= align(&x, &y)
 	if x.coef < y.coef {
 		x, y = y, x
-		sign ^= 1 // flip sign
+		sign *= -1 // flip sign
 	}
 	return result(x.coef-y.coef, sign, int(x.exp))
 }
 
 func Mul(x, y Dnum) Dnum {
-	sign := x.sign ^ y.sign
+	sign := x.sign * y.sign
 	switch {
 	case x == One:
 		return y
@@ -539,19 +539,25 @@ func (dn *Dnum) split() (lo, hi uint64) {
 }
 
 func Div(x, y Dnum) Dnum {
-	sign := x.sign ^ y.sign
+	sign := x.sign * y.sign
+	xa := x.Abs()
+	ya := y.Abs()
 	switch {
-	case y == One:
-		return x
 	case x == Zero:
 		return Zero
-	case y == Zero || x.IsInf():
+	case Cmp(ya, One) == 0:
+		return Dnum{x.coef, sign, x.exp}
+	case Cmp(xa, ya) == 0:
+		return Dnum{1, sign, 0}
+	case y == Zero:
+		return inf(x.sign)
+	case x.IsInf():
 		return inf(sign)
 	case y.IsInf():
 		return Zero
 	}
 	coef, exp := div2(x.Coef(), y.Coef())
-	return result(coef, x.sign^y.sign, int(x.exp)-int(y.exp)+exp)
+	return result(coef, sign, int(x.exp)-int(y.exp)+exp)
 }
 
 func div2(x, y uint64) (uint64, int) {
