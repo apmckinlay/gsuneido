@@ -127,7 +127,7 @@ func (dn Dnum) String() string {
 	if dn.sign == signNeg {
 		sign = "-"
 	}
-	if dn.exp == expInf {
+	if dn.IsInf() {
 		return sign + "inf"
 	}
 	exp := int(dn.exp)
@@ -151,7 +151,8 @@ func (dn Dnum) String() string {
 		digits = digits[:1] + "." + digits[1:]
 		sexp = "e" + strconv.FormatInt(int64(exp), 10)
 	}
-	digits = strings.TrimRight(digits, "0.")
+	digits = strings.TrimRight(digits, "0")
+	digits = strings.TrimRight(digits, ".")
 	return sign + digits + sexp
 }
 
@@ -307,14 +308,7 @@ func Cmp(x, y Dnum) int {
 	case x == y:
 		return 0
 	}
-	switch d := Sub(x, y); {
-	case d == Zero:
-		return 0
-	case d.sign == signNeg:
-		return -1
-	default:
-		return +1
-	}
+	return int(Sub(x, y).sign)
 }
 
 func Add(x, y Dnum) Dnum {
@@ -378,12 +372,6 @@ func Sub(x, y Dnum) Dnum {
 func uadd(x, y Dnum) Dnum {
 	align(&x, &y)
 	// align may make coef 0 if exp is too different
-	if x.coef == 0 {
-		return Dnum{y.coef, x.sign, y.exp}
-	}
-	if y.coef == 0 {
-		return Dnum{x.coef, y.sign, x.exp}
-	}
 	coef := x.coef + y.coef
 	if coef < x.coef || coef < y.coef { // overflow
 		roundup := false
@@ -412,7 +400,9 @@ func align(x, y *Dnum) {
 	roundup := false
 	for y.exp > x.exp && x.shiftRight(&roundup) {
 	}
-	if roundup {
+	if x.exp != y.exp {
+		x.exp = y.exp
+	} else if roundup {
 		x.coef++
 	}
 }
@@ -432,7 +422,6 @@ func (dn *Dnum) shiftLeft() bool {
 
 func mul10safe(n uint64) bool {
 	const HI4 = 0xf << 60
-
 	return (n & HI4) == 0
 }
 
@@ -483,7 +472,7 @@ func Mul(x, y Dnum) Dnum {
 	case x == Zero || y == Zero:
 		return Zero
 	case x.IsInf() || y.IsInf():
-		return result(0, sign, expInf)
+		return inf(sign)
 	}
 	x.minCoef()
 	y.minCoef()
@@ -493,7 +482,7 @@ func Mul(x, y Dnum) Dnum {
 	}
 	// drop 5 least significant bits off x and y
 	// 59 bits < 18 decimal digits
-	// 32 bits > 9 decmal digits
+	// 32 bits > 9 decimal digits
 	// so we can split x & y into two pieces
 	// and multiply separately guaranteed not to overflow
 	xlo, xhi := x.split()
@@ -518,13 +507,6 @@ func (dn *Dnum) minCoef() {
 	}
 }
 
-// makes coef as large as possible (losslessly)
-// i.e. trim leading zero decimal digits
-func (dn *Dnum) maxCoef() {
-	for dn.shiftLeft() {
-	}
-}
-
 func (dn *Dnum) split() (lo, hi uint64) {
 	const HI5 = 0x1f << 59
 	roundup := false
@@ -540,36 +522,34 @@ func (dn *Dnum) split() (lo, hi uint64) {
 
 func Div(x, y Dnum) Dnum {
 	sign := x.sign * y.sign
-	xa := x.Abs()
-	ya := y.Abs()
 	switch {
 	case x == Zero:
 		return Zero
-	case Cmp(ya, One) == 0:
-		return Dnum{x.coef, sign, x.exp}
-	case Cmp(xa, ya) == 0:
-		return Dnum{1, sign, 0}
 	case y == Zero:
 		return inf(x.sign)
 	case x.IsInf():
+		if y.IsInf() {
+			return Dnum{1, sign, 0}
+		}
 		return inf(sign)
 	case y.IsInf():
 		return Zero
 	}
-	coef, exp := div2(x.Coef(), y.Coef())
+	coef, exp := div2(x.coef, y.coef)
 	return result(coef, sign, int(x.exp)-int(y.exp)+exp)
 }
 
 func div2(x, y uint64) (uint64, int) {
 	exp := 0
+	// strip trailing zeroes from y i.e. shift right as far as possible
 	for y%10 == 0 {
 		y /= 10
 		exp--
 	}
 	var z uint64
 	for x > 0 {
-		// shift x left as far as possible
-		for mul10safe(x) && mul10safe(z) {
+		// shift x left until divisible or as far as possible
+		for x%y != 0 && mul10safe(x) && mul10safe(z) {
 			x *= 10
 			z *= 10
 			exp--

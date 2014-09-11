@@ -15,6 +15,7 @@ func Test_String(t *testing.T) {
 	assert.That(Inf.String(), Equals("inf"))
 	assert.That(Dnum{123, signPos, 0}.String(), Equals("123"))
 	assert.That(Dnum{123000, signPos, -3}.String(), Equals("123"))
+	assert.That(Dnum{1000000, signPos, -3}.String(), Equals("1000"))
 }
 
 func Test_Parse(t *testing.T) {
@@ -129,6 +130,7 @@ func Test_Add(t *testing.T) {
 	add("11111111111111111111", "6666666666666666666e-4", "11111777777777777778")
 	// int64 overflow
 	add("18446744073709551615", "11", "18446744073709551630")
+	add("18446744073709551615e126", "18446744073709551615e126", "inf")
 }
 
 func Test_Sub(t *testing.T) {
@@ -158,6 +160,7 @@ func Test_Sub(t *testing.T) {
 	sub("123", "-456", "579")
 	// need aligning
 	sub("123", "1e-99", "123")
+	sub("1e50", "123", "1e50")
 	sub("1e14", "1e12", "9.9e13")
 	sub("12222222222222222222", "11111111111111111111e-4", "12221111111111111111")
 }
@@ -172,11 +175,7 @@ func Test_Mul(t *testing.T) {
 			assert.That(zn.String(), Equals(expected).Comment(fmt.Sprint(xn, " * ", yn)))
 		}
 		mul2(x, y, expected)
-		if expected != "0" {
-			mul2("-"+x, y, "-"+expected)
-			mul2("-"+x, y, "-"+expected)
-		}
-		mul2("-"+x, "-"+y, expected)
+		mul2(y, x, expected)
 	}
 	// special cases (no actual math)
 	mul("0", "0", "0")
@@ -212,17 +211,21 @@ func Test_Div(t *testing.T) {
 	div("0", "0", "0")
 	div("123", "0", "inf")
 	div("123", "inf", "0")
+	div("inf", "123", "inf")
 	div("inf", "inf", "1")
-	div("1e99", "1e-99", "inf") // exp overflow
-	div("1e-99", "1e99", "0")   // exp underflow
+	div("123", "123", "1")
+	// exp overflow
+	div("1e99", "1e-99", "inf")
+	div("1e-99", "1e99", "0")
 	// divides evenly
 	div("4444", "2222", "2")
 	div("2222", "4444", ".5")
+	div("123000", ".000123", "1e9")
 	// long division
-	//	div("2", "3", ".6666666666666666666")
 	div("1", "3", ".3333333333333333333")
+	div("2", "3", ".6666666666666666666")
 	div("11", "17", ".6470588235294117647")
-	//	div("1234567890123456", "9876543210123456", ".12499999887187493")
+	div("1234567890123456", "9876543210123456", ".12499999887187493")
 }
 
 func Test_float64_convert(t *testing.T) {
