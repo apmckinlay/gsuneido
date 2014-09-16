@@ -48,8 +48,8 @@ func RunFile(filename string) bool {
 		panic("can't read " + testdir() + filename)
 	}
 	lxr := c.NewLexer(string(src))
-	item := lxr.Next()
-	p := parser{lxr, item}
+	p := parser{lxr: lxr}
+	p.next(true)
 	return p.run()
 }
 
