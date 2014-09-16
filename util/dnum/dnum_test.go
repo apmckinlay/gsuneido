@@ -308,6 +308,18 @@ func Test_ToUint(t *testing.T) {
 	test("18446744073709551615", "18446744073709551615") // max uint64
 }
 
+func Test_FromInt64(t *testing.T) {
+	test := func(x int64) {
+		Assert(t).That(FromInt64(x).String(),
+			Equals(strconv.FormatInt(x, 10)))
+	}
+	test(math.MinInt64)
+	test(-123)
+	test(0)
+	test(123)
+	test(math.MaxInt64)
+}
+
 var bench Dnum
 
 func BenchmarkAdd(b *testing.B) {
@@ -351,6 +363,50 @@ func pt_add(args []string) bool {
 }
 
 var _ = ptest.Add("dnum_add", pt_add)
+
+func pt_sub(args []string) bool {
+	xn := parse(args[0])
+	yn := parse(args[1])
+	return Sub(xn, yn).String() == args[2] &&
+		(args[2] == "0" || Sub(yn, xn).String() == "-"+args[2])
+}
+
+var _ = ptest.Add("dnum_sub", pt_sub)
+
+func pt_mul(args []string) bool {
+	xn := parse(args[0])
+	yn := parse(args[1])
+	return Mul(xn, yn).String() == args[2] &&
+		Mul(yn, xn).String() == args[2]
+}
+
+var _ = ptest.Add("dnum_mul", pt_mul)
+
+func pt_div(args []string) bool {
+	xn := parse(args[0])
+	yn := parse(args[1])
+	return Div(xn, yn).String() == args[2]
+}
+
+var _ = ptest.Add("dnum_div", pt_div)
+
+func pt_cmp(args []string) bool {
+	for i, xs := range args {
+		x := parse(xs)
+		if Cmp(x, x) != 0 {
+			return false
+		}
+		for _, ys := range args[i+1:] {
+			y := parse(ys)
+			if Cmp(x, y) != -1 || Cmp(y, x) != +1 {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+var _ = ptest.Add("dnum_cmp", pt_cmp)
 
 func TestPtest(t *testing.T) {
 	if !ptest.RunFile("dnum.test") {
