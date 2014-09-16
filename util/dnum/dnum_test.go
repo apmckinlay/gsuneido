@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"testing"
 	. "github.com/apmckinlay/gsuneido/util/hamcrest"
+	"github.com/apmckinlay/gsuneido/util/ptest"
 )
 
 func Test_String(t *testing.T) {
@@ -339,5 +340,20 @@ func init() {
 	for i := 0; i < 1000; i++ {
 		num := Dnum{coef: uint64(rand.Intn(1000000)), exp: int8(rand.Intn(9) - 5)}
 		nums = append(nums, num)
+	}
+}
+
+func pt_add(args []string) bool {
+	xn := parse(args[0])
+	yn := parse(args[1])
+	return Add(xn, yn).String() == args[2] &&
+		Add(yn, xn).String() == args[2]
+}
+
+var _ = ptest.Add("dnum_add", pt_add)
+
+func TestPtest(t *testing.T) {
+	if !ptest.RunFile("dnum.test") {
+		t.Fail()
 	}
 }
