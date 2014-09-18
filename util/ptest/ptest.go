@@ -56,7 +56,7 @@ func RunFile(filename string) bool {
 func (p *parser) run() bool {
 	ok := true
 	for p.Token != c.EOF {
-		ok = ok && p.run1()
+		ok = p.run1() && ok
 	}
 	return ok
 }
@@ -68,8 +68,8 @@ func (p *parser) run1() bool {
 	fmt.Println(name + ":")
 	test, present := testmap[name]
 	if !present {
-		fmt.Println("\tMISSING")
-		test = func(args []string) bool { return true }
+		fmt.Println("\tMISSING TEST FIXTURE")
+		test = nil
 	}
 	n := 0
 	ok := true
@@ -90,15 +90,18 @@ func (p *parser) run1() bool {
 				break
 			}
 		}
-		if !test(row) {
-			ok = false
+		if test == nil {
+			// ignore
+		} else if !test(row) {
+			//			ok = false
 			fmt.Println("\tFAILED: ", row)
+		} else {
+			n++
 		}
 		p.next(true)
-		n++
 	}
-	if ok {
-		fmt.Printf("\tok (%d)\n", n)
+	if test != nil {
+		fmt.Printf("\t%d passed\n", n)
 	}
 	return ok
 }
