@@ -41,11 +41,11 @@ func TestLexer(t *testing.T) {
 	check("f()", IDENTIFIER, L_PAREN, R_PAREN)
 	check("4-1", NUMBER, SUB, NUMBER)
 	check("[1..]", L_BRACKET, NUMBER, RANGETO, R_BRACKET)
-	check(`and break 
+	check(`and break
 		case catch continue class callback default dll do
 		else for forever function if is isnt or not
 		new switch struct super return throw try while
-		true false 
+		true false
 		== = =~ ~ != !~ ! <<= << <> <= <
 		>>= >> >= > || |= | && &= &
 		^= ^ -- -= - ++ += + /= /
@@ -86,4 +86,12 @@ func TestAheadSkip(t *testing.T) {
 	Assert(t).That(lxr.AheadSkip(2), Equals(it(NUMBER, 11, "1")))
 	Assert(t).That(lxr.AheadSkip(1), Equals(it(EQ, 4, "=")))
 	Assert(t).That(lxr.AheadSkip(3).Token, Equals(EOF))
+}
+
+func TestEscape(t *testing.T) {
+	lexer := NewLexer(`"\x80"`)
+	item := lexer.Next()
+	s := item.Text
+	Assert(t).That(len(s), Equals(1))
+	Assert(t).That(s[0], Equals(byte(128)))
 }
