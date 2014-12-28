@@ -19,7 +19,7 @@ type Lexer struct {
 	ahead []Item
 }
 
-// Lexer returns a new instance
+// NewLexer returns a new instance
 func NewLexer(src string) *Lexer {
 	return &Lexer{src: src}
 }
@@ -36,12 +36,12 @@ type Item struct {
 	// NOTE: put Token's last to reduce padding
 }
 
+// KeyTok returns Keyword if set, else Token
 func (it *Item) KeyTok() Token {
 	if it.Keyword != NIL {
 		return it.Keyword
-	} else {
-		return it.Token
 	}
+	return it.Token
 }
 
 // Next returns the next Item
@@ -121,121 +121,112 @@ func (lxr *Lexer) next() Item {
 	case ':':
 		if lxr.match(':') {
 			return it(RANGELEN)
-		} else {
-			return it(COLON)
 		}
+		return it(COLON)
 	case '=':
 		if lxr.match('=') {
 			return it(IS)
-		} else {
-			if lxr.match('~') {
-				return it(MATCH)
-			} else {
-				return it(EQ)
-			}
 		}
+		if lxr.match('~') {
+			return it(MATCH)
+		}
+		return it(EQ)
 	case '!':
 		if lxr.match('=') {
 			return it(ISNT)
-		} else {
-			if lxr.match('~') {
-				return it(MATCHNOT)
-			} else {
-				return it(NOT)
-			}
 		}
+		if lxr.match('~') {
+			return it(MATCHNOT)
+		}
+		return it(NOT)
 	case '<':
 		if lxr.match('<') {
 			if lxr.match('=') {
 				return it(LSHIFTEQ)
-			} else {
-				return it(LSHIFT)
 			}
-		} else if lxr.match('>') {
-			return it(ISNT)
-		} else if lxr.match('=') {
-			return it(LTE)
-		} else {
-			return it(LT)
+			return it(LSHIFT)
 		}
+		if lxr.match('>') {
+			return it(ISNT)
+		}
+		if lxr.match('=') {
+			return it(LTE)
+		}
+		return it(LT)
 	case '>':
 		if lxr.match('>') {
 			if lxr.match('=') {
 				return it(RSHIFTEQ)
-			} else {
-				return it(RSHIFT)
 			}
-		} else if lxr.match('=') {
-			return it(GTE)
-		} else {
-			return it(GT)
+			return it(RSHIFT)
 		}
+		if lxr.match('=') {
+			return it(GTE)
+		}
+		return it(GT)
 	case '|':
 		if lxr.match('|') {
 			return it(OR)
-		} else if lxr.match('=') {
-			return it(BITOREQ)
-		} else {
-			return it(BITOR)
 		}
+		if lxr.match('=') {
+			return it(BITOREQ)
+		}
+		return it(BITOR)
 	case '&':
 		if lxr.match('&') {
 			return it(AND)
-		} else if lxr.match('=') {
-			return it(BITANDEQ)
-		} else {
-			return it(BITAND)
 		}
+		if lxr.match('=') {
+			return it(BITANDEQ)
+		}
+		return it(BITAND)
 	case '^':
 		if lxr.match('=') {
 			return it(BITXOREQ)
-		} else {
-			return it(BITXOR)
 		}
+		return it(BITXOR)
 	case '-':
 		if lxr.match('-') {
 			return it(DEC)
-		} else if lxr.match('=') {
-			return it(SUBEQ)
-		} else {
-			return it(SUB)
 		}
+		if lxr.match('=') {
+			return it(SUBEQ)
+		}
+		return it(SUB)
 	case '+':
 		if lxr.match('+') {
 			return it(INC)
-		} else if lxr.match('=') {
-			return it(ADDEQ)
-		} else {
-			return it(ADD)
 		}
+		if lxr.match('=') {
+			return it(ADDEQ)
+		}
+		return it(ADD)
 	case '/':
 		if lxr.match('/') {
 			return lxr.lineComment(start)
-		} else if lxr.match('*') {
-			return lxr.spanComment(start)
-		} else if lxr.match('=') {
-			return it(DIVEQ)
-		} else {
-			return it(DIV)
 		}
+		if lxr.match('*') {
+			return lxr.spanComment(start)
+		}
+		if lxr.match('=') {
+			return it(DIVEQ)
+		}
+		return it(DIV)
 	case '*':
 		if lxr.match('=') {
 			return it(MULEQ)
-		} else {
-			return it(MUL)
 		}
+		return it(MUL)
 	case '%':
 		if lxr.match('=') {
 			return it(MODEQ)
-		} else {
-			return it(MOD)
 		}
+		return it(MOD)
 	case '$':
 		if lxr.match('=') {
 			return it(CATEQ)
-		} else {
-			return it(CAT)
 		}
+		return it(CAT)
 	case '`':
 		return lxr.rawString(start)
 	case '"', '\'':
@@ -243,11 +234,11 @@ func (lxr *Lexer) next() Item {
 	case '.':
 		if lxr.match('.') {
 			return it(RANGETO)
-		} else if isDigit(lxr.peek()) {
-			return lxr.number(start)
-		} else {
-			return it(DOT)
 		}
+		if isDigit(lxr.peek()) {
+			return lxr.number(start)
+		}
+		return it(DOT)
 	case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
 		return lxr.number(start)
 	default:
@@ -361,9 +352,8 @@ func digit(c rune, radix int) int {
 	}
 	if n < radix {
 		return n
-	} else {
-		return -1
 	}
+	return -1
 }
 
 func isDigit(r rune) bool {
