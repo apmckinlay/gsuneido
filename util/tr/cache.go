@@ -10,14 +10,12 @@ type LruMapCache struct {
 	old   map[string]trset
 	cur   map[string]trset
 	size  int
-	fn    getter
+	fn    func(string) trset
 	nget  int
 	nmiss int
 }
 
-type getter func(string) trset
-
-func NewLruMapCache(size int, fn getter) *LruMapCache {
+func NewLruMapCache(size int, fn func(string) trset) *LruMapCache {
 	return &LruMapCache{cur: make(map[string]trset, size),
 		old: make(map[string]trset), size: size, fn: fn}
 }
