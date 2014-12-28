@@ -312,7 +312,7 @@ func (lxr *Lexer) quotedString(start int, quote rune) Item {
 	var buf bytes.Buffer
 	lxr.match(quote)
 	for c := lxr.read1(); c != eof && c != quote; c = lxr.read1() {
-		buf.WriteRune(lxr.doesc(c))
+		buf.WriteByte(byte(lxr.doesc(c)))
 	}
 	// keyword set to STRING means not referencing src
 	return Item{buf.String(), int32(start), STRING, STRING}
