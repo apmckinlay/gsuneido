@@ -5,22 +5,13 @@ Based loosely on Guava CharMatcher for Java
 */
 package cmatch
 
-import (
-	"strings"
-	"unicode"
-)
+import "strings"
 
+// CharMatch is the type of the matchers
 type CharMatch func(rune) bool
 
-// Predefined CharMatch's
-var (
-	NONE   CharMatch = func(_ rune) bool { return false }
-	SPACE  CharMatch = AnyOf(" \t\r\n")
-	DIGIT  CharMatch = InRange('0', '9')
-	LETTER CharMatch = unicode.IsLetter
-	LOWER  CharMatch = unicode.IsLower
-	UPPER  CharMatch = unicode.IsUpper
-)
+// None is a CharMatch that doesn't match anything
+var None CharMatch = func(_ rune) bool { return false }
 
 // Match returns true if the character matches, otherwise false
 func (cm CharMatch) Match(c rune) bool {
@@ -48,13 +39,13 @@ func (cm CharMatch) Negate() CharMatch {
 }
 
 // Or returns a CharMatch that matches any character that matches either CharMatch
-func (cm1 CharMatch) Or(cm2 CharMatch) CharMatch {
-	if cm1 == nil {
+func (cm CharMatch) Or(cm2 CharMatch) CharMatch {
+	if cm == nil {
 		return cm2
 	} else if cm2 == nil {
-		return cm1
+		return cm
 	}
-	return func(c rune) bool { return cm1.Match(c) || cm2.Match(c) }
+	return func(c rune) bool { return cm.Match(c) || cm2.Match(c) }
 }
 
 // CountIn returns the number of characters in the string that match
@@ -80,7 +71,7 @@ func (cm CharMatch) Trim(s string) string {
 	return strings.TrimFunc(s, cm)
 }
 
-// Trim returns a slice of the string with all the matching characters
+// TrimLeft returns a slice of the string with all the matching characters
 // removed from the beginning
 func (cm CharMatch) TrimLeft(s string) string {
 	return strings.TrimLeftFunc(s, cm)

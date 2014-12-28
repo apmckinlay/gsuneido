@@ -6,8 +6,6 @@ package regex
 import (
 	"strconv"
 	"strings"
-	"unicode"
-
 	"github.com/apmckinlay/gsuneido/util/cmatch"
 	"github.com/apmckinlay/gsuneido/util/ints"
 	"github.com/apmckinlay/gsuneido/util/ptest"
@@ -87,6 +85,7 @@ import (
  * This makes match almost as fast as indexOf or contains
  */
 
+// Compile converts a regular expression string to a Pattern
 func Compile(rx string) Pattern {
 	co := Compiler{src: rx, sn: len(rx)}
 	return co.compile()
@@ -94,14 +93,17 @@ func Compile(rx string) Pattern {
 
 // Result ----------------------------------------------------------------------
 
+// MAX_RESULTS is the maximum number of elements in Result
 const MAX_RESULTS = 10
 
+// Result holds the results of a match
 type Result struct {
 	tmp [MAX_RESULTS]int
 	pos [MAX_RESULTS]int
 	end [MAX_RESULTS]int
 }
 
+// GroupCount returns the number of matched groups in a Result
 func (r *Result) GroupCount() int {
 	i := ints.Index(r.end[:], -1)
 	if i == -1 {
@@ -110,6 +112,7 @@ func (r *Result) GroupCount() int {
 	return i - 1
 }
 
+// Group returns one of the matched groups from a Result
 func (r *Result) Group(s string, i int) string {
 	verify.That(0 <= i && i < MAX_RESULTS)
 	if r.end[i] == -1 {
@@ -130,10 +133,12 @@ func (r *Result) String() string {
 
 const MAX_BRANCH = 1000
 
+// Pattern is a compiled regular expression
 type Pattern struct {
 	pat []Element
 }
 
+// Matches returns whether or not a pattern matches a string
 func (p Pattern) Matches(s string) bool {
 	var result Result
 	return p.FirstMatch(s, 0, &result)
@@ -184,7 +189,7 @@ func (p Pattern) ForEachMatch(s string, action func(*Result) int) {
 	}
 }
 
-// Try to match at a specific position.
+// Amatch tries to match at a specific position.
 // Returns true if a match is found, else false.
 func (p Pattern) Amatch(s string, si int, result *Result) bool {
 	var alt_si [MAX_BRANCH]int
@@ -342,23 +347,21 @@ func (co *Compiler) quoted() {
 	co.emitChars(co.src[start:co.si])
 }
 
-var CM_NOTWORD = CM_WORD.Negate()
-
 func (co *Compiler) simple() {
 	if co.match(".") {
 		co.emit(any)
 	} else if co.match("\\d") {
-		co.emit(CharClass{cm: cmatch.DIGIT})
+		co.emit(CharClass{cm: digit})
 	} else if co.match("\\D") {
-		co.emit(CharClass{cm: cmatch.DIGIT.Negate()})
+		co.emit(CharClass{cm: notDigit})
 	} else if co.match("\\w") {
-		co.emit(CharClass{cm: CM_WORD})
+		co.emit(CharClass{cm: word})
 	} else if co.match("\\W") {
-		co.emit(CharClass{cm: CM_NOTWORD})
+		co.emit(CharClass{cm: notWord})
 	} else if co.match("\\s") {
-		co.emit(CharClass{cm: cmatch.SPACE})
+		co.emit(CharClass{cm: space})
 	} else if co.match("\\S") {
-		co.emit(CharClass{cm: cmatch.SPACE.Negate()})
+		co.emit(CharClass{cm: notSpace})
 	} else if co.matchBackref() {
 		i := int(co.src[co.si-1] - '0')
 		co.emit(Backref{idx: i, ignoringCase: co.ignoringCase})
@@ -384,9 +387,6 @@ func (co *Compiler) simple() {
 func (co *Compiler) emitChars(s string) {
 	if co.inChars && co.inCharsIgnoringCase == co.ignoringCase &&
 		!co.next1of("?*+") {
-		if co.ignoringCase {
-			s = strings.ToLower(s)
-		}
 		e := co.pat[len(co.pat)-1].(addable)
 		co.pat[len(co.pat)-1] = e.add(s)
 	} else {
@@ -410,30 +410,30 @@ func (co *Compiler) charClass() {
 	if co.match("]") {
 		chars += "]"
 	}
-	var cm cmatch.CharMatch = nil
+	var cm cmatch.CharMatch
 	for co.si < co.sn && co.src[co.si] != ']' {
 		var elem cmatch.CharMatch
 		if co.matchRange() {
-			elem = co.charRange(rune(co.src[co.si-3]), rune(co.src[co.si-1]))
+			elem = cmatch.InRange(rune(co.src[co.si-3]), rune(co.src[co.si-1]))
 		} else if co.match("\\d") {
-			elem = cmatch.DIGIT
+			elem = digit
 		} else if co.match("\\D") {
-			elem = notdigit
+			elem = notDigit
 		} else if co.match("\\w") {
-			elem = CM_WORD
+			elem = word
 		} else if co.match("\\W") {
-			elem = CM_NOTWORD
+			elem = notWord
 		} else if co.match("\\s") {
-			elem = cmatch.SPACE
+			elem = space
 		} else if co.match("\\S") {
-			elem = notwhite
+			elem = notSpace
 		} else if co.match("[:") {
 			elem = co.posixClass()
 		} else {
 			if co.si+1 < co.sn {
 				co.match("\\")
 			}
-			chars += string(co.handleCase(rune(co.src[co.si])))
+			chars += string(rune(co.src[co.si]))
 			co.si++
 			continue
 		}
@@ -460,13 +460,6 @@ func (co *Compiler) charClass() {
 	}
 }
 
-func (co *Compiler) handleCase(c rune) rune {
-	if co.ignoringCase {
-		return unicode.ToLower(c)
-	}
-	return c
-}
-
 func (co *Compiler) matchRange() bool {
 	if co.src[co.si+1] == '-' &&
 		co.si+2 < co.sn && co.src[co.si+2] != ']' {
@@ -476,32 +469,26 @@ func (co *Compiler) matchRange() bool {
 	return false
 }
 
-func (co *Compiler) charRange(from rune, to rune) cmatch.CharMatch {
-	if co.ignoringCase {
-		lofrom := unicode.ToLower(from)
-		loto := unicode.ToLower(to)
-		if (from == lofrom) != (to == loto) || (from < 'A' && 'Z' < to) {
-			panic("regular expression range invalid with ignore case")
-		}
-		return cmatch.InRange(lofrom, loto)
-	}
-	return cmatch.InRange(from, to)
-}
-
 var blank = cmatch.AnyOf(" \t")
-var notdigit = cmatch.DIGIT.Negate()
-var alnum = cmatch.DIGIT.Or(cmatch.LETTER)
+var digit = cmatch.InRange('0', '9')
+var notDigit = digit.Negate()
+var lower = cmatch.InRange('a', 'z')
+var upper = cmatch.InRange('A', 'Z')
+var alpha = lower.Or(upper)
+var alnum = digit.Or(alpha)
+var word = alnum.Or(cmatch.Is('_'))
+var notWord = word.Negate()
 var punct = cmatch.AnyOf("!\"#$%&'()*+,-./:;<=>?@[\\]^_`{|}~")
 var graph = alnum.Or(punct)
 var print = graph.Or(cmatch.Is(' '))
 var xdigit = cmatch.AnyOf("0123456789abcdefABCDEF")
-var notwhite = cmatch.SPACE.Negate()
-var cntrl = cmatch.InRange('\u0000', '\u001f').
-	Or(cmatch.InRange('\u007f', '\u009f'))
+var space = cmatch.AnyOf(" \t\r\n")
+var notSpace = space.Negate()
+var cntrl = cmatch.InRange('\u0000', '\u001f').Or(cmatch.InRange('\u007f', '\u009f'))
 
 func (co *Compiler) posixClass() cmatch.CharMatch {
 	if co.match("alpha:]") {
-		return cmatch.LETTER
+		return alpha
 	} else if co.match("alnum:]") {
 		return alnum
 	} else if co.match("blank:]") {
@@ -509,23 +496,19 @@ func (co *Compiler) posixClass() cmatch.CharMatch {
 	} else if co.match("cntrl:]") {
 		return cntrl
 	} else if co.match("digit:]") {
-		return cmatch.DIGIT
+		return digit
 	} else if co.match("graph:]") {
 		return graph
 	} else if co.match("lower:]") {
-		return cmatch.LOWER
+		return lower
 	} else if co.match("print:]") {
 		return print
 	} else if co.match("punct:]") {
 		return punct
 	} else if co.match("space:]") {
-		return cmatch.SPACE
+		return space
 	} else if co.match("upper:]") {
-		if co.ignoringCase {
-			return cmatch.LOWER
-		} else {
-			return cmatch.UPPER
-		}
+		return upper
 	} else if co.match("xdigit:]") {
 		return xdigit
 	} else {
@@ -539,9 +522,8 @@ func (co *Compiler) match(s string) bool {
 	if strings.HasPrefix(co.src[co.si:], s) {
 		co.si += len(s)
 		return true
-	} else {
-		return false
 	}
+	return false
 }
 
 func (co *Compiler) mustMatch(s string) {
@@ -573,8 +555,6 @@ func (co *Compiler) insert(i int, e Element) {
 	co.pat[i] = e
 	co.inChars = false
 }
-
-var CM_WORD = alnum.Or(cmatch.Is('_'))
 
 // elements of compiled regex --------------------------------------------------
 
@@ -688,7 +668,7 @@ type StartOfWord struct {
 }
 
 func (e StartOfWord) omatch(s string, si int, _ *Result) int {
-	if si == 0 || !CM_WORD.Match(rune(s[si-1])) {
+	if si == 0 || !word.Match(rune(s[si-1])) {
 		return si
 	}
 	return FAIL
@@ -704,7 +684,7 @@ type EndOfWord struct {
 }
 
 func (e EndOfWord) omatch(s string, si int, _ *Result) int {
-	if si >= len(s) || !CM_WORD.Match(rune(s[si])) {
+	if si >= len(s) || !word.Match(rune(s[si])) {
 		return si
 	}
 	return FAIL
@@ -732,7 +712,7 @@ func (e Backref) omatch(s string, si int, res *Result) int {
 			return FAIL
 		}
 		for i := 0; i < bn; i++ {
-			if unicode.ToLower(rune(s[si+i])) != unicode.ToLower(rune(b[i])) {
+			if toLower(rune(s[si+i])) != toLower(rune(b[i])) {
 				return FAIL
 			}
 		}
@@ -788,7 +768,7 @@ type CharsIgnoreCase struct {
 }
 
 func newCharsIgnoreCase(chars string) CharsIgnoreCase {
-	return CharsIgnoreCase{strings.ToLower(chars)}
+	return CharsIgnoreCase{chars}
 }
 
 func (e CharsIgnoreCase) omatch(s string, si int, _ *Result) int {
@@ -797,7 +777,7 @@ func (e CharsIgnoreCase) omatch(s string, si int, _ *Result) int {
 		return FAIL
 	}
 	for i := 0; i < cn; i++ {
-		if unicode.ToLower(rune(s[si+i])) != rune(e.chars[i]) {
+		if toLower(rune(s[si+i])) != toLower(rune(e.chars[i])) {
 			return FAIL
 		}
 	}
@@ -810,7 +790,7 @@ func (e CharsIgnoreCase) nextPossible(s string, si int, sn int) int {
 		for i := 0; ; i++ {
 			if i == cn {
 				return si
-			} else if unicode.ToLower(rune(s[si+i])) != rune(e.chars[i]) {
+			} else if toLower(rune(s[si+i])) != toLower(rune(e.chars[i])) {
 				break
 			}
 		}
@@ -864,7 +844,8 @@ func (e CharClassIgnoreCase) omatch(s string, si int, _ *Result) int {
 	if si >= len(s) {
 		return FAIL
 	}
-	if e.cm.Match(unicode.ToLower(rune(s[si]))) {
+	if e.cm.Match(toLower(rune(s[si]))) ||
+		e.cm.Match(toUpper(rune(s[si]))) {
 		return si + 1
 	}
 	return FAIL
@@ -872,7 +853,8 @@ func (e CharClassIgnoreCase) omatch(s string, si int, _ *Result) int {
 
 func (e CharClassIgnoreCase) nextPossible(s string, si int, sn int) int {
 	for si++; si < sn; si++ {
-		if e.cm.Match(unicode.ToLower(rune(s[si]))) {
+		if e.cm.Match(toLower(rune(s[si]))) ||
+			e.cm.Match(toUpper(rune(s[si]))) {
 			return si
 		}
 	}
@@ -893,6 +875,22 @@ func (_ Any) String() string {
 }
 
 var any = CharClass{cmatch.AnyOf("\r\n").Negate()}
+
+func toLower(c rune) rune {
+	if upper(c) {
+		return c + ('a' - 'A')
+	} else {
+		return c
+	}
+}
+
+func toUpper(c rune) rune {
+	if lower(c) {
+		return c - ('a' - 'A')
+	} else {
+		return c
+	}
+}
 
 /*
  * Implemented by amatch.

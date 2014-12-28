@@ -39,7 +39,7 @@ func TestOr(t *testing.T) {
 }
 
 func TestCountIn(t *testing.T) {
-	cm := SPACE
+	cm := AnyOf(" \t\r\n")
 	Assert(t).That(cm.CountIn("now is the time"), Equals(3))
 }
 
@@ -50,7 +50,7 @@ func TestIndexIn(t *testing.T) {
 }
 
 func TestPredefined(t *testing.T) {
-	cm := LOWER
+	cm := InRange('a', 'z')
 	Assert(t).That(cm.Match('x'), Equals(true))
 	Assert(t).That(cm.Match('X'), Equals(false))
 	Assert(t).That(cm.Match('5'), Equals(false))

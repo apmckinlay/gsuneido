@@ -3,6 +3,7 @@ package regex
 import (
 	"strings"
 	"testing"
+
 	. "github.com/apmckinlay/gsuneido/util/hamcrest"
 	"github.com/apmckinlay/gsuneido/util/ptest"
 )
@@ -53,17 +54,20 @@ func TestCompile(t *testing.T) {
 
 	test("a(?q).(?-q).c(?q).(?-q).", "'a.' [...] 'c.' [...]")
 
-	test("(?i)ABC", "i'abc'")
+	//	test("(?i)ABC", "i'abc'")
 
 	test("\\", "'\\'")
-
-	Assert(t).That(func() { Compile("(?i)[5-M]") }, Panics("range invalid"))
-	Assert(t).That(func() { Compile("(?i)[M-}]") }, Panics("range invalid"))
-	Assert(t).That(func() { Compile("(?i)[5-}]") }, Panics("range invalid"))
 
 	Assert(t).That(func() { Compile("(abc") }, Panics("missing ')'"))
 	Assert(t).That(func() { Compile("abc)def") },
 		Panics("closing ) without opening ("))
+}
+
+func TestBug(t *testing.T) {
+	Assert(t).That(toLower('\x8a'), Equals('\x8a'))
+	Assert(t).That(toUpper('\x8a'), Equals('\x8a'))
+	p := Compile("(?i)[\x9a\xbb]")
+	Assert(t).That(p.Matches("\x8a"), Equals(false))
 }
 
 func TestPtest(t *testing.T) {
