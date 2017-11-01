@@ -221,3 +221,6 @@ gsuneido
 ptestdir.txt
 
 *.out
+
+.idea/
+
