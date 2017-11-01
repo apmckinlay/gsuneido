@@ -16,6 +16,7 @@ import (
 )
 import "runtime"
 import "strings"
+import gotesting "testing"
 
 type testing interface {
 	Error(err ...interface{})
@@ -44,6 +45,9 @@ func (a Asserter) False(b bool) {
 }
 
 func (a Asserter) That(actual interface{}, test Tester) {
+	if t,ok := a.t.(*gotesting.T); ok {
+		t.Helper() // skip this function when printing file/line info
+	}
 	err := test(actual)
 	if err != "" {
 		a.Fail(err)
@@ -51,6 +55,9 @@ func (a Asserter) That(actual interface{}, test Tester) {
 }
 
 func (a Asserter) Fail(err string) {
+	if t,ok := a.t.(*gotesting.T); ok {
+		t.Helper() // skip this function when printing file/line info
+	}
 	file, line := getLocation()
 	a.t.Error(err + fmt.Sprintf(" {%s:%d}", file, line))
 }
