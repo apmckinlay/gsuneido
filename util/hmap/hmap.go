@@ -85,6 +85,7 @@ restart:
 		for i := 0; i < bucketsize; i++ {
 			if buck.tophash[i] != top {
 				if buck.tophash[i] == 0 && inserti == -1 {
+					// track first empty slot
 					inserti = i
 					insertb = buck
 				}
@@ -146,7 +147,7 @@ func (hm *Hmap) grow() {
 }
 
 // Del removes a key (and its value)
-// returning true if the key was found or false if it wasn't
+// returning the value or nil if it wasn't found
 // NOTE: Does not shrink the Hmap
 func (hm *Hmap) Del(key Key) (val interface{}) {
 	if hm.size == 0 {

@@ -1,8 +1,6 @@
 package value
 
 import (
-	"strconv"
-
 	"github.com/apmckinlay/gsuneido/util/dnum"
 	"github.com/apmckinlay/gsuneido/util/hash"
 )
@@ -14,16 +12,17 @@ var _ Value = SuStr("")
 var _ Packable = SuStr("")
 
 func (ss SuStr) ToInt() int32 {
-	i, _ := strconv.ParseInt(string(ss), 0, 32)
-	return int32(i)
+	if string(ss) == "" {
+		return 0
+	}
+	panic("can't convert String to number")
 }
 
 func (ss SuStr) ToDnum() dnum.Dnum {
-	dn, err := dnum.Parse(string(ss))
-	if err != nil {
-		panic("can't convert this string to a number")
+	if string(ss) == "" {
+		return dnum.Zero
 	}
-	return dn
+	panic("can't convert String to number")
 }
 
 func (ss SuStr) ToStr() string {
@@ -35,7 +34,21 @@ func (ss SuStr) String() string {
 }
 
 func (ss SuStr) Get(key Value) Value {
-	return SuStr(string(ss)[key.ToInt()])
+	return SuStr(string(ss)[index(key)])
+}
+
+func index(v Value) int32 {
+	if i, ok := v.(SuInt); ok {
+		return int32(i)
+	}
+	if d, ok := v.(SuDnum); ok {
+		if d.IsInt() {
+			if i, err := d.Int32(); err == nil {
+				return i
+			}
+		}
+	}
+	panic("string subscripts must be integers")
 }
 
 func (ss SuStr) Put(key Value, val Value) {

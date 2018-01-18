@@ -6,6 +6,7 @@ import (
 	"math/rand"
 	"strconv"
 	"testing"
+
 	. "github.com/apmckinlay/gsuneido/util/hamcrest"
 	"github.com/apmckinlay/gsuneido/util/ptest"
 )

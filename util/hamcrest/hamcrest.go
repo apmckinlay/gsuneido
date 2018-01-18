@@ -9,43 +9,50 @@ For example:
 */
 package hamcrest
 
-import "fmt"
 import (
+	"fmt"
 	"reflect"
 	"regexp"
+	"runtime"
+	"strconv"
+	"strings"
+	gotesting "testing"
 )
-import "runtime"
-import "strings"
-import gotesting "testing"
 
 type testing interface {
 	Error(err ...interface{})
 }
 
+// Asserter wraps a testing
 type Asserter struct {
 	t testing
 }
 
+// Assert returns an Asserter
 func Assert(t testing) Asserter {
 	return Asserter{t}
 }
 
-type Tester func(interface{}) string
-
+// True checks for true e.g. Assert(t).True(cond)
 func (a Asserter) True(b bool) {
-	if b != true {
+	if !b {
 		a.Fail("expected true but it was false")
 	}
 }
 
+// False checks for false e.g. Assert(t).False(cond)
 func (a Asserter) False(b bool) {
-	if b != false {
+	if b {
 		a.Fail("expected false but it was true")
 	}
 }
 
+// Tester is a function for That
+type Tester func(interface{}) string
+
+// That checks a value against a Tester
 func (a Asserter) That(actual interface{}, test Tester) {
-	if t,ok := a.t.(*gotesting.T); ok {
+	if t, ok := a.t.(*gotesting.T); ok {
 		t.Helper() // skip this function when printing file/line info
 	}
 	err := test(actual)
@@ -54,15 +61,16 @@ func (a Asserter) That(actual interface{}, test Tester) {
 	}
 }
 
+// Fail reports an error with its file and lie
 func (a Asserter) Fail(err string) {
-	if t,ok := a.t.(*gotesting.T); ok {
+	if t, ok := a.t.(*gotesting.T); ok {
 		t.Helper() // skip this function when printing file/line info
 	}
 	file, line := getLocation()
 	a.t.Error(err + fmt.Sprintf(" {%s:%d}", file, line))
 }
 
-func getLocation() (file string, line int) {
+func getLocation() (string, int) {
 	i := 1
 	for ; i < 9; i++ {
 		_, file, _, ok := runtime.Caller(i)
@@ -85,10 +93,19 @@ func getLocation() (file string, line int) {
 	return file, line
 }
 
-// Equals checks that the actual value is equal to the expected value
-// using reflect.DeepEquals
+// Equals returns a Tester that checks that the actual value is equal to the expected value
+// float64's are compared as strings
+// otherwise uses reflect.DeepEqual
 func Equals(expected interface{}) Tester {
 	return func(actual interface{}) string {
+		if a, ok := actual.(float64); ok {
+			if e, ok := expected.(float64); ok {
+				if strconv.FormatFloat(a, 'e', 15, 64) ==
+					strconv.FormatFloat(e, 'e', 15, 64) {
+					return ""
+				}
+			}
+		}
 		if reflect.DeepEqual(expected, actual) {
 			return ""
 		}
@@ -96,6 +113,7 @@ func Equals(expected interface{}) Tester {
 	}
 }
 
+// NotEquals returns a Tester for inequality using replect.DeepEqual
 func NotEquals(expected interface{}) Tester {
 	return func(actual interface{}) string {
 		if !reflect.DeepEqual(expected, actual) {
@@ -106,6 +124,7 @@ func NotEquals(expected interface{}) Tester {
 	}
 }
 
+// Like returns a Tester for comparing strings with whitespace standardized
 func Like(expected interface{}) Tester {
 	return func(actual interface{}) string {
 		if like(expected.(string), actual.(string)) {
@@ -127,23 +146,28 @@ func canon(s string) string {
 
 var rxlike = regexp.MustCompile("[ \t\r\n]+")
 
-type runnable func()
-
+// Panics returns a Tester that checks if a function panics
 func Panics(expected string) Tester {
-	return func(f interface{}) (result string) {
-		defer func() {
-			if e := recover(); e != nil {
-				if strings.Contains(e.(string), expected) {
-					result = ""
-				} else {
-					result = fmt.Sprintf("expected panic of '%v' but got '%v'",
-						expected, e)
-				}
-			}
-		}()
-		f.(func())()
-		return fmt.Sprintf("expected panic of '%v' but it did not panic", expected)
+	return func(f interface{}) string {
+		e := Catch(f.(func()))
+		if e == nil {
+			return fmt.Sprintf("expected panic of '%v' but it did not panic", expected)
+		}
+		if !strings.Contains(e.(string), expected) {
+			return fmt.Sprintf("expected panic of '%v' but got '%v'", expected, e)
+		}
+		return ""
 	}
+}
+
+func Catch(f func()) (result interface{}) {
+	defer func() {
+		if e := recover(); e != nil {
+			result = e
+		}
+	}()
+	f()
+	return
 }
 
 // Comment decorates a Tester to add extra text to error messages
@@ -152,8 +176,7 @@ func (test Tester) Comment(items ...interface{}) Tester {
 		err := test(actual)
 		if err == "" {
 			return ""
-		} else {
-			return err + " (" + fmt.Sprint(items...) + ")"
 		}
+		return err + " (" + fmt.Sprint(items...) + ")"
 	}
 }

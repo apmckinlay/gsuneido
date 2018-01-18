@@ -45,3 +45,32 @@ func TestRandom(t *testing.T) {
 	}
 	Assert(t).That(hm.Size(), Equals(0))
 }
+
+func BenchmarkAdd(b *testing.B) {
+	for n := 0; n < b.N; n++ {
+		hm := NewHmap(0)
+		for i := 0; i < 100; i++ {
+			hm.Put(mix(i), i)
+		}
+	}
+}
+
+func BenchmarkGet(b *testing.B) {
+	hm := NewHmap(100)
+	for i := 0; i < 100; i++ {
+		hm.Put(ik(i), i)
+	}
+	for n := 0; n < b.N; n++ {
+		hm.Get(ik(n % 100))
+	}
+}
+
+func mix(n int) ik {
+	n = ^n + (n << 15)
+	n = n ^ (n >> 12)
+	n = n + (n << 2)
+	n = n ^ (n >> 4)
+	n = n * 2057
+	n = n ^ (n >> 16)
+	return ik(n)
+}

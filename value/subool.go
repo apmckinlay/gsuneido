@@ -14,19 +14,17 @@ var (
 )
 
 func (b SuBool) ToInt() int32 {
-	if b == true {
-		return 1
-	} else {
+	if b == false {
 		return 0
 	}
+	panic("can't convert true to number")
 }
 
 func (b SuBool) ToDnum() dnum.Dnum {
-	if b == true {
-		return dnum.One
-	} else {
+	if b == false {
 		return dnum.Zero
 	}
+	panic("can't convert true to number")
 }
 
 func (b SuBool) ToStr() string {

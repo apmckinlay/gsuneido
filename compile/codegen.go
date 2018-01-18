@@ -3,7 +3,7 @@ package compile
 /* TODO
 - blocks
 - try catch
-- function callsd
+- function calls
 */
 
 import (
