@@ -1,6 +1,9 @@
 package value
 
 import (
+	"bytes"
+	"fmt"
+
 	"github.com/apmckinlay/gsuneido/util/dnum"
 )
 
@@ -18,6 +21,7 @@ must come after parameters without defaults.
 '.' parameter names for public members are capitalized.
 */
 type SuFunc struct {
+	// Code is the actual byte code
 	Code []byte
 	// nparams is the number of values required on the stack
 	Nparams int
@@ -45,7 +49,25 @@ func (f *SuFunc) ToStr() string {
 }
 
 func (f *SuFunc) String() string {
-	return "function"
+	var buf bytes.Buffer
+	buf.WriteString("function (")
+	sep := ""
+	v := 0 // index into Values
+	for i := 0; i < f.Nparams; i++ {
+		buf.WriteString(sep)
+		p := f.Strings[i]
+		if p[0] == '=' {
+			buf.WriteString(p[1:])
+			buf.WriteString("=")
+			buf.WriteString(fmt.Sprint(f.Values[v]))
+			v++
+		} else {
+			buf.WriteString(p)
+		}
+		sep = ", "
+	}
+	buf.WriteString(")")
+	return buf.String()
 }
 
 func (f *SuFunc) Get(key Value) Value {
@@ -71,14 +93,6 @@ func (f *SuFunc) Equals(other interface{}) bool {
 	return false
 }
 
-func (f *SuFunc) PackSize() int {
-	panic("function cannot be packed")
-}
-
-func (f *SuFunc) Pack(buf []byte) []byte {
-	panic("function cannot be packed")
-}
-
 func (_ *SuFunc) TypeName() string {
 	return "Function"
 }
@@ -89,4 +103,8 @@ func (_ *SuFunc) order() ord {
 
 func (f *SuFunc) cmp(other Value) int {
 	panic("function compare not implemented")
+}
+
+func (_ SuFunc) Call(t AThread) Value {
+	panic("function call not implemented") //TODO
 }

@@ -185,6 +185,10 @@ func (t *Thread) Interp() Value {
 			break
 		case THROW:
 			panic(t.Pop())
+		case CALL:
+			f := t.Pop()
+			// TODO ArgSpec
+			t.Push(f.Call(t))
 		default:
 			panic("invalid op code")
 		}

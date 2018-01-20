@@ -1,5 +1,5 @@
 /*
-Package compile implements compiling Suneido source code
+Package compile compiles Suneido source code
 to byte code to be interpreted by the interp package.
 
 It uses a recursive descent parser that produces an AST

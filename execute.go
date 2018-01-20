@@ -14,7 +14,7 @@ import (
 var _ = ptest.Add("execute", pt_execute)
 
 func pt_execute(args []string) bool {
-	fmt.Println(args)
+	//fmt.Println(args)
 	src := "function () {\n" + args[0] + "\n}"
 	fn := compile.Constant(src).(*value.SuFunc)
 	th := interp.NewThread()

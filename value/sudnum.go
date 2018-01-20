@@ -12,6 +12,7 @@ import (
 type SuDnum struct {
 	dnum.Dnum
 	// use an anonymous member in a struct to include the methods from Dnum
+	// i.e. Hash, String
 }
 
 var _ Value = SuDnum{}
@@ -235,4 +236,8 @@ func (x SuDnum) cmp(other Value) int {
 	} else {
 		return dnum.Cmp(x.Dnum, y.ToDnum())
 	}
+}
+
+func (_ SuDnum) Call(t AThread) Value {
+	panic("can't call number")
 }

@@ -84,7 +84,13 @@ func (_ SuBool) order() ord {
 }
 
 func (b SuBool) cmp(other Value) int {
-	return int(b.ToInt() - other.(SuBool).ToInt())
+	if b == other {
+		return 0
+	} else if b {
+		return 1
+	} else {
+		return -1
+	}
 }
 
 func (b SuBool) Not() SuBool {
@@ -93,4 +99,8 @@ func (b SuBool) Not() SuBool {
 	} else {
 		return True
 	}
+}
+
+func (_ SuBool) Call(t AThread) Value {
+	panic("can't call Boolean")
 }

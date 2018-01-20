@@ -14,10 +14,8 @@ func ExampleIntConvert() {
 	// Output: 123 123
 }
 
-func ExampleStrConvert() {
-	v := SuStr("123")
-	fmt.Printf("%d %s\n", v.ToInt(), v.ToStr())
-	// Output: 123 123
+func TestStrConvert(t *testing.T) {
+	Assert(t).That(SuStr("123").ToStr(), Equals("123"))
 }
 
 func TestStringGet(t *testing.T) {

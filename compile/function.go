@@ -2,6 +2,7 @@ package compile
 
 import . "github.com/apmckinlay/gsuneido/lexer"
 
+// ParseFunction parses a function and returns an AST for it
 func ParseFunction(src string) Ast {
 	p := newParser(src)
 	return p.function()
@@ -191,9 +192,8 @@ func (p *parser) forStmt() Ast {
 	p.match(FOR)
 	if forIn {
 		return p.forIn(it)
-	} else {
-		return p.forClassic(it)
 	}
+	return p.forClassic(it)
 }
 
 func (p *parser) isForIn() bool {
@@ -303,10 +303,9 @@ func (p *parser) tryStmt() Ast {
 	try := p.statement()
 	if p.Keyword != CATCH {
 		return ast(item, try)
-	} else {
-		catch := p.catch()
-		return ast(item, try, catch)
 	}
+	catch := p.catch()
+	return ast(item, try, catch)
 }
 
 func (p *parser) catch() Ast {

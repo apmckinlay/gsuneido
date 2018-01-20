@@ -53,4 +53,5 @@ const (
 	EQJUMP
 	NEJUMP
 	THROW
+	CALL
 )

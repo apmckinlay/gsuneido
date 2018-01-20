@@ -13,6 +13,11 @@ import (
 	"github.com/apmckinlay/gsuneido/util/dnum"
 )
 
+// AThread is an abstract interface to interp.Thread
+// Can't reference concrete interp.Thread because that creates an import cycle
+type AThread interface {
+}
+
 // Value is used to reference a Suneido value
 type Value interface {
 	ToStr() string
@@ -29,8 +34,7 @@ type Value interface {
 	order() ord
 	// cmp returns -1 for <, 0 for ==, +1 for >
 	cmp(other Value) int // ops Cmp ensures other has same ordering
-
-	// TODO add lookup that returns method
+	Call(t AThread) Value
 }
 
 type ord int

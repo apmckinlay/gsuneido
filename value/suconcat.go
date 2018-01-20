@@ -142,3 +142,7 @@ func (c SuConcat) cmp(other Value) int {
 	}
 
 }
+
+func (_ SuConcat) Call(t AThread) Value {
+	panic("concat call not implemented") //TODO
+}

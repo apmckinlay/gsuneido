@@ -98,3 +98,7 @@ func (x SuInt) cmp(other Value) int {
 		return dnum.Cmp(x.ToDnum(), other.ToDnum())
 	}
 }
+
+func (_ SuInt) Call(t AThread) Value {
+	panic("can't call number")
+}

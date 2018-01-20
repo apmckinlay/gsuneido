@@ -65,6 +65,10 @@ func TestCodegen(t *testing.T) {
 
 	test("throw 'fubar'", "value 'fubar', throw")
 
+	test("f()", "load f, call")
+	test("F()", "global F, call")
+	test("f(a, b)", "load a, load b, load f, call")
+
 	Assert(t).That(func() { codegen(ParseFunction("function () { G = 1 }")) },
 		Panics("invalid lvalue"))
 }
@@ -216,4 +220,15 @@ func TestControl(t *testing.T) {
 		21: lt
 		22: tjump 7
 		25:`)
+}
+
+func TestParams(t *testing.T) {
+	test := func(s string) {
+		ast := ParseFunction("function (" + s + ") { }")
+		fn := codegen(ast)
+		Assert(t).That(fn.String(), Equals("function ("+s+")"))
+	}
+	test("")
+	test("a, b, c")
+	test("a, b=1, c='x'")
 }

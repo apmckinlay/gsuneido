@@ -253,3 +253,7 @@ func (_ SuObject) order() ord {
 func (d SuObject) cmp(other Value) int {
 	panic("SuObject cmp not implemented") // TODO
 }
+
+func (_ SuObject) Call(t AThread) Value {
+	panic("can't call Object")
+}

@@ -33,7 +33,7 @@ func testdir() string {
 				tdir = strings.TrimSpace(string(src))
 				break
 			}
-			if i > 8 {
+			if i > 9 {
 				panic("can't find ptestdir.txt")
 			}
 			file = "../" + file

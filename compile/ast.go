@@ -17,7 +17,7 @@ type Ast struct {
 }
 
 // String formats a tree of Ast's in a relatively compact form
-func (a *Ast) String() string {
+func (a Ast) String() string {
 	return string(a.bytes(0))
 }
 

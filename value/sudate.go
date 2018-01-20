@@ -779,3 +779,7 @@ func (d SuDate) cmp(other Value) int {
 		return 0
 	}
 }
+
+func (_ SuDate) Call(t AThread) Value {
+	panic("can't call Date")
+}

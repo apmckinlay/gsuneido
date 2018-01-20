@@ -119,5 +119,8 @@ func (c SuStr) cmp(other Value) int {
 	default:
 		return 0
 	}
+}
 
+func (_ SuStr) Call(t AThread) Value {
+	panic("String call not implemented")
 }

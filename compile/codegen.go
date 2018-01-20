@@ -6,6 +6,8 @@ package compile
 - function calls
 */
 
+// See also interp.Disasm
+
 import (
 	i "github.com/apmckinlay/gsuneido/interp"
 	"github.com/apmckinlay/gsuneido/interp/globals"
@@ -25,13 +27,15 @@ func codegen(ast Ast) *value.SuFunc {
 		Values:  cg.values,
 		Strings: cg.names,
 		Nlocals: len(cg.names),
+		Nparams: cg.nparams,
 	}
 }
 
 type cgen struct {
-	code   []byte
-	values []value.Value
-	names  []string
+	nparams int
+	code    []byte
+	values  []value.Value
+	names   []string
 }
 
 var tok2op = map[Token]byte{
@@ -54,10 +58,24 @@ var tok2op = map[Token]byte{
 
 func (cg *cgen) function(ast Ast) {
 	verify.That(ast.Keyword == FUNCTION)
-	// TODO params
+	cg.params(ast.first())
 	stmts := ast.second().Children
 	for si, stmt := range stmts {
 		cg.statement(stmt, nil, si == len(stmts)-1)
+	}
+}
+
+func (cg *cgen) params(ast Ast) {
+	verify.That(ast.Text == "params")
+	cg.nparams = len(ast.Children)
+	for _, p := range ast.Children {
+		if p.value == nil {
+			cg.name(p.Text)
+		} else {
+			cg.name("=" + p.Text)
+			cg.value(p.value)
+		}
+
 	}
 }
 
@@ -265,11 +283,13 @@ func (cg *cgen) expr(ast Ast) {
 	case IN:
 		cg.inExpr(ast)
 	default:
-		if ast.value != nil {
+		if ast.Item == call {
+			cg.call(ast)
+		} else if ast.value != nil {
 			cg.emitValue(ast.value)
-			return
+		} else {
+			panic("bad expression: " + ast.String())
 		}
-		panic("bad expression: " + ast.String())
 	}
 }
 
@@ -448,6 +468,22 @@ func (cg *cgen) nary(ast Ast, op byte) {
 			cg.expr(a)
 			cg.emit(op)
 		}
+	}
+}
+
+func (cg *cgen) call(ast Ast) {
+	// TODO call method (without getting bound method)
+	cg.args(ast.second())
+	cg.expr(ast.first()) // function
+	cg.emit(i.CALL)
+	// TODO ArgSpec
+}
+
+func (cg *cgen) args(ast Ast) {
+	verify.That(ast.Item == argList)
+	for _, arg := range ast.Children {
+		// TODO named and @args
+		cg.expr(arg.first())
 	}
 }
 
