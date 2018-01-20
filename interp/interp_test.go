@@ -3,16 +3,16 @@ package interp
 import (
 	"testing"
 
+	"github.com/apmckinlay/gsuneido/interp/op"
 	. "github.com/apmckinlay/gsuneido/util/hamcrest"
-	"github.com/apmckinlay/gsuneido/value"
 )
 
 func TestInterp(t *testing.T) {
-	test := func(expected value.Value, code ...byte) {
-		fn := &value.SuFunc{Code: code}
+	test := func(expected Value, code ...byte) {
+		fn := &SuFunc{Code: code}
 		th := NewThread()
 		result := th.Call(fn, SimpleArgSpecs[0])
-		Assert(t).That(result, Equals(value.SuInt(8)))
+		Assert(t).That(result, Equals(SuInt(8)))
 	}
-	test(value.SuInt(8), INT, 3<<1, INT, 5<<1, ADD, RETURN)
+	test(SuInt(8), op.INT, 3<<1, op.INT, 5<<1, op.ADD, op.RETURN)
 }

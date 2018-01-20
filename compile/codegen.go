@@ -9,20 +9,19 @@ package compile
 // See also interp.Disasm
 
 import (
-	i "github.com/apmckinlay/gsuneido/interp"
-	"github.com/apmckinlay/gsuneido/interp/globals"
+	. "github.com/apmckinlay/gsuneido/interp"
+	"github.com/apmckinlay/gsuneido/interp/op"
 	. "github.com/apmckinlay/gsuneido/lexer"
 	"github.com/apmckinlay/gsuneido/util/varint"
 	"github.com/apmckinlay/gsuneido/util/verify"
-	"github.com/apmckinlay/gsuneido/value"
 )
 
 // codegen compiles a Function from an Ast
-func codegen(ast Ast) *value.SuFunc {
+func codegen(ast Ast) *SuFunc {
 	//fmt.Println("codegen", ast.String())
 	cg := cgen{}
 	cg.function(ast)
-	return &value.SuFunc{
+	return &SuFunc{
 		Code:    cg.code,
 		Values:  cg.values,
 		Strings: cg.names,
@@ -34,26 +33,26 @@ func codegen(ast Ast) *value.SuFunc {
 type cgen struct {
 	nparams int
 	code    []byte
-	values  []value.Value
+	values  []Value
 	names   []string
 }
 
 var tok2op = map[Token]byte{
-	AND:      i.AND,
-	OR:       i.OR,
-	INC:      i.ADD,
-	DEC:      i.SUB,
-	ADDEQ:    i.ADD,
-	SUBEQ:    i.SUB,
-	CATEQ:    i.CAT,
-	MULEQ:    i.MUL,
-	DIVEQ:    i.DIV,
-	MODEQ:    i.MOD,
-	LSHIFTEQ: i.LSHIFT,
-	RSHIFTEQ: i.RSHIFT,
-	BITOREQ:  i.BITOR,
-	BITANDEQ: i.BITAND,
-	BITXOREQ: i.BITXOR,
+	AND:      op.AND,
+	OR:       op.OR,
+	INC:      op.ADD,
+	DEC:      op.SUB,
+	ADDEQ:    op.ADD,
+	SUBEQ:    op.SUB,
+	CATEQ:    op.CAT,
+	MULEQ:    op.MUL,
+	DIVEQ:    op.DIV,
+	MODEQ:    op.MOD,
+	LSHIFTEQ: op.LSHIFT,
+	RSHIFTEQ: op.RSHIFT,
+	BITOREQ:  op.BITOR,
+	BITANDEQ: op.BITAND,
+	BITXOREQ: op.BITXOR,
 }
 
 func (cg *cgen) function(ast Ast) {
@@ -90,7 +89,7 @@ func (cg *cgen) statement(ast Ast, labels *Labels, lastStmt bool) {
 			cg.expr(ast.first())
 		}
 		if !lastStmt {
-			cg.emit(i.RETURN)
+			cg.emit(op.RETURN)
 		}
 	case IF:
 		cg.ifStmt(ast, labels)
@@ -110,31 +109,31 @@ func (cg *cgen) statement(ast Ast, labels *Labels, lastStmt bool) {
 		}
 	case THROW:
 		cg.expr(ast.first())
-		cg.emit(i.THROW)
+		cg.emit(op.THROW)
 	case BREAK:
 		if labels == nil {
 			panic("break can only be used within a loop")
 		}
-		labels.brk = cg.emitJump(i.JUMP, labels.brk)
+		labels.brk = cg.emitJump(op.JUMP, labels.brk)
 	case CONTINUE:
 		if labels == nil {
 			panic("continue can only be used within a loop")
 		}
-		cg.emitBwdJump(i.JUMP, labels.cont)
+		cg.emitBwdJump(op.JUMP, labels.cont)
 	default: // expression
 		cg.expr(ast)
 		if !lastStmt {
-			cg.emit(i.POP)
+			cg.emit(op.POP)
 		}
 	}
 }
 
 func (cg *cgen) ifStmt(ast Ast, labels *Labels) {
 	cg.expr(ast.first())
-	f := cg.emitJump(i.FJUMP, -1)
+	f := cg.emitJump(op.FJUMP, -1)
 	cg.statement(ast.second(), labels, false)
 	if len(ast.Children) == 3 {
-		end := cg.emitJump(i.JUMP, -1)
+		end := cg.emitJump(op.JUMP, -1)
 		cg.placeLabel(f)
 		cg.statement(ast.third(), labels, false)
 		cg.placeLabel(end)
@@ -152,22 +151,22 @@ func (cg *cgen) switchStmt(ast Ast, labels *Labels) {
 		for v, val := range values {
 			cg.expr(val)
 			if v < len(values)-1 {
-				caseBody = cg.emitJump(i.EQJUMP, -1)
+				caseBody = cg.emitJump(op.EQJUMP, -1)
 			} else {
-				afterCase = cg.emitJump(i.NEJUMP, -1)
+				afterCase = cg.emitJump(op.NEJUMP, -1)
 			}
 		}
 		cg.placeLabel(caseBody)
 		cg.statement(c.second(), labels, false)
-		end = cg.emitJump(i.JUMP, end)
+		end = cg.emitJump(op.JUMP, end)
 		cg.placeLabel(afterCase)
 	}
-	cg.emit(i.POP)
+	cg.emit(op.POP)
 	if len(ast.Children) == 3 {
 		cg.statement(ast.third(), labels, false)
 	} else {
-		cg.emitValue(value.SuStr("unhandled switch value"))
-		cg.emit(i.THROW)
+		cg.emitValue(SuStr("unhandled switch value"))
+		cg.emit(op.THROW)
 	}
 	cg.placeLabel(end)
 }
@@ -175,18 +174,18 @@ func (cg *cgen) switchStmt(ast Ast, labels *Labels) {
 func (cg *cgen) foreverStmt(ast Ast) {
 	labels := cg.newLabels()
 	cg.statement(ast.first(), labels, false)
-	cg.emitJump(i.JUMP, labels.cont-len(cg.code)-3)
+	cg.emitJump(op.JUMP, labels.cont-len(cg.code)-3)
 	cg.placeLabel(labels.brk)
 }
 
 func (cg *cgen) whileStmt(ast Ast) {
 	labels := cg.newLabels()
-	cond := cg.emitJump(i.JUMP, -1)
+	cond := cg.emitJump(op.JUMP, -1)
 	loop := cg.label()
 	cg.statement(ast.second(), labels, false)
 	cg.placeLabel(cond)
 	cg.expr(ast.first())
-	cg.emitBwdJump(i.TJUMP, loop)
+	cg.emitBwdJump(op.TJUMP, loop)
 	cg.placeLabel(labels.brk)
 }
 
@@ -194,27 +193,27 @@ func (cg *cgen) dowhileStmt(ast Ast) {
 	labels := cg.newLabels()
 	cg.statement(ast.first(), labels, false)
 	cg.expr(ast.second())
-	cg.emitBwdJump(i.TJUMP, labels.cont)
+	cg.emitBwdJump(op.TJUMP, labels.cont)
 	cg.placeLabel(labels.brk)
 }
 
 func (cg *cgen) forStmt(ast Ast) {
 	cg.exprList(ast.first().Children) // init
 	labels := cg.newLabels()
-	cond := cg.emitJump(i.JUMP, -1)
+	cond := cg.emitJump(op.JUMP, -1)
 	loop := cg.label()
 	cg.statement(ast.fourth(), labels, false) // body
 	cg.exprList(ast.third().Children)         // increment
 	cg.placeLabel(cond)
 	cg.expr(ast.second()) // condition
-	cg.emitBwdJump(i.TJUMP, loop)
+	cg.emitBwdJump(op.TJUMP, loop)
 	cg.placeLabel(labels.brk)
 }
 
 func (cg *cgen) exprList(list []Ast) {
 	for _, expr := range list {
 		cg.expr(expr)
-		cg.emit(i.POP)
+		cg.emit(op.POP)
 	}
 }
 
@@ -223,22 +222,22 @@ func (cg *cgen) exprList(list []Ast) {
 func (cg *cgen) expr(ast Ast) {
 	switch ast.KeyTok() {
 	case NOT:
-		cg.unary(ast, i.NOT)
+		cg.unary(ast, op.NOT)
 	case ADD:
 		if len(ast.Children) == 1 {
-			cg.unary(ast, i.UPLUS)
+			cg.unary(ast, op.UPLUS)
 		} else {
-			cg.nary(ast, i.ADD)
+			cg.nary(ast, op.ADD)
 		}
 	case SUB:
-		cg.unary(ast, i.UMINUS) // binary sub handled by add
+		cg.unary(ast, op.UMINUS) // binary sub handled by add
 	case MUL: // also handles div
-		cg.nary(ast, i.MUL)
+		cg.nary(ast, op.MUL)
 	case IS, ISNT, MATCH, MATCHNOT, LT, LTE, GT, GTE,
 		CAT, MOD, LSHIFT, RSHIFT, BITOR, BITAND, BITXOR:
-		cg.nary(ast, i.IS+byte(ast.KeyTok()-IS))
+		cg.nary(ast, op.IS+byte(ast.KeyTok()-IS))
 	case BITNOT:
-		cg.unary(ast, i.BITNOT)
+		cg.unary(ast, op.BITNOT)
 	case IDENTIFIER:
 		cg.identifier(ast)
 	case EQ:
@@ -259,23 +258,23 @@ func (cg *cgen) expr(ast Ast) {
 		cg.load(ref)
 		if ast.Text == "post" {
 			cg.dupUnderLvalue(ref)
-			cg.emit(i.ONE)
+			cg.emit(op.ONE)
 			cg.emit(tok2op[ast.Token])
 			cg.store(ref)
-			cg.emit(i.POP)
+			cg.emit(op.POP)
 		} else {
-			cg.emit(i.ONE)
+			cg.emit(op.ONE)
 			cg.emit(tok2op[ast.Token])
 			cg.store(ref)
 		}
 	case DOT: // a.b
 		cg.expr(ast.first())
-		cg.emitValue(value.SuStr(ast.second().Text))
-		cg.emit(i.GET)
+		cg.emitValue(SuStr(ast.second().Text))
+		cg.emit(op.GET)
 	case L_BRACKET: // a[b]
 		cg.expr(ast.first())
 		cg.expr(ast.second())
-		cg.emit(i.GET)
+		cg.emit(op.GET)
 	case AND, OR:
 		cg.andorExpr(ast)
 	case Q_MARK:
@@ -300,16 +299,16 @@ func (cg *cgen) andorExpr(ast Ast) {
 		label = cg.emitJump(tok2op[ast.Keyword], label)
 		cg.expr(a)
 	}
-	cg.emit(i.BOOL)
+	cg.emit(op.BOOL)
 	cg.placeLabel(label)
 }
 
 func (cg *cgen) qcExpr(ast Ast) {
 	f, end := -1, -1
 	cg.expr(ast.first())
-	f = cg.emitJump(i.Q_MARK, f)
+	f = cg.emitJump(op.Q_MARK, f)
 	cg.expr(ast.second())
-	end = cg.emitJump(i.JUMP, end)
+	end = cg.emitJump(op.JUMP, end)
 	cg.placeLabel(f)
 	cg.expr(ast.third())
 	cg.placeLabel(end)
@@ -321,30 +320,30 @@ func (cg *cgen) inExpr(ast Ast) {
 	for j, a := range ast.Children[1:] {
 		cg.expr(a)
 		if j < len(ast.Children)-2 {
-			end = cg.emitJump(i.IN, end)
+			end = cg.emitJump(op.IN, end)
 		} else {
-			cg.emit(i.IS)
+			cg.emit(op.IS)
 		}
 	}
 	cg.placeLabel(end)
 }
 
-func (cg *cgen) emitValue(val value.Value) {
-	if val == value.True {
-		cg.emit(i.TRUE)
-	} else if val == value.False {
-		cg.emit(i.FALSE)
-	} else if val == value.SuInt(0) {
-		cg.emit(i.ZERO)
-	} else if val == value.SuInt(1) {
-		cg.emit(i.ONE)
-	} else if val == value.SuStr("") {
-		cg.emit(i.EMPTYSTR)
-	} else if si, ok := val.(value.SuInt); ok {
-		cg.emit(i.INT)
+func (cg *cgen) emitValue(val Value) {
+	if val == True {
+		cg.emit(op.TRUE)
+	} else if val == False {
+		cg.emit(op.FALSE)
+	} else if val == SuInt(0) {
+		cg.emit(op.ZERO)
+	} else if val == SuInt(1) {
+		cg.emit(op.ONE)
+	} else if val == SuStr("") {
+		cg.emit(op.EMPTYSTR)
+	} else if si, ok := val.(SuInt); ok {
+		cg.emit(op.INT)
 		cg.emitInt(int(si))
 	} else {
-		cg.emit(i.VALUE)
+		cg.emit(op.VALUE)
 		vi := cg.value(val)
 		cg.emitUint(vi)
 	}
@@ -352,7 +351,7 @@ func (cg *cgen) emitValue(val value.Value) {
 
 // value returns an index for the value
 // reusing if duplicate, adding otherwise
-func (cg *cgen) value(v value.Value) int {
+func (cg *cgen) value(v Value) int {
 	for i, v2 := range cg.values {
 		if v.Equals(v2) {
 			return i
@@ -366,14 +365,14 @@ func (cg *cgen) value(v value.Value) int {
 func (cg *cgen) identifier(ast Ast) {
 	if isLocal(ast.Text) {
 		if ast.Text[0] == '_' {
-			cg.emit(i.DYLOAD)
+			cg.emit(op.DYLOAD)
 		} else {
-			cg.emit(i.LOAD)
+			cg.emit(op.LOAD)
 		}
 		cg.emitUint(cg.name(ast.Text))
 	} else {
-		cg.emit(i.GLOBAL)
-		cg.emitUint(globals.NameNum(ast.Text))
+		cg.emit(op.GLOBAL)
+		cg.emitUint(NameNumG(ast.Text))
 	}
 }
 
@@ -384,7 +383,7 @@ func (cg *cgen) lvalue(ast Ast) int {
 		return cg.name(ast.Text)
 	} else if ast.Token == DOT {
 		cg.expr(ast.first())
-		cg.emitValue(value.SuStr(ast.second().Text))
+		cg.emitValue(SuStr(ast.second().Text))
 		return MEM_REF
 	} else if ast.Token == L_BRACKET {
 		cg.expr(ast.first())
@@ -397,12 +396,12 @@ func (cg *cgen) lvalue(ast Ast) int {
 
 func (cg *cgen) load(ref int) {
 	if ref == MEM_REF {
-		cg.emit(i.GET)
+		cg.emit(op.GET)
 	} else {
 		if cg.names[ref][0] == '_' {
-			cg.emit(i.DYLOAD)
+			cg.emit(op.DYLOAD)
 		} else {
-			cg.emit(i.LOAD)
+			cg.emit(op.LOAD)
 		}
 		cg.emitUint(ref)
 	}
@@ -410,24 +409,24 @@ func (cg *cgen) load(ref int) {
 
 func (cg *cgen) store(ref int) {
 	if ref == MEM_REF {
-		cg.emit(i.PUT)
+		cg.emit(op.PUT)
 	} else {
-		cg.emit(i.STORE)
+		cg.emit(op.STORE)
 		cg.emitUint(ref)
 	}
 }
 
 func (cg *cgen) dupLvalue(ref int) {
 	if ref == MEM_REF {
-		cg.emit(i.DUP2)
+		cg.emit(op.DUP2)
 	}
 }
 
 func (cg *cgen) dupUnderLvalue(ref int) {
 	if ref == MEM_REF {
-		cg.emit(i.DUPX2)
+		cg.emit(op.DUPX2)
 	} else {
-		cg.emit(i.DUP)
+		cg.emit(op.DUP)
 	}
 }
 
@@ -455,18 +454,18 @@ func (cg *cgen) unary(ast Ast, op byte) {
 	cg.emit(op)
 }
 
-func (cg *cgen) nary(ast Ast, op byte) {
+func (cg *cgen) nary(ast Ast, o byte) {
 	cg.expr(ast.first())
 	for _, a := range ast.Children[1:] {
-		if op == i.ADD && a.Token == SUB && len(a.Children) == 1 {
+		if o == op.ADD && a.Token == SUB && len(a.Children) == 1 {
 			cg.expr(a.first())
-			cg.emit(i.SUB)
-		} else if op == i.MUL && a.Token == DIV && len(a.Children) == 1 {
+			cg.emit(op.SUB)
+		} else if o == op.MUL && a.Token == DIV && len(a.Children) == 1 {
 			cg.expr(a.first())
-			cg.emit(i.DIV)
+			cg.emit(op.DIV)
 		} else {
 			cg.expr(a)
-			cg.emit(op)
+			cg.emit(o)
 		}
 	}
 }
@@ -475,7 +474,7 @@ func (cg *cgen) call(ast Ast) {
 	// TODO call method (without getting bound method)
 	cg.args(ast.second())
 	cg.expr(ast.first()) // function
-	cg.emit(i.CALL)
+	cg.emit(op.CALL)
 	// TODO ArgSpec
 }
 

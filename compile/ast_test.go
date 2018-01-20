@@ -3,9 +3,9 @@ package compile
 import (
 	"testing"
 
+	. "github.com/apmckinlay/gsuneido/interp"
 	. "github.com/apmckinlay/gsuneido/lexer"
 	. "github.com/apmckinlay/gsuneido/util/hamcrest"
-	"github.com/apmckinlay/gsuneido/value"
 )
 
 func TestAstString(t *testing.T) {
@@ -19,12 +19,12 @@ func TestAstString(t *testing.T) {
 	test(Ast{Item: Item{Token: EOF}}, "EOF")
 	test(a(COMMENT, "/* ... */"), "COMMENT")
 	test(a(IDENTIFIER, "foo"), "foo")
-	test(Ast{value: value.SuInt(123)}, "123")
+	test(Ast{value: SuInt(123)}, "123")
 	test(Ast{Item: Item{Text: "foo"}}, "foo")
-	test(Ast{Item: Item{Text: "num"}, value: value.SuInt(123)}, "(num 123)")
+	test(Ast{Item: Item{Text: "num"}, value: SuInt(123)}, "(num 123)")
 }
 
 func TestFold(t *testing.T) {
 	Assert(t).That(fold(Item{Token: IDENTIFIER, Keyword: TRUE}, nil, nil),
-		Equals(Ast{value: value.True}))
+		Equals(Ast{value: True}))
 }

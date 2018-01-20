@@ -1,6 +1,4 @@
-// SuStr is a string Value
-
-package value
+package interp
 
 import (
 	"math"

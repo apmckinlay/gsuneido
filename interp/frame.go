@@ -1,7 +1,5 @@
 package interp
 
-import . "github.com/apmckinlay/gsuneido/value"
-
 /*
 Frame is the context for a function/method/block invocation.
 */

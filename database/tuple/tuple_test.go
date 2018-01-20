@@ -2,9 +2,10 @@ package tuple
 
 import (
 	"testing"
+
+	v "github.com/apmckinlay/gsuneido/interp"
 	. "github.com/apmckinlay/gsuneido/util/hamcrest"
 	"github.com/apmckinlay/gsuneido/util/ints"
-	v "github.com/apmckinlay/gsuneido/value"
 )
 
 func TestTupleM(t *testing.T) {

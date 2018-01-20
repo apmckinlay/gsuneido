@@ -1,4 +1,4 @@
-package value
+package interp
 
 import "github.com/apmckinlay/gsuneido/util/dnum"
 

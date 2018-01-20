@@ -1,10 +1,9 @@
-package globals
+package interp
 
 import (
 	"sync"
 
 	"github.com/apmckinlay/gsuneido/util/verify"
-	"github.com/apmckinlay/gsuneido/value"
 )
 
 var (
@@ -12,7 +11,7 @@ var (
 	name2num = make(map[string]int)
 	// put nil in first slot so we never use gnum of zero
 	names  = []string{""}
-	values = []value.Value{nil}
+	values = []Value{nil}
 )
 
 // Add adds a new name and value to globals.
@@ -20,7 +19,7 @@ var (
 // This is used for set up of built-in globals
 // The return value is so it can be used like:
 // var _ = globals.Add(...)
-func Add(name string, val value.Value) int {
+func AddG(name string, val Value) int {
 	lock.Lock()
 	defer lock.Unlock()
 	if _, ok := name2num[name]; ok {
@@ -36,12 +35,12 @@ func Add(name string, val value.Value) int {
 
 // NameNum returns the global number for a name
 // adding it if it doesn't exist.
-func NameNum(name string) int {
+func NameNumG(name string) int {
 	gn, ok := check(name)
 	if ok {
 		return gn
 	}
-	return Add(name, nil)
+	return AddG(name, nil)
 }
 
 func check(name string) (int, bool) {
@@ -52,14 +51,14 @@ func check(name string) (int, bool) {
 }
 
 // NumName returns the name for a global number
-func NumName(gnum int) string {
+func NumNameG(gnum int) string {
 	lock.RLock()
 	defer lock.RUnlock()
 	return names[gnum]
 }
 
 // Get returns the value for a global
-func Get(gnum int) value.Value {
+func GetG(gnum int) Value {
 	lock.RLock()
 	defer lock.RUnlock()
 	return values[gnum]

@@ -2,9 +2,8 @@
 package interp
 
 import (
-	"github.com/apmckinlay/gsuneido/interp/globals"
+	. "github.com/apmckinlay/gsuneido/interp/op"
 	"github.com/apmckinlay/gsuneido/util/varint"
-	. "github.com/apmckinlay/gsuneido/value"
 )
 
 func (t *Thread) Interp() Value {
@@ -52,9 +51,9 @@ func (t *Thread) Interp() Value {
 			t.Push(fr.locals[i])
 		case GLOBAL:
 			gn := int(fetchUint(code, &fr.ip))
-			val := globals.Get(gn)
+			val := GetG(gn)
 			if val == nil {
-				panic("uninitialized global: " + globals.NumName(gn))
+				panic("uninitialized global: " + NumNameG(gn))
 			}
 			t.Push(val)
 		case GET:

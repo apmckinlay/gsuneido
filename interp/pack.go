@@ -1,4 +1,4 @@
-package value
+package interp
 
 type Packable interface {
 	// PackSize returns the size (in bytes) of the packed value

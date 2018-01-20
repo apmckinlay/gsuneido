@@ -1,4 +1,4 @@
-package value
+package interp
 
 // pairs is used by object and instance Equals
 // to prevent infinite recursion from self references

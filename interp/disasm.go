@@ -4,9 +4,8 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/apmckinlay/gsuneido/interp/globals"
+	. "github.com/apmckinlay/gsuneido/interp/op"
 	"github.com/apmckinlay/gsuneido/util/verify"
-	"github.com/apmckinlay/gsuneido/value"
 )
 
 var asm = []string{
@@ -25,7 +24,7 @@ func init() {
 	verify.That(asm[FALSE] == "false")
 }
 
-func Disasm(w io.Writer, fn *value.SuFunc) {
+func Disasm(w io.Writer, fn *SuFunc) {
 	var s string
 	for i := 0; i < len(fn.Code); {
 		j := i
@@ -35,7 +34,7 @@ func Disasm(w io.Writer, fn *value.SuFunc) {
 	fmt.Fprintf(w, "%d:\n", len(fn.Code))
 }
 
-func Disasm1(fn *value.SuFunc, i int) (int, string) {
+func Disasm1(fn *SuFunc, i int) (int, string) {
 	op := fn.Code[i]
 	i++
 	if int(op) >= len(asm) {
@@ -54,7 +53,7 @@ func Disasm1(fn *value.SuFunc, i int) (int, string) {
 		s += " " + fn.Strings[idx]
 	case GLOBAL:
 		idx := fetchUint(fn.Code, &i)
-		s += " " + globals.NumName(int(idx))
+		s += " " + NumNameG(int(idx))
 	case JUMP, TJUMP, FJUMP, AND, OR, Q_MARK, IN, EQJUMP, NEJUMP:
 		ip := i
 		i += 2

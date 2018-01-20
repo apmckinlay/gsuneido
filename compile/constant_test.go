@@ -2,8 +2,9 @@ package compile
 
 import (
 	"testing"
+
+	v "github.com/apmckinlay/gsuneido/interp"
 	. "github.com/apmckinlay/gsuneido/util/hamcrest"
-	v "github.com/apmckinlay/gsuneido/value"
 )
 
 func TestConstant(t *testing.T) {

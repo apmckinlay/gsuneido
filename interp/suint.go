@@ -1,4 +1,4 @@
-package value
+package interp
 
 import (
 	"strconv"

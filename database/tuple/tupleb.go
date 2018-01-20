@@ -1,7 +1,7 @@
 package tuple
 
 import (
-	v "github.com/apmckinlay/gsuneido/value"
+	v "github.com/apmckinlay/gsuneido/interp"
 )
 
 /*

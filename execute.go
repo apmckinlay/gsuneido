@@ -6,9 +6,9 @@ import (
 
 	"github.com/apmckinlay/gsuneido/compile"
 	"github.com/apmckinlay/gsuneido/interp"
+	value "github.com/apmckinlay/gsuneido/interp"
 	"github.com/apmckinlay/gsuneido/util/hamcrest"
 	"github.com/apmckinlay/gsuneido/util/ptest"
-	"github.com/apmckinlay/gsuneido/value"
 )
 
 var _ = ptest.Add("execute", pt_execute)

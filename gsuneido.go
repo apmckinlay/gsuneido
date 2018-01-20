@@ -10,11 +10,9 @@ import (
 
 	"github.com/apmckinlay/gsuneido/compile"
 	"github.com/apmckinlay/gsuneido/interp"
-	"github.com/apmckinlay/gsuneido/interp/globals"
-	"github.com/apmckinlay/gsuneido/value"
 )
 
-var _ = globals.Add("Suneido", new(value.SuObject))
+var _ = interp.AddG("Suneido", new(interp.SuObject))
 
 func main() {
 	if len(os.Args) > 1 {
@@ -47,7 +45,7 @@ func eval(src string) {
 		}
 	}()
 	src = "function () {\n" + src + "\n}"
-	fn := compile.Constant(src).(*value.SuFunc)
+	fn := compile.Constant(src).(*interp.SuFunc)
 	//	interp.Disasm(os.Stdout, fn)
 	th := interp.Thread{}
 	result := th.Call(fn, interp.SimpleArgSpecs[0])

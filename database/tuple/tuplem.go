@@ -3,8 +3,8 @@ package tuple
 import (
 	"math"
 
+	v "github.com/apmckinlay/gsuneido/interp"
 	"github.com/apmckinlay/gsuneido/util/verify"
-	v "github.com/apmckinlay/gsuneido/value"
 )
 
 /*

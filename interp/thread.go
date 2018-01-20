@@ -3,7 +3,6 @@ package interp
 import (
 	"github.com/apmckinlay/gsuneido/util/regex"
 	"github.com/apmckinlay/gsuneido/util/tr"
-	"github.com/apmckinlay/gsuneido/value"
 )
 
 type Thread struct {
@@ -12,7 +11,7 @@ type Thread struct {
 	frames []Frame
 	// stack is the Value stack for arguments and expressions.
 	// The end of the slice is the top of the stack.
-	stack   []value.Value
+	stack   []Value
 	rxcache *regex.LruMapCache
 	trcache *tr.LruMapCache
 }
@@ -23,18 +22,18 @@ func NewThread() *Thread {
 		trcache: tr.NewLruMapCache(100, tr.Set)}
 }
 
-func (t *Thread) Push(x value.Value) {
+func (t *Thread) Push(x Value) {
 	t.stack = append(t.stack, x)
 }
 
-func (t *Thread) Pop() value.Value {
+func (t *Thread) Pop() Value {
 	last := len(t.stack) - 1
 	x := t.stack[last]
 	t.stack = t.stack[:last]
 	return x
 }
 
-func (t *Thread) Top() value.Value {
+func (t *Thread) Top() Value {
 	return t.stack[len(t.stack)-1]
 }
 
@@ -52,7 +51,7 @@ func (t *Thread) Dupx2() {
 // Call executes a SuFunc and returns the result.
 // The arguments must be already on the stack as per the ArgSpec.
 // On return, the arguments are removed from the stack.
-func (t *Thread) Call(fn *value.SuFunc, as ArgSpec) value.Value {
+func (t *Thread) Call(fn *SuFunc, as ArgSpec) Value {
 	defer func(sp int) { t.stack = t.stack[:sp] }(len(t.stack) - as.Nargs())
 	t.args(fn, as)
 	base := len(t.stack) - fn.Nparams
@@ -68,7 +67,7 @@ func (t *Thread) Call(fn *value.SuFunc, as ArgSpec) value.Value {
 // args converts the arguments on the stack as per the ArgSpec
 // into the parameters expected by the function.
 // On return, the stack is guaranteed to match the SuFunc.
-func (t *Thread) args(fn *value.SuFunc, as ArgSpec) {
+func (t *Thread) args(fn *SuFunc, as ArgSpec) {
 	if fn.Nparams == as.N_unnamed() {
 		return // simple fast path
 	}

@@ -8,8 +8,8 @@ package tuple
 import (
 	"bytes"
 
+	v "github.com/apmckinlay/gsuneido/interp"
 	"github.com/apmckinlay/gsuneido/util/ints"
-	v "github.com/apmckinlay/gsuneido/value"
 )
 
 /*

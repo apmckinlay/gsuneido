@@ -4,15 +4,15 @@ import (
 	"bytes"
 	"strings"
 
+	. "github.com/apmckinlay/gsuneido/interp"
 	. "github.com/apmckinlay/gsuneido/lexer"
 	"github.com/apmckinlay/gsuneido/util/verify"
-	"github.com/apmckinlay/gsuneido/value"
 )
 
 // Ast is the node type for an AST returned by parse
 type Ast struct {
 	Item
-	value    value.Value
+	value    Value
 	Children []Ast
 }
 
@@ -88,14 +88,14 @@ func ast2(name string, children ...Ast) Ast {
 	return fold(Item{Text: name}, nil, children)
 }
 
-func astVal(name string, val value.Value) Ast {
+func astVal(name string, val Value) Ast {
 	return fold(Item{Text: name}, val, []Ast{})
 }
 
 func astBuilder(item Item, nodes ...T) T {
-	var val value.Value
+	var val Value
 	if len(nodes) >= 1 {
-		if v, ok := nodes[0].(value.Value); ok {
+		if v, ok := nodes[0].(Value); ok {
 			val = v
 			nodes = nodes[1:]
 		}
@@ -123,7 +123,7 @@ func (a *Ast) fourth() Ast {
 	return a.Children[3]
 }
 
-func fold(item Item, val value.Value, children []Ast) (x Ast) {
+func fold(item Item, val Value, children []Ast) (x Ast) {
 	//defer func() { fmt.Println("fold:", x) }()
 	ast := Ast{item, val, children}
 	if ast.isConstant() {
@@ -134,41 +134,41 @@ func fold(item Item, val value.Value, children []Ast) (x Ast) {
 	}
 	switch item.KeyTok() {
 	case ADD:
-		return ast.commutative(value.Add, value.SuInt(0))
+		return ast.commutative(Add, SuInt(0))
 	case SUB:
-		val = ast.unop(value.Uminus)
+		val = ast.unop(Uminus)
 	case IS:
-		val = ast.binop(value.Is)
+		val = ast.binop(Is)
 	case ISNT:
-		val = ast.binop(value.Isnt)
+		val = ast.binop(Isnt)
 	case LT:
-		val = ast.binop(value.Lt)
+		val = ast.binop(Lt)
 	case LTE:
-		val = ast.binop(value.Lte)
+		val = ast.binop(Lte)
 	case GT:
-		val = ast.binop(value.Gt)
+		val = ast.binop(Gt)
 	case GTE:
-		val = ast.binop(value.Gte)
+		val = ast.binop(Gte)
 	case CAT:
 		return ast.foldCat()
 	case MUL:
-		return ast.commutative(value.Mul, value.SuInt(1))
+		return ast.commutative(Mul, SuInt(1))
 	case MOD:
-		val = ast.binop(value.Mod)
+		val = ast.binop(Mod)
 	case LSHIFT:
-		val = ast.binop(value.Lshift)
+		val = ast.binop(Lshift)
 	case RSHIFT:
-		val = ast.binop(value.Rshift)
+		val = ast.binop(Rshift)
 	case BITOR:
-		val = ast.binop(value.Bitor)
+		val = ast.binop(Bitor)
 	case BITAND:
-		val = ast.binop(value.Bitand)
+		val = ast.binop(Bitand)
 	case BITXOR:
-		val = ast.binop(value.Bitxor)
+		val = ast.binop(Bitxor)
 	case BITNOT:
-		val = ast.unop(value.Bitnot)
+		val = ast.unop(Bitnot)
 	case NOT:
-		val = ast.unop(value.Not)
+		val = ast.unop(Not)
 	default:
 		return ast
 	}
@@ -206,26 +206,26 @@ func countConstant(children []Ast) int {
 	return n
 }
 
-type uopfn func(value.Value) value.Value
-type bopfn func(value.Value, value.Value) value.Value
+type uopfn func(Value) Value
+type bopfn func(Value, Value) Value
 
-func (a *Ast) unop(uop uopfn) value.Value {
+func (a *Ast) unop(uop uopfn) Value {
 	verify.That(len(a.Children) == 1)
 	return uop(a.Children[0].toVal())
 }
 
-func (a *Ast) binop(bop bopfn) value.Value {
+func (a *Ast) binop(bop bopfn) Value {
 	verify.That(len(a.Children) == 2)
 	return bop(a.Children[0].toVal(), a.Children[1].toVal())
 }
 
 // for add and mul
-func (a *Ast) commutative(bop bopfn, identity value.Value) Ast {
+func (a *Ast) commutative(bop bopfn, identity Value) Ast {
 	k := identity
 	i := 0
 	for _, c := range a.Children {
 		if c.Token == DIV && c.Children[0].isConstant() {
-			k = value.Div(k, c.Children[0].toVal())
+			k = Div(k, c.Children[0].toVal())
 		} else if c.isConstant() {
 			k = bop(k, c.toVal())
 		} else {
@@ -243,15 +243,15 @@ func (a *Ast) commutative(bop bopfn, identity value.Value) Ast {
 
 // cat is not commutative
 func (a *Ast) foldCat() Ast {
-	empty := value.SuStr("")
-	var k value.Value = empty
+	empty := SuStr("")
+	var k Value = empty
 	i := 0
 	for _, c := range a.Children {
 		if c.isConstant() {
-			k = value.Cat(k, c.toVal())
+			k = Cat(k, c.toVal())
 		} else {
 			if k != empty {
-				k = value.SuStr(k.ToStr()) // ensure not Concat
+				k = SuStr(k.ToStr()) // ensure not Concat
 				a.Children[i] = valAst(k)
 				k = empty
 				i++
@@ -260,8 +260,8 @@ func (a *Ast) foldCat() Ast {
 			i++
 		}
 	}
-	k = value.SuStr(k.ToStr()) // ensure not Concat
-	if i == 0 {                // all constant
+	k = SuStr(k.ToStr()) // ensure not Concat
+	if i == 0 {          // all constant
 		return valAst(k)
 	} else if k != empty {
 		a.Children[i] = valAst(k)
@@ -271,7 +271,7 @@ func (a *Ast) foldCat() Ast {
 	return *a
 }
 
-func valAst(val value.Value) Ast {
+func valAst(val Value) Ast {
 	return Ast{value: val}
 }
 
@@ -284,23 +284,23 @@ func (a *Ast) isConstant() bool {
 	}
 }
 
-func (a *Ast) toVal() value.Value {
+func (a *Ast) toVal() Value {
 	if a.value != nil {
 		return a.value
 	}
 	switch a.KeyTok() {
 	case NUMBER:
-		val, err := value.NumFromString(a.Text)
+		val, err := NumFromString(a.Text)
 		if err != nil {
 			panic("invalid number: " + a.Text)
 		}
 		return val
 	case STRING:
-		return value.SuStr(a.Text)
+		return SuStr(a.Text)
 	case TRUE:
-		return value.True
+		return True
 	case FALSE:
-		return value.False
+		return False
 	default:
 		panic("bad toVal")
 	}

@@ -1,10 +1,4 @@
-/*
-Package value implements the value types for Suneido
-
-The naming convention is that Suneido Value types start with "Su"
-e.g. SuBool, SuInt, SuStr, etc.
-*/
-package value
+package interp
 
 import (
 	"errors"

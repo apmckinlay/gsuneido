@@ -4,8 +4,8 @@ package compile
 // - class
 
 import (
+	v "github.com/apmckinlay/gsuneido/interp"
 	. "github.com/apmckinlay/gsuneido/lexer"
-	v "github.com/apmckinlay/gsuneido/value"
 )
 
 // Constant compiles a Suneido constant (e.g. a library record)

@@ -1,4 +1,4 @@
-package interp
+package op
 
 const (
 	RETURN = iota
