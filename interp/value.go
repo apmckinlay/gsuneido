@@ -7,11 +7,6 @@ import (
 	"github.com/apmckinlay/gsuneido/util/dnum"
 )
 
-// AThread is an abstract interface to interp.Thread
-// Can't reference concrete interp.Thread because that creates an import cycle
-type AThread interface {
-}
-
 // Value is used to reference a Suneido value
 type Value interface {
 	ToStr() string
