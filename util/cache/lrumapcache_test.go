@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+
 	. "github.com/apmckinlay/gsuneido/util/hamcrest"
 )
 
@@ -30,7 +31,7 @@ func TestCache_eviction(t *testing.T) {
 	Assert(t).That(c.NMiss(), Equals(14)) // specific to strategy
 }
 
-// CacheLM is a cache with a crude approximation of LRU.
+// LruMapCache is a cache with a crude approximation of LRU.
 // Working set should fit in size.
 // NOT thread safe.
 type LruMapCache struct {
