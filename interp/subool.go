@@ -101,6 +101,6 @@ func (b SuBool) Not() SuBool {
 	}
 }
 
-func (_ SuBool) Call(t AThread) Value {
+func (_ SuBool) Call(t *Thread, as ArgSpec) Value {
 	panic("can't call Boolean")
 }

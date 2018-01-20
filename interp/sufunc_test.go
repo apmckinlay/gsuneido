@@ -1,9 +1,12 @@
 package interp
 
-import "testing"
-import . "github.com/apmckinlay/gsuneido/util/hamcrest"
+import (
+	"testing"
 
-func TestSuFunc(t *testing.T) {
+	. "github.com/apmckinlay/gsuneido/util/hamcrest"
+)
+
+func TestSuFuncParams(t *testing.T) {
 	sf := SuFunc{}
 	Assert(t).That(sf.String(), Equals("function ()"))
 	sf.Nparams = 3

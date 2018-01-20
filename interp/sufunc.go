@@ -105,6 +105,6 @@ func (f *SuFunc) cmp(other Value) int {
 	panic("function compare not implemented")
 }
 
-func (_ SuFunc) Call(t AThread) Value {
-	panic("function call not implemented") //TODO
+func (f *SuFunc) Call(t *Thread, as ArgSpec) Value {
+	return t.Call(f, as)
 }

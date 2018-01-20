@@ -143,6 +143,6 @@ func (c SuConcat) cmp(other Value) int {
 
 }
 
-func (_ SuConcat) Call(t AThread) Value {
+func (_ SuConcat) Call(t *Thread, as ArgSpec) Value {
 	panic("concat call not implemented") //TODO
 }

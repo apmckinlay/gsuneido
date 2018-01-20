@@ -121,6 +121,6 @@ func (c SuStr) cmp(other Value) int {
 	}
 }
 
-func (_ SuStr) Call(t AThread) Value {
+func (_ SuStr) Call(t *Thread, as ArgSpec) Value {
 	panic("String call not implemented")
 }

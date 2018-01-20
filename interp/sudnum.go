@@ -236,6 +236,6 @@ func (x SuDnum) cmp(other Value) int {
 	}
 }
 
-func (_ SuDnum) Call(t AThread) Value {
+func (_ SuDnum) Call(t *Thread, as ArgSpec) Value {
 	panic("can't call number")
 }

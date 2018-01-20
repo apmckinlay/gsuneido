@@ -187,7 +187,7 @@ func (t *Thread) Interp() Value {
 		case CALL:
 			f := t.Pop()
 			// TODO ArgSpec
-			t.Push(f.Call(t))
+			t.Push(f.Call(t, SimpleArgSpecs[0]))
 		default:
 			panic("invalid op code")
 		}

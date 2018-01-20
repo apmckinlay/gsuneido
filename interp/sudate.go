@@ -780,6 +780,6 @@ func (d SuDate) cmp(other Value) int {
 	}
 }
 
-func (_ SuDate) Call(t AThread) Value {
+func (_ SuDate) Call(t *Thread, as ArgSpec) Value {
 	panic("can't call Date")
 }

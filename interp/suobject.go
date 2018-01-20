@@ -254,6 +254,6 @@ func (d SuObject) cmp(other Value) int {
 	panic("SuObject cmp not implemented") // TODO
 }
 
-func (_ SuObject) Call(t AThread) Value {
+func (_ SuObject) Call(t *Thread, as ArgSpec) Value {
 	panic("can't call Object")
 }

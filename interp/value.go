@@ -28,7 +28,7 @@ type Value interface {
 	order() ord
 	// cmp returns -1 for <, 0 for ==, +1 for >
 	cmp(other Value) int // ops Cmp ensures other has same ordering
-	Call(t AThread) Value
+	Call(t *Thread, as ArgSpec) Value
 }
 
 type ord int
