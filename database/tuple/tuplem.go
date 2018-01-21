@@ -3,7 +3,7 @@ package tuple
 import (
 	"math"
 
-	v "github.com/apmckinlay/gsuneido/interp"
+	. "github.com/apmckinlay/gsuneido/base"
 	"github.com/apmckinlay/gsuneido/util/verify"
 )
 
@@ -23,7 +23,7 @@ func (t TupleM) Size() int {
 	return len(t.offs)
 }
 
-func (t TupleM) Get(i int) v.Value {
+func (t TupleM) Get(i int) Value {
 	return get(t, i)
 }
 
@@ -53,7 +53,7 @@ func (t *TupleM) AddRaw(raw []byte) {
 }
 
 // Add appends a value to the tuple
-func (t *TupleM) Add(val v.Packable) {
+func (t *TupleM) Add(val Packable) {
 	t.offs = append(t.offs, len(t.buf))
 	t.buf = val.Pack(t.buf)
 }

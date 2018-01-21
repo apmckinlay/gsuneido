@@ -3,6 +3,7 @@ package interp
 import (
 	"testing"
 
+	. "github.com/apmckinlay/gsuneido/base"
 	"github.com/apmckinlay/gsuneido/interp/op"
 	. "github.com/apmckinlay/gsuneido/util/hamcrest"
 )

@@ -3,7 +3,7 @@ package tuple
 import (
 	"testing"
 
-	v "github.com/apmckinlay/gsuneido/interp"
+	. "github.com/apmckinlay/gsuneido/base"
 	. "github.com/apmckinlay/gsuneido/util/hamcrest"
 	"github.com/apmckinlay/gsuneido/util/ints"
 )
@@ -11,16 +11,16 @@ import (
 func TestTupleM(t *testing.T) {
 	tm := TupleM{}
 	Assert(t).That(tm.Size(), Equals(0))
-	tm.Add(v.SuInt(123))
-	tm.Add(v.SuStr("foobar"))
+	tm.Add(SuInt(123))
+	tm.Add(SuStr("foobar"))
 	Assert(t).That(tm.Size(), Equals(2))
-	Assert(t).That(tm.Get(0), Equals(v.SuInt(123)))
-	Assert(t).That(tm.Get(1), Equals(v.SuStr("foobar")))
+	Assert(t).That(tm.Get(0), Equals(SuInt(123)))
+	Assert(t).That(tm.Get(1), Equals(SuStr("foobar")))
 
 	tb := tm.ToTupleB()
 	Assert(t).That(tb.Size(), Equals(2))
-	Assert(t).That(tb.Get(0), Equals(v.SuInt(123)))
-	Assert(t).That(tb.Get(1), Equals(v.SuStr("foobar")))
+	Assert(t).That(tb.Get(0), Equals(SuInt(123)))
+	Assert(t).That(tb.Get(1), Equals(SuStr("foobar")))
 }
 
 func TestLength(t *testing.T) {
@@ -49,7 +49,7 @@ func TestCompare(t *testing.T) {
 func record(strs ...string) Tuple {
 	t := TupleM{}
 	for _, s := range strs {
-		t.Add(v.SuStr(s))
+		t.Add(SuStr(s))
 	}
 	return t
 }

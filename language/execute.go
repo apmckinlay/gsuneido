@@ -1,12 +1,12 @@
-package main
+package language
 
 import (
 	"fmt"
 	"strings"
 
+	. "github.com/apmckinlay/gsuneido/base"
 	"github.com/apmckinlay/gsuneido/compile"
 	"github.com/apmckinlay/gsuneido/interp"
-	value "github.com/apmckinlay/gsuneido/interp"
 	"github.com/apmckinlay/gsuneido/util/hamcrest"
 	"github.com/apmckinlay/gsuneido/util/ptest"
 )
@@ -16,14 +16,14 @@ var _ = ptest.Add("execute", pt_execute)
 func pt_execute(args []string) bool {
 	//fmt.Println(args)
 	src := "function () {\n" + args[0] + "\n}"
-	fn := compile.Constant(src).(*value.SuFunc)
+	fn := compile.Constant(src).(*SuFunc)
 	th := interp.NewThread()
 	expected := "**notfalse**"
 	if len(args) > 1 {
 		expected = args[1]
 	}
 	var ok bool
-	var result value.Value
+	var result Value
 	if expected == "throws" {
 		expected = "throws " + args[2]
 		e := hamcrest.Catch(func() {
@@ -32,13 +32,13 @@ func pt_execute(args []string) bool {
 		if e == nil {
 			ok = false
 		} else {
-			result = value.SuStr(e.(string))
+			result = SuStr(e.(string))
 			ok = strings.Contains(e.(string), args[2])
 		}
 	} else {
 		result = th.Call(fn, interp.SimpleArgSpecs[0])
 		if expected == "**notfalse**" {
-			ok = result != value.False
+			ok = result != False
 		} else {
 			expectedValue := compile.Constant(expected)
 			ok = result.Equals(expectedValue)

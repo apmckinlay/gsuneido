@@ -1,9 +1,10 @@
-package interp
+package base
 
 import (
 	"strconv"
 
 	"github.com/apmckinlay/gsuneido/util/dnum"
+	"github.com/apmckinlay/gsuneido/util/ints"
 )
 
 // SuInt is an integer Value
@@ -87,18 +88,18 @@ func (_ SuInt) TypeName() string {
 	return "Number"
 }
 
-func (_ SuInt) order() ord {
+func (_ SuInt) Order() ord {
 	return ordNum
 }
 
-func (x SuInt) cmp(other Value) int {
+func (x SuInt) Cmp(other Value) int {
 	if y, ok := other.(SuInt); ok {
-		return cmpInt(int(x.ToInt()), int(y.ToInt()))
+		return ints.Compare(int(x.ToInt()), int(y.ToInt()))
 	} else {
 		return dnum.Cmp(x.ToDnum(), other.ToDnum())
 	}
 }
 
-func (_ SuInt) Call(t *Thread, as ArgSpec) Value {
+func (_ SuInt) Call(c CallContext) Value {
 	panic("can't call number")
 }

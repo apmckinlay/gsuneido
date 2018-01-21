@@ -1,4 +1,4 @@
-package interp
+package base
 
 import (
 	"bytes"
@@ -97,14 +97,14 @@ func (_ *SuFunc) TypeName() string {
 	return "Function"
 }
 
-func (_ *SuFunc) order() ord {
+func (_ *SuFunc) Order() ord {
 	return ordOther
 }
 
-func (f *SuFunc) cmp(other Value) int {
+func (f *SuFunc) Cmp(other Value) int {
 	panic("function compare not implemented")
 }
 
-func (f *SuFunc) Call(t *Thread, as ArgSpec) Value {
-	return t.Call(f, as)
+func (f *SuFunc) Call(c CallContext) Value {
+	return c.CallSuFunc(f)
 }

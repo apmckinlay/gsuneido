@@ -1,4 +1,4 @@
-package interp
+package base
 
 import (
 	"errors"
@@ -20,10 +20,16 @@ type Value interface {
 	// hash2 is used by object to shallow hash contents
 	hash2() uint32
 	TypeName() string
-	order() ord
+	Order() ord
 	// cmp returns -1 for <, 0 for ==, +1 for >
-	cmp(other Value) int // ops Cmp ensures other has same ordering
-	Call(t *Thread, as ArgSpec) Value
+	Cmp(other Value) int // ops Cmp ensures other has same ordering
+	Call(c CallContext) Value
+}
+
+// CallContext is implemented by interp.Thread
+type CallContext interface {
+	CallSuFunc(f *SuFunc) Value
+	//TODO Builtin
 }
 
 type ord int
@@ -49,4 +55,14 @@ func NumFromString(s string) (Value, error) {
 		return DnumToValue(dn), nil
 	}
 	return NilVal, errors.New("invalid number: " + s)
+}
+
+// DnumToValue returns an SuInt if it fits, else a SuDnum
+func DnumToValue(dn dnum.Dnum) Value {
+	if dn.IsInt() {
+		if n, err := dn.Int32(); err == nil {
+			return SuInt(n)
+		}
+	}
+	return SuDnum{dn}
 }

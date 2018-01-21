@@ -3,22 +3,22 @@ package compile
 import (
 	"testing"
 
-	v "github.com/apmckinlay/gsuneido/interp"
+	. "github.com/apmckinlay/gsuneido/base"
 	. "github.com/apmckinlay/gsuneido/util/hamcrest"
 )
 
 func TestConstant(t *testing.T) {
-	test := func(src string, expected v.Value) {
+	test := func(src string, expected Value) {
 		Assert(t).That(Constant(src), Equals(expected))
 	}
-	test("true", v.True)
-	test("false", v.False)
-	test("0", v.SuInt(0))
-	test("-123", v.SuInt(-123))
-	test("+456", v.SuInt(456))
-	test("0xff", v.SuInt(255))
-	test("0377", v.SuInt(255))
-	test("'hi wo'", v.SuStr("hi wo"))
+	test("true", True)
+	test("false", False)
+	test("0", SuInt(0))
+	test("-123", SuInt(-123))
+	test("+456", SuInt(456))
+	test("0xff", SuInt(255))
+	test("0377", SuInt(255))
+	test("'hi wo'", SuStr("hi wo"))
 
 	Assert(t).That(Constant("#20140425").String(), Equals("#20140425"))
 	Assert(t).That(Constant("function () {}").TypeName(), Equals("Function"))

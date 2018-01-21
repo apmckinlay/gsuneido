@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"io"
 
+	. "github.com/apmckinlay/gsuneido/base"
+	"github.com/apmckinlay/gsuneido/interp/global"
 	. "github.com/apmckinlay/gsuneido/interp/op"
 	"github.com/apmckinlay/gsuneido/util/verify"
 )
@@ -53,7 +55,7 @@ func Disasm1(fn *SuFunc, i int) (int, string) {
 		s += " " + fn.Strings[idx]
 	case GLOBAL:
 		idx := fetchUint(fn.Code, &i)
-		s += " " + NumNameG(int(idx))
+		s += " " + global.Name(int(idx))
 	case JUMP, TJUMP, FJUMP, AND, OR, Q_MARK, IN, EQJUMP, NEJUMP:
 		ip := i
 		i += 2

@@ -1,4 +1,4 @@
-package interp
+package base
 
 import "testing"
 import . "github.com/apmckinlay/gsuneido/util/hamcrest"

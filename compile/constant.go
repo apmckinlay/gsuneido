@@ -4,34 +4,34 @@ package compile
 // - class
 
 import (
-	v "github.com/apmckinlay/gsuneido/interp"
+	. "github.com/apmckinlay/gsuneido/base"
 	. "github.com/apmckinlay/gsuneido/lexer"
 )
 
 // Constant compiles a Suneido constant (e.g. a library record)
 // to a Suneido Value
-func Constant(src string) v.Value {
+func Constant(src string) Value {
 	p := newParser(src)
 	return p.constant()
 }
 
-func (p *parser) constant() v.Value {
+func (p *parser) constant() Value {
 	switch p.Token {
 	case IDENTIFIER:
 		switch p.Keyword {
 		case TRUE:
 			p.next()
-			return v.True
+			return True
 		case FALSE:
 			p.next()
-			return v.False
+			return False
 		case FUNCTION:
 			ast := p.function()
 			return codegen(ast)
 		default:
 			s := p.Text
 			p.next()
-			return v.SuStr(s)
+			return SuStr(s)
 		}
 	case STRING:
 		return p.string()
@@ -42,7 +42,7 @@ func (p *parser) constant() v.Value {
 		return p.number()
 	case SUB:
 		p.next()
-		return v.Uminus(p.number())
+		return Uminus(p.number())
 	case HASH:
 		p.next()
 		switch p.Token {
@@ -59,7 +59,7 @@ func (p *parser) constant() v.Value {
 	panic(p.error("invalid constant"))
 }
 
-func (p *parser) string() v.Value {
+func (p *parser) string() Value {
 	s := ""
 	for {
 		s += p.Text
@@ -69,24 +69,24 @@ func (p *parser) string() v.Value {
 		}
 		p.nextSkipNL()
 	}
-	return v.SuStr(s)
+	return SuStr(s)
 }
 
-func (p *parser) number() v.Value {
+func (p *parser) number() Value {
 	s := p.Text
 	p.match(NUMBER)
-	val, err := v.NumFromString(s)
+	val, err := NumFromString(s)
 	if err != nil {
 		panic(p.error("invalid number", s))
 	}
 	return val
 }
 
-func (p *parser) date() v.Value {
+func (p *parser) date() Value {
 	s := p.Text
 	p.match(NUMBER)
-	date := v.DateFromLiteral(s)
-	if date == v.NilDate {
+	date := DateFromLiteral(s)
+	if date == NilDate {
 		p.error("invalid date", s)
 	}
 	return date
@@ -98,14 +98,14 @@ var closing = map[Token]Token{
 	L_BRACKET: R_BRACKET,
 }
 
-func (p *parser) object() v.Value {
+func (p *parser) object() Value {
 	close := closing[p.Token]
 	p.next()
 	return p.memberList(close)
 }
 
-func (p *parser) memberList(closing Token) v.Value {
-	ob := &v.SuObject{}
+func (p *parser) memberList(closing Token) Value {
+	ob := &SuObject{}
 	for p.Token != closing {
 		p.member(ob, closing)
 		if p.Token == COMMA || p.Token == SEMICOLON {
@@ -116,7 +116,7 @@ func (p *parser) memberList(closing Token) v.Value {
 	return ob
 }
 
-func (p *parser) member(ob *v.SuObject, closing Token) {
+func (p *parser) member(ob *SuObject, closing Token) {
 	mem := p.memberName()
 	val := p.memberValue(mem, closing)
 	if mem == nil {
@@ -126,7 +126,7 @@ func (p *parser) member(ob *v.SuObject, closing Token) {
 	}
 }
 
-func (p *parser) memberName() v.Value {
+func (p *parser) memberName() Value {
 	if p.isMemberName() {
 		return p.constant()
 		// does not absorb COLON
@@ -148,13 +148,13 @@ func (p *parser) isMemberName() bool {
 	return false
 }
 
-func (p *parser) memberValue(mem v.Value, closing Token) v.Value {
+func (p *parser) memberValue(mem Value, closing Token) Value {
 	if mem != nil {
 		if p.Token == COLON {
 			p.next()
 		}
 		if p.Token == COMMA || p.Token == closing {
-			return v.True
+			return True
 		}
 	}
 	return p.constant()

@@ -9,7 +9,8 @@ package compile
 // See also interp.Disasm
 
 import (
-	. "github.com/apmckinlay/gsuneido/interp"
+	. "github.com/apmckinlay/gsuneido/base"
+	"github.com/apmckinlay/gsuneido/interp/global"
 	"github.com/apmckinlay/gsuneido/interp/op"
 	. "github.com/apmckinlay/gsuneido/lexer"
 	"github.com/apmckinlay/gsuneido/util/varint"
@@ -372,7 +373,7 @@ func (cg *cgen) identifier(ast Ast) {
 		cg.emitUint(cg.name(ast.Text))
 	} else {
 		cg.emit(op.GLOBAL)
-		cg.emitUint(NameNumG(ast.Text))
+		cg.emitUint(global.Num(ast.Text))
 	}
 }
 

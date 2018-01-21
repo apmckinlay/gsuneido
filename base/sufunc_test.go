@@ -1,4 +1,4 @@
-package interp
+package base
 
 import (
 	"testing"
@@ -6,7 +6,7 @@ import (
 	. "github.com/apmckinlay/gsuneido/util/hamcrest"
 )
 
-func TestSuFuncParams(t *testing.T) {
+func TestSuFuncString(t *testing.T) {
 	sf := SuFunc{}
 	Assert(t).That(sf.String(), Equals("function ()"))
 	sf.Nparams = 3

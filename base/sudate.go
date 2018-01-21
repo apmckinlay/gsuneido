@@ -1,4 +1,4 @@
-package interp
+package base
 
 import (
 	"bytes"
@@ -761,11 +761,11 @@ func (_ SuDate) TypeName() string {
 	return "Date"
 }
 
-func (_ SuDate) order() ord {
+func (_ SuDate) Order() ord {
 	return ordDate
 }
 
-func (d SuDate) cmp(other Value) int {
+func (d SuDate) Cmp(other Value) int {
 	d2 := other.(SuDate)
 	if d.date < d2.date {
 		return -1
@@ -780,6 +780,6 @@ func (d SuDate) cmp(other Value) int {
 	}
 }
 
-func (_ SuDate) Call(t *Thread, as ArgSpec) Value {
+func (_ SuDate) Call(c CallContext) Value {
 	panic("can't call Date")
 }

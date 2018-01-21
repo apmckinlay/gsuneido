@@ -1,4 +1,4 @@
-package interp
+package base
 
 import (
 	"strconv"
@@ -124,11 +124,11 @@ func (_ SuConcat) TypeName() string {
 	return "String"
 }
 
-func (_ SuConcat) order() ord {
+func (_ SuConcat) Order() ord {
 	return ordStr
 }
 
-func (c SuConcat) cmp(other Value) int {
+func (c SuConcat) Cmp(other Value) int {
 	// COULD optimize this to not convert Concat to string
 	s1 := c.ToStr()
 	s2 := other.ToStr()
@@ -143,6 +143,6 @@ func (c SuConcat) cmp(other Value) int {
 
 }
 
-func (_ SuConcat) Call(t *Thread, as ArgSpec) Value {
+func (_ SuConcat) Call(c CallContext) Value {
 	panic("concat call not implemented") //TODO
 }

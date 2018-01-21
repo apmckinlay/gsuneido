@@ -1,4 +1,4 @@
-package interp
+package base
 
 import "github.com/apmckinlay/gsuneido/util/dnum"
 
@@ -79,11 +79,11 @@ func (_ SuBool) TypeName() string {
 	return "Boolean"
 }
 
-func (_ SuBool) order() ord {
+func (_ SuBool) Order() ord {
 	return ordBool
 }
 
-func (b SuBool) cmp(other Value) int {
+func (b SuBool) Cmp(other Value) int {
 	if b == other {
 		return 0
 	} else if b {
@@ -101,6 +101,6 @@ func (b SuBool) Not() SuBool {
 	}
 }
 
-func (_ SuBool) Call(t *Thread, as ArgSpec) Value {
+func (_ SuBool) Call(c CallContext) Value {
 	panic("can't call Boolean")
 }

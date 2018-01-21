@@ -1,4 +1,4 @@
-package interp
+package base
 
 import (
 	"testing"
@@ -73,8 +73,8 @@ func TestDateCompare(t *testing.T) {
 		Assert(t).That(d1, Equals(DateFromLiteral(s1)))
 		d2 := DateFromLiteral(s2)
 		Assert(t).That(d2, Equals(DateFromLiteral(s2)))
-		Assert(t).True(d1.cmp(d2) < 0)
-		Assert(t).True(d2.cmp(d1) > 0)
+		Assert(t).True(d1.Cmp(d2) < 0)
+		Assert(t).True(d2.Cmp(d1) > 0)
 		Assert(t).That(d1, NotEquals(d2))
 		Assert(t).That(d2, NotEquals(d1))
 	}

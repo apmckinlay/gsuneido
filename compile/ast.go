@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"strings"
 
-	. "github.com/apmckinlay/gsuneido/interp"
+	. "github.com/apmckinlay/gsuneido/base"
 	. "github.com/apmckinlay/gsuneido/lexer"
 	"github.com/apmckinlay/gsuneido/util/verify"
 )

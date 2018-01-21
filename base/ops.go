@@ -1,7 +1,9 @@
-package interp
+package base
 
 import (
 	"math"
+
+	"github.com/apmckinlay/gsuneido/util/ints"
 
 	"github.com/apmckinlay/gsuneido/util/dnum"
 	"github.com/apmckinlay/gsuneido/util/regex"
@@ -16,19 +18,19 @@ func Isnt(x Value, y Value) Value {
 }
 
 func Lt(x Value, y Value) Value {
-	return SuBool(x.cmp(y) < 0)
+	return SuBool(x.Cmp(y) < 0)
 }
 
 func Lte(x Value, y Value) Value {
-	return SuBool(x.cmp(y) <= 0)
+	return SuBool(x.Cmp(y) <= 0)
 }
 
 func Gt(x Value, y Value) Value {
-	return SuBool(x.cmp(y) > 0)
+	return SuBool(x.Cmp(y) > 0)
 }
 
 func Gte(x Value, y Value) Value {
-	return SuBool(x.cmp(y) >= 0)
+	return SuBool(x.Cmp(y) >= 0)
 }
 
 func Add(x Value, y Value) Value {
@@ -127,16 +129,6 @@ func Int64ToValue(n int64) Value {
 	}
 }
 
-// DnumToValue returns an SuInt if it fits, else a SuDnum
-func DnumToValue(dn dnum.Dnum) Value {
-	if dn.IsInt() {
-		if n, err := dn.Int32(); err == nil {
-			return SuInt(n)
-		}
-	}
-	return SuDnum{dn}
-}
-
 func Cat(x Value, y Value) Value {
 	const SMALL = 256
 
@@ -164,23 +156,12 @@ func BitNot(x Value) Value {
 }
 
 func Cmp(x Value, y Value) int {
-	xo := x.order()
-	yo := y.order()
+	xo := x.Order()
+	yo := y.Order()
 	if xo != yo {
-		return cmpInt(int(xo), int(yo))
+		return ints.Compare(int(xo), int(yo))
 	}
-	return x.cmp(y)
-}
-
-func cmpInt(x int, y int) int {
-	switch {
-	case x < y:
-		return -1
-	case x > y:
-		return +1
-	default:
-		return 0
-	}
+	return x.Cmp(y)
 }
 
 func Match(x Value, y regex.Pattern) SuBool {

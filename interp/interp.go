@@ -2,11 +2,40 @@
 package interp
 
 import (
+	. "github.com/apmckinlay/gsuneido/base"
+	"github.com/apmckinlay/gsuneido/interp/global"
 	. "github.com/apmckinlay/gsuneido/interp/op"
 	"github.com/apmckinlay/gsuneido/util/varint"
 )
 
-func (t *Thread) Interp() Value {
+type CallSpec struct {
+	t  *Thread
+	as ArgSpec
+}
+
+func (c CallSpec) CallSuFunc(f *SuFunc) Value {
+	return c.t.Call(f, c.as)
+}
+
+var _ CallContext = CallSpec{}
+
+// Call executes a SuFunc and returns the result.
+// The arguments must be already on the stack as per the ArgSpec.
+// On return, the arguments are removed from the stack.
+func (t *Thread) Call(fn *SuFunc, as ArgSpec) Value {
+	defer func(sp int) { t.stack = t.stack[:sp] }(len(t.stack) - as.Nargs())
+	t.args(fn, as)
+	base := len(t.stack) - fn.Nparams
+	for i := fn.Nparams; i < fn.Nlocals; i++ {
+		t.Push(nil)
+	}
+	frame := Frame{fn: fn, ip: 0, locals: t.stack[base:]}
+	t.frames = append(t.frames, frame)
+	defer func(fp int) { t.frames = t.frames[:fp] }(len(t.frames) - 1)
+	return t.Run()
+}
+
+func (t *Thread) Run() Value {
 	fr := &t.frames[len(t.frames)-1]
 	code := fr.fn.Code
 	sp := len(t.stack)
@@ -51,9 +80,9 @@ func (t *Thread) Interp() Value {
 			t.Push(fr.locals[i])
 		case GLOBAL:
 			gn := int(fetchUint(code, &fr.ip))
-			val := GetG(gn)
+			val := global.Get(gn)
 			if val == nil {
-				panic("uninitialized global: " + NumNameG(gn))
+				panic("uninitialized global: " + global.Name(gn))
 			}
 			t.Push(val)
 		case GET:
@@ -187,7 +216,7 @@ func (t *Thread) Interp() Value {
 		case CALL:
 			f := t.Pop()
 			// TODO ArgSpec
-			t.Push(f.Call(t, SimpleArgSpecs[0]))
+			t.Push(f.Call(CallSpec{t, SimpleArgSpecs[0]}))
 		default:
 			panic("invalid op code")
 		}

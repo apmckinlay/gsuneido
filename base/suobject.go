@@ -1,4 +1,4 @@
-package interp
+package base
 
 import (
 	"bytes"
@@ -246,14 +246,14 @@ func (_ SuObject) TypeName() string {
 	return "Object"
 }
 
-func (_ SuObject) order() ord {
+func (_ SuObject) Order() ord {
 	return ordObject
 }
 
-func (d SuObject) cmp(other Value) int {
+func (d SuObject) Cmp(other Value) int {
 	panic("SuObject cmp not implemented") // TODO
 }
 
-func (_ SuObject) Call(t *Thread, as ArgSpec) Value {
+func (_ SuObject) Call(c CallContext) Value {
 	panic("can't call Object")
 }

@@ -1,7 +1,7 @@
 package tuple
 
 import (
-	v "github.com/apmckinlay/gsuneido/interp"
+	. "github.com/apmckinlay/gsuneido/base"
 )
 
 /*
@@ -29,7 +29,7 @@ func (t TupleB) Size() int {
 	return int(t[2]) + int(t[3])<<8
 }
 
-func (t TupleB) Get(i int) v.Value {
+func (t TupleB) Get(i int) Value {
 	return get(t, i)
 }
 

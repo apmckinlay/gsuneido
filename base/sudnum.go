@@ -1,4 +1,4 @@
-package interp
+package base
 
 import (
 	"math"
@@ -15,11 +15,6 @@ type SuDnum struct {
 
 var _ Value = SuDnum{}
 var _ Packable = SuDnum{}
-
-func ParseNum(s string) (Value, error) {
-	dn, err := dnum.Parse(s)
-	return DnumToValue(dn), err
-}
 
 func (dn SuDnum) ToInt() int32 {
 	n, _ := dn.Int32()
@@ -224,11 +219,11 @@ func (_ SuDnum) TypeName() string {
 	return "Number"
 }
 
-func (_ SuDnum) order() ord {
+func (_ SuDnum) Order() ord {
 	return ordNum
 }
 
-func (x SuDnum) cmp(other Value) int {
+func (x SuDnum) Cmp(other Value) int {
 	if y, ok := other.(SuDnum); ok {
 		return dnum.Cmp(x.Dnum, y.Dnum)
 	} else {
@@ -236,6 +231,6 @@ func (x SuDnum) cmp(other Value) int {
 	}
 }
 
-func (_ SuDnum) Call(t *Thread, as ArgSpec) Value {
+func (_ SuDnum) Call(c CallContext) Value {
 	panic("can't call number")
 }

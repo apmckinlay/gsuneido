@@ -1,10 +1,13 @@
-package interp
+package global
 
 import (
 	"sync"
 
+	"github.com/apmckinlay/gsuneido/base"
 	"github.com/apmckinlay/gsuneido/util/verify"
 )
+
+type Value = base.Value
 
 var (
 	lock     sync.RWMutex
@@ -19,7 +22,7 @@ var (
 // This is used for set up of built-in globals
 // The return value is so it can be used like:
 // var _ = globals.Add(...)
-func AddG(name string, val Value) int {
+func Add(name string, val Value) int {
 	lock.Lock()
 	defer lock.Unlock()
 	if _, ok := name2num[name]; ok {
@@ -33,14 +36,14 @@ func AddG(name string, val Value) int {
 	return gnum
 }
 
-// NameNum returns the global number for a name
+// Num returns the global number for a name
 // adding it if it doesn't exist.
-func NameNumG(name string) int {
+func Num(name string) int {
 	gn, ok := check(name)
 	if ok {
 		return gn
 	}
-	return AddG(name, nil)
+	return Add(name, nil)
 }
 
 func check(name string) (int, bool) {
@@ -50,15 +53,15 @@ func check(name string) (int, bool) {
 	return gn, ok
 }
 
-// NumName returns the name for a global number
-func NumNameG(gnum int) string {
+// Name returns the name for a global number
+func Name(gnum int) string {
 	lock.RLock()
 	defer lock.RUnlock()
 	return names[gnum]
 }
 
 // Get returns the value for a global
-func GetG(gnum int) Value {
+func Get(gnum int) Value {
 	lock.RLock()
 	defer lock.RUnlock()
 	return values[gnum]

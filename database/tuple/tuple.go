@@ -8,7 +8,7 @@ package tuple
 import (
 	"bytes"
 
-	v "github.com/apmckinlay/gsuneido/interp"
+	. "github.com/apmckinlay/gsuneido/base"
 	"github.com/apmckinlay/gsuneido/util/ints"
 )
 
@@ -21,7 +21,7 @@ type Tuple interface {
 	// GetRaw returns the byte slice containing the i'th value
 	GetRaw(i int) []byte
 	// Get returns the i'th value (unpacked)
-	Get(i int) v.Value
+	Get(i int) Value
 	// Compare returns -1 for less than, 0 for equal, +1 for greater than
 	Compare(other Tuple) int
 }
@@ -41,6 +41,6 @@ func compare(x, y Tuple) int {
 	return ints.Compare(xn, yn)
 }
 
-func get(t Tuple, i int) v.Value {
-	return v.Unpack(t.GetRaw(i))
+func get(t Tuple, i int) Value {
+	return Unpack(t.GetRaw(i))
 }

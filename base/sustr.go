@@ -1,4 +1,4 @@
-package interp
+package base
 
 import (
 	"github.com/apmckinlay/gsuneido/util/dnum"
@@ -103,11 +103,11 @@ func (_ SuStr) TypeName() string {
 	return "String"
 }
 
-func (_ SuStr) order() ord {
+func (_ SuStr) Order() ord {
 	return ordStr
 }
 
-func (c SuStr) cmp(other Value) int {
+func (c SuStr) Cmp(other Value) int {
 	// COULD optimize this to not convert Concat to string
 	s1 := c.ToStr()
 	s2 := other.ToStr()
@@ -121,6 +121,6 @@ func (c SuStr) cmp(other Value) int {
 	}
 }
 
-func (_ SuStr) Call(t *Thread, as ArgSpec) Value {
+func (_ SuStr) Call(c CallContext) Value {
 	panic("String call not implemented")
 }

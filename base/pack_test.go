@@ -1,4 +1,4 @@
-package interp
+package base
 
 import (
 	"fmt"
@@ -38,7 +38,7 @@ func TestPackInt32(t *testing.T) {
 func TestPackNum(t *testing.T) {
 	test := func(s string, b ...byte) {
 		Assert(t).That(Pack(dv(s)), Equals(b))
-		v, err := ParseNum(s)
+		v, err := NumFromString(s)
 		if err == nil {
 			Assert(t).That(Pack(v.(Packable)), Equals(b))
 		}
