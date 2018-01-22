@@ -13,6 +13,9 @@ func TestCodegen(t *testing.T) {
 	test := func(src, expected string) {
 		ast := ParseFunction("function () {\n" + src + "\n}")
 		fn := codegen(ast)
+		// fmt.Println(src)
+		// fmt.Println(ast)
+		// fmt.Println(fn.Code)
 		da := []string{}
 		var s string
 		for i := 0; i < len(fn.Code); {
@@ -65,9 +68,9 @@ func TestCodegen(t *testing.T) {
 
 	test("throw 'fubar'", "value 'fubar', throw")
 
-	test("f()", "load f, call")
-	test("F()", "global F, call")
-	test("f(a, b)", "load a, load b, load f, call")
+	test("f()", "load f, call 0")
+	test("F()", "global F, call 0")
+	test("f(a, b)", "load a, load b, load f, call 2")
 
 	Assert(t).That(func() { codegen(ParseFunction("function () { G = 1 }")) },
 		Panics("invalid lvalue"))

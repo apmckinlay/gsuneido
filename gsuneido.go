@@ -50,7 +50,7 @@ func eval(src string) {
 	fn := compile.Constant(src).(*SuFunc)
 	//	interp.Disasm(os.Stdout, fn)
 	th := interp.NewThread()
-	result := th.Call(fn, interp.SimpleArgSpecs[0])
+	result := th.Call(fn, interp.ArgSpec{})
 	fmt.Print(">>> ", result)
 	if result != nil {
 		fmt.Print(" (" + reflect.TypeOf(result).String() + ")")

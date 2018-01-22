@@ -215,8 +215,11 @@ func (t *Thread) Run() Value {
 			panic(t.Pop())
 		case CALL:
 			f := t.Pop()
-			// TODO ArgSpec
-			t.Push(f.Call(CallSpec{t, SimpleArgSpecs[0]}))
+			nargs := code[fr.ip]
+			fr.ip++
+			t.Push(f.Call(CallSpec{t, ArgSpec{Unnamed: nargs}}))
+		case CALL_NAMED:
+			//TODO
 		default:
 			panic("invalid op code")
 		}

@@ -10,6 +10,7 @@ package compile
 
 import (
 	. "github.com/apmckinlay/gsuneido/base"
+	"github.com/apmckinlay/gsuneido/interp"
 	"github.com/apmckinlay/gsuneido/interp/global"
 	"github.com/apmckinlay/gsuneido/interp/op"
 	. "github.com/apmckinlay/gsuneido/lexer"
@@ -473,18 +474,23 @@ func (cg *cgen) nary(ast Ast, o byte) {
 
 func (cg *cgen) call(ast Ast) {
 	// TODO call method (without getting bound method)
-	cg.args(ast.second())
+	argspec := cg.args(ast.second())
 	cg.expr(ast.first()) // function
 	cg.emit(op.CALL)
-	// TODO ArgSpec
+	cg.emit(argspec.Unnamed)
+	// TODO named
+	//  cg.emit(byte(len(argspec.Spec)))
+	//	cg.emit(argspec.Spec...)
 }
 
-func (cg *cgen) args(ast Ast) {
+func (cg *cgen) args(ast Ast) interp.ArgSpec {
 	verify.That(ast.Item == argList)
 	for _, arg := range ast.Children {
 		// TODO named and @args
 		cg.expr(arg.first())
 	}
+	verify.That(len(ast.Children) < interp.EACH)
+	return interp.ArgSpec{Unnamed: byte(len(ast.Children))}
 }
 
 // helpers ---------------------------------------------------------------------

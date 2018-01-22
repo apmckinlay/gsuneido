@@ -1,62 +1,59 @@
 package interp
 
+import "bytes"
+
 /*
-ArgSpec specifies the arguments on the stack
-
-- first byte is the number of un-named arguments
-- additional bytes (if any) are one of:
--- index into the names array for a named argument
--- EACH for @arg
--- NONAME for unnamed args following named or each
-
+ArgSpec specifies the arguments on the stack for a call.
 The spec is normally embedded directly in the byte code
 and sliced out of it without copying or processing.
-Shortcut op codes
-that specify only the number of unnamed arguments
-use the predefined SimpleArgSpecs
-since the code does not contain an actual spec.
 */
 type ArgSpec struct {
-	spec  []byte
-	names []string // the names from the calling Function
+	// Unnamed is the number of unnamed arguments, or the special values EACH or EACH1
+	Unnamed byte
+	// Spec has one entry per named argument, indexing into Names
+	Spec []byte
+	// Names is the locals names from the calling function
+	Names []string
 }
 
 const (
-	EACH   = 254
-	NONAME = 255
+	EACH  = 254
+	EACH1 = 255
 )
 
-// ArgSpecs are predefined ArgSpec
-// for small numbers of unnamed arguments
-// with no each or named
-var SimpleArgSpecs = [...]ArgSpec{
-	{[]byte{0}, []string{}},
-	{[]byte{1}, []string{}},
-	{[]byte{2}, []string{}},
-	{[]byte{3}, []string{}},
-	{[]byte{4}, []string{}},
-	{[]byte{5}, []string{}},
-	{[]byte{6}, []string{}},
-	{[]byte{7}, []string{}},
-}
-
-func (as *ArgSpec) Nargs() int {
-	return as.N_unnamed() + len(as.spec) - 1
-}
-
-func (as *ArgSpec) N_unnamed() int {
-	return int(as.spec[0])
+// Nargs returns the total number of arguments
+func (as ArgSpec) Nargs() int {
+	return int(as.Unnamed) + len(as.Spec)
 }
 
 // ArgName returns the name of the i'th argument
-func (as *ArgSpec) ArgName(i int) string {
-	nu := as.N_unnamed()
+func (as ArgSpec) ArgName(i int) string {
+	nu := int(as.Unnamed)
 	if i < nu {
 		return ""
 	}
-	ni := as.spec[i-nu+1]
-	if ni >= EACH {
+	ni := as.Spec[i-nu]
+	if ni >= EACH1 {
 		return ""
 	}
-	return as.names[ni]
+	return as.Names[ni]
+}
+
+func (as ArgSpec) String() string {
+	var buf bytes.Buffer
+	sep := ""
+	buf.WriteString("ArgSpec(")
+	for i := byte(0); i < as.Unnamed; i++ {
+		buf.WriteString(sep)
+		buf.WriteString("?")
+		sep = ", "
+	}
+	for _, i := range as.Spec {
+		buf.WriteString(sep)
+		buf.WriteString(as.Names[i])
+		buf.WriteString(":")
+		sep = ", "
+	}
+	buf.WriteString(")")
+	return buf.String()
 }

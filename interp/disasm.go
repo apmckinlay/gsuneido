@@ -19,7 +19,7 @@ var asm = []string{
 	"load", "store", "dyload", "get", "put", "global",
 	"true", "false", "zero", "one", "emptystr",
 	"or", "and", "bool", "qmark", "in", "jump", "tjump", "fjump",
-	"eqjump", "nejump", "throw", "call",
+	"eqjump", "nejump", "throw", "call", "callnamed",
 }
 
 func init() {
@@ -61,6 +61,11 @@ func Disasm1(fn *SuFunc, i int) (int, string) {
 		i += 2
 		jump(fn.Code, &ip)
 		s += fmt.Sprintf(" %d", ip)
+	case CALL:
+		s += fmt.Sprintf(" %d", fn.Code[i])
+		i++
+	case CALL_NAMED:
+		panic("not implemnted") //TODO
 	}
 	return i, s
 }
