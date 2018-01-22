@@ -100,7 +100,3 @@ func (b SuBool) Not() SuBool {
 		return True
 	}
 }
-
-func (_ SuBool) Call(c CallContext) Value {
-	panic("can't call Boolean")
-}

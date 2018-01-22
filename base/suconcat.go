@@ -142,7 +142,3 @@ func (c SuConcat) Cmp(other Value) int {
 	}
 
 }
-
-func (_ SuConcat) Call(c CallContext) Value {
-	panic("concat call not implemented") //TODO
-}

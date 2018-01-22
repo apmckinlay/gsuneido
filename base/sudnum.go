@@ -230,7 +230,3 @@ func (x SuDnum) Cmp(other Value) int {
 		return dnum.Cmp(x.Dnum, y.ToDnum())
 	}
 }
-
-func (_ SuDnum) Call(c CallContext) Value {
-	panic("can't call number")
-}

@@ -779,7 +779,3 @@ func (d SuDate) Cmp(other Value) int {
 		return 0
 	}
 }
-
-func (_ SuDate) Call(c CallContext) Value {
-	panic("can't call Date")
-}

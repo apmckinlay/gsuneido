@@ -104,7 +104,3 @@ func (_ *SuFunc) Order() ord {
 func (f *SuFunc) Cmp(other Value) int {
 	panic("function compare not implemented")
 }
-
-func (f *SuFunc) Call(c CallContext) Value {
-	return c.CallSuFunc(f)
-}

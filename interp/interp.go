@@ -8,17 +8,6 @@ import (
 	"github.com/apmckinlay/gsuneido/util/varint"
 )
 
-type CallSpec struct {
-	t  *Thread
-	as ArgSpec
-}
-
-func (c CallSpec) CallSuFunc(f *SuFunc) Value {
-	return c.t.Call(f, c.as)
-}
-
-var _ CallContext = CallSpec{}
-
 // Call executes a SuFunc and returns the result.
 // The arguments must be already on the stack as per the ArgSpec.
 // On return, the arguments are removed from the stack.
@@ -217,9 +206,28 @@ func (t *Thread) Run() Value {
 			f := t.Pop()
 			nargs := code[fr.ip]
 			fr.ip++
-			t.Push(f.Call(CallSpec{t, ArgSpec{Unnamed: nargs}}))
+			switch f := f.(type) {
+			//TODO builtin functions, blocks, etc
+			case *SuFunc:
+				t.Push(t.Call(f, ArgSpec{Unnamed: nargs}))
+			default:
+				panic("can't call " + f.TypeName())
+			}
 		case CALL_NAMED:
-			//TODO
+			f := t.Pop()
+			unnamed := code[fr.ip]
+			fr.ip++
+			named := int(code[fr.ip])
+			fr.ip++
+			spec := code[fr.ip : fr.ip+named]
+			fr.ip += named
+			switch f := f.(type) {
+			//TODO builtin functions, blocks, etc
+			case *SuFunc:
+				t.Push(t.Call(f, ArgSpec{unnamed, spec, fr.fn.Strings}))
+			default:
+				panic("can't call " + f.TypeName())
+			}
 		default:
 			panic("invalid op code")
 		}

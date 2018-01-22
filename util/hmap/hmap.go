@@ -9,9 +9,14 @@ Without incremental resizing.
 package hmap
 
 import (
+	"bytes"
+	"fmt"
+
 	"github.com/apmckinlay/gsuneido/util/bits"
 	"github.com/apmckinlay/gsuneido/util/verify"
 )
+
+//TODO make a zero value work as empty Hmap
 
 type Key interface {
 	Hash() uint32
@@ -205,4 +210,40 @@ func (it *Iter) Next() (key Key, val interface{}) {
 		}
 		it.buck = &it.hmap.buckets[it.b]
 	}
+}
+
+func (hm Hmap) String() string {
+	var buf bytes.Buffer
+	buf.WriteString("{")
+	sep := ""
+	iter := hm.Iter()
+	for {
+		key, val := iter.Next()
+		if key == nil {
+			break
+		}
+		buf.WriteString(sep)
+		buf.WriteString(fmt.Sprint(key))
+		buf.WriteString(": ")
+		buf.WriteString(fmt.Sprint(val))
+		sep = ", "
+	}
+	buf.WriteString("}")
+	return buf.String()
+}
+
+// Copy returns a shallow copy of the Hmap
+func (hm *Hmap) Copy() *Hmap {
+	dst := NewHmap(hm.Size())
+	for b := 0; b < len(hm.buckets); b++ {
+		for buck := &hm.buckets[b]; buck != nil; buck = buck.overflow {
+			for i := 0; i < bucketsize; i++ {
+				if buck.tophash[i] != 0 {
+					dst.Put(buck.keys[i], buck.vals[i])
+					// NOTE: could use a specialized insert without dup checking
+				}
+			}
+		}
+	}
+	return dst
 }

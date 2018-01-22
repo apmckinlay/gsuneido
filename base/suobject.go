@@ -254,6 +254,12 @@ func (d SuObject) Cmp(other Value) int {
 	panic("SuObject cmp not implemented") // TODO
 }
 
-func (_ SuObject) Call(c CallContext) Value {
-	panic("can't call Object")
+// Slice returns a copy of the object, with the first n list elements removed
+func (ob *SuObject) Slice(n int) *SuObject {
+	if n > len(ob.list) {
+		return &SuObject{hash: ob.hash.Copy(), readonly: false}
+	}
+	list := make([]Value, len(ob.list)-n)
+	copy(list, ob.list[n:])
+	return &SuObject{list: list, hash: ob.hash.Copy(), readonly: false}
 }

@@ -23,13 +23,6 @@ type Value interface {
 	Order() ord
 	// cmp returns -1 for <, 0 for ==, +1 for >
 	Cmp(other Value) int // ops Cmp ensures other has same ordering
-	Call(c CallContext) Value
-}
-
-// CallContext is implemented by interp.Thread
-type CallContext interface {
-	CallSuFunc(f *SuFunc) Value
-	//TODO Builtin
 }
 
 type ord int

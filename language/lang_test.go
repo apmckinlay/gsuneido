@@ -11,14 +11,19 @@ import (
 )
 
 func TestSuFuncCall(t *testing.T) {
-	fn := compile.Constant("function (n) { n + n }")
+	fn := compile.Constant("function (a, b) { a - b }")
 	th := NewThread()
-	th.Push(SuInt(123))
-	result := th.Call(fn.(*SuFunc), ArgSpec{1, nil, nil})
-	Assert(t).That(result, Equals(SuInt(246)))
+	th.Push(SuInt(100))
+	th.Push(SuInt(1))
+	result := th.Call(fn.(*SuFunc), ArgSpec{Unnamed: 2})
+	Assert(t).That(result, Equals(SuInt(99)))
 	global.Add("F", fn)
 
-	fn = compile.Constant("function () { F(321) }")
+	fn = compile.Constant("function () { F(100, 1) }")
 	result = th.Call(fn.(*SuFunc), ArgSpec{})
-	Assert(t).That(result, Equals(SuInt(642)))
+	Assert(t).That(result, Equals(SuInt(99)))
+
+	// fn = compile.Constant("function () { F(b: 1, a: 100) }")
+	// result = th.Call(fn.(*SuFunc), ArgSpec{})
+	// Assert(t).That(result, Equals(SuInt(99)))
 }

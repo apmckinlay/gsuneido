@@ -16,6 +16,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/bits"
 )
 
+// Dnum is a decimal floating point number
 type Dnum struct {
 	coef uint64
 	sign int8

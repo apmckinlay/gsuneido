@@ -120,7 +120,3 @@ func (c SuStr) Cmp(other Value) int {
 		return 0
 	}
 }
-
-func (_ SuStr) Call(c CallContext) Value {
-	panic("String call not implemented")
-}

@@ -99,7 +99,3 @@ func (x SuInt) Cmp(other Value) int {
 		return dnum.Cmp(x.ToDnum(), other.ToDnum())
 	}
 }
-
-func (_ SuInt) Call(c CallContext) Value {
-	panic("can't call number")
-}

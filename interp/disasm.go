@@ -65,7 +65,13 @@ func Disasm1(fn *SuFunc, i int) (int, string) {
 		s += fmt.Sprintf(" %d", fn.Code[i])
 		i++
 	case CALL_NAMED:
-		panic("not implemnted") //TODO
+		unnamed := fn.Code[i]
+		i++
+		named := int(fn.Code[i])
+		i++
+		spec := fn.Code[i : i+named]
+		i += named
+		s += ArgSpec{unnamed, spec, fn.Strings}.String()[7:]
 	}
 	return i, s
 }

@@ -6,10 +6,18 @@ import (
 	"math/rand"
 	"strconv"
 	"testing"
+	"unsafe"
 
 	. "github.com/apmckinlay/gsuneido/util/hamcrest"
 	"github.com/apmckinlay/gsuneido/util/ptest"
 )
+
+func Test_size(t *testing.T) {
+	// due to allignment and padding, size is 16 bytes instead of 10
+	Assert(t).That(int(unsafe.Sizeof(Dnum{})), Equals(16))
+	var a [10]Dnum
+	Assert(t).That(int(unsafe.Sizeof(a)), Equals(160))
+}
 
 func Test_String(t *testing.T) {
 	assert := Assert(t)

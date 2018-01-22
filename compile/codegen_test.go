@@ -33,6 +33,7 @@ func TestCodegen(t *testing.T) {
 	test("_a", "dyload _a")
 	test("G", "global G")
 
+	test("-a", "load a, uminus")
 	test("a + b", "load a, load b, add")
 	test("a - b", "load a, load b, sub")
 	test("a + b + c", "load a, load b, add, load c, add")
@@ -71,6 +72,7 @@ func TestCodegen(t *testing.T) {
 	test("f()", "load f, call 0")
 	test("F()", "global F, call 0")
 	test("f(a, b)", "load a, load b, load f, call 2")
+	test("f(a, b, c:, d: 0)", "load a, load b, true, zero, load f, callnamed(?, ?, c:, d:)")
 
 	Assert(t).That(func() { codegen(ParseFunction("function () { G = 1 }")) },
 		Panics("invalid lvalue"))

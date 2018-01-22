@@ -74,3 +74,13 @@ func mix(n int) ik {
 	n = n ^ (n >> 16)
 	return ik(n)
 }
+
+func TestCopy(t *testing.T) {
+	hm := NewHmap(10)
+	for i := 0; i < 10; i++ {
+		hm.Put(mix(i), i)
+	}
+	hm2 := hm.Copy()
+	Assert(t).That(hm2.Size(), Equals(hm.Size()))
+	Assert(t).That(hm2.String(), Equals(hm.String()))
+}

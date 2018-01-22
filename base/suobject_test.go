@@ -3,7 +3,7 @@ package base
 import "testing"
 import . "github.com/apmckinlay/gsuneido/util/hamcrest"
 
-func TestBasic(t *testing.T) {
+func TestSuObject(t *testing.T) {
 	ob := SuObject{}
 	Assert(t).That(ob.String(), Equals("#()"))
 	Assert(t).That(ob.Size(), Equals(0))
@@ -23,7 +23,7 @@ func TestBasic(t *testing.T) {
 	Assert(t).That(ob.Size(), Equals(4))
 }
 
-func TestString(t *testing.T) {
+func TestSuObjectString(t *testing.T) {
 	test := func(k string, expected string) {
 		ob := SuObject{}
 		ob.Put(SuStr(k), SuInt(123))
@@ -46,13 +46,13 @@ func Test_isIdentifier(t *testing.T) {
 	Assert(t).That(isIdentifier("Bar?x"), Equals(false))
 }
 
-func TestObjectAsKey(t *testing.T) {
+func TestSuObjectObjectAsKey(t *testing.T) {
 	ob := SuObject{}
 	ob.Put(&SuObject{}, SuInt(123))
 	Assert(t).That(ob.Get(&SuObject{}), Equals(SuInt(123)))
 }
 
-func TestMigrate(t *testing.T) {
+func TestSuObjectMigrate(t *testing.T) {
 	ob := SuObject{}
 	for i := 1; i < 5; i++ {
 		ob.Put(SuInt(i), SuInt(i))
@@ -64,7 +64,7 @@ func TestMigrate(t *testing.T) {
 	Assert(t).That(ob.ListSize(), Equals(5))
 }
 
-func TestPut(t *testing.T) {
+func TestSuObjectPut(t *testing.T) {
 	ob := SuObject{}
 	ob.Put(SuInt(1), SuInt(1)) // put
 	Assert(t).That(ob.HashSize(), Equals(1))
@@ -78,7 +78,7 @@ func TestPut(t *testing.T) {
 	Assert(t).That(ob.Get(SuInt(1)), Equals(SuInt(11)))
 }
 
-func TestEquals(t *testing.T) {
+func TestSuObjectEquals(t *testing.T) {
 	x := &SuObject{}
 	y := &SuObject{}
 	eq(t, x, y)
@@ -106,4 +106,20 @@ func eq(t *testing.T, x Value, y Value) {
 func neq(t *testing.T, x Value, y Value) {
 	Assert(t).False(x.Equals(y))
 	Assert(t).False(y.Equals(x))
+}
+
+func TestSuObjectSlice(t *testing.T) {
+	ob := SuObject{}
+	ob.Add(SuInt(12))
+	ob.Add(SuInt(34))
+	ob.Add(SuInt(56))
+	ob.Put(SuStr("a"), SuInt(123))
+	ob.Put(SuStr("b"), SuInt(456))
+	Assert(t).That(ob.String(), Equals("#(12, 34, 56, a: 123, b: 456)"))
+	ob2 := ob.Slice(0)
+	Assert(t).True(ob.Equals(ob2))
+	ob2 = ob.Slice(1)
+	Assert(t).That(ob2.String(), Equals("#(34, 56, a: 123, b: 456)"))
+	ob2 = ob.Slice(10)
+	Assert(t).That(ob2.String(), Equals("#(a: 123, b: 456)"))
 }

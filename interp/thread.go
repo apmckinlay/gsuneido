@@ -1,8 +1,6 @@
 package interp
 
 import (
-	"fmt"
-
 	. "github.com/apmckinlay/gsuneido/base"
 	"github.com/apmckinlay/gsuneido/util/regex"
 	"github.com/apmckinlay/gsuneido/util/tr"
@@ -42,6 +40,10 @@ func (t *Thread) Top() Value {
 	return t.stack[len(t.stack)-1]
 }
 
+func (t *Thread) SetTop(x Value) {
+	t.stack[len(t.stack)-1] = x
+}
+
 func (t *Thread) Dup2() {
 	t.stack = append(t.stack, t.stack[len(t.stack)-2], t.stack[len(t.stack)-1])
 }
@@ -51,16 +53,4 @@ func (t *Thread) Dupx2() {
 	t.stack = append(t.stack, nil)
 	copy(t.stack[n-2:], t.stack[n-3:])
 	t.stack[n-3] = t.Top()
-}
-
-// args converts the arguments on the stack as per the ArgSpec
-// into the parameters expected by the function.
-// On return, the stack is guaranteed to match the SuFunc.
-func (t *Thread) args(fn *SuFunc, as ArgSpec) {
-	if fn.Nparams == int(as.Unnamed) && len(as.Spec) == 0 {
-		return // simple fast path
-	}
-	fmt.Println(fn.String())
-	fmt.Println(as)
-	panic("not implemented") // TODO
 }

@@ -17,8 +17,8 @@ type ArgSpec struct {
 }
 
 const (
-	EACH  = 254
-	EACH1 = 255
+	EACH  byte = 254
+	EACH1      = 255
 )
 
 // Nargs returns the total number of arguments

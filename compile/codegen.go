@@ -9,6 +9,8 @@ package compile
 // See also interp.Disasm
 
 import (
+	"math"
+
 	. "github.com/apmckinlay/gsuneido/base"
 	"github.com/apmckinlay/gsuneido/interp"
 	"github.com/apmckinlay/gsuneido/interp/global"
@@ -476,21 +478,33 @@ func (cg *cgen) call(ast Ast) {
 	// TODO call method (without getting bound method)
 	argspec := cg.args(ast.second())
 	cg.expr(ast.first()) // function
-	cg.emit(op.CALL)
-	cg.emit(argspec.Unnamed)
-	// TODO named
-	//  cg.emit(byte(len(argspec.Spec)))
-	//	cg.emit(argspec.Spec...)
+	named := len(argspec.Spec)
+	if named == 0 {
+		cg.emit(op.CALL)
+		cg.emit(argspec.Unnamed)
+	} else {
+		cg.emit(op.CALL_NAMED)
+		cg.emit(argspec.Unnamed)
+		verify.That(named <= math.MaxUint8)
+		cg.emit(byte(named))
+		cg.emit(argspec.Spec...)
+	}
 }
 
 func (cg *cgen) args(ast Ast) interp.ArgSpec {
 	verify.That(ast.Item == argList)
+	var spec []byte
 	for _, arg := range ast.Children {
-		// TODO named and @args
+		// TODO @args
+		if arg.Item != noKeyword {
+			i := cg.name(arg.Item.Text)
+			verify.That(i <= math.MaxUint8)
+			spec = append(spec, byte(i))
+		}
 		cg.expr(arg.first())
 	}
-	verify.That(len(ast.Children) < interp.EACH)
-	return interp.ArgSpec{Unnamed: byte(len(ast.Children))}
+	verify.That(len(ast.Children) < int(interp.EACH))
+	return interp.ArgSpec{Unnamed: byte(len(ast.Children) - len(spec)), Spec: spec}
 }
 
 // helpers ---------------------------------------------------------------------
@@ -511,6 +525,7 @@ func (cg *cgen) emitInt(i int) {
 
 func (cg *cgen) emitJump(op byte, label int) int {
 	adr := len(cg.code)
+	verify.That(math.MinInt16 <= label && label <= math.MaxInt16)
 	cg.emit(op, byte(label>>8), byte(label))
 	return adr
 }
@@ -528,6 +543,7 @@ func (cg *cgen) placeLabel(i int) {
 	for ; i >= 0; i = next {
 		next = int(cg.target(i))
 		adr = len(cg.code) - (i + 3) // convert to relative offset
+		verify.That(math.MinInt16 <= adr && adr <= math.MaxInt16)
 		cg.code[i+1] = byte(adr >> 8)
 		cg.code[i+2] = byte(adr)
 	}
