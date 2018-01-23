@@ -19,7 +19,7 @@ type SuObject struct {
 	readonly bool
 }
 
-var _ Value = &SuObject{}
+var _ Value = (*SuObject)(nil)
 
 //TODO var _ Packable = &SuObject{}
 

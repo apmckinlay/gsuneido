@@ -23,18 +23,20 @@ must come after parameters without defaults.
 type SuFunc struct {
 	// Code is the actual byte code
 	Code []byte
-	// nparams is the number of values required on the stack
+	// Nparams is the number of arguments required on the stack
 	Nparams int
-	// nlocals is the number of parameters and local variables
+	// Nlocals is the number of parameters plus local variables
 	Nlocals int
-	// strings starts with the parameters, then the locals,
+	// Strings starts with the parameters, then the locals,
 	// and then any argument or member names used in the code,
 	// and any argument specs
 	Strings []string
-	Values  []Value
+	// Values contains any literals in the function
+	// starting with parameter defaults
+	Values []Value
 }
 
-var _ Value = &SuFunc{} // confirm it implements Value
+var _ Value = (*SuFunc)(nil) // confirm it implements Value
 
 func (f *SuFunc) ToInt() int32 {
 	panic("cannot convert function to integer")
