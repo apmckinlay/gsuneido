@@ -13,12 +13,14 @@ import (
 // On return, the arguments are removed from the stack.
 func (t *Thread) Call(fn *SuFunc, as ArgSpec) Value {
 	defer func(sp int) { t.stack = t.stack[:sp] }(len(t.stack) - as.Nargs())
-	t.args(fn, as)
-	base := len(t.stack) - fn.Nparams
-	for i := fn.Nparams; i < fn.Nlocals; i++ {
+	base := len(t.stack) - as.Nargs()
+	// expand stack to allow for args and locals
+	for i := as.Nargs(); i < fn.Nlocals; i++ {
 		t.Push(nil)
 	}
-	frame := Frame{fn: fn, ip: 0, locals: t.stack[base:]}
+	locals := t.stack[base:]
+	t.args(fn, as, locals)
+	frame := Frame{fn: fn, ip: 0, locals: locals}
 	t.frames = append(t.frames, frame)
 	defer func(fp int) { t.frames = t.frames[:fp] }(len(t.frames) - 1)
 	return t.Run()
