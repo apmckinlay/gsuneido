@@ -221,7 +221,8 @@ func equals2(x *SuObject, y *SuObject, inProgress pairs) bool {
 			if k == nil {
 				break
 			}
-			if !equals3(v.(Value), y.hash.Get(k).(Value), inProgress) {
+			yk := y.hash.Get(k)
+			if yk == nil || !equals3(v.(Value), yk.(Value), inProgress) {
 				return false
 			}
 		}

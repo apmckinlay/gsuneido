@@ -96,14 +96,20 @@ func TestSuObjectEquals(t *testing.T) {
 	neq(t, x, y)
 	y.Put(SuInt(9), y)
 	eq(t, x, y)
+
+	a := &SuObject{}
+	a.Put(SuStr("a"), SuStr("aa"))
+	b := &SuObject{}
+	b.Put(SuStr("x"), SuStr("aa"))
+	neq(t, a, b)
 }
 
-func eq(t *testing.T, x Value, y Value) {
+func eq(t *testing.T, x *SuObject, y *SuObject) {
 	Assert(t).True(x.Equals(y))
 	Assert(t).True(y.Equals(x))
 }
 
-func neq(t *testing.T, x Value, y Value) {
+func neq(t *testing.T, x *SuObject, y *SuObject) {
 	Assert(t).False(x.Equals(y))
 	Assert(t).False(y.Equals(x))
 }
