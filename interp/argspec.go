@@ -23,6 +23,9 @@ const (
 
 // Nargs returns the total number of arguments
 func (as ArgSpec) Nargs() int {
+	if as.Unnamed >= EACH {
+		return 1
+	}
 	return int(as.Unnamed) + len(as.Spec)
 }
 

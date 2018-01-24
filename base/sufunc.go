@@ -5,7 +5,10 @@ import (
 	"fmt"
 
 	"github.com/apmckinlay/gsuneido/util/dnum"
+	"github.com/apmckinlay/gsuneido/util/str"
 )
+
+const MaxArgs = 200
 
 /*
 SuFunc is a compiled function, method, or block.
@@ -23,20 +26,40 @@ must come after parameters without defaults.
 type SuFunc struct {
 	// Code is the actual byte code
 	Code []byte
+
 	// Nparams is the number of arguments required on the stack
 	Nparams int
+
+	// NDefaults is the number of default values for parameters
+	// They are in the start of Values
+	Ndefaults int
+
+	// Flags specifies "types" of params
+	Flags []Flag
+
 	// Nlocals is the number of parameters plus local variables
 	Nlocals int
+
 	// Strings starts with the parameters, then the locals,
 	// and then any argument or member names used in the code,
 	// and any argument specs
 	Strings []string
+
 	// Values contains any literals in the function
 	// starting with parameter defaults
 	Values []Value
 }
 
 var _ Value = (*SuFunc)(nil) // confirm it implements Value
+
+type Flag byte
+
+const (
+	AT_F Flag = 1 << iota
+	DYN_F
+	DOT_F
+	PUB_F
+)
 
 func (f *SuFunc) ToInt() int32 {
 	panic("cannot convert function to integer")
@@ -57,19 +80,32 @@ func (f *SuFunc) String() string {
 	v := 0 // index into Values
 	for i := 0; i < f.Nparams; i++ {
 		buf.WriteString(sep)
-		p := f.Strings[i]
-		if p[0] == '=' {
-			buf.WriteString(p[1:])
+		buf.WriteString(flagsToName(f.Strings[i], f.Flags[i]))
+		if i >= f.Nparams-f.Ndefaults {
 			buf.WriteString("=")
 			buf.WriteString(fmt.Sprint(f.Values[v]))
 			v++
-		} else {
-			buf.WriteString(p)
 		}
 		sep = ", "
 	}
 	buf.WriteString(")")
 	return buf.String()
+}
+
+func flagsToName(p string, flags Flag) string {
+	if flags == AT_F {
+		p = "@" + p
+	}
+	if flags&PUB_F == PUB_F {
+		p = str.Capitalize(p)
+	}
+	if flags&DYN_F == DYN_F {
+		p = "_" + p
+	}
+	if flags&DOT_F == DOT_F {
+		p = "." + p
+	}
+	return p
 }
 
 func (f *SuFunc) Get(key Value) Value {

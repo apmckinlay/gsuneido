@@ -256,10 +256,14 @@ func (d SuObject) Cmp(other Value) int {
 
 // Slice returns a copy of the object, with the first n list elements removed
 func (ob *SuObject) Slice(n int) *SuObject {
+	newHash := ob.hash
+	if newHash != nil {
+		newHash = ob.hash.Copy()
+	}
 	if n > len(ob.list) {
-		return &SuObject{hash: ob.hash.Copy(), readonly: false}
+		return &SuObject{hash: newHash, readonly: false}
 	}
 	list := make([]Value, len(ob.list)-n)
 	copy(list, ob.list[n:])
-	return &SuObject{list: list, hash: ob.hash.Copy(), readonly: false}
+	return &SuObject{list: list, hash: newHash, readonly: false}
 }

@@ -107,6 +107,7 @@ func TestParseFunction(t *testing.T) {
 	test("function (a, b = 1) { }", "(function (params a (b 1)) STMTS)")
 	test("function (a = 1) { }", "(function (params (a 1)) STMTS)")
 	test("function (a, b = 1) { }", "(function (params a (b 1)) STMTS)")
+	test("function (.a, .B, _c) { }", "(function (params .a .B _c) STMTS)")
 }
 
 func TestParseStatements(t *testing.T) {

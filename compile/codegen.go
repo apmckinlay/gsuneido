@@ -16,29 +16,52 @@ import (
 	"github.com/apmckinlay/gsuneido/interp/global"
 	"github.com/apmckinlay/gsuneido/interp/op"
 	. "github.com/apmckinlay/gsuneido/lexer"
+	"github.com/apmckinlay/gsuneido/util/str"
 	"github.com/apmckinlay/gsuneido/util/varint"
 	"github.com/apmckinlay/gsuneido/util/verify"
 )
+
+// zeroFlags is shared/reused for all zero flags
+var zeroFlags [MaxArgs]Flag
 
 // codegen compiles a Function from an Ast
 func codegen(ast Ast) *SuFunc {
 	//fmt.Println("codegen", ast.String())
 	cg := cgen{}
+	var tmp [MaxArgs]Flag // hopefully on the stack
+	cg.flags = tmp[:0]
 	cg.function(ast)
+	if allZero(cg.flags) {
+		cg.flags = zeroFlags[:len(cg.flags)]
+	}
 	return &SuFunc{
-		Code:    cg.code,
-		Values:  cg.values,
-		Strings: cg.names,
-		Nlocals: len(cg.names),
-		Nparams: cg.nparams,
+		Code:      cg.code,
+		Values:    cg.values,
+		Strings:   cg.names,
+		Nlocals:   len(cg.names),
+		Nparams:   cg.nparams,
+		Ndefaults: cg.ndefaults,
+		Flags:     cg.flags,
 	}
 }
 
+func allZero(flags []Flag) bool {
+	for _, f := range flags {
+		if f != 0 {
+			return false
+		}
+	}
+	return true
+}
+
+//TODO embed SuFunc
 type cgen struct {
-	nparams int
-	code    []byte
-	values  []Value
-	names   []string
+	nparams   int
+	code      []byte
+	values    []Value
+	names     []string
+	flags     []Flag
+	ndefaults int
 }
 
 var tok2op = map[Token]byte{
@@ -72,14 +95,34 @@ func (cg *cgen) params(ast Ast) {
 	verify.That(ast.Text == "params")
 	cg.nparams = len(ast.Children)
 	for _, p := range ast.Children {
-		if p.value == nil {
-			cg.name(p.Text)
-		} else {
-			cg.name("=" + p.Text)
-			cg.value(p.value)
+		name, flags := cg.param(p.Text)
+		cg.names = append(cg.names, name) // no duplicate reuse
+		cg.flags = append(cg.flags, flags)
+		if p.value != nil {
+			cg.ndefaults++
+			cg.values = append(cg.values, p.value) // no duplicate reuse
 		}
-
 	}
+}
+
+func (cg *cgen) param(p string) (string, Flag) {
+	if p[0] == '@' {
+		return p[1:], AT_F
+	}
+	var flag Flag
+	if p[0] == '.' {
+		flag = DOT_F
+		p = p[1:]
+	}
+	if p[0] == '_' {
+		flag |= DYN_F
+		p = p[1:]
+	}
+	if flag&DOT_F == DOT_F && str.Capitalized(p) {
+		flag |= PUB_F
+		p = str.UnCapitalize(p)
+	}
+	return p, flag
 }
 
 func (cg *cgen) statement(ast Ast, labels *Labels, lastStmt bool) {
