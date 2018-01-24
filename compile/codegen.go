@@ -490,7 +490,6 @@ func (cg *cgen) name(s string) int {
 		}
 	}
 	i := len(cg.names)
-	// TODO intern to avoid ref to source
 	cg.names = append(cg.names, s)
 	return i
 }
