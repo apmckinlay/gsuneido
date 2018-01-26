@@ -266,7 +266,7 @@ func (t *Thread) load(fr *Frame, idx uint32) Value {
 
 func (t *Thread) dyload(fr *Frame, idx uint32) {
 	name := fr.fn.Strings[idx]
-	for i := len(t.frames) - 1; i > 0; i-- {
+	for i := len(t.frames) - 1; i >= 0; i-- {
 		fr2 := t.frames[i]
 		for j, s := range fr2.fn.Strings {
 			if s == name {

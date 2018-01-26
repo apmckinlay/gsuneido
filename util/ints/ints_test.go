@@ -2,6 +2,7 @@ package ints
 
 import (
 	"testing"
+
 	. "github.com/apmckinlay/gsuneido/util/hamcrest"
 )
 
@@ -31,4 +32,10 @@ func TestCompare(t *testing.T) {
 	Assert(t).That(Compare(0, 0), Equals(0))
 	Assert(t).That(Compare(123, 0), Equals(+1))
 	Assert(t).That(Compare(123, 456), Equals(-1))
+}
+
+func TestMin(t *testing.T) {
+	Assert(t).That(Min(0, 0), Equals(0))
+	Assert(t).That(Min(1, 2), Equals(1))
+	Assert(t).That(Min(2, 1), Equals(1))
 }

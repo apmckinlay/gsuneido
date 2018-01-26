@@ -2,6 +2,7 @@ package interp
 
 import (
 	. "github.com/apmckinlay/gsuneido/base"
+	"github.com/apmckinlay/gsuneido/util/ints"
 	"github.com/apmckinlay/gsuneido/util/verify"
 )
 
@@ -31,7 +32,7 @@ func (t *Thread) massage(fn *SuFunc, as ArgSpec, args []Value) {
 	if unnamed == fn.Nparams && len(as.Spec) == 0 {
 		return // simple fast path
 	}
-	if unnamed < EACH && unnamed > fn.Nparams {
+	if unnamed < EACH && fn.Flags[0] != AT_F && unnamed > fn.Nparams {
 		panic("too many arguments")
 	}
 	// as.Unnamed < fn.Nparams
@@ -51,12 +52,31 @@ func (t *Thread) massage(fn *SuFunc, as ArgSpec, args []Value) {
 			return
 		}
 		// args => @param
-		panic("not implemented") // TODO
+		ob := &SuObject{}
+		for i := 0; i < unnamed; i++ {
+			ob.Add(args[i])
+			args[i] = nil
+		}
+		for i, ni := range as.Spec {
+			ob.Put(SuStr(as.Names[ni]), args[unnamed+i])
+			args[unnamed+i] = nil
+		}
+		args[0] = ob
+		return
 	}
 
 	if unnamed >= EACH {
-		// @args
-		panic("not implemented") // TODO
+		// @args => params
+		ob := args[0].(*SuObject)
+		for i := 0; i < ints.Min(fn.Nparams, ob.Vsize()); i++ {
+			args[i] = ob.Vget(i)
+		}
+		// named members may overwrite unnamed (same as when passed individually)
+		for i := 0; i < fn.Nparams; i++ {
+			if x := ob.Get(SuStr(fn.Strings[i])); x != nil {
+				args[i] = x
+			}
+		}
 	}
 
 	if len(as.Spec) > 0 {
@@ -80,7 +100,14 @@ func (t *Thread) massage(fn *SuFunc, as ArgSpec, args []Value) {
 		}
 	}
 
-	// TODO fill in dynamic
+	// fill in dynamic
+	for i := 0; i < fn.Nparams; i++ {
+		if args[i] == nil && fn.Flags[i]&DYN_F != 0 {
+			if x := t.dyn("_" + fn.Strings[i]); x != nil {
+				args[i] = x
+			}
+		}
+	}
 
 	// fill in defaults and check for missing
 	v := 0
@@ -95,4 +122,16 @@ func (t *Thread) massage(fn *SuFunc, as ArgSpec, args []Value) {
 		}
 	}
 
+}
+
+func (t *Thread) dyn(name string) Value {
+	for i := len(t.frames) - 1; i >= 0; i-- {
+		fr := t.frames[i]
+		for j, s := range fr.fn.Strings {
+			if s == name {
+				return fr.locals[j]
+			}
+		}
+	}
+	return nil
 }

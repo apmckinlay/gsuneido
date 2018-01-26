@@ -29,3 +29,11 @@ func Compare(x int, y int) int {
 		return 0
 	}
 }
+
+// Min returns the smaller of two int's
+func Min(x int, y int) int {
+	if x < y {
+		return x
+	}
+	return y
+}

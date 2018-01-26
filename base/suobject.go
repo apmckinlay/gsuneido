@@ -23,6 +23,7 @@ var _ Value = (*SuObject)(nil)
 
 //TODO var _ Packable = &SuObject{}
 
+// Get returns the value associated with a key, or nil if not found
 func (ob *SuObject) Get(key Value) Value {
 	if iv, ok := key.(SuInt); ok {
 		i := int(iv)
@@ -32,11 +33,26 @@ func (ob *SuObject) Get(key Value) Value {
 	}
 	if ob.hash == nil {
 		return nil
-	} else {
-		return ob.hash.Get(key).(Value)
 	}
+	x := ob.hash.Get(key)
+	if x == nil {
+		return nil
+	}
+	return x.(Value)
 }
 
+// Vget returns a value from the list, panics if index out of range
+func (ob *SuObject) Vget(i int) Value {
+	return ob.list[i]
+}
+
+// Vsize returns the size of the list
+func (ob *SuObject) Vsize() int {
+	return len(ob.list)
+}
+
+// Put adds or updates the given key and value
+// The value will be added to the list if the key is the "next"
 func (ob *SuObject) Put(key Value, val Value) {
 	if iv, ok := key.(SuInt); ok {
 		i := int(iv)
