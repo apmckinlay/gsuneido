@@ -34,9 +34,9 @@ func Su2Int(x interface{}) (int, bool) {
 var _ Value = SuInt(0)
 var _ Packable = SuInt(0)
 
-func (si *smi) ToInt() int32 {
+func (si *smi) ToInt() int {
 	p := unsafe.Pointer(si)
-	offset := int32(uintptr(p) - base)
+	offset := int(uintptr(p) - base)
 	return offset + math.MinInt16
 }
 

@@ -11,7 +11,7 @@ type SuStr string
 var _ Value = SuStr("")
 var _ Packable = SuStr("")
 
-func (ss SuStr) ToInt() int32 {
+func (ss SuStr) ToInt() int {
 	if string(ss) == "" {
 		return 0
 	}

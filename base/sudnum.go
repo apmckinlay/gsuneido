@@ -16,9 +16,9 @@ type SuDnum struct {
 var _ Value = SuDnum{}
 var _ Packable = SuDnum{}
 
-func (dn SuDnum) ToInt() int32 {
+func (dn SuDnum) ToInt() int {
 	n, _ := dn.Int32()
-	return n
+	return int(n)
 }
 
 func (dn SuDnum) ToDnum() dnum.Dnum {

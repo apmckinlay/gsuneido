@@ -68,7 +68,7 @@ func Div(x Value, y Value) Value {
 }
 
 func Mod(x Value, y Value) Value {
-	return IntToValue(int(x.ToInt()) % int(y.ToInt()))
+	return IntToValue(x.ToInt() % y.ToInt())
 }
 
 func Lshift(x Value, y Value) Value {
@@ -80,19 +80,19 @@ func Rshift(x Value, y Value) Value {
 }
 
 func Bitor(x Value, y Value) Value {
-	return IntToValue(int(x.ToInt() | y.ToInt()))
+	return IntToValue(x.ToInt() | y.ToInt())
 }
 
 func Bitand(x Value, y Value) Value {
-	return IntToValue(int(x.ToInt() & y.ToInt()))
+	return IntToValue(x.ToInt() & y.ToInt())
 }
 
 func Bitxor(x Value, y Value) Value {
-	return IntToValue(int(x.ToInt() ^ y.ToInt()))
+	return IntToValue(x.ToInt() ^ y.ToInt())
 }
 
 func Bitnot(x Value) Value {
-	return IntToValue(^int(x.ToInt()))
+	return IntToValue(^x.ToInt())
 }
 
 func Not(x Value) Value {
@@ -123,7 +123,7 @@ func Uminus(x Value) Value {
 // IntToValue returns an SuInt if it fits, else a SuDnum
 func IntToValue(n int) Value {
 	if math.MinInt16 < n && n < math.MaxInt16 {
-		return SuInt(int(n))
+		return SuInt(n)
 	}
 	return SuDnum{dnum.FromInt64(int64(n))}
 }
@@ -151,7 +151,7 @@ func Cat(x Value, y Value) Value {
 }
 
 func BitNot(x Value) Value {
-	return IntToValue(int(^x.ToInt()))
+	return IntToValue(^x.ToInt())
 }
 
 func Cmp(x Value, y Value) int {

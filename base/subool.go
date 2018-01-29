@@ -13,7 +13,7 @@ var (
 	False = SuBool(false)
 )
 
-func (b SuBool) ToInt() int32 {
+func (b SuBool) ToInt() int {
 	if b == false {
 		return 0
 	}
@@ -48,7 +48,10 @@ func (b SuBool) Put(key Value, val Value) {
 }
 
 func (b SuBool) Hash() uint32 {
-	return uint32(b.ToInt())
+	if b == false {
+		return 0x11111111
+	}
+	return 0x22222222
 }
 
 func (b SuBool) hash2() uint32 {

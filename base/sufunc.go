@@ -61,7 +61,7 @@ const (
 	PUB_F
 )
 
-func (f *SuFunc) ToInt() int32 {
+func (f *SuFunc) ToInt() int {
 	panic("cannot convert function to integer")
 }
 

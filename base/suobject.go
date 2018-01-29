@@ -66,7 +66,7 @@ func (ob *SuObject) Put(key Value, val Value) {
 	ob.hash.Put(key, val)
 }
 
-func (ob *SuObject) ToInt() int32 {
+func (ob *SuObject) ToInt() int {
 	panic("cannot convert object to integer")
 }
 

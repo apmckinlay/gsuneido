@@ -745,7 +745,7 @@ func (d SuDate) Put(key Value, val Value) {
 	panic("date does not support put")
 }
 
-func (d SuDate) ToInt() int32 {
+func (d SuDate) ToInt() int {
 	panic("cannot convert date to integer")
 }
 

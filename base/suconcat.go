@@ -54,9 +54,9 @@ func (c SuConcat) AddSuConcat(cv2 SuConcat) SuConcat {
 	return SuConcat{bb, c.n + cv2.Len()}
 }
 
-func (c SuConcat) ToInt() int32 {
+func (c SuConcat) ToInt() int {
 	i, _ := strconv.ParseInt(c.ToStr(), 0, 32)
-	return int32(i)
+	return int(i)
 }
 
 func (c SuConcat) ToDnum() dnum.Dnum {
