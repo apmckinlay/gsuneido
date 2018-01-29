@@ -386,9 +386,9 @@ func (cg *cgen) emitValue(val Value) {
 		cg.emit(op.ONE)
 	} else if val == SuStr("") {
 		cg.emit(op.EMPTYSTR)
-	} else if si, ok := val.(SuInt); ok {
+	} else if i, ok := Su2Int(val); ok {
 		cg.emit(op.INT)
-		cg.emitInt(int(si))
+		cg.emitInt(i)
 	} else {
 		cg.emit(op.VALUE)
 		vi := cg.value(val)

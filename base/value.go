@@ -2,6 +2,7 @@ package base
 
 import (
 	"errors"
+	"math"
 	"strconv"
 
 	"github.com/apmckinlay/gsuneido/util/dnum"
@@ -39,9 +40,9 @@ const (
 var NilVal Value
 
 func NumFromString(s string) (Value, error) {
-	n, err := strconv.ParseInt(s, 0, 32)
+	n, err := strconv.ParseInt(s, 0, 16)
 	if err == nil {
-		return SuInt(n), nil
+		return SuInt(int(n)), nil
 	}
 	dn, err := dnum.Parse(s)
 	if err == nil {
@@ -53,8 +54,9 @@ func NumFromString(s string) (Value, error) {
 // DnumToValue returns an SuInt if it fits, else a SuDnum
 func DnumToValue(dn dnum.Dnum) Value {
 	if dn.IsInt() {
-		if n, err := dn.Int32(); err == nil {
-			return SuInt(n)
+		if n, err := dn.Int32(); err == nil &&
+			math.MinInt16 <= n && n <= math.MaxInt16 {
+			return SuInt(int(n))
 		}
 	}
 	return SuDnum{dn}

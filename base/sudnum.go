@@ -44,8 +44,8 @@ func (dn SuDnum) hash2() uint32 {
 func (dn SuDnum) Equals(other interface{}) bool {
 	if d2, ok := other.(SuDnum); ok {
 		return 0 == dnum.Cmp(dn.Dnum, d2.Dnum)
-	} else if si, ok := other.(SuInt); ok {
-		return 0 == dnum.Cmp(dn.Dnum, si.ToDnum())
+	} else if i, ok := Su2Int(other); ok {
+		return 0 == dnum.Cmp(dn.Dnum, dnum.FromInt64(int64(i)))
 	}
 	return false
 }
@@ -192,11 +192,11 @@ func UnpackNumber(buf rbuf) Value {
 			coef *= 10
 		}
 	}
-	if exp == 0 && 0 <= coef && coef <= math.MaxInt32 {
+	if exp == 0 && 0 <= coef && coef <= math.MaxInt16 {
 		if neg {
-			return SuInt(-int32(coef))
+			return SuInt(-int(coef))
 		} else {
-			return SuInt(int32(coef))
+			return SuInt(int(coef))
 		}
 	} else {
 		return SuDnum{dnum.NewDnum(neg, coef, int8(exp))}

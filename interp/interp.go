@@ -50,7 +50,7 @@ func (t *Thread) Run() Value {
 		case EMPTYSTR:
 			t.Push(SuStr(""))
 		case INT:
-			t.Push(SuInt(fetchInt(code, &fr.ip)))
+			t.Push(SuInt(int(fetchInt(code, &fr.ip))))
 		case VALUE:
 			t.Push(fr.fn.Values[fetchUint(code, &fr.ip)])
 		case LOAD:

@@ -37,14 +37,14 @@ func (ss SuStr) Get(key Value) Value {
 	return SuStr(string(ss)[index(key)])
 }
 
-func index(v Value) int32 {
-	if i, ok := v.(SuInt); ok {
-		return int32(i)
+func index(v Value) int {
+	if i, ok := Su2Int(v); ok {
+		return i
 	}
 	if d, ok := v.(SuDnum); ok {
 		if d.IsInt() {
 			if i, err := d.Int32(); err == nil {
-				return i
+				return int(i)
 			}
 		}
 	}

@@ -224,3 +224,5 @@ ptestdir.txt
 
 .idea/
 
+
+*.test

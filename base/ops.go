@@ -34,27 +34,27 @@ func Gte(x Value, y Value) Value {
 }
 
 func Add(x Value, y Value) Value {
-	if xi, xok := x.(SuInt); xok {
-		if yi, yok := y.(SuInt); yok {
-			return Int64ToValue(int64(xi) + int64(yi))
+	if xi, xok := Su2Int(x); xok {
+		if yi, yok := Su2Int(y); yok {
+			return IntToValue(xi + yi)
 		}
 	}
 	return DnumToValue(dnum.Add(x.ToDnum(), y.ToDnum()))
 }
 
 func Sub(x Value, y Value) Value {
-	if xi, xok := x.(SuInt); xok {
-		if yi, yok := y.(SuInt); yok {
-			return Int64ToValue(int64(xi) - int64(yi))
+	if xi, xok := Su2Int(x); xok {
+		if yi, yok := Su2Int(y); yok {
+			return IntToValue(xi - yi)
 		}
 	}
 	return DnumToValue(dnum.Sub(x.ToDnum(), y.ToDnum()))
 }
 
 func Mul(x Value, y Value) Value {
-	if xi, xok := x.(SuInt); xok {
-		if yi, yok := y.(SuInt); yok {
-			return Int64ToValue(int64(xi) * int64(yi))
+	if xi, xok := Su2Int(x); xok {
+		if yi, yok := Su2Int(y); yok {
+			return IntToValue(xi * yi)
 		}
 	}
 	return DnumToValue(dnum.Mul(x.ToDnum(), y.ToDnum()))
@@ -68,31 +68,31 @@ func Div(x Value, y Value) Value {
 }
 
 func Mod(x Value, y Value) Value {
-	return Int64ToValue(int64(x.ToInt()) % int64(y.ToInt()))
+	return IntToValue(int(x.ToInt()) % int(y.ToInt()))
 }
 
 func Lshift(x Value, y Value) Value {
-	return Int64ToValue(int64(uint64(x.ToInt()) << uint64(y.ToInt())))
+	return IntToValue(int(uint(x.ToInt()) << uint(y.ToInt())))
 }
 
 func Rshift(x Value, y Value) Value {
-	return Int64ToValue(int64(uint64(x.ToInt()) >> uint64(y.ToInt())))
+	return IntToValue(int(uint(x.ToInt()) >> uint(y.ToInt())))
 }
 
 func Bitor(x Value, y Value) Value {
-	return Int64ToValue(int64(uint64(x.ToInt()) | uint64(y.ToInt())))
+	return IntToValue(int(x.ToInt() | y.ToInt()))
 }
 
 func Bitand(x Value, y Value) Value {
-	return Int64ToValue(int64(uint64(x.ToInt()) & uint64(y.ToInt())))
+	return IntToValue(int(x.ToInt() & y.ToInt()))
 }
 
 func Bitxor(x Value, y Value) Value {
-	return Int64ToValue(int64(uint64(x.ToInt()) ^ uint64(y.ToInt())))
+	return IntToValue(int(x.ToInt() ^ y.ToInt()))
 }
 
 func Bitnot(x Value) Value {
-	return Int64ToValue(^int64(x.ToInt()))
+	return IntToValue(^int(x.ToInt()))
 }
 
 func Not(x Value) Value {
@@ -105,7 +105,7 @@ func Not(x Value) Value {
 }
 
 func Uplus(x Value) Value {
-	if _, ok := x.(SuInt); ok {
+	if _, ok := Su2Int(x); ok {
 		return x
 	} else if _, ok := x.(SuDnum); ok {
 		return x
@@ -114,19 +114,18 @@ func Uplus(x Value) Value {
 }
 
 func Uminus(x Value) Value {
-	if xi, ok := x.(SuInt); ok {
-		return Int64ToValue(-int64(xi))
+	if xi, ok := Su2Int(x); ok {
+		return IntToValue(-xi)
 	}
 	return DnumToValue(x.ToDnum().Neg())
 }
 
-// Int64ToValue returns an SuInt if it fits, else a SuDnum
-func Int64ToValue(n int64) Value {
-	if math.MinInt32 < n && n < math.MaxInt32 {
-		return SuInt(int32(n))
-	} else {
-		return SuDnum{dnum.FromInt64(n)}
+// IntToValue returns an SuInt if it fits, else a SuDnum
+func IntToValue(n int) Value {
+	if math.MinInt16 < n && n < math.MaxInt16 {
+		return SuInt(int(n))
 	}
+	return SuDnum{dnum.FromInt64(int64(n))}
 }
 
 func Cat(x Value, y Value) Value {
@@ -152,7 +151,7 @@ func Cat(x Value, y Value) Value {
 }
 
 func BitNot(x Value) Value {
-	return SuInt(^x.ToInt())
+	return IntToValue(int(^x.ToInt()))
 }
 
 func Cmp(x Value, y Value) int {

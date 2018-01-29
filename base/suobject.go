@@ -25,8 +25,7 @@ var _ Value = (*SuObject)(nil)
 
 // Get returns the value associated with a key, or nil if not found
 func (ob *SuObject) Get(key Value) Value {
-	if iv, ok := key.(SuInt); ok {
-		i := int(iv)
+	if i, ok := Su2Int(key); ok {
 		if 0 <= i && i <= ob.ListSize() {
 			return ob.list[i]
 		}
@@ -54,8 +53,7 @@ func (ob *SuObject) Vsize() int {
 // Put adds or updates the given key and value
 // The value will be added to the list if the key is the "next"
 func (ob *SuObject) Put(key Value, val Value) {
-	if iv, ok := key.(SuInt); ok {
-		i := int(iv)
+	if i, ok := Su2Int(key); ok {
 		if i == ob.ListSize() {
 			ob.Add(val)
 			return
@@ -121,7 +119,7 @@ func (ob *SuObject) migrate() {
 		return
 	}
 	for {
-		x := ob.hash.Del(SuInt(ob.ListSize()))
+		x := ob.hash.Del(SuInt(ob.ListSize())) //TODO handle out of range
 		if x == nil {
 			break
 		}
