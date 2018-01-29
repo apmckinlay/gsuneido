@@ -109,7 +109,8 @@ func Equals(expected interface{}) Tester {
 		if reflect.DeepEqual(expected, actual) {
 			return ""
 		}
-		return fmt.Sprintf("expected: %#v but got: %#v", expected, actual)
+		return fmt.Sprintf("expected: %#v (%T) but got: %#v (%T)",
+			expected, expected, actual, actual)
 	}
 }
 
@@ -152,6 +153,9 @@ func Panics(expected string) Tester {
 		e := Catch(f.(func()))
 		if e == nil {
 			return fmt.Sprintf("expected panic of '%v' but it did not panic", expected)
+		}
+		if err, ok := e.(error); ok {
+			e = err.Error()
 		}
 		if !strings.Contains(e.(string), expected) {
 			return fmt.Sprintf("expected panic of '%v' but got '%v'", expected, e)
