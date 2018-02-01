@@ -36,7 +36,7 @@ func pt_execute(args []string) bool {
 	if expected == "throws" {
 		expected = "throws " + args[2]
 		e := hamcrest.Catch(func() {
-			result = th.Call(fn, interp.ArgSpec{})
+			result = th.Call(fn, nil)
 		})
 		if e == nil {
 			ok = false
@@ -45,7 +45,7 @@ func pt_execute(args []string) bool {
 			ok = strings.Contains(e.(string), args[2])
 		}
 	} else {
-		result = th.Call(fn, interp.ArgSpec{})
+		result = th.Call(fn, nil)
 		if expected == "**notfalse**" {
 			ok = result != False
 		} else {

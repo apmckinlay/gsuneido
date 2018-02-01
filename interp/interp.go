@@ -8,17 +8,21 @@ import (
 	"github.com/apmckinlay/gsuneido/util/varint"
 )
 
-// Call executes a SuFunc and returns the result.
-// The arguments must be already on the stack as per the ArgSpec.
-// On return, the arguments are removed from the stack.
-func (t *Thread) Call(fn *SuFunc, as ArgSpec) Value {
-	defer func(sp int) { t.stack = t.stack[:sp] }(len(t.stack) - as.Nargs())
-	base := t.args(fn, as)
-	frame := Frame{fn: fn, ip: 0, locals: t.stack[base:]}
+// Call sets up a frame to Run a compiled Suneido function
+// The stack must already be in the form required by the function (massaged)
+func (t *Thread) Call(fn *SuFunc, self Value) Value {
+	// expand stack if necessary for locals
+	if expand := fn.Nlocals - fn.Nparams; expand > 0 {
+		t.stack = append(t.stack, nilValues[:expand]...)
+	}
+	locals := t.stack[len(t.stack)-fn.Nlocals:]
+	frame := Frame{fn: fn, ip: 0, locals: locals, self: self}
 	t.frames = append(t.frames, frame)
 	defer func(fp int) { t.frames = t.frames[:fp] }(len(t.frames) - 1)
 	return t.Run()
 }
+
+var _ Context = (*Thread)(nil) // verify Thread satisfies Context
 
 func (t *Thread) Run() Value {
 	fr := &t.frames[len(t.frames)-1]
@@ -200,17 +204,6 @@ func (t *Thread) Run() Value {
 			panic(t.Pop())
 		case CALL:
 			f := t.Pop()
-			nargs := code[fr.ip]
-			fr.ip++
-			switch f := f.(type) {
-			//TODO builtin functions, blocks, etc
-			case *SuFunc:
-				t.Push(t.Call(f, ArgSpec{Unnamed: nargs}))
-			default:
-				panic("can't call " + f.TypeName())
-			}
-		case CALL_NAMED:
-			f := t.Pop()
 			unnamed := code[fr.ip]
 			fr.ip++
 			named := int(code[fr.ip])
@@ -218,9 +211,10 @@ func (t *Thread) Run() Value {
 			spec := code[fr.ip : fr.ip+named]
 			fr.ip += named
 			switch f := f.(type) {
-			//TODO builtin functions, blocks, etc
-			case *SuFunc:
-				t.Push(t.Call(f, ArgSpec{unnamed, spec, fr.fn.Strings}))
+			case Callable:
+				//TODO defer pop args
+				t.Push(f.Call(t, nil,
+					t.args(f.Params(), ArgSpec{unnamed, spec, fr.fn.Strings})...))
 			default:
 				panic("can't call " + f.TypeName())
 			}

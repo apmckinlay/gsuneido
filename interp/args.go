@@ -8,26 +8,26 @@ import (
 
 var nilValues [MaxArgs]Value
 
-func (t *Thread) args(fn *SuFunc, as ArgSpec) int {
+func (t *Thread) args(fn *Func, as ArgSpec) []Value {
 	nargs := as.Nargs()
 	base := len(t.stack) - nargs
-	// expand stack to allow for locals (including params)
-	if expand := fn.Nlocals - nargs; expand > 0 {
+	// expand stack if necessary to allow for params
+	if expand := fn.Nparams - nargs; expand > 0 {
 		t.stack = append(t.stack, nilValues[:expand]...)
 	}
 	locals := t.stack[base:]
 	// shrink stack if excess args (locals still has full args)
-	if nargs > fn.Nlocals {
-		t.stack = t.stack[:base+fn.Nlocals]
+	if nargs > fn.Nparams {
+		t.stack = t.stack[:base+fn.Nparams]
 	}
 	t.massage(fn, as, locals)
-	return base
+	return t.stack[base:]
 }
 
 // args massages the arguments on the stack (specified by ArgSpec)
 // to match what is expected by the function (specified by SuFunc)
 // The stack must already have been expanded.
-func (t *Thread) massage(fn *SuFunc, as ArgSpec, args []Value) {
+func (t *Thread) massage(fn *Func, as ArgSpec, args []Value) {
 	unnamed := int(as.Unnamed)
 	if unnamed == fn.Nparams && len(as.Spec) == 0 {
 		return // simple fast path

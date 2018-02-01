@@ -69,10 +69,10 @@ func TestCodegen(t *testing.T) {
 
 	test("throw 'fubar'", "value 'fubar', throw")
 
-	test("f()", "load f, call 0")
-	test("F()", "global F, call 0")
-	test("f(a, b)", "load a, load b, load f, call 2")
-	test("f(a, b, c:, d: 0)", "load a, load b, true, zero, load f, callnamed(?, ?, c:, d:)")
+	test("f()", "load f, call()")
+	test("F()", "global F, call()")
+	test("f(a, b)", "load a, load b, load f, call(?, ?)")
+	test("f(a, b, c:, d: 0)", "load a, load b, true, zero, load f, call(?, ?, c:, d:)")
 
 	Assert(t).That(func() { codegen(ParseFunction("function () { G = 1 }")) },
 		Panics("invalid lvalue"))

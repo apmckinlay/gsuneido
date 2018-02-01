@@ -35,13 +35,13 @@ func codegen(ast Ast) *SuFunc {
 		cg.flags = zeroFlags[:len(cg.flags)]
 	}
 	return &SuFunc{
-		Code:      cg.code,
-		Values:    cg.values,
-		Strings:   cg.names,
-		Nlocals:   len(cg.names),
-		Nparams:   cg.nparams,
-		Ndefaults: cg.ndefaults,
-		Flags:     cg.flags,
+		Code:    cg.code,
+		Nlocals: len(cg.names),
+		Func: Func{Values: cg.values,
+			Strings:   cg.names,
+			Nparams:   cg.nparams,
+			Ndefaults: cg.ndefaults,
+			Flags:     cg.flags},
 	}
 }
 
@@ -520,17 +520,12 @@ func (cg *cgen) call(ast Ast) {
 	// TODO call method (without getting bound method)
 	argspec := cg.args(ast.second())
 	cg.expr(ast.first()) // function
+	cg.emit(op.CALL)
+	cg.emit(argspec.Unnamed)
 	named := len(argspec.Spec)
-	if named == 0 {
-		cg.emit(op.CALL)
-		cg.emit(argspec.Unnamed)
-	} else {
-		cg.emit(op.CALL_NAMED)
-		cg.emit(argspec.Unnamed)
-		verify.That(named <= math.MaxUint8)
-		cg.emit(byte(named))
-		cg.emit(argspec.Spec...)
-	}
+	verify.That(named <= math.MaxUint8)
+	cg.emit(byte(named))
+	cg.emit(argspec.Spec...)
 }
 
 func (cg *cgen) args(ast Ast) interp.ArgSpec {

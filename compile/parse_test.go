@@ -102,7 +102,7 @@ func TestParseFunction(t *testing.T) {
 	}
 	test("function () { }", "(function params STMTS)")
 	test("function (@a) { }", "(function (params @a) STMTS)")
-	//test("function (@+1 a) { }", "(function (params @a) STMTS)")
+	//test("function (@+1 a) { }", "(function (params @+1a) STMTS)")
 	test("function (a, b) { }", "(function (params a b) STMTS)")
 	test("function (a, b = 1) { }", "(function (params a (b 1)) STMTS)")
 	test("function (a = 1) { }", "(function (params (a 1)) STMTS)")

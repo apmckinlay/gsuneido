@@ -13,6 +13,7 @@ type Frame struct {
 	// locals references a slice of the Thread stack
 	// containing the parameters and local variables
 	locals []Value
+	self   Value //TODO
 }
 
 // Local returns a pointer to a local variable (including parameters)

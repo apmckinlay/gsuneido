@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	. "github.com/apmckinlay/gsuneido/base"
+	_ "github.com/apmckinlay/gsuneido/builtin"
 	"github.com/apmckinlay/gsuneido/compile"
 	"github.com/apmckinlay/gsuneido/interp"
 	"github.com/apmckinlay/gsuneido/interp/global"
@@ -20,10 +21,12 @@ func main() {
 	if len(os.Args) > 1 {
 		eval(os.Args[1])
 	} else {
+		fmt.Println("Press Enter twice (i.e. blank line) to execute, q to quit")
 		r := bufio.NewReader(os.Stdin)
 		for {
 			src := ""
 			for {
+				fmt.Print("> ")
 				line, err := r.ReadString('\n')
 				line = strings.TrimRight(line, " \t\r\n")
 				if err != nil || line == "q" {
@@ -50,7 +53,7 @@ func eval(src string) {
 	fn := compile.Constant(src).(*SuFunc)
 	//	interp.Disasm(os.Stdout, fn)
 	th := interp.NewThread()
-	result := th.Call(fn, interp.ArgSpec{})
+	result := th.Call(fn, nil)
 	fmt.Print(">>> ", result)
 	if result != nil {
 		fmt.Print(" (" + reflect.TypeOf(result).String() + ")")

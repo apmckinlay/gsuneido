@@ -3,6 +3,7 @@ package compile
 import (
 	"math"
 	"strconv"
+
 	. "github.com/apmckinlay/gsuneido/lexer"
 )
 
@@ -312,6 +313,8 @@ func (p *parser) primary() T {
 		switch p.Keyword {
 		case TRUE, FALSE:
 			return p.evalNext(p.bld(p.Item))
+		case FUNCTION:
+			panic("function literal expression not implemented") //TODO
 		default:
 			return p.evalNext(p.bld(p.Item))
 		}

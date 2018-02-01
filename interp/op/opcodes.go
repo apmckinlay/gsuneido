@@ -54,5 +54,4 @@ const (
 	NEJUMP
 	THROW
 	CALL
-	CALL_NAMED
 )

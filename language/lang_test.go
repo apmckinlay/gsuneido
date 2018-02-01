@@ -16,12 +16,12 @@ func TestSuFuncCall(t *testing.T) {
 	th := NewThread()
 	th.Push(SuInt(100))
 	th.Push(SuInt(1))
-	result := th.Call(fn.(*SuFunc), ArgSpec{Unnamed: 2})
+	result := th.Call(fn.(*SuFunc), nil)
 	Assert(t).That(result, Equals(SuInt(99)))
 	global.Add("F", fn)
 
 	fn = compile.Constant("function () { F(100, 1) }")
-	result = th.Call(fn.(*SuFunc), ArgSpec{})
+	result = th.Call(fn.(*SuFunc), nil)
 	Assert(t).That(result, Equals(SuInt(99)))
 
 	// fn = compile.Constant("function () { F(b: 1, a: 100) }")
@@ -40,6 +40,6 @@ func BenchmarkInt(b *testing.B) {
 	}
 	for i := 0; i < m; i++ {
 		th.Push(SuInt(n))
-		th.Call(fn.(*SuFunc), ArgSpec{Unnamed: 1})
+		th.Call(fn.(*SuFunc), nil)
 	}
 }
