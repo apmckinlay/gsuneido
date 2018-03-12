@@ -135,8 +135,7 @@ func (dn Dnum) String() string {
 	digits := strconv.FormatUint(dn.coef, 10)
 	if 0 <= exp && exp <= 4 {
 		// decimal to the right
-		digits += strings.Repeat("0", exp)
-		return sign + digits
+		return sign + digits + strings.Repeat("0", exp)
 	}
 	sexp := ""
 	if -len(digits)-4 < exp && exp <= -len(digits) {
@@ -502,9 +501,6 @@ func (dn *Dnum) minCoef() {
 	roundup := false
 	for dn.coef > 0 && dn.coef%10 == 0 {
 		dn.shiftRight(&roundup)
-	}
-	if roundup {
-		dn.coef++
 	}
 }
 
