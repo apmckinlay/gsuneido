@@ -226,3 +226,5 @@ ptestdir.txt
 
 
 *.test
+
+.vscode/
