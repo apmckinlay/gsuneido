@@ -7,7 +7,7 @@ import (
 	. "github.com/apmckinlay/gsuneido/util/hamcrest"
 )
 
-func ExampleIntConvert() {
+func ExampleSuInt() {
 	v := SuInt(123)
 	fmt.Printf("%d %s\n", v.ToInt(), v.ToStr())
 	// Output: 123 123
