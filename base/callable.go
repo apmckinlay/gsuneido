@@ -10,7 +10,7 @@ import (
 
 // Context is the current Thread
 // can't use actual Thread because that causes circular dependency
-type Context = interface {
+type Context interface {
 	// Call interprets a compiled Suneido function
 	Call(fn *SuFunc, self Value) Value
 }
@@ -19,7 +19,7 @@ type Context = interface {
 // Assumes args on stack, already massaged if necessary
 type Callable interface {
 	Params() *Func
-	Call(th Context, self Value, args ...Value) Value
+	Call(ct Context, self Value, args ...Value) Value
 }
 
 type Func struct {
