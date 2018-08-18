@@ -2,18 +2,19 @@
 Package dnum implements decimal floating point numbers.
 
 Uses uint64 to hold the coefficient and int8 for exponent.
+Only uses 16 decimal digits.
 
-Value is sign * coef * 10^exp, zeroed value is 0.
+Value is sign * .coef * 10^exp, i.e. assumed decimal to left
+Coefficient is kept "maximized" in 16 decimal digits.
+Zeroed value is 0.
 */
 package dnum
 
 import (
-	"errors"
 	"math"
+	"math/bits"
 	"strconv"
 	"strings"
-
-	"github.com/apmckinlay/gsuneido/util/bits"
 )
 
 // Dnum is a decimal floating point number
@@ -24,139 +25,364 @@ type Dnum struct {
 }
 
 const (
-	signPos  = +1
-	signZero = 0
-	signNeg  = -1
-	expInf   = math.MaxInt8
+	signPosInf = +2
+	signPos    = +1
+	signZero   = 0
+	signNeg    = -1
+	signNegInf = -2
+	expMin     = math.MinInt8
+	expMax     = math.MaxInt8
+	coefMin    = 1000000000000000
+	coefMax    = 9999999999999999
+	digitsMax  = 16
+	shiftMax   = digitsMax - 1
 )
 
+// common values
 var (
-	Zero     = Dnum{}
-	One      = Dnum{1, signPos, 0}
-	Inf      = Dnum{math.MaxUint64, signPos, expInf}
-	MinusInf = Dnum{math.MaxUint64, signNeg, expInf}
-
-	OutsideRange = errors.New("outside range")
+	Zero   = Dnum{}
+	One    = Dnum{1000000000000000, signPos, 1}
+	NegOne = Dnum{1000000000000000, signNeg, 1}
+	Inf    = Dnum{1, signPosInf, 0}
+	NegInf = Dnum{1, signNegInf, 0}
 )
 
-func NewDnum(neg bool, coef uint64, exp int8) Dnum {
-	if neg {
-		return Dnum{coef, signNeg, exp}
+var pow10 = [...]uint64{
+	1,
+	10,
+	100,
+	1000,
+	10000,
+	100000,
+	1000000,
+	10000000,
+	100000000,
+	1000000000,
+	10000000000,
+	100000000000,
+	1000000000000,
+	10000000000000,
+	100000000000000,
+	1000000000000000,
+	10000000000000000,
+	100000000000000000,
+	1000000000000000000}
+
+var halfpow10 = [...]uint64{
+	0,
+	5,
+	50,
+	500,
+	5000,
+	50000,
+	500000,
+	5000000,
+	50000000,
+	500000000,
+	5000000000,
+	50000000000,
+	500000000000,
+	5000000000000,
+	50000000000000,
+	500000000000000,
+	5000000000000000,
+	50000000000000000,
+	500000000000000000,
+	5000000000000000000}
+
+// NOTE: comment out body in production
+func check(_ bool) {
+	// if !cond {
+	// 	panic("verify failed")
+	// }
+}
+
+// FromInt returns a Dnum for an int
+func FromInt(n int64) Dnum {
+	if n == 0 {
+		return Zero
+	}
+	sign := int8(signPos)
+	if n < 0 {
+		n = -n
+		sign = signNeg
+	}
+	coef := uint64(n)
+	p := maxShift(coef)
+	coef *= pow10[p]
+	check(coefMin <= coef && coef <= coefMax)
+	exp := int8(digitsMax - p)
+	return Dnum{coef, sign, exp}
+}
+
+// FromFloat converts a float64 to a Dnum
+func FromFloat(f float64) Dnum {
+	switch {
+	case math.IsInf(f, +1):
+		return Inf
+	case math.IsInf(f, -1):
+		return NegInf
+	case math.IsNaN(f):
+		panic("dnum.FromFloat64 can't convert NaN")
+	}
+	s := strconv.FormatFloat(f, 'g', -1, 64)
+	return FromStr(s)
+}
+
+// New constructs a Dnum, maximizing coef and handling exp out of range
+// Used to normalize results of operations
+func New(sign int8, coef uint64, exp int) Dnum {
+	if sign == 0 || coef == 0 || exp < expMin {
+		return Zero
+	} else if sign == signPosInf {
+		return Inf
+	} else if sign == signNegInf {
+		return NegInf
 	} else {
-		return Dnum{coef, signPos, exp}
-	}
-}
-
-func abs(n int32) uint64 {
-	n64 := int64(n)
-	if n64 < 0 {
-		n64 = -n64
-	}
-	return uint64(n64)
-}
-
-// Parse convert a string to a Dnum
-func Parse(s string) (Dnum, error) {
-	if len(s) < 1 {
-		return Zero, errors.New("cannot convert empty string to Dnum")
-	}
-	if s == "0" {
-		return Zero, nil
-	}
-	var dn Dnum
-	dn.sign = signPos
-	i := 0
-	if s[i] == '+' {
-		i++
-	} else if s[i] == '-' {
-		dn.sign = signNeg
-		i++
-	}
-	before := spanDigits(s[i:])
-	i += len(before)
-	after := ""
-	if i < len(s) && s[i] == '.' {
-		i++
-		after = spanDigits(s[i:])
-		i += len(after)
-	}
-	after = strings.TrimRight(after, "0")
-	coef, err := strconv.ParseUint(before+after, 10, 64)
-	if err != nil {
-		return Zero, errors.New("invalid number (" + s + ")")
-	}
-	dn.coef = coef
-
-	exp := 0
-	if i < len(s) && (s[i] == 'e' || s[i] == 'E') {
-		i++
-		e, err := strconv.ParseInt(s[i:], 10, 8)
-		if err != nil {
-			return Zero, errors.New("invalid exponent (" + s + ")")
+		atmax := false
+		for coef > coefMax {
+			coef = (coef + 5) / 10 // drop/round least significant digit
+			exp++
+			atmax = true
 		}
-		exp = int(e)
+		if !atmax {
+			p := maxShift(coef)
+			coef *= pow10[p]
+			exp -= p
+		}
+		if exp > expMax {
+			return inf(sign)
+		}
+		return Dnum{coef, sign, int8(exp)}
 	}
-	if coef == 0 {
-		return Zero, nil
-	}
-	exp -= len(after)
-	if exp < -127 || exp >= 127 {
-		return Zero, errors.New("exponent out of range (" + s + ")")
-	}
-	dn.exp = int8(exp)
-	return dn, nil
 }
 
-// spanDigits returns the leading span of digits
-func spanDigits(s string) string {
-	i := 0
-	for i < len(s) && '0' <= s[i] && s[i] <= '9' {
-		i++
+func maxShift(x uint64) int {
+	i := ilog10(x)
+	if i > shiftMax {
+		return 0
 	}
-	return s[:i]
+	return shiftMax - i
 }
 
-// String converts a Dnum to a string.
-// If the exponent is 0 it will print the number as an integer.
-// Otherwise it will try to avoid scientific notation
-// adding up to 4 zeroes at the end or 3 zeroes at the beginning.
+func ilog10(x uint64) int {
+	// based on Hacker's Delight
+	if x == 0 {
+		return 0
+	}
+	y := (19 * (63 - bits.LeadingZeros64(x))) >> 6
+	if y < 18 && x >= pow10[y+1] {
+		y++
+	}
+	return y
+}
+
+func inf(sign int8) Dnum {
+	switch {
+	case sign < 0:
+		return NegInf
+	case sign > 0:
+		return Inf
+	default:
+		return Zero
+	}
+}
+
+// String returns a string representation of the Dnum
 func (dn Dnum) String() string {
-	if dn == Zero {
+	if dn.sign == 0 {
 		return "0"
 	}
+	const maxLeadingZeros = 7
 	sign := ""
-	if dn.sign == signNeg {
+	if dn.sign < 0 {
 		sign = "-"
 	}
 	if dn.IsInf() {
 		return sign + "inf"
 	}
-	exp := int(dn.exp)
-	digits := strconv.FormatUint(dn.coef, 10)
-	if 0 <= exp && exp <= 4 {
-		// decimal to the right
-		return sign + digits + strings.Repeat("0", exp)
-	}
-	sexp := ""
-	if -len(digits)-4 < exp && exp <= -len(digits) {
+	digits := getDigits(dn.coef)
+	nd := len(digits)
+	e := int(dn.exp) - nd
+	if -maxLeadingZeros <= dn.exp && dn.exp <= 0 {
 		// decimal to the left
-		digits = "." + strings.Repeat("0", -exp-len(digits)) + digits
-	} else if -len(digits) < exp && exp <= -1 {
+		return sign + "." + strings.Repeat("0", -e-nd) + digits
+	} else if -nd < e && e <= -1 {
 		// decimal within
-		i := len(digits) + exp
-		digits = digits[:i] + "." + digits[i:]
+		dec := nd + e
+		return sign + digits[:dec] + "." + digits[dec:]
+	} else if 0 < dn.exp && dn.exp <= digitsMax {
+		// decimal to the right
+		return sign + digits + strings.Repeat("0", e)
 	} else {
-		// use scientific notation
-		exp += len(digits) - 1
-		digits = digits[:1] + "." + digits[1:]
-		sexp = "e" + strconv.FormatInt(int64(exp), 10)
+		// scientific notation
+		after := ""
+		if nd > 1 {
+			after = "." + digits[1:]
+		}
+		return sign + digits[:1] + after + "e" + strconv.Itoa(int(dn.exp-1))
 	}
-	digits = strings.TrimRight(digits, "0")
-	digits = strings.TrimRight(digits, ".")
-	return sign + digits + sexp
 }
 
-func (dn Dnum) Float64() float64 {
+func getDigits(coef uint64) string {
+	var digits [digitsMax]byte
+	i := shiftMax
+	nd := 0
+	for coef != 0 {
+		digits[nd] = byte('0' + (coef / pow10[i]))
+		coef %= pow10[i]
+		nd++
+		i--
+	}
+	return string(digits[:nd])
+}
+
+// FromStr parses a numeric string and returns a Dnum representation.
+func FromStr(s string) Dnum {
+	r := &reader{s, 0}
+	sign := getSign(r)
+	if r.matchStr("inf") {
+		return inf(sign)
+	}
+	coef, exp := getCoef(r)
+	exp += getExp(r)
+	if r.len() != 0 { // didn't consume entire string
+		panic("invalid number")
+	} else if coef == 0 || exp < math.MinInt8 {
+		return Zero
+	} else if exp > math.MaxInt8 {
+		return inf(sign)
+	}
+	check(coefMin <= coef && coef <= coefMax)
+	return Dnum{coef, sign, int8(exp)}
+}
+
+type reader struct {
+	s string
+	i int
+}
+
+func (r *reader) cur() rune {
+	if r.i >= len(r.s) {
+		return 0
+	}
+	return rune(r.s[r.i])
+}
+
+func (r *reader) prev() rune {
+	if r.i == 0 {
+		return 0
+	}
+	return rune(r.s[r.i-1])
+}
+
+func (r *reader) len() int {
+	return len(r.s) - r.i
+}
+
+func (r *reader) match(c rune) bool {
+	if r.cur() == c {
+		r.i++
+		return true
+	}
+	return false
+}
+
+func (r *reader) matchDigit() bool {
+	c := r.cur()
+	if '0' <= c && c <= '9' {
+		r.i++
+		return true
+	}
+	return false
+}
+
+func (r *reader) matchStr(pre string) bool {
+	if strings.HasPrefix(r.s[r.i:], pre) {
+		r.i += len(pre)
+		return true
+	}
+	return false
+}
+
+func getSign(r *reader) int8 {
+	if r.match('-') {
+		return int8(signNeg)
+	}
+	r.match('+')
+	return int8(signPos)
+}
+
+func getCoef(r *reader) (uint64, int) {
+	digits := false
+	beforeDecimal := true
+	for r.match('0') {
+		digits = true
+	}
+	if r.cur() == '.' && r.len() > 1 {
+		digits = false
+	}
+	n := uint64(0)
+	exp := 0
+	p := shiftMax
+	for {
+		c := r.cur()
+		if r.matchDigit() {
+			digits = true
+			// ignore extra decimal places
+			if c != '0' && p >= 0 {
+				n += uint64(c-'0') * pow10[p]
+			}
+			p--
+		} else if beforeDecimal {
+			// decimal point or end
+			exp = shiftMax - p
+			if !r.match('.') {
+				break
+			}
+			beforeDecimal = false
+			if !digits {
+				for r.match('0') {
+					digits = true
+					exp--
+				}
+			}
+		} else {
+			break
+		}
+	}
+	if !digits {
+		panic("numbers require at least one digit")
+	}
+	return n, exp
+}
+
+func getExp(r *reader) int {
+	e := 0
+	if r.match('e') || r.match('E') {
+		esign := getSign(r)
+		for r.matchDigit() {
+			e = e*10 + int(r.prev()-'0')
+		}
+		e *= int(esign)
+	}
+	return e
+}
+
+// end of FromStr ---------------------------------------------------
+
+// IsInf returns true if a Dnum is positive or negative infinite
+func (dn Dnum) IsInf() bool {
+	return dn.sign == signPosInf || dn.sign == signNegInf
+}
+
+// IsZero returns true if a Dnum is positive or negative infinite
+func (dn Dnum) IsZero() bool {
+	return dn.sign == signZero
+}
+
+// ToFloat converts a Dnum to float64
+func (dn Dnum) ToFloat() float64 {
 	if dn.IsInf() {
 		return math.Inf(int(dn.sign))
 	}
@@ -164,102 +390,42 @@ func (dn Dnum) Float64() float64 {
 	if dn.sign == signNeg {
 		g = -g
 	}
-	e := math.Pow10(int(dn.exp))
+	e := math.Pow10(int(dn.exp) - digitsMax)
 	return g * e
 }
 
-func FromFloat64(dn float64) Dnum {
-	switch {
-	case math.IsInf(dn, +1):
-		return Inf
-	case math.IsInf(dn, -1):
-		return MinusInf
-	case math.IsNaN(dn):
-		panic("dnum.FromFloat64 can't convert NaN")
+// ToInt converts a Dnum to an int64 or panics if not convertable
+func (dn Dnum) ToInt64() int64 {
+	if dn.sign == 0 {
+		return 0
 	}
-	s := strconv.FormatFloat(dn, 'g', -1, 64)
-	g, err := Parse(s)
-	if err != nil {
-		panic(err)
+	if dn.sign != signNegInf && dn.sign != signPosInf {
+		if 0 < dn.exp && dn.exp < digitsMax &&
+			(dn.coef%pow10[digitsMax-dn.exp]) == 0 { // usual case
+			return int64(dn.sign) * int64(dn.coef/pow10[digitsMax-dn.exp])
+		}
+		if dn.exp == digitsMax {
+			return int64(dn.sign) * int64(dn.coef)
+		}
+		if dn.exp == digitsMax+1 {
+			return int64(dn.sign) * (int64(dn.coef) * 10)
+		}
+		if dn.exp == digitsMax+2 {
+			return int64(dn.sign) * (int64(dn.coef) * 100)
+		}
+		if dn.exp == digitsMax+3 && dn.coef < math.MaxInt64/1000 {
+			return int64(dn.sign) * (int64(dn.coef) * 1000)
+		}
 	}
-	return g
+	panic("can't convert number to integer " + dn.String())
 }
 
-func (dn Dnum) Uint64() (uint64, error) {
-	if dn.sign == signNeg {
-		return 0, OutsideRange
+func (dn Dnum) ToInt() int {
+	n := dn.ToInt64()
+	if int64(int(n)) != n {
+		panic("can't convert number to integer " + dn.String())
 	}
-	return dn.toUint()
-}
-
-func (dn Dnum) Int64() (int64, error) {
-	ui, err := dn.toUint()
-	if err != nil {
-		return 0, err
-	}
-	if dn.sign == signPos && ui > math.MaxInt64 {
-		return math.MaxInt32, OutsideRange
-	}
-	if dn.sign == signNeg && ui > -math.MinInt64 {
-		return math.MinInt32, OutsideRange
-	}
-	n := int64(ui)
-	if dn.sign == signNeg {
-		n = -n
-	}
-	return n, nil
-}
-
-func (dn Dnum) Int32() (int32, error) {
-	ui, err := dn.toUint()
-	if err != nil {
-		return 0, err
-	}
-	if dn.sign == signPos && ui > math.MaxInt32 {
-		return math.MaxInt32, OutsideRange
-	}
-	if dn.sign == signNeg && ui > -math.MinInt32 {
-		return math.MinInt32, OutsideRange
-	}
-	n := int32(ui)
-	if dn.sign == signNeg {
-		n = -n
-	}
-	return n, nil
-}
-
-// try to make the exponent zero
-// if exponent is too small return 0
-// if exponent is too large return error
-// result does not include sign
-func (dn Dnum) toUint() (uint64, error) {
-	for dn.exp > 0 && dn.shiftLeft() {
-	}
-	roundup := false
-	for dn.exp < 0 && dn.shiftRight(&roundup) {
-	}
-	if roundup {
-		dn.coef++
-	}
-
-	if dn.exp > 0 {
-		return 0, OutsideRange
-	} else if dn.exp < 0 {
-		return 0, nil
-	} else {
-		return dn.coef, nil
-	}
-}
-
-func FromInt64(n int64) Dnum {
-	switch {
-	case n > 0:
-		return Dnum{uint64(n), signPos, 0}
-	case n < 0:
-		return Dnum{uint64(-n), signNeg, 0}
-	default:
-		return Zero
-	}
+	return int(n)
 }
 
 // Sign returns -1 for negative, 0 for zero, and +1 for positive
@@ -267,38 +433,37 @@ func (dn Dnum) Sign() int {
 	return int(dn.sign)
 }
 
+// Coef returns the coefficient
 func (dn Dnum) Coef() uint64 {
 	return dn.coef
 }
 
+// Exp returns the exponent
 func (dn Dnum) Exp() int {
 	return int(dn.exp)
 }
 
-func (dn Dnum) IsInt() bool {
-	coef := dn.coef
-	exp := dn.exp
-	for exp < 0 && coef%10 == 0 {
-		coef /= 10
-		exp++
-	}
-	return exp >= 0
-}
-
 // arithmetic operations -------------------------------------------------------
 
+// Neg returns the Dnum negated i.e. sign reversed
 func (dn Dnum) Neg() Dnum {
 	return Dnum{dn.coef, -dn.sign, dn.exp}
 }
 
+// Abs returns the Dnum with a positive sign
 func (dn Dnum) Abs() Dnum {
-	if dn == Zero {
-		return Zero
-	} else {
-		return Dnum{dn.coef, signPos, dn.exp}
+	if dn.sign < 0 {
+		return Dnum{dn.coef, -dn.sign, dn.exp}
 	}
+	return dn
 }
 
+// Equal returns true if two Dnum's are equal
+func Equal(x, y Dnum) bool {
+	return x.sign == y.sign && x.exp == y.exp && x.coef == y.coef
+}
+
+// Cmp compares two Dnum's returning -1 for <, 0 for ==, +1 for >
 func Cmp(x, y Dnum) int {
 	switch {
 	case x.sign < y.sign:
@@ -308,193 +473,139 @@ func Cmp(x, y Dnum) int {
 	case x == y:
 		return 0
 	}
-	return int(Sub(x, y).sign)
+	sign := int(x.sign)
+	switch {
+	case sign == 0 || sign == signNegInf || sign == signPosInf:
+		return 0
+	case x.exp < y.exp:
+		return -sign
+	case x.exp > y.exp:
+		return +sign
+	case x.coef < y.coef:
+		return -sign
+	case x.coef > y.coef:
+		return +sign
+	default:
+		return 0
+	}
 }
 
+// Sub returns the difference of two Dnum's
+func Sub(x, y Dnum) Dnum {
+	return Add(x, y.Neg())
+}
+
+// Add returns the sum of two Dnum's
 func Add(x, y Dnum) Dnum {
 	switch {
-	case x == Zero:
+	case x.sign == signZero:
 		return y
-	case y == Zero:
+	case y.sign == signZero:
 		return x
-	case x == Inf:
-		if y == MinusInf {
+	case x.IsInf():
+		if y.sign == -x.sign {
 			return Zero
-		} else {
-			return Inf
 		}
-	case x == MinusInf:
-		if y == Inf {
-			return Zero
-		} else {
-			return MinusInf
-		}
-	case y == Inf:
-		return Inf
-	case y == MinusInf:
-		return MinusInf
-	case x.sign != y.sign:
-		return usub(x, y)
-	default:
-		return uadd(x, y)
+		return x
+	case y.IsInf():
+		return y
 	}
-}
-
-func Sub(x, y Dnum) Dnum {
-	switch {
-	case x == Zero:
-		return y.Neg()
-	case y == Zero:
+	if !align(&x, &y) {
 		return x
-	case x == Inf:
-		if y == Inf {
-			return Zero
-		} else {
-			return Inf
-		}
-	case x == MinusInf:
-		if y == MinusInf {
-			return Zero
-		} else {
-			return MinusInf
-		}
-	case y == Inf:
-		return MinusInf
-	case y == MinusInf:
-		return Inf
-	case x.sign != y.sign:
-		return uadd(x, y)
-	default:
+	}
+	if x.sign != y.sign {
 		return usub(x, y)
 	}
+	return uadd(x, y)
 }
 
 func uadd(x, y Dnum) Dnum {
-	align(&x, &y)
-	// align may make coef 0 if exp is too different
-	coef := x.coef + y.coef
-	if coef < x.coef || coef < y.coef { // overflow
-		roundup := false
-		x.shiftRight(&roundup)
-		if roundup {
-			x.coef++
-		}
-		y.shiftRight(&roundup)
-		if roundup {
-			y.coef++
-		}
-		coef = x.coef + y.coef
-	}
-	return result(coef, x.sign, int(x.exp))
-}
-
-func align(x, y *Dnum) {
-	if x.exp == y.exp {
-		return
-	}
-	if x.exp > y.exp {
-		x, y = y, x // swap
-	}
-	for y.exp > x.exp && y.shiftLeft() {
-	}
-	roundup := false
-	for y.exp > x.exp && x.shiftRight(&roundup) {
-	}
-	if x.exp != y.exp {
-		x.exp = y.exp
-	} else if roundup {
-		x.coef++
-	}
-}
-
-// returns true if it was able to shift (losslessly)
-func (dn *Dnum) shiftLeft() bool {
-	if !mul10safe(dn.coef) {
-		return false
-	}
-	dn.coef *= 10
-	// don't decrement past min
-	if dn.exp > math.MinInt8 {
-		dn.exp--
-	}
-	return true
-}
-
-func mul10safe(n uint64) bool {
-	const HI4 = 0xf << 60
-	return (n & HI4) == 0
-}
-
-// NOTE: may lose precision and round
-// returns false only if coef is 0
-func (dn *Dnum) shiftRight(roundup *bool) bool {
-	*roundup = false
-	if dn.coef == 0 {
-		return false
-	}
-	*roundup = (dn.coef % 10) >= 5
-	dn.coef /= 10
-	// don't increment past max
-	if dn.exp < math.MaxInt8 {
-		dn.exp++
-	}
-	return true
-}
-
-func result(coef uint64, sign int8, exp int) Dnum {
-	switch {
-	case exp >= expInf:
-		return inf(sign)
-	case exp < math.MinInt8 || coef == 0:
-		return Zero
-	default:
-		return Dnum{coef, sign, int8(exp)}
-	}
+	return New(x.sign, x.coef+y.coef, int(x.exp))
 }
 
 func usub(x, y Dnum) Dnum {
-	align(&x, &y)
-	sign := x.sign
 	if x.coef < y.coef {
-		x, y = y, x
-		sign *= -1 // flip sign
+		return New(-x.sign, y.coef-x.coef, int(x.exp))
 	}
-	return result(x.coef-y.coef, sign, int(x.exp))
+	return New(x.sign, x.coef-y.coef, int(x.exp))
 }
 
+func align(x, y *Dnum) bool {
+	if x.exp == y.exp {
+		return true
+	}
+	if x.exp < y.exp {
+		*x, *y = *y, *x // swap
+	}
+	yshift := ilog10(y.coef)
+	e := int(x.exp - y.exp)
+	if e > yshift {
+		return false
+	}
+	yshift = e
+	check(0 <= yshift && yshift <= 20)
+	y.coef = (y.coef + halfpow10[yshift]) / pow10[yshift]
+	check(int(y.exp)+yshift == int(x.exp))
+	return true
+}
+
+const e7 = 10000000
+
+// Mul returns the product of two Dnum's
 func Mul(x, y Dnum) Dnum {
 	sign := x.sign * y.sign
 	switch {
-	case x == One:
-		return y
-	case y == One:
-		return x
-	case x == Zero || y == Zero:
+	case sign == signZero:
 		return Zero
 	case x.IsInf() || y.IsInf():
 		return inf(sign)
 	}
-	x.minCoef()
-	y.minCoef()
-	if bits.Nlz(x.coef)+bits.Nlz(y.coef) >= 64 {
-		// coef won't overflow
-		return result(x.coef*y.coef, sign, int(x.exp)+int(y.exp))
+	e := int(x.exp) + int(y.exp)
+
+	// split unevenly to use full 64 bit range to get more precision
+	// and avoid needing xlo * ylo
+	xhi := x.coef / e7 // 9 digits
+	xlo := x.coef % e7 // 7 digits
+	yhi := y.coef / e7 // 9 digits
+	ylo := y.coef % e7 // 7 digits
+
+	c := xhi * yhi
+	if xlo != 0 || ylo != 0 {
+		c += (xlo*yhi + ylo*xhi) / e7
 	}
-	// drop 5 least significant bits off x and y
-	// 59 bits < 18 decimal digits
-	// 32 bits > 9 decimal digits
-	// so we can split x & y into two pieces
-	// and multiply separately guaranteed not to overflow
-	xlo, xhi := x.split()
-	ylo, yhi := y.split()
-	exp := int(x.exp) + int(y.exp)
-	r1 := result(xlo*ylo, sign, exp)
-	r2 := result(xlo*yhi, sign, exp+9)
-	r3 := result(xhi*ylo, sign, exp+9)
-	r4 := result(xhi*yhi, sign, exp+18)
-	return Add(r1, Add(r2, Add(r3, r4)))
+	return New(sign, c, e-2)
 }
 
+// Div returns the quotient of two Dnum's
+func Div(x, y Dnum) Dnum {
+	sign := x.sign * y.sign
+	switch {
+	case x.sign == signZero:
+		return x
+	case y.sign == signZero:
+		return inf(x.sign)
+	case x.IsInf():
+		if y.IsInf() {
+			if sign < 0 {
+				return NegOne
+			}
+			return One
+		}
+		return inf(sign)
+	case y.IsInf():
+		return Zero
+	}
+	coef := div128(x.coef, y.coef)
+	return New(sign, coef, int(x.exp)-int(y.exp))
+}
+
+// Hash returns a hash value for a Dnum
+func (dn Dnum) Hash() uint32 {
+	return uint32(dn.coef>>32) ^ uint32(dn.coef) ^
+		uint32(dn.sign)<<16 ^ uint32(dn.exp)<<8
+}
+
+/*
 // makes coef as small as possible (losslessly)
 // i.e. trim trailing zero decimal digits
 func (dn *Dnum) minCoef() {
@@ -517,25 +628,6 @@ func (dn *Dnum) split() (lo, hi uint64) {
 	return dn.coef % NINE, dn.coef / NINE
 }
 
-func Div(x, y Dnum) Dnum {
-	sign := x.sign * y.sign
-	switch {
-	case x == Zero:
-		return Zero
-	case y == Zero:
-		return inf(x.sign)
-	case x.IsInf():
-		if y.IsInf() {
-			return Dnum{1, sign, 0}
-		}
-		return inf(sign)
-	case y.IsInf():
-		return Zero
-	}
-	coef, exp := div2(x.coef, y.coef)
-	return result(coef, sign, int(x.exp)-int(y.exp)+exp)
-}
-
 func div2(x, y uint64) (uint64, int) {
 	exp := 0
 	// strip trailing zeroes from y i.e. shift right as far as possible
@@ -551,11 +643,11 @@ func div2(x, y uint64) (uint64, int) {
 			z *= 10
 			exp--
 		}
-		for x < y {
+		for x < y { // max once, but not necessarily first iteration
 			if !mul10safe(z) {
 				return z, exp
 			}
-			y /= 10
+			y /= 10 // should this round ???
 			z *= 10
 			exp--
 		}
@@ -564,27 +656,8 @@ func div2(x, y uint64) (uint64, int) {
 			break
 		}
 		z += q
-		x %= y
+		x %= y // or x -= q * y ???
 	}
 	return z, exp
 }
-
-func (dn Dnum) IsInf() bool {
-	return dn.exp == expInf
-}
-
-func inf(sign int8) Dnum {
-	switch sign {
-	case signPos:
-		return Inf
-	case signNeg:
-		return MinusInf
-	default:
-		panic("invalid sign")
-	}
-}
-
-func (dn Dnum) Hash() uint32 {
-	return uint32(dn.coef>>32) ^ uint32(dn.coef) ^
-		uint32(dn.sign)<<16 ^ uint32(dn.exp)<<8
-}
+*/

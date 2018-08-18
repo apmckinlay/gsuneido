@@ -9,7 +9,7 @@ import (
 
 func ExampleSuInt() {
 	v := SuInt(123)
-	fmt.Printf("%d %s\n", v.ToInt(), v.ToStr())
+	fmt.Printf("%d %s\n", v.ToInt(), v.String())
 	// Output: 123 123
 }
 

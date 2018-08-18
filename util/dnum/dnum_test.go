@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"math"
 	"math/rand"
-	"strconv"
 	"testing"
 	"unsafe"
 
-	. "github.com/apmckinlay/gsuneido/util/hamcrest"
 	"github.com/apmckinlay/gsuneido/util/ptest"
+
+	. "github.com/apmckinlay/gsuneido/util/hamcrest"
 )
 
 func Test_size(t *testing.T) {
@@ -19,90 +19,149 @@ func Test_size(t *testing.T) {
 	Assert(t).That(int(unsafe.Sizeof(a)), Equals(160))
 }
 
+func Test_inf(t *testing.T) {
+	Assert(t).That(inf(0), Equals(Zero))
+	Assert(t).That(inf(+1), Equals(Inf))
+	Assert(t).That(inf(-1), Equals(NegInf))
+}
+
+func Test_ilog10(t *testing.T) {
+	Assert(t).That(ilog10(0), Equals(0))
+	Assert(t).That(ilog10(123), Equals(2))
+}
+
+func Test_New(t *testing.T) {
+	Assert(t).That(New(signZero, 0, 0), Equals(Zero))
+	Assert(t).That(New(signPos, 1, 999), Equals(Inf))    // exponent overflow
+	Assert(t).That(New(signNeg, 1, 999), Equals(NegInf)) // exponent overflow
+	Assert(t).That(New(signPos, 1, -999), Equals(Zero))  // exponent underflow
+	Assert(t).That(New(signNeg, 1, -999), Equals(Zero))  // exponent underflow
+	Assert(t).That(New(signPos, 1, 0), Equals(Dnum{1000000000000000, 1, -15}))
+	Assert(t).That(New(signPos, 123, 0), Equals(Dnum{1230000000000000, 1, -13}))
+}
+
 func Test_String(t *testing.T) {
 	assert := Assert(t)
 	assert.That(Zero.String(), Equals("0"))
+	assert.That(One.String(), Equals("1"))
 	assert.That(Inf.String(), Equals("inf"))
-	assert.That(Dnum{123, signPos, 0}.String(), Equals("123"))
-	assert.That(Dnum{123000, signPos, -3}.String(), Equals("123"))
-	assert.That(Dnum{1000000, signPos, -3}.String(), Equals("1000"))
+	assert.That(NegInf.String(), Equals("-inf"))
+	assert.That(FromInt(123).String(), Equals("123"))
+	assert.That(FromInt(-123).String(), Equals("-123"))
+
+	assert.That(New(signPos, 1234000000000000, -20).String(), Equals("1.234e-21"))
+	assert.That(New(signPos, 1234000000000000, -2).String(), Equals(".001234"))
+	assert.That(New(signPos, 1234000000000000, 0).String(), Equals(".1234"))
+	assert.That(New(signPos, 1234000000000000, 2).String(), Equals("12.34"))
+	assert.That(New(signPos, 1234000000000000, 4).String(), Equals("1234"))
+	assert.That(New(signPos, 1234000000000000, 6).String(), Equals("123400"))
+	assert.That(New(signPos, 1234000000000000, 20).String(), Equals("1.234e19"))
 }
 
-func Test_Parse(t *testing.T) {
+func Test_FromStr(t *testing.T) {
 	assert := Assert(t)
-	test := func(s string, expected Dnum) {
-		dn := parse(s)
-		assert.That(dn, Equals(expected))
-	}
-	test("0e4", Zero)
-	test("-0", Zero)
+	assert.That(FromStr("inf"), Equals(Inf))
+	assert.That(FromStr("+inf"), Equals(Inf))
+	assert.That(FromStr("-inf"), Equals(NegInf))
+	assert.That(FromStr("0"), Equals(Zero))
+	assert.That(FromStr("+0"), Equals(Zero))
+	assert.That(FromStr("-0"), Equals(Zero))
+	assert.That(FromStr("0e4"), Equals(Zero))
+	assert.That(FromStr("0000"), Equals(Zero))
+	assert.That(FromStr("0000."), Equals(Zero))
+	assert.That(FromStr(".0000"), Equals(Zero))
+	assert.That(FromStr("0000.0000"), Equals(Zero))
+	assert.That(FromStr("1"), Equals(One))
+	assert.That(FromStr("000000000000000000001"), Equals(One))
+	assert.That(FromStr("1.0000000000000000000"), Equals(One))
+	assert.That(FromStr("100000000000000000000"), Equals(FromStr("1e20")))
+	assert.That(FromStr(".1234567890123456789"), Equals(FromStr(".1234567890123456")))
+	assert.That(FromStr(".000000000000000000001"), Equals(FromStr(".1e-20")))
 }
 
-// for testing - accepts "inf" and "-inf", panics on error
-func parse(s string) Dnum {
-	switch s {
-	case "inf":
-		return Inf
-	case "-inf":
-		return MinusInf
-	case "-0":
-		return Zero
-	default:
-		n, err := Parse(s)
-		if err != nil {
-			panic("parse failed")
-		}
-		return n
+func Test_FromToStr(t *testing.T) {
+	test := func(s string) {
+		Assert(t).That(FromStr(s).String(), Equals(s))
 	}
+	test("inf")
+	test("-inf")
+	test("0")
+	test("1")
+	test("-1")
+	test("123")
+	test("-123")
+	test("100")
+	test(".1")
+	test(".00001")
+	test("1e20")
+	test("-1e-20")
 }
 
-func TestConvert(t *testing.T) {
+func Test_getExp(t *testing.T) {
+	e := getExp(&reader{"e20", 0})
+	Assert(t).That(e, Equals(20))
+}
+
+func Test_FromToInt(t *testing.T) {
 	assert := Assert(t)
-	test := func(s string, dn Dnum) {
-		g := parse(s)
-		assert.That(g, Equals(dn).Comment("from "+s))
-		assert.That(dn.String(), Equals(s))
+	test := func(x int64) {
+		assert.That(FromInt(x).ToInt(), Equals(x))
+		assert.That(FromInt(-x).ToInt(), Equals(-x))
 	}
-	test("0", Zero)
+	test(0)
+	test(1)
+	test(100)
+	test(123)
+	test(coefMax)
+}
 
-	test("123", Dnum{123, signPos, 0})
-	test("-123", Dnum{123, signNeg, 0})
+func Test_FromInt(t *testing.T) {
+	Assert(t).That(FromInt(0), Equals(Zero))
+	Assert(t).That(FromInt(1), Equals(Dnum{1000000000000000, +1, 1}))
+	Assert(t).That(FromInt(100), Equals(Dnum{1000000000000000, +1, 3}))
+	Assert(t).That(FromInt(123), Equals(Dnum{1230000000000000, +1, 3}))
+	Assert(t).That(FromInt(-123), Equals(Dnum{1230000000000000, -1, 3}))
+	Assert(t).That(FromInt(coefMax), Equals(Dnum{coefMax, +1, 16}))
+	Assert(t).That(FromInt(-coefMax), Equals(Dnum{coefMax, -1, 16}))
+}
 
-	test("10000", Dnum{10000, signPos, 0})
-	test("1e5", Dnum{1, signPos, 5})
-
-	test(".1234", Dnum{1234, signPos, -4})
-	test(".0001", Dnum{1, signPos, -4})
-	test("1e-5", Dnum{1, signPos, -5})
-
-	test("123.4", Dnum{1234, signPos, -1})
-	test("1.234", Dnum{1234, signPos, -3})
-
-	test("12345678912345678912", Dnum{12345678912345678912, signPos, 0})
+func Test_FromToFloat(t *testing.T) {
+	assert := Assert(t)
+	cvt := func(f float64) {
+		assert.That(FromFloat(f).ToFloat(), Equals(f))
+		assert.That(FromFloat(-f).ToFloat(), Equals(-f))
+	}
+	cvt(0.0)
+	cvt(123.0)
+	cvt(1.0 / 3.0)
+	cvt(123e3)
+	cvt(-123e-44)
+	cvt(math.Inf(1))
+	cvt(math.Inf(-1))
 }
 
 func Test_Neg(t *testing.T) {
 	assert := Assert(t)
-	Neg := func(x string, expected string) {
-		xn := parse(x)
-		zn := xn.Neg()
-		assert.That(zn.String(), Equals(expected))
+	Neg := func(x string, y string) {
+		xn := FromStr(x)
+		yn := FromStr(y)
+		assert.That(xn.Neg(), Equals(yn))
+		assert.That(yn.Neg(), Equals(xn))
 	}
 	Neg("0", "0")
 	Neg("123", "-123")
-	Neg("-123", "123")
 	Neg("inf", "-inf")
-	Neg("-inf", "inf")
 }
 
 func Test_Cmp(t *testing.T) {
 	assert := Assert(t)
-	data := []string{"-inf", "-1e9", "-1e-9", "0", "1e-9", "1e9", "inf"}
+	data := []string{
+		"-inf", "-1e9", "-123", "-1e-9", "0", "1e-9", "123", "1e9", "inf"}
 	for i, xs := range data {
-		x := parse(xs)
+		x := FromStr(xs)
 		assert.That(Cmp(x, x), Equals(0).Comment(fmt.Sprint(x, " >< ", x)))
 		for _, ys := range data[i+1:] {
-			y := parse(ys)
+			y := FromStr(ys)
 			assert.That(Cmp(x, y), Equals(-1).Comment(fmt.Sprint(x, " >< ", y)))
 			assert.That(Cmp(y, x), Equals(1).Comment(fmt.Sprint(y, " >< ", x)))
 		}
@@ -112,12 +171,11 @@ func Test_Cmp(t *testing.T) {
 func Test_Add(t *testing.T) {
 	assert := Assert(t)
 	add := func(x string, y string, expected string) {
-		xn := parse(x)
-		yn := parse(y)
-		zn := Add(xn, yn)
-		assert.That(zn.String(), Equals(expected))
-		zn = Add(yn, xn)
-		assert.That(zn.String(), Equals(expected))
+		xn := FromStr(x)
+		yn := FromStr(y)
+		zn := FromStr(expected)
+		assert.That(Add(xn, yn), Equals(zn))
+		assert.That(Add(yn, xn), Equals(zn))
 	}
 	// special cases (no actual math)
 	add("123", "0", "123")
@@ -133,26 +191,23 @@ func Test_Add(t *testing.T) {
 	add("123", "-456", "-333")
 	add("-123", "456", "333")
 	// need aligning
+	add("1e12", "1e14", "1.01e14")
+	add("1111111111111111", "2222222222222222e-4", "1111333333333333")
+	add("1111111111111111", "6666666666666666e-4", "1111777777777778")
+	// exceeds alignment
 	add("123", "1e-99", "123")
 	add("1e-99", "123", "123")
-	add("1e12", "1e14", "1.01e14")
-	add("11111111111111111111", "2222222222222222222e-4", "11111333333333333333")
-	add("11111111111111111111", "6666666666666666666e-4", "11111777777777777778")
-	// int64 overflow
-	add("18446744073709551615", "11", "18446744073709551630")
-	add("18446744073709551615e126", "18446744073709551615e126", "inf")
 }
 
 func Test_Sub(t *testing.T) {
 	assert := Assert(t)
 	sub := func(x string, y string, expected string) {
-		xn := parse(x)
-		yn := parse(y)
-		zn := Sub(xn, yn)
-		assert.That(zn.String(), Equals(expected))
+		xn := FromStr(x)
+		yn := FromStr(y)
+		zn := FromStr(expected)
+		assert.That(Sub(xn, yn), Equals(zn))
 		if expected != "0" {
-			zn = Sub(yn, xn)
-			assert.That(zn.String(), Equals("-"+expected))
+			assert.That(Sub(yn, xn), Equals(zn.Neg()))
 		}
 	}
 	// special cases (no actual math)
@@ -177,15 +232,15 @@ func Test_Sub(t *testing.T) {
 
 func Test_Mul(t *testing.T) {
 	assert := Assert(t)
-	mul := func(x string, y string, expected string) {
-		mul2 := func(x string, y string, expected string) {
-			xn := parse(x)
-			yn := parse(y)
-			zn := Mul(xn, yn)
-			assert.That(zn.String(), Equals(expected).Comment(fmt.Sprint(xn, " * ", yn)))
+	mul := func(x, y, expected string) {
+		xn := FromStr(x)
+		yn := FromStr(y)
+		zn := FromStr(expected)
+		mul2 := func(x, y, zn Dnum) {
+			assert.That(Mul(xn, yn), Equals(zn).Comment(fmt.Sprint(xn, " * ", yn)))
 		}
-		mul2(x, y, expected)
-		mul2(y, x, expected)
+		mul2(xn, yn, zn)
+		mul2(yn, xn, zn)
 	}
 	// special cases (no actual math)
 	mul("0", "0", "0")
@@ -198,24 +253,27 @@ func Test_Mul(t *testing.T) {
 	mul("2e3", "3e3", "6e6")
 	mul("123456789000000000", "123456789000000000", "1.5241578750190521e34")
 	mul("2e99", "2e99", "inf") // exp overflow
-	// result too big for uint64
-	mul("1234567890123456", "1234567890123456", "1.524157875323881728e30")
-}
 
-func Test_split(t *testing.T) {
-	dn := Dnum{123456789987654321, 0, 0}
-	lo, hi := dn.split()
-	Assert(t).That(lo, Equals(uint64(987654321)))
-	Assert(t).That(hi, Equals(uint64(123456789)))
+	mul("2e9", "333e-9", "666")
+	mul("2e3", "3e3", "6e6")
+	mul("1.00000001", "1.00000001", "1.00000002")
+	mul("1.000000001", "1.000000001", "1.000000002")
+	mul(".4294967295", ".4294967295", ".1844674406511962")
+	mul("1.12233445566", "1.12233445566", "1.259634630361628")
+	mul("1.111111111111111", "1.111111111111111", "1.234567901234568")
+	mul("1.23456789", "1.23456789", "1.524157875019052")
+	mul("1.234567899", "1.234567899", "1.524157897241274")
+
+	mul("2e99", "2e99", "inf") // exp overflow
 }
 
 func Test_Div(t *testing.T) {
 	assert := Assert(t)
 	div := func(x string, y string, expected string) {
-		xn := parse(x)
-		yn := parse(y)
-		zn := Div(xn, yn)
-		assert.That(zn.String(), Equals(expected))
+		xn := FromStr(x)
+		yn := FromStr(y)
+		zn := FromStr(expected)
+		assert.That(Div(xn, yn), Equals(zn))
 	}
 	// special cases (no actual math)
 	div("0", "0", "0")
@@ -238,67 +296,125 @@ func Test_Div(t *testing.T) {
 	div("1234567890123456", "9876543210123456", ".12499999887187493")
 }
 
-func Test_float64_convert(t *testing.T) {
-	assert := Assert(t)
-	cvt := func(dn float64) {
-		f10 := FromFloat64(dn)
-		f2 := f10.Float64()
-		assert.That(f2, Equals(dn))
+// benchmarks (for 1000 operations) ---------------------------------
+
+func BenchmarkAdd(b *testing.B) {
+	for n := 0; n < b.N; n++ {
+		for i := 1; i < len(nums); i++ {
+			Add(nums[i-1], nums[i])
+		}
 	}
-	cvt(0.0)
-	cvt(123.0)
-	cvt(1.0 / 3.0)
-	cvt(123e3)
-	cvt(-123e-44)
-	cvt(math.Inf(1))
-	cvt(math.Inf(-1))
 }
 
-func Test_toInt(t *testing.T) {
-	assert := Assert(t)
-	test := func(x string, expected uint64) {
-		dn := parse(x)
-		z, err := dn.toUint()
-		if err != nil {
-			z = math.MaxUint64
+func BenchmarkMul(b *testing.B) {
+	for n := 0; n < b.N; n++ {
+		for i := 1; i < len(nums); i++ {
+			Mul(nums[i-1], nums[i])
 		}
-		assert.That(z, Equals(expected))
 	}
-	test("123", 123)
-	test("123e3", 123000)
-	test("1.23e2", 123)
-	test(".000123e6", 123)
-	test("1e-99", 0)
-	test("1e99", math.MaxUint64)
-	test("123.456", 123)
 }
 
-func Test_ToInt(t *testing.T) {
-	assert := Assert(t)
-	test := func(x string, expected string) {
-		dn := parse(x)
-		z, err := dn.Int64()
-		if err != nil {
-			assert.That(err.Error(), Equals(expected))
-			return
+func BenchmarkDiv(b *testing.B) {
+	for n := 0; n < b.N; n++ {
+		for i := 1; i < len(nums); i++ {
+			Div(nums[i-1], nums[i])
 		}
-		nexpected, err := strconv.ParseInt(expected, 10, 64)
-		if err != nil {
-			panic("bad test data!")
-		}
-		assert.That(z, Equals(nexpected))
 	}
-	test("123", "123")
-	test("-123", "-123")
-	test("1e99", "outside range")
-	test("9223372036854775807", "9223372036854775807") // max int64
-	test("18446744073709551615", "outside range")      // max uint64
+}
+
+var nums []Dnum
+
+func init() {
+	var a [1001]Dnum
+	for i := 0; i < len(a); i++ {
+		a[i] = New(signPos, uint64(rand.Intn(1000000)), rand.Intn(9) - 5)
+	}
+	nums = a[:]
+}
+
+// portable tests ---------------------------------------------------
+
+func ptAdd(args []string) bool {
+	xn := FromStr(args[0])
+	yn := FromStr(args[1])
+	zn := FromStr(args[2])
+	return Add(xn, yn) == zn && Add(yn, xn) == zn
+}
+
+var _ = ptest.Add("dnum_add", ptAdd)
+
+func ptSub(args []string) bool {
+	xn := FromStr(args[0])
+	yn := FromStr(args[1])
+	zn := FromStr(args[2])
+	return Sub(xn, yn) == zn &&
+		(args[2] == "0" || Sub(yn, xn) == zn.Neg())
+}
+
+var _ = ptest.Add("dnum_sub", ptSub)
+
+func ptMul(args []string) bool {
+	xn := FromStr(args[0])
+	yn := FromStr(args[1])
+	zn := FromStr(args[2])
+	return Mul(xn, yn) == zn && Mul(yn, xn) == zn
+}
+
+var _ = ptest.Add("dnum_mul", ptMul)
+
+func ptDiv(args []string) bool {
+	xn := FromStr(args[0])
+	yn := FromStr(args[1])
+	zn := FromStr(args[2])
+	ok := Div(xn, yn) == zn
+	if !ok {
+		fmt.Println("got:", Div(xn, yn))
+	}
+	return ok
+}
+
+var _ = ptest.Add("dnum_div", ptDiv)
+
+func ptCmp(args []string) bool {
+	for i, xs := range args {
+		x := FromStr(xs)
+		if Cmp(x, x) != 0 {
+			return false
+		}
+		for _, ys := range args[i+1:] {
+			y := FromStr(ys)
+			if Cmp(x, y) != -1 || Cmp(y, x) != +1 {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+var _ = ptest.Add("dnum_cmp", ptCmp)
+
+func TestPtest(t *testing.T) {
+	if !ptest.RunFile("dnum.test") {
+		t.Fail()
+	}
+}
+
+/*
+func closeTo(x Dnum) Tester {
+	return func(actual interface{}) string {
+		y := actual.(Dnum)
+		if x.sign == y.sign && x.exp == y.exp &&
+			(x.coef/10) == (y.coef/10) {
+			return ""
+		}
+		return fmt.Sprintf("expected: %v but got: %v", x, y)
+	}
 }
 
 func Test_ToUint(t *testing.T) {
 	assert := Assert(t)
 	test := func(x string, expected string) {
-		dn := parse(x)
+		dn := FromStr(x)
 		z, err := dn.Uint64()
 		if err != nil {
 			assert.That(err.Error(), Equals(expected))
@@ -316,109 +432,4 @@ func Test_ToUint(t *testing.T) {
 	test("9223372036854775807", "9223372036854775807")   // max int64
 	test("18446744073709551615", "18446744073709551615") // max uint64
 }
-
-func Test_FromInt64(t *testing.T) {
-	test := func(x int64) {
-		Assert(t).That(FromInt64(x).String(),
-			Equals(strconv.FormatInt(x, 10)))
-	}
-	test(math.MinInt64)
-	test(-123)
-	test(0)
-	test(123)
-	test(math.MaxInt64)
-}
-
-var bench Dnum
-
-func BenchmarkAdd(b *testing.B) {
-	for n := 0; n < b.N; n++ {
-		for i := 1; i < len(nums); i++ {
-			bench = Add(nums[i-1], nums[i])
-		}
-	}
-}
-
-func BenchmarkMul(b *testing.B) {
-	for n := 0; n < b.N; n++ {
-		for i := 1; i < len(nums); i++ {
-			bench = Mul(nums[i-1], nums[i])
-		}
-	}
-}
-
-func BenchmarkDiv(b *testing.B) {
-	for n := 0; n < b.N; n++ {
-		for i := 1; i < len(nums); i++ {
-			bench = Div(nums[i-1], nums[i])
-		}
-	}
-}
-
-var nums []Dnum
-
-func init() {
-	for i := 0; i < 1000; i++ {
-		num := Dnum{coef: uint64(rand.Intn(1000000)), exp: int8(rand.Intn(9) - 5)}
-		nums = append(nums, num)
-	}
-}
-
-func pt_add(args []string) bool {
-	xn := parse(args[0])
-	yn := parse(args[1])
-	return Add(xn, yn).String() == args[2] &&
-		Add(yn, xn).String() == args[2]
-}
-
-var _ = ptest.Add("dnum_add", pt_add)
-
-func pt_sub(args []string) bool {
-	xn := parse(args[0])
-	yn := parse(args[1])
-	return Sub(xn, yn).String() == args[2] &&
-		(args[2] == "0" || Sub(yn, xn).String() == "-"+args[2])
-}
-
-var _ = ptest.Add("dnum_sub", pt_sub)
-
-func pt_mul(args []string) bool {
-	xn := parse(args[0])
-	yn := parse(args[1])
-	return Mul(xn, yn).String() == args[2] &&
-		Mul(yn, xn).String() == args[2]
-}
-
-var _ = ptest.Add("dnum_mul", pt_mul)
-
-func pt_div(args []string) bool {
-	xn := parse(args[0])
-	yn := parse(args[1])
-	return Div(xn, yn).String() == args[2]
-}
-
-var _ = ptest.Add("dnum_div", pt_div)
-
-func pt_cmp(args []string) bool {
-	for i, xs := range args {
-		x := parse(xs)
-		if Cmp(x, x) != 0 {
-			return false
-		}
-		for _, ys := range args[i+1:] {
-			y := parse(ys)
-			if Cmp(x, y) != -1 || Cmp(y, x) != +1 {
-				return false
-			}
-		}
-	}
-	return true
-}
-
-var _ = ptest.Add("dnum_cmp", pt_cmp)
-
-func TestPtest(t *testing.T) {
-	if !ptest.RunFile("dnum.test") {
-		t.Fail()
-	}
-}
+*/

@@ -109,9 +109,18 @@ func Equals(expected interface{}) Tester {
 		if reflect.DeepEqual(expected, actual) {
 			return ""
 		}
-		return fmt.Sprintf("expected: %#v (%T) but got: %#v (%T)",
-			expected, expected, actual, actual)
+		return fmt.Sprintf("expected: %s but got: %s",
+			show(expected), show(actual))
 	}
+}
+
+func show(x interface{}) string {
+	s1 := fmt.Sprintf("%v", x)
+	s2 := fmt.Sprintf("%#v", x)
+	if s1 == s2 {
+		return s1 + " (" + fmt.Sprintf("%T", x) + ")"
+	}
+	return s1 + " (" + s2 + ")"
 }
 
 // NotEquals returns a Tester for inequality using replect.DeepEqual
@@ -183,4 +192,8 @@ func (test Tester) Comment(items ...interface{}) Tester {
 		}
 		return err + " (" + fmt.Sprint(items...) + ")"
 	}
+}
+
+func Refer(x interface{}) {
+	
 }

@@ -29,29 +29,17 @@ func (ss SuStr) ToStr() string {
 	return string(ss)
 }
 
+// String returns a human readable string with quotes and escaping
+// TODO: handle escaping
 func (ss SuStr) String() string {
 	return "'" + string(ss) + "'"
 }
 
 func (ss SuStr) Get(key Value) Value {
-	return SuStr(string(ss)[index(key)])
+	return SuStr(string(ss)[Index(key)])
 }
 
-func index(v Value) int {
-	if i, ok := Su2Int(v); ok {
-		return i
-	}
-	if d, ok := v.(SuDnum); ok {
-		if d.IsInt() {
-			if i, err := d.Int32(); err == nil {
-				return int(i)
-			}
-		}
-	}
-	panic("string subscripts must be integers")
-}
-
-func (ss SuStr) Put(key Value, val Value) {
+func (SuStr) Put(Value, Value) {
 	panic("strings do not support put")
 }
 
@@ -81,9 +69,8 @@ func (ss SuStr) Equals(other interface{}) bool {
 func (ss SuStr) PackSize() int {
 	if len(ss) == 0 {
 		return 0
-	} else {
-		return 1 + len(ss)
 	}
+	return 1 + len(ss)
 }
 
 func (ss SuStr) Pack(buf []byte) []byte {
@@ -99,18 +86,18 @@ func UnpackSuStr(buf []byte) Value {
 	return SuStr(string(buf))
 }
 
-func (_ SuStr) TypeName() string {
+func (SuStr) TypeName() string {
 	return "String"
 }
 
-func (_ SuStr) Order() ord {
+func (SuStr) Order() ord {
 	return ordStr
 }
 
-func (c SuStr) Cmp(other Value) int {
+func (ss SuStr) Cmp(other Value) int {
 	// COULD optimize this to not convert Concat to string
-	s1 := c.ToStr()
-	s2 := other.ToStr()
+	s1 := ss.String()
+	s2 := other.String()
 	switch {
 	case s1 < s2:
 		return -1

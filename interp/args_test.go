@@ -17,14 +17,14 @@ func TestArgs(t *testing.T) {
 	th.args(f, a)
 
 	// @arg => @param
-	f = &Func{Nparams: 1, Flags: []Flag{AT_F}}
+	f = &Func{Nparams: 1, Flags: []Flag{atParam}}
 	a = ArgSpec{Unnamed: EACH}
 	th.stack = []Value{makeOb()}
 	th.args(f, a)
 	Assert(t).True(th.stack[0].Equals(makeOb()))
 
 	// @+1arg => @param
-	f = &Func{Nparams: 1, Flags: []Flag{AT_F}}
+	f = &Func{Nparams: 1, Flags: []Flag{atParam}}
 	a = ArgSpec{Unnamed: EACH1}
 	th.stack = []Value{makeOb()}
 	th.args(f, a)
@@ -76,7 +76,7 @@ func TestArgs(t *testing.T) {
 	Assert(t).That(fmt.Sprint(th.stack), Equals("[11 22 33 44]"))
 
 	// args => @param
-	f = &Func{Nparams: 1, Flags: []Flag{AT_F}}
+	f = &Func{Nparams: 1, Flags: []Flag{atParam}}
 	a = ArgSpec{Unnamed: 2,
 		Names: []string{"c", "b", "a", "d"}, Spec: []byte{1, 2}} // b, a
 	th.stack = []Value{SuInt(11), SuInt(22), SuStr("bb"), SuStr("aa")}
@@ -97,7 +97,7 @@ func TestArgs(t *testing.T) {
 		fn:     &SuFunc{Func: Func{Strings: []string{"x", "_dyn"}}},
 		locals: []Value{SuInt(111), SuInt(123)},
 	})
-	f = &Func{Nparams: 1, Flags: []Flag{DYN_F}, Strings: []string{"dyn"}}
+	f = &Func{Nparams: 1, Flags: []Flag{dynParam}, Strings: []string{"dyn"}}
 	a = ArgSpec{}
 	th.stack = []Value{}
 	th.args(f, a)

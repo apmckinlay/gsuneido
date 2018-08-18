@@ -241,7 +241,7 @@ func (p *parser) newExpr() T {
 	return p.bld(it, term, args)
 }
 
-var int_max_str = strconv.Itoa(math.MaxInt32)
+var intMaxStr = strconv.Itoa(math.MaxInt32)
 
 func (p *parser) term(newTerm bool) T {
 	var preincdec Item
@@ -279,7 +279,7 @@ func (p *parser) term(newTerm bool) T {
 				p.next()
 				var expr2 T
 				if p.Token == R_BRACKET {
-					expr2 = p.bld(Item{Token: NUMBER, Text: int_max_str})
+					expr2 = p.bld(Item{Token: NUMBER, Text: intMaxStr})
 				} else {
 					expr2 = p.expr()
 				}
@@ -337,9 +337,8 @@ func (p *parser) arguments() T {
 	if p.matchIf(L_PAREN) {
 		if p.matchIf(AT) {
 			return p.atArgument()
-		} else {
-			args = p.argumentList(R_PAREN)
 		}
+		args = p.argumentList(R_PAREN)
 	}
 	if p.Token == NEWLINE &&
 		!p.expectingCompound && p.lxr.AheadSkip(0).Token == L_CURLY {

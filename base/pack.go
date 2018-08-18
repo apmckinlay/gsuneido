@@ -1,5 +1,6 @@
 package base
 
+// Packable is the interface to packable values
 type Packable interface {
 	// PackSize returns the size (in bytes) of the packed value
 	PackSize() int
@@ -31,8 +32,7 @@ func Pack(x Packable) []byte {
 
 /*
 Unpack returns the decoded value.
-
-NOTE: The correct buffer length is required.
+NOTE: The correct buf slice length is required.
 */
 func Unpack(buf []byte) Value {
 	if len(buf) == 0 {
@@ -95,4 +95,94 @@ func packUint32(n uint32, buf []byte) []byte {
 func unpackUint32(b []byte) uint32 {
 	n := uint32(b[0])<<24 | uint32(b[1])<<16 | uint32(b[2])<<8 | uint32(b[3])
 	return n
+}
+
+func PackSizeInt64(n int64) int {
+	if n == 0 {
+		return 1
+	}
+	if n < 0 {
+		n = -n
+	}
+	for n%10000 == 0 {
+		n /= 10000
+	}
+	if n < 10000 {
+		return 4
+	} else if n < e8 {
+		return 6
+	} else if n < e12 {
+		return 8
+	}
+	return 10
+}
+
+// PackInt64 packs an int64 in the same format as a Dnum
+func PackInt64(n int64, buf []byte) []byte {
+	buf = buf[:1]
+	xor := uint16(0)
+	if n < 0 {
+		buf[0] = packMinus
+		xor = 0xffff
+		n = -n
+	} else {
+		buf[0] = packPlus
+	}
+	if n == 0 {
+		return buf
+	}
+	e := 0
+	for n%10000 == 0 {
+		n /= 10000
+		e++
+	}
+	var x uint16
+	switch {
+	case n < 10000:
+		buf = buf[:4]
+		buf[1] = byte(e + 1 ^ 0x80) ^ byte(xor); // exponent
+		x = uint16(n) ^ xor
+		buf[2] = byte(x >> 8)
+		buf[3] = byte(x)
+	case n < 100000000:
+		buf = buf[:6]
+		buf[1] = byte(e + 2 ^ 0x80) ^ byte(xor); // exponent
+		x = uint16(n / 10000) ^ xor
+		buf[2] = byte(x >> 8)
+		buf[3] = byte(x)
+		x = uint16(n % 10000) ^ xor
+		buf[4] = byte(x >> 8)
+		buf[5] = byte(x)
+	case n < 1000000000000:
+		buf = buf[:8]
+		buf[1] = byte(e + 3 ^ 0x80) ^ byte(xor); // exponent
+		x = uint16(n / 100000000) ^ xor
+		buf[2] = byte(x >> 8)
+		buf[3] = byte(x)
+		n %= 100000000
+		x = uint16(n / 10000) ^ xor
+		buf[4] = byte(x >> 8)
+		buf[5] = byte(x)
+		x = uint16(n % 10000)
+		buf[6] = byte(x >> 8)
+		buf[7] = byte(x)
+	default:
+		buf = buf[:10]
+		buf[1] = byte(e + 4 ^ 0x80) ^ byte(xor); // exponent
+		x = uint16(n / 1000000000000) ^ xor
+		buf[2] = byte(x >> 8)
+		buf[3] = byte(x)
+		n %= 1000000000000
+		x = uint16(n / 100000000) ^ xor
+		buf[4] = byte(x >> 8)
+		buf[5] = byte(x)
+		n %= 100000000
+		x = uint16(n / 10000) ^ xor
+		buf[6] = byte(x >> 8)
+		buf[7] = byte(x)
+		x = uint16(n % 10000) ^ xor
+		buf[8] = byte(x >> 8)
+		buf[9] = byte(x)
+	}
+	return buf
 }

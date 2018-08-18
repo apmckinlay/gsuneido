@@ -1,5 +1,6 @@
 package base
 
+// MaxArgs is the maximum number of arguments allowed
 const MaxArgs = 200
 
 // SuFunc is a compiled Suneido function, method, or block
@@ -15,12 +16,14 @@ type SuFunc struct {
 
 var _ Callable = (*SuFunc)(nil) // verify SuFunc satisfies Callable
 
+// Call invokes the SuFunc
 func (f *SuFunc) Call(ct Context, self Value, args ...Value) Value {
-	return ct.Call(f, self)
+	return ct.Call(f, self, args)
 }
 
-var _ Value = (*SuFunc)(nil) // verify SuFunc satisfies Value
+var _ Value = (*SuFunc)(nil) // verify *SuFunc satisfies Value
 
-func (_ *SuFunc) TypeName() string {
+// TypeName returns the Suneido name for the type (Value interface)
+func (*SuFunc) TypeName() string {
 	return "Function"
 }

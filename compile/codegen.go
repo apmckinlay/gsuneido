@@ -107,19 +107,19 @@ func (cg *cgen) params(ast Ast) {
 
 func (cg *cgen) param(p string) (string, Flag) {
 	if p[0] == '@' {
-		return p[1:], AT_F
+		return p[1:], atParam
 	}
 	var flag Flag
 	if p[0] == '.' {
-		flag = DOT_F
+		flag = dotParam
 		p = p[1:]
 	}
 	if p[0] == '_' {
-		flag |= DYN_F
+		flag |= dynParam
 		p = p[1:]
 	}
-	if flag&DOT_F == DOT_F && str.Capitalized(p) {
-		flag |= PUB_F
+	if flag&dotParam == dotParam && str.Capitalized(p) {
+		flag |= pubParam
 		p = str.UnCapitalize(p)
 	}
 	return p, flag
@@ -386,7 +386,7 @@ func (cg *cgen) emitValue(val Value) {
 		cg.emit(op.ONE)
 	} else if val == SuStr("") {
 		cg.emit(op.EMPTYSTR)
-	} else if i, ok := Su2Int(val); ok {
+	} else if i, ok := SmiToInt(val); ok {
 		cg.emit(op.INT)
 		cg.emitInt(i)
 	} else {
@@ -423,7 +423,7 @@ func (cg *cgen) identifier(ast Ast) {
 	}
 }
 
-const MEM_REF = -1
+const memRef = -1
 
 func (cg *cgen) lvalue(ast Ast) int {
 	if ast.Token == IDENTIFIER && isLocal(ast.Text) {
@@ -431,18 +431,18 @@ func (cg *cgen) lvalue(ast Ast) int {
 	} else if ast.Token == DOT {
 		cg.expr(ast.first())
 		cg.emitValue(SuStr(ast.second().Text))
-		return MEM_REF
+		return memRef
 	} else if ast.Token == L_BRACKET {
 		cg.expr(ast.first())
 		cg.expr(ast.second())
-		return MEM_REF
+		return memRef
 	} else {
 		panic("invalid lvalue: " + ast.String())
 	}
 }
 
 func (cg *cgen) load(ref int) {
-	if ref == MEM_REF {
+	if ref == memRef {
 		cg.emit(op.GET)
 	} else {
 		if cg.names[ref][0] == '_' {
@@ -455,7 +455,7 @@ func (cg *cgen) load(ref int) {
 }
 
 func (cg *cgen) store(ref int) {
-	if ref == MEM_REF {
+	if ref == memRef {
 		cg.emit(op.PUT)
 	} else {
 		cg.emit(op.STORE)
@@ -464,13 +464,13 @@ func (cg *cgen) store(ref int) {
 }
 
 func (cg *cgen) dupLvalue(ref int) {
-	if ref == MEM_REF {
+	if ref == memRef {
 		cg.emit(op.DUP2)
 	}
 }
 
 func (cg *cgen) dupUnderLvalue(ref int) {
-	if ref == MEM_REF {
+	if ref == memRef {
 		cg.emit(op.DUPX2)
 	} else {
 		cg.emit(op.DUP)

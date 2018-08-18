@@ -8,8 +8,6 @@ import (
 	. "github.com/apmckinlay/gsuneido/util/hamcrest"
 )
 
-// TODO test comparison/ordering of packed values
-
 func TestPack(t *testing.T) {
 	cv := NewSuConcat().Add("foo").Add("bar")
 	values := []Packable{False, True, SuStr(""), SuStr("foo"), cv,
@@ -37,11 +35,10 @@ func TestPackInt32(t *testing.T) {
 
 func TestPackNum(t *testing.T) {
 	test := func(s string, b ...byte) {
+		t.Helper()
 		Assert(t).That(Pack(dv(s)), Equals(b))
-		v, err := NumFromString(s)
-		if err == nil {
-			Assert(t).That(Pack(v.(Packable)), Equals(b))
-		}
+		v := NumFromString(s)
+		Assert(t).That(Pack(v.(Packable)), Equals(b))
 	}
 	test("0", 3)
 	test("1", 3, 129, 0, 1)
@@ -55,6 +52,22 @@ func TestPackNum(t *testing.T) {
 }
 
 func dv(s string) SuDnum {
-	dn, _ := dnum.Parse(s)
-	return SuDnum{dn}
+	return SuDnum{dnum.FromStr(s)}
+}
+
+func TestPackInt64(t *testing.T) {
+	test := func(n int64, expected ...byte) {
+		buf := make([]byte, 0, PackSizeInt64(n))
+		buf = PackInt64(n, buf)
+		Assert(t).That(buf, Equals(expected))
+		num := UnpackNumber(rbuf{buf})
+		x := num.(*smi)
+		Assert(t).That(int64(x.ToInt()), Equals(n))
+	}
+	test(0, packPlus)
+	test(1, packPlus, 129, 0, 1)
+	test(10000, packPlus, 130, 0, 1)
+	test(10002, packPlus, 130, 0, 1, 0, 2)
+	test(-1, packMinus, 126, 255, 254)
+	test(-10002, packMinus, 125, 255, 254, 255, 253)
 }

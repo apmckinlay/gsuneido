@@ -17,7 +17,7 @@ func (b SuBool) ToInt() int {
 	if b == false {
 		return 0
 	}
-	panic("can't convert true to number")
+	panic("can't convert true to integer")
 }
 
 func (b SuBool) ToDnum() dnum.Dnum {
@@ -27,23 +27,22 @@ func (b SuBool) ToDnum() dnum.Dnum {
 	panic("can't convert true to number")
 }
 
-func (b SuBool) ToStr() string {
+func (b SuBool) String() string {
 	if b == true {
 		return "true"
-	} else {
-		return "false"
 	}
+	return "false"
 }
 
-func (b SuBool) String() string {
-	return b.ToStr()
+func (b SuBool) ToStr() string {
+	return b.String()
 }
 
-func (b SuBool) Get(key Value) Value {
+func (SuBool) Get(Value) Value {
 	panic("boolean does not support get")
 }
 
-func (b SuBool) Put(key Value, val Value) {
+func (SuBool) Put(Value, Value) {
 	panic("boolean does not support put")
 }
 
@@ -65,7 +64,7 @@ func (b SuBool) Equals(other interface{}) bool {
 	return false
 }
 
-func (b SuBool) PackSize() int {
+func (SuBool) PackSize() int {
 	return 1
 }
 
@@ -78,11 +77,11 @@ func (b SuBool) Pack(buf []byte) []byte {
 	return buf
 }
 
-func (_ SuBool) TypeName() string {
+func (SuBool) TypeName() string {
 	return "Boolean"
 }
 
-func (_ SuBool) Order() ord {
+func (SuBool) Order() ord {
 	return ordBool
 }
 
@@ -99,7 +98,6 @@ func (b SuBool) Cmp(other Value) int {
 func (b SuBool) Not() SuBool {
 	if b == True {
 		return False
-	} else {
-		return True
 	}
+	return True
 }

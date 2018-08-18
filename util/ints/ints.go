@@ -37,3 +37,11 @@ func Min(x int, y int) int {
 	}
 	return y
 }
+
+// Max returns the smaller of two int's
+func Max(x int, y int) int {
+	if x > y {
+		return x
+	}
+	return y
+}

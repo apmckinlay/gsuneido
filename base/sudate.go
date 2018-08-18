@@ -9,6 +9,7 @@ import (
 	"unicode"
 
 	"github.com/apmckinlay/gsuneido/util/dnum"
+	"github.com/apmckinlay/gsuneido/util/ints"
 	"github.com/apmckinlay/gsuneido/util/verify"
 )
 
@@ -148,12 +149,14 @@ func valid(yr int, mon int, day int, hr int, min int, sec int, ms int) bool {
 	return t.Year() == yr && int(t.Month()) == mon && t.Day() == day
 }
 
-// Packable
+// Packing
 
+// PackSize returns the packed size (Packable interface)
 func (d SuDate) PackSize() int {
 	return 9
 }
 
+// Pack packs into the supplied byte slice (Packable interface)
 func (d SuDate) Pack(buf []byte) []byte {
 	buf = append(buf, packDate)
 	buf = packUint32(d.date, buf)
@@ -161,13 +164,14 @@ func (d SuDate) Pack(buf []byte) []byte {
 	return buf
 }
 
+// UnpackDate unpacks a date from the supplied byte slice
 func UnpackDate(buf []byte) SuDate {
 	date := unpackUint32(buf)
 	time := unpackUint32(buf[4:])
 	return SuDate{date, time}
 }
 
-/* OffsetUTC returns the offset from local to UTC in minutes */
+// OffsetUTC returns the offset from local to UTC in minutes
 func OffsetUTC() int {
 	t := gotime.Now()
 	_, offset := t.Zone()
@@ -250,9 +254,8 @@ func julianDayNumber(year, month, day int) int64 {
 func (d SuDate) MinusMs(other SuDate) int64 {
 	if d.date == other.date {
 		return d.timeAsMs() - other.timeAsMs()
-	} else {
-		return d.unix() - other.unix()
 	}
+	return d.unix() - other.unix()
 }
 
 func (d SuDate) timeAsMs() int64 {
@@ -409,7 +412,7 @@ func ParseDate(s string, order string) SuDate {
 	second := NOTSET
 	millisecond := 0
 
-	date_patterns := []string{
+	datePatterns := []string{
 		"", // set to supplied order
 		"md",
 		"dm",
@@ -418,14 +421,14 @@ func ParseDate(s string, order string) SuDate {
 		"ymd",
 	}
 
-	syspat := getSyspat(order, date_patterns)
+	syspat := getSyspat(order, datePatterns)
 
 	// scan
 	const MAXTOKENS = 20
 	var typ [MAXTOKENS]minmax
 	var tokens [MAXTOKENS]int
 	ntokens := 0
-	got_time := false
+	gotTime := false
 	var prev byte
 	for si := 0; si < len(s); {
 		c := s[si]
@@ -510,9 +513,9 @@ func ParseDate(s string, order string) SuDate {
 						}
 					}
 				}
-			} else if prev == ':' || c == ':' || ampm_ahead(s, si) {
+			} else if prev == ':' || c == ':' || ampmAhead(s, si) {
 				// time
-				got_time = true
+				gotTime = true
 				if hour == NOTSET {
 					hour = n
 				} else if minute == NOTSET {
@@ -548,8 +551,8 @@ func ParseDate(s string, order string) SuDate {
 	// search for date match
 	pat := 0
 	p := ""
-	for ; pat < len(date_patterns); pat++ {
-		p = date_patterns[pat]
+	for ; pat < len(datePatterns); pat++ {
+		p = datePatterns[pat]
 		// try one pattern
 		var t int
 		for t = 0; t < len(p) && t < ntokens; t++ {
@@ -578,7 +581,7 @@ func ParseDate(s string, order string) SuDate {
 
 	now := Now()
 
-	if pat < len(date_patterns) {
+	if pat < len(datePatterns) {
 		// use match
 		for t := 0; t < len(p); t++ {
 			if p[t] == 'y' {
@@ -591,7 +594,7 @@ func ParseDate(s string, order string) SuDate {
 				panic("shouldn't reach here")
 			}
 		}
-	} else if got_time && ntokens == 0 {
+	} else if gotTime && ntokens == 0 {
 		year = now.Year()
 		month = now.Month()
 		day = now.Day()
@@ -600,8 +603,8 @@ func ParseDate(s string, order string) SuDate {
 	}
 
 	if year == NOTSET {
-		if month >= max(now.Month()-6, 1) &&
-			month <= min(now.Month()+5, 12) {
+		if month >= ints.Max(now.Month()-6, 1) &&
+			month <= ints.Min(now.Month()+5, 12) {
 			year = now.Year()
 		} else if now.Month() < 6 {
 			year = now.Year() - 1
@@ -621,22 +624,6 @@ func ParseDate(s string, order string) SuDate {
 	return NewDate(year, month, day, hour, minute, second, millisecond)
 }
 
-func min(x int, y int) int {
-	if x < y {
-		return x
-	} else {
-		return y
-	}
-}
-
-func max(x int, y int) int {
-	if x > y {
-		return x
-	} else {
-		return y
-	}
-}
-
 func nextWord(s string, si int) string {
 	dst := []byte{}
 	for ; si < len(s) && unicode.IsLetter(rune(s[si])); si++ {
@@ -651,12 +638,13 @@ func nextWord(s string, si int) string {
 
 func nextNumber(s string, si int) string {
 	i := si
-	for ; i < len(s) && unicode.IsDigit(rune(s[i])); i++ {
+	for i < len(s) && unicode.IsDigit(rune(s[i])) {
+		i++
 	}
 	return s[si:i]
 }
 
-func getSyspat(order string, date_patterns []string) []byte {
+func getSyspat(order string, datePatterns []string) []byte {
 	syspat := make([]byte, 3)
 	i := 0
 	oc := byte(0)
@@ -672,20 +660,20 @@ func getSyspat(order string, date_patterns []string) []byte {
 	if i != 3 {
 		panic("invalid date format: '" + order + "'")
 	}
-	date_patterns[0] = string(syspat)
+	datePatterns[0] = string(syspat)
 
 	// swap month-day patterns if system setting is day first
 	for i = 0; i < 3; i++ {
 		if syspat[i] == 'm' {
 			break
 		} else if syspat[i] == 'd' {
-			date_patterns[1], date_patterns[2] = date_patterns[2], date_patterns[1]
+			datePatterns[1], datePatterns[2] = datePatterns[2], datePatterns[1]
 		}
 	}
 	return syspat
 }
 
-func ampm_ahead(s string, i int) bool {
+func ampmAhead(s string, i int) bool {
 	s0 := get(s, i)
 	if s0 == ' ' {
 		i++
@@ -697,11 +685,10 @@ func ampm_ahead(s string, i int) bool {
 }
 
 func get(s string, i int) byte {
-	if i < len(s) {
-		return s[i]
-	} else {
+	if i >= len(s) {
 		return 0
 	}
+	return s[i]
 }
 
 type digits struct {
@@ -737,11 +724,11 @@ var (
 
 // Value interface
 
-func (d SuDate) Get(key Value) Value {
+func (d SuDate) Get(Value) Value {
 	panic("date does not support get")
 }
 
-func (d SuDate) Put(key Value, val Value) {
+func (d SuDate) Put(Value, Value) {
 	panic("date does not support put")
 }
 
@@ -757,11 +744,11 @@ func (d SuDate) ToStr() string {
 	panic("cannot convert date to string")
 }
 
-func (_ SuDate) TypeName() string {
+func (SuDate) TypeName() string {
 	return "Date"
 }
 
-func (_ SuDate) Order() ord {
+func (SuDate) Order() ord {
 	return ordDate
 }
 

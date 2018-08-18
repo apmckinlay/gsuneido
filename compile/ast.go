@@ -189,10 +189,9 @@ func (a *Ast) foldable() bool {
 			prev = cur
 		}
 		return false
-	} else {
-		cc := countConstant(a.Children)
-		return cc == len(a.Children) || cc >= 2
 	}
+	cc := countConstant(a.Children)
+	return cc == len(a.Children) || cc >= 2
 }
 
 func countConstant(children []Ast) int {
@@ -290,11 +289,7 @@ func (a *Ast) toVal() Value {
 	}
 	switch a.KeyTok() {
 	case NUMBER:
-		val, err := NumFromString(a.Text)
-		if err != nil {
-			panic("invalid number: " + a.Text)
-		}
-		return val
+		return NumFromString(a.Text)
 	case STRING:
 		return SuStr(a.Text)
 	case TRUE:

@@ -34,37 +34,35 @@ func Gte(x Value, y Value) Value {
 }
 
 func Add(x Value, y Value) Value {
-	if xi, xok := Su2Int(x); xok {
-		if yi, yok := Su2Int(y); yok {
+	if xi, xok := SmiToInt(x); xok {
+		if yi, yok := SmiToInt(y); yok {
 			return IntToValue(xi + yi)
 		}
 	}
-	return DnumToValue(dnum.Add(x.ToDnum(), y.ToDnum()))
+	return SuDnum{dnum.Add(x.ToDnum(), y.ToDnum())}
 }
 
 func Sub(x Value, y Value) Value {
-	if xi, xok := Su2Int(x); xok {
-		if yi, yok := Su2Int(y); yok {
+	if xi, xok := SmiToInt(x); xok {
+		if yi, yok := SmiToInt(y); yok {
 			return IntToValue(xi - yi)
 		}
 	}
-	return DnumToValue(dnum.Sub(x.ToDnum(), y.ToDnum()))
+	return SuDnum{dnum.Sub(x.ToDnum(), y.ToDnum())}
 }
 
 func Mul(x Value, y Value) Value {
-	if xi, xok := Su2Int(x); xok {
-		if yi, yok := Su2Int(y); yok {
+	if xi, xok := SmiToInt(x); xok {
+		if yi, yok := SmiToInt(y); yok {
 			return IntToValue(xi * yi)
 		}
 	}
-	return DnumToValue(dnum.Mul(x.ToDnum(), y.ToDnum()))
+	return SuDnum{dnum.Mul(x.ToDnum(), y.ToDnum())}
 }
 
 func Div(x Value, y Value) Value {
-	// TODO check if it's worth trying int division first
-	// i.e. if x and y are ints and x % y == 0, then return x / y
-	// could instrument existing suneido to see how common this is
-	return DnumToValue(dnum.Div(x.ToDnum(), y.ToDnum()))
+	// TODO if x and y are ints and x % y == 0, then return x / y
+	return SuDnum{dnum.Div(x.ToDnum(), y.ToDnum())}
 }
 
 func Mod(x Value, y Value) Value {
@@ -105,19 +103,19 @@ func Not(x Value) Value {
 }
 
 func Uplus(x Value) Value {
-	if _, ok := Su2Int(x); ok {
+	if _, ok := SmiToInt(x); ok {
 		return x
 	} else if _, ok := x.(SuDnum); ok {
 		return x
 	}
-	return DnumToValue(x.ToDnum())
+	panic("can't convert to number")
 }
 
 func Uminus(x Value) Value {
-	if xi, ok := Su2Int(x); ok {
+	if xi, ok := SmiToInt(x); ok {
 		return IntToValue(-xi)
 	}
-	return DnumToValue(x.ToDnum().Neg())
+	return SuDnum{x.ToDnum().Neg()}
 }
 
 // IntToValue returns an SuInt if it fits, else a SuDnum
@@ -125,7 +123,7 @@ func IntToValue(n int) Value {
 	if math.MinInt16 < n && n < math.MaxInt16 {
 		return SuInt(n)
 	}
-	return SuDnum{dnum.FromInt64(int64(n))}
+	return SuDnum{dnum.FromInt(int64(n))}
 }
 
 func Cat(x Value, y Value) Value {
@@ -139,15 +137,13 @@ func Cat(x Value, y Value) Value {
 		return xc.Add(y.ToStr())
 	} else if ycok {
 		return NewSuConcat().Add(x.ToStr()).AddSuConcat(yc)
-	} else {
-		xs := x.ToStr()
-		ys := y.ToStr()
-		if len(xs)+len(ys) < SMALL {
-			return SuStr(xs + ys)
-		} else {
-			return NewSuConcat().Add(xs).Add(ys)
-		}
 	}
+	xs := x.ToStr()
+	ys := y.ToStr()
+	if len(xs)+len(ys) < SMALL {
+		return SuStr(xs + ys)
+	}
+	return NewSuConcat().Add(xs).Add(ys)
 }
 
 func BitNot(x Value) Value {

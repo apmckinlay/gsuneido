@@ -25,7 +25,7 @@ var _ Value = (*SuObject)(nil)
 
 // Get returns the value associated with a key, or nil if not found
 func (ob *SuObject) Get(key Value) Value {
-	if i, ok := Su2Int(key); ok {
+	if i, ok := SmiToInt(key); ok {
 		if 0 <= i && i <= ob.ListSize() {
 			return ob.list[i]
 		}
@@ -53,7 +53,7 @@ func (ob *SuObject) Vsize() int {
 // Put adds or updates the given key and value
 // The value will be added to the list if the key is the "next"
 func (ob *SuObject) Put(key Value, val Value) {
-	if i, ok := Su2Int(key); ok {
+	if i, ok := SmiToInt(key); ok {
 		if i == ob.ListSize() {
 			ob.Add(val)
 			return
@@ -66,15 +66,15 @@ func (ob *SuObject) Put(key Value, val Value) {
 	ob.hash.Put(key, val)
 }
 
-func (ob *SuObject) ToInt() int {
+func (*SuObject) ToInt() int {
 	panic("cannot convert object to integer")
 }
 
-func (ob *SuObject) ToDnum() dnum.Dnum {
+func (*SuObject) ToDnum() dnum.Dnum {
 	panic("cannot convert object to number")
 }
 
-func (ob *SuObject) ToStr() string {
+func (*SuObject) ToStr() string {
 	panic("cannot convert object to string")
 }
 
@@ -85,9 +85,8 @@ func (ob *SuObject) ListSize() int {
 func (ob *SuObject) HashSize() int {
 	if ob.hash == nil {
 		return 0
-	} else {
-		return ob.hash.Size()
 	}
+	return ob.hash.Size()
 }
 
 // Size returns the number of values in the object
@@ -257,15 +256,15 @@ func equals3(x Value, y Value, inProgress pairs) bool {
 
 }
 
-func (_ SuObject) TypeName() string {
+func (SuObject) TypeName() string {
 	return "Object"
 }
 
-func (_ SuObject) Order() ord {
+func (SuObject) Order() ord {
 	return ordObject
 }
 
-func (d SuObject) Cmp(other Value) int {
+func (SuObject) Cmp(Value) int {
 	panic("SuObject cmp not implemented") // TODO
 }
 

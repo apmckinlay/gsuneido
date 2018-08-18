@@ -1,12 +1,13 @@
 package base
 
 import (
+	"encoding/binary"
 	"math"
 
 	"github.com/apmckinlay/gsuneido/util/dnum"
-	"github.com/apmckinlay/gsuneido/util/verify"
 )
 
+// SuDnum wraps a Dnum and implements Value and Packable
 type SuDnum struct {
 	dnum.Dnum
 	// use an anonymous member in a struct to include the methods from Dnum
@@ -14,219 +15,246 @@ type SuDnum struct {
 }
 
 var _ Value = SuDnum{}
+
 var _ Packable = SuDnum{}
 
+// Value interface --------------------------------------------------
+
+// ToInt converts a SuDnum to an integer (Value interface)
 func (dn SuDnum) ToInt() int {
-	n, _ := dn.Int32()
-	return int(n)
+	return dn.ToInt()
 }
 
+// ToDnum returns the wrapped Dnum (Value interface)
 func (dn SuDnum) ToDnum() dnum.Dnum {
 	return dn.Dnum
 }
 
+// ToStr converts the Dnum to a string (Value interface)
 func (dn SuDnum) ToStr() string {
 	return dn.Dnum.String()
 }
 
-func (dn SuDnum) Get(key Value) Value {
+// String returns a string representation of the Dnum (Value interface)
+func (dn SuDnum) String() string {
+	return dn.Dnum.String()
+}
+
+// Get is not applicable to SuDnum (Value interface)
+func (SuDnum) Get(Value) Value {
 	panic("number does not support get")
 }
 
-func (dn SuDnum) Put(key Value, val Value) {
+// Put is not applicable to SuDnum (Value interface)
+func (SuDnum) Put(Value, Value) {
 	panic("number does not support put")
 }
 
+// hash2 is used to hash nested values (Value interface)
 func (dn SuDnum) hash2() uint32 {
 	return dn.Hash()
 }
 
+// Equals returns true if other is an equal SuDnum or integer (Value interface)
 func (dn SuDnum) Equals(other interface{}) bool {
 	if d2, ok := other.(SuDnum); ok {
-		return 0 == dnum.Cmp(dn.Dnum, d2.Dnum)
-	} else if i, ok := Su2Int(other); ok {
-		return 0 == dnum.Cmp(dn.Dnum, dnum.FromInt64(int64(i)))
+		return dnum.Equal(dn.Dnum, d2.Dnum)
+	} else if i, ok := SmiToInt(other); ok {
+		return dnum.Equal(dn.Dnum, dnum.FromInt(int64(i)))
 	}
 	return false
 }
 
+// TypeName returns the name of this type (Value interface)
+func (SuDnum) TypeName() string {
+	return "Number"
+}
+
+// Order returns the ordering of SuDnum (Value interface)
+func (SuDnum) Order() ord {
+	return ordNum
+}
+
+// Cmp compares an SuDnum to another Value (Value interface)
+func (dn SuDnum) Cmp(other Value) int {
+	y, ok := other.(SuDnum)
+	if ok {
+		return dnum.Cmp(dn.Dnum, y.Dnum)
+	}
+	return dnum.Cmp(dn.Dnum, y.ToDnum())
+}
+
+// Packing (old format) ---------------------------------------------
+
+var pow10 = [...]uint64{1, 10, 100, 1000}
+
+// PackSize returns the packed size of an SuDnum
 func (dn SuDnum) PackSize() int {
-	return packSizeNum(dn)
-}
-
-func (dn SuDnum) Pack(buf []byte) []byte {
-	return packNum(dn, buf)
-}
-
-// packing - ugly because of compatibility with cSuneido
-
-type num interface {
-	Sign() int
-	Exp() int
-	Coef() uint64
-}
-
-func packSizeNum(n num) int {
-	coef := n.Coef()
-	if coef == 0 {
+	if dn.IsZero() {
 		return 1
 	}
-	exp := n.Exp()
-	exp, coef = adjustNum(exp, coef)
-	ps := packshorts(coef)
-	exp = exp/4 + ps
-	if exp >= math.MaxInt8 {
+	if dn.IsInf() {
 		return 2
 	}
-	return 2 /* tag and exponent */ + 2*ps
-}
-
-func adjustNum(exp int, coef uint64) (int, uint64) {
-	// 16 digits - maximum precision that cSuneido handles
-	const MAX_PREC = 9999999999999999
-	const MAX_PREC_DIV_10 = 999999999999999
-
-	// strip trailing zeroes
-	for (coef % 10) == 0 {
-		coef /= 10
-		exp++
-	}
-	// adjust exp to a multiple of 4 (to match cSuneido)
-	for (exp%4) != 0 && coef < MAX_PREC_DIV_10 {
-		coef *= 10
-		exp--
-	}
-	for (exp%4) != 0 || coef > MAX_PREC {
-		coef /= 10
-		exp++
-	}
-	return exp, coef
-}
-
-func packshorts(n uint64) int {
-	i := 0
-	for ; n != 0; i++ {
-		n /= 10000
-	}
-	verify.That(i <= 4) // cSuneido limit
-	return i
-}
-
-func packNum(n num, buf []byte) []byte {
-	sign := n.Sign()
-	if sign >= 0 {
-		buf = append(buf, packPlus)
+	e := int(dn.Exp())
+	n := dn.Coef()
+	var p int
+	if e > 0 {
+		p = 4 - (e % 4)
 	} else {
-		buf = append(buf, packMinus)
+		p = abs(e) % 4
 	}
-	coef := n.Coef()
-	if coef == 0 {
+	if p != 4 {
+		n /= pow10[p]
+	}
+	n %= 1000000000000
+	if n == 0 {
+		return 4
+	}
+	n %= 100000000
+	if n == 0 {
+		return 6
+	}
+	n %= 10000
+	if n == 0 {
+		return 8
+	}
+	return 10
+}
+
+func abs(n int) int {
+	if n < 0 {
+		return -n
+	}
+	return n
+}
+
+// Pack packs the SuDnum into buf (which must be large enough)
+func (dn SuDnum) Pack(buf []byte) []byte {
+	// for performance we avoid append
+	buf = buf[:1]
+	sign := dn.Sign()
+	if sign >= 0 {
+		buf[0] = packPlus
+	} else {
+		buf[0] = packMinus
+	}
+	if sign == 0 {
 		return buf
 	}
-	exp := n.Exp()
-	exp, coef = adjustNum(exp, coef)
-	exp = exp/4 + packshorts(coef)
-	if exp >= math.MaxInt8 {
+	buf = buf[0:2]
+	if dn.IsInf() {
 		if sign < 0 {
-			return append(buf, 0)
+			buf[1] = 0
 		} else {
-			return append(buf, 255)
+			buf[1] = 255
 		}
+		return buf
 	}
-	buf = append(buf, scale(sign, exp))
-	return packCoef(sign, coef, buf)
+	return packDnum(sign < 0, dn.Coef(), dn.Exp(), buf)
 }
 
-func scale(sign int, exp int) byte {
-	eb := byte(exp) ^ 0x80
-	if sign < 0 {
-		eb = (byte)((^eb) & 0xff)
+func packDnum(neg bool, coef uint64, exp int, buf []byte) []byte {
+	var p int
+	if exp > 0 {
+		p = 4 - (exp % 4)
+	} else {
+		p = abs(exp) % 4
+	}
+	if p != 4 {
+		coef /= pow10[p] // may lose up to 3 digits of precision
+		exp += p
+	}
+	exp /= 4
+	buf[1] = scale(exp, neg)
+	buf = packCoef(buf, coef, neg)
+	return buf
+}
+
+func scale(exp int, neg bool) byte {
+	eb := (byte(exp) ^ 0x80) & 0xff
+	if neg {
+		eb = (^eb) & 0xff
 	}
 	return eb
 }
 
-func packCoef(sign int, coef uint64, buf []byte) []byte {
-	var sh [4]uint16
-	i := 0
-	for ; coef != 0; i++ {
-		sh[i] = digit(sign, coef)
-		coef /= 10000
+const e12 = 1000000000000
+const e8 = 100000000
+const e4 = 10000
+
+func packCoef(buf []byte, coef uint64, neg bool) []byte {
+	flip := uint16(0)
+	if neg {
+		flip = 0xffff
 	}
-	for i--; i >= 0; i-- {
-		buf = append(buf, byte(sh[i]>>8), byte(sh[i]))
+	buf = buf[:4]
+	binary.BigEndian.PutUint16(buf[2:], uint16(coef/e12)^flip)
+	coef %= e12
+	if coef == 0 {
+		return buf
 	}
+	buf = buf[:6]
+	binary.BigEndian.PutUint16(buf[4:], uint16(coef/e8)^flip)
+	coef %= e8
+	if coef == 0 {
+		return buf
+	}
+	buf = buf[:6]
+	binary.BigEndian.PutUint16(buf[6:], uint16(coef/e4)^flip)
+	coef %= e4
+	if coef == 0 {
+		return buf
+	}
+	buf = buf[:8]
+	binary.BigEndian.PutUint16(buf[8:], uint16(coef)^flip)
 	return buf
 }
 
-func digit(sign int, coef uint64) uint16 {
-	n := uint16(coef % 10000)
-	if sign < 0 {
-		n = ^n
-	}
-	return n
-}
+const maxShiftable = math.MaxUint16 / 10000
 
+// UnpackNumber unpacks an SuInt or SuDnum
 func UnpackNumber(buf rbuf) Value {
-	neg := buf.get() == packMinus
+	sign := int8(+1)
+	if buf.get() == packMinus {
+		sign = -1
+	}
 	if buf.remaining() == 0 {
 		return SuInt(0)
 	}
-	e := buf.get()
-	if e == 0 {
-		return SuDnum{dnum.MinusInf}
+	exp := int8(buf.get())
+	if exp == 0 {
+		return SuDnum{dnum.NegInf}
 	}
-	if e == 255 {
+	if exp == -1 {
 		return SuDnum{dnum.Inf}
 	}
-	if neg {
-		e = ^e
+	if sign < 0 {
+		exp = ^exp
 	}
-	exp := int(e ^ 0x80)
-	exp = (exp - buf.remaining()/2) * 4
-	coef := unpackCoef(buf, neg)
-	if coef == 0 {
-		return SuInt(0)
+	exp = exp ^ -128
+	exp = exp - int8(buf.remaining()/2)
+
+	coef := unpackLongPart(buf, sign < 0)
+
+	if exp == 1 && coef <= maxShiftable {
+		coef *= 10000
+		exp--
 	}
-	if 10 >= exp && exp > 0 {
-		for ; exp > 0 && coef < math.MaxUint64/10; exp-- {
-			coef *= 10
-		}
+	if exp == 0 && coef <= math.MaxUint16 {
+		return SuInt(int(sign) * int(coef))
 	}
-	if exp == 0 && 0 <= coef && coef <= math.MaxInt16 {
-		if neg {
-			return SuInt(-int(coef))
-		} else {
-			return SuInt(int(coef))
-		}
-	} else {
-		return SuDnum{dnum.NewDnum(neg, coef, int8(exp))}
-	}
+	return SuDnum{dnum.New(sign, coef, int(exp)*4 + 16)}
 }
 
-func unpackCoef(buf rbuf, neg bool) uint64 {
-	var n uint64
+func unpackLongPart(buf rbuf, minus bool) uint64 {
+	flip := uint16(0)
+	if minus {
+		flip = 0xffff
+	}
+	n := uint64(0)
 	for buf.remaining() > 0 {
-		x := buf.getUint16()
-		if neg {
-			x = ^x
-		}
-		n = n*10000 + uint64(x)
+		n = n*10000 + uint64(buf.getUint16()^flip)
 	}
 	return n
-}
-
-func (_ SuDnum) TypeName() string {
-	return "Number"
-}
-
-func (_ SuDnum) Order() ord {
-	return ordNum
-}
-
-func (x SuDnum) Cmp(other Value) int {
-	if y, ok := other.(SuDnum); ok {
-		return dnum.Cmp(x.Dnum, y.Dnum)
-	} else {
-		return dnum.Cmp(x.Dnum, y.ToDnum())
-	}
 }

@@ -75,11 +75,7 @@ func (p *parser) string() Value {
 func (p *parser) number() Value {
 	s := p.Text
 	p.match(NUMBER)
-	val, err := NumFromString(s)
-	if err != nil {
-		panic(p.error("invalid number", s))
-	}
-	return val
+	return NumFromString(s)
 }
 
 func (p *parser) date() Value {

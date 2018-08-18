@@ -6,6 +6,7 @@ package regex
 import (
 	"strconv"
 	"strings"
+
 	"github.com/apmckinlay/gsuneido/util/cmatch"
 	"github.com/apmckinlay/gsuneido/util/ints"
 	"github.com/apmckinlay/gsuneido/util/ptest"
@@ -573,10 +574,10 @@ type Element interface {
 type elemDefaults struct {
 }
 
-func (_ elemDefaults) omatch(s string, si int, _ *Result) int {
+func (elemDefaults) omatch(s string, si int, _ *Result) int {
 	panic("should not be called")
 }
-func (_ elemDefaults) nextPossible(s string, si int, sn int) int {
+func (elemDefaults) nextPossible(s string, si int, sn int) int {
 	return si + 1
 }
 
@@ -870,7 +871,7 @@ type Any struct {
 	CharClass
 }
 
-func (_ Any) String() string {
+func (Any) String() string {
 	return "."
 }
 
