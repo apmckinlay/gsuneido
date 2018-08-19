@@ -22,7 +22,7 @@ var _ Packable = SuDnum{}
 
 // ToInt converts a SuDnum to an integer (Value interface)
 func (dn SuDnum) ToInt() int {
-	return dn.ToInt()
+	return dn.Dnum.ToInt()
 }
 
 // ToDnum returns the wrapped Dnum (Value interface)

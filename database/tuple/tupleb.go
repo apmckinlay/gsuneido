@@ -37,8 +37,8 @@ func (t TupleB) GetRaw(i int) []byte {
 	return t[t.offset(i):t.offset(i-1)]
 }
 
-func (x TupleB) Compare(y Tuple) int {
-	return compare(x, y)
+func (t TupleB) Compare(t2 Tuple) int {
+	return compare(t, t2)
 }
 
 func (t TupleB) mode() byte {

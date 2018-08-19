@@ -32,8 +32,8 @@ func (t TupleM) GetRaw(i int) []byte {
 	return t.buf[off : off+t.fieldLength(i)]
 }
 
-func (x TupleM) Compare(y Tuple) int {
-	return compare(x, y)
+func (t TupleM) Compare(t2 Tuple) int {
+	return compare(t, t2)
 }
 
 func (t TupleM) fieldLength(i int) int {
@@ -55,6 +55,7 @@ func (t *TupleM) AddRaw(raw []byte) {
 // Add appends a value to the tuple
 func (t *TupleM) Add(val Packable) {
 	t.offs = append(t.offs, len(t.buf))
+	t.buf = Ensure(t.buf, val.PackSize())
 	t.buf = val.Pack(t.buf)
 }
 

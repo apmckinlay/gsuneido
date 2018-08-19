@@ -107,19 +107,19 @@ func (cg *cgen) params(ast Ast) {
 
 func (cg *cgen) param(p string) (string, Flag) {
 	if p[0] == '@' {
-		return p[1:], atParam
+		return p[1:], AtParam
 	}
 	var flag Flag
 	if p[0] == '.' {
-		flag = dotParam
+		flag = DotParam
 		p = p[1:]
 	}
 	if p[0] == '_' {
-		flag |= dynParam
+		flag |= DynParam
 		p = p[1:]
 	}
-	if flag&dotParam == dotParam && str.Capitalized(p) {
-		flag |= pubParam
+	if flag&DotParam == DotParam && str.Capitalized(p) {
+		flag |= PubParam
 		p = str.UnCapitalize(p)
 	}
 	return p, flag
@@ -334,7 +334,7 @@ func (cg *cgen) expr(ast Ast) {
 		} else if ast.value != nil {
 			cg.emitValue(ast.value)
 		} else {
-			panic("bad expression: " + ast.String())
+			panic("unhandled expression: " + ast.String())
 		}
 	}
 }

@@ -56,12 +56,12 @@ func RunFile(filename string) bool {
 func (p *parser) run() bool {
 	ok := true
 	for p.Token != c.EOF {
-		ok = p.run1() && ok
+		ok = p.runFixture() && ok
 	}
 	return ok
 }
 
-func (p *parser) run1() bool {
+func (p *parser) runFixture() bool {
 	p.match(c.AT, false) // '@'
 	name := p.Text
 	p.match(c.IDENTIFIER, true)
@@ -92,9 +92,8 @@ func (p *parser) run1() bool {
 		}
 		if test == nil {
 			// ignore
-		} else if !test(row) {
-			//			ok = false
-			fmt.Println("\tFAILED: ", row)
+		} else if !runCase(test, row) {
+			// ok = false
 		} else {
 			n++
 		}
@@ -104,6 +103,21 @@ func (p *parser) run1() bool {
 		fmt.Printf("\t%d passed\n", n)
 	}
 	return ok
+}
+
+func runCase(test testfn, row []string) (ok bool) {
+	defer func() {
+		if err := recover(); err != nil {
+			fmt.Println("\tFAILED: ", row)
+			fmt.Println("\tthrew: ", err)
+			ok = false
+		}
+	}()
+	if !test(row) {
+		fmt.Println("\tFAILED: ", row)
+		ok = false
+	}
+	return
 }
 
 func (p *parser) match(expected c.Token, skip bool) {

@@ -105,8 +105,8 @@ func Test_getExp(t *testing.T) {
 func Test_FromToInt(t *testing.T) {
 	assert := Assert(t)
 	test := func(x int64) {
-		assert.That(FromInt(x).ToInt(), Equals(x))
-		assert.That(FromInt(-x).ToInt(), Equals(-x))
+		assert.That(FromInt(x).ToInt64(), Equals(x))
+		assert.That(FromInt(-x).ToInt64(), Equals(-x))
 	}
 	test(0)
 	test(1)

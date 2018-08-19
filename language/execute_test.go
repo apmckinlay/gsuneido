@@ -54,8 +54,8 @@ func pt_execute(args []string) bool {
 		}
 	}
 	if !ok {
-		fmt.Println("got: " + result.String())
-		fmt.Println("expected: " + expected)
+		fmt.Println("\tgot: " + result.String())
+		fmt.Println("\texpected: " + expected)
 	}
 	return ok
 }

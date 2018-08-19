@@ -140,27 +140,27 @@ func PackInt64(n int64, buf []byte) []byte {
 	switch {
 	case n < 10000:
 		buf = buf[:4]
-		buf[1] = byte(e + 1 ^ 0x80) ^ byte(xor); // exponent
+		buf[1] = byte(e+1^0x80) ^ byte(xor) // exponent
 		x = uint16(n) ^ xor
 		buf[2] = byte(x >> 8)
 		buf[3] = byte(x)
 	case n < 100000000:
 		buf = buf[:6]
-		buf[1] = byte(e + 2 ^ 0x80) ^ byte(xor); // exponent
-		x = uint16(n / 10000) ^ xor
+		buf[1] = byte(e+2^0x80) ^ byte(xor) // exponent
+		x = uint16(n/10000) ^ xor
 		buf[2] = byte(x >> 8)
 		buf[3] = byte(x)
-		x = uint16(n % 10000) ^ xor
+		x = uint16(n%10000) ^ xor
 		buf[4] = byte(x >> 8)
 		buf[5] = byte(x)
 	case n < 1000000000000:
 		buf = buf[:8]
-		buf[1] = byte(e + 3 ^ 0x80) ^ byte(xor); // exponent
-		x = uint16(n / 100000000) ^ xor
+		buf[1] = byte(e+3^0x80) ^ byte(xor) // exponent
+		x = uint16(n/100000000) ^ xor
 		buf[2] = byte(x >> 8)
 		buf[3] = byte(x)
 		n %= 100000000
-		x = uint16(n / 10000) ^ xor
+		x = uint16(n/10000) ^ xor
 		buf[4] = byte(x >> 8)
 		buf[5] = byte(x)
 		x = uint16(n % 10000)
@@ -168,21 +168,31 @@ func PackInt64(n int64, buf []byte) []byte {
 		buf[7] = byte(x)
 	default:
 		buf = buf[:10]
-		buf[1] = byte(e + 4 ^ 0x80) ^ byte(xor); // exponent
-		x = uint16(n / 1000000000000) ^ xor
+		buf[1] = byte(e+4^0x80) ^ byte(xor) // exponent
+		x = uint16(n/1000000000000) ^ xor
 		buf[2] = byte(x >> 8)
 		buf[3] = byte(x)
 		n %= 1000000000000
-		x = uint16(n / 100000000) ^ xor
+		x = uint16(n/100000000) ^ xor
 		buf[4] = byte(x >> 8)
 		buf[5] = byte(x)
 		n %= 100000000
-		x = uint16(n / 10000) ^ xor
+		x = uint16(n/10000) ^ xor
 		buf[6] = byte(x >> 8)
 		buf[7] = byte(x)
-		x = uint16(n % 10000) ^ xor
+		x = uint16(n%10000) ^ xor
 		buf[8] = byte(x >> 8)
 		buf[9] = byte(x)
 	}
 	return buf
+}
+
+// Ensure ensures the slice has sufficient room
+func Ensure(buf []byte, n int) []byte {
+	if cap(buf)-len(buf) >= n {
+		return buf
+	}
+	newbuf := make([]byte, len(buf), 2*(len(buf)+n)) // double
+	copy(newbuf, buf)
+	return newbuf
 }

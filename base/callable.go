@@ -12,7 +12,7 @@ import (
 // can't use actual Thread because that causes circular dependency
 type Context interface {
 	// Call interprets a compiled Suneido function
-	Call(fn *SuFunc, self Value, args []Value) Value
+	Call(fn *SuFunc, self Value) Value
 }
 
 // Callable is how things are called
@@ -48,10 +48,10 @@ type Func struct {
 type Flag byte
 
 const (
-	atParam Flag = 1 << iota
-	dynParam
-	dotParam
-	pubParam
+	AtParam Flag = 1 << iota
+	DynParam
+	DotParam
+	PubParam
 )
 
 func (f *Func) Params() *Func {
@@ -93,16 +93,16 @@ func (f *Func) String() string {
 }
 
 func flagsToName(p string, flags Flag) string {
-	if flags == atParam {
+	if flags == AtParam {
 		p = "@" + p
 	}
-	if flags&pubParam == pubParam {
+	if flags&PubParam == PubParam {
 		p = str.Capitalize(p)
 	}
-	if flags&dynParam == dynParam {
+	if flags&DynParam == DynParam {
 		p = "_" + p
 	}
-	if flags&dotParam == dotParam {
+	if flags&DotParam == DotParam {
 		p = "." + p
 	}
 	return p

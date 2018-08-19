@@ -32,12 +32,12 @@ func (t *Thread) massage(fn *Func, as ArgSpec, args []Value) {
 	if unnamed == fn.Nparams && len(as.Spec) == 0 {
 		return // simple fast path
 	}
-	if unnamed < EACH && fn.Flags[0] != atParam && unnamed > fn.Nparams {
+	if unnamed < EACH && fn.Flags[0] != AtParam && unnamed > fn.Nparams {
 		panic("too many arguments")
 	}
 	// as.Unnamed < fn.Nparams
 
-	at := fn.Nparams == 1 && fn.Flags[0] == atParam
+	at := fn.Nparams == 1 && fn.Flags[0] == AtParam
 
 	// remove after debugged
 	verify.That(!at || fn.Nparams == 1)
@@ -102,7 +102,7 @@ func (t *Thread) massage(fn *Func, as ArgSpec, args []Value) {
 
 	// fill in dynamic
 	for i := 0; i < fn.Nparams; i++ {
-		if args[i] == nil && fn.Flags[i]&dynParam != 0 {
+		if args[i] == nil && fn.Flags[i]&DynParam != 0 {
 			if x := t.dyn("_" + fn.Strings[i]); x != nil {
 				args[i] = x
 			}
