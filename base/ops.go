@@ -61,7 +61,13 @@ func Mul(x Value, y Value) Value {
 }
 
 func Div(x Value, y Value) Value {
-	// TODO if x and y are ints and x % y == 0, then return x / y
+	if xi, xok := SmiToInt(x); xok {
+		if yi, yok := SmiToInt(y); yok {
+			if xi % yi == 0 {
+				return IntToValue(xi / yi)
+			}
+		}
+	}
 	return SuDnum{dnum.Div(x.ToDnum(), y.ToDnum())}
 }
 
