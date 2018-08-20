@@ -13,7 +13,7 @@ type smi byte
 
 const smiRange = 1 << 16
 
-var space [smiRange]smi
+var space [smiRange]smi // uninitialized BSS, no actual memory used
 var base = uintptr(unsafe.Pointer(&space[0]))
 
 // SuInt converts an int to *smi which implements Value
@@ -78,24 +78,11 @@ func (si *smi) Equals(other interface{}) bool {
 }
 
 func (si *smi) PackSize() int {
-	n := si.ToInt()
-	if n == 0 {
-		return 1
-	}
-	if n < 0 {
-		n = -n
-	}
-	for n%10000 == 0 {
-		n /= 10000
-	}
-	if n < 10000 {
-		return 4
-	}
-	return 6
+	return PackSizeInt64(int64(si.ToInt()))
 }
 
 func (si *smi) Pack(buf []byte) []byte {
-	return PackInt64(int64(si.ToInt()), buf) // TODO specialized implementation
+	return PackInt64(int64(si.ToInt()), buf)
 }
 
 func (*smi) TypeName() string {
