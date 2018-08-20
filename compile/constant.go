@@ -1,7 +1,6 @@
 package compile
 
-// TODO
-// - class
+// TODO class
 
 import (
 	. "github.com/apmckinlay/gsuneido/base"

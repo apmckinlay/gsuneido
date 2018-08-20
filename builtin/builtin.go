@@ -12,13 +12,12 @@ type Builtin struct {
 }
 
 var _ Callable = (*Builtin)(nil)
+var _ Value = (*Builtin)(nil) // verify Func satisfies Value
 
 func (f *Builtin) Call(ct Context, self Value, args ...Value) Value {
 	return f.fn(ct, self, args...)
 }
 
 func (*Builtin) TypeName() string {
-	return "BuiltinFunction" //TODO
+	return "BuiltinFunction"
 }
-
-var _ Value = (*Builtin)(nil) // verify Func satisfies Value
