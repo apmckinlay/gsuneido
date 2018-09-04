@@ -66,7 +66,7 @@ func (p *parser) runFixture() bool {
 	p.match(c.AT, false) // '@'
 	name := p.Text
 	p.match(c.IDENTIFIER, true)
-	fmt.Println(name + ":", p.comment)
+	fmt.Println(name+":", p.comment)
 	test, present := testmap[name]
 	if !present {
 		fmt.Println("\tMISSING TEST FIXTURE")
@@ -91,12 +91,12 @@ func (p *parser) runFixture() bool {
 				break
 			}
 		}
-		if test == nil {
-			// ignore
-		} else if !runCase(test, row) {
-			// ok = false
-		} else {
-			n++
+		if test != nil {
+			if !runCase(test, row) {
+				// ok = false
+			} else {
+				n++
+			}
 		}
 		p.next(true)
 	}

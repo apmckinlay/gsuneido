@@ -114,7 +114,7 @@ func Uplus(x Value) Value {
 	} else if _, ok := x.(SuDnum); ok {
 		return x
 	}
-	return SuDnum{x.ToDnum()} // false or throw
+	return SuDnum{x.ToDnum()} // "" or false => 0, else throw
 }
 
 func Uminus(x Value) Value {
@@ -169,6 +169,9 @@ func Match(x Value, y regex.Pattern) SuBool {
 	return SuBool(y.Matches(x.ToStr()))
 }
 
+// Index is basically the same as value.ToInt
+// except it doesn't convert "" and false to 0
+// and it has a different error message
 func Index(v Value) int {
 	if n, ok := SmiToInt(v); ok {
 		return n
