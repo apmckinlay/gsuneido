@@ -113,6 +113,7 @@ func runCase(test testfn, row []string) (ok bool) {
 			ok = false
 		}
 	}()
+	ok = true
 	if !test(row) {
 		fmt.Println("\tFAILED: ", row)
 		ok = false

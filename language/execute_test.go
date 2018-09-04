@@ -25,7 +25,6 @@ func TestPtest(t *testing.T) {
 func pt_execute(args []string) bool {
 	//fmt.Println(args)
 	src := "function () {\n" + args[0] + "\n}"
-	fn := compile.Constant(src).(*SuFunc)
 	th := interp.NewThread()
 	expected := "**notfalse**"
 	if len(args) > 1 {
@@ -36,6 +35,7 @@ func pt_execute(args []string) bool {
 	if expected == "throws" {
 		expected = "throws " + args[2]
 		e := hamcrest.Catch(func() {
+			fn := compile.Constant(src).(*SuFunc)
 			result = th.Call(fn, nil)
 		})
 		if e == nil {
@@ -45,6 +45,7 @@ func pt_execute(args []string) bool {
 			ok = strings.Contains(e.(string), args[2])
 		}
 	} else {
+		fn := compile.Constant(src).(*SuFunc)
 		result = th.Call(fn, nil)
 		if expected == "**notfalse**" {
 			ok = result != False

@@ -114,7 +114,7 @@ func Uplus(x Value) Value {
 	} else if _, ok := x.(SuDnum); ok {
 		return x
 	}
-	panic("can't convert to number")
+	return SuDnum{x.ToDnum()} // false or throw
 }
 
 func Uminus(x Value) Value {
