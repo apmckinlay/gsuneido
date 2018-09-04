@@ -60,6 +60,14 @@ func (*smi) Put(Value, Value) {
 	panic("number does not support put")
 }
 
+func (*smi) RangeTo(int, int) Value {
+	panic("number does not support range")
+}
+
+func (*smi) RangeLen(int, int) Value {
+	panic("number does not support range")
+}
+
 func (si *smi) Hash() uint32 {
 	return uint32(si.ToInt())
 }

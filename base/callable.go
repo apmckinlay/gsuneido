@@ -116,6 +116,14 @@ func (f *Func) Put(Value, Value) {
 	panic("function does not support put")
 }
 
+func (Func) RangeTo(int, int) Value {
+	panic("function does not support range")
+}
+
+func (Func) RangeLen(int, int) Value {
+	panic("function does not support range")
+}
+
 func (f *Func) Hash() uint32 {
 	panic("function hash not implemented")
 }

@@ -91,6 +91,16 @@ func (SuConcat) Put(Value, Value) {
 	panic("strings do not support put")
 }
 
+func (c SuConcat) RangeTo(i int, j int) Value {
+	// TODO prep indexes
+	return SuStr(c.ToStr()[i:j])
+}
+
+func (c SuConcat) RangeLen(i int, n int) Value {
+	// TODO prep indexes
+	return SuStr(c.ToStr()[i : i+n])
+}
+
 // Hash returns a hash value for an SuConcat (Value interface)
 func (c SuConcat) Hash() uint32 {
 	return hash.HashBytes(c.b.a[:c.n])

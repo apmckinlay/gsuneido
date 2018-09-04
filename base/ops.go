@@ -63,7 +63,7 @@ func Mul(x Value, y Value) Value {
 func Div(x Value, y Value) Value {
 	if xi, xok := SmiToInt(x); xok {
 		if yi, yok := SmiToInt(y); yok {
-			if xi % yi == 0 {
+			if xi%yi == 0 {
 				return IntToValue(xi / yi)
 			}
 		}
@@ -167,4 +167,16 @@ func Cmp(x Value, y Value) int {
 
 func Match(x Value, y regex.Pattern) SuBool {
 	return SuBool(y.Matches(x.ToStr()))
+}
+
+func Index(v Value) int {
+	if n, ok := SmiToInt(v); ok {
+		return n
+	}
+	if dn, ok := v.(*SuDnum); ok {
+		if n, ok := dn.Dnum.ToInt(); ok {
+			return n
+		}
+	}
+	panic("indexes must be integers")
 }

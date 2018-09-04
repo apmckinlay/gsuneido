@@ -43,6 +43,16 @@ func (SuStr) Put(Value, Value) {
 	panic("strings do not support put")
 }
 
+func (ss SuStr) RangeTo(i int, j int) Value {
+	// TODO prep indexes
+	return SuStr(string(ss)[i:j])
+}
+
+func (ss SuStr) RangeLen(i int, n int) Value {
+	// TODO prep indexes
+	return SuStr(string(ss)[i : i+n])
+}
+
 func (ss SuStr) Hash() uint32 {
 	return hash.HashString(string(ss))
 }

@@ -19,7 +19,7 @@ var asm = []string{
 	"load", "store", "dyload", "get", "put", "global",
 	"true", "false", "zero", "one", "emptystr",
 	"or", "and", "bool", "qmark", "in", "jump", "tjump", "fjump",
-	"eqjump", "nejump", "throw", "call",
+	"eqjump", "nejump", "throw", "call", "rangeto", "rangelen",
 }
 
 func init() {

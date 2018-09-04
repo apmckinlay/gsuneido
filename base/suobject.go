@@ -66,6 +66,22 @@ func (ob *SuObject) Put(key Value, val Value) {
 	ob.hash.Put(key, val)
 }
 
+func (ob *SuObject) RangeTo(i int, j int) Value {
+	// TODO prep indexes
+	return ob.rangeTo(i, j)
+}
+
+func (ob *SuObject) RangeLen(i int, n int) Value {
+	// TODO prep indexes
+	return ob.rangeTo(i, i+n)
+}
+
+func (ob *SuObject) rangeTo(i int, j int) *SuObject {
+	list := make([]Value, j-i)
+	copy(list, ob.list[i:j])
+	return &SuObject{list: list}
+}
+
 func (*SuObject) ToInt() int {
 	panic("cannot convert object to integer")
 }

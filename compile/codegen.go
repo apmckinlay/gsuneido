@@ -320,8 +320,20 @@ func (cg *cgen) expr(ast Ast) {
 		cg.emit(op.GET)
 	case L_BRACKET: // a[b]
 		cg.expr(ast.first())
-		cg.expr(ast.second())
-		cg.emit(op.GET)
+		sub := ast.second()
+		switch sub.Token {
+		case RANGETO:
+			cg.expr(sub.first())
+			cg.expr(sub.second())
+			cg.emit(op.RANGETO)
+		case RANGELEN:
+			cg.expr(sub.first())
+			cg.expr(sub.second())
+			cg.emit(op.RANGELEN)
+		default:
+			cg.expr(ast.second())
+			cg.emit(op.GET)
+		}
 	case AND, OR:
 		cg.andorExpr(ast)
 	case Q_MARK:

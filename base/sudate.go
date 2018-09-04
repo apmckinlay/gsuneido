@@ -724,23 +724,31 @@ var (
 
 // Value interface
 
-func (d SuDate) Get(Value) Value {
+func (SuDate) Get(Value) Value {
 	panic("date does not support get")
 }
 
-func (d SuDate) Put(Value, Value) {
+func (SuDate) Put(Value, Value) {
 	panic("date does not support put")
 }
 
-func (d SuDate) ToInt() int {
+func (SuDate) RangeTo(int, int) Value {
+	panic("date does not support range")
+}
+
+func (SuDate) RangeLen(int, int) Value {
+	panic("date does not support range")
+}
+
+func (SuDate) ToInt() int {
 	panic("cannot convert date to integer")
 }
 
-func (d SuDate) ToDnum() dnum.Dnum {
+func (SuDate) ToDnum() dnum.Dnum {
 	panic("cannot convert date to number")
 }
 
-func (d SuDate) ToStr() string {
+func (SuDate) ToStr() string {
 	panic("cannot convert date to string")
 }
 

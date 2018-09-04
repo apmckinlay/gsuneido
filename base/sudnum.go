@@ -22,7 +22,11 @@ var _ Packable = SuDnum{}
 
 // ToInt converts a SuDnum to an integer (Value interface)
 func (dn SuDnum) ToInt() int {
-	return dn.Dnum.ToInt()
+	n,ok := dn.Dnum.ToInt()
+	if !ok {
+		panic("can't convert number to integer " + dn.String())
+	}
+	return n
 }
 
 // ToDnum returns the wrapped Dnum (Value interface)
@@ -48,6 +52,14 @@ func (SuDnum) Get(Value) Value {
 // Put is not applicable to SuDnum (Value interface)
 func (SuDnum) Put(Value, Value) {
 	panic("number does not support put")
+}
+
+func (SuDnum) RangeTo(int, int) Value {
+	panic("number does not support range")
+}
+
+func (SuDnum) RangeLen(int, int) Value {
+	panic("number does not support range")
 }
 
 // hash2 is used to hash nested values (Value interface)

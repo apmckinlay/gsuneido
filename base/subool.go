@@ -46,6 +46,14 @@ func (SuBool) Put(Value, Value) {
 	panic("boolean does not support put")
 }
 
+func (SuBool) RangeTo(int, int) Value {
+	panic("boolean does not support range")
+}
+
+func (SuBool) RangeLen(int, int) Value {
+	panic("boolean does not support range")
+}
+
 func (b SuBool) Hash() uint32 {
 	if b == false {
 		return 0x11111111

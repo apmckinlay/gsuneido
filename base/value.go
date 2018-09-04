@@ -22,6 +22,9 @@ type Value interface {
 
 	Put(key Value, val Value)
 
+	RangeTo(i int, j int) Value
+	RangeLen(i int, n int) Value
+
 	Equals(other interface{}) bool
 
 	Hash() uint32
@@ -56,15 +59,4 @@ func NumFromString(s string) Value {
 		return SuInt(int(n))
 	}
 	return SuDnum{dnum.FromStr(s)}
-}
-
-// Index converts a value to an integer or else panics if not convertible
-func Index(v Value) int {
-	if i, ok := SmiToInt(v); ok {
-		return i
-	}
-	if dn, ok := v.(SuDnum); ok {
-		return dn.ToInt()
-	}
-	panic("indexes must be integers")
 }

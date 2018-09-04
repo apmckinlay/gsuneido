@@ -54,4 +54,6 @@ const (
 	NEJUMP
 	THROW
 	CALL
+	RANGETO
+	RANGELEN
 )

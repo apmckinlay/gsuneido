@@ -395,37 +395,37 @@ func (dn Dnum) ToFloat() float64 {
 }
 
 // ToInt converts a Dnum to an int64 or panics if not convertable
-func (dn Dnum) ToInt64() int64 {
+func (dn Dnum) ToInt64() (int64, bool) {
 	if dn.sign == 0 {
-		return 0
+		return 0, true
 	}
 	if dn.sign != signNegInf && dn.sign != signPosInf {
 		if 0 < dn.exp && dn.exp < digitsMax &&
 			(dn.coef%pow10[digitsMax-dn.exp]) == 0 { // usual case
-			return int64(dn.sign) * int64(dn.coef/pow10[digitsMax-dn.exp])
+			return int64(dn.sign) * int64(dn.coef/pow10[digitsMax-dn.exp]), true
 		}
 		if dn.exp == digitsMax {
-			return int64(dn.sign) * int64(dn.coef)
+			return int64(dn.sign) * int64(dn.coef), true
 		}
 		if dn.exp == digitsMax+1 {
-			return int64(dn.sign) * (int64(dn.coef) * 10)
+			return int64(dn.sign) * (int64(dn.coef) * 10), true
 		}
 		if dn.exp == digitsMax+2 {
-			return int64(dn.sign) * (int64(dn.coef) * 100)
+			return int64(dn.sign) * (int64(dn.coef) * 100), true
 		}
 		if dn.exp == digitsMax+3 && dn.coef < math.MaxInt64/1000 {
-			return int64(dn.sign) * (int64(dn.coef) * 1000)
+			return int64(dn.sign) * (int64(dn.coef) * 1000), true
 		}
 	}
-	panic("can't convert number to integer " + dn.String())
+	return 0, false
 }
 
-func (dn Dnum) ToInt() int {
-	n := dn.ToInt64()
-	if int64(int(n)) != n {
-		panic("can't convert number to integer " + dn.String())
+func (dn Dnum) ToInt() (int, bool) {
+	n, ok := dn.ToInt64()
+	if !ok || int64(int(n)) != n {
+		return 0, false
 	}
-	return int(n)
+	return int(n), true
 }
 
 // Sign returns -1 for negative, 0 for zero, and +1 for positive

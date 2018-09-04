@@ -84,6 +84,16 @@ func (t *Thread) Run() Value {
 			ob := t.Pop()
 			ob.Put(m, val)
 			t.Push(val)
+		case RANGETO:
+			j := Index(t.Pop())
+			i := Index(t.Pop())
+			ob := t.Pop()
+			t.Push(ob.RangeTo(i, j))
+		case RANGELEN:
+			n := Index(t.Pop())
+			i := Index(t.Pop())
+			ob := t.Pop()
+			t.Push(ob.RangeLen(i, n))
 		case IS:
 			t.binop(Is)
 		case ISNT:
