@@ -15,7 +15,7 @@ func (ss SuStr) ToInt() int {
 	if string(ss) == "" {
 		return 0
 	}
-	panic("can't convert String to number")
+	panic("can't convert String to integer")
 }
 
 func (ss SuStr) ToDnum() dnum.Dnum {

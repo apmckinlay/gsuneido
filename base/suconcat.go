@@ -1,8 +1,6 @@
 package base
 
 import (
-	"strconv"
-
 	"github.com/apmckinlay/gsuneido/util/dnum"
 	"github.com/apmckinlay/gsuneido/util/hash"
 )
@@ -61,13 +59,18 @@ func (c SuConcat) AddSuConcat(cv2 SuConcat) SuConcat {
 
 // ToInt converts an SuConcat to an integer (Value interface)
 func (c SuConcat) ToInt() int {
-	i, _ := strconv.ParseInt(c.ToStr(), 0, 32)
-	return int(i)
+	if c.n == 0 {
+		return 0
+	}
+	panic("can't convert String to integer")
 }
 
 // ToDnum converts an SuConcat to a Dnum (Value interface)
 func (c SuConcat) ToDnum() dnum.Dnum {
-	return dnum.FromStr(c.ToStr())
+	if c.n == 0 {
+		return dnum.Zero
+	}
+	panic("can't convert String to number")
 }
 
 // ToStr converts an SuConcat to a string (Value interface)
