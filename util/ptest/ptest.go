@@ -19,6 +19,7 @@ import (
 type parser struct {
 	lxr *c.Lexer
 	c.Item
+	comment string
 }
 
 var tdir string
@@ -65,7 +66,7 @@ func (p *parser) runFixture() bool {
 	p.match(c.AT, false) // '@'
 	name := p.Text
 	p.match(c.IDENTIFIER, true)
-	fmt.Println(name + ":")
+	fmt.Println(name + ":", p.comment)
 	test, present := testmap[name]
 	if !present {
 		fmt.Println("\tMISSING TEST FIXTURE")
@@ -129,6 +130,8 @@ func (p *parser) match(expected c.Token, skip bool) {
 }
 
 func (p *parser) next(skip bool) {
+	p.comment = ""
+	nl := false
 	for {
 		p.Item = p.lxr.Next()
 		switch p.Token {
@@ -136,7 +139,14 @@ func (p *parser) next(skip bool) {
 			if !skip {
 				return
 			}
-		case c.WHITESPACE, c.COMMENT:
+			nl = true
+		case c.WHITESPACE:
+			continue
+		case c.COMMENT:
+			// capture trailing comment on same line
+			if !nl {
+				p.comment = p.Item.Text
+			}
 			continue
 		default:
 			return
