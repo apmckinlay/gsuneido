@@ -183,3 +183,39 @@ func Index(v Value) int {
 	}
 	panic("indexes must be integers")
 }
+
+func prepFrom(from int, size int) int {
+	if from < 0 {
+		from += size
+		if from < 0 {
+			from = 0
+		}
+	}
+	if from > size {
+		from = size
+	}
+	return from
+}
+
+func prepTo(from int, to int, size int) int {
+	if to < 0 {
+		to += size
+	}
+	if to < from {
+		to = from
+	}
+	if to > size {
+		to = size
+	}
+	return to
+}
+
+func prepLen(len int, size int) int {
+	if len < 0 {
+		len = 0
+	}
+	if len > size {
+		len = size
+	}
+	return len
+}

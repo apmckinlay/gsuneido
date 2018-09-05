@@ -1,6 +1,7 @@
 package language
 
 import (
+	"strconv"
 	"fmt"
 	"strings"
 	"testing"
@@ -15,9 +16,11 @@ import (
 
 var _ = global.Add("Suneido", new(SuObject))
 var _ = ptest.Add("execute", pt_execute)
+var _ = ptest.Add("lang_rangeto", pt_lang_rangeto)
+var _ = ptest.Add("lang_rangelen", pt_lang_rangelen)
 
 func TestPtest(t *testing.T) {
-	if !ptest.RunFile("execute.test") {
+	if !ptest.RunFile("execute.test") || !ptest.RunFile("lang.test") {
 		t.Fail()
 	}
 }
@@ -59,4 +62,53 @@ func pt_execute(args []string) bool {
 		fmt.Println("\texpected: " + expected)
 	}
 	return ok
+}
+
+func pt_lang_rangeto(args []string) bool {
+	s := args[0]
+	from,_ := strconv.Atoi(args[1])
+	to,_ := strconv.Atoi(args[2])
+	expected := SuStr(args[3])
+	actual := SuStr(s).RangeTo(from, to)
+	if ! actual.Equals(expected) {
+		fmt.Println("\tgot:", actual)
+		fmt.Println("\texpected:", expected)
+		return false
+	}
+	return true
+}
+
+func pt_lang_rangelen(args []string) bool {
+	s := args[0]
+	from,_ := strconv.Atoi(args[1])
+	n := 9999
+	if len(args) == 4 {
+		n,_ = strconv.Atoi(args[2])
+	}
+	expected := args[len(args) - 1]
+	actual := SuStr(s).RangeLen(from, n)
+	if ! actual.Equals(SuStr(expected)) {
+		fmt.Println("\tgot:", actual)
+		fmt.Println("\texpected:", expected)
+		return false
+	}
+
+	list := strToList(s)
+	expectedList := strToList(expected)
+	actualList := list.RangeLen(from, n)
+	if ! actualList.Equals(expectedList) {
+		fmt.Println("\tgot:", actualList)
+		fmt.Println("\texpected:", expectedList)
+		return false
+	}
+
+	return true
+}
+
+func strToList(s string) *SuObject {
+	ob := SuObject{}
+	for _,c := range s {
+		ob.Add(SuStr(string(c)))
+	}
+	return &ob
 }

@@ -26,7 +26,7 @@ var _ Value = (*SuObject)(nil)
 // Get returns the value associated with a key, or nil if not found
 func (ob *SuObject) Get(key Value) Value {
 	if i, ok := SmiToInt(key); ok {
-		if 0 <= i && i <= ob.ListSize() {
+		if 0 <= i && i < ob.ListSize() {
 			return ob.list[i]
 		}
 	}
@@ -66,14 +66,18 @@ func (ob *SuObject) Put(key Value, val Value) {
 	ob.hash.Put(key, val)
 }
 
-func (ob *SuObject) RangeTo(i int, j int) Value {
-	// TODO prep indexes
-	return ob.rangeTo(i, j)
+func (ob *SuObject) RangeTo(from int, to int) Value {
+	size := ob.Size()
+	from = prepFrom(from, size)
+	to = prepTo(from, to, size)
+	return ob.rangeTo(from, to)
 }
 
-func (ob *SuObject) RangeLen(i int, n int) Value {
-	// TODO prep indexes
-	return ob.rangeTo(i, i+n)
+func (ob *SuObject) RangeLen(from int, n int) Value {
+	size := ob.Size()
+	from = prepFrom(from, size)
+	n = prepLen(n, size-from)
+	return ob.rangeTo(from, from+n)
 }
 
 func (ob *SuObject) rangeTo(i int, j int) *SuObject {

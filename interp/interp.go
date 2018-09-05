@@ -77,7 +77,11 @@ func (t *Thread) Run() Value {
 		case GET:
 			m := t.Pop()
 			ob := t.Pop()
-			t.Push(ob.Get(m))
+			val := ob.Get(m)
+			if val == nil {
+				panic("uninitialized member: " + m.String())
+			}
+			t.Push(val)
 		case PUT:
 			val := t.Pop()
 			m := t.Pop()

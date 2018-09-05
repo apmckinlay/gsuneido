@@ -8,18 +8,18 @@ import (
 // SuStr is a string Value
 type SuStr string
 
-var _ Value = SuStr("")
+var SuEmptyStr Value = SuStr("")
 var _ Packable = SuStr("")
 
 func (ss SuStr) ToInt() int {
-	if string(ss) == "" {
+	if ss.IsEmpty() {
 		return 0
 	}
 	panic("can't convert String to integer")
 }
 
 func (ss SuStr) ToDnum() dnum.Dnum {
-	if string(ss) == "" {
+	if ss.IsEmpty() {
 		return dnum.Zero
 	}
 	panic("can't convert String to number")
@@ -36,21 +36,33 @@ func (ss SuStr) String() string {
 }
 
 func (ss SuStr) Get(key Value) Value {
-	return SuStr(string(ss)[Index(key)])
+	i := Index(key)
+	n := len(ss)
+	if i < -n || n <= i {
+		return SuEmptyStr
+	}
+	if i < 0 {
+		i += n
+	}
+	return SuStr(ss[i])
 }
 
 func (SuStr) Put(Value, Value) {
 	panic("strings do not support put")
 }
 
-func (ss SuStr) RangeTo(i int, j int) Value {
-	// TODO prep indexes
-	return SuStr(string(ss)[i:j])
+func (ss SuStr) RangeTo(from int, to int) Value {
+	size := len(ss)
+	from = prepFrom(from, size)
+	to = prepTo(from, to, size)
+	return SuStr(string(ss)[from:to])
 }
 
-func (ss SuStr) RangeLen(i int, n int) Value {
-	// TODO prep indexes
-	return SuStr(string(ss)[i : i+n])
+func (ss SuStr) RangeLen(from int, n int) Value {
+	size := len(ss)
+	from = prepFrom(from, size)
+	n = prepLen(n, size-from)
+	return SuStr(string(ss)[from : from+n])
 }
 
 func (ss SuStr) Hash() uint32 {
@@ -77,14 +89,14 @@ func (ss SuStr) Equals(other interface{}) bool {
 }
 
 func (ss SuStr) PackSize() int {
-	if len(ss) == 0 {
+	if ss.IsEmpty() {
 		return 0
 	}
 	return 1 + len(ss)
 }
 
 func (ss SuStr) Pack(buf []byte) []byte {
-	if len(ss) == 0 {
+	if ss.IsEmpty() {
 		return buf
 	}
 	buf = append(buf, packString)
@@ -116,4 +128,8 @@ func (ss SuStr) Cmp(other Value) int {
 	default:
 		return 0
 	}
+}
+
+func (ss SuStr) IsEmpty() bool {
+	return len(ss) == 0
 }
