@@ -1,8 +1,12 @@
 package base
 
 import (
+	"bytes"
+	"strings"
+
 	"github.com/apmckinlay/gsuneido/util/dnum"
 	"github.com/apmckinlay/gsuneido/util/hash"
+	"github.com/apmckinlay/gsuneido/util/ints"
 )
 
 // SuConcat is a Value used to optimize string concatenation
@@ -116,16 +120,13 @@ func (c SuConcat) hash2() uint32 {
 
 // Equals returns true if other is an equal SuConcat or SuStr (Value interface)
 func (c SuConcat) Equals(other interface{}) bool {
-	if c2, ok := other.(SuConcat); ok {
-		return c == c2 // FIXME: slices aren't comparable
+	// check string first assuming more common than concat
+	if s2, ok := other.(SuStr); ok {
+		// according to benchmark, this doesn't allocate
+		return c.n == len(s2) && c.ToStr() == string(s2)
 	}
-	if s2, ok := other.(SuStr); ok && c.n == len(s2) {
-		for i := 0; i < c.n; i++ {
-			if c.b.a[i] != string(s2)[i] {
-				return false
-			}
-			return true
-		}
+	if c2, ok := other.(SuConcat); ok {
+		return c.n == c2.n && bytes.Equal(c.b.a[:c.n], c2.b.a[:c.n])
 	}
 	return false
 }
@@ -140,19 +141,12 @@ func (SuConcat) Order() ord {
 	return ordStr
 }
 
-// Cmp compares an SuDnum to another Value (Value interface)
-func (c SuConcat) Cmp(other Value) int {
-	// COULD optimize this to not convert Concat to string
-	s1 := c.ToStr()
-	s2 := other.ToStr()
-	switch {
-	case s1 < s2:
-		return -1
-	case s1 > s2:
-		return +1
-	default:
-		return 0
+// Compare compares an SuDnum to another Value (Value interface)
+func (c SuConcat) Compare(other Value) int {
+	if cmp := ints.Compare(c.Order(), other.Order()); cmp != 0 {
+		return cmp
 	}
+	return strings.Compare(c.ToStr(), other.ToStr())
 }
 
 // Packable interface -----------------------------------------------

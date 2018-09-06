@@ -760,7 +760,10 @@ func (SuDate) Order() ord {
 	return ordDate
 }
 
-func (d SuDate) Cmp(other Value) int {
+func (d SuDate) Compare(other Value) int {
+	if cmp := ints.Compare(d.Order(), other.Order()); cmp != 0 {
+		return cmp
+	}
 	d2 := other.(SuDate)
 	if d.date < d2.date {
 		return -1

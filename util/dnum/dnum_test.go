@@ -105,10 +105,10 @@ func Test_getExp(t *testing.T) {
 func Test_FromToInt(t *testing.T) {
 	assert := Assert(t)
 	test := func(x int64) {
-		n,ok := FromInt(x).ToInt64()
+		n, ok := FromInt(x).ToInt64()
 		assert.True(ok)
 		assert.That(n, Equals(x))
-		n,ok = FromInt(-x).ToInt64()
+		n, ok = FromInt(-x).ToInt64()
 		assert.True(ok)
 		assert.That(n, Equals(-x))
 	}
@@ -157,17 +157,17 @@ func Test_Neg(t *testing.T) {
 	Neg("inf", "-inf")
 }
 
-func Test_Cmp(t *testing.T) {
+func Test_Compare(t *testing.T) {
 	assert := Assert(t)
 	data := []string{
 		"-inf", "-1e9", "-123", "-1e-9", "0", "1e-9", "123", "1e9", "inf"}
 	for i, xs := range data {
 		x := FromStr(xs)
-		assert.That(Cmp(x, x), Equals(0).Comment(fmt.Sprint(x, " >< ", x)))
+		assert.That(Compare(x, x), Equals(0).Comment(fmt.Sprint(x, " >< ", x)))
 		for _, ys := range data[i+1:] {
 			y := FromStr(ys)
-			assert.That(Cmp(x, y), Equals(-1).Comment(fmt.Sprint(x, " >< ", y)))
-			assert.That(Cmp(y, x), Equals(1).Comment(fmt.Sprint(y, " >< ", x)))
+			assert.That(Compare(x, y), Equals(-1).Comment(fmt.Sprint(x, " >< ", y)))
+			assert.That(Compare(y, x), Equals(1).Comment(fmt.Sprint(y, " >< ", x)))
 		}
 	}
 }
@@ -331,7 +331,7 @@ var nums []Dnum
 func init() {
 	var a [1001]Dnum
 	for i := 0; i < len(a); i++ {
-		a[i] = New(signPos, uint64(rand.Intn(1000000)), rand.Intn(9) - 5)
+		a[i] = New(signPos, uint64(rand.Intn(1000000)), rand.Intn(9)-5)
 	}
 	nums = a[:]
 }
@@ -379,15 +379,15 @@ func ptDiv(args []string) bool {
 
 var _ = ptest.Add("dnum_div", ptDiv)
 
-func ptCmp(args []string) bool {
+func ptCompare(args []string) bool {
 	for i, xs := range args {
 		x := FromStr(xs)
-		if Cmp(x, x) != 0 {
+		if Compare(x, x) != 0 {
 			return false
 		}
 		for _, ys := range args[i+1:] {
 			y := FromStr(ys)
-			if Cmp(x, y) != -1 || Cmp(y, x) != +1 {
+			if Compare(x, y) != -1 || Compare(y, x) != +1 {
 				return false
 			}
 		}
@@ -395,7 +395,7 @@ func ptCmp(args []string) bool {
 	return true
 }
 
-var _ = ptest.Add("dnum_cmp", ptCmp)
+var _ = ptest.Add("dnum_cmp", ptCompare)
 
 func TestPtest(t *testing.T) {
 	if !ptest.RunFile("dnum.test") {

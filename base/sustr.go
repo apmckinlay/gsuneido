@@ -1,8 +1,11 @@
 package base
 
 import (
+	"strings"
+
 	"github.com/apmckinlay/gsuneido/util/dnum"
 	"github.com/apmckinlay/gsuneido/util/hash"
+	"github.com/apmckinlay/gsuneido/util/ints"
 )
 
 // SuStr is a string Value
@@ -77,13 +80,9 @@ func (ss SuStr) Equals(other interface{}) bool {
 	if s2, ok := other.(SuStr); ok {
 		return ss == s2
 	}
-	if cv, ok := other.(SuConcat); ok && cv.n == len(ss) {
-		for i := 0; i < cv.n; i++ {
-			if cv.b.a[i] != string(ss)[i] {
-				return false
-			}
-			return true
-		}
+	if cv, ok := other.(SuConcat); ok {
+		// according to benchmark, this doesn't allocate
+		return cv.n == len(ss) && string(ss) == cv.ToStr()
 	}
 	return false
 }
@@ -116,18 +115,11 @@ func (SuStr) Order() ord {
 	return ordStr
 }
 
-func (ss SuStr) Cmp(other Value) int {
-	// COULD optimize this to not convert Concat to string
-	s1 := ss.String()
-	s2 := other.String()
-	switch {
-	case s1 < s2:
-		return -1
-	case s1 > s2:
-		return +1
-	default:
-		return 0
+func (ss SuStr) Compare(other Value) int {
+	if cmp := ints.Compare(ss.Order(), other.Order()); cmp != 0 {
+		return cmp
 	}
+	return strings.Compare(ss.ToStr(), other.ToStr())
 }
 
 func (ss SuStr) IsEmpty() bool {

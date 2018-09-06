@@ -37,11 +37,11 @@ type Value interface {
 
 	Order() ord
 
-	// Cmp returns -1 for <, 0 for ==, +1 for >
-	Cmp(other Value) int // ops Cmp ensures other has same ordering
+	// Compare returns -1 for less, 0 for equal, +1 for greater
+	Compare(other Value) int
 }
 
-type ord int
+type ord = int
 
 const (
 	ordBool ord = iota

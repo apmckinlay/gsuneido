@@ -463,8 +463,8 @@ func Equal(x, y Dnum) bool {
 	return x.sign == y.sign && x.exp == y.exp && x.coef == y.coef
 }
 
-// Cmp compares two Dnum's returning -1 for <, 0 for ==, +1 for >
-func Cmp(x, y Dnum) int {
+// Compare compares two Dnum's returning -1 for <, 0 for ==, +1 for >
+func Compare(x, y Dnum) int {
 	switch {
 	case x.sign < y.sign:
 		return -1

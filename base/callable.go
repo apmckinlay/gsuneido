@@ -143,6 +143,6 @@ func (*Func) Order() ord {
 	return ordOther
 }
 
-func (f *Func) Cmp(Value) int {
+func (f *Func) Compare(Value) int {
 	panic("function compare not implemented")
 }

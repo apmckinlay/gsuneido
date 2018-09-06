@@ -3,8 +3,6 @@ package base
 import (
 	"math"
 
-	"github.com/apmckinlay/gsuneido/util/ints"
-
 	"github.com/apmckinlay/gsuneido/util/dnum"
 	"github.com/apmckinlay/gsuneido/util/regex"
 )
@@ -18,19 +16,19 @@ func Isnt(x Value, y Value) Value {
 }
 
 func Lt(x Value, y Value) Value {
-	return SuBool(x.Cmp(y) < 0)
+	return SuBool(x.Compare(y) < 0)
 }
 
 func Lte(x Value, y Value) Value {
-	return SuBool(x.Cmp(y) <= 0)
+	return SuBool(x.Compare(y) <= 0)
 }
 
 func Gt(x Value, y Value) Value {
-	return SuBool(x.Cmp(y) > 0)
+	return SuBool(x.Compare(y) > 0)
 }
 
 func Gte(x Value, y Value) Value {
-	return SuBool(x.Cmp(y) >= 0)
+	return SuBool(x.Compare(y) >= 0)
 }
 
 func Add(x Value, y Value) Value {
@@ -154,15 +152,6 @@ func Cat(x Value, y Value) Value {
 
 func BitNot(x Value) Value {
 	return IntToValue(^x.ToInt())
-}
-
-func Cmp(x Value, y Value) int {
-	xo := x.Order()
-	yo := y.Order()
-	if xo != yo {
-		return ints.Compare(int(xo), int(yo))
-	}
-	return x.Cmp(y)
 }
 
 func Match(x Value, y regex.Pattern) SuBool {

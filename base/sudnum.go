@@ -5,6 +5,7 @@ import (
 	"math"
 
 	"github.com/apmckinlay/gsuneido/util/dnum"
+	"github.com/apmckinlay/gsuneido/util/ints"
 )
 
 // SuDnum wraps a Dnum and implements Value and Packable
@@ -22,7 +23,7 @@ var _ Packable = SuDnum{}
 
 // ToInt converts a SuDnum to an integer (Value interface)
 func (dn SuDnum) ToInt() int {
-	n,ok := dn.Dnum.ToInt()
+	n, ok := dn.Dnum.ToInt()
 	if !ok {
 		panic("can't convert number to integer " + dn.String())
 	}
@@ -87,13 +88,15 @@ func (SuDnum) Order() ord {
 	return ordNum
 }
 
-// Cmp compares an SuDnum to another Value (Value interface)
-func (dn SuDnum) Cmp(other Value) int {
-	y, ok := other.(SuDnum)
-	if ok {
-		return dnum.Cmp(dn.Dnum, y.Dnum)
+// Compare compares an SuDnum to another Value (Value interface)
+func (dn SuDnum) Compare(other Value) int {
+	if cmp := ints.Compare(dn.Order(), other.Order()); cmp != 0 {
+		return cmp
 	}
-	return dnum.Cmp(dn.Dnum, y.ToDnum())
+	if y, ok := other.(SuDnum); ok {
+		return dnum.Compare(dn.Dnum, y.Dnum)
+	}
+	return dnum.Compare(dn.Dnum, other.ToDnum())
 }
 
 // Packing (old format) ---------------------------------------------
@@ -256,7 +259,7 @@ func UnpackNumber(buf rbuf) Value {
 	if exp == 0 && coef <= math.MaxUint16 {
 		return SuInt(int(sign) * int(coef))
 	}
-	return SuDnum{dnum.New(sign, coef, int(exp)*4 + 16)}
+	return SuDnum{dnum.New(sign, coef, int(exp)*4+16)}
 }
 
 func unpackLongPart(buf rbuf, minus bool) uint64 {

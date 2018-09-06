@@ -93,7 +93,7 @@ func (p *parser) runFixture() bool {
 		}
 		if test != nil {
 			if !runCase(test, row) {
-				// ok = false
+				ok = false
 			} else {
 				n++
 			}

@@ -6,6 +6,7 @@ import (
 
 	"github.com/apmckinlay/gsuneido/util/dnum"
 	"github.com/apmckinlay/gsuneido/util/hmap"
+	"github.com/apmckinlay/gsuneido/util/ints"
 )
 
 // SuObject is a Suneido object
@@ -273,7 +274,6 @@ func equals3(x Value, y Value, inProgress pairs) bool {
 		return false
 	}
 	return equals2(xo, yo, inProgress)
-
 }
 
 func (SuObject) TypeName() string {
@@ -284,8 +284,36 @@ func (SuObject) Order() ord {
 	return ordObject
 }
 
-func (SuObject) Cmp(Value) int {
-	panic("SuObject cmp not implemented") // TODO
+func (ob *SuObject) Compare(other Value) int {
+	if cmp := ints.Compare(ob.Order(), other.Order()); cmp != 0 {
+		return cmp
+	}
+	return cmp2(ob, other.(*SuObject), newpairs())
+}
+
+func cmp2(x *SuObject, y *SuObject, inProgress pairs) int {
+	if x == y { // pointer comparison
+		return 0
+	}
+	if inProgress.contains(x, y) {
+		return 0
+	}
+	inProgress.push(x, y) // no need to pop due to pass by value
+	for i := 0; i < x.Size() && i < y.Size(); i++ {
+		if cmp := cmp3(x.Vget(i), y.Vget(i), inProgress); cmp != 0 {
+			return cmp
+		}
+	}
+	return ints.Compare(x.Size(), y.Size())
+}
+
+func cmp3(x Value, y Value, inProgress pairs) int {
+	xo, xok := x.(*SuObject)
+	yo, yok := y.(*SuObject)
+	if !xok || !yok {
+		return x.Compare(y)
+	}
+	return cmp2(xo, yo, inProgress)
 }
 
 // Slice returns a copy of the object, with the first n list elements removed

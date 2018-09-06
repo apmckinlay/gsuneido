@@ -1,6 +1,9 @@
 package base
 
-import "github.com/apmckinlay/gsuneido/util/dnum"
+import (
+	"github.com/apmckinlay/gsuneido/util/dnum"
+	"github.com/apmckinlay/gsuneido/util/ints"
+)
 
 // SuBool is a boolean Value
 type SuBool bool
@@ -93,7 +96,10 @@ func (SuBool) Order() ord {
 	return ordBool
 }
 
-func (b SuBool) Cmp(other Value) int {
+func (b SuBool) Compare(other Value) int {
+	if cmp := ints.Compare(b.Order(), other.Order()); cmp != 0 {
+		return cmp
+	}
 	if b == other {
 		return 0
 	} else if b {

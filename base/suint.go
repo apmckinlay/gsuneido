@@ -80,7 +80,7 @@ func (si *smi) Equals(other interface{}) bool {
 	if i2, ok := other.(*smi); ok {
 		return si == i2
 	} else if dn, ok := other.(SuDnum); ok {
-		return 0 == dnum.Cmp(si.ToDnum(), dn.Dnum)
+		return 0 == dnum.Compare(si.ToDnum(), dn.Dnum)
 	}
 	return false
 }
@@ -101,9 +101,12 @@ func (*smi) Order() ord {
 	return ordNum
 }
 
-func (si *smi) Cmp(other Value) int {
-	if y, ok := other.(*smi); ok {
-		return ints.Compare(int(si.ToInt()), int(y.ToInt()))
+func (si *smi) Compare(other Value) int {
+	if cmp := ints.Compare(si.Order(), other.Order()); cmp != 0 {
+		return cmp
 	}
-	return dnum.Cmp(si.ToDnum(), other.ToDnum())
+	if y, ok := other.(*smi); ok {
+		return ints.Compare(si.ToInt(), y.ToInt())
+	}
+	return dnum.Compare(si.ToDnum(), other.ToDnum())
 }
