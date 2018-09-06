@@ -76,7 +76,7 @@ func (ss SuStr) hash2() uint32 {
 	return ss.Hash()
 }
 
-func (ss SuStr) Equals(other interface{}) bool {
+func (ss SuStr) Equal(other interface{}) bool {
 	if s2, ok := other.(SuStr); ok {
 		return ss == s2
 	}

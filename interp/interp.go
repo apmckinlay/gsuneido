@@ -187,7 +187,7 @@ func (t *Thread) Run() Value {
 		case IN:
 			y := t.Pop()
 			x := t.Pop()
-			if x.Equals(y) {
+			if x.Equal(y) {
 				t.Push(True)
 				jump(code, &fr.ip)
 			} else {
@@ -197,7 +197,7 @@ func (t *Thread) Run() Value {
 		case EQJUMP:
 			y := t.Pop()
 			x := t.Pop()
-			if x.Equals(y) {
+			if x.Equal(y) {
 				jump(code, &fr.ip)
 			} else {
 				fr.ip += 2
@@ -206,7 +206,7 @@ func (t *Thread) Run() Value {
 		case NEJUMP:
 			y := t.Pop()
 			x := t.Pop()
-			if !x.Equals(y) {
+			if !x.Equal(y) {
 				t.Push(x)
 				jump(code, &fr.ip)
 			} else {

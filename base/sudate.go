@@ -121,7 +121,7 @@ func (d SuDate) String() string {
 	return s
 }
 
-func (d SuDate) Equals(other interface{}) bool {
+func (d SuDate) Equal(other interface{}) bool {
 	if d2, ok := other.(SuDate); ok {
 		return d == d2
 	}

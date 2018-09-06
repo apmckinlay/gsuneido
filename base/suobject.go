@@ -224,7 +224,7 @@ func (ob *SuObject) hash2() uint32 {
 	return hash
 }
 
-func (ob *SuObject) Equals(other interface{}) bool {
+func (ob *SuObject) Equal(other interface{}) bool {
 	ob2, ok := other.(*SuObject)
 	if !ok {
 		return false
@@ -267,7 +267,7 @@ func equals2(x *SuObject, y *SuObject, inProgress pairs) bool {
 func equals3(x Value, y Value, inProgress pairs) bool {
 	xo, xok := x.(*SuObject)
 	if !xok {
-		return x.Equals(y)
+		return x.Equal(y)
 	}
 	yo, yok := y.(*SuObject)
 	if !yok {

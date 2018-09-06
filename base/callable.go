@@ -132,7 +132,7 @@ func (f *Func) hash2() uint32 {
 	panic("function hash not implemented")
 }
 
-func (f *Func) Equals(other interface{}) bool {
+func (f *Func) Equal(other interface{}) bool {
 	if f2, ok := other.(*Func); ok {
 		return f == f2
 	}

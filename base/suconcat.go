@@ -119,7 +119,7 @@ func (c SuConcat) hash2() uint32 {
 }
 
 // Equals returns true if other is an equal SuConcat or SuStr (Value interface)
-func (c SuConcat) Equals(other interface{}) bool {
+func (c SuConcat) Equal(other interface{}) bool {
 	// check string first assuming more common than concat
 	if s2, ok := other.(SuStr); ok {
 		// according to benchmark, this doesn't allocate

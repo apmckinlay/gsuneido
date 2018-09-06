@@ -25,7 +25,7 @@ type Value interface {
 	RangeTo(i int, j int) Value
 	RangeLen(i int, n int) Value
 
-	Equals(other interface{}) bool
+	Equal(other interface{}) bool
 
 	Hash() uint32
 

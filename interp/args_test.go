@@ -21,14 +21,14 @@ func TestArgs(t *testing.T) {
 	a = ArgSpec{Unnamed: EACH}
 	th.stack = []Value{makeOb()}
 	th.args(f, a)
-	Assert(t).True(th.stack[0].Equals(makeOb()))
+	Assert(t).True(th.stack[0].Equal(makeOb()))
 
 	// @+1arg => @param
 	f = &Func{Nparams: 1, Flags: []Flag{AtParam}}
 	a = ArgSpec{Unnamed: EACH1}
 	th.stack = []Value{makeOb()}
 	th.args(f, a)
-	Assert(t).True(th.stack[0].Equals(makeOb().Slice(1)))
+	Assert(t).True(th.stack[0].Equal(makeOb().Slice(1)))
 
 	// 2 args => 2 params
 	f = &Func{Nparams: 2, Flags: []Flag{0, 0}}
@@ -82,7 +82,7 @@ func TestArgs(t *testing.T) {
 	th.stack = []Value{SuInt(11), SuInt(22), SuStr("bb"), SuStr("aa")}
 	th.args(f, a)
 	Assert(t).That(len(th.stack), Equals(1))
-	Assert(t).True(th.stack[0].Equals(makeOb()))
+	Assert(t).True(th.stack[0].Equal(makeOb()))
 
 	// @args => params
 	f = &Func{Nparams: 4, Flags: []Flag{0, 0, 0, 0},

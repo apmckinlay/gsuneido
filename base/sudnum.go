@@ -69,7 +69,7 @@ func (dn SuDnum) hash2() uint32 {
 }
 
 // Equals returns true if other is an equal SuDnum or integer (Value interface)
-func (dn SuDnum) Equals(other interface{}) bool {
+func (dn SuDnum) Equal(other interface{}) bool {
 	if d2, ok := other.(SuDnum); ok {
 		return dnum.Equal(dn.Dnum, d2.Dnum)
 	} else if i, ok := SmiToInt(other); ok {

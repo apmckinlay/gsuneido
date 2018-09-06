@@ -76,7 +76,7 @@ func (si *smi) hash2() uint32 {
 	return si.Hash()
 }
 
-func (si *smi) Equals(other interface{}) bool {
+func (si *smi) Equal(other interface{}) bool {
 	if i2, ok := other.(*smi); ok {
 		return si == i2
 	} else if dn, ok := other.(SuDnum); ok {

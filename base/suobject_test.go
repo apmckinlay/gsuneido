@@ -105,13 +105,13 @@ func TestSuObjectEquals(t *testing.T) {
 }
 
 func eq(t *testing.T, x *SuObject, y *SuObject) {
-	Assert(t).True(x.Equals(y))
-	Assert(t).True(y.Equals(x))
+	Assert(t).True(x.Equal(y))
+	Assert(t).True(y.Equal(x))
 }
 
 func neq(t *testing.T, x *SuObject, y *SuObject) {
-	Assert(t).False(x.Equals(y))
-	Assert(t).False(y.Equals(x))
+	Assert(t).False(x.Equal(y))
+	Assert(t).False(y.Equal(x))
 }
 
 func TestSuObjectSlice(t *testing.T) {
@@ -123,7 +123,7 @@ func TestSuObjectSlice(t *testing.T) {
 	ob.Put(SuStr("b"), SuInt(456))
 	Assert(t).That(ob.String(), Equals("#(12, 34, 56, a: 123, b: 456)"))
 	ob2 := ob.Slice(0)
-	Assert(t).True(ob.Equals(ob2))
+	Assert(t).True(ob.Equal(ob2))
 	ob2 = ob.Slice(1)
 	Assert(t).That(ob2.String(), Equals("#(34, 56, a: 123, b: 456)"))
 	ob2 = ob.Slice(10)

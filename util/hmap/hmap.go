@@ -20,7 +20,7 @@ import (
 
 type Key interface {
 	Hash() uint32
-	Equals(interface{}) bool
+	Equal(interface{}) bool
 }
 
 type Hmap struct {
@@ -70,7 +70,7 @@ func (hm *Hmap) Get(key Key) interface{} {
 	b, top := hm.hash(key)
 	for buck := &hm.buckets[b]; buck != nil; buck = buck.overflow {
 		for i := 0; i < bucketsize; i++ {
-			if buck.tophash[i] == top && key.Equals(buck.keys[i]) {
+			if buck.tophash[i] == top && key.Equal(buck.keys[i]) {
 				return buck.vals[i]
 			}
 		}
@@ -84,7 +84,7 @@ func (hm *Hmap) Put(key Key, val interface{}) {
 restart:
 	b, top := hm.hash(key)
 	inserti := -1
-	var insertb *bucket = nil
+	var insertb *bucket
 	buck := &hm.buckets[b]
 	for {
 		for i := 0; i < bucketsize; i++ {
@@ -97,7 +97,7 @@ restart:
 				continue
 			}
 			// found one where tophash matches
-			if key.Equals(buck.keys[i]) {
+			if key.Equal(buck.keys[i]) {
 				// update existing entry
 				buck.vals[i] = val
 				return
@@ -161,7 +161,7 @@ func (hm *Hmap) Del(key Key) (val interface{}) {
 	b, top := hm.hash(key)
 	for buck := &hm.buckets[b]; buck != nil; buck = buck.overflow {
 		for i := 0; i < bucketsize; i++ {
-			if buck.tophash[i] == top && key.Equals(buck.keys[i]) {
+			if buck.tophash[i] == top && key.Equal(buck.keys[i]) {
 				buck.tophash[i] = 0
 				val = buck.vals[i]
 				buck.vals[i] = nil
@@ -194,7 +194,8 @@ func (it *Iter) Next() (key Key, val interface{}) {
 		panic("hmap modified during iteration")
 	}
 	for {
-		for it.i++; it.i < bucketsize && it.buck.tophash[it.i] == 0; it.i++ {
+		for it.i++; it.i < bucketsize && it.buck.tophash[it.i] == 0; {
+			it.i++
 		}
 		if it.i < bucketsize {
 			return it.buck.keys[it.i], it.buck.vals[it.i]

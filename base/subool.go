@@ -68,7 +68,7 @@ func (b SuBool) hash2() uint32 {
 	return b.Hash()
 }
 
-func (b SuBool) Equals(other interface{}) bool {
+func (b SuBool) Equal(other interface{}) bool {
 	if b2, ok := other.(SuBool); ok {
 		return b == b2
 	}

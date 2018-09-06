@@ -13,7 +13,7 @@ func (x ik) Hash() uint32 {
 	return uint32(x)
 }
 
-func (x ik) Equals(y interface{}) bool {
+func (x ik) Equal(y interface{}) bool {
 	return x == y.(ik)
 }
 

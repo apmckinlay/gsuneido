@@ -19,7 +19,7 @@ func TestPack(t *testing.T) {
 
 func EqVal(expected interface{}) Tester {
 	return func(actual interface{}) string {
-		if actual.(Value).Equals(expected.(Value)) {
+		if actual.(Value).Equal(expected.(Value)) {
 			return ""
 		}
 		return fmt.Sprintf("expected %v but got %v", expected, actual)

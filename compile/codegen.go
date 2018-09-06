@@ -412,7 +412,7 @@ func (cg *cgen) emitValue(val Value) {
 // reusing if duplicate, adding otherwise
 func (cg *cgen) value(v Value) int {
 	for i, v2 := range cg.values {
-		if v.Equals(v2) {
+		if v.Equal(v2) {
 			return i
 		}
 	}

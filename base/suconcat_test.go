@@ -14,7 +14,7 @@ func TestSuConcatEquals(t *testing.T) {
 	for i, s := range str {
 		for j, c := range cat {
 			expected := i == j
-			if s.Equals(c) != expected || c.Equals(s) != expected {
+			if s.Equal(c) != expected || c.Equal(s) != expected {
 				t.Error(s, "vs", c)
 			}
 		}

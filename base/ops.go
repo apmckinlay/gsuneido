@@ -8,11 +8,11 @@ import (
 )
 
 func Is(x Value, y Value) Value {
-	return SuBool(x.Equals(y))
+	return SuBool(x.Equal(y))
 }
 
 func Isnt(x Value, y Value) Value {
-	return SuBool(!x.Equals(y))
+	return SuBool(!x.Equal(y))
 }
 
 func Lt(x Value, y Value) Value {
