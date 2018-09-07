@@ -21,17 +21,13 @@ type SuObject struct {
 }
 
 var _ Value = (*SuObject)(nil)
-
 //TODO var _ Packable = &SuObject{}
 
 // Get returns the value associated with a key, or nil if not found
 func (ob *SuObject) Get(key Value) Value {
-	if i, ok := SmiToInt(key); ok {
-		if 0 <= i && i < ob.ListSize() {
-			return ob.list[i]
-		}
+	if i := index(key); 0 <= i && i < ob.ListSize() {
+		return ob.list[i]
 	}
-	//TODO handle if key is dnum
 	if ob.named == nil {
 		return nil
 	}
@@ -42,6 +38,18 @@ func (ob *SuObject) Get(key Value) Value {
 	return x.(Value)
 }
 
+func index(key Value) int {
+	if i, ok := SmiToInt(key); ok {
+		return i
+	}
+	if dn, ok := key.(SuDnum); ok {
+		if i, ok := dn.Dnum.ToInt(); ok {
+			return i
+		}
+	}
+	return -1 // invalid list index
+}
+
 // ListGet returns a value from the list, panics if index out of range
 func (ob *SuObject) ListGet(i int) Value {
 	return ob.list[i]
@@ -50,16 +58,14 @@ func (ob *SuObject) ListGet(i int) Value {
 // Put adds or updates the given key and value
 // The value will be added to the list if the key is the "next"
 func (ob *SuObject) Put(key Value, val Value) {
-	if i, ok := SmiToInt(key); ok {
-		if i == ob.ListSize() {
-			ob.Add(val)
-			return
-		} else if 0 <= i && i < ob.ListSize() {
-			ob.list[i] = val
-			return
-		}
+	i := index(key)
+	if i == ob.ListSize() {
+		ob.Add(val)
+		return
+	} else if 0 <= i && i < ob.ListSize() {
+		ob.list[i] = val
+		return
 	}
-	//TODO handle if key is dnum
 	ob.ensureNamed()
 	ob.named.Put(key, val)
 }
@@ -136,7 +142,7 @@ func (ob *SuObject) migrate() {
 		return
 	}
 	for {
-		x := ob.named.Del(SuInt(ob.ListSize())) //TODO handle out of range
+		x := ob.named.Del(NumFromInt(ob.ListSize()))
 		if x == nil {
 			break
 		}

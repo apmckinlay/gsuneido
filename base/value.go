@@ -60,3 +60,11 @@ func NumFromString(s string) Value {
 	}
 	return SuDnum{dnum.FromStr(s)}
 }
+
+// NumFromInt returns an SuInt if within range, else a SuDnum
+func NumFromInt(n int) Value {
+	if MinSuInt <= n && n <= MaxSuInt {
+		return SuInt(n)
+	}
+	return SuDnum{dnum.FromInt(int64(n))}
+}

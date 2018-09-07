@@ -16,7 +16,6 @@ type SuDnum struct {
 }
 
 var _ Value = SuDnum{}
-
 var _ Packable = SuDnum{}
 
 // Value interface --------------------------------------------------
@@ -256,7 +255,7 @@ func UnpackNumber(buf rbuf) Value {
 		coef *= 10000
 		exp--
 	}
-	if exp == 0 && coef <= math.MaxUint16 {
+	if exp == 0 && coef <= MaxSuInt {
 		return SuInt(int(sign) * int(coef))
 	}
 	return SuDnum{dnum.New(sign, coef, int(exp)*4+16)}

@@ -1,7 +1,11 @@
 package base
 
-import "testing"
-import . "github.com/apmckinlay/gsuneido/util/hamcrest"
+import (
+	"testing"
+
+	"github.com/apmckinlay/gsuneido/util/dnum"
+	. "github.com/apmckinlay/gsuneido/util/hamcrest"
+)
 
 func TestSuObject(t *testing.T) {
 	ob := SuObject{}
@@ -128,4 +132,9 @@ func TestSuObjectSlice(t *testing.T) {
 	Assert(t).That(ob2.String(), Equals("#(34, 56, a: 123, b: 456)"))
 	ob2 = ob.Slice(10)
 	Assert(t).That(ob2.String(), Equals("#(a: 123, b: 456)"))
+}
+
+func TestSuObjectIndex(t *testing.T) {
+	Assert(t).That(index(SuInt(123)), Equals(123))
+	Assert(t).That(index(SuDnum{dnum.FromInt(123)}), Equals(123))
 }

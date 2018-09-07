@@ -12,6 +12,8 @@ import (
 type smi byte
 
 const smiRange = 1 << 16
+const MinSuInt = math.MinInt16
+const MaxSuInt = math.MaxInt16
 
 var space [smiRange]smi // uninitialized BSS, no actual memory used
 var base = uintptr(unsafe.Pointer(&space[0]))
@@ -19,7 +21,7 @@ var base = uintptr(unsafe.Pointer(&space[0]))
 // SuInt converts an int to *smi which implements Value
 // will panic if out of int16 range
 func SuInt(n int) *smi {
-	offset := int(n) - math.MinInt16
+	offset := n - math.MinInt16
 	return &space[offset] // will panic if out of range
 }
 

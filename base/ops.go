@@ -161,11 +161,12 @@ func Match(x Value, y regex.Pattern) SuBool {
 // Index is basically the same as value.ToInt
 // except it doesn't convert "" and false to 0
 // and it has a different error message
+// used by ranges and string[i]
 func Index(v Value) int {
 	if n, ok := SmiToInt(v); ok {
 		return n
 	}
-	if dn, ok := v.(*SuDnum); ok {
+	if dn, ok := v.(SuDnum); ok {
 		if n, ok := dn.Dnum.ToInt(); ok {
 			return n
 		}
