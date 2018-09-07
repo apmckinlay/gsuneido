@@ -57,20 +57,20 @@ func TestSuObjectMigrate(t *testing.T) {
 	for i := 1; i < 5; i++ {
 		ob.Put(SuInt(i), SuInt(i))
 	}
-	Assert(t).That(ob.HashSize(), Equals(4))
+	Assert(t).That(ob.NamedSize(), Equals(4))
 	Assert(t).That(ob.ListSize(), Equals(0))
 	ob.Add(SuInt(0))
-	Assert(t).That(ob.HashSize(), Equals(0))
+	Assert(t).That(ob.NamedSize(), Equals(0))
 	Assert(t).That(ob.ListSize(), Equals(5))
 }
 
 func TestSuObjectPut(t *testing.T) {
 	ob := SuObject{}
 	ob.Put(SuInt(1), SuInt(1)) // put
-	Assert(t).That(ob.HashSize(), Equals(1))
+	Assert(t).That(ob.NamedSize(), Equals(1))
 	Assert(t).That(ob.ListSize(), Equals(0))
 	ob.Put(SuInt(0), SuInt(0)) // add + migrate
-	Assert(t).That(ob.HashSize(), Equals(0))
+	Assert(t).That(ob.NamedSize(), Equals(0))
 	Assert(t).That(ob.ListSize(), Equals(2))
 	ob.Put(SuInt(0), SuInt(10)) // set
 	ob.Put(SuInt(1), SuInt(11)) // set

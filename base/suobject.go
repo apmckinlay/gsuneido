@@ -11,12 +11,12 @@ import (
 
 // SuObject is a Suneido object
 //
-// i.e. a container with both list and hash members
+// i.e. a container with both list and named members
 //
 // NOTE: Not thread safe
 type SuObject struct {
 	list     []Value
-	hash     *hmap.Hmap
+	named     *hmap.Hmap
 	readonly bool
 }
 
@@ -31,10 +31,11 @@ func (ob *SuObject) Get(key Value) Value {
 			return ob.list[i]
 		}
 	}
-	if ob.hash == nil {
+	//TODO handle if key is dnum
+	if ob.named == nil {
 		return nil
 	}
-	x := ob.hash.Get(key)
+	x := ob.named.Get(key)
 	if x == nil {
 		return nil
 	}
@@ -44,11 +45,6 @@ func (ob *SuObject) Get(key Value) Value {
 // Vget returns a value from the list, panics if index out of range
 func (ob *SuObject) Vget(i int) Value {
 	return ob.list[i]
-}
-
-// Vsize returns the size of the list
-func (ob *SuObject) Vsize() int {
-	return len(ob.list)
 }
 
 // Put adds or updates the given key and value
@@ -63,8 +59,9 @@ func (ob *SuObject) Put(key Value, val Value) {
 			return
 		}
 	}
-	ob.ensureHash()
-	ob.hash.Put(key, val)
+	//TODO handle if key is dnum
+	ob.ensureNamed()
+	ob.named.Put(key, val)
 }
 
 func (ob *SuObject) RangeTo(from int, to int) Value {
@@ -103,16 +100,16 @@ func (ob *SuObject) ListSize() int {
 	return len(ob.list)
 }
 
-func (ob *SuObject) HashSize() int {
-	if ob.hash == nil {
+func (ob *SuObject) NamedSize() int {
+	if ob.named == nil {
 		return 0
 	}
-	return ob.hash.Size()
+	return ob.named.Size()
 }
 
 // Size returns the number of values in the object
 func (ob *SuObject) Size() int {
-	return ob.ListSize() + ob.HashSize()
+	return ob.ListSize() + ob.NamedSize()
 }
 
 // Add appends a value to the list portion
@@ -128,18 +125,18 @@ func (ob *SuObject) mustBeMutable() {
 	}
 }
 
-func (ob *SuObject) ensureHash() {
-	if ob.hash == nil {
-		ob.hash = hmap.NewHmap(0)
+func (ob *SuObject) ensureNamed() {
+	if ob.named == nil {
+		ob.named = hmap.NewHmap(0)
 	}
 }
 
 func (ob *SuObject) migrate() {
-	if ob.hash == nil {
+	if ob.named == nil {
 		return
 	}
 	for {
-		x := ob.hash.Del(SuInt(ob.ListSize())) //TODO handle out of range
+		x := ob.named.Del(SuInt(ob.ListSize())) //TODO handle out of range
 		if x == nil {
 			break
 		}
@@ -154,8 +151,8 @@ func (ob *SuObject) String() string {
 		buf.WriteString(v.String())
 		buf.WriteString(", ")
 	}
-	if ob.hash != nil {
-		iter := ob.hash.Iter()
+	if ob.named != nil {
+		iter := ob.named.Iter()
 		for {
 			k, v := iter.Next()
 			if k == nil {
@@ -202,8 +199,8 @@ func (ob *SuObject) Hash() uint32 {
 	if ob.ListSize() > 0 {
 		hash = 31*hash + ob.list[0].Hash()
 	}
-	if 0 < ob.HashSize() && ob.HashSize() <= 4 {
-		iter := ob.hash.Iter()
+	if 0 < ob.NamedSize() && ob.NamedSize() <= 4 {
+		iter := ob.named.Iter()
 		for {
 			k, v := iter.Next()
 			if k == nil {
@@ -219,7 +216,7 @@ func (ob *SuObject) Hash() uint32 {
 // hash2 is shallow so prevents infinite recursion
 func (ob *SuObject) hash2() uint32 {
 	hash := uint32(17)
-	hash = 31*hash + uint32(ob.HashSize())
+	hash = 31*hash + uint32(ob.NamedSize())
 	hash = 31*hash + uint32(ob.ListSize())
 	return hash
 }
@@ -236,7 +233,7 @@ func equals2(x *SuObject, y *SuObject, inProgress pairs) bool {
 	if x == y { // pointer comparison
 		return true // same object
 	}
-	if x.ListSize() != y.ListSize() || x.HashSize() != y.HashSize() {
+	if x.ListSize() != y.ListSize() || x.NamedSize() != y.NamedSize() {
 		return false
 	}
 	if inProgress.contains(x, y) {
@@ -248,14 +245,14 @@ func equals2(x *SuObject, y *SuObject, inProgress pairs) bool {
 			return false
 		}
 	}
-	if x.HashSize() > 0 {
-		iter := x.hash.Iter()
+	if x.NamedSize() > 0 {
+		iter := x.named.Iter()
 		for {
 			k, v := iter.Next()
 			if k == nil {
 				break
 			}
-			yk := y.hash.Get(k)
+			yk := y.named.Get(k)
 			if yk == nil || !equals3(v.(Value), yk.(Value), inProgress) {
 				return false
 			}
@@ -318,14 +315,14 @@ func cmp3(x Value, y Value, inProgress pairs) int {
 
 // Slice returns a copy of the object, with the first n list elements removed
 func (ob *SuObject) Slice(n int) *SuObject {
-	newHash := ob.hash
-	if newHash != nil {
-		newHash = ob.hash.Copy()
+	newNamed := ob.named
+	if newNamed != nil {
+		newNamed = ob.named.Copy()
 	}
 	if n > len(ob.list) {
-		return &SuObject{hash: newHash, readonly: false}
+		return &SuObject{named: newNamed, readonly: false}
 	}
 	list := make([]Value, len(ob.list)-n)
 	copy(list, ob.list[n:])
-	return &SuObject{list: list, hash: newHash, readonly: false}
+	return &SuObject{list: list, named: newNamed, readonly: false}
 }
