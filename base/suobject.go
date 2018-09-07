@@ -16,7 +16,7 @@ import (
 // NOTE: Not thread safe
 type SuObject struct {
 	list     []Value
-	named     *hmap.Hmap
+	named    *hmap.Hmap
 	readonly bool
 }
 
@@ -42,8 +42,8 @@ func (ob *SuObject) Get(key Value) Value {
 	return x.(Value)
 }
 
-// Vget returns a value from the list, panics if index out of range
-func (ob *SuObject) Vget(i int) Value {
+// ListGet returns a value from the list, panics if index out of range
+func (ob *SuObject) ListGet(i int) Value {
 	return ob.list[i]
 }
 
@@ -297,7 +297,7 @@ func cmp2(x *SuObject, y *SuObject, inProgress pairs) int {
 	}
 	inProgress.push(x, y) // no need to pop due to pass by value
 	for i := 0; i < x.Size() && i < y.Size(); i++ {
-		if cmp := cmp3(x.Vget(i), y.Vget(i), inProgress); cmp != 0 {
+		if cmp := cmp3(x.ListGet(i), y.ListGet(i), inProgress); cmp != 0 {
 			return cmp
 		}
 	}

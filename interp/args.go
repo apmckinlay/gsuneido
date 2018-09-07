@@ -69,7 +69,7 @@ func (t *Thread) massage(fn *Func, as ArgSpec, args []Value) {
 		// @args => params
 		ob := args[0].(*SuObject)
 		for i := 0; i < ints.Min(fn.Nparams, ob.ListSize()); i++ {
-			args[i] = ob.Vget(i)
+			args[i] = ob.ListGet(i)
 		}
 		// named members may overwrite unnamed (same as when passed individually)
 		for i := 0; i < fn.Nparams; i++ {
