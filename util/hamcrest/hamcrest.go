@@ -193,7 +193,3 @@ func (test Tester) Comment(items ...interface{}) Tester {
 		return err + " (" + fmt.Sprint(items...) + ")"
 	}
 }
-
-func Refer(x interface{}) {
-	
-}
