@@ -1,4 +1,4 @@
-package compile
+package lexer
 
 // Token is returned by Lexer to identify the type of token
 type Token uint8
@@ -163,6 +163,8 @@ const (
 	VIEW
 	WHERE
 )
+
+const Ntokens = int(WHERE + 1)
 
 var keywords = map[string]Token{
 	"and":      AND,
