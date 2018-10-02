@@ -122,9 +122,7 @@ func (a *Ast) fourth() Ast {
 	return a.Children[3]
 }
 
-//TODO fold AND, OR, BITAND, BITOR, BITXOR
 func fold(item Item, val Value, children []Ast) (x Ast) {
-	//defer func() { fmt.Println("fold:", x) }()
 	ast := Ast{item, val, children}
 	if ast.isConstant() {
 		return valAst(ast.toVal())
@@ -159,12 +157,16 @@ func fold(item Item, val Value, children []Ast) (x Ast) {
 		val = ast.binop(Lshift)
 	case RSHIFT:
 		val = ast.binop(Rshift)
+	case OR:
+		return ast.foldAndOr(False, True)
+	case AND:
+		return ast.foldAndOr(True, False)
 	case BITOR:
-		val = ast.binop(Bitor)
+		return ast.commutative(Bitor, SuInt(0))
 	case BITAND:
-		val = ast.binop(Bitand)
+		return ast.commutative(Bitand, SuInt(0))
 	case BITXOR:
-		val = ast.binop(Bitxor)
+		return ast.commutative(Bitxor, SuInt(0))
 	case BITNOT:
 		val = ast.unop(Bitnot)
 	case NOT:
@@ -187,6 +189,13 @@ func (a *Ast) foldable() bool {
 				return true
 			}
 			prev = cur
+		}
+		return false
+	} else if a.Keyword == AND || a.Keyword == OR {
+		for _, c := range a.Children {
+			if c.value == True || c.value == False {
+				return true
+			}
 		}
 		return false
 	}
@@ -268,6 +277,20 @@ func (a *Ast) foldCat() Ast {
 	}
 	a.Children = a.Children[:i]
 	return *a
+}
+
+func (a *Ast) foldAndOr(skip, fold Value) Ast {
+	var newList []Ast
+	for _, c := range a.Children {
+		switch c.value {
+		case fold:
+			return c
+		case skip:
+			continue
+		}
+		newList = append(newList, c)
+	}
+	return Ast{Item: a.Item, Children: newList}
 }
 
 func valAst(val Value) Ast {

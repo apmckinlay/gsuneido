@@ -12,14 +12,13 @@ func TestParseExpression(t *testing.T) {
 		return expression(p, astBuilder).(Ast)
 	}
 	xtest := func(src string, expected string) {
-		actual := Catch(func () { parseExpr("1 = 2") })
+		actual := Catch(func() { parseExpr(src) })
 		if actual != expected {
 			t.Errorf("%#v expected: %#v but got: %#v", src, expected, actual)
 		}
 	}
 	xtest("1 = 2", "syntax error: lvalue required")
 	xtest("a = 5 = b", "syntax error: lvalue required")
-	xtest("a +", "syntax error: lvalue required")
 	xtest("++123", "syntax error: lvalue required")
 	xtest("123--", "syntax error: lvalue required")
 	xtest("++123--", "syntax error: lvalue required")
@@ -41,6 +40,9 @@ func TestParseExpression(t *testing.T) {
 	test("1 + 2", "3")
 	test("1 + 2 + 3", "6")
 	test("1 + 2 - 3", "0")
+	test("1 | 2 | 4", "7")
+	test("a or true or b", "true")
+	test("a and false and b", "false")
 
 	test("a % b % c", "(% (% a b) c)")
 
@@ -55,6 +57,7 @@ func TestParseExpression(t *testing.T) {
 	test("1 + a + b + 2", "(+ a b 3)")
 	test("5 + a + b - 2", "(+ a b 3)")
 	test("2 + a + b - 5", "(+ a b -3)")
+	test("a - 2 - 1", "(+ a -3)")
 
 	test("a $ b", "($ a b)")
 	test("a $ b $ c", "($ a b c)")
@@ -161,7 +164,6 @@ func TestParseStatements(t *testing.T) {
 		ast = ast.second() // function
 		ast = ast.first()  // statements
 		s := ast.String()
-		//fmt.Println(s)
 		Assert(t).That(s, Like(expected))
 	}
 	test("return", "return")
