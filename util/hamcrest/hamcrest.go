@@ -61,7 +61,7 @@ func (a Asserter) That(actual interface{}, test Tester) {
 	}
 }
 
-// Fail reports an error with its file and lie
+// Fail reports an error with its file and line
 func (a Asserter) Fail(err string) {
 	if t, ok := a.t.(*gotesting.T); ok {
 		t.Helper() // skip this function when printing file/line info
@@ -115,6 +115,9 @@ func Equals(expected interface{}) Tester {
 }
 
 func show(x interface{}) string {
+	if _,ok := x.(string); ok {
+		return  fmt.Sprintf("%#v", x)
+	}
 	s1 := fmt.Sprintf("%v", x)
 	s2 := fmt.Sprintf("%#v", x)
 	if s1 == s2 {
