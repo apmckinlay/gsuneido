@@ -1,5 +1,7 @@
 package lexer
 
+//go:generate stringer -type=Token
+
 // Token is returned by Lexer to identify the type of token
 type Token uint8
 
@@ -8,8 +10,8 @@ func Keyword(s string) Token {
 	return keywords[s]
 }
 
-// String returns a name for tokens that do not have a string value
-func (t Token) String() string {
+// Str returns a name for tokens that do not have a string value
+func (t Token) Str() string {
 	return tostring[t]
 }
 
@@ -31,20 +33,24 @@ const (
 	WHITESPACE
 	COMMENT
 	NEWLINE
-	// operators and punctuation
+	// punctuation
 	HASH
 	COMMA
-	COLON
 	SEMICOLON
-	Q_MARK
 	AT
-	DOT
 	L_PAREN
 	R_PAREN
 	L_BRACKET
 	R_BRACKET
 	L_CURLY
 	R_CURLY
+	RANGETO
+	RANGELEN
+	// operators
+	NOT
+	BITNOT
+	NEW
+	DOT
 	IS
 	ISNT
 	MATCH
@@ -53,21 +59,26 @@ const (
 	LTE
 	GT
 	GTE
+	Q_MARK
+	COLON
+	ASSOC_START // must be consecutive
+	AND
+	OR
+	BITOR
+	BITAND
+	BITXOR
 	ADD
 	SUB
 	CAT
 	MUL
 	DIV
+	ASSOC_END
 	MOD
 	LSHIFT
 	RSHIFT
-	BITOR
-	BITAND
-	BITXOR
-	NOT
 	INC
 	DEC
-	BITNOT
+	ASSIGN_START // must be consecutive
 	EQ
 	ADDEQ
 	SUBEQ
@@ -80,10 +91,9 @@ const (
 	BITOREQ
 	BITANDEQ
 	BITXOREQ
-	RANGETO
-	RANGELEN
-	// langauge keywords
-	AND
+	ASSIGN_END
+	IN
+	// other language keywords
 	BOOL
 	BREAK
 	BUFFER
@@ -107,11 +117,8 @@ const (
 	GDIOBJ
 	HANDLE
 	IF
-	IN
 	INT64
 	LONG
-	NEW
-	OR
 	RESOURCE
 	RETURN
 	SHORT

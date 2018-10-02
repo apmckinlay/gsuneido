@@ -26,7 +26,7 @@ const maxline = 60 // allow for indenting
 func (a *Ast) bytes(indent int) []byte {
 	buf := bytes.Buffer{}
 	if len(a.Children) == 0 {
-		if a.Token.String() == "" && a.Text == "" && a.value == nil {
+		if a.Token.Str() == "" && a.Text == "" && a.value == nil {
 			buf.WriteString("()")
 		} else {
 			a.tokval(&buf)
@@ -67,7 +67,7 @@ func (a *Ast) bytes(indent int) []byte {
 }
 
 func (a *Ast) tokval(buf *bytes.Buffer) {
-	if ts := a.Token.String(); ts != "" {
+	if ts := a.Token.Str(); ts != "" {
 		buf.WriteString(a.Token.String())
 	} else if a.value != nil {
 		if a.Text != "" {
@@ -123,6 +123,7 @@ func (a *Ast) fourth() Ast {
 	return a.Children[3]
 }
 
+//TODO fold AND, OR, BITAND, BITOR, BITXOR
 func fold(item Item, val Value, children []Ast) (x Ast) {
 	//defer func() { fmt.Println("fold:", x) }()
 	ast := Ast{item, val, children}

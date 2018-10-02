@@ -64,7 +64,7 @@ type cgen struct {
 	ndefaults int
 }
 
-var tok2op = map[Token]byte{
+var tok2op = [Ntokens]byte{
 	AND:      op.AND,
 	OR:       op.OR,
 	INC:      op.ADD,
@@ -80,6 +80,21 @@ var tok2op = map[Token]byte{
 	BITOREQ:  op.BITOR,
 	BITANDEQ: op.BITAND,
 	BITXOREQ: op.BITXOR,
+	IS:       op.IS,
+	ISNT:     op.ISNT,
+	MATCH:    op.MATCH,
+	MATCHNOT: op.MATCHNOT,
+	LT:       op.LT,
+	LTE:      op.LTE,
+	GT:       op.GT,
+	GTE:      op.GTE,
+	CAT:      op.CAT,
+	MOD:      op.MOD,
+	LSHIFT:   op.LSHIFT,
+	RSHIFT:   op.RSHIFT,
+	BITOR:    op.BITOR,
+	BITAND:   op.BITAND,
+	BITXOR:   op.BITXOR,
 }
 
 func (cg *cgen) function(ast Ast) {
@@ -282,7 +297,7 @@ func (cg *cgen) expr(ast Ast) {
 		cg.nary(ast, op.MUL)
 	case IS, ISNT, MATCH, MATCHNOT, LT, LTE, GT, GTE,
 		CAT, MOD, LSHIFT, RSHIFT, BITOR, BITAND, BITXOR:
-		cg.nary(ast, op.IS+byte(ast.KeyTok()-IS))
+		cg.nary(ast, tok2op[ast.KeyTok()])
 	case BITNOT:
 		cg.unary(ast, op.BITNOT)
 	case IDENTIFIER:
@@ -340,6 +355,8 @@ func (cg *cgen) expr(ast Ast) {
 		cg.qcExpr(ast)
 	case IN:
 		cg.inExpr(ast)
+	case THIS:
+		cg.emit(op.THIS)
 	default:
 		if ast.Item == call {
 			cg.call(ast)

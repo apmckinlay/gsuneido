@@ -7,21 +7,51 @@ import (
 )
 
 func TestParseExpression(t *testing.T) {
-	test := func(src string, expected string) {
+	parseExpr := func(src string) Ast {
 		p := newParser(src)
-		ast := expression(p, astBuilder).(Ast)
-		Assert(t).That(ast.String(), Equals(expected))
+		return expression(p, astBuilder).(Ast)
+	}
+	xtest := func(src string, expected string) {
+		actual := Catch(func () { parseExpr("1 = 2") })
+		if actual != expected {
+			t.Errorf("%#v expected: %#v but got: %#v", src, expected, actual)
+		}
+	}
+	xtest("1 = 2", "syntax error: lvalue required")
+	xtest("a = 5 = b", "syntax error: lvalue required")
+	xtest("a +", "syntax error: lvalue required")
+	xtest("++123", "syntax error: lvalue required")
+	xtest("123--", "syntax error: lvalue required")
+	xtest("++123--", "syntax error: lvalue required")
+
+	test := func(src string, expected string) {
+		ast := parseExpr(src)
+		actual := ast.String()
+		if actual != expected {
+			t.Errorf("%s expected: %s but got: %s", src, expected, actual)
+		}
 	}
 	test("123", "123")
 	test("foo", "foo")
 	test("true", "true")
 	test("-123", "-123")
+	test("a", "a")
+	test("this", "this")
+
 	test("1 + 2", "3")
 	test("1 + 2 + 3", "6")
 	test("1 + 2 - 3", "0")
+
+	test("a % b % c", "(% (% a b) c)")
+
+	test("a + b * c", "(+ a (* b c))")
+	test("(a + b) * c", "(* (+ a b) c)")
+	test("a * b + c", "(+ (* a b) c)")
+
 	test("a + b", "(+ a b)")
 	test("a - b", "(+ a (- b))")
 	test("1 + a + b", "(+ 1 a b)")
+
 	test("1 + a + b + 2", "(+ a b 3)")
 	test("5 + a + b - 2", "(+ a b 3)")
 	test("2 + a + b - 5", "(+ a b -3)")
@@ -35,7 +65,7 @@ func TestParseExpression(t *testing.T) {
 	test("a $ 'foo' $ 'bar'", "($ a 'foobar')")
 
 	test("a | b & c", "(| a (& b c))")
-	test("a ^ b ^ c", "(^ (^ a b) c)")
+	test("a ^ b ^ c", "(^ a b c)")
 
 	test("a + b - c", "(+ a b (- c))")
 	test("a + b * c", "(+ a (* b c))")
@@ -53,8 +83,10 @@ func TestParseExpression(t *testing.T) {
 	test("a * b * c", "(* a b c)")
 	test("a * b / c", "(* a b (/ c))")
 	test("++a", "(++ a)")
+	test("++a.b", "(++ (. a b))")
 	test("a--", "(post a)")
 	test("a = 123", "(= a 123)")
+	test("a = b = c", "(= a (= b c))")
 	test("a += 123", "(+= a 123)")
 	test("+ - ! ~ x", "(+ (- (! (~ x))))")
 
@@ -64,11 +96,20 @@ func TestParseExpression(t *testing.T) {
 	test("a or b or c", "(or a b c)")
 
 	test("a ? b : c", "(? a b c)")
+	test("a and b ? c + 1 : d * 2", "(? (and a b) (+ c 1) (* d 2))")
+	test("a ? (b ? c : d) : (e ? f : g)", "(? a (? b c d) (? e f g))")
+	test("a ?  b ? c : d  :  e ? f : g", "(? a (? b c d) (? e f g))")
 
 	test("a in (1,2,3)", "(in a 1 2 3)")
+	test("a in (1,2,3) in (true, false)", "(in (in a 1 2 3) true false)")
 
 	test("a.b", "(. a b)")
+	test(".a.b", "(. (. this a) b)")
+	test("this.a.b", "(. (. this a) b)")
+
 	test("a[b]", "([ a b)")
+	test("a[b][c]", "([ ([ a b) c)")
+	test("a[b + c]", "([ a (+ b c))")
 	test("a[1..]", "([ a (.. 1 2147483647))")
 	test("a[1..2]", "([ a (.. 1 2))")
 	test("a[..2]", "([ a (.. 0 2))")
@@ -89,10 +130,14 @@ func TestParseExpression(t *testing.T) {
 	test("f(1, a: 2)", "(call f (args (noKwd 1) (a 2)))")
 	test("f(){ b }", "(call f (args (blockArg (block blockParams (STMTS b)))))")
 	test("f({ b })", "(call f (args (noKwd (block blockParams (STMTS b)))))")
+	test("c.m(a, b)", "(call (. c m) (args (noKwd a) (noKwd b)))")
+	test(".m()", "(call (. this m) args)")
+	test("false isnt x = F()", "(isnt false (= x (call F args)))")
 
 	test("new c", "(new c args)")
-	test("new a.c", "(new (. a c) args)")
+	test("new c.m", "(new (. c m) args)")
 	test("new c(a, b)", "(new c (args (noKwd a) (noKwd b)))")
+	test("new c.m(a, b)", "(new (. c m) (args (noKwd a) (noKwd b)))")
 }
 
 func TestParseFunction(t *testing.T) {
@@ -133,15 +178,15 @@ func TestParseStatements(t *testing.T) {
 
 	test("switch { case 1: b }",
 		"(switch true (cases ( (vals 1) (STMTS b))))")
-	test(`switch { 
+	test(`switch {
 		case x < 3: return -1
 		}`,
 		"(switch true (cases ( (vals (< x 3)) (STMTS (return -1)))))")
 	test("switch a { case 1,2: b case 3: c default: d }", `
 		(switch a
 		    (cases
-		    	( (vals 1 2) (STMTS b)) 
-				( (vals 3) (STMTS c))) 
+		    	( (vals 1 2) (STMTS b))
+				( (vals 3) (STMTS c)))
 		    (STMTS d))`)
 	test("throw 'fubar'", "(throw 'fubar')")
 
@@ -161,4 +206,11 @@ func TestParseStatements(t *testing.T) {
 	test("try x catch y", "(try x (catch y))")
 	test("try x catch (e) y", "(try x (catch e y))")
 	test("try x catch (e, 'err') y", "(try x (catch e 'err' y))")
+}
+
+func BenchmarkParseExpr(b *testing.B) {
+	for n := 0; n < b.N; n++ {
+		p := newParser("a = b + c")
+		expression(p, astBuilder)
+	}
 }

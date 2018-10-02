@@ -29,245 +29,42 @@ type builder func(Item, ...T) T
 type T interface{}
 
 func (p *parser) expr() T {
-	return p.qcExpr()
+	return p.pcExpr(1)
 }
 
-func (p *parser) qcExpr() T {
-	e := p.orExpr()
-	if p.Token != Q_MARK {
-		return e
-	}
-	it := p.Item
-	p.nest++
-	p.match(Q_MARK)
-	t := p.expr()
-	p.match(COLON)
-	p.nest--
-	f := p.expr()
-	return p.bld(it, e, t, f)
-}
+var intMaxStr = strconv.Itoa(math.MaxInt32) // used by ranges
 
-func (p *parser) orExpr() T {
-	x := p.andExpr()
-	if p.KeyTok() != OR {
-		return x
-	}
-	it := p.Item
-	list := []T{x}
-	for p.KeyTok() == OR {
-		p.nextSkipNL()
-		list = append(list, p.andExpr())
-	}
-	return p.bld(it, list...)
-}
-
-func (p *parser) andExpr() T {
-	x := p.inExpr()
-	if p.KeyTok() != AND {
-		return x
-	}
-	it := p.Item
-	list := []T{x}
-	for p.KeyTok() == AND {
-		p.nextSkipNL()
-		list = append(list, p.inExpr())
-	}
-	return p.bld(it, list...)
-}
-
-func (p *parser) inExpr() T {
-	x := p.bitorExpr()
-	if p.KeyTok() != IN {
-		return x
-	}
-	it := p.Item
-	p.next()
-	list := []T{x}
-	p.match(L_PAREN)
-	for p.Token != R_PAREN {
-		list = append(list, p.expr())
-		if p.Token == COMMA {
-			p.next()
+// pcExpr implements precedence climbing
+// each call processes at least one atom
+// a given call processes everything >= minprec
+// it recurses to process the right hand side of each operator
+func (p *parser) pcExpr(minprec int8) T {
+	e := p.atom()
+	for {
+		kt := p.KeyTok()
+		prec := precedence[kt]
+		if prec < minprec {
+			break
 		}
-	}
-	p.match(R_PAREN)
-	return p.bld(it, list...)
-}
-
-func (p *parser) bitorExpr() T {
-	x := p.bitxorExpr()
-	for p.Token == BITOR {
-		it := p.Item
-		p.nextSkipNL()
-		x = p.bld(it, x, p.bitxorExpr())
-	}
-	return x
-}
-
-func (p *parser) bitxorExpr() T {
-	x := p.bitandExpr()
-	for p.Token == BITXOR {
-		it := p.Item
-		p.nextSkipNL()
-		x = p.bld(it, x, p.bitandExpr())
-	}
-	return x
-}
-
-func (p *parser) bitandExpr() T {
-	x := p.isExpr()
-	for p.Token == BITAND {
-		it := p.Item
-		p.nextSkipNL()
-		x = p.bld(it, x, p.isExpr())
-	}
-	return x
-}
-
-func (p *parser) isExpr() T {
-	x := p.cmpExpr()
-	for p.KeyTok() == IS || p.KeyTok() == ISNT ||
-		p.Token == MATCH || p.Token == MATCHNOT {
-		it := p.Item
-		p.nextSkipNL()
-		x = p.bld(it, x, p.cmpExpr())
-	}
-	return x
-}
-
-func (p *parser) cmpExpr() T {
-	x := p.shiftExpr()
-	for p.Token == LT || p.Token == LTE || p.Token == GT || p.Token == GTE {
-		it := p.Item
-		p.nextSkipNL()
-		x = p.bld(it, x, p.shiftExpr())
-	}
-	return x
-}
-
-func (p *parser) shiftExpr() T {
-	x := p.catExpr()
-	for p.Token == LSHIFT || p.Token == RSHIFT {
-		it := p.Item
-		p.nextSkipNL()
-		x = p.bld(it, x, p.catExpr())
-	}
-	return x
-}
-
-// e.g. a $ b $ c => ($ a b c)
-func (p *parser) catExpr() T {
-	x := p.addExpr()
-	if p.Token != CAT {
-		return x
-	}
-	it := p.Item
-	list := []T{x}
-	for p.Token == CAT {
-		p.nextSkipNL()
-		list = append(list, p.addExpr())
-	}
-	return p.bld(it, list...)
-}
-
-// convert to a sequence of additions so it's commutative for folding
-// e.g. a + b - c + d => (+ a b (- c) d)
-func (p *parser) addExpr() T {
-	list := []T{p.mulExpr()}
-	for p.Token == ADD || p.Token == SUB {
-		it := p.Item
-		p.nextSkipNL()
-		next := p.mulExpr()
-		if it.Token == SUB {
-			next = p.bld(it, next)
-		}
-		list = append(list, next)
-	}
-	if len(list) == 1 {
-		return list[0]
-	}
-	return p.bld(Item{Token: ADD, Text: "+"}, list...)
-}
-
-// convert mul & div to a sequence of mul so it's commutative for folding
-// e.g. a * b / c d => (* a b (/ c) d)
-func (p *parser) mulExpr() T {
-	list := []T{p.unary()}
-	for p.Token == MUL || p.Token == DIV || p.Token == MOD {
-		it := p.Item
-		p.nextSkipNL()
-		next := p.unary()
-		switch it.Token {
-		case MUL:
-			list = append(list, next)
-		case DIV:
-			list = append(list, p.bld(it, next))
-		case MOD:
-			if len(list) > 1 {
-				list = []T{p.bld(Item{Token: MUL, Text: "*"}, list...)}
-			}
-			list[0] = p.bld(it, list[0], next)
-		}
-	}
-	if len(list) == 1 {
-		return list[0]
-	}
-	return p.bld(Item{Token: MUL, Text: "*"}, list...)
-}
-
-func (p *parser) unary() T {
-	switch p.KeyTok() {
-	case ADD, SUB, NOT, BITNOT:
-		item := p.Item
+		op := p.Item
 		p.next()
-		return p.bld(item, p.unary())
-	case NEW:
-		return p.newExpr()
-	default:
-		return p.term(false)
-	}
-}
-
-func (p *parser) newExpr() T {
-	it := p.Item
-	p.match(NEW)
-	term := p.term(true)
-	var args T
-	if p.Token == L_PAREN {
-		args = p.arguments()
-	} else {
-		args = p.bld(argList)
-	}
-	return p.bld(it, term, args)
-}
-
-var intMaxStr = strconv.Itoa(math.MaxInt32)
-
-func (p *parser) term(newTerm bool) T {
-	var preincdec Item
-	if p.Token == INC || p.Token == DEC {
-		preincdec = p.Item
-		p.next()
-	}
-	term := p.primary()
-	for p.Token == DOT || p.Token == L_BRACKET || p.Token == L_PAREN ||
-		(p.Token == L_CURLY && !p.expectingCompound) {
-		if newTerm && p.Token == L_PAREN {
-			return term
-		}
-		if p.Token == DOT {
-			dot := p.Item
-			p.nextSkipNL()
-			id := p.Item
-			p.match(IDENTIFIER)
-			term = p.bld(dot, term, p.bld(id))
-			if !p.expectingCompound &&
-				p.Token == NEWLINE && p.lxr.AheadSkip(0).Token == L_CURLY {
-				p.match(NEWLINE)
+		switch {
+		case kt == INC || kt == DEC:
+			ckLvalue(e)
+			op.Text = "post"
+			e = p.bld(op, e)
+		case kt == IN:
+			list := []T{e}
+			p.match(L_PAREN)
+			for p.Token != R_PAREN {
+				list = append(list, p.expr())
+				if p.Token == COMMA {
+					p.next()
+				}
 			}
-		} else if p.Token == L_BRACKET {
-			sub := p.Item
-			p.next()
+			p.match(R_PAREN)
+			e = p.bld(op, list...)
+		case kt == L_BRACKET:
 			var expr T
 			if p.Token == RANGETO || p.Token == RANGELEN {
 				expr = p.bld(Item{Token: NUMBER, Text: "0"})
@@ -285,39 +82,72 @@ func (p *parser) term(newTerm bool) T {
 				}
 				expr = p.bld(rtype, expr, expr2)
 			}
-			term = p.bld(sub, term, expr)
 			p.match(R_BRACKET)
-		} else if p.Token == L_PAREN || p.Token == L_CURLY {
-			term = p.bld(call, term, p.arguments())
+			e = p.bld(op, e, expr)
+		case ASSIGN_START < kt && kt < ASSIGN_END:
+			ckLvalue(e)
+			rhs := p.expr()
+			e = p.bld(op, e, rhs)
+		case kt == Q_MARK:
+			t := p.expr()
+			p.match(COLON)
+			f := p.expr()
+			e = p.bld(op, e, t, f)
+		case kt == L_PAREN: // function call
+			e = p.bld(call, e, p.arguments(L_PAREN))
+		case ASSOC_START < kt && kt < ASSOC_END:
+			// for associative operators, collect a list of contiguous
+			es := []T{e}
+			listtype := flip(op)
+			for {
+				rhs := p.pcExpr(prec + 1) // +1 for left associative
+				// invert SUB and DIV to combine as ADD and MUL
+				if op.Token == SUB || op.Token == DIV {
+					rhs = p.bld(op, rhs)
+				}
+				es = append(es, rhs)
+				if !same(listtype.Token, p.Token) {
+					break
+				}
+				op = p.Item
+				p.next()
+			}
+			e = p.bld(listtype, es...)
+		default: // other left associative binary operators
+			rhs := p.pcExpr(prec + 1) // +1 for left associative
+			e = p.bld(op, e, rhs)
 		}
 	}
-	if preincdec.Token != NIL {
-		return p.bld(preincdec, term)
-	} else if EQ <= p.Token && p.Token <= BITXOREQ {
-		it := p.Item
-		p.nextSkipNL()
-		expr := p.expr()
-		return p.bld(it, term, expr)
-	} else if p.Token == INC || p.Token == DEC {
-		p.Text = "post"
-		return p.evalNext(p.bld(p.Item, term))
-	}
-	return term
+	return e
 }
 
-var call = Item{Text: "call"}
+func ckLvalue(a T) {
+	ast := a.(Ast)
+	if (ast.Token == IDENTIFIER && isLocal(ast.Text)) ||
+		ast.Token == DOT || ast.Token == L_BRACKET {
+		return
+	}
+	panic("syntax error: lvalue required")
+}
 
-func (p *parser) primary() T {
+func flip(op Item) Item {
+	switch op.Token {
+	case SUB:
+		return Item{Token: ADD, Text: "+"}
+	case DIV:
+		return Item{Token: MUL, Text: "*"}
+	default:
+		return op
+	}
+}
+
+func same(listtype Token, next Token) bool {
+	return next == listtype ||
+		(next == SUB && listtype == ADD) || (next == DIV && listtype == MUL)
+}
+
+func (p *parser) atom() T {
 	switch p.Token {
-	case IDENTIFIER:
-		switch p.Keyword {
-		case TRUE, FALSE:
-			return p.evalNext(p.bld(p.Item))
-		case FUNCTION:
-			panic("function literal expression not implemented") //TODO
-		default:
-			return p.evalNext(p.bld(p.Item))
-		}
 	case NUMBER, STRING:
 		return p.evalNext(p.bld(p.Item))
 	case HASH:
@@ -328,13 +158,90 @@ func (p *parser) primary() T {
 		return p.evalMatch(p.expr(), R_PAREN)
 	case L_CURLY:
 		return p.block()
+	case ADD, SUB, NOT, BITNOT:
+		it := p.Item
+		p.next()
+		return p.bld(it, p.atom())
+	case INC, DEC:
+		it := p.Item
+		p.next()
+		e := p.pcExpr(precedence[DOT])
+		ckLvalue(e)
+		return p.bld(it, e)
+	case DOT:
+		return p.bld(Item{Token: THIS, Text: "this"})
+	case IDENTIFIER:
+		switch p.Keyword {
+		case TRUE, FALSE, THIS:
+			return p.evalNext(p.bld(p.Item))
+		case FUNCTION:
+			panic("function literal expression not implemented") //TODO
+		case NEW:
+			it := p.Item
+			p.next()
+			expr := p.pcExpr(precedence[DOT])
+			var args T
+			if p.matchIf(L_PAREN) {
+				args = p.arguments(L_PAREN)
+			} else {
+				args = p.bld(argList)
+			}
+			return p.bld(it, expr, args)
+		default:
+			return p.evalNext(p.bld(p.Item))
+		}
 	}
-	panic("unexpected '" + p.Text + "'")
+	panic("syntax error: unexpected '" + p.Text + "'")
 }
 
-func (p *parser) arguments() T {
+var precedence = [Ntokens]int8{
+	Q_MARK:    2,
+	OR:        3,
+	AND:       4,
+	IN:        5,
+	BITOR:     6,
+	BITXOR:    7,
+	BITAND:    8,
+	IS:        9,
+	ISNT:      9,
+	MATCH:     9,
+	MATCHNOT:  9,
+	LT:        10,
+	LTE:       10,
+	GT:        10,
+	GTE:       10,
+	LSHIFT:    11,
+	RSHIFT:    11,
+	CAT:       12,
+	ADD:       12,
+	SUB:       12,
+	MUL:       13,
+	DIV:       13,
+	MOD:       13,
+	INC:       14,
+	DEC:       14,
+	L_PAREN:    15,
+	DOT:       16,
+	L_BRACKET: 16,
+	EQ:        16,
+	ADDEQ:     16,
+	SUBEQ:     16,
+	CATEQ:     16,
+	MULEQ:     16,
+	DIVEQ:     16,
+	MODEQ:     16,
+	LSHIFTEQ:  16,
+	RSHIFTEQ:  16,
+	BITOREQ:   16,
+	BITANDEQ:  16,
+	BITXOREQ:  16,
+}
+
+var call = Item{Text: "call"}
+
+func (p *parser) arguments(opening Token) T {
 	var args []T
-	if p.matchIf(L_PAREN) {
+	if opening == L_PAREN {
 		if p.matchIf(AT) {
 			return p.atArgument()
 		}
@@ -435,3 +342,7 @@ func (p *parser) blockParams() T {
 	}
 	return p.bld(blockParams, params...)
 }
+
+//TODO validate lvalues i.e. don't allow ++123
+
+//TODO super call

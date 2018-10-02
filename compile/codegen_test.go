@@ -22,7 +22,10 @@ func TestCodegen(t *testing.T) {
 			i, s = interp.Disasm1(fn, i)
 			da = append(da, s)
 		}
-		Assert(t).That(strings.Join(da, ", "), Equals(expected))
+		actual := strings.Join(da, ", ")
+		if actual != expected {
+			t.Errorf("%s expected: %s but got: %s", src, expected, actual)
+		}
 	}
 	test("", "")
 	test("return", "")
@@ -32,6 +35,7 @@ func TestCodegen(t *testing.T) {
 	test("a", "load a")
 	test("_a", "dyload _a")
 	test("G", "global G")
+	test("this", "this")
 
 	test("-a", "load a, uminus")
 	test("a + b", "load a, load b, add")
@@ -48,6 +52,8 @@ func TestCodegen(t *testing.T) {
 
 	test("a % b", "load a, load b, mod")
 	test("a % b % c", "load a, load b, mod, load c, mod")
+
+	test("a | b | c", "load a, load b, bitor, load c, bitor")
 
 	test("a is true", "load a, true, is")
 	test("s = 'hello'", "value 'hello', store s")
@@ -81,9 +87,6 @@ func TestCodegen(t *testing.T) {
 	test("F()", "global F, call()")
 	test("f(a, b)", "load a, load b, load f, call(?, ?)")
 	test("f(a, b, c:, d: 0)", "load a, load b, true, zero, load f, call(?, ?, c:, d:)")
-
-	Assert(t).That(func() { codegen(ParseFunction("function () { G = 1 }")) },
-		Panics("invalid lvalue"))
 }
 
 func TestControl(t *testing.T) {

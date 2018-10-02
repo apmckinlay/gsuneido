@@ -1,5 +1,7 @@
 package op
 
+// NOTE: opcodes must match disasm.go
+
 const (
 	RETURN = iota
 	POP
@@ -56,4 +58,5 @@ const (
 	CALL
 	RANGETO
 	RANGELEN
+	THIS
 )

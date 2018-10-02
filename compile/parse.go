@@ -69,7 +69,7 @@ func (p *parser) matchSkipNL(tok Token) {
 
 func (p *parser) mustMatch(tok Token) {
 	if !p.isMatch(tok) {
-		p.error("expecting", tok)
+		p.error("expecting ", tok)
 	}
 }
 
