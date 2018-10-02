@@ -1,7 +1,6 @@
 package compile
 
 import (
-	"bytes"
 	"strings"
 
 	. "github.com/apmckinlay/gsuneido/base"
@@ -18,13 +17,13 @@ type Ast struct {
 
 // String formats a tree of Ast's in a relatively compact form
 func (a Ast) String() string {
-	return string(a.bytes(0))
+	return string(a.format(0))
 }
 
 const maxline = 60 // allow for indenting
 
-func (a *Ast) bytes(indent int) []byte {
-	buf := bytes.Buffer{}
+func (a *Ast) format(indent int) string {
+	buf := strings.Builder{}
 	if len(a.Children) == 0 {
 		if a.Token.Str() == "" && a.Text == "" && a.value == nil {
 			buf.WriteString("()")
@@ -33,10 +32,10 @@ func (a *Ast) bytes(indent int) []byte {
 		}
 	} else {
 		n := 0
-		children := [][]byte{}
+		children := []string{}
 		for _, child := range a.Children {
-			c := child.bytes(indent + 4)
-			if bytes.IndexByte(c, '\n') != -1 {
+			c := child.format(indent + 4)
+			if strings.IndexByte(c, '\n') != -1 {
 				n = maxline
 			} else {
 				n += len(c) + 1
@@ -47,7 +46,7 @@ func (a *Ast) bytes(indent int) []byte {
 			buf.WriteString("(")
 			a.tokval(&buf)
 			buf.WriteString(" ")
-			buf.Write(bytes.Join(children, []byte(" ")))
+			buf.WriteString(strings.Join(children, " "))
 		} else {
 			buf.WriteString(strings.Repeat(" ", indent))
 			buf.WriteString("(")
@@ -55,18 +54,18 @@ func (a *Ast) bytes(indent int) []byte {
 			sin := strings.Repeat(" ", indent+4)
 			for _, c := range children {
 				buf.WriteByte('\n')
-				if bytes.IndexByte(c, '\n') == -1 {
+				if strings.IndexByte(c, '\n') == -1 {
 					buf.WriteString(sin)
 				}
-				buf.Write(c)
+				buf.WriteString(c)
 			}
 		}
 		buf.WriteString(")")
 	}
-	return buf.Bytes()
+	return buf.String()
 }
 
-func (a *Ast) tokval(buf *bytes.Buffer) {
+func (a *Ast) tokval(buf *strings.Builder) {
 	if ts := a.Token.Str(); ts != "" {
 		buf.WriteString(a.Token.String())
 	} else if a.value != nil {
