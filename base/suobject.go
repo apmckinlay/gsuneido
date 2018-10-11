@@ -16,20 +16,18 @@ import (
 // NOTE: Not thread safe
 type SuObject struct {
 	list     []Value
-	named    *hmap.Hmap
+	named    hmap.Hmap
 	readonly bool
 }
 
 var _ Value = (*SuObject)(nil)
+
 //TODO var _ Packable = &SuObject{}
 
 // Get returns the value associated with a key, or nil if not found
 func (ob *SuObject) Get(key Value) Value {
 	if i := index(key); 0 <= i && i < ob.ListSize() {
 		return ob.list[i]
-	}
-	if ob.named == nil {
-		return nil
 	}
 	x := ob.named.Get(key)
 	if x == nil {
@@ -66,7 +64,6 @@ func (ob *SuObject) Put(key Value, val Value) {
 		ob.list[i] = val
 		return
 	}
-	ob.ensureNamed()
 	ob.named.Put(key, val)
 }
 
@@ -107,9 +104,6 @@ func (ob *SuObject) ListSize() int {
 }
 
 func (ob *SuObject) NamedSize() int {
-	if ob.named == nil {
-		return 0
-	}
 	return ob.named.Size()
 }
 
@@ -131,16 +125,7 @@ func (ob *SuObject) mustBeMutable() {
 	}
 }
 
-func (ob *SuObject) ensureNamed() {
-	if ob.named == nil {
-		ob.named = hmap.NewHmap(0)
-	}
-}
-
 func (ob *SuObject) migrate() {
-	if ob.named == nil {
-		return
-	}
 	for {
 		x := ob.named.Del(NumFromInt(ob.ListSize()))
 		if x == nil {
@@ -157,25 +142,23 @@ func (ob *SuObject) String() string {
 		buf.WriteString(v.String())
 		buf.WriteString(", ")
 	}
-	if ob.named != nil {
-		iter := ob.named.Iter()
-		for {
-			k, v := iter.Next()
-			if k == nil {
-				break
-			}
-			if ks, ok := k.(SuStr); ok && isIdentifier(string(ks)) {
-				buf.WriteString(string(ks))
-			} else {
-				buf.WriteString(k.(Value).String())
-			}
-			buf.WriteString(":")
-			if v != True {
-				buf.WriteString(" ")
-				buf.WriteString(v.(Value).String())
-			}
-			buf.WriteString(", ")
+	iter := ob.named.Iter()
+	for {
+		k, v := iter()
+		if k == nil {
+			break
 		}
+		if ks, ok := k.(SuStr); ok && isIdentifier(string(ks)) {
+			buf.WriteString(string(ks))
+		} else {
+			buf.WriteString(k.(Value).String())
+		}
+		buf.WriteString(":")
+		if v != True {
+			buf.WriteString(" ")
+			buf.WriteString(v.(Value).String())
+		}
+		buf.WriteString(", ")
 	}
 	if buf.Len() > 2 {
 		// remove trailing ", "
@@ -208,7 +191,7 @@ func (ob *SuObject) Hash() uint32 {
 	if 0 < ob.NamedSize() && ob.NamedSize() <= 4 {
 		iter := ob.named.Iter()
 		for {
-			k, v := iter.Next()
+			k, v := iter()
 			if k == nil {
 				break
 			}
@@ -254,7 +237,7 @@ func equals2(x *SuObject, y *SuObject, inProgress pairs) bool {
 	if x.NamedSize() > 0 {
 		iter := x.named.Iter()
 		for {
-			k, v := iter.Next()
+			k, v := iter()
 			if k == nil {
 				break
 			}
@@ -321,14 +304,12 @@ func cmp3(x Value, y Value, inProgress pairs) int {
 
 // Slice returns a copy of the object, with the first n list elements removed
 func (ob *SuObject) Slice(n int) *SuObject {
-	newNamed := ob.named
-	if newNamed != nil {
-		newNamed = ob.named.Copy()
-	}
+	newNamed := ob.named.Copy()
+
 	if n > len(ob.list) {
-		return &SuObject{named: newNamed, readonly: false}
+		return &SuObject{named: *newNamed, readonly: false}
 	}
 	list := make([]Value, len(ob.list)-n)
 	copy(list, ob.list[n:])
-	return &SuObject{list: list, named: newNamed, readonly: false}
+	return &SuObject{list: list, named: *newNamed, readonly: false}
 }

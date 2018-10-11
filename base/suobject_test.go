@@ -124,14 +124,13 @@ func TestSuObjectSlice(t *testing.T) {
 	ob.Add(SuInt(34))
 	ob.Add(SuInt(56))
 	ob.Put(SuStr("a"), SuInt(123))
-	ob.Put(SuStr("b"), SuInt(456))
-	Assert(t).That(ob.String(), Equals("#(12, 34, 56, a: 123, b: 456)"))
+	Assert(t).That(ob.String(), Equals("#(12, 34, 56, a: 123)"))
 	ob2 := ob.Slice(0)
 	Assert(t).True(ob.Equal(ob2))
 	ob2 = ob.Slice(1)
-	Assert(t).That(ob2.String(), Equals("#(34, 56, a: 123, b: 456)"))
+	Assert(t).That(ob2.String(), Equals("#(34, 56, a: 123)"))
 	ob2 = ob.Slice(10)
-	Assert(t).That(ob2.String(), Equals("#(a: 123, b: 456)"))
+	Assert(t).That(ob2.String(), Equals("#(a: 123)"))
 }
 
 func TestSuObjectIndex(t *testing.T) {
