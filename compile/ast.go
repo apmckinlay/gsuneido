@@ -5,6 +5,7 @@ import (
 
 	. "github.com/apmckinlay/gsuneido/base"
 	. "github.com/apmckinlay/gsuneido/lexer"
+	"github.com/apmckinlay/gsuneido/util/dnum"
 	"github.com/apmckinlay/gsuneido/util/verify"
 )
 
@@ -122,6 +123,8 @@ func (a *Ast) fourth() Ast {
 	return a.Children[3]
 }
 
+var allones Value = SuDnum{Dnum: dnum.FromInt(0xffffffff)}
+
 func fold(item Item, val Value, children []Ast) (x Ast) {
 	ast := Ast{item, val, children}
 	if ast.isConstant() {
@@ -164,7 +167,7 @@ func fold(item Item, val Value, children []Ast) (x Ast) {
 	case BITOR:
 		return ast.commutative(Bitor, SuInt(0))
 	case BITAND:
-		return ast.commutative(Bitand, SuInt(0))
+		return ast.commutative(Bitand, allones)
 	case BITXOR:
 		return ast.commutative(Bitxor, SuInt(0))
 	case BITNOT:
