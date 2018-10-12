@@ -174,6 +174,10 @@ func (p *parser) atom() T {
 		switch p.Keyword {
 		case TRUE, FALSE, THIS:
 			return p.evalNext(p.bld(p.Item))
+		case NOT:
+			it := p.Item
+			p.next()
+			return p.bld(it, p.atom())
 		case FUNCTION:
 			panic("function literal expression not implemented") //TODO
 		case NEW:
@@ -220,7 +224,7 @@ var precedence = [Ntokens]int8{
 	MOD:       13,
 	INC:       14,
 	DEC:       14,
-	L_PAREN:    15,
+	L_PAREN:   15,
 	DOT:       16,
 	L_BRACKET: 16,
 	EQ:        16,

@@ -59,6 +59,7 @@ func TestCodegen(t *testing.T) {
 	test("s = 'hello'", "value 'hello', store s")
 	test("_dyn = 123", "int 123, store _dyn")
 	test("a = b = c", "load c, store b, store a")
+	test("a = true; not a", "true, store a, pop, load a, not")
 	test("n += 5", "load n, int 5, add, store n")
 	test("++n", "load n, one, add, store n")
 	test("n--", "load n, dup, one, sub, store n, pop")
@@ -87,6 +88,9 @@ func TestCodegen(t *testing.T) {
 	test("F()", "global F, call()")
 	test("f(a, b)", "load a, load b, load f, call(?, ?)")
 	test("f(a, b, c:, d: 0)", "load a, load b, true, zero, load f, call(?, ?, c:, d:)")
+	test("a().Add(123)", "int 123, load a, call(), value 'Add', get, call(?)")
+	test("a().Add(123).Size()",
+		"int 123, load a, call(), value 'Add', get, call(?), value 'Size', get, call()")
 }
 
 func TestControl(t *testing.T) {
