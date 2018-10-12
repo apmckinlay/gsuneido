@@ -114,55 +114,74 @@ func (t *Thread) Run() Value {
 			ob := t.Pop()
 			t.Push(ob.RangeLen(i, n))
 		case IS:
-			t.binop(Is)
+			t.sp--
+			t.stack[t.sp-1] = Is(t.stack[t.sp-1], t.stack[t.sp])
 		case ISNT:
-			t.binop(Isnt)
+			t.sp--
+			t.stack[t.sp-1] = Isnt(t.stack[t.sp-1], t.stack[t.sp])
 		case MATCH:
-			pat := t.rxcache.Get(t.Pop().ToStr())
-			s := t.Pop()
-			t.Push(Match(s, pat))
+			t.sp--
+			pat := t.rxcache.Get(t.stack[t.sp].ToStr())
+			s := t.stack[t.sp-1]
+			t.stack[t.sp-1] = Match(s, pat)
 		case MATCHNOT:
-			pat := t.rxcache.Get(t.Pop().ToStr())
-			s := t.Pop()
-			t.Push(Match(s, pat).Not())
+			t.sp--
+			pat := t.rxcache.Get(t.stack[t.sp].ToStr())
+			s := t.stack[t.sp-1]
+			t.stack[t.sp-1] = Match(s, pat).Not()
 		case LT:
-			t.binop(Lt)
+			t.sp--
+			t.stack[t.sp-1] = Lt(t.stack[t.sp-1], t.stack[t.sp])
 		case LTE:
-			t.binop(Lte)
+			t.sp--
+			t.stack[t.sp-1] = Lte(t.stack[t.sp-1], t.stack[t.sp])
 		case GT:
-			t.binop(Gt)
+			t.sp--
+			t.stack[t.sp-1] = Gt(t.stack[t.sp-1], t.stack[t.sp])
 		case GTE:
-			t.binop(Gte)
+			t.sp--
+			t.stack[t.sp-1] = Gte(t.stack[t.sp-1], t.stack[t.sp])
 		case ADD:
-			t.binop(Add)
+			t.sp--
+			t.stack[t.sp-1] = Add(t.stack[t.sp-1], t.stack[t.sp])
 		case SUB:
-			t.binop(Sub)
+			t.sp--
+			t.stack[t.sp-1] = Sub(t.stack[t.sp-1], t.stack[t.sp])
 		case CAT:
-			t.binop(Cat)
+			t.sp--
+			t.stack[t.sp-1] = Cat(t.stack[t.sp-1], t.stack[t.sp])
 		case MUL:
-			t.binop(Mul)
+			t.sp--
+			t.stack[t.sp-1] = Mul(t.stack[t.sp-1], t.stack[t.sp])
 		case DIV:
-			t.binop(Div)
+			t.sp--
+			t.stack[t.sp-1] = Div(t.stack[t.sp-1], t.stack[t.sp])
 		case MOD:
-			t.binop(Mod)
+			t.sp--
+			t.stack[t.sp-1] = Mod(t.stack[t.sp-1], t.stack[t.sp])
 		case LSHIFT:
-			t.binop(Lshift)
+			t.sp--
+			t.stack[t.sp-1] = Lshift(t.stack[t.sp-1], t.stack[t.sp])
 		case RSHIFT:
-			t.binop(Rshift)
+			t.sp--
+			t.stack[t.sp-1] = Rshift(t.stack[t.sp-1], t.stack[t.sp])
 		case BITOR:
-			t.binop(Bitor)
+			t.sp--
+			t.stack[t.sp-1] = Bitor(t.stack[t.sp-1], t.stack[t.sp])
 		case BITAND:
-			t.binop(Bitand)
+			t.sp--
+			t.stack[t.sp-1] = Bitand(t.stack[t.sp-1], t.stack[t.sp])
 		case BITXOR:
-			t.binop(Bitxor)
+			t.sp--
+			t.stack[t.sp-1] = Bitxor(t.stack[t.sp-1], t.stack[t.sp])
 		case BITNOT:
-			t.unop(Bitnot)
+			t.stack[t.sp-1] = Bitnot(t.stack[t.sp-1])
 		case NOT:
-			t.unop(Not)
+			t.stack[t.sp-1] = Not(t.stack[t.sp-1])
 		case UPLUS:
-			t.unop(Uplus)
+			t.stack[t.sp-1] = Uplus(t.stack[t.sp-1])
 		case UMINUS:
-			t.unop(Uminus)
+			t.stack[t.sp-1] = Uminus(t.stack[t.sp-1])
 		case BOOL:
 			t.topbool()
 		case JUMP:
@@ -300,15 +319,4 @@ func (t *Thread) dyload(fr *Frame, idx int) {
 		}
 	}
 	panic("uninitialized variable: " + name)
-}
-
-func (t *Thread) unop(op func(Value) Value) {
-	x := t.Pop()
-	t.Push(op(x))
-}
-
-func (t *Thread) binop(op func(Value, Value) Value) {
-	y := t.Pop()
-	x := t.Pop()
-	t.Push(op(x, y))
 }
