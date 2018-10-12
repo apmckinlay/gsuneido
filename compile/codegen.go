@@ -17,7 +17,6 @@ import (
 	"github.com/apmckinlay/gsuneido/interp/op"
 	. "github.com/apmckinlay/gsuneido/lexer"
 	"github.com/apmckinlay/gsuneido/util/str"
-	"github.com/apmckinlay/gsuneido/util/varint"
 	"github.com/apmckinlay/gsuneido/util/verify"
 )
 
@@ -416,12 +415,9 @@ func (cg *cgen) emitValue(val Value) {
 	} else if val == SuStr("") {
 		cg.emit(op.EMPTYSTR)
 	} else if i, ok := SmiToInt(val); ok {
-		cg.emit(op.INT)
-		cg.emitInt(i)
+		cg.emitInt16(op.INT, i)
 	} else {
-		cg.emit(op.VALUE)
-		vi := cg.value(val)
-		cg.emitUint(vi)
+		cg.emitUint16(op.VALUE, cg.value(val))
 	}
 }
 
@@ -440,15 +436,14 @@ func (cg *cgen) value(v Value) int {
 
 func (cg *cgen) identifier(ast Ast) {
 	if isLocal(ast.Text) {
+		i := cg.name(ast.Text)
 		if ast.Text[0] == '_' {
-			cg.emit(op.DYLOAD)
+			cg.emitUint8(op.DYLOAD, i)
 		} else {
-			cg.emit(op.LOAD)
+			cg.emitUint8(op.LOAD, i)
 		}
-		cg.emitUint(cg.name(ast.Text))
 	} else {
-		cg.emit(op.GLOBAL)
-		cg.emitUint(global.Num(ast.Text))
+		cg.emitUint16(op.GLOBAL, global.Num(ast.Text))
 	}
 }
 
@@ -475,11 +470,10 @@ func (cg *cgen) load(ref int) {
 		cg.emit(op.GET)
 	} else {
 		if cg.names[ref][0] == '_' {
-			cg.emit(op.DYLOAD)
+			cg.emitUint8(op.DYLOAD, ref)
 		} else {
-			cg.emit(op.LOAD)
+			cg.emitUint8(op.LOAD, ref)
 		}
-		cg.emitUint(ref)
 	}
 }
 
@@ -487,8 +481,7 @@ func (cg *cgen) store(ref int) {
 	if ref == memRef {
 		cg.emit(op.PUT)
 	} else {
-		cg.emit(op.STORE)
-		cg.emitUint(ref)
+		cg.emitUint8(op.STORE, ref)
 	}
 }
 
@@ -559,7 +552,7 @@ func (cg *cgen) call(ast Ast) {
 
 func (cg *cgen) args(ast Ast) interp.ArgSpec {
 	// TODO @args
-	if (ast.Item == atArg) {
+	if ast.Item == atArg {
 		panic("@args not implemented")
 	}
 	verify.That(ast.Item == argList)
@@ -584,12 +577,19 @@ func (cg *cgen) emit(b ...byte) {
 	cg.code = append(cg.code, b...)
 }
 
-func (cg *cgen) emitUint(i int) {
-	cg.code = varint.EncodeUint32(uint32(i), cg.code)
+func (cg *cgen) emitUint8(op byte, i int) {
+	verify.That(0 <= i && i < math.MaxUint8)
+	cg.emit(op, byte(i))
 }
 
-func (cg *cgen) emitInt(i int) {
-	cg.code = varint.EncodeInt32(int32(i), cg.code)
+func (cg *cgen) emitInt16(op byte, i int) {
+	verify.That(math.MinInt16 <= i && i < math.MaxInt16)
+	cg.emit(op, byte(i>>8), byte(i))
+}
+
+func (cg *cgen) emitUint16(op byte, i int) {
+	verify.That(0 <= i && i < math.MaxUint16)
+	cg.emit(op, byte(i>>8), byte(i))
 }
 
 func (cg *cgen) emitJump(op byte, label int) int {

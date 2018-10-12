@@ -15,7 +15,7 @@ func TestInterp(t *testing.T) {
 		result := th.Call(fn, nil)
 		Assert(t).That(result, Equals(SuInt(8)))
 	}
-	test(SuInt(8), op.INT, 3<<1, op.INT, 5<<1, op.ADD, op.RETURN)
+	test(SuInt(8), op.INT, 0, 3, op.INT, 0, 5, op.ADD, op.RETURN)
 }
 
 // compare to BenchmarkInterp in execute_test.go

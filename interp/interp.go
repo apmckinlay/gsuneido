@@ -5,7 +5,6 @@ import (
 	. "github.com/apmckinlay/gsuneido/base"
 	"github.com/apmckinlay/gsuneido/interp/global"
 	. "github.com/apmckinlay/gsuneido/interp/op"
-	"github.com/apmckinlay/gsuneido/util/varint"
 )
 
 // Call sets up a frame to Run a compiled Suneido function
@@ -27,6 +26,22 @@ var _ Context = (*Thread)(nil) // verify Thread satisfies Context
 func (t *Thread) Run() Value {
 	fr := &t.frames[t.fp-1]
 	code := fr.fn.Code
+	fetchUint8 := func() int {
+		fr.ip++
+		return int(code[fr.ip-1])
+	}
+	fetchInt16 := func() int {
+		fr.ip += 2
+		return int(int16(uint16(code[fr.ip-2])<<8 + uint16(code[fr.ip-1])))
+	}
+	fetchUint16 := func() int {
+		fr.ip += 2
+		return int(uint16(code[fr.ip-2])<<8 + uint16(code[fr.ip-1]))
+	}
+	jump := func() {
+		fr.ip += fetchInt16()
+	}
+
 	sp := t.sp
 	for fr.ip < len(code) {
 		// fmt.Println("stack:", t.stack[sp:t.sp])
@@ -54,21 +69,21 @@ func (t *Thread) Run() Value {
 		case EMPTYSTR:
 			t.Push(SuStr(""))
 		case INT:
-			t.Push(SuInt(int(fetchInt(code, &fr.ip))))
+			t.Push(SuInt(fetchInt16()))
 		case VALUE:
-			t.Push(fr.fn.Values[fetchUint(code, &fr.ip)])
+			t.Push(fr.fn.Values[fetchUint16()])
 		case LOAD:
-			t.Push(t.load(fr, fetchUint(code, &fr.ip)))
+			t.Push(t.load(fr, fetchUint8()))
 		case STORE:
-			t.stack[fr.bp+fetchUint(code, &fr.ip)] = t.Top()
+			t.stack[fr.bp+fetchUint8()] = t.Top()
 		case DYLOAD:
-			i := fetchUint(code, &fr.ip)
+			i := fetchUint8()
 			if t.stack[fr.bp+i] == nil {
 				t.dyload(fr, i)
 			}
 			t.Push(t.stack[fr.bp+i])
 		case GLOBAL:
-			gn := int(fetchUint(code, &fr.ip))
+			gn := int(fetchUint16())
 			val := global.Get(gn)
 			if val == nil {
 				panic("uninitialized global: " + global.Name(gn))
@@ -151,36 +166,36 @@ func (t *Thread) Run() Value {
 		case BOOL:
 			t.topbool()
 		case JUMP:
-			jump(code, &fr.ip)
+			jump()
 		case TJUMP:
 			if t.popbool() {
-				jump(code, &fr.ip)
+				jump()
 			} else {
 				fr.ip += 2
 			}
 		case FJUMP:
 			if !t.popbool() {
-				jump(code, &fr.ip)
+				jump()
 			} else {
 				fr.ip += 2
 			}
 		case AND:
 			if !t.topbool() {
-				jump(code, &fr.ip)
+				jump()
 			} else {
 				fr.ip += 2
 				t.Pop()
 			}
 		case OR:
 			if t.topbool() {
-				jump(code, &fr.ip)
+				jump()
 			} else {
 				fr.ip += 2
 				t.Pop()
 			}
 		case Q_MARK:
 			if !t.popbool() {
-				jump(code, &fr.ip)
+				jump()
 			} else {
 				fr.ip += 2
 			}
@@ -189,7 +204,7 @@ func (t *Thread) Run() Value {
 			x := t.Pop()
 			if x.Equal(y) {
 				t.Push(True)
-				jump(code, &fr.ip)
+				jump()
 			} else {
 				fr.ip += 2
 				t.Push(x)
@@ -198,7 +213,7 @@ func (t *Thread) Run() Value {
 			y := t.Pop()
 			x := t.Pop()
 			if x.Equal(y) {
-				jump(code, &fr.ip)
+				jump()
 			} else {
 				fr.ip += 2
 				t.Push(x)
@@ -208,7 +223,7 @@ func (t *Thread) Run() Value {
 			x := t.Pop()
 			if !x.Equal(y) {
 				t.Push(x)
-				jump(code, &fr.ip)
+				jump()
 			} else {
 				fr.ip += 2
 			}
@@ -265,10 +280,10 @@ func (t *Thread) popbool() bool {
 	}
 }
 
-func (t *Thread) load(fr *Frame, idx int) Value {
-	val := t.stack[fr.bp+idx]
+func (t *Thread) load(fr *Frame, i int) Value {
+	val := t.stack[fr.bp+i]
 	if val == nil {
-		panic("uninitialized variable: " + fr.fn.Strings[idx])
+		panic("uninitialized variable: " + fr.fn.Strings[i])
 	}
 	return val
 }
@@ -279,7 +294,7 @@ func (t *Thread) dyload(fr *Frame, idx int) {
 		fr2 := t.frames[i]
 		for j, s := range fr2.fn.Strings {
 			if s == name {
-				t.stack[fr.bp+idx] = t.stack[fr2.bp + j]
+				t.stack[fr.bp+idx] = t.stack[fr2.bp+j]
 				return
 			}
 		}
@@ -296,20 +311,4 @@ func (t *Thread) binop(op func(Value, Value) Value) {
 	y := t.Pop()
 	x := t.Pop()
 	t.Push(op(x, y))
-}
-
-func fetchInt(code []byte, ip *int) (int) {
-	var i int32
-	i, *ip = varint.DecodeInt32(code, *ip)
-	return int(i)
-}
-
-func fetchUint(code []byte, ip *int) (int) {
-	var i uint32
-	i, *ip = varint.DecodeUint32(code, *ip)
-	return int(i)
-}
-
-func jump(code []byte, ip *int) {
-	*ip += 2 + int(int16(uint16(code[*ip])<<8+uint16(code[*ip+1])))
 }

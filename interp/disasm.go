@@ -37,6 +37,19 @@ func Disasm(w io.Writer, fn *SuFunc) {
 }
 
 func Disasm1(fn *SuFunc, i int) (int, string) {
+	fetchUint8 := func() int {
+		i++
+		return int(fn.Code[i-1])
+	}
+	fetchInt16 := func() int {
+		i += 2
+		return int(int16(uint16(fn.Code[i-2])<<8 + uint16(fn.Code[i-1])))
+	}
+	fetchUint16 := func() int {
+		i += 2
+		return int(uint16(fn.Code[i-2])<<8 + uint16(fn.Code[i-1]))
+	}
+
 	op := fn.Code[i]
 	i++
 	if int(op) >= len(asm) {
@@ -45,22 +58,20 @@ func Disasm1(fn *SuFunc, i int) (int, string) {
 	s := asm[op]
 	switch op {
 	case INT:
-		n := fetchInt(fn.Code, &i)
+		n := fetchInt16()
 		s += fmt.Sprintf(" %d", n)
 	case VALUE:
-		v := fn.Values[fetchUint(fn.Code, &i)]
+		v := fn.Values[fetchUint16()]
 		s += fmt.Sprintf(" %v", v)
 	case LOAD, STORE, DYLOAD:
-		idx := fetchUint(fn.Code, &i)
+		idx := fetchUint8()
 		s += " " + fn.Strings[idx]
 	case GLOBAL:
-		idx := fetchUint(fn.Code, &i)
+		idx := fetchUint16()
 		s += " " + global.Name(int(idx))
 	case JUMP, TJUMP, FJUMP, AND, OR, Q_MARK, IN, EQJUMP, NEJUMP:
-		ip := i
-		i += 2
-		jump(fn.Code, &ip)
-		s += fmt.Sprintf(" %d", ip)
+		j := fetchInt16()
+		s += fmt.Sprintf(" %d", i + j)
 	case CALL:
 		unnamed := fn.Code[i]
 		i++
