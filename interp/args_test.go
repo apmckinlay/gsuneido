@@ -11,7 +11,7 @@ import (
 func TestArgs(t *testing.T) {
 	th := &Thread{}
 	setStack := func(nums ...int) {
-		th.sp = 0
+		th.Reset()
 		for _, n := range nums {
 			th.Push(SuInt(n))
 		}
@@ -29,7 +29,7 @@ func TestArgs(t *testing.T) {
 	// @arg => @param
 	f = &Func{Nparams: 1, Flags: []Flag{AtParam}}
 	a = ArgSpec{Unnamed: EACH}
-	th.sp = 0
+	th.Reset()
 	th.Push(makeOb())
 	th.args(f, a)
 	Assert(t).That(th.sp, Equals(1))
@@ -38,7 +38,7 @@ func TestArgs(t *testing.T) {
 	// @+1arg => @param
 	f = &Func{Nparams: 1, Flags: []Flag{AtParam}}
 	a = ArgSpec{Unnamed: EACH1}
-	th.sp = 0
+	th.Reset()
 	th.Push(makeOb())
 	th.args(f, a)
 	Assert(t).That(th.sp, Equals(1))
@@ -85,7 +85,7 @@ func TestArgs(t *testing.T) {
 		Strings: []string{"a", "b", "c", "d"}}
 	a = ArgSpec{Unnamed: 2,
 		Names: []string{"c", "b", "a", "d"}, Spec: []byte{3, 0}} // d, c
-	setStack(22, 33, 11, 44)  // fn(22, 33, d: 11, c: 44)
+	setStack(22, 33, 11, 44) // fn(22, 33, d: 11, c: 44)
 	th.args(f, a)
 	ckStack(22, 33, 44, 11)
 
@@ -102,19 +102,20 @@ func TestArgs(t *testing.T) {
 	f = &Func{Nparams: 4, Flags: []Flag{0, 0, 0, 0},
 		Strings: []string{"d", "c", "b", "a"}}
 	a = ArgSpec{Unnamed: EACH}
-	th.sp = 0
+	th.Reset()
 	th.Push(makeOb())
 	th.args(f, a)
 	ckStack(11, 22, 44, 33)
 
 	// dynamic
-	th.frames = append(th.frames, Frame{
+	th.Reset()
+	th.frames[0] = Frame{
 		fn:     &SuFunc{Func: Func{Strings: []string{"x", "_dyn"}}},
 		locals: []Value{SuInt(111), SuInt(123)},
-	})
+	}
+	th.fp++
 	f = &Func{Nparams: 1, Flags: []Flag{DynParam}, Strings: []string{"dyn"}}
 	a = ArgSpec{}
-	th.sp = 0
 	th.args(f, a)
 	ckStack(123)
 }

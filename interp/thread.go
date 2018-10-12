@@ -8,17 +8,22 @@ import (
 
 // See interp.go for the rest of the Thread methods
 
-const stackSize = 1024
+const maxStack = 1024
+const maxFrames = 256
 
 type Thread struct {
 	// frames are the Frame's making up the call stack.
 	// The end of the slice is top of the stack (the current frame).
-	frames []Frame
+	frames [maxFrames]Frame
+	// fp is the frame pointer
+	fp int
+
 	// stack is the Value stack for arguments and expressions.
 	// The end of the slice is the top of the stack.
-	stack [stackSize]Value
+	stack [maxStack]Value
 	// sp is the stack pointer, top is stack[sp-1]
-	sp      int
+	sp int
+
 	rxcache *regex.LruMapCache
 	trcache *tr.LruMapCache
 }
@@ -60,5 +65,6 @@ func (t *Thread) Dupx2() {
 }
 
 func (t *Thread) Reset() {
+	t.fp = 0
 	t.sp = 0
 }

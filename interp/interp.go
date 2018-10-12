@@ -17,16 +17,16 @@ func (t *Thread) Call(fn *SuFunc, self Value) Value {
 		t.Push(nil)
 	}
 	locals := t.stack[t.sp-fn.Nlocals : t.sp]
-	frame := Frame{fn: fn, ip: 0, locals: locals, self: self}
-	t.frames = append(t.frames, frame)
-	defer func(fp int) { t.frames = t.frames[:fp] }(len(t.frames) - 1)
+	t.frames[t.fp] = Frame{fn: fn, locals: locals, self: self}
+	defer func(fp int) { t.fp = fp }(t.fp)
+	t.fp++
 	return t.Run()
 }
 
 var _ Context = (*Thread)(nil) // verify Thread satisfies Context
 
 func (t *Thread) Run() Value {
-	fr := &t.frames[len(t.frames)-1]
+	fr := &t.frames[t.fp-1]
 	code := fr.fn.Code
 	sp := t.sp
 	for fr.ip < len(code) {
@@ -276,7 +276,7 @@ func (t *Thread) load(fr *Frame, idx uint32) Value {
 
 func (t *Thread) dyload(fr *Frame, idx uint32) {
 	name := fr.fn.Strings[idx]
-	for i := len(t.frames) - 1; i >= 0; i-- {
+	for i := t.fp - 1; i >= 0; i-- {
 		fr2 := t.frames[i]
 		for j, s := range fr2.fn.Strings {
 			if s == name {

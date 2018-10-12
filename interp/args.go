@@ -124,7 +124,7 @@ func (t *Thread) massage(fn *Func, as ArgSpec, args []Value) {
 }
 
 func (t *Thread) dyn(name string) Value {
-	for i := len(t.frames) - 1; i >= 0; i-- {
+	for i := t.fp - 1; i >= 0; i-- {
 		fr := t.frames[i]
 		for j, s := range fr.fn.Strings {
 			if s == name {
