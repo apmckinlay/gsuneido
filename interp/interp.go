@@ -227,9 +227,10 @@ func (t *Thread) Run() Value {
 			fr.ip += named
 			switch f := f.(type) {
 			case Callable:
-				//TODO defer pop args
-				t.Push(f.Call(t, nil,
-					t.args(f.Params(), ArgSpec{unnamed, spec, fr.fn.Strings})...))
+				result := f.Call(t, nil,
+					t.args(f.Params(), ArgSpec{unnamed, spec, fr.fn.Strings})...)
+				t.sp -= int(unnamed) + named
+				t.Push(result)
 			default:
 				panic("can't call " + f.TypeName())
 			}

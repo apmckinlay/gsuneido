@@ -10,7 +10,7 @@ func (t *Thread) args(fn *Func, as ArgSpec) []Value {
 	nargs := as.Nargs()
 	base := t.sp - nargs
 	// allow stack space for params
-	expand := fn.Nparams - nargs;
+	expand := fn.Nparams - nargs
 	for ; expand > 0; expand-- {
 		t.Push(nil)
 	}

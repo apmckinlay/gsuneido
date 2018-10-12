@@ -58,3 +58,7 @@ func (t *Thread) Dupx2() {
 	t.stack[t.sp-3] = t.stack[t.sp]
 	t.sp++
 }
+
+func (t *Thread) Reset() {
+	t.sp = 0
+}

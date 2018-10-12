@@ -66,3 +66,9 @@ func Get(gnum int) Value {
 	defer lock.RUnlock()
 	return values[gnum]
 }
+
+// Exists returns whether the name exists - for tests
+func Exists(name string) bool {
+	_, ok := name2num[name]
+	return ok
+}

@@ -112,3 +112,26 @@ func strToList(s string) *SuObject {
 	}
 	return &ob
 }
+
+// compare to BenchmarkJit in interp_test.go
+func BenchmarkInterp(b *testing.B) {
+	src := `function (x,y) { x + y }`
+	if ! global.Exists("ADD") {
+		global.Add("ADD", compile.Constant(src).(*SuFunc))
+	}
+	src = `function () {
+		sum = 0
+		for (i = 0; i < 100; ++i)
+			sum = ADD(sum, i)
+		return sum
+	}`
+	fn := compile.Constant(src).(*SuFunc)
+	th := &interp.Thread{}
+	for n := 0; n < b.N; n++ {
+		th.Reset()
+		result := th.Call(fn, nil)
+		if !result.Equal(SuInt(4950)) {
+			panic("wrong result " + result.String())
+		}
+	}
+}

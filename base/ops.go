@@ -8,6 +8,7 @@ import (
 )
 
 var Zero Value = SuInt(0)
+var One Value = SuInt(1)
 
 func Is(x Value, y Value) Value {
 	return SuBool(x.Equal(y))
