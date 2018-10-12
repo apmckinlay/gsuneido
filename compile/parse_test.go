@@ -24,6 +24,7 @@ func TestParseExpression(t *testing.T) {
 	xtest("++123--", "syntax error: lvalue required")
 
 	test := func(src string, expected string) {
+		t.Helper()
 		ast := parseExpr(src)
 		actual := ast.String()
 		if actual != expected {
@@ -41,6 +42,7 @@ func TestParseExpression(t *testing.T) {
 	test("1 + 2 + 3", "6")
 	test("1 + 2 - 3", "0")
 	test("1 | 2 | 4", "7")
+	test("255 & 15", "15")
 	test("a or true or b", "true")
 	test("a and false and b", "false")
 

@@ -8,13 +8,17 @@ import (
 
 // See interp.go for the rest of the Thread methods
 
+const stackSize = 1024
+
 type Thread struct {
 	// frames are the Frame's making up the call stack.
 	// The end of the slice is top of the stack (the current frame).
 	frames []Frame
 	// stack is the Value stack for arguments and expressions.
 	// The end of the slice is the top of the stack.
-	stack   []Value
+	stack [stackSize]Value
+	// sp is the stack pointer, top is stack[sp-1]
+	sp      int
 	rxcache *regex.LruMapCache
 	trcache *tr.LruMapCache
 }
@@ -26,31 +30,31 @@ func NewThread() *Thread {
 }
 
 func (t *Thread) Push(x Value) {
-	t.stack = append(t.stack, x)
+	t.stack[t.sp] = x
+	t.sp++
 }
 
 func (t *Thread) Pop() Value {
-	last := len(t.stack) - 1
-	x := t.stack[last]
-	t.stack = t.stack[:last]
-	return x
+	t.sp--
+	return t.stack[t.sp]
 }
 
 func (t *Thread) Top() Value {
-	return t.stack[len(t.stack)-1]
-}
-
-func (t *Thread) SetTop(x Value) {
-	t.stack[len(t.stack)-1] = x
+	return t.stack[t.sp-1]
 }
 
 func (t *Thread) Dup2() {
-	t.stack = append(t.stack, t.stack[len(t.stack)-2], t.stack[len(t.stack)-1])
+	t.stack[t.sp] = t.stack[t.sp-2]
+	t.stack[t.sp+1] = t.stack[t.sp-1]
+	t.sp += 2
 }
 
+// Dupx2 inserts a copy of the top value under the top three
+// e.g. 0,1,2,3 => 0,3,1,2,3
 func (t *Thread) Dupx2() {
-	n := len(t.stack)
-	t.stack = append(t.stack, nil)
-	copy(t.stack[n-2:], t.stack[n-3:])
-	t.stack[n-3] = t.Top()
+	t.stack[t.sp] = t.stack[t.sp-1]
+	t.stack[t.sp-1] = t.stack[t.sp-2]
+	t.stack[t.sp-2] = t.stack[t.sp-3]
+	t.stack[t.sp-3] = t.stack[t.sp]
+	t.sp++
 }

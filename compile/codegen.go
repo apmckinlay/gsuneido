@@ -558,10 +558,13 @@ func (cg *cgen) call(ast Ast) {
 }
 
 func (cg *cgen) args(ast Ast) interp.ArgSpec {
+	// TODO @args
+	if (ast.Item == atArg) {
+		panic("@args not implemented")
+	}
 	verify.That(ast.Item == argList)
 	var spec []byte
 	for _, arg := range ast.Children {
-		// TODO @args
 		if arg.Item != noKeyword {
 			i := cg.name(arg.Item.Text)
 			verify.That(i <= math.MaxUint8)

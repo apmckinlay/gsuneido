@@ -12,10 +12,11 @@ import (
 // The stack must already be in the form required by the function (massaged)
 func (t *Thread) Call(fn *SuFunc, self Value) Value {
 	// expand stack if necessary for locals
-	if expand := fn.Nlocals - fn.Nparams; expand > 0 {
-		t.stack = append(t.stack, nilValues[:expand]...)
+	expand := fn.Nlocals - fn.Nparams
+	for ; expand > 0; expand-- {
+		t.Push(nil)
 	}
-	locals := t.stack[len(t.stack)-fn.Nlocals:]
+	locals := t.stack[t.sp-fn.Nlocals : t.sp]
 	frame := Frame{fn: fn, ip: 0, locals: locals, self: self}
 	t.frames = append(t.frames, frame)
 	defer func(fp int) { t.frames = t.frames[:fp] }(len(t.frames) - 1)
@@ -27,9 +28,9 @@ var _ Context = (*Thread)(nil) // verify Thread satisfies Context
 func (t *Thread) Run() Value {
 	fr := &t.frames[len(t.frames)-1]
 	code := fr.fn.Code
-	sp := len(t.stack)
+	sp := t.sp
 	for fr.ip < len(code) {
-		// fmt.Println("stack:", t.stack[sp:])
+		// fmt.Println("stack:", t.stack[sp:t.sp])
 		// _, da := Disasm1(fr.fn, fr.ip)
 		// fmt.Printf("%d: %s\n", fr.ip, da)
 		op := code[fr.ip]
@@ -236,7 +237,7 @@ func (t *Thread) Run() Value {
 			panic("invalid op code")
 		}
 	}
-	if len(t.stack) > sp {
+	if t.sp > sp {
 		return t.Pop()
 	}
 	return nil

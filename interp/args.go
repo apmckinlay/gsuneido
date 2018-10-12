@@ -6,19 +6,18 @@ import (
 	"github.com/apmckinlay/gsuneido/util/verify"
 )
 
-var nilValues [MaxArgs]Value
-
 func (t *Thread) args(fn *Func, as ArgSpec) []Value {
 	nargs := as.Nargs()
-	base := len(t.stack) - nargs
-	// expand stack if necessary to allow for params
-	if expand := fn.Nparams - nargs; expand > 0 {
-		t.stack = append(t.stack, nilValues[:expand]...)
+	base := t.sp - nargs
+	// allow stack space for params
+	expand := fn.Nparams - nargs;
+	for ; expand > 0; expand-- {
+		t.Push(nil)
 	}
 	locals := t.stack[base:]
 	// shrink stack if excess args (locals still has full args)
 	if nargs > fn.Nparams {
-		t.stack = t.stack[:base+fn.Nparams]
+		t.sp = base + fn.Nparams
 	}
 	t.massage(fn, as, locals)
 	return t.stack[base:]
