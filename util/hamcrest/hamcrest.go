@@ -35,6 +35,9 @@ func Assert(t testing) Asserter {
 
 // True checks for true e.g. Assert(t).True(cond)
 func (a Asserter) True(b bool) {
+	if t, ok := a.t.(*gotesting.T); ok {
+		t.Helper() // skip this function when printing file/line info
+	}
 	if !b {
 		a.Fail("expected true but it was false")
 	}
@@ -42,6 +45,9 @@ func (a Asserter) True(b bool) {
 
 // False checks for false e.g. Assert(t).False(cond)
 func (a Asserter) False(b bool) {
+	if t, ok := a.t.(*gotesting.T); ok {
+		t.Helper() // skip this function when printing file/line info
+	}
 	if b {
 		a.Fail("expected false but it was true")
 	}
@@ -93,6 +99,10 @@ func getLocation() (string, int) {
 	return file, line
 }
 
+type Eq interface {
+	Equal(interface{}) bool
+}
+
 // Equals returns a Tester that checks that the actual value is equal to the expected value
 // float64's are compared as strings
 // otherwise uses reflect.DeepEqual
@@ -106,7 +116,11 @@ func Equals(expected interface{}) Tester {
 				}
 			}
 		}
-		if reflect.DeepEqual(expected, actual) {
+		if e,ok := expected.(Eq); ok {
+			if e.Equal(actual) {
+				return ""
+			}
+		} else if reflect.DeepEqual(expected, actual) {
 			return ""
 		}
 		return fmt.Sprintf("expected: %s but got: %s",
