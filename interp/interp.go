@@ -16,8 +16,7 @@ func (t *Thread) Call(fn *SuFunc, self Value) Value {
 	for ; expand > 0; expand-- {
 		t.Push(nil)
 	}
-	locals := t.stack[t.sp-fn.Nlocals : t.sp]
-	t.frames[t.fp] = Frame{fn: fn, locals: locals, self: self}
+	t.frames[t.fp] = Frame{fn: fn, bp: t.sp - fn.Nlocals, self: self}
 	defer func(fp int) { t.fp = fp }(t.fp)
 	t.fp++
 	return t.Run()
@@ -61,13 +60,13 @@ func (t *Thread) Run() Value {
 		case LOAD:
 			t.Push(t.load(fr, fetchUint(code, &fr.ip)))
 		case STORE:
-			fr.locals[fetchUint(code, &fr.ip)] = t.Top()
+			t.stack[fr.bp+fetchUint(code, &fr.ip)] = t.Top()
 		case DYLOAD:
 			i := fetchUint(code, &fr.ip)
-			if fr.locals[i] == nil {
+			if t.stack[fr.bp+i] == nil {
 				t.dyload(fr, i)
 			}
-			t.Push(fr.locals[i])
+			t.Push(t.stack[fr.bp+i])
 		case GLOBAL:
 			gn := int(fetchUint(code, &fr.ip))
 			val := global.Get(gn)
@@ -266,21 +265,21 @@ func (t *Thread) popbool() bool {
 	}
 }
 
-func (t *Thread) load(fr *Frame, idx uint32) Value {
-	val := fr.locals[idx]
+func (t *Thread) load(fr *Frame, idx int) Value {
+	val := t.stack[fr.bp+idx]
 	if val == nil {
 		panic("uninitialized variable: " + fr.fn.Strings[idx])
 	}
 	return val
 }
 
-func (t *Thread) dyload(fr *Frame, idx uint32) {
+func (t *Thread) dyload(fr *Frame, idx int) {
 	name := fr.fn.Strings[idx]
 	for i := t.fp - 1; i >= 0; i-- {
 		fr2 := t.frames[i]
 		for j, s := range fr2.fn.Strings {
 			if s == name {
-				fr.locals[idx] = fr2.locals[j]
+				t.stack[fr.bp+idx] = t.stack[fr2.bp + j]
 				return
 			}
 		}
@@ -299,14 +298,16 @@ func (t *Thread) binop(op func(Value, Value) Value) {
 	t.Push(op(x, y))
 }
 
-func fetchInt(code []byte, ip *int) (i int32) {
+func fetchInt(code []byte, ip *int) (int) {
+	var i int32
 	i, *ip = varint.DecodeInt32(code, *ip)
-	return i
+	return int(i)
 }
 
-func fetchUint(code []byte, ip *int) (i uint32) {
+func fetchUint(code []byte, ip *int) (int) {
+	var i uint32
 	i, *ip = varint.DecodeUint32(code, *ip)
-	return i
+	return int(i)
 }
 
 func jump(code []byte, ip *int) {

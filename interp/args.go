@@ -128,7 +128,7 @@ func (t *Thread) dyn(name string) Value {
 		fr := t.frames[i]
 		for j, s := range fr.fn.Strings {
 			if s == name {
-				return fr.locals[j]
+				return t.stack[fr.bp + j]
 			}
 		}
 	}

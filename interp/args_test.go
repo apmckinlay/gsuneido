@@ -108,16 +108,13 @@ func TestArgs(t *testing.T) {
 	ckStack(11, 22, 44, 33)
 
 	// dynamic
-	th.Reset()
-	th.frames[0] = Frame{
-		fn:     &SuFunc{Func: Func{Strings: []string{"x", "_dyn"}}},
-		locals: []Value{SuInt(111), SuInt(123)},
-	}
+	setStack(111, 123)
+	th.frames[0] = Frame{fn: &SuFunc{Func: Func{Strings: []string{"x", "_dyn"}}}}
 	th.fp++
 	f = &Func{Nparams: 1, Flags: []Flag{DynParam}, Strings: []string{"dyn"}}
 	a = ArgSpec{}
 	th.args(f, a)
-	ckStack(123)
+	ckStack(111, 123, 123)
 }
 
 func makeOb() *SuObject {
