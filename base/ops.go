@@ -7,6 +7,8 @@ import (
 	"github.com/apmckinlay/gsuneido/util/regex"
 )
 
+var Zero Value = SuInt(0)
+
 func Is(x Value, y Value) Value {
 	return SuBool(x.Equal(y))
 }

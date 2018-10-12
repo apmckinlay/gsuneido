@@ -165,11 +165,11 @@ func fold(item Item, val Value, children []Ast) (x Ast) {
 	case AND:
 		return ast.foldAndOr(True, False)
 	case BITOR:
-		return ast.commutative(Bitor, SuInt(0))
+		return ast.commutative(Bitor, Zero)
 	case BITAND:
 		return ast.commutative(Bitand, allones)
 	case BITXOR:
-		return ast.commutative(Bitxor, SuInt(0))
+		return ast.commutative(Bitxor, Zero)
 	case BITNOT:
 		val = ast.unop(Bitnot)
 	case NOT:
