@@ -1,7 +1,6 @@
 package compile
 
 import (
-	"bytes"
 	"strings"
 	"testing"
 
@@ -100,8 +99,8 @@ func TestControl(t *testing.T) {
 		t.Helper()
 		ast := ParseFunction("function () {\n" + src + "\n}")
 		fn := codegen(ast)
-		buf := new(bytes.Buffer)
-		interp.Disasm(buf, fn)
+		buf := strings.Builder{}
+		interp.Disasm(&buf, fn)
 		s := buf.String()
 		Assert(t).That(s, Like(expected).Comment(src))
 	}

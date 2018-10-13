@@ -1,7 +1,6 @@
 package lexer
 
 import (
-	"bytes"
 	"strings"
 	"unicode"
 	"unicode/utf8"
@@ -300,7 +299,7 @@ func (lxr *Lexer) quotedString(start int, quote rune) Item {
 		lxr.si += i + 1
 		return it(STRING, start, src[:i])
 	}
-	var buf bytes.Buffer
+	var buf strings.Builder
 	lxr.match(quote)
 	for c := lxr.read1(); c != eof && c != quote; c = lxr.read1() {
 		buf.WriteByte(byte(lxr.doesc(c)))

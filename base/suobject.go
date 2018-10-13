@@ -1,7 +1,7 @@
 package base
 
 import (
-	"bytes"
+	"strings"
 	"unicode"
 
 	"github.com/apmckinlay/gsuneido/util/dnum"
@@ -136,11 +136,13 @@ func (ob *SuObject) migrate() {
 }
 
 func (ob *SuObject) String() string {
-	var buf bytes.Buffer
+	var buf strings.Builder
+	sep := ""
 	buf.WriteString("#(")
 	for _, v := range ob.list {
+		buf.WriteString(sep)
+		sep = ", "
 		buf.WriteString(v.String())
-		buf.WriteString(", ")
 	}
 	iter := ob.named.Iter()
 	for {
@@ -148,6 +150,8 @@ func (ob *SuObject) String() string {
 		if k == nil {
 			break
 		}
+		buf.WriteString(sep)
+		sep = ", "
 		if ks, ok := k.(SuStr); ok && isIdentifier(string(ks)) {
 			buf.WriteString(string(ks))
 		} else {
@@ -158,11 +162,6 @@ func (ob *SuObject) String() string {
 			buf.WriteString(" ")
 			buf.WriteString(v.(Value).String())
 		}
-		buf.WriteString(", ")
-	}
-	if buf.Len() > 2 {
-		// remove trailing ", "
-		buf.Truncate(buf.Len() - 2)
 	}
 	buf.WriteString(")")
 	return buf.String()

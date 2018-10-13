@@ -1,6 +1,6 @@
 package interp
 
-import "bytes"
+import "strings"
 
 /*
 ArgSpec specifies the arguments on the stack for a call.
@@ -43,7 +43,7 @@ func (as ArgSpec) ArgName(i int) string {
 }
 
 func (as ArgSpec) String() string {
-	var buf bytes.Buffer
+	var buf strings.Builder
 	sep := ""
 	buf.WriteString("ArgSpec(")
 	if as.Unnamed >= EACH {

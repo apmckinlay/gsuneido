@@ -1,7 +1,6 @@
 package base
 
 import (
-	"bytes"
 	"fmt"
 	"strconv"
 	"strings"
@@ -285,7 +284,10 @@ func fromGoTime(t gotime.Time) SuDate {
 // Format converts the date to a string in the specified format
 func (d SuDate) Format(fmt string) string {
 	fmtlen := len(fmt)
-	dst := new(bytes.Buffer)
+	var dst strings.Builder
+	add := func(i int) {
+		dst.WriteByte('0' + byte(i))
+	}
 	dst.Grow(fmtlen)
 	for i := 0; i < fmtlen; i++ {
 		n := 1
@@ -298,15 +300,15 @@ func (d SuDate) Format(fmt string) string {
 		case 'y':
 			yr := d.Year()
 			if n >= 4 {
-				add(dst, yr/1000)
+				add(yr / 1000)
 			}
 			if n >= 3 {
-				add(dst, (yr%1000)/100)
+				add((yr % 1000) / 100)
 			}
 			if n >= 2 || (yr%100) > 9 {
-				add(dst, (yr%100)/10)
+				add((yr % 100) / 10)
 			}
-			add(dst, yr%10)
+			add(yr % 10)
 		case 'M':
 			mon := d.Month()
 			if n > 3 {
@@ -315,9 +317,9 @@ func (d SuDate) Format(fmt string) string {
 				dst.WriteString(months[mon-1][0:3])
 			} else {
 				if n >= 2 || mon > 9 {
-					add(dst, mon/10)
+					add(mon / 10)
 				}
-				add(dst, mon%10)
+				add(mon % 10)
 			}
 		case 'd':
 			if n > 3 {
@@ -326,9 +328,9 @@ func (d SuDate) Format(fmt string) string {
 				dst.WriteString(days[d.WeekDay()][0:3])
 			} else {
 				if n >= 2 || d.Day() > 9 {
-					add(dst, d.Day()/10)
+					add(d.Day() / 10)
 				}
-				add(dst, d.Day()%10)
+				add(d.Day() % 10)
 			}
 		case 'h': // 12 hour
 			hr := d.Hour() % 12
@@ -336,24 +338,24 @@ func (d SuDate) Format(fmt string) string {
 				hr = 12
 			}
 			if n >= 2 || hr > 9 {
-				add(dst, hr/10)
+				add(hr / 10)
 			}
-			add(dst, hr%10)
+			add(hr % 10)
 		case 'H': // 24 hour
 			if n >= 2 || d.Hour() > 9 {
-				add(dst, d.Hour()/10)
+				add(d.Hour() / 10)
 			}
-			add(dst, d.Hour()%10)
+			add(d.Hour() % 10)
 		case 'm':
 			if n >= 2 || d.Minute() > 9 {
-				add(dst, d.Minute()/10)
+				add(d.Minute() / 10)
 			}
-			add(dst, d.Minute()%10)
+			add(d.Minute() % 10)
 		case 's':
 			if n >= 2 || d.Second() > 9 {
-				add(dst, d.Second()/10)
+				add(d.Second() / 10)
 			}
-			add(dst, d.Second()%10)
+			add(d.Second() % 10)
 		case 'a':
 			if d.Hour() < 12 {
 				dst.WriteRune('a')
@@ -386,10 +388,6 @@ func (d SuDate) Format(fmt string) string {
 		}
 	}
 	return dst.String()
-}
-
-func add(dst *bytes.Buffer, i int) {
-	dst.WriteByte('0' + byte(i))
 }
 
 var months = []string{

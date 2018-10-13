@@ -1,8 +1,8 @@
 package base
 
 import (
-	"bytes"
 	"fmt"
+	"strings"
 
 	"github.com/apmckinlay/gsuneido/util/dnum"
 	"github.com/apmckinlay/gsuneido/util/str"
@@ -74,7 +74,7 @@ func (f *Func) ToStr() string {
 }
 
 func (f *Func) String() string {
-	var buf bytes.Buffer
+	var buf strings.Builder
 	buf.WriteString("function (")
 	sep := ""
 	v := 0 // index into Values

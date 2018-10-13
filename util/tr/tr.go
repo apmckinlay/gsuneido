@@ -6,7 +6,6 @@ Currently it is byte based - it does not handle unicode.
 package tr
 
 import (
-	"bytes"
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/util/ptest"
@@ -45,7 +44,7 @@ func Replace(src string, from trset, to trset) string {
 	if si == srclen {
 		return src // no changes
 	}
-	buf := new(bytes.Buffer)
+	buf := strings.Builder{}
 	buf.Grow(srclen)
 	buf.WriteString(src[:si])
 
@@ -98,7 +97,7 @@ func Set(s string) trset {
 
 func expandRanges(s string) trset {
 	slen := len(s)
-	buf := new(bytes.Buffer)
+	buf := strings.Builder{}
 	buf.Grow(slen)
 	if s[0] == '^' {
 		buf.WriteByte('^')
