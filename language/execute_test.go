@@ -19,7 +19,7 @@ var _ = ptest.Add("execute", pt_execute)
 var _ = ptest.Add("lang_rangeto", pt_lang_rangeto)
 var _ = ptest.Add("lang_rangelen", pt_lang_rangelen)
 
-func TestPtest(t *testing.T) {
+func TestPtest(*testing.T) {
 	if !ptest.RunFile("execute.test") || !ptest.RunFile("lang.test") {
 		//t.Fail()
 	}

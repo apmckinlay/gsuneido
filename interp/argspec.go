@@ -46,16 +46,23 @@ func (as ArgSpec) String() string {
 	var buf bytes.Buffer
 	sep := ""
 	buf.WriteString("ArgSpec(")
-	for i := byte(0); i < as.Unnamed; i++ {
-		buf.WriteString(sep)
-		buf.WriteString("?")
-		sep = ", "
-	}
-	for _, i := range as.Spec {
-		buf.WriteString(sep)
-		buf.WriteString(as.Names[i])
-		buf.WriteString(":")
-		sep = ", "
+	if as.Unnamed >= EACH {
+		buf.WriteString("@")
+		if as.Unnamed == EACH1 {
+			buf.WriteString("+1")
+		}
+	} else {
+		for i := byte(0); i < as.Unnamed; i++ {
+			buf.WriteString(sep)
+			buf.WriteString("?")
+			sep = ", "
+		}
+		for _, i := range as.Spec {
+			buf.WriteString(sep)
+			buf.WriteString(as.Names[i])
+			buf.WriteString(":")
+			sep = ", "
+		}
 	}
 	buf.WriteString(")")
 	return buf.String()

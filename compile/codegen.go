@@ -551,9 +551,10 @@ func (cg *cgen) call(ast Ast) {
 }
 
 func (cg *cgen) args(ast Ast) interp.ArgSpec {
-	// TODO @args
 	if ast.Item == atArg {
-		panic("@args not implemented")
+		return interp.ArgSpec{Unnamed: interp.EACH} //TODO
+	} else if ast.Item == at1Arg {
+		return interp.ArgSpec{Unnamed: interp.EACH1}
 	}
 	verify.That(ast.Item == argList)
 	var spec []byte
@@ -573,7 +574,6 @@ func (cg *cgen) args(ast Ast) interp.ArgSpec {
 
 // emit is used to append an op code
 func (cg *cgen) emit(b ...byte) {
-	// TODO detect pop after side effect free instruction
 	cg.code = append(cg.code, b...)
 }
 

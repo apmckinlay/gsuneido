@@ -1,5 +1,7 @@
 package interp
 
+// see also: ArgSpec
+
 import (
 	. "github.com/apmckinlay/gsuneido/base"
 	"github.com/apmckinlay/gsuneido/util/ints"
@@ -23,9 +25,9 @@ func (t *Thread) args(fn *Func, as ArgSpec) []Value {
 	return t.stack[base:]
 }
 
-// args massages the arguments on the stack (specified by ArgSpec)
-// to match what is expected by the function (specified by SuFunc)
-// The stack must already have been expanded.
+// args massages args on the stack (described by ArgSpec)
+// to match what is expected by the function (described by Func)
+// The stack must already have been expanded (e.g. by args)
 func (t *Thread) massage(fn *Func, as ArgSpec, args []Value) {
 	unnamed := int(as.Unnamed)
 	if unnamed == fn.Nparams && len(as.Spec) == 0 {
@@ -36,14 +38,15 @@ func (t *Thread) massage(fn *Func, as ArgSpec, args []Value) {
 	}
 	// as.Unnamed < fn.Nparams
 
-	at := fn.Nparams == 1 && fn.Flags[0] == AtParam
+	atArg := unnamed >= EACH
+	atParam := fn.Nparams == 1 && fn.Flags[0] == AtParam
 
 	// remove after debugged
-	verify.That(!at || fn.Nparams == 1)
+	verify.That(!atParam || fn.Nparams == 1)
 	verify.That(unnamed < EACH || len(as.Spec) == 0)
 
-	if at {
-		if unnamed >= EACH {
+	if atParam {
+		if atArg {
 			// @arg => @param
 			ob := args[0].(*SuObject)
 			ob = ob.Slice(unnamed - EACH)
@@ -64,7 +67,7 @@ func (t *Thread) massage(fn *Func, as ArgSpec, args []Value) {
 		return
 	}
 
-	if unnamed >= EACH {
+	if atArg {
 		// @args => params
 		ob := args[0].(*SuObject)
 		for i := 0; i < ints.Min(fn.Nparams, ob.ListSize()); i++ {

@@ -128,8 +128,8 @@ func TestParseExpression(t *testing.T) {
 
 	test("f()", "(call f args)")
 	test("f(a, b)", "(call f (args (noKwd a) (noKwd b)))")
-	test("f(@a)", "(call f (atArg 0 a))")
-	test("f(@+1 a)", "(call f (atArg 1 a))")
+	test("f(@a)", "(call f (atArg a))")
+	test("f(@+1 a)", "(call f (at1Arg a))")
 	test("f(a:)", "(call f (args (a true)))")
 	test("f(a: 1, b: 2)", "(call f (args (a 1) (b 2)))")
 	test("f(1, a: 2)", "(call f (args (noKwd 1) (a 2)))")

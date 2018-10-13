@@ -263,6 +263,7 @@ func (p *parser) arguments(opening Token) T {
 
 var argList = Item{Text: "args"}
 var atArg = Item{Text: "atArg"}
+var at1Arg = Item{Text: "at1Arg"}
 var noKeyword = Item{Text: "noKwd"}
 var trueItem = Item{Token: TRUE, Text: "true"}
 var blockArg = Item{Token: IDENTIFIER, Text: "blockArg"}
@@ -271,14 +272,17 @@ var blockParams = Item{Text: "blockParams"}
 var zeroItem = Item{Token: NUMBER, Text: "0"}
 
 func (p *parser) atArgument() T {
-	n := zeroItem
+	which := atArg
 	if p.matchIf(ADD) {
-		n = p.Item
+		if p.Item.Text != "1" {
+			panic("only @+1 is supported")
+		}
 		p.match(NUMBER)
+		which = at1Arg
 	}
 	expr := p.expr()
 	p.match(R_PAREN)
-	return p.bld(atArg, p.bld(n), expr)
+	return p.bld(which, expr)
 }
 
 func (p *parser) argumentList(closing Token) []T {
