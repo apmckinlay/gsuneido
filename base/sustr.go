@@ -11,7 +11,7 @@ import (
 // SuStr is a string Value
 type SuStr string
 
-var SuEmptyStr Value = SuStr("")
+var EmptyStr Value = SuStr("")
 var _ Packable = SuStr("")
 
 func (ss SuStr) ToInt() int {
@@ -42,7 +42,7 @@ func (ss SuStr) Get(key Value) Value {
 	i := Index(key)
 	n := len(ss)
 	if i < -n || n <= i {
-		return SuEmptyStr
+		return EmptyStr
 	}
 	if i < 0 {
 		i += n

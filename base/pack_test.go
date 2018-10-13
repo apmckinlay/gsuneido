@@ -10,7 +10,7 @@ import (
 
 func TestPack(t *testing.T) {
 	cv := NewSuConcat().Add("foo").Add("bar")
-	values := []Packable{False, True, SuStr(""), SuStr("foo"), cv,
+	values := []Packable{SuBool(false), SuBool(true), SuStr(""), SuStr("foo"), cv,
 		SuInt(0), SuInt(1), SuInt(-1), dv("123.456"), dv(".1"), dv("-1e22")}
 	for _, v := range values {
 		Assert(t).That(Unpack(Pack(v)), EqVal(v))

@@ -7,8 +7,13 @@ import (
 	"github.com/apmckinlay/gsuneido/util/regex"
 )
 
-var Zero Value = SuInt(0)
-var One Value = SuInt(1)
+var (
+	Zero  Value = SuInt(0)
+	One   Value = SuInt(1)
+	True  Value = SuBool(true)
+	False Value = SuBool(false)
+	// EmptyStr defined in sustr.go
+)
 
 func Is(x Value, y Value) Value {
 	return SuBool(x.Equal(y))

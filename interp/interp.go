@@ -63,11 +63,11 @@ func (t *Thread) Run() Value {
 		case FALSE:
 			t.Push(False)
 		case ZERO:
-			t.Push(SuInt(0))
+			t.Push(Zero)
 		case ONE:
-			t.Push(SuInt(1))
+			t.Push(One)
 		case EMPTYSTR:
-			t.Push(SuStr(""))
+			t.Push(EmptyStr)
 		case INT:
 			t.Push(SuInt(fetchInt16()))
 		case VALUE:

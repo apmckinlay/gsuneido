@@ -5,16 +5,14 @@ import (
 	"github.com/apmckinlay/gsuneido/util/ints"
 )
 
+// NOTE: converting bool/SuBool to interface{} doesn't seem to allocate
+// e.g. v Value = SuBool(b)
+
 // SuBool is a boolean Value
 type SuBool bool
 
-var _ Value = True
-var _ Packable = True
-
-var (
-	True  = SuBool(true)
-	False = SuBool(false)
-)
+var _ Value = SuBool(true)
+var _ Packable = SuBool(true)
 
 func (b SuBool) ToInt() int {
 	if b == false {
@@ -110,8 +108,5 @@ func (b SuBool) Compare(other Value) int {
 }
 
 func (b SuBool) Not() SuBool {
-	if b == True {
-		return False
-	}
-	return True
+	return SuBool(! bool(b))
 }
