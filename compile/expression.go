@@ -179,7 +179,7 @@ func (p *parser) atom() T {
 			p.next()
 			return p.bld(it, p.atom())
 		case FUNCTION:
-			panic("function literal expression not implemented") //TODO
+			return p.function() //TODO
 		case NEW:
 			it := p.Item
 			p.next()

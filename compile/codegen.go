@@ -356,6 +356,9 @@ func (cg *cgen) expr(ast Ast) {
 		cg.inExpr(ast)
 	case THIS:
 		cg.emit(op.THIS)
+	case FUNCTION:
+		fn := codegen(ast)
+		cg.emitValue(fn)
 	default:
 		if ast.Item == call {
 			cg.call(ast)

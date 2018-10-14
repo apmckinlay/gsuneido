@@ -92,6 +92,8 @@ func TestCodegen(t *testing.T) {
 		"int 123, load a, call(), value 'Add', get, call(?), value 'Size', get, call()")
 	test("f(@args)", "load f, call(@)")
 	test("f(@+1args)", "load f, call(@+1)")
+
+	test("function () { }", "value function ()")
 }
 
 func TestControl(t *testing.T) {

@@ -162,9 +162,9 @@ func TestParseFunction(t *testing.T) {
 
 func TestParseStatements(t *testing.T) {
 	test := func(src string, expected string) {
-		ast := ParseFunction("function () {\n" + src + "\n}")
-		ast = ast.second() // function
-		ast = ast.first()  // statements
+		p := newParser(src + " }")
+		ast := p.statements()
+		ast = ast.first()
 		s := ast.String()
 		Assert(t).That(s, Like(expected))
 	}
