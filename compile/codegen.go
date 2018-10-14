@@ -24,7 +24,7 @@ import (
 var zeroFlags [MaxArgs]Flag
 
 // codegen compiles a Function from an Ast
-func codegen(ast Ast) *SuFunc {
+func codegen(ast *Ast) *SuFunc {
 	//fmt.Println("codegen", ast.String())
 	cg := cgen{}
 	var tmp [MaxArgs]Flag // hopefully on the stack
@@ -96,7 +96,7 @@ var tok2op = [Ntokens]byte{
 	BITXOR:   op.BITXOR,
 }
 
-func (cg *cgen) function(ast Ast) {
+func (cg *cgen) function(ast *Ast) {
 	verify.That(ast.Keyword == FUNCTION)
 	cg.params(ast.first())
 	stmts := ast.second().Children
@@ -105,7 +105,7 @@ func (cg *cgen) function(ast Ast) {
 	}
 }
 
-func (cg *cgen) params(ast Ast) {
+func (cg *cgen) params(ast *Ast) {
 	verify.That(ast.Text == "params")
 	cg.nparams = len(ast.Children)
 	for _, p := range ast.Children {
@@ -139,7 +139,7 @@ func (cg *cgen) param(p string) (string, Flag) {
 	return p, flag
 }
 
-func (cg *cgen) statement(ast Ast, labels *Labels, lastStmt bool) {
+func (cg *cgen) statement(ast *Ast, labels *Labels, lastStmt bool) {
 	switch ast.KeyTok() {
 	case L_CURLY:
 		for _, a := range ast.Children {
@@ -189,7 +189,7 @@ func (cg *cgen) statement(ast Ast, labels *Labels, lastStmt bool) {
 	}
 }
 
-func (cg *cgen) ifStmt(ast Ast, labels *Labels) {
+func (cg *cgen) ifStmt(ast *Ast, labels *Labels) {
 	cg.expr(ast.first())
 	f := cg.emitJump(op.FJUMP, -1)
 	cg.statement(ast.second(), labels, false)
@@ -203,7 +203,7 @@ func (cg *cgen) ifStmt(ast Ast, labels *Labels) {
 	}
 }
 
-func (cg *cgen) switchStmt(ast Ast, labels *Labels) {
+func (cg *cgen) switchStmt(ast *Ast, labels *Labels) {
 	cg.expr(ast.first())
 	end := -1
 	for _, c := range ast.second().Children {
@@ -232,14 +232,14 @@ func (cg *cgen) switchStmt(ast Ast, labels *Labels) {
 	cg.placeLabel(end)
 }
 
-func (cg *cgen) foreverStmt(ast Ast) {
+func (cg *cgen) foreverStmt(ast *Ast) {
 	labels := cg.newLabels()
 	cg.statement(ast.first(), labels, false)
 	cg.emitJump(op.JUMP, labels.cont-len(cg.code)-3)
 	cg.placeLabel(labels.brk)
 }
 
-func (cg *cgen) whileStmt(ast Ast) {
+func (cg *cgen) whileStmt(ast *Ast) {
 	labels := cg.newLabels()
 	cond := cg.emitJump(op.JUMP, -1)
 	loop := cg.label()
@@ -250,7 +250,7 @@ func (cg *cgen) whileStmt(ast Ast) {
 	cg.placeLabel(labels.brk)
 }
 
-func (cg *cgen) dowhileStmt(ast Ast) {
+func (cg *cgen) dowhileStmt(ast *Ast) {
 	labels := cg.newLabels()
 	cg.statement(ast.first(), labels, false)
 	cg.expr(ast.second())
@@ -258,7 +258,7 @@ func (cg *cgen) dowhileStmt(ast Ast) {
 	cg.placeLabel(labels.brk)
 }
 
-func (cg *cgen) forStmt(ast Ast) {
+func (cg *cgen) forStmt(ast *Ast) {
 	cg.exprList(ast.first().Children) // init
 	labels := cg.newLabels()
 	cond := cg.emitJump(op.JUMP, -1)
@@ -271,7 +271,7 @@ func (cg *cgen) forStmt(ast Ast) {
 	cg.placeLabel(labels.brk)
 }
 
-func (cg *cgen) exprList(list []Ast) {
+func (cg *cgen) exprList(list []*Ast) {
 	for _, expr := range list {
 		cg.expr(expr)
 		cg.emit(op.POP)
@@ -280,7 +280,7 @@ func (cg *cgen) exprList(list []Ast) {
 
 // expressions -----------------------------------------------------------------
 
-func (cg *cgen) expr(ast Ast) {
+func (cg *cgen) expr(ast *Ast) {
 	switch ast.KeyTok() {
 	case NOT:
 		cg.unary(ast, op.NOT)
@@ -370,7 +370,7 @@ func (cg *cgen) expr(ast Ast) {
 	}
 }
 
-func (cg *cgen) andorExpr(ast Ast) {
+func (cg *cgen) andorExpr(ast *Ast) {
 	label := -1
 	cg.expr(ast.first())
 	for _, a := range ast.Children[1:] {
@@ -381,7 +381,7 @@ func (cg *cgen) andorExpr(ast Ast) {
 	cg.placeLabel(label)
 }
 
-func (cg *cgen) qcExpr(ast Ast) {
+func (cg *cgen) qcExpr(ast *Ast) {
 	f, end := -1, -1
 	cg.expr(ast.first())
 	f = cg.emitJump(op.Q_MARK, f)
@@ -392,7 +392,7 @@ func (cg *cgen) qcExpr(ast Ast) {
 	cg.placeLabel(end)
 }
 
-func (cg *cgen) inExpr(ast Ast) {
+func (cg *cgen) inExpr(ast *Ast) {
 	end := -1
 	cg.expr(ast.first())
 	for j, a := range ast.Children[1:] {
@@ -437,7 +437,7 @@ func (cg *cgen) value(v Value) int {
 	return i
 }
 
-func (cg *cgen) identifier(ast Ast) {
+func (cg *cgen) identifier(ast *Ast) {
 	if isLocal(ast.Text) {
 		i := cg.name(ast.Text)
 		if ast.Text[0] == '_' {
@@ -452,7 +452,7 @@ func (cg *cgen) identifier(ast Ast) {
 
 const memRef = -1
 
-func (cg *cgen) lvalue(ast Ast) int {
+func (cg *cgen) lvalue(ast *Ast) int {
 	if ast.Token == IDENTIFIER && isLocal(ast.Text) {
 		return cg.name(ast.Text)
 	} else if ast.Token == DOT {
@@ -519,13 +519,13 @@ func (cg *cgen) name(s string) int {
 	return i
 }
 
-func (cg *cgen) unary(ast Ast, op byte) {
+func (cg *cgen) unary(ast *Ast, op byte) {
 	verify.That(len(ast.Children) == 1)
 	cg.expr(ast.first())
 	cg.emit(op)
 }
 
-func (cg *cgen) nary(ast Ast, o byte) {
+func (cg *cgen) nary(ast *Ast, o byte) {
 	cg.expr(ast.first())
 	for _, a := range ast.Children[1:] {
 		if o == op.ADD && a.Token == SUB && len(a.Children) == 1 {
@@ -541,7 +541,7 @@ func (cg *cgen) nary(ast Ast, o byte) {
 	}
 }
 
-func (cg *cgen) call(ast Ast) {
+func (cg *cgen) call(ast *Ast) {
 	// TODO call method (without getting bound method)
 	argspec := cg.args(ast.second())
 	cg.expr(ast.first()) // function
@@ -553,7 +553,7 @@ func (cg *cgen) call(ast Ast) {
 	cg.emit(argspec.Spec...)
 }
 
-func (cg *cgen) args(ast Ast) interp.ArgSpec {
+func (cg *cgen) args(ast *Ast) interp.ArgSpec {
 	if ast.Item == atArg {
 		return interp.ArgSpec{Unnamed: interp.EACH} //TODO
 	} else if ast.Item == at1Arg {

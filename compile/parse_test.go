@@ -7,9 +7,9 @@ import (
 )
 
 func TestParseExpression(t *testing.T) {
-	parseExpr := func(src string) Ast {
+	parseExpr := func(src string) *Ast {
 		p := newParser(src)
-		return expression(p, astBuilder).(Ast)
+		return expression(p, astBuilder).(*Ast)
 	}
 	xtest := func(src string, expected string) {
 		actual := Catch(func() { parseExpr(src) })

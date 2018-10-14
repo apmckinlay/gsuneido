@@ -122,7 +122,7 @@ func (p *parser) pcExpr(minprec int8) T {
 }
 
 func ckLvalue(a T) {
-	ast := a.(Ast)
+	ast := a.(*Ast)
 	if (ast.Token == IDENTIFIER && isLocal(ast.Text)) ||
 		ast.Token == DOT || ast.Token == L_BRACKET {
 		return

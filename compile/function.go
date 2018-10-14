@@ -3,12 +3,12 @@ package compile
 import . "github.com/apmckinlay/gsuneido/lexer"
 
 // ParseFunction parses a function and returns an AST for it
-func ParseFunction(src string) Ast {
+func ParseFunction(src string) *Ast {
 	p := newParser(src)
 	return p.function()
 }
 
-func (p *parser) function() Ast {
+func (p *parser) function() *Ast {
 	it := p.Item
 	p.match(FUNCTION)
 	params := p.params()
@@ -16,9 +16,9 @@ func (p *parser) function() Ast {
 	return ast(it, params, body)
 }
 
-func (p *parser) params() Ast {
+func (p *parser) params() *Ast {
 	p.match(L_PAREN)
-	var params []Ast
+	var params []*Ast
 	if p.matchIf(AT) {
 		//TODO @+1
 		params = append(params, ast2("@"+p.Text))
@@ -49,15 +49,15 @@ func (p *parser) params() Ast {
 	return ast2("params", params...)
 }
 
-func (p *parser) compound() Ast {
+func (p *parser) compound() *Ast {
 	p.match(L_CURLY)
 	stmts := p.statements()
 	p.match(R_CURLY)
 	return stmts
 }
 
-func (p *parser) statements() Ast {
-	list := []Ast{}
+func (p *parser) statements() *Ast {
+	list := []*Ast{}
 	for p.Token != R_CURLY {
 		if p.matchIf(NEWLINE) || p.matchIf(SEMICOLON) {
 			continue
@@ -70,7 +70,7 @@ func (p *parser) statements() Ast {
 
 var code = Item{Token: L_CURLY, Text: "STMTS"}
 
-func (p *parser) statement() Ast {
+func (p *parser) statement() *Ast {
 	if p.Token == NEWLINE {
 		p.nextSkipNL()
 	}
@@ -109,7 +109,7 @@ func (p *parser) statement() Ast {
 	}
 }
 
-func (p *parser) ifStmt() Ast {
+func (p *parser) ifStmt() *Ast {
 	it, expr := p.ctrlExpr(IF)
 	t := p.statement()
 	if p.Keyword == ELSE {
@@ -120,10 +120,10 @@ func (p *parser) ifStmt() Ast {
 	return ast(it, expr, t)
 }
 
-func (p *parser) switchStmt() Ast {
+func (p *parser) switchStmt() *Ast {
 	it := p.Item
 	p.nextSkipNL()
-	var expr Ast
+	var expr *Ast
 	if p.Token == L_CURLY {
 		expr = ast(Item{Token: TRUE})
 	} else {
@@ -133,7 +133,7 @@ func (p *parser) switchStmt() Ast {
 		}
 	}
 	p.nextSkipNL()
-	var cases []Ast
+	var cases []*Ast
 	for p.matchIf(CASE) {
 		cases = append(cases, p.switchCase())
 	}
@@ -145,8 +145,8 @@ func (p *parser) switchStmt() Ast {
 	return result
 }
 
-func (p *parser) switchCase() Ast {
-	var values []Ast
+func (p *parser) switchCase() *Ast {
+	var values []*Ast
 	for {
 		values = append(values, p.exprAst())
 		if !p.matchIf(COMMA) {
@@ -157,29 +157,29 @@ func (p *parser) switchCase() Ast {
 	return ast(Item{Token: CASE}, ast2("vals", values...), body)
 }
 
-func (p *parser) switchBody() Ast {
+func (p *parser) switchBody() *Ast {
 	p.match(COLON)
-	var stmts []Ast
+	var stmts []*Ast
 	for p.Token != R_CURLY && p.Keyword != CASE && p.Keyword != DEFAULT {
 		stmts = append(stmts, p.statement())
 	}
 	return ast(code, stmts...)
 }
 
-func (p *parser) foreverStmt() Ast {
+func (p *parser) foreverStmt() *Ast {
 	it := p.Item
 	p.match(FOREVER)
 	body := p.statement()
 	return ast(it, body)
 }
 
-func (p *parser) whileStmt() Ast {
+func (p *parser) whileStmt() *Ast {
 	it, expr := p.ctrlExpr(WHILE)
 	body := p.statement()
 	return ast(it, expr, body)
 }
 
-func (p *parser) dowhileStmt() Ast {
+func (p *parser) dowhileStmt() *Ast {
 	it := p.Item
 	p.match(DO)
 	body := p.statement()
@@ -187,7 +187,7 @@ func (p *parser) dowhileStmt() Ast {
 	return ast(it, body, expr)
 }
 
-func (p *parser) forStmt() Ast {
+func (p *parser) forStmt() *Ast {
 	it := p.Item
 	forIn := p.isForIn()
 	p.match(FOR)
@@ -208,7 +208,7 @@ func (p *parser) isForIn() bool {
 	return p.lxr.AheadSkip(i+1).Keyword == IN
 }
 
-func (p *parser) forIn(it Item) Ast {
+func (p *parser) forIn(it Item) *Ast {
 	it.Text = "for-in"
 	parens := p.matchIf(L_PAREN)
 	id := p.Text
@@ -228,7 +228,7 @@ func (p *parser) forIn(it Item) Ast {
 	return ast(it, ast2(id), expr, body)
 }
 
-func (p *parser) forClassic(it Item) Ast {
+func (p *parser) forClassic(it Item) *Ast {
 	p.match(L_PAREN)
 	init := p.optExprList(SEMICOLON)
 	p.match(SEMICOLON)
@@ -240,7 +240,7 @@ func (p *parser) forClassic(it Item) Ast {
 	return ast(it, init, cond, incr, body)
 }
 
-func (p *parser) optExprList(after Token) Ast {
+func (p *parser) optExprList(after Token) *Ast {
 	ast := ast2("exprs")
 	if p.Token != after {
 		for {
@@ -255,7 +255,7 @@ func (p *parser) optExprList(after Token) Ast {
 }
 
 // used by if, while, and do-while
-func (p *parser) ctrlExpr(tok Token) (Item, Ast) {
+func (p *parser) ctrlExpr(tok Token) (Item, *Ast) {
 	it := p.Item
 	p.matchSkipNL(tok)
 	parens := p.matchIf(L_PAREN)
@@ -268,14 +268,14 @@ func (p *parser) ctrlExpr(tok Token) (Item, Ast) {
 	return it, expr
 }
 
-func (p *parser) exprExpecting(expecting bool) Ast {
+func (p *parser) exprExpecting(expecting bool) *Ast {
 	p.expectingCompound = expecting
 	expr := p.exprAst()
 	p.expectingCompound = false
 	return expr
 }
 
-func (p *parser) returnStmt() Ast {
+func (p *parser) returnStmt() *Ast {
 	item := p.Item
 	p.matchKeepNL(RETURN)
 	if p.matchIf(NEWLINE) || p.matchIf(SEMICOLON) || p.Token == R_CURLY {
@@ -284,7 +284,7 @@ func (p *parser) returnStmt() Ast {
 	return ast(item, p.exprStmt())
 }
 
-func (p *parser) exprStmt() Ast {
+func (p *parser) exprStmt() *Ast {
 	result := p.exprAst()
 	for p.Token == SEMICOLON || p.Token == NEWLINE {
 		p.next()
@@ -292,13 +292,13 @@ func (p *parser) exprStmt() Ast {
 	return result
 }
 
-func (p *parser) throwStmt() Ast {
+func (p *parser) throwStmt() *Ast {
 	item := p.Item
 	p.matchSkipNL(THROW)
 	return ast(item, p.exprStmt())
 }
 
-func (p *parser) tryStmt() Ast {
+func (p *parser) tryStmt() *Ast {
 	item := p.Item
 	p.matchSkipNL(TRY)
 	try := p.statement()
@@ -309,10 +309,10 @@ func (p *parser) tryStmt() Ast {
 	return ast(item, try, catch)
 }
 
-func (p *parser) catch() Ast {
+func (p *parser) catch() *Ast {
 	item := p.Item
 	p.matchSkipNL(CATCH)
-	var children []Ast
+	var children []*Ast
 	if p.matchIf(L_PAREN) {
 		children = append(children, ast(p.Item))
 		p.match(IDENTIFIER)
@@ -326,6 +326,6 @@ func (p *parser) catch() Ast {
 	return ast(item, children...)
 }
 
-func (p *parser) exprAst() Ast {
-	return expression(p, astBuilder).(Ast)
+func (p *parser) exprAst() *Ast {
+	return expression(p, astBuilder).(*Ast)
 }

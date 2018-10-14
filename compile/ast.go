@@ -13,11 +13,11 @@ import (
 type Ast struct {
 	Item
 	value    Value
-	Children []Ast
+	Children []*Ast
 }
 
 // String formats a tree of Ast's in a relatively compact form
-func (a Ast) String() string {
+func (a *Ast) String() string {
 	return string(a.format(0))
 }
 
@@ -80,16 +80,16 @@ func (a *Ast) tokval(buf *strings.Builder) {
 	}
 }
 
-func ast(item Item, children ...Ast) Ast {
+func ast(item Item, children ...*Ast) *Ast {
 	return fold(item, nil, children)
 }
 
-func ast2(name string, children ...Ast) Ast {
+func ast2(name string, children ...*Ast) *Ast {
 	return fold(Item{Text: name}, nil, children)
 }
 
-func astVal(name string, val Value) Ast {
-	return fold(Item{Text: name}, val, []Ast{})
+func astVal(name string, val Value) *Ast {
+	return fold(Item{Text: name}, val, []*Ast{})
 }
 
 func astBuilder(item Item, nodes ...T) T {
@@ -100,38 +100,38 @@ func astBuilder(item Item, nodes ...T) T {
 			nodes = nodes[1:]
 		}
 	}
-	children := []Ast{}
+	children := []*Ast{}
 	for _, node := range nodes {
-		children = append(children, node.(Ast))
+		children = append(children, node.(*Ast))
 	}
 	return fold(item, val, children)
 }
 
-func (a *Ast) first() Ast {
+func (a *Ast) first() *Ast {
 	return a.Children[0]
 }
 
-func (a *Ast) second() Ast {
+func (a *Ast) second() *Ast {
 	return a.Children[1]
 }
 
-func (a *Ast) third() Ast {
+func (a *Ast) third() *Ast {
 	return a.Children[2]
 }
 
-func (a *Ast) fourth() Ast {
+func (a *Ast) fourth() *Ast {
 	return a.Children[3]
 }
 
 var allones Value = SuDnum{Dnum: dnum.FromInt(0xffffffff)}
 
-func fold(item Item, val Value, children []Ast) (x Ast) {
+func fold(item Item, val Value, children []*Ast) (x *Ast) {
 	ast := Ast{item, val, children}
 	if ast.isConstant() {
 		return valAst(ast.toVal())
 	}
 	if !ast.foldable() {
-		return ast
+		return &ast
 	}
 	switch item.KeyTok() {
 	case ADD:
@@ -175,7 +175,7 @@ func fold(item Item, val Value, children []Ast) (x Ast) {
 	case NOT:
 		val = ast.unop(Not)
 	default:
-		return ast
+		return &ast
 	}
 	return valAst(val)
 }
@@ -206,7 +206,7 @@ func (a *Ast) foldable() bool {
 	return cc == len(a.Children) || cc >= 2
 }
 
-func countConstant(children []Ast) int {
+func countConstant(children []*Ast) int {
 	n := 0
 	for _, c := range children {
 		if c.isConstant() ||
@@ -231,7 +231,7 @@ func (a *Ast) binop(bop bopfn) Value {
 }
 
 // for add and mul
-func (a *Ast) commutative(bop bopfn, identity Value) Ast {
+func (a *Ast) commutative(bop bopfn, identity Value) *Ast {
 	k := identity
 	i := 0
 	for _, c := range a.Children {
@@ -249,11 +249,11 @@ func (a *Ast) commutative(bop bopfn, identity Value) Ast {
 	}
 	a.Children[i] = valAst(k)
 	a.Children = a.Children[:i+1]
-	return *a
+	return a
 }
 
 // cat is not commutative
-func (a *Ast) foldCat() Ast {
+func (a *Ast) foldCat() *Ast {
 	empty := SuStr("")
 	var k Value = empty
 	i := 0
@@ -279,11 +279,11 @@ func (a *Ast) foldCat() Ast {
 		i++
 	}
 	a.Children = a.Children[:i]
-	return *a
+	return a
 }
 
-func (a *Ast) foldAndOr(skip, fold Value) Ast {
-	var newList []Ast
+func (a *Ast) foldAndOr(skip, fold Value) *Ast {
+	var newList []*Ast
 	for _, c := range a.Children {
 		switch c.value {
 		case fold:
@@ -293,11 +293,11 @@ func (a *Ast) foldAndOr(skip, fold Value) Ast {
 		}
 		newList = append(newList, c)
 	}
-	return Ast{Item: a.Item, Children: newList}
+	return &Ast{Item: a.Item, Children: newList}
 }
 
-func valAst(val Value) Ast {
-	return Ast{value: val}
+func valAst(val Value) *Ast {
+	return &Ast{value: val}
 }
 
 func (a *Ast) isConstant() bool {
