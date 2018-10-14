@@ -24,7 +24,7 @@ func BenchmarkJit(b *testing.B) {
 	for n := 0; n < b.N; n++ {
 		th.Reset()
 		result := jitfn(th)
-		if ! result.Equal(SuInt(4950)) {
+		if !result.Equal(SuInt(4950)) {
 			panic("wrong result")
 		}
 	}
@@ -38,7 +38,7 @@ func jitfn(th *Thread) Value {
 	th.stack[1] = Zero // i
 	for {
 		th.stack[0] = Add(th.stack[0], th.stack[1]) // sum += i
-		th.stack[1] = Add(th.stack[1], One) // ++i
+		th.stack[1] = Add(th.stack[1], One)         // ++i
 		if Lt(th.stack[1], hundred) != True {
 			break
 		}

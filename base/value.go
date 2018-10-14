@@ -29,27 +29,27 @@ type Value interface {
 
 	Hash() uint32
 
-	// hash2 is used by object to shallow hash contents
-	hash2() uint32
+	// Hash2 is used by object to shallow hash contents
+	Hash2() uint32
 
 	// TypeName returns the Suneido name for the type
 	TypeName() string
 
-	Order() ord
+	Order() Ord
 
 	// Compare returns -1 for less, 0 for equal, +1 for greater
 	Compare(other Value) int
 }
 
-type ord = int
+type Ord = int
 
 const (
-	ordBool ord = iota
+	ordBool Ord = iota
 	ordNum      // SuInt, SuDnum
 	ordStr      // SuStr, SuConcat
 	ordDate
 	ordObject
-	ordOther
+	OrdOther
 )
 
 var NilVal Value

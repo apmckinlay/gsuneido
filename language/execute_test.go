@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	. "github.com/apmckinlay/gsuneido/base"
+	_ "github.com/apmckinlay/gsuneido/builtin"
 	"github.com/apmckinlay/gsuneido/compile"
 	"github.com/apmckinlay/gsuneido/interp"
 	"github.com/apmckinlay/gsuneido/interp/global"
@@ -116,7 +117,7 @@ func strToList(s string) *SuObject {
 // compare to BenchmarkJit in interp_test.go
 func BenchmarkInterp(b *testing.B) {
 	src := `function (x,y) { x + y }`
-	if ! global.Exists("ADD") {
+	if !global.Exists("ADD") {
 		global.Add("ADD", compile.Constant(src).(*SuFunc))
 	}
 	src = `function () {

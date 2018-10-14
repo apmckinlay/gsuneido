@@ -90,8 +90,8 @@ func TestCodegen(t *testing.T) {
 	test("a().Add(123)", "int 123, load a, call(), value 'Add', get, call(?)")
 	test("a().Add(123).Size()",
 		"int 123, load a, call(), value 'Add', get, call(?), value 'Size', get, call()")
-	test("f(@args)", "load f, call(@)")
-	test("f(@+1args)", "load f, call(@+1)")
+	test("f(@args)", "load args, load f, call(@)")
+	test("f(@+1args)", "load args, load f, call(@+1)")
 
 	test("function () { }", "value function ()")
 }

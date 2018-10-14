@@ -8,7 +8,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/verify"
 )
 
-func (t *Thread) args(fn *Func, as ArgSpec) []Value {
+func (t *Thread) args(fn *Func, as *ArgSpec) []Value {
 	nargs := as.Nargs()
 	base := t.sp - nargs
 	// allow stack space for params
@@ -28,7 +28,7 @@ func (t *Thread) args(fn *Func, as ArgSpec) []Value {
 // args massages args on the stack (described by ArgSpec)
 // to match what is expected by the function (described by Func)
 // The stack must already have been expanded (e.g. by args)
-func (t *Thread) massage(fn *Func, as ArgSpec, args []Value) {
+func (t *Thread) massage(fn *Func, as *ArgSpec, args []Value) {
 	unnamed := int(as.Unnamed)
 	if unnamed == fn.Nparams && len(as.Spec) == 0 {
 		return // simple fast path

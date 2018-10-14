@@ -256,17 +256,24 @@ func (t *Thread) Run() Value {
 			fr.ip++
 			named := int(code[fr.ip])
 			fr.ip++
-			spec := code[fr.ip : fr.ip+named]
+			var spec []byte
+			if named > 0 {
+				spec = code[fr.ip : fr.ip+named]
+			}
 			fr.ip += named
+			argSpec := &ArgSpec{unnamed, spec, fr.fn.Strings}
+			nargs := argSpec.Nargs()
+			var result Value
 			switch f := f.(type) {
+			case Builtin:
+				result = f(argSpec, t.stack[t.sp-nargs:]...)
 			case Callable:
-				result := f.Call(t, nil,
-					t.args(f.Params(), ArgSpec{unnamed, spec, fr.fn.Strings})...)
-				t.sp -= int(unnamed) + named
-				t.Push(result)
+				result = f.Call(t, nil, t.args(f.Params(), argSpec)...)
 			default:
 				panic("can't call " + f.TypeName())
 			}
+			t.sp -= nargs
+			t.Push(result)
 		default:
 			panic("invalid op code")
 		}

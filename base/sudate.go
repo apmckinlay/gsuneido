@@ -134,7 +134,7 @@ func (d SuDate) Hash() uint32 {
 	return h
 }
 
-func (d SuDate) hash2() uint32 {
+func (d SuDate) Hash2() uint32 {
 	return d.Hash()
 }
 
@@ -754,7 +754,7 @@ func (SuDate) TypeName() string {
 	return "Date"
 }
 
-func (SuDate) Order() ord {
+func (SuDate) Order() Ord {
 	return ordDate
 }
 

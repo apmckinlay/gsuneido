@@ -183,7 +183,7 @@ func isIdentifier(s string) bool {
 }
 
 func (ob *SuObject) Hash() uint32 {
-	hash := ob.hash2()
+	hash := ob.Hash2()
 	if ob.ListSize() > 0 {
 		hash = 31*hash + ob.list[0].Hash()
 	}
@@ -194,15 +194,15 @@ func (ob *SuObject) Hash() uint32 {
 			if k == nil {
 				break
 			}
-			hash = 31*hash + k.(Value).hash2()
-			hash = 31*hash + v.(Value).hash2()
+			hash = 31*hash + k.(Value).Hash2()
+			hash = 31*hash + v.(Value).Hash2()
 		}
 	}
 	return hash
 }
 
-// hash2 is shallow so prevents infinite recursion
-func (ob *SuObject) hash2() uint32 {
+// Hash2 is shallow so prevents infinite recursion
+func (ob *SuObject) Hash2() uint32 {
 	hash := uint32(17)
 	hash = 31*hash + uint32(ob.NamedSize())
 	hash = 31*hash + uint32(ob.ListSize())
@@ -265,7 +265,7 @@ func (SuObject) TypeName() string {
 	return "Object"
 }
 
-func (SuObject) Order() ord {
+func (SuObject) Order() Ord {
 	return ordObject
 }
 

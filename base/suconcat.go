@@ -113,8 +113,8 @@ func (c SuConcat) Hash() uint32 {
 	return hash.HashBytes(c.b.a[:c.n])
 }
 
-// hash2 is used to hash nested values (Value interface)
-func (c SuConcat) hash2() uint32 {
+// Hash2 is used to hash nested values (Value interface)
+func (c SuConcat) Hash2() uint32 {
 	return c.Hash()
 }
 
@@ -137,7 +137,7 @@ func (SuConcat) TypeName() string {
 }
 
 // Order returns the ordering of SuDnum (Value interface)
-func (SuConcat) Order() ord {
+func (SuConcat) Order() Ord {
 	return ordStr
 }
 

@@ -24,14 +24,14 @@ func TestArgs(t *testing.T) {
 	// 0 args => 0 params
 	f := &Func{}
 	a := ArgSpec{}
-	th.args(f, a)
+	th.args(f, &a)
 
 	// @arg => @param
 	f = &Func{Nparams: 1, Flags: []Flag{AtParam}}
 	a = ArgSpec{Unnamed: EACH}
 	th.Reset()
 	th.Push(makeOb())
-	th.args(f, a)
+	th.args(f, &a)
 	Assert(t).That(th.sp, Equals(1))
 	Assert(t).True(th.stack[0].Equal(makeOb()))
 
@@ -40,7 +40,7 @@ func TestArgs(t *testing.T) {
 	a = ArgSpec{Unnamed: EACH1}
 	th.Reset()
 	th.Push(makeOb())
-	th.args(f, a)
+	th.args(f, &a)
 	Assert(t).That(th.sp, Equals(1))
 	Assert(t).True(th.stack[0].Equal(makeOb().Slice(1)))
 
@@ -48,27 +48,27 @@ func TestArgs(t *testing.T) {
 	f = &Func{Nparams: 2, Flags: []Flag{0, 0}}
 	a = ArgSpec{Unnamed: 2}
 	setStack(11, 22)
-	th.args(f, a)
+	th.args(f, &a)
 	ckStack(11, 22)
 
 	// 1 args => 2 params
 	f = &Func{Nparams: 2, Flags: []Flag{0, 0}}
 	a = ArgSpec{Unnamed: 1}
 	setStack(11)
-	Assert(t).That(func() { th.args(f, a) }, Panics("missing argument"))
+	Assert(t).That(func() { th.args(f, &a) }, Panics("missing argument"))
 
 	// 2 args => 1 param
 	f = &Func{Nparams: 1, Flags: []Flag{0}}
 	a = ArgSpec{Unnamed: 2}
 	setStack(11, 22)
-	Assert(t).That(func() { th.args(f, a) }, Panics("too many arguments"))
+	Assert(t).That(func() { th.args(f, &a) }, Panics("too many arguments"))
 
 	// 1 arg => 2 params with 1 default
 	f = &Func{Nparams: 2, Flags: []Flag{0, 0},
 		Ndefaults: 1, Values: []Value{SuInt(22)}}
 	a = ArgSpec{Unnamed: 1}
 	setStack(11)
-	th.args(f, a)
+	th.args(f, &a)
 	ckStack(11, 22)
 
 	// all named
@@ -77,7 +77,7 @@ func TestArgs(t *testing.T) {
 	a = ArgSpec{Unnamed: 0,
 		Names: []string{"c", "b", "a", "d"}, Spec: []byte{1, 0, 2, 3}} // b, c, a, d
 	setStack(22, 33, 11, 44)
-	th.args(f, a)
+	th.args(f, &a)
 	ckStack(11, 22, 33)
 
 	// mixed
@@ -86,7 +86,7 @@ func TestArgs(t *testing.T) {
 	a = ArgSpec{Unnamed: 2,
 		Names: []string{"c", "b", "a", "d"}, Spec: []byte{3, 0}} // d, c
 	setStack(22, 33, 11, 44) // fn(22, 33, d: 11, c: 44)
-	th.args(f, a)
+	th.args(f, &a)
 	ckStack(22, 33, 44, 11)
 
 	// args => @param
@@ -94,7 +94,7 @@ func TestArgs(t *testing.T) {
 	a = ArgSpec{Unnamed: 2,
 		Names: []string{"c", "b", "a", "d"}, Spec: []byte{1, 2}} // b, a
 	setStack(11, 22, 44, 33)
-	th.args(f, a)
+	th.args(f, &a)
 	Assert(t).That(th.sp, Equals(1))
 	Assert(t).That(th.stack[0].String(), Equals(makeOb().String()))
 
@@ -104,7 +104,7 @@ func TestArgs(t *testing.T) {
 	a = ArgSpec{Unnamed: EACH}
 	th.Reset()
 	th.Push(makeOb())
-	th.args(f, a)
+	th.args(f, &a)
 	ckStack(11, 22, 44, 33)
 
 	// dynamic
@@ -114,7 +114,7 @@ func TestArgs(t *testing.T) {
 	th.fp++
 	f = &Func{Nparams: 1, Flags: []Flag{DynParam}, Strings: []string{"dyn"}}
 	a = ArgSpec{}
-	th.args(f, a)
+	th.args(f, &a)
 	ckStack(111, 123, 123)
 }
 

@@ -555,8 +555,10 @@ func (cg *cgen) call(ast *Ast) {
 
 func (cg *cgen) args(ast *Ast) interp.ArgSpec {
 	if ast.Item == atArg {
+		cg.expr(ast.Children[0])
 		return interp.ArgSpec{Unnamed: interp.EACH} //TODO
 	} else if ast.Item == at1Arg {
+		cg.expr(ast.Children[0])
 		return interp.ArgSpec{Unnamed: interp.EACH1}
 	}
 	verify.That(ast.Item == argList)

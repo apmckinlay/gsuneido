@@ -128,7 +128,7 @@ func (f *Func) Hash() uint32 {
 	panic("function hash not implemented")
 }
 
-func (f *Func) hash2() uint32 {
+func (f *Func) Hash2() uint32 {
 	panic("function hash not implemented")
 }
 
@@ -139,8 +139,8 @@ func (f *Func) Equal(other interface{}) bool {
 	return false
 }
 
-func (*Func) Order() ord {
-	return ordOther
+func (*Func) Order() Ord {
+	return OrdOther
 }
 
 func (f *Func) Compare(Value) int {

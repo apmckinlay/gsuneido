@@ -72,7 +72,7 @@ func (ss SuStr) Hash() uint32 {
 	return hash.HashString(string(ss))
 }
 
-func (ss SuStr) hash2() uint32 {
+func (ss SuStr) Hash2() uint32 {
 	return ss.Hash()
 }
 
@@ -111,7 +111,7 @@ func (SuStr) TypeName() string {
 	return "String"
 }
 
-func (SuStr) Order() ord {
+func (SuStr) Order() Ord {
 	return ordStr
 }
 

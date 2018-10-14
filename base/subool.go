@@ -62,7 +62,7 @@ func (b SuBool) Hash() uint32 {
 	return 0x22222222
 }
 
-func (b SuBool) hash2() uint32 {
+func (b SuBool) Hash2() uint32 {
 	return b.Hash()
 }
 
@@ -90,7 +90,7 @@ func (SuBool) TypeName() string {
 	return "Boolean"
 }
 
-func (SuBool) Order() ord {
+func (SuBool) Order() Ord {
 	return ordBool
 }
 
@@ -108,5 +108,5 @@ func (b SuBool) Compare(other Value) int {
 }
 
 func (b SuBool) Not() SuBool {
-	return SuBool(! bool(b))
+	return SuBool(!bool(b))
 }

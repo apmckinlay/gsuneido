@@ -62,8 +62,8 @@ func (SuDnum) RangeLen(int, int) Value {
 	panic("number does not support range")
 }
 
-// hash2 is used to hash nested values (Value interface)
-func (dn SuDnum) hash2() uint32 {
+// Hash2 is used to hash nested values (Value interface)
+func (dn SuDnum) Hash2() uint32 {
 	return dn.Hash()
 }
 
@@ -83,7 +83,7 @@ func (SuDnum) TypeName() string {
 }
 
 // Order returns the ordering of SuDnum (Value interface)
-func (SuDnum) Order() ord {
+func (SuDnum) Order() Ord {
 	return ordNum
 }
 

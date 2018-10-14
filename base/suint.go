@@ -74,7 +74,7 @@ func (si *smi) Hash() uint32 {
 	return uint32(si.ToInt())
 }
 
-func (si *smi) hash2() uint32 {
+func (si *smi) Hash2() uint32 {
 	return si.Hash()
 }
 
@@ -99,7 +99,7 @@ func (*smi) TypeName() string {
 	return "Number"
 }
 
-func (*smi) Order() ord {
+func (*smi) Order() Ord {
 	return ordNum
 }
 
