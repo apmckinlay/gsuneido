@@ -8,14 +8,12 @@ import (
 	"runtime/debug"
 	"strings"
 
-	. "github.com/apmckinlay/gsuneido/base"
 	_ "github.com/apmckinlay/gsuneido/builtin"
 	"github.com/apmckinlay/gsuneido/compile"
-	"github.com/apmckinlay/gsuneido/interp"
-	"github.com/apmckinlay/gsuneido/interp/global"
+	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
-var _ = global.Add("Suneido", new(SuObject))
+var _ = AddGlobal("Suneido", new(SuObject))
 
 func main() {
 	if len(os.Args) > 1 {
@@ -51,9 +49,9 @@ func eval(src string) {
 	}()
 	src = "function () {\n" + src + "\n}"
 	fn := compile.Constant(src).(*SuFunc)
-	//	interp.Disasm(os.Stdout, fn)
-	th := interp.NewThread()
-	result := th.Call(fn, nil)
+	//	Disasm(os.Stdout, fn)
+	th := NewThread()
+	result := th.Call(fn)
 	fmt.Print(">>> ", result)
 	if result != nil {
 		fmt.Print(" (" + reflect.TypeOf(result).String() + ")")

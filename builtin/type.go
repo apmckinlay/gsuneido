@@ -1,12 +1,10 @@
 package builtin
 
 import (
-	. "github.com/apmckinlay/gsuneido/base"
-	. "github.com/apmckinlay/gsuneido/interp"
-	"github.com/apmckinlay/gsuneido/interp/global"
+	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
-var _ = global.Add("Type", Builtin(suType))
+var _ = AddGlobal("Type", Builtin(suType))
 
 func suType(_ *ArgSpec, args ...Value) Value {
 	value := args[0]

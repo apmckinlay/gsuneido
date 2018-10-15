@@ -8,7 +8,7 @@ package tuple
 import (
 	"bytes"
 
-	. "github.com/apmckinlay/gsuneido/base"
+	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/ints"
 )
 

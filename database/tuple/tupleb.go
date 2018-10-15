@@ -1,7 +1,7 @@
 package tuple
 
 import (
-	. "github.com/apmckinlay/gsuneido/base"
+	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
 /*

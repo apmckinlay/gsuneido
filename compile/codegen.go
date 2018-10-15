@@ -6,16 +6,14 @@ package compile
 - function calls
 */
 
-// See also interp.Disasm
+// See also Disasm
 
 import (
 	"math"
 
-	. "github.com/apmckinlay/gsuneido/base"
-	"github.com/apmckinlay/gsuneido/interp"
-	"github.com/apmckinlay/gsuneido/interp/global"
-	"github.com/apmckinlay/gsuneido/interp/op"
 	. "github.com/apmckinlay/gsuneido/lexer"
+	. "github.com/apmckinlay/gsuneido/runtime"
+	"github.com/apmckinlay/gsuneido/runtime/op"
 	"github.com/apmckinlay/gsuneido/util/str"
 	"github.com/apmckinlay/gsuneido/util/verify"
 )
@@ -36,11 +34,12 @@ func codegen(ast *Ast) *SuFunc {
 	return &SuFunc{
 		Code:    cg.code,
 		Nlocals: len(cg.names),
-		Func: Func{Values: cg.values,
+		Func: Func{ParamSpec: ParamSpec{
+			Values:    cg.values,
 			Strings:   cg.names,
 			Nparams:   cg.nparams,
 			Ndefaults: cg.ndefaults,
-			Flags:     cg.flags},
+			Flags:     cg.flags}},
 	}
 }
 
@@ -446,7 +445,7 @@ func (cg *cgen) identifier(ast *Ast) {
 			cg.emitUint8(op.LOAD, i)
 		}
 	} else {
-		cg.emitUint16(op.GLOBAL, global.Num(ast.Text))
+		cg.emitUint16(op.GLOBAL, GlobalNum(ast.Text))
 	}
 }
 
@@ -553,13 +552,13 @@ func (cg *cgen) call(ast *Ast) {
 	cg.emit(argspec.Spec...)
 }
 
-func (cg *cgen) args(ast *Ast) interp.ArgSpec {
+func (cg *cgen) args(ast *Ast) ArgSpec {
 	if ast.Item == atArg {
 		cg.expr(ast.Children[0])
-		return interp.ArgSpec{Unnamed: interp.EACH} //TODO
+		return ArgSpec{Unnamed: EACH} //TODO
 	} else if ast.Item == at1Arg {
 		cg.expr(ast.Children[0])
-		return interp.ArgSpec{Unnamed: interp.EACH1}
+		return ArgSpec{Unnamed: EACH1}
 	}
 	verify.That(ast.Item == argList)
 	var spec []byte
@@ -571,8 +570,8 @@ func (cg *cgen) args(ast *Ast) interp.ArgSpec {
 		}
 		cg.expr(arg.first())
 	}
-	verify.That(len(ast.Children) < int(interp.EACH))
-	return interp.ArgSpec{Unnamed: byte(len(ast.Children) - len(spec)), Spec: spec}
+	verify.That(len(ast.Children) < int(EACH))
+	return ArgSpec{Unnamed: byte(len(ast.Children) - len(spec)), Spec: spec}
 }
 
 // helpers ---------------------------------------------------------------------

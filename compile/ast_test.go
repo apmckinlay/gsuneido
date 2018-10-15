@@ -3,8 +3,8 @@ package compile
 import (
 	"testing"
 
-	. "github.com/apmckinlay/gsuneido/base"
 	. "github.com/apmckinlay/gsuneido/lexer"
+	. "github.com/apmckinlay/gsuneido/runtime"
 	. "github.com/apmckinlay/gsuneido/util/hamcrest"
 )
 

@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/apmckinlay/gsuneido/interp"
+	"github.com/apmckinlay/gsuneido/runtime"
 	. "github.com/apmckinlay/gsuneido/util/hamcrest"
 )
 
@@ -18,7 +18,7 @@ func TestCodegen(t *testing.T) {
 		da := []string{}
 		var s string
 		for i := 0; i < len(fn.Code); {
-			i, s = interp.Disasm1(fn, i)
+			i, s = runtime.Disasm1(fn, i)
 			da = append(da, s)
 		}
 		actual := strings.Join(da, ", ")
@@ -102,7 +102,7 @@ func TestControl(t *testing.T) {
 		ast := ParseFunction("function () {\n" + src + "\n}")
 		fn := codegen(ast)
 		buf := strings.Builder{}
-		interp.Disasm(&buf, fn)
+		runtime.Disasm(&buf, fn)
 		s := buf.String()
 		Assert(t).That(s, Like(expected).Comment(src))
 	}

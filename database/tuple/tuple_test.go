@@ -3,7 +3,7 @@ package tuple
 import (
 	"testing"
 
-	. "github.com/apmckinlay/gsuneido/base"
+	. "github.com/apmckinlay/gsuneido/runtime"
 	. "github.com/apmckinlay/gsuneido/util/hamcrest"
 	"github.com/apmckinlay/gsuneido/util/ints"
 )

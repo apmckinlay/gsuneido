@@ -3,8 +3,8 @@ package compile
 import (
 	"strings"
 
-	. "github.com/apmckinlay/gsuneido/base"
 	. "github.com/apmckinlay/gsuneido/lexer"
+	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/dnum"
 	"github.com/apmckinlay/gsuneido/util/verify"
 )

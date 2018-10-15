@@ -3,8 +3,8 @@ package compile
 // TODO class
 
 import (
-	. "github.com/apmckinlay/gsuneido/base"
 	. "github.com/apmckinlay/gsuneido/lexer"
+	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
 // Constant compiles a Suneido constant (e.g. a library record)

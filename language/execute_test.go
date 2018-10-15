@@ -6,16 +6,14 @@ import (
 	"strings"
 	"testing"
 
-	. "github.com/apmckinlay/gsuneido/base"
 	_ "github.com/apmckinlay/gsuneido/builtin"
 	"github.com/apmckinlay/gsuneido/compile"
-	"github.com/apmckinlay/gsuneido/interp"
-	"github.com/apmckinlay/gsuneido/interp/global"
+	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/hamcrest"
 	"github.com/apmckinlay/gsuneido/util/ptest"
 )
 
-var _ = global.Add("Suneido", new(SuObject))
+var _ = AddGlobal("Suneido", new(SuObject))
 var _ = ptest.Add("execute", pt_execute)
 var _ = ptest.Add("lang_rangeto", pt_lang_rangeto)
 var _ = ptest.Add("lang_rangelen", pt_lang_rangelen)
@@ -29,7 +27,7 @@ func TestPtest(*testing.T) {
 func pt_execute(args []string) bool {
 	//fmt.Println(args)
 	src := "function () {\n" + args[0] + "\n}"
-	th := interp.NewThread()
+	th := NewThread()
 	expected := "**notfalse**"
 	if len(args) > 1 {
 		expected = args[1]
@@ -40,7 +38,7 @@ func pt_execute(args []string) bool {
 		expected = "throws " + args[2]
 		e := hamcrest.Catch(func() {
 			fn := compile.Constant(src).(*SuFunc)
-			result = th.Call(fn, nil)
+			result = th.Call(fn)
 		})
 		if e == nil {
 			ok = false
@@ -50,7 +48,7 @@ func pt_execute(args []string) bool {
 		}
 	} else {
 		fn := compile.Constant(src).(*SuFunc)
-		result = th.Call(fn, nil)
+		result = th.Call(fn)
 		if expected == "**notfalse**" {
 			ok = result != False
 		} else {
@@ -117,8 +115,8 @@ func strToList(s string) *SuObject {
 // compare to BenchmarkJit in interp_test.go
 func BenchmarkInterp(b *testing.B) {
 	src := `function (x,y) { x + y }`
-	if !global.Exists("ADD") {
-		global.Add("ADD", compile.Constant(src).(*SuFunc))
+	if !GlobalExists("ADD") {
+		AddGlobal("ADD", compile.Constant(src).(*SuFunc))
 	}
 	src = `function () {
 		sum = 0
@@ -127,10 +125,10 @@ func BenchmarkInterp(b *testing.B) {
 		return sum
 	}`
 	fn := compile.Constant(src).(*SuFunc)
-	th := &interp.Thread{}
+	th := &Thread{}
 	for n := 0; n < b.N; n++ {
 		th.Reset()
-		result := th.Call(fn, nil)
+		result := th.Call(fn)
 		if !result.Equal(SuInt(4950)) {
 			panic("wrong result " + result.String())
 		}
