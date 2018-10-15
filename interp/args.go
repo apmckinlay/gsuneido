@@ -8,24 +8,28 @@ import (
 	"github.com/apmckinlay/gsuneido/util/verify"
 )
 
+// args adjusts sp to shrink or grow the stack
+// so the correct amount is reserved for the function
+// and then calls massage
+// It returns the
 func (t *Thread) args(fn *Func, as *ArgSpec) []Value {
 	nargs := as.Nargs()
 	base := t.sp - nargs
-	// allow stack space for params
-	expand := fn.Nparams - nargs
-	for ; expand > 0; expand-- {
+	
+	// reserve stack space for params
+	for expand := fn.Nparams - nargs; expand > 0; expand-- {
 		t.Push(nil)
 	}
 	locals := t.stack[base:]
-	// shrink stack if excess args (locals still has full args)
-	if nargs > fn.Nparams {
-		t.sp = base + fn.Nparams
-	}
 	t.massage(fn, as, locals)
-	return t.stack[base:]
+
+	// shrink stack if excess args
+	t.sp = base + fn.Nparams
+
+	return locals
 }
 
-// args massages args on the stack (described by ArgSpec)
+// massage adjust the arguments on the stack (described by ArgSpec)
 // to match what is expected by the function (described by Func)
 // The stack must already have been expanded (e.g. by args)
 func (t *Thread) massage(fn *Func, as *ArgSpec, args []Value) {

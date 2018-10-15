@@ -11,8 +11,7 @@ import (
 // The stack must already be in the form required by the function (massaged)
 func (t *Thread) Call(fn *SuFunc, self Value) Value {
 	// expand stack if necessary for locals
-	expand := fn.Nlocals - fn.Nparams
-	for ; expand > 0; expand-- {
+	for expand := fn.Nlocals - fn.Nparams; expand > 0; expand-- {
 		t.Push(nil)
 	}
 	t.frames[t.fp] = Frame{fn: fn, bp: t.sp - fn.Nlocals, self: self}
@@ -26,6 +25,7 @@ var _ Context = (*Thread)(nil) // verify Thread satisfies Context
 func (t *Thread) Run() Value {
 	fr := &t.frames[t.fp-1]
 	code := fr.fn.Code
+	bp := fr.bp
 	fetchUint8 := func() int {
 		fr.ip++
 		return int(code[fr.ip-1])
@@ -73,15 +73,20 @@ func (t *Thread) Run() Value {
 		case VALUE:
 			t.Push(fr.fn.Values[fetchUint16()])
 		case LOAD:
-			t.Push(t.load(fr, fetchUint8()))
+			i := fetchUint8()
+			val := t.stack[bp+i]
+			if val == nil {
+				panic("uninitialized variable: " + fr.fn.Strings[i])
+			}
+			t.Push(val)
 		case STORE:
-			t.stack[fr.bp+fetchUint8()] = t.Top()
+			t.stack[bp+fetchUint8()] = t.Top()
 		case DYLOAD:
 			i := fetchUint8()
-			if t.stack[fr.bp+i] == nil {
+			if t.stack[bp+i] == nil {
 				t.dyload(fr, i)
 			}
-			t.Push(t.stack[fr.bp+i])
+			t.Push(t.stack[bp+i])
 		case GLOBAL:
 			gn := int(fetchUint16())
 			val := global.Get(gn)
@@ -304,14 +309,6 @@ func (t *Thread) popbool() bool {
 	default:
 		panic("conditionals require true or false")
 	}
-}
-
-func (t *Thread) load(fr *Frame, i int) Value {
-	val := t.stack[fr.bp+i]
-	if val == nil {
-		panic("uninitialized variable: " + fr.fn.Strings[i])
-	}
-	return val
 }
 
 func (t *Thread) dyload(fr *Frame, idx int) {

@@ -6,7 +6,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/tr"
 )
 
-// See interp.go for the rest of the Thread methods
+// See interp.go and args.go for the rest of the Thread methods
 
 const maxStack = 1024
 const maxFrames = 256
