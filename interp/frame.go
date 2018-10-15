@@ -10,9 +10,7 @@ type Frame struct {
 	fn *SuFunc
 	// ip is the current index into the Function's code
 	ip int
-	// locals is used to reference the local variables
-	// needs to be a slice instead of just an index
-	// to handle persisted block locals which are no longer on the stack
-	locals []Value
+	// bp is the base pointer to the locals
+	bp int
 	self   Value //TODO
 }

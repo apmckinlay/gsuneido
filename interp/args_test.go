@@ -109,8 +109,7 @@ func TestArgs(t *testing.T) {
 
 	// dynamic
 	setStack(111, 123)
-	th.frames[0] = Frame{fn: &SuFunc{Func: Func{Strings: []string{"x", "_dyn"}}},
-		locals: th.stack[0:]}
+	th.frames[0] = Frame{fn: &SuFunc{Func: Func{Strings: []string{"x", "_dyn"}}}}
 	th.fp++
 	f = &Func{Nparams: 1, Flags: []Flag{DynParam}, Strings: []string{"dyn"}}
 	a = ArgSpec{}
