@@ -25,11 +25,16 @@ var zeroFlags [MaxArgs]Flag
 func codegen(ast *Ast) *SuFunc {
 	//fmt.Println("codegen", ast.String())
 	cg := cgen{}
-	var tmp [MaxArgs]Flag // hopefully on the stack
+	var tmp [MaxArgs]Flag
 	cg.flags = tmp[:0]
 	cg.function(ast)
 	if allZero(cg.flags) {
 		cg.flags = zeroFlags[:len(cg.flags)]
+	} else {
+		// shrink flags to used size
+		bigflags := cg.flags
+		cg.flags = make([]Flag, len(bigflags))
+		copy(cg.flags, bigflags)
 	}
 	return &SuFunc{
 		Code:    cg.code,

@@ -60,7 +60,7 @@ func (f *ParamSpec) ToStr() string {
 
 func (f *ParamSpec) String() string {
 	var buf strings.Builder
-	buf.WriteString("function (")
+	buf.WriteString("function(")
 	sep := ""
 	v := 0 // index into Values
 	for i := 0; i < f.Nparams; i++ {

@@ -20,9 +20,9 @@ var _ = ptest.Add("lang_rangelen", pt_lang_rangelen)
 
 func TestBuiltinString(t *testing.T) {
 	f := GetGlobal(GlobalNum("Type"))
-	Assert(t).That(f.String(), Equals("function (value)"))
+	Assert(t).That(f.String(), Equals("function(value)"))
 	f = GetGlobal(GlobalNum("Object"))
-	Assert(t).That(f.String(), Equals("function (@args)"))
+	Assert(t).That(f.String(), Equals("function(@args)"))
 }
 
 func TestPtest(*testing.T) {
@@ -139,5 +139,15 @@ func BenchmarkInterp(b *testing.B) {
 		if !result.Equal(SuInt(4950)) {
 			panic("wrong result " + result.String())
 		}
+	}
+}
+
+func BenchmarkCall(b *testing.B) {
+	f := GetGlobal(GlobalNum("Type")).(Callable)
+	as := &ArgSpec{Unnamed: 1}
+	th := NewThread()
+	th.Push(SuInt(123))
+	for i := 0; i < b.N; i++ {
+		f.Call(th, as)
 	}
 }

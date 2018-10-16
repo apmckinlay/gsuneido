@@ -33,7 +33,7 @@ type Value interface {
 	Hash2() uint32
 
 	// TypeName returns the Suneido name for the type
-	TypeName() string
+	TypeName() string // or Value? (to avoid wrapping every time)
 
 	Order() Ord
 

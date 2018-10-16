@@ -93,7 +93,7 @@ func TestCodegen(t *testing.T) {
 	test("f(@args)", "load args, load f, call(@)")
 	test("f(@+1args)", "load args, load f, call(@+1)")
 
-	test("function () { }", "value function ()")
+	test("function () { }", "value function()")
 }
 
 func TestControl(t *testing.T) {
@@ -250,7 +250,7 @@ func TestParams(t *testing.T) {
 	test := func(s string) {
 		ast := ParseFunction("function (" + s + ") { }")
 		fn := codegen(ast)
-		Assert(t).That(fn.String(), Equals("function ("+s+")"))
+		Assert(t).That(fn.String(), Equals("function("+s+")"))
 	}
 	test("")
 	test("a, b, c")
