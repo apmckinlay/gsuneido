@@ -11,7 +11,7 @@ import (
 // so the correct amount is reserved for the function
 // and then calls massage
 // It returns the
-func (t *Thread) args(ps *ParamSpec, as *ArgSpec) []Value {
+func (t *Thread) Args(ps *ParamSpec, as *ArgSpec) []Value {
 	nargs := as.Nargs()
 	base := t.sp - nargs
 

@@ -7,7 +7,7 @@ import (
 // Call sets up a frame to Run a compiled Suneido function
 // The stack must already be in the form required by the function (massaged)
 func (t *Thread) Call(fn *SuFunc) Value {
-	// expand stack if necessary for locals
+	// reserve stack space for locals
 	for expand := fn.Nlocals - fn.Nparams; expand > 0; expand-- {
 		t.Push(nil)
 	}
@@ -16,8 +16,6 @@ func (t *Thread) Call(fn *SuFunc) Value {
 	t.fp++
 	return t.Run()
 }
-
-var _ Context = (*Thread)(nil) // verify Thread satisfies Context
 
 func (t *Thread) Run() Value {
 	fr := &t.frames[t.fp-1]
@@ -265,14 +263,15 @@ func (t *Thread) Run() Value {
 			fr.ip += named
 			argSpec := &ArgSpec{unnamed, spec, fr.fn.Strings}
 			nargs := argSpec.Nargs()
+			base := t.sp - nargs
 			var result Value
 			switch f := f.(type) {
 			case Callable:
-				result = f.Call(t, t.args(f.Params(), argSpec)...)
+				result = f.Call(t, argSpec)
 			default:
 				panic("can't call " + f.TypeName())
 			}
-			t.sp -= nargs
+			t.sp = base
 			t.Push(result)
 		default:
 			panic("invalid op code")

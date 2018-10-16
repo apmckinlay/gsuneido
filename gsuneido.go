@@ -43,8 +43,8 @@ func main() {
 func eval(src string) {
 	defer func() {
 		if e := recover(); e != nil {
-			debug.PrintStack()
 			fmt.Println("ERROR:", e)
+			debug.PrintStack()
 		}
 	}()
 	src = "function () {\n" + src + "\n}"

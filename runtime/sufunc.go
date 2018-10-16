@@ -5,7 +5,7 @@ const MaxArgs = 200
 
 // SuFunc is a compiled Suneido function, method, or block
 type SuFunc struct {
-	Func
+	ParamSpec
 
 	// Nlocals is the number of parameters and local variables
 	Nlocals int
@@ -17,9 +17,9 @@ type SuFunc struct {
 var _ Callable = (*SuFunc)(nil) // verify SuFunc satisfies Callable
 
 // Call invokes the SuFunc
-func (f *SuFunc) Call(ct Context, _ ...Value) Value {
-	// TODO push args ???
-	return ct.Call(f)
+func (f *SuFunc) Call(t *Thread, as *ArgSpec) Value {
+	t.Args(&f.ParamSpec, as)
+	return t.Call(f)
 }
 
 var _ Value = (*SuFunc)(nil) // verify *SuFunc satisfies Value

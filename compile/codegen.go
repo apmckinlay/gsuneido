@@ -21,7 +21,7 @@ import (
 // zeroFlags is shared/reused for all zero flags
 var zeroFlags [MaxArgs]Flag
 
-// codegen compiles a Function from an Ast
+// codegen compiles an Ast to an SuFunc
 func codegen(ast *Ast) *SuFunc {
 	//fmt.Println("codegen", ast.String())
 	cg := cgen{}
@@ -34,12 +34,12 @@ func codegen(ast *Ast) *SuFunc {
 	return &SuFunc{
 		Code:    cg.code,
 		Nlocals: len(cg.names),
-		Func: Func{ParamSpec: ParamSpec{
+		ParamSpec: ParamSpec{
 			Values:    cg.values,
 			Strings:   cg.names,
 			Nparams:   cg.nparams,
 			Ndefaults: cg.ndefaults,
-			Flags:     cg.flags}},
+			Flags:     cg.flags},
 	}
 }
 
