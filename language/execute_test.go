@@ -9,7 +9,7 @@ import (
 	_ "github.com/apmckinlay/gsuneido/builtin"
 	"github.com/apmckinlay/gsuneido/compile"
 	. "github.com/apmckinlay/gsuneido/runtime"
-	"github.com/apmckinlay/gsuneido/util/hamcrest"
+	. "github.com/apmckinlay/gsuneido/util/hamcrest"
 	"github.com/apmckinlay/gsuneido/util/ptest"
 )
 
@@ -17,6 +17,13 @@ var _ = AddGlobal("Suneido", new(SuObject))
 var _ = ptest.Add("execute", pt_execute)
 var _ = ptest.Add("lang_rangeto", pt_lang_rangeto)
 var _ = ptest.Add("lang_rangelen", pt_lang_rangelen)
+
+func TestBuiltinString(t *testing.T) {
+	f := GetGlobal(GlobalNum("Type"))
+	Assert(t).That(f.String(), Equals("function (value)"))
+	f = GetGlobal(GlobalNum("Object"))
+	Assert(t).That(f.String(), Equals("function (@args)"))
+}
 
 func TestPtest(*testing.T) {
 	if !ptest.RunFile("execute.test") || !ptest.RunFile("lang.test") {
@@ -36,7 +43,7 @@ func pt_execute(args []string) bool {
 	var result Value
 	if expected == "throws" {
 		expected = "throws " + args[2]
-		e := hamcrest.Catch(func() {
+		e := Catch(func() {
 			fn := compile.Constant(src).(*SuFunc)
 			result = th.Call(fn)
 		})

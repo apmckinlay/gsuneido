@@ -4,7 +4,6 @@ import (
 	"bufio"
 	"fmt"
 	"os"
-	"reflect"
 	"runtime/debug"
 	"strings"
 
@@ -54,7 +53,7 @@ func eval(src string) {
 	result := th.Call(fn)
 	fmt.Print(">>> ", result)
 	if result != nil {
-		fmt.Print(" (" + reflect.TypeOf(result).String() + ")")
+		fmt.Print(" <" + result.TypeName() + ">")
 	}
 	fmt.Println()
 	fmt.Println()
