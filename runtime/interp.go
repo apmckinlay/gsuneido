@@ -250,7 +250,7 @@ func (t *Thread) Run() Value {
 			break
 		case THROW:
 			panic(t.Pop())
-		case CALL:
+		case CALLFUNC:
 			f := t.Pop()
 			unnamed := code[fr.ip]
 			fr.ip++
@@ -266,8 +266,32 @@ func (t *Thread) Run() Value {
 			result := f.Call(t, argSpec)
 			t.sp = base
 			t.Push(result)
+		case CALLMETH:
+			method := t.Pop()
+			unnamed := code[fr.ip]
+			fr.ip++
+			named := int(code[fr.ip])
+			fr.ip++
+			var spec []byte
+			if named > 0 {
+				spec = code[fr.ip : fr.ip+named]
+			}
+			fr.ip += named
+			argSpec := &ArgSpec{unnamed, spec, fr.fn.Strings}
+			nargs := argSpec.Nargs()
+			base := t.sp - nargs - 1 // 1 extra for self
+			self := t.stack[base]
+			if methstr, ok := method.(SuStr); ok {
+				if f := self.Lookup(string(methstr)); f != nil {
+					result := f.Call(t, argSpec)
+					t.sp = base
+					t.Push(result)
+					break
+				}
+			}
+			panic("method not found " + self.TypeName() + "." + method.ToStr())
 		default:
-			panic("invalid op code")
+			panic("invalid op code") // TODO fatal?
 		}
 	}
 	if t.sp > sp {

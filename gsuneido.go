@@ -48,7 +48,7 @@ func eval(src string) {
 	}()
 	src = "function () {\n" + src + "\n}"
 	fn := compile.Constant(src).(*SuFunc)
-	//	Disasm(os.Stdout, fn)
+	// Disasm(os.Stdout, fn)
 	th := NewThread()
 	result := th.Call(fn)
 	fmt.Print(">>> ", result)

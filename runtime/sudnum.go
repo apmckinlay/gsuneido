@@ -98,8 +98,12 @@ func (dn SuDnum) Compare(other Value) int {
 	return dnum.Compare(dn.Dnum, other.ToDnum())
 }
 
-func (dn SuDnum) Call(*Thread, *ArgSpec) Value {
+func (SuDnum) Call(*Thread, *ArgSpec) Value {
 	panic("can't call Number")
+}
+
+func (SuDnum) Lookup(string) Callable {
+	return nil // TODO
 }
 
 // Packing (old format) ---------------------------------------------

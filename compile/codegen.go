@@ -559,11 +559,11 @@ func (cg *cgen) call(ast *Ast) {
 		} else { // L_BRACKET
 			cg.expr(fn.second())
 		}
-		cg.emit(op.LOOKUP)
+		cg.emit(op.CALLMETH)
 	} else {
 		cg.expr(ast.first()) // function
+		cg.emit(op.CALLFUNC)
 	}
-	cg.emit(op.CALL)
 	cg.emit(argspec.Unnamed)
 	named := len(argspec.Spec)
 	verify.That(named <= math.MaxUint8)

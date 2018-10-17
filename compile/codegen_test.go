@@ -84,19 +84,19 @@ func TestCodegen(t *testing.T) {
 
 	test("throw 'fubar'", "value 'fubar', throw")
 
-	test("f()", "load f, call()")
-	test("F()", "global F, call()")
-	test("f(a, b)", "load a, load b, load f, call(?, ?)")
-	test("f(a, b, c:, d: 0)", "load a, load b, true, zero, load f, call(?, ?, c:, d:)")
-	test("f(@args)", "load args, load f, call(@)")
-	test("f(@+1args)", "load args, load f, call(@+1)")
+	test("f()", "load f, callfunc()")
+	test("F()", "global F, callfunc()")
+	test("f(a, b)", "load a, load b, load f, callfunc(?, ?)")
+	test("f(a, b, c:, d: 0)", "load a, load b, true, zero, load f, callfunc(?, ?, c:, d:)")
+	test("f(@args)", "load args, load f, callfunc(@)")
+	test("f(@+1args)", "load args, load f, callfunc(@+1)")
 
-	test("a.f(123)", "load a, int 123, value 'f', lookup, call(?)")
-	test("a[b](123)", "load a, int 123, load b, lookup, call(?)")
-	test("a[b $ c](123)", "load a, int 123, load b, load c, cat, lookup, call(?)")
-	test("a().Add(123)", "load a, call(), int 123, value 'Add', lookup, call(?)")
+	test("a.f(123)", "load a, int 123, value 'f', callmeth(?)")
+	test("a[b](123)", "load a, int 123, load b, callmeth(?)")
+	test("a[b $ c](123)", "load a, int 123, load b, load c, cat, callmeth(?)")
+	test("a().Add(123)", "load a, callfunc(), int 123, value 'Add', callmeth(?)")
 	test("a().Add(123).Size()",
-		"load a, call(), int 123, value 'Add', lookup, call(?), value 'Size', lookup, call()")
+		"load a, callfunc(), int 123, value 'Add', callmeth(?), value 'Size', callmeth()")
 
 	test("function () { }", "value function()")
 }

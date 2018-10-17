@@ -46,15 +46,15 @@ func (f *ParamSpec) Params() *ParamSpec {
 
 // Value interface (except TypeName)
 
-func (f *ParamSpec) ToInt() int {
+func (*ParamSpec) ToInt() int {
 	panic("cannot convert function to integer")
 }
 
-func (f *ParamSpec) ToDnum() dnum.Dnum {
+func (*ParamSpec) ToDnum() dnum.Dnum {
 	panic("cannot convert function to number")
 }
 
-func (f *ParamSpec) ToStr() string {
+func (*ParamSpec) ToStr() string {
 	panic("cannot convert function to string")
 }
 
@@ -93,11 +93,11 @@ func flagsToName(p string, flags Flag) string {
 	return p
 }
 
-func (f *ParamSpec) Get(Value) Value {
+func (*ParamSpec) Get(Value) Value {
 	panic("function does not support get")
 }
 
-func (f *ParamSpec) Put(Value, Value) {
+func (*ParamSpec) Put(Value, Value) {
 	panic("function does not support put")
 }
 
@@ -109,11 +109,11 @@ func (ParamSpec) RangeLen(int, int) Value {
 	panic("function does not support range")
 }
 
-func (f *ParamSpec) Hash() uint32 {
+func (*ParamSpec) Hash() uint32 {
 	panic("function hash not implemented")
 }
 
-func (f *ParamSpec) Hash2() uint32 {
+func (*ParamSpec) Hash2() uint32 {
 	panic("function hash not implemented")
 }
 
@@ -128,6 +128,10 @@ func (*ParamSpec) Order() Ord {
 	return OrdOther
 }
 
-func (f *ParamSpec) Compare(Value) int {
+func (*ParamSpec) Compare(Value) int {
 	panic("function compare not implemented")
+}
+
+func (*ParamSpec) Lookup(string) Callable {
+	return nil // TODO
 }

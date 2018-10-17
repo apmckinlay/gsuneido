@@ -17,7 +17,8 @@ var asm = []string{
 	"load", "store", "dyload", "get", "put", "global",
 	"true", "false", "zero", "one", "emptystr",
 	"or", "and", "bool", "qmark", "in", "jump", "tjump", "fjump",
-	"eqjump", "nejump", "throw", "lookup", "call", "rangeto", "rangelen", "this",
+	"eqjump", "nejump", "throw", "callfunc", "callmeth",
+	"rangeto", "rangelen", "this",
 }
 
 func init() {
@@ -70,7 +71,7 @@ func Disasm1(fn *SuFunc, i int) (int, string) {
 	case JUMP, TJUMP, FJUMP, AND, OR, Q_MARK, IN, EQJUMP, NEJUMP:
 		j := fetchInt16()
 		s += fmt.Sprintf(" %d", i+j)
-	case CALL:
+	case CALLFUNC, CALLMETH:
 		unnamed := fn.Code[i]
 		i++
 		named := int(fn.Code[i])

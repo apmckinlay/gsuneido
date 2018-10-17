@@ -14,6 +14,7 @@ const (
 )
 
 func HashString(s string) uint32 {
+	// TODO don't hash entire string if it's long
 	hash := uint32(offset32)
 	for i := 0; i < len(s); i++ {
 		hash ^= uint32(s[i])

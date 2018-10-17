@@ -122,8 +122,23 @@ func (ss SuStr) Compare(other Value) int {
 	return strings.Compare(ss.ToStr(), other.ToStr())
 }
 
-func (ss SuStr) Call(*Thread, *ArgSpec) Value {
+func (SuStr) Call(*Thread, *ArgSpec) Value {
 	panic("not implemented") // TODO
+}
+
+func (SuStr) Lookup(method string) Callable {
+	if method == "Size" {
+		return stringSize{}
+	}
+	return nil // TODO
+}
+
+type stringSize struct{}
+
+func (stringSize) Call(t *Thread, _ *ArgSpec) Value {
+	// TODO check nargs (must be zero)
+	ss := t.Top().(SuStr)
+	return SuInt(len(string(ss)))
 }
 
 func (ss SuStr) IsEmpty() bool {

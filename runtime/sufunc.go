@@ -26,3 +26,7 @@ var _ Value = (*SuFunc)(nil) // verify *SuFunc satisfies Value
 func (*SuFunc) TypeName() string {
 	return "Function"
 }
+
+func (*SuFunc) Lookup(string) Callable {
+	return nil // TODO
+}

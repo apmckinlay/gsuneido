@@ -149,8 +149,12 @@ func (c SuConcat) Compare(other Value) int {
 	return strings.Compare(c.ToStr(), other.ToStr())
 }
 
-func (c SuConcat) Call(*Thread, *ArgSpec) Value {
+func (SuConcat) Call(*Thread, *ArgSpec) Value {
 	panic("not implemented") // TODO
+}
+
+func (SuConcat) Lookup(string) Callable {
+	return nil // TODO
 }
 
 // Packable interface -----------------------------------------------

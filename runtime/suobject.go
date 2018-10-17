@@ -301,8 +301,12 @@ func cmp3(x Value, y Value, inProgress pairs) int {
 	return cmp2(xo, yo, inProgress)
 }
 
-func (ob *SuObject) Call(*Thread, *ArgSpec) Value {
+func (*SuObject) Call(*Thread, *ArgSpec) Value {
 	panic("can't call Object")
+}
+
+func (*SuObject) Lookup(string) Callable {
+	return nil // TODO
 }
 
 // Slice returns a copy of the object, with the first n list elements removed

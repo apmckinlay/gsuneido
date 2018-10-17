@@ -6,6 +6,10 @@ import (
 	"github.com/apmckinlay/gsuneido/util/dnum"
 )
 
+type Callable interface {
+	Call(t *Thread, as *ArgSpec) Value // raw args on stack
+}
+
 // Value is used to reference a Suneido value
 type Value interface {
 	// String returns a human readable string i.e. Suneido Display
@@ -40,7 +44,9 @@ type Value interface {
 	// Compare returns -1 for less, 0 for equal, +1 for greater
 	Compare(other Value) int
 
-	Call(t *Thread, as *ArgSpec) Value // raw args on stack
+	Callable
+
+	Lookup(method string) Callable
 }
 
 type Ord = int

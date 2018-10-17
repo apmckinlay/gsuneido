@@ -113,6 +113,10 @@ func (si *smi) Compare(other Value) int {
 	return dnum.Compare(si.ToDnum(), other.ToDnum())
 }
 
-func (si *smi) Call(*Thread, *ArgSpec) Value {
+func (*smi) Call(*Thread, *ArgSpec) Value {
 	panic("can't call Number")
+}
+
+func (*smi) Lookup(string) Callable {
+	return nil // TODO
 }

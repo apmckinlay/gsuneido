@@ -111,6 +111,10 @@ func (b SuBool) Not() SuBool {
 	return SuBool(!bool(b))
 }
 
-func (b SuBool) Call(*Thread, *ArgSpec) Value {
+func (SuBool) Call(*Thread, *ArgSpec) Value {
 	panic("can't call Boolean")
+}
+
+func (SuBool) Lookup(string) Callable {
+	return nil
 }
