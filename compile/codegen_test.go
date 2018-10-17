@@ -10,6 +10,7 @@ import (
 
 func TestCodegen(t *testing.T) {
 	test := func(src, expected string) {
+		t.Helper()
 		ast := ParseFunction("function () {\n" + src + "\n}")
 		fn := codegen(ast)
 		// fmt.Println(src)
@@ -87,11 +88,15 @@ func TestCodegen(t *testing.T) {
 	test("F()", "global F, call()")
 	test("f(a, b)", "load a, load b, load f, call(?, ?)")
 	test("f(a, b, c:, d: 0)", "load a, load b, true, zero, load f, call(?, ?, c:, d:)")
-	test("a().Add(123)", "int 123, load a, call(), value 'Add', get, call(?)")
-	test("a().Add(123).Size()",
-		"int 123, load a, call(), value 'Add', get, call(?), value 'Size', get, call()")
 	test("f(@args)", "load args, load f, call(@)")
 	test("f(@+1args)", "load args, load f, call(@+1)")
+
+	test("a.f(123)", "load a, int 123, value 'f', lookup, call(?)")
+	test("a[b](123)", "load a, int 123, load b, lookup, call(?)")
+	test("a[b $ c](123)", "load a, int 123, load b, load c, cat, lookup, call(?)")
+	test("a().Add(123)", "load a, call(), int 123, value 'Add', lookup, call(?)")
+	test("a().Add(123).Size()",
+		"load a, call(), int 123, value 'Add', lookup, call(?), value 'Size', lookup, call()")
 
 	test("function () { }", "value function()")
 }

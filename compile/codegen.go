@@ -546,9 +546,23 @@ func (cg *cgen) nary(ast *Ast, o byte) {
 }
 
 func (cg *cgen) call(ast *Ast) {
-	// TODO call method (without getting bound method)
+	fn := ast.first()
+	method := fn.Token == DOT || fn.Token == L_BRACKET
+	if method {
+		cg.expr(fn.first()) // self
+	}
+
 	argspec := cg.args(ast.second())
-	cg.expr(ast.first()) // function
+	if method {
+		if fn.Token == DOT {
+			cg.emitValue(SuStr(fn.second().Text)) // method name
+		} else { // L_BRACKET
+			cg.expr(fn.second())
+		}
+		cg.emit(op.LOOKUP)
+	} else {
+		cg.expr(ast.first()) // function
+	}
 	cg.emit(op.CALL)
 	cg.emit(argspec.Unnamed)
 	named := len(argspec.Spec)
@@ -560,7 +574,7 @@ func (cg *cgen) call(ast *Ast) {
 func (cg *cgen) args(ast *Ast) ArgSpec {
 	if ast.Item == atArg {
 		cg.expr(ast.Children[0])
-		return ArgSpec{Unnamed: EACH} //TODO
+		return ArgSpec{Unnamed: EACH}
 	} else if ast.Item == at1Arg {
 		cg.expr(ast.Children[0])
 		return ArgSpec{Unnamed: EACH1}
