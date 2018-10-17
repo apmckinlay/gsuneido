@@ -153,8 +153,8 @@ func (SuConcat) Call(*Thread, *ArgSpec) Value {
 	panic("not implemented") // TODO
 }
 
-func (SuConcat) Lookup(string) Callable {
-	return nil // TODO
+func (SuConcat) Lookup(method string) Callable {
+	return lookupMethod(StringMethods, method)
 }
 
 // Packable interface -----------------------------------------------

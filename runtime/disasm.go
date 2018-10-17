@@ -61,7 +61,7 @@ func Disasm1(fn *SuFunc, i int) (int, string) {
 		s += fmt.Sprintf(" %d", n)
 	case VALUE:
 		v := fn.Values[fetchUint16()]
-		s += fmt.Sprintf(" %v", v)
+		s += fmt.Sprintf(" %v <%s>", v, v.TypeName())
 	case LOAD, STORE, DYLOAD:
 		idx := fetchUint8()
 		s += " " + fn.Strings[idx]

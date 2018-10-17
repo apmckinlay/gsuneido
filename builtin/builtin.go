@@ -26,3 +26,10 @@ func params(s string) ParamSpec {
 	fn := compile.Constant("function " + s + " {}").(*SuFunc)
 	return fn.ParamSpec
 }
+
+func method(s string, f func(t *Thread, self Value, args ...Value) Value) *Method {
+	i := strings.IndexByte(s, byte('('))
+	name := s[:i]
+	p := s[i:]
+	return &Method{Name: name, Fn: f, ParamSpec: params(p)}
+}

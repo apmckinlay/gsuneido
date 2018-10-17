@@ -305,8 +305,10 @@ func (*SuObject) Call(*Thread, *ArgSpec) Value {
 	panic("can't call Object")
 }
 
-func (*SuObject) Lookup(string) Callable {
-	return nil // TODO
+var ObjectMethods Methods
+
+func (*SuObject) Lookup(method string) Callable {
+	return lookupMethod(ObjectMethods, method)
 }
 
 // Slice returns a copy of the object, with the first n list elements removed

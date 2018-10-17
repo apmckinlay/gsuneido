@@ -126,19 +126,10 @@ func (SuStr) Call(*Thread, *ArgSpec) Value {
 	panic("not implemented") // TODO
 }
 
+var StringMethods Methods
+
 func (SuStr) Lookup(method string) Callable {
-	if method == "Size" {
-		return stringSize{}
-	}
-	return nil // TODO
-}
-
-type stringSize struct{}
-
-func (stringSize) Call(t *Thread, _ *ArgSpec) Value {
-	// TODO check nargs (must be zero)
-	ss := t.Top().(SuStr)
-	return SuInt(len(string(ss)))
+	return lookupMethod(StringMethods, method)
 }
 
 func (ss SuStr) IsEmpty() bool {
