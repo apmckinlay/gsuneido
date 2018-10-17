@@ -110,3 +110,7 @@ func (b SuBool) Compare(other Value) int {
 func (b SuBool) Not() SuBool {
 	return SuBool(!bool(b))
 }
+
+func (b SuBool) Call(*Thread, *ArgSpec) Value {
+	panic("can't call Boolean")
+}

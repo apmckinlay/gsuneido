@@ -149,6 +149,10 @@ func (c SuConcat) Compare(other Value) int {
 	return strings.Compare(c.ToStr(), other.ToStr())
 }
 
+func (c SuConcat) Call(*Thread, *ArgSpec) Value {
+	panic("not implemented") // TODO
+}
+
 // Packable interface -----------------------------------------------
 
 func (c SuConcat) PackSize() int {

@@ -262,15 +262,8 @@ func (t *Thread) Run() Value {
 			}
 			fr.ip += named
 			argSpec := &ArgSpec{unnamed, spec, fr.fn.Strings}
-			nargs := argSpec.Nargs()
-			base := t.sp - nargs
-			var result Value
-			switch f := f.(type) {
-			case Callable:
-				result = f.Call(t, argSpec)
-			default:
-				panic("can't call " + f.TypeName())
-			}
+			base := t.sp - argSpec.Nargs()
+			result := f.Call(t, argSpec)
 			t.sp = base
 			t.Push(result)
 		default:

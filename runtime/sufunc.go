@@ -14,8 +14,6 @@ type SuFunc struct {
 	Code []byte
 }
 
-var _ Callable = (*SuFunc)(nil) // verify SuFunc satisfies Callable
-
 // Call invokes the SuFunc
 func (f *SuFunc) Call(t *Thread, as *ArgSpec) Value {
 	t.Args(&f.ParamSpec, as)

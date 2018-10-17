@@ -122,6 +122,10 @@ func (ss SuStr) Compare(other Value) int {
 	return strings.Compare(ss.ToStr(), other.ToStr())
 }
 
+func (ss SuStr) Call(*Thread, *ArgSpec) Value {
+	panic("not implemented") // TODO
+}
+
 func (ss SuStr) IsEmpty() bool {
 	return len(ss) == 0
 }

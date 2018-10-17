@@ -6,7 +6,6 @@ type Builtin struct {
 }
 
 var _ Value = (*Builtin)(nil)
-var _ Callable = (*Builtin)(nil)
 
 func (b Builtin) Call(t *Thread, as *ArgSpec) Value {
 	args := t.Args(&b.ParamSpec, as)

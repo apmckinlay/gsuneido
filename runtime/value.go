@@ -39,6 +39,8 @@ type Value interface {
 
 	// Compare returns -1 for less, 0 for equal, +1 for greater
 	Compare(other Value) int
+
+	Call(t *Thread, as *ArgSpec) Value // raw args on stack
 }
 
 type Ord = int

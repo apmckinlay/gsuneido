@@ -98,6 +98,10 @@ func (dn SuDnum) Compare(other Value) int {
 	return dnum.Compare(dn.Dnum, other.ToDnum())
 }
 
+func (dn SuDnum) Call(*Thread, *ArgSpec) Value {
+	panic("can't call Number")
+}
+
 // Packing (old format) ---------------------------------------------
 
 var pow10 = [...]uint64{1, 10, 100, 1000}
