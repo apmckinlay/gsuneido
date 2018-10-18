@@ -122,8 +122,18 @@ func (ss SuStr) Compare(other Value) int {
 	return strings.Compare(ss.ToStr(), other.ToStr())
 }
 
-func (SuStr) Call(*Thread, *ArgSpec) Value {
-	panic("not implemented") // TODO
+// Call implements s(ob, ...) being treated as ob[s](...)
+func (ss SuStr) Call(t *Thread, as *ArgSpec) Value {
+	// TODO @args
+	if as.Unnamed < 1 {
+		panic("string call requires 'this' argument")
+	}
+	ob := t.stack[t.sp - as.Nargs()]
+	method := string(ss)
+	fn := ob.Lookup(method)
+	as2 := *as
+	as2.Unnamed--
+	return fn.Call(t, &as2)
 }
 
 // StringMethods is initialized by the builtin package

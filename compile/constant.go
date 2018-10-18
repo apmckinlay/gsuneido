@@ -27,6 +27,8 @@ func (p *parser) constant() Value {
 		case FUNCTION:
 			ast := p.function()
 			return codegen(ast)
+		case CLASS:
+			panic("not implemented") // TODO parse classes
 		default:
 			s := p.Text
 			p.next()
