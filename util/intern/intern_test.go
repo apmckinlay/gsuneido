@@ -10,7 +10,7 @@ var List []string
 var S = "hello"
 var T = func() string { return "world" }
 
-func TestIntern(t *testing.T) {
+func TestIntern(*testing.T) {
 	for n := 0; n < 100000; n++ {
 		// List = append(List, S+T())
 		List = append(List, Intern(S+T()))

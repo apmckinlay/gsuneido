@@ -122,12 +122,10 @@ func xindex(from trset, c byte, allbut bool, lastto int) int {
 	if allbut {
 		if i == -1 {
 			return lastto + 1
-		} else {
-			return -1
 		}
-	} else {
-		return i
+		return -1
 	}
+	return i
 }
 
 // ptest support ---------------------------------------------------------------

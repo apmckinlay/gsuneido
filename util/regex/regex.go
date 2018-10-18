@@ -574,10 +574,10 @@ type Element interface {
 type elemDefaults struct {
 }
 
-func (elemDefaults) omatch(s string, si int, _ *Result) int {
+func (elemDefaults) omatch(string, int, *Result) int {
 	panic("should not be called")
 }
-func (elemDefaults) nextPossible(s string, si int, sn int) int {
+func (elemDefaults) nextPossible(_ string, si int, _ int) int {
 	return si + 1
 }
 
@@ -630,14 +630,14 @@ type StartOfString struct {
 	elemDefaults
 }
 
-func (e StartOfString) omatch(s string, si int, _ *Result) int {
+func (e StartOfString) omatch(_ string, si int, _ *Result) int {
 	if si == 0 {
 		return si
 	}
 	return FAIL
 }
 
-func (e StartOfString) nextPossible(s string, si int, sn int) int {
+func (e StartOfString) nextPossible(_ string, _ int, sn int) int {
 	return sn + 1 // only the initial position is possible
 }
 
@@ -880,17 +880,15 @@ var any = CharClass{cmatch.AnyOf("\r\n").Negate()}
 func toLower(c rune) rune {
 	if upper(c) {
 		return c + ('a' - 'A')
-	} else {
-		return c
 	}
+	return c
 }
 
 func toUpper(c rune) rune {
 	if lower(c) {
 		return c - ('a' - 'A')
-	} else {
-		return c
 	}
+	return c
 }
 
 /*
