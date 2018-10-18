@@ -154,7 +154,7 @@ func (SuConcat) Call(*Thread, *ArgSpec) Value {
 }
 
 func (SuConcat) Lookup(method string) Callable {
-	return lookupMethod(StringMethods, method)
+	return StringMethods[method]
 }
 
 // Packable interface -----------------------------------------------

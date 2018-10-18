@@ -305,10 +305,11 @@ func (*SuObject) Call(*Thread, *ArgSpec) Value {
 	panic("can't call Object")
 }
 
+// ObjectMethods is initialized by the builtin package
 var ObjectMethods Methods
 
 func (*SuObject) Lookup(method string) Callable {
-	return lookupMethod(ObjectMethods, method)
+	return ObjectMethods[method]
 }
 
 // Slice returns a copy of the object, with the first n list elements removed

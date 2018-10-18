@@ -126,10 +126,11 @@ func (SuStr) Call(*Thread, *ArgSpec) Value {
 	panic("not implemented") // TODO
 }
 
+// StringMethods is initialized by the builtin package
 var StringMethods Methods
 
 func (SuStr) Lookup(method string) Callable {
-	return lookupMethod(StringMethods, method)
+	return StringMethods[method]
 }
 
 func (ss SuStr) IsEmpty() bool {

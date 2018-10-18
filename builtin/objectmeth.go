@@ -4,15 +4,19 @@ import . "github.com/apmckinlay/gsuneido/runtime"
 
 func init() {
 	ObjectMethods = Methods{
-		method("Size()", func(t *Thread, self Value, args ...Value) Value {
+		"Size": method("()", func(t *Thread, self Value, args ...Value) Value {
 			ob := self.(*SuObject)
 			return SuInt(ob.Size())
 		}),
-		method("Add(value)", func(t *Thread, self Value, args ...Value) Value {
-			ob := self.(*SuObject)
-			ob.Add(args[0]) // TODO handle multiple arguments (no massage)
-			return self
-		}),
+		"Add": rawmethod("(@args)",
+			func(t *Thread, self Value, as *ArgSpec, args ...Value) Value {
+				// TODO handle at: and @args
+				ob := self.(*SuObject)
+				for i := 0; i < int(as.Unnamed); i++ {
+					ob.Add(args[i])
+				}
+				return self
+			}),
 		// TODO
 	}
 }
