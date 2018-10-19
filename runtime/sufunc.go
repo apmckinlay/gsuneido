@@ -14,10 +14,6 @@ type SuFunc struct {
 	Code []byte
 }
 
-func (f *SuFunc) String() string {
-	return "function" + f.ParamSpec.String()
-}
-
 // Call invokes the SuFunc
 func (f *SuFunc) Call(t *Thread, as *ArgSpec) Value {
 	t.Args(&f.ParamSpec, as)

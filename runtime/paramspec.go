@@ -56,7 +56,7 @@ func (*ParamSpec) ToStr() string {
 
 func (f *ParamSpec) String() string {
 	var buf strings.Builder
-	buf.WriteString("(")
+	buf.WriteString("function(")
 	sep := ""
 	v := 0 // index into Values
 	for i := 0; i < f.Nparams; i++ {
@@ -139,7 +139,7 @@ func (*ParamSpec) Lookup(method string) Callable {
 }
 
 func (f *ParamSpec) Params() string {
-	return f.String()
+	return f.String()[8:] // skip "function"
 }
 
 // defaults for Builtin# and Method#

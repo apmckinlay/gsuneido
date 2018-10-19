@@ -263,7 +263,7 @@ func TestParams(t *testing.T) {
 		Assert(t).That(fn.String(), Equals("function("+s+")"))
 	}
 	test("")
-	test("a, b, c")
-	test("a, .b, .C, ._d, ._E")
-	test("a, b=1, c='x'")
+	test("a,b,c")
+	test("a,.b,.C,._d,._E")
+	test("a,b=1,c='x'")
 }
