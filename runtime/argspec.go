@@ -21,6 +21,12 @@ const (
 	EACH1 = 255
 )
 
+var ArgSpec0 = &ArgSpec{Unnamed: 0}
+var ArgSpec1 = &ArgSpec{Unnamed: 1}
+var ArgSpec2 = &ArgSpec{Unnamed: 2}
+var ArgSpec3 = &ArgSpec{Unnamed: 3}
+var ArgSpec4 = &ArgSpec{Unnamed: 4}
+
 // Nargs returns the total number of arguments
 func (as ArgSpec) Nargs() int {
 	if as.Unnamed >= EACH {

@@ -8,17 +8,17 @@ import (
 
 func init() {
 	StringMethods = Methods{
-		"Size": method("()", func(t *Thread, self Value, args ...Value) Value {
+		"Size": method0(func(self Value) Value {
 			return SuInt(len(self.ToStr()))
 		}),
-		"Lower": method("()", func(t *Thread, self Value, args ...Value) Value {
+		"Lower": method0(func(self Value) Value {
 			return SuStr(strings.ToLower(self.ToStr()))
 		}),
-		"Upper": method("()", func(t *Thread, self Value, args ...Value) Value {
+		"Upper": method0(func(self Value) Value {
 			return SuStr(strings.ToUpper(self.ToStr()))
 		}),
-		"Has?": method("(string)", func(t *Thread, self Value, args ...Value) Value {
-			return SuBool(strings.Contains(self.ToStr(), args[0].ToStr()))
+		"Has?": method1("(string)", func(self, arg Value) Value {
+			return SuBool(strings.Contains(self.ToStr(), arg.ToStr()))
 		}),
 		// TODO
 	}

@@ -40,10 +40,6 @@ const (
 	PubParam
 )
 
-func (f *ParamSpec) Params() *ParamSpec {
-	return f
-}
-
 // Value interface (except TypeName)
 
 func (*ParamSpec) ToInt() int {
@@ -60,7 +56,7 @@ func (*ParamSpec) ToStr() string {
 
 func (f *ParamSpec) String() string {
 	var buf strings.Builder
-	buf.WriteString("function(")
+	buf.WriteString("(")
 	sep := ""
 	v := 0 // index into Values
 	for i := 0; i < f.Nparams; i++ {
@@ -71,7 +67,7 @@ func (f *ParamSpec) String() string {
 			buf.WriteString(fmt.Sprint(f.Values[v]))
 			v++
 		}
-		sep = ", "
+		sep = ","
 	}
 	buf.WriteString(")")
 	return buf.String()
@@ -132,6 +128,35 @@ func (*ParamSpec) Compare(Value) int {
 	panic("function compare not implemented")
 }
 
-func (*ParamSpec) Lookup(string) Callable {
-	return nil // TODO
+// Params is set in the builtin package
+var Params Callable
+
+func (*ParamSpec) Lookup(method string) Callable {
+	if method == "Params" {
+		return Params
+	}
+	return nil
+}
+
+func (f *ParamSpec) Params() string {
+	return f.String()
+}
+
+// defaults for Builtin# and Method#
+// not enough arguments is handled elsewhere
+
+func (f *ParamSpec) Call0(*Thread) Value {
+	panic("too many arguments")
+}
+func (f *ParamSpec) Call1(_ *Thread, _ Value) Value {
+	panic("too many arguments")
+}
+func (f *ParamSpec) Call2(_ *Thread, _, _ Value) Value {
+	panic("too many arguments")
+}
+func (f *ParamSpec) Call3(_ *Thread, _, _, _ Value) Value {
+	panic("too many arguments")
+}
+func (f *ParamSpec) Call4(_ *Thread, _, _, _, _ Value) Value {
+	panic("too many arguments")
 }

@@ -2,7 +2,7 @@ package builtin
 
 import . "github.com/apmckinlay/gsuneido/runtime"
 
-var _ = builtin("Type(value)",
-	func(_ *Thread, args ...Value) Value {
-		return SuStr(args[0].TypeName())
+var _ = builtin1("Type(value)",
+	func(arg Value) Value {
+		return SuStr(arg.TypeName())
 	})

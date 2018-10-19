@@ -4,7 +4,7 @@ import . "github.com/apmckinlay/gsuneido/runtime"
 
 func init() {
 	ObjectMethods = Methods{
-		"Size": method("()", func(t *Thread, self Value, args ...Value) Value {
+		"Size": method0(func(self Value) Value {
 			ob := self.(*SuObject)
 			return SuInt(ob.Size())
 		}),

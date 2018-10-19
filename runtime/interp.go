@@ -250,6 +250,36 @@ func (t *Thread) Run() Value {
 			break
 		case THROW:
 			panic(t.Pop())
+		case CALLFUNC0:
+			f := t.Pop()
+			base := t.sp
+			result := f.Call0(t)
+			t.sp = base
+			t.Push(result)
+		case CALLFUNC1:
+			f := t.Pop()
+			base := t.sp - 1
+			result := f.Call1(t, t.stack[base])
+			t.sp = base
+			t.Push(result)
+		case CALLFUNC2:
+			f := t.Pop()
+			base := t.sp - 2
+			result := f.Call2(t, t.stack[base], t.stack[base+1])
+			t.sp = base
+			t.Push(result)
+		case CALLFUNC3:
+			f := t.Pop()
+			base := t.sp - 3
+			result := f.Call3(t, t.stack[base], t.stack[base+1], t.stack[base+2])
+			t.sp = base
+			t.Push(result)
+		case CALLFUNC4:
+			f := t.Pop()
+			base := t.sp - 4
+			result := f.Call4(t, t.stack[base], t.stack[base+1], t.stack[base+2], t.stack[base+3])
+			t.sp = base
+			t.Push(result)
 		case CALLFUNC:
 			f := t.Pop()
 			unnamed := code[fr.ip]
@@ -259,13 +289,65 @@ func (t *Thread) Run() Value {
 			var spec []byte
 			if named > 0 {
 				spec = code[fr.ip : fr.ip+named]
+				fr.ip += named
 			}
-			fr.ip += named
 			argSpec := &ArgSpec{unnamed, spec, fr.fn.Strings}
 			base := t.sp - argSpec.Nargs()
 			result := f.Call(t, argSpec)
 			t.sp = base
 			t.Push(result)
+		case CALLMETH0:
+			method := t.Pop()
+			base := t.sp - 1
+			self := t.stack[base]
+			if methstr, ok := method.(SuStr); ok {
+				if f := self.Lookup(string(methstr)); f != nil {
+					result := f.Call1(t, self)
+					t.sp = base
+					t.Push(result)
+					break
+				}
+			}
+			panic("method not found " + self.TypeName() + "." + method.ToStr())
+		case CALLMETH1:
+			method := t.Pop()
+			base := t.sp - 2
+			self := t.stack[base]
+			if methstr, ok := method.(SuStr); ok {
+				if f := self.Lookup(string(methstr)); f != nil {
+					result := f.Call2(t, self, t.stack[base])
+					t.sp = base
+					t.Push(result)
+					break
+				}
+			}
+			panic("method not found " + self.TypeName() + "." + method.ToStr())
+		case CALLMETH2:
+			method := t.Pop()
+			base := t.sp - 3
+			self := t.stack[base]
+			if methstr, ok := method.(SuStr); ok {
+				if f := self.Lookup(string(methstr)); f != nil {
+					result := f.Call3(t, self, t.stack[base+1], t.stack[base+2])
+					t.sp = base
+					t.Push(result)
+					break
+				}
+			}
+			panic("method not found " + self.TypeName() + "." + method.ToStr())
+		case CALLMETH3:
+			method := t.Pop()
+			base := t.sp - 4
+			self := t.stack[base]
+			if methstr, ok := method.(SuStr); ok {
+				if f := self.Lookup(string(methstr)); f != nil {
+					result := f.Call4(t, self, t.stack[base+1], t.stack[base+2], t.stack[base+3])
+					t.sp = base
+					t.Push(result)
+					break
+				}
+			}
+			panic("method not found " + self.TypeName() + "." + method.ToStr())
 		case CALLMETH:
 			method := t.Pop()
 			unnamed := code[fr.ip]
@@ -275,8 +357,8 @@ func (t *Thread) Run() Value {
 			var spec []byte
 			if named > 0 {
 				spec = code[fr.ip : fr.ip+named]
+				fr.ip += named
 			}
-			fr.ip += named
 			argSpec := &ArgSpec{unnamed, spec, fr.fn.Strings}
 			nargs := argSpec.Nargs()
 			base := t.sp - nargs - 1 // 1 extra for self

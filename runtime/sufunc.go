@@ -14,11 +14,31 @@ type SuFunc struct {
 	Code []byte
 }
 
+func (f *SuFunc) String() string {
+	return "function" + f.ParamSpec.String()
+}
+
 // Call invokes the SuFunc
 func (f *SuFunc) Call(t *Thread, as *ArgSpec) Value {
 	t.Args(&f.ParamSpec, as)
 	return t.Call(f)
 }
+func (f *SuFunc) Call0(t *Thread) Value {
+	return f.Call(t, ArgSpec0)
+}
+func (f *SuFunc) Call1(t *Thread, _ Value) Value {
+	return f.Call(t, ArgSpec1)
+}
+func (f *SuFunc) Call2(t *Thread, _, _ Value) Value {
+	return f.Call(t, ArgSpec2)
+}
+func (f *SuFunc) Call3(t *Thread, _, _, _ Value) Value {
+	return f.Call(t, ArgSpec3)
+}
+func (f *SuFunc) Call4(t *Thread, _, _, _, _ Value) Value {
+	return f.Call(t, ArgSpec4)
+}
+//TODO specialize, don't just call general
 
 var _ Value = (*SuFunc)(nil) // verify *SuFunc satisfies Value
 
@@ -27,6 +47,9 @@ func (*SuFunc) TypeName() string {
 	return "Function"
 }
 
-func (*SuFunc) Lookup(string) Callable {
-	return nil // TODO
+// SuFuncMethods is initialized by the builtin package
+var SuFuncMethods Methods
+
+func (*SuFunc) Lookup(method string) Callable {
+	return SuFuncMethods[method]
 }

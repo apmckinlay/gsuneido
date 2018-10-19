@@ -17,8 +17,9 @@ var asm = []string{
 	"load", "store", "dyload", "get", "put", "global",
 	"true", "false", "zero", "one", "emptystr",
 	"or", "and", "bool", "qmark", "in", "jump", "tjump", "fjump",
-	"eqjump", "nejump", "throw", "callfunc", "callmeth",
-	"rangeto", "rangelen", "this",
+	"eqjump", "nejump", "throw", "rangeto", "rangelen", "this",
+	"callfunc", "callfunc0", "callfunc1", "callfunc2", "callfunc3", "callfunc4",
+	"callmeth", "callmeth0", "callmeth1", "callmeth2", "callmeth3",
 }
 
 func init() {

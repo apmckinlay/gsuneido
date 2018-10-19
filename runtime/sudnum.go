@@ -98,6 +98,21 @@ func (dn SuDnum) Compare(other Value) int {
 	return dnum.Compare(dn.Dnum, other.ToDnum())
 }
 
+func (SuDnum) Call0(_ *Thread) Value {
+	panic("can't call Number")
+}
+func (SuDnum) Call1(_ *Thread, _ Value) Value {
+	panic("can't call Number")
+}
+func (SuDnum) Call2(_ *Thread, _, _ Value) Value {
+	panic("can't call Number")
+}
+func (SuDnum) Call3(_ *Thread, _, _, _ Value) Value {
+	panic("can't call Number")
+}
+func (SuDnum) Call4(_ *Thread, _, _, _, _ Value) Value {
+	panic("can't call Number")
+}
 func (SuDnum) Call(*Thread, *ArgSpec) Value {
 	panic("can't call Number")
 }

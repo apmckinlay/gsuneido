@@ -8,6 +8,11 @@ import (
 
 type Callable interface {
 	Call(t *Thread, as *ArgSpec) Value // raw args on stack
+	Call0(t *Thread) Value
+	Call1(t *Thread, a Value) Value
+	Call2(t *Thread, a, b Value) Value
+	Call3(t *Thread, a, b, c Value) Value
+	Call4(t *Thread, a, b, c, d Value) Value
 }
 
 // Value is used to reference a Suneido value

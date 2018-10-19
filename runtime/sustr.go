@@ -128,12 +128,27 @@ func (ss SuStr) Call(t *Thread, as *ArgSpec) Value {
 	if as.Unnamed < 1 {
 		panic("string call requires 'this' argument")
 	}
-	ob := t.stack[t.sp - as.Nargs()]
+	ob := t.stack[t.sp-as.Nargs()]
 	method := string(ss)
 	fn := ob.Lookup(method)
 	as2 := *as
 	as2.Unnamed--
 	return fn.Call(t, &as2)
+}
+func (ss SuStr) Call0(t *Thread) Value {
+	return ss.Call(t, ArgSpec0)
+}
+func (ss SuStr) Call1(t *Thread, _ Value) Value {
+	return ss.Call(t, ArgSpec1)
+}
+func (ss SuStr) Call2(t *Thread, _, _ Value) Value {
+	return ss.Call(t, ArgSpec2)
+}
+func (ss SuStr) Call3(t *Thread, _, _, _ Value) Value {
+	return ss.Call(t, ArgSpec3)
+}
+func (ss SuStr) Call4(t *Thread, _, _, _, _ Value) Value {
+	return ss.Call(t, ArgSpec4)
 }
 
 // StringMethods is initialized by the builtin package

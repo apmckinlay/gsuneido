@@ -776,6 +776,21 @@ func (d SuDate) Compare(other Value) int {
 	}
 }
 
+func (SuDate) Call0(_ *Thread) Value {
+	panic("can't call Date")
+}
+func (SuDate) Call1(_ *Thread, _ Value) Value {
+	panic("can't call Date")
+}
+func (SuDate) Call2(_ *Thread, _, _ Value) Value {
+	panic("can't call Date")
+}
+func (SuDate) Call3(_ *Thread, _, _, _ Value) Value {
+	panic("can't call Date")
+}
+func (SuDate) Call4(_ *Thread, _, _, _, _ Value) Value {
+	panic("can't call Date")
+}
 func (SuDate) Call(*Thread, *ArgSpec) Value {
 	panic("can't call Date")
 }

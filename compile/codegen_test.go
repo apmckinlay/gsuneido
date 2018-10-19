@@ -84,19 +84,24 @@ func TestCodegen(t *testing.T) {
 
 	test("throw 'fubar'", "value 'fubar', throw")
 
-	test("f()", "load f, callfunc()")
-	test("F()", "global F, callfunc()")
-	test("f(a, b)", "load a, load b, load f, callfunc(?, ?)")
+	test("f()", "load f, callfunc0")
+	test("F()", "global F, callfunc0")
+	test("f(a, b)", "load a, load b, load f, callfunc2")
+	test("f(1,2,3,4)", "one, int 2, int 3, int 4, load f, callfunc4")
+	test("f(1,2,3,4,5)", "one, int 2, int 3, int 4, int 5, load f, callfunc(?, ?, ?, ?, ?)")
 	test("f(a, b, c:, d: 0)", "load a, load b, true, zero, load f, callfunc(?, ?, c:, d:)")
 	test("f(@args)", "load args, load f, callfunc(@)")
 	test("f(@+1args)", "load args, load f, callfunc(@+1)")
 
-	test("a.f(123)", "load a, int 123, value 'f', callmeth(?)")
-	test("a[b](123)", "load a, int 123, load b, callmeth(?)")
-	test("a[b $ c](123)", "load a, int 123, load b, load c, cat, callmeth(?)")
-	test("a().Add(123)", "load a, callfunc(), int 123, value 'Add', callmeth(?)")
+	test("a.f(123)", "load a, int 123, value 'f', callmeth1")
+	test("a.f(1,2,3)", "load a, one, int 2, int 3, value 'f', callmeth3")
+	test("a.f(1,2,3,4)", "load a, one, int 2, int 3, int 4, value 'f', callmeth(?, ?, ?, ?)")
+	test("a.f(x:)", "load a, true, value 'f', callmeth(x:)")
+	test("a[b](123)", "load a, int 123, load b, callmeth1")
+	test("a[b $ c](123)", "load a, int 123, load b, load c, cat, callmeth1")
+	test("a().Add(123)", "load a, callfunc0, int 123, value 'Add', callmeth1")
 	test("a().Add(123).Size()",
-		"load a, callfunc(), int 123, value 'Add', callmeth(?), value 'Size', callmeth()")
+		"load a, callfunc0, int 123, value 'Add', callmeth1, value 'Size', callmeth0")
 
 	test("function () { }", "value function()")
 }

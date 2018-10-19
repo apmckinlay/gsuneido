@@ -551,24 +551,32 @@ func (cg *cgen) call(ast *Ast) {
 	if method {
 		cg.expr(fn.first()) // self
 	}
-
 	argspec := cg.args(ast.second())
+	simple := byte(0)
+	named := len(argspec.Spec)
 	if method {
+		if named == 0 && argspec.Unnamed <= 3 {
+			simple = argspec.Unnamed + 1
+		}
 		if fn.Token == DOT {
 			cg.emitValue(SuStr(fn.second().Text)) // method name
 		} else { // L_BRACKET
 			cg.expr(fn.second())
 		}
-		cg.emit(op.CALLMETH)
+		cg.emit(op.CALLMETH + simple)
 	} else {
+		if named == 0 && argspec.Unnamed <= 4 {
+			simple = argspec.Unnamed + 1
+		}
 		cg.expr(ast.first()) // function
-		cg.emit(op.CALLFUNC)
+		cg.emit(op.CALLFUNC + simple)
 	}
-	cg.emit(argspec.Unnamed)
-	named := len(argspec.Spec)
-	verify.That(named <= math.MaxUint8)
-	cg.emit(byte(named))
-	cg.emit(argspec.Spec...)
+	if simple == 0 {
+		cg.emit(argspec.Unnamed)
+		verify.That(named <= math.MaxUint8)
+		cg.emit(byte(named))
+		cg.emit(argspec.Spec...)
+	}
 }
 
 func (cg *cgen) args(ast *Ast) ArgSpec {
