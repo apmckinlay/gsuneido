@@ -43,7 +43,9 @@ func eval(src string) {
 	defer func() {
 		if e := recover(); e != nil {
 			fmt.Println("ERROR:", e)
-			debug.PrintStack()
+			if internal(e) {
+				debug.PrintStack()
+			}
 		}
 	}()
 	src = "function () {\n" + src + "\n}"
@@ -57,4 +59,13 @@ func eval(src string) {
 	}
 	fmt.Println()
 	fmt.Println()
+}
+
+type internalError interface {
+	RuntimeError()
+}
+
+func internal(e interface{}) bool {
+	_, ok := e.(internalError)
+	return ok
 }
