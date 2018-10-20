@@ -56,6 +56,8 @@ func (*ParamSpec) ToStr() string {
 
 func (f *ParamSpec) String() string {
 	var buf strings.Builder
+	// easier to add "function" here and strip it in Params
+	// than to implement String in a bunch of places to add it
 	buf.WriteString("function(")
 	sep := ""
 	v := 0 // index into Values
@@ -159,4 +161,16 @@ func (f *ParamSpec) Call3(_ *Thread, _, _, _ Value) Value {
 }
 func (f *ParamSpec) Call4(_ *Thread, _, _, _, _ Value) Value {
 	panic("too many arguments")
+}
+
+func (f *ParamSpec) fillin(t *Thread, i int) Value {
+	if f.Flags[i]&DynParam != 0 {
+		if x := t.dyn("_" + f.Strings[i]); x != nil {
+			return x
+		}
+	}
+	if i < f.Nparams-f.Ndefaults {
+		panic("missing argument(s)")
+	}
+	return f.Values[i-(f.Nparams-f.Ndefaults)]
 }

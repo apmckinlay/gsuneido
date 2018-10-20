@@ -68,9 +68,8 @@ func (b *Builtin1) Call(t *Thread, as *ArgSpec) Value {
 	args := t.Args(&b.ParamSpec, as)
 	return b.Fn(args[0])
 }
-func (b *Builtin1) Call0(*Thread) Value {
-	// TODO use default if available
-	panic("not enough arguments")
+func (b *Builtin1) Call0(t *Thread) Value {
+	return b.Fn(b.fillin(t,0))
 }
 func (b *Builtin1) Call1(_ *Thread, a Value) Value {
 	return b.Fn(a) // fast path
@@ -92,13 +91,11 @@ func (b *Builtin2) Call(t *Thread, as *ArgSpec) Value {
 	args := t.Args(&b.ParamSpec, as)
 	return b.Fn(args[0], args[1])
 }
-func (b *Builtin2) Call0(*Thread) Value {
-	// TODO use default if available
-	panic("not enough arguments")
+func (b *Builtin2) Call0(t *Thread) Value {
+	return b.Fn(b.fillin(t,0), b.fillin(t,1))
 }
-func (b *Builtin2) Call1(*Thread, Value) Value {
-	// TODO use default if available
-	panic("not enough arguments")
+func (b *Builtin2) Call1(t *Thread, a1 Value) Value {
+	return b.Fn(a1, b.fillin(t,1))
 }
 func (b *Builtin2) Call2(_ *Thread, a1, a2 Value) Value {
 	return b.Fn(a1, a2) // fast path
@@ -120,17 +117,14 @@ func (b *Builtin3) Call(t *Thread, as *ArgSpec) Value {
 	args := t.Args(&b.ParamSpec, as)
 	return b.Fn(args[0], args[1], args[2])
 }
-func (b *Builtin3) Call0(*Thread) Value {
-	// TODO use default if available
-	panic("not enough arguments")
+func (b *Builtin3) Call0(t *Thread) Value {
+	return b.Fn(b.fillin(t,0), b.fillin(t,1), b.fillin(t,2))
 }
-func (b *Builtin3) Call1(*Thread, Value) Value {
-	// TODO use default if available
-	panic("not enough arguments")
+func (b *Builtin3) Call1(t *Thread, a1 Value) Value {
+	return b.Fn(a1, b.fillin(t,1), b.fillin(t,2))
 }
-func (b *Builtin3) Call2(_ *Thread, _, _ Value) Value {
-	// TODO use default if available
-	panic("not enough arguments")
+func (b *Builtin3) Call2(t *Thread, a1, a2 Value) Value {
+	return b.Fn(a1, a2, b.fillin(t,2))
 }
 func (b *Builtin3) Call3(_ *Thread, a1, a2, a3 Value) Value {
 	return b.Fn(a1, a2, a3) // fast path
@@ -152,21 +146,17 @@ func (b *Builtin4) Call(t *Thread, as *ArgSpec) Value {
 	args := t.Args(&b.ParamSpec, as)
 	return b.Fn(args[0], args[1], args[2], args[3])
 }
-func (b *Builtin4) Call0(*Thread) Value {
-	// TODO use default if available
-	panic("not enough arguments")
+func (b *Builtin4) Call0(t *Thread) Value {
+	return b.Fn(b.fillin(t,0), b.fillin(t,1), b.fillin(t,2), b.fillin(t,3))
 }
-func (b *Builtin4) Call1(*Thread, Value) Value {
-	// TODO use default if available
-	panic("not enough arguments")
+func (b *Builtin4) Call1(t *Thread, a1 Value) Value {
+	return b.Fn(a1, b.fillin(t,1), b.fillin(t,2), b.fillin(t,3))
 }
-func (b *Builtin4) Call2(_ *Thread, _, _ Value) Value {
-	// TODO use default if available
-	panic("not enough arguments")
+func (b *Builtin4) Call2(t *Thread, a1, a2 Value) Value {
+	return b.Fn(a1, a2, b.fillin(t,2), b.fillin(t,3))
 }
-func (b *Builtin4) Call3(_ *Thread, _, _, _ Value) Value {
-	// TODO use default if available
-	panic("not enough arguments")
+func (b *Builtin4) Call3(t *Thread, a1, a2, a3 Value) Value {
+	return b.Fn(a1, a2, a3, b.fillin(t,3))
 }
 func (b *Builtin4) Call4(_ *Thread, a1, a2, a3, a4 Value) Value {
 	return b.Fn(a1, a2, a3, a4) // fast path
@@ -240,8 +230,8 @@ func (m *Method1) Call(t *Thread, as *ArgSpec) Value {
 func (m *Method1) Call0(*Thread) Value {
 	panic("shouldn't get here")
 }
-func (m *Method1) Call1(_ *Thread, _ Value) Value {
-	panic("not enough arguments")
+func (m *Method1) Call1(t *Thread, self Value) Value {
+	return m.Fn(self, m.fillin(t,0))
 }
 func (m *Method1) Call2(_ *Thread, self, a1 Value) Value {
 	return m.Fn(self, a1) // fast path
@@ -263,11 +253,11 @@ func (m *Method2) Call(t *Thread, as *ArgSpec) Value {
 func (m *Method2) Call0(*Thread) Value {
 	panic("shouldn't get here")
 }
-func (m *Method2) Call1(_ *Thread, _ Value) Value {
-	panic("not enough arguments")
+func (m *Method2) Call1(t *Thread, self Value) Value {
+	return m.Fn(self, m.fillin(t,0), m.fillin(t,1))
 }
-func (m *Method2) Call2(_ *Thread, _, _ Value) Value {
-	panic("not enough arguments")
+func (m *Method2) Call2(t *Thread, self, a1 Value) Value {
+	return m.Fn(self, a1, m.fillin(t,1))
 }
 func (m *Method2) Call3(_ *Thread, self, a1, a2 Value) Value {
 	return m.Fn(self, a1, a2) // fast path
@@ -289,14 +279,14 @@ func (m *Method3) Call(t *Thread, as *ArgSpec) Value {
 func (m *Method3) Call0(*Thread) Value {
 	panic("shouldn't get here")
 }
-func (m *Method3) Call1(_ *Thread, _ Value) Value {
-	panic("not enough arguments")
+func (m *Method3) Call1(t *Thread, self Value) Value {
+	return m.Fn(self, m.fillin(t,0), m.fillin(t,1), m.fillin(t,2))
 }
-func (m *Method3) Call2(_ *Thread, _, _ Value) Value {
-	panic("not enough arguments")
+func (m *Method3) Call2(t *Thread, self, a1 Value) Value {
+	return m.Fn(self, a1, m.fillin(t,1), m.fillin(t,2))
 }
-func (m *Method3) Call3(_ *Thread, _, _, _ Value) Value {
-	panic("not enough arguments")
+func (m *Method3) Call3(t *Thread, self, a1, a2 Value) Value {
+	return m.Fn(self, a1, a2, m.fillin(t,2))
 }
 func (m *Method3) Call4(_ *Thread, self, a1, a2, a3 Value) Value {
 	return m.Fn(self, a1, a2, a3) // fast path
