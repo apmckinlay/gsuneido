@@ -25,26 +25,14 @@ var zeroFlags [MaxArgs]Flag
 func codegen(ast *Ast) *SuFunc {
 	//fmt.Println("codegen", ast.String())
 	cg := cgen{}
-	var tmp [MaxArgs]Flag
-	cg.flags = tmp[:0]
 	cg.function(ast)
-	if allZero(cg.flags) {
-		cg.flags = zeroFlags[:len(cg.flags)]
-	} else {
-		// shrink flags to used size
-		bigflags := cg.flags
-		cg.flags = make([]Flag, len(bigflags))
-		copy(cg.flags, bigflags)
+	if allZero(cg.Flags) {
+		cg.Flags = zeroFlags[:len(cg.Flags)]
 	}
 	return &SuFunc{
-		Code:    cg.code,
-		Nlocals: len(cg.names),
-		ParamSpec: ParamSpec{
-			Values:    cg.values,
-			Strings:   cg.names,
-			Nparams:   cg.nparams,
-			Ndefaults: cg.ndefaults,
-			Flags:     cg.flags},
+		Code:      cg.code,
+		Nlocals:   len(cg.Names),
+		ParamSpec: cg.ParamSpec,
 	}
 }
 
@@ -57,14 +45,9 @@ func allZero(flags []Flag) bool {
 	return true
 }
 
-//TODO embed SuFunc
 type cgen struct {
-	nparams   int
-	code      []byte
-	values    []Value
-	names     []string
-	flags     []Flag
-	ndefaults int
+	ParamSpec
+	code []byte
 }
 
 var tok2op = [Ntokens]byte{
@@ -111,14 +94,14 @@ func (cg *cgen) function(ast *Ast) {
 
 func (cg *cgen) params(ast *Ast) {
 	verify.That(ast.Text == "params")
-	cg.nparams = len(ast.Children)
+	cg.Nparams = len(ast.Children)
 	for _, p := range ast.Children {
 		name, flags := cg.param(p.Text)
-		cg.names = append(cg.names, name) // no duplicate reuse
-		cg.flags = append(cg.flags, flags)
+		cg.Names = append(cg.Names, name) // no duplicate reuse
+		cg.Flags = append(cg.Flags, flags)
 		if p.value != nil {
-			cg.ndefaults++
-			cg.values = append(cg.values, p.value) // no duplicate reuse
+			cg.Ndefaults++
+			cg.Values = append(cg.Values, p.value) // no duplicate reuse
 		}
 	}
 }
@@ -212,10 +195,10 @@ func (cg *cgen) switchStmt(ast *Ast, labels *Labels) {
 	end := -1
 	for _, c := range ast.second().Children {
 		caseBody, afterCase := -1, -1
-		values := c.first().Children
-		for v, val := range values {
+		Values := c.first().Children
+		for v, val := range Values {
 			cg.expr(val)
-			if v < len(values)-1 {
+			if v < len(Values)-1 {
 				caseBody = cg.emitJump(op.EQJUMP, -1)
 			} else {
 				afterCase = cg.emitJump(op.NEJUMP, -1)
@@ -431,13 +414,13 @@ func (cg *cgen) emitValue(val Value) {
 // value returns an index for the value
 // reusing if duplicate, adding otherwise
 func (cg *cgen) value(v Value) int {
-	for i, v2 := range cg.values {
+	for i, v2 := range cg.Values {
 		if v.Equal(v2) {
 			return i
 		}
 	}
-	i := len(cg.values)
-	cg.values = append(cg.values, v)
+	i := len(cg.Values)
+	cg.Values = append(cg.Values, v)
 	return i
 }
 
@@ -476,7 +459,7 @@ func (cg *cgen) load(ref int) {
 	if ref == memRef {
 		cg.emit(op.GET)
 	} else {
-		if cg.names[ref][0] == '_' {
+		if cg.Names[ref][0] == '_' {
 			cg.emitUint8(op.DYLOAD, ref)
 		} else {
 			cg.emitUint8(op.LOAD, ref)
@@ -513,13 +496,13 @@ func isLocal(s string) bool {
 
 // name returns the index for a name variable
 func (cg *cgen) name(s string) int {
-	for i, s2 := range cg.names {
+	for i, s2 := range cg.Names {
 		if s == s2 {
 			return i
 		}
 	}
-	i := len(cg.names)
-	cg.names = append(cg.names, s)
+	i := len(cg.Names)
+	cg.Names = append(cg.Names, s)
 	return i
 }
 

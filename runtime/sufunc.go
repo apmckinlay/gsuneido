@@ -4,6 +4,7 @@ package runtime
 const MaxArgs = 200
 
 // SuFunc is a compiled Suneido function, method, or block
+// Not worth specializing SuFunc0..4 for interpreted functions
 type SuFunc struct {
 	ParamSpec
 
@@ -34,7 +35,6 @@ func (f *SuFunc) Call3(t *Thread, _, _, _ Value) Value {
 func (f *SuFunc) Call4(t *Thread, _, _, _, _ Value) Value {
 	return f.Call(t, ArgSpec4)
 }
-//TODO specialize, don't just call general
 
 var _ Value = (*SuFunc)(nil) // verify *SuFunc satisfies Value
 

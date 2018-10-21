@@ -72,7 +72,7 @@ func TestArgs(t *testing.T) {
 
 	// all named
 	f = &ParamSpec{Nparams: 3, Flags: []Flag{0, 0, 0},
-		Strings: []string{"a", "b", "c"}}
+		Names: []string{"a", "b", "c"}}
 	a = ArgSpec{Unnamed: 0,
 		Names: []string{"c", "b", "a", "d"}, Spec: []byte{1, 0, 2, 3}} // b, c, a, d
 	setStack(22, 33, 11, 44)
@@ -81,7 +81,7 @@ func TestArgs(t *testing.T) {
 
 	// mixed
 	f = &ParamSpec{Nparams: 4, Flags: []Flag{0, 0, 0},
-		Strings: []string{"a", "b", "c", "d"}}
+		Names: []string{"a", "b", "c", "d"}}
 	a = ArgSpec{Unnamed: 2,
 		Names: []string{"c", "b", "a", "d"}, Spec: []byte{3, 0}} // d, c
 	setStack(22, 33, 11, 44) // fn(22, 33, d: 11, c: 44)
@@ -99,7 +99,7 @@ func TestArgs(t *testing.T) {
 
 	// @args => params
 	f = &ParamSpec{Nparams: 4, Flags: []Flag{0, 0, 0, 0},
-		Strings: []string{"d", "c", "b", "a"}}
+		Names: []string{"d", "c", "b", "a"}}
 	a = ArgSpec{Unnamed: EACH}
 	th.Reset()
 	th.Push(makeOb())
@@ -109,9 +109,9 @@ func TestArgs(t *testing.T) {
 	// dynamic
 	setStack(111, 123)
 	th.frames[0] = Frame{
-		fn: &SuFunc{ParamSpec: ParamSpec{Strings: []string{"x", "_dyn"}}}}
+		fn: &SuFunc{ParamSpec: ParamSpec{Names: []string{"x", "_dyn"}}}}
 	th.fp++
-	f = &ParamSpec{Nparams: 1, Flags: []Flag{DynParam}, Strings: []string{"dyn"}}
+	f = &ParamSpec{Nparams: 1, Flags: []Flag{DynParam}, Names: []string{"dyn"}}
 	a = ArgSpec{}
 	th.Args(f, &a)
 	ckStack(111, 123, 123)

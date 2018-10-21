@@ -78,7 +78,7 @@ func (t *Thread) massage(ps *ParamSpec, as *ArgSpec, args []Value) {
 		}
 		// named members may overwrite unnamed (same as when passed individually)
 		for i := 0; i < ps.Nparams; i++ {
-			if x := ob.Get(SuStr(ps.Strings[i])); x != nil {
+			if x := ob.Get(SuStr(ps.Names[i])); x != nil {
 				args[i] = x
 			}
 		}
@@ -98,7 +98,7 @@ func (t *Thread) massage(ps *ParamSpec, as *ArgSpec, args []Value) {
 		// move applicable named args back to correct position
 		for si, ni := range as.Spec {
 			for i := 0; i < ps.Nparams; i++ {
-				if as.Names[ni] == ps.Strings[i] {
+				if as.Names[ni] == ps.Names[i] {
 					args[i] = tmp[si]
 				}
 			}
@@ -108,7 +108,7 @@ func (t *Thread) massage(ps *ParamSpec, as *ArgSpec, args []Value) {
 	// fill in dynamic
 	for i := 0; i < ps.Nparams; i++ {
 		if args[i] == nil && ps.Flags[i]&DynParam != 0 {
-			if x := t.dyn("_" + ps.Strings[i]); x != nil {
+			if x := t.dyn("_" + ps.Names[i]); x != nil {
 				args[i] = x
 			}
 		}
@@ -132,7 +132,7 @@ func (t *Thread) massage(ps *ParamSpec, as *ArgSpec, args []Value) {
 func (t *Thread) dyn(name string) Value {
 	for i := t.fp - 1; i >= 0; i-- {
 		fr := t.frames[i]
-		for j, s := range fr.fn.Strings {
+		for j, s := range fr.fn.Names {
 			if s == name {
 				return t.stack[fr.bp+j]
 			}

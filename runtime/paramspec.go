@@ -20,10 +20,9 @@ type ParamSpec struct {
 	// Flags specifies "types" of params
 	Flags []Flag
 
-	// Strings starts with the parameter names, then the local names,
-	// and then any argument or member names used in the code,
-	// and any argument specs
-	Strings []string
+	// Names starts with the parameter names, then the local names,
+	// and then any argument or member names used in the code
+	Names []string
 
 	// Values contains any literals in the function
 	// starting with parameter defaults
@@ -63,7 +62,7 @@ func (f *ParamSpec) String() string {
 	v := 0 // index into Values
 	for i := 0; i < f.Nparams; i++ {
 		buf.WriteString(sep)
-		buf.WriteString(flagsToName(f.Strings[i], f.Flags[i]))
+		buf.WriteString(flagsToName(f.Names[i], f.Flags[i]))
 		if i >= f.Nparams-f.Ndefaults {
 			buf.WriteString("=")
 			buf.WriteString(fmt.Sprint(f.Values[v]))
@@ -165,7 +164,7 @@ func (f *ParamSpec) Call4(_ *Thread, _, _, _, _ Value) Value {
 
 func (f *ParamSpec) fillin(t *Thread, i int) Value {
 	if f.Flags[i]&DynParam != 0 {
-		if x := t.dyn("_" + f.Strings[i]); x != nil {
+		if x := t.dyn("_" + f.Names[i]); x != nil {
 			return x
 		}
 	}

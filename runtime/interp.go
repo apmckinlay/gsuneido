@@ -71,7 +71,7 @@ func (t *Thread) Run() Value {
 			i := fetchUint8()
 			val := t.stack[bp+i]
 			if val == nil {
-				panic("uninitialized variable: " + fr.fn.Strings[i])
+				panic("uninitialized variable: " + fr.fn.Names[i])
 			}
 			t.Push(val)
 		case STORE:
@@ -291,7 +291,7 @@ func (t *Thread) Run() Value {
 				spec = code[fr.ip : fr.ip+named]
 				fr.ip += named
 			}
-			argSpec := &ArgSpec{unnamed, spec, fr.fn.Strings}
+			argSpec := &ArgSpec{unnamed, spec, fr.fn.Names}
 			base := t.sp - argSpec.Nargs()
 			result := f.Call(t, argSpec)
 			t.sp = base
@@ -359,7 +359,7 @@ func (t *Thread) Run() Value {
 				spec = code[fr.ip : fr.ip+named]
 				fr.ip += named
 			}
-			argSpec := &ArgSpec{unnamed, spec, fr.fn.Strings}
+			argSpec := &ArgSpec{unnamed, spec, fr.fn.Names}
 			nargs := argSpec.Nargs()
 			base := t.sp - nargs - 1 // 1 extra for self
 			self := t.stack[base]
@@ -405,10 +405,10 @@ func (t *Thread) popbool() bool {
 }
 
 func (t *Thread) dyload(fr *Frame, idx int) {
-	name := fr.fn.Strings[idx]
+	name := fr.fn.Names[idx]
 	for i := t.fp - 1; i >= 0; i-- {
 		fr2 := t.frames[i]
-		for j, s := range fr2.fn.Strings {
+		for j, s := range fr2.fn.Names {
 			if s == name {
 				t.stack[fr.bp+idx] = t.stack[fr2.bp+j]
 				return

@@ -65,7 +65,7 @@ func Disasm1(fn *SuFunc, i int) (int, string) {
 		s += fmt.Sprintf(" %v", v)
 	case LOAD, STORE, DYLOAD:
 		idx := fetchUint8()
-		s += " " + fn.Strings[idx]
+		s += " " + fn.Names[idx]
 	case GLOBAL:
 		idx := fetchUint16()
 		s += " " + GlobalName(int(idx))
@@ -79,7 +79,7 @@ func Disasm1(fn *SuFunc, i int) (int, string) {
 		i++
 		spec := fn.Code[i : i+named]
 		i += named
-		s += ArgSpec{unnamed, spec, fn.Strings}.String()[7:]
+		s += ArgSpec{unnamed, spec, fn.Names}.String()[7:]
 	}
 	return i, s
 }
