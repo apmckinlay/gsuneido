@@ -2,6 +2,7 @@ package runtime
 
 import (
 	"math"
+	"reflect"
 	"testing"
 
 	. "github.com/apmckinlay/gsuneido/util/hamcrest"
@@ -22,4 +23,7 @@ func TestSuInt(t *testing.T) {
 	}
 	xtest(123456)
 	xtest(-123456)
+
+	Assert(t).False(reflect.DeepEqual(SuInt(2), SuInt(3)))
+	Assert(t).False(reflect.DeepEqual(SuInt(-2), SuInt(-3)))
 }

@@ -1,5 +1,11 @@
 package runtime
 
+// WARNING: reflect.DeepEqual (tests) does not work correctly with SuInt
+// For pointers it compares what they point to
+// Which for smi is always zero
+// As a partial fix, smi's from -127 to 127 are set to themselves
+// So as long as tests stick to small values they are ok
+
 import (
 	"math"
 	"strconv"
@@ -17,6 +23,14 @@ const MaxSuInt = math.MaxInt16
 
 var space [smiRange]smi // uninitialized BSS, no actual memory used
 var base = uintptr(unsafe.Pointer(&space[0]))
+
+func init() {
+	// this is so that reflect.DeepEquals doesn't think small smi's are equal
+	// (for tests)
+	for i := -127; i < 127; i++ {
+		*SuInt(i) = smi(i) // +1 to avoid zero
+	}
+}
 
 // SuInt converts an int to *smi which implements Value
 // will panic if out of int16 range
