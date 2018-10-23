@@ -7,6 +7,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/apmckinlay/gsuneido/util/ascii"
 	"github.com/apmckinlay/gsuneido/util/cmatch"
 	"github.com/apmckinlay/gsuneido/util/ints"
 	"github.com/apmckinlay/gsuneido/util/ptest"
@@ -392,7 +393,7 @@ func (co *Compiler) emitChars(s string) {
 		co.pat[len(co.pat)-1] = e.add(s)
 	} else {
 		if co.ignoringCase {
-			co.emit(newCharsIgnoreCase(s))
+			co.emit(CharsIgnoreCase{s})
 		} else {
 			co.emit(Chars{s})
 		}
@@ -402,7 +403,7 @@ func (co *Compiler) emitChars(s string) {
 }
 
 func (co *Compiler) next1of(set string) bool {
-	return co.si < co.sn && strings.IndexRune(set, rune(co.src[co.si])) != -1
+	return co.si < co.sn && strings.IndexByte(set, co.src[co.si]) != -1
 }
 
 func (co *Compiler) charClass() {
@@ -415,7 +416,7 @@ func (co *Compiler) charClass() {
 	for co.si < co.sn && co.src[co.si] != ']' {
 		var elem cmatch.CharMatch
 		if co.matchRange() {
-			elem = cmatch.InRange(rune(co.src[co.si-3]), rune(co.src[co.si-1]))
+			elem = cmatch.InRange(co.src[co.si-3], co.src[co.si-1])
 		} else if co.match("\\d") {
 			elem = digit
 		} else if co.match("\\D") {
@@ -434,7 +435,7 @@ func (co *Compiler) charClass() {
 			if co.si+1 < co.sn {
 				co.match("\\")
 			}
-			chars += string(rune(co.src[co.si]))
+			chars += string(co.src[co.si])
 			co.si++
 			continue
 		}
@@ -596,7 +597,7 @@ func (e StartOfLine) nextPossible(s string, si int, sn int) int {
 	if si == sn {
 		return si + 1
 	}
-	j := strings.IndexRune(s[si+1:], '\n')
+	j := strings.IndexByte(s[si+1:], '\n')
 	if j == -1 {
 		return sn
 	}
@@ -669,7 +670,7 @@ type StartOfWord struct {
 }
 
 func (e StartOfWord) omatch(s string, si int, _ *Result) int {
-	if si == 0 || !word.Match(rune(s[si-1])) {
+	if si == 0 || !word.Match(s[si-1]) {
 		return si
 	}
 	return FAIL
@@ -685,7 +686,7 @@ type EndOfWord struct {
 }
 
 func (e EndOfWord) omatch(s string, si int, _ *Result) int {
-	if si >= len(s) || !word.Match(rune(s[si])) {
+	if si >= len(s) || !word.Match(s[si]) {
 		return si
 	}
 	return FAIL
@@ -713,7 +714,7 @@ func (e Backref) omatch(s string, si int, res *Result) int {
 			return FAIL
 		}
 		for i := 0; i < bn; i++ {
-			if toLower(rune(s[si+i])) != toLower(rune(b[i])) {
+			if ascii.ToLower(s[si+i]) != ascii.ToLower(b[i]) {
 				return FAIL
 			}
 		}
@@ -727,7 +728,7 @@ func (e Backref) String() string {
 	if e.ignoringCase {
 		s = "i"
 	}
-	return s + "\\" + string(rune('0'+e.idx))
+	return s + "\\" + string('0'+e.idx)
 }
 
 type addable interface {
@@ -768,17 +769,13 @@ type CharsIgnoreCase struct {
 	chars string
 }
 
-func newCharsIgnoreCase(chars string) CharsIgnoreCase {
-	return CharsIgnoreCase{chars}
-}
-
 func (e CharsIgnoreCase) omatch(s string, si int, _ *Result) int {
 	cn := len(e.chars)
 	if si+cn > len(s) {
 		return FAIL
 	}
 	for i := 0; i < cn; i++ {
-		if toLower(rune(s[si+i])) != toLower(rune(e.chars[i])) {
+		if ascii.ToLower(s[si+i]) != ascii.ToLower(e.chars[i]) {
 			return FAIL
 		}
 	}
@@ -791,7 +788,7 @@ func (e CharsIgnoreCase) nextPossible(s string, si int, sn int) int {
 		for i := 0; ; i++ {
 			if i == cn {
 				return si
-			} else if toLower(rune(s[si+i])) != toLower(rune(e.chars[i])) {
+			} else if ascii.ToLower(s[si+i]) != ascii.ToLower(e.chars[i]) {
 				break
 			}
 		}
@@ -816,7 +813,7 @@ func (e CharClass) omatch(s string, si int, _ *Result) int {
 	if si >= len(s) {
 		return FAIL
 	}
-	if e.cm.Match(rune(s[si])) {
+	if e.cm.Match(s[si]) {
 		return si + 1
 	}
 	return FAIL
@@ -845,8 +842,8 @@ func (e CharClassIgnoreCase) omatch(s string, si int, _ *Result) int {
 	if si >= len(s) {
 		return FAIL
 	}
-	if e.cm.Match(toLower(rune(s[si]))) ||
-		e.cm.Match(toUpper(rune(s[si]))) {
+	if e.cm.Match(ascii.ToLower(s[si])) ||
+		e.cm.Match(ascii.ToUpper(s[si])) {
 		return si + 1
 	}
 	return FAIL
@@ -854,8 +851,8 @@ func (e CharClassIgnoreCase) omatch(s string, si int, _ *Result) int {
 
 func (e CharClassIgnoreCase) nextPossible(s string, si int, sn int) int {
 	for si++; si < sn; si++ {
-		if e.cm.Match(toLower(rune(s[si]))) ||
-			e.cm.Match(toUpper(rune(s[si]))) {
+		if e.cm.Match(ascii.ToLower(s[si])) ||
+			e.cm.Match(ascii.ToUpper(s[si])) {
 			return si
 		}
 	}
@@ -876,20 +873,6 @@ func (Any) String() string {
 }
 
 var any = CharClass{cmatch.AnyOf("\r\n").Negate()}
-
-func toLower(c rune) rune {
-	if upper(c) {
-		return c + ('a' - 'A')
-	}
-	return c
-}
-
-func toUpper(c rune) rune {
-	if lower(c) {
-		return c - ('a' - 'A')
-	}
-	return c
-}
 
 /*
  * Implemented by amatch.

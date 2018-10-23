@@ -19,7 +19,7 @@ func TestAnyOf(t *testing.T) {
 
 func TestInRange(t *testing.T) {
 	cm := InRange('a', 'c')
-	for c := 'a'; c <= 'c'; c++ {
+	for c := byte('a'); c <= 'c'; c++ {
 		Assert(t).That(cm.Match(c), Equals(true))
 	}
 	Assert(t).That(cm.Match('x'), Equals(false))
@@ -54,4 +54,26 @@ func TestPredefined(t *testing.T) {
 	Assert(t).That(cm.Match('x'), Equals(true))
 	Assert(t).That(cm.Match('X'), Equals(false))
 	Assert(t).That(cm.Match('5'), Equals(false))
+}
+
+func TestTrim(t *testing.T) {
+	cm := Is(' ')
+	Assert(t).That(cm.Trim(""), Equals(""))
+	Assert(t).That(cm.Trim(" "), Equals(""))
+	Assert(t).That(cm.Trim("    "), Equals(""))
+	Assert(t).That(cm.Trim("hello"), Equals("hello"))
+	Assert(t).That(cm.Trim("  hello"), Equals("hello"))
+	Assert(t).That(cm.Trim("hello "), Equals("hello"))
+	Assert(t).That(cm.Trim(" hello  "), Equals("hello"))
+}
+
+func TestTrimLeft(t *testing.T) {
+	cm := Is(' ')
+	Assert(t).That(cm.TrimLeft(""), Equals(""))
+	Assert(t).That(cm.TrimLeft(" "), Equals(""))
+	Assert(t).That(cm.TrimLeft("    "), Equals(""))
+	Assert(t).That(cm.TrimLeft("hello"), Equals("hello"))
+	Assert(t).That(cm.TrimLeft("  hello"), Equals("hello"))
+	Assert(t).That(cm.TrimLeft("hello "), Equals("hello "))
+	Assert(t).That(cm.TrimLeft(" hello  "), Equals("hello  "))
 }

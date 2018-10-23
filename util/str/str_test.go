@@ -30,3 +30,13 @@ func TestUnCapitalize(t *testing.T) {
 	Assert(t).That(UnCapitalize("A"), Equals("a"))
 	Assert(t).That(UnCapitalize("AbC"), Equals("abC"))
 }
+
+func TestIndexFunc(t *testing.T) {
+	f := func(c byte) bool {
+		return c == ' '
+	}
+	Assert(t).That(IndexFunc("", f), Equals(-1))
+	Assert(t).That(IndexFunc(" ", f), Equals(0))
+	Assert(t).That(IndexFunc("foobar", f), Equals(-1))
+	Assert(t).That(IndexFunc("foo bar", f), Equals(3))
+}

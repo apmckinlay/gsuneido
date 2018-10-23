@@ -54,8 +54,6 @@ func TestCompile(t *testing.T) {
 
 	test("a(?q).(?-q).c(?q).(?-q).", "'a.' [...] 'c.' [...]")
 
-	//	test("(?i)ABC", "i'abc'")
-
 	test("\\", "'\\'")
 
 	Assert(t).That(func() { Compile("(abc") }, Panics("missing ')'"))
@@ -64,8 +62,6 @@ func TestCompile(t *testing.T) {
 }
 
 func TestBug(t *testing.T) {
-	Assert(t).That(toLower('\x8a'), Equals('\x8a'))
-	Assert(t).That(toUpper('\x8a'), Equals('\x8a'))
 	p := Compile("(?i)[\x9a\xbb]")
 	Assert(t).That(p.Matches("\x8a"), Equals(false))
 }
