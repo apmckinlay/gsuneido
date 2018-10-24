@@ -25,6 +25,8 @@ func TestConstant(t *testing.T) {
 }
 
 func TestConstantObject(t *testing.T) {
+	DefaultSingleQuotes = true
+	defer func () { DefaultSingleQuotes = false }()
 	test := func(src string, expected string) {
 		//fmt.Println(">>>", src)
 		Assert(t).That(Constant(src).String(), Equals(expected))

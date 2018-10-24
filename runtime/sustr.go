@@ -32,10 +32,16 @@ func (ss SuStr) ToStr() string {
 	return string(ss)
 }
 
+var DefaultSingleQuotes = false
+
 // String returns a human readable string with quotes and escaping
 // TODO: handle escaping
 func (ss SuStr) String() string {
-	return "'" + string(ss) + "'"
+	q := "\""
+	if DefaultSingleQuotes {
+		q = "'"
+	}
+	return q + string(ss) + q
 }
 
 func (ss SuStr) Get(key Value) Value {

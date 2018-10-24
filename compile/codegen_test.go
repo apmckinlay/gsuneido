@@ -9,6 +9,8 @@ import (
 )
 
 func TestCodegen(t *testing.T) {
+	rt.DefaultSingleQuotes = true
+	defer func () { rt.DefaultSingleQuotes = false }()
 	test := func(src, expected string) {
 		t.Helper()
 		ast := ParseFunction("function () {\n" + src + "\n}")
@@ -107,6 +109,8 @@ func TestCodegen(t *testing.T) {
 }
 
 func TestControl(t *testing.T) {
+	rt.DefaultSingleQuotes = true
+	defer func () { rt.DefaultSingleQuotes = false }()
 	test := func(src, expected string) {
 		t.Helper()
 		ast := ParseFunction("function () {\n" + src + "\n}")
@@ -257,6 +261,8 @@ func TestControl(t *testing.T) {
 }
 
 func TestParams(t *testing.T) {
+	rt.DefaultSingleQuotes = true
+	defer func () { rt.DefaultSingleQuotes = false }()
 	test := func(s string) {
 		ast := ParseFunction("function (" + s + ") { }")
 		fn := codegen(ast)

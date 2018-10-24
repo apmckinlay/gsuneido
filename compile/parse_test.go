@@ -3,10 +3,13 @@ package compile
 import (
 	"testing"
 
+	rt "github.com/apmckinlay/gsuneido/runtime"
 	. "github.com/apmckinlay/gsuneido/util/hamcrest"
 )
 
 func TestParseExpression(t *testing.T) {
+	rt.DefaultSingleQuotes = true
+	defer func() { rt.DefaultSingleQuotes = false }()
 	parseExpr := func(src string) *Ast {
 		p := newParser(src)
 		return expression(p, astBuilder).(*Ast)
@@ -161,6 +164,8 @@ func TestParseFunction(t *testing.T) {
 }
 
 func TestParseStatements(t *testing.T) {
+	rt.DefaultSingleQuotes = true
+	defer func() { rt.DefaultSingleQuotes = false }()
 	test := func(src string, expected string) {
 		p := newParser(src + " }")
 		ast := p.statements()

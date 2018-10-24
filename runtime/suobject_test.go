@@ -8,6 +8,8 @@ import (
 )
 
 func TestSuObject(t *testing.T) {
+	DefaultSingleQuotes = true
+	defer func() { DefaultSingleQuotes = false }()
 	ob := SuObject{}
 	Assert(t).That(ob.String(), Equals("#()"))
 	Assert(t).That(ob.Size(), Equals(0))
@@ -28,6 +30,8 @@ func TestSuObject(t *testing.T) {
 }
 
 func TestSuObjectString(t *testing.T) {
+	DefaultSingleQuotes = true
+	defer func() { DefaultSingleQuotes = false }()
 	test := func(k string, expected string) {
 		ob := SuObject{}
 		ob.Put(SuStr(k), SuInt(123))
