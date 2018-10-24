@@ -190,6 +190,7 @@ func Panics(expected string) Tester {
 	}
 }
 
+// Catch calls the given function, catching and returning panics
 func Catch(f func()) (result interface{}) {
 	defer func() {
 		if e := recover(); e != nil {
