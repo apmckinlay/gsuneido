@@ -2,6 +2,7 @@ package runtime
 
 import (
 	"strconv"
+	"strings"
 
 	"github.com/apmckinlay/gsuneido/util/dnum"
 )
@@ -68,8 +69,13 @@ const (
 var NilVal Value
 
 func NumFromString(s string) Value {
-	if n, err := strconv.ParseInt(s, 0, 16); err == nil {
-		return SuInt(int(n))
+	if strings.HasPrefix(s, "0x") {
+		if n, err := strconv.ParseUint(s, 0, 32); err == nil {
+			return NumFromInt(int(int32(n)))
+		}
+	}
+	if n, err := strconv.ParseInt(s, 0, 32); err == nil {
+		return NumFromInt(int(n))
 	}
 	return SuDnum{dnum.FromStr(s)}
 }
