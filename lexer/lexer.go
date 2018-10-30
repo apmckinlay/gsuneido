@@ -388,12 +388,12 @@ func (lxr *Lexer) identifier(start int) Item {
 	if !lxr.match('?') {
 		lxr.match('!')
 	}
-	value := lxr.src[start:lxr.si]
+	val := lxr.src[start:lxr.si]
 	keyword := NIL
-	if lxr.peek() != ':' || value == "default" {
-		keyword = Keyword(value)
+	if lxr.peek() != ':' || val == "default" || val == "true" || val == "false" {
+		keyword = Keyword(val)
 	}
-	return Item{value, int32(start), IDENTIFIER, keyword}
+	return Item{val, int32(start), IDENTIFIER, keyword}
 }
 
 const eof = -1

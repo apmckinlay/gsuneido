@@ -158,6 +158,8 @@ func (p *parser) atom() T {
 		return p.evalMatch(p.expr(), R_PAREN)
 	case L_CURLY:
 		return p.block()
+	case L_BRACKET:
+		return p.record()
 	case ADD, SUB, NOT, BITNOT:
 		it := p.Item
 		p.next()
@@ -179,7 +181,9 @@ func (p *parser) atom() T {
 			p.next()
 			return p.bld(it, p.atom())
 		case FUNCTION:
-			return p.function() //TODO
+			return p.function()
+		case CLASS:
+			return p.bld(Item{}, p.class())
 		case NEW:
 			it := p.Item
 			p.next()
@@ -191,7 +195,10 @@ func (p *parser) atom() T {
 				args = p.bld(argList)
 			}
 			return p.bld(it, expr, args)
-		default:
+		default: // TODO expectingCompound
+			if okBase(p.Text) && p.lxr.AheadSkip(0).Token == L_CURLY {
+				return p.bld(Item{}, p.class())
+			}
 			return p.evalNext(p.bld(p.Item))
 		}
 	}
@@ -285,31 +292,50 @@ func (p *parser) atArgument() T {
 	return p.bld(which, expr)
 }
 
+type marker struct{}
+
 func (p *parser) argumentList(closing Token) []T {
 	var args []T
+	var keys = map[string]marker{} // can't use args because T is unknown
 	keyword := noKeyword
 	for p.Token != closing {
-		if p.lxr.AheadSkip(0).Token == COLON {
-			keyword = p.keyword()
-		} else if keyword != noKeyword {
-			p.error("un-named arguments must come before named arguments")
-		}
-
-		trueDefault := (keyword != noKeyword &&
-			(p.Token == COMMA || p.Token == closing ||
-				p.lxr.AheadSkip(0).Token == COLON))
-
 		var val T
-		if trueDefault {
-			val = p.bld(trueItem)
+		if p.matchIf(COLON) {
+			keyword = p.Item
+			val = p.bld(p.Item)
+			p.match(IDENTIFIER)
 		} else {
-			val = p.expr()
+			if p.isKeyword() {
+				keyword = p.keyword()
+			} else if keyword != noKeyword {
+				p.error("un-named arguments must come before named arguments")
+			}
+
+			trueDefault := (keyword != noKeyword &&
+				(p.Token == COMMA || p.Token == closing || p.isKeyword()))
+
+			if trueDefault {
+				val = p.bld(trueItem)
+			} else {
+				val = p.expr()
+			}
+		}
+		if keyword != noKeyword {
+			if _, ok := keys[keyword.Text]; ok {
+				p.error("duplicate argument name (" + keyword.Text + ")")
+			}
+			keys[keyword.Text] = marker{}
 		}
 		args = append(args, p.bld(keyword, val))
 		p.matchIf(COMMA)
 	}
 	p.match(closing)
 	return args
+}
+
+func (p *parser) isKeyword() bool {
+	return (p.Token == STRING || p.Token == IDENTIFIER || p.Token == NUMBER) &&
+		p.lxr.AheadSkip(0).Token == COLON
 }
 
 func (p *parser) keyword() Item {
@@ -323,6 +349,14 @@ func (p *parser) keyword() Item {
 	p.next()
 	p.match(COLON)
 	return keyword
+}
+
+var rec = Item{Token: IDENTIFIER, Text: "Record"}
+
+func (p *parser) record() T {
+	p.match(L_BRACKET)
+	args := p.argumentList(R_BRACKET)
+	return p.bld(call, p.bld(rec), p.bld(argList, args...))
 }
 
 func (p *parser) block() T {
@@ -350,7 +384,3 @@ func (p *parser) blockParams() T {
 	}
 	return p.bld(blockParams, params...)
 }
-
-//TODO validate lvalues i.e. don't allow ++123
-
-//TODO super call

@@ -11,12 +11,22 @@ func ParseFunction(src string) *Ast {
 func (p *parser) function() *Ast {
 	it := p.Item
 	p.match(FUNCTION)
-	params := p.params()
+	params := p.params(false)
 	body := p.compound()
 	return ast(it, params, body)
 }
 
-func (p *parser) params() *Ast {
+func (p *parser) functionWithoutKeyword(inClass bool) *Ast {
+	it := p.Item
+	it.Token = IDENTIFIER
+	it.Keyword = FUNCTION
+	it.Text = "function"
+	params := p.params(inClass)
+	body := p.compound()
+	return ast(it, params, body)
+}
+
+func (p *parser) params(inClass bool) *Ast {
 	p.match(L_PAREN)
 	var params []*Ast
 	if p.matchIf(AT) {
@@ -28,13 +38,17 @@ func (p *parser) params() *Ast {
 			dot := p.matchIf(DOT)
 			name := p.Text
 			if dot {
+				if !inClass {
+					p.error("dot parameters only allowed in class methods")
+				}
 				name = "." + name
 			}
 			p.match(IDENTIFIER)
+			p.checkForDupParam(params, name)
 			if p.matchIf(EQ) {
 				defs = true
 				def := p.constant()
-				params = append(params, astVal(name, def))
+				params = append(params, &Ast{Item: Item{Text: name}, value: def})
 			} else {
 				if defs {
 					p.error("default parameters must come last")
@@ -46,6 +60,14 @@ func (p *parser) params() *Ast {
 	}
 	p.matchSkipNL(R_PAREN)
 	return ast2("params", params...)
+}
+
+func (p *parser) checkForDupParam(params []*Ast, name string) {
+	for _,a := range params {
+		if a.Text == name {
+			p.error("duplicate function parameter (" + name + ")")
+		}
+	}
 }
 
 func (p *parser) compound() *Ast {

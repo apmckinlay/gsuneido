@@ -33,7 +33,8 @@ func (t *Thread) Args(ps *ParamSpec, as *ArgSpec) []Value {
 // The stack must already have been expanded (e.g. by args)
 func (t *Thread) massage(ps *ParamSpec, as *ArgSpec, args []Value) {
 	unnamed := int(as.Unnamed)
-	if unnamed == ps.Nparams && len(as.Spec) == 0 {
+	atParam := ps.Nparams == 1 && ps.Flags[0] == AtParam
+	if unnamed == ps.Nparams && len(as.Spec) == 0 && !atParam {
 		return // simple fast path
 	}
 	if unnamed < EACH && ps.Flags[0] != AtParam && unnamed > ps.Nparams {
@@ -42,7 +43,6 @@ func (t *Thread) massage(ps *ParamSpec, as *ArgSpec, args []Value) {
 	// as.Unnamed < fn.Nparams
 
 	atArg := unnamed >= EACH
-	atParam := ps.Nparams == 1 && ps.Flags[0] == AtParam
 
 	// remove after debugged
 	verify.That(!atParam || ps.Nparams == 1)

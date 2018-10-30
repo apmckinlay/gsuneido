@@ -1,6 +1,7 @@
 package runtime
 
 import (
+	"sort"
 	"strings"
 	"unicode"
 
@@ -33,6 +34,10 @@ func (ob *SuObject) Get(key Value) Value {
 		return nil
 	}
 	return x.(Value)
+}
+
+func (ob *SuObject) Has(key Value) bool {
+	return ob.named.Get(key) != nil
 }
 
 func index(key Value) int {
@@ -135,7 +140,21 @@ func (ob *SuObject) migrate() {
 }
 
 func (ob *SuObject) String() string {
-	var buf strings.Builder
+	buf, sep := ob.vecstr()
+	iter := ob.named.Iter()
+	for {
+		k, v := iter()
+		if k == nil {
+			break
+		}
+		sep = entstr(buf, k, v, sep)
+	}
+	buf.WriteString(")")
+	return buf.String()
+}
+
+func (ob *SuObject) vecstr() (*strings.Builder, string) {
+	buf := strings.Builder{}
 	sep := ""
 	buf.WriteString("#(")
 	for _, v := range ob.list {
@@ -143,30 +162,51 @@ func (ob *SuObject) String() string {
 		sep = ", "
 		buf.WriteString(v.String())
 	}
+	return &buf, sep
+}
+
+func entstr(buf *strings.Builder, k interface{}, v interface{}, sep string) string {
+	buf.WriteString(sep)
+	sep = ", "
+	if ks, ok := k.(SuStr); ok && isIdentifier(string(ks)) {
+		buf.WriteString(string(ks))
+	} else {
+		buf.WriteString(k.(Value).String())
+	}
+	buf.WriteString(":")
+	if v != True {
+		buf.WriteString(" ")
+		buf.WriteString(v.(Value).String())
+	}
+	return sep
+}
+
+func (ob *SuObject) Show() string {
+	buf, sep := ob.vecstr()
+	mems := []Value{}
 	iter := ob.named.Iter()
 	for {
-		k, v := iter()
+		k, _ := iter()
 		if k == nil {
 			break
 		}
-		buf.WriteString(sep)
-		sep = ", "
-		if ks, ok := k.(SuStr); ok && isIdentifier(string(ks)) {
-			buf.WriteString(string(ks))
-		} else {
-			buf.WriteString(k.(Value).String())
-		}
-		buf.WriteString(":")
-		if v != True {
-			buf.WriteString(" ")
-			buf.WriteString(v.(Value).String())
-		}
+		mems = append(mems, k.(Value))
+	}
+	sort.Slice(mems,
+		func(i, j int) bool { return mems[i].Compare(mems[j]) < 0 })
+	for _, k := range mems {
+		v := ob.named.Get(k)
+		sep = entstr(buf, k, v, sep)
 	}
 	buf.WriteString(")")
 	return buf.String()
 }
 
 func isIdentifier(s string) bool {
+	// want true/false to be quoted to avoid ambiguity
+	if s == "true" || s == "false" {
+		return false
+	}
 	last := len(s) - 1
 	if last < 0 {
 		return false
@@ -209,8 +249,8 @@ func (ob *SuObject) Hash2() uint32 {
 }
 
 func (ob *SuObject) Equal(other interface{}) bool {
-	ob2, ok := other.(*SuObject)
-	if !ok {
+	ob2 := toSuObject(other)
+	if ob2 == nil {
 		return false
 	}
 	return equals2(ob, ob2, newpairs())
@@ -249,15 +289,25 @@ func equals2(x *SuObject, y *SuObject, inProgress pairs) bool {
 }
 
 func equals3(x Value, y Value, inProgress pairs) bool {
-	xo, xok := x.(*SuObject)
-	if !xok {
+	xo := toSuObject(x)
+	if xo == nil {
 		return x.Equal(y)
 	}
-	yo, yok := y.(*SuObject)
-	if !yok {
+	yo := toSuObject(y)
+	if yo == nil {
 		return false
 	}
 	return equals2(xo, yo, inProgress)
+}
+
+func toSuObject(x interface{}) *SuObject {
+	switch x := x.(type) {
+	case *SuObject:
+		return x
+	case *SuRecord:
+		return &x.SuObject
+	}
+	return nil
 }
 
 func (SuObject) TypeName() string {

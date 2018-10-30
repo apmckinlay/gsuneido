@@ -124,6 +124,7 @@ func TestParseExpression(t *testing.T) {
 	test("a[1::]", "([ a (:: 1 2147483647))")
 	test("a[1::2]", "([ a (:: 1 2))")
 	test("a[::2]", "([ a (:: 0 2))")
+	test("a[0::1][0]", "([ ([ a (:: 0 1)) 0)")
 
 	test("b = { }", "(= b (block blockParams STMTS))")
 	test("b = {|a,b| a; b }", "(= b (block (blockParams a b) (STMTS a b)))")
@@ -136,6 +137,7 @@ func TestParseExpression(t *testing.T) {
 	test("f(a:)", "(call f (args (a true)))")
 	test("f(a: 1, b: 2)", "(call f (args (a 1) (b 2)))")
 	test("f(1, a: 2)", "(call f (args (noKwd 1) (a 2)))")
+	test("f(1, is: 2)", "(call f (args (noKwd 1) (is 2)))")
 	test("f(){ b }", "(call f (args (blockArg (block blockParams (STMTS b)))))")
 	test("f({ b })", "(call f (args (noKwd (block blockParams (STMTS b)))))")
 	test("c.m(a, b)", "(call (. c m) (args (noKwd a) (noKwd b)))")
@@ -146,11 +148,17 @@ func TestParseExpression(t *testing.T) {
 	test("new c.m", "(new (. c m) args)")
 	test("new c(a, b)", "(new c (args (noKwd a) (noKwd b)))")
 	test("new c.m(a, b)", "(new (. c m) (args (noKwd a) (noKwd b)))")
+	test("f(a: a)", "(call f (args (a a)))")
+	test("f(:a)", "(call f (args (a a)))")
+
+	test("[:a]", "(call Record (args (a a)))")
 }
 
 func TestParseFunction(t *testing.T) {
 	test := func(src, expected string) {
-		result := ParseFunction(src)
+		t.Helper()
+		p := newParser(src[9:])
+		result := p.functionWithoutKeyword(true) // method to allow dot params
 		Assert(t).That(result.String(), Equals(expected))
 	}
 	test("function () { }", "(function params STMTS)")
@@ -160,7 +168,8 @@ func TestParseFunction(t *testing.T) {
 	test("function (a, b = 1) { }", "(function (params a (b 1)) STMTS)")
 	test("function (a = 1) { }", "(function (params (a 1)) STMTS)")
 	test("function (a, b = 1) { }", "(function (params a (b 1)) STMTS)")
-	test("function (.a, .B, _c) { }", "(function (params .a .B _c) STMTS)")
+	test("function (_a, _b = 1) { }", "(function (params _a (_b 1)) STMTS)")
+	test("function (.a, ._b = 1) { }", "(function (params .a (._b 1)) STMTS)")
 }
 
 func TestParseStatements(t *testing.T) {

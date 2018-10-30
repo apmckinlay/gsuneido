@@ -84,9 +84,7 @@ func flagsToName(p string, flags Flag) string {
 	if flags&DynParam == DynParam {
 		p = "_" + p
 	}
-	if flags&DotParam == DotParam {
-		p = "." + p
-	}
+	// don't include DotParam - not relevant to caller
 	return p
 }
 
@@ -172,4 +170,8 @@ func (f *ParamSpec) fillin(t *Thread, i int) Value {
 		panic("missing argument(s)")
 	}
 	return f.Values[i-(f.Nparams-f.Ndefaults)]
+}
+
+func (f *ParamSpec) Show() string {
+	return f.String()
 }

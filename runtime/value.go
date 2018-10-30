@@ -87,3 +87,18 @@ func NumFromInt(n int) Value {
 	}
 	return SuDnum{dnum.FromInt(int64(n))}
 }
+
+type Showable interface {
+	Show() string
+}
+
+// Show is .String() plus
+// for classes it shows their contents
+// for functions it shows their parameters
+// for containers it sorts by member
+func Show(v Value) string {
+	if s,ok := v.(Showable); ok {
+		return s.Show()
+	}
+	return v.String()
+}

@@ -88,10 +88,6 @@ func ast2(name string, children ...*Ast) *Ast {
 	return fold(Item{Text: name}, nil, children)
 }
 
-func astVal(name string, val Value) *Ast {
-	return fold(Item{Text: name}, val, []*Ast{})
-}
-
 func astBuilder(item Item, nodes ...T) T {
 	var val Value
 	if len(nodes) >= 1 {

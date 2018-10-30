@@ -94,6 +94,10 @@ func TestCodegen(t *testing.T) {
 	test("f(a, b, c:, d: 0)", "load a, load b, true, zero, load f, callfunc(?, ?, c:, d:)")
 	test("f(@args)", "load args, load f, callfunc(@)")
 	test("f(@+1args)", "load args, load f, callfunc(@+1)")
+	test("f(a: a)", "load a, load f, callfunc(a:)")
+	test("f(:a)", "load a, load f, callfunc(a:)")
+
+	test("[1, a: 2, :b]", "one, int 2, load b, global Record, callfunc(?, a:, b:)")
 
 	test("a.f(123)", "load a, int 123, value 'f', callmeth1")
 	test("a.f(1,2,3)", "load a, one, int 2, int 3, value 'f', callmeth3")
@@ -105,7 +109,7 @@ func TestCodegen(t *testing.T) {
 	test("a().Add(123).Size()",
 		"load a, callfunc0, int 123, value 'Add', callmeth1, value 'Size', callmeth0")
 
-	test("function () { }", "value function()")
+	test("function () { }", "value /* function */")
 }
 
 func TestControl(t *testing.T) {
@@ -258,18 +262,4 @@ func TestControl(t *testing.T) {
         22: lt
         23: tjump 7
         26:`)
-}
-
-func TestParams(t *testing.T) {
-	rt.DefaultSingleQuotes = true
-	defer func () { rt.DefaultSingleQuotes = false }()
-	test := func(s string) {
-		ast := ParseFunction("function (" + s + ") { }")
-		fn := codegen(ast)
-		Assert(t).That(fn.String(), Equals("function("+s+")"))
-	}
-	test("")
-	test("a,b,c")
-	test("a,.b,.C,._d,._E")
-	test("a,b=1,c='x'")
 }

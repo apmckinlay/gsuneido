@@ -1,10 +1,14 @@
 package compile
 
 import (
+	"fmt"
+	"strings"
 	"testing"
 
 	. "github.com/apmckinlay/gsuneido/runtime"
+	"github.com/apmckinlay/gsuneido/util/dnum"
 	. "github.com/apmckinlay/gsuneido/util/hamcrest"
+	"github.com/apmckinlay/gsuneido/util/ptest"
 )
 
 func TestConstant(t *testing.T) {
@@ -17,6 +21,8 @@ func TestConstant(t *testing.T) {
 	test("-123", SuInt(-123))
 	test("+456", SuInt(456))
 	test("0xff", SuInt(255))
+	test("0xfffff", SuDnum{dnum.FromInt(0xfffff)})
+	test("0xffffffff", SuDnum{dnum.FromInt(-1)})
 	test("0377", SuInt(255))
 	test("'hi wo'", SuStr("hi wo"))
 
@@ -24,25 +30,37 @@ func TestConstant(t *testing.T) {
 	Assert(t).That(Constant("function () {}").TypeName(), Equals("Function"))
 }
 
-func TestConstantObject(t *testing.T) {
-	DefaultSingleQuotes = true
-	defer func () { DefaultSingleQuotes = false }()
-	test := func(src string, expected string) {
-		//fmt.Println(">>>", src)
-		Assert(t).That(Constant(src).String(), Equals(expected))
+var _ = ptest.Add("compile", pt_compile)
+
+func TestPtest(t *testing.T) {
+	if !ptest.RunFile("constant.test") {
+		t.Fail()
 	}
-	test("()", "#()")
-	test("{}", "#()")
-	test("[]", "#()")
-	test("#()", "#()")
-	test("#{}", "#()")
-	test("#[]", "#()")
-	test("#(123)", "#(123)")
-	test("#(12, 34)", "#(12, 34)")
-	test("#(a:)", "#(a:)")
-	test("#(a: 123)", "#(a: 123)")
-	test("#(1, 2, a: 3)", "#(1, 2, a: 3)")
-	test("#(1 2 a: 3)", "#(1, 2, a: 3)")
-	test("#(-1: -1, 'foo bar': foobar)", "#(-1: -1, 'foo bar': 'foobar')")
-	test("#(-1: -1, #20140513: 'May 13')", "#(-1: -1, #20140513: 'May 13')")
+}
+
+func pt_compile(args []string) bool {
+	expectedType := args[1]
+	expected := args[2]
+	var actual Value
+	ok := true
+	e := Catch(func() {
+		actual = Constant(args[0])
+		if actual.TypeName() != expectedType {
+			ok = false
+		}
+		if Show(actual) != expected {
+			ok = false
+		}
+		if !ok {
+			fmt.Println("\tgot:", "<"+actual.TypeName()+">", Show(actual))
+		}
+	})
+	if e != nil {
+		if expectedType != "throws" ||
+			!strings.Contains(e.(string), expected) {
+			fmt.Println("\tgot:", e)
+			ok = false
+		}
+	}
+	return ok
 }

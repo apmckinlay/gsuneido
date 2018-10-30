@@ -49,3 +49,7 @@ var SuFuncMethods Methods
 func (*SuFunc) Lookup(method string) Callable {
 	return SuFuncMethods[method]
 }
+
+func (*SuFunc) String() string {
+	return "/* function */" // TODO name and library
+}
