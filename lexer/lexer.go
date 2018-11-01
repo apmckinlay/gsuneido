@@ -94,6 +94,15 @@ func (lxr *Lexer) next() Item {
 	case eof:
 		return it(EOF)
 	case '#':
+		if p := lxr.peek(); p == '_' || unicode.IsLetter(p) {
+			start++
+			lxr.matchWhile(isIdentChar)
+			if !lxr.match('?') {
+				lxr.match('!')
+			}
+			val := lxr.src[start:lxr.si]
+			return Item{val, int32(start), STRING, NIL}
+		}
 		return it(HASH)
 	case '(':
 		return it(L_PAREN)
@@ -412,6 +421,7 @@ func (lxr *Lexer) read1() rune {
 	return c
 }
 
+// peek returns the next character
 func (lxr *Lexer) peek() rune {
 	si, c := lxr.read()
 	lxr.si = si
