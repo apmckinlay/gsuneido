@@ -150,14 +150,17 @@ func (cg *cgen) statement(ast *Ast, labels *Labels, lastStmt bool) {
 	case DO:
 		cg.dowhileStmt(ast)
 	case FOR:
-		if ast.Text == "in" {
-			panic("not implemented") // TODO
+		if ast.Text == "for-in" {
+			// TODO
 		} else {
 			cg.forStmt(ast)
 		}
 	case THROW:
 		cg.expr(ast.first())
 		cg.emit(op.THROW)
+	case TRY:
+		cg.emit(op.TRY)
+		//TODO
 	case BREAK:
 		if labels == nil {
 			panic("break can only be used within a loop")
@@ -349,6 +352,8 @@ func (cg *cgen) expr(ast *Ast) {
 	default:
 		if ast.Item == call {
 			cg.call(ast)
+		} else if ast.Item == blockItem {
+			//TODO
 		} else if ast.value != nil {
 			cg.emitValue(ast.value)
 		} else {

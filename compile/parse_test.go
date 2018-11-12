@@ -71,6 +71,11 @@ func TestParseExpression(t *testing.T) {
 	test("'foo' $ 'bar' $ b", "($ 'foobar' b)")
 	test("a $ 'foo' $ 'bar' $ b", "($ a 'foobar' b)")
 	test("a $ 'foo' $ 'bar'", "($ a 'foobar')")
+	test(`'foo' $
+		'bar'`, "'foobar'")
+	test(`'foo' $
+		'bar' $
+		'baz'`, "'foobarbaz'")
 
 	test("a | b & c", "(| a (& b c))")
 	test("a ^ b ^ c", "(^ a b c)")

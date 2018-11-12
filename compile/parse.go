@@ -2,6 +2,7 @@ package compile
 
 import (
 	"fmt"
+	"strconv"
 
 	. "github.com/apmckinlay/gsuneido/lexer"
 	"github.com/apmckinlay/gsuneido/util/verify"
@@ -9,7 +10,9 @@ import (
 
 func newParser(src string) *parser {
 	lxr := NewLexer(src)
-	return &parser{lxr: lxr, Item: lxr.Next()}
+	p := &parser{lxr: lxr}
+	p.nextSkipNL()
+	return p
 }
 
 type parser struct {
@@ -83,7 +86,7 @@ func (p *parser) next() {
 	p.nextKeepNL()
 	for p.Token == NEWLINE &&
 		(p.nest > 0 || binop(p.lxr.Ahead(0))) {
-		p.Item = p.lxr.Next()
+		p.nextKeepNL()
 	}
 }
 
@@ -135,5 +138,6 @@ func (p *parser) nextKeepNL() {
 // returns string so it can be called inside panic
 // so compiler knows we don't return
 func (p *parser) error(args ...interface{}) string {
-	panic("syntax error " + fmt.Sprint(args...))
+	panic("syntax error at " + strconv.Itoa(int(p.Item.Pos)) + " " +
+		fmt.Sprint(args...))
 }

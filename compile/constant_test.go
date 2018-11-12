@@ -25,6 +25,7 @@ func TestConstant(t *testing.T) {
 	test("0xffffffff", SuDnum{dnum.FromInt(-1)})
 	test("0377", SuInt(255))
 	test("'hi wo'", SuStr("hi wo"))
+	test("/* comment */ true", True)
 
 	Assert(t).That(Constant("#20140425").String(), Equals("#20140425"))
 	Assert(t).That(Constant("function () {}").TypeName(), Equals("Function"))

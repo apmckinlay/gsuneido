@@ -61,7 +61,7 @@ func (p *parser) constant() Value {
 			return SuStr(s)
 		}
 	}
-	panic(p.error("invalid constant"))
+	panic(p.error("invalid constant, unexpected " + p.Token.String()))
 }
 
 func (p *parser) string() Value {
@@ -165,9 +165,9 @@ func (p *parser) class() Value {
 	var base string
 	if p.Token == IDENTIFIER {
 		base = p.ckBase(p.Text)
-		p.match(IDENTIFIER)
+		p.matchSkipNL(IDENTIFIER)
 	}
-	p.match(L_CURLY)
+	p.matchSkipNL(L_CURLY)
 	mems := classcon{}
 	p.memberList(mems, R_CURLY, true)
 	return &SuClass{Base: base, Data: mems}

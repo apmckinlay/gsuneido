@@ -47,7 +47,7 @@ func (p *parser) pcExpr(minprec int8) T {
 			break
 		}
 		op := p.Item
-		p.next()
+		p.nextSkipNL()
 		switch {
 		case kt == INC || kt == DEC:
 			ckLvalue(e)
@@ -90,7 +90,7 @@ func (p *parser) pcExpr(minprec int8) T {
 			e = p.bld(op, e, rhs)
 		case kt == Q_MARK:
 			t := p.expr()
-			p.match(COLON)
+			p.matchSkipNL(COLON)
 			f := p.expr()
 			e = p.bld(op, e, t, f)
 		case kt == L_PAREN: // function call
@@ -106,11 +106,12 @@ func (p *parser) pcExpr(minprec int8) T {
 					rhs = p.bld(op, rhs)
 				}
 				es = append(es, rhs)
+				
 				if !same(listtype.Token, p.Token) {
 					break
 				}
 				op = p.Item
-				p.next()
+				p.nextSkipNL()
 			}
 			e = p.bld(listtype, es...)
 		default: // other left associative binary operators
@@ -202,7 +203,7 @@ func (p *parser) atom() T {
 			return p.evalNext(p.bld(p.Item))
 		}
 	}
-	panic("syntax error: unexpected '" + p.Text + "'")
+	panic(p.error("syntax error: unexpected '" + p.Text + "'"))
 }
 
 var precedence = [Ntokens]int8{
