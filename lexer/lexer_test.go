@@ -43,9 +43,9 @@ func TestLexer(t *testing.T) {
 	check("[1..]", L_BRACKET, NUMBER, RANGETO, R_BRACKET)
 	check("#20181112.End", HASH, NUMBER, DOT, IDENTIFIER)
 	check(`and break
-		case catch continue class callback default dll do
+		case catch continue class default do
 		else for forever function if is isnt or not
-		new switch struct super return throw try while
+		new switch super return throw try while
 		true false
 		== = =~ ~ != !~ ! <<= << <> <= <
 		>>= >> >= > || |= | && &= &
@@ -53,9 +53,9 @@ func TestLexer(t *testing.T) {
 		*= * %= % $= $ name _name name123 'string'
 		"string" 123 123name .name  Name Name123 name? 1$2 +1 num=1
 		num+=1 1%2 /*comments*/ //comments`,
-		AND, BREAK, CASE, CATCH, CONTINUE, CLASS, CALLBACK, DEFAULT, DLL, DO,
+		AND, BREAK, CASE, CATCH, CONTINUE, CLASS, DEFAULT, DO,
 		ELSE, FOR, FOREVER, FUNCTION, IF, IS, ISNT, OR, NOT,
-		NEW, SWITCH, STRUCT, SUPER, RETURN, THROW, TRY, WHILE,
+		NEW, SWITCH, SUPER, RETURN, THROW, TRY, WHILE,
 		TRUE, FALSE,
 		IS, EQ, MATCH, BITNOT, ISNT, MATCHNOT, NOT, LSHIFTEQ, LSHIFT,
 		ISNT, LTE, LT, RSHIFTEQ, RSHIFT, GTE, GT, OR, BITOREQ, BITOR,
