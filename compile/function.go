@@ -58,7 +58,7 @@ func (p *parser) params(inClass bool) *Ast {
 			p.matchIf(COMMA)
 		}
 	}
-	p.matchSkipNL(R_PAREN)
+	p.match(R_PAREN)
 	return ast2("params", params...)
 }
 
@@ -80,7 +80,7 @@ func (p *parser) compound() *Ast {
 func (p *parser) statements() *Ast {
 	list := []*Ast{}
 	for p.Token != R_CURLY {
-		if p.matchIf(NEWLINE) || p.matchIf(SEMICOLON) {
+		if p.matchIf(SEMICOLON) {
 			continue
 		}
 		stmt := p.statement()
@@ -92,9 +92,6 @@ func (p *parser) statements() *Ast {
 var code = Item{Token: L_CURLY, Text: "STMTS"}
 
 func (p *parser) statement() *Ast {
-	if p.Token == NEWLINE {
-		p.nextSkipNL()
-	}
 	if p.Token == L_CURLY {
 		return p.compound()
 	}
@@ -134,7 +131,7 @@ func (p *parser) ifStmt() *Ast {
 	it, expr := p.ctrlExpr(IF)
 	t := p.statement()
 	if p.Keyword == ELSE {
-		p.nextSkipNL()
+		p.next()
 		f := p.statement()
 		return ast(it, expr, t, f)
 	}
@@ -143,17 +140,14 @@ func (p *parser) ifStmt() *Ast {
 
 func (p *parser) switchStmt() *Ast {
 	it := p.Item
-	p.nextSkipNL()
+	p.next()
 	var expr *Ast
 	if p.Token == L_CURLY {
 		expr = ast(Item{Token: TRUE})
 	} else {
 		expr = p.exprExpecting(true)
-		if p.Token == NEWLINE {
-			p.nextSkipNL()
-		}
 	}
-	p.nextSkipNL()
+	p.next()
 	var cases []*Ast
 	for p.matchIf(CASE) {
 		cases = append(cases, p.switchCase())
@@ -234,7 +228,7 @@ func (p *parser) forIn(it Item) *Ast {
 	parens := p.matchIf(L_PAREN)
 	id := p.Text
 	p.match(IDENTIFIER)
-	p.matchSkipNL(IN)
+	p.match(IN)
 	if !parens {
 		defer func(prev int) { p.nest = prev }(p.nest)
 		p.nest = 0
@@ -242,8 +236,6 @@ func (p *parser) forIn(it Item) *Ast {
 	expr := p.exprExpecting(!parens)
 	if parens {
 		p.match(R_PAREN)
-	} else {
-		p.matchIf(NEWLINE)
 	}
 	body := p.statement()
 	return ast(it, ast2(id), expr, body)
@@ -278,13 +270,11 @@ func (p *parser) optExprList(after Token) *Ast {
 // used by if, while, and do-while
 func (p *parser) ctrlExpr(tok Token) (Item, *Ast) {
 	it := p.Item
-	p.matchSkipNL(tok)
+	p.match(tok)
 	parens := p.matchIf(L_PAREN)
 	expr := p.exprExpecting(!parens)
 	if parens {
 		p.match(R_PAREN)
-	} else {
-		p.matchIf(NEWLINE)
 	}
 	return it, expr
 }
@@ -298,8 +288,8 @@ func (p *parser) exprExpecting(expecting bool) *Ast {
 
 func (p *parser) returnStmt() *Ast {
 	item := p.Item
-	p.matchKeepNL(RETURN)
-	if p.matchIf(NEWLINE) || p.matchIf(SEMICOLON) || p.Token == R_CURLY {
+	p.match(RETURN)
+	if p.newline || p.matchIf(SEMICOLON) || p.Token == R_CURLY {
 		return ast(item)
 	}
 	return ast(item, p.exprStmt())
@@ -307,7 +297,7 @@ func (p *parser) returnStmt() *Ast {
 
 func (p *parser) exprStmt() *Ast {
 	result := p.exprAst()
-	for p.Token == SEMICOLON || p.Token == NEWLINE {
+	for p.Token == SEMICOLON {
 		p.next()
 	}
 	return result
@@ -315,13 +305,13 @@ func (p *parser) exprStmt() *Ast {
 
 func (p *parser) throwStmt() *Ast {
 	item := p.Item
-	p.matchSkipNL(THROW)
+	p.match(THROW)
 	return ast(item, p.exprStmt())
 }
 
 func (p *parser) tryStmt() *Ast {
 	item := p.Item
-	p.matchSkipNL(TRY)
+	p.match(TRY)
 	try := p.statement()
 	if p.Keyword != CATCH {
 		return ast(item, try)
@@ -332,7 +322,7 @@ func (p *parser) tryStmt() *Ast {
 
 func (p *parser) catch() *Ast {
 	item := p.Item
-	p.matchSkipNL(CATCH)
+	p.match(CATCH)
 	var children []*Ast
 	if p.matchIf(L_PAREN) {
 		children = append(children, ast(p.Item))

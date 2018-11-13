@@ -12,7 +12,11 @@ import (
 // to a Suneido Value
 func Constant(src string) Value {
 	p := newParser(src)
-	return p.constant()
+	result := p.constant()
+	if p.Token != EOF {
+		p.error("syntax error: did not parse all input")
+	}
+	return result
 }
 
 func (p *parser) constant() Value {
@@ -69,10 +73,10 @@ func (p *parser) string() Value {
 	for {
 		s += p.Text
 		p.match(STRING)
-		if p.Token != CAT || p.lxr.Ahead(0).Token != STRING {
+		if p.Token != CAT || p.lxr.AheadSkip(0).Token != STRING {
 			break
 		}
-		p.nextSkipNL()
+		p.next()
 	}
 	return SuStr(s)
 }
@@ -88,7 +92,7 @@ func (p *parser) date() Value {
 	p.match(NUMBER)
 	date := DateFromLiteral(s)
 	if date == NilDate {
-		p.error("invalid date", s)
+		p.error("invalid date ", s)
 	}
 	return date
 }
@@ -157,17 +161,17 @@ func (p *parser) putMem(ob container, m Value, v Value) {
 // like object, it builds a value rather than an ast
 func (p *parser) class() Value {
 	if p.Keyword == CLASS {
-		p.matchSkipNL(CLASS)
+		p.match(CLASS)
 		if p.Token == COLON {
-			p.matchSkipNL(COLON)
+			p.match(COLON)
 		}
 	}
 	var base string
 	if p.Token == IDENTIFIER {
 		base = p.ckBase(p.Text)
-		p.matchSkipNL(IDENTIFIER)
+		p.match(IDENTIFIER)
 	}
-	p.matchSkipNL(L_CURLY)
+	p.match(L_CURLY)
 	mems := classcon{}
 	p.memberList(mems, R_CURLY, true)
 	return &SuClass{Base: base, Data: mems}

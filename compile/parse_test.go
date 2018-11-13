@@ -1,8 +1,11 @@
 package compile
 
 import (
+	"fmt"
+	"strings"
 	"testing"
 
+	"github.com/apmckinlay/gsuneido/lexer"
 	rt "github.com/apmckinlay/gsuneido/runtime"
 	. "github.com/apmckinlay/gsuneido/util/hamcrest"
 )
@@ -11,20 +14,25 @@ func TestParseExpression(t *testing.T) {
 	rt.DefaultSingleQuotes = true
 	defer func() { rt.DefaultSingleQuotes = false }()
 	parseExpr := func(src string) *Ast {
+		t.Helper()
 		p := newParser(src)
-		return expression(p, astBuilder).(*Ast)
+		result := expression(p, astBuilder).(*Ast)
+		Assert(t).That(p.Token, Equals(lexer.EOF))
+		return result
 	}
 	xtest := func(src string, expected string) {
+		t.Helper()
 		actual := Catch(func() { parseExpr(src) })
-		if actual != expected {
-			t.Errorf("%#v expected: %#v but got: %#v", src, expected, actual)
+		if !strings.Contains(actual.(string), expected) {
+			t.Errorf("\n%#v\nexpect: %#v\nactual: %#v", src, expected, actual)
 		}
 	}
-	xtest("1 = 2", "syntax error: lvalue required")
-	xtest("a = 5 = b", "syntax error: lvalue required")
-	xtest("++123", "syntax error: lvalue required")
-	xtest("123--", "syntax error: lvalue required")
-	xtest("++123--", "syntax error: lvalue required")
+	xtest("1 = 2", "lvalue required")
+	xtest("a = 5 = b", "lvalue required")
+	xtest("++123", "lvalue required")
+	xtest("123--", "lvalue required")
+	xtest("++123--", "lvalue required")
+	xtest("a.''", "expecting IDENTIFIER")
 
 	test := func(src string, expected string) {
 		t.Helper()
@@ -34,6 +42,7 @@ func TestParseExpression(t *testing.T) {
 			t.Errorf("%s expected: %s but got: %s", src, expected, actual)
 		}
 	}
+
 	test("123", "123")
 	test("foo", "foo")
 	test("true", "true")
@@ -51,6 +60,7 @@ func TestParseExpression(t *testing.T) {
 
 	test("a % b % c", "(% (% a b) c)")
 
+	test("(123)", "123")
 	test("a + b * c", "(+ a (* b c))")
 	test("(a + b) * c", "(* (+ a b) c)")
 	test("a * b + c", "(+ (* a b) c)")
@@ -102,6 +112,8 @@ func TestParseExpression(t *testing.T) {
 	test("a = b = c", "(= a (= b c))")
 	test("a += 123", "(+= a 123)")
 	test("+ - ! ~ x", "(+ (- (! (~ x))))")
+	test("+f()", "(+ (call f args))")
+	test("not f()", "(not (call f args))")
 
 	test("a and b", "(and a b)")
 	test("a and b and c", "(and a b c)")
@@ -109,11 +121,13 @@ func TestParseExpression(t *testing.T) {
 	test("a or b or c", "(or a b c)")
 
 	test("a ? b : c", "(? a b c)")
+	test("a \n ? b \n : c", "(? a b c)")
 	test("a and b ? c + 1 : d * 2", "(? (and a b) (+ c 1) (* d 2))")
 	test("a ? (b ? c : d) : (e ? f : g)", "(? a (? b c d) (? e f g))")
 	test("a ?  b ? c : d  :  e ? f : g", "(? a (? b c d) (? e f g))")
 
 	test("a in (1,2,3)", "(in a 1 2 3)")
+	test("a not in (1,2,3)", "(not (in a 1 2 3))")
 	test("a in (1,2,3) in (true, false)", "(in (in a 1 2 3) true false)")
 
 	test("a.b", "(. a b)")
@@ -143,11 +157,21 @@ func TestParseExpression(t *testing.T) {
 	test("f(a: 1, b: 2)", "(call f (args (a 1) (b 2)))")
 	test("f(1, a: 2)", "(call f (args (noKwd 1) (a 2)))")
 	test("f(1, is: 2)", "(call f (args (noKwd 1) (is 2)))")
-	test("f(){ b }", "(call f (args (blockArg (block blockParams (STMTS b)))))")
+	test("f(){ b }", "(call f (args (block (block blockParams (STMTS b)))))")
 	test("f({ b })", "(call f (args (noKwd (block blockParams (STMTS b)))))")
 	test("c.m(a, b)", "(call (. c m) (args (noKwd a) (noKwd b)))")
 	test(".m()", "(call (. this m) args)")
 	test("false isnt x = F()", "(isnt false (= x (call F args)))")
+
+	test("F { }", "/* class : F */")
+	test("a.F({ })",
+		"(call (. a F) (args (noKwd (block blockParams STMTS))))")
+	test("a.F(block: { })",
+		"(call (. a F) (args (block (block blockParams STMTS))))")
+	test("a.F(){ }",
+		"(call (. a F) (args (block (block blockParams STMTS))))")
+	test("a.F { }",
+		"(call (. a F) (args (block (block blockParams STMTS))))")
 
 	test("new c", "(new c args)")
 	test("new c.m", "(new (. c m) args)")
@@ -164,6 +188,7 @@ func TestParseFunction(t *testing.T) {
 		t.Helper()
 		p := newParser(src[9:])
 		result := p.functionWithoutKeyword(true) // method to allow dot params
+		Assert(t).That(p.Token, Equals(lexer.EOF))
 		Assert(t).That(result.String(), Equals(expected))
 	}
 	test("function () { }", "(function params STMTS)")
@@ -181,10 +206,12 @@ func TestParseStatements(t *testing.T) {
 	rt.DefaultSingleQuotes = true
 	defer func() { rt.DefaultSingleQuotes = false }()
 	test := func(src string, expected string) {
+		t.Helper()
 		p := newParser(src + " }")
 		ast := p.statements()
-		ast = ast.first()
-		s := ast.String()
+		Assert(t).That(p.Token, Equals(lexer.R_CURLY))
+		s := fmt.Sprint(ast.Children)
+		s = s[1 : len(s)-1] // strip brackets
 		Assert(t).That(s, Like(expected))
 	}
 	test("return", "return")
@@ -198,6 +225,8 @@ func TestParseStatements(t *testing.T) {
 
 	test("if (a) b", "(if a b)")
 	test("if (a) b else c", "(if a b c)")
+	test("if f() { b } else c", "(if (call f args) (STMTS b) c)")
+	test("if F { b }", "(if F (STMTS b))")
 
 	test("switch { case 1: b }",
 		"(switch true (cases ( (vals 1) (STMTS b))))")
@@ -229,6 +258,28 @@ func TestParseStatements(t *testing.T) {
 	test("try x catch y", "(try x (catch y))")
 	test("try x catch (e) y", "(try x (catch e y))")
 	test("try x catch (e, 'err') y", "(try x (catch e 'err' y))")
+
+	test("return 0", "(return 0)")
+	test("return; 0", "return 0")
+	test("return \n 0", "return 0")
+	test("+a \n -b", "(+ a) (- b)")
+	test("a + b \n -c", "(+ a b) (- c)")
+	test("a = b; .F()", "(= a b) (call (. this F) args)")
+	test("a = b; \n .F()", "(= a b) (call (. this F) args)")
+	test("a = b \n .F()", "(= a b) (call (. this F) args)")
+
+	xtest := func(src string, expected string) {
+		t.Helper()
+		actual := Catch(func() {
+			p := newParser(src + "}")
+			p.statements()
+			Assert(t).That(p.Token, Equals(lexer.EOF))
+		}).(string)
+		if !strings.Contains(actual, expected) {
+			t.Errorf("%#v expected: %#v but got: %#v", src, expected, actual)
+		}
+	}
+	xtest("a \n * b", "syntax error: unexpected '*'")
 }
 
 func BenchmarkParseExpr(b *testing.B) {

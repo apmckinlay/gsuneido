@@ -41,6 +41,7 @@ func TestLexer(t *testing.T) {
 	check("f()", IDENTIFIER, L_PAREN, R_PAREN)
 	check("4-1", NUMBER, SUB, NUMBER)
 	check("[1..]", L_BRACKET, NUMBER, RANGETO, R_BRACKET)
+	check("#20181112.End", HASH, NUMBER, DOT, IDENTIFIER)
 	check(`and break
 		case catch continue class callback default dll do
 		else for forever function if is isnt or not

@@ -5,13 +5,12 @@ import (
 	"strconv"
 
 	. "github.com/apmckinlay/gsuneido/lexer"
-	"github.com/apmckinlay/gsuneido/util/verify"
 )
 
 func newParser(src string) *parser {
 	lxr := NewLexer(src)
 	p := &parser{lxr: lxr}
-	p.nextSkipNL()
+	p.next()
 	return p
 }
 
@@ -25,6 +24,8 @@ type parser struct {
 	// bld is used by expression.go
 	// it is needed because expressions are shared by both language and queries
 	bld builder
+	// newline is true if the current token was preceeded by a newline
+	newline bool
 	// expectingCompound is used to differentiate control statement body vs. block
 	// e.g. if expr {...}
 	// set by function.go used by expression.go
@@ -60,16 +61,6 @@ func (p *parser) matchIf(tok Token) bool {
 	return false
 }
 
-func (p *parser) matchKeepNL(tok Token) {
-	p.mustMatch(tok)
-	p.nextKeepNL()
-}
-
-func (p *parser) matchSkipNL(tok Token) {
-	p.mustMatch(tok)
-	p.nextSkipNL()
-}
-
 func (p *parser) mustMatch(tok Token) {
 	if !p.isMatch(tok) {
 		p.error("expecting ", tok)
@@ -80,63 +71,29 @@ func (p *parser) isMatch(tok Token) bool {
 	return tok == p.Token || tok == p.Keyword
 }
 
-// next keeps or skips newlines based on nesting
-// and whether the next line starts with a binary operator
+// next advances to the next token, setting p.Item
 func (p *parser) next() {
-	p.nextKeepNL()
-	for p.Token == NEWLINE &&
-		(p.nest > 0 || binop(p.lxr.Ahead(0))) {
-		p.nextKeepNL()
-	}
-}
-
-func binop(it Item) bool {
-	switch it.KeyTok() {
-	// NOTE: not ADD or SUB because they can be unary
-	case AND, OR, CAT, MUL, DIV, MOD,
-		EQ, ADDEQ, SUBEQ, CATEQ, MULEQ, DIVEQ, MODEQ,
-		BITAND, BITOR, BITXOR, BITANDEQ, BITOREQ, BITXOREQ,
-		GT, GTE, LT, LTE, LSHIFT, LSHIFTEQ, RSHIFT, RSHIFTEQ,
-		IS, ISNT, MATCH, MATCHNOT, Q_MARK:
-		return true
-	}
-	return false
-}
-
-func (p *parser) nextSkipNL() {
-	p.nextKeepNL()
-	for p.Token == NEWLINE {
-		p.nextKeepNL()
-	}
-}
-
-// next advances to the next token,
-// skipping comments and whitespace (but not newlines),
-// and tracking nesting
-func (p *parser) nextKeepNL() {
+	p.newline = false
 	for {
 		p.Item = p.lxr.Next()
-		switch p.Token {
-		case COMMENT, WHITESPACE:
-			continue
-		case L_CURLY, L_PAREN, L_BRACKET:
-			p.nest++
-		case R_CURLY, R_PAREN, R_BRACKET:
-			p.nest--
+		if p.Token == NEWLINE {
+			if p.lxr.AheadSkip(0).Token != Q_MARK {
+				p.newline = true
+			}
+		} else if p.Token != COMMENT && p.Token != WHITESPACE {
+			break
 		}
-		break
 	}
-	verify.That(p.nest >= -1) // final curly on compound will go to -1
 	if p.Token == STRING && p.Keyword != STRING {
 		// make a copy of strings that are slices of the source
 		p.Text = " " + p.Text
 		p.Text = p.Text[1:]
 	}
-	//fmt.Println("item:", p.Item)
 }
 
-// returns string so it can be called inside panic
-// so compiler knows we don't return
+// error panics with "syntax error at " + position
+// It claims to return string so it can be called inside panic
+// (so compiler knows we don't return)
 func (p *parser) error(args ...interface{}) string {
 	panic("syntax error at " + strconv.Itoa(int(p.Item.Pos)) + " " +
 		fmt.Sprint(args...))

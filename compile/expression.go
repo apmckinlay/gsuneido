@@ -40,30 +40,37 @@ var intMaxStr = strconv.Itoa(math.MaxInt32) // used by ranges
 // it recurses to process the right hand side of each operator
 func (p *parser) pcExpr(minprec int8) T {
 	e := p.atom()
-	for {
+	// fmt.Println("pcExpr minprec", minprec, "atom", e)
+	for p.Token != EOF {
 		kt := p.KeyTok()
 		prec := precedence[kt]
+		// fmt.Println("loop ", p.Item, "prec", prec)
 		if prec < minprec {
 			break
 		}
+		if p.newline {
+			break
+		}
 		op := p.Item
-		p.nextSkipNL()
+		p.next()
 		switch {
+		case kt == DOT:
+			id := p.bld(p.Item)
+			p.match(IDENTIFIER)
+			e = p.bld(op, e, id)
+			if p.Token == L_CURLY && !p.expectingCompound { // a.F { }
+				e = p.bld(call, e, p.arguments(p.Token))
+			}
 		case kt == INC || kt == DEC:
 			ckLvalue(e)
 			op.Text = "post"
 			e = p.bld(op, e)
 		case kt == IN:
-			list := []T{e}
-			p.match(L_PAREN)
-			for p.Token != R_PAREN {
-				list = append(list, p.expr())
-				if p.Token == COMMA {
-					p.next()
-				}
-			}
-			p.match(R_PAREN)
-			e = p.bld(op, list...)
+			e = p.in(op, e)
+		case kt == NOT: // not in
+			in_op := p.Item
+			p.match(IN)
+			e = p.bld(op, p.in(in_op, e))
 		case kt == L_BRACKET:
 			var expr T
 			if p.Token == RANGETO || p.Token == RANGELEN {
@@ -90,11 +97,11 @@ func (p *parser) pcExpr(minprec int8) T {
 			e = p.bld(op, e, rhs)
 		case kt == Q_MARK:
 			t := p.expr()
-			p.matchSkipNL(COLON)
+			p.match(COLON)
 			f := p.expr()
 			e = p.bld(op, e, t, f)
 		case kt == L_PAREN: // function call
-			e = p.bld(call, e, p.arguments(L_PAREN))
+			e = p.bld(call, e, p.arguments(kt))
 		case ASSOC_START < kt && kt < ASSOC_END:
 			// for associative operators, collect a list of contiguous
 			es := []T{e}
@@ -106,12 +113,12 @@ func (p *parser) pcExpr(minprec int8) T {
 					rhs = p.bld(op, rhs)
 				}
 				es = append(es, rhs)
-				
-				if !same(listtype.Token, p.Token) {
+
+				if !p.same(listtype.Token, p.Token) {
 					break
 				}
 				op = p.Item
-				p.nextSkipNL()
+				p.next()
 			}
 			e = p.bld(listtype, es...)
 		default: // other left associative binary operators
@@ -120,6 +127,19 @@ func (p *parser) pcExpr(minprec int8) T {
 		}
 	}
 	return e
+}
+
+func (p *parser) in(op Item, e T) T {
+	list := []T{e}
+	p.match(L_PAREN)
+	for p.Token != R_PAREN {
+		list = append(list, p.expr())
+		if p.Token == COMMA {
+			p.next()
+		}
+	}
+	p.match(R_PAREN)
+	return p.bld(op, list...)
 }
 
 func ckLvalue(a T) {
@@ -142,7 +162,10 @@ func flip(op Item) Item {
 	}
 }
 
-func same(listtype Token, next Token) bool {
+func (p *parser) same(listtype Token, next Token) bool {
+	if p.newline {
+		return false
+	}
 	return next == listtype ||
 		(next == SUB && listtype == ADD) || (next == DIV && listtype == MUL)
 }
@@ -164,15 +187,17 @@ func (p *parser) atom() T {
 	case ADD, SUB, NOT, BITNOT:
 		it := p.Item
 		p.next()
-		return p.bld(it, p.atom())
+		return p.bld(it, p.pcExpr(precedence[L_PAREN]))
 	case INC, DEC:
 		it := p.Item
 		p.next()
 		e := p.pcExpr(precedence[DOT])
 		ckLvalue(e)
 		return p.bld(it, e)
-	case DOT:
+	case DOT: // unary, i.e. implicit "this"
+		p.newline = false
 		return p.bld(Item{Token: THIS, Text: "this"})
+		// does not absorb DOT
 	case IDENTIFIER:
 		switch p.Keyword {
 		case TRUE, FALSE, THIS:
@@ -180,7 +205,7 @@ func (p *parser) atom() T {
 		case NOT:
 			it := p.Item
 			p.next()
-			return p.bld(it, p.atom())
+			return p.bld(it, p.pcExpr(precedence[L_PAREN]))
 		case FUNCTION:
 			return p.function()
 		case CLASS:
@@ -196,14 +221,16 @@ func (p *parser) atom() T {
 				args = p.bld(argList)
 			}
 			return p.bld(it, expr, args)
-		default: // TODO expectingCompound
-			if okBase(p.Text) && p.lxr.AheadSkip(0).Token == L_CURLY {
+		default:
+			// MyClass { ... } => class
+			if !p.expectingCompound &&
+				okBase(p.Text) && p.lxr.AheadSkip(0).Token == L_CURLY {
 				return p.bld(Item{}, p.class())
 			}
 			return p.evalNext(p.bld(p.Item))
 		}
 	}
-	panic(p.error("syntax error: unexpected '" + p.Text + "'"))
+	panic(p.error("syntax error: unexpected " + p.Item.String()))
 }
 
 var precedence = [Ntokens]int8{
@@ -211,6 +238,7 @@ var precedence = [Ntokens]int8{
 	OR:        3,
 	AND:       4,
 	IN:        5,
+	NOT:       5, // not in
 	BITOR:     6,
 	BITXOR:    7,
 	BITAND:    8,
@@ -259,11 +287,7 @@ func (p *parser) arguments(opening Token) T {
 		}
 		args = p.argumentList(R_PAREN)
 	}
-	if p.Token == NEWLINE &&
-		!p.expectingCompound && p.lxr.AheadSkip(0).Token == L_CURLY {
-		p.match(NEWLINE)
-	}
-	if p.Token == L_CURLY {
+	if p.Token == L_CURLY && !p.expectingCompound {
 		args = append(args, p.bld(blockArg, p.block()))
 	}
 	return p.bld(argList, args...)
@@ -274,7 +298,7 @@ var atArg = Item{Text: "atArg"}
 var at1Arg = Item{Text: "at1Arg"}
 var noKeyword = Item{Text: "noKwd"}
 var trueItem = Item{Token: TRUE, Text: "true"}
-var blockArg = Item{Token: IDENTIFIER, Text: "blockArg"}
+var blockArg = Item{Token: IDENTIFIER, Text: "block"}
 var blockItem = Item{Text: "block"}
 var blockParams = Item{Text: "blockParams"}
 var zeroItem = Item{Token: NUMBER, Text: "0"}

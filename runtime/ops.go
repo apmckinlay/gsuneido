@@ -67,8 +67,8 @@ func Mul(x Value, y Value) Value {
 }
 
 func Div(x Value, y Value) Value {
-	if xi, xok := SmiToInt(x); xok {
-		if yi, yok := SmiToInt(y); yok {
+	if yi, yok := SmiToInt(y); yok && yi != 0 {
+		if xi, xok := SmiToInt(x); xok {
 			if xi%yi == 0 {
 				return IntToValue(xi / yi)
 			}

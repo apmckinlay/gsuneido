@@ -10,7 +10,7 @@ import (
 
 func TestCodegen(t *testing.T) {
 	rt.DefaultSingleQuotes = true
-	defer func () { rt.DefaultSingleQuotes = false }()
+	defer func() { rt.DefaultSingleQuotes = false }()
 	test := func(src, expected string) {
 		t.Helper()
 		ast := ParseFunction("function () {\n" + src + "\n}")
@@ -99,6 +99,7 @@ func TestCodegen(t *testing.T) {
 
 	test("[1, a: 2, :b]", "one, int 2, load b, global Record, callfunc(?, a:, b:)")
 
+	test("char.Size()", "load char, value 'Size', callmeth0")
 	test("a.f(123)", "load a, int 123, value 'f', callmeth1")
 	test("a.f(1,2,3)", "load a, one, int 2, int 3, value 'f', callmeth3")
 	test("a.f(1,2,3,4)", "load a, one, int 2, int 3, int 4, value 'f', callmeth(?, ?, ?, ?)")
@@ -114,7 +115,7 @@ func TestCodegen(t *testing.T) {
 
 func TestControl(t *testing.T) {
 	rt.DefaultSingleQuotes = true
-	defer func () { rt.DefaultSingleQuotes = false }()
+	defer func() { rt.DefaultSingleQuotes = false }()
 	test := func(src, expected string) {
 		t.Helper()
 		ast := ParseFunction("function () {\n" + src + "\n}")

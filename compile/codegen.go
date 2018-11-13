@@ -10,6 +10,7 @@ package compile
 
 import (
 	"math"
+	"strconv"
 
 	. "github.com/apmckinlay/gsuneido/lexer"
 	. "github.com/apmckinlay/gsuneido/runtime"
@@ -357,7 +358,8 @@ func (cg *cgen) expr(ast *Ast) {
 		} else if ast.value != nil {
 			cg.emitValue(ast.value)
 		} else {
-			panic("unhandled expression: " + ast.String())
+			panic("unhandled expression: " + ast.String() + " at " +
+				strconv.Itoa(int(ast.Pos)))
 		}
 	}
 }
@@ -547,7 +549,11 @@ func (cg *cgen) call(ast *Ast) {
 			simple = argspec.Unnamed + 1
 		}
 		if fn.Token == DOT {
-			cg.emitValue(SuStr(fn.second().Text)) // method name
+			methodName := fn.second().Text
+			if methodName == "New" {
+				panic("cannot explicitly call New method")
+			}
+			cg.emitValue(SuStr(methodName))
 		} else { // L_BRACKET
 			cg.expr(fn.second())
 		}

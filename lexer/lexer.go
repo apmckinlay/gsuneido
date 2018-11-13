@@ -43,6 +43,13 @@ func (it *Item) KeyTok() Token {
 	return it.Token
 }
 
+func (it *Item) String() string {
+	if it.Text != "" {
+		return "'" + it.Text + "'"
+	}
+	return it.Token.String()
+}
+
 // Next returns the next Item
 func (lxr *Lexer) Next() Item {
 	if len(lxr.ahead) > 0 {
@@ -382,14 +389,27 @@ func (lxr *Lexer) number(start int) Item {
 	if lxr.match('.') {
 		lxr.matchRunOf(digits)
 	}
+	exp := lxr.si
 	if lxr.matchOneOf("eE") {
 		lxr.matchOneOf("+-")
 		lxr.matchRunOf("0123456789")
+		if lxr.si == exp + 1 {
+			lxr.si = exp
+		}
 	}
-	if lxr.src[lxr.si-1] == '.' {
+	if lxr.src[lxr.si-1] == '.' && lxr.nonWhiteRemaining() {
 		lxr.si-- // don't absorb trailing dot
 	}
 	return it(NUMBER, start, lxr.src[start:lxr.si])
+}
+
+func (lxr *Lexer) nonWhiteRemaining() bool {
+	for _,c := range lxr.src[lxr.si:] {
+		if ! unicode.IsSpace(c) {
+			return true
+		}
+	}
+	return false
 }
 
 func (lxr *Lexer) identifier(start int) Item {
