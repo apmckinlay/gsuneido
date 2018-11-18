@@ -1,44 +1,21 @@
 package compile
 
 import (
-	"math"
-	"strconv"
-
+	"github.com/apmckinlay/gsuneido/compile/ast"
 	. "github.com/apmckinlay/gsuneido/lexer"
+	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
-/*
-expression parses a Suneido expression
-and builds an AST using the supplied builder
-
-it takes an existing parser since it is embedded
-and not used standalone
-
-expression is used by both function and query parsers
-(with different builder's)
-*/
-func expression(p *parser, b builder) T {
-	defer func(prev int) { p.nest = prev }(p.nest)
-	p.nest = 0
-	p.bld = b
-	return p.expr()
-}
-
-type builder func(Item, ...T) T
-
-type T interface{}
-
-func (p *parser) expr() T {
+// expression parses a Suneido expression and builds an AST
+func (p *parser) expr() ast.Expr {
 	return p.pcExpr(1)
 }
-
-var intMaxStr = strconv.Itoa(math.MaxInt32) // used by ranges
 
 // pcExpr implements precedence climbing
 // each call processes at least one atom
 // a given call processes everything >= minprec
 // it recurses to process the right hand side of each operator
-func (p *parser) pcExpr(minprec int8) T {
+func (p *parser) pcExpr(minprec int8) ast.Expr {
 	e := p.atom()
 	// fmt.Println("pcExpr minprec", minprec, "atom", e)
 	for p.Token != EOF {
@@ -51,86 +28,88 @@ func (p *parser) pcExpr(minprec int8) T {
 		if p.newline {
 			break
 		}
-		op := p.Item
 		p.next()
 		switch {
 		case kt == DOT:
-			id := p.bld(p.Item)
+			id := p.Text
 			p.match(IDENTIFIER)
-			e = p.bld(op, e, id)
+			e = p.Mem(e, p.Constant(SuStr(id)))
 			if p.Token == L_CURLY && !p.expectingCompound { // a.F { }
-				e = p.bld(call, e, p.arguments(p.Token))
+				e = p.Call(e, p.arguments(p.Token))
 			}
-		case kt == INC || kt == DEC:
+		case kt == INC || kt == DEC: // postfix
 			ckLvalue(e)
-			op.Text = "post"
-			e = p.bld(op, e)
+			e = p.Unary(kt+1, e) // +1 must be POSTINC/DEC
 		case kt == IN:
-			e = p.in(op, e)
-		case kt == NOT: // not in
-			in_op := p.Item
+			e = p.in(e)
+		case kt == NOT:
 			p.match(IN)
-			e = p.bld(op, p.in(in_op, e))
+			e = p.Unary(NOT, p.in(e))
 		case kt == L_BRACKET:
-			var expr T
+			var expr ast.Expr
 			if p.Token == RANGETO || p.Token == RANGELEN {
-				expr = p.bld(Item{Token: NUMBER, Text: "0"})
+				expr = nil
 			} else {
 				expr = p.expr()
 			}
 			if p.Token == RANGETO || p.Token == RANGELEN {
-				rtype := p.Item
+				rtype := p.Token
 				p.next()
-				var expr2 T
+				var expr2 ast.Expr
 				if p.Token == R_BRACKET {
-					expr2 = p.bld(Item{Token: NUMBER, Text: intMaxStr})
+					expr2 = nil
 				} else {
 					expr2 = p.expr()
 				}
-				expr = p.bld(rtype, expr, expr2)
+				if rtype == RANGETO {
+					e = &ast.RangeTo{E: e, From: expr, To: expr2}
+				} else {
+					e = &ast.RangeLen{E: e, From: expr, Len: expr2}
+				}
+			} else {
+				e = p.Mem(e, expr)
 			}
 			p.match(R_BRACKET)
-			e = p.bld(op, e, expr)
 		case ASSIGN_START < kt && kt < ASSIGN_END:
 			ckLvalue(e)
 			rhs := p.expr()
-			e = p.bld(op, e, rhs)
+			e = p.Binary(e, kt, rhs)
 		case kt == Q_MARK:
 			t := p.expr()
 			p.match(COLON)
 			f := p.expr()
-			e = p.bld(op, e, t, f)
+			e = p.Trinary(e, t, f)
 		case kt == L_PAREN: // function call
-			e = p.bld(call, e, p.arguments(kt))
+			e = p.Call(e, p.arguments(kt))
 		case ASSOC_START < kt && kt < ASSOC_END:
 			// for associative operators, collect a list of contiguous
-			es := []T{e}
-			listtype := flip(op)
+			es := []ast.Expr{e}
+			listtype := flip(kt)
 			for {
 				rhs := p.pcExpr(prec + 1) // +1 for left associative
 				// invert SUB and DIV to combine as ADD and MUL
-				if op.Token == SUB || op.Token == DIV {
-					rhs = p.bld(op, rhs)
+				if kt == SUB || kt == DIV {
+					rhs = p.Unary(kt, rhs)
 				}
 				es = append(es, rhs)
 
-				if !p.same(listtype.Token, p.Token) {
+				kt = p.KeyTok()
+				if !p.same(listtype, kt) {
 					break
 				}
-				op = p.Item
 				p.next()
 			}
-			e = p.bld(listtype, es...)
+			e = p.Nary(listtype, es)
 		default: // other left associative binary operators
 			rhs := p.pcExpr(prec + 1) // +1 for left associative
-			e = p.bld(op, e, rhs)
+			e = p.Binary(e, kt, rhs)
 		}
 	}
 	return e
 }
 
-func (p *parser) in(op Item, e T) T {
-	list := []T{e}
+func (p *parser) in(e ast.Expr) ast.Expr {
+	list := []ast.Expr{}
 	p.match(L_PAREN)
 	for p.Token != R_PAREN {
 		list = append(list, p.expr())
@@ -139,26 +118,29 @@ func (p *parser) in(op Item, e T) T {
 		}
 	}
 	p.match(R_PAREN)
-	return p.bld(op, list...)
+	return p.In(e, list)
 }
 
-func ckLvalue(a T) {
-	ast := a.(*Ast)
-	if (ast.Token == IDENTIFIER && isLocal(ast.Text)) ||
-		ast.Token == DOT || ast.Token == L_BRACKET {
+func ckLvalue(e ast.Expr) {
+	switch e := e.(type) {
+	case *ast.Mem:
 		return
+	case *ast.Ident:
+		if isLocal(e.Name) {
+			return
+		}
 	}
 	panic("syntax error: lvalue required")
 }
 
-func flip(op Item) Item {
-	switch op.Token {
+func flip(tok Token) Token {
+	switch tok {
 	case SUB:
-		return Item{Token: ADD, Text: "+"}
+		return ADD
 	case DIV:
-		return Item{Token: MUL, Text: "*"}
+		return MUL
 	default:
-		return op
+		return tok
 	}
 }
 
@@ -170,65 +152,54 @@ func (p *parser) same(listtype Token, next Token) bool {
 		(next == SUB && listtype == ADD) || (next == DIV && listtype == MUL)
 }
 
-func (p *parser) atom() T {
-	switch p.Token {
-	case NUMBER, STRING:
-		return p.evalNext(p.bld(p.Item))
-	case HASH:
-		val := p.constant()
-		return p.bld(Item{}, val)
+func (p *parser) atom() ast.Expr {
+	switch it := p.Item.KeyTok(); it {
+	case TRUE, FALSE, NUMBER, STRING, HASH:
+		return p.Constant(p.constant())
 	case L_PAREN:
 		p.next()
-		return p.evalMatch(p.expr(), R_PAREN)
+		e := p.expr()
+		p.match(R_PAREN)
+		return e
 	case L_CURLY:
 		return p.block()
 	case L_BRACKET:
 		return p.record()
 	case ADD, SUB, NOT, BITNOT:
-		it := p.Item
 		p.next()
-		return p.bld(it, p.pcExpr(precedence[L_PAREN]))
+		return p.Unary(it, p.pcExpr(precedence[L_PAREN]))
 	case INC, DEC:
-		it := p.Item
 		p.next()
 		e := p.pcExpr(precedence[DOT])
 		ckLvalue(e)
-		return p.bld(it, e)
+		return p.Unary(it, e)
 	case DOT: // unary, i.e. implicit "this"
-		p.newline = false
-		return p.bld(Item{Token: THIS, Text: "this"})
 		// does not absorb DOT
-	case IDENTIFIER:
-		switch p.Keyword {
-		case TRUE, FALSE, THIS:
-			return p.evalNext(p.bld(p.Item))
-		case NOT:
-			it := p.Item
-			p.next()
-			return p.bld(it, p.pcExpr(precedence[L_PAREN]))
-		case FUNCTION:
-			return p.function()
-		case CLASS:
-			return p.bld(Item{}, p.class())
-		case NEW:
-			it := p.Item
-			p.next()
-			expr := p.pcExpr(precedence[DOT])
-			var args T
-			if p.matchIf(L_PAREN) {
-				args = p.arguments(L_PAREN)
-			} else {
-				args = p.bld(argList)
-			}
-			return p.bld(it, expr, args)
-		default:
-			// MyClass { ... } => class
-			if !p.expectingCompound &&
-				okBase(p.Text) && p.lxr.AheadSkip(0).Token == L_CURLY {
-				return p.bld(Item{}, p.class())
-			}
-			return p.evalNext(p.bld(p.Item))
+		p.newline = false
+		return p.Ident("this")
+	case FUNCTION:
+		return p.function()
+	case CLASS:
+		return p.Constant(p.class())
+	case NEW:
+		p.next()
+		expr := p.pcExpr(precedence[DOT])
+		var args []ast.Arg
+		if p.matchIf(L_PAREN) {
+			args = p.arguments(L_PAREN)
+		} else {
+			args = []ast.Arg{}
 		}
+		return p.Call(expr, args)
+	case IDENTIFIER, THIS:
+		// MyClass { ... } => class
+		if !p.expectingCompound &&
+			okBase(p.Text) && p.lxr.AheadSkip(0).Token == L_CURLY {
+			return p.Constant(p.class())
+		}
+		e := p.Ident(p.Text)
+		p.next()
+		return e
 	}
 	panic(p.error("syntax error: unexpected " + p.Item.String()))
 }
@@ -279,8 +250,8 @@ var precedence = [Ntokens]int8{
 
 var call = Item{Text: "call"}
 
-func (p *parser) arguments(opening Token) T {
-	var args []T
+func (p *parser) arguments(opening Token) []ast.Arg {
+	var args []ast.Arg
 	if opening == L_PAREN {
 		if p.matchIf(AT) {
 			return p.atArgument()
@@ -288,22 +259,16 @@ func (p *parser) arguments(opening Token) T {
 		args = p.argumentList(R_PAREN)
 	}
 	if p.Token == L_CURLY && !p.expectingCompound {
-		args = append(args, p.bld(blockArg, p.block()))
+		args = append(args, ast.Arg{Name: blockArg, E: p.block()})
 	}
-	return p.bld(argList, args...)
+	return args
 }
 
-var argList = Item{Text: "args"}
-var atArg = Item{Text: "atArg"}
-var at1Arg = Item{Text: "at1Arg"}
-var noKeyword = Item{Text: "noKwd"}
-var trueItem = Item{Token: TRUE, Text: "true"}
-var blockArg = Item{Token: IDENTIFIER, Text: "block"}
-var blockItem = Item{Text: "block"}
-var blockParams = Item{Text: "blockParams"}
-var zeroItem = Item{Token: NUMBER, Text: "0"}
+var atArg = SuStr("@")
+var at1Arg = SuStr("@+1")
+var blockArg = SuStr("block")
 
-func (p *parser) atArgument() T {
+func (p *parser) atArgument() []ast.Arg {
 	which := atArg
 	if p.matchIf(ADD) {
 		if p.Item.Text != "1" {
@@ -314,44 +279,39 @@ func (p *parser) atArgument() T {
 	}
 	expr := p.expr()
 	p.match(R_PAREN)
-	return p.bld(which, expr)
+	return []ast.Arg{ast.Arg{Name: which, E: expr}}
 }
 
-type marker struct{}
-
-func (p *parser) argumentList(closing Token) []T {
-	var args []T
-	var keys = map[string]marker{} // can't use args because T is unknown
-	keyword := noKeyword
+func (p *parser) argumentList(closing Token) []ast.Arg {
+	var args []ast.Arg
+	var keyword Value
 	for p.Token != closing {
-		var val T
+		var val ast.Expr
 		if p.matchIf(COLON) {
-			keyword = p.Item
-			val = p.bld(p.Item)
+			keyword = SuStr(p.Text)
+			val = p.Ident(p.Text)
 			p.match(IDENTIFIER)
 		} else {
 			if p.isKeyword() {
 				keyword = p.keyword()
-			} else if keyword != noKeyword {
+			} else if keyword != nil {
 				p.error("un-named arguments must come before named arguments")
 			}
-
-			trueDefault := (keyword != noKeyword &&
-				(p.Token == COMMA || p.Token == closing || p.isKeyword()))
-
-			if trueDefault {
-				val = p.bld(trueItem)
+			if keyword != nil &&
+				(p.Token == COMMA || p.Token == closing || p.isKeyword()) {
+				val = p.Constant(True)
 			} else {
 				val = p.expr()
 			}
 		}
-		if keyword != noKeyword {
-			if _, ok := keys[keyword.Text]; ok {
-				p.error("duplicate argument name (" + keyword.Text + ")")
+		if keyword != nil {
+			for _, a := range args {
+				if keyword.Equal(a.Name) {
+					p.error("duplicate argument name (" + keyword.String() + ")")
+				}
 			}
-			keys[keyword.Text] = marker{}
 		}
-		args = append(args, p.bld(keyword, val))
+		args = append(args, ast.Arg{Name: keyword, E: val})
 		p.matchIf(COMMA)
 	}
 	p.match(closing)
@@ -363,49 +323,47 @@ func (p *parser) isKeyword() bool {
 		p.lxr.AheadSkip(0).Token == COLON
 }
 
-func (p *parser) keyword() Item {
-	switch p.Token {
-	case STRING, IDENTIFIER, NUMBER:
-		break
-	default:
-		p.error("invalid keyword")
-	}
-	keyword := p.Item
+func (p *parser) keyword() Value {
+	it := p.Item
 	p.next()
 	p.match(COLON)
-	return keyword
+	switch it.Token {
+	case STRING, IDENTIFIER:
+		return SuStr(it.Text)
+	case NUMBER:
+		return NumFromString(it.Text)
+	}
+	panic(p.error("invalid keyword: " + p.Token.String()))
 }
 
-var rec = Item{Token: IDENTIFIER, Text: "Record"}
-
-func (p *parser) record() T {
+func (p *parser) record() ast.Expr {
 	p.match(L_BRACKET)
 	args := p.argumentList(R_BRACKET)
-	return p.bld(call, p.bld(rec), p.bld(argList, args...))
+	return p.Call(p.Ident("Record"), args)
 }
 
-func (p *parser) block() T {
+func (p *parser) block() *ast.Block {
 	p.match(L_CURLY)
 	params := p.blockParams()
-	statements := p.statements()
+	body := p.statements()
 	p.match(R_CURLY)
-	return p.bld(blockItem, params, statements)
+	return &ast.Block{ast.Function{Params: params, Body: body}}
 }
 
-func (p *parser) blockParams() T {
-	var params []T
+func (p *parser) blockParams() []ast.Param {
+	var params []ast.Param
 	if p.matchIf(BITOR) {
 		if p.matchIf(AT) {
-			params = append(params, p.bld(Item{Text: "@" + p.Text}))
+			params = append(params, ast.Param{Name: "@" + p.Text})
 			p.match(IDENTIFIER)
 		} else {
 			for p.Token == IDENTIFIER {
-				params = append(params, p.bld(p.Item))
+				params = append(params, ast.Param{Name: p.Text})
 				p.match(IDENTIFIER)
 				p.matchIf(COMMA)
 			}
 		}
 		p.match(BITOR)
 	}
-	return p.bld(blockParams, params...)
+	return params
 }

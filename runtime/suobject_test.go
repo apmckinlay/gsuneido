@@ -43,15 +43,15 @@ func TestSuObjectString(t *testing.T) {
 }
 
 func Test_isIdentifier(t *testing.T) {
-	Assert(t).That(isIdentifier(""), Equals(false))
-	Assert(t).That(isIdentifier("123"), Equals(false))
-	Assert(t).That(isIdentifier("123bar"), Equals(false))
-	Assert(t).That(isIdentifier("foo123"), Equals(true))
-	Assert(t).That(isIdentifier("foo 123"), Equals(false))
-	Assert(t).That(isIdentifier("_foo"), Equals(true))
-	Assert(t).That(isIdentifier("Bar!"), Equals(true))
-	Assert(t).That(isIdentifier("Bar?"), Equals(true))
-	Assert(t).That(isIdentifier("Bar?x"), Equals(false))
+	Assert(t).That(IsIdentifier(""), Equals(false))
+	Assert(t).That(IsIdentifier("123"), Equals(false))
+	Assert(t).That(IsIdentifier("123bar"), Equals(false))
+	Assert(t).That(IsIdentifier("foo123"), Equals(true))
+	Assert(t).That(IsIdentifier("foo 123"), Equals(false))
+	Assert(t).That(IsIdentifier("_foo"), Equals(true))
+	Assert(t).That(IsIdentifier("Bar!"), Equals(true))
+	Assert(t).That(IsIdentifier("Bar?"), Equals(true))
+	Assert(t).That(IsIdentifier("Bar?x"), Equals(false))
 }
 
 func TestSuObjectObjectAsKey(t *testing.T) {

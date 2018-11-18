@@ -61,6 +61,8 @@ func (t *Thread) Run() Value {
 			t.Push(Zero)
 		case ONE:
 			t.Push(One)
+		case MAXINT:
+			t.Push(MaxInt)
 		case EMPTYSTR:
 			t.Push(EmptyStr)
 		case INT:

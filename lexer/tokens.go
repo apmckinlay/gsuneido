@@ -2,6 +2,8 @@ package lexer
 
 //go:generate stringer -type=Token
 
+// to make stringer: go generate
+
 // Token is returned by Lexer to identify the type of token
 type Token uint8
 
@@ -77,7 +79,9 @@ const (
 	LSHIFT
 	RSHIFT
 	INC
+	POSTINC
 	DEC
+	POSTDEC
 	ASSIGN_START // must be consecutive
 	EQ
 	ADDEQ

@@ -14,3 +14,8 @@ func TestDiv(t *testing.T) {
 	q = Div(SuInt(1), SuInt(3))
 	_ = q.(SuDnum)
 }
+
+func TestBool(t *testing.T) {
+	Assert(t).True(SuBool(true) == True)
+	Assert(t).True(SuBool(false) == False)
+}

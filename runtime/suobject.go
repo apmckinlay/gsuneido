@@ -168,7 +168,7 @@ func (ob *SuObject) vecstr() (*strings.Builder, string) {
 func entstr(buf *strings.Builder, k interface{}, v interface{}, sep string) string {
 	buf.WriteString(sep)
 	sep = ", "
-	if ks, ok := k.(SuStr); ok && isIdentifier(string(ks)) {
+	if ks, ok := k.(SuStr); ok && IsIdentifier(string(ks)) {
 		buf.WriteString(string(ks))
 	} else {
 		buf.WriteString(k.(Value).String())
@@ -202,7 +202,7 @@ func (ob *SuObject) Show() string {
 	return buf.String()
 }
 
-func isIdentifier(s string) bool {
+func IsIdentifier(s string) bool {
 	// want true/false to be quoted to avoid ambiguity
 	if s == "true" || s == "false" {
 		return false

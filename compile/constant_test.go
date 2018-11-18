@@ -57,7 +57,10 @@ func pt_compile(args []string) bool {
 		}
 	})
 	if e != nil {
-		if expectedType != "throws" ||
+		if _,str := e.(string); !str {
+			fmt.Println(e)
+			ok = false
+		} else if expectedType != "throws" ||
 			!strings.Contains(e.(string), expected) {
 			fmt.Println("\tgot:", e)
 			ok = false

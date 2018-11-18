@@ -43,6 +43,7 @@ const (
 	FALSE
 	ZERO
 	ONE
+	MAXINT
 	EMPTYSTR
 	OR
 	AND

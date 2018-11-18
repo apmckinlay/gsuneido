@@ -10,6 +10,7 @@ import (
 var (
 	Zero  Value = SuInt(0)
 	One   Value = SuInt(1)
+	MaxInt Value = SuDnum{dnum.FromInt(math.MaxInt32)}
 	True  Value = SuBool(true)
 	False Value = SuBool(false)
 	// EmptyStr defined in sustr.go
@@ -112,6 +113,17 @@ func Not(x Value) Value {
 		return True
 	}
 	panic("not requires boolean")
+}
+
+func Bool(x Value) bool {
+	switch x {
+	case True:
+		return true
+	case False:
+		return false
+	default:
+		panic("conditionals require true or false")
+	}
 }
 
 func Uplus(x Value) Value {

@@ -26,9 +26,10 @@ func TestCodegen(t *testing.T) {
 		}
 		actual := strings.Join(da, ", ")
 		if actual != expected {
-			t.Errorf("%s expected: %s but got: %s", src, expected, actual)
+			t.Errorf("\n%s\nexpect: %s\nactual: %s", src, expected, actual)
 		}
 	}
+	test("true", "true")
 	test("", "")
 	test("return", "")
 	test("return true", "true")
@@ -72,13 +73,13 @@ func TestCodegen(t *testing.T) {
 	test("a.b += 5", "load a, value 'b', dup2, get, int 5, add, put")
 	test("++a.b", "load a, value 'b', dup2, get, one, add, put")
 	test("a.b++", "load a, value 'b', dup2, get, dupx2, one, add, put, pop")
-	test("a[..]", "load a, zero, value 2147483647, rangeto")
+	test("a[..]", "load a, zero, maxint, rangeto")
 	test("a[..3]", "load a, zero, int 3, rangeto")
-	test("a[2..]", "load a, int 2, value 2147483647, rangeto")
+	test("a[2..]", "load a, int 2, maxint, rangeto")
 	test("a[2..3]", "load a, int 2, int 3, rangeto")
-	test("a[::]", "load a, zero, value 2147483647, rangelen")
+	test("a[::]", "load a, zero, maxint, rangelen")
 	test("a[::3]", "load a, zero, int 3, rangelen")
-	test("a[2::]", "load a, int 2, value 2147483647, rangelen")
+	test("a[2::]", "load a, int 2, maxint, rangelen")
 	test("a[2::3]", "load a, int 2, int 3, rangelen")
 
 	test("return", "")

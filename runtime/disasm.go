@@ -15,7 +15,7 @@ var asm = []string{
 	"lshift", "rshift", "bitor", "bitand", "bitxor",
 	"bitnot", "not", "uplus", "uminus",
 	"load", "store", "dyload", "get", "put", "global",
-	"true", "false", "zero", "one", "emptystr",
+	"true", "false", "zero", "one", "maxint", "emptystr",
 	"or", "and", "bool", "qmark", "in", "jump", "tjump", "fjump",
 	"eqjump", "nejump", "throw", "try", "rangeto", "rangelen", "this",
 	"callfunc", "callfunc0", "callfunc1", "callfunc2", "callfunc3", "callfunc4",

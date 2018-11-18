@@ -4,12 +4,13 @@ import (
 	"fmt"
 	"strconv"
 
+	"github.com/apmckinlay/gsuneido/compile/ast"
 	. "github.com/apmckinlay/gsuneido/lexer"
 )
 
 func newParser(src string) *parser {
 	lxr := NewLexer(src)
-	p := &parser{lxr: lxr}
+	p := &parser{lxr: lxr, Factory: ast.Folder{ast.Builder{}}}
 	p.next()
 	return p
 }
@@ -18,12 +19,10 @@ type parser struct {
 	lxr *Lexer
 	// Item is the current lexical token etc.
 	Item
-	// nest is used by parse.go to track nesting
-	// in order to skip newlines within e.g. parenthesis
-	nest int
-	// bld is used by expression.go
-	// it is needed because expressions are shared by both language and queries
-	bld builder
+	// Factory is used by expression.go
+	// because expressions are shared by both language and queries
+	// and generate different types of AST nodes
+	ast.Factory
 	// newline is true if the current token was preceeded by a newline
 	newline bool
 	// expectingCompound is used to differentiate control statement body vs. block
@@ -38,12 +37,12 @@ match* methods verify that the current is what is expected and then advance
 next* methods just advance
 */
 
-func (p *parser) evalMatch(result T, tok Token) T {
+func (p *parser) evalMatch(result ast.Node, tok Token) ast.Node {
 	p.match(tok)
 	return result
 }
 
-func (p *parser) evalNext(result T) T {
+func (p *parser) evalNext(result ast.Node) ast.Node {
 	p.next()
 	return result
 }
