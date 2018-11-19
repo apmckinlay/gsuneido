@@ -37,6 +37,9 @@ func TestParseExpression(t *testing.T) {
 	xtest("123--", "lvalue required")
 	xtest("++123--", "lvalue required")
 	xtest("a.''", "expecting IDENTIFIER")
+	xtest("f(a:, b:, 'a':)", "duplicate argument name")
+	xtest("f(a:, b:, :b)", "duplicate argument name")
+	xtest("f(1, 2, a:, b: 3, 4", "un-named arguments must come before named arguments")
 
 	test := func(src string, expected string) {
 		t.Helper()
@@ -138,6 +141,12 @@ func TestParseExpression(t *testing.T) {
 	test("f(@a)", "(call f '@': a)")
 	test("f(@+1 a)", "(call f '@+1': a)")
 	test("f(a:)", "(call f a: true)")
+	test("f(a: 123)", "(call f a: 123)")
+	test("f(123:)", "(call f 123: true)")
+	test("f(123: 456)", "(call f 123: 456)")
+	test("f(123: 456:)", "(call f 123: true 456: true)")
+	test("f('a b':)", "(call f 'a b': true)")
+	test("f('a b': 123)", "(call f 'a b': 123)")
 	test("f(a: 1, b: 2)", "(call f a: 1 b: 2)")
 	test("f(1, a: 2)", "(call f 1 a: 2)")
 	test("f(1, is: 2)", "(call f 1 is: 2)")

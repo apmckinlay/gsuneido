@@ -284,56 +284,63 @@ func (p *parser) atArgument() []ast.Arg {
 
 func (p *parser) argumentList(closing Token) []ast.Arg {
 	var args []ast.Arg
-	var keyword Value
+	haveNamed := false
+	unnamed := func(val ast.Expr) {
+		if haveNamed {
+			p.error("un-named arguments must come before named arguments")
+		}
+		args = append(args, ast.Arg{E: val})
+	}
+	named := func(name Value, val ast.Expr) {
+		for _, a := range args {
+			if name.Equal(a.Name) {
+				p.error("duplicate argument name (" + name.String() + ")")
+			}
+		}
+		args = append(args, ast.Arg{Name: name, E: val})
+		haveNamed = true
+	}
+	var pending Value
+	handlePending := func(val ast.Expr) {
+		if pending != nil {
+			named(pending, val)
+			pending = nil
+		}
+	}
 	for p.Token != closing {
-		var val ast.Expr
+		var expr ast.Expr
 		if p.matchIf(COLON) {
-			keyword = SuStr(p.Text)
-			val = p.Ident(p.Text)
+			handlePending(p.Constant(True))
+			named(SuStr(p.Text), p.Ident(p.Text))
 			p.match(IDENTIFIER)
 		} else {
-			if p.isKeyword() {
-				keyword = p.keyword()
-			} else if keyword != nil {
-				p.error("un-named arguments must come before named arguments")
-			}
-			if keyword != nil &&
-				(p.Token == COMMA || p.Token == closing || p.isKeyword()) {
-				val = p.Constant(True)
+			expr = p.expr() // could be name or value
+			if name := p.argname(expr); name != nil && p.matchIf(COLON) {
+				handlePending(p.Constant(True))
+				pending = name // it's a name but don't know value yet
+			} else if pending != nil {
+				handlePending(expr)
 			} else {
-				val = p.expr()
+				unnamed(expr)
 			}
 		}
-		if keyword != nil {
-			for _, a := range args {
-				if keyword.Equal(a.Name) {
-					p.error("duplicate argument name (" + keyword.String() + ")")
-				}
-			}
+		if p.matchIf(COMMA) {
+			handlePending(p.Constant(True))
 		}
-		args = append(args, ast.Arg{Name: keyword, E: val})
-		p.matchIf(COMMA)
 	}
 	p.match(closing)
+	handlePending(p.Constant(True))
 	return args
 }
 
-func (p *parser) isKeyword() bool {
-	return (p.Token == STRING || p.Token == IDENTIFIER || p.Token == NUMBER) &&
-		p.lxr.AheadSkip(0).Token == COLON
-}
-
-func (p *parser) keyword() Value {
-	it := p.Item
-	p.next()
-	p.match(COLON)
-	switch it.Token {
-	case STRING, IDENTIFIER:
-		return SuStr(it.Text)
-	case NUMBER:
-		return NumFromString(it.Text)
+func (p *parser) argname(expr ast.Expr) Value {
+	if id, ok := expr.(*ast.Ident); ok {
+		return SuStr(id.Name)
 	}
-	panic(p.error("invalid keyword: " + p.Token.String()))
+	if c, ok := expr.(*ast.Constant); ok {
+		return c.Val
+	}
+	return nil
 }
 
 func (p *parser) record() ast.Expr {
