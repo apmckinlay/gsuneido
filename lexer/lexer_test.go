@@ -20,7 +20,9 @@ func TestLexer(t *testing.T) {
 	first("is:", "is", IDENTIFIER, NIL)
 	first("0xff", "0xff", NUMBER, NIL)
 	first("'hello'", "hello", STRING, NIL)
+	first("'hello", "hello", STRING, NIL)
 	first("'foo\\'bar'", "foo'bar", STRING, STRING)
+	first(`"\"foo\""`, `"foo"`, STRING, STRING)
 	first("\\", "\\", ERROR, NIL)
 	first("//foo\nbar", "//foo", COMMENT, NIL) // not including newline
 
@@ -50,8 +52,8 @@ func TestLexer(t *testing.T) {
 		== = =~ ~ != !~ ! <<= << <> <= <
 		>>= >> >= > || |= | && &= &
 		^= ^ -- -= - ++ += + /= /
-		*= * %= % $= $ name _name name123 'string'
-		"string" 123 123name .name  Name Name123 name? 1$2 +1 num=1
+		*= * %= % $= $ name _name name123 'single'
+		"double" 123 123name .name  Name Name123 name? 1$2 +1 num=1
 		num+=1 1%2 /*comments*/ //comments`,
 		AND, BREAK, CASE, CATCH, CONTINUE, CLASS, DEFAULT, DO,
 		ELSE, FOR, FOREVER, FUNCTION, IF, IS, ISNT, OR, NOT,

@@ -6,6 +6,8 @@ import (
 	"unicode/utf8"
 )
 
+// TODO change to just ascii, not unicode (simpler)
+
 /*
 Lexer implements the lexical scanner for Suneido
 
@@ -303,24 +305,26 @@ func (lxr *Lexer) rawString(start int) Item {
 }
 
 func (lxr *Lexer) quotedString(start int, quote rune) Item {
-	// don't use buffer unless there are escapes
+	// if no escapes, return slice of source
 	src := lxr.src[lxr.si:]
-	i := strings.IndexByte(src, byte(quote))
-	if i == -1 {
-		lxr.si += len(src)
-		return it(STRING, start, src)
+	for i := 0; ; i++ {
+		if i >= len(src) {
+			lxr.si += len(src)
+			return it(STRING, start, src) // no closing quote
+		} else if src[i] == '\\' {
+			break
+		} else if src[i] == byte(quote) {
+			lxr.si += i + 1
+			return it(STRING, start, src[:i]) // no escapes
+		}
 	}
-	j := strings.IndexByte(src[:i], '\\')
-	if j == -1 { // no escapes
-		lxr.si += i + 1
-		return it(STRING, start, src[:i])
-	}
+	// have escapes so need to build new string
 	var buf strings.Builder
-	lxr.match(quote)
 	for c := lxr.read1(); c != eof && c != quote; c = lxr.read1() {
-		buf.WriteByte(byte(lxr.doesc(c)))
+		c = lxr.doesc(c)
+		buf.WriteByte(byte(c))
 	}
-	// keyword set to STRING means not referencing src
+	// keyword set to STRING means *not* referencing src
 	return Item{buf.String(), int32(start), STRING, STRING}
 }
 
@@ -342,9 +346,7 @@ func (lxr *Lexer) doesc(c rune) rune {
 		if dig1 != -1 && dig2 != -1 {
 			return rune(16*dig1 + dig2)
 		}
-	case '\\':
-	case '"':
-	case '\'':
+	case '\\', '"', '\'':
 		return c
 	default:
 		dig1 := digit(lxr.read1(), 8)
@@ -393,7 +395,7 @@ func (lxr *Lexer) number(start int) Item {
 	if lxr.matchOneOf("eE") {
 		lxr.matchOneOf("+-")
 		lxr.matchRunOf("0123456789")
-		if lxr.si == exp + 1 {
+		if lxr.si == exp+1 {
 			lxr.si = exp
 		}
 	}
@@ -404,8 +406,8 @@ func (lxr *Lexer) number(start int) Item {
 }
 
 func (lxr *Lexer) nonWhiteRemaining() bool {
-	for _,c := range lxr.src[lxr.si:] {
-		if ! unicode.IsSpace(c) {
+	for _, c := range lxr.src[lxr.si:] {
+		if !unicode.IsSpace(c) {
 			return true
 		}
 	}
