@@ -19,6 +19,7 @@ func TestLexer(t *testing.T) {
 	first("is", "is", IDENTIFIER, IS)
 	first("is:", "is", IDENTIFIER, NIL)
 	first("0xff", "0xff", NUMBER, NIL)
+	first("0xff.Chr()", "0xff", NUMBER, NIL)
 	first("'hello'", "hello", STRING, NIL)
 	first("'hello", "hello", STRING, NIL)
 	first("'foo\\'bar'", "foo'bar", STRING, STRING)
@@ -44,6 +45,7 @@ func TestLexer(t *testing.T) {
 	check("4-1", NUMBER, SUB, NUMBER)
 	check("[1..]", L_BRACKET, NUMBER, RANGETO, R_BRACKET)
 	check("#20181112.End", HASH, NUMBER, DOT, IDENTIFIER)
+	check("0xff.Chr", NUMBER, DOT, IDENTIFIER)
 	check(`and break
 		case catch continue class default do
 		else for forever function if is isnt or not

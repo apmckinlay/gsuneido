@@ -382,25 +382,24 @@ func isHexDigit(r rune) bool {
 }
 
 func (lxr *Lexer) number(start int) Item {
-	// Is it hex?
-	digits := "0123456789"
 	if lxr.src[start] == '0' && lxr.matchOneOf("xX") {
-		digits = hexDigits
-	}
-	lxr.matchRunOf(digits)
-	if lxr.match('.') {
-		lxr.matchRunOf(digits)
-	}
-	exp := lxr.si
-	if lxr.matchOneOf("eE") {
-		lxr.matchOneOf("+-")
-		lxr.matchRunOf("0123456789")
-		if lxr.si == exp+1 {
-			lxr.si = exp
+		lxr.matchRunOf(hexDigits)
+	} else {
+		lxr.matchRunOf(decDigits)
+		if lxr.match('.') {
+			lxr.matchRunOf(decDigits)
 		}
-	}
-	if lxr.src[lxr.si-1] == '.' && lxr.nonWhiteRemaining() {
-		lxr.si-- // don't absorb trailing dot
+		exp := lxr.si
+		if lxr.matchOneOf("eE") {
+			lxr.matchOneOf("+-")
+			lxr.matchRunOf(decDigits)
+			if lxr.si == exp+1 {
+				lxr.si = exp
+			}
+		}
+		if lxr.src[lxr.si-1] == '.' && lxr.nonWhiteRemaining() {
+			lxr.si-- // don't absorb trailing dot
+		}
 	}
 	return it(NUMBER, start, lxr.src[start:lxr.si])
 }
@@ -498,6 +497,7 @@ func isIdentChar(r rune) bool {
 	return r == '_' || unicode.IsLetter(r) || unicode.IsDigit(r)
 }
 
+const decDigits = "0123456789"
 const hexDigits = "0123456789abcdefABCDEF"
 
 func isSpace(c rune) bool {
