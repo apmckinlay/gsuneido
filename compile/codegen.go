@@ -587,6 +587,8 @@ func (cg *cgen) call(node *ast.Call) {
 	}
 }
 
+// generates code to push the arguments and returns an ArgSpec
+// for non-string argument names we build an object and use @args
 func (cg *cgen) args(args []ast.Arg) ArgSpec {
 	if len(args) == 1 {
 		if args[0].Name == SuStr("@") {
@@ -597,10 +599,13 @@ func (cg *cgen) args(args []ast.Arg) ArgSpec {
 			return ArgSpec{Unnamed: EACH1}
 		}
 	}
+	if !stringNames(args) {
+		return cg.objectArgs(args)
+	}
 	var spec []byte
 	for _, arg := range args {
 		if arg.Name != nil {
-			i := cg.name(arg.Name.ToStr()) // TODO handle numbers
+			i := cg.name(arg.Name.ToStr())
 			verify.That(i <= math.MaxUint8)
 			spec = append(spec, byte(i))
 		}
@@ -608,6 +613,38 @@ func (cg *cgen) args(args []ast.Arg) ArgSpec {
 	}
 	verify.That(len(args) < int(EACH))
 	return ArgSpec{Unnamed: byte(len(args) - len(spec)), Spec: spec}
+}
+
+// stringNames returns true if there are no non-string argument names
+// might want to limit to identifiers?
+func stringNames(args []ast.Arg) bool {
+	for _, arg := range args {
+		if arg.Name != nil {
+			if _, ok := arg.Name.(SuStr); !ok {
+				return false
+			}
+		}
+	}
+	return true
+}
+
+func (cg *cgen) objectArgs(args []ast.Arg) ArgSpec {
+	var vis []int
+	for _, arg := range args {
+		if arg.Name != nil {
+			vi := cg.value(arg.Name)
+			verify.That(vi <= math.MaxUint16)
+			vis = append(vis, vi)
+		}
+		cg.expr(arg.E)
+	}
+	cg.emit(op.OBJECT)
+	cg.emit(byte(len(args) - len(vis))) // unnamed
+	cg.emit(byte(len(vis)))             // named
+	for _, vi := range vis {
+		cg.emit(byte(vi>>8), byte(vi))
+	}
+	return ArgSpec{Unnamed: EACH}
 }
 
 // helpers ---------------------------------------------------------------------

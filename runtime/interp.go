@@ -374,8 +374,23 @@ func (t *Thread) Run() Value {
 				}
 			}
 			panic("method not found " + self.TypeName() + "." + method.ToStr())
+		case OBJECT:
+			unnamed := int(code[fr.ip])
+			fr.ip++
+			named := int(code[fr.ip])
+			fr.ip++
+			base := t.sp - (unnamed + named)
+			ob := SuObject{}
+			for i := 0; i < unnamed; i++ {
+				ob.Add(t.stack[base])
+			}
+			for i := 0; i < named; i++ {
+				ob.Put(fr.fn.Values[fetchUint16()], t.stack[base+unnamed+i])
+			}
+			t.sp = base
+			t.Push(&ob)
 		default:
-			panic("invalid op code") // TODO fatal?
+			panic("invalid op code" + asm[op]) // TODO fatal?
 		}
 	}
 	if t.sp > sp {

@@ -19,7 +19,7 @@ var asm = []string{
 	"or", "and", "bool", "qmark", "in", "jump", "tjump", "fjump",
 	"eqjump", "nejump", "throw", "try", "rangeto", "rangelen", "this",
 	"callfunc", "callfunc0", "callfunc1", "callfunc2", "callfunc3", "callfunc4",
-	"callmeth", "callmeth0", "callmeth1", "callmeth2", "callmeth3",
+	"callmeth", "callmeth0", "callmeth1", "callmeth2", "callmeth3", "object",
 }
 
 func init() {
@@ -80,6 +80,16 @@ func Disasm1(fn *SuFunc, i int) (int, string) {
 		spec := fn.Code[i : i+named]
 		i += named
 		s += ArgSpec{unnamed, spec, fn.Names}.String()[7:]
+	case OBJECT:
+		unnamed := fn.Code[i]
+		i++
+		named := int(fn.Code[i])
+		i++
+		s += "(" + fmt.Sprint(unnamed)
+		for j := 0; j < named; j++ {
+			s += ", " + fn.Values[fetchUint16()].String() + ":"
+		}
+		s += ")"
 	}
 	return i, s
 }

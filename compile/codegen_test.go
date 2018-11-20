@@ -97,6 +97,8 @@ func TestCodegen(t *testing.T) {
 	test("f(@+1args)", "load args, load f, callfunc(@+1)")
 	test("f(a: a)", "load a, load f, callfunc(a:)")
 	test("f(:a)", "load a, load f, callfunc(a:)")
+	test("f(12, 34: 56, false:)",
+		"int 12, int 56, true, object(1, 34:, false:), load f, callfunc(@)")
 
 	test("[1, a: 2, :b]", "one, int 2, load b, global Record, callfunc(?, a:, b:)")
 
