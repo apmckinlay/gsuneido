@@ -153,7 +153,7 @@ func (p *parser) same(listtype Token, next Token) bool {
 }
 
 func (p *parser) atom() ast.Expr {
-	switch it := p.Item.KeyTok(); it {
+	switch it := p.KeyTok(); it {
 	case TRUE, FALSE, NUMBER, STRING, HASH:
 		return p.Constant(p.constant())
 	case L_PAREN:
@@ -191,15 +191,17 @@ func (p *parser) atom() ast.Expr {
 			args = []ast.Arg{}
 		}
 		return p.Call(expr, args)
-	case IDENTIFIER, THIS:
-		// MyClass { ... } => class
-		if !p.expectingCompound &&
-			okBase(p.Text) && p.lxr.AheadSkip(0).Token == L_CURLY {
-			return p.Constant(p.class())
+	default:
+		if p.Token == IDENTIFIER {
+			// MyClass { ... } => class
+			if !p.expectingCompound &&
+				okBase(p.Text) && p.lxr.AheadSkip(0).Token == L_CURLY {
+				return p.Constant(p.class())
+			}
+			e := p.Ident(p.Text)
+			p.next()
+			return e
 		}
-		e := p.Ident(p.Text)
-		p.next()
-		return e
 	}
 	panic(p.error("syntax error: unexpected " + p.Item.String()))
 }
@@ -334,6 +336,7 @@ func (p *parser) argumentList(closing Token) []ast.Arg {
 }
 
 func (p *parser) argname(expr ast.Expr) Value {
+	// FIXME: queries won't be same ast node types
 	if id, ok := expr.(*ast.Ident); ok {
 		return SuStr(id.Name)
 	}

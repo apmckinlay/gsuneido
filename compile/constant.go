@@ -185,7 +185,8 @@ func (p *parser) ckBase(name string) string {
 }
 
 func okBase(name string) bool {
-	return ascii.IsUpper(name[0]) || (name[0] == '_' && ascii.IsUpper(name[1]))
+	return ascii.IsUpper(name[0]) ||
+		(name[0] == '_' && len(name) > 1 && ascii.IsUpper(name[1]))
 }
 
 type classcon map[string]Value

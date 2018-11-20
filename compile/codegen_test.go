@@ -232,6 +232,11 @@ func TestControl(t *testing.T) {
 		3: jump 0
 		6:`)
 
+	test("for(;;) { break }", `
+		0: jump 6
+		3: jump 0
+		6:`)
+
 	test("while a { b; break; continue }", `
 		0: jump 12
 		3: load b
@@ -248,6 +253,16 @@ func TestControl(t *testing.T) {
 		3: load b
 		5: tjump 0
 		8:`)
+
+	test("for (;a;) { b; break; continue }", `
+		0: jump 12
+		3: load b
+		5: pop
+		6: jump 17
+		9: jump 0
+		12: load a
+		14: tjump 3
+		17:`)
 
 	test("for (i = 0; i < 9; ++i) body", `
 		0: zero

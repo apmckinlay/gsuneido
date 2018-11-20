@@ -417,7 +417,11 @@ func (x *For) String() string {
 		s += sep + e.String()
 		sep = ","
 	}
-	s += "; " + x.Cond.String() + "; "
+	s += "; "
+	if x.Cond != nil {
+		s += x.Cond.String()
+	}
+	s += "; "
 	sep = ""
 	for _, e := range x.Inc {
 		s += sep + e.String()

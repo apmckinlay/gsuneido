@@ -58,6 +58,7 @@ func TestParseExpression(t *testing.T) {
 	test("true", "")
 	test("a", "")
 	test("this", "")
+	test("default", "")
 
 	test("a is true", "(IS a true)")
 
@@ -157,6 +158,7 @@ func TestParseExpression(t *testing.T) {
 	test("c.m(a, b)", "(call c.m a b)")
 	test(".m()", "(call this.m)")
 	test("false isnt x = F()", "(ISNT false (EQ x (call F)))")
+	test("0xB2.Chr()", "(call 178.Chr)")
 
 	test("F { }", "/* class : F */")
 	test("a.F({ })",
@@ -272,6 +274,7 @@ func TestParseStatements(t *testing.T) {
 	test("return \n 123", "return\n123")
 	test("return; 123", "return\n123")
 	test("return a + \n b", "return (ADD a b)")
+	test("return \n while b \n c", "return\nwhile b\nc")
 
 	test("forever\na", "forever\na")
 
@@ -305,6 +308,7 @@ func TestParseStatements(t *testing.T) {
 	test("for x in ob { a }", "for x in ob \n a")
 	test("for (x in ob) a", "for x in ob \n a")
 
+	test("for (;;) x", "for ; ; \n x")
 	test("for (i = 0; i < 9; ++i) X",
 		"for (EQ i 0); (LT i 9); (INC i) \n X")
 

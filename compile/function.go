@@ -258,7 +258,10 @@ func (p *parser) forClassic() *ast.For {
 	p.match(L_PAREN)
 	init := p.optExprList(SEMICOLON)
 	p.match(SEMICOLON)
-	cond := p.expr()
+	var cond ast.Expr
+	if p.Token != SEMICOLON {
+		cond = p.expr()
+	}
 	p.match(SEMICOLON)
 	inc := p.optExprList(R_PAREN)
 	p.match(R_PAREN)
@@ -298,7 +301,7 @@ func (p *parser) exprExpecting(expecting bool) ast.Expr {
 }
 
 func (p *parser) returnStmt() *ast.Return {
-	if (!p.newline && p.Token == SEMICOLON) || p.Token == R_CURLY {
+	if p.newline || p.Token == SEMICOLON || p.Token == R_CURLY {
 		return &ast.Return{}
 	}
 	expr := p.expr()

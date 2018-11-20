@@ -148,6 +148,8 @@ func (cg *cgen) statement(node ast.Node, labels *Labels, lastStmt bool) {
 		cg.dowhileStmt(node)
 	case *ast.For:
 		cg.forStmt(node)
+	case *ast.ForIn:
+		//TODO
 	case *ast.Throw:
 		cg.expr(node.E)
 		cg.emit(op.THROW)
@@ -170,7 +172,7 @@ func (cg *cgen) statement(node ast.Node, labels *Labels, lastStmt bool) {
 			cg.emit(op.POP)
 		}
 	default:
-		panic("unexpected statement type")
+		panic("unexpected statement type " + fmt.Sprintf("%T", node))
 	}
 }
 
@@ -251,13 +253,20 @@ func (cg *cgen) dowhileStmt(node *ast.DoWhile) {
 func (cg *cgen) forStmt(node *ast.For) {
 	cg.exprList(node.Init)
 	labels := cg.newLabels()
-	cond := cg.emitJump(op.JUMP, -1)
+	cond := -1
+	if node.Cond != nil {
+		cond = cg.emitJump(op.JUMP, -1)
+	}
 	loop := cg.label()
 	cg.statement(node.Body, labels, false)
 	cg.exprList(node.Inc) // increment
-	cg.placeLabel(cond)
-	cg.expr(node.Cond)
-	cg.emitBwdJump(op.TJUMP, loop)
+	if node.Cond == nil {
+		cg.emitBwdJump(op.JUMP, loop)
+	} else {
+		cg.placeLabel(cond)
+		cg.expr(node.Cond)
+		cg.emitBwdJump(op.TJUMP, loop)
+	}
 	cg.placeLabel(labels.brk)
 }
 
@@ -308,7 +317,7 @@ func (cg *cgen) expr(node ast.Expr) {
 	case *ast.Block:
 		//TODO
 	default:
-		panic("unhandled expression: " + fmt.Sprint(node))
+		panic("unhandled expression: " + fmt.Sprintf("%T", node))
 	}
 }
 
