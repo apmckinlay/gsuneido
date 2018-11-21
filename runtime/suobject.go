@@ -3,8 +3,8 @@ package runtime
 import (
 	"sort"
 	"strings"
-	"unicode"
 
+	"github.com/apmckinlay/gsuneido/lexer"
 	"github.com/apmckinlay/gsuneido/util/dnum"
 	"github.com/apmckinlay/gsuneido/util/hmap"
 	"github.com/apmckinlay/gsuneido/util/ints"
@@ -168,7 +168,7 @@ func (ob *SuObject) vecstr() (*strings.Builder, string) {
 func entstr(buf *strings.Builder, k interface{}, v interface{}, sep string) string {
 	buf.WriteString(sep)
 	sep = ", "
-	if ks, ok := k.(SuStr); ok && IsIdentifier(string(ks)) {
+	if ks, ok := k.(SuStr); ok && unquoted(string(ks)) {
 		buf.WriteString(string(ks))
 	} else {
 		buf.WriteString(k.(Value).String())
@@ -179,6 +179,11 @@ func entstr(buf *strings.Builder, k interface{}, v interface{}, sep string) stri
 		buf.WriteString(v.(Value).String())
 	}
 	return sep
+}
+
+func unquoted(s string) bool {
+	// want true/false to be quoted to avoid ambiguity
+	return (s != "true" && s != "false") && lexer.IsIdentifier(s)
 }
 
 func (ob *SuObject) Show() string {
@@ -200,25 +205,6 @@ func (ob *SuObject) Show() string {
 	}
 	buf.WriteString(")")
 	return buf.String()
-}
-
-func IsIdentifier(s string) bool {
-	// want true/false to be quoted to avoid ambiguity
-	if s == "true" || s == "false" {
-		return false
-	}
-	last := len(s) - 1
-	if last < 0 {
-		return false
-	}
-	for i, c := range s {
-		if !(c == '_' || unicode.IsLetter(c) ||
-			(i > 0 && '0' <= c && c <= '9') ||
-			(i == last && (c == '?' || c == '!'))) {
-			return false
-		}
-	}
-	return true
 }
 
 func (ob *SuObject) Hash() uint32 {

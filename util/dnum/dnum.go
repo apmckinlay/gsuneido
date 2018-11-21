@@ -262,25 +262,25 @@ type reader struct {
 	i int
 }
 
-func (r *reader) cur() rune {
+func (r *reader) cur() byte {
 	if r.i >= len(r.s) {
 		return 0
 	}
-	return rune(r.s[r.i])
+	return byte(r.s[r.i])
 }
 
-func (r *reader) prev() rune {
+func (r *reader) prev() byte {
 	if r.i == 0 {
 		return 0
 	}
-	return rune(r.s[r.i-1])
+	return byte(r.s[r.i-1])
 }
 
 func (r *reader) len() int {
 	return len(r.s) - r.i
 }
 
-func (r *reader) match(c rune) bool {
+func (r *reader) match(c byte) bool {
 	if r.cur() == c {
 		r.i++
 		return true

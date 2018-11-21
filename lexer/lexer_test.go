@@ -2,6 +2,7 @@ package lexer
 
 import (
 	"testing"
+
 	. "github.com/apmckinlay/gsuneido/util/hamcrest"
 )
 
@@ -11,15 +12,19 @@ func TestKeywords(t *testing.T) {
 
 func TestLexer(t *testing.T) {
 	first := func(src string, text string, id, kw Token) {
+		t.Helper()
 		Assert(t).That(NewLexer(src).Next(),
 			Equals(Item{text, 0, id, kw}))
 	}
 	first("function", "function", IDENTIFIER, FUNCTION)
 	first("foo", "foo", IDENTIFIER, NIL)
+	first("#foo", "foo", STRING, NIL)
+	first("#_foo?", "_foo?", STRING, NIL)
 	first("is", "is", IDENTIFIER, IS)
 	first("is:", "is", IDENTIFIER, NIL)
 	first("0xff", "0xff", NUMBER, NIL)
 	first("0xff.Chr()", "0xff", NUMBER, NIL)
+	first("0x8002 //foo", "0x8002", NUMBER, NIL)
 	first("'hello'", "hello", STRING, NIL)
 	first("'hello", "hello", STRING, NIL)
 	first("'foo\\'bar'", "foo'bar", STRING, STRING)
@@ -28,6 +33,7 @@ func TestLexer(t *testing.T) {
 	first("//foo\nbar", "//foo", COMMENT, NIL) // not including newline
 
 	check := func(source string, expected ...Token) {
+		t.Helper()
 		lexer := NewLexer(source)
 		for i := 0; i < len(expected); {
 			item := lexer.Next()
@@ -40,12 +46,14 @@ func TestLexer(t *testing.T) {
 			Assert(t).That(item.KeyTok(), Equals(expected[i]).Comment(i, item))
 			i++
 		}
+		Assert(t).That(lexer.Next().Token, Equals(EOF).Comment("didn't consume input"))
 	}
 	check("f()", IDENTIFIER, L_PAREN, R_PAREN)
 	check("4-1", NUMBER, SUB, NUMBER)
 	check("[1..]", L_BRACKET, NUMBER, RANGETO, R_BRACKET)
 	check("#20181112.End", HASH, NUMBER, DOT, IDENTIFIER)
 	check("0xff.Chr", NUMBER, DOT, IDENTIFIER)
+	check("//foo\n0x8002 //bar", COMMENT, NUMBER, COMMENT)
 	check(`and break
 		case catch continue class default do
 		else for forever function if is isnt or not
@@ -73,15 +81,20 @@ func TestLexer(t *testing.T) {
 }
 
 func TestAhead(t *testing.T) {
-	lxr := NewLexer("a=1")
+	lxr := NewLexer("a \n= /**/ 1 ")
 	Assert(t).That(lxr.Ahead(0), Equals(it(IDENTIFIER, 0, "a")))
-	Assert(t).That(lxr.Ahead(2), Equals(it(NUMBER, 2, "1")))
-	Assert(t).That(lxr.Ahead(1), Equals(it(EQ, 1, "=")))
-	Assert(t).That(lxr.Ahead(3).Token, Equals(EOF))
+	Assert(t).That(lxr.Ahead(6), Equals(it(NUMBER, 10, "1")))
+	Assert(t).That(lxr.Ahead(2), Equals(it(EQ, 3, "=")))
+	Assert(t).That(lxr.Ahead(8).Token, Equals(EOF))
 
 	Assert(t).That(lxr.Next(), Equals(it(IDENTIFIER, 0, "a")))
-	Assert(t).That(lxr.Next(), Equals(it(EQ, 1, "=")))
-	Assert(t).That(lxr.Next(), Equals(it(NUMBER, 2, "1")))
+	Assert(t).That(lxr.Next(), Equals(it(NEWLINE, 1, " \n")))
+	Assert(t).That(lxr.Next(), Equals(it(EQ, 3, "=")))
+	Assert(t).That(lxr.Next(), Equals(it(WHITESPACE, 4, " ")))
+	Assert(t).That(lxr.Next(), Equals(it(COMMENT, 5, "/**/")))
+	Assert(t).That(lxr.Next(), Equals(it(WHITESPACE, 9, " ")))
+	Assert(t).That(lxr.Next(), Equals(it(NUMBER, 10, "1")))
+	Assert(t).That(lxr.Next(), Equals(it(WHITESPACE, 11, " ")))
 	Assert(t).That(lxr.Next().Token, Equals(EOF))
 }
 

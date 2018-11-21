@@ -1,14 +1,15 @@
 // Package ascii contains functions for dealing with ASCII characters
+// Note: the Is... functions are usable with cmatch
 package ascii
 
 // IsLower returns whether an ASCII character is lower case (a-z)
 func IsLower(c byte) bool {
-	return byte('a') <= c && c <= byte('z')
+	return 'a' <= c && c <= 'z'
 }
 
 // IsUpper returns whether an ASCII character is upper case (A-Z)
 func IsUpper(c byte) bool {
-	return byte('A') <= c && c <= byte('Z')
+	return 'A' <= c && c <= 'Z'
 }
 
 // IsLower converts an ASCII character to lower case
@@ -25,4 +26,29 @@ func ToUpper(c byte) byte {
 		c -= 'a' - 'A'
 	}
 	return c
+}
+
+// IsLetter returns whether an ASCII character is a letter (a-z or A-Z)
+func IsLetter(c byte) bool {
+	return IsLower(c) || IsUpper(c)
+}
+
+// IsDigit returns whether an ASCII character is lower case (a-z)
+func IsDigit(c byte) bool {
+	return '0' <= c && c <= '9'
+}
+
+// IsSpace returns whether an ASCII character is white space
+func IsSpace(c byte) bool {
+	switch c {
+	case ' ', '\t', '\r', '\n', '\v':
+		return true
+	}
+	return false
+}
+
+// IsHexDigit returns whether an ASCII character is a hexadecimal digit
+func IsHexDigit(c byte) bool {
+	return IsDigit(c) ||
+		('a' <= c && c <= 'f') || ('A' <= c && c <= 'F')
 }

@@ -178,7 +178,7 @@ type Arg struct {
 func (a *Arg) String() string {
 	s := ""
 	if a.Name != nil {
-		if ks, ok := a.Name.(SuStr); ok && IsIdentifier(string(ks)) {
+		if ks, ok := a.Name.(SuStr); ok && lexer.IsIdentifier(string(ks)) {
 			s += string(ks) + ": "
 		} else {
 			s += a.Name.String() + ": "

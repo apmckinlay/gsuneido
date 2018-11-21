@@ -2,18 +2,13 @@ package lexer
 
 import (
 	"strings"
-	"unicode"
-	"unicode/utf8"
+
+	. "github.com/apmckinlay/gsuneido/util/ascii"
 )
 
-// TODO change to just ascii, not unicode (simpler)
-
-/*
-Lexer implements the lexical scanner for Suneido
-
-It is designed so the sequence of values returned
-forms the complete source.
-*/
+// Lexer implements the lexical scanner for Suneido
+// It is designed so the sequence of values returned
+// forms the complete source.
 type Lexer struct {
 	src   string
 	si    int
@@ -26,14 +21,13 @@ func NewLexer(src string) *Lexer {
 }
 
 // Item is the return value from Lexer.Next
-//
 // For keywords, Token is IDENTIFIER, Keyword is the particular keyword token.
 // When Token is STRING, if Keyword is STRING it means Text is not a slice of the source.
 type Item struct {
 	Text    string
 	Pos     int32
 	Token   Token
-	Keyword Token
+	Keyword Token //TODO maybe make this KeyTok ???
 	// NOTE: put Token's last to reduce padding
 }
 
@@ -62,8 +56,7 @@ func (lxr *Lexer) Next() Item {
 	return lxr.next()
 }
 
-// Ahead provides lookahead, 0 is the next item.
-//
+// Ahead provides lookahead, 0 is the next item
 // Items are buffered so they can be used by Next
 func (lxr *Lexer) Ahead(i int) Item {
 	for len(lxr.ahead) < i+1 {
@@ -95,7 +88,8 @@ func (lxr *Lexer) AheadSkip(i int) Item {
 }
 
 func (lxr *Lexer) next() Item {
-	start, c := lxr.read()
+	start := lxr.si
+	c := lxr.read()
 	it := func(tok Token) Item {
 		return Item{lxr.src[start:lxr.si], int32(start), tok, NIL}
 	}
@@ -103,13 +97,9 @@ func (lxr *Lexer) next() Item {
 	case eof:
 		return it(EOF)
 	case '#':
-		if p := lxr.peek(); p == '_' || unicode.IsLetter(p) {
-			start++
-			lxr.matchWhile(isIdentChar)
-			if !lxr.match('?') {
-				lxr.match('!')
-			}
-			val := lxr.src[start:lxr.si]
+		if p := lxr.peek(); p == '_' || IsLetter(p) {
+			lxr.matchIdentTail()
+			val := lxr.src[start+1 : lxr.si]
 			return Item{val, int32(start), STRING, NIL}
 		}
 		return it(HASH)
@@ -252,16 +242,16 @@ func (lxr *Lexer) next() Item {
 		if lxr.match('.') {
 			return it(RANGETO)
 		}
-		if isDigit(lxr.peek()) {
+		if IsDigit(lxr.peek()) {
 			return lxr.number(start)
 		}
 		return it(DOT)
 	case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
 		return lxr.number(start)
 	default:
-		if isSpace(c) {
+		if IsSpace(c) {
 			return lxr.whitespace(start, c)
-		} else if unicode.IsLetter(c) || c == '_' {
+		} else if IsLetter(c) || c == '_' {
 			return lxr.identifier(start)
 		}
 	}
@@ -272,25 +262,29 @@ func it(tok Token, pos int, txt string) Item {
 	return Item{txt, int32(pos), tok, NIL}
 }
 
-func (lxr *Lexer) whitespace(start int, c rune) Item {
-	si := start
+func (lxr *Lexer) whitespace(start int, c byte) Item {
 	result := WHITESPACE
-	for ; isSpace(c); si, c = lxr.read() {
+	for ; IsSpace(c); c = lxr.read() {
 		if c == '\n' || c == '\r' {
 			result = NEWLINE
 		}
 	}
-	lxr.si = si
+	if c != eof {
+		lxr.si--
+	}
 	return it(result, start, lxr.src[start:lxr.si])
 }
 
 func (lxr *Lexer) lineComment(start int) Item {
 	// does NOT absorb newline
+loop:
 	for {
-		si, c := lxr.read()
-		if c == eof || c == '\n' {
-			lxr.si = si
-			break
+		switch lxr.read() {
+		case eof:
+			break loop
+		case '\n':
+			lxr.si--
+			break loop
 		}
 	}
 	return it(COMMENT, start, lxr.src[start:lxr.si])
@@ -304,7 +298,7 @@ func (lxr *Lexer) rawString(start int) Item {
 	return it(STRING, start, lxr.matchUntil(start, "`"))
 }
 
-func (lxr *Lexer) quotedString(start int, quote rune) Item {
+func (lxr *Lexer) quotedString(start int, quote byte) Item {
 	// if no escapes, return slice of source
 	src := lxr.src[lxr.si:]
 	for i := 0; ; i++ {
@@ -320,7 +314,7 @@ func (lxr *Lexer) quotedString(start int, quote rune) Item {
 	}
 	// have escapes so need to build new string
 	var buf strings.Builder
-	for c := lxr.read1(); c != eof && c != quote; c = lxr.read1() {
+	for c := lxr.read(); c != eof && c != quote; c = lxr.read() {
 		c = lxr.doesc(c)
 		buf.WriteByte(byte(c))
 	}
@@ -328,11 +322,12 @@ func (lxr *Lexer) quotedString(start int, quote rune) Item {
 	return Item{buf.String(), int32(start), STRING, STRING}
 }
 
-func (lxr *Lexer) doesc(c rune) rune {
+func (lxr *Lexer) doesc(c byte) byte {
 	if c != '\\' {
 		return c
 	}
-	si, c := lxr.read()
+	si := lxr.si
+	c = lxr.read()
 	switch c {
 	case 'n':
 		return '\n'
@@ -341,31 +336,24 @@ func (lxr *Lexer) doesc(c rune) rune {
 	case 'r':
 		return '\r'
 	case 'x':
-		dig1 := digit(lxr.read1(), 16)
-		dig2 := digit(lxr.read1(), 16)
+		dig1 := digit(lxr.read(), 16)
+		dig2 := digit(lxr.read(), 16)
 		if dig1 != -1 && dig2 != -1 {
-			return rune(16*dig1 + dig2)
+			return byte(16*dig1 + dig2)
 		}
 	case '\\', '"', '\'':
 		return c
-	default:
-		dig1 := digit(lxr.read1(), 8)
-		dig2 := digit(lxr.read1(), 8)
-		dig3 := digit(lxr.read1(), 8)
-		if dig1 != -1 && dig2 != -1 && dig3 != -1 {
-			return rune(64*dig1 + 8*dig2 + dig3)
-		}
 	}
 	lxr.si = si
 	return '\\'
 }
 
-func digit(c rune, radix int) int {
+func digit(c byte, radix int) int {
 	n := 99
-	if isDigit(c) {
+	if IsDigit(c) {
 		n = int(c - '0')
-	} else if isHexDigit(c) {
-		n = int(10 + unicode.ToLower(c) - 'a')
+	} else if IsHexDigit(c) {
+		n = int(10 + ToLower(c) - 'a')
 	}
 	if n < radix {
 		return n
@@ -373,26 +361,18 @@ func digit(c rune, radix int) int {
 	return -1
 }
 
-func isDigit(r rune) bool {
-	return '0' <= r && r <= '9'
-}
-
-func isHexDigit(r rune) bool {
-	return strings.ContainsRune(hexDigits, r)
-}
-
 func (lxr *Lexer) number(start int) Item {
 	if lxr.src[start] == '0' && lxr.matchOneOf("xX") {
-		lxr.matchRunOf(hexDigits)
+		lxr.matchWhile(IsHexDigit)
 	} else {
-		lxr.matchRunOf(decDigits)
+		lxr.matchWhile(IsDigit)
 		if lxr.match('.') {
-			lxr.matchRunOf(decDigits)
+			lxr.matchWhile(IsDigit)
 		}
 		exp := lxr.si
 		if lxr.matchOneOf("eE") {
 			lxr.matchOneOf("+-")
-			lxr.matchRunOf(decDigits)
+			lxr.matchWhile(IsDigit)
 			if lxr.si == exp+1 {
 				lxr.si = exp
 			}
@@ -405,8 +385,8 @@ func (lxr *Lexer) number(start int) Item {
 }
 
 func (lxr *Lexer) nonWhiteRemaining() bool {
-	for _, c := range lxr.src[lxr.si:] {
-		if !unicode.IsSpace(c) {
+	for i := lxr.si; i < len(lxr.src); i++ {
+		if !IsSpace(lxr.src[i]) {
 			return true
 		}
 	}
@@ -414,10 +394,7 @@ func (lxr *Lexer) nonWhiteRemaining() bool {
 }
 
 func (lxr *Lexer) identifier(start int) Item {
-	lxr.matchWhile(isIdentChar)
-	if !lxr.match('?') {
-		lxr.match('!')
-	}
+	lxr.matchIdentTail()
 	val := lxr.src[start:lxr.si]
 	keyword := NIL
 	if lxr.peek() != ':' || val == "default" || val == "true" || val == "false" {
@@ -426,80 +403,64 @@ func (lxr *Lexer) identifier(start int) Item {
 	return Item{val, int32(start), IDENTIFIER, keyword}
 }
 
-const eof = -1
-
-func (lxr *Lexer) read() (int, rune) {
-	si := lxr.si
-	return si, lxr.read1()
+func (lxr *Lexer) matchIdentTail() {
+	lxr.matchWhile(isIdentChar)
+	if !lxr.match('?') {
+		lxr.match('!')
+	}
 }
 
-func (lxr *Lexer) read1() rune {
+func isIdentChar(r byte) bool {
+	return r == '_' || IsLetter(r) || IsDigit(r)
+}
+
+const eof = 0
+
+func (lxr *Lexer) read() byte {
 	if lxr.si >= len(lxr.src) {
 		return eof
 	}
-	c, w := utf8.DecodeRuneInString(lxr.src[lxr.si:])
-	lxr.si += w
+	c := lxr.src[lxr.si]
+	lxr.si++
 	return c
 }
 
 // peek returns the next character
-func (lxr *Lexer) peek() rune {
-	si, c := lxr.read()
-	lxr.si = si
-	return c
+func (lxr *Lexer) peek() byte {
+	if lxr.si >= len(lxr.src) {
+		return eof
+	}
+	return lxr.src[lxr.si]
 }
 
-func (lxr *Lexer) match(c rune) bool {
-	si, c2 := lxr.read()
-	if c == c2 {
+func (lxr *Lexer) match(c byte) bool {
+	if c == lxr.peek() {
+		lxr.si++
 		return true
 	}
-	lxr.si = si
 	return false
 }
 
 func (lxr *Lexer) matchOneOf(valid string) bool {
-	si, c := lxr.read()
-	if strings.ContainsRune(valid, c) {
+	if -1 != strings.IndexByte(valid, lxr.peek()) {
+		lxr.si++
 		return true
 	}
-	lxr.si = si
 	return false
 }
 
 func (lxr *Lexer) matchRunOf(valid string) {
-	for {
-		si, c := lxr.read()
-		if !strings.ContainsRune(valid, c) {
-			lxr.si = si
-			break
-		}
+	for ; -1 != strings.IndexByte(valid, lxr.peek()); lxr.si++ {
 	}
 }
 
-func (lxr *Lexer) matchWhile(f func(c rune) bool) {
-	for {
-		si, c := lxr.read()
-		if !f(c) {
-			lxr.si = si
-			break
-		}
+func (lxr *Lexer) matchWhile(f func(c byte) bool) {
+	for ; f(lxr.peek()); lxr.si++ {
 	}
 }
 
 func (lxr *Lexer) matchUntil(start int, s string) string {
-	for lxr.read1() != eof && !strings.HasSuffix(lxr.src[:lxr.si], s) {
+	for lxr.si++; lxr.si < len(lxr.src) && !strings.HasSuffix(lxr.src[:lxr.si], s); lxr.si++ {
 	}
 	return lxr.src[start:lxr.si]
-}
-
-func isIdentChar(r rune) bool {
-	return r == '_' || unicode.IsLetter(r) || unicode.IsDigit(r)
-}
-
-const decDigits = "0123456789"
-const hexDigits = "0123456789abcdefABCDEF"
-
-func isSpace(c rune) bool {
-	return c == ' ' || c == '\t' || c == '\r' || c == '\n'
 }

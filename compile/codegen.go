@@ -669,7 +669,7 @@ func (cg *cgen) emitUint8(op byte, i int) {
 }
 
 func (cg *cgen) emitInt16(op byte, i int) {
-	verify.That(math.MinInt16 <= i && i < math.MaxInt16)
+	verify.That(math.MinInt16 <= i && i <= math.MaxInt16)
 	cg.emit(op, byte(i>>8), byte(i))
 }
 

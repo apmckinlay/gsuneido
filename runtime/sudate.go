@@ -5,8 +5,8 @@ import (
 	"strconv"
 	"strings"
 	gotime "time"
-	"unicode"
 
+	"github.com/apmckinlay/gsuneido/util/ascii"
 	"github.com/apmckinlay/gsuneido/util/dnum"
 	"github.com/apmckinlay/gsuneido/util/ints"
 	"github.com/apmckinlay/gsuneido/util/verify"
@@ -291,7 +291,7 @@ func (d SuDate) Format(fmt string) string {
 	dst.Grow(fmtlen)
 	for i := 0; i < fmtlen; i++ {
 		n := 1
-		if unicode.IsLetter(rune(fmt[i])) {
+		if ascii.IsLetter(fmt[i]) {
 			for c := fmt[i]; i+1 < fmtlen && fmt[i+1] == c; i++ {
 				n++
 			}
@@ -624,19 +624,19 @@ func ParseDate(s string, order string) SuDate {
 
 func nextWord(s string, si int) string {
 	dst := []byte{}
-	for ; si < len(s) && unicode.IsLetter(rune(s[si])); si++ {
-		dst = append(dst, byte(unicode.ToLower(rune(s[si]))))
+	for ; si < len(s) && ascii.IsLetter(s[si]); si++ {
+		dst = append(dst, byte(ascii.ToLower(s[si])))
 	}
 	if len(dst) == 0 {
 		return ""
 	}
-	dst[0] = byte(unicode.ToUpper(rune(dst[0])))
+	dst[0] = byte(ascii.ToUpper(dst[0]))
 	return string(dst)
 }
 
 func nextNumber(s string, si int) string {
 	i := si
-	for i < len(s) && unicode.IsDigit(rune(s[i])) {
+	for i < len(s) && ascii.IsDigit(s[i]) {
 		i++
 	}
 	return s[si:i]
@@ -650,7 +650,7 @@ func getSyspat(order string, datePatterns []string) []byte {
 	for oi := 0; oi < len(order) && i < 3; oi++ {
 		oc = order[oi]
 		if oc != prev && (oc == 'y' || oc == 'M' || oc == 'd') {
-			syspat[i] = byte(unicode.ToLower(rune(oc)))
+			syspat[i] = byte(ascii.ToLower(oc))
 			i++
 		}
 		prev = oc
@@ -677,9 +677,9 @@ func ampmAhead(s string, i int) bool {
 		i++
 		s0 = get(s, i)
 	}
-	s0 = byte(unicode.ToLower(rune(s0)))
+	s0 = byte(ascii.ToLower(s0))
 	return (s0 == 'a' || s0 == 'p') &&
-		unicode.ToLower(rune(get(s, i+1))) == 'm'
+		ascii.ToLower(get(s, i+1)) == 'm'
 }
 
 func get(s string, i int) byte {

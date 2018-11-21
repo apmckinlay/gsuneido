@@ -1,4 +1,4 @@
-// +build slow
+// +xbuild slow
 
 package compile
 
@@ -32,7 +32,7 @@ func walk(path string, info os.FileInfo, err error) error {
 		strings.HasSuffix(path, ".js") {
 		return nil
 	}
-	//fmt.Println(path)
+	// fmt.Println(path)
 	data, _ := iou.ReadFile(path)
 	text := string(data)
 	if strings.Contains(text, "struct") ||
