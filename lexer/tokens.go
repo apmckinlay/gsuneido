@@ -145,7 +145,6 @@ var keywords = map[string]Token{
 	"not":      NOT,
 	"or":       OR,
 	"return":   RETURN,
-	"string":   STRING,
 	"super":    SUPER,
 	"switch":   SWITCH,
 	"this":     THIS,
