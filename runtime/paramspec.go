@@ -11,17 +11,16 @@ import (
 // ParamSpec describes the parameters of a function
 type ParamSpec struct {
 	// Nparams is the number of arguments required on the stack
-	Nparams int
+	Nparams uint8
 
 	// NDefaults is the number of default values for parameters
 	// They are in the start of Values
-	Ndefaults int
+	Ndefaults uint8
 
 	// Flags specifies "types" of params
 	Flags []Flag
 
-	// Names starts with the parameter names, then the local names,
-	// and then any argument or member names used in the code
+	// Names starts with the parameter names, then the local names
 	Names []string
 
 	// Values contains any literals in the function
@@ -60,10 +59,10 @@ func (f *ParamSpec) String() string {
 	buf.WriteString("function(")
 	sep := ""
 	v := 0 // index into Values
-	for i := 0; i < f.Nparams; i++ {
+	for i := 0; i < int(f.Nparams); i++ {
 		buf.WriteString(sep)
 		buf.WriteString(flagsToName(f.Names[i], f.Flags[i]))
-		if i >= f.Nparams-f.Ndefaults {
+		if i >= int(f.Nparams-f.Ndefaults) {
 			buf.WriteString("=")
 			buf.WriteString(fmt.Sprint(f.Values[v]))
 			v++
@@ -166,10 +165,10 @@ func (f *ParamSpec) fillin(t *Thread, i int) Value {
 			return x
 		}
 	}
-	if i < f.Nparams-f.Ndefaults {
+	if i < int(f.Nparams-f.Ndefaults) {
 		panic("missing argument(s)")
 	}
-	return f.Values[i-(f.Nparams-f.Ndefaults)]
+	return f.Values[i-int(f.Nparams-f.Ndefaults)]
 }
 
 func (f *ParamSpec) Show() string {

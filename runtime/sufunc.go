@@ -9,7 +9,7 @@ type SuFunc struct {
 	ParamSpec
 
 	// Nlocals is the number of parameters and local variables
-	Nlocals int
+	Nlocals uint8
 
 	// Code is the actual byte code
 	Code []byte

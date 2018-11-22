@@ -74,7 +74,7 @@ func TestArgs(t *testing.T) {
 	f = &ParamSpec{Nparams: 3, Flags: []Flag{0, 0, 0},
 		Names: []string{"a", "b", "c"}}
 	a = ArgSpec{Unnamed: 0,
-		Names: []string{"c", "b", "a", "d"}, Spec: []byte{1, 0, 2, 3}} // b, c, a, d
+		Names: vals("c", "b", "a", "d"), Spec: []byte{1, 0, 2, 3}} // b, c, a, d
 	setStack(22, 33, 11, 44)
 	th.Args(f, &a)
 	ckStack(11, 22, 33)
@@ -83,7 +83,7 @@ func TestArgs(t *testing.T) {
 	f = &ParamSpec{Nparams: 4, Flags: []Flag{0, 0, 0},
 		Names: []string{"a", "b", "c", "d"}}
 	a = ArgSpec{Unnamed: 2,
-		Names: []string{"c", "b", "a", "d"}, Spec: []byte{3, 0}} // d, c
+		Names: vals("c", "b", "a", "d"), Spec: []byte{3, 0}} // d, c
 	setStack(22, 33, 11, 44) // fn(22, 33, d: 11, c: 44)
 	th.Args(f, &a)
 	ckStack(22, 33, 44, 11)
@@ -91,7 +91,7 @@ func TestArgs(t *testing.T) {
 	// args => @param
 	f = &ParamSpec{Nparams: 1, Flags: []Flag{AtParam}}
 	a = ArgSpec{Unnamed: 2,
-		Names: []string{"c", "b", "a", "d"}, Spec: []byte{1, 2}} // b, a
+		Names: vals("c", "b", "a", "d"), Spec: []byte{1, 2}} // b, a
 	setStack(11, 22, 44, 33)
 	th.Args(f, &a)
 	Assert(t).That(th.sp, Equals(1))
@@ -124,4 +124,12 @@ func makeOb() *SuObject {
 	ob.Put(SuStr("a"), SuInt(33))
 	ob.Put(SuStr("b"), SuInt(44))
 	return &ob
+}
+
+func vals(names ...string) []Value {
+	vals := make([]Value, len(names))
+	for i,s := range names {
+		vals[i] = SuStr(s)
+	}
+	return vals
 }

@@ -11,7 +11,7 @@ func (t *Thread) Call(fn *SuFunc) Value {
 	for expand := fn.Nlocals - fn.Nparams; expand > 0; expand-- {
 		t.Push(nil)
 	}
-	t.frames[t.fp] = Frame{fn: fn, bp: t.sp - fn.Nlocals}
+	t.frames[t.fp] = Frame{fn: fn, bp: t.sp - int(fn.Nlocals)}
 	defer func(fp int) { t.fp = fp }(t.fp)
 	t.fp++
 	return t.Run()
@@ -68,7 +68,7 @@ func (t *Thread) Run() Value {
 		case INT:
 			t.Push(SuInt(fetchInt16()))
 		case VALUE:
-			t.Push(fr.fn.Values[fetchUint16()])
+			t.Push(fr.fn.Values[fetchUint8()])
 		case LOAD:
 			i := fetchUint8()
 			val := t.stack[bp+i]
@@ -293,7 +293,7 @@ func (t *Thread) Run() Value {
 				spec = code[fr.ip : fr.ip+named]
 				fr.ip += named
 			}
-			argSpec := &ArgSpec{unnamed, spec, fr.fn.Names}
+			argSpec := &ArgSpec{unnamed, spec, fr.fn.Values}
 			base := t.sp - argSpec.Nargs()
 			result := f.Call(t, argSpec)
 			t.sp = base
@@ -361,7 +361,7 @@ func (t *Thread) Run() Value {
 				spec = code[fr.ip : fr.ip+named]
 				fr.ip += named
 			}
-			argSpec := &ArgSpec{unnamed, spec, fr.fn.Names}
+			argSpec := &ArgSpec{unnamed, spec, fr.fn.Values}
 			nargs := argSpec.Nargs()
 			base := t.sp - nargs - 1 // 1 extra for self
 			self := t.stack[base]
@@ -374,21 +374,6 @@ func (t *Thread) Run() Value {
 				}
 			}
 			panic("method not found " + self.TypeName() + "." + method.ToStr())
-		case OBJECT:
-			unnamed := int(code[fr.ip])
-			fr.ip++
-			named := int(code[fr.ip])
-			fr.ip++
-			base := t.sp - (unnamed + named)
-			ob := SuObject{}
-			for i := 0; i < unnamed; i++ {
-				ob.Add(t.stack[base])
-			}
-			for i := 0; i < named; i++ {
-				ob.Put(fr.fn.Values[fetchUint16()], t.stack[base+unnamed+i])
-			}
-			t.sp = base
-			t.Push(&ob)
 		default:
 			panic("invalid op code" + asm[op]) // TODO fatal?
 		}

@@ -27,7 +27,7 @@ func codegen(fn *ast.Function) *SuFunc {
 	}
 	return &SuFunc{
 		Code:      cg.code,
-		Nlocals:   len(cg.Names),
+		Nlocals:   uint8(len(cg.Names)),
 		ParamSpec: cg.ParamSpec,
 	}
 }
@@ -91,7 +91,7 @@ func (cg *cgen) function(fn *ast.Function) {
 }
 
 func (cg *cgen) params(params []ast.Param) {
-	cg.Nparams = len(params)
+	cg.Nparams = uint8(len(params))
 	for _, p := range params {
 		name, flags := cg.param(p.Name)
 		cg.Names = append(cg.Names, name) // no duplicate reuse
@@ -357,6 +357,9 @@ func (cg *cgen) name(s string) int {
 		}
 	}
 	i := len(cg.Names)
+	if i > math.MaxUint8 {
+		panic("too many local variables (>255)")
+	}
 	cg.Names = append(cg.Names, s)
 	return i
 }
@@ -496,11 +499,11 @@ func (cg *cgen) emitValue(val Value) {
 	} else if i, ok := SmiToInt(val); ok {
 		cg.emitInt16(op.INT, i)
 	} else {
-		cg.emitUint16(op.VALUE, cg.value(val))
+		cg.emitUint8(op.VALUE, cg.value(val))
 	}
 }
 
-// value returns an index for the value
+// value returns an index for the constant value
 // reusing if duplicate, adding otherwise
 func (cg *cgen) value(v Value) int {
 	for i, v2 := range cg.Values {
@@ -509,6 +512,9 @@ func (cg *cgen) value(v Value) int {
 		}
 	}
 	i := len(cg.Values)
+	if i > math.MaxUint8 {
+		panic("too many constants (>255)")
+	}
 	cg.Values = append(cg.Values, v)
 	return i
 }
@@ -608,13 +614,10 @@ func (cg *cgen) args(args []ast.Arg) ArgSpec {
 			return ArgSpec{Unnamed: EACH1}
 		}
 	}
-	if !stringNames(args) {
-		return cg.objectArgs(args)
-	}
 	var spec []byte
 	for _, arg := range args {
 		if arg.Name != nil {
-			i := cg.name(arg.Name.ToStr())
+			i := cg.value(arg.Name)
 			verify.That(i <= math.MaxUint8)
 			spec = append(spec, byte(i))
 		}
@@ -622,38 +625,6 @@ func (cg *cgen) args(args []ast.Arg) ArgSpec {
 	}
 	verify.That(len(args) < int(EACH))
 	return ArgSpec{Unnamed: byte(len(args) - len(spec)), Spec: spec}
-}
-
-// stringNames returns true if there are no non-string argument names
-// might want to limit to identifiers?
-func stringNames(args []ast.Arg) bool {
-	for _, arg := range args {
-		if arg.Name != nil {
-			if _, ok := arg.Name.(SuStr); !ok {
-				return false
-			}
-		}
-	}
-	return true
-}
-
-func (cg *cgen) objectArgs(args []ast.Arg) ArgSpec {
-	var vis []int
-	for _, arg := range args {
-		if arg.Name != nil {
-			vi := cg.value(arg.Name)
-			verify.That(vi <= math.MaxUint16)
-			vis = append(vis, vi)
-		}
-		cg.expr(arg.E)
-	}
-	cg.emit(op.OBJECT)
-	cg.emit(byte(len(args) - len(vis))) // unnamed
-	cg.emit(byte(len(vis)))             // named
-	for _, vi := range vis {
-		cg.emit(byte(vi>>8), byte(vi))
-	}
-	return ArgSpec{Unnamed: EACH}
 }
 
 // helpers ---------------------------------------------------------------------

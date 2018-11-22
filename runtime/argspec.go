@@ -1,6 +1,10 @@
 package runtime
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/apmckinlay/gsuneido/lexer"
+)
 
 /*
 ArgSpec specifies the arguments on the stack for a call.
@@ -12,8 +16,8 @@ type ArgSpec struct {
 	Unnamed byte
 	// Spec has one entry per named argument, indexing into Names
 	Spec []byte
-	// Names is the locals names from the calling function
-	Names []string
+	// Names is the argument names from the calling function
+	Names []Value
 }
 
 const (
@@ -35,19 +39,6 @@ func (as ArgSpec) Nargs() int {
 	return int(as.Unnamed) + len(as.Spec)
 }
 
-// ArgName returns the name of the i'th argument
-func (as ArgSpec) ArgName(i int) string {
-	nu := int(as.Unnamed)
-	if i < nu {
-		return ""
-	}
-	ni := as.Spec[i-nu]
-	if ni >= EACH1 {
-		return ""
-	}
-	return as.Names[ni]
-}
-
 func (as ArgSpec) String() string {
 	var buf strings.Builder
 	sep := ""
@@ -65,7 +56,11 @@ func (as ArgSpec) String() string {
 		}
 		for _, i := range as.Spec {
 			buf.WriteString(sep)
-			buf.WriteString(as.Names[i])
+			if s, ok := as.Names[i].(SuStr); ok && lexer.IsIdentifier(string(s)) {
+				buf.WriteString(string(s))
+			} else {
+				buf.WriteString(as.Names[i].String())
+			}
 			buf.WriteString(":")
 			sep = ", "
 		}

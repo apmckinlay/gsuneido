@@ -98,7 +98,7 @@ func TestCodegen(t *testing.T) {
 	test("f(a: a)", "load a, load f, callfunc(a:)")
 	test("f(:a)", "load a, load f, callfunc(a:)")
 	test("f(12, 34: 56, false:)",
-		"int 12, int 56, true, object(1, 34:, false:), load f, callfunc(@)")
+		"int 12, int 56, true, load f, callfunc(?, 34:, false:)")
 
 	test("[1, a: 2, :b]", "one, int 2, load b, global Record, callfunc(?, a:, b:)")
 
@@ -203,11 +203,11 @@ func TestControl(t *testing.T) {
         2: nejump 11
         5: load b
         7: pop
-        8: jump 16
+        8: jump 15
         11: pop
         12: value 'unhandled switch value'
-        15: throw
-        16:`)
+        14: throw
+        15:`)
 	test("switch a { case 1,2: b case 3: c default: d }", `
 		0: load a
         2: one

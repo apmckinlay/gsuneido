@@ -16,14 +16,14 @@ func (t *Thread) Args(ps *ParamSpec, as *ArgSpec) []Value {
 	base := t.sp - nargs
 
 	// reserve stack space for params
-	for expand := ps.Nparams - nargs; expand > 0; expand-- {
+	for expand := int(ps.Nparams) - nargs; expand > 0; expand-- {
 		t.Push(nil)
 	}
 	locals := t.stack[base:]
 	t.massage(ps, as, locals)
 
 	// shrink stack if excess args
-	t.sp = base + ps.Nparams
+	t.sp = base + int(ps.Nparams)
 
 	return locals
 }
@@ -34,10 +34,10 @@ func (t *Thread) Args(ps *ParamSpec, as *ArgSpec) []Value {
 func (t *Thread) massage(ps *ParamSpec, as *ArgSpec, args []Value) {
 	unnamed := int(as.Unnamed)
 	atParam := ps.Nparams == 1 && ps.Flags[0] == AtParam
-	if unnamed == ps.Nparams && len(as.Spec) == 0 && !atParam {
+	if unnamed == int(ps.Nparams) && len(as.Spec) == 0 && !atParam {
 		return // simple fast path
 	}
-	if unnamed < EACH && ps.Flags[0] != AtParam && unnamed > ps.Nparams {
+	if unnamed < EACH && ps.Flags[0] != AtParam && unnamed > int(ps.Nparams) {
 		panic("too many arguments")
 	}
 	// as.Unnamed < fn.Nparams
@@ -63,7 +63,7 @@ func (t *Thread) massage(ps *ParamSpec, as *ArgSpec, args []Value) {
 			args[i] = nil
 		}
 		for i, ni := range as.Spec {
-			ob.Put(SuStr(as.Names[ni]), args[unnamed+i])
+			ob.Put(as.Names[ni], args[unnamed+i])
 			args[unnamed+i] = nil
 		}
 		args[0] = ob
@@ -73,11 +73,11 @@ func (t *Thread) massage(ps *ParamSpec, as *ArgSpec, args []Value) {
 	if atArg {
 		// @args => params
 		ob := args[0].(*SuObject)
-		for i := 0; i < ints.Min(ps.Nparams, ob.ListSize()); i++ {
+		for i := 0; i < ints.Min(int(ps.Nparams), ob.ListSize()); i++ {
 			args[i] = ob.ListGet(i)
 		}
 		// named members may overwrite unnamed (same as when passed individually)
-		for i := 0; i < ps.Nparams; i++ {
+		for i := 0; i < int(ps.Nparams); i++ {
 			if x := ob.Get(SuStr(ps.Names[i])); x != nil {
 				args[i] = x
 			}
@@ -97,8 +97,8 @@ func (t *Thread) massage(ps *ParamSpec, as *ArgSpec, args []Value) {
 		}
 		// move applicable named args back to correct position
 		for si, ni := range as.Spec {
-			for i := 0; i < ps.Nparams; i++ {
-				if as.Names[ni] == ps.Names[i] {
+			for i := 0; i < int(ps.Nparams); i++ {
+				if as.Names[ni] == SuStr(ps.Names[i]) {
 					args[i] = tmp[si]
 				}
 			}
@@ -106,7 +106,7 @@ func (t *Thread) massage(ps *ParamSpec, as *ArgSpec, args []Value) {
 	}
 
 	// fill in dynamic
-	for i := 0; i < ps.Nparams; i++ {
+	for i := 0; i < int(ps.Nparams); i++ {
 		if args[i] == nil && ps.Flags[i]&DynParam != 0 {
 			if x := t.dyn("_" + ps.Names[i]); x != nil {
 				args[i] = x
@@ -116,9 +116,9 @@ func (t *Thread) massage(ps *ParamSpec, as *ArgSpec, args []Value) {
 
 	// fill in defaults and check for missing
 	v := 0
-	for i := int(as.Unnamed); i < ps.Nparams; i++ {
+	for i := int(as.Unnamed); i < int(ps.Nparams); i++ {
 		if args[i] == nil {
-			if i >= ps.Nparams-ps.Ndefaults {
+			if i >= int(ps.Nparams-ps.Ndefaults) {
 				args[i] = ps.Values[v]
 				v++
 			} else {
