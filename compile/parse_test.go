@@ -97,7 +97,7 @@ func TestParseExpression(t *testing.T) {
 	test("a = 123", "(EQ a 123)")
 	test("a = b = c", "(EQ a (EQ b c))")
 	test("a += 123", "(ADDEQ a 123)")
-	test("+ - ! ~ x", "(ADD (SUB (NOT (BITNOT x))))")
+	test("+ - not ~ x", "(ADD (SUB (NOT (BITNOT x))))")
 	test("+f()", "(ADD (call f))")
 	test("not f()", "(NOT (call f))")
 

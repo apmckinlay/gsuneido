@@ -8,8 +8,15 @@ package lexer
 type Token uint8
 
 // Keyword returns the token for a string it is a keyword, else NIL
-func Keyword(s string) Token {
-	return keywords[s]
+func Keyword(s string) (Token, string) {
+	if 2 <= len(s) && len(s) <= 8 && s[0] >= 'a' {
+		for _, pair := range keywords {
+			if pair.kw == s {
+				return pair.tok, pair.kw
+			}
+		}
+	}
+	return NIL, s
 }
 
 // Str returns a name for tokens that do not have a string value
@@ -123,34 +130,67 @@ const (
 
 const Ntokens = int(WHILE + 1)
 
-var keywords = map[string]Token{
-	"and":      AND,
-	"break":    BREAK,
-	"case":     CASE,
-	"catch":    CATCH,
-	"class":    CLASS,
-	"continue": CONTINUE,
-	"default":  DEFAULT,
-	"do":       DO,
-	"else":     ELSE,
-	"false":    FALSE,
-	"for":      FOR,
-	"forever":  FOREVER,
-	"function": FUNCTION,
-	"if":       IF,
-	"in":       IN,
-	"is":       IS,
-	"isnt":     ISNT,
-	"new":      NEW,
-	"not":      NOT,
-	"or":       OR,
-	"return":   RETURN,
-	"super":    SUPER,
-	"switch":   SWITCH,
-	"this":     THIS,
-	"throw":    THROW,
-	"true":     TRUE,
-	"try":      TRY,
-	"while":    WHILE,
-	"xor":      ISNT,
+// keywords doesn't use a map because we want to use the keyword string literals
+// ordered by frequency of use
+var keywords = []struct {
+	kw  string
+	tok Token
+}{
+	{"return", RETURN},
+	{"if", IF},
+	{"false", FALSE},
+	{"is", IS},
+	{"true", TRUE},
+	{"isnt", ISNT},
+	{"and", AND},
+	{"function", FUNCTION},
+	{"for", FOR},
+	{"in", IN},
+	{"not", NOT},
+	{"super", SUPER},
+	{"or", OR},
+	{"else", ELSE},
+	{"class", CLASS},
+	{"this", THIS},
+	{"case", CASE},
+	{"new", NEW},
+	{"continue", CONTINUE},
+	{"throw", THROW},
+	{"try", TRY},
+	{"catch", CATCH},
+	{"while", WHILE},
+	{"break", BREAK},
+	{"switch", SWITCH},
+	{"default", DEFAULT},
+	{"do", DO},
+	{"forever", FOREVER},
+}
+
+var IsIdent = [Ntokens]bool{
+	IDENTIFIER: true,
+	AND:        true,
+	OR:         true,
+	NOT:        true,
+	IN:         true,
+	BREAK:      true,
+	CASE:       true,
+	CATCH:      true,
+	CLASS:      true,
+	CONTINUE:   true,
+	DEFAULT:    true,
+	DO:         true,
+	ELSE:       true,
+	FALSE:      true,
+	FOR:        true,
+	FOREVER:    true,
+	FUNCTION:   true,
+	IF:         true,
+	RETURN:     true,
+	SWITCH:     true,
+	SUPER:      true,
+	THIS:       true,
+	THROW:      true,
+	TRUE:       true,
+	TRY:        true,
+	WHILE:      true,
 }

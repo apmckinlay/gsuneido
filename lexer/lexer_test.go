@@ -7,7 +7,9 @@ import (
 )
 
 func TestKeywords(t *testing.T) {
-	Assert(t).That(Keyword("forever"), Equals(FOREVER))
+	tok, val := Keyword("forever")
+	Assert(t).That(tok, Equals(FOREVER))
+	Assert(t).That(val, Equals("forever"))
 }
 
 func TestLexer(t *testing.T) {
@@ -59,8 +61,8 @@ func TestLexer(t *testing.T) {
 		else for forever function if is isnt or not
 		new switch super return throw try while
 		true false
-		== = =~ ~ != !~ ! <<= << <> <= <
-		>>= >> >= > || |= | && &= &
+		== = =~ ~ != !~ <<= << <> <= <
+		>>= >> >= > |= | &= &
 		^= ^ -- -= - ++ += + /= /
 		*= * %= % $= $ name _name name123 'single'
 		"double" 123 123name .name  Name Name123 name? 1$2 +1 num=1
@@ -69,9 +71,9 @@ func TestLexer(t *testing.T) {
 		ELSE, FOR, FOREVER, FUNCTION, IF, IS, ISNT, OR, NOT,
 		NEW, SWITCH, SUPER, RETURN, THROW, TRY, WHILE,
 		TRUE, FALSE,
-		IS, EQ, MATCH, BITNOT, ISNT, MATCHNOT, NOT, LSHIFTEQ, LSHIFT,
-		ISNT, LTE, LT, RSHIFTEQ, RSHIFT, GTE, GT, OR, BITOREQ, BITOR,
-		AND, BITANDEQ, BITAND, BITXOREQ, BITXOR, DEC, SUBEQ, SUB, INC,
+		IS, EQ, MATCH, BITNOT, ISNT, MATCHNOT, LSHIFTEQ, LSHIFT,
+		ISNT, LTE, LT, RSHIFTEQ, RSHIFT, GTE, GT, BITOREQ, BITOR,
+		BITANDEQ, BITAND, BITXOREQ, BITXOR, DEC, SUBEQ, SUB, INC,
 		ADDEQ, ADD, DIVEQ, DIV, MULEQ, MUL, MODEQ, MOD, CATEQ, CAT,
 		IDENTIFIER, IDENTIFIER, IDENTIFIER, STRING, STRING, NUMBER,
 		NUMBER, IDENTIFIER, DOT, IDENTIFIER, IDENTIFIER, IDENTIFIER,

@@ -20,7 +20,7 @@ func Constant(src string) Value {
 }
 
 func (p *parser) constant() Value {
-	switch p.Token {
+	switch p.KeyTok() {
 	case STRING:
 		return p.string()
 	case ADD:
@@ -40,23 +40,21 @@ func (p *parser) constant() Value {
 			return p.date()
 		case L_PAREN, L_CURLY, L_BRACKET:
 			return p.object()
-		default:
-			panic("not implemented #" + p.Text)
 		}
-	case IDENTIFIER:
-		switch p.Keyword {
-		case TRUE:
-			p.next()
-			return True
-		case FALSE:
-			p.next()
-			return False
-		case FUNCTION:
-			ast := p.function()
-			return codegen(ast)
-		case CLASS:
-			return p.class()
-		default:
+		panic("not implemented #" + p.Text)
+	case TRUE:
+		p.next()
+		return True
+	case FALSE:
+		p.next()
+		return False
+	case FUNCTION:
+		ast := p.function()
+		return codegen(ast)
+	case CLASS:
+		return p.class()
+	default:
+		if p.Token == IDENTIFIER {
 			if okBase(p.Text) && p.lxr.AheadSkip(0).Token == L_CURLY {
 				return p.class()
 			}

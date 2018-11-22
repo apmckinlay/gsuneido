@@ -131,21 +131,14 @@ func (lxr *Lexer) next() Item {
 		}
 		return it(COLON)
 	case '=':
-		if lxr.match('=') {
-			return it(IS)
-		}
 		if lxr.match('~') {
 			return it(MATCH)
 		}
 		return it(EQ)
 	case '!':
-		if lxr.match('=') {
-			return it(ISNT)
-		}
 		if lxr.match('~') {
 			return it(MATCHNOT)
 		}
-		return it(NOT)
 	case '<':
 		if lxr.match('<') {
 			if lxr.match('=') {
@@ -172,17 +165,11 @@ func (lxr *Lexer) next() Item {
 		}
 		return it(GT)
 	case '|':
-		if lxr.match('|') {
-			return it(OR)
-		}
 		if lxr.match('=') {
 			return it(BITOREQ)
 		}
 		return it(BITOR)
 	case '&':
-		if lxr.match('&') {
-			return it(AND)
-		}
 		if lxr.match('=') {
 			return it(BITANDEQ)
 		}
@@ -398,7 +385,7 @@ func (lxr *Lexer) identifier(start int) Item {
 	val := lxr.src[start:lxr.si]
 	keyword := NIL
 	if lxr.peek() != ':' || val == "default" || val == "true" || val == "false" {
-		keyword = Keyword(val)
+		keyword, val = Keyword(val)
 	}
 	return Item{val, int32(start), IDENTIFIER, keyword}
 }

@@ -83,8 +83,10 @@ func (p *parser) next() {
 			break
 		}
 	}
-	if p.Token == STRING && p.Keyword != STRING {
-		// make a copy of strings that are slices of the source
+	if (p.Token == STRING && p.Keyword != STRING) ||
+		(p.Token == IDENTIFIER && p.Keyword == NIL) {
+		// make a copy of text that is a slice of the source
+		// so we don't hold reference to source and prevent garbage collection
 		p.Text = " " + p.Text
 		p.Text = p.Text[1:]
 	}
