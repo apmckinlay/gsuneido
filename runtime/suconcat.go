@@ -98,14 +98,16 @@ func (SuConcat) Put(Value, Value) {
 	panic("strings do not support put")
 }
 
-func (c SuConcat) RangeTo(i int, j int) Value {
-	// TODO prep indexes
-	return SuStr(c.ToStr()[i:j])
+func (c SuConcat) RangeTo(from int, to int) Value {
+	from = prepFrom(from, c.n)
+	to = prepTo(from, to, c.n)
+	return SuStr(c.ToStr()[from:to])
 }
 
-func (c SuConcat) RangeLen(i int, n int) Value {
-	// TODO prep indexes
-	return SuStr(c.ToStr()[i : i+n])
+func (c SuConcat) RangeLen(from int, n int) Value {
+	from = prepFrom(from, c.n)
+	n = prepLen(n, c.n-from)
+	return SuStr(c.ToStr()[from : from+n])
 }
 
 // Hash returns a hash value for an SuConcat (Value interface)
