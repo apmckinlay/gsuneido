@@ -317,7 +317,7 @@ func (t *Thread) Run() Value {
 			self := t.stack[base]
 			if methstr, ok := method.(SuStr); ok {
 				if f := self.Lookup(string(methstr)); f != nil {
-					result := f.Call2(t, self, t.stack[base])
+					result := f.Call2(t, self, t.stack[base+1])
 					t.sp = base
 					t.Push(result)
 					break
