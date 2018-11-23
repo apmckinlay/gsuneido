@@ -36,7 +36,7 @@ func TestParseExpression(t *testing.T) {
 	xtest("++123", "lvalue required")
 	xtest("123--", "lvalue required")
 	xtest("++123--", "lvalue required")
-	xtest("a.''", "expecting IDENTIFIER")
+	xtest("a.''", "expecting identifier")
 	xtest("f(a:, b:, 'a':)", "duplicate argument name")
 	xtest("f(a:, b:, :b)", "duplicate argument name")
 	xtest("f(1, 2, a:, b: 3, 4", "un-named arguments must come before named arguments")

@@ -7,7 +7,8 @@ package lexer
 // Token is returned by Lexer to identify the type of token
 type Token uint8
 
-// Keyword returns the token for a string it is a keyword, else NIL
+// Keyword returns the token for a string it is a keyword
+// otherwise IDENTIFIER and a copy of the string
 func Keyword(s string) (Token, string) {
 	if 2 <= len(s) && len(s) <= 8 && s[0] >= 'a' {
 		for _, pair := range keywords {
@@ -16,7 +17,7 @@ func Keyword(s string) (Token, string) {
 			}
 		}
 	}
-	return NIL, s
+	return IDENTIFIER, dup(s)
 }
 
 // Str returns a name for tokens that do not have a string value
@@ -169,9 +170,6 @@ var keywords = []struct {
 var IsIdent = [Ntokens]bool{
 	IDENTIFIER: true,
 	AND:        true,
-	OR:         true,
-	NOT:        true,
-	IN:         true,
 	BREAK:      true,
 	CASE:       true,
 	CATCH:      true,
@@ -185,6 +183,12 @@ var IsIdent = [Ntokens]bool{
 	FOREVER:    true,
 	FUNCTION:   true,
 	IF:         true,
+	IN:         true,
+	IS:			true,
+	ISNT:		true,
+	NEW:		true,
+	NOT:        true,
+	OR:         true,
 	RETURN:     true,
 	SWITCH:     true,
 	SUPER:      true,

@@ -52,8 +52,15 @@ func (p *parser) match(tok Token) {
 	p.next()
 }
 
+func (p *parser) matchIdent() {
+	if !IsIdent[p.Token] {
+		p.error("expecting identifier")
+	}
+	p.next()
+}
+
 func (p *parser) matchIf(tok Token) bool {
-	if p.isMatch(tok) {
+	if tok == p.Token {
 		p.next()
 		return true
 	}
@@ -61,13 +68,9 @@ func (p *parser) matchIf(tok Token) bool {
 }
 
 func (p *parser) mustMatch(tok Token) {
-	if !p.isMatch(tok) {
+	if tok != p.Token {
 		p.error("expecting ", tok)
 	}
-}
-
-func (p *parser) isMatch(tok Token) bool {
-	return tok == p.Token || tok == p.Keyword
 }
 
 // next advances to the next token, setting p.Item

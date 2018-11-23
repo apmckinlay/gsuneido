@@ -123,7 +123,7 @@ func runCase(test testfn, row []string) (ok bool) {
 }
 
 func (p *parser) match(expected c.Token, skip bool) {
-	if p.Token != expected && p.Keyword != expected {
+	if p.Token != expected {
 		panic("syntax error on " + p.Text)
 	}
 	p.next(skip)

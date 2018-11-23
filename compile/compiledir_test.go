@@ -8,6 +8,7 @@ package compile
 // run with: go test -tags slow -run TestCompileDir
 
 import (
+	"fmt"
 	iou "io/ioutil"
 	"os"
 	filepath "path/filepath"
@@ -17,8 +18,11 @@ import (
 )
 
 func TestCompileDir(*testing.T) {
-	filepath.Walk("../../stdlib", walk)
+	filepath.Walk("../../libs", walk)
+	fmt.Println("TOTAL SIZE", totalSize)
 }
+
+var totalSize = 0
 
 func walk(path string, info os.FileInfo, err error) error {
 	if err != nil {
@@ -40,6 +44,7 @@ func walk(path string, info os.FileInfo, err error) error {
 		strings.Contains(text, "callback") {
 		return nil
 	}
+	totalSize += len(text)
 	Constant(text)
 	// e := Catch(func() { Constant(text) })
 	// if e != nil {

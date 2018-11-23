@@ -21,20 +21,10 @@ func NewLexer(src string) *Lexer {
 }
 
 // Item is the return value from Lexer.Next
-// For keywords, Token is IDENTIFIER, Keyword is the particular keyword token.
 type Item struct {
 	Text    string
 	Pos     int32
 	Token   Token
-	Keyword Token
-}
-
-// KeyTok returns Keyword if set, else Token
-func (it *Item) KeyTok() Token {
-	if it.Keyword != NIL {
-		return it.Keyword
-	}
-	return it.Token
 }
 
 func (it *Item) String() string {
@@ -99,7 +89,7 @@ func (lxr *Lexer) next() Item {
 		if p := lxr.peek(); p == '_' || IsLetter(p) {
 			lxr.matchIdentTail()
 			val := lxr.src[start+1 : lxr.si]
-			return Item{val, int32(start), STRING, NIL}
+			return Item{val, int32(start), STRING}
 		}
 		return it(HASH)
 	case '(':
@@ -245,7 +235,7 @@ func (lxr *Lexer) next() Item {
 }
 
 func it(tok Token, pos int, txt string) Item {
-	return Item{txt, int32(pos), tok, NIL}
+	return Item{txt, int32(pos), tok}
 }
 
 func (lxr *Lexer) whitespace(start int, c byte) Item {
@@ -388,14 +378,11 @@ func (lxr *Lexer) nonWhiteRemaining() bool {
 func (lxr *Lexer) identifier(start int) Item {
 	lxr.matchIdentTail()
 	val := lxr.src[start:lxr.si]
-	keyword := NIL
+	token := IDENTIFIER
 	if lxr.peek() != ':' || val == "default" || val == "true" || val == "false" {
-		keyword, val = Keyword(val)
+		token, val = Keyword(val)
 	}
-	if keyword == NIL {
-		val = dup(val)
-	}
-	return Item{val, int32(start), IDENTIFIER, keyword}
+	return Item{val, int32(start), token}
 }
 
 func (lxr *Lexer) matchIdentTail() {

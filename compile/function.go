@@ -21,8 +21,7 @@ func (p *parser) function() *ast.Function {
 
 func (p *parser) functionWithoutKeyword(inClass bool) *ast.Function {
 	it := p.Item
-	it.Token = IDENTIFIER
-	it.Keyword = FUNCTION
+	it.Token = FUNCTION
 	it.Text = "function"
 	params := p.params(inClass)
 	body := p.compound()
@@ -34,7 +33,7 @@ func (p *parser) params(inClass bool) []ast.Param {
 	var params []ast.Param
 	if p.matchIf(AT) {
 		params = append(params, ast.Param{Name: "@" + p.Text})
-		p.match(IDENTIFIER)
+		p.matchIdent()
 	} else {
 		defs := false
 		for p.Token != R_PAREN {
@@ -46,7 +45,7 @@ func (p *parser) params(inClass bool) []ast.Param {
 				}
 				name = "." + name
 			}
-			p.match(IDENTIFIER)
+			p.matchIdent()
 			p.checkForDupParam(params, name)
 			if p.matchIf(EQ) {
 				defs = true
@@ -102,7 +101,7 @@ func (p *parser) statement() ast.Statement {
 }
 
 func (p *parser) statement2() ast.Statement {
-	tok := p.KeyTok()
+	tok := p.Token
 	switch tok {
 	case SEMICOLON:
 		p.next()
@@ -196,7 +195,7 @@ func (p *parser) switchCase() ast.Case {
 func (p *parser) switchBody() []ast.Statement {
 	p.match(COLON)
 	var stmts []ast.Statement
-	for p.Token != R_CURLY && p.Keyword != CASE && p.Keyword != DEFAULT {
+	for p.Token != R_CURLY && p.Token != CASE && p.Token != DEFAULT {
 		stmts = append(stmts, p.statement())
 	}
 	return stmts
@@ -235,16 +234,16 @@ func (p *parser) isForIn() bool {
 	if p.lxr.AheadSkip(i).Token == L_PAREN {
 		i++
 	}
-	if p.lxr.AheadSkip(i).Token != IDENTIFIER {
+	if !IsIdent[p.lxr.AheadSkip(i).Token] {
 		return false
 	}
-	return p.lxr.AheadSkip(i+1).Keyword == IN
+	return p.lxr.AheadSkip(i+1).Token == IN
 }
 
 func (p *parser) forIn() *ast.ForIn {
 	parens := p.matchIf(L_PAREN)
 	id := p.Text
-	p.match(IDENTIFIER)
+	p.matchIdent()
 	p.match(IN)
 	expr := p.exprExpecting(!parens)
 	if parens {
@@ -320,7 +319,7 @@ func (p *parser) tryStmt() *ast.TryCatch {
 	if p.matchIf(CATCH) {
 		if p.matchIf(L_PAREN) {
 			catchVar = p.Text
-			p.match(IDENTIFIER)
+			p.matchIdent()
 			if p.matchIf(COMMA) {
 				catchFilter = p.Text
 				p.match(STRING)

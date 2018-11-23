@@ -19,8 +19,8 @@ func (p *parser) pcExpr(minprec int8) ast.Expr {
 	e := p.atom()
 	// fmt.Println("pcExpr minprec", minprec, "atom", e)
 	for p.Token != EOF {
-		kt := p.KeyTok()
-		prec := precedence[kt]
+		tok := p.Token
+		prec := precedence[tok]
 		// fmt.Println("loop ", p.Item, "prec", prec)
 		if prec < minprec {
 			break
@@ -30,22 +30,22 @@ func (p *parser) pcExpr(minprec int8) ast.Expr {
 		}
 		p.next()
 		switch {
-		case kt == DOT:
+		case tok == DOT:
 			id := p.Text
-			p.match(IDENTIFIER)
+			p.matchIdent()
 			e = p.Mem(e, p.Constant(SuStr(id)))
 			if p.Token == L_CURLY && !p.expectingCompound { // a.F { }
 				e = p.Call(e, p.arguments(p.Token))
 			}
-		case kt == INC || kt == DEC: // postfix
+		case tok == INC || tok == DEC: // postfix
 			ckLvalue(e)
-			e = p.Unary(kt+1, e) // +1 must be POSTINC/DEC
-		case kt == IN:
+			e = p.Unary(tok+1, e) // +1 must be POSTINC/DEC
+		case tok == IN:
 			e = p.in(e)
-		case kt == NOT:
+		case tok == NOT:
 			p.match(IN)
 			e = p.Unary(NOT, p.in(e))
-		case kt == L_BRACKET:
+		case tok == L_BRACKET:
 			var expr ast.Expr
 			if p.Token == RANGETO || p.Token == RANGELEN {
 				expr = nil
@@ -70,31 +70,31 @@ func (p *parser) pcExpr(minprec int8) ast.Expr {
 				e = p.Mem(e, expr)
 			}
 			p.match(R_BRACKET)
-		case ASSIGN_START < kt && kt < ASSIGN_END:
+		case ASSIGN_START < tok && tok < ASSIGN_END:
 			ckLvalue(e)
 			rhs := p.expr()
-			e = p.Binary(e, kt, rhs)
-		case kt == Q_MARK:
+			e = p.Binary(e, tok, rhs)
+		case tok == Q_MARK:
 			t := p.expr()
 			p.match(COLON)
 			f := p.expr()
 			e = p.Trinary(e, t, f)
-		case kt == L_PAREN: // function call
-			e = p.Call(e, p.arguments(kt))
-		case ASSOC_START < kt && kt < ASSOC_END:
+		case tok == L_PAREN: // function call
+			e = p.Call(e, p.arguments(tok))
+		case ASSOC_START < tok && tok < ASSOC_END:
 			// for associative operators, collect a list of contiguous
 			es := []ast.Expr{e}
-			listtype := flip(kt)
+			listtype := flip(tok)
 			for {
 				rhs := p.pcExpr(prec + 1) // +1 for left associative
 				// invert SUB and DIV to combine as ADD and MUL
-				if kt == SUB || kt == DIV {
-					rhs = p.Unary(kt, rhs)
+				if tok == SUB || tok == DIV {
+					rhs = p.Unary(tok, rhs)
 				}
 				es = append(es, rhs)
 
-				kt = p.KeyTok()
-				if !p.same(listtype, kt) {
+				tok = p.Token
+				if !p.same(listtype, tok) {
 					break
 				}
 				p.next()
@@ -102,7 +102,7 @@ func (p *parser) pcExpr(minprec int8) ast.Expr {
 			e = p.Nary(listtype, es)
 		default: // other left associative binary operators
 			rhs := p.pcExpr(prec + 1) // +1 for left associative
-			e = p.Binary(e, kt, rhs)
+			e = p.Binary(e, tok, rhs)
 		}
 	}
 	return e
@@ -153,7 +153,7 @@ func (p *parser) same(listtype Token, next Token) bool {
 }
 
 func (p *parser) atom() ast.Expr {
-	switch it := p.KeyTok(); it {
+	switch tok := p.Token; tok {
 	case TRUE, FALSE, NUMBER, STRING, HASH:
 		return p.Constant(p.constant())
 	case L_PAREN:
@@ -167,12 +167,12 @@ func (p *parser) atom() ast.Expr {
 		return p.record()
 	case ADD, SUB, NOT, BITNOT:
 		p.next()
-		return p.Unary(it, p.pcExpr(precedence[L_PAREN]))
+		return p.Unary(tok, p.pcExpr(precedence[L_PAREN]))
 	case INC, DEC:
 		p.next()
 		e := p.pcExpr(precedence[DOT])
 		ckLvalue(e)
-		return p.Unary(it, e)
+		return p.Unary(tok, e)
 	case DOT: // unary, i.e. implicit "this"
 		// does not absorb DOT
 		p.newline = false
@@ -192,7 +192,7 @@ func (p *parser) atom() ast.Expr {
 		}
 		return p.Call(expr, args)
 	default:
-		if p.Token == IDENTIFIER {
+		if IsIdent[p.Token] {
 			// MyClass { ... } => class
 			if !p.expectingCompound &&
 				okBase(p.Text) && p.lxr.AheadSkip(0).Token == L_CURLY {
@@ -314,7 +314,7 @@ func (p *parser) argumentList(closing Token) []ast.Arg {
 		if p.matchIf(COLON) {
 			handlePending(p.Constant(True))
 			named(SuStr(p.Text), p.Ident(p.Text))
-			p.match(IDENTIFIER)
+			p.matchIdent()
 		} else {
 			expr = p.expr() // could be name or value
 			if name := p.argname(expr); name != nil && p.matchIf(COLON) {
@@ -365,11 +365,11 @@ func (p *parser) blockParams() []ast.Param {
 	if p.matchIf(BITOR) {
 		if p.matchIf(AT) {
 			params = append(params, ast.Param{Name: "@" + p.Text})
-			p.match(IDENTIFIER)
+			p.matchIdent()
 		} else {
-			for p.Token == IDENTIFIER {
+			for IsIdent[p.Token] {
 				params = append(params, ast.Param{Name: p.Text})
-				p.match(IDENTIFIER)
+				p.matchIdent()
 				p.matchIf(COMMA)
 			}
 		}

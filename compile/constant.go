@@ -20,7 +20,7 @@ func Constant(src string) Value {
 }
 
 func (p *parser) constant() Value {
-	switch p.KeyTok() {
+	switch p.Token {
 	case STRING:
 		return p.string()
 	case ADD:
@@ -54,7 +54,7 @@ func (p *parser) constant() Value {
 	case CLASS:
 		return p.class()
 	default:
-		if p.Token == IDENTIFIER {
+		if IsIdent[p.Token] {
 			if okBase(p.Text) && p.lxr.AheadSkip(0).Token == L_CURLY {
 				return p.class()
 			}
@@ -133,7 +133,7 @@ func (p *parser) memberList(ob container, closing Token, inClass bool) {
 func (p *parser) member(ob container, closing Token, inClass bool) {
 	start := p.Token
 	m := p.constant()
-	if inClass && start == IDENTIFIER && p.Token == L_PAREN {
+	if inClass && IsIdent[start] && p.Token == L_PAREN {
 		fn := codegen(p.functionWithoutKeyword(true))
 		p.putMem(ob, m, fn)
 	} else if p.matchIf(COLON) {
@@ -158,7 +158,7 @@ func (p *parser) putMem(ob container, m Value, v Value) {
 // class parses a class definition
 // like object, it builds a value rather than an ast
 func (p *parser) class() Value {
-	if p.Keyword == CLASS {
+	if p.Token == CLASS {
 		p.match(CLASS)
 		if p.Token == COLON {
 			p.match(COLON)
@@ -167,7 +167,7 @@ func (p *parser) class() Value {
 	var base string
 	if p.Token == IDENTIFIER {
 		base = p.ckBase(p.Text)
-		p.match(IDENTIFIER)
+		p.matchIdent()
 	}
 	p.match(L_CURLY)
 	mems := classcon{}

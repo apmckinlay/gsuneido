@@ -7,32 +7,38 @@ import (
 )
 
 func TestKeywords(t *testing.T) {
-	tok, val := Keyword("forever")
-	Assert(t).That(tok, Equals(FOREVER))
-	Assert(t).That(val, Equals("forever"))
+	test := func(id string, expected Token) {
+		t.Helper()
+		tok, val := Keyword(id)
+		Assert(t).That(tok, Equals(expected))
+		Assert(t).That(val, Equals(id))
+	}
+	test("return", RETURN)
+	test("forever", FOREVER)
+	test("foo", IDENTIFIER)
 }
 
 func TestLexer(t *testing.T) {
-	first := func(src string, text string, id, kw Token) {
+	first := func(src string, text string, tok Token) {
 		t.Helper()
 		Assert(t).That(NewLexer(src).Next(),
-			Equals(Item{text, 0, id, kw}))
+			Equals(Item{text, 0, tok}))
 	}
-	first("function", "function", IDENTIFIER, FUNCTION)
-	first("foo", "foo", IDENTIFIER, NIL)
-	first("#foo", "foo", STRING, NIL)
-	first("#_foo?", "_foo?", STRING, NIL)
-	first("is", "is", IDENTIFIER, IS)
-	first("is:", "is", IDENTIFIER, NIL)
-	first("0xff", "0xff", NUMBER, NIL)
-	first("0xff.Chr()", "0xff", NUMBER, NIL)
-	first("0x8002 //foo", "0x8002", NUMBER, NIL)
-	first("'hello'", "hello", STRING, NIL)
-	first("'hello", "hello", STRING, NIL)
-	first("'foo\\'bar'", "foo'bar", STRING, NIL)
-	first(`"\"foo\""`, `"foo"`, STRING, NIL)
-	first("\\", "\\", ERROR, NIL)
-	first("//foo\nbar", "//foo", COMMENT, NIL) // not including newline
+	first("function", "function", FUNCTION)
+	first("foo", "foo", IDENTIFIER)
+	first("#foo", "foo", STRING)
+	first("#_foo?", "_foo?", STRING)
+	first("is", "is", IS)
+	first("is:", "is", IDENTIFIER)
+	first("0xff", "0xff", NUMBER)
+	first("0xff.Chr()", "0xff", NUMBER)
+	first("0x8002 //foo", "0x8002", NUMBER)
+	first("'hello'", "hello", STRING)
+	first("'hello", "hello", STRING)
+	first("'foo\\'bar'", "foo'bar", STRING)
+	first(`"\"foo\""`, `"foo"`, STRING)
+	first("\\", "\\", ERROR)
+	first("//foo\nbar", "//foo", COMMENT) // not including newline
 
 	check := func(source string, expected ...Token) {
 		t.Helper()
@@ -45,7 +51,7 @@ func TestLexer(t *testing.T) {
 			} else if item.Token == WHITESPACE || item.Token == NEWLINE {
 				continue
 			}
-			Assert(t).That(item.KeyTok(), Equals(expected[i]).Comment(i, item))
+			Assert(t).That(item.Token, Equals(expected[i]).Comment(i, item))
 			i++
 		}
 		Assert(t).That(lexer.Next().Token, Equals(EOF).Comment("didn't consume input"))
