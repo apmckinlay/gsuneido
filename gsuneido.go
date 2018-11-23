@@ -55,7 +55,7 @@ func eval(src string) {
 	result := th.Call(fn)
 	fmt.Print(">>> ", result)
 	if result != nil {
-		fmt.Print(" <" + result.TypeName() + ">")
+		fmt.Printf(" <%s %T>", result.TypeName(), result)
 	}
 	fmt.Println()
 	fmt.Println()
