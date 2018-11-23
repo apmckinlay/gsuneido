@@ -22,13 +22,11 @@ func NewLexer(src string) *Lexer {
 
 // Item is the return value from Lexer.Next
 // For keywords, Token is IDENTIFIER, Keyword is the particular keyword token.
-// When Token is STRING, if Keyword is STRING it means Text is not a slice of the source.
 type Item struct {
 	Text    string
 	Pos     int32
 	Token   Token
-	Keyword Token //TODO maybe make this KeyTok ???
-	// NOTE: put Token's last to reduce padding
+	Keyword Token
 }
 
 // KeyTok returns Keyword if set, else Token
@@ -91,7 +89,8 @@ func (lxr *Lexer) next() Item {
 	start := lxr.si
 	c := lxr.read()
 	it := func(tok Token) Item {
-		return Item{lxr.src[start:lxr.si], int32(start), tok, NIL}
+		// compiler doesn't need Text, but Suneido Scanner does
+		return Item{Pos: int32(start), Token: tok, Text: lxr.src[start:lxr.si]}
 	}
 	switch c {
 	case eof:
@@ -291,12 +290,12 @@ func (lxr *Lexer) quotedString(start int, quote byte) Item {
 	for i := 0; ; i++ {
 		if i >= len(src) {
 			lxr.si += len(src)
-			return it(STRING, start, src) // no closing quote
+			return it(STRING, start, dup(src)) // no closing quote
 		} else if src[i] == '\\' {
 			break
 		} else if src[i] == byte(quote) {
 			lxr.si += i + 1
-			return it(STRING, start, src[:i]) // no escapes
+			return it(STRING, start, dup(src[:i])) // no escapes
 		}
 	}
 	// have escapes so need to build new string
@@ -305,8 +304,14 @@ func (lxr *Lexer) quotedString(start int, quote byte) Item {
 		c = lxr.doesc(c)
 		buf.WriteByte(byte(c))
 	}
-	// keyword set to STRING means *not* referencing src
-	return Item{buf.String(), int32(start), STRING, STRING}
+	return Item{Text: buf.String(), Pos: int32(start), Token: STRING}
+}
+
+// dup is intended to make a copy of a string
+// so we don't hold a reference to the source and prevent garbage collection
+func dup(s string) string {
+	s = " " + s
+	return s[1:]
 }
 
 func (lxr *Lexer) doesc(c byte) byte {
@@ -386,6 +391,9 @@ func (lxr *Lexer) identifier(start int) Item {
 	keyword := NIL
 	if lxr.peek() != ':' || val == "default" || val == "true" || val == "false" {
 		keyword, val = Keyword(val)
+	}
+	if keyword == NIL {
+		val = dup(val)
 	}
 	return Item{val, int32(start), IDENTIFIER, keyword}
 }

@@ -57,7 +57,7 @@ func pt_compile(args []string) bool {
 		}
 	})
 	if e != nil {
-		if _,str := e.(string); !str {
+		if _, str := e.(string); !str {
 			fmt.Println(e)
 			ok = false
 		} else if expectedType != "throws" ||

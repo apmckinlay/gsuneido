@@ -29,8 +29,8 @@ func TestLexer(t *testing.T) {
 	first("0x8002 //foo", "0x8002", NUMBER, NIL)
 	first("'hello'", "hello", STRING, NIL)
 	first("'hello", "hello", STRING, NIL)
-	first("'foo\\'bar'", "foo'bar", STRING, STRING)
-	first(`"\"foo\""`, `"foo"`, STRING, STRING)
+	first("'foo\\'bar'", "foo'bar", STRING, NIL)
+	first(`"\"foo\""`, `"foo"`, STRING, NIL)
 	first("\\", "\\", ERROR, NIL)
 	first("//foo\nbar", "//foo", COMMENT, NIL) // not including newline
 
@@ -61,7 +61,7 @@ func TestLexer(t *testing.T) {
 		else for forever function if is isnt or not
 		new switch super return throw try while
 		true false
-		== = =~ ~ != !~ <<= << <> <= <
+		= =~ ~ !~ <<= << <> <= <
 		>>= >> >= > |= | &= &
 		^= ^ -- -= - ++ += + /= /
 		*= * %= % $= $ name _name name123 'single'
@@ -71,7 +71,7 @@ func TestLexer(t *testing.T) {
 		ELSE, FOR, FOREVER, FUNCTION, IF, IS, ISNT, OR, NOT,
 		NEW, SWITCH, SUPER, RETURN, THROW, TRY, WHILE,
 		TRUE, FALSE,
-		IS, EQ, MATCH, BITNOT, ISNT, MATCHNOT, LSHIFTEQ, LSHIFT,
+		EQ, MATCH, BITNOT, MATCHNOT, LSHIFTEQ, LSHIFT,
 		ISNT, LTE, LT, RSHIFTEQ, RSHIFT, GTE, GT, BITOREQ, BITOR,
 		BITANDEQ, BITAND, BITXOREQ, BITXOR, DEC, SUBEQ, SUB, INC,
 		ADDEQ, ADD, DIVEQ, DIV, MULEQ, MUL, MODEQ, MOD, CATEQ, CAT,

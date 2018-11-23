@@ -131,7 +131,7 @@ const (
 const Ntokens = int(WHILE + 1)
 
 // keywords doesn't use a map because we want to use the keyword string literals
-// ordered by frequency of use
+// ordered by frequency of use to optimize successful searches
 var keywords = []struct {
 	kw  string
 	tok Token

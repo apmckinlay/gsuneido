@@ -84,7 +84,7 @@ func (p *parser) runFixture() bool {
 			}
 			row = append(row, text)
 			p.next(false)
-			if p.Text == "," {
+			if p.Token == c.COMMA {
 				p.next(true)
 			}
 			if p.Token == c.EOF || p.Token == c.NEWLINE {
