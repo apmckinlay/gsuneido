@@ -17,6 +17,6 @@ func init() {
 				}
 				return self
 			}),
-		// TODO
+		// TODO more methods
 	}
 }

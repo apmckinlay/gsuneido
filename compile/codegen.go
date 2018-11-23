@@ -149,13 +149,13 @@ func (cg *cgen) statement(node ast.Node, labels *Labels, lastStmt bool) {
 	case *ast.For:
 		cg.forStmt(node)
 	case *ast.ForIn:
-		//TODO
+		//TODO for in
 	case *ast.Throw:
 		cg.expr(node.E)
 		cg.emit(op.THROW)
 	case *ast.TryCatch:
 		cg.emit(op.TRY)
-		//TODO
+		//TODO try catch
 	case *ast.Break:
 		if labels == nil {
 			panic("break can only be used within a loop")
@@ -315,7 +315,7 @@ func (cg *cgen) expr(node ast.Expr) {
 	case *ast.Call:
 		cg.call(node)
 	case *ast.Block:
-		//TODO
+		//TODO blocks
 	default:
 		panic("unhandled expression: " + fmt.Sprintf("%T", node))
 	}

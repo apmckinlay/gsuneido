@@ -146,6 +146,6 @@ func (*smi) Call(*Thread, *ArgSpec) Value {
 	panic("can't call Number")
 }
 
-func (*smi) Lookup(string) Callable {
-	return nil // TODO
+func (*smi) Lookup(string) Callable { // TODO
+	return nil
 }

@@ -108,13 +108,13 @@ func (t *Thread) Run() Value {
 		case RANGETO:
 			j := Index(t.Pop())
 			i := Index(t.Pop())
-			ob := t.Pop()
-			t.Push(ob.RangeTo(i, j))
+			val := t.Pop()
+			t.Push(val.RangeTo(i, j))
 		case RANGELEN:
 			n := Index(t.Pop())
 			i := Index(t.Pop())
-			ob := t.Pop()
-			t.Push(ob.RangeLen(i, n))
+			val := t.Pop()
+			t.Push(val.RangeLen(i, n))
 		case IS:
 			t.sp--
 			t.stack[t.sp-1] = Is(t.stack[t.sp-1], t.stack[t.sp])

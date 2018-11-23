@@ -117,8 +117,8 @@ func (SuDnum) Call(*Thread, *ArgSpec) Value {
 	panic("can't call Number")
 }
 
-func (SuDnum) Lookup(string) Callable {
-	return nil // TODO
+func (SuDnum) Lookup(string) Callable { // TODO
+	return nil
 }
 
 // Packing (old format) ---------------------------------------------

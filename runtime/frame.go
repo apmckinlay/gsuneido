@@ -8,5 +8,5 @@ type Frame struct {
 	ip int
 	// bp is the base pointer to the locals
 	bp   int
-	self Value //TODO
+	self Value //TODO self
 }

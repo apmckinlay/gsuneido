@@ -795,6 +795,6 @@ func (SuDate) Call(*Thread, *ArgSpec) Value {
 	panic("can't call Date")
 }
 
-func (SuDate) Lookup(string) Callable {
-	return nil // TODO
+func (SuDate) Lookup(string) Callable { // TODO
+	return nil
 }

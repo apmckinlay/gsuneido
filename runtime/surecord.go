@@ -1,6 +1,6 @@
 package runtime
 
-// TODO
+// TODO default, rules, observers, etc.
 
 // SuRecord is an SuObject with observers, rules, and default values
 type SuRecord struct {
