@@ -1,4 +1,4 @@
-// +xbuild slow
+// +build slow
 
 package compile
 
