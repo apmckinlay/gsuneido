@@ -508,6 +508,22 @@ func (dn Dnum) integer(mode RoundingMode) Dnum {
 	return Dnum{i, dn.sign, dn.exp} // TODO doesn't need to normalize
 }
 
+func (dn Dnum) Round(r int, mode RoundingMode) Dnum {
+	if dn.sign == 0 || dn.sign == signNegInf || dn.sign == signPosInf ||
+		r >= digitsMax {
+		return dn
+		}
+	if r <= -digitsMax {
+		return Zero
+	}
+	n := New(dn.sign, dn.coef, int(dn.exp) + r) // multiply by 10^r
+	n = n.integer(mode)
+	if n.sign == signPos || n.sign == signNeg { // i.e. not zero or inf
+		return New(n.sign, n.coef, int(n.exp) - r)
+	}
+	return n
+}
+
 // arithmetic operations -------------------------------------------------------
 
 // Neg returns the Dnum negated i.e. sign reversed

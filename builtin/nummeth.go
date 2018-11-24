@@ -14,7 +14,7 @@ var maxNarrow = dnum.FromInt(MaxSuInt)
 
 func init() {
 	NumMethods = Methods{
-		// TODO Format, Round, RoundDown, RoundUp
+		// TODO Format
 
 		"Chr": method0(func(self Value) Value {
 			n := self.ToInt()
@@ -38,6 +38,22 @@ func init() {
 		"Hex": method0(func(self Value) Value {
 			n := self.ToInt()
 			return SuStr(strconv.FormatInt(int64(n), 16))
+		}),
+
+		"Round": method1("(number)", func(self, arg Value) Value {
+			x := self.ToDnum()
+			r := arg.ToInt()
+			return SuDnum{x.Round(r, dnum.HALF_UP)}
+		}),
+		"RoundUp": method1("(number)", func(self, arg Value) Value {
+			x := self.ToDnum()
+			r := arg.ToInt()
+			return SuDnum{x.Round(r, dnum.UP)}
+		}),
+		"RoundDown": method1("(number)", func(self, arg Value) Value {
+			x := self.ToDnum()
+			r := arg.ToInt()
+			return SuDnum{x.Round(r, dnum.DOWN)}
 		}),
 
 		// float methods
