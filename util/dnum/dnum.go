@@ -125,6 +125,10 @@ func FromFloat(f float64) Dnum {
 	case math.IsNaN(f):
 		panic("dnum.FromFloat64 can't convert NaN")
 	}
+	n := int64(f)
+	if f == float64(n) {
+		return FromInt(n)
+	}
 	s := strconv.FormatFloat(f, 'g', -1, 64)
 	return FromStr(s)
 }
@@ -394,7 +398,7 @@ func (dn Dnum) ToFloat() float64 {
 	return g * e
 }
 
-// ToInt converts a Dnum to an int64 or panics if not convertable
+// ToInt converts a Dnum to an int64, returning whether it was convertible
 func (dn Dnum) ToInt64() (int64, bool) {
 	if dn.sign == 0 {
 		return 0, true
@@ -441,6 +445,59 @@ func (dn Dnum) Coef() uint64 {
 // Exp returns the exponent
 func (dn Dnum) Exp() int {
 	return int(dn.exp)
+}
+
+// Frac returns the fractional portion, i.e. x - x.Int()
+func (dn Dnum) Frac() Dnum {
+	if dn.sign == 0 || dn.sign == signNegInf || dn.sign == signPosInf ||
+		dn.exp >= digitsMax {
+		return Zero
+	}
+	if dn.exp <= 0 {
+		return dn
+	}
+	frac := dn.coef % pow10[digitsMax-dn.exp]
+	if frac == dn.coef {
+		return dn
+	}
+	return Dnum{frac, dn.sign, dn.exp}
+}
+
+type RoundingMode int
+
+const (
+	UP RoundingMode = iota
+	DOWN
+	HALF_UP
+)
+
+// Int returns the integer portion (truncating any fractional part)
+func (dn Dnum) Int() Dnum {
+	return dn.integer(DOWN)
+}
+
+func (dn Dnum) integer(mode RoundingMode) Dnum {
+	if dn.sign == 0 || dn.sign == signNegInf || dn.sign == signPosInf ||
+		dn.exp >= digitsMax {
+		return dn
+	}
+	if dn.exp <= 0 {
+		if mode == UP ||
+			(mode == HALF_UP && dn.exp == 0 && dn.coef >= One.coef*5) {
+			return New(dn.sign, One.coef, int(dn.exp)+1)
+		}
+		return Zero
+	}
+	e := digitsMax - dn.exp
+	frac := dn.coef % pow10[e]
+	if frac == 0 {
+		return dn
+	}
+	i := dn.coef - frac
+	if (mode == UP && frac > 0) || (mode == HALF_UP && frac >= halfpow10[e]) {
+		return New(dn.sign, i+pow10[e], int(dn.exp)) // normalize
+	}
+	return Dnum{i, dn.sign, dn.exp} // TODO doesn't need to normalize
 }
 
 // arithmetic operations -------------------------------------------------------

@@ -146,6 +146,12 @@ func (*smi) Call(*Thread, *ArgSpec) Value {
 	panic("can't call Number")
 }
 
-func (*smi) Lookup(string) Callable { // TODO
-	return nil
+// IntMethods is initialized by the builtin package
+var IntMethods Methods
+
+func (*smi) Lookup(method string) Callable {
+	if m := IntMethods[method]; m != nil {
+		return m
+	}
+	return NumMethods[method]
 }

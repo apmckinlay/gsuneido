@@ -117,8 +117,11 @@ func (SuDnum) Call(*Thread, *ArgSpec) Value {
 	panic("can't call Number")
 }
 
-func (SuDnum) Lookup(string) Callable { // TODO
-	return nil
+// DnumMethods is initialized by the builtin package
+var NumMethods Methods
+
+func (SuDnum) Lookup(method string) Callable {
+	return NumMethods[method]
 }
 
 // Packing (old format) ---------------------------------------------
