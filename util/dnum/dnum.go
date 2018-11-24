@@ -123,14 +123,22 @@ func FromFloat(f float64) Dnum {
 	case math.IsInf(f, -1):
 		return NegInf
 	case math.IsNaN(f):
-		panic("dnum.FromFloat64 can't convert NaN")
+		panic("dnum.FromFloat can't convert NaN")
 	}
+
 	n := int64(f)
 	if f == float64(n) {
 		return FromInt(n)
 	}
-	s := strconv.FormatFloat(f, 'g', -1, 64)
-	return FromStr(s)
+
+	sign := int8(signPos)
+	if f < 0 {
+		f = -f
+		sign = signNeg
+	}
+	e := int(math.Log10(f))
+	c := uint64(f / math.Pow(10, float64(e-16)))
+	return New(sign, c, e)
 }
 
 // New constructs a Dnum, maximizing coef and handling exp out of range

@@ -135,13 +135,25 @@ func Test_FromToFloat(t *testing.T) {
 		assert.That(FromFloat(f).ToFloat(), Equals(f))
 		assert.That(FromFloat(-f).ToFloat(), Equals(-f))
 	}
-	cvt(0.0)
-	cvt(123.0)
-	cvt(1.0 / 3.0)
-	cvt(123e3)
-	cvt(-123e-44)
+	// special cases
 	cvt(math.Inf(1))
 	cvt(math.Inf(-1))
+
+	// integer conversion
+	cvt(0.0)
+	cvt(123.0)
+	cvt(123e3)
+
+	// float conversion
+	cvt(.1234)
+	cvt(1.0 / 3.0)
+	cvt(123456789e99)
+	cvt(123456789e-99)
+
+	assert.That(FromFloat(1e200), Equals(Inf))
+	assert.That(FromFloat(-1e200), Equals(NegInf))
+	assert.That(FromFloat(1e-200), Equals(Zero))
+	assert.That(FromFloat(-1e-200), Equals(Zero))
 }
 
 func Test_Neg(t *testing.T) {
@@ -323,6 +335,14 @@ func BenchmarkDiv(b *testing.B) {
 		for i := 1; i < len(nums); i++ {
 			Div(nums[i-1], nums[i])
 		}
+	}
+}
+
+var Bff Dnum
+
+func BenchmarkFromFloat(b *testing.B) {
+	for n := 0; n < b.N; n++ {
+		Bff = FromFloat(123456e-99)
 	}
 }
 
