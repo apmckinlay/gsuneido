@@ -20,6 +20,9 @@ func init() {
 		"Has?": method1("(string)", func(self, arg Value) Value {
 			return SuBool(strings.Contains(self.ToStr(), arg.ToStr()))
 		}),
+		"Repeat": method1("(count)", func(self, arg Value) Value {
+			return SuStr(strings.Repeat(self.ToStr(), arg.ToInt()))
+		}),
 		// TODO more methods
 	}
 }
