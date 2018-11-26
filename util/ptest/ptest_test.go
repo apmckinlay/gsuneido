@@ -12,6 +12,6 @@ func init() {
 	Add("ptest", ptest)
 }
 
-func ptest(args []string) bool {
+func ptest(args []string, _ []bool) bool {
 	return args[0] == args[1]
 }

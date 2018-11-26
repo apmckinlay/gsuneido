@@ -37,7 +37,7 @@ func init() {
 		}),
 		"Hex": method0(func(self Value) Value {
 			n := self.ToInt()
-			return SuStr(strconv.FormatInt(int64(n), 16))
+			return SuStr(strconv.FormatUint(uint64(uint32(n)), 16))
 		}),
 
 		"Round": method1("(number)", func(self, arg Value) Value {

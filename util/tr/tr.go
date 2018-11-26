@@ -7,8 +7,6 @@ package tr
 
 import (
 	"strings"
-
-	"github.com/apmckinlay/gsuneido/util/ptest"
 )
 
 type trset string
@@ -127,13 +125,3 @@ func xindex(from trset, c byte, allbut bool, lastto int) int {
 	}
 	return i
 }
-
-// ptest support ---------------------------------------------------------------
-
-// pt_tr is a ptest for matching
-// usage: "string", "from", "to", "result"
-func pt_tr(args []string) bool {
-	return Replace(args[0], Set(args[1]), Set(args[2])) == args[3]
-}
-
-var _ = ptest.Add("tr", pt_tr)

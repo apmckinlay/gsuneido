@@ -31,7 +31,7 @@ func TestPtest(*testing.T) {
 	}
 }
 
-func pt_execute(args []string) bool {
+func pt_execute(args []string, _ []bool) bool {
 	//fmt.Println(args)
 	src := "function () {\n" + args[0] + "\n}"
 	th := NewThread()
@@ -70,7 +70,7 @@ func pt_execute(args []string) bool {
 	return ok
 }
 
-func pt_lang_rangeto(args []string) bool {
+func pt_lang_rangeto(args []string, _ []bool) bool {
 	s := args[0]
 	from, _ := strconv.Atoi(args[1])
 	to, _ := strconv.Atoi(args[2])
@@ -84,7 +84,7 @@ func pt_lang_rangeto(args []string) bool {
 	return true
 }
 
-func pt_lang_rangelen(args []string) bool {
+func pt_lang_rangelen(args []string, _ []bool) bool {
 	s := args[0]
 	from, _ := strconv.Atoi(args[1])
 	n := 9999

@@ -1,6 +1,13 @@
 // Package ints supplies miscellaneous functions for integers
 package ints
 
+const (
+	MinUint = uint(0)           // binary: all zeroes
+	MaxUint = ^MinUint          // binary: all ones
+	MaxInt  = int(MaxUint >> 1) // binary: all ones except high bit
+	MinInt  = ^MaxInt           // binary: all zeroes except high bit
+)
+
 // Fill sets all the elements of data to value
 func Fill(data []int, value int) {
 	for i := 0; i < len(data); i++ {

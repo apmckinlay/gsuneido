@@ -3,13 +3,11 @@ package dnum
 import (
 	"fmt"
 	"math"
-	"math/rand"
 	"testing"
 	"unsafe"
 
-	"github.com/apmckinlay/gsuneido/util/ptest"
-
 	. "github.com/apmckinlay/gsuneido/util/hamcrest"
+	"github.com/apmckinlay/gsuneido/util/ptest"
 )
 
 func Test_size(t *testing.T) {
@@ -95,6 +93,7 @@ func Test_FromToStr(t *testing.T) {
 	test(".00001")
 	test("1e20")
 	test("-1e-20")
+	test("1e18")
 }
 
 func Test_getExp(t *testing.T) {
@@ -117,6 +116,10 @@ func Test_FromToInt(t *testing.T) {
 	test(100)
 	test(123)
 	test(coefMax)
+	test(1e15)
+	test(1e16)
+	test(1e17)
+	test(1e18)
 }
 
 func Test_FromInt(t *testing.T) {
@@ -127,11 +130,31 @@ func Test_FromInt(t *testing.T) {
 	Assert(t).That(FromInt(-123), Equals(Dnum{1230000000000000, -1, 3}))
 	Assert(t).That(FromInt(coefMax), Equals(Dnum{coefMax, +1, 16}))
 	Assert(t).That(FromInt(-coefMax), Equals(Dnum{coefMax, -1, 16}))
+	Assert(t).That(FromInt(1000000000000000000),
+		Equals(Dnum{1000000000000000, +1, 19}))
+}
+
+func Test_ToInt(t *testing.T) {
+	test := func(n int) {
+		t.Helper()
+		n2, ok := FromInt(int64(n)).ToInt()
+		if !ok {
+			t.Error("ToInt", n, FromInt(int64(n)), "failed")
+		} else if n2 != n {
+			t.Error("expected:", n, "got:", n2)
+		}
+	}
+	test(0)
+	test(1)
+	test(-1)
+	test(math.MinInt32)
+	test(math.MaxInt32)
 }
 
 func Test_FromToFloat(t *testing.T) {
 	assert := Assert(t)
 	cvt := func(f float64) {
+		t.Helper()
 		assert.That(FromFloat(f).ToFloat(), Equals(f))
 		assert.That(FromFloat(-f).ToFloat(), Equals(-f))
 	}
@@ -149,6 +172,11 @@ func Test_FromToFloat(t *testing.T) {
 	cvt(1.0 / 3.0)
 	cvt(123456789e99)
 	cvt(123456789e-99)
+	cvt(1234567890123456e10)
+	cvt(1000000000000001)
+	for f := 1e15; f < 1e25; f *= 10 {
+		cvt(f)
+	}
 
 	assert.That(FromFloat(1e200), Equals(Inf))
 	assert.That(FromFloat(-1e200), Equals(NegInf))
@@ -313,7 +341,7 @@ func Test_Div(t *testing.T) {
 }
 
 // benchmarks (for 1000 operations) ---------------------------------
-
+/*
 func BenchmarkAdd(b *testing.B) {
 	for n := 0; n < b.N; n++ {
 		for i := 1; i < len(nums); i++ {
@@ -338,6 +366,15 @@ func BenchmarkDiv(b *testing.B) {
 	}
 }
 
+var nums [1000]Dnum
+
+func init() {
+	for i := 0; i < len(nums); i++ {
+		nums[i] = New(signPos, uint64(rand.Intn(1000000)), rand.Intn(9)-5)
+	}
+}
+*/
+
 var Bff Dnum
 
 func BenchmarkFromFloat(b *testing.B) {
@@ -346,19 +383,9 @@ func BenchmarkFromFloat(b *testing.B) {
 	}
 }
 
-var nums []Dnum
-
-func init() {
-	var a [1001]Dnum
-	for i := 0; i < len(a); i++ {
-		a[i] = New(signPos, uint64(rand.Intn(1000000)), rand.Intn(9)-5)
-	}
-	nums = a[:]
-}
-
 // portable tests ---------------------------------------------------
 
-func ptAdd(args []string) bool {
+func ptAdd(args []string, _ []bool) bool {
 	xn := FromStr(args[0])
 	yn := FromStr(args[1])
 	zn := FromStr(args[2])
@@ -367,7 +394,7 @@ func ptAdd(args []string) bool {
 
 var _ = ptest.Add("dnum_add", ptAdd)
 
-func ptSub(args []string) bool {
+func ptSub(args []string, _ []bool) bool {
 	xn := FromStr(args[0])
 	yn := FromStr(args[1])
 	zn := FromStr(args[2])
@@ -377,7 +404,7 @@ func ptSub(args []string) bool {
 
 var _ = ptest.Add("dnum_sub", ptSub)
 
-func ptMul(args []string) bool {
+func ptMul(args []string, _ []bool) bool {
 	xn := FromStr(args[0])
 	yn := FromStr(args[1])
 	zn := FromStr(args[2])
@@ -386,7 +413,7 @@ func ptMul(args []string) bool {
 
 var _ = ptest.Add("dnum_mul", ptMul)
 
-func ptDiv(args []string) bool {
+func ptDiv(args []string, _ []bool) bool {
 	xn := FromStr(args[0])
 	yn := FromStr(args[1])
 	zn := FromStr(args[2])
@@ -399,7 +426,7 @@ func ptDiv(args []string) bool {
 
 var _ = ptest.Add("dnum_div", ptDiv)
 
-func ptCompare(args []string) bool {
+func ptCompare(args []string, _ []bool) bool {
 	for i, xs := range args {
 		x := FromStr(xs)
 		if Compare(x, x) != 0 {

@@ -64,8 +64,11 @@ func (*SuClass) ToStr() string {
 	panic("cannot convert class to string")
 }
 
-func (*SuClass) Get(Value) Value {
-	panic("class get not implemented") //TODO
+func (c *SuClass) Get(m Value) Value {
+	if s,ok := m.(SuStr); ok {
+		return c.Data[string(s)]
+	}
+	return nil
 }
 
 func (*SuClass) Put(Value, Value) {
@@ -106,7 +109,12 @@ func (*SuClass) Compare(Value) int {
 // ClassMethods is initialized by the builtin package
 var ClassMethods Methods
 
-func (*SuClass) Lookup(method string) Callable {
+func (c *SuClass) Lookup(method string) Callable {
+	if x,ok := c.Data[method]; ok {
+		if f,ok := x.(Callable); ok {
+			return f
+		}
+	}
 	return ClassMethods[method]
 }
 

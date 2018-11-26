@@ -197,6 +197,9 @@ func (a *Function) String() string {
 	s := "function("
 	sep := ""
 	for _, p := range a.Params {
+		if s == "function(" && p.String() == "this" {
+			continue
+		}
 		s += sep + p.String()
 		sep = ","
 	}

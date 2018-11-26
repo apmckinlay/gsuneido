@@ -53,6 +53,8 @@ func (t *Thread) Run() Value {
 			t.Dup2() // dup top two, used to dup member lvalues
 		case DUPX2:
 			t.Dupx2() // dup top under next two, used for post inc/dec
+		case THIS:
+			t.Push(t.stack[bp])
 		case TRUE:
 			t.Push(True)
 		case FALSE:
@@ -375,7 +377,7 @@ func (t *Thread) Run() Value {
 			}
 			panic("method not found " + self.TypeName() + "." + method.ToStr())
 		default:
-			panic("invalid op code" + asm[op]) // TODO fatal?
+			panic("invalid op code: " + asm[op]) // TODO fatal?
 		}
 	}
 	if t.sp > sp {

@@ -66,8 +66,32 @@ func TestBug(t *testing.T) {
 	Assert(t).That(p.Matches("\x8a"), Equals(false))
 }
 
+// ptest support ---------------------------------------------------------------
+
 func TestPtest(t *testing.T) {
 	if !ptest.RunFile("regex.test") {
 		t.Fail()
 	}
 }
+
+// pt_match is a ptest for matching
+// simple usage is two arguments, string and pattern
+// an optional third argument can be "false" for matches that should fail
+// or additional arguments can specify \0, \1, ...
+func pt_match(args []string, _ []bool) bool {
+	var res Result
+	pat := Compile(args[1])
+	result := pat.FirstMatch(args[0], 0, &res)
+	if len(args) > 2 {
+		if args[2] == "false" {
+			result = !result
+		} else {
+			for i, e := range args[2:] {
+				result = result && (e == args[0][res.pos[i]:res.end[i]])
+			}
+		}
+	}
+	return result
+}
+
+var _ = ptest.Add("regex_match", pt_match)

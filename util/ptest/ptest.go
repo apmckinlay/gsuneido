@@ -76,7 +76,9 @@ func (p *parser) runFixture() bool {
 	ok := true
 	for p.Token != c.EOF && p.Token != c.AT {
 		row := []string{}
+		str := []bool{} // parallel array, whether arg was a quoted string
 		for {
+			str = append(str, p.Token == c.STRING)
 			text := p.Text
 			if p.Token == c.SUB || p.Token == c.ADD {
 				p.next(false)
@@ -92,7 +94,7 @@ func (p *parser) runFixture() bool {
 			}
 		}
 		if test != nil {
-			if !runCase(test, row) {
+			if !runCase(test, row, str) {
 				ok = false
 			} else {
 				n++
@@ -106,7 +108,7 @@ func (p *parser) runFixture() bool {
 	return ok
 }
 
-func runCase(test testfn, row []string) (ok bool) {
+func runCase(test testfn, row []string, str []bool) (ok bool) {
 	defer func() {
 		if err := recover(); err != nil {
 			fmt.Println("\tFAILED: ", row)
@@ -115,7 +117,7 @@ func runCase(test testfn, row []string) (ok bool) {
 		}
 	}()
 	ok = true
-	if !test(row) {
+	if !test(row, str) {
 		fmt.Println("\tFAILED: ", row)
 		ok = false
 	}
@@ -154,7 +156,7 @@ func (p *parser) next(skip bool) {
 	}
 }
 
-type testfn func([]string) bool
+type testfn func([]string, []bool) bool
 
 var testmap = make(map[string]testfn)
 

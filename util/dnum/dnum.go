@@ -107,13 +107,10 @@ func FromInt(n int64) Dnum {
 		n = -n
 		sign = signNeg
 	}
-	coef := uint64(n)
-	p := maxShift(coef)
-	coef *= pow10[p]
-	check(coefMin <= coef && coef <= coefMax)
-	exp := int8(digitsMax - p)
-	return Dnum{coef, sign, exp}
+	return New(sign, uint64(n), digitsMax)
 }
+
+const log2of10 = 3.32192809488736234
 
 // FromFloat converts a float64 to a Dnum
 func FromFloat(f float64) Dnum {
@@ -136,7 +133,8 @@ func FromFloat(f float64) Dnum {
 		f = -f
 		sign = signNeg
 	}
-	e := int(math.Log10(f))
+	_, e := math.Frexp(f)
+	e = int(float32(e) / log2of10)
 	c := uint64(f / math.Pow(10, float64(e-16)))
 	return New(sign, c, e)
 }
@@ -388,7 +386,7 @@ func (dn Dnum) IsInf() bool {
 	return dn.sign == signPosInf || dn.sign == signNegInf
 }
 
-// IsZero returns true if a Dnum is positive or negative infinite
+// IsZero returns true if a Dnum is zero
 func (dn Dnum) IsZero() bool {
 	return dn.sign == signZero
 }
@@ -406,7 +404,7 @@ func (dn Dnum) ToFloat() float64 {
 	return g * e
 }
 
-// ToInt converts a Dnum to an int64, returning whether it was convertible
+// ToInt64 converts a Dnum to an int64, returning whether it was convertible
 func (dn Dnum) ToInt64() (int64, bool) {
 	if dn.sign == 0 {
 		return 0, true
@@ -433,6 +431,7 @@ func (dn Dnum) ToInt64() (int64, bool) {
 }
 
 func (dn Dnum) ToInt() (int, bool) {
+	// if int is int64, this is a nop
 	n, ok := dn.ToInt64()
 	if !ok || int64(int(n)) != n {
 		return 0, false
@@ -468,7 +467,7 @@ func (dn Dnum) Frac() Dnum {
 	if frac == dn.coef {
 		return dn
 	}
-	return Dnum{frac, dn.sign, dn.exp}
+	return New(dn.sign, frac, int(dn.exp))
 }
 
 type RoundingMode int
@@ -512,14 +511,14 @@ func (dn Dnum) Round(r int, mode RoundingMode) Dnum {
 	if dn.sign == 0 || dn.sign == signNegInf || dn.sign == signPosInf ||
 		r >= digitsMax {
 		return dn
-		}
+	}
 	if r <= -digitsMax {
 		return Zero
 	}
-	n := New(dn.sign, dn.coef, int(dn.exp) + r) // multiply by 10^r
+	n := New(dn.sign, dn.coef, int(dn.exp)+r) // multiply by 10^r
 	n = n.integer(mode)
 	if n.sign == signPos || n.sign == signNeg { // i.e. not zero or inf
-		return New(n.sign, n.coef, int(n.exp) - r)
+		return New(n.sign, n.coef, int(n.exp)-r)
 	}
 	return n
 }
@@ -685,60 +684,3 @@ func (dn Dnum) Hash() uint32 {
 	return uint32(dn.coef>>32) ^ uint32(dn.coef) ^
 		uint32(dn.sign)<<16 ^ uint32(dn.exp)<<8
 }
-
-/*
-// makes coef as small as possible (losslessly)
-// i.e. trim trailing zero decimal digits
-func (dn *Dnum) minCoef() {
-	roundup := false
-	for dn.coef > 0 && dn.coef%10 == 0 {
-		dn.shiftRight(&roundup)
-	}
-}
-
-func (dn *Dnum) split() (lo, hi uint64) {
-	const HI5 = 0x1f << 59
-	roundup := false
-	for dn.coef&HI5 != 0 {
-		dn.shiftRight(&roundup)
-	}
-	if roundup {
-		dn.coef++
-	}
-	const NINE = 1000000000
-	return dn.coef % NINE, dn.coef / NINE
-}
-
-func div2(x, y uint64) (uint64, int) {
-	exp := 0
-	// strip trailing zeroes from y i.e. shift right as far as possible
-	for y%10 == 0 {
-		y /= 10
-		exp--
-	}
-	var z uint64
-	for x > 0 {
-		// shift x left until divisible or as far as possible
-		for x%y != 0 && mul10safe(x) && mul10safe(z) {
-			x *= 10
-			z *= 10
-			exp--
-		}
-		for x < y { // max once, but not necessarily first iteration
-			if !mul10safe(z) {
-				return z, exp
-			}
-			y /= 10 // should this round ???
-			z *= 10
-			exp--
-		}
-		q := (x / y)
-		if q == 0 {
-			break
-		}
-		z += q
-		x %= y // or x -= q * y ???
-	}
-	return z, exp
-}
-*/

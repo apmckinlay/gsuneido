@@ -60,6 +60,9 @@ func (f *ParamSpec) String() string {
 	sep := ""
 	v := 0 // index into Values
 	for i := 0; i < int(f.Nparams); i++ {
+		if i == 0 && f.Names[0] == "this" {
+			continue
+		}
 		buf.WriteString(sep)
 		buf.WriteString(flagsToName(f.Names[i], f.Flags[i]))
 		if i >= int(f.Nparams-f.Ndefaults) {

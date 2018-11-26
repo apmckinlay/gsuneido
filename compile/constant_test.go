@@ -39,7 +39,7 @@ func TestPtest(t *testing.T) {
 	}
 }
 
-func pt_compile(args []string) bool {
+func pt_compile(args []string, _ []bool) bool {
 	expectedType := args[1]
 	expected := args[2]
 	var actual Value
