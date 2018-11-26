@@ -22,17 +22,19 @@ func pt_method(args []string, str []bool) bool {
 	ob := toValue(args, str, 0)
 	method := args[1]
 	expected := toValue(args, str, len(args)-1)
-	th := NewThread()
-	th.Push(ob) // "this"
-	for i := 2; i < len(args)-1; i++ {
-		th.Push(toValue(args, str, i))
-	}
 	f := ob.Lookup(method)
 	if f == nil {
 		fmt.Print("\tmethod not found: ", method)
 		return false
 	}
-	result := f.Call(th, &ArgSpec{Unnamed: byte(len(args)-3)})
+	th := NewThread()
+	var result Value
+	switch len(args) - 3 {
+	case 0:
+		result = f.Call1(th, ob)
+	case 1:
+		result = f.Call2(th, ob, toValue(args, str, 2))
+	}
 	ok := result.Equal(expected)
 	if !ok {
 		fmt.Printf("\tgot: %v %#v", result, result)
