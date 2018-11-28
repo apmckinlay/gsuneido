@@ -37,27 +37,11 @@ func builtin1(s string, f func(a Value) Value) bool {
 	return true
 }
 
-func builtin2(s string, f func(a,b Value) Value) bool {
+func builtin2(s string, f func(a, b Value) Value) bool {
 	i := strings.IndexByte(s, byte('('))
 	name := s[:i]
 	p := s[i:]
 	AddGlobal(name, &Builtin2{Fn: f, ParamSpec: params(p)})
-	return true
-}
-
-func builtin3(s string, f func(a,b,c Value) Value) bool {
-	i := strings.IndexByte(s, byte('('))
-	name := s[:i]
-	p := s[i:]
-	AddGlobal(name, &Builtin3{Fn: f, ParamSpec: params(p)})
-	return true
-}
-
-func builtin4(s string, f func(a,b,c,d Value) Value) bool {
-	i := strings.IndexByte(s, byte('('))
-	name := s[:i]
-	p := s[i:]
-	AddGlobal(name, &Builtin4{Fn: f, ParamSpec: params(p)})
 	return true
 }
 
@@ -67,27 +51,19 @@ func params(s string) ParamSpec {
 	return fn.ParamSpec
 }
 
-func method(p string, f func(t *Thread, self Value, args ...Value) Value) Callable {
+func method(p string, f func(t *Thread, this Value, args ...Value) Value) Value {
 	return &Method{Fn: f, ParamSpec: params(p)}
 }
 
-func method0(f func(self Value) Value) Callable {
-	return &Method0{Fn: f, ParamSpec: ParamSpec{}}
+func method0(f func(this Value) Value) Value {
+	return &Method0{Builtin1{Fn: f, ParamSpec: ParamSpec{}}}
 }
 
-func method1(p string, f func(self, a1 Value) Value) Callable {
-	return &Method1{Fn: f, ParamSpec: params(p)}
+func method1(p string, f func(this, a1 Value) Value) Value {
+	return &Method1{Builtin2{Fn: f, ParamSpec: params(p)}}
 }
 
-func method2(p string, f func(self, a1, a2 Value) Value) Callable {
-	return &Method2{Fn: f, ParamSpec: params(p)}
-}
-
-func method3(p string, f func(self, a1, a2, a3 Value) Value) Callable {
-	return &Method3{Fn: f, ParamSpec: params(p)}
-}
-
-func rawmethod(p string,
-	f func(t *Thread, self Value, as *ArgSpec, args ...Value) Value) Callable {
-	return &RawMethod{Fn: f, ParamSpec: params(p)}
+func rawmethod(_ string, // TODO params ???
+	f func(t *Thread, as *ArgSpec, this Value, args ...Value) Value) Value {
+	return &RawMethod{Fn: f, ParamSpec: *RawParamSpec}
 }

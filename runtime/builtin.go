@@ -1,6 +1,9 @@
 package runtime
 
-// Builtin is a Callable Value for a builtin function with massaged arguments
+// Methods is a map of method name strings to Values
+type Methods = map[string]Value
+
+// Builtin is a Value for a builtin function
 type Builtin struct {
 	Fn func(t *Thread, args ...Value) Value
 	ParamSpec
@@ -16,23 +19,8 @@ func (b *Builtin) Call(t *Thread, as *ArgSpec) Value {
 	args := t.Args(&b.ParamSpec, as)
 	return b.Fn(t, args...)
 }
-func (b *Builtin) Call0(t *Thread) Value {
-	return b.Call(t, ArgSpec0)
-}
-func (b *Builtin) Call1(t *Thread, _ Value) Value {
-	return b.Call(t, ArgSpec1)
-}
-func (b *Builtin) Call2(t *Thread, _, _ Value) Value {
-	return b.Call(t, ArgSpec2)
-}
-func (b *Builtin) Call3(t *Thread, _, _, _ Value) Value {
-	return b.Call(t, ArgSpec3)
-}
-func (b *Builtin) Call4(t *Thread, _, _, _, _ Value) Value {
-	return b.Call(t, ArgSpec4)
-}
 
-// Builtin0 is a Callable Value for a builtin function with no arguments
+// Builtin0 is a Value for a builtin function with no arguments
 type Builtin0 struct {
 	Fn func() Value
 	ParamSpec
@@ -48,13 +36,10 @@ func (b *Builtin0) Call(t *Thread, as *ArgSpec) Value {
 	t.Args(&b.ParamSpec, as)
 	return b.Fn()
 }
-func (b *Builtin0) Call0(*Thread) Value {
-	return b.Fn() // fast path
-}
 
-// Builtin1 is a Callable Value for a builtin function with one argument
+// Builtin1 is a Value for a builtin function with one argument
 type Builtin1 struct {
-	Fn func(a Value) Value
+	Fn func(a1 Value) Value
 	ParamSpec
 }
 
@@ -68,16 +53,10 @@ func (b *Builtin1) Call(t *Thread, as *ArgSpec) Value {
 	args := t.Args(&b.ParamSpec, as)
 	return b.Fn(args[0])
 }
-func (b *Builtin1) Call0(t *Thread) Value {
-	return b.Fn(b.fillin(t,0))
-}
-func (b *Builtin1) Call1(_ *Thread, a Value) Value {
-	return b.Fn(a) // fast path
-}
 
-// Builtin2 is a Callable Value for a builtin function with two arguments
+// Builtin2 is a Value for a builtin function with two arguments
 type Builtin2 struct {
-	Fn func(a, b Value) Value
+	Fn func(a1, a2 Value) Value
 	ParamSpec
 }
 
@@ -91,19 +70,10 @@ func (b *Builtin2) Call(t *Thread, as *ArgSpec) Value {
 	args := t.Args(&b.ParamSpec, as)
 	return b.Fn(args[0], args[1])
 }
-func (b *Builtin2) Call0(t *Thread) Value {
-	return b.Fn(b.fillin(t,0), b.fillin(t,1))
-}
-func (b *Builtin2) Call1(t *Thread, a1 Value) Value {
-	return b.Fn(a1, b.fillin(t,1))
-}
-func (b *Builtin2) Call2(_ *Thread, a1, a2 Value) Value {
-	return b.Fn(a1, a2) // fast path
-}
 
-// Builtin3 is a Callable Value for a builtin function with three arguments
+// Builtin3 is a Value for a builtin function with three arguments
 type Builtin3 struct {
-	Fn func(a, b, c Value) Value
+	Fn func(a1, a2, a3 Value) Value
 	ParamSpec
 }
 
@@ -117,206 +87,70 @@ func (b *Builtin3) Call(t *Thread, as *ArgSpec) Value {
 	args := t.Args(&b.ParamSpec, as)
 	return b.Fn(args[0], args[1], args[2])
 }
-func (b *Builtin3) Call0(t *Thread) Value {
-	return b.Fn(b.fillin(t,0), b.fillin(t,1), b.fillin(t,2))
-}
-func (b *Builtin3) Call1(t *Thread, a1 Value) Value {
-	return b.Fn(a1, b.fillin(t,1), b.fillin(t,2))
-}
-func (b *Builtin3) Call2(t *Thread, a1, a2 Value) Value {
-	return b.Fn(a1, a2, b.fillin(t,2))
-}
-func (b *Builtin3) Call3(_ *Thread, a1, a2, a3 Value) Value {
-	return b.Fn(a1, a2, a3) // fast path
-}
 
-// Builtin4 is a Callable Value for a builtin function with three arguments
-type Builtin4 struct {
-	Fn func(a, b, c, d Value) Value
+// ------------------------------------------------------------------
+
+// Method is a Value for a builtin method
+type Method struct {
+	Fn func(t *Thread, this Value, args ...Value) Value
 	ParamSpec
 }
 
-var _ Value = (*Builtin4)(nil)
+var _ Value = (*Method)(nil)
 
-func (*Builtin4) TypeName() string {
+func (*Method) TypeName() string {
 	return "BuiltinFunction"
 }
 
-func (b *Builtin4) Call(t *Thread, as *ArgSpec) Value {
+func (b *Method) Call(t *Thread, as *ArgSpec) Value {
 	args := t.Args(&b.ParamSpec, as)
-	return b.Fn(args[0], args[1], args[2], args[3])
-}
-func (b *Builtin4) Call0(t *Thread) Value {
-	return b.Fn(b.fillin(t,0), b.fillin(t,1), b.fillin(t,2), b.fillin(t,3))
-}
-func (b *Builtin4) Call1(t *Thread, a1 Value) Value {
-	return b.Fn(a1, b.fillin(t,1), b.fillin(t,2), b.fillin(t,3))
-}
-func (b *Builtin4) Call2(t *Thread, a1, a2 Value) Value {
-	return b.Fn(a1, a2, b.fillin(t,2), b.fillin(t,3))
-}
-func (b *Builtin4) Call3(t *Thread, a1, a2, a3 Value) Value {
-	return b.Fn(a1, a2, a3, b.fillin(t,3))
-}
-func (b *Builtin4) Call4(_ *Thread, a1, a2, a3, a4 Value) Value {
-	return b.Fn(a1, a2, a3, a4) // fast path
+	return b.Fn(t, t.this, args...)
 }
 
-// Methods is a map of method name strings to Callables
-type Methods = map[string]Callable
-
-// Method is a Callable for a builtin method with massaged arguments
-type Method struct {
-	ParamSpec
-	Fn func(t *Thread, self Value, args ...Value) Value
-}
-
-var _ Callable = (*Method)(nil)
-
-func (m *Method) Call(t *Thread, as *ArgSpec) Value {
-	self := t.stack[t.sp-as.Nargs()-1]
-	args := t.Args(&m.ParamSpec, as)
-	return m.Fn(t, self, args...)
-}
-func (m *Method) Call0(*Thread) Value {
-	panic("shouldn't get here")
-}
-func (m *Method) Call1(t *Thread, _ Value) Value {
-	return m.Call(t, ArgSpec0)
-}
-func (m *Method) Call2(t *Thread, _, _ Value) Value {
-	return m.Call(t, ArgSpec1)
-}
-func (m *Method) Call3(t *Thread, _, _, _ Value) Value {
-	return m.Call(t, ArgSpec2)
-}
-func (m *Method) Call4(t *Thread, _, _, _, _ Value) Value {
-	return m.Call(t, ArgSpec3)
-}
-
-// Method0 is a Callable for a builtin method with no arguments
+// Method0 is a Value for a builtin method with no arguments
 type Method0 struct {
-	ParamSpec
-	Fn func(self Value) Value
+	Builtin1
 }
 
-var _ Callable = (*Method0)(nil)
-
-func (m *Method0) Call(t *Thread, as *ArgSpec) Value {
-	self := t.stack[t.sp-as.Nargs()-1]
-	t.Args(&m.ParamSpec, as)
-	return m.Fn(self)
-}
-func (m *Method0) Call0(*Thread) Value {
-	panic("shouldn't get here")
-}
-func (m *Method0) Call1(_ *Thread, self Value) Value {
-	return m.Fn(self) // fast path
+func (b *Method0) Call(t *Thread, as *ArgSpec) Value {
+	t.Args(&b.ParamSpec, as)
+	return b.Fn(t.this)
 }
 
-// Method1 is a Callable for a builtin method with one argument
+// Method1 is a Value for a builtin method with one argument
 type Method1 struct {
-	ParamSpec
-	Fn func(self, a1 Value) Value
+	Builtin2
 }
 
-var _ Callable = (*Method1)(nil)
-
-func (m *Method1) Call(t *Thread, as *ArgSpec) Value {
-	self := t.stack[t.sp-as.Nargs()-1]
-	args := t.Args(&m.ParamSpec, as)
-	return m.Fn(self, args[0])
-}
-func (m *Method1) Call0(*Thread) Value {
-	panic("shouldn't get here")
-}
-func (m *Method1) Call1(t *Thread, self Value) Value {
-	return m.Fn(self, m.fillin(t,0))
-}
-func (m *Method1) Call2(_ *Thread, self, a1 Value) Value {
-	return m.Fn(self, a1) // fast path
+func (b *Method1) Call(t *Thread, as *ArgSpec) Value {
+	args := t.Args(&b.ParamSpec, as)
+	return b.Fn(t.this, args[0])
 }
 
-// Method2 is a Callable for a builtin method with two arguments
+// Method2 is a Value for a builtin method with two arguments
 type Method2 struct {
-	ParamSpec
-	Fn func(self, a1, a2 Value) Value
+	Builtin3
 }
 
-var _ Callable = (*Method2)(nil)
-
-func (m *Method2) Call(t *Thread, as *ArgSpec) Value {
-	self := t.stack[t.sp-as.Nargs()-1]
-	args := t.Args(&m.ParamSpec, as)
-	return m.Fn(self, args[0], args[1])
-}
-func (m *Method2) Call0(*Thread) Value {
-	panic("shouldn't get here")
-}
-func (m *Method2) Call1(t *Thread, self Value) Value {
-	return m.Fn(self, m.fillin(t,0), m.fillin(t,1))
-}
-func (m *Method2) Call2(t *Thread, self, a1 Value) Value {
-	return m.Fn(self, a1, m.fillin(t,1))
-}
-func (m *Method2) Call3(_ *Thread, self, a1, a2 Value) Value {
-	return m.Fn(self, a1, a2) // fast path
+func (b *Method2) Call(t *Thread, as *ArgSpec) Value {
+	args := t.Args(&b.ParamSpec, as)
+	return b.Fn(t.this, args[0], args[1])
 }
 
-// Method3 is a Callable for a builtin method with two arguments
-type Method3 struct {
-	ParamSpec
-	Fn func(self, a1, a2, a3 Value) Value
-}
-
-var _ Callable = (*Method3)(nil)
-
-func (m *Method3) Call(t *Thread, as *ArgSpec) Value {
-	self := t.stack[t.sp-as.Nargs()-1]
-	args := t.Args(&m.ParamSpec, as)
-	return m.Fn(self, args[0], args[1], args[2])
-}
-func (m *Method3) Call0(*Thread) Value {
-	panic("shouldn't get here")
-}
-func (m *Method3) Call1(t *Thread, self Value) Value {
-	return m.Fn(self, m.fillin(t,0), m.fillin(t,1), m.fillin(t,2))
-}
-func (m *Method3) Call2(t *Thread, self, a1 Value) Value {
-	return m.Fn(self, a1, m.fillin(t,1), m.fillin(t,2))
-}
-func (m *Method3) Call3(t *Thread, self, a1, a2 Value) Value {
-	return m.Fn(self, a1, a2, m.fillin(t,2))
-}
-func (m *Method3) Call4(_ *Thread, self, a1, a2, a3 Value) Value {
-	return m.Fn(self, a1, a2, a3) // fast path
-}
-
-// RawMethod is a Callable for a builtin method with raw arguments
+// RawMethod is a Value for a builtin function with no massage
 type RawMethod struct {
-	ParamSpec // ???
-	Fn        func(t *Thread, self Value, as *ArgSpec, args ...Value) Value
+	Fn func(t *Thread, as *ArgSpec, this Value, args ...Value) Value
+	ParamSpec
 }
 
-var _ Callable = (*RawMethod)(nil)
+var _ Value = (*RawMethod)(nil)
 
-func (m *RawMethod) Call(t *Thread, as *ArgSpec) Value {
-	self := t.stack[t.sp-as.Nargs()-1]
-	args := t.stack[t.sp-as.Nargs():]
-	return m.Fn(t, self, as, args...)
+func (*RawMethod) TypeName() string {
+	return "BuiltinFunction"
 }
-func (m *RawMethod) Call0(*Thread) Value {
-	panic("shouldn't get here")
-}
-func (m *RawMethod) Call1(t *Thread, _ Value) Value {
-	return m.Call(t, ArgSpec0)
-}
-func (m *RawMethod) Call2(t *Thread, _, _ Value) Value {
-	return m.Call(t, ArgSpec1)
-}
-func (m *RawMethod) Call3(t *Thread, _, _, _ Value) Value {
-	return m.Call(t, ArgSpec2)
-}
-func (m *RawMethod) Call4(t *Thread, _, _, _, _ Value) Value {
-	return m.Call(t, ArgSpec3)
+
+func (b *RawMethod) Call(t *Thread, as *ArgSpec) Value {
+	base := t.sp - as.Nargs()
+	args := t.stack[base:]
+	return b.Fn(t, as, t.this, args...)
 }

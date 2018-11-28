@@ -336,21 +336,6 @@ func cmp3(x Value, y Value, inProgress pairs) int {
 	return cmp2(xo, yo, inProgress)
 }
 
-func (*SuObject) Call0(_ *Thread) Value {
-	panic("can't call Object")
-}
-func (*SuObject) Call1(_ *Thread, _ Value) Value {
-	panic("can't call Object")
-}
-func (*SuObject) Call2(_ *Thread, _, _ Value) Value {
-	panic("can't call Object")
-}
-func (*SuObject) Call3(_ *Thread, _, _, _ Value) Value {
-	panic("can't call Object")
-}
-func (*SuObject) Call4(_ *Thread, _, _, _, _ Value) Value {
-	panic("can't call Object")
-}
 func (*SuObject) Call(*Thread, *ArgSpec) Value {
 	panic("can't call Object")
 }
@@ -358,7 +343,7 @@ func (*SuObject) Call(*Thread, *ArgSpec) Value {
 // ObjectMethods is initialized by the builtin package
 var ObjectMethods Methods
 
-func (*SuObject) Lookup(method string) Callable {
+func (*SuObject) Lookup(method string) Value {
 	return ObjectMethods[method]
 }
 

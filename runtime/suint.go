@@ -21,8 +21,8 @@ const smiRange = 1 << 16
 const MinSuInt = math.MinInt16
 const MaxSuInt = math.MaxInt16
 
-var space [smiRange]smi // uninitialized BSS, no actual memory used
-var base = uintptr(unsafe.Pointer(&space[0]))
+var smispace [smiRange]smi // uninitialized BSS, no actual memory used
+var smibase = uintptr(unsafe.Pointer(&smispace[0]))
 
 func init() {
 	// this is so that reflect.DeepEquals doesn't think small smi's are equal
@@ -36,7 +36,7 @@ func init() {
 // will panic if out of int16 range
 func SuInt(n int) *smi {
 	offset := n - math.MinInt16
-	return &space[offset] // will panic if out of range
+	return &smispace[offset] // will panic if out of range
 }
 
 // SmiToInt converts to int if its argument is a *smi
@@ -52,7 +52,7 @@ var _ Packable = SuInt(0)
 
 func (si *smi) ToInt() int {
 	p := unsafe.Pointer(si)
-	offset := int(uintptr(p) - base)
+	offset := int(uintptr(p) - smibase)
 	return offset + math.MinInt16
 }
 
@@ -127,21 +127,6 @@ func (si *smi) Compare(other Value) int {
 	return dnum.Compare(si.ToDnum(), other.ToDnum())
 }
 
-func (*smi) Call0(_ *Thread) Value {
-	panic("can't call Number")
-}
-func (*smi) Call1(_ *Thread, _ Value) Value {
-	panic("can't call Number")
-}
-func (*smi) Call2(_ *Thread, _, _ Value) Value {
-	panic("can't call Number")
-}
-func (*smi) Call3(_ *Thread, _, _, _ Value) Value {
-	panic("can't call Number")
-}
-func (*smi) Call4(_ *Thread, _, _, _, _ Value) Value {
-	panic("can't call Number")
-}
 func (*smi) Call(*Thread, *ArgSpec) Value {
 	panic("can't call Number")
 }
@@ -149,7 +134,7 @@ func (*smi) Call(*Thread, *ArgSpec) Value {
 // IntMethods is initialized by the builtin package
 var IntMethods Methods
 
-func (*smi) Lookup(method string) Callable {
+func (*smi) Lookup(method string) Value {
 	if m := IntMethods[method]; m != nil {
 		return m
 	}

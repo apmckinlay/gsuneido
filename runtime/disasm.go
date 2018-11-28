@@ -3,6 +3,7 @@ package runtime
 import (
 	"fmt"
 	"io"
+	"strconv"
 
 	. "github.com/apmckinlay/gsuneido/runtime/op"
 	"github.com/apmckinlay/gsuneido/util/verify"
@@ -18,8 +19,7 @@ var asm = []string{
 	"true", "false", "zero", "one", "maxint", "emptystr",
 	"or", "and", "bool", "qmark", "in", "jump", "tjump", "fjump",
 	"eqjump", "nejump", "throw", "try", "rangeto", "rangelen", "this",
-	"callfunc", "callfunc0", "callfunc1", "callfunc2", "callfunc3", "callfunc4",
-	"callmeth", "callmeth0", "callmeth1", "callmeth2", "callmeth3",
+	"callfunc", "callmeth",
 }
 
 func init() {
@@ -73,11 +73,14 @@ func Disasm1(fn *SuFunc, i int) (int, string) {
 		j := fetchInt16()
 		s += fmt.Sprintf(" %d", i+j)
 	case CALLFUNC, CALLMETH:
-		unnamed := fetchUint8()
-		named := int(fetchUint8())
-		spec := fn.Code[i : i+named]
-		i += named
-		s += ArgSpec{unnamed, spec, fn.Values}.String()[7:]
+		ai := int(fetchUint8())
+		if ai < 5 {
+			s += strconv.Itoa(ai)
+		} else if ai < len(StdArgSpecs) {
+			s += StdArgSpecs[ai].String()[7:]
+		} else {
+			s += fn.ArgSpecs[ai-len(StdArgSpecs)].String()[7:]
+		}
 	}
 	return i, s
 }

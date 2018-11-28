@@ -7,6 +7,8 @@ import (
 	. "github.com/apmckinlay/gsuneido/util/hamcrest"
 )
 
+var atParamSpec = &ParamSpec{Nparams: 1, Flags: []Flag{AtParam}}
+
 func TestArgs(t *testing.T) {
 	th := &Thread{}
 	setStack := func(nums ...int) {
@@ -26,7 +28,7 @@ func TestArgs(t *testing.T) {
 	th.Args(f, &a)
 
 	// @arg => @param
-	f = &ParamSpec{Nparams: 1, Flags: []Flag{AtParam}}
+	f = atParamSpec
 	a = ArgSpec{Unnamed: EACH}
 	th.Reset()
 	th.Push(makeOb())
@@ -35,7 +37,7 @@ func TestArgs(t *testing.T) {
 	Assert(t).True(th.stack[0].Equal(makeOb()))
 
 	// @+1arg => @param
-	f = &ParamSpec{Nparams: 1, Flags: []Flag{AtParam}}
+	f = atParamSpec
 	a = ArgSpec{Unnamed: EACH1}
 	th.Reset()
 	th.Push(makeOb())
@@ -89,7 +91,7 @@ func TestArgs(t *testing.T) {
 	ckStack(22, 33, 44, 11)
 
 	// args => @param
-	f = &ParamSpec{Nparams: 1, Flags: []Flag{AtParam}}
+	f = atParamSpec
 	a = ArgSpec{Unnamed: 2,
 		Names: vals("c", "b", "a", "d"), Spec: []byte{1, 2}} // b, a
 	setStack(11, 22, 44, 33)

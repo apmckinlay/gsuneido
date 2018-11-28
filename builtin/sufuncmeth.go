@@ -8,19 +8,19 @@ import (
 
 func init() {
 	SuFuncMethods = Methods{
-		"Disasm": method0(func(self Value) Value {
-			fn := self.(*SuFunc)
+		"Disasm": method0(func(this Value) Value {
+			fn := this.(*SuFunc)
 			buf := &strings.Builder{}
 			Disasm(buf, fn)
 			return SuStr(buf.String())
 		}),
-		"Params": method0(func(self Value) Value {
-			fn := self.(*SuFunc)
+		"Params": method0(func(this Value) Value {
+			fn := this.(*SuFunc)
 			return SuStr(fn.Params())
 		}),
 	}
-	Params = method0(func (self Value) Value {
-		ps := self.(Paramsable)
+	Params = method0(func(this Value) Value {
+		ps := this.(Paramsable)
 		return SuStr(ps.Params())
 	})
 }

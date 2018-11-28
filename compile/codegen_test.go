@@ -105,7 +105,7 @@ func TestCodegen(t *testing.T) {
 	test("char.Size()", "load char, value 'Size', callmeth0")
 	test("a.f(123)", "load a, int 123, value 'f', callmeth1")
 	test("a.f(1,2,3)", "load a, one, int 2, int 3, value 'f', callmeth3")
-	test("a.f(1,2,3,4)", "load a, one, int 2, int 3, int 4, value 'f', callmeth(?, ?, ?, ?)")
+	test("a.f(1,2,3,4)", "load a, one, int 2, int 3, int 4, value 'f', callmeth4")
 	test("a.f(x:)", "load a, true, value 'f', callmeth(x:)")
 	test("a[b](123)", "load a, int 123, load b, callmeth1")
 	test("a[b $ c](123)", "load a, int 123, load b, load c, cat, callmeth1")

@@ -7,15 +7,6 @@ import (
 	"github.com/apmckinlay/gsuneido/util/dnum"
 )
 
-type Callable interface {
-	Call(t *Thread, as *ArgSpec) Value // raw args on stack
-	Call0(t *Thread) Value
-	Call1(t *Thread, a Value) Value
-	Call2(t *Thread, a, b Value) Value
-	Call3(t *Thread, a, b, c Value) Value
-	Call4(t *Thread, a, b, c, d Value) Value
-}
-
 // Value is used to reference a Suneido value
 type Value interface {
 	// String returns a human readable string i.e. Suneido Display
@@ -50,9 +41,9 @@ type Value interface {
 	// Compare returns -1 for less, 0 for equal, +1 for greater
 	Compare(other Value) int
 
-	Callable
+	Call(t *Thread, as *ArgSpec) Value
 
-	Lookup(method string) Callable
+	Lookup(method string) Value
 }
 
 type Ord = int
@@ -97,7 +88,7 @@ type Showable interface {
 // for functions it shows their parameters
 // for containers it sorts by member
 func Show(v Value) string {
-	if s,ok := v.(Showable); ok {
+	if s, ok := v.(Showable); ok {
 		return s.Show()
 	}
 	return v.String()

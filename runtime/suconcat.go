@@ -155,23 +155,8 @@ func (c SuConcat) Call(t *Thread, as *ArgSpec) Value {
 	ss := SuStr(c.ToStr())
 	return ss.Call(t, as)
 }
-func (c SuConcat) Call0(t *Thread) Value {
-	return c.Call(t, ArgSpec0)
-}
-func (c SuConcat) Call1(t *Thread, _ Value) Value {
-	return c.Call(t, ArgSpec1)
-}
-func (c SuConcat) Call2(t *Thread, _, _ Value) Value {
-	return c.Call(t, ArgSpec2)
-}
-func (c SuConcat) Call3(t *Thread, _, _, _ Value) Value {
-	return c.Call(t, ArgSpec3)
-}
-func (c SuConcat) Call4(t *Thread, _, _, _, _ Value) Value {
-	return c.Call(t, ArgSpec4)
-}
 
-func (SuConcat) Lookup(method string) Callable {
+func (SuConcat) Lookup(method string) Value {
 	return StringMethods[method]
 }
 

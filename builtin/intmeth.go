@@ -8,10 +8,10 @@ import (
 
 func init() {
 	IntMethods = Methods{
-		"Int": method0(func(self Value) Value {
-			return self
+		"Int": method0(func(this Value) Value {
+			return this
 		}),
-		"Frac": method0(func(self Value) Value {
+		"Frac": method0(func(Value) Value {
 			return Zero
 		}),
 	}

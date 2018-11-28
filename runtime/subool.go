@@ -111,25 +111,10 @@ func (b SuBool) Not() SuBool {
 	return SuBool(!bool(b))
 }
 
-func (SuBool) Call0(_ *Thread) Value {
-	panic("can't call Boolean")
-}
-func (SuBool) Call1(_ *Thread, _ Value) Value {
-	panic("can't call Boolean")
-}
-func (SuBool) Call2(_ *Thread, _, _ Value) Value {
-	panic("can't call Boolean")
-}
-func (SuBool) Call3(_ *Thread, _, _, _ Value) Value {
-	panic("can't call Boolean")
-}
-func (SuBool) Call4(_ *Thread, _, _, _, _ Value) Value {
-	panic("can't call Boolean")
-}
 func (SuBool) Call(*Thread, *ArgSpec) Value {
 	panic("can't call Boolean")
 }
 
-func (SuBool) Lookup(string) Callable {
+func (SuBool) Lookup(string) Value {
 	return nil
 }

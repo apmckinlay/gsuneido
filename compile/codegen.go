@@ -19,16 +19,19 @@ var zeroFlags [MaxArgs]Flag
 
 // codegen compiles an Ast to an SuFunc
 func codegen(fn *ast.Function) *SuFunc {
-	//fmt.Println("codegen", ast.String())
 	cg := cgen{}
 	cg.function(fn)
 	if allZero(cg.Flags) {
 		cg.Flags = zeroFlags[:len(cg.Flags)]
 	}
+	for _, as := range cg.argspecs {
+		as.Names = cg.Values
+	}
 	return &SuFunc{
 		Code:      cg.code,
 		Nlocals:   uint8(len(cg.Names)),
 		ParamSpec: cg.ParamSpec,
+		ArgSpecs:  cg.argspecs,
 	}
 }
 
@@ -43,7 +46,8 @@ func allZero(flags []Flag) bool {
 
 type cgen struct {
 	ParamSpec
-	code []byte
+	code     []byte
+	argspecs []*ArgSpec
 }
 
 // binary and nary ast node token to operation
@@ -93,7 +97,10 @@ func (cg *cgen) function(fn *ast.Function) {
 func (cg *cgen) params(params []ast.Param) {
 	cg.Nparams = uint8(len(params))
 	for _, p := range params {
-		name, flags := cg.param(p.Name)
+		name, flags := param(p.Name)
+		if flags == AtParam && len(params) != 1 {
+			panic("@param must be the only parameter")
+		}
 		cg.Names = append(cg.Names, name) // no duplicate reuse
 		cg.Flags = append(cg.Flags, flags)
 		if p.DefVal != nil {
@@ -103,7 +110,7 @@ func (cg *cgen) params(params []ast.Param) {
 	}
 }
 
-func (cg *cgen) param(p string) (string, Flag) {
+func param(p string) (string, Flag) {
 	if p[0] == '@' {
 		return p[1:], AtParam
 	}
@@ -576,42 +583,29 @@ func (cg *cgen) call(node *ast.Call) {
 		cg.expr(mem.E)
 	}
 	argspec := cg.args(node.Args)
-	simple := byte(0)
-	named := len(argspec.Spec)
 	if method {
-		if named == 0 && argspec.Unnamed <= 3 {
-			simple = argspec.Unnamed + 1
-		}
 		if c, ok := mem.M.(*ast.Constant); ok && c.Val == SuStr("New") {
 			panic("cannot explicitly call New method")
 		}
 		cg.expr(mem.M)
-		cg.emit(op.CALLMETH + simple)
+		cg.emit(op.CALLMETH)
 	} else {
-		if named == 0 && argspec.Unnamed <= 4 {
-			simple = argspec.Unnamed + 1
-		}
 		cg.expr(fn)
-		cg.emit(op.CALLFUNC + simple)
+		cg.emit(op.CALLFUNC)
 	}
-	if simple == 0 {
-		cg.emit(argspec.Unnamed)
-		verify.That(named <= math.MaxUint8)
-		cg.emit(byte(named))
-		cg.emit(argspec.Spec...)
-	}
+	verify.That(argspec < math.MaxUint8)
+	cg.emit(byte(argspec))
 }
 
-// generates code to push the arguments and returns an ArgSpec
-// for non-string argument names we build an object and use @args
-func (cg *cgen) args(args []ast.Arg) ArgSpec {
+// generates code to push the arguments and returns an ArgSpec index
+func (cg *cgen) args(args []ast.Arg) int {
 	if len(args) == 1 {
 		if args[0].Name == SuStr("@") {
 			cg.expr(args[0].E)
-			return ArgSpec{Unnamed: EACH}
+			return ArgSpecEach
 		} else if args[0].Name == SuStr("@+1") {
 			cg.expr(args[0].E)
-			return ArgSpec{Unnamed: EACH1}
+			return ArgSpecEach1
 		}
 	}
 	var spec []byte
@@ -624,7 +618,40 @@ func (cg *cgen) args(args []ast.Arg) ArgSpec {
 		cg.expr(arg.E)
 	}
 	verify.That(len(args) < int(EACH))
-	return ArgSpec{Unnamed: byte(len(args) - len(spec)), Spec: spec}
+	return cg.argspec(&ArgSpec{Unnamed: byte(len(args) - len(spec)), Spec: spec})
+}
+
+func (cg *cgen) argspec(as *ArgSpec) int {
+	as.Names = cg.Values // not final, but needed for Equal
+	for i, a := range StdArgSpecs {
+		if as.Equal(&a) {
+			return i
+		}
+	}
+	for i, a := range cg.argspecs {
+		if cg.argSpecEq(a, as) {
+			return i
+		}
+	}
+	cg.argspecs = append(cg.argspecs, as)
+	return len(cg.argspecs) - 1 + len(StdArgSpecs)
+}
+
+// argSpecEq checks if two ArgSpec's are equal
+// using cg.Values instead of the ArgSpec Names
+// We can't set argspec.Names = cg.Values yet
+// because cg.Values is still growing and may be reallocated.
+func (cg *cgen) argSpecEq(a1, a2 *ArgSpec) bool {
+	if a1.Unnamed != a2.Unnamed || len(a1.Spec) != len(a2.Spec) {
+		return false
+	}
+	for i := range a1.Spec {
+		if !cg.Values[a1.Spec[i]].Equal(cg.Values[a2.Spec[i]]) {
+			return false
+		}
+	}
+	return true
+
 }
 
 // helpers ---------------------------------------------------------------------

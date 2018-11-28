@@ -8,4 +8,6 @@ type Frame struct {
 	ip int
 	// bp is the base pointer to the locals
 	bp   int
+	// this is the instance if we're running a method
+	this Value
 }

@@ -20,9 +20,10 @@ type ArgSpec struct {
 	Names []Value
 }
 
+// special values for ArgSpec Unnamed
 const (
-	EACH  = 254
-	EACH1 = 255
+	EACH1 = 255 - iota
+	EACH
 )
 
 var ArgSpec0 = &ArgSpec{Unnamed: 0}
@@ -31,15 +32,44 @@ var ArgSpec2 = &ArgSpec{Unnamed: 2}
 var ArgSpec3 = &ArgSpec{Unnamed: 3}
 var ArgSpec4 = &ArgSpec{Unnamed: 4}
 
+var StdArgSpecs = [...]ArgSpec{
+	ArgSpec{Unnamed: 0},
+	ArgSpec{Unnamed: 1},
+	ArgSpec{Unnamed: 2},
+	ArgSpec{Unnamed: 3},
+	ArgSpec{Unnamed: 4},
+	ArgSpec{Unnamed: EACH},
+	ArgSpec{Unnamed: EACH1},
+	ArgSpec{Spec: []byte{0}, Names: []Value{SuStr("block")}},
+}
+
+const (
+	ArgSpecEach = iota + 5
+	ArgSpecEach1
+	ArgSpecBlock
+)
+
 // Nargs returns the total number of arguments
-func (as ArgSpec) Nargs() int {
+func (as *ArgSpec) Nargs() int {
 	if as.Unnamed >= EACH {
 		return 1
 	}
 	return int(as.Unnamed) + len(as.Spec)
 }
 
-func (as ArgSpec) String() string {
+func (as *ArgSpec) Equal(a2 *ArgSpec) bool {
+	if as.Unnamed != a2.Unnamed || len(as.Spec) != len(a2.Spec) {
+		return false
+	}
+	for i := range as.Spec {
+		if !as.Names[as.Spec[i]].Equal(a2.Names[a2.Spec[i]]) {
+			return false
+		}
+	}
+	return true
+}
+
+func (as *ArgSpec) String() string {
 	var buf strings.Builder
 	sep := ""
 	buf.WriteString("ArgSpec(")

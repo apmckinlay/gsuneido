@@ -65,7 +65,7 @@ func (*SuClass) ToStr() string {
 }
 
 func (c *SuClass) Get(m Value) Value {
-	if s,ok := m.(SuStr); ok {
+	if s, ok := m.(SuStr); ok {
 		return c.Data[string(s)]
 	}
 	return nil
@@ -109,30 +109,23 @@ func (*SuClass) Compare(Value) int {
 // ClassMethods is initialized by the builtin package
 var ClassMethods Methods
 
-func (c *SuClass) Lookup(method string) Callable {
-	if x,ok := c.Data[method]; ok {
-		if f,ok := x.(Callable); ok {
-			return f
-		}
+func (c *SuClass) Lookup(method string) Value {
+	if f := c.lookup(method); f != nil {
+		return f
 	}
 	return ClassMethods[method]
 }
 
-func (*SuClass) Call0(_ *Thread) Value {
-	panic("call class not implemented") //TODO
+func (c *SuClass) Call(t *Thread, as *ArgSpec) Value {
+	if f := c.lookup("CallClass"); f != nil {
+		t.this = c
+		return f.Call(t, as)
+	}
+	panic("CallClass not found")
 }
-func (*SuClass) Call1(_ *Thread, _ Value) Value {
-	panic("call class not implemented") //TODO
-}
-func (*SuClass) Call2(_ *Thread, _, _ Value) Value {
-	panic("call class not implemented") //TODO
-}
-func (*SuClass) Call3(_ *Thread, _, _, _ Value) Value {
-	panic("call class not implemented") //TODO
-}
-func (*SuClass) Call4(_ *Thread, _, _, _, _ Value) Value {
-	panic("call class not implemented") //TODO
-}
-func (*SuClass) Call(*Thread, *ArgSpec) Value {
-	panic("call class not implemented") //TODO
+func (c *SuClass) lookup(method string) Value {
+	if x, ok := c.Data[method]; ok {
+		return x
+	}
+	return nil // could make dummy Value with Call's doing panic
 }

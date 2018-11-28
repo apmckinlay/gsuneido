@@ -1,7 +1,6 @@
 package builtin
 
 import (
-	"fmt"
 	"math"
 	"strconv"
 
@@ -16,93 +15,93 @@ func init() {
 	NumMethods = Methods{
 		// TODO Format
 
-		"Chr": method0(func(self Value) Value {
-			n := self.ToInt()
+		"Chr": method0(func(this Value) Value {
+			n := this.ToInt()
 			return SuStr(string(rune(n)))
 		}),
-		"Int": method0(func(self Value) Value {
-			dn := self.ToDnum().Int()
+		"Int": method0(func(this Value) Value {
+			dn := this.ToDnum().Int()
 			if dnum.Compare(dn, minNarrow) >= 0 && dnum.Compare(dn, maxNarrow) <= 0 {
 				n, _ := dn.ToInt()
 				return SuInt(n)
 			}
 			return SuDnum{dn}
 		}),
-		"Frac": method0(func(self Value) Value {
-			dn := self.ToDnum().Frac()
+		"Frac": method0(func(this Value) Value {
+			dn := this.ToDnum().Frac()
 			if dn.IsZero() {
 				return Zero
 			}
 			return SuDnum{dn}
 		}),
-		"Hex": method0(func(self Value) Value {
-			n := self.ToInt()
+		"Hex": method0(func(this Value) Value {
+			n := this.ToInt()
 			return SuStr(strconv.FormatUint(uint64(uint32(n)), 16))
 		}),
 
-		"Round": method1("(number)", func(self, arg Value) Value {
-			x := self.ToDnum()
+		"Round": method1("(number)", func(this, arg Value) Value {
+			x := this.ToDnum()
 			r := arg.ToInt()
 			return SuDnum{x.Round(r, dnum.HALF_UP)}
 		}),
-		"RoundUp": method1("(number)", func(self, arg Value) Value {
-			x := self.ToDnum()
+		"RoundUp": method1("(number)", func(this, arg Value) Value {
+			x := this.ToDnum()
 			r := arg.ToInt()
 			return SuDnum{x.Round(r, dnum.UP)}
 		}),
-		"RoundDown": method1("(number)", func(self, arg Value) Value {
-			x := self.ToDnum()
+		"RoundDown": method1("(number)", func(this, arg Value) Value {
+			x := this.ToDnum()
 			r := arg.ToInt()
 			return SuDnum{x.Round(r, dnum.DOWN)}
 		}),
 
 		// float methods
 
-		"Cos": method0(func(self Value) Value {
-			f := toFloat(self)
+		"Cos": method0(func(this Value) Value {
+			f := toFloat(this)
 			return fromFloat(math.Cos(f))
 		}),
-		"Sin": method0(func(self Value) Value {
-			f := toFloat(self)
+		"Sin": method0(func(this Value) Value {
+			f := toFloat(this)
 			return fromFloat(math.Sin(f))
 		}),
-		"Tan": method0(func(self Value) Value {
-			f := toFloat(self)
+		"Tan": method0(func(this Value) Value {
+			f := toFloat(this)
 			return fromFloat(math.Tan(f))
 		}),
 
-		"ACos": method0(func(self Value) Value {
-			f := toFloat(self)
+		"ACos": method0(func(this Value) Value {
+			f := toFloat(this)
 			return fromFloat(math.Acos(f))
 		}),
-		"ASin": method0(func(self Value) Value {
-			f := toFloat(self)
+		"ASin": method0(func(this Value) Value {
+			f := toFloat(this)
 			return fromFloat(math.Asin(f))
 		}),
-		"ATan": method0(func(self Value) Value {
-			f := toFloat(self)
+		"ATan": method0(func(this Value) Value {
+			f := toFloat(this)
 			return fromFloat(math.Atan(f))
 		}),
 
-		"Exp": method0(func(self Value) Value {
-			f := toFloat(self)
+		"Exp": method0(func(this Value) Value {
+			f := toFloat(this)
 			return fromFloat(math.Exp(f))
 		}),
-		"Log": method0(func(self Value) Value {
-			f := toFloat(self)
+		"Log": method0(func(this Value) Value {
+			f := toFloat(this)
 			return fromFloat(math.Log(f))
 		}),
-		"Log10": method0(func(self Value) Value {
-			f := toFloat(self)
+		"Log10": method0(func(this Value) Value {
+			f := toFloat(this)
 			return fromFloat(math.Log10(f))
 		}),
-		"Pow": method1("(number)", func(self, arg Value) Value {
-			x := toFloat(self)
+		"Pow": method1("(number)", func(this, arg Value) Value {
+			x := toFloat(this)
 			y := toFloat(arg)
 			return fromFloat(math.Pow(x, y))
 		}),
-		"Sqrt": method0(func(self Value) Value {
-			f := toFloat(self)
+		"Sqrt": method0(func(this Value) Value {
+			f := toFloat(this)
 			return fromFloat(math.Sqrt(f))
 		}),
 	}
@@ -110,7 +109,6 @@ func init() {
 
 func toFloat(v Value) float64 {
 	if i, ok := SmiToInt(v); ok {
-		fmt.Println("int toFloat")
 		return float64(i)
 	}
 	return v.ToDnum().ToFloat()
@@ -120,10 +118,8 @@ func fromFloat(f float64) Value {
 	n := int64(f)
 	if f == float64(n) {
 		if MinSuInt <= n && n <= MaxSuInt {
-			fmt.Println("smi fromFloat")
 			return SuInt(int(n))
 		}
-		fmt.Println("int fromFloat")
 		return SuDnum{dnum.FromInt(n)}
 	}
 	return SuDnum{dnum.FromFloat(f)}

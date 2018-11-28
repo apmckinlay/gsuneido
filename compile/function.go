@@ -31,9 +31,6 @@ func (p *parser) functionWithoutKeyword(inClass bool) *ast.Function {
 func (p *parser) params(inClass bool) []ast.Param {
 	p.match(L_PAREN)
 	var params []ast.Param
-	if (inClass) {
-		params = append(params, ast.Param{Name: "this"})
-	}
 	if p.matchIf(AT) {
 		params = append(params, ast.Param{Name: "@" + p.Text})
 		p.matchIdent()

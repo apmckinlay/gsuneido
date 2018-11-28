@@ -4,18 +4,18 @@ import . "github.com/apmckinlay/gsuneido/runtime"
 
 func init() {
 	ObjectMethods = Methods{
-		"Size": method0(func(self Value) Value {
-			ob := self.(*SuObject)
+		"Size": method0(func(this Value) Value {
+			ob := this.(*SuObject)
 			return SuInt(ob.Size())
 		}),
 		"Add": rawmethod("(@args)",
-			func(t *Thread, self Value, as *ArgSpec, args ...Value) Value {
+			func(t *Thread, as *ArgSpec, this Value, args ...Value) Value {
 				// TODO handle at: and @args
-				ob := self.(*SuObject)
+				ob := this.(*SuObject)
 				for i := 0; i < int(as.Unnamed); i++ {
 					ob.Add(args[i])
 				}
-				return self
+				return this
 			}),
 		// TODO more methods
 	}

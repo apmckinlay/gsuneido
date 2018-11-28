@@ -11,10 +11,15 @@ func (t *Thread) Call(fn *SuFunc) Value {
 	for expand := fn.Nlocals - fn.Nparams; expand > 0; expand-- {
 		t.Push(nil)
 	}
-	t.frames[t.fp] = Frame{fn: fn, bp: t.sp - int(fn.Nlocals)}
+	t.frames[t.fp] = Frame{fn: fn, bp: t.sp - int(fn.Nlocals), this: t.this}
 	defer func(fp int) { t.fp = fp }(t.fp)
 	t.fp++
 	return t.Run()
+}
+
+func CallMethod(t *Thread, this Value, f Value, as *ArgSpec) Value {
+	t.this = this
+	return f.Call(t, as)
 }
 
 func (t *Thread) Run() Value {
@@ -54,7 +59,7 @@ func (t *Thread) Run() Value {
 		case DUPX2:
 			t.Dupx2() // dup top under next two, used for post inc/dec
 		case THIS:
-			t.Push(t.stack[bp])
+			t.Push(fr.this)
 		case TRUE:
 			t.Push(True)
 		case FALSE:
@@ -254,132 +259,47 @@ func (t *Thread) Run() Value {
 			break
 		case THROW:
 			panic(t.Pop())
-		case CALLFUNC0:
-			f := t.Pop()
-			base := t.sp
-			result := f.Call0(t)
-			t.sp = base
-			t.Push(result)
-		case CALLFUNC1:
-			f := t.Pop()
-			base := t.sp - 1
-			result := f.Call1(t, t.stack[base])
-			t.sp = base
-			t.Push(result)
-		case CALLFUNC2:
-			f := t.Pop()
-			base := t.sp - 2
-			result := f.Call2(t, t.stack[base], t.stack[base+1])
-			t.sp = base
-			t.Push(result)
-		case CALLFUNC3:
-			f := t.Pop()
-			base := t.sp - 3
-			result := f.Call3(t, t.stack[base], t.stack[base+1], t.stack[base+2])
-			t.sp = base
-			t.Push(result)
-		case CALLFUNC4:
-			f := t.Pop()
-			base := t.sp - 4
-			result := f.Call4(t, t.stack[base], t.stack[base+1], t.stack[base+2], t.stack[base+3])
-			t.sp = base
-			t.Push(result)
 		case CALLFUNC:
 			f := t.Pop()
-			unnamed := code[fr.ip]
-			fr.ip++
-			named := int(code[fr.ip])
-			fr.ip++
-			var spec []byte
-			if named > 0 {
-				spec = code[fr.ip : fr.ip+named]
-				fr.ip += named
+			ai := fetchUint8()
+			var argSpec *ArgSpec
+			if ai < len(StdArgSpecs) {
+				argSpec = &StdArgSpecs[ai]
+			} else {
+				argSpec = fr.fn.ArgSpecs[ai - len(StdArgSpecs)]
 			}
-			argSpec := &ArgSpec{unnamed, spec, fr.fn.Values}
 			base := t.sp - argSpec.Nargs()
 			result := f.Call(t, argSpec)
 			t.sp = base
 			t.Push(result)
-		case CALLMETH0:
-			method := t.Pop()
-			base := t.sp - 1
-			self := t.stack[base]
-			if methstr, ok := method.(SuStr); ok {
-				if f := self.Lookup(string(methstr)); f != nil {
-					result := f.Call1(t, self)
-					t.sp = base
-					t.Push(result)
-					break
-				}
-			}
-			panic("method not found " + self.TypeName() + "." + method.ToStr())
-		case CALLMETH1:
-			method := t.Pop()
-			base := t.sp - 2
-			self := t.stack[base]
-			if methstr, ok := method.(SuStr); ok {
-				if f := self.Lookup(string(methstr)); f != nil {
-					result := f.Call2(t, self, t.stack[base+1])
-					t.sp = base
-					t.Push(result)
-					break
-				}
-			}
-			panic("method not found " + self.TypeName() + "." + method.ToStr())
-		case CALLMETH2:
-			method := t.Pop()
-			base := t.sp - 3
-			self := t.stack[base]
-			if methstr, ok := method.(SuStr); ok {
-				if f := self.Lookup(string(methstr)); f != nil {
-					result := f.Call3(t, self, t.stack[base+1], t.stack[base+2])
-					t.sp = base
-					t.Push(result)
-					break
-				}
-			}
-			panic("method not found " + self.TypeName() + "." + method.ToStr())
-		case CALLMETH3:
-			method := t.Pop()
-			base := t.sp - 4
-			self := t.stack[base]
-			if methstr, ok := method.(SuStr); ok {
-				if f := self.Lookup(string(methstr)); f != nil {
-					result := f.Call4(t, self, t.stack[base+1], t.stack[base+2], t.stack[base+3])
-					t.sp = base
-					t.Push(result)
-					break
-				}
-			}
-			panic("method not found " + self.TypeName() + "." + method.ToStr())
 		case CALLMETH:
+			//TODO move 'this' to after args so we can pop it
 			method := t.Pop()
-			unnamed := code[fr.ip]
-			fr.ip++
-			named := int(code[fr.ip])
-			fr.ip++
-			var spec []byte
-			if named > 0 {
-				spec = code[fr.ip : fr.ip+named]
-				fr.ip += named
+			ai := fetchUint8()
+			var argSpec *ArgSpec
+			if ai < len(StdArgSpecs) {
+				argSpec = &StdArgSpecs[ai]
+			} else {
+				argSpec = fr.fn.ArgSpecs[ai - len(StdArgSpecs)]
 			}
-			argSpec := &ArgSpec{unnamed, spec, fr.fn.Values}
 			nargs := argSpec.Nargs()
-			base := t.sp - nargs - 1 // 1 extra for self
-			self := t.stack[base]
+			base := t.sp - nargs - 1 // 1 extra for this
+			this := t.stack[base]
 			if methstr, ok := method.(SuStr); ok {
-				if f := self.Lookup(string(methstr)); f != nil {
+				if f := this.Lookup(string(methstr)); f != nil {
+					t.this = this
 					result := f.Call(t, argSpec)
 					t.sp = base
 					t.Push(result)
 					break
 				}
 			}
-			panic("method not found " + self.TypeName() + "." + method.ToStr())
+			panic("method not found " + this.TypeName() + "." + method.ToStr())
 		default:
 			panic("invalid op code: " + asm[op]) // TODO fatal?
 		}
 	}
+	t.this = nil
 	if t.sp > sp {
 		return t.Pop()
 	}

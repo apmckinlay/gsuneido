@@ -8,20 +8,20 @@ import (
 
 func init() {
 	StringMethods = Methods{
-		"Size": method0(func(self Value) Value {
-			return SuInt(len(self.ToStr()))
+		"Size": method0(func(this Value) Value {
+			return SuInt(len(this.ToStr()))
 		}),
-		"Lower": method0(func(self Value) Value {
-			return SuStr(strings.ToLower(self.ToStr()))
+		"Lower": method0(func(this Value) Value {
+			return SuStr(strings.ToLower(this.ToStr()))
 		}),
-		"Upper": method0(func(self Value) Value {
-			return SuStr(strings.ToUpper(self.ToStr()))
+		"Upper": method0(func(this Value) Value {
+			return SuStr(strings.ToUpper(this.ToStr()))
 		}),
-		"Has?": method1("(string)", func(self, arg Value) Value {
-			return SuBool(strings.Contains(self.ToStr(), arg.ToStr()))
+		"Has?": method1("(string)", func(this, arg Value) Value {
+			return SuBool(strings.Contains(this.ToStr(), arg.ToStr()))
 		}),
-		"Repeat": method1("(count)", func(self, arg Value) Value {
-			return SuStr(strings.Repeat(self.ToStr(), arg.ToInt()))
+		"Repeat": method1("(count)", func(this, arg Value) Value {
+			return SuStr(strings.Repeat(this.ToStr(), arg.ToInt()))
 		}),
 		// TODO more methods
 	}

@@ -10,8 +10,11 @@ import (
 // args adjusts sp to shrink or grow the stack
 // so the correct amount is reserved for the function
 // and then calls massage
-// It returns the
+// It returns a slice of the stack containing the locals
 func (t *Thread) Args(ps *ParamSpec, as *ArgSpec) []Value {
+	if ps.Nparams == RawParams {
+		return nil
+	}
 	nargs := as.Nargs()
 	base := t.sp - nargs
 
@@ -37,7 +40,7 @@ func (t *Thread) massage(ps *ParamSpec, as *ArgSpec, args []Value) {
 	if unnamed == int(ps.Nparams) && len(as.Spec) == 0 && !atParam {
 		return // simple fast path
 	}
-	if unnamed < EACH && ps.Flags[0] != AtParam && unnamed > int(ps.Nparams) {
+	if unnamed < EACH && !atParam && unnamed > int(ps.Nparams) {
 		panic("too many arguments")
 	}
 	// as.Unnamed < fn.Nparams
@@ -73,6 +76,9 @@ func (t *Thread) massage(ps *ParamSpec, as *ArgSpec, args []Value) {
 	if atArg {
 		// @args => params
 		ob := args[0].(*SuObject)
+		if ob.ListSize() > int(ps.Nparams) {
+			panic("too many arguments")
+		}
 		for i := 0; i < ints.Min(int(ps.Nparams), ob.ListSize()); i++ {
 			args[i] = ob.ListGet(i)
 		}

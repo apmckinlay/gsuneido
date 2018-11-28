@@ -10,7 +10,7 @@ import (
 
 // ParamSpec describes the parameters of a function
 type ParamSpec struct {
-	// Nparams is the number of arguments required on the stack
+	// Nparams is the number of arguments required on the stack (or RawParams)
 	Nparams uint8
 
 	// NDefaults is the number of default values for parameters
@@ -27,6 +27,12 @@ type ParamSpec struct {
 	// starting with parameter defaults
 	Values []Value
 }
+
+// RawParams is special values for ParamSpec Nparams
+// used by builtins that don't want massage
+const RawParams = 255
+
+var RawParamSpec = &ParamSpec{Nparams: RawParams}
 
 // Flag is a bit set of parameter options
 type Flag byte
@@ -60,9 +66,6 @@ func (f *ParamSpec) String() string {
 	sep := ""
 	v := 0 // index into Values
 	for i := 0; i < int(f.Nparams); i++ {
-		if i == 0 && f.Names[0] == "this" {
-			continue
-		}
 		buf.WriteString(sep)
 		buf.WriteString(flagsToName(f.Names[i], f.Flags[i]))
 		if i >= int(f.Nparams-f.Ndefaults) {
@@ -130,9 +133,9 @@ func (*ParamSpec) Compare(Value) int {
 }
 
 // Params is set in the builtin package
-var Params Callable
+var Params Value
 
-func (*ParamSpec) Lookup(method string) Callable {
+func (*ParamSpec) Lookup(method string) Value {
 	if method == "Params" {
 		return Params
 	}
@@ -143,36 +146,17 @@ func (f *ParamSpec) Params() string {
 	return f.String()[8:] // skip "function"
 }
 
-// defaults for Builtin# and Method#
-// not enough arguments is handled elsewhere
-
-func (f *ParamSpec) Call0(*Thread) Value {
-	panic("too many arguments")
-}
-func (f *ParamSpec) Call1(_ *Thread, _ Value) Value {
-	panic("too many arguments")
-}
-func (f *ParamSpec) Call2(_ *Thread, _, _ Value) Value {
-	panic("too many arguments")
-}
-func (f *ParamSpec) Call3(_ *Thread, _, _, _ Value) Value {
-	panic("too many arguments")
-}
-func (f *ParamSpec) Call4(_ *Thread, _, _, _, _ Value) Value {
-	panic("too many arguments")
-}
-
-func (f *ParamSpec) fillin(t *Thread, i int) Value {
-	if f.Flags[i]&DynParam != 0 {
-		if x := t.dyn("_" + f.Names[i]); x != nil {
-			return x
-		}
-	}
-	if i < int(f.Nparams-f.Ndefaults) {
-		panic("missing argument(s)")
-	}
-	return f.Values[i-int(f.Nparams-f.Ndefaults)]
-}
+// func (f *ParamSpec) fillin(t *Thread, i int) Value {
+// 	if f.Flags[i]&DynParam != 0 {
+// 		if x := t.dyn("_" + f.Names[i]); x != nil {
+// 			return x
+// 		}
+// 	}
+// 	if i < int(f.Nparams-f.Ndefaults) {
+// 		panic("missing argument(s)")
+// 	}
+// 	return f.Values[i-int(f.Nparams-f.Ndefaults)]
+// }
 
 func (f *ParamSpec) Show() string {
 	return f.String()

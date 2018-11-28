@@ -23,6 +23,9 @@ type Thread struct {
 	// sp is the stack pointer, top is stack[sp-1]
 	sp int
 
+	// this is used to communicate e.g. from interp call
+	this Value
+
 	rxcache *regex.LruMapCache
 	trcache *tr.LruMapCache
 }
