@@ -163,7 +163,7 @@ func BenchmarkInterp(b *testing.B) {
 
 func BenchmarkCall(b *testing.B) {
 	f := GetGlobal(GlobalNum("Type"))
-	as := &ArgSpec{Unnamed: 1}
+	as := ArgSpec1
 	th := NewThread()
 	th.Push(SuInt(123))
 	for i := 0; i < b.N; i++ {

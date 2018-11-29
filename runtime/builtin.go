@@ -150,7 +150,7 @@ func (*RawMethod) TypeName() string {
 }
 
 func (b *RawMethod) Call(t *Thread, as *ArgSpec) Value {
-	base := t.sp - as.Nargs()
+	base := t.sp - int(as.Nargs)
 	args := t.stack[base:]
 	return b.Fn(t, as, t.this, args...)
 }

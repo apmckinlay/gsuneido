@@ -131,14 +131,14 @@ func (ss SuStr) Compare(other Value) int {
 // Call implements s(ob, ...) being treated as ob[s](...)
 func (ss SuStr) Call(t *Thread, as *ArgSpec) Value {
 	// TODO @args
-	if as.Unnamed < 1 {
+	if as.Nargs < 1 {
 		panic("string call requires 'this' argument")
 	}
-	ob := t.stack[t.sp-as.Nargs()]
+	ob := t.stack[t.sp-int(as.Nargs)]
 	method := string(ss)
 	fn := ob.Lookup(method)
 	as2 := *as
-	as2.Unnamed--
+	as2.Nargs--
 	t.this = ob
 	return fn.Call(t, &as2)
 }

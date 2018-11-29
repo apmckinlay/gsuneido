@@ -264,11 +264,11 @@ func (t *Thread) Run() Value {
 			ai := fetchUint8()
 			var argSpec *ArgSpec
 			if ai < len(StdArgSpecs) {
-				argSpec = &StdArgSpecs[ai]
+				argSpec = StdArgSpecs[ai]
 			} else {
 				argSpec = fr.fn.ArgSpecs[ai - len(StdArgSpecs)]
 			}
-			base := t.sp - argSpec.Nargs()
+			base := t.sp - int(argSpec.Nargs)
 			result := f.Call(t, argSpec)
 			t.sp = base
 			t.Push(result)
@@ -278,13 +278,13 @@ func (t *Thread) Run() Value {
 			ai := fetchUint8()
 			var argSpec *ArgSpec
 			if ai < len(StdArgSpecs) {
-				argSpec = &StdArgSpecs[ai]
+				argSpec = StdArgSpecs[ai]
 			} else {
 				argSpec = fr.fn.ArgSpecs[ai - len(StdArgSpecs)]
 			}
-			nargs := argSpec.Nargs()
-			base := t.sp - nargs - 1 // 1 extra for this
-			this := t.stack[base]
+			nargs := argSpec.Nargs
+			base := t.sp - int(nargs)
+			this := t.stack[base - 1]
 			if methstr, ok := method.(SuStr); ok {
 				if f := this.Lookup(string(methstr)); f != nil {
 					t.this = this

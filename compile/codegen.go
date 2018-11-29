@@ -602,29 +602,28 @@ func (cg *cgen) args(args []ast.Arg) int {
 	if len(args) == 1 {
 		if args[0].Name == SuStr("@") {
 			cg.expr(args[0].E)
-			return ArgSpecEach
+			return AsEach
 		} else if args[0].Name == SuStr("@+1") {
 			cg.expr(args[0].E)
-			return ArgSpecEach1
+			return AsEach1
 		}
 	}
 	var spec []byte
 	for _, arg := range args {
 		if arg.Name != nil {
 			i := cg.value(arg.Name)
-			verify.That(i <= math.MaxUint8)
 			spec = append(spec, byte(i))
 		}
 		cg.expr(arg.E)
 	}
-	verify.That(len(args) < int(EACH))
-	return cg.argspec(&ArgSpec{Unnamed: byte(len(args) - len(spec)), Spec: spec})
+	verify.That(len(args) < math.MaxUint8)
+	return cg.argspec(&ArgSpec{Nargs: byte(len(args)), Spec: spec})
 }
 
 func (cg *cgen) argspec(as *ArgSpec) int {
 	as.Names = cg.Values // not final, but needed for Equal
 	for i, a := range StdArgSpecs {
-		if as.Equal(&a) {
+		if as.Equal(a) {
 			return i
 		}
 	}
@@ -642,7 +641,7 @@ func (cg *cgen) argspec(as *ArgSpec) int {
 // We can't set argspec.Names = cg.Values yet
 // because cg.Values is still growing and may be reallocated.
 func (cg *cgen) argSpecEq(a1, a2 *ArgSpec) bool {
-	if a1.Unnamed != a2.Unnamed || len(a1.Spec) != len(a2.Spec) {
+	if a1.Nargs != a2.Nargs || a1.Each != a2.Each || len(a1.Spec) != len(a2.Spec) {
 		return false
 	}
 	for i := range a1.Spec {

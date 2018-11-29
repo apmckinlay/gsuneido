@@ -12,53 +12,56 @@ The spec is normally embedded directly in the byte code
 and sliced out of it without copying or processing.
 */
 type ArgSpec struct {
-	// Unnamed is the number of unnamed arguments, or the special values EACH or EACH1
-	Unnamed byte
+	// Nargs is the number of argument (unnamed + named)
+	Nargs byte
+	// Each is 1 for @args, 2 for @+1args, 0 otherwise
+	Each byte
 	// Spec has one entry per named argument, indexing into Names
 	Spec []byte
 	// Names is the argument names from the calling function
 	Names []Value
 }
 
-// special values for ArgSpec Unnamed
+// values for ArgSpec.Each
 const (
-	EACH1 = 255 - iota
-	EACH
+	EACH = 1
+	EACH1 = 2
 )
 
-var ArgSpec0 = &ArgSpec{Unnamed: 0}
-var ArgSpec1 = &ArgSpec{Unnamed: 1}
-var ArgSpec2 = &ArgSpec{Unnamed: 2}
-var ArgSpec3 = &ArgSpec{Unnamed: 3}
-var ArgSpec4 = &ArgSpec{Unnamed: 4}
+var ArgSpec0 = &ArgSpec{Nargs: 0}
+var ArgSpec1 = &ArgSpec{Nargs: 1}
+var ArgSpec2 = &ArgSpec{Nargs: 2}
+var ArgSpec3 = &ArgSpec{Nargs: 3}
+var ArgSpec4 = &ArgSpec{Nargs: 4}
+var ArgSpecEach = &ArgSpec{Nargs: 1, Each: EACH}
+var ArgSpecEach1 = &ArgSpec{Nargs: 1, Each: EACH1}
+var ArgSpecBlock = &ArgSpec{Nargs: 1,
+	Spec: []byte{0}, Names: []Value{SuStr("block")}}
 
-var StdArgSpecs = [...]ArgSpec{
-	ArgSpec{Unnamed: 0},
-	ArgSpec{Unnamed: 1},
-	ArgSpec{Unnamed: 2},
-	ArgSpec{Unnamed: 3},
-	ArgSpec{Unnamed: 4},
-	ArgSpec{Unnamed: EACH},
-	ArgSpec{Unnamed: EACH1},
-	ArgSpec{Spec: []byte{0}, Names: []Value{SuStr("block")}},
+var StdArgSpecs = [...]*ArgSpec{
+	ArgSpec0,
+	ArgSpec1,
+	ArgSpec2,
+	ArgSpec3,
+	ArgSpec4,
+	ArgSpecEach,
+	ArgSpecEach1,
+	ArgSpecBlock,
 }
 
 const (
-	ArgSpecEach = iota + 5
-	ArgSpecEach1
-	ArgSpecBlock
+	AsEach = iota + 5
+	AsEach1
+	AsBlock
 )
 
 // Nargs returns the total number of arguments
-func (as *ArgSpec) Nargs() int {
-	if as.Unnamed >= EACH {
-		return 1
-	}
-	return int(as.Unnamed) + len(as.Spec)
+func (as *ArgSpec) Unnamed() int {
+	return int(as.Nargs) - len(as.Spec)
 }
 
 func (as *ArgSpec) Equal(a2 *ArgSpec) bool {
-	if as.Unnamed != a2.Unnamed || len(as.Spec) != len(a2.Spec) {
+	if as.Nargs != a2.Nargs || as.Each != a2.Each || len(as.Spec) != len(a2.Spec) {
 		return false
 	}
 	for i := range as.Spec {
@@ -73,13 +76,13 @@ func (as *ArgSpec) String() string {
 	var buf strings.Builder
 	sep := ""
 	buf.WriteString("ArgSpec(")
-	if as.Unnamed >= EACH {
+	if as.Each >= EACH {
 		buf.WriteString("@")
-		if as.Unnamed == EACH1 {
+		if as.Each == EACH1 {
 			buf.WriteString("+1")
 		}
 	} else {
-		for i := byte(0); i < as.Unnamed; i++ {
+		for i := 0; i < as.Unnamed(); i++ {
 			buf.WriteString(sep)
 			buf.WriteString("?")
 			sep = ", "

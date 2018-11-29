@@ -36,7 +36,7 @@ func pt_method(args []string, str []bool) bool {
 		th.Push(toValue(args, str, i))
 	}
 	nargs := len(args) - 3
-	result := CallMethod(th, ob, f, &StdArgSpecs[nargs])
+	result := CallMethod(th, ob, f, StdArgSpecs[nargs])
 	ok := result.Equal(expected)
 	if !ok {
 		fmt.Printf("\tgot: %v %#v", result, result)

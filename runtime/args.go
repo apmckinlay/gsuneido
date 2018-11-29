@@ -15,7 +15,7 @@ func (t *Thread) Args(ps *ParamSpec, as *ArgSpec) []Value {
 	if ps.Nparams == RawParams {
 		return nil
 	}
-	nargs := as.Nargs()
+	nargs := int(as.Nargs)
 	base := t.sp - nargs
 
 	// reserve stack space for params
@@ -35,27 +35,28 @@ func (t *Thread) Args(ps *ParamSpec, as *ArgSpec) []Value {
 // to match what is expected by the function (described by Func)
 // The stack must already have been expanded (e.g. by args)
 func (t *Thread) massage(ps *ParamSpec, as *ArgSpec, args []Value) {
-	unnamed := int(as.Unnamed)
+	unnamed := as.Unnamed()
 	atParam := ps.Nparams == 1 && ps.Flags[0] == AtParam
 	if unnamed == int(ps.Nparams) && len(as.Spec) == 0 && !atParam {
 		return // simple fast path
 	}
-	if unnamed < EACH && !atParam && unnamed > int(ps.Nparams) {
+	atArg := as.Each >= EACH
+	if !atArg && !atParam && unnamed > int(ps.Nparams) {
 		panic("too many arguments")
 	}
 	// as.Unnamed < fn.Nparams
 
-	atArg := unnamed >= EACH
+	each := int(as.Each) - 1
 
 	// remove after debugged
 	verify.That(!atParam || ps.Nparams == 1)
-	verify.That(unnamed < EACH || len(as.Spec) == 0)
+	verify.That(!atArg || len(as.Spec) == 0)
 
 	if atParam {
 		if atArg {
 			// @arg => @param
 			ob := args[0].(*SuObject)
-			ob = ob.Slice(unnamed - EACH)
+			ob = ob.Slice(each)
 			args[0] = ob
 			return
 		}
@@ -76,7 +77,6 @@ func (t *Thread) massage(ps *ParamSpec, as *ArgSpec, args []Value) {
 	if atArg {
 		// @args => params
 		ob := args[0].(*SuObject)
-		each := unnamed - EACH // 0 or 1
 		if ob.ListSize() - each > int(ps.Nparams) {
 			panic("too many arguments")
 		}
@@ -95,7 +95,7 @@ func (t *Thread) massage(ps *ParamSpec, as *ArgSpec, args []Value) {
 		// shuffle named args to match params
 		verify.That(len(as.Spec) < MaxArgs)
 		var tmp [MaxArgs]Value
-		nargs := as.Nargs()
+		nargs := int(as.Nargs)
 		// move named arguments aside, off the stack
 		copy(tmp[0:], args[unnamed:nargs])
 		// initialize space for named args
@@ -123,7 +123,7 @@ func (t *Thread) massage(ps *ParamSpec, as *ArgSpec, args []Value) {
 
 	// fill in defaults and check for missing
 	v := 0
-	for i := int(as.Unnamed); i < int(ps.Nparams); i++ {
+	for i := as.Unnamed(); i < int(ps.Nparams); i++ {
 		if args[i] == nil {
 			if i >= int(ps.Nparams-ps.Ndefaults) {
 				args[i] = ps.Values[v]

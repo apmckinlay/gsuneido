@@ -12,7 +12,7 @@ func init() {
 			func(t *Thread, as *ArgSpec, this Value, args ...Value) Value {
 				// TODO handle at: and @args
 				ob := this.(*SuObject)
-				for i := 0; i < int(as.Unnamed); i++ {
+				for i := 0; i < as.Unnamed(); i++ {
 					ob.Add(args[i])
 				}
 				return this
