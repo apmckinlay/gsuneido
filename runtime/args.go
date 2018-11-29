@@ -76,11 +76,12 @@ func (t *Thread) massage(ps *ParamSpec, as *ArgSpec, args []Value) {
 	if atArg {
 		// @args => params
 		ob := args[0].(*SuObject)
-		if ob.ListSize() > int(ps.Nparams) {
+		each := unnamed - EACH // 0 or 1
+		if ob.ListSize() - each > int(ps.Nparams) {
 			panic("too many arguments")
 		}
-		for i := 0; i < ints.Min(int(ps.Nparams), ob.ListSize()); i++ {
-			args[i] = ob.ListGet(i)
+		for i := 0; i < ints.Min(int(ps.Nparams), ob.ListSize() - each); i++ {
+			args[i] = ob.ListGet(i + each)
 		}
 		// named members may overwrite unnamed (same as when passed individually)
 		for i := 0; i < int(ps.Nparams); i++ {
