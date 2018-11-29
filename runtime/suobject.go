@@ -358,3 +358,23 @@ func (ob *SuObject) Slice(n int) *SuObject {
 	copy(list, ob.list[n:])
 	return &SuObject{list: list, named: *newNamed, readonly: false}
 }
+
+func (ob *SuObject) Iter() func() (Value, Value) {
+	next := 0
+	named := ob.named.Iter()
+	return func() (Value, Value) {
+		if next >= ob.Size() {
+			return nil, nil
+		}
+		i := next
+		next++
+		if i < len(ob.list) {
+			return nil, ob.list[i]
+		}
+		key, val := named()
+		if key == nil {
+			return nil, nil
+		}
+		return key.(Value), val.(Value)
+	}
+}

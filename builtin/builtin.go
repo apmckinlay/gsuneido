@@ -45,6 +45,14 @@ func builtin2(s string, f func(a, b Value) Value) bool {
 	return true
 }
 
+func rawbuiltin(s string, f func(t *Thread, as *ArgSpec, args ...Value) Value) bool {
+	i := strings.IndexByte(s, byte('('))
+	name := s[:i]
+	p := s[i:]
+	AddGlobal(name, &RawBuiltin{Fn: f, ParamSpec: params(p)})
+	return true
+}
+
 // params builds a ParamSpec from a string like (a, b) or (@args)
 func params(s string) ParamSpec {
 	fn := compile.Constant("function " + s + " {}").(*SuFunc)

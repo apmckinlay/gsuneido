@@ -53,11 +53,11 @@ func eval(src string) {
 	// Disasm(os.Stdout, fn)
 	th := NewThread()
 	result := th.Call(fn)
-	fmt.Print(">>> ", result)
 	if result != nil {
+		fmt.Print(">>> ", result)
 		fmt.Printf(" <%s %T>", result.TypeName(), result)
+		fmt.Println()
 	}
-	fmt.Println()
 	fmt.Println()
 }
 

@@ -88,6 +88,24 @@ func (b *Builtin3) Call(t *Thread, as *ArgSpec) Value {
 	return b.Fn(args[0], args[1], args[2])
 }
 
+// RawBuiltin is a Value for a builtin function with no massage
+type RawBuiltin struct {
+	Fn func(t *Thread, as *ArgSpec, args ...Value) Value
+	ParamSpec
+}
+
+var _ Value = (*RawBuiltin)(nil)
+
+func (*RawBuiltin) TypeName() string {
+	return "BuiltinFunction"
+}
+
+func (b *RawBuiltin) Call(t *Thread, as *ArgSpec) Value {
+	base := t.sp - int(as.Nargs)
+	args := t.stack[base:base + int(as.Nargs)]
+	return b.Fn(t, as, args...)
+}
+
 // ------------------------------------------------------------------
 
 // Method is a Value for a builtin method
@@ -151,6 +169,6 @@ func (*RawMethod) TypeName() string {
 
 func (b *RawMethod) Call(t *Thread, as *ArgSpec) Value {
 	base := t.sp - int(as.Nargs)
-	args := t.stack[base:]
+	args := t.stack[base:base + int(as.Nargs)]
 	return b.Fn(t, as, t.this, args...)
 }
