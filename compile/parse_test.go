@@ -269,6 +269,7 @@ func TestParseStatements(t *testing.T) {
 		}
 		Assert(t).That(s, Like(expected))
 	}
+	test("x=123;;", "(EQ x 123) {}")
 	test("return", "return")
 	test("return 123", "return 123")
 	test("return \n 123", "return\n123")

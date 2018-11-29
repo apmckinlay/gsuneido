@@ -82,9 +82,6 @@ func (p *parser) compound() []ast.Statement {
 func (p *parser) statements() []ast.Statement {
 	list := []ast.Statement{}
 	for p.Token != R_CURLY {
-		if p.matchIf(SEMICOLON) {
-			continue
-		}
 		stmt := p.statement()
 		list = append(list, stmt)
 	}
