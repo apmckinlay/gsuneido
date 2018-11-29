@@ -9,13 +9,17 @@ import (
 )
 
 // ParamSpec describes the parameters of a function
+// See also ArgSpec
 type ParamSpec struct {
-	// Nparams is the number of arguments required on the stack (or RawParams)
+	// Nparams is the number of arguments required on the stack
 	Nparams uint8
 
 	// NDefaults is the number of default values for parameters
 	// They are in the start of Values
 	Ndefaults uint8
+
+	// Signature is used for fast matching of simple Argspec to ParamSpec
+	Signature byte
 
 	// Flags specifies "types" of params
 	Flags []Flag
@@ -27,12 +31,6 @@ type ParamSpec struct {
 	// starting with parameter defaults
 	Values []Value
 }
-
-// RawParams is special values for ParamSpec Nparams
-// used by builtins that don't want massage
-const RawParams = 255
-
-var RawParamSpec = &ParamSpec{Nparams: RawParams}
 
 // Flag is a bit set of parameter options
 type Flag byte

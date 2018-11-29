@@ -7,14 +7,19 @@ import (
 	"github.com/apmckinlay/gsuneido/util/verify"
 )
 
+func (t *Thread) Args(ps *ParamSpec, as *ArgSpec) []Value {
+	if ps.Signature^as.Signature == 0xff {
+		// fast path if signatures match, hopefully inlined
+		return t.stack[t.sp-int(as.Nargs):]
+	}
+	return t.args(ps, as)
+}
+
 // args adjusts sp to shrink or grow the stack
 // so the correct amount is reserved for the function
 // and then calls massage
 // It returns a slice of the stack containing the locals
-func (t *Thread) Args(ps *ParamSpec, as *ArgSpec) []Value {
-	if ps.Nparams == RawParams {
-		return nil
-	}
+func (t *Thread) args(ps *ParamSpec, as *ArgSpec) []Value {
 	nargs := int(as.Nargs)
 	base := t.sp - nargs
 
@@ -77,10 +82,10 @@ func (t *Thread) massage(ps *ParamSpec, as *ArgSpec, args []Value) {
 	if atArg {
 		// @args => params
 		ob := args[0].(*SuObject)
-		if ob.ListSize() - each > int(ps.Nparams) {
+		if ob.ListSize()-each > int(ps.Nparams) {
 			panic("too many arguments")
 		}
-		for i := 0; i < ints.Min(int(ps.Nparams), ob.ListSize() - each); i++ {
+		for i := 0; i < ints.Min(int(ps.Nparams), ob.ListSize()-each); i++ {
 			args[i] = ob.ListGet(i + each)
 		}
 		// named members may overwrite unnamed (same as when passed individually)

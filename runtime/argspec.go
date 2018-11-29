@@ -6,34 +6,46 @@ import (
 	"github.com/apmckinlay/gsuneido/lexer"
 )
 
-/*
-ArgSpec specifies the arguments on the stack for a call.
-The spec is normally embedded directly in the byte code
-and sliced out of it without copying or processing.
-*/
+// ArgSpec describes the arguments on the stack for a call
+// See also ParamSpec
 type ArgSpec struct {
 	// Nargs is the number of argument (unnamed + named)
 	Nargs byte
+
 	// Each is 1 for @args, 2 for @+1args, 0 otherwise
 	Each byte
+
+	// Signature is used for fast matching of simple Argspec to ParamSpec
+	Signature byte
+
 	// Spec has one entry per named argument, indexing into Names
 	Spec []byte
+
 	// Names is the argument names from the calling function
 	Names []Value
 }
 
 // values for ArgSpec.Each
 const (
-	EACH = 1
+	EACH  = 1
 	EACH1 = 2
 )
 
-var ArgSpec0 = &ArgSpec{Nargs: 0}
-var ArgSpec1 = &ArgSpec{Nargs: 1}
-var ArgSpec2 = &ArgSpec{Nargs: 2}
-var ArgSpec3 = &ArgSpec{Nargs: 3}
-var ArgSpec4 = &ArgSpec{Nargs: 4}
-var ArgSpecEach = &ArgSpec{Nargs: 1, Each: EACH}
+const (
+	Sig0 byte = iota + 1
+	Sig1
+	Sig2
+	Sig3
+	Sig4
+	SigEach
+)
+
+var ArgSpec0 = &ArgSpec{Nargs: 0, Signature: Sig0}
+var ArgSpec1 = &ArgSpec{Nargs: 1, Signature: Sig1}
+var ArgSpec2 = &ArgSpec{Nargs: 2, Signature: Sig2}
+var ArgSpec3 = &ArgSpec{Nargs: 3, Signature: Sig3}
+var ArgSpec4 = &ArgSpec{Nargs: 4, Signature: Sig4}
+var ArgSpecEach = &ArgSpec{Nargs: 1, Each: EACH, Signature: SigEach}
 var ArgSpecEach1 = &ArgSpec{Nargs: 1, Each: EACH1}
 var ArgSpecBlock = &ArgSpec{Nargs: 1,
 	Spec: []byte{0}, Names: []Value{SuStr("block")}}

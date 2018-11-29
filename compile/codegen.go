@@ -21,9 +21,7 @@ var zeroFlags [MaxArgs]Flag
 func codegen(fn *ast.Function) *SuFunc {
 	cg := cgen{}
 	cg.function(fn)
-	if allZero(cg.Flags) {
-		cg.Flags = zeroFlags[:len(cg.Flags)]
-	}
+	cg.finishParamSpec()
 	for _, as := range cg.argspecs {
 		as.Names = cg.Values
 	}
@@ -32,6 +30,20 @@ func codegen(fn *ast.Function) *SuFunc {
 		Nlocals:   uint8(len(cg.Names)),
 		ParamSpec: cg.ParamSpec,
 		ArgSpecs:  cg.argspecs,
+	}
+}
+
+func (cg *cgen) finishParamSpec() {
+	if len(cg.Flags) == 1 && cg.Flags[0] == AtParam {
+		cg.Signature = ^SigEach
+		return
+	}
+	if !allZero(cg.Flags) {
+		return
+	}
+	cg.Flags = zeroFlags[:len(cg.Flags)]
+	if 0 <= cg.Nparams && cg.Nparams <= 4 {
+		cg.Signature = ^(1 + cg.Nparams)
 	}
 }
 

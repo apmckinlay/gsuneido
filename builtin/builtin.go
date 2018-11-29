@@ -63,7 +63,8 @@ func method1(p string, f func(this, a1 Value) Value) Value {
 	return &Method1{Builtin2{Fn: f, ParamSpec: params(p)}}
 }
 
-func rawmethod(_ string, // TODO params ???
+func rawmethod(p string,
 	f func(t *Thread, as *ArgSpec, this Value, args ...Value) Value) Value {
-	return &RawMethod{Fn: f, ParamSpec: *RawParamSpec}
+	// params are just for documentation, RawMethod doesn't use them
+	return &RawMethod{Fn: f, ParamSpec: params(p)}
 }
