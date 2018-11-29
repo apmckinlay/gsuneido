@@ -112,6 +112,8 @@ func TestCodegen(t *testing.T) {
 	test("a().Add(123)", "load a, callfunc0, int 123, value 'Add', callmeth1")
 	test("a().Add(123).Size()",
 		"load a, callfunc0, int 123, value 'Add', callmeth1, value 'Size', callmeth0")
+	test("a.b(1).c(2)",
+		"load a, one, value 'b', callmeth1, int 2, value 'c', callmeth1")
 
 	test("function () { }", "value /* function */")
 }

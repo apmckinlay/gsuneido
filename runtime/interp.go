@@ -26,6 +26,7 @@ func (t *Thread) Run() Value {
 	fr := &t.frames[t.fp-1]
 	code := fr.fn.Code
 	bp := fr.bp
+	sp := t.sp
 	fetchUint8 := func() int {
 		fr.ip++
 		return int(code[fr.ip-1])
@@ -42,7 +43,7 @@ func (t *Thread) Run() Value {
 		fr.ip += fetchInt16()
 	}
 
-	sp := t.sp
+loop:
 	for fr.ip < len(code) {
 		// fmt.Println("stack:", t.stack[sp:t.sp])
 		// _, da := Disasm1(fr.fn, fr.ip)
@@ -256,7 +257,7 @@ func (t *Thread) Run() Value {
 				fr.ip += 2
 			}
 		case RETURN:
-			break
+			break loop
 		case THROW:
 			panic(t.Pop())
 		case CALLFUNC:
@@ -266,25 +267,23 @@ func (t *Thread) Run() Value {
 			if ai < len(StdArgSpecs) {
 				argSpec = StdArgSpecs[ai]
 			} else {
-				argSpec = fr.fn.ArgSpecs[ai - len(StdArgSpecs)]
+				argSpec = fr.fn.ArgSpecs[ai-len(StdArgSpecs)]
 			}
 			base := t.sp - int(argSpec.Nargs)
 			result := f.Call(t, argSpec)
 			t.sp = base
 			t.Push(result)
 		case CALLMETH:
-			//TODO move 'this' to after args so we can pop it
 			method := t.Pop()
 			ai := fetchUint8()
 			var argSpec *ArgSpec
 			if ai < len(StdArgSpecs) {
 				argSpec = StdArgSpecs[ai]
 			} else {
-				argSpec = fr.fn.ArgSpecs[ai - len(StdArgSpecs)]
+				argSpec = fr.fn.ArgSpecs[ai-len(StdArgSpecs)]
 			}
-			nargs := argSpec.Nargs
-			base := t.sp - int(nargs)
-			this := t.stack[base - 1]
+			base := t.sp - int(argSpec.Nargs) - 1
+			this := t.stack[base]
 			if methstr, ok := method.(SuStr); ok {
 				if f := this.Lookup(string(methstr)); f != nil {
 					t.this = this
