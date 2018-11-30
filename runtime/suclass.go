@@ -8,11 +8,12 @@ import (
 
 // SuClass is a user defined (Suneido language) class
 type SuClass struct {
+	Name string
 	Base string
 	Data map[string]Value // or SuStr instead of string ???
 }
 
-var _ Value = &SuClass{}
+var _ Value = (*SuClass)(nil)
 
 func (c *SuClass) String() string {
 	s := "/* class"
@@ -128,4 +129,14 @@ func (c *SuClass) lookup(method string) Value {
 		return x
 	}
 	return nil // could make dummy Value with Call's doing panic
+}
+
+var _ Named = &SuClass{}
+
+func (c *SuClass) SetName(name string) {
+	c.Name = name
+}
+
+func (c *SuClass) GetName() string {
+	return c.Name
 }

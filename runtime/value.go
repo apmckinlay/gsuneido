@@ -93,3 +93,8 @@ func Show(v Value) string {
 	}
 	return v.String()
 }
+
+type Named interface {
+	GetName() string
+	SetName(name string)
+}

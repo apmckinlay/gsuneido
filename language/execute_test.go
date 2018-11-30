@@ -28,9 +28,9 @@ var _ = ptest.Add("lang_rangelen", pt_lang_rangelen)
 
 func TestBuiltinString(t *testing.T) {
 	f := GetGlobal(GlobalNum("Type"))
-	Assert(t).That(f.String(), Equals("function(value)"))
+	Assert(t).That(f.String(), Equals("Type /* builtin function */"))
 	f = GetGlobal(GlobalNum("Object"))
-	Assert(t).That(f.String(), Equals("function(@args)"))
+	Assert(t).That(f.String(), Equals("Object /* builtin function */"))
 }
 
 func TestPtestExecute(t *testing.T) {

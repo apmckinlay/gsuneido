@@ -30,6 +30,8 @@ type ParamSpec struct {
 	// Values contains any literals in the function
 	// starting with parameter defaults
 	Values []Value
+
+	Name string
 }
 
 // Flag is a bit set of parameter options
@@ -158,4 +160,14 @@ func (f *ParamSpec) Params() string {
 
 func (f *ParamSpec) Show() string {
 	return f.String()
+}
+
+var _ Named = (*ParamSpec)(nil)
+
+func (f *ParamSpec) SetName(name string) {
+	f.Name = name
+}
+
+func (f *ParamSpec) GetName() string {
+	return f.Name
 }

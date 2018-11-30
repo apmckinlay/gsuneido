@@ -3,10 +3,22 @@ package runtime
 // Methods is a map of method name strings to Values
 type Methods = map[string]Value
 
+type BuiltinParams struct {
+	ParamSpec
+}
+
+func (ps *BuiltinParams) String() string {
+	s := "/* builtin function */"
+	if ps.Name == "" {
+		return s
+	}
+	return ps.Name + " " + s
+}
+
 // Builtin is a Value for a builtin function
 type Builtin struct {
 	Fn func(t *Thread, args ...Value) Value
-	ParamSpec
+	BuiltinParams
 }
 
 var _ Value = (*Builtin)(nil)
@@ -23,7 +35,7 @@ func (b *Builtin) Call(t *Thread, as *ArgSpec) Value {
 // Builtin0 is a Value for a builtin function with no arguments
 type Builtin0 struct {
 	Fn func() Value
-	ParamSpec
+	BuiltinParams
 }
 
 var _ Value = (*Builtin0)(nil)
@@ -40,7 +52,7 @@ func (b *Builtin0) Call(t *Thread, as *ArgSpec) Value {
 // Builtin1 is a Value for a builtin function with one argument
 type Builtin1 struct {
 	Fn func(a1 Value) Value
-	ParamSpec
+	BuiltinParams
 }
 
 var _ Value = (*Builtin1)(nil)
@@ -57,7 +69,7 @@ func (b *Builtin1) Call(t *Thread, as *ArgSpec) Value {
 // Builtin2 is a Value for a builtin function with two arguments
 type Builtin2 struct {
 	Fn func(a1, a2 Value) Value
-	ParamSpec
+	BuiltinParams
 }
 
 var _ Value = (*Builtin2)(nil)
@@ -74,7 +86,7 @@ func (b *Builtin2) Call(t *Thread, as *ArgSpec) Value {
 // Builtin3 is a Value for a builtin function with three arguments
 type Builtin3 struct {
 	Fn func(a1, a2, a3 Value) Value
-	ParamSpec
+	BuiltinParams
 }
 
 var _ Value = (*Builtin3)(nil)
@@ -91,7 +103,7 @@ func (b *Builtin3) Call(t *Thread, as *ArgSpec) Value {
 // RawBuiltin is a Value for a builtin function with no massage
 type RawBuiltin struct {
 	Fn func(t *Thread, as *ArgSpec, args ...Value) Value
-	ParamSpec
+	BuiltinParams
 }
 
 var _ Value = (*RawBuiltin)(nil)
