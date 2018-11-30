@@ -4,6 +4,7 @@ import (
 	"github.com/apmckinlay/gsuneido/compile/ast"
 	. "github.com/apmckinlay/gsuneido/lexer"
 	. "github.com/apmckinlay/gsuneido/runtime"
+	. "github.com/apmckinlay/gsuneido/util/ascii"
 )
 
 // expression parses a Suneido expression and builds an AST
@@ -73,6 +74,15 @@ func (p *parser) pcExpr(minprec int8) ast.Expr {
 		case ASSIGN_START < tok && tok < ASSIGN_END:
 			ckLvalue(e)
 			rhs := p.expr()
+			if tok == EQ {
+				if id, ok := e.(*ast.Ident); ok {
+					if c, ok := rhs.(*ast.Constant); ok {
+						if named, ok := c.Val.(Named); ok {
+							named.SetName(id.Name)
+						}
+					}
+				}
+			}
 			e = p.Binary(e, tok, rhs)
 		case tok == Q_MARK:
 			t := p.expr()
@@ -178,7 +188,7 @@ func (p *parser) atom() ast.Expr {
 		p.newline = false
 		return p.Ident("this")
 	case FUNCTION:
-		return p.function()
+		return p.Constant(codegen(p.function()))
 	case CLASS:
 		return p.Constant(p.class())
 	case NEW:
@@ -312,6 +322,9 @@ func (p *parser) argumentList(closing Token) []ast.Arg {
 	for p.Token != closing {
 		var expr ast.Expr
 		if p.matchIf(COLON) {
+			if !IsLower(p.Text[0]) {
+				p.error("expecting local variable name")
+			}
 			handlePending(p.Constant(True))
 			named(SuStr(p.Text), p.Ident(p.Text))
 			p.matchIdent()

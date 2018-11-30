@@ -10,6 +10,9 @@ type SuFunc struct {
 	// Nlocals is the number of parameters and local variables
 	Nlocals uint8
 
+	// IsMethod is true for class methods
+	IsMethod bool
+
 	// Code is the actual byte code
 	Code []byte
 
@@ -36,6 +39,17 @@ func (*SuFunc) Lookup(method string) Value {
 	return SuFuncMethods[method]
 }
 
-func (*SuFunc) String() string {
-	return "/* function */" // TODO name and library
+func (f *SuFunc) String() string {
+	s := ""
+	if f.Name != "" {
+		s = f.Name + " "
+	}
+	s += "/* "
+	if f.IsMethod {
+		s += "method"
+	} else {
+		s += "function"
+	}
+	s += " */"
+	return s
 }

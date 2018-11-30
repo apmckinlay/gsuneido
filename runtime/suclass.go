@@ -16,11 +16,16 @@ type SuClass struct {
 var _ Value = (*SuClass)(nil)
 
 func (c *SuClass) String() string {
-	s := "/* class"
+	s := ""
+	if c.Name != "" {
+		s = c.Name + " "
+	}
+	s += "/* class"
 	if c.Base != "" {
 		s += " : " + c.Base
 	}
-	return s + " */"
+	s += " */"
+	return s
 }
 
 func (c *SuClass) Show() string {

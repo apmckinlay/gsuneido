@@ -133,6 +133,8 @@ func (p *parser) member(ob container, closing Token, inClass bool) {
 	m := p.constant()
 	if inClass && IsIdent[start] && p.Token == L_PAREN {
 		fn := codegen(p.functionWithoutKeyword(true))
+		fn.IsMethod = true
+		fn.Name = "." + string(m.(SuStr))
 		p.putMem(ob, m, fn)
 	} else if p.matchIf(COLON) {
 		if p.Token == COMMA || p.Token == SEMICOLON || p.Token == closing {
