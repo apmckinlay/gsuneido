@@ -67,8 +67,8 @@ func Disasm1(fn *SuFunc, i int) (int, string) {
 		idx := fetchUint8()
 		s += " " + fn.Names[idx]
 	case GLOBAL:
-		idx := fetchUint16()
-		s += " " + GlobalName(int(idx))
+		gn := Global(fetchUint16())
+		s += " " + GlobalName(gn)
 	case JUMP, TJUMP, FJUMP, AND, OR, Q_MARK, IN, EQJUMP, NEJUMP:
 		j := fetchInt16()
 		s += fmt.Sprintf(" %d", i+j)

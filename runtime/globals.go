@@ -6,9 +6,13 @@ import (
 	"github.com/apmckinlay/gsuneido/util/verify"
 )
 
+// Global is a reference to a global name/value
+// Globals are constant
+type Global = int
+
 var (
 	lock     sync.RWMutex
-	name2num = make(map[string]int)
+	name2num = make(map[string]Global)
 	// put nil in first slot so we never use gnum of zero
 	names  = []string{""}
 	values = []Value{nil}
@@ -19,13 +23,13 @@ var (
 // This is used for set up of built-in globals
 // The return value is so it can be used like:
 // var _ = globals.Add(...)
-func AddGlobal(name string, val Value) int {
+func AddGlobal(name string, val Value) Global {
 	lock.Lock()
 	defer lock.Unlock()
 	if _, ok := name2num[name]; ok {
 		panic("duplicate global: " + name)
 	}
-	gnum := len(names)
+	gnum := Global(len(names))
 	name2num[name] = gnum
 	names = append(names, name)
 	values = append(values, val)
@@ -35,15 +39,15 @@ func AddGlobal(name string, val Value) int {
 
 // Num returns the global number for a name
 // adding it if it doesn't exist.
-func GlobalNum(name string) int {
+func GlobalNum(name string) Global {
 	gn, ok := check(name)
 	if ok {
-		return gn
+		return Global(gn)
 	}
 	return AddGlobal(name, nil)
 }
 
-func check(name string) (int, bool) {
+func check(name string) (Global, bool) {
 	lock.RLock()
 	defer lock.RUnlock()
 	gn, ok := name2num[name]
@@ -51,14 +55,14 @@ func check(name string) (int, bool) {
 }
 
 // Name returns the name for a global number
-func GlobalName(gnum int) string {
+func GlobalName(gnum Global) string {
 	lock.RLock()
 	defer lock.RUnlock()
 	return names[gnum]
 }
 
 // Get returns the value for a global
-func GetGlobal(gnum int) Value {
+func GetGlobal(gnum Global) Value {
 	lock.RLock()
 	defer lock.RUnlock()
 	return values[gnum]

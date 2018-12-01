@@ -93,7 +93,7 @@ loop:
 			}
 			t.Push(t.stack[bp+i])
 		case GLOBAL:
-			gn := int(fetchUint16())
+			gn := Global(fetchUint16())
 			val := GetGlobal(gn)
 			if val == nil {
 				panic("uninitialized global: " + GlobalName(gn))
