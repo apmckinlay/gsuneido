@@ -35,6 +35,8 @@ func TestLexer(t *testing.T) {
 	first("0x8002 //foo", "0x8002", NUMBER)
 	first("'hello'", "hello", STRING)
 	first("'hello", "hello", STRING)
+	first("`hello`", "hello", STRING)
+	first("`hello", "hello", STRING)
 	first("'foo\\'bar'", "foo'bar", STRING)
 	first(`"\"foo\""`, `"foo"`, STRING)
 	first("\\", "\\", ERROR)

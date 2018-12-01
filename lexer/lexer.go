@@ -22,9 +22,9 @@ func NewLexer(src string) *Lexer {
 
 // Item is the return value from Lexer.Next
 type Item struct {
-	Text    string
-	Pos     int32
-	Token   Token
+	Text  string
+	Pos   int32
+	Token Token
 }
 
 func (it *Item) String() string {
@@ -271,7 +271,11 @@ func (lxr *Lexer) spanComment(start int) Item {
 }
 
 func (lxr *Lexer) rawString(start int) Item {
-	return it(STRING, start, lxr.matchUntil(start, "`"))
+	s := lxr.matchUntil(start+1, "`")
+	if s[len(s)-1] == '`' {
+		s = s[:len(s)-1]
+	}
+	return it(STRING, start, s)
 }
 
 func (lxr *Lexer) quotedString(start int, quote byte) Item {
