@@ -144,7 +144,7 @@ func Uminus(x Value) Value {
 
 // IntToValue returns an SuInt if it fits, else a SuDnum
 func IntToValue(n int) Value {
-	if math.MinInt16 < n && n < math.MaxInt16 {
+	if MinSuInt < n && n < MaxSuInt {
 		return SuInt(n)
 	}
 	return SuDnum{dnum.FromInt(int64(n))}

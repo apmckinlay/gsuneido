@@ -6,7 +6,7 @@ func init() {
 	ObjectMethods = Methods{
 		"Size": method0(func(this Value) Value {
 			ob := this.(*SuObject)
-			return SuInt(ob.Size())
+			return IntToValue(ob.Size())
 		}),
 		"Add": rawmethod("(@args)",
 			func(t *Thread, as *ArgSpec, this Value, args ...Value) Value {

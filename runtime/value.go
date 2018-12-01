@@ -62,21 +62,13 @@ var NilVal Value
 func NumFromString(s string) Value {
 	if strings.HasPrefix(s, "0x") {
 		if n, err := strconv.ParseUint(s, 0, 32); err == nil {
-			return NumFromInt(int(int32(n)))
+			return IntToValue(int(int32(n)))
 		}
 	}
 	if n, err := strconv.ParseInt(s, 0, 32); err == nil {
-		return NumFromInt(int(n))
+		return IntToValue(int(n))
 	}
 	return SuDnum{dnum.FromStr(s)}
-}
-
-// NumFromInt returns an SuInt if within range, else a SuDnum
-func NumFromInt(n int) Value {
-	if MinSuInt <= n && n <= MaxSuInt {
-		return SuInt(n)
-	}
-	return SuDnum{dnum.FromInt(int64(n))}
 }
 
 type Showable interface {

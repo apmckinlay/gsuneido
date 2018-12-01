@@ -509,11 +509,11 @@ func (cg *cgen) emitValue(val Value) {
 		cg.emit(op.TRUE)
 	} else if val == False {
 		cg.emit(op.FALSE)
-	} else if val == SuInt(0) {
+	} else if val == Zero {
 		cg.emit(op.ZERO)
-	} else if val == SuInt(1) {
+	} else if val == One {
 		cg.emit(op.ONE)
-	} else if val == SuStr("") {
+	} else if val == EmptyStr {
 		cg.emit(op.EMPTYSTR)
 	} else if i, ok := SmiToInt(val); ok {
 		cg.emitInt16(op.INT, i)

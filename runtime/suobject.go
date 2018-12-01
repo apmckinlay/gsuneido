@@ -131,7 +131,7 @@ func (ob *SuObject) mustBeMutable() {
 
 func (ob *SuObject) migrate() {
 	for {
-		x := ob.named.Del(NumFromInt(ob.ListSize()))
+		x := ob.named.Del(IntToValue(ob.ListSize()))
 		if x == nil {
 			break
 		}
