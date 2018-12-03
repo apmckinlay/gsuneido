@@ -1,5 +1,7 @@
 package runtime
 
+import "github.com/apmckinlay/gsuneido/util/str"
+
 // MaxArgs is the maximum number of arguments allowed
 const MaxArgs = 200
 
@@ -23,7 +25,16 @@ type SuFunc struct {
 var _ Value = (*SuFunc)(nil) // verify *SuFunc satisfies Value
 
 func (f *SuFunc) Call(t *Thread, as *ArgSpec) Value {
-	t.Args(&f.ParamSpec, as)
+	args := t.Args(&f.ParamSpec, as)
+	for i, flag := range f.Flags {
+		if flag&DotParam == DotParam {
+			name := f.Names[i]
+			if flag&PubParam == PubParam {
+				name = str.Capitalize(name)
+			}
+			t.this.Put(SuStr(name), args[i])
+		}
+	}
 	return t.Call(f)
 }
 
