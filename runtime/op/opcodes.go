@@ -62,5 +62,5 @@ const (
 	THIS
 	CALLFUNC
 	CALLMETH
-	NEW
+	SUPER
 )

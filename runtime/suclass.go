@@ -72,9 +72,21 @@ func (*SuClass) ToStr() string {
 	panic("cannot convert class to string")
 }
 
-func (c *SuClass) Get(m Value) Value {
-	if s, ok := m.(SuStr); ok {
-		return c.Data[string(s)]
+func (c *SuClass) Get(mem Value) Value {
+	if m, ok := mem.(SuStr); ok {
+		return c.get2(string(m))
+	}
+	return nil
+}
+
+func (c *SuClass) get2(m string) Value {
+	for {
+		if x, ok := c.Data[m]; ok {
+			return x
+		}
+		if c = c.parent(); c == nil {
+			break
+		}
 	}
 	return nil
 }
@@ -111,7 +123,7 @@ func (*SuClass) Compare(Value) int {
 }
 
 func (c *SuClass) parent() *SuClass {
-	if c.Base == 0 {
+	if c.Base <= 0 {
 		return nil
 	}
 	base := GetGlobal(c.Base)
@@ -128,8 +140,9 @@ func (c *SuClass) Lookup(method string) Value {
 	if f, ok := ClassMethods[method]; ok {
 		return f
 	}
-	if f := c.lookup(method); f != nil {
-		return f
+	
+	if x := c.get2(method); x != nil {
+		return x
 	}
 	if method == "New" {
 		return &Builtin0{func() Value { return nil },

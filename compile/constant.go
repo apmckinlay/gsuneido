@@ -99,6 +99,8 @@ var closing = map[Token]Token{
 	L_BRACKET: R_BRACKET,
 }
 
+const noBase = -1
+
 func (p *parser) object() Value {
 	close := closing[p.Token]
 	p.next()
@@ -108,7 +110,7 @@ func (p *parser) object() Value {
 	} else {
 		ob = new(SuRecord)
 	}
-	p.memberList(ob, close, false)
+	p.memberList(ob, close, noBase)
 	return ob.(Value)
 }
 
@@ -118,9 +120,9 @@ type container interface {
 	Put(Value, Value)
 }
 
-func (p *parser) memberList(ob container, closing Token, inClass bool) {
+func (p *parser) memberList(ob container, closing Token, base Global) {
 	for p.Token != closing {
-		p.member(ob, closing, inClass)
+		p.member(ob, closing, base)
 		if p.Token == COMMA || p.Token == SEMICOLON {
 			p.next()
 		}
@@ -128,12 +130,13 @@ func (p *parser) memberList(ob container, closing Token, inClass bool) {
 	p.next()
 }
 
-func (p *parser) member(ob container, closing Token, inClass bool) {
+func (p *parser) member(ob container, closing Token, base Global) {
 	start := p.Token
 	m := p.constant()
-	if inClass && IsIdent[start] && p.Token == L_PAREN {
+	if base != noBase && IsIdent[start] && p.Token == L_PAREN {
 		ast := p.method()
 		ast.IsMethod = true
+		ast.Base = base
 		name := string(m.(SuStr))
 		if name == "New" {
 			ast.IsNewMethod = true
@@ -177,7 +180,7 @@ func (p *parser) class() Value {
 	}
 	p.match(L_CURLY)
 	mems := classcon{}
-	p.memberList(mems, R_CURLY, true)
+	p.memberList(mems, R_CURLY, base)
 	return &SuClass{Base: base, MemBase: MemBase{Data: mems}}
 }
 

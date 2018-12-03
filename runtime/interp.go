@@ -27,6 +27,7 @@ func (t *Thread) Run() Value {
 	code := fr.fn.Code
 	bp := fr.bp
 	sp := t.sp
+	super := 0
 	fetchUint8 := func() int {
 		fr.ip++
 		return int(code[fr.ip-1])
@@ -273,6 +274,8 @@ loop:
 			result := f.Call(t, argSpec)
 			t.sp = base
 			t.Push(result)
+		case SUPER:
+			super = Global(fetchUint16())
 		case CALLMETH:
 			method := t.Pop()
 			ai := fetchUint8()
@@ -285,7 +288,12 @@ loop:
 			base := t.sp - int(argSpec.Nargs) - 1
 			this := t.stack[base]
 			if methstr, ok := method.(SuStr); ok {
-				if f := this.Lookup(string(methstr)); f != nil {
+				ob := this
+				if super > 0 {
+					ob = GetGlobal(super)
+					super = 0
+				}
+				if f := ob.Lookup(string(methstr)); f != nil {
 					t.this = this
 					result := f.Call(t, argSpec)
 					t.sp = base

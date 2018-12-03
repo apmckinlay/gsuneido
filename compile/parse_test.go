@@ -170,6 +170,9 @@ func TestParseExpression(t *testing.T) {
 	test("a.F { }",
 		"(call a.F block: { })")
 
+	test("super(1)", "(call super 1)")
+	test("super.Foo(1)", "(call super.Foo 1)")
+
 	test("new c", "(call c.*new*)")
 	test("new c.m", "(call c.m.*new*)")
 	test("new c(a, b)", "(call c.*new* a b)")

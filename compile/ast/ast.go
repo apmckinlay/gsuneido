@@ -192,6 +192,7 @@ type Function struct {
 	Params      []Param
 	Body        []Statement
 	IsMethod    bool
+	Base        Global
 	IsNewMethod bool
 }
 

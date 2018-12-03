@@ -19,7 +19,7 @@ var asm = []string{
 	"true", "false", "zero", "one", "maxint", "emptystr",
 	"or", "and", "bool", "qmark", "in", "jump", "tjump", "fjump",
 	"eqjump", "nejump", "throw", "try", "rangeto", "rangelen", "this",
-	"callfunc", "callmeth", "new",
+	"callfunc", "callmeth", "super",
 }
 
 func init() {
@@ -66,7 +66,7 @@ func Disasm1(fn *SuFunc, i int) (int, string) {
 	case LOAD, STORE, DYLOAD:
 		idx := fetchUint8()
 		s += " " + fn.Names[idx]
-	case GLOBAL:
+	case GLOBAL, SUPER:
 		gn := Global(fetchUint16())
 		s += " " + GlobalName(gn)
 	case JUMP, TJUMP, FJUMP, AND, OR, Q_MARK, IN, EQJUMP, NEJUMP:

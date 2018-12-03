@@ -53,7 +53,7 @@ func TestPtestClassImpl(*testing.T) {
 
 func init() {
 	f := func(name, val Value) Value {
-		AddGlobal(string(name.(SuStr)), val)
+		TestGlobal(string(name.(SuStr)), val)
 		return nil
 	}
 	AddGlobal("Def", &Builtin2{f, BuiltinParams{ParamSpec: ParamSpec2}})

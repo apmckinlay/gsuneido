@@ -27,12 +27,8 @@ var (
 func AddGlobal(name string, val Value) Global {
 	lock.Lock()
 	defer lock.Unlock()
-	if gn, ok := name2num[name]; ok {
-		if values[gn] != nil {
-			panic("duplicate global: " + name)
-		}
-		values[gn] = val
-		return gn
+	if _, ok := name2num[name]; ok {
+		panic("duplicate global: " + name)
 	}
 	gnum := Global(len(names))
 	name2num[name] = gnum
@@ -40,6 +36,11 @@ func AddGlobal(name string, val Value) Global {
 	values = append(values, val)
 	verify.That(len(names) == len(values))
 	return gnum
+}
+
+// TestGlobal sets a global for tests
+func TestGlobal(name string, val Value) {
+	values[GlobalNum(name)] = val
 }
 
 // Num returns the global number for a name

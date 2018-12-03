@@ -4,27 +4,18 @@ import (
 	"strings"
 	"testing"
 
-	rt "github.com/apmckinlay/gsuneido/runtime"
+	. "github.com/apmckinlay/gsuneido/runtime"
 	. "github.com/apmckinlay/gsuneido/util/hamcrest"
 )
 
 func TestCodegen(t *testing.T) {
-	rt.DefaultSingleQuotes = true
-	defer func() { rt.DefaultSingleQuotes = false }()
+	DefaultSingleQuotes = true
+	defer func() { DefaultSingleQuotes = false }()
 	test := func(src, expected string) {
 		t.Helper()
 		ast := ParseFunction("function () {\n" + src + "\n}")
 		fn := codegen(ast)
-		// fmt.Println(src)
-		// fmt.Println(ast)
-		// fmt.Println(fn.Code)
-		da := []string{}
-		var s string
-		for i := 0; i < len(fn.Code); {
-			i, s = rt.Disasm1(fn, i)
-			da = append(da, s)
-		}
-		actual := strings.Join(da, ", ")
+		actual := disasm(fn)
 		if actual != expected {
 			t.Errorf("\n%s\nexpect: %s\nactual: %s", src, expected, actual)
 		}
@@ -122,15 +113,46 @@ func TestCodegen(t *testing.T) {
 	test("new c(1)", "load c, one, value '*new*', callmeth1")
 }
 
+func TestCodegenNewMethod(t *testing.T) {
+	DefaultSingleQuotes = true
+	defer func() { DefaultSingleQuotes = false }()
+	test := func(src, expected string) {
+		t.Helper()
+		c := Constant("Foo { " + src + " }")
+		m := src[0:strings.IndexByte(src, '(')]
+		fn := c.Get(SuStr(m)).(*SuFunc)
+		actual := disasm(fn)
+		if actual != expected {
+			t.Errorf("\n%s\nexpect: %s\nactual: %s", src, expected, actual)
+		}
+	}
+	test("New(){}", "this, value 'New', super Foo, callmeth0")
+
+	// super(...) => super.New(...)
+	test("New(){super(1)}", "this, one, value 'New', super Foo, callmeth1")
+
+	test("F(){super.Bar(0,1)}", "this, zero, one, value 'Bar', super Foo, callmeth2")
+}
+
+func disasm(fn *SuFunc) string {
+	da := []string{}
+	var s string
+	for i := 0; i < len(fn.Code); {
+		i, s = Disasm1(fn, i)
+		da = append(da, s)
+	}
+	return strings.Join(da, ", ")
+}
+
 func TestControl(t *testing.T) {
-	rt.DefaultSingleQuotes = true
-	defer func() { rt.DefaultSingleQuotes = false }()
+	DefaultSingleQuotes = true
+	defer func() { DefaultSingleQuotes = false }()
 	test := func(src, expected string) {
 		t.Helper()
 		ast := ParseFunction("function () {\n" + src + "\n}")
 		fn := codegen(ast)
 		buf := strings.Builder{}
-		rt.Disasm(&buf, fn)
+		Disasm(&buf, fn)
 		s := buf.String()
 		Assert(t).That(s, Like(expected).Comment(src))
 	}

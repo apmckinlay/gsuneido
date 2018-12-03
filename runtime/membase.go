@@ -13,13 +13,6 @@ func (*MemBase) Order() Ord {
 	return OrdOther
 }
 
-func (ob *MemBase) lookup(method string) Value {
-	if x, ok := ob.Data[method]; ok {
-		return x
-	}
-	return nil // could make dummy Value with Call's doing panic
-}
-
 type Findable interface {
 	finder(fn func(*MemBase) Value) Value
 }

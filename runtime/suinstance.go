@@ -108,14 +108,17 @@ func (*SuInstance) Compare(Value) int {
 var InstanceMethods Methods
 
 func (ob *SuInstance) Lookup(method string) Value {
+	if method == "*new*" {
+		panic("can't create instance of instance")
+	}
 	if f, ok := InstanceMethods[method]; ok {
 		return f
 	}
-	return ob.lookup(method)
+	return ob.class.get2(method)
 }
 
 func (ob *SuInstance) Call(t *Thread, as *ArgSpec) Value {
-	if f := ob.lookup("Call"); f != nil {
+	if f := ob.class.get2("Call"); f != nil {
 		t.this = ob
 		return f.Call(t, as)
 	}

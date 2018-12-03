@@ -19,7 +19,7 @@ var zeroFlags [MaxArgs]Flag
 
 // codegen compiles an Ast to an SuFunc
 func codegen(fn *ast.Function) *SuFunc {
-	cg := cgen{}
+	cg := cgen{base: fn.Base, isNew: fn.IsNewMethod}
 	cg.function(fn)
 	cg.finishParamSpec()
 	for _, as := range cg.argspecs {
@@ -60,6 +60,8 @@ type cgen struct {
 	ParamSpec
 	code     []byte
 	argspecs []*ArgSpec
+	base     Global
+	isNew    bool
 }
 
 // binary and nary ast node token to operation
@@ -100,6 +102,7 @@ var tok2op = [Ntokens]byte{
 
 func (cg *cgen) function(fn *ast.Function) {
 	cg.params(fn.Params)
+	cg.chainNew(fn)
 	stmts := fn.Body
 	for si, stmt := range stmts {
 		cg.statement(stmt, nil, si == len(stmts)-1)
@@ -120,6 +123,32 @@ func (cg *cgen) params(params []ast.Param) {
 			cg.Values = append(cg.Values, p.DefVal) // no duplicate reuse
 		}
 	}
+}
+
+func (cg *cgen) chainNew(fn *ast.Function) {
+	if !fn.IsNewMethod || hasSuperCall(fn.Body) || cg.base <= 0 {
+		return
+	}
+	cg.emit(op.THIS)
+	cg.emitValue(SuStr("New"))
+	cg.emitUint16(op.SUPER, cg.base)
+	cg.emitUint8(op.CALLMETH, 0)
+}
+
+func hasSuperCall(stmts []ast.Statement) bool {
+	if len(stmts) < 1 {
+		return false
+	}
+	expr, ok := stmts[0].(*ast.Expression)
+	if !ok {
+		return false
+	}
+	call, ok := expr.E.(*ast.Call)
+	if !ok {
+		return false
+	}
+	fn, ok := call.Fn.(*ast.Ident)
+	return ok && fn.Name == "super"
 }
 
 func param(p string) (string, Flag) {
@@ -588,18 +617,44 @@ func (cg *cgen) dupUnderLvalue(ref int) {
 	}
 }
 
+var superNew = &ast.Mem{
+	E: &ast.Ident{Name: "super"},
+	M: &ast.Constant{Val: SuStr("New")}}
+
 func (cg *cgen) call(node *ast.Call) {
 	fn := node.Fn
+
+	if id, ok := fn.(*ast.Ident); ok && id.Name == "super" {
+		if !cg.isNew {
+			panic("can only use super(...) in New method")
+		}
+		fn = superNew // super(...) => super.New(...)
+	}
+
 	mem, method := fn.(*ast.Mem)
+	superCall := false
 	if method {
-		cg.expr(mem.E)
+		if x, ok := mem.E.(*ast.Ident); ok && x.Name == "super" {
+			superCall = true
+			if cg.base <= 0 {
+				panic("super requires parent")
+			}
+			cg.emit(op.THIS)
+		} else {
+			cg.expr(mem.E)
+		}
 	}
 	argspec := cg.args(node.Args)
 	if method {
-		if c, ok := mem.M.(*ast.Constant); ok && c.Val == SuStr("New") {
-			panic("cannot explicitly call New method")
+		if fn != superNew {
+			if c, ok := mem.M.(*ast.Constant); ok && c.Val == SuStr("New") {
+				panic("cannot explicitly call New method")
+			}
 		}
 		cg.expr(mem.M)
+		if superCall {
+			cg.emitUint16(op.SUPER, cg.base)
+		}
 		cg.emit(op.CALLMETH)
 	} else {
 		cg.expr(fn)
