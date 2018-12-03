@@ -19,7 +19,7 @@ var asm = []string{
 	"true", "false", "zero", "one", "maxint", "emptystr",
 	"or", "and", "bool", "qmark", "in", "jump", "tjump", "fjump",
 	"eqjump", "nejump", "throw", "try", "rangeto", "rangelen", "this",
-	"callfunc", "callmeth",
+	"callfunc", "callmeth", "new",
 }
 
 func init() {

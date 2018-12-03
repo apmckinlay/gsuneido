@@ -200,6 +200,7 @@ func (p *parser) atom() ast.Expr {
 		} else {
 			args = []ast.Arg{}
 		}
+		expr = p.Mem(expr, p.Constant(SuStr("*new*")))
 		return p.Call(expr, args)
 	default:
 		if IsIdent[p.Token] {

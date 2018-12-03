@@ -170,10 +170,10 @@ func TestParseExpression(t *testing.T) {
 	test("a.F { }",
 		"(call a.F block: { })")
 
-	// test("new c", "(new c)")
-	// test("new c.m", "(new c.m)")
-	// test("new c(a, b)", "(new c a b)")
-	// test("new c.m(a, b)", "(new c.m a b)")
+	test("new c", "(call c.*new*)")
+	test("new c.m", "(call c.m.*new*)")
+	test("new c(a, b)", "(call c.*new* a b)")
+	test("new c.m(a, b)", "(call c.m.*new* a b)")
 
 	test("[:a]", "(call Record a: a)")
 
@@ -236,7 +236,7 @@ func TestParseParams(t *testing.T) {
 	test := func(src string) {
 		t.Helper()
 		p := newParser(src + "{}")
-		result := p.functionWithoutKeyword(true) // as method to allow dot params
+		result := p.method() // method to allow dot params
 		Assert(t).That(p.Token, Equals(lexer.EOF))
 		s := result.String()
 		s = s[8:] // remove "function"

@@ -116,6 +116,10 @@ func TestCodegen(t *testing.T) {
 		"load a, one, value 'b', callmeth1, int 2, value 'c', callmeth1")
 
 	test("function () { }", "value /* function */")
+
+	test("new c", "load c, value '*new*', callmeth0")
+	test("new c()", "load c, value '*new*', callmeth0")
+	test("new c(1)", "load c, one, value '*new*', callmeth1")
 }
 
 func TestControl(t *testing.T) {

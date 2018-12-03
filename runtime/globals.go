@@ -8,6 +8,7 @@ import (
 
 // Global is a reference to a global name/value
 // Globals are constant
+// 0 is invalid
 type Global = int
 
 var (
@@ -26,8 +27,12 @@ var (
 func AddGlobal(name string, val Value) Global {
 	lock.Lock()
 	defer lock.Unlock()
-	if _, ok := name2num[name]; ok {
-		panic("duplicate global: " + name)
+	if gn, ok := name2num[name]; ok {
+		if values[gn] != nil {
+			panic("duplicate global: " + name)
+		}
+		values[gn] = val
+		return gn
 	}
 	gnum := Global(len(names))
 	name2num[name] = gnum

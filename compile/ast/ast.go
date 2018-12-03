@@ -189,8 +189,10 @@ func (a *Arg) String() string {
 
 type Function struct {
 	exprNodeT
-	Params []Param
-	Body   []Statement
+	Params      []Param
+	Body        []Statement
+	IsMethod    bool
+	IsNewMethod bool
 }
 
 func (a *Function) String() string {

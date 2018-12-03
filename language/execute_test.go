@@ -45,6 +45,20 @@ func TestPtestLang(t *testing.T) {
 	}
 }
 
+func TestPtestClassImpl(*testing.T) {
+	if !ptest.RunFile("classimpl.test") {
+		//t.Fail()
+	}
+}
+
+func init() {
+	f := func(name, val Value) Value {
+		AddGlobal(string(name.(SuStr)), val)
+		return nil
+	}
+	AddGlobal("Def", &Builtin2{f, BuiltinParams{ParamSpec: ParamSpec2}})
+}
+
 func pt_execute(args []string, _ []bool) bool {
 	//fmt.Println(args)
 	if strings.Contains(args[0], "Seq(") || strings.Contains(args[0], ".Eval(") {

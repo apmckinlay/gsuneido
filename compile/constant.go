@@ -132,9 +132,15 @@ func (p *parser) member(ob container, closing Token, inClass bool) {
 	start := p.Token
 	m := p.constant()
 	if inClass && IsIdent[start] && p.Token == L_PAREN {
-		fn := codegen(p.functionWithoutKeyword(true))
+		ast := p.method()
+		ast.IsMethod = true
+		name := string(m.(SuStr))
+		if name == "New" {
+			ast.IsNewMethod = true
+		}
+		fn := codegen(ast)
 		fn.IsMethod = true
-		fn.Name = "." + string(m.(SuStr))
+		fn.Name = "." + name
 		p.putMem(ob, m, fn)
 	} else if p.matchIf(COLON) {
 		if p.Token == COMMA || p.Token == SEMICOLON || p.Token == closing {
@@ -164,7 +170,7 @@ func (p *parser) class() Value {
 			p.match(COLON)
 		}
 	}
-	var base string
+	var base Global
 	if p.Token == IDENTIFIER {
 		base = p.ckBase(p.Text)
 		p.matchIdent()
@@ -172,14 +178,14 @@ func (p *parser) class() Value {
 	p.match(L_CURLY)
 	mems := classcon{}
 	p.memberList(mems, R_CURLY, true)
-	return &SuClass{Base: base, Data: mems}
+	return &SuClass{Base: base, MemBase: MemBase{Data: mems}}
 }
 
-func (p *parser) ckBase(name string) string {
+func (p *parser) ckBase(name string) Global {
 	if !okBase(name) {
 		p.error("base class must be global defined in library, got: ", name)
 	}
-	return name
+	return GlobalNum(name)
 }
 
 func okBase(name string) bool {

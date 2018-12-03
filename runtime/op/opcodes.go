@@ -62,4 +62,5 @@ const (
 	THIS
 	CALLFUNC
 	CALLMETH
+	NEW
 )

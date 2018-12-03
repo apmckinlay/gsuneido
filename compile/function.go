@@ -12,6 +12,7 @@ func ParseFunction(src string) *ast.Function {
 	return p.function()
 }
 
+// function parse a function (starting with the "function" keyword)
 func (p *parser) function() *ast.Function {
 	p.match(FUNCTION)
 	params := p.params(false)
@@ -19,11 +20,9 @@ func (p *parser) function() *ast.Function {
 	return &ast.Function{Params: params, Body: body}
 }
 
-func (p *parser) functionWithoutKeyword(inClass bool) *ast.Function {
-	it := p.Item
-	it.Token = FUNCTION
-	it.Text = "function"
-	params := p.params(inClass)
+// method parse a class method (without the "function" keyword)
+func (p *parser) method() *ast.Function {
+	params := p.params(true)
 	body := p.compound()
 	return &ast.Function{Params: params, Body: body}
 }

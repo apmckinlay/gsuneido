@@ -24,7 +24,7 @@ func (ps *pairs) push(x Value, y Value) {
 
 func (ps pairs) contains(x Value, y Value) bool {
 	for _, p := range ps {
-		if p.x == x && p.y == y {
+		if x.Equal(p.x) && y.Equal(p.y) {
 			return true
 		}
 	}

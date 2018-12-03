@@ -11,7 +11,8 @@ func TestGlobals(t *testing.T) {
 	Assert(t).That(GlobalNum("foo"), Equals(1))
 	Assert(t).That(AddGlobal("bar", nil), Equals(2))
 	Assert(t).That(GlobalNum("bar"), Equals(2))
-	Assert(t).That(func() { AddGlobal("foo", nil) }, Panics("duplicate"))
+	AddGlobal("baz", True)
+	Assert(t).That(func() { AddGlobal("baz", False) }, Panics("duplicate"))
 	Assert(t).That(GlobalName(1), Equals("foo"))
 	Assert(t).That(GlobalName(2), Equals("bar"))
 }

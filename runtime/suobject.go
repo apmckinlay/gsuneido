@@ -239,10 +239,10 @@ func (ob *SuObject) Equal(other interface{}) bool {
 	if ob2 == nil {
 		return false
 	}
-	return equals2(ob, ob2, newpairs())
+	return soEqual(ob, ob2, newpairs())
 }
 
-func equals2(x *SuObject, y *SuObject, inProgress pairs) bool {
+func soEqual(x *SuObject, y *SuObject, inProgress pairs) bool {
 	if x == y { // pointer comparison
 		return true // same object
 	}
@@ -275,15 +275,17 @@ func equals2(x *SuObject, y *SuObject, inProgress pairs) bool {
 }
 
 func equals3(x Value, y Value, inProgress pairs) bool {
-	xo := toSuObject(x)
-	if xo == nil {
-		return x.Equal(y)
+	if xo := toSuObject(x); xo != nil {
+		if yo := toSuObject(y); yo != nil {
+			return soEqual(xo, yo, inProgress)
+		}
 	}
-	yo := toSuObject(y)
-	if yo == nil {
-		return false
+	if xi,ok := x.(*SuInstance); ok {
+		if yi,ok := y.(*SuInstance); ok {
+			return siEqual(xi, yi, inProgress)
+		}
 	}
-	return equals2(xo, yo, inProgress)
+	return x.Equal(y)
 }
 
 func toSuObject(x interface{}) *SuObject {
@@ -377,4 +379,21 @@ func (ob *SuObject) Iter() func() (Value, Value) {
 		}
 		return key.(Value), val.(Value)
 	}
+}
+
+func (ob *SuObject) MapIter() func() (Value, Value) {
+	named := ob.named.Iter()
+	return func() (Value, Value) {
+		key, val := named()
+		if key == nil {
+			return nil, nil
+		}
+		return key.(Value), val.(Value)
+	}
+}
+
+func (ob *SuObject) Sort() {
+	sort.SliceStable(ob.list, func(i, j int) bool {
+		return ob.list[i].Compare(ob.list[j]) < 0
+	})
 }

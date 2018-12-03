@@ -8,9 +8,9 @@ import (
 
 // SuClass is a user defined (Suneido language) class
 type SuClass struct {
+	MemBase
 	Name string
-	Base string
-	Data map[string]Value // or SuStr instead of string ???
+	Base Global
 }
 
 var _ Value = (*SuClass)(nil)
@@ -21,17 +21,19 @@ func (c *SuClass) String() string {
 		s = c.Name + " "
 	}
 	s += "/* class"
-	if c.Base != "" {
-		s += " : " + c.Base
+	if c.Base != 0 {
+		s += " : " + GlobalName(c.Base)
 	}
 	s += " */"
 	return s
 }
 
 func (c *SuClass) Show() string {
-	s := c.Base
-	if s == "" {
+	s := ""
+	if c.Base == 0 {
 		s = "class"
+	} else {
+		s += GlobalName(c.Base)
 	}
 	s += "{"
 	sep := ""
@@ -104,36 +106,53 @@ func (c *SuClass) Equal(other interface{}) bool {
 	return false
 }
 
-func (*SuClass) Order() Ord {
-	return OrdOther
-}
-
 func (*SuClass) Compare(Value) int {
 	panic("class compare not implemented")
+}
+
+func (c *SuClass) parent() *SuClass {
+	if c.Base == 0 {
+		return nil
+	}
+	base := GetGlobal(c.Base)
+	if baseClass, ok := base.(*SuClass); ok {
+		return baseClass
+	}
+	panic("base must be class")
 }
 
 // ClassMethods is initialized by the builtin package
 var ClassMethods Methods
 
 func (c *SuClass) Lookup(method string) Value {
+	if f, ok := ClassMethods[method]; ok {
+		return f
+	}
 	if f := c.lookup(method); f != nil {
 		return f
 	}
-	return ClassMethods[method]
+	if method == "New" {
+		return &Builtin0{func() Value { return nil },
+			BuiltinParams{ParamSpec: ParamSpec0}}
+	}
+	return nil
 }
 
 func (c *SuClass) Call(t *Thread, as *ArgSpec) Value {
-	if f := c.lookup("CallClass"); f != nil {
+	if f := c.Data["CallClass"]; f != nil {
 		t.this = c
 		return f.Call(t, as)
 	}
-	panic("CallClass not found")
+	// default for calling a class is to create an instance
+	return c.New(t, as)
 }
-func (c *SuClass) lookup(method string) Value {
-	if x, ok := c.Data[method]; ok {
-		return x
-	}
-	return nil // could make dummy Value with Call's doing panic
+
+func (c *SuClass) New(t *Thread, as *ArgSpec) Value {
+	ob := NewInstance(c)
+	nu := c.Lookup("New")
+	t.this = ob
+	nu.Call(t, as)
+	return ob
 }
 
 var _ Named = &SuClass{}
@@ -144,4 +163,16 @@ func (c *SuClass) SetName(name string) {
 
 func (c *SuClass) GetName() string {
 	return c.Name
+}
+
+// finder applies fn to ob and all its parents
+// stopping if fn returns something other than nil, and returning that value
+func (c *SuClass) finder(fn func(*MemBase) Value) Value {
+	for i := 0; i < 100; i++ {
+		if x := fn(&c.MemBase); x != nil {
+			return x
+		}
+		c = c.parent()
+	}
+	panic("too many levels of derivation (>100)")
 }

@@ -12,7 +12,7 @@ type Value interface {
 	// String returns a human readable string i.e. Suneido Display
 	String() string
 
-	// ToStr converts to a string
+	// ToStr converts to a string or panics
 	ToStr() string
 
 	ToInt() int
