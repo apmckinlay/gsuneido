@@ -12,9 +12,8 @@ const maxFrames = 256
 
 type Thread struct {
 	// frames are the Frame's making up the call stack.
-	// The end of the slice is top of the stack (the current frame).
 	frames [maxFrames]Frame
-	// fp is the frame pointer
+	// fp is the frame pointer, top is frames[fp-1]
 	fp int
 
 	// stack is the Value stack for arguments and expressions.
