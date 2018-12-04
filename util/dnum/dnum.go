@@ -11,6 +11,7 @@ Zeroed value is 0.
 package dnum
 
 import (
+	"bytes"
 	"math"
 	"math/bits"
 	"strconv"
@@ -473,14 +474,14 @@ func (dn Dnum) Frac() Dnum {
 type RoundingMode int
 
 const (
-	UP RoundingMode = iota
-	DOWN
-	HALF_UP
+	Up RoundingMode = iota
+	Down
+	HalfUp
 )
 
 // Int returns the integer portion (truncating any fractional part)
 func (dn Dnum) Int() Dnum {
-	return dn.integer(DOWN)
+	return dn.integer(Down)
 }
 
 func (dn Dnum) integer(mode RoundingMode) Dnum {
@@ -489,8 +490,8 @@ func (dn Dnum) integer(mode RoundingMode) Dnum {
 		return dn
 	}
 	if dn.exp <= 0 {
-		if mode == UP ||
-			(mode == HALF_UP && dn.exp == 0 && dn.coef >= One.coef*5) {
+		if mode == Up ||
+			(mode == HalfUp && dn.exp == 0 && dn.coef >= One.coef*5) {
 			return New(dn.sign, One.coef, int(dn.exp)+1)
 		}
 		return Zero
@@ -501,10 +502,10 @@ func (dn Dnum) integer(mode RoundingMode) Dnum {
 		return dn
 	}
 	i := dn.coef - frac
-	if (mode == UP && frac > 0) || (mode == HALF_UP && frac >= halfpow10[e]) {
+	if (mode == Up && frac > 0) || (mode == HalfUp && frac >= halfpow10[e]) {
 		return New(dn.sign, i+pow10[e], int(dn.exp)) // normalize
 	}
-	return Dnum{i, dn.sign, dn.exp} // TODO doesn't need to normalize
+	return Dnum{i, dn.sign, dn.exp}
 }
 
 func (dn Dnum) Round(r int, mode RoundingMode) Dnum {
@@ -683,4 +684,83 @@ func Div(x, y Dnum) Dnum {
 func (dn Dnum) Hash() uint32 {
 	return uint32(dn.coef>>32) ^ uint32(dn.coef) ^
 		uint32(dn.sign)<<16 ^ uint32(dn.exp)<<8
+}
+
+// Format converts a number to a string with a specified format
+func (dn Dnum) Format(mask string) string {
+	if dn.IsInf() {
+		return "#"
+	}
+	n := dn
+	before := 0
+	after := 0
+	intpart := true
+	for _, mc := range mask {
+		switch mc {
+		case '.':
+			intpart = false
+		case '#':
+			if intpart {
+				before++
+			} else {
+				after++
+			}
+		}
+	}
+	if n.Exp() > before {
+		return "#" // too big to fit in mask
+	}
+	n = n.Round(after, HalfUp)
+	e := n.Exp()
+	var digits []byte
+	if n.IsZero() && after == 0 {
+		digits = []byte("0")
+		e = 1
+	} else {
+		digits = strconv.AppendUint(make([]byte, 0, digitsMax), n.Coef(), 10)
+		digits = bytes.TrimRight(digits, "0")
+	}
+	nd := len(digits)
+
+	di := e - before
+	check(di <= 0)
+	var buf strings.Builder
+	sign := n.Sign()
+	signok := (sign >= 0)
+	frac := false
+	for _, mc := range []byte(mask) {
+		switch mc {
+		case '#':
+			if 0 <= di && di < nd {
+				buf.WriteByte(digits[di])
+			} else if frac || di >= 0 {
+				buf.WriteByte('0')
+			}
+			di++
+		case ',':
+			if di > 0 {
+				buf.WriteByte(',')
+			}
+		case '-', '(':
+			signok = true
+			if sign < 0 {
+				buf.WriteByte(mc)
+			}
+		case ')':
+			if sign < 0 {
+				buf.WriteByte(mc)
+			} else {
+				buf.WriteByte(' ')
+			}
+		case '.':
+			frac = true
+			fallthrough
+		default:
+			buf.WriteByte(mc)
+		}
+	}
+	if !signok {
+		return "-" // negative not handled by mask
+	}
+	return buf.String()
 }

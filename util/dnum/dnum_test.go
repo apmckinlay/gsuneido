@@ -340,6 +340,24 @@ func Test_Div(t *testing.T) {
 	div("1234567890123456", "9876543210123456", ".12499999887187493")
 }
 
+func Test_Format(t *testing.T) {
+	test := func (s, mask, expected string) {
+		t.Helper()
+		dn := FromStr(s)
+		Assert(t).That(dn.Format(mask), Equals(expected))
+	}
+	test("0", "#", "0")
+	test("inf", "#", "#")
+	test("0", "#.##", ".00")
+	test("-1", "#", "-")
+	test("1234", "##", "#")
+	test("-123", "-###", "-123")
+	test("-123", "(###)", "(123)")
+	test("123", "(###)", "123 ")
+	test("1234567", "###,###,###", "1,234,567")
+	// see also: suneido_tests/number.test
+}
+
 // benchmarks (for 1000 operations) ---------------------------------
 /*
 func BenchmarkAdd(b *testing.B) {

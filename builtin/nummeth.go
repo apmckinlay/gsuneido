@@ -13,8 +13,6 @@ var maxNarrow = dnum.FromInt(MaxSuInt)
 
 func init() {
 	NumMethods = Methods{
-		// TODO Format
-
 		"Chr": method0(func(this Value) Value {
 			n := this.ToInt()
 			return SuStr(string(rune(n)))
@@ -26,6 +24,11 @@ func init() {
 				return SuInt(n)
 			}
 			return SuDnum{dn}
+		}),
+		"Format": method1("(mask)", func(this, arg Value) Value {
+			x := this.ToDnum()
+			mask := arg.ToStr()
+			return SuStr(x.Format(mask))
 		}),
 		"Frac": method0(func(this Value) Value {
 			dn := this.ToDnum().Frac()
@@ -42,17 +45,17 @@ func init() {
 		"Round": method1("(number)", func(this, arg Value) Value {
 			x := this.ToDnum()
 			r := arg.ToInt()
-			return SuDnum{x.Round(r, dnum.HALF_UP)}
+			return SuDnum{x.Round(r, dnum.HalfUp)}
 		}),
 		"RoundUp": method1("(number)", func(this, arg Value) Value {
 			x := this.ToDnum()
 			r := arg.ToInt()
-			return SuDnum{x.Round(r, dnum.UP)}
+			return SuDnum{x.Round(r, dnum.Up)}
 		}),
 		"RoundDown": method1("(number)", func(this, arg Value) Value {
 			x := this.ToDnum()
 			r := arg.ToInt()
-			return SuDnum{x.Round(r, dnum.DOWN)}
+			return SuDnum{x.Round(r, dnum.Down)}
 		}),
 
 		// float methods

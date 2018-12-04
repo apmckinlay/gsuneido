@@ -19,10 +19,6 @@ func TestMethodPtest(t *testing.T) {
 }
 
 func pt_method(args []string, str []bool) bool {
-	if args[1] == "Format" {
-		fmt.Println("skipped", args) // TODO
-		return true
-	}
 	ob := toValue(args, str, 0)
 	method := args[1]
 	expected := toValue(args, str, len(args)-1)
