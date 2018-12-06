@@ -39,7 +39,7 @@ func (p *parser) pcExpr(minprec int8) ast.Expr {
 				e = p.Call(e, p.arguments(p.Token))
 			}
 		case tok == INC || tok == DEC: // postfix
-			ckLvalue(e)
+			p.ckLvalue(e)
 			e = p.Unary(tok+1, e) // +1 must be POSTINC/DEC
 		case tok == IN:
 			e = p.in(e)
@@ -72,7 +72,7 @@ func (p *parser) pcExpr(minprec int8) ast.Expr {
 			}
 			p.match(R_BRACKET)
 		case ASSIGN_START < tok && tok < ASSIGN_END:
-			ckLvalue(e)
+			p.ckLvalue(e)
 			rhs := p.expr()
 			if tok == EQ {
 				if id, ok := e.(*ast.Ident); ok {
@@ -131,16 +131,19 @@ func (p *parser) in(e ast.Expr) ast.Expr {
 	return p.In(e, list)
 }
 
-func ckLvalue(e ast.Expr) {
+func (p *parser) ckLvalue(e ast.Expr) {
 	switch e := e.(type) {
 	case *ast.Mem:
 		return
 	case *ast.Ident:
+		if e.Name == "this" || e.Name == "super" {
+			p.error("this and super are read-only")
+		}
 		if isLocal(e.Name) {
 			return
 		}
 	}
-	panic("syntax error: lvalue required")
+	p.error("syntax error: lvalue required")
 }
 
 func flip(tok Token) Token {
@@ -181,7 +184,7 @@ func (p *parser) atom() ast.Expr {
 	case INC, DEC:
 		p.next()
 		e := p.pcExpr(precedence[DOT])
-		ckLvalue(e)
+		p.ckLvalue(e)
 		return p.Unary(tok, e)
 	case DOT: // unary, i.e. implicit "this"
 		// does not absorb DOT
