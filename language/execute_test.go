@@ -45,9 +45,9 @@ func TestPtestLang(t *testing.T) {
 	}
 }
 
-func TestPtestClassImpl(*testing.T) {
+func TestPtestClassImpl(t *testing.T) {
 	if !ptest.RunFile("classimpl.test") {
-		//t.Fail()
+		t.Fail()
 	}
 }
 

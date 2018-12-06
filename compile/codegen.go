@@ -62,6 +62,7 @@ type cgen struct {
 	argspecs []*ArgSpec
 	base     Global
 	isNew    bool
+	firstStatement bool
 }
 
 // binary and nary ast node token to operation
@@ -104,8 +105,10 @@ func (cg *cgen) function(fn *ast.Function) {
 	cg.params(fn.Params)
 	cg.chainNew(fn)
 	stmts := fn.Body
+	cg.firstStatement = true
 	for si, stmt := range stmts {
 		cg.statement(stmt, nil, si == len(stmts)-1)
+		cg.firstStatement = false
 	}
 }
 
@@ -626,7 +629,10 @@ func (cg *cgen) call(node *ast.Call) {
 
 	if id, ok := fn.(*ast.Ident); ok && id.Name == "super" {
 		if !cg.isNew {
-			panic("can only use super(...) in New method")
+			panic("super(...) only valid in New method")
+		}
+		if !cg.firstStatement {
+			panic("super(...) must be first statement")
 		}
 		fn = superNew // super(...) => super.New(...)
 	}
