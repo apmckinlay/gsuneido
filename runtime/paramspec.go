@@ -9,7 +9,7 @@ import (
 )
 
 // ParamSpec describes the parameters of a function
-// See also ArgSpec
+// See also ArgSpec which describes the arguments of a function call
 type ParamSpec struct {
 	// Nparams is the number of arguments required on the stack
 	Nparams uint8
@@ -31,6 +31,11 @@ type ParamSpec struct {
 	// starting with parameter defaults
 	Values []Value
 
+	// Name for library records will be the record name;
+	// for class methods, the method name;
+	// if assigned to a local variable, the variable name.
+	// It is primarily for debugging, i.e. call stack traces.
+	// See also: Name(value) builtin function
 	Name string
 }
 
@@ -97,7 +102,7 @@ func flagsToName(p string, flags Flag) string {
 	return p
 }
 
-func (*ParamSpec) Get(Value) Value {
+func (*ParamSpec) Get(*Thread, Value) Value {
 	panic("function does not support get")
 }
 

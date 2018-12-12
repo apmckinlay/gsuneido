@@ -39,7 +39,7 @@ func (b SuBool) ToStr() string {
 	return b.String()
 }
 
-func (SuBool) Get(Value) Value {
+func (SuBool) Get(*Thread, Value) Value {
 	panic("boolean does not support get")
 }
 

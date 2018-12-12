@@ -20,8 +20,8 @@ func TestSuObject(t *testing.T) {
 	sv := SuStr("hello")
 	ob.Add(sv)
 	Assert(t).That(ob.Size(), Equals(2))
-	Assert(t).That(ob.Get(SuInt(0)), Equals(iv))
-	Assert(t).That(ob.Get(SuInt(1)), Equals(sv))
+	Assert(t).That(ob.Get(nil, SuInt(0)), Equals(iv))
+	Assert(t).That(ob.Get(nil, SuInt(1)), Equals(sv))
 
 	ob.Put(sv, iv)
 	Assert(t).That(ob.String(), Equals("#(123, 'hello', hello: 123)"))
@@ -45,7 +45,7 @@ func TestSuObjectString(t *testing.T) {
 func TestSuObjectObjectAsKey(t *testing.T) {
 	ob := SuObject{}
 	ob.Put(&SuObject{}, SuInt(123))
-	Assert(t).That(ob.Get(&SuObject{}), Equals(SuInt(123)))
+	Assert(t).That(ob.Get(nil, &SuObject{}), Equals(SuInt(123)))
 }
 
 func TestSuObjectMigrate(t *testing.T) {
@@ -70,8 +70,8 @@ func TestSuObjectPut(t *testing.T) {
 	Assert(t).That(ob.ListSize(), Equals(2))
 	ob.Put(SuInt(0), SuInt(10)) // set
 	ob.Put(SuInt(1), SuInt(11)) // set
-	Assert(t).That(ob.Get(SuInt(0)), Equals(SuInt(10)))
-	Assert(t).That(ob.Get(SuInt(1)), Equals(SuInt(11)))
+	Assert(t).That(ob.Get(nil, SuInt(0)), Equals(SuInt(10)))
+	Assert(t).That(ob.Get(nil, SuInt(1)), Equals(SuInt(11)))
 }
 
 func TestSuObjectEquals(t *testing.T) {

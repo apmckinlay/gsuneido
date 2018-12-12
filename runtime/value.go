@@ -19,7 +19,9 @@ type Value interface {
 
 	ToDnum() dnum.Dnum
 
-	Get(key Value) Value
+	// Get returns a member of an object/instance/class or a character of a string
+	// The thread is necessary to call getters
+	Get(t *Thread, key Value) Value
 
 	Put(key Value, val Value)
 

@@ -722,7 +722,7 @@ var (
 
 // Value interface
 
-func (SuDate) Get(Value) Value {
+func (SuDate) Get(*Thread, Value) Value {
 	panic("date does not support get")
 }
 

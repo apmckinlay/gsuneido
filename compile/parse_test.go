@@ -119,7 +119,7 @@ func TestParseExpression(t *testing.T) {
 	test("a in (1,2,3) in (true, false)", "((a in 1 2 3) in true false)")
 
 	test("a.b", "")
-	test(".a.b", "this.a.b")
+	test(".a.b", "this._a.b")
 	test("this.a.b", "")
 
 	test("a[b]", "")
@@ -156,7 +156,7 @@ func TestParseExpression(t *testing.T) {
 	test("f(){ }", "(call f block: { })")
 	test("f({ })", "(call f { })")
 	test("c.m(a, b)", "(call c.m a b)")
-	test(".m()", "(call this.m)")
+	test(".m()", "(call this._m)")
 	test("false isnt x = F()", "(ISNT false (EQ x (call F)))")
 	test("0xB2.Chr()", "(call 178.Chr)")
 

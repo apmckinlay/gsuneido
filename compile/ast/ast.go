@@ -191,7 +191,6 @@ type Function struct {
 	exprNodeT
 	Params      []Param
 	Body        []Statement
-	IsMethod    bool
 	Base        Global
 	IsNewMethod bool
 }

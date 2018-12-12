@@ -20,13 +20,13 @@ func TestStrConvert(t *testing.T) {
 
 func TestStringGet(t *testing.T) {
 	var v Value = SuStr("hello")
-	v = v.Get(SuInt(1))
+	v = v.Get(nil, SuInt(1))
 	Assert(t).That(v, Equals(Value(SuStr("e"))))
 }
 
 func TestPanics(t *testing.T) {
 	v := SuInt(123)
-	Assert(t).That(func() { v.Get(v) }, Panics("number does not support get"))
+	Assert(t).That(func() { v.Get(nil, v) }, Panics("number does not support get"))
 
 	var ob SuObject
 	Assert(t).That(func() { ob.ToInt() }, Panics("cannot convert object to integer"))

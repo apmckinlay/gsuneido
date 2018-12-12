@@ -9,8 +9,9 @@ import (
 // SuClass is a user defined (Suneido language) class
 type SuClass struct {
 	MemBase
-	Name string
-	Base Global
+	Name     string
+	Base     Global
+	noGetter bool
 }
 
 var _ Value = (*SuClass)(nil)
@@ -72,9 +73,31 @@ func (*SuClass) ToStr() string {
 	panic("cannot convert class to string")
 }
 
-func (c *SuClass) Get(mem Value) Value {
+func (c *SuClass) Get(t *Thread, mem Value) Value {
 	if m, ok := mem.(SuStr); ok {
-		return c.get2(string(m))
+		return c.get1(t, string(m))
+	}
+	return nil
+}
+
+func (c *SuClass) get1(t *Thread, mem string) Value {
+	val := c.get2(mem)
+	if val != nil {
+		//TODO bound method
+		return val
+	}
+	if !c.noGetter {
+		if getter := c.get2("Getter_"); getter != nil {
+			t.this = c
+			t.Push(SuStr(mem))
+			return getter.Call(t, ArgSpec1)
+		}
+		c.noGetter = true
+	}
+	getterName := "Getter_" + mem
+	if getter := c.get2(getterName); getter != nil {
+		t.this = c
+		return getter.Call(t, ArgSpec0)
 	}
 	return nil
 }
@@ -140,7 +163,7 @@ func (c *SuClass) Lookup(method string) Value {
 	if f, ok := ClassMethods[method]; ok {
 		return f
 	}
-	
+
 	if x := c.get2(method); x != nil {
 		return x
 	}

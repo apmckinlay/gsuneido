@@ -17,18 +17,25 @@ func newParser(src string) *parser {
 
 type parser struct {
 	lxr *Lexer
+
 	// Item is the current lexical token etc.
 	Item
+	
 	// Factory is used by expression.go
 	// because expressions are shared by both language and queries
 	// and generate different types of AST nodes
 	ast.Factory
+
 	// newline is true if the current token was preceeded by a newline
 	newline bool
+
 	// expectingCompound is used to differentiate control statement body vs. block
 	// e.g. if expr {...}
 	// set by function.go used by expression.go
 	expectingCompound bool
+
+	// className is used for privatization
+	className string
 }
 
 /*

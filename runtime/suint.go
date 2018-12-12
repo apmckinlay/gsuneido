@@ -68,7 +68,7 @@ func (si *smi) String() string {
 	return si.ToStr()
 }
 
-func (*smi) Get(Value) Value {
+func (*smi) Get(*Thread, Value) Value {
 	panic("number does not support get")
 }
 

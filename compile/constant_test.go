@@ -33,7 +33,7 @@ func TestConstant(t *testing.T) {
 
 var _ = ptest.Add("compile", pt_compile)
 
-func TestPtest(t *testing.T) {
+func TestPtestConstant(t *testing.T) {
 	if !ptest.RunFile("constant.test") {
 		t.Fail()
 	}

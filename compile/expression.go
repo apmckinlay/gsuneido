@@ -1,9 +1,12 @@
 package compile
 
 import (
+	"strings"
+
 	"github.com/apmckinlay/gsuneido/compile/ast"
 	. "github.com/apmckinlay/gsuneido/lexer"
 	. "github.com/apmckinlay/gsuneido/runtime"
+	"github.com/apmckinlay/gsuneido/util/ascii"
 	. "github.com/apmckinlay/gsuneido/util/ascii"
 )
 
@@ -34,6 +37,10 @@ func (p *parser) pcExpr(minprec int8) ast.Expr {
 		case tok == DOT:
 			id := p.Text
 			p.matchIdent()
+			if e == nil {
+				e = p.Ident("this")
+				id = p.privatizeRef(id)
+			}
 			e = p.Mem(e, p.Constant(SuStr(id)))
 			if p.Token == L_CURLY && !p.expectingCompound { // a.F { }
 				e = p.Call(e, p.arguments(p.Token))
@@ -118,6 +125,25 @@ func (p *parser) pcExpr(minprec int8) ast.Expr {
 	return e
 }
 
+func (p *parser) privatizeRef(name string) string {
+	if ascii.IsLower(name[0]) {
+		if strings.HasPrefix(name, "getter_") {
+			if len(name) <= 7 || !ascii.IsLower(name[7]) {
+				p.error("invalid getter (" + name + ")")
+			}
+			// get_name => Getter_Class_name
+			name = "Getter_" + p.className + name[:6]
+		} else {
+			name = p.className + "_" + name
+		}
+		return name
+	} else if strings.HasPrefix(name, "Getter_") && len(name) > 7 &&
+		!ascii.IsUpper(name[7]) {
+		p.error("invalid getter (" + name + ")")
+	}
+	return name
+}
+
 func (p *parser) in(e ast.Expr) ast.Expr {
 	list := []ast.Expr{}
 	p.match(L_PAREN)
@@ -189,7 +215,7 @@ func (p *parser) atom() ast.Expr {
 	case DOT: // unary, i.e. implicit "this"
 		// does not absorb DOT
 		p.newline = false
-		return p.Ident("this")
+		return nil // to indicate it should be privatized
 	case FUNCTION:
 		return p.Constant(codegen(p.function()))
 	case CLASS:

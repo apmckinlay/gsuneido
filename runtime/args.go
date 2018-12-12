@@ -90,7 +90,7 @@ func (t *Thread) massage(ps *ParamSpec, as *ArgSpec, args []Value) {
 		}
 		// named members may overwrite unnamed (same as when passed individually)
 		for i := 0; i < int(ps.Nparams); i++ {
-			if x := ob.Get(SuStr(ps.Names[i])); x != nil {
+			if x := ob.Get(t, SuStr(ps.Names[i])); x != nil {
 				args[i] = x
 			}
 		}

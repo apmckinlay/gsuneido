@@ -25,7 +25,7 @@ var _ Value = (*SuObject)(nil)
 //TODO var _ Packable = &SuObject{}
 
 // Get returns the value associated with a key, or nil if not found
-func (ob *SuObject) Get(key Value) Value {
+func (ob *SuObject) Get(_ *Thread, key Value) Value {
 	if i := index(key); 0 <= i && i < ob.ListSize() {
 		return ob.list[i]
 	}

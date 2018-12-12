@@ -45,7 +45,7 @@ func (dn SuDnum) String() string {
 }
 
 // Get is not applicable to SuDnum (Value interface)
-func (SuDnum) Get(Value) Value {
+func (SuDnum) Get(*Thread, Value) Value {
 	panic("number does not support get")
 }
 

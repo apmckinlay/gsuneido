@@ -12,14 +12,14 @@ type SuFunc struct {
 	// Nlocals is the number of parameters and local variables
 	Nlocals uint8
 
-	// IsMethod is true for class methods
-	IsMethod bool
-
 	// Code is the actual byte code
 	Code []byte
 
-	// the ArgSpec's used by calls in the code
+	// ArgSpecs used by calls in the code
 	ArgSpecs []*ArgSpec
+
+	// ClassName is used to privatize dot params
+	ClassName string
 }
 
 var _ Value = (*SuFunc)(nil) // verify *SuFunc satisfies Value
@@ -31,6 +31,8 @@ func (f *SuFunc) Call(t *Thread, as *ArgSpec) Value {
 			name := f.Names[i]
 			if flag&PubParam == PubParam {
 				name = str.Capitalize(name)
+			} else { // privatize
+				name = f.ClassName + "_" + name
 			}
 			t.this.Put(SuStr(name), args[i])
 		}
@@ -56,7 +58,7 @@ func (f *SuFunc) String() string {
 		s = f.Name + " "
 	}
 	s += "/* "
-	if f.IsMethod {
+	if f.ClassName != "" {
 		s += "method"
 	} else {
 		s += "function"

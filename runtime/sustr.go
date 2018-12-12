@@ -44,7 +44,7 @@ func (ss SuStr) String() string {
 	return q + string(ss) + q
 }
 
-func (ss SuStr) Get(key Value) Value {
+func (ss SuStr) Get(_ *Thread, key Value) Value {
 	i := Index(key)
 	n := len(ss)
 	if i < -n || n <= i {

@@ -89,7 +89,7 @@ func (c SuConcat) String() string {
 }
 
 // Get returns the character at a given index (Value interface)
-func (c SuConcat) Get(key Value) Value {
+func (c SuConcat) Get(_ *Thread, key Value) Value {
 	return SuStr(string(c.b.a[:c.n][key.ToInt()]))
 }
 

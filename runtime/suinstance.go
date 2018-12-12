@@ -37,14 +37,14 @@ func (*SuInstance) ToStr() string {
 	panic("cannot convert instance to string")
 }
 
-func (ob *SuInstance) Get(m Value) Value {
+func (ob *SuInstance) Get(t *Thread, m Value) Value {
 	if m.TypeName() != "String" {
 		return nil
 	}
 	if x, ok := ob.Data[m.ToStr()]; ok {
 		return x
 	}
-	return ob.class.Get(m)
+	return ob.class.Get(t, m)
 }
 
 func (ob *SuInstance) Put(m Value, v Value) {

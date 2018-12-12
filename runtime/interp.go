@@ -103,7 +103,7 @@ loop:
 		case GET:
 			m := t.Pop()
 			ob := t.Pop()
-			val := ob.Get(m)
+			val := ob.Get(t, m)
 			if val == nil {
 				panic("uninitialized member: " + m.String())
 			}

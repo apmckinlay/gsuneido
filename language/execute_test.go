@@ -52,11 +52,15 @@ func TestPtestClassImpl(t *testing.T) {
 }
 
 func init() {
-	f := func(name, val Value) Value {
-		TestGlobal(string(name.(SuStr)), val)
+	def := func(nameVal, val Value) Value {
+		name := string(nameVal.(SuStr))
+		if ss,ok := val.(SuStr); ok {
+			val = compile.NamedConstant(name, string(ss))
+		}
+		TestGlobal(name, val)
 		return nil
 	}
-	AddGlobal("Def", &Builtin2{f, BuiltinParams{ParamSpec: ParamSpec2}})
+	AddGlobal("Def", &Builtin2{def, BuiltinParams{ParamSpec: ParamSpec2}})
 }
 
 func pt_execute(args []string, _ []bool) bool {
