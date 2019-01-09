@@ -167,7 +167,7 @@ func (dn SuDnum) Pack(buf []byte) []byte {
 	if sign == 0 {
 		return buf
 	}
-	buf = buf[0:2]
+	buf = buf[:2]
 	if dn.IsInf() {
 		if sign < 0 {
 			buf[1] = 0
@@ -225,13 +225,13 @@ func packCoef(buf []byte, coef uint64, neg bool) []byte {
 	if coef == 0 {
 		return buf
 	}
-	buf = buf[:6]
+	buf = buf[:8]
 	binary.BigEndian.PutUint16(buf[6:], uint16(coef/e4)^flip)
 	coef %= e4
 	if coef == 0 {
 		return buf
 	}
-	buf = buf[:8]
+	buf = buf[:10]
 	binary.BigEndian.PutUint16(buf[8:], uint16(coef)^flip)
 	return buf
 }
