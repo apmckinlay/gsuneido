@@ -114,7 +114,7 @@ func (SuDnum) Lookup(method string) Value {
 var pow10 = [...]uint64{1, 10, 100, 1000}
 
 // PackSize returns the packed size of an SuDnum
-func (dn SuDnum) PackSize() int {
+func (dn SuDnum) PackSize(int) int {
 	if dn.IsZero() {
 		return 1
 	}

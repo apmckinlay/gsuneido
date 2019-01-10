@@ -20,3 +20,13 @@ func (r *SuRecord) Show() string {
 	s := r.SuObject.Show()
 	return "[" + s[2:len(s) - 1] + "]"
 }
+
+func (r *SuRecord) Pack(buf []byte) []byte {
+	return r.SuObject.pack(buf, packRecord)
+}
+
+func UnpackRecord(buf []byte) *SuRecord {
+	r := &SuRecord{}
+	unpackObject(buf, &r.SuObject)
+	return r
+}

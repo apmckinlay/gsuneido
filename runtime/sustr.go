@@ -93,7 +93,7 @@ func (ss SuStr) Equal(other interface{}) bool {
 	return false
 }
 
-func (ss SuStr) PackSize() int {
+func (ss SuStr) PackSize(int) int {
 	if ss.IsEmpty() {
 		return 0
 	}

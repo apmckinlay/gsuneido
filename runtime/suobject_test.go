@@ -129,3 +129,29 @@ func TestSuObjectIndex(t *testing.T) {
 	Assert(t).That(index(SuInt(123)), Equals(123))
 	Assert(t).That(index(SuDnum{dnum.FromInt(123)}), Equals(123))
 }
+
+func TestSuObjectPack(t *testing.T) {
+	ob := &SuObject{}
+	check := func() {
+		Assert(t).That(Unpack(Pack(ob)), Equals(ob))
+	}
+	check()
+	ob.Add(SuStr(1))
+	check()
+	ob.Add(SuInt(2))
+	check()
+	ob.Put(SuStr("a"), SuInt(3))
+	check()
+	ob.Put(SuStr("b"), SuInt(4))
+	check()
+}
+
+func TestSuObjectPack2(t *testing.T) {
+	ob := &SuObject{}
+	ob.Add(SuInt(1))
+	ob.Put(SuStr("a"), SuInt(2))
+	buf := Pack(ob)
+	expected := []byte{6, 128, 0, 0, 1, 128, 0, 0, 4, 3, 129, 0, 1, 128,
+		0, 0, 1, 128, 0, 0, 2, 4, 97, 128, 0, 0, 4, 3, 129, 0, 2}
+	Assert(t).That(buf, Equals(expected))
+}

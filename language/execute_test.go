@@ -1,6 +1,7 @@
 package language
 
 import (
+	"bytes"
 	"fmt"
 	"strconv"
 	"strings"
@@ -26,6 +27,7 @@ var _ = ptest.Add("execute", pt_execute)
 var _ = ptest.Add("lang_rangeto", pt_lang_rangeto)
 var _ = ptest.Add("lang_rangelen", pt_lang_rangelen)
 var _ = ptest.Add("compare", pt_compare)
+var _ = ptest.Add("compare_packed", pt_compare_packed)
 
 func TestBuiltinString(t *testing.T) {
 	f := GetGlobal(GlobalNum("Type"))
@@ -167,6 +169,23 @@ func pt_compare(args []string, _ []bool) bool {
 		for j := i + 1; j < n; j++ {
 			y := compile.Constant(args[j])
 			if x.Compare(y) >= 0 || y.Compare(x) <= 0 {
+				fmt.Println(x, "should be less than", y)
+				return false
+			}
+		}
+	}
+	return true
+}
+
+func pt_compare_packed(args []string, _ []bool) bool {
+	n := len(args)
+	for i := 0; i < n; i++ {
+		x := compile.Constant(args[i])
+		xp := Pack(x.(Packable))
+		for j := i + 1; j < n; j++ {
+			y := compile.Constant(args[j])
+			yp := Pack(y.(Packable))
+			if bytes.Compare(xp, yp) >= 0 || bytes.Compare(yp, xp) <= 0 {
 				fmt.Println(x, "should be less than", y)
 				return false
 			}

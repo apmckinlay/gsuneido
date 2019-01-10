@@ -55,7 +55,7 @@ func (t *TupleM) AddRaw(raw []byte) {
 // Add appends a value to the tuple
 func (t *TupleM) Add(val Packable) {
 	t.offs = append(t.offs, len(t.buf))
-	t.buf = Ensure(t.buf, val.PackSize())
+	t.buf = Ensure(t.buf, val.PackSize(0))
 	t.buf = val.Pack(t.buf)
 }
 

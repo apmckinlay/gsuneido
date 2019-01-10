@@ -101,7 +101,7 @@ func (si *smi) Equal(other interface{}) bool {
 	return false
 }
 
-func (si *smi) PackSize() int {
+func (si *smi) PackSize(int) int {
 	return PackSizeInt64(int64(si.ToInt()))
 }
 

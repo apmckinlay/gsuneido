@@ -21,8 +21,7 @@ type SuObject struct {
 }
 
 var _ Value = (*SuObject)(nil)
-
-//TODO var _ Packable = &SuObject{}
+var _ Packable = &SuObject{}
 
 // Get returns the value associated with a key, or nil if not found
 func (ob *SuObject) Get(_ *Thread, key Value) Value {
@@ -400,4 +399,97 @@ func (ob *SuObject) Sort() {
 	sort.SliceStable(ob.list, func(i, j int) bool {
 		return ob.list[i].Compare(ob.list[j]) < 0
 	})
+}
+
+// Packable
+
+const packNestLimit = 20
+
+func (ob *SuObject) PackSize(nest int) int {
+	nest++
+	if nest > packNestLimit {
+		panic("pack: object nesting limit exceeded")
+	}
+	if ob.Size() == 0 {
+		return 1
+	}
+	ps := 1 // tag
+	ps += 4 // vec size
+	for _, v := range ob.list {
+		ps += 4 + packSize(v, nest)
+	}
+	ps += 4 // map size
+	iter := ob.named.Iter()
+	for k, v := iter(); k != nil; k, v = iter() {
+		ps += 4 + packSize(k.(Value), nest) + 4 + packSize(v.(Value), nest)
+	}
+	return ps
+}
+
+func packSize(x Value, nest int) int {
+	if p, ok := x.(Packable); ok {
+		return p.PackSize(nest)
+	}
+	panic("can't pack " + x.TypeName())
+}
+
+func (ob *SuObject) Pack(buf []byte) []byte {
+	return ob.pack(buf, packObject)
+}
+
+func (ob *SuObject) pack(buf []byte, tag byte) []byte {
+	buf = append(buf, tag)
+	if ob.Size() == 0 {
+		return buf
+	}
+	buf = packInt32(int32(ob.ListSize()), buf)
+	for _, v := range ob.list {
+		buf = packValue(v, buf)
+	}
+	buf = packInt32(int32(ob.NamedSize()), buf)
+	iter := ob.named.Iter()
+	for k, v := iter(); k != nil; k, v = iter() {
+		buf = packValue(k.(Value), buf)
+		buf = packValue(v.(Value), buf)
+	}
+	return buf
+}
+
+func packValue(x Value, buf []byte) []byte {
+	n := packSize(x, 0)
+	buf = packInt32(int32(n), buf)
+	x.(Packable).Pack(buf[len(buf):])
+	return buf[:len(buf)+n]
+}
+
+func UnpackObject(buf []byte) *SuObject {
+	return unpackObject(buf, &SuObject{})
+}
+
+func unpackObject(buf []byte, ob *SuObject) *SuObject {
+	if len(buf) == 0 {
+		return ob
+	}
+	var v Value
+	n := int(unpackInt32(buf))
+	buf = buf[4:]
+	for i := 0; i < n; i++ {
+		buf, v = unpackValue(buf)
+		ob.Add(v)
+	}
+	var k Value
+	n = int(unpackInt32(buf))
+	buf = buf[4:]
+	for i := 0; i < n; i++ {
+		buf, k = unpackValue(buf)
+		buf, v = unpackValue(buf)
+		ob.Put(k, v)
+	}
+	return ob
+}
+
+func unpackValue(buf []byte) ([]byte, Value) {
+	size := unpackInt32(buf)
+	v := Unpack(buf[4 : 4+size])
+	return buf[4+size:], v
 }

@@ -1,11 +1,14 @@
 package runtime
 
 // Packable is the interface to packable values
+// PackSize should be called prior to Pack
+// since Pack methods assume capacity is sufficient
+// and because PackSize does nesting limit check
 type Packable interface {
 	// PackSize returns the size (in bytes) of the packed value
-	PackSize() int
-	// Pack writes the value starting at len(buf)
-	// and returns a slice with the len extended by the number of bytes used
+	PackSize(nest int) int
+	// Pack appends the value i.e. starting at len(buf)
+	// and returns a slice with the len extended by the number of bytes written
 	Pack(buf []byte) []byte
 }
 
@@ -26,13 +29,13 @@ const (
 
 // Pack is a helper that allocates a buffer and packs a value into it
 func Pack(x Packable) []byte {
-	buf := make([]byte, 0, x.PackSize())
+	buf := make([]byte, 0, x.PackSize(0))
 	return x.Pack(buf)
 }
 
 /*
 Unpack returns the decoded value.
-NOTE: The correct buf slice length is required.
+NOTE: The buf slice length must be correct.
 */
 func Unpack(buf []byte) Value {
 	if len(buf) == 0 {
@@ -49,6 +52,8 @@ func Unpack(buf []byte) Value {
 		return UnpackDate(buf[1:])
 	case packPlus, packMinus:
 		return UnpackNumber(rbuf{buf})
+	case packObject:
+		return UnpackObject(buf[1:])
 	default:
 		panic("invalid pack tag")
 	}

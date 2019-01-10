@@ -73,7 +73,7 @@ func (b SuBool) Equal(other interface{}) bool {
 	return false
 }
 
-func (SuBool) PackSize() int {
+func (SuBool) PackSize(int) int {
 	return 1
 }
 

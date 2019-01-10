@@ -162,7 +162,7 @@ func (SuConcat) Lookup(method string) Value {
 
 // Packable interface -----------------------------------------------
 
-func (c SuConcat) PackSize() int {
+func (c SuConcat) PackSize(int) int {
 	if c.n == 0 {
 		return 0
 	}

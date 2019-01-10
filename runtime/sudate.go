@@ -151,7 +151,7 @@ func valid(yr int, mon int, day int, hr int, min int, sec int, ms int) bool {
 // Packing
 
 // PackSize returns the packed size (Packable interface)
-func (d SuDate) PackSize() int {
+func (d SuDate) PackSize(int) int {
 	return 9
 }
 
