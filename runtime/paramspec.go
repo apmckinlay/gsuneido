@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/util/dnum"
+	"github.com/apmckinlay/gsuneido/util/ints"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
@@ -137,8 +138,11 @@ func (*ParamSpec) Order() Ord {
 	return OrdOther
 }
 
-func (*ParamSpec) Compare(Value) int {
-	panic("function compare not implemented")
+func (f *ParamSpec) Compare(other Value) int {
+	if cmp := ints.Compare(f.Order(), other.Order()); cmp != 0 {
+		return cmp
+	}
+	return 0 // ???
 }
 
 // Params is set in the builtin package

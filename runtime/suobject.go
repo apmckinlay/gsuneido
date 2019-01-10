@@ -280,8 +280,8 @@ func equals3(x Value, y Value, inProgress pairs) bool {
 			return soEqual(xo, yo, inProgress)
 		}
 	}
-	if xi,ok := x.(*SuInstance); ok {
-		if yi,ok := y.(*SuInstance); ok {
+	if xi, ok := x.(*SuInstance); ok {
+		if yi, ok := y.(*SuInstance); ok {
 			return siEqual(xi, yi, inProgress)
 		}
 	}
@@ -310,7 +310,11 @@ func (ob *SuObject) Compare(other Value) int {
 	if cmp := ints.Compare(ob.Order(), other.Order()); cmp != 0 {
 		return cmp
 	}
-	return cmp2(ob, other.(*SuObject), newpairs())
+	ob2, ok := other.(*SuObject)
+	if !ok {
+		ob2 = &other.(*SuRecord).SuObject
+	}
+	return cmp2(ob, ob2, newpairs())
 }
 
 func cmp2(x *SuObject, y *SuObject, inProgress pairs) int {

@@ -25,6 +25,7 @@ var _ = AddGlobal("Suneido", new(SuObject))
 var _ = ptest.Add("execute", pt_execute)
 var _ = ptest.Add("lang_rangeto", pt_lang_rangeto)
 var _ = ptest.Add("lang_rangelen", pt_lang_rangelen)
+var _ = ptest.Add("compare", pt_compare)
 
 func TestBuiltinString(t *testing.T) {
 	f := GetGlobal(GlobalNum("Type"))
@@ -54,7 +55,7 @@ func TestPtestClassImpl(t *testing.T) {
 func init() {
 	def := func(nameVal, val Value) Value {
 		name := string(nameVal.(SuStr))
-		if ss,ok := val.(SuStr); ok {
+		if ss, ok := val.(SuStr); ok {
 			val = compile.NamedConstant(name, string(ss))
 		}
 		TestGlobal(name, val)
@@ -154,6 +155,24 @@ func strToList(s string) *SuObject {
 		ob.Add(SuStr(string(c)))
 	}
 	return &ob
+}
+
+func pt_compare(args []string, _ []bool) bool {
+	n := len(args)
+	for i := 0; i < n; i++ {
+		x := compile.Constant(args[i])
+		if x.Compare(x) != 0 {
+			return false
+		}
+		for j := i + 1; j < n; j++ {
+			y := compile.Constant(args[j])
+			if x.Compare(y) >= 0 || y.Compare(x) <= 0 {
+				fmt.Println(x, "should be less than", y)
+				return false
+			}
+		}
+	}
+	return true
 }
 
 // compare to BenchmarkJit in interp_test.go
