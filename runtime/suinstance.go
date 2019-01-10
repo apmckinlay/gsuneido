@@ -41,10 +41,15 @@ func (ob *SuInstance) Get(t *Thread, m Value) Value {
 	if m.TypeName() != "String" {
 		return nil
 	}
-	if x, ok := ob.Data[m.ToStr()]; ok {
+	ms := m.ToStr()
+	if x, ok := ob.Data[ms]; ok {
 		return x
 	}
-	return ob.class.Get(t, m)
+	x := ob.class.get1(t, ms)
+	if m,ok := x.(*SuMethod); ok {
+		m.this = ob // fix 'this' to be instance, not method class
+	}
+	return x
 }
 
 func (ob *SuInstance) Put(m Value, v Value) {

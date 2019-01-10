@@ -73,17 +73,19 @@ func (*SuClass) ToStr() string {
 	panic("cannot convert class to string")
 }
 
-func (c *SuClass) Get(t *Thread, mem Value) Value {
-	if m, ok := mem.(SuStr); ok {
-		return c.get1(t, string(m))
+func (c *SuClass) Get(t *Thread, m Value) Value {
+	if m.TypeName() != "String" {
+		return nil
 	}
-	return nil
+	return c.get1(t, m.ToStr())
 }
 
 func (c *SuClass) get1(t *Thread, mem string) Value {
 	val := c.get2(mem)
 	if val != nil {
-		//TODO bound method
+		if f, ok := val.(*SuFunc); ok {
+			return &SuMethod{SuFunc: *f, this: c}
+		}
 		return val
 	}
 	if !c.noGetter {
