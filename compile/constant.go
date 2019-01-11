@@ -123,6 +123,9 @@ func (p *parser) object() Value {
 		ob = new(SuRecord)
 	}
 	p.memberList(ob, close, noBase)
+	if p,ok := ob.(protectable); ok {
+	p.SetReadOnly()
+	}
 	return ob.(Value)
 }
 
@@ -130,6 +133,10 @@ type container interface {
 	Add(Value)
 	Has(Value) bool
 	Put(Value, Value)
+}
+
+type protectable interface {
+	SetReadOnly()
 }
 
 func (p *parser) memberList(ob container, closing Token, base Global) {
