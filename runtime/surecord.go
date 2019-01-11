@@ -30,3 +30,5 @@ func UnpackRecord(buf []byte) *SuRecord {
 	unpackObject(buf, &r.SuObject)
 	return r
 }
+
+// TODO override SuObject Lookup

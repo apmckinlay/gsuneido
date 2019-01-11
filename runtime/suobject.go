@@ -59,6 +59,7 @@ func (ob *SuObject) ListGet(i int) Value {
 // Put adds or updates the given key and value
 // The value will be added to the list if the key is the "next"
 func (ob *SuObject) Put(key Value, val Value) {
+	ob.mustBeMutable()
 	i := index(key)
 	if i == ob.ListSize() {
 		ob.Add(val)
@@ -124,7 +125,7 @@ func (ob *SuObject) Add(val Value) {
 
 func (ob *SuObject) mustBeMutable() {
 	if ob.readonly {
-		panic("cannot modify readonly object")
+		panic("can't modify readonly objects")
 	}
 }
 
@@ -396,9 +397,23 @@ func (ob *SuObject) MapIter() func() (Value, Value) {
 }
 
 func (ob *SuObject) Sort() {
+	ob.mustBeMutable()
 	sort.SliceStable(ob.list, func(i, j int) bool {
 		return ob.list[i].Compare(ob.list[j]) < 0
 	})
+}
+
+func (ob *SuObject) SetReadOnly() {
+	if ob.readonly {
+		return
+	}
+	ob.readonly = true
+	iter := ob.Iter()
+	for k, v := iter(); k != nil; k, v = iter() {
+		if x, ok := v.(*SuObject); ok {
+			x.SetReadOnly()
+		}
+	}
 }
 
 // Packable
