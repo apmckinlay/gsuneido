@@ -79,8 +79,8 @@ func pt_execute(args []string, _ []bool) bool {
 	if len(args) > 1 {
 		expected = args[1]
 	}
-	var ok bool
-	var result Value
+	var success bool
+	var result interface{}
 	if expected == "throws" {
 		expected = "throws " + args[2]
 		e := Catch(func() {
@@ -88,26 +88,30 @@ func pt_execute(args []string, _ []bool) bool {
 			result = th.Call(fn)
 		})
 		if e == nil {
-			ok = false
+			success = false
+		} else if es, ok := e.(string); ok {
+			result = SuStr(es)
+			success = strings.Contains(es, args[2])
 		} else {
-			result = SuStr(e.(string))
-			ok = strings.Contains(e.(string), args[2])
+			result = SuStr(fmt.Sprint(e))
+			success = false
 		}
 	} else {
 		fn := compile.Constant(src).(*SuFunc)
-		result = th.Call(fn)
+		actual := th.Call(fn)
+		result = actual
 		if expected == "**notfalse**" {
-			ok = result != False
+			success = actual != False
 		} else {
 			expectedValue := compile.Constant(expected)
-			ok = result.Equal(expectedValue)
+			success = actual.Equal(expectedValue)
 		}
 	}
-	if !ok {
-		fmt.Println("\tgot: " + result.String())
+	if !success {
+		fmt.Println("\tgot:", result)
 		fmt.Println("\texpected: " + expected)
 	}
-	return ok
+	return success
 }
 
 func pt_lang_rangeto(args []string, _ []bool) bool {
