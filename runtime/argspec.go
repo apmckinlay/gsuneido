@@ -37,7 +37,6 @@ const (
 	Sig2
 	Sig3
 	Sig4
-	SigEach
 )
 
 var ArgSpec0 = &ArgSpec{Nargs: 0, Signature: Sig0}
@@ -45,7 +44,7 @@ var ArgSpec1 = &ArgSpec{Nargs: 1, Signature: Sig1}
 var ArgSpec2 = &ArgSpec{Nargs: 2, Signature: Sig2}
 var ArgSpec3 = &ArgSpec{Nargs: 3, Signature: Sig3}
 var ArgSpec4 = &ArgSpec{Nargs: 4, Signature: Sig4}
-var ArgSpecEach = &ArgSpec{Nargs: 1, Each: EACH, Signature: SigEach}
+var ArgSpecEach = &ArgSpec{Nargs: 1, Each: EACH}
 var ArgSpecEach1 = &ArgSpec{Nargs: 1, Each: EACH1}
 var ArgSpecBlock = &ArgSpec{Nargs: 1,
 	Spec: []byte{0}, Names: []Value{SuStr("block")}}

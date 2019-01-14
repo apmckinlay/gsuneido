@@ -34,10 +34,6 @@ func codegen(fn *ast.Function) *SuFunc {
 }
 
 func (cg *cgen) finishParamSpec() {
-	if len(cg.Flags) == 1 && cg.Flags[0] == AtParam {
-		cg.Signature = ^SigEach
-		return
-	}
 	if !allZero(cg.Flags) {
 		return
 	}
@@ -58,10 +54,10 @@ func allZero(flags []Flag) bool {
 
 type cgen struct {
 	ParamSpec
-	code     []byte
-	argspecs []*ArgSpec
-	base     Global
-	isNew    bool
+	code           []byte
+	argspecs       []*ArgSpec
+	base           Global
+	isNew          bool
 	firstStatement bool
 }
 
