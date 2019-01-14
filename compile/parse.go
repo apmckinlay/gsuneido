@@ -20,7 +20,7 @@ type parser struct {
 
 	// Item is the current lexical token etc.
 	Item
-	
+
 	// Factory is used by expression.go
 	// because expressions are shared by both language and queries
 	// and generate different types of AST nodes
