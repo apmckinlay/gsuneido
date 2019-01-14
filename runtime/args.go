@@ -60,8 +60,8 @@ func (t *Thread) massage(ps *ParamSpec, as *ArgSpec, args []Value) {
 	if atParam {
 		if atArg {
 			// @arg => @param
-			ob := args[0].(*SuObject)
-			ob = ob.Slice(each)
+			ob := ToObject(args[0])
+			ob = ob.Slice(each) // makes a copy
 			args[0] = ob
 			return
 		}
@@ -138,7 +138,6 @@ func (t *Thread) massage(ps *ParamSpec, as *ArgSpec, args []Value) {
 			}
 		}
 	}
-
 }
 
 func (t *Thread) dyn(name string) Value {

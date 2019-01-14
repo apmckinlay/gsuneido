@@ -120,7 +120,7 @@ func (p *parser) object() Value {
 	if close == R_PAREN {
 		ob = new(SuObject)
 	} else {
-		ob = new(SuRecord)
+		ob = NewSuRecord()
 	}
 	p.memberList(ob, close, noBase)
 	if p,ok := ob.(protectable); ok {

@@ -2,9 +2,13 @@ package runtime
 
 // TODO default, rules, observers, etc.
 
-// SuRecord is an SuObject with observers, rules, and default values
+// SuRecord is an SuObject with observers and rules
 type SuRecord struct {
 	SuObject
+}
+
+func NewSuRecord() *SuRecord {
+	return &SuRecord{SuObject{defval: EmptyStr}}
 }
 
 func (*SuRecord) TypeName() string {
@@ -26,7 +30,7 @@ func (r *SuRecord) Pack(buf []byte) []byte {
 }
 
 func UnpackRecord(buf []byte) *SuRecord {
-	r := &SuRecord{}
+	r := NewSuRecord()
 	unpackObject(buf, &r.SuObject)
 	return r
 }

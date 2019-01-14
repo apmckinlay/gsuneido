@@ -43,6 +43,7 @@ func rawbuiltin(s string, f func(t *Thread, as *ArgSpec, args ...Value) Value) b
 	return true
 }
 
+// paramSplit takes Foo(x, y) and returns name and ParamSpec
 func paramSplit(s string) (string, ParamSpec) {
 	i := strings.IndexByte(s, byte('('))
 	name := s[:i]
@@ -73,5 +74,10 @@ func rawmethod(p string,
 // params builds a ParamSpec from a string like (a, b) or (@args)
 func params(s string) ParamSpec {
 	fn := compile.Constant("function " + s + " {}").(*SuFunc)
+	for i := 0; i < int(fn.ParamSpec.Ndefaults); i++ {
+		if fn.Values[i].Equal(SuStr("nil")) {
+			fn.Values[i] = nil
+		}
+	}
 	return fn.ParamSpec
 }

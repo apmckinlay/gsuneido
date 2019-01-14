@@ -18,13 +18,27 @@ type SuObject struct {
 	list     []Value
 	named    hmap.Hmap
 	readonly bool
+	defval   Value
 }
 
 var _ Value = (*SuObject)(nil)
 var _ Packable = &SuObject{}
 
-// Get returns the value associated with a key, or nil if not found
+// Get returns the value associated with a key, or defval if not found
 func (ob *SuObject) Get(_ *Thread, key Value) Value {
+	return ob.GetDefault(key, ob.defval)
+}
+
+func (ob *SuObject) GetDefault(key Value, def Value) Value {
+	val := ob.getIfPresent(key)
+	if val == nil {
+		//TODO handle copying object default
+		return def
+	}
+	return val
+}
+
+func (ob *SuObject) getIfPresent(key Value) Value {
 	if i := index(key); 0 <= i && i < ob.ListSize() {
 		return ob.list[i]
 	}
@@ -360,9 +374,9 @@ func (ob *SuObject) Slice(n int) *SuObject {
 	if n > len(ob.list) {
 		return &SuObject{named: *newNamed, readonly: false}
 	}
-	list := make([]Value, len(ob.list)-n)
-	copy(list, ob.list[n:])
-	return &SuObject{list: list, named: *newNamed, readonly: false}
+	newList := make([]Value, len(ob.list)-n)
+	copy(newList, ob.list[n:])
+	return &SuObject{list: newList, named: *newNamed, readonly: false}
 }
 
 func (ob *SuObject) Iter() func() (Value, Value) {
@@ -414,6 +428,29 @@ func (ob *SuObject) SetReadOnly() {
 			x.SetReadOnly()
 		}
 	}
+}
+
+func (ob *SuObject) IsReadOnly() bool {
+	return ob.readonly
+}
+
+func (ob *SuObject) SetDefault(def Value) {
+	ob.mustBeMutable()
+	ob.defval = def
+}
+
+func (ob *SuObject) Copy() *SuObject {
+	return ob.Slice(0)
+}
+
+func ToObject(x Value) *SuObject {
+	if ob, ok := x.(*SuObject); ok {
+		return ob
+	}
+	if r, ok := x.(*SuRecord); ok {
+		return &r.SuObject
+	}
+	panic("can't convert " + x.TypeName() + " to object")
 }
 
 // Packable
