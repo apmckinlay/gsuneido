@@ -83,8 +83,8 @@ func (c *SuClass) Get(t *Thread, m Value) Value {
 func (c *SuClass) get1(t *Thread, mem string) Value {
 	val := c.get2(mem)
 	if val != nil {
-		if f, ok := val.(*SuFunc); ok {
-			return &SuMethod{SuFunc: *f, this: c}
+		if _, ok := val.(*SuFunc); ok {
+			return &SuMethod{fn: val, this: c}
 		}
 		return val
 	}
