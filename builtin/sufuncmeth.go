@@ -19,12 +19,4 @@ func init() {
 			return SuStr(fn.Params())
 		}),
 	}
-	Params = method0(func(this Value) Value {
-		ps := this.(Paramsable)
-		return SuStr(ps.Params())
-	})
-}
-
-type Paramsable interface {
-	Params() string
 }

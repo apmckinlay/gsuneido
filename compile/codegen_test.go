@@ -113,14 +113,14 @@ func TestCodegen(t *testing.T) {
 	test("new c(1)", "load c, one, value '*new*', callmeth1")
 }
 
-func TestCodegenNewMethod(t *testing.T) {
+func TestCodegenSuper(t *testing.T) {
 	DefaultSingleQuotes = true
 	defer func() { DefaultSingleQuotes = false }()
 	test := func(src, expected string) {
 		t.Helper()
 		c := Constant("Foo { " + src + " }")
 		m := src[0:strings.IndexByte(src, '(')]
-		fn := &c.Get(nil, SuStr(m)).(*SuMethod).SuFunc
+		fn := c.Lookup(m).(*SuFunc)
 		actual := disasm(fn)
 		if actual != expected {
 			t.Errorf("\n%s\nexpect: %s\nactual: %s", src, expected, actual)

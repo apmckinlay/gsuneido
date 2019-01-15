@@ -159,21 +159,11 @@ func (f *ParamSpec) Params() string {
 	return f.String()[8:] // skip "function"
 }
 
-// func (f *ParamSpec) fillin(t *Thread, i int) Value {
-// 	if f.Flags[i]&DynParam != 0 {
-// 		if x := t.dyn("_" + f.Names[i]); x != nil {
-// 			return x
-// 		}
-// 	}
-// 	if i < int(f.Nparams-f.Ndefaults) {
-// 		panic("missing argument(s)")
-// 	}
-// 	return f.Values[i-int(f.Nparams-f.Ndefaults)]
-// }
-
 func (f *ParamSpec) Show() string {
 	return f.String()
 }
+
+// Named interface
 
 var _ Named = (*ParamSpec)(nil)
 

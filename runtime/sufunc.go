@@ -2,9 +2,6 @@ package runtime
 
 import "github.com/apmckinlay/gsuneido/util/str"
 
-// MaxArgs is the maximum number of arguments allowed
-const MaxArgs = 200
-
 // SuFunc is a compiled Suneido function, method, or block
 type SuFunc struct {
 	ParamSpec

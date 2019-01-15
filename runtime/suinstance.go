@@ -105,10 +105,6 @@ func (*SuInstance) Compare(Value) int {
 	panic("instance compare not implemented")
 }
 
-// func (ob *SuInstance) parent() *SuClass {
-// 	return ob.class
-// }
-
 // InstanceMethods is initialized by the builtin package
 var InstanceMethods Methods
 

@@ -36,6 +36,9 @@ func (t *Thread) args(ps *ParamSpec, as *ArgSpec) []Value {
 	return locals
 }
 
+// MaxArgs is the maximum number of arguments allowed
+const MaxArgs = 200
+
 // massage adjust the arguments on the stack (described by ArgSpec)
 // to match what is expected by the function (described by Func)
 // The stack must already have been expanded (e.g. by args)

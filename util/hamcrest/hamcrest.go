@@ -116,7 +116,7 @@ func Equals(expected interface{}) Tester {
 				}
 			}
 		}
-		if e,ok := expected.(Eq); ok {
+		if e, ok := expected.(Eq); ok {
 			if e.Equal(actual) {
 				return ""
 			}
@@ -129,8 +129,8 @@ func Equals(expected interface{}) Tester {
 }
 
 func show(x interface{}) string {
-	if _,ok := x.(string); ok {
-		return  fmt.Sprintf("%#v", x)
+	if _, ok := x.(string); ok {
+		return fmt.Sprintf("%#v", x)
 	}
 	s1 := fmt.Sprintf("%v", x)
 	s2 := fmt.Sprintf("%#v", x)
@@ -194,6 +194,7 @@ func Panics(expected string) Tester {
 func Catch(f func()) (result interface{}) {
 	defer func() {
 		if e := recover(); e != nil {
+			//debug.PrintStack()
 			result = e
 		}
 	}()
