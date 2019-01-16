@@ -13,13 +13,19 @@ type Value interface {
 	String() string
 
 	// ToStr converts to a string or panics
+	// boolean and number are converted, other types are not
 	ToStr() string
 
+	// ToInt converts to an integer or panics
+	// false and "" convert to 0 (but true does NOT convert to 1)
 	ToInt() int
 
+	// ToDnum converts to a dnum or panics
+	// false and "" convert to 0 (but true does NOT convert to 1)
 	ToDnum() dnum.Dnum
 
 	// Get returns a member of an object/instance/class or a character of a string
+	// returns nil if the member does not exist
 	// The thread is necessary to call getters
 	Get(t *Thread, key Value) Value
 

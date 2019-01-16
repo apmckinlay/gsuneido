@@ -99,8 +99,8 @@ func (*SuMethod) SetName(string) {
 }
 
 func (m *SuMethod) GetName() string {
-	if n,ok := m.fn.(Named); ok {
-		return n.GetName();
+	if n, ok := m.fn.(Named); ok {
+		return n.GetName()
 	}
 	return ""
 }
