@@ -3,6 +3,7 @@ package runtime
 import (
 	"github.com/apmckinlay/gsuneido/util/regex"
 	"github.com/apmckinlay/gsuneido/util/tr"
+	"github.com/apmckinlay/gsuneido/util/verify"
 )
 
 // See interp.go and args.go for the rest of the Thread methods
@@ -68,4 +69,16 @@ func (t *Thread) Dupx2() {
 func (t *Thread) Reset() {
 	t.fp = 0
 	t.sp = 0
+}
+
+func (t *Thread) CallWithArgs(fn Value, args ...Value) Value {
+	verify.That(len(args) < AsEach)
+	as := StdArgSpecs[len(args)]
+	base := t.sp
+	for _, x := range args {
+		t.Push(x)
+	}
+	result := fn.Call(t, as)
+	t.sp = base
+	return result
 }

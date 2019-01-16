@@ -425,11 +425,17 @@ func (ob *SuObject) MapIter() func() (Value, Value) {
 	}
 }
 
-func (ob *SuObject) Sort() {
+func (ob *SuObject) Sort(t *Thread, lt Value) {
 	ob.mustBeMutable()
-	sort.SliceStable(ob.list, func(i, j int) bool {
-		return ob.list[i].Compare(ob.list[j]) < 0
-	})
+	if lt == False {
+		sort.SliceStable(ob.list, func(i, j int) bool {
+			return ob.list[i].Compare(ob.list[j]) < 0
+		})
+	} else {
+		sort.SliceStable(ob.list, func(i, j int) bool {
+			return True == t.CallWithArgs(lt, ob.list[i], ob.list[j])
+		})
+	}
 }
 
 func (ob *SuObject) SetReadOnly() {

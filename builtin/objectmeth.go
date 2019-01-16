@@ -46,10 +46,12 @@ func init() {
 			ob := ToObject(this)
 			return IntToValue(ob.Size())
 		}),
-		"Sort!": method0(func(this Value) Value { // TODO override Lt
-			ToObject(this).Sort()
-			return this
-		}),
+		"Sort!": rawmethod("(block = false)", // rawmethod to get thread
+			func(t *Thread, as *ArgSpec, this Value, args ...Value) Value {
+				args = t.Args(&ParamSpecOptionalBlock, as)
+				ToObject(this).Sort(t, args[0])
+				return this
+			}),
 		// TODO more methods
 	}
 }
