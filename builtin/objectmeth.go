@@ -1,15 +1,23 @@
 package builtin
 
-import . "github.com/apmckinlay/gsuneido/runtime"
+import (
+	. "github.com/apmckinlay/gsuneido/runtime"
+)
 
 func init() {
 	ObjectMethods = Methods{
 		"Add": rawmethod("(@args)",
 			func(t *Thread, as *ArgSpec, this Value, args ...Value) Value {
-				// TODO handle at: and @args
 				ob := ToObject(this)
-				for i := 0; i < as.Unnamed(); i++ {
-					ob.Add(args[i])
+				iter := NewArgsIter(as, args)
+				if at := getNamed(as, args, SuStr("at")); at != nil {
+					if i, ok := ToInt(at); ok {
+						addAt(ob, i, iter)
+					} else {
+						putAt(ob, at, iter)
+					}
+				} else {
+					addAt(ob, ob.ListSize(), iter)
 				}
 				return this
 			}),
@@ -44,4 +52,46 @@ func init() {
 		}),
 		// TODO more methods
 	}
+}
+
+func ToInt(x Value) (int, bool) {
+	if i, ok := SmiToInt(x); ok {
+		return i, ok
+	}
+	if dn, ok := x.(SuDnum); ok {
+		return dn.Dnum.ToInt()
+	}
+	return 0, false
+}
+
+func getNamed(as *ArgSpec, args []Value, name Value) Value {
+	iter := NewArgsIter(as, args)
+	for k, v := iter(); v != nil; k, v = iter() {
+		if name.Equal(k) {
+			return v
+		}
+	}
+	return nil
+}
+
+func addAt(ob *SuObject, at int, iter ArgsIter) {
+	for {
+		k, v := iter()
+		if k != nil || v == nil {
+			break
+		}
+		ob.Insert(at, v)
+		at++
+	}
+}
+
+func putAt(ob *SuObject, at Value, iter ArgsIter) {
+	k, v := iter()
+	if k != nil || v == nil {
+		return
+	}
+	if k, v := iter(); k == nil && v != nil {
+		panic("can only Add multiple values to un-named or numeric positions")
+	}
+	ob.Put(at, v)
 }

@@ -137,6 +137,21 @@ func (ob *SuObject) Add(val Value) {
 	ob.migrate()
 }
 
+// Insert inserts at the given position
+// If the position is within the list, following values are move over
+func (ob *SuObject) Insert(at int, val Value) {
+	ob.mustBeMutable()
+	if 0 <= at && at <= len(ob.list) {
+		// insert into list
+		ob.list = append(ob.list, nil)
+		copy(ob.list[at+1:], ob.list[at:])
+		ob.list[at] = val
+	} else {
+		ob.Put(IntToValue(at), val)
+	}
+	ob.migrate()
+}
+
 func (ob *SuObject) mustBeMutable() {
 	if ob.readonly {
 		panic("can't modify readonly objects")
