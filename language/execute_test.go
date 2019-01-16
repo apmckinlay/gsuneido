@@ -42,6 +42,12 @@ func TestPtestExecute(t *testing.T) {
 	}
 }
 
+func TestPtestObjects(t *testing.T) {
+	if !ptest.RunFile("objects.test") {
+		t.Fail()
+	}
+}
+
 func TestPtestLang(t *testing.T) {
 	if !ptest.RunFile("lang.test") {
 		t.Fail()
