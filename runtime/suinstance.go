@@ -21,6 +21,15 @@ func (ob *SuInstance) String() string {
 	return "/* instance */"
 }
 
+// Display is used by Display and Print
+// to handle user defined ToString
+func (ob *SuInstance) Display(t *Thread) string {
+	if f := ob.class.get2("ToString"); f != nil {
+		return f.Call(t, ArgSpec0).ToStr()
+	}
+	return ob.String()
+}
+
 func (*SuInstance) TypeName() string {
 	return "Instance"
 }

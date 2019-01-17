@@ -17,20 +17,20 @@ var _ = rawbuiltin("Print(@args)",
 			}
 			fmt.Print(sep)
 			if name != nil {
-				print(name)
+				print(t, name)
 				fmt.Print(": ")
 			}
-			print(value)
+			print(t, value)
 			sep = " "
 		}
 		fmt.Println()
 		return nil
 	})
 
-func print(v Value) {
+func print(t *Thread, v Value) {
 	if ss, ok := v.(SuStr); ok {
 		fmt.Print(string(ss))
 	} else {
-		fmt.Print(v)
+		fmt.Print(display(t, v))
 	}
 }
