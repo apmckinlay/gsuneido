@@ -356,11 +356,11 @@ func (cg *cgen) expr(node ast.Expr) {
 		cg.emit(op.RANGELEN)
 	case *ast.In:
 		cg.inExpr(node)
+	case *ast.Call:
+		cg.call(node)
 	case *ast.Function:
 		fn := codegen(node)
 		cg.emitValue(fn)
-	case *ast.Call:
-		cg.call(node)
 	case *ast.Block:
 		//TODO blocks
 	default:
