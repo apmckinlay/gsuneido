@@ -28,8 +28,8 @@ var _ = rawbuiltin("Print(@args)",
 	})
 
 func print(t *Thread, v Value) {
-	if ss, ok := v.(SuStr); ok {
-		fmt.Print(string(ss))
+	if v.TypeName() == "String" {
+		fmt.Print(v.ToStr())
 	} else {
 		fmt.Print(display(t, v))
 	}
