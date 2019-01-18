@@ -11,7 +11,7 @@ import (
 func TestVars(t *testing.T) {
 	test := func(src string, expected ...string) {
 		f := ParseFunction(src)
-		vars := ast.Vars(f)
+		vars := ast.VarList(f)
 		sort.Strings(vars)
 		sort.Strings(expected)
 		Assert(t).That(vars, Equals(expected))

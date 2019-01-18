@@ -2,12 +2,16 @@ package ast
 
 import "github.com/apmckinlay/gsuneido/util/ascii"
 
-// Vars returns a list of variable names used in an AST
+// VarSet returns a set (map to bool) of variable names used in an AST
 // This includes function/block parameters
-func Vars(ast Node) []string {
+func VarSet(ast Node) map[string]bool {
 	vv := varVisitor{vars: map[string]bool{}}
 	Traverse(ast, &vv)
-	return vv.List()
+	return vv.vars
+}
+
+func VarList(ast Node) []string {
+	return mapToList(VarSet(ast))
 }
 
 type varVisitor struct {
@@ -39,10 +43,10 @@ func (v *varVisitor) Before(node Node) bool {
 func (*varVisitor) After(Node) {
 }
 
-func (v *varVisitor) List() []string {
-	keys := make([]string, len(v.vars))
+func mapToList(vars map[string]bool) []string {
+	keys := make([]string, len(vars))
 	i := 0
-	for k := range v.vars {
+	for k := range vars {
 		keys[i] = k
 		i++
 	}

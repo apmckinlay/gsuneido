@@ -19,7 +19,7 @@ var zeroFlags [MaxArgs]Flag
 
 // codegen compiles an Ast to an SuFunc
 func codegen(fn *ast.Function) *SuFunc {
-	cg := cgen{base: fn.Base, isNew: fn.IsNewMethod}
+	cg := cgen{outerFn: fn, base: fn.Base, isNew: fn.IsNewMethod}
 	cg.function(fn)
 	cg.finishParamSpec()
 	for _, as := range cg.argspecs {
@@ -53,12 +53,14 @@ func allZero(flags []Flag) bool {
 }
 
 type cgen struct {
-	ParamSpec
+	outerFn        *ast.Function
+	outerVars      map[string]bool
 	code           []byte
 	argspecs       []*ArgSpec
 	base           Global
 	isNew          bool
 	firstStatement bool
+	ParamSpec
 }
 
 // binary and nary ast node token to operation
@@ -362,7 +364,7 @@ func (cg *cgen) expr(node ast.Expr) {
 		fn := codegen(node)
 		cg.emitValue(fn)
 	case *ast.Block:
-		//TODO blocks
+		cg.block(node)
 	default:
 		panic("unhandled expression: " + fmt.Sprintf("%T", node))
 	}
@@ -719,7 +721,44 @@ func (cg *cgen) argSpecEq(a1, a2 *ArgSpec) bool {
 		}
 	}
 	return true
+}
 
+func (cg *cgen) block(b *ast.Block) {
+	f := &b.Function
+	blockVars := ast.VarSet(f)
+	itParam(f, blockVars)
+	if cg.blockIsFunction(blockVars) {
+		fn := codegen(f)
+		cg.emitValue(fn)
+	} else {
+		panic("closures not implemented") //TODO closures
+	}
+}
+
+func itParam(f *ast.Function, blockVars map[string]bool) {
+	if len(f.Params) == 0 && blockVars["it"] {
+		// automatic "it" parameter
+		f.Params = []ast.Param{{Name: "it"}}
+	}
+}
+
+// blockIsFunction returns false if the block is a closure
+// i.e. if it shares any variables with the enclosing function
+func (cg *cgen) blockIsFunction(blockVars map[string]bool) bool {
+	// a block cannot have its own "this"
+	// so any reference means it must be a closure (not a function)
+	if blockVars["this"] {
+		return false
+	}
+	if cg.outerVars == nil {
+		cg.outerVars = ast.VarSet(cg.outerFn) // cache
+	}
+	for v := range blockVars {
+		if cg.outerVars[v] {
+			return false
+		}
+	}
+	return true
 }
 
 // helpers ---------------------------------------------------------------------
