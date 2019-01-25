@@ -33,6 +33,8 @@ func (f Folder) Unary(tok Token, expr Expr) Expr {
 		val = Not(val)
 	case BITNOT:
 		val = BitNot(val)
+	case L_PAREN:
+		break
 	default:
 		panic("folder unexpected unary operator " + tok.String())
 	}

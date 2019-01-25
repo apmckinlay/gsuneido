@@ -199,7 +199,8 @@ func (p *parser) atom() ast.Expr {
 		p.next()
 		e := p.expr()
 		p.match(R_PAREN)
-		return e
+		// need unary for (ob.m)() [not a method call]
+		return p.Unary(L_PAREN, e)
 	case L_CURLY:
 		return p.block()
 	case L_BRACKET:

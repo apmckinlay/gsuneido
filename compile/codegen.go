@@ -414,6 +414,10 @@ func (cg *cgen) name(s string) int {
 }
 
 func (cg *cgen) unary(node *ast.Unary) {
+	if node.Tok == L_PAREN {
+		cg.expr(node.E)
+		return
+	}
 	o := utok2op[node.Tok]
 	if INC <= node.Tok && node.Tok <= POSTDEC {
 		ref := cg.lvalue(node.E)

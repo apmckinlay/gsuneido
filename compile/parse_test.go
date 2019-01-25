@@ -70,7 +70,7 @@ func TestParseExpression(t *testing.T) {
 	test("a * b", "(MUL a b)")
 	test("a / b", "(MUL a (DIV b))")
 	test("a + b * c", "(ADD a (MUL b c))")
-	test("(a + b) * c", "(MUL (ADD a b) c)")
+	test("(a + b) * c", "(MUL (L_PAREN (ADD a b)) c)")
 	test("a * b + c", "(ADD (MUL a b) c)")
 
 	test("a + b", "(ADD a b)")
@@ -109,7 +109,7 @@ func TestParseExpression(t *testing.T) {
 	test("a ? b : c", "(? a b c)")
 	test("a \n ? b \n : c", "(? a b c)")
 	test("a and b ? c + 1 : d * 2", "(? (AND a b) (ADD c 1) (MUL d 2))")
-	test("a ? (b ? c : d) : (e ? f : g)", "(? a (? b c d) (? e f g))")
+	test("a ? (b ? c : d) : (e ? f : g)", "(? a (L_PAREN (? b c d)) (L_PAREN (? e f g)))")
 	test("a ?  b ? c : d  :  e ? f : g", "(? a (? b c d) (? e f g))")
 	test("true ? b : c", "b")
 	test("false ? b : c", "c")
@@ -185,6 +185,7 @@ func TestParseExpression(t *testing.T) {
 	// unary
 	test("-123", "")
 	test("not true", "false")
+	test("(123)", "123")
 
 	// binary
 	test("8 % 3", "2")
@@ -212,6 +213,7 @@ func TestParseExpression(t *testing.T) {
 	test("a - 2 - 1", "(ADD a -3)")
 
 	test("1 * 8", "8")
+	test("(1 * 8)", "8")
 	test("1 / 8", ".125")
 	test("2 / 8", ".25")
 	test("2 * 4", "8")
