@@ -72,10 +72,10 @@ func init() {
 	AddGlobal("Def", &Builtin2{def, BuiltinParams{ParamSpec: ParamSpec2}})
 }
 
-func pt_execute(args []string, _ []bool) bool {
-	//fmt.Println(args)
+func pt_execute(args []string, str []bool) bool {
+	//fmt.Println(ptest.Fmt(args))
 	if strings.Contains(args[0], "Seq(") || strings.Contains(args[0], ".Eval(") {
-		fmt.Println("skipped", args) // TODO
+		fmt.Println("skipped", ptest.Fmt(args, str)) // TODO
 		return true
 	}
 

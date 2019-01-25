@@ -111,7 +111,7 @@ func (p *parser) runFixture() bool {
 func runCase(test testfn, row []string, str []bool) (ok bool) {
 	defer func() {
 		if err := recover(); err != nil {
-			fmt.Println("\tFAILED: ", row)
+			fmt.Println("\tFAILED: ", Fmt(row, str))
 			fmt.Println("\tthrew: ", err)
 			//debug.PrintStack()
 			ok = false
@@ -119,10 +119,29 @@ func runCase(test testfn, row []string, str []bool) (ok bool) {
 	}()
 	ok = true
 	if !test(row, str) {
-		fmt.Println("\tFAILED: ", row)
+		fmt.Println("\tFAILED: ", Fmt(row, str))
 		ok = false
 	}
 	return
+}
+
+func Fmt(row []string, str []bool) string {
+	sb := strings.Builder{}
+	sb.WriteString("[")
+	sep := ""
+	for i,s := range row {
+		sb.WriteString(sep)
+		sep = ", "
+		if str[i] {
+			sb.WriteRune('`')
+		}
+		sb.WriteString(s)
+		if str[i] {
+			sb.WriteRune('`')
+		}
+	}
+	sb.WriteString("]")
+	return sb.String()
 }
 
 func (p *parser) match(expected c.Token, skip bool) {
