@@ -19,7 +19,7 @@ var asm = []string{
 	"true", "false", "zero", "one", "maxint", "emptystr",
 	"or", "and", "bool", "qmark", "in", "jump", "tjump", "fjump",
 	"eqjump", "nejump", "throw", "try", "rangeto", "rangelen", "this",
-	"callfunc", "callmeth", "super",
+	"callfunc", "callmeth", "super", "block",
 }
 
 func init() {
@@ -63,6 +63,8 @@ func Disasm1(fn *SuFunc, i int) (int, string) {
 	case VALUE:
 		v := fn.Values[fetchUint8()]
 		s += fmt.Sprintf(" %v", v)
+	case BLOCK:
+		fetchUint8()
 	case LOAD, STORE, DYLOAD:
 		idx := fetchUint8()
 		s += " " + fn.Names[idx]

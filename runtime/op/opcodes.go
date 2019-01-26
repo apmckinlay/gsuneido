@@ -63,4 +63,5 @@ const (
 	CALLFUNC
 	CALLMETH
 	SUPER
+	BLOCK
 )

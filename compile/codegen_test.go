@@ -310,3 +310,18 @@ func TestControl(t *testing.T) {
         23: tjump 7
         26:`)
 }
+
+func TestBlock(t *testing.T) {
+	ast := ParseFunction("function (x) {\n b = {|a| a + x }\n}")
+	fn := codegen(ast)
+	block := fn.Values[0].(*SuFunc)
+
+	Assert(t).That(fn.Names, Equals([]string{"x", "b", ""}))
+	Assert(t).That(block.Names, Equals([]string{"x", "b", "a"}))
+	Assert(t).That(int(block.Offset), Equals(2))
+
+	Assert(t).That(block.ParamSpec.Params(), Equals("(a)"))
+
+	Assert(t).That(disasm(fn), Equals("block, store b"))
+	Assert(t).That(disasm(block), Equals("load a, load x, add"))
+}

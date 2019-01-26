@@ -14,14 +14,6 @@ import (
 	"github.com/apmckinlay/gsuneido/util/ptest"
 )
 
-func TestCall(*testing.T) {
-	f := compile.Constant(`function() {
-		function () { 123 }(a: 1)
-	}`)
-	th := NewThread()
-	f.Call(th, ArgSpec0)
-}
-
 var _ = AddGlobal("Suneido", new(SuObject))
 var _ = ptest.Add("execute", pt_execute)
 var _ = ptest.Add("lang_rangeto", pt_lang_rangeto)

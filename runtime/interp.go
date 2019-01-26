@@ -11,7 +11,8 @@ func (t *Thread) Call(fn *SuFunc) Value {
 	for expand := fn.Nlocals - fn.Nparams; expand > 0; expand-- {
 		t.Push(nil)
 	}
-	t.frames[t.fp] = Frame{fn: fn, bp: t.sp - int(fn.Nlocals), this: t.this}
+	t.frames[t.fp] = Frame{fn: fn, this: t.this,
+		locals: t.stack[t.sp-int(fn.Nlocals) : t.sp]}
 	defer func(fp int) { t.fp = fp }(t.fp)
 	t.fp++
 	return t.Run()
@@ -25,7 +26,6 @@ func CallMethod(t *Thread, this Value, f Value, as *ArgSpec) Value {
 func (t *Thread) Run() Value {
 	fr := &t.frames[t.fp-1]
 	code := fr.fn.Code
-	bp := fr.bp
 	sp := t.sp
 	super := 0
 	fetchUint8 := func() int {
@@ -80,19 +80,19 @@ loop:
 			t.Push(fr.fn.Values[fetchUint8()])
 		case LOAD:
 			i := fetchUint8()
-			val := t.stack[bp+i]
+			val := fr.locals[i]
 			if val == nil {
 				panic("uninitialized variable: " + fr.fn.Names[i])
 			}
 			t.Push(val)
 		case STORE:
-			t.stack[bp+fetchUint8()] = t.Top()
+			fr.locals[fetchUint8()] = t.Top()
 		case DYLOAD:
 			i := fetchUint8()
-			if t.stack[bp+i] == nil {
+			if fr.locals[i] == nil {
 				t.dyload(fr, i)
 			}
-			t.Push(t.stack[bp+i])
+			t.Push(fr.locals[i])
 		case GLOBAL:
 			gn := Global(fetchUint16())
 			val := GetGlobal(gn)
@@ -261,6 +261,11 @@ loop:
 			break loop
 		case THROW:
 			panic(t.Pop())
+		case BLOCK:
+			fr.moveLocalsToHeap()
+			fn := fr.fn.Values[fetchUint8()].(*SuFunc)
+			block := &SuBlock{SuFunc: *fn, locals: fr.locals, this: fr.this}
+			t.Push(block)
 		case CALLFUNC:
 			f := t.Pop()
 			ai := fetchUint8()
@@ -338,10 +343,10 @@ func (t *Thread) popbool() bool {
 func (t *Thread) dyload(fr *Frame, idx int) {
 	name := fr.fn.Names[idx]
 	for i := t.fp - 1; i >= 0; i-- {
-		fr2 := t.frames[i]
+		fr2 := &t.frames[i]
 		for j, s := range fr2.fn.Names {
 			if s == name {
-				t.stack[fr.bp+idx] = t.stack[fr2.bp+j]
+				fr.locals[idx] = fr2.locals[j]
 				return
 			}
 		}

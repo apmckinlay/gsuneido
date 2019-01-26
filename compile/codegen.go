@@ -20,6 +20,10 @@ var zeroFlags [MaxArgs]Flag
 // codegen compiles an Ast to an SuFunc
 func codegen(fn *ast.Function) *SuFunc {
 	cg := cgen{outerFn: fn, base: fn.Base, isNew: fn.IsNewMethod}
+	return cg.codegen(fn)
+}
+
+func (cg *cgen) codegen(fn *ast.Function) *SuFunc {
 	cg.function(fn)
 	cg.finishParamSpec()
 	for _, as := range cg.argspecs {
@@ -31,6 +35,25 @@ func codegen(fn *ast.Function) *SuFunc {
 		ParamSpec: cg.ParamSpec,
 		ArgSpecs:  cg.argspecs,
 	}
+}
+
+func codegenBlock(ast *ast.Function, outerFn *ast.Function, outerNames []string) (*SuFunc, []string) {
+	base := len(outerNames)
+	cg := cgen{outerFn: outerFn, base: ast.Base, isNew: ast.IsNewMethod}
+	cg.Names = outerNames
+
+	f := cg.codegen(ast)
+
+	// hide parameters from outer function
+	outerNames = f.Names
+	f.Names = make([]string, len(outerNames))
+	verify.That(base <= math.MaxUint8)
+	f.Offset = uint8(base)
+	copy(f.Names, outerNames)
+	for i := 0; i < int(f.Nparams); i++ {
+		outerNames[base+i] = ""
+	}
+	return f, outerNames
 }
 
 func (cg *cgen) finishParamSpec() {
@@ -735,7 +758,11 @@ func (cg *cgen) block(b *ast.Block) {
 		fn := codegen(f)
 		cg.emitValue(fn)
 	} else {
-		panic("closures not implemented") //TODO closures
+		// closure
+		var fn *SuFunc
+		fn, cg.Names = codegenBlock(f, cg.outerFn, cg.Names)
+		i := cg.value(fn)
+		cg.emitUint8(op.BLOCK, i)
 	}
 }
 

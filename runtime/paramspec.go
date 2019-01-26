@@ -11,6 +11,7 @@ import (
 
 // ParamSpec describes the parameters of a function
 // See also ArgSpec which describes the arguments of a function call
+// It also serves as the basis for callables like SuFunc
 type ParamSpec struct {
 	// Nparams is the number of arguments required on the stack
 	Nparams uint8
@@ -19,13 +20,19 @@ type ParamSpec struct {
 	// They are in the start of Values
 	Ndefaults uint8
 
+	// Offset is the location of the parameter names within Names
+	// It is used for closure blocks, for normal functions it is 0
+	// Offset is only required for parameters (or arguments),
+	// it is not needed for local variables
+	Offset uint8
+
 	// Signature is used for fast matching of simple Argspec to ParamSpec
 	Signature byte
 
 	// Flags specifies "types" of params
 	Flags []Flag
 
-	// Names starts with the parameter names, then the local names
+	// Names normally starts with the parameters, followed by local variables
 	Names []string
 
 	// Values contains any literals in the function
@@ -80,7 +87,7 @@ func (f *ParamSpec) String() string {
 	v := 0 // index into Values
 	for i := 0; i < int(f.Nparams); i++ {
 		buf.WriteString(sep)
-		buf.WriteString(flagsToName(f.Names[i], f.Flags[i]))
+		buf.WriteString(flagsToName(f.Names[i + int(f.Offset)], f.Flags[i]))
 		if i >= int(f.Nparams-f.Ndefaults) {
 			buf.WriteString("=")
 			buf.WriteString(fmt.Sprint(f.Values[v]))

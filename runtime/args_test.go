@@ -110,7 +110,7 @@ func TestArgs(t *testing.T) {
 
 	// dynamic
 	setStack(111, 123)
-	th.frames[0] = Frame{
+	th.frames[0] = Frame{locals: th.stack[0:],
 		fn: &SuFunc{ParamSpec: ParamSpec{Names: []string{"x", "_dyn"}}}}
 	th.fp++
 	f = &ParamSpec{Nparams: 1, Flags: []Flag{DynParam}, Names: []string{"dyn"}}
