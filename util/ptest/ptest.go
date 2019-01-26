@@ -5,6 +5,9 @@ This is so the same test cases can be shared between cSuneido, jSuneido,
 gSuneido, && from within Suneido.
 
 Uses compile.Lexer to parse the test files.
+
+NOTE: add the suneido_tests directory to GOPATH
+so changes to test files will invalidate the test result cache
 */
 package ptest
 
@@ -129,7 +132,7 @@ func Fmt(row []string, str []bool) string {
 	sb := strings.Builder{}
 	sb.WriteString("[")
 	sep := ""
-	for i,s := range row {
+	for i, s := range row {
 		sb.WriteString(sep)
 		sep = ", "
 		if str[i] {

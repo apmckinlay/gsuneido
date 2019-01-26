@@ -24,6 +24,7 @@ type Thread struct {
 	sp int
 
 	// this is used to pass "this" from interp to method
+	// it is only temporary, Frame.this is the real "this"
 	this Value
 
 	rxcache *regex.LruMapCache
