@@ -257,6 +257,18 @@ loop:
 			} else {
 				fr.ip += 2
 			}
+		case ITER:
+			t.Push(t.callMethod("Iter", ArgSpec0))
+		case FORIN:
+			brk := fetchInt16()
+			local := fetchUint8()
+			iter := t.Top()
+			t.Push(iter) // since call will pop it
+			next := t.callMethod("Next", ArgSpec0)
+			fr.locals[local] = next
+			if next.Equal(iter) {
+				fr.ip += brk - 1 // jump
+			}
 		case RETURN:
 			break loop
 		case THROW:
@@ -316,6 +328,20 @@ loop:
 		return t.Pop()
 	}
 	return nil
+}
+
+// callMethod is used by ITER and FORIN
+func (t *Thread) callMethod(method string, argSpec *ArgSpec) Value {
+	base := t.sp - int(argSpec.Nargs) - 1
+	ob := t.stack[base]
+	f := ob.Lookup(method)
+	if f == nil {
+		panic("method not found " + ob.TypeName() + "." + method)
+	}
+	t.this = ob
+	result := f.Call(t, argSpec)
+	t.sp = base
+	return result
 }
 
 func (t *Thread) topbool() bool {

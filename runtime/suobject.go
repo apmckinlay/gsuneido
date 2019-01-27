@@ -414,6 +414,29 @@ func (ob *SuObject) Iter() func() (Value, Value) {
 	}
 }
 
+func (ob *SuObject) IterValues() Iter {
+	return &obIterValues{ob: ob, iter: ob.Iter()}
+}
+
+type obIterValues struct {
+	ob   *SuObject
+	iter func() (Value, Value)
+}
+
+func (it *obIterValues) Next() Value {
+	//TODO check for modification during iteration
+	_, v := it.iter()
+	return v
+}
+
+func (it *obIterValues) Dup() Iter {
+	return it.ob.IterValues()
+}
+
+func (it *obIterValues) Infinite() bool {
+	return false
+}
+
 func (ob *SuObject) MapIter() func() (Value, Value) {
 	named := ob.named.Iter()
 	return func() (Value, Value) {

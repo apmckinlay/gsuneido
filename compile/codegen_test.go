@@ -308,7 +308,19 @@ func TestControl(t *testing.T) {
         19: int 9
         22: lt
         23: tjump 7
-        26:`)
+		26:`)
+
+	test(`for (x in y) { a; break; continue }`, `
+		0: load y
+        2: iter
+        3: forin x 19
+        7: load a
+        9: pop
+        10: jump 19
+        13: jump 3
+        16: jump 3
+        19: pop
+        20:`)
 }
 
 func TestBlock(t *testing.T) {

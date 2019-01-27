@@ -21,6 +21,10 @@ func init() {
 				}
 				return this
 			}),
+		"Iter": method0(func(this Value) Value { // TODO sequence
+			ob := ToObject(this)
+			return SuIter{ob.IterValues()}
+		}),
 		"Members": method0(func(this Value) Value { // TODO sequence
 			ob := ToObject(this)
 			mems := new(SuObject)

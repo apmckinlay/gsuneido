@@ -221,7 +221,7 @@ func (cg *cgen) statement(node ast.Node, labels *Labels, lastStmt bool) {
 	case *ast.For:
 		cg.forStmt(node)
 	case *ast.ForIn:
-		//TODO for in
+		cg.forInStmt(node)
 	case *ast.Throw:
 		cg.expr(node.E)
 		cg.emit(op.THROW)
@@ -340,6 +340,24 @@ func (cg *cgen) forStmt(node *ast.For) {
 		cg.emitBwdJump(op.TJUMP, loop)
 	}
 	cg.placeLabel(labels.brk)
+}
+
+func (cg *cgen) forInStmt(node *ast.ForIn) {
+	cg.expr(node.E)
+	cg.emit(op.ITER)
+	labels := cg.newLabels()
+	cg.emitForIn(node.Var, labels)
+	cg.statement(node.Body, labels, false)
+	cg.emitBwdJump(op.JUMP, labels.cont)
+	cg.placeLabel(labels.brk)
+	cg.emit(op.POP)
+}
+
+func (cg *cgen) emitForIn(name string, labels *Labels) {
+	i := cg.name(name)
+	adr := len(cg.code)
+	cg.emit(op.FORIN, byte(labels.brk>>8), byte(labels.brk), byte(i))
+	labels.brk = adr
 }
 
 func (cg *cgen) exprList(list []ast.Expr) {
@@ -849,6 +867,7 @@ type Labels struct {
 	cont int // backward jump
 }
 
+// newLabels should be called where continue should go
 func (cg *cgen) newLabels() *Labels {
-	return &Labels{-1, cg.label()}
+	return &Labels{brk: -1, cont: cg.label()}
 }

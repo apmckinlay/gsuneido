@@ -64,4 +64,6 @@ const (
 	CALLMETH
 	SUPER
 	BLOCK
+	ITER
+	FORIN
 )
