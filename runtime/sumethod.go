@@ -11,7 +11,7 @@ type SuMethod struct {
 
 // Value interface --------------------------------------------------
 
-var _ Value = (*SuMethod)(nil) // verify *SuFunc satisfies Value
+var _ Value = (*SuMethod)(nil) // verify *SuMethod satisfies Value
 
 func (m *SuMethod) Call(t *Thread, as *ArgSpec) Value {
 	t.this = m.this
