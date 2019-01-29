@@ -81,6 +81,9 @@ func pt_execute(args []string, str []bool) bool {
 		} else if es, ok := e.(string); ok {
 			result = SuStr(es)
 			success = strings.Contains(es, args[2])
+		} else if ss, ok := e.(SuStr); ok {
+			result = ss
+			success = strings.Contains(string(ss), args[2])
 		} else {
 			result = SuStr(fmt.Sprint(e))
 			success = false
