@@ -9,12 +9,14 @@ import (
 
 	_ "github.com/apmckinlay/gsuneido/builtin"
 	"github.com/apmckinlay/gsuneido/compile"
+	"github.com/apmckinlay/gsuneido/language"
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
 var _ = AddGlobal("Suneido", new(SuObject))
 
 func main() {
+	language.Def()
 	if len(os.Args) > 1 {
 		eval(os.Args[1])
 	} else {

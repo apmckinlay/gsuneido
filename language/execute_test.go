@@ -7,7 +7,6 @@ import (
 	"strings"
 	"testing"
 
-	_ "github.com/apmckinlay/gsuneido/builtin"
 	"github.com/apmckinlay/gsuneido/compile"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	. "github.com/apmckinlay/gsuneido/util/hamcrest"
@@ -53,15 +52,7 @@ func TestPtestClassImpl(t *testing.T) {
 }
 
 func init() {
-	def := func(nameVal, val Value) Value {
-		name := string(nameVal.(SuStr))
-		if ss, ok := val.(SuStr); ok {
-			val = compile.NamedConstant(name, string(ss))
-		}
-		TestGlobal(name, val)
-		return nil
-	}
-	AddGlobal("Def", &Builtin2{def, BuiltinParams{ParamSpec: ParamSpec2}})
+	Def()
 }
 
 func pt_execute(args []string, str []bool) bool {
