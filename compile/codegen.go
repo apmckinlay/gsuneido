@@ -226,8 +226,7 @@ func (cg *cgen) statement(node ast.Node, labels *Labels, lastStmt bool) {
 		cg.expr(node.E)
 		cg.emit(op.THROW)
 	case *ast.TryCatch:
-		cg.emit(op.TRY)
-		//TODO try catch
+		cg.tryCatchStmt(node, labels)
 	case *ast.Break:
 		if labels == nil {
 			panic("break can only be used within a loop")
@@ -358,6 +357,23 @@ func (cg *cgen) emitForIn(name string, labels *Labels) {
 	adr := len(cg.code)
 	cg.emit(op.FORIN, byte(labels.brk>>8), byte(labels.brk), byte(i))
 	labels.brk = adr
+}
+
+func (cg *cgen) tryCatchStmt(node *ast.TryCatch, labels *Labels) { //TODO
+	catch := cg.emitJump(op.TRY, -1)
+	cg.emit(byte(cg.value(SuStr(node.CatchFilter))))
+	cg.statement(node.Try, labels, false)
+	after := cg.emitJump(op.CATCH, -1)
+	cg.placeLabel(catch)
+	if node.CatchVar != "" {
+		cg.emit(op.STORE, byte(cg.name(node.CatchVar)))
+	}
+	cg.emit(op.POP)
+	if node.Catch != nil {
+		cg.statement(node.Catch, labels, false)
+	}
+
+	cg.placeLabel(after)
 }
 
 func (cg *cgen) exprList(list []ast.Expr) {

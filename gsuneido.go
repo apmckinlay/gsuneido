@@ -47,6 +47,10 @@ func eval(src string) {
 			fmt.Println("ERROR:", e)
 			if internal(e) {
 				debug.PrintStack()
+			} else if se, ok := e.(*SuExcept); ok {
+				for i := 0; i < se.Callstack.ListSize(); i++ {
+					fmt.Println(se.Callstack.ListGet(i))
+				}
 			}
 		}
 	}()

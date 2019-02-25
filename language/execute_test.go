@@ -27,6 +27,12 @@ func TestBuiltinString(t *testing.T) {
 	Assert(t).That(f.String(), Equals("Object /* builtin function */"))
 }
 
+// func TestTmp(t *testing.T) {
+// 	args := []string{`try throw "foo"; false`, `false`}
+// 	strq := []bool{}
+// 	pt_execute(args, strq)
+// }
+
 func TestPtestExecute(t *testing.T) {
 	if !ptest.RunFile("execute.test") {
 		t.Fail()
@@ -84,8 +90,11 @@ func pt_execute(args []string, str []bool) bool {
 		} else if ss, ok := e.(SuStr); ok {
 			result = ss
 			success = strings.Contains(string(ss), args[2])
+		} else if se, ok := e.(*SuExcept); ok {
+			result = se.SuStr
+			success = strings.Contains(string(se.SuStr), args[2])
 		} else {
-			result = SuStr(fmt.Sprint(e))
+			result = SuStr(fmt.Sprintf("%#v", e))
 			success = false
 		}
 	} else {

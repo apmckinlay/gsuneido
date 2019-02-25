@@ -17,6 +17,36 @@ func TestInterp(t *testing.T) {
 	test(SuInt(8), op.INT, 0, 3, op.INT, 0, 5, op.ADD, op.RETURN)
 }
 
+func TestCatchMatch(t *testing.T) {
+	match := func (e, pat string) {
+		Assert(t).True(catchMatch(e, pat))
+	}
+	match("", "")
+	match("foo", "")
+	match("foo", "|")
+	match("foo", "*")
+	match("foobar", "foo")
+	match("foobar", "*bar")
+	match("foobar", "*ba")
+	match("foobar", "*foo")
+	match("foobar", "*foobar")
+
+	match("foobar", "foo|def")
+	match("foobar", "abc|foo")
+	match("foobar", "abc|foo|def")
+
+	match("foobar", "abc|*bar")
+
+	nomatch := func (e, pat string) {
+		Assert(t).False(catchMatch(e, pat))
+	}
+	nomatch("", "foo")
+	nomatch("foo", "bar")
+	nomatch("foo", "*bar")
+	nomatch("foobar", "bar")
+	nomatch("foobar", "far|boo|x")
+}
+
 // compare to BenchmarkInterp in execute_test.go
 func BenchmarkJit(b *testing.B) {
 	th := &Thread{}

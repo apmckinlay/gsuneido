@@ -157,6 +157,38 @@ func TestControl(t *testing.T) {
 		Assert(t).That(s, Like(expected).Comment(src))
 	}
 
+	test(`try F()`, `
+		0: try 13 ''
+        4: global F
+        7: callfunc0
+        9: pop
+        10: catch 14
+        13: pop
+        14:`)
+	test(`try F() catch G()`, `
+		0: try 13 ''
+        4: global F
+        7: callfunc0
+        9: pop
+        10: catch 20
+        13: pop
+        14: global G
+        17: callfunc0
+        19: pop
+        20:`)
+	test(`try F() catch (x, "y") G()`, `
+		0: try 13 'y'
+        4: global F
+        7: callfunc0
+        9: pop
+        10: catch 22
+        13: store x
+        15: pop
+        16: global G
+        19: callfunc0
+        21: pop
+        22:`)
+
 	test("a and b", `
 		0: load a
 		2: and 8

@@ -228,3 +228,4 @@ ptestdir.txt
 *.test
 
 .vscode/
+.history/

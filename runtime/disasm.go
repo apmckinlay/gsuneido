@@ -18,8 +18,8 @@ var asm = []string{
 	"load", "store", "dyload", "get", "put", "global",
 	"true", "false", "zero", "one", "maxint", "emptystr",
 	"or", "and", "bool", "qmark", "in", "jump", "tjump", "fjump",
-	"eqjump", "nejump", "throw", "try", "rangeto", "rangelen", "this",
-	"callfunc", "callmeth", "super", "block", "iter", "forin",
+	"eqjump", "nejump", "throw", "try", "catch", "rangeto", "rangelen",
+	"this", "callfunc", "callmeth", "super", "block", "iter", "forin",
 }
 
 func init() {
@@ -71,13 +71,17 @@ func Disasm1(fn *SuFunc, i int) (int, string) {
 	case GLOBAL, SUPER:
 		gn := Global(fetchUint16())
 		s += " " + GlobalName(gn)
-	case JUMP, TJUMP, FJUMP, AND, OR, Q_MARK, IN, EQJUMP, NEJUMP:
+	case JUMP, TJUMP, FJUMP, AND, OR, Q_MARK, IN, EQJUMP, NEJUMP, CATCH:
 		j := fetchInt16()
 		s += fmt.Sprintf(" %d", i+j)
 	case FORIN:
 		j := fetchInt16()
 		idx := fetchUint8()
 		s += " " + fn.Names[idx] + fmt.Sprintf(" %d", i+j-1)
+	case TRY:
+		j := fetchInt16()
+		v := fn.Values[fetchUint8()]
+		s += fmt.Sprintf(" %d %v", i+j-1, v)
 	case CALLFUNC, CALLMETH:
 		ai := int(fetchUint8())
 		if ai < 5 {

@@ -1,6 +1,9 @@
 package runtime
 
 import (
+	"runtime"
+	"strings"
+
 	. "github.com/apmckinlay/gsuneido/runtime/op"
 )
 
@@ -24,10 +27,49 @@ func CallMethod(t *Thread, this Value, f Value, as *ArgSpec) Value {
 }
 
 func (t *Thread) Run() Value {
+	spBase := t.sp
+	for i := 0; i < 4; i++ {
+		result := t.run(spBase)
+		if se, ok := result.(*SuExcept); ok {
+			// try block threw
+			fr := &t.frames[t.fp-1]
+			fr.ip = fr.catchJump
+			t.sp = fr.catchSp
+			fr.catchJump = 0
+			t.Push(se)
+		} else {
+			return result
+		}
+	}
+	panic("Run too many loops")
+}
+
+func (t *Thread) run(spBase int) (ret Value) {
 	fr := &t.frames[t.fp-1]
 	code := fr.fn.Code
-	sp := t.sp
 	super := 0
+
+	defer func(fr *Frame) {
+		if e := recover(); e != nil {
+			se, ok := e.(*SuExcept)
+			if !ok {
+				// first recover creates SuExcept with callstack
+				var ss SuStr
+				if re, ok := e.(runtime.Error); ok {
+					ss = SuStr(re.Error())
+				} else {
+					ss = SuStr(e.(string))
+				}
+				se = NewSuExcept(t, ss)
+			}
+			if fr.catchJump != 0 && catchMatch(string(se.SuStr), fr.catchPat) {
+				ret = se // tells Run we're catching
+			} else {
+				panic(se)
+			}
+		}
+	}(fr)
+
 	fetchUint8 := func() int {
 		fr.ip++
 		return int(code[fr.ip-1])
@@ -46,7 +88,7 @@ func (t *Thread) Run() Value {
 
 loop:
 	for fr.ip < len(code) {
-		// fmt.Println("stack:", t.stack[sp:t.sp])
+		// fmt.Println("stack:", t.stack[spBase:t.sp])
 		// _, da := Disasm1(fr.fn, fr.ip)
 		// fmt.Printf("%d: %s\n", fr.ip, da)
 		op := code[fr.ip]
@@ -271,8 +313,15 @@ loop:
 			}
 		case RETURN:
 			break loop
+		case TRY:
+			fr.catchSp = t.sp
+			fr.catchJump = fr.ip + fetchInt16()
+			fr.catchPat = string(fr.fn.Values[fetchUint8()].(SuStr))
+		case CATCH:
+			fr.ip += fetchInt16()
+			fr.catchJump = 0
 		case THROW:
-			panic(t.Pop())
+			panic(string(t.Pop().(SuStr)))
 		case BLOCK:
 			fr.moveLocalsToHeap()
 			fn := fr.fn.Values[fetchUint8()].(*SuFunc)
@@ -324,7 +373,7 @@ loop:
 		}
 	}
 	t.this = nil
-	if t.sp > sp {
+	if t.sp > spBase {
 		return t.Pop()
 	}
 	return nil
@@ -378,4 +427,26 @@ func (t *Thread) dyload(fr *Frame, idx int) {
 		}
 	}
 	panic("uninitialized variable: " + name)
+}
+
+func catchMatch(e, pat string) bool {
+	for {
+		p := pat
+		i := strings.IndexByte(p, '|')
+		if i >= 0 {
+			pat = pat[i+1:]
+			p = p[:i]
+		}
+		if strings.HasPrefix(p, "*") {
+			if strings.Contains(e, p[1:]) {
+				return true
+			}
+		} else if strings.HasPrefix(e, p) {
+			return true
+		}
+		if i < 0 {
+			break
+		}
+	}
+	return false
 }

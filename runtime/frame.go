@@ -15,6 +15,10 @@ type Frame struct {
 	// localsOnHeap is true when locals have been moved from the stack to the heap
 	// for blocks
 	localsOnHeap bool
+
+	catchSp int
+	catchPat string
+	catchJump int
 }
 
 func (fr *Frame) moveLocalsToHeap() {
