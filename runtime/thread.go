@@ -16,12 +16,16 @@ type Thread struct {
 	frames [maxFrames]Frame
 	// fp is the frame pointer, top is frames[fp-1]
 	fp int
+	// fpMax is the "high water" mark for fp
+	fpMax int
 
 	// stack is the Value stack for arguments and expressions.
 	// The end of the slice is the top of the stack.
 	stack [maxStack]Value
 	// sp is the stack pointer, top is stack[sp-1]
 	sp int
+	// spMax is the "high water" mark for sp
+	spMax int
 
 	// this is used to pass "this" from interp to method
 	// it is only temporary, Frame.this is the real "this"

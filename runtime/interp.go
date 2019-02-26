@@ -16,9 +16,7 @@ func (t *Thread) Call(fn *SuFunc) Value {
 	}
 	t.frames[t.fp] = Frame{fn: fn, this: t.this,
 		locals: t.stack[t.sp-int(fn.Nlocals) : t.sp]}
-	defer func(fp int) { t.fp = fp }(t.fp)
-	t.fp++
-	return t.Run()
+	return t.run()
 }
 
 func CallMethod(t *Thread, this Value, f Value, as *ArgSpec) Value {
@@ -31,12 +29,36 @@ type exception struct {
 	SuExcept
 }
 
-// Run is needed because we can only recover panic on the way out of a function
-// so if the exception is caught we have to re-enter run
-func (t *Thread) Run() Value {
+// run is needed in addition to interp
+// because we can only recover panic on the way out of a function
+// so if the exception is caught we have to re-enter interp
+// Used by Thread.Call and SuBlock.Call
+func (t *Thread) run() Value {
+	defer func(fp int) { t.fp = fp }(t.fp)
+	t.fp++
+	if t.fp > t.fpMax {
+		t.fpMax = t.fp // track high water mark
+	} else if t.fpMax > t.fp {
+		// clear the frames up to the high water mark
+		for i := t.fp; i < t.fpMax; i++ {
+			t.frames[i] = Frame{}
+		}
+		t.fpMax = t.fp // reset high water mark
+	}
+	if t.sp > t.spMax {
+		t.spMax = t.sp
+	} else if t.spMax > t.sp {
+		// clear the value stack to high water mark
+		// and following non-nil (expression temporaries)
+		for i := t.sp; i < t.spMax || t.stack[i] != nil; i++ {
+			t.stack[i] = nil
+		}
+		t.spMax = t.sp
+	}
+
 	spBase := t.sp
 	for i := 0; i < 4; i++ {
-		result := t.run(spBase)
+		result := t.interp(spBase)
 		if se, ok := result.(*exception); ok {
 			// try block threw
 			fr := &t.frames[t.fp-1]
@@ -51,7 +73,7 @@ func (t *Thread) Run() Value {
 	panic("Run too many loops")
 }
 
-func (t *Thread) run(spBase int) (ret Value) {
+func (t *Thread) interp(spBase int) (ret Value) {
 	fr := &t.frames[t.fp-1]
 	code := fr.fn.Code
 	super := 0
@@ -306,7 +328,7 @@ loop:
 			fr.catchPat = string(fr.fn.Values[fetchUint8()].(SuStr))
 			if !recovering {
 				recovering = true
-				defer func(fr *Frame) {
+				defer func() {
 					if fr.catchJump == 0 {
 						return // we're no longer catching
 					}
@@ -330,7 +352,7 @@ loop:
 					} else {
 						panic(se)
 					}
-				}(fr)
+				}()
 			}
 		case CATCH:
 			fr.ip += fetchInt16()

@@ -58,7 +58,7 @@ func CallStack(t *Thread) *SuObject {
 	return cs
 }
 
-const framer = "github.com/apmckinlay/gsuneido/runtime.(*Thread).Run"
+const framer = "github.com/apmckinlay/gsuneido/runtime.(*Thread).run"
 
 // countSuneidoFrames uses the Go call stack
 // to count how many frames are active

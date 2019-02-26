@@ -26,11 +26,9 @@ func (b *SuBlock) Call(t *Thread, as *ArgSpec) Value {
 		b.locals[int(bf.Offset)+i] = args[i]
 	}
 
-	// normally done by Thread Call
+	// normally done by Thread.Call
 	t.frames[t.fp] = Frame{fn: bf, locals: b.locals, this: b.this}
-	defer func(fp int) { t.fp = fp }(t.fp)
-	t.fp++
-	return t.Run()
+	return t.run()
 }
 
 // TypeName returns the Suneido name for the type (Value interface)
