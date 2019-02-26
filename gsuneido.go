@@ -42,22 +42,22 @@ func main() {
 }
 
 func eval(src string) {
+	th := NewThread()
 	defer func() {
 		if e := recover(); e != nil {
 			fmt.Println("ERROR:", e)
 			if internal(e) {
 				debug.PrintStack()
 			} else if se, ok := e.(*SuExcept); ok {
-				for i := 0; i < se.Callstack.ListSize(); i++ {
-					fmt.Println(se.Callstack.ListGet(i))
-				}
+				printCallStack(se.Callstack)
+			} else {
+				printCallStack(CallStack(th))
 			}
 		}
 	}()
 	src = "function () {\n" + src + "\n}"
 	fn := compile.Constant(src).(*SuFunc)
 	// Disasm(os.Stdout, fn)
-	th := NewThread()
 	result := th.Call(fn)
 	if result != nil {
 		fmt.Print(">>> ", result)
@@ -74,4 +74,10 @@ type internalError interface {
 func internal(e interface{}) bool {
 	_, ok := e.(internalError)
 	return ok
+}
+
+func printCallStack(cs *SuObject) {
+	for i := 0; i < cs.ListSize(); i++ {
+		fmt.Println(cs.ListGet(i))
+	}
 }

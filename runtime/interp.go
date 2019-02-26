@@ -26,17 +26,24 @@ func CallMethod(t *Thread, this Value, f Value, as *ArgSpec) Value {
 	return f.Call(t, as)
 }
 
+// Run needs a special type to differentiate a catch return value
+type exception struct {
+	SuExcept
+}
+
+// Run is needed because we can only recover panic on the way out of a function
+// so if the exception is caught we have to re-enter run
 func (t *Thread) Run() Value {
 	spBase := t.sp
 	for i := 0; i < 4; i++ {
 		result := t.run(spBase)
-		if se, ok := result.(*SuExcept); ok {
+		if se, ok := result.(*exception); ok {
 			// try block threw
 			fr := &t.frames[t.fp-1]
 			fr.ip = fr.catchJump
 			t.sp = fr.catchSp
 			fr.catchJump = 0
-			t.Push(se)
+			t.Push(&se.SuExcept)
 		} else {
 			return result
 		}
@@ -48,27 +55,7 @@ func (t *Thread) run(spBase int) (ret Value) {
 	fr := &t.frames[t.fp-1]
 	code := fr.fn.Code
 	super := 0
-
-	defer func(fr *Frame) {
-		if e := recover(); e != nil {
-			se, ok := e.(*SuExcept)
-			if !ok {
-				// first recover creates SuExcept with callstack
-				var ss SuStr
-				if re, ok := e.(runtime.Error); ok {
-					ss = SuStr(re.Error())
-				} else {
-					ss = SuStr(e.(string))
-				}
-				se = NewSuExcept(t, ss)
-			}
-			if fr.catchJump != 0 && catchMatch(string(se.SuStr), fr.catchPat) {
-				ret = se // tells Run we're catching
-			} else {
-				panic(se)
-			}
-		}
-	}(fr)
+	recovering := false
 
 	fetchUint8 := func() int {
 		fr.ip++
@@ -317,6 +304,34 @@ loop:
 			fr.catchSp = t.sp
 			fr.catchJump = fr.ip + fetchInt16()
 			fr.catchPat = string(fr.fn.Values[fetchUint8()].(SuStr))
+			if !recovering {
+				recovering = true
+				defer func(fr *Frame) {
+					if fr.catchJump == 0 {
+						return // we're no longer catching
+					}
+					e := recover()
+					if e == nil {
+						return // not panic'ing, normal return
+					}
+					se, ok := e.(*SuExcept)
+					if !ok {
+						// first recover creates SuExcept with callstack
+						var ss SuStr
+						if re, ok := e.(runtime.Error); ok {
+							ss = SuStr(re.Error())
+						} else {
+							ss = SuStr(e.(string))
+						}
+						se = NewSuExcept(t, ss)
+					}
+					if catchMatch(string(se.SuStr), fr.catchPat) {
+						ret = &exception{*se} // tells Run we're catching
+					} else {
+						panic(se)
+					}
+				}(fr)
+			}
 		case CATCH:
 			fr.ip += fetchInt16()
 			fr.catchJump = 0
