@@ -1,9 +1,5 @@
 package runtime
 
-import (
-	"runtime"
-)
-
 type SuExcept struct {
 	SuStr
 	Callstack *SuObject
@@ -35,14 +31,10 @@ func (*SuExcept) Lookup(method string) Value {
 // to capture the call stack in an internal format (not an SuObject)
 // and only build the SuObject if required
 
-// callstack captures the call stack at the point of recover
-// the Go stack will be as of the panic
-// the Suneido frame pointer will be unwound
-// but the frames themselves will still be intact
+// callstack captures the call stack
 func CallStack(t *Thread) *SuObject {
 	cs := &SuObject{}
-	nframes := countSuneidoFrames()
-	for i := t.fp + nframes - 1; i >= 0; i-- {
+	for i := t.fp - 1; i >= 0; i-- {
 		fr := t.frames[i]
 		call := &SuObject{}
 		call.Put(SuStr("fn"), fr.fn)
@@ -56,25 +48,4 @@ func CallStack(t *Thread) *SuObject {
 		cs.Add(call)
 	}
 	return cs
-}
-
-const framer = "github.com/apmckinlay/gsuneido/runtime.(*Thread).run"
-
-// countSuneidoFrames uses the Go call stack
-// to count how many frames are active
-func countSuneidoFrames() int {
-	pc := make([]uintptr, 100)
-	n := runtime.Callers(1, pc)
-	nframes := 0
-	frames := runtime.CallersFrames(pc[:n])
-	for {
-		frame, more := frames.Next()
-		if frame.Function == framer {
-			nframes++
-		}
-		if !more {
-			break
-		}
-	}
-	return nframes
 }

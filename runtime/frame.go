@@ -13,12 +13,8 @@ type Frame struct {
 	// this is the instance if we're running a method
 	this Value
 	// localsOnHeap is true when locals have been moved from the stack to the heap
-	// for blocks
+	// for escaped blocks
 	localsOnHeap bool
-
-	catchSp int
-	catchPat string
-	catchJump int
 }
 
 func (fr *Frame) moveLocalsToHeap() {

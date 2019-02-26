@@ -24,18 +24,14 @@ func CallMethod(t *Thread, this Value, f Value, as *ArgSpec) Value {
 	return f.Call(t, as)
 }
 
-// Run needs a special type to differentiate a catch return value
-type exception struct {
-	SuExcept
-}
-
 // run is needed in addition to interp
 // because we can only recover panic on the way out of a function
 // so if the exception is caught we have to re-enter interp
-// Used by Thread.Call and SuBlock.Call
+// Called by Thread.Call and SuBlock.Call
 func (t *Thread) run() Value {
-	defer func(fp int) { t.fp = fp }(t.fp)
+	sp := t.sp
 	t.fp++
+	fp := t.fp
 	if t.fp > t.fpMax {
 		t.fpMax = t.fp // track high water mark
 	} else if t.fpMax > t.fp {
@@ -56,24 +52,32 @@ func (t *Thread) run() Value {
 		t.spMax = t.sp
 	}
 
-	spBase := t.sp
+	catchJump := 0
 	for i := 0; i < 4; i++ {
-		result := t.interp(spBase)
-		if se, ok := result.(*exception); ok {
-			// try block threw
-			fr := &t.frames[t.fp-1]
-			fr.ip = fr.catchJump
-			t.sp = fr.catchSp
-			fr.catchJump = 0
-			t.Push(&se.SuExcept)
-		} else {
-			return result
+		result := t.interp(&catchJump)
+		if result == nil {
+			t.fp = fp - 1
+			if t.sp > sp {
+				return t.Pop()
+			}
+			return nil
 		}
+		// try block threw
+		t.sp = sp
+		t.fp = fp
+		fr := &t.frames[t.fp-1]
+		fr.ip = catchJump
+		catchJump = 0  // no longer catching
+		t.Push(result) // SuExcept
+		// loop and re-enter interp
 	}
 	panic("Run too many loops")
 }
 
-func (t *Thread) interp(spBase int) (ret Value) {
+// interp is the main interpreter loop
+// It normally returns nil, with the return value (if any) on the stack
+// Returns *SuExcept if there was an exception/panic
+func (t *Thread) interp(catchJump *int) (ret Value) {
 	fr := &t.frames[t.fp-1]
 	code := fr.fn.Code
 	super := 0
@@ -323,13 +327,12 @@ loop:
 		case RETURN:
 			break loop
 		case TRY:
-			fr.catchSp = t.sp
-			fr.catchJump = fr.ip + fetchInt16()
-			fr.catchPat = string(fr.fn.Values[fetchUint8()].(SuStr))
+			*catchJump = fr.ip + fetchInt16()
+			catchPat := string(fr.fn.Values[fetchUint8()].(SuStr))
 			if !recovering {
 				recovering = true
 				defer func() {
-					if fr.catchJump == 0 {
+					if *catchJump == 0 {
 						return // we're no longer catching
 					}
 					e := recover()
@@ -342,13 +345,15 @@ loop:
 						var ss SuStr
 						if re, ok := e.(runtime.Error); ok {
 							ss = SuStr(re.Error())
+						} else if s, ok := e.(string); ok {
+							ss = SuStr(s)
 						} else {
-							ss = SuStr(e.(string))
+							ss = e.(SuStr)
 						}
 						se = NewSuExcept(t, ss)
 					}
-					if catchMatch(string(se.SuStr), fr.catchPat) {
-						ret = &exception{*se} // tells Run we're catching
+					if catchMatch(string(se.SuStr), catchPat) {
+						ret = se // tells run we're catching
 					} else {
 						panic(se)
 					}
@@ -356,9 +361,9 @@ loop:
 			}
 		case CATCH:
 			fr.ip += fetchInt16()
-			fr.catchJump = 0
+			*catchJump = 0
 		case THROW:
-			panic(string(t.Pop().(SuStr)))
+			panic(t.Pop())
 		case BLOCK:
 			fr.moveLocalsToHeap()
 			fn := fr.fn.Values[fetchUint8()].(*SuFunc)
@@ -410,9 +415,6 @@ loop:
 		}
 	}
 	t.this = nil
-	if t.sp > spBase {
-		return t.Pop()
-	}
 	return nil
 }
 
