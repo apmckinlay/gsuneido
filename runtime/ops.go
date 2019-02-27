@@ -1,6 +1,7 @@
 package runtime
 
 import (
+	"fmt"
 	"math"
 
 	"github.com/apmckinlay/gsuneido/util/dnum"
@@ -8,11 +9,11 @@ import (
 )
 
 var (
-	Zero  Value = SuInt(0)
-	One   Value = SuInt(1)
+	Zero   Value = SuInt(0)
+	One    Value = SuInt(1)
 	MaxInt Value = SuDnum{dnum.FromInt(math.MaxInt32)}
-	True  Value = SuBool(true)
-	False Value = SuBool(false)
+	True   Value = SuBool(true)
+	False  Value = SuBool(false)
 	// EmptyStr defined in sustr.go
 )
 
@@ -150,24 +151,50 @@ func IntToValue(n int) Value {
 	return SuDnum{dnum.FromInt(int64(n))}
 }
 
-func Cat(x Value, y Value) Value {
-	const SMALL = 256
+func Cat(x, y Value) Value {
+	if ssx, ok := x.(SuStr); ok {
+		if ssy, ok := y.(SuStr); ok {
+			return cat2(string(ssx), string(ssy))
+		}
+	}
+	return cat3(x, y)
+}
 
+func cat2(xs, ys string) Value {
+	const LARGE = 256
+
+	if len(xs)+len(ys) < LARGE {
+		return SuStr(xs + ys)
+	}
+	if len(xs) == 0 {
+		return SuStr(ys)
+	}
+	if len(ys) == 0 {
+		return SuStr(xs)
+	}
+	return NewSuConcat().Add(xs).Add(ys)
+}
+
+func cat3(x, y Value) Value {
+	var result Value
 	xc, xcok := x.(SuConcat)
 	yc, ycok := y.(SuConcat)
 	if xcok && ycok {
 		return xc.AddSuConcat(yc)
 	} else if xcok {
-		return xc.Add(y.ToStr())
+		result = xc.Add(y.ToStr())
 	} else if ycok {
-		return NewSuConcat().Add(x.ToStr()).AddSuConcat(yc)
+		result = NewSuConcat().Add(x.ToStr()).AddSuConcat(yc)
+	} else {
+		result = cat2(x.ToStr(), y.ToStr())
 	}
-	xs := x.ToStr()
-	ys := y.ToStr()
-	if len(xs)+len(ys) < SMALL {
-		return SuStr(xs + ys)
+	if xe, ok := x.(*SuExcept); ok {
+		return &SuExcept{SuStr: SuStr(result.ToStr()), Callstack: xe.Callstack}
 	}
-	return NewSuConcat().Add(xs).Add(ys)
+	if ye, ok := y.(*SuExcept); ok {
+		return &SuExcept{SuStr: SuStr(result.ToStr()), Callstack: ye.Callstack}
+	}
+	return result
 }
 
 func BitNot(x Value) Value {
