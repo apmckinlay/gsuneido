@@ -1,7 +1,6 @@
 package runtime
 
 import (
-	"fmt"
 	"math"
 
 	"github.com/apmckinlay/gsuneido/util/dnum"

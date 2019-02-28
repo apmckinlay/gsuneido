@@ -14,8 +14,17 @@ import (
 	"github.com/apmckinlay/gsuneido/util/verify"
 )
 
-// zeroFlags is shared/reused for all zero flags
-var zeroFlags [MaxArgs]Flag
+// cgen is the context/results for compiling a function or block
+type cgen struct {
+	outerFn        *ast.Function
+	outerVars      map[string]bool
+	code           []byte
+	argspecs       []*ArgSpec
+	base           Global
+	isNew          bool
+	firstStatement bool
+	ParamSpec
+}
 
 // codegen compiles an Ast to an SuFunc
 func codegen(fn *ast.Function) *SuFunc {
@@ -39,7 +48,7 @@ func (cg *cgen) codegen(fn *ast.Function) *SuFunc {
 
 func codegenBlock(ast *ast.Function, outerFn *ast.Function, outerNames []string) (*SuFunc, []string) {
 	base := len(outerNames)
-	cg := cgen{outerFn: outerFn, base: ast.Base, isNew: ast.IsNewMethod}
+	cg := cgen{outerFn: outerFn, base: ast.Base}
 	cg.Names = outerNames
 
 	f := cg.codegen(ast)
@@ -75,16 +84,8 @@ func allZero(flags []Flag) bool {
 	return true
 }
 
-type cgen struct {
-	outerFn        *ast.Function
-	outerVars      map[string]bool
-	code           []byte
-	argspecs       []*ArgSpec
-	base           Global
-	isNew          bool
-	firstStatement bool
-	ParamSpec
-}
+// zeroFlags is shared/reused for all zero flags
+var zeroFlags [MaxArgs]Flag
 
 // binary and nary ast node token to operation
 var tok2op = [Ntokens]byte{
@@ -202,12 +203,7 @@ func (cg *cgen) statement(node ast.Node, labels *Labels, lastStmt bool) {
 			cg.statement(stmt, labels, lastStmt)
 		}
 	case *ast.Return:
-		if node.E != nil {
-			cg.expr(node.E)
-		}
-		if !lastStmt {
-			cg.emit(op.RETURN)
-		}
+		cg.returnStmt(node, lastStmt)
 	case *ast.If:
 		cg.ifStmt(node, labels)
 	case *ast.Switch:
@@ -228,15 +224,9 @@ func (cg *cgen) statement(node ast.Node, labels *Labels, lastStmt bool) {
 	case *ast.TryCatch:
 		cg.tryCatchStmt(node, labels)
 	case *ast.Break:
-		if labels == nil {
-			panic("break can only be used within a loop")
-		}
-		labels.brk = cg.emitJump(op.JUMP, labels.brk)
+		cg.breakStmt(labels)
 	case *ast.Continue:
-		if labels == nil {
-			panic("continue can only be used within a loop")
-		}
-		cg.emitBwdJump(op.JUMP, labels.cont)
+		cg.continueStmt(labels)
 	case *ast.Expression:
 		cg.expr(node.E)
 		if !lastStmt {
@@ -251,6 +241,29 @@ func (cg *cgen) statements(stmts []ast.Statement, labels *Labels, lastStmt bool)
 	for _, stmt := range stmts {
 		cg.statement(stmt, labels, lastStmt)
 	}
+}
+
+func (cg *cgen) returnStmt(node *ast.Return, lastStmt bool) {
+	if node.E != nil {
+		cg.expr(node.E)
+	}
+	if !lastStmt {
+		cg.emit(op.RETURN)
+	}
+}
+
+func (cg *cgen) breakStmt(labels *Labels) {
+	if labels == nil {
+		panic("break can only be used within a loop")
+	}
+	labels.brk = cg.emitJump(op.JUMP, labels.brk)
+}
+
+func (cg *cgen) continueStmt(labels *Labels) {
+	if labels == nil {
+		panic("continue can only be used within a loop")
+	}
+	cg.emitBwdJump(op.JUMP, labels.cont)
 }
 
 func (cg *cgen) ifStmt(node *ast.If, labels *Labels) {
