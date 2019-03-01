@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/compile/ast"
-	"github.com/apmckinlay/gsuneido/lexer"
+	tok "github.com/apmckinlay/gsuneido/lexer/tokens"
 	rt "github.com/apmckinlay/gsuneido/runtime"
 	. "github.com/apmckinlay/gsuneido/util/hamcrest"
 )
@@ -17,7 +17,7 @@ func TestParseExpression(t *testing.T) {
 		t.Helper()
 		p := newParser(src)
 		result := p.expr()
-		Assert(t).That(p.Token, Equals(lexer.EOF))
+		Assert(t).That(p.Token, Equals(tok.Eof))
 		return result
 	}
 	xtest := func(src string, expected string) {
@@ -60,62 +60,62 @@ func TestParseExpression(t *testing.T) {
 	test("this", "")
 	test("default", "")
 
-	test("a is true", "(IS a true)")
+	test("a is true", "(Is a true)")
 
-	test("a % b % c", "(MOD (MOD a b) c)")
+	test("a % b % c", "(Mod (Mod a b) c)")
 
 	test("(123)", "123")
-	test("a + b", "(ADD a b)")
-	test("a - b", "(ADD a (SUB b))")
-	test("a * b", "(MUL a b)")
-	test("a / b", "(MUL a (DIV b))")
-	test("a + b * c", "(ADD a (MUL b c))")
-	test("(a + b) * c", "(MUL (L_PAREN (ADD a b)) c)")
-	test("a * b + c", "(ADD (MUL a b) c)")
+	test("a + b", "(Add a b)")
+	test("a - b", "(Add a (Sub b))")
+	test("a * b", "(Mul a b)")
+	test("a / b", "(Mul a (Div b))")
+	test("a + b * c", "(Add a (Mul b c))")
+	test("(a + b) * c", "(Mul (LParen (Add a b)) c)")
+	test("a * b + c", "(Add (Mul a b) c)")
 
-	test("a + b", "(ADD a b)")
-	test("a - b", "(ADD a (SUB b))")
-	test("5 + a + b", "(ADD 5 a b)")
+	test("a + b", "(Add a b)")
+	test("a - b", "(Add a (Sub b))")
+	test("5 + a + b", "(Add 5 a b)")
 
-	test("a $ b", "(CAT a b)")
-	test("a $ b $ c", "(CAT a b c)")
-	test("'foo' $ a $ 'bar'", "(CAT 'foo' a 'bar')")
+	test("a $ b", "(Cat a b)")
+	test("a $ b $ c", "(Cat a b c)")
+	test("'foo' $ a $ 'bar'", "(Cat 'foo' a 'bar')")
 
-	test("a | b & c", "(BITOR a (BITAND b c))")
-	test("a ^ b ^ c", "(BITXOR a b c)")
+	test("a | b & c", "(BitOr a (BitAnd b c))")
+	test("a ^ b ^ c", "(BitXor a b c)")
 
-	test("a + b - c", "(ADD a b (SUB c))")
-	test("a + b * c", "(ADD a (MUL b c))")
+	test("a + b - c", "(Add a b (Sub c))")
+	test("a + b * c", "(Add a (Mul b c))")
 
-	test("a % b * c", "(MUL (MOD a b) c)")
-	test("a / b % c", "(MOD (MUL a (DIV b)) c)")
-	test("a * b * c", "(MUL a b c)")
-	test("a * b / c", "(MUL a b (DIV c))")
-	test("++a", "(INC a)")
-	test("++a.b", "(INC a.b)")
-	test("a--", "(POSTDEC a)")
-	test("a = 123", "(EQ a 123)")
-	test("a = b = c", "(EQ a (EQ b c))")
-	test("a += 123", "(ADDEQ a 123)")
-	test("+ - not ~ x", "(ADD (SUB (NOT (BITNOT x))))")
-	test("+f()", "(ADD (call f))")
-	test("not f()", "(NOT (call f))")
+	test("a % b * c", "(Mul (Mod a b) c)")
+	test("a / b % c", "(Mod (Mul a (Div b)) c)")
+	test("a * b * c", "(Mul a b c)")
+	test("a * b / c", "(Mul a b (Div c))")
+	test("++a", "(Inc a)")
+	test("++a.b", "(Inc a.b)")
+	test("a--", "(PostDec a)")
+	test("a = 123", "(Eq a 123)")
+	test("a = b = c", "(Eq a (Eq b c))")
+	test("a += 123", "(AddEq a 123)")
+	test("+ - not ~ x", "(Add (Sub (Not (BitNot x))))")
+	test("+f()", "(Add (call f))")
+	test("not f()", "(Not (call f))")
 
-	test("a and b", "(AND a b)")
-	test("a and b and c", "(AND a b c)")
-	test("a or b", "(OR a b)")
-	test("a or b or c", "(OR a b c)")
+	test("a and b", "(And a b)")
+	test("a and b and c", "(And a b c)")
+	test("a or b", "(Or a b)")
+	test("a or b or c", "(Or a b c)")
 
 	test("a ? b : c", "(? a b c)")
 	test("a \n ? b \n : c", "(? a b c)")
-	test("a and b ? c + 1 : d * 2", "(? (AND a b) (ADD c 1) (MUL d 2))")
-	test("a ? (b ? c : d) : (e ? f : g)", "(? a (L_PAREN (? b c d)) (L_PAREN (? e f g)))")
+	test("a and b ? c + 1 : d * 2", "(? (And a b) (Add c 1) (Mul d 2))")
+	test("a ? (b ? c : d) : (e ? f : g)", "(? a (LParen (? b c d)) (LParen (? e f g)))")
 	test("a ?  b ? c : d  :  e ? f : g", "(? a (? b c d) (? e f g))")
 	test("true ? b : c", "b")
 	test("false ? b : c", "c")
 
 	test("a in (1,2,3)", "(a in 1 2 3)")
-	test("a not in (1,2,3)", "(NOT (a in 1 2 3))")
+	test("a not in (1,2,3)", "(Not (a in 1 2 3))")
 	test("a in (1,2,3) in (true, false)", "((a in 1 2 3) in true false)")
 
 	test("a.b", "")
@@ -124,7 +124,7 @@ func TestParseExpression(t *testing.T) {
 
 	test("a[b]", "")
 	test("a[b][c]", "")
-	test("a[b + c]", "a[(ADD b c)]")
+	test("a[b + c]", "a[(Add b c)]")
 	test("a[1..]", "")
 	test("a[1..2]", "")
 	test("a[..2]", "")
@@ -133,9 +133,9 @@ func TestParseExpression(t *testing.T) {
 	test("a[::2]", "")
 	test("a[0::1][0]", "")
 
-	test("b = { }", "(EQ b { })")
-	test("b = {|a,b| }", "(EQ b {|a,b| })")
-	test("b = {|@a| }", "(EQ b {|@a| })")
+	test("b = { }", "(Eq b { })")
+	test("b = {|a,b| }", "(Eq b {|a,b| })")
+	test("b = {|@a| }", "(Eq b {|@a| })")
 
 	test("f()", "(call f)")
 	test("f(a, b)", "(call f a b)")
@@ -157,7 +157,7 @@ func TestParseExpression(t *testing.T) {
 	test("f({ })", "(call f { })")
 	test("c.m(a, b)", "(call c.m a b)")
 	test(".m()", "(call this._m)")
-	test("false isnt x = F()", "(ISNT false (EQ x (call F)))")
+	test("false isnt x = F()", "(Isnt false (Eq x (call F)))")
 	test("0xB2.Chr()", "(call 178.Chr)")
 
 	test("F { }", "/* class : F */")
@@ -207,29 +207,29 @@ func TestParseExpression(t *testing.T) {
 	test("a or true or b", "true")   // short circuit
 	test("a and false and b", "false")
 
-	test("1 + a + b + 2", "(ADD 3 a b)")
-	test("5 + a + b - 2", "(ADD 3 a b)")
-	test("2 + a + b - 5", "(ADD -3 a b)")
-	test("a - 2 - 1", "(ADD a -3)")
+	test("1 + a + b + 2", "(Add 3 a b)")
+	test("5 + a + b - 2", "(Add 3 a b)")
+	test("2 + a + b - 5", "(Add -3 a b)")
+	test("a - 2 - 1", "(Add a -3)")
 
 	test("1 * 8", "8")
 	test("(1 * 8)", "8")
 	test("1 / 8", ".125")
 	test("2 / 8", ".25")
 	test("2 * 4", "8")
-	test("a / 2", "(MUL a .5)")
+	test("a / 2", "(Mul a .5)")
 	test("8 / 2", "4")
 	test("4 * 8 / 2", "16")
-	test("2 * a * b", "(MUL 2 a b)")
-	test("3 * a * b * 2", "(MUL 6 a b)")
-	test("a * 6 * b / 3", "(MUL a 2 b)")
-	test("a * 8 * b / 4", "(MUL a 2 b)")
+	test("2 * a * b", "(Mul 2 a b)")
+	test("3 * a * b * 2", "(Mul 6 a b)")
+	test("a * 6 * b / 3", "(Mul a 2 b)")
+	test("a * 8 * b / 4", "(Mul a 2 b)")
 
 	// concatenation
 	test("'foo' $ 'bar'", "'foobar'")
-	test("'foo' $ 'bar' $ b", "(CAT 'foobar' b)")
-	test("a $ 'foo' $ 'bar' $ b", "(CAT a 'foobar' b)")
-	test("a $ 'foo' $ 'bar'", "(CAT a 'foobar')")
+	test("'foo' $ 'bar' $ b", "(Cat 'foobar' b)")
+	test("a $ 'foo' $ 'bar' $ b", "(Cat a 'foobar' b)")
+	test("a $ 'foo' $ 'bar'", "(Cat a 'foobar')")
 	test(`'foo' $
 		'bar'`, "'foobar'")
 	test(`'foo' $
@@ -242,10 +242,10 @@ func TestParseParams(t *testing.T) {
 		t.Helper()
 		p := newParser(src + "{}")
 		result := p.method() // method to allow dot params
-		Assert(t).That(p.Token, Equals(lexer.EOF))
+		Assert(t).That(p.Token, Equals(tok.Eof))
 		s := result.String()
 		s = s[8:] // remove "function"
-		s = s[:len(s) - 4]
+		s = s[:len(s)-4]
 		Assert(t).That(s, Equals(src))
 	}
 	test("()")
@@ -265,7 +265,7 @@ func TestParseStatements(t *testing.T) {
 		t.Helper()
 		p := newParser(src + " }")
 		stmts := p.statements()
-		Assert(t).That(p.Token, Equals(lexer.R_CURLY))
+		Assert(t).That(p.Token, Equals(tok.RCurly))
 		s := ""
 		sep := ""
 		for _, stmt := range stmts {
@@ -274,12 +274,12 @@ func TestParseStatements(t *testing.T) {
 		}
 		Assert(t).That(s, Like(expected))
 	}
-	test("x=123;;", "(EQ x 123) {}")
+	test("x=123;;", "(Eq x 123) {}")
 	test("return", "return")
 	test("return 123", "return 123")
 	test("return \n 123", "return\n123")
 	test("return; 123", "return\n123")
-	test("return a + \n b", "return (ADD a b)")
+	test("return a + \n b", "return (Add a b)")
 	test("return \n while b \n c", "return\nwhile b\nc")
 
 	test("forever\na", "forever\na")
@@ -299,7 +299,7 @@ func TestParseStatements(t *testing.T) {
 	test("switch { case 1: b }",
 		"switch true { \n case 1 \n b \n }")
 	test("switch { \n case x < 3: \n return -1 \n }",
-		"switch true { \n case (LT x 3) \n return -1 \n }")
+		"switch true { \n case (Lt x 3) \n return -1 \n }")
 	test("switch a { case 1,2: b case 3: c default: d }",
 		"switch a { \n case 1,2 \n b \n case 3 \n c \n default: \n d \n }")
 
@@ -316,25 +316,25 @@ func TestParseStatements(t *testing.T) {
 
 	test("for (;;) x", "for ; ; \n x")
 	test("for (i = 0; i < 9; ++i) X",
-		"for (EQ i 0); (LT i 9); (INC i) \n X")
+		"for (Eq i 0); (Lt i 9); (Inc i) \n X")
 
 	test("try x", "try \n x")
 	test("try x catch y", "try \n x \n catch \n y")
 	test("try x catch (e) y", "try \n x \n catch (e) \n y")
 	test("try x catch (e, 'err') y", "try \n x \n catch (e,'err') \n y")
 
-	test("+a \n -b", "(ADD a) (SUB b)")
-	test("a + b \n -c", "(ADD a b) (SUB c)")
-	test("a = b; .F()", "(EQ a b) (call this.F)")
-	test("a = b; \n .F()", "(EQ a b) (call this.F)")
-	test("a = b \n .F()", "(EQ a b) (call this.F)")
+	test("+a \n -b", "(Add a) (Sub b)")
+	test("a + b \n -c", "(Add a b) (Sub c)")
+	test("a = b; .F()", "(Eq a b) (call this.F)")
+	test("a = b; \n .F()", "(Eq a b) (call this.F)")
+	test("a = b \n .F()", "(Eq a b) (call this.F)")
 
 	xtest := func(src string, expected string) {
 		t.Helper()
 		actual := Catch(func() {
 			p := newParser(src + "}")
 			p.statements()
-			Assert(t).That(p.Token, Equals(lexer.EOF))
+			Assert(t).That(p.Token, Equals(tok.Eof))
 		}).(string)
 		if !strings.Contains(actual, expected) {
 			t.Errorf("%#v expected: %#v but got: %#v", src, expected, actual)

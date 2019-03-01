@@ -8,7 +8,7 @@ import (
 	"sync/atomic"
 
 	"github.com/apmckinlay/gsuneido/compile/ast"
-	. "github.com/apmckinlay/gsuneido/lexer"
+	tok "github.com/apmckinlay/gsuneido/lexer/tokens"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	op "github.com/apmckinlay/gsuneido/runtime/opcodes"
 	"github.com/apmckinlay/gsuneido/util/str"
@@ -98,39 +98,39 @@ func allZero(flags []Flag) bool {
 var zeroFlags [MaxArgs]Flag
 
 // binary and nary ast node token to operation
-var tok2op = [Ntokens]op.Opcode{
-	ADD:      op.Add,
-	SUB:      op.Sub,
-	CAT:      op.Cat,
-	MUL:      op.Mul,
-	DIV:      op.Div,
-	MOD:      op.Mod,
-	LSHIFT:   op.LeftShift,
-	RSHIFT:   op.RightShift,
-	BITOR:    op.BitOr,
-	BITAND:   op.BitAnd,
-	BITXOR:   op.BitXor,
-	ADDEQ:    op.Add,
-	SUBEQ:    op.Sub,
-	CATEQ:    op.Cat,
-	MULEQ:    op.Mul,
-	DIVEQ:    op.Div,
-	MODEQ:    op.Mod,
-	LSHIFTEQ: op.LeftShift,
-	RSHIFTEQ: op.RightShift,
-	BITOREQ:  op.BitOr,
-	BITANDEQ: op.BitAnd,
-	BITXOREQ: op.BitXor,
-	IS:       op.Is,
-	ISNT:     op.Isnt,
-	MATCH:    op.Match,
-	MATCHNOT: op.MatchNot,
-	LT:       op.Lt,
-	LTE:      op.Lte,
-	GT:       op.Gt,
-	GTE:      op.Gte,
-	AND:      op.And,
-	OR:       op.Or,
+var tok2op = [tok.Ntokens]op.Opcode{
+	tok.Add:      op.Add,
+	tok.Sub:      op.Sub,
+	tok.Cat:      op.Cat,
+	tok.Mul:      op.Mul,
+	tok.Div:      op.Div,
+	tok.Mod:      op.Mod,
+	tok.LShift:   op.LeftShift,
+	tok.RShift:   op.RightShift,
+	tok.BitOr:    op.BitOr,
+	tok.BitAnd:   op.BitAnd,
+	tok.BitXor:   op.BitXor,
+	tok.AddEq:    op.Add,
+	tok.SubEq:    op.Sub,
+	tok.CatEq:    op.Cat,
+	tok.MulEq:    op.Mul,
+	tok.DivEq:    op.Div,
+	tok.ModEq:    op.Mod,
+	tok.LShiftEq: op.LeftShift,
+	tok.RShiftEq: op.RightShift,
+	tok.BitOrEq:  op.BitOr,
+	tok.BitAndEq: op.BitAnd,
+	tok.BitXorEq: op.BitXor,
+	tok.Is:       op.Is,
+	tok.Isnt:     op.Isnt,
+	tok.Match:    op.Match,
+	tok.MatchNot: op.MatchNot,
+	tok.Lt:       op.Lt,
+	tok.Lte:      op.Lte,
+	tok.Gt:       op.Gt,
+	tok.Gte:      op.Gte,
+	tok.And:      op.And,
+	tok.Or:       op.Or,
 }
 
 func (cg *cgen) function(fn *ast.Function) {
@@ -400,7 +400,7 @@ func (cg *cgen) emitForIn(name string, labels *Labels) {
 	labels.brk = adr
 }
 
-func (cg *cgen) tryCatchStmt(node *ast.TryCatch, labels *Labels) { //TODO
+func (cg *cgen) tryCatchStmt(node *ast.TryCatch, labels *Labels) {
 	catch := cg.emitJump(op.Try, -1)
 	cg.emitMore(byte(cg.value(SuStr(node.CatchFilter))))
 	cg.statement(node.Try, labels, false)
@@ -413,7 +413,6 @@ func (cg *cgen) tryCatchStmt(node *ast.TryCatch, labels *Labels) { //TODO
 	if node.Catch != nil {
 		cg.statement(node.Catch, labels, false)
 	}
-
 	cg.placeLabel(after)
 }
 
@@ -512,16 +511,16 @@ func (cg *cgen) name(s string) int {
 }
 
 func (cg *cgen) unary(node *ast.Unary) {
-	if node.Tok == L_PAREN {
+	if node.Tok == tok.LParen {
 		cg.expr(node.E)
 		return
 	}
 	o := utok2op[node.Tok]
-	if INC <= node.Tok && node.Tok <= POSTDEC {
+	if tok.Inc <= node.Tok && node.Tok <= tok.PostDec {
 		ref := cg.lvalue(node.E)
 		cg.dupLvalue(ref)
 		cg.load(ref)
-		if node.Tok == POSTINC || node.Tok == POSTDEC {
+		if node.Tok == tok.PostInc || node.Tok == tok.PostDec {
 			cg.dupUnderLvalue(ref)
 			cg.emit(op.One)
 			cg.emit(o)
@@ -539,33 +538,33 @@ func (cg *cgen) unary(node *ast.Unary) {
 }
 
 // Unary ast expr node token to operation
-var utok2op = [Ntokens]op.Opcode{
-	ADD:     op.UnaryPlus,
-	SUB:     op.UnaryMinus,
-	NOT:     op.Not,
-	BITNOT:  op.BitNot,
-	INC:     op.Add,
-	POSTINC: op.Add,
-	DEC:     op.Sub,
-	POSTDEC: op.Sub,
+var utok2op = [tok.Ntokens]op.Opcode{
+	tok.Add:     op.UnaryPlus,
+	tok.Sub:     op.UnaryMinus,
+	tok.Not:     op.Not,
+	tok.BitNot:  op.BitNot,
+	tok.Inc:     op.Add,
+	tok.PostInc: op.Add,
+	tok.Dec:     op.Sub,
+	tok.PostDec: op.Sub,
 }
 
 func (cg *cgen) binary(node *ast.Binary) {
 	switch node.Tok {
-	case EQ:
+	case tok.Eq:
 		ref := cg.lvalue(node.Lhs)
 		cg.expr(node.Rhs)
 		cg.store(ref)
-	case ADDEQ, SUBEQ, CATEQ, MULEQ, DIVEQ, MODEQ,
-		LSHIFTEQ, RSHIFTEQ, BITOREQ, BITANDEQ, BITXOREQ:
+	case tok.AddEq, tok.SubEq, tok.CatEq, tok.MulEq, tok.DivEq, tok.ModEq,
+		tok.LShiftEq, tok.RShiftEq, tok.BitOrEq, tok.BitAndEq, tok.BitXorEq:
 		ref := cg.lvalue(node.Lhs)
 		cg.dupLvalue(ref)
 		cg.load(ref)
 		cg.expr(node.Rhs)
 		cg.emit(tok2op[node.Tok])
 		cg.store(ref)
-	case IS, ISNT, MATCH, MATCHNOT, MOD, LSHIFT, RSHIFT,
-		LT, LTE, GT, GTE:
+	case tok.Is, tok.Isnt, tok.Match, tok.MatchNot, tok.Mod,
+		tok.LShift, tok.RShift, tok.Lt, tok.Lte, tok.Gt, tok.Gte:
 		cg.expr(node.Lhs)
 		cg.expr(node.Rhs)
 		cg.emit(tok2op[node.Tok])
@@ -575,16 +574,16 @@ func (cg *cgen) binary(node *ast.Binary) {
 }
 
 func (cg *cgen) nary(node *ast.Nary) {
-	if node.Tok == AND || node.Tok == OR {
+	if node.Tok == tok.And || node.Tok == tok.Or {
 		cg.andorExpr(node)
 	} else {
 		o := tok2op[node.Tok]
 		cg.expr(node.Exprs[0])
 		for _, e := range node.Exprs[1:] {
-			if node.Tok == ADD && isUnary(e, SUB) {
+			if node.Tok == tok.Add && isUnary(e, tok.Sub) {
 				cg.expr(e.(*ast.Unary).E)
 				cg.emit(op.Sub)
-			} else if node.Tok == MUL && isUnary(e, DIV) {
+			} else if node.Tok == tok.Mul && isUnary(e, tok.Div) {
 				cg.expr(e.(*ast.Unary).E)
 				cg.emit(op.Div)
 			} else {
@@ -606,7 +605,7 @@ func (cg *cgen) andorExpr(node *ast.Nary) {
 	cg.placeLabel(label)
 }
 
-func isUnary(e ast.Expr, tok Token) bool {
+func isUnary(e ast.Expr, tok tok.Token) bool {
 	u, ok := e.(*ast.Unary)
 	return ok && u.Tok == tok
 }
@@ -614,7 +613,7 @@ func isUnary(e ast.Expr, tok Token) bool {
 func (cg *cgen) qcExpr(node *ast.Trinary) {
 	f, end := -1, -1
 	cg.expr(node.Cond)
-	f = cg.emitJump(op.Qmark, f)
+	f = cg.emitJump(op.QMark, f)
 	cg.expr(node.T)
 	end = cg.emitJump(op.Jump, end)
 	cg.placeLabel(f)

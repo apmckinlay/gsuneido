@@ -5,6 +5,7 @@ import (
 
 	"github.com/apmckinlay/gsuneido/compile/ast"
 	. "github.com/apmckinlay/gsuneido/lexer"
+	tok "github.com/apmckinlay/gsuneido/lexer/tokens"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/ascii"
 	. "github.com/apmckinlay/gsuneido/util/ascii"
@@ -22,9 +23,9 @@ func (p *parser) expr() ast.Expr {
 func (p *parser) pcExpr(minprec int8) ast.Expr {
 	e := p.atom()
 	// fmt.Println("pcExpr minprec", minprec, "atom", e)
-	for p.Token != EOF {
-		tok := p.Token
-		prec := precedence[tok]
+	for p.Token != tok.Eof {
+		token := p.Token
+		prec := precedence[token]
 		// fmt.Println("loop ", p.Item, "prec", prec)
 		if prec < minprec {
 			break
@@ -34,7 +35,7 @@ func (p *parser) pcExpr(minprec int8) ast.Expr {
 		}
 		p.next()
 		switch {
-		case tok == DOT:
+		case token == tok.Dot:
 			id := p.Text
 			p.matchIdent()
 			if e == nil {
@@ -42,34 +43,34 @@ func (p *parser) pcExpr(minprec int8) ast.Expr {
 				id = p.privatizeRef(id)
 			}
 			e = p.Mem(e, p.Constant(SuStr(id)))
-			if p.Token == L_CURLY && !p.expectingCompound { // a.F { }
+			if p.Token == tok.LCurly && !p.expectingCompound { // a.F { }
 				e = p.Call(e, p.arguments(p.Token))
 			}
-		case tok == INC || tok == DEC: // postfix
+		case token == tok.Inc || token == tok.Dec: // postfix
 			p.ckLvalue(e)
-			e = p.Unary(tok+1, e) // +1 must be POSTINC/DEC
-		case tok == IN:
+			e = p.Unary(token+1, e) // +1 must be PostInc/Dec
+		case token == tok.In:
 			e = p.in(e)
-		case tok == NOT:
-			p.match(IN)
-			e = p.Unary(NOT, p.in(e))
-		case tok == L_BRACKET:
+		case token == tok.Not:
+			p.match(tok.In)
+			e = p.Unary(tok.Not, p.in(e))
+		case token == tok.LBracket:
 			var expr ast.Expr
-			if p.Token == RANGETO || p.Token == RANGELEN {
+			if p.Token == tok.RangeTo || p.Token == tok.RangeLen {
 				expr = nil
 			} else {
 				expr = p.expr()
 			}
-			if p.Token == RANGETO || p.Token == RANGELEN {
+			if p.Token == tok.RangeTo || p.Token == tok.RangeLen {
 				rtype := p.Token
 				p.next()
 				var expr2 ast.Expr
-				if p.Token == R_BRACKET {
+				if p.Token == tok.RBracket {
 					expr2 = nil
 				} else {
 					expr2 = p.expr()
 				}
-				if rtype == RANGETO {
+				if rtype == tok.RangeTo {
 					e = &ast.RangeTo{E: e, From: expr, To: expr2}
 				} else {
 					e = &ast.RangeLen{E: e, From: expr, Len: expr2}
@@ -77,11 +78,11 @@ func (p *parser) pcExpr(minprec int8) ast.Expr {
 			} else {
 				e = p.Mem(e, expr)
 			}
-			p.match(R_BRACKET)
-		case ASSIGN_START < tok && tok < ASSIGN_END:
+			p.match(tok.RBracket)
+		case tok.AssignStart < token && token < tok.AssignEnd:
 			p.ckLvalue(e)
 			rhs := p.expr()
-			if tok == EQ {
+			if token == tok.Eq {
 				if id, ok := e.(*ast.Ident); ok {
 					if c, ok := rhs.(*ast.Constant); ok {
 						if named, ok := c.Val.(Named); ok {
@@ -90,28 +91,28 @@ func (p *parser) pcExpr(minprec int8) ast.Expr {
 					}
 				}
 			}
-			e = p.Binary(e, tok, rhs)
-		case tok == Q_MARK:
+			e = p.Binary(e, token, rhs)
+		case token == tok.QMark:
 			t := p.expr()
-			p.match(COLON)
+			p.match(tok.Colon)
 			f := p.expr()
 			e = p.Trinary(e, t, f)
-		case tok == L_PAREN: // function call
-			e = p.Call(e, p.arguments(tok))
-		case ASSOC_START < tok && tok < ASSOC_END:
+		case token == tok.LParen: // function call
+			e = p.Call(e, p.arguments(token))
+		case tok.AssocStart < token && token < tok.AssocEnd:
 			// for associative operators, collect a list of contiguous
 			es := []ast.Expr{e}
-			listtype := flip(tok)
+			listtype := flip(token)
 			for {
 				rhs := p.pcExpr(prec + 1) // +1 for left associative
-				// invert SUB and DIV to combine as ADD and MUL
-				if tok == SUB || tok == DIV {
-					rhs = p.Unary(tok, rhs)
+				// invert Sub and Div to combine as Add and Mul
+				if token == tok.Sub || token == tok.Div {
+					rhs = p.Unary(token, rhs)
 				}
 				es = append(es, rhs)
 
-				tok = p.Token
-				if !p.same(listtype, tok) {
+				token = p.Token
+				if !p.same(listtype, token) {
 					break
 				}
 				p.next()
@@ -119,7 +120,7 @@ func (p *parser) pcExpr(minprec int8) ast.Expr {
 			e = p.Nary(listtype, es)
 		default: // other left associative binary operators
 			rhs := p.pcExpr(prec + 1) // +1 for left associative
-			e = p.Binary(e, tok, rhs)
+			e = p.Binary(e, token, rhs)
 		}
 	}
 	return e
@@ -146,14 +147,14 @@ func (p *parser) privatizeRef(name string) string {
 
 func (p *parser) in(e ast.Expr) ast.Expr {
 	list := []ast.Expr{}
-	p.match(L_PAREN)
-	for p.Token != R_PAREN {
+	p.match(tok.LParen)
+	for p.Token != tok.RParen {
 		list = append(list, p.expr())
-		if p.Token == COMMA {
+		if p.Token == tok.Comma {
 			p.next()
 		}
 	}
-	p.match(R_PAREN)
+	p.match(tok.RParen)
 	return p.In(e, list)
 }
 
@@ -172,71 +173,72 @@ func (p *parser) ckLvalue(e ast.Expr) {
 	p.error("syntax error: lvalue required")
 }
 
-func flip(tok Token) Token {
-	switch tok {
-	case SUB:
-		return ADD
-	case DIV:
-		return MUL
+func flip(token tok.Token) tok.Token {
+	switch token {
+	case tok.Sub:
+		return tok.Add
+	case tok.Div:
+		return tok.Mul
 	default:
-		return tok
+		return token
 	}
 }
 
-func (p *parser) same(listtype Token, next Token) bool {
+func (p *parser) same(listtype tok.Token, next tok.Token) bool {
 	if p.newline {
 		return false
 	}
 	return next == listtype ||
-		(next == SUB && listtype == ADD) || (next == DIV && listtype == MUL)
+		(next == tok.Sub && listtype == tok.Add) ||
+		(next == tok.Div && listtype == tok.Mul)
 }
 
 func (p *parser) atom() ast.Expr {
-	switch tok := p.Token; tok {
-	case TRUE, FALSE, NUMBER, STRING, HASH:
+	switch token := p.Token; token {
+	case tok.True, tok.False, tok.Number, tok.String, tok.Hash:
 		return p.Constant(p.constant())
-	case L_PAREN:
+	case tok.LParen:
 		p.next()
 		e := p.expr()
-		p.match(R_PAREN)
+		p.match(tok.RParen)
 		// need unary for (ob.m)() [not a method call]
-		return p.Unary(L_PAREN, e)
-	case L_CURLY:
+		return p.Unary(tok.LParen, e)
+	case tok.LCurly:
 		return p.block()
-	case L_BRACKET:
+	case tok.LBracket:
 		return p.record()
-	case ADD, SUB, NOT, BITNOT:
+	case tok.Add, tok.Sub, tok.Not, tok.BitNot:
 		p.next()
-		return p.Unary(tok, p.pcExpr(precedence[L_PAREN]))
-	case INC, DEC:
+		return p.Unary(token, p.pcExpr(precedence[tok.LParen]))
+	case tok.Inc, tok.Dec:
 		p.next()
-		e := p.pcExpr(precedence[DOT])
+		e := p.pcExpr(precedence[tok.Dot])
 		p.ckLvalue(e)
-		return p.Unary(tok, e)
-	case DOT: // unary, i.e. implicit "this"
-		// does not absorb DOT
+		return p.Unary(token, e)
+	case tok.Dot: // unary, i.e. implicit "this"
+		// does not absorb Dot
 		p.newline = false
 		return nil // to indicate it should be privatized
-	case FUNCTION:
+	case tok.Function:
 		return p.Constant(codegen(p.function()))
-	case CLASS:
+	case tok.Class:
 		return p.Constant(p.class())
-	case NEW:
+	case tok.New:
 		p.next()
-		expr := p.pcExpr(precedence[DOT])
+		expr := p.pcExpr(precedence[tok.Dot])
 		var args []ast.Arg
-		if p.matchIf(L_PAREN) {
-			args = p.arguments(L_PAREN)
+		if p.matchIf(tok.LParen) {
+			args = p.arguments(tok.LParen)
 		} else {
 			args = []ast.Arg{}
 		}
 		expr = p.Mem(expr, p.Constant(SuStr("*new*")))
 		return p.Call(expr, args)
 	default:
-		if IsIdent[p.Token] {
+		if p.Token.IsIdent() {
 			// MyClass { ... } => class
 			if !p.expectingCompound &&
-				okBase(p.Text) && p.lxr.AheadSkip(0).Token == L_CURLY {
+				okBase(p.Text) && p.lxr.AheadSkip(0).Token == tok.LCurly {
 				return p.Constant(p.class())
 			}
 			e := p.Ident(p.Text)
@@ -247,61 +249,61 @@ func (p *parser) atom() ast.Expr {
 	panic(p.error("syntax error: unexpected " + p.Item.String()))
 }
 
-var precedence = [Ntokens]int8{
-	Q_MARK:    2,
-	OR:        3,
-	AND:       4,
-	IN:        5,
-	NOT:       5, // not in
-	BITOR:     6,
-	BITXOR:    7,
-	BITAND:    8,
-	IS:        9,
-	ISNT:      9,
-	MATCH:     9,
-	MATCHNOT:  9,
-	LT:        10,
-	LTE:       10,
-	GT:        10,
-	GTE:       10,
-	LSHIFT:    11,
-	RSHIFT:    11,
-	CAT:       12,
-	ADD:       12,
-	SUB:       12,
-	MUL:       13,
-	DIV:       13,
-	MOD:       13,
-	INC:       14,
-	DEC:       14,
-	L_PAREN:   15,
-	DOT:       16,
-	L_BRACKET: 16,
-	EQ:        16,
-	ADDEQ:     16,
-	SUBEQ:     16,
-	CATEQ:     16,
-	MULEQ:     16,
-	DIVEQ:     16,
-	MODEQ:     16,
-	LSHIFTEQ:  16,
-	RSHIFTEQ:  16,
-	BITOREQ:   16,
-	BITANDEQ:  16,
-	BITXOREQ:  16,
+var precedence = [tok.Ntokens]int8{
+	tok.QMark:    2,
+	tok.Or:       3,
+	tok.And:      4,
+	tok.In:       5,
+	tok.Not:      5, // not in
+	tok.BitOr:    6,
+	tok.BitXor:   7,
+	tok.BitAnd:   8,
+	tok.Is:       9,
+	tok.Isnt:     9,
+	tok.Match:    9,
+	tok.MatchNot: 9,
+	tok.Lt:       10,
+	tok.Lte:      10,
+	tok.Gt:       10,
+	tok.Gte:      10,
+	tok.LShift:   11,
+	tok.RShift:   11,
+	tok.Cat:      12,
+	tok.Add:      12,
+	tok.Sub:      12,
+	tok.Mul:      13,
+	tok.Div:      13,
+	tok.Mod:      13,
+	tok.Inc:      14,
+	tok.Dec:      14,
+	tok.LParen:   15,
+	tok.Dot:      16,
+	tok.LBracket: 16,
+	tok.Eq:       16,
+	tok.AddEq:    16,
+	tok.SubEq:    16,
+	tok.CatEq:    16,
+	tok.MulEq:    16,
+	tok.DivEq:    16,
+	tok.ModEq:    16,
+	tok.LShiftEq: 16,
+	tok.RShiftEq: 16,
+	tok.BitOrEq:  16,
+	tok.BitAndEq: 16,
+	tok.BitXorEq: 16,
 }
 
 var call = Item{Text: "call"}
 
-func (p *parser) arguments(opening Token) []ast.Arg {
+func (p *parser) arguments(opening tok.Token) []ast.Arg {
 	var args []ast.Arg
-	if opening == L_PAREN {
-		if p.matchIf(AT) {
+	if opening == tok.LParen {
+		if p.matchIf(tok.At) {
 			return p.atArgument()
 		}
-		args = p.argumentList(R_PAREN)
+		args = p.argumentList(tok.RParen)
 	}
-	if p.Token == L_CURLY && !p.expectingCompound {
+	if p.Token == tok.LCurly && !p.expectingCompound {
 		args = append(args, ast.Arg{Name: blockArg, E: p.block()})
 	}
 	return args
@@ -313,19 +315,19 @@ var blockArg = SuStr("block")
 
 func (p *parser) atArgument() []ast.Arg {
 	which := atArg
-	if p.matchIf(ADD) {
+	if p.matchIf(tok.Add) {
 		if p.Item.Text != "1" {
 			panic("only @+1 is supported")
 		}
-		p.match(NUMBER)
+		p.match(tok.Number)
 		which = at1Arg
 	}
 	expr := p.expr()
-	p.match(R_PAREN)
+	p.match(tok.RParen)
 	return []ast.Arg{ast.Arg{Name: which, E: expr}}
 }
 
-func (p *parser) argumentList(closing Token) []ast.Arg {
+func (p *parser) argumentList(closing tok.Token) []ast.Arg {
 	var args []ast.Arg
 	haveNamed := false
 	unnamed := func(val ast.Expr) {
@@ -352,7 +354,7 @@ func (p *parser) argumentList(closing Token) []ast.Arg {
 	}
 	for p.Token != closing {
 		var expr ast.Expr
-		if p.matchIf(COLON) {
+		if p.matchIf(tok.Colon) {
 			if !IsLower(p.Text[0]) {
 				p.error("expecting local variable name")
 			}
@@ -361,7 +363,7 @@ func (p *parser) argumentList(closing Token) []ast.Arg {
 			p.matchIdent()
 		} else {
 			expr = p.expr() // could be name or value
-			if name := p.argname(expr); name != nil && p.matchIf(COLON) {
+			if name := p.argname(expr); name != nil && p.matchIf(tok.Colon) {
 				handlePending(p.Constant(True))
 				pending = name // it's a name but don't know value yet
 			} else if pending != nil {
@@ -370,7 +372,7 @@ func (p *parser) argumentList(closing Token) []ast.Arg {
 				unnamed(expr)
 			}
 		}
-		if p.matchIf(COMMA) {
+		if p.matchIf(tok.Comma) {
 			handlePending(p.Constant(True))
 		}
 	}
@@ -391,33 +393,33 @@ func (p *parser) argname(expr ast.Expr) Value {
 }
 
 func (p *parser) record() ast.Expr {
-	p.match(L_BRACKET)
-	args := p.argumentList(R_BRACKET)
+	p.match(tok.LBracket)
+	args := p.argumentList(tok.RBracket)
 	return p.Call(p.Ident("Record"), args)
 }
 
 func (p *parser) block() *ast.Block {
-	p.match(L_CURLY)
+	p.match(tok.LCurly)
 	params := p.blockParams()
 	body := p.statements()
-	p.match(R_CURLY)
+	p.match(tok.RCurly)
 	return &ast.Block{ast.Function{Params: params, Body: body}}
 }
 
 func (p *parser) blockParams() []ast.Param {
 	var params []ast.Param
-	if p.matchIf(BITOR) {
-		if p.matchIf(AT) {
+	if p.matchIf(tok.BitOr) {
+		if p.matchIf(tok.At) {
 			params = append(params, ast.Param{Name: "@" + p.Text})
 			p.matchIdent()
 		} else {
-			for IsIdent[p.Token] {
+			for p.Token.IsIdent() {
 				params = append(params, ast.Param{Name: p.Text})
 				p.matchIdent()
-				p.matchIf(COMMA)
+				p.matchIf(tok.Comma)
 			}
 		}
-		p.match(BITOR)
+		p.match(tok.BitOr)
 	}
 	return params
 }

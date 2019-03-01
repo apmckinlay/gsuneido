@@ -125,9 +125,9 @@ const (
 	And
 	// Bool checks that top is True or False, else it panics
 	Bool
-	// Qmark pops and if false jumps, else it continues
+	// QMark pops and if false jumps, else it continues
 	// panics if top is not True or false
-	Qmark
+	QMark
 	// In <int16> pops the top value and compares it to the next value
 	// if equal it pops the second value and pushes True,
 	// else it leaves the second value on the stack

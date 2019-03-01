@@ -213,7 +213,7 @@ func TestControl(t *testing.T) {
 
 	test("a ? b : c", `
 		0: Load a
-		2: Qmark 10
+		2: QMark 10
 		5: Load b
 		7: Jump 12
 		10: Load c

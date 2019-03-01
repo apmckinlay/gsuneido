@@ -4,7 +4,7 @@ package opcodes
 
 import "strconv"
 
-const _Opcode_name = "NopPopDupDup2Dupx2IntValueTrueFalseZeroOneMaxIntEmptyStrLoadStoreDyloadGlobalGetPutRangeToRangeLenThisIsIsntMatchMatchNotLtLteGtGteAddSubCatMulDivModLeftShiftRightShiftBitOrBitAndBitXorBitNotNotUnaryPlusUnaryMinusOrAndBoolQmarkInJumpJumpTrueJumpFalseJumpIsJumpIsntIterForInThrowTryCatchCallFuncCallMethSuperReturnReturnNilBlockBlockBreakBlockContinueBlockReturnBlockReturnNil"
+const _Opcode_name = "NopPopDupDup2Dupx2IntValueTrueFalseZeroOneMaxIntEmptyStrLoadStoreDyloadGlobalGetPutRangeToRangeLenThisIsIsntMatchMatchNotLtLteGtGteAddSubCatMulDivModLeftShiftRightShiftBitOrBitAndBitXorBitNotNotUnaryPlusUnaryMinusOrAndBoolQMarkInJumpJumpTrueJumpFalseJumpIsJumpIsntIterForInThrowTryCatchCallFuncCallMethSuperReturnReturnNilBlockBlockBreakBlockContinueBlockReturnBlockReturnNil"
 
 var _Opcode_index = [...]uint16{0, 3, 6, 9, 13, 18, 21, 26, 30, 35, 39, 42, 48, 56, 60, 65, 71, 77, 80, 83, 90, 98, 102, 104, 108, 113, 121, 123, 126, 128, 131, 134, 137, 140, 143, 146, 149, 158, 168, 173, 179, 185, 191, 194, 203, 213, 215, 218, 222, 227, 229, 233, 241, 250, 256, 264, 268, 273, 278, 281, 286, 294, 302, 307, 313, 322, 327, 337, 350, 361, 375}
 

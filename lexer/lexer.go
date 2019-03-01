@@ -1,9 +1,12 @@
+// Package lexer implements the lexical scanner for the Suneido language
 package lexer
 
 import (
 	"strings"
 
+	tok "github.com/apmckinlay/gsuneido/lexer/tokens"
 	. "github.com/apmckinlay/gsuneido/util/ascii"
+	"github.com/apmckinlay/gsuneido/util/str"
 )
 
 // Lexer implements the lexical scanner for Suneido
@@ -24,7 +27,7 @@ func NewLexer(src string) *Lexer {
 type Item struct {
 	Text  string
 	Pos   int32
-	Token Token
+	Token tok.Token
 }
 
 func (it *Item) String() string {
@@ -49,7 +52,7 @@ func (lxr *Lexer) Next() Item {
 func (lxr *Lexer) Ahead(i int) Item {
 	for len(lxr.ahead) < i+1 {
 		item := lxr.next()
-		if item.Token == EOF {
+		if item.Token == tok.Eof {
 			return item
 		}
 		lxr.ahead = append(lxr.ahead, item)
@@ -58,13 +61,13 @@ func (lxr *Lexer) Ahead(i int) Item {
 }
 
 // AheadSkip provides lookahead like Ahead
-// but skips WHITESPACE, NEWLINE, and COMMENT
+// but skips Whitespace, Newline, and Comment
 func (lxr *Lexer) AheadSkip(i int) Item {
 	for j := 0; ; j++ {
 		switch it := lxr.Ahead(j); it.Token {
-		case WHITESPACE, NEWLINE, COMMENT:
+		case tok.Whitespace, tok.Newline, tok.Comment:
 			continue
-		case EOF:
+		case tok.Eof:
 			return it
 		default:
 			if i <= 0 {
@@ -78,112 +81,112 @@ func (lxr *Lexer) AheadSkip(i int) Item {
 func (lxr *Lexer) next() Item {
 	start := lxr.si
 	c := lxr.read()
-	it := func(tok Token) Item {
+	it := func(token tok.Token) Item {
 		// compiler doesn't need Text, but Suneido Scanner does
-		return Item{Pos: int32(start), Token: tok, Text: lxr.src[start:lxr.si]}
+		return Item{Pos: int32(start), Token: token, Text: lxr.src[start:lxr.si]}
 	}
 	switch c {
 	case eof:
-		return it(EOF)
+		return it(tok.Eof)
 	case '#':
 		if p := lxr.peek(); p == '_' || IsLetter(p) {
 			lxr.matchIdentTail()
 			val := lxr.src[start+1 : lxr.si]
-			return Item{val, int32(start), STRING}
+			return Item{val, int32(start), tok.String}
 		}
-		return it(HASH)
+		return it(tok.Hash)
 	case '(':
-		return it(L_PAREN)
+		return it(tok.LParen)
 	case ')':
-		return it(R_PAREN)
+		return it(tok.RParen)
 	case ',':
-		return it(COMMA)
+		return it(tok.Comma)
 	case ';':
-		return it(SEMICOLON)
+		return it(tok.Semicolon)
 	case '?':
-		return it(Q_MARK)
+		return it(tok.QMark)
 	case '@':
-		return it(AT)
+		return it(tok.At)
 	case '[':
-		return it(L_BRACKET)
+		return it(tok.LBracket)
 	case ']':
-		return it(R_BRACKET)
+		return it(tok.RBracket)
 	case '{':
-		return it(L_CURLY)
+		return it(tok.LCurly)
 	case '}':
-		return it(R_CURLY)
+		return it(tok.RCurly)
 	case '~':
-		return it(BITNOT)
+		return it(tok.BitNot)
 	case ':':
 		if lxr.match(':') {
-			return it(RANGELEN)
+			return it(tok.RangeLen)
 		}
-		return it(COLON)
+		return it(tok.Colon)
 	case '=':
 		if lxr.match('~') {
-			return it(MATCH)
+			return it(tok.Match)
 		}
-		return it(EQ)
+		return it(tok.Eq)
 	case '!':
 		if lxr.match('~') {
-			return it(MATCHNOT)
+			return it(tok.MatchNot)
 		}
 	case '<':
 		if lxr.match('<') {
 			if lxr.match('=') {
-				return it(LSHIFTEQ)
+				return it(tok.LShiftEq)
 			}
-			return it(LSHIFT)
+			return it(tok.LShift)
 		}
 		if lxr.match('>') {
-			return it(ISNT)
+			return it(tok.Isnt)
 		}
 		if lxr.match('=') {
-			return it(LTE)
+			return it(tok.Lte)
 		}
-		return it(LT)
+		return it(tok.Lt)
 	case '>':
 		if lxr.match('>') {
 			if lxr.match('=') {
-				return it(RSHIFTEQ)
+				return it(tok.RShiftEq)
 			}
-			return it(RSHIFT)
+			return it(tok.RShift)
 		}
 		if lxr.match('=') {
-			return it(GTE)
+			return it(tok.Gte)
 		}
-		return it(GT)
+		return it(tok.Gt)
 	case '|':
 		if lxr.match('=') {
-			return it(BITOREQ)
+			return it(tok.BitOrEq)
 		}
-		return it(BITOR)
+		return it(tok.BitOr)
 	case '&':
 		if lxr.match('=') {
-			return it(BITANDEQ)
+			return it(tok.BitAndEq)
 		}
-		return it(BITAND)
+		return it(tok.BitAnd)
 	case '^':
 		if lxr.match('=') {
-			return it(BITXOREQ)
+			return it(tok.BitXorEq)
 		}
-		return it(BITXOR)
+		return it(tok.BitXor)
 	case '-':
 		if lxr.match('-') {
-			return it(DEC)
+			return it(tok.Dec)
 		}
 		if lxr.match('=') {
-			return it(SUBEQ)
+			return it(tok.SubEq)
 		}
-		return it(SUB)
+		return it(tok.Sub)
 	case '+':
 		if lxr.match('+') {
-			return it(INC)
+			return it(tok.Inc)
 		}
 		if lxr.match('=') {
-			return it(ADDEQ)
+			return it(tok.AddEq)
 		}
-		return it(ADD)
+		return it(tok.Add)
 	case '/':
 		if lxr.match('/') {
 			return lxr.lineComment(start)
@@ -192,36 +195,36 @@ func (lxr *Lexer) next() Item {
 			return lxr.spanComment(start)
 		}
 		if lxr.match('=') {
-			return it(DIVEQ)
+			return it(tok.DivEq)
 		}
-		return it(DIV)
+		return it(tok.Div)
 	case '*':
 		if lxr.match('=') {
-			return it(MULEQ)
+			return it(tok.MulEq)
 		}
-		return it(MUL)
+		return it(tok.Mul)
 	case '%':
 		if lxr.match('=') {
-			return it(MODEQ)
+			return it(tok.ModEq)
 		}
-		return it(MOD)
+		return it(tok.Mod)
 	case '$':
 		if lxr.match('=') {
-			return it(CATEQ)
+			return it(tok.CatEq)
 		}
-		return it(CAT)
+		return it(tok.Cat)
 	case '`':
 		return lxr.rawString(start)
 	case '"', '\'':
 		return lxr.quotedString(start, c)
 	case '.':
 		if lxr.match('.') {
-			return it(RANGETO)
+			return it(tok.RangeTo)
 		}
 		if IsDigit(lxr.peek()) {
 			return lxr.number(start)
 		}
-		return it(DOT)
+		return it(tok.Dot)
 	case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
 		return lxr.number(start)
 	default:
@@ -231,18 +234,18 @@ func (lxr *Lexer) next() Item {
 			return lxr.identifier(start)
 		}
 	}
-	return it(ERROR)
+	return it(tok.Error)
 }
 
-func it(tok Token, pos int, txt string) Item {
-	return Item{txt, int32(pos), tok}
+func it(token tok.Token, pos int, txt string) Item {
+	return Item{txt, int32(pos), token}
 }
 
 func (lxr *Lexer) whitespace(start int, c byte) Item {
-	result := WHITESPACE
+	result := tok.Whitespace
 	for ; IsSpace(c); c = lxr.read() {
 		if c == '\n' || c == '\r' {
-			result = NEWLINE
+			result = tok.Newline
 		}
 	}
 	if c != eof {
@@ -263,11 +266,11 @@ loop:
 			break loop
 		}
 	}
-	return it(COMMENT, start, lxr.src[start:lxr.si])
+	return it(tok.Comment, start, lxr.src[start:lxr.si])
 }
 
 func (lxr *Lexer) spanComment(start int) Item {
-	return it(COMMENT, start, lxr.matchUntil(start, "*/"))
+	return it(tok.Comment, start, lxr.matchUntil(start, "*/"))
 }
 
 func (lxr *Lexer) rawString(start int) Item {
@@ -275,7 +278,7 @@ func (lxr *Lexer) rawString(start int) Item {
 	if s[len(s)-1] == '`' {
 		s = s[:len(s)-1]
 	}
-	return it(STRING, start, s)
+	return it(tok.String, start, s)
 }
 
 func (lxr *Lexer) quotedString(start int, quote byte) Item {
@@ -284,12 +287,12 @@ func (lxr *Lexer) quotedString(start int, quote byte) Item {
 	for i := 0; ; i++ {
 		if i >= len(src) {
 			lxr.si += len(src)
-			return it(STRING, start, dup(src)) // no closing quote
+			return it(tok.String, start, str.Dup(src)) // no closing quote
 		} else if src[i] == '\\' {
 			break
 		} else if src[i] == byte(quote) {
 			lxr.si += i + 1
-			return it(STRING, start, dup(src[:i])) // no escapes
+			return it(tok.String, start, str.Dup(src[:i])) // no escapes
 		}
 	}
 	// have escapes so need to build new string
@@ -298,14 +301,7 @@ func (lxr *Lexer) quotedString(start int, quote byte) Item {
 		c = lxr.doesc(c)
 		buf.WriteByte(byte(c))
 	}
-	return Item{Text: buf.String(), Pos: int32(start), Token: STRING}
-}
-
-// dup is intended to make a copy of a string
-// so we don't hold a reference to the source and prevent garbage collection
-func dup(s string) string {
-	s = " " + s
-	return s[1:]
+	return Item{Text: buf.String(), Pos: int32(start), Token: tok.String}
 }
 
 func (lxr *Lexer) doesc(c byte) byte {
@@ -367,7 +363,7 @@ func (lxr *Lexer) number(start int) Item {
 			lxr.si-- // don't absorb trailing dot
 		}
 	}
-	return it(NUMBER, start, lxr.src[start:lxr.si])
+	return it(tok.Number, start, lxr.src[start:lxr.si])
 }
 
 func (lxr *Lexer) nonWhiteRemaining() bool {
@@ -382,11 +378,60 @@ func (lxr *Lexer) nonWhiteRemaining() bool {
 func (lxr *Lexer) identifier(start int) Item {
 	lxr.matchIdentTail()
 	val := lxr.src[start:lxr.si]
-	token := IDENTIFIER
+	token := tok.Identifier
 	if lxr.peek() != ':' || val == "default" || val == "true" || val == "false" {
-		token, val = Keyword(val)
+		token, val = keyword(val)
 	}
 	return Item{val, int32(start), token}
+}
+
+// keyword returns the token for a string it is a keyword
+// otherwise Identifier and a copy of the string
+func keyword(s string) (tok.Token, string) {
+	if 2 <= len(s) && len(s) <= 8 && s[0] >= 'a' {
+		for _, pair := range keywords {
+			if pair.kw == s {
+				return pair.tok, pair.kw
+			}
+		}
+	}
+	return tok.Identifier, str.Dup(s)
+}
+
+// keywords doesn't use a map because we want to use the keyword string literals
+// ordered by frequency of use to optimize successful searches
+var keywords = []struct {
+	kw  string
+	tok tok.Token
+}{
+	{"return", tok.Return},
+	{"if", tok.If},
+	{"false", tok.False},
+	{"is", tok.Is},
+	{"true", tok.True},
+	{"isnt", tok.Isnt},
+	{"and", tok.And},
+	{"function", tok.Function},
+	{"for", tok.For},
+	{"in", tok.In},
+	{"not", tok.Not},
+	{"super", tok.Super},
+	{"or", tok.Or},
+	{"else", tok.Else},
+	{"class", tok.Class},
+	{"this", tok.This},
+	{"case", tok.Case},
+	{"new", tok.New},
+	{"continue", tok.Continue},
+	{"throw", tok.Throw},
+	{"try", tok.Try},
+	{"catch", tok.Catch},
+	{"while", tok.While},
+	{"break", tok.Break},
+	{"switch", tok.Switch},
+	{"default", tok.Default},
+	{"do", tok.Do},
+	{"forever", tok.Forever},
 }
 
 func (lxr *Lexer) matchIdentTail() {

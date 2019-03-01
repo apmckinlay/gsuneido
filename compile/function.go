@@ -3,6 +3,7 @@ package compile
 import (
 	"github.com/apmckinlay/gsuneido/compile/ast"
 	. "github.com/apmckinlay/gsuneido/lexer"
+	tok "github.com/apmckinlay/gsuneido/lexer/tokens"
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
@@ -14,7 +15,7 @@ func ParseFunction(src string) *ast.Function {
 
 // function parse a function (starting with the "function" keyword)
 func (p *parser) function() *ast.Function {
-	p.match(FUNCTION)
+	p.match(tok.Function)
 	params := p.params(false)
 	body := p.compound()
 	return &ast.Function{Params: params, Body: body}
@@ -28,15 +29,15 @@ func (p *parser) method() *ast.Function {
 }
 
 func (p *parser) params(inClass bool) []ast.Param {
-	p.match(L_PAREN)
+	p.match(tok.LParen)
 	var params []ast.Param
-	if p.matchIf(AT) {
+	if p.matchIf(tok.At) {
 		params = append(params, ast.Param{Name: "@" + p.Text})
 		p.matchIdent()
 	} else {
 		defs := false
-		for p.Token != R_PAREN {
-			dot := p.matchIf(DOT)
+		for p.Token != tok.RParen {
+			dot := p.matchIf(tok.Dot)
 			name := p.Text
 			if dot {
 				if !inClass {
@@ -46,7 +47,7 @@ func (p *parser) params(inClass bool) []ast.Param {
 			}
 			p.matchIdent()
 			p.checkForDupParam(params, name)
-			if p.matchIf(EQ) {
+			if p.matchIf(tok.Eq) {
 				defs = true
 				def := p.constant()
 				params = append(params, ast.Param{Name: name, DefVal: def})
@@ -56,10 +57,10 @@ func (p *parser) params(inClass bool) []ast.Param {
 				}
 				params = append(params, ast.Param{Name: name})
 			}
-			p.matchIf(COMMA)
+			p.matchIf(tok.Comma)
 		}
 	}
-	p.match(R_PAREN)
+	p.match(tok.RParen)
 	return params
 }
 
@@ -72,22 +73,22 @@ func (p *parser) checkForDupParam(params []ast.Param, name string) {
 }
 
 func (p *parser) compound() []ast.Statement {
-	p.match(L_CURLY)
+	p.match(tok.LCurly)
 	stmts := p.statements()
-	p.match(R_CURLY)
+	p.match(tok.RCurly)
 	return stmts
 }
 
 func (p *parser) statements() []ast.Statement {
 	list := []ast.Statement{}
-	for p.Token != R_CURLY {
+	for p.Token != tok.RCurly {
 		stmt := p.statement()
 		list = append(list, stmt)
 	}
 	return list
 }
 
-var code = Item{Token: L_CURLY, Text: "STMTS"}
+var code = Item{Token: tok.LCurly, Text: "STMTS"}
 
 func (p *parser) statement() ast.Statement {
 	pos := p.Pos
@@ -97,43 +98,43 @@ func (p *parser) statement() ast.Statement {
 }
 
 func (p *parser) statement2() ast.Statement {
-	tok := p.Token
-	switch tok {
-	case SEMICOLON:
+	token := p.Token
+	switch token {
+	case tok.Semicolon:
 		p.next()
 		return &ast.Compound{Body: []ast.Statement{}}
-	case L_CURLY:
+	case tok.LCurly:
 		return &ast.Compound{Body: p.compound()}
-	case RETURN:
+	case tok.Return:
 		p.next()
 		return p.semi(p.returnStmt())
-	case IF:
+	case tok.If:
 		p.next()
 		return p.ifStmt()
-	case SWITCH:
+	case tok.Switch:
 		p.next()
 		return p.switchStmt()
-	case FOREVER:
+	case tok.Forever:
 		p.next()
 		return p.foreverStmt()
-	case WHILE:
+	case tok.While:
 		p.next()
 		return p.whileStmt()
-	case DO:
+	case tok.Do:
 		p.next()
 		return p.semi(p.dowhileStmt())
-	case FOR:
+	case tok.For:
 		return p.forStmt()
-	case THROW:
+	case tok.Throw:
 		p.next()
 		return p.semi(&ast.Throw{E: p.expr()})
-	case TRY:
+	case tok.Try:
 		p.next()
 		return p.tryStmt()
-	case BREAK:
+	case tok.Break:
 		p.next()
 		return p.semi(&ast.Break{})
-	case CONTINUE:
+	case tok.Continue:
 		p.next()
 		return p.semi(&ast.Continue{})
 	default:
@@ -142,7 +143,7 @@ func (p *parser) statement2() ast.Statement {
 }
 
 func (p *parser) semi(stmt ast.Statement) ast.Statement {
-	p.matchIf(SEMICOLON)
+	p.matchIf(tok.Semicolon)
 	return stmt
 }
 
@@ -150,7 +151,7 @@ func (p *parser) ifStmt() *ast.If {
 	expr := p.ctrlExpr()
 	t := p.statement()
 	var f ast.Statement
-	if p.matchIf(ELSE) {
+	if p.matchIf(tok.Else) {
 		f = p.statement()
 	}
 	return &ast.If{Cond: expr, Then: t, Else: f}
@@ -158,21 +159,21 @@ func (p *parser) ifStmt() *ast.If {
 
 func (p *parser) switchStmt() *ast.Switch {
 	var expr ast.Expr
-	if p.Token == L_CURLY {
+	if p.Token == tok.LCurly {
 		expr = p.Constant(True)
 	} else {
 		expr = p.exprExpecting(true)
 	}
-	p.match(L_CURLY)
+	p.match(tok.LCurly)
 	var cases []ast.Case
-	for p.matchIf(CASE) {
+	for p.matchIf(tok.Case) {
 		cases = append(cases, p.switchCase())
 	}
 	var def []ast.Statement
-	if p.matchIf(DEFAULT) {
+	if p.matchIf(tok.Default) {
 		def = p.switchBody()
 	}
-	p.match(R_CURLY)
+	p.match(tok.RCurly)
 	return &ast.Switch{E: expr, Cases: cases, Default: def}
 }
 
@@ -180,7 +181,7 @@ func (p *parser) switchCase() ast.Case {
 	var exprs []ast.Expr
 	for {
 		exprs = append(exprs, p.expr())
-		if !p.matchIf(COMMA) {
+		if !p.matchIf(tok.Comma) {
 			break
 		}
 	}
@@ -189,9 +190,9 @@ func (p *parser) switchCase() ast.Case {
 }
 
 func (p *parser) switchBody() []ast.Statement {
-	p.match(COLON)
+	p.match(tok.Colon)
 	var stmts []ast.Statement
-	for p.Token != R_CURLY && p.Token != CASE && p.Token != DEFAULT {
+	for p.Token != tok.RCurly && p.Token != tok.Case && p.Token != tok.Default {
 		stmts = append(stmts, p.statement())
 	}
 	return stmts
@@ -210,15 +211,15 @@ func (p *parser) whileStmt() *ast.While {
 
 func (p *parser) dowhileStmt() *ast.DoWhile {
 	body := p.statement()
-	p.match(WHILE)
+	p.match(tok.While)
 	cond := p.expr()
 	return &ast.DoWhile{Body: body, Cond: cond}
 }
 
 func (p *parser) forStmt() ast.Statement {
-	// easier to check before matching FOR so everything is ahead
+	// easier to check before matching For so everything is ahead
 	forIn := p.isForIn()
-	p.match(FOR)
+	p.match(tok.For)
 	if forIn {
 		return p.forIn()
 	}
@@ -227,49 +228,49 @@ func (p *parser) forStmt() ast.Statement {
 
 func (p *parser) isForIn() bool {
 	i := 0
-	if p.lxr.AheadSkip(i).Token == L_PAREN {
+	if p.lxr.AheadSkip(i).Token == tok.LParen {
 		i++
 	}
-	if !IsIdent[p.lxr.AheadSkip(i).Token] {
+	if !p.lxr.AheadSkip(i).Token.IsIdent() {
 		return false
 	}
-	return p.lxr.AheadSkip(i+1).Token == IN
+	return p.lxr.AheadSkip(i+1).Token == tok.In
 }
 
 func (p *parser) forIn() *ast.ForIn {
-	parens := p.matchIf(L_PAREN)
+	parens := p.matchIf(tok.LParen)
 	id := p.Text
 	p.matchIdent()
-	p.match(IN)
+	p.match(tok.In)
 	expr := p.exprExpecting(!parens)
 	if parens {
-		p.match(R_PAREN)
+		p.match(tok.RParen)
 	}
 	body := p.statement()
 	return &ast.ForIn{Var: id, E: expr, Body: body}
 }
 
 func (p *parser) forClassic() *ast.For {
-	p.match(L_PAREN)
-	init := p.optExprList(SEMICOLON)
-	p.match(SEMICOLON)
+	p.match(tok.LParen)
+	init := p.optExprList(tok.Semicolon)
+	p.match(tok.Semicolon)
 	var cond ast.Expr
-	if p.Token != SEMICOLON {
+	if p.Token != tok.Semicolon {
 		cond = p.expr()
 	}
-	p.match(SEMICOLON)
-	inc := p.optExprList(R_PAREN)
-	p.match(R_PAREN)
+	p.match(tok.Semicolon)
+	inc := p.optExprList(tok.RParen)
+	p.match(tok.RParen)
 	body := p.statement()
 	return &ast.For{Init: init, Cond: cond, Inc: inc, Body: body}
 }
 
-func (p *parser) optExprList(after Token) []ast.Expr {
+func (p *parser) optExprList(after tok.Token) []ast.Expr {
 	exprs := []ast.Expr{}
 	if p.Token != after {
 		for {
 			exprs = append(exprs, p.expr())
-			if p.Token != COMMA {
+			if p.Token != tok.Comma {
 				break
 			}
 			p.next()
@@ -280,10 +281,10 @@ func (p *parser) optExprList(after Token) []ast.Expr {
 
 // used by if, while, and do-while
 func (p *parser) ctrlExpr() ast.Expr {
-	parens := p.matchIf(L_PAREN)
+	parens := p.matchIf(tok.LParen)
 	expr := p.exprExpecting(!parens)
 	if parens {
-		p.match(R_PAREN)
+		p.match(tok.RParen)
 	}
 	return expr
 }
@@ -296,7 +297,7 @@ func (p *parser) exprExpecting(expecting bool) ast.Expr {
 }
 
 func (p *parser) returnStmt() *ast.Return {
-	if p.newline || p.Token == SEMICOLON || p.Token == R_CURLY {
+	if p.newline || p.Token == tok.Semicolon || p.Token == tok.RCurly {
 		return &ast.Return{}
 	}
 	expr := p.expr()
@@ -312,15 +313,15 @@ func (p *parser) tryStmt() *ast.TryCatch {
 	var catchVar string
 	var catchFilter string
 	var catch ast.Statement
-	if p.matchIf(CATCH) {
-		if p.matchIf(L_PAREN) {
+	if p.matchIf(tok.Catch) {
+		if p.matchIf(tok.LParen) {
 			catchVar = p.Text
 			p.matchIdent()
-			if p.matchIf(COMMA) {
+			if p.matchIf(tok.Comma) {
 				catchFilter = p.Text
-				p.match(STRING)
+				p.match(tok.String)
 			}
-			p.match(R_PAREN)
+			p.match(tok.RParen)
 		}
 		catch = p.statement()
 	}

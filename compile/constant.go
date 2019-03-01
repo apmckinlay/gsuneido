@@ -5,7 +5,7 @@ import (
 	"strings"
 	"sync/atomic"
 
-	. "github.com/apmckinlay/gsuneido/lexer"
+	tok "github.com/apmckinlay/gsuneido/lexer/tokens"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/ascii"
 )
@@ -14,7 +14,7 @@ func NamedConstant(name, src string) Value {
 	p := newParser(src)
 	p.className = name
 	result := p.constant()
-	if p.Token != EOF {
+	if p.Token != tok.Eof {
 		p.error("syntax error: did not parse all input")
 	}
 	if named, ok := result.(Named); ok {
@@ -31,41 +31,41 @@ func Constant(src string) Value {
 
 func (p *parser) constant() Value {
 	switch p.Token {
-	case STRING:
+	case tok.String:
 		return p.string()
-	case ADD:
+	case tok.Add:
 		p.next()
 		fallthrough
-	case NUMBER:
+	case tok.Number:
 		return p.number()
-	case SUB:
+	case tok.Sub:
 		p.next()
 		return UnaryMinus(p.number())
-	case L_PAREN, L_CURLY, L_BRACKET:
+	case tok.LParen, tok.LCurly, tok.LBracket:
 		return p.object()
-	case HASH:
+	case tok.Hash:
 		p.next()
 		switch p.Token {
-		case NUMBER:
+		case tok.Number:
 			return p.date()
-		case L_PAREN, L_CURLY, L_BRACKET:
+		case tok.LParen, tok.LCurly, tok.LBracket:
 			return p.object()
 		}
 		panic("not implemented #" + p.Text)
-	case TRUE:
+	case tok.True:
 		p.next()
 		return True
-	case FALSE:
+	case tok.False:
 		p.next()
 		return False
-	case FUNCTION:
+	case tok.Function:
 		ast := p.function()
 		return codegen(ast)
-	case CLASS:
+	case tok.Class:
 		return p.class()
 	default:
-		if IsIdent[p.Token] {
-			if okBase(p.Text) && p.lxr.AheadSkip(0).Token == L_CURLY {
+		if p.Token.IsIdent() {
+			if okBase(p.Text) && p.lxr.AheadSkip(0).Token == tok.LCurly {
 				return p.class()
 			}
 			s := p.Text
@@ -80,8 +80,8 @@ func (p *parser) string() Value {
 	s := ""
 	for {
 		s += p.Text
-		p.match(STRING)
-		if p.Token != CAT || p.lxr.AheadSkip(0).Token != STRING {
+		p.match(tok.String)
+		if p.Token != tok.Cat || p.lxr.AheadSkip(0).Token != tok.String {
 			break
 		}
 		p.next()
@@ -91,13 +91,13 @@ func (p *parser) string() Value {
 
 func (p *parser) number() Value {
 	s := p.Text
-	p.match(NUMBER)
+	p.match(tok.Number)
 	return NumFromString(s)
 }
 
 func (p *parser) date() Value {
 	s := p.Text
-	p.match(NUMBER)
+	p.match(tok.Number)
 	date := DateFromLiteral(s)
 	if date == NilDate {
 		p.error("invalid date ", s)
@@ -105,10 +105,10 @@ func (p *parser) date() Value {
 	return date
 }
 
-var closing = map[Token]Token{
-	L_PAREN:   R_PAREN,
-	L_CURLY:   R_CURLY,
-	L_BRACKET: R_BRACKET,
+var closing = map[tok.Token]tok.Token{
+	tok.LParen:   tok.RParen,
+	tok.LCurly:   tok.RCurly,
+	tok.LBracket: tok.RBracket,
 }
 
 const noBase = -1
@@ -117,14 +117,14 @@ func (p *parser) object() Value {
 	close := closing[p.Token]
 	p.next()
 	var ob container
-	if close == R_PAREN {
+	if close == tok.RParen {
 		ob = new(SuObject)
 	} else {
 		ob = NewSuRecord()
 	}
 	p.memberList(ob, close, noBase)
-	if p,ok := ob.(protectable); ok {
-	p.SetReadOnly()
+	if p, ok := ob.(protectable); ok {
+		p.SetReadOnly()
 	}
 	return ob.(Value)
 }
@@ -139,21 +139,21 @@ type protectable interface {
 	SetReadOnly()
 }
 
-func (p *parser) memberList(ob container, closing Token, base Global) {
+func (p *parser) memberList(ob container, closing tok.Token, base Global) {
 	for p.Token != closing {
 		p.member(ob, closing, base)
-		if p.Token == COMMA || p.Token == SEMICOLON {
+		if p.Token == tok.Comma || p.Token == tok.Semicolon {
 			p.next()
 		}
 	}
 	p.next()
 }
 
-func (p *parser) member(ob container, closing Token, base Global) {
+func (p *parser) member(ob container, closing tok.Token, base Global) {
 	start := p.Token
 	m := p.constant()
 	inClass := base != noBase
-	if inClass && IsIdent[start] && p.Token == L_PAREN { // method
+	if inClass && start.IsIdent() && p.Token == tok.LParen { // method
 		ast := p.method()
 		ast.Base = base
 		name := p.privatizeDef(m)
@@ -164,11 +164,11 @@ func (p *parser) member(ob container, closing Token, base Global) {
 		fn.ClassName = p.className
 		fn.Name = "." + name
 		p.putMem(ob, SuStr(name), fn)
-	} else if p.matchIf(COLON) {
+	} else if p.matchIf(tok.Colon) {
 		if inClass {
 			m = SuStr(p.privatizeDef(m))
 		}
-		if p.Token == COMMA || p.Token == SEMICOLON || p.Token == closing {
+		if p.Token == tok.Comma || p.Token == tok.Semicolon || p.Token == closing {
 			p.putMem(ob, m, True)
 		} else {
 			p.putMem(ob, m, p.constant())
@@ -215,25 +215,25 @@ var classNum int32
 // class parses a class definition
 // like object, it builds a value rather than an ast
 func (p *parser) class() Value {
-	if p.Token == CLASS {
-		p.match(CLASS)
-		if p.Token == COLON {
-			p.match(COLON)
+	if p.Token == tok.Class {
+		p.match(tok.Class)
+		if p.Token == tok.Colon {
+			p.match(tok.Colon)
 		}
 	}
 	var base Global
-	if p.Token == IDENTIFIER {
+	if p.Token == tok.Identifier {
 		base = p.ckBase(p.Text)
 		p.matchIdent()
 	}
-	p.match(L_CURLY)
+	p.match(tok.LCurly)
 	mems := classcon{}
 	classNamePrev := p.className
 	if p.className == "" {
 		cn := atomic.AddInt32(&classNum, 1)
 		p.className = "Class" + strconv.Itoa(int(cn))
 	}
-	p.memberList(mems, R_CURLY, base)
+	p.memberList(mems, tok.RCurly, base)
 	p.className = classNamePrev
 	return &SuClass{Base: base, MemBase: MemBase{Data: mems}}
 }

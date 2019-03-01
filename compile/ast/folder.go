@@ -1,7 +1,7 @@
 package ast
 
 import (
-	. "github.com/apmckinlay/gsuneido/lexer"
+	tok "github.com/apmckinlay/gsuneido/lexer/tokens"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/dnum"
 	"github.com/apmckinlay/gsuneido/util/regex"
@@ -16,69 +16,69 @@ type Folder struct {
 	Factory
 }
 
-func (f Folder) Unary(tok Token, expr Expr) Expr {
+func (f Folder) Unary(token tok.Token, expr Expr) Expr {
 	c, ok := expr.(*Constant)
 	if !ok {
-		return f.Factory.Unary(tok, expr)
+		return f.Factory.Unary(token, expr)
 	}
 	val := c.Val
-	switch tok {
-	case ADD:
+	switch token {
+	case tok.Add:
 		val = UnaryPlus(val)
-	case SUB:
+	case tok.Sub:
 		val = UnaryMinus(val)
-	case DIV:
+	case tok.Div:
 		val = Div(One, val)
-	case NOT:
+	case tok.Not:
 		val = Not(val)
-	case BITNOT:
+	case tok.BitNot:
 		val = BitNot(val)
-	case L_PAREN:
+	case tok.LParen:
 		break
 	default:
-		panic("folder unexpected unary operator " + tok.String())
+		panic("folder unexpected unary operator " + token.String())
 	}
 	return f.Constant(val)
 }
 
-func (f Folder) Binary(lhs Expr, tok Token, rhs Expr) Expr {
+func (f Folder) Binary(lhs Expr, token tok.Token, rhs Expr) Expr {
 	c1, ok := lhs.(*Constant)
 	if !ok {
-		return f.Factory.Binary(lhs, tok, rhs)
+		return f.Factory.Binary(lhs, token, rhs)
 	}
 	c2, ok := rhs.(*Constant)
 	if !ok {
-		return f.Factory.Binary(lhs, tok, rhs)
+		return f.Factory.Binary(lhs, token, rhs)
 	}
 	val := c1.Val
 	val2 := c2.Val
-	switch tok {
-	case IS:
+	switch token {
+	case tok.Is:
 		val = Is(val, val2)
-	case ISNT:
+	case tok.Isnt:
 		val = Isnt(val, val2)
-	case MATCH:
+	case tok.Match:
 		pat := regex.Compile(val2.ToStr())
 		val = Match(val, pat)
-	case MATCHNOT:
+	case tok.MatchNot:
 		pat := regex.Compile(val2.ToStr())
 		val = Not(Match(val, pat))
-	case LT:
+	case tok.Lt:
 		val = Lt(val, val2)
-	case LTE:
+	case tok.Lte:
 		val = Lte(val, val2)
-	case GT:
+	case tok.Gt:
 		val = Gt(val, val2)
-	case GTE:
+	case tok.Gte:
 		val = Gte(val, val2)
-	case MOD:
+	case tok.Mod:
 		val = Mod(val, val2)
-	case LSHIFT:
+	case tok.LShift:
 		val = LeftShift(val, val2)
-	case RSHIFT:
+	case tok.RShift:
 		val = RightShift(val, val2)
 	default:
-		panic("folder unexpected unary operator " + tok.String())
+		panic("folder unexpected unary operator " + token.String())
 	}
 	return f.Constant(val)
 }
@@ -116,31 +116,31 @@ func (f Folder) In(e Expr, exprs []Expr) Expr {
 
 var allones Value = SuDnum{Dnum: dnum.FromInt(0xffffffff)}
 
-func (f Folder) Nary(tok Token, exprs []Expr) Expr {
-	switch tok {
-	case ADD: // including SUB
+func (f Folder) Nary(token tok.Token, exprs []Expr) Expr {
+	switch token {
+	case tok.Add: // including Sub
 		exprs = commutative(exprs, Add, Zero, nil)
-	case MUL: // including DIV
+	case tok.Mul: // including Div
 		exprs = commutative(exprs, Mul, One, Zero)
-	case BITOR:
+	case tok.BitOr:
 		exprs = commutative(exprs, BitOr, Zero, allones)
-	case BITAND:
+	case tok.BitAnd:
 		exprs = commutative(exprs, BitAnd, allones, Zero)
-	case BITXOR:
+	case tok.BitXor:
 		exprs = commutative(exprs, BitXor, Zero, nil)
-	case OR:
+	case tok.Or:
 		exprs = commutative(exprs, or, False, True)
-	case AND:
+	case tok.And:
 		exprs = commutative(exprs, and, True, False)
-	case CAT:
+	case tok.Cat:
 		exprs = foldCat(exprs)
 	default:
-		// 	panic("folder unexpected n-ary operator " + tok.String())
+		// 	panic("folder unexpected n-ary operator " + token.String())
 	}
 	if len(exprs) == 1 {
 		return exprs[0]
 	}
-	return f.Factory.Nary(tok, exprs)
+	return f.Factory.Nary(token, exprs)
 }
 
 func or(x, y Value) Value {

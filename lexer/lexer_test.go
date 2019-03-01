@@ -3,67 +3,68 @@ package lexer
 import (
 	"testing"
 
+	tok "github.com/apmckinlay/gsuneido/lexer/tokens"
 	. "github.com/apmckinlay/gsuneido/util/hamcrest"
 )
 
 func TestKeywords(t *testing.T) {
-	test := func(id string, expected Token) {
+	test := func(id string, expected tok.Token) {
 		t.Helper()
-		tok, val := Keyword(id)
+		tok, val := keyword(id)
 		Assert(t).That(tok, Equals(expected))
 		Assert(t).That(val, Equals(id))
 	}
-	test("return", RETURN)
-	test("forever", FOREVER)
-	test("foo", IDENTIFIER)
+	test("return", tok.Return)
+	test("forever", tok.Forever)
+	test("foo", tok.Identifier)
 }
 
 func TestLexer(t *testing.T) {
-	first := func(src string, text string, tok Token) {
+	first := func(src string, text string, token tok.Token) {
 		t.Helper()
 		Assert(t).That(NewLexer(src).Next(),
-			Equals(Item{text, 0, tok}))
+			Equals(Item{text, 0, token}))
 	}
-	first("function", "function", FUNCTION)
-	first("foo", "foo", IDENTIFIER)
-	first("#foo", "foo", STRING)
-	first("#_foo?", "_foo?", STRING)
-	first("is", "is", IS)
-	first("is:", "is", IDENTIFIER)
-	first("0xff", "0xff", NUMBER)
-	first("0xff.Chr()", "0xff", NUMBER)
-	first("0x8002 //foo", "0x8002", NUMBER)
-	first("'hello'", "hello", STRING)
-	first("'hello", "hello", STRING)
-	first("`hello`", "hello", STRING)
-	first("`hello", "hello", STRING)
-	first("'foo\\'bar'", "foo'bar", STRING)
-	first(`"\"foo\""`, `"foo"`, STRING)
-	first("\\", "\\", ERROR)
-	first("//foo\nbar", "//foo", COMMENT) // not including newline
+	first("function", "function", tok.Function)
+	first("foo", "foo", tok.Identifier)
+	first("#foo", "foo", tok.String)
+	first("#_foo?", "_foo?", tok.String)
+	first("is", "is", tok.Is)
+	first("is:", "is", tok.Identifier)
+	first("0xff", "0xff", tok.Number)
+	first("0xff.Chr()", "0xff", tok.Number)
+	first("0x8002 //foo", "0x8002", tok.Number)
+	first("'hello'", "hello", tok.String)
+	first("'hello", "hello", tok.String)
+	first("`hello`", "hello", tok.String)
+	first("`hello", "hello", tok.String)
+	first("'foo\\'bar'", "foo'bar", tok.String)
+	first(`"\"foo\""`, `"foo"`, tok.String)
+	first("\\", "\\", tok.Error)
+	first("//foo\nbar", "//foo", tok.Comment) // not including newline
 
-	check := func(source string, expected ...Token) {
+	check := func(source string, expected ...tok.Token) {
 		t.Helper()
 		lexer := NewLexer(source)
 		for i := 0; i < len(expected); {
 			item := lexer.Next()
-			if item.Token == EOF {
+			if item.Token == tok.Eof {
 				Assert(t).That(i, Equals(len(expected)-1).Comment("too few tokens"))
 				break
-			} else if item.Token == WHITESPACE || item.Token == NEWLINE {
+			} else if item.Token == tok.Whitespace || item.Token == tok.Newline {
 				continue
 			}
 			Assert(t).That(item.Token, Equals(expected[i]).Comment(i, item))
 			i++
 		}
-		Assert(t).That(lexer.Next().Token, Equals(EOF).Comment("didn't consume input"))
+		Assert(t).That(lexer.Next().Token, Equals(tok.Eof).Comment("didn't consume input"))
 	}
-	check("f()", IDENTIFIER, L_PAREN, R_PAREN)
-	check("4-1", NUMBER, SUB, NUMBER)
-	check("[1..]", L_BRACKET, NUMBER, RANGETO, R_BRACKET)
-	check("#20181112.End", HASH, NUMBER, DOT, IDENTIFIER)
-	check("0xff.Chr", NUMBER, DOT, IDENTIFIER)
-	check("//foo\n0x8002 //bar", COMMENT, NUMBER, COMMENT)
+	check("f()", tok.Identifier, tok.LParen, tok.RParen)
+	check("4-1", tok.Number, tok.Sub, tok.Number)
+	check("[1..]", tok.LBracket, tok.Number, tok.RangeTo, tok.RBracket)
+	check("#20181112.End", tok.Hash, tok.Number, tok.Dot, tok.Identifier)
+	check("0xff.Chr", tok.Number, tok.Dot, tok.Identifier)
+	check("//foo\n0x8002 //bar", tok.Comment, tok.Number, tok.Comment)
 	check(`and break
 		case catch continue class default do
 		else for forever function if is isnt or not
@@ -75,45 +76,48 @@ func TestLexer(t *testing.T) {
 		*= * %= % $= $ name _name name123 'single'
 		"double" 123 123name .name  Name Name123 name? 1$2 +1 num=1
 		num+=1 1%2 /*comments*/ //comments`,
-		AND, BREAK, CASE, CATCH, CONTINUE, CLASS, DEFAULT, DO,
-		ELSE, FOR, FOREVER, FUNCTION, IF, IS, ISNT, OR, NOT,
-		NEW, SWITCH, SUPER, RETURN, THROW, TRY, WHILE,
-		TRUE, FALSE,
-		EQ, MATCH, BITNOT, MATCHNOT, LSHIFTEQ, LSHIFT,
-		ISNT, LTE, LT, RSHIFTEQ, RSHIFT, GTE, GT, BITOREQ, BITOR,
-		BITANDEQ, BITAND, BITXOREQ, BITXOR, DEC, SUBEQ, SUB, INC,
-		ADDEQ, ADD, DIVEQ, DIV, MULEQ, MUL, MODEQ, MOD, CATEQ, CAT,
-		IDENTIFIER, IDENTIFIER, IDENTIFIER, STRING, STRING, NUMBER,
-		NUMBER, IDENTIFIER, DOT, IDENTIFIER, IDENTIFIER, IDENTIFIER,
-		IDENTIFIER, NUMBER, CAT, NUMBER, ADD, NUMBER, IDENTIFIER,
-		EQ, NUMBER, IDENTIFIER, ADDEQ, NUMBER, NUMBER, MOD, NUMBER,
-		COMMENT, COMMENT)
+		tok.And, tok.Break, tok.Case, tok.Catch, tok.Continue, tok.Class,
+		tok.Default, tok.Do, tok.Else, tok.For, tok.Forever, tok.Function,
+		tok.If, tok.Is, tok.Isnt, tok.Or, tok.Not, tok.New, tok.Switch,
+		tok.Super, tok.Return, tok.Throw, tok.Try, tok.While,
+		tok.True, tok.False, tok.Eq, tok.Match, tok.BitNot, tok.MatchNot,
+		tok.LShiftEq, tok.LShift, tok.Isnt, tok.Lte, tok.Lt,
+		tok.RShiftEq, tok.RShift, tok.Gte, tok.Gt, tok.BitOrEq, tok.BitOr,
+		tok.BitAndEq, tok.BitAnd, tok.BitXorEq, tok.BitXor, tok.Dec,
+		tok.SubEq, tok.Sub, tok.Inc, tok.AddEq, tok.Add, tok.DivEq, tok.Div,
+		tok.MulEq, tok.Mul, tok.ModEq, tok.Mod, tok.CatEq, tok.Cat,
+		tok.Identifier, tok.Identifier, tok.Identifier, tok.String, tok.String,
+		tok.Number, tok.Number, tok.Identifier, tok.Dot, tok.Identifier,
+		tok.Identifier, tok.Identifier, tok.Identifier, tok.Number, tok.Cat,
+		tok.Number, tok.Add, tok.Number, tok.Identifier, tok.Eq, tok.Number,
+		tok.Identifier, tok.AddEq, tok.Number, tok.Number, tok.Mod, tok.Number,
+		tok.Comment, tok.Comment)
 }
 
 func TestAhead(t *testing.T) {
 	lxr := NewLexer("a \n= /**/ 1 ")
-	Assert(t).That(lxr.Ahead(0), Equals(it(IDENTIFIER, 0, "a")))
-	Assert(t).That(lxr.Ahead(6), Equals(it(NUMBER, 10, "1")))
-	Assert(t).That(lxr.Ahead(2), Equals(it(EQ, 3, "=")))
-	Assert(t).That(lxr.Ahead(8).Token, Equals(EOF))
+	Assert(t).That(lxr.Ahead(0), Equals(it(tok.Identifier, 0, "a")))
+	Assert(t).That(lxr.Ahead(6), Equals(it(tok.Number, 10, "1")))
+	Assert(t).That(lxr.Ahead(2), Equals(it(tok.Eq, 3, "=")))
+	Assert(t).That(lxr.Ahead(8).Token, Equals(tok.Eof))
 
-	Assert(t).That(lxr.Next(), Equals(it(IDENTIFIER, 0, "a")))
-	Assert(t).That(lxr.Next(), Equals(it(NEWLINE, 1, " \n")))
-	Assert(t).That(lxr.Next(), Equals(it(EQ, 3, "=")))
-	Assert(t).That(lxr.Next(), Equals(it(WHITESPACE, 4, " ")))
-	Assert(t).That(lxr.Next(), Equals(it(COMMENT, 5, "/**/")))
-	Assert(t).That(lxr.Next(), Equals(it(WHITESPACE, 9, " ")))
-	Assert(t).That(lxr.Next(), Equals(it(NUMBER, 10, "1")))
-	Assert(t).That(lxr.Next(), Equals(it(WHITESPACE, 11, " ")))
-	Assert(t).That(lxr.Next().Token, Equals(EOF))
+	Assert(t).That(lxr.Next(), Equals(it(tok.Identifier, 0, "a")))
+	Assert(t).That(lxr.Next(), Equals(it(tok.Newline, 1, " \n")))
+	Assert(t).That(lxr.Next(), Equals(it(tok.Eq, 3, "=")))
+	Assert(t).That(lxr.Next(), Equals(it(tok.Whitespace, 4, " ")))
+	Assert(t).That(lxr.Next(), Equals(it(tok.Comment, 5, "/**/")))
+	Assert(t).That(lxr.Next(), Equals(it(tok.Whitespace, 9, " ")))
+	Assert(t).That(lxr.Next(), Equals(it(tok.Number, 10, "1")))
+	Assert(t).That(lxr.Next(), Equals(it(tok.Whitespace, 11, " ")))
+	Assert(t).That(lxr.Next().Token, Equals(tok.Eof))
 }
 
 func TestAheadSkip(t *testing.T) {
 	lxr := NewLexer(" a \n= /**/ 1 ")
-	Assert(t).That(lxr.AheadSkip(0), Equals(it(IDENTIFIER, 1, "a")))
-	Assert(t).That(lxr.AheadSkip(2), Equals(it(NUMBER, 11, "1")))
-	Assert(t).That(lxr.AheadSkip(1), Equals(it(EQ, 4, "=")))
-	Assert(t).That(lxr.AheadSkip(3).Token, Equals(EOF))
+	Assert(t).That(lxr.AheadSkip(0), Equals(it(tok.Identifier, 1, "a")))
+	Assert(t).That(lxr.AheadSkip(2), Equals(it(tok.Number, 11, "1")))
+	Assert(t).That(lxr.AheadSkip(1), Equals(it(tok.Eq, 4, "=")))
+	Assert(t).That(lxr.AheadSkip(3).Token, Equals(tok.Eof))
 }
 
 func TestEscape(t *testing.T) {

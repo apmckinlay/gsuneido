@@ -16,12 +16,13 @@ import (
 	"io/ioutil"
 	"strings"
 
-	c "github.com/apmckinlay/gsuneido/lexer"
+	lex "github.com/apmckinlay/gsuneido/lexer"
+	tok "github.com/apmckinlay/gsuneido/lexer/tokens"
 )
 
 type parser struct {
-	lxr *c.Lexer
-	c.Item
+	lxr *lex.Lexer
+	lex.Item
 	comment string
 }
 
@@ -51,7 +52,7 @@ func RunFile(filename string) bool {
 	if err != nil {
 		panic("can't read " + testdir() + filename)
 	}
-	lxr := c.NewLexer(string(src))
+	lxr := lex.NewLexer(string(src))
 	p := parser{lxr: lxr}
 	p.next(true)
 	return p.run()
@@ -59,16 +60,16 @@ func RunFile(filename string) bool {
 
 func (p *parser) run() bool {
 	ok := true
-	for p.Token != c.EOF {
+	for p.Token != tok.Eof {
 		ok = p.runFixture() && ok
 	}
 	return ok
 }
 
 func (p *parser) runFixture() bool {
-	p.match(c.AT, false) // '@'
+	p.match(tok.At, false) // '@'
 	name := p.Text
-	p.match(c.IDENTIFIER, true)
+	p.match(tok.Identifier, true)
 	fmt.Println(name+":", p.comment)
 	test, present := testmap[name]
 	if !present {
@@ -77,22 +78,22 @@ func (p *parser) runFixture() bool {
 	}
 	n := 0
 	ok := true
-	for p.Token != c.EOF && p.Token != c.AT {
+	for p.Token != tok.Eof && p.Token != tok.At {
 		row := []string{}
 		str := []bool{} // parallel array, whether arg was a quoted string
 		for {
-			str = append(str, p.Token == c.STRING)
+			str = append(str, p.Token == tok.String)
 			text := p.Text
-			if p.Token == c.SUB || p.Token == c.ADD {
+			if p.Token == tok.Sub || p.Token == tok.Add {
 				p.next(false)
 				text += p.Text
 			}
 			row = append(row, text)
 			p.next(false)
-			if p.Token == c.COMMA {
+			if p.Token == tok.Comma {
 				p.next(true)
 			}
-			if p.Token == c.EOF || p.Token == c.NEWLINE {
+			if p.Token == tok.Eof || p.Token == tok.Newline {
 				break
 			}
 		}
@@ -147,7 +148,7 @@ func Fmt(row []string, str []bool) string {
 	return sb.String()
 }
 
-func (p *parser) match(expected c.Token, skip bool) {
+func (p *parser) match(expected tok.Token, skip bool) {
 	if p.Token != expected {
 		panic("syntax error on " + p.Text)
 	}
@@ -160,14 +161,14 @@ func (p *parser) next(skip bool) {
 	for {
 		p.Item = p.lxr.Next()
 		switch p.Token {
-		case c.NEWLINE:
+		case tok.Newline:
 			if !skip {
 				return
 			}
 			nl = true
-		case c.WHITESPACE:
+		case tok.Whitespace:
 			continue
-		case c.COMMENT:
+		case tok.Comment:
 			// capture trailing comment on same line
 			if !nl {
 				p.comment = p.Item.Text

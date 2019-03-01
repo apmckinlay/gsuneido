@@ -6,6 +6,7 @@ import (
 
 	"github.com/apmckinlay/gsuneido/compile/ast"
 	. "github.com/apmckinlay/gsuneido/lexer"
+	tok "github.com/apmckinlay/gsuneido/lexer/tokens"
 )
 
 func newParser(src string) *parser {
@@ -44,8 +45,8 @@ match* methods verify that the current is what is expected and then advance
 next* methods just advance
 */
 
-func (p *parser) evalMatch(result ast.Node, tok Token) ast.Node {
-	p.match(tok)
+func (p *parser) evalMatch(result ast.Node, token tok.Token) ast.Node {
+	p.match(token)
 	return result
 }
 
@@ -54,29 +55,29 @@ func (p *parser) evalNext(result ast.Node) ast.Node {
 	return result
 }
 
-func (p *parser) match(tok Token) {
-	p.mustMatch(tok)
+func (p *parser) match(token tok.Token) {
+	p.mustMatch(token)
 	p.next()
 }
 
 func (p *parser) matchIdent() {
-	if !IsIdent[p.Token] {
+	if !p.Token.IsIdent() {
 		p.error("expecting identifier")
 	}
 	p.next()
 }
 
-func (p *parser) matchIf(tok Token) bool {
-	if tok == p.Token {
+func (p *parser) matchIf(token tok.Token) bool {
+	if token == p.Token {
 		p.next()
 		return true
 	}
 	return false
 }
 
-func (p *parser) mustMatch(tok Token) {
-	if tok != p.Token {
-		p.error("expecting ", tok)
+func (p *parser) mustMatch(token tok.Token) {
+	if token != p.Token {
+		p.error("expecting ", token)
 	}
 }
 
@@ -85,11 +86,11 @@ func (p *parser) next() {
 	p.newline = false
 	for {
 		p.Item = p.lxr.Next()
-		if p.Token == NEWLINE {
-			if p.lxr.AheadSkip(0).Token != Q_MARK {
+		if p.Token == tok.Newline {
+			if p.lxr.AheadSkip(0).Token != tok.QMark {
 				p.newline = true
 			}
-		} else if p.Token != COMMENT && p.Token != WHITESPACE {
+		} else if p.Token != tok.Comment && p.Token != tok.Whitespace {
 			break
 		}
 	}

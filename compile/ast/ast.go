@@ -4,6 +4,7 @@ package ast
 
 import (
 	"github.com/apmckinlay/gsuneido/lexer"
+	tok "github.com/apmckinlay/gsuneido/lexer/tokens"
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
@@ -51,7 +52,7 @@ func (a *Constant) String() string {
 
 type Unary struct {
 	exprNodeT
-	Tok lexer.Token
+	Tok tok.Token
 	E   Expr
 }
 
@@ -66,7 +67,7 @@ func (a *Unary) Children(fn func(Node)) {
 type Binary struct {
 	exprNodeT
 	Lhs Expr
-	Tok lexer.Token
+	Tok tok.Token
 	Rhs Expr
 }
 
@@ -99,7 +100,7 @@ func (a *Trinary) Children(fn func(Node)) {
 // Nary is used for associative binary operators e.g. add, multiply, and, or
 type Nary struct {
 	exprNodeT
-	Tok   lexer.Token
+	Tok   tok.Token
 	Exprs []Expr
 }
 
@@ -253,7 +254,7 @@ type Function struct {
 	Base        Global
 	IsNewMethod bool
 	// Id is set and used by codegen for block parents
-	Id          uint32
+	Id uint32
 }
 
 func (a *Function) String() string {
@@ -317,11 +318,11 @@ func (a *Block) Children(fn func(Node)) {
 type Factory interface {
 	Ident(name string) Expr
 	Constant(val Value) Expr
-	Unary(tok lexer.Token, expr Expr) Expr
-	Binary(lhs Expr, tok lexer.Token, rhs Expr) Expr
+	Unary(tok tok.Token, expr Expr) Expr
+	Binary(lhs Expr, tok tok.Token, rhs Expr) Expr
 	Mem(e Expr, m Expr) Expr
 	Trinary(cond Expr, t Expr, f Expr) Expr
-	Nary(tok lexer.Token, exprs []Expr) Expr
+	Nary(tok tok.Token, exprs []Expr) Expr
 	In(e Expr, exprs []Expr) Expr
 	Call(fn Expr, args []Arg) Expr
 }
@@ -334,16 +335,16 @@ func (Builder) Ident(name string) Expr {
 func (Builder) Constant(val Value) Expr {
 	return &Constant{Val: val}
 }
-func (Builder) Unary(tok lexer.Token, expr Expr) Expr {
+func (Builder) Unary(tok tok.Token, expr Expr) Expr {
 	return &Unary{Tok: tok, E: expr}
 }
-func (Builder) Binary(lhs Expr, tok lexer.Token, rhs Expr) Expr {
+func (Builder) Binary(lhs Expr, tok tok.Token, rhs Expr) Expr {
 	return &Binary{Lhs: lhs, Tok: tok, Rhs: rhs}
 }
 func (Builder) Trinary(cond Expr, t Expr, f Expr) Expr {
 	return &Trinary{Cond: cond, T: t, F: f}
 }
-func (Builder) Nary(tok lexer.Token, exprs []Expr) Expr {
+func (Builder) Nary(tok tok.Token, exprs []Expr) Expr {
 	return &Nary{Tok: tok, Exprs: exprs}
 }
 func (Builder) Mem(e Expr, m Expr) Expr {

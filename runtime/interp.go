@@ -318,7 +318,7 @@ loop:
 				fr.ip += 2
 				t.Pop()
 			}
-		case op.Qmark:
+		case op.QMark:
 			if !t.popbool() {
 				jump()
 			} else {

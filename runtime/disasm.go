@@ -50,7 +50,7 @@ func Disasm1(fn *SuFunc, i int) (int, string) {
 	case op.Global, op.Super:
 		gn := Global(fetchUint16())
 		s += " " + GlobalName(gn)
-	case op.Jump, op.JumpTrue, op.JumpFalse, op.And, op.Or, op.Qmark, op.In, op.JumpIs,
+	case op.Jump, op.JumpTrue, op.JumpFalse, op.And, op.Or, op.QMark, op.In, op.JumpIs,
 		op.JumpIsnt, op.Catch:
 		j := fetchInt16()
 		s += fmt.Sprintf(" %d", i+j)
