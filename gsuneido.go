@@ -77,6 +77,9 @@ func internal(e interface{}) bool {
 }
 
 func printCallStack(cs *SuObject) {
+	if cs == nil {
+		return
+	}
 	for i := 0; i < cs.ListSize(); i++ {
 		fmt.Println(cs.ListGet(i))
 	}

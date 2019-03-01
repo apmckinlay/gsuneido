@@ -1,6 +1,6 @@
 package op
 
-// NOTE: opcodes must match disasm.go
+// NOTE: opcodes must match runtime/disasm.go
 
 const (
 	RETURN = iota
@@ -67,4 +67,8 @@ const (
 	BLOCK
 	ITER
 	FORIN
+	BLOCK_BREAK
+	BLOCK_CONTINUE
+	BLOCK_RETURN
+	BLOCK_RETURN_NULL
 )

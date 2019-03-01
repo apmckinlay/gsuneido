@@ -7,6 +7,10 @@ import (
 	. "github.com/apmckinlay/gsuneido/runtime/op"
 )
 
+var blockBreak = &SuExcept{SuStr: SuStr("block:break")}
+var blockContinue = &SuExcept{SuStr: SuStr("block:continue")}
+var blockReturn = &SuExcept{SuStr: SuStr("block return")}
+
 // Call sets up a frame to Run a compiled Suneido function
 // The stack must already be in the form required by the function (massaged)
 func (t *Thread) Call(fn *SuFunc) Value {
@@ -81,7 +85,7 @@ func (t *Thread) interp(catchJump *int) (ret Value) {
 	fr := &t.frames[t.fp-1]
 	code := fr.fn.Code
 	super := 0
-	recovering := false
+	catchPat := ""
 
 	fetchUint8 := func() int {
 		fr.ip++
@@ -98,6 +102,42 @@ func (t *Thread) interp(catchJump *int) (ret Value) {
 	jump := func() {
 		fr.ip += fetchInt16()
 	}
+	defer func() {
+		if *catchJump == 0 && fr.fn.Id == 0 {
+			return // this frame isn't catching
+		}
+		e := recover()
+		if e == nil {
+			return // not panic'ing, normal return
+		}
+		if e == blockReturn {
+			if t.frames[t.fp-1].fn.OuterId != fr.fn.Id {
+				panic(e) // not our block, rethrow
+			}
+			return // normal return
+		}
+		if *catchJump == 0 {
+			return // not catching
+		}
+		se, ok := e.(*SuExcept)
+		if !ok {
+			// first catch creates SuExcept with callstack
+			var ss SuStr
+			if re, ok := e.(runtime.Error); ok {
+				ss = SuStr(re.Error())
+			} else if s, ok := e.(string); ok {
+				ss = SuStr(s)
+			} else {
+				ss = e.(SuStr)
+			}
+			se = NewSuExcept(t, ss)
+		}
+		if catchMatch(string(se.SuStr), catchPat) {
+			ret = se // tells run we're catching
+		} else {
+			panic(se)
+		}
+	}()
 
 loop:
 	for fr.ip < len(code) {
@@ -328,37 +368,7 @@ loop:
 			break loop
 		case TRY:
 			*catchJump = fr.ip + fetchInt16()
-			catchPat := string(fr.fn.Values[fetchUint8()].(SuStr))
-			if !recovering {
-				recovering = true
-				defer func() {
-					if *catchJump == 0 {
-						return // we're no longer catching
-					}
-					e := recover()
-					if e == nil {
-						return // not panic'ing, normal return
-					}
-					se, ok := e.(*SuExcept)
-					if !ok {
-						// first recover creates SuExcept with callstack
-						var ss SuStr
-						if re, ok := e.(runtime.Error); ok {
-							ss = SuStr(re.Error())
-						} else if s, ok := e.(string); ok {
-							ss = SuStr(s)
-						} else {
-							ss = e.(SuStr)
-						}
-						se = NewSuExcept(t, ss)
-					}
-					if catchMatch(string(se.SuStr), catchPat) {
-						ret = se // tells run we're catching
-					} else {
-						panic(se)
-					}
-				}()
-			}
+			catchPat = string(fr.fn.Values[fetchUint8()].(SuStr))
 		case CATCH:
 			fr.ip += fetchInt16()
 			*catchJump = 0
@@ -369,6 +379,15 @@ loop:
 			fn := fr.fn.Values[fetchUint8()].(*SuFunc)
 			block := &SuBlock{SuFunc: *fn, locals: fr.locals, this: fr.this}
 			t.Push(block)
+		case BLOCK_BREAK:
+			panic(blockBreak)
+		case BLOCK_CONTINUE:
+			panic(blockContinue)
+		case BLOCK_RETURN_NULL:
+			t.Push(nil)
+			fallthrough
+		case BLOCK_RETURN:
+			panic(blockReturn)
 		case CALLFUNC:
 			f := t.Pop()
 			ai := fetchUint8()

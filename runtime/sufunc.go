@@ -17,6 +17,12 @@ type SuFunc struct {
 
 	// ClassName is used to privatize dot params
 	ClassName string
+
+	// Id is a unique identifier for a function defining blocks
+	Id uint32
+	// OuterId is the Id of the outer SuFunc
+	// It is used by interp to handle block return
+	OuterId uint32
 }
 
 var _ Value = (*SuFunc)(nil) // verify *SuFunc satisfies Value

@@ -5,6 +5,7 @@ package compile
 import (
 	"fmt"
 	"math"
+	"sync/atomic"
 
 	"github.com/apmckinlay/gsuneido/compile/ast"
 	. "github.com/apmckinlay/gsuneido/lexer"
@@ -16,19 +17,26 @@ import (
 
 // cgen is the context/results for compiling a function or block
 type cgen struct {
-	outerFn        *ast.Function
+	outerFn *ast.Function
+	// outerVars is used to determine if block is closure
+	// it is lazily derived from outerFn
 	outerVars      map[string]bool
 	code           []byte
 	argspecs       []*ArgSpec
 	base           Global
 	isNew          bool
+	isBlock        bool
 	firstStatement bool
 	ParamSpec
 }
 
 // codegen compiles an Ast to an SuFunc
 func codegen(fn *ast.Function) *SuFunc {
-	cg := cgen{outerFn: fn, base: fn.Base, isNew: fn.IsNewMethod}
+	return codegen2(fn, false)
+}
+
+func codegen2(fn *ast.Function, isBlock bool) *SuFunc {
+	cg := cgen{outerFn: fn, base: fn.Base, isNew: fn.IsNewMethod, isBlock: isBlock}
 	return cg.codegen(fn)
 }
 
@@ -43,12 +51,14 @@ func (cg *cgen) codegen(fn *ast.Function) *SuFunc {
 		Nlocals:   uint8(len(cg.Names)),
 		ParamSpec: cg.ParamSpec,
 		ArgSpecs:  cg.argspecs,
+		Id:        fn.Id,
 	}
 }
 
-func codegenBlock(ast *ast.Function, outerFn *ast.Function, outerNames []string) (*SuFunc, []string) {
+func codegenBlock(ast *ast.Function,
+	outerFn *ast.Function, outerNames []string) (*SuFunc, []string) {
 	base := len(outerNames)
-	cg := cgen{outerFn: outerFn, base: ast.Base}
+	cg := cgen{outerFn: outerFn, base: ast.Base, isBlock: true}
 	cg.Names = outerNames
 
 	f := cg.codegen(ast)
@@ -247,23 +257,37 @@ func (cg *cgen) returnStmt(node *ast.Return, lastStmt bool) {
 	if node.E != nil {
 		cg.expr(node.E)
 	}
-	if !lastStmt {
-		cg.emit(op.RETURN)
+	if cg.isBlock {
+		if node.E == nil {
+			cg.emit(op.BLOCK_RETURN_NULL)
+		} else {
+			cg.emit(op.BLOCK_RETURN)
+		}
+	} else {
+		if !lastStmt {
+			cg.emit(op.RETURN)
+		}
 	}
 }
 
 func (cg *cgen) breakStmt(labels *Labels) {
-	if labels == nil {
+	if labels != nil {
+		labels.brk = cg.emitJump(op.JUMP, labels.brk)
+	} else if cg.isBlock {
+		cg.emit(op.BLOCK_BREAK)
+	} else {
 		panic("break can only be used within a loop")
 	}
-	labels.brk = cg.emitJump(op.JUMP, labels.brk)
 }
 
 func (cg *cgen) continueStmt(labels *Labels) {
-	if labels == nil {
+	if labels != nil {
+		cg.emitBwdJump(op.JUMP, labels.cont)
+	} else if cg.isBlock {
+		cg.emit(op.BLOCK_CONTINUE)
+	} else {
 		panic("continue can only be used within a loop")
 	}
-	cg.emitBwdJump(op.JUMP, labels.cont)
 }
 
 func (cg *cgen) ifStmt(node *ast.If, labels *Labels) {
@@ -797,20 +821,27 @@ func (cg *cgen) argSpecEq(a1, a2 *ArgSpec) bool {
 	return true
 }
 
+var funcId uint32
+
 func (cg *cgen) block(b *ast.Block) {
 	f := &b.Function
 	blockVars := ast.VarSet(f)
 	itParam(f, blockVars)
+	var fn *SuFunc
 	if cg.blockIsFunction(blockVars) {
-		fn := codegen(f)
+		fn = codegen2(f, true)
 		cg.emitValue(fn)
 	} else {
 		// closure
-		var fn *SuFunc
 		fn, cg.Names = codegenBlock(f, cg.outerFn, cg.Names)
 		i := cg.value(fn)
 		cg.emitUint8(op.BLOCK, i)
 	}
+	if cg.outerFn.Id == 0 {
+		cg.outerFn.Id = atomic.AddUint32(&funcId, 1)
+	fmt.Println("OuterId", cg.outerFn.Id)
+	}
+	fn.OuterId = cg.outerFn.Id
 }
 
 func itParam(f *ast.Function, blockVars map[string]bool) {

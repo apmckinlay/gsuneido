@@ -28,9 +28,11 @@ func TestBuiltinString(t *testing.T) {
 }
 
 // func TestTmp(t *testing.T) {
-// 	args := []string{`try throw "foo"; false`, `false`}
+// 	args := []string{`f = function (b){ c={}; b() }; f({ return 123 }); 456`, `123`}
 // 	strq := []bool{}
-// 	pt_execute(args, strq)
+// 	if ! pt_execute(args, strq) {
+// 		t.Fail()
+// 	}
 // }
 
 func TestPtestExecute(t *testing.T) {

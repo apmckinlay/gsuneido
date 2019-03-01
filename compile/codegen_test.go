@@ -145,12 +145,13 @@ func disasm(fn *SuFunc) string {
 }
 
 func TestControl(t *testing.T) {
+	asBlock := false
 	DefaultSingleQuotes = true
 	defer func() { DefaultSingleQuotes = false }()
 	test := func(src, expected string) {
 		t.Helper()
 		ast := ParseFunction("function () {\n" + src + "\n}")
-		fn := codegen(ast)
+		fn := codegen2(ast, asBlock)
 		buf := strings.Builder{}
 		Disasm(&buf, fn)
 		s := buf.String()
@@ -352,7 +353,22 @@ func TestControl(t *testing.T) {
         13: jump 3
         16: jump 3
         19: pop
-        20:`)
+		20:`)
+
+	asBlock = true
+	test(`break`, `
+		0: blockbreak
+        1:`)
+	test(`continue`, `
+		0: blockcontinue
+        1:`)
+	test(`return`, `
+		0: blockreturnnull
+        1:`)
+	test(`return true`, `
+		0: true
+		1: blockreturn
+        2:`)
 }
 
 func TestBlock(t *testing.T) {
