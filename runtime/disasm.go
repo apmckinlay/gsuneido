@@ -10,7 +10,7 @@ import (
 )
 
 var asm = []string{
-	"return", "pop", "dup", "dup2", "dupx2", "int", "value",
+	"return", "returnnull", "pop", "dup", "dup2", "dupx2", "int", "value",
 	"is", "isnt", "match", "matchnot", "lt", "lte", "gt", "gte",
 	"add", "sub", "cat", "mul", "div", "mod",
 	"lshift", "rshift", "bitor", "bitand", "bitxor",

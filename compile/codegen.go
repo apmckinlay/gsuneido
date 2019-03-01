@@ -265,7 +265,11 @@ func (cg *cgen) returnStmt(node *ast.Return, lastStmt bool) {
 		}
 	} else {
 		if !lastStmt {
-			cg.emit(op.RETURN)
+			if node.E == nil {
+				cg.emit(op.RETURN_NULL)
+			} else {
+				cg.emit(op.RETURN)
+			}
 		}
 	}
 }
@@ -839,7 +843,6 @@ func (cg *cgen) block(b *ast.Block) {
 	}
 	if cg.outerFn.Id == 0 {
 		cg.outerFn.Id = atomic.AddUint32(&funcId, 1)
-	fmt.Println("OuterId", cg.outerFn.Id)
 	}
 	fn.OuterId = cg.outerFn.Id
 }

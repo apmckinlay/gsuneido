@@ -4,6 +4,7 @@ package op
 
 const (
 	RETURN = iota
+	RETURN_NULL
 	POP
 	DUP
 	DUP2

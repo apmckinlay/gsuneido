@@ -61,10 +61,10 @@ func (t *Thread) run() Value {
 		result := t.interp(&catchJump)
 		if result == nil {
 			t.fp = fp - 1
-			if t.sp > sp {
-				return t.Pop()
+			if t.sp <= sp {
+				return nil // implicit return from last statement had no value
 			}
-			return nil
+			return t.Top()
 		}
 		// try block threw
 		t.sp = sp
@@ -364,6 +364,9 @@ loop:
 			if next.Equal(iter) {
 				fr.ip += brk - 1 // jump
 			}
+		case RETURN_NULL:
+			t.Push(nil)
+			fallthrough
 		case RETURN:
 			break loop
 		case TRY:
