@@ -20,97 +20,97 @@ func TestCodegen(t *testing.T) {
 			t.Errorf("\n%s\nexpect: %s\nactual: %s", src, expected, actual)
 		}
 	}
-	test("true", "true")
+	test("true", "True")
 	test("", "")
 	test("return", "")
-	test("return true", "true")
-	test("true", "true")
-	test("123", "int 123")
-	test("a", "load a")
-	test("_a", "dyload _a")
-	test("G", "global G")
-	test("this", "this")
+	test("return true", "True")
+	test("true", "True")
+	test("123", "Int 123")
+	test("a", "Load a")
+	test("_a", "Dyload _a")
+	test("G", "Global G")
+	test("this", "This")
 
-	test("-a", "load a, uminus")
-	test("a + b", "load a, load b, add")
-	test("a - b", "load a, load b, sub")
-	test("a + b + c", "load a, load b, add, load c, add")
-	test("a + b - c", "load a, load b, add, load c, sub")
-	test("a - b - c", "load a, load b, sub, load c, sub")
+	test("-a", "Load a, UnaryMinus")
+	test("a + b", "Load a, Load b, Add")
+	test("a - b", "Load a, Load b, Sub")
+	test("a + b + c", "Load a, Load b, Add, Load c, Add")
+	test("a + b - c", "Load a, Load b, Add, Load c, Sub")
+	test("a - b - c", "Load a, Load b, Sub, Load c, Sub")
 
-	test("a * b", "load a, load b, mul")
-	test("a / b", "load a, load b, div")
-	test("a * b * c", "load a, load b, mul, load c, mul")
-	test("a * b / c", "load a, load b, mul, load c, div")
-	test("a / b / c", "load a, load b, div, load c, div")
+	test("a * b", "Load a, Load b, Mul")
+	test("a / b", "Load a, Load b, Div")
+	test("a * b * c", "Load a, Load b, Mul, Load c, Mul")
+	test("a * b / c", "Load a, Load b, Mul, Load c, Div")
+	test("a / b / c", "Load a, Load b, Div, Load c, Div")
 
-	test("a % b", "load a, load b, mod")
-	test("a % b % c", "load a, load b, mod, load c, mod")
+	test("a % b", "Load a, Load b, Mod")
+	test("a % b % c", "Load a, Load b, Mod, Load c, Mod")
 
-	test("a | b | c", "load a, load b, bitor, load c, bitor")
+	test("a | b | c", "Load a, Load b, BitOr, Load c, BitOr")
 
-	test("a is true", "load a, true, is")
-	test("s = 'hello'", "value 'hello', store s")
-	test("_dyn = 123", "int 123, store _dyn")
-	test("a = b = c", "load c, store b, store a")
-	test("a = true; not a", "true, store a, pop, load a, not")
-	test("n += 5", "load n, int 5, add, store n")
-	test("++n", "load n, one, add, store n")
-	test("n--", "load n, dup, one, sub, store n, pop")
-	test("a.b", "load a, value 'b', get")
-	test("a[2]", "load a, int 2, get")
-	test("a.b = 123", "load a, value 'b', int 123, put")
-	test("a[2] = false", "load a, int 2, false, put")
-	test("a.b += 5", "load a, value 'b', dup2, get, int 5, add, put")
-	test("++a.b", "load a, value 'b', dup2, get, one, add, put")
-	test("a.b++", "load a, value 'b', dup2, get, dupx2, one, add, put, pop")
-	test("a[..]", "load a, zero, maxint, rangeto")
-	test("a[..3]", "load a, zero, int 3, rangeto")
-	test("a[2..]", "load a, int 2, maxint, rangeto")
-	test("a[2..3]", "load a, int 2, int 3, rangeto")
-	test("a[::]", "load a, zero, maxint, rangelen")
-	test("a[::3]", "load a, zero, int 3, rangelen")
-	test("a[2::]", "load a, int 2, maxint, rangelen")
-	test("a[2::3]", "load a, int 2, int 3, rangelen")
+	test("a is true", "Load a, True, Is")
+	test("s = 'hello'", "Value 'hello', Store s")
+	test("_dyn = 123", "Int 123, Store _dyn")
+	test("a = b = c", "Load c, Store b, Store a")
+	test("a = true; not a", "True, Store a, Pop, Load a, Not")
+	test("n += 5", "Load n, Int 5, Add, Store n")
+	test("++n", "Load n, One, Add, Store n")
+	test("n--", "Load n, Dup, One, Sub, Store n, Pop")
+	test("a.b", "Load a, Value 'b', Get")
+	test("a[2]", "Load a, Int 2, Get")
+	test("a.b = 123", "Load a, Value 'b', Int 123, Put")
+	test("a[2] = false", "Load a, Int 2, False, Put")
+	test("a.b += 5", "Load a, Value 'b', Dup2, Get, Int 5, Add, Put")
+	test("++a.b", "Load a, Value 'b', Dup2, Get, One, Add, Put")
+	test("a.b++", "Load a, Value 'b', Dup2, Get, Dupx2, One, Add, Put, Pop")
+	test("a[..]", "Load a, Zero, MaxInt, RangeTo")
+	test("a[..3]", "Load a, Zero, Int 3, RangeTo")
+	test("a[2..]", "Load a, Int 2, MaxInt, RangeTo")
+	test("a[2..3]", "Load a, Int 2, Int 3, RangeTo")
+	test("a[::]", "Load a, Zero, MaxInt, RangeLen")
+	test("a[::3]", "Load a, Zero, Int 3, RangeLen")
+	test("a[2::]", "Load a, Int 2, MaxInt, RangeLen")
+	test("a[2::3]", "Load a, Int 2, Int 3, RangeLen")
 
 	test("return", "")
-	test("return 123", "int 123")
+	test("return 123", "Int 123")
 
-	test("throw 'fubar'", "value 'fubar', throw")
+	test("throw 'fubar'", "Value 'fubar', Throw")
 
-	test("f()", "load f, callfunc0")
-	test("F()", "global F, callfunc0")
-	test("f(a, b)", "load a, load b, load f, callfunc2")
-	test("f(1,2,3,4)", "one, int 2, int 3, int 4, load f, callfunc4")
-	test("f(1,2,3,4,5)", "one, int 2, int 3, int 4, int 5, load f, callfunc(?, ?, ?, ?, ?)")
-	test("f(a, b, c:, d: 0)", "load a, load b, true, zero, load f, callfunc(?, ?, c:, d:)")
-	test("f(@args)", "load args, load f, callfunc(@)")
-	test("f(@+1args)", "load args, load f, callfunc(@+1)")
-	test("f(a: a)", "load a, load f, callfunc(a:)")
-	test("f(:a)", "load a, load f, callfunc(a:)")
+	test("f()", "Load f, CallFunc0")
+	test("F()", "Global F, CallFunc0")
+	test("f(a, b)", "Load a, Load b, Load f, CallFunc2")
+	test("f(1,2,3,4)", "One, Int 2, Int 3, Int 4, Load f, CallFunc4")
+	test("f(1,2,3,4,5)", "One, Int 2, Int 3, Int 4, Int 5, Load f, CallFunc(?, ?, ?, ?, ?)")
+	test("f(a, b, c:, d: 0)", "Load a, Load b, True, Zero, Load f, CallFunc(?, ?, c:, d:)")
+	test("f(@args)", "Load args, Load f, CallFunc(@)")
+	test("f(@+1args)", "Load args, Load f, CallFunc(@+1)")
+	test("f(a: a)", "Load a, Load f, CallFunc(a:)")
+	test("f(:a)", "Load a, Load f, CallFunc(a:)")
 	test("f(12, 34: 56, false:)",
-		"int 12, int 56, true, load f, callfunc(?, 34:, false:)")
+		"Int 12, Int 56, True, Load f, CallFunc(?, 34:, false:)")
 
-	test("[1, a: 2, :b]", "one, int 2, load b, global Record, callfunc(?, a:, b:)")
+	test("[1, a: 2, :b]", "One, Int 2, Load b, Global Record, CallFunc(?, a:, b:)")
 
-	test("char.Size()", "load char, value 'Size', callmeth0")
-	test("a.f(123)", "load a, int 123, value 'f', callmeth1")
-	test("a.f(1,2,3)", "load a, one, int 2, int 3, value 'f', callmeth3")
-	test("a.f(1,2,3,4)", "load a, one, int 2, int 3, int 4, value 'f', callmeth4")
-	test("a.f(x:)", "load a, true, value 'f', callmeth(x:)")
-	test("a[b](123)", "load a, int 123, load b, callmeth1")
-	test("a[b $ c](123)", "load a, int 123, load b, load c, cat, callmeth1")
-	test("a().Add(123)", "load a, callfunc0, int 123, value 'Add', callmeth1")
+	test("char.Size()", "Load char, Value 'Size', CallMeth0")
+	test("a.f(123)", "Load a, Int 123, Value 'f', CallMeth1")
+	test("a.f(1,2,3)", "Load a, One, Int 2, Int 3, Value 'f', CallMeth3")
+	test("a.f(1,2,3,4)", "Load a, One, Int 2, Int 3, Int 4, Value 'f', CallMeth4")
+	test("a.f(x:)", "Load a, True, Value 'f', CallMeth(x:)")
+	test("a[b](123)", "Load a, Int 123, Load b, CallMeth1")
+	test("a[b $ c](123)", "Load a, Int 123, Load b, Load c, Cat, CallMeth1")
+	test("a().Add(123)", "Load a, CallFunc0, Int 123, Value 'Add', CallMeth1")
 	test("a().Add(123).Size()",
-		"load a, callfunc0, int 123, value 'Add', callmeth1, value 'Size', callmeth0")
+		"Load a, CallFunc0, Int 123, Value 'Add', CallMeth1, Value 'Size', CallMeth0")
 	test("a.b(1).c(2)",
-		"load a, one, value 'b', callmeth1, int 2, value 'c', callmeth1")
+		"Load a, One, Value 'b', CallMeth1, Int 2, Value 'c', CallMeth1")
 
-	test("function () { }", "value /* function */")
+	test("function () { }", "Value /* function */")
 
-	test("new c", "load c, value '*new*', callmeth0")
-	test("new c()", "load c, value '*new*', callmeth0")
-	test("new c(1)", "load c, one, value '*new*', callmeth1")
+	test("new c", "Load c, Value '*new*', CallMeth0")
+	test("new c()", "Load c, Value '*new*', CallMeth0")
+	test("new c(1)", "Load c, One, Value '*new*', CallMeth1")
 }
 
 func TestCodegenSuper(t *testing.T) {
@@ -126,12 +126,12 @@ func TestCodegenSuper(t *testing.T) {
 			t.Errorf("\n%s\nexpect: %s\nactual: %s", src, expected, actual)
 		}
 	}
-	test("New(){}", "this, value 'New', super Foo, callmeth0")
+	test("New(){}", "This, Value 'New', Super Foo, CallMeth0")
 
-	// super(...) => super.New(...)
-	test("New(){super(1)}", "this, one, value 'New', super Foo, callmeth1")
+	// Super(...) => Super.New(...)
+	test("New(){super(1)}", "This, One, Value 'New', Super Foo, CallMeth1")
 
-	test("F(){super.Bar(0,1)}", "this, zero, one, value 'Bar', super Foo, callmeth2")
+	test("F(){super.Bar(0,1)}", "This, Zero, One, Value 'Bar', Super Foo, CallMeth2")
 }
 
 func disasm(fn *SuFunc) string {
@@ -159,215 +159,215 @@ func TestControl(t *testing.T) {
 	}
 
 	test(`try F()`, `
-		0: try 13 ''
-        4: global F
-        7: callfunc0
-        9: pop
-        10: catch 14
-        13: pop
+		0: Try 13 ''
+        4: Global F
+        7: CallFunc0
+        9: Pop
+        10: Catch 14
+        13: Pop
         14:`)
 	test(`try F() catch G()`, `
-		0: try 13 ''
-        4: global F
-        7: callfunc0
-        9: pop
-        10: catch 20
-        13: pop
-        14: global G
-        17: callfunc0
-        19: pop
+		0: Try 13 ''
+        4: Global F
+        7: CallFunc0
+        9: Pop
+        10: Catch 20
+        13: Pop
+        14: Global G
+        17: CallFunc0
+        19: Pop
         20:`)
 	test(`try F() catch (x, "y") G()`, `
-		0: try 13 'y'
-        4: global F
-        7: callfunc0
-        9: pop
-        10: catch 22
-        13: store x
-        15: pop
-        16: global G
-        19: callfunc0
-        21: pop
+		0: Try 13 'y'
+        4: Global F
+        7: CallFunc0
+        9: Pop
+        10: Catch 22
+        13: Store x
+        15: Pop
+        16: Global G
+        19: CallFunc0
+        21: Pop
         22:`)
 
 	test("a and b", `
-		0: load a
-		2: and 8
-		5: load b
-		7: bool
+		0: Load a
+		2: And 8
+		5: Load b
+		7: Bool
 		8:`)
 	test("a or b", `
-		0: load a
-		2: or 8
-		5: load b
-		7: bool
+		0: Load a
+		2: Or 8
+		5: Load b
+		7: Bool
 		8:`)
 	test("a or b or c", `
-		0: load a
-		2: or 13
-		5: load b
-		7: or 13
-		10: load c
-		12: bool
+		0: Load a
+		2: Or 13
+		5: Load b
+		7: Or 13
+		10: Load c
+		12: Bool
 		13:`)
 
 	test("a ? b : c", `
-		0: load a
-		2: qmark 10
-		5: load b
-		7: jump 12
-		10: load c
+		0: Load a
+		2: Qmark 10
+		5: Load b
+		7: Jump 12
+		10: Load c
 		12:`)
 
 	test("a in (4,5,6)", `
-		0: load a
-        2: int 4
-        5: in 18
-        8: int 5
-        11: in 18
-        14: int 6
-        17: is
+		0: Load a
+        2: Int 4
+        5: In 18
+        8: Int 5
+        11: In 18
+        14: Int 6
+        17: Is
         18:`)
 
 	test("while (a) b", `
-		0: jump 6
-		3: load b
-		5: pop
-		6: load a
-		8: tjump 3
+		0: Jump 6
+		3: Load b
+		5: Pop
+		6: Load a
+		8: JumpTrue 3
 		11:`)
 	test("while a\n;", `
-		0: jump 3
-		3: load a
-		5: tjump 3
+		0: Jump 3
+		3: Load a
+		5: JumpTrue 3
 		8:`)
 
 	test("if (a) b", `
-		0: load a
-		2: fjump 8
-		5: load b
-		7: pop
+		0: Load a
+		2: JumpFalse 8
+		5: Load b
+		7: Pop
 		8:`)
 	test("if (a) b else c", `
-		0: load a
-		2: fjump 11
-		5: load b
-		7: pop
-		8: jump 14
-		11: load c
-		13: pop
+		0: Load a
+		2: JumpFalse 11
+		5: Load b
+		7: Pop
+		8: Jump 14
+		11: Load c
+		13: Pop
 		14:`)
 
 	test("switch { case 1: b }", `
-		0: true
-        1: one
-        2: nejump 11
-        5: load b
-        7: pop
-        8: jump 15
-        11: pop
-        12: value 'unhandled switch value'
-        14: throw
+		0: True
+        1: One
+        2: JumpIsnt 11
+        5: Load b
+        7: Pop
+        8: Jump 15
+        11: Pop
+        12: Value 'unhandled switch value'
+        14: Throw
         15:`)
 	test("switch a { case 1,2: b case 3: c default: d }", `
-		0: load a
-        2: one
-        3: eqjump 12
-        6: int 2
-        9: nejump 18
-        12: load b
-        14: pop
-        15: jump 34
-        18: int 3
-        21: nejump 30
-        24: load c
-        26: pop
-        27: jump 34
-        30: pop
-        31: load d
-        33: pop
+		0: Load a
+        2: One
+        3: JumpIs 12
+        6: Int 2
+        9: JumpIsnt 18
+        12: Load b
+        14: Pop
+        15: Jump 34
+        18: Int 3
+        21: JumpIsnt 30
+        24: Load c
+        26: Pop
+        27: Jump 34
+        30: Pop
+        31: Load d
+        33: Pop
         34:`)
 
 	test("forever { break }", `
-		0: jump 6
-		3: jump 0
+		0: Jump 6
+		3: Jump 0
 		6:`)
 
 	test("for(;;) { break }", `
-		0: jump 6
-		3: jump 0
+		0: Jump 6
+		3: Jump 0
 		6:`)
 
 	test("while a { b; break; continue }", `
-		0: jump 12
-		3: load b
-		5: pop
-		6: jump 17
-		9: jump 0
-		12: load a
-		14: tjump 3
+		0: Jump 12
+		3: Load b
+		5: Pop
+		6: Jump 17
+		9: Jump 0
+		12: Load a
+		14: JumpTrue 3
 		17:`)
 
 	test("do a while b", `
-		0: load a
-		2: pop
-		3: load b
-		5: tjump 0
+		0: Load a
+		2: Pop
+		3: Load b
+		5: JumpTrue 0
 		8:`)
 
 	test("for (;a;) { b; break; continue }", `
-		0: jump 12
-		3: load b
-		5: pop
-		6: jump 17
-		9: jump 0
-		12: load a
-		14: tjump 3
+		0: Jump 12
+		3: Load b
+		5: Pop
+		6: Jump 17
+		9: Jump 0
+		12: Load a
+		14: JumpTrue 3
 		17:`)
 
 	test("for (i = 0; i < 9; ++i) body", `
-		0: zero
-        1: store i
-        3: pop
-        4: jump 17
-        7: load body
-        9: pop
-        10: load i
-        12: one
-        13: add
-        14: store i
-        16: pop
-        17: load i
-        19: int 9
-        22: lt
-        23: tjump 7
+		0: Zero
+        1: Store i
+        3: Pop
+        4: Jump 17
+        7: Load body
+        9: Pop
+        10: Load i
+        12: One
+        13: Add
+        14: Store i
+        16: Pop
+        17: Load i
+        19: Int 9
+        22: Lt
+        23: JumpTrue 7
 		26:`)
 
 	test(`for (x in y) { a; break; continue }`, `
-		0: load y
-        2: iter
-        3: forin x 19
-        7: load a
-        9: pop
-        10: jump 19
-        13: jump 3
-        16: jump 3
-        19: pop
+		0: Load y
+        2: Iter
+        3: ForIn x 19
+        7: Load a
+        9: Pop
+        10: Jump 19
+        13: Jump 3
+        16: Jump 3
+        19: Pop
 		20:`)
 
 	asBlock = true
 	test(`break`, `
-		0: blockbreak
+		0: BlockBreak
         1:`)
 	test(`continue`, `
-		0: blockcontinue
+		0: BlockContinue
         1:`)
 	test(`return`, `
-		0: blockreturnnull
+		0: BlockReturnNil
         1:`)
 	test(`return true`, `
-		0: true
-		1: blockreturn
+		0: True
+		1: BlockReturn
         2:`)
 }
 
@@ -382,6 +382,6 @@ func TestBlock(t *testing.T) {
 
 	Assert(t).That(block.ParamSpec.Params(), Equals("(a)"))
 
-	Assert(t).That(disasm(fn), Equals("block, store b"))
-	Assert(t).That(disasm(block), Equals("load a, load x, add"))
+	Assert(t).That(disasm(fn), Equals("Block, Store b"))
+	Assert(t).That(disasm(block), Equals("Load a, Load x, Add"))
 }

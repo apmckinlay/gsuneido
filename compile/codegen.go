@@ -10,7 +10,7 @@ import (
 	"github.com/apmckinlay/gsuneido/compile/ast"
 	. "github.com/apmckinlay/gsuneido/lexer"
 	. "github.com/apmckinlay/gsuneido/runtime"
-	"github.com/apmckinlay/gsuneido/runtime/op"
+	op "github.com/apmckinlay/gsuneido/runtime/opcodes"
 	"github.com/apmckinlay/gsuneido/util/str"
 	"github.com/apmckinlay/gsuneido/util/verify"
 )
@@ -98,39 +98,39 @@ func allZero(flags []Flag) bool {
 var zeroFlags [MaxArgs]Flag
 
 // binary and nary ast node token to operation
-var tok2op = [Ntokens]byte{
-	ADD:      op.ADD,
-	SUB:      op.SUB,
-	CAT:      op.CAT,
-	MUL:      op.MUL,
-	DIV:      op.DIV,
-	MOD:      op.MOD,
-	LSHIFT:   op.LSHIFT,
-	RSHIFT:   op.RSHIFT,
-	BITOR:    op.BITOR,
-	BITAND:   op.BITAND,
-	BITXOR:   op.BITXOR,
-	ADDEQ:    op.ADD,
-	SUBEQ:    op.SUB,
-	CATEQ:    op.CAT,
-	MULEQ:    op.MUL,
-	DIVEQ:    op.DIV,
-	MODEQ:    op.MOD,
-	LSHIFTEQ: op.LSHIFT,
-	RSHIFTEQ: op.RSHIFT,
-	BITOREQ:  op.BITOR,
-	BITANDEQ: op.BITAND,
-	BITXOREQ: op.BITXOR,
-	IS:       op.IS,
-	ISNT:     op.ISNT,
-	MATCH:    op.MATCH,
-	MATCHNOT: op.MATCHNOT,
-	LT:       op.LT,
-	LTE:      op.LTE,
-	GT:       op.GT,
-	GTE:      op.GTE,
-	AND:      op.AND,
-	OR:       op.OR,
+var tok2op = [Ntokens]op.Opcode{
+	ADD:      op.Add,
+	SUB:      op.Sub,
+	CAT:      op.Cat,
+	MUL:      op.Mul,
+	DIV:      op.Div,
+	MOD:      op.Mod,
+	LSHIFT:   op.LeftShift,
+	RSHIFT:   op.RightShift,
+	BITOR:    op.BitOr,
+	BITAND:   op.BitAnd,
+	BITXOR:   op.BitXor,
+	ADDEQ:    op.Add,
+	SUBEQ:    op.Sub,
+	CATEQ:    op.Cat,
+	MULEQ:    op.Mul,
+	DIVEQ:    op.Div,
+	MODEQ:    op.Mod,
+	LSHIFTEQ: op.LeftShift,
+	RSHIFTEQ: op.RightShift,
+	BITOREQ:  op.BitOr,
+	BITANDEQ: op.BitAnd,
+	BITXOREQ: op.BitXor,
+	IS:       op.Is,
+	ISNT:     op.Isnt,
+	MATCH:    op.Match,
+	MATCHNOT: op.MatchNot,
+	LT:       op.Lt,
+	LTE:      op.Lte,
+	GT:       op.Gt,
+	GTE:      op.Gte,
+	AND:      op.And,
+	OR:       op.Or,
 }
 
 func (cg *cgen) function(fn *ast.Function) {
@@ -164,10 +164,10 @@ func (cg *cgen) chainNew(fn *ast.Function) {
 	if !fn.IsNewMethod || hasSuperCall(fn.Body) || cg.base <= 0 {
 		return
 	}
-	cg.emit(op.THIS)
+	cg.emit(op.This)
 	cg.emitValue(SuStr("New"))
-	cg.emitUint16(op.SUPER, cg.base)
-	cg.emitUint8(op.CALLMETH, 0)
+	cg.emitUint16(op.Super, cg.base)
+	cg.emitUint8(op.CallMeth, 0)
 }
 
 func hasSuperCall(stmts []ast.Statement) bool {
@@ -230,7 +230,7 @@ func (cg *cgen) statement(node ast.Node, labels *Labels, lastStmt bool) {
 		cg.forInStmt(node)
 	case *ast.Throw:
 		cg.expr(node.E)
-		cg.emit(op.THROW)
+		cg.emit(op.Throw)
 	case *ast.TryCatch:
 		cg.tryCatchStmt(node, labels)
 	case *ast.Break:
@@ -240,7 +240,7 @@ func (cg *cgen) statement(node ast.Node, labels *Labels, lastStmt bool) {
 	case *ast.Expression:
 		cg.expr(node.E)
 		if !lastStmt {
-			cg.emit(op.POP)
+			cg.emit(op.Pop)
 		}
 	default:
 		panic("unexpected statement type " + fmt.Sprintf("%T", node))
@@ -259,16 +259,16 @@ func (cg *cgen) returnStmt(node *ast.Return, lastStmt bool) {
 	}
 	if cg.isBlock {
 		if node.E == nil {
-			cg.emit(op.BLOCK_RETURN_NULL)
+			cg.emit(op.BlockReturnNil)
 		} else {
-			cg.emit(op.BLOCK_RETURN)
+			cg.emit(op.BlockReturn)
 		}
 	} else {
 		if !lastStmt {
 			if node.E == nil {
-				cg.emit(op.RETURN_NULL)
+				cg.emit(op.ReturnNil)
 			} else {
-				cg.emit(op.RETURN)
+				cg.emit(op.Return)
 			}
 		}
 	}
@@ -276,9 +276,9 @@ func (cg *cgen) returnStmt(node *ast.Return, lastStmt bool) {
 
 func (cg *cgen) breakStmt(labels *Labels) {
 	if labels != nil {
-		labels.brk = cg.emitJump(op.JUMP, labels.brk)
+		labels.brk = cg.emitJump(op.Jump, labels.brk)
 	} else if cg.isBlock {
-		cg.emit(op.BLOCK_BREAK)
+		cg.emit(op.BlockBreak)
 	} else {
 		panic("break can only be used within a loop")
 	}
@@ -286,9 +286,9 @@ func (cg *cgen) breakStmt(labels *Labels) {
 
 func (cg *cgen) continueStmt(labels *Labels) {
 	if labels != nil {
-		cg.emitBwdJump(op.JUMP, labels.cont)
+		cg.emitBwdJump(op.Jump, labels.cont)
 	} else if cg.isBlock {
-		cg.emit(op.BLOCK_CONTINUE)
+		cg.emit(op.BlockContinue)
 	} else {
 		panic("continue can only be used within a loop")
 	}
@@ -296,10 +296,10 @@ func (cg *cgen) continueStmt(labels *Labels) {
 
 func (cg *cgen) ifStmt(node *ast.If, labels *Labels) {
 	cg.expr(node.Cond)
-	f := cg.emitJump(op.FJUMP, -1)
+	f := cg.emitJump(op.JumpFalse, -1)
 	cg.statement(node.Then, labels, false)
 	if node.Else != nil {
-		end := cg.emitJump(op.JUMP, -1)
+		end := cg.emitJump(op.Jump, -1)
 		cg.placeLabel(f)
 		cg.statement(node.Else, labels, false)
 		cg.placeLabel(end)
@@ -316,22 +316,22 @@ func (cg *cgen) switchStmt(node *ast.Switch, labels *Labels) {
 		for v, e := range c.Exprs {
 			cg.expr(e)
 			if v < len(c.Exprs)-1 {
-				caseBody = cg.emitJump(op.EQJUMP, -1)
+				caseBody = cg.emitJump(op.JumpIs, -1)
 			} else {
-				afterCase = cg.emitJump(op.NEJUMP, -1)
+				afterCase = cg.emitJump(op.JumpIsnt, -1)
 			}
 		}
 		cg.placeLabel(caseBody)
 		cg.statements(c.Body, labels, false)
-		end = cg.emitJump(op.JUMP, end)
+		end = cg.emitJump(op.Jump, end)
 		cg.placeLabel(afterCase)
 	}
-	cg.emit(op.POP)
+	cg.emit(op.Pop)
 	if node.Default != nil {
 		cg.statements(node.Default, labels, false)
 	} else {
 		cg.emitValue(SuStr("unhandled switch value"))
-		cg.emit(op.THROW)
+		cg.emit(op.Throw)
 	}
 	cg.placeLabel(end)
 }
@@ -339,18 +339,18 @@ func (cg *cgen) switchStmt(node *ast.Switch, labels *Labels) {
 func (cg *cgen) foreverStmt(node *ast.Forever) {
 	labels := cg.newLabels()
 	cg.statement(node.Body, labels, false)
-	cg.emitJump(op.JUMP, labels.cont-len(cg.code)-3)
+	cg.emitJump(op.Jump, labels.cont-len(cg.code)-3)
 	cg.placeLabel(labels.brk)
 }
 
 func (cg *cgen) whileStmt(node *ast.While) {
 	labels := cg.newLabels()
-	cond := cg.emitJump(op.JUMP, -1)
+	cond := cg.emitJump(op.Jump, -1)
 	loop := cg.label()
 	cg.statement(node.Body, labels, false)
 	cg.placeLabel(cond)
 	cg.expr(node.Cond)
-	cg.emitBwdJump(op.TJUMP, loop)
+	cg.emitBwdJump(op.JumpTrue, loop)
 	cg.placeLabel(labels.brk)
 }
 
@@ -358,7 +358,7 @@ func (cg *cgen) dowhileStmt(node *ast.DoWhile) {
 	labels := cg.newLabels()
 	cg.statement(node.Body, labels, false)
 	cg.expr(node.Cond)
-	cg.emitBwdJump(op.TJUMP, labels.cont)
+	cg.emitBwdJump(op.JumpTrue, labels.cont)
 	cg.placeLabel(labels.brk)
 }
 
@@ -367,49 +367,49 @@ func (cg *cgen) forStmt(node *ast.For) {
 	labels := cg.newLabels()
 	cond := -1
 	if node.Cond != nil {
-		cond = cg.emitJump(op.JUMP, -1)
+		cond = cg.emitJump(op.Jump, -1)
 	}
 	loop := cg.label()
 	cg.statement(node.Body, labels, false)
 	cg.exprList(node.Inc) // increment
 	if node.Cond == nil {
-		cg.emitBwdJump(op.JUMP, loop)
+		cg.emitBwdJump(op.Jump, loop)
 	} else {
 		cg.placeLabel(cond)
 		cg.expr(node.Cond)
-		cg.emitBwdJump(op.TJUMP, loop)
+		cg.emitBwdJump(op.JumpTrue, loop)
 	}
 	cg.placeLabel(labels.brk)
 }
 
 func (cg *cgen) forInStmt(node *ast.ForIn) {
 	cg.expr(node.E)
-	cg.emit(op.ITER)
+	cg.emit(op.Iter)
 	labels := cg.newLabels()
 	cg.emitForIn(node.Var, labels)
 	cg.statement(node.Body, labels, false)
-	cg.emitBwdJump(op.JUMP, labels.cont)
+	cg.emitBwdJump(op.Jump, labels.cont)
 	cg.placeLabel(labels.brk)
-	cg.emit(op.POP)
+	cg.emit(op.Pop)
 }
 
 func (cg *cgen) emitForIn(name string, labels *Labels) {
 	i := cg.name(name)
 	adr := len(cg.code)
-	cg.emit(op.FORIN, byte(labels.brk>>8), byte(labels.brk), byte(i))
+	cg.emit(op.ForIn, byte(labels.brk>>8), byte(labels.brk), byte(i))
 	labels.brk = adr
 }
 
 func (cg *cgen) tryCatchStmt(node *ast.TryCatch, labels *Labels) { //TODO
-	catch := cg.emitJump(op.TRY, -1)
-	cg.emit(byte(cg.value(SuStr(node.CatchFilter))))
+	catch := cg.emitJump(op.Try, -1)
+	cg.emitMore(byte(cg.value(SuStr(node.CatchFilter))))
 	cg.statement(node.Try, labels, false)
-	after := cg.emitJump(op.CATCH, -1)
+	after := cg.emitJump(op.Catch, -1)
 	cg.placeLabel(catch)
 	if node.CatchVar != "" {
-		cg.emit(op.STORE, byte(cg.name(node.CatchVar)))
+		cg.emit(op.Store, byte(cg.name(node.CatchVar)))
 	}
-	cg.emit(op.POP)
+	cg.emit(op.Pop)
 	if node.Catch != nil {
 		cg.statement(node.Catch, labels, false)
 	}
@@ -420,7 +420,7 @@ func (cg *cgen) tryCatchStmt(node *ast.TryCatch, labels *Labels) { //TODO
 func (cg *cgen) exprList(list []ast.Expr) {
 	for _, expr := range list {
 		cg.expr(expr)
-		cg.emit(op.POP)
+		cg.emit(op.Pop)
 	}
 }
 
@@ -443,17 +443,17 @@ func (cg *cgen) expr(node ast.Expr) {
 	case *ast.Mem:
 		cg.expr(node.E)
 		cg.expr(node.M)
-		cg.emit(op.GET)
+		cg.emit(op.Get)
 	case *ast.RangeTo:
 		cg.expr(node.E)
-		cg.exprOr(node.From, op.ZERO)
-		cg.exprOr(node.To, op.MAXINT)
-		cg.emit(op.RANGETO)
+		cg.exprOr(node.From, op.Zero)
+		cg.exprOr(node.To, op.MaxInt)
+		cg.emit(op.RangeTo)
 	case *ast.RangeLen:
 		cg.expr(node.E)
-		cg.exprOr(node.From, op.ZERO)
-		cg.exprOr(node.Len, op.MAXINT)
-		cg.emit(op.RANGELEN)
+		cg.exprOr(node.From, op.Zero)
+		cg.exprOr(node.Len, op.MaxInt)
+		cg.emit(op.RangeLen)
 	case *ast.In:
 		cg.inExpr(node)
 	case *ast.Call:
@@ -468,7 +468,7 @@ func (cg *cgen) expr(node ast.Expr) {
 	}
 }
 
-func (cg *cgen) exprOr(expr ast.Expr, op byte) {
+func (cg *cgen) exprOr(expr ast.Expr, op op.Opcode) {
 	if expr == nil {
 		cg.emit(op)
 	} else {
@@ -478,16 +478,16 @@ func (cg *cgen) exprOr(expr ast.Expr, op byte) {
 
 func (cg *cgen) identifier(node *ast.Ident) {
 	if node.Name == "this" {
-		cg.emit(op.THIS)
+		cg.emit(op.This)
 	} else if isLocal(node.Name) {
 		i := cg.name(node.Name)
 		if node.Name[0] == '_' {
-			cg.emitUint8(op.DYLOAD, i)
+			cg.emitUint8(op.Dyload, i)
 		} else {
-			cg.emitUint8(op.LOAD, i)
+			cg.emitUint8(op.Load, i)
 		}
 	} else {
-		cg.emitUint16(op.GLOBAL, GlobalNum(node.Name))
+		cg.emitUint16(op.Global, GlobalNum(node.Name))
 	}
 }
 
@@ -523,12 +523,12 @@ func (cg *cgen) unary(node *ast.Unary) {
 		cg.load(ref)
 		if node.Tok == POSTINC || node.Tok == POSTDEC {
 			cg.dupUnderLvalue(ref)
-			cg.emit(op.ONE)
+			cg.emit(op.One)
 			cg.emit(o)
 			cg.store(ref)
-			cg.emit(op.POP)
+			cg.emit(op.Pop)
 		} else {
-			cg.emit(op.ONE)
+			cg.emit(op.One)
 			cg.emit(o)
 			cg.store(ref)
 		}
@@ -539,15 +539,15 @@ func (cg *cgen) unary(node *ast.Unary) {
 }
 
 // Unary ast expr node token to operation
-var utok2op = [Ntokens]byte{
-	ADD:     op.UPLUS,
-	SUB:     op.UMINUS,
-	NOT:     op.NOT,
-	BITNOT:  op.BITNOT,
-	INC:     op.ADD,
-	POSTINC: op.ADD,
-	DEC:     op.SUB,
-	POSTDEC: op.SUB,
+var utok2op = [Ntokens]op.Opcode{
+	ADD:     op.UnaryPlus,
+	SUB:     op.UnaryMinus,
+	NOT:     op.Not,
+	BITNOT:  op.BitNot,
+	INC:     op.Add,
+	POSTINC: op.Add,
+	DEC:     op.Sub,
+	POSTDEC: op.Sub,
 }
 
 func (cg *cgen) binary(node *ast.Binary) {
@@ -583,10 +583,10 @@ func (cg *cgen) nary(node *ast.Nary) {
 		for _, e := range node.Exprs[1:] {
 			if node.Tok == ADD && isUnary(e, SUB) {
 				cg.expr(e.(*ast.Unary).E)
-				cg.emit(op.SUB)
+				cg.emit(op.Sub)
 			} else if node.Tok == MUL && isUnary(e, DIV) {
 				cg.expr(e.(*ast.Unary).E)
-				cg.emit(op.DIV)
+				cg.emit(op.Div)
 			} else {
 				cg.expr(e)
 				cg.emit(o)
@@ -602,7 +602,7 @@ func (cg *cgen) andorExpr(node *ast.Nary) {
 		label = cg.emitJump(tok2op[node.Tok], label)
 		cg.expr(e)
 	}
-	cg.emit(op.BOOL)
+	cg.emit(op.Bool)
 	cg.placeLabel(label)
 }
 
@@ -614,9 +614,9 @@ func isUnary(e ast.Expr, tok Token) bool {
 func (cg *cgen) qcExpr(node *ast.Trinary) {
 	f, end := -1, -1
 	cg.expr(node.Cond)
-	f = cg.emitJump(op.Q_MARK, f)
+	f = cg.emitJump(op.Qmark, f)
 	cg.expr(node.T)
-	end = cg.emitJump(op.JUMP, end)
+	end = cg.emitJump(op.Jump, end)
 	cg.placeLabel(f)
 	cg.expr(node.F)
 	cg.placeLabel(end)
@@ -628,9 +628,9 @@ func (cg *cgen) inExpr(node *ast.In) {
 	for j, e := range node.Exprs {
 		cg.expr(e)
 		if j < len(node.Exprs)-1 {
-			end = cg.emitJump(op.IN, end)
+			end = cg.emitJump(op.In, end)
 		} else {
-			cg.emit(op.IS)
+			cg.emit(op.Is)
 		}
 	}
 	cg.placeLabel(end)
@@ -638,19 +638,19 @@ func (cg *cgen) inExpr(node *ast.In) {
 
 func (cg *cgen) emitValue(val Value) {
 	if val == True {
-		cg.emit(op.TRUE)
+		cg.emit(op.True)
 	} else if val == False {
-		cg.emit(op.FALSE)
+		cg.emit(op.False)
 	} else if val == Zero {
-		cg.emit(op.ZERO)
+		cg.emit(op.Zero)
 	} else if val == One {
-		cg.emit(op.ONE)
+		cg.emit(op.One)
 	} else if val == EmptyStr {
-		cg.emit(op.EMPTYSTR)
+		cg.emit(op.EmptyStr)
 	} else if i, ok := SmiToInt(val); ok {
-		cg.emitInt16(op.INT, i)
+		cg.emitInt16(op.Int, i)
 	} else {
-		cg.emitUint8(op.VALUE, cg.value(val))
+		cg.emitUint8(op.Value, cg.value(val))
 	}
 }
 
@@ -688,35 +688,35 @@ func (cg *cgen) lvalue(node ast.Expr) int {
 
 func (cg *cgen) load(ref int) {
 	if ref == memRef {
-		cg.emit(op.GET)
+		cg.emit(op.Get)
 	} else {
 		if cg.Names[ref][0] == '_' {
-			cg.emitUint8(op.DYLOAD, ref)
+			cg.emitUint8(op.Dyload, ref)
 		} else {
-			cg.emitUint8(op.LOAD, ref)
+			cg.emitUint8(op.Load, ref)
 		}
 	}
 }
 
 func (cg *cgen) store(ref int) {
 	if ref == memRef {
-		cg.emit(op.PUT)
+		cg.emit(op.Put)
 	} else {
-		cg.emitUint8(op.STORE, ref)
+		cg.emitUint8(op.Store, ref)
 	}
 }
 
 func (cg *cgen) dupLvalue(ref int) {
 	if ref == memRef {
-		cg.emit(op.DUP2)
+		cg.emit(op.Dup2)
 	}
 }
 
 func (cg *cgen) dupUnderLvalue(ref int) {
 	if ref == memRef {
-		cg.emit(op.DUPX2)
+		cg.emit(op.Dupx2)
 	} else {
-		cg.emit(op.DUP)
+		cg.emit(op.Dup)
 	}
 }
 
@@ -745,7 +745,7 @@ func (cg *cgen) call(node *ast.Call) {
 			if cg.base <= 0 {
 				panic("super requires parent")
 			}
-			cg.emit(op.THIS)
+			cg.emit(op.This)
 		} else {
 			cg.expr(mem.E)
 		}
@@ -759,15 +759,15 @@ func (cg *cgen) call(node *ast.Call) {
 		}
 		cg.expr(mem.M)
 		if superCall {
-			cg.emitUint16(op.SUPER, cg.base)
+			cg.emitUint16(op.Super, cg.base)
 		}
-		cg.emit(op.CALLMETH)
+		cg.emit(op.CallMeth)
 	} else {
 		cg.expr(fn)
-		cg.emit(op.CALLFUNC)
+		cg.emit(op.CallFunc)
 	}
 	verify.That(argspec < math.MaxUint8)
-	cg.emit(byte(argspec))
+	cg.emitMore(byte(argspec))
 }
 
 // generates code to push the arguments and returns an ArgSpec index
@@ -839,7 +839,7 @@ func (cg *cgen) block(b *ast.Block) {
 		// closure
 		fn, cg.Names = codegenBlock(f, cg.outerFn, cg.Names)
 		i := cg.value(fn)
-		cg.emitUint8(op.BLOCK, i)
+		cg.emitUint8(op.Block, i)
 	}
 	if cg.outerFn.Id == 0 {
 		cg.outerFn.Id = atomic.AddUint32(&funcId, 1)
@@ -876,33 +876,37 @@ func (cg *cgen) blockIsFunction(blockVars map[string]bool) bool {
 // helpers ---------------------------------------------------------------------
 
 // emit is used to append an op code
-func (cg *cgen) emit(b ...byte) {
+func (cg *cgen) emit(op op.Opcode, b ...byte) {
+	cg.code = append(append(cg.code, byte(op)), b...)
+}
+
+func (cg *cgen) emitMore(b ...byte) {
 	cg.code = append(cg.code, b...)
 }
 
-func (cg *cgen) emitUint8(op byte, i int) {
+func (cg *cgen) emitUint8(op op.Opcode, i int) {
 	verify.That(0 <= i && i < math.MaxUint8)
 	cg.emit(op, byte(i))
 }
 
-func (cg *cgen) emitInt16(op byte, i int) {
+func (cg *cgen) emitInt16(op op.Opcode, i int) {
 	verify.That(math.MinInt16 <= i && i <= math.MaxInt16)
 	cg.emit(op, byte(i>>8), byte(i))
 }
 
-func (cg *cgen) emitUint16(op byte, i int) {
+func (cg *cgen) emitUint16(op op.Opcode, i int) {
 	verify.That(0 <= i && i < math.MaxUint16)
 	cg.emit(op, byte(i>>8), byte(i))
 }
 
-func (cg *cgen) emitJump(op byte, label int) int {
+func (cg *cgen) emitJump(op op.Opcode, label int) int {
 	adr := len(cg.code)
 	verify.That(math.MinInt16 <= label && label <= math.MaxInt16)
 	cg.emit(op, byte(label>>8), byte(label))
 	return adr
 }
 
-func (cg *cgen) emitBwdJump(op byte, label int) {
+func (cg *cgen) emitBwdJump(op op.Opcode, label int) {
 	cg.emitJump(op, label-len(cg.code)-3)
 }
 

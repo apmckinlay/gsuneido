@@ -8,7 +8,10 @@ import (
 
 // See interp.go and args.go for the rest of the Thread methods
 
+// maxStack is the size of the value stack, fixed size for performance
 const maxStack = 1024
+
+// maxFrames is the size of the frame stack, fixed size for performance
 const maxFrames = 256
 
 type Thread struct {
@@ -35,34 +38,39 @@ type Thread struct {
 	trcache *tr.LruMapCache
 }
 
+// NewThread creates a new thread
+// zero value does not handle rxcache and trcache
 func NewThread() *Thread {
 	return &Thread{
 		rxcache: regex.NewLruMapCache(100, regex.Compile),
 		trcache: tr.NewLruMapCache(100, tr.Set)}
 }
 
+// Push pushes a value onto the value stack
 func (t *Thread) Push(x Value) {
 	t.stack[t.sp] = x
 	t.sp++
 }
 
+// Pop pops a value off the value stack
 func (t *Thread) Pop() Value {
 	t.sp--
 	return t.stack[t.sp]
 }
 
+// Top returns the top of the value stack (without modifying the stack)
 func (t *Thread) Top() Value {
 	return t.stack[t.sp-1]
 }
 
+// Dup2 duplicates the top two values on the stack i.e. a,b => a,b,a,b
 func (t *Thread) Dup2() {
 	t.stack[t.sp] = t.stack[t.sp-2]
 	t.stack[t.sp+1] = t.stack[t.sp-1]
 	t.sp += 2
 }
 
-// Dupx2 inserts a copy of the top value under the top three
-// e.g. 0,1,2,3 => 0,3,1,2,3
+// Dupx2 inserts a copy of the top value under the next two i.e. 1,2,3 => 3,1,2,3
 func (t *Thread) Dupx2() {
 	t.stack[t.sp] = t.stack[t.sp-1]
 	t.stack[t.sp-1] = t.stack[t.sp-2]
@@ -71,11 +79,13 @@ func (t *Thread) Dupx2() {
 	t.sp++
 }
 
+// Reset sets sp and fp to 0, only used by tests
 func (t *Thread) Reset() {
 	t.fp = 0
 	t.sp = 0
 }
 
+// CallWithArgs pushes the arguments onto the stack and calls the function
 func (t *Thread) CallWithArgs(fn Value, args ...Value) Value {
 	verify.That(len(args) < AsEach)
 	as := StdArgSpecs[len(args)]
@@ -84,6 +94,21 @@ func (t *Thread) CallWithArgs(fn Value, args ...Value) Value {
 		t.Push(x)
 	}
 	result := fn.Call(t, as)
+	t.sp = base
+	return result
+}
+
+// callMethod is used by ITER and FORIN
+// arguments should be on the stack
+func (t *Thread) callMethod(method string, argSpec *ArgSpec) Value {
+	base := t.sp - int(argSpec.Nargs) - 1
+	ob := t.stack[base]
+	f := ob.Lookup(method)
+	if f == nil {
+		panic("method not found " + ob.TypeName() + "." + method)
+	}
+	t.this = ob
+	result := f.Call(t, argSpec)
 	t.sp = base
 	return result
 }

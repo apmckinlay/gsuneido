@@ -82,27 +82,27 @@ func Mod(x Value, y Value) Value {
 	return IntToValue(x.ToInt() % y.ToInt())
 }
 
-func Lshift(x Value, y Value) Value {
+func LeftShift(x Value, y Value) Value {
 	return IntToValue(int(uint(x.ToInt()) << uint(y.ToInt())))
 }
 
-func Rshift(x Value, y Value) Value {
+func RightShift(x Value, y Value) Value {
 	return IntToValue(int(uint(x.ToInt()) >> uint(y.ToInt())))
 }
 
-func Bitor(x Value, y Value) Value {
+func BitOr(x Value, y Value) Value {
 	return IntToValue(x.ToInt() | y.ToInt())
 }
 
-func Bitand(x Value, y Value) Value {
+func BitAnd(x Value, y Value) Value {
 	return IntToValue(x.ToInt() & y.ToInt())
 }
 
-func Bitxor(x Value, y Value) Value {
+func BitXor(x Value, y Value) Value {
 	return IntToValue(x.ToInt() ^ y.ToInt())
 }
 
-func Bitnot(x Value) Value {
+func BitNot(x Value) Value {
 	return IntToValue(^x.ToInt())
 }
 
@@ -126,7 +126,7 @@ func Bool(x Value) bool {
 	}
 }
 
-func Uplus(x Value) Value {
+func UnaryPlus(x Value) Value {
 	if _, ok := SmiToInt(x); ok {
 		return x
 	} else if _, ok := x.(SuDnum); ok {
@@ -135,7 +135,7 @@ func Uplus(x Value) Value {
 	return SuDnum{x.ToDnum()} // "" or false => 0, else throw
 }
 
-func Uminus(x Value) Value {
+func UnaryMinus(x Value) Value {
 	if xi, ok := SmiToInt(x); ok {
 		return IntToValue(-xi)
 	}
@@ -194,10 +194,6 @@ func cat3(x, y Value) Value {
 		return &SuExcept{SuStr: SuStr(result.ToStr()), Callstack: ye.Callstack}
 	}
 	return result
-}
-
-func BitNot(x Value) Value {
-	return IntToValue(^x.ToInt())
 }
 
 func Match(x Value, y regex.Pattern) SuBool {

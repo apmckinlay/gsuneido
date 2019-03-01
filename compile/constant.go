@@ -40,7 +40,7 @@ func (p *parser) constant() Value {
 		return p.number()
 	case SUB:
 		p.next()
-		return Uminus(p.number())
+		return UnaryMinus(p.number())
 	case L_PAREN, L_CURLY, L_BRACKET:
 		return p.object()
 	case HASH:

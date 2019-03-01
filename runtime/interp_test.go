@@ -3,7 +3,7 @@ package runtime
 import (
 	"testing"
 
-	"github.com/apmckinlay/gsuneido/runtime/op"
+	op "github.com/apmckinlay/gsuneido/runtime/opcodes"
 	. "github.com/apmckinlay/gsuneido/util/hamcrest"
 )
 
@@ -14,7 +14,7 @@ func TestInterp(t *testing.T) {
 		result := th.Call(fn)
 		Assert(t).That(result, Equals(SuInt(8)))
 	}
-	test(SuInt(8), op.INT, 0, 3, op.INT, 0, 5, op.ADD, op.RETURN)
+	test(SuInt(8), byte(op.Int), 0, 3, byte(op.Int), 0, 5, byte(op.Add), byte(op.Return))
 }
 
 func TestCatchMatch(t *testing.T) {

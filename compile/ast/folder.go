@@ -24,9 +24,9 @@ func (f Folder) Unary(tok Token, expr Expr) Expr {
 	val := c.Val
 	switch tok {
 	case ADD:
-		val = Uplus(val)
+		val = UnaryPlus(val)
 	case SUB:
-		val = Uminus(val)
+		val = UnaryMinus(val)
 	case DIV:
 		val = Div(One, val)
 	case NOT:
@@ -74,9 +74,9 @@ func (f Folder) Binary(lhs Expr, tok Token, rhs Expr) Expr {
 	case MOD:
 		val = Mod(val, val2)
 	case LSHIFT:
-		val = Lshift(val, val2)
+		val = LeftShift(val, val2)
 	case RSHIFT:
-		val = Rshift(val, val2)
+		val = RightShift(val, val2)
 	default:
 		panic("folder unexpected unary operator " + tok.String())
 	}
@@ -123,11 +123,11 @@ func (f Folder) Nary(tok Token, exprs []Expr) Expr {
 	case MUL: // including DIV
 		exprs = commutative(exprs, Mul, One, Zero)
 	case BITOR:
-		exprs = commutative(exprs, Bitor, Zero, allones)
+		exprs = commutative(exprs, BitOr, Zero, allones)
 	case BITAND:
-		exprs = commutative(exprs, Bitand, allones, Zero)
+		exprs = commutative(exprs, BitAnd, allones, Zero)
 	case BITXOR:
-		exprs = commutative(exprs, Bitxor, Zero, nil)
+		exprs = commutative(exprs, BitXor, Zero, nil)
 	case OR:
 		exprs = commutative(exprs, or, False, True)
 	case AND:

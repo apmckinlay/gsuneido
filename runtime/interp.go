@@ -4,7 +4,7 @@ import (
 	"runtime"
 	"strings"
 
-	. "github.com/apmckinlay/gsuneido/runtime/op"
+	op "github.com/apmckinlay/gsuneido/runtime/opcodes"
 )
 
 var blockBreak = &SuExcept{SuStr: SuStr("block:break")}
@@ -144,58 +144,58 @@ loop:
 		// fmt.Println("stack:", t.stack[spBase:t.sp])
 		// _, da := Disasm1(fr.fn, fr.ip)
 		// fmt.Printf("%d: %s\n", fr.ip, da)
-		op := code[fr.ip]
+		oc := op.Opcode(code[fr.ip])
 		fr.ip++
-		switch op {
-		case POP:
+		switch oc {
+		case op.Pop:
 			t.Pop()
-		case DUP:
+		case op.Dup:
 			t.Push(t.Top())
-		case DUP2:
-			t.Dup2() // dup top two, used to dup member lvalues
-		case DUPX2:
-			t.Dupx2() // dup top under next two, used for post inc/dec
-		case THIS:
+		case op.Dup2:
+			t.Dup2()
+		case op.Dupx2:
+			t.Dupx2()
+		case op.This:
 			t.Push(fr.this)
-		case TRUE:
+		case op.True:
 			t.Push(True)
-		case FALSE:
+		case op.False:
 			t.Push(False)
-		case ZERO:
+		case op.Zero:
 			t.Push(Zero)
-		case ONE:
+		case op.One:
 			t.Push(One)
-		case MAXINT:
+		case op.MaxInt:
 			t.Push(MaxInt)
-		case EMPTYSTR:
+		case op.EmptyStr:
 			t.Push(EmptyStr)
-		case INT:
+		case op.Int:
 			t.Push(SuInt(fetchInt16()))
-		case VALUE:
+		case op.Value:
 			t.Push(fr.fn.Values[fetchUint8()])
-		case LOAD:
+		case op.Load:
 			i := fetchUint8()
 			val := fr.locals[i]
 			if val == nil {
 				panic("uninitialized variable: " + fr.fn.Names[i])
 			}
 			t.Push(val)
-		case STORE:
+		case op.Store:
 			fr.locals[fetchUint8()] = t.Top()
-		case DYLOAD:
+		case op.Dyload:
 			i := fetchUint8()
 			if fr.locals[i] == nil {
 				t.dyload(fr, i)
 			}
 			t.Push(fr.locals[i])
-		case GLOBAL:
+		case op.Global:
 			gn := Global(fetchUint16())
 			val := GetGlobal(gn)
 			if val == nil {
 				panic("uninitialized global: " + GlobalName(gn))
 			}
 			t.Push(val)
-		case GET:
+		case op.Get:
 			m := t.Pop()
 			ob := t.Pop()
 			val := ob.Get(t, m)
@@ -203,128 +203,128 @@ loop:
 				panic("uninitialized member: " + m.String())
 			}
 			t.Push(val)
-		case PUT:
+		case op.Put:
 			val := t.Pop()
 			m := t.Pop()
 			ob := t.Pop()
 			ob.Put(m, val)
 			t.Push(val)
-		case RANGETO:
+		case op.RangeTo:
 			j := Index(t.Pop())
 			i := Index(t.Pop())
 			val := t.Pop()
 			t.Push(val.RangeTo(i, j))
-		case RANGELEN:
+		case op.RangeLen:
 			n := Index(t.Pop())
 			i := Index(t.Pop())
 			val := t.Pop()
 			t.Push(val.RangeLen(i, n))
-		case IS:
+		case op.Is:
 			t.sp--
 			t.stack[t.sp-1] = Is(t.stack[t.sp-1], t.stack[t.sp])
-		case ISNT:
+		case op.Isnt:
 			t.sp--
 			t.stack[t.sp-1] = Isnt(t.stack[t.sp-1], t.stack[t.sp])
-		case MATCH:
+		case op.Match:
 			t.sp--
 			pat := t.rxcache.Get(t.stack[t.sp].ToStr())
 			s := t.stack[t.sp-1]
 			t.stack[t.sp-1] = Match(s, pat)
-		case MATCHNOT:
+		case op.MatchNot:
 			t.sp--
 			pat := t.rxcache.Get(t.stack[t.sp].ToStr())
 			s := t.stack[t.sp-1]
 			t.stack[t.sp-1] = Match(s, pat).Not()
-		case LT:
+		case op.Lt:
 			t.sp--
 			t.stack[t.sp-1] = Lt(t.stack[t.sp-1], t.stack[t.sp])
-		case LTE:
+		case op.Lte:
 			t.sp--
 			t.stack[t.sp-1] = Lte(t.stack[t.sp-1], t.stack[t.sp])
-		case GT:
+		case op.Gt:
 			t.sp--
 			t.stack[t.sp-1] = Gt(t.stack[t.sp-1], t.stack[t.sp])
-		case GTE:
+		case op.Gte:
 			t.sp--
 			t.stack[t.sp-1] = Gte(t.stack[t.sp-1], t.stack[t.sp])
-		case ADD:
+		case op.Add:
 			t.sp--
 			t.stack[t.sp-1] = Add(t.stack[t.sp-1], t.stack[t.sp])
-		case SUB:
+		case op.Sub:
 			t.sp--
 			t.stack[t.sp-1] = Sub(t.stack[t.sp-1], t.stack[t.sp])
-		case CAT:
+		case op.Cat:
 			t.sp--
 			t.stack[t.sp-1] = Cat(t.stack[t.sp-1], t.stack[t.sp])
-		case MUL:
+		case op.Mul:
 			t.sp--
 			t.stack[t.sp-1] = Mul(t.stack[t.sp-1], t.stack[t.sp])
-		case DIV:
+		case op.Div:
 			t.sp--
 			t.stack[t.sp-1] = Div(t.stack[t.sp-1], t.stack[t.sp])
-		case MOD:
+		case op.Mod:
 			t.sp--
 			t.stack[t.sp-1] = Mod(t.stack[t.sp-1], t.stack[t.sp])
-		case LSHIFT:
+		case op.LeftShift:
 			t.sp--
-			t.stack[t.sp-1] = Lshift(t.stack[t.sp-1], t.stack[t.sp])
-		case RSHIFT:
+			t.stack[t.sp-1] = LeftShift(t.stack[t.sp-1], t.stack[t.sp])
+		case op.RightShift:
 			t.sp--
-			t.stack[t.sp-1] = Rshift(t.stack[t.sp-1], t.stack[t.sp])
-		case BITOR:
+			t.stack[t.sp-1] = RightShift(t.stack[t.sp-1], t.stack[t.sp])
+		case op.BitOr:
 			t.sp--
-			t.stack[t.sp-1] = Bitor(t.stack[t.sp-1], t.stack[t.sp])
-		case BITAND:
+			t.stack[t.sp-1] = BitOr(t.stack[t.sp-1], t.stack[t.sp])
+		case op.BitAnd:
 			t.sp--
-			t.stack[t.sp-1] = Bitand(t.stack[t.sp-1], t.stack[t.sp])
-		case BITXOR:
+			t.stack[t.sp-1] = BitAnd(t.stack[t.sp-1], t.stack[t.sp])
+		case op.BitXor:
 			t.sp--
-			t.stack[t.sp-1] = Bitxor(t.stack[t.sp-1], t.stack[t.sp])
-		case BITNOT:
-			t.stack[t.sp-1] = Bitnot(t.stack[t.sp-1])
-		case NOT:
+			t.stack[t.sp-1] = BitXor(t.stack[t.sp-1], t.stack[t.sp])
+		case op.BitNot:
+			t.stack[t.sp-1] = BitNot(t.stack[t.sp-1])
+		case op.Not:
 			t.stack[t.sp-1] = Not(t.stack[t.sp-1])
-		case UPLUS:
-			t.stack[t.sp-1] = Uplus(t.stack[t.sp-1])
-		case UMINUS:
-			t.stack[t.sp-1] = Uminus(t.stack[t.sp-1])
-		case BOOL:
+		case op.UnaryPlus:
+			t.stack[t.sp-1] = UnaryPlus(t.stack[t.sp-1])
+		case op.UnaryMinus:
+			t.stack[t.sp-1] = UnaryMinus(t.stack[t.sp-1])
+		case op.Bool:
 			t.topbool()
-		case JUMP:
+		case op.Jump:
 			jump()
-		case TJUMP:
+		case op.JumpTrue:
 			if t.popbool() {
 				jump()
 			} else {
 				fr.ip += 2
 			}
-		case FJUMP:
+		case op.JumpFalse:
 			if !t.popbool() {
 				jump()
 			} else {
 				fr.ip += 2
 			}
-		case AND:
+		case op.And:
 			if !t.topbool() {
 				jump()
 			} else {
 				fr.ip += 2
 				t.Pop()
 			}
-		case OR:
+		case op.Or:
 			if t.topbool() {
 				jump()
 			} else {
 				fr.ip += 2
 				t.Pop()
 			}
-		case Q_MARK:
+		case op.Qmark:
 			if !t.popbool() {
 				jump()
 			} else {
 				fr.ip += 2
 			}
-		case IN:
+		case op.In:
 			y := t.Pop()
 			x := t.Pop()
 			if x.Equal(y) {
@@ -334,7 +334,7 @@ loop:
 				fr.ip += 2
 				t.Push(x)
 			}
-		case EQJUMP:
+		case op.JumpIs:
 			y := t.Pop()
 			x := t.Pop()
 			if x.Equal(y) {
@@ -343,7 +343,7 @@ loop:
 				fr.ip += 2
 				t.Push(x)
 			}
-		case NEJUMP:
+		case op.JumpIsnt:
 			y := t.Pop()
 			x := t.Pop()
 			if !x.Equal(y) {
@@ -352,9 +352,9 @@ loop:
 			} else {
 				fr.ip += 2
 			}
-		case ITER:
+		case op.Iter:
 			t.Push(t.callMethod("Iter", ArgSpec0))
-		case FORIN:
+		case op.ForIn:
 			brk := fetchInt16()
 			local := fetchUint8()
 			iter := t.Top()
@@ -364,34 +364,34 @@ loop:
 			if next.Equal(iter) {
 				fr.ip += brk - 1 // jump
 			}
-		case RETURN_NULL:
+		case op.ReturnNil:
 			t.Push(nil)
 			fallthrough
-		case RETURN:
+		case op.Return:
 			break loop
-		case TRY:
+		case op.Try:
 			*catchJump = fr.ip + fetchInt16()
 			catchPat = string(fr.fn.Values[fetchUint8()].(SuStr))
-		case CATCH:
+		case op.Catch:
 			fr.ip += fetchInt16()
 			*catchJump = 0
-		case THROW:
+		case op.Throw:
 			panic(t.Pop())
-		case BLOCK:
+		case op.Block:
 			fr.moveLocalsToHeap()
 			fn := fr.fn.Values[fetchUint8()].(*SuFunc)
 			block := &SuBlock{SuFunc: *fn, locals: fr.locals, this: fr.this}
 			t.Push(block)
-		case BLOCK_BREAK:
+		case op.BlockBreak:
 			panic(blockBreak)
-		case BLOCK_CONTINUE:
+		case op.BlockContinue:
 			panic(blockContinue)
-		case BLOCK_RETURN_NULL:
+		case op.BlockReturnNil:
 			t.Push(nil)
 			fallthrough
-		case BLOCK_RETURN:
+		case op.BlockReturn:
 			panic(blockReturn)
-		case CALLFUNC:
+		case op.CallFunc:
 			f := t.Pop()
 			ai := fetchUint8()
 			var argSpec *ArgSpec
@@ -404,9 +404,9 @@ loop:
 			result := f.Call(t, argSpec)
 			t.sp = base
 			t.Push(result)
-		case SUPER:
+		case op.Super:
 			super = Global(fetchUint16())
-		case CALLMETH:
+		case op.CallMeth:
 			method := t.Pop()
 			ai := fetchUint8()
 			var argSpec *ArgSpec
@@ -433,27 +433,14 @@ loop:
 			}
 			panic("method not found " + this.TypeName() + "." + method.ToStr())
 		default:
-			panic("invalid op code: " + asm[op]) // TODO fatal?
+			panic("invalid op code: " + oc.String()) // TODO fatal?
 		}
 	}
 	t.this = nil
 	return nil
 }
 
-// callMethod is used by ITER and FORIN
-func (t *Thread) callMethod(method string, argSpec *ArgSpec) Value {
-	base := t.sp - int(argSpec.Nargs) - 1
-	ob := t.stack[base]
-	f := ob.Lookup(method)
-	if f == nil {
-		panic("method not found " + ob.TypeName() + "." + method)
-	}
-	t.this = ob
-	result := f.Call(t, argSpec)
-	t.sp = base
-	return result
-}
-
+// topbool return the top of the stack as bool, panicing if not True or False
 func (t *Thread) topbool() bool {
 	switch t.Top() {
 	case True:
@@ -465,6 +452,7 @@ func (t *Thread) topbool() bool {
 	}
 }
 
+// popbool pops the top of the stack and returns it as bool, panicing if not True or False
 func (t *Thread) popbool() bool {
 	switch t.Pop() {
 	case True:
@@ -476,9 +464,11 @@ func (t *Thread) popbool() bool {
 	}
 }
 
+// dyload pushes a dynamic variable onto the stack
+// It looks up the frame stack to find it, and copies it locally
 func (t *Thread) dyload(fr *Frame, idx int) {
 	name := fr.fn.Names[idx]
-	for i := t.fp - 1; i >= 0; i-- {
+	for i := t.fp - 2; i >= 0; i-- {
 		fr2 := &t.frames[i]
 		for j, s := range fr2.fn.Names {
 			if s == name {
@@ -490,6 +480,7 @@ func (t *Thread) dyload(fr *Frame, idx int) {
 	panic("uninitialized variable: " + name)
 }
 
+// catchMatch matches an exception string with a catch pattern
 func catchMatch(e, pat string) bool {
 	for {
 		p := pat

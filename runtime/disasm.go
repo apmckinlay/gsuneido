@@ -5,27 +5,8 @@ import (
 	"io"
 	"strconv"
 
-	. "github.com/apmckinlay/gsuneido/runtime/op"
-	"github.com/apmckinlay/gsuneido/util/verify"
+	op "github.com/apmckinlay/gsuneido/runtime/opcodes"
 )
-
-var asm = []string{
-	"return", "returnnull", "pop", "dup", "dup2", "dupx2", "int", "value",
-	"is", "isnt", "match", "matchnot", "lt", "lte", "gt", "gte",
-	"add", "sub", "cat", "mul", "div", "mod",
-	"lshift", "rshift", "bitor", "bitand", "bitxor",
-	"bitnot", "not", "uplus", "uminus",
-	"load", "store", "dyload", "get", "put", "global",
-	"true", "false", "zero", "one", "maxint", "emptystr",
-	"or", "and", "bool", "qmark", "in", "jump", "tjump", "fjump",
-	"eqjump", "nejump", "throw", "try", "catch", "rangeto", "rangelen",
-	"this", "callfunc", "callmeth", "super", "block", "iter", "forin",
-	"blockbreak", "blockcontinue", "blockreturn", "blockreturnnull",
-}
-
-func init() {
-	verify.That(asm[FALSE] == "false")
-}
 
 func Disasm(w io.Writer, fn *SuFunc) {
 	var s string
@@ -51,39 +32,37 @@ func Disasm1(fn *SuFunc, i int) (int, string) {
 		return int(uint16(fn.Code[i-2])<<8 + uint16(fn.Code[i-1]))
 	}
 
-	op := fn.Code[i]
+	oc := op.Opcode(fn.Code[i])
 	i++
-	if int(op) >= len(asm) {
-		return i, fmt.Sprintf("bad op %d", op)
-	}
-	s := asm[op]
-	switch op {
-	case INT:
+	s := oc.String()
+	switch oc {
+	case op.Int:
 		n := fetchInt16()
 		s += fmt.Sprintf(" %d", n)
-	case VALUE:
+	case op.Value:
 		v := fn.Values[fetchUint8()]
 		s += fmt.Sprintf(" %v", v)
-	case BLOCK:
+	case op.Block:
 		fetchUint8()
-	case LOAD, STORE, DYLOAD:
+	case op.Load, op.Store, op.Dyload:
 		idx := fetchUint8()
 		s += " " + fn.Names[idx]
-	case GLOBAL, SUPER:
+	case op.Global, op.Super:
 		gn := Global(fetchUint16())
 		s += " " + GlobalName(gn)
-	case JUMP, TJUMP, FJUMP, AND, OR, Q_MARK, IN, EQJUMP, NEJUMP, CATCH:
+	case op.Jump, op.JumpTrue, op.JumpFalse, op.And, op.Or, op.Qmark, op.In, op.JumpIs,
+		op.JumpIsnt, op.Catch:
 		j := fetchInt16()
 		s += fmt.Sprintf(" %d", i+j)
-	case FORIN:
+	case op.ForIn:
 		j := fetchInt16()
 		idx := fetchUint8()
 		s += " " + fn.Names[idx] + fmt.Sprintf(" %d", i+j-1)
-	case TRY:
+	case op.Try:
 		j := fetchInt16()
 		v := fn.Values[fetchUint8()]
 		s += fmt.Sprintf(" %d %v", i+j-1, v)
-	case CALLFUNC, CALLMETH:
+	case op.CallFunc, op.CallMeth:
 		ai := int(fetchUint8())
 		if ai < 5 {
 			s += strconv.Itoa(ai)
