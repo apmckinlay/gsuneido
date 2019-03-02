@@ -3,6 +3,8 @@
 package ast
 
 import (
+	"fmt"
+
 	"github.com/apmckinlay/gsuneido/lexer"
 	tok "github.com/apmckinlay/gsuneido/lexer/tokens"
 	. "github.com/apmckinlay/gsuneido/runtime"
@@ -11,6 +13,7 @@ import (
 type Node interface {
 	astNode()
 	String() string
+	// Children calls the given function for each child node
 	Children(func(Node)) // used by Traverse
 }
 
@@ -21,7 +24,7 @@ func (*astNodeT) astNode() {}
 func (*astNodeT) Children(func(Node)) {
 }
 
-// Expression nodes implement the Expr interface.
+// Expr is implemented by expression nodes
 type Expr interface {
 	Node
 	exprNode()
@@ -57,7 +60,7 @@ type Unary struct {
 }
 
 func (a *Unary) String() string {
-	return "(" + a.Tok.String() + " " + a.E.String() + ")"
+	return "Unary(" + a.Tok.String() + " " + a.E.String() + ")"
 }
 
 func (a *Unary) Children(fn func(Node)) {
@@ -72,7 +75,7 @@ type Binary struct {
 }
 
 func (a *Binary) String() string {
-	return "(" + a.Tok.String() + " " + a.Lhs.String() + " " + a.Rhs.String() + ")"
+	return "Binary(" + a.Tok.String() + " " + a.Lhs.String() + " " + a.Rhs.String() + ")"
 }
 
 func (a *Binary) Children(fn func(Node)) {
@@ -88,7 +91,7 @@ type Trinary struct {
 }
 
 func (a *Trinary) String() string {
-	return "(? " + a.Cond.String() + " " + a.T.String() + " " + a.F.String() + ")"
+	return "Trinary(" + a.Cond.String() + " " + a.T.String() + " " + a.F.String() + ")"
 }
 
 func (a *Trinary) Children(fn func(Node)) {
@@ -105,7 +108,7 @@ type Nary struct {
 }
 
 func (a *Nary) String() string {
-	s := "(" + a.Tok.String()
+	s := "Nary(" + a.Tok.String()
 	for _, e := range a.Exprs {
 		s += " " + e.String()
 	}
@@ -126,15 +129,7 @@ type RangeTo struct {
 }
 
 func (a *RangeTo) String() string {
-	s := a.E.String() + "["
-	if a.From != nil {
-		s += a.From.String()
-	}
-	s += ".."
-	if a.To != nil {
-		s += a.To.String()
-	}
-	return s + "]"
+	return "RangeTo(" + a.E.String() + " " + fmt.Sprint(a.From) + " " + fmt.Sprint(a.To) + ")"
 }
 
 func (a *RangeTo) Children(fn func(Node)) {
@@ -151,15 +146,7 @@ type RangeLen struct {
 }
 
 func (a *RangeLen) String() string {
-	s := a.E.String() + "["
-	if a.From != nil {
-		s += a.From.String()
-	}
-	s += "::"
-	if a.Len != nil {
-		s += a.Len.String()
-	}
-	return s + "]"
+	return "RangeLen(" + a.E.String() + " " + fmt.Sprint(a.From) + " " + fmt.Sprint(a.Len) + ")"
 }
 
 func (a *RangeLen) Children(fn func(Node)) {
@@ -175,12 +162,7 @@ type Mem struct {
 }
 
 func (a *Mem) String() string {
-	if c, ok := a.M.(*Constant); ok {
-		if s, ok := c.Val.(SuStr); ok {
-			return a.E.String() + "." + string(s)
-		}
-	}
-	return a.E.String() + "[" + a.M.String() + "]"
+	return "Mem(" + a.E.String() + " " + a.M.String() + ")"
 }
 
 func (a *Mem) Children(fn func(Node)) {
@@ -195,11 +177,13 @@ type In struct {
 }
 
 func (a *In) String() string {
-	s := "(" + a.E.String() + " in"
+	s := "In(" + a.E.String() + " ["
+	sep := ""
 	for _, e := range a.Exprs {
-		s += " " + e.String()
+		s += sep + e.String()
+		sep = " "
 	}
-	return s + ")"
+	return s + "])"
 }
 
 func (a *In) Children(fn func(Node)) {
@@ -216,7 +200,7 @@ type Call struct {
 }
 
 func (a *Call) String() string {
-	s := "(call " + a.Fn.String()
+	s := "Call(" + a.Fn.String()
 	for _, arg := range a.Args {
 		s += " " + arg.String()
 	}
@@ -239,9 +223,9 @@ func (a *Arg) String() string {
 	s := ""
 	if a.Name != nil {
 		if ks, ok := a.Name.(SuStr); ok && lexer.IsIdentifier(string(ks)) {
-			s += string(ks) + ": "
+			s += string(ks) + ":"
 		} else {
-			s += a.Name.String() + ": "
+			s += a.Name.String() + ":"
 		}
 	}
 	return s + a.E.String()
@@ -258,20 +242,26 @@ type Function struct {
 }
 
 func (a *Function) String() string {
-	s := "function("
-	sep := ""
-	for _, p := range a.Params {
-		if s == "function(" && p.String() == "this" {
-			continue
+	return a.str("Function")
+}
+
+func (a *Function) str(which string) string {
+	s := which + "("
+	if len(a.Params) > 0 {
+		sep := ""
+		for _, p := range a.Params {
+			if sep == "" && p.String() == "this" {
+				continue
+			}
+			s += sep + p.String()
+			sep = ","
 		}
-		s += sep + p.String()
-		sep = ","
 	}
-	s += ") {\n"
+	s += ""
 	for _, x := range a.Body {
-		s += "\t" + x.String() + "\n"
+		s += "\n\t" + x.String()
 	}
-	return s + "}"
+	return s + ")"
 }
 
 func (a *Function) Children(fn func(Node)) {
@@ -298,17 +288,7 @@ type Block struct {
 }
 
 func (a *Block) String() string {
-	s := "{"
-	if len(a.Params) > 0 {
-		s += "|"
-		sep := ""
-		for _, p := range a.Params {
-			s += sep + p.String()
-			sep = ","
-		}
-		s += "|"
-	}
-	return s + " }"
+	return a.Function.str("Block")
 }
 
 func (a *Block) Children(fn func(Node)) {
@@ -412,11 +392,11 @@ type If struct {
 }
 
 func (x *If) String() string {
-	s := "if " + x.Cond.String() + "\n" + x.Then.String()
+	s := "If(" + x.Cond.String() + " " + x.Then.String()
 	if x.Else != nil {
-		s += "\nelse\n" + x.Else.String()
+		s += "\nelse " + x.Else.String()
 	}
-	return s
+	return s + ")"
 }
 
 func (x *If) Children(fn func(Node)) {
@@ -431,11 +411,11 @@ type Return struct {
 }
 
 func (x *Return) String() string {
-	s := "return"
+	s := "Return("
 	if x.E != nil {
-		s += " " + x.E.String()
+		s += x.E.String()
 	}
-	return s
+	return s + ")"
 }
 
 func (x *Return) Children(fn func(Node)) {
@@ -448,7 +428,7 @@ type Throw struct {
 }
 
 func (x *Throw) String() string {
-	return "throw " + x.E.String()
+	return "Throw(" + x.E.String() + ")"
 }
 
 func (x *Throw) Children(fn func(Node)) {
@@ -464,7 +444,7 @@ type TryCatch struct {
 }
 
 func (x *TryCatch) String() string {
-	s := "try\n" + x.Try.String()
+	s := "Try(" + x.Try.String()
 	if x.Catch != nil {
 		s += "\ncatch"
 		if x.CatchVar != "" {
@@ -474,9 +454,9 @@ func (x *TryCatch) String() string {
 			}
 			s += ")"
 		}
-		s += "\n" + x.Catch.String()
+		s += " " + x.Catch.String()
 	}
-	return s
+	return s + ")"
 }
 
 func (x *TryCatch) Children(fn func(Node)) {
@@ -490,7 +470,7 @@ type Forever struct {
 }
 
 func (x *Forever) String() string {
-	return "forever\n" + x.Body.String()
+	return "Forever(" + x.Body.String() + ")"
 }
 
 func (x *Forever) Children(fn func(Node)) {
@@ -505,7 +485,7 @@ type ForIn struct {
 }
 
 func (x *ForIn) String() string {
-	return "for " + x.Var + " in " + x.E.String() + "\n" + x.Body.String()
+	return "ForIn(" + x.Var + " " + x.E.String() + "\n" + x.Body.String() + ")"
 }
 
 func (x *ForIn) Children(fn func(Node)) {
@@ -522,7 +502,7 @@ type For struct {
 }
 
 func (x *For) String() string {
-	s := "for "
+	s := "For("
 	sep := ""
 	for _, e := range x.Init {
 		s += sep + e.String()
@@ -538,7 +518,7 @@ func (x *For) String() string {
 		s += sep + e.String()
 		sep = ","
 	}
-	return s + "\n" + x.Body.String()
+	return s + "\n" + x.Body.String() + ")"
 }
 
 func (x *For) Children(fn func(Node)) {
@@ -559,7 +539,7 @@ type While struct {
 }
 
 func (x *While) String() string {
-	return "while " + x.Cond.String() + "\n" + x.Body.String()
+	return "While(" + x.Cond.String() + " " + x.Body.String() + ")"
 }
 
 func (x *While) Children(fn func(Node)) {
@@ -574,7 +554,7 @@ type DoWhile struct {
 }
 
 func (x *DoWhile) String() string {
-	return "do\n" + x.Body.String() + "\nwhile " + x.Cond.String()
+	return "DoWhile(" + x.Body.String() + " " + x.Cond.String() + ")"
 }
 
 func (x *DoWhile) Children(fn func(Node)) {
@@ -587,7 +567,7 @@ type Break struct {
 }
 
 func (*Break) String() string {
-	return "break"
+	return "Break"
 }
 
 type Continue struct {
@@ -595,7 +575,7 @@ type Continue struct {
 }
 
 func (*Continue) String() string {
-	return "continue"
+	return "Continue"
 }
 
 type Expression struct {
@@ -624,25 +604,25 @@ type Case struct {
 }
 
 func (x *Switch) String() string {
-	s := "switch " + x.E.String() + " {"
+	s := "Switch(" + x.E.String()
 	for _, c := range x.Cases {
-		s += "\ncase "
+		s += "\nCase("
 		sep := ""
 		for _, e := range c.Exprs {
 			s += sep + e.String()
 			sep = ","
 		}
 		for _, stmt := range c.Body {
-			s += "\n\t" + stmt.String()
+			s += "\n" + stmt.String()
 		}
+		s += ")"
 	}
 	if x.Default != nil {
-		s += "\n" + "default:"
 		for _, stmt := range x.Default {
-			s += "\n\t" + stmt.String()
+			s += "\n" + stmt.String()
 		}
 	}
-	return s + "\n}"
+	return s + ")"
 }
 
 func (x *Switch) Children(fn func(Node)) {
