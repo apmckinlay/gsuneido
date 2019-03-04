@@ -1,9 +1,9 @@
 package runtime
 
 import (
-	"fmt"
-	"runtime/debug"
 	"testing"
+
+	"github.com/apmckinlay/gsuneido/util/verify"
 )
 
 // confirm the behavior of recover
@@ -17,8 +17,8 @@ func TestRecover(*testing.T) {
 func a() {
 	defer func() {
 		if e := recover(); e != nil {
-			fmt.Println("unwound", unwound)
-			debug.PrintStack()
+			verify.That(unwound)
+			// debug.PrintStack()
 		}
 	}()
 	b()
