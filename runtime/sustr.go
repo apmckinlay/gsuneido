@@ -166,3 +166,30 @@ func (ss SuStr) Pack(buf []byte) []byte {
 func UnpackSuStr(buf []byte) Value {
 	return SuStr(string(buf))
 }
+
+// iterator ---------------------------------------------------------
+
+type stringIter struct {
+	s string
+	i int
+}
+
+func (ss SuStr) Iter() Iter {
+	return &stringIter{s: string(ss)}
+}
+
+func (si *stringIter) Next() Value {
+	si.i++
+	if si.i > len(si.s) {
+		return nil
+	}
+	return SuStr(si.s[si.i-1])
+}
+
+func (si *stringIter) Dup() Iter {
+	return &stringIter{s: si.s}
+}
+
+func (si *stringIter) Infinite() bool {
+	return false
+}

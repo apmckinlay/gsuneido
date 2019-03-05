@@ -60,6 +60,10 @@ func (c SuConcat) AddSuConcat(cv2 SuConcat) SuConcat {
 	return SuConcat{b: bb, n: c.n + cv2.Len()}
 }
 
+func (c SuConcat) Iter() Iter {
+	return &stringIter{s: c.toStr()}
+}
+
 // Value interface --------------------------------------------------
 
 func (c SuConcat) ToInt() (int, bool) {

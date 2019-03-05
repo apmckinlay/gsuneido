@@ -22,6 +22,10 @@ func init() {
 		"Has?": method1("(string)", func(this, arg Value) Value {
 			return SuBool(strings.Contains(ToStr(this), ToStr(arg)))
 		}),
+		"Iter": method0(func(this Value) Value { // TODO sequence
+			iterable := this.(interface { Iter() Iter })
+			return SuIter{Iter: iterable.Iter()}
+		}),
 		"Lower": method0(func(this Value) Value {
 			return SuStr(strings.ToLower(ToStr(this)))
 		}),
