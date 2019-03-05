@@ -11,7 +11,7 @@ func init() {
 				ob := ToObject(this)
 				iter := NewArgsIter(as, args)
 				if at := getNamed(as, args, SuStr("at")); at != nil {
-					if i, ok := ToInt(at); ok {
+					if i, ok := Index2(at); ok {
 						addAt(ob, i, iter)
 					} else {
 						putAt(ob, at, iter)
@@ -23,7 +23,7 @@ func init() {
 			}),
 		"Iter": method0(func(this Value) Value { // TODO sequence
 			ob := ToObject(this)
-			return SuIter{ob.IterValues()}
+			return SuIter{Iter: ob.IterValues()}
 		}),
 		"Members": method0(func(this Value) Value { // TODO sequence
 			ob := ToObject(this)
@@ -58,16 +58,6 @@ func init() {
 			}),
 		// TODO more methods
 	}
-}
-
-func ToInt(x Value) (int, bool) {
-	if i, ok := SmiToInt(x); ok {
-		return i, ok
-	}
-	if dn, ok := x.(SuDnum); ok {
-		return dn.Dnum.ToInt()
-	}
-	return 0, false
 }
 
 func getNamed(as *ArgSpec, args []Value, name Value) Value {

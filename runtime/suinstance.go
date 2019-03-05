@@ -1,7 +1,5 @@
 package runtime
 
-import "github.com/apmckinlay/gsuneido/util/dnum"
-
 // SuInstance is an instance of an SuInstance
 type SuInstance struct {
 	MemBase
@@ -25,7 +23,7 @@ func (ob *SuInstance) String() string {
 // to handle user defined ToString
 func (ob *SuInstance) Display(t *Thread) string {
 	if f := ob.class.get2("ToString"); f != nil {
-		return f.Call(t, ArgSpec0).ToStr()
+		return ToStr(f.Call(t, ArgSpec0))
 	}
 	return ob.String()
 }
@@ -34,35 +32,23 @@ func (*SuInstance) TypeName() string {
 	return "Instance"
 }
 
-func (*SuInstance) ToInt() int {
-	panic("cannot convert instance to integer")
-}
-
-func (*SuInstance) ToDnum() dnum.Dnum {
-	panic("cannot convert instance to number")
-}
-
-func (*SuInstance) ToStr() string {
-	panic("cannot convert instance to string")
-}
-
 func (ob *SuInstance) Get(t *Thread, m Value) Value {
 	if m.TypeName() != "String" {
 		return nil
 	}
-	ms := m.ToStr()
+	ms := ToStr(m)
 	if x, ok := ob.Data[ms]; ok {
 		return x
 	}
 	x := ob.class.get1(t, ms)
-	if m,ok := x.(*SuMethod); ok {
+	if m, ok := x.(*SuMethod); ok {
 		m.this = ob // fix 'this' to be instance, not method class
 	}
 	return x
 }
 
 func (ob *SuInstance) Put(m Value, v Value) {
-	ob.Data[m.ToStr()] = v
+	ob.Data[ToStr(m)] = v
 }
 
 func (SuInstance) RangeTo(int, int) Value {

@@ -11,8 +11,7 @@ import (
 // SuDnum wraps a Dnum and implements Value and Packable
 type SuDnum struct {
 	dnum.Dnum
-	// use an anonymous member in a struct to include the methods from Dnum
-	// i.e. Hash, String
+	CantConvert
 }
 
 var _ Value = SuDnum{}
@@ -21,22 +20,18 @@ var _ Packable = SuDnum{}
 // Value interface --------------------------------------------------
 
 // ToInt converts a SuDnum to an integer (Value interface)
-func (dn SuDnum) ToInt() int {
-	n, ok := dn.Dnum.ToInt()
-	if !ok {
-		panic("can't convert number to integer " + dn.String())
+func (dn SuDnum) ToInt() (int,bool) {
+	return dn.Dnum.ToInt()
 	}
-	return n
-}
 
 // ToDnum returns the wrapped Dnum (Value interface)
-func (dn SuDnum) ToDnum() dnum.Dnum {
-	return dn.Dnum
+func (dn SuDnum) ToDnum() (dnum.Dnum,bool) {
+	return dn.Dnum,true
 }
 
 // ToStr converts the Dnum to a string (Value interface)
-func (dn SuDnum) ToStr() string {
-	return dn.Dnum.String()
+func (dn SuDnum) ToStr() (string,bool) {
+	return dn.Dnum.String(),true
 }
 
 // String returns a string representation of the Dnum (Value interface)
@@ -95,7 +90,7 @@ func (dn SuDnum) Compare(other Value) int {
 	if y, ok := other.(SuDnum); ok {
 		return dnum.Compare(dn.Dnum, y.Dnum)
 	}
-	return dnum.Compare(dn.Dnum, other.ToDnum())
+	return dnum.Compare(dn.Dnum, ToDnum(other))
 }
 
 func (SuDnum) Call(*Thread, *ArgSpec) Value {
@@ -249,10 +244,10 @@ func UnpackNumber(buf rbuf) Value {
 	}
 	exp := int8(buf.get())
 	if exp == 0 {
-		return SuDnum{dnum.NegInf}
+		return SuDnum{Dnum: dnum.NegInf}
 	}
 	if exp == -1 {
-		return SuDnum{dnum.Inf}
+		return SuDnum{Dnum: dnum.Inf}
 	}
 	if sign < 0 {
 		exp = ^exp
@@ -269,7 +264,7 @@ func UnpackNumber(buf rbuf) Value {
 	if exp == 0 && coef <= MaxSuInt {
 		return SuInt(int(sign) * int(coef))
 	}
-	return SuDnum{dnum.New(sign, coef, int(exp)*4+16)}
+	return SuDnum{Dnum: dnum.New(sign, coef, int(exp)*4+16)}
 }
 
 func unpackLongPart(buf rbuf, minus bool) uint64 {

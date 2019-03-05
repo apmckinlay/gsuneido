@@ -1,10 +1,9 @@
 package runtime
 
-import "github.com/apmckinlay/gsuneido/util/dnum"
-
 // SuMethod is a bound method originating from an SuClass or SuInstance
 // when called, it sets 'this' to the origin
 type SuMethod struct {
+	CantConvert
 	fn   Value
 	this Value
 }
@@ -44,18 +43,6 @@ func (m *SuMethod) Equal(other interface{}) bool {
 		return true
 	}
 	return m.fn == m2.fn && m.this == m2.this
-}
-
-func (*SuMethod) ToInt() int {
-	panic("cannot convert method to integer")
-}
-
-func (*SuMethod) ToDnum() dnum.Dnum {
-	panic("cannot convert method to number")
-}
-
-func (*SuMethod) ToStr() string {
-	panic("cannot convert method to string")
 }
 
 func (*SuMethod) Get(*Thread, Value) Value {

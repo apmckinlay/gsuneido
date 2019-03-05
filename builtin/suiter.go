@@ -2,7 +2,6 @@ package builtin
 
 import (
 	. "github.com/apmckinlay/gsuneido/runtime"
-	"github.com/apmckinlay/gsuneido/util/dnum"
 )
 
 // SuIter is a Value that wraps a runtime.Iter
@@ -10,6 +9,7 @@ import (
 // returning itself when it reaches the end
 type SuIter struct {
 	Iter
+	CantConvert
 }
 
 // Value interface --------------------------------------------------
@@ -37,32 +37,20 @@ func (it SuIter) Equal(other interface{}) bool {
 	return ok && it2.Iter == it.Iter
 }
 
-func (SuIter) ToInt() int {
-	panic("cannot convert iterator to integer")
-}
-
-func (SuIter) ToDnum() dnum.Dnum {
-	panic("cannot convert iterator to number")
-}
-
-func (SuIter) ToStr() string {
-	panic("cannot convert iterator to string")
-}
-
 func (SuIter) Get(*Thread, Value) Value {
-	panic("iterator doe not support get")
+	panic("iterator does not support get")
 }
 
 func (SuIter) Put(Value, Value) {
-	panic("iterator doe not support put")
+	panic("iterator does not support put")
 }
 
 func (SuIter) RangeTo(int, int) Value {
-	panic("iterator doe not support range")
+	panic("iterator does not support range")
 }
 
 func (SuIter) RangeLen(int, int) Value {
-	panic("iterator doe not support range")
+	panic("iterator does not support range")
 }
 
 func (SuIter) Hash() uint32 {

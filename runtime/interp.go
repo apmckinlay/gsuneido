@@ -227,12 +227,12 @@ loop:
 			t.stack[t.sp-1] = Isnt(t.stack[t.sp-1], t.stack[t.sp])
 		case op.Match:
 			t.sp--
-			pat := t.rxcache.Get(t.stack[t.sp].ToStr())
+			pat := t.rxcache.Get(ToStr(t.stack[t.sp]))
 			s := t.stack[t.sp-1]
 			t.stack[t.sp-1] = Match(s, pat)
 		case op.MatchNot:
 			t.sp--
-			pat := t.rxcache.Get(t.stack[t.sp].ToStr())
+			pat := t.rxcache.Get(ToStr(t.stack[t.sp]))
 			s := t.stack[t.sp-1]
 			t.stack[t.sp-1] = Match(s, pat).Not()
 		case op.Lt:
@@ -417,7 +417,7 @@ loop:
 			}
 			base := t.sp - int(argSpec.Nargs) - 1
 			this := t.stack[base]
-			if methstr, ok := method.(SuStr); ok {
+			if methstr, ok := method.ToStr(); ok { //BUG accepts number/bool
 				ob := this
 				if super > 0 {
 					ob = GetGlobal(super)
@@ -431,7 +431,7 @@ loop:
 					break
 				}
 			}
-			panic("method not found " + this.TypeName() + "." + method.ToStr())
+			panic("method not found " + this.TypeName() + "." + method.String())
 		default:
 			panic("invalid op code: " + oc.String()) // TODO fatal?
 		}

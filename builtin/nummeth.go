@@ -14,48 +14,48 @@ var maxNarrow = dnum.FromInt(MaxSuInt)
 func init() {
 	NumMethods = Methods{
 		"Chr": method0(func(this Value) Value {
-			n := this.ToInt()
+			n := ToInt(this)
 			return SuStr(string(rune(n)))
 		}),
 		"Int": method0(func(this Value) Value {
-			dn := this.ToDnum().Int()
+			dn := ToDnum(this).Int()
 			if dnum.Compare(dn, minNarrow) >= 0 && dnum.Compare(dn, maxNarrow) <= 0 {
 				n, _ := dn.ToInt()
 				return SuInt(n)
 			}
-			return SuDnum{dn}
+			return SuDnum{Dnum: dn}
 		}),
 		"Format": method1("(mask)", func(this, arg Value) Value {
-			x := this.ToDnum()
-			mask := arg.ToStr()
+			x := ToDnum(this)
+			mask := ToStr(arg)
 			return SuStr(x.Format(mask))
 		}),
 		"Frac": method0(func(this Value) Value {
-			dn := this.ToDnum().Frac()
+			dn := ToDnum(this).Frac()
 			if dn.IsZero() {
 				return Zero
 			}
-			return SuDnum{dn}
+			return SuDnum{Dnum: dn}
 		}),
 		"Hex": method0(func(this Value) Value {
-			n := this.ToInt()
+			n := ToInt(this)
 			return SuStr(strconv.FormatUint(uint64(uint32(n)), 16))
 		}),
 
 		"Round": method1("(number)", func(this, arg Value) Value {
-			x := this.ToDnum()
-			r := arg.ToInt()
-			return SuDnum{x.Round(r, dnum.HalfUp)}
+			x := ToDnum(this)
+			r := ToInt(arg)
+			return SuDnum{Dnum: x.Round(r, dnum.HalfUp)}
 		}),
 		"RoundUp": method1("(number)", func(this, arg Value) Value {
-			x := this.ToDnum()
-			r := arg.ToInt()
-			return SuDnum{x.Round(r, dnum.Up)}
+			x := ToDnum(this)
+			r := ToInt(arg)
+			return SuDnum{Dnum: x.Round(r, dnum.Up)}
 		}),
 		"RoundDown": method1("(number)", func(this, arg Value) Value {
-			x := this.ToDnum()
-			r := arg.ToInt()
-			return SuDnum{x.Round(r, dnum.Down)}
+			x := ToDnum(this)
+			r := ToInt(arg)
+			return SuDnum{Dnum: x.Round(r, dnum.Down)}
 		}),
 
 		// float methods
@@ -111,10 +111,10 @@ func init() {
 }
 
 func toFloat(v Value) float64 {
-	if i, ok := SmiToInt(v); ok {
+	if i, ok := v.ToInt(); ok {
 		return float64(i)
 	}
-	return v.ToDnum().ToFloat()
+	return ToDnum(v).ToFloat()
 }
 
 func fromFloat(f float64) Value {
@@ -123,7 +123,7 @@ func fromFloat(f float64) Value {
 		if MinSuInt <= n && n <= MaxSuInt {
 			return SuInt(int(n))
 		}
-		return SuDnum{dnum.FromInt(n)}
+		return SuDnum{Dnum: dnum.FromInt(n)}
 	}
-	return SuDnum{dnum.FromFloat(f)}
+	return SuDnum{Dnum: dnum.FromFloat(f)}
 }

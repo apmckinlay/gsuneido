@@ -5,7 +5,6 @@ import (
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/lexer"
-	"github.com/apmckinlay/gsuneido/util/dnum"
 	"github.com/apmckinlay/gsuneido/util/hmap"
 	"github.com/apmckinlay/gsuneido/util/ints"
 )
@@ -15,6 +14,7 @@ import (
 // Zero value is a valid empty object
 // NOTE: Not thread safe
 type SuObject struct {
+	CantConvert
 	list     []Value
 	named    hmap.Hmap
 	readonly bool
@@ -22,7 +22,7 @@ type SuObject struct {
 }
 
 var _ Value = (*SuObject)(nil)
-var _ Packable = &SuObject{}
+var _ Packable = (*SuObject)(nil)
 
 // Get returns the value associated with a key, or defval if not found
 func (ob *SuObject) Get(_ *Thread, key Value) Value {
@@ -39,7 +39,7 @@ func (ob *SuObject) GetDefault(key Value, def Value) Value {
 }
 
 func (ob *SuObject) getIfPresent(key Value) Value {
-	if i := index(key); 0 <= i && i < ob.ListSize() {
+	if i, ok := Index2(key); ok && 0 <= i && i < ob.ListSize() {
 		return ob.list[i]
 	}
 	x := ob.named.Get(key)
@@ -53,18 +53,6 @@ func (ob *SuObject) Has(key Value) bool {
 	return ob.named.Get(key) != nil
 }
 
-func index(key Value) int {
-	if i, ok := SmiToInt(key); ok {
-		return i
-	}
-	if dn, ok := key.(SuDnum); ok {
-		if i, ok := dn.Dnum.ToInt(); ok {
-			return i
-		}
-	}
-	return -1 // invalid list index
-}
-
 // ListGet returns a value from the list, panics if index out of range
 func (ob *SuObject) ListGet(i int) Value {
 	return ob.list[i]
@@ -74,13 +62,14 @@ func (ob *SuObject) ListGet(i int) Value {
 // The value will be added to the list if the key is the "next"
 func (ob *SuObject) Put(key Value, val Value) {
 	ob.mustBeMutable()
-	i := index(key)
-	if i == ob.ListSize() {
-		ob.Add(val)
-		return
-	} else if 0 <= i && i < ob.ListSize() {
-		ob.list[i] = val
-		return
+	if i, ok := Index2(key); ok {
+		if i == ob.ListSize() {
+			ob.Add(val)
+			return
+		} else if 0 <= i && i < ob.ListSize() {
+			ob.list[i] = val
+			return
+		}
 	}
 	ob.named.Put(key, val)
 }
@@ -105,16 +94,8 @@ func (ob *SuObject) rangeTo(i int, j int) *SuObject {
 	return &SuObject{list: list}
 }
 
-func (*SuObject) ToInt() int {
-	panic("cannot convert object to integer")
-}
-
-func (*SuObject) ToDnum() dnum.Dnum {
-	panic("cannot convert object to number")
-}
-
-func (*SuObject) ToStr() string {
-	panic("cannot convert object to string")
+func (ob *SuObject) ToObject() (*SuObject, bool) {
+	return ob, true
 }
 
 func (ob *SuObject) ListSize() int {
@@ -264,11 +245,12 @@ func (ob *SuObject) Hash2() uint32 {
 }
 
 func (ob *SuObject) Equal(other interface{}) bool {
-	ob2 := toSuObject(other)
-	if ob2 == nil {
-		return false
+	if val, ok := other.(Value); ok {
+		if ob2, ok := val.ToObject(); ok {
+			return soEqual(ob, ob2, newpairs())
+		}
 	}
-	return soEqual(ob, ob2, newpairs())
+	return false
 }
 
 func soEqual(x *SuObject, y *SuObject, inProgress pairs) bool {
@@ -304,8 +286,8 @@ func soEqual(x *SuObject, y *SuObject, inProgress pairs) bool {
 }
 
 func equals3(x Value, y Value, inProgress pairs) bool {
-	if xo := toSuObject(x); xo != nil {
-		if yo := toSuObject(y); yo != nil {
+	if xo, ok := x.ToObject(); ok {
+		if yo, ok := y.ToObject(); ok {
 			return soEqual(xo, yo, inProgress)
 		}
 	}
@@ -315,16 +297,6 @@ func equals3(x Value, y Value, inProgress pairs) bool {
 		}
 	}
 	return x.Equal(y)
-}
-
-func toSuObject(x interface{}) *SuObject {
-	switch x := x.(type) {
-	case *SuObject:
-		return x
-	case *SuRecord:
-		return &x.SuObject
-	}
-	return nil
 }
 
 func (SuObject) TypeName() string {
@@ -485,16 +457,6 @@ func (ob *SuObject) SetDefault(def Value) {
 
 func (ob *SuObject) Copy() *SuObject {
 	return ob.Slice(0)
-}
-
-func ToObject(x Value) *SuObject {
-	if ob, ok := x.(*SuObject); ok {
-		return ob
-	}
-	if r, ok := x.(*SuRecord); ok {
-		return &r.SuObject
-	}
-	panic("can't convert " + x.TypeName() + " to object")
 }
 
 // Packable

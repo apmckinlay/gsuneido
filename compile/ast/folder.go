@@ -58,10 +58,10 @@ func (f Folder) Binary(lhs Expr, token tok.Token, rhs Expr) Expr {
 	case tok.Isnt:
 		val = Isnt(val, val2)
 	case tok.Match:
-		pat := regex.Compile(val2.ToStr())
+		pat := regex.Compile(ToStr(val2))
 		val = Match(val, pat)
 	case tok.MatchNot:
-		pat := regex.Compile(val2.ToStr())
+		pat := regex.Compile(ToStr(val2))
 		val = Not(Match(val, pat))
 	case tok.Lt:
 		val = Lt(val, val2)
@@ -195,7 +195,7 @@ func foldCat(exprs []Expr) []Expr {
 			exprs[dst] = e
 			dst++
 		} else {
-			first.Val = SuStr(Cat(first.Val, c.Val).ToStr()) // flatten Concat
+			first.Val = SuStr(ToStr(first.Val) + ToStr(c.Val))
 		}
 	}
 	return exprs[:dst]

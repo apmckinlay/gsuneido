@@ -2,8 +2,6 @@ package runtime
 
 import (
 	"sort"
-
-	"github.com/apmckinlay/gsuneido/util/dnum"
 )
 
 // SuClass is a user defined (Suneido language) class
@@ -61,23 +59,11 @@ func (*SuClass) TypeName() string {
 	return "Class"
 }
 
-func (*SuClass) ToInt() int {
-	panic("cannot convert class to integer")
-}
-
-func (*SuClass) ToDnum() dnum.Dnum {
-	panic("cannot convert class to number")
-}
-
-func (*SuClass) ToStr() string {
-	panic("cannot convert class to string")
-}
-
 func (c *SuClass) Get(t *Thread, m Value) Value {
 	if m.TypeName() != "String" {
 		return nil
 	}
-	return c.get1(t, m.ToStr())
+	return c.get1(t, ToStr(m))
 }
 
 func (c *SuClass) get1(t *Thread, mem string) Value {

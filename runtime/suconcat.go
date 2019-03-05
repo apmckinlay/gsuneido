@@ -14,6 +14,7 @@ import (
 type SuConcat struct {
 	b *shared
 	n int
+	CantConvert
 }
 
 type shared struct {
@@ -43,7 +44,7 @@ func (c SuConcat) Add(s string) SuConcat {
 		bb = &shared{a}
 	}
 	bb.a = append(bb.a, s...)
-	return SuConcat{bb, c.n + len(s)}
+	return SuConcat{b: bb, n: c.n + len(s)}
 }
 
 // AddSuConcat appends an SuConcat to an SuConcat
@@ -56,41 +57,39 @@ func (c SuConcat) AddSuConcat(cv2 SuConcat) SuConcat {
 		bb = &shared{a}
 	}
 	bb.a = append(bb.a, cv2.b.a...)
-	return SuConcat{bb, c.n + cv2.Len()}
+	return SuConcat{b: bb, n: c.n + cv2.Len()}
 }
 
 // Value interface --------------------------------------------------
 
 // ToInt converts an SuConcat to an integer (Value interface)
-func (c SuConcat) ToInt() int {
-	if c.n == 0 {
-		return 0
-	}
-	panic("can't convert String to integer")
+func (c SuConcat) ToInt() (int, bool) {
+	return 0, c.n == 0
 }
 
 // ToDnum converts an SuConcat to a Dnum (Value interface)
-func (c SuConcat) ToDnum() dnum.Dnum {
-	if c.n == 0 {
-		return dnum.Zero
-	}
-	panic("can't convert String to number")
+func (c SuConcat) ToDnum() (dnum.Dnum, bool) {
+	return dnum.Zero, c.n == 0
 }
 
 // ToStr converts an SuConcat to a string (Value interface)
-func (c SuConcat) ToStr() string {
+func (c SuConcat) ToStr() (string, bool) {
+	return c.toStr(), true
+}
+
+func (c SuConcat) toStr() string {
 	return string(c.b.a[:c.n])
 }
 
 // String returns a quoted string (Value interface)
 // TODO: handle escaping
 func (c SuConcat) String() string {
-	return "'" + c.ToStr() + "'"
+	return "'" + c.toStr() + "'"
 }
 
 // Get returns the character at a given index (Value interface)
 func (c SuConcat) Get(_ *Thread, key Value) Value {
-	return SuStr(string(c.b.a[:c.n][key.ToInt()]))
+	return strGet(c.toStr(), key)
 }
 
 // Put is not applicable to SuConcat (Value interface)
@@ -101,13 +100,13 @@ func (SuConcat) Put(Value, Value) {
 func (c SuConcat) RangeTo(from int, to int) Value {
 	from = prepFrom(from, c.n)
 	to = prepTo(from, to, c.n)
-	return SuStr(c.ToStr()[from:to])
+	return SuStr(c.toStr()[from:to])
 }
 
 func (c SuConcat) RangeLen(from int, n int) Value {
 	from = prepFrom(from, c.n)
 	n = prepLen(n, c.n-from)
-	return SuStr(c.ToStr()[from : from+n])
+	return SuStr(c.toStr()[from : from+n])
 }
 
 // Hash returns a hash value for an SuConcat (Value interface)
@@ -125,7 +124,7 @@ func (c SuConcat) Equal(other interface{}) bool {
 	// check string first assuming more common than concat
 	if s2, ok := other.(SuStr); ok {
 		// according to benchmark, this doesn't allocate
-		return c.n == len(s2) && c.ToStr() == string(s2)
+		return c.n == len(s2) && c.toStr() == string(s2)
 	}
 	if c2, ok := other.(SuConcat); ok {
 		return c.n == c2.n && bytes.Equal(c.b.a[:c.n], c2.b.a[:c.n])
@@ -148,11 +147,11 @@ func (c SuConcat) Compare(other Value) int {
 	if cmp := ints.Compare(c.Order(), other.Order()); cmp != 0 {
 		return cmp
 	}
-	return strings.Compare(c.ToStr(), other.ToStr())
+	return strings.Compare(c.toStr(), ToStr(other))
 }
 
 func (c SuConcat) Call(t *Thread, as *ArgSpec) Value {
-	ss := SuStr(c.ToStr())
+	ss := SuStr(c.toStr())
 	return ss.Call(t, as)
 }
 

@@ -7,7 +7,6 @@ import (
 	gotime "time"
 
 	"github.com/apmckinlay/gsuneido/util/ascii"
-	"github.com/apmckinlay/gsuneido/util/dnum"
 	"github.com/apmckinlay/gsuneido/util/ints"
 	"github.com/apmckinlay/gsuneido/util/verify"
 )
@@ -27,6 +26,7 @@ type SuDate struct {
 	date uint32
 	// 10 bits for hour, 6 bits for minute, 6 bits for second, 10 bits for ms
 	time uint32
+	CantConvert
 }
 
 var NilDate = SuDate{}
@@ -35,7 +35,7 @@ var _ Value = NilDate
 var _ Packable = NilDate
 
 func DateTime(date uint32, time uint32) SuDate {
-	d := SuDate{date, time}
+	d := SuDate{date: date, time: time}
 	if !valid(d.Year(), d.Month(), d.Day(),
 		d.Hour(), d.Minute(), d.Second(), d.Millisecond()) {
 		return NilDate
@@ -167,7 +167,7 @@ func (d SuDate) Pack(buf []byte) []byte {
 func UnpackDate(buf []byte) SuDate {
 	date := unpackUint32(buf)
 	time := unpackUint32(buf[4:])
-	return SuDate{date, time}
+	return SuDate{date: date, time: time}
 }
 
 // OffsetUTC returns the offset from local to UTC in minutes
@@ -736,18 +736,6 @@ func (SuDate) RangeTo(int, int) Value {
 
 func (SuDate) RangeLen(int, int) Value {
 	panic("date does not support range")
-}
-
-func (SuDate) ToInt() int {
-	panic("cannot convert date to integer")
-}
-
-func (SuDate) ToDnum() dnum.Dnum {
-	panic("cannot convert date to number")
-}
-
-func (SuDate) ToStr() string {
-	panic("cannot convert date to string")
 }
 
 func (SuDate) TypeName() string {

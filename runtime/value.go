@@ -12,17 +12,20 @@ type Value interface {
 	// String returns a human readable string i.e. Suneido Display
 	String() string
 
-	// ToStr converts to a string or panics
+	// ToStr converts to a string when applicable
 	// boolean and number are converted, other types are not
-	ToStr() string
+	ToStr() (string, bool)
 
-	// ToInt converts to an integer or panics
+	// ToInt converts to an integer when applicable
 	// false and "" convert to 0 (but true does NOT convert to 1)
-	ToInt() int
+	ToInt() (int, bool)
 
-	// ToDnum converts to a dnum or panics
+	// ToDnum converts to a dnum when applicable
 	// false and "" convert to 0 (but true does NOT convert to 1)
-	ToDnum() dnum.Dnum
+	ToDnum() (dnum.Dnum, bool)
+
+	// ToObject converts to an SuObject when applicable
+	ToObject() (*SuObject, bool)
 
 	// Get returns a member of an object/instance/class or a character of a string
 	// returns nil if the member does not exist
@@ -76,7 +79,7 @@ func NumFromString(s string) Value {
 	if n, err := strconv.ParseInt(s, 0, 32); err == nil {
 		return IntToValue(int(n))
 	}
-	return SuDnum{dnum.FromStr(s)}
+	return SuDnum{Dnum: dnum.FromStr(s)}
 }
 
 type Showable interface {
@@ -97,4 +100,70 @@ func Show(v Value) string {
 type Named interface {
 	GetName() string
 	SetName(name string)
+}
+
+// ToStr converts to a string or panics
+// boolean and number are converted, other types are not
+func ToStr(x Value) string {
+	if s, ok := x.ToStr(); ok {
+		return s
+	}
+	panic("can't convert " + x.TypeName() + " to String")
+}
+
+// ToInt converts to an integer or panics
+// false and "" convert to 0 (but true does NOT convert to 1)
+func ToInt(x Value) int {
+	if i, ok := x.ToInt(); ok {
+		return i
+	}
+	panic("can't convert " + errType(x) + " to integer")
+}
+
+// ToDnum converts to a dnum or panics
+// false and "" convert to 0 (but true does NOT convert to 1)
+func ToDnum(x Value) dnum.Dnum {
+	if dn, ok := x.ToDnum(); ok {
+		return dn
+	}
+	panic("can't convert " + errType(x) + " to number")
+}
+
+// errType tweaks the TypeName to match cSuneido
+func errType(x Value) string {
+	if x == True {
+		return "true"
+	}
+	t := x.TypeName()
+	if t == "String" {
+		return t
+	}
+	return strings.ToLower(t)
+}
+
+// ToObject converts to an SuObject or panics
+func ToObject(x Value) *SuObject {
+	if ob, ok := x.ToObject(); ok {
+		return ob
+	}
+	panic("can't convert " + x.TypeName() + " to Object")
+}
+
+// CantConvert is embedded in Value types to supply default conversion methods
+type CantConvert struct {}
+
+func (CantConvert) ToInt() (int,bool) {
+	return 0,false
+}
+
+func (CantConvert) ToDnum() (dnum.Dnum,bool) {
+	return dnum.Zero,false
+}
+
+func (CantConvert) ToObject() (*SuObject,bool) {
+	return nil,false
+}
+
+func (CantConvert) ToStr() (string,bool) {
+	return "",false
 }

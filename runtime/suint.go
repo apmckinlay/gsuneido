@@ -39,10 +39,10 @@ func SuInt(n int) *smi {
 	return &smispace[offset] // will panic if out of range
 }
 
-// SmiToInt converts to int if its argument is a *smi
+// SmiToInt converts to int if its argument is *smi
 func SmiToInt(x interface{}) (int, bool) {
 	if si, ok := x.(*smi); ok {
-		return si.ToInt(), true
+		return si.toInt(), true
 	}
 	return 0, false
 }
@@ -50,22 +50,30 @@ func SmiToInt(x interface{}) (int, bool) {
 var _ Value = SuInt(0)
 var _ Packable = SuInt(0)
 
-func (si *smi) ToInt() int {
+func (si *smi) ToInt() (int, bool) {
+	return si.toInt(), true
+}
+
+func (si *smi) toInt() int {
 	p := unsafe.Pointer(si)
 	offset := int(uintptr(p) - smibase)
 	return offset + math.MinInt16
 }
 
-func (si *smi) ToDnum() dnum.Dnum {
-	return dnum.FromInt(int64(si.ToInt()))
+func (si *smi) ToDnum() (dnum.Dnum, bool) {
+	return dnum.FromInt(int64(ToInt(si))), true
 }
 
-func (si *smi) ToStr() string {
-	return strconv.Itoa(si.ToInt())
+func (*smi) ToObject() (*SuObject, bool) {
+	return nil, false
+}
+
+func (si *smi) ToStr() (string, bool) {
+	return si.String(), true
 }
 
 func (si *smi) String() string {
-	return si.ToStr()
+	return strconv.Itoa(si.toInt())
 }
 
 func (*smi) Get(*Thread, Value) Value {
@@ -85,7 +93,7 @@ func (*smi) RangeLen(int, int) Value {
 }
 
 func (si *smi) Hash() uint32 {
-	return uint32(si.ToInt())
+	return uint32(si.toInt())
 }
 
 func (si *smi) Hash2() uint32 {
@@ -96,17 +104,18 @@ func (si *smi) Equal(other interface{}) bool {
 	if i2, ok := other.(*smi); ok {
 		return si == i2
 	} else if dn, ok := other.(SuDnum); ok {
-		return 0 == dnum.Compare(si.ToDnum(), dn.Dnum)
+		dn2, _ := si.ToDnum()
+		return 0 == dnum.Compare(dn2, dn.Dnum)
 	}
 	return false
 }
 
 func (si *smi) PackSize(int) int {
-	return PackSizeInt64(int64(si.ToInt()))
+	return PackSizeInt64(int64(si.toInt()))
 }
 
 func (si *smi) Pack(buf []byte) []byte {
-	return PackInt64(int64(si.ToInt()), buf)
+	return PackInt64(int64(si.toInt()), buf)
 }
 
 func (*smi) TypeName() string {
@@ -122,9 +131,10 @@ func (si *smi) Compare(other Value) int {
 		return cmp
 	}
 	if y, ok := other.(*smi); ok {
-		return ints.Compare(si.ToInt(), y.ToInt())
+		return ints.Compare(si.toInt(), y.toInt())
 	}
-	return dnum.Compare(si.ToDnum(), other.ToDnum())
+	dn, _ := si.ToDnum()
+	return dnum.Compare(dn, ToDnum(other))
 }
 
 func (*smi) Call(*Thread, *ArgSpec) Value {

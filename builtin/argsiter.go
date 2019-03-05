@@ -10,7 +10,7 @@ type ArgsIter func() (Value, Value)
 // It returns nil,nil when there are no more values
 func NewArgsIter(as *ArgSpec, args []Value) ArgsIter {
 	if as.Each != 0 {
-		iter := args[0].(*SuObject).Iter()
+		iter := ToObject(args[0]).Iter()
 		if as.Each == EACH1 {
 			iter() // skip first
 		}

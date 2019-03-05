@@ -10,7 +10,7 @@ import (
 
 func TestSuInt(t *testing.T) {
 	test := func(n int) {
-		Assert(t).That(SuInt(n).ToInt(), Equals(int(n)))
+		Assert(t).That(SuInt(n).toInt(), Equals(int(n)))
 	}
 	test(0)
 	test(12345)

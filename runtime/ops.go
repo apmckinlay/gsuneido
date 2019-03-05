@@ -10,7 +10,7 @@ import (
 var (
 	Zero   Value = SuInt(0)
 	One    Value = SuInt(1)
-	MaxInt Value = SuDnum{dnum.FromInt(math.MaxInt32)}
+	MaxInt Value = SuDnum{Dnum: dnum.FromInt(math.MaxInt32)}
 	True   Value = SuBool(true)
 	False  Value = SuBool(false)
 	// EmptyStr defined in sustr.go
@@ -46,7 +46,7 @@ func Add(x Value, y Value) Value {
 			return IntToValue(xi + yi)
 		}
 	}
-	return SuDnum{dnum.Add(x.ToDnum(), y.ToDnum())}
+	return SuDnum{Dnum: dnum.Add(ToDnum(x), ToDnum(y))}
 }
 
 func Sub(x Value, y Value) Value {
@@ -55,7 +55,7 @@ func Sub(x Value, y Value) Value {
 			return IntToValue(xi - yi)
 		}
 	}
-	return SuDnum{dnum.Sub(x.ToDnum(), y.ToDnum())}
+	return SuDnum{Dnum: dnum.Sub(ToDnum(x), ToDnum(y))}
 }
 
 func Mul(x Value, y Value) Value {
@@ -64,7 +64,7 @@ func Mul(x Value, y Value) Value {
 			return IntToValue(xi * yi)
 		}
 	}
-	return SuDnum{dnum.Mul(x.ToDnum(), y.ToDnum())}
+	return SuDnum{Dnum: dnum.Mul(ToDnum(x), ToDnum(y))}
 }
 
 func Div(x Value, y Value) Value {
@@ -75,35 +75,35 @@ func Div(x Value, y Value) Value {
 			}
 		}
 	}
-	return SuDnum{dnum.Div(x.ToDnum(), y.ToDnum())}
+	return SuDnum{Dnum: dnum.Div(ToDnum(x), ToDnum(y))}
 }
 
 func Mod(x Value, y Value) Value {
-	return IntToValue(x.ToInt() % y.ToInt())
+	return IntToValue(ToInt(x) % ToInt(y))
 }
 
 func LeftShift(x Value, y Value) Value {
-	return IntToValue(int(uint(x.ToInt()) << uint(y.ToInt())))
+	return IntToValue(int(uint(ToInt(x)) << uint(ToInt(y))))
 }
 
 func RightShift(x Value, y Value) Value {
-	return IntToValue(int(uint(x.ToInt()) >> uint(y.ToInt())))
+	return IntToValue(int(uint(ToInt(x)) >> uint(ToInt(y))))
 }
 
 func BitOr(x Value, y Value) Value {
-	return IntToValue(x.ToInt() | y.ToInt())
+	return IntToValue(ToInt(x) | ToInt(y))
 }
 
 func BitAnd(x Value, y Value) Value {
-	return IntToValue(x.ToInt() & y.ToInt())
+	return IntToValue(ToInt(x) & ToInt(y))
 }
 
 func BitXor(x Value, y Value) Value {
-	return IntToValue(x.ToInt() ^ y.ToInt())
+	return IntToValue(ToInt(x) ^ ToInt(y))
 }
 
 func BitNot(x Value) Value {
-	return IntToValue(^x.ToInt())
+	return IntToValue(^ToInt(x))
 }
 
 func Not(x Value) Value {
@@ -127,19 +127,17 @@ func Bool(x Value) bool {
 }
 
 func UnaryPlus(x Value) Value {
-	if _, ok := SmiToInt(x); ok {
-		return x
-	} else if _, ok := x.(SuDnum); ok {
+	if _, ok := x.(*smi); ok {
 		return x
 	}
-	return SuDnum{x.ToDnum()} // "" or false => 0, else throw
+	return SuDnum{Dnum: ToDnum(x)}
 }
 
 func UnaryMinus(x Value) Value {
 	if xi, ok := SmiToInt(x); ok {
 		return IntToValue(-xi)
 	}
-	return SuDnum{x.ToDnum().Neg()}
+	return SuDnum{Dnum: ToDnum(x).Neg()}
 }
 
 // IntToValue returns an SuInt if it fits, else a SuDnum
@@ -147,7 +145,7 @@ func IntToValue(n int) Value {
 	if MinSuInt < n && n < MaxSuInt {
 		return SuInt(n)
 	}
-	return SuDnum{dnum.FromInt(int64(n))}
+	return SuDnum{Dnum: dnum.FromInt(int64(n))}
 }
 
 func Cat(x, y Value) Value {
@@ -181,39 +179,48 @@ func cat3(x, y Value) Value {
 	if xcok && ycok {
 		return xc.AddSuConcat(yc)
 	} else if xcok {
-		result = xc.Add(y.ToStr())
+		result = xc.Add(ToStr(y))
 	} else if ycok {
-		result = NewSuConcat().Add(x.ToStr()).AddSuConcat(yc)
+		result = NewSuConcat().Add(ToStr(x)).AddSuConcat(yc)
 	} else {
-		result = cat2(x.ToStr(), y.ToStr())
+		result = cat2(ToStr(x), ToStr(y))
 	}
 	if xe, ok := x.(*SuExcept); ok {
-		return &SuExcept{SuStr: SuStr(result.ToStr()), Callstack: xe.Callstack}
+		return &SuExcept{SuStr: SuStr(ToStr(result)), Callstack: xe.Callstack}
 	}
 	if ye, ok := y.(*SuExcept); ok {
-		return &SuExcept{SuStr: SuStr(result.ToStr()), Callstack: ye.Callstack}
+		return &SuExcept{SuStr: SuStr(ToStr(result)), Callstack: ye.Callstack}
 	}
 	return result
 }
 
 func Match(x Value, y regex.Pattern) SuBool {
-	return SuBool(y.Matches(x.ToStr()))
+	return SuBool(y.Matches(ToStr(x)))
 }
 
-// Index is basically the same as value.ToInt
+// Index is basically the same as ToInt(value)
 // except it doesn't convert "" and false to 0
 // and it has a different error message
 // used by ranges and string[i]
-func Index(v Value) int {
-	if n, ok := SmiToInt(v); ok {
+func Index(key Value) int {
+	if n,ok := Index2(key); ok {
 		return n
 	}
-	if dn, ok := v.(SuDnum); ok {
-		if n, ok := dn.Dnum.ToInt(); ok {
-			return n
+	panic("indexes must be integers")
+}
+
+// Index2 is basically the same as value.ToInt
+// except it doesn't convert "" and false to 0
+func Index2(key Value) (int,bool) {
+	if i, ok := SmiToInt(key); ok {
+		return i,true
+	}
+	if dn, ok := key.(SuDnum); ok {
+		if i, ok := dn.Dnum.ToInt(); ok {
+			return i,true
 		}
 	}
-	panic("indexes must be integers")
+	return 0,false // invalid list index
 }
 
 func prepFrom(from int, size int) int {

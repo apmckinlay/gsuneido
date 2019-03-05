@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/apmckinlay/gsuneido/util/dnum"
 	"github.com/apmckinlay/gsuneido/util/ints"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
@@ -45,6 +44,8 @@ type ParamSpec struct {
 	// It is primarily for debugging, i.e. call stack traces.
 	// See also: Name(value) builtin function
 	Name string
+
+	CantConvert
 }
 
 // Flag is a bit set of parameter options
@@ -66,18 +67,6 @@ var ParamSpecOptionalBlock = ParamSpec{Nparams: 1, Ndefaults: 1,
 
 // Value interface (except TypeName)
 
-func (*ParamSpec) ToInt() int {
-	panic("cannot convert function to integer")
-}
-
-func (*ParamSpec) ToDnum() dnum.Dnum {
-	panic("cannot convert function to number")
-}
-
-func (*ParamSpec) ToStr() string {
-	panic("cannot convert function to string")
-}
-
 func (f *ParamSpec) String() string {
 	var buf strings.Builder
 	// easier to add "function" here and strip it in Params
@@ -87,7 +76,7 @@ func (f *ParamSpec) String() string {
 	v := 0 // index into Values
 	for i := 0; i < int(f.Nparams); i++ {
 		buf.WriteString(sep)
-		buf.WriteString(flagsToName(f.Names[i + int(f.Offset)], f.Flags[i]))
+		buf.WriteString(flagsToName(f.Names[i+int(f.Offset)], f.Flags[i]))
 		if i >= int(f.Nparams-f.Ndefaults) {
 			buf.WriteString("=")
 			buf.WriteString(fmt.Sprint(f.Values[v]))

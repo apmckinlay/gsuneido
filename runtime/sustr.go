@@ -14,22 +14,20 @@ type SuStr string
 var EmptyStr Value = SuStr("")
 var _ Packable = SuStr("")
 
-func (ss SuStr) ToInt() int {
-	if ss.IsEmpty() {
-		return 0
-	}
-	panic("can't convert String to integer")
+func (ss SuStr) ToInt() (int, bool) {
+	return 0, ss.IsEmpty()
 }
 
-func (ss SuStr) ToDnum() dnum.Dnum {
-	if ss.IsEmpty() {
-		return dnum.Zero
-	}
-	panic("can't convert String to number")
+func (ss SuStr) ToDnum() (dnum.Dnum, bool) {
+	return dnum.Zero, ss.IsEmpty()
 }
 
-func (ss SuStr) ToStr() string {
-	return string(ss)
+func (SuStr) ToObject() (*SuObject, bool) {
+	return nil, false
+}
+
+func (ss SuStr) ToStr() (string, bool) {
+	return string(ss), true
 }
 
 var DefaultSingleQuotes = false
@@ -45,15 +43,19 @@ func (ss SuStr) String() string {
 }
 
 func (ss SuStr) Get(_ *Thread, key Value) Value {
+	return strGet(string(ss), key)
+}
+
+func strGet(s string, key Value) Value {
 	i := Index(key)
-	n := len(ss)
+	n := len(s)
 	if i < -n || n <= i {
 		return EmptyStr
 	}
 	if i < 0 {
 		i += n
 	}
-	return SuStr(ss[i])
+	return SuStr(s[i])
 }
 
 func (SuStr) Put(Value, Value) {
@@ -88,7 +90,8 @@ func (ss SuStr) Equal(other interface{}) bool {
 	}
 	if cv, ok := other.(SuConcat); ok {
 		// according to benchmark, this doesn't allocate
-		return cv.n == len(ss) && string(ss) == cv.ToStr()
+		cs,_ := cv.ToStr()
+		return cv.n == len(ss) && string(ss) == cs
 	}
 	return false
 }
@@ -125,7 +128,7 @@ func (ss SuStr) Compare(other Value) int {
 	if cmp := ints.Compare(ss.Order(), other.Order()); cmp != 0 {
 		return cmp
 	}
-	return strings.Compare(ss.ToStr(), other.ToStr())
+	return strings.Compare(string(ss), ToStr(other))
 }
 
 // Call implements s(ob, ...) being treated as ob[s](...)

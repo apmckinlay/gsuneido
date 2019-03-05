@@ -14,18 +14,20 @@ type SuBool bool
 var _ Value = SuBool(true)
 var _ Packable = SuBool(true)
 
-func (b SuBool) ToInt() int {
-	if b == false {
-		return 0
-	}
-	panic("can't convert true to integer")
+func (b SuBool) ToInt() (int, bool) {
+	return 0, b == false
 }
 
-func (b SuBool) ToDnum() dnum.Dnum {
-	if b == false {
-		return dnum.Zero
-	}
-	panic("can't convert true to number")
+func (b SuBool) ToDnum() (dnum.Dnum, bool) {
+	return dnum.Zero, b == false
+}
+
+func (SuBool) ToObject() (*SuObject, bool) {
+	return nil, false
+}
+
+func (b SuBool) ToStr() (string, bool) {
+	return b.String(), true
 }
 
 func (b SuBool) String() string {
@@ -33,10 +35,6 @@ func (b SuBool) String() string {
 		return "true"
 	}
 	return "false"
-}
-
-func (b SuBool) ToStr() string {
-	return b.String()
 }
 
 func (SuBool) Get(*Thread, Value) Value {

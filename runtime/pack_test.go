@@ -53,7 +53,7 @@ func TestPackNum(t *testing.T) {
 }
 
 func dv(s string) SuDnum {
-	return SuDnum{dnum.FromStr(s)}
+	return SuDnum{Dnum: dnum.FromStr(s)}
 }
 
 func TestPackInt64(t *testing.T) {
@@ -63,7 +63,7 @@ func TestPackInt64(t *testing.T) {
 		Assert(t).That(buf, Equals(expected))
 		num := UnpackNumber(rbuf{buf})
 		x := num.(*smi)
-		Assert(t).That(int64(x.ToInt()), Equals(n))
+		Assert(t).That(int64(x.toInt()), Equals(n))
 	}
 	test(0, packPlus)
 	test(1, packPlus, 129, 0, 1)
