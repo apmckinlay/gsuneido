@@ -22,9 +22,6 @@ type shared struct {
 	// MAYBE have a string to cache?
 }
 
-var _ Value = SuConcat{}
-var _ Packable = SuConcat{}
-
 // NewSuConcat returns an empty SuConcat
 func NewSuConcat() SuConcat {
 	return SuConcat{b: &shared{}}
@@ -65,6 +62,8 @@ func (c SuConcat) Iter() Iter {
 }
 
 // Value interface --------------------------------------------------
+
+var _ Value = SuConcat{}
 
 func (c SuConcat) ToInt() (int, bool) {
 	return 0, c.n == 0
@@ -159,6 +158,8 @@ func (SuConcat) Lookup(method string) Value {
 }
 
 // Packable interface -----------------------------------------------
+
+var _ Packable = SuConcat{}
 
 func (c SuConcat) PackSize(int) int {
 	if c.n == 0 {
