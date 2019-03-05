@@ -21,22 +21,14 @@ func init() {
 				}
 				return this
 			}),
-		"Iter": method0(func(this Value) Value { // TODO sequence
-			ob := ToObject(this)
-			return SuIter{Iter: ob.Iter()}
+		"Assocs": method0(func(this Value) Value {
+			return NewSuSequence(ToObject(this).IterAssocs())
 		}),
-		"Members": method0(func(this Value) Value { // TODO sequence
-			ob := ToObject(this)
-			mems := new(SuObject)
-			it := ob.MapIter()
-			for {
-				key, _ := it()
-				if key == nil {
-					break
-				}
-				mems.Add(key)
-			}
-			return mems
+		"Iter": method0(func(this Value) Value {
+			return SuIter{Iter: ToObject(this).Iter()}
+		}),
+		"Members": method0(func(this Value) Value {
+			return NewSuSequence(ToObject(this).IterMembers())
 		}),
 		"Set_default": method1("(value=nil)", func(this Value, val Value) Value {
 			ToObject(this).SetDefault(val)
@@ -47,8 +39,7 @@ func init() {
 			return this
 		}),
 		"Size": method0(func(this Value) Value {
-			ob := ToObject(this)
-			return IntToValue(ob.Size())
+			return IntToValue(ToObject(this).Size())
 		}),
 		"Sort!": methodRaw("(block = false)", // methodRaw to get thread
 			func(t *Thread, as *ArgSpec, this Value, args ...Value) Value {
@@ -56,6 +47,9 @@ func init() {
 				ToObject(this).Sort(t, args[0])
 				return this
 			}),
+		"Values": method0(func(this Value) Value {
+			return NewSuSequence(ToObject(this).Iter())
+		}),
 		// TODO more methods
 	}
 }

@@ -21,6 +21,15 @@ type SuObject struct {
 	CantConvert
 }
 
+// NewSuObject creates an SuObject from its arguments
+func NewSuObject(args ...Value) *SuObject {
+	ob := &SuObject{list: make([]Value, len(args))}
+	for i, arg := range args {
+		ob.list[i] = arg
+	}
+	return ob
+}
+
 var _ Value = (*SuObject)(nil)
 var _ Packable = (*SuObject)(nil)
 
@@ -311,11 +320,8 @@ func (ob *SuObject) Compare(other Value) int {
 	if cmp := ints.Compare(ob.Order(), other.Order()); cmp != 0 {
 		return cmp
 	}
-	ob2, ok := other.(*SuObject)
-	if !ok {
-		ob2 = &other.(*SuRecord).SuObject
-	}
-	return cmp2(ob, ob2, newpairs())
+	// now know other is an object so ToObject won't panic
+	return cmp2(ob, ToObject(other), newpairs())
 }
 
 func cmp2(x *SuObject, y *SuObject, inProgress pairs) int {
@@ -335,8 +341,8 @@ func cmp2(x *SuObject, y *SuObject, inProgress pairs) int {
 }
 
 func cmp3(x Value, y Value, inProgress pairs) int {
-	xo, xok := x.(*SuObject)
-	yo, yok := y.(*SuObject)
+	xo, xok := x.ToObject()
+	yo, yok := y.ToObject()
 	if !xok || !yok {
 		return x.Compare(y)
 	}
@@ -366,13 +372,11 @@ func (ob *SuObject) Slice(n int) *SuObject {
 	return &SuObject{list: newList, named: *newNamed, readonly: false}
 }
 
-func (ob *SuObject) Iter2() func() (Value, Value) {
+// ArgsIter is similar to Iter2 but it returns a nil key for list elements
+func (ob *SuObject) ArgsIter() func() (Value, Value) {
 	next := 0
 	named := ob.named.Iter()
 	return func() (Value, Value) {
-		if next >= ob.Size() {
-			return nil, nil
-		}
 		i := next
 		next++
 		if i < len(ob.list) {
@@ -386,38 +390,57 @@ func (ob *SuObject) Iter2() func() (Value, Value) {
 	}
 }
 
-func (ob *SuObject) Iter() Iter {
-	return &obIterValues{ob: ob, iter: ob.Iter2()}
-}
-
-type obIterValues struct {
-	ob   *SuObject
-	iter func() (Value, Value)
-}
-
-func (it *obIterValues) Next() Value {
-	//TODO check for modification during iteration
-	_, v := it.iter()
-	return v
-}
-
-func (it *obIterValues) Dup() Iter {
-	return it.ob.Iter()
-}
-
-func (it *obIterValues) Infinite() bool {
-	return false
-}
-
-func (ob *SuObject) MapIter() func() (Value, Value) {
+func (ob *SuObject) Iter2() func() (Value, Value) {
+	next := 0
 	named := ob.named.Iter()
 	return func() (Value, Value) {
+		i := next
+		next++
+		if i < len(ob.list) {
+			return SuInt(i), ob.list[i]
+		}
 		key, val := named()
 		if key == nil {
 			return nil, nil
 		}
 		return key.(Value), val.(Value)
 	}
+}
+
+func (ob *SuObject) Iter() Iter { // Values
+	return &obIter{ob: ob, iter: ob.Iter2(),
+		result: func(k, v Value) Value { return v }}
+}
+
+func (ob *SuObject) IterMembers() Iter {
+	return &obIter{ob: ob, iter: ob.Iter2(),
+		result: func(k, v Value) Value { return k }}
+}
+
+func (ob *SuObject) IterAssocs() Iter {
+	return &obIter{ob: ob, iter: ob.Iter2(),
+		result: func(k, v Value) Value { return NewSuObject(k, v) }}
+}
+
+type obIter struct {
+	ob     *SuObject
+	iter   func() (Value, Value)
+	result func(Value, Value) Value
+}
+
+func (it *obIter) Next() Value {
+	//TODO check for modification during iteration
+	k, v := it.iter()
+	if v == nil {
+		return nil
+	}
+	return it.result(k, v)
+}
+func (it *obIter) Dup() Iter {
+	return &obIter{ob: it.ob, iter: it.ob.Iter2(), result: it.result}
+}
+func (it *obIter) Infinite() bool {
+	return false
 }
 
 func (ob *SuObject) Sort(t *Thread, lt Value) {
@@ -440,7 +463,7 @@ func (ob *SuObject) SetReadOnly() {
 	ob.readonly = true
 	iter := ob.Iter2()
 	for k, v := iter(); k != nil; k, v = iter() {
-		if x, ok := v.(*SuObject); ok {
+		if x, ok := v.ToObject(); ok {
 			x.SetReadOnly()
 		}
 	}
