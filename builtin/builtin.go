@@ -37,6 +37,12 @@ func builtin2(s string, f func(a, b Value) Value) bool {
 	return true
 }
 
+func builtin3(s string, f func(a, b, c Value) Value) bool {
+	name, ps := paramSplit(s)
+	AddGlobal(name, &Builtin3{f, BuiltinParams{ParamSpec: ps}})
+	return true
+}
+
 func rawbuiltin(s string, f func(t *Thread, as *ArgSpec, args ...Value) Value) bool {
 	name, ps := paramSplit(s)
 	AddGlobal(name, &RawBuiltin{f, BuiltinParams{ParamSpec: ps}})

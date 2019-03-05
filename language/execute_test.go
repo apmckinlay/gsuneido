@@ -65,7 +65,7 @@ func init() {
 
 func pt_execute(args []string, str []bool) bool {
 	//fmt.Println(ptest.Fmt(args))
-	if strings.Contains(args[0], "Seq(") || strings.Contains(args[0], ".Eval(") {
+	if strings.Contains(args[0], ".Eval(") {
 		fmt.Println("skipped", ptest.Fmt(args, str)) // TODO
 		return true
 	}
