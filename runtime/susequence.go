@@ -1,20 +1,14 @@
 package runtime
 
-type SeqIter interface {
-	Next() Value
-	Dup() SeqIter
-	Infinite() bool
-}
-
 // SuSequence wraps an iterator and instantiates it lazily
 type SuSequence struct {
-	iter SeqIter
+	iter Iter
 	// ob is nil until the sequence is instantiated
 	ob *SuObject
 	CantConvert
 }
 
-func NewSuSequence(it SeqIter) *SuSequence {
+func NewSuSequence(it Iter) *SuSequence {
 	return &SuSequence{iter: it}
 }
 
@@ -29,6 +23,10 @@ func (seq *SuSequence) instantiate() {
 	for x := seq.iter.Next(); x != nil; x = seq.iter.Next() {
 		seq.ob.Add(x)
 	}
+}
+
+func (seq *SuSequence) Iter() Iter {
+	return seq.iter.Dup()
 }
 
 // Value interface --------------------------------------------------

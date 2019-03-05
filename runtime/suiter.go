@@ -1,8 +1,4 @@
-package builtin
-
-import (
-	. "github.com/apmckinlay/gsuneido/runtime"
-)
+package runtime
 
 // SuIter is a Value that wraps a runtime.Iter
 // and provides the Suneido interator interface,
@@ -20,8 +16,10 @@ func (SuIter) Call(*Thread, *ArgSpec) Value {
 	panic("can't call Iterator")
 }
 
+var IterMethods Methods
+
 func (SuIter) Lookup(method string) Value {
-	return SuIterMethods[method]
+	return IterMethods[method]
 }
 
 func (SuIter) TypeName() string {
@@ -67,17 +65,4 @@ func (SuIter) Compare(Value) int {
 
 func (SuIter) Order() Ord {
 	return OrdOther
-}
-
-// methods ----------------------------------------------------------
-
-var SuIterMethods Methods = Methods{
-	"Next": method0(func(this Value) Value {
-		it := this.(SuIter)
-		next := it.Next()
-		if next == nil {
-			return this
-		}
-		return next
-	}),
 }

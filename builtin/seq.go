@@ -25,8 +25,6 @@ type seqIter struct {
 	i    int
 }
 
-var _ SeqIter = (*seqIter)(nil)
-
 func (seq *seqIter) Next() Value {
 	if seq.i >= seq.to {
 		return nil
@@ -36,7 +34,7 @@ func (seq *seqIter) Next() Value {
 	return IntToValue(i)
 }
 
-func (seq *seqIter) Dup() SeqIter {
+func (seq *seqIter) Dup() Iter {
 	return &seqIter{seq.from, seq.to, seq.by, 0}
 }
 

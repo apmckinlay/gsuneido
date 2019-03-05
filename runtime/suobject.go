@@ -366,7 +366,7 @@ func (ob *SuObject) Slice(n int) *SuObject {
 	return &SuObject{list: newList, named: *newNamed, readonly: false}
 }
 
-func (ob *SuObject) Iter() func() (Value, Value) {
+func (ob *SuObject) Iter2() func() (Value, Value) {
 	next := 0
 	named := ob.named.Iter()
 	return func() (Value, Value) {
@@ -386,8 +386,8 @@ func (ob *SuObject) Iter() func() (Value, Value) {
 	}
 }
 
-func (ob *SuObject) IterValues() Iter {
-	return &obIterValues{ob: ob, iter: ob.Iter()}
+func (ob *SuObject) Iter() Iter {
+	return &obIterValues{ob: ob, iter: ob.Iter2()}
 }
 
 type obIterValues struct {
@@ -402,7 +402,7 @@ func (it *obIterValues) Next() Value {
 }
 
 func (it *obIterValues) Dup() Iter {
-	return it.ob.IterValues()
+	return it.ob.Iter()
 }
 
 func (it *obIterValues) Infinite() bool {
@@ -438,7 +438,7 @@ func (ob *SuObject) SetReadOnly() {
 		return
 	}
 	ob.readonly = true
-	iter := ob.Iter()
+	iter := ob.Iter2()
 	for k, v := iter(); k != nil; k, v = iter() {
 		if x, ok := v.(*SuObject); ok {
 			x.SetReadOnly()

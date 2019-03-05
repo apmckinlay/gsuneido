@@ -353,16 +353,22 @@ loop:
 				fr.ip += 2
 			}
 		case op.Iter:
-			t.Push(t.callMethod("Iter", ArgSpec0))
+			x := t.Pop()
+			iterable,ok := x.(interface{ Iter() Iter })
+			if !ok {
+				panic("can't iterate " + x.TypeName())
+			}
+			t.Push(SuIter{Iter: iterable.Iter()})
 		case op.ForIn:
 			brk := fetchInt16()
 			local := fetchUint8()
 			iter := t.Top()
-			t.Push(iter) // since call will pop it
-			next := t.callMethod("Next", ArgSpec0)
-			fr.locals[local] = next
-			if next.Equal(iter) {
-				fr.ip += brk - 1 // jump
+			nextable := iter.(interface{ Next() Value })
+			next := nextable.Next()
+			if next != nil {
+				fr.locals[local] = next
+			} else {
+				fr.ip += brk - 1 // break
 			}
 		case op.ReturnNil:
 			t.Push(nil)
