@@ -14,5 +14,5 @@ func Def() {
 		TestGlobal(name, val)
 		return nil
 	}
-	AddGlobal("Def", &Builtin2{def, BuiltinParams{ParamSpec: ParamSpec2}})
+	AddGlobal("Def", &SuBuiltin2{def, BuiltinParams{ParamSpec: ParamSpec2}})
 }

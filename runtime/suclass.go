@@ -147,6 +147,9 @@ func (c *SuClass) parent() *SuClass {
 // ClassMethods is initialized by the builtin package
 var ClassMethods Methods
 
+var DefaultNewMethod = &SuBuiltin0{func() Value { return nil },
+	BuiltinParams{ParamSpec: ParamSpec0}}
+
 func (c *SuClass) Lookup(method string) Value {
 	if f, ok := ClassMethods[method]; ok {
 		return f
@@ -156,8 +159,7 @@ func (c *SuClass) Lookup(method string) Value {
 		return x
 	}
 	if method == "New" {
-		return &Builtin0{func() Value { return nil },
-			BuiltinParams{ParamSpec: ParamSpec0}}
+		return DefaultNewMethod
 	}
 	return nil
 }

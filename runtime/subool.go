@@ -5,14 +5,15 @@ import (
 	"github.com/apmckinlay/gsuneido/util/ints"
 )
 
-// NOTE: converting bool/SuBool to interface{} doesn't seem to allocate
-// e.g. v Value = SuBool(b)
-
 // SuBool is a boolean Value
 type SuBool bool
 
+// NOTE: converting bool/SuBool to interface{} doesn't seem to allocate
+// e.g. v Value = SuBool(b)
+
+// Value interface --------------------------------------------------
+
 var _ Value = SuBool(true)
-var _ Packable = SuBool(true)
 
 func (b SuBool) ToInt() (int, bool) {
 	return 0, b == false
@@ -79,19 +80,6 @@ func (b SuBool) Equal(other interface{}) bool {
 	return false
 }
 
-func (SuBool) PackSize(int) int {
-	return 1
-}
-
-func (b SuBool) Pack(buf []byte) []byte {
-	if b == true {
-		buf = append(buf, packTrue)
-	} else {
-		buf = append(buf, packFalse)
-	}
-	return buf
-}
-
 func (SuBool) TypeName() string {
 	return "Boolean"
 }
@@ -123,4 +111,21 @@ func (SuBool) Call(*Thread, *ArgSpec) Value {
 
 func (SuBool) Lookup(string) Value {
 	return nil
+}
+
+// Packable interface -----------------------------------------------
+
+var _ Packable = SuBool(true)
+
+func (SuBool) PackSize(int) int {
+	return 1
+}
+
+func (b SuBool) Pack(buf []byte) []byte {
+	if b == true {
+		buf = append(buf, packTrue)
+	} else {
+		buf = append(buf, packFalse)
+	}
+	return buf
 }

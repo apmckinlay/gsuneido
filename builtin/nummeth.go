@@ -18,7 +18,7 @@ func init() {
 			return SuStr(string(rune(n)))
 		}),
 		"Int": method0(func(this Value) Value {
-			dn := ToDnum(this).Int()
+			dn := ToDnum(this).Trunc()
 			if dnum.Compare(dn, minNarrow) >= 0 && dnum.Compare(dn, maxNarrow) <= 0 {
 				n, _ := dn.ToInt()
 				return SuInt(n)

@@ -29,10 +29,7 @@ type SuDate struct {
 	CantConvert
 }
 
-var NilDate = SuDate{}
-
-var _ Value = NilDate
-var _ Packable = NilDate
+var NilDate SuDate
 
 func DateTime(date uint32, time uint32) SuDate {
 	d := SuDate{date: date, time: time}
@@ -104,40 +101,6 @@ func fromTime(t gotime.Time) SuDate {
 		t.Hour(), t.Minute(), t.Second(), t.Nanosecond()/1000000)
 }
 
-func (d SuDate) String() string {
-	if d.time == 0 {
-		return fmt.Sprintf("#%04d%02d%02d", d.Year(), d.Month(), d.Day())
-	}
-	s := fmt.Sprintf("#%04d%02d%02d.%02d%02d%02d%03d",
-		d.Year(), d.Month(), d.Day(),
-		d.Hour(), d.Minute(), d.Second(), d.Millisecond())
-	if strings.HasSuffix(s, "00000") {
-		return s[0:14]
-	}
-	if strings.HasSuffix(s, "000") {
-		return s[0:16]
-	}
-	return s
-}
-
-func (d SuDate) Equal(other interface{}) bool {
-	if d2, ok := other.(SuDate); ok {
-		return d == d2
-	}
-	return false
-}
-
-func (d SuDate) Hash() uint32 {
-	h := uint32(17)
-	h = 31*h + d.date
-	h = 31*h + d.time
-	return h
-}
-
-func (d SuDate) Hash2() uint32 {
-	return d.Hash()
-}
-
 func valid(yr int, mon int, day int, hr int, min int, sec int, ms int) bool {
 	if !mmYear.valid(yr) || !mmMonth.valid(mon) || !mmDay.valid(day) ||
 		!mmHour.valid(hr) || !mmMinute.valid(min) ||
@@ -146,28 +109,6 @@ func valid(yr int, mon int, day int, hr int, min int, sec int, ms int) bool {
 	}
 	t := goTime(yr, mon, day, 0, 0, 0, 0)
 	return t.Year() == yr && int(t.Month()) == mon && t.Day() == day
-}
-
-// Packing
-
-// PackSize returns the packed size (Packable interface)
-func (d SuDate) PackSize(int) int {
-	return 9
-}
-
-// Pack packs into the supplied byte slice (Packable interface)
-func (d SuDate) Pack(buf []byte) []byte {
-	buf = append(buf, packDate)
-	buf = packUint32(d.date, buf)
-	buf = packUint32(d.time, buf)
-	return buf
-}
-
-// UnpackDate unpacks a date from the supplied byte slice
-func UnpackDate(buf []byte) SuDate {
-	date := unpackUint32(buf)
-	time := unpackUint32(buf[4:])
-	return SuDate{date: date, time: time}
 }
 
 // OffsetUTC returns the offset from local to UTC in minutes
@@ -720,7 +661,43 @@ var (
 	mmUnknown     = minmax{0, 0}
 )
 
-// Value interface
+// Value interface --------------------------------------------------
+
+var _ Value = SuDate{}
+
+func (d SuDate) String() string {
+	if d.time == 0 {
+		return fmt.Sprintf("#%04d%02d%02d", d.Year(), d.Month(), d.Day())
+	}
+	s := fmt.Sprintf("#%04d%02d%02d.%02d%02d%02d%03d",
+		d.Year(), d.Month(), d.Day(),
+		d.Hour(), d.Minute(), d.Second(), d.Millisecond())
+	if strings.HasSuffix(s, "00000") {
+		return s[0:14]
+	}
+	if strings.HasSuffix(s, "000") {
+		return s[0:16]
+	}
+	return s
+}
+
+func (d SuDate) Equal(other interface{}) bool {
+	if d2, ok := other.(SuDate); ok {
+		return d == d2
+	}
+	return false
+}
+
+func (d SuDate) Hash() uint32 {
+	h := uint32(17)
+	h = 31*h + d.date
+	h = 31*h + d.time
+	return h
+}
+
+func (d SuDate) Hash2() uint32 {
+	return d.Hash()
+}
 
 func (SuDate) Get(*Thread, Value) Value {
 	panic("date does not support get")
@@ -759,9 +736,8 @@ func (d SuDate) Compare(other Value) int {
 		return -1
 	} else if d.time > d2.time {
 		return +1
-	} else {
-		return 0
 	}
+	return 0
 }
 
 func (SuDate) Call(*Thread, *ArgSpec) Value {
@@ -770,4 +746,28 @@ func (SuDate) Call(*Thread, *ArgSpec) Value {
 
 func (SuDate) Lookup(string) Value { // TODO
 	return nil
+}
+
+// Packable interface -----------------------------------------------
+
+var _ Packable = SuDate{}
+
+// PackSize returns the packed size (Packable interface)
+func (d SuDate) PackSize(int) int {
+	return 9
+}
+
+// Pack packs into the supplied byte slice (Packable interface)
+func (d SuDate) Pack(buf []byte) []byte {
+	buf = append(buf, packDate)
+	buf = packUint32(d.date, buf)
+	buf = packUint32(d.time, buf)
+	return buf
+}
+
+// UnpackDate unpacks a date from the supplied byte slice
+func UnpackDate(buf []byte) SuDate {
+	date := unpackUint32(buf)
+	time := unpackUint32(buf[4:])
+	return SuDate{date: date, time: time}
 }

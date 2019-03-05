@@ -6,7 +6,7 @@ import (
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
-var _ = rawbuiltin("Print(@args)",
+var _ = builtinRaw("Print(@args)",
 	func(t *Thread, as *ArgSpec, args ...Value) Value {
 		iter := NewArgsIter(as, args)
 		sep := ""

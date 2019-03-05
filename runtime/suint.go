@@ -47,8 +47,15 @@ func SmiToInt(x interface{}) (int, bool) {
 	return 0, false
 }
 
+func (si *smi) toInt() int {
+	p := unsafe.Pointer(si)
+	offset := int(uintptr(p) - smibase)
+	return offset + math.MinInt16
+}
+
+// Value interface --------------------------------------------------
+
 var _ Value = SuInt(0)
-var _ Packable = SuInt(0)
 
 func (si *smi) ToInt() (int, bool) {
 	return si.toInt(), true
@@ -56,12 +63,6 @@ func (si *smi) ToInt() (int, bool) {
 
 func (si *smi) IfInt() (int, bool) {
 	return si.toInt(), true
-}
-
-func (si *smi) toInt() int {
-	p := unsafe.Pointer(si)
-	offset := int(uintptr(p) - smibase)
-	return offset + math.MinInt16
 }
 
 func (si *smi) ToDnum() (dnum.Dnum, bool) {
@@ -118,14 +119,6 @@ func (si *smi) Equal(other interface{}) bool {
 	return false
 }
 
-func (si *smi) PackSize(int) int {
-	return PackSizeInt64(int64(si.toInt()))
-}
-
-func (si *smi) Pack(buf []byte) []byte {
-	return PackInt64(int64(si.toInt()), buf)
-}
-
 func (*smi) TypeName() string {
 	return "Number"
 }
@@ -157,4 +150,16 @@ func (*smi) Lookup(method string) Value {
 		return m
 	}
 	return NumMethods[method]
+}
+
+// Packable interface -----------------------------------------------
+
+var _ Packable = SuInt(0)
+
+func (si *smi) PackSize(int) int {
+	return PackSizeInt64(int64(si.toInt()))
+}
+
+func (si *smi) Pack(buf []byte) []byte {
+	return PackInt64(int64(si.toInt()), buf)
 }

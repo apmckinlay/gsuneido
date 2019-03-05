@@ -14,6 +14,7 @@ import (
 // - SuStr, SuConcat, SuExcept - strings
 // - SuDate
 // - SuObject, SuRecord, SuSequence - objects
+// - SuBuiltin*, SuBuiltinMethod*
 // - SuFunc
 // - SuBlock
 // - SuMethod

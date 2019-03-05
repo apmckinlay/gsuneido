@@ -479,8 +479,8 @@ const (
 	HalfUp
 )
 
-// Int returns the integer portion (truncating any fractional part)
-func (dn Dnum) Int() Dnum {
+// Trunc returns the integer portion (truncating any fractional part)
+func (dn Dnum) Trunc() Dnum {
 	return dn.integer(Down)
 }
 

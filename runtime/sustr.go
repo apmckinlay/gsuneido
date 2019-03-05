@@ -12,10 +12,11 @@ import (
 type SuStr string
 
 var EmptyStr Value = SuStr("")
-var _ Packable = SuStr("")
+
+// Value interface --------------------------------------------------
 
 func (ss SuStr) ToInt() (int, bool) {
-	return 0, ss.IsEmpty()
+	return 0, ss == ""
 }
 
 func (ss SuStr) IfInt() (int, bool) {
@@ -23,7 +24,7 @@ func (ss SuStr) IfInt() (int, bool) {
 }
 
 func (ss SuStr) ToDnum() (dnum.Dnum, bool) {
-	return dnum.Zero, ss.IsEmpty()
+	return dnum.Zero, ss == ""
 }
 
 func (SuStr) ToObject() (*SuObject, bool) {
@@ -41,8 +42,8 @@ func (ss SuStr) IfStr() (string, bool) {
 var DefaultSingleQuotes = false
 
 // String returns a human readable string with quotes and escaping
-// TODO: handle escaping
 func (ss SuStr) String() string {
+	// TODO: handle escaping
 	q := "\""
 	if DefaultSingleQuotes {
 		q = "'"
@@ -105,26 +106,6 @@ func (ss SuStr) Equal(other interface{}) bool {
 	return false
 }
 
-func (ss SuStr) PackSize(int) int {
-	if ss.IsEmpty() {
-		return 0
-	}
-	return 1 + len(ss)
-}
-
-func (ss SuStr) Pack(buf []byte) []byte {
-	if ss.IsEmpty() {
-		return buf
-	}
-	buf = append(buf, packString)
-	buf = append(buf, string(ss)...)
-	return buf
-}
-
-func UnpackSuStr(buf []byte) Value {
-	return SuStr(string(buf))
-}
-
 func (SuStr) TypeName() string {
 	return "String"
 }
@@ -162,6 +143,26 @@ func (SuStr) Lookup(method string) Value {
 	return StringMethods[method]
 }
 
-func (ss SuStr) IsEmpty() bool {
-	return len(ss) == 0
+// Packable interface -----------------------------------------------
+
+var _ Packable = SuStr("")
+
+func (ss SuStr) PackSize(int) int {
+	if ss == "" {
+		return 0
+	}
+	return 1 + len(ss)
+}
+
+func (ss SuStr) Pack(buf []byte) []byte {
+	if ss == "" {
+		return buf
+	}
+	buf = append(buf, packString)
+	buf = append(buf, string(ss)...)
+	return buf
+}
+
+func UnpackSuStr(buf []byte) Value {
+	return SuStr(string(buf))
 }

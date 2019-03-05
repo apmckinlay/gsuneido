@@ -25,6 +25,8 @@ type SuFunc struct {
 	OuterId uint32
 }
 
+// Value interface (mostly handled by ParamSpec) --------------------
+
 var _ Value = (*SuFunc)(nil) // verify *SuFunc satisfies Value
 
 func (f *SuFunc) Call(t *Thread, as *ArgSpec) Value {
@@ -43,7 +45,6 @@ func (f *SuFunc) Call(t *Thread, as *ArgSpec) Value {
 	return t.Call(f)
 }
 
-// TypeName returns the Suneido name for the type (Value interface)
 func (*SuFunc) TypeName() string {
 	return "Function"
 }
@@ -52,6 +53,9 @@ func (*SuFunc) TypeName() string {
 var SuFuncMethods Methods
 
 func (*SuFunc) Lookup(method string) Value {
+	if m,ok := ParamsMethods[method]; ok {
+		return m
+	}
 	return SuFuncMethods[method]
 }
 

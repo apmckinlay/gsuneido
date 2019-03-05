@@ -6,7 +6,7 @@ import (
 
 func init() {
 	ObjectMethods = Methods{
-		"Add": rawmethod("(@args)",
+		"Add": methodRaw("(@args)",
 			func(t *Thread, as *ArgSpec, this Value, args ...Value) Value {
 				ob := ToObject(this)
 				iter := NewArgsIter(as, args)
@@ -50,7 +50,7 @@ func init() {
 			ob := ToObject(this)
 			return IntToValue(ob.Size())
 		}),
-		"Sort!": rawmethod("(block = false)", // rawmethod to get thread
+		"Sort!": methodRaw("(block = false)", // methodRaw to get thread
 			func(t *Thread, as *ArgSpec, this Value, args ...Value) Value {
 				args = t.Args(&ParamSpecOptionalBlock, as)
 				ToObject(this).Sort(t, args[0])

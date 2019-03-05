@@ -3,9 +3,9 @@ package runtime
 // SuMethod is a bound method originating from an SuClass or SuInstance
 // when called, it sets 'this' to the origin
 type SuMethod struct {
-	CantConvert
 	fn   Value
 	this Value
+	CantConvert
 }
 
 // Value interface --------------------------------------------------

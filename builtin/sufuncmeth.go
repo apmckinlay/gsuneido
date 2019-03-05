@@ -14,9 +14,5 @@ func init() {
 			Disasm(buf, fn)
 			return SuStr(buf.String())
 		}),
-		"Params": method0(func(this Value) Value {
-			fn := this.(*SuFunc)
-			return SuStr(fn.Params())
-		}),
 	}
 }

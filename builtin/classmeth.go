@@ -2,13 +2,14 @@ package builtin
 
 import . "github.com/apmckinlay/gsuneido/runtime"
 
+// memberq is also used by InstanceMethods
 var memberq = method1("(string)", func(this, arg Value) Value {
 	return MemberQ(this.(Findable), arg)
 })
 
 func init() {
 	ClassMethods = Methods{
-		"*new*": rawmethod("(@args)",
+		"*new*": methodRaw("(@args)",
 			func(t *Thread, as *ArgSpec, this Value, args ...Value) Value {
 				return this.(*SuClass).New(t, as)
 			}),

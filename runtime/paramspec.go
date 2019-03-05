@@ -65,7 +65,7 @@ var ParamSpec2 = ParamSpec{Nparams: 2, Signature: ^Sig2}
 var ParamSpecOptionalBlock = ParamSpec{Nparams: 1, Ndefaults: 1,
 	Flags: []Flag{0}, Names: []string{"block"}, Values: []Value{False}}
 
-// Value interface (except TypeName)
+// Value interface (except TypeName) --------------------------------
 
 func (f *ParamSpec) String() string {
 	var buf strings.Builder
@@ -144,14 +144,11 @@ func (f *ParamSpec) Compare(other Value) int {
 	return 0 // ???
 }
 
-// Params is set in the builtin package
-var Params Value
+// ParamsMethods is initialized by the builtin package
+var ParamsMethods Methods
 
 func (*ParamSpec) Lookup(method string) Value {
-	if method == "Params" {
-		return Params
-	}
-	return nil
+	return ParamsMethods[method]
 }
 
 func (f *ParamSpec) Params() string {
@@ -162,7 +159,7 @@ func (f *ParamSpec) Show() string {
 	return f.String()
 }
 
-// Named interface
+// Named interface --------------------------------------------------
 
 var _ Named = (*ParamSpec)(nil)
 
