@@ -7,7 +7,19 @@ import (
 	"github.com/apmckinlay/gsuneido/util/dnum"
 )
 
-// Value is used to reference a Suneido value
+// Value is a value visible to Suneido programmers
+// The naming convention is to use a prefix of "Su"
+// - SuBoolean
+// - SuInt, SuDnum - numbers
+// - SuStr, SuConcat, SuExcept - strings
+// - SuDate
+// - SuObject, SuRecord, SuSequence - objects
+// - SuFunc
+// - SuBlock
+// - SuMethod
+// - SuClass
+// - SuInstance
+// - SuIter - not directly accessible, but returned from e.g. object.Iter
 type Value interface {
 	// String returns a human readable string i.e. Suneido Display
 	String() string
