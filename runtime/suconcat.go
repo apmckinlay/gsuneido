@@ -62,18 +62,19 @@ func (c SuConcat) AddSuConcat(cv2 SuConcat) SuConcat {
 
 // Value interface --------------------------------------------------
 
-// ToInt converts an SuConcat to an integer (Value interface)
 func (c SuConcat) ToInt() (int, bool) {
 	return 0, c.n == 0
 }
 
-// ToDnum converts an SuConcat to a Dnum (Value interface)
 func (c SuConcat) ToDnum() (dnum.Dnum, bool) {
 	return dnum.Zero, c.n == 0
 }
 
-// ToStr converts an SuConcat to a string (Value interface)
 func (c SuConcat) ToStr() (string, bool) {
+	return c.toStr(), true
+}
+
+func (c SuConcat) IfStr() (string, bool) {
 	return c.toStr(), true
 }
 
@@ -81,18 +82,17 @@ func (c SuConcat) toStr() string {
 	return string(c.b.a[:c.n])
 }
 
-// String returns a quoted string (Value interface)
-// TODO: handle escaping
+// String returns a quoted string
 func (c SuConcat) String() string {
+	// TODO: handle escaping
 	return "'" + c.toStr() + "'"
 }
 
-// Get returns the character at a given index (Value interface)
+// Get returns the character at a given index
 func (c SuConcat) Get(_ *Thread, key Value) Value {
 	return strGet(c.toStr(), key)
 }
 
-// Put is not applicable to SuConcat (Value interface)
 func (SuConcat) Put(Value, Value) {
 	panic("strings do not support put")
 }
@@ -109,17 +109,14 @@ func (c SuConcat) RangeLen(from int, n int) Value {
 	return SuStr(c.toStr()[from : from+n])
 }
 
-// Hash returns a hash value for an SuConcat (Value interface)
 func (c SuConcat) Hash() uint32 {
 	return hash.HashBytes(c.b.a[:c.n])
 }
 
-// Hash2 is used to hash nested values (Value interface)
 func (c SuConcat) Hash2() uint32 {
 	return c.Hash()
 }
 
-// Equals returns true if other is an equal SuConcat or SuStr (Value interface)
 func (c SuConcat) Equal(other interface{}) bool {
 	// check string first assuming more common than concat
 	if s2, ok := other.(SuStr); ok {
@@ -132,21 +129,19 @@ func (c SuConcat) Equal(other interface{}) bool {
 	return false
 }
 
-// TypeName returns the name of this type (Value interface)
 func (SuConcat) TypeName() string {
 	return "String"
 }
 
-// Order returns the ordering of SuDnum (Value interface)
 func (SuConcat) Order() Ord {
 	return ordStr
 }
 
-// Compare compares an SuDnum to another Value (Value interface)
 func (c SuConcat) Compare(other Value) int {
 	if cmp := ints.Compare(c.Order(), other.Order()); cmp != 0 {
 		return cmp
 	}
+	// now know other is a string so ToStr won't panic
 	return strings.Compare(c.toStr(), ToStr(other))
 }
 

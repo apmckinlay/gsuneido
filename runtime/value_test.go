@@ -42,3 +42,86 @@ func TestCompare(t *testing.T) {
 		Assert(t).That(vals[i].Compare(vals[i-1]), Equals(+1))
 	}
 }
+
+func TestIfStr(t *testing.T) {
+	xtest := func(v Value) {
+		t.Helper()
+		_, ok := v.IfStr()
+		Assert(t).False(ok)
+	}
+	xtest(True)
+	xtest(False)
+	xtest(Zero)   // SuInt
+	xtest(MaxInt) // SuDnum
+	xtest(&SuObject{})
+
+	test := func(s string) {
+		t.Helper()
+		Assert(t).That(IfStr(SuStr(s)), Equals(s))
+	}
+	test("")
+	test("hello")
+}
+
+func TestToStr(t *testing.T) {
+	test := func(v Value, expected string) {
+		t.Helper()
+		Assert(t).That(ToStr(v), Equals(expected))
+	}
+	test(EmptyStr, "")
+	test(SuStr("hello"), "hello")
+	test(True, "true")
+	test(False, "false")
+	test(Zero, "0")
+	test(MaxInt, "2147483647")
+
+	xtest := func(v Value) {
+		t.Helper()
+		_, ok := v.ToStr()
+		Assert(t).False(ok)
+	}
+	xtest(&SuObject{})
+}
+
+func TestIfInt(t *testing.T) {
+	xtest := func(v Value) {
+		t.Helper()
+		_, ok := v.IfInt()
+		Assert(t).False(ok)
+	}
+	xtest(True)
+	xtest(False)
+	xtest(EmptyStr)
+	xtest(&SuObject{})
+
+	test := func(v Value, expected int) {
+		t.Helper()
+		got, ok := v.IfInt()
+		Assert(t).True(ok)
+		Assert(t).That(got, Equals(expected))
+	}
+	test(Zero, 0)   // SuInt
+	test(MaxInt, 2147483647) // SuDnum
+}
+
+func TestToInt(t *testing.T) {
+	xtest := func(v Value) {
+		t.Helper()
+		_, ok := v.ToInt()
+		Assert(t).False(ok)
+	}
+	xtest(True)
+	xtest(SuStr("hello"))
+	xtest(&SuObject{})
+
+	test := func(v Value, expected int) {
+		t.Helper()
+		got, ok := v.ToInt()
+		Assert(t).True(ok)
+		Assert(t).That(got, Equals(expected))
+	}
+	test(Zero, 0)   // SuInt
+	test(MaxInt, 2147483647) // SuDnum
+	test(False, 0)
+	test(EmptyStr, 0)
+}

@@ -18,6 +18,10 @@ func (ss SuStr) ToInt() (int, bool) {
 	return 0, ss.IsEmpty()
 }
 
+func (ss SuStr) IfInt() (int, bool) {
+	return 0, false
+}
+
 func (ss SuStr) ToDnum() (dnum.Dnum, bool) {
 	return dnum.Zero, ss.IsEmpty()
 }
@@ -27,6 +31,10 @@ func (SuStr) ToObject() (*SuObject, bool) {
 }
 
 func (ss SuStr) ToStr() (string, bool) {
+	return string(ss), true
+}
+
+func (ss SuStr) IfStr() (string, bool) {
 	return string(ss), true
 }
 
@@ -46,6 +54,7 @@ func (ss SuStr) Get(_ *Thread, key Value) Value {
 	return strGet(string(ss), key)
 }
 
+// strGet is used by SuStr and SuConcat .Get
 func strGet(s string, key Value) Value {
 	i := Index(key)
 	n := len(s)
@@ -90,7 +99,7 @@ func (ss SuStr) Equal(other interface{}) bool {
 	}
 	if cv, ok := other.(SuConcat); ok {
 		// according to benchmark, this doesn't allocate
-		cs,_ := cv.ToStr()
+		cs, _ := cv.ToStr()
 		return cv.n == len(ss) && string(ss) == cs
 	}
 	return false

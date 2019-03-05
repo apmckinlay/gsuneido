@@ -14,37 +14,34 @@ type SuDnum struct {
 	CantConvert
 }
 
-var _ Value = SuDnum{}
-var _ Packable = SuDnum{}
-
 // Value interface --------------------------------------------------
 
-// ToInt converts a SuDnum to an integer (Value interface)
-func (dn SuDnum) ToInt() (int,bool) {
+var _ Value = SuDnum{}
+
+func (dn SuDnum) ToInt() (int, bool) {
 	return dn.Dnum.ToInt()
-	}
-
-// ToDnum returns the wrapped Dnum (Value interface)
-func (dn SuDnum) ToDnum() (dnum.Dnum,bool) {
-	return dn.Dnum,true
 }
 
-// ToStr converts the Dnum to a string (Value interface)
-func (dn SuDnum) ToStr() (string,bool) {
-	return dn.Dnum.String(),true
+func (dn SuDnum) IfInt() (int, bool) {
+	return dn.Dnum.ToInt()
 }
 
-// String returns a string representation of the Dnum (Value interface)
+func (dn SuDnum) ToDnum() (dnum.Dnum, bool) {
+	return dn.Dnum, true
+}
+
+func (dn SuDnum) ToStr() (string, bool) {
+	return dn.Dnum.String(), true
+}
+
 func (dn SuDnum) String() string {
 	return dn.Dnum.String()
 }
 
-// Get is not applicable to SuDnum (Value interface)
 func (SuDnum) Get(*Thread, Value) Value {
 	panic("number does not support get")
 }
 
-// Put is not applicable to SuDnum (Value interface)
 func (SuDnum) Put(Value, Value) {
 	panic("number does not support put")
 }
@@ -57,12 +54,10 @@ func (SuDnum) RangeLen(int, int) Value {
 	panic("number does not support range")
 }
 
-// Hash2 is used to hash nested values (Value interface)
 func (dn SuDnum) Hash2() uint32 {
 	return dn.Hash()
 }
 
-// Equals returns true if other is an equal SuDnum or integer (Value interface)
 func (dn SuDnum) Equal(other interface{}) bool {
 	if d2, ok := other.(SuDnum); ok {
 		return dnum.Equal(dn.Dnum, d2.Dnum)
@@ -72,24 +67,19 @@ func (dn SuDnum) Equal(other interface{}) bool {
 	return false
 }
 
-// TypeName returns the name of this type (Value interface)
 func (SuDnum) TypeName() string {
 	return "Number"
 }
 
-// Order returns the ordering of SuDnum (Value interface)
 func (SuDnum) Order() Ord {
 	return ordNum
 }
 
-// Compare compares an SuDnum to another Value (Value interface)
 func (dn SuDnum) Compare(other Value) int {
 	if cmp := ints.Compare(dn.Order(), other.Order()); cmp != 0 {
 		return cmp
 	}
-	if y, ok := other.(SuDnum); ok {
-		return dnum.Compare(dn.Dnum, y.Dnum)
-	}
+	// now know other is a number and ToDnum won't panic
 	return dnum.Compare(dn.Dnum, ToDnum(other))
 }
 
@@ -105,6 +95,8 @@ func (SuDnum) Lookup(method string) Value {
 }
 
 // Packing (old format) ---------------------------------------------
+
+var _ Packable = SuDnum{}
 
 var pow10 = [...]uint64{1, 10, 100, 1000}
 

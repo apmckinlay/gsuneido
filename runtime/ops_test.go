@@ -21,10 +21,6 @@ func TestBool(t *testing.T) {
 	Assert(t).True(SuBool(false) == False)
 }
 func TestIndex(t *testing.T) {
-	_, ok := Index2(False)
-	Assert(t).False(ok)
-	_, ok = Index2(EmptyStr)
-	Assert(t).False(ok)
 	Assert(t).That(Index(SuInt(123)), Equals(123))
 	Assert(t).That(Index(SuDnum{Dnum: dnum.FromInt(123)}), Equals(123))
 }

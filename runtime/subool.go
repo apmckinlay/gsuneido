@@ -18,6 +18,10 @@ func (b SuBool) ToInt() (int, bool) {
 	return 0, b == false
 }
 
+func (b SuBool) IfInt() (int, bool) {
+	return 0, false
+}
+
 func (b SuBool) ToDnum() (dnum.Dnum, bool) {
 	return dnum.Zero, b == false
 }
@@ -28,6 +32,10 @@ func (SuBool) ToObject() (*SuObject, bool) {
 
 func (b SuBool) ToStr() (string, bool) {
 	return b.String(), true
+}
+
+func (b SuBool) IfStr() (string, bool) {
+	return "", false
 }
 
 func (b SuBool) String() string {

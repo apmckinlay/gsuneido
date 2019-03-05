@@ -24,16 +24,19 @@ type Value interface {
 	// String returns a human readable string i.e. Suneido Display
 	String() string
 
-	// ToStr converts to a string when applicable
-	// boolean and number are converted, other types are not
+	// ToStr converts SuBool, SuInt, SuDnum, SuStr, SuConcat, SuExcept to string
 	ToStr() (string, bool)
 
-	// ToInt converts to an integer when applicable
-	// false and "" convert to 0 (but true does NOT convert to 1)
+	// IfStr converts SuStr, SuConcat, SuExcept to string
+	IfStr() (string, bool)
+
+	// ToInt converts false (SuBool), "" (SuStr), SuInt, SuDnum to int
 	ToInt() (int, bool)
 
-	// ToDnum converts to a dnum when applicable
-	// false and "" convert to 0 (but true does NOT convert to 1)
+	// IfInt SuInt, SuDnum to int
+	IfInt() (int, bool)
+
+	// ToDnum converts false (SuBool), "" (SuStr), SuInt, SuDnum to Dnum
 	ToDnum() (dnum.Dnum, bool)
 
 	// ToObject converts to an SuObject when applicable
@@ -114,8 +117,8 @@ type Named interface {
 	SetName(name string)
 }
 
-// ToStr converts to a string or panics
-// boolean and number are converted, other types are not
+// ToStr converts SuBool, SuInt, SuDnum, SuStr, SuConcat, SuExcept to string
+// calls Value.ToStr and panics if it fails
 func ToStr(x Value) string {
 	if s, ok := x.ToStr(); ok {
 		return s
@@ -123,8 +126,17 @@ func ToStr(x Value) string {
 	panic("can't convert " + x.TypeName() + " to String")
 }
 
-// ToInt converts to an integer or panics
-// false and "" convert to 0 (but true does NOT convert to 1)
+// IfStr converts SuBool, SuInt, SuDnum, SuStr, SuConcat, SuExcept to string
+// calls Value.IfStr and panics if it fails
+func IfStr(x Value) string {
+	if s, ok := x.IfStr(); ok {
+		return s
+	}
+	panic("can't convert " + x.TypeName() + " to String")
+}
+
+// ToInt converts false (SuBool), "" (SuStr), SuInt, SuDnum to int
+// calls Value.ToInt and panics if it fails
 func ToInt(x Value) int {
 	if i, ok := x.ToInt(); ok {
 		return i
@@ -132,8 +144,8 @@ func ToInt(x Value) int {
 	panic("can't convert " + errType(x) + " to integer")
 }
 
-// ToDnum converts to a dnum or panics
-// false and "" convert to 0 (but true does NOT convert to 1)
+// ToDnum converts false (SuBool), "" (SuStr), SuInt, SuDnum to Dnum
+// calls Value.ToDnum and panics if it fails
 func ToDnum(x Value) dnum.Dnum {
 	if dn, ok := x.ToDnum(); ok {
 		return dn
@@ -168,6 +180,10 @@ func (CantConvert) ToInt() (int,bool) {
 	return 0,false
 }
 
+func (CantConvert) IfInt() (int,bool) {
+	return 0,false
+}
+
 func (CantConvert) ToDnum() (dnum.Dnum,bool) {
 	return dnum.Zero,false
 }
@@ -177,5 +193,9 @@ func (CantConvert) ToObject() (*SuObject,bool) {
 }
 
 func (CantConvert) ToStr() (string,bool) {
+	return "",false
+}
+
+func (CantConvert) IfStr() (string,bool) {
 	return "",false
 }

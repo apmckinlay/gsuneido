@@ -11,7 +11,7 @@ func init() {
 				ob := ToObject(this)
 				iter := NewArgsIter(as, args)
 				if at := getNamed(as, args, SuStr("at")); at != nil {
-					if i, ok := Index2(at); ok {
+					if i, ok := at.IfInt(); ok {
 						addAt(ob, i, iter)
 					} else {
 						putAt(ob, at, iter)

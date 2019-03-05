@@ -198,29 +198,12 @@ func Match(x Value, y regex.Pattern) SuBool {
 	return SuBool(y.Matches(ToStr(x)))
 }
 
-// Index is basically the same as ToInt(value)
-// except it doesn't convert "" and false to 0
-// and it has a different error message
-// used by ranges and string[i]
+// Index is used by ranges and string[i]
 func Index(key Value) int {
-	if n,ok := Index2(key); ok {
+	if n, ok := key.IfInt(); ok {
 		return n
 	}
 	panic("indexes must be integers")
-}
-
-// Index2 is basically the same as value.ToInt
-// except it doesn't convert "" and false to 0
-func Index2(key Value) (int,bool) {
-	if i, ok := SmiToInt(key); ok {
-		return i,true
-	}
-	if dn, ok := key.(SuDnum); ok {
-		if i, ok := dn.Dnum.ToInt(); ok {
-			return i,true
-		}
-	}
-	return 0,false // invalid list index
 }
 
 func prepFrom(from int, size int) int {

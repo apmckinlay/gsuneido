@@ -14,11 +14,11 @@ import (
 // Zero value is a valid empty object
 // NOTE: Not thread safe
 type SuObject struct {
-	CantConvert
 	list     []Value
 	named    hmap.Hmap
 	readonly bool
 	defval   Value
+	CantConvert
 }
 
 var _ Value = (*SuObject)(nil)
@@ -39,7 +39,7 @@ func (ob *SuObject) GetDefault(key Value, def Value) Value {
 }
 
 func (ob *SuObject) getIfPresent(key Value) Value {
-	if i, ok := Index2(key); ok && 0 <= i && i < ob.ListSize() {
+	if i, ok := key.IfInt(); ok && 0 <= i && i < ob.ListSize() {
 		return ob.list[i]
 	}
 	x := ob.named.Get(key)
@@ -62,7 +62,7 @@ func (ob *SuObject) ListGet(i int) Value {
 // The value will be added to the list if the key is the "next"
 func (ob *SuObject) Put(key Value, val Value) {
 	ob.mustBeMutable()
-	if i, ok := Index2(key); ok {
+	if i, ok := key.IfInt(); ok {
 		if i == ob.ListSize() {
 			ob.Add(val)
 			return

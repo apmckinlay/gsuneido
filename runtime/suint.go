@@ -54,6 +54,10 @@ func (si *smi) ToInt() (int, bool) {
 	return si.toInt(), true
 }
 
+func (si *smi) IfInt() (int, bool) {
+	return si.toInt(), true
+}
+
 func (si *smi) toInt() int {
 	p := unsafe.Pointer(si)
 	offset := int(uintptr(p) - smibase)
@@ -70,6 +74,10 @@ func (*smi) ToObject() (*SuObject, bool) {
 
 func (si *smi) ToStr() (string, bool) {
 	return si.String(), true
+}
+
+func (si *smi) IfStr() (string, bool) {
+	return "", false
 }
 
 func (si *smi) String() string {

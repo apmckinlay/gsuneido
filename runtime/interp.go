@@ -417,7 +417,7 @@ loop:
 			}
 			base := t.sp - int(argSpec.Nargs) - 1
 			this := t.stack[base]
-			if methstr, ok := method.ToStr(); ok { //BUG accepts number/bool
+			if methstr, ok := method.IfStr(); ok {
 				ob := this
 				if super > 0 {
 					ob = GetGlobal(super)
