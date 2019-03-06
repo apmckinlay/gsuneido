@@ -114,7 +114,7 @@ func (*SuBuiltinRaw) TypeName() string {
 
 func (b *SuBuiltinRaw) Call(t *Thread, as *ArgSpec) Value {
 	base := t.sp - int(as.Nargs)
-	args := t.stack[base:base + int(as.Nargs)]
+	args := t.stack[base : base+int(as.Nargs)]
 	return b.Fn(t, as, args...)
 }
 
@@ -181,6 +181,6 @@ func (*SuBuiltinMethodRaw) TypeName() string {
 
 func (b *SuBuiltinMethodRaw) Call(t *Thread, as *ArgSpec) Value {
 	base := t.sp - int(as.Nargs)
-	args := t.stack[base:base + int(as.Nargs)]
+	args := t.stack[base : base+int(as.Nargs)]
 	return b.Fn(t, as, t.this, args...)
 }
