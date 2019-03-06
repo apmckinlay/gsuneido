@@ -21,13 +21,16 @@ func init() {
 				}
 				return this
 			}),
-		"Assocs": method0(func(this Value) Value {
+		"Assocs": method0(func(this Value) Value { //TODO list? and named?
 			return NewSuSequence(ToObject(this).IterAssocs())
 		}),
 		"Iter": method0(func(this Value) Value {
 			return SuIter{Iter: ToObject(this).Iter()}
 		}),
-		"Members": method0(func(this Value) Value {
+		// "Join": method1("(separator='')", func(this Value, sep Value) Value {
+		// 	return ToObject(this).Join(ToStr(sep))
+		// }),
+		"Members": method0(func(this Value) Value { //TODO list? and named?
 			return NewSuSequence(ToObject(this).IterMembers())
 		}),
 		"Set_default": method1("(value=nil)", func(this Value, val Value) Value {
@@ -38,7 +41,7 @@ func init() {
 			ToObject(this).SetReadOnly()
 			return this
 		}),
-		"Size": method0(func(this Value) Value {
+		"Size": method0(func(this Value) Value { //TODO list? and named?
 			return IntToValue(ToObject(this).Size())
 		}),
 		"Sort!": methodRaw("(block = false)", // methodRaw to get thread
@@ -47,7 +50,7 @@ func init() {
 				ToObject(this).Sort(t, args[0])
 				return this
 			}),
-		"Values": method0(func(this Value) Value {
+		"Values": method0(func(this Value) Value { //TODO list? and named?
 			return NewSuSequence(ToObject(this).Iter())
 		}),
 		// TODO more methods

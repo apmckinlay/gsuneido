@@ -105,5 +105,6 @@ func (seq *SuSequence) Lookup(method string) Value {
 	if meth := SequenceMethods[method]; meth != nil {
 		return meth
 	}
-	return seq.Lookup(method)
+	seq.instantiate()
+	return seq.ob.Lookup(method)
 }

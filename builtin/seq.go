@@ -3,6 +3,7 @@ package builtin
 import (
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/ints"
+	"github.com/apmckinlay/gsuneido/util/verify"
 )
 
 var _ = builtin3("Seq(from, to=false, by=1)",
@@ -26,6 +27,7 @@ type seqIter struct {
 }
 
 func (seq *seqIter) Next() Value {
+	verify.That(seq.by != 0)
 	if seq.i >= seq.to {
 		return nil
 	}
