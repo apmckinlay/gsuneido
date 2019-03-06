@@ -130,12 +130,11 @@ func (t *Thread) massage(ps *ParamSpec, as *ArgSpec, args []Value) {
 	}
 
 	// fill in defaults and check for missing
-	v := 0
+	noDefs := int(ps.Nparams - ps.Ndefaults)
 	for i := as.Unnamed(); i < int(ps.Nparams); i++ {
 		if args[i] == nil {
-			if i >= int(ps.Nparams-ps.Ndefaults) {
-				args[i] = ps.Values[v]
-				v++
+			if i >= noDefs {
+				args[i] = ps.Values[i-noDefs]
 			} else {
 				panic("missing argument")
 			}

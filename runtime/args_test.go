@@ -72,6 +72,14 @@ func TestArgs(t *testing.T) {
 	th.Args(f, as)
 	ckStack(11, 22)
 
+	// 2 arg => 3 params with 2 defaults
+	f = &ParamSpec{Nparams: 3, Flags: []Flag{0, 0, 0},
+		Ndefaults: 2, Values: []Value{False, One}}
+	as = ArgSpec2
+	setStack(2, 5)
+	th.Args(f, as)
+	ckStack(2, 5, 1)
+
 	// all named
 	f = &ParamSpec{Nparams: 3, Flags: []Flag{0, 0, 0},
 		Names: []string{"a", "b", "c"}}
