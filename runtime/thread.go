@@ -97,3 +97,18 @@ func (t *Thread) CallWithArgs(fn Value, args ...Value) Value {
 	t.sp = base
 	return result
 }
+
+// CallMethod calls a Suneido method
+// arguments (including "this") should be on the stack
+func (t *Thread) CallMethod(method string, argSpec *ArgSpec) Value {
+	base := t.sp - int(argSpec.Nargs) - 1
+	ob := t.stack[base]
+	f := ob.Lookup(method)
+	if f == nil {
+		panic("method not found " + ob.TypeName() + "." + method)
+	}
+	t.this = ob
+	result := f.Call(t, argSpec)
+	t.sp = base
+	return result
+}

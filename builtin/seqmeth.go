@@ -6,8 +6,26 @@ import (
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
+// for SuSequence
+
 func init() {
 	SequenceMethods = Methods{
+		"Copy": method0(func(this Value) Value {
+			return this.(*SuSequence).Copy()
+		}),
+		"Infinite?": method0(func(this Value) Value {
+			return SuBool(this.(*SuSequence).Infinite())
+		}),
+		"Instantiated?": method0(func(this Value) Value {
+			return SuBool(this.(*SuSequence).Instantiated())
+		}),
+		"Iter": method0(func(this Value) Value {
+				iter := this.(*SuSequence).Iter()
+				if wi, ok := iter.(*wrapIter); ok {
+					return wi.iter
+				}
+				return SuIter{Iter: iter}
+			}),
 		"Join": method1("(separator='')", func(this, arg Value) Value {
 			seq := this.(*SuSequence)
 			separator := ToStr(arg)

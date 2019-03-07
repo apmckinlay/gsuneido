@@ -1,12 +1,18 @@
 package builtin
 
 import (
+	"math"
+
 	. "github.com/apmckinlay/gsuneido/runtime"
-	"github.com/apmckinlay/gsuneido/util/ints"
 	"github.com/apmckinlay/gsuneido/util/verify"
 )
 
-var _ = builtin3("Seq(from, to=false, by=1)",
+var _ = builtin1("Seq?(value)", func(val Value) Value {
+	_,ok := val.(*SuSequence)
+	return SuBool(ok)
+})
+
+var _ = builtin3("Seq(from=false, to=false, by=1)",
 	func(from, to, by Value) Value {
 		if from == False {
 			from = Zero
@@ -41,5 +47,5 @@ func (seq *seqIter) Dup() Iter {
 }
 
 func (seq *seqIter) Infinite() bool {
-	return seq.to == ints.MaxInt
+	return seq.to == math.MaxInt32 // has to match runtime.MaxInt
 }

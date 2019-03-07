@@ -1,10 +1,17 @@
 package runtime
 
-// SuSequence wraps an iterator and instantiates it lazily
+// SuSequence wraps an Iter and instantiates it lazily
+// the Iter is either built-in e.g. Seq or object.Members,
+// or user defined via Sequence
 type SuSequence struct {
+	// iter is the iterator we're wrapping
 	iter Iter
+	// duped tracks whether the sequence has been duplicated
+	// this is used to decide to instantiate
+	duped bool
 	// ob is nil until the sequence is instantiated
 	ob *SuObject
+
 	CantConvert
 }
 
@@ -12,21 +19,43 @@ func NewSuSequence(it Iter) *SuSequence {
 	return &SuSequence{iter: it}
 }
 
+func (seq *SuSequence) Iter() Iter {
+	seq.duped = true
+	return seq.iter.Dup()
+}
+
+func (seq *SuSequence) Instantiated() bool {
+	return seq.ob != nil
+}
+
+func (seq *SuSequence) Infinite() bool {
+	return seq.iter.Infinite()
+}
+
+func (seq *SuSequence) Copy() *SuObject {
+	return iterToObject(seq.iter.Dup())
+}
+
 func (seq *SuSequence) instantiate() {
-	if seq.ob != nil {
-		return // already instantiated
-	}
-	if seq.iter.Infinite() {
-		panic("can't instantiate infinite sequence")
-	}
-	seq.ob = &SuObject{}
-	for x := seq.iter.Next(); x != nil; x = seq.iter.Next() {
-		seq.ob.Add(x)
+	if seq.ob == nil {
+		seq.ob = iterToObject(seq.iter)
 	}
 }
 
-func (seq *SuSequence) Iter() Iter {
-	return seq.iter.Dup()
+const max_instantiate = 16000
+
+func iterToObject(iter Iter) *SuObject {
+	if iter.Infinite() {
+		panic("can't instantiate infinite sequence")
+	}
+	ob := &SuObject{}
+	for x := iter.Next(); x != nil; x = iter.Next() {
+		ob.Add(x)
+		if ob.Size() >= max_instantiate {
+			panic("can't instantiate sequence larger than 16000")
+		}
+	}
+	return ob
 }
 
 // Value interface --------------------------------------------------
@@ -102,9 +131,17 @@ func (*SuSequence) Call(*Thread, *ArgSpec) Value {
 var SequenceMethods Methods
 
 func (seq *SuSequence) Lookup(method string) Value {
-	if meth := SequenceMethods[method]; meth != nil {
-		return meth
+	if seq.asSeq(method) {
+		if meth := SequenceMethods[method]; meth != nil {
+			return meth
+		}
+		//TODO user defined methods in Sequences
 	}
 	seq.instantiate()
 	return seq.ob.Lookup(method)
+}
+
+func (seq *SuSequence) asSeq(method string) bool {
+	return method == "Instantiated?" ||
+		(!seq.Instantiated() && (!seq.duped || seq.Infinite()))
 }
