@@ -10,6 +10,12 @@ func NewInstance(class *SuClass) *SuInstance {
 	return &SuInstance{NewMemBase(), class}
 }
 
+func (ob *SuInstance) Base() *SuClass {
+	return ob.class
+}
+
+// Value interface --------------------------------------------------
+
 var _ Value = (*SuInstance)(nil)
 
 func (ob *SuInstance) String() string {

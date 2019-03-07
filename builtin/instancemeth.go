@@ -4,6 +4,9 @@ import . "github.com/apmckinlay/gsuneido/runtime"
 
 func init() {
 	InstanceMethods = Methods{
+		"Base": method0(func(this Value) Value {
+			return this.(*SuInstance).Base()
+		}),
 		"Members": method0(func(this Value) Value {
 			return this.(*SuInstance).Members()
 		}),

@@ -95,7 +95,7 @@ func (c *SuClass) get2(m string) Value {
 		if x, ok := c.Data[m]; ok {
 			return x
 		}
-		if c = c.parent(); c == nil {
+		if c = c.Parent(); c == nil {
 			break
 		}
 	}
@@ -133,7 +133,7 @@ func (*SuClass) Compare(Value) int {
 	panic("class compare not implemented")
 }
 
-func (c *SuClass) parent() *SuClass {
+func (c *SuClass) Parent() *SuClass {
 	if c.Base <= 0 {
 		return nil
 	}
@@ -198,7 +198,7 @@ func (c *SuClass) finder(fn func(*MemBase) Value) Value {
 		if x := fn(&c.MemBase); x != nil {
 			return x
 		}
-		c = c.parent()
+		c = c.Parent()
 	}
 	panic("too many levels of derivation (>100)")
 }
