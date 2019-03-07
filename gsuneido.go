@@ -3,6 +3,7 @@ package main // import "github.com/apmckinlay/gsuneido"
 import (
 	"bufio"
 	"fmt"
+	"io"
 	"os"
 	"runtime/debug"
 	"strings"
@@ -15,20 +16,27 @@ import (
 
 var _ = AddGlobal("Suneido", new(SuObject))
 
+var prompt = func(s string) { fmt.Print(s); os.Stdout.Sync() }
+
 func main() {
+	fm, _ := os.Stdin.Stat()
+	if fm.Mode().IsRegular() {
+		prompt = func(string) {}
+	}
+
 	language.Def()
 	if len(os.Args) > 1 {
 		eval(os.Args[1])
 	} else {
-		fmt.Println("Press Enter twice (i.e. blank line) to execute, q to quit")
+		prompt("Press Enter twice (i.e. blank line) to execute, q to quit\n")
 		r := bufio.NewReader(os.Stdin)
 		for {
 			src := ""
 			for {
-				fmt.Print("> ")
+				prompt("> ")
 				line, err := r.ReadString('\n')
 				line = strings.TrimRight(line, " \t\r\n")
-				if err != nil || line == "q" {
+				if line == "q" || (err != nil && (err != io.EOF || src == "")) {
 					return
 				}
 				if line == "" {
@@ -60,7 +68,8 @@ func eval(src string) {
 	// Disasm(os.Stdout, fn)
 	result := th.Call(fn)
 	if result != nil {
-		fmt.Print(">>> ", result)
+		prompt(">>> ")
+		fmt.Print(result)
 		fmt.Printf(" <%s %T>", result.TypeName(), result)
 		fmt.Println()
 	}
