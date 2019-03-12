@@ -16,7 +16,7 @@ func TestSuFuncCall(t *testing.T) {
 	th.Push(SuInt(1))
 	result := fn.Call(th, ArgSpec2)
 	Assert(t).That(result, Equals(SuInt(99)))
-	AddGlobal("F", fn)
+	Global.Add("F", fn)
 
 	fn = compile.Constant("function () { F(100, 1) }").(*SuFunc)
 	result = fn.Call(th, ArgSpec0)

@@ -235,7 +235,7 @@ type Function struct {
 	exprNodeT
 	Params      []Param
 	Body        []Statement
-	Base        Global
+	Base        Gnum
 	IsNewMethod bool
 	// Id is set and used by codegen for block parents
 	Id uint32

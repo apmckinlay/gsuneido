@@ -48,8 +48,8 @@ func Disasm1(fn *SuFunc, i int) (int, string) {
 		idx := fetchUint8()
 		s += " " + fn.Names[idx]
 	case op.Global, op.Super:
-		gn := Global(fetchUint16())
-		s += " " + GlobalName(gn)
+		gn := fetchUint16()
+		s += " " + Global.Name(gn)
 	case op.Jump, op.JumpTrue, op.JumpFalse, op.And, op.Or, op.QMark, op.In, op.JumpIs,
 		op.JumpIsnt, op.Catch:
 		j := fetchInt16()

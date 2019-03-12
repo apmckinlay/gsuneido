@@ -8,7 +8,7 @@ import (
 type SuClass struct {
 	MemBase
 	Name     string
-	Base     Global
+	Base     Gnum
 	noGetter bool
 }
 
@@ -21,7 +21,7 @@ func (c *SuClass) String() string {
 	}
 	s += "/* class"
 	if c.Base != 0 {
-		s += " : " + GlobalName(c.Base)
+		s += " : " + Global.Name(c.Base)
 	}
 	s += " */"
 	return s
@@ -32,7 +32,7 @@ func (c *SuClass) Show() string {
 	if c.Base == 0 {
 		s = "class"
 	} else {
-		s += GlobalName(c.Base)
+		s += Global.Name(c.Base)
 	}
 	s += "{"
 	sep := ""
@@ -137,7 +137,7 @@ func (c *SuClass) Parent() *SuClass {
 	if c.Base <= 0 {
 		return nil
 	}
-	base := GetGlobal(c.Base)
+	base := Global.Get(c.Base)
 	if baseClass, ok := base.(*SuClass); ok {
 		return baseClass
 	}

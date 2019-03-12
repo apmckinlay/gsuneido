@@ -11,8 +11,8 @@ func Def() {
 		if ss, ok := val.(SuStr); ok {
 			val = compile.NamedConstant(name, string(ss))
 		}
-		TestGlobal(name, val)
+		Global.TestDef(name, val)
 		return nil
 	}
-	AddGlobal("Def", &SuBuiltin2{def, BuiltinParams{ParamSpec: ParamSpec2}})
+	Global.Add("Def", &SuBuiltin2{def, BuiltinParams{ParamSpec: ParamSpec2}})
 }

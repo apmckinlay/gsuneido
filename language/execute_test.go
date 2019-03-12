@@ -13,7 +13,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/ptest"
 )
 
-var _ = AddGlobal("Suneido", new(SuObject))
+var _ = Global.Add("Suneido", new(SuObject))
 var _ = ptest.Add("execute", pt_execute)
 var _ = ptest.Add("lang_rangeto", pt_lang_rangeto)
 var _ = ptest.Add("lang_rangelen", pt_lang_rangelen)
@@ -21,9 +21,9 @@ var _ = ptest.Add("compare", pt_compare)
 var _ = ptest.Add("compare_packed", pt_compare_packed)
 
 func TestBuiltinString(t *testing.T) {
-	f := GetGlobal(GlobalNum("Type"))
+	f := Global.Get(Global.Num("Type"))
 	Assert(t).That(f.String(), Equals("Type /* builtin function */"))
-	f = GetGlobal(GlobalNum("Object"))
+	f = Global.Get(Global.Num("Object"))
 	Assert(t).That(f.String(), Equals("Object /* builtin function */"))
 }
 
@@ -204,8 +204,8 @@ func pt_compare_packed(args []string, _ []bool) bool {
 // compare to BenchmarkJit in interp_test.go
 func BenchmarkInterp(b *testing.B) {
 	src := `function (x,y) { x + y }`
-	if !GlobalExists("ADD") {
-		AddGlobal("ADD", compile.Constant(src).(*SuFunc))
+	if !Global.Exists("ADD") {
+		Global.Add("ADD", compile.Constant(src).(*SuFunc))
 	}
 	src = `function () {
 		sum = 0
@@ -225,7 +225,7 @@ func BenchmarkInterp(b *testing.B) {
 }
 
 func BenchmarkCall(b *testing.B) {
-	f := GetGlobal(GlobalNum("Type"))
+	f := Global.Get(Global.Num("Type"))
 	as := ArgSpec1
 	th := NewThread()
 	th.Push(SuInt(123))

@@ -139,7 +139,7 @@ type protectable interface {
 	SetReadOnly()
 }
 
-func (p *parser) memberList(ob container, closing tok.Token, base Global) {
+func (p *parser) memberList(ob container, closing tok.Token, base Gnum) {
 	for p.Token != closing {
 		p.member(ob, closing, base)
 		if p.Token == tok.Comma || p.Token == tok.Semicolon {
@@ -149,7 +149,7 @@ func (p *parser) memberList(ob container, closing tok.Token, base Global) {
 	p.next()
 }
 
-func (p *parser) member(ob container, closing tok.Token, base Global) {
+func (p *parser) member(ob container, closing tok.Token, base Gnum) {
 	start := p.Token
 	m := p.constant()
 	inClass := base != noBase
@@ -221,7 +221,7 @@ func (p *parser) class() Value {
 			p.match(tok.Colon)
 		}
 	}
-	var base Global
+	var base Gnum
 	if p.Token == tok.Identifier {
 		base = p.ckBase(p.Text)
 		p.matchIdent()
@@ -238,11 +238,11 @@ func (p *parser) class() Value {
 	return &SuClass{Base: base, MemBase: MemBase{Data: mems}}
 }
 
-func (p *parser) ckBase(name string) Global {
+func (p *parser) ckBase(name string) Gnum {
 	if !okBase(name) {
 		p.error("base class must be global defined in library, got: ", name)
 	}
-	return GlobalNum(name)
+	return Global.Num(name)
 }
 
 func okBase(name string) bool {

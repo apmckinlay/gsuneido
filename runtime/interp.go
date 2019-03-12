@@ -189,10 +189,10 @@ loop:
 			}
 			t.Push(fr.locals[i])
 		case op.Global:
-			gn := Global(fetchUint16())
-			val := GetGlobal(gn)
+			gn := fetchUint16()
+			val := Global.Get(gn)
 			if val == nil {
-				panic("uninitialized global: " + GlobalName(gn))
+				panic("uninitialized global: " + Global.Name(gn))
 			}
 			t.Push(val)
 		case op.Get:
@@ -411,7 +411,7 @@ loop:
 			t.sp = base
 			t.Push(result)
 		case op.Super:
-			super = Global(fetchUint16())
+			super = fetchUint16()
 		case op.CallMeth:
 			method := t.Pop()
 			ai := fetchUint8()
@@ -426,7 +426,7 @@ loop:
 			if methstr, ok := method.IfStr(); ok {
 				ob := this
 				if super > 0 {
-					ob = GetGlobal(super)
+					ob = Global.Get(super)
 					super = 0
 				}
 				if f := ob.Lookup(string(methstr)); f != nil {

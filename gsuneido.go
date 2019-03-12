@@ -14,7 +14,7 @@ import (
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
-var _ = AddGlobal("Suneido", new(SuObject))
+var _ = Global.Add("Suneido", new(SuObject))
 
 var prompt = func(s string) { fmt.Print(s); os.Stdout.Sync() }
 

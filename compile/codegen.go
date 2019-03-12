@@ -23,7 +23,7 @@ type cgen struct {
 	outerVars      map[string]bool
 	code           []byte
 	argspecs       []*ArgSpec
-	base           Global
+	base           Gnum
 	isNew          bool
 	isBlock        bool
 	firstStatement bool
@@ -486,7 +486,7 @@ func (cg *cgen) identifier(node *ast.Ident) {
 			cg.emitUint8(op.Load, i)
 		}
 	} else {
-		cg.emitUint16(op.Global, GlobalNum(node.Name))
+		cg.emitUint16(op.Global, Global.Num(node.Name))
 	}
 }
 
