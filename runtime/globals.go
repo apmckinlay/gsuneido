@@ -16,6 +16,7 @@ type globals struct {
 	names    []string
 	values   []Value
 	missing  Value
+	Libload  func(name string) Value
 }
 
 var Global = globals{
@@ -24,6 +25,7 @@ var Global = globals{
 	names:   []string{""},
 	values:  []Value{nil},
 	missing: &SuExcept{}, // type doesn't matter, just has to be unique
+	Libload: func(string) Value { return nil },
 }
 
 // Add adds a new name and value to globals.
@@ -73,15 +75,32 @@ func (g *globals) Name(gnum Gnum) string {
 	return g.names[gnum]
 }
 
-// Get returns the value for a global
-func (g *globals) Get(gnum Gnum) Value {
-	g.lock.RLock()
-	defer g.lock.RUnlock()
-	return g.values[gnum]
-}
-
 // Exists returns whether the name exists - for tests
 func (g *globals) Exists(name string) bool {
 	_, ok := g.name2num[name]
 	return ok
+}
+
+// Get returns the value for a global
+func (g *globals) Get(gnum Gnum) Value {
+	Global.lock.RLock()
+	x := Global.values[gnum]
+	Global.lock.RUnlock()
+	if x == nil {
+		// NOTE: can't hold lock during Libload
+		// since compile may need to access Global.
+		// That means two threads could both load
+		// but they should both get the same value.
+		x = g.Libload(g.Name(gnum))
+		if x == nil {
+			x = g.missing // avoid further libloads
+		}
+		Global.lock.Lock()
+		g.values[gnum] = x
+		Global.lock.Unlock()
+	}
+	if x == g.missing {
+		return nil
+	}
+	return x
 }

@@ -3,9 +3,12 @@ package main // import "github.com/apmckinlay/gsuneido"
 import (
 	"bufio"
 	"fmt"
+	"hash/adler32"
 	"io"
+	"io/ioutil"
 	"os"
 	"runtime/debug"
+	"strconv"
 	"strings"
 
 	_ "github.com/apmckinlay/gsuneido/builtin"
@@ -25,6 +28,7 @@ func main() {
 	}
 
 	language.Def()
+	Global.Libload = libload
 	if len(os.Args) > 1 {
 		eval(os.Args[1])
 	} else {
@@ -92,4 +96,26 @@ func printCallStack(cs *SuObject) {
 	for i := 0; i < cs.ListSize(); i++ {
 		fmt.Println(cs.ListGet(i))
 	}
+}
+
+// libload loads a name from the libraries in use
+// Currently a temporary version that reads from text files
+func libload(name string) (result Value) {
+	defer func() {
+		if e := recover(); e != nil {
+			panic("error loading " + name + " " + fmt.Sprint(e))
+			result = nil
+		}
+	}()
+	dir := "../stdlib/"
+	hash := adler32.Checksum([]byte(name))
+	file := dir + name + "_" + strconv.FormatUint(uint64(hash), 16)
+	s, err := ioutil.ReadFile(file)
+	if err != nil {
+		fmt.Println("LOAD", file, "NOT FOUND")
+		return nil
+	}
+	result = compile.Constant(string(s))
+	fmt.Println("LOAD", name, "SUCCEEDED")
+	return
 }
