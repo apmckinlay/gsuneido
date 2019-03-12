@@ -28,7 +28,7 @@ func main() {
 	}
 
 	language.Def()
-	Global.Libload = libload
+	Libload = libloadFile
 	if len(os.Args) > 1 {
 		eval(os.Args[1])
 	} else {
@@ -100,7 +100,7 @@ func printCallStack(cs *SuObject) {
 
 // libload loads a name from the libraries in use
 // Currently a temporary version that reads from text files
-func libload(name string) (result Value) {
+func libloadFile(name string) (result Value) {
 	defer func() {
 		if e := recover(); e != nil {
 			panic("error loading " + name + " " + fmt.Sprint(e))
