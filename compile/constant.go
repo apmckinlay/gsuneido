@@ -68,6 +68,9 @@ func (p *parser) constant() Value {
 			if okBase(p.Text) && p.lxr.AheadSkip(0).Token == tok.LCurly {
 				return p.class()
 			}
+			if p.Text == "struct" || p.Text == "dll" || p.Text == "callback" {
+				panic("gSuneido does not support " + p.Text)
+			}
 			s := p.Text
 			p.next()
 			return SuStr(s)
