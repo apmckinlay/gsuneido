@@ -136,6 +136,13 @@ func IfStr(x Value) string {
 	panic("can't convert " + x.TypeName() + " to String")
 }
 
+func ToStrOrString(x Value) string {
+	if s,ok := x.IfStr(); ok {
+		return s
+	}
+	return x.String()
+}
+
 // ToInt converts false (SuBool), "" (SuStr), SuInt, SuDnum to int
 // calls Value.ToInt and panics if it fails
 func ToInt(x Value) int {
