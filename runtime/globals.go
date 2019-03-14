@@ -96,7 +96,7 @@ func (typeGlobal) Exists(name string) bool {
 	return ok
 }
 
-// Get returns the value for a global
+// Get returns the value for a global, or nil if not found
 func (typeGlobal) Get(gnum Gnum) Value {
 	g.lock.RLock()
 	x := g.values[gnum]
