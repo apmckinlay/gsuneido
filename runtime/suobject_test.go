@@ -97,6 +97,24 @@ func TestSuObjectDelete(t *testing.T) {
 	Assert(t).That(ob.Size(), Equals(0))
 }
 
+func TestSuObjectErase(t *testing.T) {
+	ob := SuObject{}
+	ob.Erase(Zero)
+	ob.Erase(SuStr("baz"))
+	for i := 0; i < 5; i++ {
+		ob.Add(SuInt(i))
+	}
+	ob.Put(SuStr("foo"), SuInt(8))
+	ob.Put(SuStr("bar"), SuInt(9))
+	Assert(t).That(ob.Show(), Equals("#(0, 1, 2, 3, 4, bar: 9, foo: 8)"))
+	ob.Erase(SuStr("foo"))
+	Assert(t).That(ob.Show(), Equals("#(0, 1, 2, 3, 4, bar: 9)"))
+	ob.Erase(SuInt(2))
+	Assert(t).That(ob.Show(), Equals("#(0, 1, 3: 3, 4: 4, bar: 9)"))
+	ob.Erase(SuInt(1))
+	Assert(t).That(ob.Show(), Equals("#(0, 3: 3, 4: 4, bar: 9)"))
+}
+
 func TestSuObjectEquals(t *testing.T) {
 	x := &SuObject{}
 	y := &SuObject{}

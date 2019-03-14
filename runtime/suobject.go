@@ -9,6 +9,8 @@ import (
 	"github.com/apmckinlay/gsuneido/util/ints"
 )
 
+//TODO split object from suobject
+
 // SuObject is a Suneido object
 // i.e. a container with both list and named members
 // Zero value is a valid empty object
@@ -47,7 +49,7 @@ func (ob *SuObject) GetDefault(key Value, def Value) Value {
 }
 
 func (ob *SuObject) getIfPresent(key Value) Value {
-	if i, ok := key.IfInt(); ok && 0 <= i && i < ob.ListSize() {
+	if i, ok := key.IfInt(); ok && 0 <= i && i < len(ob.list) {
 		return ob.list[i]
 	}
 	x := ob.named.Get(key)
@@ -72,10 +74,10 @@ func (ob *SuObject) ListGet(i int) Value {
 func (ob *SuObject) Put(key Value, val Value) {
 	ob.mustBeMutable()
 	if i, ok := key.IfInt(); ok {
-		if i == ob.ListSize() {
+		if i == len(ob.list) {
 			ob.Add(val)
 			return
-		} else if 0 <= i && i < ob.ListSize() {
+		} else if 0 <= i && i < len(ob.list) {
 			ob.list[i] = val
 			return
 		}
@@ -87,12 +89,39 @@ func (ob *SuObject) Put(key Value, val Value) {
 // If in the list, following list values are shifted over.
 func (ob *SuObject) Delete(key Value) {
 	ob.mustBeMutable()
-	if i, ok := key.IfInt(); ok && 0 <= i && i < ob.ListSize() {
-		ob.list = ob.list[:i+copy(ob.list[i:], ob.list[i+1:])]
+	if i, ok := key.IfInt(); ok && 0 <= i && i < len(ob.list) {
+		newlist := ob.list[:i+copy(ob.list[i:], ob.list[i+1:])]
+		ob.list[len(ob.list)-1] = nil // aid garbage collection
+		ob.list = newlist
 	} else {
 		ob.named.Del(key)
 	}
 }
+
+// Erase removes a key.
+// If in the list, following list values are NOT shifted over.
+func (ob *SuObject) Erase(key Value) {
+	ob.mustBeMutable()
+	if i, ok := key.IfInt(); ok && 0 <= i && i < len(ob.list) {
+		// migrate following list elements to named
+		for j := len(ob.list) - 1; j > i; j-- {
+			ob.named.Put(SuInt(j), ob.list[j])
+			ob.list[j] = nil // aid garbage collection
+		}
+		ob.list = ob.list[: i]
+	} else {
+		ob.named.Del(key)
+	}
+}
+
+// if (m.int_if_num(&i) && 0 <= i && i < vec.size()) {
+// 	// migrate from vec to map
+// 	for (int j = vec.size() - 1; j > i; --j)
+// 		map[j] = vec[j];
+// 	vec.erase(vec.begin() + i, vec.end());
+// 	return true;
+// }
+// return map.erase(m);
 
 // Clear removes all the contents of the object, making it empty (size 0)
 func (ob *SuObject) Clear() {
@@ -135,7 +164,7 @@ func (ob *SuObject) NamedSize() int {
 
 // Size returns the number of values in the object
 func (ob *SuObject) Size() int {
-	return ob.ListSize() + ob.NamedSize()
+	return len(ob.list) + ob.named.Size()
 }
 
 // Add appends a value to the list portion
@@ -168,7 +197,7 @@ func (ob *SuObject) mustBeMutable() {
 
 func (ob *SuObject) migrate() {
 	for {
-		x := ob.named.Del(IntToValue(ob.ListSize()))
+		x := ob.named.Del(IntToValue(len(ob.list)))
 		if x == nil {
 			break
 		}
@@ -246,10 +275,10 @@ func (ob *SuObject) Show() string {
 
 func (ob *SuObject) Hash() uint32 {
 	hash := ob.Hash2()
-	if ob.ListSize() > 0 {
+	if len(ob.list) > 0 {
 		hash = 31*hash + ob.list[0].Hash()
 	}
-	if 0 < ob.NamedSize() && ob.NamedSize() <= 4 {
+	if 0 < ob.named.Size() && ob.named.Size() <= 4 {
 		iter := ob.named.Iter()
 		for {
 			k, v := iter()
@@ -266,8 +295,8 @@ func (ob *SuObject) Hash() uint32 {
 // Hash2 is shallow so prevents infinite recursion
 func (ob *SuObject) Hash2() uint32 {
 	hash := uint32(17)
-	hash = 31*hash + uint32(ob.NamedSize())
-	hash = 31*hash + uint32(ob.ListSize())
+	hash = 31*hash + uint32(ob.named.Size())
+	hash = 31*hash + uint32(len(ob.list))
 	return hash
 }
 
@@ -545,11 +574,11 @@ func (ob *SuObject) pack(buf []byte, tag byte) []byte {
 	if ob.Size() == 0 {
 		return buf
 	}
-	buf = packInt32(int32(ob.ListSize()), buf)
+	buf = packInt32(int32(len(ob.list)), buf)
 	for _, v := range ob.list {
 		buf = packValue(v, buf)
 	}
-	buf = packInt32(int32(ob.NamedSize()), buf)
+	buf = packInt32(int32(ob.named.Size()), buf)
 	iter := ob.named.Iter()
 	for k, v := iter(); k != nil; k, v = iter() {
 		buf = packValue(k.(Value), buf)

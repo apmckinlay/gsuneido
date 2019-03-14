@@ -24,6 +24,36 @@ func init() {
 		"Assocs": method0(func(this Value) Value { //TODO list? and named?
 			return NewSuSequence(ToObject(this).IterAssocs())
 		}),
+		"Delete": methodRaw("(@args)",
+			func(t *Thread, as *ArgSpec, this Value, args ...Value) Value {
+				ob := ToObject(this)
+				if all := getNamed(as, args, SuStr("all")); all == True {
+					ob.Clear()
+				} else {
+					iter := NewArgsIter(as, args)
+					for {
+						k, v := iter()
+						if k != nil || v == nil {
+							break
+						}
+						ob.Delete(v)
+					}
+				}
+				return this
+			}),
+		"Erase": methodRaw("(@args)",
+			func(t *Thread, as *ArgSpec, this Value, args ...Value) Value {
+				ob := ToObject(this)
+				iter := NewArgsIter(as, args)
+				for {
+					k, v := iter()
+					if k != nil || v == nil {
+						break
+					}
+					ob.Erase(v)
+				}
+				return this
+			}),
 		"Iter": method0(func(this Value) Value {
 			return SuIter{Iter: ToObject(this).Iter()}
 		}),

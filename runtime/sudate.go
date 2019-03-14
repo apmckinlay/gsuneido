@@ -11,6 +11,8 @@ import (
 	"github.com/apmckinlay/gsuneido/util/verify"
 )
 
+//TODO split date from sudate
+
 /*
 SuDate is a Suneido date/time Value
 
