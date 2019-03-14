@@ -42,6 +42,11 @@ var _ = builtin1("Class?(value)",
 		return SuBool(arg.TypeName() == "Class")
 	})
 
+var _ = builtin1("Instance?(value)",
+	func(arg Value) Value {
+		return SuBool(arg.TypeName() == "Instance")
+	})
+
 var _ = builtin1("Function?(value)",
 	func(arg Value) Value {
 		return SuBool(arg.TypeName() == "Function")
