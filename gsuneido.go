@@ -61,11 +61,11 @@ func eval(src string) {
 			if internal(e) {
 				debug.PrintStack()
 				fmt.Println("---")
-				printCallStack(CallStack(th))
+				printCallStack(th.CallStack())
 			} else if se, ok := e.(*SuExcept); ok {
 				printCallStack(se.Callstack)
 			} else {
-				printCallStack(CallStack(th))
+				printCallStack(th.CallStack())
 			}
 		}
 	}()

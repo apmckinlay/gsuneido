@@ -112,3 +112,25 @@ func (t *Thread) CallMethod(method string, argSpec *ArgSpec) Value {
 	t.sp = base
 	return result
 }
+
+// Callstack captures the call stack
+func (t *Thread) CallStack() *SuObject {
+	// NOTE: it might be more efficient
+	// to capture the call stack in an internal format
+	// and only build the SuObject if required
+	cs := &SuObject{}
+	for i := t.fp - 1; i >= 0; i-- {
+		fr := t.frames[i]
+		call := &SuObject{}
+		call.Put(SuStr("fn"), fr.fn)
+		locals := &SuObject{}
+		for i, v := range fr.locals {
+			if v != nil {
+				locals.Put(SuStr(fr.fn.Names[i]), v)
+			}
+		}
+		call.Put(SuStr("locals"), locals)
+		cs.Add(call)
+	}
+	return cs
+}

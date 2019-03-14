@@ -6,7 +6,7 @@ type SuExcept struct {
 }
 
 func NewSuExcept(t *Thread, s SuStr) *SuExcept {
-	return &SuExcept{SuStr: s, Callstack: CallStack(t)}
+	return &SuExcept{SuStr: s, Callstack: t.CallStack()}
 }
 
 // SuValue interface ------------------------------------------------
@@ -23,29 +23,4 @@ func (*SuExcept) Lookup(method string) Value {
 		return m
 	}
 	return StringMethods[method]
-}
-
-// callstack --------------------------------------------------------
-
-// NOTE: it might be more efficient
-// to capture the call stack in an internal format (not an SuObject)
-// and only build the SuObject if required
-
-// callstack captures the call stack
-func CallStack(t *Thread) *SuObject {
-	cs := &SuObject{}
-	for i := t.fp - 1; i >= 0; i-- {
-		fr := t.frames[i]
-		call := &SuObject{}
-		call.Put(SuStr("fn"), fr.fn)
-		locals := &SuObject{}
-		for i, v := range fr.locals {
-			if v != nil {
-				locals.Put(SuStr(fr.fn.Names[i]), v)
-			}
-		}
-		call.Put(SuStr("locals"), locals)
-		cs.Add(call)
-	}
-	return cs
 }
