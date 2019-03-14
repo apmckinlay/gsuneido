@@ -33,7 +33,7 @@ var gnRecords = Global.Num("Records")
 var anSuObject = SuObject{}
 
 func (SuRecord) Lookup(method string) Value {
-	if m := Lookup(ObjectMethods, gnObjects, method); m != nil {
+	if m := Lookup(RecordMethods, gnObjects, method); m != nil {
 		return m
 	}
 	return anSuObject.Lookup(method)
