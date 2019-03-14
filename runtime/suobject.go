@@ -94,6 +94,13 @@ func (ob *SuObject) Delete(key Value) {
 	}
 }
 
+// Clear removes all the contents of the object, making it empty (size 0)
+func (ob *SuObject) Clear() {
+	ob.mustBeMutable()
+	ob.list = []Value{}
+	ob.named = hmap.Hmap{}
+}
+
 func (ob *SuObject) RangeTo(from int, to int) Value {
 	size := ob.Size()
 	from = prepFrom(from, size)
