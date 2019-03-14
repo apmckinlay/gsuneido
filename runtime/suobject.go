@@ -31,7 +31,6 @@ func NewSuObject(args ...Value) *SuObject {
 }
 
 var _ Value = (*SuObject)(nil)
-var _ Packable = (*SuObject)(nil)
 
 // Get returns the value associated with a key, or defval if not found
 func (ob *SuObject) Get(_ *Thread, key Value) Value {
@@ -82,6 +81,17 @@ func (ob *SuObject) Put(key Value, val Value) {
 		}
 	}
 	ob.named.Put(key, val)
+}
+
+// Delete removes a key.
+// If in the list, following list values are shifted over.
+func (ob *SuObject) Delete(key Value) {
+	ob.mustBeMutable()
+	if i, ok := key.IfInt(); ok && 0 <= i && i < ob.ListSize() {
+		ob.list = ob.list[:i+copy(ob.list[i:], ob.list[i+1:])]
+	} else {
+		ob.named.Del(key)
+	}
 }
 
 func (ob *SuObject) RangeTo(from int, to int) Value {
@@ -486,6 +496,8 @@ func (ob *SuObject) Copy() *SuObject {
 }
 
 // Packable ---------------------------------------------------------
+
+var _ Packable = (*SuObject)(nil)
 
 const packNestLimit = 20
 
