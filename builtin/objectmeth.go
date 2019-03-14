@@ -33,6 +33,9 @@ func init() {
 		"Members": method0(func(this Value) Value { //TODO list? and named?
 			return NewSuSequence(ToObject(this).IterMembers())
 		}),
+		"Member?": method1("(member)", func(this Value, val Value) Value {
+			return SuBool(ToObject(this).Has(val))
+		}),
 		"Set_default": method1("(value=nil)", func(this Value, val Value) Value {
 			ToObject(this).SetDefault(val)
 			return this

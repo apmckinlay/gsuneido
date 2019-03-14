@@ -58,8 +58,9 @@ func (ob *SuObject) getIfPresent(key Value) Value {
 	return x.(Value)
 }
 
+// Has returns true if the object contains the given key
 func (ob *SuObject) Has(key Value) bool {
-	return ob.named.Get(key) != nil
+	return ob.getIfPresent(key) != nil
 }
 
 // ListGet returns a value from the list, panics if index out of range
