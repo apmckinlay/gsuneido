@@ -60,6 +60,8 @@ func eval(src string) {
 			fmt.Println("ERROR:", e)
 			if internal(e) {
 				debug.PrintStack()
+				fmt.Println("---")
+				printCallStack(CallStack(th))
 			} else if se, ok := e.(*SuExcept); ok {
 				printCallStack(se.Callstack)
 			} else {
