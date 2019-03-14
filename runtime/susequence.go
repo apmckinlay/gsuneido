@@ -130,12 +130,11 @@ func (*SuSequence) Call(*Thread, *ArgSpec) Value {
 // SequenceMethods is initialized by the builtin package
 var SequenceMethods Methods
 
+var gnSequences = Global.Num("Sequences")
+
 func (seq *SuSequence) Lookup(method string) Value {
 	if seq.asSeq(method) {
-		if meth := SequenceMethods[method]; meth != nil {
-			return meth
-		}
-		//TODO user defined methods in Sequences
+		return Lookup(SequenceMethods, gnSequences, method)
 	}
 	seq.instantiate()
 	return seq.ob.Lookup(method)

@@ -139,8 +139,10 @@ func (ss SuStr) Call(t *Thread, as *ArgSpec) Value {
 // StringMethods is initialized by the builtin package
 var StringMethods Methods
 
+var gnStrings = Global.Num("Strings")
+
 func (SuStr) Lookup(method string) Value {
-	return StringMethods[method]
+	return Lookup(StringMethods, gnStrings, method)
 }
 
 // Packable interface -----------------------------------------------

@@ -145,11 +145,13 @@ func (*smi) Call(*Thread, *ArgSpec) Value {
 // IntMethods is initialized by the builtin package
 var IntMethods Methods
 
+var anSuDnum = SuDnum{}
+
 func (*smi) Lookup(method string) Value {
 	if m := IntMethods[method]; m != nil {
 		return m
 	}
-	return NumMethods[method]
+	return anSuDnum.Lookup(method)
 }
 
 // Packable interface -----------------------------------------------

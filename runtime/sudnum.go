@@ -87,11 +87,13 @@ func (SuDnum) Call(*Thread, *ArgSpec) Value {
 	panic("can't call Number")
 }
 
-// DnumMethods is initialized by the builtin package
+// NumMethods is initialized by the builtin package
 var NumMethods Methods
 
+var gnNumbers = Global.Num("Numbers")
+
 func (SuDnum) Lookup(method string) Value {
-	return NumMethods[method]
+	return Lookup(NumMethods, gnNumbers, method)
 }
 
 // Packing (old format) ---------------------------------------------

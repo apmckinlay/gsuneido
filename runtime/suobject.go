@@ -356,8 +356,10 @@ func (*SuObject) Call(*Thread, *ArgSpec) Value {
 // ObjectMethods is initialized by the builtin package
 var ObjectMethods Methods
 
+var gnObjects = Global.Num("Objects")
+
 func (*SuObject) Lookup(method string) Value {
-	return ObjectMethods[method]
+	return Lookup(ObjectMethods, gnObjects, method)
 }
 
 // Slice returns a copy of the object, with the first n list elements removed
@@ -482,7 +484,7 @@ func (ob *SuObject) Copy() *SuObject {
 	return ob.Slice(0)
 }
 
-// Packable
+// Packable ---------------------------------------------------------
 
 const packNestLimit = 20
 

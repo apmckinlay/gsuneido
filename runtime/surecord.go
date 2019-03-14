@@ -25,6 +25,22 @@ func (r *SuRecord) Show() string {
 	return "[" + s[2:len(s) - 1] + "]"
 }
 
+// RecordMethods is initialized by the builtin package
+var RecordMethods Methods
+
+var gnRecords = Global.Num("Records")
+
+var anSuObject = SuObject{}
+
+func (SuRecord) Lookup(method string) Value {
+	if m := Lookup(ObjectMethods, gnObjects, method); m != nil {
+		return m
+	}
+	return anSuObject.Lookup(method)
+}
+
+// Packable ---------------------------------------------------------
+
 func (r *SuRecord) Pack(buf []byte) []byte {
 	return r.SuObject.pack(buf, packRecord)
 }
@@ -34,5 +50,3 @@ func UnpackRecord(buf []byte) *SuRecord {
 	unpackObject(buf, &r.SuObject)
 	return r
 }
-
-// TODO override SuObject Lookup

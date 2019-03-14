@@ -744,8 +744,13 @@ func (SuDate) Call(*Thread, *ArgSpec) Value {
 	panic("can't call Date")
 }
 
-func (SuDate) Lookup(string) Value { // TODO
-	return nil
+// DateMethods is initialized by the builtin package
+var DateMethods Methods
+
+var gnDates = Global.Num("Dates")
+
+func (SuDate) Lookup(method string) Value {
+	return Lookup(DateMethods, gnDates, method)
 }
 
 // Packable interface -----------------------------------------------
@@ -753,7 +758,7 @@ func (SuDate) Lookup(string) Value { // TODO
 var _ Packable = SuDate{}
 
 // PackSize returns the packed size (Packable interface)
-func (d SuDate) PackSize(int) int {
+func (SuDate) PackSize(int) int {
 	return 9
 }
 

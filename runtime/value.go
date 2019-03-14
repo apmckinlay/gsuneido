@@ -136,6 +136,7 @@ func IfStr(x Value) string {
 	panic("can't convert " + x.TypeName() + " to String")
 }
 
+// ToStrOrString returns either IfStr() or String()
 func ToStrOrString(x Value) string {
 	if s,ok := x.IfStr(); ok {
 		return s
@@ -179,6 +180,21 @@ func ToObject(x Value) *SuObject {
 		return ob
 	}
 	panic("can't convert " + x.TypeName() + " to Object")
+}
+
+// Lookup looks for a method first in a methods map,
+// and then in a global user defined class
+// returning nil if not found in either place
+func Lookup(methods Methods, gnUserDef int, method string) Value {
+	if m := methods[method]; m != nil {
+		return m
+	}
+	if userdef := Global.Get(gnUserDef); userdef != nil {
+		if c, ok := userdef.(*SuClass); ok {
+			return c.get2(method)
+		}
+	}
+	return nil
 }
 
 // CantConvert is embedded in Value types to supply default conversion methods
