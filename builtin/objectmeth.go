@@ -1,6 +1,8 @@
 package builtin
 
 import (
+	"strings"
+
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
@@ -23,6 +25,9 @@ func init() {
 			}),
 		"Assocs": method0(func(this Value) Value { //TODO list? and named?
 			return NewSuSequence(ToObject(this).IterAssocs())
+		}),
+		"Copy": method0(func(this Value) Value {
+			return ToObject(this).Copy()
 		}),
 		"Delete": methodRaw("(@args)",
 			func(t *Thread, as *ArgSpec, this Value, args ...Value) Value {
@@ -54,12 +59,35 @@ func init() {
 				}
 				return this
 			}),
+		"Find": method1("(value)", func(this Value, val Value) Value {
+			iter := ToObject(this).Iter2()
+			for k, v := iter(); v != nil; k, v = iter() {
+				if v.Equal(val) {
+					return k
+				}
+			}
+			return False
+		}),
 		"Iter": method0(func(this Value) Value {
 			return SuIter{Iter: ToObject(this).Iter()}
 		}),
-		// "Join": method1("(separator='')", func(this Value, sep Value) Value {
-		// 	return ToObject(this).Join(ToStr(sep))
-		// }),
+		"Join": method1("(separator='')", func(this Value, arg Value) Value {
+			ob := ToObject(this)
+			separator := ToStr(arg)
+			sb := strings.Builder{}
+			sep := ""
+			iter := ob.ArgsIter()
+			for {
+				k, v := iter()
+				if k != nil || v == nil {
+					break
+				}
+				sb.WriteString(sep)
+				sep = separator
+				sb.WriteString(ToStrOrString(v))
+			}
+			return SuStr(sb.String())
+		}),
 		"Members": method0(func(this Value) Value { //TODO list? and named?
 			return NewSuSequence(ToObject(this).IterMembers())
 		}),

@@ -11,18 +11,22 @@ func NewSuRecord() *SuRecord {
 	return &SuRecord{SuObject{defval: EmptyStr}}
 }
 
+func (r *SuRecord) Copy() *SuRecord {
+	return &SuRecord{*r.SuObject.Copy()}
+}
+
 func (*SuRecord) TypeName() string {
 	return "Record"
 }
 
 func (r *SuRecord) String() string {
 	s := r.SuObject.String()
-	return "[" + s[2:len(s) - 1] + "]"
+	return "[" + s[2:len(s)-1] + "]"
 }
 
 func (r *SuRecord) Show() string {
 	s := r.SuObject.Show()
-	return "[" + s[2:len(s) - 1] + "]"
+	return "[" + s[2:len(s)-1] + "]"
 }
 
 // RecordMethods is initialized by the builtin package

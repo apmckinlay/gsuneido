@@ -25,6 +25,8 @@ func UnCapitalize(s string) string {
 	return s
 }
 
+// IndexFunc returns the index of the first byte that the func returns true for
+// else -1
 func IndexFunc(s string, f func (byte) bool) int {
 	for i,c := range []byte(s) {
 		if f(c) {

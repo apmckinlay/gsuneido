@@ -41,6 +41,12 @@ func TestPtestExecute(t *testing.T) {
 	}
 }
 
+func TestPtestStrings(t *testing.T) {
+	if !ptest.RunFile("strings.test") {
+		t.Fail()
+	}
+}
+
 func TestPtestObjects(t *testing.T) {
 	if !ptest.RunFile("objects.test") {
 		t.Fail()
@@ -64,12 +70,6 @@ func init() {
 }
 
 func pt_execute(args []string, str []bool) bool {
-	//fmt.Println(ptest.Fmt(args))
-	if strings.Contains(args[0], ".Eval(") {
-		fmt.Println("skipped", ptest.Fmt(args, str)) // TODO
-		return true
-	}
-
 	src := "function () {\n" + args[0] + "\n}"
 	th := NewThread()
 	expected := "**notfalse**"
@@ -100,8 +100,14 @@ func pt_execute(args []string, str []bool) bool {
 			success = false
 		}
 	} else {
+		var actual Value
 		fn := compile.Constant(src).(*SuFunc)
-		actual := th.Call(fn)
+		e := Catch(func() { actual = th.Call(fn) })
+		if s, ok := e.(string); ok &&
+			strings.Contains(s, "method not found Object.Eval") {
+			fmt.Println("skipped", ptest.Fmt(args, str))
+			return true
+		}
 		result = actual
 		if expected == "**notfalse**" {
 			success = actual != False

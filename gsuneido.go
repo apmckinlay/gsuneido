@@ -117,7 +117,7 @@ func libloadFile(name string) (result Value) {
 		fmt.Println("LOAD", file, "NOT FOUND")
 		return nil
 	}
-	result = compile.Constant(string(s))
+	result = compile.NamedConstant(name, string(s))
 	fmt.Println("LOAD", name, "SUCCEEDED")
 	return
 }

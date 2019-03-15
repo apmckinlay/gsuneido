@@ -32,6 +32,14 @@ func NewSuObject(args ...Value) *SuObject {
 	return ob
 }
 
+func (ob *SuObject) Copy() *SuObject {
+	return &SuObject{
+		list: append(ob.list[:0:0], ob.list...),
+		named: *ob.named.Copy(),
+		defval: ob.defval,
+	}
+}
+
 var _ Value = (*SuObject)(nil)
 
 // Get returns the value associated with a key, or defval if not found
@@ -412,13 +420,11 @@ func (*SuObject) Lookup(method string) Value {
 // Slice returns a copy of the object, with the first n list elements removed
 func (ob *SuObject) Slice(n int) *SuObject {
 	newNamed := ob.named.Copy()
-
 	if n > len(ob.list) {
-		return &SuObject{named: *newNamed, readonly: false}
+		return &SuObject{named: *newNamed, defval: ob.defval}
 	}
-	newList := make([]Value, len(ob.list)-n)
-	copy(newList, ob.list[n:])
-	return &SuObject{list: newList, named: *newNamed, readonly: false}
+	newList := append(ob.list[:0:0], ob.list[n:]...)
+	return &SuObject{list: newList, named: *newNamed, defval: ob.defval}
 }
 
 // ArgsIter is similar to Iter2 but it returns a nil key for list elements
@@ -525,10 +531,6 @@ func (ob *SuObject) IsReadOnly() bool {
 func (ob *SuObject) SetDefault(def Value) {
 	ob.mustBeMutable()
 	ob.defval = def
-}
-
-func (ob *SuObject) Copy() *SuObject {
-	return ob.Slice(0)
 }
 
 // Packable ---------------------------------------------------------
