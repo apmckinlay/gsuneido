@@ -27,7 +27,7 @@ type ArgSpec struct {
 
 // values for ArgSpec.Each
 const (
-	EACH  = 1
+	EACH  = 1 //TODO rename to Each0/1
 	EACH1 = 2
 )
 

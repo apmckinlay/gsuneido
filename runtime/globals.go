@@ -119,3 +119,7 @@ func (typeGlobal) Get(gnum Gnum) Value {
 	}
 	return x
 }
+
+func (typeGlobal) GetName(name string) Value {
+	return Global.Get(Global.Num(name))
+}

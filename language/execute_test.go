@@ -21,9 +21,9 @@ var _ = ptest.Add("compare", pt_compare)
 var _ = ptest.Add("compare_packed", pt_compare_packed)
 
 func TestBuiltinString(t *testing.T) {
-	f := Global.Get(Global.Num("Type"))
+	f := Global.GetName("Type")
 	Assert(t).That(f.String(), Equals("Type /* builtin function */"))
-	f = Global.Get(Global.Num("Object"))
+	f = Global.GetName("Object")
 	Assert(t).That(f.String(), Equals("Object /* builtin function */"))
 }
 
@@ -100,14 +100,8 @@ func pt_execute(args []string, str []bool) bool {
 			success = false
 		}
 	} else {
-		var actual Value
 		fn := compile.Constant(src).(*SuFunc)
-		e := Catch(func() { actual = th.Call(fn) })
-		if s, ok := e.(string); ok &&
-			strings.Contains(s, "method not found Object.Eval") {
-			fmt.Println("skipped", ptest.Fmt(args, str))
-			return true
-		}
+		actual := th.Call(fn)
 		result = actual
 		if expected == "**notfalse**" {
 			success = actual != False
@@ -231,7 +225,7 @@ func BenchmarkInterp(b *testing.B) {
 }
 
 func BenchmarkCall(b *testing.B) {
-	f := Global.Get(Global.Num("Type"))
+	f := Global.GetName("Type")
 	as := ArgSpec1
 	th := NewThread()
 	th.Push(SuInt(123))

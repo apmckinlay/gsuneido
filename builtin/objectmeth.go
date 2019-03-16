@@ -59,6 +59,22 @@ func init() {
 				}
 				return this
 			}),
+		"Eval": methodRaw("(@args)",
+			func(t *Thread, as *ArgSpec, this Value, args ...Value) Value {
+				result := EvalAsMethod(t, as, ToObject(this), args)
+				if result == nil {
+					return EmptyStr
+				}
+				return result
+			}),
+		"Eval2": methodRaw("(@args)",
+			func(t *Thread, as *ArgSpec, this Value, args ...Value) Value {
+				ob := &SuObject{}
+				if result := EvalAsMethod(t, as, ToObject(this), args); result != nil {
+					ob.Add(result)
+				}
+				return ob
+			}),
 		"Find": method1("(value)", func(this Value, val Value) Value {
 			iter := ToObject(this).Iter2()
 			for k, v := iter(); v != nil; k, v = iter() {

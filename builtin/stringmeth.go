@@ -19,7 +19,7 @@ func init() {
 			}),
 		"Eval": methodRaw("(string)",
 			func(t *Thread, as *ArgSpec, this Value, args ...Value) Value {
-				result := Eval(t, ToStr(this))
+				result := EvalString(t, ToStr(this))
 				if result == nil {
 					return EmptyStr
 				}
@@ -28,7 +28,7 @@ func init() {
 		"Eval2": methodRaw("(string)",
 			func(t *Thread, as *ArgSpec, this Value, args ...Value) Value {
 				ob := &SuObject{}
-				if result := Eval(t, ToStr(this)); result != nil {
+				if result := EvalString(t, ToStr(this)); result != nil {
 					ob.Add(result)
 				}
 				return ob

@@ -8,6 +8,10 @@ type SuMethod struct {
 	CantConvert
 }
 
+func (m *SuMethod) GetFn() Value {
+	return m.fn
+}
+
 // Value interface --------------------------------------------------
 
 var _ Value = (*SuMethod)(nil) // verify *SuMethod satisfies Value
