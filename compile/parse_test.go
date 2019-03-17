@@ -11,11 +11,13 @@ import (
 )
 
 func TestParseExpression(t *testing.T) {
+	className := ""
 	rt.DefaultSingleQuotes = true
 	defer func() { rt.DefaultSingleQuotes = false }()
 	parseExpr := func(src string) ast.Expr {
 		t.Helper()
 		p := newParser(src)
+		p.className = className
 		result := p.expr()
 		Assert(t).That(p.Token, Equals(tok.Eof))
 		return result
@@ -120,8 +122,11 @@ func TestParseExpression(t *testing.T) {
 	test("a in (1,2,3) in (true, false)", "In(In(a [1 2 3]) [true false])")
 
 	test("a.b", "Mem(a 'b')")
-	test(".a.b", "Mem(Mem(this '_a') 'b')") // privatized
-	test("this.a.b", "Mem(Mem(this 'a') 'b')")
+	test(".a.b", "Mem(Mem(this 'a') 'b')") // not privatized
+	className = "Foo"
+	test(".a.b", "Mem(Mem(this 'Foo_a') 'b')") // privatized
+	test("this.a.b", "Mem(Mem(this 'a') 'b')") // not privatized
+	className = ""
 
 	test("a[b]", "Mem(a b)")
 	test("a[b][c]", "Mem(Mem(a b) c)")
@@ -157,7 +162,9 @@ func TestParseExpression(t *testing.T) {
 	test("f(){ }", "Call(f block:Block())")
 	test("f({ })", "Call(f Block())")
 	test("c.m(a, b)", "Call(Mem(c 'm') a b)")
-	test(".m()", "Call(Mem(this '_m'))")
+	className = "Foo"
+	test(".m()", "Call(Mem(this 'Foo_m'))")
+	className = ""
 	test("false isnt x = F()", "Binary(Isnt false Binary(Eq x Call(F)))")
 	test("0xB2.Chr()", "Call(Mem(178 'Chr'))")
 

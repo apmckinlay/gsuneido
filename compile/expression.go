@@ -127,7 +127,7 @@ func (p *parser) pcExpr(minprec int8) ast.Expr {
 }
 
 func (p *parser) privatizeRef(name string) string {
-	if ascii.IsLower(name[0]) {
+	if p.className != "" && ascii.IsLower(name[0]) {
 		if strings.HasPrefix(name, "getter_") {
 			if len(name) <= 7 || !ascii.IsLower(name[7]) {
 				p.error("invalid getter (" + name + ")")
