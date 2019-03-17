@@ -107,7 +107,7 @@ func TestArgs(t *testing.T) {
 	Assert(t).That(th.sp, Equals(1))
 	Assert(t).That(th.stack[0].String(), Equals(makeOb().String()))
 
-	// @args => params
+	// @mixed => params
 	f = &ParamSpec{Nparams: 4, Flags: []Flag{0, 0, 0, 0},
 		Names: []string{"d", "c", "b", "a"}}
 	as = ArgSpecEach
@@ -115,6 +115,27 @@ func TestArgs(t *testing.T) {
 	th.Push(makeOb())
 	th.Args(f, as)
 	ckStack(11, 22, 44, 33)
+
+	// @list
+	th.Reset()
+	th.Push(NewSuObject(SuInt(1), SuInt(2), SuInt(3), SuInt(4)))
+	th.Args(f, as)
+	ckStack(1, 2, 3, 4)
+
+	// @+1 list
+	th.Reset()
+	th.Push(NewSuObject(SuInt(1), SuInt(2), SuInt(3), SuInt(4), SuInt(5)))
+	th.Args(f, ArgSpecEach1)
+	ckStack(2, 3, 4, 5)
+
+	// @args => one param
+	f = &ParamSpec{Nparams: 1, Flags: []Flag{0},
+		Names: []string{"a"}}
+	as = ArgSpecEach
+	th.Reset()
+	th.Push(NewSuObject(SuInt(123)))
+	th.Args(f, as)
+	ckStack(123)
 
 	// dynamic
 	setStack(111, 123)

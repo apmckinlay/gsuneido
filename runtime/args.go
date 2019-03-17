@@ -40,15 +40,15 @@ func (t *Thread) args(ps *ParamSpec, as *ArgSpec) []Value {
 const MaxArgs = 200
 
 // massage adjust the arguments on the stack (described by ArgSpec)
-// to match what is expected by the function (described by Func)
+// to match what is expected by the function (described by ParamSpec)
 // The stack must already have been expanded (e.g. by args)
 func (t *Thread) massage(ps *ParamSpec, as *ArgSpec, args []Value) {
 	unnamed := as.Unnamed()
 	atParam := ps.Nparams == 1 && ps.Flags[0] == AtParam
-	if unnamed == int(ps.Nparams) && len(as.Spec) == 0 && !atParam {
+	atArg := as.Each >= EACH
+	if unnamed == int(ps.Nparams) && len(as.Spec) == 0 && !atParam && !atArg {
 		return // simple fast path
 	}
-	atArg := as.Each >= EACH
 	if !atArg && !atParam && unnamed > int(ps.Nparams) {
 		panic("too many arguments")
 	}
