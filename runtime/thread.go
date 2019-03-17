@@ -124,6 +124,9 @@ func (t *Thread) CallStack() *SuObject {
 		call := &SuObject{}
 		call.Put(SuStr("fn"), fr.fn)
 		locals := &SuObject{}
+		if fr.this != nil {
+			locals.Put(SuStr("this"), fr.this)
+		}
 		for i, v := range fr.locals {
 			if v != nil {
 				locals.Put(SuStr(fr.fn.Names[i]), v)
