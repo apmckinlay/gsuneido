@@ -9,7 +9,7 @@ import (
 func init() {
 	ObjectMethods = Methods{
 		"Add": methodRaw("(@args)",
-			func(t *Thread, as *ArgSpec, this Value, args ...Value) Value {
+			func(_ *Thread, as *ArgSpec, this Value, args ...Value) Value {
 				ob := ToObject(this)
 				iter := NewArgsIter(as, args)
 				if at := getNamed(as, args, SuStr("at")); at != nil {
@@ -30,7 +30,7 @@ func init() {
 			return ToObject(this).Copy()
 		}),
 		"Delete": methodRaw("(@args)",
-			func(t *Thread, as *ArgSpec, this Value, args ...Value) Value {
+			func(_ *Thread, as *ArgSpec, this Value, args ...Value) Value {
 				ob := ToObject(this)
 				if all := getNamed(as, args, SuStr("all")); all == True {
 					ob.Clear()
@@ -47,7 +47,7 @@ func init() {
 				return this
 			}),
 		"Erase": methodRaw("(@args)",
-			func(t *Thread, as *ArgSpec, this Value, args ...Value) Value {
+			func(_ *Thread, as *ArgSpec, this Value, args ...Value) Value {
 				ob := ToObject(this)
 				iter := NewArgsIter(as, args)
 				for {

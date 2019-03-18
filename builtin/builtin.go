@@ -70,6 +70,10 @@ func method1(p string, f func(this, a1 Value) Value) Value {
 	return &SuBuiltinMethod1{SuBuiltin2{f, BuiltinParams{ParamSpec: params(p)}}}
 }
 
+func method2(p string, f func(this, a1, a2 Value) Value) Value {
+	return &SuBuiltinMethod2{SuBuiltin3{f, BuiltinParams{ParamSpec: params(p)}}}
+}
+
 func methodRaw(p string,
 	f func(t *Thread, as *ArgSpec, this Value, args ...Value) Value) Value {
 	// params are just for documentation, SuBuiltinMethodRaw doesn't use them

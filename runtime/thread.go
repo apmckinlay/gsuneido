@@ -35,7 +35,7 @@ type Thread struct {
 	this Value
 
 	rxcache *regex.LruMapCache
-	trcache *tr.LruMapCache
+	TrCache *tr.LruMapCache
 }
 
 // NewThread creates a new thread
@@ -43,7 +43,7 @@ type Thread struct {
 func NewThread() *Thread {
 	return &Thread{
 		rxcache: regex.NewLruMapCache(100, regex.Compile),
-		trcache: tr.NewLruMapCache(100, tr.Set)}
+		TrCache: tr.NewLruMapCache(100, tr.Set)}
 }
 
 // Push pushes a value onto the value stack
