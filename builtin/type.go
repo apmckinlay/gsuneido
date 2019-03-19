@@ -49,5 +49,9 @@ var _ = builtin1("Instance?(value)",
 
 var _ = builtin1("Function?(value)",
 	func(arg Value) Value {
-		return SuBool(arg.TypeName() == "Function")
+		switch arg.TypeName() {
+		case "Function", "Method", "BuiltinFunction":
+			return True
+		}
+		return False
 	})

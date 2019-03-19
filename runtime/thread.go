@@ -34,7 +34,9 @@ type Thread struct {
 	// it is only temporary, Frame.this is the real "this"
 	this Value
 
-	rxcache *regex.LruMapCache
+	// RxCache is per thread so no locking is required
+	RxCache *regex.LruMapCache
+	// TrCache is per thread so no locking is required
 	TrCache *tr.LruMapCache
 }
 
@@ -42,7 +44,7 @@ type Thread struct {
 // zero value does not handle rxcache and trcache
 func NewThread() *Thread {
 	return &Thread{
-		rxcache: regex.NewLruMapCache(100, regex.Compile),
+		RxCache: regex.NewLruMapCache(100, regex.Compile),
 		TrCache: tr.NewLruMapCache(100, tr.Set)}
 }
 

@@ -3,6 +3,9 @@ package builtin
 import (
 	"strings"
 
+	"github.com/apmckinlay/gsuneido/util/ints"
+	"github.com/apmckinlay/gsuneido/util/regex"
+
 	"github.com/apmckinlay/gsuneido/util/ascii"
 	"github.com/apmckinlay/gsuneido/util/tr"
 
@@ -98,13 +101,21 @@ func init() {
 		}),
 		//TODO Number?
 		//TODO Numeric
-		"Prefix?": method1("(string)", func(this, arg Value) Value {
+		"Prefix?": method1("(string)", func(this, arg Value) Value { //TODO pos
 			return SuBool(strings.HasPrefix(ToStr(this), ToStr(arg)))
 		}),
 		"Repeat": method1("(count)", func(this, arg Value) Value {
 			return SuStr(strings.Repeat(ToStr(this), ToInt(arg)))
 		}),
-		//TODO Replace
+		"Replace": methodRaw("(string)", // methodRaw to get thread
+			func(t *Thread, as *ArgSpec, this Value, args ...Value) Value {
+				args = t.Args(&paramSpecReplace, as)
+				count := ints.MaxInt
+				if args[2] != False {
+					count = ToInt(args[2])
+				}
+				return replace(t, ToStr(this), ToStr(args[0]), args[1], count)
+			}),
 		"Reverse": method0(func(this Value) Value {
 			s := []byte(ToStr(this))
 			lo := 0
@@ -199,4 +210,25 @@ func init() {
 	}
 }
 
+var paramSpecReplace = params("(pattern, replacement = '', count = false)")
 var paramSpecTr = params("(from, to='')")
+
+func replace(t *Thread, s string, patarg string, reparg Value, count int) Value {
+	if count <= 0 {
+		return SuStr(s)
+	}
+	pat := t.RxCache.Get(patarg)
+	rep := ToStr(reparg) //TODO block && backrefs
+	from := 0
+	nsubs := 0
+	var buf strings.Builder
+	pat.ForEachMatch(s, func(result *regex.Result) bool {
+		buf.WriteString(s[from:result.Pos()])
+		buf.WriteString(rep)
+		from = result.End()
+		nsubs++
+		return nsubs < count
+	})
+	buf.WriteString(s[from:])
+	return SuStr(buf.String())
+}

@@ -122,6 +122,14 @@ func (r *Result) Group(s string, i int) string {
 	return s[r.pos[i]:r.end[i]]
 }
 
+func (r *Result) Pos() int {
+	return r.pos[0]
+}
+
+func (r *Result) End() int {
+	return r.end[0]
+}
+
 func (r *Result) String() string {
 	s := ""
 	for i := 0; i < MAX_RESULTS; i++ {
@@ -174,17 +182,18 @@ func (p Pattern) LastMatch(s string, pos int, result *Result) bool {
 	return false
 }
 
-// ForEachMatch calls action for each match in the string.
-// The action returns the index to continue searching at.
-func (p Pattern) ForEachMatch(s string, action func(*Result) int) {
+// ForEachMatch calls action for each non-overlapping match in the string.
+// The action should return true to continue, false to stop.
+func (p Pattern) ForEachMatch(s string, action func(*Result) bool) {
 	var result Result
 	sn := len(s)
 	e := p.pat[1] // skip LEFT0
 	for si := 0; si <= sn; si = e.nextPossible(s, si, sn) {
 		if p.Amatch(s, si, &result) {
-			si2 := action(&result)
-			verify.That(si2 > si)
-			si = si2 - 1
+			if !action(&result) {
+				break
+			}
+			si = ints.Max(result.pos[0], result.end[0]-1)
 			// -1 since nextPossible will at least increment
 		}
 	}

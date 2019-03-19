@@ -33,6 +33,8 @@ func CallMethod(t *Thread, this Value, f Value, as *ArgSpec) Value {
 // so if the exception is caught we have to re-enter interp
 // Called by Thread.Call and SuBlock.Call
 func (t *Thread) run() Value {
+	// fmt.Println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
+	// fmt.Println("this:", t.frames[t.fp].this)
 	sp := t.sp
 	t.fp++
 	fp := t.fp
@@ -60,6 +62,7 @@ func (t *Thread) run() Value {
 	for i := 0; i < 4; i++ {
 		result := t.interp(&catchJump)
 		if result == nil {
+			// fmt.Println("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<")
 			t.fp = fp - 1
 			if t.sp <= sp {
 				return nil // implicit return from last statement had no value
@@ -141,7 +144,7 @@ func (t *Thread) interp(catchJump *int) (ret Value) {
 
 loop:
 	for fr.ip < len(code) {
-		// fmt.Println("stack:", t.stack[spBase:t.sp])
+		// fmt.Println("stack:", t.stack[ints.Max(0, t.sp-3):t.sp])
 		// _, da := Disasm1(fr.fn, fr.ip)
 		// fmt.Printf("%d: %s\n", fr.ip, da)
 		oc := op.Opcode(code[fr.ip])
@@ -227,12 +230,12 @@ loop:
 			t.stack[t.sp-1] = Isnt(t.stack[t.sp-1], t.stack[t.sp])
 		case op.Match:
 			t.sp--
-			pat := t.rxcache.Get(ToStr(t.stack[t.sp]))
+			pat := t.RxCache.Get(ToStr(t.stack[t.sp]))
 			s := t.stack[t.sp-1]
 			t.stack[t.sp-1] = Match(s, pat)
 		case op.MatchNot:
 			t.sp--
-			pat := t.rxcache.Get(ToStr(t.stack[t.sp]))
+			pat := t.RxCache.Get(ToStr(t.stack[t.sp]))
 			s := t.stack[t.sp-1]
 			t.stack[t.sp-1] = Match(s, pat).Not()
 		case op.Lt:

@@ -66,6 +66,20 @@ func TestBug(t *testing.T) {
 	Assert(t).That(p.Matches("\x8a"), Equals(false))
 }
 
+func TestForEachMatch(t *testing.T) {
+	test := func(s, p string, expected ...string) {
+		pat := Compile(p)
+		ob := []string{}
+		pat.ForEachMatch(s, func(r *Result) bool {
+			ob = append(ob, r.Group(s, 0))
+			return len(ob) < 4
+		})
+		Assert(t).That(ob, Equals(expected))
+	}
+	test("now is the time", `\w+`, "now", "is", "the", "time")
+	test("hello", `.`, "h", "e", "l", "l")
+}
+
 // ptest support ---------------------------------------------------------------
 
 func TestPtest(t *testing.T) {
