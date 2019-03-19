@@ -36,6 +36,7 @@ const (
 	BitNot
 	New
 	Dot
+	CompareStart // must be consecutive
 	Is
 	Isnt
 	Match
@@ -44,6 +45,7 @@ const (
 	Lte
 	Gt
 	Gte
+	CompareEnd
 	QMark
 	Colon
 	AssocStart // must be consecutive

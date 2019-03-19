@@ -212,6 +212,15 @@ func TestControl(t *testing.T) {
 		10: Load c
 		12: Bool
 		13:`)
+	test("a is b or c < d", `
+		0: Load a
+        2: Load b
+        4: Is
+        5: Or 13
+        8: Load c
+        10: Load d
+        12: Lt
+        13:`) // no Bool needed
 
 	test("a ? b : c", `
 		0: Load a

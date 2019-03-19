@@ -601,8 +601,16 @@ func (cg *cgen) andorExpr(node *ast.Nary) {
 		label = cg.emitJump(tok2op[node.Tok], label)
 		cg.expr(e)
 	}
-	cg.emit(op.Bool)
+	lastExpr := node.Exprs[len(node.Exprs)-1]
+	if !isCompare(lastExpr) {
+		cg.emit(op.Bool) // not needed if last expr was comparison
+	}
 	cg.placeLabel(label)
+}
+
+func isCompare(e ast.Expr) bool {
+		bin, ok := e.(*ast.Binary)
+		return ok && tok.CompareStart < bin.Tok && bin.Tok < tok.CompareEnd
 }
 
 func isUnary(e ast.Expr, tok tok.Token) bool {
