@@ -165,7 +165,7 @@ func (c *SuClass) Lookup(method string) Value {
 }
 
 func (c *SuClass) Call(t *Thread, as *ArgSpec) Value {
-	if f := c.Data["CallClass"]; f != nil {
+	if f := c.get2("CallClass"); f != nil {
 		t.this = c
 		return f.Call(t, as)
 	}
