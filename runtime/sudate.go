@@ -158,10 +158,10 @@ func (d SuDate) Plus(yr int, mon int, day int, hr int, min int, sec int, ms int)
 	min += d.Minute()
 	sec += d.Second()
 	ms += d.Millisecond()
-	return normalize(yr, mon, day, hr, min, sec, ms)
+	return NormalizeDate(yr, mon, day, hr, min, sec, ms)
 }
 
-func normalize(yr int, mon int, day int, hr int, min int, sec int, ms int) SuDate {
+func NormalizeDate(yr int, mon int, day int, hr int, min int, sec int, ms int) SuDate {
 	t := goTime(yr, mon, day, hr, min, sec, ms)
 	return fromGoTime(t)
 }
