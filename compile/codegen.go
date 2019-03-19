@@ -801,7 +801,7 @@ func (cg *cgen) argspec(as *ArgSpec) int {
 	}
 	for i, a := range cg.argspecs {
 		if cg.argSpecEq(a, as) {
-			return i
+			return i + len(StdArgSpecs)
 		}
 	}
 	cg.argspecs = append(cg.argspecs, as)

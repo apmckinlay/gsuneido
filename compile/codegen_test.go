@@ -78,39 +78,41 @@ func TestCodegen(t *testing.T) {
 
 	test("throw 'fubar'", "Value 'fubar', Throw")
 
-	test("f()", "Load f, CallFunc0")
-	test("F()", "Global F, CallFunc0")
-	test("f(a, b)", "Load a, Load b, Load f, CallFunc2")
-	test("f(1,2,3,4)", "One, Int 2, Int 3, Int 4, Load f, CallFunc4")
-	test("f(1,2,3,4,5)", "One, Int 2, Int 3, Int 4, Int 5, Load f, CallFunc(?, ?, ?, ?, ?)")
-	test("f(a, b, c:, d: 0)", "Load a, Load b, True, Zero, Load f, CallFunc(?, ?, c:, d:)")
-	test("f(@args)", "Load args, Load f, CallFunc(@)")
-	test("f(@+1args)", "Load args, Load f, CallFunc(@+1)")
-	test("f(a: a)", "Load a, Load f, CallFunc(a:)")
-	test("f(:a)", "Load a, Load f, CallFunc(a:)")
+	test("f()", "Load f, CallFunc ()")
+	test("F()", "Global F, CallFunc ()")
+	test("f(a, b)", "Load a, Load b, Load f, CallFunc (?, ?)")
+	test("f(1,2,3,4)", "One, Int 2, Int 3, Int 4, Load f, CallFunc (?, ?, ?, ?)")
+	test("f(1,2,3,4,5)", "One, Int 2, Int 3, Int 4, Int 5, Load f, CallFunc (?, ?, ?, ?, ?)")
+	test("f(a, b, c:, d: 0)", "Load a, Load b, True, Zero, Load f, CallFunc (?, ?, c:, d:)")
+	test("f(@args)", "Load args, Load f, CallFunc (@)")
+	test("f(@+1args)", "Load args, Load f, CallFunc (@+1)")
+	test("f(a: a)", "Load a, Load f, CallFunc (a:)")
+	test("f(:a)", "Load a, Load f, CallFunc (a:)")
 	test("f(12, 34: 56, false:)",
-		"Int 12, Int 56, True, Load f, CallFunc(?, 34:, false:)")
+		"Int 12, Int 56, True, Load f, CallFunc (?, 34:, false:)")
+	test("f(1,a:2); f(3,a:4)",
+		"One, Int 2, Load f, CallFunc (?, a:), Pop, Int 3, Int 4, Load f, CallFunc (?, a:)")
 
-	test("[1, a: 2, :b]", "One, Int 2, Load b, Global Record, CallFunc(?, a:, b:)")
+	test("[1, a: 2, :b]", "One, Int 2, Load b, Global Record, CallFunc (?, a:, b:)")
 
-	test("char.Size()", "Load char, Value 'Size', CallMeth0")
-	test("a.f(123)", "Load a, Int 123, Value 'f', CallMeth1")
-	test("a.f(1,2,3)", "Load a, One, Int 2, Int 3, Value 'f', CallMeth3")
-	test("a.f(1,2,3,4)", "Load a, One, Int 2, Int 3, Int 4, Value 'f', CallMeth4")
-	test("a.f(x:)", "Load a, True, Value 'f', CallMeth(x:)")
-	test("a[b](123)", "Load a, Int 123, Load b, CallMeth1")
-	test("a[b $ c](123)", "Load a, Int 123, Load b, Load c, Cat, CallMeth1")
-	test("a().Add(123)", "Load a, CallFunc0, Int 123, Value 'Add', CallMeth1")
+	test("char.Size()", "Load char, Value 'Size', CallMeth ()")
+	test("a.f(123)", "Load a, Int 123, Value 'f', CallMeth (?)")
+	test("a.f(1,2,3)", "Load a, One, Int 2, Int 3, Value 'f', CallMeth (?, ?, ?)")
+	test("a.f(1,2,3,4)", "Load a, One, Int 2, Int 3, Int 4, Value 'f', CallMeth (?, ?, ?, ?)")
+	test("a.f(x:)", "Load a, True, Value 'f', CallMeth (x:)")
+	test("a[b](123)", "Load a, Int 123, Load b, CallMeth (?)")
+	test("a[b $ c](123)", "Load a, Int 123, Load b, Load c, Cat, CallMeth (?)")
+	test("a().Add(123)", "Load a, CallFunc (), Int 123, Value 'Add', CallMeth (?)")
 	test("a().Add(123).Size()",
-		"Load a, CallFunc0, Int 123, Value 'Add', CallMeth1, Value 'Size', CallMeth0")
+		"Load a, CallFunc (), Int 123, Value 'Add', CallMeth (?), Value 'Size', CallMeth ()")
 	test("a.b(1).c(2)",
-		"Load a, One, Value 'b', CallMeth1, Int 2, Value 'c', CallMeth1")
+		"Load a, One, Value 'b', CallMeth (?), Int 2, Value 'c', CallMeth (?)")
 
 	test("function () { }", "Value /* function */")
 
-	test("new c", "Load c, Value '*new*', CallMeth0")
-	test("new c()", "Load c, Value '*new*', CallMeth0")
-	test("new c(1)", "Load c, One, Value '*new*', CallMeth1")
+	test("new c", "Load c, Value '*new*', CallMeth ()")
+	test("new c()", "Load c, Value '*new*', CallMeth ()")
+	test("new c(1)", "Load c, One, Value '*new*', CallMeth (?)")
 }
 
 func TestCodegenSuper(t *testing.T) {
@@ -126,12 +128,12 @@ func TestCodegenSuper(t *testing.T) {
 			t.Errorf("\n%s\nexpect: %s\nactual: %s", src, expected, actual)
 		}
 	}
-	test("New(){}", "This, Value 'New', Super Foo, CallMeth0")
+	test("New(){}", "This, Value 'New', Super Foo, CallMeth ()")
 
 	// Super(...) => Super.New(...)
-	test("New(){super(1)}", "This, One, Value 'New', Super Foo, CallMeth1")
+	test("New(){super(1)}", "This, One, Value 'New', Super Foo, CallMeth (?)")
 
-	test("F(){super.Bar(0,1)}", "This, Zero, One, Value 'Bar', Super Foo, CallMeth2")
+	test("F(){super.Bar(0,1)}", "This, Zero, One, Value 'Bar', Super Foo, CallMeth (?, ?)")
 }
 
 func disasm(fn *SuFunc) string {
@@ -161,7 +163,7 @@ func TestControl(t *testing.T) {
 	test(`try F()`, `
 		0: Try 13 ''
         4: Global F
-        7: CallFunc0
+        7: CallFunc ()
         9: Pop
         10: Catch 14
         13: Pop
@@ -169,24 +171,24 @@ func TestControl(t *testing.T) {
 	test(`try F() catch G()`, `
 		0: Try 13 ''
         4: Global F
-        7: CallFunc0
+        7: CallFunc ()
         9: Pop
         10: Catch 20
         13: Pop
         14: Global G
-        17: CallFunc0
+        17: CallFunc ()
         19: Pop
         20:`)
 	test(`try F() catch (x, "y") G()`, `
 		0: Try 13 'y'
         4: Global F
-        7: CallFunc0
+        7: CallFunc ()
         9: Pop
         10: Catch 22
         13: Store x
         15: Pop
         16: Global G
-        19: CallFunc0
+        19: CallFunc ()
         21: Pop
         22:`)
 

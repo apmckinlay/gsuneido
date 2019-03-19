@@ -3,7 +3,6 @@ package runtime
 import (
 	"fmt"
 	"io"
-	"strconv"
 
 	op "github.com/apmckinlay/gsuneido/runtime/opcodes"
 )
@@ -64,9 +63,8 @@ func Disasm1(fn *SuFunc, i int) (int, string) {
 		s += fmt.Sprintf(" %d %v", i+j-1, v)
 	case op.CallFunc, op.CallMeth:
 		ai := int(fetchUint8())
-		if ai < 5 {
-			s += strconv.Itoa(ai)
-		} else if ai < len(StdArgSpecs) {
+		s += " "
+		if ai < len(StdArgSpecs) {
 			s += StdArgSpecs[ai].String()[7:]
 		} else {
 			s += fn.ArgSpecs[ai-len(StdArgSpecs)].String()[7:]
