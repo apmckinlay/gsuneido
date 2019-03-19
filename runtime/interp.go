@@ -117,7 +117,7 @@ func (t *Thread) interp(catchJump *int) (ret Value) {
 			return // normal return
 		}
 		if *catchJump == 0 {
-			return // not catching
+			panic(e) // not catching
 		}
 		se, ok := e.(*SuExcept)
 		if !ok {
@@ -354,7 +354,7 @@ loop:
 			}
 		case op.Iter:
 			x := t.Pop()
-			iterable,ok := x.(interface{ Iter() Iter })
+			iterable, ok := x.(interface{ Iter() Iter })
 			if !ok {
 				panic("can't iterate " + x.TypeName())
 			}
