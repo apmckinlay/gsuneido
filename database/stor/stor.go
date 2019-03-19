@@ -6,78 +6,78 @@ Storage is chunked. Allocations may not straddle chunks.
 */
 package stor
 
-import "github.com/apmckinlay/gsuneido/util/verify"
+import (
+	"sync"
 
-// Adr is an int32 value specifying an int64 offset within storage
-// int64 values are aligned and shifted to fit into int32
-type Adr uint32
+	"github.com/apmckinlay/gsuneido/util/verify"
+)
 
-// StorImpl is the lowest level interface to storage.
+// Offset is an offset within storage
+type Offset = uint64
+
+// storage is the interface to different kinds of storage.
 // The main implementation accesses memory mapped files.
 // There is also an in memory version for testing.
-// Get returns the i'th chunk of storage
 type storage interface {
+	// Get returns the i'th chunk of storage
 	Get(chunk int) []byte
-	Close()
+	// Close closes the storage (if necessary)
+	Close(size int64)
 }
 
+// stor is the externally visible storage
 type stor struct {
-	impl      storage
-	chunksize int64
-	size      int64
-	chunks    [][]byte
+	impl storage
+	// chunksize must be a power of two and must be initialized
+	chunksize uint64
+	size      uint64
+	// chunks must be initialized up to size,
+	// with at least one chunk if size is 0
+	chunks [][]byte
+	lock   sync.Mutex
 }
 
-const ALIGN = 8
-
-// Alloc allocates n bytes of storage and returns its Adr
-func (s *stor) Alloc(n int) Adr {
+// Alloc allocates n bytes of storage and returns its Offset and data
+// Returning data here allows slicing to correct length and capacity
+// to prevent erroneously writing too far.
+// Alloc is threadsafe, guarded by s.lock
+func (s *stor) Alloc(n int) (Offset, []byte) {
 	verify.That(n < int(s.chunksize))
-	n = Align(n)
+	s.lock.Lock()
 
 	// if insufficient room in this chunk, advance to next
-	remaining := s.chunksize - s.size%s.chunksize
+	// (allocations may not straddle chunks)
+	remaining := s.chunksize - s.size&(s.chunksize-1)
 	if n > int(remaining) {
 		s.size += remaining
+		chunk := s.offsetToChunk(s.size)
+		s.chunks = append(s.chunks, s.impl.Get(chunk))
 	}
 
 	offset := s.size
-	s.size += int64(n)
-	return offsetToAdr(offset)
+	s.size += uint64(n)
+	s.lock.Unlock()
+	return offset, s.Data(offset)[:n:n]
 }
 
-func Align(n int) int {
-	// requires ALIGN to be power of 2
-	return ((n - 1) | (ALIGN - 1)) + 1
+// Data returns the slice of bytes at the given offset.
+// The slice extends to the end of the chunk,
+// since we don't know the size of the original alloc.
+// NOTE: There is no locking.
+// Code using this must ensure it locks at some point
+// prior to accessing "new" chunks from another thread's Alloc.
+// This requires mapping the existing chunks initially
+// since lazily mapping would require locking.
+func (s *stor) Data(offset Offset) []byte {
+	chunk := s.offsetToChunk(offset)
+	c := s.chunks[chunk]
+	return c[offset&(s.chunksize-1):]
 }
 
-func (s *stor) offsetToChunk(offset int64) int {
+func (s *stor) offsetToChunk(offset Offset) int {
 	return int(offset / s.chunksize)
 }
 
-func offsetToAdr(offset int64) Adr {
-	return Adr((offset / ALIGN) + 1) // +1 to avoid 0
-}
-
-func adrToOffset(adr Adr) int64 {
-	return int64(adr-1) * ALIGN
-}
-
-// Data returns the slice of bytes at the given adr.
-// The slice extends to the end of the chunk,
-// since we don't know the size of the original alloc.
-func (s *stor) Data(adr Adr) []byte {
-	offset := adrToOffset(adr)
-	chunk := s.offsetToChunk(offset)
-	for chunk >= len(s.chunks) {
-		s.chunks = append(s.chunks, nil)
-	}
-	if s.chunks[chunk] == nil {
-		s.chunks[chunk] = s.impl.Get(chunk)
-	}
-	return s.chunks[chunk][offset%s.chunksize:]
-}
-
 func (s *stor) Close() {
-	s.impl.Close()
+	s.impl.Close(int64(s.size))
 }

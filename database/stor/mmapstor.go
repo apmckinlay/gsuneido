@@ -1,6 +1,8 @@
 package stor
 
-import "os"
+import (
+	"os"
+)
 
 type Mode int
 
@@ -13,7 +15,7 @@ const (
 type mmapStor struct {
 	file *os.File
 	mode Mode
-	ptrs []uintptr // needed on windows to unmap
+	ptrs []uintptr // needed on windows
 }
 
 const MMAP_CHUNKSIZE = 64 * 1024 * 1024 // 64 mb
@@ -32,6 +34,18 @@ func MmapStor(filename string, mode Mode) (*stor, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &stor{chunksize: MMAP_CHUNKSIZE,
-		impl: &mmapStor{file, mode, nil}}, nil
+	fi, err := file.Stat()
+	if err != nil {
+		return nil, err
+	}
+	size := fi.Size()
+	nchunks := int(((size - 1) / MMAP_CHUNKSIZE) + 1)
+	impl := &mmapStor{file, mode, nil}
+	ms := &stor{impl: impl, chunksize: MMAP_CHUNKSIZE, size: uint64(size)}
+	for i := 0; i < nchunks; i++ {
+		ms.chunks = append(ms.chunks, impl.Get(0))
+	}
+	return ms, nil
 }
+
+//TODO map all but partial last chunk as read-only

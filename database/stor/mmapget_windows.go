@@ -1,12 +1,9 @@
 package stor
 
 import (
-	"reflect"
 	"syscall"
 	"unsafe"
 )
-
-// NOTE: no provision for unmapping (same as Java)
 
 func (ms *mmapStor) Get(chunk int) []byte {
 	handle := syscall.Handle(ms.file.Fd())
@@ -47,20 +44,16 @@ func (ms *mmapStor) Get(chunk int) []byte {
 	}
 	syscall.CloseHandle(fm)
 	ms.ptrs = append(ms.ptrs, ptr)
-	// this seems simpler, and is used by golang mmap_windows.go
-	// but gives "possible misuse of unsafe.Pointer"
-	//return (*[MMAP_CHUNKSIZE]byte)(unsafe.Pointer(ptr))[:]
-	var slice []byte
-	hdr := (*reflect.SliceHeader)(unsafe.Pointer(&slice))
-	hdr.Data = ptr
-	hdr.Len = MMAP_CHUNKSIZE
-	hdr.Cap = MMAP_CHUNKSIZE
-	return slice
+	return (*[MMAP_CHUNKSIZE]byte)(unsafe.Pointer(ptr))[:]
 }
 
-func (ms mmapStor) Close() {
+func (ms mmapStor) Close(size int64) {
+	// MSDN: Although an application may close the file handle used to create
+	// a file mapping object, the system holds the corresponding file open
+	// until the last view of the file is unmapped.
 	for _, ptr := range ms.ptrs {
 		syscall.UnmapViewOfFile(ptr)
 	}
+	ms.file.Truncate(size)
 	ms.file.Close()
 }

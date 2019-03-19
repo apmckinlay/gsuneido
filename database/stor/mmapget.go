@@ -4,16 +4,17 @@ package stor
 
 import (
 	"syscall"
-	"unsafe"
 )
 
 // NOTE: no provision for unmapping (same as Java)
 
+// Get returns a memory mapped portion of a file.
+// It panics on error.
 func (ms mmapStor) Get(chunk int) []byte {
 	prot := syscall.PROT_READ
 	if ms.mode != READ {
 		prot |= syscall.PROT_WRITE
-		ms.file.Truncate(int64(chunk+1) * MMAP_CHUNKSIZE)
+		ms.file.Truncate(int64(chunk+1) * MMAP_CHUNKSIZE) // extend file
 	}
 	mmap, err := syscall.Mmap(int(ms.file.Fd()),
 		int64(chunk)*MMAP_CHUNKSIZE, MMAP_CHUNKSIZE,
@@ -21,9 +22,10 @@ func (ms mmapStor) Get(chunk int) []byte {
 	if err != nil {
 		panic(err)
 	}
-	return (*[MMAP_CHUNKSIZE]byte)(unsafe.Pointer(&mmap[0]))[:]
+	return mmap
 }
 
-func (ms mmapStor) Close() {
+func (ms mmapStor) Close(size int64) {
+	ms.file.Truncate(size)
 	ms.file.Close()
 }
