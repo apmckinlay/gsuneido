@@ -76,7 +76,9 @@ func eval(src string) {
 	if result != nil {
 		prompt(">>> ")
 		fmt.Print(result)
-		fmt.Printf(" <%s %T>", result.TypeName(), result)
+		if _, ok := result.(SuStr); !ok {
+			fmt.Printf(" <%s %T>", result.TypeName(), result)
+		}
 		fmt.Println()
 	}
 	fmt.Println()
@@ -118,6 +120,6 @@ func libloadFile(name string) (result Value) {
 		return nil
 	}
 	result = compile.NamedConstant(name, string(s))
-	fmt.Println("LOAD", name, "SUCCEEDED")
+	// fmt.Println("LOAD", name, "SUCCEEDED")
 	return
 }
