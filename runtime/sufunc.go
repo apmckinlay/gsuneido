@@ -45,7 +45,10 @@ func (f *SuFunc) Call(t *Thread, as *ArgSpec) Value {
 	return t.Call(f)
 }
 
-func (*SuFunc) TypeName() string {
+func (f *SuFunc) TypeName() string {
+	if f.OuterId != 0 {
+		return "Block"
+	}
 	return "Function"
 }
 
