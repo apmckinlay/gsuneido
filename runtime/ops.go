@@ -195,7 +195,7 @@ func cat3(x, y Value) Value {
 }
 
 func Match(x Value, y regex.Pattern) SuBool {
-	return SuBool(y.Matches(ToStr(x)))
+	return SuBool(y.Matches(IfStr(x)))
 }
 
 // Index is used by ranges and string[i]

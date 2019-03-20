@@ -127,7 +127,7 @@ func ToStr(x Value) string {
 	panic("can't convert " + x.TypeName() + " to String")
 }
 
-// IfStr converts SuBool, SuInt, SuDnum, SuStr, SuConcat, SuExcept to string
+// IfStr converts SuStr, SuConcat, SuExcept to string
 // calls Value.IfStr and panics if it fails
 func IfStr(x Value) string {
 	if s, ok := x.IfStr(); ok {

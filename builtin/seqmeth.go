@@ -28,7 +28,7 @@ func init() {
 			}),
 		"Join": method1("(separator='')", func(this, arg Value) Value {
 			seq := this.(*SuSequence)
-			separator := ToStr(arg)
+			separator := IfStr(arg)
 			sep := ""
 			iter := seq.Iter()
 			var buf strings.Builder

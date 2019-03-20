@@ -230,12 +230,12 @@ loop:
 			t.stack[t.sp-1] = Isnt(t.stack[t.sp-1], t.stack[t.sp])
 		case op.Match:
 			t.sp--
-			pat := t.RxCache.Get(ToStr(t.stack[t.sp]))
+			pat := t.RxCache.Get(IfStr(t.stack[t.sp]))
 			s := t.stack[t.sp-1]
 			t.stack[t.sp-1] = Match(s, pat)
 		case op.MatchNot:
 			t.sp--
-			pat := t.RxCache.Get(ToStr(t.stack[t.sp]))
+			pat := t.RxCache.Get(IfStr(t.stack[t.sp]))
 			s := t.stack[t.sp-1]
 			t.stack[t.sp-1] = Match(s, pat).Not()
 		case op.Lt:

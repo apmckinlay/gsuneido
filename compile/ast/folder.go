@@ -58,10 +58,10 @@ func (f Folder) Binary(lhs Expr, token tok.Token, rhs Expr) Expr {
 	case tok.Isnt:
 		val = Isnt(val, val2)
 	case tok.Match:
-		pat := regex.Compile(ToStr(val2))
+		pat := regex.Compile(IfStr(val2))
 		val = Match(val, pat)
 	case tok.MatchNot:
-		pat := regex.Compile(ToStr(val2))
+		pat := regex.Compile(IfStr(val2))
 		val = Not(Match(val, pat))
 	case tok.Lt:
 		val = Lt(val, val2)
