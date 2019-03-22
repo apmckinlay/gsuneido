@@ -55,6 +55,8 @@ func TestParseExpression(t *testing.T) {
 		}
 	}
 
+	test("'x' $ 'y'.Repeat()", "Nary(Cat 'x' Call(Mem('y' 'Repeat')))")
+
 	test("123", "")
 	test("foo", "")
 	test("true", "")

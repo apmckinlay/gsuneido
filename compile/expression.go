@@ -195,7 +195,12 @@ func (p *parser) same(listtype tok.Token, next tok.Token) bool {
 
 func (p *parser) atom() ast.Expr {
 	switch token := p.Token; token {
-	case tok.True, tok.False, tok.Number, tok.String, tok.Hash:
+	case tok.String:
+		// don't call p.constant() because it allows concatenation
+		s := p.Text
+		p.match(tok.String)
+		return p.Constant(SuStr(s))
+	case tok.True, tok.False, tok.Number, tok.Hash:
 		return p.Constant(p.constant())
 	case tok.LParen:
 		p.next()
