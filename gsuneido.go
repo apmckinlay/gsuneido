@@ -2,17 +2,16 @@ package main // import "github.com/apmckinlay/gsuneido"
 
 import (
 	"bufio"
+	"flag"
 	"fmt"
-	"hash/adler32"
 	"io"
-	"io/ioutil"
 	"os"
 	"runtime/debug"
-	"strconv"
 	"strings"
 
 	_ "github.com/apmckinlay/gsuneido/builtin"
 	"github.com/apmckinlay/gsuneido/compile"
+	"github.com/apmckinlay/gsuneido/database/clientserver"
 	"github.com/apmckinlay/gsuneido/language"
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
@@ -21,16 +20,34 @@ var _ = Global.Add("Suneido", new(SuObject))
 
 var prompt = func(s string) { fmt.Print(s); os.Stdout.Sync() }
 
+var Flags struct {
+	Client bool
+}
+
+var dbms clientserver.Dbms
+
 func main() {
+	flag.BoolVar(&Flags.Client, "c", false, "run as a client")
+	flag.Parse()
+	if Flags.Client {
+		dbms = clientserver.NewDbmsClient("127.0.0.1:3147")
+		fmt.Println("Running as client")
+	} else {
+		dbms = clientserver.NewDbmsLocal()
+	}
+	Libload = libload
+	repl()
+}
+
+func repl() {
 	fm, _ := os.Stdin.Stat()
 	if fm.Mode().IsRegular() {
 		prompt = func(string) {}
 	}
 
 	language.Def()
-	Libload = libloadFile
-	if len(os.Args) > 1 {
-		eval(os.Args[1])
+	if len(flag.Args()) > 1 {
+		eval(flag.Arg(1))
 	} else {
 		prompt("Press Enter twice (i.e. blank line) to execute, q to quit\n")
 		r := bufio.NewReader(os.Stdin)
@@ -102,24 +119,20 @@ func printCallStack(cs *SuObject) {
 	}
 }
 
-// libload loads a name from the libraries in use
-// Currently a temporary version that reads from text files
-func libloadFile(name string) (result Value) {
+// libload loads a name from the dbms
+// TODO handle multiple libraries
+func libload(name string) (result Value) {
 	defer func() {
 		if e := recover(); e != nil {
 			panic("error loading " + name + " " + fmt.Sprint(e))
 			result = nil
 		}
 	}()
-	dir := "../stdlib/"
-	hash := adler32.Checksum([]byte(name))
-	file := dir + name + "_" + strconv.FormatUint(uint64(hash), 16)
-	s, err := ioutil.ReadFile(file)
-	if err != nil {
-		fmt.Println("LOAD", file, "NOT FOUND")
+	defs := dbms.LibGet(name)
+	if len(defs) == 0 {
 		return nil
 	}
-	result = compile.NamedConstant(name, string(s))
+	result = compile.NamedConstant(name, string(defs[1]))
 	// fmt.Println("LOAD", name, "SUCCEEDED")
 	return
 }
