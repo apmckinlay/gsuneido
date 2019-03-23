@@ -4,6 +4,7 @@ import (
 	"strings"
 
 	. "github.com/apmckinlay/gsuneido/runtime"
+	"github.com/apmckinlay/gsuneido/runtime/types"
 )
 
 func init() {
@@ -90,7 +91,7 @@ func init() {
 				ob := ToObject(this)
 				x := ob.GetDefault(args[0], nil)
 				if x == nil {
-					if args[1].TypeName() == "Block" {
+					if args[1].Type() == types.Block {
 						x = t.CallWithArgs(args[1])
 					} else {
 						x = args[1]

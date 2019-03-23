@@ -4,6 +4,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/apmckinlay/gsuneido/runtime/types"
 	"github.com/apmckinlay/gsuneido/util/dnum"
 )
 
@@ -60,8 +61,8 @@ type Value interface {
 	// Hash2 is used by object to shallow hash contents
 	Hash2() uint32
 
-	// TypeName returns the Suneido name for the type
-	TypeName() string // or Value? (to avoid wrapping every time)
+	// Type returns the Suneido name for the type
+	Type() types.Type
 
 	Order() Ord
 
@@ -124,7 +125,7 @@ func ToStr(x Value) string {
 	if s, ok := x.ToStr(); ok {
 		return s
 	}
-	panic("can't convert " + x.TypeName() + " to String")
+	panic("can't convert " + x.Type().String() + " to String")
 }
 
 // IfStr converts SuStr, SuConcat, SuExcept to string
@@ -133,12 +134,12 @@ func IfStr(x Value) string {
 	if s, ok := x.IfStr(); ok {
 		return s
 	}
-	panic("can't convert " + x.TypeName() + " to String")
+	panic("can't convert " + x.Type().String() + " to String")
 }
 
 // ToStrOrString returns either IfStr() or String()
 func ToStrOrString(x Value) string {
-	if s,ok := x.IfStr(); ok {
+	if s, ok := x.IfStr(); ok {
 		return s
 	}
 	return x.String()
@@ -167,7 +168,7 @@ func errType(x Value) string {
 	if x == True {
 		return "true"
 	}
-	t := x.TypeName()
+	t := x.Type().String()
 	if t == "String" {
 		return t
 	}
@@ -179,7 +180,7 @@ func ToObject(x Value) *SuObject {
 	if ob, ok := x.ToObject(); ok {
 		return ob
 	}
-	panic("can't convert " + x.TypeName() + " to Object")
+	panic("can't convert " + x.Type().String() + " to Object")
 }
 
 func ToBool(x Value) bool {
@@ -189,7 +190,7 @@ func ToBool(x Value) bool {
 	if x == False {
 		return false
 	}
-	panic("can't convert " + x.TypeName() + " to Boolean")
+	panic("can't convert " + x.Type().String() + " to Boolean")
 }
 
 // Lookup looks for a method first in a methods map,
@@ -208,28 +209,28 @@ func Lookup(methods Methods, gnUserDef int, method string) Value {
 }
 
 // CantConvert is embedded in Value types to supply default conversion methods
-type CantConvert struct {}
+type CantConvert struct{}
 
-func (CantConvert) ToInt() (int,bool) {
-	return 0,false
+func (CantConvert) ToInt() (int, bool) {
+	return 0, false
 }
 
-func (CantConvert) IfInt() (int,bool) {
-	return 0,false
+func (CantConvert) IfInt() (int, bool) {
+	return 0, false
 }
 
-func (CantConvert) ToDnum() (dnum.Dnum,bool) {
-	return dnum.Zero,false
+func (CantConvert) ToDnum() (dnum.Dnum, bool) {
+	return dnum.Zero, false
 }
 
-func (CantConvert) ToObject() (*SuObject,bool) {
-	return nil,false
+func (CantConvert) ToObject() (*SuObject, bool) {
+	return nil, false
 }
 
-func (CantConvert) ToStr() (string,bool) {
-	return "",false
+func (CantConvert) ToStr() (string, bool) {
+	return "", false
 }
 
-func (CantConvert) IfStr() (string,bool) {
-	return "",false
+func (CantConvert) IfStr() (string, bool) {
+	return "", false
 }

@@ -6,6 +6,7 @@ import (
 	"strings"
 	gotime "time"
 
+	"github.com/apmckinlay/gsuneido/runtime/types"
 	"github.com/apmckinlay/gsuneido/util/ascii"
 	"github.com/apmckinlay/gsuneido/util/ints"
 	"github.com/apmckinlay/gsuneido/util/verify"
@@ -717,8 +718,8 @@ func (SuDate) RangeLen(int, int) Value {
 	panic("date does not support range")
 }
 
-func (SuDate) TypeName() string {
-	return "Date"
+func (SuDate) Type() types.Type {
+	return types.Date
 }
 
 func (SuDate) Order() Ord {

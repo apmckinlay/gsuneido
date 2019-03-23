@@ -1,5 +1,7 @@
 package runtime
 
+import "github.com/apmckinlay/gsuneido/runtime/types"
+
 // SuSequence wraps an Iter and instantiates it lazily
 // the Iter is either built-in e.g. Seq or object.Members,
 // or user defined via Sequence
@@ -110,8 +112,8 @@ func (seq *SuSequence) Hash2() uint32 {
 	return seq.ob.Hash2()
 }
 
-func (*SuSequence) TypeName() string {
-	return "Object"
+func (*SuSequence) Type() types.Type {
+	return types.Object
 }
 
 func (*SuSequence) Order() Ord {

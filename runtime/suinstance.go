@@ -1,5 +1,7 @@
 package runtime
 
+import "github.com/apmckinlay/gsuneido/runtime/types"
+
 // SuInstance is an instance of an SuInstance
 type SuInstance struct {
 	MemBase
@@ -34,12 +36,12 @@ func (ob *SuInstance) Display(t *Thread) string {
 	return ob.String()
 }
 
-func (*SuInstance) TypeName() string {
-	return "Instance"
+func (*SuInstance) Type() types.Type {
+	return types.Instance
 }
 
 func (ob *SuInstance) Get(t *Thread, m Value) Value {
-	if m.TypeName() != "String" {
+	if m.Type() != types.String {
 		return nil
 	}
 	ms := ToStr(m)

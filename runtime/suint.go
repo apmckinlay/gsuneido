@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"unsafe"
 
+	"github.com/apmckinlay/gsuneido/runtime/types"
 	"github.com/apmckinlay/gsuneido/util/dnum"
 	"github.com/apmckinlay/gsuneido/util/ints"
 )
@@ -119,8 +120,8 @@ func (si *smi) Equal(other interface{}) bool {
 	return false
 }
 
-func (*smi) TypeName() string {
-	return "Number"
+func (*smi) Type() types.Type {
+	return types.Number
 }
 
 func (*smi) Order() Ord {

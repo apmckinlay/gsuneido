@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	. "github.com/apmckinlay/gsuneido/runtime"
+	"github.com/apmckinlay/gsuneido/runtime/types"
 	"github.com/apmckinlay/gsuneido/util/dnum"
 	. "github.com/apmckinlay/gsuneido/util/hamcrest"
 	"github.com/apmckinlay/gsuneido/util/ptest"
@@ -28,7 +29,7 @@ func TestConstant(t *testing.T) {
 	test("/* comment */ true", True)
 
 	Assert(t).That(Constant("#20140425").String(), Equals("#20140425"))
-	Assert(t).That(Constant("function () {}").TypeName(), Equals("Function"))
+	Assert(t).That(Constant("function () {}").Type(), Equals(types.Function))
 }
 
 var _ = ptest.Add("compile", pt_compile)
@@ -46,14 +47,14 @@ func pt_compile(args []string, _ []bool) bool {
 	ok := true
 	e := Catch(func() {
 		actual = Constant(args[0])
-		if actual.TypeName() != expectedType {
+		if actual.Type().String() != expectedType {
 			ok = false
 		}
 		if Show(actual) != expected {
 			ok = false
 		}
 		if !ok {
-			fmt.Println("\tgot:", "<"+actual.TypeName()+">", Show(actual))
+			fmt.Println("\tgot:", "<"+actual.Type().String()+">", Show(actual))
 		}
 	})
 	if e != nil {

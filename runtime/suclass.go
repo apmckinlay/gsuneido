@@ -2,6 +2,8 @@ package runtime
 
 import (
 	"sort"
+
+	"github.com/apmckinlay/gsuneido/runtime/types"
 )
 
 // SuClass is a user defined (Suneido language) class
@@ -55,12 +57,12 @@ func (c *SuClass) Show() string {
 	return s
 }
 
-func (*SuClass) TypeName() string {
-	return "Class"
+func (*SuClass) Type() types.Type {
+	return types.Class
 }
 
 func (c *SuClass) Get(t *Thread, m Value) Value {
-	if m.TypeName() != "String" {
+	if m.Type() != types.String {
 		return nil
 	}
 	return c.get1(t, ToStr(m))

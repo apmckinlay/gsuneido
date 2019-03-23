@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/lexer"
+	"github.com/apmckinlay/gsuneido/runtime/types"
 	"github.com/apmckinlay/gsuneido/util/hmap"
 	"github.com/apmckinlay/gsuneido/util/ints"
 )
@@ -34,8 +35,8 @@ func NewSuObject(args ...Value) *SuObject {
 
 func (ob *SuObject) Copy() *SuObject {
 	return &SuObject{
-		list: append(ob.list[:0:0], ob.list...),
-		named: *ob.named.Copy(),
+		list:   append(ob.list[:0:0], ob.list...),
+		named:  *ob.named.Copy(),
 		defval: ob.defval,
 	}
 }
@@ -116,7 +117,7 @@ func (ob *SuObject) Erase(key Value) {
 			ob.named.Put(SuInt(j), ob.list[j])
 			ob.list[j] = nil // aid garbage collection
 		}
-		ob.list = ob.list[: i]
+		ob.list = ob.list[:i]
 	} else {
 		ob.named.Del(key)
 	}
@@ -363,8 +364,8 @@ func equals3(x Value, y Value, inProgress pairs) bool {
 	return x.Equal(y)
 }
 
-func (SuObject) TypeName() string {
-	return "Object"
+func (SuObject) Type() types.Type {
+	return types.Object
 }
 
 func (SuObject) Order() Ord {
@@ -564,7 +565,7 @@ func packSize(x Value, nest int) int {
 	if p, ok := x.(Packable); ok {
 		return p.PackSize(nest)
 	}
-	panic("can't pack " + x.TypeName())
+	panic("can't pack " + x.Type().String())
 }
 
 func (ob *SuObject) Pack(buf []byte) []byte {

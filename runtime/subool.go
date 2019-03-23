@@ -1,6 +1,7 @@
 package runtime
 
 import (
+	"github.com/apmckinlay/gsuneido/runtime/types"
 	"github.com/apmckinlay/gsuneido/util/dnum"
 	"github.com/apmckinlay/gsuneido/util/ints"
 )
@@ -80,8 +81,8 @@ func (b SuBool) Equal(other interface{}) bool {
 	return false
 }
 
-func (SuBool) TypeName() string {
-	return "Boolean"
+func (SuBool) Type() types.Type {
+	return types.Boolean
 }
 
 func (SuBool) Order() Ord {

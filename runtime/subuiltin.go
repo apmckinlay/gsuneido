@@ -1,5 +1,7 @@
 package runtime
 
+import "github.com/apmckinlay/gsuneido/runtime/types"
+
 // Methods is a map of method name strings to Values
 type Methods = map[string]Value
 
@@ -23,8 +25,8 @@ type SuBuiltin struct {
 
 var _ Value = (*SuBuiltin)(nil)
 
-func (*SuBuiltin) TypeName() string {
-	return "BuiltinFunction"
+func (*SuBuiltin) Type() types.Type {
+	return types.BuiltinFunction
 }
 
 func (b *SuBuiltin) Call(t *Thread, as *ArgSpec) Value {
@@ -40,8 +42,8 @@ type SuBuiltin0 struct {
 
 var _ Value = (*SuBuiltin0)(nil)
 
-func (*SuBuiltin0) TypeName() string {
-	return "BuiltinFunction"
+func (*SuBuiltin0) Type() types.Type {
+	return types.BuiltinFunction
 }
 
 func (b *SuBuiltin0) Call(t *Thread, as *ArgSpec) Value {
@@ -57,8 +59,8 @@ type SuBuiltin1 struct {
 
 var _ Value = (*SuBuiltin1)(nil)
 
-func (*SuBuiltin1) TypeName() string {
-	return "BuiltinFunction"
+func (*SuBuiltin1) Type() types.Type {
+	return types.BuiltinFunction
 }
 
 func (b *SuBuiltin1) Call(t *Thread, as *ArgSpec) Value {
@@ -74,8 +76,8 @@ type SuBuiltin2 struct {
 
 var _ Value = (*SuBuiltin2)(nil)
 
-func (*SuBuiltin2) TypeName() string {
-	return "BuiltinFunction"
+func (*SuBuiltin2) Type() types.Type {
+	return types.BuiltinFunction
 }
 
 func (b *SuBuiltin2) Call(t *Thread, as *ArgSpec) Value {
@@ -91,8 +93,8 @@ type SuBuiltin3 struct {
 
 var _ Value = (*SuBuiltin3)(nil)
 
-func (*SuBuiltin3) TypeName() string {
-	return "BuiltinFunction"
+func (*SuBuiltin3) Type() types.Type {
+	return types.BuiltinFunction
 }
 
 func (b *SuBuiltin3) Call(t *Thread, as *ArgSpec) Value {
@@ -108,8 +110,8 @@ type SuBuiltinRaw struct {
 
 var _ Value = (*SuBuiltinRaw)(nil)
 
-func (*SuBuiltinRaw) TypeName() string {
-	return "BuiltinFunction"
+func (*SuBuiltinRaw) Type() types.Type {
+	return types.BuiltinFunction
 }
 
 func (b *SuBuiltinRaw) Call(t *Thread, as *ArgSpec) Value {
@@ -128,8 +130,8 @@ type SuBuiltinMethod struct {
 
 var _ Value = (*SuBuiltinMethod)(nil)
 
-func (*SuBuiltinMethod) TypeName() string {
-	return "BuiltinFunction"
+func (*SuBuiltinMethod) Type() types.Type {
+	return types.BuiltinFunction
 }
 
 func (b *SuBuiltinMethod) Call(t *Thread, as *ArgSpec) Value {
@@ -175,8 +177,8 @@ type SuBuiltinMethodRaw struct {
 
 var _ Value = (*SuBuiltinMethodRaw)(nil)
 
-func (*SuBuiltinMethodRaw) TypeName() string {
-	return "BuiltinFunction"
+func (*SuBuiltinMethodRaw) Type() types.Type {
+	return types.BuiltinFunction
 }
 
 func (b *SuBuiltinMethodRaw) Call(t *Thread, as *ArgSpec) Value {

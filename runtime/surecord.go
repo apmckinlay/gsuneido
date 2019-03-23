@@ -1,5 +1,7 @@
 package runtime
 
+import "github.com/apmckinlay/gsuneido/runtime/types"
+
 // TODO default, rules, observers, etc.
 
 // SuRecord is an SuObject with observers and rules
@@ -15,8 +17,8 @@ func (r *SuRecord) Copy() *SuRecord {
 	return &SuRecord{*r.SuObject.Copy()}
 }
 
-func (*SuRecord) TypeName() string {
-	return "Record"
+func (*SuRecord) Type() types.Type {
+	return types.Record
 }
 
 func (r *SuRecord) String() string {

@@ -1,6 +1,9 @@
 package runtime
 
-import "github.com/apmckinlay/gsuneido/util/str"
+import (
+	"github.com/apmckinlay/gsuneido/runtime/types"
+	"github.com/apmckinlay/gsuneido/util/str"
+)
 
 // SuFunc is a compiled Suneido function, method, or block
 type SuFunc struct {
@@ -45,18 +48,18 @@ func (f *SuFunc) Call(t *Thread, as *ArgSpec) Value {
 	return t.Call(f)
 }
 
-func (f *SuFunc) TypeName() string {
+func (f *SuFunc) Type() types.Type {
 	if f.OuterId != 0 {
-		return "Block"
+		return types.Block
 	}
-	return "Function"
+	return types.Function
 }
 
 // SuFuncMethods is initialized by the builtin package
 var SuFuncMethods Methods
 
 func (*SuFunc) Lookup(method string) Value {
-	if m,ok := ParamsMethods[method]; ok {
+	if m, ok := ParamsMethods[method]; ok {
 		return m
 	}
 	return SuFuncMethods[method]

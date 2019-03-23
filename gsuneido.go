@@ -96,7 +96,7 @@ func eval(src string) {
 		prompt(">>> ")
 		fmt.Print(result)
 		if _, ok := result.(SuStr); !ok {
-			fmt.Printf(" <%s %T>", result.TypeName(), result)
+			fmt.Printf(" <%s %T>", result.Type(), result)
 		}
 		fmt.Println()
 	}

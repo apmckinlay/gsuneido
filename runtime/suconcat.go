@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"strings"
 
+	"github.com/apmckinlay/gsuneido/runtime/types"
 	"github.com/apmckinlay/gsuneido/util/dnum"
 	"github.com/apmckinlay/gsuneido/util/hash"
 	"github.com/apmckinlay/gsuneido/util/ints"
@@ -132,8 +133,8 @@ func (c SuConcat) Equal(other interface{}) bool {
 	return false
 }
 
-func (SuConcat) TypeName() string {
-	return "String"
+func (SuConcat) Type() types.Type {
+	return types.String
 }
 
 func (SuConcat) Order() Ord {

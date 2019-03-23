@@ -1,5 +1,7 @@
 package runtime
 
+import "github.com/apmckinlay/gsuneido/runtime/types"
+
 // SuBlock is an instance of a closure block
 type SuBlock struct {
 	SuFunc
@@ -32,6 +34,6 @@ func (b *SuBlock) Call(t *Thread, as *ArgSpec) Value {
 }
 
 // TypeName returns the Suneido name for the type (Value interface)
-func (*SuBlock) TypeName() string {
-	return "Block"
+func (*SuBlock) Type() types.Type {
+	return types.Block
 }

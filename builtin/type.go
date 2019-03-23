@@ -1,56 +1,59 @@
 package builtin
 
-import . "github.com/apmckinlay/gsuneido/runtime"
+import (
+	. "github.com/apmckinlay/gsuneido/runtime"
+	"github.com/apmckinlay/gsuneido/runtime/types"
+)
 
 var _ = builtin1("Type(value)",
 	func(arg Value) Value {
-		return SuStr(arg.TypeName())
+		return SuStr(arg.Type().String())
 	})
 
 var _ = builtin1("Boolean?(value)",
 	func(arg Value) Value {
-		return SuBool(arg.TypeName() == "Boolean")
+		return SuBool(arg.Type() == types.Boolean)
 	})
 
 var _ = builtin1("Number?(value)",
 	func(arg Value) Value {
-		return SuBool(arg.TypeName() == "Number")
+		return SuBool(arg.Type() == types.Number)
 	})
 
 var _ = builtin1("String?(value)",
 	func(arg Value) Value {
-		return SuBool(arg.TypeName() == "String")
+		return SuBool(arg.Type() == types.String)
 	})
 
 var _ = builtin1("Date?(value)",
 	func(arg Value) Value {
-		return SuBool(arg.TypeName() == "Date")
+		return SuBool(arg.Type() == types.Date)
 	})
 
 var _ = builtin1("Object?(value)",
 	func(arg Value) Value {
-		return SuBool(arg.TypeName() == "Object")
+		return SuBool(arg.Type() == types.Object)
 	})
 
 var _ = builtin1("Record?(value)",
 	func(arg Value) Value {
-		return SuBool(arg.TypeName() == "Record")
+		return SuBool(arg.Type() == types.Record)
 	})
 
 var _ = builtin1("Class?(value)",
 	func(arg Value) Value {
-		return SuBool(arg.TypeName() == "Class")
+		return SuBool(arg.Type() == types.Class)
 	})
 
 var _ = builtin1("Instance?(value)",
 	func(arg Value) Value {
-		return SuBool(arg.TypeName() == "Instance")
+		return SuBool(arg.Type() == types.Instance)
 	})
 
 var _ = builtin1("Function?(value)",
 	func(arg Value) Value {
-		switch arg.TypeName() {
-		case "Function", "Method", "BuiltinFunction":
+		switch arg.Type() {
+		case types.Function, types.Method, types.BuiltinFunction:
 			return True
 		}
 		return False

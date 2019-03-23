@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"math"
 
+	"github.com/apmckinlay/gsuneido/runtime/types"
 	"github.com/apmckinlay/gsuneido/util/dnum"
 	"github.com/apmckinlay/gsuneido/util/ints"
 )
@@ -67,8 +68,8 @@ func (dn SuDnum) Equal(other interface{}) bool {
 	return false
 }
 
-func (SuDnum) TypeName() string {
-	return "Number"
+func (SuDnum) Type() types.Type {
+	return types.Number
 }
 
 func (SuDnum) Order() Ord {

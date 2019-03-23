@@ -359,7 +359,7 @@ loop:
 			x := t.Pop()
 			iterable, ok := x.(interface{ Iter() Iter })
 			if !ok {
-				panic("can't iterate " + x.TypeName())
+				panic("can't iterate " + x.Type().String())
 			}
 			t.Push(SuIter{Iter: iterable.Iter()})
 		case op.ForIn:
@@ -440,7 +440,7 @@ loop:
 					break
 				}
 			}
-			panic("method not found " + this.TypeName() + "." + ToStrOrString(method))
+			panic("method not found " + this.Type().String() + "." + ToStrOrString(method))
 		default:
 			panic("invalid op code: " + oc.String()) // TODO fatal?
 		}

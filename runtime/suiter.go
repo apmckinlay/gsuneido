@@ -1,5 +1,7 @@
 package runtime
 
+import "github.com/apmckinlay/gsuneido/runtime/types"
+
 // SuIter is a Value that wraps a runtime.Iter
 // and provides the Suneido interator interface,
 // returning itself when it reaches the end
@@ -22,8 +24,8 @@ func (SuIter) Lookup(method string) Value {
 	return IterMethods[method]
 }
 
-func (SuIter) TypeName() string {
-	return "Iterator"
+func (SuIter) Type() types.Type {
+	return types.Iterator
 }
 
 func (it SuIter) String() string {

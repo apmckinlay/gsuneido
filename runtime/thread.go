@@ -107,7 +107,7 @@ func (t *Thread) CallMethod(method string, argSpec *ArgSpec) Value {
 	ob := t.stack[base]
 	f := ob.Lookup(method)
 	if f == nil {
-		panic("method not found " + ob.TypeName() + "." + method)
+		panic("method not found " + ob.Type().String() + "." + method)
 	}
 	t.this = ob
 	result := f.Call(t, argSpec)

@@ -3,6 +3,7 @@ package runtime
 import (
 	"strings"
 
+	"github.com/apmckinlay/gsuneido/runtime/types"
 	"github.com/apmckinlay/gsuneido/util/dnum"
 	"github.com/apmckinlay/gsuneido/util/hash"
 	"github.com/apmckinlay/gsuneido/util/ints"
@@ -110,8 +111,8 @@ func (ss SuStr) Equal(other interface{}) bool {
 	return false
 }
 
-func (SuStr) TypeName() string {
-	return "String"
+func (SuStr) Type() types.Type {
+	return types.String
 }
 
 func (SuStr) Order() Ord {

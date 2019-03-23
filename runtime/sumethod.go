@@ -1,5 +1,7 @@
 package runtime
 
+import "github.com/apmckinlay/gsuneido/runtime/types"
+
 // SuMethod is a bound method originating from an SuClass or SuInstance
 // when called, it sets 'this' to the origin
 type SuMethod struct {
@@ -29,8 +31,8 @@ func (m *SuMethod) Lookup(method string) Value {
 	return nil
 }
 
-func (*SuMethod) TypeName() string {
-	return "Method"
+func (*SuMethod) Type() types.Type {
+	return types.Method
 }
 
 func (m *SuMethod) String() string {
