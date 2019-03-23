@@ -13,6 +13,10 @@ type SuStr string
 
 var EmptyStr Value = SuStr("")
 
+func (ss SuStr) Len() int {
+	return len(ss)
+}
+
 // Value interface --------------------------------------------------
 
 func (ss SuStr) ToInt() (int, bool) {

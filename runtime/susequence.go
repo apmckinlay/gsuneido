@@ -134,7 +134,9 @@ var gnSequences = Global.Num("Sequences")
 
 func (seq *SuSequence) Lookup(method string) Value {
 	if seq.asSeq(method) {
-		return Lookup(SequenceMethods, gnSequences, method)
+		if m := Lookup(SequenceMethods, gnSequences, method); m != nil {
+			return m
+		}
 	}
 	seq.instantiate()
 	return seq.ob.Lookup(method)

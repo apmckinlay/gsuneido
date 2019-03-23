@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+
 	"runtime/debug"
 	"strings"
 
@@ -46,6 +47,7 @@ func repl() {
 	}
 
 	language.Def()
+	language.Concat()
 	if len(flag.Args()) > 1 {
 		eval(flag.Arg(1))
 	} else {

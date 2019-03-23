@@ -84,6 +84,20 @@ func init() {
 			}
 			return False
 		}),
+		"GetDefault": methodRaw("(member, default)", // methodRaw to get thread
+			func(t *Thread, as *ArgSpec, this Value, args ...Value) Value {
+				args = t.Args(&paramSpecGetDef, as)
+				ob := ToObject(this)
+				x := ob.GetDefault(args[0], nil)
+				if x == nil {
+					if args[1].TypeName() == "Block" {
+						x = t.CallWithArgs(args[1])
+					} else {
+						x = args[1]
+					}
+				}
+				return x
+			}),
 		"Iter": method0(func(this Value) Value {
 			return SuIter{Iter: ToObject(this).Iter()}
 		}),
@@ -118,9 +132,21 @@ func init() {
 			ToObject(this).SetReadOnly()
 			return this
 		}),
-		"Size": method0(func(this Value) Value { //TODO list? and named?
-			return IntToValue(ToObject(this).Size())
-		}),
+		"Size": method2("(list=false,named=false)",
+			func(this, arg1, arg2 Value) Value {
+				list := ToBool(arg1)
+				named := ToBool(arg2)
+				ob := ToObject(this)
+				var n int
+				if list == named {
+					n = ob.Size()
+				} else if list {
+					n = ob.ListSize()
+				} else {
+					n = ob.NamedSize()
+				}
+				return IntToValue(n)
+			}),
 		"Sort!": methodRaw("(block = false)", // methodRaw to get thread
 			func(t *Thread, as *ArgSpec, this Value, args ...Value) Value {
 				args = t.Args(&ParamSpecOptionalBlock, as)
@@ -165,3 +191,5 @@ func putAt(ob *SuObject, at Value, iter ArgsIter) {
 	}
 	ob.Put(at, v)
 }
+
+var paramSpecGetDef = params("(member,block)")

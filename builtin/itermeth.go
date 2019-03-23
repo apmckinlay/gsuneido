@@ -6,6 +6,14 @@ import (
 
 func init() {
 	IterMethods = Methods{
+		"Dup": method0(func(this Value) Value {
+			it := this.(SuIter)
+			return SuIter{Iter: it.Dup()}
+		}),
+		"Infinite?": method0(func(this Value) Value {
+			it := this.(SuIter)
+			return SuBool(it.Infinite())
+		}),
 		"Next": method0(func(this Value) Value {
 			it := this.(SuIter)
 			next := it.Next()

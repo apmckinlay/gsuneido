@@ -46,14 +46,28 @@ func init() {
 			}),
 		"Find": method2("(string, pos=0)", func(this, arg1, arg2 Value) Value {
 			s := IfStr(this)
-			pos := pos(arg2, len(s))
+			pos := position(arg2, len(s))
 			i := strings.Index(s[pos:], IfStr(arg1))
 			if i == -1 {
-				i = len(s)
+				return IntToValue(len(s))
+			}
+			return IntToValue(pos + i)
+		}),
+		"FindLast": method2("(string, pos=false)", func(this, arg1, arg2 Value) Value {
+			s := IfStr(this)
+			pos := len(s)
+			if arg2 != False {
+				p := ToInt(arg2)
+				if p < len(s) {
+					pos = p + 1
+				}
+			}
+			i := strings.LastIndex(s[:pos], IfStr(arg1))
+			if i == -1 {
+				return False
 			}
 			return IntToValue(i)
 		}),
-		//TODO FindLast
 		//TODO Find1of
 		//TODO FindLast1of
 		//TODO Findnot1of
@@ -100,12 +114,25 @@ func init() {
 			}
 			return SuStr(s[i:j])
 		}),
-		//TODO Number?
-		//TODO Numeric
+		"Number?": method0(func(this Value) Value {
+			return SuBool(numberPat.Matches(IfStr(this)))
+		}),
+		"Numeric?": method0(func(this Value) Value {
+			s := IfStr(this)
+			if len(s) == 0 {
+				return False
+			}
+			for i := 0; i < len(s); i++ {
+				if !ascii.IsDigit(s[i]) {
+					return False
+				}
+			}
+			return True
+		}),
 		"Prefix?": method2("(string, pos=0)", func(this, arg1, arg2 Value) Value {
 			s := IfStr(this)
 			pre := IfStr(arg1)
-			pos := pos(arg2, len(s))
+			pos := position(arg2, len(s))
 			return SuBool(strings.HasPrefix(s[pos:], pre))
 		}),
 		"Repeat": method1("(count)", func(this, arg Value) Value {
@@ -140,8 +167,9 @@ func init() {
 				return result
 			}),
 		"Size": method0(func(this Value) Value {
-			// TODO handle Concat without converting
-			return IntToValue(len(IfStr(this)))
+			// avoid calling IfStr so we don't have to convert concats
+			return IntToValue(this.(interface{ Len() int }).Len())
+			// "this" should always have Len
 		}),
 		"Sort!": methodRaw("(block = false)", // methodRaw to get thread
 			func(t *Thread, as *ArgSpec, this Value, args ...Value) Value {
@@ -237,7 +265,7 @@ func replace(t *Thread, s string, patarg string, reparg Value, count int) Value 
 	return SuStr(buf.String())
 }
 
-func pos(arg Value, n int) int {
+func position(arg Value, n int) int {
 	pos := ToInt(arg)
 	if pos >= n {
 		return n
@@ -250,3 +278,5 @@ func pos(arg Value, n int) int {
 	}
 	return pos
 }
+
+var numberPat = regex.Compile(`\A[+-]?(\d+\.?|\.\d)\d*?([eE][+-]?\d\d?)?\Z`)

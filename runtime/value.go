@@ -182,6 +182,16 @@ func ToObject(x Value) *SuObject {
 	panic("can't convert " + x.TypeName() + " to Object")
 }
 
+func ToBool(x Value) bool {
+	if x == True {
+		return true
+	}
+	if x == False {
+		return false
+	}
+	panic("can't convert " + x.TypeName() + " to Boolean")
+}
+
 // Lookup looks for a method first in a methods map,
 // and then in a global user defined class
 // returning nil if not found in either place
