@@ -85,12 +85,8 @@ func (SuBool) Type() types.Type {
 	return types.Boolean
 }
 
-func (SuBool) Order() Ord {
-	return ordBool
-}
-
 func (b SuBool) Compare(other Value) int {
-	if cmp := ints.Compare(b.Order(), other.Order()); cmp != 0 {
+	if cmp := ints.Compare(ordBool, Order(other)); cmp != 0 {
 		return cmp
 	}
 	if b == other {

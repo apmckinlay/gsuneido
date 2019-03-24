@@ -124,12 +124,8 @@ func (*smi) Type() types.Type {
 	return types.Number
 }
 
-func (*smi) Order() Ord {
-	return ordNum
-}
-
 func (si *smi) Compare(other Value) int {
-	if cmp := ints.Compare(si.Order(), other.Order()); cmp != 0 {
+	if cmp := ints.Compare(ordNum, Order(other)); cmp != 0 {
 		return cmp
 	}
 	if y, ok := other.(*smi); ok {

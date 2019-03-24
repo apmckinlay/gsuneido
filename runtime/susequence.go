@@ -116,10 +116,6 @@ func (*SuSequence) Type() types.Type {
 	return types.Object
 }
 
-func (*SuSequence) Order() Ord {
-	return ordObject
-}
-
 func (seq *SuSequence) Compare(other Value) int {
 	seq.instantiate()
 	return seq.ob.Compare(other)

@@ -72,12 +72,8 @@ func (SuDnum) Type() types.Type {
 	return types.Number
 }
 
-func (SuDnum) Order() Ord {
-	return ordNum
-}
-
 func (dn SuDnum) Compare(other Value) int {
-	if cmp := ints.Compare(dn.Order(), other.Order()); cmp != 0 {
+	if cmp := ints.Compare(ordNum, Order(other)); cmp != 0 {
 		return cmp
 	}
 	// now know other is a number and ToDnum won't panic

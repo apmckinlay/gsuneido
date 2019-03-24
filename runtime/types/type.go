@@ -6,6 +6,7 @@ package types
 
 type Type int
 
+// must match Ord up to Object
 const (
 	Boolean Type = iota
 	Number

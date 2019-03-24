@@ -133,12 +133,8 @@ func (f *ParamSpec) Equal(other interface{}) bool {
 	return false
 }
 
-func (*ParamSpec) Order() Ord {
-	return OrdOther
-}
-
 func (f *ParamSpec) Compare(other Value) int {
-	if cmp := ints.Compare(f.Order(), other.Order()); cmp != 0 {
+	if cmp := ints.Compare(OrdOther, Order(other)); cmp != 0 {
 		return cmp
 	}
 	return 0 // ???

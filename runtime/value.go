@@ -64,8 +64,6 @@ type Value interface {
 	// Type returns the Suneido name for the type
 	Type() types.Type
 
-	Order() Ord
-
 	// Compare returns -1 for less, 0 for equal, +1 for greater
 	Compare(other Value) int
 
@@ -76,6 +74,7 @@ type Value interface {
 
 type Ord = int
 
+// must match types
 const (
 	ordBool Ord = iota
 	ordNum      // SuInt, SuDnum
@@ -84,6 +83,16 @@ const (
 	ordObject
 	OrdOther
 )
+
+func Order(x Value) Ord {
+	t := x.Type()
+	if t <= types.Object {
+		return Ord(t)
+	} else if t == types.Record {
+		return ordObject
+	}
+	return OrdOther
+}
 
 var NilVal Value
 

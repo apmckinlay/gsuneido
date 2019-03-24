@@ -10,10 +10,6 @@ func NewMemBase() MemBase {
 	return MemBase{Data: map[string]Value{}}
 }
 
-func (*MemBase) Order() Ord {
-	return OrdOther
-}
-
 type Findable interface {
 	finder(fn func(*MemBase) Value) Value
 }

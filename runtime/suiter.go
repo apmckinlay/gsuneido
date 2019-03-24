@@ -64,7 +64,3 @@ func (SuIter) Hash2() uint32 {
 func (SuIter) Compare(Value) int {
 	panic("iterator compare not implemented")
 }
-
-func (SuIter) Order() Ord {
-	return OrdOther
-}

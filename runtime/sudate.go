@@ -722,12 +722,8 @@ func (SuDate) Type() types.Type {
 	return types.Date
 }
 
-func (SuDate) Order() Ord {
-	return ordDate
-}
-
 func (d SuDate) Compare(other Value) int {
-	if cmp := ints.Compare(d.Order(), other.Order()); cmp != 0 {
+	if cmp := ints.Compare(ordDate, Order(other)); cmp != 0 {
 		return cmp
 	}
 	d2 := other.(SuDate)

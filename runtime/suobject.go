@@ -368,12 +368,8 @@ func (SuObject) Type() types.Type {
 	return types.Object
 }
 
-func (SuObject) Order() Ord {
-	return ordObject
-}
-
 func (ob *SuObject) Compare(other Value) int {
-	if cmp := ints.Compare(ob.Order(), other.Order()); cmp != 0 {
+	if cmp := ints.Compare(ordObject, Order(other)); cmp != 0 {
 		return cmp
 	}
 	// now know other is an object so ToObject won't panic

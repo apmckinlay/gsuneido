@@ -79,10 +79,6 @@ func (*SuMethod) Compare(Value) int {
 	panic("method compare not implemented")
 }
 
-func (*SuMethod) Order() Ord {
-	return OrdOther
-}
-
 // Named interface --------------------------------------------------
 
 var _ Named = (*SuMethod)(nil)

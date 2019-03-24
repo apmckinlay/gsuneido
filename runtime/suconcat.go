@@ -137,12 +137,8 @@ func (SuConcat) Type() types.Type {
 	return types.String
 }
 
-func (SuConcat) Order() Ord {
-	return ordStr
-}
-
 func (c SuConcat) Compare(other Value) int {
-	if cmp := ints.Compare(c.Order(), other.Order()); cmp != 0 {
+	if cmp := ints.Compare(ordStr, Order(other)); cmp != 0 {
 		return cmp
 	}
 	// now know other is a string so ToStr won't panic

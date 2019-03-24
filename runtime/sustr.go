@@ -115,15 +115,11 @@ func (SuStr) Type() types.Type {
 	return types.String
 }
 
-func (SuStr) Order() Ord {
-	return ordStr
-}
-
 func (ss SuStr) Compare(other Value) int {
-	if cmp := ints.Compare(ss.Order(), other.Order()); cmp != 0 {
+	if cmp := ints.Compare(ordStr, Order(other)); cmp != 0 {
 		return cmp
 	}
-	return strings.Compare(string(ss), ToStr(other))
+	return strings.Compare(string(ss), IfStr(other))
 }
 
 // Call implements s(ob, ...) being treated as ob[s](...)
