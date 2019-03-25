@@ -58,7 +58,7 @@ func (rw *ReadWrite) GetBool() bool {
 
 func (rw *ReadWrite) Get(n int) []byte {
 	buf := make([]byte, n)
-	rw.r.Read(buf)
+	io.ReadFull(rw.r, buf)
 	return buf
 }
 
