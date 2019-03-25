@@ -18,7 +18,7 @@ func TestInterp(t *testing.T) {
 }
 
 func TestCatchMatch(t *testing.T) {
-	match := func (e, pat string) {
+	match := func(e, pat string) {
 		Assert(t).True(catchMatch(e, pat))
 	}
 	match("", "")
@@ -37,7 +37,7 @@ func TestCatchMatch(t *testing.T) {
 
 	match("foobar", "abc|*bar")
 
-	nomatch := func (e, pat string) {
+	nomatch := func(e, pat string) {
 		Assert(t).False(catchMatch(e, pat))
 	}
 	nomatch("", "foo")
@@ -48,6 +48,7 @@ func TestCatchMatch(t *testing.T) {
 }
 
 // compare to BenchmarkInterp in execute_test.go
+
 func BenchmarkJit(b *testing.B) {
 	th := &Thread{}
 	for n := 0; n < b.N; n++ {
@@ -73,4 +74,48 @@ func jitfn(th *Thread) Value {
 		}
 	}
 	return th.stack[0] // return sum
+}
+
+func BenchmarkTranspile(b *testing.B) {
+	for n := 0; n < b.N; n++ {
+		result := transpilefn()
+		if !result.Equal(SuInt(4950)) {
+			panic("wrong result")
+		}
+	}
+}
+
+func transpilefn() Value {
+	sum := Zero
+	i := Zero
+	for {
+		sum = Add(sum, i) // sum += i
+		i = Add(i, One)   // ++i
+		if Lt(i, hundred) != True {
+			break
+		}
+	}
+	return sum
+}
+
+func BenchmarkSpecialize(b *testing.B) {
+	for n := 0; n < b.N; n++ {
+		result := specialized()
+		if !result.Equal(SuInt(4950)) {
+			panic("wrong result")
+		}
+	}
+}
+
+func specialized() Value {
+	sum := 0
+	i := 0
+	for {
+		sum += i
+		i++
+		if i >= 100 {
+			break
+		}
+	}
+	return SuInt(sum)
 }
