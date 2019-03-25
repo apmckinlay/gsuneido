@@ -53,7 +53,7 @@ var _ = builtin1("Instance?(value)",
 var _ = builtin1("Function?(value)",
 	func(arg Value) Value {
 		switch arg.Type() {
-		case types.Function, types.Method, types.BuiltinFunction:
+		case types.Function, types.Block, types.Method, types.BuiltinFunction:
 			return True
 		}
 		return False
