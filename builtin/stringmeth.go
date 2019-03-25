@@ -5,6 +5,7 @@ import (
 
 	"github.com/apmckinlay/gsuneido/util/ints"
 	"github.com/apmckinlay/gsuneido/util/regex"
+	"github.com/apmckinlay/gsuneido/util/tabs"
 
 	"github.com/apmckinlay/gsuneido/util/ascii"
 	"github.com/apmckinlay/gsuneido/util/tr"
@@ -24,8 +25,12 @@ func init() {
 		"Count": method1("(string)", func(this, arg Value) Value {
 			return IntToValue(strings.Count(IfStr(this), IfStr(arg)))
 		}),
-		//TODO Detab
-		//TODO Entab
+		"Detab": method0(func(this Value) Value {
+			return SuStr(tabs.Detab(IfStr(this)))
+		}),
+		"Entab": method0(func(this Value) Value {
+			return SuStr(tabs.Entab(IfStr(this)))
+		}),
 		"Eval": methodRaw("(string)", // methodRaw to get thread
 			func(t *Thread, as *ArgSpec, this Value, args ...Value) Value {
 				t.Args(&ParamSpec0, as)
