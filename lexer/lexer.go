@@ -495,3 +495,7 @@ func (lxr *Lexer) matchUntil(start int, s string) string {
 	}
 	return lxr.src[start:lxr.si]
 }
+
+func (lxr *Lexer) LineFromPos(pos int32) int {
+	return strings.Count(lxr.src[:pos], "\n")
+}
