@@ -2,4 +2,5 @@
 // including command line flags
 package options
 
+var BuiltDate string
 var Client bool
