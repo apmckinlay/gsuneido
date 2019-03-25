@@ -14,6 +14,7 @@ import (
 	"github.com/apmckinlay/gsuneido/compile"
 	"github.com/apmckinlay/gsuneido/database/clientserver"
 	"github.com/apmckinlay/gsuneido/language"
+	"github.com/apmckinlay/gsuneido/options"
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
@@ -21,16 +22,12 @@ var _ = Global.Add("Suneido", new(SuObject))
 
 var prompt = func(s string) { fmt.Print(s); os.Stdout.Sync() }
 
-var Flags struct {
-	Client bool
-}
-
 var dbms clientserver.Dbms
 
 func main() {
-	flag.BoolVar(&Flags.Client, "c", false, "run as a client")
+	flag.BoolVar(&options.Client, "c", false, "run as a client")
 	flag.Parse()
-	if Flags.Client {
+	if options.Client {
 		dbms = clientserver.NewDbmsClient("127.0.0.1:3147")
 		fmt.Println("Running as client")
 	} else {
