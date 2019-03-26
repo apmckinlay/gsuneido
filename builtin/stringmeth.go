@@ -24,7 +24,7 @@ func init() {
 			return compile.Constant(IfStr(this))
 		}),
 		"Count": method1("(string)", func(this, arg Value) Value {
-			return IntToValue(strings.Count(IfStr(this), IfStr(arg)))
+			return IntToVal(strings.Count(IfStr(this), IfStr(arg)))
 		}),
 		"Detab": method0(func(this Value) Value {
 			return SuStr(tabs.Detab(IfStr(this)))
@@ -55,27 +55,27 @@ func init() {
 			pos := position(arg2, len(s))
 			i := strings.Index(s[pos:], IfStr(arg1))
 			if i == -1 {
-				return IntToValue(len(s))
+				return IntToVal(len(s))
 			}
-			return IntToValue(pos + i)
+			return IntToVal(pos + i)
 		}),
 		"Find1of": method2("(string, pos=0)", func(this, arg1, arg2 Value) Value {
 			s := IfStr(this)
 			pos := position(arg2, len(s))
 			i := strings.IndexAny(s[pos:], IfStr(arg1))
 			if i == -1 {
-				return IntToValue(len(s))
+				return IntToVal(len(s))
 			}
-			return IntToValue(pos + i)
+			return IntToVal(pos + i)
 		}),
 		"Findnot1of": method2("(string, pos=0)", func(this, arg1, arg2 Value) Value {
 			s := IfStr(this)
 			pos := position(arg2, len(s))
 			i := str.IndexNotAny(s[pos:], IfStr(arg1))
 			if i == -1 {
-				return IntToValue(len(s))
+				return IntToVal(len(s))
 			}
-			return IntToValue(pos + i)
+			return IntToVal(pos + i)
 		}),
 		"FindLast": method2("(string, pos=false)", func(this, arg1, arg2 Value) Value {
 			s := IfStr(this)
@@ -91,7 +91,7 @@ func init() {
 				return False
 			}
 			if substr == "" {
-				return IntToValue(end)
+				return IntToVal(end)
 			}
 			return intOrFalse(strings.LastIndex(s[:end], substr))
 		}),
@@ -212,7 +212,7 @@ func init() {
 			}),
 		"Size": method0(func(this Value) Value {
 			// avoid calling IfStr so we don't have to convert concats
-			return IntToValue(this.(interface{ Len() int }).Len())
+			return IntToVal(this.(interface{ Len() int }).Len())
 			// "this" should always have Len
 		}),
 		"Sort!": methodRaw("(block = false)", // methodRaw to get thread
@@ -339,5 +339,5 @@ func intOrFalse(i int) Value {
 	if i == -1 {
 		return False
 	}
-	return IntToValue(i)
+	return IntToVal(i)
 }

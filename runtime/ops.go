@@ -43,7 +43,7 @@ func Gte(x Value, y Value) Value {
 func Add(x Value, y Value) Value {
 	if xi, xok := SmiToInt(x); xok {
 		if yi, yok := SmiToInt(y); yok {
-			return IntToValue(xi + yi)
+			return IntToVal(xi + yi)
 		}
 	}
 	return SuDnum{Dnum: dnum.Add(ToDnum(x), ToDnum(y))}
@@ -52,7 +52,7 @@ func Add(x Value, y Value) Value {
 func Sub(x Value, y Value) Value {
 	if xi, xok := SmiToInt(x); xok {
 		if yi, yok := SmiToInt(y); yok {
-			return IntToValue(xi - yi)
+			return IntToVal(xi - yi)
 		}
 	}
 	return SuDnum{Dnum: dnum.Sub(ToDnum(x), ToDnum(y))}
@@ -61,7 +61,7 @@ func Sub(x Value, y Value) Value {
 func Mul(x Value, y Value) Value {
 	if xi, xok := SmiToInt(x); xok {
 		if yi, yok := SmiToInt(y); yok {
-			return IntToValue(xi * yi)
+			return IntToVal(xi * yi)
 		}
 	}
 	return SuDnum{Dnum: dnum.Mul(ToDnum(x), ToDnum(y))}
@@ -71,7 +71,7 @@ func Div(x Value, y Value) Value {
 	if yi, yok := SmiToInt(y); yok && yi != 0 {
 		if xi, xok := SmiToInt(x); xok {
 			if xi%yi == 0 {
-				return IntToValue(xi / yi)
+				return IntToVal(xi / yi)
 			}
 		}
 	}
@@ -79,31 +79,31 @@ func Div(x Value, y Value) Value {
 }
 
 func Mod(x Value, y Value) Value {
-	return IntToValue(ToInt(x) % ToInt(y))
+	return IntToVal(ToInt(x) % ToInt(y))
 }
 
 func LeftShift(x Value, y Value) Value {
-	return IntToValue(int(uint(ToInt(x)) << uint(ToInt(y))))
+	return IntToVal(int(uint(ToInt(x)) << uint(ToInt(y))))
 }
 
 func RightShift(x Value, y Value) Value {
-	return IntToValue(int(uint(ToInt(x)) >> uint(ToInt(y))))
+	return IntToVal(int(uint(ToInt(x)) >> uint(ToInt(y))))
 }
 
 func BitOr(x Value, y Value) Value {
-	return IntToValue(ToInt(x) | ToInt(y))
+	return IntToVal(ToInt(x) | ToInt(y))
 }
 
 func BitAnd(x Value, y Value) Value {
-	return IntToValue(ToInt(x) & ToInt(y))
+	return IntToVal(ToInt(x) & ToInt(y))
 }
 
 func BitXor(x Value, y Value) Value {
-	return IntToValue(ToInt(x) ^ ToInt(y))
+	return IntToVal(ToInt(x) ^ ToInt(y))
 }
 
 func BitNot(x Value) Value {
-	return IntToValue(^ToInt(x))
+	return IntToVal(^ToInt(x))
 }
 
 func Not(x Value) Value {
@@ -135,13 +135,13 @@ func UnaryPlus(x Value) Value {
 
 func UnaryMinus(x Value) Value {
 	if xi, ok := SmiToInt(x); ok {
-		return IntToValue(-xi)
+		return IntToVal(-xi)
 	}
 	return SuDnum{Dnum: ToDnum(x).Neg()}
 }
 
-// IntToValue returns an SuInt if it fits, else a SuDnum
-func IntToValue(n int) Value {
+// IntToVal returns an SuInt if it fits, else a SuDnum
+func IntToVal(n int) Value {
 	if MinSuInt < n && n < MaxSuInt {
 		return SuInt(n)
 	}

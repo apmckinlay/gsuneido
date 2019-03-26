@@ -99,11 +99,11 @@ var NilVal Value
 func NumFromString(s string) Value {
 	if strings.HasPrefix(s, "0x") {
 		if n, err := strconv.ParseUint(s, 0, 32); err == nil {
-			return IntToValue(int(int32(n)))
+			return IntToVal(int(int32(n)))
 		}
 	}
 	if n, err := strconv.ParseInt(s, 0, 32); err == nil {
-		return IntToValue(int(n))
+		return IntToVal(int(n))
 	}
 	return SuDnum{Dnum: dnum.FromStr(s)}
 }

@@ -146,7 +146,7 @@ func init() {
 				} else {
 					n = ob.NamedSize()
 				}
-				return IntToValue(n)
+				return IntToVal(n)
 			}),
 		"Sort!": methodRaw("(block = false)", // methodRaw to get thread
 			func(t *Thread, as *ArgSpec, this Value, args ...Value) Value {

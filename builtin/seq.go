@@ -39,7 +39,7 @@ func (seq *seqIter) Next() Value {
 	}
 	i := seq.i
 	seq.i += seq.by
-	return IntToValue(i)
+	return IntToVal(i)
 }
 
 func (seq *seqIter) Dup() Iter {
