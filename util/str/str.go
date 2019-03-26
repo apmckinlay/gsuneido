@@ -27,8 +27,8 @@ func UnCapitalize(s string) string {
 
 // IndexFunc returns the index of the first byte that the func returns true for
 // else -1
-func IndexFunc(s string, f func (byte) bool) int {
-	for i,c := range []byte(s) {
+func IndexFunc(s string, f func(byte) bool) int {
+	for i, c := range []byte(s) {
 		if f(c) {
 			return i
 		}
@@ -41,4 +41,36 @@ func IndexFunc(s string, f func (byte) bool) int {
 func Dup(s string) string {
 	s = " " + s
 	return s[1:]
+}
+
+// IndexNotAny returns the index of the first byte not in chars, else -1
+func IndexNotAny(s, chars string) int {
+	nc := len(chars)
+loop:
+	for i := 0; i < len(s); i++ {
+		c := s[i]
+		for j := 0; j < nc; j++ {
+			if c == chars[j] {
+				continue loop
+			}
+		}
+		return i
+	}
+	return -1
+}
+
+// LastIndexNotAny returns the last index of the first byte not in chars, else -1
+func LastIndexNotAny(s, chars string) int {
+	nc := len(chars)
+loop:
+	for i := len(s) - 1; i >= 0; i-- {
+		c := s[i]
+		for j := 0; j < nc; j++ {
+			if c == chars[j] {
+				continue loop
+			}
+		}
+		return i
+	}
+	return -1
 }

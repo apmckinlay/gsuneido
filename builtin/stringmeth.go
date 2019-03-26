@@ -5,6 +5,7 @@ import (
 
 	"github.com/apmckinlay/gsuneido/util/ints"
 	"github.com/apmckinlay/gsuneido/util/regex"
+	"github.com/apmckinlay/gsuneido/util/str"
 	"github.com/apmckinlay/gsuneido/util/tabs"
 
 	"github.com/apmckinlay/gsuneido/util/ascii"
@@ -58,25 +59,63 @@ func init() {
 			}
 			return IntToValue(pos + i)
 		}),
+		"Find1of": method2("(string, pos=0)", func(this, arg1, arg2 Value) Value {
+			s := IfStr(this)
+			pos := position(arg2, len(s))
+			i := strings.IndexAny(s[pos:], IfStr(arg1))
+			if i == -1 {
+				return IntToValue(len(s))
+			}
+			return IntToValue(pos + i)
+		}),
+		"Findnot1of": method2("(string, pos=0)", func(this, arg1, arg2 Value) Value {
+			s := IfStr(this)
+			pos := position(arg2, len(s))
+			i := str.IndexNotAny(s[pos:], IfStr(arg1))
+			if i == -1 {
+				return IntToValue(len(s))
+			}
+			return IntToValue(pos + i)
+		}),
 		"FindLast": method2("(string, pos=false)", func(this, arg1, arg2 Value) Value {
 			s := IfStr(this)
-			pos := len(s)
+			substr := IfStr(arg1)
+			end := len(s)
 			if arg2 != False {
-				p := ToInt(arg2)
-				if p < len(s) {
-					pos = p + 1
+				end = ToInt(arg2) + len(substr)
+				if end > len(s) {
+					end = len(s)
 				}
 			}
-			i := strings.LastIndex(s[:pos], IfStr(arg1))
-			if i == -1 {
+			if end < 0 {
 				return False
 			}
-			return IntToValue(i)
+			if substr == "" {
+				return IntToValue(end)
+			}
+			return intOrFalse(strings.LastIndex(s[:end], substr))
 		}),
-		//TODO Find1of
-		//TODO FindLast1of
-		//TODO Findnot1of
-		//TODO FindLastnot1of
+		"FindLast1of": method2("(string, pos=false)", func(this, arg1, arg2 Value) Value {
+			set := IfStr(arg1)
+			if set == "" {
+				return False
+			}
+			s := IfStr(this)
+			end := last1ofEnd(s, arg2)
+			if end < 0 {
+				return False
+			}
+			return intOrFalse(strings.LastIndexAny(s[:end], set))
+		}),
+		"FindLastnot1of": method2("(string, pos=false)", func(this, arg1, arg2 Value) Value {
+			s := IfStr(this)
+			set := IfStr(arg1)
+			end := last1ofEnd(s, arg2)
+			if end < 0 || set == "" {
+				return False
+			}
+			return intOrFalse(str.LastIndexNotAny(s[:end], set))
+		}),
 		"Has?": method1("(string)", func(this, arg Value) Value {
 			return SuBool(strings.Contains(IfStr(this), IfStr(arg)))
 		}),
@@ -285,3 +324,20 @@ func position(arg Value, n int) int {
 }
 
 var numberPat = regex.Compile(`\A[+-]?(\d+\.?|\.\d)\d*?([eE][+-]?\d\d?)?\Z`)
+
+func last1ofEnd(s string, arg2 Value) int {
+	end := len(s)
+	if arg2 != False {
+		end = ToInt(arg2) + 1
+		if end > len(s) {
+			end = len(s)
+		}
+	}
+	return end
+}
+func intOrFalse(i int) Value {
+	if i == -1 {
+		return False
+	}
+	return IntToValue(i)
+}
