@@ -19,8 +19,8 @@ func TestSuObject(t *testing.T) {
 	sv := SuStr("hello")
 	ob.Add(sv)
 	Assert(t).That(ob.Size(), Equals(2))
-	Assert(t).That(ob.Get(nil, SuInt(0)), Equals(iv))
-	Assert(t).That(ob.Get(nil, SuInt(1)), Equals(sv))
+	Assert(t).That(ob.Get(nil, Zero), Equals(iv))
+	Assert(t).That(ob.Get(nil, One), Equals(sv))
 
 	ob.Put(sv, iv)
 	Assert(t).That(ob.String(), Equals("#(123, 'hello', hello: 123)"))
@@ -54,23 +54,23 @@ func TestSuObjectMigrate(t *testing.T) {
 	}
 	Assert(t).That(ob.NamedSize(), Equals(4))
 	Assert(t).That(ob.ListSize(), Equals(0))
-	ob.Add(SuInt(0))
+	ob.Add(Zero)
 	Assert(t).That(ob.NamedSize(), Equals(0))
 	Assert(t).That(ob.ListSize(), Equals(5))
 }
 
 func TestSuObjectPut(t *testing.T) {
 	ob := SuObject{}
-	ob.Put(SuInt(1), SuInt(1)) // put
+	ob.Put(One, One) // put
 	Assert(t).That(ob.NamedSize(), Equals(1))
 	Assert(t).That(ob.ListSize(), Equals(0))
-	ob.Put(SuInt(0), SuInt(0)) // add + migrate
+	ob.Put(Zero, Zero) // add + migrate
 	Assert(t).That(ob.NamedSize(), Equals(0))
 	Assert(t).That(ob.ListSize(), Equals(2))
-	ob.Put(SuInt(0), SuInt(10)) // set
-	ob.Put(SuInt(1), SuInt(11)) // set
-	Assert(t).That(ob.Get(nil, SuInt(0)), Equals(SuInt(10)))
-	Assert(t).That(ob.Get(nil, SuInt(1)), Equals(SuInt(11)))
+	ob.Put(Zero, SuInt(10)) // set
+	ob.Put(One, SuInt(11)) // set
+	Assert(t).That(ob.Get(nil, Zero), Equals(SuInt(10)))
+	Assert(t).That(ob.Get(nil, One), Equals(SuInt(11)))
 }
 
 func TestSuObjectDelete(t *testing.T) {
@@ -87,7 +87,7 @@ func TestSuObjectDelete(t *testing.T) {
 	Assert(t).That(ob.Show(), Equals("#(0, 1, 2, 3, 4, bar: 9)"))
 	ob.Delete(SuInt(2))
 	Assert(t).That(ob.Show(), Equals("#(0, 1, 3, 4, bar: 9)"))
-	ob.Delete(SuInt(0))
+	ob.Delete(Zero)
 	Assert(t).That(ob.Show(), Equals("#(1, 3, 4, bar: 9)"))
 	ob.Delete(SuInt(2))
 	Assert(t).That(ob.Show(), Equals("#(1, 3, bar: 9)"))
@@ -111,7 +111,7 @@ func TestSuObjectErase(t *testing.T) {
 	Assert(t).That(ob.Show(), Equals("#(0, 1, 2, 3, 4, bar: 9)"))
 	ob.Erase(SuInt(2))
 	Assert(t).That(ob.Show(), Equals("#(0, 1, 3: 3, 4: 4, bar: 9)"))
-	ob.Erase(SuInt(1))
+	ob.Erase(One)
 	Assert(t).That(ob.Show(), Equals("#(0, 3: 3, 4: 4, bar: 9)"))
 }
 
@@ -119,9 +119,9 @@ func TestSuObjectEquals(t *testing.T) {
 	x := &SuObject{}
 	y := &SuObject{}
 	eq(t, x, y)
-	x.Add(SuInt(1))
+	x.Add(One)
 	neq(t, x, y)
-	y.Add(SuInt(1))
+	y.Add(One)
 	eq(t, x, y)
 	x.Put(SuInt(4), SuInt(6))
 	neq(t, x, y)
@@ -184,7 +184,7 @@ func TestSuObjectPack(t *testing.T) {
 
 func TestSuObjectPack2(t *testing.T) {
 	ob := &SuObject{}
-	ob.Add(SuInt(1))
+	ob.Add(One)
 	ob.Put(SuStr("a"), SuInt(2))
 	buf := Pack(ob)
 	expected := []byte{6, 128, 0, 0, 1, 128, 0, 0, 4, 3, 129, 0, 1, 128,
