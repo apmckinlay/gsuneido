@@ -28,14 +28,15 @@ func pt_method(args []string, str []bool) bool {
 		return false
 	}
 	th := NewThread()
-	for i := 2; i < len(args) - 1; i++ {
+	for i := 2; i < len(args)-1; i++ {
 		th.Push(toValue(args, str, i))
 	}
 	nargs := len(args) - 3
 	result := CallMethod(th, ob, f, StdArgSpecs[nargs])
 	ok := result.Equal(expected)
 	if !ok {
-		fmt.Printf("\tgot: %v %#v", result, result)
+		fmt.Printf("\tgot: %s  expected: %s\n",
+			WithType(result), WithType(expected))
 	}
 	return ok
 }

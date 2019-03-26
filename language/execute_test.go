@@ -69,7 +69,7 @@ func init() {
 	Def()
 }
 
-func pt_execute(args []string, str []bool) bool {
+func pt_execute(args []string, _ []bool) bool {
 	src := "function () {\n" + args[0] + "\n}"
 	th := NewThread()
 	expected := "**notfalse**"
@@ -77,42 +77,41 @@ func pt_execute(args []string, str []bool) bool {
 		expected = args[1]
 	}
 	var success bool
-	var result interface{}
+	var actual Value
 	if expected == "throws" {
 		expected = "throws " + args[2]
 		e := Catch(func() {
 			fn := compile.Constant(src).(*SuFunc)
-			result = th.Call(fn)
+			actual = th.Call(fn)
 		})
 		if e == nil {
 			success = false
 		} else if es, ok := e.(string); ok {
-			result = SuStr(es)
+			actual = SuStr(es)
 			success = strings.Contains(es, args[2])
 		} else if ss, ok := e.(SuStr); ok {
-			result = ss
+			actual = ss
 			success = strings.Contains(string(ss), args[2])
 		} else if se, ok := e.(*SuExcept); ok {
-			result = se.SuStr
+			actual = se.SuStr
 			success = strings.Contains(string(se.SuStr), args[2])
 		} else {
-			result = SuStr(fmt.Sprintf("%#v", e))
+			actual = SuStr(fmt.Sprintf("%#v", e))
 			success = false
 		}
 	} else {
 		fn := compile.Constant(src).(*SuFunc)
-		actual := th.Call(fn)
-		result = actual
+		actual = th.Call(fn)
 		if expected == "**notfalse**" {
 			success = actual != False
 		} else {
 			expectedValue := compile.Constant(expected)
 			success = actual.Equal(expectedValue)
+			expected = WithType(expectedValue)
 		}
 	}
 	if !success {
-		fmt.Println("\tgot:", result)
-		fmt.Println("\texpected: " + expected)
+		fmt.Printf("\tgot: %s  expected: %s\n", WithType(actual), expected)
 	}
 	return success
 }
@@ -124,8 +123,7 @@ func pt_lang_rangeto(args []string, _ []bool) bool {
 	expected := SuStr(args[3])
 	actual := SuStr(s).RangeTo(from, to)
 	if !actual.Equal(expected) {
-		fmt.Println("\tgot:", actual)
-		fmt.Println("\texpected:", expected)
+		fmt.Printf("\tgot: %v  expected: %v\n", actual, expected)
 		return false
 	}
 	return true
@@ -141,8 +139,7 @@ func pt_lang_rangelen(args []string, _ []bool) bool {
 	expected := args[len(args)-1]
 	actual := SuStr(s).RangeLen(from, n)
 	if !actual.Equal(SuStr(expected)) {
-		fmt.Println("\tgot:", actual)
-		fmt.Println("\texpected:", expected)
+		fmt.Printf("\tgot: %v  expected: %v\n", actual, expected)
 		return false
 	}
 
@@ -150,8 +147,7 @@ func pt_lang_rangelen(args []string, _ []bool) bool {
 	expectedList := strToList(expected)
 	actualList := list.RangeLen(from, n)
 	if !actualList.Equal(expectedList) {
-		fmt.Println("\tgot:", actualList)
-		fmt.Println("\texpected:", expectedList)
+		fmt.Printf("\tgot: %v  expected: %v\n", actualList, expectedList)
 		return false
 	}
 

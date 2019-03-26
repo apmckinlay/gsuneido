@@ -123,7 +123,7 @@ func Equals(expected interface{}) Tester {
 		} else if reflect.DeepEqual(expected, actual) {
 			return ""
 		}
-		return fmt.Sprintf("expected: %s but got: %s",
+		return fmt.Sprintf("expected: %s  got: %s",
 			show(expected), show(actual))
 	}
 }

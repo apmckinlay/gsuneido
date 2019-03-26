@@ -94,11 +94,7 @@ func eval(src string) {
 	result := th.Call(fn)
 	if result != nil {
 		prompt(">>> ")
-		fmt.Print(result)
-		if _, ok := result.(SuStr); !ok {
-			fmt.Printf(" <%s %T>", result.Type(), result)
-		}
-		fmt.Println()
+		fmt.Println(WithType(result))
 	}
 	fmt.Println()
 }
