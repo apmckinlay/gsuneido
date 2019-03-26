@@ -23,7 +23,7 @@ func (ob *MemBase) Members() *SuObject { // TODO sequence
 }
 
 func (ob *MemBase) Size() Value {
-	return IntToVal(len(ob.Data))
+	return IntVal(len(ob.Data))
 }
 
 func MemberQ(ob Findable, mem Value) Value {

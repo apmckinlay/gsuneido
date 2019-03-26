@@ -193,7 +193,7 @@ func (ob *SuObject) Insert(at int, val Value) {
 		copy(ob.list[at+1:], ob.list[at:])
 		ob.list[at] = val
 	} else {
-		ob.Put(IntToVal(at), val)
+		ob.Put(IntVal(at), val)
 	}
 	ob.migrate()
 }
@@ -206,7 +206,7 @@ func (ob *SuObject) mustBeMutable() {
 
 func (ob *SuObject) migrate() {
 	for {
-		x := ob.named.Del(IntToVal(len(ob.list)))
+		x := ob.named.Del(IntVal(len(ob.list)))
 		if x == nil {
 			break
 		}
