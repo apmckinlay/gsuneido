@@ -46,9 +46,9 @@ func TestMmapWrite(t *testing.T) {
 	ms.Close()
 
 	ms, _ = MmapStor("stor_test.tmp", READ)
-	buf = ms.Data(0)
+	data := ms.Data(0)
 	for i := 0; i < N; i++ {
-		Assert(t).That(buf[i], Equals(byte(i)))
+		Assert(t).That(data[i], Equals(byte(i)))
 	}
 	ms.Close()
 

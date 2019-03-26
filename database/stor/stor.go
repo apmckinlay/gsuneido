@@ -8,6 +8,7 @@ package stor
 
 import (
 	"sync"
+	"unsafe"
 
 	"github.com/apmckinlay/gsuneido/util/verify"
 )
@@ -57,7 +58,7 @@ func (s *stor) Alloc(n int) (Offset, []byte) {
 	offset := s.size
 	s.size += uint64(n)
 	s.lock.Unlock()
-	return offset, s.Data(offset)[:n:n]
+	return offset, s.data(offset)[:n:n]
 }
 
 // Data returns the slice of bytes at the given offset.
@@ -68,7 +69,12 @@ func (s *stor) Alloc(n int) (Offset, []byte) {
 // prior to accessing "new" chunks from another thread's Alloc.
 // This requires mapping the existing chunks initially
 // since lazily mapping would require locking.
-func (s *stor) Data(offset Offset) []byte {
+func (s *stor) Data(offset Offset) string {
+	b := s.data(offset)
+	return *(*string)(unsafe.Pointer(&b))
+}
+
+func (s *stor) data(offset Offset) []byte {
 	chunk := s.offsetToChunk(offset)
 	c := s.chunks[chunk]
 	return c[offset&(s.chunksize-1):]
