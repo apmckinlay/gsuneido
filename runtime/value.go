@@ -35,7 +35,7 @@ type Value interface {
 	// ToInt converts false (SuBool), "" (SuStr), SuInt, SuDnum to int
 	ToInt() (int, bool)
 
-	// IfInt SuInt, SuDnum to int
+	// IfInt converts SuInt, SuDnum to int
 	IfInt() (int, bool)
 
 	// ToDnum converts false (SuBool), "" (SuStr), SuInt, SuDnum to Dnum
@@ -158,6 +158,15 @@ func ToStrOrString(x Value) string {
 // calls Value.ToInt and panics if it fails
 func ToInt(x Value) int {
 	if i, ok := x.ToInt(); ok {
+		return i
+	}
+	panic("can't convert " + errType(x) + " to integer")
+}
+
+// IfInt converts SuInt, SuDnum to int
+// calls Value.IfInt and panics if it fails
+func IfInt(x Value) int {
+	if i, ok := x.IfInt(); ok {
 		return i
 	}
 	panic("can't convert " + errType(x) + " to integer")

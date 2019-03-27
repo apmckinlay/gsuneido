@@ -74,3 +74,31 @@ loop:
 	}
 	return -1
 }
+
+// Doesc returns the next byte, interpreting escape sequences
+func Doesc(s string, i int) (byte, int) {
+	c := s[i]
+	if c != '\\' || i+1 >= len(s) {
+		return c, i
+	}
+	c = s[i+1]
+	switch c {
+	case 'n':
+		return '\n', i + 1
+	case 't':
+		return '\t', i + 1
+	case 'r':
+		return '\r', i + 1
+	case '\\', '"', '\'':
+		return c, i + 1
+	case 'x':
+		if i+2 < len(s) {
+			dig1 := ascii.Digit(s[i+1], 16)
+			dig2 := ascii.Digit(s[i+2], 16)
+			if dig1 != -1 && dig2 != -1 {
+				return byte(16*dig1 + dig2), i + 3
+			}
+		}
+	}
+	return '\\', i
+}

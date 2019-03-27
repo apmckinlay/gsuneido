@@ -52,3 +52,17 @@ func IsHexDigit(c byte) bool {
 	return IsDigit(c) ||
 		('a' <= c && c <= 'f') || ('A' <= c && c <= 'F')
 }
+
+// Digit returns the integer value of an ascii digit in a specified radix
+func Digit(c byte, radix int) int {
+	n := 99
+	if IsDigit(c) {
+		n = int(c - '0')
+	} else if IsHexDigit(c) {
+		n = int(10 + ToLower(c) - 'a')
+	}
+	if n < radix {
+		return n
+	}
+	return -1
+}

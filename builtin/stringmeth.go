@@ -50,6 +50,7 @@ func init() {
 				}
 				return ob
 			}),
+		//TODO Extract
 		"Find": method2("(string, pos=0)", func(this, arg1, arg2 Value) Value {
 			s := IfStr(this)
 			pos := position(arg2, len(s))
@@ -119,7 +120,7 @@ func init() {
 		"Has?": method1("(string)", func(this, arg Value) Value {
 			return SuBool(strings.Contains(IfStr(this), IfStr(arg)))
 		}),
-		"Iter": method0(func(this Value) Value { // TODO sequence
+		"Iter": method0(func(this Value) Value {
 			iterable := this.(interface{ Iter() Iter })
 			return SuIter{Iter: iterable.Iter()}
 		}),
@@ -137,7 +138,21 @@ func init() {
 			}
 			return SuBool(result)
 		}),
-		//TODO MapN
+		"MapN": methodRaw("(n, default)", // methodRaw to get thread
+			func(t *Thread, as *ArgSpec, this Value, args ...Value) Value {
+				args = t.Args(&paramSpecMapN, as)
+				s := IfStr(this)
+				n := IfInt(args[0])
+				block := args[1]
+				var buf strings.Builder
+				for i := 0; i+n < len(s); i += n {
+					val := t.CallWithArgs(block, SuStr(s[i:i+n]))
+					if val != nil {
+						buf.WriteString(ToStr(val))
+					}
+				}
+				return SuStr(buf.String())
+			}),
 		//TODO Match
 		"NthLine": method1("(n)", func(this, arg Value) Value {
 			s := IfStr(this)
@@ -268,7 +283,17 @@ func init() {
 				to := t.TrCache.Get(IfStr(args[1]))
 				return SuStr(tr.Replace(IfStr(this), from, to))
 			}),
-		//TODO Unescape
+		"Unescape": method0(func(this Value) Value {
+			s := IfStr(this)
+			var buf strings.Builder
+			buf.Grow(len(s))
+			for i := 0; i < len(s); i++ {
+				var c byte
+				c, i = str.Doesc(s, i)
+				buf.WriteByte(c)
+			}
+			return SuStr(buf.String())
+		}),
 		"Upper": method0(func(this Value) Value {
 			return SuStr(strings.ToUpper(IfStr(this)))
 		}),
@@ -286,6 +311,7 @@ func init() {
 	}
 }
 
+var paramSpecMapN = params("(n, block)")
 var paramSpecReplace = params("(pattern, replacement = '', count = false)")
 var paramSpecTr = params("(from, to='')")
 
