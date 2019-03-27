@@ -62,7 +62,7 @@ func (dn SuDnum) Hash2() uint32 {
 func (dn SuDnum) Equal(other interface{}) bool {
 	if d2, ok := other.(SuDnum); ok {
 		return dnum.Equal(dn.Dnum, d2.Dnum)
-	} else if i, ok := SmiToInt(other); ok {
+	} else if i, ok := SuIntToInt(other); ok {
 		return dnum.Equal(dn.Dnum, dnum.FromInt(int64(i)))
 	}
 	return false

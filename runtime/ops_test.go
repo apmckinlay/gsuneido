@@ -9,7 +9,7 @@ import (
 
 func TestDiv(t *testing.T) {
 	q := Div(SuInt(999), SuInt(3))
-	xi, xok := SmiToInt(q)
+	xi, xok := SuIntToInt(q)
 	Assert(t).That(xok, Equals(true))
 	Assert(t).That(xi, Equals(333))
 	q = Div(SuInt(1), SuInt(3))

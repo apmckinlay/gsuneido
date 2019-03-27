@@ -654,7 +654,7 @@ func (cg *cgen) emitValue(val Value) {
 		cg.emit(op.One)
 	} else if val == EmptyStr {
 		cg.emit(op.EmptyStr)
-	} else if i, ok := SmiToInt(val); ok {
+	} else if i, ok := SuIntToInt(val); ok {
 		cg.emitInt16(op.Int, i)
 	} else {
 		cg.emitUint8(op.Value, cg.value(val))

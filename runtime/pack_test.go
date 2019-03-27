@@ -62,8 +62,8 @@ func TestPackInt64(t *testing.T) {
 		buf = PackInt64(n, buf)
 		Assert(t).That(buf, Equals(expected))
 		num := UnpackNumber(rbuf{buf})
-		x := num.(*smi)
-		Assert(t).That(int64(x.toInt()), Equals(n))
+		x,_ := SuIntToInt(num)
+		Assert(t).That(int64(x), Equals(n))
 	}
 	test(0, packPlus)
 	test(1, packPlus, 129, 0, 1)

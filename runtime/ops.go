@@ -41,8 +41,8 @@ func Gte(x Value, y Value) Value {
 }
 
 func Add(x Value, y Value) Value {
-	if xi, xok := SmiToInt(x); xok {
-		if yi, yok := SmiToInt(y); yok {
+	if xi, xok := SuIntToInt(x); xok {
+		if yi, yok := SuIntToInt(y); yok {
 			return IntVal(xi + yi)
 		}
 	}
@@ -50,8 +50,8 @@ func Add(x Value, y Value) Value {
 }
 
 func Sub(x Value, y Value) Value {
-	if xi, xok := SmiToInt(x); xok {
-		if yi, yok := SmiToInt(y); yok {
+	if xi, xok := SuIntToInt(x); xok {
+		if yi, yok := SuIntToInt(y); yok {
 			return IntVal(xi - yi)
 		}
 	}
@@ -59,8 +59,8 @@ func Sub(x Value, y Value) Value {
 }
 
 func Mul(x Value, y Value) Value {
-	if xi, xok := SmiToInt(x); xok {
-		if yi, yok := SmiToInt(y); yok {
+	if xi, xok := SuIntToInt(x); xok {
+		if yi, yok := SuIntToInt(y); yok {
 			return IntVal(xi * yi)
 		}
 	}
@@ -68,8 +68,8 @@ func Mul(x Value, y Value) Value {
 }
 
 func Div(x Value, y Value) Value {
-	if yi, yok := SmiToInt(y); yok && yi != 0 {
-		if xi, xok := SmiToInt(x); xok {
+	if yi, yok := SuIntToInt(y); yok && yi != 0 {
+		if xi, xok := SuIntToInt(x); xok {
 			if xi%yi == 0 {
 				return IntVal(xi / yi)
 			}
@@ -134,7 +134,7 @@ func UnaryPlus(x Value) Value {
 }
 
 func UnaryMinus(x Value) Value {
-	if xi, ok := SmiToInt(x); ok {
+	if xi, ok := SuIntToInt(x); ok {
 		return IntVal(-xi)
 	}
 	return SuDnum{Dnum: ToDnum(x).Neg()}

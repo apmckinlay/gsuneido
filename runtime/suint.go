@@ -18,11 +18,10 @@ import (
 
 type smi byte
 
-const smiRange = 1 << 16
 const MinSuInt = math.MinInt16
 const MaxSuInt = math.MaxInt16
 
-var smispace [smiRange]smi // uninitialized BSS, no actual memory used
+var smispace [1 << 16]smi // uninitialized BSS, no actual memory used
 var smibase = uintptr(unsafe.Pointer(&smispace[0]))
 
 func init() {
@@ -40,8 +39,8 @@ func SuInt(n int) *smi {
 	return &smispace[offset] // will panic if out of range
 }
 
-// SmiToInt converts to int if its argument is *smi
-func SmiToInt(x interface{}) (int, bool) {
+// SuIntToInt converts to int if its argument is *smi
+func SuIntToInt(x interface{}) (int, bool) {
 	if si, ok := x.(*smi); ok {
 		return si.toInt(), true
 	}
