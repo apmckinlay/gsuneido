@@ -50,7 +50,19 @@ func init() {
 				}
 				return ob
 			}),
-		//TODO Extract
+		"Extract": method2("(pattern, part=0)", func(this, arg1, arg2 Value) Value {
+			s := IfStr(this)
+			pat := regex.Compile(IfStr(arg1))
+			var res regex.Result
+			if !pat.FirstMatch(s, 0, &res) {
+				return False
+			}
+			pos, end := res[1].Range()
+			if pos == -1 {
+				pos, end = res[0].Range()
+			}
+			return SuStr(s[pos:end])
+		}),
 		"Find": method2("(string, pos=0)", func(this, arg1, arg2 Value) Value {
 			s := IfStr(this)
 			pos := position(arg2, len(s))
@@ -145,8 +157,9 @@ func init() {
 				n := IfInt(args[0])
 				block := args[1]
 				var buf strings.Builder
-				for i := 0; i+n < len(s); i += n {
-					val := t.CallWithArgs(block, SuStr(s[i:i+n]))
+				for i := 0; i < len(s); i += n {
+					end := ints.Min(i + n, len(s))
+					val := t.CallWithArgs(block, SuStr(s[i:end]))
 					if val != nil {
 						buf.WriteString(ToStr(val))
 					}
@@ -173,7 +186,7 @@ func init() {
 					return False
 				}
 				ob := &SuObject{}
-				for i,part := range res {
+				for i, part := range res {
 					pos, end := part.Range()
 					if pos >= 0 {
 						p := &SuObject{}
