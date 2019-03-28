@@ -48,8 +48,8 @@ func repl() {
 
 	language.Def()
 	language.Concat()
-	if len(flag.Args()) > 1 {
-		eval(flag.Arg(1))
+	if len(flag.Args()) > 0 {
+		eval(flag.Arg(0))
 	} else {
 		prompt("Press Enter twice (i.e. blank line) to execute, q to quit\n")
 		r := bufio.NewReader(os.Stdin)
