@@ -14,7 +14,7 @@ type SuBool bool
 
 // Value interface --------------------------------------------------
 
-var _ Value = SuBool(true)
+var _ Value = (*SuBool)(nil)
 
 func (b SuBool) ToInt() (int, bool) {
 	return 0, b == false

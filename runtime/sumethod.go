@@ -16,7 +16,7 @@ func (m *SuMethod) GetFn() Value {
 
 // Value interface --------------------------------------------------
 
-var _ Value = (*SuMethod)(nil) // verify *SuMethod satisfies Value
+var _ Value = (*SuMethod)(nil)
 
 func (m *SuMethod) Call(t *Thread, as *ArgSpec) Value {
 	t.this = m.this

@@ -17,7 +17,7 @@ type SuDnum struct {
 
 // Value interface --------------------------------------------------
 
-var _ Value = SuDnum{}
+var _ Value = (*SuDnum)(nil)
 
 func (dn SuDnum) ToInt() (int, bool) {
 	return dn.Dnum.ToInt()

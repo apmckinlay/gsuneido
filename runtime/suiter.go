@@ -12,7 +12,7 @@ type SuIter struct {
 
 // Value interface --------------------------------------------------
 
-var _ Value = SuIter{} // verify SuIter satisfies Value
+var _ Value = (*SuIter)(nil)
 
 func (SuIter) Call(*Thread, *ArgSpec) Value {
 	panic("can't call Iterator")

@@ -30,7 +30,7 @@ type SuFunc struct {
 
 // Value interface (mostly handled by ParamSpec) --------------------
 
-var _ Value = (*SuFunc)(nil) // verify *SuFunc satisfies Value
+var _ Value = (*SuFunc)(nil)
 
 func (f *SuFunc) Call(t *Thread, as *ArgSpec) Value {
 	args := t.Args(&f.ParamSpec, as)

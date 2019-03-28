@@ -55,7 +55,7 @@ func (si *smi) toInt() int {
 
 // Value interface --------------------------------------------------
 
-var _ Value = SuInt(0)
+var _ Value = (*smi)(nil)
 
 func (si *smi) ToInt() (int, bool) {
 	return si.toInt(), true

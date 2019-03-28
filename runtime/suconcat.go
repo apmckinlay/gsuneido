@@ -64,7 +64,7 @@ func (c SuConcat) Iter() Iter {
 
 // Value interface --------------------------------------------------
 
-var _ Value = SuConcat{}
+var _ Value = (*SuConcat)(nil)
 
 func (c SuConcat) ToInt() (int, bool) {
 	return 0, c.n == 0

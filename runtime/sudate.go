@@ -666,7 +666,7 @@ var (
 
 // Value interface --------------------------------------------------
 
-var _ Value = SuDate{}
+var _ Value = (*SuDate)(nil)
 
 func (d SuDate) String() string {
 	if d.time == 0 {
