@@ -153,7 +153,37 @@ func init() {
 				}
 				return SuStr(buf.String())
 			}),
-		//TODO Match
+		"Match": method3("(pattern, pos=false, prev=false)",
+			func(this, arg1, arg2, arg3 Value) Value {
+				s := IfStr(this)
+				pat := regex.Compile(IfStr(arg1))
+				prev := ToBool(arg3)
+				pos := 0
+				if arg2 != False {
+					pos = IfInt(arg2)
+				} else if prev {
+					pos = len(s)
+				}
+				method := pat.FirstMatch
+				if prev {
+					method = pat.LastMatch
+				}
+				var res regex.Result
+				if !method(s, pos, &res) {
+					return False
+				}
+				ob := &SuObject{}
+				for i,part := range res {
+					pos, end := part.Range()
+					if pos >= 0 {
+						p := &SuObject{}
+						p.Add(IntVal(pos))
+						p.Add(IntVal(end - pos))
+						ob.Put(SuInt(i), p)
+					}
+				}
+				return ob
+			}),
 		"NthLine": method1("(n)", func(this, arg Value) Value {
 			s := IfStr(this)
 			n := len(s)
@@ -325,9 +355,10 @@ func replace(t *Thread, s string, patarg string, reparg Value, count int) Value 
 	nsubs := 0
 	var buf strings.Builder
 	pat.ForEachMatch(s, func(result *regex.Result) bool {
-		buf.WriteString(s[from:result.Pos()])
+		pos, end := result[0].Range()
+		buf.WriteString(s[from:pos])
 		buf.WriteString(rep)
-		from = result.End()
+		from = end
 		nsubs++
 		return nsubs < count
 	})

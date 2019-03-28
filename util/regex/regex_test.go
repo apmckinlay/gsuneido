@@ -71,7 +71,7 @@ func TestForEachMatch(t *testing.T) {
 		pat := Compile(p)
 		ob := []string{}
 		pat.ForEachMatch(s, func(r *Result) bool {
-			ob = append(ob, r.Group(s, 0))
+			ob = append(ob, r[0].Part(s))
 			return len(ob) < 4
 		})
 		Assert(t).That(ob, Equals(expected))
@@ -101,7 +101,7 @@ func pt_match(args []string, _ []bool) bool {
 			result = !result
 		} else {
 			for i, e := range args[2:] {
-				result = result && (e == args[0][res.pos[i]:res.end[i]])
+				result = result && (e == args[0][res[i].pos1-1:res[i].end])
 			}
 		}
 	}

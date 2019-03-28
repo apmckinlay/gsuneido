@@ -58,10 +58,6 @@ func paramSplit(s string) (string, ParamSpec) {
 	return name, ps
 }
 
-func method(p string, f func(t *Thread, this Value, args ...Value) Value) Value {
-	return &SuBuiltinMethod{Fn: f, ParamSpec: params(p)}
-}
-
 func method0(f func(this Value) Value) Value {
 	return &SuBuiltinMethod0{SuBuiltin1{f, BuiltinParams{}}}
 }
@@ -72,6 +68,10 @@ func method1(p string, f func(this, a1 Value) Value) Value {
 
 func method2(p string, f func(this, a1, a2 Value) Value) Value {
 	return &SuBuiltinMethod2{SuBuiltin3{f, BuiltinParams{ParamSpec: params(p)}}}
+}
+
+func method3(p string, f func(this, a1, a2,a3 Value) Value) Value {
+	return &SuBuiltinMethod3{SuBuiltin4{f, BuiltinParams{ParamSpec: params(p)}}}
 }
 
 func methodRaw(p string,

@@ -94,53 +94,44 @@ func Compile(rx string) Pattern {
 
 // Result ----------------------------------------------------------------------
 
-// MAX_RESULTS is the maximum number of elements in Result
-const MAX_RESULTS = 10
+// maxResult is the maximum number of elements in Result
+const maxResult = 10
 
-// Result holds the results of a match
-type Result struct {
-	tmp [MAX_RESULTS]int
-	pos [MAX_RESULTS]int
-	end [MAX_RESULTS]int
+type Result [maxResult]part
+
+// part holds the results of a match
+type part struct {
+	// pos1 is the index of the match + 1 (so zero is invalid)
+	pos1 int
+	// end is the index after the match i.e. non-inclusive
+	end int
 }
 
-// GroupCount returns the number of matched groups in a Result
-func (r *Result) GroupCount() int {
-	i := ints.Index(r.end[:], -1)
-	if i == -1 {
-		return 9
-	}
-	return i - 1
+// Range returns the start and end of part of a match, pos is -1 for no match.
+// end is after the match i.e. non-inclusive
+func (p part) Range() (pos, end int) {
+	return p.pos1 - 1, p.end
 }
 
-// Group returns one of the matched groups from a Result
-func (r *Result) Group(s string, i int) string {
-	verify.That(0 <= i && i < MAX_RESULTS)
-	if r.end[i] == -1 {
+// Part returns the substring of part of a match, "" for no match
+func (p part) Part(s string) string {
+	if p.pos1 == 0 {
 		return ""
 	}
-	return s[r.pos[i]:r.end[i]]
-}
-
-func (r *Result) Pos() int {
-	return r.pos[0]
-}
-
-func (r *Result) End() int {
-	return r.end[0]
+	return s[p.pos1-1 : p.end]
 }
 
 func (r *Result) String() string {
 	s := ""
-	for i := 0; i < MAX_RESULTS; i++ {
-		s += "(" + strconv.Itoa(r.pos[i]) + ", " + strconv.Itoa(r.end[i]) + ") "
+	for _, p := range r {
+		s += "(" + strconv.Itoa(p.pos1-1) + ", " + strconv.Itoa(p.end) + ") "
 	}
 	return s
 }
 
 // Pattern ---------------------------------------------------------------------
 
-const MAX_BRANCH = 1000
+const maxBranch = 1000
 
 // Pattern is a compiled regular expression
 type Pattern struct {
@@ -156,12 +147,12 @@ func (p Pattern) Matches(s string) bool {
 // FirstMatch finds the first match in the string at or after pos.
 // Returns true if a match is found, else false.
 func (p Pattern) FirstMatch(s string, pos int, result *Result) bool {
-	// allocate these once per match instead of once per amatch
+	var w work
 	sn := len(s)
 	verify.That(0 <= pos && pos <= sn)
 	e := p.pat[1] // skip LEFT0
 	for si := pos; si <= sn; si = e.nextPossible(s, si, sn) {
-		if p.Amatch(s, si, result) {
+		if p.Amatch(s, si, result, &w) {
 			return true
 		}
 	}
@@ -172,10 +163,11 @@ func (p Pattern) FirstMatch(s string, pos int, result *Result) bool {
 // Returns true if a match is found, else false.
 // Does not use the nextPossible optimization so may be slower;
 func (p Pattern) LastMatch(s string, pos int, result *Result) bool {
+	var w work
 	sn := len(s)
 	verify.That(0 <= pos && pos <= sn)
 	for si := pos; si >= 0; si-- {
-		if p.Amatch(s, si, result) {
+		if p.Amatch(s, si, result, &w) {
 			return true
 		}
 	}
@@ -185,47 +177,53 @@ func (p Pattern) LastMatch(s string, pos int, result *Result) bool {
 // ForEachMatch calls action for each non-overlapping match in the string.
 // The action should return true to continue, false to stop.
 func (p Pattern) ForEachMatch(s string, action func(*Result) bool) {
+	var w work
 	var result Result
 	sn := len(s)
 	e := p.pat[1] // skip LEFT0
 	for si := 0; si <= sn; si = e.nextPossible(s, si, sn) {
-		if p.Amatch(s, si, &result) {
+		if p.Amatch(s, si, &result, &w) {
 			if !action(&result) {
 				break
 			}
-			si = ints.Max(result.pos[0], result.end[0]-1)
+			si = ints.Max(result[0].pos1-1, result[0].end-1)
 			// -1 since nextPossible will at least increment
 		}
 	}
 }
 
+// work is temporary values used by Amatch
+// declared externally and passed in to avoid zeroing on every Amatch call
+type work struct {
+	alt_si [maxBranch]int
+	alt_pi [maxBranch]int
+	tmp [maxResult]int
+}
+
 // Amatch tries to match at a specific position.
 // Returns true if a match is found, else false.
-func (p Pattern) Amatch(s string, si int, result *Result) bool {
-	var alt_si [MAX_BRANCH]int
-	var alt_pi [MAX_BRANCH]int
-	//Arrays.fill(result.end, -1)
+func (p Pattern) Amatch(s string, si int, result *Result, w *work) bool {
 	na := 0
 	for pi := 0; pi < len(p.pat); {
 		e := p.pat[pi]
 		if b, ok := e.(Branch); ok {
-			alt_pi[na] = pi + b.alt
-			alt_si[na] = si
+			w.alt_pi[na] = pi + b.alt
+			w.alt_si[na] = si
 			na++
 			pi += b.main
 		} else if j, ok := e.(Jump); ok {
 			pi += j.offset
 		} else if left, ok := e.(Left); ok {
 			i := left.idx
-			if i < MAX_RESULTS {
-				result.tmp[i] = si
+			if i < maxResult {
+				w.tmp[i] = si
 			}
 			pi++
 		} else if right, ok := e.(Right); ok {
 			i := right.idx
-			if i < MAX_RESULTS {
-				result.pos[i] = result.tmp[i]
-				result.end[i] = si
+			if i < maxResult {
+				result[i].pos1 = w.tmp[i] + 1
+				result[i].end = si
 			}
 			pi++
 		} else {
@@ -235,8 +233,8 @@ func (p Pattern) Amatch(s string, si int, result *Result) bool {
 			} else if na > 0 {
 				// backtrack
 				na--
-				si = alt_si[na]
-				pi = alt_pi[na]
+				si = w.alt_si[na]
+				pi = w.alt_pi[na]
 			} else {
 				return false
 			}
@@ -712,10 +710,10 @@ type Backref struct {
 }
 
 func (e Backref) omatch(s string, si int, res *Result) int {
-	if res.end[e.idx] == -1 {
+	if res[e.idx].end == -1 {
 		return FAIL
 	}
-	b := s[res.pos[e.idx]:res.end[e.idx]]
+	b := s[res[e.idx].pos1-1 : res[e.idx].end]
 	bn := len(b)
 	if e.ignoringCase {
 		if si+bn > len(s) {
