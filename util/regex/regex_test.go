@@ -1,6 +1,7 @@
 package regex
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 
@@ -93,8 +94,8 @@ func TestPtest(t *testing.T) {
 // an optional third argument can be "false" for matches that should fail
 // or additional arguments can specify \0, \1, ...
 func pt_match(args []string, _ []bool) bool {
-	var res Result
 	pat := Compile(args[1])
+	var res Result
 	result := pat.FirstMatch(args[0], 0, &res)
 	if len(args) > 2 {
 		if args[2] == "false" {
@@ -109,3 +110,25 @@ func pt_match(args []string, _ []bool) bool {
 }
 
 var _ = ptest.Add("regex_match", pt_match)
+
+func pt_replace(args []string, _ []bool) bool {
+	s := args[0]
+	pat := Compile(args[1])
+	rep := args[2]
+	expected := args[3]
+	var res Result
+	result := pat.FirstMatch(s, 0, &res)
+	if result == false {
+		return false
+	}
+	r := Replace(s, rep, &res)
+	pos, end := res[0].Range()
+	t := s[:pos] + r + s[end:]
+	if t != expected {
+		fmt.Println("\t     got:", t, "\n\texpected:", expected)
+		return false
+	}
+	return true
+}
+
+var _ = ptest.Add("regex_replace", pt_replace)

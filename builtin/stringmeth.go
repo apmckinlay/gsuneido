@@ -158,7 +158,7 @@ func init() {
 				block := args[1]
 				var buf strings.Builder
 				for i := 0; i < len(s); i += n {
-					end := ints.Min(i + n, len(s))
+					end := ints.Min(i+n, len(s))
 					val := t.CallWithArgs(block, SuStr(s[i:end]))
 					if val != nil {
 						buf.WriteString(ToStr(val))
@@ -363,14 +363,28 @@ func replace(t *Thread, s string, patarg string, reparg Value, count int) Value 
 		return SuStr(s)
 	}
 	pat := t.RxCache.Get(patarg)
-	rep := IfStr(reparg) //TODO block && backrefs
+	rep := ""
+	if !isFunc(reparg) {
+		rep = ToStr(reparg)
+		reparg = nil
+	}
 	from := 0
 	nsubs := 0
 	var buf strings.Builder
 	pat.ForEachMatch(s, func(result *regex.Result) bool {
 		pos, end := result[0].Range()
 		buf.WriteString(s[from:pos])
-		buf.WriteString(rep)
+		if reparg == nil {
+			t := regex.Replace(s, rep, result)
+			buf.WriteString(t)
+		} else {
+			r := result[0].Part(s)
+			v := t.CallWithArgs(reparg, SuStr(r))
+			if v != nil {
+				r = ToStr(v)
+			}
+			buf.WriteString(r)
+		}
 		from = end
 		nsubs++
 		return nsubs < count
