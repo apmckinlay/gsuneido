@@ -116,6 +116,9 @@ func Equals(expected interface{}) Tester {
 				}
 			}
 		}
+		if intEqual(expected, actual) {
+			return ""
+		}
 		if e, ok := expected.(Eq); ok {
 			if e.Equal(actual) {
 				return ""
@@ -125,6 +128,58 @@ func Equals(expected interface{}) Tester {
 		}
 		return fmt.Sprintf("expected: %s  got: %s",
 			show(expected), show(actual))
+	}
+}
+
+func intEqual(x interface{}, y interface{}) bool {
+	var xi int64
+	switch i := x.(type) {
+	case int:
+		xi = int64(i)
+	case uint:
+		xi = int64(i)
+	case int8:
+		xi = int64(i)
+	case uint8:
+		xi = int64(i)
+	case int16:
+		xi = int64(i)
+	case uint16:
+		xi = int64(i)
+	case int32:
+		xi = int64(i)
+	case uint32:
+		xi = int64(i)
+	case int64:
+		xi = int64(i)
+	case uint64:
+		xi = int64(i)
+	default:
+		return false
+	}
+	switch i := y.(type) {
+	case int:
+		return xi == int64(i)
+	case uint:
+		return xi == int64(i)
+	case int8:
+		return xi == int64(i)
+	case uint8:
+		return xi == int64(i)
+	case int16:
+		return xi == int64(i)
+	case uint16:
+		return xi == int64(i)
+	case int32:
+		return xi == int64(i)
+	case uint32:
+		return xi == int64(i)
+	case int64:
+		return xi == int64(i)
+	case uint64:
+		return xi == int64(i)
+	default:
+		return false
 	}
 }
 
