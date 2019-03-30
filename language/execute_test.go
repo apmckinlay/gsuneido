@@ -1,7 +1,6 @@
 package language
 
 import (
-	"bytes"
 	"fmt"
 	"strconv"
 	"strings"
@@ -188,7 +187,7 @@ func pt_compare_packed(args []string, _ []bool) bool {
 		for j := i + 1; j < n; j++ {
 			y := compile.Constant(args[j])
 			yp := Pack(y.(Packable))
-			if bytes.Compare(xp, yp) >= 0 || bytes.Compare(yp, xp) <= 0 {
+			if strings.Compare(xp, yp) >= 0 || strings.Compare(yp, xp) <= 0 {
 				fmt.Println(x, "should be less than", y)
 				return false
 			}

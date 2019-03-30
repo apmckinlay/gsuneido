@@ -4,6 +4,7 @@ import (
 	"github.com/apmckinlay/gsuneido/runtime/types"
 	"github.com/apmckinlay/gsuneido/util/dnum"
 	"github.com/apmckinlay/gsuneido/util/ints"
+	"github.com/apmckinlay/gsuneido/util/pack"
 )
 
 // SuBool is a boolean Value
@@ -118,11 +119,10 @@ func (SuBool) PackSize(int) int {
 	return 1
 }
 
-func (b SuBool) Pack(buf []byte) []byte {
+func (b SuBool) Pack(buf *pack.Encoder) {
 	if b == true {
-		buf = append(buf, packTrue)
+		buf.Put1(packTrue)
 	} else {
-		buf = append(buf, packFalse)
+		buf.Put1(packFalse)
 	}
-	return buf
 }

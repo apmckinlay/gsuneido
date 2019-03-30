@@ -1,8 +1,12 @@
 package runtime
 
-import "github.com/apmckinlay/gsuneido/runtime/types"
+import (
+	"github.com/apmckinlay/gsuneido/runtime/types"
+	"github.com/apmckinlay/gsuneido/util/pack"
+)
 
 // TODO default, rules, observers, etc.
+// TODO lazy unpacking of Tuple
 
 // SuRecord is an SuObject with observers and rules
 type SuRecord struct {
@@ -47,12 +51,12 @@ func (SuRecord) Lookup(method string) Value {
 
 // Packable ---------------------------------------------------------
 
-func (r *SuRecord) Pack(buf []byte) []byte {
-	return r.SuObject.pack(buf, packRecord)
+func (r *SuRecord) Pack(buf *pack.Encoder) {
+	r.SuObject.pack(buf, packRecord)
 }
 
-func UnpackRecord(buf []byte) *SuRecord {
+func UnpackRecord(s string) *SuRecord {
 	r := NewSuRecord()
-	unpackObject(buf, &r.SuObject)
+	unpackObject(s, &r.SuObject)
 	return r
 }

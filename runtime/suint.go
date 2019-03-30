@@ -14,6 +14,7 @@ import (
 	"github.com/apmckinlay/gsuneido/runtime/types"
 	"github.com/apmckinlay/gsuneido/util/dnum"
 	"github.com/apmckinlay/gsuneido/util/ints"
+	"github.com/apmckinlay/gsuneido/util/pack"
 )
 
 type smi byte
@@ -155,9 +156,47 @@ func (*smi) Lookup(method string) Value {
 var _ Packable = SuInt(0)
 
 func (si *smi) PackSize(int) int {
-	return PackSizeInt64(int64(si.toInt()))
+	n := si.toInt()
+	if n == 0 {
+		return 1
+	}
+	if n < 0 {
+		n = -n
+	}
+	if n%10000 == 0 {
+		n /= 10000
+	}
+	if n < 10000 {
+		return 4
+	}
+	return 6
 }
 
-func (si *smi) Pack(buf []byte) []byte {
-	return PackInt64(int64(si.toInt()), buf)
+func (si *smi) Pack(buf *pack.Encoder) {
+	// pack the same as if we converted to Dnum and then packed
+	n := si.toInt()
+	xor := uint16(0)
+	if n < 0 {
+		buf.Put1(packMinus)
+		xor = 0xffff
+		n = -n
+	} else {
+		buf.Put1(packPlus)
+	}
+	if n == 0 {
+		return
+	}
+	e := 0
+	if n%10000 == 0 {
+		n /= 10000
+		e = 1
+	}
+	if n < 10000 {
+		lo := uint16(n) ^ xor
+		buf.Put1(byte(e+1^0x80)^byte(xor)).Uint16(lo)
+	} else {
+		hi := uint16(n/10000) ^ xor
+		lo := uint16(n%10000) ^ xor
+		buf.Put1(byte(e+2^0x80)^byte(xor)).Uint16(hi).Uint16(lo)
+	}
 }

@@ -169,6 +169,7 @@ func TestSuObjectSlice(t *testing.T) {
 func TestSuObjectPack(t *testing.T) {
 	ob := &SuObject{}
 	check := func() {
+		t.Helper()
 		Assert(t).That(Unpack(Pack(ob)), Equals(ob))
 	}
 	check()
@@ -189,5 +190,5 @@ func TestSuObjectPack2(t *testing.T) {
 	buf := Pack(ob)
 	expected := []byte{6, 128, 0, 0, 1, 128, 0, 0, 4, 3, 129, 0, 1, 128,
 		0, 0, 1, 128, 0, 0, 2, 4, 97, 128, 0, 0, 4, 3, 129, 0, 2}
-	Assert(t).That(buf, Equals(expected))
+	Assert(t).That(buf, Equals(string(expected)))
 }

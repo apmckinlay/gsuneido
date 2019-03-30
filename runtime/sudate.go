@@ -9,10 +9,9 @@ import (
 	"github.com/apmckinlay/gsuneido/runtime/types"
 	"github.com/apmckinlay/gsuneido/util/ascii"
 	"github.com/apmckinlay/gsuneido/util/ints"
+	"github.com/apmckinlay/gsuneido/util/pack"
 	"github.com/apmckinlay/gsuneido/util/verify"
 )
-
-//TODO split date from sudate
 
 /*
 SuDate is a Suneido date/time Value
@@ -762,16 +761,14 @@ func (SuDate) PackSize(int) int {
 }
 
 // Pack packs into the supplied byte slice (Packable interface)
-func (d SuDate) Pack(buf []byte) []byte {
-	buf = append(buf, packDate)
-	buf = packUint32(d.date, buf)
-	buf = packUint32(d.time, buf)
-	return buf
+func (d SuDate) Pack(buf *pack.Encoder) {
+	buf.Put1(packDate).Uint32(d.date).Uint32(d.time)
 }
 
 // UnpackDate unpacks a date from the supplied byte slice
-func UnpackDate(buf []byte) SuDate {
-	date := unpackUint32(buf)
-	time := unpackUint32(buf[4:])
+func UnpackDate(s string) SuDate {
+	d := pack.NewDecoder(s[1:])
+	date := d.Uint32()
+	time := d.Uint32()
 	return SuDate{date: date, time: time}
 }

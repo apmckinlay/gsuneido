@@ -7,6 +7,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/dnum"
 	"github.com/apmckinlay/gsuneido/util/hash"
 	"github.com/apmckinlay/gsuneido/util/ints"
+	"github.com/apmckinlay/gsuneido/util/pack"
 )
 
 // SuStr is a string Value
@@ -157,17 +158,10 @@ func (ss SuStr) PackSize(int) int {
 	return 1 + len(ss)
 }
 
-func (ss SuStr) Pack(buf []byte) []byte {
-	if ss == "" {
-		return buf
+func (ss SuStr) Pack(buf *pack.Encoder) {
+	if ss != "" {
+		buf.Put1(packString).PutStr(string(ss))
 	}
-	buf = append(buf, packString)
-	buf = append(buf, string(ss)...)
-	return buf
-}
-
-func UnpackSuStr(buf []byte) Value {
-	return SuStr(string(buf))
 }
 
 // iterator ---------------------------------------------------------

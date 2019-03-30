@@ -8,9 +8,8 @@ import (
 	"github.com/apmckinlay/gsuneido/runtime/types"
 	"github.com/apmckinlay/gsuneido/util/hmap"
 	"github.com/apmckinlay/gsuneido/util/ints"
+	"github.com/apmckinlay/gsuneido/util/pack"
 )
-
-//TODO split object from suobject
 
 // SuObject is a Suneido object
 // i.e. a container with both list and named members
@@ -564,63 +563,59 @@ func packSize(x Value, nest int) int {
 	panic("can't pack " + x.Type().String())
 }
 
-func (ob *SuObject) Pack(buf []byte) []byte {
-	return ob.pack(buf, packObject)
+func (ob *SuObject) Pack(buf *pack.Encoder) {
+	ob.pack(buf, packObject)
 }
 
-func (ob *SuObject) pack(buf []byte, tag byte) []byte {
-	buf = append(buf, tag)
+func (ob *SuObject) pack(buf *pack.Encoder, tag byte) {
+	buf.Put1(tag)
 	if ob.Size() == 0 {
-		return buf
+		return
 	}
-	buf = packInt32(int32(len(ob.list)), buf)
+	buf.Int32(len(ob.list))
 	for _, v := range ob.list {
-		buf = packValue(v, buf)
+		packValue(v, buf)
 	}
-	buf = packInt32(int32(ob.named.Size()), buf)
+	buf.Int32(ob.named.Size())
 	iter := ob.named.Iter()
 	for k, v := iter(); k != nil; k, v = iter() {
-		buf = packValue(k.(Value), buf)
-		buf = packValue(v.(Value), buf)
+		packValue(k.(Value), buf)
+		packValue(v.(Value), buf)
 	}
-	return buf
 }
 
-func packValue(x Value, buf []byte) []byte {
+func packValue(x Value, buf *pack.Encoder) {
 	n := packSize(x, 0)
-	buf = packInt32(int32(n), buf)
-	x.(Packable).Pack(buf[len(buf):])
-	return buf[:len(buf)+n]
+	buf.Int32(n)
+	x.(Packable).Pack(buf)
 }
 
-func UnpackObject(buf []byte) *SuObject {
-	return unpackObject(buf, &SuObject{})
+func UnpackObject(s string) *SuObject {
+	return unpackObject(s, &SuObject{})
 }
 
-func unpackObject(buf []byte, ob *SuObject) *SuObject {
-	if len(buf) == 0 {
+func unpackObject(s string, ob *SuObject) *SuObject {
+	if len(s) <= 1 {
 		return ob
 	}
+	buf := pack.NewDecoder(s[1:])
 	var v Value
-	n := int(unpackInt32(buf))
-	buf = buf[4:]
+	n := buf.Int32()
 	for i := 0; i < n; i++ {
-		buf, v = unpackValue(buf)
+		v = unpackValue(buf)
 		ob.Add(v)
 	}
 	var k Value
-	n = int(unpackInt32(buf))
-	buf = buf[4:]
+	n = buf.Int32()
 	for i := 0; i < n; i++ {
-		buf, k = unpackValue(buf)
-		buf, v = unpackValue(buf)
+		k = unpackValue(buf)
+		v = unpackValue(buf)
 		ob.Put(k, v)
 	}
 	return ob
 }
 
-func unpackValue(buf []byte) ([]byte, Value) {
-	size := unpackInt32(buf)
-	v := Unpack(buf[4 : 4+size])
-	return buf[4+size:], v
+func unpackValue(buf *pack.Decoder) Value {
+	size := buf.Int32()
+	return Unpack(buf.Get(size))
 }

@@ -1,12 +1,12 @@
 package runtime
 
 import (
-	"encoding/binary"
 	"math"
 
 	"github.com/apmckinlay/gsuneido/runtime/types"
 	"github.com/apmckinlay/gsuneido/util/dnum"
 	"github.com/apmckinlay/gsuneido/util/ints"
+	"github.com/apmckinlay/gsuneido/util/pack"
 )
 
 // SuDnum wraps a Dnum and implements Value and Packable
@@ -141,31 +141,28 @@ func abs(n int) int {
 }
 
 // Pack packs the SuDnum into buf (which must be large enough)
-func (dn SuDnum) Pack(buf []byte) []byte {
-	// for performance we avoid append
-	buf = buf[:1]
+func (dn SuDnum) Pack(buf *pack.Encoder) {
 	sign := dn.Sign()
 	if sign >= 0 {
-		buf[0] = packPlus
+		buf.Put1(packPlus)
 	} else {
-		buf[0] = packMinus
+		buf.Put1(packMinus)
 	}
 	if sign == 0 {
-		return buf
+		return
 	}
-	buf = buf[:2]
 	if dn.IsInf() {
 		if sign < 0 {
-			buf[1] = 0
+			buf.Put1(0)
 		} else {
-			buf[1] = 255
+			buf.Put1(255)
 		}
-		return buf
+		return
 	}
-	return packDnum(sign < 0, dn.Coef(), dn.Exp(), buf)
+	packDnum(sign < 0, dn.Coef(), dn.Exp(), buf)
 }
 
-func packDnum(neg bool, coef uint64, exp int, buf []byte) []byte {
+func packDnum(neg bool, coef uint64, exp int, buf *pack.Encoder) {
 	var p int
 	if exp > 0 {
 		p = 4 - (exp % 4)
@@ -177,9 +174,8 @@ func packDnum(neg bool, coef uint64, exp int, buf []byte) []byte {
 		exp += p
 	}
 	exp /= 4
-	buf[1] = scale(exp, neg)
-	buf = packCoef(buf, coef, neg)
-	return buf
+	buf.Put1(scale(exp, neg))
+	packCoef(buf, coef, neg)
 }
 
 func scale(exp int, neg bool) byte {
@@ -194,46 +190,42 @@ const e12 = 1000000000000
 const e8 = 100000000
 const e4 = 10000
 
-func packCoef(buf []byte, coef uint64, neg bool) []byte {
+func packCoef(buf *pack.Encoder, coef uint64, neg bool) {
 	flip := uint16(0)
 	if neg {
 		flip = 0xffff
 	}
-	buf = buf[:4]
-	binary.BigEndian.PutUint16(buf[2:], uint16(coef/e12)^flip)
+	buf.Uint16(uint16(coef/e12) ^ flip)
 	coef %= e12
 	if coef == 0 {
-		return buf
+		return
 	}
-	buf = buf[:6]
-	binary.BigEndian.PutUint16(buf[4:], uint16(coef/e8)^flip)
+	buf.Uint16(uint16(coef/e8) ^ flip)
 	coef %= e8
 	if coef == 0 {
-		return buf
+		return
 	}
-	buf = buf[:8]
-	binary.BigEndian.PutUint16(buf[6:], uint16(coef/e4)^flip)
+	buf.Uint16(uint16(coef/e4) ^ flip)
 	coef %= e4
 	if coef == 0 {
-		return buf
+		return
 	}
-	buf = buf[:10]
-	binary.BigEndian.PutUint16(buf[8:], uint16(coef)^flip)
-	return buf
+	buf.Uint16(uint16(coef) ^ flip)
 }
 
 const maxShiftable = math.MaxUint16 / 10000
 
 // UnpackNumber unpacks an SuInt or SuDnum
-func UnpackNumber(buf rbuf) Value {
+func UnpackNumber(s string) Value {
+	if len(s) <= 1 {
+		return Zero
+	}
+	buf := pack.NewDecoder(s)
 	sign := int8(+1)
-	if buf.get() == packMinus {
+	if buf.Get1() == packMinus {
 		sign = -1
 	}
-	if buf.remaining() == 0 {
-		return SuInt(0)
-	}
-	exp := int8(buf.get())
+	exp := int8(buf.Get1())
 	if exp == 0 {
 		return SuDnum{Dnum: dnum.NegInf}
 	}
@@ -244,7 +236,7 @@ func UnpackNumber(buf rbuf) Value {
 		exp = ^exp
 	}
 	exp = exp ^ -128
-	exp = exp - int8(buf.remaining()/2)
+	exp = exp - int8(buf.Remaining()/2)
 
 	coef := unpackLongPart(buf, sign < 0)
 
@@ -258,14 +250,14 @@ func UnpackNumber(buf rbuf) Value {
 	return SuDnum{Dnum: dnum.New(sign, coef, int(exp)*4+16)}
 }
 
-func unpackLongPart(buf rbuf, minus bool) uint64 {
+func unpackLongPart(buf *pack.Decoder, minus bool) uint64 {
 	flip := uint16(0)
 	if minus {
 		flip = 0xffff
 	}
 	n := uint64(0)
-	for buf.remaining() > 0 {
-		n = n*10000 + uint64(buf.getUint16()^flip)
+	for buf.Remaining() > 0 {
+		n = n*10000 + uint64(buf.Uint16()^flip)
 	}
 	return n
 }

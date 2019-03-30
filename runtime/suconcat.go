@@ -8,6 +8,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/dnum"
 	"github.com/apmckinlay/gsuneido/util/hash"
 	"github.com/apmckinlay/gsuneido/util/ints"
+	"github.com/apmckinlay/gsuneido/util/pack"
 )
 
 // SuConcat is a Value used to optimize string concatenation
@@ -165,8 +166,6 @@ func (c SuConcat) PackSize(int) int {
 	return 1 + c.n
 }
 
-func (c SuConcat) Pack(buf []byte) []byte {
-	buf = append(buf, packString)
-	buf = append(buf, c.b.a[:c.n]...)
-	return buf
+func (c SuConcat) Pack(buf *pack.Encoder) {
+	buf.Put1(packString).Put(c.b.a[:c.n])
 }
