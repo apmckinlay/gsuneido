@@ -11,37 +11,38 @@ import (
 func TestTupleBuilder(t *testing.T) {
 	var tb TupleBuilder
 	tup := tb.Build()
-	Assert(t).That([]byte(tup), Equals([]byte{'c', 0, 0, 0, 5}))
-	tb.Add("one")
+	Assert(t).That([]byte(tup), Equals([]byte{type8 << 6, 0, 3}))
+	tb.AddRaw("one")
 	tup = tb.Build()
-	Assert(t).That([]byte(tup), Equals([]byte{'c', 0, 1, 0, 9, 6, 'o', 'n', 'e'}))
+	Assert(t).That([]byte(tup), Equals([]byte{type8 << 6, 1, 7, 4, 'o', 'n', 'e'}))
+	Assert(t).That(tup.GetRaw(0), Equals("one"))
 
 	tb = TupleBuilder{}
-	tb.AddVal(SuInt(123))
-	tb.AddVal(SuStr("foobar"))
+	tb.Add(SuInt(123))
+	tb.Add(SuStr("foobar"))
 
 	tup = tb.Build()
-	Assert(t).That(tup.mode(), Equals('c'))
+	Assert(t).That(tup.mode(), Equals(type8))
 	Assert(t).That(tup.Count(), Equals(2))
 	Assert(t).That(tup.GetVal(0), Equals(SuInt(123)))
 	Assert(t).That(tup.GetVal(1), Equals(SuStr("foobar")))
 
 	s := strings.Repeat("helloworld", 30)
-	tb.Add(s)
+	tb.AddRaw(s)
 	tup = tb.Build()
-	Assert(t).That(tup.mode(), Equals('s'))
-	Assert(t).That(tup.Get(2), Equals(s))
+	Assert(t).That(tup.mode(), Equals(type16))
+	Assert(t).That(tup.GetRaw(2), Equals(s))
 
 }
 
 func TestLength(t *testing.T) {
-	Assert(t).That(tblength(0, 0), Equals(5))
-	Assert(t).That(tblength(1, 1), Equals(7))
-	Assert(t).That(tblength(1, 200), Equals(206))
-	Assert(t).That(tblength(1, 248), Equals(254))
+	Assert(t).That(tblength(0, 0), Equals(3))
+	Assert(t).That(tblength(1, 1), Equals(5))
+	Assert(t).That(tblength(1, 200), Equals(204))
+	Assert(t).That(tblength(1, 248), Equals(252))
 
-	Assert(t).That(tblength(1, 250), Equals(258))
-	Assert(t).That(tblength(1, 300), Equals(308))
+	Assert(t).That(tblength(1, 252), Equals(258))
+	Assert(t).That(tblength(1, 300), Equals(306))
 
-	Assert(t).That(tblength(1, 0x10000), Equals(0x1000c))
+	Assert(t).That(tblength(1, 0x10000), Equals(0x1000a))
 }
