@@ -3,6 +3,7 @@ package csio
 import (
 	"bufio"
 	"io"
+	"unsafe"
 
 	"github.com/apmckinlay/gsuneido/database/clientserver/commands"
 )
@@ -18,21 +19,26 @@ type ReadWrite struct {
 
 const maxio = 1024 * 1024 // 1 mb
 
+// NewReadWrite returns a new ReadWrite
 func NewReadWrite(rw io.ReadWriter) *ReadWrite {
 	return &ReadWrite{r: bufio.NewReader(rw), w: bufio.NewWriter(rw)}
 }
 
+// PutCmd writes a command byte
 func (rw *ReadWrite) PutCmd(cmd commands.Command) *ReadWrite {
-	rw.w.Write([]byte{byte(cmd)})
+	rw.w.WriteByte(byte(cmd))
 	return rw
 }
 
+// PutStr writes a size prefixed string
 func (rw *ReadWrite) PutStr(s string) *ReadWrite {
+	limit(int64(len(s)))
 	rw.PutInt(int64(len(s)))
-	rw.w.Write([]byte(s))
+	rw.w.WriteString(s)
 	return rw
 }
 
+// PutInt writes a zig zag encoded varint
 func (rw *ReadWrite) PutInt(i int64) *ReadWrite {
 	i = (i << 1) ^ (i >> 63) // zig zag encoding
 	n := uint64(i)
@@ -44,6 +50,7 @@ func (rw *ReadWrite) PutInt(i int64) *ReadWrite {
 	return rw
 }
 
+// GetBool reads a boolean
 func (rw *ReadWrite) GetBool() bool {
 	b, _ := rw.r.ReadByte()
 	switch b {
@@ -56,12 +63,14 @@ func (rw *ReadWrite) GetBool() bool {
 	}
 }
 
+// Get reads n bytes and returns it in a newly allocated buffer
 func (rw *ReadWrite) Get(n int) []byte {
 	buf := make([]byte, n)
 	io.ReadFull(rw.r, buf)
 	return buf
 }
 
+// GetInt reads a zig zag encoded varint
 func (rw *ReadWrite) GetInt() int64 {
 	shift := uint(0)
 	n := uint64(0)
@@ -78,27 +87,33 @@ func (rw *ReadWrite) GetInt() int64 {
 	return tmp
 }
 
+// GetSize returns GetInt, checking the size against the maxio limit
 func (rw *ReadWrite) GetSize() int {
 	return limit(rw.GetInt())
 }
 
+// GetStr reads a size prefixed string
 func (rw *ReadWrite) GetStr() string {
-	n := rw.GetInt()
-	s := string(rw.Get(limit(n)))
-	return s
+	n := rw.GetSize()
+	buf := rw.Get(n)
+	return *(*string)(unsafe.Pointer(&buf)) // safe since buf doesn't escape
 }
 
+// Flush flushes the Writer
 func (rw *ReadWrite) Flush() {
 	rw.w.Flush()
 }
 
+// limit panics if the size is negative or greater than maxio
 func limit(n int64) int {
-	if n < 0 || maxio < n {
-		panic("bad io size")
+	if 0 <= n && n < maxio {
+		return int(n)
 	}
-	return int(n)
+	panic("bad io size")
 }
 
+// Request does Flush and GetBool for the result.
+// If the result is false, it does GetStr for the error and panics with it.
 func (rw *ReadWrite) Request() {
 	rw.w.Flush()
 	if !rw.GetBool() {
