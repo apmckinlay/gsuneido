@@ -188,7 +188,7 @@ func TestSuObjectPack2(t *testing.T) {
 	ob.Add(One)
 	ob.Put(SuStr("a"), SuInt(2))
 	buf := Pack(ob)
-	expected := []byte{6, 128, 0, 0, 1, 128, 0, 0, 4, 3, 129, 0, 1, 128,
-		0, 0, 1, 128, 0, 0, 2, 4, 97, 128, 0, 0, 4, 3, 129, 0, 2}
-	Assert(t).That(buf, Equals(string(expected)))
+	expected := []byte{6, 128, 0, 0, 1, 128, 0, 0, 3, 3, 129, 10, 128,
+		0, 0, 1, 128, 0, 0, 2, 4, 97, 128, 0, 0, 3, 3, 129, 20}
+	Assert(t).That([]byte(buf), Equals(expected))
 }

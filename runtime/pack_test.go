@@ -19,35 +19,39 @@ func TestPack(t *testing.T) {
 
 func TestPackSuInt(t *testing.T) {
 	test := func(n int, expected ...byte) {
+		t.Helper()
 		s := Pack(SuInt(n))
-		Assert(t).That(s, Equals(string(expected)))
+		Assert(t).That([]byte(s), Equals(expected))
 		num := UnpackNumber(s)
-		x, _ := SuIntToInt(num)
+		x, ok := SuIntToInt(num)
+		Assert(t).True(ok)
 		Assert(t).That(x, Equals(n))
 	}
 	test(0, packPlus)
-	test(1, packPlus, 129, 0, 1)
-	test(10000, packPlus, 130, 0, 1)
-	test(10002, packPlus, 130, 0, 1, 0, 2)
-	test(-1, packMinus, 126, 255, 254)
-	test(-10002, packMinus, 125, 255, 254, 255, 253)
+	test(1, packPlus, 129, 10)
+	test(10000, packPlus, 133, 10)
+	test(10002, packPlus, 133, 10, 0, 20)
+	test(-1, packMinus, 126, 10 ^ 0xff)
+	test(-10002, packMinus, 122, 10 ^ 0xff, 0 ^ 0xff, 20 ^ 0xff)
 }
 
 func TestPackNum(t *testing.T) {
 	test := func(s string, b ...byte) {
 		t.Helper()
 		p := Pack(dv(s))
-		Assert(t).That(p, Equals(string(b)))
+		Assert(t).That([]byte(p), Equals(b))
 		Assert(t).That(UnpackNumber(p).String(), Equals(s))
 	}
-	test("0", 3)
-	test("1", 3, 129, 0, 1)
-	test("-1", 2, 126, 255, 254)
-	test(".1", 3, 128, 3, 232)
-	test("20000", 3, 130, 0, 2)
-	test("123.456", 3, 129, 0, 123, 17, 208)
-	test("1e23", 3, 134, 3, 232)
-	test("-1e-23", 2, 132, 255, 245)
+	test("0", packPlus)
+	test("1", packPlus, 129, 10)
+	test("-1", packMinus, 126, 10 ^ 0xff)
+	test(".1", packPlus, 128, 10)
+	test("20000", packPlus, 133, 20)
+	test("123.456", packPlus, 131, 12, 34, 56)
+	test("12345678.87654321", packPlus, 136, 12, 34, 56, 78, 87, 65, 43, 21)
+	test("1e23", packPlus, 152, 10)
+	test("-1e23", packMinus, 152 ^ 0xff, 10 ^ 0xff)
+	test("1e-23", packPlus, 106, 10)
 }
 
 func dv(s string) SuDnum {

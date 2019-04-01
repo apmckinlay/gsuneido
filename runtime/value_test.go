@@ -34,7 +34,7 @@ func TestPanics(t *testing.T) {
 
 func TestCompare(t *testing.T) {
 	vals := []Value{False, True, SuDnum{Dnum: dnum.NegInf},
-		SuInt(-1), SuInt(0), SuInt(+1), SuDnum{Dnum: dnum.Inf},
+		SuInt(-1), SuInt(0), SuInt(+1), SuDnum{Dnum: dnum.PosInf},
 		SuStr(""), SuStr("abc"), NewSuConcat().Add("foo"), SuStr("world")}
 	for i := 1; i < len(vals); i++ {
 		Assert(t).That(vals[i].Compare(vals[i]), Equals(0))
@@ -100,7 +100,7 @@ func TestIfInt(t *testing.T) {
 		Assert(t).True(ok)
 		Assert(t).That(got, Equals(expected))
 	}
-	test(Zero, 0)   // SuInt
+	test(Zero, 0)            // SuInt
 	test(MaxInt, 2147483647) // SuDnum
 }
 
@@ -120,7 +120,7 @@ func TestToInt(t *testing.T) {
 		Assert(t).True(ok)
 		Assert(t).That(got, Equals(expected))
 	}
-	test(Zero, 0)   // SuInt
+	test(Zero, 0)            // SuInt
 	test(MaxInt, 2147483647) // SuDnum
 	test(False, 0)
 	test(EmptyStr, 0)

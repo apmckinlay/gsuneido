@@ -163,40 +163,14 @@ func (si *smi) PackSize(int) int {
 	if n < 0 {
 		n = -n
 	}
-	if n%10000 == 0 {
-		n /= 10000
-	}
-	if n < 10000 {
+	if n < 100 {
+		return 3
+	} else if n < 10000 {
 		return 4
 	}
-	return 6
+	return 5
 }
 
 func (si *smi) Pack(buf *pack.Encoder) {
-	// pack the same as if we converted to Dnum and then packed
-	n := si.toInt()
-	xor := uint16(0)
-	if n < 0 {
-		buf.Put1(packMinus)
-		xor = 0xffff
-		n = -n
-	} else {
-		buf.Put1(packPlus)
-	}
-	if n == 0 {
-		return
-	}
-	e := 0
-	if n%10000 == 0 {
-		n /= 10000
-		e = 1
-	}
-	if n < 10000 {
-		lo := uint16(n) ^ xor
-		buf.Put1(byte(e+1^0x80)^byte(xor)).Uint16(lo)
-	} else {
-		hi := uint16(n/10000) ^ xor
-		lo := uint16(n%10000) ^ xor
-		buf.Put1(byte(e+2^0x80)^byte(xor)).Uint16(hi).Uint16(lo)
-	}
+	SuDnum{Dnum: dnum.FromInt(int64(si.toInt()))}.Pack(buf)
 }

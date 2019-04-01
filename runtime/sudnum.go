@@ -93,130 +93,176 @@ func (SuDnum) Lookup(method string) Value {
 	return Lookup(NumMethods, gnNumbers, method)
 }
 
-// Packing (old format) ---------------------------------------------
+// Packable interface ===============================================
 
 var _ Packable = SuDnum{}
 
-var pow10 = [...]uint64{1, 10, 100, 1000}
+// new format -------------------------------------------------------
 
-// PackSize returns the packed size of an SuDnum
+const E14 = uint64(1e14)
+const E12 = uint64(1e12)
+const E10 = uint64(1e10)
+const E8 = uint64(1e8)
+const E6 = uint64(1e6)
+const E4 = uint64(1e4)
+const E2 = uint64(1e2)
+
 func (dn SuDnum) PackSize(int) int {
-	if dn.IsZero() {
-		return 1
+	if dn.Sign() == 0 {
+		return 1 // just tag
 	}
 	if dn.IsInf() {
 		return 2
 	}
-	e := int(dn.Exp())
-	n := dn.Coef()
-	var p int
-	if e > 0 {
-		p = 4 - (e % 4)
-	} else {
-		p = abs(e) % 4
+	coef := dn.Coef()
+	// unrolled, partly because mod by constant can be faster
+	coef %= E14
+	if coef == 0 {
+		return 3
 	}
-	if p != 4 {
-		n /= pow10[p]
-	}
-	n %= 1000000000000
-	if n == 0 {
+	coef %= E12
+	if coef == 0 {
 		return 4
 	}
-	n %= 100000000
-	if n == 0 {
+	coef %= E10
+	if coef == 0 {
+		return 5
+	}
+	coef %= E8
+	if coef == 0 {
 		return 6
 	}
-	n %= 10000
-	if n == 0 {
+	coef %= E6
+	if coef == 0 {
+		return 7
+	}
+	coef %= E4
+	if coef == 0 {
 		return 8
+	}
+	coef %= E2
+	if coef == 0 {
+		return 9
 	}
 	return 10
 }
 
-func abs(n int) int {
-	if n < 0 {
-		return -n
-	}
-	return n
-}
-
-// Pack packs the SuDnum into buf (which must be large enough)
 func (dn SuDnum) Pack(buf *pack.Encoder) {
-	sign := dn.Sign()
-	if sign >= 0 {
-		buf.Put1(packPlus)
-	} else {
+	xor := byte(0)
+	if dn.Sign() < 0 {
+		xor = 0xff
 		buf.Put1(packMinus)
+	} else {
+		buf.Put1(packPlus)
 	}
-	if sign == 0 {
+	if dn.Sign() == 0 {
 		return
 	}
 	if dn.IsInf() {
-		if sign < 0 {
-			buf.Put1(0)
-		} else {
-			buf.Put1(255)
-		}
+		buf.Put2(0xff, 0xff)
 		return
 	}
-	packDnum(sign < 0, dn.Coef(), dn.Exp(), buf)
-}
 
-func packDnum(neg bool, coef uint64, exp int, buf *pack.Encoder) {
-	var p int
-	if exp > 0 {
-		p = 4 - (exp % 4)
-	} else {
-		p = abs(exp) % 4
-	}
-	if p != 4 {
-		coef /= pow10[p] // may lose up to 3 digits of precision
-		exp += p
-	}
-	exp /= 4
-	buf.Put1(scale(exp, neg))
-	packCoef(buf, coef, neg)
-}
+	// exponent
+	buf.Put1(byte(dn.Exp()) ^ 0x80 ^ xor)
 
-func scale(exp int, neg bool) byte {
-	eb := (byte(exp) ^ 0x80) & 0xff
-	if neg {
-		eb = (^eb) & 0xff
-	}
-	return eb
-}
-
-const e12 = 1000000000000
-const e8 = 100000000
-const e4 = 10000
-
-func packCoef(buf *pack.Encoder, coef uint64, neg bool) {
-	flip := uint16(0)
-	if neg {
-		flip = 0xffff
-	}
-	buf.Uint16(uint16(coef/e12) ^ flip)
-	coef %= e12
+	// coefficient
+	coef := dn.Coef()
+	// unrolled, partly because div/mod by constant can be faster
+	buf.Put1(byte(coef/E14) ^ xor)
+	coef %= E14
 	if coef == 0 {
 		return
 	}
-	buf.Uint16(uint16(coef/e8) ^ flip)
-	coef %= e8
+	buf.Put1(byte(coef/E12) ^ xor)
+	coef %= E12
 	if coef == 0 {
 		return
 	}
-	buf.Uint16(uint16(coef/e4) ^ flip)
-	coef %= e4
+	buf.Put1(byte(coef/E10) ^ xor)
+	coef %= E10
 	if coef == 0 {
 		return
 	}
-	buf.Uint16(uint16(coef) ^ flip)
+	buf.Put1(byte(coef/E8) ^ xor)
+	coef %= E8
+	if coef == 0 {
+		return
+	}
+	buf.Put1(byte(coef/E6) ^ xor)
+	coef %= E6
+	if coef == 0 {
+		return
+	}
+	buf.Put1(byte(coef/E4) ^ xor)
+	coef %= E4
+	if coef == 0 {
+		return
+	}
+	buf.Put1(byte(coef/E2) ^ xor)
+	coef %= E2
+	if coef == 0 {
+		return
+	}
+	buf.Put1(byte(coef) ^ xor)
 }
+
+func UnpackNumber(s string) Value {
+	if len(s) <= 1 {
+		return Zero
+	}
+	sign := int8(s[0]-packMinus)*2 - 1 // -1 or +1
+	if s[1] == 0xff && s[2] == 0xff {
+		return SuDnum{Dnum: dnum.Inf(sign)}
+	}
+	xor := byte(0)
+	if sign < 0 {
+		xor = 0xff
+	}
+
+	exp := s[1] ^ 0x80 ^ xor
+
+	coef := uint64(0)
+	switch len(s) {
+	case 10:
+		coef += uint64(s[9] ^ xor)
+		fallthrough
+	case 9:
+		coef += uint64(s[8]^xor) * E2
+		fallthrough
+	case 8:
+		coef += uint64(s[7]^xor) * E4
+		fallthrough
+	case 7:
+		coef += uint64(s[6]^xor) * E6
+		fallthrough
+	case 6:
+		coef += uint64(s[5]^xor) * E8
+		fallthrough
+	case 5:
+		coef += uint64(s[4]^xor) * E10
+		fallthrough
+	case 4:
+		coef += uint64(s[3]^xor) * E12
+		fallthrough
+	case 3:
+		coef += uint64(s[2]^xor) * E14
+	default:
+		panic("invalid packed number length")
+	}
+	dn := dnum.Raw(sign, coef, int(exp))
+	if n, ok := dn.ToInt(); ok && int(int16(n)) == n {
+		return SuInt(n)
+	}
+	return SuDnum{Dnum: dn}
+}
+
+// old format -------------------------------------------------------
 
 const maxShiftable = math.MaxUint16 / 10000
 
 // UnpackNumber unpacks an SuInt or SuDnum
-func UnpackNumber(s string) Value {
+func UnpackNumberOld(s string) Value {
 	if len(s) <= 1 {
 		return Zero
 	}
@@ -230,7 +276,7 @@ func UnpackNumber(s string) Value {
 		return SuDnum{Dnum: dnum.NegInf}
 	}
 	if exp == -1 {
-		return SuDnum{Dnum: dnum.Inf}
+		return SuDnum{Dnum: dnum.PosInf}
 	}
 	if sign < 0 {
 		exp = ^exp
@@ -238,7 +284,7 @@ func UnpackNumber(s string) Value {
 	exp = exp ^ -128
 	exp = exp - int8(buf.Remaining()/2)
 
-	coef := unpackLongPart(buf, sign < 0)
+	coef := unpackLongPartOld(buf, sign < 0)
 
 	if exp == 1 && coef <= maxShiftable {
 		coef *= 10000
@@ -250,7 +296,7 @@ func UnpackNumber(s string) Value {
 	return SuDnum{Dnum: dnum.New(sign, coef, int(exp)*4+16)}
 }
 
-func unpackLongPart(buf *pack.Decoder, minus bool) uint64 {
+func unpackLongPartOld(buf *pack.Decoder, minus bool) uint64 {
 	flip := uint16(0)
 	if minus {
 		flip = 0xffff

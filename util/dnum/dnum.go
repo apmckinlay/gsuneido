@@ -44,7 +44,7 @@ var (
 	Zero   = Dnum{}
 	One    = Dnum{1000000000000000, signPos, 1}
 	NegOne = Dnum{1000000000000000, signNeg, 1}
-	Inf    = Dnum{1, signPosInf, 0}
+	PosInf = Dnum{1, signPosInf, 0}
 	NegInf = Dnum{1, signNegInf, 0}
 )
 
@@ -117,7 +117,7 @@ const log2of10 = 3.32192809488736234
 func FromFloat(f float64) Dnum {
 	switch {
 	case math.IsInf(f, +1):
-		return Inf
+		return PosInf
 	case math.IsInf(f, -1):
 		return NegInf
 	case math.IsNaN(f):
@@ -140,13 +140,19 @@ func FromFloat(f float64) Dnum {
 	return New(sign, c, e)
 }
 
+// Raw constructs a Dnum without normalizing - arguments must be valid.
+// Used by SuDnum Unpack
+func Raw(sign int8, coef uint64, exp int) Dnum {
+	return Dnum{coef, sign, int8(exp)}
+}
+
 // New constructs a Dnum, maximizing coef and handling exp out of range
 // Used to normalize results of operations
 func New(sign int8, coef uint64, exp int) Dnum {
 	if sign == 0 || coef == 0 || exp < expMin {
 		return Zero
 	} else if sign == signPosInf {
-		return Inf
+		return PosInf
 	} else if sign == signNegInf {
 		return NegInf
 	} else {
@@ -162,7 +168,7 @@ func New(sign int8, coef uint64, exp int) Dnum {
 			exp -= p
 		}
 		if exp > expMax {
-			return inf(sign)
+			return Inf(sign)
 		}
 		return Dnum{coef, sign, int8(exp)}
 	}
@@ -188,12 +194,12 @@ func ilog10(x uint64) int {
 	return y
 }
 
-func inf(sign int8) Dnum {
+func Inf(sign int8) Dnum {
 	switch {
 	case sign < 0:
 		return NegInf
 	case sign > 0:
-		return Inf
+		return PosInf
 	default:
 		return Zero
 	}
@@ -253,7 +259,7 @@ func FromStr(s string) Dnum {
 	r := &reader{s, 0}
 	sign := getSign(r)
 	if r.matchStr("inf") {
-		return inf(sign)
+		return Inf(sign)
 	}
 	coef, exp := getCoef(r)
 	exp += getExp(r)
@@ -262,7 +268,7 @@ func FromStr(s string) Dnum {
 	} else if coef == 0 || exp < math.MinInt8 {
 		return Zero
 	} else if exp > math.MaxInt8 {
-		return inf(sign)
+		return Inf(sign)
 	}
 	check(coefMin <= coef && coef <= coefMax)
 	return Dnum{coef, sign, int8(exp)}
@@ -639,7 +645,7 @@ func Mul(x, y Dnum) Dnum {
 	case sign == signZero:
 		return Zero
 	case x.IsInf() || y.IsInf():
-		return inf(sign)
+		return Inf(sign)
 	}
 	e := int(x.exp) + int(y.exp)
 
@@ -664,7 +670,7 @@ func Div(x, y Dnum) Dnum {
 	case x.sign == signZero:
 		return x
 	case y.sign == signZero:
-		return inf(x.sign)
+		return Inf(x.sign)
 	case x.IsInf():
 		if y.IsInf() {
 			if sign < 0 {
@@ -672,7 +678,7 @@ func Div(x, y Dnum) Dnum {
 			}
 			return One
 		}
-		return inf(sign)
+		return Inf(sign)
 	case y.IsInf():
 		return Zero
 	}

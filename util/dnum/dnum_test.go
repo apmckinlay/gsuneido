@@ -18,9 +18,9 @@ func Test_size(t *testing.T) {
 }
 
 func Test_inf(t *testing.T) {
-	Assert(t).That(inf(0), Equals(Zero))
-	Assert(t).That(inf(+1), Equals(Inf))
-	Assert(t).That(inf(-1), Equals(NegInf))
+	Assert(t).That(Inf(0), Equals(Zero))
+	Assert(t).That(Inf(+1), Equals(PosInf))
+	Assert(t).That(Inf(-1), Equals(NegInf))
 }
 
 func Test_ilog10(t *testing.T) {
@@ -30,7 +30,7 @@ func Test_ilog10(t *testing.T) {
 
 func Test_New(t *testing.T) {
 	Assert(t).That(New(signZero, 0, 0), Equals(Zero))
-	Assert(t).That(New(signPos, 1, 999), Equals(Inf))    // exponent overflow
+	Assert(t).That(New(signPos, 1, 999), Equals(PosInf))    // exponent overflow
 	Assert(t).That(New(signNeg, 1, 999), Equals(NegInf)) // exponent overflow
 	Assert(t).That(New(signPos, 1, -999), Equals(Zero))  // exponent underflow
 	Assert(t).That(New(signNeg, 1, -999), Equals(Zero))  // exponent underflow
@@ -42,7 +42,7 @@ func Test_String(t *testing.T) {
 	assert := Assert(t)
 	assert.That(Zero.String(), Equals("0"))
 	assert.That(One.String(), Equals("1"))
-	assert.That(Inf.String(), Equals("inf"))
+	assert.That(PosInf.String(), Equals("inf"))
 	assert.That(NegInf.String(), Equals("-inf"))
 	assert.That(FromInt(123).String(), Equals("123"))
 	assert.That(FromInt(-123).String(), Equals("-123"))
@@ -58,8 +58,8 @@ func Test_String(t *testing.T) {
 
 func Test_FromStr(t *testing.T) {
 	assert := Assert(t)
-	assert.That(FromStr("inf"), Equals(Inf))
-	assert.That(FromStr("+inf"), Equals(Inf))
+	assert.That(FromStr("inf"), Equals(PosInf))
+	assert.That(FromStr("+inf"), Equals(PosInf))
 	assert.That(FromStr("-inf"), Equals(NegInf))
 	assert.That(FromStr("0"), Equals(Zero))
 	assert.That(FromStr("+0"), Equals(Zero))
@@ -178,7 +178,7 @@ func Test_FromToFloat(t *testing.T) {
 		cvt(f)
 	}
 
-	assert.That(FromFloat(1e200), Equals(Inf))
+	assert.That(FromFloat(1e200), Equals(PosInf))
 	assert.That(FromFloat(-1e200), Equals(NegInf))
 	assert.That(FromFloat(1e-200), Equals(Zero))
 	assert.That(FromFloat(-1e-200), Equals(Zero))
