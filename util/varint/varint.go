@@ -5,6 +5,17 @@ Similar to encoding/binary but with a slightly different interface.
 */
 package varint
 
+import "math/bits"
+
+// Len returns the number of bytes required to varint encode.
+// signed and unsigned are the same size
+func Len(n uint64) int {
+	if n == 0 {
+		return 1
+	}
+	return (bits.Len64(n) + 6) / 7
+}
+
 // EncodeUint32 encodes a uint32 into buf
 func EncodeUint32(n uint32, buf []byte) []byte {
 	for n >= 1<<7 {
@@ -47,4 +58,19 @@ func DecodeUint32(buf []byte, start int) (n uint32, i int) {
 		}
 	}
 	panic("varint.DecodeUint32 overflow")
+}
+
+// DecodeUint64 decodes a uint32 from buf[start:]
+// and returns the number and the end position.
+func DecodeUint64(s string) (n uint64, i int) {
+	i = 0
+	for shift := uint(0); shift < 64; shift += 7 {
+		b := s[i]
+		i++
+		n |= (uint64(b) & 0x7F) << shift
+		if b < 0x80 {
+			return
+		}
+	}
+	panic("varint.DecodeUint64 overflow")
 }

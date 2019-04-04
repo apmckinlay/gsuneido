@@ -164,12 +164,12 @@ func strToList(s string) *SuObject {
 func pt_compare(args []string, _ []bool) bool {
 	n := len(args)
 	for i := 0; i < n; i++ {
-		x := compile.Constant(args[i])
+		x := constant(args[i])
 		if x.Compare(x) != 0 {
 			return false
 		}
 		for j := i + 1; j < n; j++ {
-			y := compile.Constant(args[j])
+			y := constant(args[j])
 			if x.Compare(y) >= 0 || y.Compare(x) <= 0 {
 				fmt.Println(x, "should be less than", y)
 				return false
@@ -182,10 +182,14 @@ func pt_compare(args []string, _ []bool) bool {
 func pt_compare_packed(args []string, _ []bool) bool {
 	n := len(args)
 	for i := 0; i < n; i++ {
-		x := compile.Constant(args[i])
+		x := constant(args[i])
 		xp := Pack(x.(Packable))
+		x2 := Unpack(xp)
+		if !x.Equal(x2) {
+			fmt.Println("pack/unpack, got:", x2, " expected:", x)
+		}
 		for j := i + 1; j < n; j++ {
-			y := compile.Constant(args[j])
+			y := constant(args[j])
 			yp := Pack(y.(Packable))
 			if strings.Compare(xp, yp) >= 0 || strings.Compare(yp, xp) <= 0 {
 				fmt.Println(x, "should be less than", y)
@@ -194,6 +198,15 @@ func pt_compare_packed(args []string, _ []bool) bool {
 		}
 	}
 	return true
+}
+
+func constant(s string) Value {
+	if s == "inf" {
+		return Inf
+	} else if s == "-inf" {
+		return NegInf
+	}
+	return compile.Constant(s)
 }
 
 // compare to BenchmarkJit in interp_test.go

@@ -121,8 +121,8 @@ func (SuBool) PackSize(int) int {
 
 func (b SuBool) Pack(buf *pack.Encoder) {
 	if b == true {
-		buf.Put1(packTrue)
+		buf.Put1(PackTrue)
 	} else {
-		buf.Put1(packFalse)
+		buf.Put1(PackFalse)
 	}
 }

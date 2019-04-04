@@ -55,7 +55,7 @@ func TestDatePack(t *testing.T) {
 	pack := func(s string) {
 		d := DateFromLiteral(s)
 		buf := Pack(d)
-		Assert(t).That(buf[0], Equals(byte(packDate)))
+		Assert(t).That(buf[0], Equals(byte(PackDate)))
 		d2 := Unpack(buf)
 		Assert(t).That(d2, Equals(d))
 	}

@@ -98,6 +98,14 @@ func (SuDnum) Lookup(method string) Value {
 var _ Packable = SuDnum{}
 
 // new format -------------------------------------------------------
+// first byte is tag - PackPlus or PackMinus
+// zero is just tag
+// second byte is exponent
+// following bytes encode two decimal digits (i.e. 0 to 99) per byte
+// plus/minus infinite is PackPlus/Minus, (0xff), 0xff
+//
+// Encode decimal so that numbers with less digits are smaller.
+// With coeficient maximized, binary encoding is longer.
 
 const E14 = uint64(1e14)
 const E12 = uint64(1e12)
@@ -112,7 +120,7 @@ func (dn SuDnum) PackSize(int) int {
 		return 1 // just tag
 	}
 	if dn.IsInf() {
-		return 2
+		return 3
 	}
 	coef := dn.Coef()
 	// unrolled, partly because mod by constant can be faster
@@ -151,15 +159,15 @@ func (dn SuDnum) Pack(buf *pack.Encoder) {
 	xor := byte(0)
 	if dn.Sign() < 0 {
 		xor = 0xff
-		buf.Put1(packMinus)
+		buf.Put1(PackMinus)
 	} else {
-		buf.Put1(packPlus)
+		buf.Put1(PackPlus)
 	}
 	if dn.Sign() == 0 {
 		return
 	}
 	if dn.IsInf() {
-		buf.Put2(0xff, 0xff)
+		buf.Put2(^xor, ^xor)
 		return
 	}
 
@@ -211,13 +219,13 @@ func UnpackNumber(s string) Value {
 	if len(s) <= 1 {
 		return Zero
 	}
-	sign := int8(s[0]-packMinus)*2 - 1 // -1 or +1
-	if s[1] == 0xff && s[2] == 0xff {
-		return SuDnum{Dnum: dnum.Inf(sign)}
-	}
+	sign := int8(s[0]-PackMinus)*2 - 1 // -1 or +1
 	xor := byte(0)
 	if sign < 0 {
 		xor = 0xff
+	}
+	if s[2] == ^xor {
+		return SuDnum{Dnum: dnum.Inf(sign)}
 	}
 
 	exp := s[1] ^ 0x80 ^ xor
@@ -261,14 +269,13 @@ func UnpackNumber(s string) Value {
 
 const maxShiftable = math.MaxUint16 / 10000
 
-// UnpackNumber unpacks an SuInt or SuDnum
-func UnpackNumberOld(s string) Value {
+func UnpackNumberOld(s string) SuDnum {
 	if len(s) <= 1 {
-		return Zero
+		return SuDnum{Dnum: dnum.Zero}
 	}
 	buf := pack.NewDecoder(s)
 	sign := int8(+1)
-	if buf.Get1() == packMinus {
+	if buf.Get1() == PackMinus {
 		sign = -1
 	}
 	exp := int8(buf.Get1())
@@ -286,13 +293,6 @@ func UnpackNumberOld(s string) Value {
 
 	coef := unpackLongPartOld(buf, sign < 0)
 
-	if exp == 1 && coef <= maxShiftable {
-		coef *= 10000
-		exp--
-	}
-	if exp == 0 && coef <= MaxSuInt {
-		return SuInt(int(sign) * int(coef))
-	}
 	return SuDnum{Dnum: dnum.New(sign, coef, int(exp)*4+16)}
 }
 

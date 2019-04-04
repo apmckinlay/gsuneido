@@ -9,6 +9,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/hmap"
 	"github.com/apmckinlay/gsuneido/util/ints"
 	"github.com/apmckinlay/gsuneido/util/pack"
+	"github.com/apmckinlay/gsuneido/util/varint"
 )
 
 // SuObject is a Suneido object
@@ -541,30 +542,31 @@ func (ob *SuObject) PackSize(nest int) int {
 		panic("pack: object nesting limit exceeded")
 	}
 	if ob.Size() == 0 {
-		return 1
+		return 1 // just tag
 	}
 	ps := 1 // tag
-	ps += 4 // vec size
+	ps += varint.Len(uint64(ob.ListSize()))
 	for _, v := range ob.list {
-		ps += 4 + packSize(v, nest)
+		ps += packSize(v, nest)
 	}
-	ps += 4 // map size
+	ps += varint.Len(uint64(ob.NamedSize()))
 	iter := ob.named.Iter()
 	for k, v := iter(); k != nil; k, v = iter() {
-		ps += 4 + packSize(k.(Value), nest) + 4 + packSize(v.(Value), nest)
+		ps += packSize(k.(Value), nest) + packSize(v.(Value), nest)
 	}
 	return ps
 }
 
 func packSize(x Value, nest int) int {
 	if p, ok := x.(Packable); ok {
-		return p.PackSize(nest)
+		n := p.PackSize(nest)
+		return varint.Len(uint64(n)) + n
 	}
 	panic("can't pack " + x.Type().String())
 }
 
 func (ob *SuObject) Pack(buf *pack.Encoder) {
-	ob.pack(buf, packObject)
+	ob.pack(buf, PackObject)
 }
 
 func (ob *SuObject) pack(buf *pack.Encoder, tag byte) {
@@ -572,11 +574,11 @@ func (ob *SuObject) pack(buf *pack.Encoder, tag byte) {
 	if ob.Size() == 0 {
 		return
 	}
-	buf.Int32(len(ob.list))
+	buf.VarUint(uint64(ob.ListSize()))
 	for _, v := range ob.list {
 		packValue(v, buf)
 	}
-	buf.Int32(ob.named.Size())
+	buf.VarUint(uint64(ob.NamedSize()))
 	iter := ob.named.Iter()
 	for k, v := iter(); k != nil; k, v = iter() {
 		packValue(k.(Value), buf)
@@ -585,8 +587,8 @@ func (ob *SuObject) pack(buf *pack.Encoder, tag byte) {
 }
 
 func packValue(x Value, buf *pack.Encoder) {
-	n := packSize(x, 0)
-	buf.Int32(n)
+	n := x.(Packable).PackSize(0)
+	buf.VarUint(uint64(n))
 	x.(Packable).Pack(buf)
 }
 
@@ -600,13 +602,13 @@ func unpackObject(s string, ob *SuObject) *SuObject {
 	}
 	buf := pack.NewDecoder(s[1:])
 	var v Value
-	n := buf.Int32()
+	n := int(buf.VarUint())
 	for i := 0; i < n; i++ {
 		v = unpackValue(buf)
 		ob.Add(v)
 	}
 	var k Value
-	n = buf.Int32()
+	n = int(buf.VarUint())
 	for i := 0; i < n; i++ {
 		k = unpackValue(buf)
 		v = unpackValue(buf)
@@ -616,6 +618,38 @@ func unpackObject(s string, ob *SuObject) *SuObject {
 }
 
 func unpackValue(buf *pack.Decoder) Value {
-	size := buf.Int32()
+	size := int(buf.VarUint())
 	return Unpack(buf.Get(size))
+}
+
+// old format
+
+func UnpackObjectOld(s string) *SuObject {
+	return unpackObjectOld(s, &SuObject{})
+}
+
+func unpackObjectOld(s string, ob *SuObject) *SuObject {
+	if len(s) <= 1 {
+		return ob
+	}
+	buf := pack.NewDecoder(s[1:])
+	var v Value
+	n := buf.Int32()
+	for i := 0; i < n; i++ {
+		v = unpackValueOld(buf)
+		ob.Add(v)
+	}
+	var k Value
+	n = buf.Int32()
+	for i := 0; i < n; i++ {
+		k = unpackValueOld(buf)
+		v = unpackValueOld(buf)
+		ob.Put(k, v)
+	}
+	return ob
+}
+
+func unpackValueOld(buf *pack.Decoder) Value {
+	size := buf.Int32()
+	return UnpackOld(buf.Get(size))
 }

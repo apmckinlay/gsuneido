@@ -3,6 +3,7 @@ package tuple
 import (
 	rt "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/pack"
+	"github.com/apmckinlay/gsuneido/util/verify"
 )
 
 // TupleBuilder is used to construct tuples
@@ -11,7 +12,7 @@ type TupleBuilder struct {
 	vals []rt.Packable
 }
 
-const MaxValues = 0x3ff
+const MaxValues = 0x3fff
 
 // Add appends a Packable
 func (tb *TupleBuilder) Add(p rt.Packable) *TupleBuilder {
@@ -42,6 +43,9 @@ func (tb *TupleBuilder) Build() Tuple {
 	if len(tb.vals) > MaxValues {
 		panic("too many values for tuple")
 	}
+	if len(tb.vals) == 0 {
+		return Tuple("\x00")
+	}
 	sizes := make([]int, len(tb.vals))
 	for i, v := range tb.vals {
 		sizes[i] = v.PackSize(0)
@@ -49,6 +53,7 @@ func (tb *TupleBuilder) Build() Tuple {
 	length := tb.tupleSize(sizes)
 	buf := pack.NewEncoder(length)
 	tb.build(buf, length, sizes)
+	verify.That(len(buf.String()) == length) //TODO remove
 	return Tuple(buf.String())
 }
 
@@ -62,6 +67,9 @@ func (tb *TupleBuilder) tupleSize(sizes []int) int {
 }
 
 func tblength(nfields, datasize int) int {
+	if nfields == 0 {
+		return 1
+	}
 	length := hdrlen + (1 + nfields) + datasize
 	if length < 0x100 {
 		return length
@@ -114,7 +122,9 @@ func (tb *TupleBuilder) buildOffsets(dst *pack.Encoder, length int, sizes []int)
 }
 
 func mode(length int) int {
-	if length < 0x100 {
+	if length == 0 {
+		return 0
+	} else if length < 0x100 {
 		return type8
 	} else if length < 0x10000 {
 		return type16

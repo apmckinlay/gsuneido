@@ -52,11 +52,19 @@ func (SuRecord) Lookup(method string) Value {
 // Packable ---------------------------------------------------------
 
 func (r *SuRecord) Pack(buf *pack.Encoder) {
-	r.SuObject.pack(buf, packRecord)
+	r.SuObject.pack(buf, PackRecord)
 }
 
 func UnpackRecord(s string) *SuRecord {
 	r := NewSuRecord()
 	unpackObject(s, &r.SuObject)
+	return r
+}
+
+// old format
+
+func UnpackRecordOld(s string) *SuRecord {
+	r := NewSuRecord()
+	unpackObjectOld(s, &r.SuObject)
 	return r
 }

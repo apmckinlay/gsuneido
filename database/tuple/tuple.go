@@ -14,7 +14,9 @@ It it used in the database for storing data records in the database
 It is also used for transferring data records
 across the client-server protocol.
 
-first two bytes are the type and the count of values, high two bits are the type
+An empty Tuple is a single zero byte.
+
+First two bytes are the type and the count of values, high two bits are the type
 followed by the total length (uint8, uint16, or uint32)
 followed by the offsets of the fields (uint8, uint16, or uint32)
 followed by the contents of the fields

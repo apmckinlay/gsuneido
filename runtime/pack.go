@@ -18,14 +18,14 @@ type Packable interface {
 // which is encoded as a zero length buffer.
 // NOTE: this order is significant, it determines sorting
 const (
-	packFalse = iota
-	packTrue
-	packMinus
-	packPlus
-	packString
-	packDate
-	packObject
-	packRecord
+	PackFalse = iota
+	PackTrue
+	PackMinus
+	PackPlus
+	PackString
+	PackDate
+	PackObject
+	PackRecord
 )
 
 // Pack is a convenience function that packs a single Packable
@@ -41,20 +41,45 @@ func Unpack(s string) Value {
 		return EmptyStr
 	}
 	switch s[0] {
-	case packFalse:
+	case PackFalse:
 		return False
-	case packTrue:
+	case PackTrue:
 		return True
-	case packString:
+	case PackString:
 		return SuStr(s[1:])
-	case packDate:
+	case PackDate:
 		return UnpackDate(s)
-	case packPlus, packMinus:
+	case PackPlus, PackMinus:
 		return UnpackNumber(s)
-	case packObject:
+	case PackObject:
 		return UnpackObject(s)
+	case PackRecord:
+		return UnpackRecord(s)
 	default:
 		panic("invalid pack tag")
 	}
 }
 
+func UnpackOld(s string) Value {
+	if len(s) == 0 {
+		return EmptyStr
+	}
+	switch s[0] {
+	case PackFalse:
+		return False
+	case PackTrue:
+		return True
+	case PackString:
+		return SuStr(s[1:])
+	case PackDate:
+		return UnpackDate(s)
+	case PackPlus, PackMinus:
+		return UnpackNumberOld(s)
+	case PackObject:
+		return UnpackObjectOld(s)
+	case PackRecord:
+		return UnpackRecordOld(s)
+	default:
+		panic("invalid pack tag")
+	}
+}

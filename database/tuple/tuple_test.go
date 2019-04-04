@@ -11,7 +11,7 @@ import (
 func TestTupleBuilder(t *testing.T) {
 	var tb TupleBuilder
 	tup := tb.Build()
-	Assert(t).That([]byte(tup), Equals([]byte{type8 << 6, 0, 3}))
+	Assert(t).That([]byte(tup), Equals([]byte{0}))
 	tb.AddRaw("one")
 	tup = tb.Build()
 	Assert(t).That([]byte(tup), Equals([]byte{type8 << 6, 1, 7, 4, 'o', 'n', 'e'}))
@@ -36,7 +36,7 @@ func TestTupleBuilder(t *testing.T) {
 }
 
 func TestLength(t *testing.T) {
-	Assert(t).That(tblength(0, 0), Equals(3))
+	Assert(t).That(tblength(0, 0), Equals(1))
 	Assert(t).That(tblength(1, 1), Equals(5))
 	Assert(t).That(tblength(1, 200), Equals(204))
 	Assert(t).That(tblength(1, 248), Equals(252))

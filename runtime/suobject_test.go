@@ -1,9 +1,11 @@
 package runtime
 
 import (
+	"strings"
 	"testing"
 
 	. "github.com/apmckinlay/gsuneido/util/hamcrest"
+	"github.com/apmckinlay/gsuneido/util/pack"
 )
 
 func TestSuObject(t *testing.T) {
@@ -68,7 +70,7 @@ func TestSuObjectPut(t *testing.T) {
 	Assert(t).That(ob.NamedSize(), Equals(0))
 	Assert(t).That(ob.ListSize(), Equals(2))
 	ob.Put(Zero, SuInt(10)) // set
-	ob.Put(One, SuInt(11)) // set
+	ob.Put(One, SuInt(11))  // set
 	Assert(t).That(ob.Get(nil, Zero), Equals(SuInt(10)))
 	Assert(t).That(ob.Get(nil, One), Equals(SuInt(11)))
 }
@@ -166,11 +168,25 @@ func TestSuObjectSlice(t *testing.T) {
 	Assert(t).That(ob2.String(), Equals("#(a: 123)"))
 }
 
+func TestSuObjectPackValue(t *testing.T) {
+	test := func(v1 Value) {
+		enc := pack.NewEncoder(50)
+		packValue(v1, enc)
+		s := enc.String()
+		dec := pack.NewDecoder(s)
+		v2 := unpackValue(dec)
+		Assert(t).That(v2, Equals(v1))
+	}
+	test(SuInt(123))
+	test(SuStr("hello"))
+}
+
 func TestSuObjectPack(t *testing.T) {
 	ob := &SuObject{}
 	check := func() {
 		t.Helper()
-		Assert(t).That(Unpack(Pack(ob)), Equals(ob))
+		s := Pack(ob)
+		Assert(t).That(Unpack(s), Equals(ob))
 	}
 	check()
 	ob.Add(SuStr(1))
@@ -181,6 +197,7 @@ func TestSuObjectPack(t *testing.T) {
 	check()
 	ob.Put(SuStr("b"), SuInt(4))
 	check()
+	ob.Add(SuStr(strings.Repeat("helloworld", 100)))
 }
 
 func TestSuObjectPack2(t *testing.T) {
@@ -188,7 +205,6 @@ func TestSuObjectPack2(t *testing.T) {
 	ob.Add(One)
 	ob.Put(SuStr("a"), SuInt(2))
 	buf := Pack(ob)
-	expected := []byte{6, 128, 0, 0, 1, 128, 0, 0, 3, 3, 129, 10, 128,
-		0, 0, 1, 128, 0, 0, 2, 4, 97, 128, 0, 0, 3, 3, 129, 20}
+	expected := []byte{6, 1, 3, 3, 129, 10, 1, 2, 4, 97, 3, 3, 129, 20}
 	Assert(t).That([]byte(buf), Equals(expected))
 }

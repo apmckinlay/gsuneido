@@ -40,4 +40,10 @@ func TestPack(t *testing.T) {
 		d = NewDecoder(e.String())
 		Assert(t).That(d.Int32(), Equals(n))
 	}
+	for _, n := range []uint64{0, 1, 222, 22222, 12345678, math.MaxInt32} {
+		e = NewEncoder(32)
+		e.VarUint(n)
+		d = NewDecoder(e.String())
+		Assert(t).That(d.VarUint(), Equals(n))
+	}
 }

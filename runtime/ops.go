@@ -11,6 +11,8 @@ var (
 	Zero   Value = SuInt(0)
 	One    Value = SuInt(1)
 	MaxInt Value = SuDnum{Dnum: dnum.FromInt(math.MaxInt32)}
+	Inf    Value = SuDnum{Dnum: dnum.PosInf}
+	NegInf Value = SuDnum{Dnum: dnum.NegInf}
 	True   Value = SuBool(true)
 	False  Value = SuBool(false)
 	// EmptyStr defined in sustr.go

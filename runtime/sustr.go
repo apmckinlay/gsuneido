@@ -160,7 +160,7 @@ func (ss SuStr) PackSize(int) int {
 
 func (ss SuStr) Pack(buf *pack.Encoder) {
 	if ss != "" {
-		buf.Put1(packString).PutStr(string(ss))
+		buf.Put1(PackString).PutStr(string(ss))
 	}
 }
 

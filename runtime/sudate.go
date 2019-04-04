@@ -762,7 +762,7 @@ func (SuDate) PackSize(int) int {
 
 // Pack packs into the supplied byte slice (Packable interface)
 func (d SuDate) Pack(buf *pack.Encoder) {
-	buf.Put1(packDate).Uint32(d.date).Uint32(d.time)
+	buf.Put1(PackDate).Uint32(d.date).Uint32(d.time)
 }
 
 // UnpackDate unpacks a date from the supplied byte slice
