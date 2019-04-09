@@ -128,8 +128,8 @@ type Named interface {
 	SetName(name string)
 }
 
-// ToStr converts SuBool, SuInt, SuDnum, SuStr, SuConcat, SuExcept to string
-// calls Value.ToStr and panics if it fails
+// ToStr converts SuBool, SuInt, SuDnum, SuStr, SuConcat, SuExcept to string.
+// Calls Value.ToStr and panics if it fails
 func ToStr(x Value) string {
 	if s, ok := x.ToStr(); ok {
 		return s
@@ -137,8 +137,8 @@ func ToStr(x Value) string {
 	panic("can't convert " + x.Type().String() + " to String")
 }
 
-// IfStr converts SuStr, SuConcat, SuExcept to string
-// calls Value.IfStr and panics if it fails
+// IfStr converts SuStr, SuConcat, SuExcept to string.
+// Calls Value.IfStr and panics if it fails
 func IfStr(x Value) string {
 	if s, ok := x.IfStr(); ok {
 		return s
@@ -154,8 +154,8 @@ func ToStrOrString(x Value) string {
 	return x.String()
 }
 
-// ToInt converts false (SuBool), "" (SuStr), SuInt, SuDnum to int
-// calls Value.ToInt and panics if it fails
+// ToInt converts false (SuBool), "" (SuStr), SuInt, SuDnum to int.
+// Calls Value.ToInt and panics if it fails
 func ToInt(x Value) int {
 	if i, ok := x.ToInt(); ok {
 		return i
@@ -163,8 +163,8 @@ func ToInt(x Value) int {
 	panic("can't convert " + errType(x) + " to integer")
 }
 
-// IfInt converts SuInt, SuDnum to int
-// calls Value.IfInt and panics if it fails
+// IfInt converts SuInt, SuDnum to int.
+// Calls Value.IfInt and panics if it fails
 func IfInt(x Value) int {
 	if i, ok := x.IfInt(); ok {
 		return i
@@ -172,8 +172,8 @@ func IfInt(x Value) int {
 	panic("can't convert " + errType(x) + " to integer")
 }
 
-// ToDnum converts false (SuBool), "" (SuStr), SuInt, SuDnum to Dnum
-// calls Value.ToDnum and panics if it fails
+// ToDnum converts false (SuBool), "" (SuStr), SuInt, SuDnum to Dnum.
+// Calls Value.ToDnum and panics if it fails
 func ToDnum(x Value) dnum.Dnum {
 	if dn, ok := x.ToDnum(); ok {
 		return dn

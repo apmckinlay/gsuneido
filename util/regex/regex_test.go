@@ -111,6 +111,7 @@ func pt_match(args []string, _ []bool) bool {
 
 var _ = ptest.Add("regex_match", pt_match)
 
+// pt_replace is a ptest for regex replace
 func pt_replace(args []string, _ []bool) bool {
 	s := args[0]
 	pat := Compile(args[1])
