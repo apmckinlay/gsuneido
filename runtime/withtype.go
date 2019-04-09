@@ -4,11 +4,20 @@ import (
 	"fmt"
 	"strings"
 
+	cm "github.com/apmckinlay/gsuneido/util/cmatch"
+
 	"github.com/apmckinlay/gsuneido/runtime/types"
 )
 
+var binary = cm.InRange(' ', '~').Negate()
+
 func WithType(x Value) string {
-	s := fmt.Sprint(x)
+	var s string
+	if ss, ok := x.IfStr(); ok && binary.IndexIn(ss) != -1 {
+		s = fmt.Sprintf("%q", ss)
+	} else {
+		s = fmt.Sprint(x)
+	}
 	if x.Type() != types.Boolean {
 		if _, ok := x.(SuStr); !ok {
 			t := fmt.Sprintf("%T", x)
