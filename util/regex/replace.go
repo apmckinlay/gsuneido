@@ -1,8 +1,9 @@
 package regex
 
 import (
-	"github.com/apmckinlay/gsuneido/util/ascii"
 	"strings"
+
+	"github.com/apmckinlay/gsuneido/util/ascii"
 )
 
 func Replace(s, rep string, res *Result) string {
@@ -16,13 +17,13 @@ func Replace(s, rep string, res *Result) string {
 	tr := byte('E')
 	var buf strings.Builder
 	buf.Grow(nr)
-	trcase := func (c byte) byte {
+	trcase := func(c byte) byte {
 		switch tr {
 		case 'l':
 			tr = 'E'
 			fallthrough
 		case 'L':
-				c = ascii.ToLower(c)
+			c = ascii.ToLower(c)
 		case 'u':
 			tr = 'E'
 			fallthrough
@@ -45,12 +46,12 @@ func Replace(s, rep string, res *Result) string {
 		c := rep[i]
 		if c == '&' {
 			add(res[0])
-		} else if c == '\\' && i + 1 < nr {
+		} else if c == '\\' && i+1 < nr {
 			i++
 			c = rep[i]
 			switch rep[i] {
-			case '0','1','2','3','4','5','6','7','8','9':
-				tr = add(res[c - '0']);
+			case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
+				tr = add(res[c-'0'])
 			case 'n':
 				buf.WriteByte('\n')
 			case 't':
@@ -60,7 +61,7 @@ func Replace(s, rep string, res *Result) string {
 			case '&':
 				buf.WriteByte('&')
 			case 'u', 'l', 'U', 'L', 'E':
-				tr = c;
+				tr = c
 			default:
 				buf.WriteByte(c) // not affected by tr ???
 			}
@@ -70,4 +71,3 @@ func Replace(s, rep string, res *Result) string {
 	}
 	return buf.String()
 }
-
