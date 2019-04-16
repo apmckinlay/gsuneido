@@ -44,7 +44,7 @@ func EvalAsMethod(t *Thread, as *ArgSpec, ob *SuObject, args []Value) Value {
 		as2.Nargs--
 	}
 
-	if m,ok := f.(*SuMethod); ok {
+	if m, ok := f.(*SuMethod); ok {
 		f = m.GetFn()
 	}
 

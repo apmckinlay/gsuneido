@@ -22,7 +22,7 @@ var builtDate string // set by: go build -ldflags "-X builtin.builtDate=..."
 
 var _ = Global.Add("Suneido", new(SuObject))
 
-var prompt = func(s string) { fmt.Print(s); os.Stdout.Sync() }
+var prompt = func(s string) { fmt.Print(s); _ = os.Stdout.Sync() }
 
 var dbms clientserver.Dbms
 
@@ -123,7 +123,7 @@ func libload(name string) (result Value) {
 	defer func() {
 		if e := recover(); e != nil {
 			panic("error loading " + name + " " + fmt.Sprint(e))
-			result = nil
+			//result = nil
 		}
 	}()
 	defs := dbms.LibGet(name)
