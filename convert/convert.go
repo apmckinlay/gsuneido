@@ -10,7 +10,7 @@ import (
 	"strings"
 	"unsafe"
 
-	. "github.com/apmckinlay/gsuneido/database/tuple"
+	"github.com/apmckinlay/gsuneido/database/record"
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
@@ -26,16 +26,17 @@ var obs = 0
 func main() {
 	fin, err := os.Open("database.su")
 	ckerr(err)
-	fout, err := ioutil.TempFile(".", "suneido*.tmp")
-	ckerr(err)
 	in := bufio.NewReader(fin)
-	out := bufio.NewWriter(fout)
 	s, err := in.ReadString('\n')
 	ckerr(err)
 	hdr := "Suneido dump 1.0\n"
 	if s != hdr {
-		panic("\n\tgot: " + s + "\n\texpected: " + hdr)
+		fmt.Println("ERROR: got:", s, " expected:", hdr)
+		os.Exit(1)
 	}
+	fout, err := ioutil.TempFile(".", "suneido*.tmp")
+	ckerr(err)
+	out := bufio.NewWriter(fout)
 	out.WriteString("Suneido dump 2\n")
 	n := 0
 	for { // each table
@@ -57,13 +58,22 @@ func main() {
 	fin.Close()
 	tmpname := fout.Name()
 	fout.Close()
-	err = os.Remove("database.su2")
+	err = os.Remove("database.su.bak")
 	if !os.IsNotExist(err) {
-		ckerr(err)
+		fmt.Println("ERROR: couldn't remove database.su.bak")
+		fmt.Println(err)
 	}
-	err = os.Rename(tmpname, "database.su2")
-	ckerr(err)
-	fmt.Println(n, "tables,", nrecs, "records,", nums, "numbers,", obs, "objects")
+	err = os.Rename("database.su", "database.su.bak")
+	if err != nil {
+		fmt.Println("ERROR: couldn't rename database.su to database.su.bak")
+		fmt.Println(err)
+	}
+	err = os.Rename(tmpname, "database.su")
+	if err != nil {
+		fmt.Println("ERROR: couldn't rename", tmpname, "to database.su")
+		fmt.Println(err)
+	}
+	fmt.Println("converted", n, "tables,", nrecs, "records")
 }
 
 func convertTable(in *bufio.Reader, out *bufio.Writer) {
@@ -90,8 +100,8 @@ func convertTable(in *bufio.Reader, out *bufio.Writer) {
 
 func convertRecord(b []byte, out *bufio.Writer) {
 	s := *(*string)(unsafe.Pointer(&b))
-	inrec := TupleOld(s)
-	var tb TupleBuilder
+	inrec := record.Old(s)
+	var tb record.Builder
 	n := inrec.Count()
 	for i := 0; i < n; i++ { // for each value
 		s := inrec.Get(i)

@@ -8,7 +8,7 @@ import (
 	"os"
 	"strings"
 
-	. "github.com/apmckinlay/gsuneido/database/tuple"
+	. "github.com/apmckinlay/gsuneido/database/record"
 )
 
 // Read a dump file in new format
@@ -53,12 +53,12 @@ func readTable(in *bufio.Reader) {
 		}
 		_, err = io.ReadFull(in, inbuf[:size])
 		ckerr(err)
-		checkRecord(Tuple(inbuf[:size]))
+		checkRecord(Record(inbuf[:size]))
 		nrecs++
 	}
 }
 
-func checkRecord(rec Tuple) {
+func checkRecord(rec Record) {
 	n := rec.Count()
 	for i := 0; i < n; i++ {
 		rec.GetVal(i) // unpack

@@ -20,3 +20,6 @@ $RECYCLE.BIN/
 *.tmp
 *.exe
 gsuneido
+*.old
+*.bak
+convert/convert
