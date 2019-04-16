@@ -609,8 +609,8 @@ func (cg *cgen) andorExpr(node *ast.Nary) {
 }
 
 func isCompare(e ast.Expr) bool {
-		bin, ok := e.(*ast.Binary)
-		return ok && tok.CompareStart < bin.Tok && bin.Tok < tok.CompareEnd
+	bin, ok := e.(*ast.Binary)
+	return ok && tok.CompareStart < bin.Tok && bin.Tok < tok.CompareEnd
 }
 
 func isUnary(e ast.Expr, tok tok.Token) bool {
