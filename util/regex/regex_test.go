@@ -9,76 +9,64 @@ import (
 	"github.com/apmckinlay/gsuneido/util/ptest"
 )
 
-func TestCompile(t *testing.T) {
-	test := func(input, expected string) {
-		//fmt.Println("input '" + input + "'")
-		p := Compile(input).String()
-		Assert(t).That(strings.TrimSpace(p[5:len(p)-7]),
-			Equals(expected).Comment(input))
+func BenchmarkRegex(b *testing.B) {
+	pat := Compile(".+foo")
+	var r Result
+	s := strings.Repeat("helloworld", 11) + "foo"
+	for n := 0; n < b.N; n++ {
+		pat.FirstMatch(s, 0, &r)
 	}
-	test("", "")
-	test(".", "[...]")
-	test("a", "'a'")
-	test("abc", "'abc'")
-	test("^xyz", "^ 'xyz'")
-	test("abc$", "'abc' $")
-	test("^xyz$", "^ 'xyz' $")
-	test("?ab", "'?ab'")
-	test("*ab", "'*ab'")
-	test("+ab", "'+ab'")
-	test("a?", "Branch(1, 2) 'a'")
-	test("a??", "Branch(2, 1) 'a'")
-	test("abc?de", "'ab' Branch(1, 2) 'c' 'de'")
-	test("abc+de", "'ab' 'c' Branch(-1, 1) 'de'")
-	test("abc*de", "'ab' Branch(1, 3) 'c' Branch(-1, 1) 'de'")
-	test("ab\\.?cd", "'ab' Branch(1, 2) '.' 'cd'")
-	test("(ab+c)+x", "Left1 'a' 'b' Branch(-1, 1) 'c' Right1 Branch(-6, 1) 'x'")
-	test("ab|cd",
-		"Branch(1, 3) 'ab' Jump(2) 'cd'")
-	test("ab|cd|ef",
-		"Branch(1, 3) 'ab' Jump(3) Branch(1, 3) 'cd' Jump(2) 'ef'")
-	test("abc\\Z", "'abc' \\Z")
-	test("[a]", "'a'")
-	test("[\\a]", "'a'")
-	test("(?i)x.y(?-i)z", "i'x' [...] i'y' 'z'")
-
-	test("(?q).*(?-q)def", "'.*def'")
-
-	test("\\<Foo\\>", "\\< 'Foo' \\>")
-
-	test("a(bc)d", "'a' Left1 'bc' Right1 'd'")
-
-	test(".\\5.", "[...] \\5 [...]")
-	test("(?i)\\5", "i\\5")
-
-	test("a[.]b", "'a.b'")
-
-	test("a(?q).(?-q).c(?q).(?-q).", "'a.' [...] 'c.' [...]")
-
-	test("\\", "'\\'")
-
-	Assert(t).That(func() { Compile("(abc") }, Panics("missing ')'"))
-	Assert(t).That(func() { Compile("abc)def") },
-		Panics("closing ) without opening ("))
 }
 
-func TestBug(t *testing.T) {
-	p := Compile("(?i)[\x9a\xbb]")
-	Assert(t).That(p.Matches("\x8a"), Equals(false))
+func BenchmarkRegexChars(b *testing.B) {
+	pat := Compile("foo")
+	var r Result
+	s := strings.Repeat("helloworld", 11) + "foo"
+	for n := 0; n < b.N; n++ {
+		pat.FirstMatch(s, 0, &r)
+	}
 }
 
-func TestForEachMatch(t *testing.T) {
-	test := func(s, p string, expected ...string) {
-		pat := Compile(p)
-		ob := []string{}
-		pat.ForEachMatch(s, func(r *Result) bool {
-			ob = append(ob, r[0].Part(s))
-			return len(ob) < 4
-		})
-		Assert(t).That(ob, Equals(expected))
+func BenchmarkRegexStart(b *testing.B) {
+	pat := Compile(`\Afoo`)
+	var r Result
+	s := strings.Repeat("helloworld", 11) + "\nfoo"
+	for n := 0; n < b.N; n++ {
+		pat.FirstMatch(s, 0, &r)
 	}
-	test("now is the time", `\w+`, "now", "is", "the", "time")
-	test("hello", `.`, "h", "e", "l", "l")
+}
+
+func TestRegex(t *testing.T) {
+	pat := Compile(".+foo")
+	var r Result
+	Assert(t).That(pat.match("foo", 0, 0, &r), Equals(-1))
+	Assert(t).That(pat.match("", 0, 0, &r), Equals(-1))
+	Assert(t).That(pat.match("hello", 0, 0, &r), Equals(-1))
+	Assert(t).That(pat.match("xfoo", 0, 0, &r), Equals(0))
+	Assert(t).That(pat.match("hifoo", 0, 0, &r), Equals(0))
+	Assert(t).That(pat.match("hifoobar", 0, 0, &r), Equals(0))
+}
+
+func TestCapture(t *testing.T) {
+	pat := Compile("is")
+	s := "now is the time"
+	var r Result
+	pat.FirstMatch(s, 0, &r)
+	Assert(t).That(r[0].Part(s), Equals("is"))
+}
+
+func ExamplePattern_ForEachMatch() {
+	pat := Compile(`\w+`)
+	s := "now is the time"
+	pat.ForEachMatch(s, func(r *Result) bool {
+		fmt.Println(r[0].Part(s))
+		return true
+	})
+	// Output:
+	// now
+	// is
+	// the
+	// time
 }
 
 // ptest support ---------------------------------------------------------------
@@ -96,7 +84,7 @@ func TestPtest(t *testing.T) {
 func pt_match(args []string, _ []bool) bool {
 	pat := Compile(args[1])
 	var res Result
-	result := pat.FirstMatch(args[0], 0, &res)
+	result := pat.FirstMatch(args[0], 0, &res) != -1
 	if len(args) > 2 {
 		if args[2] == "false" {
 			result = !result
@@ -119,7 +107,7 @@ func pt_replace(args []string, _ []bool) bool {
 	expected := args[3]
 	var res Result
 	result := pat.FirstMatch(s, 0, &res)
-	if result == false {
+	if result == -1 {
 		return false
 	}
 	r := Replace(s, rep, &res)
