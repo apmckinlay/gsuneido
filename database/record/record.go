@@ -1,11 +1,11 @@
-package tuple
+package record
 
 import (
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
 /*
-Tuple is an immutable tuple stored in a string
+Record is an immutable record stored in a string
 using the same format as cSuneido and jSuneido.
 
 NOTE: This is the post 2019 format using a two byte header.
@@ -14,7 +14,7 @@ It it used in the database for storing data records in the database
 It is also used for transferring data records
 across the client-server protocol.
 
-An empty Tuple is a single zero byte.
+An empty Record is a single zero byte.
 
 First two bytes are the type and the count of values, high two bits are the type
 followed by the total length (uint8, uint16, or uint32)
@@ -22,7 +22,7 @@ followed by the offsets of the fields (uint8, uint16, or uint32)
 followed by the contents of the fields
 integers are stored big endian (most significant first)
 */
-type Tuple string
+type Record string
 
 const (
 	type8 = iota + 1
@@ -33,18 +33,18 @@ const sizeMask = 0x3ff
 
 const hdrlen = 2
 
-// Count returns the number of values in the tuple
-func (t Tuple) Count() int {
+// Count returns the number of values in the record
+func (t Record) Count() int {
 	return (int(t[0])<<8 + int(t[1])) & sizeMask
 }
 
 // GetVal is a convenience method to get and unpack
-func (t Tuple) GetVal(i int) Value {
+func (t Record) GetVal(i int) Value {
 	return Unpack(t.GetRaw(i))
 }
 
 // Get returns one of the (usually packed) values
-func (t Tuple) GetRaw(i int) string {
+func (t Record) GetRaw(i int) string {
 	var pos, end int
 	switch t.mode() {
 	case type8:
@@ -67,6 +67,6 @@ func (t Tuple) GetRaw(i int) string {
 	return string(t)[pos:end]
 }
 
-func (t Tuple) mode() byte {
+func (t Record) mode() byte {
 	return t[0] >> 6
 }

@@ -1,4 +1,4 @@
-package tuple
+package record
 
 import (
 	rt "github.com/apmckinlay/gsuneido/runtime"
@@ -6,24 +6,24 @@ import (
 	"github.com/apmckinlay/gsuneido/util/verify"
 )
 
-// TupleBuilder is used to construct tuples
+// Builder is used to construct records
 // This is the revised format (2019)
-type TupleBuilder struct {
+type Builder struct {
 	vals []rt.Packable
 }
 
 const MaxValues = 0x3fff
 
 // Add appends a Packable
-func (tb *TupleBuilder) Add(p rt.Packable) *TupleBuilder {
-	tb.vals = append(tb.vals, p)
-	return tb
+func (b *Builder) Add(p rt.Packable) *Builder {
+	b.vals = append(b.vals, p)
+	return b
 }
 
 // AddRaw appends a string containing an already packed value
-func (tb *TupleBuilder) AddRaw(s string) *TupleBuilder {
-	tb.Add(Packed(s))
-	return tb
+func (b *Builder) AddRaw(s string) *Builder {
+	b.Add(Packed(s))
+	return b
 }
 
 // Packed is a Packable wrapper for an already packed value
@@ -39,26 +39,26 @@ func (p Packed) PackSize(int) int {
 
 // Build
 
-func (tb *TupleBuilder) Build() Tuple {
-	if len(tb.vals) > MaxValues {
-		panic("too many values for tuple")
+func (b *Builder) Build() Record {
+	if len(b.vals) > MaxValues {
+		panic("too many values for record")
 	}
-	if len(tb.vals) == 0 {
-		return Tuple("\x00")
+	if len(b.vals) == 0 {
+		return Record("\x00")
 	}
-	sizes := make([]int, len(tb.vals))
-	for i, v := range tb.vals {
+	sizes := make([]int, len(b.vals))
+	for i, v := range b.vals {
 		sizes[i] = v.PackSize(0)
 	}
-	length := tb.tupleSize(sizes)
+	length := b.recSize(sizes)
 	buf := pack.NewEncoder(length)
-	tb.build(buf, length, sizes)
+	b.build(buf, length, sizes)
 	verify.That(len(buf.String()) == length) //TODO remove
-	return Tuple(buf.String())
+	return Record(buf.String())
 }
 
-func (tb *TupleBuilder) tupleSize(sizes []int) int {
-	nfields := len(tb.vals)
+func (b *Builder) recSize(sizes []int) int {
+	nfields := len(b.vals)
 	datasize := 0
 	for _, size := range sizes {
 		datasize += size
@@ -81,23 +81,23 @@ func tblength(nfields, datasize int) int {
 	return hdrlen + 4*(1+nfields) + datasize
 }
 
-func (tb *TupleBuilder) build(dst *pack.Encoder, length int, sizes []int) {
-	tb.buildHeader(dst, length, sizes)
-	nfields := len(tb.vals)
+func (b *Builder) build(dst *pack.Encoder, length int, sizes []int) {
+	b.buildHeader(dst, length, sizes)
+	nfields := len(b.vals)
 	for i := nfields - 1; i >= 0; i-- {
-		tb.vals[i].Pack(dst)
+		b.vals[i].Pack(dst)
 	}
 }
 
-func (tb *TupleBuilder) buildHeader(dst *pack.Encoder, length int, sizes []int) {
+func (b *Builder) buildHeader(dst *pack.Encoder, length int, sizes []int) {
 	mode := mode(length)
-	nfields := len(tb.vals)
+	nfields := len(b.vals)
 	dst.Uint16(uint16(mode<<14 | nfields))
-	tb.buildOffsets(dst, length, sizes)
+	b.buildOffsets(dst, length, sizes)
 }
 
-func (tb *TupleBuilder) buildOffsets(dst *pack.Encoder, length int, sizes []int) {
-	nfields := len(tb.vals)
+func (b *Builder) buildOffsets(dst *pack.Encoder, length int, sizes []int) {
+	nfields := len(b.vals)
 	offset := length
 	switch mode(length) {
 	case type8:
