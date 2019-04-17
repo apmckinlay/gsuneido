@@ -90,7 +90,8 @@ func eval(src string) {
 	}()
 	src = "function () {\n" + src + "\n}"
 	fn := compile.Constant(src).(*SuFunc)
-	// Disasm(os.Stdout, fn)
+	// DisasmMixed(os.Stdout, fn, src)
+
 	result := th.Call(fn)
 	if result != nil {
 		prompt(">>> ")

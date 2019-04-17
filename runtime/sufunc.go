@@ -13,7 +13,7 @@ type SuFunc struct {
 	Nlocals uint8
 
 	// Code is the actual byte code
-	Code []byte
+	Code []byte //TODO change to string
 
 	// ArgSpecs used by calls in the code
 	ArgSpecs []*ArgSpec
@@ -26,6 +26,11 @@ type SuFunc struct {
 	// OuterId is the Id of the outer SuFunc
 	// It is used by interp to handle block return
 	OuterId uint32
+
+	// SrcPos contains pairs of source and code position deltas
+	SrcPos string
+	// SrcBase is the starting point for the SrcPos source deltas
+	SrcBase int
 }
 
 // Value interface (mostly handled by ParamSpec) --------------------
@@ -78,4 +83,19 @@ func (f *SuFunc) String() string {
 	}
 	s += " */"
 	return s
+}
+
+func (f *SuFunc) CodeToSrcPos(ip int) int {
+	ip-- // because interp will have already incremented
+	sp := f.SrcBase
+	cp := 0
+	for i := 0; i < len(f.SrcPos); i += 2 {
+		prev := sp
+		sp += int(f.SrcPos[i])
+		cp += int(f.SrcPos[i+1])
+		if cp > ip {
+			return prev
+		}
+	}
+	return sp // ???
 }

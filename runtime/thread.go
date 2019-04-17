@@ -125,6 +125,7 @@ func (t *Thread) CallStack() *SuObject {
 		fr := t.frames[i]
 		call := &SuObject{}
 		call.Put(SuStr("fn"), fr.fn)
+		call.Put(SuStr("srcpos"), IntVal(fr.fn.CodeToSrcPos(fr.ip)))
 		locals := &SuObject{}
 		if fr.this != nil {
 			locals.Put(SuStr("this"), fr.this)

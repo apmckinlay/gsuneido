@@ -2,7 +2,11 @@
 // Uses ascii package for lower/upper case
 package str
 
-import "github.com/apmckinlay/gsuneido/util/ascii"
+import (
+	"strings"
+
+	"github.com/apmckinlay/gsuneido/util/ascii"
+)
 
 // Capitalized returns true is the string starts with A-Z, otherwise false
 func Capitalized(s string) bool {
@@ -101,4 +105,14 @@ func Doesc(s string, i int) (byte, int) {
 		}
 	}
 	return '\\', i
+}
+
+// BeforeFirst returns s up to the first occurrence of pre
+// or all of s if pre is not found.
+func BeforeFirst(s, pre string) string {
+	i := strings.Index(s, pre)
+	if i == -1 {
+		return s
+	}
+	return s[:i]
 }

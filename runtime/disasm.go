@@ -3,8 +3,10 @@ package runtime
 import (
 	"fmt"
 	"io"
+	"strings"
 
 	op "github.com/apmckinlay/gsuneido/runtime/opcodes"
+	"github.com/apmckinlay/gsuneido/util/str"
 )
 
 func Disasm(w io.Writer, fn *SuFunc) {
@@ -71,4 +73,33 @@ func Disasm1(fn *SuFunc, i int) (int, string) {
 		}
 	}
 	return i, s
+}
+
+func DisasmMixed(w io.Writer, fn *SuFunc, src string) {
+	sp := fn.SrcBase
+	printSrc := func (s string) {
+		fmt.Fprintf(w, "%d: %s\n", sp,
+			strings.TrimSpace(str.BeforeFirst(str.BeforeFirst(s, "}"), "//")))
+	}
+	src = strings.ReplaceAll(src, "\n", " ")
+	cp := 0
+	ip := 0
+	var s string
+	for i := 0; i < len(fn.SrcPos); i += 2 {
+		ds := int(fn.SrcPos[i])
+		printSrc(src[sp:sp+ds])
+		cp += int(fn.SrcPos[i+1])
+		for ip < cp {
+			fmt.Fprintf(w, "\t%d: ", ip)
+			ip, s = Disasm1(fn, ip)
+			fmt.Fprintln(w, s)
+		}
+		sp += ds
+	}
+	printSrc(src[sp:])
+	for ip < len(fn.Code) {
+		fmt.Fprintf(w, "\t%d: ", ip)
+		ip, s = Disasm1(fn, ip)
+		fmt.Fprintln(w, s)
+	}
 }

@@ -1,12 +1,37 @@
 package compile
 
 import (
+	"os"
 	"strings"
 	"testing"
 
 	. "github.com/apmckinlay/gsuneido/runtime"
 	. "github.com/apmckinlay/gsuneido/util/hamcrest"
 )
+
+func ExampleSrcPos() {
+	src := `function () {
+		a = 123
+		b = 4
+		return a + b
+		}`
+	ast := ParseFunction(src)
+	fn := codegen(ast)
+	DisasmMixed(os.Stdout, fn, src)
+	// Output:
+	// 16: a = 123
+	// 	0: Int 123
+	// 	3: Store a
+	// 	5: Pop
+	// 26: b = 4
+	// 	6: Int 4
+	// 	9: Store b
+	// 	11: Pop
+	// 34: return a + b
+	// 	12: Load a
+	// 	14: Load b
+	// 	16: Add
+}
 
 func TestCodegen(t *testing.T) {
 	DefaultSingleQuotes = true

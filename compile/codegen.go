@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math"
 	"sync/atomic"
+	"unsafe"
 
 	"github.com/apmckinlay/gsuneido/compile/ast"
 	tok "github.com/apmckinlay/gsuneido/lexer/tokens"
@@ -28,6 +29,12 @@ type cgen struct {
 	isBlock        bool
 	firstStatement bool
 	ParamSpec
+	// srcPos contains pairs of source and code position deltas
+	srcPos []byte
+	// srcBase is the starting point for the srcPos source deltas
+	srcBase  int
+	srcPrev  int
+	codePrev int
 }
 
 // codegen compiles an Ast to an SuFunc
@@ -46,12 +53,15 @@ func (cg *cgen) codegen(fn *ast.Function) *SuFunc {
 	for _, as := range cg.argspecs {
 		as.Names = cg.Values
 	}
+
 	return &SuFunc{
 		Code:      cg.code,
 		Nlocals:   uint8(len(cg.Names)),
 		ParamSpec: cg.ParamSpec,
 		ArgSpecs:  cg.argspecs,
 		Id:        fn.Id,
+		SrcPos:    *(*string)(unsafe.Pointer(&cg.srcPos)),
+		SrcBase:   cg.srcBase,
 	}
 }
 
@@ -206,7 +216,25 @@ func param(p string) (string, Flag) {
 	return p, flag
 }
 
+func (cg *cgen) savePos(sp int) {
+	if cg.srcPos == nil {
+		cg.srcBase = sp
+		cg.srcPrev = sp
+		cg.codePrev = len(cg.code)
+		cg.srcPos = make([]byte, 0, 8)
+	} else {
+		ds := sp - cg.srcPrev
+		verify.That(ds < math.MaxUint8)
+		dc := len(cg.code) - cg.codePrev
+		verify.That(dc < math.MaxUint8)
+		cg.srcPos = append(cg.srcPos, byte(ds), byte(dc))
+		cg.srcPrev = sp
+		cg.codePrev = len(cg.code)
+	}
+}
+
 func (cg *cgen) statement(node ast.Node, labels *Labels, lastStmt bool) {
+	cg.savePos(node.(ast.Statement).Position())
 	switch node := node.(type) {
 	case *ast.Compound:
 		for _, stmt := range node.Body {
