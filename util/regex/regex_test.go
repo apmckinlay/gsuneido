@@ -12,7 +12,7 @@ import (
 func BenchmarkRegex(b *testing.B) {
 	pat := Compile(".+foo")
 	var r Result
-	s := strings.Repeat("helloworld", 11) + "foo"
+	s := strings.Repeat("helloworld", 11) + "fo"
 	for n := 0; n < b.N; n++ {
 		pat.FirstMatch(s, 0, &r)
 	}

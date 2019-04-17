@@ -156,7 +156,7 @@ outer:
 		first := 0 // used to identify first non-left pattern element
 		for pi := 0; pi < len(pat); pi++ {
 			m := true
-			in := pat[pi]
+			in := &pat[pi]
 			switch in.op {
 			case dot:
 				if pi+1 < len(pat) && pat[pi+1] == repeat {
