@@ -13,7 +13,7 @@ type SuFunc struct {
 	Nlocals uint8
 
 	// Code is the actual byte code
-	Code []byte //TODO change to string
+	Code string
 
 	// ArgSpecs used by calls in the code
 	ArgSpecs []*ArgSpec

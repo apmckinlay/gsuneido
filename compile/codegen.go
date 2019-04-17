@@ -55,7 +55,7 @@ func (cg *cgen) codegen(fn *ast.Function) *SuFunc {
 	}
 
 	return &SuFunc{
-		Code:      cg.code,
+		Code:      *(*string)(unsafe.Pointer(&cg.code)),
 		Nlocals:   uint8(len(cg.Names)),
 		ParamSpec: cg.ParamSpec,
 		ArgSpecs:  cg.argspecs,
