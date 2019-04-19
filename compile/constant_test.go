@@ -32,6 +32,8 @@ func TestConstant(t *testing.T) {
 	Assert(t).That(Constant("function () {}").Type(), Equals(types.Function))
 }
 
+// ptest ------------------------------------------------------------
+
 var _ = ptest.Add("compile", pt_compile)
 
 func TestPtestConstant(t *testing.T) {

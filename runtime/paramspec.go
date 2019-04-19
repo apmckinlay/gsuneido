@@ -159,10 +159,6 @@ func (f *ParamSpec) Show() string {
 
 var _ Named = (*ParamSpec)(nil)
 
-func (f *ParamSpec) SetName(name string) {
-	f.Name = name
-}
-
 func (f *ParamSpec) GetName() string {
 	return f.Name
 }

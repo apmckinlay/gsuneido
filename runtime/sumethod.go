@@ -83,10 +83,6 @@ func (*SuMethod) Compare(Value) int {
 
 var _ Named = (*SuMethod)(nil)
 
-func (*SuMethod) SetName(string) {
-	panic("SuMethod SetName shouldn't be called")
-}
-
 func (m *SuMethod) GetName() string {
 	if n, ok := m.fn.(Named); ok {
 		return n.GetName()

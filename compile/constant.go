@@ -10,23 +10,21 @@ import (
 	"github.com/apmckinlay/gsuneido/util/ascii"
 )
 
+// Constant compiles an anonymous Suneido constant
+func Constant(src string) Value {
+	return NamedConstant("", src)
+}
+
+// NamedConstant compiles a Suneido constant with a name
+// e.g. a library record
 func NamedConstant(name, src string) Value {
 	p := newParser(src)
-	p.className = name
+	p.name = name
 	result := p.constant()
 	if p.Token != tok.Eof {
 		p.error("syntax error: did not parse all input")
 	}
-	if named, ok := result.(Named); ok {
-		named.SetName(name)
-	}
 	return result
-}
-
-// Constant compiles a Suneido constant (e.g. a library record)
-// to a Suneido Value
-func Constant(src string) Value {
-	return NamedConstant("", src)
 }
 
 func (p *parser) constant() Value {
@@ -59,8 +57,7 @@ func (p *parser) constant() Value {
 		p.next()
 		return False
 	case tok.Function:
-		ast := p.function()
-		return codegen(ast)
+		return p.functionValue()
 	case tok.Class:
 		return p.class()
 	default:
@@ -77,6 +74,12 @@ func (p *parser) constant() Value {
 		}
 	}
 	panic(p.error("invalid constant, unexpected " + p.Token.String()))
+}
+
+func (p *parser) functionValue() Value {
+	f := codegen(p.function())
+	f.Name = p.name
+	return f
 }
 
 func (p *parser) string() Value {
@@ -132,6 +135,7 @@ func (p *parser) object() Value {
 	return ob.(Value)
 }
 
+// container allows using memberList etc. for both objects and classes
 type container interface {
 	Add(Value)
 	Has(Value) bool
@@ -157,15 +161,18 @@ func (p *parser) member(ob container, closing tok.Token, base Gnum) {
 	m := p.constant()
 	inClass := base != noBase
 	if inClass && start.IsIdent() && p.Token == tok.LParen { // method
+		name := p.privatizeDef(m)
+		prevName := p.name
+		p.name += "." + name
 		ast := p.method()
 		ast.Base = base
-		name := p.privatizeDef(m)
 		if name == "New" {
 			ast.IsNewMethod = true
 		}
 		fn := codegen(ast)
+		fn.Name = p.name
+		p.name = prevName
 		fn.ClassName = p.className
-		fn.Name = "." + name
 		p.putMem(ob, SuStr(name), fn)
 	} else if p.matchIf(tok.Colon) {
 		if inClass {
@@ -174,7 +181,12 @@ func (p *parser) member(ob container, closing tok.Token, base Gnum) {
 		if p.Token == tok.Comma || p.Token == tok.Semicolon || p.Token == closing {
 			p.putMem(ob, m, True)
 		} else {
+			prevName := p.name
+			if s, ok := m.IfStr(); ok {
+				p.name += "." + s
+			}
 			p.putMem(ob, m, p.constant())
+			p.name = prevName
 		}
 	} else {
 		ob.Add(m)
@@ -230,15 +242,12 @@ func (p *parser) class() Value {
 		p.matchIdent()
 	}
 	p.match(tok.LCurly)
+	prevClassName := p.className
+	p.className = p.getClassName()
 	mems := classcon{}
-	classNamePrev := p.className
-	if p.className == "" {
-		cn := atomic.AddInt32(&classNum, 1)
-		p.className = "Class" + strconv.Itoa(int(cn))
-	}
 	p.memberList(mems, tok.RCurly, base)
-	p.className = classNamePrev
-	return &SuClass{Base: base, MemBase: MemBase{Data: mems}}
+	p.className = prevClassName
+	return &SuClass{Base: base, MemBase: MemBase{Data: mems}, Name: p.name}
 }
 
 func (p *parser) ckBase(name string) Gnum {
@@ -251,6 +260,20 @@ func (p *parser) ckBase(name string) Gnum {
 func okBase(name string) bool {
 	return ascii.IsUpper(name[0]) ||
 		(name[0] == '_' && len(name) > 1 && ascii.IsUpper(name[1]))
+}
+
+func (p *parser) getClassName() string {
+	last := p.name
+	i := strings.LastIndexAny(last, " .")
+	if i != -1 {
+		last = last[i+1:]
+	}
+	if last == "" || last == "?" {
+		cn := atomic.AddInt32(&classNum, 1)
+		className := "Class" + strconv.Itoa(int(cn))
+		return className
+	}
+	return last
 }
 
 type classcon map[string]Value

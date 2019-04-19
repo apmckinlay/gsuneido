@@ -9,6 +9,7 @@ import (
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/ascii"
 	. "github.com/apmckinlay/gsuneido/util/ascii"
+	"github.com/apmckinlay/gsuneido/util/str"
 )
 
 // expression parses a Suneido expression and builds an AST
@@ -81,16 +82,11 @@ func (p *parser) pcExpr(minprec int8) ast.Expr {
 			p.match(tok.RBracket)
 		case tok.AssignStart < token && token < tok.AssignEnd:
 			p.ckLvalue(e)
-			rhs := p.expr()
-			if token == tok.Eq {
-				if id, ok := e.(*ast.Ident); ok {
-					if c, ok := rhs.(*ast.Constant); ok {
-						if named, ok := c.Val.(Named); ok {
-							named.SetName(id.Name)
-						}
-					}
-				}
+			if id, ok := e.(*ast.Ident); ok && token == tok.Eq {
+				p.assignName = id.Name
 			}
+			rhs := p.expr()
+			p.assignName = ""
 			e = p.Binary(e, token, rhs)
 		case token == tok.QMark:
 			t := p.expr()
@@ -225,9 +221,9 @@ func (p *parser) atom() ast.Expr {
 		p.newline = false
 		return nil // to indicate it should be privatized
 	case tok.Function:
-		return p.Constant(codegen(p.function()))
+		return p.Constant(p.noName(p.functionValue))
 	case tok.Class:
-		return p.Constant(p.class())
+		return p.Constant(p.noName(p.class))
 	case tok.New:
 		p.next()
 		expr := p.pcExpr(precedence[tok.Dot])
@@ -244,7 +240,7 @@ func (p *parser) atom() ast.Expr {
 			// MyClass { ... } => class
 			if !p.expectingCompound &&
 				okBase(p.Text) && p.lxr.AheadSkip(0).Token == tok.LCurly {
-				return p.Constant(p.class())
+				return p.Constant(p.noName(p.class))
 			}
 			e := p.Ident(p.Text)
 			p.next()
@@ -252,6 +248,18 @@ func (p *parser) atom() ast.Expr {
 		}
 	}
 	panic(p.error("syntax error: unexpected " + p.Item.String()))
+}
+
+func (p *parser) noName(f func() Value) Value {
+	prevName := p.name
+	name := p.assignName
+	if p.assignName == "" {
+		name = "?"
+	}
+	p.name = str.Opt(p.name, " ") + name
+	result := f()
+	p.name = prevName
+	return result
 }
 
 var precedence = [tok.Ntokens]int8{

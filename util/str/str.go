@@ -116,3 +116,37 @@ func BeforeFirst(s, pre string) string {
 	}
 	return s[:i]
 }
+
+/*
+// AfterFirst returns s up to the first occurrence of pre
+// or all of s if pre is not found.
+func AfterFirst(s, pre string) string {
+	i := strings.Index(s, pre)
+	if i == -1 {
+		return s // different from stdlib which returns ""
+	}
+	return s[i:]
+}
+
+// AfterLast returns s after the last occurrence of pre
+// or all of s if pre is not found.
+func AfterLast(s, pre string) string {
+	i := strings.LastIndex(s, pre)
+	if i == -1 {
+		return s
+	}
+	return s[i + len(pre):]
+}
+*/
+
+// Opt returns "" if any of the strings are ""
+// else it returns the concatenation of the strings.
+// e.g. Opt("=", s) or Opt(s, ",") or Opt("<", s, ">")
+func Opt(strs ...string) string {
+	for _, s := range strs {
+		if s == "" {
+			return ""
+		}
+	}
+	return strings.Join(strs, "")
+}

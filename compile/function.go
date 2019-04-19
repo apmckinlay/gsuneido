@@ -7,12 +7,6 @@ import (
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
-// ParseFunction parses a function and returns an AST for it
-func ParseFunction(src string) *ast.Function {
-	p := newParser(src)
-	return p.function()
-}
-
 // function parse a function (starting with the "function" keyword)
 func (p *parser) function() *ast.Function {
 	p.match(tok.Function)

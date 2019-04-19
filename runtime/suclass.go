@@ -2,8 +2,10 @@ package runtime
 
 import (
 	"sort"
+	"strings"
 
 	"github.com/apmckinlay/gsuneido/runtime/types"
+	"github.com/apmckinlay/gsuneido/util/ascii"
 )
 
 // SuClass is a user defined (Suneido language) class
@@ -18,7 +20,7 @@ var _ Value = (*SuClass)(nil)
 
 func (c *SuClass) String() string {
 	s := ""
-	if c.Name != "" {
+	if !anonymous(c.Name) {
 		s = c.Name + " "
 	}
 	s += "/* class"
@@ -27,6 +29,11 @@ func (c *SuClass) String() string {
 	}
 	s += " */"
 	return s
+}
+
+func anonymous(s string) bool {
+	return s == "" || s == "?" ||
+		(strings.HasPrefix(s, "Class") && ascii.IsDigit(s[len(s)-1]))
 }
 
 func (c *SuClass) Show() string {
@@ -184,10 +191,6 @@ func (c *SuClass) New(t *Thread, as *ArgSpec) Value {
 }
 
 var _ Named = &SuClass{}
-
-func (c *SuClass) SetName(name string) {
-	c.Name = name
-}
 
 func (c *SuClass) GetName() string {
 	return c.Name

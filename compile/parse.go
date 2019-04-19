@@ -25,6 +25,7 @@ type parser struct {
 	// Factory is used by expression.go
 	// because expressions are shared by both language and queries
 	// and generate different types of AST nodes
+	// and also to handle folding.
 	ast.Factory
 
 	// newline is true if the current token was preceeded by a newline
@@ -35,8 +36,16 @@ type parser struct {
 	// set by function.go used by expression.go
 	expectingCompound bool
 
-	// className is used for privatization
+	// name is used to assign names to nested Named constants
+	// it is also used for privatization
+	name string
+
+	// className is set by parser.Class for privatization
 	className string
+
+	// assignName is used to pass the variable name through an assignment
+	// e.g. foo = function () { ... }; Name(foo) => "foo"
+	assignName string
 }
 
 /*

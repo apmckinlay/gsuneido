@@ -125,7 +125,6 @@ func Show(v Value) string {
 
 type Named interface {
 	GetName() string
-	SetName(name string)
 }
 
 // ToStr converts SuBool, SuInt, SuDnum, SuStr, SuConcat, SuExcept to string.

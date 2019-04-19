@@ -10,7 +10,7 @@ import (
 
 func TestVars(t *testing.T) {
 	test := func(src string, expected ...string) {
-		f := ParseFunction(src)
+		f := parseFunction(src)
 		vars := ast.VarList(f)
 		sort.Strings(vars)
 		sort.Strings(expected)

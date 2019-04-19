@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/apmckinlay/gsuneido/compile/ast"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	. "github.com/apmckinlay/gsuneido/util/hamcrest"
 )
@@ -15,7 +16,7 @@ func ExampleSrcPos() {
 		b = 4
 		return a + b
 		}`
-	ast := ParseFunction(src)
+	ast := parseFunction(src)
 	fn := codegen(ast)
 	DisasmMixed(os.Stdout, fn, src)
 	// Output:
@@ -38,7 +39,8 @@ func TestCodegen(t *testing.T) {
 	defer func() { DefaultSingleQuotes = false }()
 	test := func(src, expected string) {
 		t.Helper()
-		ast := ParseFunction("function () {\n" + src + "\n}")
+		classNum = 0
+		ast := parseFunction("function () {\n" + src + "\n}")
 		fn := codegen(ast)
 		actual := disasm(fn)
 		if actual != expected {
@@ -177,7 +179,7 @@ func TestControl(t *testing.T) {
 	defer func() { DefaultSingleQuotes = false }()
 	test := func(src, expected string) {
 		t.Helper()
-		ast := ParseFunction("function () {\n" + src + "\n}")
+		ast := parseFunction("function () {\n" + src + "\n}")
 		fn := codegen2(ast, asBlock)
 		buf := strings.Builder{}
 		Disasm(&buf, fn)
@@ -408,7 +410,7 @@ func TestControl(t *testing.T) {
 }
 
 func TestBlock(t *testing.T) {
-	ast := ParseFunction("function (x) {\n b = {|a| a + x }\n}")
+	ast := parseFunction("function (x) {\n b = {|a| a + x }\n}")
 	fn := codegen(ast)
 	block := fn.Values[0].(*SuFunc)
 
@@ -420,4 +422,10 @@ func TestBlock(t *testing.T) {
 
 	Assert(t).That(disasm(fn), Equals("Block, Store b"))
 	Assert(t).That(disasm(block), Equals("Load a, Load x, Add"))
+}
+
+// parseFunction parses a function and returns an AST for it
+func parseFunction(src string) *ast.Function {
+	p := newParser(src)
+	return p.function()
 }

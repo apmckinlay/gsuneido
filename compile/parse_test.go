@@ -10,6 +10,23 @@ import (
 	. "github.com/apmckinlay/gsuneido/util/hamcrest"
 )
 
+func TestClassName(t *testing.T) {
+	p := newParser("")
+	test := func(in, expected string) {
+		t.Helper()
+		classNum = 0
+		p.name = in
+		Assert(t).That(p.getClassName(), Equals(expected))
+	}
+	test("", "Class1")
+	test("?", "Class1")
+	test("Foo", "Foo")
+	test("Foo Bar", "Bar")
+	test("Foo Bar Baz", "Baz")
+	test("Foo ?", "Class1")
+	test("Foo Bar ?", "Class1")
+}
+
 func TestParseExpression(t *testing.T) {
 	className := ""
 	rt.DefaultSingleQuotes = true

@@ -72,7 +72,7 @@ func (*SuFunc) Lookup(method string) Value {
 
 func (f *SuFunc) String() string {
 	s := ""
-	if f.Name != "" {
+	if f.Name != "" && f.Name != "?" {
 		s = f.Name + " "
 	}
 	s += "/* "
