@@ -6,21 +6,14 @@ In progress Go implementation of Suneido (http://suneido.com)
 
 ### Todo
 
-- calls (suneido and builtin)
-    - codegen
-    - interp
-    - Value.Call
-    - args processing
+- records, rules etc.
 
-- try catch
+- built-in methods and functions
 
-- builtin functions
-    - Type and Display (for execute.test)
+- client end of client-server
 
-- object packing
+- database
 
-- test packed ordering
+- server end of client-server
 
-- classes
-
-- blocks (closures)
+- Win32 interface ?
