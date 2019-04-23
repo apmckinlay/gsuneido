@@ -127,11 +127,19 @@ func (*ParamSpec) Hash2() uint32 {
 }
 
 func (f *ParamSpec) Equal(other interface{}) bool {
-	if f2, ok := other.(*ParamSpec); ok {
-		return f == f2
+	// interface check and double dispatch
+	// to work with anything that embeds ParamSpec
+	if ep, ok := other.(eqps); ok {
+		return ep.equalParamSpec(f)
 	}
 	return false
 }
+
+func (f *ParamSpec) equalParamSpec(ps *ParamSpec) bool {
+	return f == ps
+}
+
+type eqps interface{ equalParamSpec(*ParamSpec) bool }
 
 func (f *ParamSpec) Compare(other Value) int {
 	if cmp := ints.Compare(OrdOther, Order(other)); cmp != 0 {
