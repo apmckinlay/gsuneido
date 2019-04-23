@@ -233,6 +233,7 @@ func (a *Arg) String() string {
 
 type Function struct {
 	exprNodeT
+	Pos         int32
 	Params      []Param
 	Body        []Statement
 	Base        Gnum
@@ -273,6 +274,8 @@ func (a *Function) Children(fn func(Node)) {
 type Param struct {
 	Name   string // including prefix @ . _
 	DefVal Value  // may be nil
+	// Unused is set if the parameter was followed by /*unused*/
+	Unused bool
 }
 
 func (a *Param) String() string {
@@ -578,16 +581,16 @@ func (*Continue) String() string {
 	return "Continue"
 }
 
-type Expression struct {
+type ExprStmt struct {
 	stmtNodeT
 	E Expr
 }
 
-func (x *Expression) String() string {
+func (x *ExprStmt) String() string {
 	return x.E.String()
 }
 
-func (x *Expression) Children(fn func(Node)) {
+func (x *ExprStmt) Children(fn func(Node)) {
 	fn(x.E)
 }
 

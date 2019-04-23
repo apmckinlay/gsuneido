@@ -89,7 +89,11 @@ func eval(src string) {
 		}
 	}()
 	src = "function () {\n" + src + "\n}"
-	fn := compile.Constant(src).(*SuFunc)
+	v, results := compile.Checked(src)
+	for _, s := range results {
+		fmt.Println(s)
+	}
+	fn := v.(*SuFunc)
 	// DisasmMixed(os.Stdout, fn, src)
 
 	result := th.Call(fn)
@@ -133,7 +137,7 @@ func libload(name string) (result Value) {
 	}
 	// want to include the library from the start (rather than adding after)
 	// so it propogates to nested Named values
-	result = compile.NamedConstant("stdlib:" + name, string(defs[1]))
+	result = compile.NamedConstant("stdlib:"+name, string(defs[1]))
 	// fmt.Println("LOAD", name, "SUCCEEDED")
 	return
 }

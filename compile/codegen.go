@@ -12,9 +12,12 @@ import (
 	tok "github.com/apmckinlay/gsuneido/lexer/tokens"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	op "github.com/apmckinlay/gsuneido/runtime/opcodes"
+	"github.com/apmckinlay/gsuneido/util/ints"
 	"github.com/apmckinlay/gsuneido/util/str"
 	"github.com/apmckinlay/gsuneido/util/verify"
 )
+
+//TODO source statement position for errors
 
 // cgen is the context/results for compiling a function or block
 type cgen struct {
@@ -184,7 +187,7 @@ func hasSuperCall(stmts []ast.Statement) bool {
 	if len(stmts) < 1 {
 		return false
 	}
-	expr, ok := stmts[0].(*ast.Expression)
+	expr, ok := stmts[0].(*ast.ExprStmt)
 	if !ok {
 		return false
 	}
@@ -216,6 +219,7 @@ func param(p string) (string, Flag) {
 	return p, flag
 }
 
+// savePos saves source to code position information (for call stacks)
 func (cg *cgen) savePos(sp int) {
 	if cg.srcPos == nil {
 		cg.srcBase = sp
@@ -224,10 +228,14 @@ func (cg *cgen) savePos(sp int) {
 		cg.srcPos = make([]byte, 0, 8)
 	} else {
 		ds := sp - cg.srcPrev
-		verify.That(ds < math.MaxUint8)
 		dc := len(cg.code) - cg.codePrev
-		verify.That(dc < math.MaxUint8)
-		cg.srcPos = append(cg.srcPos, byte(ds), byte(dc))
+		for ds > 0 || dc > 0 {
+			ns := ints.Min(math.MaxUint8, ds)
+			nc := ints.Min(math.MaxUint8, dc)
+			cg.srcPos = append(cg.srcPos, byte(ns), byte(nc))
+			ds -= ns
+			dc -= nc
+		}
 		cg.srcPrev = sp
 		cg.codePrev = len(cg.code)
 	}
@@ -265,7 +273,7 @@ func (cg *cgen) statement(node ast.Node, labels *Labels, lastStmt bool) {
 		cg.breakStmt(labels)
 	case *ast.Continue:
 		cg.continueStmt(labels)
-	case *ast.Expression:
+	case *ast.ExprStmt:
 		cg.expr(node.E)
 		if !lastStmt {
 			cg.emit(op.Pop)
@@ -491,7 +499,7 @@ func (cg *cgen) expr(node ast.Expr) {
 	case *ast.Block:
 		cg.block(node)
 	default:
-		panic("unhandled expression: " + fmt.Sprintf("%T", node))
+		panic("unhandled expression type: " + fmt.Sprintf("%T", node))
 	}
 }
 

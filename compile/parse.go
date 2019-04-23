@@ -9,9 +9,10 @@ import (
 	tok "github.com/apmckinlay/gsuneido/lexer/tokens"
 )
 
-func newParser(src string) *parser {
+func NewParser(src string) *parser {
 	lxr := NewLexer(src)
-	p := &parser{lxr: lxr, Factory: ast.Folder{ast.Builder{}}}
+	p := &parser{lxr: lxr, Factory: ast.Folder{ast.Builder{}},
+		checker: func(*ast.Function) { }}
 	p.next()
 	return p
 }
@@ -46,6 +47,9 @@ type parser struct {
 	// assignName is used to pass the variable name through an assignment
 	// e.g. foo = function () { ... }; Name(foo) => "foo"
 	assignName string
+
+	// checker is used to add additional checking along with codegen
+	checker func(*ast.Function)
 }
 
 /*

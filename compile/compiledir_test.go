@@ -1,4 +1,4 @@
-// +build slow
+// +build interactive
 
 package compile
 
@@ -18,7 +18,7 @@ import (
 )
 
 func TestCompileDir(*testing.T) {
-	filepath.Walk("../../libs", walk)
+	filepath.Walk("../../libs/stdlib", walk)
 	fmt.Println("TOTAL SIZE", totalSize)
 }
 
@@ -33,7 +33,8 @@ func walk(path string, info os.FileInfo, err error) error {
 	}
 	if strings.Contains(path, "/Win32/") ||
 		strings.HasSuffix(path, ".css") ||
-		strings.HasSuffix(path, ".js") {
+		strings.HasSuffix(path, ".js") ||
+		strings.HasSuffix(path, ".DS_Store") {
 		return nil
 	}
 	// fmt.Println(path)
@@ -45,7 +46,16 @@ func walk(path string, info os.FileInfo, err error) error {
 		return nil
 	}
 	totalSize += len(text)
-	Constant(text)
+	// Constant(text)
+	_, results := Checked(text)
+	if len(results) > 0 {
+		fmt.Println(path)
+		for _, s := range results {
+			fmt.Println("   ", s)
+		}
+		//return fmt.Errorf("errors")
+	}
+
 	// e := Catch(func() { Constant(text) })
 	// if e != nil {
 	// 	fmt.Println("\t", e)

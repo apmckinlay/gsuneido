@@ -426,6 +426,6 @@ func TestBlock(t *testing.T) {
 
 // parseFunction parses a function and returns an AST for it
 func parseFunction(src string) *ast.Function {
-	p := newParser(src)
-	return p.function()
+	p := NewParser(src)
+	return p.Function()
 }

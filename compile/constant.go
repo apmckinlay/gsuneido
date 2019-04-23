@@ -5,6 +5,8 @@ import (
 	"strings"
 	"sync/atomic"
 
+	"github.com/apmckinlay/gsuneido/compile/ast"
+	"github.com/apmckinlay/gsuneido/compile/check"
 	tok "github.com/apmckinlay/gsuneido/lexer/tokens"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/ascii"
@@ -18,13 +20,21 @@ func Constant(src string) Value {
 // NamedConstant compiles a Suneido constant with a name
 // e.g. a library record
 func NamedConstant(name, src string) Value {
-	p := newParser(src)
+	p := NewParser(src)
 	p.name = name
 	result := p.constant()
 	if p.Token != tok.Eof {
 		p.error("syntax error: did not parse all input")
 	}
 	return result
+}
+
+func Checked(src string) (Value, []string) {
+	p := NewParser(src)
+	var ck check.Check
+	p.checker = func(ast *ast.Function) { ck.Check(ast) }
+	v := p.constant()
+	return v, ck.Results
 }
 
 func (p *parser) constant() Value {
@@ -77,7 +87,9 @@ func (p *parser) constant() Value {
 }
 
 func (p *parser) functionValue() Value {
-	f := codegen(p.function())
+	ast := p.Function()
+	p.checker(ast)
+	f := codegen(ast)
 	f.Name = p.name
 	return f
 }
@@ -169,6 +181,7 @@ func (p *parser) member(ob container, closing tok.Token, base Gnum) {
 		if name == "New" {
 			ast.IsNewMethod = true
 		}
+		p.checker(ast)
 		fn := codegen(ast)
 		fn.Name = p.name
 		p.name = prevName

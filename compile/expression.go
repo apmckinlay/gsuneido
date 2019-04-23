@@ -237,9 +237,9 @@ func (p *parser) atom() ast.Expr {
 		return p.Call(expr, args)
 	default:
 		if p.Token.IsIdent() {
-			// MyClass { ... } => class
 			if !p.expectingCompound &&
 				okBase(p.Text) && p.lxr.AheadSkip(0).Token == tok.LCurly {
+				// MyClass { ... } => class
 				return p.Constant(p.noName(p.class))
 			}
 			e := p.Ident(p.Text)
@@ -395,7 +395,6 @@ func (p *parser) argumentList(closing tok.Token) []ast.Arg {
 }
 
 func (p *parser) argname(expr ast.Expr) Value {
-	// FIXME: queries won't be same ast node types
 	if id, ok := expr.(*ast.Ident); ok {
 		return SuStr(id.Name)
 	}
@@ -412,11 +411,12 @@ func (p *parser) record() ast.Expr {
 }
 
 func (p *parser) block() *ast.Block {
+	pos := p.Pos
 	p.match(tok.LCurly)
 	params := p.blockParams()
 	body := p.statements()
 	p.match(tok.RCurly)
-	return &ast.Block{ast.Function{Params: params, Body: body}}
+	return &ast.Block{ast.Function{Pos: pos, Params: params, Body: body}}
 }
 
 func (p *parser) blockParams() []ast.Param {

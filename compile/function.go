@@ -8,25 +8,28 @@ import (
 )
 
 // function parse a function (starting with the "function" keyword)
-func (p *parser) function() *ast.Function {
+func (p *parser) Function() *ast.Function {
+	pos := p.Pos
 	p.match(tok.Function)
 	params := p.params(false)
 	body := p.compound()
-	return &ast.Function{Params: params, Body: body}
+	return &ast.Function{Pos: pos, Params: params, Body: body}
 }
 
 // method parse a class method (without the "function" keyword)
 func (p *parser) method() *ast.Function {
+	pos := p.Pos
 	params := p.params(true)
 	body := p.compound()
-	return &ast.Function{Params: params, Body: body}
+	return &ast.Function{Pos: pos, Params: params, Body: body}
 }
 
 func (p *parser) params(inClass bool) []ast.Param {
 	p.match(tok.LParen)
 	var params []ast.Param
 	if p.matchIf(tok.At) {
-		params = append(params, ast.Param{Name: "@" + p.Text})
+		params = append(params,
+			ast.Param{Name: "@" + p.Text, Unused: p.unusedAhead()})
 		p.matchIdent()
 	} else {
 		defs := false
@@ -39,23 +42,32 @@ func (p *parser) params(inClass bool) []ast.Param {
 				}
 				name = "." + name
 			}
+			unused := p.unusedAhead()
 			p.matchIdent()
 			p.checkForDupParam(params, name)
 			if p.matchIf(tok.Eq) {
 				defs = true
 				def := p.constant()
-				params = append(params, ast.Param{Name: name, DefVal: def})
+				params = append(params,
+					ast.Param{Name: name, DefVal: def, Unused: unused})
 			} else {
 				if defs {
 					p.error("default parameters must come last")
 				}
-				params = append(params, ast.Param{Name: name})
+				params = append(params, ast.Param{Name: name, Unused: unused})
 			}
 			p.matchIf(tok.Comma)
 		}
 	}
 	p.match(tok.RParen)
 	return params
+}
+
+func (p *parser) unusedAhead() bool {
+	i := 0
+	for ; p.lxr.Ahead(i).Token == tok.Whitespace; i++ {
+	}
+	return p.lxr.Ahead(i).Text == "/*unused*/"
 }
 
 func (p *parser) checkForDupParam(params []ast.Param, name string) {
@@ -132,7 +144,7 @@ func (p *parser) statement2() ast.Statement {
 		p.next()
 		return p.semi(&ast.Continue{})
 	default:
-		return p.semi(&ast.Expression{E: p.expr()})
+		return p.semi(&ast.ExprStmt{E: p.expr()})
 	}
 }
 

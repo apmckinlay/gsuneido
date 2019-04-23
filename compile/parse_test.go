@@ -11,7 +11,7 @@ import (
 )
 
 func TestClassName(t *testing.T) {
-	p := newParser("")
+	p := NewParser("")
 	test := func(in, expected string) {
 		t.Helper()
 		classNum = 0
@@ -33,7 +33,7 @@ func TestParseExpression(t *testing.T) {
 	defer func() { rt.DefaultSingleQuotes = false }()
 	parseExpr := func(src string) ast.Expr {
 		t.Helper()
-		p := newParser(src)
+		p := NewParser(src)
 		p.className = className
 		result := p.expr()
 		Assert(t).That(p.Token, Equals(tok.Eof))
@@ -267,7 +267,7 @@ func TestParseExpression(t *testing.T) {
 func TestParseParams(t *testing.T) {
 	test := func(src string) {
 		t.Helper()
-		p := newParser(src + "{}")
+		p := NewParser(src + "{}")
 		result := p.method() // method to allow dot params
 		Assert(t).That(p.Token, Equals(tok.Eof))
 		s := result.String()
@@ -289,7 +289,7 @@ func TestParseStatements(t *testing.T) {
 	defer func() { rt.DefaultSingleQuotes = false }()
 	test := func(src string, expected string) {
 		t.Helper()
-		p := newParser(src + " }")
+		p := NewParser(src + " }")
 		stmts := p.statements()
 		Assert(t).That(p.Token, Equals(tok.RCurly))
 		s := ""
@@ -371,7 +371,7 @@ func TestParseStatements(t *testing.T) {
 	xtest := func(src string, expected string) {
 		t.Helper()
 		actual := Catch(func() {
-			p := newParser(src + "}")
+			p := NewParser(src + "}")
 			p.statements()
 			Assert(t).That(p.Token, Equals(tok.Eof))
 		}).(string)
