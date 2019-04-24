@@ -10,9 +10,12 @@ import (
 // SuRecord is an SuObject with observers and rules and a default value of ""
 type SuRecord struct {
 	SuObject
-	observers       iList
-	activeObservers iList
+	observers       ValueList
+	activeObservers ActiveList
 }
+
+//go:generate genny -in ../../GoTemplates/list/list.go -out alist.go -pkg runtime gen "V=active"
+//go:generate genny -in ../../GoTemplates/list/list.go -out vlist.go -pkg runtime gen "V=Value"
 
 func NewSuRecord() *SuRecord {
 	return &SuRecord{SuObject: SuObject{defval: EmptyStr}}
@@ -70,9 +73,9 @@ type active struct {
 	obs Value
 	key Value
 }
-func (a active) Equal(other interface{}) bool {
-	aa := other.(active)
-	return a.obs.Equal(aa.obs) && a.key.Equal(aa.key)
+
+func (a active) Equal(other active) bool {
+	return a.obs.Equal(other.obs) && a.key.Equal(other.key)
 }
 
 // RecordMethods is initialized by the builtin package

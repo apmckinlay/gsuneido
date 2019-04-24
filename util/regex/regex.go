@@ -8,6 +8,8 @@ import (
 	"github.com/apmckinlay/gsuneido/util/ascii"
 )
 
+//go:generate genny -in ../../../GoTemplates/cache/cache.go -out cache.go -pkg regex gen "K=string V=Pattern"
+
 // Pattern is a compiled regular expression
 type Pattern []inst
 

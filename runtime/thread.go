@@ -35,17 +35,17 @@ type Thread struct {
 	this Value
 
 	// RxCache is per thread so no locking is required
-	RxCache *regex.LruMapCache
+	RxCache *regex.PatternCache
 	// TrCache is per thread so no locking is required
-	TrCache *tr.LruMapCache
+	TrCache *tr.TrsetCache
 }
 
 // NewThread creates a new thread
 // zero value does not handle rxcache and trcache
 func NewThread() *Thread {
 	return &Thread{
-		RxCache: regex.NewLruMapCache(100, regex.Compile),
-		TrCache: tr.NewLruMapCache(100, tr.Set)}
+		RxCache: regex.NewPatternCache(100, regex.Compile),
+		TrCache: tr.NewTrsetCache(100, tr.Set)}
 }
 
 // Push pushes a value onto the value stack
