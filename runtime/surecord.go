@@ -41,6 +41,10 @@ func (r *SuRecord) Put(t *Thread, key Value, val Value) {
 	r.callObservers(t, key)
 }
 
+func (r *SuRecord) PreSet(key Value, val Value) {
+	r.SuObject.Set(key, val)
+}
+
 func (r *SuRecord) Observer(ofn Value) {
 	r.observers.Push(ofn)
 }
