@@ -1,6 +1,8 @@
 package runtime
 
 import (
+	"strings"
+
 	"github.com/apmckinlay/gsuneido/runtime/types"
 	"github.com/apmckinlay/gsuneido/util/pack"
 )
@@ -76,6 +78,32 @@ type active struct {
 
 func (a active) Equal(other active) bool {
 	return a.obs.Equal(other.obs) && a.key.Equal(other.key)
+}
+
+// Get returns the value associated with a key, or defval if not found
+func (r *SuRecord) Get(_ *Thread, key Value) Value {
+	var result Value
+	if result = r.getIfPresent(key); result == nil {
+		if result = r.getSpecial(key); result == nil {
+			result = r.defval
+		}
+	}
+	return result
+}
+
+func (r *SuRecord) getSpecial(key Value) Value {
+	if s, ok := key.IfStr(); ok {
+		if strings.HasSuffix(s, "_lower!") {
+			s = s[0 : len(s)-7]
+			if val := r.getIfPresent(SuStr(s)); val != nil {
+				if vs, ok := val.IfStr(); ok {
+					val = SuStr(strings.ToLower(vs))
+				}
+				return val
+			}
+		}
+	}
+	return nil
 }
 
 // RecordMethods is initialized by the builtin package
