@@ -705,7 +705,7 @@ func (SuDate) Get(*Thread, Value) Value {
 	panic("date does not support get")
 }
 
-func (SuDate) Put(Value, Value) {
+func (SuDate) Put(*Thread, Value, Value) {
 	panic("date does not support put")
 }
 

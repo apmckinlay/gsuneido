@@ -90,7 +90,7 @@ func (*smi) Get(*Thread, Value) Value {
 	panic("number does not support get")
 }
 
-func (*smi) Put(Value, Value) {
+func (*smi) Put(*Thread, Value, Value) {
 	panic("number does not support put")
 }
 

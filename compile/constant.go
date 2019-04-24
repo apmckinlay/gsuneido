@@ -151,7 +151,7 @@ func (p *parser) object() Value {
 type container interface {
 	Add(Value)
 	Has(Value) bool
-	Put(Value, Value)
+	Set(Value, Value)
 }
 
 type protectable interface {
@@ -232,7 +232,7 @@ func (p *parser) putMem(ob container, m Value, v Value) {
 	if ob.Has(m) {
 		p.error("duplicate member name (" + m.String() + ")")
 	} else {
-		ob.Put(m, v)
+		ob.Set(m, v)
 	}
 }
 
@@ -301,6 +301,6 @@ func (c classcon) Has(m Value) bool {
 	}
 	panic("class member names must be strings")
 }
-func (c classcon) Put(m, v Value) {
+func (c classcon) Set(m, v Value) {
 	c[string(m.(SuStr))] = v
 }

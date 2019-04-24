@@ -75,7 +75,7 @@ func (t *Thread) massage(ps *ParamSpec, as *ArgSpec, args []Value) {
 			args[i] = nil
 		}
 		for i, ni := range as.Spec {
-			ob.Put(as.Names[ni], args[unnamed+i])
+			ob.Set(as.Names[ni], args[unnamed+i])
 			args[unnamed+i] = nil
 		}
 		args[0] = ob

@@ -190,7 +190,7 @@ func putAt(ob *SuObject, at Value, iter ArgsIter) {
 	if k, v := iter(); k == nil && v != nil {
 		panic("can only Add multiple values to un-named or numeric positions")
 	}
-	ob.Put(at, v)
+	ob.Set(at, v)
 }
 
 var paramSpecGetDef = params("(member,block)")

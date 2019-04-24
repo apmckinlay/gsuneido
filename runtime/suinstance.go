@@ -55,7 +55,7 @@ func (ob *SuInstance) Get(t *Thread, m Value) Value {
 	return x
 }
 
-func (ob *SuInstance) Put(m Value, v Value) {
+func (ob *SuInstance) Put(_ *Thread, m Value, v Value) {
 	ob.Data[ToStr(m)] = v
 }
 

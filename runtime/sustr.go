@@ -74,7 +74,7 @@ func strGet(s string, key Value) Value {
 	return SuStr(s[i])
 }
 
-func (SuStr) Put(Value, Value) {
+func (SuStr) Put(*Thread, Value, Value) {
 	panic("strings do not support put")
 }
 

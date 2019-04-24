@@ -98,7 +98,7 @@ func (c SuConcat) Get(_ *Thread, key Value) Value {
 	return strGet(c.toStr(), key)
 }
 
-func (SuConcat) Put(Value, Value) {
+func (SuConcat) Put(*Thread, Value, Value) {
 	panic("strings do not support put")
 }
 

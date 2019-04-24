@@ -55,7 +55,7 @@ func (*SuMethod) Get(*Thread, Value) Value {
 	panic("method does not support get")
 }
 
-func (*SuMethod) Put(Value, Value) {
+func (*SuMethod) Put(*Thread, Value, Value) {
 	panic("method does not support put")
 }
 

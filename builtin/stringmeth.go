@@ -192,7 +192,7 @@ func init() {
 						p := &SuObject{}
 						p.Add(IntVal(pos))
 						p.Add(IntVal(end - pos))
-						ob.Put(SuInt(i), p)
+						ob.Set(SuInt(i), p)
 					}
 				}
 				return ob

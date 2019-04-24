@@ -12,6 +12,6 @@ func TestSuRecord(t *testing.T) {
 	Assert(t).That(r.Type(), Equals(types.Record))
 	Assert(t).That(r.String(), Equals("[]"))
 	r.Add(Zero)
-	r.Put(SuStr("a"), SuInt(123))
+	r.Set(SuStr("a"), SuInt(123))
 	Assert(t).That(r.String(), Equals("[0, a: 123]"))
 }

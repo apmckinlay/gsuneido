@@ -52,7 +52,7 @@ func (SuBool) Get(*Thread, Value) Value {
 	panic("boolean does not support get")
 }
 
-func (SuBool) Put(Value, Value) {
+func (SuBool) Put(*Thread, Value, Value) {
 	panic("boolean does not support put")
 }
 

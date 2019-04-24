@@ -106,7 +106,7 @@ func (*ParamSpec) Get(*Thread, Value) Value {
 	panic("function does not support get")
 }
 
-func (*ParamSpec) Put(Value, Value) {
+func (*ParamSpec) Put(*Thread, Value, Value) {
 	panic("function does not support put")
 }
 

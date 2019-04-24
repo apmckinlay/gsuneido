@@ -43,7 +43,7 @@ func (SuDnum) Get(*Thread, Value) Value {
 	panic("number does not support get")
 }
 
-func (SuDnum) Put(Value, Value) {
+func (SuDnum) Put(*Thread, Value, Value) {
 	panic("number does not support put")
 }
 

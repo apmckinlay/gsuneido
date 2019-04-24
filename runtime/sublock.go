@@ -29,7 +29,12 @@ func (b *SuBlock) Call(t *Thread, as *ArgSpec) Value {
 	}
 
 	// normally done by Thread.Call
-	t.frames[t.fp] = Frame{fn: bf, locals: b.locals, this: b.this}
+	this := b.this
+	if t.this != nil {
+		this = t.this
+	}
+	t.frames[t.fp] = Frame{fn: bf, locals: b.locals, this: this}
+	t.this = nil
 	return t.run()
 }
 

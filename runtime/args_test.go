@@ -152,8 +152,8 @@ func makeOb() *SuObject {
 	var ob SuObject
 	ob.Add(SuInt(11))
 	ob.Add(SuInt(22))
-	ob.Put(SuStr("a"), SuInt(33))
-	ob.Put(SuStr("b"), SuInt(44))
+	ob.Set(SuStr("a"), SuInt(33))
+	ob.Set(SuStr("b"), SuInt(44))
 	return &ob
 }
 

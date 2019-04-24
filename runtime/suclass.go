@@ -111,7 +111,7 @@ func (c *SuClass) get2(m string) Value {
 	return nil
 }
 
-func (*SuClass) Put(Value, Value) {
+func (*SuClass) Put(*Thread, Value, Value) {
 	panic("class does not support put")
 }
 

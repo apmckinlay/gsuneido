@@ -73,6 +73,12 @@ func TestPtestObjects(t *testing.T) {
 	}
 }
 
+func TestPtestRecords(t *testing.T) {
+	if !ptest.RunFile("records.test") {
+		t.Fail()
+	}
+}
+
 func TestPtestLang(t *testing.T) {
 	if !ptest.RunFile("lang.test") {
 		t.Fail()

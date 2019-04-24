@@ -5,20 +5,21 @@ import (
 	"github.com/apmckinlay/gsuneido/util/pack"
 )
 
-// TODO default, rules, observers, etc.
-// TODO lazy unpacking of Tuple
+//TODO rules
 
-// SuRecord is an SuObject with observers and rules
+// SuRecord is an SuObject with observers and rules and a default value of ""
 type SuRecord struct {
 	SuObject
+	observers       iList
+	activeObservers iList
 }
 
 func NewSuRecord() *SuRecord {
-	return &SuRecord{SuObject{defval: EmptyStr}}
+	return &SuRecord{SuObject: SuObject{defval: EmptyStr}}
 }
 
 func (r *SuRecord) Copy() *SuRecord {
-	return &SuRecord{*r.SuObject.Copy()}
+	return &SuRecord{SuObject: *r.SuObject.Copy()}
 }
 
 func (*SuRecord) Type() types.Type {
@@ -35,18 +36,51 @@ func (r *SuRecord) Show() string {
 	return "[" + s[2:len(s)-1] + "]"
 }
 
+func (r *SuRecord) Put(t *Thread, key Value, val Value) {
+	r.SuObject.Set(key, val)
+	r.callObservers(t, key)
+}
+
+func (r *SuRecord) Observer(ofn Value) {
+	r.observers.Push(ofn)
+}
+
+func (r *SuRecord) RemoveObserver(ofn Value) bool {
+	return r.observers.Remove(ofn)
+}
+
+func (r *SuRecord) callObservers(t *Thread, key Value) {
+	for _, x := range r.observers.list {
+		ofn := x.(Value)
+		if !r.activeObservers.Has(active{ofn, key}) {
+			func(ofn Value, key Value) {
+				r.activeObservers.Push(active{ofn, key})
+				defer r.activeObservers.Pop()
+				t.CallAsMethod(r, ofn, key)
+			}(ofn, key)
+		}
+	}
+}
+
+type active struct {
+	obs Value
+	key Value
+}
+func (a active) Equal(other interface{}) bool {
+	aa := other.(active)
+	return a.obs.Equal(aa.obs) && a.key.Equal(aa.key)
+}
+
 // RecordMethods is initialized by the builtin package
 var RecordMethods Methods
 
 var gnRecords = Global.Num("Records")
 
-var anSuObject = SuObject{}
-
 func (SuRecord) Lookup(method string) Value {
 	if m := Lookup(RecordMethods, gnObjects, method); m != nil {
 		return m
 	}
-	return anSuObject.Lookup(method)
+	return (*SuObject)(nil).Lookup(method)
 }
 
 // Packable ---------------------------------------------------------

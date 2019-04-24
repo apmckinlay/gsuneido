@@ -80,7 +80,13 @@ func (ob *SuObject) ListGet(i int) Value {
 
 // Put adds or updates the given key and value
 // The value will be added to the list if the key is the "next"
-func (ob *SuObject) Put(key Value, val Value) {
+func (ob *SuObject) Put(_ *Thread, key Value, val Value) {
+	ob.Set(key, val)
+}
+
+// Set adds or updates the given key and value
+// The value will be added to the list if the key is the "next"
+func (ob *SuObject) Set(key Value, val Value) {
 	ob.mustBeMutable()
 	if i, ok := key.IfInt(); ok {
 		if i == len(ob.list) {
@@ -193,7 +199,7 @@ func (ob *SuObject) Insert(at int, val Value) {
 		copy(ob.list[at+1:], ob.list[at:])
 		ob.list[at] = val
 	} else {
-		ob.Put(IntVal(at), val)
+		ob.Set(IntVal(at), val)
 	}
 	ob.migrate()
 }
@@ -612,7 +618,7 @@ func unpackObject(s string, ob *SuObject) *SuObject {
 	for i := 0; i < n; i++ {
 		k = unpackValue(buf)
 		v = unpackValue(buf)
-		ob.Put(k, v)
+		ob.Set(k, v)
 	}
 	return ob
 }
@@ -644,7 +650,7 @@ func unpackObjectOld(s string, ob *SuObject) *SuObject {
 	for i := 0; i < n; i++ {
 		k = unpackValueOld(buf)
 		v = unpackValueOld(buf)
-		ob.Put(k, v)
+		ob.Set(k, v)
 	}
 	return ob
 }

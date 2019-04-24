@@ -41,7 +41,7 @@ func (SuIter) Get(*Thread, Value) Value {
 	panic("iterator does not support get")
 }
 
-func (SuIter) Put(Value, Value) {
+func (SuIter) Put(*Thread, Value, Value) {
 	panic("iterator does not support put")
 }
 

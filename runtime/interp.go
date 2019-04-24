@@ -20,9 +20,11 @@ func (t *Thread) Call(fn *SuFunc) Value {
 	}
 	t.frames[t.fp] = Frame{fn: fn, this: t.this,
 		locals: t.stack[t.sp-int(fn.Nlocals) : t.sp]}
+	t.this = nil
 	return t.run()
 }
 
+// CallMethod calls a Value with a given "this"
 func CallMethod(t *Thread, this Value, f Value, as *ArgSpec) Value {
 	t.this = this
 	return f.Call(t, as)
@@ -210,7 +212,7 @@ loop:
 			val := t.Pop()
 			m := t.Pop()
 			ob := t.Pop()
-			ob.Put(m, val)
+			ob.Put(t, m, val)
 			t.Push(val)
 		case op.RangeTo:
 			j := Index(t.Pop())
@@ -445,7 +447,6 @@ loop:
 			panic("invalid op code: " + oc.String()) // TODO fatal?
 		}
 	}
-	t.this = nil
 	return nil
 }
 

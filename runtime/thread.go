@@ -100,8 +100,8 @@ func (t *Thread) CallWithArgs(fn Value, args ...Value) Value {
 	return result
 }
 
-// CallMethod calls a Suneido method
-// arguments (including "this") should be on the stack
+// CallMethod calls a *named* method.
+// Arguments (including "this") should be on the stack
 func (t *Thread) CallMethod(method string, argSpec *ArgSpec) Value {
 	base := t.sp - int(argSpec.Nargs) - 1
 	ob := t.stack[base]
@@ -109,10 +109,21 @@ func (t *Thread) CallMethod(method string, argSpec *ArgSpec) Value {
 	if f == nil {
 		panic("method not found " + ob.Type().String() + "." + method)
 	}
-	t.this = ob
-	result := f.Call(t, argSpec)
+	result := CallMethod(t, ob, f, argSpec)
 	t.sp = base
 	return result
+}
+
+
+// CallAsMethod runs a function as if it were a method of an object.
+// Implements object.Eval
+func (t *Thread) CallAsMethod(ob, fn Value, args ...Value) Value {
+	if m, ok := fn.(*SuMethod); ok {
+		fn = m.GetFn()
+	}
+	t.this = ob
+	t.Push(ob)
+	return t.CallWithArgs(fn, args...)
 }
 
 // Callstack captures the call stack
@@ -124,19 +135,20 @@ func (t *Thread) CallStack() *SuObject {
 	for i := t.fp - 1; i >= 0; i-- {
 		fr := t.frames[i]
 		call := &SuObject{}
-		call.Put(SuStr("fn"), fr.fn)
-		call.Put(SuStr("srcpos"), IntVal(fr.fn.CodeToSrcPos(fr.ip)))
+		call.Set(SuStr("fn"), fr.fn)
+		call.Set(SuStr("srcpos"), IntVal(fr.fn.CodeToSrcPos(fr.ip)))
 		locals := &SuObject{}
 		if fr.this != nil {
-			locals.Put(SuStr("this"), fr.this)
+			locals.Set(SuStr("this"), fr.this)
 		}
 		for i, v := range fr.locals {
 			if v != nil {
-				locals.Put(SuStr(fr.fn.Names[i]), v)
+				locals.Set(SuStr(fr.fn.Names[i]), v)
 			}
 		}
-		call.Put(SuStr("locals"), locals)
+		call.Set(SuStr("locals"), locals)
 		cs.Add(call)
 	}
 	return cs
 }
+

@@ -49,7 +49,7 @@ type Value interface {
 	// The thread is necessary to call getters
 	Get(t *Thread, key Value) Value
 
-	Put(key Value, val Value)
+	Put(t *Thread, key Value, val Value)
 
 	RangeTo(i int, j int) Value
 	RangeLen(i int, n int) Value
