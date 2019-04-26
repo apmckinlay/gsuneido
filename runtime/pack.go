@@ -1,6 +1,10 @@
 package runtime
 
-import "github.com/apmckinlay/gsuneido/util/pack"
+import (
+	"strconv"
+
+	"github.com/apmckinlay/gsuneido/util/pack"
+)
 
 // Packable is the interface to packable values
 // PackSize should be called prior to Pack
@@ -80,6 +84,6 @@ func UnpackOld(s string) Value {
 	case PackRecord:
 		return UnpackRecordOld(s)
 	default:
-		panic("invalid pack tag")
+		panic("invalid pack tag " + strconv.Itoa(int(s[0])))
 	}
 }
