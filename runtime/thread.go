@@ -38,6 +38,9 @@ type Thread struct {
 	RxCache *regex.PatternCache
 	// TrCache is per thread so no locking is required
 	TrCache *tr.TrsetCache
+
+	// rules is a stack of the currently running rules, used by SuRecord
+	rules activeRules
 }
 
 // NewThread creates a new thread
@@ -114,7 +117,6 @@ func (t *Thread) CallMethod(method string, argSpec *ArgSpec) Value {
 	return result
 }
 
-
 // CallAsMethod runs a function as if it were a method of an object.
 // Implements object.Eval
 func (t *Thread) CallAsMethod(ob, fn Value, args ...Value) Value {
@@ -151,4 +153,3 @@ func (t *Thread) CallStack() *SuObject {
 	}
 	return cs
 }
-

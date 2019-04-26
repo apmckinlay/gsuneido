@@ -68,7 +68,7 @@ func (ob *SuObject) getIfPresent(key Value) Value {
 	return x.(Value)
 }
 
-// Has returns true if the object contains the given key
+// Has returns true if the object contains the given key (not value)
 func (ob *SuObject) Has(key Value) bool {
 	return ob.getIfPresent(key) != nil
 }
@@ -102,20 +102,20 @@ func (ob *SuObject) Set(key Value, val Value) {
 
 // Delete removes a key.
 // If in the list, following list values are shifted over.
-func (ob *SuObject) Delete(key Value) {
+func (ob *SuObject) Delete(key Value) bool {
 	ob.mustBeMutable()
 	if i, ok := key.IfInt(); ok && 0 <= i && i < len(ob.list) {
 		newlist := ob.list[:i+copy(ob.list[i:], ob.list[i+1:])]
 		ob.list[len(ob.list)-1] = nil // aid garbage collection
 		ob.list = newlist
-	} else {
-		ob.named.Del(key)
+		return true
 	}
+	return ob.named.Del(key) != nil
 }
 
 // Erase removes a key.
 // If in the list, following list values are NOT shifted over.
-func (ob *SuObject) Erase(key Value) {
+func (ob *SuObject) Erase(key Value) bool {
 	ob.mustBeMutable()
 	if i, ok := key.IfInt(); ok && 0 <= i && i < len(ob.list) {
 		// migrate following list elements to named
@@ -124,19 +124,10 @@ func (ob *SuObject) Erase(key Value) {
 			ob.list[j] = nil // aid garbage collection
 		}
 		ob.list = ob.list[:i]
-	} else {
-		ob.named.Del(key)
+		return true
 	}
+	return ob.named.Del(key) != nil
 }
-
-// if (m.int_if_num(&i) && 0 <= i && i < vec.size()) {
-// 	// migrate from vec to map
-// 	for (int j = vec.size() - 1; j > i; --j)
-// 		map[j] = vec[j];
-// 	vec.erase(vec.begin() + i, vec.end());
-// 	return true;
-// }
-// return map.erase(m);
 
 // Clear removes all the contents of the object, making it empty (size 0)
 func (ob *SuObject) Clear() {
@@ -189,8 +180,8 @@ func (ob *SuObject) Add(val Value) {
 	ob.migrate()
 }
 
-// Insert inserts at the given position
-// If the position is within the list, following values are move over
+// Insert inserts at the given position.
+// If the position is within the list, following values are moved over.
 func (ob *SuObject) Insert(at int, val Value) {
 	ob.mustBeMutable()
 	if 0 <= at && at <= len(ob.list) {
@@ -448,6 +439,8 @@ func (ob *SuObject) ArgsIter() func() (Value, Value) {
 	}
 }
 
+// Iter2 iterates through list and named elements.
+// List elements are returned with their numeric key index.
 func (ob *SuObject) Iter2() func() (Value, Value) {
 	next := 0
 	named := ob.named.Iter()

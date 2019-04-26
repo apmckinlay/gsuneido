@@ -4,27 +4,28 @@
 
 package runtime
 
-// active is the value type.
+// activeObserver is the value type.
+// It must have an Equal method.
 
-// ActiveList is a list of values
-type ActiveList struct {
-	list []active
+// ActiveObserverList is a list of values
+type ActiveObserverList struct {
+	list []activeObserver
 }
 
-// Push adds a active to the end of the list
-func (il *ActiveList) Push(v active) {
+// Push adds a activeObserver to the end of the list
+func (il *ActiveObserverList) Push(v activeObserver) {
 	il.list = append(il.list, v)
 }
 
 // Pop removes the last element of the list
-func (il *ActiveList) Pop() {
-	var zero active
+func (il *ActiveObserverList) Pop() {
+	var zero activeObserver
 	il.list[len(il.list)-1] = zero // for gc
 	il.list = il.list[:len(il.list)-1]
 }
 
 // Has returns true if the list contains
-func (il *ActiveList) Has(v active) bool {
+func (il *ActiveObserverList) Has(v activeObserver) bool {
 	for _, x := range il.list {
 		if x.Equal(v) {
 			return true
@@ -35,10 +36,10 @@ func (il *ActiveList) Has(v active) bool {
 
 // Remove deletes the first occurence of a value
 // and returns true if the value was found, otherwise false.
-func (il *ActiveList) Remove(v active) bool {
+func (il *ActiveObserverList) Remove(v activeObserver) bool {
 	for i, x := range il.list {
 		if x.Equal(v) {
-			var zero active
+			var zero activeObserver
 			copy(il.list[i:], il.list[i+1:])
 			il.list[len(il.list)-1] = zero // for gc
 			il.list = il.list[:len(il.list)-1]

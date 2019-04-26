@@ -7,6 +7,8 @@ import (
 	"github.com/apmckinlay/gsuneido/runtime/types"
 )
 
+// NOTE: ObjectMethods are shared with SuRecord
+
 func init() {
 	ObjectMethods = Methods{
 		"Add": methodRaw("(@args)",
@@ -17,7 +19,7 @@ func init() {
 					if i, ok := at.IfInt(); ok {
 						addAt(ob, i, iter)
 					} else {
-						putAt(ob, at, iter)
+						putAt(ob.Set, at, iter)
 					}
 				} else {
 					addAt(ob, ob.ListSize(), iter)
@@ -26,6 +28,10 @@ func init() {
 			}),
 		"Assocs": method0(func(this Value) Value { //TODO list? and named?
 			return NewSuSequence(ToObject(this).IterAssocs())
+		}),
+		"Clear": method0(func(this Value) Value {
+			ToObject(this).Clear()
+			return nil
 		}),
 		"Copy": method0(func(this Value) Value {
 			return ToObject(this).Copy()
@@ -182,7 +188,7 @@ func addAt(ob *SuObject, at int, iter ArgsIter) {
 	}
 }
 
-func putAt(ob *SuObject, at Value, iter ArgsIter) {
+func putAt(put func(Value,Value), at Value, iter ArgsIter) {
 	k, v := iter()
 	if k != nil || v == nil {
 		return
@@ -190,7 +196,7 @@ func putAt(ob *SuObject, at Value, iter ArgsIter) {
 	if k, v := iter(); k == nil && v != nil {
 		panic("can only Add multiple values to un-named or numeric positions")
 	}
-	ob.Set(at, v)
+	put(at, v)
 }
 
 var paramSpecGetDef = params("(member,block)")
