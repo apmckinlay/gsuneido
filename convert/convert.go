@@ -14,8 +14,10 @@ import (
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
-var inbuf [500000]byte
-var outbuf [500000]byte
+const bufsize = 4000000
+
+var inbuf [bufsize]byte
+var outbuf [bufsize]byte
 var intbuf = make([]byte, 4)
 
 var nrecs = 0
