@@ -9,7 +9,7 @@ import (
 	"github.com/apmckinlay/gsuneido/runtime/types"
 )
 
-var binary = cm.InRange(' ', '~').Negate()
+var binary = cm.InRange(' ', '~').Or(cm.AnyOf("\r\n\t")).Negate()
 
 func WithType(x Value) string {
 	var s string
