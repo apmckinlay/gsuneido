@@ -84,7 +84,7 @@ func (ob *SuObject) Put(_ *Thread, key Value, val Value) {
 	ob.Set(key, val)
 }
 
-// Set adds or updates the given key and value
+// Set implements Put, doesn't require thread.
 // The value will be added to the list if the key is the "next"
 func (ob *SuObject) Set(key Value, val Value) {
 	ob.mustBeMutable()

@@ -5,6 +5,7 @@
 package runtime
 
 // Value is the value type.
+// It must have an Equal method.
 
 // ValueList is a list of values
 type ValueList struct {
