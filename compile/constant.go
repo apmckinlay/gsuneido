@@ -87,7 +87,10 @@ func (p *parser) constant() Value {
 }
 
 func (p *parser) functionValue() Value {
+	prevClassName := p.className
+	p.className = "" // prevent privatization in standalone function
 	ast := p.Function()
+	p.className = prevClassName
 	p.checker(ast)
 	f := codegen(ast)
 	f.Name = p.name
