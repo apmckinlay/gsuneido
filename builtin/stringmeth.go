@@ -273,12 +273,6 @@ func init() {
 			return IntVal(this.(interface{ Len() int }).Len())
 			// "this" should always have Len
 		}),
-		"Sort!": methodRaw("(block = false)", // methodRaw to get thread
-			func(t *Thread, as *ArgSpec, this Value, args ...Value) Value {
-				args = t.Args(&ParamSpecOptionalBlock, as)
-				ToObject(this).Sort(t, args[0])
-				return this
-			}),
 		"Split": method1("(separator)", func(this, arg Value) Value {
 			sep := IfStr(arg)
 			if sep == "" {
