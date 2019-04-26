@@ -20,13 +20,12 @@ import (
 
 var builtDate string // set by: go build -ldflags "-X builtin.builtDate=..."
 
-var _ = Global.Add("Suneido", new(SuObject))
-
 var prompt = func(s string) { fmt.Print(s); _ = os.Stdout.Sync() }
 
 var dbms clientserver.Dbms
 
 func main() {
+	Global.Add("Suneido", new(SuObject))
 	options.BuiltDate = builtDate
 	flag.BoolVar(&options.Client, "c", false, "run as a client")
 	flag.Parse()
