@@ -2,7 +2,7 @@ package runtime
 
 // MemBase is the shared base for SuClass and SuInstance
 type MemBase struct {
-	Data map[string]Value // or SuStr instead of string ???
+	Data map[string]Value
 	CantConvert
 }
 
