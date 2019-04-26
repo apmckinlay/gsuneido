@@ -28,7 +28,7 @@ func isGlobal(s string) bool {
 
 // EvalAsMethod runs a function as if it were a method of an object
 // implements object.Eval
-func EvalAsMethod(t *Thread, as *ArgSpec, ob *SuObject, args []Value) Value {
+func EvalAsMethod(t *Thread, as *ArgSpec, ob Value, args []Value) Value {
 	// first argument is function
 	k, f := NewArgsIter(as, args)()
 	if k != nil || f == nil {

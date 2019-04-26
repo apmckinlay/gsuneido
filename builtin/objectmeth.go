@@ -62,7 +62,7 @@ func init() {
 			}),
 		"Eval": methodRaw("(@args)",
 			func(t *Thread, as *ArgSpec, this Value, args ...Value) Value {
-				result := EvalAsMethod(t, as, ToObject(this), args)
+				result := EvalAsMethod(t, as, this, args)
 				if result == nil {
 					return EmptyStr
 				}
@@ -71,7 +71,7 @@ func init() {
 		"Eval2": methodRaw("(@args)",
 			func(t *Thread, as *ArgSpec, this Value, args ...Value) Value {
 				ob := &SuObject{}
-				if result := EvalAsMethod(t, as, ToObject(this), args); result != nil {
+				if result := EvalAsMethod(t, as, this, args); result != nil {
 					ob.Add(result)
 				}
 				return ob
