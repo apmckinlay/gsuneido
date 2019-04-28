@@ -16,6 +16,22 @@ func (ob *SuInstance) Base() *SuClass {
 	return ob.class
 }
 
+// ToString is used by Cat, Display, and Print
+// to handle user defined ToString
+func (ob *SuInstance) ToString(t *Thread) string {
+	if f := ob.class.get2("ToString"); f != nil {
+		t.this = ob
+		x := f.Call(t, ArgSpec0)
+		if x != nil {
+			if s, ok := x.IfStr(); ok {
+				return s
+			}
+		}
+		panic("ToString should return a string")
+	}
+	return ob.String()
+}
+
 // Value interface --------------------------------------------------
 
 var _ Value = (*SuInstance)(nil)
@@ -25,15 +41,6 @@ func (ob *SuInstance) String() string {
 		return ob.class.Name + "()"
 	}
 	return "/* instance */"
-}
-
-// Display is used by Display and Print
-// to handle user defined ToString
-func (ob *SuInstance) Display(t *Thread) string {
-	if f := ob.class.get2("ToString"); f != nil {
-		return ToStr(f.Call(t, ArgSpec0))
-	}
-	return ob.String()
 }
 
 func (*SuInstance) Type() types.Type {
@@ -48,7 +55,7 @@ func (ob *SuInstance) Get(t *Thread, m Value) Value {
 	if x, ok := ob.Data[ms]; ok {
 		return x
 	}
-	x := ob.class.get1(t, ms)
+	x := ob.class.get1(t, ob, ms)
 	if m, ok := x.(*SuMethod); ok {
 		m.this = ob // fix 'this' to be instance, not method class
 	}
@@ -59,11 +66,11 @@ func (ob *SuInstance) Put(_ *Thread, m Value, v Value) {
 	ob.Data[ToStr(m)] = v
 }
 
-func (SuInstance) RangeTo(int, int) Value {
+func (*SuInstance) RangeTo(int, int) Value {
 	panic("instance does not support range")
 }
 
-func (SuInstance) RangeLen(int, int) Value {
+func (*SuInstance) RangeLen(int, int) Value {
 	panic("instance does not support range")
 }
 
@@ -118,6 +125,9 @@ func (ob *SuInstance) Lookup(method string) Value {
 	if f, ok := InstanceMethods[method]; ok {
 		return f
 	}
+	if f, ok := BaseMethods[method]; ok {
+		return f
+	}
 	return ob.class.get2(method)
 }
 
@@ -129,11 +139,21 @@ func (ob *SuInstance) Call(t *Thread, as *ArgSpec) Value {
 	panic("method not found: Call")
 }
 
-// finder applies fn to ob and all its parents
-// stopping if fn returns something other than nil, and returning that value
-func (ob *SuInstance) finder(fn func(*MemBase) Value) Value {
-	if x := fn(&ob.MemBase); x != nil {
+// Finder implements Findable
+func (ob *SuInstance) Finder(fn func(Value, *MemBase) Value) Value {
+	if x := fn(ob, &ob.MemBase); x != nil {
 		return x
 	}
-	return ob.class.finder(fn)
+	return ob.class.Finder(fn)
+}
+
+var _ Findable = (*SuInstance)(nil)
+
+func (ob *SuInstance) Delete(key Value) {
+	m := IfStr(key)
+	delete(ob.Data, m)
+}
+
+func (ob *SuInstance) Clear() {
+	ob.Data = map[string]Value{}
 }

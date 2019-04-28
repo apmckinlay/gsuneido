@@ -11,7 +11,10 @@ func NewMemBase() MemBase {
 }
 
 type Findable interface {
-	finder(fn func(*MemBase) Value) Value
+	// Finder applies fn to ob and all its parents
+	// stopping if fn returns something other than nil, and returning that value.
+	// Implemented by SuClass and SuInstance
+	Finder(fn func(v Value, mb *MemBase) Value) Value
 }
 
 func (ob *MemBase) Members() *SuObject { // TODO sequence
@@ -22,22 +25,6 @@ func (ob *MemBase) Members() *SuObject { // TODO sequence
 	return mems
 }
 
-func (ob *MemBase) Size() Value {
-	return IntVal(len(ob.Data))
-}
-
-func MemberQ(ob Findable, mem Value) Value {
-	if ss, ok := mem.(SuStr); ok {
-		m := string(ss)
-		result := ob.finder(func(ob *MemBase) Value {
-			if _, ok := ob.Data[m]; ok {
-				return True
-			}
-			return nil
-		})
-		if result == True {
-			return True
-		}
-	}
-	return False
+func (ob *MemBase) Size() int {
+	return len(ob.Data)
 }

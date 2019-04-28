@@ -4,16 +4,18 @@ import . "github.com/apmckinlay/gsuneido/runtime"
 
 func init() {
 	InstanceMethods = Methods{
-		"Base": method0(func(this Value) Value {
-			return this.(*SuInstance).Base()
+		//TODO Copy
+		"Delete": method2("(key = nil, all = false)",
+			func(this, key, all Value) Value {
+				if all == True {
+					this.(*SuInstance).Clear()
+				} else {
+					this.(*SuInstance).Delete(key)
+				}
+				return this
+			}),
+		"Readonly?": method0(func(this Value) Value {
+			return False
 		}),
-		"Members": method0(func(this Value) Value {
-			return this.(*SuInstance).Members()
-		}),
-		"Member?": memberq, // from ClassMethods
-		"Size": method0(func(this Value) Value {
-			return this.(*SuInstance).Size()
-		}),
-		// TODO more methods
 	}
 }

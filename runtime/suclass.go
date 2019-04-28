@@ -72,10 +72,10 @@ func (c *SuClass) Get(t *Thread, m Value) Value {
 	if m.Type() != types.String {
 		return nil
 	}
-	return c.get1(t, ToStr(m))
+	return c.get1(t, c, ToStr(m))
 }
 
-func (c *SuClass) get1(t *Thread, mem string) Value {
+func (c *SuClass) get1(t *Thread, this Value, mem string) Value {
 	val := c.get2(mem)
 	if val != nil {
 		if _, ok := val.(*SuFunc); ok {
@@ -85,7 +85,7 @@ func (c *SuClass) get1(t *Thread, mem string) Value {
 	}
 	if !c.noGetter {
 		if getter := c.get2("Getter_"); getter != nil {
-			t.this = c
+			t.this = this
 			t.Push(SuStr(mem))
 			return getter.Call(t, ArgSpec1)
 		}
@@ -93,7 +93,7 @@ func (c *SuClass) get1(t *Thread, mem string) Value {
 	}
 	getterName := "Getter_" + mem
 	if getter := c.get2(getterName); getter != nil {
-		t.this = c
+		t.this = this
 		return getter.Call(t, ArgSpec0)
 	}
 	return nil
@@ -153,6 +153,9 @@ func (c *SuClass) Parent() *SuClass {
 	panic("base must be class")
 }
 
+// BaseMethods is initialized by the builtin package
+var BaseMethods Methods
+
 // ClassMethods is initialized by the builtin package
 var ClassMethods Methods
 
@@ -163,12 +166,20 @@ func (c *SuClass) Lookup(method string) Value {
 	if f, ok := ClassMethods[method]; ok {
 		return f
 	}
+	if f, ok := BaseMethods[method]; ok {
+		return f
+	}
 
 	if x := c.get2(method); x != nil {
 		return x
 	}
 	if method == "New" {
 		return DefaultNewMethod
+	}
+	if method != "Default" {
+		if x := c.get2("Default"); x != nil {
+			return x
+		}
 	}
 	return nil
 }
@@ -196,14 +207,18 @@ func (c *SuClass) GetName() string {
 	return c.Name
 }
 
-// finder applies fn to ob and all its parents
-// stopping if fn returns something other than nil, and returning that value
-func (c *SuClass) finder(fn func(*MemBase) Value) Value {
+// Finder implements Findable
+func (c *SuClass) Finder(fn func(v Value, mb *MemBase) Value) Value {
 	for i := 0; i < 100; i++ {
-		if x := fn(&c.MemBase); x != nil {
+		if x := fn(c, &c.MemBase); x != nil {
 			return x
 		}
 		c = c.Parent()
+		if c == nil {
+			return nil
+		}
 	}
 	panic("too many levels of derivation (>100)")
 }
+
+var _ Findable = (*SuClass)(nil)
