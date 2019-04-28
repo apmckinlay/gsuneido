@@ -260,7 +260,7 @@ loop:
 			t.stack[t.sp-1] = Sub(t.stack[t.sp-1], t.stack[t.sp])
 		case op.Cat:
 			t.sp--
-			t.stack[t.sp-1] = Cat(t.stack[t.sp-1], t.stack[t.sp])
+			t.stack[t.sp-1] = Cat(t, t.stack[t.sp-1], t.stack[t.sp])
 		case op.Mul:
 			t.sp--
 			t.stack[t.sp-1] = Mul(t.stack[t.sp-1], t.stack[t.sp])
@@ -442,7 +442,7 @@ loop:
 					break
 				}
 			}
-			panic("method not found " + this.Type().String() + "." + ToStrOrString(method))
+			panic("method not found: " + this.Type().String() + "." + ToStrOrString(method))
 		default:
 			panic("invalid op code: " + oc.String()) // TODO fatal?
 		}

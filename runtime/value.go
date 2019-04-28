@@ -251,3 +251,7 @@ func (CantConvert) ToStr() (string, bool) {
 func (CantConvert) IfStr() (string, bool) {
 	return "", false
 }
+
+type ToStringable interface {
+	ToString(*Thread) string
+}

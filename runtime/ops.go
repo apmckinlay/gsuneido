@@ -150,13 +150,13 @@ func IntVal(n int) Value {
 	return SuDnum{Dnum: dnum.FromInt(int64(n))}
 }
 
-func Cat(x, y Value) Value {
+func Cat(t *Thread, x, y Value) Value {
 	if ssx, ok := x.(SuStr); ok {
 		if ssy, ok := y.(SuStr); ok {
 			return cat2(string(ssx), string(ssy))
 		}
 	}
-	return cat3(x, y)
+	return cat3(t, x, y)
 }
 
 func cat2(xs, ys string) Value {
@@ -174,18 +174,18 @@ func cat2(xs, ys string) Value {
 	return NewSuConcat().Add(xs).Add(ys)
 }
 
-func cat3(x, y Value) Value {
+func cat3(t *Thread, x, y Value) Value {
 	var result Value
 	xc, xcok := x.(SuConcat)
 	yc, ycok := y.(SuConcat)
 	if xcok && ycok {
 		return xc.AddSuConcat(yc)
 	} else if xcok {
-		result = xc.Add(ToStr(y))
+		result = xc.Add(catToStr(t, y))
 	} else if ycok {
-		result = NewSuConcat().Add(ToStr(x)).AddSuConcat(yc)
+		result = NewSuConcat().Add(catToStr(t, x)).AddSuConcat(yc)
 	} else {
-		result = cat2(ToStr(x), ToStr(y))
+		result = cat2(catToStr(t, x), catToStr(t, y))
 	}
 	if xe, ok := x.(*SuExcept); ok {
 		return &SuExcept{SuStr: SuStr(ToStr(result)), Callstack: xe.Callstack}
@@ -194,6 +194,13 @@ func cat3(x, y Value) Value {
 		return &SuExcept{SuStr: SuStr(ToStr(result)), Callstack: ye.Callstack}
 	}
 	return result
+}
+
+func catToStr(t *Thread, v Value) string {
+	if d, ok := v.(ToStringable); ok {
+		return d.ToString(t)
+	}
+	return ToStr(v)
 }
 
 func Match(x Value, y regex.Pattern) SuBool {

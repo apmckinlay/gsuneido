@@ -9,12 +9,8 @@ var _ = builtinRaw("Display(value)", // raw to get thread
 	})
 
 func display(t *Thread, val Value) string {
-	if d, ok := val.(displayable); ok {
-		return d.Display(t)
+	if d, ok := val.(ToStringable); ok {
+		return d.ToString(t)
 	}
 	return val.String()
-}
-
-type displayable interface {
-	Display(*Thread) string
 }
