@@ -28,3 +28,11 @@ func (ob *MemBase) Members() *SuObject { // TODO sequence
 func (ob *MemBase) Size() int {
 	return len(ob.Data)
 }
+
+func (ob *MemBase) Copy() MemBase {
+	copy := make(map[string]Value, len(ob.Data))
+	for k, v := range ob.Data {
+		copy[k] = v
+	}
+	return MemBase{Data: copy}
+}

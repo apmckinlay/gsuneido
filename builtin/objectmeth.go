@@ -95,15 +95,13 @@ func init() {
 			func(t *Thread, as *ArgSpec, this Value, args ...Value) Value {
 				args = t.Args(&paramSpecGetDef, as)
 				ob := ToObject(this)
-				x := ob.GetDefault(args[0], nil)
-				if x == nil {
-					if args[1].Type() == types.Block {
-						x = t.CallWithArgs(args[1])
-					} else {
-						x = args[1]
-					}
+				if x := ob.GetDefault(args[0], nil); x != nil {
+					return x
 				}
-				return x
+				if args[1].Type() == types.Block {
+					return t.CallWithArgs(args[1])
+				}
+				return args[1]
 			}),
 		"Iter": method0(func(this Value) Value {
 			return SuIter{Iter: ToObject(this).Iter()}
@@ -192,7 +190,7 @@ func addAt(ob *SuObject, at int, iter ArgsIter) {
 	}
 }
 
-func putAt(put func(Value,Value), at Value, iter ArgsIter) {
+func putAt(put func(Value, Value), at Value, iter ArgsIter) {
 	k, v := iter()
 	if k != nil || v == nil {
 		return

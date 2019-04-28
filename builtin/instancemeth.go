@@ -6,7 +6,9 @@ import (
 
 func init() {
 	InstanceMethods = Methods{
-		//TODO Copy
+		"Copy": method0(func(this Value) Value {
+			return this.(*SuInstance).Copy()
+		}),
 		"Delete": method2("(key = nil, all = false)",
 			func(this, key, all Value) Value {
 				if all == True {

@@ -32,6 +32,10 @@ func (ob *SuInstance) ToString(t *Thread) string {
 	return ob.String()
 }
 
+func (ob *SuInstance) Copy() *SuInstance {
+	return &SuInstance{ob.MemBase.Copy(), ob.class}
+}
+
 // Value interface --------------------------------------------------
 
 var _ Value = (*SuInstance)(nil)

@@ -2,6 +2,7 @@ package builtin
 
 import (
 	. "github.com/apmckinlay/gsuneido/runtime"
+	"github.com/apmckinlay/gsuneido/runtime/types"
 )
 
 // methods common to SuClass and SuInstance
@@ -20,7 +21,17 @@ func init() {
 			})
 		}),
 		//TODO Eval, Eval2
-		//TODO GetDefault
+		"GetDefault": methodRaw("(member, default)", // methodRaw to get thread
+			func(t *Thread, as *ArgSpec, this Value, args ...Value) Value {
+				args = t.Args(&paramSpecGetDef, as)
+				if x := this.Get(t, args[0]); x != nil {
+					return x
+				}
+				if args[1].Type() == types.Block {
+					return t.CallWithArgs(args[1])
+				}
+				return args[1]
+			}),
 		"Member?": method1("(string)", func(this, arg Value) Value {
 			m := IfStr(arg)
 			result := this.(Findable).Finder(func(v Value, mb *MemBase) Value {
