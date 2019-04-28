@@ -131,6 +131,10 @@ func init() {
 		"Member?": method1("(member)", func(this Value, val Value) Value {
 			return SuBool(ToObject(this).Has(val))
 		}),
+		"Reverse!": method0(func(this Value) Value {
+			ToObject(this).Reverse()
+			return this
+		}),
 		"Set_default": method1("(value=nil)", func(this Value, val Value) Value {
 			ToObject(this).SetDefault(val)
 			return this

@@ -529,6 +529,13 @@ func (ob *SuObject) SetDefault(def Value) {
 	ob.defval = def
 }
 
+func (ob *SuObject) Reverse() {
+	ob.mustBeMutable()
+	for lo, hi := 0, len(ob.list)-1; lo < hi; lo, hi = lo+1, hi-1 {
+		ob.list[lo], ob.list[hi] = ob.list[hi], ob.list[lo]
+	}
+}
+
 // Packable ---------------------------------------------------------
 
 var _ Packable = (*SuObject)(nil)
