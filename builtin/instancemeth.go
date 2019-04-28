@@ -1,6 +1,8 @@
 package builtin
 
-import . "github.com/apmckinlay/gsuneido/runtime"
+import (
+	. "github.com/apmckinlay/gsuneido/runtime"
+)
 
 func init() {
 	InstanceMethods = Methods{
@@ -14,6 +16,12 @@ func init() {
 				}
 				return this
 			}),
+		"Method?": method1("(string)", func(this, arg Value) Value {
+			return methodQ(this.(*SuInstance).Base(), arg)
+		}),
+		"MethodClass": method1("(string)", func(this, arg Value) Value {
+			return methodClass(this.(*SuInstance).Base(), arg)
+		}),
 		"Readonly?": method0(func(this Value) Value {
 			return False
 		}),

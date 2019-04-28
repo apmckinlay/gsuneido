@@ -1,16 +1,18 @@
 package builtin
 
-import . "github.com/apmckinlay/gsuneido/runtime"
+import (
+	. "github.com/apmckinlay/gsuneido/runtime"
+)
 
 // methods common to SuClass and SuInstance
 
 func init() {
 	BaseMethods = Methods{
 		"Base": method0(func(this Value) Value {
-			return find(this, func(v Value) Value { return v })
+			return base(this, func(v Value, _ *MemBase) Value { return v })
 		}),
 		"Base?": method1("(class)", func(this, c Value) Value {
-			return find(this, func(v Value) Value {
+			return base(this, func(v Value, _ *MemBase) Value {
 				if v == c {
 					return True
 				}
@@ -38,8 +40,6 @@ func init() {
 				return mb.Members()
 			})
 		}),
-		//TODO Method?
-		//TODO MethodClass
 		"Size": method0(func(this Value) Value {
 			return this.(Findable).Finder(func(_ Value, mb *MemBase) Value {
 				return IntVal(mb.Size())
@@ -48,15 +48,19 @@ func init() {
 	}
 }
 
-func find(x Value, fn func(Value) Value) Value {
+// base skips the first
+func base(x Value, fn func(Value, *MemBase) Value) Value {
 	first := true
-	result := x.(Findable).Finder(func(v Value, _ *MemBase) Value {
+	return nilToFalse(x.(Findable).Finder(func(v Value, mb *MemBase) Value {
 		if first {
 			first = false
 			return nil
 		}
-		return fn(v)
-	})
+		return fn(v, mb)
+	}))
+}
+
+func nilToFalse(result Value) Value {
 	if result == nil {
 		result = False
 	}
