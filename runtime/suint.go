@@ -144,7 +144,7 @@ var IntMethods Methods
 
 var anSuDnum = SuDnum{}
 
-func (*smi) Lookup(method string) Value {
+func (*smi) Lookup(method string) Callable {
 	if m := IntMethods[method]; m != nil {
 		return m
 	}

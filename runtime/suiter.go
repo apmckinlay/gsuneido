@@ -20,7 +20,7 @@ func (SuIter) Call(*Thread, *ArgSpec) Value {
 
 var IterMethods Methods
 
-func (SuIter) Lookup(method string) Value {
+func (SuIter) Lookup(method string) Callable {
 	return IterMethods[method]
 }
 

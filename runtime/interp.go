@@ -25,7 +25,7 @@ func (t *Thread) Call(fn *SuFunc) Value {
 }
 
 // CallMethod calls a Value with a given "this"
-func CallMethod(t *Thread, this Value, f Value, as *ArgSpec) Value {
+func CallMethod(t *Thread, this Value, f Callable, as *ArgSpec) Value {
 	t.this = this
 	return f.Call(t, as)
 }

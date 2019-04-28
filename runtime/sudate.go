@@ -747,7 +747,7 @@ var DateMethods Methods
 
 var gnDates = Global.Num("Dates")
 
-func (SuDate) Lookup(method string) Value {
+func (SuDate) Lookup(method string) Callable {
 	return Lookup(DateMethods, gnDates, method)
 }
 

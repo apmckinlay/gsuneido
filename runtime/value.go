@@ -18,9 +18,9 @@ import (
 // - SuBuiltin*, SuBuiltinMethod*
 // - SuFunc
 // - SuBlock
-// - SuMethod
 // - SuClass
 // - SuInstance
+// - SuMethod - not directly accessible, but returned for bound methods
 // - SuIter - not directly accessible, but returned from e.g. object.Iter
 type Value interface {
 	// String returns a human readable string i.e. Suneido Display
@@ -67,9 +67,14 @@ type Value interface {
 	// Compare returns -1 for less, 0 for equal, +1 for greater
 	Compare(other Value) int
 
-	Call(t *Thread, as *ArgSpec) Value
+	Callable
 
-	Lookup(method string) Value
+	Lookup(method string) Callable
+}
+
+// Callable is returned by Lookup
+type Callable interface {
+	Call(t *Thread, as *ArgSpec) Value
 }
 
 type Ord = int
@@ -213,7 +218,7 @@ func ToBool(x Value) bool {
 // Lookup looks for a method first in a methods map,
 // and then in a global user defined class
 // returning nil if not found in either place
-func Lookup(methods Methods, gnUserDef int, method string) Value {
+func Lookup(methods Methods, gnUserDef int, method string) Callable {
 	if m := methods[method]; m != nil {
 		return m
 	}

@@ -407,7 +407,7 @@ var ObjectMethods Methods
 
 var gnObjects = Global.Num("Objects")
 
-func (*SuObject) Lookup(method string) Value {
+func (*SuObject) Lookup(method string) Callable {
 	return Lookup(ObjectMethods, gnObjects, method)
 }
 

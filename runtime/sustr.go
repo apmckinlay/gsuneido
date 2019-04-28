@@ -143,7 +143,7 @@ var StringMethods Methods
 
 var gnStrings = Global.Num("Strings")
 
-func (SuStr) Lookup(method string) Value {
+func (SuStr) Lookup(method string) Callable {
 	return Lookup(StringMethods, gnStrings, method)
 }
 

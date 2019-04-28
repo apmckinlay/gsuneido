@@ -162,7 +162,7 @@ var ClassMethods Methods
 var DefaultNewMethod = &SuBuiltin0{func() Value { return nil },
 	BuiltinParams{ParamSpec: ParamSpec0}}
 
-func (c *SuClass) Lookup(method string) Value {
+func (c *SuClass) Lookup(method string) Callable {
 	if f, ok := ClassMethods[method]; ok {
 		return f
 	}
@@ -178,7 +178,7 @@ func (c *SuClass) Lookup(method string) Value {
 	}
 	if method != "Default" {
 		if x := c.get2("Default"); x != nil {
-			return x
+			return x //TODO return Call wrapper to adjust arguments
 		}
 	}
 	return nil

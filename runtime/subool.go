@@ -107,7 +107,7 @@ func (SuBool) Call(*Thread, *ArgSpec) Value {
 	panic("can't call Boolean")
 }
 
-func (SuBool) Lookup(string) Value {
+func (SuBool) Lookup(string) Callable {
 	return nil
 }
 

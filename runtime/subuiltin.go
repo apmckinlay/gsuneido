@@ -3,7 +3,7 @@ package runtime
 import "github.com/apmckinlay/gsuneido/runtime/types"
 
 // Methods is a map of method name strings to Values
-type Methods = map[string]Value
+type Methods = map[string]Callable
 
 type BuiltinParams struct {
 	ParamSpec
@@ -115,7 +115,7 @@ func (b *SuBuiltinRaw) Call(t *Thread, as *ArgSpec) Value {
 
 // ------------------------------------------------------------------
 
-// SuBuiltinMethod0 is a Value for a builtin method with no arguments
+// SuBuiltinMethod0 is a Callable for a builtin method with no arguments
 type SuBuiltinMethod0 struct {
 	SuBuiltin1
 }
@@ -125,7 +125,7 @@ func (b *SuBuiltinMethod0) Call(t *Thread, as *ArgSpec) Value {
 	return b.Fn(t.this)
 }
 
-// SuBuiltinMethod1 is a Value for a builtin method with one argument
+// SuBuiltinMethod1 is a Callable for a builtin method with one argument
 type SuBuiltinMethod1 struct {
 	SuBuiltin2
 }
@@ -135,7 +135,7 @@ func (b *SuBuiltinMethod1) Call(t *Thread, as *ArgSpec) Value {
 	return b.Fn(t.this, args[0])
 }
 
-// SuBuiltinMethod2 is a Value for a builtin method with two arguments
+// SuBuiltinMethod2 is a Callable for a builtin method with two arguments
 type SuBuiltinMethod2 struct {
 	SuBuiltin3
 }
@@ -145,7 +145,7 @@ func (b *SuBuiltinMethod2) Call(t *Thread, as *ArgSpec) Value {
 	return b.Fn(t.this, args[0], args[1])
 }
 
-// SuBuiltinMethod3 is a Value for a builtin method with two arguments
+// SuBuiltinMethod3 is a Callable for a builtin method with two arguments
 type SuBuiltinMethod3 struct {
 	SuBuiltin4
 }
@@ -155,17 +155,13 @@ func (b *SuBuiltinMethod3) Call(t *Thread, as *ArgSpec) Value {
 	return b.Fn(t.this, args[0], args[1], args[2])
 }
 
-// SuBuiltinMethodRaw is a Value for a builtin function with no massage
+// SuBuiltinMethodRaw is a Callable for a builtin function with no massage
 type SuBuiltinMethodRaw struct {
 	Fn func(t *Thread, as *ArgSpec, this Value, args ...Value) Value
 	ParamSpec
 }
 
-var _ Value = (*SuBuiltinMethodRaw)(nil)
-
-func (*SuBuiltinMethodRaw) Type() types.Type {
-	return types.BuiltinFunction
-}
+var _ Callable = (*SuBuiltinMethodRaw)(nil)
 
 func (b *SuBuiltinMethodRaw) Call(t *Thread, as *ArgSpec) Value {
 	base := t.sp - int(as.Nargs)

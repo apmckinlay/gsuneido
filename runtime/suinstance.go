@@ -118,7 +118,7 @@ func (*SuInstance) Compare(Value) int {
 // InstanceMethods is initialized by the builtin package
 var InstanceMethods Methods
 
-func (ob *SuInstance) Lookup(method string) Value {
+func (ob *SuInstance) Lookup(method string) Callable {
 	if method == "*new*" {
 		panic("can't create instance of instance")
 	}

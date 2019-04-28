@@ -24,9 +24,9 @@ func (m *SuMethod) Call(t *Thread, as *ArgSpec) Value {
 }
 
 // Lookup is used for .Params or .Disasm
-func (m *SuMethod) Lookup(method string) Value {
+func (m *SuMethod) Lookup(method string) Callable {
 	if f := m.fn.Lookup(method); f != nil {
-		return &SuMethod{fn: f, this: m.fn}
+		return &SuMethod{fn: f.(Value), this: m.fn}
 	}
 	return nil
 }

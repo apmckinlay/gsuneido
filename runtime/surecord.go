@@ -398,7 +398,7 @@ var RecordMethods Methods
 
 var gnRecords = Global.Num("Records")
 
-func (SuRecord) Lookup(method string) Value {
+func (SuRecord) Lookup(method string) Callable {
 	if m := Lookup(RecordMethods, gnObjects, method); m != nil {
 		return m
 	}

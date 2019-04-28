@@ -151,7 +151,7 @@ func (f *ParamSpec) Compare(other Value) int {
 // ParamsMethods is initialized by the builtin package
 var ParamsMethods Methods
 
-func (*ParamSpec) Lookup(method string) Value {
+func (*ParamSpec) Lookup(method string) Callable {
 	return ParamsMethods[method]
 }
 
