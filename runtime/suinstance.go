@@ -128,6 +128,9 @@ func (ob *SuInstance) Lookup(method string) Callable {
 	if f, ok := BaseMethods[method]; ok {
 		return f
 	}
+	if x := ob.class.get2("Default"); x != nil {
+		return &defaultAdapter{x, method}
+	}
 	return ob.class.get2(method)
 }
 

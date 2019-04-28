@@ -169,19 +169,44 @@ func (c *SuClass) Lookup(method string) Callable {
 	if f, ok := BaseMethods[method]; ok {
 		return f
 	}
-
 	if x := c.get2(method); x != nil {
 		return x
 	}
 	if method == "New" {
 		return DefaultNewMethod
 	}
-	if method != "Default" {
-		if x := c.get2("Default"); x != nil {
-			return x //TODO return Call wrapper to adjust arguments
-		}
+	if x := c.get2("Default"); x != nil {
+		return &defaultAdapter{x, method}
 	}
 	return nil
+}
+
+// defaultAdapter wraps a Default method to insert the method argument
+type defaultAdapter struct {
+	fn     Callable
+	method string
+}
+
+func (d *defaultAdapter) Call(t *Thread, as *ArgSpec) Value {
+	method := SuStr(d.method)
+	if as.Each >= EACH {
+		args := ToObject(t.Pop()).Slice(int(as.Each) - 1)
+		args.Insert(0, method)
+		t.Push(args)
+		as = ArgSpecEach
+	} else if as.Nargs == 0 {
+		t.Push(method)
+		as = ArgSpec1
+	} else {
+		t.Push(nil) // allow for another value
+		base := t.sp - 1 - int(as.Nargs)
+		copy(t.stack[base+1:], t.stack[base:]) // shift over
+		t.stack[base] = method
+		as2 := *as
+		as2.Nargs++
+		as = &as2
+	}
+	return d.fn.Call(t, as)
 }
 
 func (c *SuClass) Call(t *Thread, as *ArgSpec) Value {
