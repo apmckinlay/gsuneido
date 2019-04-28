@@ -110,7 +110,7 @@ func (t *Thread) CallMethod(method string, argSpec *ArgSpec) Value {
 	ob := t.stack[base]
 	f := ob.Lookup(method)
 	if f == nil {
-		panic("method not found " + ob.Type().String() + "." + method)
+		panic("method not found: " + ob.Type().String() + "." + method)
 	}
 	result := CallMethod(t, ob, f, argSpec)
 	t.sp = base
@@ -144,7 +144,7 @@ func (t *Thread) CallStack() *SuObject {
 			locals.Set(SuStr("this"), fr.this)
 		}
 		for i, v := range fr.locals {
-			if v != nil {
+			if v != nil && fr.fn != nil && i < len(fr.fn.Names) {
 				locals.Set(SuStr(fr.fn.Names[i]), v)
 			}
 		}
