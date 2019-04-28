@@ -152,6 +152,11 @@ func (r *SuRecord) ListSize() int {
 	return r.ob.ListSize()
 }
 
+func (r *SuRecord) Iter() Iter { // Values
+	return &obIter{ob: &r.ob, iter: r.ob.Iter2(),
+		result: func(k, v Value) Value { return v }}
+}
+
 // ------------------------------------------------------------------
 
 func (r *SuRecord) Put(t *Thread, keyval Value, val Value) {
