@@ -22,7 +22,8 @@ var _ = builtin1("Number?(value)",
 
 var _ = builtin1("String?(value)",
 	func(arg Value) Value {
-		return SuBool(arg.Type() == types.String)
+		t := arg.Type()
+		return SuBool(t == types.String || t == types.Except)
 	})
 
 var _ = builtin1("Date?(value)",
