@@ -6,37 +6,46 @@ import (
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
-var _ = builtinRaw("Date(@args)",
-	func(t *Thread, as *ArgSpec, args ...Value) Value {
-		args = t.Args(&paramSpecDate, as)
-		if args[0] != False && hasFields(args) {
-			panic("usage: Date() or Date(string [, pattern]) or " +
-				"Date(year:, month:, day:, hour:, minute:, second:)")
+type SuDateGlobal struct {
+	SuBuiltinRaw
+}
+
+func init() {
+	name, ps := paramSplit("Date(@args)")
+	Global.Add(name, &SuDateGlobal{
+		SuBuiltinRaw{dateCallClass, BuiltinParams{ParamSpec: ps}}})
+}
+
+func dateCallClass(t *Thread, as *ArgSpec, args ...Value) Value {
+	args = t.Args(&paramSpecDate, as)
+	if args[0] != False && hasFields(args) {
+		panic("usage: Date() or Date(string [, pattern]) or " +
+			"Date(year:, month:, day:, hour:, minute:, second:)")
+	}
+	if args[0] != False {
+		if _, ok := args[0].(SuDate); ok {
+			return args[0]
 		}
-		if args[0] != False {
-			if _, ok := args[0].(SuDate); ok {
-				return args[0]
-			}
-			var d SuDate
-			s := ToStr(args[0])
-			if args[1] == False {
-				if strings.HasPrefix(s, "#") {
-					d = DateFromLiteral(s)
-				} else {
-					d = ParseDate(s, "yMd")
-				}
+		var d SuDate
+		s := ToStr(args[0])
+		if args[1] == False {
+			if strings.HasPrefix(s, "#") {
+				d = DateFromLiteral(s)
 			} else {
-				d = ParseDate(s, ToStr(args[1]))
+				d = ParseDate(s, "yMd")
 			}
-			if d == NilDate {
-				return False
-			}
-			return d
-		} else if hasFields(args) {
-			return named(args)
+		} else {
+			d = ParseDate(s, ToStr(args[1]))
 		}
-		return Now()
-	})
+		if d == NilDate {
+			return False
+		}
+		return d
+	} else if hasFields(args) {
+		return named(args)
+	}
+	return Now()
+}
 
 var paramSpecDate = params(`(string=false, pattern=false,
 	year=false, month=false, day=false,
@@ -82,4 +91,18 @@ func named(args []Value) Value {
 		millisecond = ToInt(args[8])
 	}
 	return NormalizeDate(year, month, day, hour, minute, second, millisecond)
+}
+
+func (d *SuDateGlobal) Lookup(method string) Callable {
+	if method == "Begin" {
+		return method0(func(Value) Value { return DateFromLiteral("#17000101") })
+	}
+	if method == "End" {
+		return method0(func(Value) Value { return DateFromLiteral("#30000101") })
+	}
+	return d.SuBuiltinRaw.Lookup(method) // for Params
+}
+
+func (d *SuDateGlobal) String() string {
+	return "Date /* builtin class */"
 }
