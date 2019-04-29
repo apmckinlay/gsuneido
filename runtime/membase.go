@@ -17,21 +17,19 @@ type Findable interface {
 	Finder(fn func(v Value, mb *MemBase) Value) Value
 }
 
-func (ob *MemBase) Members() *SuObject { // TODO sequence
-	mems := new(SuObject)
-	for m := range ob.Data {
-		mems.Add(SuStr(m))
+func (mb *MemBase) AddMembersTo(ob *SuObject) {
+	for m := range mb.Data {
+		ob.Add(SuStr(m))
 	}
-	return mems
 }
 
-func (ob *MemBase) Size() int {
-	return len(ob.Data)
+func (mb *MemBase) Size() int {
+	return len(mb.Data)
 }
 
-func (ob *MemBase) Copy() MemBase {
-	copy := make(map[string]Value, len(ob.Data))
-	for k, v := range ob.Data {
+func (mb *MemBase) Copy() MemBase {
+	copy := make(map[string]Value, len(mb.Data))
+	for k, v := range mb.Data {
 		copy[k] = v
 	}
 	return MemBase{Data: copy}

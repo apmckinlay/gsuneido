@@ -153,7 +153,7 @@ func (r *SuRecord) ListSize() int {
 }
 
 func (r *SuRecord) Iter() Iter { // Values
-	return &obIter{ob: &r.ob, iter: r.ob.Iter2(),
+	return &obIter{ob: &r.ob, iter: r.ob.Iter2(true, true),
 		result: func(k, v Value) Value { return v }}
 }
 

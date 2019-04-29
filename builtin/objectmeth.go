@@ -26,9 +26,10 @@ func init() {
 				}
 				return this
 			}),
-		"Assocs": method0(func(this Value) Value { //TODO list? and named?
-			return NewSuSequence(ToObject(this).IterAssocs())
-		}),
+		"Assocs": methodRaw("(list = true, named = true)",
+			func(_ *Thread, as *ArgSpec, this Value, args ...Value) Value {
+				return NewSuSequence(ToObject(this).IterAssocs(iterWhich(as, args)))
+			}),
 		"Clear": method0(func(this Value) Value {
 			ToObject(this).Clear()
 			return nil
@@ -83,7 +84,7 @@ func init() {
 				return ob
 			}),
 		"Find": method1("(value)", func(this Value, val Value) Value {
-			iter := ToObject(this).Iter2()
+			iter := ToObject(this).Iter2(true, true)
 			for k, v := iter(); v != nil; k, v = iter() {
 				if v.Equal(val) {
 					return k
@@ -104,7 +105,7 @@ func init() {
 				return args[1]
 			}),
 		"Iter": method0(func(this Value) Value {
-			return SuIter{Iter: ToObject(this).Iter()}
+			return SuIter{Iter: ToObject(this).IterValues(true, true)}
 		}),
 		"Join": method1("(separator='')", func(this Value, arg Value) Value {
 			ob := ToObject(this)
@@ -123,8 +124,9 @@ func init() {
 			}
 			return SuStr(sb.String())
 		}),
-		"Members": method0(func(this Value) Value { //TODO list? and named?
-			return NewSuSequence(ToObject(this).IterMembers())
+		"Members": methodRaw("(list = true, named = true)",
+			func(_ *Thread, as *ArgSpec, this Value, args ...Value) Value {
+			return NewSuSequence(ToObject(this).IterMembers(iterWhich(as, args)))
 		}),
 		"Member?": method1("(member)", func(this Value, val Value) Value {
 			return SuBool(ToObject(this).Has(val))
@@ -162,10 +164,14 @@ func init() {
 				ToObject(this).Sort(t, args[0])
 				return this
 			}),
-		"Values": method0(func(this Value) Value { //TODO list? and named?
-			return NewSuSequence(ToObject(this).Iter())
+		"Unique!": method0(func(this Value) Value {
+			ToObject(this).Unique()
+			return this
 		}),
-		// TODO more methods
+		"Values": methodRaw("(list = true, named = true)",
+			func(_ *Thread, as *ArgSpec, this Value, args ...Value) Value {
+			return NewSuSequence(ToObject(this).IterValues(iterWhich(as, args)))
+		}),
 	}
 }
 
@@ -202,3 +208,18 @@ func putAt(put func(Value, Value), at Value, iter ArgsIter) {
 }
 
 var paramSpecGetDef = params("(member,block)")
+
+func iterWhich(as *ArgSpec, args []Value) (list bool, named bool) {
+	ai := NewArgsIter(as, args)
+	for k, v := ai(); v != nil; k, v = ai() {
+		if k == nil && v != nil {
+			panic("usage: () or (list:) or (named:)")
+		}
+		if k.Equal(SuStr("list")) {
+			list = true
+		} else if k.Equal(SuStr("named")) {
+			named = true
+		}
+	}
+	return
+}

@@ -441,16 +441,35 @@ func (ob *SuObject) ArgsIter() func() (Value, Value) {
 
 // Iter2 iterates through list and named elements.
 // List elements are returned with their numeric key index.
-func (ob *SuObject) Iter2() func() (Value, Value) {
+func (ob *SuObject) Iter2(list, named bool) func() (Value, Value) {
 	next := 0
-	named := ob.named.Iter()
+	if list && !named {
+		return func() (Value, Value) {
+			i := next
+			if i < len(ob.list) {
+				next++
+				return SuInt(i), ob.list[i]
+			}
+			return nil, nil
+		}
+	}
+	namedIter := ob.named.Iter()
+	if named && !list {
+		return func() (Value, Value) {
+			key, val := namedIter()
+			if key == nil {
+				return nil, nil
+			}
+			return key.(Value), val.(Value)
+		}
+	}
 	return func() (Value, Value) {
 		i := next
-		next++
 		if i < len(ob.list) {
+			next++
 			return SuInt(i), ob.list[i]
 		}
-		key, val := named()
+		key, val := namedIter()
 		if key == nil {
 			return nil, nil
 		}
@@ -458,25 +477,34 @@ func (ob *SuObject) Iter2() func() (Value, Value) {
 	}
 }
 
-func (ob *SuObject) Iter() Iter { // Values
-	return &obIter{ob: ob, iter: ob.Iter2(),
+func (ob *SuObject) Iter() Iter {
+	return &obIter{ob: ob, iter: ob.Iter2(true, true),
 		result: func(k, v Value) Value { return v }}
 }
 
-func (ob *SuObject) IterMembers() Iter {
-	return &obIter{ob: ob, iter: ob.Iter2(),
+func (ob *SuObject) IterValues(list, named bool) Iter {
+	return &obIter{ob: ob, list: list, named: named,
+		iter:   ob.Iter2(list, named),
+		result: func(k, v Value) Value { return v }}
+}
+
+func (ob *SuObject) IterMembers(list, named bool) Iter {
+	return &obIter{ob: ob, list: list, named: named,
+		iter:   ob.Iter2(list, named),
 		result: func(k, v Value) Value { return k }}
 }
 
-func (ob *SuObject) IterAssocs() Iter {
-	return &obIter{ob: ob, iter: ob.Iter2(),
+func (ob *SuObject) IterAssocs(list, named bool) Iter {
+	return &obIter{ob: ob, list: list, named: named,
+		iter:   ob.Iter2(list, named),
 		result: func(k, v Value) Value { return NewSuObject(k, v) }}
 }
 
 type obIter struct {
-	ob     *SuObject
-	iter   func() (Value, Value)
-	result func(Value, Value) Value
+	ob          *SuObject
+	list, named bool
+	iter        func() (Value, Value)
+	result      func(Value, Value) Value
 }
 
 func (it *obIter) Next() Value {
@@ -488,7 +516,9 @@ func (it *obIter) Next() Value {
 	return it.result(k, v)
 }
 func (it *obIter) Dup() Iter {
-	return &obIter{ob: it.ob, iter: it.ob.Iter2(), result: it.result}
+	oi := *it
+	oi.iter = it.ob.Iter2(it.list, it.named)
+	return &oi
 }
 func (it *obIter) Infinite() bool {
 	return false
@@ -507,12 +537,33 @@ func (ob *SuObject) Sort(t *Thread, lt Value) {
 	}
 }
 
+func (ob *SuObject) Unique() {
+	n := ob.ListSize()
+	if n < 2 {
+		return
+	}
+	dst := 1
+	for src := 1; src < n; src++ {
+		if ob.list[src].Equal(ob.list[src-1]) {
+			continue
+		}
+		if dst < src {
+			ob.list[dst] = ob.list[src]
+		}
+		dst++
+	}
+	for i := dst; i < n; i++ {
+		ob.list[i] = nil // for gc
+	}
+	ob.list = ob.list[:dst]
+}
+
 func (ob *SuObject) SetReadOnly() {
 	if ob.readonly {
 		return
 	}
 	ob.readonly = true
-	iter := ob.Iter2()
+	iter := ob.Iter2(true, true)
 	for k, v := iter(); k != nil; k, v = iter() {
 		if x, ok := v.ToObject(); ok {
 			x.SetReadOnly()
