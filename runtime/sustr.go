@@ -49,12 +49,17 @@ var DefaultSingleQuotes = false
 
 // String returns a human readable string with quotes and escaping
 func (ss SuStr) String() string {
-	// TODO: handle escaping
-	q := "\""
-	if DefaultSingleQuotes {
-		q = "'"
+	s := string(ss)
+	if strings.ContainsRune(s, '\\') && !strings.ContainsAny(s, "`\x00") {
+		return "`" + s + "`"
 	}
-	return q + string(ss) + q
+	s = strings.ReplaceAll(s, "\\", "\\\\")
+	s = strings.ReplaceAll(s, "\x00", "\\x00")
+	if !strings.ContainsRune(s, '\'') &&
+		(DefaultSingleQuotes || strings.ContainsRune(s, '"')) {
+		return "'" + s + "'"
+	}
+	return "\"" + strings.ReplaceAll(s, "\"", "\\\"") + "\""
 }
 
 func (ss SuStr) Get(_ *Thread, key Value) Value {
