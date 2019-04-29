@@ -61,7 +61,7 @@ func main() {
 	tmpname := fout.Name()
 	fout.Close()
 	err = os.Remove("database.su.bak")
-	if !os.IsNotExist(err) {
+	if err != nil && !os.IsNotExist(err) {
 		fmt.Println("ERROR: couldn't remove database.su.bak")
 		fmt.Println(err)
 	}
