@@ -45,11 +45,18 @@ func init() {
 			}
 			return result
 		}),
-		"Members": method0(func(this Value) Value {
-			//TODO all:
-			return this.(Findable).Finder(func(_ Value, mb *MemBase) Value {
-				return mb.Members()
+		"Members": method1("(all = false)", func(this, all Value) Value {
+			if all == True {
+				all = nil
+			}
+			list := NewSuObject()
+			this.(Findable).Finder(func(v Value, mb *MemBase) Value {
+				mb.AddMembersTo(list)
+				return all
 			})
+			list.Sort(nil, False)
+			list.Unique()
+			return list
 		}),
 		"Size": method0(func(this Value) Value {
 			return this.(Findable).Finder(func(_ Value, mb *MemBase) Value {
