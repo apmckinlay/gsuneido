@@ -20,7 +20,22 @@ func init() {
 				return nil
 			})
 		}),
-		//TODO Eval, Eval2
+		"Eval": methodRaw("(@args)",
+			func(t *Thread, as *ArgSpec, this Value, args ...Value) Value {
+				result := EvalAsMethod(t, as, this, args)
+				if result == nil {
+					return EmptyStr
+				}
+				return result
+			}),
+		"Eval2": methodRaw("(@args)",
+			func(t *Thread, as *ArgSpec, this Value, args ...Value) Value {
+				ob := &SuObject{}
+				if result := EvalAsMethod(t, as, this, args); result != nil {
+					ob.Add(result)
+				}
+				return ob
+			}),
 		"GetDefault": methodRaw("(member, default)", // methodRaw to get thread
 			func(t *Thread, as *ArgSpec, this Value, args ...Value) Value {
 				args = t.Args(&paramSpecGetDef, as)
