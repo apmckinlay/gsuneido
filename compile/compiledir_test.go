@@ -18,7 +18,7 @@ import (
 )
 
 func TestCompileDir(*testing.T) {
-	filepath.Walk("../../libs/stdlib", walk)
+	filepath.Walk("../../stdlib", walk)
 	fmt.Println("TOTAL SIZE", totalSize)
 }
 
