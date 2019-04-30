@@ -44,6 +44,7 @@ func TestCompile(t *testing.T) {
 	test(`[\s]`, "[ \t\r\n]")
 	test("[ace]", "[ace]")
 	test("[a-cx-z]", "[abcxyz]")
+	test("[a-Z]", "[]")
 	test("(?i)x.y(?-i)z", "i'x' . i'y' 'z'")
 
 	test("(?q).*(?-q)def", "'.*def'")

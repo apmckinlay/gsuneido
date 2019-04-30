@@ -42,6 +42,9 @@ func cc() *builder {
 
 // addRange adds a range of characters to a character class instruction
 func (b *builder) addRange(from, to byte) *builder {
+	if from > to {
+		return b
+	}
 	if !b.isSet && len(b.data)+int(to-from) <= maxList {
 		for c := from; c <= to; c++ {
 			b.data = append(b.data, c)

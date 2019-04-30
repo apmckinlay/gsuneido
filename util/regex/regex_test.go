@@ -80,7 +80,7 @@ func TestPtest(t *testing.T) {
 // pt_match is a ptest for matching
 // simple usage is two arguments, string and pattern
 // an optional third argument can be "false" for matches that should fail
-// or additional arguments can specify \0, \1, ...
+// or additional arguments can specify expected \0, \1, ...
 func pt_match(args []string, _ []bool) bool {
 	pat := Compile(args[1])
 	var res Result

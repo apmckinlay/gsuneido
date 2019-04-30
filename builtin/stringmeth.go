@@ -54,7 +54,7 @@ func init() {
 			s := IfStr(this)
 			pat := regex.Compile(IfStr(arg1))
 			var res regex.Result
-			if pat.FirstMatch(s, 0, &res) != -1 {
+			if pat.FirstMatch(s, 0, &res) == -1 {
 				return False
 			}
 			pos, end := res[1].Range()
