@@ -124,10 +124,20 @@ func init() {
 			}
 			return SuStr(sb.String())
 		}),
+		"BinarySearch": methodRaw("(value, block = false)", // methodRaw to get thread
+			func(t *Thread, as *ArgSpec, this Value, args ...Value) Value {
+				args = t.Args(&paramSpecBound, as)
+				ob := ToObject(this)
+				if args[1] == False {
+					return IntVal(ob.BinarySearch(args[0]))
+				} else {
+					return IntVal(ob.BinarySearch2(t, args[0], args[1]))
+				}
+			}),
 		"Members": methodRaw("(list = true, named = true)",
 			func(_ *Thread, as *ArgSpec, this Value, args ...Value) Value {
-			return NewSuSequence(ToObject(this).IterMembers(iterWhich(as, args)))
-		}),
+				return NewSuSequence(ToObject(this).IterMembers(iterWhich(as, args)))
+			}),
 		"Member?": method1("(member)", func(this Value, val Value) Value {
 			return SuBool(ToObject(this).Has(val))
 		}),
@@ -170,8 +180,8 @@ func init() {
 		}),
 		"Values": methodRaw("(list = true, named = true)",
 			func(_ *Thread, as *ArgSpec, this Value, args ...Value) Value {
-			return NewSuSequence(ToObject(this).IterValues(iterWhich(as, args)))
-		}),
+				return NewSuSequence(ToObject(this).IterValues(iterWhich(as, args)))
+			}),
 	}
 }
 
@@ -223,3 +233,5 @@ func iterWhich(as *ArgSpec, args []Value) (list bool, named bool) {
 	}
 	return
 }
+
+var paramSpecBound = params("(value,block=false)")

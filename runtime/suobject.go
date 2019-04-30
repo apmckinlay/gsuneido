@@ -621,6 +621,18 @@ func (ob *SuObject) Reverse() {
 	}
 }
 
+func (ob *SuObject) BinarySearch(value Value) int {
+	return sort.Search(ob.ListSize(), func(i int) bool {
+		return ob.list[i].Compare(value) >= 0
+	})
+}
+
+func (ob *SuObject) BinarySearch2(t *Thread, value, lt Value) int {
+	return sort.Search(ob.ListSize(), func(i int) bool {
+		return True != t.CallWithArgs(lt, ob.list[i], value)
+	})
+}
+
 // Packable ---------------------------------------------------------
 
 var _ Packable = (*SuObject)(nil)
