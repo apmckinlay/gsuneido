@@ -20,6 +20,7 @@ type SuObject struct {
 	list     []Value
 	named    hmap.Hmap
 	readonly bool
+	version  int32
 	defval   Value
 	CantConvert
 }
@@ -87,7 +88,7 @@ func (ob *SuObject) Put(_ *Thread, key Value, val Value) {
 // Set implements Put, doesn't require thread.
 // The value will be added to the list if the key is the "next"
 func (ob *SuObject) Set(key Value, val Value) {
-	ob.mustBeMutable()
+	defer ob.endMutate(ob.startMutate())
 	if i, ok := key.IfInt(); ok {
 		if i == len(ob.list) {
 			ob.Add(val)
@@ -103,7 +104,7 @@ func (ob *SuObject) Set(key Value, val Value) {
 // Delete removes a key.
 // If in the list, following list values are shifted over.
 func (ob *SuObject) Delete(key Value) bool {
-	ob.mustBeMutable()
+	defer ob.endMutate(ob.startMutate())
 	if i, ok := key.IfInt(); ok && 0 <= i && i < len(ob.list) {
 		newlist := ob.list[:i+copy(ob.list[i:], ob.list[i+1:])]
 		ob.list[len(ob.list)-1] = nil // aid garbage collection
@@ -116,7 +117,7 @@ func (ob *SuObject) Delete(key Value) bool {
 // Erase removes a key.
 // If in the list, following list values are NOT shifted over.
 func (ob *SuObject) Erase(key Value) bool {
-	ob.mustBeMutable()
+	defer ob.endMutate(ob.startMutate())
 	if i, ok := key.IfInt(); ok && 0 <= i && i < len(ob.list) {
 		// migrate following list elements to named
 		for j := len(ob.list) - 1; j > i; j-- {
@@ -129,9 +130,27 @@ func (ob *SuObject) Erase(key Value) bool {
 	return ob.named.Del(key) != nil
 }
 
+// startMutate ensures the object is mutable (not readonly)
+// and saves the list and named sizes (packed into an int)
+func (ob *SuObject) startMutate() int {
+	ob.mustBeMutable()
+	return ob.sizes()
+}
+
+// endMutate increments the version if the sizes have changed
+func (ob *SuObject) endMutate(nn int) {
+	if nn != ob.sizes() {
+		ob.version++
+	}
+}
+
+func (ob *SuObject) sizes() int {
+	return ob.ListSize()<<32 | ob.NamedSize()
+}
+
 // Clear removes all the contents of the object, making it empty (size 0)
 func (ob *SuObject) Clear() {
-	ob.mustBeMutable()
+	defer ob.endMutate(ob.startMutate())
 	ob.list = []Value{}
 	ob.named = hmap.Hmap{}
 }
@@ -176,6 +195,7 @@ func (ob *SuObject) Size() int {
 // Add appends a value to the list portion
 func (ob *SuObject) Add(val Value) {
 	ob.mustBeMutable()
+	ob.version++
 	ob.list = append(ob.list, val)
 	ob.migrate()
 }
@@ -183,7 +203,7 @@ func (ob *SuObject) Add(val Value) {
 // Insert inserts at the given position.
 // If the position is within the list, following values are moved over.
 func (ob *SuObject) Insert(at int, val Value) {
-	ob.mustBeMutable()
+	defer ob.endMutate(ob.startMutate())
 	if 0 <= at && at <= len(ob.list) {
 		// insert into list
 		ob.list = append(ob.list, nil)
@@ -423,9 +443,11 @@ func (ob *SuObject) Slice(n int) *SuObject {
 
 // ArgsIter is similar to Iter2 but it returns a nil key for list elements
 func (ob *SuObject) ArgsIter() func() (Value, Value) {
+	version := ob.version
 	next := 0
 	named := ob.named.Iter()
 	return func() (Value, Value) {
+		ob.modificationCheck(version)
 		i := next
 		next++
 		if i < len(ob.list) {
@@ -442,9 +464,11 @@ func (ob *SuObject) ArgsIter() func() (Value, Value) {
 // Iter2 iterates through list and named elements.
 // List elements are returned with their numeric key index.
 func (ob *SuObject) Iter2(list, named bool) func() (Value, Value) {
+	version := ob.version
 	next := 0
 	if list && !named {
 		return func() (Value, Value) {
+			ob.modificationCheck(version)
 			i := next
 			if i < len(ob.list) {
 				next++
@@ -456,6 +480,7 @@ func (ob *SuObject) Iter2(list, named bool) func() (Value, Value) {
 	namedIter := ob.named.Iter()
 	if named && !list {
 		return func() (Value, Value) {
+			ob.modificationCheck(version)
 			key, val := namedIter()
 			if key == nil {
 				return nil, nil
@@ -464,6 +489,7 @@ func (ob *SuObject) Iter2(list, named bool) func() (Value, Value) {
 		}
 	}
 	return func() (Value, Value) {
+		ob.modificationCheck(version)
 		i := next
 		if i < len(ob.list) {
 			next++
@@ -474,6 +500,12 @@ func (ob *SuObject) Iter2(list, named bool) func() (Value, Value) {
 			return nil, nil
 		}
 		return key.(Value), val.(Value)
+	}
+}
+
+func (ob *SuObject) modificationCheck(version int32) {
+	if ob.version != version {
+		panic("object modified during iteration")
 	}
 }
 
@@ -508,7 +540,6 @@ type obIter struct {
 }
 
 func (it *obIter) Next() Value {
-	//TODO check for modification during iteration
 	k, v := it.iter()
 	if v == nil {
 		return nil
@@ -526,6 +557,7 @@ func (it *obIter) Infinite() bool {
 
 func (ob *SuObject) Sort(t *Thread, lt Value) {
 	ob.mustBeMutable()
+	ob.version++
 	if lt == False {
 		sort.SliceStable(ob.list, func(i, j int) bool {
 			return ob.list[i].Compare(ob.list[j]) < 0
@@ -538,6 +570,7 @@ func (ob *SuObject) Sort(t *Thread, lt Value) {
 }
 
 func (ob *SuObject) Unique() {
+	defer ob.endMutate(ob.startMutate())
 	n := ob.ListSize()
 	if n < 2 {
 		return
@@ -582,6 +615,7 @@ func (ob *SuObject) SetDefault(def Value) {
 
 func (ob *SuObject) Reverse() {
 	ob.mustBeMutable()
+	ob.version++
 	for lo, hi := 0, len(ob.list)-1; lo < hi; lo, hi = lo+1, hi-1 {
 		ob.list[lo], ob.list[hi] = ob.list[hi], ob.list[lo]
 	}
