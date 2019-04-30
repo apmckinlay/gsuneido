@@ -130,9 +130,8 @@ func init() {
 				ob := ToObject(this)
 				if args[1] == False {
 					return IntVal(ob.BinarySearch(args[0]))
-				} else {
-					return IntVal(ob.BinarySearch2(t, args[0], args[1]))
 				}
+				return IntVal(ob.BinarySearch2(t, args[0], args[1]))
 			}),
 		"Members": methodRaw("(list = true, named = true)",
 			func(_ *Thread, as *ArgSpec, this Value, args ...Value) Value {
