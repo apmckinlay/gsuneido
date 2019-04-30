@@ -72,8 +72,6 @@ func TestParseExpression(t *testing.T) {
 		}
 	}
 
-	test("'x' $ 'y'.Repeat()", "Nary(Cat 'x' Call(Mem('y' 'Repeat')))")
-
 	test("123", "")
 	test("foo", "")
 	test("true", "")
@@ -101,6 +99,7 @@ func TestParseExpression(t *testing.T) {
 	test("a $ b", "Nary(Cat a b)")
 	test("a $ b $ c", "Nary(Cat a b c)")
 	test("'foo' $ a $ 'bar'", "Nary(Cat 'foo' a 'bar')")
+	test("'x' $ 'y'.Repeat()", "Nary(Cat 'x' Call(Mem('y' 'Repeat')))")
 
 	test("a | b & c", "Nary(BitOr a Nary(BitAnd b c))")
 	test("a ^ b ^ c", "Nary(BitXor a b c)")
@@ -244,13 +243,13 @@ func TestParseExpression(t *testing.T) {
 	test("1 / 8", ".125")
 	test("2 / 8", ".25")
 	test("2 * 4", "8")
-	test("a / 2", "Nary(Mul a .5)")
+	test("a / 2", "Nary(Mul a Unary(Div 2))")
 	test("8 / 2", "4")
 	test("4 * 8 / 2", "16")
-	test("2 * a * b", "Nary(Mul 2 a b)")
-	test("3 * a * b * 2", "Nary(Mul 6 a b)")
-	test("a * 6 * b / 3", "Nary(Mul a 2 b)")
-	test("a * 8 * b / 4", "Nary(Mul a 2 b)")
+	test("2 * a * b", "Nary(Mul a b 2)")
+	test("3 * a * b * 2", "Nary(Mul a b 6)")
+	test("a * 6 * b / 3", "Nary(Mul a b 2)")
+	test("a * 8 * b / 4", "Nary(Mul a b 2)")
 
 	// concatenation
 	test("'foo' $ 'bar'", "'foobar'")

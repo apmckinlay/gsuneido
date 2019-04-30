@@ -18,7 +18,7 @@ type Folder struct {
 
 func (f Folder) Unary(token tok.Token, expr Expr) Expr {
 	c, ok := expr.(*Constant)
-	if !ok {
+	if !ok || token == tok.Div {
 		return f.Factory.Unary(token, expr)
 	}
 	val := c.Val
@@ -27,8 +27,6 @@ func (f Folder) Unary(token tok.Token, expr Expr) Expr {
 		val = UnaryPlus(val)
 	case tok.Sub:
 		val = UnaryMinus(val)
-	case tok.Div:
-		val = Div(One, val)
 	case tok.Not:
 		val = Not(val)
 	case tok.BitNot:
@@ -121,7 +119,7 @@ func (f Folder) Nary(token tok.Token, exprs []Expr) Expr {
 	case tok.Add: // including Sub
 		exprs = commutative(exprs, Add, Zero, nil)
 	case tok.Mul: // including Div
-		exprs = commutative(exprs, Mul, One, Zero)
+		exprs = f.foldMul(exprs)
 	case tok.BitOr:
 		exprs = commutative(exprs, BitOr, Zero, allones)
 	case tok.BitAnd:
@@ -178,6 +176,54 @@ func commutative(exprs []Expr, bop bopfn, skip, fold Value) []Expr {
 		}
 	}
 	return exprs[:dst]
+}
+
+func (f Folder) foldMul(exprs []Expr) []Expr {
+	mul := One
+	div := One
+	dst := 0
+	for _, e := range exprs {
+		if ud := unaryDivConst(e); ud != nil {
+			div = Mul(div, ud)
+		} else if c, ok := e.(*Constant); ok {
+			mul = Mul(mul, c.Val)
+		} else {
+			exprs[dst] = e
+			dst++
+		}
+	}
+	exprs = exprs[:dst]
+	if mul.Equal(Zero) {
+		exprs[0] = f.Constant(Zero)
+		return exprs[:1]
+	}
+	if div.Equal(Zero) {
+		x := Inf
+		if mul.Compare(Zero) < 0 {
+			x = NegInf
+		}
+		return append(exprs[:0], f.Constant(x))
+	}
+	if div == One && mul == One {
+		return exprs
+	}
+	if div != One && (mul != One || len(exprs) == 0) {
+		mul = Div(mul, div)
+		div = One
+	}
+	if div == One {
+		return append(exprs, f.Constant(mul))
+	}
+	return append(exprs, f.Unary(tok.Div, f.Constant(div)))
+}
+
+func unaryDivConst(e Expr) Value {
+	if u, ok := e.(*Unary); ok {
+		if c, ok := u.E.(*Constant); ok {
+			return c.Val
+		}
+	}
+	return nil
 }
 
 // foldCat folds contiguous constants in a list of expressions

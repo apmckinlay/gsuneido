@@ -69,7 +69,8 @@ func TestCodegen(t *testing.T) {
 	test("a / b", "Load a, Load b, Div")
 	test("a * b * c", "Load a, Load b, Mul, Load c, Mul")
 	test("a * b / c", "Load a, Load b, Mul, Load c, Div")
-	test("a / b / c", "Load a, Load b, Div, Load c, Div")
+	test("a / b / c", "Load a, Load b, Load c, Mul, Div")
+	test("a * b / c / d", "Load a, Load b, Mul, Load c, Load d, Mul, Div")
 
 	test("a % b", "Load a, Load b, Mod")
 	test("a % b % c", "Load a, Load b, Mod, Load c, Mod")

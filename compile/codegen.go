@@ -612,6 +612,8 @@ func (cg *cgen) binary(node *ast.Binary) {
 func (cg *cgen) nary(node *ast.Nary) {
 	if node.Tok == tok.And || node.Tok == tok.Or {
 		cg.andorExpr(node)
+	} else if node.Tok == tok.Mul {
+		cg.muldivExpr(node)
 	} else {
 		o := tok2op[node.Tok]
 		cg.expr(node.Exprs[0])
@@ -619,9 +621,6 @@ func (cg *cgen) nary(node *ast.Nary) {
 			if node.Tok == tok.Add && isUnary(e, tok.Sub) {
 				cg.expr(e.(*ast.Unary).E)
 				cg.emit(op.Sub)
-			} else if node.Tok == tok.Mul && isUnary(e, tok.Div) {
-				cg.expr(e.(*ast.Unary).E)
-				cg.emit(op.Div)
 			} else {
 				cg.expr(e)
 				cg.emit(o)
@@ -647,6 +646,27 @@ func (cg *cgen) andorExpr(node *ast.Nary) {
 func isCompare(e ast.Expr) bool {
 	bin, ok := e.(*ast.Binary)
 	return ok && tok.CompareStart < bin.Tok && bin.Tok < tok.CompareEnd
+}
+
+func (cg *cgen) muldivExpr(node *ast.Nary) {
+	var divs []ast.Expr
+	cg.expr(node.Exprs[0])
+	for _, e := range node.Exprs[1:] {
+		if isUnary(e, tok.Div) {
+			divs = append(divs, e.(*ast.Unary).E)
+		} else {
+			cg.expr(e)
+			cg.emit(op.Mul)
+		}
+	}
+	if len(divs) > 0 {
+		cg.expr(divs[0])
+		for _, e := range divs[1:] {
+			cg.expr(e)
+			cg.emit(op.Mul)
+		}
+		cg.emit(op.Div)
+	}
 }
 
 func isUnary(e ast.Expr, tok tok.Token) bool {
