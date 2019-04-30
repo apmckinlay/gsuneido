@@ -544,8 +544,8 @@ func ParseDate(s string, order string) SuDate {
 	}
 
 	if year == NOTSET {
-		if month >= ints.Max(now.Month()-6, 1) &&
-			month <= ints.Min(now.Month()+5, 12) {
+		if month >= ints.Max(now.Month()-5, 1) &&
+			month <= ints.Min(now.Month()+6, 12) {
 			year = now.Year()
 		} else if now.Month() < 6 {
 			year = now.Year() - 1
