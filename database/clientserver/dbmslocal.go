@@ -5,6 +5,7 @@ import (
 	"hash/adler32"
 	"io/ioutil"
 	"strconv"
+	"strings"
 )
 
 // DbmsLocal implements the Dbms interface using a local database
@@ -30,6 +31,7 @@ func (DbmsLocal) LibGet(name string) (result []string) {
 	}()
 	dir := "../stdlib/"
 	hash := adler32.Checksum([]byte(name))
+	name = strings.ReplaceAll(name, "?", "Q")
 	file := dir + name + "_" + strconv.FormatUint(uint64(hash), 16)
 	s, err := ioutil.ReadFile(file)
 	if err != nil {
