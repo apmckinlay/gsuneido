@@ -35,7 +35,9 @@ func (DbmsLocal) LibGet(name string) (result []string) {
 	file := dir + name + "_" + strconv.FormatUint(uint64(hash), 16)
 	s, err := ioutil.ReadFile(file)
 	if err != nil {
-		fmt.Println("LOAD", file, "NOT FOUND")
+		if !strings.HasPrefix(name, "Rule_") {
+			fmt.Println("LOAD", file, "NOT FOUND")
+		}
 		return nil
 	}
 	// fmt.Println("LOAD", name, "SUCCEEDED")
