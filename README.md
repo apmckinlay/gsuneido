@@ -6,8 +6,6 @@ In progress Go implementation of Suneido (http://suneido.com)
 
 ### Todo
 
-- records, rules etc.
-
 - built-in methods and functions
 
 - client end of client-server
