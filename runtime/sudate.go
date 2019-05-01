@@ -104,6 +104,10 @@ func fromTime(t gotime.Time) SuDate {
 }
 
 func valid(yr int, mon int, day int, hr int, min int, sec int, ms int) bool {
+	if yr == mmYear.max &&
+		(mon != 1 || day != 1 || hr != 0 || min != 0 || sec != 0 || ms != 0) {
+		return false
+	}
 	if !mmYear.valid(yr) || !mmMonth.valid(mon) || !mmDay.valid(day) ||
 		!mmHour.valid(hr) || !mmMinute.valid(min) ||
 		!mmSecond.valid(sec) || !mmMillisecond.valid(ms) {
@@ -158,7 +162,11 @@ func (d SuDate) Plus(yr int, mon int, day int, hr int, min int, sec int, ms int)
 	min += d.Minute()
 	sec += d.Second()
 	ms += d.Millisecond()
-	return NormalizeDate(yr, mon, day, hr, min, sec, ms)
+	nd := NormalizeDate(yr, mon, day, hr, min, sec, ms)
+	if nd == NilDate {
+		panic("bad date")
+	}
+	return nd
 }
 
 func NormalizeDate(yr int, mon int, day int, hr int, min int, sec int, ms int) SuDate {
@@ -372,8 +380,10 @@ func ParseDate(s string, order string) SuDate {
 	gotTime := false
 	var prev byte
 	for si := 0; si < len(s); {
+		if ntokens >= MAXTOKENS {
+			return NilDate
+		}
 		c := s[si]
-		verify.That(ntokens < MAXTOKENS)
 		next := nextWord(s, si)
 		if next != "" {
 			si += len(next)
