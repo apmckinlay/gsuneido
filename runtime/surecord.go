@@ -279,7 +279,7 @@ func (r *SuRecord) getSpecial(key string) Value {
 }
 
 func (r *SuRecord) callRule(t *Thread, key string) Value {
-	if rule := r.getRule(key); rule != nil && !t.rules.has(r, key) {
+	if rule := r.getRule(t, key); rule != nil && !t.rules.has(r, key) {
 		val := r.catchRule(t, rule, key)
 		if val != nil && !r.ob.IsReadOnly() {
 			r.PreSet(SuStr(key), val)
@@ -342,13 +342,13 @@ func toStr(e interface{}) string {
 	return e.(strable).String()
 }
 
-func (r *SuRecord) getRule(key string) Value {
+func (r *SuRecord) getRule(t *Thread, key string) Value {
 	if rule, ok := r.attachedRules[key]; ok {
 		return rule
 	}
 	if r.ob.defval != nil {
 		gn := Global.Num("Rule_" + key)
-		if rule := Global.Get(gn); rule != nil {
+		if rule := Global.Get(t, gn); rule != nil {
 			return rule
 		}
 	}
@@ -398,11 +398,11 @@ var RecordMethods Methods
 
 var gnRecords = Global.Num("Records")
 
-func (SuRecord) Lookup(method string) Callable {
-	if m := Lookup(RecordMethods, gnObjects, method); m != nil {
+func (SuRecord) Lookup(t *Thread, method string) Callable {
+	if m := Lookup(t, RecordMethods, gnObjects, method); m != nil {
 		return m
 	}
-	return (*SuObject)(nil).Lookup(method)
+	return (*SuObject)(nil).Lookup(t, method)
 }
 
 // Packable ---------------------------------------------------------

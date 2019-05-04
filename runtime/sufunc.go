@@ -63,7 +63,7 @@ func (f *SuFunc) Type() types.Type {
 // SuFuncMethods is initialized by the builtin package
 var SuFuncMethods Methods
 
-func (*SuFunc) Lookup(method string) Callable {
+func (*SuFunc) Lookup(_ *Thread, method string) Callable {
 	if m, ok := ParamsMethods[method]; ok {
 		return m
 	}

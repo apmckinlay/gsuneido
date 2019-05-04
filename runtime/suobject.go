@@ -427,8 +427,8 @@ var ObjectMethods Methods
 
 var gnObjects = Global.Num("Objects")
 
-func (*SuObject) Lookup(method string) Callable {
-	return Lookup(ObjectMethods, gnObjects, method)
+func (*SuObject) Lookup(t *Thread, method string) Callable {
+	return Lookup(t, ObjectMethods, gnObjects, method)
 }
 
 // Slice returns a copy of the object, with the first n list elements removed

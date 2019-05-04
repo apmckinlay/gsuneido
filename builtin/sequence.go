@@ -25,7 +25,7 @@ func (wi *wrapIter) Next() Value {
 }
 
 func (wi *wrapIter) Infinite() bool {
-	if wi.iter.Lookup("Infinite?") == nil {
+	if wi.iter.Lookup(wi.t, "Infinite?") == nil {
 		return false
 	}
 	return wi.call("Infinite?") == True

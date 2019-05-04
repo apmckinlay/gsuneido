@@ -58,6 +58,10 @@ func paramSplit(s string) (string, ParamSpec) {
 	return name, ps
 }
 
+func method(p string, f func(t *Thread, this Value, args ...Value) Value) Callable {
+	return &SuBuiltinMethod{f, BuiltinParams{ParamSpec: params(p)}}
+}
+
 func method0(f func(this Value) Value) Callable {
 	return &SuBuiltinMethod0{SuBuiltin1{f, BuiltinParams{}}}
 }

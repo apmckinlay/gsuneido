@@ -31,8 +31,6 @@ var g = globals{
 	missing: &SuExcept{}, // type doesn't matter, just has to be unique
 }
 
-var Libload = func(string) Value { return nil }
-
 // Add adds a new name and value to globals.
 // This is used for set up of built-in globals
 // The return value is so it can be used like:
@@ -96,8 +94,11 @@ func (typeGlobal) Exists(name string) bool {
 	return ok
 }
 
+// Libload requires dependency injection
+var Libload = func(*Thread, string) Value { return nil }
+
 // Get returns the value for a global, or nil if not found
-func (typeGlobal) Get(gnum Gnum) Value {
+func (typeGlobal) Get(t *Thread, gnum Gnum) Value {
 	g.lock.RLock()
 	x := g.values[gnum]
 	g.lock.RUnlock()
@@ -106,7 +107,7 @@ func (typeGlobal) Get(gnum Gnum) Value {
 		// since compile may need to access Global.
 		// That means two threads could both load
 		// but they should both get the same value.
-		x = Libload(Global.Name(gnum))
+		x = Libload(t, Global.Name(gnum))
 		if x == nil {
 			x = g.missing // avoid further libloads
 		}
@@ -120,6 +121,6 @@ func (typeGlobal) Get(gnum Gnum) Value {
 	return x
 }
 
-func (typeGlobal) GetName(name string) Value {
-	return Global.Get(Global.Num(name))
+func (typeGlobal) GetName(t *Thread, name string) Value {
+	return Global.Get(t, Global.Num(name))
 }

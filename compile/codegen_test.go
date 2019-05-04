@@ -150,7 +150,7 @@ func TestCodegenSuper(t *testing.T) {
 		t.Helper()
 		c := Constant("Foo { " + src + " }")
 		m := src[0:strings.IndexByte(src, '(')]
-		fn := c.Lookup(m).(*SuFunc)
+		fn := c.Lookup(nil, m).(*SuFunc)
 		actual := disasm(fn)
 		if actual != expected {
 			t.Errorf("\n%s\nexpect: %s\nactual: %s", src, expected, actual)

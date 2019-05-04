@@ -19,7 +19,7 @@ func (ob *SuInstance) Base() *SuClass {
 // ToString is used by Cat, Display, and Print
 // to handle user defined ToString
 func (ob *SuInstance) ToString(t *Thread) string {
-	if f := ob.class.get2("ToString"); f != nil {
+	if f := ob.class.get2(t, "ToString"); f != nil {
 		t.this = ob
 		x := f.Call(t, ArgSpec0)
 		if x != nil {
@@ -122,7 +122,7 @@ func (*SuInstance) Compare(Value) int {
 // InstanceMethods is initialized by the builtin package
 var InstanceMethods Methods
 
-func (ob *SuInstance) Lookup(method string) Callable {
+func (ob *SuInstance) Lookup(t *Thread, method string) Callable {
 	if method == "*new*" {
 		panic("can't create instance of instance")
 	}
@@ -132,14 +132,14 @@ func (ob *SuInstance) Lookup(method string) Callable {
 	if f, ok := BaseMethods[method]; ok {
 		return f
 	}
-	if x := ob.class.get2("Default"); x != nil {
+	if x := ob.class.get2(t, "Default"); x != nil {
 		return &defaultAdapter{x, method}
 	}
-	return ob.class.get2(method)
+	return ob.class.get2(t, method)
 }
 
 func (ob *SuInstance) Call(t *Thread, as *ArgSpec) Value {
-	if f := ob.class.get2("Call"); f != nil {
+	if f := ob.class.get2(t, "Call"); f != nil {
 		t.this = ob
 		return f.Call(t, as)
 	}
@@ -147,11 +147,11 @@ func (ob *SuInstance) Call(t *Thread, as *ArgSpec) Value {
 }
 
 // Finder implements Findable
-func (ob *SuInstance) Finder(fn func(Value, *MemBase) Value) Value {
+func (ob *SuInstance) Finder(t *Thread, fn func(Value, *MemBase) Value) Value {
 	if x := fn(ob, &ob.MemBase); x != nil {
 		return x
 	}
-	return ob.class.Finder(fn)
+	return ob.class.Finder(t, fn)
 }
 
 var _ Findable = (*SuInstance)(nil)

@@ -31,9 +31,9 @@ func init() {
 			_, offset := time.Now().Zone()
 			return IntVal(-offset / 60)
 		}),
-		"Plus": methodRaw("(n, default)", // methodRaw to get thread
-			func(t *Thread, as *ArgSpec, this Value, args ...Value) Value {
-				args = t.Args(&paramSpecPlus, as)
+		"Plus": method("(years=0, months=0, days=0, "+
+			"hours=0, minutes=0, seconds=0, milliseconds=0)",
+			func(t *Thread, this Value, args ...Value) Value {
 				return this.(SuDate).Plus(ToInt(args[0]), ToInt(args[1]),
 					ToInt(args[2]), ToInt(args[3]), ToInt(args[4]),
 					ToInt(args[5]), ToInt(args[6]))
@@ -66,9 +66,6 @@ func init() {
 		}),
 	}
 }
-
-var paramSpecPlus = params("(years=0, months=0, days=0, " +
-	"hours=0, minutes=0, seconds=0, milliseconds=0)")
 
 func dayOfWeek(x Value) int {
 	if i, ok := x.IfInt(); ok {

@@ -32,24 +32,20 @@ func init() {
 		"Entab": method0(func(this Value) Value {
 			return SuStr(tabs.Entab(IfStr(this)))
 		}),
-		"Eval": methodRaw("(string)", // methodRaw to get thread
-			func(t *Thread, as *ArgSpec, this Value, args ...Value) Value {
-				t.Args(&ParamSpec0, as)
-				result := EvalString(t, IfStr(this))
-				if result == nil {
-					return EmptyStr
-				}
-				return result
-			}),
-		"Eval2": methodRaw("(string)", // methodRaw to get thread
-			func(t *Thread, as *ArgSpec, this Value, args ...Value) Value {
-				t.Args(&ParamSpec0, as)
-				ob := &SuObject{}
-				if result := EvalString(t, IfStr(this)); result != nil {
-					ob.Add(result)
-				}
-				return ob
-			}),
+		"Eval": method("()", func(t *Thread, this Value, args ...Value) Value {
+			result := EvalString(t, IfStr(this))
+			if result == nil {
+				return EmptyStr
+			}
+			return result
+		}),
+		"Eval2": method("()", func(t *Thread, this Value, args ...Value) Value {
+			ob := &SuObject{}
+			if result := EvalString(t, IfStr(this)); result != nil {
+				ob.Add(result)
+			}
+			return ob
+		}),
 		"Extract": method2("(pattern, part=0)", func(this, arg1, arg2 Value) Value {
 			s := IfStr(this)
 			pat := regex.Compile(IfStr(arg1))
@@ -150,9 +146,8 @@ func init() {
 			}
 			return SuBool(result)
 		}),
-		"MapN": methodRaw("(n, default)", // methodRaw to get thread
-			func(t *Thread, as *ArgSpec, this Value, args ...Value) Value {
-				args = t.Args(&paramSpecMapN, as)
+		"MapN": method("(n, block)",
+			func(t *Thread, this Value, args ...Value) Value {
 				s := IfStr(this)
 				n := IfInt(args[0])
 				block := args[1]
@@ -240,9 +235,8 @@ func init() {
 		"Repeat": method1("(count)", func(this, arg Value) Value {
 			return SuStr(strings.Repeat(IfStr(this), ints.Max(0, ToInt(arg))))
 		}),
-		"Replace": methodRaw("(string)", // methodRaw to get thread
-			func(t *Thread, as *ArgSpec, this Value, args ...Value) Value {
-				args = t.Args(&paramSpecReplace, as)
+		"Replace": method("(pattern, replacement = '', count = false)",
+			func(t *Thread, this Value, args ...Value) Value {
 				count := ints.MaxInt
 				if args[2] != False {
 					count = ToInt(args[2])
@@ -260,8 +254,8 @@ func init() {
 			}
 			return SuStr(string(s))
 		}),
-		"ServerEval": methodRaw("(string)",
-			func(t *Thread, as *ArgSpec, this Value, args ...Value) Value {
+		"ServerEval": method("()",
+			func(t *Thread, this Value, args ...Value) Value {
 				result := EvalString(t, IfStr(this))
 				if result == nil {
 					return EmptyStr
@@ -313,9 +307,8 @@ func init() {
 		"Suffix?": method1("(string)", func(this, arg Value) Value {
 			return SuBool(strings.HasSuffix(IfStr(this), IfStr(arg)))
 		}),
-		"Tr": methodRaw("(from, to='')", // methodRaw to get thread
-			func(t *Thread, as *ArgSpec, this Value, args ...Value) Value {
-				args = t.Args(&paramSpecTr, as)
+		"Tr": method("(from, to='')",
+			func(t *Thread, this Value, args ...Value) Value {
 				from := t.TrCache.Get(IfStr(args[0]))
 				to := t.TrCache.Get(IfStr(args[1]))
 				return SuStr(tr.Replace(IfStr(this), from, to))
@@ -347,10 +340,6 @@ func init() {
 		}),
 	}
 }
-
-var paramSpecMapN = params("(n, block)")
-var paramSpecReplace = params("(pattern, replacement = '', count = false)")
-var paramSpecTr = params("(from, to='')")
 
 func replace(t *Thread, s string, patarg string, reparg Value, count int) Value {
 	if count <= 0 {

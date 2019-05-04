@@ -93,14 +93,14 @@ func named(args []Value) Value {
 	return NormalizeDate(year, month, day, hour, minute, second, millisecond)
 }
 
-func (d *SuDateGlobal) Lookup(method string) Callable {
+func (d *SuDateGlobal) Lookup(t *Thread, method string) Callable {
 	if method == "Begin" {
 		return method0(func(Value) Value { return DateFromLiteral("#17000101") })
 	}
 	if method == "End" {
 		return method0(func(Value) Value { return DateFromLiteral("#30000101") })
 	}
-	return d.SuBuiltinRaw.Lookup(method) // for Params
+	return d.SuBuiltinRaw.Lookup(t, method) // for Params
 }
 
 func (d *SuDateGlobal) String() string {

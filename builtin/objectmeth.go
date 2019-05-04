@@ -92,9 +92,8 @@ func init() {
 			}
 			return False
 		}),
-		"GetDefault": methodRaw("(member, default)", // methodRaw to get thread
-			func(t *Thread, as *ArgSpec, this Value, args ...Value) Value {
-				args = t.Args(&paramSpecGetDef, as)
+		"GetDefault": method("(member, block)",
+			func(t *Thread, this Value, args ...Value) Value {
 				ob := ToObject(this)
 				if x := ob.GetDefault(args[0], nil); x != nil {
 					return x
@@ -124,9 +123,8 @@ func init() {
 			}
 			return SuStr(sb.String())
 		}),
-		"BinarySearch": methodRaw("(value, block = false)", // methodRaw to get thread
-			func(t *Thread, as *ArgSpec, this Value, args ...Value) Value {
-				args = t.Args(&paramSpecBound, as)
+		"BinarySearch": method("(value, block = false)",
+			func(t *Thread, this Value, args ...Value) Value {
 				ob := ToObject(this)
 				if args[1] == False {
 					return IntVal(ob.BinarySearch(args[0]))
@@ -167,9 +165,8 @@ func init() {
 				}
 				return IntVal(n)
 			}),
-		"Sort!": methodRaw("(block = false)", // methodRaw to get thread
-			func(t *Thread, as *ArgSpec, this Value, args ...Value) Value {
-				args = t.Args(&ParamSpecOptionalBlock, as)
+		"Sort!": method("(block = false)",
+			func(t *Thread, this Value, args ...Value) Value {
 				ToObject(this).Sort(t, args[0])
 				return this
 			}),
@@ -216,8 +213,6 @@ func putAt(put func(Value, Value), at Value, iter ArgsIter) {
 	put(at, v)
 }
 
-var paramSpecGetDef = params("(member,block)")
-
 func iterWhich(as *ArgSpec, args []Value) (list bool, named bool) {
 	ai := NewArgsIter(as, args)
 	for k, v := ai(); v != nil; k, v = ai() {
@@ -232,5 +227,3 @@ func iterWhich(as *ArgSpec, args []Value) (list bool, named bool) {
 	}
 	return
 }
-
-var paramSpecBound = params("(value,block=false)")

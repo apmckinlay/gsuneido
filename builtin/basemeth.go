@@ -9,12 +9,12 @@ import (
 
 func init() {
 	BaseMethods = Methods{
-		"Base": method0(func(this Value) Value {
-			return base(this, func(v Value, _ *MemBase) Value { return v })
+		"Base": method("()", func(t *Thread, this Value, args ...Value) Value {
+			return base(t, this, func(v Value, _ *MemBase) Value { return v })
 		}),
-		"Base?": method1("(class)", func(this, c Value) Value {
-			return base(this, func(v Value, _ *MemBase) Value {
-				if v == c {
+		"Base?": method("(class)", func(t *Thread, this Value, args ...Value) Value {
+			return base(t, this, func(v Value, _ *MemBase) Value {
+				if v == args[0] {
 					return True
 				}
 				return nil
@@ -36,9 +36,8 @@ func init() {
 				}
 				return ob
 			}),
-		"GetDefault": methodRaw("(member, default)", // methodRaw to get thread
-			func(t *Thread, as *ArgSpec, this Value, args ...Value) Value {
-				args = t.Args(&paramSpecGetDef, as)
+		"GetDefault": method("(member, block)",
+			func(t *Thread, this Value, args ...Value) Value {
 				if x := this.Get(t, args[0]); x != nil {
 					return x
 				}
@@ -47,9 +46,9 @@ func init() {
 				}
 				return args[1]
 			}),
-		"Member?": method1("(string)", func(this, arg Value) Value {
-			m := IfStr(arg)
-			result := this.(Findable).Finder(func(v Value, mb *MemBase) Value {
+		"Member?": method("(string)", func(t *Thread, this Value, arg ...Value) Value {
+			m := IfStr(arg[0])
+			result := this.(Findable).Finder(t, func(v Value, mb *MemBase) Value {
 				if _, ok := mb.Data[m]; ok {
 					return True
 				}
@@ -60,21 +59,21 @@ func init() {
 			}
 			return result
 		}),
-		"Members": method1("(all = false)", func(this, all Value) Value {
-			if all == True {
-				all = nil
+		"Members": method("(all = false)", func(t *Thread, this Value, args ...Value) Value {
+			if args[0] == True {
+				args[0] = nil
 			}
 			list := NewSuObject()
-			this.(Findable).Finder(func(v Value, mb *MemBase) Value {
+			this.(Findable).Finder(t, func(v Value, mb *MemBase) Value {
 				mb.AddMembersTo(list)
-				return all
+				return args[0]
 			})
 			list.Sort(nil, False)
 			list.Unique()
 			return list
 		}),
-		"Size": method0(func(this Value) Value {
-			return this.(Findable).Finder(func(_ Value, mb *MemBase) Value {
+		"Size": method("()", func(t *Thread, this Value, args ...Value) Value {
+			return this.(Findable).Finder(t, func(_ Value, mb *MemBase) Value {
 				return IntVal(mb.Size())
 			})
 		}),
@@ -82,9 +81,9 @@ func init() {
 }
 
 // base skips the first
-func base(x Value, fn func(Value, *MemBase) Value) Value {
+func base(t *Thread, x Value, fn func(Value, *MemBase) Value) Value {
 	first := true
-	return nilToFalse(x.(Findable).Finder(func(v Value, mb *MemBase) Value {
+	return nilToFalse(x.(Findable).Finder(t, func(v Value, mb *MemBase) Value {
 		if first {
 			first = false
 			return nil

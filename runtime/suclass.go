@@ -76,7 +76,7 @@ func (c *SuClass) Get(t *Thread, m Value) Value {
 }
 
 func (c *SuClass) get1(t *Thread, this Value, mem string) Value {
-	val := c.get2(mem)
+	val := c.get2(t, mem)
 	if val != nil {
 		if _, ok := val.(*SuFunc); ok {
 			return &SuMethod{fn: val, this: c}
@@ -84,7 +84,7 @@ func (c *SuClass) get1(t *Thread, this Value, mem string) Value {
 		return val
 	}
 	if !c.noGetter {
-		if getter := c.get2("Getter_"); getter != nil {
+		if getter := c.get2(t, "Getter_"); getter != nil {
 			t.this = this
 			t.Push(SuStr(mem))
 			return getter.Call(t, ArgSpec1)
@@ -92,19 +92,19 @@ func (c *SuClass) get1(t *Thread, this Value, mem string) Value {
 		c.noGetter = true
 	}
 	getterName := "Getter_" + mem
-	if getter := c.get2(getterName); getter != nil {
+	if getter := c.get2(t, getterName); getter != nil {
 		t.this = this
 		return getter.Call(t, ArgSpec0)
 	}
 	return nil
 }
 
-func (c *SuClass) get2(m string) Value {
+func (c *SuClass) get2(t *Thread, m string) Value {
 	for {
 		if x, ok := c.Data[m]; ok {
 			return x
 		}
-		if c = c.Parent(); c == nil {
+		if c = c.Parent(t); c == nil {
 			break
 		}
 	}
@@ -142,11 +142,11 @@ func (*SuClass) Compare(Value) int {
 	panic("class compare not implemented")
 }
 
-func (c *SuClass) Parent() *SuClass {
+func (c *SuClass) Parent(t *Thread) *SuClass {
 	if c.Base <= 0 {
 		return nil
 	}
-	base := Global.Get(c.Base)
+	base := Global.Get(t, c.Base)
 	if baseClass, ok := base.(*SuClass); ok {
 		return baseClass
 	}
@@ -162,20 +162,20 @@ var ClassMethods Methods
 var DefaultNewMethod = &SuBuiltin0{func() Value { return nil },
 	BuiltinParams{ParamSpec: ParamSpec0}}
 
-func (c *SuClass) Lookup(method string) Callable {
+func (c *SuClass) Lookup(t *Thread, method string) Callable {
 	if f, ok := ClassMethods[method]; ok {
 		return f
 	}
 	if f, ok := BaseMethods[method]; ok {
 		return f
 	}
-	if x := c.get2(method); x != nil {
+	if x := c.get2(t, method); x != nil {
 		return x
 	}
 	if method == "New" {
 		return DefaultNewMethod
 	}
-	if x := c.get2("Default"); x != nil {
+	if x := c.get2(t, "Default"); x != nil {
 		return &defaultAdapter{x, method}
 	}
 	return nil
@@ -210,7 +210,7 @@ func (d *defaultAdapter) Call(t *Thread, as *ArgSpec) Value {
 }
 
 func (c *SuClass) Call(t *Thread, as *ArgSpec) Value {
-	if f := c.get2("CallClass"); f != nil {
+	if f := c.get2(t, "CallClass"); f != nil {
 		t.this = c
 		return f.Call(t, as)
 	}
@@ -220,7 +220,7 @@ func (c *SuClass) Call(t *Thread, as *ArgSpec) Value {
 
 func (c *SuClass) New(t *Thread, as *ArgSpec) Value {
 	ob := NewInstance(c)
-	nu := c.Lookup("New")
+	nu := c.Lookup(t, "New")
 	t.this = ob
 	nu.Call(t, as)
 	return ob
@@ -233,12 +233,12 @@ func (c *SuClass) GetName() string {
 }
 
 // Finder implements Findable
-func (c *SuClass) Finder(fn func(v Value, mb *MemBase) Value) Value {
+func (c *SuClass) Finder(t *Thread, fn func(v Value, mb *MemBase) Value) Value {
 	for i := 0; i < 100; i++ {
 		if x := fn(c, &c.MemBase); x != nil {
 			return x
 		}
-		c = c.Parent()
+		c = c.Parent(t)
 		if c == nil {
 			return nil
 		}

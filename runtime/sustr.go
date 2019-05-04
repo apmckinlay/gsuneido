@@ -136,7 +136,7 @@ func (ss SuStr) Call(t *Thread, as *ArgSpec) Value {
 	}
 	ob := t.stack[t.sp-int(as.Nargs)]
 	method := string(ss)
-	fn := ob.Lookup(method)
+	fn := ob.Lookup(t, method)
 	as2 := *as
 	as2.Nargs--
 	t.this = ob
@@ -148,8 +148,8 @@ var StringMethods Methods
 
 var gnStrings = Global.Num("Strings")
 
-func (SuStr) Lookup(method string) Callable {
-	return Lookup(StringMethods, gnStrings, method)
+func (SuStr) Lookup(t *Thread, method string) Callable {
+	return Lookup(t, StringMethods, gnStrings, method)
 }
 
 // Packable interface -----------------------------------------------

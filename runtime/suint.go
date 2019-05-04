@@ -144,11 +144,11 @@ var IntMethods Methods
 
 var anSuDnum = SuDnum{}
 
-func (*smi) Lookup(method string) Callable {
+func (*smi) Lookup(t *Thread, method string) Callable {
 	if m := IntMethods[method]; m != nil {
 		return m
 	}
-	return anSuDnum.Lookup(method)
+	return anSuDnum.Lookup(t, method)
 }
 
 // Packable interface -----------------------------------------------

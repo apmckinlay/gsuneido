@@ -41,6 +41,9 @@ type Thread struct {
 
 	// rules is a stack of the currently running rules, used by SuRecord
 	rules activeRules
+
+	// dbms is the database (client or local) for this Thread
+	dbms IDbms
 }
 
 // NewThread creates a new thread
@@ -108,7 +111,7 @@ func (t *Thread) CallWithArgs(fn Value, args ...Value) Value {
 func (t *Thread) CallMethod(method string, argSpec *ArgSpec) Value {
 	base := t.sp - int(argSpec.Nargs) - 1
 	ob := t.stack[base]
-	f := ob.Lookup(method)
+	f := ob.Lookup(t, method)
 	if f == nil {
 		panic("method not found: " + ob.Type().String() + "." + method)
 	}
@@ -152,4 +155,14 @@ func (t *Thread) CallStack() *SuObject {
 		cs.Add(call)
 	}
 	return cs
+}
+
+// GetDbms requires dependency injection
+var GetDbms func() IDbms
+
+func (t *Thread) Dbms() IDbms {
+	if t.dbms == nil {
+		t.dbms = GetDbms()
+	}
+	return t.dbms
 }

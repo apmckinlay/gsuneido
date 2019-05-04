@@ -69,7 +69,7 @@ type Value interface {
 
 	Callable
 
-	Lookup(method string) Callable
+	Lookup(t *Thread, method string) Callable
 }
 
 // Callable is returned by Lookup
@@ -218,13 +218,13 @@ func ToBool(x Value) bool {
 // Lookup looks for a method first in a methods map,
 // and then in a global user defined class
 // returning nil if not found in either place
-func Lookup(methods Methods, gnUserDef int, method string) Callable {
+func Lookup(t *Thread, methods Methods, gnUserDef int, method string) Callable {
 	if m := methods[method]; m != nil {
 		return m
 	}
-	if userdef := Global.Get(gnUserDef); userdef != nil {
+	if userdef := Global.Get(t, gnUserDef); userdef != nil {
 		if c, ok := userdef.(*SuClass); ok {
-			return c.get2(method)
+			return c.get2(t, method)
 		}
 	}
 	return nil

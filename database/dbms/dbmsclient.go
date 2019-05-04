@@ -1,19 +1,23 @@
-package clientserver
+package dbms
 
 import (
 	"io"
 	"net"
 	"strings"
 
-	"github.com/apmckinlay/gsuneido/database/clientserver/csio"
-
-	"github.com/apmckinlay/gsuneido/database/clientserver/commands"
+	"github.com/apmckinlay/gsuneido/database/dbms/commands"
+	"github.com/apmckinlay/gsuneido/database/dbms/csio"
+	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
 type DbmsClient struct {
 	*csio.ReadWrite
 	conn net.Conn
 }
+
+// helloSize is the size of the initial connection message from the server
+// the size must match cSuneido and jSuneido
+const helloSize = 50
 
 func NewDbmsClient(addr string) *DbmsClient {
 	conn, err := net.Dial("tcp", addr)
@@ -39,7 +43,7 @@ func checkHello(conn net.Conn) bool {
 
 // Dbms interface
 
-var _ Dbms = (*DbmsClient)(nil)
+var _ IDbms = (*DbmsClient)(nil)
 
 func (dc *DbmsClient) LibGet(name string) []string {
 	dc.PutCmd(commands.LibGet).PutStr(name).Request()
@@ -54,4 +58,19 @@ func (dc *DbmsClient) LibGet(name string) []string {
 		v[i] = string(dc.Get(sizes[i/2])) // text
 	}
 	return v
+}
+
+func (dc *DbmsClient) Timestamp() SuDate {
+	dc.PutCmd(commands.Timestamp).Request()
+	return dc.GetVal().(SuDate)
+}
+
+func (dc *DbmsClient) Libraries() *SuObject {
+	dc.PutCmd(commands.Libraries).Request()
+	n := dc.GetInt()
+	ob := NewSuObject()
+	for ; n > 0; n-- {
+		ob.Add(SuStr(dc.GetStr()))
+	}
+	return ob
 }

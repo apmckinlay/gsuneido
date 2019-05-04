@@ -5,7 +5,9 @@ import (
 	"io"
 	"unsafe"
 
-	"github.com/apmckinlay/gsuneido/database/clientserver/commands"
+	. "github.com/apmckinlay/gsuneido/runtime"
+
+	"github.com/apmckinlay/gsuneido/database/dbms/commands"
 )
 
 //TODO err checking
@@ -97,6 +99,10 @@ func (rw *ReadWrite) GetStr() string {
 	n := rw.GetSize()
 	buf := rw.Get(n)
 	return *(*string)(unsafe.Pointer(&buf)) // safe since buf doesn't escape
+}
+
+func (rw *ReadWrite) GetVal() Value {
+	return Unpack(rw.GetStr())
 }
 
 // Flush flushes the Writer

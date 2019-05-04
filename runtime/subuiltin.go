@@ -115,6 +115,17 @@ func (b *SuBuiltinRaw) Call(t *Thread, as *ArgSpec) Value {
 
 // ------------------------------------------------------------------
 
+// SuBuiltinMethod is a Callable for a builtin method
+type SuBuiltinMethod struct {
+	Fn func(t *Thread, this Value, args ...Value) Value
+	BuiltinParams
+}
+
+func (b *SuBuiltinMethod) Call(t *Thread, as *ArgSpec) Value {
+	args := t.Args(&b.ParamSpec, as)
+	return b.Fn(t, t.this, args...)
+}
+
 // SuBuiltinMethod0 is a Callable for a builtin method with no arguments
 type SuBuiltinMethod0 struct {
 	SuBuiltin1

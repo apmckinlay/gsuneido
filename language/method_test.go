@@ -22,7 +22,7 @@ func pt_method(args []string, str []bool) bool {
 	ob := toValue(args, str, 0)
 	method := args[1]
 	expected := toValue(args, str, len(args)-1)
-	f := ob.Lookup(method)
+	f := ob.Lookup(nil, method)
 	if f == nil {
 		fmt.Print("\tmethod not found: ", method)
 		return false

@@ -20,7 +20,7 @@ func (*SuExcept) Type() types.Type {
 // SuExceptMethods is initialized by the builtin package
 var SuExceptMethods Methods
 
-func (*SuExcept) Lookup(method string) Callable {
+func (*SuExcept) Lookup(_ *Thread, method string) Callable {
 	if m := SuExceptMethods[method]; m != nil {
 		return m
 	}

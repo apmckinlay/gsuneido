@@ -89,8 +89,8 @@ var NumMethods Methods
 
 var gnNumbers = Global.Num("Numbers")
 
-func (SuDnum) Lookup(method string) Callable {
-	return Lookup(NumMethods, gnNumbers, method)
+func (SuDnum) Lookup(t *Thread, method string) Callable {
+	return Lookup(t, NumMethods, gnNumbers, method)
 }
 
 // Packable interface ===============================================

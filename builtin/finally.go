@@ -4,9 +4,8 @@ import (
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
-var _ = builtinRaw("Finally(main_block, final_block)",
-	func(t *Thread, as *ArgSpec, args ...Value) Value {
-		args = t.Args(&paramSpecFinally, as)
+var _ = builtin("Finally(main_block, final_block)",
+	func(t *Thread, args ...Value) Value {
 		defer func() {
 			e := recover()
 			func() {
@@ -23,5 +22,3 @@ var _ = builtinRaw("Finally(main_block, final_block)",
 		}()
 		return t.CallWithArgs(args[0])
 	})
-
-var paramSpecFinally = params(`(main_block, final_block)`)

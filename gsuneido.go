@@ -12,7 +12,7 @@ import (
 
 	_ "github.com/apmckinlay/gsuneido/builtin"
 	"github.com/apmckinlay/gsuneido/compile"
-	"github.com/apmckinlay/gsuneido/database/clientserver"
+	"github.com/apmckinlay/gsuneido/database/dbms"
 	"github.com/apmckinlay/gsuneido/language"
 	"github.com/apmckinlay/gsuneido/options"
 	. "github.com/apmckinlay/gsuneido/runtime"
@@ -22,20 +22,23 @@ var builtDate string // set by: go build -ldflags "-X builtin.builtDate=..."
 
 var prompt = func(s string) { fmt.Print(s); _ = os.Stdout.Sync() }
 
-var dbms clientserver.Dbms
+// dbmsLocal is set if running with a local/standalone database.
+var dbmsLocal IDbms
 
 func main() {
 	Global.Add("Suneido", new(SuObject))
 	options.BuiltDate = builtDate
 	flag.BoolVar(&options.Client, "c", false, "run as a client")
 	flag.Parse()
+	// dependency injection of GetDbms
 	if options.Client {
-		dbms = clientserver.NewDbmsClient("127.0.0.1:3147")
+		GetDbms = func() IDbms { return dbms.NewDbmsClient("127.0.0.1:3147") }
 		fmt.Println("Running as client")
 	} else {
-		dbms = clientserver.NewDbmsLocal()
+		dbmsLocal = dbms.NewDbmsLocal()
+		GetDbms = func() IDbms { return dbmsLocal }
 	}
-	Libload = libload
+	Libload = libload // dependency injection
 	repl()
 }
 
@@ -123,14 +126,14 @@ func printCallStack(cs *SuObject) {
 
 // libload loads a name from the dbms
 // TODO handle multiple libraries
-func libload(name string) (result Value) {
+func libload(t *Thread, name string) (result Value) {
 	defer func() {
 		if e := recover(); e != nil {
 			panic("error loading " + name + " " + fmt.Sprint(e))
 			//result = nil
 		}
 	}()
-	defs := dbms.LibGet(name)
+	defs := t.Dbms().LibGet(name)
 	if len(defs) == 0 {
 		return nil
 	}

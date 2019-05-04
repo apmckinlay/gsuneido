@@ -9,8 +9,8 @@ import (
 
 func Test_MethodCall(t *testing.T) {
 	n := NumFromString("12.34")
-	f := n.Lookup("Round")
 	th := NewThread()
+	f := n.Lookup(th, "Round")
 	th.Push(IntVal(1))
 	result := CallMethod(th, n, f, ArgSpec1)
 	Assert(t).That(result, Equals(NumFromString("12.3")))

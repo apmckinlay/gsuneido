@@ -1,4 +1,4 @@
-package clientserver
+package dbms
 
 import (
 	"fmt"
@@ -6,6 +6,8 @@ import (
 	"io/ioutil"
 	"strconv"
 	"strings"
+
+	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
 // DbmsLocal implements the Dbms interface using a local database
@@ -13,13 +15,13 @@ import (
 type DbmsLocal struct {
 }
 
-func NewDbmsLocal() Dbms {
+func NewDbmsLocal() IDbms {
 	return &DbmsLocal{}
 }
 
 // Dbms interface
 
-var _ Dbms = (*DbmsLocal)(nil)
+var _ IDbms = (*DbmsLocal)(nil)
 
 func (DbmsLocal) LibGet(name string) (result []string) {
 	// Temporary version that reads from text files
@@ -42,4 +44,20 @@ func (DbmsLocal) LibGet(name string) (result []string) {
 	}
 	// fmt.Println("LOAD", name, "SUCCEEDED")
 	return []string{"stdlib", string(s)}
+}
+
+var prevTimestamp SuDate
+
+func (DbmsLocal) Timestamp() SuDate {
+	//TODO client/server, concurrency
+	t := Now()
+	if t.Equal(prevTimestamp) {
+		t = t.Plus(0, 0, 0, 0, 0, 0, 1)
+	}
+	prevTimestamp = t
+	return t
+}
+
+func (DbmsLocal) Libraries() *SuObject {
+	return NewSuObject()
 }

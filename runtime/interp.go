@@ -195,7 +195,7 @@ loop:
 			t.Push(fr.locals[i])
 		case op.Global:
 			gn := fetchUint16()
-			val := Global.Get(gn)
+			val := Global.Get(t, gn)
 			if val == nil {
 				panic("uninitialized global: " + Global.Name(gn))
 			}
@@ -431,10 +431,10 @@ loop:
 			if methstr, ok := method.IfStr(); ok {
 				ob := this
 				if super > 0 {
-					ob = Global.Get(super)
+					ob = Global.Get(t, super)
 					super = 0
 				}
-				if f := ob.Lookup(string(methstr)); f != nil {
+				if f := ob.Lookup(t, string(methstr)); f != nil {
 					t.this = this
 					result := f.Call(t, argSpec)
 					t.sp = base

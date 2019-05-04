@@ -151,7 +151,7 @@ func (c SuConcat) Call(t *Thread, as *ArgSpec) Value {
 	return ss.Call(t, as)
 }
 
-func (SuConcat) Lookup(method string) Callable {
+func (SuConcat) Lookup(_ *Thread, method string) Callable {
 	return StringMethods[method]
 }
 

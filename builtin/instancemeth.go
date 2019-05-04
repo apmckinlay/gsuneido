@@ -18,12 +18,14 @@ func init() {
 				}
 				return this
 			}),
-		"Method?": method1("(string)", func(this, arg Value) Value {
-			return methodQ(this.(*SuInstance).Base(), arg)
-		}),
-		"MethodClass": method1("(string)", func(this, arg Value) Value {
-			return methodClass(this.(*SuInstance).Base(), arg)
-		}),
+		"Method?": method("(string)",
+			func(t *Thread, this Value, args ...Value) Value {
+				return methodQ(t, this.(*SuInstance).Base(), args[0])
+			}),
+		"MethodClass": method("(string)",
+			func(t *Thread, this Value, args ...Value) Value {
+				return methodClass(t, this.(*SuInstance).Base(), args[0])
+			}),
 		"Readonly?": method0(func(this Value) Value {
 			return False
 		}),

@@ -41,9 +41,9 @@ var _ = ptest.Add("compare", pt_compare)
 var _ = ptest.Add("compare_packed", pt_compare_packed)
 
 func TestBuiltinString(t *testing.T) {
-	f := Global.GetName("Type")
+	f := Global.GetName(nil, "Type")
 	Assert(t).That(f.String(), Equals("Type /* builtin function */"))
-	f = Global.GetName("Object")
+	f = Global.GetName(nil, "Object")
 	Assert(t).That(f.String(), Equals("Object /* builtin function */"))
 }
 
@@ -260,7 +260,7 @@ func BenchmarkInterp(b *testing.B) {
 }
 
 func BenchmarkCall(b *testing.B) {
-	f := Global.GetName("Type")
+	f := Global.GetName(nil, "Type")
 	as := ArgSpec1
 	th := NewThread()
 	th.Push(SuInt(123))

@@ -6,12 +6,6 @@ import (
 
 var prevTimestamp SuDate
 
-var _ = builtin0("Timestamp()", func() Value {
-	//TODO client/server, concurrency
-	t := Now()
-	if t.Equal(prevTimestamp) {
-		t = t.Plus(0, 0, 0, 0, 0, 0, 1)
-	}
-	prevTimestamp = t
-	return t
+var _ = builtin("Timestamp()", func(t *Thread, args ...Value) Value {
+	return t.Dbms().Timestamp()
 })

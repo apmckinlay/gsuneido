@@ -16,14 +16,3 @@ func TestGlobals(t *testing.T) {
 	Assert(t).That(Global.Name(foo), Equals("foo"))
 	Assert(t).That(Global.Name(foo+1), Equals("bar"))
 }
-
-var V Value
-
-func BenchmarkBuffer(b *testing.B) {
-	f := Global.Num("foo")
-	g := Global.Num("bar")
-	for n := 0; n < b.N; n++ {
-		V = Global.Get(f)
-		V = Global.Get(g)
-	}
-}
