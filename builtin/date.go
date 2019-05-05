@@ -7,17 +7,18 @@ import (
 )
 
 type SuDateGlobal struct {
-	SuBuiltinRaw
+	SuBuiltin
 }
 
 func init() {
-	name, ps := paramSplit("Date(@args)")
+	name, ps := paramSplit(`Date(string=false, pattern=false,
+		year=false, month=false, day=false,
+		hour=false, minute=false, second=false, millisecond=false)`)
 	Global.Add(name, &SuDateGlobal{
-		SuBuiltinRaw{dateCallClass, BuiltinParams{ParamSpec: ps}}})
+		SuBuiltin{dateCallClass, BuiltinParams{ParamSpec: ps}}})
 }
 
-func dateCallClass(t *Thread, as *ArgSpec, args ...Value) Value {
-	args = t.Args(&paramSpecDate, as)
+func dateCallClass(_ *Thread, args ...Value) Value {
 	if args[0] != False && hasFields(args) {
 		panic("usage: Date() or Date(string [, pattern]) or " +
 			"Date(year:, month:, day:, hour:, minute:, second:)")
@@ -46,10 +47,6 @@ func dateCallClass(t *Thread, as *ArgSpec, args ...Value) Value {
 	}
 	return Now()
 }
-
-var paramSpecDate = params(`(string=false, pattern=false,
-	year=false, month=false, day=false,
-	hour=false, minute=false, second=false, millisecond=false)`)
 
 func hasFields(args []Value) bool {
 	for i := 2; i <= 8; i++ {
@@ -100,7 +97,7 @@ func (d *SuDateGlobal) Lookup(t *Thread, method string) Callable {
 	if method == "End" {
 		return method0(func(Value) Value { return DateFromLiteral("#30000101") })
 	}
-	return d.SuBuiltinRaw.Lookup(t, method) // for Params
+	return d.SuBuiltin.Lookup(t, method) // for Params
 }
 
 func (d *SuDateGlobal) String() string {

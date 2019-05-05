@@ -45,6 +45,69 @@ func checkHello(conn net.Conn) bool {
 
 var _ IDbms = (*DbmsClient)(nil)
 
+func (dc *DbmsClient) Admin(request string) {
+	dc.PutCmd(commands.Admin).PutStr(request).Request()
+}
+
+func (dc *DbmsClient) Auth(s string) bool {
+	if s == "" {
+		return false
+	}
+	dc.PutCmd(commands.Auth).PutStr(s).Request()
+	return dc.GetBool()
+}
+
+func (dc *DbmsClient) Check() string {
+	dc.PutCmd(commands.Check).Request()
+	return dc.GetStr()
+}
+
+func (dc *DbmsClient) Connections() Value {
+	dc.PutCmd(commands.Connections).Request()
+	ob := dc.GetVal().(*SuObject)
+	ob.SetReadOnly()
+	return ob
+}
+
+func (dc *DbmsClient) Cursors() int {
+	dc.PutCmd(commands.Cursors).Request()
+	return int(dc.GetInt())
+}
+
+func (dc *DbmsClient) Dump(table string) string {
+	dc.PutCmd(commands.Dump).PutStr(table).Request()
+	return dc.GetStr()
+}
+
+func (dc *DbmsClient) Exec(_ *Thread, args Value) Value {
+	dc.PutCmd(commands.Exec).PutVal(args).Request()
+	return dc.ValueResult()
+}
+
+func (dc *DbmsClient) Final() int {
+	dc.PutCmd(commands.Final).Request()
+	return int(dc.GetInt())
+}
+
+func (dc *DbmsClient) Info() Value {
+	dc.PutCmd(commands.Info).Request()
+	return dc.GetVal()
+}
+
+func (dc *DbmsClient) Kill(sessionid string) int {
+	dc.PutCmd(commands.Kill).PutStr(sessionid).Request()
+	return int(dc.GetInt())
+}
+
+func (dc *DbmsClient) Load(table string) int {
+	dc.PutCmd(commands.Load).PutStr(table).Request()
+	return int(dc.GetInt())
+}
+
+func (dc *DbmsClient) Log(s string) {
+	dc.PutCmd(commands.Log).PutStr(s).Request()
+}
+
 func (dc *DbmsClient) LibGet(name string) []string {
 	dc.PutCmd(commands.LibGet).PutStr(name).Request()
 	n := dc.GetSize()
@@ -60,11 +123,6 @@ func (dc *DbmsClient) LibGet(name string) []string {
 	return v
 }
 
-func (dc *DbmsClient) Timestamp() SuDate {
-	dc.PutCmd(commands.Timestamp).Request()
-	return dc.GetVal().(SuDate)
-}
-
 func (dc *DbmsClient) Libraries() *SuObject {
 	dc.PutCmd(commands.Libraries).Request()
 	n := dc.GetInt()
@@ -73,4 +131,60 @@ func (dc *DbmsClient) Libraries() *SuObject {
 		ob.Add(SuStr(dc.GetStr()))
 	}
 	return ob
+}
+
+func (dc *DbmsClient) Nonce() string {
+	dc.PutCmd(commands.Nonce).Request()
+	return dc.GetStr()
+}
+
+func (dc *DbmsClient) Run(code string) Value {
+	dc.PutCmd(commands.Run).PutStr(code).Request()
+	return dc.ValueResult()
+}
+
+func (dc *DbmsClient) SessionId(id string) string {
+	dc.PutCmd(commands.SessionId).PutStr(id).Request()
+	return dc.GetStr()
+}
+
+func (dc *DbmsClient) Size() int64 {
+	dc.PutCmd(commands.Size).Request()
+	return dc.GetInt()
+}
+
+func (dc *DbmsClient) Timestamp() SuDate {
+	dc.PutCmd(commands.Timestamp).Request()
+	return dc.GetVal().(SuDate)
+}
+
+func (dc *DbmsClient) Token() string {
+	dc.PutCmd(commands.Token).Request()
+	return dc.GetStr()
+}
+
+func (dc *DbmsClient) Transactions() *SuObject {
+	dc.PutCmd(commands.Transactions).Request()
+	ob := NewSuObject()
+	for n := dc.GetInt(); n > 0; n-- {
+		ob.Add(IntVal(int(dc.GetInt())))
+	}
+	return ob
+}
+
+func (dc *DbmsClient) Unuse(lib string) bool {
+	panic("can't Unuse('" + lib + "')\n" +
+		"When client-server, only the server can Unuse")
+}
+
+func (dc *DbmsClient) Use(lib string) bool {
+	if _, ok := dc.Libraries().Find(SuStr(lib)); ok {
+		return false
+	}
+	panic("can't Use('" + lib + "')\n" +
+		"When client-server, only the server can Use")
+}
+
+func (dc *DbmsClient) Close() {
+	dc.conn.Close()
 }

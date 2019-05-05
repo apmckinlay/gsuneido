@@ -52,6 +52,11 @@ func (rw *ReadWrite) PutInt(i int64) *ReadWrite {
 	return rw
 }
 
+// PutVal writes a packed value
+func (rw *ReadWrite) PutVal(v Value) *ReadWrite {
+	return rw.PutStr(PackValue(v))
+}
+
 // GetBool reads a boolean
 func (rw *ReadWrite) GetBool() bool {
 	b, _ := rw.r.ReadByte()
@@ -101,8 +106,17 @@ func (rw *ReadWrite) GetStr() string {
 	return *(*string)(unsafe.Pointer(&buf)) // safe since buf doesn't escape
 }
 
+// GetVal reads a packed value
 func (rw *ReadWrite) GetVal() Value {
 	return Unpack(rw.GetStr())
+}
+
+// ValueResult returns an optional packed value
+func (rw *ReadWrite) ValueResult() Value {
+	if rw.GetBool() {
+		return rw.GetVal()
+	}
+	return nil
 }
 
 // Flush flushes the Writer

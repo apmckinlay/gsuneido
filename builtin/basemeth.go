@@ -22,11 +22,7 @@ func init() {
 		}),
 		"Eval": methodRaw("(@args)",
 			func(t *Thread, as *ArgSpec, this Value, args ...Value) Value {
-				result := EvalAsMethod(t, as, this, args)
-				if result == nil {
-					return EmptyStr
-				}
-				return result
+				return nilToEmptyStr(EvalAsMethod(t, as, this, args))
 			}),
 		"Eval2": methodRaw("(@args)",
 			func(t *Thread, as *ArgSpec, this Value, args ...Value) Value {
@@ -54,10 +50,7 @@ func init() {
 				}
 				return nil
 			})
-			if result == nil {
-				result = False
-			}
-			return result
+			return nilToFalse(result)
 		}),
 		"Members": method("(all = false)", func(t *Thread, this Value, args ...Value) Value {
 			if args[0] == True {

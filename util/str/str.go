@@ -150,3 +150,25 @@ func Opt(strs ...string) string {
 	}
 	return strings.Join(strs, "")
 }
+
+// ListHas returns true if the list contains the string, false otherwise
+func ListHas(list []string, str string) bool {
+	for _,s := range list {
+		if s == str {
+			return true
+		}
+	}
+	return false
+}
+
+// ListRemove returns the list with the string removed (if present)
+func ListRemove(list []string, str string) []string {
+	for i, s := range list {
+		if s == str {
+			copy(list[i:], list[i+1:])
+			list[len(list)-1] = "" // for gc
+			return list[:len(list)-1]
+		}
+	}
+	return list
+}

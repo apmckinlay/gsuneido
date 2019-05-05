@@ -38,7 +38,6 @@ func (b *SuBlock) Call(t *Thread, as *ArgSpec) Value {
 	return t.run()
 }
 
-// TypeName returns the Suneido name for the type (Value interface)
 func (*SuBlock) Type() types.Type {
 	return types.Block
 }

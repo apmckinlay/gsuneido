@@ -6,10 +6,7 @@ import (
 
 var _ = builtin1("Pack(value)",
 	func(arg Value) Value {
-		if p,ok := arg.(Packable); ok {
-			return SuStr(Pack(p))
-		}
-		panic("can't pack " + arg.Type().String())
+		return SuStr(PackValue(arg))
 	})
 
 var _ = builtin1("Unpack(string)",

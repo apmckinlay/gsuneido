@@ -24,6 +24,7 @@ var prompt = func(s string) { fmt.Print(s); _ = os.Stdout.Sync() }
 
 // dbmsLocal is set if running with a local/standalone database.
 var dbmsLocal IDbms
+var mainThread *Thread
 
 func main() {
 	Global.Add("Suneido", new(SuObject))
@@ -39,6 +40,8 @@ func main() {
 		GetDbms = func() IDbms { return dbmsLocal }
 	}
 	Libload = libload // dependency injection
+	mainThread = NewThread()
+	defer mainThread.Close()
 	repl()
 }
 
@@ -75,18 +78,17 @@ func repl() {
 }
 
 func eval(src string) {
-	th := NewThread()
 	defer func() {
 		if e := recover(); e != nil {
 			fmt.Println("ERROR:", e)
 			if internal(e) {
 				debug.PrintStack()
 				fmt.Println("---")
-				printCallStack(th.CallStack())
+				printCallStack(mainThread.CallStack())
 			} else if se, ok := e.(*SuExcept); ok {
 				printCallStack(se.Callstack)
 			} else {
-				printCallStack(th.CallStack())
+				printCallStack(mainThread.CallStack())
 			}
 		}
 	}()
@@ -98,7 +100,7 @@ func eval(src string) {
 	fn := v.(*SuFunc)
 	// DisasmMixed(os.Stdout, fn, src)
 
-	result := th.Call(fn)
+	result := mainThread.Call(fn)
 	if result != nil {
 		prompt(">>> ")
 		fmt.Println(WithType(result))

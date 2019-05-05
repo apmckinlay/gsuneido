@@ -12,6 +12,15 @@ import (
 	"github.com/apmckinlay/gsuneido/util/varint"
 )
 
+// EmptyObject is a readonly empty SuObject
+var EmptyObject = emptyOb()
+
+func emptyOb() *SuObject {
+	ob := NewSuObject()
+	ob.SetReadOnly()
+	return ob
+}
+
 // SuObject is a Suneido object
 // i.e. a container with both list and named members
 // Zero value is a valid empty object
@@ -72,6 +81,18 @@ func (ob *SuObject) getIfPresent(key Value) Value {
 // Has returns true if the object contains the given key (not value)
 func (ob *SuObject) Has(key Value) bool {
 	return ob.getIfPresent(key) != nil
+}
+
+// Find returns the member name (key) of the first occurrence of the value and true
+// or False,false if not found. The order of named members is not defined.
+func (ob *SuObject) Find(val Value) (Value, bool) {
+	iter := ob.Iter2(true, true)
+	for k, v := iter(); v != nil; k, v = iter() {
+		if v.Equal(val) {
+			return k, true
+		}
+	}
+	return False, false
 }
 
 // ListGet returns a value from the list, panics if index out of range
@@ -665,7 +686,7 @@ func packSize(x Value, nest int) int {
 		n := p.PackSize(nest)
 		return varint.Len(uint64(n)) + n
 	}
-	panic("can't pack " + x.Type().String())
+	panic("can't pack " + errType(x))
 }
 
 func (ob *SuObject) Pack(buf *pack.Encoder) {

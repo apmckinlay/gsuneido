@@ -106,6 +106,17 @@ func (t *Thread) CallWithArgs(fn Value, args ...Value) Value {
 	return result
 }
 
+// CallWithArgSpec pushes the arguments onto the stack and calls the function
+func (t *Thread) CallWithArgSpec(fn Value, as *ArgSpec, args ...Value) Value {
+	base := t.sp
+	for _, x := range args {
+		t.Push(x)
+	}
+	result := fn.Call(t, as)
+	t.sp = base
+	return result
+}
+
 // CallMethod calls a *named* method.
 // Arguments (including "this") should be on the stack
 func (t *Thread) CallMethod(method string, argSpec *ArgSpec) Value {
@@ -129,6 +140,15 @@ func (t *Thread) CallAsMethod(ob, fn Value, args ...Value) Value {
 	t.this = ob
 	t.Push(ob)
 	return t.CallWithArgs(fn, args...)
+}
+
+func (t *Thread) CallMethodWithArgSpec(
+	this Value, method string, as *ArgSpec, args ...Value) Value {
+	t.Push(this)
+	for _, x := range args {
+		t.Push(x)
+	}
+	return t.CallMethod(method, as)
 }
 
 // Callstack captures the call stack
@@ -165,4 +185,10 @@ func (t *Thread) Dbms() IDbms {
 		t.dbms = GetDbms()
 	}
 	return t.dbms
+}
+
+func (t *Thread) Close(){
+	if t.dbms != nil {
+		t.dbms.Close()
+	}
 }

@@ -69,11 +69,7 @@ func init() {
 			}),
 		"Eval": methodRaw("(@args)",
 			func(t *Thread, as *ArgSpec, this Value, args ...Value) Value {
-				result := EvalAsMethod(t, as, this, args)
-				if result == nil {
-					return EmptyStr
-				}
-				return result
+				return nilToEmptyStr(EvalAsMethod(t, as, this, args))
 			}),
 		"Eval2": methodRaw("(@args)",
 			func(t *Thread, as *ArgSpec, this Value, args ...Value) Value {
@@ -84,13 +80,8 @@ func init() {
 				return ob
 			}),
 		"Find": method1("(value)", func(this Value, val Value) Value {
-			iter := ToObject(this).Iter2(true, true)
-			for k, v := iter(); v != nil; k, v = iter() {
-				if v.Equal(val) {
-					return k
-				}
-			}
-			return False
+			k,_ := ToObject(this).Find(val)
+			return k
 		}),
 		"GetDefault": method("(member, block)",
 			func(t *Thread, this Value, args ...Value) Value {

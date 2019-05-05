@@ -260,3 +260,10 @@ func (CantConvert) IfStr() (string, bool) {
 type ToStringable interface {
 	ToString(*Thread) string
 }
+
+func PackValue(v Value) string {
+	if p,ok := v.(Packable); ok {
+		return Pack(p)
+	}
+	panic("can't pack " + errType(v))
+}
