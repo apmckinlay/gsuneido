@@ -115,11 +115,11 @@ func (*SuClass) Put(*Thread, Value, Value) {
 	panic("class does not support put")
 }
 
-func (SuClass) RangeTo(int, int) Value {
+func (*SuClass) RangeTo(int, int) Value {
 	panic("class does not support range")
 }
 
-func (SuClass) RangeLen(int, int) Value {
+func (*SuClass) RangeLen(int, int) Value {
 	panic("class does not support range")
 }
 

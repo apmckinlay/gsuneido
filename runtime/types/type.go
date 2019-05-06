@@ -22,4 +22,5 @@ const (
 	Except
 	Instance
 	Iterator
+	Transaction
 )

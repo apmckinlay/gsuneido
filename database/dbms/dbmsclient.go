@@ -3,6 +3,7 @@ package dbms
 import (
 	"io"
 	"net"
+	"strconv"
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/database/dbms/commands"
@@ -163,6 +164,12 @@ func (dc *DbmsClient) Token() string {
 	return dc.GetStr()
 }
 
+func (dc *DbmsClient) Transaction(update bool) ITran {
+	dc.PutCmd(commands.Transaction).PutBool(update).Request()
+	tn := int(dc.GetInt())
+	return &TranClient{dc: dc, tn: tn, readonly: !update}
+}
+
 func (dc *DbmsClient) Transactions() *SuObject {
 	dc.PutCmd(commands.Transactions).Request()
 	ob := NewSuObject()
@@ -187,4 +194,29 @@ func (dc *DbmsClient) Use(lib string) bool {
 
 func (dc *DbmsClient) Close() {
 	dc.conn.Close()
+}
+
+// ------------------------------------------------------------------
+
+type TranClient struct {
+	dc       *DbmsClient
+	tn       int
+}
+
+var _ ITran = (*TranClient)(nil)
+
+func (tc *TranClient) Abort() {
+	tc.dc.PutCmd(commands.Abort).PutInt(int64(tc.tn)).Request()
+}
+
+func (tc *TranClient) Complete() string {
+	tc.dc.PutCmd(commands.Commit).PutInt(int64(tc.tn)).Request()
+	if tc.dc.GetBool() {
+		return ""
+	}
+	return tc.dc.GetStr()
+}
+
+func (tc *TranClient) String() string {
+	return "Transaction" + strconv.Itoa(tc.tn)
 }

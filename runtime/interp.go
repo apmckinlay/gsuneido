@@ -9,7 +9,7 @@ import (
 
 var blockBreak = &SuExcept{SuStr: SuStr("block:break")}
 var blockContinue = &SuExcept{SuStr: SuStr("block:continue")}
-var blockReturn = &SuExcept{SuStr: SuStr("block return")}
+var BlockReturn = &SuExcept{SuStr: SuStr("block return")}
 
 // Call sets up a frame to Run a compiled Suneido function
 // The stack must already be in the form required by the function (massaged)
@@ -115,7 +115,7 @@ func (t *Thread) interp(catchJump *int) (ret Value) {
 		if e == nil {
 			return // not panic'ing, normal return
 		}
-		if e == blockReturn {
+		if e == BlockReturn {
 			if t.frames[t.fp-1].fn.OuterId != fr.fn.Id {
 				panic(e) // not our block, rethrow
 			}
@@ -401,7 +401,7 @@ loop:
 			t.Push(nil)
 			fallthrough
 		case op.BlockReturn:
-			panic(blockReturn)
+			panic(BlockReturn)
 		case op.CallFunc:
 			f := t.Pop()
 			ai := fetchUint8()

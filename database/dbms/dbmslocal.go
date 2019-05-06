@@ -140,6 +140,10 @@ func (DbmsLocal) Token() string {
 	panic("DbmsLocal Token not implemented")
 }
 
+func (DbmsLocal) Transaction(bool) ITran {
+	panic("DbmsLocal Transaction not implemented")
+}
+
 var prevTimestamp SuDate
 
 func (DbmsLocal) Timestamp() SuDate {

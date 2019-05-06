@@ -32,6 +32,16 @@ func (rw *ReadWrite) PutCmd(cmd commands.Command) *ReadWrite {
 	return rw
 }
 
+// PutBool writes a boolean
+func (rw *ReadWrite) PutBool(b bool) *ReadWrite {
+	if b {
+		rw.w.WriteByte(1)
+	} else {
+		rw.w.WriteByte(0)
+	}
+	return rw
+}
+
 // PutStr writes a size prefixed string
 func (rw *ReadWrite) PutStr(s string) *ReadWrite {
 	limit(int64(len(s)))

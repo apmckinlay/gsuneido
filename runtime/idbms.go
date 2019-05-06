@@ -69,6 +69,9 @@ type IDbms interface {
 	// Token returns data to use with Auth
 	Token() string
 
+	// Transaction starts a transaction
+	Transaction(update bool) ITran
+
 	// Transactions returns a list of the outstanding transactions
 	Transactions() *SuObject
 
@@ -79,4 +82,16 @@ type IDbms interface {
 	Use(lib string) bool
 
 	Close()
+}
+
+// ITran is the interface to a database transaction,
+// either local (not implemented yet) or TranClient.
+type ITran interface {
+	// Abort rolls back the transaction
+	Abort()
+
+	// Complete commits the transaction
+	Complete() string
+
+	String() string
 }
