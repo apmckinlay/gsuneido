@@ -70,7 +70,7 @@ func (si *smi) ToDnum() (dnum.Dnum, bool) {
 	return dnum.FromInt(int64(ToInt(si))), true
 }
 
-func (*smi) ToObject() (*SuObject, bool) {
+func (*smi) ToContainer() (Container, bool) {
 	return nil, false
 }
 

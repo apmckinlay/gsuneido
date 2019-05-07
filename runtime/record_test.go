@@ -1,15 +1,14 @@
-package record
+package runtime
 
 import (
 	"strings"
 	"testing"
 
-	. "github.com/apmckinlay/gsuneido/runtime"
 	. "github.com/apmckinlay/gsuneido/util/hamcrest"
 )
 
 func TestBuilder(t *testing.T) {
-	var b Builder
+	var b RecordBuilder
 	rec := b.Build()
 	Assert(t).That([]byte(rec), Equals([]byte{0}))
 	b.AddRaw("one")
@@ -17,7 +16,7 @@ func TestBuilder(t *testing.T) {
 	Assert(t).That([]byte(rec), Equals([]byte{type8 << 6, 1, 7, 4, 'o', 'n', 'e'}))
 	Assert(t).That(rec.GetRaw(0), Equals("one"))
 
-	b = Builder{}
+	b = RecordBuilder{}
 	b.Add(SuInt(123))
 	b.Add(SuStr("foobar"))
 

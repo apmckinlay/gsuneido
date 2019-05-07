@@ -77,21 +77,21 @@ func TestSuObjectPut(t *testing.T) {
 
 func TestSuObjectDelete(t *testing.T) {
 	ob := SuObject{}
-	ob.Delete(Zero)
-	ob.Delete(SuStr("baz"))
+	ob.Delete(nil, Zero)
+	ob.Delete(nil, SuStr("baz"))
 	for i := 0; i < 5; i++ {
 		ob.Add(SuInt(i))
 	}
 	ob.Set(SuStr("foo"), SuInt(8))
 	ob.Set(SuStr("bar"), SuInt(9))
 	Assert(t).That(ob.Show(), Equals("#(0, 1, 2, 3, 4, bar: 9, foo: 8)"))
-	ob.Delete(SuStr("foo"))
+	ob.Delete(nil, SuStr("foo"))
 	Assert(t).That(ob.Show(), Equals("#(0, 1, 2, 3, 4, bar: 9)"))
-	ob.Delete(SuInt(2))
+	ob.Delete(nil, SuInt(2))
 	Assert(t).That(ob.Show(), Equals("#(0, 1, 3, 4, bar: 9)"))
-	ob.Delete(Zero)
+	ob.Delete(nil, Zero)
 	Assert(t).That(ob.Show(), Equals("#(1, 3, 4, bar: 9)"))
-	ob.Delete(SuInt(2))
+	ob.Delete(nil, SuInt(2))
 	Assert(t).That(ob.Show(), Equals("#(1, 3, bar: 9)"))
 
 	ob.Clear()
@@ -101,19 +101,19 @@ func TestSuObjectDelete(t *testing.T) {
 
 func TestSuObjectErase(t *testing.T) {
 	ob := SuObject{}
-	ob.Erase(Zero)
-	ob.Erase(SuStr("baz"))
+	ob.Erase(nil, Zero)
+	ob.Erase(nil, SuStr("baz"))
 	for i := 0; i < 5; i++ {
 		ob.Add(SuInt(i))
 	}
 	ob.Set(SuStr("foo"), SuInt(8))
 	ob.Set(SuStr("bar"), SuInt(9))
 	Assert(t).That(ob.Show(), Equals("#(0, 1, 2, 3, 4, bar: 9, foo: 8)"))
-	ob.Erase(SuStr("foo"))
+	ob.Erase(nil, SuStr("foo"))
 	Assert(t).That(ob.Show(), Equals("#(0, 1, 2, 3, 4, bar: 9)"))
-	ob.Erase(SuInt(2))
+	ob.Erase(nil, SuInt(2))
 	Assert(t).That(ob.Show(), Equals("#(0, 1, 3: 3, 4: 4, bar: 9)"))
-	ob.Erase(One)
+	ob.Erase(nil, One)
 	Assert(t).That(ob.Show(), Equals("#(0, 3: 3, 4: 4, bar: 9)"))
 }
 

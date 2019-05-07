@@ -190,7 +190,7 @@ type defaultAdapter struct {
 func (d *defaultAdapter) Call(t *Thread, as *ArgSpec) Value {
 	method := SuStr(d.method)
 	if as.Each >= EACH {
-		args := ToObject(t.Pop()).Slice(int(as.Each) - 1)
+		args := ToContainer(t.Pop()).Slice(int(as.Each) - 1)
 		args.Insert(0, method)
 		t.Push(args)
 		as = ArgSpecEach

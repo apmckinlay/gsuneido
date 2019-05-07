@@ -29,7 +29,7 @@ func (b SuBool) ToDnum() (dnum.Dnum, bool) {
 	return dnum.Zero, b == false
 }
 
-func (SuBool) ToObject() (*SuObject, bool) {
+func (SuBool) ToContainer() (Container, bool) {
 	return nil, false
 }
 

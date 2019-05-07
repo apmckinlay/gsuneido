@@ -10,7 +10,6 @@ import (
 	"strings"
 	"unsafe"
 
-	"github.com/apmckinlay/gsuneido/database/record"
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
@@ -102,8 +101,8 @@ func convertTable(in *bufio.Reader, out *bufio.Writer) {
 
 func convertRecord(b []byte, out *bufio.Writer) {
 	s := *(*string)(unsafe.Pointer(&b))
-	inrec := record.Old(s)
-	var tb record.Builder
+	inrec := OldRec(s)
+	var tb RecordBuilder
 	n := inrec.Count()
 	for i := 0; i < n; i++ { // for each value
 		s := inrec.Get(i)

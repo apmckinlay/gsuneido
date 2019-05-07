@@ -51,7 +51,7 @@ func (DbmsLocal) Dump(string) string {
 }
 
 func (DbmsLocal) Exec(t *Thread, v Value) Value {
-	fname := IfStr(ToObject(v).ListGet(0))
+	fname := IfStr(ToContainer(v).ListGet(0))
 	if i := strings.IndexByte(fname, '.'); i != -1 {
 		ob := Global.GetName(t, fname[:i])
 		m := fname[i+1:]
@@ -63,6 +63,10 @@ func (DbmsLocal) Exec(t *Thread, v Value) Value {
 
 func (DbmsLocal) Final() int {
 	panic("DbmsLocal Final not implemented")
+}
+
+func (DbmsLocal) Get(int, string, bool, bool) (Row, *Header) {
+	panic("DbmsLocal Get not implemented")
 }
 
 func (DbmsLocal) Info() Value {

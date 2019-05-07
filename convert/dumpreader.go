@@ -8,7 +8,7 @@ import (
 	"os"
 	"strings"
 
-	. "github.com/apmckinlay/gsuneido/database/record"
+	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
 // Read a dump file in new format

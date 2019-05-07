@@ -98,6 +98,18 @@ var tranMethods = Methods{
 		this.(SuTran).complete()
 		return nil
 	}),
+	"Query1": methodRaw("(@args)",
+		func(th *Thread, as *ArgSpec, this Value, args ...Value) Value {
+			return this.(SuTran).queryOne("Query1", false, true, as, args...)
+		}),
+	"QueryFirst": methodRaw("(@args)",
+		func(th *Thread, as *ArgSpec, this Value, args ...Value) Value {
+			return this.(SuTran).queryOne("QueryFirst", false, false, as, args...)
+		}),
+	"QueryLast": methodRaw("(@args)",
+		func(th *Thread, as *ArgSpec, this Value, args ...Value) Value {
+			return this.(SuTran).queryOne("QueryLast", true, false, as, args...)
+		}),
 	"Rollback": method0(func(this Value) Value {
 		this.(SuTran).rollback()
 		return nil
@@ -127,4 +139,13 @@ func (st SuTran) rollback() {
 	}
 	st.it.Abort()
 	st.state = aborted
+}
+
+func (st SuTran) queryOne(which string, prev, single bool,
+	as *ArgSpec, args ...Value) Value {
+	query := buildQuery(which, as, args)
+	row, hdr := st.it.Get(query, prev, single)
+	// fmt.Println(hdr)
+	// fmt.Println(row)
+	return SuRecordFromRow(row, hdr)
 }

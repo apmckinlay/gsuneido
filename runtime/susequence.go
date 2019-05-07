@@ -72,7 +72,7 @@ func (seq *SuSequence) String() string {
 	return seq.ob.String()
 }
 
-func (seq *SuSequence) ToObject() (*SuObject, bool) {
+func (seq *SuSequence) ToContainer() (Container, bool) {
 	seq.instantiate()
 	return seq.ob, true
 }

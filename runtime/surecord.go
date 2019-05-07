@@ -24,7 +24,14 @@ type SuRecord struct {
 	activeObservers ActiveObserverList
 	// attachedRules is from record.AttachRule(key,fn)
 	attachedRules map[string]Value
+
+	// row is used when it is from the database
+	row Row
+	// header is the Header for row
+	hdr *Header
 }
+
+var _ Container = (*SuRecord)(nil)
 
 //go:generate genny -in ../../GoTemplates/list/list.go -out alist.go -pkg runtime gen "V=activeObserver"
 //go:generate genny -in ../../GoTemplates/list/list.go -out vlist.go -pkg runtime gen "V=Value"
@@ -37,8 +44,21 @@ func SuRecordFromObject(ob *SuObject) *SuRecord {
 	return &SuRecord{ob: *ob}
 }
 
-func (r *SuRecord) Copy() *SuRecord {
-	return &SuRecord{ob: *r.ob.Copy(),
+func SuRecordFromRow(row Row, hdr *Header) *SuRecord {
+	if hdr.Map == nil { //TODO concurrency
+		hdr.Map = make(map[string]RowAt, len(hdr.Fields))
+		for ri, r := range hdr.Fields {
+			for fi, f := range r {
+				hdr.Map[f] = RowAt{int16(ri), int16(fi)}
+			}
+		}
+	}
+	//TODO _deps
+	return &SuRecord{row: row, hdr: hdr}
+}
+
+func (r *SuRecord) Copy() Container {
+	return &SuRecord{ob: *r.ob.Copy().(*SuObject),
 		dependents: r.copyDeps(), invalid: r.copyInvalid()}
 }
 
@@ -77,11 +97,11 @@ func (*SuRecord) Call(*Thread, *ArgSpec) Value {
 }
 
 func (r *SuRecord) Compare(other Value) int {
-	return r.ob.Compare(other)
+	return r.ToObject().Compare(other)
 }
 
 func (r *SuRecord) Equal(other interface{}) bool {
-	return r.ob.Equal(other)
+	return r.ToObject().Equal(other)
 }
 
 func (r *SuRecord) Hash() uint32 {
@@ -100,19 +120,35 @@ func (r *SuRecord) RangeLen(from int, n int) Value {
 	return r.ob.RangeLen(from, n)
 }
 
-// ToObject() is dangerous, it bypasses observers and rules etc.
-func (r *SuRecord) ToObject() (*SuObject, bool) {
-	return &r.ob, true
+func (r *SuRecord) ToContainer() (Container, bool) {
+	return r, true
 }
 
-// extra methods for compatibility with SuObject
+// Container --------------------------------------------------------
+
+func (r *SuRecord) ToObject() *SuObject {
+	//TODO flatten row
+	return &r.ob
+}
 
 func (r *SuRecord) Add(val Value) {
 	r.ob.Add(val)
 }
 
-func (r *SuRecord) Has(key Value) bool {
-	return r.ob.Has(key)
+func (r *SuRecord) Insert(at int, val Value) {
+	r.ob.Insert(at, val)
+}
+
+func (r *SuRecord) HasKey(key Value) bool {
+	if r.ob.HasKey(key) {
+		return true
+	}
+	if r.row != nil {
+		if k, ok := key.IfStr(); ok {
+			return r.row.GetRaw(r.hdr, k) != ""
+		}
+	}
+	return false
 }
 
 func (r *SuRecord) Set(key Value, val Value) {
@@ -128,31 +164,60 @@ func (r *SuRecord) SetReadOnly() {
 	r.ob.SetReadOnly()
 }
 
-func (r *SuRecord) Delete(t *Thread, key Value) {
+func (r *SuRecord) Delete(t *Thread, key Value) bool {
 	r.ob.mustBeMutable()
-	if r.ob.Delete(key) {
+	r.ToObject()
+	if r.ob.Delete(t, key) {
 		if keystr, ok := key.IfStr(); ok {
 			r.invalidateDependents(keystr)
 			r.callObservers(t, keystr)
 		}
+		return true
 	}
+	return false
 }
 
-func (r *SuRecord) Erase(t *Thread, key Value) {
+func (r *SuRecord) Erase(t *Thread, key Value) bool {
 	r.ob.mustBeMutable()
-	if r.ob.Erase(key) {
+	r.ToObject()
+	if r.ob.Erase(t, key) {
 		if keystr, ok := key.IfStr(); ok {
 			r.invalidateDependents(keystr)
 			r.callObservers(t, keystr)
 		}
+		return true
 	}
+	return false
 }
 
 func (r *SuRecord) ListSize() int {
 	return r.ob.ListSize()
 }
 
-func (r *SuRecord) Iter() Iter { // Values
+func (r *SuRecord) ListGet(i int) Value {
+	return r.ob.ListGet(i)
+}
+
+func (r *SuRecord) NamedSize() int {
+	return r.ToObject().NamedSize()
+}
+
+func (r *SuRecord) ArgsIter() func() (Value, Value) {
+	return r.ToObject().ArgsIter()
+}
+
+func (r *SuRecord) Iter2(list bool, named bool) func() (Value, Value) {
+	return r.ToObject().Iter2(list, named)
+}
+
+func (r *SuRecord) Slice(n int) Container {
+	ob := r.ToObject().Slice(n).(*SuObject)
+	r2 := *r
+	r2.ob = *ob
+	return &r2
+}
+
+func (r *SuRecord) Iter() Iter {
 	return &obIter{ob: &r.ob, iter: r.ob.Iter2(true, true),
 		result: func(k, v Value) Value { return v }}
 }
@@ -162,7 +227,7 @@ func (r *SuRecord) Iter() Iter { // Values
 func (r *SuRecord) Put(t *Thread, keyval Value, val Value) {
 	if key, ok := keyval.IfStr(); ok {
 		delete(r.invalid, key)
-		old := r.ob.getIfPresent(keyval)
+		old := r.ob.GetIfPresent(t, keyval)
 		r.ob.Set(keyval, val)
 		if old != nil && val.Equal(old) {
 			return
@@ -238,20 +303,32 @@ func (a activeObserver) Equal(other activeObserver) bool {
 // ------------------------------------------------------------------
 
 // Get returns the value associated with a key, or defval if not found
-func (r *SuRecord) Get(t *Thread, keyval Value) Value {
-	result := r.ob.getIfPresent(keyval)
+func (r *SuRecord) Get(t *Thread, key Value) Value {
+	if val := r.GetIfPresent(t, key); val != nil {
+		return val
+	}
+	return r.ob.defval //TODO copy object default
+}
+
+func (r *SuRecord) GetIfPresent(t *Thread, keyval Value) Value {
+	result := r.ob.GetIfPresent(t, keyval)
 	if key, ok := keyval.IfStr(); ok {
-		// only do rule stuff when key is a string
-		if ar := t.rules.top(); ar.rec == r { // identity (not Equal)
-			r.addDependent(ar.key, key)
+		// only do record stuff when key is a string
+		if result == nil && r.row != nil {
+			if val := r.row.Get(r.hdr, key); val != nil {
+				return val
+			}
+		}
+		if t != nil {
+			if ar := t.rules.top(); ar.rec == r { // identity (not Equal)
+				r.addDependent(ar.key, key)
+			}
 		}
 		if result == nil || r.invalid[key] {
 			if x := r.getSpecial(key); x != nil {
 				result = x
 			} else if x = r.callRule(t, key); x != nil {
 				result = x
-			} else if result == nil {
-				result = r.ob.defval
 			}
 		}
 	}
@@ -268,7 +345,7 @@ func (r *SuRecord) addDependent(from, to string) {
 func (r *SuRecord) getSpecial(key string) Value {
 	if strings.HasSuffix(key, "_lower!") {
 		key = key[0 : len(key)-7]
-		if val := r.ob.getIfPresent(SuStr(key)); val != nil {
+		if val := r.ob.GetIfPresent(nil, SuStr(key)); val != nil {
 			if vs, ok := val.IfStr(); ok {
 				val = SuStr(strings.ToLower(vs))
 			}
@@ -399,7 +476,7 @@ var RecordMethods Methods
 var gnRecords = Global.Num("Records")
 
 func (SuRecord) Lookup(t *Thread, method string) Callable {
-	if m := Lookup(t, RecordMethods, gnObjects, method); m != nil {
+	if m := Lookup(t, RecordMethods, gnRecords, method); m != nil {
 		return m
 	}
 	return (*SuObject)(nil).Lookup(t, method)

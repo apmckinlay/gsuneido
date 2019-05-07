@@ -153,7 +153,7 @@ func (p *parser) object() Value {
 // container allows using memberList etc. for both objects and classes
 type container interface {
 	Add(Value)
-	Has(Value) bool
+	HasKey(Value) bool
 	Set(Value, Value)
 }
 
@@ -232,7 +232,7 @@ func (p *parser) privatizeDef(m Value) string {
 }
 
 func (p *parser) putMem(ob container, m Value, v Value) {
-	if ob.Has(m) {
+	if ob.HasKey(m) {
 		p.error("duplicate member name (" + m.String() + ")")
 	} else {
 		ob.Set(m, v)
@@ -297,7 +297,7 @@ type classcon map[string]Value
 func (c classcon) Add(Value) {
 	panic("class members must be named")
 }
-func (c classcon) Has(m Value) bool {
+func (c classcon) HasKey(m Value) bool {
 	if s, ok := m.(SuStr); ok {
 		_, ok = c[string(s)]
 		return ok

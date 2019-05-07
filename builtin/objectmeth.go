@@ -12,14 +12,14 @@ import (
 func init() {
 	ObjectMethods = Methods{
 		"Add": methodRaw("(@args)",
-			func(_ *Thread, as *ArgSpec, this Value, args ...Value) Value {
-				ob := ToObject(this)
+			func(t *Thread, as *ArgSpec, this Value, args ...Value) Value {
+				ob := ToContainer(this)
 				iter := NewArgsIter(as, args)
 				if at := getNamed(as, args, SuStr("at")); at != nil {
 					if i, ok := at.IfInt(); ok {
 						addAt(ob, i, iter)
 					} else {
-						putAt(ob.Set, at, iter)
+						putAt(t, ob, at, iter)
 					}
 				} else {
 					addAt(ob, ob.ListSize(), iter)
@@ -28,18 +28,19 @@ func init() {
 			}),
 		"Assocs": methodRaw("(list = true, named = true)",
 			func(_ *Thread, as *ArgSpec, this Value, args ...Value) Value {
-				return NewSuSequence(ToObject(this).IterAssocs(iterWhich(as, args)))
+				list, named := iterWhich(as, args)
+				return NewSuSequence(IterAssocs(ToContainer(this), list, named))
 			}),
 		"Clear": method0(func(this Value) Value {
-			ToObject(this).Clear()
+			ToContainer(this).Clear()
 			return nil
 		}),
 		"Copy": method0(func(this Value) Value {
-			return ToObject(this).Copy()
+			return ToContainer(this).Copy()
 		}),
 		"Delete": methodRaw("(@args)",
-			func(_ *Thread, as *ArgSpec, this Value, args ...Value) Value {
-				ob := ToObject(this)
+			func(t *Thread, as *ArgSpec, this Value, args ...Value) Value {
+				ob := ToContainer(this)
 				if all := getNamed(as, args, SuStr("all")); all == True {
 					ob.Clear()
 				} else {
@@ -49,21 +50,21 @@ func init() {
 						if k != nil || v == nil {
 							break
 						}
-						ob.Delete(v)
+						ob.Delete(t, v)
 					}
 				}
 				return this
 			}),
 		"Erase": methodRaw("(@args)",
-			func(_ *Thread, as *ArgSpec, this Value, args ...Value) Value {
-				ob := ToObject(this)
+			func(t *Thread, as *ArgSpec, this Value, args ...Value) Value {
+				ob := ToContainer(this)
 				iter := NewArgsIter(as, args)
 				for {
 					k, v := iter()
 					if k != nil || v == nil {
 						break
 					}
-					ob.Erase(v)
+					ob.Erase(t, v)
 				}
 				return this
 			}),
@@ -80,13 +81,13 @@ func init() {
 				return ob
 			}),
 		"Find": method1("(value)", func(this Value, val Value) Value {
-			k,_ := ToObject(this).Find(val)
+			k, _ := ContainerFind(ToContainer(this), val)
 			return k
 		}),
 		"GetDefault": method("(member, block)",
 			func(t *Thread, this Value, args ...Value) Value {
-				ob := ToObject(this)
-				if x := ob.GetDefault(args[0], nil); x != nil {
+				ob := ToContainer(this)
+				if x := ob.GetIfPresent(t, args[0]); x != nil {
 					return x
 				}
 				if args[1].Type() == types.Block {
@@ -95,10 +96,10 @@ func init() {
 				return args[1]
 			}),
 		"Iter": method0(func(this Value) Value {
-			return SuIter{Iter: ToObject(this).IterValues(true, true)}
+			return SuIter{Iter: IterValues(ToContainer(this), true, true)}
 		}),
 		"Join": method1("(separator='')", func(this Value, arg Value) Value {
-			ob := ToObject(this)
+			ob := ToContainer(this)
 			separator := ToStr(arg)
 			sb := strings.Builder{}
 			sep := ""
@@ -116,7 +117,7 @@ func init() {
 		}),
 		"BinarySearch": method("(value, block = false)",
 			func(t *Thread, this Value, args ...Value) Value {
-				ob := ToObject(this)
+				ob := ToContainer(this).ToObject()
 				if args[1] == False {
 					return IntVal(ob.BinarySearch(args[0]))
 				}
@@ -124,31 +125,32 @@ func init() {
 			}),
 		"Members": methodRaw("(list = true, named = true)",
 			func(_ *Thread, as *ArgSpec, this Value, args ...Value) Value {
-				return NewSuSequence(ToObject(this).IterMembers(iterWhich(as, args)))
+				list, named := iterWhich(as, args)
+				return NewSuSequence(IterMembers(ToContainer(this), list, named))
 			}),
 		"Member?": method1("(member)", func(this Value, val Value) Value {
-			return SuBool(ToObject(this).Has(val))
+			return SuBool(ToContainer(this).HasKey(val))
 		}),
 		"Reverse!": method0(func(this Value) Value {
-			ToObject(this).Reverse()
+			ToContainer(this).ToObject().Reverse()
 			return this
 		}),
 		"Set_default": method1("(value=nil)", func(this Value, val Value) Value {
-			ToObject(this).SetDefault(val)
+			ToContainer(this).ToObject().SetDefault(val)
 			return this
 		}),
 		"Set_readonly": method0(func(this Value) Value {
-			ToObject(this).SetReadOnly()
+			ToContainer(this).SetReadOnly()
 			return this
 		}),
 		"Size": method2("(list=false,named=false)",
 			func(this, arg1, arg2 Value) Value {
 				list := ToBool(arg1)
 				named := ToBool(arg2)
-				ob := ToObject(this)
+				ob := ToContainer(this)
 				var n int
 				if list == named {
-					n = ob.Size()
+					n = ob.ListSize() + ob.NamedSize()
 				} else if list {
 					n = ob.ListSize()
 				} else {
@@ -158,16 +160,17 @@ func init() {
 			}),
 		"Sort!": method("(block = false)",
 			func(t *Thread, this Value, args ...Value) Value {
-				ToObject(this).Sort(t, args[0])
+				ToContainer(this).ToObject().Sort(t, args[0])
 				return this
 			}),
 		"Unique!": method0(func(this Value) Value {
-			ToObject(this).Unique()
+			ToContainer(this).ToObject().Unique()
 			return this
 		}),
 		"Values": methodRaw("(list = true, named = true)",
 			func(_ *Thread, as *ArgSpec, this Value, args ...Value) Value {
-				return NewSuSequence(ToObject(this).IterValues(iterWhich(as, args)))
+				list, named := iterWhich(as, args)
+				return NewSuSequence(IterValues(ToContainer(this), list, named))
 			}),
 	}
 }
@@ -182,7 +185,7 @@ func getNamed(as *ArgSpec, args []Value, name Value) Value {
 	return nil
 }
 
-func addAt(ob *SuObject, at int, iter ArgsIter) {
+func addAt(ob Container, at int, iter ArgsIter) {
 	for {
 		k, v := iter()
 		if k != nil || v == nil {
@@ -193,7 +196,7 @@ func addAt(ob *SuObject, at int, iter ArgsIter) {
 	}
 }
 
-func putAt(put func(Value, Value), at Value, iter ArgsIter) {
+func putAt(t *Thread, ob Container, at Value, iter ArgsIter) {
 	k, v := iter()
 	if k != nil || v == nil {
 		return
@@ -201,7 +204,7 @@ func putAt(put func(Value, Value), at Value, iter ArgsIter) {
 	if k, v := iter(); k == nil && v != nil {
 		panic("can only Add multiple values to un-named or numeric positions")
 	}
-	put(at, v)
+	ob.Put(t, at, v)
 }
 
 func iterWhich(as *ArgSpec, args []Value) (list bool, named bool) {

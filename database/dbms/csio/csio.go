@@ -42,6 +42,12 @@ func (rw *ReadWrite) PutBool(b bool) *ReadWrite {
 	return rw
 }
 
+// PutByte writes a byte
+func (rw *ReadWrite) PutByte(b byte) *ReadWrite {
+	rw.w.WriteByte(b)
+	return rw
+}
+
 // PutStr writes a size prefixed string
 func (rw *ReadWrite) PutStr(s string) *ReadWrite {
 	limit(int64(len(s)))
@@ -80,13 +86,6 @@ func (rw *ReadWrite) GetBool() bool {
 	}
 }
 
-// Get reads n bytes and returns it in a newly allocated buffer
-func (rw *ReadWrite) Get(n int) []byte {
-	buf := make([]byte, n)
-	io.ReadFull(rw.r, buf)
-	return buf
-}
-
 // GetInt reads a zig zag encoded varint
 func (rw *ReadWrite) GetInt() int64 {
 	shift := uint(0)
@@ -104,6 +103,13 @@ func (rw *ReadWrite) GetInt() int64 {
 	return tmp
 }
 
+// GetN reads n bytes and returns them in a string
+func (rw *ReadWrite) GetN(n int) string {
+	buf := make([]byte, n)
+	io.ReadFull(rw.r, buf)
+	return *(*string)(unsafe.Pointer(&buf)) // safe since buf doesn't escape
+}
+
 // GetSize returns GetInt, checking the size against the maxio limit
 func (rw *ReadWrite) GetSize() int {
 	return limit(rw.GetInt())
@@ -112,8 +118,7 @@ func (rw *ReadWrite) GetSize() int {
 // GetStr reads a size prefixed string
 func (rw *ReadWrite) GetStr() string {
 	n := rw.GetSize()
-	buf := rw.Get(n)
-	return *(*string)(unsafe.Pointer(&buf)) // safe since buf doesn't escape
+	return rw.GetN(n)
 }
 
 // GetVal reads a packed value
@@ -121,7 +126,7 @@ func (rw *ReadWrite) GetVal() Value {
 	return Unpack(rw.GetStr())
 }
 
-// ValueResult returns an optional packed value
+// ValueResult reads an optional packed value
 func (rw *ReadWrite) ValueResult() Value {
 	if rw.GetBool() {
 		return rw.GetVal()

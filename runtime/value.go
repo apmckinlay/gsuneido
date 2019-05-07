@@ -41,8 +41,8 @@ type Value interface {
 	// ToDnum converts false (SuBool), "" (SuStr), SuInt, SuDnum to Dnum
 	ToDnum() (dnum.Dnum, bool)
 
-	// ToObject converts to an SuObject when applicable
-	ToObject() (*SuObject, bool)
+	// ToContainer converts to a Container when applicable
+	ToContainer() (Container, bool)
 
 	// Get returns a member of an object/instance/class or a character of a string
 	// returns nil if the member does not exist
@@ -197,9 +197,9 @@ func errType(x Value) string {
 	return strings.ToLower(t)
 }
 
-// ToObject converts to an SuObject or panics
-func ToObject(x Value) *SuObject {
-	if ob, ok := x.ToObject(); ok {
+// ToContainer converts to an SuObject or panics
+func ToContainer(x Value) Container {
+	if ob, ok := x.ToContainer(); ok {
 		return ob
 	}
 	panic("can't convert " + x.Type().String() + " to Object")
@@ -230,6 +230,21 @@ func Lookup(t *Thread, methods Methods, gnUserDef int, method string) Callable {
 	return nil
 }
 
+// deepEqual is used by Container and SuInstance Equal
+func deepEqual(x Value, y Value, inProgress pairs) bool {
+	if xo, ok := x.ToContainer(); ok {
+		if yo, ok := y.ToContainer(); ok {
+			return containerEqual(xo, yo, inProgress)
+		}
+	}
+	if xi, ok := x.(*SuInstance); ok {
+		if yi, ok := y.(*SuInstance); ok {
+			return instanceEqual(xi, yi, inProgress)
+		}
+	}
+	return x.Equal(y)
+}
+
 // CantConvert is embedded in Value types to supply default conversion methods
 type CantConvert struct{}
 
@@ -245,7 +260,7 @@ func (CantConvert) ToDnum() (dnum.Dnum, bool) {
 	return dnum.Zero, false
 }
 
-func (CantConvert) ToObject() (*SuObject, bool) {
+func (CantConvert) ToContainer() (Container, bool) {
 	return nil, false
 }
 

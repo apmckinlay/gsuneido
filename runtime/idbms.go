@@ -1,7 +1,7 @@
 package runtime
 
 // IDbms is the interface to the dbms package.
-// It has two implementation - DbmsLocal and DbmsClient
+// The two implementations, DbmsLocal and DbmsClient, are in the dbms package
 type IDbms interface {
 	// Admin executes a database request
 	Admin(s string)
@@ -28,6 +28,9 @@ type IDbms interface {
 
 	// Final returns the current number of final transactions
 	Final() int
+
+	// Get returns a single record for Query1, QueryFirst, QueryLast
+	Get(tn int, query string, prev, single bool) (Row, *Header)
 
 	// Info returns an object containing database information
 	Info() Value
@@ -93,5 +96,38 @@ type ITran interface {
 	// Complete commits the transaction
 	Complete() string
 
+	// Get returns a single record for Query1, QueryFirst, QueryLast
+	Get(query string, prev, single bool) (Row, *Header)
+
 	String() string
+}
+
+type Header struct {
+	Fields  [][]string
+	Columns []string
+	Map     map[string]RowAt
+}
+
+// RowAt specifies the position of a field within a Row
+type RowAt struct {
+	Reci int16
+	Fldi int16
+}
+
+type Row []Record
+
+func (row Row) Get(hdr *Header, fld string) Value {
+	at,ok := hdr.Map[fld]
+	if !ok || int(at.Reci) >= len(row) {
+		return nil
+	}
+	return row[at.Reci].GetVal(int(at.Fldi))
+}
+
+func (row Row) GetRaw(hdr *Header, fld string) string {
+	at,ok := hdr.Map[fld]
+	if !ok || int(at.Reci) >= len(row) {
+		return ""
+	}
+	return row[at.Reci].GetRaw(int(at.Fldi))
 }

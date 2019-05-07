@@ -43,7 +43,7 @@ func NewSuObject(args ...Value) *SuObject {
 	return ob
 }
 
-func (ob *SuObject) Copy() *SuObject {
+func (ob *SuObject) Copy() Container {
 	return &SuObject{
 		list:   append(ob.list[:0:0], ob.list...),
 		named:  *ob.named.Copy(),
@@ -51,23 +51,21 @@ func (ob *SuObject) Copy() *SuObject {
 	}
 }
 
-var _ Value = (*SuObject)(nil)
+var _ Container = (*SuObject)(nil)
+
+func (ob *SuObject) ToObject() *SuObject {
+	return ob
+}
 
 // Get returns the value associated with a key, or defval if not found
-func (ob *SuObject) Get(_ *Thread, key Value) Value {
-	return ob.GetDefault(key, ob.defval)
-}
-
-func (ob *SuObject) GetDefault(key Value, def Value) Value {
-	val := ob.getIfPresent(key)
-	if val == nil {
-		//TODO handle copying object default
-		return def
+func (ob *SuObject) Get(t *Thread, key Value) Value {
+	if val := ob.GetIfPresent(t, key); val != nil {
+		return val
 	}
-	return val
+	return ob.defval //TODO copy object default
 }
 
-func (ob *SuObject) getIfPresent(key Value) Value {
+func (ob *SuObject) GetIfPresent(_ *Thread, key Value) Value {
 	if i, ok := key.IfInt(); ok && 0 <= i && i < len(ob.list) {
 		return ob.list[i]
 	}
@@ -79,20 +77,9 @@ func (ob *SuObject) getIfPresent(key Value) Value {
 }
 
 // Has returns true if the object contains the given key (not value)
-func (ob *SuObject) Has(key Value) bool {
-	return ob.getIfPresent(key) != nil
-}
-
-// Find returns the member name (key) of the first occurrence of the value and true
-// or False,false if not found. The order of named members is not defined.
-func (ob *SuObject) Find(val Value) (Value, bool) {
-	iter := ob.Iter2(true, true)
-	for k, v := iter(); v != nil; k, v = iter() {
-		if v.Equal(val) {
-			return k, true
-		}
-	}
-	return False, false
+func (ob *SuObject) HasKey(key Value) bool {
+	i, ok := key.IfInt()
+	return (ok && 0 <= i && i < len(ob.list)) || ob.named.Get(key) != nil
 }
 
 // ListGet returns a value from the list, panics if index out of range
@@ -124,7 +111,7 @@ func (ob *SuObject) Set(key Value, val Value) {
 
 // Delete removes a key.
 // If in the list, following list values are shifted over.
-func (ob *SuObject) Delete(key Value) bool {
+func (ob *SuObject) Delete(_ *Thread, key Value) bool {
 	defer ob.endMutate(ob.startMutate())
 	if i, ok := key.IfInt(); ok && 0 <= i && i < len(ob.list) {
 		newlist := ob.list[:i+copy(ob.list[i:], ob.list[i+1:])]
@@ -137,7 +124,7 @@ func (ob *SuObject) Delete(key Value) bool {
 
 // Erase removes a key.
 // If in the list, following list values are NOT shifted over.
-func (ob *SuObject) Erase(key Value) bool {
+func (ob *SuObject) Erase(_ *Thread, key Value) bool {
 	defer ob.endMutate(ob.startMutate())
 	if i, ok := key.IfInt(); ok && 0 <= i && i < len(ob.list) {
 		// migrate following list elements to named
@@ -196,7 +183,7 @@ func (ob *SuObject) rangeTo(i int, j int) *SuObject {
 	return &SuObject{list: list}
 }
 
-func (ob *SuObject) ToObject() (*SuObject, bool) {
+func (ob *SuObject) ToContainer() (Container, bool) {
 	return ob, true
 }
 
@@ -349,72 +336,27 @@ func (ob *SuObject) Hash2() uint32 {
 
 func (ob *SuObject) Equal(other interface{}) bool {
 	if val, ok := other.(Value); ok {
-		if ob2, ok := val.ToObject(); ok {
-			return soEqual(ob, ob2, newpairs())
+		if ob2, ok := val.ToContainer(); ok {
+			return containerEqual(ob, ob2, newpairs())
 		}
 	}
 	return false
-}
-
-func soEqual(x *SuObject, y *SuObject, inProgress pairs) bool {
-	if x == y { // pointer comparison
-		return true // same object
-	}
-	if x.ListSize() != y.ListSize() || x.NamedSize() != y.NamedSize() {
-		return false
-	}
-	if inProgress.contains(x, y) {
-		return true
-	}
-	inProgress.push(x, y) // no need to pop due to pass by value
-	for i := 0; i < x.ListSize(); i++ {
-		if !equals3(x.list[i], y.list[i], inProgress) {
-			return false
-		}
-	}
-	if x.NamedSize() > 0 {
-		iter := x.named.Iter()
-		for {
-			k, v := iter()
-			if k == nil {
-				break
-			}
-			yk := y.named.Get(k)
-			if yk == nil || !equals3(v.(Value), yk.(Value), inProgress) {
-				return false
-			}
-		}
-	}
-	return true
-}
-
-func equals3(x Value, y Value, inProgress pairs) bool {
-	if xo, ok := x.ToObject(); ok {
-		if yo, ok := y.ToObject(); ok {
-			return soEqual(xo, yo, inProgress)
-		}
-	}
-	if xi, ok := x.(*SuInstance); ok {
-		if yi, ok := y.(*SuInstance); ok {
-			return siEqual(xi, yi, inProgress)
-		}
-	}
-	return x.Equal(y)
 }
 
 func (SuObject) Type() types.Type {
 	return types.Object
 }
 
+// Compare compares the list values
 func (ob *SuObject) Compare(other Value) int {
 	if cmp := ints.Compare(ordObject, Order(other)); cmp != 0 {
 		return cmp
 	}
-	// now know other is an object so ToObject won't panic
-	return cmp2(ob, ToObject(other), newpairs())
+	// now know other is an object so ToContainer won't panic
+	return cmp2(ob, ToContainer(other), newpairs())
 }
 
-func cmp2(x *SuObject, y *SuObject, inProgress pairs) int {
+func cmp2(x Container, y Container, inProgress pairs) int {
 	if x == y { // pointer comparison
 		return 0
 	}
@@ -422,17 +364,17 @@ func cmp2(x *SuObject, y *SuObject, inProgress pairs) int {
 		return 0
 	}
 	inProgress.push(x, y) // no need to pop due to pass by value
-	for i := 0; i < x.Size() && i < y.Size(); i++ {
+	for i := 0; i < x.ListSize() && i < y.ListSize(); i++ {
 		if cmp := cmp3(x.ListGet(i), y.ListGet(i), inProgress); cmp != 0 {
 			return cmp
 		}
 	}
-	return ints.Compare(x.Size(), y.Size())
+	return ints.Compare(x.ListSize(), y.ListSize())
 }
 
 func cmp3(x Value, y Value, inProgress pairs) int {
-	xo, xok := x.ToObject()
-	yo, yok := y.ToObject()
+	xo, xok := x.ToContainer()
+	yo, yok := y.ToContainer()
 	if !xok || !yok {
 		return x.Compare(y)
 	}
@@ -453,7 +395,7 @@ func (*SuObject) Lookup(t *Thread, method string) Callable {
 }
 
 // Slice returns a copy of the object, with the first n list elements removed
-func (ob *SuObject) Slice(n int) *SuObject {
+func (ob *SuObject) Slice(n int) Container {
 	newNamed := ob.named.Copy()
 	if n > len(ob.list) {
 		return &SuObject{named: *newNamed, defval: ob.defval}
@@ -535,47 +477,6 @@ func (ob *SuObject) Iter() Iter {
 		result: func(k, v Value) Value { return v }}
 }
 
-func (ob *SuObject) IterValues(list, named bool) Iter {
-	return &obIter{ob: ob, list: list, named: named,
-		iter:   ob.Iter2(list, named),
-		result: func(k, v Value) Value { return v }}
-}
-
-func (ob *SuObject) IterMembers(list, named bool) Iter {
-	return &obIter{ob: ob, list: list, named: named,
-		iter:   ob.Iter2(list, named),
-		result: func(k, v Value) Value { return k }}
-}
-
-func (ob *SuObject) IterAssocs(list, named bool) Iter {
-	return &obIter{ob: ob, list: list, named: named,
-		iter:   ob.Iter2(list, named),
-		result: func(k, v Value) Value { return NewSuObject(k, v) }}
-}
-
-type obIter struct {
-	ob          *SuObject
-	list, named bool
-	iter        func() (Value, Value)
-	result      func(Value, Value) Value
-}
-
-func (it *obIter) Next() Value {
-	k, v := it.iter()
-	if v == nil {
-		return nil
-	}
-	return it.result(k, v)
-}
-func (it *obIter) Dup() Iter {
-	oi := *it
-	oi.iter = it.ob.Iter2(it.list, it.named)
-	return &oi
-}
-func (it *obIter) Infinite() bool {
-	return false
-}
-
 func (ob *SuObject) Sort(t *Thread, lt Value) {
 	ob.mustBeMutable()
 	ob.version++
@@ -619,7 +520,7 @@ func (ob *SuObject) SetReadOnly() {
 	ob.readonly = true
 	iter := ob.Iter2(true, true)
 	for k, v := iter(); k != nil; k, v = iter() {
-		if x, ok := v.ToObject(); ok {
+		if x, ok := v.ToContainer(); ok {
 			x.SetReadOnly()
 		}
 	}
@@ -642,12 +543,14 @@ func (ob *SuObject) Reverse() {
 	}
 }
 
+// BinarySearch does a binary search with default comparisons
 func (ob *SuObject) BinarySearch(value Value) int {
 	return sort.Search(ob.ListSize(), func(i int) bool {
 		return ob.list[i].Compare(value) >= 0
 	})
 }
 
+// BinarySearch2 does a binary search with a user specified less than function
 func (ob *SuObject) BinarySearch2(t *Thread, value, lt Value) int {
 	return sort.Search(ob.ListSize(), func(i int) bool {
 		return True != t.CallWithArgs(lt, ob.list[i], value)

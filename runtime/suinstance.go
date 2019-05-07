@@ -96,10 +96,10 @@ func (ob *SuInstance) Equal(other interface{}) bool {
 		return true
 	}
 	var stack [maxpairs]pair
-	return siEqual(ob, o2, stack[:0])
+	return instanceEqual(ob, o2, stack[:0])
 }
 
-func siEqual(ob, o2 *SuInstance, inProgress pairs) bool {
+func instanceEqual(ob, o2 *SuInstance, inProgress pairs) bool {
 	if ob.class != o2.class || len(ob.Data) != len(o2.Data) {
 		return false
 	}
@@ -108,7 +108,7 @@ func siEqual(ob, o2 *SuInstance, inProgress pairs) bool {
 	}
 	inProgress.push(ob, o2)
 	for k, x := range ob.Data {
-		if y, ok := o2.Data[k]; !ok || !equals3(x, y, inProgress) {
+		if y, ok := o2.Data[k]; !ok || !deepEqual(x, y, inProgress) {
 			return false
 		}
 	}

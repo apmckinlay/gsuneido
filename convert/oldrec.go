@@ -1,11 +1,9 @@
-package record
+package main
 
-import (
-	. "github.com/apmckinlay/gsuneido/runtime"
-)
+import 	. "github.com/apmckinlay/gsuneido/runtime"
 
 /*
-Old is an immutable record stored in a string
+OldRec is an immutable record stored in a string
 using the pre 2019 format with a four byte header.
 
 [0] is 'c', 's', or 'l' for 8, 16, or 32 bit offsets
@@ -16,28 +14,28 @@ followed by the offsets of the fields (uint8, uint16, or uint32)
 followed by the contents of the fields
 integers are stored little endian (least significant first)
 */
-type Old string
+type OldRec string
 
 // Count returns the number of values in the record
-func (o Old) Count() int {
+func (o OldRec) Count() int {
 	return int(o[2]) + int(o[3])<<8
 }
 
 // Get returns one of the (usually packed) values
-func (o Old) Get(i int) string {
+func (o OldRec) Get(i int) string {
 	return string(o)[o.offset(i):o.offset(i-1)]
 }
 
 // GetVal is a convenience method to get and unpack
-func (o Old) GetVal(i int) Value {
+func (o OldRec) GetVal(i int) Value {
 	return Unpack(o.Get(i))
 }
 
-func (o Old) mode() byte {
+func (o OldRec) mode() byte {
 	return o[0]
 }
 
-func (o Old) offset(i int) int {
+func (o OldRec) offset(i int) int {
 	const hdr = 4
 	switch o.mode() {
 	case 'c':

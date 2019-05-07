@@ -33,7 +33,7 @@ func (ss SuStr) ToDnum() (dnum.Dnum, bool) {
 	return dnum.Zero, ss == ""
 }
 
-func (SuStr) ToObject() (*SuObject, bool) {
+func (SuStr) ToContainer() (Container, bool) {
 	return nil, false
 }
 

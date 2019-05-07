@@ -9,6 +9,8 @@ import (
 	"github.com/apmckinlay/gsuneido/database/dbms/commands"
 	"github.com/apmckinlay/gsuneido/database/dbms/csio"
 	. "github.com/apmckinlay/gsuneido/runtime"
+	"github.com/apmckinlay/gsuneido/util/ascii"
+	"github.com/apmckinlay/gsuneido/util/str"
 )
 
 type DbmsClient struct {
@@ -90,6 +92,25 @@ func (dc *DbmsClient) Final() int {
 	return int(dc.GetInt())
 }
 
+func (dc *DbmsClient) Get(tn int, query string, prev, single bool) (Row, *Header) {
+	dc.PutCmd(commands.Get1)
+	if single {
+		dc.PutByte('1')
+	} else if prev {
+		dc.PutByte('-')
+	} else {
+		dc.PutByte('+')
+	}
+	dc.PutInt(int64(tn)).PutStr(query).Request()
+	if !dc.GetBool() {
+		return Row{}, nil
+	}
+	/* adr := */ dc.GetInt()
+	hdr := dc.getHdr()
+	row := dc.getRow()
+	return row, hdr
+}
+
 func (dc *DbmsClient) Info() Value {
 	dc.PutCmd(commands.Info).Request()
 	return dc.GetVal()
@@ -119,7 +140,7 @@ func (dc *DbmsClient) LibGet(name string) []string {
 		sizes[i/2] = dc.GetSize()
 	}
 	for i := 1; i < 2*n; i += 2 {
-		v[i] = string(dc.Get(sizes[i/2])) // text
+		v[i] = dc.GetN(sizes[i/2]) // text
 	}
 	return v
 }
@@ -167,7 +188,7 @@ func (dc *DbmsClient) Token() string {
 func (dc *DbmsClient) Transaction(update bool) ITran {
 	dc.PutCmd(commands.Transaction).PutBool(update).Request()
 	tn := int(dc.GetInt())
-	return &TranClient{dc: dc, tn: tn, readonly: !update}
+	return &TranClient{dc: dc, tn: tn}
 }
 
 func (dc *DbmsClient) Transactions() *SuObject {
@@ -185,7 +206,7 @@ func (dc *DbmsClient) Unuse(lib string) bool {
 }
 
 func (dc *DbmsClient) Use(lib string) bool {
-	if _, ok := dc.Libraries().Find(SuStr(lib)); ok {
+	if _, ok := ContainerFind(dc.Libraries(), SuStr(lib)); ok {
 		return false
 	}
 	panic("can't Use('" + lib + "')\n" +
@@ -198,15 +219,43 @@ func (dc *DbmsClient) Close() {
 
 // ------------------------------------------------------------------
 
+func (dc *DbmsClient) getHdr() *Header {
+	n := int(dc.GetInt())
+	fields := make([]string, 0, n)
+	columns := make([]string, 0, n)
+	for i := 0; i < n; i++ {
+		s := dc.GetStr()
+		if ascii.IsUpper(s[0]) {
+			s = str.UnCapitalize(s)
+		} else if !strings.HasSuffix(s, "_lower!") {
+			fields = append(fields, s)
+		}
+		if s != "-" {
+			columns = append(columns, s)
+		}
+	}
+	return &Header{Fields: [][]string{fields}, Columns: columns}
+}
+
+func (dc *DbmsClient) getRow() Row {
+	return Row([]Record{Record(dc.GetStr())})
+}
+
+// ------------------------------------------------------------------
+
 type TranClient struct {
-	dc       *DbmsClient
-	tn       int
+	dc *DbmsClient
+	tn int
 }
 
 var _ ITran = (*TranClient)(nil)
 
 func (tc *TranClient) Abort() {
 	tc.dc.PutCmd(commands.Abort).PutInt(int64(tc.tn)).Request()
+}
+
+func (tc *TranClient) Get(query string, prev, single bool) (Row, *Header) {
+	return tc.dc.Get(tc.tn, query, prev, single)
 }
 
 func (tc *TranClient) Complete() string {

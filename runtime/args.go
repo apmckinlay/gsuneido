@@ -63,9 +63,8 @@ func (t *Thread) massage(ps *ParamSpec, as *ArgSpec, args []Value) {
 	if atParam {
 		if atArg {
 			// @arg => @param
-			ob := ToObject(args[0])
-			ob = ob.Slice(each) // makes a copy
-			args[0] = ob
+			ob := ToContainer(args[0]).ToObject()
+			args[0] = ob.Slice(each) // makes a copy
 			return
 		}
 		// args => @param
@@ -84,7 +83,7 @@ func (t *Thread) massage(ps *ParamSpec, as *ArgSpec, args []Value) {
 
 	if atArg {
 		// @args => params
-		ob := ToObject(args[0])
+		ob := ToContainer(args[0])
 		if ob.ListSize()-each > int(ps.Nparams) {
 			panic("too many arguments")
 		}
@@ -93,7 +92,7 @@ func (t *Thread) massage(ps *ParamSpec, as *ArgSpec, args []Value) {
 		}
 		// named members may overwrite unnamed (same as when passed individually)
 		for i := 0; i < int(ps.Nparams); i++ {
-			if x := ob.GetDefault(SuStr(ps.Names[i]), nil); x != nil {
+			if x := ob.GetIfPresent(t, SuStr(ps.Names[i])); x != nil {
 				args[i] = x
 			}
 		}
