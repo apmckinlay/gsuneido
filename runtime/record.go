@@ -35,50 +35,56 @@ const sizeMask = 0x3ff
 const hdrlen = 2
 
 // Count returns the number of values in the record
-func (t Record) Count() int {
-	return (int(t[0])<<8 + int(t[1])) & sizeMask
+func (r Record) Count() int {
+	if r[0] == 0 {
+		return 0
+	}
+	return (int(r[0])<<8 + int(r[1])) & sizeMask
 }
 
 // GetVal is a convenience method to get and unpack
-func (t Record) GetVal(i int) Value {
-	return Unpack(t.GetRaw(i))
+func (r Record) GetVal(i int) Value {
+	return Unpack(r.GetRaw(i))
 }
 
 // Get returns one of the (usually packed) values
-func (t Record) GetRaw(i int) string {
+func (r Record) GetRaw(i int) string {
+	if i >= r.Count() {
+		return ""
+	}
 	var pos, end int
-	switch t.mode() {
+	switch r.mode() {
 	case type8:
 		j := hdrlen + i
-		end = int(t[j])
-		pos = int(t[j+1])
+		end = int(r[j])
+		pos = int(r[j+1])
 	case type16:
 		j := hdrlen + 2*i
-		end = (int(t[j]) << 8) | int(t[j+1])
-		pos = (int(t[j+2]) << 8) | int(t[j+3])
+		end = (int(r[j]) << 8) | int(r[j+1])
+		pos = (int(r[j+2]) << 8) | int(r[j+3])
 	case type32:
 		j := hdrlen + 4*i
-		end = (int(t[j]) << 24) | (int(t[j+1]) << 16) |
-			(int(t[j+2]) << 8) | int(t[j+3])
-		pos = (int(t[j+4]) << 24) | (int(t[j+5]) << 16) |
-			(int(t[j+6]) << 8) | int(t[j+7])
+		end = (int(r[j]) << 24) | (int(r[j+1]) << 16) |
+			(int(r[j+2]) << 8) | int(r[j+3])
+		pos = (int(r[j+4]) << 24) | (int(r[j+5]) << 16) |
+			(int(r[j+6]) << 8) | int(r[j+7])
 	default:
 		panic("invalid record type")
 	}
-	return string(t)[pos:end]
+	return string(r)[pos:end]
 }
 
-func (t Record) mode() byte {
-	return t[0] >> 6
+func (r Record) mode() byte {
+	return r[0] >> 6
 }
 
-func (t Record) String() string {
+func (r Record) String() string {
 	var sb strings.Builder
 	sep := "<"
-	for i := 0; i < t.Count(); i++ {
+	for i := 0; i < r.Count(); i++ {
 		sb.WriteString(sep)
 		sep = ", "
-		sb.WriteString(t.GetVal(i).String())
+		sb.WriteString(r.GetVal(i).String())
 	}
 	sb.WriteString(">")
 	return sb.String()

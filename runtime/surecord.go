@@ -83,7 +83,7 @@ func (*SuRecord) Type() types.Type {
 }
 
 func (r *SuRecord) String() string {
-	s := r.ob.String()
+	s := r.ToObject().String()
 	return "[" + s[2:len(s)-1] + "]"
 }
 
@@ -127,7 +127,16 @@ func (r *SuRecord) ToContainer() (Container, bool) {
 // Container --------------------------------------------------------
 
 func (r *SuRecord) ToObject() *SuObject {
-	//TODO flatten row
+	if r.row != nil {
+		for ri, rf := range r.hdr.Fields {
+			for fi, f := range rf {
+				key := SuStr(f)
+				if !r.ob.HasKey(key) {
+					r.ob.Set(key, r.row[ri].GetVal(fi))
+				}
+			}
+		}
+	}
 	return &r.ob
 }
 
