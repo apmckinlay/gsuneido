@@ -10,15 +10,20 @@ import (
 )
 
 var (
-	user32      = windows.NewLazyDLL("user32.dll")
-	getSysColor = user32.NewProc("GetSysColor")
-	messageBox  = user32.NewProc("MessageBoxA")
-
-	kernel32            = windows.NewLazyDLL("kernel32.dll")
-	getCurrentDirectory = kernel32.NewProc("GetCurrentDirectoryA")
+	user32   = windows.NewLazyDLL("user32.dll")
+	kernel32 = windows.NewLazyDLL("kernel32.dll")
 )
 
+type RECT struct {
+	left   int32
+	top    int32
+	right  int32
+	bottom int32
+}
+
 const maxpath = 1024
+
+var getCurrentDirectory = kernel32.NewProc("GetCurrentDirectoryA")
 
 var _ = builtin0("GetCurrentDirectory()", func() Value {
 	var buf [maxpath]byte
@@ -29,11 +34,39 @@ var _ = builtin0("GetCurrentDirectory()", func() Value {
 	return SuStr(string(buf[:n]))
 })
 
+var getDesktopWindow = user32.NewProc("GetDesktopWindow")
+
+var _ = builtin0("GetDesktopWindow()", func() Value {
+	n, _, _ := getDesktopWindow.Call()
+	return IntVal(int(n))
+})
+
+var getSysColor = user32.NewProc("GetSysColor")
+
 var _ = builtin1("GetSysColor(index)", func(arg Value) Value {
 	index := ToInt(arg)
 	n, _, _ := getSysColor.Call(uintptr(index))
 	return IntVal(int(n))
 })
+
+var getWindowRect = user32.NewProc("GetWindowRect")
+
+var _ = builtin1("GetWindowRect(hwnd)", func(arg Value) Value {
+	hwnd := ToInt(arg)
+	var r RECT
+	b, _, _ := getWindowRect.Call(uintptr(hwnd), uintptr(unsafe.Pointer(&r)))
+	if b == 0 {
+		panic("GetWindowRect failed")
+	}
+	ob := &SuObject{}
+	ob.Put(nil, SuStr("left"), IntVal(int(r.left)))
+	ob.Put(nil, SuStr("top"), IntVal(int(r.top)))
+	ob.Put(nil, SuStr("right"), IntVal(int(r.right)))
+	ob.Put(nil, SuStr("bottom"), IntVal(int(r.bottom)))
+	return ob
+})
+
+var messageBox = user32.NewProc("MessageBoxA")
 
 var _ = builtin4("MessageBox(hwnd, text, caption, flags)",
 	func(a, b, c, d Value) Value {
