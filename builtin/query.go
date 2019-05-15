@@ -1,7 +1,6 @@
 package builtin
 
 import (
-	"fmt"
 	"strings"
 
 	. "github.com/apmckinlay/gsuneido/runtime"
@@ -28,12 +27,14 @@ func queryOne(which string, t *Thread, prev bool, single bool,
 	as *ArgSpec, args ...Value) Value {
 	query := buildQuery(which, as, args)
 	row, hdr := t.Dbms().Get(noTran, query, prev, single)
-	fmt.Println(hdr)
-	fmt.Println(row)
-	return SuRecordFromRow(row, hdr)
+	if hdr == nil {
+		return False
+	}
+	return SuRecordFromRow(row, hdr, nil)
 }
 
 func buildQuery(which string, as *ArgSpec, args []Value) string {
+	//TODO insert before "sort" or "into"
 	iter := NewArgsIter(as, args)
 	k, v := iter()
 	if k != nil || v == nil {

@@ -13,6 +13,15 @@ func init() {
 		"GetDeps": method1("(field)", func(this, arg Value) Value {
 			return this.(*SuRecord).GetDeps(IfStr(arg))
 		}),
+		"Delete": methodRaw("()",
+			func(t *Thread, as *ArgSpec, this Value, args ...Value) Value {
+				k, v := NewArgsIter(as, args)()
+				if k != nil || v != nil {
+					return ObjectMethods["Delete"].Call(t, as)
+				}
+				this.(*SuRecord).DbDelete()
+				return nil
+			}),
 		"Invalidate": methodRaw("(@args)",
 			func(t *Thread, as *ArgSpec, this Value, args ...Value) Value {
 				iter := NewArgsIter(as, args)
@@ -40,5 +49,15 @@ func init() {
 			this.(*SuRecord).SetDeps(IfStr(arg1), IfStr(arg2))
 			return nil
 		}),
+		"Update": method("(record = false)",
+			func(t *Thread, this Value, args ...Value) Value {
+				r := this.(*SuRecord)
+				var ob Container = r
+				if args[0] != False {
+					ob = ToContainer(args[0])
+				}
+				r.DbUpdate(t, ob)
+				return nil
+			}),
 	}
 }

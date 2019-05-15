@@ -11,9 +11,9 @@ func TestInt(t *testing.T) {
 	var buf bytes.Buffer
 	rw := NewReadWrite(&buf)
 	test := func(n int64) {
-		rw.PutInt(n)
+		rw.PutInt64(n)
 		rw.Flush()
-		Assert(t).That(rw.GetInt(), Equals(n))
+		Assert(t).That(rw.GetInt64(), Equals(n))
 		buf.Reset()
 	}
 	test(0)

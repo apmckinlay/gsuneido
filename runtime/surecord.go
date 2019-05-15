@@ -29,6 +29,8 @@ type SuRecord struct {
 	row Row
 	// header is the Header for row
 	hdr *Header
+	// tran is the database transaction used to read the record
+	tran *SuTran
 }
 
 var _ Container = (*SuRecord)(nil)
@@ -44,7 +46,7 @@ func SuRecordFromObject(ob *SuObject) *SuRecord {
 	return &SuRecord{ob: *ob}
 }
 
-func SuRecordFromRow(row Row, hdr *Header) *SuRecord {
+func SuRecordFromRow(row Row, hdr *Header, tran *SuTran) *SuRecord {
 	if hdr.Map == nil { //TODO concurrency
 		hdr.Map = make(map[string]RowAt, len(hdr.Fields))
 		for ri, r := range hdr.Fields {
@@ -54,7 +56,7 @@ func SuRecordFromRow(row Row, hdr *Header) *SuRecord {
 		}
 	}
 	//TODO _deps
-	return &SuRecord{row: row, hdr: hdr}
+	return &SuRecord{row: row, hdr: hdr, tran: tran}
 }
 
 func (r *SuRecord) Copy() Container {
@@ -319,12 +321,15 @@ func (r *SuRecord) Get(t *Thread, key Value) Value {
 	return r.ob.defval //TODO copy object default
 }
 
+// GetIfPresent is the same as Get
+// except it returns nil instead of defval for missing members
 func (r *SuRecord) GetIfPresent(t *Thread, keyval Value) Value {
 	result := r.ob.GetIfPresent(t, keyval)
 	if key, ok := keyval.IfStr(); ok {
 		// only do record stuff when key is a string
 		if result == nil && r.row != nil {
 			if val := r.row.Get(r.hdr, key); val != nil {
+				r.PreSet(keyval, val) // cache unpacked value
 				return val
 			}
 		}
@@ -342,6 +347,28 @@ func (r *SuRecord) GetIfPresent(t *Thread, keyval Value) Value {
 		}
 	}
 	return result
+}
+
+// GetPacked is used by ToRecord to build a Record for the database.
+// It is like Get except it returns the value packed,
+// using the already packed value from the row when possible.
+// It does not add dependencies or handle special fields (e.g. _lower!)
+func (r *SuRecord) GetPacked(t *Thread, key string) string {
+	result := r.ob.GetIfPresent(t, SuStr(key))
+	if result == nil && r.row != nil {
+		if s := r.row.GetRaw(r.hdr, key); s != "" {
+			return s
+		}
+	}
+	if result == nil || r.invalid[key] {
+		if x := r.callRule(t, key); x != nil {
+			result = x
+		}
+	}
+	if result == nil {
+		result = r.ob.defval
+	}
+	return PackValue(result)
 }
 
 func (r *SuRecord) addDependent(from, to string) {
@@ -479,6 +506,16 @@ outer:
 	}
 }
 
+// ToRecord converts this SuRecord to a Record to be stored in the database
+func (r *SuRecord) ToRecord(t *Thread, hdr *Header) Record {
+	fields := hdr.Fields[0]
+	rb := RecordBuilder{}
+	for _, f := range fields {
+		rb.AddRaw(r.GetPacked(t, f))
+	}
+	return rb.Build()
+}
+
 // RecordMethods is initialized by the builtin package
 var RecordMethods Methods
 
@@ -513,4 +550,26 @@ func UnpackRecordOld(s string) *SuRecord {
 	r := NewSuRecord()
 	unpackObjectOld(s, &r.ob)
 	return r
+}
+
+// database
+
+func (r *SuRecord) DbDelete() {
+	r.ckModify("Delete")
+	r.tran.Erase(r.row[0].Adr)
+}
+
+func (r *SuRecord) DbUpdate(t *Thread, ob Container) {
+	r.ckModify("Update")
+	var rec = ob.ToRecord(t, r.hdr)
+	r.tran.Update(r.row[0].Adr, rec)
+}
+
+func (r *SuRecord) ckModify(op string) {
+	if r.row == nil {
+		panic("record." + op + ": not a database record")
+	}
+	if r.tran == nil {
+		panic("record." + op + ": no Transaction")
+	}
 }

@@ -477,6 +477,15 @@ func (ob *SuObject) Iter() Iter {
 		result: func(k, v Value) Value { return v }}
 }
 
+func (ob *SuObject) ToRecord(t *Thread, hdr *Header) Record {
+	fields := hdr.Fields[0]
+	rb := RecordBuilder{}
+	for _,f := range fields {
+		rb.AddRaw(PackValue(ob.Get(t, SuStr(f))))
+	}
+	return rb.Build()
+}
+
 func (ob *SuObject) Sort(t *Thread, lt Value) {
 	ob.mustBeMutable()
 	ob.version++

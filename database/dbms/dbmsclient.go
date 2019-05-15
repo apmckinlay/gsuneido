@@ -74,7 +74,7 @@ func (dc *DbmsClient) Connections() Value {
 
 func (dc *DbmsClient) Cursors() int {
 	dc.PutCmd(commands.Cursors).Request()
-	return int(dc.GetInt())
+	return dc.GetInt()
 }
 
 func (dc *DbmsClient) Dump(table string) string {
@@ -89,7 +89,7 @@ func (dc *DbmsClient) Exec(_ *Thread, args Value) Value {
 
 func (dc *DbmsClient) Final() int {
 	dc.PutCmd(commands.Final).Request()
-	return int(dc.GetInt())
+	return dc.GetInt()
 }
 
 func (dc *DbmsClient) Get(tn int, query string, prev, single bool) (Row, *Header) {
@@ -101,13 +101,13 @@ func (dc *DbmsClient) Get(tn int, query string, prev, single bool) (Row, *Header
 	} else {
 		dc.PutByte('+')
 	}
-	dc.PutInt(int64(tn)).PutStr(query).Request()
+	dc.PutInt(tn).PutStr(query).Request()
 	if !dc.GetBool() {
 		return Row{}, nil
 	}
-	/* adr := */ dc.GetInt()
+	adr := dc.GetInt()
 	hdr := dc.getHdr()
-	row := dc.getRow()
+	row := dc.getRow(adr)
 	return row, hdr
 }
 
@@ -118,12 +118,12 @@ func (dc *DbmsClient) Info() Value {
 
 func (dc *DbmsClient) Kill(sessionid string) int {
 	dc.PutCmd(commands.Kill).PutStr(sessionid).Request()
-	return int(dc.GetInt())
+	return dc.GetInt()
 }
 
 func (dc *DbmsClient) Load(table string) int {
 	dc.PutCmd(commands.Load).PutStr(table).Request()
-	return int(dc.GetInt())
+	return dc.GetInt()
 }
 
 func (dc *DbmsClient) Log(s string) {
@@ -172,7 +172,7 @@ func (dc *DbmsClient) SessionId(id string) string {
 
 func (dc *DbmsClient) Size() int64 {
 	dc.PutCmd(commands.Size).Request()
-	return dc.GetInt()
+	return dc.GetInt64()
 }
 
 func (dc *DbmsClient) Timestamp() SuDate {
@@ -187,7 +187,7 @@ func (dc *DbmsClient) Token() string {
 
 func (dc *DbmsClient) Transaction(update bool) ITran {
 	dc.PutCmd(commands.Transaction).PutBool(update).Request()
-	tn := int(dc.GetInt())
+	tn := dc.GetInt()
 	return &TranClient{dc: dc, tn: tn}
 }
 
@@ -195,7 +195,7 @@ func (dc *DbmsClient) Transactions() *SuObject {
 	dc.PutCmd(commands.Transactions).Request()
 	ob := NewSuObject()
 	for n := dc.GetInt(); n > 0; n-- {
-		ob.Add(IntVal(int(dc.GetInt())))
+		ob.Add(IntVal(dc.GetInt()))
 	}
 	return ob
 }
@@ -220,7 +220,7 @@ func (dc *DbmsClient) Close() {
 // ------------------------------------------------------------------
 
 func (dc *DbmsClient) getHdr() *Header {
-	n := int(dc.GetInt())
+	n := dc.GetInt()
 	fields := make([]string, 0, n)
 	columns := make([]string, 0, n)
 	for i := 0; i < n; i++ {
@@ -237,8 +237,8 @@ func (dc *DbmsClient) getHdr() *Header {
 	return &Header{Fields: [][]string{fields}, Columns: columns}
 }
 
-func (dc *DbmsClient) getRow() Row {
-	return Row([]Record{Record(dc.GetStr())})
+func (dc *DbmsClient) getRow(adr int) Row {
+	return Row([]DbRec{{Record(dc.GetStr()), adr}})
 }
 
 // ------------------------------------------------------------------
@@ -251,15 +251,30 @@ type TranClient struct {
 var _ ITran = (*TranClient)(nil)
 
 func (tc *TranClient) Abort() {
-	tc.dc.PutCmd(commands.Abort).PutInt(int64(tc.tn)).Request()
+	tc.dc.PutCmd(commands.Abort).PutInt(tc.tn).Request()
 }
 
 func (tc *TranClient) Get(query string, prev, single bool) (Row, *Header) {
 	return tc.dc.Get(tc.tn, query, prev, single)
 }
 
+func (tc *TranClient) Erase(adr int) {
+	tc.dc.PutCmd(commands.Erase).PutInt(tc.tn).PutInt(adr).Request()
+}
+
+func (tc *TranClient) Update(adr int, rec Record) int {
+	tc.dc.PutCmd(commands.Update).
+		PutInt(tc.tn).PutInt(adr).PutStr(string(rec)).Request()
+	return tc.dc.GetInt()
+}
+
+func (tc *TranClient) Request(request string) int {
+	tc.dc.PutCmd(commands.Request).PutInt(tc.tn).PutStr(request).Request()
+	return tc.dc.GetInt()
+}
+
 func (tc *TranClient) Complete() string {
-	tc.dc.PutCmd(commands.Commit).PutInt(int64(tc.tn)).Request()
+	tc.dc.PutCmd(commands.Commit).PutInt(tc.tn).Request()
 	if tc.dc.GetBool() {
 		return ""
 	}

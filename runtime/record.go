@@ -92,7 +92,7 @@ func (r Record) String() string {
 
 // ------------------------------------------------------------------
 
-// RecordBuilder is used to construct records
+// RecordBuilder is used to construct records. Zero value is ready to use.
 type RecordBuilder struct {
 	vals []Packable
 }

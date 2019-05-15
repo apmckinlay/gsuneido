@@ -19,6 +19,7 @@ type Container interface {
 	Iter2(list bool, named bool) func() (Value, Value)
 	HasKey(key Value) bool
 	ToObject() *SuObject
+	ToRecord(t *Thread, hdr *Header) Record
 }
 
 func containerEqual(x Container, y Container, inProgress pairs) bool {

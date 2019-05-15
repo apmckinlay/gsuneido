@@ -6,6 +6,8 @@ import (
 	"unsafe"
 
 	. "github.com/apmckinlay/gsuneido/runtime"
+	"github.com/apmckinlay/gsuneido/util/ints"
+	"github.com/apmckinlay/gsuneido/util/verify"
 
 	"github.com/apmckinlay/gsuneido/database/dbms/commands"
 )
@@ -51,13 +53,18 @@ func (rw *ReadWrite) PutByte(b byte) *ReadWrite {
 // PutStr writes a size prefixed string
 func (rw *ReadWrite) PutStr(s string) *ReadWrite {
 	limit(int64(len(s)))
-	rw.PutInt(int64(len(s)))
+	rw.PutInt(len(s))
 	rw.w.WriteString(s)
 	return rw
 }
 
 // PutInt writes a zig zag encoded varint
-func (rw *ReadWrite) PutInt(i int64) *ReadWrite {
+func (rw *ReadWrite) PutInt(i int) *ReadWrite {
+	return rw.PutInt64(int64(i))
+}
+
+// PutInt64 writes a zig zag encoded varint
+func (rw *ReadWrite) PutInt64(i int64) *ReadWrite {
 	i = (i << 1) ^ (i >> 63) // zig zag encoding
 	n := uint64(i)
 	for n > 0x7f {
@@ -87,7 +94,14 @@ func (rw *ReadWrite) GetBool() bool {
 }
 
 // GetInt reads a zig zag encoded varint
-func (rw *ReadWrite) GetInt() int64 {
+func (rw *ReadWrite) GetInt() int {
+	n := rw.GetInt64()
+	verify.That(int64(ints.MinInt) <= n && n <= int64(ints.MaxInt))
+	return int(n)
+}
+
+// GetInt64 reads a zig zag encoded varint
+func (rw *ReadWrite) GetInt64() int64 {
 	shift := uint(0)
 	n := uint64(0)
 	for {
@@ -112,7 +126,7 @@ func (rw *ReadWrite) GetN(n int) string {
 
 // GetSize returns GetInt, checking the size against the maxio limit
 func (rw *ReadWrite) GetSize() int {
-	return limit(rw.GetInt())
+	return limit(rw.GetInt64())
 }
 
 // GetStr reads a size prefixed string

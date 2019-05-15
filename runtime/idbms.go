@@ -99,6 +99,16 @@ type ITran interface {
 	// Get returns a single record for Query1, QueryFirst, QueryLast
 	Get(query string, prev, single bool) (Row, *Header)
 
+	// Erase deletes a record
+	Erase(adr int)
+
+	// Update modifies a record
+	Update(adr int, rec Record) int
+
+	// Request executes an insert, update, or delete
+	// and returns the number of records processed
+	Request(request string) int
+
 	String() string
 }
 
@@ -114,7 +124,12 @@ type RowAt struct {
 	Fldi int16
 }
 
-type Row []Record
+type DbRec struct {
+	Record
+	Adr int
+}
+
+type Row []DbRec
 
 func (row Row) Get(hdr *Header, fld string) Value {
 	at,ok := hdr.Map[fld]
