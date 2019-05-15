@@ -121,7 +121,8 @@ func TestCodegen(t *testing.T) {
 	test("f(1,a:2); f(3,a:4)",
 		"One, Int 2, Load f, CallFunc (?, a:), Pop, Int 3, Int 4, Load f, CallFunc (?, a:)")
 
-	test("[1, a: 2, :b]", "One, Int 2, Load b, Global Record, CallFunc (?, a:, b:)")
+	test("[a: 2, :b]", "Int 2, Load b, Global Record, CallFunc (a:, b:)")
+	test("[1, a: 2, :b]", "One, Int 2, Load b, Global Object, CallFunc (?, a:, b:)")
 
 	test("char.Size()", "Load char, Value 'Size', CallMeth ()")
 	test("a.f(123)", "Load a, Int 123, Value 'f', CallMeth (?)")

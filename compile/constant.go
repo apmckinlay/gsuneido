@@ -144,6 +144,10 @@ func (p *parser) object() Value {
 		ob = NewSuRecord()
 	}
 	p.memberList(ob, close, noBase)
+	if close == tok.RBracket && ob.(*SuRecord).ListSize() > 0 {
+		suob := *ob.(*SuRecord).ToObject()
+		ob = &suob
+	}
 	if p, ok := ob.(protectable); ok {
 		p.SetReadOnly()
 	}

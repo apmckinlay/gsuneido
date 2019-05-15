@@ -17,6 +17,7 @@ func (p *parser) expr() ast.Expr {
 	return p.pcExpr(1)
 }
 
+// ------------------------------------------------------------------
 // pcExpr implements precedence climbing
 // each call processes at least one atom
 // a given call processes everything >= minprec
@@ -189,6 +190,8 @@ func (p *parser) same(listtype tok.Token, next tok.Token) bool {
 		(next == tok.Div && listtype == tok.Mul)
 }
 
+// ------------------------------------------------------------------
+// atom handles atoms and prefix operators
 func (p *parser) atom() ast.Expr {
 	switch token := p.Token; token {
 	case tok.String:
@@ -407,7 +410,15 @@ func (p *parser) argname(expr ast.Expr) Value {
 func (p *parser) record() ast.Expr {
 	p.match(tok.LBracket)
 	args := p.argumentList(tok.RBracket)
-	return p.Call(p.Ident("Record"), args)
+	fn := "Record"
+	if hasUnnamed(args) {
+		fn = "Object"
+	}
+	return p.Call(p.Ident(fn), args)
+}
+
+func hasUnnamed(args []ast.Arg) bool {
+	return len(args) > 0 && args[0].Name == nil
 }
 
 func (p *parser) block() *ast.Block {
