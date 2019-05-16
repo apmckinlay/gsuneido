@@ -1,6 +1,8 @@
 package compile
 
 import (
+	"fmt"
+	"sort"
 	"strings"
 	"testing"
 
@@ -379,4 +381,18 @@ func TestParseStatements(t *testing.T) {
 		}
 	}
 	xtest("a \n * b", "syntax error: unexpected '*'")
+}
+
+func TestVarSet(t *testing.T) {
+	test := func(src string, expected string) {
+		p := NewParser(src)
+		f := p.method()
+		vars := ast.VarList(f)
+		sort.Strings(vars)
+		Assert(t).That(fmt.Sprint(vars), Equals(expected))
+	}
+	test("() { a = 0; b = 1 }", "[a b]")
+	test("(a, b) { c = 1 }", "[a b c]")
+	test("(.x, .Y, _z) { }", "[x y z]")
+	test("(@args) { }", "[args]")
 }
