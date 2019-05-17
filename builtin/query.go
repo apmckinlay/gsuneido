@@ -8,53 +8,53 @@ import (
 
 var _ = builtinRaw("Query1(@args)",
 	func(t *Thread, as *ArgSpec, args ...Value) Value {
-		return queryOne("Query1", t, false, true, as, args...)
+		return queryOne(t, as, args, '1')
 	})
 
 var _ = builtinRaw("QueryFirst(@args)",
 	func(t *Thread, as *ArgSpec, args ...Value) Value {
-		return queryOne("QueryFirst", t, false, false, as, args...)
+		return queryOne(t, as, args, '+')
 	})
 
 var _ = builtinRaw("QueryLast(@args)",
 	func(t *Thread, as *ArgSpec, args ...Value) Value {
-		return queryOne("QueryLast", t, true, false, as, args...)
+		return queryOne(t, as, args, '-')
 	})
 
 const noTran = 0
 
-func queryOne(which string, t *Thread, prev bool, single bool,
-	as *ArgSpec, args ...Value) Value {
-	query := buildQuery(which, as, args)
-	row, hdr := t.Dbms().Get(noTran, query, prev, single)
+var queryParams = params("(query)")
+
+func queryOne(t *Thread, as *ArgSpec, args []Value, which byte) Value {
+	query, _ := extractQuery(t, queryParams, as, args)
+	row, hdr := t.Dbms().Get(noTran, query, which)
 	if hdr == nil {
 		return False
 	}
 	return SuRecordFromRow(row, hdr, nil)
 }
 
-func buildQuery(which string, as *ArgSpec, args []Value) string {
-	//TODO insert before "sort" or "into"
-	iter := NewArgsIter(as, args)
-	k, v := iter()
-	if k != nil || v == nil {
-		panic("usage: " + which + "(query, [field: value, ...])")
-	}
+// extractQuery does queryWhere then Args and returns the query and the args.
+// NOTE: the base query must be the first argument
+func extractQuery(
+	th *Thread, ps *ParamSpec, as *ArgSpec, args []Value) (string, []Value) {
+	where := queryWhere(as, args)
+	args = th.Args(ps, as)
+	query := ToStr(args[0]) + where
+	return query + where, args
+}
+
+// queryWhere builds a string of where's for the named arguments
+// (except for 'block')
+func queryWhere(as *ArgSpec, args []Value) string {
 	var sb strings.Builder
-	sb.WriteString(IfStr(v))
-	for {
-		k, v := iter()
-		if v == nil {
-			break
-		}
+	iter := NewArgsIter(as, args)
+	for k, v := iter(); v != nil; k, v = iter() {
 		if k == nil {
-			if which == "Query" {
-				continue // Query can have additional unnamed block argument
-			}
-			panic("usage: " + which + "(query, [field: value, ...])")
+			continue
 		}
 		field := IfStr(k)
-		if which == "Query" && field == "block" {
+		if field == "query" || (field == "block" && !stringable(v)) {
 			continue
 		}
 		sb.WriteString("\nwhere ")
@@ -63,6 +63,11 @@ func buildQuery(which string, as *ArgSpec, args []Value) string {
 		sb.WriteString(v.String())
 	}
 	return sb.String()
+}
+
+func stringable(v Value) bool {
+	_, ok := v.ToStr()
+	return ok
 }
 
 func init() {
@@ -86,6 +91,11 @@ func init() {
 		"Prev": method0(func(this Value) Value {
 			return this.(*SuQuery).GetRec(Prev)
 		}),
+		"Output": method("(record)",
+			func(th *Thread, this Value, args ...Value) Value {
+				this.(*SuQuery).Output(th, ToContainer(args[0]))
+				return nil
+			}),
 		"Order": method0(func(this Value) Value {
 			return this.(*SuQuery).Order()
 		}),

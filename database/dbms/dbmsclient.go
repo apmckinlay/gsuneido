@@ -92,16 +92,8 @@ func (dc *DbmsClient) Final() int {
 	return dc.GetInt()
 }
 
-func (dc *DbmsClient) Get(tn int, query string, prev, single bool) (Row, *Header) {
-	dc.PutCmd(commands.Get1)
-	if single {
-		dc.PutByte('1')
-	} else if prev {
-		dc.PutByte('-')
-	} else {
-		dc.PutByte('+')
-	}
-	dc.PutInt(tn).PutStr(query).Request()
+func (dc *DbmsClient) Get(tn int, query string, which byte) (Row, *Header) {
+	dc.PutCmd(commands.Get1).PutByte(which).PutInt(tn).PutStr(query).Request()
 	if !dc.GetBool() {
 		return nil, nil
 	}
@@ -258,23 +250,20 @@ func (tc *TranClient) Abort() {
 	tc.dc.PutCmd(commands.Abort).PutInt(tc.tn).Request()
 }
 
-func (tc *TranClient) Get(query string, prev, single bool) (Row, *Header) {
-	return tc.dc.Get(tc.tn, query, prev, single)
+func (tc *TranClient) Complete() string {
+	tc.dc.PutCmd(commands.Commit).PutInt(tc.tn).Request()
+	if tc.dc.GetBool() {
+		return ""
+	}
+	return tc.dc.GetStr()
 }
 
 func (tc *TranClient) Erase(adr int) {
 	tc.dc.PutCmd(commands.Erase).PutInt(tc.tn).PutInt(adr).Request()
 }
 
-func (tc *TranClient) Update(adr int, rec Record) int {
-	tc.dc.PutCmd(commands.Update).
-		PutInt(tc.tn).PutInt(adr).PutStr(string(rec)).Request()
-	return tc.dc.GetInt()
-}
-
-func (tc *TranClient) Request(request string) int {
-	tc.dc.PutCmd(commands.Request).PutInt(tc.tn).PutStr(request).Request()
-	return tc.dc.GetInt()
+func (tc *TranClient) Get(query string, which byte) (Row, *Header) {
+	return tc.dc.Get(tc.tn, query, which)
 }
 
 func (tc *TranClient) Query(query string) IQuery {
@@ -283,12 +272,15 @@ func (tc *TranClient) Query(query string) IQuery {
 	return &QueryClient{dc: tc.dc, qn: qn}
 }
 
-func (tc *TranClient) Complete() string {
-	tc.dc.PutCmd(commands.Commit).PutInt(tc.tn).Request()
-	if tc.dc.GetBool() {
-		return ""
-	}
-	return tc.dc.GetStr()
+func (tc *TranClient) Request(request string) int {
+	tc.dc.PutCmd(commands.Request).PutInt(tc.tn).PutStr(request).Request()
+	return tc.dc.GetInt()
+}
+
+func (tc *TranClient) Update(adr int, rec Record) int {
+	tc.dc.PutCmd(commands.Update).
+		PutInt(tc.tn).PutInt(adr).PutStr(string(rec)).Request()
+	return tc.dc.GetInt()
 }
 
 func (tc *TranClient) String() string {
@@ -349,6 +341,10 @@ func (qc *QueryClient) Keys() *SuObject {
 func (qc *QueryClient) Order() *SuObject {
 	qc.dc.PutCmd(commands.Order).PutInt(qc.qn).PutByte('q').Request()
 	return qc.dc.getStrings()
+}
+
+func (qc *QueryClient) Output(rec Record) {
+	qc.dc.PutCmd(commands.Output).PutInt(qc.qn).PutStr(string(rec)).Request()
 }
 
 func (qc *QueryClient) Rewind() {

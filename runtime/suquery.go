@@ -107,6 +107,11 @@ func (q *SuQuery) Order() Value {
 	return q.iquery.Order()
 }
 
+func (q *SuQuery) Output(th *Thread, ob Container) {
+	rec := ob.ToRecord(th, q.iquery.Header())
+	q.iquery.Output(rec)
+}
+
 func (q *SuQuery) Rewind() {
 	q.iquery.Rewind()
 }

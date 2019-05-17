@@ -65,7 +65,7 @@ func (DbmsLocal) Final() int {
 	panic("DbmsLocal Final not implemented")
 }
 
-func (DbmsLocal) Get(int, string, bool, bool) (Row, *Header) {
+func (DbmsLocal) Get(int, string, byte) (Row, *Header) {
 	panic("DbmsLocal Get not implemented")
 }
 

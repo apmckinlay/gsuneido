@@ -13,6 +13,9 @@ type IDbms interface {
 	// It returns "" or an error message.
 	Check() string
 
+	// Close ends a dbms connection
+	Close()
+
 	// Connections returns a list of the current server connections
 	Connections() Value
 
@@ -29,8 +32,9 @@ type IDbms interface {
 	// Final returns the current number of final transactions
 	Final() int
 
-	// Get returns a single record for Query1, QueryFirst, QueryLast
-	Get(tn int, query string, prev, single bool) (Row, *Header)
+	// Get returns a single record, for Query1 (which = '1'),
+	// QueryFirst (which = '+'), or QueryLast (which = '-')
+	Get(tn int, query string, which byte) (Row, *Header)
 
 	// Info returns an object containing database information
 	Info() Value
@@ -83,36 +87,35 @@ type IDbms interface {
 
 	// Use adds a library to those in use
 	Use(lib string) bool
-
-	Close()
 }
 
 // ITran is the interface to a database transaction,
 // either local (not implemented yet) or TranClient.
 type ITran interface {
+	String() string
+
 	// Abort rolls back the transaction
 	Abort()
 
 	// Complete commits the transaction
 	Complete() string
 
-	// Get returns a single row for Query1, QueryFirst, QueryLast
-	Get(query string, prev, single bool) (Row, *Header)
-
 	// Erase deletes a record
 	Erase(adr int)
 
-	// Update modifies a record
-	Update(adr int, rec Record) int
+	// Get returns a single record, for Query1 (which = '1'),
+	// QueryFirst (which = '+'), or QueryLast (which = '-')
+	Get(query string, which byte) (Row, *Header)
+
+	// Query starts a query
+	Query(query string) IQuery
 
 	// Request executes an insert, update, or delete
 	// and returns the number of records processed
 	Request(request string) int
 
-	// Query starts a query
-	Query(query string) IQuery
-
-	String() string
+	// Update modifies a record
+	Update(adr int, rec Record) int
 }
 
 type Dir byte
@@ -138,6 +141,9 @@ type IQuery interface {
 
 	// Order returns the order for the query (a list of columns)
 	Order() *SuObject
+
+	// Output outputs a record to a query
+	Output(rec Record)
 
 	// Rewind resets the query to the beginning/end
 	Rewind()

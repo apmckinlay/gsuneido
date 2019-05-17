@@ -4,13 +4,14 @@ import "github.com/apmckinlay/gsuneido/runtime/types"
 
 // SuTran is a database transaction
 type SuTran struct {
-	itran ITran
-	state tstate
+	itran     ITran
+	updatable bool
+	state     tstate
 	CantConvert
 }
 
-func NewSuTran(itran ITran) *SuTran {
-	return &SuTran{itran: itran}
+func NewSuTran(itran ITran, updatable bool) *SuTran {
+	return &SuTran{itran: itran, updatable: updatable}
 }
 
 type tstate byte
@@ -74,8 +75,10 @@ func (st *SuTran) String() string {
 // TranMethods is initialized by the builtin package
 var TranMethods Methods
 
-func (*SuTran) Lookup(_ *Thread, method string) Callable {
-	return TranMethods[method]
+var gnTrans = Global.Num("Transactions")
+
+func (*SuTran) Lookup(t *Thread, method string) Callable {
+	return Lookup(t, TranMethods, gnTrans, method)
 }
 
 func (st *SuTran) Complete() {
@@ -99,9 +102,9 @@ func (st *SuTran) Rollback() {
 	st.state = aborted
 }
 
-func (st *SuTran) GetRow(query string, prev, single bool) (Row, *Header) {
+func (st *SuTran) GetRow(query string, which byte) (Row, *Header) {
 	st.ckActive()
-	return st.itran.Get(query, single, prev)
+	return st.itran.Get(query, which)
 }
 
 func (st *SuTran) Erase(adr int) {
@@ -123,6 +126,10 @@ func (st *SuTran) Query(query string) *SuQuery {
 	st.ckActive()
 	iquery := st.itran.Query(query)
 	return NewSuQuery(st, query, iquery)
+}
+
+func (st *SuTran) Updatable() bool {
+	return st.updatable
 }
 
 func (st *SuTran) ckActive() {
