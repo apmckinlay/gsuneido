@@ -100,6 +100,7 @@ func eval(src string) {
 	fn := v.(*SuFunc)
 	// DisasmMixed(os.Stdout, fn, src)
 
+	mainThread.Reset()
 	result := mainThread.Call(fn)
 	if result != nil {
 		prompt(">>> ")
