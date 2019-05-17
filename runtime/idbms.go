@@ -34,7 +34,7 @@ type IDbms interface {
 
 	// Get returns a single record, for Query1 (which = '1'),
 	// QueryFirst (which = '+'), or QueryLast (which = '-')
-	Get(tn int, query string, which byte) (Row, *Header)
+	Get(tn int, query string, dir Dir) (Row, *Header)
 
 	// Info returns an object containing database information
 	Info() Value
@@ -105,7 +105,7 @@ type ITran interface {
 
 	// Get returns a single record, for Query1 (which = '1'),
 	// QueryFirst (which = '+'), or QueryLast (which = '-')
-	Get(query string, which byte) (Row, *Header)
+	Get(query string, dir Dir) (Row, *Header)
 
 	// Query starts a query
 	Query(query string) IQuery
@@ -119,7 +119,9 @@ type ITran interface {
 }
 
 type Dir byte
+
 const (
+	Only Dir = '1'
 	Next Dir = '+'
 	Prev Dir = '-'
 )

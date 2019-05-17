@@ -92,8 +92,8 @@ func (dc *DbmsClient) Final() int {
 	return dc.GetInt()
 }
 
-func (dc *DbmsClient) Get(tn int, query string, which byte) (Row, *Header) {
-	dc.PutCmd(commands.Get1).PutByte(which).PutInt(tn).PutStr(query).Request()
+func (dc *DbmsClient) Get(tn int, query string, dir Dir) (Row, *Header) {
+	dc.PutCmd(commands.Get1).PutByte(byte(dir)).PutInt(tn).PutStr(query).Request()
 	if !dc.GetBool() {
 		return nil, nil
 	}
@@ -262,8 +262,8 @@ func (tc *TranClient) Erase(adr int) {
 	tc.dc.PutCmd(commands.Erase).PutInt(tc.tn).PutInt(adr).Request()
 }
 
-func (tc *TranClient) Get(query string, which byte) (Row, *Header) {
-	return tc.dc.Get(tc.tn, query, which)
+func (tc *TranClient) Get(query string, dir Dir) (Row, *Header) {
+	return tc.dc.Get(tc.tn, query, dir)
 }
 
 func (tc *TranClient) Query(query string) IQuery {

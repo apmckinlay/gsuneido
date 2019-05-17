@@ -102,9 +102,9 @@ func (st *SuTran) Rollback() {
 	st.state = aborted
 }
 
-func (st *SuTran) GetRow(query string, which byte) (Row, *Header) {
+func (st *SuTran) GetRow(query string, dir Dir) (Row, *Header) {
 	st.ckActive()
-	return st.itran.Get(query, which)
+	return st.itran.Get(query, dir)
 }
 
 func (st *SuTran) Erase(adr int) {

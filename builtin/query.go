@@ -8,26 +8,26 @@ import (
 
 var _ = builtinRaw("Query1(@args)",
 	func(t *Thread, as *ArgSpec, args ...Value) Value {
-		return queryOne(t, as, args, '1')
+		return queryOne(t, as, args, Only)
 	})
 
 var _ = builtinRaw("QueryFirst(@args)",
 	func(t *Thread, as *ArgSpec, args ...Value) Value {
-		return queryOne(t, as, args, '+')
+		return queryOne(t, as, args, Next)
 	})
 
 var _ = builtinRaw("QueryLast(@args)",
 	func(t *Thread, as *ArgSpec, args ...Value) Value {
-		return queryOne(t, as, args, '-')
+		return queryOne(t, as, args, Prev)
 	})
 
 const noTran = 0
 
 var queryParams = params("(query)")
 
-func queryOne(t *Thread, as *ArgSpec, args []Value, which byte) Value {
+func queryOne(t *Thread, as *ArgSpec, args []Value, dir Dir) Value {
 	query, _ := extractQuery(t, queryParams, as, args)
-	row, hdr := t.Dbms().Get(noTran, query, which)
+	row, hdr := t.Dbms().Get(noTran, query, dir)
 	if hdr == nil {
 		return False
 	}

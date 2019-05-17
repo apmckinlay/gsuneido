@@ -38,7 +38,7 @@ func init() {
 		}),
 		"Query": methodRaw("(@args)",
 			func(th *Thread, as *ArgSpec, this Value, args ...Value) Value {
-				query,args := extractQuery(th, queryBlockParams, as, args)
+				query, args := extractQuery(th, queryBlockParams, as, args)
 				q := this.(*SuTran).Query(query)
 				if args[1] == False {
 					return q
@@ -56,15 +56,15 @@ func init() {
 			}),
 		"Query1": methodRaw("(@args)",
 			func(th *Thread, as *ArgSpec, this Value, args ...Value) Value {
-				return tranQueryOne(th, this.(*SuTran), as, args, '1')
+				return tranQueryOne(th, this.(*SuTran), as, args, Only)
 			}),
 		"QueryFirst": methodRaw("(@args)",
 			func(th *Thread, as *ArgSpec, this Value, args ...Value) Value {
-				return tranQueryOne(th, this.(*SuTran), as, args, '+')
+				return tranQueryOne(th, this.(*SuTran), as, args, Next)
 			}),
 		"QueryLast": methodRaw("(@args)",
 			func(th *Thread, as *ArgSpec, this Value, args ...Value) Value {
-				return tranQueryOne(th, this.(*SuTran), as, args, '-')
+				return tranQueryOne(th, this.(*SuTran), as, args, Prev)
 			}),
 		"Rollback": method0(func(this Value) Value {
 			this.(*SuTran).Rollback()
@@ -76,8 +76,8 @@ func init() {
 	}
 }
 
-func tranQueryOne(th *Thread, st *SuTran, as *ArgSpec, args []Value, which byte) Value {
+func tranQueryOne(th *Thread, st *SuTran, as *ArgSpec, args []Value, dir Dir) Value {
 	query, _ := extractQuery(th, queryParams, as, args)
-	row, hdr := st.GetRow(query, which)
+	row, hdr := st.GetRow(query, dir)
 	return SuRecordFromRow(row, hdr, st)
 }
