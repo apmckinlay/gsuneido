@@ -103,7 +103,7 @@ func (dc *DbmsClient) Get(tn int, query string, prev, single bool) (Row, *Header
 	}
 	dc.PutInt(tn).PutStr(query).Request()
 	if !dc.GetBool() {
-		return Row{}, nil
+		return nil, nil
 	}
 	adr := dc.GetInt()
 	hdr := dc.getHdr()
@@ -147,6 +147,10 @@ func (dc *DbmsClient) LibGet(name string) []string {
 
 func (dc *DbmsClient) Libraries() *SuObject {
 	dc.PutCmd(commands.Libraries).Request()
+	return dc.getStrings()
+}
+
+func (dc *DbmsClient) getStrings() *SuObject {
 	n := dc.GetInt()
 	ob := NewSuObject()
 	for ; n > 0; n-- {
@@ -273,6 +277,12 @@ func (tc *TranClient) Request(request string) int {
 	return tc.dc.GetInt()
 }
 
+func (tc *TranClient) Query(query string) IQuery {
+	tc.dc.PutCmd(commands.Query).PutInt(tc.tn).PutStr(query).Request()
+	qn := tc.dc.GetInt()
+	return &QueryClient{dc: tc.dc, qn: qn}
+}
+
 func (tc *TranClient) Complete() string {
 	tc.dc.PutCmd(commands.Commit).PutInt(tc.tn).Request()
 	if tc.dc.GetBool() {
@@ -283,4 +293,69 @@ func (tc *TranClient) Complete() string {
 
 func (tc *TranClient) String() string {
 	return "Transaction" + strconv.Itoa(tc.tn)
+}
+
+// ------------------------------------------------------------------
+
+type QueryClient struct {
+	dc   *DbmsClient
+	qn   int
+	hdr  *Header
+	keys *SuObject // cache
+}
+
+var _ IQuery = (*QueryClient)(nil)
+
+func (qc *QueryClient) Close() {
+	qc.dc.PutCmd(commands.Close).PutInt(qc.qn).PutByte('q').Request()
+}
+
+func (qc *QueryClient) Get(dir Dir) Row {
+	qc.dc.PutCmd(commands.Get).
+		PutByte(byte(dir)).PutInt(0).PutInt(qc.qn).Request()
+	if !qc.dc.GetBool() {
+		return nil
+	}
+	adr := qc.dc.GetInt()
+	row := qc.dc.getRow(adr)
+	return row
+}
+
+func (qc *QueryClient) Header() *Header {
+	if qc.hdr == nil {
+		qc.dc.PutCmd(commands.Header).PutInt(qc.qn).PutByte('q').Request()
+		qc.hdr = qc.dc.getHdr()
+	}
+	return qc.hdr
+}
+
+func (qc *QueryClient) Keys() *SuObject {
+	if qc.keys == nil {
+		qc.dc.PutCmd(commands.Keys).PutInt(qc.qn).PutByte('q').Request()
+		qc.keys = NewSuObject()
+		nk := qc.dc.GetInt()
+		for ; nk > 0; nk-- {
+			cb := str.CommaBuilder{}
+			n := qc.dc.GetInt()
+			for ; n > 0; n-- {
+				cb.Add(qc.dc.GetStr())
+			}
+			qc.keys.Add(SuStr(cb.String()))
+		}
+	}
+	return qc.keys
+}
+
+func (qc *QueryClient) Order() *SuObject {
+	qc.dc.PutCmd(commands.Order).PutInt(qc.qn).PutByte('q').Request()
+	return qc.dc.getStrings()
+}
+
+func (qc *QueryClient) Rewind() {
+	qc.dc.PutCmd(commands.Rewind).PutInt(qc.qn).PutByte('q').Request()
+}
+
+func (qc *QueryClient) Strategy() string {
+	qc.dc.PutCmd(commands.Strategy).PutInt(qc.qn).PutByte('q').Request()
+	return qc.dc.GetStr()
 }

@@ -22,8 +22,9 @@ func emptyOb() *SuObject {
 }
 
 // SuObject is a Suneido object
-// i.e. a container with both list and named members
-// Zero value is a valid empty object
+// i.e. a container with both list and named members.
+// Zero value is a valid empty object.
+//
 // NOTE: Not thread safe
 type SuObject struct {
 	list     []Value

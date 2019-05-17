@@ -48,10 +48,13 @@ func buildQuery(which string, as *ArgSpec, args []Value) string {
 			break
 		}
 		if k == nil {
+			if which == "Query" {
+				continue // Query can have additional unnamed block argument
+			}
 			panic("usage: " + which + "(query, [field: value, ...])")
 		}
 		field := IfStr(k)
-		if field == "block" {
+		if which == "Query" && field == "block" {
 			continue
 		}
 		sb.WriteString("\nwhere ")
@@ -60,4 +63,41 @@ func buildQuery(which string, as *ArgSpec, args []Value) string {
 		sb.WriteString(v.String())
 	}
 	return sb.String()
+}
+
+func init() {
+	QueryMethods = Methods{
+		"Close": method0(func(this Value) Value {
+			this.(*SuQuery).Close()
+			return nil
+		}),
+		"Columns": method0(func(this Value) Value {
+			return this.(*SuQuery).Columns()
+		}),
+		"Explain": method0(func(this Value) Value { // deprecated
+			return this.(*SuQuery).Strategy()
+		}),
+		"Keys": method0(func(this Value) Value {
+			return this.(*SuQuery).Keys()
+		}),
+		"Next": method0(func(this Value) Value {
+			return this.(*SuQuery).GetRec(Next)
+		}),
+		"Prev": method0(func(this Value) Value {
+			return this.(*SuQuery).GetRec(Prev)
+		}),
+		"Order": method0(func(this Value) Value {
+			return this.(*SuQuery).Order()
+		}),
+		"Rewind": method0(func(this Value) Value {
+			this.(*SuQuery).Rewind()
+			return nil
+		}),
+		"RuleColumns": method0(func(this Value) Value {
+			return this.(*SuQuery).RuleColumns()
+		}),
+		"Strategy": method0(func(this Value) Value {
+			return this.(*SuQuery).Strategy()
+		}),
+	}
 }

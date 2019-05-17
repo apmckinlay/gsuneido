@@ -20,7 +20,7 @@ Cursors
 Dump
 Erase
 Exec
-Explain
+Strategy
 Final
 Get
 Get1

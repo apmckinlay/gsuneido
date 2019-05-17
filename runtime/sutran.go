@@ -4,7 +4,7 @@ import "github.com/apmckinlay/gsuneido/runtime/types"
 
 // SuTran is a database transaction
 type SuTran struct {
-	itran    ITran
+	itran ITran
 	state tstate
 	CantConvert
 }
@@ -117,6 +117,12 @@ func (st *SuTran) Update(adr int, rec Record) {
 func (st *SuTran) Request(req string) int {
 	st.ckActive()
 	return st.itran.Request(req)
+}
+
+func (st *SuTran) Query(query string) *SuQuery {
+	st.ckActive()
+	iquery := st.itran.Query(query)
+	return NewSuQuery(st, query, iquery)
 }
 
 func (st *SuTran) ckActive() {

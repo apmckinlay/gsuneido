@@ -96,7 +96,7 @@ type ITran interface {
 	// Complete commits the transaction
 	Complete() string
 
-	// Get returns a single record for Query1, QueryFirst, QueryLast
+	// Get returns a single row for Query1, QueryFirst, QueryLast
 	Get(query string, prev, single bool) (Row, *Header)
 
 	// Erase deletes a record
@@ -109,40 +109,39 @@ type ITran interface {
 	// and returns the number of records processed
 	Request(request string) int
 
+	// Query starts a query
+	Query(query string) IQuery
+
 	String() string
 }
 
-type Header struct {
-	Fields  [][]string
-	Columns []string
-	Map     map[string]RowAt
-}
+type Dir byte
+const (
+	Next Dir = '+'
+	Prev Dir = '-'
+)
 
-// RowAt specifies the position of a field within a Row
-type RowAt struct {
-	Reci int16
-	Fldi int16
-}
+// IQuery is the interface to a database query,
+// either local (not implemented yet) or QueryClient.
+type IQuery interface {
+	// Get returns the next or previous row from a query
+	Get(dir Dir) Row
 
-type DbRec struct {
-	Record
-	Adr int
-}
+	// Close ends a query
+	Close()
 
-type Row []DbRec
+	// Header returns the header (columns and fields) for the query
+	Header() *Header
 
-func (row Row) Get(hdr *Header, fld string) Value {
-	at,ok := hdr.Map[fld]
-	if !ok || int(at.Reci) >= len(row) {
-		return nil
-	}
-	return row[at.Reci].GetVal(int(at.Fldi))
-}
+	// Keys returns the keys for the query (a list of comma separated strings)
+	Keys() *SuObject
 
-func (row Row) GetRaw(hdr *Header, fld string) string {
-	at,ok := hdr.Map[fld]
-	if !ok || int(at.Reci) >= len(row) {
-		return ""
-	}
-	return row[at.Reci].GetRaw(int(at.Fldi))
+	// Order returns the order for the query (a list of columns)
+	Order() *SuObject
+
+	// Rewind resets the query to the beginning/end
+	Rewind()
+
+	// Strategy returns a description of the optimized query
+	Strategy() string
 }

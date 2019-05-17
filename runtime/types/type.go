@@ -23,4 +23,5 @@ const (
 	Instance
 	Iterator
 	Transaction
+	Query
 )

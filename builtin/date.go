@@ -15,7 +15,7 @@ func init() {
 		year=false, month=false, day=false,
 		hour=false, minute=false, second=false, millisecond=false)`)
 	Global.Add(name, &SuDateGlobal{
-		SuBuiltin{dateCallClass, BuiltinParams{ParamSpec: ps}}})
+		SuBuiltin{dateCallClass, BuiltinParams{ParamSpec: *ps}}})
 }
 
 func dateCallClass(_ *Thread, args ...Value) Value {

@@ -5,13 +5,13 @@ import (
 )
 
 var _ = builtin("Transaction(read=false, update=false, block=false)",
-	func(t *Thread, args ...Value) Value {
+	func(th *Thread, args ...Value) Value {
 		read := ToBool(args[0])
 		update := ToBool(args[1])
 		if read == update {
 			panic("usage: Transaction(read:) or Transaction(update:)")
 		}
-		itran := t.Dbms().Transaction(update)
+		itran := th.Dbms().Transaction(update)
 		st := NewSuTran(itran)
 		if args[2] == False {
 			return st
@@ -20,12 +20,15 @@ var _ = builtin("Transaction(read=false, update=false, block=false)",
 		defer func() {
 			if e := recover(); e != nil && e != BlockReturn {
 				st.Rollback()
+				panic(e)
 			} else {
 				st.Complete()
 			}
 		}()
-		return t.CallWithArgs(args[2], st)
+		return th.CallWithArgs(args[2], st)
 	})
+
+var queryParams = params("(query, block = false)")
 
 func init() {
 	TranMethods = Methods{
@@ -33,6 +36,20 @@ func init() {
 			this.(*SuTran).Complete()
 			return nil
 		}),
+		"Query": methodRaw("(@args)",
+			func(th *Thread, as *ArgSpec, this Value, args ...Value) Value {
+				query := buildQuery("Query", as, args)
+				q := this.(*SuTran).Query(query)
+				args = th.Args(queryParams, as)
+				if args[1] == False {
+					return q
+				}
+				// block form
+				defer func() {
+					q.Close()
+				}()
+				return th.CallWithArgs(args[1], q)
+			}),
 		"QueryDo": methodRaw("(@args)",
 			func(th *Thread, as *ArgSpec, this Value, args ...Value) Value {
 				query := buildQuery("QueryDo", as, args)

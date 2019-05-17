@@ -15,48 +15,48 @@ var _ = builtin("Foo(a,b)", func(t *Thread, args ...Value) Value {
 */
 func builtin(s string, f func(t *Thread, args ...Value) Value) bool {
 	name, ps := paramSplit(s)
-	Global.Add(name, &SuBuiltin{f, BuiltinParams{ParamSpec: ps}})
+	Global.Add(name, &SuBuiltin{f, BuiltinParams{ParamSpec: *ps}})
 	return true
 }
 
 func builtin0(s string, f func() Value) bool {
 	name, ps := paramSplit(s)
-	Global.Add(name, &SuBuiltin0{f, BuiltinParams{ParamSpec: ps}})
+	Global.Add(name, &SuBuiltin0{f, BuiltinParams{ParamSpec: *ps}})
 	return true
 }
 
 func builtin1(s string, f func(a Value) Value) bool {
 	name, ps := paramSplit(s)
-	Global.Add(name, &SuBuiltin1{f, BuiltinParams{ParamSpec: ps}})
+	Global.Add(name, &SuBuiltin1{f, BuiltinParams{ParamSpec: *ps}})
 	return true
 }
 
 func builtin2(s string, f func(a, b Value) Value) bool {
 	name, ps := paramSplit(s)
-	Global.Add(name, &SuBuiltin2{f, BuiltinParams{ParamSpec: ps}})
+	Global.Add(name, &SuBuiltin2{f, BuiltinParams{ParamSpec: *ps}})
 	return true
 }
 
 func builtin3(s string, f func(a, b, c Value) Value) bool {
 	name, ps := paramSplit(s)
-	Global.Add(name, &SuBuiltin3{f, BuiltinParams{ParamSpec: ps}})
+	Global.Add(name, &SuBuiltin3{f, BuiltinParams{ParamSpec: *ps}})
 	return true
 }
 
 func builtin4(s string, f func(a, b, c, d Value) Value) bool {
 	name, ps := paramSplit(s)
-	Global.Add(name, &SuBuiltin4{f, BuiltinParams{ParamSpec: ps}})
+	Global.Add(name, &SuBuiltin4{f, BuiltinParams{ParamSpec: *ps}})
 	return true
 }
 
 func builtinRaw(s string, f func(t *Thread, as *ArgSpec, args ...Value) Value) bool {
 	name, ps := paramSplit(s)
-	Global.Add(name, &SuBuiltinRaw{f, BuiltinParams{ParamSpec: ps}})
+	Global.Add(name, &SuBuiltinRaw{f, BuiltinParams{ParamSpec: *ps}})
 	return true
 }
 
 // paramSplit takes Foo(x, y) and returns name and ParamSpec
-func paramSplit(s string) (string, ParamSpec) {
+func paramSplit(s string) (string, *ParamSpec) {
 	i := strings.IndexByte(s, byte('('))
 	name := s[:i]
 	ps := params(s[i:])
@@ -65,7 +65,7 @@ func paramSplit(s string) (string, ParamSpec) {
 }
 
 func method(p string, f func(t *Thread, this Value, args ...Value) Value) Callable {
-	return &SuBuiltinMethod{f, BuiltinParams{ParamSpec: params(p)}}
+	return &SuBuiltinMethod{f, BuiltinParams{ParamSpec: *params(p)}}
 }
 
 func method0(f func(this Value) Value) Callable {
@@ -73,30 +73,30 @@ func method0(f func(this Value) Value) Callable {
 }
 
 func method1(p string, f func(this, a1 Value) Value) Callable {
-	return &SuBuiltinMethod1{SuBuiltin2{f, BuiltinParams{ParamSpec: params(p)}}}
+	return &SuBuiltinMethod1{SuBuiltin2{f, BuiltinParams{ParamSpec: *params(p)}}}
 }
 
 func method2(p string, f func(this, a1, a2 Value) Value) Callable {
-	return &SuBuiltinMethod2{SuBuiltin3{f, BuiltinParams{ParamSpec: params(p)}}}
+	return &SuBuiltinMethod2{SuBuiltin3{f, BuiltinParams{ParamSpec: *params(p)}}}
 }
 
 func method3(p string, f func(this, a1, a2, a3 Value) Value) Callable {
-	return &SuBuiltinMethod3{SuBuiltin4{f, BuiltinParams{ParamSpec: params(p)}}}
+	return &SuBuiltinMethod3{SuBuiltin4{f, BuiltinParams{ParamSpec: *params(p)}}}
 }
 
 func methodRaw(p string,
 	f func(t *Thread, as *ArgSpec, this Value, args ...Value) Value) Callable {
 	// params are just for documentation, SuBuiltinMethodRaw doesn't use them
-	return &SuBuiltinMethodRaw{Fn: f, ParamSpec: params(p)}
+	return &SuBuiltinMethodRaw{Fn: f, ParamSpec: *params(p)}
 }
 
 // params builds a ParamSpec from a string like (a, b) or (@args)
-func params(s string) ParamSpec {
+func params(s string) *ParamSpec {
 	fn := compile.Constant("function " + s + " {}").(*SuFunc)
 	for i := 0; i < int(fn.ParamSpec.Ndefaults); i++ {
 		if fn.Values[i].Equal(SuStr("nil")) {
 			fn.Values[i] = nil
 		}
 	}
-	return fn.ParamSpec
+	return &fn.ParamSpec
 }
