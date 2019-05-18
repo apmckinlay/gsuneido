@@ -24,4 +24,5 @@ const (
 	Iterator
 	Transaction
 	Query
+	Cursor
 )

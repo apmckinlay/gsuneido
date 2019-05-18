@@ -42,6 +42,10 @@ func (DbmsLocal) Connections() Value {
 	return EmptyObject
 }
 
+func (DbmsLocal) Cursor(string) ICursor {
+	panic("DbmsLocal Cursor not implemented")
+}
+
 func (DbmsLocal) Cursors() int {
 	panic("DbmsLocal Cursors not implemented")
 }

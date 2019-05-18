@@ -2,44 +2,122 @@ package runtime
 
 import "github.com/apmckinlay/gsuneido/runtime/types"
 
+// SuQueryCursor is the common base for SuQuery and SuCursor
+type SuQueryCursor struct {
+	CantConvert
+	// which is either "Cursor" or "Query"
+	which string
+	query string
+	iqc   IQueryCursor
+	eof   Dir
+}
+
+func newQueryCursor(which string, query string, iqc IQueryCursor) *SuQueryCursor {
+	return &SuQueryCursor{which: which, query: query, iqc: iqc}
+}
+
+func (qc *SuQueryCursor) Get(*Thread, Value) Value {
+	panic(qc.which + " does not support get")
+}
+
+func (qc *SuQueryCursor) Put(*Thread, Value, Value) {
+	panic(qc.which + " does not support put")
+}
+
+func (qc *SuQueryCursor) RangeTo(int, int) Value {
+	panic(qc.which + " does not support range")
+}
+
+func (qc *SuQueryCursor) RangeLen(int, int) Value {
+	panic(qc.which + " does not support range")
+}
+
+func (qc *SuQueryCursor) Hash() uint32 {
+	panic(qc.which + " hash not implemented")
+}
+
+func (qc *SuQueryCursor) Hash2() uint32 {
+	panic(qc.which + " hash not implemented")
+}
+
+func (qc *SuQueryCursor) Compare(Value) int {
+	panic(qc.which + " compare not implemented")
+}
+
+func (qc *SuQueryCursor) Call(*Thread, *ArgSpec) Value {
+	panic("can't call " + qc.which)
+}
+
+func (qc *SuQueryCursor) String() string {
+	return qc.which + "('" + qc.query + "')"
+}
+
+//-------------------------------------------------------------------
+
+// ISuQueryCursor is the common interface to SuQuery and SuCursor
+type ISuQueryCursor interface {
+	Close()
+	Columns() Value
+	Keys() Value
+	Order() Value
+	Rewind()
+	RuleColumns() Value
+	Strategy() Value
+}
+
+var _ ISuQueryCursor = (*SuQueryCursor)(nil)
+
+func (qc *SuQueryCursor) Close() {
+	qc.iqc.Close()
+}
+
+func (qc *SuQueryCursor) Columns() Value {
+	hdr := qc.iqc.Header()
+	ob := &SuObject{}
+	for _, col := range hdr.Columns {
+		ob.Add(SuStr(col))
+	}
+	return ob
+}
+
+func (qc *SuQueryCursor) Keys() Value {
+	return qc.iqc.Keys()
+}
+
+func (qc *SuQueryCursor) Order() Value {
+	return qc.iqc.Order()
+}
+
+func (qc *SuQueryCursor) Rewind() {
+	qc.iqc.Rewind()
+}
+
+func (qc *SuQueryCursor) RuleColumns() Value {
+	hdr := qc.iqc.Header()
+	ob := &SuObject{}
+	for _, col := range hdr.Rules() {
+		ob.Add(SuStr(col))
+	}
+	return ob
+}
+
+func (qc *SuQueryCursor) Strategy() Value {
+	return SuStr(qc.iqc.Strategy())
+}
+
+// ------------------------------------------------------------------
+
 // SuQuery is a database query
 type SuQuery struct {
-	CantConvert
-	tran   *SuTran
-	query  string
-	iquery IQuery
-	eof    Dir
+	SuQueryCursor
+	tran *SuTran
+}
+
+func NewSuQuery(tran *SuTran, query string, iquery IQuery) *SuQuery {
+	return &SuQuery{*newQueryCursor("Query", query, iquery), tran}
 }
 
 var _ Value = (*SuQuery)(nil)
-
-func NewSuQuery(t *SuTran, query string, iquery IQuery) *SuQuery {
-	return &SuQuery{tran: t, query: query, iquery: iquery}
-}
-
-func (*SuQuery) Get(*Thread, Value) Value {
-	panic("query does not support get")
-}
-
-func (*SuQuery) Put(*Thread, Value, Value) {
-	panic("query does not support put")
-}
-
-func (*SuQuery) RangeTo(int, int) Value {
-	panic("query does not support range")
-}
-
-func (*SuQuery) RangeLen(int, int) Value {
-	panic("query does not support range")
-}
-
-func (*SuQuery) Hash() uint32 {
-	panic("query hash not implemented")
-}
-
-func (*SuQuery) Hash2() uint32 {
-	panic("query hash not implemented")
-}
 
 func (q *SuQuery) Equal(other interface{}) bool {
 	if q2, ok := other.(*SuQuery); ok {
@@ -48,20 +126,8 @@ func (q *SuQuery) Equal(other interface{}) bool {
 	return false
 }
 
-func (*SuQuery) Compare(Value) int {
-	panic("query compare not implemented")
-}
-
-func (*SuQuery) Call(*Thread, *ArgSpec) Value {
-	panic("can't call query")
-}
-
 func (*SuQuery) Type() types.Type {
 	return types.Query
-}
-
-func (q *SuQuery) String() string {
-	return "Query('" + q.query + "')"
 }
 
 // QueryMethods is initialized by the builtin package
@@ -71,60 +137,65 @@ func (*SuQuery) Lookup(_ *Thread, method string) Callable {
 	return QueryMethods[method]
 }
 
-//-------------------------------------------------------------------
-
-func (q *SuQuery) Close() {
-	q.iquery.Close()
-}
-
-func (q *SuQuery) Columns() Value {
-	hdr := q.iquery.Header()
-	ob := &SuObject{}
-	for _, col := range hdr.Columns {
-		ob.Add(SuStr(col))
-	}
-	return ob
-}
-
 func (q *SuQuery) GetRec(dir Dir) Value {
 	if dir == q.eof {
 		return False
 	}
-	row := q.iquery.Get(dir)
+	row := q.iqc.(IQuery).Get(dir)
 	if row == nil {
 		q.eof = dir
 		return False
 	}
 	q.eof = 0
-	return SuRecordFromRow(row, q.iquery.Header(), q.tran)
-}
-
-func (q *SuQuery) Keys() Value {
-	return q.iquery.Keys()
-}
-
-func (q *SuQuery) Order() Value {
-	return q.iquery.Order()
+	return SuRecordFromRow(row, q.iqc.Header(), q.tran)
 }
 
 func (q *SuQuery) Output(th *Thread, ob Container) {
-	rec := ob.ToRecord(th, q.iquery.Header())
-	q.iquery.Output(rec)
+	rec := ob.ToRecord(th, q.iqc.Header())
+	q.iqc.(IQuery).Output(rec)
 }
 
-func (q *SuQuery) Rewind() {
-	q.iquery.Rewind()
+// ------------------------------------------------------------------
+
+// SuCursor is a database cursor
+type SuCursor struct {
+	SuQueryCursor
 }
 
-func (q *SuQuery) RuleColumns() Value {
-	hdr := q.iquery.Header()
-	ob := &SuObject{}
-	for _, col := range hdr.Rules() {
-		ob.Add(SuStr(col))
+func NewSuCursor(query string, icursor ICursor) *SuCursor {
+	return &SuCursor{*newQueryCursor("Cursor", query, icursor)}
+}
+
+func (q *SuCursor) Equal(other interface{}) bool {
+	if q2, ok := other.(*SuCursor); ok {
+		return q == q2
 	}
-	return ob
+	return false
 }
 
-func (q *SuQuery) Strategy() Value {
-	return SuStr(q.iquery.Strategy())
+func (*SuCursor) Type() types.Type {
+	return types.Cursor
+}
+
+// CursorMethods is initialized by the builtin package
+var CursorMethods Methods
+
+func (*SuCursor) Lookup(_ *Thread, method string) Callable {
+	if f, ok := CursorMethods[method]; ok {
+		return f
+	}
+	return QueryMethods[method]
+}
+
+func (q *SuCursor) GetRec(tran *SuTran, dir Dir) Value {
+	if dir == q.eof {
+		return False
+	}
+	row := q.iqc.(ICursor).Get(tran.itran, dir)
+	if row == nil {
+		q.eof = dir
+		return False
+	}
+	q.eof = 0
+	return SuRecordFromRow(row, q.iqc.Header(), tran)
 }

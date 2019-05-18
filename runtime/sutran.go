@@ -7,6 +7,7 @@ type SuTran struct {
 	itran     ITran
 	updatable bool
 	state     tstate
+	conflict  string
 	CantConvert
 }
 
@@ -81,17 +82,52 @@ func (*SuTran) Lookup(t *Thread, method string) Callable {
 	return Lookup(t, TranMethods, gnTrans, method)
 }
 
+//-------------------------------------------------------------------
+
 func (st *SuTran) Complete() {
 	if st.state == aborted || st.state == commitFailed {
 		panic("can't Complete a transaction after failure or Rollback")
 	}
-	conflict := st.itran.Complete()
-	if conflict == "" {
+	st.conflict = st.itran.Complete()
+	if st.conflict == "" {
 		st.state = committed
 	} else {
 		st.state = commitFailed
-		panic("transaction.Complete failed: " + conflict)
+		panic("transaction.Complete failed: " + st.conflict)
 	}
+}
+
+func (st *SuTran) Conflict() string {
+	return st.conflict
+}
+
+func (st *SuTran) Ended() bool {
+	return st.state != active
+}
+
+func (st *SuTran) Erase(adr int) {
+	st.ckActive()
+	st.itran.Erase(adr)
+}
+
+func (st *SuTran) GetRow(query string, dir Dir) (Row, *Header) {
+	st.ckActive()
+	return st.itran.Get(query, dir)
+}
+
+func (st *SuTran) Query(query string) *SuQuery {
+	st.ckActive()
+	iquery := st.itran.Query(query)
+	return NewSuQuery(st, query, iquery)
+}
+
+func (st *SuTran) ReadCount() int {
+	return st.itran.ReadCount()
+}
+
+func (st *SuTran) Request(req string) int {
+	st.ckActive()
+	return st.itran.Request(req)
 }
 
 func (st *SuTran) Rollback() {
@@ -101,15 +137,8 @@ func (st *SuTran) Rollback() {
 	st.itran.Abort()
 	st.state = aborted
 }
-
-func (st *SuTran) GetRow(query string, dir Dir) (Row, *Header) {
-	st.ckActive()
-	return st.itran.Get(query, dir)
-}
-
-func (st *SuTran) Erase(adr int) {
-	st.ckActive()
-	st.itran.Erase(adr)
+func (st *SuTran) Updatable() bool {
+	return st.updatable
 }
 
 func (st *SuTran) Update(adr int, rec Record) {
@@ -117,19 +146,8 @@ func (st *SuTran) Update(adr int, rec Record) {
 	st.itran.Update(adr, rec)
 }
 
-func (st *SuTran) Request(req string) int {
-	st.ckActive()
-	return st.itran.Request(req)
-}
-
-func (st *SuTran) Query(query string) *SuQuery {
-	st.ckActive()
-	iquery := st.itran.Query(query)
-	return NewSuQuery(st, query, iquery)
-}
-
-func (st *SuTran) Updatable() bool {
-	return st.updatable
+func (st *SuTran) WriteCount() int {
+	return st.itran.WriteCount()
 }
 
 func (st *SuTran) ckActive() {

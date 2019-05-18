@@ -19,6 +19,9 @@ type IDbms interface {
 	// Connections returns a list of the current server connections
 	Connections() Value
 
+	// Cursor is like a query but independent of any one transaction
+	Cursor(query string) ICursor
+
 	// Cursors returns the current number of cursors
 	Cursors() int
 
@@ -110,12 +113,18 @@ type ITran interface {
 	// Query starts a query
 	Query(query string) IQuery
 
+	// ReadCount returns the number of reads done by the transaction
+	ReadCount() int
+
 	// Request executes an insert, update, or delete
 	// and returns the number of records processed
 	Request(request string) int
 
 	// Update modifies a record
 	Update(adr int, rec Record) int
+
+	// WriteCount returns the number of writes done by the transaction
+	WriteCount() int
 }
 
 type Dir byte
@@ -129,9 +138,25 @@ const (
 // IQuery is the interface to a database query,
 // either local (not implemented yet) or QueryClient.
 type IQuery interface {
+	IQueryCursor
+
 	// Get returns the next or previous row from a query
 	Get(dir Dir) Row
 
+	// Output outputs a record to a query
+	Output(rec Record)
+}
+
+// ICursor is the interface to a database query,
+// either local (not implemented yet) or QueryClient.
+type ICursor interface {
+	IQueryCursor
+
+	// Get returns the next or previous row from a cursor
+	Get(tran ITran, dir Dir) Row
+}
+
+type IQueryCursor interface {
 	// Close ends a query
 	Close()
 
@@ -143,9 +168,6 @@ type IQuery interface {
 
 	// Order returns the order for the query (a list of columns)
 	Order() *SuObject
-
-	// Output outputs a record to a query
-	Output(rec Record)
 
 	// Rewind resets the query to the beginning/end
 	Rewind()

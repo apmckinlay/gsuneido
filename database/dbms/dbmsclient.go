@@ -13,7 +13,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
-type DbmsClient struct {
+type dbmsClient struct {
 	*csio.ReadWrite
 	conn net.Conn
 }
@@ -22,12 +22,12 @@ type DbmsClient struct {
 // the size must match cSuneido and jSuneido
 const helloSize = 50
 
-func NewDbmsClient(addr string) *DbmsClient {
+func NewDbmsClient(addr string) *dbmsClient {
 	conn, err := net.Dial("tcp", addr)
 	if err != nil || !checkHello(conn) {
 		panic("can't connect to " + addr + " " + err.Error())
 	}
-	return &DbmsClient{ReadWrite: csio.NewReadWrite(conn), conn: conn}
+	return &dbmsClient{ReadWrite: csio.NewReadWrite(conn), conn: conn}
 }
 
 func checkHello(conn net.Conn) bool {
@@ -46,13 +46,13 @@ func checkHello(conn net.Conn) bool {
 
 // Dbms interface
 
-var _ IDbms = (*DbmsClient)(nil)
+var _ IDbms = (*dbmsClient)(nil)
 
-func (dc *DbmsClient) Admin(request string) {
+func (dc *dbmsClient) Admin(request string) {
 	dc.PutCmd(commands.Admin).PutStr(request).Request()
 }
 
-func (dc *DbmsClient) Auth(s string) bool {
+func (dc *dbmsClient) Auth(s string) bool {
 	if s == "" {
 		return false
 	}
@@ -60,39 +60,49 @@ func (dc *DbmsClient) Auth(s string) bool {
 	return dc.GetBool()
 }
 
-func (dc *DbmsClient) Check() string {
+func (dc *dbmsClient) Check() string {
 	dc.PutCmd(commands.Check).Request()
 	return dc.GetStr()
 }
 
-func (dc *DbmsClient) Connections() Value {
+func (dc *dbmsClient) Close() {
+	dc.conn.Close()
+}
+
+func (dc *dbmsClient) Connections() Value {
 	dc.PutCmd(commands.Connections).Request()
 	ob := dc.GetVal().(*SuObject)
 	ob.SetReadOnly()
 	return ob
 }
 
-func (dc *DbmsClient) Cursors() int {
+func (dc *dbmsClient) Cursor(query string) ICursor {
+	dc.PutCmd(commands.Cursor).PutStr(query).Request()
+	cn := dc.GetInt()
+	return newClientCursor(dc, cn)
+}
+
+func (dc *dbmsClient) Cursors() int {
 	dc.PutCmd(commands.Cursors).Request()
 	return dc.GetInt()
 }
 
-func (dc *DbmsClient) Dump(table string) string {
+func (dc *dbmsClient) Dump(table string) string {
 	dc.PutCmd(commands.Dump).PutStr(table).Request()
 	return dc.GetStr()
 }
 
-func (dc *DbmsClient) Exec(_ *Thread, args Value) Value {
+func (dc *dbmsClient) Exec(_ *Thread, args Value) Value {
 	dc.PutCmd(commands.Exec).PutVal(args).Request()
 	return dc.ValueResult()
 }
 
-func (dc *DbmsClient) Final() int {
+func (dc *dbmsClient) Final() int {
 	dc.PutCmd(commands.Final).Request()
 	return dc.GetInt()
 }
 
-func (dc *DbmsClient) Get(tn int, query string, dir Dir) (Row, *Header) {
+func (dc *dbmsClient) Get(tn int, query string, dir Dir) (Row, *Header) {
 	dc.PutCmd(commands.Get1).PutByte(byte(dir)).PutInt(tn).PutStr(query).Request()
 	if !dc.GetBool() {
 		return nil, nil
@@ -103,26 +113,26 @@ func (dc *DbmsClient) Get(tn int, query string, dir Dir) (Row, *Header) {
 	return row, hdr
 }
 
-func (dc *DbmsClient) Info() Value {
+func (dc *dbmsClient) Info() Value {
 	dc.PutCmd(commands.Info).Request()
 	return dc.GetVal()
 }
 
-func (dc *DbmsClient) Kill(sessionid string) int {
+func (dc *dbmsClient) Kill(sessionid string) int {
 	dc.PutCmd(commands.Kill).PutStr(sessionid).Request()
 	return dc.GetInt()
 }
 
-func (dc *DbmsClient) Load(table string) int {
+func (dc *dbmsClient) Load(table string) int {
 	dc.PutCmd(commands.Load).PutStr(table).Request()
 	return dc.GetInt()
 }
 
-func (dc *DbmsClient) Log(s string) {
+func (dc *dbmsClient) Log(s string) {
 	dc.PutCmd(commands.Log).PutStr(s).Request()
 }
 
-func (dc *DbmsClient) LibGet(name string) []string {
+func (dc *dbmsClient) LibGet(name string) []string {
 	dc.PutCmd(commands.LibGet).PutStr(name).Request()
 	n := dc.GetSize()
 	v := make([]string, 2*n)
@@ -137,12 +147,12 @@ func (dc *DbmsClient) LibGet(name string) []string {
 	return v
 }
 
-func (dc *DbmsClient) Libraries() *SuObject {
+func (dc *dbmsClient) Libraries() *SuObject {
 	dc.PutCmd(commands.Libraries).Request()
 	return dc.getStrings()
 }
 
-func (dc *DbmsClient) getStrings() *SuObject {
+func (dc *dbmsClient) getStrings() *SuObject {
 	n := dc.GetInt()
 	ob := NewSuObject()
 	for ; n > 0; n-- {
@@ -151,43 +161,43 @@ func (dc *DbmsClient) getStrings() *SuObject {
 	return ob
 }
 
-func (dc *DbmsClient) Nonce() string {
+func (dc *dbmsClient) Nonce() string {
 	dc.PutCmd(commands.Nonce).Request()
 	return dc.GetStr()
 }
 
-func (dc *DbmsClient) Run(code string) Value {
+func (dc *dbmsClient) Run(code string) Value {
 	dc.PutCmd(commands.Run).PutStr(code).Request()
 	return dc.ValueResult()
 }
 
-func (dc *DbmsClient) SessionId(id string) string {
+func (dc *dbmsClient) SessionId(id string) string {
 	dc.PutCmd(commands.SessionId).PutStr(id).Request()
 	return dc.GetStr()
 }
 
-func (dc *DbmsClient) Size() int64 {
+func (dc *dbmsClient) Size() int64 {
 	dc.PutCmd(commands.Size).Request()
 	return dc.GetInt64()
 }
 
-func (dc *DbmsClient) Timestamp() SuDate {
+func (dc *dbmsClient) Timestamp() SuDate {
 	dc.PutCmd(commands.Timestamp).Request()
 	return dc.GetVal().(SuDate)
 }
 
-func (dc *DbmsClient) Token() string {
+func (dc *dbmsClient) Token() string {
 	dc.PutCmd(commands.Token).Request()
 	return dc.GetStr()
 }
 
-func (dc *DbmsClient) Transaction(update bool) ITran {
+func (dc *dbmsClient) Transaction(update bool) ITran {
 	dc.PutCmd(commands.Transaction).PutBool(update).Request()
 	tn := dc.GetInt()
 	return &TranClient{dc: dc, tn: tn}
 }
 
-func (dc *DbmsClient) Transactions() *SuObject {
+func (dc *dbmsClient) Transactions() *SuObject {
 	dc.PutCmd(commands.Transactions).Request()
 	ob := NewSuObject()
 	for n := dc.GetInt(); n > 0; n-- {
@@ -196,12 +206,12 @@ func (dc *DbmsClient) Transactions() *SuObject {
 	return ob
 }
 
-func (dc *DbmsClient) Unuse(lib string) bool {
+func (dc *dbmsClient) Unuse(lib string) bool {
 	panic("can't Unuse('" + lib + "')\n" +
 		"When client-server, only the server can Unuse")
 }
 
-func (dc *DbmsClient) Use(lib string) bool {
+func (dc *dbmsClient) Use(lib string) bool {
 	if _, ok := ContainerFind(dc.Libraries(), SuStr(lib)); ok {
 		return false
 	}
@@ -209,13 +219,7 @@ func (dc *DbmsClient) Use(lib string) bool {
 		"When client-server, only the server can Use")
 }
 
-func (dc *DbmsClient) Close() {
-	dc.conn.Close()
-}
-
-// ------------------------------------------------------------------
-
-func (dc *DbmsClient) getHdr() *Header {
+func (dc *dbmsClient) getHdr() *Header {
 	n := dc.GetInt()
 	fields := make([]string, 0, n)
 	columns := make([]string, 0, n)
@@ -233,14 +237,14 @@ func (dc *DbmsClient) getHdr() *Header {
 	return &Header{Fields: [][]string{fields}, Columns: columns}
 }
 
-func (dc *DbmsClient) getRow(adr int) Row {
+func (dc *dbmsClient) getRow(adr int) Row {
 	return Row([]DbRec{{Record(dc.GetStr()), adr}})
 }
 
 // ------------------------------------------------------------------
 
 type TranClient struct {
-	dc *DbmsClient
+	dc *dbmsClient
 	tn int
 }
 
@@ -269,7 +273,12 @@ func (tc *TranClient) Get(query string, dir Dir) (Row, *Header) {
 func (tc *TranClient) Query(query string) IQuery {
 	tc.dc.PutCmd(commands.Query).PutInt(tc.tn).PutStr(query).Request()
 	qn := tc.dc.GetInt()
-	return &QueryClient{dc: tc.dc, qn: qn}
+	return newClientQuery(tc.dc, qn)
+}
+
+func (tc *TranClient) ReadCount() int {
+	tc.dc.PutCmd(commands.ReadCount).PutInt(tc.tn).Request()
+	return tc.dc.GetInt()
 }
 
 func (tc *TranClient) Request(request string) int {
@@ -283,47 +292,48 @@ func (tc *TranClient) Update(adr int, rec Record) int {
 	return tc.dc.GetInt()
 }
 
+func (tc *TranClient) WriteCount() int {
+	tc.dc.PutCmd(commands.WriteCount).PutInt(tc.tn).Request()
+	return tc.dc.GetInt()
+}
+
 func (tc *TranClient) String() string {
 	return "Transaction" + strconv.Itoa(tc.tn)
 }
 
 // ------------------------------------------------------------------
 
-type QueryClient struct {
-	dc   *DbmsClient
-	qn   int
+// clientQueryCursor is the common stuff for clientQuery and clientCursor
+type clientQueryCursor struct {
+	dc   *dbmsClient
+	id   int
+	qc   qcType
 	hdr  *Header
 	keys *SuObject // cache
 }
 
-var _ IQuery = (*QueryClient)(nil)
+type qcType byte
 
-func (qc *QueryClient) Close() {
-	qc.dc.PutCmd(commands.Close).PutInt(qc.qn).PutByte('q').Request()
+const (
+	query  qcType = 'q'
+	cursor qcType = 'c'
+)
+
+func (qc *clientQueryCursor) Close() {
+	qc.dc.PutCmd(commands.Close).PutInt(qc.id).PutByte(byte(qc.qc)).Request()
 }
 
-func (qc *QueryClient) Get(dir Dir) Row {
-	qc.dc.PutCmd(commands.Get).
-		PutByte(byte(dir)).PutInt(0).PutInt(qc.qn).Request()
-	if !qc.dc.GetBool() {
-		return nil
-	}
-	adr := qc.dc.GetInt()
-	row := qc.dc.getRow(adr)
-	return row
-}
-
-func (qc *QueryClient) Header() *Header {
-	if qc.hdr == nil {
-		qc.dc.PutCmd(commands.Header).PutInt(qc.qn).PutByte('q').Request()
+func (qc *clientQueryCursor) Header() *Header {
+	if qc.hdr == nil { // cached
+		qc.dc.PutCmd(commands.Header).PutInt(qc.id).PutByte(byte(qc.qc)).Request()
 		qc.hdr = qc.dc.getHdr()
 	}
 	return qc.hdr
 }
 
-func (qc *QueryClient) Keys() *SuObject {
-	if qc.keys == nil {
-		qc.dc.PutCmd(commands.Keys).PutInt(qc.qn).PutByte('q').Request()
+func (qc *clientQueryCursor) Keys() *SuObject {
+	if qc.keys == nil { // cached
+		qc.dc.PutCmd(commands.Keys).PutInt(qc.id).PutByte(byte(qc.qc)).Request()
 		qc.keys = NewSuObject()
 		nk := qc.dc.GetInt()
 		for ; nk > 0; nk-- {
@@ -338,20 +348,64 @@ func (qc *QueryClient) Keys() *SuObject {
 	return qc.keys
 }
 
-func (qc *QueryClient) Order() *SuObject {
-	qc.dc.PutCmd(commands.Order).PutInt(qc.qn).PutByte('q').Request()
+func (qc *clientQueryCursor) Order() *SuObject {
+	qc.dc.PutCmd(commands.Order).PutInt(qc.id).PutByte(byte(qc.qc)).Request()
 	return qc.dc.getStrings()
 }
 
-func (qc *QueryClient) Output(rec Record) {
-	qc.dc.PutCmd(commands.Output).PutInt(qc.qn).PutStr(string(rec)).Request()
+func (qc *clientQueryCursor) Rewind() {
+	qc.dc.PutCmd(commands.Rewind).PutInt(qc.id).PutByte(byte(qc.qc)).Request()
 }
 
-func (qc *QueryClient) Rewind() {
-	qc.dc.PutCmd(commands.Rewind).PutInt(qc.qn).PutByte('q').Request()
-}
-
-func (qc *QueryClient) Strategy() string {
-	qc.dc.PutCmd(commands.Strategy).PutInt(qc.qn).PutByte('q').Request()
+func (qc *clientQueryCursor) Strategy() string {
+	qc.dc.PutCmd(commands.Strategy).PutInt(qc.id).PutByte(byte(qc.qc)).Request()
 	return qc.dc.GetStr()
+}
+
+// clientQuery implements IQuery ------------------------------------
+type clientQuery struct {
+	clientQueryCursor
+}
+
+func newClientQuery(dc *dbmsClient, qn int) *clientQuery {
+	return &clientQuery{clientQueryCursor{dc: dc, id: qn, qc: query}}
+}
+
+var _ IQuery = (*clientQuery)(nil)
+
+func (q *clientQuery) Get(dir Dir) Row {
+	q.dc.PutCmd(commands.Get).
+		PutByte(byte(dir)).PutInt(0).PutInt(q.id).Request()
+	if !q.dc.GetBool() {
+		return nil
+	}
+	adr := q.dc.GetInt()
+	row := q.dc.getRow(adr)
+	return row
+}
+
+func (q *clientQuery) Output(rec Record) {
+	q.dc.PutCmd(commands.Output).PutInt(q.id).PutStr(string(rec)).Request()
+}
+
+// clientCursor implements IQuery ------------------------------------
+type clientCursor struct {
+	clientQueryCursor
+}
+
+func newClientCursor(dc *dbmsClient, cn int) *clientCursor {
+	return &clientCursor{clientQueryCursor{dc: dc, id: cn, qc: cursor}}
+}
+
+var _ ICursor = (*clientCursor)(nil)
+
+func (q *clientCursor) Get(tran ITran, dir Dir) Row {
+	t := tran.(*TranClient)
+	q.dc.PutCmd(commands.Get).PutByte(byte(dir)).PutInt(t.tn).PutInt(q.id).Request()
+	if !q.dc.GetBool() {
+		return nil
+	}
+	adr := q.dc.GetInt()
+	row := q.dc.getRow(adr)
+	return row
 }

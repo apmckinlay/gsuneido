@@ -73,21 +73,25 @@ func stringable(v Value) bool {
 func init() {
 	QueryMethods = Methods{
 		"Close": method0(func(this Value) Value {
-			this.(*SuQuery).Close()
+			this.(ISuQueryCursor).Close()
 			return nil
 		}),
 		"Columns": method0(func(this Value) Value {
-			return this.(*SuQuery).Columns()
+			return this.(ISuQueryCursor).Columns()
 		}),
 		"Explain": method0(func(this Value) Value { // deprecated
-			return this.(*SuQuery).Strategy()
+			return this.(ISuQueryCursor).Strategy()
 		}),
 		"Keys": method0(func(this Value) Value {
-			return this.(*SuQuery).Keys()
+			return this.(ISuQueryCursor).Keys()
 		}),
 		"Next": method0(func(this Value) Value {
 			return this.(*SuQuery).GetRec(Next)
 		}),
+		"NewRecord": method("(@args)", // deprecated
+			func(_ *Thread, _ Value, args ...Value) Value {
+				return newRecord(args)
+			}),
 		"Prev": method0(func(this Value) Value {
 			return this.(*SuQuery).GetRec(Prev)
 		}),
@@ -97,17 +101,17 @@ func init() {
 				return nil
 			}),
 		"Order": method0(func(this Value) Value {
-			return this.(*SuQuery).Order()
+			return this.(ISuQueryCursor).Order()
 		}),
 		"Rewind": method0(func(this Value) Value {
-			this.(*SuQuery).Rewind()
+			this.(ISuQueryCursor).Rewind()
 			return nil
 		}),
 		"RuleColumns": method0(func(this Value) Value {
-			return this.(*SuQuery).RuleColumns()
+			return this.(ISuQueryCursor).RuleColumns()
 		}),
 		"Strategy": method0(func(this Value) Value {
-			return this.(*SuQuery).Strategy()
+			return this.(ISuQueryCursor).Strategy()
 		}),
 	}
 }

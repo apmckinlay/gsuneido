@@ -36,6 +36,12 @@ func init() {
 			this.(*SuTran).Complete()
 			return nil
 		}),
+		"Conflict": method0(func(this Value) Value {
+			return SuStr(this.(*SuTran).Conflict())
+		}),
+		"Ended?": method0(func(this Value) Value {
+			return SuBool(this.(*SuTran).Ended())
+		}),
 		"Query": methodRaw("(@args)",
 			func(th *Thread, as *ArgSpec, this Value, args ...Value) Value {
 				query, args := extractQuery(th, queryBlockParams, as, args)
@@ -66,12 +72,18 @@ func init() {
 			func(th *Thread, as *ArgSpec, this Value, args ...Value) Value {
 				return tranQueryOne(th, this.(*SuTran), as, args, Prev)
 			}),
+		"ReadCount": method0(func(this Value) Value {
+			return IntVal(this.(*SuTran).ReadCount())
+		}),
 		"Rollback": method0(func(this Value) Value {
 			this.(*SuTran).Rollback()
 			return nil
 		}),
 		"Update?": method0(func(this Value) Value {
 			return SuBool(this.(*SuTran).Updatable())
+		}),
+		"WriteCount": method0(func(this Value) Value {
+			return IntVal(this.(*SuTran).WriteCount())
 		}),
 	}
 }

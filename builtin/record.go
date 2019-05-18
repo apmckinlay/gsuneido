@@ -4,10 +4,14 @@ import . "github.com/apmckinlay/gsuneido/runtime"
 
 var _ = builtin("Record(@args)",
 	func(_ *Thread, args ...Value) Value {
-		ob := args[0].(*SuObject)
-		ob.SetDefault(EmptyStr)
-		return SuRecordFromObject(ob)
+		return newRecord(args)
 	})
+
+func newRecord(args []Value) *SuRecord {
+	ob := args[0].(*SuObject)
+	ob.SetDefault(EmptyStr)
+	return SuRecordFromObject(ob)
+}
 
 func init() {
 	RecordMethods = Methods{
