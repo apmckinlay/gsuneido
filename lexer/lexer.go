@@ -18,9 +18,17 @@ type Lexer struct {
 	ahead []Item
 }
 
-// NewLexer returns a new instance
+// NewLexer returns a new Lexer
 func NewLexer(src string) *Lexer {
 	return &Lexer{src: src}
+}
+
+func (lxr *Lexer) Source() string {
+	return lxr.src
+}
+
+func (lxr *Lexer) Position() int {
+	return lxr.si
 }
 
 // Item is the return value from Lexer.Next

@@ -25,4 +25,5 @@ const (
 	Transaction
 	Query
 	Cursor
+	Scanner
 )
