@@ -56,6 +56,9 @@ var databaseMethods = Methods{
 	"SessionId": method("(id = '')", func(t *Thread, this Value, args ...Value) Value {
 			return SuStr(t.Dbms().SessionId(IfStr(args[0])))
 		}),
+	"TempDest": method0(func( Value,) Value {
+			return Zero
+		}),
 	"Token": method("()", func(t *Thread, this Value, args ...Value) Value {
 			return SuStr(t.Dbms().Token())
 		}),
