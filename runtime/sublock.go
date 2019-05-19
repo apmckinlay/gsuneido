@@ -31,8 +31,7 @@ func (b *SuBlock) Call(t *Thread, as *ArgSpec) Value {
 	// normally done by Thread.Call
 	this := b.this
 	if t.this != nil { // used by object.Eval(block)
-		this = t.this
-		t.this = nil
+		this = t.takeThis()
 	}
 	t.frames[t.fp] = Frame{fn: bf, locals: b.locals, this: this}
 	return t.run()

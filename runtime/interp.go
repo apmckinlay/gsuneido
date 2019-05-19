@@ -18,9 +18,8 @@ func (t *Thread) Call(fn *SuFunc) Value {
 	for expand := fn.Nlocals - fn.Nparams; expand > 0; expand-- {
 		t.Push(nil)
 	}
-	t.frames[t.fp] = Frame{fn: fn, this: t.this,
+	t.frames[t.fp] = Frame{fn: fn, this: t.takeThis(),
 		locals: t.stack[t.sp-int(fn.Nlocals) : t.sp]}
-	t.this = nil
 	return t.run()
 }
 

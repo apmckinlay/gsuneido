@@ -192,3 +192,9 @@ func (t *Thread) Close(){
 		t.dbms.Close()
 	}
 }
+
+func (t *Thread) takeThis() Value {
+	tmp := t.this
+	t.this = nil
+	return tmp
+}

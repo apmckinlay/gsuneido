@@ -123,7 +123,7 @@ type SuBuiltinMethod struct {
 
 func (b *SuBuiltinMethod) Call(t *Thread, as *ArgSpec) Value {
 	args := t.Args(&b.ParamSpec, as)
-	return b.Fn(t, t.this, args...)
+	return b.Fn(t, t.takeThis(), args...)
 }
 
 // SuBuiltinMethod0 is a Callable for a builtin method with no arguments
@@ -133,7 +133,7 @@ type SuBuiltinMethod0 struct {
 
 func (b *SuBuiltinMethod0) Call(t *Thread, as *ArgSpec) Value {
 	t.Args(&b.ParamSpec, as)
-	return b.Fn(t.this)
+	return b.Fn(t.takeThis())
 }
 
 // SuBuiltinMethod1 is a Callable for a builtin method with one argument
@@ -143,7 +143,7 @@ type SuBuiltinMethod1 struct {
 
 func (b *SuBuiltinMethod1) Call(t *Thread, as *ArgSpec) Value {
 	args := t.Args(&b.ParamSpec, as)
-	return b.Fn(t.this, args[0])
+	return b.Fn(t.takeThis(), args[0])
 }
 
 // SuBuiltinMethod2 is a Callable for a builtin method with two arguments
@@ -153,7 +153,7 @@ type SuBuiltinMethod2 struct {
 
 func (b *SuBuiltinMethod2) Call(t *Thread, as *ArgSpec) Value {
 	args := t.Args(&b.ParamSpec, as)
-	return b.Fn(t.this, args[0], args[1])
+	return b.Fn(t.takeThis(), args[0], args[1])
 }
 
 // SuBuiltinMethod3 is a Callable for a builtin method with two arguments
@@ -163,7 +163,7 @@ type SuBuiltinMethod3 struct {
 
 func (b *SuBuiltinMethod3) Call(t *Thread, as *ArgSpec) Value {
 	args := t.Args(&b.ParamSpec, as)
-	return b.Fn(t.this, args[0], args[1], args[2])
+	return b.Fn(t.takeThis(), args[0], args[1], args[2])
 }
 
 // SuBuiltinMethodRaw is a Callable for a builtin function with no massage
@@ -177,5 +177,5 @@ var _ Callable = (*SuBuiltinMethodRaw)(nil)
 func (b *SuBuiltinMethodRaw) Call(t *Thread, as *ArgSpec) Value {
 	base := t.sp - int(as.Nargs)
 	args := t.stack[base : base+int(as.Nargs)]
-	return b.Fn(t, as, t.this, args...)
+	return b.Fn(t, as, t.takeThis(), args...)
 }
