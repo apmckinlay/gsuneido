@@ -12,6 +12,9 @@ import (
 var binary = cm.InRange(' ', '~').Or(cm.AnyOf("\r\n\t")).Negate()
 
 func WithType(x Value) string {
+	if x == nil {
+		return "nil"
+	}
 	var s string
 	if ss, ok := x.IfStr(); ok && binary.IndexIn(ss) != -1 {
 		s = fmt.Sprintf("%q", ss)

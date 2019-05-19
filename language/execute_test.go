@@ -128,7 +128,9 @@ func pt_execute(args []string, _ []bool) bool {
 	} else {
 		fn := compile.Constant(src).(*SuFunc)
 		actual = th.Call(fn)
-		if expected == "**notfalse**" {
+		if actual == nil {
+			success = false
+		} else if expected == "**notfalse**" {
 			success = actual != False
 		} else {
 			expectedValue := compile.Constant(expected)
