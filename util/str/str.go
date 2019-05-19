@@ -117,7 +117,6 @@ func BeforeFirst(s, pre string) string {
 	return s[:i]
 }
 
-/*
 // AfterFirst returns s up to the first occurrence of pre
 // or all of s if pre is not found.
 func AfterFirst(s, pre string) string {
@@ -125,9 +124,10 @@ func AfterFirst(s, pre string) string {
 	if i == -1 {
 		return s // different from stdlib which returns ""
 	}
-	return s[i:]
+	return s[i+1:]
 }
 
+/*
 // AfterLast returns s after the last occurrence of pre
 // or all of s if pre is not found.
 func AfterLast(s, pre string) string {
@@ -153,7 +153,7 @@ func Opt(strs ...string) string {
 
 // ListHas returns true if the list contains the string, false otherwise
 func ListHas(list []string, str string) bool {
-	for _,s := range list {
+	for _, s := range list {
 		if s == str {
 			return true
 		}
@@ -171,4 +171,22 @@ func ListRemove(list []string, str string) []string {
 		}
 	}
 	return list
+}
+
+// CommaBuilder builds a comma separated list. Zero value is ready to use.
+type CommaBuilder struct {
+	sb  strings.Builder
+	sep string
+}
+
+// Add adds a string to the list
+func (cb *CommaBuilder) Add(s string) {
+	cb.sb.WriteString(cb.sep)
+	cb.sb.WriteString(s)
+	cb.sep = ","
+}
+
+// String returns the comma separated list
+func (cb *CommaBuilder) String() string {
+	return cb.sb.String()
 }
