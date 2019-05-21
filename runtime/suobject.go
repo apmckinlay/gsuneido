@@ -481,7 +481,7 @@ func (ob *SuObject) Iter() Iter {
 func (ob *SuObject) ToRecord(t *Thread, hdr *Header) Record {
 	fields := hdr.Fields[0]
 	rb := RecordBuilder{}
-	for _,f := range fields {
+	for _, f := range fields {
 		rb.AddRaw(PackValue(ob.Get(t, SuStr(f))))
 	}
 	return rb.Build()
@@ -599,7 +599,7 @@ func packSize(x Value, nest int) int {
 		n := p.PackSize(nest)
 		return varint.Len(uint64(n)) + n
 	}
-	panic("can't pack " + errType(x))
+	panic("can't pack " + ErrType(x))
 }
 
 func (ob *SuObject) Pack(buf *pack.Encoder) {

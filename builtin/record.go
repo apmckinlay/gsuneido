@@ -26,7 +26,7 @@ func init() {
 			func(t *Thread, as *ArgSpec, this Value, args ...Value) Value {
 				k, v := NewArgsIter(as, args)()
 				if k != nil || v != nil {
-					return ObjectMethods["Delete"].Call(t, as)
+					return obDelete(t, as, this, args...)
 				}
 				this.(*SuRecord).DbDelete()
 				return nil

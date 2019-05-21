@@ -1,15 +1,18 @@
 package runtime
 
 import (
+	"strconv"
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/lexer"
+	"github.com/apmckinlay/gsuneido/util/verify"
 )
 
 // ArgSpec describes the arguments on the stack for a call
 // See also ParamSpec
 type ArgSpec struct {
-	// Nargs is the number of argument (unnamed + named)
+	// Nargs is the number of values on the stack.
+	// Because of @args (each) it may not be the actual number of arguments.
 	Nargs byte
 
 	// Each is 1 for @args, 2 for @+1args, 0 otherwise
@@ -66,8 +69,10 @@ const (
 	AsBlock
 )
 
-// Nargs returns the total number of arguments
+// Unnamed returns the total number of un-named arguments.
+// Not applicable with @args (each)
 func (as *ArgSpec) Unnamed() int {
+	verify.That(as.Each == 0)
 	return int(as.Nargs) - len(as.Spec)
 }
 
@@ -89,8 +94,9 @@ func (as *ArgSpec) String() string {
 	buf.WriteString("ArgSpec(")
 	if as.Each >= EACH {
 		buf.WriteString("@")
-		if as.Each == EACH1 {
-			buf.WriteString("+1")
+		if as.Each > EACH {
+			buf.WriteByte('+')
+			buf.WriteString(strconv.Itoa(int(as.Each - 1)))
 		}
 	} else {
 		for i := 0; i < as.Unnamed(); i++ {
@@ -111,4 +117,20 @@ func (as *ArgSpec) String() string {
 	}
 	buf.WriteString(")")
 	return buf.String()
+}
+
+func (as *ArgSpec) DropFirst() *ArgSpec {
+	as2 := *as
+	if as2.Each >= EACH {
+		as2.Each++
+		return &as2
+	}
+	as2.Nargs--
+	if as2.Signature > 0 {
+		as2.Signature--
+	}
+	if len(as2.Spec) > int(as2.Nargs) {
+		as2.Spec = as2.Spec[1:]
+	}
+	return &as2
 }

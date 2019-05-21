@@ -33,7 +33,11 @@ var _ = builtin1("Date?(value)",
 
 var _ = builtin1("Object?(value)",
 	func(arg Value) Value {
-		return SuBool(arg.Type() == types.Object)
+		switch arg.Type() {
+		case types.Object, types.Record:
+			return True
+		}
+		return False
 	})
 
 var _ = builtin1("Record?(value)",

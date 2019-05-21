@@ -164,7 +164,7 @@ func ToInt(x Value) int {
 	if i, ok := x.ToInt(); ok {
 		return i
 	}
-	panic("can't convert " + errType(x) + " to integer")
+	panic("can't convert " + ErrType(x) + " to integer")
 }
 
 // IfInt converts SuInt, SuDnum to int.
@@ -173,7 +173,7 @@ func IfInt(x Value) int {
 	if i, ok := x.IfInt(); ok {
 		return i
 	}
-	panic("can't convert " + errType(x) + " to integer")
+	panic("can't convert " + ErrType(x) + " to integer")
 }
 
 // ToDnum converts false (SuBool), "" (SuStr), SuInt, SuDnum to Dnum.
@@ -182,11 +182,11 @@ func ToDnum(x Value) dnum.Dnum {
 	if dn, ok := x.ToDnum(); ok {
 		return dn
 	}
-	panic("can't convert " + errType(x) + " to number")
+	panic("can't convert " + ErrType(x) + " to number")
 }
 
 // errType tweaks the TypeName to match cSuneido
-func errType(x Value) string {
+func ErrType(x Value) string {
 	if x == True {
 		return "true"
 	}
@@ -280,5 +280,5 @@ func PackValue(v Value) string {
 	if p,ok := v.(Packable); ok {
 		return Pack(p)
 	}
-	panic("can't pack " + errType(v))
+	panic("can't pack " + ErrType(v))
 }

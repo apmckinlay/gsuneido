@@ -533,8 +533,9 @@ func isLocal(s string) bool {
 
 // name returns the index for a name variable
 func (cg *cgen) name(s string) int {
-	for i, s2 := range cg.Names {
-		if s == s2 {
+	// have to search backwards to find block params before outer vars
+	for i := len(cg.Names) - 1; i >= 0; i-- {
+		if s == cg.Names[i] {
 			return i
 		}
 	}

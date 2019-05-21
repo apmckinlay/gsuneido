@@ -1,6 +1,4 @@
-package builtin
-
-import . "github.com/apmckinlay/gsuneido/runtime"
+package runtime
 
 type ArgsIter func() (Value, Value)
 
@@ -11,8 +9,8 @@ type ArgsIter func() (Value, Value)
 func NewArgsIter(as *ArgSpec, args []Value) ArgsIter {
 	if as.Each != 0 {
 		iter := ToContainer(args[0]).ArgsIter()
-		if as.Each == EACH1 {
-			iter() // skip first
+		for n := as.Each; n > 1; n-- {
+			iter() // skip
 		}
 		return iter
 	}

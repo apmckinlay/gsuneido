@@ -34,19 +34,8 @@ func EvalAsMethod(t *Thread, as *ArgSpec, ob Value, args []Value) Value {
 	if k != nil || f == nil {
 		panic("usage: object.Eval(function, ...)")
 	}
-
-	as2 := *as
-	if as.Each == EACH {
-		as2.Each = EACH1
-	} else if as.Each == EACH1 {
-		panic("object.Eval does not support @+1")
-	} else {
-		as2.Nargs--
-	}
-
 	if m, ok := f.(*SuMethod); ok {
 		f = m.GetFn()
 	}
-
-	return CallMethod(t, ob, f, &as2)
+	return CallMethod(t, ob, f, as.DropFirst())
 }

@@ -1,6 +1,9 @@
 package runtime
 
 import (
+	"strconv"
+	"sync/atomic"
+
 	"github.com/apmckinlay/gsuneido/util/regex"
 	"github.com/apmckinlay/gsuneido/util/tr"
 	"github.com/apmckinlay/gsuneido/util/verify"
@@ -44,14 +47,21 @@ type Thread struct {
 
 	// dbms is the database (client or local) for this Thread
 	dbms IDbms
+
+	// Name is the name of the thread (default is Thread-#)
+	Name string
 }
+
+var nThread int32
 
 // NewThread creates a new thread
 // zero value does not handle rxcache and trcache
 func NewThread() *Thread {
+	n := atomic.AddInt32(&nThread, 1)
 	return &Thread{
 		RxCache: regex.NewPatternCache(100, regex.Compile),
-		TrCache: tr.NewTrsetCache(100, tr.Set)}
+		TrCache: tr.NewTrsetCache(100, tr.Set),
+		Name:    "Thread-" + strconv.Itoa(int(n))}
 }
 
 // Push pushes a value onto the value stack
@@ -187,7 +197,7 @@ func (t *Thread) Dbms() IDbms {
 	return t.dbms
 }
 
-func (t *Thread) Close(){
+func (t *Thread) Close() {
 	if t.dbms != nil {
 		t.dbms.Close()
 	}

@@ -27,7 +27,7 @@ var dbmsLocal IDbms
 var mainThread *Thread
 
 func main() {
-	Global.Add("Suneido", new(SuObject))
+	Global.Builtin("Suneido", new(SuObject))
 	options.BuiltDate = builtDate
 	flag.BoolVar(&options.Client, "c", false, "run as a client")
 	flag.Parse()
@@ -53,27 +53,28 @@ func repl() {
 
 	language.Def()
 	language.Concat()
-	if len(flag.Args()) > 0 {
-		eval(flag.Arg(0))
-	} else {
-		prompt("Press Enter twice (i.e. blank line) to execute, q to quit\n")
-		r := bufio.NewReader(os.Stdin)
+
+	prompt("Press Enter twice (i.e. blank line) to execute, q to quit\n")
+	if options.Client {
+		eval("Init()")
+	}
+	r := bufio.NewReader(os.Stdin)
+	for {
+		prompt("> ")
+		src := ""
 		for {
-			src := ""
-			for {
-				prompt("> ")
-				line, err := r.ReadString('\n')
-				line = strings.TrimRight(line, " \t\r\n")
-				if line == "q" || (err != nil && (err != io.EOF || src == "")) {
-					return
-				}
-				if line == "" {
-					break
-				}
-				src += line + "\n"
+			line, err := r.ReadString('\n')
+			line = strings.TrimRight(line, " \t\r\n")
+			if line == "q" || (err != nil && (err != io.EOF || src == "")) {
+				return
 			}
-			eval(src)
+			if line == "" {
+				break
+			}
+			src += line + "\n"
 		}
+		eval(src)
+		fmt.Println()
 	}
 }
 
@@ -106,7 +107,6 @@ func eval(src string) {
 		prompt(">>> ")
 		fmt.Println(WithType(result))
 	}
-	fmt.Println()
 }
 
 type internalError interface {

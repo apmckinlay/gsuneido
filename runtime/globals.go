@@ -21,14 +21,25 @@ type globals struct {
 	names    []string
 	values   []Value
 	missing  Value
+	builtins map[Gnum]Value
 }
 
 var g = globals{
 	name2num: make(map[string]Gnum),
 	// put ""/nil in first slot so we never use gnum of zero
-	names:   []string{""},
-	values:  []Value{nil},
-	missing: &SuExcept{}, // type doesn't matter, just has to be unique
+	names:    []string{""},
+	values:   []Value{nil},
+	missing:  &SuExcept{}, // type doesn't matter, just has to be unique
+	builtins: make(map[Gnum]Value, 100),
+}
+
+// only called by single threaded init so no locking required
+func (typeGlobal) Builtin(name string, value Value) {
+	if _, ok := g.name2num[name]; ok {
+		panic("duplicate builtin: " + name)
+	}
+	gnum := Global.add(name, nil)
+	g.builtins[gnum] = value
 }
 
 // Add adds a new name and value to globals.
@@ -99,6 +110,9 @@ var Libload = func(*Thread, string) Value { return nil }
 
 // Get returns the value for a global, or nil if not found
 func (typeGlobal) Get(t *Thread, gnum Gnum) Value {
+	if x, ok := g.builtins[gnum]; ok {
+		return x
+	}
 	g.lock.RLock()
 	x := g.values[gnum]
 	g.lock.RUnlock()
@@ -123,4 +137,19 @@ func (typeGlobal) Get(t *Thread, gnum Gnum) Value {
 
 func (typeGlobal) GetName(t *Thread, name string) Value {
 	return Global.Get(t, Global.Num(name))
+}
+
+func (typeGlobal) Unload(name string) {
+	gnum := Global.Num(name)
+	g.lock.Lock()
+	g.values[gnum] = nil
+	g.lock.Unlock()
+}
+
+func (typeGlobal) UnloadAll() {
+	g.lock.Lock()
+	for i := range g.values {
+		g.values[i] = nil
+	}
+	g.lock.Unlock()
 }

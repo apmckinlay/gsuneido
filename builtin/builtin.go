@@ -15,43 +15,43 @@ var _ = builtin("Foo(a,b)", func(t *Thread, args ...Value) Value {
 */
 func builtin(s string, f func(t *Thread, args ...Value) Value) bool {
 	name, ps := paramSplit(s)
-	Global.Add(name, &SuBuiltin{f, BuiltinParams{ParamSpec: *ps}})
+	Global.Builtin(name, &SuBuiltin{f, BuiltinParams{ParamSpec: *ps}})
 	return true
 }
 
 func builtin0(s string, f func() Value) bool {
 	name, ps := paramSplit(s)
-	Global.Add(name, &SuBuiltin0{f, BuiltinParams{ParamSpec: *ps}})
+	Global.Builtin(name, &SuBuiltin0{f, BuiltinParams{ParamSpec: *ps}})
 	return true
 }
 
 func builtin1(s string, f func(a Value) Value) bool {
 	name, ps := paramSplit(s)
-	Global.Add(name, &SuBuiltin1{f, BuiltinParams{ParamSpec: *ps}})
+	Global.Builtin(name, &SuBuiltin1{f, BuiltinParams{ParamSpec: *ps}})
 	return true
 }
 
 func builtin2(s string, f func(a, b Value) Value) bool {
 	name, ps := paramSplit(s)
-	Global.Add(name, &SuBuiltin2{f, BuiltinParams{ParamSpec: *ps}})
+	Global.Builtin(name, &SuBuiltin2{f, BuiltinParams{ParamSpec: *ps}})
 	return true
 }
 
 func builtin3(s string, f func(a, b, c Value) Value) bool {
 	name, ps := paramSplit(s)
-	Global.Add(name, &SuBuiltin3{f, BuiltinParams{ParamSpec: *ps}})
+	Global.Builtin(name, &SuBuiltin3{f, BuiltinParams{ParamSpec: *ps}})
 	return true
 }
 
 func builtin4(s string, f func(a, b, c, d Value) Value) bool {
 	name, ps := paramSplit(s)
-	Global.Add(name, &SuBuiltin4{f, BuiltinParams{ParamSpec: *ps}})
+	Global.Builtin(name, &SuBuiltin4{f, BuiltinParams{ParamSpec: *ps}})
 	return true
 }
 
 func builtinRaw(s string, f func(t *Thread, as *ArgSpec, args ...Value) Value) bool {
 	name, ps := paramSplit(s)
-	Global.Add(name, &SuBuiltinRaw{f, BuiltinParams{ParamSpec: *ps}})
+	Global.Builtin(name, &SuBuiltinRaw{f, BuiltinParams{ParamSpec: *ps}})
 	return true
 }
 

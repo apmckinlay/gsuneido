@@ -167,5 +167,7 @@ func (c SuConcat) PackSize(int) int {
 }
 
 func (c SuConcat) Pack(buf *pack.Encoder) {
-	buf.Put1(PackString).Put(c.b.a[:c.n])
+	if c.n > 0 {
+		buf.Put1(PackString).Put(c.b.a[:c.n])
+	}
 }

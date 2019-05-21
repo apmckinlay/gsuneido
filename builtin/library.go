@@ -15,3 +15,13 @@ var _ = builtin("Unuse(library)",
 	func(t *Thread, args ...Value) Value {
 		return SuBool(t.Dbms().Unuse(IfStr(args[0])))
 	})
+
+var _ = builtin1("Unload(name = false)",
+	func(arg Value) Value {
+		if arg == False {
+			Global.UnloadAll()
+		} else {
+			Global.Unload(IfStr(arg))
+		}
+		return nil
+	})

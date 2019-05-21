@@ -44,22 +44,7 @@ func init() {
 			return ToContainer(this).Copy()
 		}),
 		"Delete": methodRaw("(@args)",
-			func(t *Thread, as *ArgSpec, this Value, args ...Value) Value {
-				ob := ToContainer(this)
-				if all := getNamed(as, args, SuStr("all")); all == True {
-					ob.Clear()
-				} else {
-					iter := NewArgsIter(as, args)
-					for {
-						k, v := iter()
-						if k != nil || v == nil {
-							break
-						}
-						ob.Delete(t, v)
-					}
-				}
-				return this
-			}),
+			obDelete),
 		"Erase": methodRaw("(@args)",
 			func(t *Thread, as *ArgSpec, this Value, args ...Value) Value {
 				ob := ToContainer(this)
@@ -178,6 +163,23 @@ func init() {
 				return NewSuSequence(IterValues(ToContainer(this), list, named))
 			}),
 	}
+}
+
+func obDelete(t *Thread, as *ArgSpec, this Value, args ...Value) Value {
+	ob := ToContainer(this)
+	if all := getNamed(as, args, SuStr("all")); all == True {
+		ob.Clear()
+	} else {
+		iter := NewArgsIter(as, args)
+		for {
+			k, v := iter()
+			if k != nil || v == nil {
+				break
+			}
+			ob.Delete(t, v)
+		}
+	}
+	return this
 }
 
 func getNamed(as *ArgSpec, args []Value, name Value) Value {

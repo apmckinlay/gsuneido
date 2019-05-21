@@ -43,7 +43,7 @@ const MaxArgs = 200
 // to match what is expected by the function (described by ParamSpec)
 // The stack must already have been expanded (e.g. by args)
 func (t *Thread) massage(ps *ParamSpec, as *ArgSpec, args []Value) {
-	unnamed := as.Unnamed()
+	unnamed := int(as.Nargs) - len(as.Spec) // only valid if !atArg
 	atParam := ps.Nparams == 1 && ps.Flags[0] == AtParam
 	atArg := as.Each >= EACH
 	if unnamed == int(ps.Nparams) && len(as.Spec) == 0 && !atParam && !atArg {
@@ -80,10 +80,10 @@ func (t *Thread) massage(ps *ParamSpec, as *ArgSpec, args []Value) {
 		args[0] = ob
 		return
 	}
-
 	if atArg {
 		// @args => params
 		ob := ToContainer(args[0])
+		args[0] = nil
 		if ob.ListSize()-each > int(ps.Nparams) {
 			panic("too many arguments")
 		}
@@ -96,9 +96,7 @@ func (t *Thread) massage(ps *ParamSpec, as *ArgSpec, args []Value) {
 				args[i] = x
 			}
 		}
-	}
-
-	if len(as.Spec) > 0 {
+	} else if len(as.Spec) > 0 {
 		// shuffle named args to match params
 		verify.That(len(as.Spec) < MaxArgs)
 		var tmp [MaxArgs]Value
@@ -128,15 +126,18 @@ func (t *Thread) massage(ps *ParamSpec, as *ArgSpec, args []Value) {
 		}
 	}
 
-	// fill in defaults and check for missing
+	// fill in defaults
 	noDefs := int(ps.Nparams - ps.Ndefaults)
-	for i := as.Unnamed(); i < int(ps.Nparams); i++ {
+	for i := noDefs; i < int(ps.Nparams); i++ {
 		if args[i] == nil {
-			if i >= noDefs {
-				args[i] = ps.Values[i-noDefs]
-			} else {
-				panic("missing argument")
-			}
+			args[i] = ps.Values[i-noDefs]
+		}
+	}
+
+	// check that all parameters now have values
+	for i := 0; i < noDefs; i++ {
+		if args[i] == nil {
+			panic("missing argument")
 		}
 	}
 }

@@ -1,0 +1,44 @@
+package builtin
+
+import (
+	. "github.com/apmckinlay/gsuneido/runtime"
+)
+
+type SuThreadGlobal struct {
+	SuBuiltin1
+}
+
+func init() {
+	name, ps := paramSplit("Thread(block)")
+	Global.Builtin(name, &SuThreadGlobal{
+		SuBuiltin1{threadCallClass, BuiltinParams{ParamSpec: *ps}}})
+}
+
+func threadCallClass(arg Value) Value {
+	t2 := NewThread()
+	go func() {
+		defer t2.Close()
+		t2.CallWithArgs(arg)
+	}()
+	return nil
+}
+
+var threadMethods = Methods{
+	"Name": method("(name=false)", func(t *Thread, _ Value, args ...Value) Value {
+		if args[0] != False {
+			t.Name = IfStr(args[0])
+		}
+		return SuStr(t.Name)
+	}),
+}
+
+func (d *SuThreadGlobal) Lookup(t *Thread, method string) Callable {
+	if f, ok := threadMethods[method]; ok {
+		return f
+	}
+	return d.Lookup(t, method) // for Params
+}
+
+func (d *SuThreadGlobal) String() string {
+	return "Thread /* builtin class */"
+}

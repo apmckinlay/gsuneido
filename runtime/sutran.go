@@ -1,6 +1,8 @@
 package runtime
 
-import "github.com/apmckinlay/gsuneido/runtime/types"
+import (
+	"github.com/apmckinlay/gsuneido/runtime/types"
+)
 
 // SuTran is a database transaction
 type SuTran struct {
@@ -137,6 +139,7 @@ func (st *SuTran) Rollback() {
 	st.itran.Abort()
 	st.state = aborted
 }
+
 func (st *SuTran) Updatable() bool {
 	return st.updatable
 }

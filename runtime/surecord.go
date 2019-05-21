@@ -132,9 +132,13 @@ func (r *SuRecord) ToObject() *SuObject {
 	if r.row != nil {
 		for ri, rf := range r.hdr.Fields {
 			for fi, f := range rf {
-				key := SuStr(f)
-				if !r.ob.HasKey(key) {
-					r.ob.Set(key, r.row[ri].GetVal(fi))
+				if f != "-" && !strings.HasSuffix(f, "_deps") {
+					key := SuStr(f)
+					if !r.ob.HasKey(key) {
+						if val := r.row[ri].GetRaw(fi); val != "" {
+							r.ob.Set(key, Unpack(val))
+						}
+					}
 				}
 			}
 		}
@@ -328,10 +332,13 @@ func (r *SuRecord) GetIfPresent(t *Thread, keyval Value) Value {
 	if key, ok := keyval.IfStr(); ok {
 		// only do record stuff when key is a string
 		if result == nil && r.row != nil {
-			if val := r.row.Get(r.hdr, key); val != nil {
-				r.PreSet(keyval, val) // cache unpacked value
-				return val
+			raw := r.row.GetRaw(r.hdr, key)
+			if raw == "" {
+				return EmptyStr
 			}
+			val := Unpack(raw)
+			r.PreSet(keyval, val) // cache unpacked value
+			return val
 		}
 		if t != nil {
 			if ar := t.rules.top(); ar.rec == r { // identity (not Equal)

@@ -15,7 +15,7 @@ func init() {
 	name, ps := paramSplit(`Date(string=false, pattern=false,
 		year=false, month=false, day=false,
 		hour=false, minute=false, second=false, millisecond=false)`)
-	Global.Add(name, &SuDateGlobal{
+	Global.Builtin(name, &SuDateGlobal{
 		SuBuiltin{dateCallClass, BuiltinParams{ParamSpec: *ps}}})
 }
 
