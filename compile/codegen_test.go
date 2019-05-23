@@ -195,8 +195,7 @@ func TestControl(t *testing.T) {
         7: CallFunc ()
         9: Pop
         10: Catch 14
-        13: Pop
-        14:`)
+        13: Pop`)
 	test(`try F() catch G()`, `
 		0: Try 13 ''
         4: Global F
@@ -206,8 +205,7 @@ func TestControl(t *testing.T) {
         13: Pop
         14: Global G
         17: CallFunc ()
-        19: Pop
-        20:`)
+        19: Pop`)
 	test(`try F() catch (x, "y") G()`, `
 		0: Try 13 'y'
         4: Global F
@@ -218,29 +216,25 @@ func TestControl(t *testing.T) {
         15: Pop
         16: Global G
         19: CallFunc ()
-        21: Pop
-        22:`)
+        21: Pop`)
 
 	test("a and b", `
 		0: Load a
 		2: And 8
 		5: Load b
-		7: Bool
-		8:`)
+		7: Bool`)
 	test("a or b", `
 		0: Load a
 		2: Or 8
 		5: Load b
-		7: Bool
-		8:`)
+		7: Bool`)
 	test("a or b or c", `
 		0: Load a
 		2: Or 13
 		5: Load b
 		7: Or 13
 		10: Load c
-		12: Bool
-		13:`)
+		12: Bool`)
 	test("a is b or c < d", `
 		0: Load a
         2: Load b
@@ -248,16 +242,14 @@ func TestControl(t *testing.T) {
         5: Or 13
         8: Load c
         10: Load d
-        12: Lt
-        13:`) // no Bool needed
+        12: Lt`) // no Bool needed
 
 	test("a ? b : c", `
 		0: Load a
 		2: QMark 10
 		5: Load b
 		7: Jump 12
-		10: Load c
-		12:`)
+		10: Load c`)
 
 	test("a in (4,5,6)", `
 		0: Load a
@@ -266,28 +258,24 @@ func TestControl(t *testing.T) {
         8: Int 5
         11: In 18
         14: Int 6
-        17: Is
-        18:`)
+        17: Is`)
 
 	test("while (a) b", `
 		0: Jump 6
 		3: Load b
 		5: Pop
 		6: Load a
-		8: JumpTrue 3
-		11:`)
+		8: JumpTrue 3`)
 	test("while a\n;", `
 		0: Jump 3
 		3: Load a
-		5: JumpTrue 3
-		8:`)
+		5: JumpTrue 3`)
 
 	test("if (a) b", `
 		0: Load a
 		2: JumpFalse 8
 		5: Load b
-		7: Pop
-		8:`)
+		7: Pop`)
 	test("if (a) b else c", `
 		0: Load a
 		2: JumpFalse 11
@@ -295,8 +283,7 @@ func TestControl(t *testing.T) {
 		7: Pop
 		8: Jump 14
 		11: Load c
-		13: Pop
-		14:`)
+		13: Pop`)
 
 	test("switch { case 1: b }", `
 		0: True
@@ -307,8 +294,7 @@ func TestControl(t *testing.T) {
         8: Jump 15
         11: Pop
         12: Value 'unhandled switch value'
-        14: Throw
-        15:`)
+        14: Throw`)
 	test("switch a { case 1,2: b case 3: c default: d }", `
 		0: Load a
         2: One
@@ -325,18 +311,15 @@ func TestControl(t *testing.T) {
         27: Jump 34
         30: Pop
         31: Load d
-        33: Pop
-        34:`)
+        33: Pop`)
 
 	test("forever { break }", `
 		0: Jump 6
-		3: Jump 0
-		6:`)
+		3: Jump 0`)
 
 	test("for(;;) { break }", `
 		0: Jump 6
-		3: Jump 0
-		6:`)
+		3: Jump 0`)
 
 	test("while a { b; break; continue }", `
 		0: Jump 12
@@ -345,15 +328,13 @@ func TestControl(t *testing.T) {
 		6: Jump 17
 		9: Jump 0
 		12: Load a
-		14: JumpTrue 3
-		17:`)
+		14: JumpTrue 3`)
 
 	test("do a while b", `
 		0: Load a
 		2: Pop
 		3: Load b
-		5: JumpTrue 0
-		8:`)
+		5: JumpTrue 0`)
 
 	test("for (;a;) { b; break; continue }", `
 		0: Jump 12
@@ -362,8 +343,7 @@ func TestControl(t *testing.T) {
 		6: Jump 17
 		9: Jump 0
 		12: Load a
-		14: JumpTrue 3
-		17:`)
+		14: JumpTrue 3`)
 
 	test("for (i = 0; i < 9; ++i) body", `
 		0: Zero
@@ -380,8 +360,7 @@ func TestControl(t *testing.T) {
         17: Load i
         19: Int 9
         22: Lt
-        23: JumpTrue 7
-		26:`)
+        23: JumpTrue 7`)
 
 	test(`for (x in y) { a; break; continue }`, `
 		0: Load y
@@ -392,23 +371,18 @@ func TestControl(t *testing.T) {
         10: Jump 19
         13: Jump 3
         16: Jump 3
-        19: Pop
-		20:`)
+        19: Pop`)
 
 	asBlock = true
 	test(`break`, `
-		0: BlockBreak
-        1:`)
+		0: BlockBreak`)
 	test(`continue`, `
-		0: BlockContinue
-        1:`)
+		0: BlockContinue`)
 	test(`return`, `
-		0: BlockReturnNil
-        1:`)
+		0: BlockReturnNil`)
 	test(`return true`, `
 		0: True
-		1: BlockReturn
-        2:`)
+		1: BlockReturn`)
 }
 
 func TestBlock(t *testing.T) {
@@ -422,8 +396,11 @@ func TestBlock(t *testing.T) {
 
 	Assert(t).That(block.ParamSpec.Params(), Equals("(a)"))
 
-	Assert(t).That(disasm(fn), Equals("Block, Store b"))
-	Assert(t).That(disasm(block), Equals("Load a, Load x, Add"))
+	Assert(t).That(disasm(fn), Like(
+		`Block
+		0: Load a
+		2: Load x
+		4: Add, Store b`))
 }
 
 // parseFunction parses a function and returns an AST for it

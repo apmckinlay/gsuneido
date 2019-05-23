@@ -10,16 +10,25 @@ import (
 )
 
 func Disasm(w io.Writer, fn *SuFunc) {
+	disasm(w, fn, 0)
+}
+
+func disasm(w io.Writer, fn *SuFunc, indent int) {
 	var s string
+	in := strings.Repeat("    ", indent)
 	for i := 0; i < len(fn.Code); {
 		j := i
-		i, s = Disasm1(fn, i)
-		fmt.Fprintf(w, "%d: %s\n", j, s)
+		i, s = disasm1(fn, i, indent)
+		fmt.Fprintf(w, "%s%d: %s\n", in, j, s)
 	}
-	fmt.Fprintf(w, "%d:\n", len(fn.Code))
+	// fmt.Fprintf(w, "%d:\n", len(fn.Code))
 }
 
 func Disasm1(fn *SuFunc, i int) (int, string) {
+	return disasm1(fn, i, 0)
+}
+
+func disasm1(fn *SuFunc, i int, indent int) (int, string) {
 	fetchUint8 := func() uint8 {
 		i++
 		return fn.Code[i-1]
@@ -32,6 +41,12 @@ func Disasm1(fn *SuFunc, i int) (int, string) {
 		i += 2
 		return int(uint16(fn.Code[i-2])<<8 + uint16(fn.Code[i-1]))
 	}
+	nested := func (fn *SuFunc) string {
+		var sb strings.Builder
+		sb.WriteString("\n")
+		disasm(&sb, fn, indent + 1)
+		return strings.TrimRight(sb.String(), "\n")
+	}
 
 	oc := op.Opcode(fn.Code[i])
 	i++
@@ -43,8 +58,12 @@ func Disasm1(fn *SuFunc, i int) (int, string) {
 	case op.Value:
 		v := fn.Values[fetchUint8()]
 		s += fmt.Sprintf(" %v", v)
+		if fn,ok := v.(*SuFunc); ok {
+			s += nested(fn)
+		}
 	case op.Block:
-		fetchUint8()
+		fn := fn.Values[fetchUint8()].(*SuFunc)
+		s += nested(fn)
 	case op.Load, op.Store, op.Dyload:
 		idx := fetchUint8()
 		s += " " + fn.Names[idx]
