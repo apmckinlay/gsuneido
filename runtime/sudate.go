@@ -54,7 +54,7 @@ func NewDate(yr int, mon int, day int, hr int, min int, sec int, ms int) SuDate 
 
 /* Now returns a SuDate for the current local date & time */
 func Now() SuDate {
-	return fromTime(gotime.Now())
+	return FromTime(gotime.Now())
 }
 
 // FromLiteral returns a SuDate from the Suneido literal format
@@ -98,7 +98,7 @@ func nsub(s string, from int, to int) int {
 	return i
 }
 
-func fromTime(t gotime.Time) SuDate {
+func FromTime(t gotime.Time) SuDate {
 	return NewDate(t.Year(), int(t.Month()), t.Day(),
 		t.Hour(), t.Minute(), t.Second(), t.Nanosecond()/1000000)
 }
