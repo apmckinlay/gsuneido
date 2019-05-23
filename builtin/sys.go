@@ -3,9 +3,16 @@ package builtin
 import (
 	"io/ioutil"
 	"os"
+	"runtime"
 
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
+
+var _ = builtin0("MemoryArena()", func() Value {
+	var ms runtime.MemStats
+	runtime.ReadMemStats(&ms)
+	return Int64Val(int64(ms.HeapSys))
+})
 
 var _ = builtin0("GetCurrentDirectory()",
 	func() Value {
