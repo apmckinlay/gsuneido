@@ -5,6 +5,7 @@ import (
 
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/dnum"
+	"golang.org/x/sys/windows"
 )
 
 type memStatusEx struct {
@@ -27,4 +28,15 @@ var _ = builtin0("SystemMemory()", func() Value {
 
 var _ = builtin0("OperatingSystem()", func() Value {
 	return SuStr("windows") //TODO version
+})
+
+var getDiskFreeSpaceEx = kernel32.NewProc("GetDiskFreeSpaceExA")
+
+var _ = builtin1("GetDiskFreeSpace(dir = '.')", func(arg Value) Value {
+	dir, _ := windows.BytePtrFromString(IfStr(arg))
+	var freeBytes int64
+	getDiskFreeSpaceEx.Call(
+		uintptr(unsafe.Pointer(dir)),
+		uintptr(unsafe.Pointer(&freeBytes)), 0, 0)
+	return SuDnum{Dnum: dnum.FromInt(int64(freeBytes))}
 })

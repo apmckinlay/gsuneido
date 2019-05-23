@@ -21,18 +21,18 @@ type RECT struct {
 	bottom int32
 }
 
-const maxpath = 1024
+// const maxpath = 1024
 
-var getCurrentDirectory = kernel32.NewProc("GetCurrentDirectoryA")
+// var getCurrentDirectory = kernel32.NewProc("GetCurrentDirectoryA")
 
-var _ = builtin0("GetCurrentDirectory()", func() Value {
-	var buf [maxpath]byte
-	n, _, _ := getCurrentDirectory.Call(maxpath, uintptr(unsafe.Pointer(&buf)))
-	if n == 0 {
-		return False
-	}
-	return SuStr(string(buf[:n]))
-})
+// var _ = builtin0("GetCurrentDirectory()", func() Value {
+// 	var buf [maxpath]byte
+// 	n, _, _ := getCurrentDirectory.Call(maxpath, uintptr(unsafe.Pointer(&buf)))
+// 	if n == 0 {
+// 		return False
+// 	}
+// 	return SuStr(string(buf[:n]))
+// })
 
 var getDesktopWindow = user32.NewProc("GetDesktopWindow")
 

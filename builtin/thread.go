@@ -1,6 +1,8 @@
 package builtin
 
 import (
+	"time"
+
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
@@ -42,3 +44,15 @@ func (d *SuThreadGlobal) Lookup(t *Thread, method string) Callable {
 func (d *SuThreadGlobal) String() string {
 	return "Thread /* builtin class */"
 }
+
+var _ = builtin2("Scheduled(ms, block)",
+	func(arg, block Value) Value {
+		ms := time.Duration(ToInt(arg)) * time.Millisecond
+		t2 := NewThread()
+		go func() {
+			defer t2.Close()
+			time.Sleep(ms)
+			t2.CallWithArgs(block)
+		}()
+		return nil
+	})
