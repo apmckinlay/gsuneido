@@ -2,6 +2,8 @@
 // and finds used but (possibly) not initialized,
 // and initialized but (possibly) not used.
 // "possibly" meaning not on all code paths.
+// Does not check nested functions (they're already codegen and not Ast)
+// they are checked as constructed bottom up.
 package check
 
 // TODO if/for/while where condition is: x and y
