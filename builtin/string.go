@@ -18,7 +18,11 @@ import (
 func init() {
 	StringMethods = Methods{
 		"Asc": method0(func(this Value) Value {
-			return SuInt(int(IfStr(this)[0]))
+			s := IfStr(this)
+			if s == "" {
+				return Zero
+			}
+			return SuInt(int(s[0]))
 		}),
 		"Compile": method1("(errob = false)", func(this, _ Value) Value {
 			return compile.Constant(IfStr(this))
