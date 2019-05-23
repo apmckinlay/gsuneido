@@ -5,7 +5,6 @@ import (
 	"syscall"
 
 	. "github.com/apmckinlay/gsuneido/runtime"
-	"github.com/apmckinlay/gsuneido/util/dnum"
 )
 
 var _ = builtin0("SystemMemory()", func() Value {
@@ -16,7 +15,7 @@ var _ = builtin0("SystemMemory()", func() Value {
 	var buf [8]byte
 	copy(buf[:], s)
 	m := binary.LittleEndian.Uint64(buf[:])
-	return SuDnum{Dnum: dnum.FromInt(int64(m))}
+	return Int64Val(int64(m))
 })
 
 var _ = builtin0("OperatingSystem()", func() Value {
@@ -27,5 +26,5 @@ var _ = builtin1("GetDiskFreeSpace(dir = '.')", func(arg Value) Value {
 	var stat syscall.Statfs_t
 	syscall.Statfs(IfStr(arg), &stat)
 	freeBytes := stat.Bavail * uint64(stat.Bsize)
-	return SuDnum{Dnum: dnum.FromInt(int64(freeBytes))}
+	return Int64Val(int64(freeBytes))
 })

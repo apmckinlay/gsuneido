@@ -23,7 +23,7 @@ var _ = builtin0("SystemMemory()", func() Value {
 	if r == 0 {
 		return Zero
 	}
-	return SuDnum{Dnum: dnum.FromInt(int64(msx.ullTotalPhys))}
+	return Int64Val(int64(msx.ullTotalPhys))
 })
 
 var _ = builtin0("OperatingSystem()", func() Value {
@@ -38,5 +38,5 @@ var _ = builtin1("GetDiskFreeSpace(dir = '.')", func(arg Value) Value {
 	getDiskFreeSpaceEx.Call(
 		uintptr(unsafe.Pointer(dir)),
 		uintptr(unsafe.Pointer(&freeBytes)), 0, 0)
-	return SuDnum{Dnum: dnum.FromInt(int64(freeBytes))}
+	return Int64Val(freeBytes)
 })

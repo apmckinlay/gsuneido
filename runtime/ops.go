@@ -142,14 +142,6 @@ func UnaryMinus(x Value) Value {
 	return SuDnum{Dnum: ToDnum(x).Neg()}
 }
 
-// IntVal returns an SuInt if it fits, else a SuDnum
-func IntVal(n int) Value {
-	if MinSuInt < n && n < MaxSuInt {
-		return SuInt(n)
-	}
-	return SuDnum{Dnum: dnum.FromInt(int64(n))}
-}
-
 func Cat(t *Thread, x, y Value) Value {
 	if ssx, ok := x.(SuStr); ok {
 		if ssy, ok := y.(SuStr); ok {

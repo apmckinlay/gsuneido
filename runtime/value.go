@@ -167,6 +167,14 @@ func ToInt(x Value) int {
 	panic("can't convert " + ErrType(x) + " to integer")
 }
 
+// ToInt64 does ToDnum and ToInt64 and panics if it fails
+func ToInt64(x Value) int64 {
+	if i, ok := ToDnum(x).ToInt64(); ok {
+		return i
+	}
+	panic("can't convert " + ErrType(x) + " to integer")
+}
+
 // IfInt converts SuInt, SuDnum to int.
 // Calls Value.IfInt and panics if it fails
 func IfInt(x Value) int {
@@ -276,9 +284,26 @@ type ToStringable interface {
 	ToString(*Thread) string
 }
 
+// PackValue packs a Value if it is Packable, else it panics
 func PackValue(v Value) string {
 	if p,ok := v.(Packable); ok {
 		return Pack(p)
 	}
 	panic("can't pack " + ErrType(v))
+}
+
+// IntVal returns an SuInt if it fits, else a SuDnum
+func IntVal(n int) Value {
+	if MinSuInt < n && n < MaxSuInt {
+		return SuInt(n)
+	}
+	return SuDnum{Dnum: dnum.FromInt(int64(n))}
+}
+
+// Int64Val returns an SuInt if it fits, else a SuDnum
+func Int64Val(n int64) Value {
+	if MinSuInt < n && n < MaxSuInt {
+		return SuInt(int(n))
+	}
+	return SuDnum{Dnum: dnum.FromInt(n)}
 }
