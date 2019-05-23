@@ -288,10 +288,15 @@ func (a *Param) String() string {
 
 type Block struct {
 	Function
+	CompileAsFunction bool
 }
 
 func (a *Block) String() string {
-	return a.Function.str("Block")
+	s := "Block"
+	if a.CompileAsFunction {
+		s += "-func"
+	}
+	return a.Function.str(s)
 }
 
 func (a *Block) Children(fn func(Node)) {

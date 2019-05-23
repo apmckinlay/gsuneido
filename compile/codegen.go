@@ -22,9 +22,6 @@ import (
 // cgen is the context/results for compiling a function or block
 type cgen struct {
 	outerFn *ast.Function
-	// outerVars is used to determine if block is closure
-	// it is lazily derived from outerFn
-	outerVars      map[string]bool
 	code           []byte
 	argspecs       []*ArgSpec
 	base           Gnum
@@ -42,6 +39,7 @@ type cgen struct {
 
 // codegen compiles an Ast to an SuFunc
 func codegen(fn *ast.Function) *SuFunc {
+	ast.Blocks(fn)
 	return codegen2(fn, false)
 }
 
@@ -893,10 +891,8 @@ var funcId uint32
 
 func (cg *cgen) block(b *ast.Block) {
 	f := &b.Function
-	blockVars := ast.VarSet(f)
-	itParam(f, blockVars)
 	var fn *SuFunc
-	if cg.blockIsFunction(blockVars) {
+	if b.CompileAsFunction {
 		fn = codegen2(f, true)
 		cg.emitValue(fn)
 	} else {
@@ -909,32 +905,6 @@ func (cg *cgen) block(b *ast.Block) {
 		cg.outerFn.Id = atomic.AddUint32(&funcId, 1)
 	}
 	fn.OuterId = cg.outerFn.Id
-}
-
-func itParam(f *ast.Function, blockVars map[string]bool) {
-	if len(f.Params) == 0 && blockVars["it"] {
-		// automatic "it" parameter
-		f.Params = []ast.Param{{Name: "it"}}
-	}
-}
-
-// blockIsFunction returns false if the block is a closure
-// i.e. if it shares any variables with the enclosing function
-func (cg *cgen) blockIsFunction(blockVars map[string]bool) bool {
-	// a block cannot have its own "this"
-	// so any reference means it must be a closure (not a function)
-	if blockVars["this"] {
-		return false
-	}
-	if cg.outerVars == nil {
-		cg.outerVars = ast.VarSet(cg.outerFn) // cache
-	}
-	for v := range blockVars {
-		if cg.outerVars[v] {
-			return false
-		}
-	}
-	return true
 }
 
 // helpers ---------------------------------------------------------------------

@@ -427,7 +427,7 @@ func (p *parser) block() *ast.Block {
 	params := p.blockParams()
 	body := p.statements()
 	p.match(tok.RCurly)
-	return &ast.Block{ast.Function{Pos: pos, Params: params, Body: body}}
+	return &ast.Block{Function: ast.Function{Pos: pos, Params: params, Body: body}}
 }
 
 func (p *parser) blockParams() []ast.Param {
