@@ -4,7 +4,6 @@ import (
 	"unsafe"
 
 	. "github.com/apmckinlay/gsuneido/runtime"
-	"github.com/apmckinlay/gsuneido/util/dnum"
 	"golang.org/x/sys/windows"
 )
 
