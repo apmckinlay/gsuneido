@@ -21,7 +21,7 @@ var _ = builtinRaw("Adler32(@args)",
 		for ; k == nil && v != nil; k, v = iter() {
 			io.WriteString(sa.hash, ToStr(v))
 		}
-		return IntVal(int(sa.hash.Sum32()))
+		return IntVal(int(int32(sa.hash.Sum32())))
 	})
 
 type SuAdler32 struct {
@@ -88,6 +88,6 @@ var adler32Methods = Methods{
 		return this
 	}),
 	"Value": method0(func(this Value) Value {
-		return IntVal(int(this.(*SuAdler32).hash.Sum32()))
+		return IntVal(int(int32(this.(*SuAdler32).hash.Sum32())))
 	}),
 }

@@ -282,7 +282,7 @@ func (co *compiler) charClass() {
 			if co.si+1 < co.sn {
 				co.match("\\")
 			}
-			chars += string(co.src[co.si])
+			chars += co.src[co.si : co.si+1]
 			co.si++
 		}
 	}
@@ -294,7 +294,7 @@ func (co *compiler) charClass() {
 	}
 	// optimization - treat single character class as just character
 	if len(cc.data) == 1 {
-		co.emitChars(string(cc.data[0]))
+		co.emitChars(string(cc.data[0:1]))
 		return
 	}
 	if co.ignoringCase {

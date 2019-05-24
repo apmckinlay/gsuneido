@@ -76,7 +76,7 @@ func strGet(s string, key Value) Value {
 	if i < 0 {
 		i += n
 	}
-	return SuStr(s[i])
+	return SuStr(s[i : i+1])
 }
 
 func (SuStr) Put(*Thread, Value, Value) {

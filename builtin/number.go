@@ -14,8 +14,8 @@ var maxNarrow = dnum.FromInt(MaxSuInt)
 func init() {
 	NumMethods = Methods{
 		"Chr": method0(func(this Value) Value {
-			n := ToInt(this)
-			return SuStr(string(rune(n)))
+			n := byte(ToInt(this))
+			return SuStr(string([]byte{n}))
 		}),
 		"Int": method0(func(this Value) Value {
 			dn := ToDnum(this).Trunc()
