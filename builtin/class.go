@@ -20,7 +20,7 @@ func init() {
 }
 
 func methodClass(t *Thread, this Value, args ...Value) Value {
-	m := IfStr(args[0])
+	m := ToStr(args[0])
 	return nilToFalse(this.(Findable).Finder(t, func(c Value, mb *MemBase) Value {
 		if x, ok := mb.Data[m]; ok && x.Type() == types.Function {
 			return c
@@ -30,7 +30,7 @@ func methodClass(t *Thread, this Value, args ...Value) Value {
 }
 
 func methodQ(t *Thread, this Value, args ...Value) Value {
-	m := IfStr(args[0])
+	m := ToStr(args[0])
 	return nilToFalse(this.(Findable).Finder(t, func(c Value, mb *MemBase) Value {
 		if x, ok := mb.Data[m]; ok && x.Type() == types.Function {
 			return True

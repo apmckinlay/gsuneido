@@ -19,7 +19,7 @@ var _ = builtinRaw("Adler32(@args)",
 			return sa
 		}
 		for ; k == nil && v != nil; k, v = iter() {
-			io.WriteString(sa.hash, IfStr(v))
+			io.WriteString(sa.hash, ToStr(v))
 		}
 		return IntVal(int(sa.hash.Sum32()))
 	})
@@ -84,7 +84,7 @@ func (*SuAdler32) Lookup(_ *Thread, method string) Callable {
 
 var adler32Methods = Methods{
 	"Update": method1("(string)", func(this, arg Value) Value {
-		io.WriteString(this.(*SuAdler32).hash, IfStr(arg))
+		io.WriteString(this.(*SuAdler32).hash, ToStr(arg))
 		return this
 	}),
 	"Value": method0(func(this Value) Value {

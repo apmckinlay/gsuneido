@@ -23,7 +23,7 @@ func (ob *SuInstance) ToString(t *Thread) string {
 		t.this = ob
 		x := f.Call(t, ArgSpec0)
 		if x != nil {
-			if s, ok := x.IfStr(); ok {
+			if s, ok := x.ToStr(); ok {
 				return s
 			}
 		}
@@ -55,7 +55,7 @@ func (ob *SuInstance) Get(t *Thread, m Value) Value {
 	if m.Type() != types.String {
 		return nil
 	}
-	ms := ToStr(m)
+	ms := AsStr(m)
 	if x, ok := ob.Data[ms]; ok {
 		return x
 	}
@@ -67,7 +67,7 @@ func (ob *SuInstance) Get(t *Thread, m Value) Value {
 }
 
 func (ob *SuInstance) Put(_ *Thread, m Value, v Value) {
-	ob.Data[ToStr(m)] = v
+	ob.Data[AsStr(m)] = v
 }
 
 func (*SuInstance) RangeTo(int, int) Value {
@@ -157,7 +157,7 @@ func (ob *SuInstance) Finder(t *Thread, fn func(Value, *MemBase) Value) Value {
 var _ Findable = (*SuInstance)(nil)
 
 func (ob *SuInstance) Delete(key Value) {
-	m := IfStr(key)
+	m := ToStr(key)
 	delete(ob.Data, m)
 }
 

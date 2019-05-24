@@ -31,7 +31,7 @@ func (dn SuDnum) ToDnum() (dnum.Dnum, bool) {
 	return dn.Dnum, true
 }
 
-func (dn SuDnum) ToStr() (string, bool) {
+func (dn SuDnum) AsStr() (string, bool) {
 	return dn.Dnum.String(), true
 }
 

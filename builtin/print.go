@@ -28,7 +28,7 @@ var _ = builtinRaw("Print(@args)",
 	})
 
 func print(t *Thread, v Value) {
-	if s,ok := v.IfStr(); ok {
+	if s,ok := v.ToStr(); ok {
 		fmt.Print(s)
 	} else {
 		fmt.Print(display(t, v))

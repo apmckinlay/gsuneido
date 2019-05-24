@@ -8,5 +8,5 @@ import (
 
 var _ = builtin1("Getenv(string)",
 	func(arg Value) Value {
-		return SuStr(os.Getenv(IfStr(arg)))
+		return SuStr(os.Getenv(ToStr(arg)))
 	})

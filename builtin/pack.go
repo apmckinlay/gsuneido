@@ -11,5 +11,5 @@ var _ = builtin1("Pack(value)",
 
 var _ = builtin1("Unpack(string)",
 	func(arg Value) Value {
-		return Unpack(IfStr(arg))
+		return Unpack(ToStr(arg))
 	})

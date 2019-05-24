@@ -19,7 +19,7 @@ var _ = builtinRaw("Sha1(@args)",
 			return sa
 		}
 		for ; k == nil && v != nil; k, v = iter() {
-			io.WriteString(sa.hash, IfStr(v))
+			io.WriteString(sa.hash, ToStr(v))
 		}
 		return sa.value()
 	})
@@ -84,7 +84,7 @@ func (*SuSha1) Lookup(_ *Thread, method string) Callable {
 
 var sha1Methods = Methods{
 	"Update": method1("(string)", func(this, arg Value) Value {
-		io.WriteString(this.(*SuSha1).hash, IfStr(arg))
+		io.WriteString(this.(*SuSha1).hash, ToStr(arg))
 		return this
 	}),
 	"Value": method0(func(this Value) Value {

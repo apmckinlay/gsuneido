@@ -15,13 +15,13 @@ func init() {
 }
 
 func databaseCallClass(t *Thread, args ...Value) Value {
-	t.Dbms().Admin(IfStr(args[0]))
+	t.Dbms().Admin(ToStr(args[0]))
 	return nil
 }
 
 var databaseMethods = Methods{
 	"Auth": method("(data)", func(t *Thread, this Value, args ...Value) Value {
-		return SuBool(t.Dbms().Auth(IfStr(args[0])))
+		return SuBool(t.Dbms().Auth(ToStr(args[0])))
 	}),
 	"Check": method("()", func(t *Thread, this Value, args ...Value) Value {
 		return SuStr(t.Dbms().Check())
@@ -36,7 +36,7 @@ var databaseMethods = Methods{
 		return IntVal(t.Dbms().Cursors())
 	}),
 	"Dump": method("(table = false)", func(t *Thread, this Value, args ...Value) Value {
-		return SuStr(t.Dbms().Dump(IfStr(args[0])))
+		return SuStr(t.Dbms().Dump(ToStr(args[0])))
 	}),
 	"Final": method("()", func(t *Thread, this Value, args ...Value) Value {
 		return IntVal(t.Dbms().Final())
@@ -45,16 +45,16 @@ var databaseMethods = Methods{
 		return t.Dbms().Info()
 	}),
 	"Kill": method("(sessionId)", func(t *Thread, this Value, args ...Value) Value {
-		return IntVal(t.Dbms().Kill(IfStr(args[0])))
+		return IntVal(t.Dbms().Kill(ToStr(args[0])))
 	}),
 	"Load": method("(table = false)", func(t *Thread, this Value, args ...Value) Value {
-		return IntVal(t.Dbms().Load(IfStr(args[0])))
+		return IntVal(t.Dbms().Load(ToStr(args[0])))
 	}),
 	"Nonce": method("()", func(t *Thread, this Value, args ...Value) Value {
 		return SuStr(t.Dbms().Nonce())
 	}),
 	"SessionId": method("(id = '')", func(t *Thread, this Value, args ...Value) Value {
-		return SuStr(t.Dbms().SessionId(IfStr(args[0])))
+		return SuStr(t.Dbms().SessionId(ToStr(args[0])))
 	}),
 	"TempDest": method0(func(Value) Value {
 		return Zero

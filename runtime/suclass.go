@@ -72,7 +72,7 @@ func (c *SuClass) Get(t *Thread, m Value) Value {
 	if m.Type() != types.String {
 		return nil
 	}
-	return c.get1(t, c, ToStr(m))
+	return c.get1(t, c, AsStr(m))
 }
 
 func (c *SuClass) get1(t *Thread, this Value, mem string) Value {

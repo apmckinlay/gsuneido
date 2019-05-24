@@ -37,11 +37,11 @@ func (SuStr) ToContainer() (Container, bool) {
 	return nil, false
 }
 
-func (ss SuStr) ToStr() (string, bool) {
+func (ss SuStr) AsStr() (string, bool) {
 	return string(ss), true
 }
 
-func (ss SuStr) IfStr() (string, bool) {
+func (ss SuStr) ToStr() (string, bool) {
 	return string(ss), true
 }
 
@@ -111,7 +111,7 @@ func (ss SuStr) Equal(other interface{}) bool {
 	}
 	if cv, ok := other.(SuConcat); ok {
 		// according to benchmark, this doesn't allocate
-		cs, _ := cv.ToStr()
+		cs, _ := cv.AsStr()
 		return cv.n == len(ss) && string(ss) == cs
 	}
 	return false
@@ -125,7 +125,7 @@ func (ss SuStr) Compare(other Value) int {
 	if cmp := ints.Compare(ordStr, Order(other)); cmp != 0 {
 		return cmp
 	}
-	return strings.Compare(string(ss), IfStr(other))
+	return strings.Compare(string(ss), ToStr(other))
 }
 
 // Call implements s(ob, ...) being treated as ob[s](...)

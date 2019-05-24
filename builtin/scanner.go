@@ -15,7 +15,7 @@ type SuScanner struct {
 
 var _ = builtin1("Scanner(string)",
 	func(arg Value) Value {
-		return &SuScanner{lxr: *lexer.NewLexer(IfStr(arg))}
+		return &SuScanner{lxr: *lexer.NewLexer(ToStr(arg))}
 	})
 
 var _ Value = (*SuScanner)(nil)

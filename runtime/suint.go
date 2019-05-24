@@ -74,11 +74,11 @@ func (*smi) ToContainer() (Container, bool) {
 	return nil, false
 }
 
-func (si *smi) ToStr() (string, bool) {
+func (si *smi) AsStr() (string, bool) {
 	return si.String(), true
 }
 
-func (si *smi) IfStr() (string, bool) {
+func (si *smi) ToStr() (string, bool) {
 	return "", false
 }
 

@@ -33,11 +33,11 @@ func (SuBool) ToContainer() (Container, bool) {
 	return nil, false
 }
 
-func (b SuBool) ToStr() (string, bool) {
+func (b SuBool) AsStr() (string, bool) {
 	return b.String(), true
 }
 
-func (b SuBool) IfStr() (string, bool) {
+func (b SuBool) ToStr() (string, bool) {
 	return "", false
 }
 

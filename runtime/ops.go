@@ -180,10 +180,10 @@ func cat3(t *Thread, x, y Value) Value {
 		result = cat2(catToStr(t, x), catToStr(t, y))
 	}
 	if xe, ok := x.(*SuExcept); ok {
-		return &SuExcept{SuStr: SuStr(ToStr(result)), Callstack: xe.Callstack}
+		return &SuExcept{SuStr: SuStr(AsStr(result)), Callstack: xe.Callstack}
 	}
 	if ye, ok := y.(*SuExcept); ok {
-		return &SuExcept{SuStr: SuStr(ToStr(result)), Callstack: ye.Callstack}
+		return &SuExcept{SuStr: SuStr(AsStr(result)), Callstack: ye.Callstack}
 	}
 	return result
 }
@@ -192,11 +192,11 @@ func catToStr(t *Thread, v Value) string {
 	if d, ok := v.(ToStringable); ok {
 		return d.ToString(t)
 	}
-	return ToStr(v)
+	return AsStr(v)
 }
 
 func Match(x Value, y regex.Pattern) SuBool {
-	return SuBool(y.Matches(IfStr(x)))
+	return SuBool(y.Matches(ToStr(x)))
 }
 
 // Index is used by ranges and string[i]

@@ -11,8 +11,8 @@ import (
 
 var _ = builtin("File(filename, mode='r', block=false)",
 	func(t *Thread, args ...Value) Value {
-		name := IfStr(args[0])
-		mode := IfStr(args[1])
+		name := ToStr(args[0])
+		mode := ToStr(args[1])
 
 		f, err := os.OpenFile(name, modeToFlags(mode), 0644)
 		if err != nil {
@@ -164,7 +164,7 @@ var suFileMethods = Methods{
 			offset = 0
 		}
 		var whence int
-		switch IfStr(arg2) {
+		switch ToStr(arg2) {
 		case "cur":
 			whence = io.SeekCurrent
 		case "set":
@@ -185,12 +185,12 @@ var suFileMethods = Methods{
 		return Int64Val(pos)
 	}),
 	"Write": method1("(string)", func(this, arg Value) Value {
-		this.(*suFile).f.WriteString(ToStr(arg))
+		this.(*suFile).f.WriteString(AsStr(arg))
 		return arg
 	}),
 	"Writeline": method1("(string)", func(this, arg Value) Value {
 		f := this.(*suFile).f
-		f.WriteString(ToStr(arg))
+		f.WriteString(AsStr(arg))
 		f.WriteString("\n")
 		return arg
 	}),

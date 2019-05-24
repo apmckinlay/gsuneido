@@ -90,7 +90,7 @@ func init() {
 		}),
 		"Join": method1("(separator='')", func(this Value, arg Value) Value {
 			ob := ToContainer(this)
-			separator := ToStr(arg)
+			separator := AsStr(arg)
 			sb := strings.Builder{}
 			sep := ""
 			iter := ob.ArgsIter()

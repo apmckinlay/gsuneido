@@ -75,11 +75,11 @@ func (c SuConcat) ToDnum() (dnum.Dnum, bool) {
 	return dnum.Zero, c.n == 0
 }
 
-func (c SuConcat) ToStr() (string, bool) {
+func (c SuConcat) AsStr() (string, bool) {
 	return c.toStr(), true
 }
 
-func (c SuConcat) IfStr() (string, bool) {
+func (c SuConcat) ToStr() (string, bool) {
 	return c.toStr(), true
 }
 
@@ -142,8 +142,8 @@ func (c SuConcat) Compare(other Value) int {
 	if cmp := ints.Compare(ordStr, Order(other)); cmp != 0 {
 		return cmp
 	}
-	// now know other is a string so ToStr won't panic
-	return strings.Compare(c.toStr(), ToStr(other))
+	// now know other is a string so AsStr won't panic
+	return strings.Compare(c.toStr(), AsStr(other))
 }
 
 func (c SuConcat) Call(t *Thread, as *ArgSpec) Value {

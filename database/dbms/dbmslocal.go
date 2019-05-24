@@ -55,7 +55,7 @@ func (DbmsLocal) Dump(string) string {
 }
 
 func (DbmsLocal) Exec(t *Thread, v Value) Value {
-	fname := IfStr(ToContainer(v).ListGet(0))
+	fname := ToStr(ToContainer(v).ListGet(0))
 	if i := strings.IndexByte(fname, '.'); i != -1 {
 		ob := Global.GetName(t, fname[:i])
 		m := fname[i+1:]

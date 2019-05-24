@@ -16,7 +16,7 @@ func WithType(x Value) string {
 		return "nil"
 	}
 	var s string
-	if ss, ok := x.IfStr(); ok && binary.IndexIn(ss) != -1 {
+	if ss, ok := x.ToStr(); ok && binary.IndexIn(ss) != -1 {
 		s = fmt.Sprintf("%q", ss)
 	} else {
 		s = fmt.Sprint(x)

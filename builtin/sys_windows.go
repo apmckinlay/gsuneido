@@ -32,7 +32,7 @@ var _ = builtin0("OperatingSystem()", func() Value {
 var getDiskFreeSpaceEx = kernel32.NewProc("GetDiskFreeSpaceExA")
 
 var _ = builtin1("GetDiskFreeSpace(dir = '.')", func(arg Value) Value {
-	dir, _ := windows.BytePtrFromString(IfStr(arg))
+	dir, _ := windows.BytePtrFromString(ToStr(arg))
 	var freeBytes int64
 	getDiskFreeSpaceEx.Call(
 		uintptr(unsafe.Pointer(dir)),

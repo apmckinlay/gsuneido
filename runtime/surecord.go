@@ -159,7 +159,7 @@ func (r *SuRecord) HasKey(key Value) bool {
 		return true
 	}
 	if r.row != nil {
-		if k, ok := key.IfStr(); ok {
+		if k, ok := key.ToStr(); ok {
 			return r.row.GetRaw(r.hdr, k) != ""
 		}
 	}
@@ -183,7 +183,7 @@ func (r *SuRecord) Delete(t *Thread, key Value) bool {
 	r.ob.mustBeMutable()
 	r.ToObject()
 	if r.ob.Delete(t, key) {
-		if keystr, ok := key.IfStr(); ok {
+		if keystr, ok := key.ToStr(); ok {
 			r.invalidateDependents(keystr)
 			r.callObservers(t, keystr)
 		}
@@ -196,7 +196,7 @@ func (r *SuRecord) Erase(t *Thread, key Value) bool {
 	r.ob.mustBeMutable()
 	r.ToObject()
 	if r.ob.Erase(t, key) {
-		if keystr, ok := key.IfStr(); ok {
+		if keystr, ok := key.ToStr(); ok {
 			r.invalidateDependents(keystr)
 			r.callObservers(t, keystr)
 		}
@@ -240,7 +240,7 @@ func (r *SuRecord) Iter() Iter {
 // ------------------------------------------------------------------
 
 func (r *SuRecord) Put(t *Thread, keyval Value, val Value) {
-	if key, ok := keyval.IfStr(); ok {
+	if key, ok := keyval.ToStr(); ok {
 		delete(r.invalid, key)
 		old := r.ob.GetIfPresent(t, keyval)
 		r.ob.Set(keyval, val)
@@ -329,7 +329,7 @@ func (r *SuRecord) Get(t *Thread, key Value) Value {
 // except it returns nil instead of defval for missing members
 func (r *SuRecord) GetIfPresent(t *Thread, keyval Value) Value {
 	result := r.ob.GetIfPresent(t, keyval)
-	if key, ok := keyval.IfStr(); ok {
+	if key, ok := keyval.ToStr(); ok {
 		// only do record stuff when key is a string
 		if result == nil && r.row != nil {
 			raw := r.row.GetRaw(r.hdr, key)
@@ -389,7 +389,7 @@ func (r *SuRecord) getSpecial(key string) Value {
 	if strings.HasSuffix(key, "_lower!") {
 		key = key[0 : len(key)-7]
 		if val := r.ob.GetIfPresent(nil, SuStr(key)); val != nil {
-			if vs, ok := val.IfStr(); ok {
+			if vs, ok := val.ToStr(); ok {
 				val = SuStr(strings.ToLower(vs))
 			}
 			return val
@@ -457,7 +457,7 @@ func toStr(e interface{}) string {
 		return s
 	}
 	if v, ok := e.(Value); ok {
-		return ToStr(v)
+		return AsStr(v)
 	}
 	return e.(strable).String()
 }
@@ -479,7 +479,7 @@ func (r *SuRecord) AttachRule(key, callable Value) {
 	if r.attachedRules == nil {
 		r.attachedRules = make(map[string]Value)
 	}
-	r.attachedRules[ToStr(key)] = callable
+	r.attachedRules[AsStr(key)] = callable
 }
 
 func (r *SuRecord) GetDeps(key string) Value {

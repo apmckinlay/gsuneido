@@ -15,7 +15,7 @@ func ExampleSuInt() {
 }
 
 func TestStrConvert(t *testing.T) {
-	Assert(t).That(ToStr(SuStr("123")), Equals("123"))
+	Assert(t).That(AsStr(SuStr("123")), Equals("123"))
 }
 
 func TestStringGet(t *testing.T) {
@@ -46,7 +46,7 @@ func TestCompare(t *testing.T) {
 func TestIfStr(t *testing.T) {
 	xtest := func(v Value) {
 		t.Helper()
-		_, ok := v.IfStr()
+		_, ok := v.ToStr()
 		Assert(t).False(ok)
 	}
 	xtest(True)
@@ -57,7 +57,7 @@ func TestIfStr(t *testing.T) {
 
 	test := func(s string) {
 		t.Helper()
-		Assert(t).That(IfStr(SuStr(s)), Equals(s))
+		Assert(t).That(ToStr(SuStr(s)), Equals(s))
 	}
 	test("")
 	test("hello")
@@ -66,7 +66,7 @@ func TestIfStr(t *testing.T) {
 func TestToStr(t *testing.T) {
 	test := func(v Value, expected string) {
 		t.Helper()
-		Assert(t).That(ToStr(v), Equals(expected))
+		Assert(t).That(AsStr(v), Equals(expected))
 	}
 	test(EmptyStr, "")
 	test(SuStr("hello"), "hello")
@@ -77,7 +77,7 @@ func TestToStr(t *testing.T) {
 
 	xtest := func(v Value) {
 		t.Helper()
-		_, ok := v.ToStr()
+		_, ok := v.AsStr()
 		Assert(t).False(ok)
 	}
 	xtest(&SuObject{})

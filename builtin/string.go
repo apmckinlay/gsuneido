@@ -18,37 +18,37 @@ import (
 func init() {
 	StringMethods = Methods{
 		"Asc": method0(func(this Value) Value {
-			s := IfStr(this)
+			s := ToStr(this)
 			if s == "" {
 				return Zero
 			}
 			return SuInt(int(s[0]))
 		}),
 		"Compile": method1("(errob = false)", func(this, _ Value) Value {
-			return compile.Constant(IfStr(this))
+			return compile.Constant(ToStr(this))
 		}),
 		"Count": method1("(string)", func(this, arg Value) Value {
-			return IntVal(strings.Count(IfStr(this), IfStr(arg)))
+			return IntVal(strings.Count(ToStr(this), ToStr(arg)))
 		}),
 		"Detab": method0(func(this Value) Value {
-			return SuStr(tabs.Detab(IfStr(this)))
+			return SuStr(tabs.Detab(ToStr(this)))
 		}),
 		"Entab": method0(func(this Value) Value {
-			return SuStr(tabs.Entab(IfStr(this)))
+			return SuStr(tabs.Entab(ToStr(this)))
 		}),
 		"Eval": method("()", func(t *Thread, this Value, args ...Value) Value {
-			return nilToEmptyStr(EvalString(t, IfStr(this)))
+			return nilToEmptyStr(EvalString(t, ToStr(this)))
 		}),
 		"Eval2": method("()", func(t *Thread, this Value, args ...Value) Value {
 			ob := &SuObject{}
-			if result := EvalString(t, IfStr(this)); result != nil {
+			if result := EvalString(t, ToStr(this)); result != nil {
 				ob.Add(result)
 			}
 			return ob
 		}),
 		"Extract": method2("(pattern, part=0)", func(this, arg1, arg2 Value) Value {
-			s := IfStr(this)
-			pat := regex.Compile(IfStr(arg1))
+			s := ToStr(this)
+			pat := regex.Compile(ToStr(arg1))
 			var res regex.Result
 			if pat.FirstMatch(s, 0, &res) == -1 {
 				return False
@@ -60,35 +60,35 @@ func init() {
 			return SuStr(s[pos:end])
 		}),
 		"Find": method2("(string, pos=0)", func(this, arg1, arg2 Value) Value {
-			s := IfStr(this)
+			s := ToStr(this)
 			pos := position(arg2, len(s))
-			i := strings.Index(s[pos:], IfStr(arg1))
+			i := strings.Index(s[pos:], ToStr(arg1))
 			if i == -1 {
 				return IntVal(len(s))
 			}
 			return IntVal(pos + i)
 		}),
 		"Find1of": method2("(string, pos=0)", func(this, arg1, arg2 Value) Value {
-			s := IfStr(this)
+			s := ToStr(this)
 			pos := position(arg2, len(s))
-			i := strings.IndexAny(s[pos:], IfStr(arg1))
+			i := strings.IndexAny(s[pos:], ToStr(arg1))
 			if i == -1 {
 				return IntVal(len(s))
 			}
 			return IntVal(pos + i)
 		}),
 		"Findnot1of": method2("(string, pos=0)", func(this, arg1, arg2 Value) Value {
-			s := IfStr(this)
+			s := ToStr(this)
 			pos := position(arg2, len(s))
-			i := str.IndexNotAny(s[pos:], IfStr(arg1))
+			i := str.IndexNotAny(s[pos:], ToStr(arg1))
 			if i == -1 {
 				return IntVal(len(s))
 			}
 			return IntVal(pos + i)
 		}),
 		"FindLast": method2("(string, pos=false)", func(this, arg1, arg2 Value) Value {
-			s := IfStr(this)
-			substr := IfStr(arg1)
+			s := ToStr(this)
+			substr := ToStr(arg1)
 			end := len(s)
 			if arg2 != False {
 				end = ToInt(arg2) + len(substr)
@@ -105,11 +105,11 @@ func init() {
 			return intOrFalse(strings.LastIndex(s[:end], substr))
 		}),
 		"FindLast1of": method2("(string, pos=false)", func(this, arg1, arg2 Value) Value {
-			set := IfStr(arg1)
+			set := ToStr(arg1)
 			if set == "" {
 				return False
 			}
-			s := IfStr(this)
+			s := ToStr(this)
 			end := last1ofEnd(s, arg2)
 			if end < 0 {
 				return False
@@ -117,8 +117,8 @@ func init() {
 			return intOrFalse(strings.LastIndexAny(s[:end], set))
 		}),
 		"FindLastnot1of": method2("(string, pos=false)", func(this, arg1, arg2 Value) Value {
-			s := IfStr(this)
-			set := IfStr(arg1)
+			s := ToStr(this)
+			set := ToStr(arg1)
 			end := last1ofEnd(s, arg2)
 			if end < 0 || set == "" {
 				return False
@@ -126,18 +126,18 @@ func init() {
 			return intOrFalse(str.LastIndexNotAny(s[:end], set))
 		}),
 		"Has?": method1("(string)", func(this, arg Value) Value {
-			return SuBool(strings.Contains(IfStr(this), IfStr(arg)))
+			return SuBool(strings.Contains(ToStr(this), ToStr(arg)))
 		}),
 		"Iter": method0(func(this Value) Value {
 			iterable := this.(interface{ Iter() Iter })
 			return SuIter{Iter: iterable.Iter()}
 		}),
 		"Lower": method0(func(this Value) Value {
-			return SuStr(strings.ToLower(IfStr(this)))
+			return SuStr(strings.ToLower(ToStr(this)))
 		}),
 		"Lower?": method0(func(this Value) Value {
 			result := false
-			for _, c := range []byte(IfStr(this)) {
+			for _, c := range []byte(ToStr(this)) {
 				if ascii.IsUpper(c) {
 					return False
 				} else if ascii.IsLower(c) {
@@ -148,7 +148,7 @@ func init() {
 		}),
 		"MapN": method("(n, block)",
 			func(t *Thread, this Value, args ...Value) Value {
-				s := IfStr(this)
+				s := ToStr(this)
 				n := IfInt(args[0])
 				block := args[1]
 				var buf strings.Builder
@@ -156,15 +156,15 @@ func init() {
 					end := ints.Min(i+n, len(s))
 					val := t.CallWithArgs(block, SuStr(s[i:end]))
 					if val != nil {
-						buf.WriteString(ToStr(val))
+						buf.WriteString(AsStr(val))
 					}
 				}
 				return SuStr(buf.String())
 			}),
 		"Match": method3("(pattern, pos=false, prev=false)",
 			func(this, arg1, arg2, arg3 Value) Value {
-				s := IfStr(this)
-				pat := regex.Compile(IfStr(arg1))
+				s := ToStr(this)
+				pat := regex.Compile(ToStr(arg1))
 				prev := ToBool(arg3)
 				pos := 0
 				if arg2 != False {
@@ -193,7 +193,7 @@ func init() {
 				return ob
 			}),
 		"NthLine": method1("(n)", func(this, arg Value) Value {
-			s := IfStr(this)
+			s := ToStr(this)
 			n := len(s)
 			nth := ToInt(arg)
 			i := 0
@@ -212,10 +212,10 @@ func init() {
 			return SuStr(s[i:j])
 		}),
 		"Number?": method0(func(this Value) Value {
-			return SuBool(numberPat.Matches(IfStr(this)))
+			return SuBool(numberPat.Matches(ToStr(this)))
 		}),
 		"Numeric?": method0(func(this Value) Value {
-			s := IfStr(this)
+			s := ToStr(this)
 			if len(s) == 0 {
 				return False
 			}
@@ -227,13 +227,13 @@ func init() {
 			return True
 		}),
 		"Prefix?": method2("(string, pos=0)", func(this, arg1, arg2 Value) Value {
-			s := IfStr(this)
-			pre := IfStr(arg1)
+			s := ToStr(this)
+			pre := ToStr(arg1)
 			pos := position(arg2, len(s))
 			return SuBool(strings.HasPrefix(s[pos:], pre))
 		}),
 		"Repeat": method1("(count)", func(this, arg Value) Value {
-			return SuStr(strings.Repeat(IfStr(this), ints.Max(0, ToInt(arg))))
+			return SuStr(strings.Repeat(ToStr(this), ints.Max(0, ToInt(arg))))
 		}),
 		"Replace": method("(pattern, replacement = '', count = false)",
 			func(t *Thread, this Value, args ...Value) Value {
@@ -241,10 +241,10 @@ func init() {
 				if args[2] != False {
 					count = ToInt(args[2])
 				}
-				return replace(t, IfStr(this), IfStr(args[0]), args[1], count)
+				return replace(t, ToStr(this), ToStr(args[0]), args[1], count)
 			}),
 		"Reverse": method0(func(this Value) Value {
-			s := []byte(IfStr(this))
+			s := []byte(ToStr(this))
 			lo := 0
 			hi := len(s) - 1
 			for lo < hi {
@@ -256,19 +256,19 @@ func init() {
 		}),
 		"ServerEval": method("()",
 			func(t *Thread, this Value, args ...Value) Value {
-				return nilToEmptyStr(t.Dbms().Run(IfStr(this)))
+				return nilToEmptyStr(t.Dbms().Run(ToStr(this)))
 			}),
 		"Size": method0(func(this Value) Value {
-			// avoid calling IfStr so we don't have to convert concats
+			// avoid calling ToStr so we don't have to convert concats
 			return IntVal(this.(interface{ Len() int }).Len())
 			// "this" should always have Len
 		}),
 		"Split": method1("(separator)", func(this, arg Value) Value {
-			sep := IfStr(arg)
+			sep := ToStr(arg)
 			if sep == "" {
 				panic("string.Split separator must not be empty string")
 			}
-			strs := strings.Split(IfStr(this), sep)
+			strs := strings.Split(ToStr(this), sep)
 			if strs[len(strs)-1] == "" {
 				strs = strs[:len(strs)-1]
 			}
@@ -279,7 +279,7 @@ func init() {
 			return NewSuObject(vals...)
 		}),
 		"Substr": method2("(i, n=false)", func(this, arg1, arg2 Value) Value {
-			s := IfStr(this)
+			s := ToStr(this)
 			sn := len(s)
 			i := Index(arg1)
 			if i < 0 {
@@ -301,16 +301,16 @@ func init() {
 			return SuStr(s[i : i+n])
 		}),
 		"Suffix?": method1("(string)", func(this, arg Value) Value {
-			return SuBool(strings.HasSuffix(IfStr(this), IfStr(arg)))
+			return SuBool(strings.HasSuffix(ToStr(this), ToStr(arg)))
 		}),
 		"Tr": method("(from, to='')",
 			func(t *Thread, this Value, args ...Value) Value {
-				from := t.TrCache.Get(IfStr(args[0]))
-				to := t.TrCache.Get(IfStr(args[1]))
-				return SuStr(tr.Replace(IfStr(this), from, to))
+				from := t.TrCache.Get(ToStr(args[0]))
+				to := t.TrCache.Get(ToStr(args[1]))
+				return SuStr(tr.Replace(ToStr(this), from, to))
 			}),
 		"Unescape": method0(func(this Value) Value {
-			s := IfStr(this)
+			s := ToStr(this)
 			var buf strings.Builder
 			buf.Grow(len(s))
 			for i := 0; i < len(s); i++ {
@@ -321,11 +321,11 @@ func init() {
 			return SuStr(buf.String())
 		}),
 		"Upper": method0(func(this Value) Value {
-			return SuStr(strings.ToUpper(IfStr(this)))
+			return SuStr(strings.ToUpper(ToStr(this)))
 		}),
 		"Upper?": method0(func(this Value) Value {
 			result := false
-			for _, c := range []byte(IfStr(this)) {
+			for _, c := range []byte(ToStr(this)) {
 				if ascii.IsLower(c) {
 					return False
 				} else if ascii.IsUpper(c) {
@@ -344,7 +344,7 @@ func replace(t *Thread, s string, patarg string, reparg Value, count int) Value 
 	pat := t.RxCache.Get(patarg)
 	rep := ""
 	if !isFunc(reparg) {
-		rep = ToStr(reparg)
+		rep = AsStr(reparg)
 		reparg = nil
 	}
 	from := 0
@@ -360,7 +360,7 @@ func replace(t *Thread, s string, patarg string, reparg Value, count int) Value 
 			r := result[0].Part(s)
 			v := t.CallWithArgs(reparg, SuStr(r))
 			if v != nil {
-				r = ToStr(v)
+				r = AsStr(v)
 			}
 			buf.WriteString(r)
 		}

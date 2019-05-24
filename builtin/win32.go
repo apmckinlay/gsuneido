@@ -71,8 +71,8 @@ var messageBox = user32.NewProc("MessageBoxA")
 var _ = builtin4("MessageBox(hwnd, text, caption, flags)",
 	func(a, b, c, d Value) Value {
 		hwnd := ToInt(a)
-		s1, _ := windows.BytePtrFromString(IfStr(b))
-		s2, _ := windows.BytePtrFromString(IfStr(c))
+		s1, _ := windows.BytePtrFromString(ToStr(b))
+		s2, _ := windows.BytePtrFromString(ToStr(c))
 		flags := ToInt(d)
 		n, _, _ := messageBox.Call(
 			uintptr(hwnd),

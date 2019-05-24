@@ -32,7 +32,7 @@ var _ = builtin0("GetTempPath()",
 // (same as cSuneido, but different from jSuneido)
 var _ = builtin2("GetTempFileName(path, prefix)",
 	func(path, prefix Value) Value {
-		f, err := ioutil.TempFile(IfStr(path), IfStr(prefix))
+		f, err := ioutil.TempFile(ToStr(path), ToStr(prefix))
 		if err != nil {
 			panic("GetTempFileName: " + err.Error())
 		}
@@ -43,7 +43,7 @@ var _ = builtin2("GetTempFileName(path, prefix)",
 
 var _ = builtin1("CreateDirectory(dirname)",
 	func(arg Value) Value {
-		err := os.Mkdir(IfStr(arg), 0755)
+		err := os.Mkdir(ToStr(arg), 0755)
 		if err != nil {
 			panic("CreateDirctory: " + err.Error())
 		}
@@ -52,7 +52,7 @@ var _ = builtin1("CreateDirectory(dirname)",
 
 var _ = builtin1("DeleteFileApi(filename)",
 	func(arg Value) Value {
-		err := os.Remove(IfStr(arg))
+		err := os.Remove(ToStr(arg))
 		if err != nil {
 			panic("DeleteFile: " + err.Error())
 		}
@@ -61,7 +61,7 @@ var _ = builtin1("DeleteFileApi(filename)",
 
 var _ = builtin1("FileExists(filename)",
 	func(arg Value) Value {
-		_, err := os.Stat(IfStr(arg))
+		_, err := os.Stat(ToStr(arg))
 		if err == nil {
 			return True
 		}
@@ -73,7 +73,7 @@ var _ = builtin1("FileExists(filename)",
 
 var _ = builtin1("DirExists(filename)",
 	func(arg Value) Value {
-		info, err := os.Stat(IfStr(arg))
+		info, err := os.Stat(ToStr(arg))
 		if err == nil {
 			return SuBool((info.Mode() & os.ModeDir) == os.ModeDir)
 		}
@@ -85,7 +85,7 @@ var _ = builtin1("DirExists(filename)",
 
 var _ = builtin2("MoveFile(from, to)",
 	func(from, to Value) Value {
-		err := os.Rename(IfStr(from), IfStr(to))
+		err := os.Rename(ToStr(from), ToStr(to))
 		if err != nil {
 			panic("MoveFile: " + err.Error())
 		}

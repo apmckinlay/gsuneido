@@ -27,7 +27,7 @@ func init() {
 		}),
 		"Format": method1("(mask)", func(this, arg Value) Value {
 			x := ToDnum(this)
-			mask := IfStr(arg)
+			mask := ToStr(arg)
 			return SuStr(x.Format(mask))
 		}),
 		"Frac": method0(func(this Value) Value {

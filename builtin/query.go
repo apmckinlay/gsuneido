@@ -40,7 +40,7 @@ func extractQuery(
 	th *Thread, ps *ParamSpec, as *ArgSpec, args []Value) (string, []Value) {
 	where := queryWhere(as, args)
 	args = th.Args(ps, as)
-	query := ToStr(args[0]) + where
+	query := AsStr(args[0]) + where
 	return query + where, args
 }
 
@@ -53,7 +53,7 @@ func queryWhere(as *ArgSpec, args []Value) string {
 		if k == nil {
 			continue
 		}
-		field := IfStr(k)
+		field := ToStr(k)
 		if field == "query" || (field == "block" && !stringable(v)) {
 			continue
 		}
@@ -66,7 +66,7 @@ func queryWhere(as *ArgSpec, args []Value) string {
 }
 
 func stringable(v Value) bool {
-	_, ok := v.ToStr()
+	_, ok := v.AsStr()
 	return ok
 }
 

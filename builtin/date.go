@@ -29,7 +29,7 @@ func dateCallClass(_ *Thread, args ...Value) Value {
 			return args[0]
 		}
 		var d SuDate
-		s := ToStr(args[0])
+		s := AsStr(args[0])
 		if args[1] == False {
 			if strings.HasPrefix(s, "#") {
 				d = DateFromLiteral(s)
@@ -37,7 +37,7 @@ func dateCallClass(_ *Thread, args ...Value) Value {
 				d = ParseDate(s, "yMd")
 			}
 		} else {
-			d = ParseDate(s, ToStr(args[1]))
+			d = ParseDate(s, AsStr(args[1]))
 		}
 		if d == NilDate {
 			return False
@@ -123,7 +123,7 @@ func init() {
 			panic("date.MinusSeconds requires date")
 		}),
 		"FormatEn": method1("(format)", func(this, arg Value) Value {
-			return SuStr(this.(SuDate).Format(IfStr(arg)))
+			return SuStr(this.(SuDate).Format(ToStr(arg)))
 		}),
 		"GetLocalGMTBias": method0(func(this Value) Value { // should be static
 			_, offset := time.Now().Zone()
@@ -169,7 +169,7 @@ func dayOfWeek(x Value) int {
 	if i, ok := x.IfInt(); ok {
 		return i
 	}
-	s := strings.ToLower(ToStr(x))
+	s := strings.ToLower(AsStr(x))
 	days := []string{"sunday", "monday", "tuesday",
 		"wednesday", "thursday", "friday", "saturday"}
 	for i, d := range days {

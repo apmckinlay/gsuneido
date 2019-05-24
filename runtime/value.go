@@ -26,11 +26,11 @@ type Value interface {
 	// String returns a human readable string i.e. Suneido Display
 	String() string
 
-	// ToStr converts SuBool, SuInt, SuDnum, SuStr, SuConcat, SuExcept to string
-	ToStr() (string, bool)
+	// AsStr converts SuBool, SuInt, SuDnum, SuStr, SuConcat, SuExcept to string
+	AsStr() (string, bool)
 
-	// IfStr converts SuStr, SuConcat, SuExcept to string
-	IfStr() (string, bool)
+	// ToStr converts SuStr, SuConcat, SuExcept to string
+	ToStr() (string, bool)
 
 	// ToInt converts false (SuBool), "" (SuStr), SuInt, SuDnum to int
 	ToInt() (int, bool)
@@ -132,7 +132,16 @@ type Named interface {
 	GetName() string
 }
 
-// ToStr converts SuBool, SuInt, SuDnum, SuStr, SuConcat, SuExcept to string.
+// AsStr converts SuBool, SuInt, SuDnum, SuStr, SuConcat, SuExcept to string.
+// Calls Value.AsStr and panics if it fails
+func AsStr(x Value) string {
+	if s, ok := x.AsStr(); ok {
+		return s
+	}
+	panic("can't convert " + x.Type().String() + " to String")
+}
+
+// ToStr converts SuStr, SuConcat, SuExcept to string.
 // Calls Value.ToStr and panics if it fails
 func ToStr(x Value) string {
 	if s, ok := x.ToStr(); ok {
@@ -141,18 +150,9 @@ func ToStr(x Value) string {
 	panic("can't convert " + x.Type().String() + " to String")
 }
 
-// IfStr converts SuStr, SuConcat, SuExcept to string.
-// Calls Value.IfStr and panics if it fails
-func IfStr(x Value) string {
-	if s, ok := x.IfStr(); ok {
-		return s
-	}
-	panic("can't convert " + x.Type().String() + " to String")
-}
-
-// ToStrOrString returns either IfStr() or String()
+// ToStrOrString returns either ToStr() or String()
 func ToStrOrString(x Value) string {
-	if s, ok := x.IfStr(); ok {
+	if s, ok := x.ToStr(); ok {
 		return s
 	}
 	return x.String()
@@ -272,11 +272,11 @@ func (CantConvert) ToContainer() (Container, bool) {
 	return nil, false
 }
 
-func (CantConvert) ToStr() (string, bool) {
+func (CantConvert) AsStr() (string, bool) {
 	return "", false
 }
 
-func (CantConvert) IfStr() (string, bool) {
+func (CantConvert) ToStr() (string, bool) {
 	return "", false
 }
 
@@ -286,7 +286,7 @@ type ToStringable interface {
 
 // PackValue packs a Value if it is Packable, else it panics
 func PackValue(v Value) string {
-	if p,ok := v.(Packable); ok {
+	if p, ok := v.(Packable); ok {
 		return Pack(p)
 	}
 	panic("can't pack " + ErrType(v))

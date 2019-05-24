@@ -19,7 +19,7 @@ var _ = builtinRaw("Md5(@args)",
 			return sa
 		}
 		for ; k == nil && v != nil; k, v = iter() {
-			io.WriteString(sa.hash, IfStr(v))
+			io.WriteString(sa.hash, ToStr(v))
 		}
 		return sa.value()
 	})
@@ -84,7 +84,7 @@ func (*SuMd5) Lookup(_ *Thread, method string) Callable {
 
 var md5Methods = Methods{
 	"Update": method1("(string)", func(this, arg Value) Value {
-		io.WriteString(this.(*SuMd5).hash, IfStr(arg))
+		io.WriteString(this.(*SuMd5).hash, ToStr(arg))
 		return this
 	}),
 	"Value": method0(func(this Value) Value {

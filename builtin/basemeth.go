@@ -43,7 +43,7 @@ func init() {
 				return args[1]
 			}),
 		"Member?": method("(string)", func(t *Thread, this Value, arg ...Value) Value {
-			m := IfStr(arg[0])
+			m := ToStr(arg[0])
 			result := this.(Findable).Finder(t, func(v Value, mb *MemBase) Value {
 				if _, ok := mb.Data[m]; ok {
 					return True

@@ -202,7 +202,7 @@ func (p *parser) member(ob container, closing tok.Token, base Gnum) {
 			p.putMem(ob, m, True)
 		} else {
 			prevName := p.name
-			if s, ok := m.IfStr(); ok {
+			if s, ok := m.ToStr(); ok {
 				p.name += "." + s
 			}
 			p.putMem(ob, m, p.constant())

@@ -69,7 +69,7 @@ func init() {
 		}),
 		"Join": method1("(separator='')", func(this, arg Value) Value {
 			seq := this.(*SuSequence)
-			separator := IfStr(arg)
+			separator := ToStr(arg)
 			sep := ""
 			iter := seq.Iter()
 			var buf strings.Builder
@@ -80,7 +80,7 @@ func init() {
 				}
 				buf.WriteString(sep)
 				sep = separator
-				if s, ok := val.IfStr(); ok {
+				if s, ok := val.ToStr(); ok {
 					buf.WriteString(s)
 				} else {
 					buf.WriteString(val.String())

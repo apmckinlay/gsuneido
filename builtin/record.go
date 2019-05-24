@@ -20,7 +20,7 @@ func init() {
 			return nil
 		}),
 		"GetDeps": method1("(field)", func(this, arg Value) Value {
-			return this.(*SuRecord).GetDeps(IfStr(arg))
+			return this.(*SuRecord).GetDeps(ToStr(arg))
 		}),
 		"Delete": methodRaw("()",
 			func(t *Thread, as *ArgSpec, this Value, args ...Value) Value {
@@ -39,7 +39,7 @@ func init() {
 					if k != nil || v == nil {
 						break
 					}
-					this.(*SuRecord).Invalidate(ToStr(v))
+					this.(*SuRecord).Invalidate(AsStr(v))
 				}
 				return nil
 			}),
@@ -55,7 +55,7 @@ func init() {
 			return SuBool(this.(*SuRecord).RemoveObserver(arg))
 		}),
 		"SetDeps": method2("(field,deps)", func(this, arg1, arg2 Value) Value {
-			this.(*SuRecord).SetDeps(IfStr(arg1), IfStr(arg2))
+			this.(*SuRecord).SetDeps(ToStr(arg1), ToStr(arg2))
 			return nil
 		}),
 		"Update": method("(record = false)",

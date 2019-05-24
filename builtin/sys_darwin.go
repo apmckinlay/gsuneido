@@ -24,7 +24,7 @@ var _ = builtin0("OperatingSystem()", func() Value {
 
 var _ = builtin1("GetDiskFreeSpace(dir = '.')", func(arg Value) Value {
 	var stat syscall.Statfs_t
-	syscall.Statfs(IfStr(arg), &stat)
+	syscall.Statfs(ToStr(arg), &stat)
 	freeBytes := stat.Bavail * uint64(stat.Bsize)
 	return Int64Val(int64(freeBytes))
 })
