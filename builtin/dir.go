@@ -10,11 +10,12 @@ import (
 
 const maxDir = 10000
 
-var _ = builtin4("Dir(path='*', files=false, details=false, block=false)",
-	func(p, f, d, block Value) Value {
-		path := strings.ReplaceAll(IfStr(p), "\\", "/")
-		justfiles := ToBool(f)
-		details := ToBool(d)
+var _ = builtin("Dir(path='*', files=false, details=false, block=false)",
+	func(t *Thread, args ...Value) Value {
+		path := strings.ReplaceAll(IfStr(args[0]), "\\", "/")
+		justfiles := ToBool(args[1])
+		details := ToBool(args[2])
+		block := args[3]
 		if block == False {
 			ob := &SuObject{}
 			forEachDir(path, justfiles, details, func(entry Value) {
@@ -25,6 +26,10 @@ var _ = builtin4("Dir(path='*', files=false, details=false, block=false)",
 			})
 			return ob
 		}
+		// block form
+		forEachDir(path, justfiles, details, func(entry Value) {
+			t.CallWithArgs(block, entry)
+		})
 		return nil
 	})
 
