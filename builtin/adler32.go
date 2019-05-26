@@ -11,7 +11,7 @@ import (
 )
 
 var _ = builtinRaw("Adler32(@args)",
-	func(th *Thread, as *ArgSpec, args ...Value) Value {
+	func(th *Thread, as *ArgSpec, args []Value) Value {
 		sa := &SuAdler32{hash: adler32.New()}
 		iter := NewArgsIter(as, args)
 		k, v := iter()

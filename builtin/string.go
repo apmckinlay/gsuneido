@@ -36,10 +36,10 @@ func init() {
 		"Entab": method0(func(this Value) Value {
 			return SuStr(tabs.Entab(ToStr(this)))
 		}),
-		"Eval": method("()", func(t *Thread, this Value, args ...Value) Value {
+		"Eval": method("()", func(t *Thread, this Value, args []Value) Value {
 			return nilToEmptyStr(EvalString(t, ToStr(this)))
 		}),
-		"Eval2": method("()", func(t *Thread, this Value, args ...Value) Value {
+		"Eval2": method("()", func(t *Thread, this Value, args []Value) Value {
 			ob := &SuObject{}
 			if result := EvalString(t, ToStr(this)); result != nil {
 				ob.Add(result)
@@ -147,7 +147,7 @@ func init() {
 			return SuBool(result)
 		}),
 		"MapN": method("(n, block)",
-			func(t *Thread, this Value, args ...Value) Value {
+			func(t *Thread, this Value, args []Value) Value {
 				s := ToStr(this)
 				n := IfInt(args[0])
 				block := args[1]
@@ -236,7 +236,7 @@ func init() {
 			return SuStr(strings.Repeat(ToStr(this), ints.Max(0, ToInt(arg))))
 		}),
 		"Replace": method("(pattern, replacement = '', count = false)",
-			func(t *Thread, this Value, args ...Value) Value {
+			func(t *Thread, this Value, args []Value) Value {
 				count := ints.MaxInt
 				if args[2] != False {
 					count = ToInt(args[2])
@@ -255,7 +255,7 @@ func init() {
 			return SuStr(string(s))
 		}),
 		"ServerEval": method("()",
-			func(t *Thread, this Value, args ...Value) Value {
+			func(t *Thread, this Value, args []Value) Value {
 				return nilToEmptyStr(t.Dbms().Run(ToStr(this)))
 			}),
 		"Size": method0(func(this Value) Value {
@@ -304,7 +304,7 @@ func init() {
 			return SuBool(strings.HasSuffix(ToStr(this), ToStr(arg)))
 		}),
 		"Tr": method("(from, to='')",
-			func(t *Thread, this Value, args ...Value) Value {
+			func(t *Thread, this Value, args []Value) Value {
 				from := t.TrCache.Get(ToStr(args[0]))
 				to := t.TrCache.Get(ToStr(args[1]))
 				return SuStr(tr.Replace(ToStr(this), from, to))

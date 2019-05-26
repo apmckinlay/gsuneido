@@ -4,7 +4,7 @@ import (
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
-var _ = builtin("ServerEval(@args)", func(t *Thread, args ...Value) Value {
+var _ = builtin("ServerEval(@args)", func(t *Thread, args []Value) Value {
 	return nilToEmptyStr(t.Dbms().Exec(t, args[0]))
 })
 

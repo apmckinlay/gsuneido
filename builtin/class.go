@@ -8,7 +8,7 @@ import (
 func init() {
 	ClassMethods = Methods{
 		"*new*": methodRaw("(@args)",
-			func(t *Thread, as *ArgSpec, this Value, args ...Value) Value {
+			func(t *Thread, as *ArgSpec, this Value, args []Value) Value {
 				return this.(*SuClass).New(t, as)
 			}),
 		"Method?":     method("(string)", methodQ),
@@ -19,7 +19,7 @@ func init() {
 	}
 }
 
-func methodClass(t *Thread, this Value, args ...Value) Value {
+func methodClass(t *Thread, this Value, args []Value) Value {
 	m := ToStr(args[0])
 	return nilToFalse(this.(Findable).Finder(t, func(c Value, mb *MemBase) Value {
 		if x, ok := mb.Data[m]; ok && x.Type() == types.Function {
@@ -29,7 +29,7 @@ func methodClass(t *Thread, this Value, args ...Value) Value {
 	}))
 }
 
-func methodQ(t *Thread, this Value, args ...Value) Value {
+func methodQ(t *Thread, this Value, args []Value) Value {
 	m := ToStr(args[0])
 	return nilToFalse(this.(Findable).Finder(t, func(c Value, mb *MemBase) Value {
 		if x, ok := mb.Data[m]; ok && x.Type() == types.Function {

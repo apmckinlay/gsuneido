@@ -8,7 +8,7 @@ import (
 )
 
 var _ = builtin("Object(@args)",
-	func(_ *Thread, args ...Value) Value {
+	func(_ *Thread, args []Value) Value {
 		return args[0]
 	})
 
@@ -17,7 +17,7 @@ var _ = builtin("Object(@args)",
 func init() {
 	ObjectMethods = Methods{
 		"Add": methodRaw("(@args)",
-			func(t *Thread, as *ArgSpec, this Value, args ...Value) Value {
+			func(t *Thread, as *ArgSpec, this Value, args []Value) Value {
 				ob := ToContainer(this)
 				iter := NewArgsIter(as, args)
 				if at := getNamed(as, args, SuStr("at")); at != nil {
@@ -32,7 +32,7 @@ func init() {
 				return this
 			}),
 		"Assocs": methodRaw("(list = true, named = true)",
-			func(_ *Thread, as *ArgSpec, this Value, args ...Value) Value {
+			func(_ *Thread, as *ArgSpec, this Value, args []Value) Value {
 				list, named := iterWhich(as, args)
 				return NewSuSequence(IterAssocs(ToContainer(this), list, named))
 			}),
@@ -46,7 +46,7 @@ func init() {
 		"Delete": methodRaw("(@args)",
 			obDelete),
 		"Erase": methodRaw("(@args)",
-			func(t *Thread, as *ArgSpec, this Value, args ...Value) Value {
+			func(t *Thread, as *ArgSpec, this Value, args []Value) Value {
 				ob := ToContainer(this)
 				iter := NewArgsIter(as, args)
 				for {
@@ -59,11 +59,11 @@ func init() {
 				return this
 			}),
 		"Eval": methodRaw("(@args)",
-			func(t *Thread, as *ArgSpec, this Value, args ...Value) Value {
+			func(t *Thread, as *ArgSpec, this Value, args []Value) Value {
 				return nilToEmptyStr(EvalAsMethod(t, as, this, args))
 			}),
 		"Eval2": methodRaw("(@args)",
-			func(t *Thread, as *ArgSpec, this Value, args ...Value) Value {
+			func(t *Thread, as *ArgSpec, this Value, args []Value) Value {
 				ob := &SuObject{}
 				if result := EvalAsMethod(t, as, this, args); result != nil {
 					ob.Add(result)
@@ -75,7 +75,7 @@ func init() {
 			return k
 		}),
 		"GetDefault": method("(member, block)",
-			func(t *Thread, this Value, args ...Value) Value {
+			func(t *Thread, this Value, args []Value) Value {
 				ob := ToContainer(this)
 				if x := ob.GetIfPresent(t, args[0]); x != nil {
 					return x
@@ -106,7 +106,7 @@ func init() {
 			return SuStr(sb.String())
 		}),
 		"BinarySearch": method("(value, block = false)",
-			func(t *Thread, this Value, args ...Value) Value {
+			func(t *Thread, this Value, args []Value) Value {
 				ob := ToContainer(this).ToObject()
 				if args[1] == False {
 					return IntVal(ob.BinarySearch(args[0]))
@@ -114,7 +114,7 @@ func init() {
 				return IntVal(ob.BinarySearch2(t, args[0], args[1]))
 			}),
 		"Members": methodRaw("(list = true, named = true)",
-			func(_ *Thread, as *ArgSpec, this Value, args ...Value) Value {
+			func(_ *Thread, as *ArgSpec, this Value, args []Value) Value {
 				list, named := iterWhich(as, args)
 				return NewSuSequence(IterMembers(ToContainer(this), list, named))
 			}),
@@ -152,7 +152,7 @@ func init() {
 				return IntVal(n)
 			}),
 		"Sort!": method("(block = false)",
-			func(t *Thread, this Value, args ...Value) Value {
+			func(t *Thread, this Value, args []Value) Value {
 				ToContainer(this).ToObject().Sort(t, args[0])
 				return this
 			}),
@@ -161,14 +161,14 @@ func init() {
 			return this
 		}),
 		"Values": methodRaw("(list = true, named = true)",
-			func(_ *Thread, as *ArgSpec, this Value, args ...Value) Value {
+			func(_ *Thread, as *ArgSpec, this Value, args []Value) Value {
 				list, named := iterWhich(as, args)
 				return NewSuSequence(IterValues(ToContainer(this), list, named))
 			}),
 	}
 }
 
-func obDelete(t *Thread, as *ArgSpec, this Value, args ...Value) Value {
+func obDelete(t *Thread, as *ArgSpec, this Value, args []Value) Value {
 	ob := ToContainer(this)
 	if all := getNamed(as, args, SuStr("all")); all == True {
 		ob.Clear()

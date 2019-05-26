@@ -7,17 +7,17 @@ import (
 )
 
 var _ = builtinRaw("Query1(@args)",
-	func(t *Thread, as *ArgSpec, args ...Value) Value {
+	func(t *Thread, as *ArgSpec, args []Value) Value {
 		return queryOne(t, as, args, Only)
 	})
 
 var _ = builtinRaw("QueryFirst(@args)",
-	func(t *Thread, as *ArgSpec, args ...Value) Value {
+	func(t *Thread, as *ArgSpec, args []Value) Value {
 		return queryOne(t, as, args, Next)
 	})
 
 var _ = builtinRaw("QueryLast(@args)",
-	func(t *Thread, as *ArgSpec, args ...Value) Value {
+	func(t *Thread, as *ArgSpec, args []Value) Value {
 		return queryOne(t, as, args, Prev)
 	})
 
@@ -89,14 +89,14 @@ func init() {
 			return this.(*SuQuery).GetRec(Next)
 		}),
 		"NewRecord": method("(@args)", // deprecated
-			func(_ *Thread, _ Value, args ...Value) Value {
+			func(_ *Thread, _ Value, args []Value) Value {
 				return newRecord(args)
 			}),
 		"Prev": method0(func(this Value) Value {
 			return this.(*SuQuery).GetRec(Prev)
 		}),
 		"Output": method("(record)",
-			func(th *Thread, this Value, args ...Value) Value {
+			func(th *Thread, this Value, args []Value) Value {
 				this.(*SuQuery).Output(th, ToContainer(args[0]))
 				return nil
 			}),

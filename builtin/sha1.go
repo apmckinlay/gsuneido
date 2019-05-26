@@ -11,7 +11,7 @@ import (
 )
 
 var _ = builtinRaw("Sha1(@args)",
-	func(th *Thread, as *ArgSpec, args ...Value) Value {
+	func(th *Thread, as *ArgSpec, args []Value) Value {
 		sa := &SuSha1{hash: sha1.New()}
 		iter := NewArgsIter(as, args)
 		k, v := iter()

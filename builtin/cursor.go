@@ -5,7 +5,7 @@ import (
 )
 
 var _ = builtinRaw("Cursor(@args)",
-	func(th *Thread, as *ArgSpec, args ...Value) Value {
+	func(th *Thread, as *ArgSpec, args []Value) Value {
 		query, args := extractQuery(th, queryBlockParams, as, args)
 		icursor := th.Dbms().Cursor(query)
 		c := NewSuCursor(query, icursor)
@@ -29,7 +29,7 @@ func init() {
 			return this.(*SuCursor).GetRec(arg.(*SuTran), Prev)
 		}),
 		"Output": method("(transaction, record)",
-			func(_ *Thread, _ Value, _ ...Value) Value {
+			func(_ *Thread, _ Value, _ []Value) Value {
 				panic("cursor.Output is not supported")
 			}),
 	}

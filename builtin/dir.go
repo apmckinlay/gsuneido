@@ -11,7 +11,7 @@ import (
 const maxDir = 10000
 
 var _ = builtin("Dir(path='*', files=false, details=false, block=false)",
-	func(t *Thread, args ...Value) Value {
+	func(t *Thread, args []Value) Value {
 		path := strings.ReplaceAll(ToStr(args[0]), "\\", "/")
 		justfiles := ToBool(args[1])
 		details := ToBool(args[2])

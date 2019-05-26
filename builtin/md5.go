@@ -11,7 +11,7 @@ import (
 )
 
 var _ = builtinRaw("Md5(@args)",
-	func(th *Thread, as *ArgSpec, args ...Value) Value {
+	func(th *Thread, as *ArgSpec, args []Value) Value {
 		sa := &SuMd5{hash: md5.New()}
 		iter := NewArgsIter(as, args)
 		k, v := iter()

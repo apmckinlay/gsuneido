@@ -9,11 +9,11 @@ import (
 
 /* builtin defines a built in function in globals
 for example:
-var _ = builtin("Foo(a,b)", func(t *Thread, args ...Value) Value {
+var _ = builtin("Foo(a,b)", func(t *Thread, args []Value) Value {
 		...
 	}))
 */
-func builtin(s string, f func(t *Thread, args ...Value) Value) bool {
+func builtin(s string, f func(t *Thread, args []Value) Value) bool {
 	name, ps := paramSplit(s)
 	Global.Builtin(name, &SuBuiltin{f, BuiltinParams{ParamSpec: *ps}})
 	return true
@@ -49,7 +49,7 @@ func builtin4(s string, f func(a, b, c, d Value) Value) bool {
 	return true
 }
 
-func builtinRaw(s string, f func(t *Thread, as *ArgSpec, args ...Value) Value) bool {
+func builtinRaw(s string, f func(t *Thread, as *ArgSpec, args []Value) Value) bool {
 	name, ps := paramSplit(s)
 	Global.Builtin(name, &SuBuiltinRaw{f, BuiltinParams{ParamSpec: *ps}})
 	return true
@@ -64,7 +64,7 @@ func paramSplit(s string) (string, *ParamSpec) {
 	return name, ps
 }
 
-func method(p string, f func(t *Thread, this Value, args ...Value) Value) Callable {
+func method(p string, f func(t *Thread, this Value, args []Value) Value) Callable {
 	return &SuBuiltinMethod{f, BuiltinParams{ParamSpec: *params(p)}}
 }
 
@@ -85,7 +85,7 @@ func method3(p string, f func(this, a1, a2, a3 Value) Value) Callable {
 }
 
 func methodRaw(p string,
-	f func(t *Thread, as *ArgSpec, this Value, args ...Value) Value) Callable {
+	f func(t *Thread, as *ArgSpec, this Value, args []Value) Value) Callable {
 	// params are just for documentation, SuBuiltinMethodRaw doesn't use them
 	return &SuBuiltinMethodRaw{Fn: f, ParamSpec: *params(p)}
 }

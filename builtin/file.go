@@ -10,7 +10,7 @@ import (
 )
 
 var _ = builtin("File(filename, mode='r', block=false)",
-	func(t *Thread, args ...Value) Value {
+	func(t *Thread, args []Value) Value {
 		name := ToStr(args[0])
 		mode := ToStr(args[1])
 

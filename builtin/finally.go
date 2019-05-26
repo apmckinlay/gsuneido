@@ -5,7 +5,7 @@ import (
 )
 
 var _ = builtin("Finally(main_block, final_block)",
-	func(t *Thread, args ...Value) Value {
+	func(t *Thread, args []Value) Value {
 		defer func() {
 			e := recover()
 			func() {

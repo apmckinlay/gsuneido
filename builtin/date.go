@@ -19,7 +19,7 @@ func init() {
 		SuBuiltin{dateCallClass, BuiltinParams{ParamSpec: *ps}}})
 }
 
-func dateCallClass(_ *Thread, args ...Value) Value {
+func dateCallClass(_ *Thread, args []Value) Value {
 	if args[0] != False && hasFields(args) {
 		panic("usage: Date() or Date(string [, pattern]) or " +
 			"Date(year:, month:, day:, hour:, minute:, second:)")
@@ -131,7 +131,7 @@ func init() {
 		}),
 		"Plus": method("(years=0, months=0, days=0, "+
 			"hours=0, minutes=0, seconds=0, milliseconds=0)",
-			func(t *Thread, this Value, args ...Value) Value {
+			func(t *Thread, this Value, args []Value) Value {
 				return this.(SuDate).Plus(ToInt(args[0]), ToInt(args[1]),
 					ToInt(args[2]), ToInt(args[3]), ToInt(args[4]),
 					ToInt(args[5]), ToInt(args[6]))

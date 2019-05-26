@@ -7,7 +7,7 @@ import (
 )
 
 var _ = builtinRaw("Print(@args)",
-	func(t *Thread, as *ArgSpec, args ...Value) Value {
+	func(t *Thread, as *ArgSpec, args []Value) Value {
 		iter := NewArgsIter(as, args)
 		sep := ""
 		for {

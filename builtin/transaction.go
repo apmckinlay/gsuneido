@@ -5,7 +5,7 @@ import (
 )
 
 var _ = builtin("Transaction(read=false, update=false, block=false)",
-	func(th *Thread, args ...Value) Value {
+	func(th *Thread, args []Value) Value {
 		read := ToBool(args[0])
 		update := ToBool(args[1])
 		if read == true && update == true {
@@ -43,7 +43,7 @@ func init() {
 			return SuBool(this.(*SuTran).Ended())
 		}),
 		"Query": methodRaw("(@args)",
-			func(th *Thread, as *ArgSpec, this Value, args ...Value) Value {
+			func(th *Thread, as *ArgSpec, this Value, args []Value) Value {
 				query, args := extractQuery(th, queryBlockParams, as, args)
 				q := this.(*SuTran).Query(query)
 				if args[1] == False {
@@ -56,20 +56,20 @@ func init() {
 				return th.CallWithArgs(args[1], q)
 			}),
 		"QueryDo": methodRaw("(@args)",
-			func(th *Thread, as *ArgSpec, this Value, args ...Value) Value {
+			func(th *Thread, as *ArgSpec, this Value, args []Value) Value {
 				query, _ := extractQuery(th, queryParams, as, args)
 				return IntVal(this.(*SuTran).Request(query))
 			}),
 		"Query1": methodRaw("(@args)",
-			func(th *Thread, as *ArgSpec, this Value, args ...Value) Value {
+			func(th *Thread, as *ArgSpec, this Value, args []Value) Value {
 				return tranQueryOne(th, this.(*SuTran), as, args, Only)
 			}),
 		"QueryFirst": methodRaw("(@args)",
-			func(th *Thread, as *ArgSpec, this Value, args ...Value) Value {
+			func(th *Thread, as *ArgSpec, this Value, args []Value) Value {
 				return tranQueryOne(th, this.(*SuTran), as, args, Next)
 			}),
 		"QueryLast": methodRaw("(@args)",
-			func(th *Thread, as *ArgSpec, this Value, args ...Value) Value {
+			func(th *Thread, as *ArgSpec, this Value, args []Value) Value {
 				return tranQueryOne(th, this.(*SuTran), as, args, Prev)
 			}),
 		"ReadCount": method0(func(this Value) Value {

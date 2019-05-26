@@ -3,7 +3,7 @@ package builtin
 import . "github.com/apmckinlay/gsuneido/runtime"
 
 var _ = builtin("Record(@args)",
-	func(_ *Thread, args ...Value) Value {
+	func(_ *Thread, args []Value) Value {
 		return newRecord(args)
 	})
 
@@ -23,16 +23,16 @@ func init() {
 			return this.(*SuRecord).GetDeps(ToStr(arg))
 		}),
 		"Delete": methodRaw("()",
-			func(t *Thread, as *ArgSpec, this Value, args ...Value) Value {
+			func(t *Thread, as *ArgSpec, this Value, args []Value) Value {
 				k, v := NewArgsIter(as, args)()
 				if k != nil || v != nil {
-					return obDelete(t, as, this, args...)
+					return obDelete(t, as, this, args)
 				}
 				this.(*SuRecord).DbDelete()
 				return nil
 			}),
 		"Invalidate": methodRaw("(@args)",
-			func(t *Thread, as *ArgSpec, this Value, args ...Value) Value {
+			func(t *Thread, as *ArgSpec, this Value, args []Value) Value {
 				iter := NewArgsIter(as, args)
 				for {
 					k, v := iter()
@@ -59,7 +59,7 @@ func init() {
 			return nil
 		}),
 		"Update": method("(record = false)",
-			func(t *Thread, this Value, args ...Value) Value {
+			func(t *Thread, this Value, args []Value) Value {
 				r := this.(*SuRecord)
 				var ob Container = r
 				if args[0] != False {

@@ -26,7 +26,7 @@ func threadCallClass(arg Value) Value {
 }
 
 var threadMethods = Methods{
-	"Name": method("(name=false)", func(t *Thread, _ Value, args ...Value) Value {
+	"Name": method("(name=false)", func(t *Thread, _ Value, args []Value) Value {
 		if args[0] != False {
 			t.Name = ToStr(args[0])
 		}

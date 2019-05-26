@@ -9,10 +9,10 @@ import (
 
 func init() {
 	BaseMethods = Methods{
-		"Base": method("()", func(t *Thread, this Value, args ...Value) Value {
+		"Base": method("()", func(t *Thread, this Value, args []Value) Value {
 			return base(t, this, func(v Value, _ *MemBase) Value { return v })
 		}),
-		"Base?": method("(class)", func(t *Thread, this Value, args ...Value) Value {
+		"Base?": method("(class)", func(t *Thread, this Value, args []Value) Value {
 			return base(t, this, func(v Value, _ *MemBase) Value {
 				if v == args[0] {
 					return True
@@ -21,11 +21,11 @@ func init() {
 			})
 		}),
 		"Eval": methodRaw("(@args)",
-			func(t *Thread, as *ArgSpec, this Value, args ...Value) Value {
+			func(t *Thread, as *ArgSpec, this Value, args []Value) Value {
 				return nilToEmptyStr(EvalAsMethod(t, as, this, args))
 			}),
 		"Eval2": methodRaw("(@args)",
-			func(t *Thread, as *ArgSpec, this Value, args ...Value) Value {
+			func(t *Thread, as *ArgSpec, this Value, args []Value) Value {
 				ob := &SuObject{}
 				if result := EvalAsMethod(t, as, this, args); result != nil {
 					ob.Add(result)
@@ -33,7 +33,7 @@ func init() {
 				return ob
 			}),
 		"GetDefault": method("(member, block)",
-			func(t *Thread, this Value, args ...Value) Value {
+			func(t *Thread, this Value, args []Value) Value {
 				if x := this.Get(t, args[0]); x != nil {
 					return x
 				}
@@ -42,7 +42,7 @@ func init() {
 				}
 				return args[1]
 			}),
-		"Member?": method("(string)", func(t *Thread, this Value, arg ...Value) Value {
+		"Member?": method("(string)", func(t *Thread, this Value, arg []Value) Value {
 			m := ToStr(arg[0])
 			result := this.(Findable).Finder(t, func(v Value, mb *MemBase) Value {
 				if _, ok := mb.Data[m]; ok {
@@ -52,7 +52,7 @@ func init() {
 			})
 			return nilToFalse(result)
 		}),
-		"Members": method("(all = false)", func(t *Thread, this Value, args ...Value) Value {
+		"Members": method("(all = false)", func(t *Thread, this Value, args []Value) Value {
 			if args[0] == True {
 				args[0] = nil
 			}
@@ -65,7 +65,7 @@ func init() {
 			list.Unique()
 			return list
 		}),
-		"Size": method("()", func(t *Thread, this Value, args ...Value) Value {
+		"Size": method("()", func(t *Thread, this Value, args []Value) Value {
 			return this.(Findable).Finder(t, func(_ Value, mb *MemBase) Value {
 				return IntVal(mb.Size())
 			})

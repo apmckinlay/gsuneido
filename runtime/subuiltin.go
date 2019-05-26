@@ -23,7 +23,7 @@ func (*BuiltinParams) Type() types.Type {
 
 // SuBuiltin is a Value for a built in function
 type SuBuiltin struct {
-	Fn func(t *Thread, args ...Value) Value
+	Fn func(t *Thread, args []Value) Value
 	BuiltinParams
 }
 
@@ -31,7 +31,7 @@ var _ Value = (*SuBuiltin)(nil)
 
 func (b *SuBuiltin) Call(t *Thread, as *ArgSpec) Value {
 	args := t.Args(&b.ParamSpec, as)
-	return b.Fn(t, args...)
+	return b.Fn(t, args)
 }
 
 // SuBuiltin0 is a Value for a builtin function with no arguments
@@ -101,7 +101,7 @@ func (b *SuBuiltin4) Call(t *Thread, as *ArgSpec) Value {
 
 // SuBuiltinRaw is a Value for a builtin function with no massage
 type SuBuiltinRaw struct {
-	Fn func(t *Thread, as *ArgSpec, args ...Value) Value
+	Fn func(t *Thread, as *ArgSpec, args []Value) Value
 	BuiltinParams
 }
 
@@ -110,20 +110,20 @@ var _ Value = (*SuBuiltinRaw)(nil)
 func (b *SuBuiltinRaw) Call(t *Thread, as *ArgSpec) Value {
 	base := t.sp - int(as.Nargs)
 	args := t.stack[base : base+int(as.Nargs)]
-	return b.Fn(t, as, args...)
+	return b.Fn(t, as, args)
 }
 
 // ------------------------------------------------------------------
 
 // SuBuiltinMethod is a Callable for a builtin method
 type SuBuiltinMethod struct {
-	Fn func(t *Thread, this Value, args ...Value) Value
+	Fn func(t *Thread, this Value, args []Value) Value
 	BuiltinParams
 }
 
 func (b *SuBuiltinMethod) Call(t *Thread, as *ArgSpec) Value {
 	args := t.Args(&b.ParamSpec, as)
-	return b.Fn(t, t.takeThis(), args...)
+	return b.Fn(t, t.takeThis(), args)
 }
 
 // SuBuiltinMethod0 is a Callable for a builtin method with no arguments
@@ -168,7 +168,7 @@ func (b *SuBuiltinMethod3) Call(t *Thread, as *ArgSpec) Value {
 
 // SuBuiltinMethodRaw is a Callable for a builtin function with no massage
 type SuBuiltinMethodRaw struct {
-	Fn func(t *Thread, as *ArgSpec, this Value, args ...Value) Value
+	Fn func(t *Thread, as *ArgSpec, this Value, args []Value) Value
 	ParamSpec
 }
 
@@ -177,5 +177,5 @@ var _ Callable = (*SuBuiltinMethodRaw)(nil)
 func (b *SuBuiltinMethodRaw) Call(t *Thread, as *ArgSpec) Value {
 	base := t.sp - int(as.Nargs)
 	args := t.stack[base : base+int(as.Nargs)]
-	return b.Fn(t, as, t.takeThis(), args...)
+	return b.Fn(t, as, t.takeThis(), args)
 }

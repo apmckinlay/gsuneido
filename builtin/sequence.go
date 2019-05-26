@@ -7,7 +7,7 @@ import (
 )
 
 var _ = builtinRaw("Sequence(iter)", // raw to get thread
-	func(t *Thread, as *ArgSpec, args ...Value) Value {
+	func(t *Thread, as *ArgSpec, args []Value) Value {
 		args = t.Args(&ParamSpec1, as)
 		return NewSuSequence(&wrapIter{iter: args[0], t: t})
 	})

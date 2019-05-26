@@ -6,6 +6,6 @@ import (
 
 var prevTimestamp SuDate
 
-var _ = builtin("Timestamp()", func(t *Thread, args ...Value) Value {
+var _ = builtin("Timestamp()", func(t *Thread, args []Value) Value {
 	return t.Dbms().Timestamp()
 })
