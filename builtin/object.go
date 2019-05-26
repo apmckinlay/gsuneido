@@ -121,6 +121,9 @@ func init() {
 		"Member?": method1("(member)", func(this Value, val Value) Value {
 			return SuBool(ToContainer(this).HasKey(val))
 		}),
+		"Readonly?": method0(func(this Value) Value {
+			return SuBool(ToContainer(this).IsReadOnly())
+		}),
 		"Reverse!": method0(func(this Value) Value {
 			ToContainer(this).ToObject().Reverse()
 			return this

@@ -14,6 +14,7 @@ type Container interface {
 	Erase(t *Thread, key Value) bool
 	Delete(t *Thread, key Value) bool
 	GetIfPresent(t *Thread, key Value) Value
+	IsReadOnly() bool
 	SetReadOnly()
 	ArgsIter() func() (Value, Value)
 	Iter2(list bool, named bool) func() (Value, Value)

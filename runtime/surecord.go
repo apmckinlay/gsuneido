@@ -179,6 +179,10 @@ func (r *SuRecord) SetReadOnly() {
 	r.ob.SetReadOnly()
 }
 
+func (r *SuRecord) IsReadOnly() bool {
+	return r.ob.IsReadOnly()
+}
+
 func (r *SuRecord) Delete(t *Thread, key Value) bool {
 	r.ob.mustBeMutable()
 	r.ToObject()
