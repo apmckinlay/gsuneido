@@ -54,12 +54,12 @@ var _ = builtin1("DeleteFileApi(filename)",
 	func(arg Value) Value {
 		err := os.Remove(ToStr(arg))
 		if err != nil {
-			panic("DeleteFile: " + err.Error())
+			return False
 		}
 		return True
 	})
 
-var _ = builtin1("FileExists(filename)",
+var _ = builtin1("FileExists?(filename)",
 	func(arg Value) Value {
 		_, err := os.Stat(ToStr(arg))
 		if err == nil {
@@ -71,7 +71,7 @@ var _ = builtin1("FileExists(filename)",
 		panic("FileExists: " + err.Error())
 	})
 
-var _ = builtin1("DirExists(filename)",
+var _ = builtin1("DirExists?(filename)",
 	func(arg Value) Value {
 		info, err := os.Stat(ToStr(arg))
 		if err == nil {

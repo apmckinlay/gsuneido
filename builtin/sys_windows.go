@@ -26,7 +26,7 @@ var _ = builtin0("SystemMemory()", func() Value {
 })
 
 var _ = builtin0("OperatingSystem()", func() Value {
-	return SuStr("windows") //TODO version
+	return SuStr("Windows") //TODO version
 })
 
 var getDiskFreeSpaceEx = kernel32.NewProc("GetDiskFreeSpaceExA")
