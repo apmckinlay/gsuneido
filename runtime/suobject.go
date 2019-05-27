@@ -88,6 +88,15 @@ func (ob *SuObject) ListGet(i int) Value {
 	return ob.list[i]
 }
 
+// NamedGet returns a value from the named or nil if not found
+func (ob *SuObject) NamedGet(key Value) Value {
+	val := ob.named.Get(key)
+	if val == nil {
+		return nil
+	}
+	return val.(Value)
+}
+
 // Put adds or updates the given key and value
 // The value will be added to the list if the key is the "next"
 func (ob *SuObject) Put(_ *Thread, key Value, val Value) {

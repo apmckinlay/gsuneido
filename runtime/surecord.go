@@ -221,6 +221,10 @@ func (r *SuRecord) NamedSize() int {
 	return r.ToObject().NamedSize()
 }
 
+func (r *SuRecord) NamedGet(key Value) Value {
+	return r.ToObject().NamedGet(key)
+}
+
 func (r *SuRecord) ArgsIter() func() (Value, Value) {
 	return r.ToObject().ArgsIter()
 }

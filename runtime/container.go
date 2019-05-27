@@ -7,6 +7,7 @@ type Container interface {
 	ListSize() int
 	ListGet(i int) Value
 	NamedSize() int
+	NamedGet(k Value) Value
 	Copy() Container
 	Slice(n int) Container
 	Clear()
@@ -39,6 +40,7 @@ func containerEqual(x Container, y Container, inProgress pairs) bool {
 			return false
 		}
 	}
+	// NOTE: does NOT apply default or rules
 	if x.NamedSize() > 0 {
 		iter := x.Iter2(false, true)
 		for {
@@ -46,7 +48,7 @@ func containerEqual(x Container, y Container, inProgress pairs) bool {
 			if k == nil {
 				break
 			}
-			yk := y.GetIfPresent(nil, k) //TODO need thread for record
+			yk := y.NamedGet(k)
 			if yk == nil || !deepEqual(v.(Value), yk.(Value), inProgress) {
 				return false
 			}
