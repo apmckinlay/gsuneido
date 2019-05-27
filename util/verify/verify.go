@@ -7,9 +7,14 @@ For example:
 */
 package verify
 
+import (
+	"runtime/debug"
+)
+
 // That panics if its argument is false
 func That(cond bool) {
 	if !cond {
+		debug.PrintStack()
 		panic("verify failed")
 	}
 }
