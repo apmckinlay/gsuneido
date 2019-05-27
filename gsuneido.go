@@ -142,7 +142,7 @@ func libload(t *Thread, name string) (result Value) {
 	}
 	// want to include the library from the start (rather than adding after)
 	// so it propogates to nested Named values
-	result = compile.NamedConstant("stdlib:"+name, string(defs[1]))
+	result = compile.NamedConstant(name, defs[1])
 	// fmt.Println("LOAD", name, "SUCCEEDED")
 	return
 }

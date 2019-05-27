@@ -16,7 +16,7 @@ func EvalString(t *Thread, s string) Value {
 		if x := Global.GetName(t, s); x != nil {
 			return x
 		}
-		panic("uninitialized global: " + s)
+		panic("can't find " + s)
 	}
 	s = "function () {\n" + s + "\n}"
 	fn := compile.NamedConstant("eval", s).(*SuFunc)

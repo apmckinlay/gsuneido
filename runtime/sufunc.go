@@ -38,7 +38,9 @@ type SuFunc struct {
 var _ Value = (*SuFunc)(nil)
 
 func (f *SuFunc) Call(t *Thread, as *ArgSpec) Value {
+	saveThis := t.this
 	args := t.Args(&f.ParamSpec, as)
+	t.this = saveThis
 	for i, flag := range f.Flags {
 		if flag&DotParam == DotParam {
 			name := f.Names[i]

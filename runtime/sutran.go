@@ -136,8 +136,10 @@ func (st *SuTran) Rollback() {
 	if st.state == committed {
 		panic("can't Rollback a transaction after Complete")
 	}
-	st.itran.Abort()
-	st.state = aborted
+	if st.state != aborted {
+		st.itran.Abort()
+		st.state = aborted
+	}
 }
 
 func (st *SuTran) Updatable() bool {

@@ -61,7 +61,7 @@ func (t *Thread) run() Value {
 
 	catchJump := 0
 	catchSp := -1
-	for i := 0; i < 4; i++ {
+	for {
 		result := t.interp(&catchJump, &catchSp)
 		if result == nil {
 			// fmt.Println("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<")
@@ -81,7 +81,6 @@ func (t *Thread) run() Value {
 		t.Push(result) // SuExcept
 		// loop and re-enter interp
 	}
-	panic("Run too many loops")
 }
 
 // interp is the main interpreter loop
@@ -198,7 +197,7 @@ loop:
 			gn := fetchUint16()
 			val := Global.Get(t, gn)
 			if val == nil {
-				panic("uninitialized global: " + Global.Name(gn))
+				panic("can't find " + Global.Name(gn))
 			}
 			t.Push(val)
 		case op.Get:
