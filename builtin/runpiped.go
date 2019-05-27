@@ -76,35 +76,35 @@ func (rp *suRunPiped) close() {
 var _ Value = (*suRunPiped)(nil)
 
 func (*suRunPiped) Get(*Thread, Value) Value {
-	panic("File does not support get")
+	panic("RunPiped does not support get")
 }
 
 func (*suRunPiped) Put(*Thread, Value, Value) {
-	panic("File does not support put")
+	panic("RunPiped does not support put")
 }
 
 func (*suRunPiped) RangeTo(int, int) Value {
-	panic("File does not support range")
+	panic("RunPiped does not support range")
 }
 
 func (*suRunPiped) RangeLen(int, int) Value {
-	panic("File does not support range")
+	panic("RunPiped does not support range")
 }
 
 func (*suRunPiped) Hash() uint32 {
-	panic("File hash not implemented")
+	panic("RunPiped hash not implemented")
 }
 
 func (*suRunPiped) Hash2() uint32 {
-	panic("File hash not implemented")
+	panic("RunPiped hash not implemented")
 }
 
 func (*suRunPiped) Compare(Value) int {
-	panic("File compare not implemented")
+	panic("RunPiped compare not implemented")
 }
 
 func (*suRunPiped) Call(*Thread, *ArgSpec) Value {
-	panic("can't call File")
+	panic("can't call RunPiped")
 }
 
 func (rp *suRunPiped) String() string {
@@ -112,7 +112,7 @@ func (rp *suRunPiped) String() string {
 }
 
 func (*suRunPiped) Type() types.Type {
-	return types.File
+	return types.RunPiped
 }
 
 func (rp *suRunPiped) Equal(other interface{}) bool {
