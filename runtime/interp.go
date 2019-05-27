@@ -60,8 +60,9 @@ func (t *Thread) run() Value {
 	}
 
 	catchJump := 0
+	catchSp := -1
 	for i := 0; i < 4; i++ {
-		result := t.interp(&catchJump)
+		result := t.interp(&catchJump, &catchSp)
 		if result == nil {
 			// fmt.Println("<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<<")
 			t.fp = fp - 1
@@ -71,11 +72,12 @@ func (t *Thread) run() Value {
 			return t.Top()
 		}
 		// try block threw
-		t.sp = sp
+		t.sp = catchSp
 		t.fp = fp
 		fr := &t.frames[t.fp-1]
 		fr.ip = catchJump
-		catchJump = 0  // no longer catching
+		catchJump = 0 // no longer catching
+		catchSp = -1
 		t.Push(result) // SuExcept
 		// loop and re-enter interp
 	}
@@ -85,7 +87,7 @@ func (t *Thread) run() Value {
 // interp is the main interpreter loop
 // It normally returns nil, with the return value (if any) on the stack
 // Returns *SuExcept if there was an exception/panic
-func (t *Thread) interp(catchJump *int) (ret Value) {
+func (t *Thread) interp(catchJump, catchSp *int) (ret Value) {
 	fr := &t.frames[t.fp-1]
 	code := fr.fn.Code
 	super := 0
@@ -145,7 +147,7 @@ func (t *Thread) interp(catchJump *int) (ret Value) {
 
 loop:
 	for fr.ip < len(code) {
-		// fmt.Println("stack:", t.stack[ints.Max(0, t.sp-3):t.sp])
+		// fmt.Println("stack:", t.sp, t.stack[ints.Max(0, t.sp-3):t.sp])
 		// _, da := Disasm1(fr.fn, fr.ip)
 		// fmt.Printf("%d: %s\n", fr.ip, da)
 		oc := op.Opcode(code[fr.ip])
@@ -381,10 +383,10 @@ loop:
 			break loop
 		case op.Try:
 			*catchJump = fr.ip + fetchInt16()
+			*catchSp = t.sp
 			catchPat = string(fr.fn.Values[fetchUint8()].(SuStr))
 		case op.Catch:
 			fr.ip += fetchInt16()
-			*catchJump = 0
 		case op.Throw:
 			panic(t.Pop())
 		case op.Block:
