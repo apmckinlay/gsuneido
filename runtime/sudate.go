@@ -748,7 +748,7 @@ func (d SuDate) Compare(other Value) int {
 	return 0
 }
 
-func (SuDate) Call(*Thread, *ArgSpec) Value {
+func (SuDate) Call(*Thread, Value, *ArgSpec) Value {
 	panic("can't call Date")
 }
 

@@ -85,16 +85,15 @@ func (c *SuClass) get1(t *Thread, this Value, mem string) Value {
 	}
 	if !c.noGetter {
 		if getter := c.get2(t, "Getter_"); getter != nil {
-			t.this = this
 			t.Push(SuStr(mem))
-			return getter.Call(t, ArgSpec1)
+			return getter.Call(t, this, ArgSpec1)
+			//BUG not resetting sp ?
 		}
 		c.noGetter = true
 	}
 	getterName := "Getter_" + mem
 	if getter := c.get2(t, getterName); getter != nil {
-		t.this = this
-		return getter.Call(t, ArgSpec0)
+		return getter.Call(t, this, ArgSpec0)
 	}
 	return nil
 }
@@ -187,7 +186,7 @@ type defaultAdapter struct {
 	method string
 }
 
-func (d *defaultAdapter) Call(t *Thread, as *ArgSpec) Value {
+func (d *defaultAdapter) Call(t *Thread, this Value, as *ArgSpec) Value {
 	method := SuStr(d.method)
 	if as.Each >= EACH {
 		args := ToContainer(t.Pop()).Slice(int(as.Each) - 1)
@@ -206,13 +205,12 @@ func (d *defaultAdapter) Call(t *Thread, as *ArgSpec) Value {
 		as2.Nargs++
 		as = &as2
 	}
-	return d.fn.Call(t, as)
+	return d.fn.Call(t, this, as)
 }
 
-func (c *SuClass) Call(t *Thread, as *ArgSpec) Value {
+func (c *SuClass) Call(t *Thread, _ Value, as *ArgSpec) Value {
 	if f := c.get2(t, "CallClass"); f != nil {
-		t.this = c
-		return f.Call(t, as)
+		return f.Call(t, c, as)
 	}
 	// default for calling a class is to create an instance
 	return c.New(t, as)
@@ -221,8 +219,7 @@ func (c *SuClass) Call(t *Thread, as *ArgSpec) Value {
 func (c *SuClass) New(t *Thread, as *ArgSpec) Value {
 	ob := NewInstance(c)
 	nu := c.Lookup(t, "New")
-	t.this = ob
-	nu.Call(t, as)
+	nu.Call(t, ob, as)
 	return ob
 }
 

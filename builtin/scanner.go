@@ -48,7 +48,7 @@ func (*SuScanner) Compare(Value) int {
 	panic("Scanner compare not implemented")
 }
 
-func (*SuScanner) Call(*Thread, *ArgSpec) Value {
+func (*SuScanner) Call(*Thread, Value, *ArgSpec) Value {
 	panic("can't call Scanner")
 }
 

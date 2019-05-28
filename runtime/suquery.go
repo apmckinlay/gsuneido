@@ -44,7 +44,7 @@ func (qc *SuQueryCursor) Compare(Value) int {
 	panic(qc.which + " compare not implemented")
 }
 
-func (qc *SuQueryCursor) Call(*Thread, *ArgSpec) Value {
+func (qc *SuQueryCursor) Call(*Thread, Value, *ArgSpec) Value {
 	panic("can't call " + qc.which)
 }
 

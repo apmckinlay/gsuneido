@@ -146,9 +146,9 @@ func (c SuConcat) Compare(other Value) int {
 	return strings.Compare(c.toStr(), AsStr(other))
 }
 
-func (c SuConcat) Call(t *Thread, as *ArgSpec) Value {
+func (c SuConcat) Call(t *Thread, this Value, as *ArgSpec) Value {
 	ss := SuStr(c.toStr())
-	return ss.Call(t, as)
+	return ss.Call(t, this, as)
 }
 
 func (SuConcat) Lookup(_ *Thread, method string) Callable {

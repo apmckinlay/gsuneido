@@ -41,8 +41,7 @@ func (wi *wrapIter) Dup() Iter {
 }
 
 func (wi *wrapIter) call(method string) Value {
-	wi.t.Push(wi.iter)
-	return wi.t.CallMethod(method, ArgSpec0)
+	return wi.t.CallMethod(wi.iter, method, ArgSpec0)
 }
 
 var _ Iter = (*wrapIter)(nil)

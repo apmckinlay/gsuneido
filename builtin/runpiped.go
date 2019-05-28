@@ -103,7 +103,7 @@ func (*suRunPiped) Compare(Value) int {
 	panic("RunPiped compare not implemented")
 }
 
-func (*suRunPiped) Call(*Thread, *ArgSpec) Value {
+func (*suRunPiped) Call(*Thread, Value, *ArgSpec) Value {
 	panic("can't call RunPiped")
 }
 
@@ -112,7 +112,7 @@ func (rp *suRunPiped) String() string {
 }
 
 func (*suRunPiped) Type() types.Type {
-	return types.RunPiped
+	return 0 //TODO types.RunPiped
 }
 
 func (rp *suRunPiped) Equal(other interface{}) bool {

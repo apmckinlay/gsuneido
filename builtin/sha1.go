@@ -59,7 +59,7 @@ func (*SuSha1) Compare(Value) int {
 	panic("Sha1 compare not implemented")
 }
 
-func (*SuSha1) Call(*Thread, *ArgSpec) Value {
+func (*SuSha1) Call(*Thread, Value, *ArgSpec) Value {
 	panic("can't call Sha1")
 }
 

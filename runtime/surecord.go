@@ -94,7 +94,7 @@ func (r *SuRecord) Show() string {
 	return "[" + s[2:len(s)-1] + "]"
 }
 
-func (*SuRecord) Call(*Thread, *ArgSpec) Value {
+func (*SuRecord) Call(*Thread, Value, *ArgSpec) Value {
 	panic("can't call Record")
 }
 
@@ -308,7 +308,7 @@ func (r *SuRecord) callObservers2(t *Thread, key string) {
 			func(ofn Value, key string) {
 				r.activeObservers.Push(activeObserver{ofn, key})
 				defer r.activeObservers.Pop()
-				t.CallAsMethod(r, ofn, SuStr(key)) // TODO member: named arg
+				t.CallAsMethod(ofn, r, SuStr(key)) // TODO member: named arg
 			}(ofn, key)
 		}
 	}
@@ -425,7 +425,7 @@ func (r *SuRecord) catchRule(t *Thread, rule Value, key string) Value {
 			panic(toStr(e) + " (rule for " + key + ")")
 		}
 	}()
-	return t.CallAsMethod(r, rule)
+	return t.CallAsMethod(rule, r)
 }
 
 // activeRules stack

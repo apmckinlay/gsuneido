@@ -58,6 +58,6 @@ var zlibMethods = Methods{
 	}),
 }
 
-func (z *suZlib) Call(*Thread, *ArgSpec) Value {
-	panic("cannot call zlib")
+func (z *suZlib) Call(*Thread, Value, *ArgSpec) Value {
+	panic("can't call zlib")
 }

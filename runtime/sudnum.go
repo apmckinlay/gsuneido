@@ -80,7 +80,7 @@ func (dn SuDnum) Compare(other Value) int {
 	return dnum.Compare(dn.Dnum, ToDnum(other))
 }
 
-func (SuDnum) Call(*Thread, *ArgSpec) Value {
+func (SuDnum) Call(*Thread, Value, *ArgSpec) Value {
 	panic("can't call Number")
 }
 

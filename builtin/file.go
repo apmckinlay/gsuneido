@@ -77,7 +77,7 @@ func (*suFile) Compare(Value) int {
 	panic("File compare not implemented")
 }
 
-func (*suFile) Call(*Thread, *ArgSpec) Value {
+func (*suFile) Call(*Thread, Value, *ArgSpec) Value {
 	panic("can't call File")
 }
 

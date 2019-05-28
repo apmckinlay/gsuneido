@@ -74,7 +74,7 @@ type Value interface {
 
 // Callable is returned by Lookup
 type Callable interface {
-	Call(t *Thread, as *ArgSpec) Value
+	Call(t *Thread, this Value, as *ArgSpec) Value
 }
 
 type Ord = int

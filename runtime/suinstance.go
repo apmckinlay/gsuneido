@@ -20,8 +20,7 @@ func (ob *SuInstance) Base() *SuClass {
 // to handle user defined ToString
 func (ob *SuInstance) ToString(t *Thread) string {
 	if f := ob.class.get2(t, "ToString"); f != nil {
-		t.this = ob
-		x := f.Call(t, ArgSpec0)
+		x := f.Call(t, ob, ArgSpec0)
 		if x != nil {
 			if s, ok := x.ToStr(); ok {
 				return s
@@ -138,10 +137,9 @@ func (ob *SuInstance) Lookup(t *Thread, method string) Callable {
 	return ob.class.get2(t, method)
 }
 
-func (ob *SuInstance) Call(t *Thread, as *ArgSpec) Value {
+func (ob *SuInstance) Call(t *Thread, _ Value, as *ArgSpec) Value {
 	if f := ob.class.get2(t, "Call"); f != nil {
-		t.this = ob
-		return f.Call(t, as)
+		return f.Call(t, ob, as)
 	}
 	panic("method not found: Call")
 }

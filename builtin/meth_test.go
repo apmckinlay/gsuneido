@@ -12,6 +12,6 @@ func Test_MethodCall(t *testing.T) {
 	th := NewThread()
 	f := n.Lookup(th, "Round")
 	th.Push(IntVal(1))
-	result := CallMethod(th, n, f, ArgSpec1)
+	result := f.Call(th, n, ArgSpec1)
 	Assert(t).That(result, Equals(NumFromString("12.3")))
 }

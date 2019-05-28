@@ -121,7 +121,7 @@ func (seq *SuSequence) Compare(other Value) int {
 	return seq.ob.Compare(other)
 }
 
-func (*SuSequence) Call(*Thread, *ArgSpec) Value {
+func (*SuSequence) Call(*Thread, Value, *ArgSpec) Value {
 	panic("can't call Object")
 }
 

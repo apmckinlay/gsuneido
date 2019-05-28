@@ -59,7 +59,7 @@ func (*SuAdler32) Compare(Value) int {
 	panic("Adler32 compare not implemented")
 }
 
-func (*SuAdler32) Call(*Thread, *ArgSpec) Value {
+func (*SuAdler32) Call(*Thread, Value, *ArgSpec) Value {
 	panic("can't call Adler32")
 }
 

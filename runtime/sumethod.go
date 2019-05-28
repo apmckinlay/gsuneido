@@ -14,19 +14,31 @@ func (m *SuMethod) GetFn() Value {
 	return m.fn
 }
 
+// methodForce ignores the "this" passed to Call.
+// It is used by Lookup to ensure Params and Disasm get the right "this".
+type methodForce struct {
+	SuMethod
+}
+
+func (m *methodForce) Call(t *Thread, _ Value, as *ArgSpec) Value {
+	return m.fn.Call(t, m.this, as)
+}
+
 // Value interface --------------------------------------------------
 
 var _ Value = (*SuMethod)(nil)
 
-func (m *SuMethod) Call(t *Thread, as *ArgSpec) Value {
-	t.this = m.this
-	return m.fn.Call(t, as)
+func (m *SuMethod) Call(t *Thread, this Value, as *ArgSpec) Value {
+	if this == nil {
+		this = m.this
+	}
+	return m.fn.Call(t, this, as)
 }
 
 // Lookup is used for .Params or .Disasm
 func (m *SuMethod) Lookup(t *Thread, method string) Callable {
 	if f := m.fn.Lookup(t, method); f != nil {
-		return &SuMethod{fn: f.(Value), this: m.fn}
+		return &methodForce{SuMethod{fn: f.(Value), this: m.fn}}
 	}
 	return nil
 }

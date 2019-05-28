@@ -17,7 +17,7 @@ func (b *SuBlock) String() string {
 	return "/* block */"
 }
 
-func (b *SuBlock) Call(t *Thread, as *ArgSpec) Value {
+func (b *SuBlock) Call(t *Thread, this Value, as *ArgSpec) Value {
 	bf := &b.SuFunc
 
 	// normally done by SuFunc Call
@@ -28,10 +28,8 @@ func (b *SuBlock) Call(t *Thread, as *ArgSpec) Value {
 		b.locals[int(bf.Offset)+i] = args[i]
 	}
 
-	// normally done by Thread.Call
-	this := b.this
-	if t.this != nil { // used by object.Eval(block)
-		this = t.takeThis()
+	if this == nil {
+		this = b.this
 	}
 	t.frames[t.fp] = Frame{fn: bf, locals: b.locals, this: this}
 	return t.run()

@@ -63,7 +63,7 @@ func (*SuTran) Compare(Value) int {
 	panic("transaction compare not implemented")
 }
 
-func (*SuTran) Call(*Thread, *ArgSpec) Value {
+func (*SuTran) Call(*Thread, Value, *ArgSpec) Value {
 	panic("can't call transaction")
 }
 

@@ -391,7 +391,7 @@ func cmp3(x Value, y Value, inProgress pairs) int {
 	return cmp2(xo, yo, inProgress)
 }
 
-func (*SuObject) Call(*Thread, *ArgSpec) Value {
+func (*SuObject) Call(*Thread, Value, *ArgSpec) Value {
 	panic("can't call Object")
 }
 

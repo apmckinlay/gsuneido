@@ -33,10 +33,6 @@ type Thread struct {
 	// spMax is the "high water" mark for sp
 	spMax int
 
-	// this is used to pass "this" from interp to method
-	// it is only temporary, Frame.this is the real "this"
-	this Value
-
 	// RxCache is per thread so no locking is required
 	RxCache *regex.PatternCache
 	// TrCache is per thread so no locking is required
@@ -105,60 +101,56 @@ func (t *Thread) Reset() {
 
 // CallWithArgs pushes the arguments onto the stack and calls the function
 func (t *Thread) CallWithArgs(fn Value, args ...Value) Value {
+	return t.callWithArgs(fn, nil, args)
+}
+
+func (t *Thread) callWithArgs(fn Value, this Value, args []Value) Value {
 	verify.That(len(args) < AsEach)
 	as := StdArgSpecs[len(args)]
+	return t.pushCall(fn, this, as, args)
+}
+
+// pushCall pushes the arguments onto the stack and calls the function
+func (t *Thread) pushCall(fn Value, this Value, as *ArgSpec, args []Value) Value {
 	base := t.sp
 	for _, x := range args {
 		t.Push(x)
 	}
-	result := fn.Call(t, as)
+	result := fn.Call(t, this, as)
 	t.sp = base
 	return result
 }
 
 // CallWithArgSpec pushes the arguments onto the stack and calls the function
 func (t *Thread) CallWithArgSpec(fn Value, as *ArgSpec, args ...Value) Value {
-	base := t.sp
-	for _, x := range args {
-		t.Push(x)
-	}
-	result := fn.Call(t, as)
-	t.sp = base
-	return result
+	return t.pushCall(fn, nil, as, args)
 }
 
 // CallMethod calls a *named* method.
-// Arguments (including "this") should be on the stack
-func (t *Thread) CallMethod(method string, argSpec *ArgSpec) Value {
-	base := t.sp - int(argSpec.Nargs) - 1
-	ob := t.stack[base]
-	f := ob.Lookup(t, method)
+// Arguments should be on the stack
+func (t *Thread) CallMethod(this Value, method string, as *ArgSpec) Value {
+	f := this.Lookup(t, method)
 	if f == nil {
-		panic("method not found: " + ob.Type().String() + "." + method)
+		panic("method not found: " + this.Type().String() + "." + method)
 	}
-	result := CallMethod(t, ob, f, argSpec)
+	base := t.sp - int(as.Nargs)
+	result := f.Call(t, this, as)
 	t.sp = base
 	return result
 }
 
 // CallAsMethod runs a function as if it were a method of an object.
-// Implements object.Eval
-func (t *Thread) CallAsMethod(ob, fn Value, args ...Value) Value {
-	if m, ok := fn.(*SuMethod); ok {
-		fn = m.GetFn()
-	}
-	t.this = ob
-	t.Push(ob)
-	return t.CallWithArgs(fn, args...)
+func (t *Thread) CallAsMethod(fn Value, this Value, args ...Value) Value {
+	return t.callWithArgs(fn, this, args)
 }
 
 func (t *Thread) CallMethodWithArgSpec(
 	this Value, method string, as *ArgSpec, args ...Value) Value {
-	t.Push(this)
 	for _, x := range args {
 		t.Push(x)
 	}
-	return t.CallMethod(method, as)
+	return t.CallMethod(this, method, as)
+	//BUG not resetting sp ?
 }
 
 // Callstack captures the call stack
@@ -201,10 +193,4 @@ func (t *Thread) Close() {
 	if t.dbms != nil {
 		t.dbms.Close()
 	}
-}
-
-func (t *Thread) takeThis() Value {
-	tmp := t.this
-	t.this = nil
-	return tmp
 }

@@ -59,7 +59,7 @@ func (*SuMd5) Compare(Value) int {
 	panic("Md5 compare not implemented")
 }
 
-func (*SuMd5) Call(*Thread, *ArgSpec) Value {
+func (*SuMd5) Call(*Thread, Value, *ArgSpec) Value {
 	panic("can't call Md5")
 }
 

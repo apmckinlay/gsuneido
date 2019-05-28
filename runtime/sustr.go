@@ -129,7 +129,7 @@ func (ss SuStr) Compare(other Value) int {
 }
 
 // Call implements s(ob, ...) being treated as ob[s](...)
-func (ss SuStr) Call(t *Thread, as *ArgSpec) Value {
+func (ss SuStr) Call(t *Thread, _ Value, as *ArgSpec) Value {
 	base := t.sp - int(as.Nargs)
 	args := t.stack[base : base+int(as.Nargs)]
 	k, v := NewArgsIter(as, args)()
@@ -141,13 +141,7 @@ func (ss SuStr) Call(t *Thread, as *ArgSpec) Value {
 	if fn == nil {
 		panic("method not found " + ErrType(v) + "." + method)
 	}
-	if as.Each >= EACH {
-		ob := t.Pop()
-		t.Push(v)
-		t.Push(ob)
-	}
-	t.this = v
-	return fn.Call(t, as.DropFirst())
+	return fn.Call(t, v, as.DropFirst())
 }
 
 // StringMethods is initialized by the builtin package

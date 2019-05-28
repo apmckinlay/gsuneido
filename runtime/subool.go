@@ -103,7 +103,7 @@ func (b SuBool) Not() SuBool {
 	return SuBool(!bool(b))
 }
 
-func (SuBool) Call(*Thread, *ArgSpec) Value {
+func (SuBool) Call(*Thread, Value, *ArgSpec) Value {
 	panic("can't call Boolean")
 }
 

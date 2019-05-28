@@ -13,20 +13,14 @@ var BlockReturn = &SuExcept{SuStr: SuStr("block return")}
 
 // Call sets up a frame to Run a compiled Suneido function
 // The stack must already be in the form required by the function (massaged)
-func (t *Thread) Call(fn *SuFunc) Value {
+func (t *Thread) Call(fn *SuFunc, this Value) Value {
 	// reserve stack space for locals
 	for expand := fn.Nlocals - fn.Nparams; expand > 0; expand-- {
 		t.Push(nil)
 	}
-	t.frames[t.fp] = Frame{fn: fn, this: t.takeThis(),
+	t.frames[t.fp] = Frame{fn: fn, this: this,
 		locals: t.stack[t.sp-int(fn.Nlocals) : t.sp]}
 	return t.run()
-}
-
-// CallMethod calls a Value with a given "this"
-func CallMethod(t *Thread, this Value, f Callable, as *ArgSpec) Value {
-	t.this = this
-	return f.Call(t, as)
 }
 
 // run is needed in addition to interp
@@ -412,7 +406,7 @@ loop:
 				argSpec = fr.fn.ArgSpecs[ai-len(StdArgSpecs)]
 			}
 			base := t.sp - int(argSpec.Nargs)
-			result := f.Call(t, argSpec)
+			result := f.Call(t, nil, argSpec)
 			t.sp = base
 			t.Push(result)
 		case op.Super:
@@ -435,8 +429,7 @@ loop:
 					super = 0
 				}
 				if f := ob.Lookup(t, string(methstr)); f != nil {
-					t.this = this
-					result := f.Call(t, argSpec)
+					result := f.Call(t, this, argSpec)
 					t.sp = base
 					t.Push(result)
 					break

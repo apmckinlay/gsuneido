@@ -102,7 +102,7 @@ func eval(src string) {
 	// DisasmMixed(os.Stdout, fn, src)
 
 	mainThread.Reset()
-	result := mainThread.Call(fn)
+	result := mainThread.Call(fn, nil)
 	if result != nil {
 		prompt(">>> ")
 		fmt.Println(WithType(result))
@@ -123,7 +123,15 @@ func printCallStack(cs *SuObject) {
 		return
 	}
 	for i := 0; i < cs.ListSize(); i++ {
-		fmt.Println(cs.ListGet(i))
+		frame := cs.ListGet(i)
+		fn := frame.Get(nil, SuStr("fn"))
+		fmt.Println(fn)
+		locals := frame.Get(nil, SuStr("locals"))
+		s := locals.String()
+		if len(s) > 230 {
+			s = s[:230] + "..."
+		}
+		fmt.Println(s)
 	}
 }
 

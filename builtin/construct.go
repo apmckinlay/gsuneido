@@ -11,13 +11,12 @@ var _ = builtin("Construct(what, suffix='')",
 		what := args[0]
 		suffix := ToStr(args[1])
 		as := ArgSpec0
-		var arg Value
 		if c, ok := what.ToContainer(); ok {
 			what = c.ListGet(0)
 			if what == nil {
 				panic("Construct: object requires member 0")
 			}
-			arg = c
+			t.Push(c)
 			as = ArgSpecEach1
 		}
 		if s, ok := what.ToStr(); ok {
@@ -26,9 +25,6 @@ var _ = builtin("Construct(what, suffix='')",
 			}
 			what = Global.GetName(t, s)
 		}
-		t.Push(what)
-		if arg != nil {
-			t.Push(arg)
-		}
-		return t.CallMethod("*new*", as)
+		return t.CallMethod(what, "*new*", as)
+		//BUG not resetting sp ?
 	})

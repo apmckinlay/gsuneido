@@ -14,7 +14,7 @@ type SuIter struct {
 
 var _ Value = (*SuIter)(nil)
 
-func (SuIter) Call(*Thread, *ArgSpec) Value {
+func (SuIter) Call(*Thread, Value, *ArgSpec) Value {
 	panic("can't call Iterator")
 }
 

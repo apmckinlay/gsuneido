@@ -16,7 +16,7 @@ func TestNaming(t *testing.T) {
 	test := func(src, expected string) {
 		t.Helper()
 		c := compile.Constant("function () {\n" + src + "\n}").(*SuFunc)
-		result := NewThread().Call(c)
+		result := NewThread().Call(c, nil)
 		Assert(t).That(result, Equals(SuStr(expected)))
 	}
 	test(`foo = function(){}; Name(foo)`, "foo")
@@ -108,7 +108,7 @@ func pt_execute(args []string, _ []bool) bool {
 		expected = "throws " + args[2]
 		e := Catch(func() {
 			fn := compile.Constant(src).(*SuFunc)
-			actual = th.Call(fn)
+			actual = th.Call(fn, nil)
 		})
 		if e == nil {
 			success = false
@@ -127,7 +127,7 @@ func pt_execute(args []string, _ []bool) bool {
 		}
 	} else {
 		fn := compile.Constant(src).(*SuFunc)
-		actual = th.Call(fn)
+		actual = th.Call(fn, nil)
 		if actual == nil {
 			success = false
 		} else if expected == "**notfalse**" {
@@ -254,7 +254,7 @@ func BenchmarkInterp(b *testing.B) {
 	th := &Thread{}
 	for n := 0; n < b.N; n++ {
 		th.Reset()
-		result := th.Call(fn)
+		result := th.Call(fn, nil)
 		if !result.Equal(SuInt(4950)) {
 			panic("wrong result " + result.String())
 		}
@@ -267,6 +267,6 @@ func BenchmarkCall(b *testing.B) {
 	th := NewThread()
 	th.Push(SuInt(123))
 	for i := 0; i < b.N; i++ {
-		f.Call(th, as)
+		f.Call(th, nil, as)
 	}
 }

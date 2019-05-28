@@ -135,7 +135,7 @@ func (si *smi) Compare(other Value) int {
 	return dnum.Compare(dn, ToDnum(other))
 }
 
-func (*smi) Call(*Thread, *ArgSpec) Value {
+func (*smi) Call(*Thread, Value, *ArgSpec) Value {
 	panic("can't call Number")
 }
 
