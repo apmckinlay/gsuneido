@@ -61,5 +61,9 @@ func TestBlocks(t *testing.T) {
 			x))`)
 	test("b = { .x }", // "this" means closure
 		`Binary(Eq b Block(
-        	Mem(this "x")))`)
+			Mem(this "x")))`)
+	test("b1 = {|p| b2 = { p }}", // inner references outer param
+		`Binary(Eq b1 Block(p
+        	Binary(Eq b2 Block(
+        	p))))`)
 }

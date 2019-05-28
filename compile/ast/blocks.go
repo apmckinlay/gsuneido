@@ -15,6 +15,7 @@ var yes = struct{}{}
 type blok struct {
 	block  *Block
 	parent *blok
+	params set
 	vars   set
 }
 
@@ -32,7 +33,7 @@ type bloks struct {
 // they are checked as constructed bottom up.
 func Blocks(f *Function) {
 	// first traverse the ast and collect outer variables
-	// and a list of blocks, ther variables, and their parents if nested.
+	// and a list of blocks, their params & variables, and their parent if nested.
 	var b bloks
 	vars := make(set)
 	b.params(f.Params, vars)
@@ -44,7 +45,8 @@ func Blocks(f *Function) {
 		x.block.CompileAsFunction = true
 	}
 	for i, x := range b.bloks {
-		if _, ok := x.vars["this"]; ok || shares(x.vars, vars) {
+		if _, ok := x.vars["this"]; ok || shares(x.vars, vars) ||
+				(x.parent != nil && shares(x.vars, x.parent.params)) {
 			closure(x)
 			continue
 		}
@@ -87,8 +89,6 @@ func (b *bloks) params(params []Param, vars set) {
 }
 
 // statement processes one statement (and its children)
-// Conditional statements are assumed to run for used, and not to run for vars.
-// So we accumulate used, but not vars.
 func (b *bloks) statement(stmt Statement, vars set) {
 	if stmt == nil {
 		return
@@ -203,9 +203,9 @@ func (b *bloks) expr(expr Expr, vars set) {
 
 func (b *bloks) block(block *Block) {
 	parent := b.cur
-	b.cur = &blok{block, parent, nil}
 	params := make(set)
 	b.params(block.Params, params)
+	b.cur = &blok{block, parent, params, nil}
 	blockVars := make(set)
 	for _, stmt := range block.Body {
 		b.statement(stmt, blockVars)
