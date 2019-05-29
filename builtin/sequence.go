@@ -67,10 +67,9 @@ func init() {
 			return SuIter{Iter: iter}
 		}),
 		"Join": method1("(separator='')", func(this, arg Value) Value {
-			seq := this.(*SuSequence)
+			iter := this.(*SuSequence).Iter()
 			separator := ToStr(arg)
 			sep := ""
-			iter := seq.Iter()
 			var buf strings.Builder
 			for {
 				val := iter.Next()

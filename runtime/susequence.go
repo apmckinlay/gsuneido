@@ -22,6 +22,9 @@ func NewSuSequence(it Iter) *SuSequence {
 }
 
 func (seq *SuSequence) Iter() Iter {
+	if seq.Instantiated() {
+		return seq.ob.Iter()
+	}
 	seq.duped = true
 	return seq.iter.Dup()
 }
