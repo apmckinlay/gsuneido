@@ -154,7 +154,7 @@ func init() {
 				var buf strings.Builder
 				for i := 0; i < len(s); i += n {
 					end := ints.Min(i+n, len(s))
-					val := t.CallWithArgs(block, SuStr(s[i:end]))
+					val := t.Call(block, SuStr(s[i:end]))
 					if val != nil {
 						buf.WriteString(AsStr(val))
 					}
@@ -358,7 +358,7 @@ func replace(t *Thread, s string, patarg string, reparg Value, count int) Value 
 			buf.WriteString(t)
 		} else {
 			r := result[0].Part(s)
-			v := t.CallWithArgs(reparg, SuStr(r))
+			v := t.Call(reparg, SuStr(r))
 			if v != nil {
 				r = AsStr(v)
 			}

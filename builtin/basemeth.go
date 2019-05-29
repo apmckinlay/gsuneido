@@ -38,7 +38,7 @@ func init() {
 					return x
 				}
 				if args[1].Type() == types.Block {
-					return t.CallWithArgs(args[1])
+					return t.Call(args[1])
 				}
 				return args[1]
 			}),

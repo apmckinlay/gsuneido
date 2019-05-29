@@ -35,7 +35,7 @@ var _ = builtin("RunPiped(command, block=false)",
 		}
 		// block form
 		defer rp.close()
-		return t.CallWithArgs(args[1], rp)
+		return t.Call(args[1], rp)
 	})
 
 func splitCommand(s string) []string {

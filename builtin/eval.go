@@ -21,7 +21,7 @@ func EvalString(t *Thread, s string) Value {
 	}
 	s = "function () {\n" + s + "\n}"
 	fn := compile.NamedConstant("eval", s).(*SuFunc)
-	return t.Call(fn, nil)
+	return t.Start(fn, nil)
 }
 
 var rxGlobal = regex.Compile("^[A-Z][_a-zA-Z0-9]*?[!?]?$")

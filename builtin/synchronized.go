@@ -12,5 +12,5 @@ var _ = builtin("Synchronized(block)",
 	func(t *Thread, args []Value) Value {
 		lock.Lock()
 		defer lock.Unlock()
-		return t.CallWithArgs(args[0])
+		return t.Call(args[0])
 	})

@@ -24,7 +24,7 @@ var _ = builtin("File(filename, mode='r', block=false)",
 		}
 		// block form
 		defer sf.f.Close()
-		return t.CallWithArgs(args[2], sf)
+		return t.Call(args[2], sf)
 	})
 
 type suFile struct {

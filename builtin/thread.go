@@ -20,7 +20,7 @@ func threadCallClass(arg Value) Value {
 	t2 := NewThread()
 	go func() {
 		defer t2.Close()
-		t2.CallWithArgs(arg)
+		t2.Call(arg)
 	}()
 	return nil
 }
@@ -52,7 +52,7 @@ var _ = builtin2("Scheduled(ms, block)",
 		go func() {
 			defer t2.Close()
 			time.Sleep(ms)
-			t2.CallWithArgs(block)
+			t2.Call(block)
 		}()
 		return nil
 	})

@@ -308,7 +308,7 @@ func (r *SuRecord) callObservers2(t *Thread, key string) {
 			func(ofn Value, key string) {
 				r.activeObservers.Push(activeObserver{ofn, key})
 				defer r.activeObservers.Pop()
-				t.CallAsMethod(ofn, r, SuStr(key)) // TODO member: named arg
+				t.CallThis(ofn, r, SuStr(key)) // TODO member: named arg
 			}(ofn, key)
 		}
 	}
@@ -425,7 +425,7 @@ func (r *SuRecord) catchRule(t *Thread, rule Value, key string) Value {
 			panic(toStr(e) + " (rule for " + key + ")")
 		}
 	}()
-	return t.CallAsMethod(rule, r)
+	return t.CallThis(rule, r)
 }
 
 // activeRules stack

@@ -38,6 +38,6 @@ func BenchmarkInt(b *testing.B) {
 	}
 	for i := 0; i < m; i++ {
 		th.Push(SuInt(n))
-		th.Call(fn, nil)
+		th.Start(fn, nil)
 	}
 }

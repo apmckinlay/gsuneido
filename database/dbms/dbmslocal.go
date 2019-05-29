@@ -59,10 +59,10 @@ func (DbmsLocal) Exec(t *Thread, v Value) Value {
 	if i := strings.IndexByte(fname, '.'); i != -1 {
 		ob := Global.GetName(t, fname[:i])
 		m := fname[i+1:]
-		return t.CallMethodWithArgSpec(ob, m, ArgSpecEach1, v)
+		return t.CallLookupEach1(ob, m, v)
 	}
 	fn := Global.GetName(t, fname)
-	return t.CallWithArgSpec(fn, ArgSpecEach1, v)
+	return t.CallEach1(fn, v)
 }
 
 func (DbmsLocal) Final() int {

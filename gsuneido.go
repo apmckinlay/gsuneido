@@ -102,7 +102,7 @@ func eval(src string) {
 	// DisasmMixed(os.Stdout, fn, src)
 
 	mainThread.Reset()
-	result := mainThread.Call(fn, nil)
+	result := mainThread.Start(fn, nil)
 	if result != nil {
 		prompt(">>> ")
 		fmt.Println(WithType(result))

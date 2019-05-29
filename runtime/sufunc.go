@@ -50,7 +50,7 @@ func (f *SuFunc) Call(t *Thread, this Value, as *ArgSpec) Value {
 			this.Put(t, SuStr(name), args[i])
 		}
 	}
-	return t.Call(f, this)
+	return t.Start(f, this)
 }
 
 func (f *SuFunc) Type() types.Type {

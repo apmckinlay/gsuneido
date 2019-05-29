@@ -25,7 +25,7 @@ var _ = builtin("Transaction(read=false, update=false, block=false)",
 				st.Complete()
 			}
 		}()
-		return th.CallWithArgs(args[2], st)
+		return th.Call(args[2], st)
 	})
 
 var queryBlockParams = params("(query, block = false)")
@@ -53,7 +53,7 @@ func init() {
 				defer func() {
 					q.Close()
 				}()
-				return th.CallWithArgs(args[1], q)
+				return th.Call(args[1], q)
 			}),
 		"QueryDo": methodRaw("(@args)",
 			func(th *Thread, as *ArgSpec, this Value, args []Value) Value {

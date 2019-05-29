@@ -16,7 +16,7 @@ var _ = builtinRaw("Cursor(@args)",
 		defer func() {
 			c.Close()
 		}()
-		return th.CallWithArgs(args[1], c)
+		return th.Call(args[1], c)
 	})
 
 // see also QueryMethods

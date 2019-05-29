@@ -85,9 +85,7 @@ func (c *SuClass) get1(t *Thread, this Value, mem string) Value {
 	}
 	if !c.noGetter {
 		if getter := c.get2(t, "Getter_"); getter != nil {
-			t.Push(SuStr(mem))
-			return getter.Call(t, this, ArgSpec1)
-			//BUG not resetting sp ?
+			return t.CallThis(getter, this, SuStr(mem))
 		}
 		c.noGetter = true
 	}

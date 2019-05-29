@@ -14,11 +14,11 @@ var _ = builtin("Finally(main_block, final_block)",
 						recover() // if main block panics, ignore finally panic
 					}
 				}()
-				t.CallWithArgs(args[1])
+				t.Call(args[1])
 			}()
 			if e != nil {
 				panic(e)
 			}
 		}()
-		return t.CallWithArgs(args[0])
+		return t.Call(args[0])
 	})

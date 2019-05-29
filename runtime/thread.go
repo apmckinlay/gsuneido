@@ -6,7 +6,6 @@ import (
 
 	"github.com/apmckinlay/gsuneido/util/regex"
 	"github.com/apmckinlay/gsuneido/util/tr"
-	"github.com/apmckinlay/gsuneido/util/verify"
 )
 
 // See interp.go and args.go for the rest of the Thread methods
@@ -97,60 +96,6 @@ func (t *Thread) Dupx2() {
 func (t *Thread) Reset() {
 	t.fp = 0
 	t.sp = 0
-}
-
-// CallWithArgs pushes the arguments onto the stack and calls the function
-func (t *Thread) CallWithArgs(fn Value, args ...Value) Value {
-	return t.callWithArgs(fn, nil, args)
-}
-
-func (t *Thread) callWithArgs(fn Value, this Value, args []Value) Value {
-	verify.That(len(args) < AsEach)
-	as := StdArgSpecs[len(args)]
-	return t.pushCall(fn, this, as, args)
-}
-
-// pushCall pushes the arguments onto the stack and calls the function
-func (t *Thread) pushCall(fn Value, this Value, as *ArgSpec, args []Value) Value {
-	base := t.sp
-	for _, x := range args {
-		t.Push(x)
-	}
-	result := fn.Call(t, this, as)
-	t.sp = base
-	return result
-}
-
-// CallWithArgSpec pushes the arguments onto the stack and calls the function
-func (t *Thread) CallWithArgSpec(fn Value, as *ArgSpec, args ...Value) Value {
-	return t.pushCall(fn, nil, as, args)
-}
-
-// CallMethod calls a *named* method.
-// Arguments should be on the stack
-func (t *Thread) CallMethod(this Value, method string, as *ArgSpec) Value {
-	f := this.Lookup(t, method)
-	if f == nil {
-		panic("method not found: " + this.Type().String() + "." + method)
-	}
-	base := t.sp - int(as.Nargs)
-	result := f.Call(t, this, as)
-	t.sp = base
-	return result
-}
-
-// CallAsMethod runs a function as if it were a method of an object.
-func (t *Thread) CallAsMethod(fn Value, this Value, args ...Value) Value {
-	return t.callWithArgs(fn, this, args)
-}
-
-func (t *Thread) CallMethodWithArgSpec(
-	this Value, method string, as *ArgSpec, args ...Value) Value {
-	for _, x := range args {
-		t.Push(x)
-	}
-	return t.CallMethod(this, method, as)
-	//BUG not resetting sp ?
 }
 
 // Callstack captures the call stack

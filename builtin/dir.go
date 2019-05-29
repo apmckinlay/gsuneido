@@ -28,7 +28,7 @@ var _ = builtin("Dir(path='*', files=false, details=false, block=false)",
 		}
 		// block form
 		forEachDir(path, justfiles, details, func(entry Value) {
-			t.CallWithArgs(block, entry)
+			t.Call(block, entry)
 		})
 		return nil
 	})

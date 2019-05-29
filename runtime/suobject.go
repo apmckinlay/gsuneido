@@ -505,7 +505,7 @@ func (ob *SuObject) Sort(t *Thread, lt Value) {
 		})
 	} else {
 		sort.SliceStable(ob.list, func(i, j int) bool {
-			return True == t.CallWithArgs(lt, ob.list[i], ob.list[j])
+			return True == t.Call(lt, ob.list[i], ob.list[j])
 		})
 	}
 }
@@ -572,7 +572,7 @@ func (ob *SuObject) BinarySearch(value Value) int {
 // BinarySearch2 does a binary search with a user specified less than function
 func (ob *SuObject) BinarySearch2(t *Thread, value, lt Value) int {
 	return sort.Search(ob.ListSize(), func(i int) bool {
-		return True != t.CallWithArgs(lt, ob.list[i], value)
+		return True != t.Call(lt, ob.list[i], value)
 	})
 }
 
