@@ -61,6 +61,9 @@ func NewThread() *Thread {
 
 // Push pushes a value onto the value stack
 func (t *Thread) Push(x Value) {
+	if t.sp >= maxStack {
+		panic("value stack overflow")
+	}
 	t.stack[t.sp] = x
 	t.sp++
 }
