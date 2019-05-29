@@ -435,7 +435,7 @@ loop:
 					break
 				}
 			}
-			panic("method not found: " + this.Type().String() + "." + ToStrOrString(method))
+			panic("method not found: " + ErrType(this) + "." + ToStrOrString(method))
 		default:
 			panic("invalid op code: " + oc.String()) // TODO fatal?
 		}

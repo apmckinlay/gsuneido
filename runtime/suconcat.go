@@ -151,8 +151,8 @@ func (c SuConcat) Call(t *Thread, this Value, as *ArgSpec) Value {
 	return ss.Call(t, this, as)
 }
 
-func (SuConcat) Lookup(_ *Thread, method string) Callable {
-	return StringMethods[method]
+func (SuConcat) Lookup(t *Thread, method string) Callable {
+	return Lookup(t, StringMethods, gnStrings, method)
 }
 
 // Packable interface -----------------------------------------------

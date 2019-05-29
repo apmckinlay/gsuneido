@@ -194,7 +194,7 @@ func ToDnum(x Value) dnum.Dnum {
 	panic("can't convert " + ErrType(x) + " to number")
 }
 
-// errType tweaks the TypeName to match cSuneido
+// ErrType tweaks the TypeName to match cSuneido
 func ErrType(x Value) string {
 	if x == True {
 		return "true"
