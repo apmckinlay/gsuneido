@@ -21,7 +21,7 @@ var _ = builtin("Transaction(read=false, update=false, block=false)",
 			if e := recover(); e != nil && e != BlockReturn {
 				st.Rollback()
 				panic(e)
-			} else {
+			} else if ! st.Ended() {
 				st.Complete()
 			}
 		}()
