@@ -110,9 +110,10 @@ func (ss SuStr) Equal(other interface{}) bool {
 		return ss == s2
 	}
 	if cv, ok := other.(SuConcat); ok {
-		// according to benchmark, this doesn't allocate
-		cs, _ := cv.AsStr()
-		return cv.n == len(ss) && string(ss) == cs
+		return cv.n == len(ss) && string(ss) == cv.toStr()
+	}
+	if se, ok := other.(*SuExcept); ok {
+		return ss == se.SuStr
 	}
 	return false
 }
