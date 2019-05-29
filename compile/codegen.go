@@ -550,6 +550,12 @@ func (cg *cgen) unary(node *ast.Unary) {
 		cg.expr(node.E)
 		return
 	}
+	if node.Tok == tok.Div {
+		cg.emit(op.One)
+		cg.expr(node.E)
+		cg.emit(op.Div)
+		return
+	}
 	o := utok2op[node.Tok]
 	if tok.Inc <= node.Tok && node.Tok <= tok.PostDec {
 		ref := cg.lvalue(node.E)

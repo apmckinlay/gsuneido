@@ -88,6 +88,8 @@ func TestParseExpression(t *testing.T) {
 	test("a - b", "Nary(Add a Unary(Sub b))")
 	test("a * b", "Nary(Mul a b)")
 	test("a / b", "Nary(Mul a Unary(Div b))")
+	test("3 / a", "Nary(Mul Unary(Div a) 3)")
+	test("1 / a", "Unary(Div a)")
 	test("a + b * c", "Nary(Add a Nary(Mul b c))")
 	test("(a + b) * c", "Nary(Mul Unary(LParen Nary(Add a b)) c)")
 	test("a * b + c", "Nary(Add Nary(Mul a b) c)")
