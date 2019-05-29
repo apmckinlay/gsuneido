@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/apmckinlay/gsuneido/builtin"
 	"github.com/apmckinlay/gsuneido/compile"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	. "github.com/apmckinlay/gsuneido/util/hamcrest"
@@ -92,7 +93,7 @@ func TestPtestClass(t *testing.T) {
 }
 
 func init() {
-	Def()
+	builtin.Def()
 }
 
 func pt_execute(args []string, _ []bool) bool {

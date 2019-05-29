@@ -6,14 +6,14 @@ import (
 	"fmt"
 	"io"
 	"os"
-
 	"runtime/debug"
+
 	"strings"
 
+	"github.com/apmckinlay/gsuneido/builtin"
 	_ "github.com/apmckinlay/gsuneido/builtin"
 	"github.com/apmckinlay/gsuneido/compile"
 	"github.com/apmckinlay/gsuneido/database/dbms"
-	"github.com/apmckinlay/gsuneido/language"
 	"github.com/apmckinlay/gsuneido/options"
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
@@ -51,8 +51,8 @@ func repl() {
 		prompt = func(string) {}
 	}
 
-	language.Def()
-	language.Concat()
+	builtin.Def()
+	builtin.Concat()
 
 	prompt("Press Enter twice (i.e. blank line) to execute, q to quit\n")
 	if options.Client {
