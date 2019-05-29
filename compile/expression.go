@@ -355,7 +355,7 @@ func (p *parser) argumentList(closing tok.Token) []ast.Arg {
 	named := func(name Value, val ast.Expr) {
 		for _, a := range args {
 			if name.Equal(a.Name) {
-				p.error("duplicate argument name (" + name.String() + ")")
+				p.error("duplicate argument name: " + ToStrOrString(name))
 			}
 		}
 		args = append(args, ast.Arg{Name: name, E: val})

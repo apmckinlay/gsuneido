@@ -151,6 +151,7 @@ func ToStr(x Value) string {
 }
 
 // ToStrOrString returns either ToStr() or String()
+// i.e. strings won't have quotes
 func ToStrOrString(x Value) string {
 	if s, ok := x.ToStr(); ok {
 		return s
