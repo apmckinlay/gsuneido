@@ -1,6 +1,8 @@
 package runtime
 
-import "github.com/apmckinlay/gsuneido/runtime/types"
+import (
+	"github.com/apmckinlay/gsuneido/runtime/types"
+)
 
 // SuInstance is an instance of an SuInstance
 type SuInstance struct {
@@ -128,13 +130,7 @@ func (ob *SuInstance) Lookup(t *Thread, method string) Callable {
 	if f, ok := InstanceMethods[method]; ok {
 		return f
 	}
-	if f, ok := BaseMethods[method]; ok {
-		return f
-	}
-	if x := ob.class.get2(t, "Default"); x != nil {
-		return &defaultAdapter{x, method}
-	}
-	return ob.class.get2(t, method)
+	return ob.class.Lookup(t, method)
 }
 
 func (ob *SuInstance) Call(t *Thread, _ Value, as *ArgSpec) Value {
