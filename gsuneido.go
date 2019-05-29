@@ -148,7 +148,10 @@ func libload(t *Thread, name string) (result Value) {
 	if len(defs) == 0 {
 		return nil
 	}
-	// want to include the library from the start (rather than adding after)
+	if len(defs) > 2 {
+		panic("library overloading not handled")
+	}
+	// want to pass the name from the start (rather than adding after)
 	// so it propogates to nested Named values
 	result = compile.NamedConstant(name, defs[1])
 	// fmt.Println("LOAD", name, "SUCCEEDED")
