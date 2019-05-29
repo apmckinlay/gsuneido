@@ -172,7 +172,7 @@ func (b *bloks) expr(expr Expr, vars set) {
 		b.expr(expr.Lhs, vars)
 		b.expr(expr.Rhs, vars)
 	case *Ident:
-		if ascii.IsLower(expr.Name[0]) {
+		if! ascii.IsUpper(expr.Name[0]) {
 			vars[expr.Name] = yes
 		}
 	case *Trinary:

@@ -65,5 +65,9 @@ func TestBlocks(t *testing.T) {
 	test("b1 = {|p| b2 = { p }}", // inner references outer param
 		`Binary(Eq b1 Block(p
         	Binary(Eq b2 Block(
-        	p))))`)
+			p))))`)
+	test("_x = 5; b = { _x }", // dynamic
+		`Binary(Eq _x 5)
+        	Binary(Eq b Block(
+        	_x))`)
 }
