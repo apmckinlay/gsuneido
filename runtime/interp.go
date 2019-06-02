@@ -101,6 +101,33 @@ func (t *Thread) interp(catchJump, catchSp *int) (ret Value) {
 	jump := func() {
 		fr.ip += fetchInt16()
 	}
+	jumpToPopReturn := func(o op.Opcode) bool {
+		if o != op.Jump {
+			return false
+		}
+		save_ip := fr.ip
+		fr.ip++
+		jump()
+		if fr.ip < len(code) {
+			o = op.Opcode(code[fr.ip])
+			if o != op.Pop && o != op.Return {
+				fr.ip = save_ip
+				return false
+			}
+		}
+		fr.ip = save_ip
+		return true
+	}
+	pushResult := func(result Value) {
+		if result == nil && fr.ip < len(code) {
+			o := op.Opcode(code[fr.ip])
+			if o != op.Pop && o != op.Return && !jumpToPopReturn(o) {
+				panic("no return value " + o.String())
+			}
+		}
+		t.Push(result)
+	}
+
 	defer func() {
 		if *catchJump == 0 && fr.fn.Id == 0 {
 			return // this frame isn't catching
@@ -127,7 +154,7 @@ func (t *Thread) interp(catchJump, catchSp *int) (ret Value) {
 			} else if s, ok := e.(string); ok {
 				ss = SuStr(s)
 			} else {
-				ss = e.(SuStr)
+				ss = e.(SuStr) // BUG could be concat
 			}
 			se = NewSuExcept(t, ss)
 		}
@@ -408,7 +435,7 @@ loop:
 			base := t.sp - int(argSpec.Nargs)
 			result := f.Call(t, nil, argSpec)
 			t.sp = base
-			t.Push(result)
+			pushResult(result)
 		case op.Super:
 			super = fetchUint16()
 		case op.CallMeth:
@@ -431,7 +458,7 @@ loop:
 				if f := ob.Lookup(t, string(methstr)); f != nil {
 					result := f.Call(t, this, argSpec)
 					t.sp = base
-					t.Push(result)
+					pushResult(result)
 					break
 				}
 			}
