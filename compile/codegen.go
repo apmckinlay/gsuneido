@@ -179,6 +179,9 @@ func (cg *cgen) chainNew(fn *ast.Function) {
 	cg.emitValue(SuStr("New"))
 	cg.emitUint16(op.Super, cg.base)
 	cg.emitUint8(op.CallMeth, 0)
+	if len(fn.Body) > 0 {
+		cg.emit(op.Pop)
+	}
 }
 
 func hasSuperCall(stmts []ast.Statement) bool {

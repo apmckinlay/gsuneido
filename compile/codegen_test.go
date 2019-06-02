@@ -108,6 +108,7 @@ func TestCodegen(t *testing.T) {
 	test("throw 'fubar'", "Value 'fubar', Throw")
 
 	test("f()", "Load f, CallFunc ()")
+	test("f(); f()", "Load f, CallFunc (), Pop, Load f, CallFunc ()")
 	test("F()", "Global F, CallFunc ()")
 	test("f(a, b)", "Load a, Load b, Load f, CallFunc (?, ?)")
 	test("f(1,2,3,4)", "One, Int 2, Int 3, Int 4, Load f, CallFunc (?, ?, ?, ?)")
@@ -159,6 +160,8 @@ func TestCodegenSuper(t *testing.T) {
 		}
 	}
 	test("New(){}", "This, Value 'New', Super Foo, CallMeth ()")
+	test("New(){ F() }", "This, Value 'New', Super Foo, CallMeth (), Pop, " +
+		"Global F, CallFunc ()")
 
 	// Super(...) => Super.New(...)
 	test("New(){super(1)}", "This, One, Value 'New', Super Foo, CallMeth (?)")
