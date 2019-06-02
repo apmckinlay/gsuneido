@@ -3,6 +3,8 @@ package runtime
 // see also: ArgSpec
 
 import (
+	"strconv"
+
 	"github.com/apmckinlay/gsuneido/util/ints"
 	"github.com/apmckinlay/gsuneido/util/verify"
 )
@@ -28,6 +30,11 @@ func (t *Thread) args(ps *ParamSpec, as *ArgSpec) []Value {
 		t.Push(nil)
 	}
 	locals := t.stack[base:]
+	for i := 0; i < nargs; i++ {
+		if locals[i] == nil {
+			panic("missing argument " + strconv.Itoa(i) + " in " + as.String())
+		}
+	}
 	t.massage(ps, as, locals)
 
 	// shrink stack if excess args
