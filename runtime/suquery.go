@@ -141,6 +141,9 @@ func (q *SuQuery) GetRec(dir Dir) Value {
 	if dir == q.eof {
 		return False
 	}
+	if q.tran.Ended() {
+		panic("cannot use a completed transaction")
+	}
 	row := q.iqc.(IQuery).Get(dir)
 	if row == nil {
 		q.eof = dir
