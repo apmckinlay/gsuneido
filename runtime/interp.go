@@ -101,28 +101,11 @@ func (t *Thread) interp(catchJump, catchSp *int) (ret Value) {
 	jump := func() {
 		fr.ip += fetchInt16()
 	}
-	jumpToPopReturn := func(o op.Opcode) bool {
-		if o != op.Jump {
-			return false
-		}
-		save_ip := fr.ip
-		fr.ip++
-		jump()
-		if fr.ip < len(code) {
-			o = op.Opcode(code[fr.ip])
-			if o != op.Pop && o != op.Return {
-				fr.ip = save_ip
-				return false
-			}
-		}
-		fr.ip = save_ip
-		return true
-	}
 	pushResult := func(result Value) {
 		if result == nil && fr.ip < len(code) {
 			o := op.Opcode(code[fr.ip])
-			if o != op.Pop && o != op.Return && !jumpToPopReturn(o) {
-				panic("no return value " + o.String())
+			if o != op.Pop && o != op.Return {
+				panic("no return value")
 			}
 		}
 		t.Push(result)

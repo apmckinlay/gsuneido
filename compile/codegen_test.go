@@ -250,10 +250,57 @@ func TestControl(t *testing.T) {
 
 	test("a ? b : c", `
 		0: Load a
-		2: QMark 10
-		5: Load b
-		7: Jump 12
-		10: Load c`)
+        2: QMark 11
+        5: Load b
+        7: Return
+        8: Jump 14
+        11: Load c
+        13: Return`)
+
+	test("(a ? b : c)", `
+		0: Load a
+        2: QMark 11
+        5: Load b
+        7: Return
+        8: Jump 14
+        11: Load c
+        13: Return`)
+
+	test("a ? b : c;;", `
+		0: Load a
+        2: QMark 11
+        5: Load b
+        7: Pop
+        8: Jump 14
+        11: Load c
+        13: Pop`)
+
+	test("(a ? b : c);;", `
+		0: Load a
+        2: QMark 11
+        5: Load b
+        7: Pop
+        8: Jump 14
+        11: Load c
+        13: Pop`)
+
+	test("return a ? b : c;;", `
+		0: Load a
+        2: QMark 11
+        5: Load b
+        7: Return
+        8: Jump 14
+        11: Load c
+        13: Return`)
+
+	test("return (a ? b : c);;", `
+		0: Load a
+        2: QMark 11
+        5: Load b
+        7: Return
+        8: Jump 14
+        11: Load c
+        13: Return`)
 
 	test("a in (4,5,6)", `
 		0: Load a

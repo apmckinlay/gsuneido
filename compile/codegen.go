@@ -21,7 +21,7 @@ import (
 
 // cgen is the context/results for compiling a function or block
 type cgen struct {
-	outerFn *ast.Function
+	outerFn        *ast.Function
 	code           []byte
 	argspecs       []*ArgSpec
 	base           Gnum
@@ -250,7 +250,7 @@ func (cg *cgen) statement(node ast.Node, labels *Labels, lastStmt bool) {
 			cg.statement(stmt, labels, lastStmt)
 		}
 	case *ast.Return:
-		cg.returnStmt(node, lastStmt)
+		cg.returnStmt(node.E, lastStmt)
 	case *ast.If:
 		cg.ifStmt(node, labels)
 	case *ast.Switch:
@@ -275,10 +275,7 @@ func (cg *cgen) statement(node ast.Node, labels *Labels, lastStmt bool) {
 	case *ast.Continue:
 		cg.continueStmt(labels)
 	case *ast.ExprStmt:
-		cg.expr(node.E)
-		if !lastStmt {
-			cg.emit(op.Pop)
-		}
+		cg.exprStmt(node.E, lastStmt)
 	default:
 		panic("unexpected statement type " + fmt.Sprintf("%T", node))
 	}
@@ -290,19 +287,27 @@ func (cg *cgen) statements(stmts []ast.Statement, labels *Labels, lastStmt bool)
 	}
 }
 
-func (cg *cgen) returnStmt(node *ast.Return, lastStmt bool) {
-	if node.E != nil {
-		cg.expr(node.E)
+func (cg *cgen) returnStmt(expr ast.Expr, lastStmt bool) {
+	if expr != nil {
+		if tri := cg.ifTrinary(expr); tri != nil {
+			cg.triExpr(tri, func() { cg.returnStmt2(expr, false) })
+			return
+		}
+		cg.expr(expr)
 	}
+	cg.returnStmt2(expr, lastStmt)
+}
+
+func (cg *cgen) returnStmt2(expr ast.Expr, lastStmt bool) {
 	if cg.isBlock {
-		if node.E == nil {
+		if expr == nil {
 			cg.emit(op.BlockReturnNil)
 		} else {
 			cg.emit(op.BlockReturn)
 		}
 	} else {
 		if !lastStmt {
-			if node.E == nil {
+			if expr == nil {
 				cg.emit(op.ReturnNil)
 			} else {
 				cg.emit(op.Return)
@@ -460,6 +465,33 @@ func (cg *cgen) exprList(list []ast.Expr) {
 	}
 }
 
+func (cg *cgen) exprStmt(expr ast.Expr, lastStmt bool) {
+	if tri := cg.ifTrinary(expr); tri != nil {
+		cg.triExpr(tri, func() {
+			if lastStmt {
+				cg.returnStmt2(expr, false)
+			} else {
+				cg.emit(op.Pop)
+			}
+		})
+		return
+	}
+	cg.expr(expr)
+	if !lastStmt {
+		cg.emit(op.Pop)
+	}
+}
+
+func (cg *cgen) ifTrinary(expr ast.Expr) *ast.Trinary {
+	if u, ok := expr.(*ast.Unary); ok && u.Tok == tok.LParen {
+		expr = u.E
+	}
+	if tri, ok := expr.(*ast.Trinary); ok {
+		return tri
+	}
+	return nil
+}
+
 // expressions -----------------------------------------------------------------
 
 func (cg *cgen) expr(node ast.Expr) {
@@ -475,7 +507,7 @@ func (cg *cgen) expr(node ast.Expr) {
 	case *ast.Nary:
 		cg.nary(node)
 	case *ast.Trinary:
-		cg.qcExpr(node)
+		cg.triExpr(node, func() {})
 	case *ast.Mem:
 		cg.expr(node.E)
 		cg.expr(node.M)
@@ -682,14 +714,19 @@ func isUnary(e ast.Expr, tok tok.Token) bool {
 	return ok && u.Tok == tok
 }
 
-func (cg *cgen) qcExpr(node *ast.Trinary) {
+func (cg *cgen) triExpr(node *ast.Trinary, add func()) {
+	// add is used for "no return value" checking
+	// interp only looks at opcode following call
+	// so Pop and Return have to be duplicated on each branch
 	f, end := -1, -1
 	cg.expr(node.Cond)
 	f = cg.emitJump(op.QMark, f)
 	cg.expr(node.T)
+	add()
 	end = cg.emitJump(op.Jump, end)
 	cg.placeLabel(f)
 	cg.expr(node.F)
+	add()
 	cg.placeLabel(end)
 }
 
