@@ -43,7 +43,7 @@ func (seq *seqIter) Next() Value {
 }
 
 func (seq *seqIter) Dup() Iter {
-	return &seqIter{seq.from, seq.to, seq.by, 0}
+	return &seqIter{seq.from, seq.to, seq.by, seq.from}
 }
 
 func (seq *seqIter) Infinite() bool {
