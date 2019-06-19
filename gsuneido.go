@@ -146,6 +146,7 @@ func libload(t *Thread, name string) (result Value) {
 	}()
 	defs := t.Dbms().LibGet(name)
 	if len(defs) == 0 {
+		// fmt.Println("LOAD", name, "MISSING")
 		return nil
 	}
 	if len(defs) > 2 {
