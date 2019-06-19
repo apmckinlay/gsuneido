@@ -382,6 +382,9 @@ func (r *SuRecord) GetPacked(t *Thread, key string) string {
 	}
 	if result == nil {
 		result = r.ob.defval
+		if result == nil {
+			return ""
+		}
 	}
 	return PackValue(result)
 }

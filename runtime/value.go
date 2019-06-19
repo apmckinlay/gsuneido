@@ -196,6 +196,9 @@ func ToDnum(x Value) dnum.Dnum {
 
 // ErrType tweaks the TypeName to match cSuneido
 func ErrType(x Value) string {
+	if x == nil {
+		return "nil"
+	}
 	if x == True {
 		return "true"
 	}
