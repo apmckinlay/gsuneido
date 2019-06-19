@@ -2,10 +2,12 @@ package runtime
 
 import (
 	"fmt"
+	"math"
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/util/dnum"
 	. "github.com/apmckinlay/gsuneido/util/hamcrest"
+	"github.com/apmckinlay/gsuneido/util/str"
 )
 
 func ExampleSuInt() {
@@ -124,4 +126,22 @@ func TestToInt(t *testing.T) {
 	test(MaxInt, 2147483647) // SuDnum
 	test(False, 0)
 	test(EmptyStr, 0)
+}
+
+func TestIntVal(t *testing.T) {
+	test := func(n int, expected string) {
+		v := IntVal(n)
+		typ := fmt.Sprintf("%T", v)
+		Assert(t).That(str.AfterFirst(typ, "."), Equals(expected))
+		Assert(t).That(ToInt(v), Equals(n))
+	}
+	test(0, "smi")
+	test(123, "smi")
+	test(-123, "smi")
+	test(math.MaxInt16, "smi")
+	test(math.MinInt16, "smi")
+	test(math.MaxInt16+1, "SuDnum")
+	test(math.MinInt16-1, "SuDnum")
+	test(math.MaxInt32, "SuDnum")
+	test(math.MinInt32, "SuDnum")
 }

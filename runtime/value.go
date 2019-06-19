@@ -299,7 +299,7 @@ func PackValue(v Value) string {
 
 // IntVal returns an SuInt if it fits, else a SuDnum
 func IntVal(n int) Value {
-	if MinSuInt < n && n < MaxSuInt {
+	if MinSuInt <= n && n <= MaxSuInt {
 		return SuInt(n)
 	}
 	return SuDnum{Dnum: dnum.FromInt(int64(n))}
