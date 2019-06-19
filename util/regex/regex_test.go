@@ -69,6 +69,15 @@ func ExamplePattern_ForEachMatch() {
 	// time
 }
 
+func TestForEachMatch(t *testing.T) {
+	s := `one
+		two`
+	pat := Compile(`^ *`)
+	n := 0
+	pat.ForEachMatch(s, func(*Result) bool { n++; return true })
+	Assert(t).That(n, Equals(2))
+}
+
 // ptest support ---------------------------------------------------------------
 
 func TestPtest(t *testing.T) {

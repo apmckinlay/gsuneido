@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/util/ascii"
+	"github.com/apmckinlay/gsuneido/util/ints"
 )
 
 //go:generate genny -in ../../../GoTemplates/cache/cache.go -out cache.go -pkg regex gen "K=string V=Pattern"
@@ -136,7 +137,7 @@ func (pat Pattern) ForEachMatch(s string, action func(*Result) bool) {
 		if i == -1 || !action(&result) {
 			break
 		}
-		pos = result[0].end
+		pos = ints.Max(result[0].end, i+1)
 	}
 }
 
