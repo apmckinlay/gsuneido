@@ -18,11 +18,16 @@ var _ = builtin("Transaction(read=false, update=false, block=false)",
 		}
 		// block form
 		defer func() {
-			if e := recover(); e != nil && e != BlockReturn {
-				st.Rollback()
-				panic(e)
-			} else if ! st.Ended() {
-				st.Complete()
+			if !st.Ended() {
+				e := recover()
+				if e != nil && e != BlockReturn {
+					st.Rollback()
+				} else {
+					st.Complete()
+				}
+				if e != nil {
+					panic(e)
+				}
 			}
 		}()
 		return th.Call(args[2], st)
