@@ -153,22 +153,12 @@ func (*smi) Lookup(t *Thread, method string) Callable {
 
 // Packable interface -----------------------------------------------
 
+// TODO: avoid conversion to Dnum
+
 var _ Packable = SuInt(0)
 
-func (si *smi) PackSize(int) int {
-	n := si.toInt()
-	if n == 0 {
-		return 1
-	}
-	if n < 0 {
-		n = -n
-	}
-	if n < 100 {
-		return 3
-	} else if n < 10000 {
-		return 4
-	}
-	return 5
+func (si *smi) PackSize(nest int) int {
+	return SuDnum{Dnum: dnum.FromInt(int64(si.toInt()))}.PackSize(nest)
 }
 
 func (si *smi) Pack(buf *pack.Encoder) {

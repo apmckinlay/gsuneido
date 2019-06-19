@@ -20,7 +20,9 @@ func TestPack(t *testing.T) {
 func TestPackSuInt(t *testing.T) {
 	test := func(n int, expected ...byte) {
 		t.Helper()
-		s := Pack(SuInt(n))
+		v := IntVal(n).(Packable)
+		s := Pack(v)
+		Assert(t).That(v.PackSize(0), Equals(len(s)))
 		Assert(t).That([]byte(s), Equals(expected))
 		num := UnpackNumber(s)
 		x, ok := SuIntToInt(num)
@@ -29,6 +31,7 @@ func TestPackSuInt(t *testing.T) {
 	}
 	test(0, PackPlus)
 	test(1, PackPlus, 129, 10)
+	test(100, PackPlus, 0x83, 0x0a)
 	test(10000, PackPlus, 133, 10)
 	test(10002, PackPlus, 133, 10, 0, 20)
 	test(-1, PackMinus, 126, 10 ^ 0xff)

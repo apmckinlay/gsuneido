@@ -60,7 +60,7 @@ func Unpack(s string) Value {
 	case PackRecord:
 		return UnpackRecord(s)
 	default:
-		panic("invalid pack tag")
+		panic("invalid pack tag " + strconv.Itoa(int(s[0])))
 	}
 }
 
