@@ -85,11 +85,13 @@ func Mod(x Value, y Value) Value {
 }
 
 func LeftShift(x Value, y Value) Value {
-	return IntVal(int(uint(ToInt(x)) << uint(ToInt(y))))
+	result := int32(ToInt(x)) << uint(ToInt(y))
+	return IntVal(int(result))
 }
 
 func RightShift(x Value, y Value) Value {
-	return IntVal(int(uint(ToInt(x)) >> uint(ToInt(y))))
+	result := uint32(ToInt(x)) >> uint(ToInt(y))
+	return IntVal(int(result))
 }
 
 func BitOr(x Value, y Value) Value {
