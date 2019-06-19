@@ -172,6 +172,9 @@ func (c *SuClass) Lookup(t *Thread, method string) Callable {
 	if method == "New" {
 		return DefaultNewMethod
 	}
+	if x := UserDef(t, gnObjects, method); x != nil {
+		return x
+	}
 	if x := c.get2(t, "Default"); x != nil {
 		return &defaultAdapter{x, method}
 	}
