@@ -222,18 +222,18 @@ func TestParseExpression(t *testing.T) {
 	test("'foobar' !~ 'obo'", "true")
 
 	// commutative
-	test("a * 0 * b", "0") // short circuit
+	test("a * 0 * b", "Nary(Mul a b 0)") // short circuit
 	test("a & 0 & b", "0") // short circuit
-	test("1 * a * 1", "a") // skip identity
+	test("1 * a * 1", "Nary(Mul a 1)")
 	test("1 + 2", "3")
 	test("1 + 2 + 3", "6")
 	test("1 + 2 - 3", "0")
 	test("1 | 2 | 4", "7")
 	test("255 & 15", "15")
-	test("a and true and true", "a") // skip identity
-	test("a or false or false", "a") // skip identity
-	test("a or true or b", "true")   // short circuit
-	test("a and false and b", "false")
+	test("a and true and true", "Nary(And a true)")
+	test("a or false or false", "Nary(Or a false)")
+	test("a or true or b", "true") // short circuit
+	test("a and false and b", "false") // short circuit
 
 	test("1 + a + b + 2", "Nary(Add 3 a b)")
 	test("5 + a + b - 2", "Nary(Add 3 a b)")

@@ -117,19 +117,19 @@ var allones Value = SuDnum{Dnum: dnum.FromInt(0xffffffff)}
 func (f Folder) Nary(token tok.Token, exprs []Expr) Expr {
 	switch token {
 	case tok.Add: // including Sub
-		exprs = commutative(exprs, Add, Zero, nil)
+		exprs = commutative(exprs, Add, nil)
 	case tok.Mul: // including Div
 		exprs = f.foldMul(exprs)
 	case tok.BitOr:
-		exprs = commutative(exprs, BitOr, Zero, allones)
+		exprs = commutative(exprs, BitOr, allones)
 	case tok.BitAnd:
-		exprs = commutative(exprs, BitAnd, allones, Zero)
+		exprs = commutative(exprs, BitAnd, Zero)
 	case tok.BitXor:
-		exprs = commutative(exprs, BitXor, Zero, nil)
+		exprs = commutative(exprs, BitXor, nil)
 	case tok.Or:
-		exprs = commutative(exprs, or, False, True)
+		exprs = commutative(exprs, or, True)
 	case tok.And:
-		exprs = commutative(exprs, and, True, False)
+		exprs = commutative(exprs, and, False)
 	case tok.Cat:
 		exprs = foldCat(exprs)
 	default:
@@ -152,16 +152,15 @@ func and(x, y Value) Value {
 type bopfn func(Value, Value) Value
 
 // commutative folds constants in a list of expressions
-// skip is the identity value e.g. zero for add
 // fold is a short circuit value e.g. zero for multiply
-func commutative(exprs []Expr, bop bopfn, skip, fold Value) []Expr {
+func commutative(exprs []Expr, bop bopfn, fold Value) []Expr {
 	var first *Constant
 	dst := 0
 	for _, e := range exprs {
 		if c, ok := e.(*Constant); !ok {
 			exprs[dst] = e
 			dst++
-		} else if !skip.Equal(c.Val) {
+		} else {
 			if c.Val.Equal(fold) {
 				exprs[0] = c
 				return exprs[:1]
@@ -179,6 +178,7 @@ func commutative(exprs []Expr, bop bopfn, skip, fold Value) []Expr {
 }
 
 func (f Folder) foldMul(exprs []Expr) []Expr {
+	// extract and combine constants
 	mul := One
 	div := One
 	dst := 0
@@ -193,28 +193,23 @@ func (f Folder) foldMul(exprs []Expr) []Expr {
 		}
 	}
 	exprs = exprs[:dst]
-	if mul.Equal(Zero) {
-		exprs[0] = f.Constant(Zero)
-		return exprs[:1]
-	}
-	if div.Equal(Zero) {
-		x := Inf
-		if mul.Compare(Zero) < 0 {
-			x = NegInf
-		}
-		return append(exprs[:0], f.Constant(x))
-	}
-	if div == One && mul == One {
-		return exprs
-	}
-	if div != One && (mul != One || len(exprs) == 0) {
+
+	if !div.Equal(One) && (!mul.Equal(One) || len(exprs) == 0) {
 		mul = Div(mul, div)
 		div = One
 	}
-	if div == One {
-		return append(exprs, f.Constant(mul))
+	if div.Equal(One) {
+		if !mul.Equal(One) {
+			exprs = append(exprs, f.Constant(mul))
+		}
+	} else {
+		exprs = append(exprs, f.Unary(tok.Div, f.Constant(div)))
 	}
-	return append(exprs, f.Unary(tok.Div, f.Constant(div)))
+	if len(exprs) == 1 && !unaryDivOrConstant(exprs[0]) {
+		// force an operation to preserve conversion
+		exprs = append(exprs, f.Constant(One))
+	}
+	return exprs
 }
 
 func unaryDivConst(e Expr) Value {
@@ -224,6 +219,15 @@ func unaryDivConst(e Expr) Value {
 		}
 	}
 	return nil
+}
+
+func unaryDivOrConstant(e Expr) bool {
+	u, ok := e.(*Unary)
+	if ok && u.Tok == tok.Div {
+		return true
+	}
+	_, ok = e.(*Constant)
+	return ok
 }
 
 // foldCat folds contiguous constants in a list of expressions
