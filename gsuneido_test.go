@@ -8,7 +8,7 @@ package main
 // 	. "github.com/apmckinlay/gsuneido/runtime"
 // )
 
-// func TestGsuneido(t *testing.T) {
+// func TestGsuneido(*testing.T) {
 // 	Global.Builtin("Suneido", new(SuObject))
 // 	GetDbms = func() IDbms { return dbms.NewDbmsClient("127.0.0.1:3147") }
 // 	Libload = libload // dependency injection
