@@ -146,9 +146,9 @@ func (st *SuTran) Updatable() bool {
 	return st.updatable
 }
 
-func (st *SuTran) Update(adr int, rec Record) {
+func (st *SuTran) Update(adr int, rec Record) int {
 	st.ckActive()
-	st.itran.Update(adr, rec)
+	return st.itran.Update(adr, rec)
 }
 
 func (st *SuTran) WriteCount() int {

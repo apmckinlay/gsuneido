@@ -31,6 +31,8 @@ type SuRecord struct {
 	hdr *Header
 	// tran is the database transaction used to read the record
 	tran *SuTran
+	// recadr is the record address in the database
+	recadr int
 }
 
 var _ Container = (*SuRecord)(nil)
@@ -56,7 +58,7 @@ func SuRecordFromRow(row Row, hdr *Header, tran *SuTran) *SuRecord {
 		}
 	}
 	//TODO _deps
-	return &SuRecord{row: row, hdr: hdr, tran: tran}
+	return &SuRecord{row: row, hdr: hdr, tran: tran, recadr: row[0].Adr}
 }
 
 func (r *SuRecord) Copy() Container {
@@ -574,13 +576,13 @@ func UnpackRecordOld(s string) *SuRecord {
 
 func (r *SuRecord) DbDelete() {
 	r.ckModify("Delete")
-	r.tran.Erase(r.row[0].Adr)
+	r.tran.Erase(r.recadr)
 }
 
 func (r *SuRecord) DbUpdate(t *Thread, ob Container) {
 	r.ckModify("Update")
 	var rec = ob.ToRecord(t, r.hdr)
-	r.tran.Update(r.row[0].Adr, rec)
+	r.recadr = r.tran.Update(r.recadr, rec)
 }
 
 func (r *SuRecord) ckModify(op string) {
