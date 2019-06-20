@@ -20,6 +20,7 @@ type ParamSpec struct {
 	Ndefaults uint8
 
 	// Offset is the location of the parameter names within Names
+	// and the arguments within Locals
 	// It is used for closure blocks, for normal functions it is 0
 	// Offset is only required for parameters (or arguments),
 	// it is not needed for local variables
@@ -67,25 +68,29 @@ var ParamSpecOptionalBlock = ParamSpec{Nparams: 1, Ndefaults: 1,
 
 // Value interface (except TypeName) --------------------------------
 
-func (f *ParamSpec) String() string {
+func (ps *ParamSpec) String() string {
 	var buf strings.Builder
 	// easier to add "function" here and strip it in Params
 	// than to implement String in a bunch of places to add it
 	buf.WriteString("function(")
 	sep := ""
 	v := 0 // index into Values
-	for i := 0; i < int(f.Nparams); i++ {
+	for i := 0; i < int(ps.Nparams); i++ {
 		buf.WriteString(sep)
-		buf.WriteString(flagsToName(f.Names[i+int(f.Offset)], f.Flags[i]))
-		if i >= int(f.Nparams-f.Ndefaults) {
+		buf.WriteString(flagsToName(ps.ParamName(i), ps.Flags[i]))
+		if i >= int(ps.Nparams-ps.Ndefaults) {
 			buf.WriteString("=")
-			buf.WriteString(fmt.Sprint(f.Values[v]))
+			buf.WriteString(fmt.Sprint(ps.Values[v]))
 			v++
 		}
 		sep = ","
 	}
 	buf.WriteString(")")
 	return buf.String()
+}
+
+func (ps *ParamSpec) ParamName(i int) string {
+	return ps.Names[i+int(ps.Offset)]
 }
 
 func flagsToName(p string, flags Flag) string {
@@ -126,22 +131,22 @@ func (*ParamSpec) Hash2() uint32 {
 	panic("function hash not implemented")
 }
 
-func (f *ParamSpec) Equal(other interface{}) bool {
+func (ps *ParamSpec) Equal(other interface{}) bool {
 	// interface check and double dispatch
 	// to work with anything that embeds ParamSpec
 	if ep, ok := other.(eqps); ok {
-		return ep.equalParamSpec(f)
+		return ep.equalParamSpec(ps)
 	}
 	return false
 }
 
-func (f *ParamSpec) equalParamSpec(ps *ParamSpec) bool {
-	return f == ps
+func (ps *ParamSpec) equalParamSpec(ps2 *ParamSpec) bool {
+	return ps == ps2
 }
 
 type eqps interface{ equalParamSpec(*ParamSpec) bool }
 
-func (f *ParamSpec) Compare(other Value) int {
+func (ps *ParamSpec) Compare(other Value) int {
 	if cmp := ints.Compare(OrdOther, Order(other)); cmp != 0 {
 		return cmp
 	}
@@ -155,18 +160,18 @@ func (*ParamSpec) Lookup(_ *Thread, method string) Callable {
 	return ParamsMethods[method]
 }
 
-func (f *ParamSpec) Params() string {
-	return f.String()[8:] // skip "function"
+func (ps *ParamSpec) Params() string {
+	return ps.String()[8:] // skip "function"
 }
 
-func (f *ParamSpec) Show() string {
-	return f.String()
+func (ps *ParamSpec) Show() string {
+	return ps.String()
 }
 
 // Named interface --------------------------------------------------
 
 var _ Named = (*ParamSpec)(nil)
 
-func (f *ParamSpec) GetName() string {
-	return f.Name
+func (ps *ParamSpec) GetName() string {
+	return ps.Name
 }

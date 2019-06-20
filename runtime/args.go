@@ -3,6 +3,7 @@ package runtime
 // see also: ArgSpec
 
 import (
+	"fmt"
 	"strconv"
 
 	"github.com/apmckinlay/gsuneido/util/ints"
@@ -99,7 +100,7 @@ func (t *Thread) massage(ps *ParamSpec, as *ArgSpec, args []Value) {
 		}
 		// named members may overwrite unnamed (same as when passed individually)
 		for i := 0; i < int(ps.Nparams); i++ {
-			if x := ob.GetIfPresent(t, SuStr(ps.Names[i])); x != nil {
+			if x := ob.GetIfPresent(t, SuStr(ps.ParamName(i))); x != nil {
 				args[i] = x
 			}
 		}
@@ -117,7 +118,7 @@ func (t *Thread) massage(ps *ParamSpec, as *ArgSpec, args []Value) {
 		// move applicable named args back to correct position
 		for si, ni := range as.Spec {
 			for i := 0; i < int(ps.Nparams); i++ {
-				if as.Names[ni] == SuStr(ps.Names[i]) {
+				if as.Names[ni] == SuStr(ps.ParamName(i)) {
 					args[i] = tmp[si]
 				}
 			}
@@ -127,7 +128,7 @@ func (t *Thread) massage(ps *ParamSpec, as *ArgSpec, args []Value) {
 	// fill in dynamic
 	for i := 0; i < int(ps.Nparams); i++ {
 		if args[i] == nil && ps.Flags[i]&DynParam != 0 {
-			if x := t.dyn("_" + ps.Names[i]); x != nil {
+			if x := t.dyn("_" + ps.ParamName(i)); x != nil {
 				args[i] = x
 			}
 		}
@@ -144,6 +145,7 @@ func (t *Thread) massage(ps *ParamSpec, as *ArgSpec, args []Value) {
 	// check that all parameters now have values
 	for i := 0; i < noDefs; i++ {
 		if args[i] == nil {
+			fmt.Println("i", i, "as", as, "ps", ps)
 			panic("missing argument")
 		}
 	}
