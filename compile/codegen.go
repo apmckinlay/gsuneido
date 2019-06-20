@@ -358,9 +358,9 @@ func (cg *cgen) switchStmt(node *ast.Switch, labels *Labels) {
 		for v, e := range c.Exprs {
 			cg.expr(e)
 			if v < len(c.Exprs)-1 {
-				caseBody = cg.emitJump(op.JumpIs, -1)
+				caseBody = cg.emitJump(op.JumpIs, caseBody)
 			} else {
-				afterCase = cg.emitJump(op.JumpIsnt, -1)
+				afterCase = cg.emitJump(op.JumpIsnt, afterCase)
 			}
 		}
 		cg.placeLabel(caseBody)

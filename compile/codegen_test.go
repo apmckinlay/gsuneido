@@ -363,6 +363,18 @@ func TestControl(t *testing.T) {
         30: Pop
         31: Load d
         33: Pop`)
+	test("switch a { case 1,2,3: b default: }", `
+		0: Load a
+        2: One
+        3: JumpIs 18
+        6: Int 2
+        9: JumpIs 18
+        12: Int 3
+        15: JumpIsnt 24
+        18: Load b
+        20: Pop
+        21: Jump 25
+        24: Pop`)
 
 	test("forever { break }", `
 		0: Jump 6

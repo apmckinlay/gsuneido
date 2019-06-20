@@ -334,6 +334,8 @@ func TestParseStatements(t *testing.T) {
 		"Switch(true \n Case(Binary(Lt x 3) \n Return(-1)))")
 	test("switch a { case 1,2: b case 3: c default: d }",
 		"Switch(a \n Case(1,2 \n b) \n Case(3 \n c) \n d)")
+	test("switch a { case 1,2: b case 3: c default: }",
+		"Switch(a \n Case(1,2 \n b) \n Case(3 \n c) \n ())")
 
 	test("throw 'fubar'", "Throw('fubar')")
 

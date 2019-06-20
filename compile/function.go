@@ -197,7 +197,7 @@ func (p *parser) switchCase() ast.Case {
 
 func (p *parser) switchBody() []ast.Statement {
 	p.match(tok.Colon)
-	var stmts []ast.Statement
+	stmts := []ast.Statement{}
 	for p.Token != tok.RCurly && p.Token != tok.Case && p.Token != tok.Default {
 		stmts = append(stmts, p.statement())
 	}

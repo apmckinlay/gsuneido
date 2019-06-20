@@ -626,6 +626,9 @@ func (x *Switch) String() string {
 		s += ")"
 	}
 	if x.Default != nil {
+		if len(x.Default) == 0 {
+			s += "\n()"
+		}
 		for _, stmt := range x.Default {
 			s += "\n" + stmt.String()
 		}
