@@ -63,7 +63,20 @@ func (ob *SuObject) Get(t *Thread, key Value) Value {
 	if val := ob.GetIfPresent(t, key); val != nil {
 		return val
 	}
-	return ob.defval //TODO copy object default
+	return ob.defaultValue(key)
+}
+
+func (ob  *SuObject) defaultValue(key Value) Value {
+	if ob.defval != nil {
+		if d, ok := ob.defval.ToContainer(); ok {
+			d = d.Copy()
+			if !ob.readonly {
+				ob.Set(key, d)
+			}
+			return d
+		}
+	}
+	return ob.defval
 }
 
 func (ob *SuObject) GetIfPresent(_ *Thread, key Value) Value {

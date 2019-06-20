@@ -332,7 +332,7 @@ func (r *SuRecord) Get(t *Thread, key Value) Value {
 	if val := r.GetIfPresent(t, key); val != nil {
 		return val
 	}
-	return r.ob.defval //TODO copy object default
+	return r.ob.defaultValue(key)
 }
 
 // GetIfPresent is the same as Get
