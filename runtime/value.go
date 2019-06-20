@@ -209,7 +209,7 @@ func ErrType(x Value) string {
 	return strings.ToLower(t)
 }
 
-// ToContainer converts to an SuObject or panics
+// ToContainer converts to a Container or panics
 func ToContainer(x Value) Container {
 	if ob, ok := x.ToContainer(); ok {
 		return ob
