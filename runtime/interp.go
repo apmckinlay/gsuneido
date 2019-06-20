@@ -133,11 +133,12 @@ func (t *Thread) interp(catchJump, catchSp *int) (ret Value) {
 			// first catch creates SuExcept with callstack
 			var ss SuStr
 			if re, ok := e.(runtime.Error); ok {
+				// debug.PrintStack()
 				ss = SuStr(re.Error())
 			} else if s, ok := e.(string); ok {
 				ss = SuStr(s)
 			} else {
-				ss = e.(SuStr) // BUG could be concat
+				ss = SuStr(ToStr(e.(Value)))
 			}
 			se = NewSuExcept(t, ss)
 		}
