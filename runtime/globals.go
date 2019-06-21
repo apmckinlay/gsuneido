@@ -42,6 +42,14 @@ func (typeGlobal) Builtin(name string, value Value) {
 	g.builtins[gnum] = value
 }
 
+func BuiltinNames() []Value {
+	names := make([]Value, 0, len(g.builtins))
+	for gn := range g.builtins {
+		names = append(names, SuStr(Global.Name(gn)))
+	}
+	return names
+}
+
 // Add adds a new name and value to globals.
 // This is used for set up of built-in globals
 // The return value is so it can be used like:
