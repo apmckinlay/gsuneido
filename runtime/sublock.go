@@ -31,7 +31,7 @@ func (b *SuBlock) Call(t *Thread, this Value, as *ArgSpec) Value {
 	if this == nil {
 		this = b.this
 	}
-	t.frames[t.fp] = Frame{fn: bf, locals: b.locals, this: this}
+	t.frames[t.fp] = Frame{fn: bf, locals: b.locals, this: this, localsOnHeap: true}
 	return t.run()
 }
 
