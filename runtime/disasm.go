@@ -41,10 +41,10 @@ func disasm1(fn *SuFunc, i int, indent int) (int, string) {
 		i += 2
 		return int(uint16(fn.Code[i-2])<<8 + uint16(fn.Code[i-1]))
 	}
-	nested := func (fn *SuFunc) string {
+	nested := func(fn *SuFunc) string {
 		var sb strings.Builder
 		sb.WriteString("\n")
-		disasm(&sb, fn, indent + 1)
+		disasm(&sb, fn, indent+1)
 		return strings.TrimRight(sb.String(), "\n")
 	}
 
@@ -58,7 +58,7 @@ func disasm1(fn *SuFunc, i int, indent int) (int, string) {
 	case op.Value:
 		v := fn.Values[fetchUint8()]
 		s += fmt.Sprintf(" %v", v)
-		if fn,ok := v.(*SuFunc); ok {
+		if fn, ok := v.(*SuFunc); ok {
 			s += nested(fn)
 		}
 	case op.Block:
@@ -96,7 +96,7 @@ func disasm1(fn *SuFunc, i int, indent int) (int, string) {
 
 func DisasmMixed(w io.Writer, fn *SuFunc, src string) {
 	sp := fn.SrcBase
-	printSrc := func (s string) {
+	printSrc := func(s string) {
 		fmt.Fprintf(w, "%d: %s\n", sp,
 			strings.TrimSpace(str.BeforeFirst(str.BeforeFirst(s, "}"), "//")))
 	}
@@ -106,7 +106,7 @@ func DisasmMixed(w io.Writer, fn *SuFunc, src string) {
 	var s string
 	for i := 0; i < len(fn.SrcPos); i += 2 {
 		ds := int(fn.SrcPos[i])
-		printSrc(src[sp:sp+ds])
+		printSrc(src[sp : sp+ds])
 		cp += int(fn.SrcPos[i+1])
 		for ip < cp {
 			fmt.Fprintf(w, "\t%d: ", ip)
