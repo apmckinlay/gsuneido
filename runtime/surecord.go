@@ -58,7 +58,8 @@ func SuRecordFromRow(row Row, hdr *Header, tran *SuTran) *SuRecord {
 		}
 	}
 	//TODO _deps
-	return &SuRecord{row: row, hdr: hdr, tran: tran, recadr: row[0].Adr}
+	return &SuRecord{row: row, hdr: hdr, tran: tran, recadr: row[0].Adr,
+		ob: SuObject{defval: EmptyStr}}
 }
 
 func (r *SuRecord) Copy() Container {
@@ -344,7 +345,7 @@ func (r *SuRecord) GetIfPresent(t *Thread, keyval Value) Value {
 		if result == nil && r.row != nil {
 			raw := r.row.GetRaw(r.hdr, key)
 			if raw == "" {
-				return EmptyStr
+				return r.ob.defaultValue(keyval)
 			}
 			val := Unpack(raw)
 			r.PreSet(keyval, val) // cache unpacked value
