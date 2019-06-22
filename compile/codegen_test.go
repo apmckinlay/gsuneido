@@ -155,18 +155,26 @@ func TestCodegenSuper(t *testing.T) {
 		m := src[0:strings.IndexByte(src, '(')]
 		fn := c.Lookup(nil, m).(*SuFunc)
 		actual := disasm(fn)
-		if actual != expected {
-			t.Errorf("\n%s\nexpect: %s\nactual: %s", src, expected, actual)
-		}
+		Assert(t).That(actual, Like(expected))
+		// if actual != expected {
+		// 	t.Errorf("\n%s\nexpect: %s\nactual: %s", src, expected, actual)
+		// }
 	}
 	test("New(){}", "This, Value 'New', Super Foo, CallMeth ()")
-	test("New(){ F() }", "This, Value 'New', Super Foo, CallMeth (), Pop, " +
+	test("New(){ F() }", "This, Value 'New', Super Foo, CallMeth (), Pop, "+
 		"Global F, CallFunc ()")
 
 	// Super(...) => Super.New(...)
 	test("New(){super(1)}", "This, One, Value 'New', Super Foo, CallMeth (?)")
 
 	test("F(){super.Bar(0,1)}", "This, Zero, One, Value 'Bar', Super Foo, CallMeth (?, ?)")
+
+	test("F() { 1.Times() { super.Push(123) } }", `One, Block
+		0: This
+		1: Int 123
+		4: Value 'Push'
+		6: Super Foo
+		9: CallMeth (?), Value 'Times', CallMeth (block:)`)
 }
 
 func disasm(fn *SuFunc) string {
@@ -174,6 +182,7 @@ func disasm(fn *SuFunc) string {
 	var s string
 	for i := 0; i < len(fn.Code); {
 		i, s = Disasm1(fn, i)
+		// s = str.BeforeFirst(s, "\n")
 		da = append(da, s)
 	}
 	return strings.Join(da, ", ")

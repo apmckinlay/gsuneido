@@ -45,7 +45,9 @@ func Blocks(f *Function) {
 		x.block.CompileAsFunction = true
 	}
 	for i, x := range b.bloks {
-		if _, ok := x.vars["this"]; ok || shares(x.vars, vars) ||
+		_, this := x.vars["this"]
+		_, super := x.vars["super"]
+		if this || super || shares(x.vars, vars) ||
 				(x.parent != nil && shares(x.vars, x.parent.params)) {
 			closure(x)
 			continue

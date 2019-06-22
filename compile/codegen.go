@@ -66,16 +66,15 @@ func (cg *cgen) codegen(fn *ast.Function) *SuFunc {
 	}
 }
 
-func codegenBlock(ast *ast.Function,
-	outerFn *ast.Function, outerNames []string) (*SuFunc, []string) {
-	base := len(outerNames)
-	cg := cgen{outerFn: outerFn, base: ast.Base, isBlock: true}
-	cg.Names = outerNames
+func codegenBlock(ast *ast.Function, outercg *cgen) (*SuFunc, []string) {
+	base := len(outercg.Names)
+	cg := cgen{outerFn: outercg.outerFn, base: outercg.base, isBlock: true}
+	cg.Names = outercg.Names
 
 	f := cg.codegen(ast)
 
 	// hide parameters from outer function
-	outerNames = f.Names
+	outerNames := f.Names
 	f.Names = make([]string, len(outerNames))
 	verify.That(base <= math.MaxUint8)
 	f.Offset = uint8(base)
@@ -943,7 +942,7 @@ func (cg *cgen) block(b *ast.Block) {
 		cg.emitValue(fn)
 	} else {
 		// closure
-		fn, cg.Names = codegenBlock(f, cg.outerFn, cg.Names)
+		fn, cg.Names = codegenBlock(f, cg)
 		i := cg.value(fn)
 		cg.emitUint8(op.Block, i)
 	}
