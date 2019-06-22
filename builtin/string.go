@@ -17,6 +17,30 @@ import (
 
 func init() {
 	StringMethods = Methods{
+		"Alpha?": method0(func(this Value) Value {
+			s := ToStr(this)
+			if s == "" {
+				return False
+			}
+			for _, c := range []byte(ToStr(this)) {
+				if !ascii.IsLetter(c) {
+					return False
+				}
+			}
+			return True
+		}),
+		"AlphaNum?": method0(func(this Value) Value {
+			s := ToStr(this)
+			if s == "" {
+				return False
+			}
+			for _, c := range []byte(ToStr(this)) {
+				if !ascii.IsLetter(c) && !ascii.IsDigit(c) {
+					return False
+				}
+			}
+			return True
+		}),
 		"Asc": method0(func(this Value) Value {
 			s := ToStr(this)
 			if s == "" {
