@@ -138,7 +138,7 @@ func init() {
 			}),
 		"WeekDay": method1("(firstDay='Sun')", func(this, arg Value) Value {
 			i := dayOfWeek(arg)
-			return IntVal((this.(SuDate).WeekDay() - i) % 7)
+			return IntVal(((this.(SuDate).WeekDay() - i) + 7) % 7)
 		}),
 
 		"Year": method0(func(this Value) Value {
