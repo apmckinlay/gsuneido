@@ -3,7 +3,6 @@ package runtime
 // see also: ArgSpec
 
 import (
-	"fmt"
 	"strconv"
 
 	"github.com/apmckinlay/gsuneido/util/ints"
@@ -145,7 +144,6 @@ func (t *Thread) massage(ps *ParamSpec, as *ArgSpec, args []Value) {
 	// check that all parameters now have values
 	for i := 0; i < noDefs; i++ {
 		if args[i] == nil {
-			fmt.Println("i", i, "as", as, "ps", ps)
 			panic("missing argument")
 		}
 	}
