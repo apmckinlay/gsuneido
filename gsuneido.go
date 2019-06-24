@@ -136,7 +136,6 @@ func printCallStack(cs *SuObject) {
 }
 
 // libload loads a name from the dbms
-// TODO handle multiple libraries
 func libload(t *Thread, name string) (result Value) {
 	defer func() {
 		if e := recover(); e != nil {

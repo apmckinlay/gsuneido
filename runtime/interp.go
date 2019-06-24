@@ -153,7 +153,7 @@ loop:
 	for fr.ip < len(code) {
 		// fmt.Println("stack:", t.sp, t.stack[ints.Max(0, t.sp-3):t.sp])
 		// _, da := Disasm1(fr.fn, fr.ip)
-		// fmt.Printf("%d: %s\n", fr.ip, da)
+		// fmt.Printf("%d: %d: %s\n", t.fp, fr.ip, da)
 		oc := op.Opcode(code[fr.ip])
 		fr.ip++
 		switch oc {
