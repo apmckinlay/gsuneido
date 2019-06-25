@@ -36,6 +36,14 @@ func init() {
 				list, named := iterWhich(as, args)
 				return NewSuSequence(IterAssocs(ToContainer(this), list, named))
 			}),
+		"BinarySearch": method("(value, block = false)",
+			func(t *Thread, this Value, args []Value) Value {
+				ob := ToContainer(this).ToObject()
+				if args[1] == False {
+					return IntVal(ob.BinarySearch(args[0]))
+				}
+				return IntVal(ob.BinarySearch2(t, args[0], args[1]))
+			}),
 		"Clear": method0(func(this Value) Value {
 			ToContainer(this).Clear()
 			return nil
@@ -105,14 +113,6 @@ func init() {
 			}
 			return SuStr(sb.String())
 		}),
-		"BinarySearch": method("(value, block = false)",
-			func(t *Thread, this Value, args []Value) Value {
-				ob := ToContainer(this).ToObject()
-				if args[1] == False {
-					return IntVal(ob.BinarySearch(args[0]))
-				}
-				return IntVal(ob.BinarySearch2(t, args[0], args[1]))
-			}),
 		"Members": methodRaw("(list = true, named = true)",
 			func(_ *Thread, as *ArgSpec, this Value, args []Value) Value {
 				list, named := iterWhich(as, args)
@@ -166,6 +166,7 @@ func init() {
 				return NewSuSequence(IterValues(ToContainer(this), list, named))
 			}),
 	}
+	ObjectMethods["LowerBound"] = ObjectMethods["BinarySearch"]
 }
 
 func obDelete(t *Thread, as *ArgSpec, this Value, args []Value) Value {
