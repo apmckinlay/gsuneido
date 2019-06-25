@@ -413,7 +413,7 @@ func TestControl(t *testing.T) {
 		3: Load b
 		5: Pop
 		6: Jump 17
-		9: Jump 0
+		9: Jump 12
 		12: Load a
 		14: JumpTrue 3`)
 
@@ -433,6 +433,26 @@ func TestControl(t *testing.T) {
         19: Int 9
         22: Lt
         23: JumpTrue 7`)
+
+	test("for (i = 0; i < 9; ++i) { a; continue; b }", `
+		0: Zero
+        1: Store i
+        3: Pop
+        4: Jump 23
+        7: Load a
+        9: Pop
+        10: Jump 16
+        13: Load b
+        15: Pop
+        16: Load i
+        18: One
+        19: Add
+        20: Store i
+        22: Pop
+        23: Load i
+        25: Int 9
+        28: Lt
+        29: JumpTrue 7`)
 
 	test(`for (x in y) { a; break; continue }`, `
 		0: Load y

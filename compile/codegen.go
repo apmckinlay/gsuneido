@@ -327,7 +327,11 @@ func (cg *cgen) breakStmt(labels *Labels) {
 
 func (cg *cgen) continueStmt(labels *Labels) {
 	if labels != nil {
-		cg.emitBwdJump(op.Jump, labels.cont)
+		if labels.cont != -1 && labels.cont < len(cg.code) {
+			cg.emitBwdJump(op.Jump, labels.cont)
+		} else {
+			labels.cont = cg.emitJump(op.Jump, labels.cont)
+		}
 	} else if cg.isBlock {
 		cg.emit(op.BlockContinue)
 	} else {
@@ -406,12 +410,14 @@ func (cg *cgen) dowhileStmt(node *ast.DoWhile) {
 func (cg *cgen) forStmt(node *ast.For) {
 	cg.exprList(node.Init)
 	labels := cg.newLabels()
+	labels.cont = -1
 	cond := -1
 	if node.Cond != nil {
 		cond = cg.emitJump(op.Jump, -1)
 	}
 	loop := cg.label()
 	cg.statement(node.Body, labels, false)
+	cg.placeLabel(labels.cont)
 	cg.exprList(node.Inc) // increment
 	if node.Cond == nil {
 		cg.emitBwdJump(op.Jump, loop)
