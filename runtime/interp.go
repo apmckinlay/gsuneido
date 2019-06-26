@@ -220,12 +220,12 @@ loop:
 			ob.Put(t, m, val)
 			t.Push(val)
 		case op.RangeTo:
-			j := Index(t.Pop())
+			j := ToInt(t.Pop())
 			i := Index(t.Pop())
 			val := t.Pop()
 			t.Push(val.RangeTo(i, j))
 		case op.RangeLen:
-			n := Index(t.Pop())
+			n := ToInt(t.Pop())
 			i := Index(t.Pop())
 			val := t.Pop()
 			t.Push(val.RangeLen(i, n))
