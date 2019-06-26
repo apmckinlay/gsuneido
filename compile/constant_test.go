@@ -14,6 +14,7 @@ import (
 
 func TestConstant(t *testing.T) {
 	test := func(src string, expected Value) {
+		t.Helper()
 		Assert(t).That(Constant(src), Equals(expected))
 	}
 	test("true", True)
@@ -24,7 +25,7 @@ func TestConstant(t *testing.T) {
 	test("0xff", SuInt(255))
 	test("0xfffff", SuDnum{Dnum: dnum.FromInt(0xfffff)})
 	test("0xffffffff", SuDnum{Dnum: dnum.FromInt(-1)})
-	test("0377", SuInt(255))
+	test("0377", SuInt(377))
 	test("'hi wo'", SuStr("hi wo"))
 	test("/* comment */ true", True)
 

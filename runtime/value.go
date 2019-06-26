@@ -107,7 +107,7 @@ func NumFromString(s string) Value {
 			return IntVal(int(int32(n)))
 		}
 	}
-	if n, err := strconv.ParseInt(s, 0, 32); err == nil {
+	if n, err := strconv.ParseInt(s, 10, 32); err == nil {
 		return IntVal(int(n))
 	}
 	return SuDnum{Dnum: dnum.FromStr(s)}
