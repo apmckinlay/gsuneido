@@ -129,8 +129,6 @@ func (p *parser) privatizeRef(name string) string {
 			if len(name) <= 7 || !ascii.IsLower(name[7]) {
 				p.error("invalid getter (" + name + ")")
 			}
-			// get_name => Getter_Class_name
-			name = "Getter_" + p.className + name[:6]
 		} else {
 			name = p.className + "_" + name
 		}

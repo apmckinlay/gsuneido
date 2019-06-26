@@ -87,9 +87,18 @@ func (c *SuClass) get1(t *Thread, this Value, mem string) Value {
 		if getter := c.get2(t, "Getter_"); getter != nil {
 			return t.CallThis(getter, this, SuStr(mem))
 		}
+		//TODO deprecated
+		if getter := c.get2(t, "Get_"); getter != nil {
+			return t.CallThis(getter, this, SuStr(mem))
+		}
 		c.noGetter = true
 	}
 	getterName := "Getter_" + mem
+	if getter := c.get2(t, getterName); getter != nil {
+		return getter.Call(t, this, ArgSpec0)
+	}
+	//TODO deprecated
+	getterName = "Get_" + mem
 	if getter := c.get2(t, getterName); getter != nil {
 		return getter.Call(t, this, ArgSpec0)
 	}
