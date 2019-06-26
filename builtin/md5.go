@@ -68,7 +68,7 @@ func (*SuMd5) String() string {
 }
 
 func (*SuMd5) Type() types.Type {
-	return types.Md5
+	return types.BuiltinClass
 }
 
 func (sa *SuMd5) Equal(other interface{}) bool {

@@ -68,7 +68,7 @@ func (*SuAdler32) String() string {
 }
 
 func (*SuAdler32) Type() types.Type {
-	return types.Adler32
+	return types.BuiltinClass
 }
 
 func (sa *SuAdler32) Equal(other interface{}) bool {

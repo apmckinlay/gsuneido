@@ -26,8 +26,6 @@ const (
 	Query
 	Cursor
 	Scanner
-	Adler32
-	Md5
-	Sha1
 	File
+	BuiltinClass
 )

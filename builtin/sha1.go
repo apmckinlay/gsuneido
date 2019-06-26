@@ -68,7 +68,7 @@ func (*SuSha1) String() string {
 }
 
 func (*SuSha1) Type() types.Type {
-	return types.Sha1
+	return types.BuiltinClass
 }
 
 func (sa *SuSha1) Equal(other interface{}) bool {
