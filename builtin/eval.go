@@ -36,7 +36,7 @@ func EvalAsMethod(t *Thread, as *ArgSpec, ob Value, args []Value) Value {
 	// first argument is function
 	k, f := NewArgsIter(as, args)()
 	if k != nil || f == nil {
-		panic("usage: object.Eval(function, ...)")
+		panic("usage: object.Eval(callable, ...)")
 	}
 	return f.Call(t, ob, as.DropFirst())
 }

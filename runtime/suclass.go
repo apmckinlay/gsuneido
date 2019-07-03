@@ -218,9 +218,12 @@ func (d *defaultAdapter) Call(t *Thread, this Value, as *ArgSpec) Value {
 	return d.fn.Call(t, this, as)
 }
 
-func (c *SuClass) Call(t *Thread, _ Value, as *ArgSpec) Value {
+func (c *SuClass) Call(t *Thread, this Value, as *ArgSpec) Value {
+	if this == nil {
+		this = c
+	}
 	if f := c.get2(t, "CallClass"); f != nil {
-		return f.Call(t, c, as)
+		return f.Call(t, this, as)
 	}
 	// default for calling a class is to create an instance
 	return c.New(t, as)
