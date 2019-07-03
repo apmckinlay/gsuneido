@@ -99,6 +99,16 @@ func init() {
 			return fromFloat(math.Log10(f))
 		}),
 		"Pow": method1("(number)", func(this, arg Value) Value {
+			if p, ok := arg.ToInt(); ok && 0 <= p && p <= 10 {
+				if p == 0 {
+					return One
+				}
+				x := this
+				for ; p > 1; p-- {
+					x = Mul(x, this)
+				}
+				return x
+			}
 			x := toFloat(this)
 			y := toFloat(arg)
 			return fromFloat(math.Pow(x, y))
