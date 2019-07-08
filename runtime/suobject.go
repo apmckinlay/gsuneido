@@ -66,7 +66,7 @@ func (ob *SuObject) Get(t *Thread, key Value) Value {
 	return ob.defaultValue(key)
 }
 
-func (ob  *SuObject) defaultValue(key Value) Value {
+func (ob *SuObject) defaultValue(key Value) Value {
 	if ob.defval != nil {
 		if d, ok := ob.defval.ToContainer(); ok {
 			d = d.Copy()
@@ -504,7 +504,12 @@ func (ob *SuObject) ToRecord(t *Thread, hdr *Header) Record {
 	fields := hdr.Fields[0]
 	rb := RecordBuilder{}
 	for _, f := range fields {
-		rb.AddRaw(PackValue(ob.Get(t, SuStr(f))))
+		x := ob.Get(t, SuStr(f))
+		if x == nil {
+			rb.AddRaw("")
+		} else {
+			rb.AddRaw(PackValue(x))
+		}
 	}
 	return rb.Build()
 }
