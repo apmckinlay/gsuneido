@@ -9,12 +9,19 @@ func init() {
 		"Copy": method0(func(this Value) Value {
 			return this.(*SuInstance).Copy()
 		}),
-		"Delete": method2("(key = nil, all = false)",
-			func(this, key, all Value) Value {
-				if all == True {
+		"Delete": methodRaw("(@args)",
+			func(t *Thread, as *ArgSpec, this Value, args []Value) Value {
+				if all := getNamed(as, args, SuStr("all")); all == True {
 					this.(*SuInstance).Clear()
 				} else {
-					this.(*SuInstance).Delete(key)
+					iter := NewArgsIter(as, args)
+					for {
+						k, v := iter()
+						if k != nil || v == nil {
+							break
+						}
+						this.(*SuInstance).Delete(v)
+					}
 				}
 				return this
 			}),

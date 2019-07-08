@@ -46,8 +46,12 @@ func (p *parser) params(inClass bool) []ast.Param {
 			p.matchIdent()
 			p.checkForDupParam(params, name)
 			if p.matchIf(tok.Eq) {
+				was_string := p.Token == tok.String
 				defs = true
 				def := p.constant()
+				if _,ok := def.(SuStr); ok && !was_string {
+					p.error("parameter defaults must be constants")
+				}
 				params = append(params,
 					ast.Param{Name: name, DefVal: def, Unused: unused})
 			} else {

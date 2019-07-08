@@ -92,6 +92,7 @@ func methodRaw(p string,
 
 // params builds a ParamSpec from a string like (a, b) or (@args)
 func params(s string) *ParamSpec {
+	s = strings.ReplaceAll(s, "nil", "'nil'")
 	fn := compile.Constant("function " + s + " {}").(*SuFunc)
 	for i := 0; i < int(fn.ParamSpec.Ndefaults); i++ {
 		if fn.Values[i].Equal(SuStr("nil")) {
