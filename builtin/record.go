@@ -43,6 +43,9 @@ func init() {
 				}
 				return nil
 			}),
+		"New?": method0(func(this Value) Value {
+			return SuBool(this.(*SuRecord).IsNew())
+		}),
 		"Observer": method1("(observer)", func(this, arg Value) Value {
 			this.(*SuRecord).Observer(arg)
 			return nil

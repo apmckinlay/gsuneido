@@ -132,7 +132,7 @@ func (r *SuRecord) ToContainer() (Container, bool) {
 // Container --------------------------------------------------------
 
 func (r *SuRecord) ToObject() *SuObject {
-	if r.row != nil {
+	if r.row != nil { //TODO and r.ob == nil ???
 		for ri, rf := range r.hdr.Fields {
 			for fi, f := range rf {
 				if f != "-" && !strings.HasSuffix(f, "_deps") {
@@ -184,6 +184,10 @@ func (r *SuRecord) SetReadOnly() {
 
 func (r *SuRecord) IsReadOnly() bool {
 	return r.ob.IsReadOnly()
+}
+
+func (r *SuRecord) IsNew() bool {
+	return r.row == nil
 }
 
 func (r *SuRecord) Delete(t *Thread, key Value) bool {
