@@ -13,5 +13,5 @@ func init() {
 
 var _ = builtin1("Random(limit)", func(arg Value) Value {
 	limit := IfInt(arg)
-	return SuInt(rand.Intn(limit))
+	return IntVal(rand.Intn(limit))
 })
