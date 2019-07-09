@@ -771,7 +771,8 @@ func (cg *cgen) emitValue(val Value) {
 // reusing if duplicate, adding otherwise
 func (cg *cgen) value(v Value) int {
 	for i, v2 := range cg.Values {
-		if v.Equal(v2) {
+		// need the type check to differentiate object and record
+		if v.Equal(v2) && v.Type() == v2.Type() {
 			return i
 		}
 	}
