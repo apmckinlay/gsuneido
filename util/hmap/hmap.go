@@ -162,6 +162,7 @@ func (h *Hmap) Put(key Key, val Val) {
 	for {
 		if key.Equal(iter.key()) {
 			iter.valSet(val) // update value for existing key
+			h.version-- // version doesn't need to change
 			return
 		}
 		if !iter.next() {
