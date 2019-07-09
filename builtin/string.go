@@ -13,6 +13,7 @@ import (
 
 	"github.com/apmckinlay/gsuneido/compile"
 	. "github.com/apmckinlay/gsuneido/runtime"
+	"golang.org/x/text/encoding/charmap"
 )
 
 func init() {
@@ -148,6 +149,15 @@ func init() {
 				return False
 			}
 			return intOrFalse(str.LastIndexNotAny(s[:end], set))
+		}),
+		"FromUtf8": method0(func(this Value) Value {
+			utf8 := ToStr(this)
+			encoder := charmap.Windows1252.NewEncoder()
+			s, err := encoder.String(utf8)
+			if err != nil {
+				panic("string.FromUtf8 " + err.Error())
+			}
+			return SuStr(s)
 		}),
 		"Has?": method1("(string)", func(this, arg Value) Value {
 			return SuBool(strings.Contains(ToStr(this), ToStr(arg)))
@@ -326,6 +336,15 @@ func init() {
 		}),
 		"Suffix?": method1("(string)", func(this, arg Value) Value {
 			return SuBool(strings.HasSuffix(ToStr(this), ToStr(arg)))
+		}),
+		"ToUtf8": method0(func(this Value) Value {
+			s := ToStr(this)
+			decoder := charmap.Windows1252.NewDecoder()
+			utf8, err := decoder.String(s)
+			if err != nil {
+				panic("string.ToUtf8 " + err.Error())
+			}
+			return SuStr(utf8)
 		}),
 		"Tr": method("(from, to='')",
 			func(t *Thread, this Value, args []Value) Value {
