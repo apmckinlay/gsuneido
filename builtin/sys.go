@@ -91,3 +91,12 @@ var _ = builtin2("MoveFile(from, to)",
 		}
 		return True
 	})
+
+var _ = builtin1("DeleteDir(dir)",
+	func(dir Value) Value {
+		err := os.RemoveAll(ToStr(dir))
+		if err != nil {
+			panic("DeleteDir: " + err.Error())
+		}
+		return True
+	})
