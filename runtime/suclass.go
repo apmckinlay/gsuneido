@@ -153,6 +153,9 @@ func (c *SuClass) Parent(t *Thread) *SuClass {
 		return nil
 	}
 	base := Global.Get(t, c.Base)
+	if base == nil {
+		return nil
+	}
 	if baseClass, ok := base.(*SuClass); ok {
 		return baseClass
 	}
