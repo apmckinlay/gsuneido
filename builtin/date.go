@@ -5,6 +5,7 @@ import (
 	"time"
 
 	. "github.com/apmckinlay/gsuneido/runtime"
+	"github.com/apmckinlay/gsuneido/util/dnum"
 )
 
 type SuDateGlobal struct {
@@ -105,6 +106,8 @@ func (d *SuDateGlobal) String() string {
 	return "Date /* builtin class */"
 }
 
+var msFactor = dnum.FromStr(".001")
+
 func init() {
 	DateMethods = Methods{
 		"MinusDays": method1("(date)", func(this Value, val Value) Value {
@@ -117,8 +120,11 @@ func init() {
 		"MinusSeconds": method1("(date)", func(this Value, val Value) Value {
 			t1 := this.(SuDate)
 			if t2, ok := val.(SuDate); ok {
+				if t1.Year()-t2.Year() >= 50 {
+					panic("date.MinusSeconds interval too large")
+				}
 				ms := t1.MinusMs(t2)
-				return fromFloat(float64(ms) / 1000)
+				return SuDnum{Dnum: dnum.Mul(dnum.FromInt(ms), msFactor)}
 			}
 			panic("date.MinusSeconds requires date")
 		}),
