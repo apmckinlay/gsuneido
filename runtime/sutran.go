@@ -10,6 +10,7 @@ type SuTran struct {
 	updatable bool
 	state     tstate
 	conflict  string
+	data      *SuObject
 	CantConvert
 }
 
@@ -159,4 +160,11 @@ func (st *SuTran) ckActive() {
 	if st.state != active {
 		panic("cannot use ended transaction")
 	}
+}
+
+func (st *SuTran) Data() *SuObject {
+	if st.data == nil {
+		st.data = &SuObject{}
+	}
+	return st.data
 }

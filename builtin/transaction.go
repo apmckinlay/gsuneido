@@ -44,6 +44,9 @@ func init() {
 		"Conflict": method0(func(this Value) Value {
 			return SuStr(this.(*SuTran).Conflict())
 		}),
+		"Data": method0(func(this Value) Value {
+			return this.(*SuTran).Data()
+		}),
 		"Ended?": method0(func(this Value) Value {
 			return SuBool(this.(*SuTran).Ended())
 		}),
