@@ -474,7 +474,7 @@ func (cg *cgen) exprStmt(expr ast.Expr, lastStmt bool) {
 	if tri := cg.ifTrinary(expr); tri != nil {
 		cg.triExpr(tri, func() {
 			if lastStmt {
-				cg.returnStmt2(expr, false)
+				cg.emit(op.Return)
 			} else {
 				cg.emit(op.Pop)
 			}
