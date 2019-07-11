@@ -148,12 +148,16 @@ func libload(t *Thread, name string) (result Value) {
 		// fmt.Println("LOAD", name, "MISSING")
 		return nil
 	}
-	if len(defs) > 2 {
-		panic("library overloading not handled")
+	for i := 0; i < len(defs); i += 2 {
+		lib := defs[i]
+		src := defs[i+1]
+		if s, ok := LibraryOverrides[lib+":"+name]; ok {
+			src = s
+		}
+		// want to pass the name from the start (rather than adding after)
+		// so it propogates to nested Named values
+		result = compile.NamedConstant(lib, name, src)
+		// fmt.Println("LOAD", name, "SUCCEEDED")
 	}
-	// want to pass the name from the start (rather than adding after)
-	// so it propogates to nested Named values
-	result = compile.NamedConstant(defs[0], name, defs[1])
-	// fmt.Println("LOAD", name, "SUCCEEDED")
 	return
 }
