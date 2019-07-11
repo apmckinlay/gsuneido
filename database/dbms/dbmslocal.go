@@ -90,7 +90,6 @@ func (DbmsLocal) LibGet(name string) (result []string) {
 	defer func() {
 		if e := recover(); e != nil {
 			panic("error loading " + name + " " + fmt.Sprint(e))
-			result = nil
 		}
 	}()
 	dir := "../stdlib/"
