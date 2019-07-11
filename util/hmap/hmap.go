@@ -153,6 +153,7 @@ func (h *Hmap) Put(key Key, val Val) {
 		b.key[ib] = key
 		b.val[ib] = val
 		h.size++
+		return
 	}
 	iter := chainIter{h, b, index, ib}
 	if iter.meta()&metaDirect != metaDirect {
