@@ -269,7 +269,7 @@ func init() {
 		"Repeat": method1("(count)", func(this, arg Value) Value {
 			return SuStr(strings.Repeat(ToStr(this), ints.Max(0, ToInt(arg))))
 		}),
-		"Replace": method("(pattern, replacement = '', count = false)",
+		"Replace": method("(pattern, block = '', count = false)",
 			func(t *Thread, this Value, args []Value) Value {
 				count := ints.MaxInt
 				if args[2] != False {
