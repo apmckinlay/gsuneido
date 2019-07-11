@@ -1,6 +1,9 @@
 package runtime
 
-import "sync"
+import (
+	"fmt"
+	"sync"
+)
 
 // Gnum is a reference to a global name/value
 // 0 is invalid
@@ -33,7 +36,7 @@ var g = globals{
 
 // only called by single threaded init so no locking required
 func (typeGlobal) Builtin(name string, value Value) {
-	if _, ok := g.name2num[name]; ok {
+	if gn, ok := g.name2num[name]; ok && g.values[gn] != nil {
 		panic("duplicate builtin: " + name)
 	}
 	gnum := Global.add(name, nil)
@@ -114,6 +117,8 @@ func (typeGlobal) Exists(name string) bool {
 // Libload requires dependency injection
 var Libload = func(*Thread, string) Value { return nil }
 
+var gnPrint = Global.Num("Print")
+
 // Get returns the value for a global, or nil if not found
 func (typeGlobal) Get(t *Thread, gnum Gnum) Value {
 	if x, ok := g.builtins[gnum]; ok {
@@ -128,6 +133,11 @@ func (typeGlobal) Get(t *Thread, gnum Gnum) Value {
 		// That means two threads could both load
 		// but they should both get the same value.
 		x = Libload(t, Global.Name(gnum))
+		// want Print even if we don't have stdlib
+		if x == nil && gnum == gnPrint {
+			fmt.Println("using built-in Print")
+			return printBuiltin
+		}
 		if x == nil {
 			x = g.missing // avoid further libloads
 		}

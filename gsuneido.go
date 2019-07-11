@@ -57,6 +57,8 @@ func repl() {
 	prompt("Press Enter twice (i.e. blank line) to execute, q to quit\n")
 	if options.Client {
 		eval("Init()")
+	} else {
+		eval("Suneido.Print = PrintStdout;;")
 	}
 	r := bufio.NewReader(os.Stdin)
 	for {

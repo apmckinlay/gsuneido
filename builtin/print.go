@@ -6,31 +6,8 @@ import (
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
-var _ = builtinRaw("Print(@args)",
-	func(t *Thread, as *ArgSpec, args []Value) Value {
-		iter := NewArgsIter(as, args)
-		sep := ""
-		for {
-			name, value := iter()
-			if value == nil {
-				break
-			}
-			fmt.Print(sep)
-			if name != nil {
-				print(t, name)
-				fmt.Print(": ")
-			}
-			print(t, value)
-			sep = " "
-		}
-		fmt.Println()
+var _ = builtin("PrintStdout(string)",
+	func(t *Thread, args []Value) Value {
+		fmt.Print(ToStr(args[0]))
 		return nil
 	})
-
-func print(t *Thread, v Value) {
-	if s,ok := v.ToStr(); ok {
-		fmt.Print(s)
-	} else {
-		fmt.Print(display(t, v))
-	}
-}

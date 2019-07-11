@@ -66,6 +66,8 @@ var ParamSpec0 = ParamSpec{Nparams: 0, Signature: ^Sig0}
 var ParamSpec1 = ParamSpec{Nparams: 1, Signature: ^Sig1}
 var ParamSpec2 = ParamSpec{Nparams: 2, Signature: ^Sig2}
 
+var ParamSpecAt = ParamSpec{Nparams: 1, Flags: []Flag{AtParam}}
+
 var ParamSpecOptionalBlock = ParamSpec{Nparams: 1, Ndefaults: 1,
 	Flags: []Flag{0}, Names: []string{"block"}, Values: []Value{False}}
 
