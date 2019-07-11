@@ -7,6 +7,7 @@ import (
 	"github.com/apmckinlay/gsuneido/runtime/types"
 	"github.com/apmckinlay/gsuneido/util/ascii"
 	"github.com/apmckinlay/gsuneido/util/str"
+	"github.com/apmckinlay/gsuneido/util/verify"
 )
 
 // SuClass is a user defined (Suneido language) class
@@ -110,6 +111,7 @@ func (c *SuClass) get1(t *Thread, this Value, mem string) Value {
 func (c *SuClass) get2(t *Thread, m string) Value {
 	for {
 		if x, ok := c.Data[m]; ok {
+			verify.That(x != nil)
 			return x
 		}
 		if c = c.Parent(t); c == nil {
@@ -156,7 +158,7 @@ func (c *SuClass) Parent(t *Thread) *SuClass {
 	}
 	base := Global.Get(t, c.Base)
 	if base == nil {
-		return nil
+		panic("can't find " + Global.Name(c.Base))
 	}
 	if baseClass, ok := base.(*SuClass); ok {
 		return baseClass
