@@ -37,11 +37,13 @@ type parser struct {
 	// set by function.go used by expression.go
 	expectingCompound bool
 
-	// name is used to assign names to nested Named constants
-	// it is also used for privatization
+	// lib is passed to named constants for Display
+	lib string
+
+	// name is used for Named constants
 	name string
 
-	// className is set by parser.Class for privatization
+	// className is set for privatization
 	className string
 
 	// assignName is used to pass the variable name through an assignment

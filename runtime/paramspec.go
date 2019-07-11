@@ -39,6 +39,9 @@ type ParamSpec struct {
 	// starting with parameter defaults
 	Values []Value
 
+	// Lib is the library that the function came from
+	Lib string
+
 	// Name for library records will be the record name;
 	// for class methods, the method name;
 	// if assigned to a local variable, the variable name.

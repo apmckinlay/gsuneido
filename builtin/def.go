@@ -10,7 +10,7 @@ func Def() {
 	builtin2("Def(name, definition)", func(nameVal, val Value) Value {
 		name := string(nameVal.(SuStr))
 		if ss, ok := val.(SuStr); ok {
-			val = compile.NamedConstant(name, string(ss))
+			val = compile.NamedConstant("Def", name, string(ss))
 		}
 		Global.TestDef(name, val)
 		return nil

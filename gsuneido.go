@@ -153,7 +153,7 @@ func libload(t *Thread, name string) (result Value) {
 	}
 	// want to pass the name from the start (rather than adding after)
 	// so it propogates to nested Named values
-	result = compile.NamedConstant(name, defs[1])
+	result = compile.NamedConstant(defs[0], name, defs[1])
 	// fmt.Println("LOAD", name, "SUCCEEDED")
 	return
 }

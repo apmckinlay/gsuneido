@@ -75,7 +75,7 @@ func (f *SuFunc) String() string {
 	if f.Name != "" && f.Name != "?" {
 		s = f.Name + " "
 	}
-	s += "/* "
+	s += "/* " + str.Opt(f.Lib, " ")
 	if f.ClassName != "" {
 		s += "method"
 	} else {

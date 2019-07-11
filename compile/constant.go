@@ -14,13 +14,14 @@ import (
 
 // Constant compiles an anonymous Suneido constant
 func Constant(src string) Value {
-	return NamedConstant("", src)
+	return NamedConstant("", "", src)
 }
 
 // NamedConstant compiles a Suneido constant with a name
 // e.g. a library record
-func NamedConstant(name, src string) Value {
+func NamedConstant(lib, name, src string) Value {
 	p := NewParser(src)
+	p.lib = lib
 	p.name = name
 	result := p.constant()
 	if p.Token != tok.Eof {
@@ -94,6 +95,7 @@ func (p *parser) functionValue() Value {
 	p.className = prevClassName
 	p.checker(ast)
 	f := codegen(ast)
+	f.Lib = p.lib
 	f.Name = p.name
 	return f
 }
@@ -268,7 +270,7 @@ func (p *parser) class() Value {
 	mems := classcon{}
 	p.memberList(mems, tok.RCurly, base)
 	p.className = prevClassName
-	return &SuClass{Base: base, MemBase: MemBase{Data: mems}, Name: p.name}
+	return &SuClass{Base: base, MemBase: MemBase{Data: mems}, Lib: p.lib, Name: p.name}
 }
 
 func (p *parser) ckBase(name string) Gnum {

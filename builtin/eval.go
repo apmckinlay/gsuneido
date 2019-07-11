@@ -20,7 +20,7 @@ func EvalString(t *Thread, s string) Value {
 		panic("can't find " + s)
 	}
 	s = "function () {\n" + s + "\n}"
-	fn := compile.NamedConstant("eval", s).(*SuFunc)
+	fn := compile.NamedConstant("", "eval", s).(*SuFunc)
 	return t.Start(fn, nil)
 }
 

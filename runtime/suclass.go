@@ -6,11 +6,13 @@ import (
 
 	"github.com/apmckinlay/gsuneido/runtime/types"
 	"github.com/apmckinlay/gsuneido/util/ascii"
+	"github.com/apmckinlay/gsuneido/util/str"
 )
 
 // SuClass is a user defined (Suneido language) class
 type SuClass struct {
 	MemBase
+	Lib      string
 	Name     string
 	Base     Gnum
 	noGetter bool
@@ -23,7 +25,7 @@ func (c *SuClass) String() string {
 	if !anonymous(c.Name) {
 		s = c.Name + " "
 	}
-	s += "/* class"
+	s += "/* " + str.Opt(c.Lib, " ") + "class"
 	if c.Base != 0 {
 		s += " : " + Global.Name(c.Base)
 	}
