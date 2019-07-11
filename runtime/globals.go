@@ -1,8 +1,6 @@
 package runtime
 
-import (
-	"sync"
-)
+import "sync"
 
 // Gnum is a reference to a global name/value
 // 0 is invalid
