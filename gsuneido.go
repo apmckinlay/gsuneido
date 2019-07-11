@@ -107,7 +107,7 @@ func eval(src string) {
 	result := mainThread.Start(fn, nil)
 	if result != nil {
 		prompt(">>> ")
-		fmt.Println(WithType(result))
+		fmt.Println(WithType(result)) // NOTE: doesn't use ToString
 	}
 }
 
