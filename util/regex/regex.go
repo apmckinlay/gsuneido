@@ -7,6 +7,7 @@ import (
 
 	"github.com/apmckinlay/gsuneido/util/ascii"
 	"github.com/apmckinlay/gsuneido/util/ints"
+	"github.com/apmckinlay/gsuneido/util/verify"
 )
 
 //go:generate genny -in ../../../GoTemplates/cache/cache.go -out cache.go -pkg regex gen "K=string V=Pattern"
@@ -166,15 +167,17 @@ outer:
 					// for .* or .+ shortcut looping to end of line
 					alts[ai].pi = pi + 2
 					alts[ai].si = si + 1
-					si = strings.IndexByte(s, '\n')
-					if si == -1 {
+					j := strings.IndexAny(s[si:], "\r\n")
+					if j == -1 {
 						si = len(s)
+					} else {
+						si += j
 					}
 					alts[ai].si2 = si
 					ai++
 					pi++
 				} else {
-					m = si < len(s) && s[si] != '\n'
+					m = si < len(s) && s[si] != '\r' && s[si] != '\n'
 					si++
 				}
 			case chars:
@@ -185,6 +188,7 @@ outer:
 					}
 					if j > 0 {
 						// skip ahead and restart match where chars are
+						verify.That(pos == si)
 						pos += j
 						si = pos
 						pi = -1 // -1 because loop increments

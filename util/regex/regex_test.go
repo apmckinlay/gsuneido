@@ -78,6 +78,14 @@ func TestForEachMatch(t *testing.T) {
 	Assert(t).That(n, Equals(2))
 }
 
+func TestMatchBug(t *testing.T) {
+	pat := Compile("^Date: .*")
+	var result Result
+	pat.FirstMatch("foo\nDate: Fri, 12 Jul 2019 16:31:35 GMT\r\nbar", 0, &result)
+	Assert(t).That(result[0].pos1, Equals(4+1))
+	Assert(t).That(result[0].end, Equals(39))
+}
+
 // ptest support ---------------------------------------------------------------
 
 func TestPtest(t *testing.T) {
