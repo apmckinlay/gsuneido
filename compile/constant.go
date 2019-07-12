@@ -193,6 +193,7 @@ func (p *parser) member(ob container, closing tok.Token, base Gnum) {
 		}
 		p.checker(ast)
 		fn := codegen(ast)
+		fn.Lib = p.lib
 		fn.Name = p.name
 		p.name = prevName
 		fn.ClassName = p.className
