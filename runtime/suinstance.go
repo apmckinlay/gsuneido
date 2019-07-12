@@ -53,14 +53,12 @@ func (*SuInstance) Type() types.Type {
 }
 
 func (ob *SuInstance) Get(t *Thread, m Value) Value {
-	if m.Type() != types.String {
-		return nil
+	if ms, ok := m.ToStr(); ok {
+		if x, ok := ob.Data[ms]; ok {
+			return x
+		}
 	}
-	ms := AsStr(m)
-	if x, ok := ob.Data[ms]; ok {
-		return x
-	}
-	x := ob.class.get1(t, ob, ms)
+	x := ob.class.get1(t, ob, m)
 	if m, ok := x.(*SuMethod); ok {
 		m.this = ob // fix 'this' to be instance, not method class
 	}

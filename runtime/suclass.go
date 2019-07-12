@@ -72,14 +72,12 @@ func (*SuClass) Type() types.Type {
 }
 
 func (c *SuClass) Get(t *Thread, m Value) Value {
-	if m.Type() != types.String {
-		return nil
-	}
-	return c.get1(t, c, AsStr(m))
+	return c.get1(t, c, m)
 }
 
-func (c *SuClass) get1(t *Thread, this Value, mem string) Value {
-	val := c.get2(t, mem)
+func (c *SuClass) get1(t *Thread, this Value, m Value) Value {
+	ms := AsStr(m) //TODO not quite right - allows class { "4": }[4]
+	val := c.get2(t, ms)
 	if val != nil {
 		if _, ok := val.(*SuFunc); ok {
 			return &SuMethod{fn: val, this: c}
@@ -88,20 +86,20 @@ func (c *SuClass) get1(t *Thread, this Value, mem string) Value {
 	}
 	if !c.noGetter {
 		if getter := c.get2(t, "Getter_"); getter != nil {
-			return t.CallThis(getter, this, SuStr(mem))
+			return t.CallThis(getter, this, m)
 		}
 		//TODO deprecated
 		if getter := c.get2(t, "Get_"); getter != nil {
-			return t.CallThis(getter, this, SuStr(mem))
+			return t.CallThis(getter, this, m)
 		}
 		c.noGetter = true
 	}
-	getterName := "Getter_" + mem
+	getterName := "Getter_" + ms
 	if getter := c.get2(t, getterName); getter != nil {
 		return getter.Call(t, this, ArgSpec0)
 	}
 	//TODO deprecated
-	getterName = "Get_" + mem
+	getterName = "Get_" + ms
 	if getter := c.get2(t, getterName); getter != nil {
 		return getter.Call(t, this, ArgSpec0)
 	}
