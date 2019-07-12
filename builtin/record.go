@@ -61,6 +61,9 @@ func init() {
 			this.(*SuRecord).SetDeps(ToStr(arg1), ToStr(arg2))
 			return nil
 		}),
+		"Transaction": method0(func(this Value) Value {
+			return this.(*SuRecord).Transaction()
+		}),
 		"Update": method("(record = false)",
 			func(t *Thread, this Value, args []Value) Value {
 				r := this.(*SuRecord)

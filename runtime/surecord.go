@@ -531,6 +531,10 @@ outer:
 	}
 }
 
+func (r *SuRecord) Transaction() *SuTran {
+	return r.tran
+}
+
 // ToRecord converts this SuRecord to a Record to be stored in the database
 func (r *SuRecord) ToRecord(t *Thread, hdr *Header) Record {
 	fields := hdr.Fields[0]
