@@ -138,7 +138,7 @@ func printCallStack(cs *SuObject) {
 }
 
 // libload loads a name from the dbms
-func libload(t *Thread, name string) (result Value) {
+func libload(t *Thread, gn Gnum, name string) (result Value) {
 	defer func() {
 		if e := recover(); e != nil {
 			panic("error loading " + name + " " + fmt.Sprint(e))
@@ -159,6 +159,7 @@ func libload(t *Thread, name string) (result Value) {
 		// want to pass the name from the start (rather than adding after)
 		// so it propogates to nested Named values
 		result = compile.NamedConstant(lib, name, src)
+		Global.Set(gn, result) // required for overload inheritance
 		// fmt.Println("LOAD", name, "SUCCEEDED")
 	}
 	return

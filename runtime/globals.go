@@ -115,7 +115,7 @@ func (typeGlobal) Exists(name string) bool {
 }
 
 // Libload requires dependency injection
-var Libload = func(*Thread, string) Value { return nil }
+var Libload = func(*Thread, Gnum, string) Value { return nil }
 
 var gnPrint = Global.Num("Print")
 
@@ -132,7 +132,7 @@ func (typeGlobal) Get(t *Thread, gnum Gnum) Value {
 		// since compile may need to access Global.
 		// That means two threads could both load
 		// but they should both get the same value.
-		x = Libload(t, Global.Name(gnum))
+		x = Libload(t, gnum, Global.Name(gnum))
 		// want Print even if we don't have stdlib
 		if x == nil && gnum == gnPrint {
 			fmt.Println("using built-in Print")
@@ -168,4 +168,27 @@ func (typeGlobal) UnloadAll() {
 		g.values[i] = nil
 	}
 	g.lock.Unlock()
+}
+
+// Set is used by LibLoad
+func (typeGlobal) Set(gn Gnum, val Value) {
+	g.lock.Lock()
+	g.values[gn] = val
+	g.lock.Unlock()
+}
+
+// Copy is used by compile to handle overload inheritance (_Name)
+// It copies the value of a slot to a new slot (without a name)
+func (typeGlobal) Copy(name string) Gnum {
+	g.lock.Lock()
+	gn, ok := g.name2num[name]
+	if ! ok || g.values[gn] == nil {
+		g.lock.Unlock()
+		panic("can't find " + name)
+	}
+	newgn := len(g.names)
+	g.names = append(g.names, name)
+	g.values = append(g.values, g.values[gn])
+	g.lock.Unlock()
+	return newgn
 }
