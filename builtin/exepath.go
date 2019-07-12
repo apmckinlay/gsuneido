@@ -1,0 +1,17 @@
+package builtin
+
+import (
+	"os"
+	"strings"
+
+	. "github.com/apmckinlay/gsuneido/runtime"
+)
+
+var _ = builtin0("ExePath()", func() Value {
+	path, err := os.Executable()
+	if err != nil {
+		panic("ExePath " + err.Error())
+	}
+	path = strings.ReplaceAll(path, "\\", "/")
+	return SuStr(path)
+})
