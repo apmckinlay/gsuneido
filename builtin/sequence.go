@@ -28,10 +28,12 @@ func (wi *wrapIter) Next() Value {
 	return x
 }
 
-func (wi *wrapIter) Infinite() bool {
-	if wi.iter.Lookup(wi.t, "Infinite?") == nil {
-		return false
-	}
+func (wi *wrapIter) Infinite() (result bool) {
+	defer func () {
+		if e := recover(); e != nil {
+			result = false
+		}
+	}()
 	return wi.call("Infinite?") == True
 }
 
