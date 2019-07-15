@@ -247,6 +247,9 @@ func (p *parser) atom() ast.Expr {
 				// MyClass { ... } => class
 				return p.Constant(p.noName(p.class))
 			}
+			if p.Text == "dll" || p.Text == "callback" || p.Text == "struct" {
+				p.error("gSuneido does not implement " + p.Text)
+			}
 			e := p.Ident(p.Text)
 			p.next()
 			return e

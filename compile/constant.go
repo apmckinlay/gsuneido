@@ -78,7 +78,7 @@ func (p *parser) constant() Value {
 			}
 			if p.lxr.Ahead(0).Token != tok.Colon &&
 				(p.Text == "struct" || p.Text == "dll" || p.Text == "callback") {
-				panic("gSuneido does not implement " + p.Text)
+				p.error("gSuneido does not implement " + p.Text)
 			}
 			s := p.Text
 			p.next()
