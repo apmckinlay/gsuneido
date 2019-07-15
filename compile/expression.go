@@ -238,6 +238,10 @@ func (p *parser) atom() ast.Expr {
 		return p.Call(expr, args)
 	default:
 		if p.Token.IsIdent() {
+			if p.Text[0] == '_' && len(p.Text) > 1 && ascii.IsUpper(p.Text[1]) &&
+				p.Text[1:] != p.name && p.lxr.AheadSkip(0).Token != tok.Colon {
+				p.error("invalid reference to " + p.Text)
+			}
 			if !p.expectingCompound &&
 				okBase(p.Text) && p.lxr.AheadSkip(0).Token == tok.LCurly {
 				// MyClass { ... } => class

@@ -279,6 +279,9 @@ func (p *parser) ckBase(name string) Gnum {
 		p.error("base class must be global defined in library, got: ", name)
 	}
 	if name[0] == '_' {
+		if name == "_" || name[1:] != p.name {
+			p.error("invalid reference to " + name)
+		}
 		return Global.Copy(name[1:])
 	}
 	return Global.Num(name)
