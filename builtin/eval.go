@@ -24,7 +24,7 @@ func EvalString(t *Thread, s string) Value {
 	return t.Start(fn, nil)
 }
 
-var rxGlobal = regex.Compile("^[A-Z][_a-zA-Z0-9]*?[!?]?$")
+var rxGlobal = regex.Compile(`\A[A-Z][_a-zA-Z0-9]*?[!?]?\Z`)
 
 func isGlobal(s string) bool {
 	return rxGlobal.Matches(s)
