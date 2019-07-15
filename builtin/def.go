@@ -13,6 +13,6 @@ func Def() {
 			val = compile.NamedConstant("Def", name, string(ss))
 		}
 		Global.TestDef(name, val)
-		return nil
+		return val
 	})
 }
