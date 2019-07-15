@@ -2,6 +2,7 @@ package builtin
 
 import (
 	"encoding/binary"
+	"os"
 	"syscall"
 
 	. "github.com/apmckinlay/gsuneido/runtime"
@@ -27,4 +28,12 @@ var _ = builtin1("GetDiskFreeSpace(dir = '.')", func(arg Value) Value {
 	syscall.Statfs(ToStr(arg), &stat)
 	freeBytes := stat.Bavail * uint64(stat.Bsize)
 	return Int64Val(int64(freeBytes))
+})
+
+var _ = builtin0("GetComputerName()", func() Value {
+	name, err := os.Hostname()
+	if err != nil {
+		panic("GetComputerName " + err.Error())
+	}
+	return SuStr(name)
 })
