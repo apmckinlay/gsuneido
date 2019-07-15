@@ -47,7 +47,7 @@ func TestCheckResults(t *testing.T) {
 	test := func(src string, expected ...string) {
 		t.Helper()
 		// fmt.Println(src)
-		_, results := compile.Checked(src)
+		_, results := compile.Checked(nil, src)
 		Assert(t).That(results, Equals(expected))
 	}
 	test("function (a) { }", "WARNING: initialized but not used: a @0")
@@ -62,7 +62,7 @@ func TestCheckResults(t *testing.T) {
 	test("function () { a=1; b={|c,d| a }; c }",
 		"ERROR: used but not initialized: c @33",
 		"WARNING: initialized but not used: b @19")
-	test("function () { while (false isnt x = Next()) { }; x }")
+	test("function () { while (false isnt x = 1) { }; x }")
 
 	test("class { F(){} G(a){} }",
 		"WARNING: initialized but not used: a @15")

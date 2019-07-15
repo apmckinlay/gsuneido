@@ -47,7 +47,7 @@ func walk(path string, info os.FileInfo, err error) error {
 	}
 	totalSize += len(text)
 	// Constant(text)
-	_, results := Checked(text)
+	_, results := Checked(nil, text)
 	if len(results) > 0 {
 		fmt.Println(path)
 		for _, s := range results {

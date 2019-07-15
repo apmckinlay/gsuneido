@@ -30,9 +30,10 @@ func NamedConstant(lib, name, src string) Value {
 	return result
 }
 
-func Checked(src string) (Value, []string) {
+// can't do AST check after compile because that would miss nested functions
+func Checked(t *Thread, src string) (Value, []string) {
 	p := NewParser(src)
-	var ck check.Check
+	ck := check.New(t)
 	p.checker = func(ast *ast.Function) { ck.Check(ast) }
 	v := p.constant()
 	return v, ck.Results

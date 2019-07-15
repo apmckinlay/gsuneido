@@ -96,7 +96,7 @@ func eval(src string) {
 		}
 	}()
 	src = "function () {\n" + src + "\n}"
-	v, results := compile.Checked(src)
+	v, results := compile.Checked(mainThread, src)
 	for _, s := range results {
 		fmt.Println(s)
 	}

@@ -49,9 +49,18 @@ func init() {
 			}
 			return SuInt(int(s[0]))
 		}),
-		"Compile": method1("(errob = false)", func(this, _ Value) Value {
-			return compile.Constant(ToStr(this))
-		}),
+		"Compile": method("(errob = false)",
+			func(t *Thread, this Value, args []Value) Value {
+				if args[0] == False {
+					return compile.Constant(ToStr(this))
+				}
+				ob := ToContainer(args[0])
+				val, checks := compile.Checked(t, ToStr(this))
+				for _, w := range checks {
+					ob.Add(SuStr(w))
+				}
+				return val
+			}),
 		"Count": method1("(string)", func(this, arg Value) Value {
 			return IntVal(strings.Count(ToStr(this), ToStr(arg)))
 		}),

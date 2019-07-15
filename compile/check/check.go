@@ -20,11 +20,13 @@ import (
 
 	"github.com/apmckinlay/gsuneido/compile/ast"
 	tok "github.com/apmckinlay/gsuneido/lexer/tokens"
+	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/ascii"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
 type Check struct {
+	t *Thread
 	// pos is used to store the position of the current statement
 	pos int
 	// AllInit is the set of variables assigned to, including conditionally
@@ -34,15 +36,15 @@ type Check struct {
 	Results []string
 }
 
+func New(t *Thread) *Check {
+	return &Check{t: t}
+}
+
 func (ck *Check) Check(f *ast.Function) set {
 	ck.AllInit = make(map[string]int32)
 	ck.AllUsed = make(map[string]struct{})
 	var init set
 	init = ck.check(f, init)
-	// fmt.Println("init", init)
-	// fmt.Println("AllInit", ck.AllInit)
-	// fmt.Println("AllUsed", ck.AllUsed)
-
 	for i, id := range init {
 		if !ck.used(id) {
 			at := ""
@@ -186,6 +188,12 @@ func (ck *Check) expr(expr ast.Expr, init set) set {
 	case *ast.Ident:
 		if ascii.IsLower(expr.Name[0]) {
 			init = ck.usedVar(init, expr.Name)
+		}
+		if ascii.IsUpper(expr.Name[0]) {
+			if nil == Global.GetName(ck.t, expr.Name) {
+				ck.Results = append(ck.Results,
+					"WARNING: can't find: "+expr.Name+" @"+strconv.Itoa(ck.pos))
+			}
 		}
 	case *ast.Trinary:
 		init = ck.expr(expr.Cond, init)
