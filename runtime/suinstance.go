@@ -135,6 +135,10 @@ func (ob *SuInstance) Call(t *Thread, _ Value, as *ArgSpec) Value {
 	if f := ob.class.get2(t, "Call"); f != nil {
 		return f.Call(t, ob, as)
 	}
+	if f := ob.class.get2(t, "Default"); f != nil {
+		da := &defaultAdapter{f, "Call"}
+		return da.Call(t, ob, as)
+	}
 	panic("method not found: Call")
 }
 

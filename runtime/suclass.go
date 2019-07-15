@@ -189,6 +189,7 @@ func (c *SuClass) Lookup(t *Thread, method string) Callable {
 	if x := UserDef(t, gnObjects, method); x != nil {
 		return x
 	}
+	//TODO explicit CallClass doesn't go to Default in cSuneido or jSuneido
 	if x := c.get2(t, "Default"); x != nil {
 		return &defaultAdapter{x, method}
 	}
