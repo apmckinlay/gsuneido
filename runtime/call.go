@@ -29,7 +29,7 @@ func (t *Thread) CallLookupEach1(this Value, method string, arg Value) Value {
 func (t *Thread) lookup(this Value, method string) Callable {
 	fn := this.Lookup(t, method)
 	if fn == nil {
-		panic("method not found: " + this.Type().String() + "." + method)
+		panic("method not found: " + ErrType(this) + "." + method)
 	}
 	return fn
 }
