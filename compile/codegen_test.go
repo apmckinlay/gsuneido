@@ -10,7 +10,7 @@ import (
 	. "github.com/apmckinlay/gsuneido/util/hamcrest"
 )
 
-func ExampleSrcPos() {
+func Example_parseFunction_SrcPos() {
 	src := `function () {
 		a = 123
 		b = 4

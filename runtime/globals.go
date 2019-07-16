@@ -151,6 +151,20 @@ func (typeGlobal) Get(t *Thread, gnum Gnum) Value {
 	return x
 }
 
+// GetIfPresent returns the current value (if there is one)
+// without doing LibLoad.
+// Used by compiler for _Name references
+func (typeGlobal) GetIfPresent(name string) (x Value) {
+	g.lock.RLock()
+	if gnum, ok := g.name2num[name]; ok {
+		if x = g.builtins[gnum]; x == nil {
+			x = g.values[gnum]
+		}
+	}
+	g.lock.RUnlock()
+	return
+}
+
 func (typeGlobal) GetName(t *Thread, name string) Value {
 	return Global.Get(t, Global.Num(name))
 }
@@ -182,7 +196,7 @@ func (typeGlobal) Set(gn Gnum, val Value) {
 func (typeGlobal) Copy(name string) Gnum {
 	g.lock.Lock()
 	gn, ok := g.name2num[name]
-	if ! ok || g.values[gn] == nil {
+	if !ok || g.values[gn] == nil {
 		g.lock.Unlock()
 		panic("can't find " + name)
 	}

@@ -559,6 +559,12 @@ func (cg *cgen) identifier(node *ast.Ident) {
 		} else {
 			cg.emitUint8(op.Load, i)
 		}
+	} else if node.Name[0] == '_' {
+		val := Global.GetIfPresent(node.Name[1:])
+		if val == nil {
+			panic("can't find " + node.Name)
+		}
+		cg.value(val)
 	} else {
 		cg.emitUint16(op.Global, Global.Num(node.Name))
 	}
@@ -566,7 +572,10 @@ func (cg *cgen) identifier(node *ast.Ident) {
 
 // includes dynamic
 func isLocal(s string) bool {
-	return ('a' <= s[0] && s[0] <= 'z') || s[0] == '_'
+	if s[0] == '_' && len(s) > 1 {
+		s = s[1:]
+	}
+	return 'a' <= s[0] && s[0] <= 'z'
 }
 
 // name returns the index for a name variable
