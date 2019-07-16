@@ -80,16 +80,25 @@ func init() {
 			}
 			return ob
 		}),
-		"Extract": method2("(pattern, part=0)", func(this, arg1, arg2 Value) Value {
+		"Extract": method2("(pattern, part=false)", func(this, arg1, arg2 Value) Value {
 			s := ToStr(this)
 			pat := regex.Compile(ToStr(arg1))
 			var res regex.Result
 			if pat.FirstMatch(s, 0, &res) == -1 {
 				return False
 			}
-			pos, end := res[1].Range()
+			var pos, end int
+			if arg2 == False {
+				pos, end = res[1].Range()
+				if pos == -1 {
+					pos, end = res[0].Range()
+				}
+			} else {
+				part := ToInt(arg2)
+				pos, end = res[part].Range()
+			}
 			if pos == -1 {
-				pos, end = res[0].Range()
+				return EmptyStr
 			}
 			return SuStr(s[pos:end])
 		}),
