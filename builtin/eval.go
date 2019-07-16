@@ -38,5 +38,8 @@ func EvalAsMethod(t *Thread, as *ArgSpec, ob Value, args []Value) Value {
 	if k != nil || f == nil {
 		panic("usage: object.Eval(callable, ...)")
 	}
+	if m,ok := f.(*SuMethod); ok {
+		f = m.GetFn()
+	}
 	return f.Call(t, ob, as.DropFirst())
 }

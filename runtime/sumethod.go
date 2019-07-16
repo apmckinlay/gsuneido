@@ -28,11 +28,8 @@ func (m *methodForce) Call(t *Thread, _ Value, as *ArgSpec) Value {
 
 var _ Value = (*SuMethod)(nil)
 
-func (m *SuMethod) Call(t *Thread, this Value, as *ArgSpec) Value {
-	if this == nil {
-		this = m.this
-	}
-	return m.fn.Call(t, this, as)
+func (m *SuMethod) Call(t *Thread, _ Value, as *ArgSpec) Value {
+	return m.fn.Call(t, m.this, as)
 }
 
 // Lookup is used for .Params or .Disasm
