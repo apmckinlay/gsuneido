@@ -391,6 +391,7 @@ loop:
 			catchPat = string(fr.fn.Values[fetchUint8()].(SuStr))
 		case op.Catch:
 			fr.ip += fetchInt16()
+			*catchJump = 0 // no longer catching
 		case op.Throw:
 			panic(t.Pop())
 		case op.Block:
