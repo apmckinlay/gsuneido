@@ -1,6 +1,6 @@
 // +build interactive
 
-package compile
+package language
 
 // compiles a directory tree of files
 // e.g. as exported by LibToFiles
@@ -14,6 +14,9 @@ import (
 	filepath "path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/apmckinlay/gsuneido/compile"
+	_ "github.com/apmckinlay/gsuneido/builtin"
 	//	. "github.com/apmckinlay/gsuneido/util/hamcrest"
 )
 
@@ -47,7 +50,7 @@ func walk(path string, info os.FileInfo, err error) error {
 	}
 	totalSize += len(text)
 	// Constant(text)
-	_, results := Checked(nil, text)
+	_, results := compile.Checked(nil, text)
 	if len(results) > 0 {
 		fmt.Println(path)
 		for _, s := range results {
