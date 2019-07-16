@@ -62,7 +62,11 @@ func init() {
 			return nil
 		}),
 		"Transaction": method0(func(this Value) Value {
-			return this.(*SuRecord).Transaction()
+			t := this.(*SuRecord).Transaction()
+			if t == nil || t.Ended() {
+				return False
+			}
+			return t
 		}),
 		"Update": method("(record = false)",
 			func(t *Thread, this Value, args []Value) Value {
