@@ -469,6 +469,7 @@ func (ar *activeRules) has(r *SuRecord, key string) bool {
 }
 
 type strable interface{ String() string }
+type errable interface{ Error() string }
 
 func toStr(e interface{}) string {
 	if s, ok := e.(string); ok {
@@ -477,7 +478,13 @@ func toStr(e interface{}) string {
 	if v, ok := e.(Value); ok {
 		return AsStr(v)
 	}
-	return e.(strable).String()
+	if sa,ok := e.(strable); ok {
+		return sa.String()
+	}
+	if ea,ok := e.(errable); ok {
+		return ea.Error()
+	}
+	return "???"
 }
 
 func (r *SuRecord) getRule(t *Thread, key string) Value {
