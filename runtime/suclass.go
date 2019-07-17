@@ -96,12 +96,12 @@ func (c *SuClass) get1(t *Thread, this Value, m Value) Value {
 	}
 	getterName := "Getter_" + ms
 	if getter := c.get2(t, getterName); getter != nil {
-		return getter.Call(t, this, ArgSpec0)
+		return t.CallThis(getter, this)
 	}
 	//TODO deprecated
 	getterName = "Get_" + ms
 	if getter := c.get2(t, getterName); getter != nil {
-		return getter.Call(t, this, ArgSpec0)
+		return t.CallThis(getter, this)
 	}
 	return nil
 }

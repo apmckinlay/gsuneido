@@ -22,7 +22,7 @@ func (ob *SuInstance) Base() *SuClass {
 // to handle user defined ToString
 func (ob *SuInstance) ToString(t *Thread) string {
 	if f := ob.class.get2(t, "ToString"); f != nil {
-		x := f.Call(t, ob, ArgSpec0)
+		x := t.CallThis(f, ob)
 		if x != nil {
 			if s, ok := x.ToStr(); ok {
 				return s
