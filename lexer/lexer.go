@@ -16,11 +16,16 @@ type Lexer struct {
 	src   string
 	si    int
 	ahead []Item
+	keyword func(s string) (tok.Token, string)
 }
 
 // NewLexer returns a new Lexer
 func NewLexer(src string) *Lexer {
-	return &Lexer{src: src}
+	return &Lexer{src: src, keyword: keyword}
+}
+
+func (lxr *Lexer) Dup() *Lexer {
+	return &Lexer{src: lxr.src, keyword: lxr.keyword}
 }
 
 func (lxr *Lexer) Source() string {
@@ -388,7 +393,7 @@ func (lxr *Lexer) identifier(start int) Item {
 	val := lxr.src[start:lxr.si]
 	token := tok.Identifier
 	if lxr.peek() != ':' || val == "default" || val == "true" || val == "false" {
-		token, val = keyword(val)
+		token, val = lxr.keyword(val)
 	}
 	return Item{val, int32(start), token}
 }
@@ -406,7 +411,7 @@ func keyword(s string) (tok.Token, string) {
 	return tok.Identifier, str.Dup(s)
 }
 
-// keywords doesn't use a map because we want to use the keyword string literals
+// keywords doesn't use a map because we want to reuse the keyword string literals
 // ordered by frequency of use to optimize successful searches
 var keywords = []struct {
 	kw  string

@@ -11,53 +11,54 @@ type SuScanner struct {
 	CantConvert
 	lxr  lexer.Lexer
 	item lexer.Item
+	name string
 }
 
 var _ = builtin1("Scanner(string)",
 	func(arg Value) Value {
-		return &SuScanner{lxr: *lexer.NewLexer(ToStr(arg))}
+		return &SuScanner{lxr: *lexer.NewLexer(ToStr(arg)), name: "Scanner"}
 	})
 
 var _ Value = (*SuScanner)(nil)
 
-func (*SuScanner) Get(*Thread, Value) Value {
-	panic("Scanner does not support get")
+func (sc *SuScanner) Get(*Thread, Value) Value {
+	panic(sc.name + " does not support get")
 }
 
-func (*SuScanner) Put(*Thread, Value, Value) {
-	panic("Scanner does not support put")
+func (sc *SuScanner) Put(*Thread, Value, Value) {
+	panic(sc.name + " does not support put")
 }
 
-func (*SuScanner) RangeTo(int, int) Value {
-	panic("Scanner does not support range")
+func (sc *SuScanner) RangeTo(int, int) Value {
+	panic(sc.name + " does not support range")
 }
 
-func (*SuScanner) RangeLen(int, int) Value {
-	panic("Scanner does not support range")
+func (sc *SuScanner) RangeLen(int, int) Value {
+	panic(sc.name + " does not support range")
 }
 
-func (*SuScanner) Hash() uint32 {
-	panic("Scanner hash not implemented")
+func (sc *SuScanner) Hash() uint32 {
+	panic(sc.name + " hash not implemented")
 }
 
-func (*SuScanner) Hash2() uint32 {
-	panic("Scanner hash not implemented")
+func (sc *SuScanner) Hash2() uint32 {
+	panic(sc.name + " hash not implemented")
 }
 
-func (*SuScanner) Compare(Value) int {
-	panic("Scanner compare not implemented")
+func (sc *SuScanner) Compare(Value) int {
+	panic(sc.name + " compare not implemented")
 }
 
-func (*SuScanner) Call(*Thread, Value, *ArgSpec) Value {
-	panic("can't call Scanner")
+func (sc *SuScanner) Call(*Thread, Value, *ArgSpec) Value {
+	panic("can't call " + sc.name)
 }
 
-func (*SuScanner) String() string {
-	return "aScanner"
+func (sc *SuScanner) String() string {
+	return "a" + sc.name
 }
 
 func (*SuScanner) Type() types.Type {
-	return types.Scanner
+	return types.BuiltinInstance
 }
 
 func (sc *SuScanner) Equal(other interface{}) bool {
@@ -161,7 +162,7 @@ func (sc *SuScanner) Next() Value {
 }
 
 func (sc *SuScanner) Dup() Iter {
-	return &SuScanner{lxr: *lexer.NewLexer(sc.lxr.Source())}
+	return &SuScanner{lxr: *sc.lxr.Dup()}
 }
 
 func (sc *SuScanner) Infinite() bool {

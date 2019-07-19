@@ -25,7 +25,7 @@ const (
 	Transaction
 	Query
 	Cursor
-	Scanner
 	File
 	BuiltinClass
+	BuiltinInstance
 )

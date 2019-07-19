@@ -100,11 +100,51 @@ func _() {
 	_ = x[True-89]
 	_ = x[Try-90]
 	_ = x[While-91]
+	_ = x[QueryStart-92]
+	_ = x[Alter-93]
+	_ = x[Average-94]
+	_ = x[By-95]
+	_ = x[Cascade-96]
+	_ = x[Count-97]
+	_ = x[Create-98]
+	_ = x[Delete-99]
+	_ = x[Drop-100]
+	_ = x[Ensure-101]
+	_ = x[Extend-102]
+	_ = x[History-103]
+	_ = x[Index-104]
+	_ = x[Insert-105]
+	_ = x[Intersect-106]
+	_ = x[Into-107]
+	_ = x[Join-108]
+	_ = x[Key-109]
+	_ = x[Leftjoin-110]
+	_ = x[List-111]
+	_ = x[Lower-112]
+	_ = x[Max-113]
+	_ = x[Min-114]
+	_ = x[Minus-115]
+	_ = x[Project-116]
+	_ = x[Remove-117]
+	_ = x[Rename-118]
+	_ = x[Reverse-119]
+	_ = x[Set-120]
+	_ = x[Sort-121]
+	_ = x[Summarize-122]
+	_ = x[Sview-123]
+	_ = x[Times-124]
+	_ = x[To-125]
+	_ = x[Total-126]
+	_ = x[Union-127]
+	_ = x[Unique-128]
+	_ = x[Update-129]
+	_ = x[View-130]
+	_ = x[Where-131]
 }
 
-const _Token_name = "NilEofErrorIdentifierNumberStringWhitespaceCommentNewlineHashCommaSemicolonAtLParenRParenLBracketRBracketLCurlyRCurlyRangeToRangeLenNotBitNotNewDotCompareStartIsIsntMatchMatchNotLtLteGtGteCompareEndQMarkColonAssocStartAndOrBitOrBitAndBitXorAddSubCatMulDivAssocEndModLShiftRShiftIncPostIncDecPostDecAssignStartEqAddEqSubEqCatEqMulEqDivEqModEqLShiftEqRShiftEqBitOrEqBitAndEqBitXorEqAssignEndInBreakCaseCatchClassContinueDefaultDoElseFalseForForeverFunctionIfReturnSwitchSuperThisThrowTrueTryWhile"
+const _Token_name = "NilEofErrorIdentifierNumberStringWhitespaceCommentNewlineHashCommaSemicolonAtLParenRParenLBracketRBracketLCurlyRCurlyRangeToRangeLenNotBitNotNewDotCompareStartIsIsntMatchMatchNotLtLteGtGteCompareEndQMarkColonAssocStartAndOrBitOrBitAndBitXorAddSubCatMulDivAssocEndModLShiftRShiftIncPostIncDecPostDecAssignStartEqAddEqSubEqCatEqMulEqDivEqModEqLShiftEqRShiftEqBitOrEqBitAndEqBitXorEqAssignEndInBreakCaseCatchClassContinueDefaultDoElseFalseForForeverFunctionIfReturnSwitchSuperThisThrowTrueTryWhileQueryStartAlterAverageByCascadeCountCreateDeleteDropEnsureExtendHistoryIndexInsertIntersectIntoJoinKeyLeftjoinListLowerMaxMinMinusProjectRemoveRenameReverseSetSortSummarizeSviewTimesToTotalUnionUniqueUpdateViewWhere"
 
-var _Token_index = [...]uint16{0, 3, 6, 11, 21, 27, 33, 43, 50, 57, 61, 66, 75, 77, 83, 89, 97, 105, 111, 117, 124, 132, 135, 141, 144, 147, 159, 161, 165, 170, 178, 180, 183, 185, 188, 198, 203, 208, 218, 221, 223, 228, 234, 240, 243, 246, 249, 252, 255, 263, 266, 272, 278, 281, 288, 291, 298, 309, 311, 316, 321, 326, 331, 336, 341, 349, 357, 364, 372, 380, 389, 391, 396, 400, 405, 410, 418, 425, 427, 431, 436, 439, 446, 454, 456, 462, 468, 473, 477, 482, 486, 489, 494}
+var _Token_index = [...]uint16{0, 3, 6, 11, 21, 27, 33, 43, 50, 57, 61, 66, 75, 77, 83, 89, 97, 105, 111, 117, 124, 132, 135, 141, 144, 147, 159, 161, 165, 170, 178, 180, 183, 185, 188, 198, 203, 208, 218, 221, 223, 228, 234, 240, 243, 246, 249, 252, 255, 263, 266, 272, 278, 281, 288, 291, 298, 309, 311, 316, 321, 326, 331, 336, 341, 349, 357, 364, 372, 380, 389, 391, 396, 400, 405, 410, 418, 425, 427, 431, 436, 439, 446, 454, 456, 462, 468, 473, 477, 482, 486, 489, 494, 504, 509, 516, 518, 525, 530, 536, 542, 546, 552, 558, 565, 570, 576, 585, 589, 593, 596, 604, 608, 613, 616, 619, 624, 631, 637, 643, 650, 653, 657, 666, 671, 676, 678, 683, 688, 694, 700, 704, 709}
 
 func (i Token) String() string {
 	if i >= Token(len(_Token_index)-1) {

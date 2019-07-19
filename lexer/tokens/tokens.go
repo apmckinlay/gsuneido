@@ -104,11 +104,52 @@ const (
 	True
 	Try
 	While
+	// query keywords
+	QueryStart
+	Alter
+	Average
+	By
+	Cascade
+	Count
+	Create
+	Delete
+	Drop
+	Ensure
+	Extend
+	History
+	Index
+	Insert
+	Intersect
+	Into
+	Join
+	Key
+	Leftjoin
+	List
+	Lower
+	Max
+	Min
+	Minus
+	Project
+	Remove
+	Rename
+	Reverse
+	Set
+	Sort
+	Summarize
+	Sview
+	Times
+	To
+	Total
+	Union
+	Unique
+	Update
+	View
+	Where
 )
 
 const Ntokens = int(While + 1)
 
-var isIdent = [Ntokens]bool{
+var isIdent = [Ntokens]bool{ // note: array rather than map
 	Identifier: true,
 	And:        true,
 	Break:      true,
@@ -143,5 +184,5 @@ var isIdent = [Ntokens]bool{
 // IsIdent returns whether a token is an identifier
 // token must be within the valid range
 func (token Token) IsIdent() bool {
-	return isIdent[token]
+	return  token > QueryStart || isIdent[token]
 }
