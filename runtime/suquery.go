@@ -90,6 +90,7 @@ func (qc *SuQueryCursor) Order() Value {
 
 func (qc *SuQueryCursor) Rewind() {
 	qc.iqc.Rewind()
+	qc.eof = 0
 }
 
 func (qc *SuQueryCursor) RuleColumns() Value {
