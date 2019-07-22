@@ -503,13 +503,24 @@ func (ob *SuObject) Iter() Iter {
 func (ob *SuObject) ToRecord(t *Thread, hdr *Header) Record {
 	fields := hdr.Fields[0]
 	rb := RecordBuilder{}
+	var tsField string
+	var ts SuDate
 	for _, f := range fields {
-		x := ob.Get(t, SuStr(f))
-		if x == nil {
-			rb.AddRaw("")
+		if strings.HasSuffix(f, "_TS") { // also done in SuRecord ToRecord
+			tsField = f
+			ts = t.Dbms().Timestamp()
+			rb.Add(ts)
 		} else {
-			rb.AddRaw(PackValue(x))
+			x := ob.Get(t, SuStr(f))
+			if x == nil {
+				rb.AddRaw("")
+			} else {
+				rb.AddRaw(PackValue(x))
+			}
 		}
+	}
+	if tsField != "" && ! ob.IsReadOnly() {
+		ob.Put(t, SuStr(tsField), ts)
 	}
 	return rb.Build()
 }

@@ -478,10 +478,10 @@ func toStr(e interface{}) string {
 	if v, ok := e.(Value); ok {
 		return AsStr(v)
 	}
-	if sa,ok := e.(strable); ok {
+	if sa, ok := e.(strable); ok {
 		return sa.String()
 	}
-	if ea,ok := e.(errable); ok {
+	if ea, ok := e.(errable); ok {
 		return ea.Error()
 	}
 	return "???"
@@ -546,8 +546,19 @@ func (r *SuRecord) Transaction() *SuTran {
 func (r *SuRecord) ToRecord(t *Thread, hdr *Header) Record {
 	fields := hdr.Fields[0]
 	rb := RecordBuilder{}
+	var tsField string
+	var ts SuDate
 	for _, f := range fields {
-		rb.AddRaw(r.GetPacked(t, f))
+		if strings.HasSuffix(f, "_TS") { // also done in SuObject ToRecord
+			tsField = f
+			ts = t.Dbms().Timestamp()
+			rb.Add(ts)
+		} else {
+			rb.AddRaw(r.GetPacked(t, f))
+		}
+	}
+	if tsField != "" && !r.IsReadOnly() {
+		r.Put(t, SuStr(tsField), ts)
 	}
 	return rb.Build()
 }
