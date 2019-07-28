@@ -57,9 +57,25 @@ func SuRecordFromRow(row Row, hdr *Header, tran *SuTran) *SuRecord {
 			}
 		}
 	}
-	//TODO _deps
+	dependents := deps(row, hdr)
 	return &SuRecord{row: row, hdr: hdr, tran: tran, recadr: row[0].Adr,
-		ob: SuObject{defval: EmptyStr}}
+		ob: SuObject{defval: EmptyStr}, dependents: dependents}
+}
+
+func deps(row Row, hdr *Header) map[string][]string {
+	dependents := map[string][]string{}
+	for _, f := range hdr.Fields[0] {
+		if strings.HasSuffix(f, "_deps") {
+			deps := strings.Split(ToStr(row.Get(hdr, f)), ",")
+			f = f[:len(f)-5]
+			for _, d := range deps {
+				if !str.ListHas(dependents[d], f) {
+					dependents[d] = append(dependents[d], f)
+				}
+			}
+		}
+	}
+	return dependents
 }
 
 func (r *SuRecord) Copy() Container {
@@ -271,11 +287,16 @@ func (r *SuRecord) Put(t *Thread, keyval Value, val Value) {
 
 func (r *SuRecord) invalidateDependents(key string) {
 	for _, d := range r.dependents[key] {
-		r.Invalidate(d)
+		r.invalidate(d)
 	}
 }
 
-func (r *SuRecord) Invalidate(key string) {
+func (r *SuRecord) Invalidate(t *Thread, key string) {
+	r.invalidate(key)
+	r.callObservers(t, key)
+}
+
+func (r *SuRecord) invalidate(key string) {
 	wasValid := !r.invalid[key]
 	r.invalidated.Add(key) // for observers
 	if r.invalid == nil {
@@ -348,12 +369,11 @@ func (r *SuRecord) GetIfPresent(t *Thread, keyval Value) Value {
 		// only do record stuff when key is a string
 		if result == nil && r.row != nil {
 			raw := r.row.GetRaw(r.hdr, key)
-			if raw == "" {
-				return r.ob.defaultValue(keyval)
+			if raw != "" {
+				val := Unpack(raw)
+				r.PreSet(keyval, val) // cache unpacked value
+				return val
 			}
-			val := Unpack(raw)
-			r.PreSet(keyval, val) // cache unpacked value
-			return val
 		}
 		if t != nil {
 			if ar := t.rules.top(); ar.rec == r { // identity (not Equal)
@@ -545,14 +565,36 @@ func (r *SuRecord) Transaction() *SuTran {
 // ToRecord converts this SuRecord to a Record to be stored in the database
 func (r *SuRecord) ToRecord(t *Thread, hdr *Header) Record {
 	fields := hdr.Fields[0]
+
+	// access all the fields to ensure dependencies are created
+	for _, f := range fields {
+		//TODO optimize this - don't force unpack/pack on every field
+		r.Get(t, SuStr(f))
+	}
+
+	// invert stored dependencies
+	deps := map[string][]string{}
+	for k, v := range r.dependents {
+		for _, d := range v {
+			d_deps := d + "_deps"
+			if str.ListHas(fields, d_deps) {
+				deps[d_deps] = append(deps[d_deps], k)
+			}
+		}
+	}
+
 	rb := RecordBuilder{}
 	var tsField string
 	var ts SuDate
 	for _, f := range fields {
-		if strings.HasSuffix(f, "_TS") { // also done in SuObject ToRecord
+		if f == "" {
+			rb.AddRaw("")
+		} else if strings.HasSuffix(f, "_TS") { // also done in SuObject ToRecord
 			tsField = f
 			ts = t.Dbms().Timestamp()
 			rb.Add(ts)
+		} else if d, ok := deps[f]; ok {
+			rb.Add(SuStr(strings.Join(d, ",")))
 		} else {
 			rb.AddRaw(r.GetPacked(t, f))
 		}

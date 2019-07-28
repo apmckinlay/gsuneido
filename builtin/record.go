@@ -39,7 +39,7 @@ func init() {
 					if k != nil || v == nil {
 						break
 					}
-					this.(*SuRecord).Invalidate(AsStr(v))
+					this.(*SuRecord).Invalidate(t, AsStr(v))
 				}
 				return nil
 			}),
