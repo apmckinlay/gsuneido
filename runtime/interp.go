@@ -104,7 +104,7 @@ func (t *Thread) interp(catchJump, catchSp *int) (ret Value) {
 	pushResult := func(result Value) {
 		if result == nil && fr.ip < len(code) {
 			o := op.Opcode(code[fr.ip])
-			if o != op.Pop && o != op.Return {
+			if o != op.Pop && o != op.Return && o != op.BlockReturn {
 				panic("no return value")
 			}
 		}
