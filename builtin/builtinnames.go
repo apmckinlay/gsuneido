@@ -5,5 +5,7 @@ import (
 )
 
 var _ = builtin0("BuiltinNames()", func() Value {
-	return NewSuObject(BuiltinNames()...)
+	list := NewSuObject(BuiltinNames()...)
+	list.Sort(nil, False)
+	return list
 })
