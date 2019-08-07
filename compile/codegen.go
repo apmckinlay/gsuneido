@@ -564,7 +564,7 @@ func (cg *cgen) identifier(node *ast.Ident) {
 		if val == nil {
 			panic("can't find " + node.Name)
 		}
-		cg.value(val)
+		cg.emitValue(val)
 	} else {
 		cg.emitUint16(op.Global, Global.Num(node.Name))
 	}
