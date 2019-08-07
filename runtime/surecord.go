@@ -297,15 +297,15 @@ func (r *SuRecord) Invalidate(t *Thread, key string) {
 }
 
 func (r *SuRecord) invalidate(key string) {
-	wasValid := !r.invalid[key]
+	if r.invalid[key] {
+		return
+	}
 	r.invalidated.Add(key) // for observers
 	if r.invalid == nil {
 		r.invalid = make(map[string]bool)
 	}
 	r.invalid[key] = true
-	if wasValid {
-		r.invalidateDependents(key)
-	}
+	r.invalidateDependents(key)
 }
 
 func (r *SuRecord) PreSet(key, val Value) {
@@ -336,11 +336,14 @@ func (r *SuRecord) callObservers2(t *Thread, key string) {
 			func(ofn Value, key string) {
 				r.activeObservers.Push(activeObserver{ofn, key})
 				defer r.activeObservers.Pop()
-				t.CallThis(ofn, r, SuStr(key)) // TODO member: named arg
+				t.pushCall(ofn, r, argSpecMember, SuStr(key))
 			}(ofn, key)
 		}
 	}
 }
+
+var argSpecMember = &ArgSpec{Nargs: 1,
+	Spec: []byte{0}, Names: []Value{SuStr("member")}}
 
 type activeObserver struct {
 	obs Value
@@ -437,6 +440,7 @@ func (r *SuRecord) getSpecial(key string) Value {
 }
 
 func (r *SuRecord) callRule(t *Thread, key string) Value {
+	delete(r.invalid, key)
 	if rule := r.getRule(t, key); rule != nil && !t.rules.has(r, key) {
 		val := r.catchRule(t, rule, key)
 		if val != nil && !r.ob.IsReadOnly() {
