@@ -245,9 +245,7 @@ func (cg *cgen) statement(node ast.Node, labels *Labels, lastStmt bool) {
 	cg.savePos(node.(ast.Statement).Position())
 	switch node := node.(type) {
 	case *ast.Compound:
-		for _, stmt := range node.Body {
-			cg.statement(stmt, labels, lastStmt)
-		}
+		cg.statements(node.Body, labels)
 	case *ast.Return:
 		cg.returnStmt(node.E, lastStmt)
 	case *ast.If:
@@ -280,9 +278,9 @@ func (cg *cgen) statement(node ast.Node, labels *Labels, lastStmt bool) {
 	}
 }
 
-func (cg *cgen) statements(stmts []ast.Statement, labels *Labels, lastStmt bool) {
+func (cg *cgen) statements(stmts []ast.Statement, labels *Labels) {
 	for _, stmt := range stmts {
-		cg.statement(stmt, labels, lastStmt)
+		cg.statement(stmt, labels, false)
 	}
 }
 
@@ -367,13 +365,13 @@ func (cg *cgen) switchStmt(node *ast.Switch, labels *Labels) {
 			}
 		}
 		cg.placeLabel(caseBody)
-		cg.statements(c.Body, labels, false)
+		cg.statements(c.Body, labels)
 		end = cg.emitJump(op.Jump, end)
 		cg.placeLabel(afterCase)
 	}
 	cg.emit(op.Pop)
 	if node.Default != nil {
-		cg.statements(node.Default, labels, false)
+		cg.statements(node.Default, labels)
 	} else {
 		cg.emitValue(SuStr("unhandled switch value"))
 		cg.emit(op.Throw)
