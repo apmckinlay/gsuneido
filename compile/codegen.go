@@ -37,6 +37,14 @@ type cgen struct {
 	codePrev int
 }
 
+type calltype int
+
+const (
+	callDiscard calltype = iota
+	callNoNil
+	callNilOk
+)
+
 // codegen compiles an Ast to an SuFunc
 func codegen(fn *ast.Function) *SuFunc {
 	ast.Blocks(fn)
@@ -177,9 +185,10 @@ func (cg *cgen) chainNew(fn *ast.Function) {
 	cg.emit(op.This)
 	cg.emitValue(SuStr("New"))
 	cg.emitUint16(op.Super, cg.base)
-	cg.emitUint8(op.CallMeth, 0)
 	if len(fn.Body) > 0 {
-		cg.emit(op.Pop)
+		cg.emitUint8(op.CallMethDiscard, 0)
+	} else {
+		cg.emitUint8(op.CallMethNilOk, 0)
 	}
 }
 
@@ -286,16 +295,8 @@ func (cg *cgen) statements(stmts []ast.Statement, labels *Labels) {
 
 func (cg *cgen) returnStmt(expr ast.Expr, lastStmt bool) {
 	if expr != nil {
-		if tri := cg.ifTrinary(expr); tri != nil {
-			cg.triExpr(tri, func() { cg.returnStmt2(expr, false) })
-			return
-		}
-		cg.expr(expr)
+		cg.expr2(expr, callNilOk)
 	}
-	cg.returnStmt2(expr, lastStmt)
-}
-
-func (cg *cgen) returnStmt2(expr ast.Expr, lastStmt bool) {
 	if cg.isBlock {
 		if expr == nil {
 			cg.emit(op.BlockReturnNil)
@@ -469,48 +470,38 @@ func (cg *cgen) exprList(list []ast.Expr) {
 }
 
 func (cg *cgen) exprStmt(expr ast.Expr, lastStmt bool) {
-	if tri := cg.ifTrinary(expr); tri != nil {
-		cg.triExpr(tri, func() {
-			if lastStmt {
-				cg.emit(op.Return)
-			} else {
+	if lastStmt {
+		cg.expr2(expr, callNilOk)
+	} else {
+		cg.expr2(expr, callDiscard)
+		if !lastStmt {
+			if _, ok := expr.(*ast.Call); !ok {
 				cg.emit(op.Pop)
 			}
-		})
-		return
+		}
 	}
-	cg.expr(expr)
-	if !lastStmt {
-		cg.emit(op.Pop)
-	}
-}
-
-func (cg *cgen) ifTrinary(expr ast.Expr) *ast.Trinary {
-	if u, ok := expr.(*ast.Unary); ok && u.Tok == tok.LParen {
-		expr = u.E
-	}
-	if tri, ok := expr.(*ast.Trinary); ok {
-		return tri
-	}
-	return nil
 }
 
 // expressions -----------------------------------------------------------------
 
 func (cg *cgen) expr(node ast.Expr) {
+	cg.expr2(node, callNoNil)
+}
+
+func (cg *cgen) expr2(node ast.Expr, ct calltype) {
 	switch node := node.(type) {
 	case *ast.Constant:
 		cg.emitValue(node.Val)
 	case *ast.Ident:
 		cg.identifier(node)
 	case *ast.Unary:
-		cg.unary(node)
+		cg.unary(node, ct)
 	case *ast.Binary:
 		cg.binary(node)
 	case *ast.Nary:
 		cg.nary(node)
 	case *ast.Trinary:
-		cg.triExpr(node, func() {})
+		cg.trinary(node, ct)
 	case *ast.Mem:
 		cg.expr(node.E)
 		cg.expr(node.M)
@@ -528,7 +519,7 @@ func (cg *cgen) expr(node ast.Expr) {
 	case *ast.In:
 		cg.inExpr(node)
 	case *ast.Call:
-		cg.call(node)
+		cg.call(node, ct)
 	case *ast.Function:
 		fn := codegen(node)
 		cg.emitValue(fn)
@@ -592,9 +583,9 @@ func (cg *cgen) name(s string) int {
 	return i
 }
 
-func (cg *cgen) unary(node *ast.Unary) {
+func (cg *cgen) unary(node *ast.Unary, ct calltype) {
 	if node.Tok == tok.LParen {
-		cg.expr(node.E)
+		cg.expr2(node.E, ct)
 		return
 	}
 	if node.Tok == tok.Div {
@@ -726,19 +717,18 @@ func isUnary(e ast.Expr, tok tok.Token) bool {
 	return ok && u.Tok == tok
 }
 
-func (cg *cgen) triExpr(node *ast.Trinary, add func()) {
-	// add is used for "no return value" checking
-	// interp only looks at opcode following call
-	// so Pop and Return have to be duplicated on each branch
+func (cg *cgen) trinary(node *ast.Trinary, ct calltype) {
+	// always leave a value on the stack
+	if ct == callDiscard {
+		ct = callNilOk
+	}
 	f, end := -1, -1
 	cg.expr(node.Cond)
 	f = cg.emitJump(op.QMark, f)
-	cg.expr(node.T)
-	add()
+	cg.expr2(node.T, ct)
 	end = cg.emitJump(op.Jump, end)
 	cg.placeLabel(f)
-	cg.expr(node.F)
-	add()
+	cg.expr2(node.F, ct)
 	cg.placeLabel(end)
 }
 
@@ -845,7 +835,7 @@ var superNew = &ast.Mem{
 	E: &ast.Ident{Name: "super"},
 	M: &ast.Constant{Val: SuStr("New")}}
 
-func (cg *cgen) call(node *ast.Call) {
+func (cg *cgen) call(node *ast.Call, ct calltype) {
 	fn := node.Fn
 
 	if id, ok := fn.(*ast.Ident); ok && id.Name == "super" {
@@ -882,10 +872,10 @@ func (cg *cgen) call(node *ast.Call) {
 		if superCall {
 			cg.emitUint16(op.Super, cg.base)
 		}
-		cg.emit(op.CallMeth)
+		cg.emit(op.CallMethDiscard + op.Opcode(ct))
 	} else {
 		cg.expr(fn)
-		cg.emit(op.CallFunc)
+		cg.emit(op.CallFuncDiscard + op.Opcode(ct))
 	}
 	verify.That(argspec < math.MaxUint8)
 	cg.emitMore(byte(argspec))

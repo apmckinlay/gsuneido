@@ -82,7 +82,8 @@ func disasm1(fn *SuFunc, i int, indent int) (int, string) {
 		j := fetchInt16()
 		v := fn.Values[fetchUint8()]
 		s += fmt.Sprintf(" %d %v", i+j-1, v)
-	case op.CallFunc, op.CallMeth:
+	case op.CallFuncDiscard, op.CallFuncNoNil, op.CallFuncNilOk,
+		op.CallMethDiscard, op.CallMethNoNil, op.CallMethNilOk:
 		ai := int(fetchUint8())
 		s += " "
 		if ai < len(StdArgSpecs) {

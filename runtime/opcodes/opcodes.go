@@ -170,14 +170,36 @@ const (
 
 	// call and return ----------------------------------------------
 
-	// CallFunc <uint8> replaces the function on the top of the stack
-	// with the result of calling it with the specified ArgSpec
-	// which may be from StdArgSpecs or frame.fn.ArgsSpecs
-	CallFunc
-	// CallMeth <uint8> replaces the function and method on the top of the stack
-	// with the result of calling it with the specified ArgSpec
-	// which may be from StdArgSpecs or frame.fn.ArgsSpecs
-	CallMeth
+	// CallFuncDiscard <uint8> calls the function popped from the stack
+	// with the specified StdArgSpecs or frame.fn.ArgsSpecs
+	// and discards the result
+	CallFuncDiscard
+
+	// CallFuncNoNil <uint8> calls the function popped from the stack
+	// with the specified StdArgSpecs or frame.fn.ArgsSpecs
+	// and pushes the result which must not be nil
+	CallFuncNoNil
+
+	// CallFuncNilOk<uint8> calls the function popped from the stack
+	// with the specified StdArgSpecs or frame.fn.ArgsSpecs
+	// and pushes the result which may be nil (return special case)
+	CallFuncNilOk
+
+	// CallMethDiscard <uint8> calls the method popped from the stack
+	// with the specified StdArgSpecs or frame.fn.ArgsSpecs
+	// and discards the result
+	CallMethDiscard
+
+	// CallMethNoNil <uint8> calls the method popped from the stack
+	// with the specified StdArgSpecs or frame.fn.ArgsSpecs
+	// and pushes the result which must not be nil
+	CallMethNoNil
+
+	// CallMethNilOk <uint8> calls the method popped from the stack
+	// with the specified StdArgSpecs or frame.fn.ArgsSpecs
+	// and pushes the result which may be nil (return special case)
+	CallMethNilOk
+
 	// Super <uint16> specifies where to start the method lookup
 	// for the following CallMeth
 	Super

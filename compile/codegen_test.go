@@ -107,43 +107,44 @@ func TestCodegen(t *testing.T) {
 
 	test("throw 'fubar'", "Value 'fubar', Throw")
 
-	test("f()", "Load f, CallFunc ()")
-	test("f(); f()", "Load f, CallFunc (), Pop, Load f, CallFunc ()")
-	test("F()", "Global F, CallFunc ()")
-	test("f(a, b)", "Load a, Load b, Load f, CallFunc (?, ?)")
-	test("f(1,2,3,4)", "One, Int 2, Int 3, Int 4, Load f, CallFunc (?, ?, ?, ?)")
-	test("f(1,2,3,4,5)", "One, Int 2, Int 3, Int 4, Int 5, Load f, CallFunc (?, ?, ?, ?, ?)")
-	test("f(a, b, c:, d: 0)", "Load a, Load b, True, Zero, Load f, CallFunc (?, ?, c:, d:)")
-	test("f(@args)", "Load args, Load f, CallFunc (@)")
-	test("f(@+1args)", "Load args, Load f, CallFunc (@+1)")
-	test("f(a: a)", "Load a, Load f, CallFunc (a:)")
-	test("f(:a)", "Load a, Load f, CallFunc (a:)")
+	test("f()", "Load f, CallFuncNilOk ()")
+	test("(f())", "Load f, CallFuncNilOk ()")
+	test("f(); f()", "Load f, CallFuncDiscard (), Load f, CallFuncNilOk ()")
+	test("F()", "Global F, CallFuncNilOk ()")
+	test("f(a, b)", "Load a, Load b, Load f, CallFuncNilOk (?, ?)")
+	test("f(1,2,3,4)", "One, Int 2, Int 3, Int 4, Load f, CallFuncNilOk (?, ?, ?, ?)")
+	test("f(1,2,3,4,5)", "One, Int 2, Int 3, Int 4, Int 5, Load f, CallFuncNilOk (?, ?, ?, ?, ?)")
+	test("f(a, b, c:, d: 0)", "Load a, Load b, True, Zero, Load f, CallFuncNilOk (?, ?, c:, d:)")
+	test("f(@args)", "Load args, Load f, CallFuncNilOk (@)")
+	test("f(@+1args)", "Load args, Load f, CallFuncNilOk (@+1)")
+	test("f(a: a)", "Load a, Load f, CallFuncNilOk (a:)")
+	test("f(:a)", "Load a, Load f, CallFuncNilOk (a:)")
 	test("f(12, 34: 56, false:)",
-		"Int 12, Int 56, True, Load f, CallFunc (?, 34:, false:)")
+		"Int 12, Int 56, True, Load f, CallFuncNilOk (?, 34:, false:)")
 	test("f(1,a:2); f(3,a:4)",
-		"One, Int 2, Load f, CallFunc (?, a:), Pop, Int 3, Int 4, Load f, CallFunc (?, a:)")
+		"One, Int 2, Load f, CallFuncDiscard (?, a:), Int 3, Int 4, Load f, CallFuncNilOk (?, a:)")
 
-	test("[a: 2, :b]", "Int 2, Load b, Global Record, CallFunc (a:, b:)")
-	test("[1, a: 2, :b]", "One, Int 2, Load b, Global Object, CallFunc (?, a:, b:)")
+	test("[a: 2, :b]", "Int 2, Load b, Global Record, CallFuncNilOk (a:, b:)")
+	test("[1, a: 2, :b]", "One, Int 2, Load b, Global Object, CallFuncNilOk (?, a:, b:)")
 
-	test("char.Size()", "Load char, Value 'Size', CallMeth ()")
-	test("a.f(123)", "Load a, Int 123, Value 'f', CallMeth (?)")
-	test("a.f(1,2,3)", "Load a, One, Int 2, Int 3, Value 'f', CallMeth (?, ?, ?)")
-	test("a.f(1,2,3,4)", "Load a, One, Int 2, Int 3, Int 4, Value 'f', CallMeth (?, ?, ?, ?)")
-	test("a.f(x:)", "Load a, True, Value 'f', CallMeth (x:)")
-	test("a[b](123)", "Load a, Int 123, Load b, CallMeth (?)")
-	test("a[b $ c](123)", "Load a, Int 123, Load b, Load c, Cat, CallMeth (?)")
-	test("a().Add(123)", "Load a, CallFunc (), Int 123, Value 'Add', CallMeth (?)")
+	test("char.Size()", "Load char, Value 'Size', CallMethNilOk ()")
+	test("a.f(123)", "Load a, Int 123, Value 'f', CallMethNilOk (?)")
+	test("a.f(1,2,3)", "Load a, One, Int 2, Int 3, Value 'f', CallMethNilOk (?, ?, ?)")
+	test("a.f(1,2,3,4)", "Load a, One, Int 2, Int 3, Int 4, Value 'f', CallMethNilOk (?, ?, ?, ?)")
+	test("a.f(x:)", "Load a, True, Value 'f', CallMethNilOk (x:)")
+	test("a[b](123)", "Load a, Int 123, Load b, CallMethNilOk (?)")
+	test("a[b $ c](123)", "Load a, Int 123, Load b, Load c, Cat, CallMethNilOk (?)")
+	test("a().Add(123)", "Load a, CallFuncNoNil (), Int 123, Value 'Add', CallMethNilOk (?)")
 	test("a().Add(123).Size()",
-		"Load a, CallFunc (), Int 123, Value 'Add', CallMeth (?), Value 'Size', CallMeth ()")
+		"Load a, CallFuncNoNil (), Int 123, Value 'Add', CallMethNoNil (?), Value 'Size', CallMethNilOk ()")
 	test("a.b(1).c(2)",
-		"Load a, One, Value 'b', CallMeth (?), Int 2, Value 'c', CallMeth (?)")
+		"Load a, One, Value 'b', CallMethNoNil (?), Int 2, Value 'c', CallMethNilOk (?)")
 
 	test("function () { }", "Value /* function */")
 
-	test("new c", "Load c, Value '*new*', CallMeth ()")
-	test("new c()", "Load c, Value '*new*', CallMeth ()")
-	test("new c(1)", "Load c, One, Value '*new*', CallMeth (?)")
+	test("new c", "Load c, Value '*new*', CallMethNilOk ()")
+	test("new c()", "Load c, Value '*new*', CallMethNilOk ()")
+	test("new c(1)", "Load c, One, Value '*new*', CallMethNilOk (?)")
 }
 
 func TestCodegenSuper(t *testing.T) {
@@ -160,21 +161,21 @@ func TestCodegenSuper(t *testing.T) {
 		// 	t.Errorf("\n%s\nexpect: %s\nactual: %s", src, expected, actual)
 		// }
 	}
-	test("New(){}", "This, Value 'New', Super Foo, CallMeth ()")
-	test("New(){ F() }", "This, Value 'New', Super Foo, CallMeth (), Pop, "+
-		"Global F, CallFunc ()")
+	test("New(){}", "This, Value 'New', Super Foo, CallMethNilOk ()")
+	test("New(){ F() }", "This, Value 'New', Super Foo, CallMethDiscard (), "+
+		"Global F, CallFuncNilOk ()")
 
 	// Super(...) => Super.New(...)
-	test("New(){super(1)}", "This, One, Value 'New', Super Foo, CallMeth (?)")
+	test("New(){super(1)}", "This, One, Value 'New', Super Foo, CallMethNilOk (?)")
 
-	test("F(){super.Bar(0,1)}", "This, Zero, One, Value 'Bar', Super Foo, CallMeth (?, ?)")
+	test("F(){super.Bar(0,1)}", "This, Zero, One, Value 'Bar', Super Foo, CallMethNilOk (?, ?)")
 
 	test("F() { 1.Times() { super.Push(123) } }", `One, Block
 		0: This
 		1: Int 123
 		4: Value 'Push'
 		6: Super Foo
-		9: CallMeth (?), Value 'Times', CallMeth (block:)`)
+		9: CallMethNilOk (?), Value 'Times', CallMethNilOk (block:)`)
 }
 
 func disasm(fn *SuFunc) string {
@@ -203,33 +204,28 @@ func TestControl(t *testing.T) {
 	}
 
 	test(`try F()`, `
-		0: Try 13 ''
+		0: Try 12 ''
         4: Global F
-        7: CallFunc ()
-        9: Pop
-        10: Catch 14
-        13: Pop`)
+        7: CallFuncDiscard ()
+        9: Catch 13
+        12: Pop`)
 	test(`try F() catch G()`, `
-		0: Try 13 ''
+		0: Try 12 ''
         4: Global F
-        7: CallFunc ()
-        9: Pop
-        10: Catch 20
-        13: Pop
-        14: Global G
-        17: CallFunc ()
-        19: Pop`)
+        7: CallFuncDiscard ()
+        9: Catch 18
+        12: Pop
+        13: Global G
+        16: CallFuncDiscard ()`)
 	test(`try F() catch (x, "y") G()`, `
-		0: Try 13 'y'
+		0: Try 12 'y'
         4: Global F
-        7: CallFunc ()
-        9: Pop
-        10: Catch 22
-        13: Store x
-        15: Pop
-        16: Global G
-        19: CallFunc ()
-        21: Pop`)
+        7: CallFuncDiscard ()
+        9: Catch 20
+        12: Store x
+        14: Pop
+        15: Global G
+        18: CallFuncDiscard ()`)
 
 	test("a and b", `
 		0: Load a
@@ -259,57 +255,75 @@ func TestControl(t *testing.T) {
 
 	test("a ? b : c", `
 		0: Load a
-        2: QMark 11
+        2: QMark 10
         5: Load b
-        7: Return
-        8: Jump 14
-        11: Load c
-        13: Return`)
+        7: Jump 12
+        10: Load c`)
+
+	test("a ? b() : c()", `
+		0: Load a
+        2: QMark 12
+        5: Load b
+        7: CallFuncNilOk ()
+        9: Jump 16
+        12: Load c
+        14: CallFuncNilOk ()`)
+
+	test("a ? b() : c();;", `
+		0: Load a
+        2: QMark 12
+        5: Load b
+        7: CallFuncNilOk ()
+        9: Jump 16
+        12: Load c
+		14: CallFuncNilOk ()
+		16: Pop`)
 
 	test("(a ? b : c)", `
 		0: Load a
-        2: QMark 11
+        2: QMark 10
         5: Load b
-        7: Return
-        8: Jump 14
-        11: Load c
-        13: Return`)
+        7: Jump 12
+        10: Load c`)
 
 	test("a ? b : c;;", `
 		0: Load a
-        2: QMark 11
+        2: QMark 10
         5: Load b
-        7: Pop
-        8: Jump 14
-        11: Load c
-        13: Pop`)
+        7: Jump 12
+        10: Load c
+        12: Pop`)
 
 	test("(a ? b : c);;", `
 		0: Load a
-        2: QMark 11
+        2: QMark 10
         5: Load b
-        7: Pop
-        8: Jump 14
-        11: Load c
-        13: Pop`)
+        7: Jump 12
+        10: Load c
+        12: Pop`)
+
+	test("return a ? b : c", `
+		0: Load a
+        2: QMark 10
+        5: Load b
+        7: Jump 12
+        10: Load c`)
 
 	test("return a ? b : c;;", `
 		0: Load a
-        2: QMark 11
+        2: QMark 10
         5: Load b
-        7: Return
-        8: Jump 14
-        11: Load c
-        13: Return`)
+        7: Jump 12
+        10: Load c
+        12: Return`)
 
 	test("return (a ? b : c);;", `
 		0: Load a
-        2: QMark 11
+        2: QMark 10
         5: Load b
-        7: Return
-        8: Jump 14
-        11: Load c
-        13: Return`)
+        7: Jump 12
+        10: Load c
+        12: Return`)
 
 	test("a in (4,5,6)", `
 		0: Load a

@@ -85,6 +85,7 @@ func (t *Thread) interp(catchJump, catchSp *int) (ret Value) {
 	code := fr.fn.Code
 	super := 0
 	catchPat := ""
+	var oc op.Opcode
 
 	fetchUint8 := func() int {
 		fr.ip++
@@ -102,13 +103,17 @@ func (t *Thread) interp(catchJump, catchSp *int) (ret Value) {
 		fr.ip += fetchInt16()
 	}
 	pushResult := func(result Value) {
-		if result == nil && fr.ip < len(code) {
-			o := op.Opcode(code[fr.ip])
-			if o != op.Pop && o != op.Return && o != op.BlockReturn {
+		switch oc {
+		case op.CallFuncNoNil, op.CallMethNoNil:
+			if result == nil {
 				panic("no return value")
 			}
+			fallthrough
+		case op.CallFuncNilOk, op.CallMethNilOk:
+			t.Push(result)
+		default:
+			// discard result
 		}
-		t.Push(result)
 	}
 
 	defer func() {
@@ -154,7 +159,7 @@ loop:
 		// fmt.Println("stack:", t.sp, t.stack[ints.Max(0, t.sp-3):t.sp])
 		// _, da := Disasm1(fr.fn, fr.ip)
 		// fmt.Printf("%d: %d: %s\n", t.fp, fr.ip, da)
-		oc := op.Opcode(code[fr.ip])
+		oc = op.Opcode(code[fr.ip])
 		fr.ip++
 		switch oc {
 		case op.Pop:
@@ -408,7 +413,7 @@ loop:
 			fallthrough
 		case op.BlockReturn:
 			panic(BlockReturn)
-		case op.CallFunc:
+		case op.CallFuncDiscard, op.CallFuncNoNil, op.CallFuncNilOk:
 			f := t.Pop()
 			ai := fetchUint8()
 			var argSpec *ArgSpec
@@ -423,7 +428,7 @@ loop:
 			pushResult(result)
 		case op.Super:
 			super = fetchUint16()
-		case op.CallMeth:
+		case op.CallMethDiscard, op.CallMethNoNil, op.CallMethNilOk:
 			method := t.Pop()
 			ai := fetchUint8()
 			var argSpec *ArgSpec
