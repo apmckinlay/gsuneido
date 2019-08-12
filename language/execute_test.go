@@ -130,7 +130,7 @@ func pt_execute(args []string, _ []bool) bool {
 		fn := compile.Constant(src).(*SuFunc)
 		actual = th.Start(fn, nil)
 		if actual == nil {
-			success = false
+			success = expected == "nil"
 		} else if expected == "**notfalse**" {
 			success = actual != False
 		} else {
