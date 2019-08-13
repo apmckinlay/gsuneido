@@ -171,6 +171,9 @@ loop:
 		case op.Dupx2:
 			t.Dupx2()
 		case op.This:
+			if fr.this == nil {
+				panic("uninitialized: this")
+			}
 			t.Push(fr.this)
 		case op.True:
 			t.Push(True)
