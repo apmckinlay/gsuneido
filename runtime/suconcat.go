@@ -89,8 +89,7 @@ func (c SuConcat) toStr() string {
 
 // String returns a quoted string
 func (c SuConcat) String() string {
-	// TODO: handle escaping
-	return "'" + c.toStr() + "'"
+	return escapeStr(c.toStr())
 }
 
 // Get returns the character at a given index

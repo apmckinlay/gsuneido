@@ -49,7 +49,10 @@ var DefaultSingleQuotes = false
 
 // String returns a human readable string with quotes and escaping
 func (ss SuStr) String() string {
-	s := string(ss)
+	return escapeStr(string(ss))
+}
+
+func escapeStr(s string) string {
 	if strings.ContainsRune(s, '\\') && !strings.ContainsAny(s, "`\x00") {
 		return "`" + s + "`"
 	}
