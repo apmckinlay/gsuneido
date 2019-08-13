@@ -78,7 +78,7 @@ func (*SuInstance) RangeLen(int, int) Value {
 }
 
 func (*SuInstance) Hash() uint32 {
-	panic("instance hash not implemented") //TODO
+	panic("instance hash not implemented")
 }
 
 func (*SuInstance) Hash2() uint32 {

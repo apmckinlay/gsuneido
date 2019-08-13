@@ -1,9 +1,9 @@
 package runtime
 
 import (
-	"github.com/apmckinlay/gsuneido/util/pack"
-	"github.com/apmckinlay/gsuneido/util/verify"
 	"strings"
+
+	"github.com/apmckinlay/gsuneido/util/pack"
 )
 
 /*
@@ -138,7 +138,7 @@ func (b *RecordBuilder) Build() Record {
 	length := b.recSize(sizes)
 	buf := pack.NewEncoder(length)
 	b.build(buf, length, sizes)
-	verify.That(len(buf.String()) == length) //TODO remove
+	//verify.That(len(buf.String()) == length)
 	return Record(buf.String())
 }
 

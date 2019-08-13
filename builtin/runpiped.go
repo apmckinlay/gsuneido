@@ -112,7 +112,7 @@ func (rp *suRunPiped) String() string {
 }
 
 func (*suRunPiped) Type() types.Type {
-	return 0 //TODO types.RunPiped
+	return types.BuiltinClass
 }
 
 func (rp *suRunPiped) Equal(other interface{}) bool {
