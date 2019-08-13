@@ -33,6 +33,8 @@ type SuRecord struct {
 	tran *SuTran
 	// recadr is the record address in the database
 	recadr int
+	// unpacked is true if the row has been unpacked into ob
+	unpacked bool
 }
 
 var _ Container = (*SuRecord)(nil)
@@ -148,7 +150,7 @@ func (r *SuRecord) ToContainer() (Container, bool) {
 // Container --------------------------------------------------------
 
 func (r *SuRecord) ToObject() *SuObject {
-	if r.row != nil { //TODO and r.ob == nil ???
+	if r.row != nil && !r.unpacked {
 		for ri, rf := range r.hdr.Fields {
 			for fi, f := range rf {
 				if f != "-" && !strings.HasSuffix(f, "_deps") {
@@ -161,6 +163,7 @@ func (r *SuRecord) ToObject() *SuObject {
 				}
 			}
 		}
+		r.unpacked = true
 	}
 	return &r.ob
 }
