@@ -29,7 +29,7 @@ func TestArgs(t *testing.T) {
 
 	// @arg => @param
 	f = atParamSpec
-	as = ArgSpecEach
+	as = ArgSpecEach0
 	th.Reset()
 	th.Push(makeOb())
 	th.Args(f, as)
@@ -110,7 +110,7 @@ func TestArgs(t *testing.T) {
 	// @mixed => params
 	f = &ParamSpec{Nparams: 4, Flags: []Flag{0, 0, 0, 0},
 		Names: []string{"d", "c", "b", "a"}}
-	as = ArgSpecEach
+	as = ArgSpecEach0
 	th.Reset()
 	th.Push(makeOb())
 	th.Args(f, as)
@@ -131,7 +131,7 @@ func TestArgs(t *testing.T) {
 	// @args => one param
 	f = &ParamSpec{Nparams: 1, Flags: []Flag{0},
 		Names: []string{"a"}}
-	as = ArgSpecEach
+	as = ArgSpecEach0
 	th.Reset()
 	th.Push(NewSuObject(SuInt(123)))
 	th.Args(f, as)
@@ -159,7 +159,7 @@ func makeOb() *SuObject {
 
 func vals(names ...string) []Value {
 	vals := make([]Value, len(names))
-	for i,s := range names {
+	for i, s := range names {
 		vals[i] = SuStr(s)
 	}
 	return vals

@@ -30,7 +30,7 @@ type ArgSpec struct {
 
 // values for ArgSpec.Each
 const (
-	EACH  = 1 //TODO rename to Each0/1
+	EACH0 = 1
 	EACH1 = 2
 )
 
@@ -47,7 +47,7 @@ var ArgSpec1 = &ArgSpec{Nargs: 1, Signature: Sig1}
 var ArgSpec2 = &ArgSpec{Nargs: 2, Signature: Sig2}
 var ArgSpec3 = &ArgSpec{Nargs: 3, Signature: Sig3}
 var ArgSpec4 = &ArgSpec{Nargs: 4, Signature: Sig4}
-var ArgSpecEach = &ArgSpec{Nargs: 1, Each: EACH}
+var ArgSpecEach0 = &ArgSpec{Nargs: 1, Each: EACH0}
 var ArgSpecEach1 = &ArgSpec{Nargs: 1, Each: EACH1}
 var ArgSpecBlock = &ArgSpec{Nargs: 1,
 	Spec: []byte{0}, Names: []Value{SuStr("block")}}
@@ -58,7 +58,7 @@ var StdArgSpecs = [...]*ArgSpec{
 	ArgSpec2,
 	ArgSpec3,
 	ArgSpec4,
-	ArgSpecEach,
+	ArgSpecEach0,
 	ArgSpecEach1,
 	ArgSpecBlock,
 }
@@ -92,9 +92,9 @@ func (as *ArgSpec) String() string {
 	var buf strings.Builder
 	sep := ""
 	buf.WriteString("ArgSpec(")
-	if as.Each >= EACH {
+	if as.Each >= EACH0 {
 		buf.WriteString("@")
-		if as.Each > EACH {
+		if as.Each > EACH0 {
 			buf.WriteByte('+')
 			buf.WriteString(strconv.Itoa(int(as.Each - 1)))
 		}
@@ -121,7 +121,7 @@ func (as *ArgSpec) String() string {
 
 func (as *ArgSpec) DropFirst() *ArgSpec {
 	as2 := *as
-	if as2.Each >= EACH {
+	if as2.Each >= EACH0 {
 		as2.Each++
 		return &as2
 	}

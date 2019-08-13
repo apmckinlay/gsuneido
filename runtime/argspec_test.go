@@ -13,7 +13,7 @@ func TestArgSpecString(t *testing.T) {
 	}
 	test(ArgSpec0, "ArgSpec()")
 	test(ArgSpec3, "ArgSpec(?, ?, ?)")
-	test(ArgSpecEach, "ArgSpec(@)")
+	test(ArgSpecEach0, "ArgSpec(@)")
 	test(ArgSpecEach1, "ArgSpec(@+1)")
 	test(ArgSpecBlock, "ArgSpec(block:)")
 	test(&ArgSpec{Nargs: 0, Spec: []byte{2, 0, 1}, Names: vals("a", "b", "c")},
@@ -26,11 +26,11 @@ func TestArgSpecEqual(t *testing.T) {
 	as := []*ArgSpec{
 		ArgSpec0,
 		ArgSpec4,
-		ArgSpecEach,
+		ArgSpecEach0,
 		ArgSpecEach1,
 		ArgSpecBlock,
-		&ArgSpec{Nargs: 2, Spec: []byte{0,1}, Names: []Value{SuStr("foo"), SuStr("bar")}},
-		&ArgSpec{Nargs: 2, Spec: []byte{0,1}, Names: []Value{SuStr("foo"), SuStr("baz")}},
+		&ArgSpec{Nargs: 2, Spec: []byte{0, 1}, Names: []Value{SuStr("foo"), SuStr("bar")}},
+		&ArgSpec{Nargs: 2, Spec: []byte{0, 1}, Names: []Value{SuStr("foo"), SuStr("baz")}},
 	}
 	for i, x := range as {
 		for j, y := range as {

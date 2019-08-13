@@ -52,7 +52,7 @@ const MaxArgs = 200
 func (t *Thread) massage(ps *ParamSpec, as *ArgSpec, args []Value) {
 	unnamed := int(as.Nargs) - len(as.Spec) // only valid if !atArg
 	atParam := ps.Nparams == 1 && ps.Flags[0] == AtParam
-	atArg := as.Each >= EACH
+	atArg := as.Each >= EACH0
 	if unnamed == int(ps.Nparams) && len(as.Spec) == 0 && !atParam && !atArg {
 		return // simple fast path
 	}
