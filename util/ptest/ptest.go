@@ -14,6 +14,8 @@ package ptest
 import (
 	"fmt"
 	"io/ioutil"
+	"os"
+	"path/filepath"
 	"strings"
 
 	lex "github.com/apmckinlay/gsuneido/lexer"
@@ -31,18 +33,24 @@ var tdir string
 func testdir() string {
 	if tdir == "" {
 		// first time, read and cache
-		file := "ptestdir.txt"
+		dir := ""
 		for i := 0; ; i++ {
-			src, err := ioutil.ReadFile(file)
+			src, err := ioutil.ReadFile(dir + "ptestdir.txt")
 			if err == nil {
 				tdir = strings.TrimSpace(string(src))
+				break
+			}
+			if fi, e := os.Stat(dir + "suneido_tests"); e == nil && fi.IsDir() {
+				tdir = dir + "suneido_tests"
 				break
 			}
 			if i > 9 {
 				panic("can't find ptestdir.txt")
 			}
-			file = "../" + file
+			dir = "../" + dir // go "up" one directory
 		}
+		tdir, _ = filepath.Abs(tdir)
+		tdir += "/"
 	}
 	return tdir
 }
