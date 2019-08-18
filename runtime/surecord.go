@@ -6,6 +6,7 @@ import (
 	"github.com/apmckinlay/gsuneido/runtime/types"
 	"github.com/apmckinlay/gsuneido/util/pack"
 	"github.com/apmckinlay/gsuneido/util/str"
+	"github.com/apmckinlay/gsuneido/util/verify"
 )
 
 // SuRecord is an SuObject with observers and rules and a default value of ""
@@ -516,13 +517,11 @@ func toStr(e interface{}) string {
 
 func (r *SuRecord) getRule(t *Thread, key string) Value {
 	if rule, ok := r.attachedRules[key]; ok {
+		verify.That(rule != nil)
 		return rule
 	}
-	if r.ob.defval != nil {
-		gn := Global.Num("Rule_" + key)
-		if rule := Global.Get(t, gn); rule != nil {
-			return rule
-		}
+	if r.ob.defval != nil && t != nil {
+		return Global.GetName(t, "Rule_"+key)
 	}
 	return nil
 }
