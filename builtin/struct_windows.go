@@ -14,6 +14,10 @@ type SuStructGlobal struct {
 func init() {
 	Global.Builtin("INITCOMMONCONTROLSEX",
 		&SuStructGlobal{size: int(unsafe.Sizeof(INITCOMMONCONTROLSEX{}))})
+	Global.Builtin("MENUITEMINFO",
+		&SuStructGlobal{size: int(unsafe.Sizeof(MENUITEMINFO{}))})
+	Global.Builtin("MONITORINFO",
+		&SuStructGlobal{size: int(unsafe.Sizeof(MONITORINFO{}))})
 	//TODO add other structs
 }
 
