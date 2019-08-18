@@ -8,15 +8,16 @@ import (
 const maxCb = 2000 // same as Go's limit (as of 20190813)
 
 var callbacks [maxCb]struct {
-	fn    Value
-	nargs int
-	gcb   uintptr
+	fn     Value
+	nargs  byte
+	active bool
+	gcb    uintptr
 }
 
-func NewCallback(fn Value, nargs int) uintptr {
+func NewCallback(fn Value, nargs byte) uintptr {
 	for i := range callbacks {
 		cb := &callbacks[i]
-		if cb.fn == nil && (cb.gcb == 0 || cb.nargs == nargs) {
+		if !cb.active && (cb.gcb == 0 || cb.nargs == nargs) {
 			if cb.gcb == 0 {
 				// create a reusable callback for callbacks[i]
 				switch nargs {
@@ -64,6 +65,7 @@ func NewCallback(fn Value, nargs int) uintptr {
 			}
 			cb.fn = fn
 			cb.nargs = nargs
+			cb.active = true
 			return cb.gcb
 		}
 	}
@@ -73,7 +75,8 @@ func NewCallback(fn Value, nargs int) uintptr {
 func ClearCallback(fn Value) bool {
 	for _, cb := range callbacks {
 		if cb.fn == fn {
-			cb.fn = nil
+			cb.active = false
+			// keep the fn in case it gets called soon after clear
 			// keep the go callback to reuse
 			return true
 		}
@@ -84,3 +87,5 @@ func ClearCallback(fn Value) bool {
 var _ = builtin1("ClearCallback(fn)", func(fn Value) Value {
 	return SuBool(ClearCallback(fn))
 })
+
+//TODO may want to delay reuse, e.g. add to tail of free list (per nargs)
