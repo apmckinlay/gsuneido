@@ -38,7 +38,7 @@ func (d *SuThreadGlobal) Lookup(t *Thread, method string) Callable {
 	if f, ok := threadMethods[method]; ok {
 		return f
 	}
-	return d.Lookup(t, method) // for Params
+	return d.SuBuiltin1.Lookup(t, method) // for Params
 }
 
 func (d *SuThreadGlobal) String() string {

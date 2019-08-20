@@ -71,7 +71,7 @@ func (d *SuDatabaseGlobal) Lookup(t *Thread, method string) Callable {
 	if f, ok := databaseMethods[method]; ok {
 		return f
 	}
-	return d.Lookup(t, method) // for Params
+	return d.SuBuiltin.Lookup(t, method) // for Params
 }
 
 func (d *SuDatabaseGlobal) String() string {
