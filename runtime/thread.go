@@ -43,6 +43,9 @@ type Thread struct {
 	// dbms is the database (client or local) for this Thread
 	dbms IDbms
 
+	// Num is a unique number assigned to the thread
+	Num int32
+
 	// Name is the name of the thread (default is Thread-#)
 	Name string
 }
@@ -56,6 +59,7 @@ func NewThread() *Thread {
 	return &Thread{
 		RxCache: regex.NewPatternCache(100, regex.Compile),
 		TrCache: tr.NewTrsetCache(100, tr.Set),
+		Num:     n,
 		Name:    "Thread-" + strconv.Itoa(int(n))}
 }
 

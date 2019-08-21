@@ -16,10 +16,16 @@ func init() {
 		SuBuiltin1{threadCallClass, BuiltinParams{ParamSpec: *ps}}})
 }
 
+var threads = map[int32]*Thread{}
+
 func threadCallClass(arg Value) Value {
 	t2 := NewThread()
+	threads[t2.Num] = t2 //TODO lock
 	go func() {
-		defer t2.Close()
+		defer func() {
+			t2.Close()
+			delete(threads, t2.Num) //TODO lock
+		}()
 		t2.Call(arg)
 	}()
 	return nil
@@ -31,6 +37,20 @@ var threadMethods = Methods{
 			t.Name = ToStr(args[0])
 		}
 		return SuStr(t.Name)
+	}),
+	"Count": method0(func(this Value) Value {
+		return IntVal(len(threads))
+	}),
+	"List": method0(func(this Value) Value {
+		ob := NewSuObject()
+		for _,t := range threads { //TODO lock
+			ob.Put(nil, SuStr(t.Name), True)
+		}
+		return ob
+	}),
+	"Sleep": method1("(ms)", func(this, ms Value) Value {
+		time.Sleep(time.Duration(1000000 * ToInt(ms)))
+		return nil
 	}),
 }
 
