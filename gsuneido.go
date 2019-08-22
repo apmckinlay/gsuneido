@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"runtime"
 	"runtime/debug"
 
 	"strings"
@@ -16,6 +17,7 @@ import (
 	"github.com/apmckinlay/gsuneido/database/dbms"
 	"github.com/apmckinlay/gsuneido/options"
 	. "github.com/apmckinlay/gsuneido/runtime"
+	"golang.org/x/sys/windows"
 )
 
 var builtDate string // set by: go build -ldflags "-X builtin.builtDate=..."
@@ -27,6 +29,7 @@ var dbmsLocal IDbms
 var mainThread *Thread
 
 func main() {
+	runtime.LockOSThread()
 	Global.Builtin("Suneido", new(SuObject))
 	options.BuiltDate = builtDate
 	flag.BoolVar(&options.Client, "c", false, "run as a client")
@@ -41,6 +44,8 @@ func main() {
 	}
 	Libload = libload // dependency injection
 	mainThread = NewThread()
+	builtin.UIThread = mainThread
+	windows.MustLoadDLL("scilexer.dll")
 	defer mainThread.Close()
 	repl()
 }
@@ -54,12 +59,13 @@ func repl() {
 	builtin.Def()
 	builtin.Concat()
 
-	prompt("Press Enter twice (i.e. blank line) to execute, q to quit\n")
 	if options.Client {
 		eval("Init()")
-	} else {
-		eval("Suneido.Print = PrintStdout;;")
-	}
+		// builtin.MessageLoop()
+	} //else {
+	eval("Suneido.Print = PrintStdout;;")
+	//}
+	prompt("Press Enter twice (i.e. blank line) to execute, q to quit\n")
 	r := bufio.NewReader(os.Stdin)
 	for {
 		prompt("> ")
@@ -141,6 +147,7 @@ func printCallStack(cs *SuObject) {
 func libload(t *Thread, gn Gnum, name string) (result Value) {
 	defer func() {
 		if e := recover(); e != nil {
+			fmt.Println("error loading", name, e)
 			panic("error loading " + name + " " + fmt.Sprint(e))
 			//result = nil
 		}

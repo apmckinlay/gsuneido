@@ -49,6 +49,24 @@ func builtin4(s string, f func(a, b, c, d Value) Value) bool {
 	return true
 }
 
+func builtin5(s string, f func(a, b, c, d, e Value) Value) bool {
+	name, ps := paramSplit(s)
+	Global.Builtin(name, &SuBuiltin5{f, BuiltinParams{ParamSpec: *ps}})
+	return true
+}
+
+func builtin6(s string, f func(a, b, c, d, e, f Value) Value) bool {
+	name, ps := paramSplit(s)
+	Global.Builtin(name, &SuBuiltin6{f, BuiltinParams{ParamSpec: *ps}})
+	return true
+}
+
+func builtin7(s string, f func(a, b, c, d, e, f, g Value) Value) bool {
+	name, ps := paramSplit(s)
+	Global.Builtin(name, &SuBuiltin7{f, BuiltinParams{ParamSpec: *ps}})
+	return true
+}
+
 func builtinRaw(s string, f func(t *Thread, as *ArgSpec, args []Value) Value) bool {
 	name, ps := paramSplit(s)
 	Global.Builtin(name, &SuBuiltinRaw{f, BuiltinParams{ParamSpec: *ps}})

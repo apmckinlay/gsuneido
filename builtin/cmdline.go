@@ -7,7 +7,12 @@ import (
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
+var CmdlineOverride string
+
 var _ = builtin0("Cmdline()", func() Value {
+	if CmdlineOverride != "" {
+		return SuStr(CmdlineOverride)
+	}
 	var sb strings.Builder
 	sep := ""
 	for _, arg := range flag.Args() {

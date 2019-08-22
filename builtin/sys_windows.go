@@ -1,7 +1,6 @@
 package builtin
 
 import (
-	"os"
 	"unsafe"
 
 	. "github.com/apmckinlay/gsuneido/runtime"
@@ -39,8 +38,4 @@ var _ = builtin1("GetDiskFreeSpace(dir = '.')", func(arg Value) Value {
 		uintptr(unsafe.Pointer(dir)),
 		uintptr(unsafe.Pointer(&freeBytes)), 0, 0)
 	return Int64Val(freeBytes)
-})
-
-var _ = builtin0("GetComputerName()", func() Value {
-	return SuStr(os.Getenv("COMPUTERNAME"))
 })

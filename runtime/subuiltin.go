@@ -86,7 +86,7 @@ func (b *SuBuiltin3) Call(t *Thread, _ Value, as *ArgSpec) Value {
 	return b.Fn(args[0], args[1], args[2])
 }
 
-// SuBuiltin4 is a Value for a builtin function with three arguments
+// SuBuiltin4 is a Value for a builtin function with four arguments
 type SuBuiltin4 struct {
 	Fn func(a1, a2, a3, a4 Value) Value
 	BuiltinParams
@@ -97,6 +97,45 @@ var _ Value = (*SuBuiltin4)(nil)
 func (b *SuBuiltin4) Call(t *Thread, _ Value, as *ArgSpec) Value {
 	args := t.Args(&b.ParamSpec, as)
 	return b.Fn(args[0], args[1], args[2], args[3])
+}
+
+// SuBuiltin5 is a Value for a builtin function with five arguments
+type SuBuiltin5 struct {
+	Fn func(a1, a2, a3, a4, a5 Value) Value
+	BuiltinParams
+}
+
+var _ Value = (*SuBuiltin5)(nil)
+
+func (b *SuBuiltin5) Call(t *Thread, _ Value, as *ArgSpec) Value {
+	args := t.Args(&b.ParamSpec, as)
+	return b.Fn(args[0], args[1], args[2], args[3], args[4])
+}
+
+// SuBuiltin6 is a Value for a builtin function with six arguments
+type SuBuiltin6 struct {
+	Fn func(a1, a2, a3, a4, a5, a6 Value) Value
+	BuiltinParams
+}
+
+var _ Value = (*SuBuiltin6)(nil)
+
+func (b *SuBuiltin6) Call(t *Thread, _ Value, as *ArgSpec) Value {
+	args := t.Args(&b.ParamSpec, as)
+	return b.Fn(args[0], args[1], args[2], args[3], args[4], args[5])
+}
+
+// SuBuiltin7 is a Value for a builtin function with seven arguments
+var _ Value = (*SuBuiltin7)(nil)
+
+type SuBuiltin7 struct {
+	Fn func(a1, a2, a3, a4, a5, a6, a7 Value) Value
+	BuiltinParams
+}
+
+func (b *SuBuiltin7) Call(t *Thread, _ Value, as *ArgSpec) Value {
+	args := t.Args(&b.ParamSpec, as)
+	return b.Fn(args[0], args[1], args[2], args[3], args[4], args[5], args[6])
 }
 
 // SuBuiltinRaw is a Value for a builtin function with no massage

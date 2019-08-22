@@ -1,10 +1,7 @@
 package builtin
 
 import (
-	"runtime"
 	"unsafe"
-
-	"golang.org/x/sys/windows"
 
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
@@ -27,9 +24,6 @@ type MSG struct {
 }
 
 func MessageLoop() {
-	runtime.LockOSThread()
-	defer runtime.UnlockOSThread()
-
 	var msg MSG
 	for 0 != GetMessage(&msg, 0, 0, 0) {
 		TranslateMessage(&msg)
@@ -63,5 +57,3 @@ func DispatchMessage(msg *MSG) uintptr {
 		uintptr(unsafe.Pointer(msg)))
 	return ret
 }
-
-var scintilla = windows.MustLoadDLL("scilexer.dll")

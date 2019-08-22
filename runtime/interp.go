@@ -29,7 +29,7 @@ func (t *Thread) Start(fn *SuFunc, this Value) Value {
 // Called by Thread.Start and SuBlock.Call
 func (t *Thread) run() Value {
 	// fmt.Println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
-	// fmt.Println("this:", t.frames[t.fp].this)
+	// fmt.Println(strings.Repeat("    ", t.fp) + "run:", t.frames[t.fp].fn)
 	sp := t.sp
 	t.fp++
 	fp := t.fp
@@ -425,6 +425,7 @@ loop:
 			} else {
 				argSpec = fr.fn.ArgSpecs[ai-len(StdArgSpecs)]
 			}
+			// fmt.Println(strings.Repeat("    ", t.fp+1), f)
 			base := t.sp - int(argSpec.Nargs)
 			result := f.Call(t, nil, argSpec)
 			t.sp = base
@@ -449,6 +450,7 @@ loop:
 					super = 0
 				}
 				if f := ob.Lookup(t, string(methstr)); f != nil {
+					// fmt.Println(strings.Repeat("   ", t.fp+1), f)
 					result := f.Call(t, this, argSpec)
 					t.sp = base
 					pushResult(result)
