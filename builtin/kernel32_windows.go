@@ -138,25 +138,20 @@ var _ = builtin3("HeapFree(hHeap, dwFlags, lpMem)",
 	})
 
 // dll Kernel32:MulDiv(long x, long y, long z) long
-var mulDiv = user32.NewProc("MulDiv")
 var _ = builtin3("MulDiv(x, y, z)",
 	func(a, b, c Value) Value {
-		rtn, _, _ := mulDiv.Call(
-			intArg(a),
-			intArg(b),
-			intArg(c))
-		return IntVal(int(rtn))
+		return IntVal(int(int64(ToInt(a)) * int64(ToInt(b)) / int64(ToInt(c))))
 	})
 
-// dll Kernel32:RtlMoveMemory(pointer destination, instring source,
+// dll Kernel32:CopyMemory(pointer destination, instring source,
 // long length) void
-// Not defined in stdlib
-var rtlMoveMemory = user32.NewProc("RtlMoveMemory")
-var _ = builtin3("RtlMoveMemory(a, b, c)",
+var _ = builtin3("CopyMemory(destination, source, length)",
 	func(a, b, c Value) Value {
-		rtlMoveMemory.Call(
-			intArg(a),
-			stringArg(b),
-			intArg(c))
-		return IntVal(1)
+		dst := uintptr(ToInt(a))
+		src := ToStr(b)
+		n := ToInt(c)
+		for i := 0; i < n; i++ {
+			*(*byte)(unsafe.Pointer(dst + uintptr(i))) = src[i]
+		}
+		return nil
 	})

@@ -2,18 +2,8 @@
 
 package builtin
 
-//TODO: use builtin with array of args instead e.g. builtin12 and SuBuiltin12
-//TODO: DONE! GetMenuItemInfo, SetMenuItemInfo
-//TODO: DONE! dll User32:SendMessage(pointer hwnd, long msg, pointer wParam,
-// TV_INSERTSTRUCT* tvins) pointer
-//TODO: When everything finalized and needs to push to Andrew's repo, make sure
-// to compare the file names and contents before committing each files!!!
-//TODO: Standardize to put the func on a separate line
-//TODO: Remove some old versions that have been commented out
-//TODO: Remove documentation in the comments
-//TODO: Check each line should be under 80 characters
-
 import (
+	"hash/adler32"
 	"unsafe"
 
 	. "github.com/apmckinlay/gsuneido/runtime"
@@ -115,6 +105,11 @@ type TCITEM struct {
 type CHARRANGE struct {
 	cpMin int32
 	cpMax int32
+}
+
+type TEXTRANGE struct {
+	chrg      CHARRANGE
+	lpstrText *byte
 }
 
 type TOOLINFO struct {
@@ -314,7 +309,7 @@ var _ = builtin2("GetWindowRectApi(hwnd, rect)",
 	})
 
 // dll long User32:MessageBox(pointer window, [in] string text,
-// [in] string caption, long flags)
+//		[in] string caption, long flags)
 var messageBox = user32.NewProc("MessageBoxA")
 var _ = builtin4("MessageBox(hwnd, text, caption, flags)",
 	func(a, b, c, d Value) Value {
@@ -327,7 +322,7 @@ var _ = builtin4("MessageBox(hwnd, text, caption, flags)",
 	})
 
 // dll User32:AdjustWindowRectEx(RECT* rect, long style, bool menu,
-// long exStyle) bool
+// 		long exStyle) bool
 var adjustWindowRectEx = user32.NewProc("AdjustWindowRectEx")
 var _ = builtin4("AdjustWindowRectEx(lpRect, dwStyle, bMenu, dwExStyle)",
 	func(a, b, c, d Value) Value {
@@ -358,7 +353,7 @@ var _ = builtin0("CreatePopupMenu()",
 	})
 
 // dll User32:AppendMenu(pointer hmenu, long flags, pointer item,
-// [in] string name) bool
+//		[in] string name) bool
 var appendMenu = user32.NewProc("AppendMenuA")
 var _ = builtin4("AppendMenu(hmenu, flags, item, name)",
 	func(a, b, c, d Value) Value {
@@ -379,9 +374,9 @@ var _ = builtin1("DestroyMenu(hmenu)",
 		return boolRet(rtn)
 	})
 
-// dll User32:CreateWindowEx(long exStyle, resource classname, in string name,
-// long style, long x, long y, long w, long h, pointer parent, pointer menu,
-// pointer instance, pointer param) pointer
+// dll User32:CreateWindowEx(long exStyle, resource classname, [in] string name,
+//		long style, long x, long y, long w, long h, pointer parent, pointer menu,
+//		pointer instance, pointer param) pointer
 var createWindowEx = user32.NewProc("CreateWindowExA")
 var _ = builtin("CreateWindowEx(exStyle, classname, name, style, x, y, w, h,"+
 	" parent, menu, instance, param)",
@@ -460,7 +455,7 @@ func psArg(ob Value, ps *PAINTSTRUCT) uintptr {
 }
 
 // dll User32:CallWindowProc(pointer wndprcPrev, pointer hwnd, long msg,
-// pointer wParam, pointer lParam) pointer
+//		pointer wParam, pointer lParam) pointer
 var callWindowProc = user32.NewProc("CallWindowProcA")
 var _ = builtin5("CallWindowProc(wndprcPrev, hwnd, msg, wParam, lParam)",
 	func(a, b, c, d, e Value) Value {
@@ -473,7 +468,7 @@ var _ = builtin5("CallWindowProc(wndprcPrev, hwnd, msg, wParam, lParam)",
 		return IntVal(int(rtn))
 	})
 
-// dll User32:CreateAcceleratorTable(in string lpaccel, long cEntries) pointer
+// dll User32:CreateAcceleratorTable([in] string lpaccel, long cEntries) pointer
 var createAcceleratorTable = user32.NewProc("CreateAcceleratorTable")
 var _ = builtin2("CreateAcceleratorTable(lpaccel, cEntries)",
 	func(a, b Value) Value {
@@ -502,7 +497,7 @@ var _ = builtin1("DestroyWindow(hwnd)",
 	})
 
 // dll User32:DrawFrameControl(pointer hdc, RECT* lprc, long uType,
-// long uState) bool
+//		long uState) bool
 var drawFrameControl = user32.NewProc("DrawFrameControl")
 var _ = builtin4("DrawFrameControl(hdc, lprc, uType, uState)",
 	func(a, b, c, d Value) Value {
@@ -515,8 +510,8 @@ var _ = builtin4("DrawFrameControl(hdc, lprc, uType, uState)",
 		return boolRet(rtn)
 	})
 
-// dll User32:DrawText(pointer hdc, in string lpsz, long cb, RECT* lprc,
-// long uFormat) long
+// dll User32:DrawText(pointer hdc, [in] string lpsz, long cb, RECT* lprc,
+//		long uFormat) long
 var drawText = user32.NewProc("DrawText")
 var _ = builtin5("DrawText(hdc, lpsz, cb, lprc, uFormat)",
 	func(a, b, c, d, e Value) Value {
@@ -715,7 +710,7 @@ var _ = builtin3("InflateRect(rect, dx, dy)",
 	})
 
 // dll User32:InsertMenuItem(pointer hMenu, long uItem, bool fByPosition,
-// MENUITEMINFO* lpmii) bool
+//		MENUITEMINFO* lpmii) bool
 var insertMenuItem = user32.NewProc("InsertMenuItemA")
 var _ = builtin4("InsertMenuItem(hMenu, uItem, fByPosition, lpmii)",
 	func(a, b, c, d Value) Value {
@@ -741,8 +736,27 @@ var _ = builtin4("InsertMenuItem(hMenu, uItem, fByPosition, lpmii)",
 		return boolRet(rtn)
 	})
 
+// dll long User32:GetMenuItemCount(pointer hMenu)
+var getMenuItemCount = user32.NewProc("GetMenuItemCount")
+var _ = builtin1("GetMenuItemCount(hMenu)",
+	func(a Value) Value {
+		rtn, _, _ := getMenuItemCount.Call(
+			intArg(a))
+		return IntVal(int(rtn))
+	})
+
+// dll long User32:GetMenuItemID(pointer hMenu, long nPos)
+var getMenuItemID = user32.NewProc("GetMenuItemID")
+var _ = builtin2("GetMenuItemID(hMenu, nPos)",
+	func(a, b Value) Value {
+		rtn, _, _ := getMenuItemID.Call(
+			intArg(a),
+			intArg(b))
+		return IntVal(int(rtn))
+	})
+
 // dll User32:GetMenuItemInfo(pointer hMenu, long uItem, bool fByPosition,
-// MENUITEMINFO* lpmii) bool
+//		MENUITEMINFO* lpmii) bool
 var getMenuItemInfo = user32.NewProc("GetMenuItemInfoA")
 var _ = builtin4("GetMenuItemInfo(hMenu, uItem, fByPosition, lpmii)",
 	func(a, b, c, d Value) Value {
@@ -799,7 +813,7 @@ var _ = builtin2("GetMenuItemInfoText(hMenu, uItem)",
 	})
 
 // dll User32:SetMenuItemInfo(pointer hMenu, long uItem, long fByPosition,
-// MENUITEMINFO* lpmii) bool
+//		MENUITEMINFO* lpmii) bool
 var setMenuItemInfo = user32.NewProc("SetMenuItemInfoA")
 var _ = builtin4("SetMenuItemInfo(hMenu, uItem, fByPosition, lpmii)",
 	func(a, b, c, d Value) Value {
@@ -888,7 +902,7 @@ var _ = builtin2("MonitorFromRect(lprc, dwFlags)",
 	})
 
 // dll User32:MoveWindow(pointer hwnd, long left, long top, long width,
-// long height, bool repaint) bool
+//		long height, bool repaint) bool
 var moveWindow = user32.NewProc("MoveWindow")
 var _ = builtin6("MoveWindow(hwnd, left, top, width, height, repaint)",
 	func(a, b, c, d, e, f Value) Value {
@@ -923,7 +937,7 @@ var _ = builtin1("RegisterClass(wc)",
 		return IntVal(int(rtn))
 	})
 
-// dll User32:RegisterClipboardFormat(in string lpszFormat) long
+// dll User32:RegisterClipboardFormat([in] string lpszFormat) long
 var registerClipboardFormat = user32.NewProc("RegisterClipboardFormat")
 var _ = builtin1("RegisterClipboardFormat(lpszFormat)",
 	func(a Value) Value {
@@ -943,7 +957,7 @@ var _ = builtin2("ReleaseDC(hwnd, hDC)",
 	})
 
 // dll User32:SendMessage(pointer hwnd, long msg, pointer wParam,
-// pointer lParam) pointer
+//		pointer lParam) pointer
 var sendMessage = user32.NewProc("SendMessageA")
 var _ = builtin4("SendMessage(hwnd, msg, wParam, lParam)",
 	func(a, b, c, d Value) Value {
@@ -956,14 +970,37 @@ var _ = builtin4("SendMessage(hwnd, msg, wParam, lParam)",
 	})
 
 // dll User32:SendMessage(pointer hwnd, long msg, pointer wParam,
-// instring text) pointer
+//		string text) pointer
 var _ = builtin4("SendMessageText(hwnd, msg, wParam, text)",
 	func(a, b, c, d Value) Value {
+		// Must pass a defensive mutable copy of the string
+		// (even though we discard it)
+		// since the function may modify it.
+		// Use SendMessageTextIn if the function doesn't modify it.
+		// Use SendMessageTextOut if the modified text is needed.
+		buf := ([]byte)(ToStr(d))
+		rtn, _, _ := sendMessage.Call(
+			intArg(a),
+			intArg(b),
+			intArg(c),
+			uintptr(unsafe.Pointer(&buf[0])))
+		return IntVal(int(rtn))
+	})
+
+// dll User32:SendMessage(pointer hwnd, long msg, pointer wParam,
+//		[in] string text) pointer
+var _ = builtin4("SendMessageTextIn(hwnd, msg, wParam, text)",
+	func(a, b, c, d Value) Value {
+		s := ToStr(d)
+		cksum := adler32.Checksum(([]byte)(s))
 		rtn, _, _ := sendMessage.Call(
 			intArg(a),
 			intArg(b),
 			intArg(c),
 			stringArg(d))
+		if cksum != adler32.Checksum(([]byte)(s)) {
+			panic("SendMessageTextIn modified string")
+		}
 		return IntVal(int(rtn))
 	})
 
@@ -984,7 +1021,7 @@ var _ = builtin4("SendMessageTextOut(hwnd, msg, wParam = 0, bufsize = 1024)",
 	})
 
 // dll User32:SendMessage(pointer hwnd, long msg, pointer wParam,
-// TCITEM* tcitem) pointer
+//		TCITEM* tcitem) pointer
 var _ = builtin4("SendMessageTcitem(hwnd, msg, wParam, tcitem)",
 	func(a, b, c, d Value) Value {
 		verify.That(getInt32(d, "cchTextMax") == 0)
@@ -1004,25 +1041,30 @@ var _ = builtin4("SendMessageTcitem(hwnd, msg, wParam, tcitem)",
 		return IntVal(int(rtn))
 	})
 
-// dll User32:SendMessage(pointer hwnd, long msg, pointer wParam,
-// TEXTRANGE* charRange) pointer
-var _ = builtin4("SendMessageCharRange(hwnd, msg, wParam, charRange)",
-	func(a, b, c, d Value) Value {
-		var cr CHARRANGE
+var _ = builtin5("SendMessageTextRange(hwnd, msg, cpMin, cpMax, each = 1)",
+	func(a, b, c, d, e Value) Value {
+		cpMin := ToInt(c)
+		cpMax := ToInt(d)
+		if cpMax <= cpMin {
+			return EmptyStr
+		}
+		each := ToInt(e)
+		n := (cpMax - cpMin) * each
+		buf := make([]byte, n + each)
+		tr := TEXTRANGE{
+			chrg: CHARRANGE{cpMin: int32(cpMin), cpMax: int32(cpMax)},
+			lpstrText: &buf[0],
+		}
 		rtn, _, _ := sendMessage.Call(
 			intArg(a),
 			intArg(b),
-			intArg(c),
-			uintptr(unsafe.Pointer(&cr)))
-		d.Put(nil, SuStr("cpMin"), IntVal(int(cr.cpMin)))
-		d.Put(nil, SuStr("cpMax"), IntVal(int(cr.cpMax)))
-		return IntVal(int(rtn))
+			0,
+			uintptr(unsafe.Pointer(&tr)))
+		return SuStr(string(buf[:rtn]))
 	})
 
-const LPSTR_TEXTCALLBACK = -1
-
 // dll User32:SendMessage(pointer hwnd, long msg, pointer wParam,
-// TOOLINFO* lParam) pointer
+//		TOOLINFO* lParam) pointer
 var _ = builtin4("SendMessageTOOLINFO(hwnd, msg, wParam, lParam)",
 	func(a, b, c, d Value) Value {
 		t := TOOLINFO{
@@ -1044,7 +1086,7 @@ var _ = builtin4("SendMessageTOOLINFO(hwnd, msg, wParam, lParam)",
 	})
 
 // dll User32:SendMessage(pointer hwnd, long msg, pointer wParam,
-// TOOLINFO2* lParam) pointer
+//		TOOLINFO2* lParam) pointer
 var _ = builtin4("SendMessageTOOLINFO2(hwnd, msg, wParam, lParam)",
 	func(a, b, c, d Value) Value {
 		t := TOOLINFO2{
@@ -1066,7 +1108,7 @@ var _ = builtin4("SendMessageTOOLINFO2(hwnd, msg, wParam, lParam)",
 	})
 
 // dll User32:SendMessage(pointer hwnd, long msg, pointer wParam,
-// TV_ITEM* tvitem) pointer
+//		TV_ITEM* tvitem) pointer
 var _ = builtin4("SendMessageTreeItem(hwnd, msg, wParam, tvitem)",
 	func(a, b, c, d Value) Value {
 		cchTextMax := getInt32(d, "cchTextMax")
@@ -1111,7 +1153,7 @@ var _ = builtin4("SendMessageTreeItem(hwnd, msg, wParam, tvitem)",
 	})
 
 // dll User32:SendMessage(pointer hwnd, long msg, pointer wParam,
-// TV_INSERTSTRUCT* tvins) pointer
+//		TV_INSERTSTRUCT* tvins) pointer
 var _ = builtin4("SendMessageTVINS(hwnd, msg, wParam, tvins)",
 	func(a, b, c, d Value) Value {
 		item := d.Get(nil, SuStr("item"))
@@ -1235,7 +1277,7 @@ var _ = builtin2("SetWindowPlacement(hwnd, lpwndpl)",
 	})
 
 // dll User32:SetWindowPos(pointer hWnd, pointer hWndInsertAfter,
-// long X, long Y, long cx, long cy, long uFlags) bool
+//		long X, long Y, long cx, long cy, long uFlags) bool
 var setWindowPos = user32.NewProc("SetWindowPos")
 var _ = builtin7("SetWindowPos(hWnd, hWndInsertAfter, X, Y, cx, cy, uFlags)",
 	func(a, b, c, d, e, f, g Value) Value {
@@ -1250,7 +1292,7 @@ var _ = builtin7("SetWindowPos(hWnd, hWndInsertAfter, X, Y, cx, cy, uFlags)",
 		return boolRet(rtn)
 	})
 
-// dll User32:SetWindowText(pointer hwnd, in string text) bool
+// dll User32:SetWindowText(pointer hwnd, [in] string text) bool
 var setWindowText = user32.NewProc("SetWindowTextA")
 var _ = builtin2("SetWindowText(hwnd, lpwndpl)",
 	func(a, b Value) Value {
@@ -1271,7 +1313,7 @@ var _ = builtin2("ShowWindow(hwnd, ncmd)",
 	})
 
 // dll User32:SystemParametersInfo(long uiAction, long uiParam, ? pvParam,
-// long fWinIni) bool
+//		long fWinIni) bool
 var systemParametersInfo = user32.NewProc("SystemParametersInfoA")
 
 var _ = builtin0("SPI_GetFocusBorderHeight()",
@@ -1337,7 +1379,7 @@ var _ = builtin1("UpdateWindow(hwnd)",
 	})
 
 // dll User32:DefWindowProc(pointer hwnd, long msg, pointer wParam,
-// pointer lParam) pointer
+//		pointer lParam) pointer
 var defWindowProc = user32.NewProc("DefWindowProcA")
 var _ = builtin4("DefWindowProc(hwnd, msg, wParam, lParam)",
 	func(a, b, c, d Value) Value {
@@ -1359,5 +1401,35 @@ var getKeyState = user32.NewProc("GetKeyState")
 var _ = builtin1("GetKeyState(nVirtKey)",
 	func(a Value) Value {
 		rtn, _, _ := getKeyState.Call(intArg(a))
+		return IntVal(int(rtn))
+	})
+
+type TPMPARAMS struct {
+	cbSize    int32
+	rcExclude RECT
+}
+
+// dll long User32:TrackPopupMenuEx(pointer hmenu, long fuFlags, long x, long y,
+//		pointer hwnd, TPMPARAMS* lptpm)
+var trackPopupMenuEx = user32.NewProc("TrackPopupMenuEx")
+var _ = builtin6("TrackPopupMenuEx(hmenu, fuFlags, x, y, hwnd, lptpm)",
+	func(a, b, c, d, e, f Value) Value {
+		var lptpm uintptr
+		if f.Equal(Zero) {
+			lptpm = 0
+		} else {
+			tpm := TPMPARAMS{
+				cbSize:    int32(unsafe.Sizeof(TPMPARAMS{})),
+				rcExclude: getRect(f, "rcExclude"),
+			}
+			lptpm = uintptr(unsafe.Pointer(&tpm))
+		}
+		rtn, _, _ := trackPopupMenuEx.Call(
+			intArg(a),
+			intArg(b),
+			intArg(c),
+			intArg(d),
+			intArg(e),
+			lptpm)
 		return IntVal(int(rtn))
 	})
