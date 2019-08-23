@@ -1433,3 +1433,49 @@ var _ = builtin6("TrackPopupMenuEx(hmenu, fuFlags, x, y, hwnd, lptpm)",
 			lptpm)
 		return IntVal(int(rtn))
 	})
+
+// dll bool User32:OpenClipboard(pointer hwnd)
+var openClipboard = user32.NewProc("OpenClipboard")
+var _ = builtin1("OpenClipboard(hwnd)",
+    func(a Value) Value {
+        rtn, _, _ := openClipboard.Call(
+            intArg(a))
+        return boolRet(rtn)
+    })
+
+// dll bool User32:EmptyClipboard()
+var emptyClipboard = user32.NewProc("EmptyClipboard")
+var _ = builtin0("EmptyClipboard()",
+    func() Value {
+        rtn, _, _ := emptyClipboard.Call()
+        return boolRet(rtn)
+    })
+
+// dll pointer User32:GetClipboardData(long format)
+var getClipboardData = user32.NewProc("GetClipboardData")
+var _ = builtin1("GetClipboardData(format)",
+    func(a Value) Value {
+        rtn, _, _ := getClipboardData.Call(
+            intArg(a))
+        return IntVal(int(rtn))
+    })
+
+// dll pointer User32:SetClipboardData(
+//  long uFormat, Clipboard format identifier (UINT)
+//  pointer hMem    // Global memory handle allocated with GMEM_MOVEABLE)
+var setClipboardData = user32.NewProc("SetClipboardData")
+var _ = builtin2("SetClipboardData(uFormat, hMem)",
+    func(a Value, b Value) Value {
+        rtn, _, _ := setClipboardData.Call(
+            intArg(a),
+            intArg(b))
+        return IntVal(int(rtn))
+    })
+
+// dll bool User32:CloseClipboard()
+var closeClipboard = user32.NewProc("CloseClipboard")
+var _ = builtin0("CloseClipboard()",
+    func() Value {
+        rtn, _, _ := closeClipboard.Call()
+        return boolRet(rtn)
+    })
