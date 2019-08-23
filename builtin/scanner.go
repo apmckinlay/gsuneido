@@ -76,6 +76,12 @@ var scannerMethods = Methods{
 	"Keyword?": method0(func(this Value) Value {
 		return SuBool(this.(*SuScanner).isKeyword())
 	}),
+	"Length": method0(func(this Value) Value {
+		sc := this.(*SuScanner)
+		from := sc.item.Pos
+		to := sc.lxr.Position()
+		return IntVal(to - int(from))
+	}),
 	"Next": method0(func(this Value) Value {
 		return this.(*SuScanner).next()
 	}),
