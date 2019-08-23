@@ -17,7 +17,7 @@ var _ = builtin5("RegOpenKeyEx(hKey, lpSubKey, ulOptions, samDesired, phkResult)
 		var e1 uintptr
 		rtn, _, _ := regOpenKeyExA.Call(
 			intArg(a),
-			stringArg(b),
+			uintptr(stringArg(b)),
 			intArg(c),
 			intArg(d),
 			uintptr(unsafe.Pointer(&e1)))
@@ -41,9 +41,9 @@ var _ = builtin("RegCreateKeyEx(hKey, lpSubKey, Reserved, lpClass, dwOptions, "+
 		var h1 uintptr
 		rtn, _, _ := regCreateKeyEx.Call(
 			intArg(a[0]),
-			stringArg(a[1]),
+			uintptr(stringArg(a[1])),
 			intArg(a[2]),
-			stringArg(a[3]),
+			uintptr(stringArg(a[3])),
 			intArg(a[4]),
 			intArg(a[5]),
 			0, // lpSecurityAttributes - always null
@@ -62,7 +62,7 @@ var _ = builtin6("RegQueryValueEx(hKey, lpValueName, lpReserved/*unused*/, "+
 		f1 := int32(4) // cbData = 4 to match int32 data
 		rtn, _, _ := regQueryValueEx.Call(
 			intArg(a),
-			stringArg(b),
+			uintptr(stringArg(b)),
 			uintptr(0),                   // lpReserved - must be 0
 			uintptr(0),                   // lpType - NULL
 			uintptr(unsafe.Pointer(&e1)), // lpData
@@ -79,7 +79,7 @@ var _ = builtin6("RegSetValueEx(hKey, lpValueName, reserved/*unused*/, "+
 		var e1 int32 // data
 		rtn, _, _ := regSetValueEx.Call(
 			intArg(a),
-			stringArg(b),
+			uintptr(stringArg(b)),
 			uintptr(0),                   // reserved - must be 0
 			intArg(d),                    // lpType
 			uintptr(unsafe.Pointer(&e1)), // lpData

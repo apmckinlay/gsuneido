@@ -4,7 +4,6 @@ import (
 	"unsafe"
 
 	. "github.com/apmckinlay/gsuneido/runtime"
-	"golang.org/x/sys/windows"
 )
 
 type memStatusEx struct {
@@ -32,10 +31,9 @@ var _ = builtin0("OperatingSystem()", func() Value {
 var getDiskFreeSpaceEx = kernel32.NewProc("GetDiskFreeSpaceExA")
 
 var _ = builtin1("GetDiskFreeSpace(dir = '.')", func(arg Value) Value {
-	dir, _ := windows.BytePtrFromString(ToStr(arg))
 	var freeBytes int64
 	getDiskFreeSpaceEx.Call(
-		uintptr(unsafe.Pointer(dir)),
+		uintptr(stringArg(arg)),
 		uintptr(unsafe.Pointer(&freeBytes)), 0, 0)
 	return Int64Val(freeBytes)
 })

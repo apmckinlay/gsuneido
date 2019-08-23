@@ -64,7 +64,7 @@ var _ = builtin2("GetProcAddress(a,b)",
 	func(a, b Value) Value {
 		rtn, _, _ := getProcAddress.Call(
 			intArg(a),
-			stringArg(b))
+			uintptr(stringArg(b)))
 		return intRet(rtn)
 	})
 

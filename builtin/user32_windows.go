@@ -3,7 +3,6 @@
 package builtin
 
 import (
-	"hash/adler32"
 	"unsafe"
 
 	. "github.com/apmckinlay/gsuneido/runtime"
@@ -155,6 +154,8 @@ type TV_INSERTSTRUCT struct {
 	item         TVITEM
 }
 
+// helper functions
+
 func boolArg(arg Value) uintptr {
 	if ToBool(arg) {
 		return 1
@@ -183,12 +184,26 @@ func intRet(rtn uintptr) Value {
 	return IntVal(int(rtn))
 }
 
-func stringArg(arg Value) uintptr {
-	if arg.Equal(Zero) {
-		return 0
+var zero byte
+
+// bytePtrFromString returns a pointer to a nul terminated copy of the string.
+// The copy is required to get nul termination.
+// uintptr(unsafe.Pointer( must be in final call to prevent garbage collection.
+func bytePtrFromString(v Value) *byte {
+	if v.Equal(Zero) {
+		return nil
 	}
-	s, _ := windows.BytePtrFromString(ToStr(arg))
-	return uintptr(unsafe.Pointer(s))
+	s := ToStr(v)
+	if s == "" {
+		return nil
+	}
+	a := make([]byte, len(s)+1) // +1 for nul terminator
+	copy(a, s)
+	return &a[0]
+}
+
+func stringArg(v Value) unsafe.Pointer {
+	return unsafe.Pointer(bytePtrFromString(v))
 }
 
 func getBool(ob Value, mem string) bool {
@@ -219,16 +234,15 @@ func getStr(ob Value, mem string) *byte {
 	if x == nil || x.Equal(Zero) || x.Equal(False) {
 		return nil
 	}
-	result, _ := windows.BytePtrFromString(ToStr(x))
-	return result
+	return bytePtrFromString(x)
 }
 
-func rectArg(ob Value, r *RECT) uintptr {
+func rectArg(ob Value, r *RECT) unsafe.Pointer {
 	if ob.Equal(Zero) {
-		return 0
+		return nil
 	}
 	*r = obToRect(ob)
-	return uintptr(unsafe.Pointer(r))
+	return unsafe.Pointer(r)
 }
 
 func obToRect(ob Value) RECT {
@@ -319,8 +333,8 @@ var _ = builtin4("MessageBox(hwnd, text, caption, flags)",
 	func(a, b, c, d Value) Value {
 		n, _, _ := messageBox.Call(
 			intArg(a),
-			stringArg(b),
-			stringArg(c),
+			uintptr(stringArg(b)),
+			uintptr(stringArg(c)),
 			intArg(d))
 		return IntVal(int(n))
 	})
@@ -332,7 +346,7 @@ var _ = builtin4("AdjustWindowRectEx(lpRect, dwStyle, bMenu, dwExStyle)",
 	func(a, b, c, d Value) Value {
 		var r RECT
 		rtn, _, _ := adjustWindowRectEx.Call(
-			rectArg(a, &r),
+			uintptr(rectArg(a, &r)),
 			intArg(b),
 			boolArg(c),
 			intArg(d))
@@ -365,7 +379,7 @@ var _ = builtin4("AppendMenu(hmenu, flags, item, name)",
 			intArg(a),
 			intArg(b),
 			intArg(c),
-			stringArg(d))
+			uintptr(stringArg(d)))
 		return intRet(rtn)
 	})
 
@@ -387,8 +401,8 @@ var _ = builtin("CreateWindowEx(exStyle, classname, name, style, x, y, w, h,"+
 	func(_ *Thread, a []Value) Value {
 		rtn, _, _ := createWindowEx.Call(
 			intArg(a[0]),
-			stringArg(a[1]),
-			stringArg(a[2]),
+			uintptr(stringArg(a[1])),
+			uintptr(stringArg(a[2])),
 			intArg(a[3]),
 			intArg(a[4]),
 			intArg(a[5]),
@@ -428,7 +442,7 @@ var _ = builtin2("BeginPaint(hwnd, ps)",
 		var ps PAINTSTRUCT
 		rtn, _, _ := beginPaint.Call(
 			intArg(a),
-			psArg(b, &ps))
+			uintptr(psArg(b, &ps)))
 		b.Put(nil, SuStr("hdc"), IntVal(int(ps.hdc)))
 		b.Put(nil, SuStr("fErase"), SuBool(ps.fErase))
 		b.Put(nil, SuStr("rcPaint"),
@@ -445,17 +459,17 @@ var _ = builtin2("EndPaint(hwnd, ps)",
 		var ps PAINTSTRUCT
 		rtn, _, _ := endPaint.Call(
 			intArg(a),
-			psArg(b, &ps))
+			uintptr(psArg(b, &ps)))
 		return boolRet(rtn)
 	})
 
-func psArg(ob Value, ps *PAINTSTRUCT) uintptr {
+func psArg(ob Value, ps *PAINTSTRUCT) unsafe.Pointer {
 	ps.hdc = getHandle(ob, "hdc")
 	ps.fErase = getBool(ob, "fErase")
 	ps.rcPaint = getRect(ob, "rcPaint")
 	ps.fRestore = getBool(ob, "fRestore")
 	ps.fIncUpdate = getBool(ob, "fIncUpdate")
-	return uintptr(unsafe.Pointer(&ps))
+	return unsafe.Pointer(&ps)
 }
 
 // dll User32:CallWindowProc(pointer wndprcPrev, pointer hwnd, long msg,
@@ -477,7 +491,7 @@ var createAcceleratorTable = user32.NewProc("CreateAcceleratorTable")
 var _ = builtin2("CreateAcceleratorTable(lpaccel, cEntries)",
 	func(a, b Value) Value {
 		rtn, _, _ := createAcceleratorTable.Call(
-			stringArg(a),
+			uintptr(stringArg(a)),
 			intArg(b))
 		return intRet(rtn)
 	})
@@ -508,7 +522,7 @@ var _ = builtin4("DrawFrameControl(hdc, lprc, uType, uState)",
 		var r RECT
 		rtn, _, _ := drawFrameControl.Call(
 			intArg(a),
-			rectArg(b, &r),
+			uintptr(rectArg(b, &r)),
 			intArg(c),
 			intArg(d))
 		return boolRet(rtn)
@@ -522,9 +536,9 @@ var _ = builtin5("DrawText(hdc, lpsz, cb, lprc, uFormat)",
 		var r RECT
 		rtn, _, _ := drawText.Call(
 			intArg(a),
-			stringArg(b),
+			uintptr(stringArg(b)),
 			intArg(c),
-			rectArg(d, &r),
+			uintptr(rectArg(d, &r)),
 			intArg(e))
 		rectToOb(&r, d) // for CALCRECT
 		return intRet(rtn)
@@ -537,7 +551,7 @@ var _ = builtin3("FillRect(hdc, lpRect, hBrush)",
 		var r RECT
 		rtn, _, _ := fillRect.Call(
 			intArg(a),
-			rectArg(b, &r),
+			uintptr(rectArg(b, &r)),
 			intArg(c))
 		return intRet(rtn)
 	})
@@ -706,7 +720,7 @@ var _ = builtin3("InflateRect(rect, dx, dy)",
 	func(a, b, c Value) Value {
 		var r RECT
 		rtn, _, _ := inflateRect.Call(
-			rectArg(a, &r),
+			uintptr(rectArg(a, &r)),
 			intArg(b),
 			intArg(c))
 		rectToOb(&r, a)
@@ -850,7 +864,7 @@ var _ = builtin3("InvalidateRect(hwnd, rect, erase)",
 		var r RECT
 		rtn, _, _ := invalidateRect.Call(
 			intArg(a),
-			rectArg(b, &r),
+			uintptr(rectArg(b, &r)),
 			boolArg(c))
 		return boolRet(rtn)
 	})
@@ -900,7 +914,7 @@ var _ = builtin2("MonitorFromRect(lprc, dwFlags)",
 	func(a, b Value) Value {
 		var r RECT
 		rtn, _, _ := monitorFromRect.Call(
-			rectArg(a, &r),
+			uintptr(rectArg(a, &r)),
 			intArg(b))
 		return intRet(rtn)
 	})
@@ -946,7 +960,7 @@ var registerClipboardFormat = user32.NewProc("RegisterClipboardFormat")
 var _ = builtin1("RegisterClipboardFormat(lpszFormat)",
 	func(a Value) Value {
 		rtn, _, _ := registerClipboardFormat.Call(
-			stringArg(a))
+			uintptr(stringArg(a)))
 		return intRet(rtn)
 	})
 
@@ -995,16 +1009,11 @@ var _ = builtin4("SendMessageText(hwnd, msg, wParam, text)",
 //		[in] string text) pointer
 var _ = builtin4("SendMessageTextIn(hwnd, msg, wParam, text)",
 	func(a, b, c, d Value) Value {
-		s := ToStr(d)
-		cksum := adler32.Checksum(([]byte)(s))
 		rtn, _, _ := sendMessage.Call(
 			intArg(a),
 			intArg(b),
 			intArg(c),
-			stringArg(d))
-		if cksum != adler32.Checksum(([]byte)(s)) {
-			panic("SendMessageTextIn modified string")
-		}
+			uintptr(stringArg(d)))
 		return intRet(rtn)
 	})
 
@@ -1054,9 +1063,9 @@ var _ = builtin5("SendMessageTextRange(hwnd, msg, cpMin, cpMax, each = 1)",
 		}
 		each := ToInt(e)
 		n := (cpMax - cpMin) * each
-		buf := make([]byte, n + each)
+		buf := make([]byte, n+each)
 		tr := TEXTRANGE{
-			chrg: CHARRANGE{cpMin: int32(cpMin), cpMax: int32(cpMax)},
+			chrg:      CHARRANGE{cpMin: int32(cpMin), cpMax: int32(cpMax)},
 			lpstrText: &buf[0],
 		}
 		rtn, _, _ := sendMessage.Call(
@@ -1302,7 +1311,7 @@ var _ = builtin2("SetWindowText(hwnd, lpwndpl)",
 	func(a, b Value) Value {
 		rtn, _, _ := setWindowText.Call(
 			intArg(a),
-			stringArg(b))
+			uintptr(stringArg(b)))
 		return boolRet(rtn)
 	})
 
@@ -1418,15 +1427,15 @@ type TPMPARAMS struct {
 var trackPopupMenuEx = user32.NewProc("TrackPopupMenuEx")
 var _ = builtin6("TrackPopupMenuEx(hmenu, fuFlags, x, y, hwnd, lptpm)",
 	func(a, b, c, d, e, f Value) Value {
-		var lptpm uintptr
+		var lptpm *TPMPARAMS
 		if f.Equal(Zero) {
-			lptpm = 0
+			lptpm = nil
 		} else {
 			tpm := TPMPARAMS{
 				cbSize:    int32(unsafe.Sizeof(TPMPARAMS{})),
 				rcExclude: getRect(f, "rcExclude"),
 			}
-			lptpm = uintptr(unsafe.Pointer(&tpm))
+			lptpm = &tpm
 		}
 		rtn, _, _ := trackPopupMenuEx.Call(
 			intArg(a),
@@ -1434,50 +1443,50 @@ var _ = builtin6("TrackPopupMenuEx(hmenu, fuFlags, x, y, hwnd, lptpm)",
 			intArg(c),
 			intArg(d),
 			intArg(e),
-			lptpm)
+			uintptr(unsafe.Pointer(lptpm)))
 		return intRet(rtn)
 	})
 
 // dll bool User32:OpenClipboard(pointer hwnd)
 var openClipboard = user32.NewProc("OpenClipboard")
 var _ = builtin1("OpenClipboard(hwnd)",
-    func(a Value) Value {
-        rtn, _, _ := openClipboard.Call(
-            intArg(a))
-        return boolRet(rtn)
-    })
+	func(a Value) Value {
+		rtn, _, _ := openClipboard.Call(
+			intArg(a))
+		return boolRet(rtn)
+	})
 
 // dll bool User32:EmptyClipboard()
 var emptyClipboard = user32.NewProc("EmptyClipboard")
 var _ = builtin0("EmptyClipboard()",
-    func() Value {
-        rtn, _, _ := emptyClipboard.Call()
-        return boolRet(rtn)
-    })
+	func() Value {
+		rtn, _, _ := emptyClipboard.Call()
+		return boolRet(rtn)
+	})
 
 // dll pointer User32:GetClipboardData(long format)
 var getClipboardData = user32.NewProc("GetClipboardData")
 var _ = builtin1("GetClipboardData(format)",
-    func(a Value) Value {
-        rtn, _, _ := getClipboardData.Call(
-            intArg(a))
-        return intRet(rtn)
-    })
+	func(a Value) Value {
+		rtn, _, _ := getClipboardData.Call(
+			intArg(a))
+		return intRet(rtn)
+	})
 
 // dll pointer User32:SetClipboardData(long uFormat, pointer hMem)
 var setClipboardData = user32.NewProc("SetClipboardData")
 var _ = builtin2("SetClipboardData(uFormat, hMem)",
-    func(a Value, b Value) Value {
-        rtn, _, _ := setClipboardData.Call(
-            intArg(a),
-            intArg(b))
-        return intRet(rtn)
-    })
+	func(a Value, b Value) Value {
+		rtn, _, _ := setClipboardData.Call(
+			intArg(a),
+			intArg(b))
+		return intRet(rtn)
+	})
 
 // dll bool User32:CloseClipboard()
 var closeClipboard = user32.NewProc("CloseClipboard")
 var _ = builtin0("CloseClipboard()",
-    func() Value {
-        rtn, _, _ := closeClipboard.Call()
-        return boolRet(rtn)
-    })
+	func() Value {
+		rtn, _, _ := closeClipboard.Call()
+		return boolRet(rtn)
+	})

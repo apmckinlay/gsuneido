@@ -177,7 +177,7 @@ var _ = builtin4("GetTextExtentPoint32(hdc, text, len, p)",
 		var pt POINT
 		rtn, _, _ := getTextExtentPoint32.Call(
 			intArg(a),
-			stringArg(b),
+			uintptr(stringArg(b)),
 			uintptr(len(ToStr(b))),
 			uintptr(unsafe.Pointer(&pt)))
 		pointToOb(&pt, d)
@@ -238,7 +238,7 @@ var _ = builtin2("GetClipBox(hdc, rect)",
 		var r RECT
 		rtn, _, _ := getClipBox.Call(
 			intArg(a),
-			rectArg(b, &r))
+			uintptr(rectArg(b, &r)))
 		return intRet(rtn)
 	})
 

@@ -20,8 +20,8 @@ var _ = builtin6("DrawThemeBackground(hTheme, hdc, iPartId, iStateId, pRect,"+
 			intArg(b),
 			intArg(c),
 			intArg(d),
-			rectArg(e, &r1),
-			rectArg(f, &r2))
+			uintptr(rectArg(e, &r1)),
+			uintptr(rectArg(f, &r2)))
 		return intRet(rtn)
 	})
 
@@ -38,11 +38,11 @@ var _ = builtin("DrawThemeText(hTheme, hdc, iPartId, iStateId, pszText,"+
 			intArg(a[1]),
 			intArg(a[2]),
 			intArg(a[3]),
-			stringArg(a[4]),
+			uintptr(stringArg(a[4])),
 			intArg(a[5]),
 			intArg(a[6]),
 			intArg(a[7]),
-			rectArg(a[8], &r))
+			uintptr(rectArg(a[8], &r)))
 		return intRet(rtn)
 	})
 
@@ -52,8 +52,8 @@ var _ = builtin3("SetWindowTheme(hwnd, appname, idlist)",
 	func(a, b, c Value) Value {
 		rtn, _, _ := setWindowTheme.Call(
 			intArg(a),
-			stringArg(b),
-			stringArg(c))
+			uintptr(stringArg(b)),
+			uintptr(stringArg(c)))
 		return intRet(rtn)
 	})
 
