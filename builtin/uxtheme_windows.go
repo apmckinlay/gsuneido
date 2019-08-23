@@ -22,7 +22,7 @@ var _ = builtin6("DrawThemeBackground(hTheme, hdc, iPartId, iStateId, pRect,"+
 			intArg(d),
 			rectArg(e, &r1),
 			rectArg(f, &r2))
-		return IntVal(int(rtn))
+		return intRet(rtn)
 	})
 
 // dll uxtheme:DrawThemeText(pointer hTheme, pointer hdc, long iPartId,
@@ -43,7 +43,7 @@ var _ = builtin("DrawThemeText(hTheme, hdc, iPartId, iStateId, pszText,"+
 			intArg(a[6]),
 			intArg(a[7]),
 			rectArg(a[8], &r))
-		return IntVal(int(rtn))
+		return intRet(rtn)
 	})
 
 // dll uxtheme:SetWindowTheme(pointer hwnd, string appname, string idlist) long
@@ -54,7 +54,7 @@ var _ = builtin3("SetWindowTheme(hwnd, appname, idlist)",
 			intArg(a),
 			stringArg(b),
 			stringArg(c))
-		return IntVal(int(rtn))
+		return intRet(rtn)
 	})
 
 // dll uxtheme:GetWindowTheme(pointer hwnd) pointer
@@ -62,7 +62,7 @@ var getWindowTheme = uxtheme.NewProc("GetWindowTheme")
 var _ = builtin1("GetWindowTheme(hwnd)",
 	func(a Value) Value {
 		rtn, _, _ := getWindowTheme.Call(intArg(a))
-		return IntVal(int(rtn))
+		return intRet(rtn)
 	})
 
 // dll uxtheme:IsAppThemed() bool

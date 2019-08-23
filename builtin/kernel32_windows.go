@@ -38,82 +38,90 @@ var _ = builtin0("GetComputerName()", func() Value {
 
 // dll Kernel32:GetModuleHandle(instring name) pointer
 var getModuleHandle = kernel32.NewProc("GetModuleHandleA")
-var _ = builtin1("GetModuleHandle(unused)", func(a Value) Value {
-	rtn, _, _ := getModuleHandle.Call(0)
-	return IntVal(int(rtn))
-})
+var _ = builtin1("GetModuleHandle(unused)",
+	func(a Value) Value {
+		rtn, _, _ := getModuleHandle.Call(0)
+		return intRet(rtn)
+	})
 
 // dll Kernel32:GetLocaleInfo(long locale, long lctype, string lpLCData, long cchData) long
 var getLocaleInfo = kernel32.NewProc("GetLocaleInfoA")
-var _ = builtin2("GetLocaleInfo(a,b)", func(a, b Value) Value {
-	const bufsize = 255
-	var buf [bufsize + 1]byte
-	getLocaleInfo.Call(
-		intArg(a),
-		intArg(b),
-		uintptr(unsafe.Pointer(&buf)),
-		uintptr(bufsize))
-	return SuStr(string(buf[:bytes.IndexByte(buf[:], 0)]))
-})
+var _ = builtin2("GetLocaleInfo(a,b)",
+	func(a, b Value) Value {
+		const bufsize = 255
+		var buf [bufsize + 1]byte
+		getLocaleInfo.Call(
+			intArg(a),
+			intArg(b),
+			uintptr(unsafe.Pointer(&buf)),
+			uintptr(bufsize))
+		return SuStr(string(buf[:bytes.IndexByte(buf[:], 0)]))
+	})
 
 // dll Kernel32:GetProcAddress(pointer hModule, instring procName) pointer
 var getProcAddress = kernel32.NewProc("GetProcAddress")
-var _ = builtin2("GetProcAddress(a,b)", func(a, b Value) Value {
-	rtn, _, _ := getProcAddress.Call(
-		intArg(a),
-		stringArg(b))
-	return IntVal(int(rtn))
-})
+var _ = builtin2("GetProcAddress(a,b)",
+	func(a, b Value) Value {
+		rtn, _, _ := getProcAddress.Call(
+			intArg(a),
+			stringArg(b))
+		return intRet(rtn)
+	})
 
 // dll Kernel32:GetProcessHeap() pointer
 var getProcessHeap = kernel32.NewProc("GetProcessHeap")
-var _ = builtin0("GetProcessHeap()", func() Value {
-	rtn, _, _ := getProcessHeap.Call()
-	return IntVal(int(rtn))
-})
+var _ = builtin0("GetProcessHeap()",
+	func() Value {
+		rtn, _, _ := getProcessHeap.Call()
+		return intRet(rtn)
+	})
 
 // dll Kernel32:GetVersionEx(OSVERSIONINFOEX* lpVersionInfo) bool
 var getVersionEx = kernel32.NewProc("GetVersionEx")
-var _ = builtin1("GetVersionEx(a)", func(a Value) Value {
-	ovi := OSVERSIONINFOEX{
-		dwOSVersionInfoSize: getInt32(a, "dwOSVersionInfoSize"),
-		dwMajorVersion:      getInt32(a, "dwMajorVersion"),
-		dwMinorVersion:      getInt32(a, "dwMinorVersion"),
-		dwBuildNumber:       getInt32(a, "dwBuildNumber"),
-		dwPlatformId:        getInt32(a, "dwPlatformId"),
-		szCSDVersion:        getStr(a, "szCSDVersion"),
-		wServicePackMajor:   getInt(a, "wServicePackMajor"),
-		wServicePackMinor:   getInt(a, "wServicePackMinor"),
-		wSuiteMask:          getInt(a, "wSuiteMask"),
-		wProductType:        getStr(a, "wProductType"),
-		wReserved:           getStr(a, "wReserved"),
-	}
-	rtn, _, _ := getVersionEx.Call(uintptr(unsafe.Pointer(&ovi)))
-	return boolRet(rtn)
-})
+var _ = builtin1("GetVersionEx(a)",
+	func(a Value) Value {
+		ovi := OSVERSIONINFOEX{
+			dwOSVersionInfoSize: getInt32(a, "dwOSVersionInfoSize"),
+			dwMajorVersion:      getInt32(a, "dwMajorVersion"),
+			dwMinorVersion:      getInt32(a, "dwMinorVersion"),
+			dwBuildNumber:       getInt32(a, "dwBuildNumber"),
+			dwPlatformId:        getInt32(a, "dwPlatformId"),
+			szCSDVersion:        getStr(a, "szCSDVersion"),
+			wServicePackMajor:   getInt(a, "wServicePackMajor"),
+			wServicePackMinor:   getInt(a, "wServicePackMinor"),
+			wSuiteMask:          getInt(a, "wSuiteMask"),
+			wProductType:        getStr(a, "wProductType"),
+			wReserved:           getStr(a, "wReserved"),
+		}
+		rtn, _, _ := getVersionEx.Call(uintptr(unsafe.Pointer(&ovi)))
+		return boolRet(rtn)
+	})
 
 // dll Kernel32:GlobalAlloc(long flags, long size) pointer
 var globalAlloc = kernel32.NewProc("GlobalAlloc")
-var _ = builtin2("GlobalAlloc(flags, size)", func(a, b Value) Value {
-	rtn, _, _ := globalAlloc.Call(
-		intArg(a),
-		intArg(b))
-	return IntVal(int(rtn))
-})
+var _ = builtin2("GlobalAlloc(flags, size)",
+	func(a, b Value) Value {
+		rtn, _, _ := globalAlloc.Call(
+			intArg(a),
+			intArg(b))
+		return intRet(rtn)
+	})
 
 // dll Kernel32:GlobalLock(pointer handle) pointer
 var globalLock = kernel32.NewProc("GlobalLock")
-var _ = builtin1("GlobalLock(hMem)", func(a Value) Value {
-	rtn, _, _ := globalLock.Call(intArg(a))
-	return IntVal(int(rtn))
-})
+var _ = builtin1("GlobalLock(hMem)",
+	func(a Value) Value {
+		rtn, _, _ := globalLock.Call(intArg(a))
+		return intRet(rtn)
+	})
 
 // dll Kernel32:GlobalUnlock(pointer handle) void
 var globalUnlock = kernel32.NewProc("GlobalUnlock")
-var _ = builtin1("GlobalUnlock(hMem)", func(a Value) Value {
-	rtn, _, _ := globalUnlock.Call(intArg(a))
-	return IntVal(int(rtn))
-})
+var _ = builtin1("GlobalUnlock(hMem)",
+	func(a Value) Value {
+		rtn, _, _ := globalUnlock.Call(intArg(a))
+		return intRet(rtn)
+	})
 
 // dll Kernel32:HeapAlloc(pointer hHeap, long dwFlags, long dwBytes) pointer
 var heapAlloc = user32.NewProc("HeapAlloc")
@@ -123,7 +131,7 @@ var _ = builtin3("HeapAlloc(hHeap, dwFlags, dwBytes)",
 			intArg(a),
 			intArg(b),
 			intArg(c))
-		return IntVal(int(rtn))
+		return intRet(rtn)
 	})
 
 // dll Kernel32:HeapFree(pointer hHeap, long dwFlags, pointer lpMem) bool

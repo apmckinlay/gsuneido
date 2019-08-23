@@ -22,15 +22,16 @@ var _ = builtin5("RegOpenKeyEx(hKey, lpSubKey, ulOptions, samDesired, phkResult)
 			intArg(d),
 			uintptr(unsafe.Pointer(&e1)))
 		e.Put(nil, SuStr("x"), IntVal(int(e1))) // phkResult
-		return IntVal(int(rtn))
+		return intRet(rtn)
 	})
 
 // RegCloseKey
 var regCloseKey = advapi32.NewProc("RegCloseKey")
-var _ = builtin1("RegCloseKey(hKey)", func(a Value) Value {
-	rtn, _, _ := regCloseKey.Call(intArg(a))
-	return IntVal(int(rtn))
-})
+var _ = builtin1("RegCloseKey(hKey)",
+	func(a Value) Value {
+		rtn, _, _ := regCloseKey.Call(intArg(a))
+		return intRet(rtn)
+	})
 
 // RegCreateKeyEx
 var regCreateKeyEx = advapi32.NewProc("RegCreateKeyExA")
@@ -49,7 +50,7 @@ var _ = builtin("RegCreateKeyEx(hKey, lpSubKey, Reserved, lpClass, dwOptions, "+
 			uintptr(unsafe.Pointer(&h1)),
 			0) // lpdwDisposition - always null
 		a[7].Put(nil, SuStr("x"), IntVal(int(h1))) // phkResult
-		return IntVal(int(rtn))
+		return intRet(rtn)
 	})
 
 // RegQueryValueEx - hard coded for 4 byte data
@@ -67,7 +68,7 @@ var _ = builtin6("RegQueryValueEx(hKey, lpValueName, lpReserved/*unused*/, "+
 			uintptr(unsafe.Pointer(&e1)), // lpData
 			uintptr(unsafe.Pointer(&f1))) // lpcbData
 		e.Put(nil, SuStr("x"), IntVal(int(e1))) // data
-		return IntVal(int(rtn))
+		return intRet(rtn)
 	})
 
 // RegSetValueEx - hard coded for 4 byte data
@@ -84,5 +85,5 @@ var _ = builtin6("RegSetValueEx(hKey, lpValueName, reserved/*unused*/, "+
 			uintptr(unsafe.Pointer(&e1)), // lpData
 			uintptr(4))                   // cbData = 4 to match int32 data
 		e.Put(nil, SuStr("x"), IntVal(int(e1)))
-		return IntVal(int(rtn))
+		return intRet(rtn)
 	})

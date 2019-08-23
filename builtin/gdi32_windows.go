@@ -72,7 +72,7 @@ var _ = builtin1("CreateFontIndirect(logfont)", func(a Value) Value {
 	}
 	copy(f.lfFaceName[:], ToStr(a.Get(nil, SuStr("lfFaceName"))))
 	rtn, _, _ := createFontIndirect.Call(uintptr(unsafe.Pointer(&f)))
-	return IntVal(int(rtn))
+	return intRet(rtn)
 })
 
 // dll bool Gdi32:GetTextMetrics(pointer hdc, TEXTMETRIC* tm)
@@ -108,7 +108,7 @@ var _ = builtin2("GetTextMetrics(hdc, tm)",
 var getStockObject = gdi32.NewProc("GetStockObject")
 var _ = builtin1("GetStockObject(i)", func(a Value) Value {
 	rtn, _, _ := getStockObject.Call(intArg(a))
-	return IntVal(int(rtn))
+	return intRet(rtn)
 })
 
 var getDeviceCaps = gdi32.NewProc("GetDeviceCaps")
@@ -116,7 +116,7 @@ var _ = builtin2("GetDeviceCaps(hdc, nIndex)", func(a, b Value) Value {
 	rtn, _, _ := getDeviceCaps.Call(
 		intArg(a),
 		intArg(b))
-	return IntVal(int(rtn))
+	return intRet(rtn)
 })
 
 // dll GDI32:BitBlt(pointer hdcDest, long nXDest, long nYDest, long nWidth, long nHeight, pointer hdcSrc, long nXSrc, long nYSrc, long dwRop) bool
@@ -133,7 +133,7 @@ var _ = builtin("BitBlt(hdc, x, y, cx, cy, hdcSrc, x1, y1, rop)",
 			intArg(a[6]),
 			intArg(a[7]),
 			intArg(a[8]))
-		return IntVal(int(rtn))
+		return intRet(rtn)
 	})
 
 // dll Gdi32:CreateCompatibleBitmap(pointer hdc, long nWidth, long nHeight) gdiobj
@@ -143,21 +143,21 @@ var _ = builtin3("CreateCompatibleBitmap(hdc, cx, cy)", func(a, b, c Value) Valu
 		intArg(a),
 		intArg(b),
 		intArg(c))
-	return IntVal(int(rtn))
+	return intRet(rtn)
 })
 
 // dll Gdi32:CreateCompatibleDC(pointer hdc) pointer
 var createCompatibleDC = gdi32.NewProc("CreateCompatibleDC")
 var _ = builtin1("CreateCompatibleDC(hdc)", func(a Value) Value {
 	rtn, _, _ := createCompatibleDC.Call(intArg(a))
-	return IntVal(int(rtn))
+	return intRet(rtn)
 })
 
 // dll Gdi32:CreateSolidBrush(long rgb) gdiobj
 var createSolidBrush = gdi32.NewProc("CreateSolidBrush")
 var _ = builtin1("CreateSolidBrush(i)", func(a Value) Value {
 	rtn, _, _ := createSolidBrush.Call(intArg(a))
-	return IntVal(int(rtn))
+	return intRet(rtn)
 })
 
 // dll pointer Gdi32:SelectObject(pointer hdc, pointer obj)
@@ -167,7 +167,7 @@ var _ = builtin2("SelectObject(hdc, obj)",
 		rtn, _, _ := selectObject.Call(
 			intArg(a),
 			intArg(b))
-		return IntVal(int(rtn))
+		return intRet(rtn)
 	})
 
 // dll bool Gdi32:GetTextExtentPoint32(pointer hdc, [in] string text, long len, POINT* p)
@@ -203,7 +203,7 @@ var _ = builtin2("SetBkMode(hdc, color)",
 		rtn, _, _ := setBkMode.Call(
 			intArg(a),
 			intArg(b))
-		return IntVal(int(rtn))
+		return intRet(rtn)
 	})
 
 // dll long Gdi32:SetBkColor(pointer hdc, long color)
@@ -213,7 +213,7 @@ var _ = builtin2("SetBkColor(hdc, color)",
 		rtn, _, _ := setBkColor.Call(
 			intArg(a),
 			intArg(b))
-		return IntVal(int(rtn))
+		return intRet(rtn)
 	})
 
 // dll Gdi32:DeleteDC(pointer hdc) bool
@@ -221,7 +221,7 @@ var deleteDC = gdi32.NewProc("DeleteDC")
 var _ = builtin1("DeleteDC(hdc)",
 	func(a Value) Value {
 		rtn, _, _ := deleteDC.Call(intArg(a))
-		return IntVal(int(rtn))
+		return intRet(rtn)
 	})
 
 // dll Gdi32:DeleteObject(pointer hgdiobj) bool
@@ -239,7 +239,7 @@ var _ = builtin2("GetClipBox(hdc, rect)",
 		rtn, _, _ := getClipBox.Call(
 			intArg(a),
 			rectArg(b, &r))
-		return IntVal(int(rtn))
+		return intRet(rtn)
 	})
 
 // dll Gdi32:GetPixel(pointer hdc, long nXPos, long nYPos) long
@@ -250,7 +250,7 @@ var _ = builtin3("GetPixel(hdc, nXPos, nYPos)",
 			intArg(a),
 			intArg(b),
 			intArg(c))
-		return IntVal(int(rtn))
+		return intRet(rtn)
 	})
 
 // dll Gdi32:PtVisible(pointer hdc, long nXPos, long nYPos) bool
@@ -277,7 +277,7 @@ var _ = builtin5("Rectangle(hdc, left, top, right, bottom)",
 			intArg(c),
 			intArg(d),
 			intArg(e))
-		return IntVal(int(rtn))
+		return intRet(rtn)
 	})
 
 // dll Gdi32:SetStretchBltMode(pointer hdc, long iStretchMode) long
@@ -287,7 +287,7 @@ var _ = builtin2("SetStretchBltMode(hdc, iStretchMode)",
 		rtn, _, _ := setStretchBltMode.Call(
 			intArg(a),
 			intArg(b))
-		return IntVal(int(rtn))
+		return intRet(rtn)
 	})
 
 // dll Gdi32:SetTextColor(pointer hdc, long color) long
@@ -297,7 +297,7 @@ var _ = builtin2("SetTextColor(hdc, color)",
 		rtn, _, _ := setTextColor.Call(
 			intArg(a),
 			intArg(b))
-		return IntVal(int(rtn))
+		return intRet(rtn)
 	})
 
 // dll Gdi32:StretchBlt(pointer hdcDest, long nXOriginDest, long nYOriginDest, long nWidthDest, long nHeightDest, pointer hdcSrc,
