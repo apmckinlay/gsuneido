@@ -1,5 +1,3 @@
-// +build windows
-
 package builtin
 
 import (
@@ -10,6 +8,10 @@ import (
 	"github.com/apmckinlay/gsuneido/util/verify"
 	"golang.org/x/sys/windows"
 )
+
+func init() {
+	windows.MustLoadDLL("scilexer.dll")
+}
 
 var user32 = windows.NewLazyDLL("user32.dll")
 

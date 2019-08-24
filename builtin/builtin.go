@@ -7,6 +7,8 @@ import (
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
+var UIThread *Thread // set by main
+
 /* builtin defines a built in function in globals
 for example:
 var _ = builtin("Foo(a,b)", func(t *Thread, args []Value) Value {

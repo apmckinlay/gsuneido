@@ -6,10 +6,7 @@ import (
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
-var UIThread *Thread
-
 var _ = builtin("MessageLoop()", func(t *Thread, _ []Value) Value {
-	UIThread = t
 	MessageLoop()
 	return nil
 })

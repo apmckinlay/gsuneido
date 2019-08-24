@@ -17,7 +17,6 @@ import (
 	"github.com/apmckinlay/gsuneido/database/dbms"
 	"github.com/apmckinlay/gsuneido/options"
 	. "github.com/apmckinlay/gsuneido/runtime"
-	"golang.org/x/sys/windows"
 )
 
 var builtDate string // set by: go build -ldflags "-X builtin.builtDate=..."
@@ -45,7 +44,6 @@ func main() {
 	Libload = libload // dependency injection
 	mainThread = NewThread()
 	builtin.UIThread = mainThread
-	windows.MustLoadDLL("scilexer.dll")
 	defer mainThread.Close()
 	repl()
 }
