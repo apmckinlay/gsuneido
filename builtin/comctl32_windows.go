@@ -60,3 +60,75 @@ var _ = builtin3("ImageList_ReplaceIcon(himl, i, hicon)",
 		rtn, _, _ := imageList_ReplaceIcon.Call(intArg(a), intArg(b), intArg(c))
 		return intRet(rtn)
 	})
+
+// dll bool Comctl32:ImageList_BeginDrag(
+// 	pointer himlTrack, long iTrack, long dxHotspot, long dyHotspot)
+var imageList_BeginDrag = comctl32.NewProc("ImageList_BeginDrag")
+var _ = builtin4("ImageList_BeginDrag(himlTrack, iTrack, dxHotspot, dyHotspot)",
+	func(a, b, c, d Value) Value {
+		rtn, _, _ := imageList_BeginDrag.Call(
+			intArg(a),
+			intArg(b),
+			intArg(c),
+			intArg(d))
+			return boolRet(rtn)
+		})
+
+// dll bool Comctl32:ImageList_DragEnter(pointer hwnd, long x, long y)
+var imageList_DragEnter = comctl32.NewProc("ImageList_DragEnter")
+var _ = builtin3("ImageList_DragEnter(hwnd, x, y)",
+	func(a, b, c Value) Value {
+		rtn, _, _ := imageList_DragEnter.Call(
+			intArg(a),
+			intArg(b),
+			intArg(c))
+			return boolRet(rtn)
+		})
+
+// dll bool Comctl32:ImageList_DragLeave(pointer hwnd)
+var imageList_DragLeave = comctl32.NewProc("ImageList_DragLeave")
+var _ = builtin1("ImageList_DragLeave(hwnd)",
+	func(a Value) Value {
+		rtn, _, _ := imageList_DragLeave.Call(
+			intArg(a))
+			return boolRet(rtn)
+		})
+
+// dll bool Comctl32:ImageList_DragMove(long x, long y)
+var imageList_DragMove = comctl32.NewProc("ImageList_DragMove")
+var _ = builtin2("ImageList_DragMove(x, y)",
+	func(a, b Value) Value {
+		rtn, _, _ := imageList_DragMove.Call(
+			intArg(a),
+			intArg(b))
+			return boolRet(rtn)
+		})
+
+// dll void Comctl32:ImageList_EndDrag()
+var imageList_EndDrag = comctl32.NewProc("ImageList_EndDrag")
+var _ = builtin0("ImageList_EndDrag()",
+	func() Value {
+		imageList_EndDrag.Call()
+			return nil
+		})
+
+// dll pointer Comctl32:ImageList_Merge( // [ Returns handle to new image list]
+// 	pointer	himl1,	// Handle of first image list
+// 	long i1,		// Index of image in himl1
+// 	pointer himl2,	// Handle of second image list
+// 	long i2,		// Index of image in himl2
+// 	long dx,		// ...
+// 	long dy		// x- and y- offset of i2 from i1
+// 	)
+var imageList_Merge = comctl32.NewProc("ImageList_Merge")
+var _ = builtin6("ImageList_Merge(himl1, i1, himl2, i2, dx, dy)",
+	func(a, b, c, d, e, f Value) Value {
+		rtn, _, _ := imageList_Merge.Call(
+			intArg(a),
+			intArg(b),
+			intArg(c),
+			intArg(d),
+			intArg(e),
+			intArg(f))
+			return intRet(rtn)
+		})

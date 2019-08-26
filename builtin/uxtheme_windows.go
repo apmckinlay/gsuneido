@@ -72,3 +72,38 @@ var _ = builtin0("IsAppThemed()",
 		rtn, _, _ := isAppThemed.Call()
 		return boolRet(rtn)
 	})
+
+// dll long uxtheme:CloseThemeData(pointer hTheme)
+var closeThemeData = uxtheme.NewProc("CloseThemeData")
+var _ = builtin1("CloseThemeData(hTheme)",
+	func(a Value) Value {
+		rtn, _, _ := closeThemeData.Call(
+			intArg(a))
+		return intRet(rtn)
+	})
+
+// dll bool UxTheme:IsThemeBackgroundPartiallyTransparent(
+// 	pointer hTheme,
+// 	long iPartId,
+// 	long iStateId)
+var isThemeBackgroundPartiallyTransparent = uxtheme.NewProc("IsThemeBackgroundPartiallyTransparent")
+var _ = builtin3("IsThemeBackgroundPartiallyTransparent(hTheme, iPartId, iStateId)",
+	func(a, b, c Value) Value {
+		rtn, _, _ := isThemeBackgroundPartiallyTransparent.Call(
+			intArg(a),
+			intArg(b),
+			intArg(c))
+		return boolRet(rtn)
+	})
+
+// dll pointer uxtheme:OpenThemeData(
+// 	pointer hwnd,
+// 	string pszClassList)
+var openThemeData = uxtheme.NewProc("OpenThemeData")
+var _ = builtin2("OpenThemeData(hwnd, pszClassList)",
+	func(a, b Value) Value {
+		rtn, _, _ := openThemeData.Call(
+			intArg(a),
+			uintptr(stringArg(b)))
+		return intRet(rtn)
+	})

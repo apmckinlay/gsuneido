@@ -382,7 +382,7 @@ var _ = builtin4("AppendMenu(hmenu, flags, item, name)",
 			intArg(b),
 			intArg(c),
 			uintptr(stringArg(d)))
-		return intRet(rtn)
+		return boolRet(rtn)
 	})
 
 // dll User32:DestroyMenu(pointer hmenu) bool
@@ -1490,5 +1490,446 @@ var closeClipboard = user32.NewProc("CloseClipboard")
 var _ = builtin0("CloseClipboard()",
 	func() Value {
 		rtn, _, _ := closeClipboard.Call()
+		return boolRet(rtn)
+	})
+
+// dll pointer User32:BeginDeferWindowPos(
+// 	long nNumWindows		// initial number of windows to allocate space for
+// 	)
+var beginDeferWindowPos = user32.NewProc("BeginDeferWindowPos")
+var _ = builtin1("BeginDeferWindowPos(nNumWindows)",
+	func(a Value) Value {
+		rtn, _, _ := beginDeferWindowPos.Call(
+			intArg(a))
+		return intRet(rtn)
+	})
+
+// dll pointer User32:CallNextHookEx(		// returns an LRESULT
+// 	pointer	hhk,	// handle to current hook [HHOOK]
+// 	long	nCode,	// hook code passed to hook procedure [int]
+// 	pointer	wParam,	// value passed to hook procedure [WPARAM]
+// 	pointer	lParam	// value passed to hook procedure [LPARAM]
+// )
+var callNextHookEx = user32.NewProc("CallNextHookEx")
+var _ = builtin4("CallNextHookEx(hhk, nCode, wParam, lParam)",
+	func(a, b, c, d Value) Value {
+		rtn, _, _ := callNextHookEx.Call(
+			intArg(a),
+			intArg(b),
+			intArg(c),
+			intArg(d))
+		return intRet(rtn)
+	})
+
+// dll long User32:CheckMenuItem(
+// 	pointer hmenu, 		// handle to menu
+// 	long uIDCheckItem, 	// menu item to check or uncheck
+// 	long uCheck 		// menu item options
+// 	)
+var checkMenuItem = user32.NewProc("CheckMenuItem")
+var _ = builtin3("CheckMenuItem(hmenu, uIDCheckItem, uCheck)",
+	func(a, b, c Value) Value {
+		rtn, _, _ := checkMenuItem.Call(
+			intArg(a),
+			intArg(b),
+			intArg(c))
+		return intRet(rtn)
+	})
+
+// dll bool user32:DeleteMenu(pointer hMenu, long uPosition, long uFlags)
+var deleteMenu = user32.NewProc("DeleteMenu")
+var _ = builtin3("DeleteMenu(hMenu, uPosition, uFlags)",
+	func(a, b, c Value) Value {
+		rtn, _, _ := deleteMenu.Call(
+			intArg(a),
+			intArg(b),
+			intArg(c))
+		return boolRet(rtn)
+	})
+
+// dll long User32:EnableMenuItem(
+// 	pointer hMenu,
+// 	long uIDEnableItem,
+// 	long uEnable
+// 	)
+var enableMenuItem = user32.NewProc("EnableMenuItem")
+var _ = builtin3("EnableMenuItem(hMenu, uIDEnableItem, uEnable)",
+	func(a, b, c Value) Value {
+		rtn, _, _ := enableMenuItem.Call(
+			intArg(a),
+			intArg(b),
+			intArg(c))
+		return intRet(rtn)
+	})
+
+// dll bool User32:EnableWindow(pointer hWnd, bool bEnable)
+var enableWindow = user32.NewProc("EnableWindow")
+var _ = builtin2("EnableWindow(hWnd, bEnable)",
+	func(a, b Value) Value {
+		rtn, _, _ := enableWindow.Call(
+			intArg(a),
+			boolArg(b))
+		return boolRet(rtn)
+	})
+
+// dll bool User32:EndDeferWindowPos(
+// 	pointer hWinPosInfo		// handle to internal structure
+// 	)
+var endDeferWindowPos = user32.NewProc("EndDeferWindowPos")
+var _ = builtin1("EndDeferWindowPos(hWinPosInfo)",
+	func(a Value) Value {
+		rtn, _, _ := endDeferWindowPos.Call(
+			intArg(a))
+		return boolRet(rtn)
+	})
+
+// dll bool User32:EndDialog(pointer hwndDlg, long nResult)
+var endDialog = user32.NewProc("EndDialog")
+var _ = builtin2("EndDialog(hwndDlg, nResult)",
+	func(a, b Value) Value {
+		rtn, _, _ := endDialog.Call(
+			intArg(a),
+			intArg(b))
+		return boolRet(rtn)
+	})
+
+// dll long User32:EnumClipboardFormats(long format)
+var enumClipboardFormats = user32.NewProc("EnumClipboardFormats")
+var _ = builtin1("EnumClipboardFormats(format)",
+	func(a Value) Value {
+		rtn, _, _ := enumClipboardFormats.Call(
+			intArg(a))
+		return intRet(rtn)
+	})
+
+// dll pointer User32:FindWindow([in] string c, [in] string n)
+var findWindow = user32.NewProc("FindWindow")
+var _ = builtin2("FindWindow(c, n)",
+	func(a, b Value) Value {
+		rtn, _, _ := findWindow.Call(
+			uintptr(stringArg(a)),
+			uintptr(stringArg(b)))
+		return intRet(rtn)
+	})
+
+// dll pointer User32:GetAncestor(pointer hwnd, long gaFlags)
+var getAncestor = user32.NewProc("GetAncestor")
+var _ = builtin2("GetAncestor(hwnd, gaFlags)",
+	func(a, b Value) Value {
+		rtn, _, _ := getAncestor.Call(
+			intArg(a),
+			intArg(b))
+		return intRet(rtn)
+	})
+
+// dll long User32:GetClipboardFormatName(
+// 	long		format,				// clipboard format to retrieve
+// 	string		lpszFormatName,		// buffer to receive format name
+// 	long		cchMaxCount			// maximum length of string to copy into buffer
+// 	)
+var getClipboardFormatName = user32.NewProc("GetClipboardFormatName")
+var _ = builtin3("GetClipboardFormatName(format, lpszFormatName, cchMaxCount)",
+	func(a, b, c Value) Value {
+		rtn, _, _ := getClipboardFormatName.Call(
+			intArg(a),
+			uintptr(stringArg(b)),
+			intArg(c))
+		return intRet(rtn)
+	})
+
+// dll pointer User32:GetCursor()
+var getCursor = user32.NewProc("GetCursor")
+var _ = builtin0("GetCursor()",
+	func() Value {
+		rtn, _, _ := getCursor.Call()
+		return intRet(rtn)
+	})
+
+// dll long User32:GetDoubleClickTime()
+var getDoubleClickTime = user32.NewProc("GetDoubleClickTime")
+var _ = builtin0("GetDoubleClickTime()",
+	func() Value {
+		rtn, _, _ := getDoubleClickTime.Call()
+		return intRet(rtn)
+	})
+
+// dll long User32:GetMenuState(
+// 	pointer hMenu, 	// handle to menu
+// 	long uId, 		// menu item to query
+// 	long uFlags		// options
+// 	)
+var getMenuState = user32.NewProc("GetMenuState")
+var _ = builtin3("GetMenuState(hMenu, uId, uFlags)",
+	func(a, b, c Value) Value {
+		rtn, _, _ := getMenuState.Call(
+			intArg(a),
+			intArg(b),
+			intArg(c))
+		return intRet(rtn)
+	})
+
+// dll long User32:GetMessagePos()
+var getMessagePos = user32.NewProc("GetMessagePos")
+var _ = builtin0("GetMessagePos()",
+	func() Value {
+		rtn, _, _ := getMessagePos.Call()
+		return intRet(rtn)
+	})
+
+// dll pointer User32:GetNextDlgGroupItem(pointer hDlg, pointer hCtl, bool prev)
+var getNextDlgGroupItem = user32.NewProc("GetNextDlgGroupItem")
+var _ = builtin3("GetNextDlgGroupItem(hDlg, hCtl, prev)",
+	func(a, b, c Value) Value {
+		rtn, _, _ := getNextDlgGroupItem.Call(
+			intArg(a),
+			intArg(b),
+			boolArg(c))
+		return intRet(rtn)
+	})
+
+// dll pointer User32:GetParent(pointer hwnd)
+var getParent = user32.NewProc("GetParent")
+var _ = builtin1("GetParent(hwnd)",
+	func(a Value) Value {
+		rtn, _, _ := getParent.Call(
+			intArg(a))
+		return intRet(rtn)
+	})
+
+// dll pointer User32:GetSubMenu(
+// 	pointer hmenu,	//menu handle
+// 	long position	//position
+// 	)
+var getSubMenu = user32.NewProc("GetSubMenu")
+var _ = builtin2("GetSubMenu(hmenu, position)",
+	func(a, b Value) Value {
+		rtn, _, _ := getSubMenu.Call(
+			intArg(a),
+			intArg(b))
+		return intRet(rtn)
+	})
+
+// dll pointer User32:GetTopWindow(pointer hWnd)
+var getTopWindow = user32.NewProc("GetTopWindow")
+var _ = builtin1("GetTopWindow(hWnd)",
+	func(a Value) Value {
+		rtn, _, _ := getTopWindow.Call(
+			intArg(a))
+		return intRet(rtn)
+	})
+
+// dll long User32:GetUpdateRgn(pointer hwnd, pointer hRgn, bool bErase)
+var getUpdateRgn = user32.NewProc("GetUpdateRgn")
+var _ = builtin3("GetUpdateRgn(hwnd, hRgn, bErase)",
+	func(a, b, c Value) Value {
+		rtn, _, _ := getUpdateRgn.Call(
+			intArg(a),
+			intArg(b),
+			boolArg(c))
+		return intRet(rtn)
+	})
+
+// dll pointer User32:GetWindow(pointer hWnd, long uCmd)
+var getWindow = user32.NewProc("GetWindow")
+var _ = builtin2("GetWindow(hWnd, uCmd)",
+	func(a, b Value) Value {
+		rtn, _, _ := getWindow.Call(
+			intArg(a),
+			intArg(b))
+		return intRet(rtn)
+	})
+
+// dll pointer User32:GetWindowDC(pointer hwnd)
+var getWindowDC = user32.NewProc("GetWindowDC")
+var _ = builtin1("GetWindowDC(hwnd)",
+	func(a Value) Value {
+		rtn, _, _ := getWindowDC.Call(
+			intArg(a))
+		return intRet(rtn)
+	})
+
+// dll bool User32:IsClipboardFormatAvailable(long format)
+var isClipboardFormatAvailable = user32.NewProc("IsClipboardFormatAvailable")
+var _ = builtin1("IsClipboardFormatAvailable(format)",
+	func(a Value) Value {
+		rtn, _, _ := isClipboardFormatAvailable.Call(
+			intArg(a))
+		return boolRet(rtn)
+	})
+
+// dll bool User32:IsWindow(pointer hwnd)
+var isWindow = user32.NewProc("IsWindow")
+var _ = builtin1("IsWindow(hwnd)",
+	func(a Value) Value {
+		rtn, _, _ := isWindow.Call(
+			intArg(a))
+		return boolRet(rtn)
+	})
+
+// dll bool User32:IsWindowVisible(pointer hwnd)
+var isWindowVisible = user32.NewProc("IsWindowVisible")
+var _ = builtin1("IsWindowVisible(hwnd)",
+	func(a Value) Value {
+		rtn, _, _ := isWindowVisible.Call(
+			intArg(a))
+		return boolRet(rtn)
+	})
+
+// dll bool User32:MessageBeep(long type)
+var messageBeep = user32.NewProc("MessageBeep")
+var _ = builtin1("MessageBeep(type)",
+	func(a Value) Value {
+		rtn, _, _ := messageBeep.Call(
+			intArg(a))
+		return boolRet(rtn)
+	})
+
+// dll void User32:mouse_event(
+// 	long	dwFlags,		// motion and click options
+// 	long	dx,			// horizontal position or change
+// 	long	dy,			// vertical position or change
+// 	long	dwData,		// wheel movement
+// 	pointer	dwExtraInfo	// (ULONG_PTR) application-defined information
+// )
+var mouse_event = user32.NewProc("mouse_event")
+var _ = builtin5("mouse_event(dwFlags, dx, dy, dwData, dwExtraInfo)",
+	func(a, b, c, d, e Value) Value {
+		mouse_event.Call(
+			intArg(a),
+			intArg(b),
+			intArg(c),
+			intArg(d),
+			intArg(e))
+		return nil
+	})
+
+// dll bool User32:PostMessage(pointer hwnd, long msg, pointer wParam, pointer lParam)
+var postMessage = user32.NewProc("PostMessage")
+var _ = builtin4("PostMessage(hwnd, msg, wParam, lParam)",
+	func(a, b, c, d Value) Value {
+		rtn, _, _ := postMessage.Call(
+			intArg(a),
+			intArg(b),
+			intArg(c),
+			intArg(d))
+		return boolRet(rtn)
+	})
+
+// dll bool User32:RegisterHotKey(
+// 	pointer hWnd /*optional*/,
+// 	long id,
+// 	long fsModifiers,
+// 	long vk
+// )
+var registerHotKey = user32.NewProc("RegisterHotKey")
+var _ = builtin4("RegisterHotKey(hWnd, id, fsModifiers, vk)",
+	func(a, b, c, d Value) Value {
+		rtn, _, _ := registerHotKey.Call(
+			intArg(a),
+			intArg(b),
+			intArg(c),
+			intArg(d))
+		return boolRet(rtn)
+	})
+
+// dll bool User32:ReleaseCapture()
+var releaseCapture = user32.NewProc("ReleaseCapture")
+var _ = builtin0("ReleaseCapture()",
+	func() Value {
+		rtn, _, _ := releaseCapture.Call()
+		return boolRet(rtn)
+	})
+
+// dll pointer User32:SetActiveWindow(pointer hWnd)
+var setActiveWindow = user32.NewProc("SetActiveWindow")
+var _ = builtin1("SetActiveWindow(hWnd)",
+	func(a Value) Value {
+		rtn, _, _ := setActiveWindow.Call(
+			intArg(a))
+		return intRet(rtn)
+	})
+
+// dll pointer User32:SetCapture(pointer hwnd)
+var setCapture = user32.NewProc("SetCapture")
+var _ = builtin1("SetCapture(hwnd)",
+	func(a Value) Value {
+		rtn, _, _ := setCapture.Call(
+			intArg(a))
+		return intRet(rtn)
+	})
+
+// dll pointer User32:SetCursor(pointer hcursor)
+var setCursor = user32.NewProc("SetCursor")
+var _ = builtin1("SetCursor(hcursor)",
+	func(a Value) Value {
+		rtn, _, _ := setCursor.Call(
+			intArg(a))
+		return intRet(rtn)
+	})
+
+// dll bool User32:SetForegroundWindow(pointer hwnd)
+// // puts creator thread into foreground and activates window
+var setForegroundWindow = user32.NewProc("SetForegroundWindow")
+var _ = builtin1("SetForegroundWindow(hwnd)",
+	func(a Value) Value {
+		rtn, _, _ := setForegroundWindow.Call(
+			intArg(a))
+		return boolRet(rtn)
+	})
+
+// dll bool User32:SetMenuDefaultItem(
+// 	pointer hMenu,
+// 	long uItem,
+// 	long fByPosition
+// 	)
+var setMenuDefaultItem = user32.NewProc("SetMenuDefaultItem")
+var _ = builtin3("SetMenuDefaultItem(hMenu, uItem, fByPosition)",
+	func(a, b, c Value) Value {
+		rtn, _, _ := setMenuDefaultItem.Call(
+			intArg(a),
+			intArg(b),
+			intArg(c))
+		return boolRet(rtn)
+	})
+
+// dll pointer User32:SetParent(pointer hwndNewChild, pointer hwndNewParent)
+var setParent = user32.NewProc("SetParent")
+var _ = builtin2("SetParent(hwndNewChild, hwndNewParent)",
+	func(a, b Value) Value {
+		rtn, _, _ := setParent.Call(
+			intArg(a),
+			intArg(b))
+		return intRet(rtn)
+	})
+
+// dll bool User32:SetProp(pointer hwnd, [in] string name, pointer value)
+var setProp = user32.NewProc("SetProp")
+var _ = builtin3("SetProp(hwnd, name, value)",
+	func(a, b, c Value) Value {
+		rtn, _, _ := setProp.Call(
+			intArg(a),
+			uintptr(stringArg(b)),
+			intArg(c))
+		return boolRet(rtn)
+	})
+
+// dll bool User32:UnhookWindowsHookEx(
+// 	pointer hhk	// handle to hook procedure [HHOOK]
+// )
+var unhookWindowsHookEx = user32.NewProc("UnhookWindowsHookEx")
+var _ = builtin1("UnhookWindowsHookEx(hhk)",
+	func(a Value) Value {
+		rtn, _, _ := unhookWindowsHookEx.Call(
+			intArg(a))
+		return boolRet(rtn)
+	})
+
+// dll bool User32:UnregisterHotKey(pointer hWnd /*optional*/, long id)
+var unregisterHotKey = user32.NewProc("UnregisterHotKey")
+var _ = builtin2("UnregisterHotKey(hWnd, id)",
+	func(a, b Value) Value {
+		rtn, _, _ := unregisterHotKey.Call(
+			intArg(a),
+			intArg(b))
 		return boolRet(rtn)
 	})
