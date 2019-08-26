@@ -1,7 +1,10 @@
 package builtin
 
 import (
+	"unsafe"
+
 	. "github.com/apmckinlay/gsuneido/runtime"
+	"github.com/apmckinlay/gsuneido/util/str"
 	"golang.org/x/sys/windows"
 )
 
@@ -25,4 +28,26 @@ var _ = builtin2("SHGetPathFromIDList(pidl, path)",
 			intArg(a),
 			uintptr(stringArg(b)))
 		return boolRet(rtn)
+	})
+
+// dll long Shell32:DragQueryFile(
+//  pointer hDrop,
+//  long iFile,
+//  string lpszFile,
+//  long cch)
+var dragQueryFile = shell32.NewProc("DragQueryFile")
+var _ = builtin2("DragQueryFile(hDrop, iFile)",
+	func(a, b Value) Value {
+		n, _, _ := dragQueryFile.Call(
+			intArg(a),
+			intArg(b),
+			uintptr(0),
+			uintptr(0))
+		buf := make([]byte, n)
+		dragQueryFile.Call(
+			intArg(a),
+			intArg(b),
+			uintptr(unsafe.Pointer(&buf[0])),
+			n)
+		return SuStr(str.BeforeFirst(string(buf), "\x00"))
 	})
