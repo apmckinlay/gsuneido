@@ -133,30 +133,7 @@ var suFileMethods = Methods{
 		return SuStr(string(buf))
 	}),
 	"Readline": method0(func(this Value) Value {
-		f := this.(*suFile).f
-		var buf strings.Builder
-		b := make([]byte, 1)
-		for {
-			n, err := f.Read(b)
-			if n == 0 {
-				if buf.Len() == 0 {
-					return False
-				}
-				break
-			}
-			if err != nil {
-				panic("file.Readline " + err.Error())
-			}
-			if b[0] == '\n' {
-				break
-			}
-			if buf.Len() < MaxLine {
-				buf.WriteByte(b[0])
-			}
-		}
-		s := buf.String()
-		s = strings.TrimRight(s, "\r")
-		return SuStr(s)
+		return Readline(this.(*suFile).f, "file.Readline: ")
 	}),
 	"Seek": method2("(offset, origin='set')", func(this, arg1, arg2 Value) Value {
 		offset := ToInt64(arg1)
@@ -194,4 +171,30 @@ var suFileMethods = Methods{
 		f.WriteString("\n")
 		return arg
 	}),
+}
+
+func Readline(rdr io.Reader, errPrefix string) Value {
+		var buf strings.Builder
+		b := make([]byte, 1)
+		for {
+			n, err := rdr.Read(b)
+			if n == 0 {
+				if buf.Len() == 0 {
+					return False
+				}
+				break
+			}
+			if err != nil {
+				panic(errPrefix + err.Error())
+			}
+			if b[0] == '\n' {
+				break
+			}
+			if buf.Len() < MaxLine {
+				buf.WriteByte(b[0])
+			}
+		}
+		s := buf.String()
+		s = strings.TrimRight(s, "\r")
+		return SuStr(s)
 }

@@ -159,30 +159,7 @@ var suRunPipedMethods = Methods{
 		return SuStr(string(buf[:m]))
 	}),
 	"Readline": method0(func(this Value) Value {
-		f := this.(*suRunPiped).r
-		var buf strings.Builder
-		b := make([]byte, 1)
-		for {
-			n, err := f.Read(b)
-			if n == 0 {
-				if buf.Len() == 0 {
-					return False
-				}
-				break
-			}
-			if err != nil {
-				panic("runpiped.Readline failed " + err.Error())
-			}
-			if b[0] == '\n' {
-				break
-			}
-			if buf.Len() < MaxLine {
-				buf.WriteByte(b[0])
-			}
-		}
-		s := buf.String()
-		s = strings.TrimRight(s, "\r")
-		return SuStr(s)
+		return Readline(this.(*suRunPiped).r, "runPiped.Readline: ")
 	}),
 	"Write": method1("(string)", func(this, arg Value) Value {
 		_, err := io.WriteString(this.(*suRunPiped).w, AsStr(arg))
