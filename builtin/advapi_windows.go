@@ -9,8 +9,7 @@ import (
 
 var advapi32 = windows.NewLazyDLL("advapi32.dll")
 
-// If the function succeeds, the return value is ERROR_SUCCESS.
-// If the function fails, the return value is a nonzero error code defined in Winerror.h.
+// RegOpenKeyEx
 var regOpenKeyExA = advapi32.NewProc("RegOpenKeyExA")
 var _ = builtin5("RegOpenKeyEx(hKey, lpSubKey, ulOptions, samDesired, phkResult)",
 	func(a, b, c, d, e Value) Value {
