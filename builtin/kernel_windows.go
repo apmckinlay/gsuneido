@@ -130,7 +130,7 @@ var _ = builtin1("GlobalUnlockString(hMem)",
 	})
 
 // dll Kernel32:HeapAlloc(pointer hHeap, long dwFlags, long dwBytes) pointer
-var heapAlloc = user32.NewProc("HeapAlloc")
+var heapAlloc = kernel32.NewProc("HeapAlloc")
 var _ = builtin3("HeapAlloc(hHeap, dwFlags, dwBytes)",
 	func(a, b, c Value) Value {
 		rtn, _, _ := heapAlloc.Call(
@@ -141,7 +141,7 @@ var _ = builtin3("HeapAlloc(hHeap, dwFlags, dwBytes)",
 	})
 
 // dll Kernel32:HeapFree(pointer hHeap, long dwFlags, pointer lpMem) bool
-var heapFree = user32.NewProc("HeapFree")
+var heapFree = kernel32.NewProc("HeapFree")
 var _ = builtin3("HeapFree(hHeap, dwFlags, lpMem)",
 	func(a, b, c Value) Value {
 		rtn, _, _ := heapFree.Call(
