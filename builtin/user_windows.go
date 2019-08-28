@@ -305,6 +305,12 @@ func getPoint(ob Value, mem string) POINT {
 	return obToPoint(x)
 }
 
+func pointArg(ob Value, pt *POINT) unsafe.Pointer {
+	pt.x = getInt32(ob, "x")
+	pt.y = getInt32(ob, "y")
+	return unsafe.Pointer(&pt)
+}
+
 func getHandle(ob Value, mem string) HANDLE {
 	return HANDLE(getInt(ob, mem))
 }
@@ -1945,3 +1951,84 @@ var _ = builtin2("UnregisterHotKey(hWnd, id)",
 			intArg(b))
 		return boolRet(rtn)
 	})
+
+// dll bool User32:ClientToScreen(pointer hwnd, POINT* point)
+var clientToScreen = user32.NewProc("ClientToScreen")
+var _ = builtin2("ClientToScreen(hWnd, point)",
+	func(a, b Value) Value {
+		var pt POINT
+		rtn, _, _ := clientToScreen.Call(
+			intArg(a),
+			uintptr(pointArg(b, &pt)))
+		return intRet(rtn)
+	})
+
+// dll bool User32:ClipCursor(RECT* rect)
+var clipCursor = user32.NewProc("ClipCursor")
+var _ = builtin1("ClipCursor(rect)",
+	func(a Value) Value {
+		var r RECT
+		rtn, _, _ := clipCursor.Call(
+			uintptr(rectArg(a, &r)))
+		return boolRet(rtn)
+	})
+
+// dll pointer User32:DeferWindowPos(pointer hWinPosInfo, pointer hWnd,
+//		pointer hWndInsertAfter, long x, long y, long cx, long cy, long flags)
+var deferWindowPos = user32.NewProc("DeferWindowPos")
+var _ = builtin("DeferWindowPos(hWinPosInfo, hWnd, hWndInsertAfter, "+
+	"x, y, cx, cy, flags)",
+	func(_ *Thread, a []Value) Value {
+		rtn, _, _ := deferWindowPos.Call(
+			intArg(a[0]),
+			intArg(a[1]),
+			intArg(a[2]),
+			intArg(a[3]),
+			intArg(a[4]),
+			intArg(a[5]),
+			intArg(a[6]),
+			intArg(a[7]))
+		return intRet(rtn)
+	})
+
+// dll bool User32:DrawFocusRect(pointer hdc, RECT* lprc)
+var drawFocusRect = user32.NewProc("DrawFocusRect")
+var _ = builtin2("DrawFocusRect(hwnd, rect)",
+	func(a, b Value) Value {
+		var r RECT
+		rtn, _, _ := drawFocusRect.Call(
+			intArg(a),
+			uintptr(rectArg(b, &r)))
+		return intRet(rtn)
+	})
+
+// dll long User32:DrawTextEx(pointer hdc, [in] string lpsz, long cb,
+// RECT* lprc, long uFormat, DRAWTEXTPARAMS* params)
+var drawTextEx = user32.NewProc("DrawTextEx")
+var _ = builtin6("DrawTextEx(hdc, lpsz, cb, lprc, uFormat, params)",
+	func(a, b, c, d, e, f Value) Value {
+		var r RECT
+		dtp := DRAWTEXTPARAMS{
+			cbSize:        int32(unsafe.Sizeof(DRAWTEXTPARAMS{})),
+			iTabLength:    getInt32(f, "iTabLength"),
+			iLeftMargin:   getInt32(f, "iLeftMargin"),
+			iRightMargin:  getInt32(f, "iRightMargin"),
+			uiLengthDrawn: getInt32(f, "uiLengthDrawn"),
+		}
+		rtn, _, _ := drawTextEx.Call(
+			intArg(a),
+			uintptr(stringArg(b)),
+			intArg(c),
+			uintptr(rectArg(d, &r)),
+			intArg(e),
+			uintptr(unsafe.Pointer(&dtp)))
+		return intRet(rtn)
+	})
+
+type DRAWTEXTPARAMS struct {
+	cbSize        int32
+	iTabLength    int32
+	iLeftMargin   int32
+	iRightMargin  int32
+	uiLengthDrawn int32
+}

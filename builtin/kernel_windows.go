@@ -390,3 +390,34 @@ var _ = builtin2("SetFileAttributes(lpFileName, dwFileAttributes)",
 			intArg(b))
 		return boolRet(rtn)
 	})
+
+// dll handle Kernel32:CreateFile([in] string lpFileName, long dwDesiredAccess,
+//		long dwShareMode, SECURITY_ATTRIBUTES* lpSecurityAttributes,
+//		long dwCreationDistribution, long dwFlagsAndAttributes,
+//		pointer hTemplateFile)
+var createFile = user32.NewProc("CreateFile")
+var _ = builtin7("CreateFile(lpFileName, dwDesiredAccess, dwShareMode,"+
+	"lpSecurityAttributes, dwCreationDistribution, dwFlagsAndAttributes,"+
+	"hTemplateFile)",
+	func(a, b, c, d, e, f, g Value) Value {
+		sa := SECURITY_ATTRIBUTES{
+			nLength:              int32(unsafe.Sizeof(SECURITY_ATTRIBUTES{})),
+			lpSecurityDescriptor: getHandle(d, "lpSecurityDescriptor"),
+			bInheritHandle:       getBool(d, "bInheritHandle"),
+		}
+		rtn, _, _ := createFile.Call(
+			uintptr(stringArg(a)),
+			intArg(b),
+			intArg(c),
+			uintptr(unsafe.Pointer(&sa)),
+			intArg(e),
+			intArg(f),
+			intArg(g))
+		return boolRet(rtn)
+	})
+
+type SECURITY_ATTRIBUTES struct {
+	nLength              int32
+	lpSecurityDescriptor HANDLE
+	bInheritHandle       bool
+}

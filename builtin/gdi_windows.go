@@ -581,3 +581,63 @@ var _ = builtin5("TextOut(hdc, x, y, text, n)",
 			intArg(e))
 		return boolRet(rtn)
 	})
+
+// dll bool Gdi32:Arc(pointer hdc, long nLeftRect, long nTopRect,
+//		long nRightRect, long nBottomRect, long nXStartArc, long nYStartArc,
+//		long nXEndArc, long nYEndArc)
+var arc = gdi32.NewProc("Arc")
+var _ = builtin("Arc(hdc, nLeftRect, nTopRect, nRightRect, nBottomRect,"+
+	"nXStartArc, nYStartArc, nXEndArc, nYEndArc)",
+	func(_ *Thread, a []Value) Value {
+		rtn, _, _ := arc.Call(
+			intArg(a[0]),
+			intArg(a[1]),
+			intArg(a[2]),
+			intArg(a[3]),
+			intArg(a[4]),
+			intArg(a[5]),
+			intArg(a[6]),
+			intArg(a[7]),
+			intArg(a[8]))
+		return intRet(rtn)
+	})
+
+// dll pointer Gdi32:CreateEnhMetaFile(pointer hdcRef, [in] string filename,
+//		RECT* rect, [in] string desc)
+var createEnhMetaFile = gdi32.NewProc("CreateEnhMetaFileA")
+var _ = builtin4("CreateEnhMetaFile(hdcRef, filename, rect, desc)",
+	func(a, b, c, d Value) Value {
+		var r RECT
+		rtn, _, _ := createEnhMetaFile.Call(
+			intArg(a),
+			uintptr(stringArg(b)),
+			uintptr(rectArg(c, &r)),
+			uintptr(stringArg(d)))
+		return intRet(rtn)
+	})
+
+// dll gdiobj Gdi32:CreateFont(long nHeight, long nWidth, long nEscapement,
+//		long nOrientation, long fnWeight, long fdwItalic, long fdwUnderline,
+//		long fdwStrikeOut, long fdwCharSet, long fdwOutputPrecision,
+//		long fdwClipPrecision, long fdwQuality, long fdwPitchAndFamily,
+//		[in] string lpszFace)
+var createFont = gdi32.NewProc("CreateFont")
+var _ = builtin("CreateFont(hdc, x, y, cx, cy, hdcSrc, x1, y1, rop)",
+	func(_ *Thread, a []Value) Value {
+		rtn, _, _ := createFont.Call(
+			intArg(a[0]),
+			intArg(a[1]),
+			intArg(a[2]),
+			intArg(a[3]),
+			intArg(a[4]),
+			intArg(a[5]),
+			intArg(a[6]),
+			intArg(a[7]),
+			intArg(a[8]),
+			intArg(a[9]),
+			intArg(a[10]),
+			intArg(a[11]),
+			intArg(a[12]),
+			uintptr(stringArg(a[13])))
+		return intRet(rtn)
+	})
