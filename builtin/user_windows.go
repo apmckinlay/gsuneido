@@ -209,7 +209,11 @@ func stringArg(v Value) unsafe.Pointer {
 }
 
 func getBool(ob Value, mem string) bool {
-	return ToBool(ob.Get(nil, SuStr(mem)))
+	x := ob.Get(nil, SuStr(mem))
+	if x == nil {
+		return false
+	}
+	return ToBool(x)
 }
 
 func getInt(ob Value, mem string) int {
@@ -257,7 +261,11 @@ func obToRect(ob Value) RECT {
 }
 
 func getRect(ob Value, mem string) RECT {
-	return obToRect(ob.Get(nil, SuStr(mem)))
+	x := ob.Get(nil, SuStr(mem))
+	if x == nil {
+		return RECT{}
+	}
+	return obToRect(x)
 }
 
 func rectToOb(r *RECT, ob Value) Value {
@@ -290,7 +298,11 @@ func pointToOb(pt *POINT, ob Value) Value {
 }
 
 func getPoint(ob Value, mem string) POINT {
-	return obToPoint(ob.Get(nil, SuStr(mem)))
+	x := ob.Get(nil, SuStr(mem))
+	if x == nil {
+		return POINT{}
+	}
+	return obToPoint(x)
 }
 
 func getHandle(ob Value, mem string) HANDLE {

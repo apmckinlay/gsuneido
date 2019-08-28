@@ -16,7 +16,7 @@ var _ = builtin("File(filename, mode='r', block=false)",
 
 		f, err := os.OpenFile(name, modeToFlags(mode), 0644)
 		if err != nil {
-			panic("File: " + err.Error())
+			panic("File: can't " + err.Error())
 		}
 		sf := &suFile{name: name, mode: mode, f: f}
 		if args[2] == False {

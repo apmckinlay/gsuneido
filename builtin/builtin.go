@@ -71,6 +71,7 @@ func builtin7(s string, f func(a, b, c, d, e, f, g Value) Value) bool {
 
 func builtinRaw(s string, f func(t *Thread, as *ArgSpec, args []Value) Value) bool {
 	name, ps := paramSplit(s)
+	// params are just for documentation, SuBuiltinRaw doesn't use them
 	Global.Builtin(name, &SuBuiltinRaw{f, BuiltinParams{ParamSpec: *ps}})
 	return true
 }

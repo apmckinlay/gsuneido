@@ -21,29 +21,38 @@ func init() {
 		&SuStructGlobal{size: int(unsafe.Sizeof(MONITORINFO{}))})
 	Global.Builtin("SCROLLINFO",
 		&SuStructGlobal{size: int(unsafe.Sizeof(SCROLLINFO{}))})
-		
+
 	Global.Builtin("MINMAXINFO",
 		&SuMinMaxInfo{SuStructGlobal{size: int(unsafe.Sizeof(MINMAXINFO{}))}})
 	Global.Builtin("RECT",
-		&SuRect{SuStructGlobal{size: int(unsafe.Sizeof(RECT{}))}})
-	Global.Builtin("ACCEL",
-		&SuAccel{SuStructGlobal{size: int(unsafe.Sizeof(ACCEL{})),
+		&SuRect{callableStruct{SuStructGlobal{size: int(unsafe.Sizeof(RECT{})),
 			SuBuiltin: SuBuiltin{
 				BuiltinParams: BuiltinParams{ParamSpec: ParamSpec1},
-				Fn: func(_ *Thread, args []Value) Value {
-					return accel(args[0])
-				}}}})
+				Fn:            rect}}}})
+	Global.Builtin("ACCEL",
+		&SuAccel{callableStruct{SuStructGlobal{size: int(unsafe.Sizeof(ACCEL{})),
+			SuBuiltin: SuBuiltin{
+				BuiltinParams: BuiltinParams{ParamSpec: ParamSpec1},
+				Fn:            accel}}}})
 }
 
 func (*SuStructGlobal) Call(*Thread, Value, *ArgSpec) Value {
 	panic("can't call struct")
 }
 
+type callableStruct struct {
+	SuStructGlobal
+}
+
+func (cs *callableStruct) Call(t *Thread, this Value, as *ArgSpec) Value {
+	return cs.SuBuiltin.Call(t, this, as)
+}
+
 func (sg *SuStructGlobal) Size() int {
 	return sg.size
 }
 
-type sizeable interface { Size() int }
+type sizeable interface{ Size() int }
 
 var structSize = method0(func(this Value) Value {
 	return IntVal(this.(sizeable).Size())
@@ -85,15 +94,20 @@ var _ = builtin("StructModify(type, address, block)",
 //-------------------------------------------------------------------
 
 type SuRect struct {
-	SuStructGlobal
+	callableStruct
 }
 
-func (typ *SuRect) structToOb(p unsafe.Pointer) Value {
+func (*SuRect) structToOb(p unsafe.Pointer) Value {
 	return rectToOb((*RECT)(p), nil)
 }
 
-func (typ *SuRect) updateStruct(ob Value, p unsafe.Pointer) {
+func (*SuRect) updateStruct(ob Value, p unsafe.Pointer) {
 	*(*RECT)(p) = obToRect(ob)
+}
+
+func rect(_ *Thread, args []Value) Value {
+	r := obToRect(args[0])
+	return SuStr(memToStr(uintptr(unsafe.Pointer(&r)), unsafe.Sizeof(r)))
 }
 
 //-------------------------------------------------------------------
@@ -153,7 +167,7 @@ func nmhdrToOb(nmh *NMHDR) *SuObject {
 //-------------------------------------------------------------------
 
 type SuAccel struct {
-	SuStructGlobal
+	callableStruct
 }
 
 type ACCEL struct {
@@ -163,7 +177,8 @@ type ACCEL struct {
 	cmd   int16
 }
 
-func accel(arg Value) Value {
+func accel(_ *Thread, args []Value) Value {
+	arg := args[0]
 	if a, ok := arg.ToInt(); ok {
 		// address => ob
 		ac := (*ACCEL)(unsafe.Pointer(uintptr(a)))
@@ -177,17 +192,17 @@ func accel(arg Value) Value {
 	// else ob => string
 	ac := ACCEL{
 		fVirt: byte(getInt(arg, "fVirt")),
-		pad: byte(getInt(arg, "pad")),
-		key: int16(getInt(arg, "key")),
-		cmd: int16(getInt(arg, "cmd")),
+		pad:   byte(getInt(arg, "pad")),
+		key:   int16(getInt(arg, "key")),
+		cmd:   int16(getInt(arg, "cmd")),
 	}
-	return SuStr(memToStr(unsafe.Pointer(&ac), unsafe.Sizeof(ac)))
+	return SuStr(memToStr(uintptr(unsafe.Pointer(&ac)), unsafe.Sizeof(ac)))
 }
 
-func memToStr(p unsafe.Pointer, n uintptr) string {
+func memToStr(p uintptr, n uintptr) string {
 	var sb strings.Builder
-	for ; n > 0; n--{
-		sb.WriteByte(*(*byte)(unsafe.Pointer(uintptr(p) + n)))
+	for i := uintptr(0); i < n; i++ {
+		sb.WriteByte(*(*byte)(unsafe.Pointer(p + i)))
 	}
 	return sb.String()
 }
