@@ -92,10 +92,10 @@ var halfpow10 = [...]uint64{
 	5000000000000000000}
 
 // NOTE: comment out body in production
-func check(_ bool) {
-	// if !cond {
-	// 	panic("verify failed")
-	// }
+func check(cond bool) {
+	if !cond {
+		panic("check failed")
+	}
 }
 
 // FromInt returns a Dnum for an int
@@ -103,12 +103,20 @@ func FromInt(n int64) Dnum {
 	if n == 0 {
 		return Zero
 	}
+	n0 := n
 	sign := int8(signPos)
 	if n < 0 {
 		n = -n
 		sign = signNeg
 	}
-	return New(sign, uint64(n), digitsMax)
+	dn := New(sign, uint64(n), digitsMax)
+	check(reversible(n0, dn))
+	return dn
+}
+
+func reversible(n int64, dn Dnum) bool {
+	n2, ok := dn.ToInt64()
+	return ok && n2 == n
 }
 
 const log2of10 = 3.32192809488736234
