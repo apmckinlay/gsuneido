@@ -2032,3 +2032,25 @@ type DRAWTEXTPARAMS struct {
 	iRightMargin  int32
 	uiLengthDrawn int32
 }
+
+// dll bool User32:TrackMouseEvent(TRACKMOUSEEVENT* lpEventTrack)
+var trackMouseEvent = user32.NewProc("TrackMouseEvent")
+var _ = builtin1("TrackMouseEvent(lpEventTrack)",
+	func(a Value) Value {
+		tme := TRACKMOUSEEVENT{
+			cbSize: int32(unsafe.Sizeof(TRACKMOUSEEVENT{})),
+			dwFlags: getInt32(a, "dwFlags"),
+			hwndTrack: getHandle(a, "hwndTrack"),
+			dwHoverTime: getInt32(a, "dwHoverTime"),
+		}
+		rtn, _, _ := trackMouseEvent.Call(
+			uintptr(unsafe.Pointer(&tme)))
+		return boolRet(rtn)
+	})
+
+type TRACKMOUSEEVENT struct {
+	cbSize      int32
+	dwFlags     int32
+	hwndTrack   uintptr
+	dwHoverTime int32
+}

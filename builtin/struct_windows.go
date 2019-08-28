@@ -21,6 +21,8 @@ func init() {
 		&SuStructGlobal{size: int(unsafe.Sizeof(MONITORINFO{}))})
 	Global.Builtin("SCROLLINFO",
 		&SuStructGlobal{size: int(unsafe.Sizeof(SCROLLINFO{}))})
+	Global.Builtin("TRACKMOUSEEVENT",
+		&SuStructGlobal{size: int(unsafe.Sizeof(TRACKMOUSEEVENT{}))})
 
 	Global.Builtin("MINMAXINFO",
 		&SuMinMaxInfo{SuStructGlobal{size: int(unsafe.Sizeof(MINMAXINFO{}))}})
