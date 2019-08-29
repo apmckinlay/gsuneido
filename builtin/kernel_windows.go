@@ -421,3 +421,13 @@ type SECURITY_ATTRIBUTES struct {
 	lpSecurityDescriptor HANDLE
 	bInheritHandle       bool
 }
+
+// dll long Kernel32:GetFileSize(handle hf, LONG* hiword)
+var getFileSize = kernel32.NewProc("GetFileSize")
+var _ = builtin2("GetFileSize(a, b/*unused*/)",
+	func(a, b Value) Value {
+		rtn, _, _ := getFileSize.Call(
+			intArg(a),
+			0)
+		return intRet(rtn)
+	})

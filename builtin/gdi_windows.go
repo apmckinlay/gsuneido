@@ -4,6 +4,7 @@ import (
 	"unsafe"
 
 	. "github.com/apmckinlay/gsuneido/runtime"
+	"github.com/apmckinlay/gsuneido/util/verify"
 	"golang.org/x/sys/windows"
 )
 
@@ -641,3 +642,107 @@ var _ = builtin("CreateFont(hdc, x, y, cx, cy, hdcSrc, x1, y1, rop)",
 			uintptr(stringArg(a[13])))
 		return intRet(rtn)
 	})
+
+// dll bool Gdi32:ExtTextOut(pointer hdc, long X, long Y, long fuOptions,
+//		RECT* lprc, [in] string lpString, long cbCount, LONG* lpDx)
+var extTextOut = gdi32.NewProc("ExtTextOutA")
+var _ = builtin("ExtTextOut(hdc, x, y, fuOptions, lprc, lpString, cbCount,"+
+	" lpDx/*unused*/)",
+	func(_ *Thread, a []Value) Value {
+		var r RECT
+		verify.That(a[7].Equal(Zero))
+		rtn, _, _ := extTextOut.Call(
+			intArg(a[0]),
+			intArg(a[1]),
+			intArg(a[2]),
+			intArg(a[3]),
+			uintptr(rectArg(a[4], &r)),
+			uintptr(stringArg(a[5])),
+			intArg(a[6]),
+			0)
+		return intRet(rtn)
+	})
+
+// dll gdiobj Gdi32:ExtCreatePen(long dwPenStyle, long dwWidth, LOGBRUSH* brush,
+//		long dwStyleCount, pointer lpStyle)
+var extCreatePen = gdi32.NewProc("ExtCreatePen")
+var _ = builtin5("ExtCreatePen(dwPenStyle, dwWidth, brush, "+
+	"dwStyleCount/*unused*/, lpStyle/*unused*/)",
+	func(a, b, c, d, e Value) Value {
+		lb := LOGBRUSH{
+			lbStyle: getInt32(c, "lbStyle"),
+			lbColor: getInt32(c, "lbColor"),
+			lbHatch: uintptr(getInt(d, "dwItemData")),
+		}
+		rtn, _, _ := extCreatePen.Call(
+			intArg(a),
+			intArg(b),
+			uintptr(unsafe.Pointer(&lb)),
+			0,
+			0)
+		return intRet(rtn)
+	})
+
+type LOGBRUSH struct {
+	lbStyle int32
+	lbColor int32
+	lbHatch HANDLE
+}
+
+// dll long Gdi32:GetGlyphOutline(pointer hdc, long uChar, long uFormat,
+//		GLYPHMETRICS*  lpgm, long cbBuffer, pointer lpvBuffer, MAT2* lpmat2)
+var getGlyphOutline = gdi32.NewProc("GetGlyphOutlineA")
+var _ = builtin7("GetGlyphOutline(hdc, uChar, uFormat, lpgm, "+
+	"cbBuffer/*unused*/, lpvBuffer/*unused*/, lpmat2)",
+	func(a, b, c, d, e, f, g Value) Value {
+		var gm GLYPHMETRICS
+		mat := MAT2{
+			eM11: FIXED{
+				fract: getInt32(g.Get(nil, SuStr("eM11")), "fract"),
+				value: getInt32(g.Get(nil, SuStr("eM11")), "value")},
+			eM12: FIXED{
+				fract: getInt32(g.Get(nil, SuStr("eM12")), "fract"),
+				value: getInt32(g.Get(nil, SuStr("eM12")), "value")},
+			eM21: FIXED{
+				fract: getInt32(g.Get(nil, SuStr("eM21")), "fract"),
+				value: getInt32(g.Get(nil, SuStr("eM21")), "value")},
+			eM22: FIXED{
+				fract: getInt32(g.Get(nil, SuStr("eM22")), "fract"),
+				value: getInt32(g.Get(nil, SuStr("eM22")), "value")},
+		}
+		rtn, _, _ := getGlyphOutline.Call(
+			intArg(a),
+			intArg(b),
+			intArg(c),
+			uintptr(unsafe.Pointer(&gm)),
+			0,
+			0,
+			uintptr(unsafe.Pointer(&mat)))
+		d.Put(nil, SuStr("gmBlackBoxX"), IntVal(int(gm.gmBlackBoxX)))
+		d.Put(nil, SuStr("gmBlackBoxY"), IntVal(int(gm.gmBlackBoxY)))
+		d.Put(nil, SuStr("gmptGlyphOrigin"),
+			pointToOb(&gm.gmptGlyphOrigin, d.Get(nil, SuStr("gmptGlyphOrigin"))))
+		d.Put(nil, SuStr("gmCellIncX"), IntVal(int(gm.gmCellIncX)))
+		d.Put(nil, SuStr("gmCellIncY"), IntVal(int(gm.gmCellIncY)))
+		return intRet(rtn)
+	})
+
+type GLYPHMETRICS struct {
+	gmBlackBoxX     int32
+	gmBlackBoxY     int32
+	gmptGlyphOrigin POINT
+	gmCellIncX      int32
+	gmCellIncY      int32
+}
+
+type FIXED struct {
+	fract int32
+	value int32
+}
+
+type MAT2 struct {
+	eM11 FIXED
+	eM12 FIXED
+	eM21 FIXED
+	eM22 FIXED
+}

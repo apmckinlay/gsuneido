@@ -228,6 +228,9 @@ func getInt(ob Value, mem string) int {
 }
 
 func getInt32(ob Value, mem string) int32 {
+	if ob == nil {
+		return 0
+	}
 	return int32(getInt(ob, mem))
 }
 
@@ -2038,9 +2041,9 @@ var trackMouseEvent = user32.NewProc("TrackMouseEvent")
 var _ = builtin1("TrackMouseEvent(lpEventTrack)",
 	func(a Value) Value {
 		tme := TRACKMOUSEEVENT{
-			cbSize: int32(unsafe.Sizeof(TRACKMOUSEEVENT{})),
-			dwFlags: getInt32(a, "dwFlags"),
-			hwndTrack: getHandle(a, "hwndTrack"),
+			cbSize:      int32(unsafe.Sizeof(TRACKMOUSEEVENT{})),
+			dwFlags:     getInt32(a, "dwFlags"),
+			hwndTrack:   getHandle(a, "hwndTrack"),
 			dwHoverTime: getInt32(a, "dwHoverTime"),
 		}
 		rtn, _, _ := trackMouseEvent.Call(
@@ -2053,4 +2056,105 @@ type TRACKMOUSEEVENT struct {
 	dwFlags     int32
 	hwndTrack   uintptr
 	dwHoverTime int32
+}
+
+// dll bool User32:FlashWindowEx(FLASHWINFO* fi)
+var flashWindowEx = user32.NewProc("FlashWindowEx")
+var _ = builtin1("FlashWindowEx(fi)",
+	func(a Value) Value {
+		fwi := FLASHWINFO{
+			cbSize:    getInt32(a, "cbSize"),
+			hwnd:      getHandle(a, "hwnd"),
+			dwFlags:   getInt32(a, "dwFlags"),
+			uCount:    getInt32(a, "uCount"),
+			dwTimeout: getInt32(a, "dwTimeout"),
+		}
+		rtn, _, _ := flashWindowEx.Call(
+			uintptr(unsafe.Pointer(&fwi)))
+		return boolRet(rtn)
+	})
+
+type FLASHWINFO struct {
+	cbSize    int32
+	hwnd      HANDLE
+	dwFlags   int32
+	uCount    int32
+	dwTimeout int32
+}
+
+// dll long User32:FrameRect(pointer hdc, RECT* rect, pointer brush)
+var frameRect = user32.NewProc("FrameRect")
+var _ = builtin3("FrameRect(hdc, rect, brush)",
+	func(a, b, c Value) Value {
+		var r RECT
+		rtn, _, _ := frameRect.Call(
+			intArg(a),
+			uintptr(rectArg(b, &r)),
+			intArg(c))
+		return intRet(rtn)
+	})
+
+// dll bool User32:GetClipCursor(RECT* rect)
+var getClipCursor = user32.NewProc("GetClipCursor")
+var _ = builtin1("GetClipCursor(rect)",
+	func(a Value) Value {
+		var r RECT
+		rtn, _, _ := getClipCursor.Call(
+			uintptr(rectArg(a, &r)))
+		return boolRet(rtn)
+	})
+
+// dll bool User32:GetCursorPos(POINT* p)
+var getCursorPos = user32.NewProc("GetCursorPos")
+var _ = builtin1("GetCursorPos(rect)",
+	func(a Value) Value {
+		var p POINT
+		rtn, _, _ := getCursorPos.Call(
+			uintptr(unsafe.Pointer(&p)))
+		pointToOb(&p, a)
+		return boolRet(rtn)
+	})
+
+// dll long Gdi32:GetDIBits(pointer hdc, pointer hbmp, long uStartScan,
+//		long cScanLines, pointer lpvBits, BITMAPINFO* lpbi, long uUsage)
+var getDIBits = gdi32.NewProc("GetDIBits")
+var _ = builtin7("GetDIBits(hdc, hbmp, uStartScan, cScanLines, lpvBits,"+
+	" lpbi, uUsage)",
+	func(a, b, c, d, e, f, g Value) Value {
+		bi := BITMAPINFOHEADER{
+			biSize:          int32(unsafe.Sizeof(BITMAPINFOHEADER{})),
+			biWidth:         getInt32(f.Get(nil, SuStr("bmiHeader")), "biWidth"),
+			biHeight:        getInt32(f.Get(nil, SuStr("bmiHeader")), "biHeight"),
+			biPlanes:        getInt32(f.Get(nil, SuStr("bmiHeader")), "biPlanes"),
+			biBitCount:      getInt32(f.Get(nil, SuStr("bmiHeader")), "biBitCount"),
+			biCompression:   getInt32(f.Get(nil, SuStr("bmiHeader")), "biCompression"),
+			biSizeImage:     getInt32(f.Get(nil, SuStr("bmiHeader")), "biSizeImage"),
+			biXPelsPerMeter: getInt32(f.Get(nil, SuStr("bmiHeader")), "biXPelsPerMeter"),
+			biYPelsPerMeter: getInt32(f.Get(nil, SuStr("bmiHeader")), "biYPelsPerMeter"),
+			biClrUsed:       getInt32(f.Get(nil, SuStr("bmiHeader")), "biClrUsed"),
+			biClrImportant:  getInt32(f.Get(nil, SuStr("bmiHeader")), "biClrImportant"),
+		}
+		rtn, _, _ := getDIBits.Call(
+			intArg(a),
+			intArg(b),
+			intArg(c),
+			intArg(d),
+			intArg(e),
+			uintptr(unsafe.Pointer(&bi)),
+			intArg(g))
+		return intRet(rtn)
+	})
+
+type BITMAPINFOHEADER struct {
+	biSize          int32
+	biWidth         int32
+	biHeight        int32
+	biPlanes        int32
+	biBitCount      int32
+	biCompression   int32
+	biSizeImage     int32
+	biXPelsPerMeter int32
+	biYPelsPerMeter int32
+	biClrUsed       int32
+	biClrImportant  int32
 }
