@@ -9,7 +9,7 @@ import (
 )
 
 func init() {
-	connection := &ole.Connection{nil}
+	connection := &ole.Connection{}
 	err := connection.Initialize()
 	if err != nil {
 		panic("can't initialize COM/OLE")
