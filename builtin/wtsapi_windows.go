@@ -13,5 +13,5 @@ var _ = builtin1("WTSFreeMemory(adr)",
 	func(a Value) Value {
 		wtsFreeMemory.Call(
 			intArg(a))
-			return nil
-		})
+		return nil
+	})

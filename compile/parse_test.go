@@ -223,7 +223,7 @@ func TestParseExpression(t *testing.T) {
 
 	// commutative
 	test("a * 0 * b", "Nary(Mul a b 0)") // short circuit
-	test("a & 0 & b", "0") // short circuit
+	test("a & 0 & b", "0")               // short circuit
 	test("1 * a * 1", "Nary(Mul a 1)")
 	test("1 + 2", "3")
 	test("1 + 2 + 3", "6")
@@ -232,7 +232,7 @@ func TestParseExpression(t *testing.T) {
 	test("255 & 15", "15")
 	test("a and true and true", "Nary(And a true)")
 	test("a or false or false", "Nary(Or a false)")
-	test("a or true or b", "true") // short circuit
+	test("a or true or b", "true")     // short circuit
 	test("a and false and b", "false") // short circuit
 
 	test("1 + a + b + 2", "Nary(Add 3 a b)")

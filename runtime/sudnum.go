@@ -56,7 +56,7 @@ func (SuDnum) RangeLen(int, int) Value {
 }
 
 func (dn SuDnum) Hash() uint32 {
-	if n,ok := dn.ToInt64(); ok && MinSuInt <= n && n <= MaxSuInt {
+	if n, ok := dn.ToInt64(); ok && MinSuInt <= n && n <= MaxSuInt {
 		return uint32(n) // for compatibility with SuInt
 	}
 	return dn.Dnum.Hash()

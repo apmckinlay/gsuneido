@@ -31,40 +31,40 @@ func (e *Encoder) String() string {
 }
 
 // Put appends a byte slice
-func (e *Encoder) Put(b []byte) *Encoder  {
-	e.buf = e.buf[:len(e.buf) + len(b)]
-	copy(e.buf[len(e.buf) - len(b):], b)
+func (e *Encoder) Put(b []byte) *Encoder {
+	e.buf = e.buf[:len(e.buf)+len(b)]
+	copy(e.buf[len(e.buf)-len(b):], b)
 	return e
 }
 
 // Put1 appends one or more bytes (or a byte slice)
-func (e *Encoder) Put1(b byte) *Encoder  {
-	e.buf = e.buf[:len(e.buf) + 1]
-	e.buf[len(e.buf) - 1] = b
+func (e *Encoder) Put1(b byte) *Encoder {
+	e.buf = e.buf[:len(e.buf)+1]
+	e.buf[len(e.buf)-1] = b
 	return e
 }
 
 // Put2 appends one or more bytes (or a byte slice)
-func (e *Encoder) Put2(a,b byte) *Encoder  {
-	e.buf = e.buf[:len(e.buf) + 2]
-	e.buf[len(e.buf) - 2] = a
-	e.buf[len(e.buf) - 1] = b
+func (e *Encoder) Put2(a, b byte) *Encoder {
+	e.buf = e.buf[:len(e.buf)+2]
+	e.buf[len(e.buf)-2] = a
+	e.buf[len(e.buf)-1] = b
 	return e
 }
 
 // Put4 appends one or more bytes (or a byte slice)
-func (e *Encoder) Put4(a,b,c,d byte) *Encoder  {
-	e.buf = e.buf[:len(e.buf) + 4]
-	e.buf[len(e.buf) - 4] = a
-	e.buf[len(e.buf) - 3] = b
-	e.buf[len(e.buf) - 2] = c
-	e.buf[len(e.buf) - 1] = d
+func (e *Encoder) Put4(a, b, c, d byte) *Encoder {
+	e.buf = e.buf[:len(e.buf)+4]
+	e.buf[len(e.buf)-4] = a
+	e.buf[len(e.buf)-3] = b
+	e.buf[len(e.buf)-2] = c
+	e.buf[len(e.buf)-1] = d
 	return e
 }
 
 // PutStr appends the contents of a string
 func (e *Encoder) PutStr(s string) *Encoder {
-	e.buf = e.buf[:len(e.buf) + len(s)]
-	copy(e.buf[len(e.buf) - len(s):], s)
+	e.buf = e.buf[:len(e.buf)+len(s)]
+	copy(e.buf[len(e.buf)-len(s):], s)
 	return e
 }

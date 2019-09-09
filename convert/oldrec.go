@@ -1,6 +1,6 @@
 package main
 
-import 	. "github.com/apmckinlay/gsuneido/runtime"
+import . "github.com/apmckinlay/gsuneido/runtime"
 
 /*
 OldRec is an immutable record stored in a string

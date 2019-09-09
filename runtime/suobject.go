@@ -519,7 +519,7 @@ func (ob *SuObject) ToRecord(t *Thread, hdr *Header) Record {
 			}
 		}
 	}
-	if tsField != "" && ! ob.IsReadOnly() {
+	if tsField != "" && !ob.IsReadOnly() {
 		ob.Put(t, SuStr(tsField), ts)
 	}
 	return rb.Build()

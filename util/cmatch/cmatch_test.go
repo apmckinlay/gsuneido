@@ -1,8 +1,8 @@
 package cmatch
 
 import (
-	"testing"
 	. "github.com/apmckinlay/gsuneido/util/hamcrest"
+	"testing"
 )
 
 func TestIs(t *testing.T) {

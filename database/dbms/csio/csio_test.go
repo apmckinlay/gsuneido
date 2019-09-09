@@ -39,5 +39,5 @@ func TestStr(t *testing.T) {
 
 	rw.PutInt(0xffffff)
 	rw.Flush()
-	Assert(t).That(func () { rw.GetStr() }, Panics("bad io size"))
+	Assert(t).That(func() { rw.GetStr() }, Panics("bad io size"))
 }

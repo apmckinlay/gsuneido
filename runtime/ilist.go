@@ -5,7 +5,7 @@ type iList struct {
 	list []interface{}
 }
 
-type equable interface { Equal(other interface{}) bool }
+type equable interface{ Equal(other interface{}) bool }
 
 func (il *iList) Push(v interface{}) {
 	il.list = append(il.list, v)

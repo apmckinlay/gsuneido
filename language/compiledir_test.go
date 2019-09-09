@@ -15,8 +15,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/apmckinlay/gsuneido/compile"
 	_ "github.com/apmckinlay/gsuneido/builtin"
+	"github.com/apmckinlay/gsuneido/compile"
 	//	. "github.com/apmckinlay/gsuneido/util/hamcrest"
 )
 

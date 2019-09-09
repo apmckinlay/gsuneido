@@ -13,7 +13,7 @@ var _ = builtin2("WideCharToMultiByte(string, cp = 1252)",
 		// UTF-16 to 1252 or UTF-8
 		utf16 := ToStr(s)
 		if strings.HasSuffix(utf16, "\x00\x00") {
-			utf16 = utf16[: len(utf16) - 2]
+			utf16 = utf16[:len(utf16)-2]
 		}
 		utf16decode := unicode.UTF16(unicode.LittleEndian, unicode.IgnoreBOM).NewDecoder()
 		utf8, err := utf16decode.String(utf16)

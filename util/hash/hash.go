@@ -10,8 +10,7 @@ Only the first 64 bytes are included if longer.
 */
 package hash
 
-import 	"github.com/apmckinlay/gsuneido/util/ints"
-
+import "github.com/apmckinlay/gsuneido/util/ints"
 
 const (
 	offset32 = 2166136261

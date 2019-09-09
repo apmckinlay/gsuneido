@@ -7,7 +7,7 @@ import (
 )
 
 func TestCharClass(t *testing.T) {
-	test := func (in inst, s string, expected int) {
+	test := func(in inst, s string, expected int) {
 		t.Helper()
 		pat := Pattern([]inst{in})
 		var r Result

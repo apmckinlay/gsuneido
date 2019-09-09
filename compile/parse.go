@@ -12,7 +12,7 @@ import (
 func NewParser(src string) *parser {
 	lxr := NewLexer(src)
 	p := &parser{lxr: lxr, Factory: ast.Folder{ast.Builder{}},
-		checker: func(*ast.Function) { }}
+		checker: func(*ast.Function) {}}
 	p.next()
 	return p
 }

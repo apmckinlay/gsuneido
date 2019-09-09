@@ -34,7 +34,7 @@ func TestBlocks(t *testing.T) {
         Binary(Eq b Block(
         	a))`)
 	test("b = { a }; a",
-        `Binary(Eq b Block(
+		`Binary(Eq b Block(
 			a))
 		a`)
 	test("a=1; b = {|a| a }",

@@ -13,9 +13,9 @@ import (
 // It is designed so the sequence of values returned
 // forms the complete source.
 type Lexer struct {
-	src   string
-	si    int
-	ahead []Item
+	src     string
+	si      int
+	ahead   []Item
 	keyword func(s string) (tok.Token, string)
 }
 

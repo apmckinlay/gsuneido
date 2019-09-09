@@ -48,7 +48,7 @@ func Blocks(f *Function) {
 		_, this := x.vars["this"]
 		_, super := x.vars["super"]
 		if this || super || shares(x.vars, vars) ||
-				(x.parent != nil && shares(x.vars, x.parent.params)) {
+			(x.parent != nil && shares(x.vars, x.parent.params)) {
 			closure(x)
 			continue
 		}
@@ -174,7 +174,7 @@ func (b *bloks) expr(expr Expr, vars set) {
 		b.expr(expr.Lhs, vars)
 		b.expr(expr.Rhs, vars)
 	case *Ident:
-		if! ascii.IsUpper(expr.Name[0]) {
+		if !ascii.IsUpper(expr.Name[0]) {
 			vars[expr.Name] = yes
 		}
 	case *Trinary:

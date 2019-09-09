@@ -184,5 +184,5 @@ var isIdent = [Ntokens]bool{ // note: array rather than map
 // IsIdent returns whether a token is an identifier
 // token must be within the valid range
 func (token Token) IsIdent() bool {
-	return  token > QueryStart || isIdent[token]
+	return token > QueryStart || isIdent[token]
 }

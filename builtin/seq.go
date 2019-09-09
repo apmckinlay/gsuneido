@@ -8,7 +8,7 @@ import (
 )
 
 var _ = builtin1("Seq?(value)", func(val Value) Value {
-	_,ok := val.(*SuSequence)
+	_, ok := val.(*SuSequence)
 	return SuBool(ok)
 })
 

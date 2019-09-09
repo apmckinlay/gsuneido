@@ -49,7 +49,7 @@ func (p *parser) params(inClass bool) []ast.Param {
 				was_string := p.Token == tok.String
 				defs = true
 				def := p.constant()
-				if _,ok := def.(SuStr); ok && !was_string {
+				if _, ok := def.(SuStr); ok && !was_string {
 					p.error("parameter defaults must be constants")
 				}
 				params = append(params,

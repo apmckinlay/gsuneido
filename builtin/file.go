@@ -174,27 +174,27 @@ var suFileMethods = Methods{
 }
 
 func Readline(rdr io.Reader, errPrefix string) Value {
-		var buf strings.Builder
-		b := make([]byte, 1)
-		for {
-			n, err := rdr.Read(b)
-			if n == 0 {
-				if buf.Len() == 0 {
-					return False
-				}
-				break
+	var buf strings.Builder
+	b := make([]byte, 1)
+	for {
+		n, err := rdr.Read(b)
+		if n == 0 {
+			if buf.Len() == 0 {
+				return False
 			}
-			if err != nil {
-				panic(errPrefix + err.Error())
-			}
-			if b[0] == '\n' {
-				break
-			}
-			if buf.Len() < MaxLine {
-				buf.WriteByte(b[0])
-			}
+			break
 		}
-		s := buf.String()
-		s = strings.TrimRight(s, "\r")
-		return SuStr(s)
+		if err != nil {
+			panic(errPrefix + err.Error())
+		}
+		if b[0] == '\n' {
+			break
+		}
+		if buf.Len() < MaxLine {
+			buf.WriteByte(b[0])
+		}
+	}
+	s := buf.String()
+	s = strings.TrimRight(s, "\r")
+	return SuStr(s)
 }

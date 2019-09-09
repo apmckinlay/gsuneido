@@ -29,7 +29,7 @@ func (wi *wrapIter) Next() Value {
 }
 
 func (wi *wrapIter) Infinite() (result bool) {
-	defer func () {
+	defer func() {
 		if e := recover(); e != nil {
 			result = false
 		}

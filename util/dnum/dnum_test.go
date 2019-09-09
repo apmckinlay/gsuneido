@@ -30,7 +30,7 @@ func Test_ilog10(t *testing.T) {
 
 func Test_New(t *testing.T) {
 	Assert(t).That(New(signZero, 0, 0), Equals(Zero))
-	Assert(t).That(New(signPos, 1, 999), Equals(PosInf))    // exponent overflow
+	Assert(t).That(New(signPos, 1, 999), Equals(PosInf)) // exponent overflow
 	Assert(t).That(New(signNeg, 1, 999), Equals(NegInf)) // exponent overflow
 	Assert(t).That(New(signPos, 1, -999), Equals(Zero))  // exponent underflow
 	Assert(t).That(New(signNeg, 1, -999), Equals(Zero))  // exponent underflow
@@ -341,7 +341,7 @@ func Test_Div(t *testing.T) {
 }
 
 func Test_Format(t *testing.T) {
-	test := func (s, mask, expected string) {
+	test := func(s, mask, expected string) {
 		t.Helper()
 		dn := FromStr(s)
 		Assert(t).That(dn.Format(mask), Equals(expected))

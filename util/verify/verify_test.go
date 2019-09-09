@@ -1,8 +1,8 @@
 package verify
 
 import (
-	"testing"
 	. "github.com/apmckinlay/gsuneido/util/hamcrest"
+	"testing"
 )
 
 func TestVerify(t *testing.T) {

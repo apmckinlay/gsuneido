@@ -43,7 +43,7 @@ var threadMethods = Methods{
 	}),
 	"List": method0(func(this Value) Value {
 		ob := NewSuObject()
-		for _,t := range threads { //TODO lock
+		for _, t := range threads { //TODO lock
 			ob.Put(nil, SuStr(t.Name), True)
 		}
 		return ob
