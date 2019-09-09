@@ -33,8 +33,8 @@ const (
 	signNegInf = -2
 	expMin     = math.MinInt8
 	expMax     = math.MaxInt8
-	coefMin    = 1000000000000000
-	coefMax    = 9999999999999999
+	coefMin    = 1000_0000_0000_0000
+	coefMax    = 9999_9999_9999_9999
 	digitsMax  = 16
 	shiftMax   = digitsMax - 1
 )
@@ -42,8 +42,8 @@ const (
 // common values
 var (
 	Zero   = Dnum{}
-	One    = Dnum{1000000000000000, signPos, 1}
-	NegOne = Dnum{1000000000000000, signNeg, 1}
+	One    = Dnum{1000_0000_0000_0000, signPos, 1}
+	NegOne = Dnum{1000_0000_0000_0000, signNeg, 1}
 	PosInf = Dnum{1, signPosInf, 0}
 	NegInf = Dnum{1, signNegInf, 0}
 )

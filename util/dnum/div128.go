@@ -6,7 +6,7 @@ import (
 )
 
 const (
-	e16        = 10000000000000000
+	e16        = 1_0000_0000_0000_0000
 	longMask   = 0xffffffff
 	divNumBase = 1 << 32
 	e16Hi      = e16 >> 32
