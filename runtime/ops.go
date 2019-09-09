@@ -85,12 +85,12 @@ func Mod(x Value, y Value) Value {
 }
 
 func LeftShift(x Value, y Value) Value {
-	result := int32(ToInt(x)) << uint(ToInt(y))
+	result := int32(ToInt(x)) << ToInt(y)
 	return IntVal(int(result))
 }
 
 func RightShift(x Value, y Value) Value {
-	result := uint32(ToInt(x)) >> uint(ToInt(y))
+	result := uint32(ToInt(x)) >> ToInt(y)
 	return IntVal(int(result))
 }
 
