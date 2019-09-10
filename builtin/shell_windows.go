@@ -51,3 +51,127 @@ var _ = builtin2("DragQueryFile(hDrop, iFile)",
 			n)
 		return SuStr(str.BeforeFirst(string(buf), "\x00"))
 	})
+
+// dll bool Shell32:Shell_NotifyIcon(long dwMessage, NOTIFYICONDATA* lpdata)
+var shell_NotifyIcon = shell32.NewProc("Shell_NotifyIconA")
+var _ = builtin2("Shell_NotifyIcon(dwMessage, lpdata)",
+	func(a, b Value) Value {
+		nid := NOTIFYICONDATA{
+			cbSize:               int32(unsafe.Sizeof(NOTIFYICONDATA{})),
+			hWnd:                 getHandle(b, "hWnd"),
+			uID:                  getInt32(b, "uID"),
+			uFlags:               getInt32(b, "uFlags"),
+			uCallbackMessage:     getInt32(b, "uCallbackMessage"),
+			hIcon:                getHandle(b, "hIcon"),
+			dwState:              getInt32(b, "dwState"),
+			dwStateMask:          getInt32(b, "dwStateMask"),
+			uTimeoutVersionUnion: getUint32(b, "uTimeoutVersionUnion"),
+			dwInfoFlags:          getInt32(b, "dwInfoFlags"),
+		}
+		copyStr(nid.szTip[:], ToStr(b.Get(nil, SuStr("szTip"))))
+		copyStr(nid.szInfo[:], ToStr(b.Get(nil, SuStr("szInfo"))))
+		copyStr(nid.szInfoTitle[:], ToStr(b.Get(nil, SuStr("szInfoTitle"))))
+		rtn, _, _ := shell_NotifyIcon.Call(
+			intArg(a),
+			uintptr(unsafe.Pointer(&nid)))
+		return boolRet(rtn)
+	})
+
+type NOTIFYICONDATA struct {
+	cbSize               int32
+	hWnd                 HANDLE
+	uID                  int32
+	uFlags               int32
+	uCallbackMessage     int32
+	hIcon                HANDLE
+	szTip                [64]byte
+	dwState              int32
+	dwStateMask          int32
+	szInfo               [256]byte
+	uTimeoutVersionUnion uint32
+	szInfoTitle          [64]byte
+	dwInfoFlags          int32
+}
+
+// copyStr copies the string into the byte slice and adds a nul terminator
+func copyStr(dst []byte, src string) {
+	copy(dst[:], src)
+	dst[len(src)] = 0
+}
+
+// dll bool Shell32:ShellExecuteEx(SHELLEXECUTEINFO* lpExecInfo)
+var shellExecuteEx = shell32.NewProc("ShellExecuteEx")
+var _ = builtin1("ShellExecuteEx(lpExecInfo)",
+	func(a Value) Value {
+		sei := SHELLEXECUTEINFO{
+			cbSize:       int32(unsafe.Sizeof(SHELLEXECUTEINFO{})),
+			fMask:        getInt32(a, "fMask"),
+			hwnd:         getHandle(a, "hwnd"),
+			lpVerb:       getStr(a, "lpVerb"),
+			lpFile:       getStr(a, "lpFile"),
+			lpDirectory:  getStr(a, "lpDirectory"),
+			lpParameters: getStr(a, "lpParameters"),
+			nShow:        getInt32(a, "nShow"),
+			hInstApp:     getHandle(a, "hInstApp"),
+			lpIDList:     getHandle(a, "lpIDList"),
+			lpClass:      getStr(a, "lpClass"),
+			hkeyClass:    getHandle(a, "hkeyClass"),
+			dwHotKey:     getInt32(a, "dwHotKey"),
+			hIcon:        getHandle(a, "hIcon"),
+			hProcess:     getHandle(a, "hProcess"),
+		}
+		rtn, _, _ := shellExecuteEx.Call(
+			uintptr(unsafe.Pointer(&sei)))
+		return boolRet(rtn)
+	})
+
+type SHELLEXECUTEINFO struct {
+	cbSize       int32
+	fMask        int32
+	hwnd         HANDLE
+	lpVerb       *byte
+	lpFile       *byte
+	lpParameters *byte
+	lpDirectory  *byte
+	nShow        int32
+	hInstApp     HANDLE
+	lpIDList     HANDLE
+	lpClass      *byte
+	hkeyClass    HANDLE
+	dwHotKey     int32
+	hIcon        HANDLE
+	hProcess     HANDLE
+}
+
+const MAX_PATH = 260
+
+// dll pointer Shell32:SHBrowseForFolder(BROWSEINFO* lpbi)
+var sHBrowseForFolder = shell32.NewProc("SHBrowseForFolderA")
+var _ = builtin1("SHBrowseForFolder(lpbi)",
+	func(a Value) Value {
+		var displayName [MAX_PATH]byte
+		bi := BROWSEINFO{
+			hwndOwner:      getHandle(a, "hwndOwner"),
+			pidlRoot:       getHandle(a, "pidlRoot"),
+			pszDisplayName: &displayName[0],
+			lpszTitle:      getStr(a, "lpszTitle"),
+			ulFlags:        getInt32(a, "ulFlags"),
+			lpfn:           getCallback(a, "lpfn", 4),
+			lParam:         getHandle(a, "lParam"),
+			iImage:         getInt32(a, "iImage"),
+		}
+		rtn, _, _ := sHBrowseForFolder.Call(
+			uintptr(unsafe.Pointer(&bi)))
+		return intRet(rtn)
+	})
+
+type BROWSEINFO struct {
+	hwndOwner      HANDLE
+	pidlRoot       HANDLE
+	pszDisplayName *byte
+	lpszTitle      *byte
+	ulFlags        int32
+	lpfn           uintptr
+	lParam         HANDLE
+	iImage         int32
+}

@@ -8,7 +8,7 @@ import (
 var uxtheme = windows.NewLazyDLL("uxtheme.dll")
 
 // dll uxtheme:DrawThemeBackground(pointer hTheme, pointer hdc, long iPartId,
-// long iStateId, RECT* pRect, RECT* pClipRect) long
+//		long iStateId, RECT* pRect, RECT* pClipRect) long
 var drawThemeBackground = uxtheme.NewProc("DrawThemeBackground")
 var _ = builtin6("DrawThemeBackground(hTheme, hdc, iPartId, iStateId, pRect,"+
 	" pClipRect)",
@@ -26,8 +26,8 @@ var _ = builtin6("DrawThemeBackground(hTheme, hdc, iPartId, iStateId, pRect,"+
 	})
 
 // dll uxtheme:DrawThemeText(pointer hTheme, pointer hdc, long iPartId,
-// long iStateId, string pszText, long iCharCount, long dwTextFlags,
-// long dwTextFlags2, RECT* pRect) long
+//		long iStateId, string pszText, long iCharCount, long dwTextFlags,
+//		long dwTextFlags2, RECT* pRect) long
 var drawThemeText = uxtheme.NewProc("DrawThemeText")
 var _ = builtin("DrawThemeText(hTheme, hdc, iPartId, iStateId, pszText,"+
 	" iCharCount, dwTextFlags, dwTextFlags2, pRect)",
@@ -83,9 +83,9 @@ var _ = builtin1("CloseThemeData(hTheme)",
 	})
 
 // dll bool UxTheme:IsThemeBackgroundPartiallyTransparent(
-// 	pointer hTheme,
-// 	long iPartId,
-// 	long iStateId)
+//		pointer hTheme,
+//		long iPartId,
+//		long iStateId)
 var isThemeBackgroundPartiallyTransparent = uxtheme.NewProc("IsThemeBackgroundPartiallyTransparent")
 var _ = builtin3("IsThemeBackgroundPartiallyTransparent(hTheme, iPartId, iStateId)",
 	func(a, b, c Value) Value {
@@ -96,14 +96,25 @@ var _ = builtin3("IsThemeBackgroundPartiallyTransparent(hTheme, iPartId, iStateI
 		return boolRet(rtn)
 	})
 
-// dll pointer uxtheme:OpenThemeData(
-// 	pointer hwnd,
-// 	string pszClassList)
+// dll pointer uxtheme:OpenThemeData(pointer hwnd, string pszClassList)
 var openThemeData = uxtheme.NewProc("OpenThemeData")
 var _ = builtin2("OpenThemeData(hwnd, pszClassList)",
 	func(a, b Value) Value {
 		rtn, _, _ := openThemeData.Call(
 			intArg(a),
 			uintptr(stringArg(b)))
+		return intRet(rtn)
+	})
+
+// dll long UxTheme:DrawThemeParentBackground(pointer hwnd, pointer hdc,
+//		RECT* prc)
+var drawThemeParentBackground = uxtheme.NewProc("DrawThemeParentBackground")
+var _ = builtin3("DrawThemeParentBackground(hwnd, hdc, prc)",
+	func(a, b, c Value) Value {
+		var r RECT
+		rtn, _, _ := drawThemeParentBackground.Call(
+			intArg(a),
+			intArg(b),
+			uintptr(rectArg(c, &r)))
 		return intRet(rtn)
 	})

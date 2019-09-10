@@ -746,3 +746,130 @@ type MAT2 struct {
 	eM21 FIXED
 	eM22 FIXED
 }
+
+// dll long Gdi32:StartDoc(pointer hdc, DOCINFO* di)
+var startDoc = gdi32.NewProc("StartDocA")
+var _ = builtin2("StartDoc(hdc, di)",
+	func(a, b Value) Value {
+		di := DOCINFO{
+			cbSize:       int32(unsafe.Sizeof(DOCINFO{})),
+			lpszDocName:  getStr(b, "lpszDocName"),
+			lpszOutput:   getStr(b, "lpszOutput"),
+			lpszDatatype: getStr(b, "lpszDatatype"),
+			fwType:       getInt32(b, "fwType"),
+		}
+		rtn, _, _ := startDoc.Call(
+			intArg(a),
+			uintptr(unsafe.Pointer(&di)))
+		return intRet(rtn)
+	})
+
+type DOCINFO struct {
+	cbSize       int32
+	lpszDocName  *byte
+	lpszOutput   *byte
+	lpszDatatype *byte
+	fwType       int32
+}
+
+// dll bool Gdi32:SetWindowExtEx(pointer hdc, long x, long y, POINT* p)
+var setWindowExtEx = gdi32.NewProc("SetWindowExtEx")
+var _ = builtin4("SetWindowExtEx(hdc, x, y, p)",
+	func(a, b, c, d Value) Value {
+		var pt POINT
+		rtn, _, _ := setWindowExtEx.Call(
+			intArg(a),
+			intArg(b),
+			intArg(c),
+			uintptr(unsafe.Pointer(&pt)))
+		pointToOb(&pt, d)
+		return boolRet(rtn)
+	})
+
+// dll bool Gdi32:SetViewportOrgEx(pointer hdc, long x, long y, POINT* p)
+var setViewportOrgEx = gdi32.NewProc("SetViewportOrgEx")
+var _ = builtin4("SetViewportOrgEx(hdc, x, y, p)",
+	func(a, b, c, d Value) Value {
+		var pt POINT
+		rtn, _, _ := setViewportOrgEx.Call(
+			intArg(a),
+			intArg(b),
+			intArg(c),
+			uintptr(unsafe.Pointer(&pt)))
+		pointToOb(&pt, d)
+		return boolRet(rtn)
+	})
+
+// dll bool Gdi32:SetViewportExtEx(pointer hdc, long x, long y, POINT* p)
+var setViewportExtEx = gdi32.NewProc("SetViewportExtEx")
+var _ = builtin4("SetViewportExtEx(hdc, x, y, p)",
+	func(a, b, c, d Value) Value {
+		var pt POINT
+		rtn, _, _ := setViewportExtEx.Call(
+			intArg(a),
+			intArg(b),
+			intArg(c),
+			uintptr(unsafe.Pointer(&pt)))
+		pointToOb(&pt, d)
+		return boolRet(rtn)
+	})
+
+// dll bool Gdi32:PlayEnhMetaFile(pointer hdc, pointer hemf, RECT* rect)
+var playEnhMetaFile = gdi32.NewProc("PlayEnhMetaFile")
+var _ = builtin3("PlayEnhMetaFile(hdc, hemf, rect)",
+	func(a, b, c Value) Value {
+		var r RECT
+		rtn, _, _ := playEnhMetaFile.Call(
+			intArg(a),
+			intArg(b),
+			uintptr(rectArg(c, &r)))
+		return boolRet(rtn)
+	})
+
+// dll bool Gdi32:MoveToEx(pointer hdc, long x, long y, POINT* p)
+var moveToEx = gdi32.NewProc("MoveToEx")
+var _ = builtin4("MoveToEx(hdc, x, y, p)",
+	func(a, b, c, d Value) Value {
+		var pt POINT
+		rtn, _, _ := moveToEx.Call(
+			intArg(a),
+			intArg(b),
+			intArg(c),
+			uintptr(unsafe.Pointer(&pt)))
+		pointToOb(&pt, d)
+		return boolRet(rtn)
+	})
+
+// dll long Gdi32:GetObject(pointer hgdiobj, long bufsize, buffer buf)
+var getObject = gdi32.NewProc("GetObject")
+var _ = builtin1("GetObjectBitmap(h)",
+	func(a Value) Value {
+		var bm BITMAP
+		bmSize := unsafe.Sizeof(bm)
+		rtn, _, _ := getObject.Call(
+			intArg(a),
+			bmSize,
+			uintptr(unsafe.Pointer(&bm)))
+		if rtn != bmSize {
+			return False
+		}
+		ob := NewSuObject()
+		ob.Put(nil, SuStr("bmType"), IntVal(int(bm.bmType)))
+		ob.Put(nil, SuStr("bmWidth"), IntVal(int(bm.bmWidth)))
+		ob.Put(nil, SuStr("bmHeight"), IntVal(int(bm.bmHeight)))
+		ob.Put(nil, SuStr("bmWidthBytes"), IntVal(int(bm.bmWidthBytes)))
+		ob.Put(nil, SuStr("bmPlanes"), IntVal(int(bm.bmPlanes)))
+		ob.Put(nil, SuStr("bmBitsPixel"), IntVal(int(bm.bmBitsPixel)))
+		// bmBits not used
+		return ob
+	})
+
+type BITMAP struct {
+	bmType       uint32
+	bmWidth      uint32
+	bmHeight     uint32
+	bmWidthBytes uint32
+	bmPlanes     int16
+	bmBitsPixel  int16
+	bmBits       uintptr
+}

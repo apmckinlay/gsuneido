@@ -1,6 +1,7 @@
 package builtin
 
 import (
+	"bytes"
 	"unsafe"
 
 	. "github.com/apmckinlay/gsuneido/runtime"
@@ -183,7 +184,7 @@ func intArg(arg Value) uintptr {
 }
 
 func intRet(rtn uintptr) Value {
-	return IntVal(int(rtn))
+	return intRet(rtn)
 }
 
 var zero byte
@@ -206,6 +207,10 @@ func bytePtrFromString(v Value) *byte {
 
 func stringArg(v Value) unsafe.Pointer {
 	return unsafe.Pointer(bytePtrFromString(v))
+}
+
+func strRet(buf []byte) Value {
+	return SuStr(string(buf[:bytes.IndexByte(buf, 0)]))
 }
 
 func getBool(ob Value, mem string) bool {
@@ -316,6 +321,14 @@ func pointArg(ob Value, pt *POINT) unsafe.Pointer {
 
 func getHandle(ob Value, mem string) HANDLE {
 	return HANDLE(getInt(ob, mem))
+}
+
+func getCallback(ob Value, mem string, nargs byte) uintptr {
+	fn := ob.Get(nil, SuStr(mem))
+	if fn == nil {
+		return 0
+	}
+	return NewCallback(fn, nargs)
 }
 
 //===================================================================
@@ -1052,7 +1065,7 @@ var _ = builtin4("SendMessageTextOut(hwnd, msg, wParam = 0, bufsize = 1024)",
 		ob := NewSuObject()
 		text := str.BeforeFirst(string(buf), "\x00")
 		ob.Put(nil, SuStr("text"), SuStr(text))
-		ob.Put(nil, SuStr("result"), IntVal(int(rtn)))
+		ob.Put(nil, SuStr("result"), intRet(rtn))
 		return ob
 	})
 
@@ -1963,6 +1976,8 @@ var _ = builtin2("ClientToScreen(hWnd, point)",
 		rtn, _, _ := clientToScreen.Call(
 			intArg(a),
 			uintptr(pointArg(b, &pt)))
+		b.Put(nil, SuStr("x"), IntVal(int(pt.x)))
+		b.Put(nil, SuStr("y"), IntVal(int(pt.y)))
 		return intRet(rtn)
 	})
 
@@ -2158,3 +2173,170 @@ type BITMAPINFOHEADER struct {
 	biClrUsed       int32
 	biClrImportant  int32
 }
+
+// dll bool User32:EnumThreadWindows(long dwThreadId, WNDENUMPROC lpfn,
+//		pointer lParam)
+var enumThreadWindows = user32.NewProc("EnumThreadWindows")
+var _ = builtin3("EnumThreadWindows(dwThreadId, lpfn, lParam)",
+	func(a, b, c Value) Value {
+		rtn, _, _ := enumThreadWindows.Call(
+			intArg(a),
+			NewCallback(b, 2),
+			intArg(c))
+		return boolRet(rtn)
+	})
+
+// dll bool User32:EnumChildWindows(pointer hwnd, WNDENUMPROC lpEnumProc,
+//		pointer lParam)
+var enumChildWindows = user32.NewProc("EnumChildWindows")
+var _ = builtin3("EnumChildWindowsApi(hwnd, lpEnumProc, lParam)",
+	func(a, b, c Value) Value {
+		rtn, _, _ := enumChildWindows.Call(
+			intArg(a),
+			NewCallback(b, 2),
+			intArg(c))
+		return boolRet(rtn)
+	})
+
+// dll pointer User32:WindowFromPoint(POINT pt)
+var windowFromPoint = user32.NewProc("WindowFromPoint")
+var _ = builtin1("WindowFromPoint(pt)",
+	func(a Value) Value {
+		var pt POINT
+		rtn, _, _ := windowFromPoint.Call(
+			uintptr(pointArg(a, &pt)))
+		return intRet(rtn)
+	})
+
+// dll long User32:GetWindowThreadProcessId(pointer hwnd, LONG* lpdwProcessId)
+var getWindowThreadProcessId = user32.NewProc("GetWindowThreadProcessId")
+var _ = builtin2("GetWindowThreadProcessId(hwnd, lpdwProcessId)",
+	func(a, b Value) Value {
+		var prcid int32
+		rtn, _, _ := getWindowThreadProcessId.Call(
+			intArg(a),
+			uintptr(unsafe.Pointer(&prcid)))
+		b.Put(nil, SuStr("x"), IntVal(int(prcid)))
+		return boolRet(rtn)
+	})
+
+// dll long User32:TrackPopupMenu(pointer hMenu, long uFlags, long x, long y,
+//		long nReserved, pointer hWnd, RECT* prcRect)
+var trackPopupMenu = user32.NewProc("TrackPopupMenu")
+var _ = builtin7("TrackPopupMenu(hMenu, uFlags, x, y, nReserved, hWnd, prcRect)",
+	func(a, b, c, d, e, f, g Value) Value {
+		var r RECT
+		rtn, _, _ := trackPopupMenu.Call(
+			intArg(a),
+			intArg(b),
+			intArg(c),
+			intArg(d),
+			intArg(e),
+			intArg(f),
+			uintptr(rectArg(g, &r)))
+		return intRet(rtn)
+	})
+
+// dll pointer User32:SetWindowsHookEx(long idHook, HOOKPROC lpfn, pointer hMod,
+//		long dwThreadId)
+var setWindowsHookEx = user32.NewProc("SetWindowsHookExA")
+var _ = builtin4("SetWindowsHookEx(idHook, lpfn, hMod, dwThreadId)",
+	func(a, b, c, d Value) Value {
+		rtn, _, _ := setWindowsHookEx.Call(
+			intArg(a),
+			NewCallback(b, 3),
+			intArg(c),
+			intArg(d))
+		return intRet(rtn)
+	})
+
+// dll long User32:SetScrollInfo(pointer hwnd, long bar, SCROLLINFO* si,
+//		bool redraw)
+var setScrollInfo = user32.NewProc("SetScrollInfo")
+var _ = builtin4("SetScrollInfo(hwnd, bar, si, redraw)",
+	func(a, b, c, d Value) Value {
+		si := SCROLLINFO{
+			cbSize:    uint32(unsafe.Sizeof(SCROLLINFO{})),
+			fMask:     getUint32(c, "fMask"),
+			nMin:      getInt32(c, "nMin"),
+			nMax:      getInt32(c, "nMax"),
+			nPage:     getUint32(c, "nPage"),
+			nPos:      getInt32(c, "nPos"),
+			nTrackPos: getInt32(c, "nTrackPos"),
+		}
+		rtn, _, _ := setScrollInfo.Call(
+			intArg(a),
+			intArg(b),
+			uintptr(unsafe.Pointer(&si)),
+			boolArg(d))
+		return intRet(rtn)
+	})
+
+// dll long User32:ScrollWindowEx(pointer hwnd, long dx, long dy, RECT* scroll,
+//		RECT* clip, pointer rgnUpdate, RECT* rcUpdate, long flags)
+var scrollWindowEx = user32.NewProc("ScrollWindowEx")
+var _ = builtin("ScrollWindowEx(hwnd, dx, dy, scroll, clip, rgnUpdate,"+
+	"rcUpdate, flags)",
+	func(_ *Thread, a []Value) Value {
+		var r1 RECT
+		var r2 RECT
+		var r3 RECT
+		rtn, _, _ := scrollWindowEx.Call(
+			intArg(a[0]),
+			intArg(a[1]),
+			intArg(a[2]),
+			uintptr(rectArg(a[3], &r1)),
+			uintptr(rectArg(a[4], &r2)),
+			intArg(a[5]),
+			uintptr(rectArg(a[6], &r3)),
+			intArg(a[7]))
+		rectToOb(&r3, a[6])
+		return intRet(rtn)
+	})
+
+// dll bool User32:ScreenToClient(pointer hwnd, POINT* p)
+var screenToClient = user32.NewProc("ScreenToClient")
+var _ = builtin2("ScreenToClient(hWnd, p)",
+	func(a, b Value) Value {
+		var pt POINT
+		rtn, _, _ := screenToClient.Call(
+			intArg(a),
+			uintptr(pointArg(b, &pt)))
+		b.Put(nil, SuStr("x"), IntVal(int(pt.x)))
+		b.Put(nil, SuStr("y"), IntVal(int(pt.y)))
+		return boolRet(rtn)
+	})
+
+// dll pointer User32:LoadImage(pointer hInstance, resource lpszName,
+//		long uType, long cxDesired, long cyDesired, long fuLoad)
+var loadImage = user32.NewProc("LoadImageA")
+var _ = builtin6("LoadImage(hInstance, lpszName, uType, cxDesired, cyDesired,"+
+	" fuLoad)",
+	func(a, b, c, d, e, f Value) Value {
+		rtn, _, _ := loadImage.Call(
+			intArg(a),
+			uintptr(stringArg(f)), // doesn't handle resource id
+			intArg(c),
+			intArg(d),
+			intArg(e),
+			intArg(f))
+		return intRet(rtn)
+	})
+
+// dll bool User32:IsDialogMessage(pointer hDlg, MSG* lpMsg)
+var isDialogMessage = user32.NewProc("IsDialogMessageA")
+var _ = builtin2("IsDialogMessage(hDlg, lpMsg)",
+	func(a, b Value) Value {
+		msg := MSG{
+			hwnd:    getHandle(b, "hwnd"),
+			message: uint32(getInt(b, "message")),
+			wParam:  getHandle(b, "wParam"),
+			lParam:  getHandle(b, "lParam"),
+			time:    uint32(getInt(b, "time")),
+			pt:      getPoint(b, "pt"),
+		}
+		rtn, _, _ := isDialogMessage.Call(
+			intArg(a),
+			uintptr(unsafe.Pointer(&msg)))
+		return boolRet(rtn)
+	})

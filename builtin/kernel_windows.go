@@ -1,7 +1,6 @@
 package builtin
 
 import (
-	"bytes"
 	"unsafe"
 
 	. "github.com/apmckinlay/gsuneido/runtime"
@@ -53,9 +52,9 @@ var _ = builtin2("GetLocaleInfo(a,b)",
 		getLocaleInfo.Call(
 			intArg(a),
 			intArg(b),
-			uintptr(unsafe.Pointer(&buf)),
+			uintptr(unsafe.Pointer(&buf[0])),
 			uintptr(bufsize))
-		return SuStr(string(buf[:bytes.IndexByte(buf[:], 0)]))
+		return strRet(buf[:])
 	})
 
 // dll Kernel32:GetProcAddress(pointer hModule, instring procName) pointer
@@ -430,4 +429,25 @@ var _ = builtin2("GetFileSize(a, b/*unused*/)",
 			intArg(a),
 			0)
 		return intRet(rtn)
+	})
+
+// dll bool Kernel32:GetVolumeInformation([in] string lpRootPathName,
+//		string lpVolumeNameBuffer, long nVolumeNameSize, LONG* lpVolumeSerialNumber,
+//		LONG* lpMaximumComponentLength, LONG* lpFileSystemFlags,
+//		string lpFileSystemNameBuffer, long nFileSystemNameSize)
+var getVolumeInformation = kernel32.NewProc("GetVolumeInformationA")
+var _ = builtin1("GetVolumeName(vol = 'c:\\\\')",
+	func(a Value) Value {
+		const bufsize = 255
+		var buf [bufsize + 1]byte
+		getVolumeInformation.Call(
+			uintptr(stringArg(a)),
+			uintptr(unsafe.Pointer(&buf[0])),
+			uintptr(bufsize),
+			0,
+			0,
+			0,
+			0,
+			0)
+		return strRet(buf[:])
 	})

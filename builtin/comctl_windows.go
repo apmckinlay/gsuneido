@@ -140,3 +140,28 @@ var _ = builtin4("DrawStatusText(himlTrack, iTrack, dxHotspot, dyHotspot)",
 			intArg(d))
 		return nil
 	})
+
+// dll bool Comctl32:ImageList_GetImageInfo(pointer himl, long imageindex,
+//		IMAGEINFO* pImageInfo)
+var imageList_GetImageInfo = comctl32.NewProc("ImageList_GetImageInfo")
+var _ = builtin3("ImageList_GetImageInfo(himl, imageindex, pImageInfo)",
+	func(a, b, c Value) Value {
+		var imginf IMAGEINFO
+		rtn, _, _ := imageList_GetImageInfo.Call(
+			intArg(a),
+			intArg(b),
+			uintptr(unsafe.Pointer(&imginf)))
+		c.Put(nil, SuStr("hbmImage"), IntVal(int(imginf.hbmImage)))
+		c.Put(nil, SuStr("hbmMask"), IntVal(int(imginf.hbmMask)))
+		c.Put(nil, SuStr("rcImage"),
+			rectToOb(&imginf.rcImage, c.Get(nil, SuStr("rcImage"))))
+		return boolRet(rtn)
+	})
+
+type IMAGEINFO struct {
+	hbmImage HANDLE
+	hbmMask  HANDLE
+	Unused1  int32
+	Unused2  int32
+	rcImage  RECT
+}
