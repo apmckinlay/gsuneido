@@ -1,6 +1,7 @@
 package runtime
 
 import (
+	"fmt"
 	"strconv"
 	"sync/atomic"
 
@@ -106,7 +107,7 @@ func (t *Thread) Reset() {
 }
 
 // Callstack captures the call stack
-func (t *Thread) CallStack() *SuObject {
+func (t *Thread) Callstack() *SuObject {
 	// NOTE: it might be more efficient
 	// to capture the call stack in an internal format
 	// and only build the SuObject if required

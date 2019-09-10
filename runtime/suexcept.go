@@ -8,7 +8,7 @@ type SuExcept struct {
 }
 
 func NewSuExcept(t *Thread, s SuStr) *SuExcept {
-	return &SuExcept{SuStr: s, Callstack: t.CallStack()}
+	return &SuExcept{SuStr: s, Callstack: t.Callstack()}
 }
 
 // SuValue interface ------------------------------------------------

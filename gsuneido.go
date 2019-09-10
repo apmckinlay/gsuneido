@@ -124,7 +124,7 @@ func internal(e interface{}) bool {
 	return ok
 }
 
-func printCallStack(cs *SuObject) {
+func printCallstack(cs *SuObject) {
 	if cs == nil {
 		return
 	}
