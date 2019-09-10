@@ -184,7 +184,7 @@ func intArg(arg Value) uintptr {
 }
 
 func intRet(rtn uintptr) Value {
-	return intRet(rtn)
+	return IntVal(int(rtn))
 }
 
 var zero byte
