@@ -1,6 +1,7 @@
 package builtin
 
 import (
+	"fmt"
 	"time"
 
 	. "github.com/apmckinlay/gsuneido/runtime"
@@ -23,6 +24,10 @@ func threadCallClass(arg Value) Value {
 	threads[t2.Num] = t2 //TODO lock
 	go func() {
 		defer func() {
+			if e := recover(); e != nil {
+				fmt.Println("error in thread:", e)
+				t2.PrintStack()
+			}
 			t2.Close()
 			delete(threads, t2.Num) //TODO lock
 		}()
