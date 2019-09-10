@@ -91,11 +91,11 @@ func eval(src string) {
 			if internal(e) {
 				debug.PrintStack()
 				fmt.Println("---")
-				printCallStack(mainThread.CallStack())
+				PrintStack(mainThread.Callstack())
 			} else if se, ok := e.(*SuExcept); ok {
-				printCallStack(se.Callstack)
+				PrintStack(se.Callstack)
 			} else {
-				printCallStack(mainThread.CallStack())
+				PrintStack(mainThread.Callstack())
 			}
 		}
 	}()
@@ -122,23 +122,6 @@ type internalError interface {
 func internal(e interface{}) bool {
 	_, ok := e.(internalError)
 	return ok
-}
-
-func printCallstack(cs *SuObject) {
-	if cs == nil {
-		return
-	}
-	for i := 0; i < cs.ListSize(); i++ {
-		frame := cs.ListGet(i)
-		fn := frame.Get(nil, SuStr("fn"))
-		fmt.Println(fn)
-		locals := frame.Get(nil, SuStr("locals"))
-		s := locals.String()
-		if len(s) > 230 {
-			s = s[:230] + "..."
-		}
-		fmt.Println(s)
-	}
 }
 
 // libload loads a name from the dbms
