@@ -243,7 +243,7 @@ var _ = builtin1("SCNotificationText(address)",
 	func(a Value) Value {
 		scn := (*SCNotification)(unsafe.Pointer(uintptr(ToInt(a))))
 		ob := scnToOb(scn)
-		ob.Put(nil, SuStr("text"), SuStr(strFromAddr(scn.text)))
+		ob.Put(nil, SuStr("text"), strFromAddr(scn.text))
 		return ob
 	})
 
@@ -270,7 +270,10 @@ func scnToOb(scn *SCNotification) *SuObject {
 	return ob
 }
 
-func strFromAddr(a uintptr) string {
+func strFromAddr(a uintptr) Value {
+	if a == 0 {
+		return False
+	}
 	var sb strings.Builder
 	for ; ; a++ {
 		c := *(*byte)(unsafe.Pointer(a))
@@ -279,5 +282,5 @@ func strFromAddr(a uintptr) string {
 		}
 		sb.WriteByte(c)
 	}
-	return sb.String()
+	return SuStr(sb.String())
 }

@@ -125,7 +125,7 @@ var _ = builtin1("GlobalUnlock(hMem)",
 var _ = builtin1("GlobalUnlockString(hMem)",
 	func(a Value) Value {
 		rtn, _, _ := globalUnlock.Call(intArg(a))
-		return SuStr(strFromAddr(rtn))
+		return strFromAddr(rtn)
 	})
 
 // dll Kernel32:HeapAlloc(pointer hHeap, long dwFlags, long dwBytes) pointer
