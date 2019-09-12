@@ -213,17 +213,17 @@ func memToStr(p uintptr, n uintptr) string {
 
 type SCNotification struct {
 	nmhdr            NMHDR
-	position         int32
+	position         int
 	ch               int32
 	modifiers        int32
 	modificationType int32
 	text             uintptr
-	length           int32
-	linesAdded       int32
+	length           int
+	linesAdded       int
 	message          int32
 	wParam           uintptr
 	lParam           uintptr
-	line             int32
+	line             int
 	foldLevelNow     int32
 	foldLevelPrev    int32
 	margin           int32
