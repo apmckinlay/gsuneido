@@ -1263,10 +1263,22 @@ var _ = builtin1("SetFocus(hwnd)",
 		return intRet(rtn)
 	})
 
+var postThreadMessage = user32.NewProc("PostThreadMessageA")
+
 // dll User32:SetTimer(pointer hwnd, long id, long ms, TIMERPROC f) long
 var setTimer = user32.NewProc("SetTimer")
 var _ = builtin4("SetTimer(hwnd, id, ms, f)",
 	func(a, b, c, d Value) Value {
+		tid, _, _ := getCurrentThreadId.Call()
+		if tid != uiThreadId {
+			r, _, _ := postThreadMessage.Call(uiThreadId, WM_USER,
+				intArg(c), NewCallback(d, 4))
+			if r == 0 {
+				return Zero // SetTimer failure return value
+			}
+			rtn := <-retChan
+			return intRet(rtn)
+		}
 		rtn, _, _ := setTimer.Call(
 			intArg(a),
 			intArg(b),

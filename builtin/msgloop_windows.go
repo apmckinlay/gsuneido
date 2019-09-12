@@ -20,9 +20,20 @@ type MSG struct {
 	pt      POINT
 }
 
+var uiThreadId uintptr
+
+const WM_USER = 0x400
+
+var retChan = make(chan uintptr, 1)
+
 func MessageLoop() {
 	var msg MSG
 	for 0 != GetMessage(&msg, 0, 0, 0) {
+		if msg.hwnd == 0 && msg.message == WM_USER {
+			rtn, _, _ := setTimer.Call(0, 0, msg.wParam, msg.lParam)
+			retChan <- rtn
+			continue
+		}
 		TranslateMessage(&msg)
 		DispatchMessage(&msg)
 	}
