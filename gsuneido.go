@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"runtime"
 	"runtime/debug"
 
 	"strings"
@@ -28,8 +27,7 @@ var dbmsLocal IDbms
 var mainThread *Thread
 
 func main() {
-	runtime.LockOSThread()
-	Global.Builtin("Suneido", new(SuObject))
+	builtin.Init()
 	options.BuiltDate = builtDate
 	flag.BoolVar(&options.Client, "c", false, "run as a client")
 	flag.Parse()

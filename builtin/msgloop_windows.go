@@ -1,6 +1,7 @@
 package builtin
 
 import (
+	"runtime"
 	"unsafe"
 
 	. "github.com/apmckinlay/gsuneido/runtime"
@@ -25,6 +26,11 @@ var uiThreadId uintptr
 const WM_USER = 0x400
 
 var retChan = make(chan uintptr, 1)
+
+func Init() {
+	runtime.LockOSThread()
+	uiThreadId, _, _ = getCurrentThreadId.Call()
+}
 
 func MessageLoop() {
 	var msg MSG

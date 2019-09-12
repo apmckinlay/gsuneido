@@ -8,6 +8,9 @@ import (
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
+func Init() {
+}
+
 var _ = builtin0("SystemMemory()", func() Value {
 	s, err := syscall.Sysctl("hw.memsize")
 	if err != nil {
