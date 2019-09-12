@@ -1838,7 +1838,7 @@ var _ = builtin5("mouse_event(dwFlags, dx, dy, dwData, dwExtraInfo)",
 	})
 
 // dll bool User32:PostMessage(pointer hwnd, long msg, pointer wParam, pointer lParam)
-var postMessage = user32.NewProc("PostMessage")
+var postMessage = user32.NewProc("PostMessageA")
 var _ = builtin4("PostMessage(hwnd, msg, wParam, lParam)",
 	func(a, b, c, d Value) Value {
 		rtn, _, _ := postMessage.Call(
