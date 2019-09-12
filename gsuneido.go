@@ -28,7 +28,7 @@ var mainThread *Thread
 
 func main() {
 	builtin.Init()
-	Global.Builtin("Suneido", new(SuneidoObject))
+	Global.Builtin("Suneido", (new(SuObject)).SetConcurrent())
 	options.BuiltDate = builtDate
 	flag.BoolVar(&options.Client, "c", false, "run as a client")
 	flag.Parse()

@@ -27,13 +27,16 @@ func emptyOb() *SuObject {
 // i.e. a container with both list and named members.
 // Zero value is a valid empty object.
 //
-// NOTE: Not thread safe
+// If concurrent is 0, no locking, assumed to be thread contained
+// If concurrent is 1, guarded by lock, assumed to be shared
 type SuObject struct {
-	list     []Value
-	named    hmap.Hmap
-	readonly bool
-	version  int32
-	defval   Value
+	list       []Value
+	named      hmap.Hmap
+	readonly   bool
+	concurrent int32 // access atomically
+	version    int32
+	lock       sync.Mutex
+	defval     Value
 	CantConvert
 }
 
@@ -82,6 +85,10 @@ func (ob *SuObject) defaultValue(key Value) Value {
 }
 
 func (ob *SuObject) GetIfPresent(_ *Thread, key Value) Value {
+	if atomic.LoadInt32(&ob.concurrent) == 1 {
+		ob.lock.Lock()
+		defer ob.lock.Unlock()
+	}
 	if i, ok := key.IfInt(); ok && 0 <= i && i < len(ob.list) {
 		return ob.list[i]
 	}
@@ -94,6 +101,10 @@ func (ob *SuObject) GetIfPresent(_ *Thread, key Value) Value {
 
 // Has returns true if the object contains the given key (not value)
 func (ob *SuObject) HasKey(key Value) bool {
+	if atomic.LoadInt32(&ob.concurrent) == 1 {
+		ob.lock.Lock()
+		defer ob.lock.Unlock()
+	}
 	i, ok := key.IfInt()
 	return (ok && 0 <= i && i < len(ob.list)) || ob.named.Get(key) != nil
 }
@@ -121,6 +132,10 @@ func (ob *SuObject) Put(_ *Thread, key Value, val Value) {
 // Set implements Put, doesn't require thread.
 // The value will be added to the list if the key is the "next"
 func (ob *SuObject) Set(key Value, val Value) {
+	if atomic.LoadInt32(&ob.concurrent) == 1 {
+		ob.lock.Lock()
+		defer ob.lock.Unlock()
+	}
 	defer ob.endMutate(ob.startMutate())
 	if i, ok := key.IfInt(); ok {
 		if i == len(ob.list) {
@@ -731,33 +746,7 @@ func unpackValueOld(buf *pack.Decoder) Value {
 	return UnpackOld(buf.Get(size))
 }
 
-// SuneidoObject is a thread safe version of SuObject
-// used for the global shared Suneido object
-type SuneidoObject struct {
-	SuObject
-	lock sync.Mutex
-}
-
-func (ob *SuneidoObject) GetIfPresent(t *Thread, key Value) Value {
-	ob.lock.Lock()
-	defer ob.lock.Unlock()
-	return ob.SuObject.Get(t, key)
-}
-
-func (ob *SuneidoObject) Set(key Value, val Value) {
-	ob.lock.Lock()
-	defer ob.lock.Unlock()
-	ob.SuObject.Set(key, val)
-}
-
-func (ob *SuneidoObject) Delete(t *Thread, key Value) bool {
-	ob.lock.Lock()
-	defer ob.lock.Unlock()
-	return ob.SuObject.Delete(t, key)
-}
-
-func (ob *SuneidoObject) Erase(t *Thread, key Value) bool {
-	ob.lock.Lock()
-	defer ob.lock.Unlock()
-	return ob.SuObject.Erase(t, key)
+func (ob *SuObject) SetConcurrent() *SuObject {
+	atomic.StoreInt32(&ob.concurrent, 1)
+	return ob
 }
