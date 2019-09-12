@@ -20,5 +20,5 @@ package main
 // 	builtin.UIThread = mainThread
 // 	builtin.CmdlineOverride = "0" // prevent loading persistent windows
 // 	eval("Init()")
-// 	eval("EditControl()")
+// 	eval("CodeControl(); MessageLoop()")
 // }

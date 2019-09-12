@@ -11,8 +11,9 @@ import (
 // so we have to implement our own
 
 type synchInfo struct {
+	// lockThread is the current owner of the lock
+	lockThread *Thread // guarded by threadLock
 	threadLock sync.Mutex
-	lockThread *Thread
 	lock       sync.Mutex
 }
 

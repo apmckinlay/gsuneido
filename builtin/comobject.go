@@ -29,9 +29,8 @@ var _ = builtin1("COMobject(progid)",
 			idisp, err := iunk.QueryInterface(ole.IID_IDispatch)
 			if err == nil && idisp != nil {
 				return &suComObject{idisp: idisp}
-			} else {
-				return &suComObject{iunk: iunk}
 			}
+			return &suComObject{iunk: iunk}
 		}
 		panic("COMobject: only numeric implemented")
 	})
