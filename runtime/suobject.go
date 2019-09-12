@@ -3,6 +3,8 @@ package runtime
 import (
 	"sort"
 	"strings"
+	"sync"
+	"sync/atomic"
 
 	"github.com/apmckinlay/gsuneido/lexer"
 	"github.com/apmckinlay/gsuneido/runtime/types"
@@ -171,7 +173,7 @@ func (ob *SuObject) startMutate() int {
 // endMutate increments the version if the sizes have changed
 func (ob *SuObject) endMutate(nn int) {
 	if nn != ob.sizes() {
-		ob.version++
+		atomic.AddInt32(&ob.version, 1)
 	}
 }
 
@@ -226,7 +228,7 @@ func (ob *SuObject) Size() int {
 // Add appends a value to the list portion
 func (ob *SuObject) Add(val Value) {
 	ob.mustBeMutable()
-	ob.version++
+	atomic.AddInt32(&ob.version, 1)
 	ob.list = append(ob.list, val)
 	ob.migrate()
 }
@@ -429,7 +431,7 @@ func (ob *SuObject) Slice(n int) Container {
 
 // ArgsIter is similar to Iter2 but it returns a nil key for list elements
 func (ob *SuObject) ArgsIter() func() (Value, Value) {
-	version := ob.version
+	version := atomic.LoadInt32(&ob.version)
 	next := 0
 	named := ob.named.Iter()
 	return func() (Value, Value) {
@@ -450,7 +452,7 @@ func (ob *SuObject) ArgsIter() func() (Value, Value) {
 // Iter2 iterates through list and named elements.
 // List elements are returned with their numeric key index.
 func (ob *SuObject) Iter2(list, named bool) func() (Value, Value) {
-	version := ob.version
+	version := atomic.LoadInt32(&ob.version)
 	next := 0
 	if list && !named {
 		return func() (Value, Value) {
@@ -490,7 +492,7 @@ func (ob *SuObject) Iter2(list, named bool) func() (Value, Value) {
 }
 
 func (ob *SuObject) modificationCheck(version int32) {
-	if ob.version != version {
+	if atomic.LoadInt32(&ob.version) != version {
 		panic("object modified during iteration")
 	}
 }
@@ -527,7 +529,7 @@ func (ob *SuObject) ToRecord(t *Thread, hdr *Header) Record {
 
 func (ob *SuObject) Sort(t *Thread, lt Value) {
 	ob.mustBeMutable()
-	ob.version++
+	atomic.AddInt32(&ob.version, 1)
 	if lt == False {
 		sort.SliceStable(ob.list, func(i, j int) bool {
 			return ob.list[i].Compare(ob.list[j]) < 0
@@ -585,7 +587,7 @@ func (ob *SuObject) SetDefault(def Value) {
 
 func (ob *SuObject) Reverse() {
 	ob.mustBeMutable()
-	ob.version++
+	atomic.AddInt32(&ob.version, 1)
 	for lo, hi := 0, len(ob.list)-1; lo < hi; lo, hi = lo+1, hi-1 {
 		ob.list[lo], ob.list[hi] = ob.list[hi], ob.list[lo]
 	}
@@ -727,4 +729,35 @@ func unpackObjectOld(s string, ob *SuObject) *SuObject {
 func unpackValueOld(buf *pack.Decoder) Value {
 	size := buf.Int32()
 	return UnpackOld(buf.Get(size))
+}
+
+// SuneidoObject is a thread safe version of SuObject
+// used for the global shared Suneido object
+type SuneidoObject struct {
+	SuObject
+	lock sync.Mutex
+}
+
+func (ob *SuneidoObject) GetIfPresent(t *Thread, key Value) Value {
+	ob.lock.Lock()
+	defer ob.lock.Unlock()
+	return ob.SuObject.Get(t, key)
+}
+
+func (ob *SuneidoObject) Set(key Value, val Value) {
+	ob.lock.Lock()
+	defer ob.lock.Unlock()
+	ob.SuObject.Set(key, val)
+}
+
+func (ob *SuneidoObject) Delete(t *Thread, key Value) bool {
+	ob.lock.Lock()
+	defer ob.lock.Unlock()
+	return ob.SuObject.Delete(t, key)
+}
+
+func (ob *SuneidoObject) Erase(t *Thread, key Value) bool {
+	ob.lock.Lock()
+	defer ob.lock.Unlock()
+	return ob.SuObject.Erase(t, key)
 }
