@@ -523,7 +523,7 @@ var _ = builtin5("CallWindowProc(wndprcPrev, hwnd, msg, wParam, lParam)",
 	})
 
 // dll User32:CreateAcceleratorTable([in] string lpaccel, long cEntries) pointer
-var createAcceleratorTable = user32.NewProc("CreateAcceleratorTable")
+var createAcceleratorTable = user32.NewProc("CreateAcceleratorTableA")
 var _ = builtin2("CreateAcceleratorTable(lpaccel, cEntries)",
 	func(a, b Value) Value {
 		rtn, _, _ := createAcceleratorTable.Call(
