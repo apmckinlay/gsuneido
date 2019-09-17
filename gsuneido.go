@@ -20,7 +20,7 @@ import (
 
 var builtDate string // set by: go build -ldflags "-X builtin.builtDate=..."
 
-var prompt = func(s string) { fmt.Print(s); _ = os.Stdout.Sync() }
+var prompt = func(s string) { fmt.Println(s) }
 
 // dbmsLocal is set if running with a local/standalone database.
 var dbmsLocal IDbms
@@ -35,7 +35,7 @@ func main() {
 	// dependency injection of GetDbms
 	if options.Client {
 		GetDbms = func() IDbms { return dbms.NewDbmsClient("127.0.0.1:3147") }
-		fmt.Println("Running as client")
+		prompt("Running as client")
 	} else {
 		dbmsLocal = dbms.NewDbmsLocal()
 		GetDbms = func() IDbms { return dbmsLocal }
@@ -62,10 +62,10 @@ func repl() {
 	} //else {
 	eval("Suneido.Print = PrintStdout;;")
 	//}
-	prompt("Press Enter twice (i.e. blank line) to execute, q to quit\n")
+	prompt("Press Enter twice (i.e. blank line) to execute, q to quit")
 	r := bufio.NewReader(os.Stdin)
 	for {
-		prompt("> ")
+		prompt("~~~")
 		src := ""
 		for {
 			line, err := r.ReadString('\n')
@@ -79,7 +79,6 @@ func repl() {
 			src += line + "\n"
 		}
 		eval(src)
-		fmt.Println()
 	}
 }
 
@@ -109,7 +108,6 @@ func eval(src string) {
 	mainThread.Reset()
 	result := mainThread.Start(fn, nil)
 	if result != nil {
-		prompt(">>> ")
 		fmt.Println(WithType(result)) // NOTE: doesn't use ToString
 	}
 }
@@ -127,9 +125,8 @@ func internal(e interface{}) bool {
 func libload(t *Thread, gn Gnum, name string) (result Value) {
 	defer func() {
 		if e := recover(); e != nil {
-			fmt.Println("error loading", name, e)
+			// fmt.Println("INFO: error loading", name, e)
 			panic("error loading " + name + " " + fmt.Sprint(e))
-			//result = nil
 		}
 	}()
 	defs := t.Dbms().LibGet(name)
