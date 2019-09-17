@@ -200,15 +200,6 @@ var _ = builtin3("CopyFile(from, to, failIfExists)",
 		return boolRet(rtn)
 	})
 
-// dll bool Kernel32:DeleteFile([in] string filename)
-var deleteFile = kernel32.NewProc("DeleteFile")
-var _ = builtin1("DeleteFile(filename)",
-	func(a Value) Value {
-		rtn, _, _ := deleteFile.Call(
-			uintptr(stringArg(a)))
-		return boolRet(rtn)
-	})
-
 // dll bool Kernel32:FindClose(pointer hFindFile)
 var findClose = kernel32.NewProc("FindClose")
 var _ = builtin1("FindClose(hFindFile)",
