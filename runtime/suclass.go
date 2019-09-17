@@ -155,9 +155,6 @@ func (c *SuClass) Parent(t *Thread) *SuClass {
 		return nil
 	}
 	base := Global.Get(t, c.Base)
-	if base == nil {
-		panic("can't find " + Global.Name(c.Base))
-	}
 	if baseClass, ok := base.(*SuClass); ok {
 		return baseClass
 	}

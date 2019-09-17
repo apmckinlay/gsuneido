@@ -190,7 +190,7 @@ func (ck *Check) expr(expr ast.Expr, init set) set {
 			init = ck.usedVar(init, expr.Name)
 		}
 		if ascii.IsUpper(expr.Name[0]) {
-			if nil == Global.GetName(ck.t, expr.Name) {
+			if nil == Global.FindName(ck.t, expr.Name) {
 				ck.Results = append(ck.Results,
 					"WARNING: can't find: "+expr.Name+" @"+strconv.Itoa(ck.pos))
 			}

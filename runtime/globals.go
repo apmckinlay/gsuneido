@@ -23,6 +23,7 @@ type globals struct {
 	values   []Value
 	missing  Value
 	builtins map[Gnum]Value
+	errors   map[Gnum]interface{}
 }
 
 var g = globals{
@@ -32,6 +33,7 @@ var g = globals{
 	values:   []Value{nil},
 	missing:  &SuExcept{}, // type doesn't matter, just has to be unique
 	builtins: make(map[Gnum]Value, 100),
+	errors:   make(map[Gnum]interface{}),
 }
 
 // only called by single threaded init so no locking required
@@ -114,13 +116,37 @@ func (typeGlobal) Exists(name string) bool {
 	return ok
 }
 
+// GetName returns the value for a global name, or panics
+func (typeGlobal) GetName(t *Thread, name string) Value {
+	return Global.Get(t, Global.Num(name))
+}
+
+// Get returns the value for a global number, or panics
+func (typeGlobal) Get(t *Thread, gnum Gnum) (result Value) {
+	x := Global.Find(t, gnum)
+	if x == nil {
+		if err, ok := g.errors[gnum]; ok {
+			panic(err)
+		}
+		panic("can't find " + Global.Name(gnum))
+	}
+	return x
+}
+
+// FindName returns the value for a global name, or nil if not found.
+// Used by SuRecord to check if a rule exists.
+func (typeGlobal) FindName(t *Thread, name string) (result Value) {
+	return Global.Find(t, Global.Num(name))
+}
+
 // Libload requires dependency injection
 var Libload = func(*Thread, Gnum, string) Value { return nil }
 
 var gnPrint = Global.Num("Print")
 
-// Get returns the value for a global, or nil if not found
-func (typeGlobal) Get(t *Thread, gnum Gnum) Value {
+// Find returns the value for a global number, or nil if not found.
+// The two branches on the happy path (x==nil/missing) should be predicted.
+func (typeGlobal) Find(t *Thread, gnum Gnum) (result Value) {
 	if x, ok := g.builtins[gnum]; ok {
 		return x
 	}
@@ -128,12 +154,21 @@ func (typeGlobal) Get(t *Thread, gnum Gnum) Value {
 	x := g.values[gnum]
 	g.lock.RUnlock()
 	if x == nil {
+		if _, ok := g.errors[gnum]; ok {
+			return nil
+		}
 		// NOTE: can't hold lock during Libload
 		// since compile may need to access Global.
 		// That means two threads could both load
 		// but they should both get the same value.
+		defer func() {
+			if err := recover(); err != nil {
+				g.errors[gnum] = err // remember the error
+				result = nil
+			}
+		}()
 		x = Libload(t, gnum, Global.Name(gnum))
-		// want Print even if we don't have stdlib
+		// for development we want Print even if we don't have stdlib
 		if x == nil && gnum == gnPrint {
 			fmt.Println("using built-in Print")
 			return printBuiltin
@@ -163,10 +198,6 @@ func (typeGlobal) GetIfPresent(name string) (x Value) {
 	}
 	g.lock.RUnlock()
 	return
-}
-
-func (typeGlobal) GetName(t *Thread, name string) Value {
-	return Global.Get(t, Global.Num(name))
 }
 
 func (typeGlobal) Unload(name string) {

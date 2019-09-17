@@ -208,11 +208,7 @@ loop:
 			t.Push(fr.locals[i])
 		case op.Global:
 			gn := fetchUint16()
-			val := Global.Get(t, gn)
-			if val == nil {
-				panic("can't find " + Global.Name(gn))
-			}
-			t.Push(val)
+			t.Push(Global.Get(t, gn))
 		case op.Get:
 			m := t.Pop()
 			ob := t.Pop()

@@ -14,10 +14,7 @@ func EvalString(t *Thread, s string) Value {
 	s = strings.Trim(s, " \t\r\n")
 	if isGlobal(s) {
 		// optimize if just a global name
-		if x := Global.GetName(t, s); x != nil {
-			return x
-		}
-		panic("can't find " + s)
+		return Global.GetName(t, s)
 	}
 	s = "function () {\n" + s + "\n}"
 	fn := compile.NamedConstant("", "eval", s).(*SuFunc)

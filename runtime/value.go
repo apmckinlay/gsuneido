@@ -238,7 +238,7 @@ func Lookup(t *Thread, methods Methods, gnUserDef int, method string) Callable {
 }
 
 func UserDef(t *Thread, gnUserDef int, method string) Callable {
-	if userdef := Global.Get(t, gnUserDef); userdef != nil {
+	if userdef := Global.Find(t, gnUserDef); userdef != nil {
 		if c, ok := userdef.(*SuClass); ok {
 			return c.get2(t, method)
 		}
