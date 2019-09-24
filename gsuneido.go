@@ -1,5 +1,11 @@
 package main // import "github.com/apmckinlay/gsuneido"
 
+/*
+CheckLibrary('stdlib')
+TestRunner.Run(libs: #(stdlib), skipTags: #(gui, windows), quit_on_failure:);;
+TestRunner.Run(TestObserverPrint(), libs: #(stdlib), skipTags: #(gui, windows));;
+*/
+
 import (
 	"bufio"
 	"flag"
@@ -28,7 +34,9 @@ var mainThread *Thread
 
 func main() {
 	builtin.Init()
-	Global.Builtin("Suneido", (new(SuObject)).SetConcurrent())
+	suneido := new(SuObject)
+	suneido.SetConcurrent()
+	Global.Builtin("Suneido", suneido)
 	options.BuiltDate = builtDate
 	flag.BoolVar(&options.Client, "c", false, "run as a client")
 	flag.Parse()
@@ -126,6 +134,7 @@ func libload(t *Thread, gn Gnum, name string) (result Value) {
 	defer func() {
 		if e := recover(); e != nil {
 			// fmt.Println("INFO: error loading", name, e)
+			// debug.PrintStack()
 			panic("error loading " + name + " " + fmt.Sprint(e))
 		}
 	}()

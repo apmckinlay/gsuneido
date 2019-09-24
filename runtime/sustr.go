@@ -157,18 +157,29 @@ func (SuStr) Lookup(t *Thread, method string) Callable {
 	return Lookup(t, StringMethods, gnStrings, method)
 }
 
+func (SuStr) SetConcurrent() {
+}
+
 // Packable interface -----------------------------------------------
 
 var _ Packable = SuStr("")
 
-func (ss SuStr) PackSize(int) int {
+func (ss SuStr) PackSize(*int32) int {
 	if ss == "" {
 		return 0
 	}
 	return 1 + len(ss)
 }
 
-func (ss SuStr) Pack(buf *pack.Encoder) {
+func (ss SuStr) PackSize2(int32, packStack) int {
+	return ss.PackSize(nil)
+}
+
+func (ss SuStr) PackSize3() int {
+	return ss.PackSize(nil)
+}
+
+func (ss SuStr) Pack(_ int32, buf *pack.Encoder) {
 	if ss != "" {
 		buf.Put1(PackString).PutStr(string(ss))
 	}

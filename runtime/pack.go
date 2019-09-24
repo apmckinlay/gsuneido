@@ -11,10 +11,15 @@ import (
 // since Pack methods assume capacity is sufficient
 // and because PackSize does nesting limit check
 type Packable interface {
-	// PackSize returns the size (in bytes) of the packed value
-	PackSize(nest int) int
+	// PackSize returns the size (in bytes) of the packed value.
+	// object/record set clock to detect nested changes.
+	PackSize(clock *int32) int
+	// PackSize2 is used by object/record to handle nesting
+	PackSize2(clock int32, stack packStack) int
+	// PackSize3 is used by object/record during Pack
+	PackSize3() int
 	// Pack appends the value to the Encoder
-	Pack(buf *pack.Encoder)
+	Pack(clock int32, buf *pack.Encoder)
 }
 
 // Packed values start with one of the following type tags,
@@ -32,10 +37,32 @@ const (
 	PackRecord
 )
 
+var packClock = int32(0)
+
+type packStack []Value
+
+func newPackStack() packStack {
+	// initialSize should handle almost all cases without further allocation
+	const initialSize = 16
+	return make([]Value, 0, initialSize)
+}
+
+func (ps *packStack) push(x Value) {
+	for _, v := range *ps {
+		if x == v { // NOTE: == not Equals
+			panic("can't pack object/record containing itself")
+		}
+	}
+	*ps = append(*ps, x)
+}
+
+// Note: no pop required because of passing slice by value
+
 // Pack is a convenience function that packs a single Packable
 func Pack(x Packable) string {
-	buf := pack.NewEncoder(x.PackSize(0))
-	x.Pack(buf)
+	var clock int32
+	buf := pack.NewEncoder(x.PackSize(&clock))
+	x.Pack(clock, buf)
 	return buf.String()
 }
 

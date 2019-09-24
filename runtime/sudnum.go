@@ -122,7 +122,7 @@ const E6 = uint64(1e6)
 const E4 = uint64(1e4)
 const E2 = uint64(1e2)
 
-func (dn SuDnum) PackSize(int) int {
+func (dn SuDnum) PackSize(*int32) int {
 	if dn.Sign() == 0 {
 		return 1 // just tag
 	}
@@ -162,7 +162,15 @@ func (dn SuDnum) PackSize(int) int {
 	return 10
 }
 
-func (dn SuDnum) Pack(buf *pack.Encoder) {
+func (dn SuDnum) PackSize2(int32, packStack) int {
+	return dn.PackSize(nil)
+}
+
+func (dn SuDnum) PackSize3() int {
+	return dn.PackSize(nil)
+}
+
+func (dn SuDnum) Pack(_ int32, buf *pack.Encoder) {
 	xor := byte(0)
 	if dn.Sign() < 0 {
 		xor = 0xff

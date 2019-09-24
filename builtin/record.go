@@ -8,9 +8,7 @@ var _ = builtin("Record(@args)",
 	})
 
 func newRecord(args []Value) *SuRecord {
-	ob := args[0].(*SuObject)
-	ob.SetDefault(EmptyStr)
-	return SuRecordFromObject(ob)
+	return SuRecordFromObject(args[0].(*SuObject))
 }
 
 func init() {

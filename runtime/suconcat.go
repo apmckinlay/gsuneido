@@ -158,14 +158,22 @@ func (SuConcat) Lookup(t *Thread, method string) Callable {
 
 var _ Packable = SuConcat{}
 
-func (c SuConcat) PackSize(int) int {
+func (c SuConcat) PackSize(*int32) int {
 	if c.n == 0 {
 		return 0
 	}
 	return 1 + c.n
 }
 
-func (c SuConcat) Pack(buf *pack.Encoder) {
+func (c SuConcat) PackSize2(int32, packStack) int {
+	return c.PackSize(nil)
+}
+
+func (c SuConcat) PackSize3() int {
+	return c.PackSize(nil)
+}
+
+func (c SuConcat) Pack(_ int32, buf *pack.Encoder) {
 	if c.n > 0 {
 		buf.Put1(PackString).Put(c.b.a[:c.n])
 	}

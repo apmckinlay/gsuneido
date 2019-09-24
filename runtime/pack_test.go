@@ -22,7 +22,7 @@ func TestPackSuInt(t *testing.T) {
 		t.Helper()
 		v := IntVal(n).(Packable)
 		s := Pack(v)
-		Assert(t).That(v.PackSize(0), Equals(len(s)))
+		Assert(t).That(v.PackSize3(), Equals(len(s)))
 		Assert(t).That([]byte(s), Equals(expected))
 		num := UnpackNumber(s)
 		x, ok := SuIntToInt(num)

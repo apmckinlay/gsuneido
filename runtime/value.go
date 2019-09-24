@@ -41,7 +41,7 @@ type Value interface {
 	// ToDnum converts false (SuBool), "" (SuStr), SuInt, SuDnum to Dnum
 	ToDnum() (dnum.Dnum, bool)
 
-	// ToContainer converts to a Container when applicable
+	// ToContainer converts object,record,sequence to a Container
 	ToContainer() (Container, bool)
 
 	// Get returns a member of an object/instance/class or a character of a string
@@ -70,6 +70,8 @@ type Value interface {
 	Callable
 
 	Lookup(t *Thread, method string) Callable
+
+	SetConcurrent()
 }
 
 // Callable is returned by Lookup
@@ -83,7 +85,7 @@ type Ord = int
 const (
 	ordBool Ord = iota
 	ordNum      // SuInt, SuDnum
-	ordStr      // SuStr, SuConcat
+	ordStr      // SuStr, SuConcat, SuExcept
 	ordDate
 	ordObject
 	OrdOther
@@ -122,6 +124,9 @@ type Showable interface {
 // for functions it shows their parameters
 // for containers it sorts by member
 func Show(v Value) string {
+	if v == nil {
+		return "nil"
+	}
 	if s, ok := v.(Showable); ok {
 		return s.Show()
 	}
@@ -246,21 +251,6 @@ func UserDef(t *Thread, gnUserDef int, method string) Callable {
 	return nil
 }
 
-// deepEqual is used by Container and SuInstance Equal
-func deepEqual(x Value, y Value, inProgress pairs) bool {
-	if xo, ok := x.ToContainer(); ok {
-		if yo, ok := y.ToContainer(); ok {
-			return containerEqual(xo, yo, inProgress)
-		}
-	}
-	if xi, ok := x.(*SuInstance); ok {
-		if yi, ok := y.(*SuInstance); ok {
-			return instanceEqual(xi, yi, inProgress)
-		}
-	}
-	return x.Equal(y)
-}
-
 // CantConvert is embedded in Value types to supply default conversion methods
 type CantConvert struct{}
 
@@ -286,6 +276,9 @@ func (CantConvert) AsStr() (string, bool) {
 
 func (CantConvert) ToStr() (string, bool) {
 	return "", false
+}
+
+func (CantConvert) SetConcurrent() {
 }
 
 type ToStringable interface {

@@ -2,6 +2,7 @@ package runtime
 
 import (
 	"strings"
+	"sync/atomic"
 
 	"github.com/apmckinlay/gsuneido/util/pack"
 )
@@ -114,17 +115,27 @@ func (b *RecordBuilder) AddRaw(s string) *RecordBuilder {
 // Packed is a Packable wrapper for an already packed value
 type Packed string
 
-func (p Packed) Pack(buf *pack.Encoder) {
+func (p Packed) Pack(_ int32, buf *pack.Encoder) {
 	buf.PutStr(string(p))
 }
 
-func (p Packed) PackSize(int) int {
+func (p Packed) PackSize(*int32) int {
+	return len(p)
+}
+
+func (p Packed) PackSize2(int32, packStack) int {
+	return len(p)
+}
+
+func (p Packed) PackSize3() int {
 	return len(p)
 }
 
 // Build
 
 func (b *RecordBuilder) Build() Record {
+	clock := atomic.AddInt32(&packClock, 1)
+	stack := newPackStack()
 	if len(b.vals) > MaxValues {
 		panic("too many values for record")
 	}
@@ -133,11 +144,11 @@ func (b *RecordBuilder) Build() Record {
 	}
 	sizes := make([]int, len(b.vals))
 	for i, v := range b.vals {
-		sizes[i] = v.PackSize(0)
+		sizes[i] = v.PackSize2(clock, stack)
 	}
 	length := b.recSize(sizes)
 	buf := pack.NewEncoder(length)
-	b.build(buf, length, sizes)
+	b.build(clock, buf, length, sizes)
 	//verify.That(len(buf.String()) == length)
 	return Record(buf.String())
 }
@@ -166,11 +177,11 @@ func tblength(nfields, datasize int) int {
 	return hdrlen + 4*(1+nfields) + datasize
 }
 
-func (b *RecordBuilder) build(dst *pack.Encoder, length int, sizes []int) {
+func (b *RecordBuilder) build(clock int32, dst *pack.Encoder, length int, sizes []int) {
 	b.buildHeader(dst, length, sizes)
 	nfields := len(b.vals)
 	for i := nfields - 1; i >= 0; i-- {
-		b.vals[i].Pack(dst)
+		b.vals[i].Pack(clock, dst)
 	}
 }
 

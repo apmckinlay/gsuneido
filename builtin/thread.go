@@ -20,6 +20,7 @@ func init() {
 var threads = map[int32]*Thread{}
 
 func threadCallClass(arg Value) Value {
+	arg.SetConcurrent()
 	t2 := NewThread()
 	threads[t2.Num] = t2 //TODO lock
 	go func() {

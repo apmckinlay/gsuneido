@@ -28,4 +28,5 @@ const (
 	File
 	BuiltinClass
 	BuiltinInstance
+	N
 )

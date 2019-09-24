@@ -766,12 +766,20 @@ func (SuDate) Lookup(t *Thread, method string) Callable {
 var _ Packable = SuDate{}
 
 // PackSize returns the packed size (Packable interface)
-func (SuDate) PackSize(int) int {
+func (SuDate) PackSize(*int32) int {
+	return 9
+}
+
+func (SuDate) PackSize2(int32, packStack) int {
+	return 9
+}
+
+func (SuDate) PackSize3() int {
 	return 9
 }
 
 // Pack packs into the supplied byte slice (Packable interface)
-func (d SuDate) Pack(buf *pack.Encoder) {
+func (d SuDate) Pack(_ int32, buf *pack.Encoder) {
 	buf.Put1(PackDate).Uint32(d.date).Uint32(d.time)
 }
 

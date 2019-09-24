@@ -111,15 +111,26 @@ func (SuBool) Lookup(*Thread, string) Callable {
 	return nil
 }
 
+func (SuBool) SetConcurrent() {
+}
+
 // Packable interface -----------------------------------------------
 
 var _ Packable = SuBool(true)
 
-func (SuBool) PackSize(int) int {
+func (SuBool) PackSize(*int32) int {
 	return 1
 }
 
-func (b SuBool) Pack(buf *pack.Encoder) {
+func (SuBool) PackSize2(int32, packStack) int {
+	return 1
+}
+
+func (SuBool) PackSize3() int {
+	return 1
+}
+
+func (b SuBool) Pack(_ int32, buf *pack.Encoder) {
 	if b == true {
 		buf.Put1(PackTrue)
 	} else {

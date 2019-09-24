@@ -171,7 +171,7 @@ func TestSuObjectSlice(t *testing.T) {
 func TestSuObjectPackValue(t *testing.T) {
 	test := func(v1 Value) {
 		enc := pack.NewEncoder(50)
-		packValue(v1, enc)
+		packValue(v1, 0, enc)
 		s := enc.String()
 		dec := pack.NewDecoder(s)
 		v2 := unpackValue(dec)

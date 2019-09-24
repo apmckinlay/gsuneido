@@ -88,6 +88,10 @@ func (*SuMethod) Compare(Value) int {
 	panic("method compare not implemented")
 }
 
+func (m *SuMethod) SetConcurrent() {
+	m.this.SetConcurrent()
+}
+
 // Named interface --------------------------------------------------
 
 var _ Named = (*SuMethod)(nil)

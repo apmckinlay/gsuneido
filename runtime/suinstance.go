@@ -1,17 +1,23 @@
 package runtime
 
 import (
+	"sync"
+	"sync/atomic"
+
 	"github.com/apmckinlay/gsuneido/runtime/types"
+	// sync "github.com/sasha-s/go-deadlock"
 )
 
 // SuInstance is an instance of an SuInstance
 type SuInstance struct {
 	MemBase
-	class *SuClass
+	class      *SuClass
+	concurrent int32 // access atomically
+	lock       sync.Mutex
 }
 
 func NewInstance(class *SuClass) *SuInstance {
-	return &SuInstance{NewMemBase(), class}
+	return &SuInstance{MemBase: NewMemBase(), class: class}
 }
 
 func (ob *SuInstance) Base() *SuClass {
@@ -34,7 +40,7 @@ func (ob *SuInstance) ToString(t *Thread) string {
 }
 
 func (ob *SuInstance) Copy() *SuInstance {
-	return &SuInstance{ob.MemBase.Copy(), ob.class}
+	return &SuInstance{MemBase: ob.MemBase.Copy(), class: ob.class}
 }
 
 // Value interface --------------------------------------------------
@@ -53,19 +59,33 @@ func (*SuInstance) Type() types.Type {
 }
 
 func (ob *SuInstance) Get(t *Thread, m Value) Value {
+	x := ob.get(m)
+	if x == nil {
+		// can't hold lock for this because it may call getter
+		x = ob.class.get1(t, ob, m)
+		if m, ok := x.(*SuMethod); ok {
+			m.this = ob // fix 'this' to be instance, not method class
+		}
+	}
+	return x
+}
+
+func (ob *SuInstance) get(m Value) Value {
+	if ob.Lock() {
+		defer ob.lock.Unlock()
+	}
 	if ms, ok := m.ToStr(); ok {
 		if x, ok := ob.Data[ms]; ok {
 			return x
 		}
 	}
-	x := ob.class.get1(t, ob, m)
-	if m, ok := x.(*SuMethod); ok {
-		m.this = ob // fix 'this' to be instance, not method class
-	}
-	return x
+	return nil
 }
 
 func (ob *SuInstance) Put(_ *Thread, m Value, v Value) {
+	if ob.Lock() {
+		defer ob.lock.Unlock()
+	}
 	ob.Data[AsStr(m)] = v
 }
 
@@ -87,35 +107,24 @@ func (*SuInstance) Hash2() uint32 {
 
 // Equal returns true if two instances have the same class and data
 func (ob *SuInstance) Equal(other interface{}) bool {
-	o2, ok := other.(*SuInstance)
-	if !ok {
-		return false
+	if o2, ok := other.(*SuInstance); ok {
+		return deepEqual(ob, o2)
 	}
-	if ob == o2 {
-		return true
-	}
-	var stack [maxpairs]pair
-	return instanceEqual(ob, o2, stack[:0])
-}
-
-func instanceEqual(ob, o2 *SuInstance, inProgress pairs) bool {
-	if ob.class != o2.class || len(ob.Data) != len(o2.Data) {
-		return false
-	}
-	if inProgress.contains(ob, o2) {
-		return true
-	}
-	inProgress.push(ob, o2)
-	for k, x := range ob.Data {
-		if y, ok := o2.Data[k]; !ok || !deepEqual(x, y, inProgress) {
-			return false
-		}
-	}
-	return true
+	return false
 }
 
 func (*SuInstance) Compare(Value) int {
 	panic("instance compare not implemented")
+}
+
+func (ob *SuInstance) SetConcurrent() {
+	if atomic.LoadInt32(&ob.concurrent) == 1 {
+		return
+	}
+	atomic.StoreInt32(&ob.concurrent, 1)
+	for _, v := range ob.Data {
+		v.SetConcurrent() // recursive, deep
+	}
 }
 
 // InstanceMethods is initialized by the builtin package
@@ -153,10 +162,33 @@ func (ob *SuInstance) Finder(t *Thread, fn func(Value, *MemBase) Value) Value {
 var _ Findable = (*SuInstance)(nil)
 
 func (ob *SuInstance) Delete(key Value) {
-	m := ToStr(key)
-	delete(ob.Data, m)
+	if ob.Lock() {
+		defer ob.lock.Unlock()
+	}
+	delete(ob.Data, ToStr(key))
 }
 
 func (ob *SuInstance) Clear() {
+	if ob.Lock() {
+		defer ob.lock.Unlock()
+	}
 	ob.Data = map[string]Value{}
+}
+
+func (ob *SuInstance) Lock() bool {
+	if atomic.LoadInt32(&ob.concurrent) == 1 {
+		ob.lock.Lock()
+		return true
+	}
+	return false
+}
+
+func (ob *SuInstance) Unlock() {
+	if atomic.LoadInt32(&ob.concurrent) == 1 {
+		ob.lock.Unlock()
+	}
+}
+
+func (ob *SuInstance) size() int {
+	return len(ob.Data)
 }

@@ -38,8 +38,6 @@ type SuRecord struct {
 	unpacked bool
 }
 
-var _ Container = (*SuRecord)(nil)
-
 //go:generate genny -in ../../GoTemplates/list/list.go -out alist.go -pkg runtime gen "V=activeObserver"
 //go:generate genny -in ../../GoTemplates/list/list.go -out vlist.go -pkg runtime gen "V=Value"
 
@@ -47,8 +45,11 @@ func NewSuRecord() *SuRecord {
 	return &SuRecord{ob: SuObject{defval: EmptyStr}}
 }
 
+// SuRecordFromObject creates a record from an arguments object
+// WARNING: it does not copy the data, the original object should be discarded
 func SuRecordFromObject(ob *SuObject) *SuRecord {
-	return &SuRecord{ob: *ob}
+	return &SuRecord{
+		ob: SuObject{list: ob.list, named: ob.named, defval: EmptyStr}}
 }
 
 func SuRecordFromRow(row Row, hdr *Header, tran *SuTran) *SuRecord {
@@ -82,8 +83,14 @@ func deps(row Row, hdr *Header) map[string][]string {
 }
 
 func (r *SuRecord) Copy() Container {
-	return &SuRecord{ob: *r.ob.Copy().(*SuObject),
-		dependents: r.copyDeps(), invalid: r.copyInvalid()}
+	return r.slice(0)
+}
+
+func (r *SuRecord) slice(n int) *SuRecord {
+	return &SuRecord{
+		ob:         r.ob.slice(n),
+		dependents: r.copyDeps(),
+		invalid:    r.copyInvalid()}
 }
 
 func (r *SuRecord) copyDeps() map[string][]string {
@@ -149,6 +156,8 @@ func (r *SuRecord) ToContainer() (Container, bool) {
 }
 
 // Container --------------------------------------------------------
+
+var _ Container = (*SuRecord)(nil)
 
 func (r *SuRecord) ToObject() *SuObject {
 	if r.row != nil && !r.unpacked {
@@ -261,10 +270,7 @@ func (r *SuRecord) Iter2(list bool, named bool) func() (Value, Value) {
 }
 
 func (r *SuRecord) Slice(n int) Container {
-	ob := r.ToObject().Slice(n).(*SuObject)
-	r2 := *r
-	r2.ob = *ob
-	return &r2
+	return r.slice(n)
 }
 
 func (r *SuRecord) Iter() Iter {
@@ -616,7 +622,7 @@ var RecordMethods Methods
 
 var gnRecords = Global.Num("Records")
 
-func (SuRecord) Lookup(t *Thread, method string) Callable {
+func (*SuRecord) Lookup(t *Thread, method string) Callable {
 	if m := Lookup(t, RecordMethods, gnRecords, method); m != nil {
 		return m
 	}
@@ -625,12 +631,22 @@ func (SuRecord) Lookup(t *Thread, method string) Callable {
 
 // Packable ---------------------------------------------------------
 
-func (r *SuRecord) PackSize(nest int) int {
-	return r.ob.PackSize(nest)
+var _ Packable = (*SuRecord)(nil)
+
+func (r *SuRecord) PackSize(clock *int32) int {
+	return r.ob.PackSize(clock)
 }
 
-func (r *SuRecord) Pack(buf *pack.Encoder) {
-	r.ob.pack(buf, PackRecord)
+func (r *SuRecord) PackSize2(clock int32, stack packStack) int {
+	return r.ob.PackSize2(clock, stack)
+}
+
+func (r *SuRecord) PackSize3() int {
+	return r.ob.PackSize3()
+}
+
+func (r *SuRecord) Pack(clock int32, buf *pack.Encoder) {
+	r.ob.pack(clock, buf, PackRecord)
 }
 
 func UnpackRecord(s string) *SuRecord {

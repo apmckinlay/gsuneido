@@ -24,39 +24,6 @@ type Container interface {
 	ToRecord(t *Thread, hdr *Header) Record
 }
 
-func containerEqual(x Container, y Container, inProgress pairs) bool {
-	if x == y { // pointer comparison
-		return true // same object
-	}
-	if x.ListSize() != y.ListSize() || x.NamedSize() != y.NamedSize() {
-		return false
-	}
-	if inProgress.contains(x, y) {
-		return true
-	}
-	inProgress.push(x, y) // no need to pop due to pass by value
-	for i := 0; i < x.ListSize(); i++ {
-		if !deepEqual(x.ListGet(i), y.ListGet(i), inProgress) {
-			return false
-		}
-	}
-	// NOTE: does NOT apply default or rules
-	if x.NamedSize() > 0 {
-		iter := x.Iter2(false, true)
-		for {
-			k, v := iter()
-			if k == nil {
-				break
-			}
-			yk := y.NamedGet(k)
-			if yk == nil || !deepEqual(v.(Value), yk.(Value), inProgress) {
-				return false
-			}
-		}
-	}
-	return true
-}
-
 // ContainerFind returns the key of the first occurrence of the value and true
 // or False,false if not found. The order of named members is not defined.
 func ContainerFind(ob Container, val Value) (Value, bool) {
