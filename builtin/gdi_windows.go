@@ -53,7 +53,6 @@ type TEXTMETRIC struct {
 }
 
 // dll Gdi32:CreateFontIndirect(LOGFONT* lf) gdiobj
-// e.g. CreateFontIndirect(#(lfFaceName: "Segoe UI", lfHeight: -27))
 var createFontIndirect = gdi32.NewProc("CreateFontIndirectA")
 var _ = builtin1("CreateFontIndirect(logfont)", func(a Value) Value {
 	f := LOGFONTA{
@@ -107,20 +106,24 @@ var _ = builtin2("GetTextMetrics(hdc, tm)",
 	})
 
 var getStockObject = gdi32.NewProc("GetStockObject")
-var _ = builtin1("GetStockObject(i)", func(a Value) Value {
-	rtn, _, _ := getStockObject.Call(intArg(a))
-	return intRet(rtn)
-})
+var _ = builtin1("GetStockObject(i)",
+	func(a Value) Value {
+		rtn, _, _ := getStockObject.Call(intArg(a))
+		return intRet(rtn)
+	})
 
 var getDeviceCaps = gdi32.NewProc("GetDeviceCaps")
-var _ = builtin2("GetDeviceCaps(hdc, nIndex)", func(a, b Value) Value {
-	rtn, _, _ := getDeviceCaps.Call(
-		intArg(a),
-		intArg(b))
-	return intRet(rtn)
-})
+var _ = builtin2("GetDeviceCaps(hdc, nIndex)",
+	func(a, b Value) Value {
+		rtn, _, _ := getDeviceCaps.Call(
+			intArg(a),
+			intArg(b))
+		return intRet(rtn)
+	})
 
-// dll GDI32:BitBlt(pointer hdcDest, long nXDest, long nYDest, long nWidth, long nHeight, pointer hdcSrc, long nXSrc, long nYSrc, long dwRop) bool
+// dll GDI32:BitBlt(pointer hdcDest,
+//		long nXDest, long nYDest, long nWidth, long nHeight,
+//		pointer hdcSrc, long nXSrc, long nYSrc, long dwRop) bool
 var bitBlt = gdi32.NewProc("BitBlt")
 var _ = builtin("BitBlt(hdc, x, y, cx, cy, hdcSrc, x1, y1, rop)",
 	func(_ *Thread, a []Value) Value {
@@ -134,32 +137,35 @@ var _ = builtin("BitBlt(hdc, x, y, cx, cy, hdcSrc, x1, y1, rop)",
 			intArg(a[6]),
 			intArg(a[7]),
 			intArg(a[8]))
-		return intRet(rtn)
+		return boolRet(rtn)
 	})
 
 // dll Gdi32:CreateCompatibleBitmap(pointer hdc, long nWidth, long nHeight) gdiobj
 var createCompatibleBitmap = gdi32.NewProc("CreateCompatibleBitmap")
-var _ = builtin3("CreateCompatibleBitmap(hdc, cx, cy)", func(a, b, c Value) Value {
-	rtn, _, _ := createCompatibleBitmap.Call(
-		intArg(a),
-		intArg(b),
-		intArg(c))
-	return intRet(rtn)
-})
+var _ = builtin3("CreateCompatibleBitmap(hdc, cx, cy)",
+	func(a, b, c Value) Value {
+		rtn, _, _ := createCompatibleBitmap.Call(
+			intArg(a),
+			intArg(b),
+			intArg(c))
+		return intRet(rtn)
+	})
 
 // dll Gdi32:CreateCompatibleDC(pointer hdc) pointer
 var createCompatibleDC = gdi32.NewProc("CreateCompatibleDC")
-var _ = builtin1("CreateCompatibleDC(hdc)", func(a Value) Value {
-	rtn, _, _ := createCompatibleDC.Call(intArg(a))
-	return intRet(rtn)
-})
+var _ = builtin1("CreateCompatibleDC(hdc)",
+	func(a Value) Value {
+		rtn, _, _ := createCompatibleDC.Call(intArg(a))
+		return intRet(rtn)
+	})
 
 // dll Gdi32:CreateSolidBrush(long rgb) gdiobj
 var createSolidBrush = gdi32.NewProc("CreateSolidBrush")
-var _ = builtin1("CreateSolidBrush(i)", func(a Value) Value {
-	rtn, _, _ := createSolidBrush.Call(intArg(a))
-	return intRet(rtn)
-})
+var _ = builtin1("CreateSolidBrush(i)",
+	func(a Value) Value {
+		rtn, _, _ := createSolidBrush.Call(intArg(a))
+		return intRet(rtn)
+	})
 
 // dll pointer Gdi32:SelectObject(pointer hdc, pointer obj)
 var selectObject = gdi32.NewProc("SelectObject")
@@ -221,16 +227,19 @@ var _ = builtin2("SetBkColor(hdc, color)",
 var deleteDC = gdi32.NewProc("DeleteDC")
 var _ = builtin1("DeleteDC(hdc)",
 	func(a Value) Value {
-		rtn, _, _ := deleteDC.Call(intArg(a))
-		return intRet(rtn)
+		rtn, _, _ := deleteDC.Call(
+			intArg(a))
+		return boolRet(rtn)
 	})
 
 // dll Gdi32:DeleteObject(pointer hgdiobj) bool
 var deleteObject = gdi32.NewProc("DeleteObject")
-var _ = builtin1("DeleteObject(hgdiobj)", func(a Value) Value {
-	rtn, _, _ := deleteObject.Call(intArg(a))
-	return boolRet(rtn)
-})
+var _ = builtin1("DeleteObject(hgdiobj)",
+	func(a Value) Value {
+		rtn, _, _ := deleteObject.Call(
+			intArg(a))
+		return boolRet(rtn)
+	})
 
 // dll Gdi32:GetClipBox(pointer hdc, RECT* rect) long
 var getClipBox = gdi32.NewProc("GetClipBox")
@@ -278,7 +287,7 @@ var _ = builtin5("Rectangle(hdc, left, top, right, bottom)",
 			intArg(c),
 			intArg(d),
 			intArg(e))
-		return intRet(rtn)
+		return boolRet(rtn)
 	})
 
 // dll Gdi32:SetStretchBltMode(pointer hdc, long iStretchMode) long
@@ -335,7 +344,7 @@ var _ = builtin1("CloseEnhMetaFile(dc)",
 // 	[in] string device,
 // 	[in] string output,
 // 	pointer devmode)
-var createDC = gdi32.NewProc("CreateDC")
+var createDC = gdi32.NewProc("CreateDCA")
 var _ = builtin4("CreateDC(driver, device, output, devmode)",
 	func(a, b, c, d Value) Value {
 		rtn, _, _ := createDC.Call(
@@ -411,7 +420,7 @@ var _ = builtin2("GetCurrentObject(hdc, uObjectType)",
 	})
 
 // dll pointer Gdi32:GetEnhMetaFile(string filename)
-var getEnhMetaFile = gdi32.NewProc("GetEnhMetaFile")
+var getEnhMetaFile = gdi32.NewProc("GetEnhMetaFileA")
 var _ = builtin1("GetEnhMetaFile(filename)",
 	func(a Value) Value {
 		rtn, _, _ := getEnhMetaFile.Call(
@@ -495,11 +504,7 @@ var _ = builtin7("RoundRect(hdc, left, top, right, bottom, ellipse_width, ellips
 		return boolRet(rtn)
 	})
 
-// dll long Gdi32:SaveDC(
-// 	pointer hdc	// handle to DC
-// )
-//
-// // corresponding restore function is RestoreDC...
+// dll long Gdi32:SaveDC(pointer hdc)
 var saveDC = gdi32.NewProc("SaveDC")
 var _ = builtin1("SaveDC(hdc)",
 	func(a Value) Value {
@@ -518,10 +523,7 @@ var _ = builtin2("SelectClipRgn(hdc, hrgn)",
 		return intRet(rtn)
 	})
 
-// dll pointer Gdi32:SetEnhMetaFileBits(
-// 	long cbBuffer,
-// 	[in] string lpData
-// 	)
+// dll pointer Gdi32:SetEnhMetaFileBits(long cbBuffer, [in] string lpData)
 var setEnhMetaFileBits = gdi32.NewProc("SetEnhMetaFileBits")
 var _ = builtin2("SetEnhMetaFileBits(cbBuffer, lpData)",
 	func(a, b Value) Value {
@@ -571,7 +573,7 @@ var _ = builtin1("StartPage(hdc)",
 	})
 
 // dll bool Gdi32:TextOut(pointer hdc, long x, long y, [in] string text, long n)
-var textOut = gdi32.NewProc("TextOut")
+var textOut = gdi32.NewProc("TextOutA")
 var _ = builtin5("TextOut(hdc, x, y, text, n)",
 	func(a, b, c, d, e Value) Value {
 		rtn, _, _ := textOut.Call(
@@ -600,7 +602,7 @@ var _ = builtin("Arc(hdc, nLeftRect, nTopRect, nRightRect, nBottomRect,"+
 			intArg(a[6]),
 			intArg(a[7]),
 			intArg(a[8]))
-		return intRet(rtn)
+		return boolRet(rtn)
 	})
 
 // dll pointer Gdi32:CreateEnhMetaFile(pointer hdcRef, [in] string filename,
@@ -622,7 +624,7 @@ var _ = builtin4("CreateEnhMetaFile(hdcRef, filename, rect, desc)",
 //		long fdwStrikeOut, long fdwCharSet, long fdwOutputPrecision,
 //		long fdwClipPrecision, long fdwQuality, long fdwPitchAndFamily,
 //		[in] string lpszFace)
-var createFont = gdi32.NewProc("CreateFont")
+var createFont = gdi32.NewProc("CreateFontA")
 var _ = builtin("CreateFont(hdc, x, y, cx, cy, hdcSrc, x1, y1, rop)",
 	func(_ *Thread, a []Value) Value {
 		rtn, _, _ := createFont.Call(
@@ -660,7 +662,7 @@ var _ = builtin("ExtTextOut(hdc, x, y, fuOptions, lprc, lpString, cbCount,"+
 			uintptr(stringArg(a[5])),
 			intArg(a[6]),
 			0)
-		return intRet(rtn)
+		return boolRet(rtn)
 	})
 
 // dll gdiobj Gdi32:ExtCreatePen(long dwPenStyle, long dwWidth, LOGBRUSH* brush,
@@ -672,7 +674,7 @@ var _ = builtin5("ExtCreatePen(dwPenStyle, dwWidth, brush, "+
 		lb := LOGBRUSH{
 			lbStyle: getInt32(c, "lbStyle"),
 			lbColor: getInt32(c, "lbColor"),
-			lbHatch: uintptr(getInt(d, "dwItemData")),
+			lbHatch: uintptr(getInt(c, "lbHatch")),
 		}
 		rtn, _, _ := extCreatePen.Call(
 			intArg(a),
@@ -686,7 +688,7 @@ var _ = builtin5("ExtCreatePen(dwPenStyle, dwWidth, brush, "+
 type LOGBRUSH struct {
 	lbStyle int32
 	lbColor int32
-	lbHatch HANDLE
+	lbHatch uintptr
 }
 
 // dll long Gdi32:GetGlyphOutline(pointer hdc, long uChar, long uFormat,
@@ -752,7 +754,7 @@ var startDoc = gdi32.NewProc("StartDocA")
 var _ = builtin2("StartDoc(hdc, di)",
 	func(a, b Value) Value {
 		di := DOCINFO{
-			cbSize:       int32(unsafe.Sizeof(DOCINFO{})),
+			cbSize:       uint32(unsafe.Sizeof(DOCINFO{})),
 			lpszDocName:  getStr(b, "lpszDocName"),
 			lpszOutput:   getStr(b, "lpszOutput"),
 			lpszDatatype: getStr(b, "lpszDatatype"),
@@ -765,7 +767,7 @@ var _ = builtin2("StartDoc(hdc, di)",
 	})
 
 type DOCINFO struct {
-	cbSize       int32
+	cbSize       uint32
 	lpszDocName  *byte
 	lpszOutput   *byte
 	lpszDatatype *byte
@@ -841,7 +843,7 @@ var _ = builtin4("MoveToEx(hdc, x, y, p)",
 	})
 
 // dll long Gdi32:GetObject(pointer hgdiobj, long bufsize, buffer buf)
-var getObject = gdi32.NewProc("GetObject")
+var getObject = gdi32.NewProc("GetObjectA")
 var _ = builtin1("GetObjectBitmap(h)",
 	func(a Value) Value {
 		var bm BITMAP

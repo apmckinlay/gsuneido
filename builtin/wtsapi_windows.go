@@ -20,7 +20,7 @@ var _ = builtin1("WTSFreeMemory(adr)",
 
 // dll bool WTSAPI32:WTSQuerySessionInformation(pointer hServer, long SessionId,
 //		long WTSInfoClass, POINTER* ppBuffer, LONG* pBytesReturned)
-var wtsQuerySessionInformation = wtsapi32.NewProc("WTSQuerySessionInformation")
+var wtsQuerySessionInformation = wtsapi32.NewProc("WTSQuerySessionInformationA")
 var _ = builtin5("WTSQuerySessionInformation(hServer, SessionId, WTSInfoClass,"+
 	" ppBuffer, pBytesReturned)",
 	func(a, b, c, d, e Value) Value {

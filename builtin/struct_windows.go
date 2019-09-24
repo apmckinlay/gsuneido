@@ -23,6 +23,10 @@ func init() {
 		&SuStructGlobal{size: int(unsafe.Sizeof(SCROLLINFO{}))})
 	Global.Builtin("TRACKMOUSEEVENT",
 		&SuStructGlobal{size: int(unsafe.Sizeof(TRACKMOUSEEVENT{}))})
+	Global.Builtin("OSVERSIONINFOEX",
+		&SuStructGlobal{size: int(unsafe.Sizeof(OSVERSIONINFOEX{}))})
+	Global.Builtin("SHELLEXECUTEINFO",
+		&SuStructGlobal{size: int(unsafe.Sizeof(SHELLEXECUTEINFO{}))})
 
 	Global.Builtin("MINMAXINFO",
 		&SuMinMaxInfo{SuStructGlobal{size: int(unsafe.Sizeof(MINMAXINFO{}))}})

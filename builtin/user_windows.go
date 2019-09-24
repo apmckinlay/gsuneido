@@ -337,17 +337,17 @@ func getCallback(ob Value, mem string, nargs byte) uintptr {
 var getDesktopWindow = user32.NewProc("GetDesktopWindow")
 var _ = builtin0("GetDesktopWindow()",
 	func() Value {
-		n, _, _ := getDesktopWindow.Call()
-		return IntVal(int(n))
+		rtn, _, _ := getDesktopWindow.Call()
+		return intRet(rtn)
 	})
 
 // dll User32:GetSysColor(long nIndex) long
 var getSysColor = user32.NewProc("GetSysColor")
 var _ = builtin1("GetSysColor(index)",
 	func(a Value) Value {
-		n, _, _ := getSysColor.Call(
+		rtn, _, _ := getSysColor.Call(
 			intArg(a))
-		return IntVal(int(n))
+		return intRet(rtn)
 	})
 
 // dll User32:GetWindowRect(pointer hwnd, RECT* rect) bool
@@ -367,12 +367,12 @@ var _ = builtin2("GetWindowRectApi(hwnd, rect)",
 var messageBox = user32.NewProc("MessageBoxA")
 var _ = builtin4("MessageBox(hwnd, text, caption, flags)",
 	func(a, b, c, d Value) Value {
-		n, _, _ := messageBox.Call(
+		rtn, _, _ := messageBox.Call(
 			intArg(a),
 			uintptr(stringArg(b)),
 			uintptr(stringArg(c)),
 			intArg(d))
-		return IntVal(int(n))
+		return intRet(rtn)
 	})
 
 // dll User32:AdjustWindowRectEx(RECT* rect, long style, bool menu,
@@ -566,7 +566,7 @@ var _ = builtin4("DrawFrameControl(hdc, lprc, uType, uState)",
 
 // dll User32:DrawText(pointer hdc, [in] string lpsz, long cb, RECT* lprc,
 //		long uFormat) long
-var drawText = user32.NewProc("DrawText")
+var drawText = user32.NewProc("DrawTextA")
 var _ = builtin5("DrawText(hdc, lpsz, cb, lprc, uFormat)",
 	func(a, b, c, d, e Value) Value {
 		var r RECT
@@ -812,31 +812,6 @@ var _ = builtin2("GetMenuItemID(hMenu, nPos)",
 // dll User32:GetMenuItemInfo(pointer hMenu, long uItem, bool fByPosition,
 //		MENUITEMINFO* lpmii) bool
 var getMenuItemInfo = user32.NewProc("GetMenuItemInfoA")
-var _ = builtin4("GetMenuItemInfo(hMenu, uItem, fByPosition, lpmii)",
-	func(a, b, c, d Value) Value {
-		mii := MENUITEMINFO{
-			cbSize: uint32(unsafe.Sizeof(MENUITEMINFO{})),
-			fMask:  getUint32(d, "fMask"),
-		}
-		rtn, _, _ := getMenuItemInfo.Call(
-			intArg(a),
-			intArg(b),
-			boolArg(c),
-			uintptr(unsafe.Pointer(&mii)))
-		b.Put(nil, SuStr("fMask"), IntVal(int(mii.fMask)))
-		b.Put(nil, SuStr("fType"), IntVal(int(mii.fType)))
-		b.Put(nil, SuStr("fState"), IntVal(int(mii.fState)))
-		b.Put(nil, SuStr("wID"), IntVal(int(mii.wID)))
-		b.Put(nil, SuStr("hSubMenu"), IntVal(int(mii.hSubMenu)))
-		b.Put(nil, SuStr("hbmpChecked"), IntVal(int(mii.hbmpChecked)))
-		b.Put(nil, SuStr("hbmpUnchecked"), IntVal(int(mii.hbmpUnchecked)))
-		b.Put(nil, SuStr("dwItemData"), IntVal(int(mii.dwItemData)))
-		//b.Put(nil, SuStr("dwTypeData"), IntVal(int(mii.dwTypeData)))
-		b.Put(nil, SuStr("cch"), IntVal(int(mii.cch)))
-		b.Put(nil, SuStr("hbmpItem"), IntVal(int(mii.hbmpItem)))
-		return boolRet(rtn)
-	})
-
 var _ = builtin2("GetMenuItemInfoText(hMenu, uItem)",
 	func(a, b Value) Value {
 		const MMIM_TYPE = 0x10
@@ -881,9 +856,9 @@ var _ = builtin4("SetMenuItemInfo(hMenu, uItem, fByPosition, lpmii)",
 			hbmpChecked:   getHandle(d, "hbmpChecked"),
 			hbmpUnchecked: getHandle(d, "hbmpUnchecked"),
 			dwItemData:    uintptr(getInt(d, "dwItemData")),
-			dwTypeData:    getStr(d, "dwTypeData"),
-			cch:           getUint32(d, "cch"),
-			hbmpItem:      getHandle(d, "hbmpItem"),
+			//dwTypeData:    getStr(d, "dwTypeData"),
+			cch:      getUint32(d, "cch"),
+			hbmpItem: getHandle(d, "hbmpItem"),
 		}
 		rtn, _, _ := setMenuItemInfo.Call(
 			intArg(a),
@@ -992,7 +967,7 @@ var _ = builtin1("RegisterClass(wc)",
 	})
 
 // dll User32:RegisterClipboardFormat([in] string lpszFormat) long
-var registerClipboardFormat = user32.NewProc("RegisterClipboardFormat")
+var registerClipboardFormat = user32.NewProc("RegisterClipboardFormatA")
 var _ = builtin1("RegisterClipboardFormat(lpszFormat)",
 	func(a Value) Value {
 		rtn, _, _ := registerClipboardFormat.Call(
@@ -1271,6 +1246,7 @@ var _ = builtin4("SetTimer(hwnd, id, ms, f)",
 	func(a, b, c, d Value) Value {
 		tid, _, _ := getCurrentThreadId.Call()
 		if tid != uiThreadId {
+			d.SetConcurrent() // since callback will be from different thread
 			r, _, _ := postThreadMessage.Call(uiThreadId, WM_USER,
 				intArg(c), NewCallback(d, 4))
 			if r == 0 {
@@ -1364,9 +1340,9 @@ var _ = builtin2("SetWindowText(hwnd, lpwndpl)",
 	})
 
 // dll User32:ShowWindow(pointer hwnd, long ncmd) bool
+var showWindow = user32.NewProc("ShowWindow")
 var _ = builtin2("ShowWindow(hwnd, ncmd)",
 	func(a, b Value) Value {
-		var showWindow = user32.NewProc("ShowWindow")
 		rtn, _, _ := showWindow.Call(
 			intArg(a),
 			intArg(b))
@@ -1415,9 +1391,9 @@ var _ = builtin0("SPI_GetWorkArea()",
 var postQuitMessage = user32.NewProc("PostQuitMessage")
 var _ = builtin1("PostQuitMessage(exitcode)",
 	func(a Value) Value {
-		rtn, _, _ := postQuitMessage.Call(
+		postQuitMessage.Call(
 			intArg(a))
-		return intRet(rtn)
+		return nil
 	})
 
 // dll User32:GetNextDlgTabItem(pointer hDlg, pointer hCtl, bool prev) pointer
@@ -1649,7 +1625,7 @@ var _ = builtin1("EnumClipboardFormats(format)",
 	})
 
 // dll pointer User32:FindWindow([in] string c, [in] string n)
-var findWindow = user32.NewProc("FindWindow")
+var findWindow = user32.NewProc("FindWindowA")
 var _ = builtin2("FindWindow(c, n)",
 	func(a, b Value) Value {
 		rtn, _, _ := findWindow.Call(
@@ -1673,7 +1649,7 @@ var _ = builtin2("GetAncestor(hwnd, gaFlags)",
 // 	string		lpszFormatName,		// buffer to receive format name
 // 	long		cchMaxCount			// maximum length of string to copy into buffer
 // 	)
-var getClipboardFormatName = user32.NewProc("GetClipboardFormatName")
+var getClipboardFormatName = user32.NewProc("GetClipboardFormatNameA")
 var _ = builtin3("GetClipboardFormatName(format, lpszFormatName, cchMaxCount)",
 	func(a, b, c Value) Value {
 		rtn, _, _ := getClipboardFormatName.Call(
@@ -1949,7 +1925,7 @@ var _ = builtin2("SetParent(hwndNewChild, hwndNewParent)",
 	})
 
 // dll bool User32:SetProp(pointer hwnd, [in] string name, pointer value)
-var setProp = user32.NewProc("SetProp")
+var setProp = user32.NewProc("SetPropA")
 var _ = builtin3("SetProp(hwnd, name, value)",
 	func(a, b, c Value) Value {
 		rtn, _, _ := setProp.Call(
@@ -1990,7 +1966,7 @@ var _ = builtin2("ClientToScreen(hWnd, point)",
 			uintptr(pointArg(b, &pt)))
 		b.Put(nil, SuStr("x"), IntVal(int(pt.x)))
 		b.Put(nil, SuStr("y"), IntVal(int(pt.y)))
-		return intRet(rtn)
+		return boolRet(rtn)
 	})
 
 // dll bool User32:ClipCursor(RECT* rect)
@@ -2029,17 +2005,17 @@ var _ = builtin2("DrawFocusRect(hwnd, rect)",
 		rtn, _, _ := drawFocusRect.Call(
 			intArg(a),
 			uintptr(rectArg(b, &r)))
-		return intRet(rtn)
+		return boolRet(rtn)
 	})
 
 // dll long User32:DrawTextEx(pointer hdc, [in] string lpsz, long cb,
 // RECT* lprc, long uFormat, DRAWTEXTPARAMS* params)
-var drawTextEx = user32.NewProc("DrawTextEx")
+var drawTextEx = user32.NewProc("DrawTextExA")
 var _ = builtin6("DrawTextEx(hdc, lpsz, cb, lprc, uFormat, params)",
 	func(a, b, c, d, e, f Value) Value {
 		var r RECT
 		dtp := DRAWTEXTPARAMS{
-			cbSize:        int32(unsafe.Sizeof(DRAWTEXTPARAMS{})),
+			cbSize:        uint32(unsafe.Sizeof(DRAWTEXTPARAMS{})),
 			iTabLength:    getInt32(f, "iTabLength"),
 			iLeftMargin:   getInt32(f, "iLeftMargin"),
 			iRightMargin:  getInt32(f, "iRightMargin"),
@@ -2056,7 +2032,7 @@ var _ = builtin6("DrawTextEx(hdc, lpsz, cb, lprc, uFormat, params)",
 	})
 
 type DRAWTEXTPARAMS struct {
-	cbSize        int32
+	cbSize        uint32
 	iTabLength    int32
 	iLeftMargin   int32
 	iRightMargin  int32
@@ -2068,7 +2044,7 @@ var trackMouseEvent = user32.NewProc("TrackMouseEvent")
 var _ = builtin1("TrackMouseEvent(lpEventTrack)",
 	func(a Value) Value {
 		tme := TRACKMOUSEEVENT{
-			cbSize:      int32(unsafe.Sizeof(TRACKMOUSEEVENT{})),
+			cbSize:      uint32(unsafe.Sizeof(TRACKMOUSEEVENT{})),
 			dwFlags:     getInt32(a, "dwFlags"),
 			hwndTrack:   getHandle(a, "hwndTrack"),
 			dwHoverTime: getInt32(a, "dwHoverTime"),
@@ -2079,7 +2055,7 @@ var _ = builtin1("TrackMouseEvent(lpEventTrack)",
 	})
 
 type TRACKMOUSEEVENT struct {
-	cbSize      int32
+	cbSize      uint32
 	dwFlags     int32
 	hwndTrack   uintptr
 	dwHoverTime int32
@@ -2090,7 +2066,7 @@ var flashWindowEx = user32.NewProc("FlashWindowEx")
 var _ = builtin1("FlashWindowEx(fi)",
 	func(a Value) Value {
 		fwi := FLASHWINFO{
-			cbSize:    getInt32(a, "cbSize"),
+			cbSize:    getUint32(a, "cbSize"),
 			hwnd:      getHandle(a, "hwnd"),
 			dwFlags:   getInt32(a, "dwFlags"),
 			uCount:    getInt32(a, "uCount"),
@@ -2102,7 +2078,7 @@ var _ = builtin1("FlashWindowEx(fi)",
 	})
 
 type FLASHWINFO struct {
-	cbSize    int32
+	cbSize    uint32
 	hwnd      HANDLE
 	dwFlags   int32
 	uCount    int32
@@ -2127,7 +2103,8 @@ var _ = builtin1("GetClipCursor(rect)",
 	func(a Value) Value {
 		var r RECT
 		rtn, _, _ := getClipCursor.Call(
-			uintptr(rectArg(a, &r)))
+			uintptr(unsafe.Pointer(&r)))
+		rectToOb(&r, a)
 		return boolRet(rtn)
 	})
 

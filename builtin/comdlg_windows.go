@@ -18,7 +18,7 @@ var _ = builtin0("CommDlgExtendedError()",
 	})
 
 // dll bool ComDlg32:PrintDlg(PRINTDLG* printdlg)
-var printDlg = comdlg32.NewProc("PrintDlg")
+var printDlg = comdlg32.NewProc("PrintDlgA")
 var _ = builtin1("PrintDlg(printdlg)",
 	func(a Value) Value {
 		pd := PRINTDLG{
@@ -82,7 +82,7 @@ type PRINTDLG struct {
 }
 
 // dll bool ComDlg32:PageSetupDlg(PAGESETUPDLG* pagesetupdlg)
-var pageSetupDlg = comdlg32.NewProc("PageSetupDlg")
+var pageSetupDlg = comdlg32.NewProc("PageSetupDlgA")
 var _ = builtin1("PageSetupDlg(pagesetupdlg)",
 	func(a Value) Value {
 		psob := a.Get(nil, SuStr("ptPaperSize"))
@@ -187,7 +187,7 @@ type OPENFILENAME struct {
 }
 
 // dll bool ComDlg32:ChooseColor(CHOOSECOLOR* x)
-var chooseColor = comdlg32.NewProc("ChooseColor")
+var chooseColor = comdlg32.NewProc("ChooseColorA")
 var _ = builtin1("ChooseColor(x)",
 	func(a Value) Value {
 		var custColors CustColors
@@ -229,7 +229,7 @@ const nCustColors = 16
 type CustColors [nCustColors]int32
 
 // dll bool ComDlg32:ChooseFont(CHOOSEFONT* cf)
-var chooseFont = comdlg32.NewProc("ChooseFont")
+var chooseFont = comdlg32.NewProc("ChooseFontA")
 var _ = builtin1("ChooseFont(cf)",
 	func(a Value) Value {
 		lfob := a.Get(nil, SuStr("lpLogFont"))

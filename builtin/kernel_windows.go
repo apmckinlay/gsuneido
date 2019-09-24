@@ -9,20 +9,6 @@ import (
 
 var kernel32 = windows.NewLazyDLL("kernel32.dll")
 
-type OSVERSIONINFOEX struct {
-	dwOSVersionInfoSize int32
-	dwMajorVersion      int32
-	dwMinorVersion      int32
-	dwBuildNumber       int32
-	dwPlatformId        int32
-	szCSDVersion        *byte
-	wServicePackMajor   int
-	wServicePackMinor   int
-	wSuiteMask          int
-	wProductType        *byte
-	wReserved           *byte
-}
-
 // dll Kernel32:GetComputerName(buffer lpBuffer, LONG* lpnSize) bool
 var getComputerName = kernel32.NewProc("GetComputerNameA")
 var _ = builtin0("GetComputerName()", func() Value {
@@ -59,7 +45,7 @@ var _ = builtin2("GetLocaleInfo(a,b)",
 
 // dll Kernel32:GetProcAddress(pointer hModule, instring procName) pointer
 var getProcAddress = kernel32.NewProc("GetProcAddress")
-var _ = builtin2("GetProcAddress(a,b)",
+var _ = builtin2("GetProcAddress(hModule, procName)",
 	func(a, b Value) Value {
 		rtn, _, _ := getProcAddress.Call(
 			intArg(a),
@@ -76,25 +62,48 @@ var _ = builtin0("GetProcessHeap()",
 	})
 
 // dll Kernel32:GetVersionEx(OSVERSIONINFOEX* lpVersionInfo) bool
-var getVersionEx = kernel32.NewProc("GetVersionEx")
+var getVersionEx = kernel32.NewProc("GetVersionExA")
 var _ = builtin1("GetVersionEx(a)",
 	func(a Value) Value {
 		ovi := OSVERSIONINFOEX{
-			dwOSVersionInfoSize: getInt32(a, "dwOSVersionInfoSize"),
-			dwMajorVersion:      getInt32(a, "dwMajorVersion"),
-			dwMinorVersion:      getInt32(a, "dwMinorVersion"),
-			dwBuildNumber:       getInt32(a, "dwBuildNumber"),
-			dwPlatformId:        getInt32(a, "dwPlatformId"),
-			szCSDVersion:        getStr(a, "szCSDVersion"),
-			wServicePackMajor:   getInt(a, "wServicePackMajor"),
-			wServicePackMinor:   getInt(a, "wServicePackMinor"),
-			wSuiteMask:          getInt(a, "wSuiteMask"),
-			wProductType:        getStr(a, "wProductType"),
-			wReserved:           getStr(a, "wReserved"),
+			dwOSVersionInfoSize: int32(unsafe.Sizeof(OSVERSIONINFOEX{})),
 		}
-		rtn, _, _ := getVersionEx.Call(uintptr(unsafe.Pointer(&ovi)))
+		rtn, _, _ := getVersionEx.Call(
+			uintptr(unsafe.Pointer(&ovi)))
+		a.Put(nil, SuStr("dwMajorVersion"),
+			IntVal(int(ovi.dwMajorVersion)))
+		a.Put(nil, SuStr("dwMinorVersion"),
+			IntVal(int(ovi.dwMinorVersion)))
+		a.Put(nil, SuStr("dwBuildNumber"),
+			IntVal(int(ovi.dwBuildNumber)))
+		a.Put(nil, SuStr("dwPlatformId"),
+			IntVal(int(ovi.dwPlatformId)))
+		a.Put(nil, SuStr("szCSDVersion"),
+			strRet(ovi.szCSDVersion[:]))
+		a.Put(nil, SuStr("wServicePackMajor"),
+			IntVal(int(ovi.wServicePackMajor)))
+		a.Put(nil, SuStr("wServicePackMinor"),
+			IntVal(int(ovi.wServicePackMinor)))
+		a.Put(nil, SuStr("wSuiteMask"),
+			IntVal(int(ovi.wSuiteMask)))
+		a.Put(nil, SuStr("wProductType"),
+			IntVal(int(ovi.wProductType)))
 		return boolRet(rtn)
 	})
+
+type OSVERSIONINFOEX struct {
+	dwOSVersionInfoSize int32
+	dwMajorVersion      int32
+	dwMinorVersion      int32
+	dwBuildNumber       int32
+	dwPlatformId        int32
+	szCSDVersion        [128]byte
+	wServicePackMajor   int16
+	wServicePackMinor   int16
+	wSuiteMask          int16
+	wProductType        byte
+	wReserved           byte
+}
 
 // dll Kernel32:GlobalAlloc(long flags, long size) pointer
 var globalAlloc = kernel32.NewProc("GlobalAlloc")
@@ -114,12 +123,12 @@ var _ = builtin1("GlobalLock(hMem)",
 		return intRet(rtn)
 	})
 
-// dll Kernel32:GlobalUnlock(pointer handle) void
+// dll Kernel32:GlobalUnlock(pointer handle) bool
 var globalUnlock = kernel32.NewProc("GlobalUnlock")
 var _ = builtin1("GlobalUnlock(hMem)",
 	func(a Value) Value {
 		rtn, _, _ := globalUnlock.Call(intArg(a))
-		return intRet(rtn)
+		return boolRet(rtn)
 	})
 
 var _ = builtin1("GlobalUnlockString(hMem)",
@@ -169,14 +178,6 @@ var _ = builtin3("CopyMemory(destination, source, length)",
 		return nil
 	})
 
-// dll bool Kernel32:AllocConsole()
-var allocConsole = kernel32.NewProc("AllocConsole")
-var _ = builtin0("AllocConsole()",
-	func() Value {
-		rtn, _, _ := allocConsole.Call()
-		return boolRet(rtn)
-	})
-
 // dll bool Kernel32:CloseHandle(pointer handle)
 var closeHandle = kernel32.NewProc("CloseHandle")
 var _ = builtin1("CloseHandle(handle)",
@@ -190,7 +191,7 @@ var _ = builtin1("CloseHandle(handle)",
 //		[in] string from,
 //		[in] string to,
 //		bool failIfExists)
-var copyFile = kernel32.NewProc("CopyFile")
+var copyFile = kernel32.NewProc("CopyFileA")
 var _ = builtin3("CopyFile(from, to, failIfExists)",
 	func(a, b, c Value) Value {
 		rtn, _, _ := copyFile.Call(
@@ -215,14 +216,6 @@ var _ = builtin1("FlushFileBuffers(hFile)",
 	func(a Value) Value {
 		rtn, _, _ := flushFileBuffers.Call(
 			intArg(a))
-		return boolRet(rtn)
-	})
-
-// dll bool Kernel32:FreeConsole()
-var freeConsole = kernel32.NewProc("FreeConsole")
-var _ = builtin0("FreeConsole()",
-	func() Value {
-		rtn, _, _ := freeConsole.Call()
 		return boolRet(rtn)
 	})
 
@@ -252,7 +245,7 @@ var _ = builtin0("GetCurrentThreadId()",
 
 // dll long Kernel32:GetFileAttributes(
 // 		[in] string lpFileName)
-var getFileAttributes = kernel32.NewProc("GetFileAttributes")
+var getFileAttributes = kernel32.NewProc("GetFileAttributesA")
 var _ = builtin1("GetFileAttributes(lpFileName)",
 	func(a Value) Value {
 		rtn, _, _ := getFileAttributes.Call(
@@ -286,13 +279,15 @@ var _ = builtin0("GetTickCount64()",
 	})
 
 // dll long Kernel32:GetWindowsDirectory(string lpBuffer, long size)
-var getWindowsDirectory = kernel32.NewProc("GetWindowsDirectory")
-var _ = builtin2("GetWindowsDirectory(lpBuffer, size)",
-	func(a, b Value) Value {
-		rtn, _, _ := getWindowsDirectory.Call(
-			uintptr(stringArg(a)),
-			intArg(b))
-		return intRet(rtn)
+var getWindowsDirectory = kernel32.NewProc("GetWindowsDirectoryA")
+var _ = builtin0("GetWindowsDirectory()",
+	func() Value {
+		const bufsize = 256
+		var buf [bufsize + 1]byte
+		getWindowsDirectory.Call(
+			uintptr(unsafe.Pointer(&buf)),
+			uintptr(bufsize))
+		return strRet(buf[:])
 	})
 
 // dll pointer Kernel32:GlobalFree(pointer hglb)
@@ -314,7 +309,7 @@ var _ = builtin1("GlobalSize(handle)",
 	})
 
 // dll pointer Kernel32:LoadLibrary([in] string library)
-var loadLibrary = kernel32.NewProc("LoadLibrary")
+var loadLibrary = kernel32.NewProc("LoadLibraryA")
 var _ = builtin1("LoadLibrary(library)",
 	func(a Value) Value {
 		rtn, _, _ := loadLibrary.Call(
@@ -332,37 +327,8 @@ var _ = builtin2("LoadResource(module, res)",
 		return intRet(rtn)
 	})
 
-// dll bool Kernel32:MoveFileEx([in] string from, [in] string to, long flags)
-var moveFileEx = kernel32.NewProc("MoveFileEx")
-var _ = builtin3("MoveFileEx(from, to, flags)",
-	func(a, b, c Value) Value {
-		rtn, _, _ := moveFileEx.Call(
-			uintptr(stringArg(a)),
-			uintptr(stringArg(b)),
-			intArg(c))
-		return boolRet(rtn)
-	})
-
-// dll bool Kernel32:RemoveDirectory([in] string lpPathName)
-var removeDirectory = kernel32.NewProc("RemoveDirectory")
-var _ = builtin1("RemoveDirectory(lpPathName)",
-	func(a Value) Value {
-		rtn, _, _ := removeDirectory.Call(
-			uintptr(stringArg(a)))
-		return boolRet(rtn)
-	})
-
-// dll bool Kernel32:SetConsoleTitle(string title)
-var setConsoleTitle = kernel32.NewProc("SetConsoleTitle")
-var _ = builtin1("SetConsoleTitle(title)",
-	func(a Value) Value {
-		rtn, _, _ := setConsoleTitle.Call(
-			uintptr(stringArg(a)))
-		return boolRet(rtn)
-	})
-
 // dll bool Kernel32:SetCurrentDirectory(string lpPathName)
-var setCurrentDirectory = kernel32.NewProc("SetCurrentDirectory")
+var setCurrentDirectory = kernel32.NewProc("SetCurrentDirectoryA")
 var _ = builtin1("SetCurrentDirectory(lpPathName)",
 	func(a Value) Value {
 		rtn, _, _ := setCurrentDirectory.Call(
@@ -372,7 +338,7 @@ var _ = builtin1("SetCurrentDirectory(lpPathName)",
 
 // dll bool Kernel32:SetFileAttributes(
 //		[in] string lpFileName, long dwFileAttributes)
-var setFileAttributes = kernel32.NewProc("SetFileAttributes")
+var setFileAttributes = kernel32.NewProc("SetFileAttributesA")
 var _ = builtin2("SetFileAttributes(lpFileName, dwFileAttributes)",
 	func(a, b Value) Value {
 		rtn, _, _ := setFileAttributes.Call(
@@ -385,7 +351,7 @@ var _ = builtin2("SetFileAttributes(lpFileName, dwFileAttributes)",
 //		long dwShareMode, SECURITY_ATTRIBUTES* lpSecurityAttributes,
 //		long dwCreationDistribution, long dwFlagsAndAttributes,
 //		pointer hTemplateFile)
-var createFile = user32.NewProc("CreateFile")
+var createFile = kernel32.NewProc("CreateFileA")
 var _ = builtin7("CreateFile(lpFileName, dwDesiredAccess, dwShareMode,"+
 	"lpSecurityAttributes, dwCreationDistribution, dwFlagsAndAttributes,"+
 	"hTemplateFile)",
@@ -403,7 +369,7 @@ var _ = builtin7("CreateFile(lpFileName, dwDesiredAccess, dwShareMode,"+
 			intArg(e),
 			intArg(f),
 			intArg(g))
-		return boolRet(rtn)
+		return intRet(rtn)
 	})
 
 type SECURITY_ATTRIBUTES struct {

@@ -21,13 +21,17 @@ var _ = builtin2("DragAcceptFiles(hWnd, fAccept)",
 	})
 
 // dll bool Shell32:SHGetPathFromIDList(pointer pidl, string path)
-var shGetPathFromIDList = shell32.NewProc("SHGetPathFromIDList")
-var _ = builtin2("SHGetPathFromIDList(pidl, path)",
-	func(a, b Value) Value {
+var shGetPathFromIDList = shell32.NewProc("SHGetPathFromIDListA")
+var _ = builtin1("SHGetPathFromIDList(pidl)",
+	func(a Value) Value {
+		var buf [MAX_PATH]byte
 		rtn, _, _ := shGetPathFromIDList.Call(
 			intArg(a),
-			uintptr(stringArg(b)))
-		return boolRet(rtn)
+			uintptr(unsafe.Pointer(&buf)))
+		if rtn == 0 {
+			return EmptyStr
+		}
+		return strRet(buf[:])
 	})
 
 // dll long Shell32:DragQueryFile(
@@ -57,7 +61,7 @@ var shell_NotifyIcon = shell32.NewProc("Shell_NotifyIconA")
 var _ = builtin2("Shell_NotifyIcon(dwMessage, lpdata)",
 	func(a, b Value) Value {
 		nid := NOTIFYICONDATA{
-			cbSize:               int32(unsafe.Sizeof(NOTIFYICONDATA{})),
+			cbSize:               uint32(unsafe.Sizeof(NOTIFYICONDATA{})),
 			hWnd:                 getHandle(b, "hWnd"),
 			uID:                  getInt32(b, "uID"),
 			uFlags:               getInt32(b, "uFlags"),
@@ -78,7 +82,7 @@ var _ = builtin2("Shell_NotifyIcon(dwMessage, lpdata)",
 	})
 
 type NOTIFYICONDATA struct {
-	cbSize               int32
+	cbSize               uint32
 	hWnd                 HANDLE
 	uID                  int32
 	uFlags               int32
@@ -100,7 +104,7 @@ func copyStr(dst []byte, src string) {
 }
 
 // dll bool Shell32:ShellExecuteEx(SHELLEXECUTEINFO* lpExecInfo)
-var shellExecuteEx = shell32.NewProc("ShellExecuteEx")
+var shellExecuteEx = shell32.NewProc("ShellExecuteExA")
 var _ = builtin1("ShellExecuteEx(lpExecInfo)",
 	func(a Value) Value {
 		sei := SHELLEXECUTEINFO{
@@ -149,11 +153,10 @@ const MAX_PATH = 260
 var sHBrowseForFolder = shell32.NewProc("SHBrowseForFolderA")
 var _ = builtin1("SHBrowseForFolder(lpbi)",
 	func(a Value) Value {
-		var displayName [MAX_PATH]byte
 		bi := BROWSEINFO{
 			hwndOwner:      getHandle(a, "hwndOwner"),
 			pidlRoot:       getHandle(a, "pidlRoot"),
-			pszDisplayName: &displayName[0],
+			pszDisplayName: nil,
 			lpszTitle:      getStr(a, "lpszTitle"),
 			ulFlags:        getInt32(a, "ulFlags"),
 			lpfn:           getCallback(a, "lpfn", 4),
