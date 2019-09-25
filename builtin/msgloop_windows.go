@@ -71,3 +71,10 @@ func DispatchMessage(msg *MSG) uintptr {
 		uintptr(unsafe.Pointer(msg)))
 	return ret
 }
+
+//-------------------------------------------------------------------
+
+// since we don't have the functions it calls
+var _ = builtin0("WorkSpaceStatus()", func() Value {
+	return EmptyStr
+})
