@@ -45,8 +45,8 @@ var _ = builtin2("DragQueryFile(hDrop, iFile)",
 		n, _, _ := dragQueryFile.Call(
 			intArg(a),
 			intArg(b),
-			uintptr(0),
-			uintptr(0))
+			0,
+			0)
 		buf := make([]byte, n)
 		dragQueryFile.Call(
 			intArg(a),

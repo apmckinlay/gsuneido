@@ -10,11 +10,11 @@ import (
 var advapi32 = windows.NewLazyDLL("advapi32.dll")
 
 // RegOpenKeyEx
-var regOpenKeyExA = advapi32.NewProc("RegOpenKeyExA")
+var regOpenKeyEx = advapi32.NewProc("RegOpenKeyExA")
 var _ = builtin5("RegOpenKeyEx(hKey, lpSubKey, ulOptions, samDesired, phkResult)",
 	func(a, b, c, d, e Value) Value {
 		var e1 uintptr
-		rtn, _, _ := regOpenKeyExA.Call(
+		rtn, _, _ := regOpenKeyEx.Call(
 			intArg(a),
 			uintptr(stringArg(b)),
 			intArg(c),
@@ -34,14 +34,14 @@ var _ = builtin1("RegCloseKey(hKey)",
 
 // RegCreateKeyEx
 var regCreateKeyEx = advapi32.NewProc("RegCreateKeyExA")
-var _ = builtin("RegCreateKeyEx(hKey, lpSubKey, Reserved, lpClass, dwOptions, "+
-	"samDesired, lpSecurityAttributes, phkResult, lpdwDisposition)",
+var _ = builtin("RegCreateKeyEx(hKey, lpSubKey, Reserved/*unused*/, lpClass, "+
+	"dwOptions, samDesired, lpSecurityAttributes, phkResult, lpdwDisposition)",
 	func(_ *Thread, a []Value) Value {
 		var h1 uintptr
 		rtn, _, _ := regCreateKeyEx.Call(
 			intArg(a[0]),
 			uintptr(stringArg(a[1])),
-			intArg(a[2]),
+			0, // Reserved - must be 0
 			uintptr(stringArg(a[3])),
 			intArg(a[4]),
 			intArg(a[5]),
@@ -62,8 +62,8 @@ var _ = builtin6("RegQueryValueEx(hKey, lpValueName, lpReserved/*unused*/, "+
 		rtn, _, _ := regQueryValueEx.Call(
 			intArg(a),
 			uintptr(stringArg(b)),
-			uintptr(0),                   // lpReserved - must be 0
-			uintptr(0),                   // lpType - NULL
+			0,                            // lpReserved - must be 0
+			0,                            // lpType - NULL
 			uintptr(unsafe.Pointer(&e1)), // lpData
 			uintptr(unsafe.Pointer(&f1))) // lpcbData
 		e.Put(nil, SuStr("x"), IntVal(int(e1))) // data
@@ -73,16 +73,16 @@ var _ = builtin6("RegQueryValueEx(hKey, lpValueName, lpReserved/*unused*/, "+
 // RegSetValueEx - hard coded for 4 byte data
 var regSetValueEx = advapi32.NewProc("RegSetValueExA")
 var _ = builtin6("RegSetValueEx(hKey, lpValueName, reserved/*unused*/, "+
-	"lpType/*unused*/, lpData, cbData/*unused*/)",
+	"dwType/*unused*/, lpData, cbData/*unused*/)",
 	func(a, b, c, d, e, f Value) Value {
 		var e1 int32 // data
 		rtn, _, _ := regSetValueEx.Call(
 			intArg(a),
 			uintptr(stringArg(b)),
-			uintptr(0),                   // reserved - must be 0
-			intArg(d),                    // lpType
+			0,                            // reserved - must be 0
+			intArg(d),                    // dwType
 			uintptr(unsafe.Pointer(&e1)), // lpData
-			uintptr(4))                   // cbData = 4 to match int32 data
+			4)                            // cbData = 4 to match int32 data
 		e.Put(nil, SuStr("x"), IntVal(int(e1)))
 		return intRet(rtn)
 	})

@@ -54,8 +54,11 @@ func NewCallback(fn Value, nargs byte) uintptr {
 							IntVal(int(b)),
 							IntVal(int(c)),
 							IntVal(int(d)))
-						if x == nil {
+						if x == nil || x == False {
 							return 0
+						}
+						if x == True {
+							return 1
 						}
 						return uintptr(ToInt(x))
 					})

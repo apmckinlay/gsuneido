@@ -998,8 +998,6 @@ var _ = builtin4("SendMessage(hwnd, msg, wParam, lParam)",
 		return intRet(rtn)
 	})
 
-// dll User32:SendMessage(pointer hwnd, long msg, pointer wParam,
-//		string text) pointer
 var _ = builtin4("SendMessageText(hwnd, msg, wParam, text)",
 	func(a, b, c, d Value) Value {
 		// Must pass a defensive mutable copy of the string
@@ -1044,8 +1042,6 @@ var _ = builtin4("SendMessageTextOut(hwnd, msg, wParam = 0, bufsize = 1024)",
 		return ob
 	})
 
-// dll User32:SendMessage(pointer hwnd, long msg, pointer wParam,
-//		TCITEM* tcitem) pointer
 var _ = builtin4("SendMessageTcitem(hwnd, msg, wParam, tcitem)",
 	func(a, b, c, d Value) Value {
 		verify.That(getInt32(d, "cchTextMax") == 0)
@@ -1087,8 +1083,6 @@ var _ = builtin5("SendMessageTextRange(hwnd, msg, cpMin, cpMax, each = 1)",
 		return SuStr(string(buf[:rtn]))
 	})
 
-// dll User32:SendMessage(pointer hwnd, long msg, pointer wParam,
-//		TOOLINFO* lParam) pointer
 var _ = builtin4("SendMessageTOOLINFO(hwnd, msg, wParam, lParam)",
 	func(a, b, c, d Value) Value {
 		t := TOOLINFO{
@@ -1109,8 +1103,6 @@ var _ = builtin4("SendMessageTOOLINFO(hwnd, msg, wParam, lParam)",
 		return intRet(rtn)
 	})
 
-// dll User32:SendMessage(pointer hwnd, long msg, pointer wParam,
-//		TOOLINFO2* lParam) pointer
 var _ = builtin4("SendMessageTOOLINFO2(hwnd, msg, wParam, lParam)",
 	func(a, b, c, d Value) Value {
 		t := TOOLINFO2{
@@ -1131,8 +1123,6 @@ var _ = builtin4("SendMessageTOOLINFO2(hwnd, msg, wParam, lParam)",
 		return intRet(rtn)
 	})
 
-// dll User32:SendMessage(pointer hwnd, long msg, pointer wParam,
-//		TV_ITEM* tvitem) pointer
 var _ = builtin4("SendMessageTreeItem(hwnd, msg, wParam, tvitem)",
 	func(a, b, c, d Value) Value {
 		cchTextMax := getInt32(d, "cchTextMax")
@@ -1176,8 +1166,6 @@ var _ = builtin4("SendMessageTreeItem(hwnd, msg, wParam, tvitem)",
 		return intRet(rtn)
 	})
 
-// dll User32:SendMessage(pointer hwnd, long msg, pointer wParam,
-//		TV_INSERTSTRUCT* tvins) pointer
 var _ = builtin4("SendMessageTVINS(hwnd, msg, wParam, tvins)",
 	func(a, b, c, d Value) Value {
 		item := d.Get(nil, SuStr("item"))
@@ -1226,6 +1214,45 @@ var _ = builtin4("SendMessageTVINS(hwnd, msg, wParam, tvins)",
 		if cchTextMax != 0 {
 			item.Put(nil, SuStr("pszText"), SuStr(buf))
 		}
+		return intRet(rtn)
+	})
+
+var _ = builtin4("SendMessageSBPART(hwnd, msg, wParam, sbpart)",
+	func(a, b, c, d Value) Value {
+		var sbpart SBPART
+		for i := range sbpart.parts {
+			sbpart.parts[i] = int32(ToInt(d.Get(nil, SuInt(i))))
+		}
+		rtn, _, _ := sendMessage.Call(
+			intArg(a),
+			intArg(b),
+			intArg(c),
+			uintptr(unsafe.Pointer(&sbpart)))
+		for i := range sbpart.parts {
+			d.Put(nil, SuInt(i), IntVal(int(sbpart.parts[i])))
+		}
+		return intRet(rtn)
+	})
+
+type SBPART struct {
+	parts [256]int32
+}
+
+var _ = builtin4("SendMessageMSG(hwnd, msg, wParam, lParam)",
+	func(a, b, c, d Value) Value {
+		msg := MSG{
+			hwnd:    getHandle(d, "hwnd"),
+			message: getUint32(d, "message"),
+			wParam:  getHandle(d, "message"),
+			lParam:  getHandle(d, "message"),
+			time:    getUint32(d, "message"),
+			pt:      getPoint(d, "pt"),
+		}
+		rtn, _, _ := sendMessage.Call(
+			intArg(a),
+			intArg(b),
+			intArg(c),
+			uintptr(unsafe.Pointer(&msg)))
 		return intRet(rtn)
 	})
 
@@ -2328,4 +2355,18 @@ var _ = builtin2("IsDialogMessage(hDlg, lpMsg)",
 			intArg(a),
 			uintptr(unsafe.Pointer(&msg)))
 		return boolRet(rtn)
+	})
+
+// dll long User32:MapWindowPoints(pointer hwndfrom, pointer hwndto, RECT* p, long n)
+var mapWindowPoints = user32.NewProc("MapWindowPoints")
+var _ = builtin3("MapWindowRect(hwndfrom, hwndto, r)",
+	func(a, b, c Value) Value {
+		var r RECT
+		rtn, _, _ := mapWindowPoints.Call(
+			intArg(a),
+			intArg(b),
+			uintptr(rectArg(c, &r)),
+			2)
+		rectToOb(&r, c)
+		return intRet(rtn)
 	})

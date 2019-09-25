@@ -159,14 +159,11 @@ var _ = builtin3("HeapFree(hHeap, dwFlags, lpMem)",
 		return boolRet(rtn)
 	})
 
-// dll Kernel32:MulDiv(long x, long y, long z) long
 var _ = builtin3("MulDiv(x, y, z)",
 	func(a, b, c Value) Value {
 		return IntVal(int(int64(ToInt(a)) * int64(ToInt(b)) / int64(ToInt(c))))
 	})
 
-// dll Kernel32:CopyMemory(pointer destination, [in] string source,
-//		long length) void
 var _ = builtin3("CopyMemory(destination, source, length)",
 	func(a, b, c Value) Value {
 		dst := uintptr(ToInt(a))
@@ -272,7 +269,7 @@ var _ = builtin1("GetStdHandle(nStdHandle)",
 
 // dll int64 Kernel32:GetTickCount64()
 var getTickCount64 = kernel32.NewProc("GetTickCount64")
-var _ = builtin0("GetTickCount64()",
+var _ = builtin0("GetTickCount()",
 	func() Value {
 		rtn, _, _ := getTickCount64.Call()
 		return intRet(rtn)

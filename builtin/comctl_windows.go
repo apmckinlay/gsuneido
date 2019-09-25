@@ -13,18 +13,16 @@ var initCommonControlsEx = comctl32.NewProc("InitCommonControlsEx")
 var _ = builtin1("InitCommonControlsEx(picce)",
 	func(a Value) Value {
 		a1 := INITCOMMONCONTROLSEX{
-			dwSize: int32(unsafe.Sizeof(INITCOMMONCONTROLSEX{})),
+			dwSize: uint32(unsafe.Sizeof(INITCOMMONCONTROLSEX{})),
 			dwICC:  int32(getInt(a, "dwICC")),
 		}
-		rtn, _, _ := initCommonControlsEx.Call(uintptr(unsafe.Pointer(&a1)))
-		if rtn == 0 {
-			return False
-		}
-		return True
+		rtn, _, _ := initCommonControlsEx.Call(
+			uintptr(unsafe.Pointer(&a1)))
+		return boolRet(rtn)
 	})
 
 type INITCOMMONCONTROLSEX struct {
-	dwSize int32
+	dwSize uint32
 	dwICC  int32
 }
 
@@ -46,18 +44,19 @@ var _ = builtin5("ImageList_Create(cx, cy, flags, cInitial, cGrow)",
 var imageList_Destroy = comctl32.NewProc("ImageList_Destroy")
 var _ = builtin1("ImageList_Destroy(himl)",
 	func(a Value) Value {
-		rtn, _, _ := initCommonControlsEx.Call(intArg(a))
-		if rtn == 0 {
-			return False
-		}
-		return True
+		rtn, _, _ := initCommonControlsEx.Call(
+			intArg(a))
+		return boolRet(rtn)
 	})
 
 // dll Comctl32:ImageList_ReplaceIcon(pointer imagelist, long i, pointer hicon) long
 var imageList_ReplaceIcon = comctl32.NewProc("ImageList_ReplaceIcon")
 var _ = builtin3("ImageList_ReplaceIcon(himl, i, hicon)",
 	func(a, b, c Value) Value {
-		rtn, _, _ := imageList_ReplaceIcon.Call(intArg(a), intArg(b), intArg(c))
+		rtn, _, _ := imageList_ReplaceIcon.Call(
+			intArg(a),
+			intArg(b),
+			intArg(c))
 		return intRet(rtn)
 	})
 

@@ -27,6 +27,8 @@ func init() {
 		&SuStructGlobal{size: int(unsafe.Sizeof(OSVERSIONINFOEX{}))})
 	Global.Builtin("SHELLEXECUTEINFO",
 		&SuStructGlobal{size: int(unsafe.Sizeof(SHELLEXECUTEINFO{}))})
+	Global.Builtin("TOOLINFO",
+		&SuStructGlobal{size: int(unsafe.Sizeof(TOOLINFO{}))})
 
 	Global.Builtin("MINMAXINFO",
 		&SuMinMaxInfo{SuStructGlobal{size: int(unsafe.Sizeof(MINMAXINFO{}))}})
@@ -257,7 +259,7 @@ func scnToOb(scn *SCNotification) *SuObject {
 	ob.Put(nil, SuStr("ch"), IntVal(int(scn.ch)))
 	ob.Put(nil, SuStr("modifiers"), IntVal(int(scn.modifiers)))
 	ob.Put(nil, SuStr("modificationType"), IntVal(int(scn.modificationType)))
-	// NOT text
+	// NOT scn.text
 	ob.Put(nil, SuStr("length"), IntVal(int(scn.length)))
 	ob.Put(nil, SuStr("linesAdded"), IntVal(int(scn.linesAdded)))
 	ob.Put(nil, SuStr("message"), IntVal(int(scn.message)))
@@ -288,3 +290,48 @@ func strFromAddr(a uintptr) Value {
 	}
 	return SuStr(sb.String())
 }
+
+//-------------------------------------------------------------------
+
+type DRAWITEMSTRUCT struct {
+	CtlType    int32
+	CtlID      int32
+	itemID     int32
+	itemAction int32
+	itemState  int32
+	hwndItem   uintptr
+	hDC        uintptr
+	rcItem     RECT
+	itemData   uintptr
+}
+
+var _ = builtin1("DRAWITEMSTRUCT(address)",
+	func(a Value) Value {
+		dis := (*DRAWITEMSTRUCT)(unsafe.Pointer(uintptr(ToInt(a))))
+		ob := NewSuObject()
+		ob.Put(nil, SuStr("CtlType"), IntVal(int(dis.CtlType)))
+		ob.Put(nil, SuStr("CtlID"), IntVal(int(dis.CtlID)))
+		ob.Put(nil, SuStr("itemID"), IntVal(int(dis.itemID)))
+		ob.Put(nil, SuStr("itemAction"), IntVal(int(dis.itemAction)))
+		ob.Put(nil, SuStr("itemState"), IntVal(int(dis.itemState)))
+		ob.Put(nil, SuStr("hwndItem"), IntVal(int(dis.hwndItem)))
+		ob.Put(nil, SuStr("hDC"), IntVal(int(dis.hDC)))
+		ob.Put(nil, SuStr("rcItem"), rectToOb(&dis.rcItem, nil))
+		ob.Put(nil, SuStr("itemData"), IntVal(int(dis.itemData)))
+		return ob
+	})
+
+//-------------------------------------------------------------------
+
+var _ = builtin1("MSG(address)",
+	func(a Value) Value {
+		msg := (*MSG)(unsafe.Pointer(uintptr(ToInt(a))))
+		ob := NewSuObject()
+		ob.Put(nil, SuStr("hwnd"), IntVal(int(msg.hwnd)))
+		ob.Put(nil, SuStr("message"), IntVal(int(msg.message)))
+		ob.Put(nil, SuStr("wParam"), IntVal(int(msg.wParam)))
+		ob.Put(nil, SuStr("lParam"), IntVal(int(msg.lParam)))
+		ob.Put(nil, SuStr("time"), IntVal(int(msg.time)))
+		ob.Put(nil, SuStr("pt"), pointToOb(&msg.pt, nil))
+		return ob
+	})
