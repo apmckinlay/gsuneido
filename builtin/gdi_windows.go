@@ -12,7 +12,7 @@ var gdi32 = windows.NewLazyDLL("gdi32.dll")
 
 const LF_FACESIZE = 32
 
-type LOGFONTA struct {
+type LOGFONT struct {
 	lfHeight         int32
 	lfWidth          int32
 	lfEscapement     int32
@@ -38,24 +38,25 @@ type TEXTMETRIC struct {
 	AveCharWidth     int32
 	MaxCharWidth     int32
 	Weight           int32
-	Italic           byte
-	Underlined       byte
-	StruckOut        byte
+	Overhang         int32
+	DigitizedAspectX int32
+	DigitizedAspectY int32
 	FirstChar        byte
 	LastChar         byte
 	DefaultChar      byte
 	BreakChar        byte
+	Italic           byte
+	Underlined       byte
+	StruckOut        byte
 	PitchAndFamily   byte
 	CharSet          byte
-	Overhang         int32
-	DigitizedAspectX int32
-	DigitizedAspectY int32
+	_                [3]byte // padding
 }
 
 // dll Gdi32:CreateFontIndirect(LOGFONT* lf) gdiobj
 var createFontIndirect = gdi32.NewProc("CreateFontIndirectA")
 var _ = builtin1("CreateFontIndirect(logfont)", func(a Value) Value {
-	f := LOGFONTA{
+	f := LOGFONT{
 		lfHeight:         getInt32(a, "lfHeight"),
 		lfWidth:          getInt32(a, "lfWidth"),
 		lfEscapement:     getInt32(a, "lfEscapement"),
@@ -665,6 +666,17 @@ var _ = builtin("ExtTextOut(hdc, x, y, fuOptions, lprc, lpString, cbCount,"+
 		return boolRet(rtn)
 	})
 
+// dll gdiobj Gdi32:CreatePen(long fnPenStyle, long nWidth, long clrref)
+var createPen = gdi32.NewProc("createPen")
+var _ = builtin3("CreatePen(fnPenStyle, nWidth, clrref)",
+	func(a, b, c Value) Value {
+		rtn, _, _ := createPen.Call(
+			intArg(a),
+			intArg(b),
+			intArg(b))
+		return intRet(rtn)
+	})
+
 // dll gdiobj Gdi32:ExtCreatePen(long dwPenStyle, long dwWidth, LOGBRUSH* brush,
 //		long dwStyleCount, pointer lpStyle)
 var extCreatePen = gdi32.NewProc("ExtCreatePen")
@@ -700,17 +712,17 @@ var _ = builtin7("GetGlyphOutline(hdc, uChar, uFormat, lpgm, "+
 		var gm GLYPHMETRICS
 		mat := MAT2{
 			eM11: FIXED{
-				fract: getInt32(g.Get(nil, SuStr("eM11")), "fract"),
-				value: getInt32(g.Get(nil, SuStr("eM11")), "value")},
+				fract: getInt16(g.Get(nil, SuStr("eM11")), "fract"),
+				value: getInt16(g.Get(nil, SuStr("eM11")), "value")},
 			eM12: FIXED{
-				fract: getInt32(g.Get(nil, SuStr("eM12")), "fract"),
-				value: getInt32(g.Get(nil, SuStr("eM12")), "value")},
+				fract: getInt16(g.Get(nil, SuStr("eM12")), "fract"),
+				value: getInt16(g.Get(nil, SuStr("eM12")), "value")},
 			eM21: FIXED{
-				fract: getInt32(g.Get(nil, SuStr("eM21")), "fract"),
-				value: getInt32(g.Get(nil, SuStr("eM21")), "value")},
+				fract: getInt16(g.Get(nil, SuStr("eM21")), "fract"),
+				value: getInt16(g.Get(nil, SuStr("eM21")), "value")},
 			eM22: FIXED{
-				fract: getInt32(g.Get(nil, SuStr("eM22")), "fract"),
-				value: getInt32(g.Get(nil, SuStr("eM22")), "value")},
+				fract: getInt16(g.Get(nil, SuStr("eM22")), "fract"),
+				value: getInt16(g.Get(nil, SuStr("eM22")), "value")},
 		}
 		rtn, _, _ := getGlyphOutline.Call(
 			intArg(a),
@@ -733,13 +745,13 @@ type GLYPHMETRICS struct {
 	gmBlackBoxX     int32
 	gmBlackBoxY     int32
 	gmptGlyphOrigin POINT
-	gmCellIncX      int32
-	gmCellIncY      int32
+	gmCellIncX      int16
+	gmCellIncY      int16
 }
 
 type FIXED struct {
-	fract int32
-	value int32
+	fract int16
+	value int16
 }
 
 type MAT2 struct {
@@ -772,6 +784,7 @@ type DOCINFO struct {
 	lpszOutput   *byte
 	lpszDatatype *byte
 	fwType       int32
+	_            [4]byte // padding
 }
 
 // dll bool Gdi32:SetWindowExtEx(pointer hdc, long x, long y, POINT* p)

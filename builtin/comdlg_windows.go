@@ -28,11 +28,11 @@ var _ = builtin1("PrintDlg(printdlg)",
 			hDevNames:           getHandle(a, "hDevNames"),
 			hDC:                 getHandle(a, "hDC"),
 			Flags:               getInt32(a, "Flags"),
-			nFromPage:           getInt32(a, "nFromPage"),
-			nToPage:             getInt32(a, "nToPage"),
-			nMinPage:            getInt32(a, "nMinPage"),
-			nMaxPage:            getInt32(a, "nMaxPage"),
-			nCopies:             getInt32(a, "nCopies"),
+			nFromPage:           getInt16(a, "nFromPage"),
+			nToPage:             getInt16(a, "nToPage"),
+			nMinPage:            getInt16(a, "nMinPage"),
+			nMaxPage:            getInt16(a, "nMaxPage"),
+			nCopies:             getInt16(a, "nCopies"),
 			hInstance:           getHandle(a, "hInstance"),
 			lCustData:           getHandle(a, "lCustData"),
 			lpPrintTemplateName: getStr(a, "lpPrintTemplateName"),
@@ -66,11 +66,11 @@ type PRINTDLG struct {
 	hDevNames           HANDLE
 	hDC                 HANDLE
 	Flags               int32
-	nFromPage           int32
-	nToPage             int32
-	nMinPage            int32
-	nMaxPage            int32
-	nCopies             int32
+	nFromPage           int16
+	nToPage             int16
+	nMinPage            int16
+	nMaxPage            int16
+	nCopies             int16
 	hInstance           HANDLE
 	lCustData           HANDLE
 	lpfnPrintHook       HANDLE
@@ -178,12 +178,15 @@ type OPENFILENAME struct {
 	initialDir     *byte
 	title          *byte
 	flags          int32
-	fileOffset     int32
-	fileExtension  int32
+	fileOffset     int16
+	fileExtension  int16
 	defExt         *byte
 	custData       HANDLE
 	hook           HANDLE
 	templateName   *byte
+	pvReserved     uintptr
+	dwReserved     int32
+	FlagsEx        int32
 }
 
 // dll bool ComDlg32:ChooseColor(CHOOSECOLOR* x)
@@ -233,7 +236,7 @@ var chooseFont = comdlg32.NewProc("ChooseFontA")
 var _ = builtin1("ChooseFont(cf)",
 	func(a Value) Value {
 		lfob := a.Get(nil, SuStr("lpLogFont"))
-		lf := LOGFONTA{
+		lf := LOGFONT{
 			lfHeight:         getInt32(lfob, "lfHeight"),
 			lfWidth:          getInt32(lfob, "lfWidth"),
 			lfEscapement:     getInt32(lfob, "lfEscapement"),
@@ -257,12 +260,12 @@ var _ = builtin1("ChooseFont(cf)",
 			iPointSize:     getInt32(a, "iPointSize"),
 			Flags:          getInt32(a, "Flags"),
 			rgbColors:      getInt32(a, "rgbColors"),
-			lCustData:      getInt32(a, "lCustData"),
+			lCustData:      getHandle(a, "lCustData"),
 			lpfnHook:       getHandle(a, "lpfnHook"),
 			lpTemplateName: getStr(a, "lpTemplateName"),
 			hInstance:      getHandle(a, "hInstance"),
 			lpszStyle:      getStr(a, "lpszStyle"),
-			nFontType:      getInt32(a, "nFontType"),
+			nFontType:      getInt16(a, "nFontType"),
 			nSizeMin:       getInt32(a, "nSizeMin"),
 			nSizeMax:       getInt32(a, "nSizeMax"),
 		}
@@ -288,16 +291,17 @@ type CHOOSEFONT struct {
 	lStructSize    uint32
 	hwndOwner      HANDLE
 	hDC            HANDLE
-	lpLogFont      *LOGFONTA
+	lpLogFont      *LOGFONT
 	iPointSize     int32
 	Flags          int32
 	rgbColors      int32
-	lCustData      int32
+	lCustData      uintptr
 	lpfnHook       HANDLE
 	lpTemplateName *byte
 	hInstance      HANDLE
 	lpszStyle      *byte
-	nFontType      int32
+	nFontType      int16
+	_              [4]byte // padding
 	nSizeMin       int32
 	nSizeMax       int32
 }

@@ -372,7 +372,7 @@ var _ = builtin7("CreateFile(lpFileName, dwDesiredAccess, dwShareMode,"+
 type SECURITY_ATTRIBUTES struct {
 	nLength              int32
 	lpSecurityDescriptor HANDLE
-	bInheritHandle       bool
+	bInheritHandle       BOOL
 }
 
 // dll long Kernel32:GetFileSize(handle hf, LONG* hiword)

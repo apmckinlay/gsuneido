@@ -17,6 +17,7 @@ func init() {
 var user32 = windows.NewLazyDLL("user32.dll")
 
 type HANDLE = uintptr
+type BOOL = int32
 
 type RECT struct {
 	left   int32
@@ -27,11 +28,12 @@ type RECT struct {
 
 type PAINTSTRUCT struct {
 	hdc         HANDLE
-	fErase      bool
+	fErase      BOOL
 	rcPaint     RECT
-	fRestore    bool
-	fIncUpdate  bool
+	fRestore    BOOL
+	fIncUpdate  BOOL
 	rgbReserved [32]byte
+	_           [4]byte // padding
 }
 
 type MONITORINFO struct {
@@ -63,7 +65,6 @@ type WINDOWPLACEMENT struct {
 	ptMinPosition    POINT
 	ptMaxPosition    POINT
 	rcNormalPosition RECT
-	rcDevice         RECT // stdlib does not have this member
 }
 
 type MENUITEMINFO struct {
@@ -102,6 +103,7 @@ type TCITEM struct {
 	cchTextMax  int32
 	iImage      int32
 	lParam      int32
+	_           [4]byte // padding
 }
 
 type CHARRANGE struct {
@@ -148,16 +150,35 @@ type TVITEM struct {
 	iImage         int32
 	iSelectedImage int32
 	cChildren      int32
-	lParam         int32
+	lParam         HANDLE
+}
+
+type TVITEMEX struct {
+	TVITEM
+	iIntegral      int32
+	uStateEx       int32
+	hwnd           HANDLE
+	iExpandedImage int32
+	iReserved      int32
 }
 
 type TV_INSERTSTRUCT struct {
 	hParent      HANDLE
 	hInsertAfter HANDLE
-	item         TVITEM
+	item         TVITEMEX
 }
 
 // helper functions
+
+func truncToInt(x Value) int {
+	// seems like rounding would make more sense but cSuneido truncates
+	if dn, ok := x.ToDnum(); ok {
+		if n, ok := dn.Trunc().ToInt(); ok {
+			return n
+		}
+	}
+	return ToInt(x)
+}
 
 func boolArg(arg Value) uintptr {
 	if ToBool(arg) {
@@ -180,7 +201,7 @@ func intArg(arg Value) uintptr {
 	if arg.Equal(False) {
 		return 0
 	}
-	return uintptr(ToInt(arg))
+	return uintptr(truncToInt(arg))
 }
 
 func intRet(rtn uintptr) Value {
@@ -213,12 +234,12 @@ func strRet(buf []byte) Value {
 	return SuStr(string(buf[:bytes.IndexByte(buf, 0)]))
 }
 
-func getBool(ob Value, mem string) bool {
+func getBool(ob Value, mem string) BOOL {
 	x := ob.Get(nil, SuStr(mem))
-	if x == nil {
-		return false
+	if x == nil || !ToBool(x) {
+		return 0
 	}
-	return ToBool(x)
+	return 1
 }
 
 func getInt(ob Value, mem string) int {
@@ -241,6 +262,13 @@ func getInt32(ob Value, mem string) int32 {
 
 func getUint32(ob Value, mem string) uint32 {
 	return uint32(getInt(ob, mem))
+}
+
+func getInt16(ob Value, mem string) int16 {
+	if ob == nil {
+		return 0
+	}
+	return int16(getInt(ob, mem))
 }
 
 func getStr(ob Value, mem string) *byte {
@@ -480,11 +508,11 @@ var _ = builtin2("BeginPaint(hwnd, ps)",
 			intArg(a),
 			uintptr(psArg(b, &ps)))
 		b.Put(nil, SuStr("hdc"), IntVal(int(ps.hdc)))
-		b.Put(nil, SuStr("fErase"), SuBool(ps.fErase))
+		b.Put(nil, SuStr("fErase"), SuBool(ps.fErase != 0))
 		b.Put(nil, SuStr("rcPaint"),
 			rectToOb(&ps.rcPaint, b.Get(nil, SuStr("rcPaint"))))
-		b.Put(nil, SuStr("fRestore"), SuBool(ps.fRestore))
-		b.Put(nil, SuStr("fIncUpdate"), SuBool(ps.fIncUpdate))
+		b.Put(nil, SuStr("fRestore"), SuBool(ps.fRestore != 0))
+		b.Put(nil, SuStr("fIncUpdate"), SuBool(ps.fIncUpdate != 0))
 		return intRet(rtn)
 	})
 
@@ -584,6 +612,7 @@ var _ = builtin5("DrawText(hdc, lpsz, cb, lprc, uFormat)",
 var fillRect = user32.NewProc("FillRect")
 var _ = builtin3("FillRect(hdc, lpRect, hBrush)",
 	func(a, b, c Value) Value {
+		verify.That(b != Zero)
 		var r RECT
 		rtn, _, _ := fillRect.Call(
 			intArg(a),
@@ -732,7 +761,6 @@ var _ = builtin2("GetWindowPlacement(hwnd, ps)",
 		b.Put(nil, SuStr("ptMaxPosition"), pointToOb(&wp.ptMaxPosition, nil))
 		b.Put(nil, SuStr("rcNormalPosition"),
 			rectToOb(&wp.rcNormalPosition, nil))
-		b.Put(nil, SuStr("rcDevice"), rectToOb(&wp.rcDevice, nil))
 		return boolRet(rtn)
 	})
 
@@ -951,7 +979,7 @@ var _ = builtin1("RegisterClass(wc)",
 	func(a Value) Value {
 		w := WNDCLASS{
 			style:      getUint32(a, "style"),
-			wndProc:    uintptr(getInt(a, "wndProc")),
+			wndProc:    getHandle(a, "wndProc"),
 			clsExtra:   getInt32(a, "clsExtra"),
 			wndExtra:   getInt32(a, "wndExtra"),
 			instance:   getHandle(a, "instance"),
@@ -1134,18 +1162,19 @@ var _ = builtin4("SendMessageTreeItem(hwnd, msg, wParam, tvitem)",
 			buf = make([]byte, cchTextMax)
 			pszText = &buf[0]
 		}
-		tvi := TVITEM{
-			mask:           getUint32(d, "mask"),
-			hItem:          getHandle(d, "hItem"),
-			state:          getUint32(d, "state"),
-			stateMask:      getUint32(d, "stateMask"),
-			pszText:        pszText,
-			cchTextMax:     cchTextMax,
-			iImage:         getInt32(d, "iImage"),
-			iSelectedImage: getInt32(d, "iSelectedImage"),
-			cChildren:      getInt32(d, "cChildren"),
-			lParam:         getInt32(d, "lParam"),
-		}
+		tvi := TVITEMEX{
+			TVITEM: TVITEM{
+				mask:           getUint32(d, "mask"),
+				hItem:          getHandle(d, "hItem"),
+				state:          getUint32(d, "state"),
+				stateMask:      getUint32(d, "stateMask"),
+				pszText:        pszText,
+				cchTextMax:     cchTextMax,
+				iImage:         getInt32(d, "iImage"),
+				iSelectedImage: getInt32(d, "iSelectedImage"),
+				cChildren:      getInt32(d, "cChildren"),
+				lParam:         getHandle(d, "lParam"),
+			}}
 		rtn, _, _ := sendMessage.Call(
 			intArg(a),
 			intArg(b),
@@ -1178,18 +1207,19 @@ var _ = builtin4("SendMessageTVINS(hwnd, msg, wParam, tvins)",
 			buf = make([]byte, cchTextMax)
 			pszText = &buf[0]
 		}
-		tvi := TVITEM{
-			mask:           getUint32(d, "mask"),
-			hItem:          getHandle(d, "hItem"),
-			state:          getUint32(d, "state"),
-			stateMask:      getUint32(d, "stateMask"),
-			pszText:        pszText,
-			cchTextMax:     cchTextMax,
-			iImage:         getInt32(d, "iImage"),
-			iSelectedImage: getInt32(d, "iSelectedImage"),
-			cChildren:      getInt32(d, "cChildren"),
-			lParam:         getInt32(d, "lParam"),
-		}
+		tvi := TVITEMEX{
+			TVITEM: TVITEM{
+				mask:           getUint32(d, "mask"),
+				hItem:          getHandle(d, "hItem"),
+				state:          getUint32(d, "state"),
+				stateMask:      getUint32(d, "stateMask"),
+				pszText:        pszText,
+				cchTextMax:     cchTextMax,
+				iImage:         getInt32(d, "iImage"),
+				iSelectedImage: getInt32(d, "iSelectedImage"),
+				cChildren:      getInt32(d, "cChildren"),
+				lParam:         getHandle(d, "lParam"),
+			}}
 		tvins := TV_INSERTSTRUCT{
 			hParent:      getHandle(d, "hParent"),
 			hInsertAfter: getHandle(d, "hInsertAfter"),
@@ -1217,6 +1247,7 @@ var _ = builtin4("SendMessageTVINS(hwnd, msg, wParam, tvins)",
 		return intRet(rtn)
 	})
 
+//TODO make a slice the correct size
 var _ = builtin4("SendMessageSBPART(hwnd, msg, wParam, sbpart)",
 	func(a, b, c, d Value) Value {
 		var sbpart SBPART
@@ -2086,6 +2117,7 @@ type TRACKMOUSEEVENT struct {
 	dwFlags     int32
 	hwndTrack   uintptr
 	dwHoverTime int32
+	_           [4]byte // padding
 }
 
 // dll bool User32:FlashWindowEx(FLASHWINFO* fi)
@@ -2110,6 +2142,7 @@ type FLASHWINFO struct {
 	dwFlags   int32
 	uCount    int32
 	dwTimeout int32
+	_         [4]byte // padding
 }
 
 // dll long User32:FrameRect(pointer hdc, RECT* rect, pointer brush)
@@ -2156,8 +2189,8 @@ var _ = builtin7("GetDIBits(hdc, hbmp, uStartScan, cScanLines, lpvBits,"+
 			biSize:          int32(unsafe.Sizeof(BITMAPINFOHEADER{})),
 			biWidth:         getInt32(f.Get(nil, SuStr("bmiHeader")), "biWidth"),
 			biHeight:        getInt32(f.Get(nil, SuStr("bmiHeader")), "biHeight"),
-			biPlanes:        getInt32(f.Get(nil, SuStr("bmiHeader")), "biPlanes"),
-			biBitCount:      getInt32(f.Get(nil, SuStr("bmiHeader")), "biBitCount"),
+			biPlanes:        getInt16(f.Get(nil, SuStr("bmiHeader")), "biPlanes"),
+			biBitCount:      getInt16(f.Get(nil, SuStr("bmiHeader")), "biBitCount"),
 			biCompression:   getInt32(f.Get(nil, SuStr("bmiHeader")), "biCompression"),
 			biSizeImage:     getInt32(f.Get(nil, SuStr("bmiHeader")), "biSizeImage"),
 			biXPelsPerMeter: getInt32(f.Get(nil, SuStr("bmiHeader")), "biXPelsPerMeter"),
@@ -2180,8 +2213,8 @@ type BITMAPINFOHEADER struct {
 	biSize          int32
 	biWidth         int32
 	biHeight        int32
-	biPlanes        int32
-	biBitCount      int32
+	biPlanes        int16
+	biBitCount      int16
 	biCompression   int32
 	biSizeImage     int32
 	biXPelsPerMeter int32

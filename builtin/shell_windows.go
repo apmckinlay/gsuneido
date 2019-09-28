@@ -88,13 +88,15 @@ type NOTIFYICONDATA struct {
 	uFlags               int32
 	uCallbackMessage     int32
 	hIcon                HANDLE
-	szTip                [64]byte
+	szTip                [128]byte
 	dwState              int32
 	dwStateMask          int32
 	szInfo               [256]byte
 	uTimeoutVersionUnion uint32
 	szInfoTitle          [64]byte
 	dwInfoFlags          int32
+	guidItem             GUID
+	hBalloonIcon         HANDLE
 }
 
 // copyStr copies the string into the byte slice and adds a nul terminator
@@ -177,4 +179,5 @@ type BROWSEINFO struct {
 	lpfn           uintptr
 	lParam         HANDLE
 	iImage         int32
+	_              [4]byte // padding
 }
