@@ -204,7 +204,7 @@ func (ob *SuObject) Erase(_ *Thread, key Value) bool {
 	if i, ok := key.IfInt(); ok && 0 <= i && i < len(ob.list) {
 		// migrate following list elements to named
 		for j := len(ob.list) - 1; j > i; j-- {
-			ob.named.Put(SuInt(j), ob.list[j])
+			ob.named.Put(IntVal(j), ob.list[j])
 			ob.list[j] = nil // aid garbage collection
 		}
 		ob.list = ob.list[:i]
@@ -606,7 +606,7 @@ func (ob *SuObject) Iter2(list, named bool) func() (Value, Value) {
 			i := next
 			if i < len(ob.list) {
 				next++
-				return SuInt(i), ob.list[i]
+				return IntVal(i), ob.list[i]
 			}
 			return nil, nil
 		}
@@ -627,7 +627,7 @@ func (ob *SuObject) Iter2(list, named bool) func() (Value, Value) {
 		i := next
 		if i < len(ob.list) {
 			next++
-			return SuInt(i), ob.list[i]
+			return IntVal(i), ob.list[i]
 		}
 		key, val := namedIter()
 		if key == nil {
