@@ -24,12 +24,12 @@ func TestArgs(t *testing.T) {
 
 	// 0 args => 0 params
 	f := &ParamSpec{}
-	as := ArgSpec0
+	as := &ArgSpec0
 	th.Args(f, as)
 
 	// @arg => @param
 	f = atParamSpec
-	as = ArgSpecEach0
+	as = &ArgSpecEach0
 	th.Reset()
 	th.Push(makeOb())
 	th.Args(f, as)
@@ -38,7 +38,7 @@ func TestArgs(t *testing.T) {
 
 	// @+1arg => @param
 	f = atParamSpec
-	as = ArgSpecEach1
+	as = &ArgSpecEach1
 	th.Reset()
 	th.Push(makeOb())
 	th.Args(f, as)
@@ -47,27 +47,27 @@ func TestArgs(t *testing.T) {
 
 	// 2 args => 2 params
 	f = &ParamSpec{Nparams: 2, Flags: []Flag{0, 0}}
-	as = ArgSpec2
+	as = &ArgSpec2
 	setStack(11, 22)
 	th.Args(f, as)
 	ckStack(11, 22)
 
 	// 1 args => 2 params
 	f = &ParamSpec{Nparams: 2, Flags: []Flag{0, 0}}
-	as = ArgSpec1
+	as = &ArgSpec1
 	setStack(11)
 	Assert(t).That(func() { th.Args(f, as) }, Panics("missing argument"))
 
 	// 2 args => 1 param
 	f = &ParamSpec{Nparams: 1, Flags: []Flag{0}}
-	as = ArgSpec2
+	as = &ArgSpec2
 	setStack(11, 22)
 	Assert(t).That(func() { th.Args(f, as) }, Panics("too many arguments"))
 
 	// 1 arg => 2 params with 1 default
 	f = &ParamSpec{Nparams: 2, Flags: []Flag{0, 0},
 		Ndefaults: 1, Values: []Value{SuInt(22)}}
-	as = ArgSpec1
+	as = &ArgSpec1
 	setStack(11)
 	th.Args(f, as)
 	ckStack(11, 22)
@@ -75,7 +75,7 @@ func TestArgs(t *testing.T) {
 	// 2 arg => 3 params with 2 defaults
 	f = &ParamSpec{Nparams: 3, Flags: []Flag{0, 0, 0},
 		Ndefaults: 2, Values: []Value{False, One}}
-	as = ArgSpec2
+	as = &ArgSpec2
 	setStack(2, 5)
 	th.Args(f, as)
 	ckStack(2, 5, 1)
@@ -110,7 +110,7 @@ func TestArgs(t *testing.T) {
 	// @mixed => params
 	f = &ParamSpec{Nparams: 4, Flags: []Flag{0, 0, 0, 0},
 		Names: []string{"d", "c", "b", "a"}}
-	as = ArgSpecEach0
+	as = &ArgSpecEach0
 	th.Reset()
 	th.Push(makeOb())
 	th.Args(f, as)
@@ -125,13 +125,13 @@ func TestArgs(t *testing.T) {
 	// @+1 list
 	th.Reset()
 	th.Push(NewSuObject(SuInt(1), SuInt(2), SuInt(3), SuInt(4), SuInt(5)))
-	th.Args(f, ArgSpecEach1)
+	th.Args(f, &ArgSpecEach1)
 	ckStack(2, 3, 4, 5)
 
 	// @args => one param
 	f = &ParamSpec{Nparams: 1, Flags: []Flag{0},
 		Names: []string{"a"}}
-	as = ArgSpecEach0
+	as = &ArgSpecEach0
 	th.Reset()
 	th.Push(NewSuObject(SuInt(123)))
 	th.Args(f, as)
@@ -143,7 +143,7 @@ func TestArgs(t *testing.T) {
 		fn: &SuFunc{ParamSpec: ParamSpec{Names: []string{"x", "_dyn"}}}}
 	th.fp++
 	f = &ParamSpec{Nparams: 1, Flags: []Flag{DynParam}, Names: []string{"dyn"}}
-	as = ArgSpec0
+	as = &ArgSpec0
 	th.Args(f, as)
 	ckStack(111, 123, 123)
 }

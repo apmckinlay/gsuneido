@@ -23,7 +23,7 @@ import (
 type cgen struct {
 	outerFn        *ast.Function
 	code           []byte
-	argspecs       []*ArgSpec
+	argspecs       []ArgSpec
 	base           Gnum
 	isNew          bool
 	isBlock        bool
@@ -64,12 +64,12 @@ func (cg *cgen) codegen(fn *ast.Function) *SuFunc {
 	}
 
 	return &SuFunc{
-		Code:      *(*string)(unsafe.Pointer(&cg.code)),
+		Code:      *(*string)(unsafe.Pointer(&cg.code)), //TODO shrink to fit
 		Nlocals:   uint8(len(cg.Names)),
 		ParamSpec: cg.ParamSpec,
-		ArgSpecs:  cg.argspecs,
+		ArgSpecs:  cg.argspecs, //TODO shrink to fit
 		Id:        fn.Id,
-		SrcPos:    *(*string)(unsafe.Pointer(&cg.srcPos)),
+		SrcPos:    *(*string)(unsafe.Pointer(&cg.srcPos)), //TODO shrink to fit
 		SrcBase:   cg.srcBase,
 	}
 }
@@ -907,16 +907,16 @@ func (cg *cgen) args(args []ast.Arg) int {
 func (cg *cgen) argspec(as *ArgSpec) int {
 	as.Names = cg.Values // not final, but needed for Equal
 	for i, a := range StdArgSpecs {
-		if as.Equal(a) {
+		if as.Equal(&a) {
 			return i
 		}
 	}
 	for i, a := range cg.argspecs {
-		if cg.argSpecEq(a, as) {
+		if cg.argSpecEq(&a, as) {
 			return i + len(StdArgSpecs)
 		}
 	}
-	cg.argspecs = append(cg.argspecs, as)
+	cg.argspecs = append(cg.argspecs, *as)
 	return len(cg.argspecs) - 1 + len(StdArgSpecs)
 }
 

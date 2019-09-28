@@ -205,10 +205,10 @@ func (d *defaultAdapter) Call(t *Thread, this Value, as *ArgSpec) Value {
 		args := ToContainer(t.Pop()).Slice(int(as.Each) - 1)
 		args.Insert(0, method)
 		t.Push(args)
-		as = ArgSpecEach0
+		as = &ArgSpecEach0
 	} else if as.Nargs == 0 {
 		t.Push(method)
-		as = ArgSpec1
+		as = &ArgSpec1
 	} else {
 		t.Push(nil) // allow for another value
 		base := t.sp - 1 - int(as.Nargs)

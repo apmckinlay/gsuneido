@@ -32,7 +32,7 @@ func pt_method(args []string, str []bool) bool {
 		th.Push(toValue(args, str, i))
 	}
 	nargs := len(args) - 3
-	result := f.Call(th, ob, StdArgSpecs[nargs])
+	result := f.Call(th, ob, &StdArgSpecs[nargs])
 	ok := result.Equal(expected)
 	if !ok {
 		fmt.Printf("\tgot: %s  expected: %s\n",

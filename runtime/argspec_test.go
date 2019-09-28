@@ -11,11 +11,11 @@ func TestArgSpecString(t *testing.T) {
 		t.Helper()
 		Assert(t).That(as.String(), Equals(expected))
 	}
-	test(ArgSpec0, "ArgSpec()")
-	test(ArgSpec3, "ArgSpec(?, ?, ?)")
-	test(ArgSpecEach0, "ArgSpec(@)")
-	test(ArgSpecEach1, "ArgSpec(@+1)")
-	test(ArgSpecBlock, "ArgSpec(block:)")
+	test(&ArgSpec0, "ArgSpec()")
+	test(&ArgSpec3, "ArgSpec(?, ?, ?)")
+	test(&ArgSpecEach0, "ArgSpec(@)")
+	test(&ArgSpecEach1, "ArgSpec(@+1)")
+	test(&ArgSpecBlock, "ArgSpec(block:)")
 	test(&ArgSpec{Nargs: 0, Spec: []byte{2, 0, 1}, Names: vals("a", "b", "c")},
 		"ArgSpec(c:, a:, b:)")
 	test(&ArgSpec{Nargs: 4, Spec: []byte{2, 1}, Names: vals("a", "b", "c", "d")},
@@ -24,11 +24,11 @@ func TestArgSpecString(t *testing.T) {
 
 func TestArgSpecEqual(t *testing.T) {
 	as := []*ArgSpec{
-		ArgSpec0,
-		ArgSpec4,
-		ArgSpecEach0,
-		ArgSpecEach1,
-		ArgSpecBlock,
+		&ArgSpec0,
+		&ArgSpec4,
+		&ArgSpecEach0,
+		&ArgSpecEach1,
+		&ArgSpecBlock,
 		&ArgSpec{Nargs: 2, Spec: []byte{0, 1}, Names: []Value{SuStr("foo"), SuStr("bar")}},
 		&ArgSpec{Nargs: 2, Spec: []byte{0, 1}, Names: []Value{SuStr("foo"), SuStr("baz")}},
 	}

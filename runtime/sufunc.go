@@ -16,7 +16,7 @@ type SuFunc struct {
 	Code string
 
 	// ArgSpecs used by calls in the code
-	ArgSpecs []*ArgSpec
+	ArgSpecs []ArgSpec
 
 	// ClassName is used to privatize dot params
 	ClassName string

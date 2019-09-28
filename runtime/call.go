@@ -8,7 +8,7 @@ func (t *Thread) Call(fn Callable, args ...Value) Value {
 }
 
 func (t *Thread) CallEach1(fn Callable, arg Value) Value {
-	return t.pushCall(fn, nil, ArgSpecEach1, arg)
+	return t.pushCall(fn, nil, &ArgSpecEach1, arg)
 }
 
 // CallLookup calls a *named* method.
@@ -18,12 +18,12 @@ func (t *Thread) CallLookup(this Value, method string, args ...Value) Value {
 
 func (t *Thread) CallThis(fn Callable, this Value, args ...Value) Value {
 	verify.That(len(args) < AsEach)
-	as := StdArgSpecs[len(args)]
+	as := &StdArgSpecs[len(args)]
 	return t.pushCall(fn, this, as, args...)
 }
 
 func (t *Thread) CallLookupEach1(this Value, method string, arg Value) Value {
-	return t.pushCall(t.lookup(this, method), this, ArgSpecEach1, arg)
+	return t.pushCall(t.lookup(this, method), this, &ArgSpecEach1, arg)
 }
 
 func (t *Thread) lookup(this Value, method string) Callable {

@@ -417,9 +417,9 @@ loop:
 			ai := fetchUint8()
 			var argSpec *ArgSpec
 			if ai < len(StdArgSpecs) {
-				argSpec = StdArgSpecs[ai]
+				argSpec = &StdArgSpecs[ai]
 			} else {
-				argSpec = fr.fn.ArgSpecs[ai-len(StdArgSpecs)]
+				argSpec = &fr.fn.ArgSpecs[ai-len(StdArgSpecs)]
 			}
 			// fmt.Println(strings.Repeat("    ", t.fp+1), f)
 			base := t.sp - int(argSpec.Nargs)
@@ -433,9 +433,9 @@ loop:
 			ai := fetchUint8()
 			var argSpec *ArgSpec
 			if ai < len(StdArgSpecs) {
-				argSpec = StdArgSpecs[ai]
+				argSpec = &StdArgSpecs[ai]
 			} else {
-				argSpec = fr.fn.ArgSpecs[ai-len(StdArgSpecs)]
+				argSpec = &fr.fn.ArgSpecs[ai-len(StdArgSpecs)]
 			}
 			base := t.sp - int(argSpec.Nargs) - 1
 			this := t.stack[base]
