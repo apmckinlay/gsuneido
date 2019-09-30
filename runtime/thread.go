@@ -132,6 +132,7 @@ func (t *Thread) Callstack() *SuObject {
 	return cs
 }
 
+// PrintStack prints the thread's call stack
 func (t *Thread) PrintStack() {
 	PrintStack(t.Callstack())
 }

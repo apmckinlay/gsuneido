@@ -2,8 +2,11 @@ package main // import "github.com/apmckinlay/gsuneido"
 
 /*
 CheckLibrary('stdlib')
+
 TestRunner.Run(libs: #(stdlib), skipTags: #(gui, windows), quit_on_failure:);;
 TestRunner.Run(TestObserverPrint(), libs: #(stdlib), skipTags: #(gui, windows));;
+
+dlv debug -- -c "WorkSpaceControl();MessageLoop()"
 */
 
 import (
