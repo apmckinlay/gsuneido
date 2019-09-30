@@ -1,75 +1,82 @@
 package builtin
 
 import (
+	"syscall"
 	"unsafe"
 
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"golang.org/x/sys/windows"
 )
 
-var kernel32 = windows.NewLazyDLL("kernel32.dll")
+var kernel32 = windows.MustLoadDLL("kernel32.dll")
 
 // dll Kernel32:GetComputerName(buffer lpBuffer, LONG* lpnSize) bool
-var getComputerName = kernel32.NewProc("GetComputerNameA")
+var getComputerName = kernel32.MustFindProc("GetComputerNameA").Addr()
 var _ = builtin0("GetComputerName()", func() Value {
 	const bufsize = 255
 	var buf [bufsize + 1]byte
 	n := int32(bufsize)
-	getComputerName.Call(
+	syscall.Syscall(getComputerName, 2,
 		uintptr(unsafe.Pointer(&buf)),
-		uintptr(unsafe.Pointer(&n)))
+		uintptr(unsafe.Pointer(&n)),
+		0)
 	return SuStr(string(buf[:n]))
 })
 
 // dll Kernel32:GetModuleHandle(instring name) pointer
-var getModuleHandle = kernel32.NewProc("GetModuleHandleA")
+var getModuleHandle = kernel32.MustFindProc("GetModuleHandleA").Addr()
 var _ = builtin1("GetModuleHandle(unused)",
 	func(a Value) Value {
-		rtn, _, _ := getModuleHandle.Call(0)
+		rtn, _, _ := syscall.Syscall(getModuleHandle, 1,
+			0,
+			0, 0)
 		return intRet(rtn)
 	})
 
 // dll Kernel32:GetLocaleInfo(long locale, long lctype, string lpLCData, long cchData) long
-var getLocaleInfo = kernel32.NewProc("GetLocaleInfoA")
+var getLocaleInfo = kernel32.MustFindProc("GetLocaleInfoA").Addr()
 var _ = builtin2("GetLocaleInfo(a,b)",
 	func(a, b Value) Value {
 		const bufsize = 255
 		var buf [bufsize + 1]byte
-		getLocaleInfo.Call(
+		syscall.Syscall6(getLocaleInfo, 4,
 			intArg(a),
 			intArg(b),
 			uintptr(unsafe.Pointer(&buf[0])),
-			uintptr(bufsize))
+			uintptr(bufsize),
+			0, 0)
 		return strRet(buf[:])
 	})
 
 // dll Kernel32:GetProcAddress(pointer hModule, instring procName) pointer
-var getProcAddress = kernel32.NewProc("GetProcAddress")
+var getProcAddress = kernel32.MustFindProc("GetProcAddress").Addr()
 var _ = builtin2("GetProcAddress(hModule, procName)",
 	func(a, b Value) Value {
-		rtn, _, _ := getProcAddress.Call(
+		rtn, _, _ := syscall.Syscall(getProcAddress, 2,
 			intArg(a),
-			uintptr(stringArg(b)))
+			uintptr(stringArg(b)),
+			0)
 		return intRet(rtn)
 	})
 
 // dll Kernel32:GetProcessHeap() pointer
-var getProcessHeap = kernel32.NewProc("GetProcessHeap")
+var getProcessHeap = kernel32.MustFindProc("GetProcessHeap").Addr()
 var _ = builtin0("GetProcessHeap()",
 	func() Value {
-		rtn, _, _ := getProcessHeap.Call()
+		rtn, _, _ := syscall.Syscall(getProcessHeap, 0, 0, 0, 0)
 		return intRet(rtn)
 	})
 
 // dll Kernel32:GetVersionEx(OSVERSIONINFOEX* lpVersionInfo) bool
-var getVersionEx = kernel32.NewProc("GetVersionExA")
+var getVersionEx = kernel32.MustFindProc("GetVersionExA").Addr()
 var _ = builtin1("GetVersionEx(a)",
 	func(a Value) Value {
 		ovi := OSVERSIONINFOEX{
 			dwOSVersionInfoSize: int32(unsafe.Sizeof(OSVERSIONINFOEX{})),
 		}
-		rtn, _, _ := getVersionEx.Call(
-			uintptr(unsafe.Pointer(&ovi)))
+		rtn, _, _ := syscall.Syscall(getVersionEx, 1,
+			uintptr(unsafe.Pointer(&ovi)),
+			0, 0)
 		a.Put(nil, SuStr("dwMajorVersion"),
 			IntVal(int(ovi.dwMajorVersion)))
 		a.Put(nil, SuStr("dwMinorVersion"),
@@ -106,42 +113,49 @@ type OSVERSIONINFOEX struct {
 }
 
 // dll Kernel32:GlobalAlloc(long flags, long size) pointer
-var globalAlloc = kernel32.NewProc("GlobalAlloc")
+var globalAlloc = kernel32.MustFindProc("GlobalAlloc").Addr()
 var _ = builtin2("GlobalAlloc(flags, size)",
 	func(a, b Value) Value {
-		rtn, _, _ := globalAlloc.Call(
+		rtn, _, _ := syscall.Syscall(globalAlloc, 2,
 			intArg(a),
-			intArg(b))
+			intArg(b),
+			0)
 		return intRet(rtn)
 	})
 
 // dll Kernel32:GlobalLock(pointer handle) pointer
-var globalLock = kernel32.NewProc("GlobalLock")
+var globalLock = kernel32.MustFindProc("GlobalLock").Addr()
 var _ = builtin1("GlobalLock(hMem)",
 	func(a Value) Value {
-		rtn, _, _ := globalLock.Call(intArg(a))
+		rtn, _, _ := syscall.Syscall(globalLock, 1,
+			intArg(a),
+			0, 0)
 		return intRet(rtn)
 	})
 
 // dll Kernel32:GlobalUnlock(pointer handle) bool
-var globalUnlock = kernel32.NewProc("GlobalUnlock")
+var globalUnlock = kernel32.MustFindProc("GlobalUnlock").Addr()
 var _ = builtin1("GlobalUnlock(hMem)",
 	func(a Value) Value {
-		rtn, _, _ := globalUnlock.Call(intArg(a))
+		rtn, _, _ := syscall.Syscall(globalUnlock, 1,
+			intArg(a),
+			0, 0)
 		return boolRet(rtn)
 	})
 
 var _ = builtin1("GlobalUnlockString(hMem)",
 	func(a Value) Value {
-		rtn, _, _ := globalUnlock.Call(intArg(a))
+		rtn, _, _ := syscall.Syscall(globalUnlock, 1,
+			intArg(a),
+			0, 0)
 		return strFromAddr(rtn)
 	})
 
 // dll Kernel32:HeapAlloc(pointer hHeap, long dwFlags, long dwBytes) pointer
-var heapAlloc = kernel32.NewProc("HeapAlloc")
+var heapAlloc = kernel32.MustFindProc("HeapAlloc").Addr()
 var _ = builtin3("HeapAlloc(hHeap, dwFlags, dwBytes)",
 	func(a, b, c Value) Value {
-		rtn, _, _ := heapAlloc.Call(
+		rtn, _, _ := syscall.Syscall(heapAlloc, 3,
 			intArg(a),
 			intArg(b),
 			intArg(c))
@@ -149,10 +163,10 @@ var _ = builtin3("HeapAlloc(hHeap, dwFlags, dwBytes)",
 	})
 
 // dll Kernel32:HeapFree(pointer hHeap, long dwFlags, pointer lpMem) bool
-var heapFree = kernel32.NewProc("HeapFree")
+var heapFree = kernel32.MustFindProc("HeapFree").Addr()
 var _ = builtin3("HeapFree(hHeap, dwFlags, lpMem)",
 	func(a, b, c Value) Value {
-		rtn, _, _ := heapFree.Call(
+		rtn, _, _ := syscall.Syscall(heapFree, 3,
 			intArg(a),
 			intArg(b),
 			intArg(c))
@@ -176,11 +190,12 @@ var _ = builtin3("CopyMemory(destination, source, length)",
 	})
 
 // dll bool Kernel32:CloseHandle(pointer handle)
-var closeHandle = kernel32.NewProc("CloseHandle")
+var closeHandle = kernel32.MustFindProc("CloseHandle").Addr()
 var _ = builtin1("CloseHandle(handle)",
 	func(a Value) Value {
-		rtn, _, _ := closeHandle.Call(
-			intArg(a))
+		rtn, _, _ := syscall.Syscall(closeHandle, 1,
+			intArg(a),
+			0, 0)
 		return boolRet(rtn)
 	})
 
@@ -188,10 +203,10 @@ var _ = builtin1("CloseHandle(handle)",
 //		[in] string from,
 //		[in] string to,
 //		bool failIfExists)
-var copyFile = kernel32.NewProc("CopyFileA")
+var copyFile = kernel32.MustFindProc("CopyFileA").Addr()
 var _ = builtin3("CopyFile(from, to, failIfExists)",
 	func(a, b, c Value) Value {
-		rtn, _, _ := copyFile.Call(
+		rtn, _, _ := syscall.Syscall(copyFile, 3,
 			uintptr(stringArg(a)),
 			uintptr(stringArg(b)),
 			boolArg(c))
@@ -199,148 +214,159 @@ var _ = builtin3("CopyFile(from, to, failIfExists)",
 	})
 
 // dll bool Kernel32:FindClose(pointer hFindFile)
-var findClose = kernel32.NewProc("FindClose")
+var findClose = kernel32.MustFindProc("FindClose").Addr()
 var _ = builtin1("FindClose(hFindFile)",
 	func(a Value) Value {
-		rtn, _, _ := findClose.Call(
-			intArg(a))
+		rtn, _, _ := syscall.Syscall(findClose, 1,
+			intArg(a),
+			0, 0)
 		return boolRet(rtn)
 	})
 
 // dll bool Kernel32:FlushFileBuffers(handle hFile)
-var flushFileBuffers = kernel32.NewProc("FlushFileBuffers")
+var flushFileBuffers = kernel32.MustFindProc("FlushFileBuffers").Addr()
 var _ = builtin1("FlushFileBuffers(hFile)",
 	func(a Value) Value {
-		rtn, _, _ := flushFileBuffers.Call(
-			intArg(a))
+		rtn, _, _ := syscall.Syscall(flushFileBuffers, 1,
+			intArg(a),
+			0, 0)
 		return boolRet(rtn)
 	})
 
 // dll pointer Kernel32:GetCurrentProcess()
-var getCurrentProcess = kernel32.NewProc("GetCurrentProcess")
+var getCurrentProcess = kernel32.MustFindProc("GetCurrentProcess").Addr()
 var _ = builtin0("GetCurrentProcess()",
 	func() Value {
-		rtn, _, _ := getCurrentProcess.Call()
+		rtn, _, _ := syscall.Syscall(getCurrentProcess, 0, 0, 0, 0)
 		return intRet(rtn)
 	})
 
 // dll long Kernel32:GetCurrentProcessId()
-var getCurrentProcessId = kernel32.NewProc("GetCurrentProcessId")
+var getCurrentProcessId = kernel32.MustFindProc("GetCurrentProcessId").Addr()
 var _ = builtin0("GetCurrentProcessId()",
 	func() Value {
-		rtn, _, _ := getCurrentProcessId.Call()
+		rtn, _, _ := syscall.Syscall(getCurrentProcessId, 0, 0, 0, 0)
 		return intRet(rtn)
 	})
 
 // dll long Kernel32:GetCurrentThreadId()
-var getCurrentThreadId = kernel32.NewProc("GetCurrentThreadId")
+var getCurrentThreadId = kernel32.MustFindProc("GetCurrentThreadId").Addr()
 var _ = builtin0("GetCurrentThreadId()",
 	func() Value {
-		rtn, _, _ := getCurrentThreadId.Call()
+		rtn, _, _ := syscall.Syscall(getCurrentThreadId, 0, 0, 0, 0)
 		return intRet(rtn)
 	})
 
 // dll long Kernel32:GetFileAttributes(
 // 		[in] string lpFileName)
-var getFileAttributes = kernel32.NewProc("GetFileAttributesA")
+var getFileAttributes = kernel32.MustFindProc("GetFileAttributesA").Addr()
 var _ = builtin1("GetFileAttributes(lpFileName)",
 	func(a Value) Value {
-		rtn, _, _ := getFileAttributes.Call(
-			uintptr(stringArg(a)))
+		rtn, _, _ := syscall.Syscall(getFileAttributes, 1,
+			uintptr(stringArg(a)),
+			0, 0)
 		return intRet(rtn)
 	})
 
 // dll long Kernel32:GetLastError()
-var getLastError = kernel32.NewProc("GetLastError")
+var getLastError = kernel32.MustFindProc("GetLastError").Addr()
 var _ = builtin0("GetLastError()",
 	func() Value {
-		rtn, _, _ := getLastError.Call()
+		rtn, _, _ := syscall.Syscall(getLastError, 0, 0, 0, 0)
 		return intRet(rtn)
 	})
 
 // dll pointer Kernel32:GetStdHandle(long nStdHandle)
-var getStdHandle = kernel32.NewProc("GetStdHandle")
+var getStdHandle = kernel32.MustFindProc("GetStdHandle").Addr()
 var _ = builtin1("GetStdHandle(nStdHandle)",
 	func(a Value) Value {
-		rtn, _, _ := getStdHandle.Call(
-			intArg(a))
+		rtn, _, _ := syscall.Syscall(getStdHandle, 1,
+			intArg(a),
+			0, 0)
 		return intRet(rtn)
 	})
 
 // dll int64 Kernel32:GetTickCount64()
-var getTickCount64 = kernel32.NewProc("GetTickCount64")
+var getTickCount64 = kernel32.MustFindProc("GetTickCount64").Addr()
 var _ = builtin0("GetTickCount()",
 	func() Value {
-		rtn, _, _ := getTickCount64.Call()
+		rtn, _, _ := syscall.Syscall(getTickCount64, 0, 0, 0, 0)
 		return intRet(rtn)
 	})
 
 // dll long Kernel32:GetWindowsDirectory(string lpBuffer, long size)
-var getWindowsDirectory = kernel32.NewProc("GetWindowsDirectoryA")
+var getWindowsDirectory = kernel32.MustFindProc("GetWindowsDirectoryA").Addr()
 var _ = builtin0("GetWindowsDirectory()",
 	func() Value {
 		const bufsize = 256
 		var buf [bufsize + 1]byte
-		getWindowsDirectory.Call(
+		syscall.Syscall(getWindowsDirectory, 2,
 			uintptr(unsafe.Pointer(&buf)),
-			uintptr(bufsize))
+			uintptr(bufsize),
+			0)
 		return strRet(buf[:])
 	})
 
 // dll pointer Kernel32:GlobalFree(pointer hglb)
-var globalFree = kernel32.NewProc("GlobalFree")
+var globalFree = kernel32.MustFindProc("GlobalFree").Addr()
 var _ = builtin1("GlobalFree(hglb)",
 	func(a Value) Value {
-		rtn, _, _ := globalFree.Call(
-			intArg(a))
+		rtn, _, _ := syscall.Syscall(globalFree, 1,
+			intArg(a),
+			0, 0)
 		return intRet(rtn)
 	})
 
 // dll long Kernel32:GlobalSize(pointer handle)
-var globalSize = kernel32.NewProc("GlobalSize")
+var globalSize = kernel32.MustFindProc("GlobalSize").Addr()
 var _ = builtin1("GlobalSize(handle)",
 	func(a Value) Value {
-		rtn, _, _ := globalSize.Call(
-			intArg(a))
+		rtn, _, _ := syscall.Syscall(globalSize, 1,
+			intArg(a),
+			0, 0)
 		return intRet(rtn)
 	})
 
 // dll pointer Kernel32:LoadLibrary([in] string library)
-var loadLibrary = kernel32.NewProc("LoadLibraryA")
+var loadLibrary = kernel32.MustFindProc("LoadLibraryA").Addr()
 var _ = builtin1("LoadLibrary(library)",
 	func(a Value) Value {
-		rtn, _, _ := loadLibrary.Call(
-			uintptr(stringArg(a)))
+		rtn, _, _ := syscall.Syscall(loadLibrary, 1,
+			uintptr(stringArg(a)),
+			0, 0)
 		return intRet(rtn)
 	})
 
 // dll pointer Kernel32:LoadResource(pointer module, pointer res)
-var loadResource = kernel32.NewProc("LoadResource")
+var loadResource = kernel32.MustFindProc("LoadResource").Addr()
 var _ = builtin2("LoadResource(module, res)",
 	func(a, b Value) Value {
-		rtn, _, _ := loadResource.Call(
+		rtn, _, _ := syscall.Syscall(loadResource, 2,
 			intArg(a),
-			intArg(b))
+			intArg(b),
+			0)
 		return intRet(rtn)
 	})
 
 // dll bool Kernel32:SetCurrentDirectory(string lpPathName)
-var setCurrentDirectory = kernel32.NewProc("SetCurrentDirectoryA")
+var setCurrentDirectory = kernel32.MustFindProc("SetCurrentDirectoryA").Addr()
 var _ = builtin1("SetCurrentDirectory(lpPathName)",
 	func(a Value) Value {
-		rtn, _, _ := setCurrentDirectory.Call(
-			uintptr(stringArg(a)))
+		rtn, _, _ := syscall.Syscall(setCurrentDirectory, 1,
+			uintptr(stringArg(a)),
+			0, 0)
 		return boolRet(rtn)
 	})
 
 // dll bool Kernel32:SetFileAttributes(
 //		[in] string lpFileName, long dwFileAttributes)
-var setFileAttributes = kernel32.NewProc("SetFileAttributesA")
+var setFileAttributes = kernel32.MustFindProc("SetFileAttributesA").Addr()
 var _ = builtin2("SetFileAttributes(lpFileName, dwFileAttributes)",
 	func(a, b Value) Value {
-		rtn, _, _ := setFileAttributes.Call(
+		rtn, _, _ := syscall.Syscall(setFileAttributes, 2,
 			uintptr(stringArg(a)),
-			intArg(b))
+			intArg(b),
+			0)
 		return boolRet(rtn)
 	})
 
@@ -348,7 +374,7 @@ var _ = builtin2("SetFileAttributes(lpFileName, dwFileAttributes)",
 //		long dwShareMode, SECURITY_ATTRIBUTES* lpSecurityAttributes,
 //		long dwCreationDistribution, long dwFlagsAndAttributes,
 //		pointer hTemplateFile)
-var createFile = kernel32.NewProc("CreateFileA")
+var createFile = kernel32.MustFindProc("CreateFileA").Addr()
 var _ = builtin7("CreateFile(lpFileName, dwDesiredAccess, dwShareMode,"+
 	"lpSecurityAttributes, dwCreationDistribution, dwFlagsAndAttributes,"+
 	"hTemplateFile)",
@@ -358,14 +384,15 @@ var _ = builtin7("CreateFile(lpFileName, dwDesiredAccess, dwShareMode,"+
 			lpSecurityDescriptor: getHandle(d, "lpSecurityDescriptor"),
 			bInheritHandle:       getBool(d, "bInheritHandle"),
 		}
-		rtn, _, _ := createFile.Call(
+		rtn, _, _ := syscall.Syscall9(createFile, 7,
 			uintptr(stringArg(a)),
 			intArg(b),
 			intArg(c),
 			uintptr(unsafe.Pointer(&sa)),
 			intArg(e),
 			intArg(f),
-			intArg(g))
+			intArg(g),
+			0, 0)
 		return intRet(rtn)
 	})
 
@@ -376,11 +403,12 @@ type SECURITY_ATTRIBUTES struct {
 }
 
 // dll long Kernel32:GetFileSize(handle hf, LONG* hiword)
-var getFileSize = kernel32.NewProc("GetFileSize")
+var getFileSize = kernel32.MustFindProc("GetFileSize").Addr()
 var _ = builtin2("GetFileSize(a, b/*unused*/)",
 	func(a, b Value) Value {
-		rtn, _, _ := getFileSize.Call(
+		rtn, _, _ := syscall.Syscall(getFileSize, 2,
 			intArg(a),
+			0,
 			0)
 		return intRet(rtn)
 	})
@@ -389,15 +417,16 @@ var _ = builtin2("GetFileSize(a, b/*unused*/)",
 //		string lpVolumeNameBuffer, long nVolumeNameSize, LONG* lpVolumeSerialNumber,
 //		LONG* lpMaximumComponentLength, LONG* lpFileSystemFlags,
 //		string lpFileSystemNameBuffer, long nFileSystemNameSize)
-var getVolumeInformation = kernel32.NewProc("GetVolumeInformationA")
+var getVolumeInformation = kernel32.MustFindProc("GetVolumeInformationA").Addr()
 var _ = builtin1("GetVolumeName(vol = 'c:\\\\')",
 	func(a Value) Value {
 		const bufsize = 255
 		var buf [bufsize + 1]byte
-		getVolumeInformation.Call(
+		syscall.Syscall9(getVolumeInformation, 8,
 			uintptr(stringArg(a)),
 			uintptr(unsafe.Pointer(&buf[0])),
 			uintptr(bufsize),
+			0,
 			0,
 			0,
 			0,

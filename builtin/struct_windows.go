@@ -29,6 +29,8 @@ func init() {
 		&SuStructGlobal{size: int(unsafe.Sizeof(SHELLEXECUTEINFO{}))})
 	Global.Builtin("TOOLINFO",
 		&SuStructGlobal{size: int(unsafe.Sizeof(TOOLINFO{}))})
+	Global.Builtin("WINDOWPLACEMENT",
+		&SuStructGlobal{size: int(unsafe.Sizeof(WINDOWPLACEMENT{}))})
 
 	Global.Builtin("MINMAXINFO",
 		&SuMinMaxInfo{SuStructGlobal{size: int(unsafe.Sizeof(MINMAXINFO{}))}})

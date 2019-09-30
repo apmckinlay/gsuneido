@@ -1,24 +1,25 @@
 package builtin
 
 import (
+	"syscall"
 	"unsafe"
 
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"golang.org/x/sys/windows"
 )
 
-var comdlg32 = windows.NewLazyDLL("comdlg32.dll")
+var comdlg32 = windows.MustLoadDLL("comdlg32.dll")
 
 // dll long ComDlg32:CommDlgExtendedError()
-var commDlgExtendedError = comdlg32.NewProc("CommDlgExtendedError")
+var commDlgExtendedError = comdlg32.MustFindProc("CommDlgExtendedError").Addr()
 var _ = builtin0("CommDlgExtendedError()",
 	func() Value {
-		rtn, _, _ := commDlgExtendedError.Call()
+		rtn, _, _ := syscall.Syscall(commDlgExtendedError, 0, 0, 0, 0)
 		return intRet(rtn)
 	})
 
 // dll bool ComDlg32:PrintDlg(PRINTDLG* printdlg)
-var printDlg = comdlg32.NewProc("PrintDlgA")
+var printDlg = comdlg32.MustFindProc("PrintDlgA").Addr()
 var _ = builtin1("PrintDlg(printdlg)",
 	func(a Value) Value {
 		pd := PRINTDLG{
@@ -40,8 +41,9 @@ var _ = builtin1("PrintDlg(printdlg)",
 			hPrintTemplate:      getHandle(a, "hPrintTemplate"),
 			hSetupTemplate:      getHandle(a, "hSetupTemplate"),
 		}
-		rtn, _, _ := printDlg.Call(
-			uintptr(unsafe.Pointer(&pd)))
+		rtn, _, _ := syscall.Syscall(printDlg, 1,
+			uintptr(unsafe.Pointer(&pd)),
+			0, 0)
 		a.Put(nil, SuStr("hwndOwner"), IntVal(int(pd.hwndOwner)))
 		a.Put(nil, SuStr("hDevMode"), IntVal(int(pd.hDevMode)))
 		a.Put(nil, SuStr("hDevNames"), IntVal(int(pd.hDevNames)))
@@ -82,7 +84,7 @@ type PRINTDLG struct {
 }
 
 // dll bool ComDlg32:PageSetupDlg(PAGESETUPDLG* pagesetupdlg)
-var pageSetupDlg = comdlg32.NewProc("PageSetupDlgA")
+var pageSetupDlg = comdlg32.MustFindProc("PageSetupDlgA").Addr()
 var _ = builtin1("PageSetupDlg(pagesetupdlg)",
 	func(a Value) Value {
 		psob := a.Get(nil, SuStr("ptPaperSize"))
@@ -104,8 +106,9 @@ var _ = builtin1("PageSetupDlg(pagesetupdlg)",
 			lpPageSetupTemplateName: getStr(a, "lpPageSetupTemplateName"),
 			hPageSetupTemplate:      getHandle(a, "hPageSetupTemplate"),
 		}
-		rtn, _, _ := pageSetupDlg.Call(
-			uintptr(unsafe.Pointer(&psd)))
+		rtn, _, _ := syscall.Syscall(pageSetupDlg, 1,
+			uintptr(unsafe.Pointer(&psd)),
+			0, 0)
 		a.Put(nil, SuStr("hwndOwner"), IntVal(int(psd.hwndOwner)))
 		a.Put(nil, SuStr("hDevMode"), IntVal(int(psd.hDevMode)))
 		a.Put(nil, SuStr("hDevNames"), IntVal(int(psd.hDevNames)))
@@ -139,7 +142,7 @@ type PAGESETUPDLG struct {
 }
 
 // dll bool ComDlg32:GetSaveFileName(OPENFILENAME* ofn)
-var getSaveFileName = comdlg32.NewProc("GetSaveFileNameA")
+var getSaveFileName = comdlg32.MustFindProc("GetSaveFileNameA").Addr()
 var _ = builtin1("GetSaveFileName(a)",
 	func(a Value) Value {
 		const bufsize = 8192
@@ -156,7 +159,9 @@ var _ = builtin1("GetSaveFileName(a)",
 			defExt:     getStr(a, "defExt"),
 			initialDir: getStr(a, "initialDir"),
 		}
-		rtn, _, _ := getSaveFileName.Call(uintptr(unsafe.Pointer(&ofn)))
+		rtn, _, _ := syscall.Syscall(getSaveFileName, 1,
+			uintptr(unsafe.Pointer(&ofn)),
+			0, 0)
 		if rtn == 0 {
 			return EmptyStr
 		}
@@ -190,7 +195,7 @@ type OPENFILENAME struct {
 }
 
 // dll bool ComDlg32:ChooseColor(CHOOSECOLOR* x)
-var chooseColor = comdlg32.NewProc("ChooseColorA")
+var chooseColor = comdlg32.MustFindProc("ChooseColorA").Addr()
 var _ = builtin1("ChooseColor(x)",
 	func(a Value) Value {
 		var custColors CustColors
@@ -205,8 +210,9 @@ var _ = builtin1("ChooseColor(x)",
 			resource:   getStr(a, "resource"),
 			custColors: &custColors,
 		}
-		rtn, _, _ := chooseColor.Call(
-			uintptr(unsafe.Pointer(&cc)))
+		rtn, _, _ := syscall.Syscall(chooseColor, 1,
+			uintptr(unsafe.Pointer(&cc)),
+			0, 0)
 		a.Put(nil, SuStr("rgbResult"), IntVal(int(cc.rgbResult)))
 		a.Put(nil, SuStr("flags"), IntVal(int(cc.flags)))
 		for i := 0; i < nCustColors; i++ {
@@ -232,7 +238,7 @@ const nCustColors = 16
 type CustColors [nCustColors]int32
 
 // dll bool ComDlg32:ChooseFont(CHOOSEFONT* cf)
-var chooseFont = comdlg32.NewProc("ChooseFontA")
+var chooseFont = comdlg32.MustFindProc("ChooseFontA").Addr()
 var _ = builtin1("ChooseFont(cf)",
 	func(a Value) Value {
 		lfob := a.Get(nil, SuStr("lpLogFont"))
@@ -269,7 +275,9 @@ var _ = builtin1("ChooseFont(cf)",
 			nSizeMin:       getInt32(a, "nSizeMin"),
 			nSizeMax:       getInt32(a, "nSizeMax"),
 		}
-		rtn, _, _ := chooseFont.Call(uintptr(unsafe.Pointer(&cf)))
+		rtn, _, _ := syscall.Syscall(chooseFont, 1,
+			uintptr(unsafe.Pointer(&cf)),
+			0, 0)
 		lfob.Put(nil, SuStr("lfHeight"), IntVal(int(lf.lfHeight)))
 		lfob.Put(nil, SuStr("lfWidth"), IntVal(int(lf.lfWidth)))
 		lfob.Put(nil, SuStr("lfEscapement"), IntVal(int(lf.lfEscapement)))

@@ -1,6 +1,7 @@
 package builtin
 
 import (
+	"syscall"
 	"unsafe"
 
 	. "github.com/apmckinlay/gsuneido/runtime"
@@ -8,26 +9,28 @@ import (
 	"golang.org/x/sys/windows"
 )
 
-var shell32 = windows.NewLazyDLL("shell32.dll")
+var shell32 = windows.MustLoadDLL("shell32.dll")
 
 // dll void Shell32:DragAcceptFiles(pointer hWnd, bool fAccept)
-var dragAcceptFiles = shell32.NewProc("DragAcceptFiles")
+var dragAcceptFiles = shell32.MustFindProc("DragAcceptFiles").Addr()
 var _ = builtin2("DragAcceptFiles(hWnd, fAccept)",
 	func(a, b Value) Value {
-		dragAcceptFiles.Call(
+		syscall.Syscall(dragAcceptFiles, 2,
 			intArg(a),
-			boolArg(b))
+			boolArg(b),
+			0)
 		return nil
 	})
 
 // dll bool Shell32:SHGetPathFromIDList(pointer pidl, string path)
-var shGetPathFromIDList = shell32.NewProc("SHGetPathFromIDListA")
+var shGetPathFromIDList = shell32.MustFindProc("SHGetPathFromIDListA").Addr()
 var _ = builtin1("SHGetPathFromIDList(pidl)",
 	func(a Value) Value {
 		var buf [MAX_PATH]byte
-		rtn, _, _ := shGetPathFromIDList.Call(
+		rtn, _, _ := syscall.Syscall(shGetPathFromIDList, 2,
 			intArg(a),
-			uintptr(unsafe.Pointer(&buf)))
+			uintptr(unsafe.Pointer(&buf)),
+			0)
 		if rtn == 0 {
 			return EmptyStr
 		}
@@ -39,25 +42,27 @@ var _ = builtin1("SHGetPathFromIDList(pidl)",
 //  long iFile,
 //  string lpszFile,
 //  long cch)
-var dragQueryFile = shell32.NewProc("DragQueryFile")
+var dragQueryFile = shell32.MustFindProc("DragQueryFile").Addr()
 var _ = builtin2("DragQueryFile(hDrop, iFile)",
 	func(a, b Value) Value {
-		n, _, _ := dragQueryFile.Call(
+		n, _, _ := syscall.Syscall6(dragQueryFile, 4,
 			intArg(a),
 			intArg(b),
 			0,
-			0)
+			0,
+			0, 0)
 		buf := make([]byte, n)
-		dragQueryFile.Call(
+		syscall.Syscall6(dragQueryFile, 4,
 			intArg(a),
 			intArg(b),
 			uintptr(unsafe.Pointer(&buf[0])),
-			n)
+			n,
+			0, 0)
 		return SuStr(str.BeforeFirst(string(buf), "\x00"))
 	})
 
 // dll bool Shell32:Shell_NotifyIcon(long dwMessage, NOTIFYICONDATA* lpdata)
-var shell_NotifyIcon = shell32.NewProc("Shell_NotifyIconA")
+var shell_NotifyIcon = shell32.MustFindProc("Shell_NotifyIconA").Addr()
 var _ = builtin2("Shell_NotifyIcon(dwMessage, lpdata)",
 	func(a, b Value) Value {
 		nid := NOTIFYICONDATA{
@@ -75,9 +80,10 @@ var _ = builtin2("Shell_NotifyIcon(dwMessage, lpdata)",
 		copyStr(nid.szTip[:], ToStr(b.Get(nil, SuStr("szTip"))))
 		copyStr(nid.szInfo[:], ToStr(b.Get(nil, SuStr("szInfo"))))
 		copyStr(nid.szInfoTitle[:], ToStr(b.Get(nil, SuStr("szInfoTitle"))))
-		rtn, _, _ := shell_NotifyIcon.Call(
+		rtn, _, _ := syscall.Syscall(shell_NotifyIcon, 2,
 			intArg(a),
-			uintptr(unsafe.Pointer(&nid)))
+			uintptr(unsafe.Pointer(&nid)),
+			0)
 		return boolRet(rtn)
 	})
 
@@ -106,7 +112,7 @@ func copyStr(dst []byte, src string) {
 }
 
 // dll bool Shell32:ShellExecuteEx(SHELLEXECUTEINFO* lpExecInfo)
-var shellExecuteEx = shell32.NewProc("ShellExecuteExA")
+var shellExecuteEx = shell32.MustFindProc("ShellExecuteExA").Addr()
 var _ = builtin1("ShellExecuteEx(lpExecInfo)",
 	func(a Value) Value {
 		sei := SHELLEXECUTEINFO{
@@ -126,8 +132,9 @@ var _ = builtin1("ShellExecuteEx(lpExecInfo)",
 			hIcon:        getHandle(a, "hIcon"),
 			hProcess:     getHandle(a, "hProcess"),
 		}
-		rtn, _, _ := shellExecuteEx.Call(
-			uintptr(unsafe.Pointer(&sei)))
+		rtn, _, _ := syscall.Syscall(shellExecuteEx, 1,
+			uintptr(unsafe.Pointer(&sei)),
+			0, 0)
 		return boolRet(rtn)
 	})
 
@@ -152,7 +159,7 @@ type SHELLEXECUTEINFO struct {
 const MAX_PATH = 260
 
 // dll pointer Shell32:SHBrowseForFolder(BROWSEINFO* lpbi)
-var sHBrowseForFolder = shell32.NewProc("SHBrowseForFolderA")
+var sHBrowseForFolder = shell32.MustFindProc("SHBrowseForFolderA").Addr()
 var _ = builtin1("SHBrowseForFolder(lpbi)",
 	func(a Value) Value {
 		bi := BROWSEINFO{
@@ -165,8 +172,9 @@ var _ = builtin1("SHBrowseForFolder(lpbi)",
 			lParam:         getHandle(a, "lParam"),
 			iImage:         getInt32(a, "iImage"),
 		}
-		rtn, _, _ := sHBrowseForFolder.Call(
-			uintptr(unsafe.Pointer(&bi)))
+		rtn, _, _ := syscall.Syscall(sHBrowseForFolder, 1,
+			uintptr(unsafe.Pointer(&bi)),
+			0, 0)
 		return intRet(rtn)
 	})
 

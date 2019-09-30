@@ -1,6 +1,7 @@
 package builtin
 
 import (
+	"syscall"
 	"unsafe"
 
 	. "github.com/apmckinlay/gsuneido/runtime"
@@ -13,11 +14,13 @@ type memStatusEx struct {
 	unused       [6]uint64
 }
 
-var globalMemoryStatusEx = kernel32.NewProc("GlobalMemoryStatusEx")
+var globalMemoryStatusEx = kernel32.MustFindProc("GlobalMemoryStatusEx").Addr()
 
 var _ = builtin0("SystemMemory()", func() Value {
 	msx := &memStatusEx{dwLength: 64}
-	r, _, _ := globalMemoryStatusEx.Call(uintptr(unsafe.Pointer(msx)))
+	r, _, _ := syscall.Syscall(globalMemoryStatusEx, 1,
+		uintptr(unsafe.Pointer(msx)),
+		0, 0)
 	if r == 0 {
 		return Zero
 	}
@@ -28,12 +31,21 @@ var _ = builtin0("OperatingSystem()", func() Value {
 	return SuStr("Windows") //TODO version
 })
 
-var getDiskFreeSpaceEx = kernel32.NewProc("GetDiskFreeSpaceExA")
+// dll bool Kernel32:GetDiskFreeSpaceEx(
+// 	[in] string			directoryName,
+// 	ULARGE_INTEGER*		freeBytesAvailableToCaller,
+// 	ULARGE_INTEGER*		totalNumberOfBytes,
+// 	ULARGE_INTEGER*		totalNumberOfFreeBytes
+// 	)
+var getDiskFreeSpaceEx = kernel32.MustFindProc("GetDiskFreeSpaceExA").Addr()
 
 var _ = builtin1("GetDiskFreeSpace(dir = '.')", func(arg Value) Value {
 	var freeBytes int64
-	getDiskFreeSpaceEx.Call(
+	syscall.Syscall6(getDiskFreeSpaceEx, 4,
 		uintptr(stringArg(arg)),
-		uintptr(unsafe.Pointer(&freeBytes)), 0, 0)
+		uintptr(unsafe.Pointer(&freeBytes)),
+		0,
+		0,
+		0, 0)
 	return Int64Val(freeBytes)
 })

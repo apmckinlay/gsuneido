@@ -1,70 +1,84 @@
 package builtin
 
 import (
+	"fmt"
+
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"golang.org/x/sys/windows"
 )
 
+// WARNING: Not thread-safe.
+// Should only be used on main UI thread.
+
 const maxCb = 2000 // same as Go's limit (as of 20190813)
 
-var callbacks [maxCb]struct {
+type callback struct {
 	fn     Value
 	nargs  byte
 	active bool
 	gcb    uintptr
 }
 
+func (cb *callback) call1(a uintptr) uintptr {
+	return cb.callv(
+		IntVal(int(a)))
+}
+func (cb *callback) call2(a, b uintptr) uintptr {
+	return cb.callv(
+		IntVal(int(a)),
+		IntVal(int(b)))
+}
+func (cb *callback) call3(a, b, c uintptr) uintptr {
+	return cb.callv(
+		IntVal(int(a)),
+		IntVal(int(b)),
+		IntVal(int(c)))
+}
+func (cb *callback) call4(a, b, c, d uintptr) uintptr {
+	return cb.callv(
+		IntVal(int(a)),
+		IntVal(int(b)),
+		IntVal(int(c)),
+		IntVal(int(d)))
+}
+
+var callbacks [maxCb]callback
+
+func (cb *callback) callv(args ...Value) uintptr {
+	if !cb.active {
+		fmt.Println("CALLBACK TO INACTIVE!!!")
+	}
+	x := UIThread.Call(cb.fn, args...)
+	if x == nil || x == False {
+		return 0
+	}
+	if x == True {
+		return 1
+	}
+	return uintptr(ToInt(x))
+}
+
 func NewCallback(fn Value, nargs byte) uintptr {
-	for i := range callbacks {
+	for j := range callbacks {
+		i := j
 		cb := &callbacks[i]
 		if !cb.active && (cb.gcb == 0 || cb.nargs == nargs) {
 			if cb.gcb == 0 {
 				// create a reusable callback for callbacks[i]
 				switch nargs {
-				case 1:
-					cb.gcb = windows.NewCallback(func(a uintptr) uintptr {
-						x := UIThread.Call(callbacks[i].fn, IntVal(int(a)))
-						return uintptr(ToInt(x))
-					})
-				case 2:
-					cb.gcb = windows.NewCallback(func(a, b uintptr) uintptr {
-						x := UIThread.Call(callbacks[i].fn,
-							IntVal(int(a)),
-							IntVal(int(b)))
-						if x == nil {
-							return 0
-						}
-						return uintptr(ToInt(x))
-					})
-				case 3:
-					cb.gcb = windows.NewCallback(func(a, b, c uintptr) uintptr {
-						x := UIThread.Call(callbacks[i].fn,
-							IntVal(int(a)),
-							IntVal(int(b)),
-							IntVal(int(c)))
-						if x == nil {
-							return 0
-						}
-						return uintptr(ToInt(x))
-					})
+				// case 1:
+				// 	cb.gcb = windows.NewCallback(cb.call1)
+				// case 2:
+				// 	cb.gcb = windows.NewCallback(cb.call2)
+				// case 3:
+				// 	cb.gcb = windows.NewCallback(cb.call3)
 				case 4:
-					cb.gcb = windows.NewCallback(func(a, b, c, d uintptr) uintptr {
-						x := UIThread.Call(callbacks[i].fn,
-							IntVal(int(a)),
-							IntVal(int(b)),
-							IntVal(int(c)),
-							IntVal(int(d)))
-						if x == nil || x == False {
-							return 0
-						}
-						if x == True {
-							return 1
-						}
-						return uintptr(ToInt(x))
-					})
+					cb.gcb = windows.NewCallback(cb.call4)
 				default:
-					panic("callback with unsupported nargs")
+					panic("callback with unsupported number of arguments")
 				}
+			} else {
+				fmt.Println("--- reuse callback", i)
 			}
 			cb.fn = fn
 			cb.nargs = nargs
@@ -72,13 +86,17 @@ func NewCallback(fn Value, nargs byte) uintptr {
 			return cb.gcb
 		}
 	}
-	panic("too many callback1")
+	panic("too many callbacks")
+}
+
+func init() {
+	fmt.Println("ClearCallback disabled")
 }
 
 func ClearCallback(fn Value) bool {
 	for _, cb := range callbacks {
 		if cb.fn == fn {
-			cb.active = false
+			// cb.active = false
 			// keep the fn in case it gets called soon after clear
 			// keep the go callback to reuse
 			return true
