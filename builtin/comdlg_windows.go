@@ -4,6 +4,7 @@ import (
 	"syscall"
 	"unsafe"
 
+	heap "github.com/apmckinlay/gsuneido/builtin/heapstack"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"golang.org/x/sys/windows"
 )
@@ -22,8 +23,11 @@ var _ = builtin0("CommDlgExtendedError()",
 var printDlg = comdlg32.MustFindProc("PrintDlgA").Addr()
 var _ = builtin1("PrintDlg(printdlg)",
 	func(a Value) Value {
-		pd := PRINTDLG{
-			lStructSize:         uint32(unsafe.Sizeof(PRINTDLG{})),
+		defer heap.FreeTo(heap.CurSize())
+		p := heap.Alloc(nPRINTDLG)
+		pd := (*PRINTDLG)(p)
+		*pd = PRINTDLG{
+			lStructSize:         uint32(nPRINTDLG),
 			hwndOwner:           getHandle(a, "hwndOwner"),
 			hDevMode:            getHandle(a, "hDevMode"),
 			hDevNames:           getHandle(a, "hDevNames"),
@@ -42,7 +46,7 @@ var _ = builtin1("PrintDlg(printdlg)",
 			hSetupTemplate:      getHandle(a, "hSetupTemplate"),
 		}
 		rtn, _, _ := syscall.Syscall(printDlg, 1,
-			uintptr(unsafe.Pointer(&pd)),
+			uintptr(p),
 			0, 0)
 		a.Put(nil, SuStr("hwndOwner"), IntVal(int(pd.hwndOwner)))
 		a.Put(nil, SuStr("hDevMode"), IntVal(int(pd.hDevMode)))
@@ -83,6 +87,8 @@ type PRINTDLG struct {
 	hSetupTemplate      HANDLE
 }
 
+const nPRINTDLG = unsafe.Sizeof(PRINTDLG{})
+
 // dll bool ComDlg32:PageSetupDlg(PAGESETUPDLG* pagesetupdlg)
 var pageSetupDlg = comdlg32.MustFindProc("PageSetupDlgA").Addr()
 var _ = builtin1("PageSetupDlg(pagesetupdlg)",
@@ -90,8 +96,11 @@ var _ = builtin1("PageSetupDlg(pagesetupdlg)",
 		psob := a.Get(nil, SuStr("ptPaperSize"))
 		mmob := a.Get(nil, SuStr("rtMinMargin"))
 		rmob := a.Get(nil, SuStr("rtMargin"))
-		psd := PAGESETUPDLG{
-			lStructSize:             uint32(unsafe.Sizeof(PAGESETUPDLG{})),
+		defer heap.FreeTo(heap.CurSize())
+		p := heap.Alloc(nPAGESETUPDLG)
+		psd := (*PAGESETUPDLG)(p)
+		*psd = PAGESETUPDLG{
+			lStructSize:             uint32(nPAGESETUPDLG),
 			ptPaperSize:             getPoint(psob, "ptPaperSize"),
 			rtMinMargin:             getRect(mmob, "rtMinMargin"),
 			rtMargin:                getRect(rmob, "rtMargin"),
@@ -107,7 +116,7 @@ var _ = builtin1("PageSetupDlg(pagesetupdlg)",
 			hPageSetupTemplate:      getHandle(a, "hPageSetupTemplate"),
 		}
 		rtn, _, _ := syscall.Syscall(pageSetupDlg, 1,
-			uintptr(unsafe.Pointer(&psd)),
+			uintptr(p),
 			0, 0)
 		a.Put(nil, SuStr("hwndOwner"), IntVal(int(psd.hwndOwner)))
 		a.Put(nil, SuStr("hDevMode"), IntVal(int(psd.hDevMode)))
@@ -141,31 +150,60 @@ type PAGESETUPDLG struct {
 	hPageSetupTemplate      HANDLE
 }
 
+const nPAGESETUPDLG = unsafe.Sizeof(PAGESETUPDLG{})
+
 // dll bool ComDlg32:GetSaveFileName(OPENFILENAME* ofn)
 var getSaveFileName = comdlg32.MustFindProc("GetSaveFileNameA").Addr()
 var _ = builtin1("GetSaveFileName(a)",
 	func(a Value) Value {
-		const bufsize = 8192
-		var buf [bufsize + 1]byte
+		defer heap.FreeTo(heap.CurSize())
+		bufsize := getInt(a, "maxFile")
 		file := ToStr(a.Get(nil, SuStr("file")))
-		copyStr(buf[:], file)
-		buf[len(file)+1] = 0 // need double nuls
-		ofn := OPENFILENAME{
-			structSize: int32(unsafe.Sizeof(OPENFILENAME{})),
-			file:       &buf[0],
-			maxFile:    bufsize,
+		buf := strToBuf(file, bufsize)
+		p := heap.Alloc(nOPENFILENAME)
+		*(*OPENFILENAME)(p) = OPENFILENAME{
+			structSize: int32(nOPENFILENAME),
+			file:       (*byte)(buf),
+			maxFile:    int32(bufsize),
 			filter:     getStr(a, "filter"),
 			flags:      getInt32(a, "flags"),
 			defExt:     getStr(a, "defExt"),
 			initialDir: getStr(a, "initialDir"),
 		}
 		rtn, _, _ := syscall.Syscall(getSaveFileName, 1,
-			uintptr(unsafe.Pointer(&ofn)),
+			uintptr(p),
 			0, 0)
-		if rtn == 0 {
-			return EmptyStr
+		if rtn != 0 {
+			a.Put(nil, SuStr("file"), bufToStr(buf, uintptr(bufsize)))
 		}
-		return strRet(buf[:])
+		return boolRet(rtn)
+	})
+
+// dll bool ComDlg32:GetOpenFileName(OPENFILENAME* ofn)
+var getOpenFileName = comdlg32.MustFindProc("GetOpenFileNameA").Addr()
+var _ = builtin1("GetOpenFileName(a)",
+	func(a Value) Value {
+		defer heap.FreeTo(heap.CurSize())
+		bufsize := getInt(a, "maxFile")
+		file := ToStr(a.Get(nil, SuStr("file")))
+		buf := strToBuf(file, bufsize)
+		p := heap.Alloc(nOPENFILENAME)
+		*(*OPENFILENAME)(p) = OPENFILENAME{
+			structSize: int32(nOPENFILENAME),
+			file:       (*byte)(buf),
+			maxFile:    int32(bufsize),
+			filter:     getStr(a, "filter"),
+			flags:      getInt32(a, "flags"),
+			defExt:     getStr(a, "defExt"),
+			initialDir: getStr(a, "initialDir"),
+		}
+		rtn, _, _ := syscall.Syscall(getSaveFileName, 1,
+			uintptr(p),
+			0, 0)
+		if rtn != 0 {
+			a.Put(nil, SuStr("file"), bufToStr2(buf, uintptr(bufsize)))
+		}
+		return boolRet(rtn)
 	})
 
 type OPENFILENAME struct {
@@ -194,24 +232,29 @@ type OPENFILENAME struct {
 	FlagsEx        int32
 }
 
+const nOPENFILENAME = unsafe.Sizeof(OPENFILENAME{})
+
 // dll bool ComDlg32:ChooseColor(CHOOSECOLOR* x)
 var chooseColor = comdlg32.MustFindProc("ChooseColorA").Addr()
 var _ = builtin1("ChooseColor(x)",
 	func(a Value) Value {
-		var custColors CustColors
+		defer heap.FreeTo(heap.CurSize())
+		custColors := (*CustColors)(heap.Alloc(nCustColors * int32Size))
 		ccs := a.Get(nil, SuStr("custColors"))
 		for i := 0; i < nCustColors; i++ {
 			custColors[i] = int32(ToInt(ccs.Get(nil, SuInt(i))))
 		}
-		cc := CHOOSECOLOR{
+		p := heap.Alloc(nCustColors)
+		cc := (*CHOOSECOLOR)(p)
+		*cc = CHOOSECOLOR{
 			size:       getInt32(a, "size"),
 			owner:      getHandle(a, "owner"),
 			flags:      getInt32(a, "flags"),
 			resource:   getStr(a, "resource"),
-			custColors: &custColors,
+			custColors: custColors,
 		}
 		rtn, _, _ := syscall.Syscall(chooseColor, 1,
-			uintptr(unsafe.Pointer(&cc)),
+			uintptr(p),
 			0, 0)
 		a.Put(nil, SuStr("rgbResult"), IntVal(int(cc.rgbResult)))
 		a.Put(nil, SuStr("flags"), IntVal(int(cc.flags)))
@@ -241,8 +284,10 @@ type CustColors [nCustColors]int32
 var chooseFont = comdlg32.MustFindProc("ChooseFontA").Addr()
 var _ = builtin1("ChooseFont(cf)",
 	func(a Value) Value {
+		defer heap.FreeTo(heap.CurSize())
+		lf := (*LOGFONT)(heap.Alloc(nLOGFONT))
 		lfob := a.Get(nil, SuStr("lpLogFont"))
-		lf := LOGFONT{
+		*lf = LOGFONT{
 			lfHeight:         getInt32(lfob, "lfHeight"),
 			lfWidth:          getInt32(lfob, "lfWidth"),
 			lfEscapement:     getInt32(lfob, "lfEscapement"),
@@ -257,12 +302,13 @@ var _ = builtin1("ChooseFont(cf)",
 			lfQuality:        byte(getInt(lfob, "lfQuality")),
 			lfPitchAndFamily: byte(getInt(lfob, "lfPitchAndFamily")),
 		}
-		copyStr(lf.lfFaceName[:], ToStr(lfob.Get(nil, SuStr("lfFaceName"))))
-		cf := CHOOSEFONT{
-			lStructSize:    uint32(unsafe.Sizeof(CHOOSEFONT{})),
+		copyStr(lf.lfFaceName[:], lfob, "lfFaceName")
+		p := heap.Alloc(nCHOOSEFONT)
+		*(*CHOOSEFONT)(p) = CHOOSEFONT{
+			lStructSize:    uint32(nCHOOSEFONT),
 			hwndOwner:      getHandle(a, "hwndOwner"),
 			hDC:            getHandle(a, "hDC"),
-			lpLogFont:      &lf,
+			lpLogFont:      lf,
 			iPointSize:     getInt32(a, "iPointSize"),
 			Flags:          getInt32(a, "Flags"),
 			rgbColors:      getInt32(a, "rgbColors"),
@@ -276,7 +322,7 @@ var _ = builtin1("ChooseFont(cf)",
 			nSizeMax:       getInt32(a, "nSizeMax"),
 		}
 		rtn, _, _ := syscall.Syscall(chooseFont, 1,
-			uintptr(unsafe.Pointer(&cf)),
+			uintptr(p),
 			0, 0)
 		lfob.Put(nil, SuStr("lfHeight"), IntVal(int(lf.lfHeight)))
 		lfob.Put(nil, SuStr("lfWidth"), IntVal(int(lf.lfWidth)))
@@ -313,3 +359,5 @@ type CHOOSEFONT struct {
 	nSizeMin       int32
 	nSizeMax       int32
 }
+
+const nCHOOSEFONT = unsafe.Sizeof(CHOOSEFONT{})

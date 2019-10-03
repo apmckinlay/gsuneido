@@ -1,7 +1,6 @@
 package builtin
 
 import (
-	"strings"
 	"unsafe"
 
 	. "github.com/apmckinlay/gsuneido/runtime"
@@ -31,6 +30,8 @@ func init() {
 		&SuStructGlobal{size: int(unsafe.Sizeof(TOOLINFO{}))})
 	Global.Builtin("WINDOWPLACEMENT",
 		&SuStructGlobal{size: int(unsafe.Sizeof(WINDOWPLACEMENT{}))})
+	Global.Builtin("OPENFILENAME",
+		&SuStructGlobal{size: int(nOPENFILENAME)})
 
 	Global.Builtin("MINMAXINFO",
 		&SuMinMaxInfo{SuStructGlobal{size: int(unsafe.Sizeof(MINMAXINFO{}))}})
@@ -108,7 +109,7 @@ type SuRect struct {
 }
 
 func (*SuRect) structToOb(p unsafe.Pointer) Value {
-	return rectToOb((*RECT)(p), nil)
+	return urectToOb(p, nil)
 }
 
 func (*SuRect) updateStruct(ob Value, p unsafe.Pointer) {
@@ -117,7 +118,7 @@ func (*SuRect) updateStruct(ob Value, p unsafe.Pointer) {
 
 func rect(_ *Thread, args []Value) Value {
 	r := obToRect(args[0])
-	return SuStr(memToStr(uintptr(unsafe.Pointer(&r)), unsafe.Sizeof(r)))
+	return bufRet(unsafe.Pointer(&r), nRECT)
 }
 
 //-------------------------------------------------------------------
@@ -197,7 +198,7 @@ func tvitemToOb(tvi *TVITEM) *SuObject {
 	ob.Put(nil, SuStr("hItem"), IntVal(int(tvi.hItem)))
 	ob.Put(nil, SuStr("state"), IntVal(int(tvi.state)))
 	ob.Put(nil, SuStr("stateMask"), IntVal(int(tvi.stateMask)))
-	ob.Put(nil, SuStr("pszText"), strFromAddr(uintptr(unsafe.Pointer(tvi.pszText))))
+	ob.Put(nil, SuStr("pszText"), bufRet(unsafe.Pointer(tvi.pszText), 1024))
 	ob.Put(nil, SuStr("cchTextMax"), IntVal(int(tvi.cchTextMax)))
 	ob.Put(nil, SuStr("iImage"), IntVal(int(tvi.iImage)))
 	ob.Put(nil, SuStr("iSelectedImage"), IntVal(int(tvi.iSelectedImage)))
@@ -238,16 +239,16 @@ func accel(_ *Thread, args []Value) Value {
 		key:   int16(getInt(arg, "key")),
 		cmd:   int16(getInt(arg, "cmd")),
 	}
-	return SuStr(memToStr(uintptr(unsafe.Pointer(&ac)), unsafe.Sizeof(ac)))
+	return bufRet(unsafe.Pointer(&ac), unsafe.Sizeof(ac))
 }
 
-func memToStr(p uintptr, n uintptr) string {
-	var sb strings.Builder
-	for i := uintptr(0); i < n; i++ {
-		sb.WriteByte(*(*byte)(unsafe.Pointer(p + i)))
-	}
-	return sb.String()
-}
+// func memToStr(p uintptr, n uintptr) string {
+// 	var sb strings.Builder
+// 	for i := uintptr(0); i < n; i++ {
+// 		sb.WriteByte(*(*byte)(unsafe.Pointer(p + i)))
+// 	}
+// 	return sb.String()
+// }
 
 //-------------------------------------------------------------------
 
@@ -283,7 +284,7 @@ var _ = builtin1("SCNotificationText(address)",
 	func(a Value) Value {
 		scn := (*SCNotification)(unsafe.Pointer(uintptr(ToInt(a))))
 		ob := scnToOb(scn)
-		ob.Put(nil, SuStr("text"), strFromAddr(scn.text))
+		ob.Put(nil, SuStr("text"), bufRet(unsafe.Pointer(scn.text), 1024))
 		return ob
 	})
 
@@ -308,21 +309,6 @@ func scnToOb(scn *SCNotification) *SuObject {
 	ob.Put(nil, SuStr("y"), IntVal(int(scn.y)))
 	ob.Put(nil, SuStr("token"), IntVal(int(scn.token)))
 	return ob
-}
-
-func strFromAddr(a uintptr) Value {
-	if a == 0 {
-		return False
-	}
-	var sb strings.Builder
-	for ; ; a++ {
-		c := *(*byte)(unsafe.Pointer(a))
-		if c == 0 {
-			break
-		}
-		sb.WriteByte(c)
-	}
-	return SuStr(sb.String())
 }
 
 //-------------------------------------------------------------------

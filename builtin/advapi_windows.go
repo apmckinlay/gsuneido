@@ -2,8 +2,8 @@ package builtin
 
 import (
 	"syscall"
-	"unsafe"
 
+	heap "github.com/apmckinlay/gsuneido/builtin/heapstack"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"golang.org/x/sys/windows"
 )
@@ -14,15 +14,16 @@ var advapi32 = windows.MustLoadDLL("advapi32.dll")
 var regOpenKeyEx = advapi32.MustFindProc("RegOpenKeyExA").Addr()
 var _ = builtin5("RegOpenKeyEx(hKey, lpSubKey, ulOptions, samDesired, phkResult)",
 	func(a, b, c, d, e Value) Value {
-		var e1 uintptr
+		defer heap.FreeTo(heap.CurSize())
+		p := heap.Alloc(uintptrSize)
 		rtn, _, _ := syscall.Syscall6(regOpenKeyEx, 5,
 			intArg(a),
 			uintptr(stringArg(b)),
 			intArg(c),
 			intArg(d),
-			uintptr(unsafe.Pointer(&e1)),
+			uintptr(p),
 			0)
-		e.Put(nil, SuStr("x"), IntVal(int(e1))) // phkResult
+		e.Put(nil, SuStr("x"), IntVal(int(*(*uintptr)(p)))) // phkResult
 		return intRet(rtn)
 	})
 
@@ -41,7 +42,8 @@ var regCreateKeyEx = advapi32.MustFindProc("RegCreateKeyExA").Addr()
 var _ = builtin("RegCreateKeyEx(hKey, lpSubKey, Reserved/*unused*/, lpClass, "+
 	"dwOptions, samDesired, lpSecurityAttributes, phkResult, lpdwDisposition)",
 	func(_ *Thread, a []Value) Value {
-		var h1 uintptr
+		defer heap.FreeTo(heap.CurSize())
+		p := heap.Alloc(uintptrSize)
 		rtn, _, _ := syscall.Syscall9(regCreateKeyEx, 9,
 			intArg(a[0]),
 			uintptr(stringArg(a[1])),
@@ -50,9 +52,9 @@ var _ = builtin("RegCreateKeyEx(hKey, lpSubKey, Reserved/*unused*/, lpClass, "+
 			intArg(a[4]),
 			intArg(a[5]),
 			0, // lpSecurityAttributes - always null
-			uintptr(unsafe.Pointer(&h1)),
+			uintptr(p),
 			0) // lpdwDisposition - always null
-		a[7].Put(nil, SuStr("x"), IntVal(int(h1))) // phkResult
+		a[7].Put(nil, SuStr("x"), IntVal(int(*(*uintptr)(p)))) // phkResult
 		return intRet(rtn)
 	})
 
@@ -61,32 +63,37 @@ var regQueryValueEx = advapi32.MustFindProc("RegQueryValueExA").Addr()
 var _ = builtin6("RegQueryValueEx(hKey, lpValueName, lpReserved/*unused*/, "+
 	"lpType/*unused*/, lpData, lpcbData/*unused*/)",
 	func(a, b, c, d, e, f Value) Value {
-		var e1 int32   // data
-		f1 := int32(4) // cbData = 4 to match int32 data
+		defer heap.FreeTo(heap.CurSize())
+		pe := heap.Alloc(int32Size)
+		pf := heap.Alloc(int32Size)
+		*(*int32)(pf) = int32(int32Size) // to match int32 data
 		rtn, _, _ := syscall.Syscall6(regQueryValueEx, 6,
 			intArg(a),
 			uintptr(stringArg(b)),
-			0,                            // lpReserved - must be 0
-			0,                            // lpType - NULL
-			uintptr(unsafe.Pointer(&e1)), // lpData
-			uintptr(unsafe.Pointer(&f1))) // lpcbData
-		e.Put(nil, SuStr("x"), IntVal(int(e1))) // data
+			0,           // lpReserved - must be 0
+			0,           // lpType - NULL
+			uintptr(pe), // lpData
+			uintptr(pf)) // lpcbData
+		e.Put(nil, SuStr("x"), IntVal(int(*(*int32)(pe)))) // data
 		return intRet(rtn)
 	})
+
+const REG_DWORD = 4
 
 // RegSetValueEx - hard coded for 4 byte data
 var regSetValueEx = advapi32.MustFindProc("RegSetValueExA").Addr()
 var _ = builtin6("RegSetValueEx(hKey, lpValueName, reserved/*unused*/, "+
 	"dwType/*unused*/, lpData, cbData/*unused*/)",
 	func(a, b, c, d, e, f Value) Value {
-		var e1 int32 // data
+		defer heap.FreeTo(heap.CurSize())
+		pe := heap.Alloc(int32Size)
 		rtn, _, _ := syscall.Syscall6(regSetValueEx, 6,
 			intArg(a),
 			uintptr(stringArg(b)),
-			0,                            // reserved - must be 0
-			intArg(d),                    // dwType
-			uintptr(unsafe.Pointer(&e1)), // lpData
-			4)                            // cbData = 4 to match int32 data
-		e.Put(nil, SuStr("x"), IntVal(int(e1)))
+			0,           // reserved - must be 0
+			REG_DWORD,   // dwType
+			uintptr(pe), // lpData
+			int32Size)   // cbData
+		e.Put(nil, SuStr("x"), IntVal(int(*(*int32)(pe))))
 		return intRet(rtn)
 	})

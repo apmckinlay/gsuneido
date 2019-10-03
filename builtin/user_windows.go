@@ -1,25 +1,14 @@
 package builtin
 
 import (
-	"bytes"
 	"fmt"
 	"syscall"
 	"unsafe"
 
+	heap "github.com/apmckinlay/gsuneido/builtin/heapstack"
 	. "github.com/apmckinlay/gsuneido/runtime"
-	"github.com/apmckinlay/gsuneido/util/str"
 	"github.com/apmckinlay/gsuneido/util/verify"
-	"golang.org/x/sys/windows"
 )
-
-func init() {
-	windows.MustLoadDLL("scilexer.dll")
-}
-
-var user32 = windows.MustLoadDLL("user32.dll")
-
-type HANDLE = uintptr
-type BOOL = int32
 
 type RECT struct {
 	left   int32
@@ -40,12 +29,16 @@ type PAINTSTRUCT struct {
 	_           [4]byte // padding
 }
 
+const nPAINTSTRUCT = unsafe.Sizeof(PAINTSTRUCT{})
+
 type MONITORINFO struct {
 	cbSize    uint32
 	rcMonitor RECT
 	rcWork    RECT
 	dwFlags   uint32
 }
+
+const nMONITORINFO = unsafe.Sizeof(MONITORINFO{})
 
 type SCROLLINFO struct {
 	cbSize    uint32
@@ -57,10 +50,14 @@ type SCROLLINFO struct {
 	nTrackPos int32
 }
 
+const nSCROLLINFO = unsafe.Sizeof(SCROLLINFO{})
+
 type POINT struct {
 	x int32
 	y int32
 }
+
+const nPOINT = unsafe.Sizeof(POINT{})
 
 type WINDOWPLACEMENT struct {
 	length           uint32
@@ -70,6 +67,8 @@ type WINDOWPLACEMENT struct {
 	ptMaxPosition    POINT
 	rcNormalPosition RECT
 }
+
+const nWINDOWPLACEMENT = unsafe.Sizeof(WINDOWPLACEMENT{})
 
 type MENUITEMINFO struct {
 	cbSize        uint32
@@ -86,6 +85,8 @@ type MENUITEMINFO struct {
 	hbmpItem      HANDLE
 }
 
+const nMENUITEMINFO = unsafe.Sizeof(MENUITEMINFO{})
+
 type WNDCLASS struct {
 	style      uint32
 	wndProc    uintptr
@@ -99,6 +100,8 @@ type WNDCLASS struct {
 	className  *byte
 }
 
+const nWNDCLASS = unsafe.Sizeof(WNDCLASS{})
+
 type TCITEM struct {
 	mask        uint32
 	dwState     uint32
@@ -110,6 +113,8 @@ type TCITEM struct {
 	_           [4]byte // padding
 }
 
+const nTCITEM = unsafe.Sizeof(TCITEM{})
+
 type CHARRANGE struct {
 	cpMin int32
 	cpMax int32
@@ -119,6 +124,8 @@ type TEXTRANGE struct {
 	chrg      CHARRANGE
 	lpstrText *byte
 }
+
+const nTEXTRANGE = unsafe.Sizeof(TEXTRANGE{})
 
 type TOOLINFO struct {
 	cbSize     uint32
@@ -132,6 +139,8 @@ type TOOLINFO struct {
 	lpReserved uintptr
 }
 
+const nTOOLINFO = unsafe.Sizeof(TOOLINFO{})
+
 type TOOLINFO2 struct {
 	cbSize     uint32
 	uFlags     uint32
@@ -143,6 +152,8 @@ type TOOLINFO2 struct {
 	lParam     int32
 	lpReserved uintptr
 }
+
+const nTOOLINFO2 = unsafe.Sizeof(TOOLINFO{})
 
 type TVITEM struct {
 	mask           uint32
@@ -166,204 +177,17 @@ type TVITEMEX struct {
 	iReserved      int32
 }
 
+const nTVITEMEX = unsafe.Sizeof(TVITEMEX{})
+
 type TV_INSERTSTRUCT struct {
 	hParent      HANDLE
 	hInsertAfter HANDLE
 	item         TVITEMEX
 }
 
-// helper functions
+const nTV_INSERTSTRUCT = unsafe.Sizeof(TV_INSERTSTRUCT{})
 
-func truncToInt(x Value) int {
-	// seems like rounding would make more sense but cSuneido truncates
-	if dn, ok := x.ToDnum(); ok {
-		if n, ok := dn.Trunc().ToInt(); ok {
-			return n
-		}
-	}
-	return ToInt(x)
-}
-
-func boolArg(arg Value) uintptr {
-	if ToBool(arg) {
-		return 1
-	}
-	return 0
-}
-
-func boolRet(rtn uintptr) Value {
-	if rtn == 0 {
-		return False
-	}
-	return True
-}
-
-func intArg(arg Value) uintptr {
-	if arg.Equal(True) {
-		return 1
-	}
-	if arg.Equal(False) {
-		return 0
-	}
-	return uintptr(truncToInt(arg))
-}
-
-func intRet(rtn uintptr) Value {
-	return IntVal(int(rtn))
-}
-
-var zero byte
-
-// bytePtrFromString returns a pointer to a nul terminated copy of the string.
-// The copy is required to get nul termination.
-// uintptr(unsafe.Pointer( must be in final call to prevent garbage collection.
-func bytePtrFromString(v Value) *byte {
-	if v.Equal(Zero) {
-		return nil
-	}
-	s := ToStr(v)
-	if s == "" {
-		return nil
-	}
-	a := make([]byte, len(s)+1) // +1 for nul terminator
-	copy(a, s)
-	return &a[0]
-}
-
-func stringArg(v Value) unsafe.Pointer {
-	return unsafe.Pointer(bytePtrFromString(v))
-}
-
-func strRet(buf []byte) Value {
-	return SuStr(string(buf[:bytes.IndexByte(buf, 0)]))
-}
-
-func getBool(ob Value, mem string) BOOL {
-	x := ob.Get(nil, SuStr(mem))
-	if x == nil || !ToBool(x) {
-		return 0
-	}
-	return 1
-}
-
-func getInt(ob Value, mem string) int {
-	x := ob.Get(nil, SuStr(mem))
-	if x == nil || x.Equal(False) {
-		return 0
-	}
-	if x.Equal(True) {
-		return 1
-	}
-	return ToInt(x)
-}
-
-func getInt32(ob Value, mem string) int32 {
-	if ob == nil {
-		return 0
-	}
-	return int32(getInt(ob, mem))
-}
-
-func getUint32(ob Value, mem string) uint32 {
-	return uint32(getInt(ob, mem))
-}
-
-func getInt16(ob Value, mem string) int16 {
-	if ob == nil {
-		return 0
-	}
-	return int16(getInt(ob, mem))
-}
-
-func getStr(ob Value, mem string) *byte {
-	x := ob.Get(nil, SuStr(mem))
-	if x == nil || x.Equal(Zero) || x.Equal(False) {
-		return nil
-	}
-	return bytePtrFromString(x)
-}
-
-func rectArg(ob Value, r *RECT) unsafe.Pointer {
-	if ob.Equal(Zero) {
-		return nil
-	}
-	*r = obToRect(ob)
-	return unsafe.Pointer(r)
-}
-
-func obToRect(ob Value) RECT {
-	return RECT{
-		left:   getInt32(ob, "left"),
-		top:    getInt32(ob, "top"),
-		right:  getInt32(ob, "right"),
-		bottom: getInt32(ob, "bottom"),
-	}
-}
-
-func getRect(ob Value, mem string) RECT {
-	x := ob.Get(nil, SuStr(mem))
-	if x == nil {
-		return RECT{}
-	}
-	return obToRect(x)
-}
-
-func rectToOb(r *RECT, ob Value) Value {
-	if ob == nil {
-		ob = NewSuObject()
-	} else if ob.Equal(Zero) {
-		return ob
-	}
-	ob.Put(nil, SuStr("left"), IntVal(int(r.left)))
-	ob.Put(nil, SuStr("top"), IntVal(int(r.top)))
-	ob.Put(nil, SuStr("right"), IntVal(int(r.right)))
-	ob.Put(nil, SuStr("bottom"), IntVal(int(r.bottom)))
-	return ob
-}
-
-func obToPoint(ob Value) POINT {
-	return POINT{
-		x: getInt32(ob, "x"),
-		y: getInt32(ob, "y"),
-	}
-}
-
-func pointToOb(pt *POINT, ob Value) Value {
-	if ob == nil {
-		ob = NewSuObject()
-	}
-	ob.Put(nil, SuStr("x"), IntVal(int(pt.x)))
-	ob.Put(nil, SuStr("y"), IntVal(int(pt.y)))
-	return ob
-}
-
-func getPoint(ob Value, mem string) POINT {
-	x := ob.Get(nil, SuStr(mem))
-	if x == nil {
-		return POINT{}
-	}
-	return obToPoint(x)
-}
-
-func pointArg(ob Value, pt *POINT) unsafe.Pointer {
-	pt.x = getInt32(ob, "x")
-	pt.y = getInt32(ob, "y")
-	return unsafe.Pointer(&pt)
-}
-
-func getHandle(ob Value, mem string) HANDLE {
-	return HANDLE(getInt(ob, mem))
-}
-
-func getCallback(ob Value, mem string, nargs byte) uintptr {
-	fn := ob.Get(nil, SuStr(mem))
-	if fn == nil {
-		return 0
-	}
-	return NewCallback(fn, nargs)
-}
-
-//===================================================================
+//-------------------------------------------------------------------
 
 // dll User32:GetDesktopWindow() hwnd
 var getDesktopWindow = user32.MustFindProc("GetDesktopWindow").Addr()
@@ -387,13 +211,13 @@ var _ = builtin1("GetSysColor(index)",
 var getWindowRect = user32.MustFindProc("GetWindowRect").Addr()
 var _ = builtin2("GetWindowRectApi(hwnd, rect)",
 	func(a Value, b Value) Value {
-		r := alloc(nRECT)
-		defer free(r, nRECT)
+		defer heap.FreeTo(heap.CurSize())
+		r := heap.Alloc(nRECT)
 		rtn, _, _ := syscall.Syscall(getWindowRect, 2,
 			intArg(a),
 			uintptr(r),
 			0)
-		rectToOb((*RECT)(r), b)
+		urectToOb(r, b)
 		return boolRet(rtn)
 	})
 
@@ -402,6 +226,7 @@ var _ = builtin2("GetWindowRectApi(hwnd, rect)",
 var messageBox = user32.MustFindProc("MessageBoxA").Addr()
 var _ = builtin4("MessageBox(hwnd, text, caption, flags)",
 	func(a, b, c, d Value) Value {
+		defer heap.FreeTo(heap.CurSize())
 		rtn, _, _ := syscall.Syscall6(messageBox, 4,
 			intArg(a),
 			uintptr(stringArg(b)),
@@ -416,14 +241,15 @@ var _ = builtin4("MessageBox(hwnd, text, caption, flags)",
 var adjustWindowRectEx = user32.MustFindProc("AdjustWindowRectEx").Addr()
 var _ = builtin4("AdjustWindowRectEx(lpRect, dwStyle, bMenu, dwExStyle)",
 	func(a, b, c, d Value) Value {
-		var r RECT
+		defer heap.FreeTo(heap.CurSize())
+		r := heap.Alloc(nRECT)
 		rtn, _, _ := syscall.Syscall6(adjustWindowRectEx, 4,
-			uintptr(rectArg(a, &r)),
+			uintptr(rectArg(a, r)),
 			intArg(b),
 			boolArg(c),
 			intArg(d),
 			0, 0)
-		rectToOb(&r, a)
+		urectToOb(r, a)
 		return boolRet(rtn)
 	})
 
@@ -448,6 +274,7 @@ var _ = builtin0("CreatePopupMenu()",
 var appendMenu = user32.MustFindProc("AppendMenuA").Addr()
 var _ = builtin4("AppendMenu(hmenu, flags, item, name)",
 	func(a, b, c, d Value) Value {
+		defer heap.FreeTo(heap.CurSize())
 		rtn, _, _ := syscall.Syscall6(appendMenu, 4,
 			intArg(a),
 			intArg(b),
@@ -474,6 +301,7 @@ var createWindowEx = user32.MustFindProc("CreateWindowExA").Addr()
 var _ = builtin("CreateWindowEx(exStyle, classname, name, style, x, y, w, h,"+
 	" parent, menu, instance, param)",
 	func(_ *Thread, a []Value) Value {
+		defer heap.FreeTo(heap.CurSize())
 		rtn, _, _ := syscall.Syscall12(createWindowEx, 12,
 			intArg(a[0]),
 			uintptr(stringArg(a[1])),
@@ -516,11 +344,13 @@ var _ = builtin2("SetMenu(hwnd, hmenu)",
 var beginPaint = user32.MustFindProc("BeginPaint").Addr()
 var _ = builtin2("BeginPaint(hwnd, ps)",
 	func(a, b Value) Value {
-		var ps PAINTSTRUCT
+		defer heap.FreeTo(heap.CurSize())
+		p := heap.Alloc(nPAINTSTRUCT)
 		rtn, _, _ := syscall.Syscall(beginPaint, 2,
 			intArg(a),
-			uintptr(psArg(b, &ps)),
+			uintptr(psArg(b, p)),
 			0)
+		ps := (*PAINTSTRUCT)(p)
 		b.Put(nil, SuStr("hdc"), IntVal(int(ps.hdc)))
 		b.Put(nil, SuStr("fErase"), SuBool(ps.fErase != 0))
 		b.Put(nil, SuStr("rcPaint"),
@@ -534,21 +364,23 @@ var _ = builtin2("BeginPaint(hwnd, ps)",
 var endPaint = user32.MustFindProc("EndPaint").Addr()
 var _ = builtin2("EndPaint(hwnd, ps)",
 	func(a, b Value) Value {
-		var ps PAINTSTRUCT
+		defer heap.FreeTo(heap.CurSize())
+		p := heap.Alloc(nPAINTSTRUCT)
 		rtn, _, _ := syscall.Syscall(endPaint, 2,
 			intArg(a),
-			uintptr(psArg(b, &ps)),
+			uintptr(psArg(b, p)),
 			0)
 		return boolRet(rtn)
 	})
 
-func psArg(ob Value, ps *PAINTSTRUCT) unsafe.Pointer {
+func psArg(ob Value, p unsafe.Pointer) unsafe.Pointer {
+	ps := (*PAINTSTRUCT)(p)
 	ps.hdc = getHandle(ob, "hdc")
 	ps.fErase = getBool(ob, "fErase")
 	ps.rcPaint = getRect(ob, "rcPaint")
 	ps.fRestore = getBool(ob, "fRestore")
 	ps.fIncUpdate = getBool(ob, "fIncUpdate")
-	return unsafe.Pointer(&ps)
+	return p
 }
 
 // dll User32:CallWindowProc(pointer wndprcPrev, pointer hwnd, long msg,
@@ -570,6 +402,7 @@ var _ = builtin5("CallWindowProc(wndprcPrev, hwnd, msg, wParam, lParam)",
 var createAcceleratorTable = user32.MustFindProc("CreateAcceleratorTableA").Addr()
 var _ = builtin2("CreateAcceleratorTable(lpaccel, cEntries)",
 	func(a, b Value) Value {
+		defer heap.FreeTo(heap.CurSize())
 		rtn, _, _ := syscall.Syscall(createAcceleratorTable, 2,
 			uintptr(stringArg(a)),
 			intArg(b),
@@ -602,10 +435,11 @@ var _ = builtin1("DestroyWindow(hwnd)",
 var drawFrameControl = user32.MustFindProc("DrawFrameControl").Addr()
 var _ = builtin4("DrawFrameControl(hdc, lprc, uType, uState)",
 	func(a, b, c, d Value) Value {
-		var r RECT
+		defer heap.FreeTo(heap.CurSize())
+		r := heap.Alloc(nRECT)
 		rtn, _, _ := syscall.Syscall6(drawFrameControl, 4,
 			intArg(a),
-			uintptr(rectArg(b, &r)),
+			uintptr(rectArg(b, r)),
 			intArg(c),
 			intArg(d),
 			0, 0)
@@ -617,15 +451,16 @@ var _ = builtin4("DrawFrameControl(hdc, lprc, uType, uState)",
 var drawText = user32.MustFindProc("DrawTextA").Addr()
 var _ = builtin5("DrawText(hdc, lpsz, cb, lprc, uFormat)",
 	func(a, b, c, d, e Value) Value {
-		var r RECT
+		defer heap.FreeTo(heap.CurSize())
+		r := heap.Alloc(nRECT)
 		rtn, _, _ := syscall.Syscall6(drawText, 5,
 			intArg(a),
 			uintptr(stringArg(b)),
 			intArg(c),
-			uintptr(rectArg(d, &r)),
+			uintptr(rectArg(d, r)),
 			intArg(e),
 			0)
-		rectToOb(&r, d) // for CALCRECT
+		urectToOb(r, d) // for CALCRECT
 		return intRet(rtn)
 	})
 
@@ -633,11 +468,12 @@ var _ = builtin5("DrawText(hdc, lpsz, cb, lprc, uFormat)",
 var fillRect = user32.MustFindProc("FillRect").Addr()
 var _ = builtin3("FillRect(hdc, lpRect, hBrush)",
 	func(a, b, c Value) Value {
+		defer heap.FreeTo(heap.CurSize())
 		verify.That(b != Zero)
-		var r RECT
+		r := heap.Alloc(nRECT)
 		rtn, _, _ := syscall.Syscall(fillRect, 3,
 			intArg(a),
-			uintptr(rectArg(b, &r)),
+			uintptr(rectArg(b, r)),
 			intArg(c))
 		return intRet(rtn)
 	})
@@ -662,12 +498,13 @@ var _ = builtin0("GetFocus()",
 var getClientRect = user32.MustFindProc("GetClientRect").Addr()
 var _ = builtin2("GetClientRect(hwnd, rect)",
 	func(a, b Value) Value {
-		var r RECT
+		defer heap.FreeTo(heap.CurSize())
+		r := heap.Alloc(nRECT)
 		rtn, _, _ := syscall.Syscall(getClientRect, 2,
 			intArg(a),
-			uintptr(unsafe.Pointer(&r)),
+			uintptr(r),
 			0)
-		rectToOb(&r, b)
+		urectToOb(r, b)
 		return boolRet(rtn)
 	})
 
@@ -685,11 +522,13 @@ var _ = builtin1("GetDC(hwnd)",
 var getMonitorInfo = user32.MustFindProc("GetMonitorInfoA").Addr()
 var _ = builtin2("GetMonitorInfoApi(hwnd, mInfo)",
 	func(a, b Value) Value {
-		var mi MONITORINFO
-		mi.cbSize = uint32(unsafe.Sizeof(mi))
+		defer heap.FreeTo(heap.CurSize())
+		p := heap.Alloc(nMONITORINFO)
+		mi := (*MONITORINFO)(p)
+		mi.cbSize = uint32(nMONITORINFO)
 		rtn, _, _ := syscall.Syscall(getMonitorInfo, 2,
 			intArg(a),
-			uintptr(unsafe.Pointer(&mi)),
+			uintptr(p),
 			0)
 		b.Put(nil, SuStr("rcMonitor"), rectToOb(&mi.rcMonitor, nil))
 		b.Put(nil, SuStr("rcWork"), rectToOb(&mi.rcWork, nil))
@@ -701,8 +540,11 @@ var _ = builtin2("GetMonitorInfoApi(hwnd, mInfo)",
 var getScrollInfo = user32.MustFindProc("GetScrollInfo").Addr()
 var _ = builtin3("GetScrollInfo(hwnd, fnBar, lpsi)",
 	func(a, b, c Value) Value {
-		si := SCROLLINFO{
-			cbSize:    uint32(unsafe.Sizeof(SCROLLINFO{})),
+		defer heap.FreeTo(heap.CurSize())
+		p := heap.Alloc(nSCROLLINFO)
+		si := (*SCROLLINFO)(p)
+		*si = SCROLLINFO{
+			cbSize:    uint32(nSCROLLINFO),
 			fMask:     getUint32(c, "fMask"),
 			nMin:      getInt32(c, "nMin"),
 			nMax:      getInt32(c, "nMax"),
@@ -713,7 +555,7 @@ var _ = builtin3("GetScrollInfo(hwnd, fnBar, lpsi)",
 		rtn, _, _ := syscall.Syscall(getScrollInfo, 3,
 			intArg(a),
 			intArg(b),
-			uintptr(unsafe.Pointer(&si)))
+			uintptr(p))
 		c.Put(nil, SuStr("nMin"), IntVal(int(si.nMin)))
 		c.Put(nil, SuStr("nMax"), IntVal(int(si.nMax)))
 		c.Put(nil, SuStr("nPage"), IntVal(int(si.nPage)))
@@ -779,11 +621,13 @@ var _ = builtin2("GetWindowLongPtr(hwnd, offset)",
 var getWindowPlacement = user32.MustFindProc("GetWindowPlacement").Addr()
 var _ = builtin2("GetWindowPlacement(hwnd, ps)",
 	func(a, b Value) Value {
-		var wp WINDOWPLACEMENT
-		wp.length = uint32(unsafe.Sizeof(wp))
+		defer heap.FreeTo(heap.CurSize())
+		p := heap.Alloc(nWINDOWPLACEMENT)
+		wp := (*WINDOWPLACEMENT)(p)
+		wp.length = uint32(nWINDOWPLACEMENT)
 		rtn, _, _ := syscall.Syscall(getWindowPlacement, 2,
 			intArg(a),
-			uintptr(unsafe.Pointer(&wp)),
+			uintptr(p),
 			0)
 		b.Put(nil, SuStr("flags"), IntVal(int(wp.flags)))
 		b.Put(nil, SuStr("showCmd"), IntVal(int(wp.showCmd)))
@@ -799,27 +643,29 @@ var getWindowText = user32.MustFindProc("GetWindowTextA").Addr()
 var getWindowTextLength = user32.MustFindProc("GetWindowTextLengthA").Addr()
 var _ = builtin1("GetWindowText(hwnd)",
 	func(hwnd Value) Value {
+		defer heap.FreeTo(heap.CurSize())
 		n, _, _ := syscall.Syscall(getWindowTextLength, 1,
 			intArg(hwnd),
 			0, 0)
-		buf := make([]byte, n+1)
+		buf := heap.Alloc(n + 1)
 		n, _, _ = syscall.Syscall(getWindowText, 3,
 			intArg(hwnd),
-			uintptr(unsafe.Pointer(&buf[0])),
+			uintptr(buf),
 			n)
-		return SuStr(string(buf[:n]))
+		return bufRet(buf, n)
 	})
 
 // dll User32:InflateRect(RECT* rect, long dx, long dy) bool
 var inflateRect = user32.MustFindProc("InflateRect").Addr()
 var _ = builtin3("InflateRect(rect, dx, dy)",
 	func(a, b, c Value) Value {
-		var r RECT
+		defer heap.FreeTo(heap.CurSize())
+		r := heap.Alloc(nRECT)
 		rtn, _, _ := syscall.Syscall(inflateRect, 3,
-			uintptr(rectArg(a, &r)),
+			uintptr(rectArg(a, r)),
 			intArg(b),
 			intArg(c))
-		rectToOb(&r, a)
+		urectToOb(r, a)
 		return boolRet(rtn)
 	})
 
@@ -828,8 +674,10 @@ var _ = builtin3("InflateRect(rect, dx, dy)",
 var insertMenuItem = user32.MustFindProc("InsertMenuItemA").Addr()
 var _ = builtin4("InsertMenuItem(hMenu, uItem, fByPosition, lpmii)",
 	func(a, b, c, d Value) Value {
-		m := MENUITEMINFO{
-			cbSize:        uint32(unsafe.Sizeof(MENUITEMINFO{})),
+		defer heap.FreeTo(heap.CurSize())
+		p := heap.Alloc(nMENUITEMINFO)
+		*(*MENUITEMINFO)(p) = MENUITEMINFO{
+			cbSize:        uint32(nMENUITEMINFO),
 			fMask:         getUint32(d, "fMask"),
 			fType:         getUint32(d, "fType"),
 			fState:        getUint32(d, "fState"),
@@ -846,7 +694,7 @@ var _ = builtin4("InsertMenuItem(hMenu, uItem, fByPosition, lpmii)",
 			intArg(a),
 			intArg(b),
 			boolArg(c),
-			uintptr(unsafe.Pointer(&m)),
+			uintptr(p),
 			0, 0)
 		return boolRet(rtn)
 	})
@@ -877,33 +725,38 @@ var _ = builtin2("GetMenuItemID(hMenu, nPos)",
 var getMenuItemInfo = user32.MustFindProc("GetMenuItemInfoA").Addr()
 var _ = builtin2("GetMenuItemInfoText(hMenu, uItem)",
 	func(a, b Value) Value {
+		defer heap.FreeTo(heap.CurSize())
 		const MMIM_TYPE = 0x10
 		const MFT_STRING = 0
-		mii := MENUITEMINFO{
-			cbSize:     uint32(unsafe.Sizeof(MENUITEMINFO{})),
+		p := heap.Alloc(nMENUITEMINFO)
+		mii := (*MENUITEMINFO)(p)
+		*mii = MENUITEMINFO{
+			cbSize:     uint32(nMENUITEMINFO),
 			fMask:      MMIM_TYPE,
 			fType:      MFT_STRING,
 			dwTypeData: nil,
 		}
+		// get the length
 		rtn, _, _ := syscall.Syscall6(getMenuItemInfo, 4,
 			intArg(a),
 			intArg(b),
 			0,
-			uintptr(unsafe.Pointer(&mii)),
+			uintptr(p),
 			0, 0)
 		if rtn == 0 {
 			return False
 		}
 		mii.cch++
-		buf := make([]byte, mii.cch)
-		mii.dwTypeData = (*byte)(unsafe.Pointer(&buf[0]))
+		n := uintptr(mii.cch)
+		buf := heap.Alloc(n)
+		mii.dwTypeData = (*byte)(buf)
 		rtn, _, _ = syscall.Syscall6(getMenuItemInfo, 4,
 			intArg(a),
 			intArg(b),
 			0,
-			uintptr(unsafe.Pointer(&mii)),
+			uintptr(buf),
 			0, 0)
-		return SuStr(string(buf[:]))
+		return bufRet(buf, n-1) // -1 to omit nul terminator
 	})
 
 // dll User32:SetMenuItemInfo(pointer hMenu, long uItem, long fByPosition,
@@ -911,8 +764,10 @@ var _ = builtin2("GetMenuItemInfoText(hMenu, uItem)",
 var setMenuItemInfo = user32.MustFindProc("SetMenuItemInfoA").Addr()
 var _ = builtin4("SetMenuItemInfo(hMenu, uItem, fByPosition, lpmii)",
 	func(a, b, c, d Value) Value {
-		m := MENUITEMINFO{
-			cbSize:        uint32(unsafe.Sizeof(MENUITEMINFO{})),
+		defer heap.FreeTo(heap.CurSize())
+		p := heap.Alloc(nMENUITEMINFO)
+		*(*MENUITEMINFO)(p) = MENUITEMINFO{
+			cbSize:        uint32(nMENUITEMINFO),
 			fMask:         getUint32(d, "fMask"),
 			fType:         getUint32(d, "fType"),
 			fState:        getUint32(d, "fState"),
@@ -929,7 +784,7 @@ var _ = builtin4("SetMenuItemInfo(hMenu, uItem, fByPosition, lpmii)",
 			intArg(a),
 			intArg(b),
 			intArg(c),
-			uintptr(unsafe.Pointer(&m)),
+			uintptr(p),
 			0, 0)
 		return boolRet(rtn)
 	})
@@ -938,10 +793,11 @@ var _ = builtin4("SetMenuItemInfo(hMenu, uItem, fByPosition, lpmii)",
 var invalidateRect = user32.MustFindProc("InvalidateRect").Addr()
 var _ = builtin3("InvalidateRect(hwnd, rect, erase)",
 	func(a, b, c Value) Value {
-		var r RECT
+		defer heap.FreeTo(heap.CurSize())
+		r := heap.Alloc(nRECT)
 		rtn, _, _ := syscall.Syscall(invalidateRect, 3,
 			intArg(a),
-			uintptr(rectArg(b, &r)),
+			uintptr(rectArg(b, r)),
 			boolArg(c))
 		return boolRet(rtn)
 	})
@@ -982,9 +838,10 @@ var _ = builtin2("LoadIcon(hinst, lpIconName)",
 var monitorFromRect = user32.MustFindProc("MonitorFromRect").Addr()
 var _ = builtin2("MonitorFromRect(lprc, dwFlags)",
 	func(a, b Value) Value {
-		var r RECT
+		defer heap.FreeTo(heap.CurSize())
+		r := heap.Alloc(nRECT)
 		rtn, _, _ := syscall.Syscall(monitorFromRect, 2,
-			uintptr(rectArg(a, &r)),
+			uintptr(rectArg(a, r)),
 			intArg(b),
 			0)
 		return intRet(rtn)
@@ -1009,7 +866,9 @@ var _ = builtin6("MoveWindow(hwnd, left, top, width, height, repaint)",
 var registerClass = user32.MustFindProc("RegisterClassA").Addr()
 var _ = builtin1("RegisterClass(wc)",
 	func(a Value) Value {
-		w := WNDCLASS{
+		defer heap.FreeTo(heap.CurSize())
+		p := heap.Alloc(nWNDCLASS)
+		*(*WNDCLASS)(p) = WNDCLASS{
 			style:      getUint32(a, "style"),
 			wndProc:    getHandle(a, "wndProc"),
 			clsExtra:   getInt32(a, "clsExtra"),
@@ -1022,7 +881,7 @@ var _ = builtin1("RegisterClass(wc)",
 			className:  getStr(a, "className"),
 		}
 		rtn, _, _ := syscall.Syscall(registerClass, 1,
-			uintptr(unsafe.Pointer(&w)),
+			uintptr(p),
 			0, 0)
 		return intRet(rtn)
 	})
@@ -1031,6 +890,7 @@ var _ = builtin1("RegisterClass(wc)",
 var registerClipboardFormat = user32.MustFindProc("RegisterClipboardFormatA").Addr()
 var _ = builtin1("RegisterClipboardFormat(lpszFormat)",
 	func(a Value) Value {
+		defer heap.FreeTo(heap.CurSize())
 		rtn, _, _ := syscall.Syscall(registerClipboardFormat, 1,
 			uintptr(stringArg(a)),
 			0, 0)
@@ -1064,17 +924,12 @@ var _ = builtin4("SendMessage(hwnd, msg, wParam, lParam)",
 
 var _ = builtin4("SendMessageText(hwnd, msg, wParam, text)",
 	func(a, b, c, d Value) Value {
-		// Must pass a defensive mutable copy of the string
-		// (even though we discard it)
-		// since the function may modify it.
-		// Use SendMessageTextIn if the function doesn't modify it.
-		// Use SendMessageTextOut if the modified text is needed.
-		buf := ([]byte)(ToStr(d))
+		defer heap.FreeTo(heap.CurSize())
 		rtn, _, _ := syscall.Syscall6(sendMessage, 4,
 			intArg(a),
 			intArg(b),
 			intArg(c),
-			uintptr(unsafe.Pointer(&buf[0])),
+			uintptr(stringArg(d)),
 			0, 0)
 		return intRet(rtn)
 	})
@@ -1083,6 +938,7 @@ var _ = builtin4("SendMessageText(hwnd, msg, wParam, text)",
 //		[in] string text) pointer
 var _ = builtin4("SendMessageTextIn(hwnd, msg, wParam, text)",
 	func(a, b, c, d Value) Value {
+		defer heap.FreeTo(heap.CurSize())
 		rtn, _, _ := syscall.Syscall6(sendMessage, 4,
 			intArg(a),
 			intArg(b),
@@ -1094,25 +950,27 @@ var _ = builtin4("SendMessageTextIn(hwnd, msg, wParam, text)",
 
 var _ = builtin4("SendMessageTextOut(hwnd, msg, wParam = 0, bufsize = 1024)",
 	func(a, b, c, d Value) Value {
-		n := ToInt(d)
-		buf := make([]byte, n)
+		defer heap.FreeTo(heap.CurSize())
+		n := uintptr(ToInt(d))
+		p := heap.Alloc(n)
 		rtn, _, _ := syscall.Syscall6(sendMessage, 4,
 			intArg(a),
 			intArg(b),
 			intArg(c),
-			uintptr(unsafe.Pointer(&buf[0])),
+			uintptr(p),
 			0, 0)
 		ob := NewSuObject()
-		text := str.BeforeFirst(string(buf), "\x00")
-		ob.Put(nil, SuStr("text"), SuStr(text))
+		ob.Put(nil, SuStr("text"), bufToStr(p, n))
 		ob.Put(nil, SuStr("result"), intRet(rtn))
 		return ob
 	})
 
 var _ = builtin4("SendMessageTcitem(hwnd, msg, wParam, tcitem)",
 	func(a, b, c, d Value) Value {
+		defer heap.FreeTo(heap.CurSize())
 		verify.That(getInt32(d, "cchTextMax") == 0)
-		t := TCITEM{
+		p := heap.Alloc(nTCITEM)
+		*(*TCITEM)(p) = TCITEM{
 			mask:        getUint32(d, "mask"),
 			dwState:     getUint32(d, "dwState"),
 			dwStateMask: getUint32(d, "dwStateMask"),
@@ -1124,38 +982,42 @@ var _ = builtin4("SendMessageTcitem(hwnd, msg, wParam, tcitem)",
 			intArg(a),
 			intArg(b),
 			intArg(c),
-			uintptr(unsafe.Pointer(&t)),
+			uintptr(p),
 			0, 0)
 		return intRet(rtn)
 	})
 
 var _ = builtin5("SendMessageTextRange(hwnd, msg, cpMin, cpMax, each = 1)",
 	func(a, b, c, d, e Value) Value {
+		defer heap.FreeTo(heap.CurSize())
 		cpMin := ToInt(c)
 		cpMax := ToInt(d)
 		if cpMax <= cpMin {
 			return EmptyStr
 		}
-		each := ToInt(e)
-		n := (cpMax - cpMin) * each
-		buf := make([]byte, n+each)
-		tr := TEXTRANGE{
+		each := uintptr(ToInt(e))
+		n := uintptr(cpMax-cpMin) * each
+		buf := heap.Alloc(n + each)
+		p := heap.Alloc(nTEXTRANGE)
+		*(*TEXTRANGE)(p) = TEXTRANGE{
 			chrg:      CHARRANGE{cpMin: int32(cpMin), cpMax: int32(cpMax)},
-			lpstrText: &buf[0],
+			lpstrText: (*byte)(buf),
 		}
-		rtn, _, _ := syscall.Syscall6(sendMessage, 4,
+		syscall.Syscall6(sendMessage, 4,
 			intArg(a),
 			intArg(b),
 			0,
-			uintptr(unsafe.Pointer(&tr)),
+			uintptr(p),
 			0, 0)
-		return SuStr(string(buf[:rtn]))
+		return bufRet(buf, n)
 	})
 
 var _ = builtin4("SendMessageTOOLINFO(hwnd, msg, wParam, lParam)",
 	func(a, b, c, d Value) Value {
-		t := TOOLINFO{
-			cbSize:   uint32(unsafe.Sizeof(TOOLINFO{})),
+		defer heap.FreeTo(heap.CurSize())
+		p := heap.Alloc(nTOOLINFO)
+		*(*TOOLINFO)(p) = TOOLINFO{
+			cbSize:   uint32(nTOOLINFO),
 			uFlags:   getUint32(d, "uFlags"),
 			hwnd:     getHandle(d, "hwnd"),
 			uId:      getUint32(d, "uId"),
@@ -1168,15 +1030,17 @@ var _ = builtin4("SendMessageTOOLINFO(hwnd, msg, wParam, lParam)",
 			intArg(a),
 			intArg(b),
 			intArg(c),
-			uintptr(unsafe.Pointer(&t)),
+			uintptr(p),
 			0, 0)
 		return intRet(rtn)
 	})
 
 var _ = builtin4("SendMessageTOOLINFO2(hwnd, msg, wParam, lParam)",
 	func(a, b, c, d Value) Value {
-		t := TOOLINFO2{
-			cbSize:   uint32(unsafe.Sizeof(TOOLINFO{})),
+		defer heap.FreeTo(heap.CurSize())
+		p := heap.Alloc(nTOOLINFO2)
+		*(*TOOLINFO2)(p) = TOOLINFO2{
+			cbSize:   uint32(nTOOLINFO2),
 			uFlags:   getUint32(d, "uFlags"),
 			hwnd:     getHandle(d, "hwnd"),
 			uId:      getUint32(d, "uId"),
@@ -1189,30 +1053,33 @@ var _ = builtin4("SendMessageTOOLINFO2(hwnd, msg, wParam, lParam)",
 			intArg(a),
 			intArg(b),
 			intArg(c),
-			uintptr(unsafe.Pointer(&t)),
+			uintptr(p),
 			0, 0)
 		return intRet(rtn)
 	})
 
 var _ = builtin4("SendMessageTreeItem(hwnd, msg, wParam, tvitem)",
 	func(a, b, c, d Value) Value {
-		cchTextMax := getInt32(d, "cchTextMax")
+		defer heap.FreeTo(heap.CurSize())
+		n := uintptr(getInt32(d, "cchTextMax"))
 		var pszText *byte
-		var buf []byte
-		if cchTextMax == 0 {
+		var buf unsafe.Pointer
+		if n == 0 {
 			pszText = getStr(d, "pszText")
 		} else {
-			buf = make([]byte, cchTextMax)
-			pszText = &buf[0]
+			buf = heap.Alloc(n)
+			pszText = (*byte)(buf)
 		}
-		tvi := TVITEMEX{
+		p := heap.Alloc(nTVITEMEX)
+		tvi := (*TVITEMEX)(p)
+		*tvi = TVITEMEX{
 			TVITEM: TVITEM{
 				mask:           getUint32(d, "mask"),
 				hItem:          getHandle(d, "hItem"),
 				state:          getUint32(d, "state"),
 				stateMask:      getUint32(d, "stateMask"),
 				pszText:        pszText,
-				cchTextMax:     cchTextMax,
+				cchTextMax:     int32(n),
 				iImage:         getInt32(d, "iImage"),
 				iSelectedImage: getInt32(d, "iSelectedImage"),
 				cChildren:      getInt32(d, "cChildren"),
@@ -1222,14 +1089,14 @@ var _ = builtin4("SendMessageTreeItem(hwnd, msg, wParam, tvitem)",
 			intArg(a),
 			intArg(b),
 			intArg(c),
-			uintptr(unsafe.Pointer(&tvi)),
+			uintptr(p),
 			0, 0)
 		d.Put(nil, SuStr("mask"), IntVal(int(tvi.mask)))
 		d.Put(nil, SuStr("hItem"), IntVal(int(tvi.hItem)))
 		d.Put(nil, SuStr("state"), IntVal(int(tvi.state)))
 		d.Put(nil, SuStr("stateMask"), IntVal(int(tvi.stateMask)))
-		if cchTextMax != 0 {
-			d.Put(nil, SuStr("pszText"), SuStr(buf))
+		if n != 0 {
+			d.Put(nil, SuStr("pszText"), bufToStr(buf, n))
 		}
 		d.Put(nil, SuStr("cchTextMax"), IntVal(int(tvi.cchTextMax)))
 		d.Put(nil, SuStr("iImage"), IntVal(int(tvi.iImage)))
@@ -1241,83 +1108,66 @@ var _ = builtin4("SendMessageTreeItem(hwnd, msg, wParam, tvitem)",
 
 var _ = builtin4("SendMessageTreeInsert(hwnd, msg, wParam, tvins)",
 	func(a, b, c, d Value) Value {
-		item := d.Get(nil, SuStr("item"))
-		cchTextMax := getInt32(item, "cchTextMax")
-		var pszText *byte
-		var buf []byte
-		if cchTextMax == 0 {
-			pszText = getStr(item, "pszText")
-		} else {
-			buf = make([]byte, cchTextMax)
-			pszText = &buf[0]
-		}
-		tvi := TVITEMEX{
-			TVITEM: TVITEM{
-				mask:           getUint32(d, "mask"),
-				hItem:          getHandle(d, "hItem"),
-				state:          getUint32(d, "state"),
-				stateMask:      getUint32(d, "stateMask"),
-				pszText:        pszText,
-				cchTextMax:     cchTextMax,
-				iImage:         getInt32(d, "iImage"),
-				iSelectedImage: getInt32(d, "iSelectedImage"),
-				cChildren:      getInt32(d, "cChildren"),
-				lParam:         getHandle(d, "lParam"),
-			}}
-		tvins := TV_INSERTSTRUCT{
+		defer heap.FreeTo(heap.CurSize())
+		p := heap.Alloc(nTV_INSERTSTRUCT)
+		tvins := (*TV_INSERTSTRUCT)(p)
+		*tvins = TV_INSERTSTRUCT{
 			hParent:      getHandle(d, "hParent"),
 			hInsertAfter: getHandle(d, "hInsertAfter"),
-			item:         tvi,
 		}
+		item := d.Get(nil, SuStr("item"))
+		tvi := &tvins.item
+		*tvi = TVITEMEX{
+			TVITEM: TVITEM{
+				mask:           getUint32(item, "mask"),
+				hItem:          getHandle(item, "hItem"),
+				state:          getUint32(item, "state"),
+				stateMask:      getUint32(item, "stateMask"),
+				pszText:        getStr(item, "pszText"),
+				cchTextMax:     getInt32(item, "cchTextMax"),
+				iImage:         getInt32(item, "iImage"),
+				iSelectedImage: getInt32(item, "iSelectedImage"),
+				cChildren:      getInt32(item, "cChildren"),
+				lParam:         getHandle(item, "lParam"),
+			}}
 		rtn, _, _ := syscall.Syscall6(sendMessage, 4,
 			intArg(a),
 			intArg(b),
 			intArg(c),
-			uintptr(unsafe.Pointer(&tvins)),
+			uintptr(p),
 			0, 0)
-		d.Put(nil, SuStr("hParent"), IntVal(int(tvins.hParent)))
-		d.Put(nil, SuStr("hInsertAfter"), IntVal(int(tvins.hInsertAfter)))
-		item.Put(nil, SuStr("mask"), IntVal(int(tvi.mask)))
-		item.Put(nil, SuStr("hItem"), IntVal(int(tvi.hItem)))
-		item.Put(nil, SuStr("state"), IntVal(int(tvi.state)))
-		item.Put(nil, SuStr("stateMask"), IntVal(int(tvi.stateMask)))
-		item.Put(nil, SuStr("cchTextMax"), IntVal(int(tvi.cchTextMax)))
-		item.Put(nil, SuStr("iImage"), IntVal(int(tvi.iImage)))
-		item.Put(nil, SuStr("iSelectedImage"), IntVal(int(tvi.iSelectedImage)))
-		item.Put(nil, SuStr("cChildren"), IntVal(int(tvi.cChildren)))
-		item.Put(nil, SuStr("lParam"), IntVal(int(tvi.lParam)))
-		if cchTextMax != 0 {
-			item.Put(nil, SuStr("pszText"), SuStr(buf))
-		}
 		return intRet(rtn)
 	})
 
-//TODO make a slice the correct size
 var _ = builtin4("SendMessageSBPART(hwnd, msg, wParam, sbpart)",
 	func(a, b, c, d Value) Value {
-		var sbpart SBPART
-		for i := range sbpart.parts {
-			sbpart.parts[i] = int32(ToInt(d.Get(nil, SuInt(i))))
+		defer heap.FreeTo(heap.CurSize())
+		np := ToInt(c)
+		n := uintptr(np) * int32Size
+		p := heap.Alloc(n)
+		ob := ToContainer(d)
+		for i := 0; i < np && i < ob.ListSize(); i++ {
+			*(*int32)(unsafe.Pointer(uintptr(p) + int32Size*uintptr(i))) =
+				int32(ToInt(ob.ListGet(i)))
 		}
 		rtn, _, _ := syscall.Syscall6(sendMessage, 4,
 			intArg(a),
 			intArg(b),
 			intArg(c),
-			uintptr(unsafe.Pointer(&sbpart)),
+			uintptr(p),
 			0, 0)
-		for i := range sbpart.parts {
-			d.Put(nil, SuInt(i), IntVal(int(sbpart.parts[i])))
+		for i := 0; i < np; i++ {
+			x := *(*int32)(unsafe.Pointer(uintptr(p) + int32Size*uintptr(i)))
+			d.Put(nil, SuInt(i), IntVal(int(x)))
 		}
 		return intRet(rtn)
 	})
-
-type SBPART struct {
-	parts [256]int32
-}
 
 var _ = builtin4("SendMessageMSG(hwnd, msg, wParam, lParam)",
 	func(a, b, c, d Value) Value {
-		msg := MSG{
+		defer heap.FreeTo(heap.CurSize())
+		p := heap.Alloc(nMSG)
+		*(*MSG)(p) = MSG{
 			hwnd:    getHandle(d, "hwnd"),
 			message: getUint32(d, "message"),
 			wParam:  getHandle(d, "message"),
@@ -1329,7 +1179,7 @@ var _ = builtin4("SendMessageMSG(hwnd, msg, wParam, lParam)",
 			intArg(a),
 			intArg(b),
 			intArg(c),
-			uintptr(unsafe.Pointer(&msg)),
+			uintptr(p),
 			0, 0)
 		return intRet(rtn)
 	})
@@ -1431,7 +1281,9 @@ var _ = builtin3("SetWindowProc(hwnd, offset, value)",
 var setWindowPlacement = user32.MustFindProc("SetWindowPlacement").Addr()
 var _ = builtin2("SetWindowPlacement(hwnd, lpwndpl)",
 	func(a, b Value) Value {
-		w := WINDOWPLACEMENT{
+		defer heap.FreeTo(heap.CurSize())
+		p := heap.Alloc(nMSG)
+		*(*WINDOWPLACEMENT)(p) = WINDOWPLACEMENT{
 			length:           getUint32(b, "length"),
 			flags:            getUint32(b, "flags"),
 			showCmd:          getUint32(b, "showCmd"),
@@ -1441,7 +1293,7 @@ var _ = builtin2("SetWindowPlacement(hwnd, lpwndpl)",
 		}
 		rtn, _, _ := syscall.Syscall(setWindowPlacement, 2,
 			intArg(a),
-			uintptr(unsafe.Pointer(&w)),
+			uintptr(p),
 			0)
 		return boolRet(rtn)
 	})
@@ -1467,6 +1319,7 @@ var _ = builtin7("SetWindowPos(hWnd, hWndInsertAfter, X, Y, cx, cy, uFlags)",
 var setWindowText = user32.MustFindProc("SetWindowTextA").Addr()
 var _ = builtin2("SetWindowText(hwnd, lpwndpl)",
 	func(a, b Value) Value {
+		defer heap.FreeTo(heap.CurSize())
 		rtn, _, _ := syscall.Syscall(setWindowText, 2,
 			intArg(a),
 			uintptr(stringArg(b)),
@@ -1491,39 +1344,44 @@ var systemParametersInfo = user32.MustFindProc("SystemParametersInfoA").Addr()
 
 var _ = builtin0("SPI_GetFocusBorderHeight()",
 	func() Value {
-		var x int32
+		defer heap.FreeTo(heap.CurSize())
+		p := heap.Alloc(4)
 		const SPI_GETFOCUSBORDERHEIGHT = 0x2010
 		syscall.Syscall6(systemParametersInfo, 4,
 			SPI_GETFOCUSBORDERHEIGHT,
 			0,
-			uintptr(unsafe.Pointer(&x)),
+			uintptr(p),
 			0,
 			0, 0)
-		return IntVal(int(x))
+		return IntVal(int((*(*int32)(p))))
 	})
+
 var _ = builtin0("SPI_GetWheelScrollLines()",
 	func() Value {
-		var x int32
+		defer heap.FreeTo(heap.CurSize())
+		p := heap.Alloc(4)
 		const SPI_GETWHEELSCROLLLINES = 104
 		syscall.Syscall6(systemParametersInfo, 4,
 			SPI_GETWHEELSCROLLLINES,
 			0,
-			uintptr(unsafe.Pointer(&x)),
+			uintptr(p),
 			0,
 			0, 0)
-		return IntVal(int(x))
+		return IntVal(int((*(*int32)(p))))
 	})
+
 var _ = builtin0("SPI_GetWorkArea()",
 	func() Value {
-		var r RECT
+		defer heap.FreeTo(heap.CurSize())
+		r := heap.Alloc(nRECT)
 		const SPI_GETWORKAREA = 48
 		syscall.Syscall6(systemParametersInfo, 4,
 			SPI_GETWORKAREA,
 			0,
-			uintptr(unsafe.Pointer(&r)),
+			uintptr(r),
 			0,
 			0, 0)
-		return rectToOb(&r, nil)
+		return urectToOb(r, nil)
 	})
 
 // dll User32:PostQuitMessage(long exitcode) void
@@ -1591,20 +1449,21 @@ type TPMPARAMS struct {
 	rcExclude RECT
 }
 
+const nTPMPARAMS = unsafe.Sizeof(TPMPARAMS{})
+
 // dll long User32:TrackPopupMenuEx(pointer hmenu, long fuFlags, long x, long y,
 //		pointer hwnd, TPMPARAMS* lptpm)
 var trackPopupMenuEx = user32.MustFindProc("TrackPopupMenuEx").Addr()
 var _ = builtin6("TrackPopupMenuEx(hmenu, fuFlags, x, y, hwnd, lptpm)",
 	func(a, b, c, d, e, f Value) Value {
-		var lptpm *TPMPARAMS
-		if f.Equal(Zero) {
-			lptpm = nil
-		} else {
-			tpm := TPMPARAMS{
-				cbSize:    int32(unsafe.Sizeof(TPMPARAMS{})),
+		var p unsafe.Pointer
+		if !f.Equal(Zero) {
+			defer heap.FreeTo(heap.CurSize())
+			p := heap.Alloc(nTPMPARAMS)
+			*(*TPMPARAMS)(p) = TPMPARAMS{
+				cbSize:    int32(nTPMPARAMS),
 				rcExclude: getRect(f, "rcExclude"),
 			}
-			lptpm = &tpm
 		}
 		rtn, _, _ := syscall.Syscall6(trackPopupMenuEx, 6,
 			intArg(a),
@@ -1612,7 +1471,7 @@ var _ = builtin6("TrackPopupMenuEx(hmenu, fuFlags, x, y, hwnd, lptpm)",
 			intArg(c),
 			intArg(d),
 			intArg(e),
-			uintptr(unsafe.Pointer(lptpm)))
+			uintptr(p))
 		return intRet(rtn)
 	})
 
@@ -1782,6 +1641,7 @@ var _ = builtin1("EnumClipboardFormats(format)",
 var findWindow = user32.MustFindProc("FindWindowA").Addr()
 var _ = builtin2("FindWindow(c, n)",
 	func(a, b Value) Value {
+		defer heap.FreeTo(heap.CurSize())
 		rtn, _, _ := syscall.Syscall(findWindow, 2,
 			uintptr(stringArg(a)),
 			uintptr(stringArg(b)),
@@ -1808,6 +1668,7 @@ var _ = builtin2("GetAncestor(hwnd, gaFlags)",
 var getClipboardFormatName = user32.MustFindProc("GetClipboardFormatNameA").Addr()
 var _ = builtin3("GetClipboardFormatName(format, lpszFormatName, cchMaxCount)",
 	func(a, b, c Value) Value {
+		defer heap.FreeTo(heap.CurSize())
 		rtn, _, _ := syscall.Syscall(getClipboardFormatName, 3,
 			intArg(a),
 			uintptr(stringArg(b)),
@@ -2101,6 +1962,7 @@ var _ = builtin2("SetParent(hwndNewChild, hwndNewParent)",
 var setProp = user32.MustFindProc("SetPropA").Addr()
 var _ = builtin3("SetProp(hwnd, name, value)",
 	func(a, b, c Value) Value {
+		defer heap.FreeTo(heap.CurSize())
 		rtn, _, _ := syscall.Syscall(setProp, 3,
 			intArg(a),
 			uintptr(stringArg(b)),
@@ -2135,11 +1997,13 @@ var _ = builtin2("UnregisterHotKey(hWnd, id)",
 var clientToScreen = user32.MustFindProc("ClientToScreen").Addr()
 var _ = builtin2("ClientToScreen(hWnd, point)",
 	func(a, b Value) Value {
-		var pt POINT
+		defer heap.FreeTo(heap.CurSize())
+		p := heap.Alloc(nPOINT)
 		rtn, _, _ := syscall.Syscall(clientToScreen, 2,
 			intArg(a),
-			uintptr(pointArg(b, &pt)),
+			uintptr(pointArg(b, p)),
 			0)
+		pt := (*POINT)(p)
 		b.Put(nil, SuStr("x"), IntVal(int(pt.x)))
 		b.Put(nil, SuStr("y"), IntVal(int(pt.y)))
 		return boolRet(rtn)
@@ -2149,9 +2013,10 @@ var _ = builtin2("ClientToScreen(hWnd, point)",
 var clipCursor = user32.MustFindProc("ClipCursor").Addr()
 var _ = builtin1("ClipCursor(rect)",
 	func(a Value) Value {
-		var r RECT
+		defer heap.FreeTo(heap.CurSize())
+		r := heap.Alloc(nRECT)
 		rtn, _, _ := syscall.Syscall(clipCursor, 1,
-			uintptr(rectArg(a, &r)),
+			uintptr(rectArg(a, r)),
 			0, 0)
 		return boolRet(rtn)
 	})
@@ -2179,10 +2044,11 @@ var _ = builtin("DeferWindowPos(hWinPosInfo, hWnd, hWndInsertAfter, "+
 var drawFocusRect = user32.MustFindProc("DrawFocusRect").Addr()
 var _ = builtin2("DrawFocusRect(hwnd, rect)",
 	func(a, b Value) Value {
-		var r RECT
+		defer heap.FreeTo(heap.CurSize())
+		r := heap.Alloc(nRECT)
 		rtn, _, _ := syscall.Syscall(drawFocusRect, 2,
 			intArg(a),
-			uintptr(rectArg(b, &r)),
+			uintptr(rectArg(b, r)),
 			0)
 		return boolRet(rtn)
 	})
@@ -2192,9 +2058,11 @@ var _ = builtin2("DrawFocusRect(hwnd, rect)",
 var drawTextEx = user32.MustFindProc("DrawTextExA").Addr()
 var _ = builtin6("DrawTextEx(hdc, lpsz, cb, lprc, uFormat, params)",
 	func(a, b, c, d, e, f Value) Value {
-		var r RECT
-		dtp := DRAWTEXTPARAMS{
-			cbSize:        uint32(unsafe.Sizeof(DRAWTEXTPARAMS{})),
+		defer heap.FreeTo(heap.CurSize())
+		r := heap.Alloc(nRECT)
+		p := heap.Alloc(nDRAWTEXTPARAMS)
+		*(*DRAWTEXTPARAMS)(p) = DRAWTEXTPARAMS{
+			cbSize:        uint32(nDRAWTEXTPARAMS),
 			iTabLength:    getInt32(f, "iTabLength"),
 			iLeftMargin:   getInt32(f, "iLeftMargin"),
 			iRightMargin:  getInt32(f, "iRightMargin"),
@@ -2204,9 +2072,9 @@ var _ = builtin6("DrawTextEx(hdc, lpsz, cb, lprc, uFormat, params)",
 			intArg(a),
 			uintptr(stringArg(b)),
 			intArg(c),
-			uintptr(rectArg(d, &r)),
+			uintptr(rectArg(d, r)),
 			intArg(e),
-			uintptr(unsafe.Pointer(&dtp)))
+			uintptr(p))
 		return intRet(rtn)
 	})
 
@@ -2218,18 +2086,22 @@ type DRAWTEXTPARAMS struct {
 	uiLengthDrawn int32
 }
 
+const nDRAWTEXTPARAMS = unsafe.Sizeof(DRAWTEXTPARAMS{})
+
 // dll bool User32:TrackMouseEvent(TRACKMOUSEEVENT* lpEventTrack)
 var trackMouseEvent = user32.MustFindProc("TrackMouseEvent").Addr()
 var _ = builtin1("TrackMouseEvent(lpEventTrack)",
 	func(a Value) Value {
-		tme := TRACKMOUSEEVENT{
-			cbSize:      uint32(unsafe.Sizeof(TRACKMOUSEEVENT{})),
+		defer heap.FreeTo(heap.CurSize())
+		p := heap.Alloc(nTRACKMOUSEEVENT)
+		*(*TRACKMOUSEEVENT)(p) = TRACKMOUSEEVENT{
+			cbSize:      uint32(nTRACKMOUSEEVENT),
 			dwFlags:     getInt32(a, "dwFlags"),
 			hwndTrack:   getHandle(a, "hwndTrack"),
 			dwHoverTime: getInt32(a, "dwHoverTime"),
 		}
 		rtn, _, _ := syscall.Syscall(trackMouseEvent, 1,
-			uintptr(unsafe.Pointer(&tme)),
+			uintptr(p),
 			0, 0)
 		return boolRet(rtn)
 	})
@@ -2242,11 +2114,15 @@ type TRACKMOUSEEVENT struct {
 	_           [4]byte // padding
 }
 
+const nTRACKMOUSEEVENT = unsafe.Sizeof(TRACKMOUSEEVENT{})
+
 // dll bool User32:FlashWindowEx(FLASHWINFO* fi)
 var flashWindowEx = user32.MustFindProc("FlashWindowEx").Addr()
 var _ = builtin1("FlashWindowEx(fi)",
 	func(a Value) Value {
-		fwi := FLASHWINFO{
+		defer heap.FreeTo(heap.CurSize())
+		p := heap.Alloc(nFLASHWINFO)
+		*(*FLASHWINFO)(p) = FLASHWINFO{
 			cbSize:    getUint32(a, "cbSize"),
 			hwnd:      getHandle(a, "hwnd"),
 			dwFlags:   getInt32(a, "dwFlags"),
@@ -2254,7 +2130,7 @@ var _ = builtin1("FlashWindowEx(fi)",
 			dwTimeout: getInt32(a, "dwTimeout"),
 		}
 		rtn, _, _ := syscall.Syscall(flashWindowEx, 1,
-			uintptr(unsafe.Pointer(&fwi)),
+			uintptr(p),
 			0, 0)
 		return boolRet(rtn)
 	})
@@ -2268,14 +2144,17 @@ type FLASHWINFO struct {
 	_         [4]byte // padding
 }
 
+const nFLASHWINFO = unsafe.Sizeof(FLASHWINFO{})
+
 // dll long User32:FrameRect(pointer hdc, RECT* rect, pointer brush)
 var frameRect = user32.MustFindProc("FrameRect").Addr()
 var _ = builtin3("FrameRect(hdc, rect, brush)",
 	func(a, b, c Value) Value {
-		var r RECT
+		defer heap.FreeTo(heap.CurSize())
+		r := heap.Alloc(nRECT)
 		rtn, _, _ := syscall.Syscall(frameRect, 3,
 			intArg(a),
-			uintptr(rectArg(b, &r)),
+			uintptr(rectArg(b, r)),
 			intArg(c))
 		return intRet(rtn)
 	})
@@ -2284,11 +2163,12 @@ var _ = builtin3("FrameRect(hdc, rect, brush)",
 var getClipCursor = user32.MustFindProc("GetClipCursor").Addr()
 var _ = builtin1("GetClipCursor(rect)",
 	func(a Value) Value {
-		var r RECT
+		defer heap.FreeTo(heap.CurSize())
+		r := heap.Alloc(nRECT)
 		rtn, _, _ := syscall.Syscall(getClipCursor, 1,
-			uintptr(unsafe.Pointer(&r)),
+			uintptr(r),
 			0, 0)
-		rectToOb(&r, a)
+		urectToOb(r, a)
 		return boolRet(rtn)
 	})
 
@@ -2296,11 +2176,12 @@ var _ = builtin1("GetClipCursor(rect)",
 var getCursorPos = user32.MustFindProc("GetCursorPos").Addr()
 var _ = builtin1("GetCursorPos(rect)",
 	func(a Value) Value {
-		var p POINT
+		defer heap.FreeTo(heap.CurSize())
+		p := heap.Alloc(nPOINT)
 		rtn, _, _ := syscall.Syscall(getCursorPos, 1,
-			uintptr(unsafe.Pointer(&p)),
+			uintptr(p),
 			0, 0)
-		pointToOb(&p, a)
+		upointToOb(p, a)
 		return boolRet(rtn)
 	})
 
@@ -2310,8 +2191,10 @@ var getDIBits = gdi32.MustFindProc("GetDIBits").Addr()
 var _ = builtin7("GetDIBits(hdc, hbmp, uStartScan, cScanLines, lpvBits,"+
 	" lpbi, uUsage)",
 	func(a, b, c, d, e, f, g Value) Value {
-		bi := BITMAPINFOHEADER{
-			biSize:          int32(unsafe.Sizeof(BITMAPINFOHEADER{})),
+		defer heap.FreeTo(heap.CurSize())
+		p := heap.Alloc(nBITMAPINFOHEADER)
+		*(*BITMAPINFOHEADER)(p) = BITMAPINFOHEADER{
+			biSize:          int32(nBITMAPINFOHEADER),
 			biWidth:         getInt32(f.Get(nil, SuStr("bmiHeader")), "biWidth"),
 			biHeight:        getInt32(f.Get(nil, SuStr("bmiHeader")), "biHeight"),
 			biPlanes:        getInt16(f.Get(nil, SuStr("bmiHeader")), "biPlanes"),
@@ -2329,7 +2212,7 @@ var _ = builtin7("GetDIBits(hdc, hbmp, uStartScan, cScanLines, lpvBits,"+
 			intArg(c),
 			intArg(d),
 			intArg(e),
-			uintptr(unsafe.Pointer(&bi)),
+			uintptr(p),
 			intArg(g),
 			0, 0)
 		return intRet(rtn)
@@ -2348,6 +2231,8 @@ type BITMAPINFOHEADER struct {
 	biClrUsed       int32
 	biClrImportant  int32
 }
+
+const nBITMAPINFOHEADER = unsafe.Sizeof(BITMAPINFOHEADER{})
 
 // dll bool User32:EnumThreadWindows(long dwThreadId, WNDENUMPROC lpfn,
 //		pointer lParam)
@@ -2377,9 +2262,10 @@ var _ = builtin3("EnumChildWindowsApi(hwnd, lpEnumProc, lParam)",
 var windowFromPoint = user32.MustFindProc("WindowFromPoint").Addr()
 var _ = builtin1("WindowFromPoint(pt)",
 	func(a Value) Value {
-		var pt POINT
+		defer heap.FreeTo(heap.CurSize())
+		p := heap.Alloc(nPOINT)
 		rtn, _, _ := syscall.Syscall(windowFromPoint, 1,
-			uintptr(pointArg(a, &pt)),
+			uintptr(pointArg(a, p)),
 			0, 0)
 		return intRet(rtn)
 	})
@@ -2388,12 +2274,13 @@ var _ = builtin1("WindowFromPoint(pt)",
 var getWindowThreadProcessId = user32.MustFindProc("GetWindowThreadProcessId").Addr()
 var _ = builtin2("GetWindowThreadProcessId(hwnd, lpdwProcessId)",
 	func(a, b Value) Value {
-		var prcid int32
+		defer heap.FreeTo(heap.CurSize())
+		p := heap.Alloc(4)
 		rtn, _, _ := syscall.Syscall(getWindowThreadProcessId, 2,
 			intArg(a),
-			uintptr(unsafe.Pointer(&prcid)),
+			uintptr(p),
 			0)
-		b.Put(nil, SuStr("x"), IntVal(int(prcid)))
+		b.Put(nil, SuStr("x"), IntVal(int(*(*int32)(p))))
 		return boolRet(rtn)
 	})
 
@@ -2402,7 +2289,8 @@ var _ = builtin2("GetWindowThreadProcessId(hwnd, lpdwProcessId)",
 var trackPopupMenu = user32.MustFindProc("TrackPopupMenu").Addr()
 var _ = builtin7("TrackPopupMenu(hMenu, uFlags, x, y, nReserved, hWnd, prcRect)",
 	func(a, b, c, d, e, f, g Value) Value {
-		var r RECT
+		defer heap.FreeTo(heap.CurSize())
+		r := heap.Alloc(nRECT)
 		rtn, _, _ := syscall.Syscall9(trackPopupMenu, 7,
 			intArg(a),
 			intArg(b),
@@ -2410,7 +2298,7 @@ var _ = builtin7("TrackPopupMenu(hMenu, uFlags, x, y, nReserved, hWnd, prcRect)"
 			intArg(d),
 			intArg(e),
 			intArg(f),
-			uintptr(rectArg(g, &r)),
+			uintptr(rectArg(g, r)),
 			0, 0)
 		return intRet(rtn)
 	})
@@ -2434,8 +2322,10 @@ var _ = builtin4("SetWindowsHookEx(idHook, lpfn, hMod, dwThreadId)",
 var setScrollInfo = user32.MustFindProc("SetScrollInfo").Addr()
 var _ = builtin4("SetScrollInfo(hwnd, bar, si, redraw)",
 	func(a, b, c, d Value) Value {
-		si := SCROLLINFO{
-			cbSize:    uint32(unsafe.Sizeof(SCROLLINFO{})),
+		defer heap.FreeTo(heap.CurSize())
+		p := heap.Alloc(nSCROLLINFO)
+		*(*SCROLLINFO)(p) = SCROLLINFO{
+			cbSize:    uint32(nSCROLLINFO),
 			fMask:     getUint32(c, "fMask"),
 			nMin:      getInt32(c, "nMin"),
 			nMax:      getInt32(c, "nMax"),
@@ -2446,7 +2336,7 @@ var _ = builtin4("SetScrollInfo(hwnd, bar, si, redraw)",
 		rtn, _, _ := syscall.Syscall6(setScrollInfo, 4,
 			intArg(a),
 			intArg(b),
-			uintptr(unsafe.Pointer(&si)),
+			uintptr(p),
 			boolArg(d),
 			0, 0)
 		return intRet(rtn)
@@ -2458,20 +2348,21 @@ var scrollWindowEx = user32.MustFindProc("ScrollWindowEx").Addr()
 var _ = builtin("ScrollWindowEx(hwnd, dx, dy, scroll, clip, rgnUpdate,"+
 	"rcUpdate, flags)",
 	func(_ *Thread, a []Value) Value {
-		var r1 RECT
-		var r2 RECT
-		var r3 RECT
+		defer heap.FreeTo(heap.CurSize())
+		r1 := heap.Alloc(nRECT)
+		r2 := heap.Alloc(nRECT)
+		r3 := heap.Alloc(nRECT)
 		rtn, _, _ := syscall.Syscall9(scrollWindowEx, 8,
 			intArg(a[0]),
 			intArg(a[1]),
 			intArg(a[2]),
-			uintptr(rectArg(a[3], &r1)),
-			uintptr(rectArg(a[4], &r2)),
+			uintptr(rectArg(a[3], r1)),
+			uintptr(rectArg(a[4], r2)),
 			intArg(a[5]),
-			uintptr(rectArg(a[6], &r3)),
+			uintptr(rectArg(a[6], r3)),
 			intArg(a[7]),
 			0)
-		rectToOb(&r3, a[6])
+		urectToOb(r3, a[6])
 		return intRet(rtn)
 	})
 
@@ -2479,13 +2370,13 @@ var _ = builtin("ScrollWindowEx(hwnd, dx, dy, scroll, clip, rgnUpdate,"+
 var screenToClient = user32.MustFindProc("ScreenToClient").Addr()
 var _ = builtin2("ScreenToClient(hWnd, p)",
 	func(a, b Value) Value {
-		var pt POINT
+		defer heap.FreeTo(heap.CurSize())
+		p := heap.Alloc(nPOINT)
 		rtn, _, _ := syscall.Syscall(screenToClient, 2,
 			intArg(a),
-			uintptr(pointArg(b, &pt)),
+			uintptr(pointArg(b, p)),
 			0)
-		b.Put(nil, SuStr("x"), IntVal(int(pt.x)))
-		b.Put(nil, SuStr("y"), IntVal(int(pt.y)))
+		upointToOb(p, b)
 		return boolRet(rtn)
 	})
 
@@ -2495,6 +2386,7 @@ var loadImage = user32.MustFindProc("LoadImageA").Addr()
 var _ = builtin6("LoadImage(hInstance, lpszName, uType, cxDesired, cyDesired,"+
 	" fuLoad)",
 	func(a, b, c, d, e, f Value) Value {
+		defer heap.FreeTo(heap.CurSize())
 		rtn, _, _ := syscall.Syscall6(loadImage, 6,
 			intArg(a),
 			uintptr(stringArg(f)), // doesn't handle resource id
@@ -2509,7 +2401,9 @@ var _ = builtin6("LoadImage(hInstance, lpszName, uType, cxDesired, cyDesired,"+
 var isDialogMessage = user32.MustFindProc("IsDialogMessageA").Addr()
 var _ = builtin2("IsDialogMessage(hDlg, lpMsg)",
 	func(a, b Value) Value {
-		msg := MSG{
+		defer heap.FreeTo(heap.CurSize())
+		p := heap.Alloc(nMSG)
+		*(*MSG)(p) = MSG{
 			hwnd:    getHandle(b, "hwnd"),
 			message: uint32(getInt(b, "message")),
 			wParam:  getHandle(b, "wParam"),
@@ -2519,7 +2413,7 @@ var _ = builtin2("IsDialogMessage(hDlg, lpMsg)",
 		}
 		rtn, _, _ := syscall.Syscall(isDialogMessage, 2,
 			intArg(a),
-			uintptr(unsafe.Pointer(&msg)),
+			uintptr(p),
 			0)
 		return boolRet(rtn)
 	})
@@ -2528,13 +2422,14 @@ var _ = builtin2("IsDialogMessage(hDlg, lpMsg)",
 var mapWindowPoints = user32.MustFindProc("MapWindowPoints").Addr()
 var _ = builtin3("MapWindowRect(hwndfrom, hwndto, r)",
 	func(a, b, c Value) Value {
-		var r RECT
+		defer heap.FreeTo(heap.CurSize())
+		r := heap.Alloc(nRECT)
 		rtn, _, _ := syscall.Syscall6(mapWindowPoints, 4,
 			intArg(a),
 			intArg(b),
-			uintptr(rectArg(c, &r)),
+			uintptr(rectArg(c, r)),
 			2,
 			0, 0)
-		rectToOb(&r, c)
+		urectToOb(r, c)
 		return intRet(rtn)
 	})

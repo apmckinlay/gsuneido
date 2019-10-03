@@ -4,6 +4,7 @@ import (
 	"syscall"
 	"unsafe"
 
+	heap "github.com/apmckinlay/gsuneido/builtin/heapstack"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"golang.org/x/sys/windows"
 )
@@ -13,12 +14,14 @@ var comctl32 = windows.MustLoadDLL("comctl32.dll")
 var initCommonControlsEx = comctl32.MustFindProc("InitCommonControlsEx").Addr()
 var _ = builtin1("InitCommonControlsEx(picce)",
 	func(a Value) Value {
-		a1 := INITCOMMONCONTROLSEX{
-			dwSize: uint32(unsafe.Sizeof(INITCOMMONCONTROLSEX{})),
+		defer heap.FreeTo(heap.CurSize())
+		p := heap.Alloc(nINITCOMMONCONTROLSEX)
+		*(*INITCOMMONCONTROLSEX)(p) = INITCOMMONCONTROLSEX{
+			dwSize: uint32(nINITCOMMONCONTROLSEX),
 			dwICC:  int32(getInt(a, "dwICC")),
 		}
 		rtn, _, _ := syscall.Syscall(initCommonControlsEx, 1,
-			uintptr(unsafe.Pointer(&a1)),
+			uintptr(p),
 			0, 0)
 		return boolRet(rtn)
 	})
@@ -27,6 +30,8 @@ type INITCOMMONCONTROLSEX struct {
 	dwSize uint32
 	dwICC  int32
 }
+
+const nINITCOMMONCONTROLSEX = unsafe.Sizeof(INITCOMMONCONTROLSEX{})
 
 // dll Comctl32:ImageList_Create(
 //		long x, long y, long flags, long initial, long grow) pointer
@@ -138,10 +143,11 @@ var _ = builtin6("ImageList_Merge(himl1, i1, himl2, i2, dx, dy)",
 var drawStatusText = comctl32.MustFindProc("DrawStatusTextA").Addr()
 var _ = builtin4("DrawStatusText(himlTrack, iTrack, dxHotspot, dyHotspot)",
 	func(a, b, c, d Value) Value {
-		var r RECT
+		defer heap.FreeTo(heap.CurSize())
+		r := heap.Alloc(nRECT)
 		syscall.Syscall6(drawStatusText, 4,
 			intArg(a),
-			uintptr(rectArg(b, &r)),
+			uintptr(rectArg(b, r)),
 			uintptr(stringArg(c)),
 			intArg(d),
 			0, 0)
@@ -153,15 +159,17 @@ var _ = builtin4("DrawStatusText(himlTrack, iTrack, dxHotspot, dyHotspot)",
 var imageList_GetImageInfo = comctl32.MustFindProc("ImageList_GetImageInfo").Addr()
 var _ = builtin3("ImageList_GetImageInfo(himl, imageindex, pImageInfo)",
 	func(a, b, c Value) Value {
-		var imginf IMAGEINFO
+		defer heap.FreeTo(heap.CurSize())
+		p := heap.Alloc(nIMAGEINFO)
 		rtn, _, _ := syscall.Syscall(imageList_GetImageInfo, 3,
 			intArg(a),
 			intArg(b),
-			uintptr(unsafe.Pointer(&imginf)))
-		c.Put(nil, SuStr("hbmImage"), IntVal(int(imginf.hbmImage)))
-		c.Put(nil, SuStr("hbmMask"), IntVal(int(imginf.hbmMask)))
+			uintptr(p))
+		ii := *(*IMAGEINFO)(p)
+		c.Put(nil, SuStr("hbmImage"), IntVal(int(ii.hbmImage)))
+		c.Put(nil, SuStr("hbmMask"), IntVal(int(ii.hbmMask)))
 		c.Put(nil, SuStr("rcImage"),
-			rectToOb(&imginf.rcImage, c.Get(nil, SuStr("rcImage"))))
+			rectToOb(&ii.rcImage, c.Get(nil, SuStr("rcImage"))))
 		return boolRet(rtn)
 	})
 
@@ -172,3 +180,5 @@ type IMAGEINFO struct {
 	Unused2  int32
 	rcImage  RECT
 }
+
+const nIMAGEINFO = unsafe.Sizeof(IMAGEINFO{})

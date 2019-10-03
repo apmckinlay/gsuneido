@@ -3,6 +3,7 @@ package builtin
 import (
 	"syscall"
 
+	heap "github.com/apmckinlay/gsuneido/builtin/heapstack"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"golang.org/x/sys/windows"
 )
@@ -15,15 +16,16 @@ var drawThemeBackground = uxtheme.MustFindProc("DrawThemeBackground").Addr()
 var _ = builtin6("DrawThemeBackground(hTheme, hdc, iPartId, iStateId, pRect,"+
 	" pClipRect)",
 	func(a, b, c, d, e, f Value) Value {
-		var r1 RECT
-		var r2 RECT
+		defer heap.FreeTo(heap.CurSize())
+		r1 := heap.Alloc(nRECT)
+		r2 := heap.Alloc(nRECT)
 		rtn, _, _ := syscall.Syscall6(drawThemeBackground, 6,
 			intArg(a),
 			intArg(b),
 			intArg(c),
 			intArg(d),
-			uintptr(rectArg(e, &r1)),
-			uintptr(rectArg(f, &r2)))
+			uintptr(rectArg(e, r1)),
+			uintptr(rectArg(f, r2)))
 		return intRet(rtn)
 	})
 
@@ -34,7 +36,8 @@ var drawThemeText = uxtheme.MustFindProc("DrawThemeText").Addr()
 var _ = builtin("DrawThemeText(hTheme, hdc, iPartId, iStateId, pszText,"+
 	" iCharCount, dwTextFlags, dwTextFlags2, pRect)",
 	func(_ *Thread, a []Value) Value {
-		var r RECT
+		defer heap.FreeTo(heap.CurSize())
+		r := heap.Alloc(nRECT)
 		rtn, _, _ := syscall.Syscall9(drawThemeText, 9,
 			intArg(a[0]),
 			intArg(a[1]),
@@ -44,7 +47,7 @@ var _ = builtin("DrawThemeText(hTheme, hdc, iPartId, iStateId, pszText,"+
 			intArg(a[5]),
 			intArg(a[6]),
 			intArg(a[7]),
-			uintptr(rectArg(a[8], &r)))
+			uintptr(rectArg(a[8], r)))
 		return intRet(rtn)
 	})
 
@@ -117,10 +120,11 @@ var _ = builtin2("OpenThemeData(hwnd, pszClassList)",
 var drawThemeParentBackground = uxtheme.MustFindProc("DrawThemeParentBackground").Addr()
 var _ = builtin3("DrawThemeParentBackground(hwnd, hdc, prc)",
 	func(a, b, c Value) Value {
-		var r RECT
+		defer heap.FreeTo(heap.CurSize())
+		r := heap.Alloc(nRECT)
 		rtn, _, _ := syscall.Syscall(drawThemeParentBackground, 3,
 			intArg(a),
 			intArg(b),
-			uintptr(rectArg(c, &r)))
+			uintptr(rectArg(c, r)))
 		return intRet(rtn)
 	})

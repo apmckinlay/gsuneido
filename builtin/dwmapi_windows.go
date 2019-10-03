@@ -3,6 +3,7 @@ package builtin
 import (
 	"syscall"
 
+	heap "github.com/apmckinlay/gsuneido/builtin/heapstack"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"golang.org/x/sys/windows"
 )
@@ -15,13 +16,14 @@ var dwmGetWindowAttribute = dwmapi.MustFindProc("DwmGetWindowAttribute").Addr()
 var _ = builtin4("DwmGetWindowAttributeRect(hwnd, dwAttribute, pvAttribute,"+
 	" cbAttribute)",
 	func(a, b, c, d Value) Value {
-		var r RECT
+		defer heap.FreeTo(heap.CurSize())
+		r := heap.Alloc(nRECT)
 		rtn, _, _ := syscall.Syscall6(dwmGetWindowAttribute, 4,
 			intArg(a),
 			intArg(b),
-			uintptr(rectArg(c, &r)),
+			uintptr(rectArg(c, r)),
 			intArg(d),
 			0, 0)
-		rectToOb(&r, c)
+		urectToOb(r, c)
 		return intRet(rtn)
 	})

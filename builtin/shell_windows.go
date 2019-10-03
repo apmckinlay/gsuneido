@@ -4,8 +4,8 @@ import (
 	"syscall"
 	"unsafe"
 
+	heap "github.com/apmckinlay/gsuneido/builtin/heapstack"
 	. "github.com/apmckinlay/gsuneido/runtime"
-	"github.com/apmckinlay/gsuneido/util/str"
 	"golang.org/x/sys/windows"
 )
 
@@ -26,15 +26,16 @@ var _ = builtin2("DragAcceptFiles(hWnd, fAccept)",
 var shGetPathFromIDList = shell32.MustFindProc("SHGetPathFromIDListA").Addr()
 var _ = builtin1("SHGetPathFromIDList(pidl)",
 	func(a Value) Value {
-		var buf [MAX_PATH]byte
+		defer heap.FreeTo(heap.CurSize())
+		buf := heap.Alloc(MAX_PATH)
 		rtn, _, _ := syscall.Syscall(shGetPathFromIDList, 2,
 			intArg(a),
-			uintptr(unsafe.Pointer(&buf)),
+			uintptr(buf),
 			0)
 		if rtn == 0 {
 			return EmptyStr
 		}
-		return strRet(buf[:])
+		return bufToStr(buf, MAX_PATH)
 	})
 
 // dll long Shell32:DragQueryFile(
@@ -51,22 +52,25 @@ var _ = builtin2("DragQueryFile(hDrop, iFile)",
 			0,
 			0,
 			0, 0)
-		buf := make([]byte, n)
+		buf := heap.Alloc(n)
 		syscall.Syscall6(dragQueryFile, 4,
 			intArg(a),
 			intArg(b),
-			uintptr(unsafe.Pointer(&buf[0])),
+			uintptr(buf),
 			n,
 			0, 0)
-		return SuStr(str.BeforeFirst(string(buf), "\x00"))
+		return bufToStr(buf, n)
 	})
 
 // dll bool Shell32:Shell_NotifyIcon(long dwMessage, NOTIFYICONDATA* lpdata)
 var shell_NotifyIcon = shell32.MustFindProc("Shell_NotifyIconA").Addr()
 var _ = builtin2("Shell_NotifyIcon(dwMessage, lpdata)",
 	func(a, b Value) Value {
-		nid := NOTIFYICONDATA{
-			cbSize:               uint32(unsafe.Sizeof(NOTIFYICONDATA{})),
+		defer heap.FreeTo(heap.CurSize())
+		p := heap.Alloc(nNOTIFYICONDATA)
+		nid := (*NOTIFYICONDATA)(p)
+		*nid = NOTIFYICONDATA{
+			cbSize:               uint32(nNOTIFYICONDATA),
 			hWnd:                 getHandle(b, "hWnd"),
 			uID:                  getInt32(b, "uID"),
 			uFlags:               getInt32(b, "uFlags"),
@@ -77,12 +81,12 @@ var _ = builtin2("Shell_NotifyIcon(dwMessage, lpdata)",
 			uTimeoutVersionUnion: getUint32(b, "uTimeoutVersionUnion"),
 			dwInfoFlags:          getInt32(b, "dwInfoFlags"),
 		}
-		copyStr(nid.szTip[:], ToStr(b.Get(nil, SuStr("szTip"))))
-		copyStr(nid.szInfo[:], ToStr(b.Get(nil, SuStr("szInfo"))))
-		copyStr(nid.szInfoTitle[:], ToStr(b.Get(nil, SuStr("szInfoTitle"))))
+		copyStr(nid.szTip[:], b, "szTip")
+		copyStr(nid.szInfo[:], b, "szInfo")
+		copyStr(nid.szInfoTitle[:], b, "szInfoTitle")
 		rtn, _, _ := syscall.Syscall(shell_NotifyIcon, 2,
 			intArg(a),
-			uintptr(unsafe.Pointer(&nid)),
+			uintptr(p),
 			0)
 		return boolRet(rtn)
 	})
@@ -105,18 +109,16 @@ type NOTIFYICONDATA struct {
 	hBalloonIcon         HANDLE
 }
 
-// copyStr copies the string into the byte slice and adds a nul terminator
-func copyStr(dst []byte, src string) {
-	copy(dst[:], src)
-	dst[len(src)] = 0
-}
+const nNOTIFYICONDATA = unsafe.Sizeof(NOTIFYICONDATA{})
 
 // dll bool Shell32:ShellExecuteEx(SHELLEXECUTEINFO* lpExecInfo)
 var shellExecuteEx = shell32.MustFindProc("ShellExecuteExA").Addr()
 var _ = builtin1("ShellExecuteEx(lpExecInfo)",
 	func(a Value) Value {
-		sei := SHELLEXECUTEINFO{
-			cbSize:       int32(unsafe.Sizeof(SHELLEXECUTEINFO{})),
+		defer heap.FreeTo(heap.CurSize())
+		p := heap.Alloc(nSHELLEXECUTEINFO)
+		*(*SHELLEXECUTEINFO)(p) = SHELLEXECUTEINFO{
+			cbSize:       int32(nSHELLEXECUTEINFO),
 			fMask:        getInt32(a, "fMask"),
 			hwnd:         getHandle(a, "hwnd"),
 			lpVerb:       getStr(a, "lpVerb"),
@@ -133,7 +135,7 @@ var _ = builtin1("ShellExecuteEx(lpExecInfo)",
 			hProcess:     getHandle(a, "hProcess"),
 		}
 		rtn, _, _ := syscall.Syscall(shellExecuteEx, 1,
-			uintptr(unsafe.Pointer(&sei)),
+			uintptr(p),
 			0, 0)
 		return boolRet(rtn)
 	})
@@ -156,13 +158,17 @@ type SHELLEXECUTEINFO struct {
 	hProcess     HANDLE
 }
 
+const nSHELLEXECUTEINFO = unsafe.Sizeof(SHELLEXECUTEINFO{})
+
 const MAX_PATH = 260
 
 // dll pointer Shell32:SHBrowseForFolder(BROWSEINFO* lpbi)
 var sHBrowseForFolder = shell32.MustFindProc("SHBrowseForFolderA").Addr()
 var _ = builtin1("SHBrowseForFolder(lpbi)",
 	func(a Value) Value {
-		bi := BROWSEINFO{
+		defer heap.FreeTo(heap.CurSize())
+		p := heap.Alloc(nBROWSEINFO)
+		*(*BROWSEINFO)(p) = BROWSEINFO{
 			hwndOwner:      getHandle(a, "hwndOwner"),
 			pidlRoot:       getHandle(a, "pidlRoot"),
 			pszDisplayName: nil,
@@ -173,7 +179,7 @@ var _ = builtin1("SHBrowseForFolder(lpbi)",
 			iImage:         getInt32(a, "iImage"),
 		}
 		rtn, _, _ := syscall.Syscall(sHBrowseForFolder, 1,
-			uintptr(unsafe.Pointer(&bi)),
+			uintptr(p),
 			0, 0)
 		return intRet(rtn)
 	})
@@ -189,3 +195,5 @@ type BROWSEINFO struct {
 	iImage         int32
 	_              [4]byte // padding
 }
+
+const nBROWSEINFO = unsafe.Sizeof(BROWSEINFO{})

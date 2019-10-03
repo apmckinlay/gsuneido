@@ -66,12 +66,12 @@ func NewCallback(fn Value, nargs byte) uintptr {
 			if cb.gcb == 0 {
 				// create a reusable callback for callbacks[i]
 				switch nargs {
-				// case 1:
-				// 	cb.gcb = windows.NewCallback(cb.call1)
-				// case 2:
-				// 	cb.gcb = windows.NewCallback(cb.call2)
-				// case 3:
-				// 	cb.gcb = windows.NewCallback(cb.call3)
+				case 1:
+					cb.gcb = windows.NewCallback(cb.call1)
+				case 2:
+					cb.gcb = windows.NewCallback(cb.call2)
+				case 3:
+					cb.gcb = windows.NewCallback(cb.call3)
 				case 4:
 					cb.gcb = windows.NewCallback(cb.call4)
 				default:
@@ -89,14 +89,20 @@ func NewCallback(fn Value, nargs byte) uintptr {
 	panic("too many callbacks")
 }
 
+const clearCallbackDisabled = false
+
 func init() {
-	fmt.Println("ClearCallback disabled")
+	if clearCallbackDisabled {
+		fmt.Println("ClearCallback disabled")
+	}
 }
 
 func ClearCallback(fn Value) bool {
 	for _, cb := range callbacks {
 		if cb.fn == fn {
-			// cb.active = false
+			if !clearCallbackDisabled {
+				cb.active = false
+			}
 			// keep the fn in case it gets called soon after clear
 			// keep the go callback to reuse
 			return true

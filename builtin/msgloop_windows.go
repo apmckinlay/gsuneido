@@ -1,11 +1,11 @@
 package builtin
 
 import (
-	"fmt"
 	"runtime"
 	"syscall"
 	"unsafe"
 
+	heap "github.com/apmckinlay/gsuneido/builtin/heapstack"
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
@@ -24,6 +24,8 @@ type MSG struct {
 	_       [4]byte // padding
 }
 
+const nMSG = unsafe.Sizeof(MSG{})
+
 var uiThreadId uintptr
 
 const WM_USER = 0x400
@@ -40,34 +42,34 @@ const WM_QUIT = 0x12
 const GMEM_FIXED = 0
 
 func MessageLoop(hdlg int) {
-	// see: https://github.com/lxn/walk/pull/493
-	msg := (*MSG)(GlobalAlloc(unsafe.Sizeof(MSG{})))
-	defer GlobalFree(unsafe.Pointer(msg))
+	defer heap.FreeTo(heap.CurSize())
+	msg := (*MSG)(heap.Alloc(nMSG))
 	for {
 		if -1 == GetMessage(msg, 0, 0, 0) {
-			continue // error
+			continue // ignore error ???
 		}
-		// if msg.message == WM_QUIT {
-		// 	if hdlg != 0 {
-		// 		PostQuitMessage(msg.wParam)
-		// 		return
-		// 	}
-		// 	return //TODO shutdown(msg.wParam)
-		// }
-		// if msg.message == WM_USER && msg.hwnd == 0 {
-		// 	// from SetTimer in another thread
-		// 	rtn, _, _ := syscall.Syscall(setTimer, ?,0, 0, msg.wParam, msg.lParam)
-		// 	retChan <- rtn
-		// 	continue
-		// }
-		// if window := GetAncestor(msg.hwnd, GA_ROOT); window != 0 {
-		// 	// if (HACCEL haccel = (HACCEL) GetWindowLong(window, GWL_USERDATA))
-		// 	// 	if (TranslateAccelerator(window, haccel, &msg))
-		// 	// 		continue;
-		// 	if IsDialogMessage(window, msg) {
-		// 		continue
-		// 	}
-		// }
+		if msg.message == WM_QUIT {
+			if hdlg != 0 {
+				PostQuitMessage(msg.wParam)
+				return
+			}
+			return //TODO shutdown(msg.wParam)
+		}
+		if msg.message == WM_USER && msg.hwnd == 0 {
+			// from SetTimer in another thread
+			rtn, _, _ := syscall.Syscall6(setTimer, 4,
+				0, 0, msg.wParam, msg.lParam, 0, 0)
+			retChan <- rtn
+			continue
+		}
+		if window := GetAncestor(msg.hwnd, GA_ROOT); window != 0 {
+			// if (HACCEL haccel = (HACCEL) GetWindowLong(window, GWL_USERDATA))
+			// 	if (TranslateAccelerator(window, haccel, &msg))
+			// 		continue;
+			if IsDialogMessage(window, msg) {
+				continue
+			}
+		}
 		TranslateMessage(msg)
 		DispatchMessage(msg)
 	}
@@ -75,20 +77,6 @@ func MessageLoop(hdlg int) {
 
 func GetCurrentThreadId() uintptr {
 	ret, _, _ := syscall.Syscall(getCurrentThreadId, 0, 0, 0, 0)
-	return ret
-}
-
-func GlobalAlloc(dwBytes uintptr) unsafe.Pointer {
-	ret, _, _ := syscall.Syscall(globalAlloc, 2,
-		GMEM_FIXED,
-		dwBytes,
-		0)
-	return unsafe.Pointer(ret)
-}
-func GlobalFree(hglb unsafe.Pointer) uintptr {
-	ret, _, _ := syscall.Syscall(globalFree, 2,
-		uintptr(hglb),
-		0, 0)
 	return ret
 }
 
@@ -151,47 +139,3 @@ func PostQuitMessage(exitCode uintptr) uintptr {
 var _ = builtin0("WorkSpaceStatus()", func() Value {
 	return EmptyStr
 })
-
-//-------------------------------------------------------------------
-
-// NOT thread safe
-
-const align uintptr = 8
-const heapsize = 64 * 1024
-const magicBefore = 0xb5
-const magicAfter = 0xc3
-
-var myheap = [heapsize]byte{248, 249, 250, 251, 252, 253, 254, 255}
-var heapnext = align
-
-func alloc(n uintptr) unsafe.Pointer {
-	if n%align != 0 {
-		panic("unaligned alloc")
-	}
-	heapcheck("alloc")
-	p := &myheap[heapnext]
-	heapnext += n + align
-	for i := align; i > 0; i-- {
-		myheap[heapnext-i] = byte(256 - i)
-	}
-	return unsafe.Pointer(p)
-}
-
-func free(p unsafe.Pointer, n uintptr) {
-	heapcheck("free1")
-	heapnext -= n + align
-	if (*byte)(p) != &myheap[heapnext] {
-		panic("non-stack free")
-	}
-	heapcheck("free2")
-}
-
-func heapcheck(s string) {
-	for i := align; i > 0; i-- {
-		if myheap[heapnext-i] != byte(256-i) {
-			fmt.Println("heapnext", heapnext, "i", i, ",",
-				myheap[heapnext-i], "should be", byte(256-i))
-			panic("heap corrupt " + s)
-		}
-	}
-}

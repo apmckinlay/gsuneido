@@ -4,6 +4,7 @@ import (
 	"syscall"
 	"unsafe"
 
+	heap "github.com/apmckinlay/gsuneido/builtin/heapstack"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"golang.org/x/sys/windows"
 )
@@ -17,12 +18,13 @@ var ole32 = windows.MustLoadDLL("ole32.dll")
 var createStreamOnHGlobal = ole32.MustFindProc("CreateStreamOnHGlobal").Addr()
 var _ = builtin3("CreateStreamOnHGlobal(hGlobal, fDeleteOnRelease, ppstm)",
 	func(a, b, c Value) Value {
-		var p uintptr
+		defer heap.FreeTo(heap.CurSize())
+		p := heap.Alloc(uintptrSize)
 		rtn, _, _ := syscall.Syscall(createStreamOnHGlobal, 3,
 			intArg(a),
 			boolArg(b),
-			uintptr(unsafe.Pointer(&p)))
-		c.Put(nil, SuStr("x"), IntVal(int(p)))
+			uintptr(p))
+		c.Put(nil, SuStr("x"), IntVal(int(*(*uintptr)(p))))
 		return intRet(rtn)
 	})
 
@@ -37,8 +39,11 @@ var oleaut32 = windows.MustLoadDLL("oleaut32.dll")
 var oleLoadPicture = oleaut32.MustFindProc("OleLoadPicture").Addr()
 var _ = builtin5("OleLoadPicture(lpstream, lSize, fRunmode, riid, lplpvobj)",
 	func(a, b, c, d, e Value) Value {
-		var p uintptr
-		guid := GUID{
+		defer heap.FreeTo(heap.CurSize())
+		p := heap.Alloc(uintptrSize)
+		g := heap.Alloc(nGUID)
+		guid := (*GUID)(g)
+		*guid = GUID{
 			Data1: getInt32(d, "Data1"),
 			Data2: int16(getInt(d, "Data2")),
 			Data3: int16(getInt(d, "Data3")),
@@ -51,10 +56,10 @@ var _ = builtin5("OleLoadPicture(lpstream, lSize, fRunmode, riid, lplpvobj)",
 			intArg(a),
 			intArg(b),
 			boolArg(c),
-			uintptr(unsafe.Pointer(&guid)),
-			uintptr(unsafe.Pointer(&p)),
+			uintptr(g),
+			uintptr(p),
 			0)
-		e.Put(nil, SuStr("x"), IntVal(int(p)))
+		e.Put(nil, SuStr("x"), IntVal(int(*(*uintptr)(p))))
 		return intRet(rtn)
 	})
 
@@ -64,3 +69,5 @@ type GUID struct {
 	Data3 int16
 	Data4 [8]byte
 }
+
+const nGUID = unsafe.Sizeof(GUID{})

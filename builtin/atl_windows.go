@@ -2,8 +2,8 @@ package builtin
 
 import (
 	"syscall"
-	"unsafe"
 
+	heap "github.com/apmckinlay/gsuneido/builtin/heapstack"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"golang.org/x/sys/windows"
 )
@@ -22,12 +22,13 @@ var _ = builtin0("AtlAxWinInit()",
 var atlAxGetHost = atl.MustFindProc("AtlAxGetHost").Addr()
 var _ = builtin2("AtlAxGetHost(hwnd, iunk)",
 	func(a Value, b Value) Value {
-		var iunk int32
+		defer heap.FreeTo(heap.CurSize())
+		iunk := heap.Alloc(int32Size)
 		rtn, _, _ := syscall.Syscall(atlAxGetHost, 2,
 			intArg(a),
-			uintptr(unsafe.Pointer(&iunk)),
+			uintptr(iunk),
 			0)
-		b.Put(nil, SuStr("x"), IntVal(int(iunk)))
+		b.Put(nil, SuStr("x"), IntVal(int(*(*int32)(iunk))))
 		return intRet(rtn)
 	})
 
@@ -35,12 +36,13 @@ var _ = builtin2("AtlAxGetHost(hwnd, iunk)",
 var atlAxGetControl = atl.MustFindProc("AtlAxGetControl").Addr()
 var _ = builtin2("AtlAxGetControl(hwnd, iunk)",
 	func(a Value, b Value) Value {
-		var iunk int32
+		defer heap.FreeTo(heap.CurSize())
+		iunk := heap.Alloc(int32Size)
 		rtn, _, _ := syscall.Syscall(atlAxGetControl, 2,
 			intArg(a),
-			uintptr(unsafe.Pointer(&iunk)),
+			uintptr(iunk),
 			0)
-		b.Put(nil, SuStr("x"), IntVal(int(iunk)))
+		b.Put(nil, SuStr("x"), IntVal(int(*(*int32)(iunk))))
 		return intRet(rtn)
 	})
 
@@ -48,12 +50,14 @@ var _ = builtin2("AtlAxGetControl(hwnd, iunk)",
 var atlAxAttachControl = atl.MustFindProc("AtlAxAttachControl").Addr()
 var _ = builtin3("AtlAxAttachControl(iunk, hwnd, unkContainer)",
 	func(a, b, c Value) Value {
-		iunk := getInt32(a, "x")
-		var unkContainer int32
+		defer heap.FreeTo(heap.CurSize())
+		iunk := heap.Alloc(int32Size)
+		*(*int32)(iunk) = getInt32(a, "x")
+		unkContainer := heap.Alloc(int32Size)
 		rtn, _, _ := syscall.Syscall(atlAxAttachControl, 3,
-			uintptr(unsafe.Pointer(&iunk)),
+			uintptr(iunk),
 			intArg(b),
-			uintptr(unsafe.Pointer(&unkContainer)))
-		b.Put(nil, SuStr("x"), IntVal(int(unkContainer)))
+			uintptr(unkContainer))
+		b.Put(nil, SuStr("x"), IntVal(int(*(*int32)(unkContainer))))
 		return intRet(rtn)
 	})
