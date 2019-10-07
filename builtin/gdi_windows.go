@@ -281,6 +281,7 @@ var _ = builtin2("GetClipBox(hdc, rect)",
 			intArg(a),
 			uintptr(rectArg(b, r)),
 			0)
+		urectToOb(r, b)
 		return intRet(rtn)
 	})
 
@@ -867,6 +868,7 @@ type DOCINFO struct {
 	fwType       int32
 	_            [4]byte // padding
 }
+
 const nDOCINFO = unsafe.Sizeof(DOCINFO{})
 
 // dll bool Gdi32:SetWindowExtEx(pointer hdc, long x, long y, POINT* p)
@@ -935,14 +937,19 @@ var moveToEx = gdi32.MustFindProc("MoveToEx").Addr()
 var _ = builtin4("MoveToEx(hdc, x, y, p)",
 	func(a, b, c, d Value) Value {
 		defer heap.FreeTo(heap.CurSize())
-		pt := heap.Alloc(nPOINT)
+		var pt unsafe.Pointer
+		if !d.Equal(Zero) {
+			pt = heap.Alloc(nPOINT)
+		}
 		rtn, _, _ := syscall.Syscall6(moveToEx, 4,
 			intArg(a),
 			intArg(b),
 			intArg(c),
 			uintptr(pt),
 			0, 0)
-		upointToOb(pt, d)
+		if pt != nil {
+			upointToOb(pt, d)
+		}
 		return boolRet(rtn)
 	})
 
@@ -982,3 +989,16 @@ type BITMAP struct {
 }
 
 const nBITMAP = unsafe.Sizeof(BITMAP{})
+
+// dll gdiobj Gdi32:CreateRectRgn(long x1, long y1, long x2, long y2)
+var createRectRegion = gdi32.MustFindProc("CreateRectRgn").Addr()
+var _ = builtin4("CreateRectRgn(x1, y1, x2, y2)",
+	func(a, b, c, d Value) Value {
+		rtn, _, _ := syscall.Syscall6(createRectRegion, 4,
+			intArg(a),
+			intArg(b),
+			intArg(c),
+			intArg(d),
+			0, 0)
+		return intRet(rtn)
+	})

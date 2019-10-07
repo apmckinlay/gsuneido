@@ -36,13 +36,14 @@ var g = globals{
 	errors:   make(map[Gnum]interface{}),
 }
 
-// only called by single threaded init so no locking required
-func (typeGlobal) Builtin(name string, value Value) {
+func (typeGlobal) Builtin(name string, value Value) Value {
+	// only called by single threaded init so no locking required
 	if gn, ok := g.name2num[name]; ok && g.builtins[gn] != nil {
 		panic("duplicate builtin: " + name)
 	}
 	gnum := Global.add(name, nil)
 	g.builtins[gnum] = value
+	return value // return value to allow: var _ = Global.Builtin(...)
 }
 
 func BuiltinNames() []Value {

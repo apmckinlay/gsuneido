@@ -32,19 +32,10 @@ func init() {
 		&SuStructGlobal{size: int(unsafe.Sizeof(WINDOWPLACEMENT{}))})
 	Global.Builtin("OPENFILENAME",
 		&SuStructGlobal{size: int(nOPENFILENAME)})
-
-	Global.Builtin("MINMAXINFO",
-		&SuMinMaxInfo{SuStructGlobal{size: int(unsafe.Sizeof(MINMAXINFO{}))}})
-	Global.Builtin("RECT",
-		&SuRect{callableStruct{SuStructGlobal{size: int(unsafe.Sizeof(RECT{})),
-			SuBuiltin: SuBuiltin{
-				BuiltinParams: BuiltinParams{ParamSpec: ParamSpec1},
-				Fn:            rect}}}})
-	Global.Builtin("ACCEL",
-		&SuAccel{callableStruct{SuStructGlobal{size: int(unsafe.Sizeof(ACCEL{})),
-			SuBuiltin: SuBuiltin{
-				BuiltinParams: BuiltinParams{ParamSpec: ParamSpec1},
-				Fn:            accel}}}})
+	Global.Builtin("TPMPARAMS",
+		&SuStructGlobal{size: int(nTPMPARAMS)})
+	Global.Builtin("DRAWTEXTPARAMS",
+		&SuStructGlobal{size: int(nDRAWTEXTPARAMS)})
 }
 
 func (*SuStructGlobal) Call(*Thread, Value, *ArgSpec) Value {
@@ -80,7 +71,7 @@ func (*SuStructGlobal) String() string {
 	return "/* builtin struct */"
 }
 
-//===================================================================
+//-------------------------------------------------------------------
 
 type Struct interface {
 	structToOb(p unsafe.Pointer) Value
@@ -104,6 +95,12 @@ var _ = builtin("StructModify(type, address, block)",
 
 //-------------------------------------------------------------------
 
+var _ = Global.Builtin("RECT",
+	&SuRect{callableStruct{SuStructGlobal{size: int(unsafe.Sizeof(RECT{})),
+		SuBuiltin: SuBuiltin{
+			BuiltinParams: BuiltinParams{ParamSpec: ParamSpec1},
+			Fn:            rect}}}})
+
 type SuRect struct {
 	callableStruct
 }
@@ -122,6 +119,9 @@ func rect(_ *Thread, args []Value) Value {
 }
 
 //-------------------------------------------------------------------
+
+var _ = Global.Builtin("MINMAXINFO",
+	&SuMinMaxInfo{SuStructGlobal{size: int(unsafe.Sizeof(MINMAXINFO{}))}})
 
 type SuMinMaxInfo struct {
 	SuStructGlobal
@@ -178,17 +178,19 @@ func nmhdrToOb(nmh *NMHDR) *SuObject {
 
 //-------------------------------------------------------------------
 
-type TV_DISPINFO struct {
+type NMTVDISPINFO struct {
 	nmhdr NMHDR
 	item  TVITEM
 }
 
-var _ = builtin1("TV_DISPINFO(address)",
+var _ = builtin1("NMTVDISPINFO(address)",
 	func(a Value) Value {
-		di := (*TV_DISPINFO)(unsafe.Pointer(uintptr(ToInt(a))))
+		di := (*NMTVDISPINFO)(unsafe.Pointer(uintptr(ToInt(a))))
 		ob := nmhdrToOb(&di.nmhdr)
 		ob.Put(nil, SuStr("nmhdr"), nmhdrToOb(&di.nmhdr))
-		ob.Put(nil, SuStr("item"), tvitemToOb(&di.item))
+		tvi := tvitemToOb(&di.item)
+		tvi.Put(nil, SuStr("pszText"), bufRet(unsafe.Pointer(di.item.pszText), 1024))
+		ob.Put(nil, SuStr("item"), tvi)
 		return ob
 	})
 
@@ -198,7 +200,7 @@ func tvitemToOb(tvi *TVITEM) *SuObject {
 	ob.Put(nil, SuStr("hItem"), IntVal(int(tvi.hItem)))
 	ob.Put(nil, SuStr("state"), IntVal(int(tvi.state)))
 	ob.Put(nil, SuStr("stateMask"), IntVal(int(tvi.stateMask)))
-	ob.Put(nil, SuStr("pszText"), bufRet(unsafe.Pointer(tvi.pszText), 1024))
+	// pszText must be handled by caller
 	ob.Put(nil, SuStr("cchTextMax"), IntVal(int(tvi.cchTextMax)))
 	ob.Put(nil, SuStr("iImage"), IntVal(int(tvi.iImage)))
 	ob.Put(nil, SuStr("iSelectedImage"), IntVal(int(tvi.iSelectedImage)))
@@ -208,6 +210,156 @@ func tvitemToOb(tvi *TVITEM) *SuObject {
 }
 
 //-------------------------------------------------------------------
+
+var _ = Global.Builtin("NMTVDISPINFO2",
+	&SuNMTVDISPINFO{callableStruct{SuStructGlobal{size: int(unsafe.Sizeof(NMTVDISPINFO{})),
+		SuBuiltin: SuBuiltin{
+			BuiltinParams: BuiltinParams{ParamSpec: ParamSpec1},
+			Fn:            nmtvdispinfo}}}})
+
+type SuNMTVDISPINFO struct {
+	callableStruct
+}
+
+func (*SuNMTVDISPINFO) structToOb(p unsafe.Pointer) Value {
+	x := (*NMTVDISPINFO)(p)
+	ob := NewSuObject()
+	ob.Put(nil, SuStr("hdr"), nmhdrToOb(&x.nmhdr))
+	ob.Put(nil, SuStr("item"), tvitemToOb(&x.item))
+	return ob
+}
+
+func (*SuNMTVDISPINFO) updateStruct(ob Value, p unsafe.Pointer) {
+	tvi := ob.Get(nil, SuStr("item"))
+	x := (*NMTVDISPINFO)(p)
+	x.item.mask = getUint32(tvi, "mask")
+	x.item.hItem = getHandle(tvi, "hItem")
+	x.item.state = getUint32(tvi, "state")
+	x.item.stateMask = getUint32(tvi, "stateMask")
+	x.item.cchTextMax = getInt32(tvi, "cchTextMax")
+	x.item.iImage = getInt32(tvi, "iImage")
+	x.item.iSelectedImage = getInt32(tvi, "iSelectedImage")
+	x.item.cChildren = getInt32(tvi, "cChildren")
+	x.item.lParam = getHandle(tvi, "lParam")
+}
+
+func nmtvdispinfo(_ *Thread, args []Value) Value {
+	a := ToInt(args[0])
+	var x *SuNMTVDISPINFO
+	return x.structToOb(unsafe.Pointer(uintptr(a)))
+}
+
+//-------------------------------------------------------------------
+
+var _ = Global.Builtin("NMTTDISPINFO2",
+	&SuNMTTDISPINFO{SuStructGlobal{size: int(unsafe.Sizeof(NMTTDISPINFO{}))}})
+
+type SuNMTTDISPINFO struct {
+	SuStructGlobal
+}
+
+func (*SuNMTTDISPINFO) structToOb(p unsafe.Pointer) Value {
+	x := (*NMTTDISPINFO)(p)
+	ob := NewSuObject()
+	ob.Put(nil, SuStr("hdr"), nmhdrToOb(&x.hdr))
+	ob.Put(nil, SuStr("szText"), strRet(x.szText[:]))
+	ob.Put(nil, SuStr("lpszText"), IntVal(int(x.lpszText)))
+	ob.Put(nil, SuStr("hinst"), IntVal(int(x.hinst)))
+	ob.Put(nil, SuStr("uFlags"), IntVal(int(x.uFlags)))
+	ob.Put(nil, SuStr("lParam"), IntVal(int(x.lParam)))
+	return ob
+}
+
+func (*SuNMTTDISPINFO) updateStruct(ob Value, p unsafe.Pointer) {
+	x := (*NMTTDISPINFO)(p)
+	x.lpszText = getHandle(ob, "lpszText")
+	copyStr(x.szText[:], ob, "szText")
+	x.hinst = getHandle(ob, "hinst")
+	x.uFlags = getInt32(ob, "uFlags")
+	x.lParam = getHandle(ob, "lParam")
+}
+
+type NMTTDISPINFO struct {
+	hdr      NMHDR
+	lpszText uintptr
+	szText   [80]byte
+	hinst    uintptr
+	uFlags   int32
+	lParam   uintptr
+}
+
+//-------------------------------------------------------------------
+
+type NMHEADER struct {
+	hdr     NMHDR
+	iItem   int32
+	iButton int32
+	pitem   *HDITEM
+}
+
+var _ = builtin1("NMHEADER(address)",
+	func(a Value) Value {
+		x := (*NMHEADER)(unsafe.Pointer(uintptr(ToInt(a))))
+		ob := NewSuObject()
+		ob.Put(nil, SuStr("hdr"), nmhdrToOb(&x.hdr))
+		ob.Put(nil, SuStr("iItem"), IntVal(int(x.iItem)))
+		ob.Put(nil, SuStr("iButton"), IntVal(int(x.iButton)))
+		if x.pitem != nil {
+			hdi := hditemToOb(x.pitem, NewSuObject())
+			hdi.Put(nil, SuStr("pszText"),
+				IntVal(int(uintptr(unsafe.Pointer(x.pitem.pszText)))))
+			ob.Put(nil, SuStr("pitem"), hdi)
+		}
+		return ob
+	})
+
+//-------------------------------------------------------------------
+
+type NMTREEVIEW struct {
+	hdr     NMHDR
+	action  int32
+	itemOld TVITEM
+	itemNew TVITEM
+	ptDrag  POINT
+}
+
+var _ = builtin1("NM_TREEVIEW(address)",
+	func(a Value) Value {
+		x := (*NMTREEVIEW)(unsafe.Pointer(uintptr(ToInt(a))))
+		ob := NewSuObject()
+		ob.Put(nil, SuStr("hdr"), nmhdrToOb(&x.hdr))
+		ob.Put(nil, SuStr("action"), IntVal(int(x.action)))
+		ob.Put(nil, SuStr("itemOld"), tvitemToOb(&x.itemOld))
+		ob.Put(nil, SuStr("itemNew"), tvitemToOb(&x.itemNew))
+		ob.Put(nil, SuStr("ptDrag"), pointToOb(&x.ptDrag, nil))
+		return ob
+	})
+
+//-------------------------------------------------------------------
+
+type NMTVKEYDOWN struct {
+	hdr   NMHDR
+	wVKey int16
+	flags int32
+}
+
+var _ = builtin1("NMTVKEYDOWN(address)",
+	func(a Value) Value {
+		x := (*NMTVKEYDOWN)(unsafe.Pointer(uintptr(ToInt(a))))
+		ob := NewSuObject()
+		ob.Put(nil, SuStr("hdr"), nmhdrToOb(&x.hdr))
+		ob.Put(nil, SuStr("wVKey"), IntVal(int(x.wVKey)))
+		ob.Put(nil, SuStr("flags"), IntVal(int(x.flags)))
+		return ob
+	})
+
+//-------------------------------------------------------------------
+
+var _ = Global.Builtin("ACCEL",
+	&SuAccel{callableStruct{SuStructGlobal{size: int(unsafe.Sizeof(ACCEL{})),
+		SuBuiltin: SuBuiltin{
+			BuiltinParams: BuiltinParams{ParamSpec: ParamSpec1},
+			Fn:            accel}}}})
 
 type SuAccel struct {
 	callableStruct
@@ -241,14 +393,6 @@ func accel(_ *Thread, args []Value) Value {
 	}
 	return bufRet(unsafe.Pointer(&ac), unsafe.Sizeof(ac))
 }
-
-// func memToStr(p uintptr, n uintptr) string {
-// 	var sb strings.Builder
-// 	for i := uintptr(0); i < n; i++ {
-// 		sb.WriteByte(*(*byte)(unsafe.Pointer(p + i)))
-// 	}
-// 	return sb.String()
-// }
 
 //-------------------------------------------------------------------
 
@@ -372,7 +516,7 @@ func _() {
 	_ = x[unsafe.Sizeof(TEXTRANGE{})-16]
 	_ = x[unsafe.Sizeof(TOOLINFO{})-72]
 	_ = x[unsafe.Sizeof(TVITEM{})-56]
-	_ = x[unsafe.Sizeof(TV_DISPINFO{})-80]
+	_ = x[unsafe.Sizeof(NMTVDISPINFO{})-80]
 	_ = x[unsafe.Sizeof(TV_INSERTSTRUCT{})-96]
 	_ = x[unsafe.Sizeof(TPMPARAMS{})-20]
 	_ = x[unsafe.Sizeof(DRAWTEXTPARAMS{})-20]
@@ -381,6 +525,8 @@ func _() {
 	_ = x[unsafe.Sizeof(BITMAPINFOHEADER{})-40]
 	_ = x[unsafe.Sizeof(INITCOMMONCONTROLSEX{})-8]
 	_ = x[unsafe.Sizeof(IMAGEINFO{})-40]
+	_ = x[unsafe.Sizeof(HDITEM{})-72]
+	_ = x[unsafe.Sizeof(HDHITTESTINFO{})-16]
 	_ = x[unsafe.Sizeof(PRINTDLG{})-120]
 	_ = x[unsafe.Sizeof(PAGESETUPDLG{})-128]
 	_ = x[unsafe.Sizeof(OPENFILENAME{})-152]

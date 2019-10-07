@@ -74,7 +74,7 @@ func getInt(ob Value, mem string) int {
 	if x.Equal(True) {
 		return 1
 	}
-	return ToInt(x)
+	return truncToInt(x)
 }
 
 func getInt32(ob Value, mem string) int32 {
@@ -95,7 +95,7 @@ func getInt16(ob Value, mem string) int16 {
 	return int16(getInt(ob, mem))
 }
 
-// string
+// string -----------------------------------------------------------
 
 // getStr returns a nul terminated heap copy of a string member.
 // Callers should defer heap.Free
@@ -181,7 +181,7 @@ func copyStr(dst []byte, ob Value, mem string) {
 	dst[len(src)] = 0
 }
 
-// rect
+// rect -------------------------------------------------------------
 
 func rectArg(ob Value, r unsafe.Pointer) unsafe.Pointer {
 	//TODO if r is nil, alloc it
@@ -226,9 +226,12 @@ func rectToOb(r *RECT, ob Value) Value {
 	return ob
 }
 
-// point
+// point ------------------------------------------------------------
 
 func obToPoint(ob Value) POINT {
+	if ob.Equal(Zero) {
+		return POINT{}
+	}
 	return POINT{
 		x: getInt32(ob, "x"),
 		y: getInt32(ob, "y"),
@@ -257,7 +260,6 @@ func getPoint(ob Value, mem string) POINT {
 }
 
 func pointArg(ob Value, p unsafe.Pointer) unsafe.Pointer {
-	//TODO if p is nil, alloc it
 	pt := (*POINT)(p)
 	pt.x = getInt32(ob, "x")
 	pt.y = getInt32(ob, "y")

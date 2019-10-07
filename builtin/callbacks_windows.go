@@ -45,6 +45,11 @@ func (cb *callback) call4(a, b, c, d uintptr) uintptr {
 var callbacks [maxCb]callback
 
 func (cb *callback) callv(args ...Value) uintptr {
+	defer func () {
+		if e := recover(); e != nil {
+			fmt.Println("panic in callback", e)
+		}
+	}()
 	if !cb.active {
 		fmt.Println("CALLBACK TO INACTIVE!!!")
 	}
