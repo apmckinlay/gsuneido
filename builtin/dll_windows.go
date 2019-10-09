@@ -135,7 +135,7 @@ func strRet(buf []byte) Value {
 	return SuStr(string(buf[:bytes.IndexByte(buf, 0)]))
 }
 
-// bufToStr copies a nul terminated string from a heap buffer.
+// bufToStr copies a nul terminated string from an unsafe.Pointer.
 // If nul is not found, then the entire length is returned.
 func bufToStr(p unsafe.Pointer, n uintptr) Value {
 	i := uintptr(0)
@@ -265,6 +265,8 @@ func pointArg(ob Value, p unsafe.Pointer) unsafe.Pointer {
 	pt.y = getInt32(ob, "y")
 	return p
 }
+
+//-------------------------------------------------------------------
 
 func getHandle(ob Value, mem string) HANDLE {
 	return HANDLE(getInt(ob, mem))
