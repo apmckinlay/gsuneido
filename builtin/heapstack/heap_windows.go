@@ -21,14 +21,14 @@ import (
 	"github.com/apmckinlay/gsuneido/util/verify"
 )
 
-const debug_enabled = true
+const debugEnabled = true
 
 var GetCurrentThreadId func() uintptr // must be injected
 
 var UIthread uintptr
 
 func init() {
-	if debug_enabled {
+	if debugEnabled {
 		fmt.Println("heap debug enabled")
 	}
 }
@@ -40,7 +40,7 @@ var heap = [heapsize]byte{248, 249, 250, 251, 252, 253, 254, 255}
 var heapnext = align
 
 func Alloc(n uintptr) unsafe.Pointer {
-	if debug_enabled && GetCurrentThreadId() != UIthread {
+	if debugEnabled && GetCurrentThreadId() != UIthread {
 		panic("Alloc on non UI thread")
 	}
 	n = ((n - 1) | (align - 1)) + 1
@@ -52,7 +52,7 @@ func Alloc(n uintptr) unsafe.Pointer {
 	}
 	p := &heap[heapnext]
 	heapnext += n
-	if debug_enabled {
+	if debugEnabled {
 		heapnext += align
 		for i := align; i > 0; i-- {
 			heap[heapnext-i] = byte(256 - i)
@@ -73,7 +73,7 @@ func FreeTo(prevSize uintptr) {
 }
 
 func heapcheck(s string) {
-	if debug_enabled {
+	if debugEnabled {
 		for i := align; i > 0; i-- {
 			if heap[heapnext-i] != byte(256-i) {
 				panic("heap corrupt " + s)
