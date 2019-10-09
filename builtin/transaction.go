@@ -2,6 +2,7 @@ package builtin
 
 import (
 	. "github.com/apmckinlay/gsuneido/runtime"
+	"github.com/apmckinlay/gsuneido/util/regex"
 )
 
 var _ = builtin("Transaction(read=false, update=false, block=false)",
@@ -53,6 +54,7 @@ func init() {
 		"Query": methodRaw("(@args)",
 			func(th *Thread, as *ArgSpec, this Value, args []Value) Value {
 				query, args := extractQuery(th, queryBlockParams, as, args)
+				mustNotBeRequest(query)
 				q := this.(*SuTran).Query(query)
 				if args[1] == False {
 					return q
@@ -103,4 +105,12 @@ func tranQueryOne(th *Thread, st *SuTran, as *ArgSpec, args []Value, dir Dir) Va
 		return False
 	}
 	return SuRecordFromRow(row, hdr, st)
+}
+
+var requestRegex = regex.Compile(`(?i)\A(insert|delete|update)\>`)
+
+func mustNotBeRequest(query string) {
+	if requestRegex.Matches(query) {
+		panic("transaction.Query: use QueryDo for insert, delete, or update requests")
+	}
 }
