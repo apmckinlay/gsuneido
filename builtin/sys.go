@@ -65,10 +65,7 @@ var _ = builtin1("FileExists?(filename)",
 		if err == nil {
 			return True
 		}
-		if os.IsNotExist(err) {
-			return False
-		}
-		panic("FileExists: " + err.Error())
+		return False
 	})
 
 var _ = builtin1("DirExists?(filename)",
