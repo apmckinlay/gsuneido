@@ -3,6 +3,7 @@ package heapstack
 import "testing"
 
 func TestHeap(*testing.T) {
+	GetCurrentThreadId = func() uintptr { return 0 }
 	f1()
 }
 

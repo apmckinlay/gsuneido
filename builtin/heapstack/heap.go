@@ -17,12 +17,18 @@ package heapstack
 import (
 	"fmt"
 	"unsafe"
+
+	"github.com/apmckinlay/gsuneido/util/verify"
 )
 
-const debug = true
+const debug_enabled = true
+
+var GetCurrentThreadId func() uintptr // must be injected
+
+var UIthread uintptr
 
 func init() {
-	if debug {
+	if debug_enabled {
 		fmt.Println("heap debug enabled")
 	}
 }
@@ -34,6 +40,9 @@ var heap = [heapsize]byte{248, 249, 250, 251, 252, 253, 254, 255}
 var heapnext = align
 
 func Alloc(n uintptr) unsafe.Pointer {
+	if debug_enabled && GetCurrentThreadId() != UIthread {
+		panic("Alloc on non UI thread")
+	}
 	n = ((n - 1) | (align - 1)) + 1
 	heapcheck("alloc")
 	// zero out memory
@@ -43,7 +52,7 @@ func Alloc(n uintptr) unsafe.Pointer {
 	}
 	p := &heap[heapnext]
 	heapnext += n
-	if debug {
+	if debug_enabled {
 		heapnext += align
 		for i := align; i > 0; i-- {
 			heap[heapnext-i] = byte(256 - i)
@@ -58,12 +67,13 @@ func CurSize() uintptr {
 
 func FreeTo(prevSize uintptr) {
 	heapcheck("free1")
+	verify.That(prevSize <= heapnext)
 	heapnext = prevSize
 	heapcheck("free2")
 }
 
 func heapcheck(s string) {
-	if debug {
+	if debug_enabled {
 		for i := align; i > 0; i-- {
 			if heap[heapnext-i] != byte(256-i) {
 				panic("heap corrupt " + s)

@@ -35,6 +35,8 @@ var retChan = make(chan uintptr, 1)
 func Init() {
 	runtime.LockOSThread()
 	uiThreadId = GetCurrentThreadId()
+	heap.UIthread = uiThreadId // for debug
+	heap.GetCurrentThreadId = GetCurrentThreadId
 }
 
 const GA_ROOT = 2
