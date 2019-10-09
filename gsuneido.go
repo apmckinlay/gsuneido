@@ -14,6 +14,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"runtime/debug"
 
@@ -36,13 +37,22 @@ var dbmsLocal IDbms
 var mainThread *Thread
 
 func main() {
+	log.SetFlags(0)
 	builtin.Init()
 	suneido := new(SuObject)
 	suneido.SetConcurrent()
 	Global.Builtin("Suneido", suneido)
 	options.BuiltDate = builtDate
 	flag.BoolVar(&options.Client, "c", false, "run as a client")
+	flag.BoolVar(&options.Repl, "r", false, "run REPL (not message loop)")
 	flag.Parse()
+	if !options.Client {
+		options.Repl = true
+	}
+	Libload = libload // dependency injection
+	mainThread = NewThread()
+	builtin.UIThread = mainThread
+	defer mainThread.Close()
 	// dependency injection of GetDbms
 	if options.Client {
 		GetDbms = func() IDbms { return dbms.NewDbmsClient("127.0.0.1:3147") }
@@ -50,12 +60,14 @@ func main() {
 	} else {
 		dbmsLocal = dbms.NewDbmsLocal()
 		GetDbms = func() IDbms { return dbmsLocal }
+		eval("Suneido.Print = PrintStdout;;")
 	}
-	Libload = libload // dependency injection
-	mainThread = NewThread()
-	builtin.UIThread = mainThread
-	defer mainThread.Close()
-	repl()
+	if options.Repl {
+		repl()
+	} else {
+		eval("Init()")
+		builtin.Run()
+	}
 }
 
 func repl() {
@@ -67,12 +79,6 @@ func repl() {
 	builtin.Def()
 	builtin.Concat()
 
-	if options.Client {
-		eval("Init()")
-		// builtin.MessageLoop()
-	} //else {
-	eval("Suneido.Print = PrintStdout;;")
-	//}
 	prompt("Press Enter twice (i.e. blank line) to execute, q to quit")
 	r := bufio.NewReader(os.Stdin)
 	for {

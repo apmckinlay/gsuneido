@@ -4,3 +4,4 @@ package options
 
 var BuiltDate string
 var Client bool
+var Repl bool
