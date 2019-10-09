@@ -87,6 +87,9 @@ var _ = builtin("StructModify(type, address, block)",
 			panic("StructModify invalid type " + ErrType(args[0]))
 		}
 		p := unsafe.Pointer(uintptr(ToInt(args[1])))
+		if p == nil {
+			panic("StructModify: address cannot be zero")
+		}
 		ob := typ.structToOb(p)
 		t.Call(args[2], ob) // call the block, which modifies ob
 		typ.updateStruct(ob, p)
@@ -164,7 +167,11 @@ type NMHDR struct {
 
 var _ = builtin1("NMHDR(address)",
 	func(a Value) Value {
-		nmh := (*NMHDR)(unsafe.Pointer(uintptr(ToInt(a))))
+		adr := ToInt(a)
+		if adr == 0 {
+			return False
+		}
+		nmh := (*NMHDR)(unsafe.Pointer(uintptr(adr)))
 		return nmhdrToOb(nmh)
 	})
 
@@ -185,7 +192,11 @@ type NMTVDISPINFO struct {
 
 var _ = builtin1("NMTVDISPINFO(address)",
 	func(a Value) Value {
-		di := (*NMTVDISPINFO)(unsafe.Pointer(uintptr(ToInt(a))))
+		adr := ToInt(a)
+		if adr == 0 {
+			return False
+		}
+		di := (*NMTVDISPINFO)(unsafe.Pointer(uintptr(adr)))
 		ob := nmhdrToOb(&di.nmhdr)
 		ob.Put(nil, SuStr("nmhdr"), nmhdrToOb(&di.nmhdr))
 		tvi := tvitemToOb(&di.item)
@@ -244,9 +255,12 @@ func (*SuNMTVDISPINFO) updateStruct(ob Value, p unsafe.Pointer) {
 }
 
 func nmtvdispinfo(_ *Thread, args []Value) Value {
-	a := ToInt(args[0])
+	adr := ToInt(args[0])
+	if adr == 0 {
+		return False
+	}
 	var x *SuNMTVDISPINFO
-	return x.structToOb(unsafe.Pointer(uintptr(a)))
+	return x.structToOb(unsafe.Pointer(uintptr(adr)))
 }
 
 //-------------------------------------------------------------------
@@ -299,7 +313,11 @@ type NMHEADER struct {
 
 var _ = builtin1("NMHEADER(address)",
 	func(a Value) Value {
-		x := (*NMHEADER)(unsafe.Pointer(uintptr(ToInt(a))))
+		adr := ToInt(a)
+		if adr == 0 {
+			return False
+		}
+		x := (*NMHEADER)(unsafe.Pointer(uintptr(adr)))
 		ob := NewSuObject()
 		ob.Put(nil, SuStr("hdr"), nmhdrToOb(&x.hdr))
 		ob.Put(nil, SuStr("iItem"), IntVal(int(x.iItem)))
@@ -325,7 +343,11 @@ type NMTREEVIEW struct {
 
 var _ = builtin1("NM_TREEVIEW(address)",
 	func(a Value) Value {
-		x := (*NMTREEVIEW)(unsafe.Pointer(uintptr(ToInt(a))))
+		adr := ToInt(a)
+		if adr == 0 {
+			return False
+		}
+		x := (*NMTREEVIEW)(unsafe.Pointer(uintptr(adr)))
 		ob := NewSuObject()
 		ob.Put(nil, SuStr("hdr"), nmhdrToOb(&x.hdr))
 		ob.Put(nil, SuStr("action"), IntVal(int(x.action)))
@@ -345,7 +367,11 @@ type NMTVKEYDOWN struct {
 
 var _ = builtin1("NMTVKEYDOWN(address)",
 	func(a Value) Value {
-		x := (*NMTVKEYDOWN)(unsafe.Pointer(uintptr(ToInt(a))))
+		adr := ToInt(a)
+		if adr == 0 {
+			return False
+		}
+		x := (*NMTVKEYDOWN)(unsafe.Pointer(uintptr(adr)))
 		ob := NewSuObject()
 		ob.Put(nil, SuStr("hdr"), nmhdrToOb(&x.hdr))
 		ob.Put(nil, SuStr("wVKey"), IntVal(int(x.wVKey)))
@@ -376,6 +402,9 @@ func accel(_ *Thread, args []Value) Value {
 	arg := args[0]
 	if a, ok := arg.ToInt(); ok {
 		// address => ob
+		if a == 0 {
+			return False
+		}
 		ac := (*ACCEL)(unsafe.Pointer(uintptr(a)))
 		ob := NewSuObject()
 		ob.Put(nil, SuStr("fVirt"), IntVal(int(ac.fVirt)))
@@ -420,13 +449,21 @@ type SCNotification struct {
 
 var _ = builtin1("SCNotification(address)",
 	func(a Value) Value {
-		scn := (*SCNotification)(unsafe.Pointer(uintptr(ToInt(a))))
+		adr := ToInt(a)
+		if adr == 0 {
+			return False
+		}
+		scn := (*SCNotification)(unsafe.Pointer(uintptr(adr)))
 		return scnToOb(scn)
 	})
 
 var _ = builtin1("SCNotificationText(address)",
 	func(a Value) Value {
-		scn := (*SCNotification)(unsafe.Pointer(uintptr(ToInt(a))))
+		adr := ToInt(a)
+		if adr == 0 {
+			return False
+		}
+		scn := (*SCNotification)(unsafe.Pointer(uintptr(adr)))
 		ob := scnToOb(scn)
 		ob.Put(nil, SuStr("text"), bufRet(unsafe.Pointer(scn.text), 1024))
 		return ob
@@ -471,7 +508,11 @@ type DRAWITEMSTRUCT struct {
 
 var _ = builtin1("DRAWITEMSTRUCT(address)",
 	func(a Value) Value {
-		dis := (*DRAWITEMSTRUCT)(unsafe.Pointer(uintptr(ToInt(a))))
+		adr := ToInt(a)
+		if adr == 0 {
+			return False
+		}
+		dis := (*DRAWITEMSTRUCT)(unsafe.Pointer(uintptr(adr)))
 		ob := NewSuObject()
 		ob.Put(nil, SuStr("CtlType"), IntVal(int(dis.CtlType)))
 		ob.Put(nil, SuStr("CtlID"), IntVal(int(dis.CtlID)))
@@ -489,7 +530,11 @@ var _ = builtin1("DRAWITEMSTRUCT(address)",
 
 var _ = builtin1("MSG(address)",
 	func(a Value) Value {
-		msg := (*MSG)(unsafe.Pointer(uintptr(ToInt(a))))
+		adr := ToInt(a)
+		if adr == 0 {
+			return False
+		}
+		msg := (*MSG)(unsafe.Pointer(uintptr(adr)))
 		ob := NewSuObject()
 		ob.Put(nil, SuStr("hwnd"), IntVal(int(msg.hwnd)))
 		ob.Put(nil, SuStr("message"), IntVal(int(msg.message)))
@@ -499,6 +544,32 @@ var _ = builtin1("MSG(address)",
 		ob.Put(nil, SuStr("pt"), pointToOb(&msg.pt, nil))
 		return ob
 	})
+
+//-------------------------------------------------------------------
+
+var _ = builtin1("CWPRETSTRUCT(address)",
+	func(a Value) Value {
+		adr := ToInt(a)
+		if adr == 0 {
+			return False
+		}
+		x := (*CWPRETSTRUCT)(unsafe.Pointer(uintptr(adr)))
+		ob := NewSuObject()
+		ob.Put(nil, SuStr("lResult"), IntVal(int(x.lResult)))
+		ob.Put(nil, SuStr("lParam"), IntVal(int(x.lParam)))
+		ob.Put(nil, SuStr("wParam"), IntVal(int(x.wParam)))
+		ob.Put(nil, SuStr("message"), IntVal(int(x.message)))
+		ob.Put(nil, SuStr("hwnd"), IntVal(int(x.hwnd)))
+		return ob
+	})
+
+type CWPRETSTRUCT struct {
+	lResult uintptr
+	lParam  uintptr
+	wParam  uintptr
+	message int32
+	hwnd    HANDLE
+}
 
 //-------------------------------------------------------------------
 

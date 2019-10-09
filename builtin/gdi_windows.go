@@ -220,6 +220,7 @@ var _ = builtin4("GetTextExtentPoint32(hdc, text, len, p)",
 var getTextFace = gdi32.MustFindProc("GetTextFaceA").Addr()
 var _ = builtin1("GetTextFace(hdc)",
 	func(a Value) Value {
+		defer heap.FreeTo(heap.CurSize())
 		const bufsize = 512
 		p := heap.Alloc(bufsize)
 		n, _, _ := syscall.Syscall(getTextFace, 3,

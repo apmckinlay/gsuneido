@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	. "github.com/apmckinlay/gsuneido/runtime"
+	"github.com/apmckinlay/gsuneido/runtime/types"
 	"golang.org/x/sys/windows"
 )
 
@@ -64,6 +65,9 @@ func (cb *callback) callv(args ...Value) uintptr {
 }
 
 func NewCallback(fn Value, nargs byte) uintptr {
+	if fn.Type() == types.Number {
+		return uintptr(ToInt(fn))
+	}
 	for j := range callbacks {
 		i := j
 		cb := &callbacks[i]

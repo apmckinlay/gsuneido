@@ -55,6 +55,7 @@ var _ = builtin("DrawThemeText(hTheme, hdc, iPartId, iStateId, pszText,"+
 var setWindowTheme = uxtheme.MustFindProc("SetWindowTheme").Addr()
 var _ = builtin3("SetWindowTheme(hwnd, appname, idlist)",
 	func(a, b, c Value) Value {
+		defer heap.FreeTo(heap.CurSize())
 		rtn, _, _ := syscall.Syscall(setWindowTheme, 3,
 			intArg(a),
 			uintptr(stringArg(b)),
@@ -108,6 +109,7 @@ var _ = builtin3("IsThemeBackgroundPartiallyTransparent(hTheme, iPartId, iStateI
 var openThemeData = uxtheme.MustFindProc("OpenThemeData").Addr()
 var _ = builtin2("OpenThemeData(hwnd, pszClassList)",
 	func(a, b Value) Value {
+		defer heap.FreeTo(heap.CurSize())
 		rtn, _, _ := syscall.Syscall(openThemeData, 2,
 			intArg(a),
 			uintptr(stringArg(b)),

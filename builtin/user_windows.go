@@ -1168,7 +1168,7 @@ var _ = builtin4("SendMessageSBPART(hwnd, msg, wParam, sbpart)",
 		np := ToInt(c)
 		n := uintptr(np) * int32Size
 		p := heap.Alloc(n)
-		ob := ToContainer(d)
+		ob := ToContainer(d.Get(nil, SuStr("parts")))
 		for i := 0; i < np && i < ob.ListSize(); i++ {
 			*(*int32)(unsafe.Pointer(uintptr(p) + int32Size*uintptr(i))) =
 				int32(ToInt(ob.ListGet(i)))
@@ -1181,7 +1181,7 @@ var _ = builtin4("SendMessageSBPART(hwnd, msg, wParam, sbpart)",
 			0, 0)
 		for i := 0; i < np; i++ {
 			x := *(*int32)(unsafe.Pointer(uintptr(p) + int32Size*uintptr(i)))
-			d.Put(nil, SuInt(i), IntVal(int(x)))
+			ob.Put(nil, SuInt(i), IntVal(int(x)))
 		}
 		return intRet(rtn)
 	})
@@ -1213,13 +1213,11 @@ var _ = builtin4("SendMessageHditem(hwnd, msg, wParam, lParam)",
 		n := getInt32(d, "cchTextMax")
 		var pszText *byte
 		var buf unsafe.Pointer
-		if n == 0 {
-			pszText = getStr(d, "pszText")
-			if pszText != nil {
-				s := ToStr(d.Get(nil, SuStr("pszText")))
-				n = int32(len(s))
-			}
-		} else {
+		pszText = getStr(d, "pszText")
+		if pszText != nil {
+			s := ToStr(d.Get(nil, SuStr("pszText")))
+			n = int32(len(s))
+		} else if n > 0 {
 			buf = heap.Alloc(uintptr(n))
 			pszText = (*byte)(buf)
 		}

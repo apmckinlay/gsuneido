@@ -52,6 +52,7 @@ var _ = builtin2("DragQueryFile(hDrop, iFile)",
 			0,
 			0,
 			0, 0)
+		defer heap.FreeTo(heap.CurSize())
 		buf := heap.Alloc(n)
 		syscall.Syscall6(dragQueryFile, 4,
 			intArg(a),
