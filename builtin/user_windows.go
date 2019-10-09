@@ -1389,7 +1389,7 @@ var _ = builtin1("SetFocus(hwnd)",
 
 var postThreadMessage = user32.MustFindProc("PostThreadMessageA").Addr()
 
-var timersDisabled = true
+var timersDisabled = false
 
 func init() {
 	if timersDisabled {
@@ -1401,17 +1401,17 @@ func init() {
 var setTimer = user32.MustFindProc("SetTimer").Addr()
 var _ = builtin4("SetTimer(hwnd, id, ms, f)",
 	func(a, b, c, d Value) Value {
-		// tid, _, _ := syscall.Syscall(getCurrentThreadId, 0)
-		// if tid != uiThreadId {
-		// 	d.SetConcurrent() // since callback will be from different thread
-		// 	r, _, _ := syscall.Syscall6(postThreadMessage, 4,
-		// 		uiThreadId, WM_USER, intArg(c), NewCallback(d, 4))
-		// 	if r == 0 {
-		// 		return Zero // SetTimer failure return value
-		// 	}
-		// 	rtn := <-retChan
-		// 	return intRet(rtn)
-		// }
+		tid, _, _ := syscall.Syscall(getCurrentThreadId, 0, 0, 0, 0)
+		if tid != uiThreadId {
+			d.SetConcurrent() // since callback will be from different thread
+			r, _, _ := syscall.Syscall6(postThreadMessage, 4,
+				uiThreadId, WM_USER, intArg(c), NewCallback(d, 4), 0, 0)
+			if r == 0 {
+				return Zero // SetTimer failure return value
+			}
+			rtn := <-retChan
+			return intRet(rtn)
+		}
 		if timersDisabled {
 			return Zero
 		}
