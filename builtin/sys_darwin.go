@@ -10,6 +10,8 @@ import (
 
 func Init() {
 }
+func Run() {
+}
 
 var _ = builtin0("SystemMemory()", func() Value {
 	s, err := syscall.Sysctl("hw.memsize")

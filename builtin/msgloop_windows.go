@@ -1,6 +1,7 @@
 package builtin
 
 import (
+	"log"
 	"runtime"
 	"syscall"
 	"unsafe"
@@ -39,14 +40,25 @@ func Init() {
 	heap.GetCurrentThreadId = GetCurrentThreadId
 }
 
+func Run() {
+	MessageLoop(0)
+}
+
 const GA_ROOT = 2
+const WM_NULL = 0
 const WM_QUIT = 0x12
 const GMEM_FIXED = 0
+const GWL_USERDATA = -21
+const END_MSG_LOOP = 0xebb
 
 func MessageLoop(hdlg int) {
 	defer heap.FreeTo(heap.CurSize())
 	msg := (*MSG)(heap.Alloc(nMSG))
+	heapSize := heap.CurSize()
 	for {
+		if heap.CurSize() != heapSize {
+			log.Fatalln("msgloop: heap", heapSize, "=>", heap.CurSize())
+		}
 		if -1 == GetMessage(msg, 0, 0, 0) {
 			continue // ignore error ???
 		}
@@ -57,17 +69,24 @@ func MessageLoop(hdlg int) {
 			}
 			return //TODO shutdown(msg.wParam)
 		}
+		if hdlg != 0 && msg.hwnd == uintptr(hdlg) && msg.message == WM_NULL &&
+			msg.wParam == END_MSG_LOOP && msg.lParam == END_MSG_LOOP {
+			return
+		}
 		if msg.message == WM_USER && msg.hwnd == 0 {
 			// from SetTimer in another thread
 			rtn, _, _ := syscall.Syscall6(setTimer, 4,
 				0, 0, msg.wParam, msg.lParam, 0, 0)
 			retChan <- rtn
+
 			continue
 		}
 		if window := GetAncestor(msg.hwnd, GA_ROOT); window != 0 {
-			// if (HACCEL haccel = (HACCEL) GetWindowLong(window, GWL_USERDATA))
-			// 	if (TranslateAccelerator(window, haccel, &msg))
-			// 		continue;
+			if haccel := GetWindowLong(window, GWL_USERDATA); haccel != 0 {
+				if TranslateAccelerator(window, haccel, msg) {
+					continue
+				}
+			}
 			if IsDialogMessage(window, msg) {
 				continue
 			}
@@ -135,9 +154,17 @@ func PostQuitMessage(exitCode uintptr) uintptr {
 	return ret
 }
 
-//-------------------------------------------------------------------
+func GetWindowLong(hwnd HANDLE, offset int) uintptr {
+	ret, _, _ := syscall.Syscall(getWindowLong, 2, hwnd, uintptr(offset), 0)
+	return ret
+}
 
-// since we don't have the functions it calls
-var _ = builtin0("WorkSpaceStatus()", func() Value {
-	return EmptyStr
-})
+var translateAccelerator = user32.MustFindProc("TranslateAcceleratorA").Addr()
+
+func TranslateAccelerator(hwnd HANDLE, haccel HANDLE, msg *MSG) bool {
+	ret, _, _ := syscall.Syscall(translateAccelerator, 3,
+		hwnd,
+		haccel,
+		uintptr(unsafe.Pointer(msg)))
+	return ret != 0
+}
