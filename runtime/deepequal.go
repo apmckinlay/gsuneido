@@ -1,8 +1,6 @@
 package runtime
 
 import (
-	"math"
-
 	"github.com/apmckinlay/gsuneido/runtime/types"
 )
 
@@ -13,8 +11,8 @@ type pair struct {
 	y Value
 }
 
-const initpairs = 12           // handles almost all cases
-const maxpairs = math.MaxUint8 // to match inProgressStack
+const initpairs = 12  // handles almost all cases
+const maxpairs = 1024 // must be less than inProgressStack type max
 
 func newpairs() pairs {
 	return make([]pair, 0, initpairs)
@@ -22,7 +20,7 @@ func newpairs() pairs {
 
 func (ps *pairs) push(x Value, y Value) {
 	if len(*ps) > maxpairs {
-		panic("object equals nesting overflow")
+		panic("object equals overflow")
 	}
 	*ps = append(*ps, pair{x, y})
 }
@@ -52,10 +50,10 @@ func (ps pairs) contains(x Value, y Value) bool {
 
 //-------------------------------------------------------------------
 
-type inProgressStack []uint8
+type inProgressStack []uint16
 
 func (ip *inProgressStack) push(i int) {
-	*ip = append(*ip, uint8(i))
+	*ip = append(*ip, uint16(i))
 }
 
 func (ip *inProgressStack) pop() {
