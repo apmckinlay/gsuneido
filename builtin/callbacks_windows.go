@@ -2,7 +2,9 @@ package builtin
 
 import (
 	"fmt"
+	"log"
 
+	heap "github.com/apmckinlay/gsuneido/builtin/heapstack"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/runtime/types"
 	"golang.org/x/sys/windows"
@@ -46,9 +48,14 @@ func (cb *callback) call4(a, b, c, d uintptr) uintptr {
 var callbacks [maxCb]callback
 
 func (cb *callback) callv(args ...Value) uintptr {
-	defer func () {
+	heapSize := heap.CurSize()
+	defer func() {
 		if e := recover(); e != nil {
-			fmt.Println("panic in callback", e)
+			handler(e)
+		}
+		if heap.CurSize() != heapSize {
+			log.Fatalln("callback: heap", heapSize, "=>", heap.CurSize(),
+				"in", cb.fn, args)
 		}
 	}()
 	if !cb.active {
@@ -62,6 +69,25 @@ func (cb *callback) callv(args ...Value) uintptr {
 		return 1
 	}
 	return uintptr(ToInt(x))
+}
+
+func handler(e interface{}) {
+	defer func() {
+		if e := recover(); e != nil {
+			log.Fatalln("error in Handler:", e)
+		}
+	}()
+	// debug.PrintStack()
+	// UIThread.PrintStack()
+	fmt.Println("panic in callback:", e, "<<<<<<<<<<<<<<<<")
+
+	se,ok := e.(*SuExcept)
+	if !ok {
+		s := fmt.Sprint(e) // TODO avoid fmt
+		se = NewSuExcept(UIThread, SuStr(s))
+	}
+	handler := Global.GetName(UIThread, "Handler")
+	UIThread.Call(handler, se, Zero, se.Callstack)
 }
 
 func NewCallback(fn Value, nargs byte) uintptr {
@@ -95,7 +121,17 @@ func NewCallback(fn Value, nargs byte) uintptr {
 			return cb.gcb
 		}
 	}
-	panic("too many callbacks")
+	tooManyCallbacks()
+	return 0 // unreachable, just to keep compiler happy
+}
+
+func tooManyCallbacks() {
+	for i,cb := range callbacks {
+		if cb.active {
+		log.Println(i, cb.fn)
+		}
+	}
+	log.Fatalln("too many callbacks")
 }
 
 const clearCallbackDisabled = false
