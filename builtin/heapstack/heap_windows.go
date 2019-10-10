@@ -16,6 +16,7 @@ package heapstack
 
 import (
 	"fmt"
+	"log"
 	"unsafe"
 
 	"github.com/apmckinlay/gsuneido/util/verify"
@@ -29,7 +30,7 @@ var UIthread uintptr
 
 func init() {
 	if debugEnabled {
-		fmt.Println("heap debug enabled")
+		fmt.Println("heap debugging enabled")
 	}
 }
 
@@ -41,7 +42,7 @@ var heapnext = align
 
 func Alloc(n uintptr) unsafe.Pointer {
 	if debugEnabled && GetCurrentThreadId() != UIthread {
-		panic("Alloc on non UI thread")
+		log.Fatalln("Alloc on non UI thread")
 	}
 	n = ((n - 1) | (align - 1)) + 1
 	heapcheck("alloc")
@@ -76,7 +77,7 @@ func heapcheck(s string) {
 	if debugEnabled {
 		for i := align; i > 0; i-- {
 			if heap[heapnext-i] != byte(256-i) {
-				panic("heap corrupt " + s)
+				log.Fatalln("heap corrupt " + s)
 			}
 		}
 	}
