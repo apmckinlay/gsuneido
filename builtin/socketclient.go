@@ -129,17 +129,17 @@ var suSocketClientMethods = Methods{
 		}
 		return nil
 	}),
-	"WriteLine": method1("(string)", func(this, arg Value) Value {
+	"Writeline": method1("(string)", func(this, arg Value) Value {
 		ssc := this.(*suSocketClient)
 		s := ToStr(arg)
 		ssc.conn.SetWriteDeadline(time.Now().Add(ssc.timeout))
 		_, e := io.WriteString(ssc.conn, s)
 		if e != nil {
-			panic("socketClient.WriteLine: " + e.Error())
+			panic("socketClient.Writeline: " + e.Error())
 		}
 		_, e = ssc.conn.Write(newline)
 		if e != nil {
-			panic("socketClient.WriteLine: " + e.Error())
+			panic("socketClient.Writeline: " + e.Error())
 		}
 		return nil
 	}),
