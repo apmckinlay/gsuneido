@@ -2253,13 +2253,16 @@ var _ = builtin6("DrawTextEx(hdc, lpsz, cb, lprc, uFormat, params)",
 	func(a, b, c, d, e, f Value) Value {
 		defer heap.FreeTo(heap.CurSize())
 		r := heap.Alloc(nRECT)
-		p := heap.Alloc(nDRAWTEXTPARAMS)
-		*(*DRAWTEXTPARAMS)(p) = DRAWTEXTPARAMS{
-			cbSize:        uint32(nDRAWTEXTPARAMS),
-			iTabLength:    getInt32(f, "iTabLength"),
-			iLeftMargin:   getInt32(f, "iLeftMargin"),
-			iRightMargin:  getInt32(f, "iRightMargin"),
-			uiLengthDrawn: getInt32(f, "uiLengthDrawn"),
+		p := unsafe.Pointer(nil)
+		if !f.Equal(Zero) {
+			p = heap.Alloc(nDRAWTEXTPARAMS)
+			*(*DRAWTEXTPARAMS)(p) = DRAWTEXTPARAMS{
+				cbSize:        uint32(nDRAWTEXTPARAMS),
+				iTabLength:    getInt32(f, "iTabLength"),
+				iLeftMargin:   getInt32(f, "iLeftMargin"),
+				iRightMargin:  getInt32(f, "iRightMargin"),
+				uiLengthDrawn: getInt32(f, "uiLengthDrawn"),
+			}
 		}
 		rtn, _, _ := syscall.Syscall6(drawTextEx, 6,
 			intArg(a),
@@ -2268,6 +2271,7 @@ var _ = builtin6("DrawTextEx(hdc, lpsz, cb, lprc, uFormat, params)",
 			uintptr(rectArg(d, r)),
 			intArg(e),
 			uintptr(p))
+		urectToOb(r, d)
 		return intRet(rtn)
 	})
 
