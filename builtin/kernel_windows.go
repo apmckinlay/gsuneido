@@ -147,6 +147,15 @@ var _ = builtin1("GlobalLock(hMem)",
 		return intRet(rtn)
 	})
 
+var _ = builtin1("GlobalLockString(hMem)",
+	func(a Value) Value {
+		rtn, _, _ := syscall.Syscall(globalLock, 1,
+			intArg(a),
+			0, 0)
+		const maxLen = 64 * 1024 // ???
+		return bufToStr(unsafe.Pointer(rtn), maxLen)
+	})
+
 // dll Kernel32:GlobalUnlock(pointer handle) bool
 var globalUnlock = kernel32.MustFindProc("GlobalUnlock").Addr()
 var _ = builtin1("GlobalUnlock(hMem)",
