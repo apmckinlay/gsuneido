@@ -81,7 +81,7 @@ func handler(e interface{}) {
 	// UIThread.PrintStack()
 	fmt.Println("panic in callback:", e, "<<<<<<<<<<<<<<<<")
 
-	se,ok := e.(*SuExcept)
+	se, ok := e.(*SuExcept)
 	if !ok {
 		s := fmt.Sprint(e) // TODO avoid fmt
 		se = NewSuExcept(UIThread, SuStr(s))
@@ -126,9 +126,9 @@ func NewCallback(fn Value, nargs byte) uintptr {
 }
 
 func tooManyCallbacks() {
-	for i,cb := range callbacks {
+	for i, cb := range callbacks {
 		if cb.active {
-		log.Println(i, cb.fn)
+			log.Println(i, cb.fn)
 		}
 	}
 	log.Fatalln("too many callbacks")
@@ -155,6 +155,16 @@ func ClearCallback(fn Value) bool {
 	}
 	return false // not found
 }
+
+var _ = builtin0("Callbacks()", func() Value {
+	ob := NewSuObject()
+	for _, cb := range callbacks {
+		if cb.active {
+			ob.Add(cb.fn)
+		}
+	}
+	return ob
+})
 
 var _ = builtin1("ClearCallback(fn)", func(fn Value) Value {
 	return SuBool(ClearCallback(fn))
