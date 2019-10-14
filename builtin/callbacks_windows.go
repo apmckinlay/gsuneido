@@ -22,6 +22,8 @@ type callback struct {
 	gcb    uintptr
 }
 
+var callbacks [maxCb]callback
+
 func (cb *callback) call1(a uintptr) uintptr {
 	return cb.callv(
 		IntVal(int(a)))
@@ -45,8 +47,6 @@ func (cb *callback) call4(a, b, c, d uintptr) uintptr {
 		IntVal(int(d)))
 }
 
-var callbacks [maxCb]callback
-
 func (cb *callback) callv(args ...Value) uintptr {
 	heapSize := heap.CurSize()
 	defer func() {
@@ -59,7 +59,7 @@ func (cb *callback) callv(args ...Value) uintptr {
 		}
 	}()
 	if !cb.active {
-		fmt.Println("CALLBACK TO INACTIVE!!!")
+		log.Println("CALLBACK TO INACTIVE!!!")
 	}
 	x := UIThread.Call(cb.fn, args...)
 	if x == nil || x == False {
@@ -79,7 +79,7 @@ func handler(e interface{}) {
 	}()
 	// debug.PrintStack()
 	// UIThread.PrintStack()
-	fmt.Println("panic in callback:", e, "<<<<<<<<<<<<<<<<")
+	log.Println("panic in callback:", e, "<<<<<<<<<<<<<<<<")
 
 	se, ok := e.(*SuExcept)
 	if !ok {
@@ -94,35 +94,42 @@ func NewCallback(fn Value, nargs byte) uintptr {
 	if fn.Type() == types.Number {
 		return uintptr(ToInt(fn))
 	}
-	for j := range callbacks {
-		i := j
+	j := -1
+	for i := range callbacks {
 		cb := &callbacks[i]
-		if !cb.active && (cb.gcb == 0 || cb.nargs == nargs) {
-			if cb.gcb == 0 {
-				// create a reusable callback for callbacks[i]
-				switch nargs {
-				case 1:
-					cb.gcb = windows.NewCallback(cb.call1)
-				case 2:
-					cb.gcb = windows.NewCallback(cb.call2)
-				case 3:
-					cb.gcb = windows.NewCallback(cb.call3)
-				case 4:
-					cb.gcb = windows.NewCallback(cb.call4)
-				default:
-					panic("callback with unsupported number of arguments")
-				}
-			} else {
-				fmt.Println("--- reuse callback", i)
+		if j == -1 { // haven't found one yet
+			if cb.gcb == 0 || // unused
+				(!cb.active && cb.nargs == nargs) { // reuse
+				j = i
 			}
-			cb.fn = fn
-			cb.nargs = nargs
-			cb.active = true
-			return cb.gcb
+		}
+		if cb.active && cb.fn == fn {
+			panic("duplcate callback")
 		}
 	}
-	tooManyCallbacks()
-	return 0 // unreachable, just to keep compiler happy
+	if j == -1 {
+		tooManyCallbacks()
+	}
+	cb := &callbacks[j]
+	if cb.gcb == 0 {
+		// create a reusable callback for callbacks[i]
+		switch nargs {
+		case 1:
+			cb.gcb = windows.NewCallback(cb.call1)
+		case 2:
+			cb.gcb = windows.NewCallback(cb.call2)
+		case 3:
+			cb.gcb = windows.NewCallback(cb.call3)
+		case 4:
+			cb.gcb = windows.NewCallback(cb.call4)
+		default:
+			panic("callback with unsupported number of arguments")
+		}
+	}
+	cb.fn = fn
+	cb.nargs = nargs
+	cb.active = true
+	return cb.gcb
 }
 
 func tooManyCallbacks() {
@@ -143,8 +150,12 @@ func init() {
 }
 
 func ClearCallback(fn Value) bool {
-	for _, cb := range callbacks {
-		if cb.fn == fn {
+	for i := range callbacks {
+		cb := &callbacks[i]
+		if cb.gcb == 0 {
+			break
+		}
+		if cb.active && cb.fn == fn {
 			if !clearCallbackDisabled {
 				cb.active = false
 			}
@@ -153,6 +164,7 @@ func ClearCallback(fn Value) bool {
 			return true
 		}
 	}
+	log.Println("NOT FOUND")
 	return false // not found
 }
 
