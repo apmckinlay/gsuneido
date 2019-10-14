@@ -79,6 +79,7 @@ func repl() {
 	builtin.Def()
 	builtin.Concat()
 
+	prompt(builtin.Built())
 	prompt("Press Enter twice (i.e. blank line) to execute, q to quit")
 	r := bufio.NewReader(os.Stdin)
 	for {
