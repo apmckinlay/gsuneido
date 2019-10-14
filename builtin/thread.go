@@ -8,13 +8,13 @@ import (
 )
 
 type SuThreadGlobal struct {
-	SuBuiltin1
+	SuBuiltin
 }
 
 func init() {
 	name, ps := paramSplit("Thread(block)")
 	Global.Builtin(name, &SuThreadGlobal{
-		SuBuiltin1{threadCallClass, BuiltinParams{ParamSpec: *ps}}})
+		SuBuiltin{threadCallClass, BuiltinParams{ParamSpec: *ps}}})
 }
 
 var threads = map[int32]*Thread{}
@@ -27,12 +27,14 @@ func init() {
 	}
 }
 
-func threadCallClass(arg Value) Value {
+func threadCallClass(t *Thread, args []Value) Value {
 	if threadsDisabled {
 		return nil
 	}
-	arg.SetConcurrent()
+	fn := args[0]
+	fn.SetConcurrent()
 	t2 := NewThread()
+	t2.Token = t.Dbms().Token()
 	threads[t2.Num] = t2 //TODO lock
 	go func() {
 		defer func() {
@@ -43,7 +45,7 @@ func threadCallClass(arg Value) Value {
 			t2.Close()
 			delete(threads, t2.Num) //TODO lock
 		}()
-		t2.Call(arg)
+		t2.Call(fn)
 	}()
 	return nil
 }
@@ -75,7 +77,7 @@ func (d *SuThreadGlobal) Lookup(t *Thread, method string) Callable {
 	if f, ok := threadMethods[method]; ok {
 		return f
 	}
-	return d.SuBuiltin1.Lookup(t, method) // for Params
+	return d.Lookup(t, method) // for Params
 }
 
 func (d *SuThreadGlobal) String() string {
