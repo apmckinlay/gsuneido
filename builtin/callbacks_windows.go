@@ -97,11 +97,12 @@ func NewCallback(fn Value, nargs byte) uintptr {
 	j := -1
 	for i := range callbacks {
 		cb := &callbacks[i]
-		if j == -1 { // haven't found one yet
-			if cb.gcb == 0 || // unused
-				(!cb.active && cb.nargs == nargs) { // reuse
-				j = i
-			}
+		if cb.gcb == 0 { // unused
+			j = i
+			break
+		}
+		if j == -1 && (!cb.active && cb.nargs == nargs) { // reuse
+			j = i
 		}
 		if cb.active && cb.fn == fn {
 			panic("duplcate callback")
