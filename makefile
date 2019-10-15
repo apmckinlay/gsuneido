@@ -2,7 +2,7 @@
 BUILT=$(shell date "+%b %e %Y %X")
 
 build:
-	@go build -v -trimpath -ldflags "-X 'main.builtDate=${BUILT}'"
+	@go build -v -ldflags "-X 'main.builtDate=${BUILT}'"
 
 client: build
 	@./gsuneido -c t@../tok
@@ -13,4 +13,5 @@ gsuneido_windows.syso : res/suneido.rc res/suneido.manifest
 
 .PHONY : build client
 
+# -trimpath
 # -ldflags="-H windowsgui"
