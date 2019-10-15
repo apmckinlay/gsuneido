@@ -741,7 +741,7 @@ var _ = builtin2("GetMenuItemInfoText(hMenu, uItem)",
 			intArg(a),
 			intArg(b),
 			0,
-			uintptr(buf),
+			uintptr(p),
 			0, 0)
 		return bufRet(buf, n-1) // -1 to omit nul terminator
 	})
@@ -938,7 +938,7 @@ var _ = builtin4("SendMessageTextIn(hwnd, msg, wParam, text)",
 var _ = builtin4("SendMessageTextOut(hwnd, msg, wParam = 0, bufsize = 1024)",
 	func(a, b, c, d Value) Value {
 		defer heap.FreeTo(heap.CurSize())
-		n := uintptr(ToInt(d))
+		n := uintptr(ToInt(d) + 1)
 		p := heap.Alloc(n)
 		rtn, _, _ := syscall.Syscall6(sendMessage, 4,
 			intArg(a),
@@ -2249,31 +2249,57 @@ var _ = builtin2("DrawFocusRect(hwnd, rect)",
 // dll long User32:DrawTextEx(pointer hdc, [in] string lpsz, long cb,
 // RECT* lprc, long uFormat, DRAWTEXTPARAMS* params)
 var drawTextEx = user32.MustFindProc("DrawTextExA").Addr()
+
 var _ = builtin6("DrawTextEx(hdc, lpsz, cb, lprc, uFormat, params)",
 	func(a, b, c, d, e, f Value) Value {
 		defer heap.FreeTo(heap.CurSize())
 		r := heap.Alloc(nRECT)
-		p := unsafe.Pointer(nil)
-		if !f.Equal(Zero) {
-			p = heap.Alloc(nDRAWTEXTPARAMS)
-			*(*DRAWTEXTPARAMS)(p) = DRAWTEXTPARAMS{
-				cbSize:        uint32(nDRAWTEXTPARAMS),
-				iTabLength:    getInt32(f, "iTabLength"),
-				iLeftMargin:   getInt32(f, "iLeftMargin"),
-				iRightMargin:  getInt32(f, "iRightMargin"),
-				uiLengthDrawn: getInt32(f, "uiLengthDrawn"),
-			}
-		}
 		rtn, _, _ := syscall.Syscall6(drawTextEx, 6,
 			intArg(a),
 			uintptr(stringArg(b)),
 			intArg(c),
 			uintptr(rectArg(d, r)),
 			intArg(e),
-			uintptr(p))
+			uintptr(drawTextParams(f)))
 		urectToOb(r, d)
 		return intRet(rtn)
 	})
+
+var _ = builtin5("DrawTextExOut(hdc, text, rect, flags, params)",
+	func(a, b, c, d, e Value) Value {
+		defer heap.FreeTo(heap.CurSize())
+		text := ToStr(b)
+		bufsize := len(text) + 8
+		buf := strToBuf(text, bufsize)
+		r := heap.Alloc(nRECT)
+		rtn, _, _ := syscall.Syscall6(drawTextEx, 6,
+			intArg(a),
+			uintptr(buf),
+			uintptrMinusOne,
+			uintptr(rectArg(c, r)),
+			intArg(d),
+			uintptr(drawTextParams(e)))
+		urectToOb(r, c)
+		ob := NewSuObject()
+		ob.Put(nil, SuStr("text"), bufToStr(buf, uintptr(bufsize)))
+		ob.Put(nil, SuStr("result"), intRet(rtn))
+		return ob
+	})
+
+func drawTextParams(x Value) unsafe.Pointer {
+	p := unsafe.Pointer(nil)
+	if !x.Equal(Zero) {
+		p = heap.Alloc(nDRAWTEXTPARAMS)
+		*(*DRAWTEXTPARAMS)(p) = DRAWTEXTPARAMS{
+			cbSize:        uint32(nDRAWTEXTPARAMS),
+			iTabLength:    getInt32(x, "iTabLength"),
+			iLeftMargin:   getInt32(x, "iLeftMargin"),
+			iRightMargin:  getInt32(x, "iRightMargin"),
+			uiLengthDrawn: getInt32(x, "uiLengthDrawn"),
+		}
+	}
+	return p
+}
 
 type DRAWTEXTPARAMS struct {
 	cbSize        uint32

@@ -25,7 +25,7 @@ func WTSFreeMemory(adr uintptr) {
 var wtsQuerySessionInformation = wtsapi32.MustFindProc("WTSQuerySessionInformationA").Addr()
 
 const WTS_CURRENT_SERVER_HANDLE = 0
-const WTS_CURRENT_SESSION = ^uintptr(0) // -1
+const WTS_CURRENT_SESSION = uintptrMinusOne
 const WTS_ClientProtocolType = 16
 const WTS_SessionId = 4
 
