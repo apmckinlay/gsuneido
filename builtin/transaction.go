@@ -61,7 +61,9 @@ func init() {
 				}
 				// block form
 				defer func() {
-					q.Close()
+					if !this.(*SuTran).Ended() {
+						q.Close()
+					}
 				}()
 				return th.Call(args[1], q)
 			}),
