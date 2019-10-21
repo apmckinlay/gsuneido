@@ -121,7 +121,7 @@ var suSocketClientMethods = Methods{
 	}),
 	"Write": method1("(string)", func(this, arg Value) Value {
 		ssc := this.(*suSocketClient)
-		s := ToStr(arg)
+		s := AsStr(arg)
 		ssc.conn.SetWriteDeadline(time.Now().Add(ssc.timeout))
 		_, e := io.WriteString(ssc.conn, s)
 		if e != nil {
@@ -131,7 +131,7 @@ var suSocketClientMethods = Methods{
 	}),
 	"Writeline": method1("(string)", func(this, arg Value) Value {
 		ssc := this.(*suSocketClient)
-		s := ToStr(arg)
+		s := AsStr(arg)
 		ssc.conn.SetWriteDeadline(time.Now().Add(ssc.timeout))
 		_, e := io.WriteString(ssc.conn, s)
 		if e != nil {
