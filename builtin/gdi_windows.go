@@ -1,9 +1,9 @@
 package builtin
 
 import (
-	"syscall"
 	"unsafe"
 
+	"github.com/apmckinlay/gsuneido/builtin/goc"
 	heap "github.com/apmckinlay/gsuneido/builtin/heapstack"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/verify"
@@ -82,9 +82,8 @@ var _ = builtin1("CreateFontIndirect(logfont)",
 			lfPitchAndFamily: byte(getInt(a, "lfPitchAndFamily")),
 		}
 		copyStr(f.lfFaceName[:], a, "lfFaceName")
-		rtn, _, _ := syscall.Syscall(createFontIndirect, 1,
-			uintptr(p),
-			0, 0)
+		rtn := goc.Syscall1(createFontIndirect,
+			uintptr(p))
 		return intRet(rtn)
 	})
 
@@ -94,10 +93,9 @@ var _ = builtin2("GetTextMetrics(hdc, tm)",
 	func(a, b Value) Value {
 		defer heap.FreeTo(heap.CurSize())
 		p := heap.Alloc(nTEXTMETRIC)
-		rtn, _, _ := syscall.Syscall(getTextMetrics, 2,
+		rtn := goc.Syscall2(getTextMetrics,
 			intArg(a),
-			uintptr(p),
-			0)
+			uintptr(p))
 		tm := (*TEXTMETRIC)(p)
 		b.Put(nil, SuStr("Height"), IntVal(int(tm.Height)))
 		b.Put(nil, SuStr("Ascent"), IntVal(int(tm.Ascent)))
@@ -124,19 +122,17 @@ var _ = builtin2("GetTextMetrics(hdc, tm)",
 var getStockObject = gdi32.MustFindProc("GetStockObject").Addr()
 var _ = builtin1("GetStockObject(i)",
 	func(a Value) Value {
-		rtn, _, _ := syscall.Syscall(getStockObject, 1,
-			intArg(a),
-			0, 0)
+		rtn := goc.Syscall1(getStockObject,
+			intArg(a))
 		return intRet(rtn)
 	})
 
 var getDeviceCaps = gdi32.MustFindProc("GetDeviceCaps").Addr()
 var _ = builtin2("GetDeviceCaps(hdc, nIndex)",
 	func(a, b Value) Value {
-		rtn, _, _ := syscall.Syscall(getDeviceCaps, 2,
+		rtn := goc.Syscall2(getDeviceCaps,
 			intArg(a),
-			intArg(b),
-			0)
+			intArg(b))
 		return intRet(rtn)
 	})
 
@@ -146,7 +142,7 @@ var _ = builtin2("GetDeviceCaps(hdc, nIndex)",
 var bitBlt = gdi32.MustFindProc("BitBlt").Addr()
 var _ = builtin("BitBlt(hdc, x, y, cx, cy, hdcSrc, x1, y1, rop)",
 	func(_ *Thread, a []Value) Value {
-		rtn, _, _ := syscall.Syscall9(bitBlt, 9,
+		rtn := goc.Syscall9(bitBlt,
 			intArg(a[0]),
 			intArg(a[1]),
 			intArg(a[2]),
@@ -163,7 +159,7 @@ var _ = builtin("BitBlt(hdc, x, y, cx, cy, hdcSrc, x1, y1, rop)",
 var createCompatibleBitmap = gdi32.MustFindProc("CreateCompatibleBitmap").Addr()
 var _ = builtin3("CreateCompatibleBitmap(hdc, cx, cy)",
 	func(a, b, c Value) Value {
-		rtn, _, _ := syscall.Syscall(createCompatibleBitmap, 3,
+		rtn := goc.Syscall3(createCompatibleBitmap,
 			intArg(a),
 			intArg(b),
 			intArg(c))
@@ -174,9 +170,8 @@ var _ = builtin3("CreateCompatibleBitmap(hdc, cx, cy)",
 var createCompatibleDC = gdi32.MustFindProc("CreateCompatibleDC").Addr()
 var _ = builtin1("CreateCompatibleDC(hdc)",
 	func(a Value) Value {
-		rtn, _, _ := syscall.Syscall(createCompatibleDC, 1,
-			intArg(a),
-			0, 0)
+		rtn := goc.Syscall1(createCompatibleDC,
+			intArg(a))
 		return intRet(rtn)
 	})
 
@@ -184,9 +179,8 @@ var _ = builtin1("CreateCompatibleDC(hdc)",
 var createSolidBrush = gdi32.MustFindProc("CreateSolidBrush").Addr()
 var _ = builtin1("CreateSolidBrush(i)",
 	func(a Value) Value {
-		rtn, _, _ := syscall.Syscall(createSolidBrush, 1,
-			intArg(a),
-			0, 0)
+		rtn := goc.Syscall1(createSolidBrush,
+			intArg(a))
 		return intRet(rtn)
 	})
 
@@ -194,10 +188,9 @@ var _ = builtin1("CreateSolidBrush(i)",
 var selectObject = gdi32.MustFindProc("SelectObject").Addr()
 var _ = builtin2("SelectObject(hdc, obj)",
 	func(a, b Value) Value {
-		rtn, _, _ := syscall.Syscall(selectObject, 2,
+		rtn := goc.Syscall2(selectObject,
 			intArg(a),
-			intArg(b),
-			0)
+			intArg(b))
 		return intRet(rtn)
 	})
 
@@ -207,12 +200,11 @@ var _ = builtin4("GetTextExtentPoint32(hdc, text, len, p)",
 	func(a, b, c, d Value) Value {
 		defer heap.FreeTo(heap.CurSize())
 		pt := heap.Alloc(nPOINT)
-		rtn, _, _ := syscall.Syscall6(getTextExtentPoint32, 4,
+		rtn := goc.Syscall4(getTextExtentPoint32,
 			intArg(a),
 			uintptr(stringArg(b)),
 			uintptr(len(ToStr(b))),
-			uintptr(pt),
-			0, 0)
+			uintptr(pt))
 		upointToOb(pt, d)
 		return boolRet(rtn)
 	})
@@ -223,7 +215,7 @@ var _ = builtin1("GetTextFace(hdc)",
 		defer heap.FreeTo(heap.CurSize())
 		const bufsize = 512
 		p := heap.Alloc(bufsize)
-		n, _, _ := syscall.Syscall(getTextFace, 3,
+		n := goc.Syscall3(getTextFace,
 			intArg(a),
 			bufsize,
 			uintptr(p))
@@ -234,10 +226,9 @@ var _ = builtin1("GetTextFace(hdc)",
 var setBkMode = gdi32.MustFindProc("SetBkMode").Addr()
 var _ = builtin2("SetBkMode(hdc, color)",
 	func(a, b Value) Value {
-		rtn, _, _ := syscall.Syscall(setBkMode, 2,
+		rtn := goc.Syscall2(setBkMode,
 			intArg(a),
-			intArg(b),
-			0)
+			intArg(b))
 		return intRet(rtn)
 	})
 
@@ -245,10 +236,9 @@ var _ = builtin2("SetBkMode(hdc, color)",
 var setBkColor = gdi32.MustFindProc("SetBkColor").Addr()
 var _ = builtin2("SetBkColor(hdc, color)",
 	func(a, b Value) Value {
-		rtn, _, _ := syscall.Syscall(setBkColor, 2,
+		rtn := goc.Syscall2(setBkColor,
 			intArg(a),
-			intArg(b),
-			0)
+			intArg(b))
 		return intRet(rtn)
 	})
 
@@ -256,9 +246,8 @@ var _ = builtin2("SetBkColor(hdc, color)",
 var deleteDC = gdi32.MustFindProc("DeleteDC").Addr()
 var _ = builtin1("DeleteDC(hdc)",
 	func(a Value) Value {
-		rtn, _, _ := syscall.Syscall(deleteDC, 1,
-			intArg(a),
-			0, 0)
+		rtn := goc.Syscall1(deleteDC,
+			intArg(a))
 		return boolRet(rtn)
 	})
 
@@ -266,9 +255,8 @@ var _ = builtin1("DeleteDC(hdc)",
 var deleteObject = gdi32.MustFindProc("DeleteObject").Addr()
 var _ = builtin1("DeleteObject(hgdiobj)",
 	func(a Value) Value {
-		rtn, _, _ := syscall.Syscall(deleteObject, 1,
-			intArg(a),
-			0, 0)
+		rtn := goc.Syscall1(deleteObject,
+			intArg(a))
 		return boolRet(rtn)
 	})
 
@@ -278,7 +266,7 @@ var _ = builtin2("GetClipBox(hdc, rect)",
 	func(a, b Value) Value {
 		defer heap.FreeTo(heap.CurSize())
 		r := heap.Alloc(nRECT)
-		rtn, _, _ := syscall.Syscall(getClipBox, 3,
+		rtn := goc.Syscall3(getClipBox,
 			intArg(a),
 			uintptr(rectArg(b, r)),
 			0)
@@ -290,7 +278,7 @@ var _ = builtin2("GetClipBox(hdc, rect)",
 var getPixel = gdi32.MustFindProc("GetPixel").Addr()
 var _ = builtin3("GetPixel(hdc, nXPos, nYPos)",
 	func(a, b, c Value) Value {
-		rtn, _, _ := syscall.Syscall(getPixel, 3,
+		rtn := goc.Syscall3(getPixel,
 			intArg(a),
 			intArg(b),
 			intArg(c))
@@ -301,7 +289,7 @@ var _ = builtin3("GetPixel(hdc, nXPos, nYPos)",
 var ptVisible = gdi32.MustFindProc("PtVisible").Addr()
 var _ = builtin3("PtVisible(hdc, nXPos, nYPos)",
 	func(a, b, c Value) Value {
-		rtn, _, _ := syscall.Syscall(ptVisible, 3,
+		rtn := goc.Syscall3(ptVisible,
 			intArg(a),
 			intArg(b),
 			intArg(c))
@@ -315,13 +303,12 @@ var _ = builtin3("PtVisible(hdc, nXPos, nYPos)",
 var rectangle = gdi32.MustFindProc("Rectangle").Addr()
 var _ = builtin5("Rectangle(hdc, left, top, right, bottom)",
 	func(a, b, c, d, e Value) Value {
-		rtn, _, _ := syscall.Syscall6(rectangle, 5,
+		rtn := goc.Syscall5(rectangle,
 			intArg(a),
 			intArg(b),
 			intArg(c),
 			intArg(d),
-			intArg(e),
-			0)
+			intArg(e))
 		return boolRet(rtn)
 	})
 
@@ -329,10 +316,9 @@ var _ = builtin5("Rectangle(hdc, left, top, right, bottom)",
 var setStretchBltMode = gdi32.MustFindProc("SetStretchBltMode").Addr()
 var _ = builtin2("SetStretchBltMode(hdc, iStretchMode)",
 	func(a, b Value) Value {
-		rtn, _, _ := syscall.Syscall(setStretchBltMode, 2,
+		rtn := goc.Syscall2(setStretchBltMode,
 			intArg(a),
-			intArg(b),
-			0)
+			intArg(b))
 		return intRet(rtn)
 	})
 
@@ -340,10 +326,9 @@ var _ = builtin2("SetStretchBltMode(hdc, iStretchMode)",
 var setTextColor = gdi32.MustFindProc("SetTextColor").Addr()
 var _ = builtin2("SetTextColor(hdc, color)",
 	func(a, b Value) Value {
-		rtn, _, _ := syscall.Syscall(setTextColor, 2,
+		rtn := goc.Syscall2(setTextColor,
 			intArg(a),
-			intArg(b),
-			0)
+			intArg(b))
 		return intRet(rtn)
 	})
 
@@ -352,7 +337,7 @@ var _ = builtin2("SetTextColor(hdc, color)",
 var stretchBlt = gdi32.MustFindProc("StretchBlt").Addr()
 var _ = builtin("StretchBlt(hdcDest, nXOriginDest, nYOriginDest, nWidthDest, nHeightDest, hdcSrc, nXOriginSrc, nYOriginSrc, nWidthSrc, nHeightSrc, dwRop)",
 	func(_ *Thread, a []Value) Value {
-		rtn, _, _ := syscall.Syscall12(stretchBlt, 11,
+		rtn := goc.Syscall11(stretchBlt,
 			intArg(a[0]),
 			intArg(a[1]),
 			intArg(a[2]),
@@ -363,8 +348,7 @@ var _ = builtin("StretchBlt(hdcDest, nXOriginDest, nYOriginDest, nWidthDest, nHe
 			intArg(a[7]),
 			intArg(a[8]),
 			intArg(a[9]),
-			intArg(a[10]),
-			0)
+			intArg(a[10]))
 		return boolRet(rtn)
 	})
 
@@ -372,9 +356,8 @@ var _ = builtin("StretchBlt(hdcDest, nXOriginDest, nYOriginDest, nWidthDest, nHe
 var closeEnhMetaFile = gdi32.MustFindProc("CloseEnhMetaFile").Addr()
 var _ = builtin1("CloseEnhMetaFile(dc)",
 	func(a Value) Value {
-		rtn, _, _ := syscall.Syscall(closeEnhMetaFile, 1,
-			intArg(a),
-			0, 0)
+		rtn := goc.Syscall1(closeEnhMetaFile,
+			intArg(a))
 		return intRet(rtn)
 	})
 
@@ -387,12 +370,11 @@ var createDC = gdi32.MustFindProc("CreateDCA").Addr()
 var _ = builtin4("CreateDC(driver, device, output, devmode)",
 	func(a, b, c, d Value) Value {
 		defer heap.FreeTo(heap.CurSize())
-		rtn, _, _ := syscall.Syscall6(createDC, 4,
+		rtn := goc.Syscall4(createDC,
 			uintptr(stringArg(a)),
 			uintptr(stringArg(b)),
 			uintptr(stringArg(c)),
-			intArg(d),
-			0, 0)
+			intArg(d))
 		return intRet(rtn)
 	})
 
@@ -400,13 +382,12 @@ var _ = builtin4("CreateDC(driver, device, output, devmode)",
 var ellipse = gdi32.MustFindProc("Ellipse").Addr()
 var _ = builtin5("Ellipse(hdc, left, top, right, bottom)",
 	func(a, b, c, d, e Value) Value {
-		rtn, _, _ := syscall.Syscall6(ellipse, 5,
+		rtn := goc.Syscall5(ellipse,
 			intArg(a),
 			intArg(b),
 			intArg(c),
 			intArg(d),
-			intArg(e),
-			0)
+			intArg(e))
 		return boolRet(rtn)
 	})
 
@@ -414,9 +395,8 @@ var _ = builtin5("Ellipse(hdc, left, top, right, bottom)",
 var endDoc = gdi32.MustFindProc("EndDoc").Addr()
 var _ = builtin1("EndDoc(hdc)",
 	func(a Value) Value {
-		rtn, _, _ := syscall.Syscall(endDoc, 1,
-			intArg(a),
-			0, 0)
+		rtn := goc.Syscall1(endDoc,
+			intArg(a))
 		return intRet(rtn)
 	})
 
@@ -424,9 +404,8 @@ var _ = builtin1("EndDoc(hdc)",
 var endPage = gdi32.MustFindProc("EndPage").Addr()
 var _ = builtin1("EndPage(hdc)",
 	func(a Value) Value {
-		rtn, _, _ := syscall.Syscall(endPage, 1,
-			intArg(a),
-			0, 0)
+		rtn := goc.Syscall1(endPage,
+			intArg(a))
 		return intRet(rtn)
 	})
 
@@ -434,13 +413,12 @@ var _ = builtin1("EndPage(hdc)",
 var excludeClipRect = gdi32.MustFindProc("ExcludeClipRect").Addr()
 var _ = builtin5("ExcludeClipRect(hdc, l, t, r, b)",
 	func(a, b, c, d, e Value) Value {
-		rtn, _, _ := syscall.Syscall6(excludeClipRect, 5,
+		rtn := goc.Syscall5(excludeClipRect,
 			intArg(a),
 			intArg(b),
 			intArg(c),
 			intArg(d),
-			intArg(e),
-			0)
+			intArg(e))
 		return intRet(rtn)
 	})
 
@@ -448,10 +426,9 @@ var _ = builtin5("ExcludeClipRect(hdc, l, t, r, b)",
 var getClipRgn = gdi32.MustFindProc("GetClipRgn").Addr()
 var _ = builtin2("GetClipRgn(hdc, hrgn)",
 	func(a, b Value) Value {
-		rtn, _, _ := syscall.Syscall(getClipRgn, 2,
+		rtn := goc.Syscall2(getClipRgn,
 			intArg(a),
-			intArg(b),
-			0)
+			intArg(b))
 		return intRet(rtn)
 	})
 
@@ -459,10 +436,9 @@ var _ = builtin2("GetClipRgn(hdc, hrgn)",
 var getCurrentObject = gdi32.MustFindProc("GetCurrentObject").Addr()
 var _ = builtin2("GetCurrentObject(hdc, uObjectType)",
 	func(a, b Value) Value {
-		rtn, _, _ := syscall.Syscall(getCurrentObject, 2,
+		rtn := goc.Syscall2(getCurrentObject,
 			intArg(a),
-			intArg(b),
-			0)
+			intArg(b))
 		return intRet(rtn)
 	})
 
@@ -471,9 +447,8 @@ var getEnhMetaFile = gdi32.MustFindProc("GetEnhMetaFileA").Addr()
 var _ = builtin1("GetEnhMetaFile(filename)",
 	func(a Value) Value {
 		defer heap.FreeTo(heap.CurSize())
-		rtn, _, _ := syscall.Syscall(getEnhMetaFile, 1,
-			uintptr(stringArg(a)),
-			0, 0)
+		rtn := goc.Syscall1(getEnhMetaFile,
+			uintptr(stringArg(a)))
 		return intRet(rtn)
 	})
 
@@ -481,7 +456,7 @@ var _ = builtin1("GetEnhMetaFile(filename)",
 var lineTo = gdi32.MustFindProc("LineTo").Addr()
 var _ = builtin3("LineTo(hdc, x, y)",
 	func(a, b, c Value) Value {
-		rtn, _, _ := syscall.Syscall(lineTo, 3,
+		rtn := goc.Syscall3(lineTo,
 			intArg(a),
 			intArg(b),
 			intArg(c))
@@ -499,7 +474,7 @@ var _ = builtin3("LineTo(hdc, x, y)",
 var patBlt = gdi32.MustFindProc("PatBlt").Addr()
 var _ = builtin6("PatBlt(hdc, nXLeft, nYLeft, nWidth, nHeight, dwRop)",
 	func(a, b, c, d, e, f Value) Value {
-		rtn, _, _ := syscall.Syscall6(patBlt, 6,
+		rtn := goc.Syscall6(patBlt,
 			intArg(a),
 			intArg(b),
 			intArg(c),
@@ -518,7 +493,7 @@ var polygon = gdi32.MustFindProc("Polygon").Addr()
 var _ = builtin3("Polygon(hdc, lppt, cCount)",
 	func(a, b, c Value) Value {
 		defer heap.FreeTo(heap.CurSize())
-		rtn, _, _ := syscall.Syscall(polygon, 3,
+		rtn := goc.Syscall3(polygon,
 			intArg(a),
 			uintptr(stringArg(b)),
 			intArg(c))
@@ -532,10 +507,9 @@ var _ = builtin3("Polygon(hdc, lppt, cCount)",
 var restoreDC = gdi32.MustFindProc("RestoreDC").Addr()
 var _ = builtin2("RestoreDC(hdc, nSavedDC)",
 	func(a, b Value) Value {
-		rtn, _, _ := syscall.Syscall(restoreDC, 2,
+		rtn := goc.Syscall2(restoreDC,
 			intArg(a),
-			intArg(b),
-			0)
+			intArg(b))
 		return boolRet(rtn)
 	})
 
@@ -544,15 +518,14 @@ var _ = builtin2("RestoreDC(hdc, nSavedDC)",
 var roundRect = gdi32.MustFindProc("RoundRect").Addr()
 var _ = builtin7("RoundRect(hdc, left, top, right, bottom, ellipse_width, ellipse_height)",
 	func(a, b, c, d, e, f, g Value) Value {
-		rtn, _, _ := syscall.Syscall9(roundRect, 7,
+		rtn := goc.Syscall7(roundRect,
 			intArg(a),
 			intArg(b),
 			intArg(c),
 			intArg(d),
 			intArg(e),
 			intArg(f),
-			intArg(g),
-			0, 0)
+			intArg(g))
 		return boolRet(rtn)
 	})
 
@@ -560,9 +533,8 @@ var _ = builtin7("RoundRect(hdc, left, top, right, bottom, ellipse_width, ellips
 var saveDC = gdi32.MustFindProc("SaveDC").Addr()
 var _ = builtin1("SaveDC(hdc)",
 	func(a Value) Value {
-		rtn, _, _ := syscall.Syscall(saveDC, 1,
-			intArg(a),
-			0, 0)
+		rtn := goc.Syscall1(saveDC,
+			intArg(a))
 		return intRet(rtn)
 	})
 
@@ -570,10 +542,9 @@ var _ = builtin1("SaveDC(hdc)",
 var selectClipRgn = gdi32.MustFindProc("SelectClipRgn").Addr()
 var _ = builtin2("SelectClipRgn(hdc, hrgn)",
 	func(a, b Value) Value {
-		rtn, _, _ := syscall.Syscall(selectClipRgn, 2,
+		rtn := goc.Syscall2(selectClipRgn,
 			intArg(a),
-			intArg(b),
-			0)
+			intArg(b))
 		return intRet(rtn)
 	})
 
@@ -582,10 +553,9 @@ var setEnhMetaFileBits = gdi32.MustFindProc("SetEnhMetaFileBits").Addr()
 var _ = builtin2("SetEnhMetaFileBits(cbBuffer, lpData)",
 	func(a, b Value) Value {
 		defer heap.FreeTo(heap.CurSize())
-		rtn, _, _ := syscall.Syscall(setEnhMetaFileBits, 2,
+		rtn := goc.Syscall2(setEnhMetaFileBits,
 			intArg(a),
-			uintptr(stringArg(b)),
-			0)
+			uintptr(stringArg(b)))
 		return intRet(rtn)
 	})
 
@@ -593,10 +563,9 @@ var _ = builtin2("SetEnhMetaFileBits(cbBuffer, lpData)",
 var setMapMode = gdi32.MustFindProc("SetMapMode").Addr()
 var _ = builtin2("SetMapMode(hdc, mode)",
 	func(a, b Value) Value {
-		rtn, _, _ := syscall.Syscall(setMapMode, 2,
+		rtn := goc.Syscall2(setMapMode,
 			intArg(a),
-			intArg(b),
-			0)
+			intArg(b))
 		return intRet(rtn)
 	})
 
@@ -604,10 +573,9 @@ var _ = builtin2("SetMapMode(hdc, mode)",
 var setROP2 = gdi32.MustFindProc("SetROP2").Addr()
 var _ = builtin2("SetROP2(hdc, fnDrawMode)",
 	func(a, b Value) Value {
-		rtn, _, _ := syscall.Syscall(setROP2, 2,
+		rtn := goc.Syscall2(setROP2,
 			intArg(a),
-			intArg(b),
-			0)
+			intArg(b))
 		return intRet(rtn)
 	})
 
@@ -615,10 +583,9 @@ var _ = builtin2("SetROP2(hdc, fnDrawMode)",
 var setTextAlign = gdi32.MustFindProc("SetTextAlign").Addr()
 var _ = builtin2("SetTextAlign(hdc, mode)",
 	func(a, b Value) Value {
-		rtn, _, _ := syscall.Syscall(setTextAlign, 2,
+		rtn := goc.Syscall2(setTextAlign,
 			intArg(a),
-			intArg(b),
-			0)
+			intArg(b))
 		return intRet(rtn)
 	})
 
@@ -626,9 +593,8 @@ var _ = builtin2("SetTextAlign(hdc, mode)",
 var startPage = gdi32.MustFindProc("StartPage").Addr()
 var _ = builtin1("StartPage(hdc)",
 	func(a Value) Value {
-		rtn, _, _ := syscall.Syscall(startPage, 1,
-			intArg(a),
-			0, 0)
+		rtn := goc.Syscall1(startPage,
+			intArg(a))
 		return intRet(rtn)
 	})
 
@@ -637,13 +603,12 @@ var textOut = gdi32.MustFindProc("TextOutA").Addr()
 var _ = builtin5("TextOut(hdc, x, y, text, n)",
 	func(a, b, c, d, e Value) Value {
 		defer heap.FreeTo(heap.CurSize())
-		rtn, _, _ := syscall.Syscall6(textOut, 5,
+		rtn := goc.Syscall5(textOut,
 			intArg(a),
 			intArg(b),
 			intArg(c),
 			uintptr(stringArg(d)),
-			intArg(e),
-			0)
+			intArg(e))
 		return boolRet(rtn)
 	})
 
@@ -654,7 +619,7 @@ var arc = gdi32.MustFindProc("Arc").Addr()
 var _ = builtin("Arc(hdc, nLeftRect, nTopRect, nRightRect, nBottomRect,"+
 	"nXStartArc, nYStartArc, nXEndArc, nYEndArc)",
 	func(_ *Thread, a []Value) Value {
-		rtn, _, _ := syscall.Syscall9(arc, 9,
+		rtn := goc.Syscall9(arc,
 			intArg(a[0]),
 			intArg(a[1]),
 			intArg(a[2]),
@@ -674,12 +639,11 @@ var _ = builtin4("CreateEnhMetaFile(hdcRef, filename, rect, desc)",
 	func(a, b, c, d Value) Value {
 		defer heap.FreeTo(heap.CurSize())
 		r := heap.Alloc(nRECT)
-		rtn, _, _ := syscall.Syscall6(createEnhMetaFile, 4,
+		rtn := goc.Syscall4(createEnhMetaFile,
 			intArg(a),
 			uintptr(stringArg(b)),
 			uintptr(rectArg(c, r)),
-			uintptr(stringArg(d)),
-			0, 0)
+			uintptr(stringArg(d)))
 		return intRet(rtn)
 	})
 
@@ -692,7 +656,7 @@ var createFont = gdi32.MustFindProc("CreateFontA").Addr()
 var _ = builtin("CreateFont(hdc, x, y, cx, cy, hdcSrc, x1, y1, rop)",
 	func(_ *Thread, a []Value) Value {
 		defer heap.FreeTo(heap.CurSize())
-		rtn, _, _ := syscall.Syscall15(createFont, 14,
+		rtn := goc.Syscall14(createFont,
 			intArg(a[0]),
 			intArg(a[1]),
 			intArg(a[2]),
@@ -706,8 +670,7 @@ var _ = builtin("CreateFont(hdc, x, y, cx, cy, hdcSrc, x1, y1, rop)",
 			intArg(a[10]),
 			intArg(a[11]),
 			intArg(a[12]),
-			uintptr(stringArg(a[13])),
-			0)
+			uintptr(stringArg(a[13])))
 		return intRet(rtn)
 	})
 
@@ -720,7 +683,7 @@ var _ = builtin("ExtTextOut(hdc, x, y, fuOptions, lprc, lpString, cbCount,"+
 		defer heap.FreeTo(heap.CurSize())
 		r := heap.Alloc(nRECT)
 		verify.That(a[7].Equal(Zero))
-		rtn, _, _ := syscall.Syscall9(extTextOut, 8,
+		rtn := goc.Syscall8(extTextOut,
 			intArg(a[0]),
 			intArg(a[1]),
 			intArg(a[2]),
@@ -728,7 +691,6 @@ var _ = builtin("ExtTextOut(hdc, x, y, fuOptions, lprc, lpString, cbCount,"+
 			uintptr(rectArg(a[4], r)),
 			uintptr(stringArg(a[5])),
 			intArg(a[6]),
-			0,
 			0)
 		return boolRet(rtn)
 	})
@@ -737,7 +699,7 @@ var _ = builtin("ExtTextOut(hdc, x, y, fuOptions, lprc, lpString, cbCount,"+
 var createPen = gdi32.MustFindProc("CreatePen").Addr()
 var _ = builtin3("CreatePen(fnPenStyle, nWidth, clrref)",
 	func(a, b, c Value) Value {
-		rtn, _, _ := syscall.Syscall(createPen, 3,
+		rtn := goc.Syscall3(createPen,
 			intArg(a),
 			intArg(b),
 			intArg(b))
@@ -757,11 +719,10 @@ var _ = builtin5("ExtCreatePen(dwPenStyle, dwWidth, brush, "+
 			lbColor: getInt32(c, "lbColor"),
 			lbHatch: uintptr(getInt(c, "lbHatch")),
 		}
-		rtn, _, _ := syscall.Syscall6(extCreatePen, 5,
+		rtn := goc.Syscall5(extCreatePen,
 			intArg(a),
 			intArg(b),
 			uintptr(p),
-			0,
 			0,
 			0)
 		return intRet(rtn)
@@ -798,15 +759,14 @@ var _ = builtin7("GetGlyphOutline(hdc, uChar, uFormat, lpgm, "+
 				fract: getInt16(g.Get(nil, SuStr("eM22")), "fract"),
 				value: getInt16(g.Get(nil, SuStr("eM22")), "value")},
 		}
-		rtn, _, _ := syscall.Syscall9(getGlyphOutline, 7,
+		rtn := goc.Syscall7(getGlyphOutline,
 			intArg(a),
 			intArg(b),
 			intArg(c),
 			uintptr(p1),
 			0,
 			0,
-			uintptr(p2),
-			0, 0)
+			uintptr(p2))
 		gm := *(*GLYPHMETRICS)(p1)
 		d.Put(nil, SuStr("gmBlackBoxX"), IntVal(int(gm.gmBlackBoxX)))
 		d.Put(nil, SuStr("gmBlackBoxY"), IntVal(int(gm.gmBlackBoxY)))
@@ -854,10 +814,9 @@ var _ = builtin2("StartDoc(hdc, di)",
 			lpszDatatype: getStr(b, "lpszDatatype"),
 			fwType:       getInt32(b, "fwType"),
 		}
-		rtn, _, _ := syscall.Syscall(startDoc, 2,
+		rtn := goc.Syscall2(startDoc,
 			intArg(a),
-			uintptr(p),
-			0)
+			uintptr(p))
 		return intRet(rtn)
 	})
 
@@ -878,12 +837,11 @@ var _ = builtin4("SetWindowExtEx(hdc, x, y, p)",
 	func(a, b, c, d Value) Value {
 		defer heap.FreeTo(heap.CurSize())
 		pt := heap.Alloc(nPOINT)
-		rtn, _, _ := syscall.Syscall6(setWindowExtEx, 4,
+		rtn := goc.Syscall4(setWindowExtEx,
 			intArg(a),
 			intArg(b),
 			intArg(c),
-			uintptr(pt),
-			0, 0)
+			uintptr(pt))
 		upointToOb(pt, d)
 		return boolRet(rtn)
 	})
@@ -894,12 +852,11 @@ var _ = builtin4("SetViewportOrgEx(hdc, x, y, p)",
 	func(a, b, c, d Value) Value {
 		defer heap.FreeTo(heap.CurSize())
 		pt := heap.Alloc(nPOINT)
-		rtn, _, _ := syscall.Syscall6(setViewportOrgEx, 4,
+		rtn := goc.Syscall4(setViewportOrgEx,
 			intArg(a),
 			intArg(b),
 			intArg(c),
-			uintptr(pt),
-			0, 0)
+			uintptr(pt))
 		upointToOb(pt, d)
 		return boolRet(rtn)
 	})
@@ -910,12 +867,11 @@ var _ = builtin4("SetViewportExtEx(hdc, x, y, p)",
 	func(a, b, c, d Value) Value {
 		defer heap.FreeTo(heap.CurSize())
 		pt := heap.Alloc(nPOINT)
-		rtn, _, _ := syscall.Syscall6(setViewportExtEx, 4,
+		rtn := goc.Syscall4(setViewportExtEx,
 			intArg(a),
 			intArg(b),
 			intArg(c),
-			uintptr(pt),
-			0, 0)
+			uintptr(pt))
 		upointToOb(pt, d)
 		return boolRet(rtn)
 	})
@@ -926,7 +882,7 @@ var _ = builtin3("PlayEnhMetaFile(hdc, hemf, rect)",
 	func(a, b, c Value) Value {
 		defer heap.FreeTo(heap.CurSize())
 		r := heap.Alloc(nRECT)
-		rtn, _, _ := syscall.Syscall(playEnhMetaFile, 3,
+		rtn := goc.Syscall3(playEnhMetaFile,
 			intArg(a),
 			intArg(b),
 			uintptr(rectArg(c, r)))
@@ -942,12 +898,11 @@ var _ = builtin4("MoveToEx(hdc, x, y, p)",
 		if !d.Equal(Zero) {
 			pt = heap.Alloc(nPOINT)
 		}
-		rtn, _, _ := syscall.Syscall6(moveToEx, 4,
+		rtn := goc.Syscall4(moveToEx,
 			intArg(a),
 			intArg(b),
 			intArg(c),
-			uintptr(pt),
-			0, 0)
+			uintptr(pt))
 		if pt != nil {
 			upointToOb(pt, d)
 		}
@@ -961,7 +916,7 @@ var _ = builtin1("GetObjectBitmap(h)",
 		defer heap.FreeTo(heap.CurSize())
 		p := heap.Alloc(nBITMAP)
 		bm := (*BITMAP)(p)
-		rtn, _, _ := syscall.Syscall(getObject, 3,
+		rtn := goc.Syscall3(getObject,
 			intArg(a),
 			nBITMAP,
 			uintptr(p))
@@ -995,11 +950,10 @@ const nBITMAP = unsafe.Sizeof(BITMAP{})
 var createRectRegion = gdi32.MustFindProc("CreateRectRgn").Addr()
 var _ = builtin4("CreateRectRgn(x1, y1, x2, y2)",
 	func(a, b, c, d Value) Value {
-		rtn, _, _ := syscall.Syscall6(createRectRegion, 4,
+		rtn := goc.Syscall4(createRectRegion,
 			intArg(a),
 			intArg(b),
 			intArg(c),
-			intArg(d),
-			0, 0)
+			intArg(d))
 		return intRet(rtn)
 	})

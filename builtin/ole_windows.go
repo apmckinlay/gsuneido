@@ -1,9 +1,9 @@
 package builtin
 
 import (
-	"syscall"
 	"unsafe"
 
+	"github.com/apmckinlay/gsuneido/builtin/goc"
 	heap "github.com/apmckinlay/gsuneido/builtin/heapstack"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"golang.org/x/sys/windows"
@@ -20,7 +20,7 @@ var _ = builtin3("CreateStreamOnHGlobal(hGlobal, fDeleteOnRelease, ppstm)",
 	func(a, b, c Value) Value {
 		defer heap.FreeTo(heap.CurSize())
 		p := heap.Alloc(uintptrSize)
-		rtn, _, _ := syscall.Syscall(createStreamOnHGlobal, 3,
+		rtn := goc.Syscall3(createStreamOnHGlobal,
 			intArg(a),
 			boolArg(b),
 			uintptr(p))
@@ -52,13 +52,12 @@ var _ = builtin5("OleLoadPicture(lpstream, lSize, fRunmode, riid, lplpvobj)",
 		for i := 0; i < 8; i++ {
 			guid.Data4[i] = byte(ToInt(data4.Get(nil, SuInt(i))))
 		}
-		rtn, _, _ := syscall.Syscall6(oleLoadPicture, 5,
+		rtn := goc.Syscall5(oleLoadPicture,
 			intArg(a),
 			intArg(b),
 			boolArg(c),
 			uintptr(g),
-			uintptr(p),
-			0)
+			uintptr(p))
 		e.Put(nil, SuStr("x"), IntVal(int(*(*uintptr)(p))))
 		return intRet(rtn)
 	})

@@ -274,7 +274,7 @@ func getHandle(ob Value, mem string) HANDLE {
 	return HANDLE(getInt(ob, mem))
 }
 
-func getCallback(ob Value, mem string, nargs byte) uintptr {
+func getCallback(ob Value, mem string, nargs int) uintptr {
 	fn := ob.Get(nil, SuStr(mem))
 	if fn == nil {
 		return 0

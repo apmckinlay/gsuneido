@@ -17,16 +17,13 @@ package heapstack
 import (
 	"fmt"
 	"log"
+	"runtime/debug"
 	"unsafe"
 
 	"github.com/apmckinlay/gsuneido/util/verify"
 )
 
 const debugEnabled = true
-
-var GetCurrentThreadId func() uintptr // must be injected
-
-var UIthread uintptr
 
 func init() {
 	if debugEnabled {
@@ -40,10 +37,10 @@ const heapsize = 64 * 1024
 var heap = [heapsize]byte{248, 249, 250, 251, 252, 253, 254, 255}
 var heapnext = align
 
+var lastAlloc uintptr
+
 func Alloc(n uintptr) unsafe.Pointer {
-	if debugEnabled && GetCurrentThreadId() != UIthread {
-		log.Fatalln("Alloc on non UI thread")
-	}
+	lastAlloc = n
 	n = ((n - 1) | (align - 1)) + 1
 	heapcheck("alloc")
 	// zero out memory
@@ -77,7 +74,8 @@ func heapcheck(s string) {
 	if debugEnabled {
 		for i := align; i > 0; i-- {
 			if heap[heapnext-i] != byte(256-i) {
-				log.Fatalln("heap corrupt " + s)
+				debug.PrintStack()
+				log.Fatalln("heap corrupt", s, "lastAlloc", lastAlloc)
 			}
 		}
 	}

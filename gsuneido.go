@@ -28,7 +28,7 @@ import (
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
-var builtDate string // set by: go build -ldflags "-X builtin.builtDate=..."
+var builtDate = "Oct 19 2019" // set by: go build -ldflags "-X builtin.builtDate=..."
 
 var prompt = func(s string) { fmt.Println(s) }
 
@@ -56,7 +56,6 @@ func main() {
 	// dependency injection of GetDbms
 	if options.Client {
 		GetDbms = func() IDbms { return dbms.NewDbmsClient("127.0.0.1:3147") }
-		prompt("Running as client")
 	} else {
 		dbmsLocal = dbms.NewDbmsLocal()
 		GetDbms = func() IDbms { return dbmsLocal }
@@ -80,6 +79,9 @@ func repl() {
 	builtin.Concat()
 
 	prompt(builtin.Built())
+	if options.Client {
+		prompt("Running as client")
+	}
 	prompt("Press Enter twice (i.e. blank line) to execute, q to quit")
 	r := bufio.NewReader(os.Stdin)
 	for {

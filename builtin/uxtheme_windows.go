@@ -1,8 +1,7 @@
 package builtin
 
 import (
-	"syscall"
-
+	"github.com/apmckinlay/gsuneido/builtin/goc"
 	heap "github.com/apmckinlay/gsuneido/builtin/heapstack"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"golang.org/x/sys/windows"
@@ -19,7 +18,7 @@ var _ = builtin6("DrawThemeBackground(hTheme, hdc, iPartId, iStateId, pRect,"+
 		defer heap.FreeTo(heap.CurSize())
 		r1 := heap.Alloc(nRECT)
 		r2 := heap.Alloc(nRECT)
-		rtn, _, _ := syscall.Syscall6(drawThemeBackground, 6,
+		rtn := goc.Syscall6(drawThemeBackground,
 			intArg(a),
 			intArg(b),
 			intArg(c),
@@ -38,7 +37,7 @@ var _ = builtin("DrawThemeText(hTheme, hdc, iPartId, iStateId, pszText,"+
 	func(_ *Thread, a []Value) Value {
 		defer heap.FreeTo(heap.CurSize())
 		r := heap.Alloc(nRECT)
-		rtn, _, _ := syscall.Syscall9(drawThemeText, 9,
+		rtn := goc.Syscall9(drawThemeText,
 			intArg(a[0]),
 			intArg(a[1]),
 			intArg(a[2]),
@@ -56,7 +55,7 @@ var setWindowTheme = uxtheme.MustFindProc("SetWindowTheme").Addr()
 var _ = builtin3("SetWindowTheme(hwnd, appname, idlist)",
 	func(a, b, c Value) Value {
 		defer heap.FreeTo(heap.CurSize())
-		rtn, _, _ := syscall.Syscall(setWindowTheme, 3,
+		rtn := goc.Syscall3(setWindowTheme,
 			intArg(a),
 			uintptr(stringArg(b)),
 			uintptr(stringArg(c)))
@@ -67,9 +66,8 @@ var _ = builtin3("SetWindowTheme(hwnd, appname, idlist)",
 var getWindowTheme = uxtheme.MustFindProc("GetWindowTheme").Addr()
 var _ = builtin1("GetWindowTheme(hwnd)",
 	func(a Value) Value {
-		rtn, _, _ := syscall.Syscall(getWindowTheme, 1,
-			intArg(a),
-			0, 0)
+		rtn := goc.Syscall1(getWindowTheme,
+			intArg(a))
 		return intRet(rtn)
 	})
 
@@ -77,7 +75,7 @@ var _ = builtin1("GetWindowTheme(hwnd)",
 var isAppThemed = uxtheme.MustFindProc("IsAppThemed").Addr()
 var _ = builtin0("IsAppThemed()",
 	func() Value {
-		rtn, _, _ := syscall.Syscall(isAppThemed, 0, 0, 0, 0)
+		rtn := goc.Syscall0(isAppThemed)
 		return boolRet(rtn)
 	})
 
@@ -85,9 +83,8 @@ var _ = builtin0("IsAppThemed()",
 var closeThemeData = uxtheme.MustFindProc("CloseThemeData").Addr()
 var _ = builtin1("CloseThemeData(hTheme)",
 	func(a Value) Value {
-		rtn, _, _ := syscall.Syscall(closeThemeData, 1,
-			intArg(a),
-			0, 0)
+		rtn := goc.Syscall1(closeThemeData,
+			intArg(a))
 		return intRet(rtn)
 	})
 
@@ -98,7 +95,7 @@ var _ = builtin1("CloseThemeData(hTheme)",
 var isThemeBackgroundPartiallyTransparent = uxtheme.MustFindProc("IsThemeBackgroundPartiallyTransparent").Addr()
 var _ = builtin3("IsThemeBackgroundPartiallyTransparent(hTheme, iPartId, iStateId)",
 	func(a, b, c Value) Value {
-		rtn, _, _ := syscall.Syscall(isThemeBackgroundPartiallyTransparent, 3,
+		rtn := goc.Syscall3(isThemeBackgroundPartiallyTransparent,
 			intArg(a),
 			intArg(b),
 			intArg(c))
@@ -110,10 +107,9 @@ var openThemeData = uxtheme.MustFindProc("OpenThemeData").Addr()
 var _ = builtin2("OpenThemeData(hwnd, pszClassList)",
 	func(a, b Value) Value {
 		defer heap.FreeTo(heap.CurSize())
-		rtn, _, _ := syscall.Syscall(openThemeData, 2,
+		rtn := goc.Syscall2(openThemeData,
 			intArg(a),
-			uintptr(stringArg(b)),
-			0)
+			uintptr(stringArg(b)))
 		return intRet(rtn)
 	})
 
@@ -124,7 +120,7 @@ var _ = builtin3("DrawThemeParentBackground(hwnd, hdc, prc)",
 	func(a, b, c Value) Value {
 		defer heap.FreeTo(heap.CurSize())
 		r := heap.Alloc(nRECT)
-		rtn, _, _ := syscall.Syscall(drawThemeParentBackground, 3,
+		rtn := goc.Syscall3(drawThemeParentBackground,
 			intArg(a),
 			intArg(b),
 			uintptr(rectArg(c, r)))

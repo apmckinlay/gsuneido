@@ -1,9 +1,9 @@
 package builtin
 
 import (
-	"syscall"
 	"unsafe"
 
+	"github.com/apmckinlay/gsuneido/builtin/goc"
 	heap "github.com/apmckinlay/gsuneido/builtin/heapstack"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"golang.org/x/sys/windows"
@@ -15,9 +15,8 @@ var wtsapi32 = windows.MustLoadDLL("wtsapi32.dll")
 var wtsFreeMemory = wtsapi32.MustFindProc("WTSFreeMemory").Addr()
 
 func WTSFreeMemory(adr uintptr) {
-	syscall.Syscall(wtsFreeMemory, 1,
-		adr,
-		0, 0)
+	goc.Syscall1(wtsFreeMemory,
+		adr)
 }
 
 // dll bool WTSAPI32:WTSQuerySessionInformation(pointer hServer, long SessionId,
@@ -34,13 +33,12 @@ var _ = builtin0("WTS_GetClientProtocolType()",
 		defer heap.FreeTo(heap.CurSize())
 		pbuf := heap.Alloc(uintptrSize)
 		psize := heap.Alloc(int32Size)
-		rtn, _, _ := syscall.Syscall6(wtsQuerySessionInformation, 5,
+		rtn := goc.Syscall5(wtsQuerySessionInformation,
 			WTS_CURRENT_SERVER_HANDLE,
 			WTS_CURRENT_SESSION,
 			WTS_ClientProtocolType,
 			uintptr(pbuf),
-			uintptr(psize),
-			0)
+			uintptr(psize))
 		buf := *(*uintptr)(pbuf)
 		size := *(*int32)(psize)
 		if rtn == 0 || size != 2 || buf == 0 {
@@ -56,13 +54,12 @@ var _ = builtin0("WTS_GetSessionId()",
 		defer heap.FreeTo(heap.CurSize())
 		pbuf := heap.Alloc(uintptrSize)
 		psize := heap.Alloc(int32Size)
-		rtn, _, _ := syscall.Syscall6(wtsQuerySessionInformation, 5,
+		rtn := goc.Syscall5(wtsQuerySessionInformation,
 			WTS_CURRENT_SERVER_HANDLE,
 			WTS_CURRENT_SESSION,
 			WTS_SessionId,
 			uintptr(pbuf),
-			uintptr(psize),
-			0)
+			uintptr(psize))
 		buf := *(*uintptr)(pbuf)
 		size := *(*int32)(psize)
 		if rtn == 0 || size != 4 || buf == 0 {

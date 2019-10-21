@@ -5,9 +5,11 @@ import (
 	"syscall"
 	"unsafe"
 
+	"github.com/apmckinlay/gsuneido/builtin/goc"
 	heap "github.com/apmckinlay/gsuneido/builtin/heapstack"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/verify"
+	"golang.org/x/sys/windows"
 )
 
 type RECT struct {
@@ -114,6 +116,18 @@ type TEXTRANGE struct {
 
 const nTEXTRANGE = unsafe.Sizeof(TEXTRANGE{})
 
+type MSG struct {
+	hwnd    HANDLE
+	message uint32
+	wParam  uintptr
+	lParam  uintptr
+	time    uint32
+	pt      POINT
+	_       [4]byte // padding
+}
+
+const nMSG = unsafe.Sizeof(MSG{})
+
 type TOOLINFO struct {
 	cbSize     uint32
 	uFlags     uint32
@@ -180,7 +194,7 @@ const nTV_INSERTSTRUCT = unsafe.Sizeof(TV_INSERTSTRUCT{})
 var getDesktopWindow = user32.MustFindProc("GetDesktopWindow").Addr()
 var _ = builtin0("GetDesktopWindow()",
 	func() Value {
-		rtn, _, _ := syscall.Syscall(getDesktopWindow, 0, 0, 0, 0)
+		rtn := goc.Syscall0(getDesktopWindow)
 		return intRet(rtn)
 	})
 
@@ -188,9 +202,8 @@ var _ = builtin0("GetDesktopWindow()",
 var getSysColor = user32.MustFindProc("GetSysColor").Addr()
 var _ = builtin1("GetSysColor(index)",
 	func(a Value) Value {
-		rtn, _, _ := syscall.Syscall(getSysColor, 1,
-			intArg(a),
-			0, 0)
+		rtn := goc.Syscall1(getSysColor,
+			intArg(a))
 		return intRet(rtn)
 	})
 
@@ -200,10 +213,9 @@ var _ = builtin2("GetWindowRectApi(hwnd, rect)",
 	func(a Value, b Value) Value {
 		defer heap.FreeTo(heap.CurSize())
 		r := heap.Alloc(nRECT)
-		rtn, _, _ := syscall.Syscall(getWindowRect, 2,
+		rtn := goc.Syscall2(getWindowRect,
 			intArg(a),
-			uintptr(r),
-			0)
+			uintptr(r))
 		urectToOb(r, b)
 		return boolRet(rtn)
 	})
@@ -214,12 +226,11 @@ var messageBox = user32.MustFindProc("MessageBoxA").Addr()
 var _ = builtin4("MessageBox(hwnd, text, caption, flags)",
 	func(a, b, c, d Value) Value {
 		defer heap.FreeTo(heap.CurSize())
-		rtn, _, _ := syscall.Syscall6(messageBox, 4,
+		rtn := goc.Syscall4(messageBox,
 			intArg(a),
 			uintptr(stringArg(b)),
 			uintptr(stringArg(c)),
-			intArg(d),
-			0, 0)
+			intArg(d))
 		return intRet(rtn)
 	})
 
@@ -230,12 +241,11 @@ var _ = builtin4("AdjustWindowRectEx(lpRect, dwStyle, bMenu, dwExStyle)",
 	func(a, b, c, d Value) Value {
 		defer heap.FreeTo(heap.CurSize())
 		r := heap.Alloc(nRECT)
-		rtn, _, _ := syscall.Syscall6(adjustWindowRectEx, 4,
+		rtn := goc.Syscall4(adjustWindowRectEx,
 			uintptr(rectArg(a, r)),
 			intArg(b),
 			boolArg(c),
-			intArg(d),
-			0, 0)
+			intArg(d))
 		urectToOb(r, a)
 		return boolRet(rtn)
 	})
@@ -244,7 +254,7 @@ var _ = builtin4("AdjustWindowRectEx(lpRect, dwStyle, bMenu, dwExStyle)",
 var createMenu = user32.MustFindProc("CreateMenu").Addr()
 var _ = builtin0("CreateMenu()",
 	func() Value {
-		rtn, _, _ := syscall.Syscall(createMenu, 0, 0, 0, 0)
+		rtn := goc.Syscall0(createMenu)
 		return intRet(rtn)
 	})
 
@@ -252,7 +262,7 @@ var _ = builtin0("CreateMenu()",
 var createPopupMenu = user32.MustFindProc("CreatePopupMenu").Addr()
 var _ = builtin0("CreatePopupMenu()",
 	func() Value {
-		rtn, _, _ := syscall.Syscall(createPopupMenu, 0, 0, 0, 0)
+		rtn := goc.Syscall0(createPopupMenu)
 		return intRet(rtn)
 	})
 
@@ -262,12 +272,11 @@ var appendMenu = user32.MustFindProc("AppendMenuA").Addr()
 var _ = builtin4("AppendMenu(hmenu, flags, item, name)",
 	func(a, b, c, d Value) Value {
 		defer heap.FreeTo(heap.CurSize())
-		rtn, _, _ := syscall.Syscall6(appendMenu, 4,
+		rtn := goc.Syscall4(appendMenu,
 			intArg(a),
 			intArg(b),
 			intArg(c),
-			uintptr(stringArg(d)),
-			0, 0)
+			uintptr(stringArg(d)))
 		return boolRet(rtn)
 	})
 
@@ -275,9 +284,8 @@ var _ = builtin4("AppendMenu(hmenu, flags, item, name)",
 var destroyMenu = user32.MustFindProc("DestroyMenu").Addr()
 var _ = builtin1("DestroyMenu(hmenu)",
 	func(a Value) Value {
-		rtn, _, _ := syscall.Syscall(destroyMenu, 1,
-			intArg(a),
-			0, 0)
+		rtn := goc.Syscall1(destroyMenu,
+			intArg(a))
 		return boolRet(rtn)
 	})
 
@@ -289,7 +297,7 @@ var _ = builtin("CreateWindowEx(exStyle, classname, name, style, x, y, w, h,"+
 	" parent, menu, instance, param)",
 	func(_ *Thread, a []Value) Value {
 		defer heap.FreeTo(heap.CurSize())
-		rtn, _, _ := syscall.Syscall12(createWindowEx, 12,
+		rtn := goc.Syscall12(createWindowEx,
 			intArg(a[0]),
 			uintptr(stringArg(a[1])),
 			uintptr(stringArg(a[2])),
@@ -309,10 +317,9 @@ var _ = builtin("CreateWindowEx(exStyle, classname, name, style, x, y, w, h,"+
 var getSystemMenu = user32.MustFindProc("GetSystemMenu").Addr()
 var _ = builtin2("GetSystemMenu(hwnd, bRevert)",
 	func(a, b Value) Value {
-		rtn, _, _ := syscall.Syscall(getSystemMenu, 2,
+		rtn := goc.Syscall2(getSystemMenu,
 			intArg(a),
-			boolArg(b),
-			0)
+			boolArg(b))
 		return intRet(rtn)
 	})
 
@@ -320,10 +327,9 @@ var _ = builtin2("GetSystemMenu(hwnd, bRevert)",
 var setMenu = user32.MustFindProc("SetMenu").Addr()
 var _ = builtin2("SetMenu(hwnd, hmenu)",
 	func(a, b Value) Value {
-		rtn, _, _ := syscall.Syscall(setMenu, 2,
+		rtn := goc.Syscall2(setMenu,
 			intArg(a),
-			intArg(b),
-			0)
+			intArg(b))
 		return boolRet(rtn)
 	})
 
@@ -333,10 +339,9 @@ var _ = builtin2("BeginPaint(hwnd, ps)",
 	func(a, b Value) Value {
 		defer heap.FreeTo(heap.CurSize())
 		p := heap.Alloc(nPAINTSTRUCT)
-		rtn, _, _ := syscall.Syscall(beginPaint, 2,
+		rtn := goc.Syscall2(beginPaint,
 			intArg(a),
-			uintptr(psArg(b, p)),
-			0)
+			uintptr(psArg(b, p)))
 		ps := (*PAINTSTRUCT)(p)
 		b.Put(nil, SuStr("hdc"), IntVal(int(ps.hdc)))
 		b.Put(nil, SuStr("fErase"), SuBool(ps.fErase != 0))
@@ -353,10 +358,9 @@ var _ = builtin2("EndPaint(hwnd, ps)",
 	func(a, b Value) Value {
 		defer heap.FreeTo(heap.CurSize())
 		p := heap.Alloc(nPAINTSTRUCT)
-		rtn, _, _ := syscall.Syscall(endPaint, 2,
+		rtn := goc.Syscall2(endPaint,
 			intArg(a),
-			uintptr(psArg(b, p)),
-			0)
+			uintptr(psArg(b, p)))
 		return boolRet(rtn)
 	})
 
@@ -375,13 +379,12 @@ func psArg(ob Value, p unsafe.Pointer) unsafe.Pointer {
 var callWindowProc = user32.MustFindProc("CallWindowProcA").Addr()
 var _ = builtin5("CallWindowProc(wndprcPrev, hwnd, msg, wParam, lParam)",
 	func(a, b, c, d, e Value) Value {
-		rtn, _, _ := syscall.Syscall6(callWindowProc, 5,
+		rtn := goc.Syscall5(callWindowProc,
 			intArg(a),
 			intArg(b),
 			intArg(c),
 			intArg(d),
-			intArg(e),
-			0)
+			intArg(e))
 		return intRet(rtn)
 	})
 
@@ -390,10 +393,9 @@ var createAcceleratorTable = user32.MustFindProc("CreateAcceleratorTableA").Addr
 var _ = builtin2("CreateAcceleratorTable(lpaccel, cEntries)",
 	func(a, b Value) Value {
 		defer heap.FreeTo(heap.CurSize())
-		rtn, _, _ := syscall.Syscall(createAcceleratorTable, 2,
+		rtn := goc.Syscall2(createAcceleratorTable,
 			uintptr(stringArg(a)),
-			intArg(b),
-			0)
+			intArg(b))
 		return intRet(rtn)
 	})
 
@@ -401,9 +403,8 @@ var _ = builtin2("CreateAcceleratorTable(lpaccel, cEntries)",
 var destroyAcceleratorTable = user32.MustFindProc("DestroyAcceleratorTable").Addr()
 var _ = builtin1("DestroyAcceleratorTable(hAccel)",
 	func(a Value) Value {
-		rtn, _, _ := syscall.Syscall(destroyAcceleratorTable, 1,
-			intArg(a),
-			0, 0)
+		rtn := goc.Syscall1(destroyAcceleratorTable,
+			intArg(a))
 		return boolRet(rtn)
 	})
 
@@ -411,9 +412,8 @@ var _ = builtin1("DestroyAcceleratorTable(hAccel)",
 var destroyWindow = user32.MustFindProc("DestroyWindow").Addr()
 var _ = builtin1("DestroyWindow(hwnd)",
 	func(a Value) Value {
-		rtn, _, _ := syscall.Syscall(destroyWindow, 1,
-			intArg(a),
-			0, 0)
+		rtn := goc.Syscall1(destroyWindow,
+			intArg(a))
 		return boolRet(rtn)
 	})
 
@@ -424,12 +424,11 @@ var _ = builtin4("DrawFrameControl(hdc, lprc, uType, uState)",
 	func(a, b, c, d Value) Value {
 		defer heap.FreeTo(heap.CurSize())
 		r := heap.Alloc(nRECT)
-		rtn, _, _ := syscall.Syscall6(drawFrameControl, 4,
+		rtn := goc.Syscall4(drawFrameControl,
 			intArg(a),
 			uintptr(rectArg(b, r)),
 			intArg(c),
-			intArg(d),
-			0, 0)
+			intArg(d))
 		return boolRet(rtn)
 	})
 
@@ -440,13 +439,12 @@ var _ = builtin5("DrawText(hdc, lpsz, cb, lprc, uFormat)",
 	func(a, b, c, d, e Value) Value {
 		defer heap.FreeTo(heap.CurSize())
 		r := heap.Alloc(nRECT)
-		rtn, _, _ := syscall.Syscall6(drawText, 5,
+		rtn := goc.Syscall5(drawText,
 			intArg(a),
 			uintptr(stringArg(b)),
 			intArg(c),
 			uintptr(rectArg(d, r)),
-			intArg(e),
-			0)
+			intArg(e))
 		urectToOb(r, d) // for CALCRECT
 		return intRet(rtn)
 	})
@@ -458,7 +456,7 @@ var _ = builtin3("FillRect(hdc, lpRect, hBrush)",
 		defer heap.FreeTo(heap.CurSize())
 		verify.That(b != Zero)
 		r := heap.Alloc(nRECT)
-		rtn, _, _ := syscall.Syscall(fillRect, 3,
+		rtn := goc.Syscall3(fillRect,
 			intArg(a),
 			uintptr(rectArg(b, r)),
 			intArg(c))
@@ -469,7 +467,7 @@ var _ = builtin3("FillRect(hdc, lpRect, hBrush)",
 var getActiveWindow = user32.MustFindProc("GetActiveWindow").Addr()
 var _ = builtin0("GetActiveWindow()",
 	func() Value {
-		rtn, _, _ := syscall.Syscall(getActiveWindow, 0, 0, 0, 0)
+		rtn := goc.Syscall0(getActiveWindow)
 		return intRet(rtn)
 	})
 
@@ -477,7 +475,7 @@ var _ = builtin0("GetActiveWindow()",
 var getFocus = user32.MustFindProc("GetFocus").Addr()
 var _ = builtin0("GetFocus()",
 	func() Value {
-		rtn, _, _ := syscall.Syscall(getFocus, 0, 0, 0, 0)
+		rtn := goc.Syscall0(getFocus)
 		return intRet(rtn)
 	})
 
@@ -487,10 +485,9 @@ var _ = builtin2("GetClientRect(hwnd, rect)",
 	func(a, b Value) Value {
 		defer heap.FreeTo(heap.CurSize())
 		r := heap.Alloc(nRECT)
-		rtn, _, _ := syscall.Syscall(getClientRect, 2,
+		rtn := goc.Syscall2(getClientRect,
 			intArg(a),
-			uintptr(r),
-			0)
+			uintptr(r))
 		urectToOb(r, b)
 		return boolRet(rtn)
 	})
@@ -499,9 +496,8 @@ var _ = builtin2("GetClientRect(hwnd, rect)",
 var getDC = user32.MustFindProc("GetDC").Addr()
 var _ = builtin1("GetDC(hwnd)",
 	func(a Value) Value {
-		rtn, _, _ := syscall.Syscall(getDC, 1,
-			intArg(a),
-			0, 0)
+		rtn := goc.Syscall1(getDC,
+			intArg(a))
 		return intRet(rtn)
 	})
 
@@ -513,10 +509,9 @@ var _ = builtin2("GetMonitorInfoApi(hwnd, mInfo)",
 		p := heap.Alloc(nMONITORINFO)
 		mi := (*MONITORINFO)(p)
 		mi.cbSize = uint32(nMONITORINFO)
-		rtn, _, _ := syscall.Syscall(getMonitorInfo, 2,
+		rtn := goc.Syscall2(getMonitorInfo,
 			intArg(a),
-			uintptr(p),
-			0)
+			uintptr(p))
 		b.Put(nil, SuStr("rcMonitor"), rectToOb(&mi.rcMonitor, nil))
 		b.Put(nil, SuStr("rcWork"), rectToOb(&mi.rcWork, nil))
 		b.Put(nil, SuStr("dwFlags"), IntVal(int(mi.dwFlags)))
@@ -539,7 +534,7 @@ var _ = builtin3("GetScrollInfo(hwnd, fnBar, lpsi)",
 			nPos:      getInt32(c, "nPos"),
 			nTrackPos: getInt32(c, "nTrackPos"),
 		}
-		rtn, _, _ := syscall.Syscall(getScrollInfo, 3,
+		rtn := goc.Syscall3(getScrollInfo,
 			intArg(a),
 			intArg(b),
 			uintptr(p))
@@ -555,10 +550,9 @@ var _ = builtin3("GetScrollInfo(hwnd, fnBar, lpsi)",
 var getScrollPos = user32.MustFindProc("GetScrollPos").Addr()
 var _ = builtin2("GetScrollPos(hwnd, nBar)",
 	func(a, b Value) Value {
-		rtn, _, _ := syscall.Syscall(getScrollPos, 2,
+		rtn := goc.Syscall2(getScrollPos,
 			intArg(a),
-			intArg(b),
-			0)
+			intArg(b))
 		return intRet(rtn)
 	})
 
@@ -566,9 +560,8 @@ var _ = builtin2("GetScrollPos(hwnd, nBar)",
 var getSysColorBrush = user32.MustFindProc("GetSysColorBrush").Addr()
 var _ = builtin1("GetSysColorBrush(nIndex)",
 	func(a Value) Value {
-		rtn, _, _ := syscall.Syscall(getSysColorBrush, 1,
-			intArg(a),
-			0, 0)
+		rtn := goc.Syscall1(getSysColorBrush,
+			intArg(a))
 		return intRet(rtn)
 	})
 
@@ -576,9 +569,8 @@ var _ = builtin1("GetSysColorBrush(nIndex)",
 var getSystemMetrics = user32.MustFindProc("GetSystemMetrics").Addr()
 var _ = builtin1("GetSystemMetrics(nIndex)",
 	func(a Value) Value {
-		rtn, _, _ := syscall.Syscall(getSystemMetrics, 1,
-			intArg(a),
-			0, 0)
+		rtn := goc.Syscall1(getSystemMetrics,
+			intArg(a))
 		return intRet(rtn)
 	})
 
@@ -586,10 +578,9 @@ var _ = builtin1("GetSystemMetrics(nIndex)",
 var getWindowLong = user32.MustFindProc("GetWindowLongA").Addr()
 var _ = builtin2("GetWindowLong(hwnd, offset)",
 	func(a, b Value) Value {
-		rtn, _, _ := syscall.Syscall(getWindowLong, 2,
+		rtn := goc.Syscall2(getWindowLong,
 			intArg(a),
-			intArg(b),
-			0)
+			intArg(b))
 		return intRet(rtn)
 	})
 
@@ -597,10 +588,9 @@ var _ = builtin2("GetWindowLong(hwnd, offset)",
 var getWindowLongPtr = user32.MustFindProc("GetWindowLongPtrA").Addr()
 var _ = builtin2("GetWindowLongPtr(hwnd, offset)",
 	func(a, b Value) Value {
-		rtn, _, _ := syscall.Syscall(getWindowLongPtr, 2,
+		rtn := goc.Syscall2(getWindowLongPtr,
 			intArg(a),
-			intArg(b),
-			0)
+			intArg(b))
 		return intRet(rtn)
 	})
 
@@ -612,10 +602,9 @@ var _ = builtin2("GetWindowPlacement(hwnd, ps)",
 		p := heap.Alloc(nWINDOWPLACEMENT)
 		wp := (*WINDOWPLACEMENT)(p)
 		wp.length = uint32(nWINDOWPLACEMENT)
-		rtn, _, _ := syscall.Syscall(getWindowPlacement, 2,
+		rtn := goc.Syscall2(getWindowPlacement,
 			intArg(a),
-			uintptr(p),
-			0)
+			uintptr(p))
 		b.Put(nil, SuStr("flags"), IntVal(int(wp.flags)))
 		b.Put(nil, SuStr("showCmd"), IntVal(int(wp.showCmd)))
 		b.Put(nil, SuStr("ptMinPosition"), pointToOb(&wp.ptMinPosition, nil))
@@ -631,11 +620,10 @@ var getWindowTextLength = user32.MustFindProc("GetWindowTextLengthA").Addr()
 var _ = builtin1("GetWindowText(hwnd)",
 	func(hwnd Value) Value {
 		defer heap.FreeTo(heap.CurSize())
-		n, _, _ := syscall.Syscall(getWindowTextLength, 1,
-			intArg(hwnd),
-			0, 0)
+		n := goc.Syscall1(getWindowTextLength,
+			intArg(hwnd))
 		buf := heap.Alloc(n + 1)
-		n, _, _ = syscall.Syscall(getWindowText, 3,
+		n = goc.Syscall3(getWindowText,
 			intArg(hwnd),
 			uintptr(buf),
 			n+1)
@@ -648,7 +636,7 @@ var _ = builtin3("InflateRect(rect, dx, dy)",
 	func(a, b, c Value) Value {
 		defer heap.FreeTo(heap.CurSize())
 		r := heap.Alloc(nRECT)
-		rtn, _, _ := syscall.Syscall(inflateRect, 3,
+		rtn := goc.Syscall3(inflateRect,
 			uintptr(rectArg(a, r)),
 			intArg(b),
 			intArg(c))
@@ -677,12 +665,11 @@ var _ = builtin4("InsertMenuItem(hMenu, uItem, fByPosition, lpmii)",
 			cch:           getUint32(d, "cch"),
 			hbmpItem:      getHandle(d, "hbmpItem"),
 		}
-		rtn, _, _ := syscall.Syscall6(insertMenuItem, 4,
+		rtn := goc.Syscall4(insertMenuItem,
 			intArg(a),
 			intArg(b),
 			boolArg(c),
-			uintptr(p),
-			0, 0)
+			uintptr(p))
 		return boolRet(rtn)
 	})
 
@@ -690,9 +677,8 @@ var _ = builtin4("InsertMenuItem(hMenu, uItem, fByPosition, lpmii)",
 var getMenuItemCount = user32.MustFindProc("GetMenuItemCount").Addr()
 var _ = builtin1("GetMenuItemCount(hMenu)",
 	func(a Value) Value {
-		rtn, _, _ := syscall.Syscall(getMenuItemCount, 1,
-			intArg(a),
-			0, 0)
+		rtn := goc.Syscall1(getMenuItemCount,
+			intArg(a))
 		return intRet(rtn)
 	})
 
@@ -700,10 +686,9 @@ var _ = builtin1("GetMenuItemCount(hMenu)",
 var getMenuItemID = user32.MustFindProc("GetMenuItemID").Addr()
 var _ = builtin2("GetMenuItemID(hMenu, nPos)",
 	func(a, b Value) Value {
-		rtn, _, _ := syscall.Syscall(getMenuItemID, 2,
+		rtn := goc.Syscall2(getMenuItemID,
 			intArg(a),
-			intArg(b),
-			0)
+			intArg(b))
 		return intRet(rtn)
 	})
 
@@ -724,12 +709,11 @@ var _ = builtin2("GetMenuItemInfoText(hMenu, uItem)",
 			dwTypeData: nil,
 		}
 		// get the length
-		rtn, _, _ := syscall.Syscall6(getMenuItemInfo, 4,
+		rtn := goc.Syscall4(getMenuItemInfo,
 			intArg(a),
 			intArg(b),
 			0,
-			uintptr(p),
-			0, 0)
+			uintptr(p))
 		if rtn == 0 {
 			return False
 		}
@@ -737,12 +721,11 @@ var _ = builtin2("GetMenuItemInfoText(hMenu, uItem)",
 		n := uintptr(mii.cch)
 		buf := heap.Alloc(n)
 		mii.dwTypeData = (*byte)(buf)
-		rtn, _, _ = syscall.Syscall6(getMenuItemInfo, 4,
+		rtn = goc.Syscall4(getMenuItemInfo,
 			intArg(a),
 			intArg(b),
 			0,
-			uintptr(p),
-			0, 0)
+			uintptr(p))
 		return bufRet(buf, n-1) // -1 to omit nul terminator
 	})
 
@@ -767,12 +750,11 @@ var _ = builtin4("SetMenuItemInfo(hMenu, uItem, fByPosition, lpmii)",
 			cch:      getUint32(d, "cch"),
 			hbmpItem: getHandle(d, "hbmpItem"),
 		}
-		rtn, _, _ := syscall.Syscall6(setMenuItemInfo, 4,
+		rtn := goc.Syscall4(setMenuItemInfo,
 			intArg(a),
 			intArg(b),
 			intArg(c),
-			uintptr(p),
-			0, 0)
+			uintptr(p))
 		return boolRet(rtn)
 	})
 
@@ -782,7 +764,7 @@ var _ = builtin3("InvalidateRect(hwnd, rect, erase)",
 	func(a, b, c Value) Value {
 		defer heap.FreeTo(heap.CurSize())
 		r := heap.Alloc(nRECT)
-		rtn, _, _ := syscall.Syscall(invalidateRect, 3,
+		rtn := goc.Syscall3(invalidateRect,
 			intArg(a),
 			uintptr(rectArg(b, r)),
 			boolArg(c))
@@ -793,9 +775,8 @@ var _ = builtin3("InvalidateRect(hwnd, rect, erase)",
 var isWindowEnabled = user32.MustFindProc("IsWindowEnabled").Addr()
 var _ = builtin1("IsWindowEnabled(hwnd)",
 	func(a Value) Value {
-		rtn, _, _ := syscall.Syscall(isWindowEnabled, 1,
-			intArg(a),
-			0, 0)
+		rtn := goc.Syscall1(isWindowEnabled,
+			intArg(a))
 		return boolRet(rtn)
 	})
 
@@ -803,10 +784,9 @@ var _ = builtin1("IsWindowEnabled(hwnd)",
 var loadCursor = user32.MustFindProc("LoadCursorA").Addr()
 var _ = builtin2("LoadCursor(hinst, pszCursor)",
 	func(a, b Value) Value {
-		rtn, _, _ := syscall.Syscall(loadCursor, 2,
+		rtn := goc.Syscall2(loadCursor,
 			intArg(a),
-			intArg(b),
-			0) // could be a string but we never use that
+			intArg(b)) // could be a string but we never use that
 		return intRet(rtn)
 	})
 
@@ -814,10 +794,9 @@ var _ = builtin2("LoadCursor(hinst, pszCursor)",
 var loadIcon = user32.MustFindProc("LoadIconA").Addr()
 var _ = builtin2("LoadIcon(hinst, lpIconName)",
 	func(a, b Value) Value {
-		rtn, _, _ := syscall.Syscall(loadIcon, 2,
+		rtn := goc.Syscall2(loadIcon,
 			intArg(a),
-			intArg(b),
-			0) // could be a string but we never use that
+			intArg(b)) // could be a string but we never use that
 		return intRet(rtn)
 	})
 
@@ -827,10 +806,9 @@ var _ = builtin2("MonitorFromRect(lprc, dwFlags)",
 	func(a, b Value) Value {
 		defer heap.FreeTo(heap.CurSize())
 		r := heap.Alloc(nRECT)
-		rtn, _, _ := syscall.Syscall(monitorFromRect, 2,
+		rtn := goc.Syscall2(monitorFromRect,
 			uintptr(rectArg(a, r)),
-			intArg(b),
-			0)
+			intArg(b))
 		return intRet(rtn)
 	})
 
@@ -839,7 +817,7 @@ var _ = builtin2("MonitorFromRect(lprc, dwFlags)",
 var moveWindow = user32.MustFindProc("MoveWindow").Addr()
 var _ = builtin6("MoveWindow(hwnd, left, top, width, height, repaint)",
 	func(a, b, c, d, e, f Value) Value {
-		rtn, _, _ := syscall.Syscall6(moveWindow, 6,
+		rtn := goc.Syscall6(moveWindow,
 			intArg(a),
 			intArg(b),
 			intArg(c),
@@ -867,9 +845,8 @@ var _ = builtin1("RegisterClass(wc)",
 			menuName:   getStr(a, "menuName"),
 			className:  getStr(a, "className"),
 		}
-		rtn, _, _ := syscall.Syscall(registerClass, 1,
-			uintptr(p),
-			0, 0)
+		rtn := goc.Syscall1(registerClass,
+			uintptr(p))
 		return intRet(rtn)
 	})
 
@@ -878,9 +855,8 @@ var registerClipboardFormat = user32.MustFindProc("RegisterClipboardFormatA").Ad
 var _ = builtin1("RegisterClipboardFormat(lpszFormat)",
 	func(a Value) Value {
 		defer heap.FreeTo(heap.CurSize())
-		rtn, _, _ := syscall.Syscall(registerClipboardFormat, 1,
-			uintptr(stringArg(a)),
-			0, 0)
+		rtn := goc.Syscall1(registerClipboardFormat,
+			uintptr(stringArg(a)))
 		return intRet(rtn)
 	})
 
@@ -888,10 +864,9 @@ var _ = builtin1("RegisterClipboardFormat(lpszFormat)",
 var releaseDC = user32.MustFindProc("ReleaseDC").Addr()
 var _ = builtin2("ReleaseDC(hwnd, hDC)",
 	func(a, b Value) Value {
-		rtn, _, _ := syscall.Syscall(releaseDC, 2,
+		rtn := goc.Syscall2(releaseDC,
 			intArg(a),
-			intArg(b),
-			0)
+			intArg(b))
 		return intRet(rtn)
 	})
 
@@ -900,24 +875,22 @@ var _ = builtin2("ReleaseDC(hwnd, hDC)",
 var sendMessage = user32.MustFindProc("SendMessageA").Addr()
 var _ = builtin4("SendMessage(hwnd, msg, wParam, lParam)",
 	func(a, b, c, d Value) Value {
-		rtn, _, _ := syscall.Syscall6(sendMessage, 4,
+		rtn := goc.Syscall4(sendMessage,
 			intArg(a),
 			intArg(b),
 			intArg(c),
-			intArg(d),
-			0, 0)
+			intArg(d))
 		return intRet(rtn)
 	})
 
 var _ = builtin4("SendMessageText(hwnd, msg, wParam, text)",
 	func(a, b, c, d Value) Value {
 		defer heap.FreeTo(heap.CurSize())
-		rtn, _, _ := syscall.Syscall6(sendMessage, 4,
+		rtn := goc.Syscall4(sendMessage,
 			intArg(a),
 			intArg(b),
 			intArg(c),
-			uintptr(stringArg(d)),
-			0, 0)
+			uintptr(stringArg(d)))
 		return intRet(rtn)
 	})
 
@@ -926,12 +899,11 @@ var _ = builtin4("SendMessageText(hwnd, msg, wParam, text)",
 var _ = builtin4("SendMessageTextIn(hwnd, msg, wParam, text)",
 	func(a, b, c, d Value) Value {
 		defer heap.FreeTo(heap.CurSize())
-		rtn, _, _ := syscall.Syscall6(sendMessage, 4,
+		rtn := goc.Syscall4(sendMessage,
 			intArg(a),
 			intArg(b),
 			intArg(c),
-			uintptr(stringArg(d)),
-			0, 0)
+			uintptr(stringArg(d)))
 		return intRet(rtn)
 	})
 
@@ -940,12 +912,11 @@ var _ = builtin4("SendMessageTextOut(hwnd, msg, wParam = 0, bufsize = 1024)",
 		defer heap.FreeTo(heap.CurSize())
 		n := uintptr(ToInt(d) + 1)
 		p := heap.Alloc(n)
-		rtn, _, _ := syscall.Syscall6(sendMessage, 4,
+		rtn := goc.Syscall4(sendMessage,
 			intArg(a),
 			intArg(b),
 			intArg(c),
-			uintptr(p),
-			0, 0)
+			uintptr(p))
 		ob := NewSuObject()
 		ob.Put(nil, SuStr("text"), bufToStr(p, n))
 		ob.Put(nil, SuStr("result"), intRet(rtn))
@@ -956,12 +927,11 @@ var _ = builtin4("SendMessageRect(hwnd, msg, wParam, rect)",
 	func(a, b, c, d Value) Value {
 		defer heap.FreeTo(heap.CurSize())
 		r := heap.Alloc(nRECT)
-		rtn, _, _ := syscall.Syscall6(sendMessage, 4,
+		rtn := goc.Syscall4(sendMessage,
 			intArg(a),
 			intArg(b),
 			0,
-			uintptr(rectArg(d, r)),
-			0, 0)
+			uintptr(rectArg(d, r)))
 		urectToOb(r, d)
 		return intRet(rtn)
 	})
@@ -984,12 +954,11 @@ var _ = builtin4("SendMessageTcitem(hwnd, msg, wParam, tcitem)",
 			iImage:      getInt32(d, "iImage"),
 			lParam:      getInt32(d, "lParam"),
 		}
-		rtn, _, _ := syscall.Syscall6(sendMessage, 4,
+		rtn := goc.Syscall4(sendMessage,
 			intArg(a),
 			intArg(b),
 			intArg(c),
-			uintptr(p),
-			0, 0)
+			uintptr(p))
 		if n > 0 {
 			d.Put(nil, SuStr("pszText"), bufToStr(unsafe.Pointer(t), uintptr(n)))
 		}
@@ -1026,12 +995,11 @@ var _ = builtin5("SendMessageTextRange(hwnd, msg, cpMin, cpMax, each = 1)",
 			chrg:      CHARRANGE{cpMin: int32(cpMin), cpMax: int32(cpMax)},
 			lpstrText: (*byte)(buf),
 		}
-		syscall.Syscall6(sendMessage, 4,
+		goc.Syscall4(sendMessage,
 			intArg(a),
 			intArg(b),
 			0,
-			uintptr(p),
-			0, 0)
+			uintptr(p))
 		return bufRet(buf, n)
 	})
 
@@ -1049,12 +1017,11 @@ var _ = builtin4("SendMessageTOOLINFO(hwnd, msg, wParam, lParam)",
 			lParam:   getInt32(d, "lParam"),
 			rect:     getRect(d, "rect"),
 		}
-		rtn, _, _ := syscall.Syscall6(sendMessage, 4,
+		rtn := goc.Syscall4(sendMessage,
 			intArg(a),
 			intArg(b),
 			intArg(c),
-			uintptr(p),
-			0, 0)
+			uintptr(p))
 		return intRet(rtn)
 	})
 
@@ -1072,12 +1039,11 @@ var _ = builtin4("SendMessageTOOLINFO2(hwnd, msg, wParam, lParam)",
 			lParam:   getInt32(d, "lParam"),
 			rect:     getRect(d, "rect"),
 		}
-		rtn, _, _ := syscall.Syscall6(sendMessage, 4,
+		rtn := goc.Syscall4(sendMessage,
 			intArg(a),
 			intArg(b),
 			intArg(c),
-			uintptr(p),
-			0, 0)
+			uintptr(p))
 		return intRet(rtn)
 	})
 
@@ -1108,12 +1074,11 @@ var _ = builtin4("SendMessageTreeItem(hwnd, msg, wParam, tvitem)",
 				cChildren:      getInt32(d, "cChildren"),
 				lParam:         getHandle(d, "lParam"),
 			}}
-		rtn, _, _ := syscall.Syscall6(sendMessage, 4,
+		rtn := goc.Syscall4(sendMessage,
 			intArg(a),
 			intArg(b),
 			intArg(c),
-			uintptr(p),
-			0, 0)
+			uintptr(p))
 		d.Put(nil, SuStr("mask"), IntVal(int(tvi.mask)))
 		d.Put(nil, SuStr("hItem"), IntVal(int(tvi.hItem)))
 		d.Put(nil, SuStr("state"), IntVal(int(tvi.state)))
@@ -1153,12 +1118,11 @@ var _ = builtin4("SendMessageTreeInsert(hwnd, msg, wParam, tvins)",
 				cChildren:      getInt32(item, "cChildren"),
 				lParam:         getHandle(item, "lParam"),
 			}}
-		rtn, _, _ := syscall.Syscall6(sendMessage, 4,
+		rtn := goc.Syscall4(sendMessage,
 			intArg(a),
 			intArg(b),
 			intArg(c),
-			uintptr(p),
-			0, 0)
+			uintptr(p))
 		return intRet(rtn)
 	})
 
@@ -1173,12 +1137,11 @@ var _ = builtin4("SendMessageSBPART(hwnd, msg, wParam, sbpart)",
 			*(*int32)(unsafe.Pointer(uintptr(p) + int32Size*uintptr(i))) =
 				int32(ToInt(ob.ListGet(i)))
 		}
-		rtn, _, _ := syscall.Syscall6(sendMessage, 4,
+		rtn := goc.Syscall4(sendMessage,
 			intArg(a),
 			intArg(b),
 			intArg(c),
-			uintptr(p),
-			0, 0)
+			uintptr(p))
 		for i := 0; i < np; i++ {
 			x := *(*int32)(unsafe.Pointer(uintptr(p) + int32Size*uintptr(i)))
 			ob.Put(nil, SuInt(i), IntVal(int(x)))
@@ -1198,12 +1161,11 @@ var _ = builtin4("SendMessageMSG(hwnd, msg, wParam, lParam)",
 			time:    getUint32(d, "message"),
 			pt:      getPoint(d, "pt"),
 		}
-		rtn, _, _ := syscall.Syscall6(sendMessage, 4,
+		rtn := goc.Syscall4(sendMessage,
 			intArg(a),
 			intArg(b),
 			intArg(c),
-			uintptr(p),
-			0, 0)
+			uintptr(p))
 		return intRet(rtn)
 	})
 
@@ -1226,12 +1188,11 @@ var _ = builtin4("SendMessageHditem(hwnd, msg, wParam, lParam)",
 		obToHDITEM(d, hdi)
 		hdi.pszText = pszText
 		hdi.cchTextMax = n
-		rtn, _, _ := syscall.Syscall6(sendMessage, 4,
+		rtn := goc.Syscall4(sendMessage,
 			intArg(a),
 			intArg(b),
 			intArg(c),
-			uintptr(p),
-			0, 0)
+			uintptr(p))
 		hditemToOb(hdi, d)
 		if buf != nil {
 			d.Put(nil, SuStr("pszText"), bufToStr(buf, uintptr(n)))
@@ -1300,12 +1261,11 @@ var _ = builtin4("SendMessageHDHITTESTINFO(hwnd, msg, wParam, lParam)",
 			flags: getInt32(d, "flags"),
 			iItem: getInt32(d, "iItem"),
 		}
-		rtn, _, _ := syscall.Syscall6(sendMessage, 4,
+		rtn := goc.Syscall4(sendMessage,
 			intArg(a),
 			intArg(b),
 			intArg(c),
-			uintptr(p),
-			0, 0)
+			uintptr(p))
 		d.Put(nil, SuStr("pt"), pointToOb(&ht.pt, nil))
 		d.Put(nil, SuStr("flags"), IntVal(int(ht.flags)))
 		d.Put(nil, SuStr("iItem"), IntVal(int(ht.iItem)))
@@ -1330,12 +1290,11 @@ var _ = builtin4("SendMessageTreeHitTest(hwnd, msg, wParam, lParam)",
 			flags: getInt32(d, "flags"),
 			iItem: getHandle(d, "iItem"),
 		}
-		rtn, _, _ := syscall.Syscall6(sendMessage, 4,
+		rtn := goc.Syscall4(sendMessage,
 			intArg(a),
 			intArg(b),
 			intArg(c),
-			uintptr(p),
-			0, 0)
+			uintptr(p))
 		d.Put(nil, SuStr("pt"), pointToOb(&ht.pt, nil))
 		d.Put(nil, SuStr("flags"), IntVal(int(ht.flags)))
 		d.Put(nil, SuStr("iItem"), IntVal(int(ht.iItem)))
@@ -1359,12 +1318,11 @@ var _ = builtin4("SendMessageTabHitTest(hwnd, msg, wParam, lParam)",
 			pt:    getPoint(d, "pt"),
 			flags: getInt32(d, "flags"),
 		}
-		rtn, _, _ := syscall.Syscall6(sendMessage, 4,
+		rtn := goc.Syscall4(sendMessage,
 			intArg(a),
 			intArg(b),
 			intArg(c),
-			uintptr(p),
-			0, 0)
+			uintptr(p))
 		d.Put(nil, SuStr("pt"), pointToOb(&ht.pt, nil))
 		d.Put(nil, SuStr("flags"), IntVal(int(ht.flags)))
 		return intRet(rtn)
@@ -1381,9 +1339,8 @@ const nTCHITTESTINFO = unsafe.Sizeof(TCHITTESTINFO{})
 var setFocus = user32.MustFindProc("SetFocus").Addr()
 var _ = builtin1("SetFocus(hwnd)",
 	func(a Value) Value {
-		rtn, _, _ := syscall.Syscall(setFocus, 1,
-			intArg(a),
-			0, 0)
+		rtn := goc.Syscall1(setFocus,
+			intArg(a))
 		return intRet(rtn)
 	})
 
@@ -1397,15 +1354,18 @@ func init() {
 	}
 }
 
+const WM_USER = 0x400
+
 // dll User32:SetTimer(pointer hwnd, long id, long ms, TIMERPROC f) long
 var setTimer = user32.MustFindProc("SetTimer").Addr()
 var _ = builtin4("SetTimer(hwnd, id, ms, f)",
 	func(a, b, c, d Value) Value {
-		tid, _, _ := syscall.Syscall(getCurrentThreadId, 0, 0, 0, 0)
-		if tid != uiThreadId {
+		if windows.GetCurrentThreadId() != uiThreadId {
+			// WARNING: can't use heap from background thread
 			d.SetConcurrent() // since callback will be from different thread
+			// NOTE: this has to be the Go Syscall, not goc.Syscall
 			r, _, _ := syscall.Syscall6(postThreadMessage, 4,
-				uiThreadId, WM_USER, intArg(c), NewCallback(d, 4), 0, 0)
+				goc.CThreadId(), WM_USER, intArg(c), NewCallback(d, 4), 0, 0)
 			if r == 0 {
 				return Zero // SetTimer failure return value
 			}
@@ -1415,12 +1375,11 @@ var _ = builtin4("SetTimer(hwnd, id, ms, f)",
 		if timersDisabled {
 			return Zero
 		}
-		rtn, _, _ := syscall.Syscall6(setTimer, 4,
+		rtn := goc.Syscall4(setTimer,
 			intArg(a),
 			intArg(b),
 			intArg(c),
-			NewCallback(d, 4),
-			0, 0)
+			NewCallback(d, 4))
 		return intRet(rtn)
 	})
 
@@ -1431,10 +1390,9 @@ var _ = builtin2("KillTimer(hwnd, id)",
 		if timersDisabled {
 			return False
 		}
-		rtn, _, _ := syscall.Syscall(killTimer, 2,
+		rtn := goc.Syscall2(killTimer,
 			intArg(a),
-			intArg(b),
-			0)
+			intArg(b))
 		return boolRet(rtn)
 	})
 
@@ -1442,7 +1400,7 @@ var _ = builtin2("KillTimer(hwnd, id)",
 var setWindowLong = user32.MustFindProc("SetWindowLongA").Addr()
 var _ = builtin3("SetWindowLong(hwnd, offset, value)",
 	func(a, b, c Value) Value {
-		rtn, _, _ := syscall.Syscall(setWindowLong, 3,
+		rtn := goc.Syscall3(setWindowLong,
 			intArg(a),
 			intArg(b),
 			intArg(c))
@@ -1453,7 +1411,7 @@ var _ = builtin3("SetWindowLong(hwnd, offset, value)",
 var setWindowLongPtr = user32.MustFindProc("SetWindowLongPtrA").Addr()
 var _ = builtin3("SetWindowLongPtr(hwnd, offset, value)",
 	func(a, b, c Value) Value {
-		rtn, _, _ := syscall.Syscall(setWindowLongPtr, 3,
+		rtn := goc.Syscall3(setWindowLongPtr,
 			intArg(a),
 			intArg(b),
 			intArg(c))
@@ -1461,9 +1419,9 @@ var _ = builtin3("SetWindowLongPtr(hwnd, offset, value)",
 	})
 
 // dll User32:SetWindowProc(pointer hwnd, long offset, WNDPROC proc) pointer
-var _ = builtin3("SetWindowProc(hwnd, offset, value)",
+var _ = builtin3("SetWindowProc(hwnd, offset, proc)",
 	func(a, b, c Value) Value {
-		rtn, _, _ := syscall.Syscall(setWindowLongPtr, 3,
+		rtn := goc.Syscall3(setWindowLongPtr,
 			intArg(a),
 			intArg(b),
 			NewCallback(c, 4))
@@ -1484,10 +1442,9 @@ var _ = builtin2("SetWindowPlacement(hwnd, lpwndpl)",
 			ptMaxPosition:    getPoint(b, "ptMaxPosition"),
 			rcNormalPosition: getRect(b, "rcNormalPosition"),
 		}
-		rtn, _, _ := syscall.Syscall(setWindowPlacement, 2,
+		rtn := goc.Syscall2(setWindowPlacement,
 			intArg(a),
-			uintptr(p),
-			0)
+			uintptr(p))
 		return boolRet(rtn)
 	})
 
@@ -1496,15 +1453,14 @@ var _ = builtin2("SetWindowPlacement(hwnd, lpwndpl)",
 var setWindowPos = user32.MustFindProc("SetWindowPos").Addr()
 var _ = builtin7("SetWindowPos(hWnd, hWndInsertAfter, X, Y, cx, cy, uFlags)",
 	func(a, b, c, d, e, f, g Value) Value {
-		rtn, _, _ := syscall.Syscall9(setWindowPos, 7,
+		rtn := goc.Syscall7(setWindowPos,
 			intArg(a),
 			intArg(b),
 			intArg(c),
 			intArg(d),
 			intArg(e),
 			intArg(f),
-			intArg(g),
-			0, 0)
+			intArg(g))
 		return boolRet(rtn)
 	})
 
@@ -1513,10 +1469,9 @@ var setWindowText = user32.MustFindProc("SetWindowTextA").Addr()
 var _ = builtin2("SetWindowText(hwnd, lpwndpl)",
 	func(a, b Value) Value {
 		defer heap.FreeTo(heap.CurSize())
-		rtn, _, _ := syscall.Syscall(setWindowText, 2,
+		rtn := goc.Syscall2(setWindowText,
 			intArg(a),
-			uintptr(stringArg(b)),
-			0)
+			uintptr(stringArg(b)))
 		return boolRet(rtn)
 	})
 
@@ -1524,10 +1479,9 @@ var _ = builtin2("SetWindowText(hwnd, lpwndpl)",
 var showWindow = user32.MustFindProc("ShowWindow").Addr()
 var _ = builtin2("ShowWindow(hwnd, ncmd)",
 	func(a, b Value) Value {
-		rtn, _, _ := syscall.Syscall(showWindow, 2,
+		rtn := goc.Syscall2(showWindow,
 			intArg(a),
-			intArg(b),
-			0)
+			intArg(b))
 		return boolRet(rtn)
 	})
 
@@ -1540,12 +1494,11 @@ var _ = builtin0("SPI_GetFocusBorderHeight()",
 		defer heap.FreeTo(heap.CurSize())
 		p := heap.Alloc(4)
 		const SPI_GETFOCUSBORDERHEIGHT = 0x2010
-		syscall.Syscall6(systemParametersInfo, 4,
+		goc.Syscall4(systemParametersInfo,
 			SPI_GETFOCUSBORDERHEIGHT,
 			0,
 			uintptr(p),
-			0,
-			0, 0)
+			0)
 		return IntVal(int((*(*int32)(p))))
 	})
 
@@ -1554,12 +1507,11 @@ var _ = builtin0("SPI_GetWheelScrollLines()",
 		defer heap.FreeTo(heap.CurSize())
 		p := heap.Alloc(4)
 		const SPI_GETWHEELSCROLLLINES = 104
-		syscall.Syscall6(systemParametersInfo, 4,
+		goc.Syscall4(systemParametersInfo,
 			SPI_GETWHEELSCROLLLINES,
 			0,
 			uintptr(p),
-			0,
-			0, 0)
+			0)
 		return IntVal(int((*(*int32)(p))))
 	})
 
@@ -1568,12 +1520,11 @@ var _ = builtin0("SPI_GetWorkArea()",
 		defer heap.FreeTo(heap.CurSize())
 		r := heap.Alloc(nRECT)
 		const SPI_GETWORKAREA = 48
-		syscall.Syscall6(systemParametersInfo, 4,
+		goc.Syscall4(systemParametersInfo,
 			SPI_GETWORKAREA,
 			0,
 			uintptr(r),
-			0,
-			0, 0)
+			0)
 		return urectToOb(r, nil)
 	})
 
@@ -1581,9 +1532,8 @@ var _ = builtin0("SPI_GetWorkArea()",
 var postQuitMessage = user32.MustFindProc("PostQuitMessage").Addr()
 var _ = builtin1("PostQuitMessage(exitcode)",
 	func(a Value) Value {
-		syscall.Syscall(postQuitMessage, 1,
-			intArg(a),
-			0, 0)
+		goc.Syscall1(postQuitMessage,
+			intArg(a))
 		return nil
 	})
 
@@ -1591,7 +1541,7 @@ var _ = builtin1("PostQuitMessage(exitcode)",
 var getNextDlgTabItem = user32.MustFindProc("GetNextDlgTabItem").Addr()
 var _ = builtin3("GetNextDlgTabItem(hDlg, hCtl, prev)",
 	func(a, b, c Value) Value {
-		rtn, _, _ := syscall.Syscall(getNextDlgTabItem, 3,
+		rtn := goc.Syscall3(getNextDlgTabItem,
 			intArg(a),
 			intArg(b),
 			boolArg(c))
@@ -1602,9 +1552,8 @@ var _ = builtin3("GetNextDlgTabItem(hDlg, hCtl, prev)",
 var updateWindow = user32.MustFindProc("UpdateWindow").Addr()
 var _ = builtin1("UpdateWindow(hwnd)",
 	func(a Value) Value {
-		rtn, _, _ := syscall.Syscall(updateWindow, 1,
-			intArg(a),
-			0, 0)
+		rtn := goc.Syscall1(updateWindow,
+			intArg(a))
 		return boolRet(rtn)
 	})
 
@@ -1613,12 +1562,11 @@ var _ = builtin1("UpdateWindow(hwnd)",
 var defWindowProc = user32.MustFindProc("DefWindowProcA").Addr()
 var _ = builtin4("DefWindowProc(hwnd, msg, wParam, lParam)",
 	func(a, b, c, d Value) Value {
-		rtn, _, _ := syscall.Syscall6(defWindowProc, 4,
+		rtn := goc.Syscall4(defWindowProc,
 			intArg(a),
 			intArg(b),
 			intArg(c),
-			intArg(d),
-			0, 0)
+			intArg(d))
 		return intRet(rtn)
 	})
 
@@ -1631,9 +1579,8 @@ var _ = builtin0("GetDefWindowProc()",
 var getKeyState = user32.MustFindProc("GetKeyState").Addr()
 var _ = builtin1("GetKeyState(nVirtKey)",
 	func(a Value) Value {
-		rtn, _, _ := syscall.Syscall(getKeyState, 1,
-			intArg(a),
-			0, 0)
+		rtn := goc.Syscall1(getKeyState,
+			intArg(a))
 		return intRet(rtn)
 	})
 
@@ -1658,7 +1605,7 @@ var _ = builtin6("TrackPopupMenuEx(hmenu, fuFlags, x, y, hwnd, lptpm)",
 				rcExclude: getRect(f, "rcExclude"),
 			}
 		}
-		rtn, _, _ := syscall.Syscall6(trackPopupMenuEx, 6,
+		rtn := goc.Syscall6(trackPopupMenuEx,
 			intArg(a),
 			intArg(b),
 			intArg(c),
@@ -1672,9 +1619,8 @@ var _ = builtin6("TrackPopupMenuEx(hmenu, fuFlags, x, y, hwnd, lptpm)",
 var openClipboard = user32.MustFindProc("OpenClipboard").Addr()
 var _ = builtin1("OpenClipboard(hwnd)",
 	func(a Value) Value {
-		rtn, _, _ := syscall.Syscall(openClipboard, 1,
-			intArg(a),
-			0, 0)
+		rtn := goc.Syscall1(openClipboard,
+			intArg(a))
 		return boolRet(rtn)
 	})
 
@@ -1682,7 +1628,7 @@ var _ = builtin1("OpenClipboard(hwnd)",
 var emptyClipboard = user32.MustFindProc("EmptyClipboard").Addr()
 var _ = builtin0("EmptyClipboard()",
 	func() Value {
-		rtn, _, _ := syscall.Syscall(emptyClipboard, 0, 0, 0, 0)
+		rtn := goc.Syscall0(emptyClipboard)
 		return boolRet(rtn)
 	})
 
@@ -1690,9 +1636,8 @@ var _ = builtin0("EmptyClipboard()",
 var getClipboardData = user32.MustFindProc("GetClipboardData").Addr()
 var _ = builtin1("GetClipboardData(format)",
 	func(a Value) Value {
-		rtn, _, _ := syscall.Syscall(getClipboardData, 1,
-			intArg(a),
-			0, 0)
+		rtn := goc.Syscall1(getClipboardData,
+			intArg(a))
 		return intRet(rtn)
 	})
 
@@ -1700,10 +1645,9 @@ var _ = builtin1("GetClipboardData(format)",
 var setClipboardData = user32.MustFindProc("SetClipboardData").Addr()
 var _ = builtin2("SetClipboardData(uFormat, hMem)",
 	func(a Value, b Value) Value {
-		rtn, _, _ := syscall.Syscall(setClipboardData, 2,
+		rtn := goc.Syscall2(setClipboardData,
 			intArg(a),
-			intArg(b),
-			0)
+			intArg(b))
 		return intRet(rtn)
 	})
 
@@ -1711,7 +1655,7 @@ var _ = builtin2("SetClipboardData(uFormat, hMem)",
 var closeClipboard = user32.MustFindProc("CloseClipboard").Addr()
 var _ = builtin0("CloseClipboard()",
 	func() Value {
-		rtn, _, _ := syscall.Syscall(closeClipboard, 0, 0, 0, 0)
+		rtn := goc.Syscall0(closeClipboard)
 		return boolRet(rtn)
 	})
 
@@ -1721,9 +1665,8 @@ var _ = builtin0("CloseClipboard()",
 var beginDeferWindowPos = user32.MustFindProc("BeginDeferWindowPos").Addr()
 var _ = builtin1("BeginDeferWindowPos(nNumWindows)",
 	func(a Value) Value {
-		rtn, _, _ := syscall.Syscall(beginDeferWindowPos, 1,
-			intArg(a),
-			0, 0)
+		rtn := goc.Syscall1(beginDeferWindowPos,
+			intArg(a))
 		return intRet(rtn)
 	})
 
@@ -1736,12 +1679,11 @@ var _ = builtin1("BeginDeferWindowPos(nNumWindows)",
 var callNextHookEx = user32.MustFindProc("CallNextHookEx").Addr()
 var _ = builtin4("CallNextHookEx(hhk, nCode, wParam, lParam)",
 	func(a, b, c, d Value) Value {
-		rtn, _, _ := syscall.Syscall6(callNextHookEx, 4,
+		rtn := goc.Syscall4(callNextHookEx,
 			intArg(a),
 			intArg(b),
 			intArg(c),
-			intArg(d),
-			0, 0)
+			intArg(d))
 		return intRet(rtn)
 	})
 
@@ -1753,7 +1695,7 @@ var _ = builtin4("CallNextHookEx(hhk, nCode, wParam, lParam)",
 var checkMenuItem = user32.MustFindProc("CheckMenuItem").Addr()
 var _ = builtin3("CheckMenuItem(hmenu, uIDCheckItem, uCheck)",
 	func(a, b, c Value) Value {
-		rtn, _, _ := syscall.Syscall(checkMenuItem, 3,
+		rtn := goc.Syscall3(checkMenuItem,
 			intArg(a),
 			intArg(b),
 			intArg(c))
@@ -1764,7 +1706,7 @@ var _ = builtin3("CheckMenuItem(hmenu, uIDCheckItem, uCheck)",
 var deleteMenu = user32.MustFindProc("DeleteMenu").Addr()
 var _ = builtin3("DeleteMenu(hMenu, uPosition, uFlags)",
 	func(a, b, c Value) Value {
-		rtn, _, _ := syscall.Syscall(deleteMenu, 3,
+		rtn := goc.Syscall3(deleteMenu,
 			intArg(a),
 			intArg(b),
 			intArg(c))
@@ -1779,7 +1721,7 @@ var _ = builtin3("DeleteMenu(hMenu, uPosition, uFlags)",
 var enableMenuItem = user32.MustFindProc("EnableMenuItem").Addr()
 var _ = builtin3("EnableMenuItem(hMenu, uIDEnableItem, uEnable)",
 	func(a, b, c Value) Value {
-		rtn, _, _ := syscall.Syscall(enableMenuItem, 3,
+		rtn := goc.Syscall3(enableMenuItem,
 			intArg(a),
 			intArg(b),
 			intArg(c))
@@ -1790,10 +1732,9 @@ var _ = builtin3("EnableMenuItem(hMenu, uIDEnableItem, uEnable)",
 var enableWindow = user32.MustFindProc("EnableWindow").Addr()
 var _ = builtin2("EnableWindow(hWnd, bEnable)",
 	func(a, b Value) Value {
-		rtn, _, _ := syscall.Syscall(enableWindow, 2,
+		rtn := goc.Syscall2(enableWindow,
 			intArg(a),
-			boolArg(b),
-			0)
+			boolArg(b))
 		return boolRet(rtn)
 	})
 
@@ -1803,9 +1744,8 @@ var _ = builtin2("EnableWindow(hWnd, bEnable)",
 var endDeferWindowPos = user32.MustFindProc("EndDeferWindowPos").Addr()
 var _ = builtin1("EndDeferWindowPos(hWinPosInfo)",
 	func(a Value) Value {
-		rtn, _, _ := syscall.Syscall(endDeferWindowPos, 1,
-			intArg(a),
-			0, 0)
+		rtn := goc.Syscall1(endDeferWindowPos,
+			intArg(a))
 		return boolRet(rtn)
 	})
 
@@ -1813,10 +1753,9 @@ var _ = builtin1("EndDeferWindowPos(hWinPosInfo)",
 var endDialog = user32.MustFindProc("EndDialog").Addr()
 var _ = builtin2("EndDialog(hwndDlg, nResult)",
 	func(a, b Value) Value {
-		rtn, _, _ := syscall.Syscall(endDialog, 2,
+		rtn := goc.Syscall2(endDialog,
 			intArg(a),
-			intArg(b),
-			0)
+			intArg(b))
 		return boolRet(rtn)
 	})
 
@@ -1824,9 +1763,8 @@ var _ = builtin2("EndDialog(hwndDlg, nResult)",
 var enumClipboardFormats = user32.MustFindProc("EnumClipboardFormats").Addr()
 var _ = builtin1("EnumClipboardFormats(format)",
 	func(a Value) Value {
-		rtn, _, _ := syscall.Syscall(enumClipboardFormats, 1,
-			intArg(a),
-			0, 0)
+		rtn := goc.Syscall1(enumClipboardFormats,
+			intArg(a))
 		return intRet(rtn)
 	})
 
@@ -1835,10 +1773,9 @@ var findWindow = user32.MustFindProc("FindWindowA").Addr()
 var _ = builtin2("FindWindow(c, n)",
 	func(a, b Value) Value {
 		defer heap.FreeTo(heap.CurSize())
-		rtn, _, _ := syscall.Syscall(findWindow, 2,
+		rtn := goc.Syscall2(findWindow,
 			uintptr(stringArg(a)),
-			uintptr(stringArg(b)),
-			0)
+			uintptr(stringArg(b)))
 		return intRet(rtn)
 	})
 
@@ -1846,10 +1783,9 @@ var _ = builtin2("FindWindow(c, n)",
 var getAncestor = user32.MustFindProc("GetAncestor").Addr()
 var _ = builtin2("GetAncestor(hwnd, gaFlags)",
 	func(a, b Value) Value {
-		rtn, _, _ := syscall.Syscall(getAncestor, 2,
+		rtn := goc.Syscall2(getAncestor,
 			intArg(a),
-			intArg(b),
-			0)
+			intArg(b))
 		return intRet(rtn)
 	})
 
@@ -1862,7 +1798,7 @@ var getClipboardFormatName = user32.MustFindProc("GetClipboardFormatNameA").Addr
 var _ = builtin3("GetClipboardFormatName(format, lpszFormatName, cchMaxCount)",
 	func(a, b, c Value) Value {
 		defer heap.FreeTo(heap.CurSize())
-		rtn, _, _ := syscall.Syscall(getClipboardFormatName, 3,
+		rtn := goc.Syscall3(getClipboardFormatName,
 			intArg(a),
 			uintptr(stringArg(b)),
 			intArg(c))
@@ -1873,7 +1809,7 @@ var _ = builtin3("GetClipboardFormatName(format, lpszFormatName, cchMaxCount)",
 var getCursor = user32.MustFindProc("GetCursor").Addr()
 var _ = builtin0("GetCursor()",
 	func() Value {
-		rtn, _, _ := syscall.Syscall(getCursor, 0, 0, 0, 0)
+		rtn := goc.Syscall0(getCursor)
 		return intRet(rtn)
 	})
 
@@ -1881,7 +1817,7 @@ var _ = builtin0("GetCursor()",
 var getDoubleClickTime = user32.MustFindProc("GetDoubleClickTime").Addr()
 var _ = builtin0("GetDoubleClickTime()",
 	func() Value {
-		rtn, _, _ := syscall.Syscall(getDoubleClickTime, 0, 0, 0, 0)
+		rtn := goc.Syscall0(getDoubleClickTime)
 		return intRet(rtn)
 	})
 
@@ -1893,7 +1829,7 @@ var _ = builtin0("GetDoubleClickTime()",
 var getMenuState = user32.MustFindProc("GetMenuState").Addr()
 var _ = builtin3("GetMenuState(hMenu, uId, uFlags)",
 	func(a, b, c Value) Value {
-		rtn, _, _ := syscall.Syscall(getMenuState, 3,
+		rtn := goc.Syscall3(getMenuState,
 			intArg(a),
 			intArg(b),
 			intArg(c))
@@ -1904,7 +1840,7 @@ var _ = builtin3("GetMenuState(hMenu, uId, uFlags)",
 var getMessagePos = user32.MustFindProc("GetMessagePos").Addr()
 var _ = builtin0("GetMessagePos()",
 	func() Value {
-		rtn, _, _ := syscall.Syscall(getMessagePos, 0, 0, 0, 0)
+		rtn := goc.Syscall0(getMessagePos)
 		return intRet(rtn)
 	})
 
@@ -1912,7 +1848,7 @@ var _ = builtin0("GetMessagePos()",
 var getNextDlgGroupItem = user32.MustFindProc("GetNextDlgGroupItem").Addr()
 var _ = builtin3("GetNextDlgGroupItem(hDlg, hCtl, prev)",
 	func(a, b, c Value) Value {
-		rtn, _, _ := syscall.Syscall(getNextDlgGroupItem, 3,
+		rtn := goc.Syscall3(getNextDlgGroupItem,
 			intArg(a),
 			intArg(b),
 			boolArg(c))
@@ -1923,9 +1859,8 @@ var _ = builtin3("GetNextDlgGroupItem(hDlg, hCtl, prev)",
 var getParent = user32.MustFindProc("GetParent").Addr()
 var _ = builtin1("GetParent(hwnd)",
 	func(a Value) Value {
-		rtn, _, _ := syscall.Syscall(getParent, 1,
-			intArg(a),
-			0, 0)
+		rtn := goc.Syscall1(getParent,
+			intArg(a))
 		return intRet(rtn)
 	})
 
@@ -1936,10 +1871,9 @@ var _ = builtin1("GetParent(hwnd)",
 var getSubMenu = user32.MustFindProc("GetSubMenu").Addr()
 var _ = builtin2("GetSubMenu(hmenu, position)",
 	func(a, b Value) Value {
-		rtn, _, _ := syscall.Syscall(getSubMenu, 2,
+		rtn := goc.Syscall2(getSubMenu,
 			intArg(a),
-			intArg(b),
-			0)
+			intArg(b))
 		return intRet(rtn)
 	})
 
@@ -1947,9 +1881,8 @@ var _ = builtin2("GetSubMenu(hmenu, position)",
 var getTopWindow = user32.MustFindProc("GetTopWindow").Addr()
 var _ = builtin1("GetTopWindow(hWnd)",
 	func(a Value) Value {
-		rtn, _, _ := syscall.Syscall(getTopWindow, 1,
-			intArg(a),
-			0, 0)
+		rtn := goc.Syscall1(getTopWindow,
+			intArg(a))
 		return intRet(rtn)
 	})
 
@@ -1957,7 +1890,7 @@ var _ = builtin1("GetTopWindow(hWnd)",
 var getUpdateRgn = user32.MustFindProc("GetUpdateRgn").Addr()
 var _ = builtin3("GetUpdateRgn(hwnd, hRgn, bErase)",
 	func(a, b, c Value) Value {
-		rtn, _, _ := syscall.Syscall(getUpdateRgn, 3,
+		rtn := goc.Syscall3(getUpdateRgn,
 			intArg(a),
 			intArg(b),
 			boolArg(c))
@@ -1968,10 +1901,9 @@ var _ = builtin3("GetUpdateRgn(hwnd, hRgn, bErase)",
 var getWindow = user32.MustFindProc("GetWindow").Addr()
 var _ = builtin2("GetWindow(hWnd, uCmd)",
 	func(a, b Value) Value {
-		rtn, _, _ := syscall.Syscall(getWindow, 2,
+		rtn := goc.Syscall2(getWindow,
 			intArg(a),
-			intArg(b),
-			0)
+			intArg(b))
 		return intRet(rtn)
 	})
 
@@ -1979,9 +1911,8 @@ var _ = builtin2("GetWindow(hWnd, uCmd)",
 var getWindowDC = user32.MustFindProc("GetWindowDC").Addr()
 var _ = builtin1("GetWindowDC(hwnd)",
 	func(a Value) Value {
-		rtn, _, _ := syscall.Syscall(getWindowDC, 1,
-			intArg(a),
-			0, 0)
+		rtn := goc.Syscall1(getWindowDC,
+			intArg(a))
 		return intRet(rtn)
 	})
 
@@ -1989,9 +1920,8 @@ var _ = builtin1("GetWindowDC(hwnd)",
 var isClipboardFormatAvailable = user32.MustFindProc("IsClipboardFormatAvailable").Addr()
 var _ = builtin1("IsClipboardFormatAvailable(format)",
 	func(a Value) Value {
-		rtn, _, _ := syscall.Syscall(isClipboardFormatAvailable, 1,
-			intArg(a),
-			0, 0)
+		rtn := goc.Syscall1(isClipboardFormatAvailable,
+			intArg(a))
 		return boolRet(rtn)
 	})
 
@@ -1999,9 +1929,8 @@ var _ = builtin1("IsClipboardFormatAvailable(format)",
 var isWindow = user32.MustFindProc("IsWindow").Addr()
 var _ = builtin1("IsWindow(hwnd)",
 	func(a Value) Value {
-		rtn, _, _ := syscall.Syscall(isWindow, 1,
-			intArg(a),
-			0, 0)
+		rtn := goc.Syscall1(isWindow,
+			intArg(a))
 		return boolRet(rtn)
 	})
 
@@ -2009,9 +1938,8 @@ var _ = builtin1("IsWindow(hwnd)",
 var isWindowVisible = user32.MustFindProc("IsWindowVisible").Addr()
 var _ = builtin1("IsWindowVisible(hwnd)",
 	func(a Value) Value {
-		rtn, _, _ := syscall.Syscall(isWindowVisible, 1,
-			intArg(a),
-			0, 0)
+		rtn := goc.Syscall1(isWindowVisible,
+			intArg(a))
 		return boolRet(rtn)
 	})
 
@@ -2019,9 +1947,8 @@ var _ = builtin1("IsWindowVisible(hwnd)",
 var messageBeep = user32.MustFindProc("MessageBeep").Addr()
 var _ = builtin1("MessageBeep(type)",
 	func(a Value) Value {
-		rtn, _, _ := syscall.Syscall(messageBeep, 1,
-			intArg(a),
-			0, 0)
+		rtn := goc.Syscall1(messageBeep,
+			intArg(a))
 		return boolRet(rtn)
 	})
 
@@ -2035,13 +1962,12 @@ var _ = builtin1("MessageBeep(type)",
 var mouse_event = user32.MustFindProc("mouse_event").Addr()
 var _ = builtin5("mouse_event(dwFlags, dx, dy, dwData, dwExtraInfo)",
 	func(a, b, c, d, e Value) Value {
-		syscall.Syscall6(mouse_event, 5,
+		goc.Syscall5(mouse_event,
 			intArg(a),
 			intArg(b),
 			intArg(c),
 			intArg(d),
-			intArg(e),
-			0)
+			intArg(e))
 		return nil
 	})
 
@@ -2049,12 +1975,11 @@ var _ = builtin5("mouse_event(dwFlags, dx, dy, dwData, dwExtraInfo)",
 var postMessage = user32.MustFindProc("PostMessageA").Addr()
 var _ = builtin4("PostMessage(hwnd, msg, wParam, lParam)",
 	func(a, b, c, d Value) Value {
-		rtn, _, _ := syscall.Syscall6(postMessage, 4,
+		rtn := goc.Syscall4(postMessage,
 			intArg(a),
 			intArg(b),
 			intArg(c),
-			intArg(d),
-			0, 0)
+			intArg(d))
 		return boolRet(rtn)
 	})
 
@@ -2067,12 +1992,11 @@ var _ = builtin4("PostMessage(hwnd, msg, wParam, lParam)",
 var registerHotKey = user32.MustFindProc("RegisterHotKey").Addr()
 var _ = builtin4("RegisterHotKey(hWnd, id, fsModifiers, vk)",
 	func(a, b, c, d Value) Value {
-		rtn, _, _ := syscall.Syscall6(registerHotKey, 4,
+		rtn := goc.Syscall4(registerHotKey,
 			intArg(a),
 			intArg(b),
 			intArg(c),
-			intArg(d),
-			0, 0)
+			intArg(d))
 		return boolRet(rtn)
 	})
 
@@ -2080,7 +2004,7 @@ var _ = builtin4("RegisterHotKey(hWnd, id, fsModifiers, vk)",
 var releaseCapture = user32.MustFindProc("ReleaseCapture").Addr()
 var _ = builtin0("ReleaseCapture()",
 	func() Value {
-		rtn, _, _ := syscall.Syscall(releaseCapture, 0, 0, 0, 0)
+		rtn := goc.Syscall0(releaseCapture)
 		return boolRet(rtn)
 	})
 
@@ -2088,9 +2012,8 @@ var _ = builtin0("ReleaseCapture()",
 var setActiveWindow = user32.MustFindProc("SetActiveWindow").Addr()
 var _ = builtin1("SetActiveWindow(hWnd)",
 	func(a Value) Value {
-		rtn, _, _ := syscall.Syscall(setActiveWindow, 1,
-			intArg(a),
-			0, 0)
+		rtn := goc.Syscall1(setActiveWindow,
+			intArg(a))
 		return intRet(rtn)
 	})
 
@@ -2098,9 +2021,8 @@ var _ = builtin1("SetActiveWindow(hWnd)",
 var setCapture = user32.MustFindProc("SetCapture").Addr()
 var _ = builtin1("SetCapture(hwnd)",
 	func(a Value) Value {
-		rtn, _, _ := syscall.Syscall(setCapture, 1,
-			intArg(a),
-			0, 0)
+		rtn := goc.Syscall1(setCapture,
+			intArg(a))
 		return intRet(rtn)
 	})
 
@@ -2108,9 +2030,8 @@ var _ = builtin1("SetCapture(hwnd)",
 var setCursor = user32.MustFindProc("SetCursor").Addr()
 var _ = builtin1("SetCursor(hcursor)",
 	func(a Value) Value {
-		rtn, _, _ := syscall.Syscall(setCursor, 1,
-			intArg(a),
-			0, 0)
+		rtn := goc.Syscall1(setCursor,
+			intArg(a))
 		return intRet(rtn)
 	})
 
@@ -2119,9 +2040,8 @@ var _ = builtin1("SetCursor(hcursor)",
 var setForegroundWindow = user32.MustFindProc("SetForegroundWindow").Addr()
 var _ = builtin1("SetForegroundWindow(hwnd)",
 	func(a Value) Value {
-		rtn, _, _ := syscall.Syscall(setForegroundWindow, 1,
-			intArg(a),
-			0, 0)
+		rtn := goc.Syscall1(setForegroundWindow,
+			intArg(a))
 		return boolRet(rtn)
 	})
 
@@ -2133,7 +2053,7 @@ var _ = builtin1("SetForegroundWindow(hwnd)",
 var setMenuDefaultItem = user32.MustFindProc("SetMenuDefaultItem").Addr()
 var _ = builtin3("SetMenuDefaultItem(hMenu, uItem, fByPosition)",
 	func(a, b, c Value) Value {
-		rtn, _, _ := syscall.Syscall(setMenuDefaultItem, 3,
+		rtn := goc.Syscall3(setMenuDefaultItem,
 			intArg(a),
 			intArg(b),
 			intArg(c))
@@ -2144,10 +2064,9 @@ var _ = builtin3("SetMenuDefaultItem(hMenu, uItem, fByPosition)",
 var setParent = user32.MustFindProc("SetParent").Addr()
 var _ = builtin2("SetParent(hwndNewChild, hwndNewParent)",
 	func(a, b Value) Value {
-		rtn, _, _ := syscall.Syscall(setParent, 2,
+		rtn := goc.Syscall2(setParent,
 			intArg(a),
-			intArg(b),
-			0)
+			intArg(b))
 		return intRet(rtn)
 	})
 
@@ -2156,7 +2075,7 @@ var setProp = user32.MustFindProc("SetPropA").Addr()
 var _ = builtin3("SetProp(hwnd, name, value)",
 	func(a, b, c Value) Value {
 		defer heap.FreeTo(heap.CurSize())
-		rtn, _, _ := syscall.Syscall(setProp, 3,
+		rtn := goc.Syscall3(setProp,
 			intArg(a),
 			uintptr(stringArg(b)),
 			intArg(c))
@@ -2169,9 +2088,8 @@ var _ = builtin3("SetProp(hwnd, name, value)",
 var unhookWindowsHookEx = user32.MustFindProc("UnhookWindowsHookEx").Addr()
 var _ = builtin1("UnhookWindowsHookEx(hhk)",
 	func(a Value) Value {
-		rtn, _, _ := syscall.Syscall(unhookWindowsHookEx, 1,
-			intArg(a),
-			0, 0)
+		rtn := goc.Syscall1(unhookWindowsHookEx,
+			intArg(a))
 		return boolRet(rtn)
 	})
 
@@ -2179,10 +2097,9 @@ var _ = builtin1("UnhookWindowsHookEx(hhk)",
 var unregisterHotKey = user32.MustFindProc("UnregisterHotKey").Addr()
 var _ = builtin2("UnregisterHotKey(hWnd, id)",
 	func(a, b Value) Value {
-		rtn, _, _ := syscall.Syscall(unregisterHotKey, 2,
+		rtn := goc.Syscall2(unregisterHotKey,
 			intArg(a),
-			intArg(b),
-			0)
+			intArg(b))
 		return boolRet(rtn)
 	})
 
@@ -2192,10 +2109,9 @@ var _ = builtin2("ClientToScreen(hWnd, point)",
 	func(a, b Value) Value {
 		defer heap.FreeTo(heap.CurSize())
 		p := heap.Alloc(nPOINT)
-		rtn, _, _ := syscall.Syscall(clientToScreen, 2,
+		rtn := goc.Syscall2(clientToScreen,
 			intArg(a),
-			uintptr(pointArg(b, p)),
-			0)
+			uintptr(pointArg(b, p)))
 		pt := (*POINT)(p)
 		b.Put(nil, SuStr("x"), IntVal(int(pt.x)))
 		b.Put(nil, SuStr("y"), IntVal(int(pt.y)))
@@ -2208,9 +2124,8 @@ var _ = builtin1("ClipCursor(rect)",
 	func(a Value) Value {
 		defer heap.FreeTo(heap.CurSize())
 		r := heap.Alloc(nRECT)
-		rtn, _, _ := syscall.Syscall(clipCursor, 1,
-			uintptr(rectArg(a, r)),
-			0, 0)
+		rtn := goc.Syscall1(clipCursor,
+			uintptr(rectArg(a, r)))
 		return boolRet(rtn)
 	})
 
@@ -2220,7 +2135,7 @@ var deferWindowPos = user32.MustFindProc("DeferWindowPos").Addr()
 var _ = builtin("DeferWindowPos(hWinPosInfo, hWnd, hWndInsertAfter, "+
 	"x, y, cx, cy, flags)",
 	func(_ *Thread, a []Value) Value {
-		rtn, _, _ := syscall.Syscall9(deferWindowPos, 8,
+		rtn := goc.Syscall8(deferWindowPos,
 			intArg(a[0]),
 			intArg(a[1]),
 			intArg(a[2]),
@@ -2228,8 +2143,7 @@ var _ = builtin("DeferWindowPos(hWinPosInfo, hWnd, hWndInsertAfter, "+
 			intArg(a[4]),
 			intArg(a[5]),
 			intArg(a[6]),
-			intArg(a[7]),
-			0)
+			intArg(a[7]))
 		return intRet(rtn)
 	})
 
@@ -2239,10 +2153,9 @@ var _ = builtin2("DrawFocusRect(hwnd, rect)",
 	func(a, b Value) Value {
 		defer heap.FreeTo(heap.CurSize())
 		r := heap.Alloc(nRECT)
-		rtn, _, _ := syscall.Syscall(drawFocusRect, 2,
+		rtn := goc.Syscall2(drawFocusRect,
 			intArg(a),
-			uintptr(rectArg(b, r)),
-			0)
+			uintptr(rectArg(b, r)))
 		return boolRet(rtn)
 	})
 
@@ -2254,7 +2167,7 @@ var _ = builtin6("DrawTextEx(hdc, lpsz, cb, lprc, uFormat, params)",
 	func(a, b, c, d, e, f Value) Value {
 		defer heap.FreeTo(heap.CurSize())
 		r := heap.Alloc(nRECT)
-		rtn, _, _ := syscall.Syscall6(drawTextEx, 6,
+		rtn := goc.Syscall6(drawTextEx,
 			intArg(a),
 			uintptr(stringArg(b)),
 			intArg(c),
@@ -2272,7 +2185,7 @@ var _ = builtin5("DrawTextExOut(hdc, text, rect, flags, params)",
 		bufsize := len(text) + 8
 		buf := strToBuf(text, bufsize)
 		r := heap.Alloc(nRECT)
-		rtn, _, _ := syscall.Syscall6(drawTextEx, 6,
+		rtn := goc.Syscall6(drawTextEx,
 			intArg(a),
 			uintptr(buf),
 			uintptrMinusOne,
@@ -2323,9 +2236,8 @@ var _ = builtin1("TrackMouseEvent(lpEventTrack)",
 			hwndTrack:   getHandle(a, "hwndTrack"),
 			dwHoverTime: getInt32(a, "dwHoverTime"),
 		}
-		rtn, _, _ := syscall.Syscall(trackMouseEvent, 1,
-			uintptr(p),
-			0, 0)
+		rtn := goc.Syscall1(trackMouseEvent,
+			uintptr(p))
 		return boolRet(rtn)
 	})
 
@@ -2352,9 +2264,8 @@ var _ = builtin1("FlashWindowEx(fi)",
 			uCount:    getInt32(a, "uCount"),
 			dwTimeout: getInt32(a, "dwTimeout"),
 		}
-		rtn, _, _ := syscall.Syscall(flashWindowEx, 1,
-			uintptr(p),
-			0, 0)
+		rtn := goc.Syscall1(flashWindowEx,
+			uintptr(p))
 		return boolRet(rtn)
 	})
 
@@ -2375,7 +2286,7 @@ var _ = builtin3("FrameRect(hdc, rect, brush)",
 	func(a, b, c Value) Value {
 		defer heap.FreeTo(heap.CurSize())
 		r := heap.Alloc(nRECT)
-		rtn, _, _ := syscall.Syscall(frameRect, 3,
+		rtn := goc.Syscall3(frameRect,
 			intArg(a),
 			uintptr(rectArg(b, r)),
 			intArg(c))
@@ -2388,9 +2299,8 @@ var _ = builtin1("GetClipCursor(rect)",
 	func(a Value) Value {
 		defer heap.FreeTo(heap.CurSize())
 		r := heap.Alloc(nRECT)
-		rtn, _, _ := syscall.Syscall(getClipCursor, 1,
-			uintptr(r),
-			0, 0)
+		rtn := goc.Syscall1(getClipCursor,
+			uintptr(r))
 		urectToOb(r, a)
 		return boolRet(rtn)
 	})
@@ -2401,9 +2311,8 @@ var _ = builtin1("GetCursorPos(rect)",
 	func(a Value) Value {
 		defer heap.FreeTo(heap.CurSize())
 		p := heap.Alloc(nPOINT)
-		rtn, _, _ := syscall.Syscall(getCursorPos, 1,
-			uintptr(p),
-			0, 0)
+		rtn := goc.Syscall1(getCursorPos,
+			uintptr(p))
 		upointToOb(p, a)
 		return boolRet(rtn)
 	})
@@ -2429,15 +2338,14 @@ var _ = builtin7("GetDIBits(hdc, hbmp, uStartScan, cScanLines, lpvBits,"+
 			biClrUsed:       getInt32(f.Get(nil, SuStr("bmiHeader")), "biClrUsed"),
 			biClrImportant:  getInt32(f.Get(nil, SuStr("bmiHeader")), "biClrImportant"),
 		}
-		rtn, _, _ := syscall.Syscall9(getDIBits, 7,
+		rtn := goc.Syscall7(getDIBits,
 			intArg(a),
 			intArg(b),
 			intArg(c),
 			intArg(d),
 			intArg(e),
 			uintptr(p),
-			intArg(g),
-			0, 0)
+			intArg(g))
 		return intRet(rtn)
 	})
 
@@ -2462,7 +2370,7 @@ const nBITMAPINFOHEADER = unsafe.Sizeof(BITMAPINFOHEADER{})
 var enumThreadWindows = user32.MustFindProc("EnumThreadWindows").Addr()
 var _ = builtin3("EnumThreadWindows(dwThreadId, lpfn, lParam)",
 	func(a, b, c Value) Value {
-		rtn, _, _ := syscall.Syscall(enumThreadWindows, 3,
+		rtn := goc.Syscall3(enumThreadWindows,
 			intArg(a),
 			NewCallback(b, 2),
 			intArg(c))
@@ -2474,7 +2382,7 @@ var _ = builtin3("EnumThreadWindows(dwThreadId, lpfn, lParam)",
 var enumChildWindows = user32.MustFindProc("EnumChildWindows").Addr()
 var _ = builtin3("EnumChildWindowsApi(hwnd, lpEnumProc, lParam)",
 	func(a, b, c Value) Value {
-		rtn, _, _ := syscall.Syscall(enumChildWindows, 3,
+		rtn := goc.Syscall3(enumChildWindows,
 			intArg(a),
 			NewCallback(b, 2),
 			intArg(c))
@@ -2487,9 +2395,8 @@ var _ = builtin1("WindowFromPoint(pt)",
 	func(a Value) Value {
 		defer heap.FreeTo(heap.CurSize())
 		p := heap.Alloc(nPOINT)
-		rtn, _, _ := syscall.Syscall(windowFromPoint, 1,
-			uintptr(pointArg(a, p)),
-			0, 0)
+		rtn := goc.Syscall1(windowFromPoint,
+			uintptr(pointArg(a, p)))
 		return intRet(rtn)
 	})
 
@@ -2499,10 +2406,9 @@ var _ = builtin2("GetWindowThreadProcessId(hwnd, lpdwProcessId)",
 	func(a, b Value) Value {
 		defer heap.FreeTo(heap.CurSize())
 		p := heap.Alloc(4)
-		rtn, _, _ := syscall.Syscall(getWindowThreadProcessId, 2,
+		rtn := goc.Syscall2(getWindowThreadProcessId,
 			intArg(a),
-			uintptr(p),
-			0)
+			uintptr(p))
 		b.Put(nil, SuStr("x"), IntVal(int(*(*int32)(p))))
 		return boolRet(rtn)
 	})
@@ -2514,15 +2420,14 @@ var _ = builtin7("TrackPopupMenu(hMenu, uFlags, x, y, nReserved, hWnd, prcRect)"
 	func(a, b, c, d, e, f, g Value) Value {
 		defer heap.FreeTo(heap.CurSize())
 		r := heap.Alloc(nRECT)
-		rtn, _, _ := syscall.Syscall9(trackPopupMenu, 7,
+		rtn := goc.Syscall7(trackPopupMenu,
 			intArg(a),
 			intArg(b),
 			intArg(c),
 			intArg(d),
 			intArg(e),
 			intArg(f),
-			uintptr(rectArg(g, r)),
-			0, 0)
+			uintptr(rectArg(g, r)))
 		return intRet(rtn)
 	})
 
@@ -2531,12 +2436,11 @@ var _ = builtin7("TrackPopupMenu(hMenu, uFlags, x, y, nReserved, hWnd, prcRect)"
 var setWindowsHookEx = user32.MustFindProc("SetWindowsHookExA").Addr()
 var _ = builtin4("SetWindowsHookEx(idHook, lpfn, hMod, dwThreadId)",
 	func(a, b, c, d Value) Value {
-		rtn, _, _ := syscall.Syscall6(setWindowsHookEx, 4,
+		rtn := goc.Syscall4(setWindowsHookEx,
 			intArg(a),
 			NewCallback(b, 3),
 			intArg(c),
-			intArg(d),
-			0, 0)
+			intArg(d))
 		return intRet(rtn)
 	})
 
@@ -2556,12 +2460,11 @@ var _ = builtin4("SetScrollInfo(hwnd, bar, si, redraw)",
 			nPos:      getInt32(c, "nPos"),
 			nTrackPos: getInt32(c, "nTrackPos"),
 		}
-		rtn, _, _ := syscall.Syscall6(setScrollInfo, 4,
+		rtn := goc.Syscall4(setScrollInfo,
 			intArg(a),
 			intArg(b),
 			uintptr(p),
-			boolArg(d),
-			0, 0)
+			boolArg(d))
 		return intRet(rtn)
 	})
 
@@ -2575,7 +2478,7 @@ var _ = builtin("ScrollWindowEx(hwnd, dx, dy, scroll, clip, rgnUpdate,"+
 		r1 := heap.Alloc(nRECT)
 		r2 := heap.Alloc(nRECT)
 		r3 := heap.Alloc(nRECT)
-		rtn, _, _ := syscall.Syscall9(scrollWindowEx, 8,
+		rtn := goc.Syscall8(scrollWindowEx,
 			intArg(a[0]),
 			intArg(a[1]),
 			intArg(a[2]),
@@ -2583,8 +2486,7 @@ var _ = builtin("ScrollWindowEx(hwnd, dx, dy, scroll, clip, rgnUpdate,"+
 			uintptr(rectArg(a[4], r2)),
 			intArg(a[5]),
 			uintptr(rectArg(a[6], r3)),
-			intArg(a[7]),
-			0)
+			intArg(a[7]))
 		urectToOb(r3, a[6])
 		return intRet(rtn)
 	})
@@ -2595,10 +2497,9 @@ var _ = builtin2("ScreenToClient(hWnd, p)",
 	func(a, b Value) Value {
 		defer heap.FreeTo(heap.CurSize())
 		p := heap.Alloc(nPOINT)
-		rtn, _, _ := syscall.Syscall(screenToClient, 2,
+		rtn := goc.Syscall2(screenToClient,
 			intArg(a),
-			uintptr(pointArg(b, p)),
-			0)
+			uintptr(pointArg(b, p)))
 		upointToOb(p, b)
 		return boolRet(rtn)
 	})
@@ -2610,7 +2511,7 @@ var _ = builtin6("LoadImage(hInstance, lpszName, uType, cxDesired, cyDesired,"+
 	" fuLoad)",
 	func(a, b, c, d, e, f Value) Value {
 		defer heap.FreeTo(heap.CurSize())
-		rtn, _, _ := syscall.Syscall6(loadImage, 6,
+		rtn := goc.Syscall6(loadImage,
 			intArg(a),
 			uintptr(stringArg(f)), // doesn't handle resource id
 			intArg(c),
@@ -2634,10 +2535,9 @@ var _ = builtin2("IsDialogMessage(hDlg, lpMsg)",
 			time:    uint32(getInt(b, "time")),
 			pt:      getPoint(b, "pt"),
 		}
-		rtn, _, _ := syscall.Syscall(isDialogMessage, 2,
+		rtn := goc.Syscall2(isDialogMessage,
 			intArg(a),
-			uintptr(p),
-			0)
+			uintptr(p))
 		return boolRet(rtn)
 	})
 
@@ -2647,12 +2547,11 @@ var _ = builtin3("MapWindowRect(hwndfrom, hwndto, r)",
 	func(a, b, c Value) Value {
 		defer heap.FreeTo(heap.CurSize())
 		r := heap.Alloc(nRECT)
-		rtn, _, _ := syscall.Syscall6(mapWindowPoints, 4,
+		rtn := goc.Syscall4(mapWindowPoints,
 			intArg(a),
 			intArg(b),
 			uintptr(rectArg(c, r)),
-			2,
-			0, 0)
+			2)
 		urectToOb(r, c)
 		return intRet(rtn)
 	})

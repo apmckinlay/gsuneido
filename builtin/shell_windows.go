@@ -1,9 +1,9 @@
 package builtin
 
 import (
-	"syscall"
 	"unsafe"
 
+	"github.com/apmckinlay/gsuneido/builtin/goc"
 	heap "github.com/apmckinlay/gsuneido/builtin/heapstack"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"golang.org/x/sys/windows"
@@ -15,10 +15,9 @@ var shell32 = windows.MustLoadDLL("shell32.dll")
 var dragAcceptFiles = shell32.MustFindProc("DragAcceptFiles").Addr()
 var _ = builtin2("DragAcceptFiles(hWnd, fAccept)",
 	func(a, b Value) Value {
-		syscall.Syscall(dragAcceptFiles, 2,
+		goc.Syscall2(dragAcceptFiles,
 			intArg(a),
-			boolArg(b),
-			0)
+			boolArg(b))
 		return nil
 	})
 
@@ -28,10 +27,9 @@ var _ = builtin1("SHGetPathFromIDList(pidl)",
 	func(a Value) Value {
 		defer heap.FreeTo(heap.CurSize())
 		buf := heap.Alloc(MAX_PATH)
-		rtn, _, _ := syscall.Syscall(shGetPathFromIDList, 2,
+		rtn := goc.Syscall2(shGetPathFromIDList,
 			intArg(a),
-			uintptr(buf),
-			0)
+			uintptr(buf))
 		if rtn == 0 {
 			return EmptyStr
 		}
@@ -46,20 +44,18 @@ var _ = builtin1("SHGetPathFromIDList(pidl)",
 var dragQueryFile = shell32.MustFindProc("DragQueryFile").Addr()
 var _ = builtin2("DragQueryFile(hDrop, iFile)",
 	func(a, b Value) Value {
-		n, _, _ := syscall.Syscall6(dragQueryFile, 4,
+		n := goc.Syscall4(dragQueryFile,
 			intArg(a),
 			intArg(b),
 			0,
-			0,
-			0, 0)
+			0)
 		defer heap.FreeTo(heap.CurSize())
 		buf := heap.Alloc(n)
-		syscall.Syscall6(dragQueryFile, 4,
+		goc.Syscall4(dragQueryFile,
 			intArg(a),
 			intArg(b),
 			uintptr(buf),
-			n,
-			0, 0)
+			n)
 		return bufToStr(buf, n)
 	})
 
@@ -85,10 +81,9 @@ var _ = builtin2("Shell_NotifyIcon(dwMessage, lpdata)",
 		copyStr(nid.szTip[:], b, "szTip")
 		copyStr(nid.szInfo[:], b, "szInfo")
 		copyStr(nid.szInfoTitle[:], b, "szInfoTitle")
-		rtn, _, _ := syscall.Syscall(shell_NotifyIcon, 2,
+		rtn := goc.Syscall2(shell_NotifyIcon,
 			intArg(a),
-			uintptr(p),
-			0)
+			uintptr(p))
 		return boolRet(rtn)
 	})
 
@@ -135,9 +130,8 @@ var _ = builtin1("ShellExecuteEx(lpExecInfo)",
 			hIcon:        getHandle(a, "hIcon"),
 			hProcess:     getHandle(a, "hProcess"),
 		}
-		rtn, _, _ := syscall.Syscall(shellExecuteEx, 1,
-			uintptr(p),
-			0, 0)
+		rtn := goc.Syscall1(shellExecuteEx,
+			uintptr(p))
 		return boolRet(rtn)
 	})
 
@@ -179,9 +173,8 @@ var _ = builtin1("SHBrowseForFolder(lpbi)",
 			lParam:         getHandle(a, "lParam"),
 			iImage:         getInt32(a, "iImage"),
 		}
-		rtn, _, _ := syscall.Syscall(sHBrowseForFolder, 1,
-			uintptr(p),
-			0, 0)
+		rtn := goc.Syscall1(sHBrowseForFolder,
+			uintptr(p))
 		return intRet(rtn)
 	})
 

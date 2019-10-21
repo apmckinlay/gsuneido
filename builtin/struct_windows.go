@@ -426,25 +426,28 @@ func accel(_ *Thread, args []Value) Value {
 //-------------------------------------------------------------------
 
 type SCNotification struct {
-	nmhdr            NMHDR
-	position         int
-	ch               int32
-	modifiers        int32
-	modificationType int32
-	text             uintptr
-	length           int
-	linesAdded       int
-	message          int32
-	wParam           uintptr
-	lParam           uintptr
-	line             int
-	foldLevelNow     int32
-	foldLevelPrev    int32
-	margin           int32
-	listType         int32
-	x                int32
-	y                int32
-	token            int32
+	nmhdr                NMHDR
+	position             int
+	ch                   int32
+	modifiers            int32
+	modificationType     int32
+	text                 uintptr
+	length               int
+	linesAdded           int
+	message              int32
+	wParam               uintptr
+	lParam               uintptr
+	line                 int
+	foldLevelNow         int32
+	foldLevelPrev        int32
+	margin               int32
+	listType             int32
+	x                    int32
+	y                    int32
+	token                int32
+	annotationLinesAdded int
+	updated              int32
+	listCompletionMethod int32
 }
 
 var _ = builtin1("SCNotification(address)",
@@ -620,4 +623,5 @@ func _() {
 	_ = x[unsafe.Sizeof(NMHDR{})-24]
 	_ = x[unsafe.Sizeof(ACCEL{})-6]
 	_ = x[unsafe.Sizeof(DRAWITEMSTRUCT{})-64]
+	_ = x[unsafe.Sizeof(SCNotification{})-152]
 }

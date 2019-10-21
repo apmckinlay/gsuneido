@@ -1,9 +1,9 @@
 package builtin
 
 import (
-	"syscall"
 	"unsafe"
 
+	"github.com/apmckinlay/gsuneido/builtin/goc"
 	heap "github.com/apmckinlay/gsuneido/builtin/heapstack"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"golang.org/x/sys/windows"
@@ -15,7 +15,7 @@ var comdlg32 = windows.MustLoadDLL("comdlg32.dll")
 var commDlgExtendedError = comdlg32.MustFindProc("CommDlgExtendedError").Addr()
 var _ = builtin0("CommDlgExtendedError()",
 	func() Value {
-		rtn, _, _ := syscall.Syscall(commDlgExtendedError, 0, 0, 0, 0)
+		rtn := goc.Syscall0(commDlgExtendedError)
 		return intRet(rtn)
 	})
 
@@ -45,9 +45,8 @@ var _ = builtin1("PrintDlg(printdlg)",
 			hPrintTemplate:      getHandle(a, "hPrintTemplate"),
 			hSetupTemplate:      getHandle(a, "hSetupTemplate"),
 		}
-		rtn, _, _ := syscall.Syscall(printDlg, 1,
-			uintptr(p),
-			0, 0)
+		rtn := goc.Syscall1(printDlg,
+			uintptr(p))
 		a.Put(nil, SuStr("hwndOwner"), IntVal(int(pd.hwndOwner)))
 		a.Put(nil, SuStr("hDevMode"), IntVal(int(pd.hDevMode)))
 		a.Put(nil, SuStr("hDevNames"), IntVal(int(pd.hDevNames)))
@@ -115,9 +114,8 @@ var _ = builtin1("PageSetupDlg(pagesetupdlg)",
 			lpPageSetupTemplateName: getStr(a, "lpPageSetupTemplateName"),
 			hPageSetupTemplate:      getHandle(a, "hPageSetupTemplate"),
 		}
-		rtn, _, _ := syscall.Syscall(pageSetupDlg, 1,
-			uintptr(p),
-			0, 0)
+		rtn := goc.Syscall1(pageSetupDlg,
+			uintptr(p))
 		a.Put(nil, SuStr("hwndOwner"), IntVal(int(psd.hwndOwner)))
 		a.Put(nil, SuStr("hDevMode"), IntVal(int(psd.hDevMode)))
 		a.Put(nil, SuStr("hDevNames"), IntVal(int(psd.hDevNames)))
@@ -170,9 +168,8 @@ var _ = builtin1("GetSaveFileName(a)",
 			defExt:     getStr(a, "defExt"),
 			initialDir: getStr(a, "initialDir"),
 		}
-		rtn, _, _ := syscall.Syscall(getSaveFileName, 1,
-			uintptr(p),
-			0, 0)
+		rtn := goc.Syscall1(getSaveFileName,
+			uintptr(p))
 		if rtn != 0 {
 			a.Put(nil, SuStr("file"), bufToStr(buf, uintptr(bufsize)))
 		}
@@ -197,9 +194,8 @@ var _ = builtin1("GetOpenFileName(a)",
 			defExt:     getStr(a, "defExt"),
 			initialDir: getStr(a, "initialDir"),
 		}
-		rtn, _, _ := syscall.Syscall(getSaveFileName, 1,
-			uintptr(p),
-			0, 0)
+		rtn := goc.Syscall1(getSaveFileName,
+			uintptr(p))
 		if rtn != 0 {
 			a.Put(nil, SuStr("file"), bufToStr2(buf, uintptr(bufsize)))
 		}
@@ -253,9 +249,8 @@ var _ = builtin1("ChooseColor(x)",
 			resource:   getStr(a, "resource"),
 			custColors: custColors,
 		}
-		rtn, _, _ := syscall.Syscall(chooseColor, 1,
-			uintptr(p),
-			0, 0)
+		rtn := goc.Syscall1(chooseColor,
+			uintptr(p))
 		a.Put(nil, SuStr("rgbResult"), IntVal(int(cc.rgbResult)))
 		a.Put(nil, SuStr("flags"), IntVal(int(cc.flags)))
 		for i := 0; i < nCustColors; i++ {
@@ -321,9 +316,8 @@ var _ = builtin1("ChooseFont(cf)",
 			nSizeMin:       getInt32(a, "nSizeMin"),
 			nSizeMax:       getInt32(a, "nSizeMax"),
 		}
-		rtn, _, _ := syscall.Syscall(chooseFont, 1,
-			uintptr(p),
-			0, 0)
+		rtn := goc.Syscall1(chooseFont,
+			uintptr(p))
 		lfob.Put(nil, SuStr("lfHeight"), IntVal(int(lf.lfHeight)))
 		lfob.Put(nil, SuStr("lfWidth"), IntVal(int(lf.lfWidth)))
 		lfob.Put(nil, SuStr("lfEscapement"), IntVal(int(lf.lfEscapement)))
