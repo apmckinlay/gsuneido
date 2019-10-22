@@ -12,7 +12,7 @@ type pair struct {
 }
 
 const initpairs = 12  // handles almost all cases
-const maxpairs = 1024 // must be less than inProgressStack type max
+const maxpairs = 4096 // must be less than inProgressStack type max
 
 func newpairs() pairs {
 	return make([]pair, 0, initpairs)
