@@ -42,6 +42,9 @@ var lastAlloc uintptr
 func Alloc(n uintptr) unsafe.Pointer {
 	lastAlloc = n
 	n = ((n - 1) | (align - 1)) + 1
+	if heapnext + n > heapsize {
+		panic("Windows dll interface argument space limit exceeded")
+	}
 	heapcheck("alloc")
 	// zero out memory
 	// probably not required ???
