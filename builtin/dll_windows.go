@@ -133,6 +133,7 @@ func strToBuf(s string, n int) unsafe.Pointer {
 	return p
 }
 
+// strRet returns a string from a nul terminated byte slice
 func strRet(buf []byte) Value {
 	return SuStr(string(buf[:bytes.IndexByte(buf, 0)]))
 }
