@@ -102,6 +102,10 @@ func (seq *SuSequence) RangeLen(i int, n int) Value {
 
 func (seq *SuSequence) Equal(other interface{}) bool {
 	seq.instantiate()
+	if y,ok := other.(*SuSequence); ok {
+		y.instantiate()
+		other = y.ob
+	}
 	return seq.ob.Equal(other)
 }
 
