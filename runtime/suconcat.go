@@ -3,6 +3,7 @@ package runtime
 import (
 	"bytes"
 	"strings"
+	"unsafe"
 
 	"github.com/apmckinlay/gsuneido/runtime/types"
 	"github.com/apmckinlay/gsuneido/util/dnum"
@@ -12,7 +13,7 @@ import (
 )
 
 // SuConcat is a Value used to optimize string concatenation
-// NOTE: Not thread safe
+// FIXME: concurrency (atomic access to b)
 type SuConcat struct {
 	b *shared
 	n int
@@ -21,7 +22,6 @@ type SuConcat struct {
 
 type shared struct {
 	a []byte
-	// MAYBE have a string to cache?
 }
 
 // NewSuConcat returns an empty SuConcat
@@ -84,7 +84,8 @@ func (c SuConcat) ToStr() (string, bool) {
 }
 
 func (c SuConcat) toStr() string {
-	return string(c.b.a[:c.n])
+	// use the same trick as strings.Builder to avoid allocation
+	return *(*string)(unsafe.Pointer(&c.b.a))
 }
 
 // String returns a quoted string
