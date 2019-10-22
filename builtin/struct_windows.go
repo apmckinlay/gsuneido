@@ -200,7 +200,8 @@ var _ = builtin1("NMTVDISPINFO(address)",
 		ob := nmhdrToOb(&di.nmhdr)
 		ob.Put(nil, SuStr("nmhdr"), nmhdrToOb(&di.nmhdr))
 		tvi := tvitemToOb(&di.item)
-		tvi.Put(nil, SuStr("pszText"), bufRet(unsafe.Pointer(di.item.pszText), 1024))
+		tvi.Put(nil, SuStr("pszText"),
+			bufToStr(unsafe.Pointer(di.item.pszText), 1024))
 		ob.Put(nil, SuStr("item"), tvi)
 		return ob
 	})
