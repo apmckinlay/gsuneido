@@ -365,11 +365,16 @@ func (ob *SuObject) String() string {
 	return buf.String()
 }
 
+const maxbuf = 16 * 1024
+
 func (ob *SuObject) vecstr() (*strings.Builder, string) {
 	buf := strings.Builder{}
 	sep := ""
 	buf.WriteString("#(")
 	for _, v := range ob.list {
+		if buf.Len() > maxbuf {
+			panic("buffer overflow displaying object")
+		}
 		buf.WriteString(sep)
 		sep = ", "
 		buf.WriteString(v.String())
@@ -378,6 +383,9 @@ func (ob *SuObject) vecstr() (*strings.Builder, string) {
 }
 
 func entstr(buf *strings.Builder, k interface{}, v interface{}, sep string) string {
+	if buf.Len() > maxbuf {
+		panic("buffer overflow displaying object")
+	}
 	buf.WriteString(sep)
 	sep = ", "
 	if ks, ok := k.(SuStr); ok && unquoted(string(ks)) {
@@ -470,7 +478,7 @@ func (*SuObject) Type() types.Type {
 	return types.Object
 }
 
-// Compare compares only the list values (not the named).
+// Compare compares only list values (not named)
 func (ob *SuObject) Compare(other Value) int {
 	if cmp := ints.Compare(ordObject, Order(other)); cmp != 0 {
 		return cmp
