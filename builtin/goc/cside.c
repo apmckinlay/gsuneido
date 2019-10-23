@@ -137,11 +137,42 @@ const int stack_size = 16 * 1024; // ???
 
 enum { END_MSG_LOOP = 0xebb };
 
+static DWORD main_threadid = 0;
+static int volatile ticks = 0;
+static HCURSOR volatile prev_cursor = 0;
+static HHOOK hook = 0;
+
+static DWORD WINAPI timer_thread(LPVOID lpParameter) {
+	HCURSOR wait_cursor = LoadCursor(NULL, IDC_WAIT);
+	AttachThreadInput(GetCurrentThreadId(), main_threadid, TRUE);
+	for (;;) {
+		Sleep(25); // milliseconds
+		if (ticks > 0 && --ticks == 0)
+			prev_cursor = SetCursor(wait_cursor);
+	}
+}
+static LRESULT CALLBACK message_hook(int code, WPARAM wParam, LPARAM lParam) {
+	ticks = 0; // stop timer
+	return CallNextHookEx(hook, code, wParam, lParam);
+}
+
 static void message_loop(uintptr hdlg) {
+	main_threadid = GetCurrentThreadId();
+	hook = SetWindowsHookExA(WH_GETMESSAGE, message_hook, 0, main_threadid);
+	CreateThread(NULL, 1000, timer_thread, 0, 0, 0);
 	MSG msg;
 	for (;;) {
+		ticks = 0; // stop timer
+		if (prev_cursor) {
+			// restore cursor
+			POINT pt;
+			GetCursorPos(&pt);
+			SetCursorPos(pt.x, pt.y);
+		}
 		if (-1 == GetMessageA(&msg, 0, 0, 0))
 			continue; // ignore error ???
+		ticks = 5;    // start timer
+		prev_cursor = 0;
 		if (msg.message == WM_QUIT) {
 			if (hdlg != 0)
 				PostQuitMessage(msg.wParam);
