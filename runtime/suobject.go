@@ -489,23 +489,17 @@ func (ob *SuObject) Compare(other Value) int {
 
 func cmp2(x Value, y Value) int {
 	var tx, ty types.Type
-	inProgress := make(inProgressStack, 0, 8) // 8 handles almost all cases
-	stack := newpairs()
-	stack.push(x, y)
+	inProgress := make(inProgressStack, 0, 8) // 8 should handle most cases
+	stack := make([]Value, 0, 32)             // 32 should handle most cases
 	for {
-		x, y = stack.top()
-		inProgress.push(stack.topIndex())
+		if x == y || inProgress.has(x, y) {
+			goto endOfLoop
+		}
 		if x == nil {
 			return -1
 		}
 		if y == nil {
 			return +1
-		}
-		if x == y {
-			goto endOfLoop
-		}
-		if pair_equal == checkRecursive(x, y, stack) {
-			goto endOfLoop
 		}
 		tx = order[x.Type()]
 		ty = order[y.Type()]
@@ -514,8 +508,9 @@ func cmp2(x Value, y Value) int {
 		}
 		switch tx {
 		case types.Object:
-			size := xcmpObject(ToContainer(x).ToObject(), &stack)
-			ycmpObject(ToContainer(y).ToObject(), &stack, size)
+			xTodo := children(ToContainer(x).ToObject(), &stack)
+			yTodo := children(ToContainer(y).ToObject(), &stack)
+			inProgress.push(x, y, xTodo, yTodo)
 		default:
 			cmp := x.Compare(y)
 			if cmp != 0 {
@@ -523,42 +518,26 @@ func cmp2(x Value, y Value) int {
 			}
 		}
 	endOfLoop:
-		for stack.topIndex() == inProgress.top() {
-			stack.pop()
-			inProgress.pop()
-			if len(stack) == 0 {
-				return 0 // equal
-			}
+		x, y = inProgress.next()
+		if x == nil && y == nil {
+			return 0 // equal
 		}
 	}
 }
 
-// push x's members
-func xcmpObject(x *SuObject, ps *pairs) int {
-	x.Lock()
-	defer x.Unlock()
-	ps.push(EmptyStr, EmptyStr) // to handle if y has more elements
-	n := len(x.list)
-	for i := n - 1; i >= 0; i-- { // push in reverse order, so pop is in order
-		ps.push(x.list[i], nil)
+func children(ob *SuObject, stack *[]Value) []Value {
+	if !ob.Lock() {
+		// not concurrent, don't need to copy
+		return ob.list
 	}
-	return n
-}
-
-// add y's members
-func ycmpObject(y *SuObject, ps *pairs, nx int) {
-	y.Lock()
-	defer y.Unlock()
-	ny := len(y.list)
-	top := len(*ps) - 1
-	for i := 0; i < nx && i < ny; i++ {
-		(*ps)[top-i].y = y.list[i]
+	defer ob.Unlock()
+	n := len(ob.list)
+	expand(stack, n)
+	start := len(*stack)
+	for i := 0; i < n; i++ {
+		(*stack)[start+i] = ob.list[i]
 	}
-	if nx < ny {
-		(*ps)[top-nx].x = nil
-	} else if nx > ny {
-		(*ps)[top-nx].y = nil
-	}
+	return (*stack)[start:]
 }
 
 func (*SuObject) Call(*Thread, Value, *ArgSpec) Value {
