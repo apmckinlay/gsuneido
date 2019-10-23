@@ -3,6 +3,7 @@ package builtin
 import (
 	"fmt"
 	"syscall"
+	"time"
 	"unsafe"
 
 	"github.com/apmckinlay/gsuneido/builtin/goc"
@@ -1369,8 +1370,12 @@ var _ = builtin4("SetTimer(hwnd, id, ms, f)",
 			if r == 0 {
 				return Zero // SetTimer failure return value
 			}
-			rtn := <-retChan
-			return intRet(rtn)
+			select {
+			case rtn := <-retChan:
+				return intRet(rtn)
+			case <-time.After(1 * time.Second):
+				panic("SetTimer no reply")
+			}
 		}
 		if timersDisabled {
 			return Zero
