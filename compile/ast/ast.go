@@ -38,6 +38,7 @@ func (*exprNodeT) exprNode() {}
 type Ident struct {
 	exprNodeT
 	Name string
+	Pos  int32
 }
 
 func (a *Ident) String() string {
@@ -276,6 +277,7 @@ type Param struct {
 	DefVal Value  // may be nil
 	// Unused is set if the parameter was followed by /*unused*/
 	Unused bool
+	Pos    int32
 }
 
 func (a *Param) String() string {
@@ -304,7 +306,7 @@ func (a *Block) Children(fn func(Node)) {
 }
 
 type Factory interface {
-	Ident(name string) Expr
+	Ident(name string, pos int32) Expr
 	Constant(val Value) Expr
 	Unary(tok tok.Token, expr Expr) Expr
 	Binary(lhs Expr, tok tok.Token, rhs Expr) Expr
@@ -317,8 +319,8 @@ type Factory interface {
 
 type Builder struct{}
 
-func (Builder) Ident(name string) Expr {
-	return &Ident{Name: name}
+func (Builder) Ident(name string, pos int32) Expr {
+	return &Ident{Name: name, Pos: pos}
 }
 func (Builder) Constant(val Value) Expr {
 	return &Constant{Val: val}
@@ -447,6 +449,7 @@ type TryCatch struct {
 	stmtNodeT
 	Try         Statement
 	CatchVar    string
+	VarPos      int32
 	CatchFilter string
 	Catch       Statement
 }
@@ -487,9 +490,10 @@ func (x *Forever) Children(fn func(Node)) {
 
 type ForIn struct {
 	stmtNodeT
-	Var  string
-	E    Expr
-	Body Statement
+	Var    string
+	VarPos int32
+	E      Expr
+	Body   Statement
 }
 
 func (x *ForIn) String() string {

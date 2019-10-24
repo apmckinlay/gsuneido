@@ -29,13 +29,14 @@ func (p *parser) params(inClass bool) []ast.Param {
 	var params []ast.Param
 	if p.matchIf(tok.At) {
 		params = append(params,
-			ast.Param{Name: "@" + p.Text, Unused: p.unusedAhead()})
+			ast.Param{Name: "@" + p.Text, Unused: p.unusedAhead(), Pos: p.Pos})
 		p.matchIdent()
 	} else {
 		defs := false
 		for p.Token != tok.RParen {
 			dot := p.matchIf(tok.Dot)
 			name := p.Text
+			pos := p.Pos
 			if dot {
 				if !inClass {
 					p.error("dot parameters only allowed in class methods")
@@ -53,12 +54,13 @@ func (p *parser) params(inClass bool) []ast.Param {
 					p.error("parameter defaults must be constants")
 				}
 				params = append(params,
-					ast.Param{Name: name, DefVal: def, Unused: unused})
+					ast.Param{Name: name, DefVal: def, Unused: unused, Pos: pos})
 			} else {
 				if defs {
 					p.error("default parameters must come last")
 				}
-				params = append(params, ast.Param{Name: name, Unused: unused})
+				params = append(params,
+					ast.Param{Name: name, Unused: unused, Pos: pos})
 			}
 			p.matchIf(tok.Comma)
 		}
@@ -250,6 +252,7 @@ func (p *parser) isForIn() bool {
 func (p *parser) forIn() *ast.ForIn {
 	parens := p.matchIf(tok.LParen)
 	id := p.Text
+	pos := p.Pos
 	p.matchIdent()
 	p.match(tok.In)
 	expr := p.exprExpecting(!parens)
@@ -257,7 +260,7 @@ func (p *parser) forIn() *ast.ForIn {
 		p.match(tok.RParen)
 	}
 	body := p.statement()
-	return &ast.ForIn{Var: id, E: expr, Body: body}
+	return &ast.ForIn{Var: id, VarPos: pos, E: expr, Body: body}
 }
 
 func (p *parser) forClassic() *ast.For {
@@ -321,11 +324,13 @@ func (p *parser) throwStmt() *ast.Throw {
 func (p *parser) tryStmt() *ast.TryCatch {
 	try := p.statement()
 	var catchVar string
+	var varPos int32
 	var catchFilter string
 	var catch ast.Statement
 	if p.matchIf(tok.Catch) {
 		if p.matchIf(tok.LParen) {
 			catchVar = p.Text
+			varPos = p.Pos
 			p.matchIdent()
 			if p.matchIf(tok.Comma) {
 				catchFilter = p.Text
@@ -335,6 +340,6 @@ func (p *parser) tryStmt() *ast.TryCatch {
 		}
 		catch = p.statement()
 	}
-	return &ast.TryCatch{Try: try,
-		CatchVar: catchVar, CatchFilter: catchFilter, Catch: catch}
+	return &ast.TryCatch{Try: try, Catch: catch,
+		CatchVar: catchVar, VarPos: varPos, CatchFilter: catchFilter}
 }

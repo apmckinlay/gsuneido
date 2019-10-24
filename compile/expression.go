@@ -419,6 +419,7 @@ func (p *parser) record() ast.Expr {
 	if hasUnnamed(args) {
 		fn = "Object"
 	}
+	// note: ident will have wrong pos
 	return p.Call(p.Ident(fn), args)
 }
 

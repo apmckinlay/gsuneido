@@ -45,11 +45,11 @@ func (ck *Check) Check(f *ast.Function) set {
 	ck.AllUsed = make(map[string]struct{})
 	var init set
 	init = ck.check(f, init)
-	for i, id := range init {
+	for _, id := range init {
 		if !ck.used(id) {
 			at := ""
-			if i < len(f.Params) {
-				at = " @" + strconv.Itoa(int(f.Pos))
+			if pos := paramPos(f.Params, id); pos >= 0 {
+				at = " @" + strconv.Itoa(pos)
 			} else if pos, ok := ck.AllInit[id]; ok {
 				at = " @" + strconv.Itoa(int(pos))
 			}
@@ -57,11 +57,16 @@ func (ck *Check) Check(f *ast.Function) set {
 				"WARNING: initialized but not used: "+id+at)
 		}
 	}
-
-	// for _, s := range ck.Results {
-	// 	fmt.Println(s)
-	// }
 	return init
+}
+
+func paramPos(params []ast.Param, id string) int {
+	for _,p := range params {
+		if p.Name == id {
+			return int(p.Pos)
+		}
+	}
+	return -1
 }
 
 func (ck *Check) check(f *ast.Function, init set) set {
@@ -118,7 +123,7 @@ func (ck *Check) statement(stmt ast.Statement, init set) set {
 	case *ast.TryCatch:
 		init = ck.statement(stmt.Try, init)
 		if stmt.CatchVar != "" {
-			init = ck.initVar(init, stmt.CatchVar)
+			init = ck.initVar(init, stmt.CatchVar, int(stmt.VarPos))
 		}
 		ck.statement(stmt.Catch, init)
 	case *ast.While:
@@ -150,7 +155,7 @@ func (ck *Check) statement(stmt ast.Statement, init set) set {
 			in = ck.statement(d, in)
 		}
 	case *ast.ForIn:
-		init = ck.initVar(init, stmt.Var)
+		init = ck.initVar(init, stmt.Var, int(stmt.VarPos))
 		init = ck.expr(stmt.E, init)
 		ck.statement(stmt.Body, init)
 	case *ast.For:
@@ -159,6 +164,7 @@ func (ck *Check) statement(stmt ast.Statement, init set) set {
 		}
 		init = ck.expr(stmt.Cond, init)
 		ck.statement(stmt.Body, init)
+		ck.pos = stmt.Pos // restore after statement has modified
 		for _, expr := range stmt.Inc {
 			ck.expr(expr, init)
 		}
@@ -178,7 +184,7 @@ func (ck *Check) expr(expr ast.Expr, init set) set {
 	case *ast.Binary:
 		if expr.Tok == tok.Eq {
 			if id, ok := expr.Lhs.(*ast.Ident); ok {
-				init = ck.initVar(init, id.Name)
+				init = ck.initVar(init, id.Name, int(id.Pos))
 				init = ck.expr(expr.Rhs, init)
 				break
 			}
@@ -187,12 +193,12 @@ func (ck *Check) expr(expr ast.Expr, init set) set {
 		init = ck.expr(expr.Rhs, init)
 	case *ast.Ident:
 		if ascii.IsLower(expr.Name[0]) {
-			init = ck.usedVar(init, expr.Name)
+			init = ck.usedVar(init, expr.Name, int(expr.Pos))
 		}
 		if ascii.IsUpper(expr.Name[0]) {
 			if nil == Global.FindName(ck.t, expr.Name) {
-				ck.Results = append(ck.Results,
-					"WARNING: can't find: "+expr.Name+" @"+strconv.Itoa(ck.pos))
+				ck.Results = append(ck.Results, "WARNING: can't find: "+
+					expr.Name+" @"+strconv.Itoa(int(expr.Pos)))
 			}
 		}
 	case *ast.Trinary:
@@ -224,15 +230,15 @@ func (ck *Check) expr(expr ast.Expr, init set) set {
 	return init
 }
 
-func (ck *Check) initVar(init set, id string) set {
+func (ck *Check) initVar(init set, id string, pos int) set {
 	if strings.HasPrefix(id, "_") {
 		return init
 	}
-	ck.AllInit[id] = int32(ck.pos)
+	ck.AllInit[id] = int32(pos)
 	return init.with(id)
 }
 
-func (ck *Check) usedVar(init set, id string) set {
+func (ck *Check) usedVar(init set, id string, pos int) set {
 	if strings.HasPrefix(id, "_") {
 		return init
 	}
@@ -242,7 +248,7 @@ func (ck *Check) usedVar(init set, id string) set {
 			p = "WARNING: used but possibly"
 		}
 		ck.Results = append(ck.Results,
-			p+" not initialized: "+id+" @"+strconv.Itoa(ck.pos))
+			p+" not initialized: "+id+" @"+strconv.Itoa(pos))
 	}
 	ck.AllUsed[id] = struct{}{}
 	return init

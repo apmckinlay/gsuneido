@@ -11,7 +11,7 @@ import (
 
 func NewParser(src string) *parser {
 	lxr := NewLexer(src)
-	p := &parser{lxr: lxr, Factory: ast.Folder{ast.Builder{}},
+	p := &parser{lxr: lxr, Factory: ast.Folder{Factory: ast.Builder{}},
 		checker: func(*ast.Function) {}}
 	p.next()
 	return p
@@ -117,4 +117,8 @@ func (p *parser) next() {
 func (p *parser) error(args ...interface{}) string {
 	line := p.lxr.LineFromPos(p.Item.Pos)
 	panic("syntax error at line " + strconv.Itoa(line) + " " + fmt.Sprint(args...))
+}
+
+func (p *parser) Ident(name string) ast.Expr {
+	return p.Factory.Ident(name, p.Pos)
 }

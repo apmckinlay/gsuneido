@@ -50,11 +50,19 @@ func TestCheckResults(t *testing.T) {
 		_, results := compile.Checked(nil, src)
 		Assert(t).That(results, Equals(expected))
 	}
-	test("function (a) { }", "WARNING: initialized but not used: a @0")
-	test("function (a /*unused*/, b) { }", "WARNING: initialized but not used: b @0")
-	test("function (a/*unused*/) { a }", "ERROR: used but not initialized: a @25")
-	test("function () { a=1 }", "WARNING: initialized but not used: a @14")
-	test("function () { a }", "ERROR: used but not initialized: a @14")
+	test("function (a) { }",
+		"WARNING: initialized but not used: a @10")
+	test("function (a /*unused*/, b) { }",
+		"WARNING: initialized but not used: b @24")
+	test("function (a/*unused*/) { a }",
+		"ERROR: used but not initialized: a @25")
+	test("function () { a=1 }",
+		"WARNING: initialized but not used: a @14")
+	test("function () { a + a }",
+		"ERROR: used but not initialized: a @14",
+		"ERROR: used but not initialized: a @18")
+	test("function () { a }",
+		"ERROR: used but not initialized: a @14")
 	test("function (a) { if a { b } }",
 		"ERROR: used but not initialized: b @22")
 	test("function (a) { if a { b=5 } if a { b } }",
@@ -63,8 +71,14 @@ func TestCheckResults(t *testing.T) {
 		"ERROR: used but not initialized: c @33",
 		"WARNING: initialized but not used: b @19")
 	test("function () { while (false isnt x = 1) { }; x }")
+	test("function () { for (i=0; i < 5; j++) { a=1; b=2; } }",
+		"ERROR: used but not initialized: j @31")
+	test("function () { for x in #() { } }",
+		"WARNING: initialized but not used: x @18")
+	test("function () { try {} catch (e) {} }",
+		"WARNING: initialized but not used: e @28")
 
 	test("class { F(){} G(a){} }",
-		"WARNING: initialized but not used: a @15")
+		"WARNING: initialized but not used: a @16")
 	test("class { New(.X){} }")
 }
