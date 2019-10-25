@@ -165,7 +165,7 @@ func (cg *cgen) function(fn *ast.Function) {
 func (cg *cgen) params(params []ast.Param) {
 	cg.Nparams = uint8(len(params))
 	for _, p := range params {
-		name, flags := param(p.Name)
+		name, flags := param(p.Name.Name)
 		if flags == AtParam && len(params) != 1 {
 			panic("@param must be the only parameter")
 		}
@@ -432,7 +432,7 @@ func (cg *cgen) forInStmt(node *ast.ForIn) {
 	cg.expr(node.E)
 	cg.emit(op.Iter)
 	labels := cg.newLabels()
-	cg.emitForIn(node.Var, labels)
+	cg.emitForIn(node.Var.Name, labels)
 	cg.statement(node.Body, labels, false)
 	cg.emitBwdJump(op.Jump, labels.cont)
 	cg.placeLabel(labels.brk)
@@ -452,8 +452,8 @@ func (cg *cgen) tryCatchStmt(node *ast.TryCatch, labels *Labels) {
 	cg.statement(node.Try, labels, false)
 	after := cg.emitJump(op.Catch, -1)
 	cg.placeLabel(catch)
-	if node.CatchVar != "" {
-		cg.emit(op.Store, byte(cg.name(node.CatchVar)))
+	if node.CatchVar.Name != "" {
+		cg.emit(op.Store, byte(cg.name(node.CatchVar.Name)))
 	}
 	cg.emit(op.Pop)
 	if node.Catch != nil {

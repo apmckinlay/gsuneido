@@ -440,11 +440,11 @@ func (p *parser) blockParams() []ast.Param {
 	var params []ast.Param
 	if p.matchIf(tok.BitOr) {
 		if p.matchIf(tok.At) {
-			params = append(params, ast.Param{Name: "@" + p.Text})
+			params = append(params, ast.MkParam("@" + p.Text))
 			p.matchIdent()
 		} else {
 			for p.Token.IsIdent() {
-				params = append(params, ast.Param{Name: p.Text})
+				params = append(params, ast.MkParam(p.Text))
 				p.matchIdent()
 				p.matchIf(tok.Comma)
 			}

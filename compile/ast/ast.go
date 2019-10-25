@@ -273,15 +273,18 @@ func (a *Function) Children(fn func(Node)) {
 }
 
 type Param struct {
-	Name   string // including prefix @ . _
+	Name   Ident // including prefix @ . _
 	DefVal Value  // may be nil
 	// Unused is set if the parameter was followed by /*unused*/
 	Unused bool
-	Pos    int32
+}
+
+func MkParam(name string) Param {
+	return Param{Name: Ident{Name: name}}
 }
 
 func (a *Param) String() string {
-	s := a.Name
+	s := a.Name.Name
 	if a.DefVal != nil {
 		s += "=" + a.DefVal.String()
 	}
@@ -448,8 +451,7 @@ func (x *Throw) Children(fn func(Node)) {
 type TryCatch struct {
 	stmtNodeT
 	Try         Statement
-	CatchVar    string
-	VarPos      int32
+	CatchVar    Ident
 	CatchFilter string
 	Catch       Statement
 }
@@ -458,8 +460,8 @@ func (x *TryCatch) String() string {
 	s := "Try(" + x.Try.String()
 	if x.Catch != nil {
 		s += "\ncatch"
-		if x.CatchVar != "" {
-			s += " (" + x.CatchVar
+		if x.CatchVar.Name != "" {
+			s += " (" + x.CatchVar.Name
 			if x.CatchFilter != "" {
 				s += ",'" + x.CatchFilter + "'"
 			}
@@ -490,14 +492,13 @@ func (x *Forever) Children(fn func(Node)) {
 
 type ForIn struct {
 	stmtNodeT
-	Var    string
-	VarPos int32
+	Var    Ident
 	E      Expr
 	Body   Statement
 }
 
 func (x *ForIn) String() string {
-	return "ForIn(" + x.Var + " " + x.E.String() + "\n" + x.Body.String() + ")"
+	return "ForIn(" + x.Var.Name + " " + x.E.String() + "\n" + x.Body.String() + ")"
 }
 
 func (x *ForIn) Children(fn func(Node)) {

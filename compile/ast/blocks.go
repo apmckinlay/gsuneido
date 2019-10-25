@@ -80,7 +80,7 @@ func closure(x *blok) {
 
 func (b *bloks) params(params []Param, vars set) {
 	for _, p := range params {
-		name := p.Name
+		name := p.Name.Name
 		if name[0] == '.' {
 			name = str.UnCapitalize(name[1:])
 		} else if name[0] == '@' || name[0] == '_' {
@@ -108,8 +108,8 @@ func (b *bloks) statement(stmt Statement, vars set) {
 		b.expr(stmt.E, vars)
 	case *TryCatch:
 		b.statement(stmt.Try, vars)
-		if stmt.CatchVar != "" {
-			vars[stmt.CatchVar] = yes
+		if stmt.CatchVar.Name != "" {
+			vars[stmt.CatchVar.Name] = yes
 		}
 		b.statement(stmt.Catch, vars)
 	case *While:
@@ -138,7 +138,7 @@ func (b *bloks) statement(stmt Statement, vars set) {
 			b.statement(d, vars)
 		}
 	case *ForIn:
-		vars[stmt.Var] = yes
+		vars[stmt.Var.Name] = yes
 		b.expr(stmt.E, vars)
 		b.statement(stmt.Body, vars)
 	case *For:
@@ -214,7 +214,7 @@ func (b *bloks) block(block *Block) {
 	}
 	if _, ok := blockVars["it"]; ok && len(block.Params) == 0 {
 		delete(blockVars, "it")
-		block.Params = []Param{{Name: "it"}}
+		block.Params = []Param{{Name: Ident{Name: "it"}}}
 	}
 	for v := range params {
 		delete(blockVars, v)

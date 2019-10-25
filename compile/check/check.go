@@ -62,8 +62,8 @@ func (ck *Check) Check(f *ast.Function) set {
 
 func paramPos(params []ast.Param, id string) int {
 	for _,p := range params {
-		if p.Name == id {
-			return int(p.Pos)
+		if p.Name.Name == id {
+			return int(p.Name.Pos)
 		}
 	}
 	return -1
@@ -79,7 +79,7 @@ func (ck *Check) check(f *ast.Function, init set) set {
 
 func (ck *Check) params(params []ast.Param, init set) set {
 	for _, p := range params {
-		name := p.Name
+		name := p.Name.Name
 		if name[0] == '.' {
 			name = str.UnCapitalize(name[1:])
 			ck.AllUsed[name] = struct{}{}
@@ -122,8 +122,8 @@ func (ck *Check) statement(stmt ast.Statement, init set) set {
 		init = ck.expr(stmt.E, init)
 	case *ast.TryCatch:
 		init = ck.statement(stmt.Try, init)
-		if stmt.CatchVar != "" {
-			init = ck.initVar(init, stmt.CatchVar, int(stmt.VarPos))
+		if stmt.CatchVar.Name != "" {
+			init = ck.initVar(init, stmt.CatchVar.Name, int(stmt.CatchVar.Pos))
 		}
 		ck.statement(stmt.Catch, init)
 	case *ast.While:
@@ -155,7 +155,7 @@ func (ck *Check) statement(stmt ast.Statement, init set) set {
 			in = ck.statement(d, in)
 		}
 	case *ast.ForIn:
-		init = ck.initVar(init, stmt.Var, int(stmt.VarPos))
+		init = ck.initVar(init, stmt.Var.Name, int(stmt.Var.Pos))
 		init = ck.expr(stmt.E, init)
 		ck.statement(stmt.Body, init)
 	case *ast.For:

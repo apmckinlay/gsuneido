@@ -29,7 +29,8 @@ func (p *parser) params(inClass bool) []ast.Param {
 	var params []ast.Param
 	if p.matchIf(tok.At) {
 		params = append(params,
-			ast.Param{Name: "@" + p.Text, Unused: p.unusedAhead(), Pos: p.Pos})
+			ast.Param{Name: ast.Ident{Name: "@" + p.Text, Pos: p.Pos},
+				Unused: p.unusedAhead()})
 		p.matchIdent()
 	} else {
 		defs := false
@@ -54,13 +55,15 @@ func (p *parser) params(inClass bool) []ast.Param {
 					p.error("parameter defaults must be constants")
 				}
 				params = append(params,
-					ast.Param{Name: name, DefVal: def, Unused: unused, Pos: pos})
+					ast.Param{Name: ast.Ident{Name: name, Pos: pos},
+						DefVal: def, Unused: unused})
 			} else {
 				if defs {
 					p.error("default parameters must come last")
 				}
 				params = append(params,
-					ast.Param{Name: name, Unused: unused, Pos: pos})
+					ast.Param{Name: ast.Ident{Name: name, Pos: pos},
+						Unused: unused})
 			}
 			p.matchIf(tok.Comma)
 		}
@@ -78,7 +81,7 @@ func (p *parser) unusedAhead() bool {
 
 func (p *parser) checkForDupParam(params []ast.Param, name string) {
 	for _, a := range params {
-		if a.Name == name {
+		if a.Name.Name == name {
 			p.error("duplicate function parameter (" + name + ")")
 		}
 	}
@@ -260,7 +263,7 @@ func (p *parser) forIn() *ast.ForIn {
 		p.match(tok.RParen)
 	}
 	body := p.statement()
-	return &ast.ForIn{Var: id, VarPos: pos, E: expr, Body: body}
+	return &ast.ForIn{Var: ast.Ident{Name: id, Pos: pos}, E: expr, Body: body}
 }
 
 func (p *parser) forClassic() *ast.For {
@@ -341,5 +344,5 @@ func (p *parser) tryStmt() *ast.TryCatch {
 		catch = p.statement()
 	}
 	return &ast.TryCatch{Try: try, Catch: catch,
-		CatchVar: catchVar, VarPos: varPos, CatchFilter: catchFilter}
+		CatchVar: ast.Ident{Name: catchVar, Pos: varPos}, CatchFilter: catchFilter}
 }
