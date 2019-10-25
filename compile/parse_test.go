@@ -338,6 +338,7 @@ func TestParseStatements(t *testing.T) {
 		"Switch(a \n Case(1,2 \n b) \n Case(3 \n c) \n ())")
 
 	test("throw 'fubar'", "Throw('fubar')")
+	test("throw 123 throw 456", "Throw(123) \n Throw(456)")
 
 	test("break", "Break")
 
@@ -383,4 +384,9 @@ func TestParseStatements(t *testing.T) {
 		}
 	}
 	xtest("a \n * b", "syntax error: unexpected '*'")
+	xtest("foo bar", "syntax error")
+	xtest("1+2 3+4", "syntax error")
+	xtest("1+2 3+4", "syntax error")
+	xtest("return 1+2 3+4", "syntax error")
+	xtest("throw 1+2 3+4", "syntax error")
 }

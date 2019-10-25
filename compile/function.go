@@ -122,7 +122,7 @@ func (p *parser) statement2() ast.Statement {
 		return &ast.Compound{Body: p.compound()}
 	case tok.Return:
 		p.next()
-		return p.semi(p.returnStmt())
+		return p.returnStmt()
 	case tok.If:
 		p.next()
 		return p.ifStmt()
@@ -142,7 +142,7 @@ func (p *parser) statement2() ast.Statement {
 		return p.forStmt()
 	case tok.Throw:
 		p.next()
-		return p.semi(&ast.Throw{E: p.expr()})
+		return &ast.Throw{E: p.trailingExpr()}
 	case tok.Try:
 		p.next()
 		return p.tryStmt()
@@ -153,8 +153,30 @@ func (p *parser) statement2() ast.Statement {
 		p.next()
 		return p.semi(&ast.Continue{})
 	default:
-		return p.semi(&ast.ExprStmt{E: p.expr()})
+		return &ast.ExprStmt{E: p.trailingExpr()}
 	}
+}
+
+// trailingExpr gives a syntax error for two expressions side by side
+// without either a semicolon or newline separator
+// because this is not very readable and often a mistake
+// cSuneido and jSuneido only allowed catch, while, or else to follow
+// but here we are more lenient and allow any statement keyword
+func (p *parser) trailingExpr() ast.Expr {
+		expr := p.expr()
+		switch p.Token {
+		case tok.Semicolon:
+			p.next()
+		case tok.RCurly, tok.Return, tok.If, tok.Else, tok.Switch, tok.Forever,
+			tok.While, tok.Do, tok.For, tok.Throw, tok.Try, tok.Catch,
+			tok.Break, tok.Continue, tok.Case, tok.Default:
+			// ok
+		default:
+			if !p.newline {
+				p.error()
+			}
+		}
+		return expr
 }
 
 func (p *parser) semi(stmt ast.Statement) ast.Statement {
@@ -313,11 +335,10 @@ func (p *parser) exprExpecting(expecting bool) ast.Expr {
 }
 
 func (p *parser) returnStmt() *ast.Return {
-	if p.newline || p.Token == tok.Semicolon || p.Token == tok.RCurly {
+	if p.newline || p.matchIf(tok.Semicolon) || p.Token == tok.RCurly {
 		return &ast.Return{}
 	}
-	expr := p.expr()
-	return &ast.Return{E: expr}
+	return &ast.Return{E: p.trailingExpr()}
 }
 
 func (p *parser) throwStmt() *ast.Throw {
