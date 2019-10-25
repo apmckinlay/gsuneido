@@ -58,6 +58,10 @@ func TestCheckResults(t *testing.T) {
 		"ERROR: used but not initialized: a @25")
 	test("function () { a=1 }",
 		"WARNING: initialized but not used: a @14")
+	test("function () { a=b; a }",
+		"ERROR: used but not initialized: b @16")
+	test("function () { a=1+a }",
+		"ERROR: used but not initialized: a @18")
 	test("function () { a + a }",
 		"ERROR: used but not initialized: a @14",
 		"ERROR: used but not initialized: a @18")

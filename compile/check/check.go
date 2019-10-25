@@ -184,8 +184,8 @@ func (ck *Check) expr(expr ast.Expr, init set) set {
 	case *ast.Binary:
 		if expr.Tok == tok.Eq {
 			if id, ok := expr.Lhs.(*ast.Ident); ok {
-				init = ck.initVar(init, id.Name, int(id.Pos))
 				init = ck.expr(expr.Rhs, init)
+				init = ck.initVar(init, id.Name, int(id.Pos))
 				break
 			}
 		}
