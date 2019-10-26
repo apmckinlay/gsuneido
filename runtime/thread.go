@@ -120,19 +120,24 @@ func (t *Thread) Callstack() *SuObject {
 		call := &SuObject{}
 		call.Set(SuStr("fn"), fr.fn)
 		call.Set(SuStr("srcpos"), IntVal(fr.fn.CodeToSrcPos(fr.ip)))
-		locals := &SuObject{}
-		if fr.this != nil {
-			locals.Set(SuStr("this"), fr.this)
-		}
-		for i, v := range fr.locals {
-			if v != nil && fr.fn != nil && i < len(fr.fn.Names) {
-				locals.Set(SuStr(fr.fn.Names[i]), v)
-			}
-		}
-		call.Set(SuStr("locals"), locals)
+		call.Set(SuStr("locals"), t.Locals(i))
 		cs.Add(call)
 	}
 	return cs
+}
+
+func (t *Thread) Locals(i int) *SuObject {
+	fr := t.frames[i]
+	locals := &SuObject{}
+	if fr.this != nil {
+		locals.Set(SuStr("this"), fr.this)
+	}
+	for i, v := range fr.locals {
+		if v != nil && fr.fn != nil && i < len(fr.fn.Names) {
+			locals.Set(SuStr(fr.fn.Names[i]), v)
+		}
+	}
+	return locals
 }
 
 // PrintStack prints the thread's call stack

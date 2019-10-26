@@ -2,7 +2,7 @@ package builtin
 
 import . "github.com/apmckinlay/gsuneido/runtime"
 
-var _ = builtin1("Locals(i)",
-	func(arg Value) Value {
-		return &SuObject{} //TODO
+var _ = builtin("Locals(i)",
+	func(t *Thread, args []Value) Value {
+		return t.Locals(ToInt(args[0]))
 	})
