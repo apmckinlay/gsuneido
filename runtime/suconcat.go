@@ -13,20 +13,27 @@ import (
 )
 
 // SuConcat is a Value used to optimize string concatenation
-// FIXME: concurrency (atomic access to b)
+// WARNING: zero value is not valid, use NewSuConcat
 type SuConcat struct {
-	b *shared
+	buf *scbuf
 	n int
 	CantConvert
 }
 
-type shared struct {
-	a []byte
+type scbuf struct {
+	bs []byte
+	// concurrent is set by SetConcurrent
+	// once it is set, shared must be immutable
+	concurrent bool
 }
 
 // NewSuConcat returns an empty SuConcat
 func NewSuConcat() SuConcat {
-	return SuConcat{b: &shared{}}
+	return SuConcat{buf: &scbuf{}}
+}
+
+func (c SuConcat) SetConcurrent() {
+	c.buf.concurrent = true
 }
 
 // Len returns the length of an SuConcat
@@ -36,27 +43,15 @@ func (c SuConcat) Len() int {
 
 // Add appends a string to an SuConcat
 func (c SuConcat) Add(s string) SuConcat {
-	bb := c.b
-	if len(bb.a) != c.n {
-		// another reference has appended their own stuff so make our own buf
-		a := append(make([]byte, 0, c.n+len(s)), bb.a[:c.n]...)
-		bb = &shared{a}
+	buf := c.buf
+	if buf.concurrent || // shared between threads
+		len(buf.bs) != c.n { // another SuConcat has appended their own stuff
+		// copy to our own new buffer
+		a := append(make([]byte, 0, c.n+len(s)), buf.bs[:c.n]...)
+		buf = &scbuf{bs: a}
 	}
-	bb.a = append(bb.a, s...)
-	return SuConcat{b: bb, n: c.n + len(s)}
-}
-
-// AddSuConcat appends an SuConcat to an SuConcat
-func (c SuConcat) AddSuConcat(cv2 SuConcat) SuConcat {
-	// avoid converting cv2 to string
-	bb := c.b
-	if len(bb.a) != c.n {
-		// another reference has appended their own stuff so make our own buf
-		a := append(make([]byte, 0, c.n+cv2.Len()), bb.a[:c.n]...)
-		bb = &shared{a}
-	}
-	bb.a = append(bb.a, cv2.b.a...)
-	return SuConcat{b: bb, n: c.n + cv2.Len()}
+	buf.bs = append(buf.bs, s...)
+	return SuConcat{buf: buf, n: c.n + len(s)}
 }
 
 func (c SuConcat) Iter() Iter {
@@ -85,7 +80,7 @@ func (c SuConcat) ToStr() (string, bool) {
 
 func (c SuConcat) toStr() string {
 	// use the same trick as strings.Builder to avoid allocation
-	return *(*string)(unsafe.Pointer(&c.b.a))
+	return *(*string)(unsafe.Pointer(&c.buf.bs))
 }
 
 // String returns a quoted string
@@ -115,7 +110,7 @@ func (c SuConcat) RangeLen(from int, n int) Value {
 }
 
 func (c SuConcat) Hash() uint32 {
-	return hash.HashBytes(c.b.a[:c.n])
+	return hash.HashBytes(c.buf.bs[:c.n])
 }
 
 func (c SuConcat) Hash2() uint32 {
@@ -129,7 +124,7 @@ func (c SuConcat) Equal(other interface{}) bool {
 		return c.n == len(s2) && c.toStr() == string(s2)
 	}
 	if c2, ok := other.(SuConcat); ok {
-		return c.n == c2.n && bytes.Equal(c.b.a[:c.n], c2.b.a[:c.n])
+		return c.n == c2.n && bytes.Equal(c.buf.bs[:c.n], c2.buf.bs[:c.n])
 	}
 	return false
 }
@@ -176,6 +171,6 @@ func (c SuConcat) PackSize3() int {
 
 func (c SuConcat) Pack(_ int32, buf *pack.Encoder) {
 	if c.n > 0 {
-		buf.Put1(PackString).Put(c.b.a[:c.n])
+		buf.Put1(PackString).Put(c.buf.bs[:c.n])
 	}
 }

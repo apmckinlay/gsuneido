@@ -170,14 +170,8 @@ func cat2(xs, ys string) Value {
 
 func cat3(t *Thread, x, y Value) Value {
 	var result Value
-	xc, xcok := x.(SuConcat)
-	yc, ycok := y.(SuConcat)
-	if xcok && ycok {
-		return xc.AddSuConcat(yc)
-	} else if xcok {
+	if xc, ok := x.(SuConcat); ok {
 		result = xc.Add(catToStr(t, y))
-	} else if ycok {
-		result = NewSuConcat().Add(catToStr(t, x)).AddSuConcat(yc)
 	} else {
 		result = cat2(catToStr(t, x), catToStr(t, y))
 	}
