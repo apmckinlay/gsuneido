@@ -5,7 +5,7 @@ build:
 	@go build -v -ldflags "-X 'main.builtDate=${BUILT}'"
 
 test:
-	go test ./...
+	go test -count=1 ./...
 
 client: build
 	@./gsuneido -c t@../tok
