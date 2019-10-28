@@ -482,3 +482,176 @@ type TCHITTESTINFO struct {
 }
 
 const nTCHITTESTINFO = unsafe.Sizeof(TCHITTESTINFO{})
+
+var _ = builtin4("SendMessageListColumn(hwnd, msg, wParam, lParam)",
+	func(a, b, c, d Value) Value {
+		defer heap.FreeTo(heap.CurSize())
+		var p unsafe.Pointer
+		if !d.Equal(Zero) {
+			p = heap.Alloc(nLV_COLUMN)
+			*(*LV_COLUMN)(p) = LV_COLUMN{
+				mask:       getInt32(d, "mask"),
+				fmt:        getInt32(d, "fmt"),
+				cx:         getInt32(d, "cx"),
+				pszText:    getStr(d, "pszText"),
+				cchTextMax: getInt32(d, "cchTextMax"),
+				iSubItem:   getInt32(d, "iSubItem"),
+				iImage:     getInt32(d, "iImage"),
+				iOrder:     getInt32(d, "iOrder"),
+			}
+		}
+		rtn := goc.Syscall4(sendMessage,
+			intArg(a),
+			intArg(b),
+			intArg(c),
+			uintptr(p))
+		return intRet(rtn)
+	})
+
+type LV_COLUMN struct {
+	mask       int32
+	fmt        int32
+	cx         int32
+	pszText    *byte
+	cchTextMax int32
+	iSubItem   int32
+	iImage     int32
+	iOrder     int32
+	cxMin      int32
+	cxDefault  int32
+	cxIdeal    int32
+	_          [4]byte // padding
+}
+
+const nLV_COLUMN = unsafe.Sizeof(LV_COLUMN{})
+
+var _ = builtin4("SendMessageListItem(hwnd, msg, wParam, lParam)",
+	func(a, b, c, d Value) Value {
+		defer heap.FreeTo(heap.CurSize())
+		p, li := obToLV_ITEM(d)
+		rtn := goc.Syscall4(sendMessage,
+			intArg(a),
+			intArg(b),
+			intArg(c),
+			uintptr(p))
+		d.Put(nil, SuStr("lParam"), IntVal(int(li.lParam)))
+		return intRet(rtn)
+	})
+
+var _ = builtin4("SendMessageListItemOut(hwnd, msg, wParam, lParam)",
+	func(a, b, c, d Value) Value {
+		defer heap.FreeTo(heap.CurSize())
+		p, li := obToLV_ITEM(d)
+		const bufsize = 256
+		buf := heap.Alloc(bufsize)
+		li.pszText = (*byte)(buf)
+		goc.Syscall4(sendMessage,
+			intArg(a),
+			intArg(b),
+			intArg(c),
+			uintptr(p))
+		return bufRet(buf, bufsize)
+	})
+
+func obToLV_ITEM(ob Value) (unsafe.Pointer, *LV_ITEM) {
+	var p unsafe.Pointer
+	var li *LV_ITEM
+	if !ob.Equal(Zero) {
+		p = heap.Alloc(nLV_ITEM)
+		li = (*LV_ITEM)(p)
+		*li = LV_ITEM{
+			mask:       getInt32(ob, "mask"),
+			iItem:      getInt32(ob, "iItem"),
+			iSubItem:   getInt32(ob, "iSubItem"),
+			state:      getInt32(ob, "state"),
+			stateMask:  getInt32(ob, "stateMask"),
+			pszText:    getStr(ob, "pszText"),
+			cchTextMax: getInt32(ob, "cchTextMax"),
+			iImage:     getInt32(ob, "iImage"),
+			lParam:     getHandle(ob, "lParam"),
+			iIndent:    getInt32(ob, "iIndent"),
+		}
+	}
+	return p, li
+}
+
+const nLV_ITEM = unsafe.Sizeof(LV_ITEM{})
+
+type LV_ITEM struct {
+	mask       int32
+	iItem      int32
+	iSubItem   int32
+	state      int32
+	stateMask  int32
+	pszText    *byte
+	cchTextMax int32
+	iImage     int32
+	lParam     uintptr
+	iIndent    int32
+	iGroupId   int32
+	cColumns   uint32
+	puColumns  uintptr
+	piColFmt   uintptr
+	iGroup     int32
+	_          [4]byte // padding
+}
+
+var _ = builtin4("SendMessageListColumnOrder(hwnd, msg, wParam, lParam)",
+	func(a, b, c, d Value) Value {
+		defer heap.FreeTo(heap.CurSize())
+		msg := ToInt(b)
+		n := ToInt(c)
+		p := heap.Alloc(uintptr(n) * int32Size)
+		colsob := d.Get(nil, SuStr("order"))
+		const LVM_SETCOLUMNORDERARRAY = 4154
+		if msg == LVM_SETCOLUMNORDERARRAY {
+			for i := 0; i < n; i++ {
+				*(*int32)(unsafe.Pointer(uintptr(p) + uintptr(i)*int32Size)) =
+					int32(ToInt(colsob.Get(nil, IntVal(i))))
+			}
+		}
+		rtn := goc.Syscall4(sendMessage,
+			intArg(a),
+			intArg(b),
+			intArg(c),
+			uintptr(p))
+		if msg != LVM_SETCOLUMNORDERARRAY {
+			for i := 0; i < n; i++ {
+				colsob.Put(nil, IntVal(i), IntVal(int(*(*int32)(
+					unsafe.Pointer(uintptr(p) + uintptr(i)*int32Size)))))
+			}
+		}
+		return intRet(rtn)
+	})
+
+var _ = builtin4("SendMessageLVHITTESTINFO(hwnd, msg, wParam, lParam)",
+	func(a, b, c, d Value) Value {
+		defer heap.FreeTo(heap.CurSize())
+		p := heap.Alloc(nLVHITTESTINFO)
+		ht := (*LVHITTESTINFO)(p)
+		*ht = LVHITTESTINFO{
+			pt:       getPoint(d, "pt"),
+			flags:    getInt32(d, "flags"),
+			iItem:    getInt32(d, "iItem"),
+			iSubItem: getInt32(d, "iSubItem"),
+			iGroup:   getInt32(d, "iGroup"),
+		}
+		rtn := goc.Syscall4(sendMessage,
+			intArg(a),
+			intArg(b),
+			intArg(c),
+			uintptr(p))
+		d.Put(nil, SuStr("iItem"), IntVal(int(ht.iItem)))
+		d.Put(nil, SuStr("iSubItem"), IntVal(int(ht.iSubItem)))
+		return intRet(rtn)
+	})
+
+type LVHITTESTINFO struct {
+	pt       POINT
+	flags    int32
+	iItem    int32
+	iSubItem int32
+	iGroup   int32
+}
+
+const nLVHITTESTINFO = unsafe.Sizeof(LVHITTESTINFO{})
