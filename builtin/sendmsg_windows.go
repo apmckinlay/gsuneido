@@ -655,3 +655,79 @@ type LVHITTESTINFO struct {
 }
 
 const nLVHITTESTINFO = unsafe.Sizeof(LVHITTESTINFO{})
+
+var _ = builtin4("SendMessageSystemTime(hwnd, msg, wParam, lParam)",
+	func(a, b, c, d Value) Value {
+		defer heap.FreeTo(heap.CurSize())
+		p := heap.Alloc(nSYSTEMTIME)
+		st := (*SYSTEMTIME)(p)
+		*st = obToSYSTEMTIME(d)
+		rtn := goc.Syscall4(sendMessage,
+			intArg(a),
+			intArg(b),
+			intArg(c),
+			uintptr(p))
+		SYSTEMTIMEtoOb(st, d)
+		return intRet(rtn)
+	})
+
+func obToSYSTEMTIME(ob Value) SYSTEMTIME {
+	return SYSTEMTIME{
+		wYear:         getInt16(ob, "wYear"),
+		wMonth:        getInt16(ob, "wMonth"),
+		wDayOfWeek:    getInt16(ob, "wDayOfWeek"),
+		wDay:          getInt16(ob, "wDay"),
+		wHour:         getInt16(ob, "wHour"),
+		wMinute:       getInt16(ob, "wMinute"),
+		wSecond:       getInt16(ob, "wSecond"),
+		wMilliseconds: getInt16(ob, "wMilliseconds"),
+	}
+}
+
+func SYSTEMTIMEtoOb(st *SYSTEMTIME, ob Value) Value {
+	ob.Put(nil, SuStr("wYear"), IntVal(int(st.wYear)))
+	ob.Put(nil, SuStr("wMonth"), IntVal(int(st.wMonth)))
+	ob.Put(nil, SuStr("wDayOfWeek"), IntVal(int(st.wDayOfWeek)))
+	ob.Put(nil, SuStr("wDay"), IntVal(int(st.wDay)))
+	ob.Put(nil, SuStr("wHour"), IntVal(int(st.wHour)))
+	ob.Put(nil, SuStr("wMinute"), IntVal(int(st.wMinute)))
+	ob.Put(nil, SuStr("wSecond"), IntVal(int(st.wSecond)))
+	ob.Put(nil, SuStr("wMilliseconds"), IntVal(int(st.wMilliseconds)))
+	return ob
+}
+
+type SYSTEMTIME struct {
+	wYear         int16
+	wMonth        int16
+	wDayOfWeek    int16
+	wDay          int16
+	wHour         int16
+	wMinute       int16
+	wSecond       int16
+	wMilliseconds int16
+}
+
+const nSYSTEMTIME = unsafe.Sizeof(SYSTEMTIME{})
+
+var _ = builtin4("SendMessageSTRange(hwnd, msg, wParam, lParam)",
+	func(a, b, c, d Value) Value {
+		defer heap.FreeTo(heap.CurSize())
+		p := heap.Alloc(nSystemTimeRange)
+		*(*SystemTimeRange)(p) = SystemTimeRange{
+			min: obToSYSTEMTIME(d.Get(nil, SuStr("min"))),
+			max: obToSYSTEMTIME(d.Get(nil, SuStr("max"))),
+		}
+		rtn := goc.Syscall4(sendMessage,
+			intArg(a),
+			intArg(b),
+			intArg(c),
+			uintptr(p))
+		return intRet(rtn)
+	})
+
+type SystemTimeRange struct {
+	min SYSTEMTIME
+	max SYSTEMTIME
+}
+
+const nSystemTimeRange = unsafe.Sizeof(SystemTimeRange{})
