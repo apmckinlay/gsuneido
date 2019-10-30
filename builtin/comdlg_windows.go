@@ -117,9 +117,12 @@ var _ = builtin1("PageSetupDlg(pagesetupdlg)",
 		a.Put(nil, SuStr("hDevMode"), IntVal(int(psd.hDevMode)))
 		a.Put(nil, SuStr("hDevNames"), IntVal(int(psd.hDevNames)))
 		a.Put(nil, SuStr("Flags"), IntVal(int(psd.Flags)))
-		pointToOb(&psd.ptPaperSize, a.Get(nil, SuStr("ptPaperSize")))
-		rectToOb(&psd.rtMinMargin, a.Get(nil, SuStr("rtMinMargin")))
-		rectToOb(&psd.rtMargin, a.Get(nil, SuStr("rtMargin")))
+		a.Put(nil, SuStr("ptPaperSize"),
+			pointToOb(&psd.ptPaperSize, a.Get(nil, SuStr("ptPaperSize"))))
+		a.Put(nil, SuStr("rtMinMargin"),
+			rectToOb(&psd.rtMinMargin, a.Get(nil, SuStr("rtMinMargin"))))
+		a.Put(nil, SuStr("rtMargin"),
+			rectToOb(&psd.rtMargin, a.Get(nil, SuStr("rtMargin"))))
 		a.Put(nil, SuStr("hInstance"), IntVal(int(psd.hInstance)))
 		a.Put(nil, SuStr("lCustData"), IntVal(int(psd.lCustData)))
 		a.Put(nil, SuStr("lpfnPageSetupHook"), IntVal(int(psd.lpfnPageSetupHook)))

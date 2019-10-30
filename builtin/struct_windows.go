@@ -607,7 +607,7 @@ type CWPRETSTRUCT struct {
 
 //-------------------------------------------------------------------
 
-var _ = builtin1("NM_LVDISPINFO2(address)",
+var _ = builtin1("NMLVDISPINFO(address)",
 	func(a Value) Value {
 		adr := ToInt(a)
 		if adr == 0 {
@@ -639,7 +639,7 @@ type NMLVDISPINFO struct {
 
 //-------------------------------------------------------------------
 
-var _ = builtin1("NM_LISTVIEW(address)",
+var _ = builtin1("NMLISTVIEW(address)",
 	func(a Value) Value {
 		adr := ToInt(a)
 		if adr == 0 {
@@ -754,7 +754,7 @@ const nDEVMODE = unsafe.Sizeof(DEVMODE{})
 
 var _ = builtin1("DevnamesString(hdn)",
 	func(a Value) Value {
-		const maxlen = 512
+		const maxlen = 1024
 		handle := uintptr(ToInt(a))
 		p := GlobalLock(handle)
 		defer GlobalUnlock(handle)
