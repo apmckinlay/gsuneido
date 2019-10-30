@@ -430,6 +430,9 @@ func (r *SuRecord) GetPacked(t *Thread, key string) string {
 }
 
 func (r *SuRecord) addDependent(from, to string) {
+	if from == to {
+		return
+	}
 	if r.dependents == nil {
 		r.dependents = make(map[string][]string)
 	}
