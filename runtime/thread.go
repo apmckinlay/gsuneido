@@ -52,6 +52,9 @@ type Thread struct {
 
 	// Name is the name of the thread (default is Thread-#)
 	Name string
+
+	// Every is the interval to check ChanUI. 0 means never.
+	Every int
 }
 
 var nThread int32

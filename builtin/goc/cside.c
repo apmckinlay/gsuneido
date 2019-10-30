@@ -183,12 +183,15 @@ static void message_loop(uintptr hdlg) {
 			msg.lParam == END_MSG_LOOP)
 			return;
 		if (msg.message == WM_USER && msg.hwnd == 0) {
-			// from SetTimer in another thread
-			uintptr id =
-				SetTimer(0, 0, (UINT)(msg.wParam), (TIMERPROC)(msg.lParam));
-			// timerId(id);
-			args[0] = msg_timerid;
-			args[1] = id;
+			if (msg.wParam == 0xffffffff) {
+				args[0] = msg_updateui;
+			} else {
+				// from SetTimer in another thread
+				uintptr id =
+					SetTimer(0, 0, (UINT)(msg.wParam), (TIMERPROC)(msg.lParam));
+				args[0] = msg_timerid;
+				args[1] = id;
+			}
 			interact();
 			continue;
 		}

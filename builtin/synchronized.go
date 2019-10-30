@@ -20,22 +20,24 @@ type synchInfo struct {
 var sy synchInfo
 
 var _ = builtin("Synchronized(block)",
-	func(t *Thread, args []Value) Value {
-		sy.threadLock.Lock()
-		reentry := sy.lockThread == t
-		sy.threadLock.Unlock()
-		if reentry {
-			return t.Call(args[0])
-		}
-		sy.lock.Lock()
-		sy.threadLock.Lock()
-		sy.lockThread = t
-		sy.threadLock.Unlock()
-		defer func() {
-			sy.threadLock.Lock()
-			sy.lockThread = nil
-			sy.threadLock.Unlock()
-			sy.lock.Unlock()
-		}()
+	synchronized)
+
+func synchronized(t *Thread, args []Value) Value {
+	sy.threadLock.Lock()
+	reentry := sy.lockThread == t
+	sy.threadLock.Unlock()
+	if reentry {
 		return t.Call(args[0])
-	})
+	}
+	sy.lock.Lock()
+	sy.threadLock.Lock()
+	sy.lockThread = t
+	sy.threadLock.Unlock()
+	defer func() {
+		sy.threadLock.Lock()
+		sy.lockThread = nil
+		sy.threadLock.Unlock()
+		sy.lock.Unlock()
+	}()
+	return t.Call(args[0])
+}

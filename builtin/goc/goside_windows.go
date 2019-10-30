@@ -52,6 +52,7 @@ var TimerId func(a uintptr)
 var Callback2 func(i, a, b uintptr) uintptr
 var Callback3 func(i, a, b, c uintptr) uintptr
 var Callback4 func(i, a, b, c, d uintptr) uintptr
+var UpdateUI func()
 
 func interact() uintptr {
 	//TODO use Suneido thread instead
@@ -77,6 +78,9 @@ func interact() uintptr {
 				uintptr(C.args[5])))
 		case C.msg_timerid:
 			TimerId(uintptr(C.args[1]))
+			C.args[0] = C.msg_result
+		case C.msg_updateui:
+			UpdateUI()
 			C.args[0] = C.msg_result
 		case C.msg_result:
 			return uintptr(C.args[1])

@@ -7,6 +7,9 @@ import (
 	op "github.com/apmckinlay/gsuneido/runtime/opcodes"
 )
 
+// UpdateUI is injected
+var UpdateUI = func() {}
+
 var blockBreak = &SuExcept{SuStr: SuStr("block:break")}
 var blockContinue = &SuExcept{SuStr: SuStr("block:continue")}
 var BlockReturn = &SuExcept{SuStr: SuStr("block return")}
@@ -154,11 +157,17 @@ func (t *Thread) interp(catchJump, catchSp *int) (ret Value) {
 		}
 	}()
 
+	opCount := t.Every
 loop:
 	for fr.ip < len(code) {
 		// fmt.Println("stack:", t.sp, t.stack[ints.Max(0, t.sp-3):t.sp])
 		// _, da := Disasm1(fr.fn, fr.ip)
 		// fmt.Printf("%d: %d: %s\n", t.fp, fr.ip, da)
+		opCount--
+		if opCount == 0 {
+			UpdateUI()
+			opCount = t.Every
+		}
 		oc = op.Opcode(code[fr.ip])
 		fr.ip++
 		switch oc {

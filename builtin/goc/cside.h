@@ -26,6 +26,7 @@ enum {
 	msg_callback4,
 	msg_msgloop,
 	msg_timerid,
+	msg_updateui,
 };
 
 typedef uintptr(__stdcall* cb2_t)(uintptr a, uintptr b);
