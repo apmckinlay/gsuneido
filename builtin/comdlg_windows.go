@@ -92,17 +92,14 @@ const nPRINTDLG = unsafe.Sizeof(PRINTDLG{})
 var pageSetupDlg = comdlg32.MustFindProc("PageSetupDlgA").Addr()
 var _ = builtin1("PageSetupDlg(pagesetupdlg)",
 	func(a Value) Value {
-		psob := a.Get(nil, SuStr("ptPaperSize"))
-		mmob := a.Get(nil, SuStr("rtMinMargin"))
-		rmob := a.Get(nil, SuStr("rtMargin"))
 		defer heap.FreeTo(heap.CurSize())
 		p := heap.Alloc(nPAGESETUPDLG)
 		psd := (*PAGESETUPDLG)(p)
 		*psd = PAGESETUPDLG{
 			lStructSize:             uint32(nPAGESETUPDLG),
-			ptPaperSize:             getPoint(psob, "ptPaperSize"),
-			rtMinMargin:             getRect(mmob, "rtMinMargin"),
-			rtMargin:                getRect(rmob, "rtMargin"),
+			ptPaperSize:             getPoint(a, "ptPaperSize"),
+			rtMinMargin:             getRect(a, "rtMinMargin"),
+			rtMargin:                getRect(a, "rtMargin"),
 			hwndOwner:               getHandle(a, "hwndOwner"),
 			hDevMode:                getHandle(a, "hDevMode"),
 			hDevNames:               getHandle(a, "hDevNames"),
@@ -120,9 +117,9 @@ var _ = builtin1("PageSetupDlg(pagesetupdlg)",
 		a.Put(nil, SuStr("hDevMode"), IntVal(int(psd.hDevMode)))
 		a.Put(nil, SuStr("hDevNames"), IntVal(int(psd.hDevNames)))
 		a.Put(nil, SuStr("Flags"), IntVal(int(psd.Flags)))
-		a.Put(nil, SuStr("ptPaperSize"), pointToOb(&psd.ptPaperSize, psob))
-		a.Put(nil, SuStr("rtMinMargin"), rectToOb(&psd.rtMinMargin, mmob))
-		a.Put(nil, SuStr("rtMargin"), rectToOb(&psd.rtMargin, rmob))
+		pointToOb(&psd.ptPaperSize, a.Get(nil, SuStr("ptPaperSize")))
+		rectToOb(&psd.rtMinMargin, a.Get(nil, SuStr("rtMinMargin")))
+		rectToOb(&psd.rtMargin, a.Get(nil, SuStr("rtMargin")))
 		a.Put(nil, SuStr("hInstance"), IntVal(int(psd.hInstance)))
 		a.Put(nil, SuStr("lCustData"), IntVal(int(psd.lCustData)))
 		a.Put(nil, SuStr("lpfnPageSetupHook"), IntVal(int(psd.lpfnPageSetupHook)))

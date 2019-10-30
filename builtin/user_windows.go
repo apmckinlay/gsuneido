@@ -181,13 +181,13 @@ type TVITEMEX struct {
 
 const nTVITEMEX = unsafe.Sizeof(TVITEMEX{})
 
-type TV_INSERTSTRUCT struct {
+type TVINSERTSTRUCT struct {
 	hParent      HANDLE
 	hInsertAfter HANDLE
 	item         TVITEMEX
 }
 
-const nTV_INSERTSTRUCT = unsafe.Sizeof(TV_INSERTSTRUCT{})
+const nTVINSERTSTRUCT = unsafe.Sizeof(TVINSERTSTRUCT{})
 
 //-------------------------------------------------------------------
 

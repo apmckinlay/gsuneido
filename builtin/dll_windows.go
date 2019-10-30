@@ -126,11 +126,17 @@ func strToBuf(s string, n int) unsafe.Pointer {
 		panic("string too long")
 	}
 	p := heap.Alloc(uintptr(n))
+	strToPtr(s, p)
+	return p
+}
+
+// strToPtr copies a nul terminated string to an unsafe.Pointer
+// WARNING: p must point to at least len(s)+1 bytes
+func strToPtr(s string, p unsafe.Pointer) {
 	for i := 0; i < len(s); i++ {
 		*(*byte)(unsafe.Pointer(uintptr(p) + uintptr(i))) = s[i]
 	}
 	*(*byte)(unsafe.Pointer(uintptr(p) + uintptr(len(s)))) = 0
-	return p
 }
 
 // strRet returns a string from a nul terminated byte slice
@@ -141,6 +147,9 @@ func strRet(buf []byte) Value {
 // bufToStr copies a nul terminated string from an unsafe.Pointer.
 // If nul is not found, then the entire length is returned.
 func bufToStr(p unsafe.Pointer, n uintptr) Value {
+	if p == nil {
+		return False
+	}
 	i := uintptr(0)
 	for ; i < n; i++ {
 		if *(*byte)(unsafe.Pointer(uintptr(p) + i)) == 0 {
@@ -205,6 +214,9 @@ func obToRect(ob Value) RECT {
 }
 
 func getRect(ob Value, mem string) RECT {
+	if ob == nil {
+		return RECT{}
+	}
 	x := ob.Get(nil, SuStr(mem))
 	if x == nil {
 		return RECT{}
@@ -255,6 +267,9 @@ func pointToOb(pt *POINT, ob Value) Value {
 }
 
 func getPoint(ob Value, mem string) POINT {
+	if ob == nil {
+		return POINT{}
+	}
 	x := ob.Get(nil, SuStr(mem))
 	if x == nil {
 		return POINT{}

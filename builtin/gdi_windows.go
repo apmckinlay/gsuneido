@@ -361,6 +361,15 @@ var _ = builtin1("CloseEnhMetaFile(dc)",
 		return intRet(rtn)
 	})
 
+// dll pointer Gdi32:DeleteEnhMetaFile(pointer emf)
+var deleteEnhMetaFile = gdi32.MustFindProc("DeleteEnhMetaFile").Addr()
+var _ = builtin1("DeleteEnhMetaFile(dc)",
+	func(a Value) Value {
+		rtn := goc.Syscall1(deleteEnhMetaFile,
+			intArg(a))
+		return intRet(rtn)
+	})
+
 // dll pointer Gdi32:CreateDC(
 // 	[in] string driver,
 // 	[in] string device,
@@ -842,7 +851,9 @@ var _ = builtin4("SetWindowExtEx(hdc, x, y, p)",
 			intArg(b),
 			intArg(c),
 			uintptr(pt))
-		upointToOb(pt, d)
+		if !d.Equal(Zero) {
+			upointToOb(pt, d)
+		}
 		return boolRet(rtn)
 	})
 
@@ -857,7 +868,9 @@ var _ = builtin4("SetViewportOrgEx(hdc, x, y, p)",
 			intArg(b),
 			intArg(c),
 			uintptr(pt))
-		upointToOb(pt, d)
+		if !d.Equal(Zero) {
+			upointToOb(pt, d)
+		}
 		return boolRet(rtn)
 	})
 
@@ -872,7 +885,9 @@ var _ = builtin4("SetViewportExtEx(hdc, x, y, p)",
 			intArg(b),
 			intArg(c),
 			uintptr(pt))
-		upointToOb(pt, d)
+		if !d.Equal(Zero) {
+			upointToOb(pt, d)
+		}
 		return boolRet(rtn)
 	})
 

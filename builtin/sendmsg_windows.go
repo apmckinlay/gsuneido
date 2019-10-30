@@ -245,9 +245,9 @@ var _ = builtin4("SendMessageTreeItem(hwnd, msg, wParam, tvitem)",
 var _ = builtin4("SendMessageTreeInsert(hwnd, msg, wParam, tvins)",
 	func(a, b, c, d Value) Value {
 		defer heap.FreeTo(heap.CurSize())
-		p := heap.Alloc(nTV_INSERTSTRUCT)
-		tvins := (*TV_INSERTSTRUCT)(p)
-		*tvins = TV_INSERTSTRUCT{
+		p := heap.Alloc(nTVINSERTSTRUCT)
+		tvins := (*TVINSERTSTRUCT)(p)
+		*tvins = TVINSERTSTRUCT{
 			hParent:      getHandle(d, "hParent"),
 			hInsertAfter: getHandle(d, "hInsertAfter"),
 		}
@@ -488,8 +488,8 @@ var _ = builtin4("SendMessageListColumn(hwnd, msg, wParam, lParam)",
 		defer heap.FreeTo(heap.CurSize())
 		var p unsafe.Pointer
 		if !d.Equal(Zero) {
-			p = heap.Alloc(nLV_COLUMN)
-			*(*LV_COLUMN)(p) = LV_COLUMN{
+			p = heap.Alloc(nLVCOLUMN)
+			*(*LVCOLUMN)(p) = LVCOLUMN{
 				mask:       getInt32(d, "mask"),
 				fmt:        getInt32(d, "fmt"),
 				cx:         getInt32(d, "cx"),
@@ -508,7 +508,7 @@ var _ = builtin4("SendMessageListColumn(hwnd, msg, wParam, lParam)",
 		return intRet(rtn)
 	})
 
-type LV_COLUMN struct {
+type LVCOLUMN struct {
 	mask       int32
 	fmt        int32
 	cx         int32
@@ -523,12 +523,12 @@ type LV_COLUMN struct {
 	_          [4]byte // padding
 }
 
-const nLV_COLUMN = unsafe.Sizeof(LV_COLUMN{})
+const nLVCOLUMN = unsafe.Sizeof(LVCOLUMN{})
 
 var _ = builtin4("SendMessageListItem(hwnd, msg, wParam, lParam)",
 	func(a, b, c, d Value) Value {
 		defer heap.FreeTo(heap.CurSize())
-		p, li := obToLV_ITEM(d)
+		p, li := obToLVITEM(d)
 		rtn := goc.Syscall4(sendMessage,
 			intArg(a),
 			intArg(b),
@@ -541,7 +541,7 @@ var _ = builtin4("SendMessageListItem(hwnd, msg, wParam, lParam)",
 var _ = builtin4("SendMessageListItemOut(hwnd, msg, wParam, lParam)",
 	func(a, b, c, d Value) Value {
 		defer heap.FreeTo(heap.CurSize())
-		p, li := obToLV_ITEM(d)
+		p, li := obToLVITEM(d)
 		const bufsize = 256
 		buf := heap.Alloc(bufsize)
 		li.pszText = (*byte)(buf)
@@ -553,13 +553,13 @@ var _ = builtin4("SendMessageListItemOut(hwnd, msg, wParam, lParam)",
 		return bufRet(buf, bufsize)
 	})
 
-func obToLV_ITEM(ob Value) (unsafe.Pointer, *LV_ITEM) {
+func obToLVITEM(ob Value) (unsafe.Pointer, *LVITEM) {
 	var p unsafe.Pointer
-	var li *LV_ITEM
+	var li *LVITEM
 	if !ob.Equal(Zero) {
-		p = heap.Alloc(nLV_ITEM)
-		li = (*LV_ITEM)(p)
-		*li = LV_ITEM{
+		p = heap.Alloc(nLVITEM)
+		li = (*LVITEM)(p)
+		*li = LVITEM{
 			mask:       getInt32(ob, "mask"),
 			iItem:      getInt32(ob, "iItem"),
 			iSubItem:   getInt32(ob, "iSubItem"),
@@ -575,9 +575,9 @@ func obToLV_ITEM(ob Value) (unsafe.Pointer, *LV_ITEM) {
 	return p, li
 }
 
-const nLV_ITEM = unsafe.Sizeof(LV_ITEM{})
+const nLVITEM = unsafe.Sizeof(LVITEM{})
 
-type LV_ITEM struct {
+type LVITEM struct {
 	mask       int32
 	iItem      int32
 	iSubItem   int32
