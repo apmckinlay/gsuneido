@@ -2053,7 +2053,7 @@ var _ = builtin6("LoadImage(hInstance, lpszName, uType, cxDesired, cyDesired,"+
 		defer heap.FreeTo(heap.CurSize())
 		rtn := goc.Syscall6(loadImage,
 			intArg(a),
-			uintptr(stringArg(f)), // doesn't handle resource id
+			uintptr(stringArg(b)), // doesn't handle resource id
 			intArg(c),
 			intArg(d),
 			intArg(e),
