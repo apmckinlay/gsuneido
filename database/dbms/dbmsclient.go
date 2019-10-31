@@ -2,6 +2,7 @@ package dbms
 
 import (
 	"io"
+	"log"
 	"net"
 	"strconv"
 	"strings"
@@ -25,7 +26,7 @@ const helloSize = 50
 func NewDbmsClient(addr string) *dbmsClient {
 	conn, err := net.Dial("tcp", addr)
 	if err != nil || !checkHello(conn) {
-		panic("can't connect to " + addr + " " + err.Error())
+		log.Fatalln("can't connect to " + addr + " " + err.Error())
 	}
 	return &dbmsClient{ReadWrite: csio.NewReadWrite(conn), conn: conn}
 }
