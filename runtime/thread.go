@@ -123,13 +123,17 @@ func (t *Thread) Callstack() *SuObject {
 		call := &SuObject{}
 		call.Set(SuStr("fn"), fr.fn)
 		call.Set(SuStr("srcpos"), IntVal(fr.fn.CodeToSrcPos(fr.ip)))
-		call.Set(SuStr("locals"), t.Locals(i))
+		call.Set(SuStr("locals"), t.locals(i))
 		cs.Add(call)
 	}
 	return cs
 }
 
 func (t *Thread) Locals(i int) *SuObject {
+	return t.locals(t.fp - 1 - i)
+}
+
+func (t *Thread) locals(i int) *SuObject {
 	fr := t.frames[i]
 	locals := &SuObject{}
 	if fr.this != nil {
