@@ -1,6 +1,7 @@
 package builtin
 
 import (
+	"syscall"
 	"unsafe"
 
 	"github.com/apmckinlay/gsuneido/builtin/goc"
@@ -459,10 +460,6 @@ var _ = builtin0("SystemMemory()", func() Value {
 	return Int64Val(int64((*MEMORYSTATUSEX)(p).ullTotalPhys))
 })
 
-var _ = builtin0("OperatingSystem()", func() Value {
-	return SuStr("Windows") //TODO version
-})
-
 // dll bool Kernel32:GetDiskFreeSpaceEx(
 // 	[in] string			directoryName,
 // 	ULARGE_INTEGER*		freeBytesAvailableToCaller,
@@ -481,3 +478,122 @@ var _ = builtin1("GetDiskFreeSpace(dir = '.')", func(arg Value) Value {
 		0)
 	return Int64Val(*(*int64)(p))
 })
+
+//-------------------------------------------------------------------
+
+var verPath = ([]byte)("SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion\x00")
+var verKey = ([]byte)("ProductName\x00")
+
+const RegHkeyLocalMachine = 0x80000002
+const RegKeyQueryValue = 1
+
+var _ = builtin0("OSName()", func() Value {
+	defer heap.FreeTo(heap.CurSize())
+	var hkey HANDLE
+	rtn, _, _ := syscall.Syscall6(regOpenKeyEx, 5,
+		RegHkeyLocalMachine,
+		uintptr(unsafe.Pointer(&verPath[0])),
+		0,
+		RegKeyQueryValue,
+		uintptr(unsafe.Pointer(&hkey)),
+		0)
+	if rtn != 0 {
+		return EmptyStr
+	}
+	const bufsize = 256
+	var buf = heap.Alloc(bufsize)
+	var size int32 = bufsize
+	var valtype uint32
+	rtn, _, _ = syscall.Syscall6(regQueryValueEx, 6,
+		hkey,
+		uintptr(unsafe.Pointer(&verKey[0])),
+		0,
+		uintptr(unsafe.Pointer(&valtype)),
+		uintptr(buf),
+		uintptr(unsafe.Pointer(&size)))
+	syscall.Syscall(regCloseKey, 1, hkey, 0, 0)
+	if rtn != 0 {
+		return EmptyStr
+	}
+	return bufRet(buf, uintptr(size-1))
+})
+
+//-------------------------------------------------------------------
+
+var versionApi = windows.MustLoadDLL("Api-ms-win-core-version-l1-1-0.dll")
+
+var getFileVersionInfo = versionApi.MustFindProc("GetFileVersionInfoA").Addr()
+var getFileVersionInfoSize = versionApi.MustFindProc("GetFileVersionInfoSizeA").Addr()
+var verQueryValue = versionApi.MustFindProc("VerQueryValueA").Addr()
+
+var verFile = ([]byte)("kernel32\x00")
+var verFileW = ([]byte)("\\\x00")
+
+var _ = builtin0("OSVersion()", OSVersion)
+var _ = builtin0("OperatingSystem()", OSVersion) // deprecated
+
+func OSVersion() Value {
+	defer heap.FreeTo(heap.CurSize())
+	file := unsafe.Pointer(&verFile[0])
+	var dummy int32
+	size, _, _ := syscall.Syscall(getFileVersionInfoSize, 2,
+		uintptr(file),
+		uintptr(unsafe.Pointer(&dummy)),
+		0)
+	if size == 0 {
+		return False
+	}
+	p := heap.Alloc(size)
+	rtn, _, _ := syscall.Syscall6(getFileVersionInfo, 4,
+		uintptr(file),
+		0,
+		size,
+		uintptr(p),
+		0, 0)
+	if rtn == 0 {
+		return False
+	}
+	var pffi *VS_FIXEDFILEINFO
+	var len int32
+	rtn, _, _ = syscall.Syscall6(verQueryValue, 4,
+		uintptr(p),
+		uintptr(unsafe.Pointer(&verFileW[0])),
+		uintptr(unsafe.Pointer(&pffi)),
+		uintptr(unsafe.Pointer(&len)),
+		0, 0)
+	if rtn == 0 {
+		return False
+	}
+	ob := NewSuObject()
+	ob.Add(IntVal(hiword(pffi.dwFileVersionMS)))
+	ob.Add(IntVal(loword(pffi.dwFileVersionMS)))
+	ob.Add(IntVal(hiword(pffi.dwFileVersionLS)))
+	ob.Add(IntVal(loword(pffi.dwFileVersionLS)))
+	return ob
+}
+
+func loword(n int32) int {
+	return int(n & 0xffff)
+}
+
+func hiword(n int32) int {
+	return int(n >> 16)
+}
+
+type VS_FIXEDFILEINFO struct {
+	dwSignature        int32
+	dwStrucVersion     int32
+	dwFileVersionMS    int32
+	dwFileVersionLS    int32
+	dwProductVersionMS int32
+	dwProductVersionLS int32
+	dwFileFlagsMask    int32
+	dwFileFlags        int32
+	dwFileOS           int32
+	dwFileType         int32
+	dwFileSubtype      int32
+	dwFileDateMS       int32
+	dwFileDateLS       int32
+}
+
+const nVS_FIXEDFILEINFO = unsafe.Sizeof(VS_FIXEDFILEINFO{})
