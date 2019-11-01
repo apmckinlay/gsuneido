@@ -1,9 +1,6 @@
 package runtime
 
 import (
-	"sync"
-	"sync/atomic"
-
 	"github.com/apmckinlay/gsuneido/runtime/types"
 	// sync "github.com/sasha-s/go-deadlock"
 )
@@ -11,9 +8,8 @@ import (
 // SuInstance is an instance of an SuInstance
 type SuInstance struct {
 	MemBase
-	class      *SuClass
-	concurrent int32 // access atomically
-	lock       sync.Mutex
+	class *SuClass
+	Lockable
 }
 
 func NewInstance(class *SuClass) *SuInstance {
@@ -85,6 +81,7 @@ func (ob *SuInstance) get(m Value) Value {
 func (ob *SuInstance) Put(_ *Thread, m Value, v Value) {
 	if ob.Lock() {
 		defer ob.lock.Unlock()
+		v.SetConcurrent()
 	}
 	ob.Data[AsStr(m)] = v
 }
@@ -118,10 +115,10 @@ func (*SuInstance) Compare(Value) int {
 }
 
 func (ob *SuInstance) SetConcurrent() {
-	if atomic.LoadInt32(&ob.concurrent) == 1 {
+	if ob.concurrent {
 		return
 	}
-	atomic.StoreInt32(&ob.concurrent, 1)
+	ob.concurrent = true
 	for _, v := range ob.Data {
 		v.SetConcurrent() // recursive, deep
 	}
@@ -173,20 +170,6 @@ func (ob *SuInstance) Clear() {
 		defer ob.lock.Unlock()
 	}
 	ob.Data = map[string]Value{}
-}
-
-func (ob *SuInstance) Lock() bool {
-	if atomic.LoadInt32(&ob.concurrent) == 1 {
-		ob.lock.Lock()
-		return true
-	}
-	return false
-}
-
-func (ob *SuInstance) Unlock() {
-	if atomic.LoadInt32(&ob.concurrent) == 1 {
-		ob.lock.Unlock()
-	}
 }
 
 func (ob *SuInstance) size() int {

@@ -4,7 +4,6 @@ import (
 	"sort"
 	"strings"
 
-	"sync"
 	"sync/atomic"
 
 	"github.com/apmckinlay/gsuneido/lexer"
@@ -39,14 +38,13 @@ func emptyOb() *SuObject {
 // If concurrent is 0, no locking, assumed to be thread contained
 // If concurrent is 1, guarded by lock, assumed to be shared
 type SuObject struct {
-	list       []Value
-	named      hmap.Hmap
-	readonly   bool
-	concurrent int32 // access atomically
-	version    int32
-	clock      int32
-	lock       sync.Mutex
-	defval     Value
+	list     []Value
+	named    hmap.Hmap
+	readonly bool
+	version  int32
+	clock    int32
+	defval   Value
+	Lockable
 	CantConvert
 }
 
@@ -160,6 +158,7 @@ func (ob *SuObject) Put(_ *Thread, key Value, val Value) {
 func (ob *SuObject) Set(key Value, val Value) {
 	if ob.Lock() {
 		defer ob.lock.Unlock()
+		val.SetConcurrent()
 	}
 	ob.set(key, val)
 }
@@ -302,6 +301,7 @@ func (ob *SuObject) size() int {
 func (ob *SuObject) Add(val Value) {
 	if ob.Lock() {
 		defer ob.lock.Unlock()
+		val.SetConcurrent()
 	}
 	ob.add(val)
 }
@@ -319,6 +319,7 @@ func (ob *SuObject) add(val Value) {
 func (ob *SuObject) Insert(at int, val Value) {
 	if ob.Lock() {
 		defer ob.lock.Unlock()
+		val.SetConcurrent()
 	}
 	defer ob.endMutate(ob.startMutate())
 	if 0 <= at && at <= len(ob.list) {
@@ -707,11 +708,11 @@ func (ob *SuObject) Unique() {
 }
 
 func (ob *SuObject) SetConcurrent() {
-	if atomic.LoadInt32(&ob.concurrent) == 1 ||
+	if ob.concurrent ||
 		ob.readonly { // don't need concurrent if readonly
 		return
 	}
-	atomic.StoreInt32(&ob.concurrent, 1)
+	ob.concurrent = true
 	iter := ob.Iter2(true, true)
 	// recursive, deep
 	for k, v := iter(); k != nil; k, v = iter() {
@@ -734,7 +735,6 @@ func (ob *SuObject) SetReadOnly() {
 			x.SetReadOnly() // recursive, deep
 		}
 	}
-	atomic.StoreInt32(&ob.concurrent, 0) // don't need concurrent if readonly
 }
 
 func (ob *SuObject) IsReadOnly() bool {
@@ -747,6 +747,7 @@ func (ob *SuObject) IsReadOnly() bool {
 func (ob *SuObject) SetDefault(def Value) {
 	if ob.Lock() {
 		defer ob.lock.Unlock()
+		def.SetConcurrent()
 	}
 	ob.mustBeMutable()
 	ob.defval = def
@@ -779,20 +780,6 @@ func (ob *SuObject) BinarySearch2(t *Thread, value, lt Value) int {
 	return sort.Search(ob.ListSize(), func(i int) bool {
 		return True != t.Call(lt, ob.ListGet(i), value)
 	})
-}
-
-func (ob *SuObject) Lock() bool {
-	if atomic.LoadInt32(&ob.concurrent) == 1 {
-		ob.lock.Lock()
-		return true
-	}
-	return false
-}
-
-func (ob *SuObject) Unlock() {
-	if atomic.LoadInt32(&ob.concurrent) == 1 {
-		ob.lock.Unlock()
-	}
 }
 
 // Packable ---------------------------------------------------------

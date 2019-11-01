@@ -3,6 +3,7 @@ package runtime
 import (
 	"strconv"
 	"strings"
+	"sync"
 
 	"github.com/apmckinlay/gsuneido/runtime/types"
 	"github.com/apmckinlay/gsuneido/util/dnum"
@@ -307,4 +308,27 @@ func Int64Val(n int64) Value {
 		return SuInt(int(n))
 	}
 	return SuDnum{Dnum: dnum.FromInt(n)}
+}
+
+// Lockable can be embedded to provide locking.
+// concurrent is set *before* an object is shared
+// and doesn't change after that
+// so it should not require atomic or locked access
+type Lockable struct {
+	concurrent bool
+	lock       sync.Mutex
+}
+
+func (x *Lockable) Lock() bool {
+	if x.concurrent {
+		x.lock.Lock()
+		return true
+	}
+	return false
+}
+
+func (x *Lockable) Unlock() {
+	if x.concurrent {
+		x.lock.Unlock()
+	}
 }
