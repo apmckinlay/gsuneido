@@ -39,6 +39,10 @@ var suComObjectMethods = Methods{
 	"Dispatch?": method0(func(this Value) Value {
 		return SuBool(this.(*suComObject).idisp != nil)
 	}),
+	"Release": method0(func(this Value) Value {
+		this.(*suComObject).idisp.Release()
+		return nil
+	}),
 }
 
 var _ Value = (*suComObject)(nil)
@@ -82,8 +86,12 @@ func variantToSu(v *ole.VARIANT) Value {
 	panic("COMobject: can't convert to Suneido value")
 }
 
-func (*suComObject) Put(*Thread, Value, Value) {
-	panic("COMobject does not support put")
+func (sco *suComObject) Put(_ *Thread, mem Value, val Value) {
+	name := ToStr(mem)
+	_, err := sco.idisp.PutProperty(name, suToGo(val))
+	if err != nil {
+		panic("COMobject put " + name + ": " + err.Error())
+	}
 }
 
 func (*suComObject) RangeTo(int, int) Value {
