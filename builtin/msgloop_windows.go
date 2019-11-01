@@ -21,6 +21,7 @@ func Init() {
 	goc.Callback2 = callback2
 	goc.Callback3 = callback3
 	goc.Callback4 = callback4
+	goc.SunAPP = sunAPP
 	goc.UpdateUI = updateUI
 	UpdateUI = updateUI // runtime
 

@@ -1,6 +1,7 @@
 package goc
 
 // #cgo CFLAGS: -DWINVER=0x601 -D_WIN32_WINNT=0x0601
+// #cgo LDFLAGS: -lurlmon -lole32 -luuid -lwininet
 // #include "cside.h"
 import "C"
 
@@ -8,6 +9,7 @@ import (
 	"log"
 	"runtime"
 	"strconv"
+	"unsafe"
 
 	"golang.org/x/sys/windows"
 )
@@ -53,6 +55,7 @@ var Callback2 func(i, a, b uintptr) uintptr
 var Callback3 func(i, a, b, c uintptr) uintptr
 var Callback4 func(i, a, b, c, d uintptr) uintptr
 var UpdateUI func()
+var SunAPP func(string) string
 
 func interact() uintptr {
 	//TODO use Suneido thread instead
@@ -82,6 +85,11 @@ func interact() uintptr {
 		case C.msg_updateui:
 			UpdateUI()
 			C.args[0] = C.msg_result
+		case C.msg_sunapp:
+			s := SunAPP(C.GoString((*C.char)(unsafe.Pointer(uintptr(C.args[1])))))
+			C.args[0] = C.msg_result
+			C.args[1] = (C.uintptr)(uintptr(unsafe.Pointer(C.CString(s))))
+			C.args[2] = (C.uintptr)(len(s));
 		case C.msg_result:
 			return uintptr(C.args[1])
 		}

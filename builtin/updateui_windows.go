@@ -27,7 +27,7 @@ var _ = builtin("UpdateUI(block)",
 		return nil
 	})
 
-var updateThread = NewThread()
+var updateThread *Thread
 
 func updateUI() {
 	select {
@@ -37,6 +37,9 @@ func updateUI() {
 				log.Println("error in UpdateUI:", e)
 			}
 		}()
+		if updateThread == nil {
+			updateThread = UIThread.SubThread()
+		}
 		updateThread.Call(block)
 	default: // non-blocking
 	}

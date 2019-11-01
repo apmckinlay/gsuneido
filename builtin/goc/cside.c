@@ -225,11 +225,25 @@ static DWORD WINAPI thread(LPVOID lpParameter) {
 	exit(0);
 }
 
+int sunapp_register_classes();
+
 DWORD threadid;
 
 void start() {
+	sunapp_register_classes();
 	InitializeCriticalSection(&lock);
 	EnterCriticalSection(&lock);
 	CreateThread(NULL, stack_size, thread, 0, 0, &threadid);
 	EnterCriticalSection(&lock); // wait for thread to be in signalAndWait
+}
+
+buf_t suneidoAPP(char* url) {
+	args[0] = msg_sunapp;
+	args[1] = (uintptr) url;
+	uintptr p = interact();
+	char* s = (char*) p;
+	buf_t result;
+	result.size = args[2];
+	result.buf = memcpy(malloc(result.size + 1), s, result.size);
+	return result;
 }
