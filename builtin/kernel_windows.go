@@ -487,7 +487,10 @@ var verKey = ([]byte)("ProductName\x00")
 const RegHkeyLocalMachine = 0x80000002
 const RegKeyQueryValue = 1
 
-var _ = builtin0("OSName()", func() Value {
+var _ = builtin0("OperatingSystem()", OSName) // deprecated
+var _ = builtin0("OSName()", OSName)
+
+func OSName() Value {
 	defer heap.FreeTo(heap.CurSize())
 	var hkey HANDLE
 	rtn, _, _ := syscall.Syscall6(regOpenKeyEx, 5,
@@ -516,7 +519,7 @@ var _ = builtin0("OSName()", func() Value {
 		return EmptyStr
 	}
 	return bufRet(buf, uintptr(size-1))
-})
+}
 
 //-------------------------------------------------------------------
 
@@ -529,10 +532,7 @@ var verQueryValue = versionApi.MustFindProc("VerQueryValueA").Addr()
 var verFile = ([]byte)("kernel32\x00")
 var verFileW = ([]byte)("\\\x00")
 
-var _ = builtin0("OSVersion()", OSVersion)
-var _ = builtin0("OperatingSystem()", OSVersion) // deprecated
-
-func OSVersion() Value {
+var _ = builtin0("OSVersion()", func() Value {
 	defer heap.FreeTo(heap.CurSize())
 	file := unsafe.Pointer(&verFile[0])
 	var dummy int32
@@ -570,7 +570,7 @@ func OSVersion() Value {
 	ob.Add(IntVal(hiword(pffi.dwFileVersionLS)))
 	ob.Add(IntVal(loword(pffi.dwFileVersionLS)))
 	return ob
-}
+})
 
 func loword(n int32) int {
 	return int(n & 0xffff)
