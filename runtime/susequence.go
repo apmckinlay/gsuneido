@@ -1,6 +1,9 @@
 package runtime
 
-import "github.com/apmckinlay/gsuneido/runtime/types"
+import (
+	"github.com/apmckinlay/gsuneido/runtime/types"
+	"github.com/apmckinlay/gsuneido/util/pack"
+)
 
 // SuSequence wraps an Iter and instantiates it lazily
 // the Iter is either built-in e.g. Seq or object.Members,
@@ -102,7 +105,7 @@ func (seq *SuSequence) RangeLen(i int, n int) Value {
 
 func (seq *SuSequence) Equal(other interface{}) bool {
 	seq.instantiate()
-	if y,ok := other.(*SuSequence); ok {
+	if y, ok := other.(*SuSequence); ok {
 		y.instantiate()
 		other = y.ob
 	}
@@ -150,4 +153,28 @@ func (seq *SuSequence) Lookup(t *Thread, method string) Callable {
 func (seq *SuSequence) asSeq(method string) bool {
 	return method == "Instantiated?" ||
 		(!seq.Instantiated() && (!seq.duped || seq.Infinite()))
+}
+
+// Packable ---------------------------------------------------------
+
+var _ Packable = (*SuSequence)(nil)
+
+func (seq *SuSequence) PackSize(clock *int32) int {
+	seq.instantiate()
+	return seq.ob.PackSize(clock)
+}
+
+func (seq *SuSequence) Pack(clock int32, buf *pack.Encoder) {
+	seq.instantiate()
+	seq.ob.Pack(clock, buf)
+}
+
+func (seq *SuSequence) PackSize2(clock int32, stack packStack) int {
+	seq.instantiate()
+	return seq.ob.PackSize2(clock, stack)
+}
+
+func (seq *SuSequence) PackSize3() int {
+	seq.instantiate()
+	return seq.ob.PackSize3()
 }
