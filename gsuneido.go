@@ -37,17 +37,19 @@ var dbmsLocal IDbms
 var mainThread *Thread
 
 func main() {
-	log.SetFlags(0)
+	log.SetFlags(0) //TODO use io.MultiWriter for stderr and error.log
 	builtin.Init()
 	suneido := new(SuObject)
 	suneido.SetConcurrent()
 	Global.Builtin("Suneido", suneido)
 	options.BuiltDate = builtDate
 	flag.BoolVar(&options.Client, "c", false, "run as a client")
-	flag.BoolVar(&options.Repl, "r", false, "run REPL (not message loop)")
+	flag.StringVar(&options.NetAddr, "p", "127.0.0.1:3147", "network address and/or port")
+	flag.BoolVar(&options.Repl, "r", false, "run REPL (not GUI message loop)")
 	flag.Parse()
 	if !options.Client {
 		options.Repl = true
+		options.NetAddr = "" // for ServerIP
 	}
 	Libload = libload // dependency injection
 	mainThread = NewThread()
@@ -55,7 +57,7 @@ func main() {
 	defer mainThread.Close()
 	// dependency injection of GetDbms
 	if options.Client {
-		GetDbms = func() IDbms { return dbms.NewDbmsClient("127.0.0.1:3147") }
+		GetDbms = func() IDbms { return dbms.NewDbmsClient(options.NetAddr) }
 	} else {
 		dbmsLocal = dbms.NewDbmsLocal()
 		GetDbms = func() IDbms { return dbmsLocal }
