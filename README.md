@@ -10,10 +10,8 @@ See also: [cSuneido](https://github.com/apmckinlay/csuneido), [jSuneido](https:/
 
 As of August 2019 it successfully runs all the standard library tests.
 
+As of November 2019 the Windows interface is mostly functional.
+
 ### Todo
 
-- Win32 interface
-
-- database
-
-- server end of client-server
+- database and server end of client-server
