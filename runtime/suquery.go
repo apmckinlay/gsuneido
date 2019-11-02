@@ -1,6 +1,10 @@
 package runtime
 
-import "github.com/apmckinlay/gsuneido/runtime/types"
+import (
+	"strings"
+
+	"github.com/apmckinlay/gsuneido/runtime/types"
+)
 
 // SuQueryCursor is the common base for SuQuery and SuCursor
 type SuQueryCursor struct {
@@ -75,7 +79,9 @@ func (qc *SuQueryCursor) Columns() Value {
 	hdr := qc.iqc.Header()
 	ob := &SuObject{}
 	for _, col := range hdr.Columns {
-		ob.Add(SuStr(col))
+		if !strings.HasSuffix(col, "_deps") {
+			ob.Add(SuStr(col))
+		}
 	}
 	return ob
 }
