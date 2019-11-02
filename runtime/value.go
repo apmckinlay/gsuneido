@@ -208,6 +208,9 @@ func ErrType(x Value) string {
 	if x == True {
 		return "true"
 	}
+	if _,ok := x.(*SuSequence); ok {
+		return "sequence"
+	}
 	t := x.Type().String()
 	if t == "String" {
 		return t
