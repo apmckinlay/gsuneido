@@ -153,6 +153,9 @@ var suRunPipedMethods = Methods{
 		n := IfInt(arg)
 		buf := make([]byte, n)
 		m, err := f.Read(buf)
+		if m == 0 || err == io.EOF {
+			return False
+		}
 		if err != nil {
 			panic("runpiped.Read " + err.Error())
 		}
