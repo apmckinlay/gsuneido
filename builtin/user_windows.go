@@ -1865,19 +1865,9 @@ var _ = builtin7("GetDIBits(hdc, hbmp, uStartScan, cScanLines, lpvBits,"+
 	func(a, b, c, d, e, f, g Value) Value {
 		defer heap.FreeTo(heap.CurSize())
 		p := heap.Alloc(nBITMAPINFOHEADER)
-		*(*BITMAPINFOHEADER)(p) = BITMAPINFOHEADER{
-			biSize:          int32(nBITMAPINFOHEADER),
-			biWidth:         getInt32(f.Get(nil, SuStr("bmiHeader")), "biWidth"),
-			biHeight:        getInt32(f.Get(nil, SuStr("bmiHeader")), "biHeight"),
-			biPlanes:        getInt16(f.Get(nil, SuStr("bmiHeader")), "biPlanes"),
-			biBitCount:      getInt16(f.Get(nil, SuStr("bmiHeader")), "biBitCount"),
-			biCompression:   getInt32(f.Get(nil, SuStr("bmiHeader")), "biCompression"),
-			biSizeImage:     getInt32(f.Get(nil, SuStr("bmiHeader")), "biSizeImage"),
-			biXPelsPerMeter: getInt32(f.Get(nil, SuStr("bmiHeader")), "biXPelsPerMeter"),
-			biYPelsPerMeter: getInt32(f.Get(nil, SuStr("bmiHeader")), "biYPelsPerMeter"),
-			biClrUsed:       getInt32(f.Get(nil, SuStr("bmiHeader")), "biClrUsed"),
-			biClrImportant:  getInt32(f.Get(nil, SuStr("bmiHeader")), "biClrImportant"),
-		}
+		hdr := f.Get(nil, SuStr("bmiHeader"))
+		bmih := (*BITMAPINFOHEADER)(p)
+		*bmih = obToBMIH(hdr)
 		rtn := goc.Syscall7(getDIBits,
 			intArg(a),
 			intArg(b),
@@ -1886,6 +1876,11 @@ var _ = builtin7("GetDIBits(hdc, hbmp, uStartScan, cScanLines, lpvBits,"+
 			intArg(e),
 			uintptr(p),
 			intArg(g))
+		hdr.Put(nil, SuStr("biSizeImage"), IntVal(int(bmih.biSizeImage)))
+		hdr.Put(nil, SuStr("biXPelsPerMeter"), IntVal(int(bmih.biXPelsPerMeter)))
+		hdr.Put(nil, SuStr("biYPelsPerMeter"), IntVal(int(bmih.biYPelsPerMeter)))
+		hdr.Put(nil, SuStr("biClrUsed"), IntVal(int(bmih.biClrUsed)))
+		hdr.Put(nil, SuStr("biClrImportant"), IntVal(int(bmih.biClrImportant)))
 		return intRet(rtn)
 	})
 

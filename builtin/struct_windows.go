@@ -7,6 +7,7 @@ import (
 	"unsafe"
 
 	. "github.com/apmckinlay/gsuneido/runtime"
+	"github.com/apmckinlay/gsuneido/util/verify"
 )
 
 type SuStructGlobal struct {
@@ -697,6 +698,72 @@ type NMDAYSTATE struct {
 	stStart     SYSTEMTIME
 	cDayState   int32
 	prgDayState uintptr
+}
+
+//-------------------------------------------------------------------
+
+var _ = Global.Builtin("BITMAPFILEHEADER",
+	&SuAccel{callableStruct{SuStructGlobal{size: int(nBITMAPFILEHEADER),
+		SuBuiltin: SuBuiltin{
+			BuiltinParams: BuiltinParams{ParamSpec: ParamSpec1},
+			Fn:            bmfh}}}})
+
+type SuBMFH struct {
+	callableStruct
+}
+
+func bmfh(_ *Thread, args []Value) Value {
+	var buf strings.Builder
+	binary.Write(&buf, binary.LittleEndian, getInt16(args[0], "bfType"))
+	binary.Write(&buf, binary.LittleEndian, getInt32(args[0], "bfSize"))
+	binary.Write(&buf, binary.LittleEndian, int32(0)) // reserved
+	binary.Write(&buf, binary.LittleEndian, getInt32(args[0], "bfOffBits"))
+	verify.That(buf.Len() == nBITMAPFILEHEADER)
+	return SuStr(buf.String())
+}
+
+// NOTE: 2 byte alignment (no padding) so not compatible as Go struct
+// type BITMAPFILEHEADER struct {
+// 	bfType      int16
+// 	bfSize      int32
+// 	bfReserved1 int16
+// 	bfReserved2 int16
+// 	bfOffBits   int32
+// }
+
+const nBITMAPFILEHEADER = 14
+
+//-------------------------------------------------------------------
+
+var _ = Global.Builtin("BITMAPINFOHEADER",
+	&SuAccel{callableStruct{SuStructGlobal{size: int(nBITMAPINFOHEADER),
+		SuBuiltin: SuBuiltin{
+			BuiltinParams: BuiltinParams{ParamSpec: ParamSpec1},
+			Fn:            bmih}}}})
+
+type SuBMIH struct {
+	callableStruct
+}
+
+func bmih(_ *Thread, args []Value) Value {
+	bmih := obToBMIH(args[0])
+	return bufRet(unsafe.Pointer(&bmih), nBITMAPINFOHEADER)
+}
+
+func obToBMIH(hdr Value) BITMAPINFOHEADER {
+	return BITMAPINFOHEADER{
+		biSize:          int32(nBITMAPINFOHEADER),
+		biWidth:         getInt32(hdr, "biWidth"),
+		biHeight:        getInt32(hdr, "biHeight"),
+		biPlanes:        getInt16(hdr, "biPlanes"),
+		biBitCount:      getInt16(hdr, "biBitCount"),
+		biCompression:   getInt32(hdr, "biCompression"),
+		biSizeImage:     getInt32(hdr, "biSizeImage"),
+		biXPelsPerMeter: getInt32(hdr, "biXPelsPerMeter"),
+		biYPelsPerMeter: getInt32(hdr, "biYPelsPerMeter"),
+		biClrUsed:       getInt32(hdr, "biClrUsed"),
+		biClrImportant:  getInt32(hdr, "biClrImportant"),
+	}
 }
 
 //-------------------------------------------------------------------

@@ -378,30 +378,56 @@ var _ = builtin7("CreateFile(lpFileName, dwDesiredAccess, dwShareMode,"+
 	"hTemplateFile)",
 	func(a, b, c, d, e, f, g Value) Value {
 		defer heap.FreeTo(heap.CurSize())
-		p := heap.Alloc(nSECURITY_ATTRIBUTES)
-		*(*SECURITY_ATTRIBUTES)(p) = SECURITY_ATTRIBUTES{
-			nLength:              int32(nSECURITY_ATTRIBUTES),
-			lpSecurityDescriptor: getHandle(d, "lpSecurityDescriptor"),
-			bInheritHandle:       getBool(d, "bInheritHandle"),
-		}
 		rtn := goc.Syscall7(createFile,
 			uintptr(stringArg(a)),
 			intArg(b),
 			intArg(c),
-			uintptr(p),
+			intArg(d),
 			intArg(e),
 			intArg(f),
 			intArg(g))
 		return intRet(rtn)
 	})
 
-type SECURITY_ATTRIBUTES struct {
-	nLength              int32
-	lpSecurityDescriptor HANDLE
-	bInheritHandle       BOOL
-}
+// dll bool Kernel32:WriteFile(
+//		handle hFile,
+//		buffer lpBuffer,
+//		long nNumberOfBytesToWrite,
+//		LONG* lpNumberOfBytesWritten,
+//		pointer lpOverlapped)
+var writeFile = kernel32.MustFindProc("WriteFile").Addr()
+var _ = builtin5("WriteFile(hFile, lpBuffer, nNumberOfBytesToWrite, "+
+	"lpNumberOfBytesWritten, lpOverlapped/*unused*/)",
+	func(a, b, c, d, e Value) Value {
+		s := ToStr(b)
+		n := ToInt(c)
+		buf := ([]byte)(s[:n]) // n <= len(s)
+		return WriteFile(a, unsafe.Pointer(&buf[0]), c, d)
+	})
 
-const nSECURITY_ATTRIBUTES = unsafe.Sizeof(SECURITY_ATTRIBUTES{})
+var _ = builtin5("WriteFilePtr(hFile, lpBuffer, nNumberOfBytesToWrite, "+
+	"lpNumberOfBytesWritten, lpOverlapped/*unused*/)",
+	func(a, b, c, d, e  Value) Value {
+		buf := unsafe.Pointer(uintptr(ToInt(b)))
+		return WriteFile(a, buf, c, d)
+	})
+
+func WriteFile(f Value, buf unsafe.Pointer, size Value, written Value) Value {
+		n := ToInt(size)
+		if n == 0 {
+			return False
+		}
+		var w int32
+		rtn, _, _ := syscall.Syscall6(writeFile, 5,
+			intArg(f),
+			uintptr(buf),
+			uintptr(n),
+			uintptr(unsafe.Pointer(&w)),
+			0,
+			0)
+		written.Put(nil, SuStr("x"), IntVal(int(w)))
+		return boolRet(rtn)
+}
 
 // dll long Kernel32:GetFileSize(handle hf, LONG* hiword)
 var getFileSize = kernel32.MustFindProc("GetFileSize").Addr()
