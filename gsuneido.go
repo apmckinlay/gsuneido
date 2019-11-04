@@ -37,7 +37,6 @@ var dbmsLocal IDbms
 var mainThread *Thread
 
 func main() {
-	log.SetFlags(0) //TODO use io.MultiWriter for stderr and error.log
 	builtin.Init()
 	suneido := new(SuObject)
 	suneido.SetConcurrent()
@@ -64,12 +63,25 @@ func main() {
 		eval("Suneido.Print = PrintStdout;;")
 	}
 	if options.Repl {
+		log.SetFlags(0)
 		repl()
 	} else {
+		initLogger()
 		eval("Init()")
 		builtin.Run()
 	}
 }
+
+func initLogger() {
+	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
+	f, err := os.OpenFile("error.log", os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0666)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	log.SetOutput(io.MultiWriter(f, os.Stderr))
+}
+
+// REPL -------------------------------------------------------------
 
 func repl() {
 	fm, _ := os.Stdin.Stat()

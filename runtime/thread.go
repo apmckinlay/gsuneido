@@ -1,7 +1,7 @@
 package runtime
 
 import (
-	"fmt"
+	"log"
 	"strconv"
 	"sync/atomic"
 
@@ -159,13 +159,13 @@ func PrintStack(cs *SuObject) {
 	for i := 0; i < cs.ListSize(); i++ {
 		frame := cs.ListGet(i)
 		fn := frame.Get(nil, SuStr("fn"))
-		fmt.Println(fn)
+		log.Println(fn)
 		locals := frame.Get(nil, SuStr("locals"))
 		s := locals.String()
 		if len(s) > 230 {
 			s = s[:230] + "..."
 		}
-		fmt.Println(s)
+		log.Println(s)
 	}
 }
 

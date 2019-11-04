@@ -2,6 +2,7 @@ package builtin
 
 import (
 	"fmt"
+	"log"
 	"time"
 
 	. "github.com/apmckinlay/gsuneido/runtime"
@@ -39,7 +40,7 @@ func threadCallClass(t *Thread, args []Value) Value {
 	go func() {
 		defer func() {
 			if e := recover(); e != nil {
-				fmt.Println("error in thread:", e)
+				log.Println("error in thread:", e)
 				t2.PrintStack()
 			}
 			t2.Close()
