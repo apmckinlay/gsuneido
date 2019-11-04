@@ -1857,49 +1857,6 @@ var _ = builtin1("GetCursorPos(rect)",
 		return boolRet(rtn)
 	})
 
-// dll long Gdi32:GetDIBits(pointer hdc, pointer hbmp, long uStartScan,
-//		long cScanLines, pointer lpvBits, BITMAPINFO* lpbi, long uUsage)
-var getDIBits = gdi32.MustFindProc("GetDIBits").Addr()
-var _ = builtin7("GetDIBits(hdc, hbmp, uStartScan, cScanLines, lpvBits,"+
-	" lpbi, uUsage)",
-	func(a, b, c, d, e, f, g Value) Value {
-		defer heap.FreeTo(heap.CurSize())
-		p := heap.Alloc(nBITMAPINFOHEADER)
-		hdr := f.Get(nil, SuStr("bmiHeader"))
-		bmih := (*BITMAPINFOHEADER)(p)
-		*bmih = obToBMIH(hdr)
-		rtn := goc.Syscall7(getDIBits,
-			intArg(a),
-			intArg(b),
-			intArg(c),
-			intArg(d),
-			intArg(e),
-			uintptr(p),
-			intArg(g))
-		hdr.Put(nil, SuStr("biSizeImage"), IntVal(int(bmih.biSizeImage)))
-		hdr.Put(nil, SuStr("biXPelsPerMeter"), IntVal(int(bmih.biXPelsPerMeter)))
-		hdr.Put(nil, SuStr("biYPelsPerMeter"), IntVal(int(bmih.biYPelsPerMeter)))
-		hdr.Put(nil, SuStr("biClrUsed"), IntVal(int(bmih.biClrUsed)))
-		hdr.Put(nil, SuStr("biClrImportant"), IntVal(int(bmih.biClrImportant)))
-		return intRet(rtn)
-	})
-
-type BITMAPINFOHEADER struct {
-	biSize          int32
-	biWidth         int32
-	biHeight        int32
-	biPlanes        int16
-	biBitCount      int16
-	biCompression   int32
-	biSizeImage     int32
-	biXPelsPerMeter int32
-	biYPelsPerMeter int32
-	biClrUsed       int32
-	biClrImportant  int32
-}
-
-const nBITMAPINFOHEADER = unsafe.Sizeof(BITMAPINFOHEADER{})
-
 // dll bool User32:EnumThreadWindows(long dwThreadId, WNDENUMPROC lpfn,
 //		pointer lParam)
 var enumThreadWindows = user32.MustFindProc("EnumThreadWindows").Addr()
