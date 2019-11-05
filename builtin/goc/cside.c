@@ -122,6 +122,7 @@ uintptr interact() {
 
 #undef UNICODE
 #undef _UNICODE
+#define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <synchapi.h>
 
