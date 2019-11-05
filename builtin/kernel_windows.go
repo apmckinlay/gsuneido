@@ -407,26 +407,26 @@ var _ = builtin5("WriteFile(hFile, lpBuffer, nNumberOfBytesToWrite, "+
 
 var _ = builtin5("WriteFilePtr(hFile, lpBuffer, nNumberOfBytesToWrite, "+
 	"lpNumberOfBytesWritten, lpOverlapped/*unused*/)",
-	func(a, b, c, d, e  Value) Value {
+	func(a, b, c, d, e Value) Value {
 		buf := unsafe.Pointer(uintptr(ToInt(b)))
 		return WriteFile(a, buf, c, d)
 	})
 
 func WriteFile(f Value, buf unsafe.Pointer, size Value, written Value) Value {
-		n := ToInt(size)
-		if n == 0 {
-			return False
-		}
-		var w int32
-		rtn, _, _ := syscall.Syscall6(writeFile, 5,
-			intArg(f),
-			uintptr(buf),
-			uintptr(n),
-			uintptr(unsafe.Pointer(&w)),
-			0,
-			0)
-		written.Put(nil, SuStr("x"), IntVal(int(w)))
-		return boolRet(rtn)
+	n := ToInt(size)
+	if n == 0 {
+		return False
+	}
+	var w int32
+	rtn, _, _ := syscall.Syscall6(writeFile, 5,
+		intArg(f),
+		uintptr(buf),
+		uintptr(n),
+		uintptr(unsafe.Pointer(&w)),
+		0,
+		0)
+	written.Put(nil, SuStr("x"), IntVal(int(w)))
+	return boolRet(rtn)
 }
 
 // dll long Kernel32:GetFileSize(handle hf, LONG* hiword)
