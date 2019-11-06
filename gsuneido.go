@@ -40,12 +40,16 @@ func main() {
 	Global.Builtin("Suneido", suneido)
 	options.BuiltDate = builtDate
 	fs := flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
-	fs.BoolVar(&options.Client, "c", false, "run as a client")
+	fs.BoolVar(&options.Client, "c", false, "")
+	fs.BoolVar(&options.Client, "client", false, "run as a client")
 	fs.StringVar(&options.NetAddr, "p", "127.0.0.1:3147", "network address and/or port")
+	fs.BoolVar(&options.Repl, "r", false, "")
 	fs.BoolVar(&options.Repl, "repl", false, "run REPL (not GUI message loop)")
+	ver := fs.Bool("v", false, "")
+	fs.BoolVar(ver, "version", false, "show the version")
 	err := fs.Parse(os.Args[1:])
 	options.Args = fs.Args()
-	if !options.Client {
+	if !options.Client && !*ver {
 		options.Repl = true
 		options.NetAddr = "" // for ServerIP
 	}
@@ -53,6 +57,10 @@ func main() {
 	if err != nil {
 		fs.Usage()
 		os.Exit(1)
+	}
+	if *ver && !options.Repl {
+		fmt.Println(builtin.Built())
+		os.Exit(0)
 	}
 	Libload = libload // dependency injection
 	mainThread = NewThread()
