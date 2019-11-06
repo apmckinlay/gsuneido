@@ -7,6 +7,7 @@ import (
 
 	"github.com/apmckinlay/gsuneido/builtin/goc"
 	heap "github.com/apmckinlay/gsuneido/builtin/heapstack"
+	"github.com/apmckinlay/gsuneido/options"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/runtime/types"
 )
@@ -122,14 +123,6 @@ func NewCallback(fn Value, nargs int) uintptr {
 	return goc.GetCallback(nargs, j)
 }
 
-const clearCallbackDisabled = false
-
-func init() {
-	if clearCallbackDisabled {
-		fmt.Println("ClearCallback disabled")
-	}
-}
-
 // cbeq is identity equality, except for bound methods
 // can't just use Equals because it's deep equals for SuInstance
 func cbeq(x, y Value) bool {
@@ -152,7 +145,7 @@ func ClearCallback(fn Value) bool {
 			}
 			if cbeq(fn, cb.fn) {
 				if cb.active {
-					if !clearCallbackDisabled {
+					if !options.ClearCallbackDisabled {
 						cb.active = false
 					}
 					// keep the fn in case it gets called soon after clear

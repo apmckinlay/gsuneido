@@ -15,21 +15,13 @@
 package heapstack
 
 import (
-	"fmt"
 	"log"
 	"runtime/debug"
 	"unsafe"
 
+	"github.com/apmckinlay/gsuneido/options"
 	"github.com/apmckinlay/gsuneido/util/verify"
 )
-
-const debugEnabled = true
-
-func init() {
-	if debugEnabled {
-		fmt.Println("heap debugging enabled")
-	}
-}
 
 const align uintptr = 8 // Alloc assumes power of two
 const heapsize = 64 * 1024
@@ -42,7 +34,7 @@ var lastAlloc uintptr
 func Alloc(n uintptr) unsafe.Pointer {
 	lastAlloc = n
 	n = ((n - 1) | (align - 1)) + 1
-	if heapnext + n > heapsize {
+	if heapnext+n > heapsize {
 		panic("Windows dll interface argument space limit exceeded")
 	}
 	heapcheck("alloc")
@@ -53,7 +45,7 @@ func Alloc(n uintptr) unsafe.Pointer {
 	}
 	p := &heap[heapnext]
 	heapnext += n
-	if debugEnabled {
+	if options.HeapDebug {
 		heapnext += align
 		for i := align; i > 0; i-- {
 			heap[heapnext-i] = byte(256 - i)
@@ -74,7 +66,7 @@ func FreeTo(prevSize uintptr) {
 }
 
 func heapcheck(s string) {
-	if debugEnabled {
+	if options.HeapDebug {
 		for i := align; i > 0; i-- {
 			if heap[heapnext-i] != byte(256-i) {
 				debug.PrintStack()

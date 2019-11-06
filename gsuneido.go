@@ -30,25 +30,29 @@ import (
 
 var builtDate = "Oct 19 2019" // set by: go build -ldflags "-X builtin.builtDate=..."
 
-var prompt = func(s string) { fmt.Println(s) }
-
 // dbmsLocal is set if running with a local/standalone database.
 var dbmsLocal IDbms
 var mainThread *Thread
 
 func main() {
-	builtin.Init()
 	suneido := new(SuObject)
 	suneido.SetConcurrent()
 	Global.Builtin("Suneido", suneido)
 	options.BuiltDate = builtDate
-	flag.BoolVar(&options.Client, "c", false, "run as a client")
-	flag.StringVar(&options.NetAddr, "p", "127.0.0.1:3147", "network address and/or port")
-	flag.BoolVar(&options.Repl, "r", false, "run REPL (not GUI message loop)")
-	flag.Parse()
+	fs := flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
+	fs.BoolVar(&options.Client, "c", false, "run as a client")
+	fs.StringVar(&options.NetAddr, "p", "127.0.0.1:3147", "network address and/or port")
+	fs.BoolVar(&options.Repl, "repl", false, "run REPL (not GUI message loop)")
+	err := fs.Parse(os.Args[1:])
+	options.Args = fs.Args()
 	if !options.Client {
 		options.Repl = true
 		options.NetAddr = "" // for ServerIP
+	}
+	builtin.Init(options.Repl)
+	if err != nil {
+		fs.Usage()
+		os.Exit(1)
 	}
 	Libload = libload // dependency injection
 	mainThread = NewThread()
@@ -83,19 +87,23 @@ func initLogger() {
 
 // REPL -------------------------------------------------------------
 
+var prompt = func(s string) { fmt.Fprintln(os.Stderr, s) }
+
 func repl() {
-	fm, _ := os.Stdin.Stat()
-	if fm.Mode().IsRegular() {
+	if !isTerminal() {
 		prompt = func(string) {}
 	}
 
 	builtin.Def()
 	builtin.Concat()
 
-	prompt(builtin.Built())
+	built := builtin.Built()
 	if options.Client {
-		prompt("Running as client")
+		built += " - client"
 	}
+	prompt(built)
+	showOptions()
+	prompt("Note: use start/w gsuneido -repl")
 	prompt("Press Enter twice (i.e. blank line) to execute, q to quit")
 	r := bufio.NewReader(os.Stdin)
 	for {
@@ -113,6 +121,28 @@ func repl() {
 			src += line + "\n"
 		}
 		eval(src)
+	}
+}
+
+func isTerminal() bool {
+	fm, _ := os.Stdout.Stat()
+	mode := fm.Mode()
+	return mode&os.ModeDevice == os.ModeDevice &&
+		mode&os.ModeCharDevice == os.ModeCharDevice
+}
+
+func showOptions() {
+	if options.HeapDebug {
+		prompt("- HeapDebug enabled")
+	}
+	if options.ThreadDisabled {
+		prompt("- Thread disabled")
+	}
+	if options.TimersDisabled {
+		prompt("- Timers disabled")
+	}
+	if options.ClearCallbackDisabled {
+		prompt("- ClearCallback disabled")
 	}
 }
 

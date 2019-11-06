@@ -15,7 +15,9 @@ var _ = builtin("MessageLoop(hwnd = 0)", func(t *Thread, args []Value) Value {
 
 var uiThreadId uint32
 
-func Init() {
+func Init(repl bool) {
+	connectToConsole(repl)
+
 	// inject dependencies
 	goc.TimerId = timerId
 	goc.Callback2 = callback2

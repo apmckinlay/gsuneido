@@ -1,10 +1,10 @@
 package builtin
 
 import (
-	"fmt"
 	"log"
 	"time"
 
+	"github.com/apmckinlay/gsuneido/options"
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
@@ -20,16 +20,8 @@ func init() {
 
 var threads = map[int32]*Thread{}
 
-var threadsDisabled = false
-
-func init() {
-	if threadsDisabled {
-		fmt.Println("Thread disabled")
-	}
-}
-
 func threadCallClass(t *Thread, args []Value) Value {
-	if threadsDisabled {
+	if options.ThreadDisabled {
 		return nil
 	}
 	fn := args[0]

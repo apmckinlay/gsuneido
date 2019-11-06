@@ -1,13 +1,13 @@
 package builtin
 
 import (
-	"fmt"
 	"syscall"
 	"time"
 	"unsafe"
 
 	"github.com/apmckinlay/gsuneido/builtin/goc"
 	heap "github.com/apmckinlay/gsuneido/builtin/heapstack"
+	"github.com/apmckinlay/gsuneido/options"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/verify"
 	"golang.org/x/sys/windows"
@@ -882,20 +882,15 @@ var _ = builtin1("SetFocus(hwnd)",
 
 var postThreadMessage = user32.MustFindProc("PostThreadMessageA").Addr()
 
-var timersDisabled = false
-
-func init() {
-	if timersDisabled {
-		fmt.Println("Set/KillTimer disabled")
-	}
-}
-
 const WM_USER = 0x400
 
 // dll User32:SetTimer(pointer hwnd, long id, long ms, TIMERPROC f) long
 var setTimer = user32.MustFindProc("SetTimer").Addr()
 var _ = builtin4("SetTimer(hwnd, id, ms, f)",
 	func(a, b, c, d Value) Value {
+		if options.TimersDisabled {
+			return Zero
+		}
 		if windows.GetCurrentThreadId() != uiThreadId {
 			// WARNING: can't use heap from background thread
 			d.SetConcurrent() // since callback will be from different thread
@@ -912,9 +907,6 @@ var _ = builtin4("SetTimer(hwnd, id, ms, f)",
 				panic("SetTimer no reply")
 			}
 		}
-		if timersDisabled {
-			return Zero
-		}
 		rtn := goc.Syscall4(setTimer,
 			intArg(a),
 			intArg(b),
@@ -927,7 +919,7 @@ var _ = builtin4("SetTimer(hwnd, id, ms, f)",
 var killTimer = user32.MustFindProc("KillTimer").Addr()
 var _ = builtin2("KillTimer(hwnd, id)",
 	func(a, b Value) Value {
-		if timersDisabled {
+		if options.TimersDisabled {
 			return False
 		}
 		rtn := goc.Syscall2(killTimer,

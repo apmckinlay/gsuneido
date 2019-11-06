@@ -1,11 +1,14 @@
-# requires sh on path (e.g. from MinGW/msys/1.0/bin)
+# requires sh on path (e.g. from MinGW)
 BUILT=$(shell date "+%b %e %Y %X")
 
 build:
-	@go build -v -ldflags "-X 'main.builtDate=${BUILT}'"
+	@go build -v -ldflags "-X 'main.builtDate=${BUILT}' -H windowsgui"
 
 test:
 	go test -count=1 ./...
+
+repl: build
+	@cmd /c start/w ./gsuneido -repl
 
 client: build
 	@./gsuneido -c t@../tok
@@ -16,5 +19,4 @@ gsuneido_windows.syso : res/suneido.rc res/suneido.manifest
 
 .PHONY : build test client
 
-# -trimpath
-# -ldflags="-H windowsgui"
+# -trimpath (but breaks vscode goto)
