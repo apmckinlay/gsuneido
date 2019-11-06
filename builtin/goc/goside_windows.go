@@ -1,7 +1,7 @@
 package goc
 
 // #cgo CFLAGS: -DWINVER=0x601 -D_WIN32_WINNT=0x0601
-// #cgo LDFLAGS: -lurlmon -lole32 -luuid -lwininet
+// #cgo LDFLAGS: -lurlmon -lole32 -luuid -lwininet -static
 // #include "cside.h"
 import "C"
 
