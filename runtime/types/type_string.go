@@ -28,11 +28,12 @@ func _() {
 	_ = x[File-17]
 	_ = x[BuiltinClass-18]
 	_ = x[BuiltinInstance-19]
+	_ = x[N-20]
 }
 
-const _Type_name = "BooleanNumberStringDateObjectRecordFunctionBlockBuiltinFunctionClassMethodExceptInstanceIteratorTransactionQueryCursorFileBuiltinClassBuiltinInstance"
+const _Type_name = "BooleanNumberStringDateObjectRecordFunctionBlockBuiltinFunctionClassMethodExceptInstanceIteratorTransactionQueryCursorFileBuiltinClassBuiltinInstanceN"
 
-var _Type_index = [...]uint8{0, 7, 13, 19, 23, 29, 35, 43, 48, 63, 68, 74, 80, 88, 96, 107, 112, 118, 122, 134, 149}
+var _Type_index = [...]uint8{0, 7, 13, 19, 23, 29, 35, 43, 48, 63, 68, 74, 80, 88, 96, 107, 112, 118, 122, 134, 149, 150}
 
 func (i Type) String() string {
 	if i < 0 || i >= Type(len(_Type_index)-1) {

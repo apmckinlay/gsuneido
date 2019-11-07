@@ -13,6 +13,9 @@ repl: build
 client: build
 	@./gsuneido -c t@../tok
 
+generate:
+	go generate ./...
+
 # need 64 bit windres e.g. from mingw64
 gsuneido_windows.syso : res/suneido.rc res/suneido.manifest
 	windres -F pe-x86-64 -o gsuneido_windows.syso res/suneido.rc
