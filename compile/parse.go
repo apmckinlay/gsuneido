@@ -5,14 +5,14 @@ import (
 	"strconv"
 
 	"github.com/apmckinlay/gsuneido/compile/ast"
+	"github.com/apmckinlay/gsuneido/compile/check"
 	. "github.com/apmckinlay/gsuneido/lexer"
 	tok "github.com/apmckinlay/gsuneido/lexer/tokens"
 )
 
 func NewParser(src string) *parser {
 	lxr := NewLexer(src)
-	p := &parser{lxr: lxr, Factory: ast.Folder{Factory: ast.Builder{}},
-		checker: func(*ast.Function) {}}
+	p := &parser{lxr: lxr, Factory: ast.Folder{Factory: ast.Builder{}}}
 	p.next()
 	return p
 }
@@ -51,7 +51,7 @@ type parser struct {
 	assignName string
 
 	// checker is used to add additional checking along with codegen
-	checker func(*ast.Function)
+	checker *check.Check
 }
 
 /*

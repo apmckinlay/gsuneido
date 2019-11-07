@@ -5,7 +5,6 @@ import (
 	"strings"
 	"sync/atomic"
 
-	"github.com/apmckinlay/gsuneido/compile/ast"
 	"github.com/apmckinlay/gsuneido/compile/check"
 	tok "github.com/apmckinlay/gsuneido/lexer/tokens"
 	. "github.com/apmckinlay/gsuneido/runtime"
@@ -33,10 +32,9 @@ func NamedConstant(lib, name, src string) Value {
 // can't do AST check after compile because that would miss nested functions
 func Checked(t *Thread, src string) (Value, []string) {
 	p := NewParser(src)
-	ck := check.New(t)
-	p.checker = func(ast *ast.Function) { ck.Check(ast) }
+	p.checker = check.New(t)
 	v := p.constant()
-	return v, ck.Results
+	return v, p.checker.Results
 }
 
 func (p *parser) constant() Value {
@@ -94,7 +92,9 @@ func (p *parser) functionValue() Value {
 	p.className = "" // prevent privatization in standalone function
 	ast := p.Function()
 	p.className = prevClassName
-	p.checker(ast)
+	if p.checker != nil {
+		p.checker.Check(ast)
+	}
 	f := codegen(ast)
 	f.Lib = p.lib
 	f.Name = p.name
@@ -192,7 +192,9 @@ func (p *parser) member(ob container, closing tok.Token, base Gnum) {
 		if name == "New" {
 			ast.IsNewMethod = true
 		}
-		p.checker(ast)
+		if p.checker != nil {
+			p.checker.Check(ast)
+		}
 		fn := codegen(ast)
 		fn.Lib = p.lib
 		fn.Name = p.name
@@ -284,6 +286,9 @@ func (p *parser) ckBase(name string) Gnum {
 			p.error("invalid reference to " + name)
 		}
 		return Global.Copy(name[1:])
+	}
+	if p.checker != nil {
+		p.checker.CheckGlobal(name, p.Pos)
 	}
 	return Global.Num(name)
 }

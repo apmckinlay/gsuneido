@@ -61,7 +61,7 @@ func (ck *Check) Check(f *ast.Function) set {
 }
 
 func paramPos(params []ast.Param, id string) int {
-	for _,p := range params {
+	for _, p := range params {
 		if p.Name.Name == id {
 			return int(p.Name.Pos)
 		}
@@ -196,10 +196,7 @@ func (ck *Check) expr(expr ast.Expr, init set) set {
 			init = ck.usedVar(init, expr.Name, int(expr.Pos))
 		}
 		if ascii.IsUpper(expr.Name[0]) {
-			if nil == Global.FindName(ck.t, expr.Name) {
-				ck.Results = append(ck.Results, "WARNING: can't find: "+
-					expr.Name+" @"+strconv.Itoa(int(expr.Pos)))
-			}
+			ck.CheckGlobal(expr.Name, expr.Pos)
 		}
 	case *ast.Trinary:
 		init = ck.expr(expr.Cond, init)
@@ -228,6 +225,13 @@ func (ck *Check) expr(expr ast.Expr, init set) set {
 		})
 	}
 	return init
+}
+
+func (ck *Check) CheckGlobal(name string, pos int32) {
+	if nil == Global.FindName(ck.t, name) {
+		ck.Results = append(ck.Results, "ERROR: can't find: "+
+			name+" @"+strconv.Itoa(int(pos)))
+	}
 }
 
 func (ck *Check) initVar(init set, id string, pos int) set {
