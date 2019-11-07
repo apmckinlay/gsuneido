@@ -127,6 +127,9 @@ func (sc *SuScanner) text() Value {
 }
 
 func (sc *SuScanner) type2() string {
+	if sc.item.Token.IsOperator() {
+		return ""
+	}
 	if sc.item.Token.IsIdent() {
 		return "IDENTIFIER"
 	}

@@ -31,7 +31,7 @@ const (
 	RCurly
 	RangeTo
 	RangeLen
-	// operators
+	OpsStart // operators
 	Not
 	BitNot
 	New
@@ -185,4 +185,8 @@ var isIdent = [Ntokens]bool{ // note: array rather than map
 // token must be within the valid range
 func (token Token) IsIdent() bool {
 	return token > QueryStart || isIdent[token]
+}
+
+func (token Token) IsOperator() bool {
+	return OpsStart < token && token < AssignStart
 }
