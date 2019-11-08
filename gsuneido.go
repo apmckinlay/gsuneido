@@ -53,7 +53,7 @@ func main() {
 		options.Repl = true
 		options.NetAddr = "" // for ServerIP
 	}
-	builtin.Init(options.Repl)
+	builtin.Init(options.Repl) //WARNING: errors before this won't show up
 	if err != nil {
 		fs.Usage()
 		os.Exit(1)
