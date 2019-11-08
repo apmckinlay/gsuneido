@@ -965,7 +965,7 @@ var setWindowPlacement = user32.MustFindProc("SetWindowPlacement").Addr()
 var _ = builtin2("SetWindowPlacement(hwnd, lpwndpl)",
 	func(a, b Value) Value {
 		defer heap.FreeTo(heap.CurSize())
-		p := heap.Alloc(nMSG)
+		p := heap.Alloc(nWINDOWPLACEMENT)
 		*(*WINDOWPLACEMENT)(p) = WINDOWPLACEMENT{
 			length:           getUint32(b, "length"),
 			flags:            getUint32(b, "flags"),
