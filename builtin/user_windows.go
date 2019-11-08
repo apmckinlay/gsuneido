@@ -2032,15 +2032,7 @@ var isDialogMessage = user32.MustFindProc("IsDialogMessageA").Addr()
 var _ = builtin2("IsDialogMessage(hDlg, lpMsg)",
 	func(a, b Value) Value {
 		defer heap.FreeTo(heap.CurSize())
-		p := heap.Alloc(nMSG)
-		*(*MSG)(p) = MSG{
-			hwnd:    getHandle(b, "hwnd"),
-			message: uint32(getInt(b, "message")),
-			wParam:  getHandle(b, "wParam"),
-			lParam:  getHandle(b, "lParam"),
-			time:    uint32(getInt(b, "time")),
-			pt:      getPoint(b, "pt"),
-		}
+		p := obToMSG(b)
 		rtn := goc.Syscall2(isDialogMessage,
 			intArg(a),
 			uintptr(p))
@@ -2052,15 +2044,7 @@ var translateMessage = user32.MustFindProc("TranslateMessage").Addr()
 var _ = builtin1("TranslateMessage(msg)",
 	func(a Value) Value {
 		defer heap.FreeTo(heap.CurSize())
-		p := heap.Alloc(nMSG)
-		*(*MSG)(p) = MSG{
-			hwnd:    getHandle(a, "hwnd"),
-			message: uint32(getInt(a, "message")),
-			wParam:  getHandle(a, "wParam"),
-			lParam:  getHandle(a, "lParam"),
-			time:    uint32(getInt(a, "time")),
-			pt:      getPoint(a, "pt"),
-		}
+		p := obToMSG(a)
 		rtn := goc.Syscall1(translateMessage,
 			uintptr(p))
 		return boolRet(rtn)
@@ -2071,19 +2055,24 @@ var dispatchMessage = user32.MustFindProc("DispatchMessageA").Addr()
 var _ = builtin1("DispatchMessage(msg)",
 	func(a Value) Value {
 		defer heap.FreeTo(heap.CurSize())
-		p := heap.Alloc(nMSG)
-		*(*MSG)(p) = MSG{
-			hwnd:    getHandle(a, "hwnd"),
-			message: uint32(getInt(a, "message")),
-			wParam:  getHandle(a, "wParam"),
-			lParam:  getHandle(a, "lParam"),
-			time:    uint32(getInt(a, "time")),
-			pt:      getPoint(a, "pt"),
-		}
+		p := obToMSG(a)
 		rtn := goc.Syscall1(dispatchMessage,
 			uintptr(p))
 		return intRet(rtn)
 	})
+
+func obToMSG(ob Value) unsafe.Pointer {
+	p := heap.Alloc(nMSG)
+	*(*MSG)(p) = MSG{
+		hwnd:    getHandle(ob, "hwnd"),
+		message: uint32(getInt(ob, "message")),
+		wParam:  getHandle(ob, "wParam"),
+		lParam:  getHandle(ob, "lParam"),
+		time:    uint32(getInt(ob, "time")),
+		pt:      getPoint(ob, "pt"),
+	}
+	return p
+}
 
 // dll long User32:MapWindowPoints(pointer hwndfrom, pointer hwndto, RECT* p, long n)
 var mapWindowPoints = user32.MustFindProc("MapWindowPoints").Addr()
