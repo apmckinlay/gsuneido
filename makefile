@@ -4,6 +4,9 @@ BUILT=$(shell date "+%b %e %Y %X")
 build:
 	@go build -v -ldflags "-X 'main.builtDate=${BUILT}' -H windowsgui"
 
+console:
+	@go build -v -ldflags "-X 'main.builtDate=${BUILT}'"
+
 test:
 	go test -count=1 ./...
 
