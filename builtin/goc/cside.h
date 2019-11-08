@@ -28,6 +28,7 @@ enum {
 	msg_timerid,
 	msg_updateui,
 	msg_sunapp,
+	msg_traccel,
 };
 
 typedef uintptr(__stdcall* cb2_t)(uintptr a, uintptr b);

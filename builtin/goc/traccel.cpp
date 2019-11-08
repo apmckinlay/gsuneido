@@ -1,0 +1,30 @@
+#undef UNICODE
+#undef _UNICODE
+#define WIN32_LEAN_AND_MEAN
+#include <objbase.h>
+#include <cstdio>
+
+typedef unsigned int uint32;
+typedef unsigned long long uintptr;
+
+// Used to forward keyboard messages to a browser control
+// to get Tab etc. to work.
+extern "C"
+long traccel(uintptr ob, uint32 message, uintptr wParam) {
+	if (!ob)
+		return S_FALSE;
+	void* p = reinterpret_cast<void*>(ob);
+	auto iunk = static_cast<IUnknown*>(p);
+	IOleInPlaceActiveObject* pi;
+	HRESULT hr = iunk->QueryInterface(
+		IID_IOleInPlaceActiveObject, reinterpret_cast<void**>(&pi));
+	if (!SUCCEEDED(hr) || !pi)
+		return S_FALSE;
+	MSG msg;
+	memset(&msg, 0, sizeof msg);
+	msg.message = message;
+	msg.wParam = wParam;
+	hr = pi->TranslateAcceleratorA(&msg);
+	pi->Release();
+	return hr;
+}

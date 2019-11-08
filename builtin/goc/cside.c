@@ -97,6 +97,9 @@ uintptr syscall() {
 
 static void message_loop(uintptr hdlg);
 
+typedef unsigned int uint32;
+long traccel(uintptr ob, uint32 message, uintptr wParam);
+
 uintptr interact() {
 	for (;;) {
 		switch (args[0]) {
@@ -111,6 +114,10 @@ uintptr interact() {
 			break;
 		case msg_msgloop:
 			message_loop(args[1]);
+			args[0] = msg_result;
+			break;
+		case msg_traccel:
+			args[1] = traccel(args[1], args[2], args[3]);
 			args[0] = msg_result;
 			break;
 		case msg_result:
