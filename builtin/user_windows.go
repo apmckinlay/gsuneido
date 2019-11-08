@@ -2005,6 +2005,28 @@ var _ = builtin6("LoadImage(hInstance, lpszName, uType, cxDesired, cyDesired,"+
 		return intRet(rtn)
 	})
 
+// dll long User32:GetMessage(
+//		MSG* msg, pointer hwnd, long minfilter, long maxfilter)
+var getMessage = user32.MustFindProc("GetMessageA").Addr()
+var _ = builtin4("GetMessage(msg, hwnd, minfilter, maxfilter)",
+	func(a, b, c, d Value) Value {
+		defer heap.FreeTo(heap.CurSize())
+		p := heap.Alloc(nMSG)
+		rtn := goc.Syscall4(getMessage,
+			uintptr(p),
+			intArg(b),
+			intArg(c),
+			intArg(d))
+		msg := (*MSG)(p)
+		a.Put(nil, SuStr("hwnd"), IntVal(int(msg.hwnd)))
+		a.Put(nil, SuStr("message"), IntVal(int(msg.message)))
+		a.Put(nil, SuStr("wParam"), IntVal(int(msg.wParam)))
+		a.Put(nil, SuStr("lParam"), IntVal(int(msg.lParam)))
+		a.Put(nil, SuStr("time"), IntVal(int(msg.time)))
+		a.Put(nil, SuStr("pt"), pointToOb(&msg.pt, nil))
+		return intRet(rtn)
+	})
+
 // dll bool User32:IsDialogMessage(pointer hDlg, MSG* lpMsg)
 var isDialogMessage = user32.MustFindProc("IsDialogMessageA").Addr()
 var _ = builtin2("IsDialogMessage(hDlg, lpMsg)",
@@ -2023,6 +2045,44 @@ var _ = builtin2("IsDialogMessage(hDlg, lpMsg)",
 			intArg(a),
 			uintptr(p))
 		return boolRet(rtn)
+	})
+
+// dll bool User32:TranslateMessage(MSG* msg)
+var translateMessage = user32.MustFindProc("TranslateMessage").Addr()
+var _ = builtin1("TranslateMessage(msg)",
+	func(a Value) Value {
+		defer heap.FreeTo(heap.CurSize())
+		p := heap.Alloc(nMSG)
+		*(*MSG)(p) = MSG{
+			hwnd:    getHandle(a, "hwnd"),
+			message: uint32(getInt(a, "message")),
+			wParam:  getHandle(a, "wParam"),
+			lParam:  getHandle(a, "lParam"),
+			time:    uint32(getInt(a, "time")),
+			pt:      getPoint(a, "pt"),
+		}
+		rtn := goc.Syscall1(translateMessage,
+			uintptr(p))
+		return boolRet(rtn)
+	})
+
+// dll long User32:DispatchMessage(MSG* msg)
+var dispatchMessage = user32.MustFindProc("DispatchMessageA").Addr()
+var _ = builtin1("DispatchMessage(msg)",
+	func(a Value) Value {
+		defer heap.FreeTo(heap.CurSize())
+		p := heap.Alloc(nMSG)
+		*(*MSG)(p) = MSG{
+			hwnd:    getHandle(a, "hwnd"),
+			message: uint32(getInt(a, "message")),
+			wParam:  getHandle(a, "wParam"),
+			lParam:  getHandle(a, "lParam"),
+			time:    uint32(getInt(a, "time")),
+			pt:      getPoint(a, "pt"),
+		}
+		rtn := goc.Syscall1(dispatchMessage,
+			uintptr(p))
+		return intRet(rtn)
 	})
 
 // dll long User32:MapWindowPoints(pointer hwndfrom, pointer hwndto, RECT* p, long n)
