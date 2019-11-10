@@ -1,16 +1,22 @@
 package builtin
 
 import (
+	"fmt"
+
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
 var sunappThread *Thread
 
-func sunAPP(url string) string {
+func sunAPP(url string) (result string) {
 	if sunappThread == nil {
 		sunappThread = UIThread.SubThread()
 	}
+	defer func() {
+		if err := recover(); err != nil {
+			result = fmt.Sprint("SuneidoApp("+url+")", err)
+		}
+	}()
 	f := Global.GetName(sunappThread, "SuneidoAPP")
-	result := sunappThread.Call(f, SuStr(url))
-	return ToStr(result)
+	return ToStr(sunappThread.Call(f, SuStr(url)))
 }

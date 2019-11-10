@@ -37,11 +37,10 @@ func CThreadId() uintptr {
 	return uintptr(C.threadid)
 }
 
-func Traccel(ob int, msg int, wParam int) int {
+func Traccel(ob int, msg unsafe.Pointer) int {
 	C.args[0] = C.msg_traccel
 	C.args[1] = C.uintptr(ob)
-	C.args[2] = C.uintptr(msg)
-	C.args[3] = C.uintptr(wParam)
+	C.args[2] = C.uintptr(uintptr(msg))
 	return int(interact())
 }
 

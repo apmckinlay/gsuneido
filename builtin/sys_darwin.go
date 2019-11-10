@@ -8,7 +8,7 @@ import (
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
-func Init() {
+func Init(bool) {
 }
 func Run() {
 }

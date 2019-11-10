@@ -2061,6 +2061,7 @@ var _ = builtin1("DispatchMessage(msg)",
 		return intRet(rtn)
 	})
 
+// obToMSG callers must defer heap.FreeTo
 func obToMSG(ob Value) unsafe.Pointer {
 	p := heap.Alloc(nMSG)
 	*(*MSG)(p) = MSG{

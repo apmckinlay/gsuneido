@@ -10,7 +10,7 @@ typedef unsigned long long uintptr;
 // Used to forward keyboard messages to a browser control
 // to get Tab etc. to work.
 extern "C"
-long traccel(uintptr ob, uint32 message, uintptr wParam) {
+long traccel(uintptr ob, uintptr msg) {
 	if (!ob)
 		return S_FALSE;
 	void* p = reinterpret_cast<void*>(ob);
@@ -20,11 +20,7 @@ long traccel(uintptr ob, uint32 message, uintptr wParam) {
 		IID_IOleInPlaceActiveObject, reinterpret_cast<void**>(&pi));
 	if (!SUCCEEDED(hr) || !pi)
 		return S_FALSE;
-	MSG msg;
-	memset(&msg, 0, sizeof msg);
-	msg.message = message;
-	msg.wParam = wParam;
-	hr = pi->TranslateAcceleratorA(&msg);
+	hr = pi->TranslateAcceleratorA(reinterpret_cast<MSG*>(msg));
 	pi->Release();
 	return hr;
 }

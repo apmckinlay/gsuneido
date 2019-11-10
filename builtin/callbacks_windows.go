@@ -53,7 +53,7 @@ func (cb *callback) callv(args ...Value) uintptr {
 			handler(e)
 		}
 		if heap.CurSize() != heapSize {
-			log.Fatalln("callback: heap", heapSize, "=>", heap.CurSize(),
+			log.Fatalln("callback: heapSize", heapSize, "=>", heap.CurSize(),
 				"in", cb.fn, args)
 		}
 	}()
@@ -77,7 +77,7 @@ func handler(e interface{}) {
 		}
 	}()
 	// debug.PrintStack()
-	// UIThread.PrintStack()
+	UIThread.PrintStack()
 	log.Println("panic in callback:", e, "<<<<<<<<<<<<<<<<")
 
 	se, ok := e.(*SuExcept)
