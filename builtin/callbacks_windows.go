@@ -77,7 +77,7 @@ func handler(e interface{}) {
 		}
 	}()
 	// debug.PrintStack()
-	UIThread.PrintStack()
+	// UIThread.PrintStack()
 	log.Println("panic in callback:", e, "<<<<<<<<<<<<<<<<")
 
 	se, ok := e.(*SuExcept)
