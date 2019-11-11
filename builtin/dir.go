@@ -1,6 +1,7 @@
 package builtin
 
 import (
+	"log"
 	"os"
 	"path"
 	"strings"
@@ -12,7 +13,7 @@ const maxDir = 10000
 
 var _ = builtin("Dir(path='*', files=false, details=false, block=false)",
 	func(t *Thread, args []Value) Value {
-		path := strings.ReplaceAll(ToStr(args[0]), "\\", "/")
+		path := ToStr(args[0])
 		justfiles := ToBool(args[1])
 		details := ToBool(args[2])
 		block := args[3]
@@ -43,13 +44,19 @@ func forEachDir(dir string, justfiles, details bool, fn func(entry Value)) {
 	if pat == "" {
 		pat = "*"
 	} else if strings.HasSuffix(pat, "*.*") {
-		pat = pat[:len(pat)-3] + "*"
+		pat = pat[:len(pat)-2] // switch *.* to *
+	}
+	if dir[len(dir)-1] == '/' {
+		// os.Open calls file_windows.go openDir which requires backslash
+		dir = dir[:len(dir)-1] + `\`
 	}
 	f, err := os.Open(dir)
-	defer f.Close()
 	if err != nil {
-		panic("Dir: " + err.Error())
+		// should panic, but cSuneido doesn't
+		log.Println("Dir:", err)
+		return
 	}
+	defer f.Close()
 	list, err := f.Readdir(100)
 	for _, info := range list {
 		name := info.Name()
