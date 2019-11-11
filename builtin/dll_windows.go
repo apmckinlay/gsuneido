@@ -186,10 +186,14 @@ func bufRet(p unsafe.Pointer, n uintptr) Value {
 	return SuStr(*(*string)(unsafe.Pointer(&buf)))
 }
 
-// copyStr copies the string into the byte slice and adds a nul terminator
+// copyStr copies the string into the byte slice and adds a nul terminator.
+// If the string is too long, the excess is ignored
 func copyStr(dst []byte, ob Value, mem string) {
 	src := ToStr(ob.Get(nil, SuStr(mem)))
-	copy(dst[:], src)
+	if len(src) > len(dst) - 1 {
+		src = src[:len(dst) - 1]
+	}
+	copy(dst, src)
 	dst[len(src)] = 0
 }
 
