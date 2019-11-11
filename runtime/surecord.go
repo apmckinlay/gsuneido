@@ -87,8 +87,12 @@ func (r *SuRecord) Copy() Container {
 }
 
 func (r *SuRecord) slice(n int) *SuRecord {
+	// keep row and hdr even if unpacked, to help ToRecord
 	return &SuRecord{
 		ob:         r.ob.slice(n),
+		row:        r.row,
+		hdr:        r.hdr,
+		unpacked:	r.unpacked,
 		dependents: r.copyDeps(),
 		invalid:    r.copyInvalid()}
 }
@@ -174,6 +178,7 @@ func (r *SuRecord) ToObject() *SuObject {
 			}
 		}
 		r.unpacked = true
+		// keep row and hdr for ToRecord
 	}
 	return &r.ob
 }
@@ -254,11 +259,27 @@ func (r *SuRecord) ListGet(i int) Value {
 }
 
 func (r *SuRecord) NamedSize() int {
-	return r.ToObject().NamedSize()
+	if r.row != nil && !r.unpacked {
+		return r.rowSize()
+	}
+	return r.ob.NamedSize()
 }
 
-func (r *SuRecord) NamedGet(key Value) Value {
-	return r.ToObject().NamedGet(key)
+func (r *SuRecord) rowSize() int {
+	n := r.ob.NamedSize()
+	for ri, rf := range r.hdr.Fields {
+		for fi, f := range rf {
+			if f != "-" && !strings.HasSuffix(f, "_deps") {
+				key := SuStr(f)
+				if !r.ob.HasKey(key) {
+					if val := r.row[ri].GetRaw(fi); val != "" {
+						n++
+					}
+				}
+			}
+		}
+	}
+	return n
 }
 
 func (r *SuRecord) ArgsIter() func() (Value, Value) {
