@@ -131,14 +131,6 @@ func (ob *SuObject) ListGet(i int) Value {
 	return ob.list[i]
 }
 
-// NamedGet returns a value from the named or nil if not found
-func (ob *SuObject) NamedGet(key Value) Value {
-	if ob.Lock() {
-		defer ob.lock.Unlock()
-	}
-	return ob.namedGet(key)
-}
-
 func (ob *SuObject) namedGet(key Value) Value {
 	val := ob.named.Get(key)
 	if val == nil {

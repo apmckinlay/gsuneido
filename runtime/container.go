@@ -7,7 +7,6 @@ type Container interface {
 	ListSize() int
 	ListGet(i int) Value
 	NamedSize() int
-	NamedGet(k Value) Value
 	Copy() Container
 	Slice(n int) Container
 	Clear()
