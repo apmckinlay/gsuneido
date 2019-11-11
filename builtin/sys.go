@@ -53,19 +53,13 @@ var _ = builtin1("CreateDirectory(dirname)",
 var _ = builtin1("DeleteFileApi(filename)",
 	func(arg Value) Value {
 		err := os.Remove(ToStr(arg))
-		if err != nil {
-			return False
-		}
-		return True
+		return SuBool(err == nil)
 	})
 
 var _ = builtin1("FileExists?(filename)",
 	func(arg Value) Value {
 		_, err := os.Stat(ToStr(arg))
-		if err == nil {
-			return True
-		}
-		return False
+		return SuBool(err == nil)
 	})
 
 var _ = builtin1("DirExists?(filename)",
