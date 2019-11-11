@@ -44,10 +44,7 @@ var _ = builtin2("GetTempFileName(path, prefix)",
 var _ = builtin1("CreateDirectory(dirname)",
 	func(arg Value) Value {
 		err := os.Mkdir(ToStr(arg), 0755)
-		if err != nil {
-			panic("CreateDirctory: " + err.Error())
-		}
-		return True
+		return SuBool(err == nil)
 	})
 
 var _ = builtin1("DeleteFileApi(filename)",
