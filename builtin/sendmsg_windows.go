@@ -65,7 +65,7 @@ var _ = builtin4("SendMessagePoint(hwnd, msg, wParam, point)",
 		rtn := goc.Syscall4(sendMessage,
 			intArg(a),
 			intArg(b),
-			0,
+			intArg(c),
 			uintptr(pointArg(d, pt)))
 		upointToOb(pt, d)
 		return intRet(rtn)
@@ -78,7 +78,7 @@ var _ = builtin4("SendMessageRect(hwnd, msg, wParam, rect)",
 		rtn := goc.Syscall4(sendMessage,
 			intArg(a),
 			intArg(b),
-			0,
+			intArg(c),
 			uintptr(rectArg(d, r)))
 		urectToOb(r, d)
 		return intRet(rtn)
@@ -538,44 +538,52 @@ var _ = builtin4("SendMessageListItem(hwnd, msg, wParam, lParam)",
 		return intRet(rtn)
 	})
 
-var _ = builtin4("SendMessageListItemOut(hwnd, msg, wParam, lParam)",
-	func(a, b, c, d Value) Value {
+	func obToLVITEM(ob Value) (unsafe.Pointer, *LVITEM) {
+		var p unsafe.Pointer
+		var li *LVITEM
+		if !ob.Equal(Zero) {
+			p = heap.Alloc(nLVITEM)
+			li = (*LVITEM)(p)
+			*li = LVITEM{
+				mask:       getInt32(ob, "mask"),
+				iItem:      getInt32(ob, "iItem"),
+				iSubItem:   getInt32(ob, "iSubItem"),
+				state:      getInt32(ob, "state"),
+				stateMask:  getInt32(ob, "stateMask"),
+				pszText:    getStr(ob, "pszText"),
+				cchTextMax: getInt32(ob, "cchTextMax"),
+				iImage:     getInt32(ob, "iImage"),
+				lParam:     getHandle(ob, "lParam"),
+				iIndent:    getInt32(ob, "iIndent"),
+			}
+		}
+		return p, li
+	}
+	
+const LVIF_TEXT = 1
+const LVM_ITEM = 4101
+
+var _ = builtin3("SendMessageListItemOut(hwnd, iItem, iSubItem)",
+	func(a, b, c Value) Value {
 		defer heap.FreeTo(heap.CurSize())
-		p, li := obToLVITEM(d)
+		p := heap.Alloc(nLVITEM)
 		const bufsize = 256
 		buf := heap.Alloc(bufsize)
-		li.pszText = (*byte)(buf)
+		li := (*LVITEM)(p)
+		*li = LVITEM{
+			mask:       LVIF_TEXT,
+			iItem:      int32(ToInt(b)),
+			iSubItem:   int32(ToInt(c)),
+			pszText:    (*byte)(buf),
+			cchTextMax: bufsize,
+		}
 		goc.Syscall4(sendMessage,
 			intArg(a),
-			intArg(b),
-			intArg(c),
+			uintptr(LVM_ITEM),
+			0,
 			uintptr(p))
 		return bufRet(buf, bufsize)
 	})
-
-func obToLVITEM(ob Value) (unsafe.Pointer, *LVITEM) {
-	var p unsafe.Pointer
-	var li *LVITEM
-	if !ob.Equal(Zero) {
-		p = heap.Alloc(nLVITEM)
-		li = (*LVITEM)(p)
-		*li = LVITEM{
-			mask:       getInt32(ob, "mask"),
-			iItem:      getInt32(ob, "iItem"),
-			iSubItem:   getInt32(ob, "iSubItem"),
-			state:      getInt32(ob, "state"),
-			stateMask:  getInt32(ob, "stateMask"),
-			pszText:    getStr(ob, "pszText"),
-			cchTextMax: getInt32(ob, "cchTextMax"),
-			iImage:     getInt32(ob, "iImage"),
-			lParam:     getHandle(ob, "lParam"),
-			iIndent:    getInt32(ob, "iIndent"),
-		}
-	}
-	return p, li
-}
-
-const nLVITEM = unsafe.Sizeof(LVITEM{})
 
 type LVITEM struct {
 	mask       int32
@@ -595,6 +603,8 @@ type LVITEM struct {
 	iGroup     int32
 	_          [4]byte // padding
 }
+
+const nLVITEM = unsafe.Sizeof(LVITEM{})
 
 var _ = builtin4("SendMessageListColumnOrder(hwnd, msg, wParam, lParam)",
 	func(a, b, c, d Value) Value {
