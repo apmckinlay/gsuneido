@@ -77,10 +77,12 @@ func (d *SuThreadGlobal) String() string {
 	return "Thread /* builtin class */"
 }
 
-var _ = builtin2("Scheduled(ms, block)",
-	func(arg, block Value) Value {
-		ms := time.Duration(ToInt(arg)) * time.Millisecond
+var _ = builtin("Scheduled(ms, block)",
+	func(t *Thread, args []Value) Value {
+		ms := time.Duration(ToInt(args[0])) * time.Millisecond
 		t2 := NewThread()
+		t2.Token = t.Dbms().Token()
+		block := args[1]
 		go func() {
 			defer t2.Close()
 			time.Sleep(ms)
