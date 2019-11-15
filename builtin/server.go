@@ -9,7 +9,10 @@ import (
 )
 
 var _ = builtin0("ServerIP()", func() Value {
-	host, _, _ := net.SplitHostPort(options.NetAddr)
+	host, port, _ := net.SplitHostPort(options.NetAddr)
+	if host == "" && port != "" {
+		host = "127.0.0.1"
+	}
 	return SuStr(host)
 })
 
