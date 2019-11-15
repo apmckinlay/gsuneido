@@ -538,28 +538,28 @@ var _ = builtin4("SendMessageListItem(hwnd, msg, wParam, lParam)",
 		return intRet(rtn)
 	})
 
-	func obToLVITEM(ob Value) (unsafe.Pointer, *LVITEM) {
-		var p unsafe.Pointer
-		var li *LVITEM
-		if !ob.Equal(Zero) {
-			p = heap.Alloc(nLVITEM)
-			li = (*LVITEM)(p)
-			*li = LVITEM{
-				mask:       getInt32(ob, "mask"),
-				iItem:      getInt32(ob, "iItem"),
-				iSubItem:   getInt32(ob, "iSubItem"),
-				state:      getInt32(ob, "state"),
-				stateMask:  getInt32(ob, "stateMask"),
-				pszText:    getStr(ob, "pszText"),
-				cchTextMax: getInt32(ob, "cchTextMax"),
-				iImage:     getInt32(ob, "iImage"),
-				lParam:     getHandle(ob, "lParam"),
-				iIndent:    getInt32(ob, "iIndent"),
-			}
+func obToLVITEM(ob Value) (unsafe.Pointer, *LVITEM) {
+	var p unsafe.Pointer
+	var li *LVITEM
+	if !ob.Equal(Zero) {
+		p = heap.Alloc(nLVITEM)
+		li = (*LVITEM)(p)
+		*li = LVITEM{
+			mask:       getInt32(ob, "mask"),
+			iItem:      getInt32(ob, "iItem"),
+			iSubItem:   getInt32(ob, "iSubItem"),
+			state:      getInt32(ob, "state"),
+			stateMask:  getInt32(ob, "stateMask"),
+			pszText:    getStr(ob, "pszText"),
+			cchTextMax: getInt32(ob, "cchTextMax"),
+			iImage:     getInt32(ob, "iImage"),
+			lParam:     getHandle(ob, "lParam"),
+			iIndent:    getInt32(ob, "iIndent"),
 		}
-		return p, li
 	}
-	
+	return p, li
+}
+
 const LVIF_TEXT = 1
 const LVM_ITEM = 4101
 
@@ -609,15 +609,17 @@ const nLVITEM = unsafe.Sizeof(LVITEM{})
 var _ = builtin4("SendMessageListColumnOrder(hwnd, msg, wParam, lParam)",
 	func(a, b, c, d Value) Value {
 		defer heap.FreeTo(heap.CurSize())
-		msg := ToInt(b)
 		n := ToInt(c)
 		p := heap.Alloc(uintptr(n) * int32Size)
 		colsob := d.Get(nil, SuStr("order"))
-		const LVM_SETCOLUMNORDERARRAY = 4154
-		if msg == LVM_SETCOLUMNORDERARRAY {
-			for i := 0; i < n; i++ {
+		if colsob == nil {
+			colsob = NewSuObject()
+			d.Put(nil, SuStr("order"), colsob)
+		}
+		for i := 0; i < n; i++ {
+			if x := colsob.Get(nil, IntVal(i)); x != nil {
 				*(*int32)(unsafe.Pointer(uintptr(p) + uintptr(i)*int32Size)) =
-					int32(ToInt(colsob.Get(nil, IntVal(i))))
+					int32(ToInt(x))
 			}
 		}
 		rtn := goc.Syscall4(sendMessage,
@@ -625,11 +627,9 @@ var _ = builtin4("SendMessageListColumnOrder(hwnd, msg, wParam, lParam)",
 			intArg(b),
 			intArg(c),
 			uintptr(p))
-		if msg != LVM_SETCOLUMNORDERARRAY {
-			for i := 0; i < n; i++ {
-				colsob.Put(nil, IntVal(i), IntVal(int(*(*int32)(
-					unsafe.Pointer(uintptr(p) + uintptr(i)*int32Size)))))
-			}
+		for i := 0; i < n; i++ {
+			colsob.Put(nil, IntVal(i), IntVal(int(*(*int32)(
+				unsafe.Pointer(uintptr(p) + uintptr(i)*int32Size)))))
 		}
 		return intRet(rtn)
 	})
