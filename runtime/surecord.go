@@ -34,8 +34,8 @@ type SuRecord struct {
 	tran *SuTran
 	// recadr is the record address in the database
 	recadr int
-	// unpacked is true if the row has been unpacked into ob
-	unpacked bool
+	// userow is true when we want to use data in row as well as ob
+	userow bool
 }
 
 //go:generate genny -in ../../GoTemplates/list/list.go -out alist.go -pkg runtime gen "V=activeObserver"
@@ -63,7 +63,7 @@ func SuRecordFromRow(row Row, hdr *Header, tran *SuTran) *SuRecord {
 	}
 	dependents := deps(row, hdr)
 	return &SuRecord{row: row, hdr: hdr, tran: tran, recadr: row[0].Adr,
-		ob: SuObject{defval: EmptyStr}, dependents: dependents}
+		ob: SuObject{defval: EmptyStr}, dependents: dependents, userow: true}
 }
 
 func deps(row Row, hdr *Header) map[string][]string {
@@ -92,7 +92,7 @@ func (r *SuRecord) slice(n int) *SuRecord {
 		ob:         r.ob.slice(n),
 		row:        r.row,
 		hdr:        r.hdr,
-		unpacked:   r.unpacked,
+		userow:     r.userow,
 		dependents: r.copyDeps(),
 		invalid:    r.copyInvalid()}
 }
@@ -164,7 +164,7 @@ func (r *SuRecord) ToContainer() (Container, bool) {
 var _ Container = (*SuRecord)(nil)
 
 func (r *SuRecord) ToObject() *SuObject {
-	if r.row != nil && !r.unpacked {
+	if r.userow {
 		for ri, rf := range r.hdr.Fields {
 			for fi, f := range rf {
 				if f != "-" && !strings.HasSuffix(f, "_deps") {
@@ -177,8 +177,8 @@ func (r *SuRecord) ToObject() *SuObject {
 				}
 			}
 		}
-		r.unpacked = true
-		// keep row and hdr for ToRecord
+		r.userow = false
+		// keep row for ToRecord
 	}
 	return &r.ob
 }
@@ -195,7 +195,7 @@ func (r *SuRecord) HasKey(key Value) bool {
 	if r.ob.HasKey(key) {
 		return true
 	}
-	if !r.unpacked && r.row != nil {
+	if r.userow {
 		if k, ok := key.ToStr(); ok {
 			return r.row.GetRaw(r.hdr, k) != ""
 		}
@@ -240,6 +240,7 @@ func (r *SuRecord) delete(t *Thread, key Value, fn func(*Thread, Value) bool) bo
 	// have to remove row
 	// because we assume if field is missing from object we can use row
 	r.row = nil
+	r.userow = false
 	if fn(t, key) {
 		if keystr, ok := key.ToStr(); ok {
 			r.invalidateDependents(keystr)
@@ -259,7 +260,7 @@ func (r *SuRecord) ListGet(i int) Value {
 }
 
 func (r *SuRecord) NamedSize() int {
-	if r.row != nil && !r.unpacked {
+	if r.userow {
 		return r.rowSize()
 	}
 	return r.ob.NamedSize()
@@ -401,7 +402,7 @@ func (r *SuRecord) GetIfPresent(t *Thread, keyval Value) Value {
 	result := r.ob.GetIfPresent(t, keyval)
 	if key, ok := keyval.ToStr(); ok {
 		// only do record stuff when key is a string
-		if result == nil && !r.unpacked && r.row != nil {
+		if result == nil && r.userow {
 			raw := r.row.GetRaw(r.hdr, key)
 			if raw != "" {
 				val := Unpack(raw)
