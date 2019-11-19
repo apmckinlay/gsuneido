@@ -92,7 +92,7 @@ func (r *SuRecord) slice(n int) *SuRecord {
 		ob:         r.ob.slice(n),
 		row:        r.row,
 		hdr:        r.hdr,
-		unpacked:	r.unpacked,
+		unpacked:   r.unpacked,
 		dependents: r.copyDeps(),
 		invalid:    r.copyInvalid()}
 }
@@ -195,7 +195,7 @@ func (r *SuRecord) HasKey(key Value) bool {
 	if r.ob.HasKey(key) {
 		return true
 	}
-	if r.row != nil {
+	if !r.unpacked && r.row != nil {
 		if k, ok := key.ToStr(); ok {
 			return r.row.GetRaw(r.hdr, k) != ""
 		}
@@ -221,26 +221,26 @@ func (r *SuRecord) IsReadOnly() bool {
 }
 
 func (r *SuRecord) IsNew() bool {
-	return r.row == nil
+	return r.recadr == 0
 }
 
 func (r *SuRecord) Delete(t *Thread, key Value) bool {
-	r.ob.mustBeMutable()
-	r.ToObject()
-	if r.ob.Delete(t, key) {
-		if keystr, ok := key.ToStr(); ok {
-			r.invalidateDependents(keystr)
-			r.callObservers(t, keystr)
-		}
-		return true
-	}
-	return false
+	return r.delete(t, key, r.ob.Delete)
 }
 
 func (r *SuRecord) Erase(t *Thread, key Value) bool {
+	return r.delete(t, key, r.ob.Erase)
+}
+
+func (r *SuRecord) delete(t *Thread, key Value, fn func(*Thread, Value) bool) bool {
 	r.ob.mustBeMutable()
+	// have to unpack
+	// because we have no way to delete from row
 	r.ToObject()
-	if r.ob.Erase(t, key) {
+	// have to remove row
+	// because we assume if field is missing from object we can use row
+	r.row = nil
+	if fn(t, key) {
 		if keystr, ok := key.ToStr(); ok {
 			r.invalidateDependents(keystr)
 			r.callObservers(t, keystr)
@@ -401,7 +401,7 @@ func (r *SuRecord) GetIfPresent(t *Thread, keyval Value) Value {
 	result := r.ob.GetIfPresent(t, keyval)
 	if key, ok := keyval.ToStr(); ok {
 		// only do record stuff when key is a string
-		if result == nil && r.row != nil {
+		if result == nil && !r.unpacked && r.row != nil {
 			raw := r.row.GetRaw(r.hdr, key)
 			if raw != "" {
 				val := Unpack(raw)
@@ -694,14 +694,19 @@ func (r *SuRecord) DbDelete() {
 	r.tran.Erase(r.recadr)
 }
 
-func (r *SuRecord) DbUpdate(t *Thread, ob Container) {
+func (r *SuRecord) DbUpdate(t *Thread, ob Value) {
 	r.ckModify("Update")
-	var rec = ob.ToRecord(t, r.hdr)
+	var rec Record
+	if ob == False {
+		rec = r.ToRecord(t, r.hdr)
+	} else {
+		rec = ToContainer(ob).ToRecord(t, r.hdr)
+	}
 	r.recadr = r.tran.Update(r.recadr, rec)
 }
 
 func (r *SuRecord) ckModify(op string) {
-	if r.row == nil {
+	if r.recadr == 0 {
 		panic("record." + op + ": not a database record")
 	}
 	if r.tran == nil {

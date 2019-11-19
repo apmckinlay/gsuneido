@@ -68,12 +68,7 @@ func init() {
 		}),
 		"Update": method("(record = false)",
 			func(t *Thread, this Value, args []Value) Value {
-				r := this.(*SuRecord)
-				var ob Container = r
-				if args[0] != False {
-					ob = ToContainer(args[0])
-				}
-				r.DbUpdate(t, ob)
+				this.(*SuRecord).DbUpdate(t, args[0])
 				return nil
 			}),
 	}
