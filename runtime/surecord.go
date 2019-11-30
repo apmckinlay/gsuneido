@@ -656,22 +656,24 @@ func (*SuRecord) Lookup(t *Thread, method string) Callable {
 
 // Packable ---------------------------------------------------------
 
+//TODO use row
+
 var _ Packable = (*SuRecord)(nil)
 
 func (r *SuRecord) PackSize(clock *int32) int {
-	return r.ob.PackSize(clock)
+	return r.ToObject().PackSize(clock)
 }
 
 func (r *SuRecord) PackSize2(clock int32, stack packStack) int {
-	return r.ob.PackSize2(clock, stack)
+	return r.ToObject().PackSize2(clock, stack)
 }
 
 func (r *SuRecord) PackSize3() int {
-	return r.ob.PackSize3()
+	return r.ToObject().PackSize3()
 }
 
 func (r *SuRecord) Pack(clock int32, buf *pack.Encoder) {
-	r.ob.pack(clock, buf, PackRecord)
+	r.ToObject().pack(clock, buf, PackRecord)
 }
 
 func UnpackRecord(s string) *SuRecord {
