@@ -636,6 +636,9 @@ func (r *SuRecord) ToRecord(t *Thread, hdr *Header) Record {
 		if f == "" {
 			rb.AddRaw("")
 		} else if strings.HasSuffix(f, "_TS") { // also done in SuObject ToRecord
+			if tsField != "" {
+				panic("multiple _TS fields not supported")
+			}
 			tsField = f
 			ts = t.Dbms().Timestamp()
 			rb.Add(ts)
