@@ -402,7 +402,7 @@ func (r *SuRecord) GetIfPresent(t *Thread, keyval Value) Value {
 	result := r.ob.GetIfPresent(t, keyval)
 	if key, ok := keyval.ToStr(); ok {
 		// only do record stuff when key is a string
-		if result == nil && r.userow {
+		if result == nil && !r.invalid[key] && r.userow {
 			raw := r.row.GetRaw(r.hdr, key)
 			if raw != "" {
 				val := Unpack(raw)
@@ -432,7 +432,7 @@ func (r *SuRecord) GetIfPresent(t *Thread, keyval Value) Value {
 // It does not add dependencies or handle special fields (e.g. _lower!)
 func (r *SuRecord) GetPacked(t *Thread, key string) string {
 	result := r.ob.GetIfPresent(t, SuStr(key))
-	if result == nil && r.row != nil {
+	if result == nil && !r.invalid[key] && r.row != nil { // even if !r.userow
 		if s := r.row.GetRaw(r.hdr, key); s != "" {
 			return s
 		}
