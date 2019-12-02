@@ -463,8 +463,8 @@ func (r *SuRecord) addDependent(from, to string) {
 
 func (r *SuRecord) getSpecial(key string) Value {
 	if strings.HasSuffix(key, "_lower!") {
-		key = key[0 : len(key)-7]
-		if val := r.ob.GetIfPresent(nil, SuStr(key)); val != nil {
+		basekey := key[0 : len(key)-7]
+		if val := r.GetIfPresent(nil, SuStr(basekey)); val != nil {
 			if vs, ok := val.ToStr(); ok {
 				val = SuStr(strings.ToLower(vs))
 			}
