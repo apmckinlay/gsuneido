@@ -458,7 +458,9 @@ func (r *SuRecord) addDependent(from, to string) {
 	if r.dependents == nil {
 		r.dependents = make(map[string][]string)
 	}
-	r.dependents[to] = append(r.dependents[to], from)
+	if !str.ListHas(r.dependents[to], from) {
+		r.dependents[to] = append(r.dependents[to], from)
+	}
 }
 
 func (r *SuRecord) getSpecial(key string) Value {
