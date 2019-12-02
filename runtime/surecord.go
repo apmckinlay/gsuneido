@@ -306,6 +306,9 @@ func (r *SuRecord) Put(t *Thread, keyval Value, val Value) {
 	if key, ok := keyval.ToStr(); ok {
 		delete(r.invalid, key)
 		old := r.ob.GetIfPresent(t, keyval)
+		if old == nil && r.userow {
+			old = r.getFromRow(key)
+		}
 		r.ob.Set(keyval, val)
 		if old != nil && val.Equal(old) {
 			return
@@ -402,17 +405,14 @@ func (r *SuRecord) GetIfPresent(t *Thread, keyval Value) Value {
 	result := r.ob.GetIfPresent(t, keyval)
 	if key, ok := keyval.ToStr(); ok {
 		// only do record stuff when key is a string
-		if result == nil && !r.invalid[key] && r.userow {
-			raw := r.row.GetRaw(r.hdr, key)
-			if raw != "" {
-				val := Unpack(raw)
-				r.PreSet(keyval, val) // cache unpacked value
-				return val
-			}
-		}
 		if t != nil {
 			if ar := t.rules.top(); ar.rec == r { // identity (not Equal)
 				r.addDependent(ar.key, key)
+			}
+		}
+		if result == nil && !r.invalid[key] && r.userow {
+			if val := r.getFromRow(key); val != nil {
+				return val
 			}
 		}
 		if result == nil || r.invalid[key] {
@@ -426,6 +426,14 @@ func (r *SuRecord) GetIfPresent(t *Thread, keyval Value) Value {
 	return result
 }
 
+func (r *SuRecord) getFromRow(key string) Value {
+	if raw := r.row.GetRaw(r.hdr, key); raw != "" {
+		val := Unpack(raw)
+		r.PreSet(SuStr(key), val) // cache unpacked value
+		return val
+	}
+	return nil
+}
 // GetPacked is used by ToRecord to build a Record for the database.
 // It is like Get except it returns the value packed,
 // using the already packed value from the row when possible.
