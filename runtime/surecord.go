@@ -238,9 +238,8 @@ func (r *SuRecord) delete(t *Thread, key Value, fn func(*Thread, Value) bool) bo
 	// because we have no way to delete from row
 	r.ToObject()
 	// have to remove row
-	// because we assume if field is missing from object we can use row
+	// because we assume if field is missing from object we can use row data
 	r.row = nil
-	r.userow = false
 	if fn(t, key) {
 		if keystr, ok := key.ToStr(); ok {
 			r.invalidateDependents(keystr)
