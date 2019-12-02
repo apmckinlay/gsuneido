@@ -209,7 +209,7 @@ func (r *SuRecord) Set(key Value, val Value) {
 
 func (r *SuRecord) Clear() {
 	r.ob.mustBeMutable()
-	*r = SuRecord{}
+	*r = *NewSuRecord()
 }
 
 func (r *SuRecord) SetReadOnly() {
