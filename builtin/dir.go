@@ -3,7 +3,7 @@ package builtin
 import (
 	"log"
 	"os"
-	"path"
+	"path/filepath"
 	"strings"
 
 	. "github.com/apmckinlay/gsuneido/runtime"
@@ -37,7 +37,7 @@ var _ = builtin("Dir(path='*', files=false, details=false, block=false)",
 var name = SuStr("name")
 
 func forEachDir(dir string, justfiles, details bool, fn func(entry Value)) {
-	dir, pat := path.Split(dir)
+	dir, pat := filepath.Split(dir)
 	if dir == "" {
 		dir = "."
 	}
@@ -53,14 +53,16 @@ func forEachDir(dir string, justfiles, details bool, fn func(entry Value)) {
 	f, err := os.Open(dir)
 	if err != nil {
 		// should panic, but cSuneido doesn't
-		log.Println("Dir:", err)
+		if !strings.Contains(err.Error(), "The system cannot find the file specified") {
+			log.Println("Dir:", err)
+		}
 		return
 	}
 	defer f.Close()
 	list, err := f.Readdir(100)
 	for _, info := range list {
 		name := info.Name()
-		match, _ := path.Match(pat, name)
+		match, _ := filepath.Match(pat, name)
 		if match && (!justfiles || !info.IsDir()) {
 			suffix := ""
 			if info.IsDir() {
