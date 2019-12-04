@@ -2,19 +2,19 @@
 BUILT=$(shell date "+%b %e %Y %X")
 
 build:
-	@go build -v -ldflags "-X 'main.builtDate=${BUILT}' -H windowsgui"
+	go build -v -ldflags "-X 'main.builtDate=${BUILT}' -H windowsgui"
 
 console:
-	@go build -v -ldflags "-X 'main.builtDate=${BUILT}'"
+	go build -v -ldflags "-X 'main.builtDate=${BUILT}'"
 
 test:
 	go test -count=1 ./...
 
 repl: build
-	@cmd /c start/w ./gsuneido -repl
+	cmd /c start/w ./gsuneido -repl
 
 client: build
-	@./gsuneido -c t@../tok
+	gsuneido -c t@../tok
 
 generate:
 	go generate ./...
