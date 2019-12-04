@@ -56,14 +56,7 @@ func SuRecordFromObject(ob *SuObject) *SuRecord {
 }
 
 func SuRecordFromRow(row Row, hdr *Header, tran *SuTran) *SuRecord {
-	if hdr.Map == nil { //TODO concurrency
-		hdr.Map = make(map[string]RowAt, len(hdr.Fields))
-		for ri, r := range hdr.Fields {
-			for fi, f := range r {
-				hdr.Map[f] = RowAt{int16(ri), int16(fi)}
-			}
-		}
-	}
+	hdr.EnsureMap()
 	dependents := deps(row, hdr)
 	return &SuRecord{row: row, hdr: hdr, tran: tran, recadr: row[0].Adr,
 		ob: SuObject{defval: EmptyStr}, dependents: dependents, userow: true}

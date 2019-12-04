@@ -39,6 +39,17 @@ type Header struct {
 	Map     map[string]RowAt
 }
 
+func (hdr *Header) EnsureMap() {
+	if hdr.Map == nil { //TODO concurrency
+		hdr.Map = make(map[string]RowAt, len(hdr.Fields))
+		for ri, r := range hdr.Fields {
+			for fi, f := range r {
+				hdr.Map[f] = RowAt{int16(ri), int16(fi)}
+			}
+		}
+	}
+}
+
 // Rules is a list of the rule columns i.e. columns that are not fields
 func (hdr *Header) Rules() []string {
 	rules := []string{}
