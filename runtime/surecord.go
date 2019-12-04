@@ -410,9 +410,9 @@ func (r *SuRecord) GetIfPresent(t *Thread, keyval Value) Value {
 				r.addDependent(ar.key, key)
 			}
 		}
-		if result == nil && !r.invalid[key] && r.userow {
-			if val := r.getFromRow(key); val != nil {
-				return val
+		if result == nil && r.userow {
+			if x := r.getFromRow(key); x != nil {
+				result = x
 			}
 		}
 		if result == nil || r.invalid[key] {
@@ -451,9 +451,11 @@ func (r *SuRecord) GetDefault(t *Thread, keyval Value) Value {
 // It does not add dependencies or handle special fields (e.g. _lower!)
 func (r *SuRecord) GetPacked(t *Thread, key string) string {
 	result := r.ob.GetIfPresent(t, SuStr(key))
-	if result == nil && !r.invalid[key] && r.row != nil { // even if !r.userow
+	packed := ""
+	if result == nil && r.row != nil { // even if !r.userow
 		if s := r.row.GetRaw(r.hdr, key); s != "" {
-			return s
+			packed = s
+			result = True
 		}
 	}
 	if result == nil || r.invalid[key] {
@@ -466,6 +468,9 @@ func (r *SuRecord) GetPacked(t *Thread, key string) string {
 		if result == nil {
 			return ""
 		}
+	}
+	if packed != "" {
+		return packed
 	}
 	return PackValue(result)
 }
@@ -628,8 +633,8 @@ func (r *SuRecord) ToRecord(t *Thread, hdr *Header) Record {
 
 	// access all the fields to ensure dependencies are created
 	for _, f := range fields {
-		//TODO optimize this - don't force unpack/pack on every field
-		r.Get(t, SuStr(f))
+		// use GetPacked so we don't force unpack on every field
+		r.GetPacked(t, f)
 	}
 
 	// invert stored dependencies
@@ -752,3 +757,46 @@ func (r *SuRecord) trace(args ...interface{}) {
 	s := fmt.Sprintf("RECORDS %p ", r) + fmt.Sprintln(args...)
 	f.WriteString(s)
 }
+
+// ToRow is only for debugging purposes
+// func (r *SuRecord) ToRow() *SuRecord {
+// 	var cols []string
+// 	rb := RecordBuilder{}
+// 	iter := r.Iter2(false /*list*/, true /*named*/)
+// 	for {
+// 		k, v := iter()
+// 		if v == nil {
+// 			break
+// 		}
+// 		if f, ok := k.ToStr(); ok {
+// 			if v != EmptyStr {
+// 				if p, ok := tryPack(v); ok {
+// 					cols = append(cols, f)
+// 					rb.AddRaw(p)
+// 				}
+// 			}
+// 		}
+// 	}
+// 	for _, f := range cols {
+// 		r.ob.Delete(nil, SuStr(f))
+// 	}
+
+// 	hdr := &Header{Columns: cols, Fields: [][]string{cols}}
+// 	hdr.EnsureMap()
+
+// 	rec := DbRec{Record: rb.Build()}
+
+// 	r.hdr = hdr
+// 	r.row = []DbRec{rec}
+// 	r.userow = true
+// 	return r
+// }
+
+// func tryPack(v Value) (packed string, ok bool) {
+// 	defer func() {
+// 		if e := recover(); e != nil {
+// 			ok = false
+// 		}
+// 	}()
+// 	return PackValue(v), true
+// }
