@@ -1,8 +1,11 @@
 package runtime
 
 import (
+	"fmt"
+	"os"
 	"strings"
 
+	"github.com/apmckinlay/gsuneido/options"
 	"github.com/apmckinlay/gsuneido/runtime/types"
 	"github.com/apmckinlay/gsuneido/util/pack"
 	"github.com/apmckinlay/gsuneido/util/str"
@@ -302,6 +305,7 @@ func (r *SuRecord) Iter() Iter {
 // ------------------------------------------------------------------
 
 func (r *SuRecord) Put(t *Thread, keyval Value, val Value) {
+	r.trace("Put", keyval, "=", val)
 	if key, ok := keyval.ToStr(); ok {
 		delete(r.invalid, key)
 		old := r.ob.GetIfPresent(t, keyval)
@@ -320,6 +324,7 @@ func (r *SuRecord) Put(t *Thread, keyval Value, val Value) {
 }
 
 func (r *SuRecord) invalidateDependents(key string) {
+	r.trace("invalidate dependents of", key)
 	for _, d := range r.dependents[key] {
 		r.invalidate(d)
 	}
@@ -338,6 +343,7 @@ func (r *SuRecord) invalidate(key string) {
 	if r.invalid == nil {
 		r.invalid = make(map[string]bool)
 	}
+	r.trace("invalidate", key)
 	r.invalid[key] = true
 	r.invalidateDependents(key)
 }
@@ -392,6 +398,7 @@ func (a activeObserver) Equal(other activeObserver) bool {
 
 // Get returns the value associated with a key, or defval if not found
 func (r *SuRecord) Get(t *Thread, key Value) Value {
+	r.trace("Get", key)
 	if val := r.GetIfPresent(t, key); val != nil {
 		return val
 	}
@@ -477,6 +484,7 @@ func (r *SuRecord) addDependent(from, to string) {
 		r.dependents = make(map[string][]string)
 	}
 	if !str.ListHas(r.dependents[to], from) {
+		r.trace("add dependency for", from, "uses", to)
 		r.dependents[to] = append(r.dependents[to], from)
 	}
 }
@@ -497,6 +505,7 @@ func (r *SuRecord) getSpecial(key string) Value {
 func (r *SuRecord) callRule(t *Thread, key string) Value {
 	delete(r.invalid, key)
 	if rule := r.getRule(t, key); rule != nil && !t.rules.has(r, key) {
+		r.trace("call rule", key)
 		val := r.catchRule(t, rule, key)
 		if val != nil && !r.ob.IsReadOnly() {
 			r.PreSet(SuStr(key), val)
@@ -738,4 +747,14 @@ func (r *SuRecord) ckModify(op string) {
 	if r.tran == nil {
 		panic("record." + op + ": no Transaction")
 	}
+}
+
+func (r *SuRecord) trace(args ...interface{}) {
+	if options.Trace&options.TraceRecords == 0 {
+		return
+	}
+	f, _ := os.OpenFile("trace.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0644)
+	defer f.Close()
+	s := fmt.Sprintf("RECORDS %p ", r) + fmt.Sprintln(args...)
+	f.WriteString(s)
 }

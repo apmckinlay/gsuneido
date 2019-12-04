@@ -20,3 +20,30 @@ var (
 	TimersDisabled        = false
 	ClearCallbackDisabled = false
 )
+
+var Trace = 0
+
+const (
+	TraceFunctions = 1 << iota
+	TraceStatements
+	TraceOpcodes
+	TraceRecords
+	TraceLibraries
+	TraceSlowQuery
+	TraceQuery
+	TraceSymbol
+	TraceAllIndex
+	TraceTable
+	TraceSelect
+	TraceTempIndex
+	TraceQueryOpt
+
+	TraceConsole
+	TraceLogFile
+
+	TraceClientServer
+	TraceExceptions
+	TraceGlobals
+
+	TraceJoinOpt
+)
