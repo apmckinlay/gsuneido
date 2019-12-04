@@ -85,7 +85,7 @@ func init() {
 		"GetDefault": method("(member, block)",
 			func(t *Thread, this Value, args []Value) Value {
 				ob := ToContainer(this)
-				if x := ob.GetIfPresent(t, args[0]); x != nil {
+				if x := ob.GetDefault(t, args[0]); x != nil {
 					return x
 				}
 				if args[1].Type() == types.Block {

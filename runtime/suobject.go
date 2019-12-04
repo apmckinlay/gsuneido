@@ -88,6 +88,7 @@ func (ob *SuObject) Get(t *Thread, key Value) Value {
 	return ob.defaultValue(key)
 }
 
+// defaultValue returns ob.defval, copying & saving if it's a Containter
 func (ob *SuObject) defaultValue(key Value) Value {
 	if ob.Lock() {
 		defer ob.lock.Unlock()
@@ -102,6 +103,10 @@ func (ob *SuObject) defaultValue(key Value) Value {
 		}
 	}
 	return ob.defval
+}
+
+func (ob *SuObject) GetDefault(t *Thread, key Value) Value {
+	return ob.GetIfPresent(t, key)
 }
 
 func (ob *SuObject) GetIfPresent(_ *Thread, key Value) Value {

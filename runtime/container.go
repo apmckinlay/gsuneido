@@ -13,6 +13,7 @@ type Container interface {
 	Insert(at int, val Value)
 	Erase(t *Thread, key Value) bool
 	Delete(t *Thread, key Value) bool
+	GetDefault(t *Thread, key Value) Value
 	GetIfPresent(t *Thread, key Value) Value
 	IsReadOnly() bool
 	SetReadOnly()
