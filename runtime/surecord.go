@@ -126,7 +126,7 @@ func (r *SuRecord) String() string {
 }
 
 func (r *SuRecord) Show() string {
-	s := r.ob.Show()
+	s := r.ToObject().Show()
 	return "[" + s[2:len(s)-1] + "]"
 }
 
@@ -143,11 +143,11 @@ func (r *SuRecord) Equal(other interface{}) bool {
 }
 
 func (r *SuRecord) Hash() uint32 {
-	return r.ob.Hash()
+	return r.ToObject().Hash()
 }
 
 func (r *SuRecord) Hash2() uint32 {
-	return r.ob.Hash2()
+	return r.ToObject().Hash2()
 }
 
 func (r *SuRecord) RangeTo(from int, to int) Value {
@@ -298,6 +298,7 @@ func (r *SuRecord) Slice(n int) Container {
 }
 
 func (r *SuRecord) Iter() Iter {
+	r.ToObject()
 	return &obIter{ob: &r.ob, iter: r.ob.Iter2(true, true),
 		result: func(k, v Value) Value { return v }}
 }
@@ -318,7 +319,7 @@ func (r *SuRecord) Put(t *Thread, keyval Value, val Value) {
 		}
 		r.invalidateDependents(key)
 		r.callObservers(t, key)
-	} else {
+	} else { // key not a string
 		r.ob.Set(keyval, val)
 	}
 }
