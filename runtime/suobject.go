@@ -560,6 +560,26 @@ func (ob *SuObject) Slice(n int) Container {
 	return &ob2
 }
 
+// Find returns the key of the first occurence of the value.
+// Lock to avoid object-modified-during-iteration.
+func (ob *SuObject) Find(val Value) Value {
+	if ob.Lock() {
+		defer ob.lock.Unlock()
+	}
+	for i,v := range ob.list {
+		if v.Equal(val) {
+			return IntVal(i)
+		}
+	}
+	named := ob.named.Iter()
+	for k,v := named(); k != nil; k,v = named() {
+		if v.(Value).Equal(val) {
+			return k.(Value)
+		}
+	}
+	return False
+}
+
 // ArgsIter is similar to Iter2 but it returns a nil key for list elements
 func (ob *SuObject) ArgsIter() func() (Value, Value) {
 	version := atomic.LoadInt32(&ob.version)

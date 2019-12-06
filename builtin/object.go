@@ -79,8 +79,7 @@ func init() {
 				return ob
 			}),
 		"Find": method1("(value)", func(this Value, val Value) Value {
-			k, _ := ContainerFind(ToContainer(this), val)
-			return k
+			return ToContainer(this).ToObject().Find(val)
 		}),
 		"GetDefault": method("(member, block)",
 			func(t *Thread, this Value, args []Value) Value {

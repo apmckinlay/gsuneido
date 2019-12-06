@@ -24,18 +24,6 @@ type Container interface {
 	ToRecord(t *Thread, hdr *Header) Record
 }
 
-// ContainerFind returns the key of the first occurrence of the value and true
-// or False,false if not found. The order of named members is not defined.
-func ContainerFind(ob Container, val Value) (Value, bool) {
-	iter := ob.Iter2(true, true)
-	for k, v := iter(); v != nil; k, v = iter() {
-		if v.Equal(val) {
-			return k, true
-		}
-	}
-	return False, false
-}
-
 // iterators
 
 func IterValues(ob Container, list, named bool) Iter {

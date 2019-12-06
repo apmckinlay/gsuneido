@@ -213,7 +213,7 @@ func (dc *dbmsClient) Unuse(lib string) bool {
 }
 
 func (dc *dbmsClient) Use(lib string) bool {
-	if _, ok := ContainerFind(dc.Libraries(), SuStr(lib)); ok {
+	if False != dc.Libraries().Find(SuStr(lib)) {
 		return false
 	}
 	panic("can't Use('" + lib + "')\n" +
