@@ -346,57 +346,97 @@ func (ob *SuObject) migrate() {
 	}
 }
 
+type vstack []*SuObject
+
+func (vs *vstack) Push(ob *SuObject) bool {
+	for _, v := range *vs {
+		if v == ob { // deliberately == not Equal
+			return false
+		}
+	}
+	*vs = append(*vs, ob) // push
+	return true
+}
+
 func (ob *SuObject) String() string {
+	buf := strings.Builder{}
+	ob.rstring(&buf, nil)
+	return buf.String()
+}
+
+func (ob *SuObject) rstring(buf *strings.Builder, inProgress vstack) {
+	ob.rstring2(buf, "#(", ")", inProgress)
+}
+
+type recursable interface {
+	rstring(buf *strings.Builder, inProgress vstack)
+}
+
+var _ recursable = (*SuObject)(nil)
+
+func (ob *SuObject) rstring2(buf *strings.Builder, before, after string, inProgress vstack) {
+	if !inProgress.Push(ob) {
+		buf.WriteString("...")
+		return
+	}
+	// no pop necessary because we pass vstack slice by value
+	buf.WriteString(before)
+	// ok to lock recursively because of inProgress check
 	if ob.Lock() {
 		defer ob.lock.Unlock()
 	}
-	buf, sep := ob.vecstr()
+	sep := ob.vecstr(buf, inProgress)
 	iter := ob.named.Iter()
 	for {
 		k, v := iter()
 		if k == nil {
 			break
 		}
-		sep = entstr(buf, k, v, sep)
+		sep = entstr(buf, k, v, sep, inProgress)
 	}
-	buf.WriteString(")")
-	return buf.String()
+	buf.WriteString(after)
 }
 
 const maxbuf = 16 * 1024
 
-func (ob *SuObject) vecstr() (*strings.Builder, string) {
-	buf := strings.Builder{}
+func (ob *SuObject) vecstr(buf *strings.Builder, inProgress vstack) string {
 	sep := ""
-	buf.WriteString("#(")
 	for _, v := range ob.list {
 		if buf.Len() > maxbuf {
 			panic("buffer overflow displaying object")
 		}
 		buf.WriteString(sep)
 		sep = ", "
-		buf.WriteString(v.String())
+		valstr(buf, v, inProgress)
 	}
-	return &buf, sep
+	return sep
 }
 
-func entstr(buf *strings.Builder, k interface{}, v interface{}, sep string) string {
-	if buf.Len() > maxbuf {
-		panic("buffer overflow displaying object")
-	}
+func entstr(buf *strings.Builder, k interface{}, v interface{}, sep string, inProgress vstack) string {
 	buf.WriteString(sep)
 	sep = ", "
 	if ks, ok := k.(SuStr); ok && unquoted(string(ks)) {
 		buf.WriteString(string(ks))
 	} else {
-		buf.WriteString(k.(Value).String())
+		valstr(buf, k.(Value), inProgress)
 	}
 	buf.WriteString(":")
 	if v != True {
 		buf.WriteString(" ")
-		buf.WriteString(v.(Value).String())
+		valstr(buf, v.(Value), inProgress)
 	}
 	return sep
+}
+
+func valstr(buf *strings.Builder, v Value, inProgress vstack) {
+	if buf.Len() > maxbuf {
+		panic("buffer overflow displaying object")
+	}
+	if r, ok := v.(recursable); ok {
+		r.rstring(buf, inProgress)
+	} else {
+		buf.WriteString(v.String())
+	}
 }
 
 func unquoted(s string) bool {
@@ -405,10 +445,15 @@ func unquoted(s string) bool {
 }
 
 func (ob *SuObject) Show() string {
+	return ob.show("#(", ")", nil)
+}
+func (ob *SuObject) show(before, after string, inProgress vstack) string {
+	buf := &strings.Builder{}
+	buf.WriteString(before)
 	if ob.Lock() {
 		defer ob.lock.Unlock()
 	}
-	buf, sep := ob.vecstr()
+	sep := ob.vecstr(buf, inProgress)
 	mems := []Value{}
 	iter := ob.named.Iter()
 	for {
@@ -422,9 +467,9 @@ func (ob *SuObject) Show() string {
 		func(i, j int) bool { return mems[i].Compare(mems[j]) < 0 })
 	for _, k := range mems {
 		v := ob.named.Get(k)
-		sep = entstr(buf, k, v, sep)
+		sep = entstr(buf, k, v, sep, inProgress)
 	}
-	buf.WriteString(")")
+	buf.WriteString(after)
 	return buf.String()
 }
 
@@ -566,13 +611,13 @@ func (ob *SuObject) Find(val Value) Value {
 	if ob.Lock() {
 		defer ob.lock.Unlock()
 	}
-	for i,v := range ob.list {
+	for i, v := range ob.list {
 		if v.Equal(val) {
 			return IntVal(i)
 		}
 	}
 	named := ob.named.Iter()
-	for k,v := named(); k != nil; k,v = named() {
+	for k, v := named(); k != nil; k, v = named() {
 		if v.(Value).Equal(val) {
 			return k.(Value)
 		}

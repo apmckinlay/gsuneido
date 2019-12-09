@@ -114,13 +114,19 @@ func (*SuRecord) Type() types.Type {
 }
 
 func (r *SuRecord) String() string {
-	s := r.ToObject().String()
-	return "[" + s[2:len(s)-1] + "]"
+	buf := strings.Builder{}
+	r.rstring(&buf, nil)
+	return buf.String()
 }
 
+func (r *SuRecord) rstring(buf *strings.Builder, inProgress vstack) {
+	r.ToObject().rstring2(buf, "[", "]", inProgress)
+}
+
+var _ recursable = (*SuRecord)(nil)
+
 func (r *SuRecord) Show() string {
-	s := r.ToObject().Show()
-	return "[" + s[2:len(s)-1] + "]"
+	return r.ToObject().show("[", "]", nil)
 }
 
 func (*SuRecord) Call(*Thread, Value, *ArgSpec) Value {
