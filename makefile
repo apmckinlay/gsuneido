@@ -13,8 +13,9 @@ test:
 repl: build
 	cmd /c start/w ./gsuneido -repl
 
+# need the ./ so sh won't find an old one on the path
 client: build
-	gsuneido -c t@../tok
+	./gsuneido.exe -c t@../tok
 
 generate:
 	go generate ./...
