@@ -1,6 +1,6 @@
 gsuneido
 ========
-In progress Go implementation of Suneido (http://suneido.com)
+Go implementation of Suneido (http://suneido.com). Client portion "complete" but not completely debugged.
 
 [![GoDoc](https://godoc.org/github.com/apmckinlay/gsuneido?status.png)](https://godoc.org/github.com/apmckinlay/gsuneido)
 
