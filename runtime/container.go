@@ -9,7 +9,7 @@ type Container interface {
 	NamedSize() int
 	Copy() Container
 	Slice(n int) Container
-	Clear()
+	DeleteAll()
 	Insert(at int, val Value)
 	Erase(t *Thread, key Value) bool
 	Delete(t *Thread, key Value) bool

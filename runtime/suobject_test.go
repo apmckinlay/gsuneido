@@ -94,7 +94,7 @@ func TestSuObjectDelete(t *testing.T) {
 	ob.Delete(nil, SuInt(2))
 	Assert(t).That(ob.Show(), Equals("#(1, 3, bar: 9)"))
 
-	ob.Clear()
+	ob.DeleteAll()
 	Assert(t).That(ob.Show(), Equals("#()"))
 	Assert(t).That(ob.Size(), Equals(0))
 }

@@ -44,10 +44,6 @@ func init() {
 				}
 				return IntVal(ob.BinarySearch2(t, args[0], args[1]))
 			}),
-		"Clear": method0(func(this Value) Value {
-			ToContainer(this).Clear()
-			return nil
-		}),
 		"Copy": method0(func(this Value) Value {
 			return ToContainer(this).Copy()
 		}),
@@ -171,7 +167,7 @@ func init() {
 func obDelete(t *Thread, as *ArgSpec, this Value, args []Value) Value {
 	ob := ToContainer(this)
 	if all := getNamed(as, args, SuStr("all")); all == True {
-		ob.Clear()
+		ob.DeleteAll()
 	} else {
 		iter := NewArgsIter(as, args)
 		for {

@@ -214,6 +214,12 @@ func (r *SuRecord) Clear() {
 	*r = *NewSuRecord()
 }
 
+func (r *SuRecord) DeleteAll() {
+	r.ob.DeleteAll()
+	r.row = nil
+	r.userow = false
+}
+
 func (r *SuRecord) SetReadOnly() {
 	r.ob.SetReadOnly()
 }
@@ -440,6 +446,7 @@ func (r *SuRecord) getFromRow(key string) Value {
 	}
 	return nil
 }
+
 // GetPacked is used by ToRecord to build a Record for the database.
 // It is like Get except it returns the value packed,
 // using the already packed value from the row when possible.

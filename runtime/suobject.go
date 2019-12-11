@@ -223,8 +223,8 @@ func (ob *SuObject) sizes() int {
 	return len(ob.list)<<32 | ob.named.Size()
 }
 
-// Clear removes all the contents of the object, making it empty (size 0)
-func (ob *SuObject) Clear() {
+// DeleteAll removes all the contents of the object, making it empty (size 0)
+func (ob *SuObject) DeleteAll() {
 	if ob.Lock() {
 		defer ob.lock.Unlock()
 	}

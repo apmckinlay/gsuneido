@@ -17,6 +17,10 @@ func init() {
 			this.(*SuRecord).AttachRule(arg1, arg2)
 			return nil
 		}),
+		"Clear": method0(func(this Value) Value {
+			this.(*SuRecord).Clear()
+			return this
+		}),
 		"GetDeps": method1("(field)", func(this, arg Value) Value {
 			return this.(*SuRecord).GetDeps(ToStr(arg))
 		}),
