@@ -440,17 +440,6 @@ func (r *SuRecord) getFromRow(key string) Value {
 	}
 	return nil
 }
-
-func (r *SuRecord) GetDefault(t *Thread, keyval Value) Value {
-	result := r.ob.GetIfPresent(t, keyval)
-	if result == nil && r.userow {
-		if key, ok := keyval.ToStr(); ok {
-			result = r.getFromRow(key)
-		}
-	}
-	return result
-}
-
 // GetPacked is used by ToRecord to build a Record for the database.
 // It is like Get except it returns the value packed,
 // using the already packed value from the row when possible.
