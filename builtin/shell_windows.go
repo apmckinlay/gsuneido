@@ -44,7 +44,7 @@ var _ = builtin1("SHGetPathFromIDList(pidl)",
 var dragQueryFile = shell32.MustFindProc("DragQueryFile").Addr()
 var _ = builtin2("DragQueryFile(hDrop, iFile)",
 	func(a, b Value) Value {
-		n := goc.Syscall4(dragQueryFile,
+		n := 1 + goc.Syscall4(dragQueryFile,
 			intArg(a),
 			intArg(b),
 			0,
