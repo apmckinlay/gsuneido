@@ -64,7 +64,7 @@ func init() {
 			}),
 		"Eval": methodRaw("(@args)",
 			func(t *Thread, as *ArgSpec, this Value, args []Value) Value {
-				return nilToEmptyStr(EvalAsMethod(t, as, this, args))
+				return EvalAsMethod(t, as, this, args)
 			}),
 		"Eval2": methodRaw("(@args)",
 			func(t *Thread, as *ArgSpec, this Value, args []Value) Value {

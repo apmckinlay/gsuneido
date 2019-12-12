@@ -71,7 +71,11 @@ func init() {
 			return SuStr(tabs.Entab(ToStr(this)))
 		}),
 		"Eval": method("()", func(t *Thread, this Value, args []Value) Value {
-			return nilToEmptyStr(EvalString(t, ToStr(this)))
+			result := EvalString(t, ToStr(this))
+			if result == nil {
+				return EmptyStr
+			}
+			return result
 		}),
 		"Eval2": method("()", func(t *Thread, this Value, args []Value) Value {
 			ob := &SuObject{}
@@ -308,7 +312,7 @@ func init() {
 		}),
 		"ServerEval": method("()",
 			func(t *Thread, this Value, args []Value) Value {
-				return nilToEmptyStr(t.Dbms().Run(ToStr(this)))
+				return t.Dbms().Run(ToStr(this))
 			}),
 		"Size": method0(func(this Value) Value {
 			// avoid calling ToStr so we don't have to convert concats
