@@ -7,5 +7,5 @@ import (
 
 var _ = builtin0("Client?()",
 	func() Value {
-		return SuBool(options.Client)
+		return SuBool(options.Client != "")
 	})

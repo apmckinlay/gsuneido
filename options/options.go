@@ -5,13 +5,15 @@ package options
 // command line flags
 var (
 	BuiltDate string
-	Client    bool
 	Repl      bool
-	NetAddr   string
+	Client    string
+	Port      = "3147"
+	Version   bool
+	Help      bool
 )
 
-// Args are the remaining command line arguments
-var Args []string
+// CmdLine is the remaining command line arguments
+var CmdLine string
 
 // debugging options
 var (

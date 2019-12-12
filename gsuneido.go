@@ -11,11 +11,11 @@ dlv debug -- -c "WorkSpaceControl();MessageLoop()"
 
 import (
 	"bufio"
-	"flag"
 	"fmt"
 	"io"
 	"log"
 	"os"
+	"runtime"
 	"runtime/debug"
 
 	"strings"
@@ -28,7 +28,13 @@ import (
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
-var builtDate = "Oct 19 2019" // set by: go build -ldflags "-X builtin.builtDate=..."
+var builtDate string // set by: go build -ldflags "-X main.builtDate=..."
+
+var help = `options:
+    -c[lient] [ipaddress]
+    -p[ort] #
+    -r[epl]
+    -v[ersion]`
 
 // dbmsLocal is set if running with a local/standalone database.
 var dbmsLocal IDbms
@@ -38,28 +44,23 @@ func main() {
 	suneido := new(SuObject)
 	suneido.SetConcurrent()
 	Global.Builtin("Suneido", suneido)
+
 	options.BuiltDate = builtDate
-	fs := flag.NewFlagSet(os.Args[0], flag.ContinueOnError)
-	fs.BoolVar(&options.Client, "c", false, "")
-	fs.BoolVar(&options.Client, "client", false, "run as a client")
-	fs.StringVar(&options.NetAddr, "p", "127.0.0.1:3147", "network address and/or port")
-	fs.BoolVar(&options.Repl, "r", false, "")
-	fs.BoolVar(&options.Repl, "repl", false, "run REPL (not GUI message loop)")
-	ver := fs.Bool("v", false, "")
-	fs.BoolVar(ver, "version", false, "show the version")
-	err := fs.Parse(os.Args[1:])
-	options.Args = fs.Args()
-	if !options.Client && !*ver {
+	args := options.Parse(os.Args[1:])
+	options.CmdLine = remainder(args)
+	if options.Client == "" {
 		options.Repl = true
-		options.NetAddr = "" // for ServerIP
 	}
+
 	builtin.Init(options.Repl) //WARNING: errors before this won't show up
-	if err != nil {
-		fs.Usage()
-		os.Exit(1)
+
+	if options.Version {
+		println("gSuneido " + builtDate + " (" + runtime.Version() + " " +
+			runtime.GOARCH + " " + runtime.GOOS + ")")
+		os.Exit(0)
 	}
-	if *ver && !options.Repl {
-		fmt.Println(builtin.Built())
+	if options.Help {
+		println(help)
 		os.Exit(0)
 	}
 	Libload = libload // dependency injection
@@ -67,8 +68,9 @@ func main() {
 	builtin.UIThread = mainThread
 	defer mainThread.Close()
 	// dependency injection of GetDbms
-	if options.Client {
-		GetDbms = func() IDbms { return dbms.NewDbmsClient(options.NetAddr) }
+	if options.Client != "" {
+		addr := options.Client + ":" + options.Port
+		GetDbms = func() IDbms { return dbms.NewDbmsClient(addr) }
 	} else {
 		dbmsLocal = dbms.NewDbmsLocal()
 		GetDbms = func() IDbms { return dbmsLocal }
@@ -82,6 +84,21 @@ func main() {
 		eval("Init()")
 		builtin.Run()
 	}
+}
+
+func remainder(args []string) string {
+	var sb strings.Builder
+	sep := ""
+	for _, arg := range args {
+		sb.WriteString(sep)
+		sep = " "
+		if strings.ContainsAny(arg, " '\"") {
+			arg = SuStr(arg).String()
+		}
+		sb.WriteString(arg)
+	}
+	return sb.String()
+
 }
 
 func initLogger() {
@@ -106,7 +123,7 @@ func repl() {
 	builtin.Concat()
 
 	built := builtin.Built()
-	if options.Client {
+	if options.Client != "" {
 		built += " - client"
 	}
 	prompt(built)

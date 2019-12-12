@@ -1,7 +1,6 @@
 package builtin
 
 import (
-	"net"
 	"strconv"
 
 	"github.com/apmckinlay/gsuneido/options"
@@ -9,19 +8,11 @@ import (
 )
 
 var _ = builtin0("ServerIP()", func() Value {
-	host, port, _ := net.SplitHostPort(options.NetAddr)
-	if host == "" && port != "" {
-		host = "127.0.0.1"
-	}
-	return SuStr(host)
+	return SuStr(options.Client)
 })
 
 var _ = builtin0("ServerPort()", func() Value {
-	_, port, _ := net.SplitHostPort(options.NetAddr)
-	if port == "" {
-		return EmptyStr
-	}
-	n, _ := strconv.Atoi(port)
+	n, _ := strconv.Atoi(options.Port)
 	return IntVal(n)
 })
 

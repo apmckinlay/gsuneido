@@ -15,7 +15,7 @@ repl: build
 
 # need the ./ so sh won't find an old one on the path
 client: build
-	./gsuneido.exe -c t@../tok
+	./gsuneido.exe -c -- t@../tok
 
 generate:
 	go generate ./...
