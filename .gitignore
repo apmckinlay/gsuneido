@@ -26,3 +26,4 @@ convert/convert
 SciLexer.dll
 *.log
 install.bat
+en_US.*
