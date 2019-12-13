@@ -355,3 +355,92 @@ type CHOOSEFONT struct {
 }
 
 const nCHOOSEFONT = unsafe.Sizeof(CHOOSEFONT{})
+
+// dll HRESULT ComDlg32:PrintDlgEx(PRINTDLGEX* printdlgex)
+var printDlgEx = comdlg32.MustFindProc("PrintDlgExA").Addr()
+var _ = builtin1("PrintDlgEx(printdlgex)",
+	func(a Value) Value {
+		defer heap.FreeTo(heap.CurSize())
+		prob := a.Get(nil, SuStr("lpPageRanges"))
+		q := heap.Alloc(nPRINTPAGERANGE)
+		pr := (*PRINTPAGERANGE)(q)
+		*pr = PRINTPAGERANGE{
+			nFromPage: getInt32(prob, "nFromPage"),
+			nToPage:   getInt32(prob, "nToPage"),
+		}
+		p := heap.Alloc(nPRINTDLGEX)
+		pd := (*PRINTDLGEX)(p)
+		*pd = PRINTDLGEX{
+			lStructSize:         int32(nPRINTDLGEX),
+			hwndOwner:           getHandle(a, "hwndOwner"),
+			hDevMode:            getHandle(a, "hDevMode"),
+			hDevNames:           getHandle(a, "hDevNames"),
+			hDC:                 getHandle(a, "hDC"),
+			Flags:               getInt32(a, "Flags"),
+			Flags2:              getInt32(a, "Flags2"),
+			ExclusionFlags:      getInt32(a, "ExclusionFlags"),
+			nPageRanges:         1,
+			nMaxPageRanges:      1,
+			lpPageRanges:        pr,
+			nMinPage:            getInt32(a, "nMinPage"),
+			nMaxPage:            getInt32(a, "nMaxPage"),
+			nCopies:             getInt32(a, "nCopies"),
+			hInstance:           getHandle(a, "hInstance"),
+			lpPrintTemplateName: getStr(a, "lpPrintTemplateName"),
+			nStartPage:          getInt32(a, "nStartPage"),
+			dwResultAction:      getInt32(a, "dwResultAction"),
+		}
+		rtn := goc.Syscall1(printDlgEx,
+			uintptr(p))
+		a.Put(nil, SuStr("hwndOwner"), IntVal(int(pd.hwndOwner)))
+		a.Put(nil, SuStr("hDevMode"), IntVal(int(pd.hDevMode)))
+		a.Put(nil, SuStr("hDevNames"), IntVal(int(pd.hDevNames)))
+		a.Put(nil, SuStr("hDC"), IntVal(int(pd.hDC)))
+		a.Put(nil, SuStr("Flags"), IntVal(int(pd.Flags)))
+		a.Put(nil, SuStr("Flags2"), IntVal(int(pd.Flags2)))
+		a.Put(nil, SuStr("ExclusionFlags"), IntVal(int(pd.ExclusionFlags)))
+		a.Put(nil, SuStr("nPageRanges"), IntVal(int(pd.nPageRanges)))
+		a.Put(nil, SuStr("nMaxPageRanges"), IntVal(int(pd.nMaxPageRanges)))
+		prob.Put(nil, SuStr("nFromPage"), IntVal(int(pr.nFromPage)))
+		prob.Put(nil, SuStr("nToPage"), IntVal(int(pr.nToPage)))
+		a.Put(nil, SuStr("nMinPage"), IntVal(int(pd.nMinPage)))
+		a.Put(nil, SuStr("nMaxPage"), IntVal(int(pd.nMaxPage)))
+		a.Put(nil, SuStr("nCopies"), IntVal(int(pd.nCopies)))
+		a.Put(nil, SuStr("hInstance"), IntVal(int(pd.hInstance)))
+		a.Put(nil, SuStr("nStartPage"), IntVal(int(pd.nStartPage)))
+		a.Put(nil, SuStr("dwResultAction"), IntVal(int(pd.dwResultAction)))
+		return intRet(rtn)
+	})
+
+type PRINTDLGEX struct {
+	lStructSize         int32
+	hwndOwner           HANDLE
+	hDevMode            HANDLE
+	hDevNames           HANDLE
+	hDC                 HANDLE
+	Flags               int32
+	Flags2              int32
+	ExclusionFlags      int32
+	nPageRanges         int32
+	nMaxPageRanges      int32
+	lpPageRanges        *PRINTPAGERANGE
+	nMinPage            int32
+	nMaxPage            int32
+	nCopies             int32
+	hInstance           HANDLE
+	lpPrintTemplateName *byte
+	lpCallback          uintptr
+	nPropertyPages      int32
+	lphPropertyPages    uintptr
+	nStartPage          int32
+	dwResultAction      int32
+}
+
+const nPRINTDLGEX = unsafe.Sizeof(PRINTDLGEX{})
+
+type PRINTPAGERANGE struct {
+	nFromPage int32
+	nToPage   int32
+}
+
+const nPRINTPAGERANGE = unsafe.Sizeof(PRINTPAGERANGE{})
