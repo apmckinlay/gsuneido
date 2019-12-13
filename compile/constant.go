@@ -125,7 +125,7 @@ func (p *parser) date() Value {
 	p.match(tok.Number)
 	date := DateFromLiteral(s)
 	if date == NilDate {
-		p.error("invalid date ", s)
+		p.error("bad date literal ", s)
 	}
 	return date
 }

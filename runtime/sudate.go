@@ -93,7 +93,7 @@ func nsub(s string, from int, to int) int {
 	}
 	i, err := strconv.Atoi(s[from:to])
 	if err != nil {
-		panic("bad date literal")
+		return -1
 	}
 	return i
 }

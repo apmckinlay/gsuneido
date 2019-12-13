@@ -49,6 +49,7 @@ func TestDateLiteral(t *testing.T) {
 	bad("20140230")
 	bad("20130229")
 	good("20120229") // leap year
+	bad("20160523.0-15")
 }
 
 func TestDatePack(t *testing.T) {
