@@ -8,7 +8,7 @@ Desktop.ini
 # Recycle Bin used on file shares
 $RECYCLE.BIN/
 
-# Mac 
+# Mac
 .DS_Store
 
 .idea/
@@ -25,3 +25,4 @@ gsuneido
 convert/convert
 SciLexer.dll
 *.log
+install.bat
