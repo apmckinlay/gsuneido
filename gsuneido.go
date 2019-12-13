@@ -102,7 +102,7 @@ func remainder(args []string) string {
 }
 
 func initLogger() {
-	log.SetFlags(log.Ldate | log.Ltime | log.Lshortfile)
+	log.SetFlags(log.Ldate | log.Ltime)// | log.Lshortfile)
 	f, err := os.OpenFile("error.log", os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0666)
 	if err != nil {
 		log.Fatalln(err)
