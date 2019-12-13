@@ -478,6 +478,7 @@ var globalMemoryStatusEx = kernel32.MustFindProc("GlobalMemoryStatusEx").Addr()
 var _ = builtin0("SystemMemory()", func() Value {
 	defer heap.FreeTo(heap.CurSize())
 	p := heap.Alloc(nMEMORYSTATUSEX)
+	(*MEMORYSTATUSEX)(p).dwLength = uint32(nMEMORYSTATUSEX)
 	r := goc.Syscall1(globalMemoryStatusEx,
 		uintptr(p))
 	if r == 0 {
