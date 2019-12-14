@@ -37,9 +37,19 @@ type SuRecord struct {
 	tran *SuTran
 	// recadr is the record address in the database
 	recadr int
+	// status
+	status Status
 	// userow is true when we want to use data in row as well as ob
 	userow bool
 }
+
+type Status byte
+
+const (
+	NEW Status = iota
+	OLD
+	DELETED
+)
 
 //go:generate genny -in ../../GoTemplates/list/list.go -out alist.go -pkg runtime gen "V=activeObserver"
 //go:generate genny -in ../../GoTemplates/list/list.go -out vlist.go -pkg runtime gen "V=Value"
@@ -59,7 +69,8 @@ func SuRecordFromRow(row Row, hdr *Header, tran *SuTran) *SuRecord {
 	hdr.EnsureMap()
 	dependents := deps(row, hdr)
 	return &SuRecord{row: row, hdr: hdr, tran: tran, recadr: row[0].Adr,
-		ob: SuObject{defval: EmptyStr}, dependents: dependents, userow: true}
+		ob: SuObject{defval: EmptyStr}, dependents: dependents, userow: true,
+		status: OLD}
 }
 
 func deps(row Row, hdr *Header) map[string][]string {
@@ -89,6 +100,7 @@ func (r *SuRecord) slice(n int) *SuRecord {
 		row:        r.row,
 		hdr:        r.hdr,
 		userow:     r.userow,
+		status:     r.status,
 		dependents: r.copyDeps(),
 		invalid:    r.copyInvalid()}
 }
@@ -229,7 +241,7 @@ func (r *SuRecord) IsReadOnly() bool {
 }
 
 func (r *SuRecord) IsNew() bool {
-	return r.recadr == 0
+	return r.status == NEW
 }
 
 func (r *SuRecord) Delete(t *Thread, key Value) bool {
@@ -728,6 +740,7 @@ func UnpackRecordOld(s string) *SuRecord {
 func (r *SuRecord) DbDelete() {
 	r.ckModify("Delete")
 	r.tran.Erase(r.recadr)
+	r.status = DELETED
 }
 
 func (r *SuRecord) DbUpdate(t *Thread, ob Value) {
@@ -747,6 +760,9 @@ func (r *SuRecord) ckModify(op string) {
 	}
 	if r.tran == nil {
 		panic("record." + op + ": no Transaction")
+	}
+	if r.status != OLD || r.recadr == 0 {
+		panic("record." + op + ": not a database record")
 	}
 }
 
