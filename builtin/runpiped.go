@@ -30,7 +30,7 @@ var _ = builtin("RunPiped(command, block=false)",
 		pw.Close()
 
 		rp := &suRunPiped{command: command, cmd: cmd, w: in, r: pr}
-		if args[2] == False {
+		if args[1] == False {
 			return rp
 		}
 		// block form
