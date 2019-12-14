@@ -15,6 +15,7 @@ var _ = builtin("RunPiped(command, block=false)",
 		command := ToStr(args[0])
 		cmdargs := splitCommand(command)
 		cmd := exec.Command(cmdargs[0], cmdargs[1:]...)
+		cmdSetup(cmd, command)
 		in, err := cmd.StdinPipe()
 		pr, pw, err := os.Pipe()
 		if err != nil {
