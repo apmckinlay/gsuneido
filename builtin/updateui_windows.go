@@ -21,7 +21,7 @@ var _ = builtin("UpdateUI(block)",
 			r, _, _ := syscall.Syscall6(postThreadMessage, 4,
 				goc.CThreadId(), WM_USER, 0xffffffff, 0, 0, 0)
 			if r == 0 {
-				panic("UpdateUI failed")
+				log.Panicln("UpdateUI failed")
 			}
 		}
 		return nil

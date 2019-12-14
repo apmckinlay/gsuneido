@@ -8,7 +8,6 @@ import "C"
 import (
 	"log"
 	"runtime"
-	"strconv"
 	"unsafe"
 
 	"golang.org/x/sys/windows"
@@ -53,7 +52,8 @@ func GetCallback(nargs, i int) uintptr {
 	case 4:
 		return uintptr(C.cb4s[i])
 	}
-	panic("GetCallback unsupported nargs " + strconv.Itoa(nargs))
+	log.Panicln("GetCallback unsupported nargs", nargs)
+	return 0 // unreachable
 }
 
 // must be injected
@@ -67,7 +67,7 @@ var SunAPP func(string) string
 func interact() uintptr {
 	//TODO use Suneido thread instead
 	if uiThreadId != windows.GetCurrentThreadId() {
-		panic("illegal UI call from background thread")
+		log.Panicln("illegal UI call from background thread")
 	}
 	for {
 		switch C.args[0] {

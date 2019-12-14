@@ -1,6 +1,7 @@
 package builtin
 
 import (
+	"log"
 	"syscall"
 	"time"
 	"unsafe"
@@ -904,7 +905,7 @@ var _ = builtin4("SetTimer(hwnd, id, ms, f)",
 			case rtn := <-retChan:
 				return intRet(rtn)
 			case <-time.After(1 * time.Second):
-				panic("SetTimer no reply")
+				log.Panicln("SetTimer no reply")
 			}
 		}
 		rtn := goc.Syscall4(setTimer,

@@ -2,6 +2,7 @@ package builtin
 
 import (
 	"bytes"
+	"log"
 	"unsafe"
 
 	heap "github.com/apmckinlay/gsuneido/builtin/heapstack"
@@ -123,7 +124,7 @@ func stringArg(v Value) unsafe.Pointer {
 // Callers should defer heap.Free
 func strToBuf(s string, n int) unsafe.Pointer {
 	if len(s)+1 > n {
-		panic("string too long")
+		log.Panicln("dll interface: string too long")
 	}
 	p := heap.Alloc(uintptr(n))
 	strToPtr(s, p)
@@ -190,8 +191,8 @@ func bufRet(p unsafe.Pointer, n uintptr) Value {
 // If the string is too long, the excess is ignored
 func copyStr(dst []byte, ob Value, mem string) {
 	src := ToStr(ob.Get(nil, SuStr(mem)))
-	if len(src) > len(dst) - 1 {
-		src = src[:len(dst) - 1]
+	if len(src) > len(dst)-1 {
+		src = src[:len(dst)-1]
 	}
 	copy(dst, src)
 	dst[len(src)] = 0
