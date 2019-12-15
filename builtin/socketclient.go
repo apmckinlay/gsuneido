@@ -100,6 +100,8 @@ func (*suSocketClient) Lookup(_ *Thread, method string) Callable {
 
 var newline = []byte{'\r', '\n'}
 
+var noDeadline time.Time
+
 var suSocketClientMethods = Methods{
 	"Close": method0(func(this Value) Value {
 		this.(*suSocketClient).conn.Close()
@@ -109,7 +111,8 @@ var suSocketClientMethods = Methods{
 		ssc := this.(*suSocketClient)
 		n := ToInt(arg)
 		buf := make([]byte, n)
-		ssc.conn.SetReadDeadline(time.Now().Add(ssc.timeout))
+		ssc.conn.SetDeadline(time.Now().Add(ssc.timeout))
+		defer ssc.conn.SetDeadline(noDeadline)
 		n, e := io.ReadFull(ssc.rdr, buf)
 		if e != nil && e != io.ErrUnexpectedEOF {
 			panic("socketClient.Read: " + e.Error())
@@ -117,12 +120,16 @@ var suSocketClientMethods = Methods{
 		return SuStr(string(buf[:n]))
 	}),
 	"Readline": method0(func(this Value) Value {
+		ssc := this.(*suSocketClient)
+		ssc.conn.SetDeadline(time.Now().Add(ssc.timeout))
+		defer ssc.conn.SetDeadline(noDeadline)
 		return Readline(this.(*suSocketClient).rdr, "file.Readline: ")
 	}),
 	"Write": method1("(string)", func(this, arg Value) Value {
 		ssc := this.(*suSocketClient)
+		ssc.conn.SetDeadline(time.Now().Add(ssc.timeout))
+		defer ssc.conn.SetDeadline(noDeadline)
 		s := AsStr(arg)
-		ssc.conn.SetWriteDeadline(time.Now().Add(ssc.timeout))
 		_, e := io.WriteString(ssc.conn, s)
 		if e != nil {
 			panic("socketClient.Write: " + e.Error())
@@ -131,8 +138,9 @@ var suSocketClientMethods = Methods{
 	}),
 	"Writeline": method1("(string)", func(this, arg Value) Value {
 		ssc := this.(*suSocketClient)
+		ssc.conn.SetDeadline(time.Now().Add(ssc.timeout))
+		defer ssc.conn.SetDeadline(noDeadline)
 		s := AsStr(arg)
-		ssc.conn.SetWriteDeadline(time.Now().Add(ssc.timeout))
 		_, e := io.WriteString(ssc.conn, s)
 		if e != nil {
 			panic("socketClient.Writeline: " + e.Error())
