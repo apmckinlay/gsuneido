@@ -42,6 +42,9 @@ func TestLexer(t *testing.T) {
 	first(`"\"foo\""`, `"foo"`, tok.String)
 	first("\\", "\\", tok.Error)
 	first("//foo\nbar", "//foo", tok.Comment) // not including newline
+	first("'", "", tok.String)
+	first("\"", "", tok.String)
+	first("`", "", tok.String)
 
 	check := func(source string, expected ...tok.Token) {
 		t.Helper()

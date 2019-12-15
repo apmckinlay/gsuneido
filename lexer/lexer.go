@@ -288,9 +288,7 @@ func (lxr *Lexer) spanComment(start int) Item {
 
 func (lxr *Lexer) rawString(start int) Item {
 	s := lxr.matchUntil(start+1, "`")
-	if s[len(s)-1] == '`' {
-		s = s[:len(s)-1]
-	}
+	s = strings.TrimSuffix(s, "`")
 	return it(tok.String, start, s)
 }
 
@@ -504,7 +502,7 @@ func (lxr *Lexer) matchWhile(f func(c byte) bool) {
 }
 
 func (lxr *Lexer) matchUntil(start int, s string) string {
-	for lxr.si++; lxr.si < len(lxr.src) && !strings.HasSuffix(lxr.src[:lxr.si], s); lxr.si++ {
+	for lxr.read(); lxr.si < len(lxr.src) && !strings.HasSuffix(lxr.src[:lxr.si], s); lxr.si++ {
 	}
 	return lxr.src[start:lxr.si]
 }
