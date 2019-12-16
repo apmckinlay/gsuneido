@@ -1,3 +1,6 @@
+// Copyright Suneido Software Corp. All rights reserved.
+// Governed by the MIT license found in the LICENSE file.
+
 package stor
 
 import (
@@ -32,7 +35,7 @@ func TestData(t *testing.T) {
 func TestMmapRead(t *testing.T) {
 	ms, _ := MmapStor("stor_test.go", READ)
 	buf := ms.Data(0)
-	Assert(t).That(string(buf[:12]), Equals("package stor"))
+	Assert(t).That(string(buf[:12]), Equals("// Copyright"))
 	ms.Close()
 }
 

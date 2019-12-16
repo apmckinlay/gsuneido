@@ -1,3 +1,6 @@
+// Copyright Suneido Software Corp. All rights reserved.
+// Governed by the MIT license found in the LICENSE file.
+
 package runtime
 
 // Frame is the context for a function/method/block invocation.

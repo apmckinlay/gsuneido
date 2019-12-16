@@ -1,3 +1,6 @@
+// Copyright Suneido Software Corp. All rights reserved.
+// Governed by the MIT license found in the LICENSE file.
+
 /*
 Package compile compiles Suneido source code
 to byte code to be interpreted by the runtime package.

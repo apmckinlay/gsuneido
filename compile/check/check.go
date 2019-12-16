@@ -1,3 +1,6 @@
+// Copyright Suneido Software Corp. All rights reserved.
+// Governed by the MIT license found in the LICENSE file.
+
 // Package check processes an ast.Function
 // and finds used but (possibly) not initialized,
 // and initialized but (possibly) not used.

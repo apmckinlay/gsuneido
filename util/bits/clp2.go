@@ -1,3 +1,6 @@
+// Copyright Suneido Software Corp. All rights reserved.
+// Governed by the MIT license found in the LICENSE file.
+
 package bits
 
 // Clp2 returns the next (ceiling) power of 2

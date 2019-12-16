@@ -1,3 +1,6 @@
+// Copyright Suneido Software Corp. All rights reserved.
+// Governed by the MIT license found in the LICENSE file.
+
 package goc
 
 // #cgo CFLAGS: -DWINVER=0x601 -D_WIN32_WINNT=0x0601

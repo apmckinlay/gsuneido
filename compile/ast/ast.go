@@ -1,3 +1,6 @@
+// Copyright Suneido Software Corp. All rights reserved.
+// Governed by the MIT license found in the LICENSE file.
+
 // Package ast defines the node types
 // used by the compiler to build syntax trees
 package ast

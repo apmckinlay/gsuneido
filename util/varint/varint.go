@@ -1,3 +1,6 @@
+// Copyright Suneido Software Corp. All rights reserved.
+// Governed by the MIT license found in the LICENSE file.
+
 /*
 Package varint encodes and decodes integers as in Google Protocol Buffers
 

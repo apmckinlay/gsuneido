@@ -1,3 +1,6 @@
+// Copyright Suneido Software Corp. All rights reserved.
+// Governed by the MIT license found in the LICENSE file.
+
 // Package cmatch implements a composable way of matching characters.
 // Based loosely on Guava CharMatcher for Java
 package cmatch

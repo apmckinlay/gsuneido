@@ -1,3 +1,6 @@
+// Copyright Suneido Software Corp. All rights reserved.
+// Governed by the MIT license found in the LICENSE file.
+
 #include "cside.h"
 
 uintptr __stdcall cb2_0(uintptr a, uintptr b) {

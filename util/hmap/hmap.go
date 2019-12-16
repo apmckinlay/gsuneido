@@ -1,3 +1,6 @@
+// Copyright Suneido Software Corp. All rights reserved.
+// Governed by the MIT license found in the LICENSE file.
+
 // Package hmap implements a hash map
 // Based on: https://github.com/skarupke/flat_hash_map bytell_hash_map
 package hmap

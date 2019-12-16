@@ -1,3 +1,6 @@
+// Copyright Suneido Software Corp. All rights reserved.
+// Governed by the MIT license found in the LICENSE file.
+
 package runtime
 
 // MemBase is the shared base for SuClass and SuInstance

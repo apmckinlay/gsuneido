@@ -1,3 +1,6 @@
+// Copyright Suneido Software Corp. All rights reserved.
+// Governed by the MIT license found in the LICENSE file.
+
 package pack
 
 // Decoder is used to read values from a binary string (created with Encoder)
