@@ -4,6 +4,7 @@
 package runtime
 
 import (
+	"log"
 	"sort"
 	"strings"
 
@@ -357,22 +358,22 @@ func (vs *vstack) Push(ob *SuObject) bool {
 }
 
 func (ob *SuObject) String() string {
-	buf := strings.Builder{}
+	buf := limitBuf{}
 	ob.rstring(&buf, nil)
 	return buf.String()
 }
 
-func (ob *SuObject) rstring(buf *strings.Builder, inProgress vstack) {
+func (ob *SuObject) rstring(buf *limitBuf, inProgress vstack) {
 	ob.rstring2(buf, "#(", ")", inProgress)
 }
 
 type recursable interface {
-	rstring(buf *strings.Builder, inProgress vstack)
+	rstring(buf *limitBuf, inProgress vstack)
 }
 
 var _ recursable = (*SuObject)(nil)
 
-func (ob *SuObject) rstring2(buf *strings.Builder, before, after string, inProgress vstack) {
+func (ob *SuObject) rstring2(buf *limitBuf, before, after string, inProgress vstack) {
 	if !inProgress.Push(ob) {
 		buf.WriteString("...")
 		return
@@ -395,14 +396,9 @@ func (ob *SuObject) rstring2(buf *strings.Builder, before, after string, inProgr
 	buf.WriteString(after)
 }
 
-const maxbuf = 16 * 1024
-
-func (ob *SuObject) vecstr(buf *strings.Builder, inProgress vstack) string {
+func (ob *SuObject) vecstr(buf *limitBuf, inProgress vstack) string {
 	sep := ""
 	for _, v := range ob.list {
-		if buf.Len() > maxbuf {
-			panic("buffer overflow displaying object")
-		}
 		buf.WriteString(sep)
 		sep = ", "
 		valstr(buf, v, inProgress)
@@ -410,7 +406,7 @@ func (ob *SuObject) vecstr(buf *strings.Builder, inProgress vstack) string {
 	return sep
 }
 
-func entstr(buf *strings.Builder, k interface{}, v interface{}, sep string, inProgress vstack) string {
+func entstr(buf *limitBuf, k interface{}, v interface{}, sep string, inProgress vstack) string {
 	buf.WriteString(sep)
 	sep = ", "
 	if ks, ok := k.(SuStr); ok && unquoted(string(ks)) {
@@ -426,10 +422,7 @@ func entstr(buf *strings.Builder, k interface{}, v interface{}, sep string, inPr
 	return sep
 }
 
-func valstr(buf *strings.Builder, v Value, inProgress vstack) {
-	if buf.Len() > maxbuf {
-		panic("buffer overflow displaying object")
-	}
+func valstr(buf *limitBuf, v Value, inProgress vstack) {
 	if r, ok := v.(recursable); ok {
 		r.rstring(buf, inProgress)
 	} else {
@@ -446,7 +439,7 @@ func (ob *SuObject) Show() string {
 	return ob.show("#(", ")", nil)
 }
 func (ob *SuObject) show(before, after string, inProgress vstack) string {
-	buf := &strings.Builder{}
+	buf := &limitBuf{}
 	buf.WriteString(before)
 	if ob.Lock() {
 		defer ob.lock.Unlock()
@@ -469,6 +462,24 @@ func (ob *SuObject) show(before, after string, inProgress vstack) string {
 	}
 	buf.WriteString(after)
 	return buf.String()
+}
+
+const maxbuf = 64 * 1024
+
+type limitBuf struct {
+	sb strings.Builder
+}
+
+func (buf *limitBuf) WriteString(s string) {
+	if buf.sb.Len()+len(s) > maxbuf {
+		log.Panicln("buffer overflow displaying object",
+			buf.sb.Len(), ">", maxbuf)
+	}
+	buf.sb.WriteString(s)
+}
+
+func (buf *limitBuf) String() string {
+	return buf.sb.String()
 }
 
 func (ob *SuObject) Hash() uint32 {

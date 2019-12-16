@@ -129,12 +129,12 @@ func (*SuRecord) Type() types.Type {
 }
 
 func (r *SuRecord) String() string {
-	buf := strings.Builder{}
+	buf := limitBuf{}
 	r.rstring(&buf, nil)
 	return buf.String()
 }
 
-func (r *SuRecord) rstring(buf *strings.Builder, inProgress vstack) {
+func (r *SuRecord) rstring(buf *limitBuf, inProgress vstack) {
 	r.ToObject().rstring2(buf, "[", "]", inProgress)
 }
 
