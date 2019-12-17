@@ -103,7 +103,17 @@ static void message_loop(uintptr hdlg);
 typedef unsigned int uint32;
 long traccel(uintptr ob, uintptr msg);
 
+#undef UNICODE
+#undef _UNICODE
+#define WIN32_LEAN_AND_MEAN
+#include <windows.h>
+#include <synchapi.h>
+
+static DWORD main_threadid = 0;
+
 uintptr interact() {
+	if (GetCurrentThreadId() != main_threadid)
+		exit(666);
 	for (;;) {
 		switch (args[0]) {
 		case msg_callback2:
@@ -130,12 +140,6 @@ uintptr interact() {
 	}
 }
 
-#undef UNICODE
-#undef _UNICODE
-#define WIN32_LEAN_AND_MEAN
-#include <windows.h>
-#include <synchapi.h>
-
 static CRITICAL_SECTION lock;
 static CONDITION_VARIABLE cond = CONDITION_VARIABLE_INIT;
 
@@ -148,7 +152,6 @@ const int stack_size = 16 * 1024; // ???
 
 enum { END_MSG_LOOP = 0xebb };
 
-static DWORD main_threadid = 0;
 static int volatile ticks = 0;
 static HCURSOR volatile prev_cursor = 0;
 static HHOOK hook = 0;
@@ -168,9 +171,6 @@ static LRESULT CALLBACK message_hook(int code, WPARAM wParam, LPARAM lParam) {
 }
 
 static void message_loop(uintptr hdlg) {
-	main_threadid = GetCurrentThreadId();
-	hook = SetWindowsHookExA(WH_GETMESSAGE, message_hook, 0, main_threadid);
-	CreateThread(NULL, 1000, timer_thread, 0, 0, 0);
 	MSG msg;
 	for (;;) {
 		ticks = 0; // stop timer
@@ -229,6 +229,9 @@ static void destroy_windows() {
 }
 
 static DWORD WINAPI thread(LPVOID lpParameter) {
+	main_threadid = GetCurrentThreadId();
+	hook = SetWindowsHookExA(WH_GETMESSAGE, message_hook, 0, main_threadid);
+	CreateThread(NULL, 1000, timer_thread, 0, 0, 0);
 	signalAndWait();
 	interact(); // allow go side to run init, finishing with result
 	message_loop(0);
