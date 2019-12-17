@@ -907,8 +907,8 @@ var _ = builtin4("SetTimer(hwnd, id, ms, f)",
 			select {
 			case rtn := <-retChan:
 				return intRet(rtn)
-			case <-time.After(1 * time.Second):
-				log.Panicln("SetTimer no reply")
+			case <-time.After(10 * time.Second):
+				log.Panicln("SetTimer timeout")
 			}
 		}
 		rtn := goc.Syscall4(setTimer,
