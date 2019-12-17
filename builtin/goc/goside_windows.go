@@ -68,9 +68,10 @@ var UpdateUI func()
 var SunAPP func(string) string
 
 func interact() uintptr {
-	//TODO use Suneido thread instead
+	//TODO use Suneido thread instead of Windows thread
 	if uiThreadId != windows.GetCurrentThreadId() {
-		log.Panicln("illegal UI call from background thread")
+		log.Println("illegal UI call from background thread")
+		runtime.Goexit()
 	}
 	for {
 		switch C.args[0] {
