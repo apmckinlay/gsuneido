@@ -195,7 +195,7 @@ func (t *Thread) Close() {
 // This is used for the UpdateUI and SuneidoAPP threads.
 // We want a new thread for isolation e.g. for exceptions or dynamic variables
 // but we don't need the overhead of another dbms connection.
-// WARNING: This can also be used where it is guaranteed
+// WARNING: This should only be used where it is guaranteed
 // that the Threads will NOT be used concurrently.
 func (t *Thread) SubThread() *Thread {
 	t2 := NewThread()

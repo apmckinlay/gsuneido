@@ -9,7 +9,7 @@ CheckLibrary('stdlib')
 TestRunner.Run(libs: #(stdlib), skipTags: #(gui, windows), quit_on_failure:);;
 TestRunner.Run(TestObserverPrint(), libs: #(stdlib), skipTags: #(gui, windows));;
 
-dlv debug -- -c "WorkSpaceControl();MessageLoop()"
+dlv debug -- -c ...
 */
 
 import (
@@ -31,7 +31,7 @@ import (
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
-var builtDate string // set by: go build -ldflags "-X main.builtDate=..."
+var builtDate = "Dec 16 2019" // set by: go build -ldflags "-X main.builtDate=..."
 
 var help = `options:
     -c[lient] [ipaddress]
