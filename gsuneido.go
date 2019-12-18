@@ -177,7 +177,7 @@ func showOptions() {
 func eval(src string) {
 	defer func() {
 		if e := recover(); e != nil {
-			fmt.Println("ERROR:", e)
+			log.Println("ERROR:", e)
 			if internal(e) {
 				debug.PrintStack()
 				fmt.Println("---")
