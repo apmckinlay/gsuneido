@@ -258,6 +258,6 @@ buf_t suneidoAPP(char* url) {
 	char* s = (char*) p;
 	buf_t result;
 	result.size = args[2];
-	result.buf = memcpy(malloc(result.size + 1), s, result.size);
+	result.buf = s;
 	return result;
 }

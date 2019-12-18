@@ -11,6 +11,7 @@ import (
 
 var sunappThread *Thread
 
+// sunAPP is called by goside.go <- interact <- cside.c <- sunapp.cpp
 func sunAPP(url string) (result string) {
 	if sunappThread == nil {
 		sunappThread = UIThread.SubThread()

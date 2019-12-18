@@ -147,9 +147,8 @@ HRESULT STDMETHODCALLTYPE CSuneidoAPP::Start(
 		delete str;
 	str = result.buf;
 	int n = result.size;
-	if (str == 0)
+	if (n == 0)
 		return INET_E_DATA_NOT_AVAILABLE;
-	str = (char*) memcpy(malloc(n), str, n);
 	len = n;
 	pos = 0;
 

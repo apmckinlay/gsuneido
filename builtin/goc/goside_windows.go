@@ -100,6 +100,7 @@ func interact() uintptr {
 			s := SunAPP(C.GoString((*C.char)(unsafe.Pointer(uintptr(C.args[1])))))
 			C.args[0] = C.msg_result
 			C.args[1] = (C.uintptr)(uintptr(unsafe.Pointer(C.CString(s))))
+			// C.CString will malloc, sunapp will free
 			C.args[2] = (C.uintptr)(len(s))
 		case C.msg_result:
 			return uintptr(C.args[1])
