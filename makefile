@@ -4,6 +4,9 @@ BUILT=$(shell date "+%b %e %Y %X")
 build:
 	go build -v -ldflags "-X 'main.builtDate=${BUILT}' -H windowsgui"
 
+all:
+	go build -a -v -ldflags "-X 'main.builtDate=${BUILT}' -H windowsgui"
+
 console:
 	go build -v -ldflags "-X 'main.builtDate=${BUILT}'"
 
@@ -24,6 +27,6 @@ generate:
 gsuneido_windows.syso : res/suneido.rc res/suneido.manifest
 	windres -F pe-x86-64 -o gsuneido_windows.syso res/suneido.rc
 
-.PHONY : build test client
+.PHONY : build all console test repl client generate
 
 # -trimpath (but breaks vscode goto)
