@@ -27,3 +27,4 @@ SciLexer.dll
 *.log
 install.bat
 en_US.*
+*.diff
