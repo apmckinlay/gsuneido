@@ -241,16 +241,22 @@ var _ = builtin1("ChooseColor(x)",
 		custColors := (*CustColors)(heap.Alloc(nCustColors * int32Size))
 		ccs := a.Get(nil, SuStr("custColors"))
 		for i := 0; i < nCustColors; i++ {
-			custColors[i] = int32(ToInt(ccs.Get(nil, SuInt(i))))
+			if x := ccs.Get(nil, SuInt(i)); x != nil {
+				custColors[i] = int32(ToInt(x))
+			}
 		}
-		p := heap.Alloc(nCustColors)
+		p := heap.Alloc(nCHOOSECOLOR)
 		cc := (*CHOOSECOLOR)(p)
 		*cc = CHOOSECOLOR{
-			size:       getInt32(a, "size"),
-			owner:      getHandle(a, "owner"),
-			flags:      getInt32(a, "flags"),
-			resource:   getStr(a, "resource"),
-			custColors: custColors,
+			size:         int32(nCHOOSECOLOR),
+			owner:        getHandle(a, "owner"),
+			instance:     getHandle(a, "instance"),
+			rgbResult:    getInt32(a, "rgbResult"),
+			custColors:   custColors,
+			flags:        getInt32(a, "flags"),
+			custData:     getHandle(a, "custData"),
+			hook:         getHandle(a, "hook"),
+			templateName: getStr(a, "templateName"),
 		}
 		rtn := goc.Syscall1(chooseColor,
 			uintptr(p))
@@ -263,16 +269,18 @@ var _ = builtin1("ChooseColor(x)",
 	})
 
 type CHOOSECOLOR struct {
-	size       int32
-	owner      HANDLE
-	instance   HANDLE
-	rgbResult  int32
-	custColors *CustColors
-	flags      int32
-	custData   HANDLE
-	hook       HANDLE
-	resource   *byte
+	size         int32
+	owner        HANDLE
+	instance     HANDLE
+	rgbResult    int32
+	custColors   *CustColors
+	flags        int32
+	custData     HANDLE
+	hook         HANDLE
+	templateName *byte
 }
+
+const nCHOOSECOLOR = unsafe.Sizeof(CHOOSECOLOR{})
 
 const nCustColors = 16
 

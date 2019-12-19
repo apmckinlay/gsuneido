@@ -53,6 +53,10 @@ func init() {
 		&SuStructGlobal{size: int(nDOCINFO)})
 	Global.Builtin("PRINTDLGEX",
 		&SuStructGlobal{size: int(nPRINTDLGEX)})
+	Global.Builtin("CHOOSECOLOR",
+		&SuStructGlobal{size: int(nCHOOSECOLOR)})
+	Global.Builtin("FLASHWINFO",
+		&SuStructGlobal{size: int(nFLASHWINFO)})
 }
 
 func (*SuStructGlobal) Call(*Thread, Value, *ArgSpec) Value {

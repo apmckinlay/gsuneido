@@ -1794,7 +1794,7 @@ var _ = builtin1("FlashWindowEx(fi)",
 		defer heap.FreeTo(heap.CurSize())
 		p := heap.Alloc(nFLASHWINFO)
 		*(*FLASHWINFO)(p) = FLASHWINFO{
-			cbSize:    getUint32(a, "cbSize"),
+			cbSize:    uint32(nFLASHWINFO),
 			hwnd:      getHandle(a, "hwnd"),
 			dwFlags:   getInt32(a, "dwFlags"),
 			uCount:    getInt32(a, "uCount"),
