@@ -76,7 +76,8 @@ func (cb *callback) callv(args ...Value) uintptr {
 func handler(e interface{}) {
 	defer func() {
 		if e := recover(); e != nil {
-			log.Fatalln("error in Handler:", e)
+			log.Println("Error in Handler", e)
+			MessageBox(fmt.Sprint(e), "Error in Handler")
 		}
 	}()
 	// debug.PrintStack()
