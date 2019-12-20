@@ -5,6 +5,7 @@ package builtin
 
 import (
 	"io/ioutil"
+	"net"
 	"os"
 	"runtime"
 
@@ -90,4 +91,17 @@ var _ = builtin1("DeleteDir(dir)",
 			panic("DeleteDir: " + err.Error())
 		}
 		return True
+	})
+
+var _ = builtin0("GetMacAddresses()",
+	func() Value {
+		ob := NewSuObject()
+		if intfcs, err := net.Interfaces(); err == nil {
+			for _, intfc := range intfcs {
+				if s := string(intfc.HardwareAddr); s != "" {
+					ob.Add(SuStr(s))
+				}
+			}
+		}
+		return ob
 	})
