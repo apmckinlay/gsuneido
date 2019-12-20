@@ -1516,7 +1516,7 @@ var _ = builtin1("MessageBeep(type)",
 // 	pointer	dwExtraInfo	// (ULONG_PTR) application-defined information
 // )
 var mouse_event = user32.MustFindProc("mouse_event").Addr()
-var _ = builtin5("mouse_event(dwFlags, dx, dy, dwData, dwExtraInfo)",
+var _ = builtin5("Mouse_event(dwFlags, dx, dy, dwData, dwExtraInfo)",
 	func(a, b, c, d, e Value) Value {
 		goc.Syscall5(mouse_event,
 			intArg(a),
