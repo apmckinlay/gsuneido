@@ -1470,6 +1470,16 @@ var _ = builtin1("IsWindow(hwnd)",
 		return boolRet(rtn)
 	})
 
+// dll bool User32:IsChild(pointer hwndParent, pointer hwnd)
+var isChild= user32.MustFindProc("IsChild").Addr()
+var _ = builtin2("IsChild(hwndParent, hwnd)",
+	func(a, b Value) Value {
+		rtn := goc.Syscall2(isChild,
+			intArg(a),
+			intArg(b))
+		return boolRet(rtn)
+	})
+
 // dll bool User32:IsWindowVisible(pointer hwnd)
 var isWindowVisible = user32.MustFindProc("IsWindowVisible").Addr()
 var _ = builtin1("IsWindowVisible(hwnd)",
