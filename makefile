@@ -9,6 +9,7 @@ all:
 
 console:
 	go build -v -ldflags "-X 'main.builtDate=${BUILT}'"
+	./gsuneido -repl
 
 test:
 	go test -count=1 ./...
