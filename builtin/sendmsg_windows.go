@@ -744,3 +744,30 @@ type SystemTimeRange struct {
 }
 
 const nSystemTimeRange = unsafe.Sizeof(SystemTimeRange{})
+
+var _ = builtin4("SendMessageEDITBALLOONTIP(hwnd, msg, wParam, lParam)",
+	func(a, b, c, d Value) Value {
+		defer heap.FreeTo(heap.CurSize())
+		p := heap.Alloc(nEDITBALLOONTIP)
+		*(*EDITBALLOONTIP)(p) = EDITBALLOONTIP{
+			cbStruct: int32(nEDITBALLOONTIP),
+			pszTitle: getStr(d, "pszTitle"),
+			pszText:  getStr(d, "pszText"),
+			ttiIcon: getInt32(d, "ttiIcon"),
+		}
+		rtn := goc.Syscall4(sendMessage,
+			intArg(a),
+			intArg(b),
+			intArg(c),
+			uintptr(p))
+		return intRet(rtn)
+	})
+
+type EDITBALLOONTIP struct {
+	cbStruct int32
+	pszTitle *byte
+	pszText  *byte
+	ttiIcon  int32
+}
+
+const nEDITBALLOONTIP = unsafe.Sizeof(EDITBALLOONTIP{})

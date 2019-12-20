@@ -57,6 +57,8 @@ func init() {
 		&SuStructGlobal{size: int(nCHOOSECOLOR)})
 	Global.Builtin("FLASHWINFO",
 		&SuStructGlobal{size: int(nFLASHWINFO)})
+	Global.Builtin("EDITBALLOONTIP",
+		&SuStructGlobal{size: int(nEDITBALLOONTIP)})
 }
 
 func (*SuStructGlobal) Call(*Thread, Value, *ArgSpec) Value {
