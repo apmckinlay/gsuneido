@@ -188,3 +188,8 @@ func dayOfWeek(x Value) int {
 	}
 	panic("usage: date.WeekDay(day name or number)")
 }
+
+var _ = builtin0("UnixTime()",
+	func() Value {
+		return IntVal(int(time.Now().Unix()))
+	})
