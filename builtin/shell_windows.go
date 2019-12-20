@@ -40,11 +40,9 @@ var _ = builtin1("SHGetPathFromIDList(pidl)",
 	})
 
 // dll long Shell32:DragQueryFile(
-//  pointer hDrop,
-//  long iFile,
-//  string lpszFile,
-//  long cch)
+//		pointer hDrop, long iFile, string lpszFile, long cch)
 var dragQueryFile = shell32.MustFindProc("DragQueryFile").Addr()
+
 var _ = builtin2("DragQueryFile(hDrop, iFile)",
 	func(a, b Value) Value {
 		n := 1 + goc.Syscall4(dragQueryFile,
@@ -60,6 +58,16 @@ var _ = builtin2("DragQueryFile(hDrop, iFile)",
 			uintptr(buf),
 			n)
 		return bufToStr(buf, n)
+	})
+
+var _ = builtin1("DragQueryFileCount(hDrop)",
+	func(a Value) Value {
+		rtn := goc.Syscall4(dragQueryFile,
+			intArg(a),
+			0xffffffff,
+			0,
+			0)
+		return intRet(rtn)
 	})
 
 // dll bool Shell32:Shell_NotifyIcon(long dwMessage, NOTIFYICONDATA* lpdata)
