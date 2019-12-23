@@ -37,6 +37,9 @@ func Checked(t *Thread, src string) (Value, []string) {
 	p := NewParser(src)
 	p.checker = check.New(t)
 	v := p.constant()
+	if p.Token != tok.Eof {
+		p.error("syntax error: did not parse all input")
+	}
 	return v, p.checker.Results
 }
 
