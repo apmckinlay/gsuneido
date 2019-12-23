@@ -354,10 +354,12 @@ func (p *parser) tryStmt() *ast.TryCatch {
 	var varPos int32
 	var catchFilter string
 	var catch ast.Statement
+	var unused bool
 	if p.matchIf(tok.Catch) {
 		if p.matchIf(tok.LParen) {
 			catchVar = p.Text
 			varPos = p.Pos
+			unused = p.unusedAhead()
 			p.matchIdent()
 			if p.matchIf(tok.Comma) {
 				catchFilter = p.Text
@@ -368,5 +370,7 @@ func (p *parser) tryStmt() *ast.TryCatch {
 		catch = p.statement()
 	}
 	return &ast.TryCatch{Try: try, Catch: catch,
-		CatchVar: ast.Ident{Name: catchVar, Pos: varPos}, CatchFilter: catchFilter}
+		CatchVar: ast.Ident{Name: catchVar, Pos: varPos},
+		CatchVarUnused: unused,
+		CatchFilter: catchFilter}
 }

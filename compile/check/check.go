@@ -125,7 +125,7 @@ func (ck *Check) statement(stmt ast.Statement, init set) set {
 		init = ck.expr(stmt.E, init)
 	case *ast.TryCatch:
 		init = ck.statement(stmt.Try, init)
-		if stmt.CatchVar.Name != "" {
+		if stmt.CatchVar.Name != "" && !stmt.CatchVarUnused {
 			init = ck.initVar(init, stmt.CatchVar.Name, int(stmt.CatchVar.Pos))
 		}
 		ck.statement(stmt.Catch, init)

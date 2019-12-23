@@ -277,7 +277,7 @@ func (a *Function) Children(fn func(Node)) {
 
 type Param struct {
 	Name   Ident // including prefix @ . _
-	DefVal Value  // may be nil
+	DefVal Value // may be nil
 	// Unused is set if the parameter was followed by /*unused*/
 	Unused bool
 }
@@ -453,10 +453,11 @@ func (x *Throw) Children(fn func(Node)) {
 
 type TryCatch struct {
 	stmtNodeT
-	Try         Statement
-	CatchVar    Ident
-	CatchFilter string
-	Catch       Statement
+	Try            Statement
+	CatchVar       Ident
+	CatchVarUnused bool
+	CatchFilter    string
+	Catch          Statement
 }
 
 func (x *TryCatch) String() string {
@@ -495,9 +496,9 @@ func (x *Forever) Children(fn func(Node)) {
 
 type ForIn struct {
 	stmtNodeT
-	Var    Ident
-	E      Expr
-	Body   Statement
+	Var  Ident
+	E    Expr
+	Body Statement
 }
 
 func (x *ForIn) String() string {

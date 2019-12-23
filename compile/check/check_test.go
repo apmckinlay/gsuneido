@@ -88,4 +88,11 @@ func TestCheckResults(t *testing.T) {
 	test("class { F(){} G(a){} }",
 		"WARNING: initialized but not used: a @16")
 	test("class { New(.X){} }")
+
+	test("function () { try true catch (e) false }",
+		"WARNING: initialized but not used: e @30")
+	test("function () { try true catch (e, 'x') false }",
+		"WARNING: initialized but not used: e @30")
+	test("function () { try true catch (e /*unused*/) false }")
+	test("function () { try true catch (e /*unused*/, 'x') false }")
 }
