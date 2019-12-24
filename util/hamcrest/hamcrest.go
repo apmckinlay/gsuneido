@@ -129,7 +129,7 @@ func Equals(expected interface{}) Tester {
 		} else if reflect.DeepEqual(expected, actual) {
 			return ""
 		}
-		return fmt.Sprintf("expected: %s  got: %s",
+		return fmt.Sprintf("\n    expect: %s\n    actual: %s\n    ",
 			show(expected), show(actual))
 	}
 }
@@ -192,6 +192,9 @@ func show(x interface{}) string {
 	}
 	s1 := fmt.Sprintf("%v", x)
 	s2 := fmt.Sprintf("%#v", x)
+	if s1[0] == '[' {
+		return s2
+	}
 	if s1 == s2 {
 		return s1 + " (" + fmt.Sprintf("%T", x) + ")"
 	}
