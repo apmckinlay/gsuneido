@@ -43,7 +43,12 @@ var suComObjectMethods = Methods{
 		return SuBool(this.(*suComObject).idisp != nil)
 	}),
 	"Release": method0(func(this Value) Value {
-		this.(*suComObject).idisp.Release()
+		sco := this.(*suComObject)
+		if sco.idisp != nil {
+			sco.idisp.Release()
+		} else if sco.iunk != nil {
+			sco.iunk.Release()
+		}
 		return nil
 	}),
 }
@@ -51,10 +56,13 @@ var suComObjectMethods = Methods{
 var _ Value = (*suComObject)(nil)
 
 func (sco *suComObject) Get(_ *Thread, mem Value) Value {
+	if sco.idisp == nil {
+		panic("COMobject can't get property of IUnknown")
+	}
 	name := ToStr(mem)
 	v, err := sco.idisp.GetProperty(name)
 	if err != nil {
-		panic("COMobject get " + name + ": " + err.Error())
+		panic("COMobject get " + name + " failed: " + err.Error())
 	}
 	return variantToSu(v)
 }
@@ -90,10 +98,13 @@ func variantToSu(v *ole.VARIANT) Value {
 }
 
 func (sco *suComObject) Put(_ *Thread, mem Value, val Value) {
+	if sco.idisp == nil {
+		panic("COMobject can't put property of IUnknown")
+	}
 	name := ToStr(mem)
 	_, err := sco.idisp.PutProperty(name, suToGo(val))
 	if err != nil {
-		panic("COMobject put " + name + ": " + err.Error())
+		panic("COMobject put " + name + " failed: " + err.Error())
 	}
 }
 
@@ -144,9 +155,12 @@ func (sco *suComObject) Lookup(_ *Thread, method string) Callable {
 }
 
 func (sco *suComObject) call(method string, as *ArgSpec, args []Value) Value {
+	if sco.idisp == nil {
+		panic("COMobject can't call method of IUnknown")
+	}
 	v, err := sco.idisp.CallMethod(method, comArgs(as, args)...)
 	if err != nil {
-		panic("COMobject call " + method + ": " + err.Error())
+		panic("COMobject call " + method + " failed: " + err.Error())
 	}
 	return variantToSu(v)
 }
