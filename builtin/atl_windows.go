@@ -7,10 +7,9 @@ import (
 	"github.com/apmckinlay/gsuneido/builtin/goc"
 	heap "github.com/apmckinlay/gsuneido/builtin/heapstack"
 	. "github.com/apmckinlay/gsuneido/runtime"
-	"golang.org/x/sys/windows"
 )
 
-var atl = windows.MustLoadDLL("atl.dll")
+var atl = MustLoadDLL("atl.dll")
 
 // dll bool atl:AtlAxWinInit()
 var atlAxWinInit = atl.MustFindProc("AtlAxWinInit").Addr()

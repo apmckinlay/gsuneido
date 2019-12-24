@@ -13,9 +13,27 @@ import (
 	"golang.org/x/sys/windows"
 )
 
-var _ = windows.MustLoadDLL("scilexer.dll")
+// MustLoadDLL is like windows.MustLoadDLL but uses log.Fatalln instead of panic
+func MustLoadDLL(name string) *mydll {
+	d, err := windows.LoadDLL(name)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	return (*mydll)(d)
+}
 
-var user32 = windows.MustLoadDLL("user32.dll")
+type mydll windows.DLL
+
+// MustFindProc is like window.MustFindProc but uses log.Fatalln instead of panic
+func (d *mydll) MustFindProc(name string) *windows.Proc {
+	p, err := (*windows.DLL)(d).FindProc(name)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	return p
+}
+
+var user32 = MustLoadDLL("user32.dll")
 
 type HANDLE = uintptr
 type BOOL = int32

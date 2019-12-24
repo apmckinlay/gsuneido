@@ -21,6 +21,8 @@ var uiThreadId uint32
 func Init(repl bool) {
 	connectToConsole(repl)
 
+	MustLoadDLL("scilexer.dll")
+
 	// inject dependencies
 	goc.TimerId = timerId
 	goc.Callback2 = callback2

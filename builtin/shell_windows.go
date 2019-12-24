@@ -9,10 +9,9 @@ import (
 	"github.com/apmckinlay/gsuneido/builtin/goc"
 	heap "github.com/apmckinlay/gsuneido/builtin/heapstack"
 	. "github.com/apmckinlay/gsuneido/runtime"
-	"golang.org/x/sys/windows"
 )
 
-var shell32 = windows.MustLoadDLL("shell32.dll")
+var shell32 = MustLoadDLL("shell32.dll")
 
 // dll void Shell32:DragAcceptFiles(pointer hWnd, bool fAccept)
 var dragAcceptFiles = shell32.MustFindProc("DragAcceptFiles").Addr()

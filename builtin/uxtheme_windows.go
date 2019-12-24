@@ -7,10 +7,9 @@ import (
 	"github.com/apmckinlay/gsuneido/builtin/goc"
 	heap "github.com/apmckinlay/gsuneido/builtin/heapstack"
 	. "github.com/apmckinlay/gsuneido/runtime"
-	"golang.org/x/sys/windows"
 )
 
-var uxtheme = windows.MustLoadDLL("uxtheme.dll")
+var uxtheme = MustLoadDLL("uxtheme.dll")
 
 // dll uxtheme:DrawThemeBackground(pointer hTheme, pointer hdc, long iPartId,
 //		long iStateId, RECT* pRect, RECT* pClipRect) long

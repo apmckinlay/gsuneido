@@ -11,10 +11,9 @@ import (
 	heap "github.com/apmckinlay/gsuneido/builtin/heapstack"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/verify"
-	"golang.org/x/sys/windows"
 )
 
-var kernel32 = windows.MustLoadDLL("kernel32.dll")
+var kernel32 = MustLoadDLL("kernel32.dll")
 
 // dll Kernel32:GetComputerName(buffer lpBuffer, LONG* lpnSize) bool
 var getComputerName = kernel32.MustFindProc("GetComputerNameA").Addr()
@@ -553,7 +552,7 @@ func OSName() Value {
 
 //-------------------------------------------------------------------
 
-var versionApi = windows.MustLoadDLL("Api-ms-win-core-version-l1-1-0.dll")
+var versionApi = MustLoadDLL("Api-ms-win-core-version-l1-1-0.dll")
 
 var getFileVersionInfo = versionApi.MustFindProc("GetFileVersionInfoA").Addr()
 var getFileVersionInfoSize = versionApi.MustFindProc("GetFileVersionInfoSizeA").Addr()

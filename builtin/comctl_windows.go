@@ -9,10 +9,9 @@ import (
 	"github.com/apmckinlay/gsuneido/builtin/goc"
 	heap "github.com/apmckinlay/gsuneido/builtin/heapstack"
 	. "github.com/apmckinlay/gsuneido/runtime"
-	"golang.org/x/sys/windows"
 )
 
-var comctl32 = windows.MustLoadDLL("comctl32.dll")
+var comctl32 = MustLoadDLL("comctl32.dll")
 
 var initCommonControlsEx = comctl32.MustFindProc("InitCommonControlsEx").Addr()
 var _ = builtin1("InitCommonControlsEx(picce)",

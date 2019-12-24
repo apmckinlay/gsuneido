@@ -7,10 +7,9 @@ import (
 	"github.com/apmckinlay/gsuneido/builtin/goc"
 	heap "github.com/apmckinlay/gsuneido/builtin/heapstack"
 	. "github.com/apmckinlay/gsuneido/runtime"
-	"golang.org/x/sys/windows"
 )
 
-var dwmapi = windows.MustLoadDLL("dwmapi.dll")
+var dwmapi = MustLoadDLL("dwmapi.dll")
 
 // dll pointer Dwmapi:DwmGetWindowAttribute(pointer hwnd, long dwAttribute,
 //		RECT* pvAttribute, long cbAttribute)

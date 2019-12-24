@@ -8,7 +8,7 @@ package builtin
 // 	"golang.org/x/sys/windows"
 // )
 
-// var eztwain4 = windows.MustLoadDLL("eztwain4.dll")
+// var eztwain4 = MustLoadDLL("eztwain4.dll")
 
 // // dll long Eztwain4:TWAIN_AcquireMultipageFile(pointer hwndApp, string pszFile)
 // var twain_AcquireMultipageFile = eztwain4.MustFindProc("TWAIN_AcquireMultipageFile").Addr()

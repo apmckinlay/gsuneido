@@ -9,10 +9,9 @@ import (
 	"github.com/apmckinlay/gsuneido/builtin/goc"
 	heap "github.com/apmckinlay/gsuneido/builtin/heapstack"
 	. "github.com/apmckinlay/gsuneido/runtime"
-	"golang.org/x/sys/windows"
 )
 
-var ole32 = windows.MustLoadDLL("ole32.dll")
+var ole32 = MustLoadDLL("ole32.dll")
 
 // dll long Ole32:CreateStreamOnHGlobal(
 // 	pointer hGlobal,
@@ -31,7 +30,7 @@ var _ = builtin3("CreateStreamOnHGlobal(hGlobal, fDeleteOnRelease, ppstm)",
 		return intRet(rtn)
 	})
 
-var oleaut32 = windows.MustLoadDLL("oleaut32.dll")
+var oleaut32 = MustLoadDLL("oleaut32.dll")
 
 // dll long OleAut32:OleLoadPicture(
 //		pointer lpstream,

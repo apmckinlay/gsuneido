@@ -9,10 +9,9 @@ import (
 	"github.com/apmckinlay/gsuneido/builtin/goc"
 	heap "github.com/apmckinlay/gsuneido/builtin/heapstack"
 	. "github.com/apmckinlay/gsuneido/runtime"
-	"golang.org/x/sys/windows"
 )
 
-var wtsapi32 = windows.MustLoadDLL("wtsapi32.dll")
+var wtsapi32 = MustLoadDLL("wtsapi32.dll")
 
 // dll void WTSAPI32:WTSFreeMemory(pointer adr)
 var wtsFreeMemory = wtsapi32.MustFindProc("WTSFreeMemory").Addr()

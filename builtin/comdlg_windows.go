@@ -9,10 +9,9 @@ import (
 	"github.com/apmckinlay/gsuneido/builtin/goc"
 	heap "github.com/apmckinlay/gsuneido/builtin/heapstack"
 	. "github.com/apmckinlay/gsuneido/runtime"
-	"golang.org/x/sys/windows"
 )
 
-var comdlg32 = windows.MustLoadDLL("comdlg32.dll")
+var comdlg32 = MustLoadDLL("comdlg32.dll")
 
 // dll long ComDlg32:CommDlgExtendedError()
 var commDlgExtendedError = comdlg32.MustFindProc("CommDlgExtendedError").Addr()

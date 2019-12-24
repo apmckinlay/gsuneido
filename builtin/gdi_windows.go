@@ -10,10 +10,9 @@ import (
 	heap "github.com/apmckinlay/gsuneido/builtin/heapstack"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/verify"
-	"golang.org/x/sys/windows"
 )
 
-var gdi32 = windows.MustLoadDLL("gdi32.dll")
+var gdi32 = MustLoadDLL("gdi32.dll")
 
 const LF_FACESIZE = 32
 

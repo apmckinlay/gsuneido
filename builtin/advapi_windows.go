@@ -7,10 +7,9 @@ import (
 	"github.com/apmckinlay/gsuneido/builtin/goc"
 	heap "github.com/apmckinlay/gsuneido/builtin/heapstack"
 	. "github.com/apmckinlay/gsuneido/runtime"
-	"golang.org/x/sys/windows"
 )
 
-var advapi32 = windows.MustLoadDLL("advapi32.dll")
+var advapi32 = MustLoadDLL("advapi32.dll")
 
 // RegOpenKeyEx
 var regOpenKeyEx = advapi32.MustFindProc("RegOpenKeyExA").Addr()

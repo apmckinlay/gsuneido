@@ -12,7 +12,7 @@ import (
 	"golang.org/x/sys/windows"
 )
 
-var user32 = windows.MustLoadDLL("user32.dll")
+var user32 = MustLoadDLL("user32.dll")
 var messageBox = user32.MustFindProc("MessageBoxA").Addr()
 
 func TestGoc(*testing.T) {
