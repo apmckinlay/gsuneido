@@ -72,13 +72,15 @@ func TestCheckResults(t *testing.T) {
 		"ERROR: used but not initialized: a @14")
 	test("function (a) { if a { b } }",
 		"ERROR: used but not initialized: b @22")
+	test("function (a) { if a { b=5 } }",
+		"WARNING: initialized but not used: b @22")
 	test("function (a) { if a { b=5 } if a { b } }",
 		"WARNING: used but possibly not initialized: b @35")
 	test("function () { a=1; b={|c,d| a }; c }",
 		"ERROR: used but not initialized: c @33",
 		"WARNING: initialized but not used: b @19")
 	test("function () { while (false isnt x = 1) { }; x }")
-	test("function () { for (i=0; i < 5; j++) { a=1; b=2; } }",
+	test("function () { for (i=0; i < 5; j++) { } }",
 		"ERROR: used but not initialized: j @31")
 	test("function () { for x in #() { } }",
 		"WARNING: initialized but not used: x @18")

@@ -60,6 +60,13 @@ func (ck *Check) Check(f *ast.Function) set {
 				"WARNING: initialized but not used: "+id+at)
 		}
 	}
+	for id,pos := range ck.AllInit {
+		if _,ok := ck.AllUsed[id]; !ok && ! init.has(id) {
+			at := " @" + strconv.Itoa(int(pos))
+			ck.Results = append(ck.Results,
+				"WARNING: initialized but not used: " + id + at)
+		}
+	}
 	return init
 }
 
