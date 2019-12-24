@@ -272,14 +272,6 @@ var _ = builtin1("GetFileAttributes(lpFileName)",
 		return intRet(rtn)
 	})
 
-// dll long Kernel32:GetLastError()
-var getLastError = kernel32.MustFindProc("GetLastError").Addr()
-var _ = builtin0("GetLastError()",
-	func() Value {
-		rtn := goc.Syscall0(getLastError)
-		return intRet(rtn)
-	})
-
 // dll pointer Kernel32:GetStdHandle(long nStdHandle)
 var getStdHandle = kernel32.MustFindProc("GetStdHandle").Addr()
 var _ = builtin1("GetStdHandle(nStdHandle)",
