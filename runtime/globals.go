@@ -5,6 +5,7 @@ package runtime
 
 import (
 	"fmt"
+	"log"
 	"sync"
 )
 
@@ -42,7 +43,7 @@ var g = globals{
 func (typeGlobal) Builtin(name string, value Value) Value {
 	// only called by single threaded init so no locking required
 	if gn, ok := g.name2num[name]; ok && g.builtins[gn] != nil {
-		panic("duplicate builtin: " + name)
+		log.Fatalln("duplicate builtin: " + name)
 	}
 	gnum := Global.add(name, nil)
 	g.builtins[gnum] = value
