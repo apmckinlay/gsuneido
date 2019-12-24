@@ -46,9 +46,9 @@ func connectToConsole(repl bool) {
 func redirected(which uint32) bool {
 	handle, _ := windows.GetStdHandle(which)
 	if handle != 0 {
-	dwFileType, _ := windows.GetFileType(handle)
-	return dwFileType == windows.FILE_TYPE_DISK ||
-		dwFileType == windows.FILE_TYPE_PIPE
+		dwFileType, _ := windows.GetFileType(handle)
+		return dwFileType == windows.FILE_TYPE_DISK ||
+			dwFileType == windows.FILE_TYPE_PIPE
 	}
 	return false
 }
