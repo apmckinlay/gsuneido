@@ -20,11 +20,10 @@ import (
 	"os"
 	"runtime"
 	"runtime/debug"
-
 	"strings"
 
+	"github.com/apmckinlay/gsuneido/aaainitfirst"
 	"github.com/apmckinlay/gsuneido/builtin"
-	_ "github.com/apmckinlay/gsuneido/builtin"
 	"github.com/apmckinlay/gsuneido/compile"
 	"github.com/apmckinlay/gsuneido/database/dbms"
 	"github.com/apmckinlay/gsuneido/options"
@@ -55,8 +54,6 @@ func main() {
 		options.Repl = true
 	}
 
-	builtin.Init(options.Repl) //WARNING: errors before this won't show up
-
 	if options.Version {
 		println("gSuneido " + builtDate + " (" + runtime.Version() + " " +
 			runtime.GOARCH + " " + runtime.GOOS + ")")
@@ -80,10 +77,11 @@ func main() {
 		eval("Suneido.Print = PrintStdout;;")
 	}
 	if options.Repl {
-		log.SetFlags(0)
+		log.SetFlags(0) // no date/time
+		aaainitfirst.InputFromConsole()
 		repl()
 	} else {
-		initLogger()
+		// initLogger()
 		eval("Init()")
 		builtin.Run()
 	}
@@ -101,16 +99,6 @@ func remainder(args []string) string {
 		sb.WriteString(arg)
 	}
 	return sb.String()
-
-}
-
-func initLogger() {
-	log.SetFlags(log.Ldate | log.Ltime) // | log.Lshortfile)
-	f, err := os.OpenFile("error.log", os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0666)
-	if err != nil {
-		log.Fatalln(err)
-	}
-	log.SetOutput(io.MultiWriter(f, os.Stderr))
 }
 
 // REPL -------------------------------------------------------------
@@ -131,7 +119,6 @@ func repl() {
 	}
 	prompt(built)
 	showOptions()
-	prompt("Note: use start/w gsuneido -repl")
 	prompt("Press Enter twice (i.e. blank line) to execute, q to quit")
 	r := bufio.NewReader(os.Stdin)
 	for {

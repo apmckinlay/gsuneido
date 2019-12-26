@@ -18,9 +18,7 @@ var _ = builtin("MessageLoop(hwnd = 0)", func(t *Thread, args []Value) Value {
 
 var uiThreadId uint32
 
-func Init(repl bool) {
-	connectToConsole(repl)
-
+func init() {
 	MustLoadDLL("scilexer.dll")
 
 	// inject dependencies

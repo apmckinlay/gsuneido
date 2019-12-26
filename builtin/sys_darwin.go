@@ -11,8 +11,6 @@ import (
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
-func Init(bool) {
-}
 func Run() {
 }
 
