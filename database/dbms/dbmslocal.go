@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"hash/adler32"
 	"io/ioutil"
-	"os"
+	"log"
 	"strconv"
 	"strings"
 
@@ -115,14 +115,7 @@ func (DbmsLocal) Libraries() *SuObject {
 }
 
 func (DbmsLocal) Log(s string) {
-	f, err := os.OpenFile("error.log", os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
-	if err != nil {
-		panic("can't open error.log " + err.Error())
-	}
-	if _, err := f.Write([]byte(s + "\n")); err != nil {
-		panic("can't write to error.log " + err.Error())
-	}
-	f.Close()
+	log.Println(s)
 }
 
 func (DbmsLocal) Nonce() string {
