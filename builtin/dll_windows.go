@@ -24,7 +24,7 @@ func MustLoadDLL(name string) *mydll {
 
 type mydll windows.DLL
 
-// MustFindProc is like window.MustFindProc but uses log.Fatalln instead of panic
+// MustFindProc is like windows.MustFindProc but uses log.Fatalln instead of panic
 func (d *mydll) MustFindProc(name string) *windows.Proc {
 	p, err := (*windows.DLL)(d).FindProc(name)
 	if err != nil {
