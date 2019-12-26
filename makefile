@@ -1,8 +1,13 @@
 # requires sh on path (e.g. from MinGW)
 BUILT=$(shell date "+%b %e %Y %X")
 
+LDFLAGS = -X 'main.builtDate=${BUILT}'
+ifdef windir
+	LDFLAGS += -H windowsgui
+endif
+
 build:
-	go build -v -ldflags "-X 'main.builtDate=${BUILT}' -H windowsgui"
+	go build -v -ldflags "$(LDFLAGS)"
 
 all:
 	go build -a -v -ldflags "-X 'main.builtDate=${BUILT}' -H windowsgui"
