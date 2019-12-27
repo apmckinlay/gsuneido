@@ -3,114 +3,132 @@
 
 package builtin
 
-// import (
-// 	. "github.com/apmckinlay/gsuneido/runtime"
-// 	"golang.org/x/sys/windows"
-// )
+import (
+	"syscall"
 
-// var eztwain4 = MustLoadDLL("eztwain4.dll")
+	heap "github.com/apmckinlay/gsuneido/builtin/heapstack"
+	. "github.com/apmckinlay/gsuneido/runtime"
+	"golang.org/x/sys/windows"
+)
 
-// // dll long Eztwain4:TWAIN_AcquireMultipageFile(pointer hwndApp, string pszFile)
-// var twain_AcquireMultipageFile = eztwain4.MustFindProc("TWAIN_AcquireMultipageFile").Addr()
-// var _ = builtin2("TWAIN_AcquireMultipageFile(hwndApp, pszFile)",
-// 	func(a, b Value) Value {
-// 		rtn, _, _ := syscall.Syscall(twain_AcquireMultipageFile, ?,
-// 			intArg(a),
-// 			uintptr(stringArg(b)))
-// 		return intRet(rtn)
-// 	})
+var eztwain4 = windows.NewLazyDLL("eztwain4.dll")
 
-// // dll long Eztwain4:TWAIN_GetHideUI()
-// var twain_GetHideUI = eztwain4.MustFindProc("TWAIN_GetHideUI").Addr()
-// var _ = builtin0("TWAIN_GetHideUI()",
-// 	func() Value {
-// 		rtn, _, _ := syscall.Syscall(twain_GetHideUI, 0)
-// 		return intRet(rtn)
-// 	})
+// dll long Eztwain4:TWAIN_AcquireMultipageFile(pointer hwndApp, string pszFile)
+var twain_AcquireMultipageFile = eztwain4.NewProc("TWAIN_AcquireMultipageFile")
+var _ = builtin2("TWAIN_AcquireMultipageFile(hwndApp, pszFile)",
+	func(a, b Value) Value {
+		defer heap.FreeTo(heap.CurSize())
+		rtn, _, _ := syscall.Syscall(twain_AcquireMultipageFile.Addr(), 2,
+			intArg(a),
+			uintptr(stringArg(b)),
+			0)
+		return intRet(rtn)
+	})
 
-// // dll long Eztwain4:TWAIN_GetSourceList()
-// var twain_GetSourceList = eztwain4.MustFindProc("TWAIN_GetSourceList").Addr()
-// var _ = builtin0("TWAIN_GetSourceList()",
-// 	func() Value {
-// 		rtn, _, _ := syscall.Syscall(twain_GetSourceList, 0)
-// 		return intRet(rtn)
-// 	})
+// dll long Eztwain4:TWAIN_GetHideUI()
+var twain_GetHideUI = eztwain4.NewProc("TWAIN_GetHideUI")
+var _ = builtin0("TWAIN_GetHideUI()",
+	func() Value {
+		rtn, _, _ := syscall.Syscall(twain_GetHideUI.Addr(), 0,
+			0, 0, 0)
+		return intRet(rtn)
+	})
 
-// // dll long Eztwain4:TWAIN_HasControllableUI()
-// var twain_HasControllableUI = eztwain4.MustFindProc("TWAIN_HasControllableUI").Addr()
-// var _ = builtin0("TWAIN_HasControllableUI()",
-// 	func() Value {
-// 		rtn, _, _ := syscall.Syscall(twain_HasControllableUI, 0)
-// 		return intRet(rtn)
-// 	})
+// dll long Eztwain4:TWAIN_GetSourceList()
+var twain_GetSourceList = eztwain4.NewProc("TWAIN_GetSourceList")
+var _ = builtin0("TWAIN_GetSourceList()",
+	func() Value {
+		rtn, _, _ := syscall.Syscall(twain_GetSourceList.Addr(), 0,
+			0, 0, 0)
+		return intRet(rtn)
+	})
 
-// // dll long Eztwain4:TWAIN_LastErrorCode()
-// var twain_LastErrorCode = eztwain4.MustFindProc("TWAIN_LastErrorCode").Addr()
-// var _ = builtin0("TWAIN_LastErrorCode()",
-// 	func() Value {
-// 		rtn, _, _ := syscall.Syscall(twain_LastErrorCode, 0)
-// 		return intRet(rtn)
-// 	})
+// dll long Eztwain4:TWAIN_HasControllableUI()
+var twain_HasControllableUI = eztwain4.NewProc("TWAIN_HasControllableUI")
+var _ = builtin0("TWAIN_HasControllableUI()",
+	func() Value {
+		rtn, _, _ := syscall.Syscall(twain_HasControllableUI.Addr(), 0,
+			0, 0, 0)
+		return intRet(rtn)
+	})
 
-// // dll long Eztwain4:TWAIN_OpenDefaultSource()
-// var twain_OpenDefaultSource = eztwain4.MustFindProc("TWAIN_OpenDefaultSource").Addr()
-// var _ = builtin0("TWAIN_OpenDefaultSource()",
-// 	func() Value {
-// 		rtn, _, _ := syscall.Syscall(twain_OpenDefaultSource, 0)
-// 		return intRet(rtn)
-// 	})
+// dll long Eztwain4:TWAIN_LastErrorCode()
+var twain_LastErrorCode = eztwain4.NewProc("TWAIN_LastErrorCode")
+var _ = builtin0("TWAIN_LastErrorCode()",
+	func() Value {
+		rtn, _, _ := syscall.Syscall(twain_LastErrorCode.Addr(), 0,
+			0, 0, 0)
+		return intRet(rtn)
+	})
 
-// // dll long Eztwain4:TWAIN_SelectImageSource(pointer hwnd)
-// var twain_SelectImageSource = eztwain4.MustFindProc("TWAIN_SelectImageSource").Addr()
-// var _ = builtin1("TWAIN_SelectImageSource(hwnd)",
-// 	func(a Value) Value {
-// 		rtn, _, _ := syscall.Syscall(twain_SelectImageSource, ?,
-// 			intArg(a))
-// 		return intRet(rtn)
-// 	})
+// dll long Eztwain4:TWAIN_OpenDefaultSource()
+var twain_OpenDefaultSource = eztwain4.NewProc("TWAIN_OpenDefaultSource")
+var _ = builtin0("TWAIN_OpenDefaultSource()",
+	func() Value {
+		rtn, _, _ := syscall.Syscall(twain_OpenDefaultSource.Addr(), 0,
+			0, 0, 0)
+		return intRet(rtn)
+	})
 
-// // dll void Eztwain4:TWAIN_SetAppTitle(string title)
-// var twain_SetAppTitle = eztwain4.MustFindProc("TWAIN_SetAppTitle").Addr()
-// var _ = builtin1("TWAIN_SetAppTitle(title)",
-// 	func(a Value) Value {
-// 		syscall.Syscall(twain_SetAppTitle, ?,
-// 			uintptr(stringArg(a)))
-// 		return nil
-// 	})
+// dll long Eztwain4:TWAIN_SelectImageSource(pointer hwnd)
+var twain_SelectImageSource = eztwain4.NewProc("TWAIN_SelectImageSource")
+var _ = builtin1("TWAIN_SelectImageSource(hwnd)",
+	func(a Value) Value {
+		rtn, _, _ := syscall.Syscall(twain_SelectImageSource.Addr(), 1,
+			intArg(a),
+			0, 0)
+		return intRet(rtn)
+	})
 
-// // dll long Eztwain4:TWAIN_SetHideUI(long fHide)
-// var twain_SetHideUI = eztwain4.MustFindProc("TWAIN_SetHideUI").Addr()
-// var _ = builtin1("TWAIN_SetHideUI(fHide)",
-// 	func(a Value) Value {
-// 		rtn, _, _ := syscall.Syscall(twain_SetHideUI, ?,
-// 			intArg(a))
-// 		return intRet(rtn)
-// 	})
+// dll void Eztwain4:TWAIN_SetAppTitle(string title)
+var twain_SetAppTitle = eztwain4.NewProc("TWAIN_SetAppTitle")
+var _ = builtin1("TWAIN_SetAppTitle(title)",
+	func(a Value) Value {
+		defer heap.FreeTo(heap.CurSize())
+		syscall.Syscall(twain_SetAppTitle.Addr(), 1,
+			uintptr(stringArg(a)),
+			0, 0)
+		return nil
+	})
 
-// // dll long Eztwain4:TWAIN_SetPaperSize(long nPaper)
-// var twain_SetPaperSize = eztwain4.MustFindProc("TWAIN_SetPaperSize").Addr()
-// var _ = builtin1("TWAIN_SetPaperSize(nPaper)",
-// 	func(a Value) Value {
-// 		rtn, _, _ := syscall.Syscall(twain_SetPaperSize, ?,
-// 			intArg(a))
-// 		return intRet(rtn)
-// 	})
+// dll long Eztwain4:TWAIN_SetHideUI(long fHide)
+var twain_SetHideUI = eztwain4.NewProc("TWAIN_SetHideUI")
+var _ = builtin1("TWAIN_SetHideUI(fHide)",
+	func(a Value) Value {
+		rtn, _, _ := syscall.Syscall(twain_SetHideUI.Addr(), 1,
+			intArg(a),
+			0, 0)
+		return intRet(rtn)
+	})
 
-// // dll long Eztwain4:TWAIN_SetPixelType(long nPixType)
-// var twain_SetPixelType = eztwain4.MustFindProc("TWAIN_SetPixelType").Addr()
-// var _ = builtin1("TWAIN_SetPixelType(nPixType)",
-// 	func(a Value) Value {
-// 		rtn, _, _ := syscall.Syscall(twain_SetPixelType, ?,
-// 			intArg(a))
-// 		return intRet(rtn)
-// 	})
+// dll long Eztwain4:TWAIN_SetPaperSize(long nPaper)
+var twain_SetPaperSize = eztwain4.NewProc("TWAIN_SetPaperSize")
+var _ = builtin1("TWAIN_SetPaperSize(nPaper)",
+	func(a Value) Value {
+		rtn, _, _ := syscall.Syscall(twain_SetPaperSize.Addr(), 0,
+			intArg(a),
+			0, 0)
+		return intRet(rtn)
+	})
 
-// // dll void Eztwain4:TWAIN_UniversalLicense(string pzVendorName, long nKey)
-// var twain_UniversalLicense = eztwain4.MustFindProc("TWAIN_UniversalLicense").Addr()
-// var _ = builtin2("TWAIN_UniversalLicense(pzVendorName, nKey)",
-// 	func(a, b Value) Value {
-// 		syscall.Syscall(twain_UniversalLicense, ?,
-// 			uintptr(stringArg(a)),
-// 			intArg(b))
-// 		return nil
-// 	})
+// dll long Eztwain4:TWAIN_SetPixelType(long nPixType)
+var twain_SetPixelType = eztwain4.NewProc("TWAIN_SetPixelType")
+var _ = builtin1("TWAIN_SetPixelType(nPixType)",
+	func(a Value) Value {
+		rtn, _, _ := syscall.Syscall(twain_SetPixelType.Addr(), 0,
+			intArg(a),
+			0, 0)
+		return intRet(rtn)
+	})
+
+// dll void Eztwain4:TWAIN_UniversalLicense(string pzVendorName, long nKey)
+var twain_UniversalLicense = eztwain4.NewProc("TWAIN_UniversalLicense")
+var _ = builtin2("TWAIN_UniversalLicense(pzVendorName, nKey)",
+	func(a, b Value) Value {
+		defer heap.FreeTo(heap.CurSize())
+		syscall.Syscall(twain_UniversalLicense.Addr(), 2,
+			uintptr(stringArg(a)),
+			intArg(b),
+			0)
+		return nil
+	})
