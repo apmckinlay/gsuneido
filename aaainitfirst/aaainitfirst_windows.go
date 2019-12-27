@@ -1,3 +1,6 @@
+// Copyright Suneido Software Corp. All rights reserved.
+// Governed by the MIT license found in the LICENSE file.
+
 // Package aaainitfirst is intended to be imported from main
 // and initialized first so that any errors from other initialization
 // is seen or logged.
