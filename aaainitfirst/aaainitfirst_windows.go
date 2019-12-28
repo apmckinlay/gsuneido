@@ -26,7 +26,7 @@ func init() {
 	if !attachedStderr {
 		stderrToLog()
 		log.SetOutput(os.Stderr) // new Stderr
-		log.SetFlags(0) // no date time to console
+		log.SetFlags(0)          // no date time to console
 	} else {
 		logFileAlso()
 	}
@@ -47,22 +47,21 @@ func stderrToLog() {
 }
 
 var consoleAttached = AttachParentConsole()
+var stdoutRedirected = redirected(windows.STD_OUTPUT_HANDLE)
+var stderrRedirected = redirected(windows.STD_ERROR_HANDLE)
 
 func outputToConsole() (stdoutAttached bool, stderrAttached bool) {
-	attachStdout := !redirected(windows.STD_OUTPUT_HANDLE)
-	attachStderr := !redirected(windows.STD_ERROR_HANDLE)
-
-	if attachStdout || attachStderr {
+	if !stdoutRedirected || !stderrRedirected {
 		// If not directed to a file, try attaching to console,
 		if consoleAttached {
 			if f, _ := os.OpenFile("CONOUT$", os.O_WRONLY, 0644); f != nil {
-				if attachStdout {
+				if !stdoutRedirected {
 					os.Stdout = f
 				}
-				if attachStderr {
+				if !stderrRedirected {
 					os.Stderr = f
 				}
-				return attachStdout, attachStderr
+				return !stdoutRedirected, !stderrRedirected
 			}
 		}
 	}
@@ -71,8 +70,9 @@ func outputToConsole() (stdoutAttached bool, stderrAttached bool) {
 
 func InputFromConsole() {
 	attachStdIn := !redirected(windows.STD_INPUT_HANDLE)
-	if consoleAttached {
-		if attachStdIn {
+	if attachStdIn {
+		OutputToConsole()
+		if consoleAttached {
 			if f, e := os.Open("CONIN$"); e == nil {
 				os.Stdin = f
 			}
@@ -88,6 +88,17 @@ func redirected(which uint32) bool {
 			dwFileType == windows.FILE_TYPE_PIPE
 	}
 	return false
+}
+
+func OutputToConsole() {
+	if !consoleAttached && (!stdoutRedirected || !stderrRedirected) {
+		consoleAttached = AllocConsole()
+		outputToConsole()
+	}
+}
+
+func ConsoleAttached() bool {
+	return consoleAttached
 }
 
 var kernel32 = windows.MustLoadDLL("kernel32.dll")

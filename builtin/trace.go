@@ -8,12 +8,25 @@ import (
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
-var _ = builtin("Trace(flags, block)",
+var _ = builtin("Trace(value, block = false)",
 	func(t *Thread, args []Value) Value {
-		defer func(oldflags int) {
-			options.Trace = oldflags
-		}(options.Trace)
-		options.Trace = ToInt(args[0])
-		t.Call(args[1])
+		if s, ok := args[0].ToStr(); ok {
+			if args[1] != False {
+				panic("usage: Trace(string) or Trace(flags, block)")
+			}
+			Trace(s)
+		} else {
+			oldFlags := options.Trace
+			options.Trace = ToInt(args[0])
+			if 0 == (options.Trace & (options.TraceConsole | options.TraceLogFile)) {
+				options.Trace |= options.TraceConsole | options.TraceLogFile
+			}
+			if args[1] != False {
+				defer func() {
+					options.Trace = oldFlags
+				}()
+				return t.Call(args[1])
+			}
+		}
 		return nil
 	})

@@ -4,8 +4,6 @@
 package runtime
 
 import (
-	"fmt"
-	"os"
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/options"
@@ -770,13 +768,10 @@ func (r *SuRecord) ckModify(op string) {
 }
 
 func (r *SuRecord) trace(args ...interface{}) {
-	if options.Trace&options.TraceRecords == 0 {
-		return
+	if options.Trace&options.TraceRecords != 0 {
+		Trace("RECORDS %p ", r)
+		Trace(args...)
 	}
-	f, _ := os.OpenFile("trace.log", os.O_RDWR|os.O_CREATE|os.O_APPEND, 0644)
-	defer f.Close()
-	s := fmt.Sprintf("RECORDS %p ", r) + fmt.Sprintln(args...)
-	f.WriteString(s)
 }
 
 // ToRow is only for debugging purposes
