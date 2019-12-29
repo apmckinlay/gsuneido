@@ -71,6 +71,7 @@ func main() {
 	if options.Client != "" {
 		addr := options.Client + ":" + options.Port
 		GetDbms = func() IDbms { return dbms.NewDbmsClient(addr) }
+		clientErrorLog()
 	} else {
 		dbmsLocal = dbms.NewDbmsLocal()
 		GetDbms = func() IDbms { return dbmsLocal }
@@ -99,6 +100,34 @@ func remainder(args []string) string {
 		sb.WriteString(arg)
 	}
 	return sb.String()
+}
+
+func clientErrorLog() {
+	// unlike cSuneido, client error.log is still in current directory
+	// this is partly because stderr has already been redirected
+	f, err := os.Open("error.log")
+	if err != nil {
+		return
+	}
+	dbms := mainThread.Dbms()
+	defer func() {
+		f.Close()
+		os.Truncate("error.log", 0) // can't remove since open as stderr
+		if e := recover(); e != nil {
+			dbms.Log("log previous errors: " + fmt.Sprint(e))
+		}
+	}()
+	// send errors to server
+	in := bufio.NewScanner(f)
+	in.Buffer(nil, 1024)
+	nlines := 0
+	for in.Scan() {
+		dbms.Log("PREVIOUS: " + in.Text())
+		if nlines++; nlines > 1000 {
+			dbms.Log("PREVIOUS: too many errors")
+			break
+		}
+	}
 }
 
 // REPL -------------------------------------------------------------
