@@ -17,7 +17,7 @@ var traceLogOnce sync.Once
 var traceConOnce sync.Once
 
 func Trace(args ...interface{}) {
-	s := fmt.Sprint(args...)
+	s := fmt.Sprintln(args...)
 	if options.Trace&options.TraceLogFile != 0 {
 		traceLogOnce.Do(func() {
 			traceLog, _ = os.OpenFile("trace.log",
