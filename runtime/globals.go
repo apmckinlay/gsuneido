@@ -209,6 +209,7 @@ func (typeGlobal) Unload(name string) {
 	gnum := Global.Num(name)
 	g.lock.Lock()
 	g.values[gnum] = nil
+	delete(g.errors, gnum)
 	g.lock.Unlock()
 }
 
