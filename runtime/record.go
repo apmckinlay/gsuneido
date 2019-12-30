@@ -46,6 +46,26 @@ func (r Record) Count() int {
 	return (int(r[0])<<8 + int(r[1])) & sizeMask
 }
 
+func (r Record) Len() int {
+	if r[0] == 0 {
+		return 1
+	}
+	switch r.mode() {
+	case type8:
+		j := hdrlen
+		return int(r[j])
+	case type16:
+		j := hdrlen
+		return (int(r[j]) << 8) | int(r[j+1])
+	case type32:
+		j := hdrlen
+		return (int(r[j]) << 24) | (int(r[j+1]) << 16) |
+			(int(r[j+2]) << 8) | int(r[j+3])
+	default:
+		panic("invalid record type")
+	}
+}
+
 // GetVal is a convenience method to get and unpack
 func (r Record) GetVal(i int) Value {
 	return Unpack(r.GetRaw(i))
