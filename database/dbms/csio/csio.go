@@ -6,6 +6,7 @@ package csio
 import (
 	"bufio"
 	"io"
+	"log"
 	"unsafe"
 
 	. "github.com/apmckinlay/gsuneido/runtime"
@@ -123,7 +124,9 @@ func (rw *ReadWrite) GetInt64() int64 {
 // GetN reads n bytes and returns them in a string
 func (rw *ReadWrite) GetN(n int) string {
 	buf := make([]byte, n)
-	io.ReadFull(rw.r, buf)
+	if _, err := io.ReadFull(rw.r, buf); err != nil {
+		log.Fatalln("client GetN", err)
+	}
 	return *(*string)(unsafe.Pointer(&buf)) // safe since buf doesn't escape
 }
 
