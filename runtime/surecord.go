@@ -4,6 +4,7 @@
 package runtime
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/options"
@@ -769,7 +770,7 @@ func (r *SuRecord) ckModify(op string) {
 
 func (r *SuRecord) trace(args ...interface{}) {
 	if options.Trace&options.TraceRecords != 0 {
-		Trace("RECORDS %p ", r)
+		Trace(fmt.Sprintf("RECORDS %p ", r))
 		Trace(args...)
 	}
 }
