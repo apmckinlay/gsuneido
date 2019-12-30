@@ -34,7 +34,7 @@ const (
 	type16
 	type32
 )
-const sizeMask = 0x3ff
+const sizeMask = 0x3fff
 
 const hdrlen = 2
 
