@@ -713,7 +713,7 @@ var _ = builtin3("CreatePen(fnPenStyle, nWidth, clrref)",
 		rtn := goc.Syscall3(createPen,
 			intArg(a),
 			intArg(b),
-			intArg(b))
+			intArg(c))
 		return intRet(rtn)
 	})
 
