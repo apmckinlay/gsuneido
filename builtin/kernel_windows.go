@@ -311,15 +311,6 @@ var _ = builtin1("GlobalFree(hglb)",
 		return intRet(rtn)
 	})
 
-// dll long Kernel32:GlobalSize(pointer handle)
-var globalSize = kernel32.MustFindProc("GlobalSize").Addr()
-var _ = builtin1("GlobalSize(handle)",
-	func(a Value) Value {
-		rtn := goc.Syscall1(globalSize,
-			intArg(a))
-		return intRet(rtn)
-	})
-
 // dll pointer Kernel32:LoadLibrary([in] string library)
 var loadLibrary = kernel32.MustFindProc("LoadLibraryA").Addr()
 var _ = builtin1("LoadLibrary(library)",
