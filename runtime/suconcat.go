@@ -23,6 +23,8 @@ type SuConcat struct {
 	CantConvert
 }
 
+// scbuf is the potentially shared byte slice buffer
+// i.e. multiple SuConcat's may point to the same scbuf
 type scbuf struct {
 	bs []byte
 	// concurrent is set by SetConcurrent
@@ -83,7 +85,8 @@ func (c SuConcat) ToStr() (string, bool) {
 
 func (c SuConcat) toStr() string {
 	// use the same trick as strings.Builder to avoid allocation
-	return *(*string)(unsafe.Pointer(&c.buf.bs))
+	s := *(*string)(unsafe.Pointer(&c.buf.bs))
+	return s[:c.n]
 }
 
 // String returns a quoted string
