@@ -183,6 +183,21 @@ var _ = builtin0("Callbacks()", func() Value {
 	return ob
 })
 
+func CallbacksCount() int {
+	n := 0
+	for _, c := range cbs {
+		for _, cb := range c {
+			if !cb.used {
+				break
+			}
+			if cb.active {
+				n++
+			}
+		}
+	}
+	return n
+}
+
 var _ = builtin1("ClearCallback(fn)", func(fn Value) Value {
 	return SuBool(ClearCallback(fn))
 })

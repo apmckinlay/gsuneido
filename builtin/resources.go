@@ -6,5 +6,7 @@ package builtin
 import . "github.com/apmckinlay/gsuneido/runtime"
 
 var _ = builtin0("ResourceCounts()", func() Value {
-	return NewSuObject()
+	ob := NewSuObject()
+	ob.Put(nil, SuStr("Callbacks"), IntVal(CallbacksCount()))
+	return ob
 })
