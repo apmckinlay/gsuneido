@@ -80,3 +80,8 @@ func (d *SuDatabaseGlobal) Lookup(t *Thread, method string) Callable {
 func (d *SuDatabaseGlobal) String() string {
 	return "Database /* builtin class */"
 }
+
+var _ = builtin("DoWithoutTriggers()",
+	func(t *Thread, args []Value) Value {
+		panic("DoWithoutTriggers cannot be used when running as a client")
+	})
