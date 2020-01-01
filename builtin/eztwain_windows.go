@@ -5,6 +5,7 @@ package builtin
 
 import (
 	"syscall"
+	"unsafe"
 
 	heap "github.com/apmckinlay/gsuneido/builtin/heapstack"
 	. "github.com/apmckinlay/gsuneido/runtime"
@@ -61,6 +62,24 @@ var _ = builtin0("TWAIN_LastErrorCode()",
 		return intRet(rtn)
 	})
 
+// dll string Eztwain4:TWAIN_LastErrorText()
+var twain_LastErrorText = eztwain4.NewProc("TWAIN_LastErrorText")
+var _ = builtin0("TWAIN_LastErrorText()",
+	func() Value {
+		rtn, _, _ := syscall.Syscall(twain_LastErrorText.Addr(), 0,
+			0, 0, 0)
+		return bufToStr(unsafe.Pointer(rtn), 256)
+	})
+
+// dll string Eztwain4:TWAIN_NextSourceName()
+var twain_NextSourceName = eztwain4.NewProc("TWAIN_NextSourceName")
+var _ = builtin0("TWAIN_NextSourceName()",
+	func() Value {
+		rtn, _, _ := syscall.Syscall(twain_LastErrorText.Addr(), 0,
+			0, 0, 0)
+		return bufToStr(unsafe.Pointer(rtn), 256)
+	})
+
 // dll long Eztwain4:TWAIN_OpenDefaultSource()
 var twain_OpenDefaultSource = eztwain4.NewProc("TWAIN_OpenDefaultSource")
 var _ = builtin0("TWAIN_OpenDefaultSource()",
@@ -105,7 +124,7 @@ var _ = builtin1("TWAIN_SetHideUI(fHide)",
 var twain_SetPaperSize = eztwain4.NewProc("TWAIN_SetPaperSize")
 var _ = builtin1("TWAIN_SetPaperSize(nPaper)",
 	func(a Value) Value {
-		rtn, _, _ := syscall.Syscall(twain_SetPaperSize.Addr(), 0,
+		rtn, _, _ := syscall.Syscall(twain_SetPaperSize.Addr(), 1,
 			intArg(a),
 			0, 0)
 		return intRet(rtn)
@@ -115,7 +134,7 @@ var _ = builtin1("TWAIN_SetPaperSize(nPaper)",
 var twain_SetPixelType = eztwain4.NewProc("TWAIN_SetPixelType")
 var _ = builtin1("TWAIN_SetPixelType(nPixType)",
 	func(a Value) Value {
-		rtn, _, _ := syscall.Syscall(twain_SetPixelType.Addr(), 0,
+		rtn, _, _ := syscall.Syscall(twain_SetPixelType.Addr(), 1,
 			intArg(a),
 			0, 0)
 		return intRet(rtn)
@@ -131,4 +150,16 @@ var _ = builtin2("TWAIN_UniversalLicense(pzVendorName, nKey)",
 			intArg(b),
 			0)
 		return nil
+	})
+
+// dll int32 Eztwain4:TWAIN_SetResolution(double nRes)
+var twain_SetResolution = eztwain4.NewProc("TWAIN_SetResolution")
+var _ = builtin1("TWAIN_SetResolution(nRes)",
+	func(a Value) Value {
+		n := ToDnum(a).ToFloat()
+		rtn, _, _ := syscall.Syscall(twain_SetResolution.Addr(), 1,
+			// assuming Go and Windows use same float representation ???
+			*(*uintptr)(unsafe.Pointer(&n)),
+			0, 0)
+		return intRet(rtn)
 	})
