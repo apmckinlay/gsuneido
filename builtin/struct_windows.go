@@ -53,6 +53,8 @@ func init() {
 		&SuStructGlobal{size: int(nDOCINFO)})
 	Global.Builtin("PRINTDLGEX",
 		&SuStructGlobal{size: int(nPRINTDLGEX)})
+	Global.Builtin("CHOOSEFONT",
+		&SuStructGlobal{size: int(nCHOOSEFONT)})
 	Global.Builtin("CHOOSECOLOR",
 		&SuStructGlobal{size: int(nCHOOSECOLOR)})
 	Global.Builtin("FLASHWINFO",
