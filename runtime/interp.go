@@ -13,9 +13,9 @@ import (
 // UpdateUI is injected
 var UpdateUI func()
 
-var blockBreak = &SuExcept{SuStr: SuStr("block:break")}
-var blockContinue = &SuExcept{SuStr: SuStr("block:continue")}
-var BlockReturn = &SuExcept{SuStr: SuStr("block return")}
+var blockBreak = BuiltinSuExcept("block:break")
+var blockContinue = BuiltinSuExcept("block:continue")
+var BlockReturn = BuiltinSuExcept("block return")
 
 // Start sets up a frame to Run a compiled Suneido function
 // The stack must already be in the form required by the function (massaged)

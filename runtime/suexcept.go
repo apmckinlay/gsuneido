@@ -10,6 +10,10 @@ type SuExcept struct {
 	Callstack *SuObject
 }
 
+func BuiltinSuExcept(s string) *SuExcept {
+	return &SuExcept{SuStr: SuStr(s), Callstack: EmptyObject}
+}
+
 func NewSuExcept(t *Thread, s SuStr) *SuExcept {
 	return &SuExcept{SuStr: s, Callstack: t.Callstack()}
 }
