@@ -193,16 +193,9 @@ static void message_loop(uintptr hdlg) {
 			msg.message == WM_NULL && msg.wParam == END_MSG_LOOP &&
 			msg.lParam == END_MSG_LOOP)
 			return;
-		if (msg.message == WM_USER && msg.hwnd == 0) {
-			if (msg.wParam == 0xffffffff) {
-				args[0] = msg_updateui;
-			} else {
-				// from SetTimer in another thread
-				uintptr id =
-					SetTimer(0, 0, (UINT)(msg.wParam), (TIMERPROC)(msg.lParam));
-				args[0] = msg_timerid;
-				args[1] = id;
-			}
+		if (msg.message == WM_USER && msg.hwnd == 0 &&
+			msg.wParam == 0xffffffff) {
+			args[0] = msg_updateui;
 			interact();
 			continue;
 		}
@@ -228,12 +221,26 @@ static void destroy_windows() {
 	EnumWindows(destroy_func, (LPARAM) NULL);
 }
 
+// timer ensures UpdateUI since it will get called
+// even if a Windows message loop is running e.g. in MessageBox
+static VOID CALLBACK timer(
+	HWND hwnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime) {
+	// only needed if our message loop isnt running
+	if (ticks <= 3) {
+		args[0] = msg_updateui;
+		interact();
+	}
+}
+
+const int timerIntervalMS = 50;
+
 static DWORD WINAPI thread(LPVOID lpParameter) {
 	main_threadid = GetCurrentThreadId();
 	hook = SetWindowsHookExA(WH_GETMESSAGE, message_hook, 0, main_threadid);
-	CreateThread(NULL, 1000, timer_thread, 0, 0, 0);
+	CreateThread(NULL, 8192, timer_thread, 0, 0, 0);
 	signalAndWait();
 	interact(); // allow go side to run init, finishing with result
+	SetTimer(0, 0, timerIntervalMS, timer);
 	message_loop(0);
 	destroy_windows();
 	exit(0);

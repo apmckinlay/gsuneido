@@ -11,7 +11,7 @@ import (
 )
 
 // UpdateUI is injected
-var UpdateUI = func() {}
+var UpdateUI func()
 
 var blockBreak = &SuExcept{SuStr: SuStr("block:break")}
 var blockContinue = &SuExcept{SuStr: SuStr("block:continue")}
@@ -168,7 +168,9 @@ loop:
 		// fmt.Printf("%d: %d: %s\n", t.fp, fr.ip, da)
 		opCount--
 		if opCount == 0 {
-			UpdateUI()
+			if t.Every != 0 {
+				UpdateUI()
+			}
 			opCount = t.Every
 		}
 		oc = op.Opcode(code[fr.ip])

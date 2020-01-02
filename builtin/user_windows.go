@@ -5,7 +5,6 @@ package builtin
 
 import (
 	"log"
-	"syscall"
 	"time"
 	"unsafe"
 
@@ -245,8 +244,7 @@ func MessageBox(text, caption string) {
 		0,
 		uintptr(strToBuf(text, len(text)+1)),
 		uintptr(strToBuf(caption, len(caption)+1)),
-		0x52000, // MB_OK | MB_TASKMODAL | MB_TOPMOST | MB_SETFOREGROUND
-		)
+		0x52000) // MB_OK | MB_TASKMODAL | MB_TOPMOST | MB_SETFOREGROUND
 }
 
 // dll User32:AdjustWindowRectEx(RECT* rect, long style, bool menu,
@@ -908,26 +906,32 @@ var _ = builtin4("SetTimer(hwnd, id, ms, f)",
 		if windows.GetCurrentThreadId() != uiThreadId {
 			// WARNING: can't use heap from background thread
 			d.SetConcurrent() // since callback will be from different thread
-			// NOTE: this has to be the Go Syscall, not goc.Syscall
-			r, _, _ := syscall.Syscall6(postThreadMessage, 4,
-				goc.CThreadId(), WM_USER, intArg(c), NewCallback(d, 4), 0, 0)
-			if r == 0 {
-				return Zero // SetTimer failure return value
-			}
-			select {
-			case rtn := <-retChan:
-				return intRet(rtn)
-			case <-time.After(10 * time.Second):
-				log.Panicln("SetTimer timeout")
+			setTimerChan <- timerSpec{hwnd: a, id: b, ms: c, cb: d}
+			notifyMessageLoop()
+			first := true
+			for {
+				select {
+				case id := <-timerIdChan:
+					return id
+				case <-time.After(5 * time.Second):
+					if first {
+						first = false
+						log.Println("SetTimer timeout")
+					}
+				}
 			}
 		}
-		rtn := goc.Syscall4(setTimer,
-			intArg(a),
-			intArg(b),
-			intArg(c),
-			NewCallback(d, 4))
-		return intRet(rtn)
+		return gocSetTimer(a, b, c, d)
 	})
+
+func gocSetTimer(hwnd, id, ms, cb Value) Value {
+	rtn := goc.Syscall4(setTimer,
+		intArg(hwnd),
+		intArg(id),
+		intArg(ms),
+		NewCallback(cb, 4))
+	return intRet(rtn)
+}
 
 // dll User32:KillTimer(pointer hwnd, long id) bool
 var killTimer = user32.MustFindProc("KillTimer").Addr()
@@ -1481,7 +1485,7 @@ var _ = builtin1("IsWindow(hwnd)",
 	})
 
 // dll bool User32:IsChild(pointer hwndParent, pointer hwnd)
-var isChild= user32.MustFindProc("IsChild").Addr()
+var isChild = user32.MustFindProc("IsChild").Addr()
 var _ = builtin2("IsChild(hwndParent, hwnd)",
 	func(a, b Value) Value {
 		rtn := goc.Syscall2(isChild,

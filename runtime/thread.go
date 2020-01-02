@@ -56,7 +56,7 @@ type Thread struct {
 	// Name is the name of the thread (default is Thread-#)
 	Name string
 
-	// Every is the interval to check ChanUI. 0 means never.
+	// Every is the interval to call UpdateUI. 0 means never.
 	Every int
 }
 

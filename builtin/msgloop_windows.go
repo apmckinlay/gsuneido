@@ -22,12 +22,11 @@ func init() {
 	MustLoadDLL("scilexer.dll")
 
 	// inject dependencies
-	goc.TimerId = timerId
 	goc.Callback2 = callback2
 	goc.Callback3 = callback3
 	goc.Callback4 = callback4
 	goc.SunAPP = sunAPP
-	goc.UpdateUI = updateUI
+	goc.UpdateUI = updateUI2
 	UpdateUI = updateUI // runtime
 
 	// used to detect calls from other threads (not allowed)
@@ -43,9 +42,15 @@ func Run() {
 	goc.Run()
 }
 
-// retChan is used for the return value for cross thread SetTimer
-var retChan = make(chan uintptr, 1) //TODO check if buffer is needed
-
-func timerId(id uintptr) {
-	retChan <- id
+type timerSpec struct {
+	hwnd Value
+	id   Value
+	ms   Value
+	cb   Value
 }
+
+// setTimerChan is used for cross thread SetTimer requests
+var setTimerChan = make(chan timerSpec, 1)
+
+// timerIdChan is used for the return value for cross thread SetTimer
+var timerIdChan = make(chan Value, 1) //TODO check if buffer is needed
