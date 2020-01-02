@@ -472,8 +472,7 @@ type limitBuf struct {
 
 func (buf *limitBuf) WriteString(s string) {
 	if buf.sb.Len()+len(s) > maxbuf {
-		log.Panicln("buffer overflow displaying object",
-			buf.sb.Len(), ">", maxbuf)
+		log.Panicln("buffer overflow displaying object > ", maxbuf)
 	}
 	buf.sb.WriteString(s)
 }
