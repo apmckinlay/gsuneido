@@ -60,11 +60,11 @@ func (ck *Check) Check(f *ast.Function) set {
 				"WARNING: initialized but not used: "+id+at)
 		}
 	}
-	for id,pos := range ck.AllInit {
-		if _,ok := ck.AllUsed[id]; !ok && ! init.has(id) {
+	for id, pos := range ck.AllInit {
+		if _, ok := ck.AllUsed[id]; !ok && !init.has(id) {
 			at := " @" + strconv.Itoa(int(pos))
 			ck.Results = append(ck.Results,
-				"WARNING: initialized but not used: " + id + at)
+				"WARNING: initialized but not used: "+id+at)
 		}
 	}
 	return init
@@ -132,7 +132,8 @@ func (ck *Check) statement(stmt ast.Statement, init set) set {
 		init = ck.expr(stmt.E, init)
 	case *ast.TryCatch:
 		init = ck.statement(stmt.Try, init)
-		if stmt.CatchVar.Name != "" && !stmt.CatchVarUnused {
+		if stmt.CatchVar.Name != "" && stmt.CatchVar.Name != "unused" &&
+			!stmt.CatchVarUnused {
 			init = ck.initVar(init, stmt.CatchVar.Name, int(stmt.CatchVar.Pos))
 		}
 		ck.statement(stmt.Catch, init)
