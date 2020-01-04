@@ -16,8 +16,6 @@ import (
 	"github.com/apmckinlay/gsuneido/database/dbms/commands"
 )
 
-//TODO err checking
-
 // ReadWrite handles encode/decode for the Suneido client/server protocol.
 // It uses bufio for buffering.
 type ReadWrite struct {
@@ -84,9 +82,11 @@ func (rw *ReadWrite) PutVal(v Value) *ReadWrite {
 	return rw.PutStr(PackValue(v))
 }
 
+//-------------------------------------------------------------------
+
 // GetBool reads a boolean
 func (rw *ReadWrite) GetBool() bool {
-	b, _ := rw.r.ReadByte()
+	b := rw.getByte()
 	switch b {
 	case 0:
 		return false
@@ -94,6 +94,18 @@ func (rw *ReadWrite) GetBool() bool {
 		return true
 	default:
 		panic("bad boolean")
+	}
+}
+
+func (rw *ReadWrite) getByte() byte {
+	b, err := rw.r.ReadByte()
+	ck(err)
+	return b
+}
+
+func ck(err error) {
+	if err != nil {
+		log.Fatalln("client:", err)
 	}
 }
 
@@ -109,7 +121,7 @@ func (rw *ReadWrite) GetInt64() int64 {
 	shift := uint(0)
 	n := uint64(0)
 	for {
-		b, _ := rw.r.ReadByte()
+		b := rw.getByte()
 		n |= uint64(b&0x7f) << shift
 		shift += 7
 		if 0 == (b & 0x80) {
@@ -124,9 +136,8 @@ func (rw *ReadWrite) GetInt64() int64 {
 // GetN reads n bytes and returns them in a string
 func (rw *ReadWrite) GetN(n int) string {
 	buf := make([]byte, n)
-	if _, err := io.ReadFull(rw.r, buf); err != nil {
-		log.Fatalln("client GetN", err)
-	}
+	_, err := io.ReadFull(rw.r, buf)
+	ck(err)
 	return *(*string)(unsafe.Pointer(&buf)) // safe since buf doesn't escape
 }
 
@@ -170,7 +181,7 @@ func limit(n int64) int {
 // Request does Flush and GetBool for the result.
 // If the result is false, it does GetStr for the error and panics with it.
 func (rw *ReadWrite) Request() {
-	rw.w.Flush()
+	ck(rw.w.Flush())
 	if !rw.GetBool() {
 		err := rw.GetStr()
 		panic(err + " (from server)")
