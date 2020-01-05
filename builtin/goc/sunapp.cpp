@@ -41,7 +41,7 @@ public:
 	HRESULT STDMETHODCALLTYPE Abort(
 		/* [in] */ HRESULT hrReason,
 		/* [in] */ DWORD dwOptions) {
-		return S_OK;
+		return S_OK; // or E_NOTIMPL ???
 	}
 
 	HRESULT STDMETHODCALLTYPE Terminate(
@@ -68,7 +68,7 @@ public:
 		/* [in] */ LARGE_INTEGER dlibMove,
 		/* [in] */ DWORD dwOrigin,
 		/* [out] */ ULARGE_INTEGER __RPC_FAR* plibNewPosition) {
-		return S_OK;
+		return E_NOTIMPL;
 	}
 
 	HRESULT STDMETHODCALLTYPE LockRequest(
@@ -143,13 +143,8 @@ HRESULT STDMETHODCALLTYPE CSuneidoAPP::Start(
 	InternetCanonicalizeUrl(url, buf, &buflen, ICU_DECODE | ICU_NO_ENCODE);
 
 	buf_t result = suneidoAPP(buf);
-	if (str)
-		delete str;
 	str = result.buf;
-	int n = result.size;
-	if (n == 0)
-		return INET_E_DATA_NOT_AVAILABLE;
-	len = n;
+	len = result.size;
 	pos = 0;
 
 	pOIProtSink->ReportData(BSCF_DATAFULLYAVAILABLE | BSCF_LASTDATANOTIFICATION,
@@ -166,9 +161,7 @@ HRESULT STDMETHODCALLTYPE CSuneidoAPP::Read(
 	*pcbRead = min(cb, len - pos);
 	memcpy(pv, str + pos, *pcbRead);
 	pos += *pcbRead;
-	if (pos < len)
-		return S_OK;
-	return S_FALSE;
+	return pos >= len ? S_FALSE : S_OK; // more to read ?
 }
 
 //-------------------------------------------------------------------
