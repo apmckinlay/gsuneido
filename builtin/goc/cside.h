@@ -32,6 +32,9 @@ enum {
 	msg_updateui,
 	msg_sunapp,
 	msg_traccel,
+	msg_queryidispatch,
+	msg_invoke,
+	msg_release,
 };
 
 typedef uintptr(__stdcall* cb2_t)(uintptr a, uintptr b);

@@ -4,7 +4,7 @@
 package goc
 
 // #cgo CFLAGS: -DWINVER=0x601 -D_WIN32_WINNT=0x0601
-// #cgo LDFLAGS: -lurlmon -lole32 -luuid -lwininet -static
+// #cgo LDFLAGS: -lurlmon -lole32 -loleaut32 -luuid -lwininet -static
 // #include "cside.h"
 import "C"
 
@@ -37,6 +37,28 @@ func Run() {
 
 func CThreadId() uintptr {
 	return uintptr(C.threadid)
+}
+
+func QueryIDispatch(iunk uintptr) uintptr {
+	C.args[0] = C.msg_queryidispatch
+	C.args[1] = C.uintptr(iunk)
+	return interact()
+}
+
+func Invoke(idisp, name, flags, args, result uintptr) int {
+	C.args[0] = C.msg_invoke
+	C.args[1] = C.uintptr(idisp)
+	C.args[2] = C.uintptr(name)
+	C.args[3] = C.uintptr(flags)
+	C.args[4] = C.uintptr(args)
+	C.args[5] = C.uintptr(result)
+	return int(interact())
+}
+
+func Release(iunk uintptr) {
+	C.args[0] = C.msg_release
+	C.args[1] = C.uintptr(iunk)
+	interact()
 }
 
 func Traccel(ob int, msg unsafe.Pointer) int {
