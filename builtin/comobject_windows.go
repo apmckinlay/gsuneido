@@ -77,8 +77,9 @@ func (*suComObject) Hash2() uint32 {
 	panic("COMobject hash not implemented")
 }
 
-func (*suComObject) Equal(interface{}) bool {
-	panic("COMobject equals not implemented")
+func (sco *suComObject) Equal(other interface{}) bool {
+	sco2, ok := other.(*suComObject)
+	return ok && sco == sco2
 }
 
 func (*suComObject) Compare(Value) int {
