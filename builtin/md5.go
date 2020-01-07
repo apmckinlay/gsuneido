@@ -75,10 +75,8 @@ func (*SuMd5) Type() types.Type {
 }
 
 func (sa *SuMd5) Equal(other interface{}) bool {
-	if sa2, ok := other.(*SuMd5); ok {
-		return sa == sa2
-	}
-	return false
+	sa2, ok := other.(*SuMd5)
+	return ok && sa == sa2
 }
 
 func (*SuMd5) Lookup(_ *Thread, method string) Callable {

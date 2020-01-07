@@ -75,10 +75,8 @@ func (*SuSha256) Type() types.Type {
 }
 
 func (sa *SuSha256) Equal(other interface{}) bool {
-	if sa2, ok := other.(*SuSha256); ok {
-		return sa == sa2
-	}
-	return false
+	sa2, ok := other.(*SuSha256)
+	return ok && sa == sa2
 }
 
 func (*SuSha256) Lookup(_ *Thread, method string) Callable {

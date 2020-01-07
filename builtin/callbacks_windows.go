@@ -128,7 +128,7 @@ func NewCallback(fn Value, nargs int) uintptr {
 }
 
 // cbeq is identity equality, except for bound methods
-// can't just use Equals because it's deep equals for SuInstance
+// can't just use Equal because it's deep equals for SuInstance
 func cbeq(x, y Value) bool {
 	if x == y {
 		return true

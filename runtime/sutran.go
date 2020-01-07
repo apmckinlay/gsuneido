@@ -57,10 +57,8 @@ func (*SuTran) Hash2() uint32 {
 }
 
 func (st *SuTran) Equal(other interface{}) bool {
-	if t2, ok := other.(*SuTran); ok {
-		return st == t2
-	}
-	return false
+	st2, ok := other.(*SuTran)
+	return ok && st == st2
 }
 
 func (*SuTran) Compare(Value) int {

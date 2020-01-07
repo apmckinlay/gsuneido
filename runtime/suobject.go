@@ -519,10 +519,8 @@ func (ob *SuObject) hash2() uint32 {
 }
 
 func (ob *SuObject) Equal(other interface{}) bool {
-	if val, ok := other.(Value); ok {
-		return deepEqual(ob, val)
-	}
-	return false
+	val, ok := other.(Value)
+	return ok && deepEqual(ob, val)
 }
 
 func (*SuObject) Type() types.Type {

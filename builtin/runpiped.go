@@ -120,10 +120,8 @@ func (*suRunPiped) Type() types.Type {
 }
 
 func (rp *suRunPiped) Equal(other interface{}) bool {
-	if rp2, ok := other.(*suRunPiped); ok {
-		return rp == rp2
-	}
-	return false
+	rp2, ok := other.(*suRunPiped)
+	return ok && rp == rp2
 }
 
 func (*suRunPiped) Lookup(_ *Thread, method string) Callable {

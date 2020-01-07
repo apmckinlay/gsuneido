@@ -79,10 +79,8 @@ func (b SuBool) Hash2() uint32 {
 }
 
 func (b SuBool) Equal(other interface{}) bool {
-	if b2, ok := other.(SuBool); ok {
-		return b == b2
-	}
-	return false
+	b2, ok := other.(SuBool)
+	return ok && b == b2
 }
 
 func (SuBool) Type() types.Type {

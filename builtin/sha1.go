@@ -75,10 +75,8 @@ func (*SuSha1) Type() types.Type {
 }
 
 func (sa *SuSha1) Equal(other interface{}) bool {
-	if sa2, ok := other.(*SuSha1); ok {
-		return sa == sa2
-	}
-	return false
+	sa2, ok := other.(*SuSha1)
+	return ok && sa == sa2
 }
 
 func (*SuSha1) Lookup(_ *Thread, method string) Callable {

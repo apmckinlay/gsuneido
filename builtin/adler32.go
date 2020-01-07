@@ -75,10 +75,8 @@ func (*SuAdler32) Type() types.Type {
 }
 
 func (sa *SuAdler32) Equal(other interface{}) bool {
-	if sa2, ok := other.(*SuAdler32); ok {
-		return sa == sa2
-	}
-	return false
+	sa2, ok := other.(*SuAdler32)
+	return ok && sa == sa2
 }
 
 func (*SuAdler32) Lookup(_ *Thread, method string) Callable {

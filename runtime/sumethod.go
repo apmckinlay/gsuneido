@@ -54,13 +54,7 @@ func (m *SuMethod) String() string {
 // Equal returns true if two methods have the same fn and this
 func (m *SuMethod) Equal(other interface{}) bool {
 	m2, ok := other.(*SuMethod)
-	if !ok {
-		return false
-	}
-	if m == m2 {
-		return true
-	}
-	return m.fn == m2.fn && m.this == m2.this
+	return ok && *m == *m2
 }
 
 func (*SuMethod) Get(*Thread, Value) Value {

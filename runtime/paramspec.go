@@ -142,10 +142,8 @@ func (*ParamSpec) Hash2() uint32 {
 func (ps *ParamSpec) Equal(other interface{}) bool {
 	// interface check and double dispatch
 	// to work with anything that embeds ParamSpec
-	if ep, ok := other.(eqps); ok {
-		return ep.equalParamSpec(ps)
-	}
-	return false
+	ep, ok := other.(eqps)
+	return ok && ep.equalParamSpec(ps)
 }
 
 func (ps *ParamSpec) equalParamSpec(ps2 *ParamSpec) bool {

@@ -697,10 +697,8 @@ func (d SuDate) String() string {
 }
 
 func (d SuDate) Equal(other interface{}) bool {
-	if d2, ok := other.(SuDate); ok {
-		return d == d2
-	}
-	return false
+	d2, ok := other.(SuDate)
+	return ok && d == d2
 }
 
 func (d SuDate) Hash() uint32 {

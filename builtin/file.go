@@ -93,10 +93,8 @@ func (*suFile) Type() types.Type {
 }
 
 func (sf *suFile) Equal(other interface{}) bool {
-	if sf2, ok := other.(*suFile); ok {
-		return sf == sf2
-	}
-	return false
+	sf2, ok := other.(*suFile)
+	return ok && sf == sf2
 }
 
 func (*suFile) Lookup(_ *Thread, method string) Callable {

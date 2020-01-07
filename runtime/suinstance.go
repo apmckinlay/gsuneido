@@ -107,10 +107,8 @@ func (*SuInstance) Hash2() uint32 {
 
 // Equal returns true if two instances have the same class and data
 func (ob *SuInstance) Equal(other interface{}) bool {
-	if o2, ok := other.(*SuInstance); ok {
-		return deepEqual(ob, o2)
-	}
-	return false
+	ob2, ok := other.(*SuInstance)
+	return ok && deepEqual(ob, ob2)
 }
 
 func (*SuInstance) Compare(Value) int {

@@ -143,10 +143,8 @@ func (*SuClass) Hash2() uint32 {
 }
 
 func (c *SuClass) Equal(other interface{}) bool {
-	if c2, ok := other.(*SuClass); ok {
-		return c == c2
-	}
-	return false
+	c2, ok := other.(*SuClass)
+	return ok && c == c2
 }
 
 func (*SuClass) Compare(Value) int {

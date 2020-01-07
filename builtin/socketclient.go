@@ -82,7 +82,7 @@ func (*suSocketClient) Call(*Thread, Value, *ArgSpec) Value {
 	panic("can't call a SocketClient instance")
 }
 
-func (sf *suSocketClient) String() string {
+func (*suSocketClient) String() string {
 	return "SocketClient"
 }
 
@@ -90,11 +90,9 @@ func (*suSocketClient) Type() types.Type {
 	return types.BuiltinClass
 }
 
-func (sf *suSocketClient) Equal(other interface{}) bool {
-	if sf2, ok := other.(*suSocketClient); ok {
-		return sf == sf2
-	}
-	return false
+func (sc *suSocketClient) Equal(other interface{}) bool {
+	sc2, ok := other.(*suSocketClient)
+	return ok && sc == sc2
 }
 
 func (*suSocketClient) Lookup(_ *Thread, method string) Callable {
@@ -111,44 +109,44 @@ var suSocketClientMethods = Methods{
 		return nil
 	}),
 	"Read": method1("(n)", func(this, arg Value) Value {
-		ssc := this.(*suSocketClient)
+		sc := this.(*suSocketClient)
 		n := ToInt(arg)
 		buf := make([]byte, n)
-		ssc.conn.SetDeadline(time.Now().Add(ssc.timeout))
-		defer ssc.conn.SetDeadline(noDeadline)
-		n, e := io.ReadFull(ssc.rdr, buf)
+		sc.conn.SetDeadline(time.Now().Add(sc.timeout))
+		defer sc.conn.SetDeadline(noDeadline)
+		n, e := io.ReadFull(sc.rdr, buf)
 		if e != nil && e != io.ErrUnexpectedEOF {
 			panic("socketClient.Read: " + e.Error())
 		}
 		return SuStr(string(buf[:n]))
 	}),
 	"Readline": method0(func(this Value) Value {
-		ssc := this.(*suSocketClient)
-		ssc.conn.SetDeadline(time.Now().Add(ssc.timeout))
-		defer ssc.conn.SetDeadline(noDeadline)
+		sc := this.(*suSocketClient)
+		sc.conn.SetDeadline(time.Now().Add(sc.timeout))
+		defer sc.conn.SetDeadline(noDeadline)
 		return Readline(this.(*suSocketClient).rdr, "file.Readline: ")
 	}),
 	"Write": method1("(string)", func(this, arg Value) Value {
-		ssc := this.(*suSocketClient)
-		ssc.conn.SetDeadline(time.Now().Add(ssc.timeout))
-		defer ssc.conn.SetDeadline(noDeadline)
+		sc := this.(*suSocketClient)
+		sc.conn.SetDeadline(time.Now().Add(sc.timeout))
+		defer sc.conn.SetDeadline(noDeadline)
 		s := AsStr(arg)
-		_, e := io.WriteString(ssc.conn, s)
+		_, e := io.WriteString(sc.conn, s)
 		if e != nil {
 			panic("socketClient.Write: " + e.Error())
 		}
 		return nil
 	}),
 	"Writeline": method1("(string)", func(this, arg Value) Value {
-		ssc := this.(*suSocketClient)
-		ssc.conn.SetDeadline(time.Now().Add(ssc.timeout))
-		defer ssc.conn.SetDeadline(noDeadline)
+		sc := this.(*suSocketClient)
+		sc.conn.SetDeadline(time.Now().Add(sc.timeout))
+		defer sc.conn.SetDeadline(noDeadline)
 		s := AsStr(arg)
-		_, e := io.WriteString(ssc.conn, s)
+		_, e := io.WriteString(sc.conn, s)
 		if e != nil {
 			panic("socketClient.Writeline: " + e.Error())
 		}
-		_, e = ssc.conn.Write(newline)
+		_, e = sc.conn.Write(newline)
 		if e != nil {
 			panic("socketClient.Writeline: " + e.Error())
 		}

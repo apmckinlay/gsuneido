@@ -65,10 +65,8 @@ func (*SuScanner) Type() types.Type {
 }
 
 func (sc *SuScanner) Equal(other interface{}) bool {
-	if sc2, ok := other.(*SuScanner); ok {
-		return sc == sc2
-	}
-	return false
+	sc2, ok := other.(*SuScanner)
+	return ok && sc == sc2
 }
 
 func (*SuScanner) Lookup(_ *Thread, method string) Callable {
