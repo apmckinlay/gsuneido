@@ -4,6 +4,7 @@
 package builtin
 
 import (
+	"log"
 	"os"
 	"os/exec"
 	"runtime"
@@ -39,6 +40,7 @@ func getShell() (string, string, string) {
 var _ = builtinRaw("Spawn(@args)",
 	func(t *Thread, as *ArgSpec, args []Value) Value {
 		const wait = 0
+		const nowait = 1
 		iter := NewArgsIter(as, args)
 		args = args[:0]
 		for k, v := iter(); k == nil && v != nil; k, v = iter() {
@@ -48,6 +50,9 @@ var _ = builtinRaw("Spawn(@args)",
 			panic("usage: Spawn(mode, command, @args)")
 		}
 		mode := IfInt(args[0])
+		if mode != wait && mode != nowait {
+			panic("Spawn: bad mode")
+		}
 		exe := ToStr(args[1])
 		var argstr []string
 		for _, v := range args[2:] {
@@ -58,16 +63,15 @@ var _ = builtinRaw("Spawn(@args)",
 		cmd.Stderr = os.Stderr
 		err := cmd.Start()
 		if err != nil {
-			panic("Spawn failed to start: " + err.Error())
+			log.Println("Spawn:", err)
+			return IntVal(-1)
 		}
 		if mode == wait {
 			err = cmd.Wait()
 			if err != nil {
-				if _, ok := err.(*exec.ExitError); !ok {
-					panic("Spawn failed: " + err.Error())
-				}
+				log.Println("Spawn:", err)
 			}
 			return IntVal(cmd.ProcessState.ExitCode())
 		}
-		return nil
+		return IntVal(cmd.Process.Pid)
 	})
