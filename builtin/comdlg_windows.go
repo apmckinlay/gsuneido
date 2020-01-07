@@ -342,6 +342,7 @@ var _ = builtin1("ChooseFont(cf)",
 		lfob.Put(nil, SuStr("lfQuality"), IntVal(int(lf.lfQuality)))
 		lfob.Put(nil, SuStr("lfPitchAndFamily"), IntVal(int(lf.lfPitchAndFamily)))
 		lfob.Put(nil, SuStr("lfPitchAndFamily"), IntVal(int(lf.lfPitchAndFamily)))
+		lfob.Put(nil, SuStr("lfFaceName"), strRet(lf.lfFaceName[:]))
 		return boolRet(rtn)
 	})
 
@@ -359,9 +360,10 @@ type CHOOSEFONT struct {
 	hInstance      HANDLE
 	lpszStyle      *byte
 	nFontType      int16
-	_              [4]byte // padding
+	_              int16 // padding
 	nSizeMin       int32
 	nSizeMax       int32
+	_              int32 // padding
 }
 
 const nCHOOSEFONT = unsafe.Sizeof(CHOOSEFONT{})
