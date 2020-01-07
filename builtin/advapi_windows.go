@@ -38,7 +38,7 @@ var _ = builtin1("RegCloseKey(hKey)",
 
 // RegCreateKeyEx
 var regCreateKeyEx = advapi32.MustFindProc("RegCreateKeyExA").Addr()
-var _ = builtin("RegCreateKeyEx(hKey, lpSubKey, Reserved/*unused*/, lpClass, "+
+var _ = builtin("RegCreateKeyEx(hKey, lpSubKey, reserved/*unused*/, lpClass, "+
 	"dwOptions, samDesired, lpSecurityAttributes, phkResult, lpdwDisposition)",
 	func(_ *Thread, a []Value) Value {
 		defer heap.FreeTo(heap.CurSize())
