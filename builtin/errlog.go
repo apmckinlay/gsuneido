@@ -11,6 +11,6 @@ import (
 
 var _ = builtin1("ErrorLog(string)",
 	func(arg Value) Value {
-		log.Println(arg)
+		log.Println(ToStrOrString(arg))
 		return nil
 	})
