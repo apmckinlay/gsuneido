@@ -6,8 +6,6 @@
 package aaainitfirst
 
 func init() {
-	logFileAlso()
-}
-
-func InputFromConsole() {
+	options.Parse(os.Args[1:])
+	console.LogFileAlso()
 }

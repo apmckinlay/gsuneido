@@ -13,6 +13,8 @@ var (
 	Port      = "3147"
 	Version   bool
 	Help      bool
+	Errlog    = "error.log"
+	Outlog    = "output.log"
 )
 
 // CmdLine is the remaining command line arguments

@@ -3,9 +3,13 @@
 
 package options
 
+import "strings"
+
+import "syscall"
+
 // Parse processes the command line options
 // returning the remaining arguments
-func Parse(args []string) []string {
+func Parse(args []string) {
 	i := 0
 loop:
 	for ; i < len(args); i++ {
@@ -39,5 +43,20 @@ loop:
 			Help = true
 		}
 	}
-	return args[i:]
+	CmdLine = remainder(args[i:])
+	if Client != "" {
+		Errlog = "error" + Port + ".log"
+		Outlog = "output" + Port + ".log"
+	}
+}
+
+func remainder(args []string) string {
+	var sb strings.Builder
+	sep := ""
+	for _, arg := range args {
+		sb.WriteString(sep)
+		sep = " "
+		sb.WriteString(syscall.EscapeArg(arg))
+	}
+	return sb.String()
 }

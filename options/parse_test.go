@@ -12,7 +12,7 @@ import (
 func TestParse(t *testing.T) {
 	parse := func(args ...string) func(string) {
 		Repl, Client, Port, Version, Help = false, "", "", false, false
-		args = Parse(args)
+		Parse(args)
 		if len(args) == 0 {
 			args = nil
 		}
@@ -32,8 +32,8 @@ func TestParse(t *testing.T) {
 		if Help {
 			s += " help"
 		}
-		for _,a := range args {
-			s += " | " + a
+		if CmdLine != "" {
+			s += " | " + CmdLine
 		}
 		if s != "" {
 			s = s[1:]
@@ -53,5 +53,5 @@ func TestParse(t *testing.T) {
 	parse("-p", "1234")("1234")
 	parse("-c", "-p", "1234")("127.0.0.1 1234")
 	parse("-c", "localhost", "-p", "1234")("localhost 1234")
-	parse("-c", "--", "foo", "bar")("127.0.0.1 | foo | bar")
+	parse("-c", "--", "foo", "bar")("127.0.0.1 | foo bar")
 }

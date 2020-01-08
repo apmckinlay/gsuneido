@@ -22,7 +22,7 @@ import (
 	"runtime/debug"
 	"strings"
 
-	"github.com/apmckinlay/gsuneido/aaainitfirst"
+	_ "github.com/apmckinlay/gsuneido/aaainitfirst"
 	"github.com/apmckinlay/gsuneido/builtin"
 	"github.com/apmckinlay/gsuneido/compile"
 	"github.com/apmckinlay/gsuneido/database/dbms"
@@ -48,8 +48,6 @@ func main() {
 	Global.Builtin("Suneido", suneido)
 
 	options.BuiltDate = builtDate
-	args := options.Parse(os.Args[1:])
-	options.CmdLine = remainder(args)
 	if options.Client == "" {
 		options.Repl = true
 	}
@@ -78,41 +76,24 @@ func main() {
 		eval("Suneido.Print = PrintStdout;;")
 	}
 	if options.Repl {
-		log.SetFlags(0) // no date/time
-		aaainitfirst.InputFromConsole()
 		repl()
 	} else {
-		// initLogger()
 		eval("Init()")
 		builtin.Run()
 	}
 }
 
-func remainder(args []string) string {
-	var sb strings.Builder
-	sep := ""
-	for _, arg := range args {
-		sb.WriteString(sep)
-		sep = " "
-		if strings.ContainsAny(arg, " '\"") {
-			arg = SuStr(arg).String()
-		}
-		sb.WriteString(arg)
-	}
-	return sb.String()
-}
-
 func clientErrorLog() {
 	// unlike cSuneido, client error.log is still in current directory
 	// this is partly because stderr has already been redirected
-	f, err := os.Open("error.log")
+	f, err := os.Open(options.Errlog)
 	if err != nil {
 		return
 	}
 	dbms := mainThread.Dbms()
 	defer func() {
 		f.Close()
-		os.Truncate("error.log", 0) // can't remove since open as stderr
+		os.Truncate(options.Errlog, 0) // can't remove since open as stderr
 		if e := recover(); e != nil {
 			dbms.Log("log previous errors: " + fmt.Sprint(e))
 		}

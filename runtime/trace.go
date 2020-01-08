@@ -8,7 +8,7 @@ import (
 	"os"
 	"sync"
 
-	"github.com/apmckinlay/gsuneido/aaainitfirst"
+	"github.com/apmckinlay/gsuneido/console"
 	"github.com/apmckinlay/gsuneido/options"
 )
 
@@ -28,8 +28,8 @@ func Trace(args ...interface{}) {
 		}
 	}
 	if options.Trace&options.TraceConsole != 0 {
-		traceConOnce.Do(aaainitfirst.OutputToConsole)
-		if aaainitfirst.ConsoleAttached() {
+		traceConOnce.Do(console.OutputToConsole)
+		if console.ConsoleAttached() {
 			os.Stdout.WriteString(s)
 		}
 	}
