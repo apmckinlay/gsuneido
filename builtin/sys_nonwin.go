@@ -1,15 +1,31 @@
 // Copyright Suneido Software Corp. All rights reserved.
 // Governed by the MIT license found in the LICENSE file.
 
+// +build !windows
+
 package builtin
 
 import (
 	"encoding/binary"
 	"os"
+	"os/signal"
 	"syscall"
 
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
+
+func init() {
+	c := make(chan os.Signal, 1)
+	signal.Notify(c, os.Interrupt)
+	Interrupt = func() bool {
+		select {
+		case <-c:
+			return true
+		default:
+			return false
+		}
+	}
+}
 
 func Run() {
 }
@@ -43,3 +59,7 @@ var _ = builtin0("GetComputerName()", func() Value {
 	}
 	return SuStr(name)
 })
+
+func CallbacksCount() int {
+	return 0
+}

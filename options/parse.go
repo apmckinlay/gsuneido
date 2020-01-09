@@ -3,9 +3,9 @@
 
 package options
 
-import "strings"
-
-import "syscall"
+import (
+	"strings"
+)
 
 // Parse processes the command line options
 // returning the remaining arguments
@@ -56,7 +56,7 @@ func remainder(args []string) string {
 	for _, arg := range args {
 		sb.WriteString(sep)
 		sep = " "
-		sb.WriteString(syscall.EscapeArg(arg))
+		sb.WriteString(EscapeArg(arg))
 	}
 	return sb.String()
 }

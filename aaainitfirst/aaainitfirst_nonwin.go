@@ -5,6 +5,13 @@
 
 package aaainitfirst
 
+import (
+	"os"
+
+	"github.com/apmckinlay/gsuneido/console"
+	"github.com/apmckinlay/gsuneido/options"
+)
+
 func init() {
 	options.Parse(os.Args[1:])
 	console.LogFileAlso()
