@@ -14,8 +14,8 @@ import (
 var UpdateUI = func() {}
 var Interrupt = func() bool { return false }
 
-var blockBreak = BuiltinSuExcept("block:break")
-var blockContinue = BuiltinSuExcept("block:continue")
+var BlockBreak = BuiltinSuExcept("block:break")
+var BlockContinue = BuiltinSuExcept("block:continue")
 var BlockReturn = BuiltinSuExcept("block return")
 
 // Start sets up a frame to Run a compiled Suneido function
@@ -421,9 +421,9 @@ loop:
 			block := &SuBlock{SuFunc: *fn, locals: fr.locals, this: fr.this}
 			t.Push(block)
 		case op.BlockBreak:
-			panic(blockBreak)
+			panic(BlockBreak)
 		case op.BlockContinue:
-			panic(blockContinue)
+			panic(BlockContinue)
 		case op.BlockReturnNil:
 			t.Push(nil)
 			fallthrough

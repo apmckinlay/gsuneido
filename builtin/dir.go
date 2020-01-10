@@ -61,7 +61,12 @@ func forEachDir(dir string, justfiles, details bool, fn func(entry Value)) {
 		}
 		return
 	}
-	defer f.Close()
+	defer func() {
+		f.Close()
+		if e := recover(); e != nil && e != BlockBreak {
+			panic(e)
+		}
+	}()
 	list, err := f.Readdir(100)
 	for _, info := range list {
 		name := info.Name()
@@ -79,7 +84,14 @@ func forEachDir(dir string, justfiles, details bool, fn func(entry Value)) {
 				ob.Set(SuStr("date"), FromTime(info.ModTime()))
 				entry = ob
 			}
-			fn(entry)
+			func() {
+				defer func() {
+					if e := recover(); e != nil && e != BlockContinue {
+						panic(e)
+					}
+				}()
+				fn(entry)
+			}()
 		}
 	}
 }
