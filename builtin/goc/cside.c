@@ -115,6 +115,20 @@ void release(uintptr iunk);
 
 static DWORD main_threadid = 0;
 
+const int CTRL_BREAK_ID = 1; // no significance to this number
+
+static int interrupt() {
+	MSG msg;
+
+	int hotkey = 0;
+	if (HIWORD(GetQueueStatus(QS_HOTKEY))) {
+		while (PeekMessage(&msg, NULL, WM_HOTKEY, WM_HOTKEY, PM_REMOVE))
+			if (msg.wParam == CTRL_BREAK_ID)
+				hotkey = 1;
+	}
+	return hotkey;
+}
+
 uintptr interact() {
 	if (GetCurrentThreadId() != main_threadid)
 		exit(666);
@@ -147,6 +161,10 @@ uintptr interact() {
 			break;
 		case msg_release:
 			release(args[1]);
+			args[0] = msg_result;
+			break;
+		case msg_interrupt:
+			args[1] = interrupt();
 			args[0] = msg_result;
 			break;
 		case msg_result:
@@ -251,6 +269,7 @@ static VOID CALLBACK timer(
 const int timerIntervalMS = 50;
 
 static DWORD WINAPI thread(LPVOID lpParameter) {
+	RegisterHotKey(0, CTRL_BREAK_ID, MOD_CONTROL, VK_CANCEL);
 	main_threadid = GetCurrentThreadId();
 	hook = SetWindowsHookExA(WH_GETMESSAGE, message_hook, 0, main_threadid);
 	CreateThread(NULL, 8192, timer_thread, 0, 0, 0);

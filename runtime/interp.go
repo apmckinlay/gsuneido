@@ -11,7 +11,8 @@ import (
 )
 
 // UpdateUI is injected
-var UpdateUI func()
+var UpdateUI = func() {}
+var Interrupt = func() bool { return false }
 
 var blockBreak = BuiltinSuExcept("block:break")
 var blockContinue = BuiltinSuExcept("block:continue")
@@ -160,19 +161,21 @@ func (t *Thread) interp(catchJump, catchSp *int) (ret Value) {
 		}
 	}()
 
-	opCount := t.Every
 loop:
 	for fr.ip < len(code) {
 		// fmt.Println("stack:", t.sp, t.stack[ints.Max(0, t.sp-3):t.sp])
 		// _, da := Disasm1(fr.fn, fr.ip)
 		// fmt.Printf("%d: %d: %s\n", t.fp, fr.ip, da)
-		opCount--
-		if opCount == 0 {
-			if t.Every != 0 {
+		if t.OpCount == 0 {
+			if t.Poll {
 				UpdateUI()
+				if Interrupt() {
+					panic("interrupt")
+				}
+				t.OpCount = 1009
 			}
-			opCount = t.Every
 		}
+		t.OpCount--
 		oc = op.Opcode(code[fr.ip])
 		fr.ip++
 		switch oc {

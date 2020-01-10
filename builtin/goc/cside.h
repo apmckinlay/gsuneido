@@ -35,6 +35,7 @@ enum {
 	msg_queryidispatch,
 	msg_invoke,
 	msg_release,
+	msg_interrupt,
 };
 
 typedef uintptr(__stdcall* cb2_t)(uintptr a, uintptr b);

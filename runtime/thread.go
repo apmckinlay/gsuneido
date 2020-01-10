@@ -56,8 +56,11 @@ type Thread struct {
 	// Name is the name of the thread (default is Thread-#)
 	Name string
 
-	// Every is the interval to call UpdateUI. 0 means never.
-	Every int
+	// Poll is whether or not interp should poll (only set for main thread)
+	Poll bool
+
+	// OpCount counts op codes in interp, for polling
+	OpCount int
 }
 
 var nThread int32

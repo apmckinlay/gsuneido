@@ -28,6 +28,7 @@ func init() {
 	goc.SunAPP = sunAPP
 	goc.UpdateUI = updateUI2
 	UpdateUI = updateUI // runtime
+	Interrupt = goc.Interrupt
 
 	// used to detect calls from other threads (not allowed)
 	runtime.LockOSThread()
@@ -37,8 +38,6 @@ func init() {
 }
 
 func Run() {
-	const uiCheckInterval = 101
-	UIThread.Every = uiCheckInterval
 	goc.Run()
 }
 

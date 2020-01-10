@@ -68,6 +68,11 @@ func Traccel(ob int, msg unsafe.Pointer) int {
 	return int(interact())
 }
 
+func Interrupt() bool {
+	C.args[0] = C.msg_interrupt
+	return interact() == 1
+}
+
 func GetCallback(nargs, i int) uintptr {
 	switch nargs {
 	case 2:
