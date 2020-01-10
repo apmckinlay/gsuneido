@@ -43,7 +43,7 @@ func stderrToLog() {
 	}
 }
 
-var consoleAttached = AttachParentConsole()
+var consoleAttached = GetConsoleWindow() != 0 || AttachParentConsole()
 var stdoutRedirected = redirected(windows.STD_OUTPUT_HANDLE)
 var stderrRedirected = redirected(windows.STD_ERROR_HANDLE)
 
@@ -115,3 +115,10 @@ func AttachParentConsole() bool {
 }
 
 const ATTACH_PARENT_PROCESS = ^uintptr(0) // -1
+
+var getConsoleWindow = kernel32.MustFindProc("GetConsoleWindow").Addr()
+
+func GetConsoleWindow() uintptr {
+	rtn, _, _ := syscall.Syscall(getConsoleWindow, 0, 0, 0, 0)
+	return rtn
+}
