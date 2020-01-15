@@ -38,11 +38,11 @@ func getShell() (string, string, string) {
 }
 
 var _ = builtinRaw("Spawn(@args)",
-	func(t *Thread, as *ArgSpec, args []Value) Value {
+	func(t *Thread, as *ArgSpec, rawargs []Value) Value {
 		const wait = 0
 		const nowait = 1
-		iter := NewArgsIter(as, args)
-		args = args[:0]
+		iter := NewArgsIter(as, rawargs)
+		var args []Value
 		for k, v := iter(); k == nil && v != nil; k, v = iter() {
 			args = append(args, v)
 		}
@@ -54,9 +54,9 @@ var _ = builtinRaw("Spawn(@args)",
 			panic("Spawn: bad mode")
 		}
 		exe := ToStr(args[1])
-		var argstr []string
-		for _, v := range args[2:] {
-			argstr = append(argstr, ToStr(v))
+		argstr := make([]string, len(args)-2)
+		for i, v := range args[2:] {
+			argstr[i] = ToStr(v)
 		}
 		cmd := exec.Command(exe, argstr...)
 		cmd.Stdout = os.Stdout
