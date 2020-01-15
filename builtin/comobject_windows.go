@@ -4,7 +4,7 @@
 package builtin
 
 import (
-	"log"
+	"fmt"
 	"math"
 	"syscall"
 	"unicode/utf16"
@@ -168,8 +168,8 @@ func invoke(idisp uintptr, name string, flags uintptr, args ...Value) Value {
 	hr := goc.Invoke(idisp, uintptr(goStrArg(name)), flags, uintptr(params),
 		uintptr(result))
 	if hr < 0 {
-		log.Fatalf("COMobject %s failed %s %x\n",
-			flagnames[flags], name, uint32(hr))
+		panic(fmt.Sprintf("COMobject %s failed %s %x",
+			flagnames[flags], name, uint32(hr)))
 	}
 	if flags == DISPATCH_PROPERTYPUT {
 		return nil

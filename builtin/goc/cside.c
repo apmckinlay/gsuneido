@@ -115,6 +115,18 @@ void release(uintptr iunk);
 
 static DWORD main_threadid = 0;
 
+void alert(char* msg) {
+	MessageBox(0, msg, "Alert",
+		MB_ICONWARNING | MB_TASKMODAL | MB_TOPMOST | MB_SETFOREGROUND);
+	free(msg);
+}
+
+void fatal(char* msg) {
+	MessageBox(0, msg, "FATAL",
+		MB_ICONERROR | MB_TASKMODAL | MB_TOPMOST | MB_SETFOREGROUND);
+	free(msg);
+}
+
 const int CTRL_BREAK_ID = 1; // no significance to this number
 
 static int interrupt() {

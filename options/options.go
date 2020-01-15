@@ -7,18 +7,23 @@ package options
 
 // command line flags
 var (
-	BuiltDate string
-	Repl      bool
-	Client    string
-	Port      = "3147"
-	Version   bool
-	Help      bool
-	Errlog    = "error.log"
-	Outlog    = "output.log"
+	BuiltDate  string
+	Repl       bool
+	Client     string
+	Port       = "3147"
+	Unattended = false
+	Version    bool
+	Help       bool
 )
 
 // CmdLine is the remaining command line arguments
 var CmdLine string
+
+// log file names, port is added when client
+var (
+	Errlog = "error.log"
+	Outlog = "output.log"
+)
 
 // debugging options
 var (

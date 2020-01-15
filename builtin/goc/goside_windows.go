@@ -9,10 +9,15 @@ package goc
 import "C"
 
 import (
+	"fmt"
 	"log"
+	"os"
 	"runtime"
+	"sync"
+	"time"
 	"unsafe"
 
+	"github.com/apmckinlay/gsuneido/options"
 	"golang.org/x/sys/windows"
 )
 
@@ -84,6 +89,31 @@ func GetCallback(nargs, i int) uintptr {
 	}
 	log.Panicln("GetCallback unsupported nargs", nargs)
 	return 0 // unreachable
+}
+
+func Alert(args ...interface{}) {
+	s := fmt.Sprintln(args...)
+	log.Print("Alert: ", s)
+	if !options.Unattended {
+		C.alert(C.CString(s))
+	}
+}
+
+var fatalOnce sync.Once
+
+func Fatal(args ...interface{}) {
+	fatalOnce.Do(func(){
+		s := fmt.Sprintln(args...)
+		log.Print("FATAL: ", s)
+		go func() {
+			time.Sleep(10 * time.Second)
+			os.Exit(1)
+		}()
+		if !options.Unattended {
+			C.fatal(C.CString(s[:len(s)-1]))
+		}
+		os.Exit(1)
+	})
 }
 
 // must be injected

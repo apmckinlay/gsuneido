@@ -34,6 +34,8 @@ loop:
 				i++
 				Port = args[i]
 			}
+		case "-u", "-unattended":
+			Unattended = true
 		case "-v", "-version":
 			Version = true
 		case "--":

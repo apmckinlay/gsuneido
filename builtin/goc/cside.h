@@ -20,6 +20,8 @@ extern uintptr cb4s[ncb4s];
 
 void start();
 void signalAndWait();
+void alert(char* msg);
+void fatal(char* msg);
 
 enum {
 	msg_result,

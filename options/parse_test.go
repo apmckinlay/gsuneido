@@ -55,3 +55,16 @@ func TestParse(t *testing.T) {
 	parse("-c", "localhost", "-p", "1234")("localhost 1234")
 	parse("-c", "--", "foo", "bar")("127.0.0.1 | foo bar")
 }
+
+func TestEscapeArg(t *testing.T) {
+	test := func (s, expected string) {
+		t.Helper()
+		Assert(t).That(EscapeArg(s), Equals(expected))
+	}
+	test(`foo`, `foo`)
+	test(`foo bar`, `"foo bar"`)
+	test(`ab"c`, `ab\"c`)
+	test(`\`, `\`)
+	test(`a\\\b`, `a\\\b`)
+	test(`a\"b`, `a\\\"b`)
+}

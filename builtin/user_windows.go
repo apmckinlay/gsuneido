@@ -238,15 +238,6 @@ var _ = builtin4("MessageBox(hwnd, text, caption, flags)",
 		return intRet(rtn)
 	})
 
-func MessageBox(text, caption string) {
-	defer heap.FreeTo(heap.CurSize())
-	goc.Syscall4(messageBox,
-		0,
-		uintptr(strToBuf(text, len(text)+1)),
-		uintptr(strToBuf(caption, len(caption)+1)),
-		0x52000) // MB_OK | MB_TASKMODAL | MB_TOPMOST | MB_SETFOREGROUND
-}
-
 // dll User32:AdjustWindowRectEx(RECT* rect, long style, bool menu,
 // 		long exStyle) bool
 var adjustWindowRectEx = user32.MustFindProc("AdjustWindowRectEx").Addr()
