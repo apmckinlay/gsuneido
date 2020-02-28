@@ -1071,10 +1071,14 @@ var _ = builtin0("SPI_GetWorkArea()",
 
 // dll User32:PostQuitMessage(long exitcode) void
 var postQuitMessage = user32.MustFindProc("PostQuitMessage").Addr()
+
+func PostQuitMessage(arg uintptr) {
+	goc.Syscall1(postQuitMessage, arg)
+}
+
 var _ = builtin1("PostQuitMessage(exitcode)",
 	func(a Value) Value {
-		goc.Syscall1(postQuitMessage,
-			intArg(a))
+		PostQuitMessage(intArg(a))
 		return nil
 	})
 
