@@ -26,7 +26,7 @@ func (ob *SuInstance) Base() *SuClass {
 // ToString is used by Cat, Display, and Print
 // to handle user defined ToString
 func (ob *SuInstance) ToString(t *Thread) string {
-	if f := ob.class.get2(t, "ToString"); f != nil {
+	if f := ob.class.get2(t, "ToString"); f != nil && t != nil {
 		x := t.CallThis(f, ob)
 		if x != nil {
 			if s, ok := x.ToStr(); ok {
