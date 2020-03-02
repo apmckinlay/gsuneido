@@ -17,7 +17,7 @@ console:
 	./gsuneido -repl
 
 test:
-	go test -count=1 ./...
+	go test -tags win32 -count=1 ./...
 
 repl: build
 	cmd /c start/w ./gsuneido -repl

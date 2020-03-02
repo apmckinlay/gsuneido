@@ -1,6 +1,8 @@
 // Copyright Suneido Software Corp. All rights reserved.
 // Governed by the MIT license found in the LICENSE file.
 
+// +build win32
+
 // Package heapstack provides a heap for win32 dll arguments
 // that are allocated and freed stack-wise.
 // It must not move and is therefore fixed size and statically declared.
