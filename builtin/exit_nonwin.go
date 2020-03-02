@@ -1,7 +1,9 @@
 // Copyright Suneido Software Corp. All rights reserved.
 // Governed by the MIT license found in the LICENSE file.
 
-// +build !windows
+// +build !win32
+
+package builtin
 
 import (
 	"os"
@@ -15,6 +17,6 @@ var _ = builtin1("Exit(code = 0)",
 		if arg != True {
 			code = IfInt(arg)
 		}
-		ox.Exit(code)
+		os.Exit(code)
 		return nil
 	})
