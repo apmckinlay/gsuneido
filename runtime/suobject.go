@@ -358,22 +358,26 @@ func (vs *vstack) Push(ob *SuObject) bool {
 }
 
 func (ob *SuObject) String() string {
+	return ob.Display(nil)
+}
+
+func (ob *SuObject) Display(t *Thread) string {
 	buf := limitBuf{}
-	ob.rstring(&buf, nil)
+	ob.rstring(t, &buf, nil)
 	return buf.String()
 }
 
-func (ob *SuObject) rstring(buf *limitBuf, inProgress vstack) {
-	ob.rstring2(buf, "#(", ")", inProgress)
+func (ob *SuObject) rstring(t *Thread, buf *limitBuf, inProgress vstack) {
+	ob.rstring2(t, buf, "#(", ")", inProgress)
 }
 
 type recursable interface {
-	rstring(buf *limitBuf, inProgress vstack)
+	rstring(t *Thread, buf *limitBuf, inProgress vstack)
 }
 
 var _ recursable = (*SuObject)(nil)
 
-func (ob *SuObject) rstring2(buf *limitBuf, before, after string, inProgress vstack) {
+func (ob *SuObject) rstring2(t *Thread, buf *limitBuf, before, after string, inProgress vstack) {
 	if !inProgress.Push(ob) {
 		buf.WriteString("...")
 		return
@@ -384,49 +388,49 @@ func (ob *SuObject) rstring2(buf *limitBuf, before, after string, inProgress vst
 	if ob.Lock() {
 		defer ob.lock.Unlock()
 	}
-	sep := ob.vecstr(buf, inProgress)
+	sep := ob.vecstr(t, buf, inProgress)
 	iter := ob.named.Iter()
 	for {
 		k, v := iter()
 		if k == nil {
 			break
 		}
-		sep = entstr(buf, k, v, sep, inProgress)
+		sep = entstr(t, buf, k, v, sep, inProgress)
 	}
 	buf.WriteString(after)
 }
 
-func (ob *SuObject) vecstr(buf *limitBuf, inProgress vstack) string {
+func (ob *SuObject) vecstr(t *Thread, buf *limitBuf, inProgress vstack) string {
 	sep := ""
 	for _, v := range ob.list {
 		buf.WriteString(sep)
 		sep = ", "
-		valstr(buf, v, inProgress)
+		valstr(t, buf, v, inProgress)
 	}
 	return sep
 }
 
-func entstr(buf *limitBuf, k interface{}, v interface{}, sep string, inProgress vstack) string {
+func entstr(t *Thread, buf *limitBuf, k interface{}, v interface{}, sep string, inProgress vstack) string {
 	buf.WriteString(sep)
 	sep = ", "
 	if ks, ok := k.(SuStr); ok && unquoted(string(ks)) {
 		buf.WriteString(string(ks))
 	} else {
-		valstr(buf, k.(Value), inProgress)
+		valstr(t, buf, k.(Value), inProgress)
 	}
 	buf.WriteString(":")
 	if v != True {
 		buf.WriteString(" ")
-		valstr(buf, v.(Value), inProgress)
+		valstr(t, buf, v.(Value), inProgress)
 	}
 	return sep
 }
 
-func valstr(buf *limitBuf, v Value, inProgress vstack) {
+func valstr(t *Thread, buf *limitBuf, v Value, inProgress vstack) {
 	if r, ok := v.(recursable); ok {
-		r.rstring(buf, inProgress)
+		r.rstring(t, buf, inProgress)
 	} else {
-		buf.WriteString(v.String())
+		buf.WriteString(Display(t, v))
 	}
 }
 
@@ -444,7 +448,7 @@ func (ob *SuObject) show(before, after string, inProgress vstack) string {
 	if ob.Lock() {
 		defer ob.lock.Unlock()
 	}
-	sep := ob.vecstr(buf, inProgress)
+	sep := ob.vecstr(nil, buf, inProgress)
 	mems := []Value{}
 	iter := ob.named.Iter()
 	for {
@@ -458,7 +462,7 @@ func (ob *SuObject) show(before, after string, inProgress vstack) string {
 		func(i, j int) bool { return mems[i].Compare(mems[j]) < 0 })
 	for _, k := range mems {
 		v := ob.named.Get(k)
-		sep = entstr(buf, k, v, sep, inProgress)
+		sep = entstr(nil, buf, k, v, sep, inProgress)
 	}
 	buf.WriteString(after)
 	return buf.String()

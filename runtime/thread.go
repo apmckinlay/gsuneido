@@ -61,6 +61,9 @@ type Thread struct {
 
 	// OpCount counts op codes in interp, for polling
 	OpCount int
+
+	// Quote is used by Display to request specific quotes
+	Quote int
 }
 
 var nThread int32

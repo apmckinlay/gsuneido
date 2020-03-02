@@ -35,7 +35,14 @@ func print(t *Thread, v Value) {
 	}
 }
 
+type Displayable interface {
+	Display(t *Thread) string
+}
+
 func Display(t *Thread, val Value) string {
+	if d, ok := val.(Displayable); ok {
+		return d.Display(t)
+	}
 	if d, ok := val.(ToStringable); ok {
 		return d.ToString(t)
 	}

@@ -128,13 +128,17 @@ func (*SuRecord) Type() types.Type {
 }
 
 func (r *SuRecord) String() string {
+	return r.Display(nil)
+}
+
+func (r *SuRecord) Display(t *Thread) string {
 	buf := limitBuf{}
-	r.rstring(&buf, nil)
+	r.rstring(t, &buf, nil)
 	return buf.String()
 }
 
-func (r *SuRecord) rstring(buf *limitBuf, inProgress vstack) {
-	r.ToObject().rstring2(buf, "[", "]", inProgress)
+func (r *SuRecord) rstring(t *Thread, buf *limitBuf, inProgress vstack) {
+	r.ToObject().rstring2(t, buf, "[", "]", inProgress)
 }
 
 var _ recursable = (*SuRecord)(nil)

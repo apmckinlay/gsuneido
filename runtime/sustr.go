@@ -52,20 +52,32 @@ var DefaultSingleQuotes = false
 
 // String returns a human readable string with quotes and escaping
 func (ss SuStr) String() string {
-	return escapeStr(string(ss))
+	return escapeStr(string(ss), 0)
 }
 
-func escapeStr(s string) string {
-	if strings.ContainsRune(s, '\\') && !strings.ContainsAny(s, "`\x00") {
+func (ss SuStr) Display(t *Thread) string {
+	q := 0
+	if t != nil {
+		q = t.Quote
+	}
+	return escapeStr(string(ss), q)
+}
+
+func escapeStr(s string, q int) string {
+	if q == 0 &&
+		strings.ContainsRune(s, '\\') && !strings.ContainsAny(s, "`\x00") {
 		return "`" + s + "`"
 	}
-	s = strings.ReplaceAll(s, "\\", "\\\\")
-	s = strings.ReplaceAll(s, "\x00", "\\x00")
-	if !strings.ContainsRune(s, '\'') &&
+	s = strings.ReplaceAll(s, `\`, `\\`)
+	s = strings.ReplaceAll(s, "\x00", `\x00`)
+	if q == 0 && !strings.ContainsRune(s, '\'') &&
 		(DefaultSingleQuotes || strings.ContainsRune(s, '"')) {
 		return "'" + s + "'"
 	}
-	return "\"" + strings.ReplaceAll(s, "\"", "\\\"") + "\""
+	if q == 1 {
+		return "'" + strings.ReplaceAll(s, "'", `\'`) + "'"
+	}
+	return `"` + strings.ReplaceAll(s, `"`, `\"`) + `"`
 }
 
 func (ss SuStr) Get(_ *Thread, key Value) Value {
