@@ -11,9 +11,9 @@ import (
 	"io/ioutil"
 	"os"
 	"strings"
-	"unsafe"
 
 	. "github.com/apmckinlay/gsuneido/runtime"
+	"github.com/apmckinlay/gsuneido/util/hacks"
 )
 
 const bufsize = 4000000
@@ -103,7 +103,7 @@ func convertTable(in *bufio.Reader, out *bufio.Writer) {
 }
 
 func convertRecord(b []byte, out *bufio.Writer) {
-	s := *(*string)(unsafe.Pointer(&b))
+	s := hacks.BStoS(b)
 	inrec := OldRec(s)
 	var tb RecordBuilder
 	n := inrec.Count()

@@ -3,9 +3,7 @@
 
 package pack
 
-import (
-	"unsafe"
-)
+import "github.com/apmckinlay/gsuneido/util/hacks"
 
 // Encoder is used to build a (usually binary) string.
 // Encoder values should not be copied.
@@ -30,7 +28,7 @@ func NewMmapEncoder(buf []byte) *Encoder {
 
 // String returns the accumulated data as a string
 func (e *Encoder) String() string {
-	return *(*string)(unsafe.Pointer(&e.buf))
+	return hacks.BStoS(e.buf)
 }
 
 // Put appends a byte slice

@@ -7,9 +7,9 @@ import (
 	"bufio"
 	"io"
 	"log"
-	"unsafe"
 
 	. "github.com/apmckinlay/gsuneido/runtime"
+	"github.com/apmckinlay/gsuneido/util/hacks"
 	"github.com/apmckinlay/gsuneido/util/ints"
 	"github.com/apmckinlay/gsuneido/util/verify"
 
@@ -138,7 +138,7 @@ func (rw *ReadWrite) GetN(n int) string {
 	buf := make([]byte, n)
 	_, err := io.ReadFull(rw.r, buf)
 	ck(err)
-	return *(*string)(unsafe.Pointer(&buf)) // safe since buf doesn't escape
+	return hacks.BStoS(buf) // safe since buf doesn't escape
 }
 
 // GetSize returns GetInt, checking the size against the maxio limit

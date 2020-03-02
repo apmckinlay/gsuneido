@@ -7,8 +7,8 @@ package intern
 import (
 	"fmt"
 	"sync"
-	"unsafe"
 
+	"github.com/apmckinlay/gsuneido/util/hacks"
 	"github.com/apmckinlay/gsuneido/util/hash"
 )
 
@@ -55,7 +55,7 @@ func addStringToBuffer(s string) string {
 	i := len(buffer)
 	buffer = append(buffer, s...)
 	p := buffer[i:]
-	return *(*string)(unsafe.Pointer(&p))
+	return hacks.BStoS(p)
 }
 
 // hashSet16 stores a set of int16 indexes into strings

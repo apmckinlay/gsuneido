@@ -6,10 +6,10 @@ package runtime
 import (
 	"bytes"
 	"strings"
-	"unsafe"
 
 	"github.com/apmckinlay/gsuneido/runtime/types"
 	"github.com/apmckinlay/gsuneido/util/dnum"
+	"github.com/apmckinlay/gsuneido/util/hacks"
 	"github.com/apmckinlay/gsuneido/util/hash"
 	"github.com/apmckinlay/gsuneido/util/ints"
 	"github.com/apmckinlay/gsuneido/util/pack"
@@ -19,7 +19,7 @@ import (
 // WARNING: zero value is not valid, use NewSuConcat
 type SuConcat struct {
 	buf *scbuf
-	n int
+	n   int
 	CantConvert
 }
 
@@ -85,7 +85,7 @@ func (c SuConcat) ToStr() (string, bool) {
 
 func (c SuConcat) toStr() string {
 	// use the same trick as strings.Builder to avoid allocation
-	s := *(*string)(unsafe.Pointer(&c.buf.bs))
+	s := hacks.BStoS(c.buf.bs)
 	return s[:c.n]
 }
 

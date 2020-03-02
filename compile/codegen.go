@@ -9,12 +9,12 @@ import (
 	"fmt"
 	"math"
 	"sync/atomic"
-	"unsafe"
 
 	"github.com/apmckinlay/gsuneido/compile/ast"
 	tok "github.com/apmckinlay/gsuneido/lexer/tokens"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	op "github.com/apmckinlay/gsuneido/runtime/opcodes"
+	"github.com/apmckinlay/gsuneido/util/hacks"
 	"github.com/apmckinlay/gsuneido/util/ints"
 	"github.com/apmckinlay/gsuneido/util/str"
 	"github.com/apmckinlay/gsuneido/util/verify"
@@ -67,12 +67,12 @@ func (cg *cgen) codegen(fn *ast.Function) *SuFunc {
 	}
 
 	return &SuFunc{
-		Code:      *(*string)(unsafe.Pointer(&cg.code)), //TODO shrink to fit
+		Code:      hacks.BStoS(cg.code), //TODO shrink to fit
 		Nlocals:   uint8(len(cg.Names)),
 		ParamSpec: cg.ParamSpec,
 		ArgSpecs:  cg.argspecs, //TODO shrink to fit
 		Id:        fn.Id,
-		SrcPos:    *(*string)(unsafe.Pointer(&cg.srcPos)), //TODO shrink to fit
+		SrcPos:    hacks.BStoS(cg.srcPos), //TODO shrink to fit
 		SrcBase:   cg.srcBase,
 	}
 }

@@ -12,6 +12,7 @@ import (
 
 	heap "github.com/apmckinlay/gsuneido/builtin/heapstack"
 	. "github.com/apmckinlay/gsuneido/runtime"
+	"github.com/apmckinlay/gsuneido/util/hacks"
 	"golang.org/x/sys/windows"
 )
 
@@ -207,7 +208,7 @@ func bufRet(p unsafe.Pointer, n uintptr) Value {
 	for i := uintptr(0); i < n; i++ {
 		buf[i] = *(*byte)(unsafe.Pointer(uintptr(p) + i))
 	}
-	return SuStr(*(*string)(unsafe.Pointer(&buf)))
+	return SuStr(hacks.BStoS(buf))
 }
 
 // copyStr copies the string into the byte slice and adds a nul terminator.
