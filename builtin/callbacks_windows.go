@@ -58,7 +58,7 @@ func (cb *callback) callv(args ...Value) uintptr {
 			handler(e)
 		}
 		if heap.CurSize() != heapSize {
-			goc.Fatal("callback: heapSize", heapSize, "=>", heap.CurSize(),
+			Fatal("callback: heapSize", heapSize, "=>", heap.CurSize(),
 				"in", cb.fn, args)
 		}
 	}()
@@ -78,7 +78,7 @@ func (cb *callback) callv(args ...Value) uintptr {
 func handler(e interface{}) {
 	defer func() {
 		if e := recover(); e != nil {
-			goc.Alert("Error in Handler:", e)
+			Alert("Error in Handler:", e)
 		}
 	}()
 	// debug.PrintStack()
@@ -120,7 +120,7 @@ func NewCallback(fn Value, nargs int) uintptr {
 		}
 	}
 	if j == -1 {
-		goc.Fatal("too many callbacks")
+		Fatal("too many callbacks")
 	}
 	cb := &callbacks[j]
 	cb.fn = fn

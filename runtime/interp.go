@@ -7,7 +7,6 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/apmckinlay/gsuneido/builtin/goc"
 	op "github.com/apmckinlay/gsuneido/runtime/opcodes"
 )
 
@@ -473,7 +472,7 @@ loop:
 			}
 			panic("method not found: " + ErrType(this) + "." + ToStrOrString(method))
 		default:
-			goc.Fatal("invalid op code: " + oc.String())
+			Fatal("invalid op code: " + oc.String())
 		}
 	}
 	return nil

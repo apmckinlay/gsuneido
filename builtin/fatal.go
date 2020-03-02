@@ -4,11 +4,10 @@
 package builtin
 
 import (
-	"github.com/apmckinlay/gsuneido/builtin/goc"
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
 var _ = builtin1("Fatal(msg)", func(a Value) Value {
-	goc.Fatal(ToStrOrString(a))
+	Fatal(ToStrOrString(a))
 	return nil
 })
