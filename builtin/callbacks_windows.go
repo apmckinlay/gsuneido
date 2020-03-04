@@ -116,7 +116,7 @@ func NewCallback(fn Value, nargs int) uintptr {
 			j = i
 		}
 		if cb.active && cbeq(fn, cb.fn) {
-			panic("duplcate callback")
+			panic("duplicate callback")
 		}
 	}
 	if j == -1 {
