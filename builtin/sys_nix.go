@@ -5,6 +5,12 @@
 
 package builtin
 
+import (
+	"encoding/binary"
+	"syscall"
+
+	. "github.com/apmckinlay/gsuneido/runtime"
+)
 
 var _ = builtin0("SystemMemory()", func() Value {
 	s, err := syscall.Sysctl("hw.memsize")
