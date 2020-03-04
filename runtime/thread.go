@@ -174,7 +174,7 @@ func PrintStack(cs *SuObject) {
 		if len(s) > 230 {
 			s = s[:230] + "..."
 		}
-		log.Println(s)
+		log.Println("   " + s)
 	}
 }
 
