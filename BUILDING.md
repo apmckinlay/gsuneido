@@ -1,7 +1,7 @@
 Building gSuneido
 ================
 
-The Windows version with DLL and COM support uses [cgo](https://golang.org/cmd/cgo/) so it requires a C/C++ compiler on the path. I am using [Mingw-w64](http://mingw-w64.org). You can either install Msys2 or just Mingw-w64. The specific version of GCC shouldn't be critical.
+The Windows version with DLL and COM support uses [cgo](https://golang.org/cmd/cgo/) so it requires a C/C++ compiler on the path. I am using [Mingw-w64](http://mingw-w64.org). You can either install Msys2 or just Mingw-w64. The specific version of GCC shouldn't be critical. I would recommend using a normal install of Go, *not* installing it in Msys2 with pacman. Go just needs gcc on the path.
 
 I've been mostly working on the Windows version so building on Linux or Mac may occasionally be broken due to build tags etc. Cgo is not required for these versions, they are plain Go. But the only UI is the command line REPL.
 
