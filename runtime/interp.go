@@ -124,6 +124,7 @@ func (t *Thread) interp(catchJump, catchSp *int) (ret Value) {
 	}
 
 	defer func() {
+		// this is an optimization to avoid unnecessary recover/repanic
 		if *catchJump == 0 && fr.fn.Id == 0 {
 			return // this frame isn't catching
 		}
