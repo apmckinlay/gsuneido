@@ -14,7 +14,6 @@ all:
 
 console:
 	go build -v -ldflags "-X 'main.builtDate=${BUILT}'"
-	./gsuneido -repl
 
 test:
 	go test -tags win32 -count=1 ./...
@@ -39,3 +38,6 @@ gsuneido_windows.syso : res/suneido.rc res/suneido.manifest
 
 1.14:
 	go1.14 build -v -ldflags "-X 'main.builtDate=${BUILT}'"
+
+tip:
+	gotip build -v -ldflags "-X 'main.builtDate=${BUILT}'"
