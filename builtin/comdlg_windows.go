@@ -159,19 +159,7 @@ var getSaveFileName = comdlg32.MustFindProc("GetSaveFileNameA").Addr()
 var _ = builtin1("GetSaveFileName(a)",
 	func(a Value) Value {
 		defer heap.FreeTo(heap.CurSize())
-		bufsize := getInt(a, "maxFile")
-		file := ToStr(a.Get(nil, SuStr("file")))
-		buf := strToBuf(file, bufsize)
-		p := heap.Alloc(nOPENFILENAME)
-		*(*OPENFILENAME)(p) = OPENFILENAME{
-			structSize: int32(nOPENFILENAME),
-			file:       (*byte)(buf),
-			maxFile:    int32(bufsize),
-			filter:     getStr(a, "filter"),
-			flags:      getInt32(a, "flags"),
-			defExt:     getStr(a, "defExt"),
-			initialDir: getStr(a, "initialDir"),
-		}
+		p, buf, bufsize := buildOPENFILENAME(a)
 		rtn := goc.Syscall1(getSaveFileName,
 			uintptr(p))
 		if rtn != 0 {
@@ -185,26 +173,33 @@ var getOpenFileName = comdlg32.MustFindProc("GetOpenFileNameA").Addr()
 var _ = builtin1("GetOpenFileName(a)",
 	func(a Value) Value {
 		defer heap.FreeTo(heap.CurSize())
-		bufsize := getInt(a, "maxFile")
-		file := ToStr(a.Get(nil, SuStr("file")))
-		buf := strToBuf(file, bufsize)
-		p := heap.Alloc(nOPENFILENAME)
-		*(*OPENFILENAME)(p) = OPENFILENAME{
-			structSize: int32(nOPENFILENAME),
-			file:       (*byte)(buf),
-			maxFile:    int32(bufsize),
-			filter:     getStr(a, "filter"),
-			flags:      getInt32(a, "flags"),
-			defExt:     getStr(a, "defExt"),
-			initialDir: getStr(a, "initialDir"),
-		}
-		rtn := goc.Syscall1(getSaveFileName,
+		p, buf, bufsize := buildOPENFILENAME(a)
+		rtn := goc.Syscall1(getOpenFileName,
 			uintptr(p))
 		if rtn != 0 {
 			a.Put(nil, SuStr("file"), bufToStr2(buf, uintptr(bufsize)))
 		}
 		return boolRet(rtn)
 	})
+
+func buildOPENFILENAME(a Value) (p unsafe.Pointer, buf unsafe.Pointer, bufsize int) {
+	bufsize = getInt(a, "maxFile")
+	file := ToStr(a.Get(nil, SuStr("file")))
+	buf = strToBuf(file, bufsize)
+	p = heap.Alloc(nOPENFILENAME)
+	*(*OPENFILENAME)(p) = OPENFILENAME{
+		structSize: int32(nOPENFILENAME),
+		hwndOwner:  getHandle(a, "hwndOwner"),
+		file:       (*byte)(buf),
+		maxFile:    int32(bufsize),
+		filter:     getStr(a, "filter"),
+		flags:      getInt32(a, "flags"),
+		defExt:     getStr(a, "defExt"),
+		initialDir: getStr(a, "initialDir"),
+		title:      getStr(a, "title"),
+	}
+	return
+}
 
 type OPENFILENAME struct {
 	structSize     int32
