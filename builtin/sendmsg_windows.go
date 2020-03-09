@@ -1,7 +1,7 @@
 // Copyright Suneido Software Corp. All rights reserved.
 // Governed by the MIT license found in the LICENSE file.
 
-// +build win32
+// +build !portable
 
 package builtin
 
@@ -755,7 +755,7 @@ var _ = builtin4("SendMessageEDITBALLOONTIP(hwnd, msg, wParam, lParam)",
 			cbStruct: int32(nEDITBALLOONTIP),
 			pszTitle: getStr(d, "pszTitle"),
 			pszText:  getStr(d, "pszText"),
-			ttiIcon: getInt32(d, "ttiIcon"),
+			ttiIcon:  getInt32(d, "ttiIcon"),
 		}
 		rtn := goc.Syscall4(sendMessage,
 			intArg(a),

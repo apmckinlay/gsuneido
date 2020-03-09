@@ -7,16 +7,16 @@ ifdef PATHEXT
 endif
 
 build:
-	go build -v -tags win32 -ldflags "$(LDFLAGS)"
+	go build -v -ldflags "$(LDFLAGS)"
 
 all:
-	go build -a -v -ldflags "$(LDFLAGS)"
+	go build -v -ldflags "$(LDFLAGS)" -a
 
-console:
-	go build -v -ldflags "-X 'main.builtDate=${BUILT}'"
+portable:
+	go build -v -ldflags "-X 'main.builtDate=${BUILT}'" -tags portable
 
 test:
-	go test -tags win32 -count=1 ./...
+	go test -count=1 ./...
 
 repl: build
 	cmd /c start/w ./gsuneido -repl
@@ -32,7 +32,7 @@ generate:
 gsuneido_windows.syso : res/suneido.rc res/suneido.manifest
 	windres -F pe-x86-64 -o gsuneido_windows.syso res/suneido.rc
 
-.PHONY : build all console test repl client generate
+.PHONY : build all console test repl client generate clean 1.14 tip
 
 # -trimpath (but breaks vscode goto)
 
@@ -41,3 +41,6 @@ gsuneido_windows.syso : res/suneido.rc res/suneido.manifest
 
 tip:
 	gotip build -v -ldflags "-X 'main.builtDate=${BUILT}'"
+
+clean:
+	go clean -cache
