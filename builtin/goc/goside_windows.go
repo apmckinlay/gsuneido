@@ -21,6 +21,8 @@ import (
 	"golang.org/x/sys/windows"
 )
 
+var CallbackClock uint32
+
 const Ncb2s = C.ncb2s
 const Ncb3s = C.ncb3s
 const Ncb4s = C.ncb4s
@@ -163,6 +165,7 @@ func interact() uintptr {
 			return uintptr(C.args[1])
 		}
 		C.signalAndWait()
+		CallbackClock = uint32(C.callback_clock)
 	}
 }
 

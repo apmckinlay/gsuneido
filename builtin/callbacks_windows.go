@@ -30,6 +30,9 @@ type callback struct {
 	// active is set to true when the callback is allocated
 	// and set to false when it's cleared
 	active bool
+	// keepTill records "when" the callback was cleared.
+	// We delay reusing slots since calls may happen after clear.
+	keepTill uint32
 }
 
 var cb2s [goc.Ncb2s]callback
@@ -68,8 +71,9 @@ func (cb *callback) callv(args ...Value) uintptr {
 				"in", cb.fn, args)
 		}
 	}()
-	if !cb.active {
-		log.Println("CALLBACK TO INACTIVE!!!", cb.fn)
+	if !cb.active && cb.keepTill < goc.CallbackClock {
+		log.Println("CALLBACK TO INACTIVE!!!", cb.fn,
+			"keepTill", cb.keepTill, "CallbackClock", goc.CallbackClock)
 	}
 	x := UIThread.Call(cb.fn, args...)
 	if x == nil || x == False {
@@ -118,8 +122,9 @@ func NewCallback(fn Value, nargs int) uintptr {
 			j = i
 			break
 		}
-		if j == -1 && !cb.active { // reuse
-			j = i
+		if j == -1 && !cb.active && cb.keepTill < goc.CallbackClock {
+			j = i // reuse
+			// don't break so we finish checking for duplicate
 		}
 		if cb.active && cbeq(fn, cb.fn) {
 			panic("duplicate callback")
@@ -158,6 +163,9 @@ func ClearCallback(fn Value) bool {
 				if cb.active {
 					if !options.ClearCallbackDisabled {
 						cb.active = false
+						// wait for at least 2 clock ticks before reusing
+						// to ensure at least one full timer interval
+						cb.keepTill = goc.CallbackClock + 2
 					}
 					// keep the fn in case it gets called soon after clear
 					// keep the go callback to reuse
