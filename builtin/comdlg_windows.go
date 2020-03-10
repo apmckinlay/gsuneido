@@ -370,13 +370,6 @@ var printDlgEx = comdlg32.MustFindProc("PrintDlgExA").Addr()
 var _ = builtin1("PrintDlgEx(printdlgex)",
 	func(a Value) Value {
 		defer heap.FreeTo(heap.CurSize())
-		prob := a.Get(nil, SuStr("lpPageRanges"))
-		q := heap.Alloc(nPRINTPAGERANGE)
-		pr := (*PRINTPAGERANGE)(q)
-		*pr = PRINTPAGERANGE{
-			nFromPage: getInt32(prob, "nFromPage"),
-			nToPage:   getInt32(prob, "nToPage"),
-		}
 		p := heap.Alloc(nPRINTDLGEX)
 		pd := (*PRINTDLGEX)(p)
 		*pd = PRINTDLGEX{
@@ -388,9 +381,6 @@ var _ = builtin1("PrintDlgEx(printdlgex)",
 			Flags:               getInt32(a, "Flags"),
 			Flags2:              getInt32(a, "Flags2"),
 			ExclusionFlags:      getInt32(a, "ExclusionFlags"),
-			nPageRanges:         1,
-			nMaxPageRanges:      1,
-			lpPageRanges:        pr,
 			nMinPage:            getInt32(a, "nMinPage"),
 			nMaxPage:            getInt32(a, "nMaxPage"),
 			nCopies:             getInt32(a, "nCopies"),
@@ -398,6 +388,18 @@ var _ = builtin1("PrintDlgEx(printdlgex)",
 			lpPrintTemplateName: getStr(a, "lpPrintTemplateName"),
 			nStartPage:          getInt32(a, "nStartPage"),
 			dwResultAction:      getInt32(a, "dwResultAction"),
+		}
+		prob := a.Get(nil, SuStr("lpPageRanges"))
+		var pr *PRINTPAGERANGE
+		if prob != nil {
+			pr = (*PRINTPAGERANGE)(heap.Alloc(nPRINTPAGERANGE))
+			*pr = PRINTPAGERANGE{
+				nFromPage: getInt32(prob, "nFromPage"),
+				nToPage:   getInt32(prob, "nToPage"),
+			}
+			pd.lpPageRanges = pr
+			pd.nPageRanges = 1
+			pd.nMaxPageRanges = 1
 		}
 		rtn := goc.Syscall1(printDlgEx,
 			uintptr(p))
@@ -410,8 +412,10 @@ var _ = builtin1("PrintDlgEx(printdlgex)",
 		a.Put(nil, SuStr("ExclusionFlags"), IntVal(int(pd.ExclusionFlags)))
 		a.Put(nil, SuStr("nPageRanges"), IntVal(int(pd.nPageRanges)))
 		a.Put(nil, SuStr("nMaxPageRanges"), IntVal(int(pd.nMaxPageRanges)))
-		prob.Put(nil, SuStr("nFromPage"), IntVal(int(pr.nFromPage)))
-		prob.Put(nil, SuStr("nToPage"), IntVal(int(pr.nToPage)))
+		if prob != nil {
+			prob.Put(nil, SuStr("nFromPage"), IntVal(int(pr.nFromPage)))
+			prob.Put(nil, SuStr("nToPage"), IntVal(int(pr.nToPage)))
+		}
 		a.Put(nil, SuStr("nMinPage"), IntVal(int(pd.nMinPage)))
 		a.Put(nil, SuStr("nMaxPage"), IntVal(int(pd.nMaxPage)))
 		a.Put(nil, SuStr("nCopies"), IntVal(int(pd.nCopies)))
