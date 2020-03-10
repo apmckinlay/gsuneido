@@ -21,18 +21,17 @@ var _ = builtin("SocketClient(ipaddress, port, timeout=60, timeoutConnect=0, blo
 		ipaddr += ":" + strconv.Itoa(port)
 		var c net.Conn
 		var e error
-		toc := ToInt(args[3])
-		const sec = 1000 * 1000 * 1000
-		if toc == 0 {
+		toc := time.Duration(ToInt(Mul(args[3], SuInt(1000)))) * 1000 * 1000
+		if toc <= 0 {
 			c, e = net.Dial("tcp", ipaddr)
 		} else {
-			c, e = net.DialTimeout("tcp", ipaddr, time.Duration(toc*sec))
+			c, e = net.DialTimeout("tcp", ipaddr, toc)
 		}
 		if e != nil {
 			panic("SocketClient: " + e.Error())
 		}
 		sc := &suSocketClient{conn: c.(*net.TCPConn), rdr: bufio.NewReader(c),
-			timeout: time.Duration(ToInt(args[2]) * sec)}
+			timeout: time.Duration(ToInt(args[2])) * time.Second}
 		if args[4] == False {
 			return sc
 		}
