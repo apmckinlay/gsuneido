@@ -123,44 +123,46 @@ func (t *Thread) interp(catchJump, catchSp *int) (ret Value) {
 		}
 	}
 
-	defer func() {
-		// this is an optimization to avoid unnecessary recover/repanic
-		if *catchJump == 0 && fr.fn.Id == 0 {
-			return // this frame isn't catching
-		}
-		e := recover()
-		if e == nil {
-			return // not panic'ing, normal return
-		}
-		if e == BlockReturn {
-			if t.frames[t.fp-1].fn.OuterId != fr.fn.Id {
-				panic(e) // not our block, rethrow
+	for i := 0; i < 1; i++ { // workaround for 1.14 bug
+		defer func() {
+			// this is an optimization to avoid unnecessary recover/repanic
+			if *catchJump == 0 && fr.fn.Id == 0 {
+				return // this frame isn't catching
 			}
-			return // normal return
-		}
-		if *catchJump == 0 {
-			panic(e) // not catching
-		}
-		se, ok := e.(*SuExcept)
-		if !ok {
-			// first catch creates SuExcept with callstack
-			var ss SuStr
-			if re, ok := e.(runtime.Error); ok {
-				// debug.PrintStack()
-				ss = SuStr(re.Error())
-			} else if s, ok := e.(string); ok {
-				ss = SuStr(s)
+			e := recover()
+			if e == nil {
+				return // not panic'ing, normal return
+			}
+			if e == BlockReturn {
+				if t.frames[t.fp-1].fn.OuterId != fr.fn.Id {
+					panic(e) // not our block, rethrow
+				}
+				return // normal return
+			}
+			if *catchJump == 0 {
+				panic(e) // not catching
+			}
+			se, ok := e.(*SuExcept)
+			if !ok {
+				// first catch creates SuExcept with callstack
+				var ss SuStr
+				if re, ok := e.(runtime.Error); ok {
+					// debug.PrintStack()
+					ss = SuStr(re.Error())
+				} else if s, ok := e.(string); ok {
+					ss = SuStr(s)
+				} else {
+					ss = SuStr(ToStr(e.(Value)))
+				}
+				se = NewSuExcept(t, ss)
+			}
+			if catchMatch(string(se.SuStr), catchPat) {
+				ret = se // tells run we're catching
 			} else {
-				ss = SuStr(ToStr(e.(Value)))
+				panic(se)
 			}
-			se = NewSuExcept(t, ss)
-		}
-		if catchMatch(string(se.SuStr), catchPat) {
-			ret = se // tells run we're catching
-		} else {
-			panic(se)
-		}
-	}()
+		}()
+	}
 
 loop:
 	for fr.ip < len(code) {

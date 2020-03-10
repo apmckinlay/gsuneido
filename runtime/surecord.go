@@ -536,12 +536,14 @@ func (r *SuRecord) callRule(t *Thread, key string) Value {
 
 func (r *SuRecord) catchRule(t *Thread, rule Value, key string) Value {
 	t.rules.push(r, key)
-	defer func() {
-		t.rules.pop()
-		if e := recover(); e != nil {
-			panic(toStr(e) + " (rule for " + key + ")")
-		}
-	}()
+	for i := 0; i < 1; i++ { // workaround for 1.14 bug
+		defer func() {
+			t.rules.pop()
+			if e := recover(); e != nil {
+				panic(toStr(e) + " (rule for " + key + ")")
+			}
+		}()
+	}
 	return t.CallThis(rule, r)
 }
 
