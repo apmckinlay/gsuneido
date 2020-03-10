@@ -216,5 +216,3 @@ func CallbacksCount() int {
 var _ = builtin1("ClearCallback(fn)", func(fn Value) Value {
 	return SuBool(ClearCallback(fn))
 })
-
-//TODO may want to delay reuse, e.g. add to tail of free list (per nargs)
