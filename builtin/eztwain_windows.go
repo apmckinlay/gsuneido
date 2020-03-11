@@ -28,6 +28,25 @@ var _ = builtin2("TWAIN_AcquireMultipageFile(hwndApp, pszFile)",
 		return intRet(rtn)
 	})
 
+// dll long Eztwain4:TWAIN_GetDuplexSupport()
+var twain_GetDuplexSupport = eztwain4.NewProc("TWAIN_GetDuplexSupport")
+var _ = builtin0("TWAIN_GetDuplexSupport()",
+	func() Value {
+		rtn, _, _ := syscall.Syscall(twain_GetDuplexSupport.Addr(), 0,
+			0, 0, 0)
+		return intRet(rtn)
+	})
+
+// dll long Eztwain4:TWAIN_EnableDuplex(long i)
+var twain_EnableDuplex = eztwain4.NewProc("TWAIN_EnableDuplex")
+var _ = builtin1("TWAIN_EnableDuplex(enable)",
+	func(a Value) Value {
+		rtn, _, _ := syscall.Syscall(twain_EnableDuplex.Addr(), 1,
+			intArg(a),
+			0, 0)
+		return intRet(rtn)
+	})
+
 // dll long Eztwain4:TWAIN_GetHideUI()
 var twain_GetHideUI = eztwain4.NewProc("TWAIN_GetHideUI")
 var _ = builtin0("TWAIN_GetHideUI()",
@@ -53,6 +72,15 @@ var _ = builtin0("TWAIN_HasControllableUI()",
 		rtn, _, _ := syscall.Syscall(twain_HasControllableUI.Addr(), 0,
 			0, 0, 0)
 		return intRet(rtn)
+	})
+
+// dll bool Eztwain4:TWAIN_IsDuplexEnabled()
+var twain_IsDuplexEnabled = eztwain4.NewProc("TWAIN_IsDuplexEnabled")
+var _ = builtin0("TWAIN_IsDuplexEnabled()",
+	func() Value {
+		rtn, _, _ := syscall.Syscall(twain_IsDuplexEnabled.Addr(), 0,
+			0, 0, 0)
+		return boolRet(rtn)
 	})
 
 // dll long Eztwain4:TWAIN_LastErrorCode()
