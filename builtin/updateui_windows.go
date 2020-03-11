@@ -32,6 +32,7 @@ var _ = builtin("UpdateUI(block)",
 		return nil
 	})
 
+// notifyMessageLoop is used by UpdateUI and SetTimer
 func notifyMessageLoop() {
 	// NOTE: this has to be the Go Syscall, not goc.Syscall
 	r, _, _ := syscall.Syscall6(postThreadMessage, 4,
@@ -41,6 +42,7 @@ func notifyMessageLoop() {
 	}
 }
 
+// updateUI2 is called via goc.UpdateUI
 func updateUI2() {
 	for {
 		select {
@@ -54,6 +56,8 @@ func updateUI2() {
 	}
 }
 
+// updateUI is called via runtime.UpdateUI
+// including by interp
 func updateUI() {
 	for {
 		select {

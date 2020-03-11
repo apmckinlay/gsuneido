@@ -111,7 +111,6 @@ func handler(e interface{}) {
 var cblock sync.Mutex
 
 func NewCallback(fn Value, nargs int) uintptr {
-	// need locking because SetTimer(Delayed) can be called from other threads
 	cblock.Lock()
 	defer cblock.Unlock()
 	if fn.Type() == types.Number {

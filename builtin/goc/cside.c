@@ -242,7 +242,7 @@ static void message_loop(uintptr hdlg) {
 			msg.lParam == END_MSG_LOOP)
 			return;
 		if (msg.message == WM_USER && msg.hwnd == 0 &&
-			msg.wParam == 0xffffffff) {
+			msg.wParam == 0xffffffff) { // from notifyMessageLoop
 			args[0] = msg_updateui;
 			interact();
 			continue;
@@ -269,7 +269,7 @@ static void destroy_windows() {
 	EnumWindows(destroy_func, (LPARAM) NULL);
 }
 
-// timer ensures UpdateUI since it will get called
+// timer is called by a Windows timer so it will get called
 // even if a Windows message loop is running e.g. in MessageBox
 static VOID CALLBACK timer(
 	HWND hwnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime) {

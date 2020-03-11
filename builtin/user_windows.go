@@ -897,7 +897,7 @@ var _ = builtin4("SetTimer(hwnd, id, ms, f)",
 			return Zero
 		}
 		if windows.GetCurrentThreadId() != uiThreadId {
-			// WARNING: can't use heap from background thread
+			// WARNING: don't use heap from background thread
 			d.SetConcurrent() // since callback will be from different thread
 			setTimerChan <- timerSpec{hwnd: a, id: b, ms: c, cb: d}
 			notifyMessageLoop()
@@ -917,6 +917,8 @@ var _ = builtin4("SetTimer(hwnd, id, ms, f)",
 		return gocSetTimer(a, b, c, d)
 	})
 
+// gocSetTimer is called by SetTimer directly if on main UI thread
+// and via updateUI2 if from background thread
 func gocSetTimer(hwnd, id, ms, cb Value) Value {
 	rtn := goc.Syscall4(setTimer,
 		intArg(hwnd),
