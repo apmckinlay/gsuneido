@@ -48,10 +48,8 @@ type timerSpec struct {
 	id   Value
 	ms   Value
 	cb   Value
+	ret  chan Value
 }
 
 // setTimerChan is used for cross thread SetTimer requests
 var setTimerChan = make(chan timerSpec, 1)
-
-// timerIdChan is used for the return value for cross thread SetTimer
-var timerIdChan = make(chan Value, 1) //TODO check if buffer is needed

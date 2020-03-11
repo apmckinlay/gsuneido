@@ -899,12 +899,13 @@ var _ = builtin4("SetTimer(hwnd, id, ms, f)",
 		if windows.GetCurrentThreadId() != uiThreadId {
 			// WARNING: don't use heap from background thread
 			d.SetConcurrent() // since callback will be from different thread
-			setTimerChan <- timerSpec{hwnd: a, id: b, ms: c, cb: d}
+			ts := timerSpec{hwnd: a, id: b, ms: c, cb: d, ret: make(chan Value, 1)}
+			setTimerChan <- ts
 			notifyMessageLoop()
 			first := true
 			for {
 				select {
-				case id := <-timerIdChan:
+				case id := <-ts.ret:
 					return id
 				case <-time.After(5 * time.Second):
 					if first {

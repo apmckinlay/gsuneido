@@ -49,7 +49,7 @@ func updateUI2() {
 		case block := <-uuiChan:
 			runUI(block)
 		case t := <-setTimerChan:
-			timerIdChan <- gocSetTimer(t.hwnd, t.id, t.ms, t.cb)
+			t.ret <- gocSetTimer(t.hwnd, t.id, t.ms, t.cb)
 		default: // non-blocking
 			return
 		}
