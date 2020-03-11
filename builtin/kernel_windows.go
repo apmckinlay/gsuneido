@@ -537,7 +537,7 @@ func OSName() Value {
 
 //-------------------------------------------------------------------
 
-var versionApi = MustLoadDLL("Api-ms-win-core-version-l1-1-0.dll")
+var versionApi = MustLoadDLL("version.dll")
 
 var getFileVersionInfo = versionApi.MustFindProc("GetFileVersionInfoA").Addr()
 var getFileVersionInfoSize = versionApi.MustFindProc("GetFileVersionInfoSizeA").Addr()
