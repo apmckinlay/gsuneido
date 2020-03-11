@@ -121,8 +121,10 @@ func NewCallback(fn Value, nargs int) uintptr {
 	for i := range callbacks {
 		cb := &callbacks[i]
 		if !cb.used {
-			cb.used = true
-			j = i
+			if j == -1 {
+				cb.used = true
+				j = i
+			}
 			break
 		}
 		if j == -1 && !cb.active && cb.keepTill < goc.CallbackClock {
@@ -155,6 +157,8 @@ func cbeq(x, y Value) bool {
 }
 
 func ClearCallback(fn Value) bool {
+	cblock.Lock()
+	defer cblock.Unlock()
 	foundInactive := false
 	for _, c := range cbs {
 		for i := range c {
