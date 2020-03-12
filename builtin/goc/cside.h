@@ -8,8 +8,6 @@ extern uintptr args[maxargs];
 
 extern unsigned long threadid;
 
-extern unsigned callback_clock;
-
 enum {
 	ncb2s = 32,
 	ncb3s = 32,

@@ -3,8 +3,6 @@
 
 #include "cside.h"
 
-unsigned callback_clock = 0;
-
 extern void timerId();
 
 uintptr interact();
@@ -273,7 +271,6 @@ static void destroy_windows() {
 // even if a Windows message loop is running e.g. in MessageBox
 static VOID CALLBACK timer(
 	HWND hwnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime) {
-	++callback_clock;
 	if (ticks <= 3) {
 		// our message loop isnt running
 		args[0] = msg_updateui;

@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"log"
 	"sync"
+	"time"
 
 	"github.com/apmckinlay/gsuneido/builtin/goc"
 	heap "github.com/apmckinlay/gsuneido/builtin/heapstack"
@@ -17,8 +18,13 @@ import (
 	"github.com/apmckinlay/gsuneido/runtime/types"
 )
 
-// WARNING: Not thread-safe.
-// Should only be used on main UI thread.
+var startTime = time.Now()
+
+// clock ticks every 10 ms
+func clock() uint32 {
+	d := time.Since(startTime)
+	return uint32(d / time.Millisecond / 10)
+}
 
 type callback struct {
 	// fn is the current Suneido function for the callback
@@ -34,6 +40,8 @@ type callback struct {
 	// We delay reusing slots since calls may happen after clear.
 	keepTill uint32
 }
+
+// var ncbs = []int{goc.Ncb2s, goc.Ncb3s, goc.Ncb4s}
 
 var cb2s [goc.Ncb2s]callback
 var cb3s [goc.Ncb3s]callback
@@ -73,9 +81,9 @@ func (cb *callback) callv(args ...Value) uintptr {
 			}
 		}()
 	}
-	if !cb.active && cb.keepTill < goc.CallbackClock {
+	if !cb.active && cb.keepTill < clock() {
 		log.Println("CALLBACK TO INACTIVE!!!", cb.fn,
-			"keepTill", cb.keepTill, "CallbackClock", goc.CallbackClock)
+			"keepTill", cb.keepTill, "clock", clock())
 	}
 	x := UIThread.Call(cb.fn, args...)
 	if x == nil || x == False {
@@ -116,6 +124,7 @@ func NewCallback(fn Value, nargs int) uintptr {
 	if fn.Type() == types.Number {
 		return uintptr(ToInt(fn))
 	}
+	clock := clock()
 	callbacks := cbs[nargs-2]
 	j := -1
 	for i := range callbacks {
@@ -127,7 +136,7 @@ func NewCallback(fn Value, nargs int) uintptr {
 			}
 			break
 		}
-		if j == -1 && !cb.active && cb.keepTill < goc.CallbackClock {
+		if j == -1 && !cb.active && cb.keepTill < clock {
 			j = i // reuse
 			// don't break so we finish checking for duplicate
 		}
@@ -136,6 +145,10 @@ func NewCallback(fn Value, nargs int) uintptr {
 		}
 	}
 	if j == -1 {
+		// fmt.Println("Last 10 callbacks, clock ", clock)
+		// for _, c := range callbacks[ncbs[nargs-2]-10:] {
+		// 	fmt.Println(c.fn, "keepTill", c.keepTill)
+		// }
 		Fatal("too many callbacks")
 	}
 	cb := &callbacks[j]
@@ -171,8 +184,8 @@ func ClearCallback(fn Value) bool {
 					if !options.ClearCallbackDisabled {
 						cb.active = false
 						// wait for at least 2 clock ticks before reusing
-						// to ensure at least one full timer interval
-						cb.keepTill = goc.CallbackClock + 2
+						// to ensure at least one full interval
+						cb.keepTill = clock() + 2
 					}
 					// keep the fn in case it gets called soon after clear
 					// keep the go callback to reuse
