@@ -4,6 +4,7 @@
 package builtin
 
 import (
+	"io"
 	"log"
 	"os"
 	"path/filepath"
@@ -44,9 +45,7 @@ func forEachDir(dir string, justfiles, details bool, fn func(entry Value)) {
 	if dir == "" {
 		dir = "."
 	}
-	if pat == "" {
-		pat = "*"
-	} else if strings.HasSuffix(pat, "*.*") {
+	if strings.HasSuffix(pat, "*.*") {
 		pat = pat[:len(pat)-2] // switch *.* to *
 	}
 	if dir[len(dir)-1] == '/' {
@@ -57,7 +56,7 @@ func forEachDir(dir string, justfiles, details bool, fn func(entry Value)) {
 	if err != nil {
 		// should panic, but cSuneido doesn't
 		if !strings.Contains(err.Error(), "cannot find the file specified") &&
-			! strings.Contains(err.Error(), "syntax is incorrect") {
+			!strings.Contains(err.Error(), "syntax is incorrect") {
 			log.Println("Dir:", err)
 		}
 		return
@@ -70,33 +69,41 @@ func forEachDir(dir string, justfiles, details bool, fn func(entry Value)) {
 			}
 		}()
 	}
-	list, err := f.Readdir(100)
-	for _, info := range list {
-		name := info.Name()
-		match, _ := filepath.Match(pat, name)
-		if match && (!justfiles || !info.IsDir()) {
-			suffix := ""
-			if info.IsDir() {
-				suffix = "/"
+	for {
+		list, err := f.Readdir(100)
+		if err != nil {
+			if err != io.EOF {
+				panic(err.Error())
 			}
-			var entry Value = SuStr(info.Name() + suffix)
-			if details {
-				ob := &SuObject{}
-				ob.Set(SuStr("name"), entry)
-				ob.Set(SuStr("size"), Int64Val(info.Size()))
-				ob.Set(SuStr("date"), FromTime(info.ModTime()))
-				entry = ob
-			}
-			func() {
-				for i := 0; i < 1; i++ { // workaround for 1.14 bug
-					defer func() {
-						if e := recover(); e != nil && e != BlockContinue {
-							panic(e)
-						}
-					}()
+			break
+		}
+		for _, info := range list {
+			name := info.Name()
+			match, _ := filepath.Match(pat, name)
+			if match && (!justfiles || !info.IsDir()) {
+				suffix := ""
+				if info.IsDir() {
+					suffix = "/"
 				}
-				fn(entry)
-			}()
+				var entry Value = SuStr(info.Name() + suffix)
+				if details {
+					ob := &SuObject{}
+					ob.Set(SuStr("name"), entry)
+					ob.Set(SuStr("size"), Int64Val(info.Size()))
+					ob.Set(SuStr("date"), FromTime(info.ModTime()))
+					entry = ob
+				}
+				func() {
+					for i := 0; i < 1; i++ { // workaround for 1.14 bug
+						defer func() {
+							if e := recover(); e != nil && e != BlockContinue {
+								panic(e)
+							}
+						}()
+					}
+					fn(entry)
+				}()
+			}
 		}
 	}
 }
