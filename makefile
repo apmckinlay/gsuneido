@@ -7,7 +7,7 @@ ifdef PATHEXT
 endif
 
 build:
-	go1.14 build -v -ldflags "$(LDFLAGS)"
+	go build -v -ldflags "$(LDFLAGS)"
 
 all:
 	go build -v -ldflags "$(LDFLAGS)" -a
@@ -35,9 +35,6 @@ gsuneido_windows.syso : res/suneido.rc res/suneido.manifest
 .PHONY : build all console test repl client generate clean 1.14 tip
 
 # -trimpath (but breaks vscode goto)
-
-1.14:
-	go1.14 build -v -ldflags "$(LDFLAGS)"
 
 clean:
 	go clean -cache
