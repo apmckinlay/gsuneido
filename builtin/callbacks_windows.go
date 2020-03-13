@@ -18,12 +18,13 @@ import (
 	"github.com/apmckinlay/gsuneido/runtime/types"
 )
 
+const delay = 10
 var startTime = time.Now()
 
-// clock ticks every 10 ms
+// clock ticks every millisecond
 func clock() uint32 {
 	d := time.Since(startTime)
-	return uint32(d / time.Millisecond / 10)
+	return uint32(d / time.Millisecond)
 }
 
 type callback struct {
@@ -183,9 +184,7 @@ func ClearCallback(fn Value) bool {
 				if cb.active {
 					if !options.ClearCallbackDisabled {
 						cb.active = false
-						// wait for at least 2 clock ticks before reusing
-						// to ensure at least one full interval
-						cb.keepTill = clock() + 2
+						cb.keepTill = clock() + delay
 					}
 					// keep the fn in case it gets called soon after clear
 					// keep the go callback to reuse
