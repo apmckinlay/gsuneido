@@ -10,8 +10,8 @@ import (
 )
 
 func TestSuConcat(t *testing.T) {
-	a := NewSuConcat();
-	b := a;
+	a := NewSuConcat()
+	b := a
 	Assert(t).True(a.buf == b.buf) // same shared buffer
 	a = a.Add("hello")
 	a = a.Add("world")
@@ -22,8 +22,8 @@ func TestSuConcat(t *testing.T) {
 }
 
 func TestSuConcat_SetConcurrent(t *testing.T) {
-	a := NewSuConcat();
-	b := a;
+	a := NewSuConcat()
+	b := a
 	a.SetConcurrent()
 	Assert(t).True(a.buf == b.buf) // same shared buffer
 	a = a.Add("hello")
