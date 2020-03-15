@@ -148,7 +148,7 @@ func (t *Thread) locals(i int) *SuObject {
 	if fr.this != nil {
 		locals.Set(SuStr("this"), fr.this)
 	}
-	for i, v := range fr.locals {
+	for i, v := range fr.locals.v {
 		if v != nil && fr.fn != nil && i < len(fr.fn.Names) {
 			locals.Set(SuStr(fr.fn.Names[i]), v)
 		}

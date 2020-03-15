@@ -338,3 +338,7 @@ func (x *Lockable) Unlock() {
 		x.lock.Unlock()
 	}
 }
+
+func (x *Lockable) IsConcurrent() bool {
+	return x.concurrent
+}

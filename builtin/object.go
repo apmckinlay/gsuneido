@@ -10,6 +10,18 @@ import (
 	"github.com/apmckinlay/gsuneido/runtime/types"
 )
 
+type Concurrent interface {
+	IsConcurrent() bool
+}
+
+var _ = builtin1("Concurrent?(value)",
+	func (v Value) Value {
+		if c,ok := v.(Concurrent); ok {
+			return SuBool(c.IsConcurrent())
+		}
+		return EmptyStr
+	})
+
 var _ = builtin("Object(@args)",
 	func(_ *Thread, args []Value) Value {
 		return args[0]

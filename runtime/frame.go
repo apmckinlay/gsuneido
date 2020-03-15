@@ -14,22 +14,38 @@ type Frame struct {
 	// locals are the local variables (including arguments)
 	// Normally they are on the thread stack
 	// but for closure blocks they are moved to the heap.
-	locals []Value
+	locals Locals
 
 	// this is the instance if we're running a method
 	this Value
-
-	// localsOnHeap is true when locals have been moved from the stack to the heap
-	// for escaped blocks
-	localsOnHeap bool
 }
 
-func (fr *Frame) moveLocalsToHeap() {
-	if fr.localsOnHeap {
+type Locals struct {
+	v []Value
+	// onHeap is true when locals have been moved from the stack to the heap
+	onHeap bool
+	*Lockable
+}
+
+func (ls *Locals) moveToHeap() {
+	if ls.onHeap {
 		return
 	}
-	oldlocals := fr.locals
-	fr.locals = make([]Value, len(oldlocals))
-	copy(fr.locals, oldlocals)
-	fr.localsOnHeap = true
+	// not concurrent at this point
+	oldlocals := ls.v
+	ls.v = make([]Value, len(oldlocals))
+	copy(ls.v, oldlocals)
+	ls.onHeap = true
+}
+
+func (ls *Locals) SetConcurrent() {
+	if ls.Lockable.concurrent {
+		return
+	}
+	ls.Lockable.concurrent = true
+	for _, v := range ls.v {
+		if v != nil {
+			v.SetConcurrent()
+		}
+	}
 }

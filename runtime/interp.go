@@ -26,7 +26,7 @@ func (t *Thread) Start(fn *SuFunc, this Value) Value {
 		t.Push(nil)
 	}
 	t.frames[t.fp] = Frame{fn: fn, this: this,
-		locals: t.stack[t.sp-int(fn.Nlocals) : t.sp]}
+		locals: Locals{v: t.stack[t.sp-int(fn.Nlocals) : t.sp], Lockable: &Lockable{}}}
 	return t.run()
 }
 
@@ -213,19 +213,26 @@ loop:
 			t.Push(fr.fn.Values[fetchUint8()])
 		case op.Load:
 			i := fetchUint8()
-			val := fr.locals[i]
+			fr.locals.Lock()
+			val := fr.locals.v[i]
+			fr.locals.Unlock()
 			if val == nil {
 				panic("uninitialized variable: " + fr.fn.Names[i])
 			}
 			t.Push(val)
 		case op.Store:
-			fr.locals[fetchUint8()] = t.Top()
+			fr.locals.Lock()
+			fr.locals.v[fetchUint8()] = t.Top()
+			fr.locals.Unlock()
 		case op.Dyload:
 			i := fetchUint8()
-			if fr.locals[i] == nil {
-				t.dyload(fr, i)
+			fr.locals.Lock()
+			x := fr.locals.v[i]
+			fr.locals.Unlock()
+			if x == nil {
+				x = t.dyload(fr, i)
 			}
-			t.Push(fr.locals[i])
+			t.Push(x)
 		case op.Global:
 			gn := fetchUint16()
 			t.Push(Global.Get(t, gn))
@@ -400,7 +407,9 @@ loop:
 			nextable := iter.(interface{ Next() Value })
 			next := nextable.Next()
 			if next != nil {
-				fr.locals[local] = next
+				fr.locals.Lock()
+				fr.locals.v[local] = next
+				fr.locals.Unlock()
 			} else {
 				fr.ip += brk - 1 // break
 			}
@@ -419,7 +428,7 @@ loop:
 		case op.Throw:
 			panic(t.Pop())
 		case op.Block:
-			fr.moveLocalsToHeap()
+			fr.locals.moveToHeap()
 			fn := fr.fn.Values[fetchUint8()].(*SuFunc)
 			block := &SuBlock{SuFunc: *fn, locals: fr.locals, this: fr.this}
 			t.Push(block)
@@ -507,14 +516,21 @@ func (t *Thread) popbool() bool {
 
 // dyload pushes a dynamic variable onto the stack
 // It looks up the frame stack to find it, and copies it locally
-func (t *Thread) dyload(fr *Frame, idx int) {
+func (t *Thread) dyload(fr *Frame, idx int) Value {
 	name := fr.fn.Names[idx]
 	for i := t.fp - 2; i >= 0; i-- {
 		fr2 := &t.frames[i]
 		for j, s := range fr2.fn.Names {
-			if s == name && fr2.locals[j] != nil {
-				fr.locals[idx] = fr2.locals[j]
-				return
+			if s == name {
+				fr2.locals.Lock()
+				x := fr2.locals.v[j]
+				fr2.locals.Unlock()
+				if x != nil {
+					fr.locals.Lock()
+					fr.locals.v[idx] = x
+					fr.locals.Unlock()
+					return x
+				}
 			}
 		}
 	}
