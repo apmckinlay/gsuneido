@@ -37,4 +37,4 @@ gsuneido_windows.syso : res/suneido.rc res/suneido.manifest
 # -trimpath (but breaks vscode goto)
 
 clean:
-	go clean -cache
+	go clean -cache -testcache
