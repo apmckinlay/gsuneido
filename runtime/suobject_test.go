@@ -211,3 +211,16 @@ func TestSuObjectPack2(t *testing.T) {
 	expected := []byte{6, 1, 3, 3, 129, 10, 1, 2, 4, 97, 3, 3, 129, 20}
 	Assert(t).That([]byte(buf), Equals(expected))
 }
+
+func TestSuObjectCompare(t *testing.T) {
+	x := &SuObject{}
+	x.Add(Zero)
+	y := &SuObject{}
+	y.Add(One)
+	for i := 0; i < 2; i++ {
+		Assert(t).That(x.Compare(y), Equals(-1))
+		Assert(t).That(y.Compare(x), Equals(1))
+		x.SetConcurrent()
+		y.SetConcurrent()
+	}
+}
