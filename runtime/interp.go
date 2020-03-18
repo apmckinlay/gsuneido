@@ -227,12 +227,12 @@ loop:
 		case op.Dyload:
 			i := fetchUint8()
 			fr.locals.Lock()
-			x := fr.locals.v[i]
+			val := fr.locals.v[i]
 			fr.locals.Unlock()
-			if x == nil {
-				x = t.dyload(fr, i)
+			if val == nil {
+				val = t.dyload(fr, i)
 			}
-			t.Push(x)
+			t.Push(val)
 		case op.Global:
 			gn := fetchUint16()
 			t.Push(Global.Get(t, gn))

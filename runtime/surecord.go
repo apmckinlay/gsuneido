@@ -508,6 +508,7 @@ func (r *SuRecord) addDependent(from, to string) {
 	}
 }
 
+// getSpecial handles _lower!
 func (r *SuRecord) getSpecial(key string) Value {
 	if strings.HasSuffix(key, "_lower!") {
 		basekey := key[0 : len(key)-7]
