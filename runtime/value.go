@@ -4,12 +4,14 @@
 package runtime
 
 import (
+	"log"
 	"strconv"
 	"strings"
 	"sync"
 
 	"github.com/apmckinlay/gsuneido/runtime/types"
 	"github.com/apmckinlay/gsuneido/util/dnum"
+	// sync "github.com/sasha-s/go-deadlock"
 )
 
 // Value is a value visible to Suneido programmers
@@ -211,7 +213,7 @@ func ErrType(x Value) string {
 	if x == True {
 		return "true"
 	}
-	if _,ok := x.(*SuSequence); ok {
+	if _, ok := x.(*SuSequence); ok {
 		return "sequence"
 	}
 	t := x.Type().String()
@@ -325,7 +327,14 @@ type Lockable struct {
 	lock       sync.Mutex
 }
 
+func (x *Lockable) SetConcurrent() {
+	log.Fatalln("SetConcurrent must be defined")
+}
+
 func (x *Lockable) Lock() bool {
+	if x == nil {
+		log.Fatal("Lock nil")
+	}
 	if x.concurrent {
 		x.lock.Lock()
 		return true
@@ -333,12 +342,24 @@ func (x *Lockable) Lock() bool {
 	return false
 }
 
-func (x *Lockable) Unlock() {
+func (x *Lockable) Unlock() bool {
 	if x.concurrent {
 		x.lock.Unlock()
+		return true
 	}
+	return false
 }
 
 func (x *Lockable) IsConcurrent() bool {
 	return x.concurrent
+}
+
+type Locker interface {
+	Lock() bool
+	Unlock() bool
+	// get is like Get but doesn't lock, caller handles locking
+	get(t *Thread, key Value) Value
+	// put is like Put but doesn't lock, caller handles locking
+	put(t *Thread, key Value, val Value)
+	IsConcurrent() bool
 }

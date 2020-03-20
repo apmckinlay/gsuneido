@@ -4,6 +4,7 @@
 package runtime
 
 import (
+	"log"
 	"runtime"
 	"strings"
 
@@ -123,8 +124,19 @@ func (t *Thread) interp(catchJump, catchSp *int) (ret Value) {
 		}
 	}
 
+	var lockedLocal = -1
+	var lockedObject Value
+	var lockedMember Value
+
 	for i := 0; i < 1; i++ { // workaround for 1.14 bug
 		defer func() {
+			if lockedLocal != -1 {
+				fr.locals.Unlock()
+			} else if lockedObject != nil {
+				if locker, ok := lockedObject.(Locker); ok {
+					locker.Unlock()
+				}
+			}
 			// this is an optimization to avoid unnecessary recover/repanic
 			if *catchJump == 0 && fr.fn.Id == 0 {
 				return // this frame isn't catching
@@ -186,10 +198,8 @@ loop:
 			t.Pop()
 		case op.Dup:
 			t.Push(t.Top())
-		case op.Dup2:
-			t.Dup2()
-		case op.Dupx2:
-			t.Dupx2()
+		case op.Swap:
+			t.Swap()
 		case op.This:
 			if fr.this == nil {
 				panic("uninitialized: this")
@@ -220,10 +230,30 @@ loop:
 				panic("uninitialized variable: " + fr.fn.Names[i])
 			}
 			t.Push(val)
-		case op.Store:
+		case op.LoadLock:
+			if lockedLocal != -1 {
+				log.Fatalln("lockedLocal already set in LoadLock")
+			}
+			lockedLocal = fetchUint8()
 			fr.locals.Lock()
-			fr.locals.v[fetchUint8()] = t.Top()
+			val := fr.locals.v[lockedLocal]
+			if val == nil {
+				panic("uninitialized variable: " + fr.fn.Names[lockedLocal])
+			}
+			t.Push(val)
+		case op.Store:
+			val := t.Top()
+			if fr.locals.Lock() {
+				val.SetConcurrent()
+			}
+			fr.locals.v[fetchUint8()] = val
 			fr.locals.Unlock()
+		case op.StoreUnlock:
+			val := t.Top()
+			val.SetConcurrent()
+			fr.locals.v[lockedLocal] = val
+			fr.locals.Unlock()
+			lockedLocal = -1
 		case op.Dyload:
 			i := fetchUint8()
 			fr.locals.Lock()
@@ -244,11 +274,42 @@ loop:
 				panic("uninitialized member: " + m.String())
 			}
 			t.Push(val)
+		case op.GetLock:
+			if lockedObject != nil {
+				log.Fatalln("lockedObject already set in GetLock")
+			}
+			if lockedMember != nil {
+				log.Fatalln("lockedMember already set in GetLock")
+			}
+			lockedMember = t.Pop()
+			lockedObject = t.Pop()
+			var val Value
+			if locker, ok := lockedObject.(Locker); ok {
+				locker.Lock()
+				val = locker.get(t, lockedMember)
+			} else {
+				val = lockedObject.Get(t, lockedMember)
+			}
+			if val == nil {
+				panic("uninitialized member: " + lockedMember.String())
+			}
+			t.Push(val)
 		case op.Put:
 			val := t.Pop()
 			m := t.Pop()
 			ob := t.Pop()
 			ob.Put(t, m, val)
+			t.Push(val)
+		case op.PutUnlock:
+			val := t.Pop()
+			if locker, ok := lockedObject.(Locker); ok {
+				locker.put(t, lockedMember, val)
+				locker.Unlock()
+			} else {
+				lockedObject.Put(t, lockedMember, val)
+			}
+			lockedObject = nil
+			lockedMember = nil
 			t.Push(val)
 		case op.RangeTo:
 			j := ToInt(t.Pop())

@@ -23,10 +23,8 @@ const (
 	Pop
 	// Dup duplicates the top of the stack
 	Dup
-	// Dup2 duplicates the top two values on the stack i.e. a,b => a,b,a,b
-	Dup2
-	// Dupx2 duplicates the top under the next two, used for post inc/dec
-	Dupx2
+	// Swap swaps the top two values
+	Swap
 
 	// push values --------------------------------------------------
 
@@ -53,6 +51,10 @@ const (
 	Load
 	// Store <uint8> pops the top value off the stack into a local variable
 	Store
+	// LoadLock <uint8> locks the locals and then does Load
+	LoadLock
+	// StoreUnlock <uint8> does Store and then unlocks the locals
+	StoreUnlock
 	// Dyload <uint8> pushes a dynamic variable onto the stack
 	// It looks up the frame stack to find it, and copies it locally
 	Dyload
@@ -62,6 +64,10 @@ const (
 	Get
 	// Put pops the top three values (ob, mem, val) and does ob.Put(mem, val)
 	Put
+	// GetLock locks the object and then does Get
+	GetLock
+	// PutUnlock does Put and then unlocks the object
+	PutUnlock
 	// RangeTo replaces the top three values (x,i,j) with x.RangeTo(i,j)
 	RangeTo
 	// RangeLen replaces the top three values (x,i,n) with x.RangeLen(i,n)

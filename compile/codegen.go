@@ -600,18 +600,17 @@ func (cg *cgen) unary(node *ast.Unary, ct calltype) {
 	o := utok2op[node.Tok]
 	if tok.Inc <= node.Tok && node.Tok <= tok.PostDec {
 		ref := cg.lvalue(node.E)
-		cg.dupLvalue(ref)
-		cg.load(ref)
+		cg.loadLock(ref)
 		if node.Tok == tok.PostInc || node.Tok == tok.PostDec {
-			cg.dupUnderLvalue(ref)
+			cg.emit(op.Dup)
 			cg.emit(op.One)
 			cg.emit(o)
-			cg.store(ref)
+			cg.storeUnlock(ref)
 			cg.emit(op.Pop)
 		} else {
 			cg.emit(op.One)
 			cg.emit(o)
-			cg.store(ref)
+			cg.storeUnlock(ref)
 		}
 	} else {
 		cg.expr(node.E)
@@ -639,12 +638,15 @@ func (cg *cgen) binary(node *ast.Binary) {
 		cg.store(ref)
 	case tok.AddEq, tok.SubEq, tok.CatEq, tok.MulEq, tok.DivEq, tok.ModEq,
 		tok.LShiftEq, tok.RShiftEq, tok.BitOrEq, tok.BitAndEq, tok.BitXorEq:
-		ref := cg.lvalue(node.Lhs)
-		cg.dupLvalue(ref)
-		cg.load(ref)
 		cg.expr(node.Rhs)
+		ref := cg.lvalue(node.Lhs)
+		cg.loadLock(ref)
+		switch node.Tok {
+		case tok.CatEq, tok.SubEq, tok.DivEq, tok.ModEq, tok.LShiftEq, tok.RShiftEq:
+			cg.emit(op.Swap) // need to swap non-commutative
+		}
 		cg.emit(tok2op[node.Tok])
-		cg.store(ref)
+		cg.storeUnlock(ref)
 	case tok.Is, tok.Isnt, tok.Match, tok.MatchNot, tok.Mod,
 		tok.LShift, tok.RShift, tok.Lt, tok.Lte, tok.Gt, tok.Gte:
 		cg.expr(node.Lhs)
@@ -812,6 +814,18 @@ func (cg *cgen) load(ref int) {
 	}
 }
 
+func (cg *cgen) loadLock(ref int) {
+	if ref == memRef {
+		cg.emit(op.GetLock)
+	} else {
+		if cg.Names[ref][0] == '_' {
+			cg.emitUint8(op.Dyload, ref)
+		} else {
+			cg.emitUint8(op.LoadLock, ref)
+		}
+	}
+}
+
 func (cg *cgen) store(ref int) {
 	if ref == memRef {
 		cg.emit(op.Put)
@@ -820,17 +834,11 @@ func (cg *cgen) store(ref int) {
 	}
 }
 
-func (cg *cgen) dupLvalue(ref int) {
+func (cg *cgen) storeUnlock(ref int) {
 	if ref == memRef {
-		cg.emit(op.Dup2)
-	}
-}
-
-func (cg *cgen) dupUnderLvalue(ref int) {
-	if ref == memRef {
-		cg.emit(op.Dupx2)
+		cg.emit(op.PutUnlock)
 	} else {
-		cg.emit(op.Dup)
+		cg.emit(op.StoreUnlock)
 	}
 }
 

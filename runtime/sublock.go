@@ -48,5 +48,7 @@ func (*SuBlock) Type() types.Type {
 
 func (b *SuBlock) SetConcurrent() {
 	b.locals.SetConcurrent()
-	b.this.SetConcurrent()
+	if b.this != nil {
+		b.this.SetConcurrent()
+	}
 }

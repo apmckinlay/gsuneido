@@ -67,7 +67,7 @@ func disasm1(fn *SuFunc, i int, indent int) (int, string) {
 	case op.Block:
 		fn := fn.Values[fetchUint8()].(*SuFunc)
 		s += nested(fn)
-	case op.Load, op.Store, op.Dyload:
+	case op.Load, op.LoadLock, op.Store, op.Dyload:
 		idx := fetchUint8()
 		s += " " + fn.Names[idx]
 	case op.Global, op.Super:

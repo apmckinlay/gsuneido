@@ -99,20 +99,9 @@ func (t *Thread) Top() Value {
 	return t.stack[t.sp-1]
 }
 
-// Dup2 duplicates the top two values on the stack i.e. a,b => a,b,a,b
-func (t *Thread) Dup2() {
-	t.stack[t.sp] = t.stack[t.sp-2]
-	t.stack[t.sp+1] = t.stack[t.sp-1]
-	t.sp += 2
-}
-
-// Dupx2 inserts a copy of the top value under the next two i.e. 1,2,3 => 3,1,2,3
-func (t *Thread) Dupx2() {
-	t.stack[t.sp] = t.stack[t.sp-1]
-	t.stack[t.sp-1] = t.stack[t.sp-2]
-	t.stack[t.sp-2] = t.stack[t.sp-3]
-	t.stack[t.sp-3] = t.stack[t.sp]
-	t.sp++
+// Swap exchanges the top two values on the stack
+func (t *Thread) Swap() {
+	t.stack[t.sp-1], t.stack[t.sp-2] = t.stack[t.sp-2], t.stack[t.sp-1]
 }
 
 // Reset sets sp and fp to 0, only used by tests

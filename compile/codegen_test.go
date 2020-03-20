@@ -86,16 +86,18 @@ func TestCodegen(t *testing.T) {
 	test("_dyn = 123", "Int 123, Store _dyn")
 	test("a = b = c", "Load c, Store b, Store a")
 	test("a = true; not a", "True, Store a, Pop, Load a, Not")
-	test("n += 5", "Load n, Int 5, Add, Store n")
-	test("++n", "Load n, One, Add, Store n")
-	test("n--", "Load n, Dup, One, Sub, Store n, Pop")
+	test("n += 5", "Int 5, LoadLock n, Add, StoreUnlock")
+	test("n /= 5", "Int 5, LoadLock n, Swap, Div, StoreUnlock")
+	test("++n", "LoadLock n, One, Add, StoreUnlock")
+	test("n--", "LoadLock n, Dup, One, Sub, StoreUnlock, Pop")
 	test("a.b", "Load a, Value 'b', Get")
 	test("a[2]", "Load a, Int 2, Get")
 	test("a.b = 123", "Load a, Value 'b', Int 123, Put")
 	test("a[2] = false", "Load a, Int 2, False, Put")
-	test("a.b += 5", "Load a, Value 'b', Dup2, Get, Int 5, Add, Put")
-	test("++a.b", "Load a, Value 'b', Dup2, Get, One, Add, Put")
-	test("a.b++", "Load a, Value 'b', Dup2, Get, Dupx2, One, Add, Put, Pop")
+	test("a.b += 5", "Int 5, Load a, Value 'b', GetLock, Add, PutUnlock")
+	test("a.b -= 5", "Int 5, Load a, Value 'b', GetLock, Swap, Sub, PutUnlock")
+	test("++a.b", "Load a, Value 'b', GetLock, One, Add, PutUnlock")
+	test("a.b++", "Load a, Value 'b', GetLock, Dup, One, Add, PutUnlock, Pop")
 	test("a[..]", "Load a, Zero, MaxInt, RangeTo")
 	test("a[..3]", "Load a, Zero, Int 3, RangeTo")
 	test("a[2..]", "Load a, Int 2, MaxInt, RangeTo")
@@ -438,38 +440,38 @@ func TestControl(t *testing.T) {
 		0: Zero
         1: Store i
         3: Pop
-        4: Jump 17
+        4: Jump 16
         7: Load body
         9: Pop
-        10: Load i
+        10: LoadLock i
         12: One
         13: Add
-        14: Store i
-        16: Pop
-        17: Load i
-        19: Int 9
-        22: Lt
-        23: JumpTrue 7`)
+        14: StoreUnlock
+        15: Pop
+        16: Load i
+        18: Int 9
+        21: Lt
+        22: JumpTrue 7`)
 
 	test("for (i = 0; i < 9; ++i) { a; continue; b }", `
 		0: Zero
         1: Store i
         3: Pop
-        4: Jump 23
+        4: Jump 22
         7: Load a
         9: Pop
         10: Jump 16
         13: Load b
         15: Pop
-        16: Load i
+        16: LoadLock i
         18: One
         19: Add
-        20: Store i
-        22: Pop
-        23: Load i
-        25: Int 9
-        28: Lt
-        29: JumpTrue 7`)
+        20: StoreUnlock
+        21: Pop
+        22: Load i
+        24: Int 9
+        27: Lt
+        28: JumpTrue 7`)
 
 	test(`for (x in y) { a; break; continue }`, `
 		0: Load y

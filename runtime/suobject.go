@@ -63,7 +63,7 @@ func NewSuObject(args ...Value) *SuObject {
 
 func (ob *SuObject) Copy() Container {
 	if ob.Lock() {
-		defer ob.lock.Unlock()
+		defer ob.Unlock()
 	}
 	ob2 := ob.slice(0)
 	return &ob2
@@ -78,7 +78,7 @@ func (ob *SuObject) slice(n int) (ob2 SuObject) {
 	return
 }
 
-var _ Container = (*SuObject)(nil)
+var _ Container = (*SuObject)(nil) // includes Value and Locker
 
 func (ob *SuObject) ToObject() *SuObject {
 	return ob
@@ -86,16 +86,20 @@ func (ob *SuObject) ToObject() *SuObject {
 
 // Get returns the value associated with a key, or defval if not found
 func (ob *SuObject) Get(t *Thread, key Value) Value {
-	if val := ob.GetIfPresent(t, key); val != nil {
+	if ob.Lock() {
+		defer ob.Unlock()
+	}
+	return ob.get(t, key)
+}
+
+func (ob *SuObject) get(_ *Thread, key Value) Value {
+	if val := ob.getIfPresent(key); val != nil {
 		return val
 	}
 	return ob.defaultValue(key)
 }
 
 func (ob *SuObject) defaultValue(key Value) Value {
-	if ob.Lock() {
-		defer ob.lock.Unlock()
-	}
 	if ob.defval != nil {
 		if d, ok := ob.defval.ToContainer(); ok {
 			d = d.Copy()
@@ -110,8 +114,13 @@ func (ob *SuObject) defaultValue(key Value) Value {
 
 func (ob *SuObject) GetIfPresent(_ *Thread, key Value) Value {
 	if ob.Lock() {
-		defer ob.lock.Unlock()
+		defer ob.Unlock()
 	}
+	return ob.getIfPresent(key)
+}
+
+// getIfPresent implements GetIfPresent without locking
+func (ob *SuObject) getIfPresent(key Value) Value {
 	if i, ok := key.IfInt(); ok && 0 <= i && i < len(ob.list) {
 		return ob.list[i]
 	}
@@ -121,7 +130,7 @@ func (ob *SuObject) GetIfPresent(_ *Thread, key Value) Value {
 // Has returns true if the object contains the given key (not value)
 func (ob *SuObject) HasKey(key Value) bool {
 	if ob.Lock() {
-		defer ob.lock.Unlock()
+		defer ob.Unlock()
 	}
 	i, ok := key.IfInt()
 	return (ok && 0 <= i && i < len(ob.list)) || ob.named.Get(key) != nil
@@ -130,7 +139,7 @@ func (ob *SuObject) HasKey(key Value) bool {
 // ListGet returns a value from the list, panics if index out of range
 func (ob *SuObject) ListGet(i int) Value {
 	if ob.Lock() {
-		defer ob.lock.Unlock()
+		defer ob.Unlock()
 	}
 	return ob.list[i]
 }
@@ -149,17 +158,25 @@ func (ob *SuObject) Put(_ *Thread, key Value, val Value) {
 	ob.Set(key, val)
 }
 
+// put implements Put without locking
+func (ob *SuObject) put(_ *Thread, key Value, val Value) {
+	ob.set(key, val)
+}
+
 // Set implements Put, doesn't require thread.
 // The value will be added to the list if the key is the "next"
 func (ob *SuObject) Set(key Value, val Value) {
 	if ob.Lock() {
-		defer ob.lock.Unlock()
-		val.SetConcurrent()
+		defer ob.Unlock()
 	}
 	ob.set(key, val)
 }
 
+// set implements Set without locking
 func (ob *SuObject) set(key Value, val Value) {
+	if ob.concurrent {
+		val.SetConcurrent()
+	}
 	defer ob.endMutate(ob.startMutate())
 	if i, ok := key.IfInt(); ok {
 		if i == len(ob.list) {
@@ -177,7 +194,7 @@ func (ob *SuObject) set(key Value, val Value) {
 // If in the list, following list values are shifted over.
 func (ob *SuObject) Delete(_ *Thread, key Value) bool {
 	if ob.Lock() {
-		defer ob.lock.Unlock()
+		defer ob.Unlock()
 	}
 	defer ob.endMutate(ob.startMutate())
 	if i, ok := key.IfInt(); ok && 0 <= i && i < len(ob.list) {
@@ -193,7 +210,7 @@ func (ob *SuObject) Delete(_ *Thread, key Value) bool {
 // If in the list, following list values are NOT shifted over.
 func (ob *SuObject) Erase(_ *Thread, key Value) bool {
 	if ob.Lock() {
-		defer ob.lock.Unlock()
+		defer ob.Unlock()
 	}
 	defer ob.endMutate(ob.startMutate())
 	if i, ok := key.IfInt(); ok && 0 <= i && i < len(ob.list) {
@@ -230,7 +247,7 @@ func (ob *SuObject) sizes() int {
 // DeleteAll removes all the contents of the object, making it empty (size 0)
 func (ob *SuObject) DeleteAll() {
 	if ob.Lock() {
-		defer ob.lock.Unlock()
+		defer ob.Unlock()
 	}
 	defer ob.endMutate(ob.startMutate())
 	ob.list = []Value{}
@@ -239,7 +256,7 @@ func (ob *SuObject) DeleteAll() {
 
 func (ob *SuObject) RangeTo(from int, to int) Value {
 	if ob.Lock() {
-		defer ob.lock.Unlock()
+		defer ob.Unlock()
 	}
 	size := ob.size()
 	from = prepFrom(from, size)
@@ -249,7 +266,7 @@ func (ob *SuObject) RangeTo(from int, to int) Value {
 
 func (ob *SuObject) RangeLen(from int, n int) Value {
 	if ob.Lock() {
-		defer ob.lock.Unlock()
+		defer ob.Unlock()
 	}
 	size := ob.size()
 	from = prepFrom(from, size)
@@ -269,14 +286,14 @@ func (ob *SuObject) ToContainer() (Container, bool) {
 
 func (ob *SuObject) ListSize() int {
 	if ob.Lock() {
-		defer ob.lock.Unlock()
+		defer ob.Unlock()
 	}
 	return len(ob.list)
 }
 
 func (ob *SuObject) NamedSize() int {
 	if ob.Lock() {
-		defer ob.lock.Unlock()
+		defer ob.Unlock()
 	}
 	return ob.named.Size()
 }
@@ -284,7 +301,7 @@ func (ob *SuObject) NamedSize() int {
 // Size returns the number of values in the object
 func (ob *SuObject) Size() int {
 	if ob.Lock() {
-		defer ob.lock.Unlock()
+		defer ob.Unlock()
 	}
 	return ob.size()
 }
@@ -296,12 +313,13 @@ func (ob *SuObject) size() int {
 // Add appends a value to the list portion
 func (ob *SuObject) Add(val Value) {
 	if ob.Lock() {
-		defer ob.lock.Unlock()
+		defer ob.Unlock()
 		val.SetConcurrent()
 	}
 	ob.add(val)
 }
 
+// add implements Add without locking
 func (ob *SuObject) add(val Value) {
 	ob.mustBeMutable()
 	ob.clock++
@@ -314,7 +332,7 @@ func (ob *SuObject) add(val Value) {
 // If the position is within the list, following values are moved over.
 func (ob *SuObject) Insert(at int, val Value) {
 	if ob.Lock() {
-		defer ob.lock.Unlock()
+		defer ob.Unlock()
 		val.SetConcurrent()
 	}
 	defer ob.endMutate(ob.startMutate())
@@ -386,7 +404,7 @@ func (ob *SuObject) rstring2(t *Thread, buf *limitBuf, before, after string, inP
 	buf.WriteString(before)
 	// ok to lock recursively because of inProgress check
 	if ob.Lock() {
-		defer ob.lock.Unlock()
+		defer ob.Unlock()
 	}
 	sep := ob.vecstr(t, buf, inProgress)
 	iter := ob.named.Iter()
@@ -446,7 +464,7 @@ func (ob *SuObject) show(before, after string, inProgress vstack) string {
 	buf := &limitBuf{}
 	buf.WriteString(before)
 	if ob.Lock() {
-		defer ob.lock.Unlock()
+		defer ob.Unlock()
 	}
 	sep := ob.vecstr(nil, buf, inProgress)
 	mems := []Value{}
@@ -487,7 +505,7 @@ func (buf *limitBuf) String() string {
 
 func (ob *SuObject) Hash() uint32 {
 	if ob.Lock() {
-		defer ob.lock.Unlock()
+		defer ob.Unlock()
 	}
 	hash := ob.hash2()
 	if len(ob.list) > 0 {
@@ -510,7 +528,7 @@ func (ob *SuObject) Hash() uint32 {
 // Hash2 is shallow so prevents infinite recursion
 func (ob *SuObject) Hash2() uint32 {
 	if ob.Lock() {
-		defer ob.lock.Unlock()
+		defer ob.Unlock()
 	}
 	return ob.hash2()
 }
@@ -609,7 +627,7 @@ func (*SuObject) Lookup(t *Thread, method string) Callable {
 // Slice returns a copy of the object, with the first n list elements removed
 func (ob *SuObject) Slice(n int) Container {
 	if ob.Lock() {
-		defer ob.lock.Unlock()
+		defer ob.Unlock()
 	}
 	ob2 := ob.slice(n)
 	return &ob2
@@ -619,7 +637,7 @@ func (ob *SuObject) Slice(n int) Container {
 // Lock to avoid object-modified-during-iteration.
 func (ob *SuObject) Find(val Value) Value {
 	if ob.Lock() {
-		defer ob.lock.Unlock()
+		defer ob.Unlock()
 	}
 	for i, v := range ob.list {
 		if v.Equal(val) {
@@ -710,7 +728,7 @@ func (ob *SuObject) Iter() Iter {
 
 func (ob *SuObject) ToRecord(t *Thread, hdr *Header) Record {
 	if ob.Lock() {
-		defer ob.lock.Unlock()
+		defer ob.Unlock()
 	}
 	fields := hdr.Fields[0]
 	rb := RecordBuilder{}
@@ -738,7 +756,7 @@ func (ob *SuObject) ToRecord(t *Thread, hdr *Header) Record {
 
 func (ob *SuObject) Sort(t *Thread, lt Value) {
 	if ob.Lock() {
-		defer ob.lock.Unlock()
+		defer ob.Unlock()
 	}
 	ob.mustBeMutable()
 	ob.clock++
@@ -756,7 +774,7 @@ func (ob *SuObject) Sort(t *Thread, lt Value) {
 
 func (ob *SuObject) Unique() {
 	if ob.Lock() {
-		defer ob.lock.Unlock()
+		defer ob.Unlock()
 	}
 	defer ob.endMutate(ob.startMutate())
 	n := len(ob.list)
@@ -811,15 +829,21 @@ func (ob *SuObject) SetReadOnly() {
 
 func (ob *SuObject) IsReadOnly() bool {
 	if ob.Lock() {
-		defer ob.lock.Unlock()
+		defer ob.Unlock()
 	}
+	return ob.isReadOnly()
+}
+
+func (ob *SuObject) isReadOnly() bool {
 	return ob.readonly
 }
 
 func (ob *SuObject) SetDefault(def Value) {
 	if ob.Lock() {
-		defer ob.lock.Unlock()
-		def.SetConcurrent()
+		defer ob.Unlock()
+		if def != nil {
+			def.SetConcurrent()
+		}
 	}
 	ob.mustBeMutable()
 	ob.defval = def
@@ -827,7 +851,7 @@ func (ob *SuObject) SetDefault(def Value) {
 
 func (ob *SuObject) Reverse() {
 	if ob.Lock() {
-		defer ob.lock.Unlock()
+		defer ob.Unlock()
 	}
 	ob.mustBeMutable()
 	ob.clock++
@@ -840,7 +864,7 @@ func (ob *SuObject) Reverse() {
 // BinarySearch does a binary search with default comparisons
 func (ob *SuObject) BinarySearch(value Value) int {
 	if ob.Lock() {
-		defer ob.lock.Unlock()
+		defer ob.Unlock()
 	}
 	return sort.Search(len(ob.list), func(i int) bool {
 		return ob.list[i].Compare(value) >= 0
@@ -869,9 +893,7 @@ func (ob *SuObject) PackSize2(clock int32, stack packStack) int {
 	// must check stack before locking to avoid recursive deadlock
 	stack.push(ob)
 	if ob.Lock() {
-		defer func() {
-			ob.lock.Unlock()
-		}()
+		defer ob.Unlock()
 	}
 	ob.clock = clock
 	if ob.size() == 0 {
@@ -900,7 +922,7 @@ func packSize(x interface{}, clock int32, stack packStack) int {
 
 func (ob *SuObject) PackSize3() int {
 	if ob.Lock() {
-		defer ob.lock.Unlock()
+		defer ob.Unlock()
 	}
 	if ob.size() == 0 {
 		return 1 // just tag
@@ -928,7 +950,7 @@ func packSize3(x interface{}) int {
 
 func (ob *SuObject) Pack(clock int32, buf *pack.Encoder) {
 	if ob.Lock() {
-		defer ob.lock.Unlock()
+		defer ob.Unlock()
 	}
 	ob.pack(clock, buf, PackObject)
 }

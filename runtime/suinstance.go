@@ -45,6 +45,7 @@ func (ob *SuInstance) Copy() *SuInstance {
 // Value interface --------------------------------------------------
 
 var _ Value = (*SuInstance)(nil)
+var _ Locker = (*SuInstance)(nil)
 
 func (ob *SuInstance) String() string {
 	if ob.class.Name != "" {
@@ -58,34 +59,37 @@ func (*SuInstance) Type() types.Type {
 }
 
 func (ob *SuInstance) Get(t *Thread, m Value) Value {
-	x := ob.get(m)
-	if x == nil {
-		// can't hold lock for this because it may call getter
-		x = ob.class.get1(t, ob, m)
-		if m, ok := x.(*SuMethod); ok {
-			m.this = ob // fix 'this' to be instance, not method class
-		}
-	}
-	return x
-}
-
-func (ob *SuInstance) get(m Value) Value {
 	if ob.Lock() {
 		defer ob.lock.Unlock()
 	}
+	return ob.get(t, m)
+}
+
+// get should only be called when ob is locked
+func (ob *SuInstance) get(t *Thread, m Value) Value {
 	if ms, ok := m.ToStr(); ok {
 		if x, ok := ob.Data[ms]; ok {
 			return x
 		}
 	}
-	return nil
+	ob.Unlock() // can't hold lock because it may call getter
+	defer ob.Lock()
+	x := ob.class.get1(t, ob, m)
+	if m, ok := x.(*SuMethod); ok {
+		m.this = ob // fix 'this' to be instance, not method class
+	}
+	return x
 }
 
-func (ob *SuInstance) Put(_ *Thread, m Value, v Value) {
+func (ob *SuInstance) Put(t *Thread, m Value, v Value) {
 	if ob.Lock() {
 		defer ob.lock.Unlock()
 		v.SetConcurrent()
 	}
+	ob.put(t, m, v)
+}
+
+func (ob *SuInstance) put(_ *Thread, m Value, v Value) {
 	ob.Data[AsStr(m)] = v
 }
 

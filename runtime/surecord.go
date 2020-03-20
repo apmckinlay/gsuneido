@@ -179,9 +179,22 @@ func (r *SuRecord) ToContainer() (Container, bool) {
 	return r, true
 }
 
+func (r *SuRecord) SetConcurrent() {
+	r.ob.SetConcurrent()
+}
+func (r *SuRecord) Lock() bool {
+	return r.ob.Lock()
+}
+func (r *SuRecord) Unlock() bool {
+	return r.ob.Unlock()
+}
+func (r *SuRecord) IsConcurrent() bool {
+	return r.ob.IsConcurrent()
+}
+
 // Container --------------------------------------------------------
 
-var _ Container = (*SuRecord)(nil)
+var _ Container = (*SuRecord)(nil) // includes Value and Locker
 
 func (r *SuRecord) ToObject() *SuObject {
 	if r.userow {
@@ -244,6 +257,10 @@ func (r *SuRecord) SetReadOnly() {
 
 func (r *SuRecord) IsReadOnly() bool {
 	return r.ob.IsReadOnly()
+}
+
+func (r *SuRecord) isReadOnly() bool {
+	return r.ob.isReadOnly()
 }
 
 func (r *SuRecord) IsNew() bool {
@@ -329,21 +346,35 @@ func (r *SuRecord) Iter() Iter {
 // ------------------------------------------------------------------
 
 func (r *SuRecord) Put(t *Thread, keyval Value, val Value) {
+	if r.Lock() {
+		defer r.Unlock()
+	}
+	r.put(t, keyval, val)
+}
+
+// put implements Put without locking
+func (r *SuRecord) put(t *Thread, keyval Value, val Value) {
 	r.trace("Put", keyval, "=", val)
 	if key, ok := keyval.ToStr(); ok {
 		delete(r.invalid, key)
-		old := r.ob.GetIfPresent(t, keyval)
+		old := r.ob.getIfPresent(keyval)
 		if old == nil && r.userow {
 			old = r.getFromRow(key)
 		}
-		r.ob.Set(keyval, val)
-		if old != nil && val.Equal(old) {
+		r.ob.set(keyval, val)
+		if old != nil &&
+			// only compare simple values to avoid deadlock
+			old.Type() <= types.Date && val.Type() <= types.Date &&
+			val.Equal(old) {
 			return
 		}
 		r.invalidateDependents(key)
+		if r.Unlock() { // can't hold lock while calling observers
+			defer r.Lock()
+		}
 		r.callObservers(t, key)
 	} else { // key not a string
-		r.ob.Set(keyval, val)
+		r.ob.set(keyval, val)
 	}
 }
 
@@ -422,8 +453,16 @@ func (a activeObserver) Equal(other activeObserver) bool {
 
 // Get returns the value associated with a key, or defval if not found
 func (r *SuRecord) Get(t *Thread, key Value) Value {
+	if r.Lock() {
+		defer r.Unlock()
+	}
+	return r.get(t, key)
+}
+
+// get implements Get without locking
+func (r *SuRecord) get(t *Thread, key Value) Value {
 	r.trace("Get", key)
-	if val := r.GetIfPresent(t, key); val != nil {
+	if val := r.getIfPresent(t, key); val != nil {
 		return val
 	}
 	return r.ob.defaultValue(key)
@@ -432,7 +471,15 @@ func (r *SuRecord) Get(t *Thread, key Value) Value {
 // GetIfPresent is the same as Get
 // except it returns nil instead of defval for missing members
 func (r *SuRecord) GetIfPresent(t *Thread, keyval Value) Value {
-	result := r.ob.GetIfPresent(t, keyval)
+	if r.Lock() {
+		defer r.Unlock()
+	}
+	return r.getIfPresent(t, keyval)
+}
+
+// getIfPresent implements GetIfPresent without locking
+func (r *SuRecord) getIfPresent(t *Thread, keyval Value) Value {
+	result := r.ob.getIfPresent(keyval)
 	if key, ok := keyval.ToStr(); ok {
 		// only do record stuff when key is a string
 		if t != nil {
@@ -459,18 +506,18 @@ func (r *SuRecord) GetIfPresent(t *Thread, keyval Value) Value {
 func (r *SuRecord) getFromRow(key string) Value {
 	if raw := r.row.GetRaw(r.hdr, key); raw != "" {
 		val := Unpack(raw)
-		r.PreSet(SuStr(key), val) // cache unpacked value
+		r.ob.set(SuStr(key), val) // cache unpacked value
 		return val
 	}
 	return nil
 }
 
-// GetPacked is used by ToRecord to build a Record for the database.
+// getPacked is used by ToRecord to build a Record for the database.
 // It is like Get except it returns the value packed,
 // using the already packed value from the row when possible.
 // It does not add dependencies or handle special fields (e.g. _lower!)
-func (r *SuRecord) GetPacked(t *Thread, key string) string {
-	result := r.ob.GetIfPresent(t, SuStr(key))
+func (r *SuRecord) getPacked(t *Thread, key string) string {
+	result := r.ob.getIfPresent(SuStr(key))
 	packed := ""
 	if result == nil && r.row != nil { // even if !r.userow
 		if s := r.row.GetRaw(r.hdr, key); s != "" {
@@ -512,7 +559,7 @@ func (r *SuRecord) addDependent(from, to string) {
 func (r *SuRecord) getSpecial(key string) Value {
 	if strings.HasSuffix(key, "_lower!") {
 		basekey := key[0 : len(key)-7]
-		if val := r.GetIfPresent(nil, SuStr(basekey)); val != nil {
+		if val := r.getIfPresent(nil, SuStr(basekey)); val != nil {
 			if vs, ok := val.ToStr(); ok {
 				val = SuStr(strings.ToLower(vs))
 			}
@@ -527,8 +574,8 @@ func (r *SuRecord) callRule(t *Thread, key string) Value {
 	if rule := r.getRule(t, key); rule != nil && !t.rules.has(r, key) {
 		r.trace("call rule", key)
 		val := r.catchRule(t, rule, key)
-		if val != nil && !r.ob.IsReadOnly() {
-			r.PreSet(SuStr(key), val)
+		if val != nil && !r.ob.readonly {
+			r.ob.set(SuStr(key), val)
 		}
 		return val
 	}
@@ -544,6 +591,9 @@ func (r *SuRecord) catchRule(t *Thread, rule Value, key string) Value {
 				panic(toStr(e) + " (rule for " + key + ")")
 			}
 		}()
+	}
+	if r.Unlock() { // can't hold lock while calling observers
+		defer r.Lock()
 	}
 	return t.CallThis(rule, r)
 }
@@ -652,12 +702,15 @@ func (r *SuRecord) Transaction() *SuTran {
 
 // ToRecord converts this SuRecord to a Record to be stored in the database
 func (r *SuRecord) ToRecord(t *Thread, hdr *Header) Record {
+	if r.Lock() {
+		defer r.Unlock()
+	}
 	fields := hdr.Fields[0]
 
 	// access all the fields to ensure dependencies are created
 	for _, f := range fields {
-		// use GetPacked so we don't force unpack on every field
-		r.GetPacked(t, f)
+		// use getPacked so we don't force unpack on every field
+		r.getPacked(t, f)
 	}
 
 	// invert stored dependencies
@@ -687,11 +740,11 @@ func (r *SuRecord) ToRecord(t *Thread, hdr *Header) Record {
 		} else if d, ok := deps[f]; ok {
 			rb.Add(SuStr(strings.Join(d, ",")))
 		} else {
-			rb.AddRaw(r.GetPacked(t, f))
+			rb.AddRaw(r.getPacked(t, f))
 		}
 	}
-	if tsField != "" && !r.IsReadOnly() {
-		r.Put(t, SuStr(tsField), ts)
+	if tsField != "" && !r.isReadOnly() {
+		r.put(t, SuStr(tsField), ts)
 	}
 	return rb.Build()
 }
