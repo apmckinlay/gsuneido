@@ -21,21 +21,19 @@ var _ = builtin("Transaction(read=false, update=false, block=false)",
 			return st
 		}
 		// block form
-		for i := 0; i < 1; i++ { // workaround for 1.14 bug
-			defer func() {
-				if !st.Ended() {
-					e := recover()
-					if e != nil && e != BlockReturn {
-						st.Rollback()
-					} else {
-						st.Complete()
-					}
-					if e != nil {
-						panic(e)
-					}
+		defer func() {
+			if !st.Ended() {
+				e := recover()
+				if e != nil && e != BlockReturn {
+					st.Rollback()
+				} else {
+					st.Complete()
 				}
-			}()
-		}
+				if e != nil {
+					panic(e)
+				}
+			}
+		}()
 		return th.Call(args[2], st)
 	})
 
@@ -65,13 +63,11 @@ func init() {
 					return q
 				}
 				// block form
-				for i := 0; i < 1; i++ { // workaround for 1.14 bug
-					defer func() {
-						if !this.(*SuTran).Ended() {
-							q.Close()
-						}
-					}()
-				}
+				defer func() {
+					if !this.(*SuTran).Ended() {
+						q.Close()
+					}
+				}()
 				return th.Call(args[1], q)
 			}),
 		"QueryDo": methodRaw("(@args)",

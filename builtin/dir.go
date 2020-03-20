@@ -61,14 +61,12 @@ func forEachDir(dir string, justfiles, details bool, fn func(entry Value)) {
 		}
 		return
 	}
-	for i := 0; i < 1; i++ { // workaround for 1.14 bug
-		defer func() {
-			f.Close()
-			if e := recover(); e != nil && e != BlockBreak {
-				panic(e)
-			}
-		}()
-	}
+	defer func() {
+		f.Close()
+		if e := recover(); e != nil && e != BlockBreak {
+			panic(e)
+		}
+	}()
 	for {
 		list, err := f.Readdir(100)
 		if err != nil {
@@ -94,13 +92,11 @@ func forEachDir(dir string, justfiles, details bool, fn func(entry Value)) {
 					entry = ob
 				}
 				func() {
-					for i := 0; i < 1; i++ { // workaround for 1.14 bug
-						defer func() {
-							if e := recover(); e != nil && e != BlockContinue {
-								panic(e)
-							}
-						}()
-					}
+					defer func() {
+						if e := recover(); e != nil && e != BlockContinue {
+							panic(e)
+						}
+					}()
 					fn(entry)
 				}()
 			}

@@ -33,16 +33,14 @@ func threadCallClass(t *Thread, args []Value) Value {
 	t2.Token = t.Dbms().Token()
 	threads[t2.Num] = t2 //TODO lock
 	go func() {
-		for i := 0; i < 1; i++ { // workaround for 1.14 bug
-			defer func() {
-				if e := recover(); e != nil {
-					log.Println("error in thread:", e)
-					t2.PrintStack()
-				}
-				t2.Close()
-				delete(threads, t2.Num) //TODO lock
-			}()
-		}
+		defer func() {
+			if e := recover(); e != nil {
+				log.Println("error in thread:", e)
+				t2.PrintStack()
+			}
+			t2.Close()
+			delete(threads, t2.Num) //TODO lock
+		}()
 		t2.Call(fn)
 	}()
 	return nil

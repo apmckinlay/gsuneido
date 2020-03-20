@@ -72,13 +72,11 @@ func updateUI() {
 var updateThread *Thread
 
 func runUI(block Value) {
-	for i := 0; i < 1; i++ { // workaround for 1.14 bug
-		defer func() {
-			if e := recover(); e != nil {
-				log.Println("error in UpdateUI:", e)
-			}
-		}()
-	}
+	defer func() {
+		if e := recover(); e != nil {
+			log.Println("error in UpdateUI:", e)
+		}
+	}()
 	if updateThread == nil {
 		updateThread = UIThread.SubThread()
 	}

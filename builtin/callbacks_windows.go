@@ -19,6 +19,7 @@ import (
 )
 
 const delay = 10
+
 var startTime = time.Now()
 
 // clock ticks every millisecond
@@ -71,17 +72,15 @@ func callback4(i, a, b, c, d uintptr) uintptr {
 
 func (cb *callback) callv(args ...Value) uintptr {
 	heapSize := heap.CurSize()
-	for i := 0; i < 1; i++ { // workaround for 1.14 bug
-		defer func() {
-			if e := recover(); e != nil {
-				handler(e)
-			}
-			if heap.CurSize() != heapSize {
-				Fatal("callback: heapSize", heapSize, "=>", heap.CurSize(),
-					"in", cb.fn, args)
-			}
-		}()
-	}
+	defer func() {
+		if e := recover(); e != nil {
+			handler(e)
+		}
+		if heap.CurSize() != heapSize {
+			Fatal("callback: heapSize", heapSize, "=>", heap.CurSize(),
+				"in", cb.fn, args)
+		}
+	}()
 	if !cb.active && cb.keepTill < clock() {
 		log.Println("CALLBACK TO INACTIVE!!!", cb.fn,
 			"keepTill", cb.keepTill, "clock", clock())
@@ -97,13 +96,11 @@ func (cb *callback) callv(args ...Value) uintptr {
 }
 
 func handler(e interface{}) {
-	for i := 0; i < 1; i++ { // workaround for 1.14 bug
-		defer func() {
-			if e := recover(); e != nil {
-				Alert("Error in Handler:", e)
-			}
-		}()
-	}
+	defer func() {
+		if e := recover(); e != nil {
+			Alert("Error in Handler:", e)
+		}
+	}()
 	// debug.PrintStack()
 	// UIThread.PrintStack()
 	log.Println("panic in callback:", e, "<<<<<<<<<<<<<<<<")

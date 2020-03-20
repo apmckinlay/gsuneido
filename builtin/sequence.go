@@ -32,13 +32,11 @@ func (wi *wrapIter) Next() Value {
 }
 
 func (wi *wrapIter) Infinite() (result bool) {
-	for i := 0; i < 1; i++ { // workaround for 1.14 bug
-		defer func() {
-			if e := recover(); e != nil {
-				result = false
-			}
-		}()
-	}
+	defer func() {
+		if e := recover(); e != nil {
+			result = false
+		}
+	}()
 	return wi.call("Infinite?") == True
 }
 
