@@ -48,7 +48,7 @@ type SuObject struct {
 	version  int32
 	clock    int32
 	defval   Value
-	Lockable
+	MayLock
 	CantConvert
 }
 
@@ -78,7 +78,7 @@ func (ob *SuObject) slice(n int) (ob2 SuObject) {
 	return
 }
 
-var _ Container = (*SuObject)(nil) // includes Value and Locker
+var _ Container = (*SuObject)(nil) // includes Value and Lockable
 
 func (ob *SuObject) ToObject() *SuObject {
 	return ob

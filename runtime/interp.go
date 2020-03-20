@@ -27,7 +27,7 @@ func (t *Thread) Start(fn *SuFunc, this Value) Value {
 		t.Push(nil)
 	}
 	t.frames[t.fp] = Frame{fn: fn, this: this,
-		locals: Locals{v: t.stack[t.sp-int(fn.Nlocals) : t.sp], Lockable: &Lockable{}}}
+		locals: Locals{v: t.stack[t.sp-int(fn.Nlocals) : t.sp], MayLock: &MayLock{}}}
 	return t.run()
 }
 
@@ -133,8 +133,8 @@ func (t *Thread) interp(catchJump, catchSp *int) (ret Value) {
 			if lockedLocal != -1 {
 				fr.locals.Unlock()
 			} else if lockedObject != nil {
-				if locker, ok := lockedObject.(Locker); ok {
-					locker.Unlock()
+				if lockable, ok := lockedObject.(Lockable); ok {
+					lockable.Unlock()
 				}
 			}
 			// this is an optimization to avoid unnecessary recover/repanic
@@ -284,9 +284,9 @@ loop:
 			lockedMember = t.Pop()
 			lockedObject = t.Pop()
 			var val Value
-			if locker, ok := lockedObject.(Locker); ok {
-				locker.Lock()
-				val = locker.get(t, lockedMember)
+			if lockable, ok := lockedObject.(Lockable); ok {
+				lockable.Lock()
+				val = lockable.get(t, lockedMember)
 			} else {
 				val = lockedObject.Get(t, lockedMember)
 			}
@@ -302,9 +302,9 @@ loop:
 			t.Push(val)
 		case op.PutUnlock:
 			val := t.Pop()
-			if locker, ok := lockedObject.(Locker); ok {
-				locker.put(t, lockedMember, val)
-				locker.Unlock()
+			if lockable, ok := lockedObject.(Lockable); ok {
+				lockable.put(t, lockedMember, val)
+				lockable.Unlock()
 			} else {
 				lockedObject.Put(t, lockedMember, val)
 			}

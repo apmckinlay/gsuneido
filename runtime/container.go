@@ -6,7 +6,7 @@ package runtime
 // Container is an interface to objects and records
 type Container interface {
 	Value
-	Locker
+	Lockable
 	Add(val Value)
 	ListSize() int
 	ListGet(i int) Value

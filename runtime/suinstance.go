@@ -12,7 +12,7 @@ import (
 type SuInstance struct {
 	MemBase
 	class *SuClass
-	Lockable
+	MayLock
 }
 
 func NewInstance(class *SuClass) *SuInstance {
@@ -45,7 +45,7 @@ func (ob *SuInstance) Copy() *SuInstance {
 // Value interface --------------------------------------------------
 
 var _ Value = (*SuInstance)(nil)
-var _ Locker = (*SuInstance)(nil)
+var _ Lockable = (*SuInstance)(nil)
 
 func (ob *SuInstance) String() string {
 	if ob.class.Name != "" {

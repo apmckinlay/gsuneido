@@ -24,7 +24,7 @@ type Locals struct {
 	v []Value
 	// onHeap is true when locals have been moved from the stack to the heap
 	onHeap bool
-	*Lockable
+	*MayLock
 }
 
 func (ls *Locals) moveToHeap() {
@@ -39,10 +39,10 @@ func (ls *Locals) moveToHeap() {
 }
 
 func (ls *Locals) SetConcurrent() {
-	if ls.Lockable.concurrent {
+	if ls.MayLock.concurrent {
 		return
 	}
-	ls.Lockable.concurrent = true
+	ls.MayLock.concurrent = true
 	for _, v := range ls.v {
 		if v != nil {
 			v.SetConcurrent()

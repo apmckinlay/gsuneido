@@ -318,20 +318,21 @@ func Int64Val(n int64) Value {
 	return SuDnum{Dnum: dnum.FromInt(n)}
 }
 
-// Lockable can be embedded to provide locking.
+// MayLock can be embedded to provide locking.
 // concurrent is set *before* an object is shared
 // and doesn't change after that
-// so it should not require atomic or locked access
-type Lockable struct {
+// so it should not require atomic or locked access.
+// Before concurrent is set, no locking is done.
+type MayLock struct {
 	concurrent bool
 	lock       sync.Mutex
 }
 
-func (x *Lockable) SetConcurrent() {
+func (x *MayLock) SetConcurrent() {
 	log.Fatalln("SetConcurrent must be defined")
 }
 
-func (x *Lockable) Lock() bool {
+func (x *MayLock) Lock() bool {
 	if x == nil {
 		log.Fatal("Lock nil")
 	}
@@ -342,7 +343,7 @@ func (x *Lockable) Lock() bool {
 	return false
 }
 
-func (x *Lockable) Unlock() bool {
+func (x *MayLock) Unlock() bool {
 	if x.concurrent {
 		x.lock.Unlock()
 		return true
@@ -350,11 +351,11 @@ func (x *Lockable) Unlock() bool {
 	return false
 }
 
-func (x *Lockable) IsConcurrent() bool {
+func (x *MayLock) IsConcurrent() bool {
 	return x.concurrent
 }
 
-type Locker interface {
+type Lockable interface {
 	Lock() bool
 	Unlock() bool
 	// get is like Get but doesn't lock, caller handles locking

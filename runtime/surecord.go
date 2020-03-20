@@ -194,7 +194,7 @@ func (r *SuRecord) IsConcurrent() bool {
 
 // Container --------------------------------------------------------
 
-var _ Container = (*SuRecord)(nil) // includes Value and Locker
+var _ Container = (*SuRecord)(nil) // includes Value and Lockable
 
 func (r *SuRecord) ToObject() *SuObject {
 	if r.userow {
