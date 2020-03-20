@@ -22,7 +22,7 @@ var (
 )
 
 func Is(x Value, y Value) Value {
-	return SuBool(x.Equal(y))
+	return SuBool(x == y || x.Equal(y))
 }
 
 func Isnt(x Value, y Value) Value {
