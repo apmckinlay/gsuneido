@@ -118,7 +118,12 @@ func (p *parser) next() {
 // It claims to return string so it can be called inside panic
 // (so compiler knows we don't return)
 func (p *parser) error(args ...interface{}) string {
-	line := p.lxr.LineFromPos(p.Item.Pos)
+	p.errorAt(p.Item.Pos, args...)
+	return ""
+}
+
+func (p *parser) errorAt(pos int32, args ...interface{}) string {
+	line := p.lxr.LineFromPos(pos)
 	panic("syntax error at line " + strconv.Itoa(line) + " " + fmt.Sprint(args...))
 }
 

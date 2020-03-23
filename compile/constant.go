@@ -187,6 +187,7 @@ func (p *parser) memberList(ob container, closing tok.Token, base Gnum) {
 
 func (p *parser) member(ob container, closing tok.Token, base Gnum) {
 	start := p.Token
+	pos := p.Item.Pos
 	m := p.constant()
 	inClass := base != noBase
 	if inClass && start.IsIdent() && p.Token == tok.LParen { // method
@@ -206,19 +207,19 @@ func (p *parser) member(ob container, closing tok.Token, base Gnum) {
 		fn.Name = p.name
 		p.name = prevName
 		fn.ClassName = p.className
-		p.putMem(ob, SuStr(name), fn)
+		p.putMem(ob, SuStr(name), fn, pos)
 	} else if p.matchIf(tok.Colon) {
 		if inClass {
 			m = SuStr(p.privatizeDef(m))
 		}
 		if p.Token == tok.Comma || p.Token == tok.Semicolon || p.Token == closing {
-			p.putMem(ob, m, True)
+			p.putMem(ob, m, True, pos)
 		} else {
 			prevName := p.name
 			if s, ok := m.ToStr(); ok {
 				p.name += "." + s
 			}
-			p.putMem(ob, m, p.constant())
+			p.putMem(ob, m, p.constant(), pos)
 			p.name = prevName
 		}
 	} else {
@@ -248,9 +249,9 @@ func (p *parser) privatizeDef(m Value) string {
 	return p.className + "_" + name
 }
 
-func (p *parser) putMem(ob container, m Value, v Value) {
+func (p *parser) putMem(ob container, m Value, v Value, pos int32) {
 	if ob.HasKey(m) {
-		p.error("duplicate member name (" + m.String() + ")")
+		p.errorAt(pos, "duplicate member name (" + m.String() + ")")
 	} else {
 		ob.Set(m, v)
 	}
