@@ -19,7 +19,8 @@ import (
 
 type dbmsClient struct {
 	*csio.ReadWrite
-	conn net.Conn
+	conn      net.Conn
+	sessionId string
 }
 
 // helloSize is the size of the initial connection message from the server
@@ -31,7 +32,9 @@ func NewDbmsClient(addr string) *dbmsClient {
 	if err != nil || !checkHello(conn) {
 		log.Fatalln("can't connect to " + addr + " " + err.Error())
 	}
-	return &dbmsClient{ReadWrite: csio.NewReadWrite(conn), conn: conn}
+	c := &dbmsClient{ReadWrite: csio.NewReadWrite(conn), conn: conn}
+	c.sessionId = c.SessionId("")
+	return c
 }
 
 func checkHello(conn net.Conn) bool {
@@ -176,8 +179,11 @@ func (dc *dbmsClient) Run(code string) Value {
 }
 
 func (dc *dbmsClient) SessionId(id string) string {
-	dc.PutCmd(commands.SessionId).PutStr(id).Request()
-	return dc.GetStr()
+	if id != "" || dc.sessionId == "" {
+		dc.PutCmd(commands.SessionId).PutStr(id).Request()
+		dc.sessionId = dc.GetStr()
+	} // else use cached value
+	return dc.sessionId
 }
 
 func (dc *dbmsClient) Size() int64 {

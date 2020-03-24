@@ -85,13 +85,17 @@ func main() {
 }
 
 func clientErrorLog() {
+	dbms := mainThread.Dbms()
+	
+	log.SetFlags(log.Ldate | log.Ltime | log.Lmsgprefix)
+	log.SetPrefix(dbms.SessionId("") + " ")
+	
 	// unlike cSuneido, client error.log is still in current directory
 	// this is partly because stderr has already been redirected
 	f, err := os.Open(options.Errlog)
 	if err != nil {
 		return
 	}
-	dbms := mainThread.Dbms()
 	defer func() {
 		f.Close()
 		os.Truncate(options.Errlog, 0) // can't remove since open as stderr
@@ -117,6 +121,9 @@ func clientErrorLog() {
 var prompt = func(s string) { fmt.Fprintln(os.Stderr, s) }
 
 func repl() {
+	log.SetFlags(log.Ltime)
+	log.SetPrefix("")
+
 	if !isTerminal() {
 		prompt = func(string) {}
 	}
