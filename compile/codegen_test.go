@@ -501,7 +501,7 @@ func TestBlock(t *testing.T) {
 	fn := codegen(ast)
 	block := fn.Values[0].(*SuFunc)
 
-	Assert(t).That(fn.Names, Equals([]string{"x", "b", ""}))
+	Assert(t).That(fn.Names, Equals([]string{"x", "b", "a|2"}))
 	Assert(t).That(block.Names, Equals([]string{"x", "b", "a"}))
 	Assert(t).That(int(block.Offset), Equals(2))
 

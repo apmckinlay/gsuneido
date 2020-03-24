@@ -8,6 +8,7 @@ package compile
 import (
 	"fmt"
 	"math"
+	"strconv"
 	"sync/atomic"
 
 	"github.com/apmckinlay/gsuneido/compile/ast"
@@ -91,7 +92,7 @@ func codegenBlock(ast *ast.Function, outercg *cgen) (*SuFunc, []string) {
 	f.Offset = uint8(base)
 	copy(f.Names, outerNames)
 	for i := 0; i < int(f.Nparams); i++ {
-		outerNames[base+i] = ""
+		outerNames[base+i] += "|" + strconv.Itoa(base+i)
 	}
 	return f, outerNames
 }
