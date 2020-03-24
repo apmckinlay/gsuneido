@@ -247,6 +247,23 @@ var _ = builtin4("SendMessageTreeItem(hwnd, msg, wParam, tvitem)",
 		return intRet(rtn)
 	})
 
+var _ = builtin4("SendMessageTreeSort(hwnd, msg, wParam, tvitem)",
+	func(a, b, c, d Value) Value {
+		defer heap.FreeTo(heap.CurSize())
+		p := heap.Alloc(nTVSORTCB)
+		*(*TVSORTCB)(p) = TVSORTCB{
+			hParent:     getHandle(d, "hParent"),
+			lpfnCompare: getCallback(d, "lpfnCompare", 3),
+			lParam:      getHandle(d, "lParam"),
+		}
+		rtn := goc.Syscall4(sendMessage,
+			intArg(a),
+			intArg(b),
+			intArg(c),
+			uintptr(p))
+		return boolRet(rtn)
+	})
+
 var _ = builtin4("SendMessageTreeInsert(hwnd, msg, wParam, tvins)",
 	func(a, b, c, d Value) Value {
 		defer heap.FreeTo(heap.CurSize())
