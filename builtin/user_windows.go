@@ -194,13 +194,13 @@ type TVINSERTSTRUCT struct {
 
 const nTVINSERTSTRUCT = unsafe.Sizeof(TVINSERTSTRUCT{})
 
-type TVSORT struct {
+type TVSORTCB struct {
 	hParent     HANDLE
 	lpfnCompare uintptr
 	lParam      HANDLE
 }
 
-const nTVSORT = unsafe.Sizeof(TVSORT{})
+const nTVSORTCB = unsafe.Sizeof(TVSORTCB{})
 
 //-------------------------------------------------------------------
 

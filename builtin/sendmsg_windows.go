@@ -250,8 +250,8 @@ var _ = builtin4("SendMessageTreeItem(hwnd, msg, wParam, tvitem)",
 var _ = builtin4("SendMessageTreeSort(hwnd, msg, wParam, tvitem)",
 	func(a, b, c, d Value) Value {
 		defer heap.FreeTo(heap.CurSize())
-		p := heap.Alloc(nTVSORT)
-		*(*TVSORT)(p) = TVSORT{
+		p := heap.Alloc(nTVSORTCB)
+		*(*TVSORTCB)(p) = TVSORTCB{
 			hParent:     getHandle(d, "hParent"),
 			lpfnCompare: getCallback(d, "lpfnCompare", 3),
 			lParam:      getHandle(d, "lParam"),
