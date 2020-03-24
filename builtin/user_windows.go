@@ -194,6 +194,14 @@ type TVINSERTSTRUCT struct {
 
 const nTVINSERTSTRUCT = unsafe.Sizeof(TVINSERTSTRUCT{})
 
+type TVSORT struct {
+	hParent     HANDLE
+	lpfnCompare uintptr
+	lParam      HANDLE
+}
+
+const nTVSORT = unsafe.Sizeof(TVSORT{})
+
 //-------------------------------------------------------------------
 
 // dll User32:GetDesktopWindow() hwnd
