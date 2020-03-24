@@ -1,11 +1,19 @@
 Building gSuneido
 ================
 
-The Windows version with DLL and COM support uses [cgo](https://golang.org/cmd/cgo/) so it requires a C/C++ compiler on the path. I am using [Mingw-w64](http://mingw-w64.org). You can either install Msys2 or just Mingw-w64. The specific version of GCC shouldn't be critical. I would recommend using a normal install of Go, *not* installing it in Msys2 with pacman. Go just needs gcc on the path.
+The Windows version with DLL and COM support needs [cgo](https://golang.org/cmd/cgo/) so it requires a C/C++ compiler on the path. I am using [Mingw-w64](https://sourceforge.net/projects/mingw-w64/). You can either install Msys2 or just Mingw-w64. The specific version of GCC shouldn't be critical (but not too ancient). I would recommend using a normal install of Go, *not* installing it in Msys2 with pacman. Go just needs gcc on the path.
+
+From the terminal, running:
+
+    g++ --version
+    
+Should give something like:
+
+    g++ (x86_64-posix-seh-rev0, Built by MinGW-W64 project) 8.1.0
 
 I've been mostly working on the Windows version so building on Linux or Mac may occasionally be broken due to build tags etc. Cgo is not required for these versions, they are plain Go. But the only UI is the command line REPL.
 
-I use the included makefile (requires make). If you prefer not to use make you can just look at the makefile to see what the build commands are.
+I use the included makefile (requires make). If you prefer not to use make you can just look at the makefile to see what the build commands are. There is a make included with mingw_w64 but it's called `mingw32_make.exe` You can make a copy and rename it to `make.exe`
 
 You should be able to run the tests with the usual: `go test ./..`
 
