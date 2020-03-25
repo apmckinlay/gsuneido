@@ -9,6 +9,7 @@ import . "github.com/apmckinlay/gsuneido/runtime"
 
 var _ = builtin0("ResourceCounts()", func() Value {
 	ob := NewSuObject()
+	ob.Put(nil, SuStr("File"), IntVal(nFile))
 	ob.Put(nil, SuStr("Callbacks"), IntVal(CallbacksCount()))
 	return ob
 })

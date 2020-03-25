@@ -22,11 +22,15 @@ var _ = builtin("File(filename, mode='r', block=false)",
 			panic("File: can't " + err.Error())
 		}
 		sf := &suFile{name: name, mode: mode, f: f}
+		nFile++
 		if args[2] == False {
 			return sf
 		}
 		// block form
-		defer sf.f.Close()
+		defer func () {
+			nFile--
+			sf.f.Close()
+		}()
 		return t.Call(args[2], sf)
 	})
 
@@ -36,6 +40,8 @@ type suFile struct {
 	mode string
 	f    *os.File
 }
+
+var nFile = 0
 
 func modeToFlags(mode string) int {
 	switch mode {
@@ -105,16 +111,19 @@ const MaxLine = 4000
 
 var suFileMethods = Methods{
 	"Close": method0(func(this Value) Value {
-		this.(*suFile).f.Close()
-		return this
+		sf := ckopen(this, "Close")
+		nFile--
+		sf.f.Close()
+		sf.f = nil
+		return nil
 	}),
 	"Flush": method0(func(this Value) Value {
 		// no buffering so nothing to do
-		this.(*suFile).f.Sync()
+		ckopen(this, "Flush").f.Sync()
 		return nil
 	}),
 	"Read": method1("(nbytes=false)", func(this, arg Value) Value {
-		f := this.(*suFile).f
+		f := ckopen(this, "Read").f
 		pos, _ := f.Seek(0, io.SeekCurrent)
 		info, _ := f.Stat()
 		n := int(info.Size() - pos)
@@ -134,7 +143,7 @@ var suFileMethods = Methods{
 		return SuStr(string(buf))
 	}),
 	"Readline": method0(func(this Value) Value {
-		return Readline(this.(*suFile).f, "file.Readline: ")
+		return Readline(ckopen(this, "Readline").f, "file.Readline: ")
 	}),
 	"Seek": method2("(offset, origin='set')", func(this, arg1, arg2 Value) Value {
 		offset := ToInt64(arg1)
@@ -152,26 +161,34 @@ var suFileMethods = Methods{
 		default:
 			panic("file.Seek: origin must be 'set', 'end', or 'cur'")
 		}
-		_, err := this.(*suFile).f.Seek(offset, whence)
+		_, err := ckopen(this, "Seek").f.Seek(offset, whence)
 		if err != nil {
 			panic("file.Seek " + err.Error())
 		}
 		return nil
 	}),
 	"Tell": method0(func(this Value) Value {
-		pos, _ := this.(*suFile).f.Seek(0, io.SeekCurrent)
+		pos, _ := ckopen(this, "Tell").f.Seek(0, io.SeekCurrent)
 		return Int64Val(pos)
 	}),
 	"Write": method1("(string)", func(this, arg Value) Value {
-		this.(*suFile).f.WriteString(AsStr(arg))
+		ckopen(this, "Write").f.WriteString(AsStr(arg))
 		return arg
 	}),
 	"Writeline": method1("(string)", func(this, arg Value) Value {
-		f := this.(*suFile).f
+		f := ckopen(this, "Writeline").f
 		f.WriteString(AsStr(arg))
 		f.WriteString("\n")
 		return arg
 	}),
+}
+
+func ckopen(this Value, action string) *suFile {
+	sf := this.(*suFile)
+	if sf.f == nil {
+		panic("can't " + action + " a closed file: " + sf.name)
+	}
+	return sf
 }
 
 func Readline(rdr io.Reader, errPrefix string) Value {
