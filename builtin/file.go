@@ -12,6 +12,15 @@ import (
 	"github.com/apmckinlay/gsuneido/runtime/types"
 )
 
+type suFile struct {
+	CantConvert
+	name string
+	mode string
+	f    *os.File
+}
+
+var nFile = 0
+
 var _ = builtin("File(filename, mode='r', block=false)",
 	func(t *Thread, args []Value) Value {
 		name := ToStr(args[0])
@@ -27,21 +36,9 @@ var _ = builtin("File(filename, mode='r', block=false)",
 			return sf
 		}
 		// block form
-		defer func () {
-			nFile--
-			sf.f.Close()
-		}()
+		defer sf.close()
 		return t.Call(args[2], sf)
 	})
-
-type suFile struct {
-	CantConvert
-	name string
-	mode string
-	f    *os.File
-}
-
-var nFile = 0
 
 func modeToFlags(mode string) int {
 	switch mode {
@@ -54,6 +51,12 @@ func modeToFlags(mode string) int {
 	default:
 		panic("File: invalid mode")
 	}
+}
+
+func (sf *suFile) close() {
+	nFile--
+	sf.f.Close()
+	sf.f = nil
 }
 
 var _ Value = (*suFile)(nil)
@@ -111,19 +114,16 @@ const MaxLine = 4000
 
 var suFileMethods = Methods{
 	"Close": method0(func(this Value) Value {
-		sf := ckopen(this, "Close")
-		nFile--
-		sf.f.Close()
-		sf.f = nil
+		sfOpen(this).close()
 		return nil
 	}),
 	"Flush": method0(func(this Value) Value {
 		// no buffering so nothing to do
-		ckopen(this, "Flush").f.Sync()
+		sfOpen(this).f.Sync()
 		return nil
 	}),
 	"Read": method1("(nbytes=false)", func(this, arg Value) Value {
-		f := ckopen(this, "Read").f
+		f := sfOpen(this).f
 		pos, _ := f.Seek(0, io.SeekCurrent)
 		info, _ := f.Stat()
 		n := int(info.Size() - pos)
@@ -143,7 +143,7 @@ var suFileMethods = Methods{
 		return SuStr(string(buf))
 	}),
 	"Readline": method0(func(this Value) Value {
-		return Readline(ckopen(this, "Readline").f, "file.Readline: ")
+		return Readline(sfOpen(this).f, "file.Readline: ")
 	}),
 	"Seek": method2("(offset, origin='set')", func(this, arg1, arg2 Value) Value {
 		offset := ToInt64(arg1)
@@ -161,32 +161,32 @@ var suFileMethods = Methods{
 		default:
 			panic("file.Seek: origin must be 'set', 'end', or 'cur'")
 		}
-		_, err := ckopen(this, "Seek").f.Seek(offset, whence)
+		_, err := sfOpen(this).f.Seek(offset, whence)
 		if err != nil {
 			panic("file.Seek " + err.Error())
 		}
 		return nil
 	}),
 	"Tell": method0(func(this Value) Value {
-		pos, _ := ckopen(this, "Tell").f.Seek(0, io.SeekCurrent)
+		pos, _ := sfOpen(this).f.Seek(0, io.SeekCurrent)
 		return Int64Val(pos)
 	}),
 	"Write": method1("(string)", func(this, arg Value) Value {
-		ckopen(this, "Write").f.WriteString(AsStr(arg))
+		sfOpen(this).f.WriteString(AsStr(arg))
 		return arg
 	}),
 	"Writeline": method1("(string)", func(this, arg Value) Value {
-		f := ckopen(this, "Writeline").f
+		f := sfOpen(this).f
 		f.WriteString(AsStr(arg))
 		f.WriteString("\n")
 		return arg
 	}),
 }
 
-func ckopen(this Value, action string) *suFile {
+func sfOpen(this Value) *suFile {
 	sf := this.(*suFile)
 	if sf.f == nil {
-		panic("can't " + action + " a closed file: " + sf.name)
+		panic("can't use a closed file: " + sf.name)
 	}
 	return sf
 }
