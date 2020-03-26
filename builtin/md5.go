@@ -13,6 +13,11 @@ import (
 	"github.com/apmckinlay/gsuneido/runtime/types"
 )
 
+type SuMd5 struct {
+	CantConvert
+	hash hash.Hash
+}
+
 var _ = builtinRaw("Md5(@args)",
 	func(th *Thread, as *ArgSpec, args []Value) Value {
 		sa := &SuMd5{hash: md5.New()}
@@ -26,11 +31,6 @@ var _ = builtinRaw("Md5(@args)",
 		}
 		return sa.value()
 	})
-
-type SuMd5 struct {
-	CantConvert
-	hash hash.Hash
-}
 
 var _ Value = (*SuMd5)(nil)
 

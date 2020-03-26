@@ -13,6 +13,11 @@ import (
 	"github.com/apmckinlay/gsuneido/runtime/types"
 )
 
+type SuSha256 struct {
+	CantConvert
+	hash hash.Hash
+}
+
 var _ = builtinRaw("Sha256(@args)",
 	func(th *Thread, as *ArgSpec, args []Value) Value {
 		sa := &SuSha256{hash: sha256.New()}
@@ -26,11 +31,6 @@ var _ = builtinRaw("Sha256(@args)",
 		}
 		return sa.value()
 	})
-
-type SuSha256 struct {
-	CantConvert
-	hash hash.Hash
-}
 
 var _ Value = (*SuSha256)(nil)
 
