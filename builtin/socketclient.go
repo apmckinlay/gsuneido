@@ -14,6 +14,15 @@ import (
 	"github.com/apmckinlay/gsuneido/runtime/types"
 )
 
+type suSocketClient struct {
+	CantConvert
+	conn    *net.TCPConn
+	rdr     *bufio.Reader
+	timeout time.Duration
+}
+
+var nSocketClient = 0
+
 var _ = builtin("SocketClient(ipaddress, port, timeout=60, timeoutConnect=0, block=false)",
 	func(t *Thread, args []Value) Value {
 		ipaddr := ToStr(args[0])
@@ -32,22 +41,14 @@ var _ = builtin("SocketClient(ipaddress, port, timeout=60, timeoutConnect=0, blo
 		}
 		sc := &suSocketClient{conn: c.(*net.TCPConn), rdr: bufio.NewReader(c),
 			timeout: time.Duration(ToInt(args[2])) * time.Second}
+		nSocketClient++
 		if args[4] == False {
 			return sc
 		}
 		// block form
-		defer sc.conn.Close()
+		defer sc.close()
 		return t.Call(args[4], sc)
 	})
-
-type suSocketClient struct {
-	CantConvert
-	conn    *net.TCPConn
-	rdr     *bufio.Reader
-	timeout time.Duration
-}
-
-var _ Value = (*suSocketClient)(nil)
 
 func (*suSocketClient) Get(*Thread, Value) Value {
 	panic("SocketClient does not support get")
@@ -104,11 +105,11 @@ var noDeadline time.Time
 
 var suSocketClientMethods = Methods{
 	"Close": method0(func(this Value) Value {
-		this.(*suSocketClient).conn.Close()
+		scOpen(this).close()
 		return nil
 	}),
 	"Read": method1("(n)", func(this, arg Value) Value {
-		sc := this.(*suSocketClient)
+		sc := scOpen(this)
 		n := ToInt(arg)
 		buf := make([]byte, n)
 		sc.conn.SetDeadline(time.Now().Add(sc.timeout))
@@ -120,13 +121,13 @@ var suSocketClientMethods = Methods{
 		return SuStr(string(buf[:n]))
 	}),
 	"Readline": method0(func(this Value) Value {
-		sc := this.(*suSocketClient)
+		sc := scOpen(this)
 		sc.conn.SetDeadline(time.Now().Add(sc.timeout))
 		defer sc.conn.SetDeadline(noDeadline)
-		return Readline(this.(*suSocketClient).rdr, "file.Readline: ")
+		return Readline(sc.rdr, "file.Readline: ")
 	}),
 	"Write": method1("(string)", func(this, arg Value) Value {
-		sc := this.(*suSocketClient)
+		sc := scOpen(this)
 		sc.conn.SetDeadline(time.Now().Add(sc.timeout))
 		defer sc.conn.SetDeadline(noDeadline)
 		s := AsStr(arg)
@@ -137,7 +138,7 @@ var suSocketClientMethods = Methods{
 		return nil
 	}),
 	"Writeline": method1("(string)", func(this, arg Value) Value {
-		sc := this.(*suSocketClient)
+		sc := scOpen(this)
 		sc.conn.SetDeadline(time.Now().Add(sc.timeout))
 		defer sc.conn.SetDeadline(noDeadline)
 		s := AsStr(arg)
@@ -151,4 +152,21 @@ var suSocketClientMethods = Methods{
 		}
 		return nil
 	}),
+}
+
+func (sc *suSocketClient) close() {
+	if sc.conn == nil {
+		return
+	}
+	nSocketClient--
+	sc.conn.Close()
+	sc.conn = nil
+}
+
+func scOpen(this Value) *suSocketClient {
+	sc := this.(*suSocketClient)
+	if sc.conn == nil {
+		panic("can't use a closed SocketClient")
+	}
+	return sc
 }

@@ -5,11 +5,17 @@ package builtin
 
 import . "github.com/apmckinlay/gsuneido/runtime"
 
-//TODO add some kind of registry of name->func
-
 var _ = builtin0("ResourceCounts()", func() Value {
 	ob := NewSuObject()
-	ob.Put(nil, SuStr("File"), IntVal(nFile))
-	ob.Put(nil, SuStr("Callbacks"), IntVal(CallbacksCount()))
+	add(ob, "File", nFile)
+	add(ob, "RunPiped", nRunPiped)
+	add(ob, "SocketClient", nSocketClient)
+	add(ob, "Callbacks", CallbacksCount())
 	return ob
 })
+
+func add(ob *SuObject, name string, n int) {
+	if n != 0 {
+		ob.Set(SuStr(name), IntVal(n))
+	}
+}

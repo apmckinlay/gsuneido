@@ -5,7 +5,6 @@ package builtin
 
 import (
 	"io"
-	"os"
 	"os/exec"
 	"strings"
 
@@ -13,27 +12,38 @@ import (
 	"github.com/apmckinlay/gsuneido/runtime/types"
 )
 
+type suRunPiped struct {
+	CantConvert
+	command string
+	cmd     *exec.Cmd
+	w       io.WriteCloser
+	r       io.ReadCloser
+}
+
+var nRunPiped = 0
+
 var _ = builtin("RunPiped(command, block=false)",
 	func(t *Thread, args []Value) Value {
 		command := ToStr(args[0])
 		cmdargs := splitCommand(command)
 		cmd := exec.Command(cmdargs[0], cmdargs[1:]...)
 		cmdSetup(cmd, command)
-		in, err := cmd.StdinPipe()
-		pr, pw, err := os.Pipe()
+		w, err := cmd.StdinPipe()
 		if err != nil {
 			panic("RunPiped create pipe failed: " + err.Error())
 		}
-		cmd.Stdout = pw
-		cmd.Stderr = pw
+		r, err := cmd.StdoutPipe()
+		if err != nil {
+			panic("RunPiped create pipe failed: " + err.Error())
+		}
+		cmd.Stderr = cmd.Stdout
 
 		err = cmd.Start()
 		if err != nil {
 			panic("Runpiped failed to start: " + err.Error())
 		}
-		pw.Close()
-
-		rp := &suRunPiped{command: command, cmd: cmd, w: in, r: pr}
+		rp := &suRunPiped{command: command, cmd: cmd, w: w, r: r}
+		nRunPiped++
 		if args[1] == False {
 			return rp
 		}
@@ -63,16 +73,13 @@ func splitCommand(s string) []string {
 	}
 }
 
-type suRunPiped struct {
-	CantConvert
-	command string
-	cmd     *exec.Cmd
-	w       io.WriteCloser
-	r       io.ReadCloser
-}
-
 func (rp *suRunPiped) close() {
+	if rp.r == nil {
+		return
+	}
+	nRunPiped--
 	rp.r.Close()
+	rp.r = nil
 }
 
 // Value ------------------------------------------------------------
@@ -130,19 +137,24 @@ func (*suRunPiped) Lookup(_ *Thread, method string) Callable {
 
 var suRunPipedMethods = Methods{
 	"Close": method0(func(this Value) Value {
-		this.(*suRunPiped).close()
+		rpOpen(this).close()
 		return this
 	}),
 	"CloseWrite": method0(func(this Value) Value {
-		this.(*suRunPiped).w.Close()
+		rp := rpOpen(this)
+		rp.w.Close()
+		rp.w = nil
 		return this
 	}),
 	"ExitValue": method0(func(this Value) Value {
-		cmd := this.(*suRunPiped).cmd
+		rp := rpOpen(this)
+		cmd := rp.cmd
+		rp.r = nil
+		rp.w = nil
 		err := cmd.Wait()
 		if err != nil {
 			if _, ok := err.(*exec.ExitError); !ok {
-				panic("System failed to run: " + err.Error())
+				panic("RunPiped.ExitValue failed: " + err.Error())
 			}
 		}
 		return IntVal(cmd.ProcessState.ExitCode())
@@ -151,7 +163,7 @@ var suRunPipedMethods = Methods{
 		return nil
 	}),
 	"Read": method1("(nbytes=1024)", func(this, arg Value) Value {
-		f := this.(*suRunPiped).r
+		f := rpOpen(this).r
 		n := IfInt(arg)
 		buf := make([]byte, n)
 		m, err := f.Read(buf)
@@ -164,20 +176,36 @@ var suRunPipedMethods = Methods{
 		return SuStr(string(buf[:m]))
 	}),
 	"Readline": method0(func(this Value) Value {
-		return Readline(this.(*suRunPiped).r, "runPiped.Readline: ")
+		return Readline(rpOpen(this).r, "runPiped.Readline: ")
 	}),
 	"Write": method1("(string)", func(this, arg Value) Value {
-		_, err := io.WriteString(this.(*suRunPiped).w, AsStr(arg))
+		_, err := io.WriteString(rpWrite(this).w, AsStr(arg))
 		if err != nil {
 			panic("runpiped.Write failed " + err.Error())
 		}
 		return arg
 	}),
 	"Writeline": method1("(string)", func(this, arg Value) Value {
-		_, err := io.WriteString(this.(*suRunPiped).w, AsStr(arg)+"\n")
+		_, err := io.WriteString(rpWrite(this).w, AsStr(arg)+"\n")
 		if err != nil {
 			panic("runpiped.Writeline failed " + err.Error())
 		}
 		return arg
 	}),
+}
+
+func rpOpen(this Value) *suRunPiped {
+	rp := this.(*suRunPiped)
+	if rp.r == nil {
+		panic("can't use a closed RunPiped")
+	}
+	return rp
+}
+
+func rpWrite(this Value) *suRunPiped {
+	rp := this.(*suRunPiped)
+	if rp.w == nil {
+		panic("can't write to a closed RunPiped")
+	}
+	return rp
 }
