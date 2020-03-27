@@ -5,6 +5,7 @@ package builtin
 
 import (
 	"log"
+	"sync"
 	"time"
 
 	"github.com/apmckinlay/gsuneido/options"
@@ -18,10 +19,34 @@ type SuThreadGlobal struct {
 func init() {
 	name, ps := paramSplit("Thread(block)")
 	Global.Builtin(name, &SuThreadGlobal{
-		SuBuiltin{threadCallClass, BuiltinParams{ParamSpec: *ps}}})
+		SuBuiltin{Fn: threadCallClass,
+			BuiltinParams: BuiltinParams{ParamSpec: *ps}}})
 }
 
-var threads = map[int32]*Thread{}
+type threadList struct {
+	list map[int32]*Thread // map so we can remove
+	lock sync.Mutex
+}
+
+var threads = threadList{ list: map[int32]*Thread{} }
+
+func (ts *threadList) add(num int32, t *Thread) {
+	ts.lock.Lock()
+	defer ts.lock.Unlock()
+	ts.list[num] = t
+}
+
+func (ts *threadList) remove(num int32) {
+	ts.lock.Lock()
+	defer ts.lock.Unlock()
+	delete(ts.list, num)
+}
+
+func (ts *threadList) count() int {
+	ts.lock.Lock()
+	defer ts.lock.Unlock()
+	return len(ts.list)
+}
 
 func threadCallClass(t *Thread, args []Value) Value {
 	if options.ThreadDisabled {
@@ -31,7 +56,8 @@ func threadCallClass(t *Thread, args []Value) Value {
 	fn.SetConcurrent()
 	t2 := NewThread()
 	t2.Token = t.Dbms().Token()
-	threads[t2.Num] = t2 //TODO lock
+	
+	threads.add(t2.Num, t2)
 	go func() {
 		defer func() {
 			if e := recover(); e != nil {
@@ -39,7 +65,7 @@ func threadCallClass(t *Thread, args []Value) Value {
 				t2.PrintStack()
 			}
 			t2.Close()
-			delete(threads, t2.Num) //TODO lock
+			threads.remove(t2.Num)
 		}()
 		t2.Call(fn)
 	}()
@@ -54,11 +80,13 @@ var threadMethods = Methods{
 		return SuStr(t.Name)
 	}),
 	"Count": method0(func(this Value) Value {
-		return IntVal(len(threads))
+		return IntVal(threads.count())
 	}),
 	"List": method0(func(this Value) Value {
 		ob := NewSuObject()
-		for _, t := range threads { //TODO lock
+		threads.lock.Lock()
+		defer threads.lock.Unlock()
+		for _, t := range threads.list {
 			ob.Put(nil, SuStr(t.Name), True)
 		}
 		return ob
@@ -86,6 +114,7 @@ var _ = builtin("Scheduled(ms, block)",
 		t2 := NewThread()
 		t2.Token = t.Dbms().Token()
 		block := args[1]
+		block.SetConcurrent()
 		go func() {
 			defer t2.Close()
 			time.Sleep(ms)
