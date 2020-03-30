@@ -38,7 +38,7 @@ var databaseMethods = Methods{
 	"Cursors": method("()", func(t *Thread, this Value, args []Value) Value {
 		return IntVal(t.Dbms().Cursors())
 	}),
-	"Dump": method("(table = false)", func(t *Thread, this Value, args []Value) Value {
+	"Dump": method("(table = '')", func(t *Thread, this Value, args []Value) Value {
 		return SuStr(t.Dbms().Dump(ToStr(args[0])))
 	}),
 	"Final": method("()", func(t *Thread, this Value, args []Value) Value {
@@ -50,7 +50,7 @@ var databaseMethods = Methods{
 	"Kill": method("(sessionId)", func(t *Thread, this Value, args []Value) Value {
 		return IntVal(t.Dbms().Kill(ToStr(args[0])))
 	}),
-	"Load": method("(table = false)", func(t *Thread, this Value, args []Value) Value {
+	"Load": method("(table)", func(t *Thread, this Value, args []Value) Value {
 		return IntVal(t.Dbms().Load(ToStr(args[0])))
 	}),
 	"Nonce": method("()", func(t *Thread, this Value, args []Value) Value {
