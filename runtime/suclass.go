@@ -91,10 +91,6 @@ func (c *SuClass) get1(t *Thread, this Value, m Value) Value {
 		if getter := c.get2(t, "Getter_"); getter != nil {
 			return t.CallThis(getter, this, m)
 		}
-		//TODO deprecated
-		if getter := c.get2(t, "Get_"); getter != nil {
-			return t.CallThis(getter, this, m)
-		}
 		c.noGetter = true
 	}
 	getterName := "Getter_" + ms
@@ -104,7 +100,7 @@ func (c *SuClass) get1(t *Thread, this Value, m Value) Value {
 	//TODO deprecated
 	getterName = "Get_" + ms
 	if getter := c.get2(t, getterName); getter != nil {
-		return t.CallThis(getter, this)
+		panic("invalid old style " + getterName)
 	}
 	return nil
 }
