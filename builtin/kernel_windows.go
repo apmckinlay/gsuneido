@@ -189,24 +189,6 @@ var _ = builtin3("CopyFile(from, to, failIfExists)",
 		return boolRet(rtn)
 	})
 
-// dll bool Kernel32:FindClose(pointer hFindFile)
-var findClose = kernel32.MustFindProc("FindClose").Addr()
-var _ = builtin1("FindClose(hFindFile)",
-	func(a Value) Value {
-		rtn := goc.Syscall1(findClose,
-			intArg(a))
-		return boolRet(rtn)
-	})
-
-// dll bool Kernel32:FlushFileBuffers(handle hFile)
-var flushFileBuffers = kernel32.MustFindProc("FlushFileBuffers").Addr()
-var _ = builtin1("FlushFileBuffers(hFile)",
-	func(a Value) Value {
-		rtn := goc.Syscall1(flushFileBuffers,
-			intArg(a))
-		return boolRet(rtn)
-	})
-
 // dll pointer Kernel32:GetCurrentProcess()
 var getCurrentProcess = kernel32.MustFindProc("GetCurrentProcess").Addr()
 var _ = builtin0("GetCurrentProcess()",
