@@ -260,20 +260,6 @@ var _ = builtin0("GetTickCount()",
 		return intRet(rtn)
 	})
 
-// dll long Kernel32:GetWindowsDirectory(string lpBuffer, long size)
-var getWindowsDirectory = kernel32.MustFindProc("GetWindowsDirectoryA").Addr()
-var _ = builtin0("GetWindowsDirectory()",
-	func() Value {
-		defer heap.FreeTo(heap.CurSize())
-		const bufsize = 256
-		buf := heap.Alloc(bufsize + 1)
-		syscall.Syscall(getWindowsDirectory, 2,
-			uintptr(buf),
-			uintptr(bufsize),
-			0)
-		return bufToStr(buf, bufsize)
-	})
-
 // dll pointer Kernel32:LoadLibrary([in] string library)
 var loadLibrary = kernel32.MustFindProc("LoadLibraryA").Addr()
 var _ = builtin1("LoadLibrary(library)",
