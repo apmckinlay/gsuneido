@@ -31,8 +31,6 @@ func init() {
 		&SuStructGlobal{size: int(unsafe.Sizeof(SCROLLINFO{}))})
 	Global.Builtin("TRACKMOUSEEVENT",
 		&SuStructGlobal{size: int(unsafe.Sizeof(TRACKMOUSEEVENT{}))})
-	Global.Builtin("OSVERSIONINFOEX",
-		&SuStructGlobal{size: int(unsafe.Sizeof(OSVERSIONINFOEX{}))})
 	Global.Builtin("SHELLEXECUTEINFO",
 		&SuStructGlobal{size: int(unsafe.Sizeof(SHELLEXECUTEINFO{}))})
 	Global.Builtin("TOOLINFO",
@@ -948,7 +946,6 @@ func _() {
 	_ = x[unsafe.Sizeof(NMTVDISPINFO{})-80]
 	_ = x[unsafe.Sizeof(NOTIFYICONDATA{})-528]
 	_ = x[unsafe.Sizeof(OPENFILENAME{})-152]
-	_ = x[unsafe.Sizeof(OSVERSIONINFOEX{})-156]
 	_ = x[unsafe.Sizeof(PAGESETUPDLG{})-128]
 	_ = x[unsafe.Sizeof(PAINTSTRUCT{})-72]
 	_ = x[unsafe.Sizeof(POINT{})-8]

@@ -94,53 +94,6 @@ var _ = builtin0("GetProcessHeap()",
 		return intRet(rtn)
 	})
 
-// dll Kernel32:GetVersionEx(OSVERSIONINFOEX* lpVersionInfo) bool
-var getVersionEx = kernel32.MustFindProc("GetVersionExA").Addr()
-var _ = builtin1("GetVersionEx(a)",
-	func(a Value) Value {
-		defer heap.FreeTo(heap.CurSize())
-		p := heap.Alloc(nOSVERSIONINFOEX)
-		ovi := (*OSVERSIONINFOEX)(p)
-		ovi.dwOSVersionInfoSize = int32(nOSVERSIONINFOEX)
-		rtn := goc.Syscall1(getVersionEx,
-			uintptr(p))
-		a.Put(nil, SuStr("dwMajorVersion"),
-			IntVal(int(ovi.dwMajorVersion)))
-		a.Put(nil, SuStr("dwMinorVersion"),
-			IntVal(int(ovi.dwMinorVersion)))
-		a.Put(nil, SuStr("dwBuildNumber"),
-			IntVal(int(ovi.dwBuildNumber)))
-		a.Put(nil, SuStr("dwPlatformId"),
-			IntVal(int(ovi.dwPlatformId)))
-		a.Put(nil, SuStr("szCSDVersion"),
-			strRet(ovi.szCSDVersion[:]))
-		a.Put(nil, SuStr("wServicePackMajor"),
-			IntVal(int(ovi.wServicePackMajor)))
-		a.Put(nil, SuStr("wServicePackMinor"),
-			IntVal(int(ovi.wServicePackMinor)))
-		a.Put(nil, SuStr("wSuiteMask"),
-			IntVal(int(ovi.wSuiteMask)))
-		a.Put(nil, SuStr("wProductType"),
-			IntVal(int(ovi.wProductType)))
-		return boolRet(rtn)
-	})
-
-type OSVERSIONINFOEX struct {
-	dwOSVersionInfoSize int32
-	dwMajorVersion      int32
-	dwMinorVersion      int32
-	dwBuildNumber       int32
-	dwPlatformId        int32
-	szCSDVersion        [128]byte
-	wServicePackMajor   int16
-	wServicePackMinor   int16
-	wSuiteMask          int16
-	wProductType        byte
-	wReserved           byte
-}
-
-const nOSVERSIONINFOEX = unsafe.Sizeof(OSVERSIONINFOEX{})
-
 // dll Kernel32:GlobalAlloc(long flags, long size) pointer
 var globalAlloc = kernel32.MustFindProc("GlobalAlloc").Addr()
 var _ = builtin2("GlobalAlloc(flags, size)",
