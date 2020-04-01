@@ -41,6 +41,11 @@ var _ = builtin0("GetComputerName()", func() Value {
 	return SuStr(name)
 })
 
+var _ = builtin0("GetTempPath()",
+	func() Value {
+		return SuStr(os.TempDir())
+	})
+
 func CallbacksCount() int {
 	return 0
 }

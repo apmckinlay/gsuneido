@@ -36,6 +36,21 @@ var _ = builtin0("GetComputerName()", func() Value {
 	return bufToStr(buf, uintptr(*pn))
 })
 
+// dll Kernel32:GetTempPath(DWORD nBufferLength, buffer lpBuffer) bool
+var getTempPath = kernel32.MustFindProc("GetTempPathA").Addr()
+var _ = builtin0("GetTempPath()", func() Value {
+	defer heap.FreeTo(heap.CurSize())
+	buf := heap.Alloc(MAX_PATH + 1)
+	rtn, _, _ := syscall.Syscall(getTempPath, 2,
+		MAX_PATH,
+		uintptr(buf),
+		0)
+	if rtn == 0 {
+		return EmptyStr
+	}
+	return bufToStr(buf, rtn)
+})
+
 // dll Kernel32:GetModuleHandle(instring name) pointer
 var getModuleHandle = kernel32.MustFindProc("GetModuleHandleA").Addr()
 var _ = builtin1("GetModuleHandle(unused)",

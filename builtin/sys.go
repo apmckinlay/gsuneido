@@ -27,11 +27,6 @@ var _ = builtin0("GetCurrentDirectory()",
 		return SuStr(dir)
 	})
 
-var _ = builtin0("GetTempPath()",
-	func() Value {
-		return SuStr(os.TempDir())
-	})
-
 // NOTE: temp file is NOT deleted automatically on exit
 // (same as cSuneido, but different from jSuneido)
 var _ = builtin2("GetTempFileName(path, prefix)",
