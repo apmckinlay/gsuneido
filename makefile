@@ -12,6 +12,9 @@ build:
 all:
 	go build -v -ldflags "$(LDFLAGS)" -a
 
+console:
+	go build -v -ldflags "-X 'main.builtDate=${BUILT}'"
+
 portable:
 	go build -v -ldflags "-X 'main.builtDate=${BUILT}'" -tags portable
 
@@ -28,13 +31,13 @@ client: build
 generate:
 	go generate ./...
 
+clean:
+	go clean -cache -testcache
+
 # need 64 bit windres e.g. from mingw64
 gsuneido_windows.syso : res/suneido.rc res/suneido.manifest
 	windres -F pe-x86-64 -o gsuneido_windows.syso res/suneido.rc
 
-.PHONY : build all console test repl client generate clean 1.14 tip
+.PHONY : build all console portable test repl client generate clean
 
 # -trimpath (but breaks vscode goto)
-
-clean:
-	go clean -cache -testcache
