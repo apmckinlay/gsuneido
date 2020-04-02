@@ -223,7 +223,7 @@ var _ = builtin1("GetTextFace(hdc)",
 			intArg(a),
 			bufsize,
 			uintptr(p))
-		return bufRet(p, n)
+		return SuStr(heap.GetStrN(p, int(n)))
 	})
 
 // dll long Gdi32:SetBkMode(pointer hdc, long mode)

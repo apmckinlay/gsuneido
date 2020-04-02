@@ -163,7 +163,7 @@ var _ = builtin1("GetSaveFileName(a)",
 		rtn := goc.Syscall1(getSaveFileName,
 			uintptr(p))
 		if rtn != 0 {
-			a.Put(nil, SuStr("file"), bufToStr(buf, uintptr(bufsize)))
+			a.Put(nil, SuStr("file"), SuStr(heap.GetStrZ(buf, bufsize)))
 		}
 		return boolRet(rtn)
 	})

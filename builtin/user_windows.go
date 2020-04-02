@@ -641,7 +641,7 @@ var _ = builtin1("GetWindowText(hwnd)",
 			intArg(hwnd),
 			uintptr(buf),
 			n+1)
-		return bufRet(buf, n)
+		return SuStr(heap.GetStrN(buf, int(n)))
 	})
 
 // dll User32:InflateRect(RECT* rect, long dx, long dy) bool
@@ -740,7 +740,7 @@ var _ = builtin2("GetMenuItemInfoText(hMenu, uItem)",
 			intArg(b),
 			0,
 			uintptr(p))
-		return bufRet(buf, n-1) // -1 to omit nul terminator
+		return SuStr(heap.GetStrN(buf, int(n-1))) // -1 to omit nul terminator
 	})
 
 // dll User32:SetMenuItemInfo(pointer hMenu, long uItem, long fByPosition,
@@ -1762,7 +1762,7 @@ var _ = builtin5("DrawTextExOut(hdc, text, rect, flags, params)",
 			uintptr(drawTextParams(e)))
 		urectToOb(r, c)
 		ob := NewSuObject()
-		ob.Put(nil, SuStr("text"), bufToStr(buf, uintptr(bufsize)))
+		ob.Put(nil, SuStr("text"), SuStr(heap.GetStrZ(buf, bufsize)))
 		ob.Put(nil, SuStr("result"), intRet(rtn))
 		return ob
 	})

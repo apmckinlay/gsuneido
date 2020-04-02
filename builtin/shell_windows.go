@@ -37,7 +37,7 @@ var _ = builtin1("SHGetPathFromIDList(pidl)",
 		if rtn == 0 {
 			return EmptyStr
 		}
-		return bufToStr(buf, MAX_PATH)
+		return SuStr(heap.GetStrZ(buf, MAX_PATH))
 	})
 
 // dll long Shell32:DragQueryFile(
@@ -46,19 +46,19 @@ var dragQueryFile = shell32.MustFindProc("DragQueryFile").Addr()
 
 var _ = builtin2("DragQueryFile(hDrop, iFile)",
 	func(a, b Value) Value {
-		n := 1 + goc.Syscall4(dragQueryFile,
+		n := goc.Syscall4(dragQueryFile,
 			intArg(a),
 			intArg(b),
 			0,
 			0)
 		defer heap.FreeTo(heap.CurSize())
-		buf := heap.Alloc(n)
+		buf := heap.Alloc(n + 1)
 		goc.Syscall4(dragQueryFile,
 			intArg(a),
 			intArg(b),
 			uintptr(buf),
 			n)
-		return bufToStr(buf, n)
+		return SuStr(heap.GetStrN(buf, int(n)))
 	})
 
 var _ = builtin1("DragQueryFileCount(hDrop)",

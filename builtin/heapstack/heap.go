@@ -18,6 +18,7 @@
 package heapstack
 
 import (
+	"bytes"
 	"log"
 	"runtime/debug"
 	"unsafe"
@@ -59,6 +60,30 @@ func Alloc(n uintptr) unsafe.Pointer {
 
 func CurSize() uintptr {
 	return heapnext
+}
+
+// GetStrN return a string containing a copy of a slice of the heap
+// starting at p and n bytes long
+func GetStrN(p unsafe.Pointer, n int) string {
+	return string(get(p)[:n])
+}
+
+// GetStrZ return a string containing a copy of a slice of the heap
+// starting at p, up to the first nul or n bytes, whichever comes first.
+func GetStrZ(p unsafe.Pointer, n int) string {
+	buf := get(p)[:n]
+	if i := bytes.IndexByte(buf, 0); i != -1 {
+		buf = buf[:i]
+	}
+	return string(buf)
+}
+
+// get returns a byte slice of the heap from p to end of allocation.
+// The slice is temporary and will be overwritten. Copy it if you want to keep it.
+func get(p unsafe.Pointer) []byte {
+	h := unsafe.Pointer(&heap[0])
+	i := uintptr(p) - uintptr(h)
+	return heap[i:heapnext]
 }
 
 func FreeTo(prevSize uintptr) {

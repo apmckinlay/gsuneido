@@ -6,12 +6,12 @@
 package builtin
 
 import (
+	"strings"
 	"syscall"
 	"unsafe"
 
 	heap "github.com/apmckinlay/gsuneido/builtin/heapstack"
 	. "github.com/apmckinlay/gsuneido/runtime"
-	"github.com/apmckinlay/gsuneido/util/verify"
 )
 
 var kernel32 = MustLoadDLL("kernel32.dll")
@@ -32,8 +32,7 @@ var _ = builtin0("GetComputerName()", func() Value {
 	if rtn == 0 {
 		return EmptyStr
 	}
-	verify.That(*pn <= bufsize)
-	return bufToStr(buf, uintptr(*pn))
+	return SuStr(heap.GetStrN(buf, int(*pn)))
 })
 
 // dll Kernel32:GetTempPath(DWORD nBufferLength, buffer lpBuffer) bool
@@ -45,10 +44,8 @@ var _ = builtin0("GetTempPath()", func() Value {
 		MAX_PATH,
 		uintptr(buf),
 		0)
-	if rtn == 0 {
-		return EmptyStr
-	}
-	return bufToStr(buf, rtn)
+	s := heap.GetStrN(buf, int(rtn))
+	return SuStr(strings.ReplaceAll(s, "\\", "/"))
 })
 
 // dll Kernel32:GetModuleHandle(instring name) pointer
@@ -68,13 +65,13 @@ var _ = builtin2("GetLocaleInfo(a,b)",
 		defer heap.FreeTo(heap.CurSize())
 		const bufsize = 255
 		buf := heap.Alloc(bufsize + 1)
-		syscall.Syscall6(getLocaleInfo, 4,
+		rtn, _, _ := syscall.Syscall6(getLocaleInfo, 4,
 			intArg(a),
 			intArg(b),
 			uintptr(buf),
 			uintptr(bufsize),
 			0, 0)
-		return bufToStr(buf, bufsize)
+		return SuStr(heap.GetStrN(buf, int(rtn)-1))
 	})
 
 // dll Kernel32:GetProcAddress(pointer hModule, [in] string procName) pointer
@@ -402,7 +399,7 @@ var _ = builtin1("GetVolumeName(vol = 'c:\\\\')",
 		if rtn == 0 {
 			return EmptyStr
 		}
-		return bufToStr(buf, bufsize)
+		return SuStr(heap.GetStrZ(buf, bufsize))
 	})
 
 type MEMORYSTATUSEX struct {
@@ -433,8 +430,7 @@ var _ = builtin0("SystemMemory()", func() Value {
 // 	[in] string			directoryName,
 // 	ULARGE_INTEGER*		freeBytesAvailableToCaller,
 // 	ULARGE_INTEGER*		totalNumberOfBytes,
-// 	ULARGE_INTEGER*		totalNumberOfFreeBytes
-// 	)
+// 	ULARGE_INTEGER*		totalNumberOfFreeBytes)
 var getDiskFreeSpaceEx = kernel32.MustFindProc("GetDiskFreeSpaceExA").Addr()
 
 var _ = builtin1("GetDiskFreeSpace(dir = '.')", func(arg Value) Value {
@@ -488,7 +484,7 @@ func OSName() Value {
 	if rtn != 0 {
 		return EmptyStr
 	}
-	return bufRet(buf, uintptr(size-1))
+	return SuStr(heap.GetStrN(buf, int(size)-1))
 }
 
 //-------------------------------------------------------------------

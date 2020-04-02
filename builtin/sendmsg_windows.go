@@ -51,14 +51,14 @@ var _ = builtin4("SendMessageTextOut(hwnd, msg, wParam = 0, bufsize = 1024)",
 	func(a, b, c, d Value) Value {
 		defer heap.FreeTo(heap.CurSize())
 		n := uintptr(ToInt(d) + 1)
-		p := heap.Alloc(n)
+		buf := heap.Alloc(n)
 		rtn := goc.Syscall4(sendMessage,
 			intArg(a),
 			intArg(b),
 			intArg(c),
-			uintptr(p))
+			uintptr(buf))
 		ob := NewSuObject()
-		ob.Put(nil, SuStr("text"), bufToStr(p, n))
+		ob.Put(nil, SuStr("text"), SuStr(heap.GetStrZ(buf, int(n))))
 		ob.Put(nil, SuStr("result"), intRet(rtn))
 		return ob
 	})
@@ -113,7 +113,8 @@ var _ = builtin4("SendMessageTcitem(hwnd, msg, wParam, tcitem)",
 			intArg(c),
 			uintptr(p))
 		if n > 0 {
-			d.Put(nil, SuStr("pszText"), bufToStr(unsafe.Pointer(t), uintptr(n)))
+			d.Put(nil, SuStr("pszText"),
+				SuStr(heap.GetStrZ(unsafe.Pointer(t), int(n))))
 		}
 		d.Put(nil, SuStr("iImage"), IntVal(int((*TCITEM)(p).iImage)))
 		return intRet(rtn)
@@ -140,9 +141,9 @@ var _ = builtin5("SendMessageTextRange(hwnd, msg, cpMin, cpMax, each = 1)",
 		if cpMax <= cpMin {
 			return EmptyStr
 		}
-		each := uintptr(ToInt(e))
-		n := uintptr(cpMax-cpMin) * each
-		buf := heap.Alloc(n + each)
+		each := ToInt(e)
+		n := (cpMax - cpMin) * each
+		buf := heap.Alloc(uintptr(n + each))
 		p := heap.Alloc(nTEXTRANGE)
 		*(*TEXTRANGE)(p) = TEXTRANGE{
 			chrg:      CHARRANGE{cpMin: int32(cpMin), cpMax: int32(cpMax)},
@@ -153,7 +154,7 @@ var _ = builtin5("SendMessageTextRange(hwnd, msg, cpMin, cpMax, each = 1)",
 			intArg(b),
 			0,
 			uintptr(p))
-		return bufRet(buf, n)
+		return SuStr(heap.GetStrN(buf, n))
 	})
 
 var _ = builtin4("SendMessageTOOLINFO(hwnd, msg, wParam, lParam)",
@@ -237,7 +238,7 @@ var _ = builtin4("SendMessageTreeItem(hwnd, msg, wParam, tvitem)",
 		d.Put(nil, SuStr("state"), IntVal(int(tvi.state)))
 		d.Put(nil, SuStr("stateMask"), IntVal(int(tvi.stateMask)))
 		if n != 0 {
-			d.Put(nil, SuStr("pszText"), bufToStr(buf, n))
+			d.Put(nil, SuStr("pszText"), SuStr(heap.GetStrZ(buf, int(n))))
 		}
 		d.Put(nil, SuStr("cchTextMax"), IntVal(int(tvi.cchTextMax)))
 		d.Put(nil, SuStr("iImage"), IntVal(int(tvi.iImage)))
@@ -365,7 +366,7 @@ var _ = builtin4("SendMessageHditem(hwnd, msg, wParam, lParam)",
 			uintptr(p))
 		hditemToOb(hdi, d)
 		if buf != nil {
-			d.Put(nil, SuStr("pszText"), bufToStr(buf, uintptr(n)))
+			d.Put(nil, SuStr("pszText"), SuStr(heap.GetStrZ(buf, int(n))))
 		}
 		return intRet(rtn)
 	})
@@ -604,7 +605,7 @@ var _ = builtin3("SendMessageListItemOut(hwnd, iItem, iSubItem)",
 			uintptr(LVM_ITEM),
 			0,
 			uintptr(p))
-		return bufRet(buf, bufsize)
+		return SuStr(heap.GetStrZ(buf, bufsize))
 	})
 
 type LVITEM struct {
