@@ -6,7 +6,8 @@
 package builtin
 
 import (
-	"github.com/apmckinlay/gsuneido/builtin/goc"
+	"syscall"
+
 	"github.com/apmckinlay/gsuneido/builtin/heap"
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
@@ -19,12 +20,13 @@ var _ = builtin5("RegOpenKeyEx(hKey, lpSubKey, ulOptions, samDesired, phkResult)
 	func(a, b, c, d, e Value) Value {
 		defer heap.FreeTo(heap.CurSize())
 		p := heap.Alloc(uintptrSize)
-		rtn := goc.Syscall5(regOpenKeyEx,
+		rtn, _, _ := syscall.Syscall6(regOpenKeyEx, 5,
 			intArg(a),
 			uintptr(stringArg(b)),
 			intArg(c),
 			intArg(d),
-			uintptr(p))
+			uintptr(p),
+			0)
 		e.Put(nil, SuStr("x"), IntVal(int(*(*uintptr)(p)))) // phkResult
 		return intRet(rtn)
 	})
@@ -33,8 +35,9 @@ var _ = builtin5("RegOpenKeyEx(hKey, lpSubKey, ulOptions, samDesired, phkResult)
 var regCloseKey = advapi32.MustFindProc("RegCloseKey").Addr()
 var _ = builtin1("RegCloseKey(hKey)",
 	func(a Value) Value {
-		rtn := goc.Syscall1(regCloseKey,
-			intArg(a))
+		rtn, _, _ := syscall.Syscall(regCloseKey, 1,
+			intArg(a),
+			0, 0)
 		return intRet(rtn)
 	})
 
@@ -45,7 +48,7 @@ var _ = builtin("RegCreateKeyEx(hKey, lpSubKey, reserved/*unused*/, lpClass, "+
 	func(_ *Thread, a []Value) Value {
 		defer heap.FreeTo(heap.CurSize())
 		p := heap.Alloc(uintptrSize)
-		rtn := goc.Syscall9(regCreateKeyEx,
+		rtn, _, _ := syscall.Syscall9(regCreateKeyEx, 9,
 			intArg(a[0]),
 			uintptr(stringArg(a[1])),
 			0, // Reserved - must be 0
@@ -68,7 +71,7 @@ var _ = builtin6("RegQueryValueEx(hKey, lpValueName, lpReserved/*unused*/, "+
 		pe := heap.Alloc(int32Size)
 		pf := heap.Alloc(int32Size)
 		*(*int32)(pf) = int32(int32Size) // to match int32 data
-		rtn := goc.Syscall6(regQueryValueEx,
+		rtn, _, _ := syscall.Syscall6(regQueryValueEx, 6,
 			intArg(a),
 			uintptr(stringArg(b)),
 			0,           // lpReserved - must be 0
@@ -88,7 +91,7 @@ var _ = builtin6("RegSetValueEx(hKey, lpValueName, reserved/*unused*/, "+
 	func(a, b, c, d, e, f Value) Value {
 		defer heap.FreeTo(heap.CurSize())
 		pe := heap.Alloc(int32Size)
-		rtn := goc.Syscall6(regSetValueEx,
+		rtn, _, _ := syscall.Syscall6(regSetValueEx, 6,
 			intArg(a),
 			uintptr(stringArg(b)),
 			0,           // reserved - must be 0
