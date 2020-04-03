@@ -4,6 +4,7 @@
 #include "cside.h"
 
 extern void timerId();
+int Scintilla_RegisterClasses(void *hInstance);
 
 uintptr interact();
 
@@ -298,6 +299,7 @@ int sunapp_register_classes();
 DWORD threadid;
 
 void start() {
+	Scintilla_RegisterClasses(GetModuleHandle(NULL));
 	sunapp_register_classes();
 	InitializeCriticalSection(&lock);
 	EnterCriticalSection(&lock);
