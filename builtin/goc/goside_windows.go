@@ -4,6 +4,7 @@
 package goc
 
 // #cgo CFLAGS: -DWINVER=0x601 -D_WIN32_WINNT=0x0601
+// #cgo LDFLAGS: -L . -lscintilla -lgdi32 -lcomdlg32 -lcomctl32 -limm32 -lmsimg32
 // #cgo LDFLAGS: -lurlmon -lole32 -loleaut32 -luuid -lwininet -static
 // #include "cside.h"
 import "C"
@@ -102,7 +103,7 @@ func Alert(args ...interface{}) {
 var fatalOnce sync.Once
 
 func Fatal(args ...interface{}) {
-	fatalOnce.Do(func(){
+	fatalOnce.Do(func() {
 		s := fmt.Sprintln(args...)
 		log.Print("FATAL: ", s)
 		go func() {

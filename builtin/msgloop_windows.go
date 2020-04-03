@@ -21,8 +21,6 @@ var _ = builtin("MessageLoop(hwnd = 0)", func(t *Thread, args []Value) Value {
 var uiThreadId uint32
 
 func init() {
-	MustLoadDLL("scilexer.dll")
-
 	// inject dependencies
 	goc.Callback2 = callback2
 	goc.Callback3 = callback3
