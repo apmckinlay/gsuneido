@@ -85,7 +85,7 @@ var _ = builtin1("CreateFontIndirect(logfont)",
 			lfQuality:        byte(getInt(a, "lfQuality")),
 			lfPitchAndFamily: byte(getInt(a, "lfPitchAndFamily")),
 		}
-		copyStr(f.lfFaceName[:], a, "lfFaceName")
+		getStrZbs(a, "lfFaceName", f.lfFaceName[:])
 		rtn := goc.Syscall1(createFontIndirect,
 			uintptr(p))
 		return intRet(rtn)

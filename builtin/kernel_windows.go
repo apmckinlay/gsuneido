@@ -121,7 +121,7 @@ var _ = builtin1("GlobalLockString(hMem)",
 			intArg(a),
 			0, 0)
 		const maxLen = 64 * 1024 // ???
-		return bufToStr(unsafe.Pointer(rtn), maxLen)
+		return bufStrZ(unsafe.Pointer(rtn), maxLen)
 	})
 
 // dll Kernel32:GlobalUnlock(pointer handle) bool

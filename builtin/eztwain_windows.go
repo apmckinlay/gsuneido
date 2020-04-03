@@ -98,7 +98,7 @@ var _ = builtin0("TWAIN_LastErrorText()",
 	func() Value {
 		rtn, _, _ := syscall.Syscall(twain_LastErrorText.Addr(), 0,
 			0, 0, 0)
-		return bufToStr(unsafe.Pointer(rtn), 256)
+		return bufStrZ(unsafe.Pointer(rtn), 256)
 	})
 
 // dll string Eztwain4:TWAIN_NextSourceName()
@@ -107,7 +107,7 @@ var _ = builtin0("TWAIN_NextSourceName()",
 	func() Value {
 		rtn, _, _ := syscall.Syscall(twain_LastErrorText.Addr(), 0,
 			0, 0, 0)
-		return bufToStr(unsafe.Pointer(rtn), 256)
+		return bufStrZ(unsafe.Pointer(rtn), 256)
 	})
 
 // dll long Eztwain4:TWAIN_OpenDefaultSource()

@@ -143,7 +143,7 @@ func (*SuRect) updateStruct(ob Value, p unsafe.Pointer) {
 
 func rect(_ *Thread, args []Value) Value {
 	r := obToRect(args[0])
-	return bufRet(unsafe.Pointer(&r), nRECT)
+	return bufStrN(unsafe.Pointer(&r), nRECT)
 }
 
 //-------------------------------------------------------------------
@@ -226,7 +226,7 @@ var _ = builtin1("NMTVDISPINFO(address)",
 		ob.Put(nil, SuStr("nmhdr"), nmhdrToOb(&di.nmhdr))
 		tvi := tvitemToOb(&di.item)
 		tvi.Put(nil, SuStr("pszText"),
-			bufToStr(unsafe.Pointer(di.item.pszText), 1024))
+			bufStrZ(unsafe.Pointer(di.item.pszText), 1024))
 		ob.Put(nil, SuStr("item"), tvi)
 		return ob
 	})
@@ -302,7 +302,7 @@ func (*SuNMTTDISPINFO) structToOb(p unsafe.Pointer) Value {
 	x := (*NMTTDISPINFO)(p)
 	ob := NewSuObject()
 	ob.Put(nil, SuStr("hdr"), nmhdrToOb(&x.hdr))
-	ob.Put(nil, SuStr("szText"), strRet(x.szText[:]))
+	ob.Put(nil, SuStr("szText"), bsStrZ(x.szText[:]))
 	ob.Put(nil, SuStr("lpszText"), IntVal(int(x.lpszText)))
 	ob.Put(nil, SuStr("hinst"), IntVal(int(x.hinst)))
 	ob.Put(nil, SuStr("uFlags"), IntVal(int(x.uFlags)))
@@ -313,7 +313,7 @@ func (*SuNMTTDISPINFO) structToOb(p unsafe.Pointer) Value {
 func (*SuNMTTDISPINFO) updateStruct(ob Value, p unsafe.Pointer) {
 	x := (*NMTTDISPINFO)(p)
 	x.lpszText = getHandle(ob, "lpszText")
-	copyStr(x.szText[:], ob, "szText")
+	getStrZbs(ob, "szText", x.szText[:])
 	x.hinst = getHandle(ob, "hinst")
 	x.uFlags = getInt32(ob, "uFlags")
 	x.lParam = getHandle(ob, "lParam")
@@ -465,7 +465,7 @@ func accel(_ *Thread, args []Value) Value {
 		key:   int16(getInt(arg, "key")),
 		cmd:   int16(getInt(arg, "cmd")),
 	}
-	return bufRet(unsafe.Pointer(&ac), unsafe.Sizeof(ac))
+	return bufStrN(unsafe.Pointer(&ac), unsafe.Sizeof(ac))
 }
 
 //-------------------------------------------------------------------
@@ -513,7 +513,7 @@ var _ = builtin1("SCNotificationText(address)",
 		}
 		scn := (*SCNotification)(unsafe.Pointer(uintptr(adr)))
 		ob := scnToOb(scn)
-		ob.Put(nil, SuStr("text"), bufRet(unsafe.Pointer(scn.text), 1024))
+		ob.Put(nil, SuStr("text"), bufStrN(unsafe.Pointer(scn.text), 1024))
 		return ob
 	})
 
@@ -760,7 +760,7 @@ type SuBMIH struct {
 
 func bmih(_ *Thread, args []Value) Value {
 	bmih := obToBMIH(args[0])
-	return bufRet(unsafe.Pointer(&bmih), nBITMAPINFOHEADER)
+	return bufStrN(unsafe.Pointer(&bmih), nBITMAPINFOHEADER)
 }
 
 func obToBMIH(hdr Value) BITMAPINFOHEADER {
@@ -787,7 +787,7 @@ var _ = builtin1("DevmodeString(hdn)",
 		p := GlobalLock(handle)
 		defer GlobalUnlock(handle)
 		dm := (*DEVMODE)(p)
-		s := bufRet(p, nDEVMODE+uintptr(dm.DriverExtra))
+		s := bufStrN(p, nDEVMODE+uintptr(dm.DriverExtra))
 		return s
 	})
 
@@ -846,7 +846,7 @@ var _ = builtin1("DevnamesString(hdn)",
 			}
 			n++
 		}
-		s := bufRet(p, n+1)
+		s := bufStrN(p, n+1)
 		return s
 	})
 

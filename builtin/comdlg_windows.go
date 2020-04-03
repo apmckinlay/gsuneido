@@ -177,7 +177,7 @@ var _ = builtin1("GetOpenFileName(a)",
 		rtn := goc.Syscall1(getOpenFileName,
 			uintptr(p))
 		if rtn != 0 {
-			a.Put(nil, SuStr("file"), bufToStr2(buf, uintptr(bufsize)))
+			a.Put(nil, SuStr("file"), bufStrZ2(buf, uintptr(bufsize)))
 		}
 		return boolRet(rtn)
 	})
@@ -304,7 +304,7 @@ var _ = builtin1("ChooseFont(cf)",
 			lfQuality:        byte(getInt(lfob, "lfQuality")),
 			lfPitchAndFamily: byte(getInt(lfob, "lfPitchAndFamily")),
 		}
-		copyStr(lf.lfFaceName[:], lfob, "lfFaceName")
+		getStrZbs(lfob, "lfFaceName", lf.lfFaceName[:])
 		p := heap.Alloc(nCHOOSEFONT)
 		*(*CHOOSEFONT)(p) = CHOOSEFONT{
 			lStructSize:    uint32(nCHOOSEFONT),
@@ -339,7 +339,7 @@ var _ = builtin1("ChooseFont(cf)",
 		lfob.Put(nil, SuStr("lfQuality"), IntVal(int(lf.lfQuality)))
 		lfob.Put(nil, SuStr("lfPitchAndFamily"), IntVal(int(lf.lfPitchAndFamily)))
 		lfob.Put(nil, SuStr("lfPitchAndFamily"), IntVal(int(lf.lfPitchAndFamily)))
-		lfob.Put(nil, SuStr("lfFaceName"), strRet(lf.lfFaceName[:]))
+		lfob.Put(nil, SuStr("lfFaceName"), bsStrZ(lf.lfFaceName[:]))
 		return boolRet(rtn)
 	})
 

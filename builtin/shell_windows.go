@@ -90,9 +90,9 @@ var _ = builtin2("Shell_NotifyIcon(dwMessage, lpdata)",
 			uTimeoutVersionUnion: getUint32(b, "uTimeoutVersionUnion"),
 			dwInfoFlags:          getInt32(b, "dwInfoFlags"),
 		}
-		copyStr(nid.szTip[:], b, "szTip")
-		copyStr(nid.szInfo[:], b, "szInfo")
-		copyStr(nid.szInfoTitle[:], b, "szInfoTitle")
+		getStrZbs(b, "szTip", nid.szTip[:])
+		getStrZbs(b, "szInfo", nid.szInfo[:])
+		getStrZbs(b, "szInfoTitle", nid.szInfoTitle[:])
 		rtn := goc.Syscall2(shell_NotifyIcon,
 			intArg(a),
 			uintptr(p))

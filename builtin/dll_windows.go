@@ -164,14 +164,14 @@ func strToPtr(s string, p unsafe.Pointer) {
 	*(*byte)(unsafe.Pointer(uintptr(p) + uintptr(len(s)))) = 0
 }
 
-// strRet returns a string from a nul terminated byte slice
-func strRet(buf []byte) Value {
+// bsStrZ copies a nul terminated string from a byte slice
+func bsStrZ(buf []byte) Value {
 	return SuStr(string(buf[:bytes.IndexByte(buf, 0)]))
 }
 
-// bufToStr copies a nul terminated string from an unsafe.Pointer.
+// bufStrZ copies a nul terminated string from an unsafe.Pointer.
 // If nul is not found, then the entire length is returned.
-func bufToStr(p unsafe.Pointer, n uintptr) Value {
+func bufStrZ(p unsafe.Pointer, n uintptr) Value {
 	if p == nil {
 		return False
 	}
@@ -181,13 +181,13 @@ func bufToStr(p unsafe.Pointer, n uintptr) Value {
 			break
 		}
 	}
-	return bufRet(p, i)
+	return bufStrN(p, i)
 }
 
-// bufToStr2 copies a *double* nul terminated string from a heap buffer.
+// bufStrZ2 copies a *double* nul terminated string from a heap buffer.
 // It includes the nuls in the result.
 // If nuls are not found, then the entire length is returned.
-func bufToStr2(p unsafe.Pointer, n uintptr) Value {
+func bufStrZ2(p unsafe.Pointer, n uintptr) Value {
 	i := uintptr(2)
 	for ; i < n; i++ {
 		if *(*byte)(unsafe.Pointer(uintptr(p) + i - 2)) == 0 &&
@@ -195,15 +195,14 @@ func bufToStr2(p unsafe.Pointer, n uintptr) Value {
 			break
 		}
 	}
-	return bufRet(p, i)
+	return bufStrN(p, i)
 }
 
-// bufRet returns a string from a pointer and length (not nul terminated)
-func bufRet(p unsafe.Pointer, n uintptr) Value {
+// bufStrN copies a string of a given length from an unsafe.Pointer
+func bufStrN(p unsafe.Pointer, n uintptr) Value {
 	if p == nil {
 		return EmptyStr
 	}
-	// same approach as strings.Builder to reuse []byte as string (without copy)
 	buf := make([]byte, n)
 	for i := uintptr(0); i < n; i++ {
 		buf[i] = *(*byte)(unsafe.Pointer(uintptr(p) + i))
@@ -211,9 +210,9 @@ func bufRet(p unsafe.Pointer, n uintptr) Value {
 	return SuStr(hacks.BStoS(buf))
 }
 
-// copyStr copies the string into the byte slice and adds a nul terminator.
+// getStrZbs copies the string into the byte slice and adds a nul terminator.
 // If the string is too long, the excess is ignored
-func copyStr(dst []byte, ob Value, mem string) {
+func getStrZbs(ob Value, mem string, dst []byte) {
 	src := ToStr(ob.Get(nil, SuStr(mem)))
 	if len(src) > len(dst)-1 {
 		src = src[:len(dst)-1]
