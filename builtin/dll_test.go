@@ -5,7 +5,7 @@ package builtin
 import (
 	"testing"
 
-	heap "github.com/apmckinlay/gsuneido/builtin/heapstack"
+	"github.com/apmckinlay/gsuneido/builtin/heap"
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
@@ -26,7 +26,7 @@ func BenchmarkBufToStr(b *testing.B) {
 	buf := heap.Alloc(n)
 	var s Value
 	for i := 0; i < b.N; i++ {
-		s = bufRet(buf, n)
+		s = bufStrN(buf, n)
 	}
 	result = s
 }
