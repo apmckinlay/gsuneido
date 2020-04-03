@@ -7,7 +7,7 @@ package builtin
 
 import (
 	"github.com/apmckinlay/gsuneido/builtin/goc"
-	heap "github.com/apmckinlay/gsuneido/builtin/heapstack"
+	"github.com/apmckinlay/gsuneido/builtin/heap"
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
 

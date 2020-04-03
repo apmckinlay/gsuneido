@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/apmckinlay/gsuneido/builtin/goc"
-	heap "github.com/apmckinlay/gsuneido/builtin/heapstack"
+	"github.com/apmckinlay/gsuneido/builtin/heap"
 	"github.com/apmckinlay/gsuneido/options"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/runtime/types"

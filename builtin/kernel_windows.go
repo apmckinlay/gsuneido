@@ -10,7 +10,7 @@ import (
 	"syscall"
 	"unsafe"
 
-	heap "github.com/apmckinlay/gsuneido/builtin/heapstack"
+	"github.com/apmckinlay/gsuneido/builtin/heap"
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
 

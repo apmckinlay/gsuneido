@@ -1,7 +1,7 @@
 // Copyright Suneido Software Corp. All rights reserved.
 // Governed by the MIT license found in the LICENSE file.
 
-// Package heapstack provides a heap for win32 dll arguments
+// Package heap provides a heap for win32 dll arguments
 // that are allocated and freed stack-wise.
 // It must not move and is therefore fixed size and statically declared.
 // It is NOT thread safe. (Since win32 should be single threaded.)
@@ -15,7 +15,7 @@
 // Although I thought escape analysis would be putting the data on the heap.
 // The crashes were mostly (always?) with nested callbacks.
 // see: https://github.com/lxn/walk/pull/493
-package heapstack
+package heap
 
 import (
 	"bytes"
