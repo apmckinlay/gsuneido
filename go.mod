@@ -1,6 +1,6 @@
 module github.com/apmckinlay/gsuneido
 
-go 1.13
+go 1.14 // should be 1.14.1 since 1.14 had a bug that caused crashes
 
 require (
 	github.com/google/uuid v1.1.1
