@@ -249,6 +249,7 @@ loop:
 			val.SetConcurrent()
 			fr.locals.v[atomicLocal] = val
 			fr.locals.Unlock()
+			toUnlock = nil
 			atomicLocal = -1
 		case op.Dyload:
 			i := fetchUint8()
