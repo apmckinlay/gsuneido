@@ -10,6 +10,7 @@ import (
 	"syscall"
 	"unsafe"
 
+	"github.com/apmckinlay/gsuneido/builtin/goc"
 	"github.com/apmckinlay/gsuneido/builtin/heap"
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
@@ -224,8 +225,8 @@ var _ = builtin0("GetCurrentProcessId()",
 var getCurrentThreadId = kernel32.MustFindProc("GetCurrentThreadId").Addr()
 var _ = builtin0("GetCurrentThreadId()",
 	func() Value {
-		rtn, _, _ := syscall.Syscall(getCurrentThreadId, 0, 0, 0, 0)
-		return intRet(rtn)
+		// NOTE: always returns cside thread id
+		return intRet(goc.CThreadId())
 	})
 
 // dll long Kernel32:GetFileAttributes([in] string lpFileName)
