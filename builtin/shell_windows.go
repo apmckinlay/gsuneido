@@ -57,7 +57,7 @@ var _ = builtin2("DragQueryFile(hDrop, iFile)",
 			intArg(a),
 			intArg(b),
 			uintptr(buf),
-			n)
+			n + 1)
 		return SuStr(heap.GetStrN(buf, int(n)))
 	})
 
