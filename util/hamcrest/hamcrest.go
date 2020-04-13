@@ -218,7 +218,7 @@ func Like(expected interface{}) Tester {
 		if like(expected.(string), actual.(string)) {
 			return ""
 		}
-		return fmt.Sprintf("expected: %s\nbut got: %s", expected, actual)
+		return fmt.Sprintf("\nexpected: %s\nbut got: %s", expected, actual)
 	}
 }
 
