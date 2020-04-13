@@ -330,6 +330,9 @@ func TestControl(t *testing.T) {
         10: Load c
         12: Return`)
 
+	test("a in ()", `
+		0: False`)
+
 	test("a in (4,5,6)", `
 		0: Load a
         2: Int 4

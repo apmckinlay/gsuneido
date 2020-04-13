@@ -739,6 +739,10 @@ func (cg *cgen) trinary(node *ast.Trinary, ct calltype) {
 }
 
 func (cg *cgen) inExpr(node *ast.In) {
+	if len(node.Exprs) == 0 {
+		cg.emit(op.False)
+		return
+	}
 	end := -1
 	cg.expr(node.E)
 	for j, e := range node.Exprs {
