@@ -123,8 +123,7 @@ func (p *parser) error(args ...interface{}) string {
 }
 
 func (p *parser) errorAt(pos int32, args ...interface{}) string {
-	line := p.lxr.LineFromPos(pos)
-	panic("syntax error at line " + strconv.Itoa(line) + " " + fmt.Sprint(args...))
+	panic("syntax error @" + strconv.Itoa(int(pos)) + " " + fmt.Sprint(args...))
 }
 
 func (p *parser) Ident(name string) ast.Expr {

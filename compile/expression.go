@@ -168,7 +168,7 @@ func (p *parser) ckLvalue(e ast.Expr) {
 			return
 		}
 	}
-	p.error("syntax error: lvalue required")
+	p.error("lvalue required")
 }
 
 func flip(token tok.Token) tok.Token {
@@ -258,7 +258,7 @@ func (p *parser) atom() ast.Expr {
 			return e
 		}
 	}
-	panic(p.error("syntax error: unexpected " + p.Item.String()))
+	panic(p.error("unexpected " + p.Item.String()))
 }
 
 func (p *parser) noName(f func() Value) Value {

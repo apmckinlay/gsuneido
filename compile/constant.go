@@ -27,7 +27,7 @@ func NamedConstant(lib, name, src string) Value {
 	p.name = name
 	result := p.constant()
 	if p.Token != tok.Eof {
-		p.error("syntax error: did not parse all input")
+		p.error("did not parse all input")
 	}
 	return result
 }
@@ -38,7 +38,7 @@ func Checked(t *Thread, src string) (Value, []string) {
 	p.checker = check.New(t)
 	v := p.constant()
 	if p.Token != tok.Eof {
-		p.error("syntax error: did not parse all input")
+		p.error("did not parse all input")
 	}
 	return v, p.checker.Results
 }

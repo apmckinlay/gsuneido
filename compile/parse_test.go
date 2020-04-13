@@ -386,7 +386,7 @@ func TestParseStatements(t *testing.T) {
 			t.Errorf("%#v expected: %#v but got: %#v", src, expected, actual)
 		}
 	}
-	xtest("a \n * b", "syntax error: unexpected '*'")
+	xtest("a \n * b", "syntax error @4 unexpected '*'")
 	xtest("foo bar", "syntax error")
 	xtest("1+2 3+4", "syntax error")
 	xtest("1+2 3+4", "syntax error")
