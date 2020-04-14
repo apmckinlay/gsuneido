@@ -166,20 +166,20 @@ func (p *parser) statement2() ast.Statement {
 // cSuneido and jSuneido only allowed catch, while, or else to follow
 // but here we are more lenient and allow any statement keyword
 func (p *parser) trailingExpr() ast.Expr {
-		expr := p.expr()
-		switch p.Token {
-		case tok.Semicolon:
-			p.next()
-		case tok.RCurly, tok.Return, tok.If, tok.Else, tok.Switch, tok.Forever,
-			tok.While, tok.Do, tok.For, tok.Throw, tok.Try, tok.Catch,
-			tok.Break, tok.Continue, tok.Case, tok.Default:
-			// ok
-		default:
-			if !p.newline {
-				p.error()
-			}
+	expr := p.expr()
+	switch p.Token {
+	case tok.Semicolon:
+		p.next()
+	case tok.RCurly, tok.Return, tok.If, tok.Else, tok.Switch, tok.Forever,
+		tok.While, tok.Do, tok.For, tok.Throw, tok.Try, tok.Catch,
+		tok.Break, tok.Continue, tok.Case, tok.Default:
+		// ok
+	default:
+		if !p.newline {
+			p.error()
 		}
-		return expr
+	}
+	return expr
 }
 
 func (p *parser) semi(stmt ast.Statement) ast.Statement {
@@ -370,7 +370,7 @@ func (p *parser) tryStmt() *ast.TryCatch {
 		catch = p.statement()
 	}
 	return &ast.TryCatch{Try: try, Catch: catch,
-		CatchVar: ast.Ident{Name: catchVar, Pos: varPos},
+		CatchVar:       ast.Ident{Name: catchVar, Pos: varPos},
 		CatchVarUnused: unused,
-		CatchFilter: catchFilter}
+		CatchFilter:    catchFilter}
 }
