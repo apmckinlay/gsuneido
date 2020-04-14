@@ -222,17 +222,17 @@ func (ck *Check) expr(expr ast.Expr, init set) set {
 				in = ck.expr(e, in) // rest are conditional
 			}
 		} else {
-			expr.Children(func(e ast.Node) {
+			expr.Children(func(e ast.Node) ast.Node {
 				init = ck.expr(e.(ast.Expr), init)
+				return e
 			})
 		}
 	case *ast.Block:
 		ck.check(&expr.Function, init.with("it"))
 	default:
-		expr.Children(func(e ast.Node) {
-			if e != nil {
-				init = ck.expr(e.(ast.Expr), init)
-			}
+		expr.Children(func(e ast.Node) ast.Node {
+			init = ck.expr(e.(ast.Expr), init)
+			return e
 		})
 	}
 	return init

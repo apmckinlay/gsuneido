@@ -14,27 +14,27 @@ import (
 )
 
 func Example_parseFunction_SrcPos() {
-	src := `function () {
-		a = 123
-		b = 4
+	src := `function (x, y) {
+		a = x
+		b = y
 		return a + b
 		}`
 	ast := parseFunction(src)
 	fn := codegen(ast)
 	DisasmMixed(os.Stdout, fn, src)
 	// Output:
-	// 16: a = 123
-	// 	0: Int 123
-	// 	3: Store a
-	// 	5: Pop
-	// 26: b = 4
-	// 	6: Int 4
-	// 	9: Store b
-	// 	11: Pop
-	// 34: return a + b
-	// 	12: Load a
-	// 	14: Load b
-	// 	16: Add
+	// 20: a = x
+	// 	0: Load x
+	// 	2: Store a
+	// 	4: Pop
+	// 28: b = y
+	// 	5: Load y
+	// 	7: Store b
+	// 	9: Pop
+	// 36: return a + b
+	// 	10: Load a
+	// 	12: Load b
+	// 	14: Add
 }
 
 func TestCodegen(t *testing.T) {
@@ -81,11 +81,11 @@ func TestCodegen(t *testing.T) {
 
 	test("a | b | c", "Load a, Load b, BitOr, Load c, BitOr")
 
-	test("a is true", "Load a, True, Is")
-	test("s = 'hello'", "Value 'hello', Store s")
+	test("a is b", "Load a, Load b, Is")
+	test("a = b", "Load b, Store a")
 	test("_dyn = 123", "Int 123, Store _dyn")
 	test("a = b = c", "Load c, Store b, Store a")
-	test("a = true; not a", "True, Store a, Pop, Load a, Not")
+	test("a = b; not a", "Load b, Store a, Pop, Load a, Not")
 	test("n += 5", "Int 5, LoadLock n, Add, StoreUnlock")
 	test("n /= 5", "Int 5, LoadLock n, Swap, Div, StoreUnlock")
 	test("++n", "LoadLock n, One, Add, StoreUnlock")

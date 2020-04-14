@@ -34,6 +34,9 @@ type bloks struct {
 // e.g. Have to handle nested blocks and sharing between peer blocks.
 // Does not process nested functions (they're already codegen and not Ast);
 // they are checked as constructed bottom up.
+//
+// Also handles the automatic "it" parameter.
+//
 func Blocks(f *Function) {
 	// first traverse the ast and collect outer variables
 	// and a list of blocks, their params & variables, and their parent if nested.
@@ -191,17 +194,17 @@ func (b *bloks) expr(expr Expr, vars set) {
 				b.expr(e, vars) // rest are conditional
 			}
 		} else {
-			expr.Children(func(e Node) {
+			expr.Children(func(e Node) Node {
 				b.expr(e.(Expr), vars)
+				return e
 			})
 		}
 	case *Block:
 		b.block(expr)
 	default:
-		expr.Children(func(e Node) {
-			if e != nil {
-				b.expr(e.(Expr), vars)
-			}
+		expr.Children(func(e Node) Node {
+			b.expr(e.(Expr), vars)
+			return e
 		})
 	}
 }

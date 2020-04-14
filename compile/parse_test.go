@@ -86,13 +86,13 @@ func TestParseExpression(t *testing.T) {
 
 	test("a % b % c", "Binary(Mod Binary(Mod a b) c)")
 
-	test("(123)", "123")
+	test("(123)", "Unary(LParen 123)")
 	test("a + b", "Nary(Add a b)")
 	test("a - b", "Nary(Add a Unary(Sub b))")
 	test("a * b", "Nary(Mul a b)")
 	test("a / b", "Nary(Mul a Unary(Div b))")
-	test("3 / a", "Nary(Mul Unary(Div a) 3)")
-	test("1 / a", "Unary(Div a)")
+	test("3 / a", "Nary(Mul 3 Unary(Div a))")
+	test("1 / a", "Nary(Mul 1 Unary(Div a))")
 	test("a + b * c", "Nary(Add a Nary(Mul b c))")
 	test("(a + b) * c", "Nary(Mul Unary(LParen Nary(Add a b)) c)")
 	test("a * b + c", "Nary(Add Nary(Mul a b) c)")
@@ -137,8 +137,6 @@ func TestParseExpression(t *testing.T) {
 	test("a ? (b ? c : d) : (e ? f : g)",
 		"Trinary(a Unary(LParen Trinary(b c d)) Unary(LParen Trinary(e f g)))")
 	test("a ?  b ? c : d  :  e ? f : g", "Trinary(a Trinary(b c d) Trinary(e f g))")
-	test("true ? b : c", "b")  // folded
-	test("false ? b : c", "c") // folded
 
 	test("a in (1,2,3)", "In(a [1 2 3])")
 	test("a not in (1,2,3)", "Unary(Not In(a [1 2 3]))")
@@ -211,61 +209,6 @@ func TestParseExpression(t *testing.T) {
 
 	test("[:a]", "Call(Record a:a)")
 
-	// folding ------------------------------------------------------
-
-	// unary
-	test("-123", "")
-	test("not true", "false")
-	test("(123)", "123")
-
-	// binary
-	test("8 % 3", "2")
-	test("1 << 4", "16")
-	test("'foobar' =~ 'oo'", "true")
-	test("'foobar' !~ 'obo'", "true")
-
-	// commutative
-	test("a * 0 * b", "Nary(Mul a b 0)") // short circuit
-	test("a & 0 & b", "0")               // short circuit
-	test("1 * a * 1", "Nary(Mul a 1)")
-	test("1 + 2", "3")
-	test("1 + 2 + 3", "6")
-	test("1 + 2 - 3", "0")
-	test("1 | 2 | 4", "7")
-	test("255 & 15", "15")
-	test("a and true and true", "Nary(And a true)")
-	test("a or false or false", "Nary(Or a false)")
-	test("a or true or b", "true")     // short circuit
-	test("a and false and b", "false") // short circuit
-
-	test("1 + a + b + 2", "Nary(Add 3 a b)")
-	test("5 + a + b - 2", "Nary(Add 3 a b)")
-	test("2 + a + b - 5", "Nary(Add -3 a b)")
-	test("a - 2 - 1", "Nary(Add a -3)")
-
-	test("1 * 8", "8")
-	test("(1 * 8)", "8")
-	test("1 / 8", ".125")
-	test("2 / 8", ".25")
-	test("2 * 4", "8")
-	test("a / 2", "Nary(Mul a Unary(Div 2))")
-	test("8 / 2", "4")
-	test("4 * 8 / 2", "16")
-	test("2 * a * b", "Nary(Mul a b 2)")
-	test("3 * a * b * 2", "Nary(Mul a b 6)")
-	test("a * 6 * b / 3", "Nary(Mul a b 2)")
-	test("a * 8 * b / 4", "Nary(Mul a b 2)")
-
-	// concatenation
-	test("'foo' $ 'bar'", "'foobar'")
-	test("'foo' $ 'bar' $ b", "Nary(Cat 'foobar' b)")
-	test("a $ 'foo' $ 'bar' $ b", "Nary(Cat a 'foobar' b)")
-	test("a $ 'foo' $ 'bar'", "Nary(Cat a 'foobar')")
-	test(`'foo' $
-		'bar'`, "'foobar'")
-	test(`'foo' $
-		'bar' $
-		'baz'`, "'foobarbaz'")
 }
 
 func TestParseParams(t *testing.T) {
@@ -333,8 +276,8 @@ func TestParseStatements(t *testing.T) {
 	// switch
 	test("switch { case 1: b }",
 		"Switch(true \n Case(1 \n b))")
-	test("switch { \n case x < 3: \n return -1 \n }",
-		"Switch(true \n Case(Binary(Lt x 3) \n Return(-1)))")
+	test("switch { \n case x < 3: \n return 123 \n }",
+		"Switch(true \n Case(Binary(Lt x 3) \n Return(123)))")
 	test("switch a { case 1,2: b case 3: c default: d }",
 		"Switch(a \n Case(1,2 \n b) \n Case(3 \n c) \n d)")
 	test("switch a { case 1,2: b case 3: c default: }",

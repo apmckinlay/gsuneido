@@ -5,7 +5,7 @@ package ast
 
 type Visitor interface {
 	Before(node Node) bool // return false to skip children
-	After(node Node)
+	After(node Node) Node // return non-nil to update
 }
 
 // Traverse calls visitor.Before for node.
@@ -14,13 +14,10 @@ type Visitor interface {
 // and then visitor.After is called for node.
 // NOTE: it will not traverse nested functions and classes
 // because they will be constants.
-func Traverse(node Node, visitor Visitor) {
-	if node == nil {
-		return
+func Traverse(node Node, visitor Visitor) Node {
+	if node == nil || !visitor.Before(node) {
+		return node
 	}
-	if !visitor.Before(node) {
-		return
-	}
-	node.Children(func(child Node) { Traverse(child, visitor) })
-	visitor.After(node)
+	node.Children(func(child Node) Node { return Traverse(child, visitor) })
+	return visitor.After(node)
 }

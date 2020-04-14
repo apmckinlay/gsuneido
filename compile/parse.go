@@ -15,7 +15,7 @@ import (
 
 func NewParser(src string) *parser {
 	lxr := NewLexer(src)
-	p := &parser{lxr: lxr, Factory: ast.Folder{Factory: ast.Builder{}}}
+	p := &parser{lxr: lxr, Factory: ast.Builder{}}
 	p.next()
 	return p
 }

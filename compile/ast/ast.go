@@ -17,14 +17,14 @@ type Node interface {
 	astNode()
 	String() string
 	// Children calls the given function for each child node
-	Children(func(Node)) // used by Traverse
+	Children(func(Node) Node) // used by Traverse
 }
 
 type astNodeT struct{}
 
 func (*astNodeT) astNode() {}
 
-func (*astNodeT) Children(func(Node)) {
+func (*astNodeT) Children(func(Node) Node) {
 }
 
 // Expr is implemented by expression nodes
@@ -67,8 +67,8 @@ func (a *Unary) String() string {
 	return "Unary(" + a.Tok.String() + " " + a.E.String() + ")"
 }
 
-func (a *Unary) Children(fn func(Node)) {
-	fn(a.E)
+func (a *Unary) Children(fn func(Node) Node) {
+	applyExpr(fn, &a.E)
 }
 
 type Binary struct {
@@ -82,9 +82,15 @@ func (a *Binary) String() string {
 	return "Binary(" + a.Tok.String() + " " + a.Lhs.String() + " " + a.Rhs.String() + ")"
 }
 
-func (a *Binary) Children(fn func(Node)) {
-	fn(a.Lhs)
-	fn(a.Rhs)
+func applyExpr(fn func(Node) Node, pexpr *Expr) {
+	if *pexpr != nil {
+		*pexpr = fn(*pexpr).(Expr)
+	}
+}
+
+func (a *Binary) Children(fn func(Node) Node) {
+	applyExpr(fn, &a.Lhs)
+	applyExpr(fn, &a.Rhs)
 }
 
 type Trinary struct {
@@ -98,10 +104,10 @@ func (a *Trinary) String() string {
 	return "Trinary(" + a.Cond.String() + " " + a.T.String() + " " + a.F.String() + ")"
 }
 
-func (a *Trinary) Children(fn func(Node)) {
-	fn(a.Cond)
-	fn(a.T)
-	fn(a.F)
+func (a *Trinary) Children(fn func(Node) Node) {
+	applyExpr(fn, &a.Cond)
+	applyExpr(fn, &a.T)
+	applyExpr(fn, &a.F)
 }
 
 // Nary is used for associative binary operators e.g. add, multiply, and, or
@@ -119,9 +125,9 @@ func (a *Nary) String() string {
 	return s + ")"
 }
 
-func (a *Nary) Children(fn func(Node)) {
-	for _, node := range a.Exprs {
-		fn(node)
+func (a *Nary) Children(fn func(Node) Node) {
+	for i := range a.Exprs {
+		applyExpr(fn, &a.Exprs[i])
 	}
 }
 
@@ -136,10 +142,10 @@ func (a *RangeTo) String() string {
 	return "RangeTo(" + a.E.String() + " " + fmt.Sprint(a.From) + " " + fmt.Sprint(a.To) + ")"
 }
 
-func (a *RangeTo) Children(fn func(Node)) {
-	fn(a.E)
-	fn(a.From)
-	fn(a.To)
+func (a *RangeTo) Children(fn func(Node) Node) {
+	applyExpr(fn, &a.E)
+	applyExpr(fn, &a.From)
+	applyExpr(fn, &a.To)
 }
 
 type RangeLen struct {
@@ -153,10 +159,10 @@ func (a *RangeLen) String() string {
 	return "RangeLen(" + a.E.String() + " " + fmt.Sprint(a.From) + " " + fmt.Sprint(a.Len) + ")"
 }
 
-func (a *RangeLen) Children(fn func(Node)) {
-	fn(a.E)
-	fn(a.From)
-	fn(a.Len)
+func (a *RangeLen) Children(fn func(Node) Node) {
+	applyExpr(fn, &a.E)
+	applyExpr(fn, &a.From)
+	applyExpr(fn, &a.Len)
 }
 
 type Mem struct {
@@ -169,9 +175,9 @@ func (a *Mem) String() string {
 	return "Mem(" + a.E.String() + " " + a.M.String() + ")"
 }
 
-func (a *Mem) Children(fn func(Node)) {
-	fn(a.E)
-	fn(a.M)
+func (a *Mem) Children(fn func(Node) Node) {
+	applyExpr(fn, &a.E)
+	applyExpr(fn, &a.M)
 }
 
 type In struct {
@@ -190,10 +196,10 @@ func (a *In) String() string {
 	return s + "])"
 }
 
-func (a *In) Children(fn func(Node)) {
-	fn(a.E)
-	for _, node := range a.Exprs {
-		fn(node)
+func (a *In) Children(fn func(Node) Node) {
+	applyExpr(fn, &a.E)
+	for i := range a.Exprs {
+		applyExpr(fn, &a.Exprs[i])
 	}
 }
 
@@ -211,10 +217,10 @@ func (a *Call) String() string {
 	return s + ")"
 }
 
-func (a *Call) Children(fn func(Node)) {
-	fn(a.Fn)
-	for _, arg := range a.Args {
-		fn(arg.E)
+func (a *Call) Children(fn func(Node) Node) {
+	applyExpr(fn, &a.Fn)
+	for i := range a.Args {
+		applyExpr(fn, &a.Args[i].E)
 	}
 }
 
@@ -269,9 +275,15 @@ func (a *Function) str(which string) string {
 	return s + ")"
 }
 
-func (a *Function) Children(fn func(Node)) {
-	for _, stmt := range a.Body {
-		fn(stmt)
+func applyStmt(fn func(Node) Node, pstmt *Statement) {
+	if *pstmt != nil {
+		*pstmt = fn(*pstmt).(Statement)
+	}
+}
+
+func (a *Function) Children(fn func(Node) Node) {
+	for i := range a.Body {
+		applyStmt(fn, &a.Body[i])
 	}
 }
 
@@ -307,8 +319,8 @@ func (a *Block) String() string {
 	return a.Function.str(s)
 }
 
-func (a *Block) Children(fn func(Node)) {
-	fn(&a.Function)
+func (a *Block) Children(fn func(Node) Node) {
+	a.Function = *fn(&a.Function).(*Function)
 }
 
 type Factory interface {
@@ -394,9 +406,9 @@ func (x *Compound) String() string {
 	return s + "}"
 }
 
-func (x *Compound) Children(fn func(Node)) {
-	for _, stmt := range x.Body {
-		fn(stmt)
+func (x *Compound) Children(fn func(Node) Node) {
+	for i := range x.Body {
+		applyStmt(fn, &x.Body[i])
 	}
 }
 
@@ -415,10 +427,10 @@ func (x *If) String() string {
 	return s + ")"
 }
 
-func (x *If) Children(fn func(Node)) {
-	fn(x.Cond)
-	fn(x.Then)
-	fn(x.Else)
+func (x *If) Children(fn func(Node) Node) {
+	applyExpr(fn, &x.Cond)
+	applyStmt(fn, &x.Then)
+	applyStmt(fn, &x.Else)
 }
 
 type Return struct {
@@ -434,8 +446,8 @@ func (x *Return) String() string {
 	return s + ")"
 }
 
-func (x *Return) Children(fn func(Node)) {
-	fn(x.E)
+func (x *Return) Children(fn func(Node) Node) {
+	applyExpr(fn, &x.E)
 }
 
 type Throw struct {
@@ -447,8 +459,8 @@ func (x *Throw) String() string {
 	return "Throw(" + x.E.String() + ")"
 }
 
-func (x *Throw) Children(fn func(Node)) {
-	fn(x.E)
+func (x *Throw) Children(fn func(Node) Node) {
+	applyExpr(fn, &x.E)
 }
 
 type TryCatch struct {
@@ -476,9 +488,10 @@ func (x *TryCatch) String() string {
 	return s + ")"
 }
 
-func (x *TryCatch) Children(fn func(Node)) {
-	fn(x.Try)
-	fn(x.Catch)
+func (x *TryCatch) Children(fn func(Node) Node) {
+	// TODO what about CatchVar ?
+	applyStmt(fn, &x.Try)
+	applyStmt(fn, &x.Catch)
 }
 
 type Forever struct {
@@ -490,8 +503,8 @@ func (x *Forever) String() string {
 	return "Forever(" + x.Body.String() + ")"
 }
 
-func (x *Forever) Children(fn func(Node)) {
-	fn(x.Body)
+func (x *Forever) Children(fn func(Node) Node) {
+	applyStmt(fn, &x.Body)
 }
 
 type ForIn struct {
@@ -505,9 +518,10 @@ func (x *ForIn) String() string {
 	return "ForIn(" + x.Var.Name + " " + x.E.String() + "\n" + x.Body.String() + ")"
 }
 
-func (x *ForIn) Children(fn func(Node)) {
-	fn(x.E)
-	fn(x.Body)
+func (x *ForIn) Children(fn func(Node) Node) {
+	// TODO what about Var ?
+	applyExpr(fn, &x.E)
+	applyStmt(fn, &x.Body)
 }
 
 type For struct {
@@ -538,15 +552,15 @@ func (x *For) String() string {
 	return s + "\n" + x.Body.String() + ")"
 }
 
-func (x *For) Children(fn func(Node)) {
-	for _, expr := range x.Init {
-		fn(expr)
+func (x *For) Children(fn func(Node) Node) {
+	for i := range x.Init {
+		applyExpr(fn, &x.Init[i])
 	}
-	fn(x.Cond)
-	for _, expr := range x.Inc {
-		fn(expr)
+	applyExpr(fn, &x.Cond)
+	for i := range x.Inc {
+		applyExpr(fn, &x.Inc[i])
 	}
-	fn(x.Body)
+	applyStmt(fn, &x.Body)
 }
 
 type While struct {
@@ -559,9 +573,9 @@ func (x *While) String() string {
 	return "While(" + x.Cond.String() + " " + x.Body.String() + ")"
 }
 
-func (x *While) Children(fn func(Node)) {
-	fn(x.Cond)
-	fn(x.Body)
+func (x *While) Children(fn func(Node) Node) {
+	applyExpr(fn, &x.Cond)
+	applyStmt(fn, &x.Body)
 }
 
 type DoWhile struct {
@@ -574,9 +588,9 @@ func (x *DoWhile) String() string {
 	return "DoWhile(" + x.Body.String() + " " + x.Cond.String() + ")"
 }
 
-func (x *DoWhile) Children(fn func(Node)) {
-	fn(x.Body)
-	fn(x.Cond)
+func (x *DoWhile) Children(fn func(Node) Node) {
+	applyStmt(fn, &x.Body)
+	applyExpr(fn, &x.Cond)
 }
 
 type Break struct {
@@ -604,8 +618,8 @@ func (x *ExprStmt) String() string {
 	return x.E.String()
 }
 
-func (x *ExprStmt) Children(fn func(Node)) {
-	fn(x.E)
+func (x *ExprStmt) Children(fn func(Node) Node) {
+	applyExpr(fn, &x.E)
 }
 
 type Switch struct {
@@ -645,17 +659,18 @@ func (x *Switch) String() string {
 	return s + ")"
 }
 
-func (x *Switch) Children(fn func(Node)) {
-	fn(x.E)
-	for _, c := range x.Cases {
-		for _, expr := range c.Exprs {
-			fn(expr)
+func (x *Switch) Children(fn func(Node) Node) {
+	applyExpr(fn, &x.E)
+	for i := range x.Cases {
+		c := &x.Cases[i]
+		for j := range c.Exprs {
+			applyExpr(fn, &c.Exprs[j])
 		}
-		for _, stmt := range c.Body {
-			fn(stmt)
+		for j := range c.Body {
+			applyStmt(fn, &c.Body[j])
 		}
 	}
-	for _, stmt := range x.Default {
-		fn(stmt)
+	for i := range x.Default {
+		applyStmt(fn, &x.Default[i])
 	}
 }

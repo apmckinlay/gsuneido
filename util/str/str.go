@@ -193,3 +193,12 @@ func (cb *CommaBuilder) Add(s string) {
 func (cb *CommaBuilder) String() string {
 	return cb.sb.String()
 }
+
+// FromList returns a comma separated string
+func FromList(list []string) string {
+	cb := CommaBuilder{}
+	for _,s := range list {
+		cb.Add(s)
+	}
+	return cb.String()
+}
