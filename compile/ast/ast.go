@@ -246,6 +246,7 @@ type Function struct {
 	Pos         int32
 	Params      []Param
 	Body        []Statement
+	HasBlocks	bool
 	Final       map[string]int
 	Base        Gnum
 	IsNewMethod bool

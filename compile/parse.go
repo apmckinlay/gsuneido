@@ -68,6 +68,9 @@ type funcInfo struct {
 	
 	// compoundNest is the compound nesting level, used for final
 	compoundNest int
+	
+	// hasBlocks is whether the function has any blocks
+	hasBlocks bool
 }
 
 // disqualified is a special value for final

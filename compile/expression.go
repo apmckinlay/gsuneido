@@ -456,6 +456,7 @@ func hasUnnamed(args []ast.Arg) bool {
 }
 
 func (p *parser) block() *ast.Block {
+	p.hasBlocks = true
 	pos := p.Pos
 	p.match(tok.LCurly)
 	params := p.blockParams()

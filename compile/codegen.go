@@ -52,7 +52,9 @@ const (
 // codegen compiles an Ast to an SuFunc
 func codegen(fn *ast.Function) *SuFunc {
 	ast.PropFold(fn)
-	ast.Blocks(fn)
+	if fn.HasBlocks {
+		ast.Blocks(fn)
+	}
 	return codegen2(fn, fn)
 }
 
@@ -478,7 +480,7 @@ func (cg *cgen) exprList(list []ast.Expr) {
 func (cg *cgen) exprStmt(expr ast.Expr, lastStmt bool) {
 	if lastStmt {
 		cg.expr2(expr, callNilOk)
-	} else if _,ok := expr.(*ast.Constant); !ok {
+	} else if _, ok := expr.(*ast.Constant); !ok {
 		cg.expr2(expr, callDiscard)
 		if !lastStmt {
 			if _, ok := expr.(*ast.Call); !ok {
