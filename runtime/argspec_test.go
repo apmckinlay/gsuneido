@@ -32,8 +32,8 @@ func TestArgSpecEqual(t *testing.T) {
 		&ArgSpecEach0,
 		&ArgSpecEach1,
 		&ArgSpecBlock,
-		&ArgSpec{Nargs: 2, Spec: []byte{0, 1}, Names: []Value{SuStr("foo"), SuStr("bar")}},
-		&ArgSpec{Nargs: 2, Spec: []byte{0, 1}, Names: []Value{SuStr("foo"), SuStr("baz")}},
+		{Nargs: 2, Spec: []byte{0, 1}, Names: []Value{SuStr("foo"), SuStr("bar")}},
+		{Nargs: 2, Spec: []byte{0, 1}, Names: []Value{SuStr("foo"), SuStr("baz")}},
 	}
 	for i, x := range as {
 		for j, y := range as {
