@@ -15,7 +15,7 @@ import (
 
 func NewParser(src string) *parser {
 	lxr := NewLexer(src)
-	p := &parser{lxr: lxr, Factory: ast.Builder{}}
+	p := &parser{lxr: lxr, Factory: ast.Builder{}, final: map[string]int{}}
 	p.next()
 	return p
 }
@@ -52,10 +52,19 @@ type parser struct {
 	// assignName is used to pass the variable name through an assignment
 	// e.g. foo = function () { ... }; Name(foo) => "foo"
 	assignName string
+	
+	// final is used to identify final variables
+	final  map[string]int
+	
+	// compoundNest is the compound nesting level, used for final
+	compoundNest int
 
 	// checker is used to add additional checking along with codegen
 	checker *check.Check
 }
+
+// disqualified is a special value for final
+const disqualified = -1
 
 /*
 eval* methods are helpers so you can match/next after evaluating something

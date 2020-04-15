@@ -51,8 +51,8 @@ const (
 
 // codegen compiles an Ast to an SuFunc
 func codegen(fn *ast.Function) *SuFunc {
-	ast.Blocks(fn)
 	ast.PropFold(fn)
+	ast.Blocks(fn)
 	return codegen2(fn, false)
 }
 

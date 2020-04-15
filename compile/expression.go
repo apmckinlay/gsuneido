@@ -53,6 +53,9 @@ func (p *parser) pcExpr(minprec int8) ast.Expr {
 			}
 		case token == tok.Inc || token == tok.Dec: // postfix
 			p.ckLvalue(e)
+			if id := localVar(e); id != "" {
+				p.final[id] = disqualified // modified
+			}
 			e = p.Unary(token+1, e) // +1 must be PostInc/Dec
 		case token == tok.In:
 			e = p.in(e)
@@ -86,8 +89,20 @@ func (p *parser) pcExpr(minprec int8) ast.Expr {
 			p.match(tok.RBracket)
 		case tok.AssignStart < token && token < tok.AssignEnd:
 			p.ckLvalue(e)
-			if id, ok := e.(*ast.Ident); ok && token == tok.Eq {
-				p.assignName = id.Name
+			if id, ok := e.(*ast.Ident); ok {
+				name := id.Name
+				if token == tok.Eq {
+					p.assignName = name
+					if ascii.IsLower(name[0]) {
+						if _, ok := p.final[name]; ok {
+							p.final[name] = disqualified // multiple assignment
+						} else {
+							p.final[name] = p.compoundNest
+						}
+					}
+				} else {
+					p.final[name] = disqualified
+				}
 			}
 			rhs := p.expr()
 			p.assignName = ""
@@ -121,6 +136,13 @@ func (p *parser) pcExpr(minprec int8) ast.Expr {
 		default: // other left associative binary operators
 			rhs := p.pcExpr(prec + 1) // +1 for left associative
 			e = p.Binary(e, token, rhs)
+		}
+	}
+	if id := localVar(e); id != "" {
+		// disqualify if used in a more outer compound
+		// because the initialization may be conditional
+		if nest, ok := p.final[id]; !ok || nest > p.compoundNest {
+			p.final[id] = disqualified
 		}
 	}
 	return e
@@ -219,6 +241,9 @@ func (p *parser) atom() ast.Expr {
 		p.next()
 		e := p.pcExpr(precedence[tok.Dot])
 		p.ckLvalue(e)
+		if id := localVar(e); id != "" {
+			p.final[id] = disqualified // modified
+		}
 		return p.Unary(token, e)
 	case tok.Dot: // unary, i.e. implicit "this"
 		// does not absorb Dot
@@ -348,7 +373,7 @@ func (p *parser) atArgument() []ast.Arg {
 	}
 	expr := p.expr()
 	p.match(tok.RParen)
-	return []ast.Arg{ast.Arg{Name: which, E: expr}}
+	return []ast.Arg{{Name: which, E: expr}}
 }
 
 func (p *parser) argumentList(closing tok.Token) []ast.Arg {
@@ -443,11 +468,13 @@ func (p *parser) blockParams() []ast.Param {
 	var params []ast.Param
 	if p.matchIf(tok.BitOr) {
 		if p.matchIf(tok.At) {
-			params = append(params, ast.MkParam("@" + p.Text))
+			params = append(params, ast.MkParam("@"+p.Text))
+			p.final[p.Text] = disqualified
 			p.matchIdent()
 		} else {
 			for p.Token.IsIdent() {
 				params = append(params, ast.MkParam(p.Text))
+				p.final[unDyn(p.Text)] = disqualified
 				p.matchIdent()
 				p.matchIf(tok.Comma)
 			}
@@ -455,4 +482,11 @@ func (p *parser) blockParams() []ast.Param {
 		p.match(tok.BitOr)
 	}
 	return params
+}
+
+func localVar(node ast.Node) string {
+	if id, ok := node.(*ast.Ident); ok && ascii.IsLower(id.Name[0]) {
+		return id.Name
+	}
+	return ""
 }

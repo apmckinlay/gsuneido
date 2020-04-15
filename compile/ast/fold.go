@@ -8,7 +8,6 @@ import (
 
 	tok "github.com/apmckinlay/gsuneido/lexer/tokens"
 	. "github.com/apmckinlay/gsuneido/runtime"
-	"github.com/apmckinlay/gsuneido/util/ascii"
 	"github.com/apmckinlay/gsuneido/util/dnum"
 	"github.com/apmckinlay/gsuneido/util/regex"
 )
@@ -16,103 +15,10 @@ import (
 // Fold traverses an AST and does constant propagation and folding
 // modifying the AST
 func PropFold(fn *Function) *Function {
-	vars := Final(fn)
-	propfold(fn, vars)
+	// Final variables (set once, not modified) are determined during parse
+	propfold(fn, fn.Final)
 	return fn
 }
-
-// Final - first phase, identify final local variables
-// i.e. that are initialized once and never modified.
-// Disqualifies variables that are used in an outer compound
-// since these may be conditionally initialized.
-func Final(f *Function) map[string]int { // public for testing
-	vars := map[string]int{}
-	for _, p := range f.Params {
-		// BUG doesn't handle @ or . or _
-		vars[p.Name.Name] = disqualified
-	}
-	Traverse(f, &final{vars: vars})
-	for id, lev := range vars {
-		if lev == disqualified {
-			delete(vars, id)
-		}
-	}
-	return vars
-}
-
-type final struct {
-	vars  map[string]int
-	level int
-}
-
-const disqualified = -1
-
-func (f *final) Before(node Node) bool {
-	switch node := node.(type) {
-	case *Ident: // usage
-		if id := local(node); id != "" {
-			if level, ok := f.vars[id]; !ok || f.level < level {
-				f.vars[id] = disqualified
-			}
-		}
-	case *Unary:
-		if node.Tok == tok.Inc || node.Tok == tok.PostInc ||
-			node.Tok == tok.Dec || node.Tok == tok.PostDec {
-			if id := local(node.E); id != "" {
-				f.vars[id] = disqualified
-			}
-		}
-	case *Binary:
-		if id := local(node.Lhs); id != "" {
-			if node.Tok == tok.Eq { // assignment
-				if _, ok := f.vars[id]; ok {
-					f.vars[id] = disqualified
-				} else {
-					f.vars[id] = f.level
-				}
-			} else if tok.AssignStart < node.Tok && node.Tok < tok.AssignEnd {
-				f.vars[id] = disqualified
-			}
-			Traverse(node.Rhs, f)
-			return false // don't process Lhs so we don't think ident is usage
-		}
-	case *ForIn:
-		f.vars[node.Var.Name] = disqualified
-	case *TryCatch:
-		if node.CatchVar.Name != "" {
-			f.vars[node.CatchVar.Name] = disqualified
-		}
-	case *Block:
-		for _, p := range node.Params {
-			name := p.Name.Name
-			if name[0] == '@' {
-				name = name[1:]
-			}
-			f.vars[name] = disqualified
-		}
-		f.level++
-	case *Compound, *Switch:
-		f.level++
-	}
-	return true
-}
-
-func (f *final) After(node Node) Node {
-	switch node.(type) {
-	case *Compound, *Switch, *Block:
-		f.level--
-	}
-	return node
-}
-
-func local(node Node) string {
-	if id, ok := node.(*Ident); ok && ascii.IsLower(id.Name[0]) {
-		return id.Name
-	}
-	return ""
-}
-
-//-------------------------------------------------------------------
 
 // propfold - constant propagation and folding
 func propfold(fn *Function, vars map[string]int) {

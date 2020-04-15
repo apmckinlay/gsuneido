@@ -8,15 +8,27 @@ import (
 	. "github.com/apmckinlay/gsuneido/lexer"
 	tok "github.com/apmckinlay/gsuneido/lexer/tokens"
 	. "github.com/apmckinlay/gsuneido/runtime"
+	"github.com/apmckinlay/gsuneido/util/verify"
 )
 
 // function parse a function (starting with the "function" keyword)
 func (p *parser) Function() *ast.Function {
 	pos := p.Pos
 	p.match(tok.Function)
+	before := p.compoundNest
 	params := p.params(false)
 	body := p.compound()
-	return &ast.Function{Pos: pos, Params: params, Body: body}
+	verify.That(p.compoundNest == before)
+	p.removeDisqualified()
+	return &ast.Function{Pos: pos, Params: params, Body: body, Final: p.final}
+}
+
+func (p *parser) removeDisqualified() {
+	for id, lev := range p.final {
+		if lev == disqualified {
+			delete(p.final, id)
+		}
+	}
 }
 
 // method parse a class method (without the "function" keyword)
@@ -34,12 +46,14 @@ func (p *parser) params(inClass bool) []ast.Param {
 		params = append(params,
 			ast.Param{Name: ast.Ident{Name: "@" + p.Text, Pos: p.Pos},
 				Unused: p.unusedAhead()})
+		p.final[p.Text] = disqualified
 		p.matchIdent()
 	} else {
 		defs := false
 		for p.Token != tok.RParen {
 			dot := p.matchIf(tok.Dot)
 			name := p.Text
+			p.final[unDyn(name)] = disqualified
 			pos := p.Pos
 			if dot {
 				if !inClass {
@@ -75,6 +89,14 @@ func (p *parser) params(inClass bool) []ast.Param {
 	return params
 }
 
+// unDyn removes the leading underscore from dynamic parameters
+func unDyn(id string) string {
+	if id[0] == '_' {
+		return id[1:]
+	}
+	return id
+}
+
 func (p *parser) unusedAhead() bool {
 	i := 0
 	for ; p.lxr.Ahead(i).Token == tok.Whitespace; i++ {
@@ -98,11 +120,13 @@ func (p *parser) compound() []ast.Statement {
 }
 
 func (p *parser) statements() []ast.Statement {
+	p.compoundNest++
 	list := []ast.Statement{}
 	for p.Token != tok.RCurly {
 		stmt := p.statement()
 		list = append(list, stmt)
 	}
+	p.compoundNest--
 	return list
 }
 
@@ -198,6 +222,7 @@ func (p *parser) ifStmt() *ast.If {
 }
 
 func (p *parser) switchStmt() *ast.Switch {
+	p.compoundNest++
 	var expr ast.Expr
 	if p.Token == tok.LCurly {
 		expr = p.Constant(True)
@@ -214,6 +239,7 @@ func (p *parser) switchStmt() *ast.Switch {
 		def = p.switchBody()
 	}
 	p.match(tok.RCurly)
+	p.compoundNest--
 	return &ast.Switch{E: expr, Cases: cases, Default: def}
 }
 
@@ -280,6 +306,7 @@ func (p *parser) isForIn() bool {
 func (p *parser) forIn() *ast.ForIn {
 	parens := p.matchIf(tok.LParen)
 	id := p.Text
+	p.final[id] = disqualified
 	pos := p.Pos
 	p.matchIdent()
 	p.match(tok.In)
@@ -358,6 +385,7 @@ func (p *parser) tryStmt() *ast.TryCatch {
 	if p.matchIf(tok.Catch) {
 		if p.matchIf(tok.LParen) {
 			catchVar = p.Text
+			p.final[catchVar] = disqualified
 			varPos = p.Pos
 			unused = p.unusedAhead()
 			p.matchIdent()

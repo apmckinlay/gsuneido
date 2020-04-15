@@ -20,10 +20,11 @@ func TestFinal(t *testing.T) {
 		t.Helper()
 		p := NewParser("function (p) {\n" + src + "\n}")
 		f := p.Function()
-		vars := ast.Final(f) // this is what we're testing
 		list := []string{}
-		for v := range vars {
-			list = append(list, v)
+		for v, lev := range f.Final {
+			if lev != disqualified {
+				list = append(list, v)
+			}
 		}
 		sort.Strings(list)
 		Assert(t).That(str.FromList(list), Like(expected))
