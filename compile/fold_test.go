@@ -43,7 +43,7 @@ func TestFinal(t *testing.T) {
 	test("forever\n{ x = 5 }\n x", "") // usage at outer nesting level
 }
 
-func TestFold(t *testing.T) {
+func TestPropFold(t *testing.T) {
 	test := func(src string, expected string) {
 		t.Helper()
 		rt.DefaultSingleQuotes = true

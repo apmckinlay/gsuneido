@@ -31,7 +31,7 @@ func propfold(fn *Function, vars map[string]int) {
 			panic(fmt.Sprintf("compile error @%d %s", f.srcpos, e))
 		}
 	}(&f)
-	Traverse(fn, &f)
+	fn.Children(f.visit)
 }
 
 type fold struct {
@@ -39,14 +39,11 @@ type fold struct {
 	srcpos int
 }
 
-func (f *fold) Before(node Node) bool {
+func (f *fold) visit(node Node) Node {
 	if stmt, ok := node.(Statement); ok {
 		f.srcpos = stmt.Position() // for error reporting
 	}
-	return true
-}
-
-func (f *fold) After(node Node) Node {
+	node.Children(f.visit) // recurse
 	node = f.fold(node)
 	node = f.findConst(node)
 	return node

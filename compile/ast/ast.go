@@ -17,7 +17,7 @@ type Node interface {
 	astNode()
 	String() string
 	// Children calls the given function for each child node
-	Children(func(Node) Node) // used by Traverse
+	Children(func(Node) Node)
 }
 
 type astNodeT struct{}
