@@ -35,6 +35,9 @@ type Thread struct {
 	sp int
 	// spMax is the "high water" mark for sp
 	spMax int
+	
+	// blockReturnId is the id of the function to return from
+	blockReturnId uint32
 
 	// RxCache is per thread so no locking is required
 	RxCache *regex.PatternCache

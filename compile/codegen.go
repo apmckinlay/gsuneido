@@ -53,11 +53,12 @@ const (
 func codegen(fn *ast.Function) *SuFunc {
 	ast.PropFold(fn)
 	ast.Blocks(fn)
-	return codegen2(fn, false)
+	return codegen2(fn, fn)
 }
 
-func codegen2(fn *ast.Function, isBlock bool) *SuFunc {
-	cg := cgen{outerFn: fn, base: fn.Base, isNew: fn.IsNewMethod, isBlock: isBlock}
+func codegen2(fn *ast.Function, outerFn *ast.Function) *SuFunc {
+	cg := cgen{outerFn: outerFn, base: fn.Base, isNew: fn.IsNewMethod, 
+		isBlock: fn != outerFn}
 	return cg.codegen(fn)
 }
 
@@ -953,13 +954,13 @@ func (cg *cgen) argSpecEq(a1, a2 *ArgSpec) bool {
 	return true
 }
 
-var funcId uint32
+var funcId uint32 = 1
 
 func (cg *cgen) block(b *ast.Block) {
 	f := &b.Function
 	var fn *SuFunc
 	if b.CompileAsFunction {
-		fn = codegen2(f, true)
+		fn = codegen2(f, cg.outerFn)
 		cg.emitValue(fn)
 	} else {
 		// closure

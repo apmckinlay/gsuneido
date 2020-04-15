@@ -57,16 +57,24 @@ func disasm1(fn *SuFunc, i int, indent int) (int, string) {
 	switch oc {
 	case op.Int:
 		n := fetchInt16()
-		s += fmt.Sprintf(" %d", n)
+		s += fmt.Sprint(" ", n)
 	case op.Value:
 		v := fn.Values[fetchUint8()]
 		s += fmt.Sprintf(" %v", v)
-		if fn, ok := v.(*SuFunc); ok {
-			s += nested(fn)
+		if f, ok := v.(*SuFunc); ok {
+			if f.Id != 0 {
+				s += fmt.Sprint(" ", f.Id)
+			}
+			s += nested(f)
 		}
+	case op.BlockReturn:
+		s += fmt.Sprint(" ", fn.OuterId)
 	case op.Block:
-		fn := fn.Values[fetchUint8()].(*SuFunc)
-		s += nested(fn)
+		f := fn.Values[fetchUint8()].(*SuFunc)
+		if f.Id != 0 {
+			s += fmt.Sprint(" ", f.Id)
+		}
+		s += nested(f)
 	case op.Load, op.LoadLock, op.Store, op.Dyload:
 		idx := fetchUint8()
 		s += " " + fn.Names[idx]
@@ -76,11 +84,11 @@ func disasm1(fn *SuFunc, i int, indent int) (int, string) {
 	case op.Jump, op.JumpTrue, op.JumpFalse, op.And, op.Or, op.QMark, op.In, op.JumpIs,
 		op.JumpIsnt, op.Catch:
 		j := fetchInt16()
-		s += fmt.Sprintf(" %d", i+j)
+		s += fmt.Sprint(" ", i+j)
 	case op.ForIn:
 		j := fetchInt16()
 		idx := fetchUint8()
-		s += " " + fn.Names[idx] + fmt.Sprintf(" %d", i+j-1)
+		s += " " + fn.Names[idx] + fmt.Sprint(" ", i+j-1)
 	case op.Try:
 		j := fetchInt16()
 		v := fn.Values[fetchUint8()]

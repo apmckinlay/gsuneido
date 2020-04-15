@@ -142,7 +142,7 @@ func (t *Thread) interp(catchJump, catchSp *int) (ret Value) {
 			return // not panic'ing, normal return
 		}
 		if e == BlockReturn {
-			if t.frames[t.fp-1].fn.OuterId != fr.fn.Id {
+			if t.blockReturnId != fr.fn.Id {
 				panic(e) // not our block, rethrow
 			}
 			return // normal return
@@ -500,6 +500,7 @@ loop:
 			t.Push(nil)
 			fallthrough
 		case op.BlockReturn:
+			t.blockReturnId = fr.fn.OuterId
 			panic(BlockReturn)
 		case op.CallFuncDiscard, op.CallFuncNoNil, op.CallFuncNilOk:
 			f := t.Pop()
