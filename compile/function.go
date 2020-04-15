@@ -13,14 +13,22 @@ import (
 
 // function parse a function (starting with the "function" keyword)
 func (p *parser) Function() *ast.Function {
-	pos := p.Pos
 	p.match(tok.Function)
-	before := p.compoundNest
-	params := p.params(false)
+	return p.function(false)
+}
+
+// function parses a function or method (without the "function" keyword)
+func (p *parser) function(inClass bool) *ast.Function {
+	funcInfoSave := p.funcInfo
+	p.funcInfo = funcInfo{final: map[string]int{}}
+	pos := p.Pos
+	params := p.params(inClass)
 	body := p.compound()
-	verify.That(p.compoundNest == before)
+	verify.That(p.compoundNest == 0)
 	p.removeDisqualified()
-	return &ast.Function{Pos: pos, Params: params, Body: body, Final: p.final}
+	fn := &ast.Function{Pos: pos, Params: params, Body: body, Final: p.final}
+	p.funcInfo = funcInfoSave
+	return fn
 }
 
 func (p *parser) removeDisqualified() {
@@ -29,14 +37,6 @@ func (p *parser) removeDisqualified() {
 			delete(p.final, id)
 		}
 	}
-}
-
-// method parse a class method (without the "function" keyword)
-func (p *parser) method() *ast.Function {
-	pos := p.Pos
-	params := p.params(true)
-	body := p.compound()
-	return &ast.Function{Pos: pos, Params: params, Body: body}
 }
 
 func (p *parser) params(inClass bool) []ast.Param {

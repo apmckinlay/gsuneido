@@ -15,7 +15,8 @@ import (
 
 func NewParser(src string) *parser {
 	lxr := NewLexer(src)
-	p := &parser{lxr: lxr, Factory: ast.Builder{}, final: map[string]int{}}
+	p := &parser{lxr: lxr, Factory: ast.Builder{}, 
+		funcInfo: funcInfo{final: map[string]int{}}}
 	p.next()
 	return p
 }
@@ -53,14 +54,20 @@ type parser struct {
 	// e.g. foo = function () { ... }; Name(foo) => "foo"
 	assignName string
 	
+	// funcInfo is information gathered specific to a function
+	// it must be saved/reset/restored for nested functions
+	funcInfo
+	
+	// checker is used to add additional checking along with codegen
+	checker *check.Check
+}
+
+type funcInfo struct {
 	// final is used to identify final variables
 	final  map[string]int
 	
 	// compoundNest is the compound nesting level, used for final
 	compoundNest int
-
-	// checker is used to add additional checking along with codegen
-	checker *check.Check
 }
 
 // disqualified is a special value for final

@@ -215,7 +215,7 @@ func TestParseParams(t *testing.T) {
 	test := func(src string) {
 		t.Helper()
 		p := NewParser(src + "{}")
-		result := p.method() // method to allow dot params
+		result := p.function(true) // method to allow dot params
 		Assert(t).That(p.Token, Equals(tok.Eof))
 		s := result.String()
 		s = s[8:] // remove "Function"

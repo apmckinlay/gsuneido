@@ -194,7 +194,7 @@ func (p *parser) member(ob container, closing tok.Token, base Gnum) {
 		name := p.privatizeDef(m)
 		prevName := p.name
 		p.name += "." + name
-		ast := p.method()
+		ast := p.function(true)
 		ast.Base = base
 		if name == "New" {
 			ast.IsNewMethod = true
