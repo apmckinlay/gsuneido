@@ -86,13 +86,13 @@ func TestParseExpression(t *testing.T) {
 
 	test("a % b % c", "Binary(Mod Binary(Mod a b) c)")
 
-	test("(123)", "Unary(LParen 123)")
+	test("(123)", "123")
 	test("a + b", "Nary(Add a b)")
 	test("a - b", "Nary(Add a Unary(Sub b))")
 	test("a * b", "Nary(Mul a b)")
 	test("a / b", "Nary(Mul a Unary(Div b))")
-	test("3 / a", "Nary(Mul 3 Unary(Div a))")
-	test("1 / a", "Nary(Mul 1 Unary(Div a))")
+	test("3 / a", "Nary(Mul Unary(Div a) 3)")
+	test("1 / a", "Unary(Div a)")
 	test("a + b * c", "Nary(Add a Nary(Mul b c))")
 	test("(a + b) * c", "Nary(Mul Unary(LParen Nary(Add a b)) c)")
 	test("a * b + c", "Nary(Add Nary(Mul a b) c)")

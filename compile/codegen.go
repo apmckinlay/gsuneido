@@ -51,7 +51,9 @@ const (
 
 // codegen compiles an Ast to an SuFunc
 func codegen(fn *ast.Function) *SuFunc {
-	ast.PropFold(fn)
+	if len(fn.Final) > 0 {
+		ast.PropFold(fn)
+	}
 	if fn.HasBlocks {
 		ast.Blocks(fn)
 	}
@@ -59,7 +61,7 @@ func codegen(fn *ast.Function) *SuFunc {
 }
 
 func codegen2(fn *ast.Function, outerFn *ast.Function) *SuFunc {
-	cg := cgen{outerFn: outerFn, base: fn.Base, isNew: fn.IsNewMethod, 
+	cg := cgen{outerFn: outerFn, base: fn.Base, isNew: fn.IsNewMethod,
 		isBlock: fn != outerFn}
 	return cg.codegen(fn)
 }
