@@ -22,8 +22,10 @@ func PropFold(fn *Function) *Function {
 func propfold(fn *Function, vars map[string]int) {
 	f := fold{vars: map[string]Value{}, srcpos: -1,
 		Folder: Folder{Factory: Builder{}}}
-	for v := range vars {
-		f.vars[v] = nil
+	for id, lev := range vars {
+		if lev != -1 {
+			f.vars[id] = nil
+		}
 	}
 	defer func(f *fold) {
 		if e := recover(); e != nil {

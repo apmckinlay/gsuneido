@@ -25,19 +25,10 @@ func (p *parser) function(inClass bool) *ast.Function {
 	params := p.params(inClass)
 	body := p.compound()
 	verify.That(p.compoundNest == 0)
-	p.removeDisqualified()
 	fn := &ast.Function{Pos: pos, Params: params, Body: body, Final: p.final,
 		HasBlocks: p.hasBlocks}
 	p.funcInfo = funcInfoSave
 	return fn
-}
-
-func (p *parser) removeDisqualified() {
-	for id, lev := range p.final {
-		if lev == disqualified {
-			delete(p.final, id)
-		}
-	}
 }
 
 func (p *parser) params(inClass bool) []ast.Param {
