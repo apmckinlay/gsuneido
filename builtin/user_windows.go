@@ -14,6 +14,7 @@ import (
 	"github.com/apmckinlay/gsuneido/builtin/heap"
 	"github.com/apmckinlay/gsuneido/options"
 	. "github.com/apmckinlay/gsuneido/runtime"
+	"github.com/apmckinlay/gsuneido/runtime/types"
 	"github.com/apmckinlay/gsuneido/util/verify"
 	"golang.org/x/sys/windows"
 )
@@ -393,6 +394,10 @@ func psArg(ob Value, p unsafe.Pointer) unsafe.Pointer {
 var callWindowProc = user32.MustFindProc("CallWindowProcA").Addr()
 var _ = builtin5("CallWindowProc(wndprcPrev, hwnd, msg, wParam, lParam)",
 	func(a, b, c, d, e Value) Value {
+		if a.Type() != types.Number {
+			// presumably a previous callback returned by SetWindowProc
+			return UIThread.Call(a, b, c, d, e)
+		}
 		rtn := goc.Syscall5(callWindowProc,
 			intArg(a),
 			intArg(b),
@@ -975,10 +980,22 @@ var _ = builtin3("SetWindowLongPtr(hwnd, offset, value)",
 // dll User32:SetWindowProc(pointer hwnd, long offset, WNDPROC proc) pointer
 var _ = builtin3("SetWindowProc(hwnd, offset, proc)",
 	func(a, b, c Value) Value {
+		hwnd := intArg(a)
+		var cb uintptr
+		var fn Value
+		if c.Type() == types.Number {
+			cb = uintptr(ToInt(c))
+		} else {
+			fn = hwndToCb[hwnd] // save the old one in case we're overwriting
+			cb = WndProcCallback(hwnd, c)
+		}
 		rtn := goc.Syscall3(setWindowLongPtr,
-			intArg(a),
+			hwnd,
 			intArg(b),
-			NewCallback(c, 4))
+			cb)
+		if rtn == wndProcCb && fn != nil { // if overwriting
+			return fn // return the actual previous Suneido callback
+		}
 		return intRet(rtn)
 	})
 

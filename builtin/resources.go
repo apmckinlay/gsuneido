@@ -11,6 +11,7 @@ var _ = builtin0("ResourceCounts()", func() Value {
 	add(ob, "RunPiped", nRunPiped)
 	add(ob, "SocketClient", nSocketClient)
 	add(ob, "Callbacks", CallbacksCount())
+	add(ob, "WndProcs", len(hwndToCb))
 	return ob
 })
 

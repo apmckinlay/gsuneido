@@ -18,6 +18,21 @@ import (
 	"github.com/apmckinlay/gsuneido/runtime/types"
 )
 
+// use the very last 4 argument callback
+const iWndProc = goc.Ncb4s - 1
+
+// wndProcCb is the single C side callback shared by WndProc's
+var wndProcCb = goc.GetCallback(4, iWndProc)
+
+// hwndToCb maps hwnd's to Suneido callbacks
+var hwndToCb = map[uintptr]Value{}
+
+// WndProcCallback is used by SetWindowProc
+func WndProcCallback(hwnd uintptr, fn Value) uintptr {
+	hwndToCb[hwnd] = fn
+	return wndProcCb
+}
+
 const delay = 10
 
 var startTime = time.Now()
@@ -47,7 +62,7 @@ type callback struct {
 
 var cb2s [goc.Ncb2s]callback
 var cb3s [goc.Ncb3s]callback
-var cb4s [goc.Ncb4s]callback
+var cb4s [goc.Ncb4s - 1]callback // -1 to allow for wndProcCb
 
 var cbs = [3][]callback{cb2s[:], cb3s[:], cb4s[:]}
 
@@ -63,6 +78,16 @@ func callback3(i, a, b, c uintptr) uintptr {
 		IntVal(int(c)))
 }
 func callback4(i, a, b, c, d uintptr) uintptr {
+	if i == iWndProc {
+		if fn, ok := hwndToCb[a]; ok {
+			return call(fn,
+				IntVal(int(a)),
+				IntVal(int(b)),
+				IntVal(int(c)),
+				IntVal(int(d)))
+		}
+		log.Fatalln("WndProc callback missing hwnd")
+	}
 	return cb4s[i].callv(
 		IntVal(int(a)),
 		IntVal(int(b)),
@@ -71,6 +96,14 @@ func callback4(i, a, b, c, d uintptr) uintptr {
 }
 
 func (cb *callback) callv(args ...Value) uintptr {
+	if !cb.active && cb.keepTill < clock() {
+		log.Println("CALLBACK TO INACTIVE!!!", cb.fn,
+			"keepTill", cb.keepTill, "clock", clock())
+	}
+	return call(cb.fn, args...)
+}
+
+func call(fn Value, args ...Value) uintptr {
 	heapSize := heap.CurSize()
 	defer func() {
 		if e := recover(); e != nil {
@@ -78,14 +111,10 @@ func (cb *callback) callv(args ...Value) uintptr {
 		}
 		if heap.CurSize() != heapSize {
 			Fatal("callback: heapSize", heapSize, "=>", heap.CurSize(),
-				"in", cb.fn, args)
+				"in", fn, args)
 		}
 	}()
-	if !cb.active && cb.keepTill < clock() {
-		log.Println("CALLBACK TO INACTIVE!!!", cb.fn,
-			"keepTill", cb.keepTill, "clock", clock())
-	}
-	x := UIThread.Call(cb.fn, args...)
+	x := UIThread.Call(fn, args...)
 	if x == nil || x == False {
 		return 0
 	}
@@ -117,11 +146,11 @@ func handler(e interface{}) {
 var cblock sync.Mutex
 
 func NewCallback(fn Value, nargs int) uintptr {
-	cblock.Lock()
-	defer cblock.Unlock()
 	if fn.Type() == types.Number {
 		return uintptr(ToInt(fn))
 	}
+	cblock.Lock()
+	defer cblock.Unlock()
 	clock := clock()
 	callbacks := cbs[nargs-2]
 	j := -1
@@ -194,8 +223,14 @@ func ClearCallback(fn Value) bool {
 	if foundInactive {
 		log.Println("ClearCallback FOUND INACTIVE", fn)
 	} else {
-		log.Println("ClearCallback NOT FOUND", fn)
+		for hwnd,cbfn := range hwndToCb {
+			if cbfn == fn {
+				delete(hwndToCb, hwnd)
+				return true
+			}
+		}
 	}
+	// one reason it may not be found is if it was overwritten in hwndToCb
 	return false // not found
 }
 
