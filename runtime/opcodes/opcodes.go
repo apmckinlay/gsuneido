@@ -219,8 +219,8 @@ const (
 
 	// blocks -------------------------------------------------------
 
-	// Block <uint8> pushes a new block instance
-	Block
+	// Closure <uint8> pushes a new closure block instance
+	Closure
 	// BlockBreak panics "block:break" (handled by application code)
 	BlockBreak
 	// BlockContinue panics "block:continue" (handled by application code)

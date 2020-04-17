@@ -80,16 +80,16 @@ func _() {
 	_ = x[Super-69]
 	_ = x[Return-70]
 	_ = x[ReturnNil-71]
-	_ = x[Block-72]
+	_ = x[Closure-72]
 	_ = x[BlockBreak-73]
 	_ = x[BlockContinue-74]
 	_ = x[BlockReturn-75]
 	_ = x[BlockReturnNil-76]
 }
 
-const _Opcode_name = "NopPopDupSwapIntValueTrueFalseZeroOneMaxIntEmptyStrLoadStoreLoadLockStoreUnlockDyloadGlobalGetPutGetLockPutUnlockRangeToRangeLenThisIsIsntMatchMatchNotLtLteGtGteAddSubCatMulDivModLeftShiftRightShiftBitOrBitAndBitXorBitNotNotUnaryPlusUnaryMinusOrAndBoolQMarkInJumpJumpTrueJumpFalseJumpIsJumpIsntIterForInThrowTryCatchCallFuncDiscardCallFuncNoNilCallFuncNilOkCallMethDiscardCallMethNoNilCallMethNilOkSuperReturnReturnNilBlockBlockBreakBlockContinueBlockReturnBlockReturnNil"
+const _Opcode_name = "NopPopDupSwapIntValueTrueFalseZeroOneMaxIntEmptyStrLoadStoreLoadLockStoreUnlockDyloadGlobalGetPutGetLockPutUnlockRangeToRangeLenThisIsIsntMatchMatchNotLtLteGtGteAddSubCatMulDivModLeftShiftRightShiftBitOrBitAndBitXorBitNotNotUnaryPlusUnaryMinusOrAndBoolQMarkInJumpJumpTrueJumpFalseJumpIsJumpIsntIterForInThrowTryCatchCallFuncDiscardCallFuncNoNilCallFuncNilOkCallMethDiscardCallMethNoNilCallMethNilOkSuperReturnReturnNilClosureBlockBreakBlockContinueBlockReturnBlockReturnNil"
 
-var _Opcode_index = [...]uint16{0, 3, 6, 9, 13, 16, 21, 25, 30, 34, 37, 43, 51, 55, 60, 68, 79, 85, 91, 94, 97, 104, 113, 120, 128, 132, 134, 138, 143, 151, 153, 156, 158, 161, 164, 167, 170, 173, 176, 179, 188, 198, 203, 209, 215, 221, 224, 233, 243, 245, 248, 252, 257, 259, 263, 271, 280, 286, 294, 298, 303, 308, 311, 316, 331, 344, 357, 372, 385, 398, 403, 409, 418, 423, 433, 446, 457, 471}
+var _Opcode_index = [...]uint16{0, 3, 6, 9, 13, 16, 21, 25, 30, 34, 37, 43, 51, 55, 60, 68, 79, 85, 91, 94, 97, 104, 113, 120, 128, 132, 134, 138, 143, 151, 153, 156, 158, 161, 164, 167, 170, 173, 176, 179, 188, 198, 203, 209, 215, 221, 224, 233, 243, 245, 248, 252, 257, 259, 263, 271, 280, 286, 294, 298, 303, 308, 311, 316, 331, 344, 357, 372, 385, 398, 403, 409, 418, 425, 435, 448, 459, 473}
 
 func (i Opcode) String() string {
 	if i >= Opcode(len(_Opcode_index)-1) {

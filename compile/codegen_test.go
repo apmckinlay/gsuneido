@@ -175,7 +175,7 @@ func TestCodegenSuper(t *testing.T) {
 
 	test("F(){super.Bar(0,1)}", "This, Zero, One, Value 'Bar', Super Foo, CallMethNilOk (?, ?)")
 
-	test("F() { 1.Times() { super.Push(123) } }", `One, Block
+	test("F() { 1.Times() { super.Push(123) } }", `One, Closure
 		0: This
 		1: Int 123
 		4: Value 'Push'
@@ -499,7 +499,7 @@ func TestBlock(t *testing.T) {
 	Assert(t).That(block.ParamSpec.Params(), Equals("(a)"))
 
 	Assert(t).That(disasm(fn), Like(
-		`Block
+		`Closure
 		0: Load a
 		2: Load x
 		4: Add, Store b`))

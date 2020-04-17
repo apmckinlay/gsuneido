@@ -34,7 +34,7 @@ func (t *Thread) Start(fn *SuFunc, this Value) Value {
 // run is needed in addition to interp
 // because we can only recover panic on the way out of a function
 // so if the exception is caught we have to re-enter interp
-// Called by Thread.Start and SuBlock.Call
+// Called by Thread.Start and SuClosure.Call
 func (t *Thread) run() Value {
 	// fmt.Println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
 	// fmt.Println(strings.Repeat("    ", t.fp) + "run:", t.frames[t.fp].fn)
@@ -487,10 +487,10 @@ loop:
 			*catchJump = 0 // no longer catching
 		case op.Throw:
 			panic(t.Pop())
-		case op.Block:
+		case op.Closure:
 			fr.locals.moveToHeap()
 			fn := fr.fn.Values[fetchUint8()].(*SuFunc)
-			block := &SuBlock{SuFunc: *fn, locals: fr.locals, this: fr.this}
+			block := &SuClosure{SuFunc: *fn, locals: fr.locals, this: fr.this}
 			t.Push(block)
 		case op.BlockBreak:
 			panic(BlockBreak)

@@ -970,7 +970,7 @@ func (cg *cgen) block(b *ast.Block) {
 		// closure
 		fn, cg.Names = codegenBlock(f, cg)
 		i := cg.value(fn)
-		cg.emitUint8(op.Block, i)
+		cg.emitUint8(op.Closure, i)
 	}
 	if cg.outerFn.Id == 0 {
 		cg.outerFn.Id = atomic.AddUint32(&funcId, 1)

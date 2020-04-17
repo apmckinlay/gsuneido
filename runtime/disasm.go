@@ -69,7 +69,7 @@ func disasm1(fn *SuFunc, i int, indent int) (int, string) {
 		}
 	case op.BlockReturn:
 		s += fmt.Sprint(" ", fn.OuterId)
-	case op.Block:
+	case op.Closure:
 		f := fn.Values[fetchUint8()].(*SuFunc)
 		if f.Id != 0 {
 			s += fmt.Sprint(" ", f.Id)

@@ -23,7 +23,7 @@ import (
 // - SuObject, SuRecord, SuSequence - objects
 // - SuBuiltin*, SuBuiltinMethod*
 // - SuFunc
-// - SuBlock
+// - SuClosure
 // - SuClass
 // - SuInstance
 // - SuMethod - not directly accessible, but returned for bound methods

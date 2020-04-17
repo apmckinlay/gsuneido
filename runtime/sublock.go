@@ -7,8 +7,8 @@ import (
 	"github.com/apmckinlay/gsuneido/runtime/types"
 )
 
-// SuBlock is an instance of a closure block
-type SuBlock struct {
+// SuClosure is an instance of a closure block
+type SuClosure struct {
 	SuFunc
 	locals Locals
 	this   Value
@@ -16,13 +16,13 @@ type SuBlock struct {
 
 // Value interface
 
-var _ Value = (*SuBlock)(nil)
+var _ Value = (*SuClosure)(nil)
 
-func (b *SuBlock) String() string {
+func (b *SuClosure) String() string {
 	return "/* block */"
 }
 
-func (b *SuBlock) Call(t *Thread, this Value, as *ArgSpec) Value {
+func (b *SuClosure) Call(t *Thread, this Value, as *ArgSpec) Value {
 	bf := &b.SuFunc
 
 	// normally done by SuFunc Call
@@ -42,11 +42,11 @@ func (b *SuBlock) Call(t *Thread, this Value, as *ArgSpec) Value {
 	return t.run()
 }
 
-func (*SuBlock) Type() types.Type {
+func (*SuClosure) Type() types.Type {
 	return types.Block
 }
 
-func (b *SuBlock) SetConcurrent() {
+func (b *SuClosure) SetConcurrent() {
 	b.locals.SetConcurrent()
 	if b.this != nil {
 		b.this.SetConcurrent()
