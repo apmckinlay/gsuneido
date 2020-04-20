@@ -70,9 +70,7 @@ func TestParseExpression(t *testing.T) {
 		}
 		ast := parseExpr(src)
 		actual := ast.String()
-		if actual != expected {
-			t.Errorf("%s expected: %s but got: %s", src, expected, actual)
-		}
+		Assert(t).That(actual, Like(expected))
 	}
 
 	test("123", "")
@@ -161,6 +159,7 @@ func TestParseExpression(t *testing.T) {
 	test("a[0::1][0]", "Mem(RangeLen(a 0 1) 0)")
 
 	test("b = { }", "Binary(Eq b Block())")
+	test("b = { it }", "Binary(Eq b Block(it \n it))")
 	test("b = {|a,b| }", "Binary(Eq b Block(a,b))")
 	test("b = {|@a| }", "Binary(Eq b Block(@a))")
 

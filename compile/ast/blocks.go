@@ -34,9 +34,6 @@ type bloks struct {
 // e.g. Have to handle nested blocks and sharing between peer blocks.
 // Does not process nested functions (they're already codegen and not Ast);
 // they are checked as constructed bottom up.
-//
-// Also handles the automatic "it" parameter.
-//
 func Blocks(f *Function) {
 	// first traverse the ast and collect outer variables
 	// and a list of blocks, their params & variables, and their parent if nested.
@@ -217,10 +214,6 @@ func (b *bloks) block(block *Block) {
 	blockVars := make(set)
 	for _, stmt := range block.Body {
 		b.statement(stmt, blockVars)
-	}
-	if _, ok := blockVars["it"]; ok && len(block.Params) == 0 {
-		delete(blockVars, "it")
-		block.Params = []Param{{Name: Ident{Name: "it"}}}
 	}
 	for v := range params {
 		delete(blockVars, v)

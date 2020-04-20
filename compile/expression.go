@@ -275,6 +275,9 @@ func (p *parser) atom() ast.Expr {
 				// MyClass { ... } => class
 				return p.Constant(p.noName(p.class))
 			}
+			if p.Text == "it" {
+				p.itUsed = true
+			}
 			if p.Text == "dll" || p.Text == "callback" || p.Text == "struct" {
 				p.error("gSuneido does not implement " + p.Text)
 			}
@@ -457,11 +460,17 @@ func hasUnnamed(args []ast.Arg) bool {
 
 func (p *parser) block() *ast.Block {
 	p.hasBlocks = true
+	itUsedPrev := p.itUsed
+	p.itUsed = false
 	pos := p.Pos
 	p.match(tok.LCurly)
 	params := p.blockParams()
 	body := p.statements()
 	p.match(tok.RCurly)
+	if p.itUsed && len(params) == 0 {
+		params = append(params, ast.MkParam("it"))
+	}
+	p.itUsed = itUsedPrev
 	return &ast.Block{Function: ast.Function{Pos: pos, Params: params, Body: body}}
 }
 
