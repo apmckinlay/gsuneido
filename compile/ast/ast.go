@@ -246,7 +246,7 @@ type Function struct {
 	Pos         int32
 	Params      []Param
 	Body        []Statement
-	HasBlocks	bool
+	HasBlocks   bool
 	Final       map[string]int
 	Base        Gnum
 	IsNewMethod bool
@@ -300,10 +300,10 @@ func MkParam(name string) Param {
 	return Param{Name: Ident{Name: name}}
 }
 
-func (a *Param) String() string {
-	s := a.Name.Name
-	if a.DefVal != nil {
-		s += "=" + a.DefVal.String()
+func (p *Param) String() string {
+	s := p.Name.Name
+	if p.DefVal != nil {
+		s += "=" + p.DefVal.String()
 	}
 	return s
 }
