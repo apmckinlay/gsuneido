@@ -188,8 +188,13 @@ func (ck *Check) expr(expr ast.Expr, init set) set {
 				break
 			}
 		}
-		init = ck.expr(expr.Lhs, init)
-		init = ck.expr(expr.Rhs, init)
+		if tok.AssignStart < expr.Tok && expr.Tok < tok.AssignEnd {
+			init = ck.expr(expr.Rhs, init)
+			init = ck.expr(expr.Lhs, init)
+		} else {
+			init = ck.expr(expr.Lhs, init)
+			init = ck.expr(expr.Rhs, init)
+		}
 	case *ast.Ident:
 		if ascii.IsLower(expr.Name[0]) {
 			init = ck.usedVar(init, expr.Name, int(expr.Pos))

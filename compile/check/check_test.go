@@ -105,6 +105,8 @@ func TestCheckResults(t *testing.T) {
 	test("function (f) { f({|x/*unused*/| }) }")
 	test("function (f) { f({|x/*unused*/| x }) }",
 		"ERROR: used but not initialized: x @32")
+	test("function (f) { f(a=1).x = a }",
+		"ERROR: used but not initialized: a @26")
 
 	// shadowing
 	test("function (f) { f({|x| x }); x }",
