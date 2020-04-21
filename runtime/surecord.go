@@ -252,6 +252,9 @@ func (r *SuRecord) DeleteAll() {
 }
 
 func (r *SuRecord) SetReadOnly() {
+	// unpack fully before setting readonly
+	// because lazy unpack will no longer be able to save values
+	r.ToObject()
 	r.ob.SetReadOnly()
 }
 
@@ -506,7 +509,9 @@ func (r *SuRecord) getIfPresent(t *Thread, keyval Value) Value {
 func (r *SuRecord) getFromRow(key string) Value {
 	if raw := r.row.GetRaw(r.hdr, key); raw != "" {
 		val := Unpack(raw)
-		r.ob.set(SuStr(key), val) // cache unpacked value
+		if !r.ob.readonly {
+			r.ob.set(SuStr(key), val) // cache unpacked value
+		}
 		return val
 	}
 	return nil
