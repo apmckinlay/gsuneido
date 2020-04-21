@@ -38,6 +38,7 @@ type Check struct {
 	resultPos []int
 }
 
+// New returns a Check instance
 func New(t *Thread) *Check {
 	return &Check{t: t}
 }
@@ -48,24 +49,17 @@ func (ck *Check) Check(f *ast.Function) set {
 	ck.AllInit = make(map[string]int)
 	ck.AllUsed = make(map[string]struct{})
 	var init set
-	init = ck.check(f, init) // the heart
-	for _, id := range init {
-		if !ck.used(id) {
-			var at int
-			if pos := paramPos(f.Params, id); pos >= 0 {
-				at = pos
-			} else if pos, ok := ck.AllInit[id]; ok {
-				at = int(pos)
-			}
-			ck.addResult(at, "WARNING: initialized but not used: "+id)
-		}
-	}
-	for id, pos := range ck.AllInit {
-		if _, ok := ck.AllUsed[id]; !ok && !init.has(id) {
-			ck.addResult(pos, "WARNING: initialized but not used: "+id)
-		}
-	}
+	init = ck.check(f, init)
+	ck.process(f.Params, init)
 	return init
+}
+
+// CheckGlobal checks if a global name is defined.
+// It is also called by compile constant to check class base.
+func (ck *Check) CheckGlobal(name string, pos int) {
+	if nil == Global.FindName(ck.t, name) {
+		ck.addResult(pos, "ERROR: can't find: "+name)
+	}
 }
 
 // Results returns the results sorted by code position
@@ -74,14 +68,7 @@ func (ck *Check) Results() []string {
 	return ck.results
 }
 
-func paramPos(params []ast.Param, id string) int {
-	for _, p := range params {
-		if p.Name.Name == id {
-			return int(p.Name.Pos)
-		}
-	}
-	return -1
-}
+//-------------------------------------------------------------------
 
 func (ck *Check) check(f *ast.Function, init set) set {
 	init = ck.params(f.Params, init)
@@ -293,14 +280,8 @@ func (ck *Check) block(b *ast.Block, init set) set {
 	for id := range allUsed {
 		ck.AllUsed[id] = struct{}{}
 	}
-	
-	return init
-}
 
-func (ck *Check) CheckGlobal(name string, pos int) {
-	if nil == Global.FindName(ck.t, name) {
-		ck.addResult(pos, "ERROR: can't find: "+name)
-	}
+	return init
 }
 
 func (ck *Check) initVar(init set, id string, pos int) set {
@@ -325,6 +306,37 @@ func (ck *Check) usedVar(init set, id string, pos int) set {
 	ck.AllUsed[id] = struct{}{}
 	return init
 }
+
+//-------------------------------------------------------------------
+
+func (ck *Check) process(params []ast.Param, init set) {
+	for _, id := range init {
+		if !ck.used(id) {
+			var at int
+			if pos := paramPos(params, id); pos >= 0 {
+				at = pos
+			} else if pos, ok := ck.AllInit[id]; ok {
+				at = int(pos)
+			}
+			ck.addResult(at, "WARNING: initialized but not used: "+id)
+		}
+	}
+	for id, pos := range ck.AllInit {
+		if _, ok := ck.AllUsed[id]; !ok && !init.has(id) {
+			ck.addResult(pos, "WARNING: initialized but not used: "+id)
+		}
+	}
+}
+func paramPos(params []ast.Param, id string) int {
+	for _, p := range params {
+		if p.Name.Name == id {
+			return int(p.Name.Pos)
+		}
+	}
+	return -1
+}
+
+//-------------------------------------------------------------------
 
 func (ck *Check) addResult(pos int, str string) {
 	ck.resultPos = append(ck.resultPos, pos)
