@@ -40,7 +40,7 @@ func Checked(t *Thread, src string) (Value, []string) {
 	if p.Token != tok.Eof {
 		p.error("did not parse all input")
 	}
-	return v, p.checker.Results
+	return v, p.checker.Results()
 }
 
 func (p *parser) constant() Value {
@@ -295,7 +295,7 @@ func (p *parser) ckBase(name string) Gnum {
 		return Global.Copy(name[1:])
 	}
 	if p.checker != nil {
-		p.checker.CheckGlobal(name, p.Pos)
+		p.checker.CheckGlobal(name, int(p.Pos))
 	}
 	return Global.Num(name)
 }

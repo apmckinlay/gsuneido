@@ -296,10 +296,6 @@ type Param struct {
 	Unused bool
 }
 
-func MkParam(name string) Param {
-	return Param{Name: Ident{Name: name}}
-}
-
 func (p *Param) String() string {
 	s := p.Name.Name
 	if p.DefVal != nil {

@@ -13,11 +13,9 @@ package check
 // should know y will always run for the body
 // e.g. if i > 0 and false isnt x = Next() { ... x ...}
 
-// TODO add a way to indicate that a block is always called e.g. Transaction
-// to avoid spurious "possibly not initialized"
-
 import (
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -33,41 +31,47 @@ type Check struct {
 	// pos is used to store the position of the current statement
 	pos int
 	// AllInit is the set of variables assigned to, including conditionally
-	AllInit map[string]int32
+	AllInit map[string]int
 	// AllUsed is the set of variables read from, including conditionally
-	AllUsed map[string]struct{}
-	Results []string
+	AllUsed   map[string]struct{}
+	results   []string
+	resultPos []int
 }
 
 func New(t *Thread) *Check {
 	return &Check{t: t}
 }
 
+// Check is the main entry point.
+// It can be called more than once (for nested functions).
 func (ck *Check) Check(f *ast.Function) set {
-	ck.AllInit = make(map[string]int32)
+	ck.AllInit = make(map[string]int)
 	ck.AllUsed = make(map[string]struct{})
 	var init set
-	init = ck.check(f, init)
+	init = ck.check(f, init) // the heart
 	for _, id := range init {
 		if !ck.used(id) {
-			at := ""
+			var at int
 			if pos := paramPos(f.Params, id); pos >= 0 {
-				at = " @" + strconv.Itoa(pos)
+				at = pos
 			} else if pos, ok := ck.AllInit[id]; ok {
-				at = " @" + strconv.Itoa(int(pos))
+				at = int(pos)
 			}
-			ck.Results = append(ck.Results,
-				"WARNING: initialized but not used: "+id+at)
+			ck.addResult(at, "WARNING: initialized but not used: "+id)
 		}
 	}
 	for id, pos := range ck.AllInit {
 		if _, ok := ck.AllUsed[id]; !ok && !init.has(id) {
-			at := " @" + strconv.Itoa(int(pos))
-			ck.Results = append(ck.Results,
-				"WARNING: initialized but not used: "+id+at)
+			ck.addResult(pos, "WARNING: initialized but not used: "+id)
 		}
 	}
 	return init
+}
+
+// Results returns the results sorted by code position
+func (ck *Check) Results() []string {
+	sort.Sort(resultsByPos{ck})
+	return ck.results
 }
 
 func paramPos(params []ast.Param, id string) int {
@@ -97,16 +101,13 @@ func (ck *Check) params(params []ast.Param, init set) set {
 			name = name[1:]
 		}
 		if !p.Unused {
-			init = init.with(name)
+			init = append(init, name)
 		}
 	}
 	return init
 }
 
 func (ck *Check) used(id string) bool {
-	if id == "unused" {
-		return true
-	}
 	_, ok := ck.AllUsed[id]
 	return ok
 }
@@ -207,7 +208,7 @@ func (ck *Check) expr(expr ast.Expr, init set) set {
 			init = ck.usedVar(init, expr.Name, int(expr.Pos))
 		}
 		if ascii.IsUpper(expr.Name[0]) {
-			ck.CheckGlobal(expr.Name, expr.Pos)
+			ck.CheckGlobal(expr.Name, int(expr.Pos))
 		}
 	case *ast.Trinary:
 		init = ck.expr(expr.Cond, init)
@@ -228,7 +229,8 @@ func (ck *Check) expr(expr ast.Expr, init set) set {
 			})
 		}
 	case *ast.Block:
-		ck.check(&expr.Function, init.with("it"))
+		init = ck.block(expr, init)
+
 	default:
 		expr.Children(func(e ast.Node) ast.Node {
 			init = ck.expr(e.(ast.Expr), init)
@@ -238,10 +240,66 @@ func (ck *Check) expr(expr ast.Expr, init set) set {
 	return init
 }
 
-func (ck *Check) CheckGlobal(name string, pos int32) {
+func (ck *Check) block(b *ast.Block, init set) set {
+	// save & remove variables shadowed by params
+	allInit := map[string]int{}
+	allUsed := map[string]struct{}{}
+	nUsedParams := 0
+	for _, p := range b.Function.Params {
+		id := p.Name.Name
+		if !p.Unused {
+			nUsedParams++
+		}
+		if n, ok := ck.AllInit[id]; ok {
+			allInit[id] = n
+			delete(ck.AllInit, id)
+		}
+		if _, ok := ck.AllUsed[id]; ok {
+			allUsed[id] = struct{}{}
+			delete(ck.AllUsed, id)
+		}
+	}
+
+	// assume that blocks are executed at point of definition
+	// this is not necessarily true
+	// they may be called elsewhere or not at all
+	// but too many spurious warnings otherwise
+	before := init
+	after := ck.check(&b.Function, init)
+	// remove params from init
+	init = append(before, after[len(before)+nUsedParams:]...)
+
+	// detect unused params
+	for _, p := range b.Function.Params {
+		if !p.Unused {
+			id := p.Name.Name
+			if _, ok := ck.AllUsed[id]; !ok {
+				ck.addResult(int(p.Name.Pos),
+					"WARNING: initialized but not used: "+id)
+			}
+		}
+	}
+
+	// remove params
+	for _, p := range b.Function.Params {
+		id := p.Name.Name
+		delete(ck.AllInit, id)
+		delete(ck.AllUsed, id)
+	}
+	// restore shadowed variables
+	for id, n := range allInit {
+		ck.AllInit[id] = n
+	}
+	for id := range allUsed {
+		ck.AllUsed[id] = struct{}{}
+	}
+	
+	return init
+}
+
+func (ck *Check) CheckGlobal(name string, pos int) {
 	if nil == Global.FindName(ck.t, name) {
-		ck.Results = append(ck.Results, "ERROR: can't find: "+
-			name+" @"+strconv.Itoa(int(pos)))
+		ck.addResult(pos, "ERROR: can't find: "+name)
 	}
 }
 
@@ -249,7 +307,7 @@ func (ck *Check) initVar(init set, id string, pos int) set {
 	if strings.HasPrefix(id, "_") {
 		return init
 	}
-	ck.AllInit[id] = int32(pos)
+	ck.AllInit[id] = pos
 	return init.with(id)
 }
 
@@ -262,9 +320,29 @@ func (ck *Check) usedVar(init set, id string, pos int) set {
 		if _, ok := ck.AllInit[id]; ok {
 			p = "WARNING: used but possibly"
 		}
-		ck.Results = append(ck.Results,
-			p+" not initialized: "+id+" @"+strconv.Itoa(pos))
+		ck.addResult(pos, p+" not initialized: "+id)
 	}
 	ck.AllUsed[id] = struct{}{}
 	return init
+}
+
+func (ck *Check) addResult(pos int, str string) {
+	ck.resultPos = append(ck.resultPos, pos)
+	ck.results = append(ck.results, str+" @"+strconv.Itoa(pos))
+}
+
+// resultByPos is used to sort the results
+type resultsByPos struct {
+	*Check
+}
+
+func (r resultsByPos) Len() int {
+	return len(r.results)
+}
+func (r resultsByPos) Swap(i, j int) {
+	r.results[i], r.results[j] = r.results[j], r.results[i]
+	r.resultPos[i], r.resultPos[j] = r.resultPos[j], r.resultPos[i]
+}
+func (r resultsByPos) Less(i, j int) bool {
+	return r.resultPos[i] < r.resultPos[j]
 }

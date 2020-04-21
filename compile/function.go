@@ -35,9 +35,8 @@ func (p *parser) params(inClass bool) []ast.Param {
 	p.match(tok.LParen)
 	var params []ast.Param
 	if p.matchIf(tok.At) {
-		params = append(params,
-			ast.Param{Name: ast.Ident{Name: "@" + p.Text, Pos: p.Pos},
-				Unused: p.unusedAhead()})
+		params = append(params, 
+			mkParam("@" + p.Text, p.Pos, p.unusedAhead(), nil))
 		p.final[p.Text] = disqualified
 		p.matchIdent()
 	} else {
@@ -63,22 +62,26 @@ func (p *parser) params(inClass bool) []ast.Param {
 				if _, ok := def.(SuStr); ok && !was_string {
 					p.error("parameter defaults must be constants")
 				}
-				params = append(params,
-					ast.Param{Name: ast.Ident{Name: name, Pos: pos},
-						DefVal: def, Unused: unused})
+				params = append(params, mkParam(name, pos, unused, def))
 			} else {
 				if defs {
 					p.error("default parameters must come last")
 				}
-				params = append(params,
-					ast.Param{Name: ast.Ident{Name: name, Pos: pos},
-						Unused: unused})
+				params = append(params, mkParam(name, pos, unused, nil))
 			}
 			p.matchIf(tok.Comma)
 		}
 	}
 	p.match(tok.RParen)
 	return params
+}
+
+func mkParam(name string, pos int32, unused bool, def Value) ast.Param {
+	if name == "unused" || name == "@unused" {
+		unused = true
+	}
+	return ast.Param{Name: ast.Ident{Name: name, Pos: pos},
+		DefVal: def, Unused: unused}
 }
 
 // unDyn removes the leading underscore from dynamic parameters
@@ -89,6 +92,7 @@ func unDyn(id string) string {
 	return id
 }
 
+// unusedAhead detects whether /*unused*/ is next
 func (p *parser) unusedAhead() bool {
 	i := 0
 	for ; p.lxr.Ahead(i).Token == tok.Whitespace; i++ {

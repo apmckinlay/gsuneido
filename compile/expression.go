@@ -468,7 +468,7 @@ func (p *parser) block() *ast.Block {
 	body := p.statements()
 	p.match(tok.RCurly)
 	if p.itUsed && len(params) == 0 {
-		params = append(params, ast.MkParam("it"))
+		params = append(params, mkParam("it", pos, false, nil))
 	}
 	p.itUsed = itUsedPrev
 	return &ast.Block{Function: ast.Function{Pos: pos, Params: params, Body: body}}
@@ -478,12 +478,14 @@ func (p *parser) blockParams() []ast.Param {
 	var params []ast.Param
 	if p.matchIf(tok.BitOr) {
 		if p.matchIf(tok.At) {
-			params = append(params, ast.MkParam("@"+p.Text))
+			params = append(params,
+				mkParam("@"+p.Text, p.Pos, p.unusedAhead(), nil))
 			p.final[p.Text] = disqualified
 			p.matchIdent()
 		} else {
 			for p.Token.IsIdent() {
-				params = append(params, ast.MkParam(p.Text))
+				params = append(params,
+					mkParam(p.Text, p.Pos, p.unusedAhead(), nil))
 				p.final[unDyn(p.Text)] = disqualified
 				p.matchIdent()
 				p.matchIf(tok.Comma)

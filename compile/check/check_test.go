@@ -53,16 +53,20 @@ func TestCheckResults(t *testing.T) {
 		_, results := compile.Checked(nil, src)
 		Assert(t).That(results, Equals(expected))
 	}
+	test("function () { return { it } }")
+
 	test("function (a) { }",
 		"WARNING: initialized but not used: a @10")
-	test("function (a /*unused*/, b) { }",
-		"WARNING: initialized but not used: b @24")
+	test("function (unused) { }")
+	test("function (a/*unused*/) { }")
 	test("function (a/*unused*/) { a }",
 		"ERROR: used but not initialized: a @25")
 	test("function () { a=1 }",
 		"WARNING: initialized but not used: a @14")
 	test("function () { a=b; a }",
 		"ERROR: used but not initialized: b @16")
+	test("function () { a++ }",
+		"ERROR: used but not initialized: a @14")
 	test("function () { a=1+a }",
 		"ERROR: used but not initialized: a @18")
 	test("function () { a + a }",
@@ -76,9 +80,6 @@ func TestCheckResults(t *testing.T) {
 		"WARNING: initialized but not used: b @22")
 	test("function (a) { if a { b=5 } if a { b } }",
 		"WARNING: used but possibly not initialized: b @35")
-	test("function () { a=1; b={|c,d| a }; c }",
-		"ERROR: used but not initialized: c @33",
-		"WARNING: initialized but not used: b @19")
 	test("function () { while (false isnt x = 1) { }; x }")
 	test("function () { for (i=0; i < 5; j++) { } }",
 		"ERROR: used but not initialized: j @31")
@@ -97,4 +98,27 @@ func TestCheckResults(t *testing.T) {
 		"WARNING: initialized but not used: e @30")
 	test("function () { try true catch (e /*unused*/) false }")
 	test("function () { try true catch (e /*unused*/, 'x') false }")
+
+	test("function () { return { it } }")
+	test("function (f) { f({ x=1 }); x }")
+	test("function (f) { f({|unused| }) }")
+	test("function (f) { f({|x/*unused*/| }) }")
+	test("function (f) { f({|x/*unused*/| x }) }",
+		"ERROR: used but not initialized: x @32")
+
+	// shadowing
+	test("function (f) { f({|x| x }); x }",
+		"ERROR: used but not initialized: x @28")
+	test("function (f) { f({|x| x++ }); x }",
+		"ERROR: used but not initialized: x @30")
+	test("function (f) { f({|x| x = x + 1 }); x }",
+		"ERROR: used but not initialized: x @36")
+	test("function (f) { x=1; f({|x| x }); }",
+		"WARNING: initialized but not used: x @15")
+	test("function (f, x) { f({|x| x }); }",
+		"WARNING: initialized but not used: x @13")
+	test("function (f) { a=1; f({|c,d| a }); c }",
+		"WARNING: initialized but not used: c @24",
+		"WARNING: initialized but not used: d @26",
+		"ERROR: used but not initialized: c @35")
 }
