@@ -212,6 +212,14 @@ func suToVariant(x Value, v *VARIANT) {
 	} else if _, ok := x.ToStr(); ok {
 		v.vt = VT_BSTR
 		v.val = int64(uintptr(stringArg(x))) // C side converts
+	} else if sco, ok := x.(*suComObject); ok {
+		if sco.idisp != 0 {
+			v.vt = VT_DISPATCH
+			v.val = int64(sco.idisp)
+		} else {
+			v.vt = VT_UNKNOWN
+			v.val = int64(sco.iunk)
+		}
 	} else {
 		panic("COMobject can't convert " + ErrType(x))
 	}
@@ -227,16 +235,18 @@ type DISPPARAMS struct {
 const nDISPPARAMS = unsafe.Sizeof(DISPPARAMS{})
 
 const (
-	VT_EMPTY = 0
-	VT_NULL  = 1
-	VT_I2    = 2
-	VT_I4    = 3
-	VT_BSTR  = 8
-	VT_BOOL  = 11
-	VT_UI2   = 18
-	VT_UI4   = 19
-	VT_I8    = 20
-	VT_UI8   = 21
+	VT_EMPTY    = 0
+	VT_NULL     = 1
+	VT_I2       = 2
+	VT_I4       = 3
+	VT_BSTR     = 8
+	VT_DISPATCH = 9
+	VT_BOOL     = 11
+	VT_UNKNOWN  = 13
+	VT_UI2      = 18
+	VT_UI4      = 19
+	VT_I8       = 20
+	VT_UI8      = 21
 )
 
 func variantToSu(v *VARIANT) Value {
@@ -261,6 +271,17 @@ func variantToSu(v *VARIANT) Value {
 	case VT_BSTR:
 		result = SuStr(bstrToString(v))
 		VariantClear(v)
+	case VT_DISPATCH:
+		idisp := uintptr(v.val)
+		result = &suComObject{idisp: idisp}
+	case VT_UNKNOWN:
+		iunk := uintptr(v.val)
+		idisp := goc.QueryIDispatch(iunk)
+		if idisp != 0 {
+			goc.Release(iunk)
+			iunk = idisp
+		}
+		result = &suComObject{iunk: iunk, idisp: idisp}
 	default:
 		panic("COMobject: can't convert to Suneido value")
 	}
