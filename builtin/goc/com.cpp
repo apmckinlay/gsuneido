@@ -46,7 +46,7 @@ static uintptr invoke2(IDispatch* idisp, char* name, WORD flags,
 		VARIANT* v = &args->rgvarg[i];
 		if (V_VT(v) == VT_BSTR) {
 			char* s = (char*) V_BSTR(v);
-			int n = MultiByteToWideChar(CP_ACP, 0, s, -1, NULL, 0);
+			int n = MultiByteToWideChar(CP_ACP, 0, s, -1, NULL, 0) - 1;
 			BSTR bs = ::SysAllocStringLen(NULL, n);
 			MultiByteToWideChar(CP_ACP, 0, s, -1, bs, n);
 			V_BSTR(v) = bs;
