@@ -9,10 +9,6 @@
 // they are checked as constructed bottom up.
 package check
 
-// TODO if/for/while where condition is: x and y
-// should know y will always run for the body
-// e.g. if i > 0 and false isnt x = Next() { ... x ...}
-
 import (
 	"fmt"
 	"sort"
@@ -126,17 +122,18 @@ func (ck *Check) statement(stmt ast.Statement, init set) set {
 		}
 		ck.statement(stmt.Catch, init)
 	case *ast.While:
-		init = ck.expr(stmt.Cond, init)
-		ck.statement(stmt.Body, init)
+		initTrue, initFalse := ck.cond(stmt.Cond, init)
+		ck.statement(stmt.Body, initTrue)
+		init = initFalse
 	case *ast.Forever:
 		init = ck.statement(stmt.Body, init)
 	case *ast.DoWhile:
 		init = ck.statement(stmt.Body, init)
 		init = ck.expr(stmt.Cond, init)
 	case *ast.If:
-		init = ck.expr(stmt.Cond, init)
-		thenInit := ck.statement(stmt.Then, init)
-		elseInit := ck.statement(stmt.Else, init)
+		initTrue, initFalse := ck.cond(stmt.Cond, init)
+		thenInit := ck.statement(stmt.Then, initTrue)
+		elseInit := ck.statement(stmt.Else, initFalse)
 		init = init.unionIntersect(thenInit, elseInit)
 	case *ast.Switch:
 		init = ck.expr(stmt.E, init)
@@ -161,18 +158,40 @@ func (ck *Check) statement(stmt ast.Statement, init set) set {
 		for _, expr := range stmt.Init {
 			init = ck.expr(expr, init)
 		}
-		init = ck.expr(stmt.Cond, init)
-		ck.statement(stmt.Body, init)
+		initTrue, initFalse := ck.cond(stmt.Cond, init)
+		afterBody := ck.statement(stmt.Body, initTrue)
 		ck.pos = stmt.Pos // restore after statement has modified
 		for _, expr := range stmt.Inc {
-			ck.expr(expr, init)
+			ck.expr(expr, afterBody)
 		}
+		init = initFalse
 	case *ast.Break, *ast.Continue:
 		// nothing to do
 	default:
 		panic("unexpected statement type " + fmt.Sprintf("%T", stmt))
 	}
 	return init
+}
+
+func (ck *Check) cond(expr ast.Expr, init set) (initTrue set, initFalse set) {
+	if u, ok := expr.(*ast.Unary); ok && u.Tok == tok.LParen {
+		expr = u.E
+	}
+	if expr, ok := expr.(*ast.Nary); ok {
+		if expr.Tok == tok.And || expr.Tok == tok.Or {
+			first := ck.expr(expr.Exprs[0], init) // first is always done
+			rest := first
+			for _, e := range expr.Exprs[1:] {
+				rest = ck.expr(e, rest) // rest are conditional
+			}
+			if expr.Tok == tok.And {
+				return rest, first
+			}
+			return first, rest
+		}
+	}
+	init = ck.expr(expr, init)
+	return init, init
 }
 
 func (ck *Check) expr(expr ast.Expr, init set) set {
@@ -203,9 +222,9 @@ func (ck *Check) expr(expr ast.Expr, init set) set {
 			ck.CheckGlobal(expr.Name, int(expr.Pos))
 		}
 	case *ast.Trinary:
-		init = ck.expr(expr.Cond, init)
-		tInit := ck.expr(expr.T, init)
-		fInit := ck.expr(expr.F, init)
+		initTrue, initFalse := ck.cond(expr.Cond, init)
+		tInit := ck.expr(expr.T, initTrue)
+		fInit := ck.expr(expr.F, initFalse)
 		init = init.unionIntersect(tInit, fInit)
 	case *ast.Nary:
 		if expr.Tok == tok.And || expr.Tok == tok.Or {

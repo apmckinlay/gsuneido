@@ -67,6 +67,8 @@ func TestCheckResults(t *testing.T) {
 		"ERROR: used but not initialized: b @16")
 	test("function () { a++ }",
 		"ERROR: used but not initialized: a @14")
+	test("function () { a += 1 }",
+		"ERROR: used but not initialized: a @14")
 	test("function () { a=1+a }",
 		"ERROR: used but not initialized: a @18")
 	test("function () { a + a }",
@@ -74,24 +76,37 @@ func TestCheckResults(t *testing.T) {
 		"ERROR: used but not initialized: a @18")
 	test("function () { a }",
 		"ERROR: used but not initialized: a @14")
+
+	// if and ?:
 	test("function (a) { if a { b } }",
 		"ERROR: used but not initialized: b @22")
 	test("function (a) { if a { b=5 } }",
 		"WARNING: initialized but not used: b @22")
 	test("function (a) { if a { b=5 } if a { b } }",
 		"WARNING: used but possibly not initialized: b @35")
+	test("function (a) { if (a) { b=1 } else { b=2 } b }")
+	test("function (a) { a ? b=1 : b=2; b }")
+	test("function (a) { a ? b=1 : 2; b }",
+		"WARNING: used but possibly not initialized: b @28")
+		
+	// switch
+	test("function (f) { switch (a=f()) { case 1: a; default: a } }")
+
+	// while
 	test("function () { while (false isnt x = 1) { }; x }")
+	
+	// for(;;)
 	test("function () { for (i=0; i < 5; j++) { } }",
 		"ERROR: used but not initialized: j @31")
+	test("function () { for (i=0; i < 5; i++, j++) { j=0 } }")
+
+	// for-in
 	test("function () { for x in #() { } }",
 		"WARNING: initialized but not used: x @18")
+		
+	// try-catch
 	test("function () { try {} catch (e) {} }",
 		"WARNING: initialized but not used: e @28")
-
-	test("class { F(){} G(a){} }",
-		"WARNING: initialized but not used: a @16")
-	test("class { New(.X){} }")
-
 	test("function () { try true catch (e) false }",
 		"WARNING: initialized but not used: e @30")
 	test("function () { try true catch (e, 'x') false }",
@@ -99,6 +114,13 @@ func TestCheckResults(t *testing.T) {
 	test("function () { try true catch (e /*unused*/) false }")
 	test("function () { try true catch (e /*unused*/, 'x') false }")
 
+	// class
+	test("class { F(a){} G(){a} }",
+		"WARNING: initialized but not used: a @10",
+		"ERROR: used but not initialized: a @19")
+	test("class { New(.X){} }")
+
+	// blocks
 	test("function () { return { it } }")
 	test("function (f) { f({ x=1 }); x }")
 	test("function (f) { f({|unused| }) }")
@@ -123,4 +145,17 @@ func TestCheckResults(t *testing.T) {
 		"WARNING: initialized but not used: c @24",
 		"WARNING: initialized but not used: d @26",
 		"ERROR: used but not initialized: c @35")
+
+	// and/or conditions
+	test("function (f) { (f and (b=0)) ? b : 0 }")
+	test("function (f) { (f or (b=0)) ? 0 : b }")
+	test("function (f) { (f and (b=0)) ? 0 : b }",
+		"WARNING: used but possibly not initialized: b @35")
+	test("function (f) { (f and (b=0)) ? 0 : 1; b }",
+		"WARNING: used but possibly not initialized: b @38")
+	test("function (f) { if (f and (b=0)) { b } }")
+	test("function (f) { if (f or (b=0)) {} else { b } }")
+	test("function (f) { while (f and (b=0)) { b } }")
+	test("function (f) { while (f and (b=0)) { } b }",
+		"WARNING: used but possibly not initialized: b @39")
 }
