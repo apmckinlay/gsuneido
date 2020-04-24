@@ -309,7 +309,7 @@ func (ck *Check) block(b *ast.Block, init set) set {
 }
 
 func (ck *Check) initVar(init set, id string, pos int) set {
-	if strings.HasPrefix(id, "_") {
+	if strings.HasPrefix(id, "_") || id == "unused" {
 		return init
 	}
 	ck.AllInit[id] = pos
