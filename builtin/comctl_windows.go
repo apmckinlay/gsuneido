@@ -135,6 +135,29 @@ var _ = builtin6("ImageList_Merge(himl1, i1, himl2, i2, dx, dy)",
 			intArg(f))
 		return intRet(rtn)
 	})
+	
+// dll long Comctl32:ImageList_Add(pointer imagelist, pointer image, pointer mask)
+var imageList_Add = comctl32.MustFindProc("ImageList_Add").Addr()
+var _ = builtin3("ImageList_Add(imagelist, image, mask)",
+	func(a, b, c Value) Value {
+		rtn := goc.Syscall3(imageList_Add,
+			intArg(a),
+			intArg(b),
+			intArg(c))
+		return intRet(rtn)
+	})
+	
+// dll long ComCtl32:ImageList_AddMasked(pointer himl, pointer hbmImage,
+// 		long crMask)
+var imageList_AddMasked = comctl32.MustFindProc("ImageList_AddMasked").Addr()
+var _ = builtin3("ImageList_AddMasked(himl, hbmImage, crMask)",
+	func(a, b, c Value) Value {
+		rtn := goc.Syscall3(imageList_AddMasked,
+			intArg(a),
+			intArg(b),
+			intArg(c))
+		return intRet(rtn)
+	})
 
 // dll void comctl32:DrawStatusText(pointer hdc, RECT* rect, [in] string text,
 //		long flags)
