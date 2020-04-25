@@ -134,7 +134,11 @@ func (ck *Check) statement(stmt ast.Statement, init set) set {
 		initTrue, initFalse := ck.cond(stmt.Cond, init)
 		thenInit := ck.statement(stmt.Then, initTrue)
 		elseInit := ck.statement(stmt.Else, initFalse)
-		init = init.unionIntersect(thenInit, elseInit)
+		if _,ok := stmt.Then.(*ast.Return); ok {
+			init = initFalse
+		} else {
+			init = init.unionIntersect(thenInit, elseInit)
+		}
 	case *ast.Switch:
 		init = ck.expr(stmt.E, init)
 		for _, c := range stmt.Cases {
