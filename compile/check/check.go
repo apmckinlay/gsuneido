@@ -68,9 +68,7 @@ func (ck *Check) Results() []string {
 
 func (ck *Check) check(f *ast.Function, init set) set {
 	init = ck.params(f.Params, init)
-	for _, stmt := range f.Body {
-		init = ck.statement(stmt, init)
-	}
+	init, _ = ck.statements(f.Body, init)
 	return init
 }
 
@@ -95,27 +93,37 @@ func (ck *Check) used(id string) bool {
 	return ok
 }
 
+func (ck *Check) statements(stmts []ast.Statement, init set) (initOut set, exit bool) {
+	for _, stmt := range stmts {
+		if exit {
+			ck.addResult(stmt.Position(), "ERROR: unreachable code")
+		}
+		init, exit = ck.statement(stmt, init)
+	}
+	return init, exit
+}
+
 // statement processes one statement (and its children)
 // Conditional statements are assumed to run for used, and not to run for init.
 // So we accumulate used, but not init.
-func (ck *Check) statement(stmt ast.Statement, init set) set {
+func (ck *Check) statement(stmt ast.Statement, init set) (initOut set, exit bool) {
 	if stmt == nil {
-		return init
+		return init, exit
 	}
 	ck.pos = stmt.Position()
 	switch stmt := stmt.(type) {
 	case *ast.Compound:
-		for _, stmt := range stmt.Body {
-			init = ck.statement(stmt, init)
-		}
+		init, exit = ck.statements(stmt.Body, init)
 	case *ast.ExprStmt:
 		init = ck.expr(stmt.E, init)
 	case *ast.Return:
 		init = ck.expr(stmt.E, init)
+		exit = true
 	case *ast.Throw:
 		init = ck.expr(stmt.E, init)
+		exit = true
 	case *ast.TryCatch:
-		init = ck.statement(stmt.Try, init)
+		init, _ = ck.statement(stmt.Try, init)
 		if stmt.CatchVar.Name != "" && stmt.CatchVar.Name != "unused" &&
 			!stmt.CatchVarUnused {
 			init = ck.initVar(init, stmt.CatchVar.Name, int(stmt.CatchVar.Pos))
@@ -126,33 +134,40 @@ func (ck *Check) statement(stmt ast.Statement, init set) set {
 		ck.statement(stmt.Body, initTrue)
 		init = initFalse
 	case *ast.Forever:
-		init = ck.statement(stmt.Body, init)
+		init, _ = ck.statement(stmt.Body, init)
 	case *ast.DoWhile:
-		init = ck.statement(stmt.Body, init)
+		init, _ = ck.statement(stmt.Body, init)
 		init = ck.expr(stmt.Cond, init)
 	case *ast.If:
 		initTrue, initFalse := ck.cond(stmt.Cond, init)
-		thenInit := ck.statement(stmt.Then, initTrue)
-		elseInit := ck.statement(stmt.Else, initFalse)
-		if _,ok := stmt.Then.(*ast.Return); ok {
+		thenInit, ex1 := ck.statement(stmt.Then, initTrue)
+		elseInit, ex2 := ck.statement(stmt.Else, initFalse)
+		if _, ok := stmt.Then.(*ast.Return); ok {
 			init = initFalse
 		} else {
 			init = init.unionIntersect(thenInit, elseInit)
 		}
+		if ex1 && ex2 {
+			exit = true
+		}
 	case *ast.Switch:
+		// there will always be at least a default default that throws
+		exAll := true
 		init = ck.expr(stmt.E, init)
 		for _, c := range stmt.Cases {
 			in := init
 			for _, e := range c.Exprs {
 				in = ck.expr(e, in)
 			}
-			for _, b := range c.Body {
-				in = ck.statement(b, in)
-			}
+			in, ex := ck.statements(c.Body, in)
+			exAll = exAll && ex
 		}
-		in := init
-		for _, d := range stmt.Default {
-			in = ck.statement(d, in)
+		if stmt.Default != nil { // specifically nil and not len 0
+			_, ex := ck.statements(stmt.Default, init)
+			exAll = exAll && ex
+		}
+		if exAll {
+			exit = true
 		}
 	case *ast.ForIn:
 		init = ck.initVar(init, stmt.Var.Name, int(stmt.Var.Pos))
@@ -163,18 +178,18 @@ func (ck *Check) statement(stmt ast.Statement, init set) set {
 			init = ck.expr(expr, init)
 		}
 		initTrue, initFalse := ck.cond(stmt.Cond, init)
-		afterBody := ck.statement(stmt.Body, initTrue)
+		afterBody, _ := ck.statement(stmt.Body, initTrue)
 		ck.pos = stmt.Pos // restore after statement has modified
 		for _, expr := range stmt.Inc {
 			ck.expr(expr, afterBody)
 		}
 		init = initFalse
 	case *ast.Break, *ast.Continue:
-		// nothing to do
+		exit = true
 	default:
 		panic("unexpected statement type " + fmt.Sprintf("%T", stmt))
 	}
-	return init
+	return init, exit
 }
 
 func (ck *Check) cond(expr ast.Expr, init set) (initTrue set, initFalse set) {

@@ -381,7 +381,7 @@ func (cg *cgen) switchStmt(node *ast.Switch, labels *Labels) {
 		cg.placeLabel(afterCase)
 	}
 	cg.emit(op.Pop)
-	if node.Default != nil {
+	if node.Default != nil { // specifically nil and not len 0
 		cg.statements(node.Default, labels)
 	} else {
 		cg.emitValue(SuStr("unhandled switch value"))

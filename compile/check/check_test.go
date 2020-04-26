@@ -88,13 +88,13 @@ func TestCheckResults(t *testing.T) {
 	test("function (a) { a ? b=1 : b=2; b }")
 	test("function (a) { a ? b=1 : 2; b }",
 		"WARNING: used but possibly not initialized: b @28")
-		
+
 	// switch
 	test("function (f) { switch (a=f()) { case 1: a; default: a } }")
 
 	// while
 	test("function () { while (false isnt x = 1) { }; x }")
-	
+
 	// for(;;)
 	test("function () { for (i=0; i < 5; j++) { } }",
 		"ERROR: used but not initialized: j @31")
@@ -103,7 +103,7 @@ func TestCheckResults(t *testing.T) {
 	// for-in
 	test("function () { for x in #() { } }",
 		"WARNING: initialized but not used: x @18")
-		
+
 	// try-catch
 	test("function () { try {} catch (e) {} }",
 		"WARNING: initialized but not used: e @28")
@@ -158,4 +158,22 @@ func TestCheckResults(t *testing.T) {
 	test("function (f) { while (f and (b=0)) { b } }")
 	test("function (f) { while (f and (b=0)) { } b }",
 		"WARNING: used but possibly not initialized: b @39")
+
+	// unreachable
+	test("function () { return }")
+	test("function () { return; 123 }",
+		"ERROR: unreachable code @22")
+	test("function (x) { if (x) { return; 123 } }",
+		"ERROR: unreachable code @32")
+	test("function (x) { if (x) { return } else { return } 123 }",
+		"ERROR: unreachable code @49")
+	test("function () { forever { break; 123 } }",
+		"ERROR: unreachable code @31")
+	test("function () { forever { 123; continue; 456 } }",
+		"ERROR: unreachable code @39")
+	test("function () { switch { } 123 }",
+		"ERROR: unreachable code @25")
+	test("function () { switch { default: } 123 }")
+	test("function () { switch { case 0: return } 123 }",
+		"ERROR: unreachable code @40")
 }
