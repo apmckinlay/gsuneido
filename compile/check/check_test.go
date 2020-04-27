@@ -78,11 +78,11 @@ func TestCheckResults(t *testing.T) {
 		"ERROR: used but not initialized: a @14")
 
 	// if and ?:
-	test("function (a) { if a { b } }",
+	test("function (a) { if a { b() } }",
 		"ERROR: used but not initialized: b @22")
 	test("function (a) { if a { b=5 } }",
 		"WARNING: initialized but not used: b @22")
-	test("function (a) { if a { b=5 } if a { b } }",
+	test("function (a) { if a { b=5 } if a { b() } }",
 		"WARNING: used but possibly not initialized: b @35")
 	test("function (a) { if (a) { b=1 } else { b=2 } b }")
 	test("function (a) { a ? b=1 : b=2; b }")
@@ -90,7 +90,7 @@ func TestCheckResults(t *testing.T) {
 		"WARNING: used but possibly not initialized: b @28")
 
 	// switch
-	test("function (f) { switch (a=f()) { case 1: a; default: a } }")
+	test("function (f) { switch (a=f()) { case 1: a(); default: a() } }")
 
 	// while
 	test("function () { while (false isnt x = 1) { }; x }")
@@ -107,12 +107,13 @@ func TestCheckResults(t *testing.T) {
 	// try-catch
 	test("function () { try {} catch (e) {} }",
 		"WARNING: initialized but not used: e @28")
-	test("function () { try true catch (e) false }",
+	test("function (f) { try f() catch (e) f() }",
 		"WARNING: initialized but not used: e @30")
-	test("function () { try true catch (e, 'x') false }",
+	test("function (f) { try f() catch (e, 'x') f() }",
 		"WARNING: initialized but not used: e @30")
-	test("function () { try true catch (e /*unused*/) false }")
-	test("function () { try true catch (e /*unused*/, 'x') false }")
+	test("function (f) { try f() catch (unused) f() }")
+	test("function (f) { try f() catch (e /*unused*/) f() }")
+	test("function (f) { try f() catch (e /*unused*/, 'x') f() }")
 
 	// class
 	test("class { F(a){} G(){a} }",
@@ -151,11 +152,11 @@ func TestCheckResults(t *testing.T) {
 	test("function (f) { (f or (b=0)) ? 0 : b }")
 	test("function (f) { (f and (b=0)) ? 0 : b }",
 		"WARNING: used but possibly not initialized: b @35")
-	test("function (f) { (f and (b=0)) ? 0 : 1; b }",
-		"WARNING: used but possibly not initialized: b @38")
-	test("function (f) { if (f and (b=0)) { b } }")
-	test("function (f) { if (f or (b=0)) {} else { b } }")
-	test("function (f) { while (f and (b=0)) { b } }")
+	test("function (f) { (f and (b=0)) ? f() : f(); b }",
+		"WARNING: used but possibly not initialized: b @42")
+	test("function (f) { if (f and (b=0)) { b() } }")
+	test("function (f) { if (f or (b=0)) {} else { b() } }")
+	test("function (f) { while (f and (b=0)) { b() } }")
 	test("function (f) { while (f and (b=0)) { } b }",
 		"WARNING: used but possibly not initialized: b @39")
 
@@ -163,17 +164,25 @@ func TestCheckResults(t *testing.T) {
 	test("function () { return }")
 	test("function () { return; 123 }",
 		"ERROR: unreachable code @22")
-	test("function (x) { if (x) { return; 123 } }",
+	test("function (x) { if (x) { return; x() } }",
 		"ERROR: unreachable code @32")
-	test("function (x) { if (x) { return } else { return } 123 }",
+	test("function (x) { if (x) { return } else { return } x }",
 		"ERROR: unreachable code @49")
-	test("function () { forever { break; 123 } }",
-		"ERROR: unreachable code @31")
-	test("function () { forever { 123; continue; 456 } }",
-		"ERROR: unreachable code @39")
-	test("function () { switch { } 123 }",
-		"ERROR: unreachable code @25")
+	test("function (f) { forever { break; f() } }",
+		"ERROR: unreachable code @32")
+	test("function (f) { forever { f(); continue; f() } }",
+		"ERROR: unreachable code @40")
+	test("function (f) { switch { } f() }",
+		"ERROR: unreachable code @26")
 	test("function () { switch { default: } 123 }")
 	test("function () { switch { case 0: return } 123 }",
 		"ERROR: unreachable code @40")
+		
+	// unused expression (no side effects)
+	test("function () { 123; return }",
+		"ERROR: useless expression @14")
+	test("function () { class{}; return }",
+		"ERROR: useless expression @14")
+	test("function (f) { if (f()) return \n 123 \n return 456 }",
+		"ERROR: useless expression @33")
 }

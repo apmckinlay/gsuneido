@@ -68,7 +68,7 @@ func (ck *Check) Results() []string {
 
 func (ck *Check) check(f *ast.Function, init set) set {
 	init = ck.params(f.Params, init)
-	init, _ = ck.statements(f.Body, init)
+	init, _ = ck.statements(f.Body, init, true)
 	return init
 }
 
@@ -93,12 +93,13 @@ func (ck *Check) used(id string) bool {
 	return ok
 }
 
-func (ck *Check) statements(stmts []ast.Statement, init set) (initOut set, exit bool) {
-	for _, stmt := range stmts {
+func (ck *Check) statements(
+	stmts []ast.Statement, init set, fnBody bool) (initOut set, exit bool) {
+	for si, stmt := range stmts {
 		if exit {
 			ck.addResult(stmt.Position(), "ERROR: unreachable code")
 		}
-		init, exit = ck.statement(stmt, init)
+		init, exit = ck.statement(stmt, init, fnBody && si == len(stmts)-1)
 	}
 	return init, exit
 }
@@ -106,42 +107,47 @@ func (ck *Check) statements(stmts []ast.Statement, init set) (initOut set, exit 
 // statement processes one statement (and its children)
 // Conditional statements are assumed to run for used, and not to run for init.
 // So we accumulate used, but not init.
-func (ck *Check) statement(stmt ast.Statement, init set) (initOut set, exit bool) {
+func (ck *Check) statement(
+	stmt ast.Statement, init set, last bool) (initOut set, exit bool) {
 	if stmt == nil {
 		return init, exit
 	}
+	var effects bool
 	ck.pos = stmt.Position()
 	switch stmt := stmt.(type) {
 	case *ast.Compound:
-		init, exit = ck.statements(stmt.Body, init)
+		init, exit = ck.statements(stmt.Body, init, false)
 	case *ast.ExprStmt:
-		init = ck.expr(stmt.E, init)
+		init, effects = ck.expr(stmt.E, init)
+		if !last && !effects {
+			ck.addResult(stmt.Pos, "ERROR: useless expression")
+		}
 	case *ast.Return:
-		init = ck.expr(stmt.E, init)
+		init, _ = ck.expr(stmt.E, init)
 		exit = true
 	case *ast.Throw:
-		init = ck.expr(stmt.E, init)
+		init, _ = ck.expr(stmt.E, init)
 		exit = true
 	case *ast.TryCatch:
-		init, _ = ck.statement(stmt.Try, init)
+		init, _ = ck.statement(stmt.Try, init, false)
 		if stmt.CatchVar.Name != "" && stmt.CatchVar.Name != "unused" &&
 			!stmt.CatchVarUnused {
 			init = ck.initVar(init, stmt.CatchVar.Name, int(stmt.CatchVar.Pos))
 		}
-		ck.statement(stmt.Catch, init)
+		ck.statement(stmt.Catch, init, false)
 	case *ast.While:
 		initTrue, initFalse := ck.cond(stmt.Cond, init)
-		ck.statement(stmt.Body, initTrue)
+		ck.statement(stmt.Body, initTrue, false)
 		init = initFalse
 	case *ast.Forever:
-		init, _ = ck.statement(stmt.Body, init)
+		init, _ = ck.statement(stmt.Body, init, false)
 	case *ast.DoWhile:
-		init, _ = ck.statement(stmt.Body, init)
-		init = ck.expr(stmt.Cond, init)
+		init, _ = ck.statement(stmt.Body, init, false)
+		init, _ = ck.expr(stmt.Cond, init)
 	case *ast.If:
 		initTrue, initFalse := ck.cond(stmt.Cond, init)
-		thenInit, ex1 := ck.statement(stmt.Then, initTrue)
-		elseInit, ex2 := ck.statement(stmt.Else, initFalse)
+		thenInit, ex1 := ck.statement(stmt.Then, initTrue, false)
+		elseInit, ex2 := ck.statement(stmt.Else, initFalse, false)
 		if _, ok := stmt.Then.(*ast.Return); ok {
 			init = initFalse
 		} else {
@@ -153,17 +159,17 @@ func (ck *Check) statement(stmt ast.Statement, init set) (initOut set, exit bool
 	case *ast.Switch:
 		// there will always be at least a default default that throws
 		exAll := true
-		init = ck.expr(stmt.E, init)
+		init, _ = ck.expr(stmt.E, init)
 		for _, c := range stmt.Cases {
 			in := init
 			for _, e := range c.Exprs {
-				in = ck.expr(e, in)
+				in, _ = ck.expr(e, in)
 			}
-			in, ex := ck.statements(c.Body, in)
+			in, ex := ck.statements(c.Body, in, false)
 			exAll = exAll && ex
 		}
 		if stmt.Default != nil { // specifically nil and not len 0
-			_, ex := ck.statements(stmt.Default, init)
+			_, ex := ck.statements(stmt.Default, init, false)
 			exAll = exAll && ex
 		}
 		if exAll {
@@ -171,14 +177,14 @@ func (ck *Check) statement(stmt ast.Statement, init set) (initOut set, exit bool
 		}
 	case *ast.ForIn:
 		init = ck.initVar(init, stmt.Var.Name, int(stmt.Var.Pos))
-		init = ck.expr(stmt.E, init)
-		ck.statement(stmt.Body, init)
+		init, _ = ck.expr(stmt.E, init)
+		ck.statement(stmt.Body, init, false)
 	case *ast.For:
 		for _, expr := range stmt.Init {
-			init = ck.expr(expr, init)
+			init, _ = ck.expr(expr, init)
 		}
 		initTrue, initFalse := ck.cond(stmt.Cond, init)
-		afterBody, _ := ck.statement(stmt.Body, initTrue)
+		afterBody, _ := ck.statement(stmt.Body, initTrue, false)
 		ck.pos = stmt.Pos // restore after statement has modified
 		for _, expr := range stmt.Inc {
 			ck.expr(expr, afterBody)
@@ -198,10 +204,10 @@ func (ck *Check) cond(expr ast.Expr, init set) (initTrue set, initFalse set) {
 	}
 	if expr, ok := expr.(*ast.Nary); ok {
 		if expr.Tok == tok.And || expr.Tok == tok.Or {
-			first := ck.expr(expr.Exprs[0], init) // first is always done
+			first, _ := ck.expr(expr.Exprs[0], init) // first is always done
 			rest := first
 			for _, e := range expr.Exprs[1:] {
-				rest = ck.expr(e, rest) // rest are conditional
+				rest, _ = ck.expr(e, rest) // rest are conditional
 			}
 			if expr.Tok == tok.And {
 				return rest, first
@@ -209,30 +215,46 @@ func (ck *Check) cond(expr ast.Expr, init set) (initTrue set, initFalse set) {
 			return first, rest
 		}
 	}
-	init = ck.expr(expr, init)
+	init, _ = ck.expr(expr, init)
 	return init, init
 }
 
-func (ck *Check) expr(expr ast.Expr, init set) set {
+func (ck *Check) expr(expr ast.Expr, init set) (initOut set, effects bool) {
 	if expr == nil {
-		return init
+		return init, false
 	}
+	var ef1, ef2 bool
 	switch expr := expr.(type) {
+	case *ast.Unary:
+		init, effects = ck.expr(expr.E, init)
+		switch expr.Tok {
+		case tok.Inc, tok.Dec, tok.PostInc, tok.PostDec:
+			effects = true
+		}
 	case *ast.Binary:
 		if expr.Tok == tok.Eq {
+			effects = true
 			if id, ok := expr.Lhs.(*ast.Ident); ok {
-				init = ck.expr(expr.Rhs, init)
+				init, _ = ck.expr(expr.Rhs, init)
 				init = ck.initVar(init, id.Name, int(id.Pos))
 				break
 			}
 		}
 		if tok.AssignStart < expr.Tok && expr.Tok < tok.AssignEnd {
-			init = ck.expr(expr.Rhs, init)
-			init = ck.expr(expr.Lhs, init)
+			init, _ = ck.expr(expr.Rhs, init)
+			init, _ = ck.expr(expr.Lhs, init)
+			effects = true
 		} else {
-			init = ck.expr(expr.Lhs, init)
-			init = ck.expr(expr.Rhs, init)
+			init, ef1 = ck.expr(expr.Lhs, init)
+			init, ef2 = ck.expr(expr.Rhs, init)
+			effects = ef1 || ef2
 		}
+	case *ast.Mem:
+		effects = true // accessing member of record can have rule effects
+		expr.Children(func(e ast.Node) ast.Node {
+			init, _ = ck.expr(e.(ast.Expr), init)
+			return e
+		})
 	case *ast.Ident:
 		if ascii.IsLower(expr.Name[0]) {
 			init = ck.usedVar(init, expr.Name, int(expr.Pos))
@@ -242,32 +264,40 @@ func (ck *Check) expr(expr ast.Expr, init set) set {
 		}
 	case *ast.Trinary:
 		initTrue, initFalse := ck.cond(expr.Cond, init)
-		tInit := ck.expr(expr.T, initTrue)
-		fInit := ck.expr(expr.F, initFalse)
+		tInit, ef1 := ck.expr(expr.T, initTrue)
+		fInit, ef2 := ck.expr(expr.F, initFalse)
 		init = init.unionIntersect(tInit, fInit)
+		effects = ef1 || ef2
 	case *ast.Nary:
 		if expr.Tok == tok.And || expr.Tok == tok.Or {
-			init = ck.expr(expr.Exprs[0], init) // first is always done
+			init, effects = ck.expr(expr.Exprs[0], init) // first is always done
 			in := init
 			for _, e := range expr.Exprs[1:] {
-				in = ck.expr(e, in) // rest are conditional
+				in, ef1 = ck.expr(e, in) // rest are conditional
+				effects = effects || ef1
 			}
 		} else {
 			expr.Children(func(e ast.Node) ast.Node {
-				init = ck.expr(e.(ast.Expr), init)
+				init, _ = ck.expr(e.(ast.Expr), init)
 				return e
 			})
 		}
+	case *ast.Call:
+		effects = true
+		expr.Children(func(e ast.Node) ast.Node {
+			init, _ = ck.expr(e.(ast.Expr), init)
+			return e
+		})
 	case *ast.Block:
 		init = ck.block(expr, init)
 
 	default:
 		expr.Children(func(e ast.Node) ast.Node {
-			init = ck.expr(e.(ast.Expr), init)
+			init, _ = ck.expr(e.(ast.Expr), init)
 			return e
 		})
 	}
-	return init
+	return init, effects
 }
 
 func (ck *Check) block(b *ast.Block, init set) set {
