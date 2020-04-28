@@ -148,8 +148,10 @@ func (ck *Check) statement(
 		initTrue, initFalse := ck.cond(stmt.Cond, init)
 		thenInit, ex1 := ck.statement(stmt.Then, initTrue, false)
 		elseInit, ex2 := ck.statement(stmt.Else, initFalse, false)
-		if _, ok := stmt.Then.(*ast.Return); ok {
-			init = initFalse
+		if ck.isReturn(stmt.Then) {
+			init = elseInit
+		} else if ck.isReturn(stmt.Else) {
+			init = thenInit
 		} else {
 			init = init.unionIntersect(thenInit, elseInit)
 		}
@@ -217,6 +219,14 @@ func (ck *Check) cond(expr ast.Expr, init set) (initTrue set, initFalse set) {
 	}
 	init, _ = ck.expr(expr, init)
 	return init, init
+}
+
+func (*Check) isReturn(stmt ast.Statement) bool {
+	if cmpd,ok := stmt.(*ast.Compound); ok && len(cmpd.Body) == 1 {
+		stmt = cmpd.Body[0]
+	}
+	_, ok := stmt.(*ast.Return)
+	return ok
 }
 
 func (ck *Check) expr(expr ast.Expr, init set) (initOut set, effects bool) {

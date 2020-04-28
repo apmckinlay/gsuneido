@@ -53,6 +53,7 @@ func TestCheckResults(t *testing.T) {
 		_, results := compile.Checked(nil, src)
 		Assert(t).That(results, Equals(expected))
 	}
+
 	test("function () { return { it } }")
 
 	test("function (a) { }",
@@ -185,4 +186,8 @@ func TestCheckResults(t *testing.T) {
 		"ERROR: useless expression @14")
 	test("function (f) { if (f()) return \n 123 \n return 456 }",
 		"ERROR: useless expression @33")
+		
+	// guard clause
+	test("function (f) { if (f()) { x=5 } else { return } x  }")
+	test("function (f) { if (f()) { return } else { x=5 } x  }")
 }
