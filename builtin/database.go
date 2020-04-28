@@ -83,5 +83,5 @@ func (d *SuDatabaseGlobal) String() string {
 
 var _ = builtin("DoWithoutTriggers()",
 	func(t *Thread, args []Value) Value {
-		panic("DoWithoutTriggers cannot be used when running as a client")
+		panic("DoWithoutTriggers can't be used when running as a client")
 	})

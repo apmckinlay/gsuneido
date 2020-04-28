@@ -113,7 +113,7 @@ var _ = builtin("StructModify(type, address, block)",
 		}
 		p := unsafe.Pointer(uintptr(ToInt(args[1])))
 		if p == nil {
-			panic("StructModify: address cannot be zero")
+			panic("StructModify: address can't be zero")
 		}
 		ob := typ.structToOb(p)
 		t.Call(args[2], ob) // call the block, which modifies ob

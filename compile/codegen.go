@@ -887,7 +887,7 @@ func (cg *cgen) call(node *ast.Call, ct calltype) {
 	if method {
 		if fn != superNew {
 			if c, ok := mem.M.(*ast.Constant); ok && c.Val == SuStr("New") {
-				panic("cannot explicitly call New method")
+				panic("can't explicitly call New method")
 			}
 		}
 		cg.expr(mem.M)

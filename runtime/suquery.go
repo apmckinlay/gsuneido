@@ -150,7 +150,7 @@ func (q *SuQuery) GetRec(dir Dir) Value {
 		return False
 	}
 	if q.tran.Ended() {
-		panic("cannot use a completed transaction")
+		panic("can't use ended transaction")
 	}
 	row := q.iqc.(IQuery).Get(dir)
 	if row == nil {

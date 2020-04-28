@@ -136,7 +136,7 @@ func (st *SuTran) Request(req string) int {
 
 func (st *SuTran) Rollback() {
 	if st.state == committed {
-		panic("can't Rollback a transaction after Complete")
+		panic("can't Rollback transaction after Complete")
 	}
 	if st.state != aborted {
 		st.itran.Abort()
@@ -159,7 +159,7 @@ func (st *SuTran) WriteCount() int {
 
 func (st *SuTran) ckActive() {
 	if st.state != active {
-		panic("cannot use ended transaction")
+		panic("can't use ended transaction")
 	}
 }
 
