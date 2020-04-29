@@ -5,8 +5,6 @@
 126     ICON     "res\\folder.ico"
 129     ICON     "res\\openfolder.ico"
 127     ICON     "res\\document.ico"
-128     ICON     "res\\docyellow.ico"
-191     ICON     "res\\docred.ico"
 183     ICON     "res\\downarrow.ico"
 192	    ICON     "res\\close.ico"
 
