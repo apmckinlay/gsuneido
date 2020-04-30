@@ -129,7 +129,12 @@ func (ck *Check) statement(
 		init, _ = ck.expr(stmt.E, init)
 		exit = true
 	case *ast.TryCatch:
-		init, _ = ck.statement(stmt.Try, init, false)
+		if expr, ok := ck.exprStmt(stmt.Try); ok {
+			// allow useless expression as try statement
+			init, _ = ck.expr(expr, init)
+		} else {
+			init, _ = ck.statement(stmt.Try, init, false)
+		}
 		if stmt.CatchVar.Name != "" && stmt.CatchVar.Name != "unused" &&
 			!stmt.CatchVarUnused {
 			init = ck.initVar(init, stmt.CatchVar.Name, int(stmt.CatchVar.Pos))
@@ -227,6 +232,16 @@ func (*Check) isReturn(stmt ast.Statement) bool {
 	}
 	_, ok := stmt.(*ast.Return)
 	return ok
+}
+
+func (*Check) exprStmt(stmt ast.Statement) (expr ast.Expr, ok bool) {
+	if cmpd, ok := stmt.(*ast.Compound); ok && len(cmpd.Body) == 1 {
+		stmt = cmpd.Body[0]
+	}
+	if es, ok := stmt.(*ast.ExprStmt); ok {
+		return es.E, true
+	}
+	return nil, false
 }
 
 func (ck *Check) expr(expr ast.Expr, init set) (initOut set, effects bool) {

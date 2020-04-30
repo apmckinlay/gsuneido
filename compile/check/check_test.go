@@ -179,13 +179,14 @@ func TestCheckResults(t *testing.T) {
 	test("function () { switch { case 0: return } 123 }",
 		"ERROR: unreachable code @40")
 		
-	// unused expression (no side effects)
+	// useless expression (no side effects)
 	test("function () { 123; return }",
 		"ERROR: useless expression @14")
 	test("function () { class{}; return }",
 		"ERROR: useless expression @14")
 	test("function (f) { if (f()) return \n 123 \n return 456 }",
 		"ERROR: useless expression @33")
+	test("function (x) { try x+0 catch x=0 }")
 		
 	// guard clause
 	test("function (f) { if (f()) { x=5 } else { return } x  }")
