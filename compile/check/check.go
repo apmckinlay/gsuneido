@@ -44,7 +44,7 @@ func New(t *Thread) *Check {
 func (ck *Check) Check(f *ast.Function) set {
 	ck.AllInit = make(map[string]int)
 	ck.AllUsed = make(map[string]struct{})
-	var init set
+	var init set = make([]string, 0, 8)
 	init = ck.check(f, init)
 	ck.process(f.Params, init)
 	return init
@@ -147,7 +147,7 @@ func (ck *Check) statement(
 	case *ast.If:
 		initTrue, initFalse := ck.cond(stmt.Cond, init)
 		thenInit, ex1 := ck.statement(stmt.Then, initTrue, false)
-		elseInit, ex2 := ck.statement(stmt.Else, initFalse, false)
+		elseInit, ex2 := ck.statement(stmt.Else, initFalse.cow(), false)
 		if ck.isReturn(stmt.Then) {
 			init = elseInit
 		} else if ck.isReturn(stmt.Else) {
@@ -222,7 +222,7 @@ func (ck *Check) cond(expr ast.Expr, init set) (initTrue set, initFalse set) {
 }
 
 func (*Check) isReturn(stmt ast.Statement) bool {
-	if cmpd,ok := stmt.(*ast.Compound); ok && len(cmpd.Body) == 1 {
+	if cmpd, ok := stmt.(*ast.Compound); ok && len(cmpd.Body) == 1 {
 		stmt = cmpd.Body[0]
 	}
 	_, ok := stmt.(*ast.Return)
@@ -275,7 +275,7 @@ func (ck *Check) expr(expr ast.Expr, init set) (initOut set, effects bool) {
 	case *ast.Trinary:
 		initTrue, initFalse := ck.cond(expr.Cond, init)
 		tInit, ef1 := ck.expr(expr.T, initTrue)
-		fInit, ef2 := ck.expr(expr.F, initFalse)
+		fInit, ef2 := ck.expr(expr.F, initFalse.cow())
 		init = init.unionIntersect(tInit, fInit)
 		effects = ef1 || ef2
 	case *ast.Nary:

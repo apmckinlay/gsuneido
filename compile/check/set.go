@@ -6,6 +6,9 @@ package check
 // set is a set of strings in a slice.
 // By only ever appending, we make it an immutable data structure.
 // Warning: operations are O(N) so should only be used with small sizes.
+// BEWARE: start = set(); a = start.with('x'); b = start.with('y')
+// will overwrite, both a and b will end up as ['y']
+// Instead, do: a = start.with('x'); b = start.cow().with('y')
 type set []string
 
 // with extends a set with a new string
@@ -38,4 +41,11 @@ func (ls set) unionIntersect(ls1, ls2 set) set {
 		}
 	}
 	return ls
+}
+
+// cow (copy on write) returns the set with the capacity set to the length
+// so that any extension (append) will be forced to re-alloc
+// making a separate copy
+func (ls set) cow() set {
+	return ls[:len(ls):len(ls)]
 }

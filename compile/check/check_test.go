@@ -190,4 +190,8 @@ func TestCheckResults(t *testing.T) {
 	// guard clause
 	test("function (f) { if (f()) { x=5 } else { return } x  }")
 	test("function (f) { if (f()) { return } else { x=5 } x  }")
+	
+	// copy on write
+	test(`function (a) { if (a) b = 1 else a(c=1, b=c) return b }`)
+	test("function (a) { a ? b=1 : a(c=1, b=c); b }")
 }
