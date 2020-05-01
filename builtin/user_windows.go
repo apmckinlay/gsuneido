@@ -909,26 +909,26 @@ var _ = builtin4("SetTimer(hwnd, id, ms, f)",
 		if options.TimersDisabled {
 			return Zero
 		}
-		if windows.GetCurrentThreadId() != uiThreadId {
-			// WARNING: don't use heap from background thread
-			d.SetConcurrent() // since callback will be from different thread
-			ts := timerSpec{hwnd: a, id: b, ms: c, cb: d, ret: make(chan Value, 1)}
-			setTimerChan <- ts
-			notifyMessageLoop()
-			first := true
-			for {
-				select {
-				case id := <-ts.ret:
-					return id
-				case <-time.After(5 * time.Second):
-					if first {
-						first = false
-						log.Println("SetTimer timeout")
-					}
+		if windows.GetCurrentThreadId() == uiThreadId {
+			return gocSetTimer(a, b, c, d)
+		}
+		// WARNING: don't use heap from background thread
+		d.SetConcurrent() // since callback will be from different thread
+		ts := timerSpec{hwnd: a, id: b, ms: c, cb: d, ret: make(chan Value, 1)}
+		timerChan <- ts
+		notifyMessageLoop()
+		first := true
+		for {
+			select {
+			case id := <-ts.ret:
+				return id
+			case <-time.After(5 * time.Second):
+				if first {
+					first = false
+					log.Println("SetTimer timeout")
 				}
 			}
 		}
-		return gocSetTimer(a, b, c, d)
 	})
 
 // gocSetTimer is called by SetTimer directly if on main UI thread
@@ -949,11 +949,34 @@ var _ = builtin2("KillTimer(hwnd, id)",
 		if options.TimersDisabled {
 			return False
 		}
-		rtn := goc.Syscall2(killTimer,
-			intArg(a),
-			intArg(b))
-		return boolRet(rtn)
+		if windows.GetCurrentThreadId() == uiThreadId {
+			return gocKillTimer(a, b)
+		}
+		ts := timerSpec{hwnd: a, id: b, ret: make(chan Value, 1)}
+		timerChan <- ts
+		notifyMessageLoop()
+		first := true
+		for {
+			select {
+			case id := <-ts.ret:
+				return id
+			case <-time.After(5 * time.Second):
+				if first {
+					first = false
+					log.Println("KillTimer timeout")
+				}
+			}
+		}
 	})
+
+// gocKillTimer is called by KillTimer directly if on main UI thread
+// and via updateUI2 if from background thread
+func gocKillTimer(hwnd, id Value) Value {
+	rtn := goc.Syscall2(killTimer,
+		intArg(hwnd),
+		intArg(id))
+	return boolRet(rtn)
+}
 
 // dll User32:SetWindowLong(pointer hwnd, int offset, long value) long
 var setWindowLong = user32.MustFindProc("SetWindowLongA").Addr()

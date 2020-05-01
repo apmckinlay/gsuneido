@@ -48,8 +48,12 @@ func updateUI2() {
 		select {
 		case block := <-uuiChan:
 			runUI(block)
-		case t := <-setTimerChan:
-			t.ret <- gocSetTimer(t.hwnd, t.id, t.ms, t.cb)
+		case t := <-timerChan:
+			if t.ms != nil {
+				t.ret <- gocSetTimer(t.hwnd, t.id, t.ms, t.cb)
+			} else {
+				t.ret <- gocKillTimer(t.hwnd, t.id)
+			}
 		default: // non-blocking
 			return
 		}

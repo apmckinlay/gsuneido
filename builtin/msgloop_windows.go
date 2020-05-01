@@ -44,10 +44,10 @@ func Run() {
 type timerSpec struct {
 	hwnd Value
 	id   Value
-	ms   Value
+	ms   Value // nil for KillTimer
 	cb   Value
 	ret  chan Value
 }
 
-// setTimerChan is used for cross thread SetTimer requests
-var setTimerChan = make(chan timerSpec, 1)
+// timerChan is used for cross thread SetTimer and KillTimer requests
+var timerChan = make(chan timerSpec, 1)
