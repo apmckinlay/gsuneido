@@ -238,6 +238,7 @@ func (*Check) exprStmt(stmt ast.Statement) (expr ast.Expr, ok bool) {
 	if cmpd, ok := stmt.(*ast.Compound); ok && len(cmpd.Body) == 1 {
 		stmt = cmpd.Body[0]
 	}
+	// TODO also allow <exprstmt>, <return>
 	if es, ok := stmt.(*ast.ExprStmt); ok {
 		return es.E, true
 	}

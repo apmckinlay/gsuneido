@@ -239,7 +239,7 @@ func libload(t *Thread, gn Gnum, name string) (result Value) {
 			src = s
 		}
 		// want to pass the name from the start (rather than adding after)
-		// so it propogates to nested Named values
+		// so it propagates to nested Named values
 		result = compile.NamedConstant(lib, name, src)
 		Global.Set(gn, result) // required for overload inheritance
 		// fmt.Println("LOAD", name, "SUCCEEDED")
