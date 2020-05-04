@@ -224,6 +224,7 @@ func libload(t *Thread, gn Gnum, name string) (result Value) {
 		if e := recover(); e != nil {
 			// fmt.Println("INFO: error loading", name, e)
 			// debug.PrintStack()
+			Global.Set(gn, nil)
 			panic("error loading " + name + " " + fmt.Sprint(e))
 		}
 	}()
