@@ -271,15 +271,22 @@ func (a *Function) str(which string) string {
 		}
 	}
 	s += ""
-	for _, x := range a.Body {
-		s += "\n\t" + x.String()
+	for _, stmt := range a.Body {
+		if stmt != nil {
+			s += "\n\t" + stmt.String()
+		}
 	}
 	return s + ")"
 }
 
 func applyStmt(fn func(Node) Node, pstmt *Statement) {
 	if *pstmt != nil {
-		*pstmt = fn(*pstmt).(Statement)
+		stmt := fn(*pstmt)
+		if stmt == nil {
+			*pstmt = nil
+		} else {
+			*pstmt = stmt.(Statement)
+		}
 	}
 }
 
@@ -399,7 +406,9 @@ func (x *Compound) String() string {
 	}
 	s := "{\n"
 	for _, stmt := range x.Body {
-		s += stmt.String() + "\n"
+		if stmt != nil {
+			s += stmt.String() + "\n"
+		}
 	}
 	return s + "}"
 }
@@ -642,7 +651,9 @@ func (x *Switch) String() string {
 			sep = ","
 		}
 		for _, stmt := range c.Body {
-			s += "\n" + stmt.String()
+			if stmt != nil {
+				s += "\n" + stmt.String()
+			}
 		}
 		s += ")"
 	}
@@ -651,7 +662,9 @@ func (x *Switch) String() string {
 			s += "\n()"
 		}
 		for _, stmt := range x.Default {
-			s += "\n" + stmt.String()
+			if stmt != nil {
+				s += "\n" + stmt.String()
+			}
 		}
 	}
 	return s + ")"

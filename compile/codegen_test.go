@@ -365,6 +365,8 @@ func TestControl(t *testing.T) {
 		8: Jump 14
 		11: Load c
 		13: Pop`)
+	test("x=1; if (x > 1) a()",
+		``)
 
 	test("switch { case 1: b }", `
 		0: True

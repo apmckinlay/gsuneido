@@ -261,6 +261,9 @@ func (cg *cgen) savePos(sp int) {
 }
 
 func (cg *cgen) statement(node ast.Node, labels *Labels, lastStmt bool) {
+	if node == nil {
+		return
+	}
 	cg.savePos(node.(ast.Statement).Position())
 	switch node := node.(type) {
 	case *ast.Compound:

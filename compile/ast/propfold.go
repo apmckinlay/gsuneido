@@ -47,7 +47,9 @@ func (f *fold) visit(node Node) Node {
 	}
 	node.Children(f.visit) // recurse
 	node = f.fold(node)
-	node = f.findConst(node)
+	if node != nil {
+		node = f.findConst(node)
+	}
 	return node
 }
 

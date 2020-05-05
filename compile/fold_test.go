@@ -54,11 +54,14 @@ func TestPropFold(t *testing.T) {
 		s := ""
 		sep := ""
 		for _, stmt := range f.Body {
-			s += sep + stmt.String()
-			sep = "\n"
+			if stmt != nil {
+				s += sep + stmt.String()
+				sep = "\n"
+			}
 		}
 		Assert(t).That(s, Like(expected))
 	}
+
 	test("return 123",
 		"Return(123)") // no change
 	test("x = 5; F(x)",
@@ -110,6 +113,14 @@ func TestPropFold(t *testing.T) {
 		"Call(T)")
 	test("if (false) T() else F()",
 		"Call(F)")
+	test("if (true) T()",
+		"Call(T)")
+	test("if (false) T()",
+		"")
+	test("if (false) if (false) if (false) T()",
+		"")
+	test("x=1; if (x > 1) F()",
+		"1")
 
 	// commutative
 	test("a * 0 * b", "Nary(Mul a b 0)") // short circuit
