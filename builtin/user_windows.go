@@ -648,6 +648,15 @@ var _ = builtin1("GetWindowText(hwnd)",
 			n+1)
 		return SuStr(heap.GetStrN(buf, int(n)))
 	})
+	
+// dll bool User32:HideCaret(pointer hWnd)
+var hideCaret = user32.MustFindProc("HideCaret").Addr()
+var _ = builtin1("HideCaret(hwnd)",
+	func(hwnd Value) Value {
+		rtn := goc.Syscall1(hideCaret,
+			intArg(hwnd))
+		return boolRet(rtn)
+	})
 
 // dll User32:InflateRect(RECT* rect, long dx, long dy) bool
 var inflateRect = user32.MustFindProc("InflateRect").Addr()
