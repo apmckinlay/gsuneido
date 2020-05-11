@@ -103,10 +103,6 @@ var scannerMethods = Methods{
 	"Type": method0(func(this Value) Value {
 		return SuStr(this.(*SuScanner).type2())
 	}),
-	// TODO remove after everyone has switched to new Type
-	"Type2": method0(func(this Value) Value {
-		return SuStr(this.(*SuScanner).type2())
-	}),
 	"Value": method0(func(this Value) Value {
 		return SuStr(this.(*SuScanner).item.Text)
 	}),
