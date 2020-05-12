@@ -91,6 +91,24 @@ var _ = builtin1("CreateFontIndirect(logfont)",
 		return intRet(rtn)
 	})
 
+// dll pointer Gdi32:AddFontMemResourceEx([in] string pFileView, long cjSize,
+//		pointer pvResrved, LONG* pNumFonts)
+var addFontMemResourceEx = gdi32.MustFindProc("AddFontMemResourceEx").Addr()
+var _ = builtin4("AddFontMemResourceEx(pFileView, cjSize, pvResrved, pNumFonts)",
+	func(a, b, c, d Value) Value {
+		defer heap.FreeTo(heap.CurSize())
+		pFileView := ToStr(a)
+		cjSize := ToInt(b)	
+		pNumFonts := heap.Alloc(int32Size)
+		rtn := goc.Syscall4(addFontMemResourceEx,
+			uintptr(heap.Copy(pFileView, cjSize)),
+			uintptr(cjSize),
+			0,
+			uintptr(pNumFonts))
+		b.Put(nil, SuStr("x"), IntVal(int(*(*int32)(pNumFonts))))
+		return intRet(rtn)
+	})
+
 // dll bool Gdi32:GetTextMetrics(pointer hdc, TEXTMETRIC* tm)
 var getTextMetrics = gdi32.MustFindProc("GetTextMetricsA").Addr()
 var _ = builtin2("GetTextMetrics(hdc, tm)",
