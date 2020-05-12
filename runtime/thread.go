@@ -4,6 +4,7 @@
 package runtime
 
 import (
+	"fmt"
 	"log"
 	"strconv"
 	"sync/atomic"
@@ -35,7 +36,7 @@ type Thread struct {
 	sp int
 	// spMax is the "high water" mark for sp
 	spMax int
-	
+
 	// blockReturnId is the id of the function to return from
 	blockReturnId uint32
 
@@ -155,6 +156,18 @@ func (t *Thread) PrintStack() {
 }
 
 func PrintStack(cs *SuObject) {
+	toStr := func(x Value) (s string) {
+		defer func() {
+			if e := recover(); e != nil {
+				s = fmt.Sprint(e)
+			}
+		}()
+		s = x.String()
+		if len(s) > 230 {
+			s = s[:230] + "..."
+		}
+		return s
+	}
 	if cs == nil {
 		return
 	}
@@ -163,11 +176,7 @@ func PrintStack(cs *SuObject) {
 		fn := frame.Get(nil, SuStr("fn"))
 		log.Println(fn)
 		locals := frame.Get(nil, SuStr("locals"))
-		s := locals.String()
-		if len(s) > 230 {
-			s = s[:230] + "..."
-		}
-		log.Println("   " + s)
+		log.Println("   " + toStr(locals))
 	}
 }
 
