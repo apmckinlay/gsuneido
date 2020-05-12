@@ -26,7 +26,7 @@ var (
 )
 
 // debugging options
-var (
+const (
 	HeapDebug             = true
 	ThreadDisabled        = false
 	TimersDisabled        = false
