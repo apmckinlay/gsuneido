@@ -648,7 +648,7 @@ var _ = builtin1("GetWindowText(hwnd)",
 			n+1)
 		return SuStr(heap.GetStrN(buf, int(n)))
 	})
-	
+
 // dll bool User32:HideCaret(pointer hWnd)
 var hideCaret = user32.MustFindProc("HideCaret").Addr()
 var _ = builtin1("HideCaret(hwnd)",
@@ -1800,7 +1800,7 @@ var _ = builtin5("DrawTextExOut(hdc, text, rect, flags, params)",
 		defer heap.FreeTo(heap.CurSize())
 		text := ToStr(b)
 		bufsize := len(text) + 8
-		buf := strToBuf(text, bufsize)
+		buf := heap.Copy(text, bufsize)
 		r := heap.Alloc(nRECT)
 		rtn := goc.Syscall6(drawTextEx,
 			intArg(a),

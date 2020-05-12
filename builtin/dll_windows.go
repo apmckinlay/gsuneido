@@ -141,18 +141,7 @@ func stringArg(v Value) unsafe.Pointer {
 		return nil
 	}
 	s := ToStr(v)
-	return strToBuf(s, len(s)+1)
-}
-
-// strToBuf returns a nul terminated heap copy of a string of a specified size.
-// Callers should defer heap.Free
-func strToBuf(s string, n int) unsafe.Pointer {
-	if len(s)+1 > n {
-		log.Panicln("dll interface: string too long")
-	}
-	p := heap.Alloc(uintptr(n))
-	strToPtr(s, p)
-	return p
+	return heap.Copy(s, len(s)+1)
 }
 
 // strToPtr copies a nul terminated string to an unsafe.Pointer

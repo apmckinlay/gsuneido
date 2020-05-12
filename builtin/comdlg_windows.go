@@ -185,7 +185,7 @@ var _ = builtin1("GetOpenFileName(a)",
 func buildOPENFILENAME(a Value) (p unsafe.Pointer, buf unsafe.Pointer, bufsize int) {
 	bufsize = getInt(a, "maxFile")
 	file := ToStr(a.Get(nil, SuStr("file")))
-	buf = strToBuf(file, bufsize)
+	buf = heap.Copy(file, bufsize)
 	p = heap.Alloc(nOPENFILENAME)
 	*(*OPENFILENAME)(p) = OPENFILENAME{
 		structSize: int32(nOPENFILENAME),

@@ -35,27 +35,43 @@ var heapnext = align
 
 var lastAlloc uintptr
 
+// Alloc returns an unsafe.Pointer to n byts of heap space.
 func Alloc(n uintptr) unsafe.Pointer {
+	i := alloc(n)
+	// zero out memory
+	for j := uintptr(0); j < n; j++ {
+		heap[i + j] = 0
+	}
+	return unsafe.Pointer(&heap[i])
+}
+
+func alloc(n uintptr) uintptr {
 	lastAlloc = n
 	n = ((n - 1) | (align - 1)) + 1
 	if heapnext+n > heapsize {
 		panic("Windows dll interface argument space limit exceeded")
 	}
 	heapcheck("alloc")
-	// zero out memory
-	// probably not required ???
-	for i := uintptr(0); i < n; i++ {
-		heap[heapnext+i] = 0
-	}
-	p := &heap[heapnext]
+	i := heapnext
 	heapnext += n
 	if options.HeapDebug {
 		heapnext += align
-		for i := align; i > 0; i-- {
-			heap[heapnext-i] = byte(256 - i)
+		for j := align; j > 0; j-- {
+			heap[heapnext-j] = byte(256 - j)
 		}
 	}
-	return unsafe.Pointer(p)
+	return i
+}
+
+// Copy allocates n bytes on the heap and copies the string into it.
+func Copy(s string, n int) unsafe.Pointer {
+	i := alloc(uintptr(n))
+	copy(heap[i:i+uintptr(n)], s)
+	// zero out any remainder (handles nul string terminator)
+	for j := uintptr(len(s)); j < uintptr(n); j++ {
+		heap[i + j] = 0
+	}
+	return unsafe.Pointer(&heap[i])
 }
 
 func CurSize() uintptr {

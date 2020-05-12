@@ -192,7 +192,7 @@ func convertArgs(args []Value) unsafe.Pointer {
 var DISPID_PROPERTYPUT int32 = -3
 
 func goStrArg(s string) unsafe.Pointer {
-	return strToBuf(s, len(s)+1)
+	return heap.Copy(s, len(s)+1)
 }
 
 func suToVariant(x Value, v *VARIANT) {
