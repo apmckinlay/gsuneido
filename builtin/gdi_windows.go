@@ -105,7 +105,7 @@ var _ = builtin4("AddFontMemResourceEx(pFileView, cjSize, pvResrved, pNumFonts)"
 			uintptr(cjSize),
 			0,
 			uintptr(pNumFonts))
-		b.Put(nil, SuStr("x"), IntVal(int(*(*int32)(pNumFonts))))
+		d.Put(nil, SuStr("x"), IntVal(int(*(*int32)(pNumFonts))))
 		return intRet(rtn)
 	})
 
