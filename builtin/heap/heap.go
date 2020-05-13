@@ -27,25 +27,25 @@ import (
 	"github.com/apmckinlay/gsuneido/util/verify"
 )
 
-const align uintptr = 8 // Alloc assumes power of two
+const align int = 8 // Alloc assumes power of two
 const heapsize = 64 * 1024
 
 var heap = [heapsize]byte{248, 249, 250, 251, 252, 253, 254, 255}
 var heapnext = align
 
-var lastAlloc uintptr
+var lastAlloc int
 
 // Alloc returns an unsafe.Pointer to n byts of heap space.
 func Alloc(n uintptr) unsafe.Pointer {
-	i := alloc(n)
+	i := alloc(int(n))
 	// zero out memory
-	for j := uintptr(0); j < n; j++ {
+	for j := 0; j < int(n); j++ {
 		heap[i + j] = 0
 	}
 	return unsafe.Pointer(&heap[i])
 }
 
-func alloc(n uintptr) uintptr {
+func alloc(n int) int {
 	lastAlloc = n
 	n = ((n - 1) | (align - 1)) + 1
 	if heapnext+n > heapsize {
@@ -65,16 +65,16 @@ func alloc(n uintptr) uintptr {
 
 // Copy allocates n bytes on the heap and copies the string into it.
 func Copy(s string, n int) unsafe.Pointer {
-	i := alloc(uintptr(n))
-	copy(heap[i:i+uintptr(n)], s)
+	i := alloc(n)
+	copy(heap[i:i+n], s)
 	// zero out any remainder (handles nul string terminator)
-	for j := uintptr(len(s)); j < uintptr(n); j++ {
+	for j := len(s); j < n; j++ {
 		heap[i + j] = 0
 	}
 	return unsafe.Pointer(&heap[i])
 }
 
-func CurSize() uintptr {
+func CurSize() int {
 	return heapnext
 }
 
@@ -102,7 +102,7 @@ func get(p unsafe.Pointer) []byte {
 	return heap[i:heapnext]
 }
 
-func FreeTo(prevSize uintptr) {
+func FreeTo(prevSize int) {
 	heapcheck("free1")
 	verify.That(prevSize <= heapnext)
 	heapnext = prevSize
