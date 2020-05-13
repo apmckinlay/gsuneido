@@ -358,6 +358,7 @@ func Test_Format(t *testing.T) {
 	test("-123", "(###)", "(123)")
 	test("123", "(###)", "123 ")
 	test("1234567", "###,###,###", "1,234,567")
+	test(".8", "Foo", "#")
 	// see also: suneido_tests/number.test
 }
 
