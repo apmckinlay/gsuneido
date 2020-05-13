@@ -198,12 +198,18 @@ func (ob *SuObject) Delete(_ *Thread, key Value) bool {
 	}
 	defer ob.endMutate(ob.startMutate())
 	if i, ok := key.IfInt(); ok && 0 <= i && i < len(ob.list) {
-		newlist := ob.list[:i+copy(ob.list[i:], ob.list[i+1:])]
-		ob.list[len(ob.list)-1] = nil // aid garbage collection
-		ob.list = newlist
+		ob.listDelete(i)
 		return true
 	}
 	return ob.named.Del(key) != nil
+}
+
+func (ob *SuObject) listDelete(i int) Value {
+	x := ob.list[i]
+	newlist := ob.list[:i+copy(ob.list[i:], ob.list[i+1:])]
+	ob.list[len(ob.list)-1] = nil // aid garbage collection
+	ob.list = newlist
+	return x
 }
 
 // Erase removes a key.
@@ -223,6 +229,29 @@ func (ob *SuObject) Erase(_ *Thread, key Value) bool {
 		return true
 	}
 	return ob.named.Del(key) != nil
+}
+
+func (ob *SuObject) PopFirst() Value {
+	if ob.Lock() {
+		defer ob.Unlock()
+	}
+	if len(ob.list) < 1 {
+		return nil
+	}
+	defer ob.endMutate(ob.startMutate())
+	return ob.listDelete(0)
+}
+
+func (ob *SuObject) PopLast() Value {
+	if ob.Lock() {
+		defer ob.Unlock()
+	}
+	last := len(ob.list) - 1
+	if last < 0 {
+		return nil
+	}
+	defer ob.endMutate(ob.startMutate())
+	return ob.listDelete(last)
 }
 
 // startMutate ensures the object is mutable (not readonly)

@@ -127,6 +127,20 @@ func init() {
 		"Member?": method1("(member)", func(this Value, val Value) Value {
 			return SuBool(ToContainer(this).HasKey(val))
 		}),
+		"PopFirst": method0(func(this Value) Value {
+			x := ToContainer(this).ToObject().PopFirst()
+			if x == nil {
+				return this
+			}
+			return x
+		}),
+		"PopLast": method0(func(this Value) Value {
+			x :=  ToContainer(this).ToObject().PopLast()
+			if x == nil {
+				return this
+			}
+			return x
+		}),
 		"Readonly?": method0(func(this Value) Value {
 			return SuBool(ToContainer(this).IsReadOnly())
 		}),
