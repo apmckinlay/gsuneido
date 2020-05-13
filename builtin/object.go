@@ -186,7 +186,6 @@ func init() {
 				return NewSuSequence(IterValues(ToContainer(this), list, named))
 			}),
 	}
-	ObjectMethods["LowerBound"] = ObjectMethods["BinarySearch"]
 }
 
 func obDelete(t *Thread, as *ArgSpec, this Value, args []Value) Value {
