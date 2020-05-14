@@ -165,9 +165,6 @@ func isTerminal() bool {
 }
 
 func showOptions() {
-	if options.HeapDebug {
-		prompt("- HeapDebug enabled")
-	}
 	if options.ThreadDisabled {
 		prompt("- Thread disabled")
 	}

@@ -167,7 +167,7 @@ func invoke(idisp uintptr, name string, flags uintptr, args ...Value) Value {
 	} else {
 		result = heap.Alloc(nVARIANT)
 	}
-	hr := goc.Invoke(idisp, uintptr(goStrArg(name)), flags, uintptr(params),
+	hr := goc.Invoke(idisp, uintptr(heap.CopyStr(name)), flags, uintptr(params),
 		uintptr(result))
 	if hr < 0 {
 		panic(fmt.Sprintf("COMobject %s failed %s %x",
@@ -190,10 +190,6 @@ func convertArgs(args []Value) unsafe.Pointer {
 }
 
 var DISPID_PROPERTYPUT int32 = -3
-
-func goStrArg(s string) unsafe.Pointer {
-	return heap.Copy(s, len(s)+1)
-}
 
 func suToVariant(x Value, v *VARIANT) {
 	if x == True {

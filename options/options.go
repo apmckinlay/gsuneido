@@ -27,7 +27,6 @@ var (
 
 // debugging options
 const (
-	HeapDebug             = true
 	ThreadDisabled        = false
 	TimersDisabled        = false
 	ClearCallbackDisabled = false

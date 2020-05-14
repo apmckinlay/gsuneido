@@ -140,8 +140,7 @@ func stringArg(v Value) unsafe.Pointer {
 	if v.Equal(Zero) {
 		return nil
 	}
-	s := ToStr(v)
-	return heap.Copy(s, len(s)+1)
+	return heap.CopyStr(ToStr(v))
 }
 
 // strToPtr copies a nul terminated string to an unsafe.Pointer

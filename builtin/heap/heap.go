@@ -15,62 +15,52 @@
 // Although I thought escape analysis would be putting the data on the heap.
 // The crashes were mostly (always?) with nested callbacks.
 // see: https://github.com/lxn/walk/pull/493
+//
+// Allocated memory is zero filled by FreeTo 
+// since that is less overhead than alloc zeroing.
 package heap
 
 import (
 	"bytes"
-	"log"
-	"runtime/debug"
 	"unsafe"
 
-	"github.com/apmckinlay/gsuneido/options"
 	"github.com/apmckinlay/gsuneido/util/verify"
 )
 
-const align int = 8 // Alloc assumes power of two
+const align = 8 // Alloc assumes power of two
 const heapsize = 64 * 1024
 
-var heap = [heapsize]byte{248, 249, 250, 251, 252, 253, 254, 255}
-var heapnext = align
+var heap [heapsize]byte
+var heapnext = 0
 
-var lastAlloc int
-
-// Alloc returns an unsafe.Pointer to n byts of heap space.
+// Alloc returns an unsafe.Pointer to n bytes of zero heap space.
 func Alloc(n uintptr) unsafe.Pointer {
 	i := alloc(int(n))
-	// zero out memory
-	for j := 0; j < int(n); j++ {
-		heap[i + j] = 0
-	}
 	return unsafe.Pointer(&heap[i])
 }
 
 func alloc(n int) int {
-	lastAlloc = n
-	n = ((n - 1) | (align - 1)) + 1
-	if heapnext+n > heapsize {
-		panic("Windows dll interface argument space limit exceeded")
-	}
-	heapcheck("alloc")
+	n = ((n - 1) | (align - 1)) + 1 // requires align is power of 2
 	i := heapnext
 	heapnext += n
-	if options.HeapDebug {
-		heapnext += align
-		for j := align; j > 0; j-- {
-			heap[heapnext-j] = byte(256 - j)
-		}
+	if heapnext > heapsize {
+		panic("Windows dll interface argument space limit exceeded")
 	}
 	return i
 }
 
+// CopyStr copies the string into the heap with a nul terminator (the +1).
+// Due to alignment, "" is guaranteed to have two nuls as required by UTF16.
+func CopyStr(s string) unsafe.Pointer {
+	return Copy(s, len(s)+1)
+}
+
 // Copy allocates n bytes on the heap and copies the string into it.
+// If n > len(s) the excess will be zero.
+// If len(s) > n only n bytes will be copied.
 func Copy(s string, n int) unsafe.Pointer {
 	i := alloc(n)
 	copy(heap[i:i+n], s)
-	// zero out any remainder (handles nul string terminator)
-	for j := len(s); j < n; j++ {
-		heap[i + j] = 0
-	}
 	return unsafe.Pointer(&heap[i])
 }
 
@@ -103,19 +93,15 @@ func get(p unsafe.Pointer) []byte {
 }
 
 func FreeTo(prevSize int) {
-	heapcheck("free1")
 	verify.That(prevSize <= heapnext)
+	zero(heap[prevSize:heapnext])
 	heapnext = prevSize
-	heapcheck("free2")
 }
 
-func heapcheck(s string) {
-	if options.HeapDebug {
-		for i := align; i > 0; i-- {
-			if heap[heapnext-i] != byte(256-i) {
-				debug.PrintStack()
-				log.Fatalln("heap corrupt", s, "lastAlloc", lastAlloc)
-			}
-		}
+func zero(buf []byte) {
+	// Zero memory, the compiler should optimize this to memclr.
+	// github.com/golang/go/commit/f03c9202c43e0abb130669852082117ca50aa9b1
+	for i := range buf {
+		buf[i] = 0
 	}
 }
