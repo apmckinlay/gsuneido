@@ -922,6 +922,7 @@ func _() {
 	_ = x[unsafe.Sizeof(DOCINFO{})-40]
 	_ = x[unsafe.Sizeof(DRAWITEMSTRUCT{})-64]
 	_ = x[unsafe.Sizeof(DRAWTEXTPARAMS{})-20]
+	_ = x[unsafe.Sizeof(EDITBALLOONTIP{})-32]
 	_ = x[unsafe.Sizeof(FIXED{})-4]
 	_ = x[unsafe.Sizeof(FLASHWINFO{})-32]
 	_ = x[unsafe.Sizeof(GLYPHMETRICS{})-20]

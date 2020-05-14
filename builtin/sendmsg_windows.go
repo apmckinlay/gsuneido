@@ -788,6 +788,7 @@ type EDITBALLOONTIP struct {
 	pszTitle *byte
 	pszText  *byte
 	ttiIcon  int32
+	_        [4]byte // padding
 }
 
 const nEDITBALLOONTIP = unsafe.Sizeof(EDITBALLOONTIP{})
