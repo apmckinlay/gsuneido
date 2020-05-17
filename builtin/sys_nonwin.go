@@ -49,3 +49,7 @@ var _ = builtin0("GetTempPath()",
 func CallbacksCount() int {
 	return 0
 }
+
+func WndProcCount() int {
+	return 0
+}

@@ -223,7 +223,7 @@ func ClearCallback(fn Value) bool {
 	if foundInactive {
 		log.Println("ClearCallback FOUND INACTIVE", fn)
 	} else {
-		for hwnd,cbfn := range hwndToCb {
+		for hwnd, cbfn := range hwndToCb {
 			if cbfn == fn {
 				delete(hwndToCb, hwnd)
 				return true
@@ -267,3 +267,7 @@ func CallbacksCount() int {
 var _ = builtin1("ClearCallback(fn)", func(fn Value) Value {
 	return SuBool(ClearCallback(fn))
 })
+
+func WndProcCount() int {
+	return len(hwndToCb)
+}
