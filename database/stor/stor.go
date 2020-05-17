@@ -41,7 +41,7 @@ type stor struct {
 	lock   sync.Mutex
 }
 
-// Alloc allocates n bytes of storage and returns its Offset and data
+// Alloc allocates n bytes of storage and returns its Offset and byte slice
 // Returning data here allows slicing to correct length and capacity
 // to prevent erroneously writing too far.
 // Alloc is threadsafe, guarded by s.lock
@@ -64,11 +64,11 @@ func (s *stor) Alloc(n int) (Offset, []byte) {
 	return offset, s.data(offset)[:n:n]
 }
 
-// Data returns the slice of bytes at the given offset.
-// The slice extends to the end of the chunk,
+// Data returns the bytes at the given offset as a string.
+// The string extends to the end of the chunk,
 // since we don't know the size of the original alloc.
 // NOTE: There is no locking.
-// Code using this must ensure it locks at some point
+// A thread using this must ensure it locks at some point
 // prior to accessing "new" chunks from another thread's Alloc.
 // This requires mapping the existing chunks initially
 // since lazily mapping would require locking.
