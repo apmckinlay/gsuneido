@@ -44,10 +44,12 @@ func MmapStor(filename string, mode Mode) (*stor, error) {
 	size := fi.Size()
 	nchunks := int(((size - 1) / MMAP_CHUNKSIZE) + 1)
 	impl := &mmapStor{file, mode, nil}
-	ms := &stor{impl: impl, chunksize: MMAP_CHUNKSIZE, size: uint64(size)}
+	chunks := make([][]byte, nchunks)
 	for i := 0; i < nchunks; i++ {
-		ms.chunks = append(ms.chunks, impl.Get(0))
+		chunks[i] = impl.Get(0)
 	}
+	ms := &stor{impl: impl, chunksize: MMAP_CHUNKSIZE, size: uint64(size)}
+	ms.chunks.Store(chunks)
 	return ms, nil
 }
 

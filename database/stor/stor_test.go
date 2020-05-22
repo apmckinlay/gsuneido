@@ -57,3 +57,4 @@ func TestMmapWrite(t *testing.T) {
 
 	os.Remove("stor_test.tmp")
 }
+

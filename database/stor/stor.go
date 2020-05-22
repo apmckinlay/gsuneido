@@ -11,6 +11,7 @@ package stor
 
 import (
 	"sync"
+	"sync/atomic"
 	"unsafe"
 
 	"github.com/apmckinlay/gsuneido/util/verify"
@@ -34,52 +35,64 @@ type stor struct {
 	impl storage
 	// chunksize must be a power of two and must be initialized
 	chunksize uint64
-	size      uint64
+	// size is the currently used amount.
+	// It must be accessed in a thread safe way.
+	size uint64
 	// chunks must be initialized up to size,
 	// with at least one chunk if size is 0
-	chunks [][]byte
+	chunks atomic.Value // [][]byte
 	lock   sync.Mutex
 }
 
 // Alloc allocates n bytes of storage and returns its Offset and byte slice
 // Returning data here allows slicing to correct length and capacity
 // to prevent erroneously writing too far.
-// Alloc is threadsafe, guarded by s.lock
+// If insufficient room in the current chunk, advance to next
+// (allocations may not straddle chunks)
 func (s *stor) Alloc(n int) (Offset, []byte) {
-	verify.That(n < int(s.chunksize))
-	s.lock.Lock()
+	verify.That(0 < n && n < int(s.chunksize))
 
-	// if insufficient room in this chunk, advance to next
-	// (allocations may not straddle chunks)
-	remaining := s.chunksize - s.size&(s.chunksize-1)
-	if n > int(remaining) {
-		s.size += remaining
-		chunk := s.offsetToChunk(s.size)
-		s.chunks = append(s.chunks, s.impl.Get(chunk))
+	for {
+		oldsize := atomic.LoadUint64(&s.size)
+		offset := oldsize
+		newsize := offset + uint64(n)
+		if newsize&(s.chunksize-1) < uint64(n) {
+			// straddle, need to get another chunk
+			s.lock.Lock() // note: lock does not prevent concurrent allocations
+			chunk := s.offsetToChunk(newsize)
+			chunks := s.chunks.Load().([][]byte)
+			if chunk >= len(chunks) {
+				// no one else beat us to it
+				chunks = append(chunks, s.impl.Get(chunk))
+				s.chunks.Store(chunks)
+			}
+			s.lock.Unlock()
+
+			offset = uint64(chunk) * s.chunksize
+			newsize = offset + uint64(n)
+		}
+		// attempt to confirm our allocation
+		if atomic.CompareAndSwapUint64(&s.size, oldsize, newsize) {
+			return offset, s.data(offset)[:n:n] // fast path
+		}
+		// another thread beat us, loop and try again
 	}
-
-	offset := s.size
-	s.size += uint64(n)
-	s.lock.Unlock()
-	return offset, s.data(offset)[:n:n]
 }
 
 // Data returns the bytes at the given offset as a string.
 // The string extends to the end of the chunk,
 // since we don't know the size of the original alloc.
-// NOTE: There is no locking.
-// A thread using this must ensure it locks at some point
-// prior to accessing "new" chunks from another thread's Alloc.
-// This requires mapping the existing chunks initially
+// The existing chunks must be mapped initially
 // since lazily mapping would require locking.
 func (s *stor) Data(offset Offset) string {
 	b := s.data(offset)
-	return *(*string)(unsafe.Pointer(&b))
+	return *(*string)(unsafe.Pointer(&b)) // no alloc converstion to string
 }
 
 func (s *stor) data(offset Offset) []byte {
 	chunk := s.offsetToChunk(offset)
-	c := s.chunks[chunk]
+	chunks := s.chunks.Load().([][]byte)
+	c := chunks[chunk]
 	return c[offset&(s.chunksize-1):]
 }
 
