@@ -3,6 +3,15 @@
 
 // +build interactive
 
+// model of commit/merge/persist
+//
+// []client()
+//		->commitChan	commitMsg = set of index overlays
+// commit()
+//		->mergeChan		mergeMsg
+// merge()
+//		->persistChan *dbState = writable state
+// persist()
 package model
 
 import (
@@ -17,29 +26,14 @@ import (
 	"unsafe"
 )
 
-// model of commit/merge/checkpoint/persist
-//
-// []client()
-//		->commitChan	commitMsg = set of index overlays
-// commit()
-//		->mergeChan		mergeMsg = which index to merge
-//		<-cpStateChan	*dbState = valid checkpoint state
-// []merge()
-//
-//		->checkpointChan *dbState = state to write
-// checkpoint()
-//		->persistInChan	persistInMsg = which index to persist
-//		->persistOutChan persistOutMsg = new index root
-// []persist()
-
 func TestModel(*testing.T) {
 	start()
 }
 
-// trans identifies a client
-type trans int32
+// tranNum is a sequential transaction number
+type tranNum int32
 
-func (t trans) String() string {
+func (t tranNum) String() string {
 	return "T" + strconv.Itoa(int(t))
 }
 
@@ -50,84 +44,91 @@ func (v value) String() string {
 	return "V" + strconv.Itoa(int(v))
 }
 
-// index identifies an index
-type index int
+type indexBase []value
 
-func (i index) String() string {
+// indexNum identifies an index
+type indexNum int
+
+func (i indexNum) String() string {
 	return string('a' + i)
 }
 
 // commitMsg is sent by clients to the commit process
-type commitMsg map[index]value
+type commitMsg map[indexNum]value
 
 // mergeMsg is sent by the commit process to the index mergers
 type mergeMsg struct {
-	tran  trans
-	idx   index
 	state *dbState
+	tran  tranNum
+	cm    commitMsg
 }
+
+type persistMsg struct{}
 
 const nIndexes = 13
 
-// number of goroutines
-const (
-	nClients  = 4
-	nMerges   = 4
-	nPersists = 2
-)
+const nClients = 4
 
 // duration of simulated work
 const (
-	timeUnits       = time.Millisecond
 	testDuration    = 3000 * timeUnits
-	commitDelay     = 10
-	mergeDelay      = 20
-	clientDelay     = 200
-	checkpointDelay = 50
+	mergeDelay      = 8
+	clientDelay     = 200 // avg 100 / 4 clients = commit every ~25
+	persistDelay    = 50
+	persistInterval = 400
 )
 
-// buffers is the input channel buffer size for merges and persists
-// a buffer size of 4 seems to make a modest (~10%) increase in throughput
+// buffers is the channel buffer size
 const buffers = 4
 
+// terminate is used to signal the clients to end.
+// It should be accessed atomically.
+var terminate int32
+
+// allDone is closed by persist when it finishes shutdown
+var allDone = make(chan bool)
+
 func start() {
-	commitChan := make(chan commitMsg)
-	mergeChan := make(chan mergeMsg, buffers)
-	cpStateChan := make(chan *dbState, 1)
-	checkpointChan := make(chan *dbState)
+	commitChan := make(chan commitMsg, buffers)
+	mergeChan := make(chan *mergeMsg, buffers)
+	persistChan := make(chan persistMsg, buffers)
 
 	for i := range vals {
 		vals[i] = int32(i * 100)
 	}
 	rand.Seed(time.Now().UnixNano()) // BEWARE of test caching
+	var wg sync.WaitGroup
 	for i := 0; i < nClients; i++ {
-		go client(commitChan)
+		wg.Add(1)
+		go client(commitChan, &wg)
 	}
-	for i := 0; i < nMerges; i++ {
-		go merge(mergeChan, cpStateChan)
-	}
-	go checkpoint(checkpointChan)
-	commit(commitChan, mergeChan, cpStateChan, checkpointChan)
+	go merge(mergeChan, persistChan)
+	go persist(persistChan)
+	go commit(commitChan, mergeChan)
+	time.Sleep(testDuration)
+	atomic.AddInt32(&terminate, nClients)
+	wg.Wait()
+	close(commitChan)
+	<-allDone
 }
 
-// tran is the next client number
-// must be accessed atomically
-var tran int32
-
 // vals is the next value number for each index
-// must be access atomically
+// must be accessed atomically
 var vals [nIndexes]int32
 
-// client models a database client
-// sends commitMsg to commitChan to the commit process
-func client(commitChan chan<- commitMsg) {
-	for {
+//-------------------------------------------------------------------
+
+// client models a database client.
+// It sends commitMsg to commitChan to the commit process
+func client(commitChan chan<- commitMsg, wg *sync.WaitGroup) {
+	defer wg.Done()
+	for atomic.LoadInt32(&terminate) == 0 {
 		randSleep(clientDelay)
-		msg := make(map[index]value)
+		msg := make(map[indexNum]value)
 		ni := 1 + rand.Intn(nIndexes/2)
 		for i := 0; i < nIndexes && ni > 0; i++ {
 			if rand.Int()%2 == 0 {
-				msg[index(i)] = value(atomic.AddInt32(&vals[i], 1))
+				msg[indexNum(i)] = value(atomic.AddInt32(&vals[i], 1))
 				ni--
 			}
 		}
@@ -135,126 +136,127 @@ func client(commitChan chan<- commitMsg) {
 	}
 }
 
-// commit models the commit process
+//-------------------------------------------------------------------
+
+// commit completes transactions.
+// It is single threaded, serializes transactions.
+//
 // - receive commitMsg's from clients
+//
 // - add overlays to state
-// - send mergeMsg's to merge's, and dbState to checkpoint
-func commit(commitChan <-chan commitMsg, mergeChan chan<- mergeMsg,
-	cpStateChan <-chan *dbState, checkpointChan chan<- *dbState) {
-	var cpState *dbState
-	ticker := time.Tick(1000 * timeUnits)
-	terminator := time.NewTimer(testDuration)
-	for {
-		var cm commitMsg
-		select {
-		case cm = <-commitChan: // commitMsg from clients
-			t := trans(atomic.AddInt32(&tran, 1))
-			println("commit", t, cm)
-			state := updateState(func(state *dbState) {
-				for i, val := range cm {
-					// add overlay to state
-					idx := &state.indexes[i]
-					idx.overlays = append(idx.overlays, val)
-					randSleep(commitDelay)
-				}
-			})
-			// notify the relevant merges
-			for i := range cm {
-				atomic.AddInt32(&activeMergeCount, +1)
-				mergeChan <- mergeMsg{t, i, state}
+//
+// - send mergeMsg's to merge's
+func commit(commitChan <-chan commitMsg, mergeChan chan<- *mergeMsg) {
+	var tran tranNum
+	// receive commitMsg from clients
+	for cm := range commitChan {
+		t := tran
+		tran++
+		println("commit", t, cm, "commitChan", len(commitChan))
+		// add overlays to state
+		state := updateState(func(state *dbState) {
+			for i, val := range cm {
+				idx := &state.indexes[i]
+				idx.overlays = append(idx.overlays, val)
 			}
-		case cpState = <-cpStateChan:
-			// just accept new cpState
-		case <-ticker:
-			// send ticks from here so commit will block if checkpoint slow
-			if cpState == nil {
-				// haven't had a lull so need to force one
-				println(strings.Repeat("-", 70), "force")
-				cpState = <-cpStateChan
-			}
-			checkpointChan <- cpState
-			cpState = nil
-		case <-terminator.C:
-			if atomic.LoadInt32(&activeMergeCount) > 0 {
-				cpState = <-cpStateChan
-				checkpointChan <- cpState
-				//TODO wait for checkpoint to finish
-			}
-			return
-		}
+		})
+		// notify merger
+		mergeChan <- &mergeMsg{state, t, cm}
 	}
+	close(mergeChan)
 }
 
-// merge models an index merger
+//-------------------------------------------------------------------
+
+// merge models an index merger.
+// This only changes the representation, not any actual data.
+//
 // - receives mergeMsg's from commit
+//
 // - updates database state with results of merges
-func merge(mergeChan <-chan mergeMsg, cpStateChan chan<- *dbState) {
-	// locks prevent two merges on the same index at the same time
-	var locks [nIndexes]sync.Mutex
-
-	// receive mergeMsg's from commit
-	for m := range mergeChan {
-		merge1(m, locks[m.idx], cpStateChan)
+func merge(mergeChan <-chan *mergeMsg, persistChan chan<- persistMsg) {
+	ticker := time.NewTicker(persistInterval * timeUnits)
+loop:
+	for {
+		select {
+		case m := <-mergeChan: // receive mergeMsg's from commit
+			if m == nil {
+				break loop
+			}
+			println(indent(1)+"merge", m.tran, "mergeChan", len(mergeChan))
+			newBases := map[indexNum]indexBase{}
+			for idx := range m.cm { // NOTE: could merge indexes in parallel
+				newBases[idx] = merge1(m, idx)
+			}
+			updateState(func(state *dbState) {
+				for idx, newBase := range newBases {
+					updateIndexState(&state.indexes[idx], newBase)
+				}
+				state.lastMergedTran = m.tran
+			})
+		case <-ticker.C:
+			// send ticks from here so we get back pressure
+			persistChan <- struct{}{}
+		}
 	}
+	persistChan <- struct{}{}
+	close(persistChan)
 }
 
-// activeMergeCount is used to detect when all merges are complete
-// to set cpState
-var activeMergeCount int32
-
-func merge1(m mergeMsg, lock sync.Mutex, cpStateChan chan<- *dbState) {
-	// lock to prevent two merges on the same index at the same time
-	lock.Lock()
-	defer lock.Unlock()
+func merge1(m *mergeMsg, idx indexNum) indexBase {
+	println(indent(2)+"merge", m.tran, idx)
 	randSleep(mergeDelay)
-	newBase := merge2(&m.state.indexes[m.idx])
-	println(indent(1+int(m.idx))+"merge", m.tran, m.idx)
-	updateState(func(state *dbState) {
-		updateIndexState(&state.indexes[m.idx], newBase)
-		if 0 == atomic.AddInt32(&activeMergeCount, -1) {
-			println(strings.Repeat("-", 70), "cpstate")
-			cpStateChan <- state
-		}
-	})
+	return merge2(&m.state.indexes[idx])
 }
 
 // merge2 merges the first overlay into the base for a single index state
 // and returns the new indexState
-func merge2(iState *indexState) []value {
+func merge2(iState *indexState) indexBase {
 	newBase := make([]value, len(iState.base), len(iState.base)+1)
 	return append(newBase, iState.overlays[0])
 }
 
 // updateIndexState updates the global database state with the result of an index merge
-func updateIndexState(iState *indexState, newBase []value) {
+func updateIndexState(iState *indexState, newBase indexBase) {
 	iState.overlays = iState.overlays[1:]
 	iState.base = newBase
 }
 
-// checkpoint models the checkpoint process that writes index updates to disk.
-// At intervals it gets the latest merged state (set by merges)
-// concurrently persists indexes,
-// and then writes a new root state
-func checkpoint(checkpointChan <-chan *dbState) {
-	for {
-		<-checkpointChan
-		println(strings.Repeat("=", 70), "checkpoint")
-		//TODO get the current persistable state
-		//TODO send a message for each index that requires updating
-		//TODO wait for all the results
-		//TODO write a new root state
+//-------------------------------------------------------------------
+
+// persist models the writing index updates to disk.
+// It receives new states from merge and at intervals
+// writes the index updates and then a new root state.
+func persist(persistChan <-chan persistMsg) {
+	var lastTran tranNum
+	for range persistChan {
+		state := getState()
+		if state.lastMergedTran == lastTran {
+			continue
+		}
+		lastTran = state.lastMergedTran
+		println(strings.Repeat("^", 40)+"PERSIST up to", state.lastMergedTran,
+			"persistChan", len(persistChan))
+		randSleep(persistDelay)
+		println(strings.Repeat(".", 40) + "PERSIST end")
+		// NOTE: could persist indexes in parallel
 	}
+	close(allDone)
 }
+
+//-------------------------------------------------------------------
+
+var begin = time.Now()
+
+const timeUnits = time.Millisecond
 
 func randSleep(ms int) {
 	time.Sleep(time.Duration(rand.Intn(ms)) * timeUnits)
 }
 
-var begin = time.Now()
-
 func println(args ...interface{}) {
 	args2 := make([]interface{}, 0, 20)
-	args2 = append(args2, fmt.Sprintf("%4d ", time.Now().Sub(begin)/timeUnits))
+	args2 = append(args2, fmt.Sprintf("%4d ", time.Since(begin)/timeUnits))
 	args2 = append(args2, args...)
 	fmt.Println(args2...)
 }
@@ -293,7 +295,8 @@ func updateState(fn func(*dbState)) *dbState {
 
 // dbState must be immutable, updated by copy on write
 type dbState struct {
-	indexes [nIndexes]indexState
+	indexes        [nIndexes]indexState
+	lastMergedTran tranNum
 }
 
 // indexState is the state of an index
