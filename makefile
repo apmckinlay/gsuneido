@@ -29,7 +29,7 @@ client: build
 	./gsuneido.exe -c -- t@../tok
 
 generate:
-	go generate ./...
+	go generate -x ./...
 
 clean:
 	go clean -cache -testcache

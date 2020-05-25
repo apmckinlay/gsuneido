@@ -53,8 +53,8 @@ const (
 	DELETED
 )
 
-//go:generate genny -in ../../GoTemplates/list/list.go -out alist.go -pkg runtime gen "V=activeObserver"
-//go:generate genny -in ../../GoTemplates/list/list.go -out vlist.go -pkg runtime gen "V=Value"
+//go:generate genny -in ../genny/list/list.go -out alist.go -pkg runtime gen "V=activeObserver"
+//go:generate genny -in ../genny/list/list.go -out vlist.go -pkg runtime gen "V=Value"
 
 func NewSuRecord() *SuRecord {
 	return &SuRecord{ob: SuObject{defval: EmptyStr}}

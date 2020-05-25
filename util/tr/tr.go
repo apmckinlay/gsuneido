@@ -8,7 +8,7 @@ Currently it is byte based - it does not handle unicode.
 */
 package tr
 
-//go:generate genny -in ../../../GoTemplates/cache/cache.go -out cache.go -pkg tr gen "K=string V=trset"
+//go:generate genny -in ../../genny/cache/cache.go -out cache.go -pkg tr gen "K=string V=trset"
 
 import (
 	"strings"
