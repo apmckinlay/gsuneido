@@ -3,17 +3,14 @@
 
 package btree
 
-import "fmt"
-
-// mbtree is a specialized btree with a fixed size and number of levels
+// mbtree is a specialized btree with a maximum size and number of levels.
+// Nodes are fixed size to reduce allocation and bounds checks.
 type mbtree struct {
 	// tree is not embedded since it's not needed when small
 	tree *mTree
 	// leaf is embedded to reduce indirection and optimize when small
 	leaf mLeaf
 }
-
-// slots are fixed size arrays to reduce indirection and bounds checking
 
 // mSize of 128 means tree size of 128 * 128 = 16k
 // with splitting giving an average of 3/4 full, that gives average max of 12k
@@ -131,35 +128,4 @@ func (m *mbtree) Iterator() mIter {
 		slot := leaf.slots[i]
 		return slot.key, slot.rec, true
 	}
-}
-
-//-------------------------------------------------------------------
-
-func (m *mbtree) print() int {
-	var n int
-	if m.tree != nil {
-		n = m.tree.print()
-		fmt.Println("total size", n,
-			"average leaf occupancy", float32(n)/float32(m.tree.size)/float32(mSize))
-	} else {
-		fmt.Println("no tree, single leaf")
-		n = m.leaf.print()
-	}
-	return n
-}
-
-func (tree *mTree) print() int {
-	n := 0
-	for i := 0; i < tree.size; i++ {
-		fmt.Println(i, tree.slots[i].key, "leaf size", tree.slots[i].leaf.size)
-		n += tree.slots[i].leaf.print()
-	}
-	return n
-}
-
-func (leaf *mLeaf) print() int {
-	for i := 0; i < leaf.size; i++ {
-		// fmt.Println("   ", leaf.slots[i])
-	}
-	return leaf.size
 }

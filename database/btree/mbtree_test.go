@@ -4,11 +4,12 @@
 package btree
 
 import (
-	"math/rand"
+	"fmt"
 	"sort"
 	"testing"
 
 	. "github.com/apmckinlay/gsuneido/util/hamcrest"
+	"github.com/apmckinlay/gsuneido/util/str"
 )
 
 func TestMbtree(t *testing.T) {
@@ -52,23 +53,11 @@ func TestMbtreeRandom(t *testing.T) {
 	data := make(mLeafSlots, n)
 	x := newMbtree()
 	for i := uint64(0); i < n; i++ {
-		key := randomString() + randomString()
+		key := str.Random(3, 10)
 		x.Insert(key, i)
 		data[i] = mLeafSlot{key, i}
 	}
 	mCompare(t, x, data)
-}
-
-const chars = "abcdefghijklmnopqrstuvwxyz"
-const maxchars = 8
-
-func randomString() string {
-	n := 1 + rand.Int63()%maxchars
-	b := make([]byte, n)
-	for i := range b {
-		b[i] = chars[rand.Int63()%int64(len(chars))]
-	}
-	return string(b)
 }
 
 func TestMbtreeOrdered(t *testing.T) {
@@ -76,7 +65,7 @@ func TestMbtreeOrdered(t *testing.T) {
 	data := make(mLeafSlots, n)
 	x := newMbtree()
 	for i := uint64(0); i < n; i++ {
-		key := randomString() + randomString()
+		key := str.Random(2, 10)
 		data[i] = mLeafSlot{key, i}
 	}
 	sort.Sort(data)
@@ -84,4 +73,35 @@ func TestMbtreeOrdered(t *testing.T) {
 		x.Insert(v.key, v.rec)
 	}
 	mCompare(t, x, data)
+}
+
+//-------------------------------------------------------------------
+
+func (m *mbtree) print() int {
+	var n int
+	if m.tree != nil {
+		n = m.tree.print()
+		fmt.Println("total size", n,
+			"average leaf occupancy", float32(n)/float32(m.tree.size)/float32(mSize))
+	} else {
+		fmt.Println("no tree, single leaf")
+		n = m.leaf.print()
+	}
+	return n
+}
+
+func (tree *mTree) print() int {
+	n := 0
+	for i := 0; i < tree.size; i++ {
+		fmt.Println(i, tree.slots[i].key, "leaf size", tree.slots[i].leaf.size)
+		n += tree.slots[i].leaf.print()
+	}
+	return n
+}
+
+func (leaf *mLeaf) print() int {
+	for i := 0; i < leaf.size; i++ {
+		// fmt.Println("   ", leaf.slots[i])
+	}
+	return leaf.size
 }
