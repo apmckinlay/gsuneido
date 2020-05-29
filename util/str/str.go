@@ -202,3 +202,27 @@ func FromList(list []string) string {
 	}
 	return cb.String()
 }
+
+// Subi returns the substring specified by a starting index and a limit index
+// allowing indexes to exceed the string
+func Subi(s string, i, j int) string {
+	if i >= len(s) {
+		return ""
+	}
+	if j >= len(s) {
+		return s[i:]
+	}
+	return s[i:j]
+}
+
+// Subn returns the substring specified by a starting index and a length
+// allows index and length to exceed the string
+func Subn(s string, i, n int) string {
+	if i >= len(s) {
+		return ""
+	}
+	if i+n >= len(s) {
+		return s[i:]
+	}
+	return s[i : i+n]
+}
