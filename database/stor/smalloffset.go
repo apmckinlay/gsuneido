@@ -11,6 +11,7 @@ package stor
 type SmallOffset [5]byte
 
 const MaxSmallOffset = 1<<40 - 1
+const SmallOffsetLen = 5
 
 func NewSmallOffset(offset uint64) SmallOffset {
 	var so SmallOffset
@@ -28,4 +29,30 @@ func (so SmallOffset) Offset() uint64 {
 		uint64(so[2])<<16 +
 		uint64(so[3])<<24 +
 		uint64(so[4])<<32
+}
+
+func WriteSmallOffset(buf []byte, offset uint64) {
+	buf[0] = byte(offset)
+	buf[1] = byte(offset >> 8)
+	buf[2] = byte(offset >> 16)
+	buf[3] = byte(offset >> 24)
+	buf[4] = byte(offset >> 32)
+}
+
+func AppendSmallOffset(buf []byte, offset uint64) []byte {
+	return append(buf,
+		byte(offset),
+		byte(offset>>8),
+		byte(offset>>16),
+		byte(offset>>24),
+		byte(offset>>32))
+}
+
+func ReadSmallOffset(buf []byte) ([]byte, uint64) {
+	return buf[5:],
+		uint64(buf[0]) +
+		uint64(buf[1])<<8 +
+		uint64(buf[2])<<16 +
+		uint64(buf[3])<<24 +
+		uint64(buf[4])<<32
 }
