@@ -5,9 +5,11 @@ import (
 	"strings"
 )
 
-const chars = "abcdefghijklmnopqrstuvwxyz"
-
 func Random(min, max int) string {
+	return RandomOf(min, max, "abcdefghijklmnopqrstuvwxyz")
+}
+
+func RandomOf(min, max int, chars string) string {
 	n := min + rand.Intn(1+max-min)
 	var b strings.Builder
 	b.Grow(n)
