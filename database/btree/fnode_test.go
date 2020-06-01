@@ -22,7 +22,7 @@ func TestFAppendRead(t *testing.T) {
 		npre   int
 		diff   string
 	}
-	var fe fEntries
+	var fe fNode
 	var data []ent
 	add := func(offset uint64, npre int, diff string) {
 		fe = fAppend(fe, offset, npre, diff)
@@ -54,7 +54,7 @@ func TestInsert(*testing.T) {
 		// print()
 		// print()
 		get := func(i uint64) string { return data[i] }
-		var fe fEntries
+		var fe fNode
 		// forward
 		for i, d := range data {
 			fe = fe.insert(d, uint64(i), get)
@@ -103,7 +103,7 @@ func TestRandom(*testing.T) {
 		for si := 0; si < nShuffle; si++ {
 			rand.Shuffle(len(data),
 				func(i, j int) { data[i], data[j] = data[j], data[i] })
-			var fe fEntries
+			var fe fNode
 			for i, d := range data {
 				fe = fe.insert(d, uint64(i), get)
 				// fe.checkUpTo(i, data, get)
@@ -120,30 +120,33 @@ func TestRandom(*testing.T) {
 	}
 }
 
-func TestFileData(t *testing.T) {
-    if testing.Short() {
-        t.Skip("skipping test in short mode")
-    }
-	data := fileData("../../../bizpartnername.txt")
-	get := func(i uint64) string { return data[i] }
-	const nShuffle = 4
-	for si := 0; si < nShuffle; si++ {
-		rand.Shuffle(len(data),
-			func(i, j int) { data[i], data[j] = data[j], data[i] })
-		var fe fEntries
-		for i, d := range data {
-			fe = fe.insert(d, uint64(i), get)
-			// fe.checkData(i, data, get)
-		}
-		fe.checkData(data, get)
-		// print("------------------------")
-		// fe.printRaw(get)
-		// print("------------------------")
-		if si == 0 {
+func TestSampleData(t *testing.T) {
+	if testing.Short() {
+		t.Skip("skipping test in short mode")
+	}
+	test := func(data []string, nShuffle int) {
+		get := func(i uint64) string { return data[i] }
+		for si := 0; si < nShuffle; si++ {
+			rand.Shuffle(len(data),
+				func(i, j int) { data[i], data[j] = data[j], data[i] })
+			var fe fNode
+			for i, d := range data {
+				fe = fe.insert(d, uint64(i), get)
+				// fe.checkData(i, data, get)
+			}
+			fe.checkData(data, get)
+			// print("------------------------")
 			// fe.printRaw(get)
-			// fe.stats()
+			// print("------------------------")
+			if si == 0 {
+				// fe.printRaw(get)
+				// fe.stats()
+			}
 		}
 	}
+	test(words, 8)
+	test(fileData("../../../bizpartnername.txt"), 4)
+	test(fileData("../../../bizpartnerabbrev.txt"), 8)
 }
 
 func fileData(filename string) []string {
@@ -159,33 +162,33 @@ func fileData(filename string) []string {
 
 //-------------------------------------------------------------------
 
-func (fe fEntries) stats() {
-	n := fe.check()
-	avg := float32(len(fe)-7*n) / float32(n)
-	print("    n", n, "len", len(fe), "avg", avg)
+func (fn fNode) stats() {
+	n := fn.check()
+	avg := float32(len(fn)-7*n) / float32(n)
+	print("    n", n, "len", len(fn), "avg", avg)
 }
 
-func (fe fEntries) checkData(data []string, get func(uint64) string) {
+func (fn fNode) checkData(data []string, get func(uint64) string) {
 	n := len(data)
-	fe.checkUpTo(n-1, data, get)
+	fn.checkUpTo(n-1, data, get)
 }
 
 // checkUpTo is used during inserting.
 // It checks that inserted keys are present
 // and uninserted keys are not present.
-func (fe fEntries) checkUpTo(i int, data []string, get func(uint64) string) {
-	verify.That(fe.check() == i+1)
+func (fn fNode) checkUpTo(i int, data []string, get func(uint64) string) {
+	verify.That(fn.check() == i+1)
 	for j, d := range data {
-		if j <= i != fe.contains(d, get) {
+		if j <= i != fn.contains(d, get) {
 			panic("can't find " + d)
 		}
 	}
 }
 
-func (fe fEntries) check() int {
+func (fn fNode) check() int {
 	n := 0
 	prev := ""
-	it := fe.Iter()
+	it := fn.Iter()
 	for it.next() {
 		if it.known < prev {
 			panic("fEntries out of order")
@@ -196,15 +199,15 @@ func (fe fEntries) check() int {
 	return n
 }
 
-func (fe fEntries) print() {
-	it := fe.Iter()
+func (fn fNode) print() {
+	it := fn.Iter()
 	for it.next() {
 		print(it.offset, it.known)
 	}
 }
 
-func (fe fEntries) printRaw(get func(uint64) string) {
-	it := fe.Iter()
+func (fn fNode) printRaw(get func(uint64) string) {
+	it := fn.Iter()
 	for it.next() {
 		print(it.fi, "{", it.offset, it.npre, it.diff, "}", it.known, "=", get(it.offset))
 	}

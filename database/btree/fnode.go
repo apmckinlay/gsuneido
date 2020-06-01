@@ -9,35 +9,26 @@ import (
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
-// fbtree is a file based btree with partial incremental encoding.
-// In the file (memory mapped) they are immutable.
-// To update, temporary mutable versions are built in memory
-// before being written to disk.
-//
+// fNode is a file based btree node with partial incremental encoding.
 // Nodes are variable length and are packed into a sequence of bytes
 // with variable length entries.
 // So we can only iterate from the beginning. No random access.
-//
-// Leaf and tree nodes are the same except that
-// leaf nodes point to data records and tree nodes point to other nodes.
-// To save space offsets (pointers) are stored as 5 byte smalloffsets.
 //
 // Entry is:
 //		- 5 byte smalloffset
 //		- one byte prefix length
 //		- one byte key part length
 //		- key part bytes (variable length)
+type fNode []byte
 
-type fEntries []byte
-
-func fAppend(fe fEntries, offset uint64, npre int, diff string) fEntries {
+func fAppend(fe fNode, offset uint64, npre int, diff string) fNode {
 	fe = stor.AppendSmallOffset(fe, offset)
 	fe = append(fe, byte(npre), byte(len(diff)))
 	fe = append(fe, diff...)
 	return fe
 }
 
-func fRead(fe_ fEntries) (fe fEntries, offset uint64, npre int, diff string) {
+func fRead(fe_ fNode) (fe fNode, offset uint64, npre int, diff string) {
 	fe, offset = stor.ReadSmallOffset(fe_)
 	npre = int(fe[0])
 	sn := int(fe[1])
@@ -60,13 +51,13 @@ type fData struct {
 // Making it larger reduces looking at data for failing searches.
 const embedLen = 1
 
-type fBuilder struct {
-	fe    fEntries
+type fNodeBuilder struct {
+	fe    fNode
 	prev  string
 	known string
 }
 
-func (fb *fBuilder) Add(key string, offset uint64) {
+func (fb *fNodeBuilder) Add(key string, offset uint64) {
 	if key <= fb.prev {
 		panic("fBuilder keys must be inserted in order, without duplicates")
 	}
@@ -81,7 +72,7 @@ func (fb *fBuilder) Add(key string, offset uint64) {
 	fb.prev = key
 }
 
-func (fb *fBuilder) Entries() fEntries {
+func (fb *fNodeBuilder) Entries() fNode {
 	return fb.fe
 }
 
@@ -112,10 +103,10 @@ func commonPrefixLen(s, t string) int {
 
 // search returns the offset and range
 // of the entry that could match the search string
-func (fe fEntries) search(s string) (uint64, string, string) {
+func (fn fNode) search(s string) (uint64, string, string) {
 	var offset uint64
 	var known string
-	it := fe.Iter()
+	it := fn.Iter()
 	for it.next() && s >= it.known {
 		offset = it.offset
 		known = it.known
@@ -123,25 +114,25 @@ func (fe fEntries) search(s string) (uint64, string, string) {
 	return offset, known, it.known
 }
 
-func (fe fEntries) contains(s string, get func(uint64) string) bool {
-	offset, _, _ := fe.search(s)
+func (fn fNode) contains(s string, get func(uint64) string) bool {
+	offset, _, _ := fn.search(s)
 	return s == get(offset)
 }
 
-func (fe fEntries) insert(keyNew string, offNew uint64, get func(uint64) string) fEntries {
-	if len(fe) == 0 {
-		return fAppend(fe, offNew, 0, "")
+func (fn fNode) insert(keyNew string, offNew uint64, get func(uint64) string) fNode {
+	if len(fn) == 0 {
+		return fAppend(fn, offNew, 0, "")
 	}
 	// search
 	var cur iter
-	it := fe.Iter()
+	it := fn.Iter()
 	for it.next() && keyNew >= it.known {
 		cur = *it
 	}
 
 	curkey := get(cur.offset)
 	var prev string
-	ins := make(fEntries, 0, 64)
+	ins := make(fNode, 0, 64)
 	var npre int
 	var diff string
 	var knownNew string
@@ -149,7 +140,7 @@ func (fe fEntries) insert(keyNew string, offNew uint64, get func(uint64) string)
 	if keyNew > curkey { // newkey after curkey
 		if cur.eof() {
 			npre, diff, _ = addone(keyNew, curkey, cur.known)
-			return fAppend(fe, offNew, npre, diff)
+			return fAppend(fn, offNew, npre, diff)
 		}
 		npre, diff, knownNew = addone(keyNew, curkey, cur.known)
 		ins = fAppend(ins, offNew, npre, diff)
@@ -174,11 +165,11 @@ func (fe fEntries) insert(keyNew string, offNew uint64, get func(uint64) string)
 			j += fLen(it.diff)
 		}
 	}
-	fe = replace(fe, i, j, ins)
-	return fe
+	fn = replace(fn, i, j, ins)
+	return fn
 }
 
-func replace(fe fEntries, i, j int, ins fEntries) fEntries {
+func replace(fe fNode, i, j int, ins fNode) fNode {
 	d := len(ins) - (j - i)
 	fe = bytes.Grow(fe, d)
 	copy(fe[i+d:], fe[i:])
@@ -189,7 +180,7 @@ func replace(fe fEntries, i, j int, ins fEntries) fEntries {
 // iter -------------------------------------------------------------
 
 type iter struct {
-	fe         fEntries
+	fn         fNode
 	fi         int // position in original fEntries
 	offset     uint64
 	npre       int
@@ -198,8 +189,8 @@ type iter struct {
 	afterFirst bool
 }
 
-func (fe fEntries) Iter() *iter {
-	return &iter{fe: fe}
+func (fn fNode) Iter() *iter {
+	return &iter{fn: fn}
 }
 
 func (it *iter) next() bool {
@@ -208,12 +199,12 @@ func (it *iter) next() bool {
 	} else {
 		it.afterFirst = true
 	}
-	if len(it.fe) == 0 {
+	if len(it.fn) == 0 {
 		it.known = ""
 		return false
 	}
 	//TODO don't decode offset unless needed
-	it.fe, it.offset, it.npre, it.diff = fRead(it.fe)
+	it.fn, it.offset, it.npre, it.diff = fRead(it.fn)
 	if it.known == "" && it.npre == 0 && it.diff == "" {
 		// first
 	} else if it.npre <= len(it.known) {
@@ -235,5 +226,5 @@ func (it *iter) next() bool {
 }
 
 func (it *iter) eof() bool {
-	return len(it.fe) == 0
+	return len(it.fn) == 0
 }
