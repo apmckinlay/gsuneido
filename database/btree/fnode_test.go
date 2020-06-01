@@ -8,6 +8,7 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
+	"sort"
 	"strings"
 	"testing"
 
@@ -31,11 +32,9 @@ func TestFAppendRead(t *testing.T) {
 	add(123, 2, "bar")
 	add(456, 1, "foo")
 	for _, e := range data {
-		var offset uint64
 		var npre int
 		var diff string
-		fe, offset, npre, diff = fRead(fe)
-		Assert(t).That(offset, Equals(e.offset))
+		fe, npre, diff = fRead(fe)
 		Assert(t).That(npre, Equals(e.npre))
 		Assert(t).That(diff, Equals(e.diff))
 	}
@@ -51,18 +50,13 @@ func TestInsert(*testing.T) {
 	}
 	for _, s := range datas {
 		data := strings.Fields(s)
-		// print()
-		// print()
 		get := func(i uint64) string { return data[i] }
-		var fe fNode
 		// forward
+		fe := fNode{}
 		for i, d := range data {
 			fe = fe.insert(d, uint64(i), get)
 			fe.checkUpTo(i, data, get)
 		}
-		// print("------------------------")
-		// fe.printRaw(get)
-		// print("------------------------")
 		verify.That(fe.check() == len(data))
 		// reverse
 		str.ListReverse(data)
@@ -71,10 +65,19 @@ func TestInsert(*testing.T) {
 			fe = fe.insert(d, uint64(i), get)
 			fe.checkUpTo(i, data, get)
 		}
-		// print("------------------------")
-		// fe.printRaw(get)
-		// print("------------------------")
+		// builder
+		fe = build(data)
+		fe.checkData(data, get)
 	}
+}
+
+func build(data []string) fNode {
+	sort.Strings(data)
+	b := fNodeBuilder{}
+	for i, d := range data {
+		b.Add(d, uint64(i))
+	}
+	return b.Entries()
 }
 
 func TestRandom(*testing.T) {
@@ -86,12 +89,6 @@ func TestRandom(*testing.T) {
 		nShuffle = 4
 	}
 	var data = make([]string, nData)
-	defer func() {
-		if e := recover(); e != nil {
-			print(data)
-			panic(e)
-		}
-	}()
 	get := func(i uint64) string { return data[i] }
 	for gi := 0; gi < nGenerate; gi++ {
 		data = data[0:nData]
@@ -99,7 +96,6 @@ func TestRandom(*testing.T) {
 			data[di] = str.RandomOf(1, 6, "abcdef")
 		}
 		data = str.ListUnique(data)
-		// print(data)
 		for si := 0; si < nShuffle; si++ {
 			rand.Shuffle(len(data),
 				func(i, j int) { data[i], data[j] = data[j], data[i] })
@@ -109,12 +105,6 @@ func TestRandom(*testing.T) {
 				// fe.checkUpTo(i, data, get)
 			}
 			fe.checkData(data, get)
-			// print("------------------------")
-			// fe.printRaw(get)
-			// print("------------------------")
-			// if si == 0 {
-			// 	fe.stats()
-			// }
 		}
 
 	}
@@ -132,21 +122,14 @@ func TestSampleData(t *testing.T) {
 			var fe fNode
 			for i, d := range data {
 				fe = fe.insert(d, uint64(i), get)
-				// fe.checkData(i, data, get)
+				// fe.checkUpto(i, data, get)
 			}
 			fe.checkData(data, get)
-			// print("------------------------")
-			// fe.printRaw(get)
-			// print("------------------------")
-			if si == 0 {
-				// fe.printRaw(get)
-				// fe.stats()
-			}
 		}
 	}
-	test(words, 8)
+	test(words, 10)
 	test(fileData("../../../bizpartnername.txt"), 4)
-	test(fileData("../../../bizpartnerabbrev.txt"), 8)
+	test(fileData("../../../bizpartnerabbrev.txt"), 4)
 }
 
 func fileData(filename string) []string {
@@ -202,14 +185,15 @@ func (fn fNode) check() int {
 func (fn fNode) print() {
 	it := fn.Iter()
 	for it.next() {
-		print(it.offset, it.known)
+		print(fn.offset(it.fi), it.known)
 	}
 }
 
 func (fn fNode) printRaw(get func(uint64) string) {
 	it := fn.Iter()
 	for it.next() {
-		print(it.fi, "{", it.offset, it.npre, it.diff, "}", it.known, "=", get(it.offset))
+		offset := fn.offset(it.fi)
+		print(it.fi, "{", offset, it.npre, it.diff, "}", it.known, "=", get(offset))
 	}
 }
 

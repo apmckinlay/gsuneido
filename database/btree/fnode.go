@@ -28,8 +28,8 @@ func fAppend(fe fNode, offset uint64, npre int, diff string) fNode {
 	return fe
 }
 
-func fRead(fe_ fNode) (fe fNode, offset uint64, npre int, diff string) {
-	fe, offset = stor.ReadSmallOffset(fe_)
+func fRead(fe_ fNode) (fe fNode, npre int, diff string) {
+	fe = fe_[stor.SmallOffsetLen:]
 	npre = int(fe[0])
 	sn := int(fe[1])
 	fe = fe[2:]
@@ -104,14 +104,14 @@ func commonPrefixLen(s, t string) int {
 // search returns the offset and range
 // of the entry that could match the search string
 func (fn fNode) search(s string) (uint64, string, string) {
-	var offset uint64
+	var ofi int
 	var known string
 	it := fn.Iter()
 	for it.next() && s >= it.known {
-		offset = it.offset
+		ofi = it.fi
 		known = it.known
 	}
-	return offset, known, it.known
+	return fn.offset(ofi), known, it.known
 }
 
 func (fn fNode) contains(s string, get func(uint64) string) bool {
@@ -130,7 +130,8 @@ func (fn fNode) insert(keyNew string, offNew uint64, get func(uint64) string) fN
 		cur = *it
 	}
 
-	curkey := get(cur.offset)
+	curoff := fn.offset(cur.fi)
+	curkey := get(curoff)
 	var prev string
 	ins := make(fNode, 0, 64)
 	var npre int
@@ -152,7 +153,7 @@ func (fn fNode) insert(keyNew string, offNew uint64, get func(uint64) string) fN
 		ins = fAppend(ins, offNew, cur.npre, cur.diff)
 		// old first key becomes second entry
 		npre, diff, knownNew = addone(curkey, keyNew, cur.known)
-		ins = fAppend(ins, cur.offset, npre, diff)
+		ins = fAppend(ins, curoff, npre, diff)
 		i = cur.fi
 		j = it.fi
 		prev = curkey
@@ -161,7 +162,7 @@ func (fn fNode) insert(keyNew string, offNew uint64, get func(uint64) string) fN
 		npre2, diff2, _ := addone(it.known, prev, knownNew)
 		if npre2 != it.npre || diff2 != it.diff {
 			// adjust following entry
-			ins = fAppend(ins, it.offset, npre2, diff2)
+			ins = fAppend(ins, fn.offset(it.fi), npre2, diff2)
 			j += fLen(it.diff)
 		}
 	}
@@ -177,12 +178,16 @@ func replace(fe fNode, i, j int, ins fNode) fNode {
 	return fe
 }
 
+func (fn fNode) offset(fi int) uint64 {
+	_, offset := stor.ReadSmallOffset(fn[fi:])
+	return offset
+}
+
 // iter -------------------------------------------------------------
 
 type iter struct {
 	fn         fNode
 	fi         int // position in original fEntries
-	offset     uint64
 	npre       int
 	diff       string
 	known      string
@@ -203,8 +208,7 @@ func (it *iter) next() bool {
 		it.known = ""
 		return false
 	}
-	//TODO don't decode offset unless needed
-	it.fn, it.offset, it.npre, it.diff = fRead(it.fn)
+	it.fn, it.npre, it.diff = fRead(it.fn)
 	if it.known == "" && it.npre == 0 && it.diff == "" {
 		// first
 	} else if it.npre <= len(it.known) {
