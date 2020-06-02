@@ -106,11 +106,15 @@ type Eq interface {
 	Equal(interface{}) bool
 }
 
-// Equals returns a Tester that checks that the actual value is equal to the expected value
+// Equals returns a Tester
+// that checks that the actual value is equal to the expected value
 // float64's are compared as strings
 // otherwise uses reflect.DeepEqual
 func Equals(expected interface{}) Tester {
 	return func(actual interface{}) string {
+		if isNil(expected) && isNil(actual) {
+			return ""
+		}
 		if a, ok := actual.(float64); ok {
 			if e, ok := expected.(float64); ok {
 				if strconv.FormatFloat(a, 'e', 15, 64) ==
@@ -132,6 +136,14 @@ func Equals(expected interface{}) Tester {
 		return fmt.Sprintf("\n    expect: %s\n    actual: %s\n    ",
 			show(expected), show(actual))
 	}
+}
+
+func isNil(x interface{}) bool {
+	if x == nil {
+		return true
+	}
+	v := reflect.ValueOf(x)
+	return v.Kind() == reflect.Ptr && v.IsNil()
 }
 
 func intEqual(x interface{}, y interface{}) bool {
