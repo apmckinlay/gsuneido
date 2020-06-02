@@ -7,7 +7,7 @@ import (
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
-var _ = builtin("Finally(main_block, final_block)",
+var _ = builtin("Finally(main, final)",
 	func(t *Thread, args []Value) Value {
 		defer func() {
 			e := recover()
