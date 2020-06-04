@@ -5,6 +5,7 @@ package btree
 
 import (
 	"fmt"
+	"math/rand"
 	"sort"
 	"testing"
 
@@ -21,7 +22,7 @@ func TestMbtree(t *testing.T) {
 		{"zorro", 789},
 	}
 	for _, v := range data {
-		x.Insert(v.key, v.rec)
+		x.Insert(v.key, v.off)
 	}
 	mCompare(t, x, data)
 }
@@ -30,10 +31,10 @@ func mCompare(t *testing.T, x *mbtree, data mLeafSlots) {
 	sort.Sort(data)
 	iter := x.Iterator()
 	for _, v := range data {
-		key, rec, ok := iter()
+		key, off, ok := iter()
 		Assert(t).That(ok, Equals(true))
 		Assert(t).That(key, Equals(v.key))
-		Assert(t).That(rec, Equals(v.rec))
+		Assert(t).That(off, Equals(v.off).Comment(key))
 	}
 	_, _, ok := iter()
 	Assert(t).That(ok, Equals(false))
@@ -45,19 +46,33 @@ func (a mLeafSlots) Len() int      { return len(a) }
 func (a mLeafSlots) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
 func (a mLeafSlots) Less(i, j int) bool {
 	return a[i].key < a[j].key ||
-		(a[i].key == a[j].key && a[i].rec < a[j].rec)
+		(a[i].key == a[j].key && a[i].off < a[j].off)
 }
 
 func TestMbtreeRandom(t *testing.T) {
-	const n = mSize * 87
-	data := make(mLeafSlots, n)
-	x := newMbtree()
-	for i := uint64(0); i < n; i++ {
-		key := str.Random(3, 10)
-		x.Insert(key, i)
-		data[i] = mLeafSlot{key, i}
+	var nGenerate = 8
+	var nShuffle = 8
+	if testing.Short() {
+		nGenerate = 2
+		nShuffle = 2
 	}
-	mCompare(t, x, data)
+	const n = mSize * 80
+	for gi := 0; gi < nGenerate; gi++ {
+		data := make(mLeafSlots, n)
+		randKey := str.UniqueRandom(3, 10)
+		for i := uint64(0); i < n; i++ {
+			data[i] = mLeafSlot{randKey(), i}
+		}
+		for si := 0; si < nShuffle; si++ {
+			rand.Shuffle(len(data),
+				func(i, j int) { data[i], data[j] = data[j], data[i] })
+			x := newMbtree()
+			for _, v := range data {
+				x.Insert(v.key, v.off)
+			}
+			mCompare(t, x, data)
+		}
+	}
 }
 
 func TestMbtreeOrdered(t *testing.T) {
@@ -70,7 +85,7 @@ func TestMbtreeOrdered(t *testing.T) {
 	}
 	sort.Sort(data)
 	for _, v := range data {
-		x.Insert(v.key, v.rec)
+		x.Insert(v.key, v.off)
 	}
 	mCompare(t, x, data)
 }

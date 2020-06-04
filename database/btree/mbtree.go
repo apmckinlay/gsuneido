@@ -3,6 +3,8 @@
 
 package btree
 
+//TODO search
+
 // mbtree is a specialized btree with a maximum size and number of levels.
 // Nodes are fixed size to reduce allocation and bounds checks.
 type mbtree struct {
@@ -24,7 +26,7 @@ type mLeaf struct {
 
 type mLeafSlot struct {
 	key string
-	rec uint64
+	off uint64
 }
 
 type mTree struct {
@@ -41,24 +43,24 @@ func newMbtree() *mbtree {
 	return &mbtree{}
 }
 
-func (m *mbtree) Insert(key string, rec uint64) {
+func (m *mbtree) Insert(key string, off uint64) {
 	if m.tree == nil && m.leaf.size == mSize {
 		m.tree = &mTree{size: 1}
 		m.tree.slots[0].leaf = &m.leaf
 	}
 	if m.tree != nil {
-		m.tree.insert(key, rec)
+		m.tree.insert(key, off)
 	} else {
-		m.leaf.insert(m.tree, key, rec)
+		m.leaf.insert(m.tree, key, off)
 	}
 }
 
-func (leaf *mLeaf) insert(tree *mTree, key string, rec uint64) {
+func (leaf *mLeaf) insert(tree *mTree, key string, off uint64) {
 	if leaf.size < mSize {
-		leaf.insert2(key, rec)
+		leaf.insert2(key, off)
 	} else {
 		leaf.split(tree, key > leaf.slots[mSize-1].key)
-		tree.insert(key, rec)
+		tree.insert(key, off)
 	}
 }
 
@@ -76,21 +78,21 @@ func (leaf *mLeaf) split(tree *mTree, righthand bool) {
 	tree.insert2(leaf2.slots[0].key, leaf2)
 }
 
-func (leaf *mLeaf) insert2(key string, rec uint64) {
+func (leaf *mLeaf) insert2(key string, off uint64) {
 	i := 0
 	for ; i < leaf.size && key >= leaf.slots[i].key; i++ {
 	}
 	// i is either ol.size or points to first slot > key
 	copy(leaf.slots[i+1:], leaf.slots[i:])
-	leaf.slots[i].key, leaf.slots[i].rec = key, rec
+	leaf.slots[i].key, leaf.slots[i].off = key, off
 	leaf.size++
 }
 
-func (tree *mTree) insert(key string, rec uint64) {
+func (tree *mTree) insert(key string, off uint64) {
 	i := 0
 	for ; i+1 < tree.size && key > tree.slots[i+1].key; i++ {
 	}
-	tree.slots[i].leaf.insert(tree, key, rec)
+	tree.slots[i].leaf.insert(tree, key, off)
 }
 
 // insert2 inserts a key & leaf into the tree node
@@ -126,6 +128,6 @@ func (m *mbtree) Iterator() mIter {
 			i = 0
 		}
 		slot := leaf.slots[i]
-		return slot.key, slot.rec, true
+		return slot.key, slot.off, true
 	}
 }

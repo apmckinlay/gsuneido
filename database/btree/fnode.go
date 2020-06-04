@@ -4,9 +4,13 @@
 package btree
 
 import (
+	"fmt"
+	"strconv"
+
 	"github.com/apmckinlay/gsuneido/database/stor"
 	"github.com/apmckinlay/gsuneido/util/bytes"
 	"github.com/apmckinlay/gsuneido/util/str"
+	"github.com/apmckinlay/gsuneido/util/verify"
 )
 
 // fNode is a file based btree node with partial incremental encoding.
@@ -47,10 +51,6 @@ type fData struct {
 	offset uint64
 }
 
-// embedLen only needs to be one.
-// Making it larger reduces looking at data for failing searches.
-const embedLen = 1
-
 type fNodeBuilder struct {
 	fe    fNode
 	prev  string
@@ -65,7 +65,7 @@ func (fb *fNodeBuilder) Add(key string, offset uint64) {
 		fb.fe = fAppend(fb.fe, offset, 0, "")
 		fb.known = ""
 	} else {
-		npre, diff, known := addone(key, fb.prev, fb.known)
+		npre, diff, known := addone(key, fb.prev, fb.known, 1)
 		fb.fe = fAppend(fb.fe, offset, npre, diff)
 		fb.known = known
 	}
@@ -76,7 +76,7 @@ func (fb *fNodeBuilder) Entries() fNode {
 	return fb.fe
 }
 
-func addone(key, prev, known string) (npre int, diff string, knownNew string) {
+func addone(key, prev, known string, embedLen int) (npre int, diff string, knownNew string) {
 	npre = commonPrefixLen(prev, key)
 	if npre > 255 {
 		panic("key common prefix too long")
@@ -119,6 +119,7 @@ func (fn fNode) contains(s string, get func(uint64) string) bool {
 	return s == get(offset)
 }
 
+// insert adds a new key to a node. get will be nil for tree nodes.
 func (fn fNode) insert(keyNew string, offNew uint64, get func(uint64) string) fNode {
 	if len(fn) == 0 {
 		return fAppend(fn, offNew, 0, "")
@@ -131,7 +132,12 @@ func (fn fNode) insert(keyNew string, offNew uint64, get func(uint64) string) fN
 	}
 
 	curoff := fn.offset(cur.fi)
-	curkey := get(curoff)
+	curkey := cur.known
+	embedLen := 255
+	if get != nil {
+		embedLen = 1
+		curkey = get(curoff)
+	}
 	var prev string
 	ins := make(fNode, 0, 64)
 	var npre int
@@ -140,10 +146,10 @@ func (fn fNode) insert(keyNew string, offNew uint64, get func(uint64) string) fN
 	var i, j int
 	if keyNew > curkey { // newkey after curkey
 		if cur.eof() {
-			npre, diff, _ = addone(keyNew, curkey, cur.known)
+			npre, diff, _ = addone(keyNew, curkey, cur.known, embedLen)
 			return fAppend(fn, offNew, npre, diff)
 		}
-		npre, diff, knownNew = addone(keyNew, curkey, cur.known)
+		npre, diff, knownNew = addone(keyNew, curkey, cur.known, embedLen)
 		ins = fAppend(ins, offNew, npre, diff)
 		i = it.fi
 		j = it.fi
@@ -152,14 +158,14 @@ func (fn fNode) insert(keyNew string, offNew uint64, get func(uint64) string) fN
 		// first entry stays the same, just update offset
 		ins = fAppend(ins, offNew, cur.npre, cur.diff)
 		// old first key becomes second entry
-		npre, diff, knownNew = addone(curkey, keyNew, cur.known)
+		npre, diff, knownNew = addone(curkey, keyNew, cur.known, embedLen)
 		ins = fAppend(ins, curoff, npre, diff)
 		i = cur.fi
 		j = it.fi
 		prev = curkey
 	}
 	if !cur.eof() {
-		npre2, diff2, _ := addone(it.known, prev, knownNew)
+		npre2, diff2, _ := addone(it.known, prev, knownNew, embedLen)
 		if npre2 != it.npre || diff2 != it.diff {
 			// adjust following entry
 			ins = fAppend(ins, fn.offset(it.fi), npre2, diff2)
@@ -178,6 +184,10 @@ func replace(fe fNode, i, j int, ins fNode) fNode {
 	return fe
 }
 
+func (fn fNode) split(fe fNode, fi int, newkey string, newoff uint64) {
+
+}
+
 func (fn fNode) offset(fi int) uint64 {
 	_, offset := stor.ReadSmallOffset(fn[fi:])
 	return offset
@@ -191,19 +201,14 @@ type iter struct {
 	npre       int
 	diff       string
 	known      string
-	afterFirst bool
 }
 
 func (fn fNode) Iter() *iter {
-	return &iter{fn: fn}
+	return &iter{fn: fn, fi: -7}
 }
 
 func (it *iter) next() bool {
-	if it.afterFirst {
-		it.fi += fLen(it.diff)
-	} else {
-		it.afterFirst = true
-	}
+	it.fi += fLen(it.diff)
 	if len(it.fn) == 0 {
 		it.known = ""
 		return false
@@ -212,8 +217,8 @@ func (it *iter) next() bool {
 	if it.known == "" && it.npre == 0 && it.diff == "" {
 		// first
 	} else if it.npre <= len(it.known) {
-		if len(it.diff) != 1 {
-			panic("unexpected diff len")
+		if len(it.diff) < 1 {
+			panic("unexpected diff len " + it.diff)
 		}
 	} else {
 		if len(it.diff) != it.npre-len(it.known)+1 {
@@ -231,4 +236,80 @@ func (it *iter) next() bool {
 
 func (it *iter) eof() bool {
 	return len(it.fn) == 0
+}
+
+//-------------------------------------------------------------------
+
+func (fn fNode) stats() {
+	n := fn.check()
+	avg := float32(len(fn)-7*n) / float32(n)
+	print("    n", n, "len", len(fn), "avg", avg)
+}
+
+func (fn fNode) checkData(data []string, get func(uint64) string) {
+	n := len(data)
+	fn.checkUpTo(n-1, data, get)
+}
+
+// checkUpTo is used during inserting.
+// It checks that inserted keys are present
+// and uninserted keys are not present.
+func (fn fNode) checkUpTo(i int, data []string, get func(uint64) string) {
+	verify.That(fn.check() == i+1)
+	for j, d := range data {
+		if j <= i != fn.contains(d, get) {
+			panic("can't find " + d)
+		}
+	}
+}
+
+func (fn fNode) check() int {
+	n := 0
+	prev := ""
+	it := fn.Iter()
+	for it.next() {
+		if it.known < prev {
+			panic("fEntries out of order")
+		}
+		prev = it.known
+		n++
+	}
+	return n
+}
+
+func (fn fNode) print() {
+	it := fn.Iter()
+	for it.next() {
+		print(fn.offset(it.fi), it.known)
+	}
+}
+
+func (fn fNode) printLeafNode(get func(uint64) string) {
+	it := fn.Iter()
+	for it.next() {
+		offset := fn.offset(it.fi)
+		print(strconv.Itoa(it.fi)+": {", offset, it.npre, it.diff, "}",
+			it.known, "("+get(offset)+")")
+	}
+}
+
+func (fn fNode) printTreeNode() {
+	it := fn.Iter()
+	for it.next() {
+		offset := fn.offset(it.fi)
+		print(strconv.Itoa(it.fi)+": {", offset, it.npre, it.diff, "}",
+			it.known)
+	}
+}
+
+func print(args ...interface{}) {
+	for i, x := range args {
+		switch x := x.(type) {
+		case string:
+			if x == "" {
+				args[i] = "'" + x + "'"
+			}
+		}
+	}
+	fmt.Println(args...)
 }

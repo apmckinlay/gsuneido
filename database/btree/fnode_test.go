@@ -4,10 +4,7 @@
 package btree
 
 import (
-	"bufio"
-	"fmt"
 	"math/rand"
-	"os"
 	"sort"
 	"strings"
 	"testing"
@@ -40,7 +37,7 @@ func TestFAppendRead(t *testing.T) {
 	}
 }
 
-func TestInsert(*testing.T) {
+func TestFnodeInsert(*testing.T) {
 	datas := []string{
 		"a b c d",
 		"xa xb xc xd",
@@ -80,7 +77,7 @@ func build(data []string) fNode {
 	return b.Entries()
 }
 
-func TestRandom(*testing.T) {
+func TestFnodeRandom(*testing.T) {
 	const nData = 100
 	var nGenerate = 40
 	var nShuffle = 40
@@ -110,103 +107,20 @@ func TestRandom(*testing.T) {
 	}
 }
 
-func TestSampleData(t *testing.T) {
-	if testing.Short() {
-		t.Skip("skipping test in short mode")
-	}
-	test := func(data []string, nShuffle int) {
-		get := func(i uint64) string { return data[i] }
-		for si := 0; si < nShuffle; si++ {
-			rand.Shuffle(len(data),
-				func(i, j int) { data[i], data[j] = data[j], data[i] })
-			var fe fNode
-			for i, d := range data {
-				fe = fe.insert(d, uint64(i), get)
-				// fe.checkUpto(i, data, get)
-			}
-			fe.checkData(data, get)
+func TestWords(*testing.T) {
+	data := words
+	const nShuffle = 100
+	get := func(i uint64) string { return data[i] }
+	for si := 0; si < nShuffle; si++ {
+		rand.Shuffle(len(data),
+			func(i, j int) { data[i], data[j] = data[j], data[i] })
+		var fe fNode
+		for i, d := range data {
+			fe = fe.insert(d, uint64(i), get)
+			// fe.checkUpto(i, data, get)
 		}
+		fe.checkData(data, get)
 	}
-	test(words, 10)
-	test(fileData("../../../bizpartnername.txt"), 4)
-	test(fileData("../../../bizpartnerabbrev.txt"), 4)
-}
-
-func fileData(filename string) []string {
-	file, _ := os.Open(filename)
-	defer file.Close()
-	data := []string{}
-	scanner := bufio.NewScanner(file)
-	for scanner.Scan() {
-		data = append(data, scanner.Text())
-	}
-	return data
-}
-
-//-------------------------------------------------------------------
-
-func (fn fNode) stats() {
-	n := fn.check()
-	avg := float32(len(fn)-7*n) / float32(n)
-	print("    n", n, "len", len(fn), "avg", avg)
-}
-
-func (fn fNode) checkData(data []string, get func(uint64) string) {
-	n := len(data)
-	fn.checkUpTo(n-1, data, get)
-}
-
-// checkUpTo is used during inserting.
-// It checks that inserted keys are present
-// and uninserted keys are not present.
-func (fn fNode) checkUpTo(i int, data []string, get func(uint64) string) {
-	verify.That(fn.check() == i+1)
-	for j, d := range data {
-		if j <= i != fn.contains(d, get) {
-			panic("can't find " + d)
-		}
-	}
-}
-
-func (fn fNode) check() int {
-	n := 0
-	prev := ""
-	it := fn.Iter()
-	for it.next() {
-		if it.known < prev {
-			panic("fEntries out of order")
-		}
-		prev = it.known
-		n++
-	}
-	return n
-}
-
-func (fn fNode) print() {
-	it := fn.Iter()
-	for it.next() {
-		print(fn.offset(it.fi), it.known)
-	}
-}
-
-func (fn fNode) printRaw(get func(uint64) string) {
-	it := fn.Iter()
-	for it.next() {
-		offset := fn.offset(it.fi)
-		print(it.fi, "{", offset, it.npre, it.diff, "}", it.known, "=", get(offset))
-	}
-}
-
-func print(args ...interface{}) {
-	for i, x := range args {
-		switch x := x.(type) {
-		case string:
-			if x == "" {
-				args[i] = "'" + x + "'"
-			}
-		}
-	}
-	fmt.Println(args...)
 }
 
 var words = []string{
