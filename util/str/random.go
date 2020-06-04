@@ -5,8 +5,10 @@ import (
 	"strings"
 )
 
+const alpha = "abcdefghijklmnopqrstuvwxyz"
+
 func Random(min, max int) string {
-	return RandomOf(min, max, "abcdefghijklmnopqrstuvwxyz")
+	return RandomOf(min, max, alpha)
 }
 
 func RandomOf(min, max int, chars string) string {
@@ -17,4 +19,22 @@ func RandomOf(min, max int, chars string) string {
 		b.WriteByte(chars[rand.Intn(len(chars))])
 	}
 	return b.String()
+}
+
+func UniqueRandom(min, max int) func() string {
+	return UniqueRandomOf(min, max, alpha)
+}
+
+func UniqueRandomOf(min, max int, chars string) func() string {
+	prev := map[string]bool{}
+	return func() string {
+		var key string
+		for {
+			key = RandomOf(min, max, chars)
+			if !prev[key] {
+				prev[key] = true
+				return key
+			}
+		}
+	}
 }
