@@ -30,8 +30,8 @@ type storage interface {
 	Close(size int64)
 }
 
-// stor is the externally visible storage
-type stor struct {
+// Stor is the externally visible storage
+type Stor struct {
 	impl storage
 	// chunksize must be a power of two and must be initialized
 	chunksize uint64
@@ -49,7 +49,7 @@ type stor struct {
 // to prevent erroneously writing too far.
 // If insufficient room in the current chunk, advance to next
 // (allocations may not straddle chunks)
-func (s *stor) Alloc(n int) (Offset, []byte) {
+func (s *Stor) Alloc(n int) (Offset, []byte) {
 	verify.That(0 < n && n < int(s.chunksize))
 
 	for {
@@ -84,22 +84,22 @@ func (s *stor) Alloc(n int) (Offset, []byte) {
 // since we don't know the size of the original alloc.
 // The existing chunks must be mapped initially
 // since lazily mapping would require locking.
-func (s *stor) Data(offset Offset) string {
+func (s *Stor) Data(offset Offset) string {
 	b := s.data(offset)
 	return *(*string)(unsafe.Pointer(&b)) // no alloc converstion to string
 }
 
-func (s *stor) data(offset Offset) []byte {
+func (s *Stor) data(offset Offset) []byte {
 	chunk := s.offsetToChunk(offset)
 	chunks := s.chunks.Load().([][]byte)
 	c := chunks[chunk]
 	return c[offset&(s.chunksize-1):]
 }
 
-func (s *stor) offsetToChunk(offset Offset) int {
+func (s *Stor) offsetToChunk(offset Offset) int {
 	return int(offset / s.chunksize)
 }
 
-func (s *stor) Close() {
+func (s *Stor) Close() {
 	s.impl.Close(int64(s.size))
 }

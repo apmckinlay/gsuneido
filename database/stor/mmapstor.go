@@ -24,7 +24,7 @@ type mmapStor struct {
 const MMAP_CHUNKSIZE = 64 * 1024 * 1024 // 64 mb
 
 // MmapStor returns a memory mapped file stor.
-func MmapStor(filename string, mode Mode) (*stor, error) {
+func MmapStor(filename string, mode Mode) (*Stor, error) {
 	var perm os.FileMode
 	flags := os.O_RDONLY
 	if mode == UPDATE {
@@ -48,7 +48,7 @@ func MmapStor(filename string, mode Mode) (*stor, error) {
 	for i := 0; i < nchunks; i++ {
 		chunks[i] = impl.Get(0)
 	}
-	ms := &stor{impl: impl, chunksize: MMAP_CHUNKSIZE, size: uint64(size)}
+	ms := &Stor{impl: impl, chunksize: MMAP_CHUNKSIZE, size: uint64(size)}
 	ms.chunks.Store(chunks)
 	return ms, nil
 }

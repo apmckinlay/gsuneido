@@ -26,7 +26,7 @@ func TestStress(*testing.T) {
 	wg.Wait()
 }
 
-func thread(wg *sync.WaitGroup, s *stor) {
+func thread(wg *sync.WaitGroup, s *Stor) {
 	for i := 0; i < nIterations; i++ {
 		n := rand.Intn(allocSize) + 1
 		s.Alloc(n)

@@ -8,8 +8,8 @@ type heapStor struct {
 }
 
 // HeapStor returns an empty in-memory stor for testing.
-func HeapStor(chunksize int) *stor {
-	hs := &stor{chunksize: uint64(chunksize), impl: &heapStor{chunksize}}
+func HeapStor(chunksize int) *Stor {
+	hs := &Stor{chunksize: uint64(chunksize), impl: &heapStor{chunksize}}
 	hs.chunks.Store([][]byte{make([]byte, chunksize)})
 	return hs
 }
