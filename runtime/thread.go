@@ -115,6 +115,21 @@ func (t *Thread) Reset() {
 	t.sp = 0
 }
 
+type state struct {
+	fp int
+	sp int
+}
+
+func (t *Thread) GetState() state {
+	return state{fp: t.fp, sp: t.sp}
+}
+
+func (t *Thread) RestoreState(st interface{}) {
+	s := st.(state)
+	t.fp = s.fp
+	t.sp = s.sp
+}
+
 // Callstack captures the call stack
 func (t *Thread) Callstack() *SuObject {
 	// NOTE: it might be more efficient

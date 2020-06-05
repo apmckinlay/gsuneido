@@ -105,9 +105,10 @@ func (cb *callback) callv(args ...Value) uintptr {
 
 func call(fn Value, args ...Value) uintptr {
 	heapSize := heap.CurSize()
+	state := UIThread.GetState()
 	defer func() {
 		if e := recover(); e != nil {
-			handler(e)
+			handler(e, state)
 		}
 		if heap.CurSize() != heapSize {
 			Fatal("callback: heapSize", heapSize, "=>", heap.CurSize(),
@@ -124,8 +125,9 @@ func call(fn Value, args ...Value) uintptr {
 	return uintptr(ToInt(x))
 }
 
-func handler(e interface{}) {
+func handler(e interface{}, state interface{}) {
 	defer func() {
+		UIThread.RestoreState(state)
 		if e := recover(); e != nil {
 			Alert("Error in Handler:", e)
 		}
