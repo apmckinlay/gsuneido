@@ -31,7 +31,7 @@ func MmapStor(filename string, mode Mode) (*Stor, error) {
 		flags = os.O_RDWR
 	} else if mode == CREATE {
 		perm = 0666
-		flags = os.O_CREATE | os.O_RDWR
+		flags = os.O_CREATE | os.O_TRUNC | os.O_RDWR
 	}
 	file, err := os.OpenFile(filename, flags, perm)
 	if err != nil {
