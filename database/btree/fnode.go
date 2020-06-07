@@ -119,10 +119,17 @@ func (fn fNode) contains(s string, get func(uint64) string) bool {
 	return s == get(offset)
 }
 
+const (
+	insMiddle = iota
+	insStart
+	insEnd
+)
+
 // insert adds a new key to a node. get will be nil for tree nodes.
-func (fn fNode) insert(keyNew string, offNew uint64, get func(uint64) string) fNode {
+func (fn fNode) insert(keyNew string, offNew uint64, get func(uint64) string) (fNode,int) {
+	where := insMiddle
 	if len(fn) == 0 {
-		return fAppend(fn, offNew, 0, "")
+		return fAppend(fn, offNew, 0, ""),where
 	}
 	// search
 	var cur iter
@@ -146,8 +153,9 @@ func (fn fNode) insert(keyNew string, offNew uint64, get func(uint64) string) fN
 	var i, j int
 	if keyNew > curkey { // newkey after curkey
 		if cur.eof() {
+			// at end
 			npre, diff, _ = addone(keyNew, curkey, cur.known, embedLen)
-			return fAppend(fn, offNew, npre, diff)
+			return fAppend(fn, offNew, npre, diff), insEnd
 		}
 		npre, diff, knownNew = addone(keyNew, curkey, cur.known, embedLen)
 		ins = fAppend(ins, offNew, npre, diff)
@@ -155,6 +163,9 @@ func (fn fNode) insert(keyNew string, offNew uint64, get func(uint64) string) fN
 		j = it.fi
 		prev = knownNew
 	} else { // newkey before curkey
+		if cur.fi == 0 {
+			where = insStart
+		}
 		// first entry stays the same, just update offset
 		ins = fAppend(ins, offNew, cur.npre, cur.diff)
 		// old first key becomes second entry
@@ -173,7 +184,7 @@ func (fn fNode) insert(keyNew string, offNew uint64, get func(uint64) string) fN
 		}
 	}
 	fn = replace(fn, i, j, ins)
-	return fn
+	return fn, where
 }
 
 func replace(fe fNode, i, j int, ins fNode) fNode {
@@ -191,6 +202,10 @@ func (fn fNode) split(fe fNode, fi int, newkey string, newoff uint64) {
 func (fn fNode) offset(fi int) uint64 {
 	_, offset := stor.ReadSmallOffset(fn[fi:])
 	return offset
+}
+
+func (fn fNode) setOffset(fi int, off uint64) {
+	stor.WriteSmallOffset(fn[fi:], off)
 }
 
 // iter -------------------------------------------------------------

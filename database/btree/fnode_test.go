@@ -51,7 +51,7 @@ func TestFnodeInsert(*testing.T) {
 		// forward
 		fe := fNode{}
 		for i, d := range data {
-			fe = fe.insert(d, uint64(i), get)
+			fe,_ = fe.insert(d, uint64(i), get)
 			fe.checkUpTo(i, data, get)
 		}
 		verify.That(fe.check() == len(data))
@@ -59,7 +59,7 @@ func TestFnodeInsert(*testing.T) {
 		str.ListReverse(data)
 		fe = nil
 		for i, d := range data {
-			fe = fe.insert(d, uint64(i), get)
+			fe,_ = fe.insert(d, uint64(i), get)
 			fe.checkUpTo(i, data, get)
 		}
 		// builder
@@ -98,7 +98,7 @@ func TestFnodeRandom(*testing.T) {
 				func(i, j int) { data[i], data[j] = data[j], data[i] })
 			var fe fNode
 			for i, d := range data {
-				fe = fe.insert(d, uint64(i), get)
+				fe,_ = fe.insert(d, uint64(i), get)
 				// fe.checkUpTo(i, data, get)
 			}
 			fe.checkData(data, get)
@@ -116,7 +116,7 @@ func TestWords(*testing.T) {
 			func(i, j int) { data[i], data[j] = data[j], data[i] })
 		var fe fNode
 		for i, d := range data {
-			fe = fe.insert(d, uint64(i), get)
+			fe,_ = fe.insert(d, uint64(i), get)
 			// fe.checkUpto(i, data, get)
 		}
 		fe.checkData(data, get)
