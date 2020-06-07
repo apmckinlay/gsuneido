@@ -12,7 +12,6 @@ package stor
 import (
 	"sync"
 	"sync/atomic"
-	"unsafe"
 
 	"github.com/apmckinlay/gsuneido/util/verify"
 )
@@ -45,7 +44,7 @@ type Stor struct {
 }
 
 // Alloc allocates n bytes of storage and returns its Offset and byte slice
-// Returning data here allows slicing to correct length and capacity
+// Returning data here allows slicing to the correct length and capacity
 // to prevent erroneously writing too far.
 // If insufficient room in the current chunk, advance to next
 // (allocations may not straddle chunks)
@@ -73,23 +72,18 @@ func (s *Stor) Alloc(n int) (Offset, []byte) {
 		}
 		// attempt to confirm our allocation
 		if atomic.CompareAndSwapUint64(&s.size, oldsize, newsize) {
-			return offset, s.data(offset)[:n:n] // fast path
+			return offset, s.Data(offset)[:n:n] // fast path
 		}
 		// another thread beat us, loop and try again
 	}
 }
 
-// Data returns the bytes at the given offset as a string.
-// The string extends to the end of the chunk,
+// Data returns a byte slice starting at the given offset
+// and extending to the end of the chunk
 // since we don't know the size of the original alloc.
-// The existing chunks must be mapped initially
-// since lazily mapping would require locking.
-func (s *Stor) Data(offset Offset) string {
-	b := s.data(offset)
-	return *(*string)(unsafe.Pointer(&b)) // no alloc converstion to string
-}
-
-func (s *Stor) data(offset Offset) []byte {
+func (s *Stor) Data(offset Offset) []byte {
+	// The existing chunks must be mapped initially
+	// since lazily mapping would require locking.
 	chunk := s.offsetToChunk(offset)
 	chunks := s.chunks.Load().([][]byte)
 	c := chunks[chunk]
