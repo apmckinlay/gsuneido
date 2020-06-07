@@ -29,12 +29,13 @@ func UniqueRandomOf(min, max int, chars string) func() string {
 	prev := map[string]bool{}
 	return func() string {
 		var key string
-		for {
+		for i := 0; i < 10; i++ {
 			key = RandomOf(min, max, chars)
 			if !prev[key] {
 				prev[key] = true
 				return key
 			}
 		}
+		panic("str.UniqueRandomOf too many duplicates")
 	}
 }
