@@ -26,13 +26,15 @@ func UniqueRandom(min, max int) func() string {
 }
 
 func UniqueRandomOf(min, max int, chars string) func() string {
-	prev := map[string]bool{}
+	type set struct{}
+	var mark set
+	prev := map[string]set{}
 	return func() string {
 		var key string
 		for i := 0; i < 10; i++ {
 			key = RandomOf(min, max, chars)
-			if !prev[key] {
-				prev[key] = true
+			if _, ok := prev[key]; !ok {
+				prev[key] = mark
 				return key
 			}
 		}
