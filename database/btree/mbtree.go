@@ -3,9 +3,7 @@
 
 package btree
 
-//TODO search
-
-// mbtree is a specialized btree with a maximum size and number of levels.
+// mbtree is a specialized in-memory btree with a max size and number of levels.
 // Nodes are fixed size to reduce allocation and bounds checks.
 type mbtree struct {
 	// tree is not embedded since it's not needed when small
@@ -14,7 +12,7 @@ type mbtree struct {
 	leaf mLeaf
 }
 
-// mSize of 128 means tree size of 128 * 128 = 16k
+// mSize of 128 means capacity of 128 * 128 = 16k
 // with splitting giving an average of 3/4 full, that gives average max of 12k
 // which is comparable to jSuneido's 10,000 update limit
 const mSize = 128
@@ -81,9 +79,7 @@ func (leaf *mLeaf) split(tree *mTree, key string) {
 }
 
 func (leaf *mLeaf) insert2(key string, off uint64) {
-	i := 0
-	for ; i < leaf.size && key >= leaf.slots[i].key; i++ {
-	}
+	i := leaf.searchBinary(key)
 	// i is either leaf.size or points to first slot > key
 	copy(leaf.slots[i+1:], leaf.slots[i:])
 	leaf.slots[i].key, leaf.slots[i].off = key, off
@@ -91,21 +87,65 @@ func (leaf *mLeaf) insert2(key string, off uint64) {
 }
 
 func (tree *mTree) insert(key string, off uint64) {
-	i := 0
-	for ; i+1 < tree.size && key > tree.slots[i+1].key; i++ {
-	}
-	tree.slots[i].leaf.insert(tree, key, off)
+	i := tree.searchBinary(key)
+	tree.slots[i-1].leaf.insert(tree, key, off)
 }
 
 // insert2 inserts a key & leaf into the tree node
 func (tree *mTree) insert2(key string, leaf *mLeaf) {
-	i := 0
-	for ; i < tree.size && key >= tree.slots[i].key; i++ {
-	}
+	i := tree.searchBinary(key)
 	copy(tree.slots[i+1:], tree.slots[i:])
 	tree.slots[i].key, tree.slots[i].leaf = key, leaf
 	tree.size++
 }
+
+func (m *mbtree) Search(key string) uint64 {
+	if m.tree != nil {
+		return m.tree.search(key)
+	}
+	return m.leaf.search(key)
+}
+
+func (tree *mTree) search(key string) uint64 {
+	i := tree.searchBinary(key)
+	return tree.slots[i-1].leaf.search(key)
+}
+
+func (tree *mTree) searchBinary(key string) int {
+	i, j := 0, tree.size
+	for i < j {
+		h := int(uint(i+j) >> 1)
+		if key >= tree.slots[h].key {
+			i = h + 1
+		} else {
+			j = h
+		}
+	}
+	return i
+}
+
+func (leaf *mLeaf) search(key string) uint64 {
+	i := leaf.searchBinary(key)
+	if i >= leaf.size || leaf.slots[i].key != key {
+		return 0
+	}
+	return leaf.slots[i].off
+}
+
+func (leaf *mLeaf) searchBinary(key string) int {
+	i, j := 0, leaf.size
+	for i < j {
+		h := int(uint(i+j) >> 1)
+		if key > leaf.slots[h].key {
+			i = h + 1
+		} else {
+			j = h
+		}
+	}
+	return i
+}
+
+//-------------------------------------------------------------------
 
 type mIter func() (string, uint64, bool)
 

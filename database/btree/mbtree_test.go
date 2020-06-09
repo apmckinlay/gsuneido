@@ -13,42 +13,6 @@ import (
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
-func TestMbtree(t *testing.T) {
-	x := newMbtree()
-	mCompare(t, x, mLeafSlots{})
-	data := mLeafSlots{
-		{"hello", 456},
-		{"andrew", 123},
-		{"zorro", 789},
-	}
-	for _, v := range data {
-		x.Insert(v.key, v.off)
-	}
-	mCompare(t, x, data)
-}
-
-func mCompare(t *testing.T, x *mbtree, data mLeafSlots) {
-	sort.Sort(data)
-	iter := x.Iterator()
-	for _, v := range data {
-		key, off, ok := iter()
-		Assert(t).That(ok, Equals(true))
-		Assert(t).That(key, Equals(v.key))
-		Assert(t).That(off, Equals(v.off).Comment(key))
-	}
-	_, _, ok := iter()
-	Assert(t).That(ok, Equals(false))
-}
-
-type mLeafSlots []mLeafSlot
-
-func (a mLeafSlots) Len() int      { return len(a) }
-func (a mLeafSlots) Swap(i, j int) { a[i], a[j] = a[j], a[i] }
-func (a mLeafSlots) Less(i, j int) bool {
-	return a[i].key < a[j].key ||
-		(a[i].key == a[j].key && a[i].off < a[j].off)
-}
-
 func TestMbtreeRandom(t *testing.T) {
 	var nGenerate = 8
 	var nShuffle = 8
@@ -57,45 +21,72 @@ func TestMbtreeRandom(t *testing.T) {
 		nShuffle = 2
 	}
 	const n = mSize * 80
-	for gi := 0; gi < nGenerate; gi++ {
-		data := make(mLeafSlots, n)
+	data := make([]string, n)
+	for g := 0; g < nGenerate; g++ {
 		randKey := str.UniqueRandom(3, 10)
-		for i := uint64(0); i < n; i++ {
-			data[i] = mLeafSlot{randKey(), i}
+		for i := 0; i < n; i++ {
+			data[i] = randKey()
 		}
 		for si := 0; si < nShuffle; si++ {
 			rand.Shuffle(len(data),
 				func(i, j int) { data[i], data[j] = data[j], data[i] })
 			x := newMbtree()
-			for _, v := range data {
-				x.Insert(v.key, v.off)
+			for i, k := range data {
+				x.Insert(k, uint64(i))
 			}
-			mCompare(t, x, data)
+			x.checkData(t, data)
 		}
 	}
 }
 
 func TestMbtreeUnevenSplit(t *testing.T) {
 	const n = mSize * 87 // won't fit without uneven splits
-	data := make(mLeafSlots, n)
+	data := make([]string, n)
 	randKey := str.UniqueRandom(3, 10)
-	for i := uint64(0); i < n; i++ {
-		data[i] = mLeafSlot{randKey(), i}
+	for i := 0; i < n; i++ {
+		data[i] = randKey()
 	}
-	sort.Sort(data)
-	x := newMbtree()
-	for _, v := range data {
-		x.Insert(v.key, v.off)
+	sort.Strings(data)
+	m := newMbtree()
+	for i, k := range data {
+		m.Insert(k, uint64(i))
 	}
-	mCompare(t, x, data)
-	x = newMbtree()
+	m.checkData(t, data)
+	m = newMbtree()
 	for i := len(data) - 1; i >= 0; i-- {
-		x.Insert(data[i].key, data[i].off)
+		m.Insert(data[i], uint64(i))
 	}
-	mCompare(t, x, data)
+	m.checkData(t, data)
 }
 
 //-------------------------------------------------------------------
+
+func (m *mbtree) check() {
+	prev := ""
+	iter := m.Iterator()
+	for key, _, ok := iter(); ok; key, _, ok = iter() {
+		if key <= prev {
+			panic("keys out of order " + prev + " " + key)
+		}
+	}
+}
+
+func (m *mbtree) checkData(t *testing.T, data []string) {
+	m.check()
+	for i, key := range data {
+		Assert(t).That(m.Search(key), Equals(i))
+		Assert(t).That(m.Search(bigger(key)), Equals(0))
+		Assert(t).That(m.Search(smaller(key)), Equals(0))
+	}
+}
+
+func bigger(s string) string {
+	return s + " "
+}
+
+func smaller(s string) string {
+	return s[:len(s)-1] + "~"
+}
 
 func (m *mbtree) print() int {
 	var n int
