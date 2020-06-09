@@ -59,15 +59,17 @@ func (leaf *mLeaf) insert(tree *mTree, key string, off uint64) {
 	if leaf.size < mSize {
 		leaf.insert2(key, off)
 	} else {
-		leaf.split(tree, key > leaf.slots[mSize-1].key)
+		leaf.split(tree, key)
 		tree.insert(key, off)
 	}
 }
 
-func (leaf *mLeaf) split(tree *mTree, righthand bool) {
+func (leaf *mLeaf) split(tree *mTree, key string) {
 	var left int
-	if righthand {
+	if key > leaf.slots[mSize-1].key {
 		left = (mSize * 3) / 4
+	} else if key < leaf.slots[0].key {
+		left = mSize / 4
 	} else {
 		left = mSize / 2
 	}
@@ -82,7 +84,7 @@ func (leaf *mLeaf) insert2(key string, off uint64) {
 	i := 0
 	for ; i < leaf.size && key >= leaf.slots[i].key; i++ {
 	}
-	// i is either ol.size or points to first slot > key
+	// i is either leaf.size or points to first slot > key
 	copy(leaf.slots[i+1:], leaf.slots[i:])
 	leaf.slots[i].key, leaf.slots[i].off = key, off
 	leaf.size++

@@ -75,17 +75,22 @@ func TestMbtreeRandom(t *testing.T) {
 	}
 }
 
-func TestMbtreeOrdered(t *testing.T) {
-	const n = mSize * 87
+func TestMbtreeUnevenSplit(t *testing.T) {
+	const n = mSize * 87 // won't fit without uneven splits
 	data := make(mLeafSlots, n)
-	x := newMbtree()
+	randKey := str.UniqueRandom(3, 10)
 	for i := uint64(0); i < n; i++ {
-		key := str.Random(2, 10)
-		data[i] = mLeafSlot{key, i}
+		data[i] = mLeafSlot{randKey(), i}
 	}
 	sort.Sort(data)
+	x := newMbtree()
 	for _, v := range data {
 		x.Insert(v.key, v.off)
+	}
+	mCompare(t, x, data)
+	x = newMbtree()
+	for i := len(data) - 1; i >= 0; i-- {
+		x.Insert(data[i].key, data[i].off)
 	}
 	mCompare(t, x, data)
 }
