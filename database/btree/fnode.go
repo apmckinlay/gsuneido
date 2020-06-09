@@ -195,10 +195,6 @@ func replace(fe fNode, i, j int, ins fNode) fNode {
 	return fe
 }
 
-func (fn fNode) split(fe fNode, fi int, newkey string, newoff uint64) {
-
-}
-
 func (fn fNode) offset(fi int) uint64 {
 	_, offset := stor.ReadSmallOffset(fn[fi:])
 	return offset

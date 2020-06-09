@@ -17,7 +17,7 @@ import (
 )
 
 func TestMemOffsets(t *testing.T) {
-	mo := newMemOffsets()
+	mo := memOffsets{nextOff: stor.MaxSmallOffset, nodes: make(map[uint64]fNode)}
 	Assert(t).True(mo.get(0) == nil)
 	Assert(t).True(mo.get(123) == nil)
 	n := fNode{123}
@@ -40,13 +40,9 @@ func TestFbupdate(t *testing.T) {
 	for j := 0; j < nTimes; j++ {
 		const n = 1000
 		var data [n]string
-		mo := newMemOffsets()
-		up := fbupdate{
-			fb:          fbtree{root: mo.add(fNode{})},
-			moffs:       mo,
-			getLeafKey:  func(i uint64) string { return data[i] },
-			maxNodeSize: 44,
-		}
+		getLeafKey := func(i uint64) string { return data[i] }
+		fb := CreateFbtree(nil, getLeafKey, 44)
+		up := newFbupdate(fb)
 		randKey := str.UniqueRandomOf(3, 6, "abcde")
 		for i := 0; i < n; i++ {
 			key := randKey()
@@ -63,19 +59,15 @@ func TestUnevenSplit(t *testing.T) {
 	const n = 1000
 	var data [n]string
 	test := func() {
-		mo := newMemOffsets()
-		up := fbupdate{
-			fb:          fbtree{root: mo.add(fNode{})},
-			moffs:       mo,
-			getLeafKey:  func(i uint64) string { return data[i] },
-			maxNodeSize: 128,
-		}
+		getLeafKey := func(i uint64) string { return data[i] }
+		fb := CreateFbtree(nil, getLeafKey, 128)
+		up := newFbupdate(fb)
 		for i := 0; i < n; i++ {
 			up.Insert(data[i], uint64(i))
 		}
 		count, size, nnodes := up.check()
 		Assert(t).That(count, Equals(n))
-		full := float32(size) / float32(nnodes) / float32(up.maxNodeSize)
+		full := float32(size) / float32(nnodes) / float32(up.fb.maxNodeSize)
 		// print("count", count, "nnodes", nnodes, "size", size, "full", full)
 		if full < .65 {
 			t.Error("expected > .65 got", full)
@@ -91,6 +83,17 @@ func TestUnevenSplit(t *testing.T) {
 	test()
 	str.ListReverse(data[:])
 	test()
+}
+
+func (fb *fbtree) checkData(t *testing.T, data []string) {
+	count, _, _ := fb.check()
+	Assert(t).That(count, Equals(len(data)))
+	for i, k := range data {
+		o := fb.Search(k)
+		if o != uint64(i) {
+			t.Error("checkData", k, "expected", i, "got", o)
+		}
+	}
 }
 
 func (up *fbupdate) checkData(t *testing.T, data []string) {
@@ -114,13 +117,9 @@ func TestSampleData(t *testing.T) {
 		for si := 0; si < nShuffle; si++ {
 			rand.Shuffle(len(data),
 				func(i, j int) { data[i], data[j] = data[j], data[i] })
-			mo := newMemOffsets()
-			up := fbupdate{
-				fb:          fbtree{root: mo.add(fNode{})},
-				moffs:       mo,
-				getLeafKey:  func(i uint64) string { return data[i] },
-				maxNodeSize: 256,
-			}
+			getLeafKey := func(i uint64) string { return data[i] }
+			fb := CreateFbtree(nil, getLeafKey, 256)
+			up := newFbupdate(fb)
 			for i, d := range data {
 				up.Insert(d, uint64(i))
 			}
@@ -143,30 +142,34 @@ func fileData(filename string) []string {
 }
 
 func TestSave(t *testing.T) {
-	const n = 1000
-	data := make([]string, 0, n)
-	mo := newMemOffsets()
+	var nSaves = 50
+	if testing.Short() {
+		nSaves = 10
+	}
+	const freezesPerSave = 3
+	const insertsPerFreeze = 17
+	data := make([]string, 0, nSaves * freezesPerSave * insertsPerFreeze)
+	getLeafKey := func(i uint64) string { return data[i] }
 	st, err := stor.MmapStor("tmp.db", stor.CREATE)
 	if err != nil {
 		log.Fatalln(err)
 	}
-	up := fbupdate{
-		fb:          fbtree{root: mo.add(fNode{}), store: st},
-		moffs:       mo,
-		getLeafKey:  func(i uint64) string { return data[i] },
-		maxNodeSize: 44,
-	}
-	up.save()
-	randKey := str.UniqueRandomOf(3, 6, "abcd")
-	for i := 0; i < n; i++ {
-		key := randKey()
-		data = append(data, key)
-		up.Insert(key, uint64(i))
-		if (i+1)%17 == 0 {
-			up.checkData(t, data)
-			up.save()
-			up.checkData(t, data)
+	fb := CreateFbtree(st, getLeafKey, 64)
+	randKey := str.UniqueRandomOf(3, 7, "abcdef")
+	for i := 0; i < nSaves; i++ {
+		for j := 0; j < freezesPerSave; j++ {
+			fb = fb.Update(func(up *fbupdate) {
+				for k := 0; k < insertsPerFreeze; k++ {
+					key := randKey()
+					up.Insert(key, uint64(len(data)))
+					data = append(data, key)
+				}
+				up.checkData(t, data)
+			})
+			fb.checkData(t, data)
 		}
+		fb = fb.save()
+		fb.checkData(t, data)
 	}
 	st.Close()
 	os.Remove("tmp.db")

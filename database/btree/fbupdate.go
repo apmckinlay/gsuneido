@@ -13,13 +13,30 @@ import (
 // fbupdate handles updating an immutable btree.
 // It creates new and updated nodes in memory.
 type fbupdate struct {
+	// fb is a copy of the fbtree (so we can update it)
 	fb fbtree
-	// moffs assigns temporary offsets to new and updated nodes
+	// moffs (mutable) maps offsets to mutable new and updated in-memory nodes
 	moffs memOffsets
-	// getLeafKey returns the key associated with a leaf data offset
-	getLeafKey func(uint64) string
-	// maxNodeSize is the maximum node size in bytes, split if larger
-	maxNodeSize int
+	// paths is a set of nodes that will need to be path copied
+	paths map[uint64]set
+}
+
+type set struct{}
+
+var mark set
+
+func (fb *fbtree) Update(fn func(*fbupdate)) *fbtree {
+	up := newFbupdate(fb)
+	fn(up)
+	up.freeze()
+	return &up.fb
+}
+
+func newFbupdate(fb *fbtree) *fbupdate {
+	moffs := memOffsets{nextOff: fb.moffs.nextOff,
+		nodes: make(map[uint64]fNode, len(fb.moffs.nodes))}
+	return &fbupdate{fb: *fb, moffs: moffs,
+		paths: make(map[uint64]set, len(fb.paths))}
 }
 
 func (up *fbupdate) Search(key string) uint64 {
@@ -41,17 +58,15 @@ func (up *fbupdate) Insert(key string, off uint64) {
 	nodeOff := up.fb.root
 	for i := 0; i < up.fb.treeLevels; i++ {
 		stack[i] = nodeOff
-		node := up.getMutableNode(nodeOff) // mutable to mark path for save
+		node := up.getPathNode(nodeOff)
 		nodeOff, _, _ = node.search(key)
 	}
 
 	// insert into leaf
-	node := up.getMutableNode(nodeOff)
-	var where int
-	node, where = node.insert(key, off, up.getLeafKey)
+	node, where := up.insert(nodeOff, key, off, up.fb.getLeafKey)
 	up.moffs.set(nodeOff, node)
 	size := len(node)
-	if size <= up.maxNodeSize {
+	if size <= up.fb.maxNodeSize {
 		return // fast path, just insert into leaf
 	}
 
@@ -60,11 +75,10 @@ func (up *fbupdate) Insert(key string, off uint64) {
 
 	// insert up the tree
 	for i := up.fb.treeLevels - 1; i >= 0; i-- {
-		node = up.getMutableNode(stack[i])
-		node, where = node.insert(splitKey, rightOff, nil)
+		node, where = up.insert(stack[i], splitKey, rightOff, nil)
 		up.moffs.set(stack[i], node)
 		size := len(node)
-		if size <= up.maxNodeSize {
+		if size <= up.fb.maxNodeSize {
 			return // finished
 		}
 		splitKey, rightOff = up.split(node, stack[i], where)
@@ -78,11 +92,22 @@ func (up *fbupdate) Insert(key string, off uint64) {
 	up.fb.treeLevels++
 }
 
+func (up *fbupdate) insert(nodeOff uint64, keyNew string, offNew uint64,
+	get func(uint64) string) (fNode, int) {
+	node := up.getMutableNode(nodeOff)
+	return node.insert(keyNew, offNew, get)
+}
+
 func (up *fbupdate) getNode(off uint64) fNode {
 	if node := up.moffs.get(off); node != nil {
 		return node
 	}
 	return up.fb.getNode(off)
+}
+
+func (up *fbupdate) getPathNode(off uint64) fNode {
+	up.paths[off] = mark
+	return up.getNode(off)
 }
 
 func (up *fbupdate) getMutableNode(off uint64) fNode {
@@ -125,36 +150,22 @@ func (up *fbupdate) split(node fNode, nodeOff uint64, where int) (
 	return
 }
 
-// save writes the btree (changes) to the stor and returns the new root offset.
-// It works bottom (leaves) up so it can replace memOffsets with stor offsets.
-func (up *fbupdate) save() {
-	up.fb.root = up.save2(0, up.fb.root)
-	up.moffs.clear()
-}
-
-func (up *fbupdate) save2(depth int, nodeOff uint64) uint64 {
-	// only traverse modified paths, not entire (possibly huge) tree
-	if up.inStor(nodeOff) {
-		return nodeOff
-	}
-	node := up.getNode(nodeOff) // mutable since not in stor
-	if depth < up.fb.treeLevels {
-		// tree node, need to update any memOffsets
-		for it := node.Iter(); it.next(); {
-			off := node.offset(it.fi)
-			off2 := up.save2(depth+1, off) // recurse
-			// bottom up
-			if off2 != off {
-				node.setOffset(it.fi, off2)
-			}
+// freeze moves the changes to the fbtree.
+// It will still reference in-memory new and updated nodes
+// but they are no longer mutable.
+func (up *fbupdate) freeze() {
+	for k, v := range up.fb.moffs.nodes {
+		if _, ok := up.moffs.nodes[k]; !ok {
+			up.moffs.nodes[k] = v
 		}
 	}
-	return up.fb.putNode(node)
-}
-
-func (up *fbupdate) inStor(off uint64) bool {
-	_, ok := up.moffs.nodes[off]
-	return !ok
+	up.fb.moffs = up.moffs
+	up.moffs.nodes = nil
+	for k := range up.fb.paths {
+		up.paths[k] = mark
+	}
+	up.fb.paths = up.paths
+	up.paths = nil
 }
 
 //-------------------------------------------------------------------
@@ -167,8 +178,8 @@ type memOffsets struct {
 	nextOff uint64
 }
 
-func newMemOffsets() memOffsets {
-	return memOffsets{nodes: map[uint64]fNode{}, nextOff: stor.MaxSmallOffset}
+func nilMemOffsets() memOffsets {
+	return memOffsets{nextOff: stor.MaxSmallOffset}
 }
 
 // add returns a fake offset for a new node
@@ -189,10 +200,6 @@ func (mo *memOffsets) get(off uint64) fNode {
 	return mo.nodes[off]
 }
 
-func (mo *memOffsets) clear() {
-	*mo = newMemOffsets()
-}
-
 // ------------------------------------------------------------------
 
 func (up *fbupdate) print() {
@@ -211,7 +218,7 @@ func (up *fbupdate) print1(depth int, offset uint64) {
 		} else {
 			// leaf
 			print(strings.Repeat("    ", depth)+strconv.Itoa(it.fi)+":",
-				it.npre, it.diff, "=", it.known, "("+up.getLeafKey(offset)+")")
+				it.npre, it.diff, "=", it.known, "("+up.fb.getLeafKey(offset)+")")
 		}
 	}
 }
@@ -238,7 +245,7 @@ func (up *fbupdate) check1(depth int, offset uint64, key string) (count, size, n
 			nnodes += n
 		} else {
 			// leaf
-			itkey := up.getLeafKey(offset)
+			itkey := up.fb.getLeafKey(offset)
 			if key > itkey {
 				panic("keys out of order " + key + " " + itkey)
 			}
