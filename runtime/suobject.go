@@ -287,7 +287,7 @@ func (ob *SuObject) RangeTo(from int, to int) Value {
 	if ob.Lock() {
 		defer ob.Unlock()
 	}
-	size := ob.ListSize()
+	size := len(ob.list)
 	from = prepFrom(from, size)
 	to = prepTo(from, to, size)
 	return ob.rangeTo(from, to)
@@ -297,7 +297,7 @@ func (ob *SuObject) RangeLen(from int, n int) Value {
 	if ob.Lock() {
 		defer ob.Unlock()
 	}
-	size := ob.ListSize()
+	size := len(ob.list)
 	from = prepFrom(from, size)
 	n = prepLen(n, size-from)
 	return ob.rangeTo(from, from+n)
