@@ -7,8 +7,8 @@ const smallBufferSize = 64
 
 // Grow grows the buffer to guarantee space for n more bytes.
 func Grow(buf []byte, n int) []byte {
-	if n < 0 {
-		panic("Grow requires positive amount")
+	if n <= 0 {
+		return buf
 	}
 	l := len(buf)
 	// Try to grow by reslice (fast path)

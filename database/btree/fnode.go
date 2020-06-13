@@ -10,13 +10,12 @@ import (
 	"github.com/apmckinlay/gsuneido/database/stor"
 	"github.com/apmckinlay/gsuneido/util/bytes"
 	"github.com/apmckinlay/gsuneido/util/str"
-	"github.com/apmckinlay/gsuneido/util/verify"
 )
 
 // fNode is a file based btree node with partial incremental encoding.
 // Nodes are variable length and are packed into a sequence of bytes
 // with variable length entries.
-// So we can only iterate from the beginning. No random access.
+// So we can only iterate from the beginning, no random access or binary search.
 //
 // Entry is:
 //		- 5 byte smalloffset
@@ -35,15 +34,19 @@ func fAppend(fe fNode, offset uint64, npre int, diff string) fNode {
 func fRead(fe_ fNode) (fe fNode, npre int, diff string) {
 	fe = fe_[stor.SmallOffsetLen:]
 	npre = int(fe[0])
-	sn := int(fe[1])
+	dn := int(fe[1])
 	fe = fe[2:]
-	diff = string(fe[:sn])
-	fe = fe[sn:]
+	diff = string(fe[:dn])
+	fe = fe[dn:]
 	return
 }
 
 func fLen(diff string) int {
 	return 5 + 1 + 1 + len(diff)
+}
+
+func (fn fNode) next(i int) int {
+	return i + 7 + int(fn[i+6])
 }
 
 type fData struct {
@@ -115,6 +118,10 @@ func (fn fNode) search(s string) (uint64, string, string) {
 }
 
 func (fn fNode) contains(s string, get func(uint64) string) bool {
+	if len(fn) == 0 {
+		return false
+	}
+
 	offset, _, _ := fn.search(s)
 	return s == get(offset)
 }
@@ -126,10 +133,10 @@ const (
 )
 
 // insert adds a new key to a node. get will be nil for tree nodes.
-func (fn fNode) insert(keyNew string, offNew uint64, get func(uint64) string) (fNode,int) {
+func (fn fNode) insert(keyNew string, offNew uint64, get func(uint64) string) (fNode, int) {
 	where := insMiddle
 	if len(fn) == 0 {
-		return fAppend(fn, offNew, 0, ""),where
+		return fAppend(fn, offNew, 0, ""), where
 	}
 	// search
 	var cur iter
@@ -183,16 +190,69 @@ func (fn fNode) insert(keyNew string, offNew uint64, get func(uint64) string) (f
 			j += fLen(it.diff)
 		}
 	}
-	fn = replace(fn, i, j, ins)
+	fn = fn.replace(i, j, ins)
 	return fn, where
 }
 
-func replace(fe fNode, i, j int, ins fNode) fNode {
-	d := len(ins) - (j - i)
-	fe = bytes.Grow(fe, d)
-	copy(fe[i+d:], fe[i:])
-	copy(fe[i:], ins)
-	return fe
+// replace is used by insert and delete
+// to replace a portion of a node (i,j) with new content (rep)
+func (fn fNode) replace(i, j int, rep fNode) fNode {
+	nr := len(rep)
+	d := nr - (j - i)
+	fn = bytes.Grow(fn, d)
+	copy(fn[i+nr:], fn[j:])
+	copy(fn[i:], rep)
+	if d < 0 {
+		fn = fn[:len(fn)+d]
+	}
+	return fn
+}
+
+func (fn fNode) delete(offset uint64) (fNode, bool) {
+	// search
+	prevKnown := ""
+	it := fn.Iter()
+	for {
+		if !it.next() {
+			return nil, false // not found
+		}
+		if stor.EqualSmallOffset(fn[it.fi:], offset) {
+			break
+		}
+		prevKnown = it.known
+	}
+	i := it.fi
+
+	j := fn.next(i)
+	if j >= len(fn) {
+		// delete last item, simplest case, no adjustments
+		return fn[:i], true
+	}
+
+	rep := make(fNode, 0, 64)
+	if i == 0 {
+		// deleting first entry so make following into first
+		rep = rep.updateCopy(fn, j, 0, "")
+		j = fn.next(j)
+		prevKnown = it.known
+		it.next()
+		// then adjust following entry if there is one
+	}
+	if it.next() {
+		npre := commonPrefixLen(prevKnown, it.known)
+		diff := it.known[npre:]
+		rep = rep.updateCopy(fn, j, npre, diff)
+		j = fn.next(j)
+	}
+	fn = fn.replace(i, j, rep)
+	return fn, true
+}
+
+func (fn fNode) updateCopy(src fNode, i int, npre int, diff string) fNode {
+	fn = append(fn, src[i:i+5]...) // offset
+	fn = append(fn, byte(npre), byte(len(diff)))
+	fn = append(fn, diff...)
+	return fn
 }
 
 func (fn fNode) offset(fi int) uint64 {
@@ -207,11 +267,11 @@ func (fn fNode) setOffset(fi int, off uint64) {
 // iter -------------------------------------------------------------
 
 type iter struct {
-	fn         fNode
-	fi         int // position in original fEntries
-	npre       int
-	diff       string
-	known      string
+	fn    fNode
+	fi    int // position in original fEntries
+	npre  int
+	diff  string
+	known string
 }
 
 func (fn fNode) Iter() *iter {
@@ -229,11 +289,13 @@ func (it *iter) next() bool {
 		// first
 	} else if it.npre <= len(it.known) {
 		if len(it.diff) < 1 {
-			panic("unexpected diff len " + it.diff)
+			print("bad diff len, npre", it.npre, "diff", it.diff, "known", it.known)
+			panic("bad diff len")
 		}
 	} else {
 		if len(it.diff) != it.npre-len(it.known)+1 {
-			panic("unexpected diff len")
+			print("bad diff len, npre", it.npre, "diff", it.diff, "known", it.known)
+			panic("bad diff len")
 		}
 	}
 	//TODO use a buffer for known to reduce allocation
@@ -258,31 +320,41 @@ func (fn fNode) stats() {
 }
 
 func (fn fNode) checkData(data []string, get func(uint64) string) {
-	n := len(data)
-	fn.checkUpTo(n-1, data, get)
+	fn.checkUpTo(len(data)-1, data, get)
 }
 
 // checkUpTo is used during inserting.
 // It checks that inserted keys are present
 // and uninserted keys are not present.
 func (fn fNode) checkUpTo(i int, data []string, get func(uint64) string) {
-	verify.That(fn.check() == i+1)
+	n := fn.check()
+	nn := 0
 	for j, d := range data {
-		if j <= i != fn.contains(d, get) {
+		if (d != "" && j <= i) != fn.contains(d, get) {
 			panic("can't find " + d)
 		}
+		if d != "" && j <= i {
+			nn++
+		}
+	}
+	if nn != n {
+		panic("check count expected " + strconv.Itoa(n) +
+			" got " + strconv.Itoa(nn))
 	}
 }
 
 func (fn fNode) check() int {
 	n := 0
-	prev := ""
+	var prev iter
 	it := fn.Iter()
 	for it.next() {
-		if it.known < prev {
+		if it.known < prev.known {
 			panic("fEntries out of order")
 		}
-		prev = it.known
+		if it.fi > 7 && it.npre > len(prev.known)+(len(it.diff)-1) {
+			panic("npre > len(prev.known)")
+		}
+		prev = *it
 		n++
 	}
 	return n

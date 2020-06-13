@@ -20,10 +20,10 @@ func TestFAppendRead(t *testing.T) {
 		npre   int
 		diff   string
 	}
-	var fe fNode
+	var fn fNode
 	var data []ent
 	add := func(offset uint64, npre int, diff string) {
-		fe = fAppend(fe, offset, npre, diff)
+		fn = fAppend(fn, offset, npre, diff)
 		data = append(data, ent{offset, npre, diff})
 	}
 	add(123, 2, "bar")
@@ -31,7 +31,7 @@ func TestFAppendRead(t *testing.T) {
 	for _, e := range data {
 		var npre int
 		var diff string
-		fe, npre, diff = fRead(fe)
+		fn, npre, diff = fRead(fn)
 		Assert(t).That(npre, Equals(e.npre))
 		Assert(t).That(diff, Equals(e.diff))
 	}
@@ -49,22 +49,22 @@ func TestFnodeInsert(*testing.T) {
 		data := strings.Fields(s)
 		get := func(i uint64) string { return data[i] }
 		// forward
-		fe := fNode{}
+		fn := fNode{}
 		for i, d := range data {
-			fe,_ = fe.insert(d, uint64(i), get)
-			fe.checkUpTo(i, data, get)
+			fn, _ = fn.insert(d, uint64(i), get)
+			fn.checkUpTo(i, data, get)
 		}
-		verify.That(fe.check() == len(data))
+		verify.That(fn.check() == len(data))
 		// reverse
 		str.ListReverse(data)
-		fe = nil
+		fn = nil
 		for i, d := range data {
-			fe,_ = fe.insert(d, uint64(i), get)
-			fe.checkUpTo(i, data, get)
+			fn, _ = fn.insert(d, uint64(i), get)
+			fn.checkUpTo(i, data, get)
 		}
 		// builder
-		fe = build(data)
-		fe.checkData(data, get)
+		fn = build(data)
+		fn.checkData(data, get)
 	}
 }
 
@@ -89,21 +89,93 @@ func TestFnodeRandom(*testing.T) {
 	get := func(i uint64) string { return data[i] }
 	for gi := 0; gi < nGenerate; gi++ {
 		data = data[0:nData]
+		randKey := str.UniqueRandomOf(1, 6, "abcdef")
 		for di := 0; di < nData; di++ {
-			data[di] = str.RandomOf(1, 6, "abcdef")
+			data[di] = randKey()
 		}
-		data = str.ListUnique(data)
 		for si := 0; si < nShuffle; si++ {
 			rand.Shuffle(len(data),
 				func(i, j int) { data[i], data[j] = data[j], data[i] })
-			var fe fNode
+			var fn fNode
 			for i, d := range data {
-				fe,_ = fe.insert(d, uint64(i), get)
+				fn, _ = fn.insert(d, uint64(i), get)
 				// fe.checkUpTo(i, data, get)
 			}
-			fe.checkData(data, get)
+			fn.checkData(data, get)
 		}
 
+	}
+}
+
+func TestDelete(t *testing.T) {
+	var fn fNode
+	const nData = 8 + 32
+	var data = make([]string, nData)
+	get := func(i uint64) string { return data[i] }
+	randKey := str.UniqueRandomOf(1, 6, "abcdef")
+	for i := 0; i < nData; i++ {
+		data[i] = randKey()
+	}
+	sort.Strings(data)
+	for i := 0; i < len(data); i++ {
+		fn, _ = fn.insert(data[i], uint64(i), get)
+	}
+	// fn.printLeafNode(get)
+
+	var ok bool
+
+	// delete at end, simplest case
+	for i := 0; i < 8; i++ {
+		fn, ok = fn.delete(uint64(len(data) - 1))
+		Assert(t).True(ok)
+		data = data[:len(data)-1]
+		fn.checkData(data, get)
+	}
+	// print("================================")
+	// fn.printLeafNode(get)
+
+	// delete at start
+	const nStart = 8
+	for i := 0; i < nStart; i++ {
+		fn, ok = fn.delete(uint64(i))
+		Assert(t).True(ok)
+		data[i] = ""
+		fn.checkData(data, get)
+	}
+	// print("================================")
+	// fn.printLeafNode(get)
+
+	for i := 0; i < len(data)-nStart; i++ {
+		off := rand.Intn(len(data))
+		for data[off] == "" {
+			off = (off + 1) % len(data)
+		}
+		// print("================================ delete", data[off])
+		fn, ok = fn.delete(uint64(off))
+		Assert(t).True(ok)
+		// fn.printLeafNode(get)
+		data[off] = ""
+		fn.checkData(data, get)
+	}
+}
+
+func TestDelete2(t *testing.T) {
+	data := []string{"a", "b", "c", "d", "e"}
+	get := func(i uint64) string { return data[i] }
+	var fn fNode
+	for i := 0; i < len(data); i++ {
+		fn, _ = fn.insert(data[i], uint64(i), get)
+	}
+	// fn.printLeafNode(get)
+
+	var ok bool
+	for i := 1; i < len(data); i++ {
+		fn, ok = fn.delete(uint64(i))
+		Assert(t).True(ok)
+		// print("================================")
+		// fn.printLeafNode(get)
+		data[i] = ""
+		fn.checkData(data, get)
 	}
 }
 
@@ -114,12 +186,12 @@ func TestWords(*testing.T) {
 	for si := 0; si < nShuffle; si++ {
 		rand.Shuffle(len(data),
 			func(i, j int) { data[i], data[j] = data[j], data[i] })
-		var fe fNode
+		var fn fNode
 		for i, d := range data {
-			fe,_ = fe.insert(d, uint64(i), get)
+			fn, _ = fn.insert(d, uint64(i), get)
 			// fe.checkUpto(i, data, get)
 		}
-		fe.checkData(data, get)
+		fn.checkData(data, get)
 	}
 }
 

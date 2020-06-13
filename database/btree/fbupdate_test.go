@@ -91,20 +91,25 @@ func (fb *fbtree) checkData(t *testing.T, data []string) {
 	for i, k := range data {
 		o := fb.Search(k)
 		if o != uint64(i) {
-			t.Error("checkData", k, "expected", i, "got", o)
+			t.Error("checkData", k, "expect", i, "actual", o)
 		}
 	}
 }
 
 func (up *fbupdate) checkData(t *testing.T, data []string) {
 	count, _, _ := up.check()
-	Assert(t).That(count, Equals(len(data)))
+	n := 0
 	for i, k := range data {
+		if data[i] == "" {
+			continue
+		}
 		o := up.Search(k)
 		if o != uint64(i) {
-			t.Error("checkData", k, "expected", i, "got", o)
+			t.Error("checkData", k, "expect", i, "actual", o)
 		}
+		n++
 	}
+	Assert(t).That(count, Equals(n))
 }
 
 func TestSampleData(t *testing.T) {
@@ -141,6 +146,39 @@ func fileData(filename string) []string {
 	return data
 }
 
+func TestFbdelete(t *testing.T) {
+	var n = 2000
+	if testing.Short() {
+		n = 100
+	}
+	data := make([]string, n)
+	getLeafKey := func(i uint64) string { return data[i] }
+	fb := CreateFbtree(nil, getLeafKey, 44)
+	up := newFbupdate(fb)
+	randKey := str.UniqueRandomOf(3, 6, "abcde")
+	for i := 0; i < n; i++ {
+		key := randKey()
+		data[i] = key
+		up.Insert(key, uint64(i))
+	}
+	up.checkData(t, data)
+	// up.print()
+
+	for i := 0; i < len(data); i++ {
+		off := rand.Intn(len(data))
+		for data[off] == "" {
+			off = (off + 1) % len(data)
+		}
+		// print("================================= delete", data[off])
+		up.Delete(data[off], uint64(off))
+		// up.print()
+		data[off] = ""
+		if i%11 == 0 {
+			up.checkData(t, data)
+		}
+	}
+}
+
 func TestSave(t *testing.T) {
 	var nSaves = 50
 	if testing.Short() {
@@ -148,7 +186,7 @@ func TestSave(t *testing.T) {
 	}
 	const freezesPerSave = 3
 	const insertsPerFreeze = 17
-	data := make([]string, 0, nSaves * freezesPerSave * insertsPerFreeze)
+	data := make([]string, 0, nSaves*freezesPerSave*insertsPerFreeze)
 	getLeafKey := func(i uint64) string { return data[i] }
 	st, err := stor.MmapStor("tmp.db", stor.CREATE)
 	if err != nil {

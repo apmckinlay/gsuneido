@@ -49,9 +49,9 @@ func (up *fbupdate) Search(key string) uint64 {
 }
 
 const maxNodeSize = 1536 // * .75 ~ 1k
+const maxlevels = 8
 
 func (up *fbupdate) Insert(key string, off uint64) {
-	const maxlevels = 8
 	var stack [maxlevels]uint64
 
 	// search down the tree to the appropriate leaf
@@ -92,10 +92,10 @@ func (up *fbupdate) Insert(key string, off uint64) {
 	up.fb.treeLevels++
 }
 
-func (up *fbupdate) insert(nodeOff uint64, keyNew string, offNew uint64,
+func (up *fbupdate) insert(nodeOff uint64, key string, off uint64,
 	get func(uint64) string) (fNode, int) {
 	node := up.getMutableNode(nodeOff)
-	return node.insert(keyNew, offNew, get)
+	return node.insert(key, off, get)
 }
 
 func (up *fbupdate) getNode(off uint64) fNode {
@@ -149,6 +149,61 @@ func (up *fbupdate) split(node fNode, nodeOff uint64, where int) (
 	rightOff = up.moffs.add(right)
 	return
 }
+
+//-------------------------------------------------------------------
+
+func (up *fbupdate) Delete(key string, off uint64) bool {
+	var stack [maxlevels]uint64
+
+	// search down the tree to the appropriate leaf
+	nodeOff := up.fb.root
+	for i := 0; i < up.fb.treeLevels; i++ {
+		stack[i] = nodeOff
+		node := up.getPathNode(nodeOff)
+		nodeOff, _, _ = node.search(key)
+	}
+
+	// delete from leaf
+	node, ok := up.delete(nodeOff, off)
+	if !ok {
+		return false
+	}
+	if len(node) != 0 || up.fb.treeLevels == 0 {
+		return true // usual fast path
+	}
+
+	// delete up the tree
+	for i := up.fb.treeLevels - 1; i >= 0; i-- {
+		node, ok = up.delete(stack[i], nodeOff)
+		if !ok {
+			panic("leaf node not found in tree")
+		}
+		if (i > 0 || up.fb.treeLevels == 0) && len(node) != 0 {
+			return true
+		}
+		nodeOff = stack[i]
+	}
+
+	// remove empty root(s)
+	for up.fb.treeLevels > 0 && len(node) == 7 {
+		up.fb.treeLevels--
+		up.fb.root = node.offset(0)
+		node = up.getNode(up.fb.root)
+	}
+
+	return true
+}
+
+func (up *fbupdate) delete(nodeOff uint64, off uint64) (fNode, bool) {
+	node := up.getMutableNode(nodeOff)
+	node, ok := node.delete(off)
+	if ok {
+		up.moffs.set(nodeOff, node)
+	}
+	return node, ok
+}
+
+//-------------------------------------------------------------------
 
 // freeze moves the changes to the fbtree.
 // It will still reference in-memory new and updated nodes
