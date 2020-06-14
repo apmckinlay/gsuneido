@@ -4,9 +4,6 @@
 package btree
 
 import (
-	"strconv"
-	"strings"
-
 	"github.com/apmckinlay/gsuneido/database/stor"
 )
 
@@ -258,24 +255,7 @@ func (mo *memOffsets) get(off uint64) fNode {
 // ------------------------------------------------------------------
 
 func (up *fbupdate) print() {
-	up.print1(0, up.fb.root)
-}
-
-func (up *fbupdate) print1(depth int, offset uint64) {
-	node := up.getNode(offset)
-	for it := node.Iter(); it.next(); {
-		offset := node.offset(it.fi)
-		if depth < up.fb.treeLevels {
-			// tree
-			print(strings.Repeat("    ", depth)+strconv.Itoa(it.fi)+":",
-				it.npre, it.diff, "=", it.known)
-			up.print1(depth+1, offset) // recurse
-		} else {
-			// leaf
-			print(strings.Repeat("    ", depth)+strconv.Itoa(it.fi)+":",
-				it.npre, it.diff, "=", it.known, "("+up.fb.getLeafKey(offset)+")")
-		}
-	}
+	up.fb.print()
 }
 
 // check verifies that the keys are in order and returns the number of keys

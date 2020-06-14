@@ -285,6 +285,8 @@ func (it *iter) next() bool {
 		return false
 	}
 	it.fn, it.npre, it.diff = fRead(it.fn)
+
+	//TODO remove this validation in production
 	if it.known == "" && it.npre == 0 && it.diff == "" {
 		// first
 	} else if it.npre <= len(it.known) {
@@ -298,7 +300,7 @@ func (it *iter) next() bool {
 			panic("bad diff len")
 		}
 	}
-	//TODO use a buffer for known to reduce allocation
+
 	if it.npre <= len(it.known) {
 		it.known = it.known[:it.npre] + it.diff
 	} else {

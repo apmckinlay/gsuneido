@@ -63,12 +63,12 @@ func TestMbtreeUnevenSplit(t *testing.T) {
 
 func (m *mbtree) check() {
 	prev := ""
-	iter := m.Iterator()
-	for key, _, ok := iter(); ok; key, _, ok = iter() {
+	m.ForEach(func(key string, off uint64) {
 		if key <= prev {
 			panic("keys out of order " + prev + " " + key)
 		}
-	}
+		prev = key
+	})
 }
 
 func (m *mbtree) checkData(t *testing.T, data []string) {

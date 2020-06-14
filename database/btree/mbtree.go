@@ -147,29 +147,20 @@ func (leaf *mLeaf) searchBinary(key string) int {
 
 //-------------------------------------------------------------------
 
-type mIter func() (string, uint64, bool)
+type visitor func(key string, off uint64)
 
-func (m *mbtree) Iterator() mIter {
-	tree := m.tree
-	ti := 0
-	var leaf *mLeaf
-	if tree == nil {
-		leaf = &m.leaf
+func (m *mbtree) ForEach(fn visitor) {
+	if m.tree == nil {
+		m.leaf.forEach(fn)
 	} else {
-		leaf = tree.slots[ti].leaf
-	}
-	i := -1
-	return func() (string, uint64, bool) {
-		i++
-		if i >= leaf.size {
-			if tree == nil || ti+1 >= tree.size {
-				return "", 0, false
-			}
-			ti++
-			leaf = tree.slots[ti].leaf
-			i = 0
+		for i := 0; i < m.tree.size; i++ {
+			m.tree.slots[i].leaf.forEach(fn)
 		}
-		slot := leaf.slots[i]
-		return slot.key, slot.off, true
+	}
+}
+
+func (leaf *mLeaf) forEach(fn visitor) {
+	for i := 0; i < leaf.size; i++ {
+		fn(leaf.slots[i].key, leaf.slots[i].off)
 	}
 }

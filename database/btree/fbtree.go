@@ -4,6 +4,9 @@
 package btree
 
 import (
+	"strconv"
+	"strings"
+
 	"github.com/apmckinlay/gsuneido/database/stor"
 	"github.com/apmckinlay/gsuneido/util/verify"
 )
@@ -118,6 +121,31 @@ func (fb *fbtree) getNode(off uint64) fNode {
 	return fNode(buf[2 : 2+size])
 }
 
+//-------------------------------------------------------------------
+
+// type visitfn func (key string, off uint64)
+
+// func (fb *fbtree) forEach(fn visitfn) {
+// 	fb.forEach1(0, fb.root, fn)
+// }
+
+// func (fb *fbtree) forEach1(depth int, offset uint64, fn visitfn) {
+// 	node := fb.getNode(offset)
+// 	for it := node.Iter(); it.next(); {
+// 		offset := node.offset(it.fi)
+// 		if depth < fb.treeLevels {
+// 			// tree
+// 			fb.forEach1(depth+1, offset, fn) // recurse
+// 		} else {
+// 			// leaf
+// 			key := fb.getLeafKey(offset)
+// 			fn(key, node.offset(it.fi))
+// 		}
+// 	}
+// }
+
+//-------------------------------------------------------------------
+
 // check verifies that the keys are in order and returns the number of keys
 func (fb *fbtree) check() (count, size, nnodes int) {
 	return fb.check1(0, fb.root, "")
@@ -148,4 +176,27 @@ func (fb *fbtree) check1(depth int, offset uint64, key string) (count, size, nno
 		}
 	}
 	return
+}
+
+// ------------------------------------------------------------------
+
+func (fb *fbtree) print() {
+	fb.print1(0, fb.root)
+}
+
+func (fb *fbtree) print1(depth int, offset uint64) {
+	node := fb.getNode(offset)
+	for it := node.Iter(); it.next(); {
+		offset := node.offset(it.fi)
+		if depth < fb.treeLevels {
+			// tree
+			print(strings.Repeat("    ", depth)+strconv.Itoa(it.fi)+":",
+				it.npre, it.diff, "=", it.known)
+			fb.print1(depth+1, offset) // recurse
+		} else {
+			// leaf
+			print(strings.Repeat("    ", depth)+strconv.Itoa(it.fi)+":",
+				it.npre, it.diff, "=", it.known, "("+fb.getLeafKey(offset)+")")
+		}
+	}
 }

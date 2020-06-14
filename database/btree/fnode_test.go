@@ -103,7 +103,6 @@ func TestFnodeRandom(*testing.T) {
 			}
 			fn.checkData(data, get)
 		}
-
 	}
 }
 
