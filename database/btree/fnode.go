@@ -24,20 +24,18 @@ import (
 //		- key part bytes (variable length)
 type fNode []byte
 
-func fAppend(fe fNode, offset uint64, npre int, diff string) fNode {
-	fe = stor.AppendSmallOffset(fe, offset)
-	fe = append(fe, byte(npre), byte(len(diff)))
-	fe = append(fe, diff...)
-	return fe
+func fAppend(fn fNode, offset uint64, npre int, diff string) fNode {
+	fn = stor.AppendSmallOffset(fn, offset)
+	fn = append(fn, byte(npre), byte(len(diff)))
+	fn = append(fn, diff...)
+	return fn
 }
 
-func fRead(fe_ fNode) (fe fNode, npre int, diff string) {
-	fe = fe_[stor.SmallOffsetLen:]
-	npre = int(fe[0])
-	dn := int(fe[1])
-	fe = fe[2:]
-	diff = string(fe[:dn])
-	fe = fe[dn:]
+func fRead(fn fNode) (npre int, diff string, offset uint64) {
+	offset = stor.ReadSmallOffset(fn)
+	npre = int(fn[5])
+	dn := int(fn[6])
+	diff = string(fn[7:7+dn])
 	return
 }
 
@@ -107,14 +105,14 @@ func commonPrefixLen(s, t string) int {
 // search returns the offset and range
 // of the entry that could match the search string
 func (fn fNode) search(s string) (uint64, string, string) {
-	var ofi int
+	var off uint64
 	var known string
-	it := fn.Iter()
+	it := fn.iter()
 	for it.next() && s >= it.known {
-		ofi = it.fi
+		off = it.offset
 		known = it.known
 	}
-	return fn.offset(ofi), known, it.known
+	return off, known, it.known
 }
 
 func (fn fNode) contains(s string, get func(uint64) string) bool {
@@ -139,13 +137,13 @@ func (fn fNode) insert(keyNew string, offNew uint64, get func(uint64) string) (f
 		return fAppend(fn, offNew, 0, ""), where
 	}
 	// search
-	var cur iter
-	it := fn.Iter()
+	var cur fnIter
+	it := fn.iter()
 	for it.next() && keyNew >= it.known {
 		cur = *it
 	}
 
-	curoff := fn.offset(cur.fi)
+	curoff := cur.offset
 	curkey := cur.known
 	embedLen := 255
 	if get != nil {
@@ -186,7 +184,7 @@ func (fn fNode) insert(keyNew string, offNew uint64, get func(uint64) string) (f
 		npre2, diff2, _ := addone(it.known, prev, knownNew, embedLen)
 		if npre2 != it.npre || diff2 != it.diff {
 			// adjust following entry
-			ins = fAppend(ins, fn.offset(it.fi), npre2, diff2)
+			ins = fAppend(ins, it.offset, npre2, diff2)
 			j += fLen(it.diff)
 		}
 	}
@@ -211,7 +209,7 @@ func (fn fNode) replace(i, j int, rep fNode) fNode {
 func (fn fNode) delete(offset uint64) (fNode, bool) {
 	// search
 	prevKnown := ""
-	it := fn.Iter()
+	it := fn.iter()
 	for {
 		if !it.next() {
 			return nil, false // not found
@@ -255,36 +253,32 @@ func (fn fNode) updateCopy(src fNode, i int, npre int, diff string) fNode {
 	return fn
 }
 
-func (fn fNode) offset(fi int) uint64 {
-	_, offset := stor.ReadSmallOffset(fn[fi:])
-	return offset
-}
-
 func (fn fNode) setOffset(fi int, off uint64) {
 	stor.WriteSmallOffset(fn[fi:], off)
 }
 
 // iter -------------------------------------------------------------
 
-type iter struct {
+type fnIter struct {
 	fn    fNode
 	fi    int // position in original fEntries
 	npre  int
 	diff  string
 	known string
+	offset uint64
 }
 
-func (fn fNode) Iter() *iter {
-	return &iter{fn: fn, fi: -7}
+func (fn fNode) iter() *fnIter {
+	return &fnIter{fn: fn, fi: -7}
 }
 
-func (it *iter) next() bool {
+func (it *fnIter) next() bool {
 	it.fi += fLen(it.diff)
-	if len(it.fn) == 0 {
+	if it.fi >= len(it.fn) {
 		it.known = ""
 		return false
 	}
-	it.fn, it.npre, it.diff = fRead(it.fn)
+	it.npre, it.diff, it.offset = fRead(it.fn[it.fi:])
 
 	//TODO remove this validation in production
 	if it.known == "" && it.npre == 0 && it.diff == "" {
@@ -309,8 +303,8 @@ func (it *iter) next() bool {
 	return true
 }
 
-func (it *iter) eof() bool {
-	return len(it.fn) == 0
+func (it *fnIter) eof() bool {
+	return it.fi + fLen(it.diff) >= len(it.fn)
 }
 
 //-------------------------------------------------------------------
@@ -347,8 +341,8 @@ func (fn fNode) checkUpTo(i int, data []string, get func(uint64) string) {
 
 func (fn fNode) check() int {
 	n := 0
-	var prev iter
-	it := fn.Iter()
+	var prev fnIter
+	it := fn.iter()
 	for it.next() {
 		if it.known < prev.known {
 			panic("fEntries out of order")
@@ -363,25 +357,25 @@ func (fn fNode) check() int {
 }
 
 func (fn fNode) print() {
-	it := fn.Iter()
+	it := fn.iter()
 	for it.next() {
-		print(fn.offset(it.fi), it.known)
+		print(it.offset, it.known)
 	}
 }
 
 func (fn fNode) printLeafNode(get func(uint64) string) {
-	it := fn.Iter()
+	it := fn.iter()
 	for it.next() {
-		offset := fn.offset(it.fi)
+		offset := it.offset
 		print(strconv.Itoa(it.fi)+": {", offset, it.npre, it.diff, "}",
 			it.known, "("+get(offset)+")")
 	}
 }
 
 func (fn fNode) printTreeNode() {
-	it := fn.Iter()
+	it := fn.iter()
 	for it.next() {
-		offset := fn.offset(it.fi)
+		offset := it.offset
 		print(strconv.Itoa(it.fi)+": {", offset, it.npre, it.diff, "}",
 			it.known)
 	}

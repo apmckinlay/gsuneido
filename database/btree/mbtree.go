@@ -7,9 +7,9 @@ package btree
 // Nodes are fixed size to reduce allocation and bounds checks.
 type mbtree struct {
 	// tree is not embedded since it's not needed when small
-	tree *mTree
+	tree *mbTreeNode
 	// leaf is embedded to reduce indirection and optimize when small
-	leaf mLeaf
+	leaf mbLeaf
 }
 
 // mSize of 128 means capacity of 128 * 128 = 16k
@@ -17,43 +17,45 @@ type mbtree struct {
 // which is comparable to jSuneido's 10,000 update limit
 const mSize = 128
 
-type mLeaf struct {
+type mbLeaf struct {
 	size  int
-	slots [mSize]mLeafSlot
+	slots [mSize]mbLeafSlot
 }
 
-type mLeafSlot struct {
+type mbLeafSlot struct {
 	key string
 	off uint64
 }
 
-type mTree struct {
-	slots [mSize + 1]mTreeSlot
+type mbTreeNode struct {
+	slots [mSize + 1]mbTreeSlot
 	size  int
 }
 
-type mTreeSlot struct {
+type mbTreeSlot struct {
 	key  string
-	leaf *mLeaf
+	leaf *mbLeaf
 }
 
 func newMbtree() *mbtree {
 	return &mbtree{}
 }
 
-func (m *mbtree) Insert(key string, off uint64) {
-	if m.tree == nil && m.leaf.size == mSize {
-		m.tree = &mTree{size: 1}
-		m.tree.slots[0].leaf = &m.leaf
+//-------------------------------------------------------------------
+
+func (mb *mbtree) Insert(key string, off uint64) {
+	if mb.tree == nil && mb.leaf.size == mSize {
+		mb.tree = &mbTreeNode{size: 1}
+		mb.tree.slots[0].leaf = &mb.leaf
 	}
-	if m.tree != nil {
-		m.tree.insert(key, off)
+	if mb.tree != nil {
+		mb.tree.insert(key, off)
 	} else {
-		m.leaf.insert(m.tree, key, off)
+		mb.leaf.insert(mb.tree, key, off)
 	}
 }
 
-func (leaf *mLeaf) insert(tree *mTree, key string, off uint64) {
+func (leaf *mbLeaf) insert(tree *mbTreeNode, key string, off uint64) {
 	if leaf.size < mSize {
 		leaf.insert2(key, off)
 	} else {
@@ -62,7 +64,7 @@ func (leaf *mLeaf) insert(tree *mTree, key string, off uint64) {
 	}
 }
 
-func (leaf *mLeaf) split(tree *mTree, key string) {
+func (leaf *mbLeaf) split(tree *mbTreeNode, key string) {
 	var left int
 	if key > leaf.slots[mSize-1].key {
 		left = (mSize * 3) / 4
@@ -72,13 +74,13 @@ func (leaf *mLeaf) split(tree *mTree, key string) {
 		left = mSize / 2
 	}
 	right := mSize - left
-	leaf2 := &mLeaf{size: right}
+	leaf2 := &mbLeaf{size: right}
 	copy(leaf2.slots[:], leaf.slots[left:])
 	leaf.size = left
 	tree.insert2(leaf2.slots[0].key, leaf2)
 }
 
-func (leaf *mLeaf) insert2(key string, off uint64) {
+func (leaf *mbLeaf) insert2(key string, off uint64) {
 	i := leaf.searchBinary(key)
 	// i is either leaf.size or points to first slot > key
 	copy(leaf.slots[i+1:], leaf.slots[i:])
@@ -86,32 +88,54 @@ func (leaf *mLeaf) insert2(key string, off uint64) {
 	leaf.size++
 }
 
-func (tree *mTree) insert(key string, off uint64) {
+func (tree *mbTreeNode) insert(key string, off uint64) {
 	i := tree.searchBinary(key)
 	tree.slots[i-1].leaf.insert(tree, key, off)
 }
 
 // insert2 inserts a key & leaf into the tree node
-func (tree *mTree) insert2(key string, leaf *mLeaf) {
+func (tree *mbTreeNode) insert2(key string, leaf *mbLeaf) {
 	i := tree.searchBinary(key)
 	copy(tree.slots[i+1:], tree.slots[i:])
 	tree.slots[i].key, tree.slots[i].leaf = key, leaf
 	tree.size++
 }
 
-func (m *mbtree) Search(key string) uint64 {
-	if m.tree != nil {
-		return m.tree.search(key)
+//-------------------------------------------------------------------
+
+func (mb *mbtree) Delete(key string, off uint64) bool {
+	leaf, i := mb.search(key)
+	if leaf == nil || leaf.slots[i].off != off {
+		return false
 	}
-	return m.leaf.search(key)
+	copy(leaf.slots[i:], leaf.slots[i+1:])
+	leaf.size--
+	return true
 }
 
-func (tree *mTree) search(key string) uint64 {
+//-------------------------------------------------------------------
+
+func (mb *mbtree) Search(key string) uint64 {
+	leaf, i := mb.search(key)
+	if leaf == nil {
+		return 0
+	}
+	return leaf.slots[i].off
+}
+
+func (mb *mbtree) search(key string) (*mbLeaf, int) {
+	if mb.tree != nil {
+		return mb.tree.search(key)
+	}
+	return mb.leaf.search(key)
+}
+
+func (tree *mbTreeNode) search(key string) (*mbLeaf, int) {
 	i := tree.searchBinary(key)
 	return tree.slots[i-1].leaf.search(key)
 }
 
-func (tree *mTree) searchBinary(key string) int {
+func (tree *mbTreeNode) searchBinary(key string) int {
 	i, j := 0, tree.size
 	for i < j {
 		h := int(uint(i+j) >> 1)
@@ -124,15 +148,15 @@ func (tree *mTree) searchBinary(key string) int {
 	return i
 }
 
-func (leaf *mLeaf) search(key string) uint64 {
+func (leaf *mbLeaf) search(key string) (*mbLeaf, int) {
 	i := leaf.searchBinary(key)
 	if i >= leaf.size || leaf.slots[i].key != key {
-		return 0
+		return nil, 0
 	}
-	return leaf.slots[i].off
+	return leaf, i
 }
 
-func (leaf *mLeaf) searchBinary(key string) int {
+func (leaf *mbLeaf) searchBinary(key string) int {
 	i, j := 0, leaf.size
 	for i < j {
 		h := int(uint(i+j) >> 1)
@@ -149,18 +173,47 @@ func (leaf *mLeaf) searchBinary(key string) int {
 
 type visitor func(key string, off uint64)
 
-func (m *mbtree) ForEach(fn visitor) {
-	if m.tree == nil {
-		m.leaf.forEach(fn)
+func (mb *mbtree) ForEach(fn visitor) {
+	if mb.tree == nil {
+		mb.leaf.forEach(fn)
 	} else {
-		for i := 0; i < m.tree.size; i++ {
-			m.tree.slots[i].leaf.forEach(fn)
+		for i := 0; i < mb.tree.size; i++ {
+			mb.tree.slots[i].leaf.forEach(fn)
 		}
 	}
 }
 
-func (leaf *mLeaf) forEach(fn visitor) {
+func (leaf *mbLeaf) forEach(fn visitor) {
 	for i := 0; i < leaf.size; i++ {
 		fn(leaf.slots[i].key, leaf.slots[i].off)
+	}
+}
+
+//-------------------------------------------------------------------
+
+type mbIter = func() (string, uint64, bool)
+
+func (mb *mbtree) Iter() mbIter {
+	tree := mb.tree
+	ti := 0
+	var leaf *mbLeaf
+	if tree == nil {
+		leaf = &mb.leaf
+	} else {
+		leaf = tree.slots[ti].leaf
+	}
+	i := -1
+	return func() (string, uint64, bool) {
+		i++
+		if i >= leaf.size {
+			if tree == nil || ti+1 >= tree.size {
+				return "", 0, false
+			}
+			ti++
+			leaf = tree.slots[ti].leaf
+			i = 0
+		}
+		slot := leaf.slots[i]
+		return slot.key, slot.off, true
 	}
 }

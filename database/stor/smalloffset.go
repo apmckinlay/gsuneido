@@ -48,13 +48,12 @@ func AppendSmallOffset(buf []byte, offset uint64) []byte {
 		byte(offset>>32))
 }
 
-func ReadSmallOffset(buf []byte) ([]byte, uint64) {
-	return buf[5:],
-		uint64(buf[0]) +
-			uint64(buf[1])<<8 +
-			uint64(buf[2])<<16 +
-			uint64(buf[3])<<24 +
-			uint64(buf[4])<<32
+func ReadSmallOffset(buf []byte) uint64 {
+	return uint64(buf[0]) +
+		uint64(buf[1])<<8 +
+		uint64(buf[2])<<16 +
+		uint64(buf[3])<<24 +
+		uint64(buf[4])<<32
 }
 
 func EqualSmallOffset(buf []byte, offset uint64) bool {

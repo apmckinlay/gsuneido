@@ -72,8 +72,8 @@ func (up *fbupdate) save2(depth int, nodeOff uint64) uint64 {
 	node := up.getMutableNode(nodeOff)
 	if depth < up.fb.treeLevels {
 		// tree node, need to update any memOffsets
-		for it := node.Iter(); it.next(); {
-			off := node.offset(it.fi)
+		for it := node.iter(); it.next(); {
+			off := it.offset
 			off2 := up.save2(depth+1, off) // recurse
 			// bottom up
 			if off2 != off {
@@ -123,29 +123,6 @@ func (fb *fbtree) getNode(off uint64) fNode {
 
 //-------------------------------------------------------------------
 
-// type visitfn func (key string, off uint64)
-
-// func (fb *fbtree) forEach(fn visitfn) {
-// 	fb.forEach1(0, fb.root, fn)
-// }
-
-// func (fb *fbtree) forEach1(depth int, offset uint64, fn visitfn) {
-// 	node := fb.getNode(offset)
-// 	for it := node.Iter(); it.next(); {
-// 		offset := node.offset(it.fi)
-// 		if depth < fb.treeLevels {
-// 			// tree
-// 			fb.forEach1(depth+1, offset, fn) // recurse
-// 		} else {
-// 			// leaf
-// 			key := fb.getLeafKey(offset)
-// 			fn(key, node.offset(it.fi))
-// 		}
-// 	}
-// }
-
-//-------------------------------------------------------------------
-
 // check verifies that the keys are in order and returns the number of keys
 func (fb *fbtree) check() (count, size, nnodes int) {
 	return fb.check1(0, fb.root, "")
@@ -155,8 +132,8 @@ func (fb *fbtree) check1(depth int, offset uint64, key string) (count, size, nno
 	node := fb.getNode(offset)
 	size += len(node)
 	nnodes++
-	for it := node.Iter(); it.next(); {
-		offset := node.offset(it.fi)
+	for it := node.iter(); it.next(); {
+		offset := it.offset
 		if depth < fb.treeLevels {
 			// tree
 			if it.fi > 0 && key > it.known {
@@ -180,14 +157,58 @@ func (fb *fbtree) check1(depth int, offset uint64, key string) (count, size, nno
 
 // ------------------------------------------------------------------
 
+type fbIter = func() (string, uint64, bool)
+
+func (fb *fbtree) Iter() fbIter {
+	var stack [maxlevels]*fnIter
+
+	// traverse down the tree to the leftmost leaf, making a stack of iterators
+	nodeOff := fb.root
+	for i := 0; i < fb.treeLevels; i++ {
+		stack[i] = fb.getNode(nodeOff).iter()
+		stack[i].next()
+		nodeOff = stack[i].offset
+	}
+	iter := fb.getNode(nodeOff).iter()
+
+	return func() (string, uint64, bool) {
+		for {
+			if iter.next() {
+				off := iter.offset
+				return fb.getLeafKey(off), off, true // most common path
+			}
+			// end of leaf, go up the tree
+			i := fb.treeLevels - 1
+			for ; i >= 0; i-- {
+				if stack[i].next() {
+					nodeOff = stack[i].offset
+					break
+				}
+			}
+			if i == -1 {
+				return "", 0, false // eof
+			}
+			// and then back down to the next leaf
+			for i++; i < fb.treeLevels; i++ {
+				stack[i] = fb.getNode(nodeOff).iter()
+				stack[i].next()
+				nodeOff = stack[i].offset
+			}
+			iter = fb.getNode(nodeOff).iter()
+		}
+	}
+}
+
+// ------------------------------------------------------------------
+
 func (fb *fbtree) print() {
 	fb.print1(0, fb.root)
 }
 
 func (fb *fbtree) print1(depth int, offset uint64) {
 	node := fb.getNode(offset)
-	for it := node.Iter(); it.next(); {
-		offset := node.offset(it.fi)
+	for it := node.iter(); it.next(); {
+		offset := it.offset
 		if depth < fb.treeLevels {
 			// tree
 			print(strings.Repeat("    ", depth)+strconv.Itoa(it.fi)+":",

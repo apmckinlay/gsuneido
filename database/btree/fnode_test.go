@@ -31,9 +31,12 @@ func TestFAppendRead(t *testing.T) {
 	for _, e := range data {
 		var npre int
 		var diff string
-		fn, npre, diff = fRead(fn)
+		var off uint64
+		npre, diff, off = fRead(fn)
+		fn = fn[fLen(diff):]
 		Assert(t).That(npre, Equals(e.npre))
 		Assert(t).That(diff, Equals(e.diff))
+		Assert(t).That(off, Equals(e.offset))
 	}
 }
 

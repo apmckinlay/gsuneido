@@ -126,7 +126,7 @@ func (up *fbupdate) split(node fNode, nodeOff uint64, where int) (
 	} else if where == insEnd {
 		splitSize = (size * 3) / 4
 	}
-	it := node.Iter()
+	it := node.iter()
 	for it.next() && it.fi < splitSize {
 	}
 	splitKey = it.known
@@ -135,10 +135,10 @@ func (up *fbupdate) split(node fNode, nodeOff uint64, where int) (
 	up.moffs.set(nodeOff, left)
 	right := make(fNode, 0, len(node)-it.fi+8)
 	// first entry becomes 0, ""
-	right = fAppend(right, node.offset(it.fi), 0, "")
+	right = fAppend(right, it.offset, 0, "")
 	if it.next() {
 		// second entry becomes 0, known
-		right = fAppend(right, node.offset(it.fi), 0, it.known)
+		right = fAppend(right, it.offset, 0, it.known)
 		if it.next() {
 			right = append(right, node[it.fi:]...)
 		}
@@ -184,7 +184,7 @@ func (up *fbupdate) Delete(key string, off uint64) bool {
 	// remove empty root(s)
 	for up.fb.treeLevels > 0 && len(node) == 7 {
 		up.fb.treeLevels--
-		up.fb.root = node.offset(0)
+		up.fb.root = stor.ReadSmallOffset(node)
 		node = up.getNode(up.fb.root)
 	}
 
@@ -205,7 +205,7 @@ func (up *fbupdate) delete(nodeOff uint64, off uint64) (fNode, bool) {
 // freeze moves the changes to the fbtree.
 // It will still reference in-memory new and updated nodes
 // but they are no longer mutable.
-func (up *fbupdate) freeze() {
+func (up *fbupdate) freeze() *fbtree {
 	for k, v := range up.fb.moffs.nodes {
 		if _, ok := up.moffs.nodes[k]; !ok {
 			up.moffs.nodes[k] = v
@@ -218,6 +218,7 @@ func (up *fbupdate) freeze() {
 	}
 	up.fb.paths = up.paths
 	up.paths = nil
+	return &up.fb
 }
 
 //-------------------------------------------------------------------
@@ -267,8 +268,8 @@ func (up *fbupdate) check1(depth int, offset uint64, key string) (count, size, n
 	node := up.getNode(offset)
 	size += len(node)
 	nnodes++
-	for it := node.Iter(); it.next(); {
-		offset := node.offset(it.fi)
+	for it := node.iter(); it.next(); {
+		offset := it.offset
 		if depth < up.fb.treeLevels {
 			// tree
 			if it.fi > 0 && key > it.known {

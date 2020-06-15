@@ -101,7 +101,7 @@ func (m *mbtree) print() int {
 	return n
 }
 
-func (tree *mTree) print() int {
+func (tree *mbTreeNode) print() int {
 	n := 0
 	for i := 0; i < tree.size; i++ {
 		fmt.Println(i, tree.slots[i].key, "leaf size", tree.slots[i].leaf.size)
@@ -110,7 +110,7 @@ func (tree *mTree) print() int {
 	return n
 }
 
-func (leaf *mLeaf) print() int {
+func (leaf *mbLeaf) print() int {
 	for i := 0; i < leaf.size; i++ {
 		// fmt.Println("   ", leaf.slots[i])
 	}
