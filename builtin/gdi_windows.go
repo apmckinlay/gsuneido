@@ -98,7 +98,7 @@ var _ = builtin4("AddFontMemResourceEx(pFileView, cjSize, pvResrved, pNumFonts)"
 	func(a, b, c, d Value) Value {
 		defer heap.FreeTo(heap.CurSize())
 		pFileView := ToStr(a)
-		cjSize := ToInt(b)	
+		cjSize := ToInt(b)
 		pNumFonts := heap.Alloc(int32Size)
 		rtn := goc.Syscall4(addFontMemResourceEx,
 			uintptr(heap.Copy(pFileView, cjSize)),
@@ -948,6 +948,26 @@ var _ = builtin4("MoveToEx(hdc, x, y, p)",
 
 // dll long Gdi32:GetObject(pointer hgdiobj, long bufsize, buffer buf)
 var getObject = gdi32.MustFindProc("GetObjectA").Addr()
+
+var _ = builtin1("GetObjectBrush(h)",
+	func(a Value) Value {
+		defer heap.FreeTo(heap.CurSize())
+		p := heap.Alloc(nLOGBRUSH)
+		lb := (*LOGBRUSH)(p)
+		rtn := goc.Syscall3(getObject,
+			intArg(a),
+			nLOGBRUSH,
+			uintptr(p))
+		if rtn != nLOGBRUSH {
+			return False
+		}
+		ob := NewSuObject()
+		ob.Put(nil, SuStr("lbStyle"), IntVal(int(lb.lbStyle)))
+		ob.Put(nil, SuStr("lbColor"), IntVal(int(lb.lbColor)))
+		ob.Put(nil, SuStr("lbHatch"), IntVal(int(lb.lbHatch)))
+		return ob
+	})
+
 var _ = builtin1("GetObjectBitmap(h)",
 	func(a Value) Value {
 		defer heap.FreeTo(heap.CurSize())
