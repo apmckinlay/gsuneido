@@ -117,7 +117,8 @@ func (fb *fbtree) getNode(off uint64) fNode {
 		return node
 	}
 	buf := fb.store.Data(off)
-	size := int(buf[0]) + int(buf[1])<<8 //TODO validate
+	size := int(buf[0]) + int(buf[1])<<8
+	verify.That(7 <= size && size <= fb.maxNodeSize)
 	return fNode(buf[2 : 2+size])
 }
 
