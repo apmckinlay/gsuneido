@@ -174,6 +174,8 @@ func commit(commitChan <-chan commitMsg, mergeChan chan<- *mergeMsg) {
 // - receives mergeMsg's from commit
 //
 // - updates database state with results of merges
+//
+// - sends periodic messages to persist
 func merge(mergeChan <-chan *mergeMsg, persistChan chan<- persistMsg) {
 	ticker := time.NewTicker(persistInterval * timeUnits)
 loop:

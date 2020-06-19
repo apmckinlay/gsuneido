@@ -138,7 +138,7 @@ func (tree *mbTreeNode) search(key string) (*mbLeaf, int) {
 func (tree *mbTreeNode) searchBinary(key string) int {
 	i, j := 0, tree.size
 	for i < j {
-		h := int(uint(i+j) >> 1)
+		h := int(uint(i+j) >> 1) // i ≤ h < j
 		if key >= tree.slots[h].key {
 			i = h + 1
 		} else {
@@ -159,7 +159,7 @@ func (leaf *mbLeaf) search(key string) (*mbLeaf, int) {
 func (leaf *mbLeaf) searchBinary(key string) int {
 	i, j := 0, leaf.size
 	for i < j {
-		h := int(uint(i+j) >> 1)
+		h := int(uint(i+j) >> 1) // i ≤ h < j
 		if key > leaf.slots[h].key {
 			i = h + 1
 		} else {
