@@ -104,11 +104,8 @@ func (up *fbupdate) canSkip(off uint64) bool {
 
 // putNode stores the node with a leading uint16 size
 func (fb *fbtree) putNode(node fNode) uint64 {
-	off, buf := fb.store.Alloc(2 + len(node))
-	size := len(node)
-	buf[0] = byte(size)
-	buf[1] = byte(size >> 8)
-	copy(buf[2:], node)
+	off, buf := fb.store.AllocSized(len(node))
+	copy(buf, node)
 	return off
 }
 
@@ -116,10 +113,8 @@ func (fb *fbtree) getNode(off uint64) fNode {
 	if node := fb.moffs.get(off); node != nil {
 		return node
 	}
-	buf := fb.store.Data(off)
-	size := int(buf[0]) + int(buf[1])<<8
-	verify.That(7 <= size && size <= fb.maxNodeSize)
-	return fNode(buf[2 : 2+size])
+	buf := fb.store.DataSized(off)
+	return fNode(buf)
 }
 
 //-------------------------------------------------------------------
