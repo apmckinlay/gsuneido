@@ -49,7 +49,7 @@ type Stor struct {
 // If insufficient room in the current chunk, advance to next
 // (allocations may not straddle chunks)
 func (s *Stor) Alloc(n int) (Offset, []byte) {
-	verify.That(0 < n && n < int(s.chunksize))
+	verify.That(0 < n && n <= int(s.chunksize))
 
 	for {
 		oldsize := atomic.LoadUint64(&s.size)
