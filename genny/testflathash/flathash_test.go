@@ -23,7 +23,7 @@ func TestPairHtbl(t *testing.T) {
 		}
 	}
 	addRand := func() {
-		key := rand.Intn(10000)
+		key := rand.Int()
 		val := rand.Int()
 		h.Put(&Pair{key: key, val: val})
 		data[key] = val
@@ -36,4 +36,8 @@ func TestPairHtbl(t *testing.T) {
 	}
 	h = h.Dup()
 	check()
+	list := h.List()
+	if len(list) != n {
+		t.Error("expected list len", n, "actual", len(list))
+	}
 }
