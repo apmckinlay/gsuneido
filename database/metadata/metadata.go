@@ -3,7 +3,12 @@
 
 package metadata
 
-import "sort"
+import (
+	"sort"
+
+	"github.com/apmckinlay/gsuneido/database/stor"
+	"github.com/apmckinlay/gsuneido/util/verify"
+)
 
 //go:generate genny -in ../../genny/flathash/flathash.go -out tables.go -pkg metadata gen "Key=int Item=TableInfo"
 
@@ -15,7 +20,7 @@ type TableInfo struct {
 }
 
 type IndexInfo struct {
-	root       uint64
+	root       uint64 //TODO should be fbtree
 	treeLevels int
 }
 
@@ -58,55 +63,134 @@ func (ti *TableInfo) Merge(ti2 *TableInfo) *TableInfo {
 
 //-------------------------------------------------------------------
 
+const blockSize = 4 * 1024
+const itemsPerFinger = 16
+
 // Write converts a TableInfoHtbl to external packed format in a byte slice.
 // Tables are sorted by table number.
-// TODO binary search fingers
-func (t *TableInfoHtbl) Write() []byte {
+func (t *TableInfoHtbl) Write(st *stor.Stor) uint64 {
+	w := st.Writer(blockSize)
 	keys := t.List()
 	sort.Ints(keys)
-	buf := make(buffer, 0, 32*len(keys)) // guesstimate
-	buf.put2(t.nitems)
-	for _, k := range keys {
-		t.Get(k).Write(&buf)
+	w.Put2(t.nitems)
+	nfingers := 1 + t.nitems/itemsPerFinger
+	w2 := *w
+	for i := 0; i < nfingers; i++ {
+		w.Put3(0) // leave room
 	}
-	return buf
+	fingers := make([]int, 0, nfingers)
+	for i, k := range keys {
+		if i%16 == 0 {
+			fingers = append(fingers, w.Pos())
+		}
+		t.Get(k).Write(w)
+	}
+	verify.That(len(fingers) == nfingers)
+	for _, f := range fingers {
+		w2.Put3(f) // update with actual values
+	}
+	return w.Close()
 }
 
 // Write converts a TableInfo to external packed format in a byte slice
-func (ti *TableInfo) Write(b *buffer) {
-	b.put3(ti.table).
-		put4(ti.nrows).
-		put5(ti.size).
-		put1(len(ti.indexes))
+func (ti *TableInfo) Write(w *stor.Writer) {
+	w.Put3(ti.table).
+		Put4(ti.nrows).
+		Put5(ti.size).
+		Put1(len(ti.indexes))
 	for _, ii := range ti.indexes {
-		b.put5(ii.root).put1(ii.treeLevels)
+		w.Put5(ii.root).Put1(ii.treeLevels)
 	}
 }
 
-func ReadTablesInfo(buf []byte) *TableInfoHtbl {
-	b := buffer(buf)
-	nitems := b.get2()
+func ReadTablesInfo(st *stor.Stor, off uint64) *TableInfoHtbl {
+	r := st.Reader(off)
+	nitems := r.Get2()
+	nfingers := 1 + nitems/itemsPerFinger
+	for i := 0; i < nfingers; i++ {
+		r.Get3() // skip the fingers
+	}
 	t := NewTableInfoHtbl(nitems)
-	for len(b) > 0 {
-		t.Put(ReadTableInfo(&b))
+	for i := 0; i < nitems; i++ {
+		t.Put(ReadTableInfo(r))
 	}
 	return t
 }
 
-func ReadTableInfo(b *buffer) *TableInfo {
+func ReadTableInfo(r *stor.Reader) *TableInfo {
 	var ti TableInfo
-	ti.table = b.get3()
-	ti.nrows = b.get4()
-	ti.size = b.get5()
-	ni := b.get1()
+	ti.table = r.Get3()
+	ti.nrows = r.Get4()
+	ti.size = r.Get5()
+	ni := r.Get1()
 	ti.indexes = make([]IndexInfo, ni)
 	for i := 0; i < ni; i++ {
-		ti.indexes[i].Read(b)
+		ti.indexes[i].Read(r)
 	}
 	return &ti
 }
 
-func (ii *IndexInfo) Read(b *buffer) {
-	ii.root = b.get5()
-	ii.treeLevels = b.get1()
+func (ii *IndexInfo) Read(r *stor.Reader) {
+	ii.root = r.Get5()
+	ii.treeLevels = r.Get1()
+}
+
+//-------------------------------------------------------------------
+
+type TableInfoPacked struct {
+	r       *stor.Reader
+	fingers []finger
+}
+
+type finger struct {
+	table int
+	pos   int
+}
+
+func NewTableInfoPacked(st *stor.Stor, off uint64) *TableInfoPacked {
+	r := st.Reader(off)
+	nitems := r.Get2()
+	nfingers := 1 + nitems/itemsPerFinger
+	fingers := make([]finger, nfingers)
+	for i := 0; i < nfingers; i++ {
+		fingers[i].pos = r.Get3()
+	}
+	for i := 0; i < nfingers; i++ {
+		fingers[i].table = r.Pos(fingers[i].pos).Get3()
+	}
+	return &TableInfoPacked{r: r, fingers: fingers}
+}
+
+func (p TableInfoPacked) Get(table int) *TableInfo {
+	p.r.Pos(p.binarySearch(table))
+	count := 0
+	for {
+		ti := ReadTableInfo(p.r)
+		if ti.table == table {
+			return ti
+		}
+		count++
+		if count > 20 {
+			panic("linear search too long")
+		}
+	}
+}
+
+func (p TableInfoPacked) binarySearch(table int) int {
+	i, j := 0, len(p.fingers)
+	count := 0
+	for i < j {
+		h := int(uint(i+j) >> 1) // i ≤ h < j
+		if table >= p.fingers[h].table {
+			i = h + 1
+		} else {
+			j = h
+		}
+		count++
+		if count > 20 {
+			panic("binary search too long")
+		}
+	}
+	// i is first one greater, so we want i-1
+	return int(p.fingers[i-1].pos)
 }

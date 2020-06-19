@@ -26,6 +26,10 @@ type ItemHtbl struct {
 
 // NewItemHtbl creates a new ItemHtbl with roughly the specified capacity
 func NewItemHtbl(cap int) *ItemHtbl {
+	nextPow2 := func(n int) (int, int) {
+		bl := bits.Len(uint(n))
+		return 1 << bl, 32 - bl
+	}
 	const loadPercent = 70
 	if cap < 9 {
 		cap = 9
@@ -33,11 +37,6 @@ func NewItemHtbl(cap int) *ItemHtbl {
 	size, shift := nextPow2(cap * 100 / loadPercent)
 	return &ItemHtbl{slots: make([]*Item, size),
 		shift: shift, mask: size - 1, cap: size * loadPercent / 100}
-}
-
-func nextPow2(n int) (int, int) {
-	bl := bits.Len(uint(n))
-	return 1 << bl, 32 - bl
 }
 
 func (h *ItemHtbl) Put(item *Item) {
@@ -98,7 +97,7 @@ func (h *ItemHtbl) Dup() *ItemHtbl {
 
 // List returns a list of the keys in the table
 func (h *ItemHtbl) List() []Key {
-	keys := make([]Key, h.nitems, 0)
+	keys := make([]Key, 0, h.nitems)
 	for _, slot := range h.slots {
 		if slot != nil {
 			keys = append(keys, h.keyOf(slot))
@@ -111,9 +110,9 @@ func (h *ItemHtbl) List() []Key {
 }
 
 func (h *ItemHtbl) Iter() func() *Item {
-	i := 0
+	i := -1
 	return func() *Item {
-		for ; i < len(h.slots); i++ {
+		for i++; i < len(h.slots); i++ {
 			if h.slots[i] != nil {
 				return h.slots[i]
 			}
