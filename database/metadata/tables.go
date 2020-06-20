@@ -23,6 +23,10 @@ type TableInfoHtbl struct {
 
 // NewTableInfoHtbl creates a new TableInfoHtbl with roughly the specified capacity
 func NewTableInfoHtbl(cap int) *TableInfoHtbl {
+	nextPow2 := func(n int) (int, int) {
+		bl := bits.Len(uint(n))
+		return 1 << bl, 32 - bl
+	}
 	const loadPercent = 70
 	if cap < 9 {
 		cap = 9
@@ -30,11 +34,6 @@ func NewTableInfoHtbl(cap int) *TableInfoHtbl {
 	size, shift := nextPow2(cap * 100 / loadPercent)
 	return &TableInfoHtbl{slots: make([]*TableInfo, size),
 		shift: shift, mask: size - 1, cap: size * loadPercent / 100}
-}
-
-func nextPow2(n int) (int, int) {
-	bl := bits.Len(uint(n))
-	return 1 << bl, 32 - bl
 }
 
 func (h *TableInfoHtbl) Put(item *TableInfo) {
@@ -93,6 +92,7 @@ func (h *TableInfoHtbl) Dup() *TableInfoHtbl {
 	return &h2
 }
 
+// List returns a list of the keys in the table
 func (h *TableInfoHtbl) List() []int {
 	keys := make([]int, 0, h.nitems)
 	for _, slot := range h.slots {
