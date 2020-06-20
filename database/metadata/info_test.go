@@ -11,7 +11,7 @@ import (
 	. "github.com/apmckinlay/gsuneido/util/hamcrest"
 )
 
-func TestMetadata(t *testing.T) {
+func TestInfo(t *testing.T) {
 	base := NewTableInfoHtbl(0)
 	base.Put(&TableInfo{
 		table: 1,
