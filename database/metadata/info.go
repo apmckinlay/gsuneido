@@ -7,16 +7,18 @@ import (
 	"sort"
 
 	"github.com/apmckinlay/gsuneido/database/stor"
+	"github.com/apmckinlay/gsuneido/util/hash"
 	"github.com/apmckinlay/gsuneido/util/verify"
 )
 
-//go:generate genny -in ../../genny/flathash/flathash.go -out tables.go -pkg metadata gen "Key=int Item=TableInfo"
+//go:generate genny -in ../../genny/flathash/flathash.go -out tables.go -pkg metadata gen "Key=string Item=TableInfo"
 
 type TableInfo struct {
-	table   int
+	table    string
 	nrows   int
 	size    uint64
 	indexes []IndexInfo
+	schema  *TableSchema
 }
 
 type IndexInfo struct {
@@ -24,11 +26,11 @@ type IndexInfo struct {
 	treeLevels int
 }
 
-func (*TableInfoHtbl) hash(k int) uint32 {
-	return uint32(k)
+func (*TableInfoHtbl) hash(key string) uint32 {
+	return hash.HashString(key)
 }
 
-func (*TableInfoHtbl) keyOf(ti *TableInfo) int {
+func (*TableInfoHtbl) keyOf(ti *TableInfo) string {
 	return ti.table
 }
 
@@ -58,6 +60,7 @@ func (ti *TableInfo) Merge(ti2 *TableInfo) *TableInfo {
 		nrows:   ti.nrows + ti2.nrows,
 		size:    ti.size + ti2.size,
 		indexes: append([]IndexInfo(nil), ti2.indexes...),
+		schema:  ti2.schema,
 	}
 }
 
@@ -66,12 +69,16 @@ func (ti *TableInfo) Merge(ti2 *TableInfo) *TableInfo {
 const blockSize = 4 * 1024
 const itemsPerFinger = 16
 
-// Write converts a TableInfoHtbl to external packed format in a byte slice.
+// WriteInfo saves a TableInfoHtbl to external packed format in a stor.
 // Tables are sorted by table number.
-func (t *TableInfoHtbl) Write(st *stor.Stor) uint64 {
+func (t *TableInfoHtbl) WriteInfo(st *stor.Stor) uint64 {
+	return t.Write(st, (*TableInfo).WriteInfo)
+}
+
+func (t *TableInfoHtbl) Write(st *stor.Stor, write func(*TableInfo, *stor.Writer)) uint64 {
 	w := st.Writer(blockSize)
 	keys := t.List()
-	sort.Ints(keys)
+	sort.Strings(keys)
 	w.Put2(t.nitems)
 	nfingers := 1 + t.nitems/itemsPerFinger
 	w2 := *w
@@ -83,7 +90,7 @@ func (t *TableInfoHtbl) Write(st *stor.Stor) uint64 {
 		if i%16 == 0 {
 			fingers = append(fingers, w.Pos())
 		}
-		t.Get(k).Write(w)
+		write(t.Get(k), w)
 	}
 	verify.That(len(fingers) == nfingers)
 	for _, f := range fingers {
@@ -92,9 +99,9 @@ func (t *TableInfoHtbl) Write(st *stor.Stor) uint64 {
 	return w.Close()
 }
 
-// Write converts a TableInfo to external packed format in a byte slice
-func (ti *TableInfo) Write(w *stor.Writer) {
-	w.Put3(ti.table).
+// Write saves a TableInfo to external packed format in a stor
+func (ti *TableInfo) WriteInfo(w *stor.Writer) {
+	w.PutStr(ti.table).
 		Put4(ti.nrows).
 		Put5(ti.size).
 		Put1(len(ti.indexes))
@@ -119,7 +126,7 @@ func ReadTablesInfo(st *stor.Stor, off uint64) *TableInfoHtbl {
 
 func ReadTableInfo(r *stor.Reader) *TableInfo {
 	var ti TableInfo
-	ti.table = r.Get3()
+	ti.table = r.GetStr()
 	ti.nrows = r.Get4()
 	ti.size = r.Get5()
 	ni := r.Get1()
@@ -138,12 +145,16 @@ func (ii *IndexInfo) Read(r *stor.Reader) {
 //-------------------------------------------------------------------
 
 type TableInfoPacked struct {
+	packed
+}
+
+type packed struct {
 	r       *stor.Reader
 	fingers []finger
 }
 
 type finger struct {
-	table int
+	table string
 	pos   int
 }
 
@@ -156,12 +167,12 @@ func NewTableInfoPacked(st *stor.Stor, off uint64) *TableInfoPacked {
 		fingers[i].pos = r.Get3()
 	}
 	for i := 0; i < nfingers; i++ {
-		fingers[i].table = r.Pos(fingers[i].pos).Get3()
+		fingers[i].table = r.Pos(fingers[i].pos).GetStr()
 	}
-	return &TableInfoPacked{r: r, fingers: fingers}
+	return &TableInfoPacked{packed{r: r, fingers: fingers}}
 }
 
-func (p TableInfoPacked) Get(table int) *TableInfo {
+func (p TableInfoPacked) Get(table string) *TableInfo {
 	p.r.Pos(p.binarySearch(table))
 	count := 0
 	for {
@@ -176,7 +187,7 @@ func (p TableInfoPacked) Get(table int) *TableInfo {
 	}
 }
 
-func (p TableInfoPacked) binarySearch(table int) int {
+func (p packed) binarySearch(table string) int {
 	i, j := 0, len(p.fingers)
 	count := 0
 	for i < j {

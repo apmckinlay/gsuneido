@@ -101,6 +101,27 @@ func (w *Writer) Put5(n uint64) *Writer {
 	return w
 }
 
+// PutStr writes a string with a maximum length of 64k
+func (w *Writer) PutStr(s string) *Writer {
+	n := len(s)
+	w.Put2(n)
+	if len(w.buf) < n {
+		w.allocNext()
+	}
+	copy(w.buf, s)
+	w.buf = w.buf[len(s):]
+	return w
+}
+
+// PutInts writes a slice of <256 int's, each <64k
+func (w *Writer) PutInts(ints []int) *Writer {
+	w.Put1(len(ints))
+	for _, n := range ints {
+		w.Put2(n)
+	}
+	return w
+}
+
 func (w *Writer) allocNext() {
 	off, buf := w.stor.Alloc(w.blockSize)
 	w.buf = buf
@@ -218,4 +239,25 @@ func (r *Reader) Get5() uint64 {
 		uint64(r.buf[3])<<24 + uint64(r.buf[4])<<32
 	r.buf = r.buf[5:]
 	return n
+}
+
+// GetStr reads a string
+func (r *Reader) GetStr() string {
+	n := r.Get2()
+	if len(r.buf) < n {
+		r.nextBlock()
+	}
+	s := string(r.buf[:n])
+	r.buf = r.buf[n:]
+	return s
+}
+
+// GetStr reads a slice of int's
+func (r *Reader) GetInts() []int {
+	n := r.Get1()
+	ints := make([]int, n)
+	for i := 0; i < n; i++ {
+		ints[i] = r.Get2()
+	}
+	return ints
 }

@@ -104,7 +104,7 @@ func (h *ItemHtbl) List() []Key {
 		}
 	}
 	if len(keys) != h.nitems {
-		panic("flathash Keys failed")
+		panic("flathash List failed")
 	}
 	return keys
 }

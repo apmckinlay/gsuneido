@@ -52,7 +52,7 @@ func (h *TableInfoHtbl) Put(item *TableInfo) {
 	}
 }
 
-func (h *TableInfoHtbl) Get(key int) *TableInfo {
+func (h *TableInfoHtbl) Get(key string) *TableInfo {
 	for i := h.hashToIndex(h.hash(key)); ; i = (i + 1) & h.mask {
 		if h.slots[i] == nil {
 			return nil
@@ -93,15 +93,15 @@ func (h *TableInfoHtbl) Dup() *TableInfoHtbl {
 }
 
 // List returns a list of the keys in the table
-func (h *TableInfoHtbl) List() []int {
-	keys := make([]int, 0, h.nitems)
+func (h *TableInfoHtbl) List() []string {
+	keys := make([]string, 0, h.nitems)
 	for _, slot := range h.slots {
 		if slot != nil {
 			keys = append(keys, h.keyOf(slot))
 		}
 	}
 	if len(keys) != h.nitems {
-		panic("flathash Ints failed")
+		panic("flathash List failed")
 	}
 	return keys
 }

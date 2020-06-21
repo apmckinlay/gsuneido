@@ -4,17 +4,17 @@
 package metadata
 
 import (
-	"math/rand"
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/database/stor"
 	. "github.com/apmckinlay/gsuneido/util/hamcrest"
+	"github.com/apmckinlay/gsuneido/util/str"
 )
 
 func TestInfo(t *testing.T) {
 	base := NewTableInfoHtbl(0)
 	base.Put(&TableInfo{
-		table: 1,
+		table: "one",
 		nrows: 100,
 		size:  1000,
 		indexes: []IndexInfo{
@@ -23,7 +23,7 @@ func TestInfo(t *testing.T) {
 		},
 	})
 	base.Put(&TableInfo{
-		table: 2,
+		table: "two",
 		nrows: 200,
 		size:  2000,
 		indexes: []IndexInfo{
@@ -33,7 +33,7 @@ func TestInfo(t *testing.T) {
 	})
 	over := NewTableInfoHtbl(0)
 	over.Put(&TableInfo{
-		table: 2,
+		table: "two",
 		nrows: 9,
 		size:  99,
 		indexes: []IndexInfo{
@@ -44,12 +44,12 @@ func TestInfo(t *testing.T) {
 	merged := base.Merge(over)
 
 	st := stor.HeapStor(blockSize)
-	off := merged.Write(st)
+	off := merged.WriteInfo(st)
 
 	packed := NewTableInfoPacked(st, off)
-	Assert(t).That(*packed.Get(1), Equals(*base.Get(1)))
-	Assert(t).That(*packed.Get(2), Equals(TableInfo{
-		table: 2,
+	Assert(t).That(*packed.Get("one"), Equals(*base.Get("one")))
+	Assert(t).That(*packed.Get("two"), Equals(TableInfo{
+		table: "two",
 		nrows: 209,
 		size:  2099,
 		indexes: []IndexInfo{
@@ -59,9 +59,9 @@ func TestInfo(t *testing.T) {
 	}))
 
 	reread := ReadTablesInfo(st, off)
-	Assert(t).That(*reread.Get(1), Equals(*base.Get(1)))
-	Assert(t).That(*reread.Get(2), Equals(TableInfo{
-		table: 2,
+	Assert(t).That(*reread.Get("one"), Equals(*base.Get("one")))
+	Assert(t).That(*reread.Get("two"), Equals(TableInfo{
+		table: "two",
 		nrows: 209,
 		size:  2099,
 		indexes: []IndexInfo{
@@ -74,9 +74,10 @@ func TestInfo(t *testing.T) {
 func TestMetadata2(t *testing.T) {
 	tbl := NewTableInfoHtbl(0)
 	const n = 1000
-	data := make([]int, n)
+	data := make([]string, n)
+	randStr := str.UniqueRandom(4, 4)
 	for i := 0; i < n; i++ {
-		data[i] = rand.Intn(1<<24 - 1)
+		data[i] = randStr()
 		tbl.Put(&TableInfo{
 			table: data[i],
 			nrows: i,
@@ -88,11 +89,11 @@ func TestMetadata2(t *testing.T) {
 		})
 	}
 	st := stor.HeapStor(2 * blockSize)
-	off := tbl.Write(st)
+	off := tbl.WriteInfo(st)
 	packed := NewTableInfoPacked(st, off)
-	for i, n := range data {
-		ti := packed.Get(n)
-		Assert(t).That(ti.table, Equals(n).Comment("table"))
+	for i, s := range data {
+		ti := packed.Get(s)
+		Assert(t).That(ti.table, Equals(s).Comment("table"))
 		Assert(t).That(ti.nrows, Equals(i).Comment("nrows"))
 	}
 }
