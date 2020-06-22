@@ -11,7 +11,7 @@ func Merge(fb *fbtree, mb *mbtree) *fbtree {
 			if (off & tombstone) == 0 {
 				up.Insert(key, off)
 			} else {
-				up.Delete(key, off &^ tombstone)
+				up.Delete(key, off&^tombstone)
 			}
 		})
 	})
