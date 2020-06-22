@@ -91,6 +91,7 @@ var _ = builtin6("RegSetValueEx(hKey, lpValueName, reserved/*unused*/, "+
 	func(a, b, c, d, e, f Value) Value {
 		defer heap.FreeTo(heap.CurSize())
 		pe := heap.Alloc(int32Size)
+		*(*int32)(pe) = getInt32(e, "x")
 		rtn, _, _ := syscall.Syscall6(regSetValueEx, 6,
 			intArg(a),
 			uintptr(stringArg(b)),
@@ -98,6 +99,5 @@ var _ = builtin6("RegSetValueEx(hKey, lpValueName, reserved/*unused*/, "+
 			REG_DWORD,   // dwType
 			uintptr(pe), // lpData
 			int32Size)   // cbData
-		e.Put(nil, SuStr("x"), IntVal(int(*(*int32)(pe))))
 		return intRet(rtn)
 	})
