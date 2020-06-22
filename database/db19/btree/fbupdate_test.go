@@ -74,7 +74,7 @@ func TestUnevenSplit(t *testing.T) {
 		}
 		up.checkData(t, data[:])
 	}
-	randKey := str.UniqueRandomOf(3, 6, "abcd")
+	randKey := str.UniqueRandomOf(3, 6, "abcde")
 	for i := 0; i < n; i++ {
 		data[i] = randKey()
 	}
