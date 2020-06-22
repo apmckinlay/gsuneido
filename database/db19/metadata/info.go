@@ -6,12 +6,12 @@ package metadata
 import (
 	"sort"
 
-	"github.com/apmckinlay/gsuneido/database/stor"
+	"github.com/apmckinlay/gsuneido/database/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/hash"
 	"github.com/apmckinlay/gsuneido/util/verify"
 )
 
-//go:generate genny -in ../../genny/flathash/flathash.go -out tables.go -pkg metadata gen "Key=string Item=TableInfo"
+//go:generate genny -in ../../../genny/flathash/flathash.go -out tables.go -pkg metadata gen "Key=string Item=TableInfo"
 
 type TableInfo struct {
 	table   string

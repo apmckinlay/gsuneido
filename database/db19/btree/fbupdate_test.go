@@ -11,7 +11,7 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/apmckinlay/gsuneido/database/stor"
+	"github.com/apmckinlay/gsuneido/database/db19/stor"
 	. "github.com/apmckinlay/gsuneido/util/hamcrest"
 	"github.com/apmckinlay/gsuneido/util/str"
 )

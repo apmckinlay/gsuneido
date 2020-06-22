@@ -3,7 +3,7 @@
 
 package metadata
 
-import "github.com/apmckinlay/gsuneido/database/stor"
+import "github.com/apmckinlay/gsuneido/database/db19/stor"
 
 type TableSchema struct {
 	table   string

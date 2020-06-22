@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/apmckinlay/gsuneido/database/stor"
+	"github.com/apmckinlay/gsuneido/database/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/verify"
 )
 

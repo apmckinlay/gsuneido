@@ -1,8 +1,6 @@
 // Copyright Suneido Software Corp. All rights reserved.
 // Governed by the MIT license found in the LICENSE file.
 
-// +build interactive
-
 package stor
 
 import (
@@ -11,12 +9,16 @@ import (
 	"testing"
 )
 
-const nThreads = 11
-const nIterations = 1000000
+var nThreads = 11
+var nIterations = 1000000
 const allocSize = 32
 const chunkSize = 1024
 
-func TestStress(*testing.T) {
+func TestStress(t *testing.T) {
+	if testing.Short() {
+		nThreads = 2
+		nIterations = 10000
+	}
 	var wg sync.WaitGroup
 	s := HeapStor(chunkSize)
 	for i := 0; i < nThreads; i++ {

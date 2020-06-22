@@ -4,7 +4,7 @@
 package btree
 
 import (
-	"github.com/apmckinlay/gsuneido/database/stor"
+	"github.com/apmckinlay/gsuneido/database/db19/stor"
 )
 
 // fbupdate handles updating an immutable btree.
