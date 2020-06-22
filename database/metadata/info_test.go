@@ -46,7 +46,7 @@ func TestInfo(t *testing.T) {
 	st := stor.HeapStor(blockSize)
 	off := merged.WriteInfo(st)
 
-	packed := NewTableInfoPacked(st, off)
+	packed := NewInfoPacked(st, off)
 	Assert(t).That(*packed.Get("one"), Equals(*base.Get("one")))
 	Assert(t).That(*packed.Get("two"), Equals(TableInfo{
 		table: "two",
@@ -90,7 +90,7 @@ func TestMetadata2(t *testing.T) {
 	}
 	st := stor.HeapStor(2 * blockSize)
 	off := tbl.WriteInfo(st)
-	packed := NewTableInfoPacked(st, off)
+	packed := NewInfoPacked(st, off)
 	for i, s := range data {
 		ti := packed.Get(s)
 		Assert(t).That(ti.table, Equals(s).Comment("table"))

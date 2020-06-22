@@ -14,11 +14,14 @@ import (
 //go:generate genny -in ../../genny/flathash/flathash.go -out tables.go -pkg metadata gen "Key=string Item=TableInfo"
 
 type TableInfo struct {
-	table    string
+	table   string
 	nrows   int
 	size    uint64
 	indexes []IndexInfo
-	schema  *TableSchema
+	// schema is separate because it changes much less often
+	schema *TableSchema
+	// mutable is used to know whether to persist
+	mutable bool
 }
 
 type IndexInfo struct {
@@ -144,7 +147,7 @@ func (ii *IndexInfo) Read(r *stor.Reader) {
 
 //-------------------------------------------------------------------
 
-type TableInfoPacked struct {
+type InfoPacked struct {
 	packed
 }
 
@@ -158,7 +161,7 @@ type finger struct {
 	pos   int
 }
 
-func NewTableInfoPacked(st *stor.Stor, off uint64) *TableInfoPacked {
+func NewInfoPacked(st *stor.Stor, off uint64) *InfoPacked {
 	r := st.Reader(off)
 	nitems := r.Get2()
 	nfingers := 1 + nitems/itemsPerFinger
@@ -169,10 +172,10 @@ func NewTableInfoPacked(st *stor.Stor, off uint64) *TableInfoPacked {
 	for i := 0; i < nfingers; i++ {
 		fingers[i].table = r.Pos(fingers[i].pos).GetStr()
 	}
-	return &TableInfoPacked{packed{r: r, fingers: fingers}}
+	return &InfoPacked{packed{r: r, fingers: fingers}}
 }
 
-func (p TableInfoPacked) Get(table string) *TableInfo {
+func (p InfoPacked) Get(table string) *TableInfo {
 	p.r.Pos(p.binarySearch(table))
 	count := 0
 	for {
