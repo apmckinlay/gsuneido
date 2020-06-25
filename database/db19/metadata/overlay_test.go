@@ -20,15 +20,15 @@ func TestOverlay(*testing.T) {
 	for i := 0; i < n; i++ {
 		data[i] = randStr()
 		tbl.Put(&TableInfo{
-			table: data[i],
-			schema: &TableSchema{
-				table: data[i],
-				columns: []ColumnSchema{
-					{name: "one", field: i},
-					{name: "two", field: i * 2},
+			Table: data[i],
+			Schema: &TableSchema{
+				Table: data[i],
+				Columns: []ColumnSchema{
+					{Name: "one", Field: i},
+					{Name: "two", Field: i * 2},
 				},
-				indexes: []IndexSchema{
-					{fields: []int{i}},
+				Indexes: []IndexSchema{
+					{Fields: []int{i}},
 				},
 			},
 		})
@@ -43,17 +43,17 @@ func TestOverlay(*testing.T) {
 
 	for i := 0; i < 4; i++ {
 		ov := &Overlay{
-			rwInfo:       NewTableInfoHtbl(0),
-			roInfo:       global,
-			infoPacked:   infoPacked,
-			schemaPacked: schemaPacked,
+			rwMeta:       NewTableInfoHtbl(0),
+			roMeta:       global,
+			baseInfo:   infoPacked,
+			baseSchema: schemaPacked,
 		}
 		for i := 0; i < 5; i++ {
 			ov.GetReadonly(data[rand.Intn(100)])
-			ov.GetMutable(data[rand.Intn(100)])
+			ov.GetMutable(data[rand.Intn(100)], 0)
 		}
 		// end of transaction, merge back to global
-		global = global.Merge(ov.rwInfo)
+		global = ov.LayeredOnto(global)
 	}
 
 	// persist global info

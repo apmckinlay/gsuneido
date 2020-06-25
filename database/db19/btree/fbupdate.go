@@ -45,7 +45,6 @@ func (up *fbupdate) Search(key string) uint64 {
 	return nodeOff
 }
 
-const maxNodeSize = 1536 // * .75 ~ 1k
 const maxlevels = 8
 
 func (up *fbupdate) Insert(key string, off uint64) {
@@ -63,7 +62,7 @@ func (up *fbupdate) Insert(key string, off uint64) {
 	node, where := up.insert(nodeOff, key, off, up.fb.getLeafKey)
 	up.moffs.set(nodeOff, node)
 	size := len(node)
-	if size <= up.fb.maxNodeSize {
+	if size <= MaxNodeSize {
 		return // fast path, just insert into leaf
 	}
 
@@ -75,7 +74,7 @@ func (up *fbupdate) Insert(key string, off uint64) {
 		node, where = up.insert(stack[i], splitKey, rightOff, nil)
 		up.moffs.set(stack[i], node)
 		size := len(node)
-		if size <= up.fb.maxNodeSize {
+		if size <= MaxNodeSize {
 			return // finished
 		}
 		splitKey, rightOff = up.split(node, stack[i], where)

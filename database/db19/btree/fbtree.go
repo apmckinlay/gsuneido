@@ -23,25 +23,32 @@ type fbtree struct {
 	moffs memOffsets
 	// paths is a set of nodes that will need to be path copied
 	paths map[uint64]set
-	// getLeafKey returns the key associated with a leaf data offset
-	getLeafKey func(uint64) string
-	// maxNodeSize is the maximum node size in bytes, split if larger
-	maxNodeSize int
+	// ixspec is an opaque value passed to GetLeafKey
+	// normally it specifies which fields make up the key, based on the schema
+	ixspec interface{}
 }
 
-func CreateFbtree(st *stor.Stor,
-	getLeafKey func(uint64) string, maxNodeSize int) *fbtree {
+// MaxNodeSize is the maximum node size in bytes, split if larger.
+// Overridden by tests.
+var MaxNodeSize = 1536 // * .75 ~ 1k
+
+// GetLeafKey returns the key for a data offset. (e.g. extract key from record)
+// It is a dependency that must be injected
+var GetLeafKey func(st *stor.Stor, ixspec interface{}, off uint64) string
+
+func CreateFbtree(st *stor.Stor) *fbtree {
 	mo := memOffsets{nextOff: stor.MaxSmallOffset, nodes: map[uint64]fNode{}}
 	root := mo.add(fNode{})
-	return &fbtree{root: root, moffs: mo, store: st,
-		getLeafKey: getLeafKey, maxNodeSize: maxNodeSize}
+	return &fbtree{root: root, moffs: mo, store: st}
 }
 
-func OpenFbtree(st *stor.Stor, root uint64,
-	getLeafKey func(uint64) string, maxNodeSize int) *fbtree {
+func OpenFbtree(st *stor.Stor, root uint64, treeLevels int) *fbtree {
 	mo := nilMemOffsets()
-	return &fbtree{root: root, moffs: mo, store: st,
-		getLeafKey: getLeafKey, maxNodeSize: maxNodeSize}
+	return &fbtree{root: root, treeLevels: treeLevels, moffs: mo, store: st}
+}
+
+func (fb *fbtree) getLeafKey(off uint64) string {
+	return GetLeafKey(fb.store, fb.ixspec, off)
 }
 
 func (fb *fbtree) Search(key string) uint64 {
@@ -213,7 +220,8 @@ func (fb *fbtree) print1(depth int, offset uint64) {
 		} else {
 			// leaf
 			print(strings.Repeat("    ", depth)+strconv.Itoa(it.fi)+":",
-				it.npre, it.diff, "=", it.known, "("+fb.getLeafKey(offset)+")")
+				it.npre, it.diff, "=", it.known,
+				"("+fb.getLeafKey(offset)+")")
 		}
 	}
 }

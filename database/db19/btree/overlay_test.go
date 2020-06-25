@@ -8,16 +8,18 @@ import (
 	"sort"
 	"testing"
 
+	"github.com/apmckinlay/gsuneido/database/db19/stor"
 	. "github.com/apmckinlay/gsuneido/util/hamcrest"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
 func TestEmptyOverlay(t *testing.T) {
 	var data []string
-	get := func(i uint64) string { return data[i] }
-	fb := CreateFbtree(nil, get, 64)
-	mb := newMbtree()
-	mb2 := newMbtree()
+	GetLeafKey = func(_ *stor.Stor, _ interface{}, i uint64) string { return data[i] }
+	MaxNodeSize = 64
+	fb := CreateFbtree(nil)
+	mb := newMbtree(0)
+	mb2 := newMbtree(0)
 	ov := &Overlay{under: []tree{fb, mb2}, mb: mb}
 	checkIter(t, data, ov)
 

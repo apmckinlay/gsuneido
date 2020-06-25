@@ -40,8 +40,9 @@ func TestFbupdate(t *testing.T) {
 	for j := 0; j < nTimes; j++ {
 		const n = 1000
 		var data [n]string
-		getLeafKey := func(i uint64) string { return data[i] }
-		fb := CreateFbtree(nil, getLeafKey, 44)
+		GetLeafKey = func(_ *stor.Stor, _ interface{}, i uint64) string { return data[i] }
+		MaxNodeSize = 44
+		fb := CreateFbtree(nil)
 		up := newFbupdate(fb)
 		randKey := str.UniqueRandomOf(3, 6, "abcde")
 		for i := 0; i < n; i++ {
@@ -59,15 +60,16 @@ func TestUnevenSplit(t *testing.T) {
 	const n = 1000
 	var data [n]string
 	test := func() {
-		getLeafKey := func(i uint64) string { return data[i] }
-		fb := CreateFbtree(nil, getLeafKey, 128)
+		GetLeafKey = func(_ *stor.Stor, _ interface{}, i uint64) string { return data[i] }
+		MaxNodeSize = 128
+		fb := CreateFbtree(nil)
 		up := newFbupdate(fb)
 		for i := 0; i < n; i++ {
 			up.Insert(data[i], uint64(i))
 		}
 		count, size, nnodes := up.check()
 		Assert(t).That(count, Equals(n))
-		full := float32(size) / float32(nnodes) / float32(up.fb.maxNodeSize)
+		full := float32(size) / float32(nnodes) / float32(MaxNodeSize)
 		// print("count", count, "nnodes", nnodes, "size", size, "full", full)
 		if full < .65 {
 			t.Error("expected > .65 got", full)
@@ -122,8 +124,9 @@ func TestSampleData(t *testing.T) {
 		for si := 0; si < nShuffle; si++ {
 			rand.Shuffle(len(data),
 				func(i, j int) { data[i], data[j] = data[j], data[i] })
-			getLeafKey := func(i uint64) string { return data[i] }
-			fb := CreateFbtree(nil, getLeafKey, 256)
+			GetLeafKey = func(_ *stor.Stor, _ interface{}, i uint64) string { return data[i] }
+			MaxNodeSize = 256
+			fb := CreateFbtree(nil)
 			up := newFbupdate(fb)
 			for i, d := range data {
 				up.Insert(d, uint64(i))
@@ -152,8 +155,9 @@ func TestFbdelete(t *testing.T) {
 		n = 100
 	}
 	data := make([]string, n)
-	getLeafKey := func(i uint64) string { return data[i] }
-	fb := CreateFbtree(nil, getLeafKey, 44)
+	GetLeafKey = func(_ *stor.Stor, _ interface{}, i uint64) string { return data[i] }
+	MaxNodeSize = 44
+	fb := CreateFbtree(nil)
 	up := newFbupdate(fb)
 	randKey := str.UniqueRandomOf(3, 6, "abcde")
 	for i := 0; i < n; i++ {
@@ -187,12 +191,13 @@ func TestSave(t *testing.T) {
 	const freezesPerSave = 3
 	const insertsPerFreeze = 17
 	data := make([]string, 0, nSaves*freezesPerSave*insertsPerFreeze)
-	getLeafKey := func(i uint64) string { return data[i] }
+	GetLeafKey = func(_ *stor.Stor, _ interface{}, i uint64) string { return data[i] }
+	MaxNodeSize = 64
 	st, err := stor.MmapStor("tmp.db", stor.CREATE)
 	if err != nil {
 		log.Fatalln(err)
 	}
-	fb := CreateFbtree(st, getLeafKey, 64)
+	fb := CreateFbtree(st)
 	randKey := str.UniqueRandomOf(3, 7, "abcdef")
 	for i := 0; i < nSaves; i++ {
 		for j := 0; j < freezesPerSave; j++ {

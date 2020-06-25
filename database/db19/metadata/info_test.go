@@ -6,68 +6,54 @@ package metadata
 import (
 	"testing"
 
+	"github.com/apmckinlay/gsuneido/database/db19/btree"
 	"github.com/apmckinlay/gsuneido/database/db19/stor"
 	. "github.com/apmckinlay/gsuneido/util/hamcrest"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
 func TestInfo(t *testing.T) {
-	base := NewTableInfoHtbl(0)
-	base.Put(&TableInfo{
-		table: "one",
-		nrows: 100,
-		size:  1000,
-		indexes: []IndexInfo{
-			{root: 11111111111, treeLevels: 0},
-			{root: 111111111111, treeLevels: 1},
-		},
+	tbl := NewTableInfoHtbl(0)
+	tbl.Put(&TableInfo{
+		Table: "one",
+		Nrows: 100,
+		Size:  1000,
+		Indexes: []*btree.Overlay{},
 	})
-	base.Put(&TableInfo{
-		table: "two",
-		nrows: 200,
-		size:  2000,
-		indexes: []IndexInfo{
-			{root: 22222222222, treeLevels: 0},
-			{root: 222222222222, treeLevels: 2},
-		},
+	tbl.Put(&TableInfo{
+		Table:   "two",
+		Nrows:   200,
+		Size:    2000,
+		Indexes: []*btree.Overlay{},
 	})
-	over := NewTableInfoHtbl(0)
-	over.Put(&TableInfo{
-		table: "two",
-		nrows: 9,
-		size:  99,
-		indexes: []IndexInfo{
-			{root: 22222222220, treeLevels: 1},
-			{root: 222222222220, treeLevels: 2},
-		},
-	})
-	merged := base.Merge(over)
+	// over := NewTableInfoHtbl(0)
+	// over.Put(&TableInfo{
+	// 	Table: "two",
+	// 	Nrows: 9,
+	// 	Size:  99,
+	// 	Indexes: []*btree.Overlay{},
+	// })
+	// merged := base.Merge(over)
 
 	st := stor.HeapStor(blockSize)
-	off := merged.WriteInfo(st)
+	off := tbl.WriteInfo(st)
 
 	packed := NewInfoPacked(st, off)
-	Assert(t).That(*packed.Get("one"), Equals(*base.Get("one")))
+	Assert(t).That(*packed.Get("one"), Equals(*tbl.Get("one")))
 	Assert(t).That(*packed.Get("two"), Equals(TableInfo{
-		table: "two",
-		nrows: 209,
-		size:  2099,
-		indexes: []IndexInfo{
-			{root: 22222222220, treeLevels: 1},
-			{root: 222222222220, treeLevels: 2},
-		},
+		Table: "two",
+		Nrows: 200,
+		Size:  2000,
+		Indexes: []*btree.Overlay{},
 	}))
 
-	reread := ReadTablesInfo(st, off)
-	Assert(t).That(*reread.Get("one"), Equals(*base.Get("one")))
+	reread := ReadInfo(st, off)
+	Assert(t).That(*reread.Get("one"), Equals(*tbl.Get("one")))
 	Assert(t).That(*reread.Get("two"), Equals(TableInfo{
-		table: "two",
-		nrows: 209,
-		size:  2099,
-		indexes: []IndexInfo{
-			{root: 22222222220, treeLevels: 1},
-			{root: 222222222220, treeLevels: 2},
-		},
+		Table: "two",
+		Nrows: 200,
+		Size:  2000,
+		Indexes: []*btree.Overlay{},
 	}))
 }
 
@@ -79,13 +65,9 @@ func TestMetadata2(t *testing.T) {
 	for i := 0; i < n; i++ {
 		data[i] = randStr()
 		tbl.Put(&TableInfo{
-			table: data[i],
-			nrows: i,
-			size:  1000,
-			indexes: []IndexInfo{
-				{root: 11111111111, treeLevels: 0},
-				{root: 111111111111, treeLevels: 1},
-			},
+			Table: data[i],
+			Nrows: i,
+			Size:  1000,
 		})
 	}
 	st := stor.HeapStor(2 * blockSize)
@@ -93,7 +75,7 @@ func TestMetadata2(t *testing.T) {
 	packed := NewInfoPacked(st, off)
 	for i, s := range data {
 		ti := packed.Get(s)
-		Assert(t).That(ti.table, Equals(s).Comment("table"))
-		Assert(t).That(ti.nrows, Equals(i).Comment("nrows"))
+		Assert(t).That(ti.Table, Equals(s).Comment("table"))
+		Assert(t).That(ti.Nrows, Equals(i).Comment("nrows"))
 	}
 }

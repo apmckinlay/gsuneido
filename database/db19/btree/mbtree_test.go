@@ -30,7 +30,7 @@ func TestMbtreeRandom(t *testing.T) {
 		for si := 0; si < nShuffle; si++ {
 			rand.Shuffle(len(data),
 				func(i, j int) { data[i], data[j] = data[j], data[i] })
-			x := newMbtree()
+			x := newMbtree(0)
 			for i, k := range data {
 				x.Insert(k, uint64(i))
 			}
@@ -47,12 +47,12 @@ func TestMbtreeUnevenSplit(t *testing.T) {
 		data[i] = randKey()
 	}
 	sort.Strings(data)
-	m := newMbtree()
+	m := newMbtree(0)
 	for i, k := range data {
 		m.Insert(k, uint64(i))
 	}
 	m.checkData(t, data)
-	m = newMbtree()
+	m = newMbtree(0)
 	for i := len(data) - 1; i >= 0; i-- {
 		m.Insert(data[i], uint64(i))
 	}

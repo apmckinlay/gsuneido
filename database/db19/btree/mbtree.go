@@ -6,6 +6,7 @@ package btree
 // mbtree is a specialized in-memory btree with a max size and number of levels.
 // Nodes are fixed size to reduce allocation and bounds checks.
 type mbtree struct {
+	tranNum int
 	// tree is not embedded since it's not needed when small
 	tree *mbTreeNode
 	// leaf is embedded to reduce indirection and optimize when small
@@ -37,8 +38,8 @@ type mbTreeSlot struct {
 	leaf *mbLeaf
 }
 
-func newMbtree() *mbtree {
-	return &mbtree{}
+func newMbtree(tranNum int) *mbtree {
+	return &mbtree{tranNum: tranNum}
 }
 
 //-------------------------------------------------------------------

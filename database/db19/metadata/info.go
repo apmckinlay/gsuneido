@@ -6,6 +6,7 @@ package metadata
 import (
 	"sort"
 
+	"github.com/apmckinlay/gsuneido/database/db19/btree"
 	"github.com/apmckinlay/gsuneido/database/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/hash"
 	"github.com/apmckinlay/gsuneido/util/verify"
@@ -14,19 +15,14 @@ import (
 //go:generate genny -in ../../../genny/flathash/flathash.go -out tables.go -pkg metadata gen "Key=string Item=TableInfo"
 
 type TableInfo struct {
-	table   string
-	nrows   int
-	size    uint64
-	indexes []IndexInfo
-	// schema is separate because it changes much less often
-	schema *TableSchema
+	Table   string
+	Nrows   int
+	Size    uint64
+	Indexes []*btree.Overlay
+	// Schema is separate because it changes much less often
+	Schema *TableSchema
 	// mutable is used to know whether to persist
 	mutable bool
-}
-
-type IndexInfo struct {
-	root       uint64 //TODO should be fbtree
-	treeLevels int
 }
 
 func (*TableInfoHtbl) hash(key string) uint32 {
@@ -34,38 +30,38 @@ func (*TableInfoHtbl) hash(key string) uint32 {
 }
 
 func (*TableInfoHtbl) keyOf(ti *TableInfo) string {
-	return ti.table
+	return ti.Table
 }
 
 //-------------------------------------------------------------------
 
-// Merge combines two TableInfoHtbl into a new one.
-// t2 takes precedence.
-func (t *TableInfoHtbl) Merge(t2 *TableInfoHtbl) *TableInfoHtbl {
-	// Important - bulk copy rather than inserting individually
-	t3 := t.Dup()
-	iter := t2.Iter()
-	for ti2 := iter(); ti2 != nil; ti2 = iter() {
-		ti := t.Get(ti2.table)
-		if ti == nil {
-			t3.Put(ti2)
-		} else {
-			t3.Put(ti.Merge(ti2))
-		}
-	}
-	return t3
-}
+// // Merge combines two TableInfoHtbl into a new one.
+// // t2 takes precedence.
+// func (t *TableInfoHtbl) Merge(t2 *TableInfoHtbl) *TableInfoHtbl {
+// 	// Important - bulk copy rather than inserting individually
+// 	t3 := t.Dup()
+// 	iter := t2.Iter()
+// 	for ti2 := iter(); ti2 != nil; ti2 = iter() {
+// 		ti := t.Get(ti2.Table)
+// 		if ti == nil {
+// 			t3.Put(ti2)
+// 		} else {
+// 			t3.Put(ti.Merge(ti2))
+// 		}
+// 	}
+// 	return t3
+// }
 
-// Merge combines two TableInfo into a new one.
-// ti2 takes precedence.
-func (ti *TableInfo) Merge(ti2 *TableInfo) *TableInfo {
-	return &TableInfo{table: ti2.table,
-		nrows:   ti.nrows + ti2.nrows,
-		size:    ti.size + ti2.size,
-		indexes: append([]IndexInfo(nil), ti2.indexes...),
-		schema:  ti2.schema,
-	}
-}
+// // Merge combines two TableInfo into a new one.
+// // ti2 takes precedence.
+// func (ti *TableInfo) Merge(ti2 *TableInfo) *TableInfo {
+// 	return &TableInfo{Table: ti2.Table,
+// 		Nrows:   ti.Nrows + ti2.Nrows,
+// 		Size:    ti.Size + ti2.Size,
+// 		Indexes: append([]*btree.Overlay(nil), ti2.Indexes...),
+// 		Schema:  ti2.Schema,
+// 	}
+// }
 
 //-------------------------------------------------------------------
 
@@ -104,16 +100,16 @@ func (t *TableInfoHtbl) Write(st *stor.Stor, write func(*TableInfo, *stor.Writer
 
 // Write saves a TableInfo to external packed format in a stor
 func (ti *TableInfo) WriteInfo(w *stor.Writer) {
-	w.PutStr(ti.table).
-		Put4(ti.nrows).
-		Put5(ti.size).
-		Put1(len(ti.indexes))
-	for _, ii := range ti.indexes {
-		w.Put5(ii.root).Put1(ii.treeLevels)
+	w.PutStr(ti.Table).
+		Put4(ti.Nrows).
+		Put5(ti.Size).
+		Put1(len(ti.Indexes))
+	for _, ii := range ti.Indexes {
+		ii.Write(w)
 	}
 }
 
-func ReadTablesInfo(st *stor.Stor, off uint64) *TableInfoHtbl {
+func ReadInfo(st *stor.Stor, off uint64) *TableInfoHtbl {
 	r := st.Reader(off)
 	nitems := r.Get2()
 	nfingers := 1 + nitems/itemsPerFinger
@@ -129,20 +125,76 @@ func ReadTablesInfo(st *stor.Stor, off uint64) *TableInfoHtbl {
 
 func ReadTableInfo(r *stor.Reader) *TableInfo {
 	var ti TableInfo
-	ti.table = r.GetStr()
-	ti.nrows = r.Get4()
-	ti.size = r.Get5()
+	ti.Table = r.GetStr()
+	ti.Nrows = r.Get4()
+	ti.Size = r.Get5()
 	ni := r.Get1()
-	ti.indexes = make([]IndexInfo, ni)
+	ti.Indexes = make([]*btree.Overlay, ni)
 	for i := 0; i < ni; i++ {
-		ti.indexes[i].Read(r)
+		ti.Indexes[i] = btree.ReadOverlay(r)
 	}
 	return &ti
 }
 
-func (ii *IndexInfo) Read(r *stor.Reader) {
-	ii.root = r.Get5()
-	ii.treeLevels = r.Get1()
+//-------------------------------------------------------------------
+
+type update struct {
+	table string
+	overlays
+}
+type overlays []*btree.Overlay
+
+type btOver = *btree.Overlay
+
+func (t *TableInfoHtbl) process(fn func(btOver) btOver) []update {
+	var updates []update
+	iter := t.Iter()
+	for ti := iter(); ti != nil; ti = iter() {
+		if ti.mutable {
+			updated := make(overlays, len(ti.Indexes))
+			for i, ov := range ti.Indexes {
+				updated[i] = fn(ov)
+			}
+			updates = append(updates, update{table: ti.Table, overlays: updated})
+		}
+	}
+	return updates
+}
+
+func (t *TableInfoHtbl) withUpdates(updates []update, fn func(btOver, btOver) btOver) *TableInfoHtbl {
+	t2 := t.Dup()
+	for _, up := range updates {
+		ti := *t2.Get(up.table)                           // copy
+		ti.Indexes = append(overlays(nil), ti.Indexes...) // copy
+		for i, ov := range ti.Indexes {
+			if up.overlays[i] != nil {
+				ti.Indexes[i] = fn(ov, up.overlays[i])
+			}
+		}
+		t2.Put(&ti)
+	}
+	return t2
+}
+
+//-------------------------------------------------------------------
+
+func (t *TableInfoHtbl) Merge(tranNum int) []update {
+	return t.process(func(ov btOver) btOver {
+		return ov.Merge(tranNum)
+	})
+}
+func (t *TableInfoHtbl) WithMerged(updates []update) *TableInfoHtbl {
+	return t.withUpdates(updates, btOver.WithMerged)
+}
+
+//-------------------------------------------------------------------
+
+func (t *TableInfoHtbl) SaveIndexes() []update {
+	return t.process(btOver.Save)
+}
+
+func (t *TableInfoHtbl) WithSaved(updates []update) *TableInfoHtbl {
+	return t.withUpdates(updates, btOver.WithSaved)
 }
 
 //-------------------------------------------------------------------
@@ -152,6 +204,7 @@ type InfoPacked struct {
 }
 
 type packed struct {
+	off     uint64
 	r       *stor.Reader
 	fingers []finger
 }
@@ -172,7 +225,7 @@ func NewInfoPacked(st *stor.Stor, off uint64) *InfoPacked {
 	for i := 0; i < nfingers; i++ {
 		fingers[i].table = r.Pos(fingers[i].pos).GetStr()
 	}
-	return &InfoPacked{packed{r: r, fingers: fingers}}
+	return &InfoPacked{packed{off: off, r: r, fingers: fingers}}
 }
 
 func (p InfoPacked) Get(table string) *TableInfo {
@@ -180,7 +233,7 @@ func (p InfoPacked) Get(table string) *TableInfo {
 	count := 0
 	for {
 		ti := ReadTableInfo(p.r)
-		if ti.table == table {
+		if ti.Table == table {
 			return ti
 		}
 		count++
@@ -208,3 +261,11 @@ func (p packed) binarySearch(table string) int {
 	// i is first one greater, so we want i-1
 	return int(p.fingers[i-1].pos)
 }
+
+func (p packed) Offset() uint64 {
+	return p.off
+}
+
+//-------------------------------------------------------------------
+
+//TODO Merge a TableInfoHtbl and an InfoPacked to make new base

@@ -6,24 +6,24 @@ package metadata
 import "github.com/apmckinlay/gsuneido/database/db19/stor"
 
 type TableSchema struct {
-	table   string
-	columns []ColumnSchema
-	indexes []IndexSchema
+	Table   string
+	Columns []ColumnSchema
+	Indexes []IndexSchema
 	//TODO foreign key target stuff
 }
 
 type ColumnSchema struct {
-	name  string
-	field int
+	Name  string
+	Field int
 }
 
 type IndexSchema struct {
-	fields []int
-	// mode is 'k' for key, 'i' for index, 'u' for unique index
-	mode     int
-	fktable  string
-	fkmode   int
-	fkfields []int
+	Fields []int
+	// Mode is 'k' for key, 'i' for index, 'u' for unique index
+	Mode     int
+	Fktable  string
+	Fkmode   int
+	Fkfields []int
 }
 
 // fkmode bits
@@ -41,20 +41,20 @@ func (t *TableInfoHtbl) WriteSchema(st *stor.Stor) uint64 {
 }
 
 func (ti *TableInfo) WriteSchema(w *stor.Writer) {
-	ts := ti.schema
-	w.PutStr(ti.table)
-	w.Put2(len(ts.columns))
-	for _, col := range ts.columns {
-		w.Put2(col.field).PutStr(col.name)
+	ts := ti.Schema
+	w.PutStr(ti.Table)
+	w.Put2(len(ts.Columns))
+	for _, col := range ts.Columns {
+		w.Put2(col.Field).PutStr(col.Name)
 	}
-	w.Put1(len(ts.indexes))
-	for _, idx := range ts.indexes {
-		w.Put1(idx.mode).PutInts(idx.fields)
-		w.PutStr(idx.fktable).Put1(idx.fkmode).PutInts(idx.fkfields)
+	w.Put1(len(ts.Indexes))
+	for _, idx := range ts.Indexes {
+		w.Put1(idx.Mode).PutInts(idx.Fields)
+		w.PutStr(idx.Fktable).Put1(idx.Fkmode).PutInts(idx.Fkfields)
 	}
 }
 
-func (t *TableInfoHtbl) ReadSchema(st *stor.Stor, off uint64) {
+func (t *TableInfoHtbl) ReadSchema(st *stor.Stor, off uint64) *TableInfoHtbl {
 	r := st.Reader(off)
 	nitems := r.Get2()
 	if nitems != t.nitems {
@@ -66,27 +66,28 @@ func (t *TableInfoHtbl) ReadSchema(st *stor.Stor, off uint64) {
 	}
 	for i := 0; i < nitems; i++ {
 		ts := ReadTableSchema(r)
-		t.Get(ts.table).schema = ts
+		t.Get(ts.Table).Schema = ts
 	}
+	return t
 }
 
 func ReadTableSchema(r *stor.Reader) *TableSchema {
 	ts := TableSchema{}
-	ts.table = r.GetStr()
+	ts.Table = r.GetStr()
 	n := r.Get2()
-	ts.columns = make([]ColumnSchema, n)
+	ts.Columns = make([]ColumnSchema, n)
 	for i := 0; i < n; i++ {
-		ts.columns[i] = ColumnSchema{field: r.Get2(), name: r.GetStr()}
+		ts.Columns[i] = ColumnSchema{Field: r.Get2(), Name: r.GetStr()}
 	}
 	n = r.Get1()
-	ts.indexes = make([]IndexSchema, n)
+	ts.Indexes = make([]IndexSchema, n)
 	for i := 0; i < n; i++ {
-		ts.indexes[i] = IndexSchema{
-			mode:     r.Get1(),
-			fields:   r.GetInts(),
-			fktable:  r.GetStr(),
-			fkmode:   r.Get1(),
-			fkfields: r.GetInts(),
+		ts.Indexes[i] = IndexSchema{
+			Mode:     r.Get1(),
+			Fields:   r.GetInts(),
+			Fktable:  r.GetStr(),
+			Fkmode:   r.Get1(),
+			Fkfields: r.GetInts(),
 		}
 	}
 	return &ts
@@ -117,7 +118,7 @@ func (p SchemaPacked) Get(table string) *TableSchema {
 	count := 0
 	for {
 		ti := ReadTableSchema(p.r)
-		if ti.table == table {
+		if ti.Table == table {
 			return ti
 		}
 		count++

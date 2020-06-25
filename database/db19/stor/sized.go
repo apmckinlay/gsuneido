@@ -6,7 +6,7 @@ package stor
 import "encoding/binary"
 
 func (s *Stor) AllocSized(n int) (Offset, []byte) {
-	if n <= 0 {
+	if n < 0 {
 		panic("stor.AllocSized bad size")
 	}
 	var uv [8]byte

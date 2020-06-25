@@ -19,15 +19,15 @@ func TestSchema(t *testing.T) {
 	for i := 0; i < n; i++ {
 		data[i] = randStr()
 		tbl.Put(&TableInfo{
-			table: data[i],
-			schema: &TableSchema{
-				table: data[i],
-				columns: []ColumnSchema{
-					{name: "one", field: i},
-					{name: "two", field: i*2},
+			Table: data[i],
+			Schema: &TableSchema{
+				Table: data[i],
+				Columns: []ColumnSchema{
+					{Name: "one", Field: i},
+					{Name: "two", Field: i*2},
 				},
-				indexes: []IndexSchema{
-					{fields: []int{i}},
+				Indexes: []IndexSchema{
+					{Fields: []int{i}},
 				},
 			},
 		})
@@ -36,23 +36,23 @@ func TestSchema(t *testing.T) {
 	off := tbl.WriteSchema(st)
 
 	test := func (i int, table string, ts *TableSchema) {
-		Assert(t).That(ts.table, Equals(table).Comment("table"))
-		Assert(t).That(ts.columns[0].name, Equals("one").Comment("one"))
-		Assert(t).That(ts.columns[0].field, Equals(i).Comment("one field"))
-		Assert(t).That(ts.columns[1].name, Equals("two").Comment("two"))
-		Assert(t).That(ts.columns[0].field, Equals(i).Comment("two field"))
-		Assert(t).That(ts.indexes[0].fields, Equals([]int{i}).Comment("indexes"))
+		Assert(t).That(ts.Table, Equals(table).Comment("table"))
+		Assert(t).That(ts.Columns[0].Name, Equals("one").Comment("one"))
+		Assert(t).That(ts.Columns[0].Field, Equals(i).Comment("one field"))
+		Assert(t).That(ts.Columns[1].Name, Equals("two").Comment("two"))
+		Assert(t).That(ts.Columns[0].Field, Equals(i).Comment("two field"))
+		Assert(t).That(ts.Indexes[0].Fields, Equals([]int{i}).Comment("indexes"))
 	}
 
 	for _,table := range data {
-		tbl.Get(table).schema = nil
+		tbl.Get(table).Schema = nil
 	}
 	tbl.ReadSchema(st, off)
 
 	packed := NewSchemaPacked(st, off)
 
 	for i, table := range data {
-		test(i, table, tbl.Get(table).schema)
+		test(i, table, tbl.Get(table).Schema)
 		test(i, table, packed.Get(table))
 	}
 }

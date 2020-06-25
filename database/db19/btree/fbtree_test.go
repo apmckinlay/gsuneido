@@ -7,6 +7,7 @@ import (
 	"sort"
 	"testing"
 
+	"github.com/apmckinlay/gsuneido/database/db19/stor"
 	. "github.com/apmckinlay/gsuneido/util/hamcrest"
 
 	"github.com/apmckinlay/gsuneido/util/str"
@@ -15,8 +16,9 @@ import (
 func TestFbtreeIter(t *testing.T) {
 	const n = 1000
 	var data [n]string
-	getLeafKey := func(i uint64) string { return data[i] }
-	fb := CreateFbtree(nil, getLeafKey, 440)
+	GetLeafKey = func(_ *stor.Stor, _ interface{}, i uint64) string { return data[i] }
+	MaxNodeSize = 440
+	fb := CreateFbtree(nil)
 	up := newFbupdate(fb)
 	randKey := str.UniqueRandomOf(3, 6, "abcde")
 	for i := 0; i < n; i++ {

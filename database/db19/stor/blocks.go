@@ -261,3 +261,7 @@ func (r *Reader) GetInts() []int {
 	}
 	return ints
 }
+
+func (r *Reader) Stor() *Stor {
+	return r.stor
+}

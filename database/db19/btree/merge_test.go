@@ -6,6 +6,7 @@ package btree
 import (
 	"testing"
 
+	"github.com/apmckinlay/gsuneido/database/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
@@ -14,7 +15,7 @@ func TestMerge(t *testing.T) {
 	var data []string
 	randMbtree := func() *mbtree {
 		const n = mSize * 3
-		mb := newMbtree()
+		mb := newMbtree(0)
 		for i := 0; i < n; i++ {
 			key := randKey()
 			off := uint64(len(data))
@@ -25,8 +26,9 @@ func TestMerge(t *testing.T) {
 	}
 	mb := randMbtree()
 	mb.checkData(t, data)
-	get := func(i uint64) string { return data[i] }
-	fb := CreateFbtree(nil, get, 64)
+	GetLeafKey = func(_ *stor.Stor, _ interface{}, i uint64) string { return data[i] }
+	MaxNodeSize = 64
+	fb := CreateFbtree(nil)
 	fb = Merge(fb, mb)
 	fb.checkData(t, data)
 
