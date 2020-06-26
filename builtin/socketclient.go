@@ -124,7 +124,11 @@ var suSocketClientMethods = Methods{
 		sc := scOpen(this)
 		sc.conn.SetDeadline(time.Now().Add(sc.timeout))
 		defer sc.conn.SetDeadline(noDeadline)
-		return Readline(sc.rdr, "file.Readline: ")
+		line := Readline(sc.rdr, "file.Readline: ")
+		if line == False {
+			panic("socket Readline lost connection or timeout")
+		}
+		return line
 	}),
 	"Write": method1("(string)", func(this, arg Value) Value {
 		sc := scOpen(this)
