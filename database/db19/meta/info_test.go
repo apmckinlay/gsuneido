@@ -1,7 +1,7 @@
 // Copyright Suneido Software Corp. All rights reserved.
 // Governed by the MIT license found in the LICENSE file.
 
-package metadata
+package meta
 
 import (
 	"testing"
@@ -13,14 +13,14 @@ import (
 )
 
 func TestInfo(t *testing.T) {
-	tbl := NewTableInfoHtbl(0)
-	tbl.Put(&TableInfo{
-		Table: "one",
-		Nrows: 100,
-		Size:  1000,
+	tbl := NewInfoHtbl(0)
+	tbl.Put(&Info{
+		Table:   "one",
+		Nrows:   100,
+		Size:    1000,
 		Indexes: []*btree.Overlay{},
 	})
-	tbl.Put(&TableInfo{
+	tbl.Put(&Info{
 		Table:   "two",
 		Nrows:   200,
 		Size:    2000,
@@ -35,43 +35,43 @@ func TestInfo(t *testing.T) {
 	// })
 	// merged := base.Merge(over)
 
-	st := stor.HeapStor(blockSize)
-	off := tbl.WriteInfo(st)
+	st := stor.HeapStor(8192)
+	off := tbl.Write(st)
 
 	packed := NewInfoPacked(st, off)
 	Assert(t).That(*packed.Get("one"), Equals(*tbl.Get("one")))
-	Assert(t).That(*packed.Get("two"), Equals(TableInfo{
-		Table: "two",
-		Nrows: 200,
-		Size:  2000,
+	Assert(t).That(*packed.Get("two"), Equals(Info{
+		Table:   "two",
+		Nrows:   200,
+		Size:    2000,
 		Indexes: []*btree.Overlay{},
 	}))
 
-	reread := ReadInfo(st, off)
+	reread := ReadInfoHtbl(st, off)
 	Assert(t).That(*reread.Get("one"), Equals(*tbl.Get("one")))
-	Assert(t).That(*reread.Get("two"), Equals(TableInfo{
-		Table: "two",
-		Nrows: 200,
-		Size:  2000,
+	Assert(t).That(*reread.Get("two"), Equals(Info{
+		Table:   "two",
+		Nrows:   200,
+		Size:    2000,
 		Indexes: []*btree.Overlay{},
 	}))
 }
 
-func TestMetadata2(t *testing.T) {
-	tbl := NewTableInfoHtbl(0)
+func TestInfo2(t *testing.T) {
+	tbl := NewInfoHtbl(0)
 	const n = 1000
 	data := make([]string, n)
 	randStr := str.UniqueRandom(4, 4)
 	for i := 0; i < n; i++ {
 		data[i] = randStr()
-		tbl.Put(&TableInfo{
+		tbl.Put(&Info{
 			Table: data[i],
 			Nrows: i,
 			Size:  1000,
 		})
 	}
-	st := stor.HeapStor(2 * blockSize)
-	off := tbl.WriteInfo(st)
+	st := stor.HeapStor(8192)
+	off := tbl.Write(st)
 	packed := NewInfoPacked(st, off)
 	for i, s := range data {
 		ti := packed.Get(s)

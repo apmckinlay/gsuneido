@@ -6,13 +6,13 @@ package db19
 import (
 	"sync/atomic"
 
-	"github.com/apmckinlay/gsuneido/database/db19/metadata"
+	"github.com/apmckinlay/gsuneido/database/db19/meta"
 )
 
 type UpdateTran struct {
 	num int
 	//state *DbState
-	meta *metadata.Overlay
+	meta *meta.Overlay
 }
 
 // tranNum should be accessed atomically
@@ -20,17 +20,13 @@ var tranNum int64
 
 func NewUpdateTran() *UpdateTran {
 	state := GetState()
-	info := metadata.NewOverlay(
-		state.baseSchema,
-		state.baseInfo,
-		state.memMeta,
-		metadata.NewTableInfoHtbl(0))
+	info := state.meta.NewOverlay()
 	return &UpdateTran{num: int(atomic.AddInt64(&tranNum, 1)), meta: info}
 }
 
 func (t *UpdateTran) Commit() {
 	UpdateState(func(state *DbState) {
-		state.memMeta = t.meta.LayeredOnto(state.memMeta)
+		state.meta = t.meta.LayeredOnto(state.meta)
 	})
 	Merge(t.num) //TODO async
 }

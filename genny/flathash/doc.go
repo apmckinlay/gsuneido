@@ -7,6 +7,6 @@
 // The key type must support ==.
 // The zero value of keys is used to identify noKey slots.
 // The zero value of values is returned for failed searched.
-// Instantiations must define hash and keyOf to complete the generated code.
+// Instantiations must define hash, keyOf, Write, Read<Item>
 package flathash
 

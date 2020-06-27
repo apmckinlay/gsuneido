@@ -1,7 +1,7 @@
 // Copyright Suneido Software Corp. All rights reserved.
 // Governed by the MIT license found in the LICENSE file.
 
-package metadata
+package meta
 
 import (
 	"testing"
@@ -12,30 +12,27 @@ import (
 )
 
 func TestSchema(t *testing.T) {
-	tbl := NewTableInfoHtbl(0)
+	tbl := NewSchemaHtbl(0)
 	const n = 1000
 	data := make([]string, n)
 	randStr := str.UniqueRandom(4, 4)
 	for i := 0; i < n; i++ {
 		data[i] = randStr()
-		tbl.Put(&TableInfo{
+		tbl.Put(&Schema{
 			Table: data[i],
-			Schema: &TableSchema{
-				Table: data[i],
-				Columns: []ColumnSchema{
-					{Name: "one", Field: i},
-					{Name: "two", Field: i*2},
-				},
-				Indexes: []IndexSchema{
-					{Fields: []int{i}},
-				},
+			Columns: []ColumnSchema{
+				{Name: "one", Field: i},
+				{Name: "two", Field: i * 2},
+			},
+			Indexes: []IndexSchema{
+				{Fields: []int{i}},
 			},
 		})
 	}
-	st := stor.HeapStor(2 * blockSize)
-	off := tbl.WriteSchema(st)
+	st := stor.HeapStor(8192)
+	off := tbl.Write(st)
 
-	test := func (i int, table string, ts *TableSchema) {
+	test := func(i int, table string, ts *Schema) {
 		Assert(t).That(ts.Table, Equals(table).Comment("table"))
 		Assert(t).That(ts.Columns[0].Name, Equals("one").Comment("one"))
 		Assert(t).That(ts.Columns[0].Field, Equals(i).Comment("one field"))
@@ -44,15 +41,12 @@ func TestSchema(t *testing.T) {
 		Assert(t).That(ts.Indexes[0].Fields, Equals([]int{i}).Comment("indexes"))
 	}
 
-	for _,table := range data {
-		tbl.Get(table).Schema = nil
-	}
-	tbl.ReadSchema(st, off)
+	tbl = ReadSchemaHtbl(st, off)
 
 	packed := NewSchemaPacked(st, off)
 
 	for i, table := range data {
-		test(i, table, tbl.Get(table).Schema)
+		test(i, table, tbl.Get(table))
 		test(i, table, packed.Get(table))
 	}
 }
