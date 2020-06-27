@@ -131,10 +131,10 @@ func (ov *Overlay) Write(w *stor.Writer) {
 	w.Put5(fb.root).Put1(fb.treeLevels)
 }
 
-func ReadOverlay(r *stor.Reader) *Overlay {
+func ReadOverlay(st *stor.Stor, r *stor.Reader) *Overlay {
 	root := r.Get5()
 	treeLevels := r.Get1()
-	return &Overlay{under: []tree{OpenFbtree(r.Stor(), root, treeLevels)}}
+	return &Overlay{under: []tree{OpenFbtree(st, root, treeLevels)}}
 }
 
 //-------------------------------------------------------------------

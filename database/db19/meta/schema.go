@@ -62,7 +62,7 @@ func (sc *Schema) Write(w *stor.Writer) {
 	}
 }
 
-func ReadSchema(r *stor.Reader) *Schema {
+func ReadSchema(st *stor.Stor, r *stor.Reader) *Schema {
 	ts := Schema{}
 	ts.Table = r.GetStr()
 	n := r.Get2()

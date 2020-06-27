@@ -40,7 +40,7 @@ func (ti *Info) Write(w *stor.Writer) {
 	}
 }
 
-func ReadInfo(r *stor.Reader) *Info {
+func ReadInfo(st *stor.Stor, r *stor.Reader) *Info {
 	var ti Info
 	ti.Table = r.GetStr()
 	ti.Nrows = r.Get4()
@@ -48,7 +48,7 @@ func ReadInfo(r *stor.Reader) *Info {
 	ni := r.Get1()
 	ti.Indexes = make([]*btree.Overlay, ni)
 	for i := 0; i < ni; i++ {
-		ti.Indexes[i] = btree.ReadOverlay(r)
+		ti.Indexes[i] = btree.ReadOverlay(st, r)
 	}
 	return &ti
 }

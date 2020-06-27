@@ -128,30 +128,29 @@ const blockSizeInfo = 2000
 const perFingerInfo = 16
 
 func (h *InfoHtbl) Write(st *stor.Stor) uint64 {
-	w := st.Writer(blockSizeInfo)
+	w := stor.NewWriter(h.nitems * 32)
 	w.Put2(h.nitems)
-	if h.nitems == 0 {
-		return w.Close()
-	}
-	keys := h.List()
-	sort.Strings(keys)
-	nfingers := 1 + h.nitems/perFingerInfo
-	w2 := *w
-	for i := 0; i < nfingers; i++ {
-		w.Put3(0) // leave room
-	}
-	fingers := make([]int, 0, nfingers)
-	for i, k := range keys {
-		if i%16 == 0 {
-			fingers = append(fingers, w.Pos())
+	if h.nitems > 0 {
+		keys := h.List()
+		sort.Strings(keys)
+		nfingers := 1 + h.nitems/perFingerInfo
+		w2 := *w
+		for i := 0; i < nfingers; i++ {
+			w.Put3(0) // leave room
 		}
-		h.Get(k).Write(w)
+		fingers := make([]int, 0, nfingers)
+		for i, k := range keys {
+			if i%16 == 0 {
+				fingers = append(fingers, w.Len())
+			}
+			h.Get(k).Write(w)
+		}
+		verify.That(len(fingers) == nfingers)
+		for _, f := range fingers {
+			w2.Put3(f) // update with actual values
+		}
 	}
-	verify.That(len(fingers) == nfingers)
-	for _, f := range fingers {
-		w2.Put3(f) // update with actual values
-	}
-	return w.Close()
+	return w.Save(st)
 }
 
 func ReadInfoHtbl(st *stor.Stor, off uint64) *InfoHtbl {
@@ -166,7 +165,7 @@ func ReadInfoHtbl(st *stor.Stor, off uint64) *InfoHtbl {
 		r.Get3() // skip the fingers
 	}
 	for i := 0; i < nitems; i++ {
-		t.Put(ReadInfo(r))
+		t.Put(ReadInfo(st, r))
 	}
 	return t
 }
@@ -174,8 +173,9 @@ func ReadInfoHtbl(st *stor.Stor, off uint64) *InfoHtbl {
 //-------------------------------------------------------------------
 
 type InfoPacked struct {
+	stor    *stor.Stor
 	off     uint64
-	r       *stor.Reader
+	buf     []byte
 	fingers []InfoFinger
 }
 
@@ -185,7 +185,8 @@ type InfoFinger struct {
 }
 
 func NewInfoPacked(st *stor.Stor, off uint64) *InfoPacked {
-	r := st.Reader(off)
+	buf := st.Data(off)
+	r := stor.NewReader(buf)
 	nitems := r.Get2()
 	nfingers := 1 + nitems/perFingerInfo
 	fingers := make([]InfoFinger, nfingers)
@@ -193,16 +194,17 @@ func NewInfoPacked(st *stor.Stor, off uint64) *InfoPacked {
 		fingers[i].pos = r.Get3()
 	}
 	for i := 0; i < nfingers; i++ {
-		fingers[i].table = r.Pos(fingers[i].pos).GetStr()
+		fingers[i].table = stor.NewReader(buf[fingers[i].pos:]).GetStr()
 	}
-	return &InfoPacked{off: off, r: r, fingers: fingers}
+	return &InfoPacked{stor: st, off: off, buf: buf, fingers: fingers}
 }
 
 func (p InfoPacked) Get(table string) *Info {
-	p.r.Pos(p.binarySearch(table))
+	pos := p.binarySearch(table)
+	r := stor.NewReader(p.buf[pos:])
 	count := 0
 	for {
-		ti := ReadInfo(p.r)
+		ti := ReadInfo(p.stor, r)
 		if ti.Table == table {
 			return ti
 		}
@@ -213,6 +215,7 @@ func (p InfoPacked) Get(table string) *Info {
 	}
 }
 
+// binarySearch does a binary search of the fingers
 func (p InfoPacked) binarySearch(table string) int {
 	i, j := 0, len(p.fingers)
 	count := 0

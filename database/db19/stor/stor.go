@@ -10,7 +10,6 @@ Storage is chunked. Allocations may not straddle chunks.
 package stor
 
 import (
-	"fmt"
 	"sync"
 	"sync/atomic"
 
@@ -51,7 +50,6 @@ type Stor struct {
 // (allocations may not straddle chunks)
 func (s *Stor) Alloc(n int) (Offset, []byte) {
 	verify.That(0 < n && n <= int(s.chunksize))
-	fmt.Println("alloc", n)
 
 	for {
 		oldsize := atomic.LoadUint64(&s.size)

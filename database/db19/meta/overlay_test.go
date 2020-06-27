@@ -33,7 +33,7 @@ func TestOverlay(*testing.T) {
 			// },
 		})
 	}
-	st := stor.HeapStor(8192)
+	st := stor.HeapStor(32*1024)
 	offInfo := tbl.Write(st)
 	offSchema := tbl.Write(st)
 	state := &Overlay{

@@ -70,7 +70,7 @@ func TestInfo2(t *testing.T) {
 			Size:  1000,
 		})
 	}
-	st := stor.HeapStor(8192)
+	st := stor.HeapStor(32 * 1024)
 	off := tbl.Write(st)
 	packed := NewInfoPacked(st, off)
 	for i, s := range data {

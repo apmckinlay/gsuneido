@@ -29,7 +29,7 @@ func TestSchema(t *testing.T) {
 			},
 		})
 	}
-	st := stor.HeapStor(8192)
+	st := stor.HeapStor(32 * 1024)
 	off := tbl.Write(st)
 
 	test := func(i int, table string, ts *Schema) {
