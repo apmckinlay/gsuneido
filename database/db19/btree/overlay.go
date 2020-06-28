@@ -125,6 +125,10 @@ func ovsrcLess(x, y *ovsrc) bool {
 
 //-------------------------------------------------------------------
 
+func (ov *Overlay) StorSize() int {
+	return 5 + 1
+}
+
 func (ov *Overlay) Write(w *stor.Writer) {
 	fb := ov.under[0].(*fbtree)
 	verify.That(len(fb.moffs.nodes) == 0)

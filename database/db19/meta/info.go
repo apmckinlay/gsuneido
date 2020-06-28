@@ -30,13 +30,21 @@ type Info struct {
 
 //-------------------------------------------------------------------
 
+func (ti *Info) storSize() int {
+	size := 2 + len(ti.Table) + 4 + 5 + 1
+	for i := range ti.Indexes {
+		size += ti.Indexes[i].StorSize()
+	}
+	return size
+}
+
 func (ti *Info) Write(w *stor.Writer) {
 	w.PutStr(ti.Table).
 		Put4(ti.Nrows).
 		Put5(ti.Size).
 		Put1(len(ti.Indexes))
-	for _, ii := range ti.Indexes {
-		ii.Write(w)
+	for i := range ti.Indexes {
+		ti.Indexes[i].Write(w)
 	}
 }
 

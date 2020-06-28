@@ -128,29 +128,39 @@ const blockSizeInfo = 2000
 const perFingerInfo = 16
 
 func (h *InfoHtbl) Write(st *stor.Stor) uint64 {
-	w := stor.NewWriter(h.nitems * 32)
-	w.Put2(h.nitems)
-	if h.nitems > 0 {
-		keys := h.List()
-		sort.Strings(keys)
-		nfingers := 1 + h.nitems/perFingerInfo
-		w2 := *w
-		for i := 0; i < nfingers; i++ {
-			w.Put3(0) // leave room
-		}
-		fingers := make([]int, 0, nfingers)
-		for i, k := range keys {
-			if i%16 == 0 {
-				fingers = append(fingers, w.Len())
-			}
-			h.Get(k).Write(w)
-		}
-		verify.That(len(fingers) == nfingers)
-		for _, f := range fingers {
-			w2.Put3(f) // update with actual values
-		}
+	if h.nitems == 0 {
+		off, buf := st.Alloc(2)
+		stor.NewWriter(buf).Put2(0)
+		return off
 	}
-	return w.Save(st)
+	nfingers := 1 + h.nitems/perFingerInfo
+	size := 2 + 3*nfingers
+	iter := h.Iter()
+	for it := iter(); it != nil; it = iter() {
+		size += it.storSize()
+	}
+	off, buf := st.Alloc(size)
+	w := stor.NewWriter(buf)
+	w.Put2(h.nitems)
+
+	keys := h.List()
+	sort.Strings(keys)
+	w2 := *w
+	for i := 0; i < nfingers; i++ {
+		w.Put3(0) // leave room
+	}
+	fingers := make([]int, 0, nfingers)
+	for i, k := range keys {
+		if i%16 == 0 {
+			fingers = append(fingers, w.Len())
+		}
+		h.Get(k).Write(w)
+	}
+	verify.That(len(fingers) == nfingers)
+	for _, f := range fingers {
+		w2.Put3(f) // update with actual values
+	}
+	return off
 }
 
 func ReadInfoHtbl(st *stor.Stor, off uint64) *InfoHtbl {

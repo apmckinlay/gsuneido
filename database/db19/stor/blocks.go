@@ -3,21 +3,15 @@
 
 package stor
 
-// Writer allows writing data to a stor with an unknown length
-// by buffering in memory.
-// (If the length of the data is known, just Alloc)
 // Put methods return the writer so they can be chained.
+
 type Writer struct {
 	buf []byte
 }
 
-// NewWriter returns a new Writer
-func NewWriter(sizeHint int) *Writer {
-	return &Writer{make([]byte, 0, sizeHint)}
-}
-
-func WriterOn(buf []byte) *Writer {
-	return &Writer{buf}
+// NewWriter returns a new Writer on a byte slice
+func NewWriter(buf []byte) *Writer {
+	return &Writer{buf[:0]}
 }
 
 // Put1 writes an unsigned byte value
@@ -99,17 +93,6 @@ func (w *Writer) PutInts(ints []int) *Writer {
 // Len returns the current position within this writer
 func (w *Writer) Len() int {
 	return len(w.buf)
-}
-
-// Buf returns the current buffer
-func (w *Writer) Buf() []byte {
-	return w.buf
-}
-
-func (w *Writer) Save(stor *Stor) uint64 {
-	off, buf := stor.Alloc(w.Len())
-	copy(buf, w.Buf())
-	return off
 }
 
 //-------------------------------------------------------------------
