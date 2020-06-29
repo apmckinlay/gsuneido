@@ -6,18 +6,9 @@ package meta
 import (
 	"github.com/apmckinlay/gsuneido/database/db19/btree"
 	"github.com/apmckinlay/gsuneido/database/db19/stor"
-	"github.com/apmckinlay/gsuneido/util/hash"
 )
 
-//go:generate genny -in ../../../genny/flathash/flathash.go -out infohtbl.go -pkg meta gen "Key=string Item=Info"
-
-func (*InfoHtbl) hash(key string) uint32 {
-	return hash.HashString(key)
-}
-
-func (*InfoHtbl) keyOf(ti *Info) string {
-	return ti.Table
-}
+//go:generate genny -in ../../../genny/flathash/flathash.go -out infohtbl.go -pkg meta gen "Item=Info"
 
 type Info struct {
 	Table   string

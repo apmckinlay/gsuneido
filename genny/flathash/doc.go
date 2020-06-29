@@ -4,9 +4,6 @@
 // Package flathash implements a simple hash map
 // with linear probing open addressing.
 // The flat structure means we can duplicate efficiently for copy-on-write.
-// The key type must support ==.
-// The zero value of keys is used to identify noKey slots.
-// The zero value of values is returned for failed searched.
-// Instantiations must define hash, keyOf, Write, Read<Item>
+// It is specifically written for meta Info and Schema, not general purpose.
 package flathash
 

@@ -8,12 +8,12 @@ import (
 	"sort"
 
 	"github.com/apmckinlay/gsuneido/database/db19/stor"
+	"github.com/apmckinlay/gsuneido/util/hash"
 	"github.com/apmckinlay/gsuneido/util/verify"
 	"github.com/cheekybits/genny/generic"
 )
 
 type Item generic.Type
-type Key generic.Type
 
 type ItemHtbl struct {
 	slots []*Item
@@ -46,11 +46,11 @@ func (h *ItemHtbl) Put(item *Item) {
 	if h.nitems >= h.cap {
 		h.grow()
 	}
-	key := h.keyOf(item)
-	for i := h.hashToIndex(h.hash(key)); ; i = (i + 1) & h.mask {
+	key := item.Table
+	for i := h.hashToIndex(hash.HashString(key)); ; i = (i + 1) & h.mask {
 		if h.slots[i] == nil {
 			h.nitems++
-		} else if h.keyOf(h.slots[i]) != key {
+		} else if h.slots[i].Table != key {
 			continue
 		}
 		h.slots[i] = item
@@ -58,15 +58,15 @@ func (h *ItemHtbl) Put(item *Item) {
 	}
 }
 
-func (h *ItemHtbl) Get(key Key) *Item {
+func (h *ItemHtbl) Get(key string) *Item {
 	if h == nil {
 		return nil
 	}
-	for i := h.hashToIndex(h.hash(key)); ; i = (i + 1) & h.mask {
+	for i := h.hashToIndex(hash.HashString(key)); ; i = (i + 1) & h.mask {
 		if h.slots[i] == nil {
 			return nil
 		}
-		if key == h.keyOf(h.slots[i]) {
+		if key == h.slots[i].Table {
 			return h.slots[i]
 		}
 	}
@@ -102,11 +102,11 @@ func (h *ItemHtbl) Dup() *ItemHtbl {
 }
 
 // List returns a list of the keys in the table
-func (h *ItemHtbl) List() []Key {
-	keys := make([]Key, 0, h.nitems)
+func (h *ItemHtbl) List() []string {
+	keys := make([]string, 0, h.nitems)
 	for _, slot := range h.slots {
 		if slot != nil {
-			keys = append(keys, h.keyOf(slot))
+			keys = append(keys, slot.Table)
 		}
 	}
 	if len(keys) != h.nitems {
@@ -212,14 +212,14 @@ func NewItemPacked(st *stor.Stor, off uint64) *ItemPacked {
 	return &ItemPacked{stor: st, off: off, buf: buf, fingers: fingers}
 }
 
-func (p ItemPacked) Get(table string) *Item {
-	pos := p.binarySearch(table)
+func (p ItemPacked) Get(key string) *Item {
+	pos := p.binarySearch(key)
 	r := stor.NewReader(p.buf[pos:])
 	count := 0
 	for {
-		ti := ReadItem(p.stor, r)
-		if ti.Table == table {
-			return ti
+		item := ReadItem(p.stor, r)
+		if item.Table == key {
+			return item
 		}
 		count++
 		if count > 20 {

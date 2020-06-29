@@ -12,6 +12,7 @@ import (
 	"sort"
 
 	"github.com/apmckinlay/gsuneido/database/db19/stor"
+	"github.com/apmckinlay/gsuneido/util/hash"
 	"github.com/apmckinlay/gsuneido/util/verify"
 )
 
@@ -46,11 +47,11 @@ func (h *SchemaHtbl) Put(item *Schema) {
 	if h.nitems >= h.cap {
 		h.grow()
 	}
-	key := h.keyOf(item)
-	for i := h.hashToIndex(h.hash(key)); ; i = (i + 1) & h.mask {
+	key := item.Table
+	for i := h.hashToIndex(hash.HashString(key)); ; i = (i + 1) & h.mask {
 		if h.slots[i] == nil {
 			h.nitems++
-		} else if h.keyOf(h.slots[i]) != key {
+		} else if h.slots[i].Table != key {
 			continue
 		}
 		h.slots[i] = item
@@ -62,11 +63,11 @@ func (h *SchemaHtbl) Get(key string) *Schema {
 	if h == nil {
 		return nil
 	}
-	for i := h.hashToIndex(h.hash(key)); ; i = (i + 1) & h.mask {
+	for i := h.hashToIndex(hash.HashString(key)); ; i = (i + 1) & h.mask {
 		if h.slots[i] == nil {
 			return nil
 		}
-		if key == h.keyOf(h.slots[i]) {
+		if key == h.slots[i].Table {
 			return h.slots[i]
 		}
 	}
@@ -106,7 +107,7 @@ func (h *SchemaHtbl) List() []string {
 	keys := make([]string, 0, h.nitems)
 	for _, slot := range h.slots {
 		if slot != nil {
-			keys = append(keys, h.keyOf(slot))
+			keys = append(keys, slot.Table)
 		}
 	}
 	if len(keys) != h.nitems {
@@ -212,14 +213,14 @@ func NewSchemaPacked(st *stor.Stor, off uint64) *SchemaPacked {
 	return &SchemaPacked{stor: st, off: off, buf: buf, fingers: fingers}
 }
 
-func (p SchemaPacked) Get(table string) *Schema {
-	pos := p.binarySearch(table)
+func (p SchemaPacked) Get(key string) *Schema {
+	pos := p.binarySearch(key)
 	r := stor.NewReader(p.buf[pos:])
 	count := 0
 	for {
-		ti := ReadSchema(p.stor, r)
-		if ti.Table == table {
-			return ti
+		item := ReadSchema(p.stor, r)
+		if item.Table == key {
+			return item
 		}
 		count++
 		if count > 20 {

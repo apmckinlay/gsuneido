@@ -5,18 +5,9 @@ package meta
 
 import (
 	"github.com/apmckinlay/gsuneido/database/db19/stor"
-	"github.com/apmckinlay/gsuneido/util/hash"
 )
 
-//go:generate genny -in ../../../genny/flathash/flathash.go -out schemahtbl.go -pkg meta gen "Key=string Item=Schema"
-
-func (*SchemaHtbl) hash(key string) uint32 {
-	return hash.HashString(key)
-}
-
-func (*SchemaHtbl) keyOf(ti *Schema) string {
-	return ti.Table
-}
+//go:generate genny -in ../../../genny/flathash/flathash.go -out schemahtbl.go -pkg meta gen "Item=Schema"
 
 type Schema struct {
 	Table   string
