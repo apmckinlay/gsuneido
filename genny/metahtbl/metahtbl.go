@@ -1,7 +1,7 @@
 // Copyright Suneido Software Corp. All rights reserved.
 // Governed by the MIT license found in the LICENSE file.
 
-package flathash
+package metahtbl
 
 import (
 	"math/bits"
@@ -91,7 +91,7 @@ func (h *ItemHtbl) grow() {
 		}
 	}
 	if h.nitems != old.nitems {
-		panic("flathash grow failed")
+		panic("metahtbl grow failed")
 	}
 }
 
@@ -110,7 +110,7 @@ func (h *ItemHtbl) List() []string {
 		}
 	}
 	if len(keys) != h.nitems {
-		panic("flathash List failed")
+		panic("metahtbl List failed")
 	}
 	return keys
 }

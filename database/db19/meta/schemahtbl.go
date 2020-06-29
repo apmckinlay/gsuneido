@@ -92,7 +92,7 @@ func (h *SchemaHtbl) grow() {
 		}
 	}
 	if h.nitems != old.nitems {
-		panic("flathash grow failed")
+		panic("metahtbl grow failed")
 	}
 }
 
@@ -111,7 +111,7 @@ func (h *SchemaHtbl) List() []string {
 		}
 	}
 	if len(keys) != h.nitems {
-		panic("flathash List failed")
+		panic("metahtbl List failed")
 	}
 	return keys
 }

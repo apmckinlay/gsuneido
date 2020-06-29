@@ -8,7 +8,7 @@ import (
 	"github.com/apmckinlay/gsuneido/database/db19/stor"
 )
 
-//go:generate genny -in ../../../genny/flathash/flathash.go -out infohtbl.go -pkg meta gen "Item=Info"
+//go:generate genny -in ../../../genny/metahtbl/metahtbl.go -out infohtbl.go -pkg meta gen "Item=Info"
 
 type Info struct {
 	Table   string

@@ -7,7 +7,7 @@ import (
 	"github.com/apmckinlay/gsuneido/database/db19/stor"
 )
 
-//go:generate genny -in ../../../genny/flathash/flathash.go -out schemahtbl.go -pkg meta gen "Item=Schema"
+//go:generate genny -in ../../../genny/metahtbl/metahtbl.go -out schemahtbl.go -pkg meta gen "Item=Schema"
 
 type Schema struct {
 	Table   string
