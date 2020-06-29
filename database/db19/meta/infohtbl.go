@@ -59,6 +59,9 @@ func (h *InfoHtbl) Put(item *Info) {
 }
 
 func (h *InfoHtbl) Get(key string) *Info {
+	if h == nil {
+		return nil
+	}
 	for i := h.hashToIndex(h.hash(key)); ; i = (i + 1) & h.mask {
 		if h.slots[i] == nil {
 			return nil

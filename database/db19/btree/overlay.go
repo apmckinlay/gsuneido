@@ -63,14 +63,12 @@ type ovsrc struct {
 
 // Iter returns an treeIter function
 func (ov *Overlay) Iter() treeIter {
-	srcs := make([]ovsrc, len(ov.under)+1)
-	i := 0
+	srcs := make([]ovsrc, 0, len(ov.under)+1)
 	if ov.mb != nil {
-		srcs[0] = ovsrc{iter: ov.mb.Iter()}
-		i++
+		srcs = append(srcs, ovsrc{iter: ov.mb.Iter()})
 	}
-	for ; i < len(srcs); i++ {
-		srcs[i] = ovsrc{iter: ov.under[i-1].Iter()}
+	for i := range ov.under {
+		srcs = append(srcs, ovsrc{iter: ov.under[i].Iter()})
 	}
 	for i := range srcs {
 		srcs[i].next()

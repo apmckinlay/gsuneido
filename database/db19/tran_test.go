@@ -4,6 +4,8 @@
 package db19
 
 import (
+	"os"
+	"strconv"
 	"testing"
 
 	. "github.com/apmckinlay/gsuneido/util/hamcrest"
@@ -14,27 +16,46 @@ import (
 )
 
 func TestTran(t *testing.T) {
-	btree.GetLeafKey = func(st *stor.Stor, ixspec interface{}, off uint64) string {
+	btree.GetLeafKey = func(st *stor.Stor, _ interface{}, off uint64) string {
 		return string(st.DataSized(off))
 	}
-	store := stor.HeapStor(16 * 1024)
+
+	// store := stor.HeapStor(16 * 1024)
+	store, err := stor.MmapStor("test.tmp", stor.CREATE)
+	if err != nil {
+		panic("can't create test.tmp")
+	}
+
 	createDb(store)
 
-	ut := NewUpdateTran()
-	// write some data
-	off, buf := store.AllocSized(10)
-	copy(buf, "helloworld")
-	// add it to the indexes
-	ti := ut.meta.GetRwInfo("mytable", ut.num)
-	Assert(t).That(ti.Nrows, Equals(0).Comment("nrows"))
-	Assert(t).That(ti.Size, Equals(0).Comment("size"))
-	Assert(t).That(len(ti.Indexes), Equals(1).Comment("n indexes"))
-	ti.Indexes[0].Insert("helloworld", off)
-	ut.Commit()
+	const nout = 100
+	for i := 0; i < nout; i++ {
+		output1()
+	}
 
-	off = Persist()
+	Persist()
+	store.Close()
 
-	ReadState(store, off)
+	f, _ := os.OpenFile("test.tmp", os.O_WRONLY|os.O_APPEND, 0644)
+	f.Write([]byte("some garbage to add on the end of the file"))
+	f.Close()
+
+	store, err = stor.MmapStor("test.tmp", stor.UPDATE)
+	if err != nil {
+		panic("can't open test.tmp")
+	}
+	off := store.LastOffset([]byte(magic1))
+	UpdateState(func(state *DbState) {
+		*state = *ReadState(store, off)
+	})
+
+	rt := NewReadTran()
+	ti := rt.meta.GetRoInfo("mytable")
+	Assert(t).That(ti.Nrows, Equals(nout).Comment("nrows"))
+	Assert(t).That(ti.Size, Equals(nout*12).Comment("size"))
+
+	store.Close()
+	os.Remove("test.tmp")
 }
 
 func createDb(store *stor.Stor) {
@@ -68,4 +89,19 @@ func createDb(store *stor.Stor) {
 		state.meta = meta.NewOverlay(baseSchema, baseInfo,
 			roSchema, roSchemaOff, roInfo, roInfoOff, nil)
 	})
+}
+
+func output1() {
+	ut := NewUpdateTran()
+	// write some data
+	data := (strconv.Itoa(ut.num) + "transaction")[:12]
+	off, buf := ut.store.AllocSized(len(data))
+	copy(buf, data)
+	// add it to the indexes
+	ti := ut.meta.GetRwInfo("mytable", ut.num)
+	ti.Nrows++
+	ti.Size += uint64(len(data))
+	ti.Indexes[0].Insert(data, off)
+	ut.Commit()
+	Merge(ut.num)
 }

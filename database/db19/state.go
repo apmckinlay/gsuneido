@@ -4,7 +4,6 @@
 package db19
 
 import (
-	"fmt"
 	"sync"
 	"sync/atomic"
 	"unsafe"
@@ -67,34 +66,33 @@ func Persist() uint64 {
 	return state.Write()
 }
 
-const magic = "\xfe\xdc\xba\x98\x76\x54\x32\x10"
-const stateLen = 2*len(magic) + meta.Noffsets*stor.SmallOffsetLen
+const magic1 = "\x01\x23\x45\x67\x89\xab\xcd\xef"
+const magic2 = "\xfe\xdc\xba\x98\x76\x54\x32\x10"
+const stateLen = len(magic1) + meta.Noffsets*stor.SmallOffsetLen + len(magic2)
 
 func (state *DbState) Write() uint64 {
 	// NOTE: indexes should already have been saved
 	stateOff, buf := state.store.Alloc(stateLen)
-	copy(buf, magic)
-	i := len(magic)
+	copy(buf, magic1)
+	i := len(magic1)
 	offsets := state.meta.Write(state.store)
-	fmt.Println(offsets)
 	for _, o := range offsets {
 		stor.WriteSmallOffset(buf[i:], o)
 		i += stor.SmallOffsetLen
 	}
-	copy(buf[i:], magic)
+	copy(buf[i:], magic2)
 	return stateOff
 }
 
 func ReadState(st *stor.Stor, off uint64) *DbState {
 	buf := st.Data(off)[:stateLen]
-	verify.That(string(buf[:len(magic)]) == magic)
-	verify.That(string(buf[stateLen-len(magic):]) == magic)
-	i := len(magic)
+	i := len(magic1)
+	verify.That(string(buf[:i]) == magic1)
+	verify.That(string(buf[stateLen-len(magic2):]) == magic2)
 	var offsets [meta.Noffsets]uint64
 	for j := range offsets {
 		offsets[j] = stor.ReadSmallOffset(buf[i:])
 		i += stor.SmallOffsetLen
 	}
-	fmt.Println(offsets)
 	return &DbState{store: st, meta: meta.FromOffsets(st, offsets)}
 }

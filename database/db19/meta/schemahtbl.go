@@ -59,6 +59,9 @@ func (h *SchemaHtbl) Put(item *Schema) {
 }
 
 func (h *SchemaHtbl) Get(key string) *Schema {
+	if h == nil {
+		return nil
+	}
 	for i := h.hashToIndex(h.hash(key)); ; i = (i + 1) & h.mask {
 		if h.slots[i] == nil {
 			return nil

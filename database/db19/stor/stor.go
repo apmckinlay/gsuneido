@@ -10,6 +10,7 @@ Storage is chunked. Allocations may not straddle chunks.
 package stor
 
 import (
+	"bytes"
 	"sync"
 	"sync/atomic"
 
@@ -92,6 +93,19 @@ func (s *Stor) Data(offset Offset) []byte {
 
 func (s *Stor) offsetToChunk(offset Offset) int {
 	return int(offset / s.chunksize)
+}
+
+// LastOffset searches backwards for a given byte slice
+// and returns the offset, or 0 if not found
+func (s *Stor) LastOffset(b []byte) uint64 {
+	chunks := s.chunks.Load().([][]byte)
+	for c := len(chunks) - 1; c >= 0; c-- {
+		buf := chunks[c]
+		if i := bytes.LastIndex(buf, b); i != -1 {
+			return uint64(c) * s.chunksize + uint64(i)
+		}
+	}
+	return 0
 }
 
 func (s *Stor) Close() {

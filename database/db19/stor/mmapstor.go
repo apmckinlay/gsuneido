@@ -3,9 +3,7 @@
 
 package stor
 
-import (
-	"os"
-)
+import "os"
 
 type Mode int
 
@@ -43,14 +41,15 @@ func MmapStor(filename string, mode Mode) (*Stor, error) {
 	}
 	size := fi.Size()
 	nchunks := int(((size - 1) / MMAP_CHUNKSIZE) + 1)
-	impl := &mmapStor{file, mode, nil}
+	impl := &mmapStor{file, READ, nil} // map existing chunks as READ
 	chunks := make([][]byte, nchunks)
-	for i := 0; i < nchunks; i++ {
-		chunks[i] = impl.Get(0)
+	i := 0
+	for ; i < nchunks-1; i++ {
+		chunks[i] = impl.Get(i)
 	}
+	impl.mode = mode
+	chunks[i] = impl.Get(i) // map last chunk with actual mode
 	ms := &Stor{impl: impl, chunksize: MMAP_CHUNKSIZE, size: uint64(size)}
 	ms.chunks.Store(chunks)
 	return ms, nil
 }
-
-//TODO map all but partial last chunk as read-only

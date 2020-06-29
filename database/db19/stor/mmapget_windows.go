@@ -41,7 +41,7 @@ func (ms *mmapStor) Get(chunk int) []byte {
 		size = 0 // to end of file
 	}
 	ptr, err := syscall.MapViewOfFile(fm, access,
-		uint32(offset>>32), uint32(offset&0xffffffff), size)
+		uint32(offset>>32), uint32(offset), size)
 	if err != nil {
 		panic(err)
 	}

@@ -61,11 +61,14 @@ func (ov *Overlay) GetRwInfo(table string, tranNum int) *Info {
 		return ti // already have mutable
 	}
 	if ti = ov.roInfo.Get(table); ti != nil {
-		ti2 := *ti
+		ti2 := *ti // copy
 		ti = &ti2
 	} else {
-		ti = ov.baseInfo.Get(table)
+		ti = ov.baseInfo.Get(table) // this will be a copy
 	}
+	// start at 0 since these are deltas
+	ti.Nrows = 0
+	ti.Size = 0
 	ti.mutable = true
 
 	// setup up index overlays

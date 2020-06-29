@@ -7,12 +7,27 @@ import (
 	"sync/atomic"
 
 	"github.com/apmckinlay/gsuneido/database/db19/meta"
+	"github.com/apmckinlay/gsuneido/database/db19/stor"
 )
 
-type UpdateTran struct {
+type tran struct {
 	num int
-	//state *DbState
-	meta *meta.Overlay
+	meta  *meta.Overlay
+	store *stor.Stor
+}
+
+type ReadTran struct {
+	tran
+}
+
+func NewReadTran() *ReadTran {
+	state := GetState()
+	return &ReadTran{tran: tran{num: int(atomic.AddInt64(&tranNum, 1)),
+		meta: state.meta, store: state.store}}
+}
+
+type UpdateTran struct {
+	tran
 }
 
 // tranNum should be accessed atomically
@@ -20,13 +35,13 @@ var tranNum int64
 
 func NewUpdateTran() *UpdateTran {
 	state := GetState()
-	info := state.meta.NewOverlay()
-	return &UpdateTran{num: int(atomic.AddInt64(&tranNum, 1)), meta: info}
+	meta := state.meta.NewOverlay()
+	return &UpdateTran{tran: tran{num: int(atomic.AddInt64(&tranNum, 1)),
+		meta: meta, store: state.store}}
 }
 
 func (t *UpdateTran) Commit() {
 	UpdateState(func(state *DbState) {
 		state.meta = t.meta.LayeredOnto(state.meta)
 	})
-	Merge(t.num) //TODO async
 }
