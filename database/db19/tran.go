@@ -11,7 +11,7 @@ import (
 )
 
 type tran struct {
-	num int
+	num   int
 	meta  *meta.Overlay
 	store *stor.Stor
 }
@@ -40,8 +40,9 @@ func NewUpdateTran() *UpdateTran {
 		meta: meta, store: state.store}}
 }
 
-func (t *UpdateTran) Commit() {
+func (t *UpdateTran) Commit() int {
 	UpdateState(func(state *DbState) {
 		state.meta = t.meta.LayeredOnto(state.meta)
 	})
+	return t.num
 }

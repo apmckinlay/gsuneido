@@ -6,7 +6,9 @@ package db19
 import (
 	"os"
 	"strconv"
+	"sync"
 	"testing"
+	"time"
 
 	. "github.com/apmckinlay/gsuneido/util/hamcrest"
 
@@ -15,22 +17,46 @@ import (
 	"github.com/apmckinlay/gsuneido/database/db19/stor"
 )
 
+func TestConcurrent(t *testing.T) {
+	createDb()
+	c := StartConcur(100 * time.Millisecond)
+	var nclients = 8
+	var ntrans = 4000
+	if testing.Short() {
+		nclients = 4
+		ntrans = 100
+	}
+	var wg sync.WaitGroup
+	for i := 0; i < nclients; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for j := 0; j < ntrans; j++ {
+				ut := output1()
+				c.commitChan <- ut
+				// time.Sleep(time.Duration(rand.Intn(900)) * time.Microsecond)
+			}
+		}()
+	}
+	wg.Wait()
+	c.Stop()
+	// fmt.Println("under", btree.Under)
+
+	var nout = nclients * ntrans
+	rt := NewReadTran()
+	ti := rt.meta.GetRoInfo("mytable")
+	Assert(t).That(ti.Nrows, Equals(nout).Comment("nrows"))
+	Assert(t).That(ti.Size, Equals(nout*12).Comment("size"))
+
+	GetState().store.Close()
+}
+
 func TestTran(t *testing.T) {
-	btree.GetLeafKey = func(st *stor.Stor, _ interface{}, off uint64) string {
-		return string(st.DataSized(off))
-	}
-
-	// store := stor.HeapStor(16 * 1024)
-	store, err := stor.MmapStor("test.tmp", stor.CREATE)
-	if err != nil {
-		panic("can't create test.tmp")
-	}
-
-	createDb(store)
+	store := createDb()
 
 	const nout = 100
 	for i := 0; i < nout; i++ {
-		output1()
+		Merge(output1().Commit())
 	}
 
 	Persist()
@@ -40,10 +66,7 @@ func TestTran(t *testing.T) {
 	f.Write([]byte("some garbage to add on the end of the file"))
 	f.Close()
 
-	store, err = stor.MmapStor("test.tmp", stor.UPDATE)
-	if err != nil {
-		panic("can't open test.tmp")
-	}
+	store, _ = stor.MmapStor("test.tmp", stor.UPDATE)
 	off := store.LastOffset([]byte(magic1))
 	UpdateState(func(state *DbState) {
 		*state = *ReadState(store, off)
@@ -58,7 +81,17 @@ func TestTran(t *testing.T) {
 	os.Remove("test.tmp")
 }
 
-func createDb(store *stor.Stor) {
+func createDb() *stor.Stor {
+	btree.GetLeafKey = func(st *stor.Stor, _ interface{}, off uint64) string {
+		return string(st.DataSized(off))
+	}
+
+	// store := stor.HeapStor(16 * 1024)
+	store, err := stor.MmapStor("test.tmp", stor.CREATE)
+	if err != nil {
+		panic("can't create test.tmp")
+	}
+
 	schema := meta.NewSchemaHtbl(0)
 	schema.Put(&meta.Schema{
 		Table: "mytable",
@@ -89,9 +122,11 @@ func createDb(store *stor.Stor) {
 		state.meta = meta.NewOverlay(baseSchema, baseInfo,
 			roSchema, roSchemaOff, roInfo, roInfoOff, nil)
 	})
+
+	return store
 }
 
-func output1() {
+func output1() *UpdateTran {
 	ut := NewUpdateTran()
 	// write some data
 	data := (strconv.Itoa(ut.num) + "transaction")[:12]
@@ -102,6 +137,6 @@ func output1() {
 	ti.Nrows++
 	ti.Size += uint64(len(data))
 	ti.Indexes[0].Insert(data, off)
-	ut.Commit()
-	Merge(ut.num)
+	return ut
+	// NOTE: does not commit
 }

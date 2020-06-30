@@ -50,7 +50,9 @@ func Merge(tranNum int) {
 	state := GetState()
 	updates := state.meta.Merge(tranNum) // outside UpdateState
 	UpdateState(func(state *DbState) {
-		state.meta.ApplyMerge(updates)
+		meta := *state.meta // copy
+		meta.ApplyMerge(updates)
+		state.meta = &meta
 	})
 }
 
@@ -61,7 +63,9 @@ func Persist() uint64 {
 	state := GetState()
 	updates := state.meta.SaveIndexes() // outside UpdateState
 	state = UpdateState(func(state *DbState) {
-		state.meta.ApplySave(updates)
+		meta := *state.meta // copy
+		meta.ApplySave(updates)
+		state.meta = &meta
 	})
 	return state.Write()
 }

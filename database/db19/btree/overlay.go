@@ -27,12 +27,13 @@ func NewOverlay(st *stor.Stor) *Overlay {
 	return &Overlay{under: []tree{CreateFbtree(st)}}
 }
 
+// var Under [8]int64
+
 // Mutable returns a modifiable copy of an Overlay
 func (ov *Overlay) Mutable(tranNum int) *Overlay {
+	verify.That(ov.mb == nil)
 	under := append([]tree(nil), ov.under...) // copy
-	if ov.mb != nil {
-		under = append(under, ov.mb)
-	}
+	// atomic.AddInt64(&Under[len(under)], 1)
 	return &Overlay{under: under, mb: newMbtree(tranNum)}
 }
 
@@ -160,11 +161,11 @@ func (ov *Overlay) Freeze() {
 func (ov *Overlay) Merge(tranNum int) *Overlay {
 	verify.That(ov.mb == nil)
 	if len(ov.under) == 1 {
-		return nil
+		panic("merge: missing overlay")
 	}
 	mb := ov.under[1].(*mbtree)
 	if mb.tranNum != tranNum {
-		return nil
+		panic("merge: wrong tranNum")
 	}
 	fb := ov.under[0].(*fbtree)
 	fb = Merge(fb, mb)
