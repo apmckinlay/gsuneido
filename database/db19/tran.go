@@ -10,6 +10,9 @@ import (
 	"github.com/apmckinlay/gsuneido/database/db19/stor"
 )
 
+// tranNum should be accessed atomically
+var tranNum int64
+
 type tran struct {
 	num   int
 	meta  *meta.Overlay
@@ -29,9 +32,6 @@ func NewReadTran() *ReadTran {
 type UpdateTran struct {
 	tran
 }
-
-// tranNum should be accessed atomically
-var tranNum int64
 
 func NewUpdateTran() *UpdateTran {
 	state := GetState()
