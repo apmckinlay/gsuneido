@@ -5,7 +5,10 @@ package db19
 
 import (
 	"github.com/apmckinlay/gsuneido/util/ints"
+	"github.com/apmckinlay/gsuneido/util/ordered"
 )
+
+type Set = ordered.Set
 
 // Check holds the data for the transaction conflict checker.
 // Checking is designed to be single threaded i.e. run in its own goroutine.
@@ -35,6 +38,7 @@ type cktran struct {
 
 type cktbl struct {
 	deletes map[uint64]void
+	outputs ckout
 }
 
 func NewCheck() *Check {
@@ -55,7 +59,7 @@ func (ck *Check) next() int {
 
 // Delete adds a delete action
 func (ck *Check) Delete(tn int, table string, off uint64) bool {
-	trace("delete", tn, table, off)
+	trace("T", tn, "delete", table, "offset", off)
 	// check overlapping transactions
 	t, ok := ck.trans[tn]
 	if !ok {
@@ -85,8 +89,55 @@ func (ck *Check) Delete(tn int, table string, off uint64) bool {
 	return true
 }
 
+// Output adds an output action
+func (ck *Check) Output(tn int, table string, index int, key string) bool {
+	trace("T", tn, "output", table, "index", index, "key", key)
+	// check overlapping transactions
+	t, ok := ck.trans[tn]
+	if !ok {
+		return false // it's gone, presumably aborted
+	}
+	for _, t2 := range ck.trans {
+		if overlap(t, t2) {
+			if tbl, ok := t2.tables[table]; ok {
+				if tbl.outputs.Contains(index, key) {
+					if !ck.addConflict(t, t2) {
+						return false // other tran is already committed
+					}
+				}
+			}
+		}
+	}
+	// save action in this transaction
+	tbl, ok := t.tables[table]
+	if !ok {
+		tbl = &cktbl{}
+		t.tables[table] = tbl
+	}
+	tbl.outputs = tbl.outputs.With(index, key)
+	return true
+}
+
+type ckout []*Set
+
+func (o ckout) Contains(index int, key string) bool {
+	return index < len(o) && o[index].Contains(key)
+}
+
+func (o ckout) With(index int, key string) ckout {
+	for len(o) <= index {
+		o = append(o, nil)
+	}
+	if o[index] == nil {
+		o[index] = &Set{}
+	}
+	o[index].Insert(key)
+	return o
+}
+
 // addConflict makes t1 and t2 mutually conflicting
 func (ck *Check) addConflict(t1, t2 *cktran) bool {
+	trace("conflict with", t2)
 	if t2.isEnded() {
 		ck.Abort(t1.start)
 		return false

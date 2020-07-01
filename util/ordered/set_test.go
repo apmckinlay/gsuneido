@@ -1,0 +1,77 @@
+// Copyright Suneido Software Corp. All rights reserved.
+// Governed by the MIT license found in the LICENSE file.
+
+package ordered
+
+import (
+	"math/rand"
+	"sort"
+	"testing"
+
+	. "github.com/apmckinlay/gsuneido/util/hamcrest"
+	"github.com/apmckinlay/gsuneido/util/str"
+)
+
+func TestSetRandom(t *testing.T) {
+	var nGenerate = 8
+	var nShuffle = 8
+	if testing.Short() {
+		nGenerate = 2
+		nShuffle = 2
+	}
+	const n = nodeSize * 80
+	data := make([]string, n)
+	for g := 0; g < nGenerate; g++ {
+		randKey := str.UniqueRandom(3, 10)
+		for i := 0; i < n; i++ {
+			data[i] = randKey()
+		}
+		for si := 0; si < nShuffle; si++ {
+			rand.Shuffle(len(data),
+				func(i, j int) { data[i], data[j] = data[j], data[i] })
+			var x Set
+			for _, k := range data {
+				x.Insert(k)
+			}
+			x.checkData(t, data)
+		}
+	}
+}
+
+func TestSetUnevenSplit(t *testing.T) {
+	const n = nodeSize * 87 // won't fit without uneven splits
+	data := make([]string, n)
+	randKey := str.UniqueRandom(3, 10)
+	for i := 0; i < n; i++ {
+		data[i] = randKey()
+	}
+	sort.Strings(data)
+	m := Set{}
+	for _, k := range data {
+		m.Insert(k)
+	}
+	m.checkData(t, data)
+	m = Set{}
+	for i := len(data) - 1; i >= 0; i-- {
+		m.Insert(data[i])
+	}
+	m.checkData(t, data)
+}
+
+//-------------------------------------------------------------------
+
+func (set *Set) checkData(t *testing.T, data []string) {
+	for _, key := range data {
+		Assert(t).True(set.Contains(key))
+		Assert(t).False(set.Contains(bigger(key)))
+		Assert(t).False(set.Contains(smaller(key)))
+	}
+}
+
+func bigger(s string) string {
+	return s + " "
+}
+
+func smaller(s string) string {
+	return s[:len(s)-1] + "~"
+}
