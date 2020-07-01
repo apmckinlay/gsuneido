@@ -7,6 +7,19 @@ import (
 	"github.com/apmckinlay/gsuneido/util/ints"
 )
 
+// Check holds the data for the transaction conflict checker.
+// Checking is designed to be single threaded i.e. run in its own goroutine.
+// It is intended to run asynchronously, i.e. not waiting for results.
+// This allow more concurrency (overlap) with user code.
+// Actions are checked as they are done, incrementally
+// A conflict with a completed transaction aborts the current transaction.
+// A conflict with an outstanding (not completed) transaction
+// does not immediately abort either transaction.
+// The two transactions are marked as mutually conflicting.
+// Whichever one commits first will succeed and the other will be aborted.
+// Or if one aborts, the other can commit.
+// The checker serializes transaction commits.
+// A single sequence counter is used to assign unique start and end values.
 type Check struct {
 	seq    int
 	oldest int
@@ -14,8 +27,14 @@ type Check struct {
 }
 
 type cktran struct {
-	start int
-	end   int
+	start     int
+	end       int
+	tables    map[string]*cktbl
+	conflicts []*cktran
+}
+
+type cktbl struct {
+	deletes map[uint64]void
 }
 
 func NewCheck() *Check {
@@ -24,7 +43,8 @@ func NewCheck() *Check {
 
 func (ck *Check) StartTran() int {
 	start := ck.next()
-	ck.trans[start] = &cktran{start: start, end: ints.MaxInt}
+	ck.trans[start] = &cktran{start: start, end: ints.MaxInt,
+		tables: make(map[string]*cktbl)}
 	return start
 }
 
@@ -33,27 +53,112 @@ func (ck *Check) next() int {
 	return ck.seq
 }
 
-func (ck *Check) Abort(tn int) {
+// Delete adds a delete action
+func (ck *Check) Delete(tn int, table string, off uint64) bool {
+	trace("delete", tn, table, off)
+	// check overlapping transactions
+	t, ok := ck.trans[tn]
+	if !ok {
+		return false // it's gone, presumably aborted
+	}
+	for _, t2 := range ck.trans {
+		if overlap(t, t2) {
+			if tbl, ok := t2.tables[table]; ok {
+				if _, ok := tbl.deletes[off]; ok {
+					if !ck.addConflict(t, t2) {
+						return false // other tran is already committed
+					}
+				}
+			}
+		}
+	}
+	// save action in this transaction
+	tbl, ok := t.tables[table]
+	if !ok {
+		tbl = &cktbl{}
+		t.tables[table] = tbl
+	}
+	if tbl.deletes == nil {
+		tbl.deletes = make(map[uint64]void)
+	}
+	tbl.deletes[off] = void{}
+	return true
+}
+
+// addConflict makes t1 and t2 mutually conflicting
+func (ck *Check) addConflict(t1, t2 *cktran) bool {
+	if t2.isEnded() {
+		ck.Abort(t1.start)
+		return false
+	}
+	t1.conflicts = append(t1.conflicts, t2)
+	t2.conflicts = append(t2.conflicts, t1)
+	return true
+}
+
+func (t *cktran) isEnded() bool {
+	return t.end != ints.MaxInt
+}
+
+// delConflict deletes t2 from t1's conflicts
+func delConflict(t1, t2 *cktran) {
+	for i, t := range t1.conflicts {
+		if t == t2 && t.end == ints.MaxInt {
+			last := len(t1.conflicts) - 1
+			t1.conflicts[i] = t1.conflicts[last]
+			t1.conflicts = t1.conflicts[:last]
+		}
+	}
+}
+
+// Abort cancels a transaction.
+// It returns false if the transaction is not found (e.g. already aborted).
+// Conflicts with this transaction are removed from the conflicting transactions.
+func (ck *Check) Abort(tn int) bool {
+	trace("abort", tn)
+	t, ok := ck.trans[tn]
+	if !ok {
+		return false
+	}
 	delete(ck.trans, tn)
 	if tn == ck.oldest {
 		ck.oldest = ints.MaxInt // need to find the new oldest
 	}
 	ck.cleanEnded()
+	// remove conflicts
+	for _, t2 := range t.conflicts {
+		delConflict(t2, t)
+	}
+	return true
 }
 
-func (ck *Check) Commit(tn int) {
-	t := ck.trans[tn]
+// Commit finishes a transaction.
+// It returns false if the transaction is not found (e.g. already aborted).
+// Conflicting transactions are aborted.
+func (ck *Check) Commit(tn int) bool {
+	trace("commit", tn)
+	t, ok := ck.trans[tn]
+	if !ok {
+		return false // it's gone, presumably aborted
+	}
 	t.end = ck.next()
 	if t.start == ck.oldest {
 		ck.oldest = ints.MaxInt // need to find the new oldest
 	}
 	ck.cleanEnded()
+	// abort conflicting
+	for _, t2 := range t.conflicts {
+		ck.Abort(t2.start)
+	}
+	return true
 }
 
 func overlap(t1, t2 *cktran) bool {
 	return t1.end > t2.start && t2.end > t1.start
 }
 
+// cleanEnded removes ended transactions
+// that finished before the earliest outstanding start time.
 func (ck *Check) cleanEnded() {
 	// find oldest start of non-ended (would be faster with a heap)
 	if ck.oldest == ints.MaxInt {
@@ -62,13 +167,17 @@ func (ck *Check) cleanEnded() {
 				ck.oldest = t.start
 			}
 		}
-		// fmt.Println("OLDEST", ck.oldest)
+		trace("OLDEST", ck.oldest)
 	}
 	// remove any ended transactions older than this
 	for tn, t := range ck.trans {
 		if t.end != ints.MaxInt && t.end < ck.oldest {
-			// fmt.Println("REMOVE", tn, "->", t.end)
+			trace("REMOVE", tn, "->", t.end)
 			delete(ck.trans, tn)
 		}
 	}
+}
+
+func trace(args ...interface{}) {
+	// fmt.Println(args...) // comment out to disable tracing
 }
