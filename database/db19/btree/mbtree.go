@@ -5,6 +5,7 @@ package btree
 
 // mbtree is a specialized in-memory btree with a max size and number of levels.
 // Nodes are fixed size to reduce allocation and bounds checks.
+// ordset and ranges use variations of this code.
 type mbtree struct {
 	tranNum int
 	// tree is not embedded since it's not needed when small
@@ -45,27 +46,32 @@ func newMbtree(tranNum int) *mbtree {
 //-------------------------------------------------------------------
 
 func (mb *mbtree) Insert(key string, off uint64) {
+	leaf := &mb.leaf
+	if mb.tree != nil {
+		i := mb.tree.searchBinary(key)
+		leaf = mb.tree.slots[i-1].leaf
+	}
+	if leaf.size >= mSize {
+		mb.split(leaf, key)
+		i := mb.tree.searchBinary(key)
+		leaf = mb.tree.slots[i-1].leaf
+	}
+	leaf.insert(key, off)
+}
+
+func (leaf *mbLeaf) insert(key string, off uint64) {
+	i := leaf.searchBinary(key)
+	// i is either leaf.size or points to first slot > key
+	copy(leaf.slots[i+1:], leaf.slots[i:])
+	leaf.slots[i].key, leaf.slots[i].off = key, off
+	leaf.size++
+}
+
+func (mb *mbtree) split(leaf *mbLeaf, key string) {
 	if mb.tree == nil && mb.leaf.size == mSize {
 		mb.tree = &mbTreeNode{size: 1}
 		mb.tree.slots[0].leaf = &mb.leaf
 	}
-	if mb.tree != nil {
-		mb.tree.insert(key, off)
-	} else {
-		mb.leaf.insert(mb.tree, key, off)
-	}
-}
-
-func (leaf *mbLeaf) insert(tree *mbTreeNode, key string, off uint64) {
-	if leaf.size < mSize {
-		leaf.insert2(key, off)
-	} else {
-		leaf.split(tree, key)
-		tree.insert(key, off)
-	}
-}
-
-func (leaf *mbLeaf) split(tree *mbTreeNode, key string) {
 	var left int
 	if key > leaf.slots[mSize-1].key {
 		left = (mSize * 3) / 4
@@ -78,24 +84,10 @@ func (leaf *mbLeaf) split(tree *mbTreeNode, key string) {
 	leaf2 := &mbLeaf{size: right}
 	copy(leaf2.slots[:], leaf.slots[left:])
 	leaf.size = left
-	tree.insert2(leaf2.slots[0].key, leaf2)
+	mb.tree.insert(leaf2.slots[0].key, leaf2)
 }
 
-func (leaf *mbLeaf) insert2(key string, off uint64) {
-	i := leaf.searchBinary(key)
-	// i is either leaf.size or points to first slot > key
-	copy(leaf.slots[i+1:], leaf.slots[i:])
-	leaf.slots[i].key, leaf.slots[i].off = key, off
-	leaf.size++
-}
-
-func (tree *mbTreeNode) insert(key string, off uint64) {
-	i := tree.searchBinary(key)
-	tree.slots[i-1].leaf.insert(tree, key, off)
-}
-
-// insert2 inserts a key & leaf into the tree node
-func (tree *mbTreeNode) insert2(key string, leaf *mbLeaf) {
+func (tree *mbTreeNode) insert(key string, leaf *mbLeaf) {
 	i := tree.searchBinary(key)
 	copy(tree.slots[i+1:], tree.slots[i:])
 	tree.slots[i].key, tree.slots[i].leaf = key, leaf

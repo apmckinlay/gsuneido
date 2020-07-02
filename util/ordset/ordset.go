@@ -8,6 +8,7 @@ import "github.com/apmckinlay/gsuneido/util/str"
 // Set is an ordered set of strings.
 // It uses a specialized in-memory btree with a max size and number of levels.
 // Nodes are fixed size to reduce allocation and bounds checks.
+// ranges and mbtree use variations of this code.
 type Set struct {
 	// tree is not embedded since it's not needed when small
 	tree *treeNode
@@ -39,27 +40,32 @@ type treeSlot struct {
 
 func (set *Set) Insert(key string) {
 	//TODO ignore duplicates
+	leaf := &set.leaf
+	if set.tree != nil {
+		i := set.tree.searchBinary(key)
+		leaf = set.tree.slots[i-1].leaf
+	}
+	if leaf.size >= nodeSize {
+		set.split(leaf, key)
+		i := set.tree.searchBinary(key)
+		leaf = set.tree.slots[i-1].leaf
+	}
+	leaf.insert(key)
+}
+
+func (leaf *leafNode) insert(key string) {
+	i := leaf.searchBinary(key)
+	// i is either leaf.size or points to first slot > key
+	copy(leaf.slots[i+1:], leaf.slots[i:])
+	leaf.slots[i] = key
+	leaf.size++
+}
+
+func (set *Set) split(leaf *leafNode, key string) {
 	if set.tree == nil && set.leaf.size == nodeSize {
 		set.tree = &treeNode{size: 1}
 		set.tree.slots[0].leaf = &set.leaf
 	}
-	if set.tree != nil {
-		set.tree.insert(key)
-	} else {
-		set.leaf.insert(set.tree, key)
-	}
-}
-
-func (leaf *leafNode) insert(tree *treeNode, key string) {
-	if leaf.size < nodeSize {
-		leaf.insert2(key)
-	} else {
-		leaf.split(tree, key)
-		tree.insert(key)
-	}
-}
-
-func (leaf *leafNode) split(tree *treeNode, key string) {
 	var left int
 	if key > leaf.slots[nodeSize-1] {
 		left = (nodeSize * 3) / 4
@@ -72,24 +78,10 @@ func (leaf *leafNode) split(tree *treeNode, key string) {
 	leaf2 := &leafNode{size: right}
 	copy(leaf2.slots[:], leaf.slots[left:])
 	leaf.size = left
-	tree.insert2(leaf2.slots[0], leaf2)
+	set.tree.insert(leaf2.slots[0], leaf2)
 }
 
-func (leaf *leafNode) insert2(key string) {
-	i := leaf.searchBinary(key)
-	// i is either leaf.size or points to first slot > key
-	copy(leaf.slots[i+1:], leaf.slots[i:])
-	leaf.slots[i] = key
-	leaf.size++
-}
-
-func (tree *treeNode) insert(key string) {
-	i := tree.searchBinary(key)
-	tree.slots[i-1].leaf.insert(tree, key)
-}
-
-// insert2 inserts a key & leaf into the tree node
-func (tree *treeNode) insert2(key string, leaf *leafNode) {
+func (tree *treeNode) insert(key string, leaf *leafNode) {
 	i := tree.searchBinary(key)
 	copy(tree.slots[i+1:], tree.slots[i:])
 	tree.slots[i].key, tree.slots[i].leaf = key, leaf
