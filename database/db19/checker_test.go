@@ -40,23 +40,21 @@ func TestCheckerStartStop(*testing.T) {
 }
 
 func TestCheckerActions(t *testing.T) {
-	// // delete
-	script(t, "1d1 2d2 1c 2c")
-	script(t, "1d1 2d2 1c 2a")
-	script(t, "1d1 2d2 1a 2c")
-	script(t, "1d1 2d2 1a 2a")
+	// writes
+	script(t, "1w1 2w2 1c 2c")
+	script(t, "1w4 1w5 2w6 2w7 1c 2c")
+	script(t, "1w1 2w2 1c 2a")
+	script(t, "1w1 2w2 1a 2c")
+	script(t, "1w1 2w2 1a 2a")
 	// conflict
-	script(t, "1d1 1d2 2d3 2d1 1a 2a")
-	script(t, "1d1 2d1 1a 2c")
-	script(t, "1d1 2d1 1c 2C")
-	script(t, "1d1 2d1 1c 2A")
+	script(t, "1w1 1w2 2w3 2w1 1a 2a")
+	script(t, "1w1 2w1 1a 2c")
+	script(t, "1w1 2w1 1c 2C")
+	script(t, "1w1 2w1 1c 2A")
+	script(t, "1w4 1w5 2w3 2w5 1c 2A")
 	// conflict with ended
-	script(t, "1d1 1c 2D1 2C")
-	script(t, "2d1 2c 1D1 1C")
-
-	// output
-	script(t, "1o4 1o5 2o6 2o7 1c 2c")
-	script(t, "1o4 1o5 2o3 2o5 1c 2A")
+	script(t, "1w1 1c 2W1 2C")
+	script(t, "2w1 2c 1W1 1C")
 }
 
 func script(t *testing.T, s string) {
@@ -77,17 +75,11 @@ func script(t *testing.T, s string) {
 	for len(s) > 0 {
 		t := ts[s[0]-'1']
 		switch s[1] {
-		case 'd':
-			ok(ck.Delete(t, "mytable", uint64(s[2]-'0')))
+		case 'w':
+			ok(ck.Write(t, "mytable", []string{"", s[2:3]}))
 			s = s[1:]
-		case 'D':
-			fail(ck.Delete(t, "mytable", uint64(s[2]-'0')))
-			s = s[1:]
-		case 'o':
-			ok(ck.Output(t, "mytable", 3, s[2:3]))
-			s = s[1:]
-		case 'O':
-			fail(ck.Output(t, "mytable", 3, s[2:3]))
+		case 'W':
+			fail(ck.Write(t, "mytable", []string{"", s[2:3]}))
 			s = s[1:]
 		case 'c':
 			ok(ck.Commit(t))
@@ -114,14 +106,7 @@ func (t *cktran) String() string {
 	fmt.Fprintln(b)
 	for name, tbl := range t.tables {
 		fmt.Fprintln(b, "    ", name)
-		if len(tbl.deletes) > 0 {
-			fmt.Fprint(b, "        deletes")
-			for off := range tbl.deletes {
-				fmt.Fprint(b, " ", off)
-			}
-			fmt.Fprintln(b)
-		}
-		for i, set := range tbl.outputs {
+		for i, set := range tbl.writes {
 			if set != nil {
 				fmt.Fprintln(b, "        index", i, ":", set.String())
 			}

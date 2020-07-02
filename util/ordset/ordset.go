@@ -1,7 +1,7 @@
 // Copyright Suneido Software Corp. All rights reserved.
 // Governed by the MIT license found in the LICENSE file.
 
-package ordered
+package ordset
 
 import "github.com/apmckinlay/gsuneido/util/str"
 
@@ -38,6 +38,7 @@ type treeSlot struct {
 //-------------------------------------------------------------------
 
 func (set *Set) Insert(key string) {
+	//TODO ignore duplicates
 	if set.tree == nil && set.leaf.size == nodeSize {
 		set.tree = &treeNode{size: 1}
 		set.tree.slots[0].leaf = &set.leaf

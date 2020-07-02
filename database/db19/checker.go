@@ -5,10 +5,10 @@ package db19
 
 import (
 	"github.com/apmckinlay/gsuneido/util/ints"
-	"github.com/apmckinlay/gsuneido/util/ordered"
+	"github.com/apmckinlay/gsuneido/util/ordset"
 )
 
-type Set = ordered.Set
+type Set = ordset.Set
 
 // Check holds the data for the transaction conflict checker.
 // Checking is designed to be single threaded i.e. run in its own goroutine.
@@ -37,9 +37,12 @@ type cktran struct {
 }
 
 type cktbl struct {
-	deletes map[uint64]void
-	outputs ckout
+	// writes tracks outputs, updates, and deletes
+	writes ckwrites
+	//TODO reads
 }
+
+type ckwrites []*Set
 
 func NewCheck() *Check {
 	return &Check{trans: make(map[int]*cktran), oldest: ints.MaxInt}
@@ -57,9 +60,10 @@ func (ck *Check) next() int {
 	return ck.seq
 }
 
-// Delete adds a delete action
-func (ck *Check) Delete(tn int, table string, off uint64) bool {
-	trace("T", tn, "delete", table, "offset", off)
+// Write adds output/update/delete actions.
+// Updates require two calls, one with the from keys, another with the to keys.
+func (ck *Check) Write(tn int, table string, keys []string) bool {
+	trace("T", tn, "output", table, "keys", keys)
 	// check overlapping transactions
 	t, ok := ck.trans[tn]
 	if !ok {
@@ -68,9 +72,11 @@ func (ck *Check) Delete(tn int, table string, off uint64) bool {
 	for _, t2 := range ck.trans {
 		if overlap(t, t2) {
 			if tbl, ok := t2.tables[table]; ok {
-				if _, ok := tbl.deletes[off]; ok {
-					if !ck.addConflict(t, t2) {
-						return false // other tran is already committed
+				for i, key := range keys {
+					if key != "" && tbl.writes.Contains(i, key) {
+						if !ck.addConflict(t, t2) {
+							return false // other tran is already committed
+						}
 					}
 				}
 			}
@@ -82,49 +88,17 @@ func (ck *Check) Delete(tn int, table string, off uint64) bool {
 		tbl = &cktbl{}
 		t.tables[table] = tbl
 	}
-	if tbl.deletes == nil {
-		tbl.deletes = make(map[uint64]void)
+	for i, key := range keys {
+		tbl.writes = tbl.writes.With(i, key)
 	}
-	tbl.deletes[off] = void{}
 	return true
 }
 
-// Output adds an output action
-func (ck *Check) Output(tn int, table string, index int, key string) bool {
-	trace("T", tn, "output", table, "index", index, "key", key)
-	// check overlapping transactions
-	t, ok := ck.trans[tn]
-	if !ok {
-		return false // it's gone, presumably aborted
-	}
-	for _, t2 := range ck.trans {
-		if overlap(t, t2) {
-			if tbl, ok := t2.tables[table]; ok {
-				if tbl.outputs.Contains(index, key) {
-					if !ck.addConflict(t, t2) {
-						return false // other tran is already committed
-					}
-				}
-			}
-		}
-	}
-	// save action in this transaction
-	tbl, ok := t.tables[table]
-	if !ok {
-		tbl = &cktbl{}
-		t.tables[table] = tbl
-	}
-	tbl.outputs = tbl.outputs.With(index, key)
-	return true
-}
-
-type ckout []*Set
-
-func (o ckout) Contains(index int, key string) bool {
+func (o ckwrites) Contains(index int, key string) bool {
 	return index < len(o) && o[index].Contains(key)
 }
 
-func (o ckout) With(index int, key string) ckout {
+func (o ckwrites) With(index int, key string) ckwrites {
 	for len(o) <= index {
 		o = append(o, nil)
 	}
