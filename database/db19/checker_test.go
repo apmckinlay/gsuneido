@@ -40,6 +40,7 @@ func TestCheckerStartStop(*testing.T) {
 }
 
 func TestCheckerActions(t *testing.T) {
+	checkerAbortT1 = true
 	// writes
 	script(t, "1w1 2w2 1c 2c")
 	script(t, "1w4 1w5 2w6 2w7 1c 2c")
@@ -47,24 +48,25 @@ func TestCheckerActions(t *testing.T) {
 	script(t, "1w1 2w2 1a 2c")
 	script(t, "1w1 2w2 1a 2a")
 	// conflict
-	script(t, "1w1 1w2 2w3 2w1 1a 2a")
-	script(t, "1w1 2w1 1a 2c")
-	script(t, "1w1 2w1 1c 2C")
-	script(t, "1w1 2w1 1c 2A")
-	script(t, "1w4 1w5 2w3 2w5 1c 2A")
+	script(t, "1w1 2W1 1c")
+	script(t, "1w1 1a 2w1 2c")
+	script(t, "1w4 1w5 2w3 2W5")
 	// conflict with ended
-	script(t, "1w1 1c 2W1 2C")
+	script(t, "1w1 1c 2W1")
 	script(t, "2w1 2c 1W1 1C")
 }
 
 func script(t *testing.T, s string) {
+	t.Helper()
 	ok := func(result bool) {
+		t.Helper()
 		if result != true {
 			t.Log("incorrect at:", s)
 			t.FailNow()
 		}
 	}
 	fail := func(result bool) {
+		t.Helper()
 		if result != false {
 			t.Log("incorrect at:", s)
 			t.FailNow()

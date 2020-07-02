@@ -4,23 +4,24 @@
 package db19
 
 import (
+	"math/rand"
+
 	"github.com/apmckinlay/gsuneido/util/ints"
 	"github.com/apmckinlay/gsuneido/util/ordset"
+	"github.com/apmckinlay/gsuneido/util/verify"
 )
 
+// Need to use an ordered set so that reads can check for a range
 type Set = ordset.Set
 
 // Check holds the data for the transaction conflict checker.
 // Checking is designed to be single threaded i.e. run in its own goroutine.
-// It is intended to run asynchronously, i.e. not waiting for results.
+// It is intended to run asynchronously, i.e. callers not waiting for results.
 // This allow more concurrency (overlap) with user code.
 // Actions are checked as they are done, incrementally
 // A conflict with a completed transaction aborts the current transaction.
 // A conflict with an outstanding (not completed) transaction
-// does not immediately abort either transaction.
-// The two transactions are marked as mutually conflicting.
-// Whichever one commits first will succeed and the other will be aborted.
-// Or if one aborts, the other can commit.
+// randomly aborts one of the two transactions.
 // The checker serializes transaction commits.
 // A single sequence counter is used to assign unique start and end values.
 type Check struct {
@@ -30,10 +31,9 @@ type Check struct {
 }
 
 type cktran struct {
-	start     int
-	end       int
-	tables    map[string]*cktbl
-	conflicts []*cktran
+	start  int
+	end    int
+	tables map[string]*cktbl
 }
 
 type cktbl struct {
@@ -69,20 +69,25 @@ func (ck *Check) Write(tn int, table string, keys []string) bool {
 	if !ok {
 		return false // it's gone, presumably aborted
 	}
+	verify.That(!t.isEnded())
 	for _, t2 := range ck.trans {
 		if overlap(t, t2) {
 			if tbl, ok := t2.tables[table]; ok {
 				for i, key := range keys {
 					if key != "" && tbl.writes.Contains(i, key) {
-						if !ck.addConflict(t, t2) {
-							return false // other tran is already committed
+						if ck.abort1of(t, t2) {
+							return false // this transaction got aborted
 						}
 					}
 				}
 			}
 		}
 	}
-	// save action in this transaction
+	t.saveWrite(table, keys)
+	return true
+}
+
+func (t *cktran) saveWrite(table string, keys []string) {
 	tbl, ok := t.tables[table]
 	if !ok {
 		tbl = &cktbl{}
@@ -91,7 +96,6 @@ func (ck *Check) Write(tn int, table string, keys []string) bool {
 	for i, key := range keys {
 		tbl.writes = tbl.writes.With(i, key)
 	}
-	return true
 }
 
 func (o ckwrites) Contains(index int, key string) bool {
@@ -109,40 +113,31 @@ func (o ckwrites) With(index int, key string) ckwrites {
 	return o
 }
 
-// addConflict makes t1 and t2 mutually conflicting
-func (ck *Check) addConflict(t1, t2 *cktran) bool {
+// checkerAbortT1 is used by tests to avoid randomness
+var checkerAbortT1 = false
+
+// abort1of aborts one of t1 and t2.
+// If t2 is committed, abort t1, otherwise choose randomly.
+// It returns true if t1 is aborted, false if t2 is aborted.
+func (ck *Check) abort1of(t1, t2 *cktran) bool {
 	trace("conflict with", t2)
-	if t2.isEnded() {
+	if t2.isEnded() || checkerAbortT1 || rand.Intn(2) == 1 {
 		ck.Abort(t1.start)
-		return false
+		return true
 	}
-	t1.conflicts = append(t1.conflicts, t2)
-	t2.conflicts = append(t2.conflicts, t1)
-	return true
+	ck.Abort(t2.start)
+	return false
 }
 
 func (t *cktran) isEnded() bool {
 	return t.end != ints.MaxInt
 }
 
-// delConflict deletes t2 from t1's conflicts
-func delConflict(t1, t2 *cktran) {
-	for i, t := range t1.conflicts {
-		if t == t2 && t.end == ints.MaxInt {
-			last := len(t1.conflicts) - 1
-			t1.conflicts[i] = t1.conflicts[last]
-			t1.conflicts = t1.conflicts[:last]
-		}
-	}
-}
-
 // Abort cancels a transaction.
 // It returns false if the transaction is not found (e.g. already aborted).
-// Conflicts with this transaction are removed from the conflicting transactions.
 func (ck *Check) Abort(tn int) bool {
 	trace("abort", tn)
-	t, ok := ck.trans[tn]
-	if !ok {
+	if _, ok := ck.trans[tn]; !ok {
 		return false
 	}
 	delete(ck.trans, tn)
@@ -150,16 +145,12 @@ func (ck *Check) Abort(tn int) bool {
 		ck.oldest = ints.MaxInt // need to find the new oldest
 	}
 	ck.cleanEnded()
-	// remove conflicts
-	for _, t2 := range t.conflicts {
-		delConflict(t2, t)
-	}
 	return true
 }
 
 // Commit finishes a transaction.
 // It returns false if the transaction is not found (e.g. already aborted).
-// Conflicting transactions are aborted.
+// No additional checking required since actions have already been checked.
 func (ck *Check) Commit(tn int) bool {
 	trace("commit", tn)
 	t, ok := ck.trans[tn]
@@ -171,10 +162,6 @@ func (ck *Check) Commit(tn int) bool {
 		ck.oldest = ints.MaxInt // need to find the new oldest
 	}
 	ck.cleanEnded()
-	// abort conflicting
-	for _, t2 := range t.conflicts {
-		ck.Abort(t2.start)
-	}
 	return true
 }
 
