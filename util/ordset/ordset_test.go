@@ -12,7 +12,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
-func TestSetRandom(t *testing.T) {
+func TestRandom(t *testing.T) {
 	var nGenerate = 8
 	var nShuffle = 8
 	if testing.Short() {
@@ -38,7 +38,7 @@ func TestSetRandom(t *testing.T) {
 	}
 }
 
-func TestSetUnevenSplit(t *testing.T) {
+func TestUnevenSplit(t *testing.T) {
 	const n = nodeSize * 87 // won't fit without uneven splits
 	data := make([]string, n)
 	randKey := str.UniqueRandom(3, 10)
@@ -58,6 +58,35 @@ func TestSetUnevenSplit(t *testing.T) {
 	m.checkData(t, data)
 }
 
+func TestAnyInRange(t *testing.T) {
+	const n = nodeSize * 80
+	data := make([]string, n)
+	randKey := str.UniqueRandom(3, 10)
+	var x Set
+	for i := 0; i < n; i++ {
+		data[i] = randKey()
+		x.Insert(data[i])
+	}
+	yes := func(d int) {
+		Assert(t).True(x.AnyInRange(data[d], data[d]))
+		Assert(t).True(x.AnyInRange(smaller(data[d]), data[d]))
+		Assert(t).True(x.AnyInRange(data[d], bigger(data[d])))
+		Assert(t).True(x.AnyInRange(smaller(data[d]), bigger(data[d])))
+	}
+	sort.Strings(data)
+	yes(0)
+	yes(n - 1)
+	const ntimes = 1000
+	for i := 0; i < ntimes; i++ {
+		d := rand.Intn(n - 1)
+		Assert(t).False(x.AnyInRange(bigger(data[d]), smaller(data[d+1])))
+		yes(rand.Intn(n))
+		d = rand.Intn(n - 10)
+		e := d + rand.Intn(10)
+		Assert(t).True(x.AnyInRange(smaller(data[d]), bigger(data[e])))
+	}
+}
+
 //-------------------------------------------------------------------
 
 func (set *Set) checkData(t *testing.T, data []string) {
@@ -73,5 +102,6 @@ func bigger(s string) string {
 }
 
 func smaller(s string) string {
-	return s[:len(s)-1] + "~"
+	last := len(s) - 1
+	return s[:last] + string(s[last]-1) + " "
 }

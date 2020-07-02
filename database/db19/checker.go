@@ -60,18 +60,44 @@ func (ck *Check) next() int {
 	return ck.seq
 }
 
-// Write adds output/update/delete actions.
-// Updates require two calls, one with the from keys, another with the to keys.
-func (ck *Check) Write(tn int, table string, keys []string) bool {
-	trace("T", tn, "output", table, "keys", keys)
-	// check overlapping transactions
+// Read adds a read action.
+// Will conflict if another transaction has a write within the range.
+func (ck *Check) Read(tn int, table string, index int, from, to string) bool {
+	trace("T", tn, "read", table, "index", index, "from", from, "to", to)
 	t, ok := ck.trans[tn]
 	if !ok {
 		return false // it's gone, presumably aborted
 	}
 	verify.That(!t.isEnded())
+	// check against overlapping transactions
 	for _, t2 := range ck.trans {
-		if overlap(t, t2) {
+		if t2 != t && overlap(t, t2) {
+			if tbl, ok := t2.tables[table]; ok {
+				if tbl.writes.AnyInRange(index, from, to) {
+					if ck.abort1of(t, t2) {
+						return false // this transaction got aborted
+					}
+				}
+			}
+		}
+	}
+	//TODO saveRead
+	return true
+}
+
+// Write adds output/update/delete actions.
+// Updates require two calls, one with the from keys, another with the to keys.
+// NOTE: Even if an update doesn't change a key, it still has to register it.
+func (ck *Check) Write(tn int, table string, keys []string) bool {
+	trace("T", tn, "write", table, "keys", keys)
+	t, ok := ck.trans[tn]
+	if !ok {
+		return false // it's gone, presumably aborted
+	}
+	verify.That(!t.isEnded())
+	// check against overlapping transactions
+	for _, t2 := range ck.trans {
+		if t2 != t && overlap(t, t2) {
 			if tbl, ok := t2.tables[table]; ok {
 				for i, key := range keys {
 					if key != "" && tbl.writes.Contains(i, key) {
@@ -100,6 +126,13 @@ func (t *cktran) saveWrite(table string, keys []string) {
 
 func (o ckwrites) Contains(index int, key string) bool {
 	return index < len(o) && o[index].Contains(key)
+}
+
+func (o ckwrites) AnyInRange(index int, from, to string) bool {
+	if index >= len(o) {
+		return false
+	}
+	return o[index].AnyInRange(from, to)
 }
 
 func (o ckwrites) With(index int, key string) ckwrites {

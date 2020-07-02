@@ -54,6 +54,9 @@ func TestCheckerActions(t *testing.T) {
 	// conflict with ended
 	script(t, "1w1 1c 2W1")
 	script(t, "2w1 2c 1W1 1C")
+
+	// reads
+	script(t, "1w4 1r68 2r77 2R35")
 }
 
 func script(t *testing.T, s string) {
@@ -83,6 +86,12 @@ func script(t *testing.T, s string) {
 		case 'W':
 			fail(ck.Write(t, "mytable", []string{"", s[2:3]}))
 			s = s[1:]
+		case 'r':
+			ok(ck.Read(t, "mytable", 1, s[2:3], s[3:4]))
+			s = s[2:]
+		case 'R':
+			fail(ck.Read(t, "mytable", 1, s[2:3], s[3:4]))
+			s = s[2:]
 		case 'c':
 			ok(ck.Commit(t))
 		case 'C':
@@ -110,7 +119,8 @@ func (t *cktran) String() string {
 		fmt.Fprintln(b, "    ", name)
 		for i, set := range tbl.writes {
 			if set != nil {
-				fmt.Fprintln(b, "        index", i, ":", set.String())
+				fmt.Fprintln(b, "        index", i)
+				fmt.Fprintln(b, "            writes", set.String())
 			}
 		}
 	}

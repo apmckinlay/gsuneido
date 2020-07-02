@@ -3,7 +3,9 @@
 
 package ordset
 
-import "github.com/apmckinlay/gsuneido/util/str"
+import (
+	"github.com/apmckinlay/gsuneido/util/str"
+)
 
 // Set is an ordered set of strings.
 // It uses a specialized in-memory btree with a max size and number of levels.
@@ -55,7 +57,6 @@ func (set *Set) Insert(key string) {
 
 func (leaf *leafNode) insert(key string) {
 	i := leaf.searchBinary(key)
-	// i is either leaf.size or points to first slot > key
 	copy(leaf.slots[i+1:], leaf.slots[i:])
 	leaf.slots[i] = key
 	leaf.size++
@@ -90,14 +91,20 @@ func (tree *treeNode) insert(key string, leaf *leafNode) {
 
 //-------------------------------------------------------------------
 
-func (set *Set) Delete(key string) bool {
-	leaf, i := set.search(key)
-	if leaf == nil || leaf.slots[i] != key {
+func (set *Set) AnyInRange(from, to string) bool {
+	if set == nil {
 		return false
 	}
-	copy(leaf.slots[i:], leaf.slots[i+1:])
-	leaf.size--
-	return true
+	ti, leaf, li := set.search(from)
+	if li >= leaf.size {
+		if set.tree == nil || ti >= set.tree.size {
+			return false
+		}
+		// advance to next leaf
+		leaf = set.tree.slots[ti + 1].leaf
+		li = 0
+	}
+	return leaf.slots[li] <= to
 }
 
 //-------------------------------------------------------------------
@@ -106,20 +113,23 @@ func (set *Set) Contains(key string) bool {
 	if set == nil {
 		return false
 	}
-	leaf, _ := set.search(key)
-	return leaf != nil
+	_, leaf, li := set.search(key)
+	return li < leaf.size && leaf.slots[li] == key
 }
 
-func (set *Set) search(key string) (*leafNode, int) {
+func (set *Set) search(key string) (int, *leafNode, int) {
 	if set.tree != nil {
 		return set.tree.search(key)
 	}
-	return set.leaf.search(key)
+	li := set.leaf.searchBinary(key)
+	return 0, &set.leaf, li
 }
 
-func (tree *treeNode) search(key string) (*leafNode, int) {
-	i := tree.searchBinary(key)
-	return tree.slots[i-1].leaf.search(key)
+func (tree *treeNode) search(key string) (int, *leafNode, int) {
+	ti := tree.searchBinary(key) - 1
+	leaf := tree.slots[ti].leaf
+	li := leaf.searchBinary(key)
+	return ti, leaf, li
 }
 
 func (tree *treeNode) searchBinary(key string) int {
@@ -135,14 +145,7 @@ func (tree *treeNode) searchBinary(key string) int {
 	return i
 }
 
-func (leaf *leafNode) search(key string) (*leafNode, int) {
-	i := leaf.searchBinary(key)
-	if i >= leaf.size || leaf.slots[i] != key {
-		return nil, 0
-	}
-	return leaf, i
-}
-
+// searchBinary returns the index of the first item >= val, or leaf.size
 func (leaf *leafNode) searchBinary(key string) int {
 	i, j := 0, leaf.size
 	for i < j {
