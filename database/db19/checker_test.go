@@ -57,6 +57,7 @@ func TestCheckerActions(t *testing.T) {
 
 	// reads
 	script(t, "1w4 1r68 2r77 2R35")
+	script(t, "1r35 2W4")
 }
 
 func script(t *testing.T, s string) {

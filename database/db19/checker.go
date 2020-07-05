@@ -8,11 +8,16 @@ import (
 
 	"github.com/apmckinlay/gsuneido/util/ints"
 	"github.com/apmckinlay/gsuneido/util/ordset"
+	"github.com/apmckinlay/gsuneido/util/ranges"
 	"github.com/apmckinlay/gsuneido/util/verify"
 )
 
+//TODO abort long transactions
+
 // Need to use an ordered set so that reads can check for a range
 type Set = ordset.Set
+
+type Ranges = ranges.Ranges
 
 // Check holds the data for the transaction conflict checker.
 // Checking is designed to be single threaded i.e. run in its own goroutine.
@@ -39,10 +44,11 @@ type cktran struct {
 type cktbl struct {
 	// writes tracks outputs, updates, and deletes
 	writes ckwrites
-	//TODO reads
+	reads  ckreads
 }
 
 type ckwrites []*Set
+type ckreads []*Ranges
 
 func NewCheck() *Check {
 	return &Check{trans: make(map[int]*cktran), oldest: ints.MaxInt}
@@ -73,7 +79,7 @@ func (ck *Check) Read(tn int, table string, index int, from, to string) bool {
 	for _, t2 := range ck.trans {
 		if t2 != t && overlap(t, t2) {
 			if tbl, ok := t2.tables[table]; ok {
-				if tbl.writes.AnyInRange(index, from, to) {
+				if tbl.writes.anyInRange(index, from, to) {
 					if ck.abort1of(t, t2) {
 						return false // this transaction got aborted
 					}
@@ -81,8 +87,32 @@ func (ck *Check) Read(tn int, table string, index int, from, to string) bool {
 			}
 		}
 	}
-	//TODO saveRead
+	t.saveRead(table, index, from, to)
 	return true
+}
+
+func (t *cktran) saveRead(table string, index int, from,to string) {
+	tbl, ok := t.tables[table]
+	if !ok {
+		tbl = &cktbl{}
+		t.tables[table] = tbl
+	}
+		tbl.reads = tbl.reads.with(index, from, to)
+}
+
+func (cr ckreads) with(index int, from,to string) ckreads {
+	for len(cr) <= index {
+		cr = append(cr, nil)
+	}
+	if cr[index] == nil {
+		cr[index] = &Ranges{}
+	}
+	cr[index].Insert(from, to)
+	return cr
+}
+
+func (cr ckreads) contains(index int, key string) bool {
+	return index < len(cr) && cr[index].Contains(key)
 }
 
 // Write adds output/update/delete actions.
@@ -100,7 +130,10 @@ func (ck *Check) Write(tn int, table string, keys []string) bool {
 		if t2 != t && overlap(t, t2) {
 			if tbl, ok := t2.tables[table]; ok {
 				for i, key := range keys {
-					if key != "" && tbl.writes.Contains(i, key) {
+					// check against other writes
+					if key != "" &&
+						(tbl.writes.contains(i, key) ||
+						tbl.reads.contains(i, key)) {
 						if ck.abort1of(t, t2) {
 							return false // this transaction got aborted
 						}
@@ -120,30 +153,30 @@ func (t *cktran) saveWrite(table string, keys []string) {
 		t.tables[table] = tbl
 	}
 	for i, key := range keys {
-		tbl.writes = tbl.writes.With(i, key)
+		tbl.writes = tbl.writes.with(i, key)
 	}
 }
 
-func (o ckwrites) Contains(index int, key string) bool {
-	return index < len(o) && o[index].Contains(key)
+func (cw ckwrites) contains(index int, key string) bool {
+	return index < len(cw) && cw[index].Contains(key)
 }
 
-func (o ckwrites) AnyInRange(index int, from, to string) bool {
-	if index >= len(o) {
+func (cw ckwrites) anyInRange(index int, from, to string) bool {
+	if index >= len(cw) {
 		return false
 	}
-	return o[index].AnyInRange(from, to)
+	return cw[index].AnyInRange(from, to)
 }
 
-func (o ckwrites) With(index int, key string) ckwrites {
-	for len(o) <= index {
-		o = append(o, nil)
+func (cw ckwrites) with(index int, key string) ckwrites {
+	for len(cw) <= index {
+		cw = append(cw, nil)
 	}
-	if o[index] == nil {
-		o[index] = &Set{}
+	if cw[index] == nil {
+		cw[index] = &Set{}
 	}
-	o[index].Insert(key)
-	return o
+	cw[index].Insert(key)
+	return cw
 }
 
 // checkerAbortT1 is used by tests to avoid randomness

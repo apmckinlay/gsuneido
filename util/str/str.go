@@ -204,3 +204,17 @@ func Subn(s string, i, n int) string {
 	}
 	return s[i : i+n]
 }
+
+func Min(s1, s2 string) string {
+	if s1 <= s2 {
+		return s1
+	}
+	return s2
+}
+
+func Max(s1, s2 string) string {
+	if s1 >= s2 {
+		return s1
+	}
+	return s2
+}
