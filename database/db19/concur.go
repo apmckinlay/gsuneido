@@ -4,7 +4,6 @@
 package db19
 
 import (
-	"fmt"
 	"time"
 )
 
@@ -54,7 +53,7 @@ loop:
 			Merge(tn)
 		case <-ticker.C:
 			// send ticks from here so we get back pressure
-			fmt.Println("Persist")
+			// fmt.Println("Persist")
 			c.persistChan <- void{}
 		}
 	}

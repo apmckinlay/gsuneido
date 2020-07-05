@@ -103,5 +103,5 @@ func bigger(s string) string {
 
 func smaller(s string) string {
 	last := len(s) - 1
-	return s[:last] + string(s[last]-1) + " "
+	return s[:last] + string(s[last]-1) + "~"
 }
