@@ -21,7 +21,7 @@ func TestCheckerStartStop(*testing.T) {
 	for i := 0; i < ntimes; i++ {
 		j := rand.Intn(ntrans)
 		if trans[j] == 0 {
-			trans[j] = ck.StartTran()
+			trans[j] = ck.StartTran().start
 		} else {
 			if rand.Intn(2) == 1 {
 				ck.Commit(trans[j])
@@ -77,7 +77,7 @@ func script(t *testing.T, s string) {
 		}
 	}
 	ck := NewCheck()
-	ts := []int{ck.StartTran(), ck.StartTran()}
+	ts := []int{ck.StartTran().start, ck.StartTran().start}
 	for len(s) > 0 {
 		t := ts[s[0]-'1']
 		switch s[1] {
@@ -109,7 +109,7 @@ func script(t *testing.T, s string) {
 	}
 }
 
-func (t *cktran) String() string {
+func (t *CkTran) String() string {
 	b := new(bytes.Buffer)
 	fmt.Fprint(b, "T", t.start)
 	if t.isEnded() {

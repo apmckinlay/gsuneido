@@ -5,6 +5,7 @@ package db19
 
 import (
 	"math/rand"
+	"sync/atomic"
 
 	"github.com/apmckinlay/gsuneido/util/ints"
 	"github.com/apmckinlay/gsuneido/util/ordset"
@@ -12,7 +13,9 @@ import (
 	"github.com/apmckinlay/gsuneido/util/verify"
 )
 
+//TODO limit max outstanding transactions
 //TODO abort long transactions
+//TODO return conflict info
 
 // Need to use an ordered set so that reads can check for a range
 type Set = ordset.Set
@@ -32,13 +35,15 @@ type Ranges = ranges.Ranges
 type Check struct {
 	seq    int
 	oldest int
-	trans  map[int]*cktran
+	trans  map[int]*CkTran
 }
 
-type cktran struct {
+type CkTran struct {
 	start  int
 	end    int
 	tables map[string]*cktbl
+	// aborted should be access atomically as a string
+	conflict atomic.Value
 }
 
 type cktbl struct {
@@ -51,14 +56,14 @@ type ckwrites []*Set
 type ckreads []*Ranges
 
 func NewCheck() *Check {
-	return &Check{trans: make(map[int]*cktran), oldest: ints.MaxInt}
+	return &Check{trans: make(map[int]*CkTran), oldest: ints.MaxInt}
 }
 
-func (ck *Check) StartTran() int {
+func (ck *Check) StartTran() *CkTran {
 	start := ck.next()
-	ck.trans[start] = &cktran{start: start, end: ints.MaxInt,
-		tables: make(map[string]*cktbl)}
-	return start
+	t := &CkTran{start: start, end: ints.MaxInt, tables: make(map[string]*cktbl)}
+	ck.trans[start] = t
+	return t
 }
 
 func (ck *Check) next() int {
@@ -91,16 +96,16 @@ func (ck *Check) Read(tn int, table string, index int, from, to string) bool {
 	return true
 }
 
-func (t *cktran) saveRead(table string, index int, from,to string) {
+func (t *CkTran) saveRead(table string, index int, from, to string) {
 	tbl, ok := t.tables[table]
 	if !ok {
 		tbl = &cktbl{}
 		t.tables[table] = tbl
 	}
-		tbl.reads = tbl.reads.with(index, from, to)
+	tbl.reads = tbl.reads.with(index, from, to)
 }
 
-func (cr ckreads) with(index int, from,to string) ckreads {
+func (cr ckreads) with(index int, from, to string) ckreads {
 	for len(cr) <= index {
 		cr = append(cr, nil)
 	}
@@ -116,7 +121,8 @@ func (cr ckreads) contains(index int, key string) bool {
 }
 
 // Write adds output/update/delete actions.
-// Updates require two calls, one with the from keys, another with the to keys.
+// Will conflict with another write to the same index/key or an overlapping read.
+// Updates require two calls, one with the old keys, another with the new keys.
 // NOTE: Even if an update doesn't change a key, it still has to register it.
 func (ck *Check) Write(tn int, table string, keys []string) bool {
 	trace("T", tn, "write", table, "keys", keys)
@@ -133,7 +139,7 @@ func (ck *Check) Write(tn int, table string, keys []string) bool {
 					// check against other writes
 					if key != "" &&
 						(tbl.writes.contains(i, key) ||
-						tbl.reads.contains(i, key)) {
+							tbl.reads.contains(i, key)) {
 						if ck.abort1of(t, t2) {
 							return false // this transaction got aborted
 						}
@@ -146,7 +152,7 @@ func (ck *Check) Write(tn int, table string, keys []string) bool {
 	return true
 }
 
-func (t *cktran) saveWrite(table string, keys []string) {
+func (t *CkTran) saveWrite(table string, keys []string) {
 	tbl, ok := t.tables[table]
 	if !ok {
 		tbl = &cktbl{}
@@ -185,7 +191,7 @@ var checkerAbortT1 = false
 // abort1of aborts one of t1 and t2.
 // If t2 is committed, abort t1, otherwise choose randomly.
 // It returns true if t1 is aborted, false if t2 is aborted.
-func (ck *Check) abort1of(t1, t2 *cktran) bool {
+func (ck *Check) abort1of(t1, t2 *CkTran) bool {
 	trace("conflict with", t2)
 	if t2.isEnded() || checkerAbortT1 || rand.Intn(2) == 1 {
 		ck.Abort(t1.start)
@@ -195,7 +201,7 @@ func (ck *Check) abort1of(t1, t2 *cktran) bool {
 	return false
 }
 
-func (t *cktran) isEnded() bool {
+func (t *CkTran) isEnded() bool {
 	return t.end != ints.MaxInt
 }
 
@@ -203,9 +209,11 @@ func (t *cktran) isEnded() bool {
 // It returns false if the transaction is not found (e.g. already aborted).
 func (ck *Check) Abort(tn int) bool {
 	trace("abort", tn)
-	if _, ok := ck.trans[tn]; !ok {
+	t, ok := ck.trans[tn]
+	if !ok {
 		return false
 	}
+	t.conflict.Store("conflict")
 	delete(ck.trans, tn)
 	if tn == ck.oldest {
 		ck.oldest = ints.MaxInt // need to find the new oldest
@@ -231,7 +239,7 @@ func (ck *Check) Commit(tn int) bool {
 	return true
 }
 
-func overlap(t1, t2 *cktran) bool {
+func overlap(t1, t2 *CkTran) bool {
 	return t1.end > t2.start && t2.end > t1.start
 }
 
