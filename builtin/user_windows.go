@@ -1206,7 +1206,7 @@ var _ = builtin6("TrackPopupMenuEx(hmenu, fuFlags, x, y, hwnd, lptpm)",
 		var p unsafe.Pointer
 		if !f.Equal(Zero) {
 			defer heap.FreeTo(heap.CurSize())
-			p := heap.Alloc(nTPMPARAMS)
+			p = heap.Alloc(nTPMPARAMS)
 			*(*TPMPARAMS)(p) = TPMPARAMS{
 				cbSize:    int32(nTPMPARAMS),
 				rcExclude: getRect(f, "rcExclude"),
