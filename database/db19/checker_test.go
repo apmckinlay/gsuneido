@@ -4,13 +4,29 @@
 package db19
 
 import (
-	"fmt"
 	"math/rand"
 	"strconv"
 	"sync"
 	"sync/atomic"
 	"testing"
+	"time"
+
+	. "github.com/apmckinlay/gsuneido/util/hamcrest"
 )
+
+func TestCheckerTimeout(t *testing.T) {
+	if testing.Short() {
+		return
+	}
+	MaxAge = 1
+	ck := NewChecker()
+	tran := ck.StartTran()
+	Assert(t).False(tran.Aborted())
+	time.Sleep(2 * time.Second)
+	Assert(t).True(tran.Aborted())
+	close(ck.c)
+}
+
 
 func TestCheckerRandom(*testing.T) {
 	ck := NewChecker()
@@ -32,8 +48,7 @@ func TestCheckerRandom(*testing.T) {
 	}
 	wg.Wait()
 	close(ck.c)
-	fmt.Println("commit", nCommit, "conflict", nConflict)
-	fmt.Println("maxTran", maxTran)
+	// fmt.Println("commit", nCommit, "conflict", nConflict)
 }
 
 var nCommit, nConflict int64

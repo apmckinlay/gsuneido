@@ -10,10 +10,10 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/apmckinlay/gsuneido/util/verify"
+	. "github.com/apmckinlay/gsuneido/util/hamcrest"
 )
 
-func TestCheckerStartStop(*testing.T) {
+func TestCheckStartStop(t *testing.T) {
 	ck := NewCheck()
 	const ntrans = 20
 	var trans [ntrans]int
@@ -36,11 +36,20 @@ func TestCheckerStartStop(*testing.T) {
 			ck.Commit(tn)
 		}
 	}
-	verify.That(len(ck.trans) == 0)
+	Assert(t).That(len(ck.trans), Equals(0))
 }
 
-func TestCheckerActions(t *testing.T) {
+func TestCheckLimit(t *testing.T) {
+	ck := NewCheck()
+	for i := 0; i < maxTrans; i++ {
+		Assert(t).True(ck.StartTran() != nil)
+	}
+	Assert(t).True(ck.StartTran() == nil)
+}
+
+func TestCheckActions(t *testing.T) {
 	checkerAbortT1 = true
+	defer func() { checkerAbortT1 = false }()
 	// writes
 	script(t, "1w1 2w2 1c 2c")
 	script(t, "1w4 1w5 2w6 2w7 1c 2c")
@@ -118,10 +127,14 @@ func (t *CkTran) String() string {
 	fmt.Fprintln(b)
 	for name, tbl := range t.tables {
 		fmt.Fprintln(b, "    ", name)
-		for i, set := range tbl.writes {
-			if set != nil {
-				fmt.Fprintln(b, "        index", i)
-				fmt.Fprintln(b, "            writes", set.String())
+		for i, writes := range tbl.writes {
+			if writes != nil {
+				fmt.Fprintln(b, "        writes", i, writes.String())
+			}
+		}
+		for i, reads := range tbl.reads {
+			if reads != nil {
+				fmt.Fprintln(b, "        reads", i, reads.String())
 			}
 		}
 	}

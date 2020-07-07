@@ -4,7 +4,7 @@
 package db19
 
 import (
-	"fmt"
+	"time"
 )
 
 type Checker struct {
@@ -91,26 +91,34 @@ func NewChecker() *Checker {
 
 func checker(c chan interface{}) {
 	ck := NewCheck()
-	for msg := range c {
-		switch msg := msg.(type) {
-		case *ckStart:
-			if len(ck.trans) > maxTran {
-				maxTran = len(ck.trans)
+	ticker := time.NewTicker(time.Second)
+	defer ticker.Stop()
+	for {
+		select {
+		case msg := <-c:
+			if msg == nil {
+				return // channel closed
 			}
-			msg.ret <- ck.StartTran()
-		case *ckRead:
-			ck.Read(msg.t.start, msg.table, msg.index, msg.from, msg.to)
-		case *ckWrite:
-			ck.Write(msg.t.start, msg.table, msg.keys)
-		case *ckAbort:
-			ck.Abort(msg.t.start)
-		case *ckCommit:
-			msg.ret <- ck.Commit(msg.t.start)
-		default:
-			panic("checker unknown message type")
+			ck.dispatch(msg)
+		case <-ticker.C:
+			ck.tick()
 		}
 	}
-	fmt.Println("trans", len(ck.trans))
 }
 
-var maxTran int
+func (ck *Check) dispatch(msg interface{}) {
+	switch msg := msg.(type) {
+	case *ckStart:
+		msg.ret <- ck.StartTran()
+	case *ckRead:
+		ck.Read(msg.t.start, msg.table, msg.index, msg.from, msg.to)
+	case *ckWrite:
+		ck.Write(msg.t.start, msg.table, msg.keys)
+	case *ckAbort:
+		ck.Abort(msg.t.start)
+	case *ckCommit:
+		msg.ret <- ck.Commit(msg.t.start)
+	default:
+		panic("checker unknown message type")
+	}
+}
