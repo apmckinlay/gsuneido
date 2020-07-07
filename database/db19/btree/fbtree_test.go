@@ -4,7 +4,10 @@
 package btree
 
 import (
+	"fmt"
 	"sort"
+	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/database/db19/stor"
@@ -32,9 +35,36 @@ func TestFbtreeIter(t *testing.T) {
 	i := 0
 	iter := fb.Iter()
 	for k, o, ok := iter(); ok; k, o, ok = iter() {
-		Assert(t).That(k, Equals(data[i]))
+		Assert(t).True(strings.HasPrefix(data[i], k))
 		Assert(t).That(o, Equals(i))
 		i++
 	}
 	Assert(t).That(i, Equals(n))
+}
+
+func TestFbtreeBuilder(t *testing.T) {
+	store := stor.HeapStor(8192)
+	bldr := newFbtreeBuilder(store)
+	limit := 999999
+	if testing.Short() {
+		limit = 199999
+	}
+	for i := 100000; i <= limit; i++ {
+		key := strconv.Itoa(i)
+		bldr.Add(key, uint64(i))
+	}
+	root, treeLevels := bldr.Finish()
+	fmt.Println("treeLevels", treeLevels, "nput", nput)
+
+	fb := OpenFbtree(store, root, treeLevels)
+	iter := fb.Iter()
+	for i := 100000; i <= limit; i++ {
+		key := strconv.Itoa(i)
+		k, o, ok := iter()
+		Assert(t).True(ok)
+		Assert(t).True(strings.HasPrefix(key, k))
+		Assert(t).That(o, Equals(i))
+	}
+	_,_,ok := iter()
+	Assert(t).False(ok)
 }

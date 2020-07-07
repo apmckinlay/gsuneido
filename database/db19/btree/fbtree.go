@@ -88,7 +88,7 @@ func (up *fbupdate) save2(depth int, nodeOff uint64) uint64 {
 			}
 		}
 	}
-	off := up.fb.putNode(node)
+	off := node.putNode(up.fb.store)
 	verify.That(up.canSkip(off))
 	return off
 }
@@ -110,8 +110,8 @@ func (up *fbupdate) canSkip(off uint64) bool {
 }
 
 // putNode stores the node with a leading uint16 size
-func (fb *fbtree) putNode(node fNode) uint64 {
-	off, buf := fb.store.AllocSized(len(node))
+func (node fNode) putNode(store *stor.Stor) uint64 {
+	off, buf := store.AllocSized(len(node))
 	copy(buf, node)
 	return off
 }
@@ -162,6 +162,9 @@ func (fb *fbtree) check1(depth int, offset uint64, key string) (count, size, nno
 
 type fbIter = func() (string, uint64, bool)
 
+// Iter returns a function that can be called to return consecutive entries.
+// NOTE: The returned key is only the known prefix.
+// (unlike mbtree which returns the actual key)
 func (fb *fbtree) Iter() fbIter {
 	var stack [maxlevels]*fnIter
 
@@ -177,8 +180,7 @@ func (fb *fbtree) Iter() fbIter {
 	return func() (string, uint64, bool) {
 		for {
 			if iter.next() {
-				off := iter.offset
-				return fb.getLeafKey(off), off, true // most common path
+				return iter.known, iter.offset, true // most common path
 			}
 			// end of leaf, go up the tree
 			i := fb.treeLevels - 1
@@ -224,4 +226,66 @@ func (fb *fbtree) print1(depth int, offset uint64) {
 				"("+fb.getLeafKey(offset)+")")
 		}
 	}
+}
+
+// ------------------------------------------------------------------
+
+// fbtreeBuilder is used to bulk load an fbtree.
+// Keys must be added in order.
+// The fbtree is built bottom up with no splitting or inserting.
+// All nodes will be "full" except for the right hand edge.
+type fbtreeBuilder struct {
+	levels []*level // leaf is [0]
+	prev   string
+	store  *stor.Stor
+}
+
+type level struct {
+	first   string
+	builder fNodeBuilder
+}
+
+func newFbtreeBuilder(store *stor.Stor) *fbtreeBuilder {
+	return &fbtreeBuilder{store: store, levels: []*level{{}}}
+}
+
+func (fb *fbtreeBuilder) Add(key string, off uint64) {
+	if key <= fb.prev {
+		panic("fbtreeBuilder keys must be inserted in order, without duplicates")
+	}
+	fb.insert(0, key, off)
+	fb.prev = key
+}
+
+var nput = 0
+
+func (fb *fbtreeBuilder) insert(li int, key string, off uint64) {
+	if li >= len(fb.levels) {
+		fb.levels = append(fb.levels, &level{})
+	}
+	lev := fb.levels[li]
+	if len(lev.builder.fe) > MaxNodeSize {
+		// flush full node to stor
+		nput++
+		offNode := lev.builder.fe.putNode(fb.store)
+		fb.insert(li+1, lev.first, offNode) // recurse
+		*lev = level{}
+	}
+	if len(lev.builder.fe) == 0 {
+		lev.first = key
+	}
+	lev.builder.Add(key, off)
+}
+
+func (fb *fbtreeBuilder) Finish() (off uint64, treeLevels int) {
+	var key string
+	for li := 0; li < len(fb.levels); li++ {
+		if li > 0 {
+			// allow node to slightly exceed max size
+			fb.levels[li].builder.Add(key, off)
+		}
+		key = fb.levels[li].first
+		off = fb.levels[li].builder.fe.putNode(fb.store)
+	}
+	return off, len(fb.levels) - 1
 }

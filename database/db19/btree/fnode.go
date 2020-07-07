@@ -35,7 +35,7 @@ func fRead(fn fNode) (npre int, diff string, offset uint64) {
 	offset = stor.ReadSmallOffset(fn)
 	npre = int(fn[5])
 	dn := int(fn[6])
-	diff = string(fn[7:7+dn])
+	diff = string(fn[7 : 7+dn])
 	return
 }
 
@@ -260,11 +260,11 @@ func (fn fNode) setOffset(fi int, off uint64) {
 // iter -------------------------------------------------------------
 
 type fnIter struct {
-	fn    fNode
-	fi    int // position in original fEntries
-	npre  int
-	diff  string
-	known string
+	fn     fNode
+	fi     int // position in original fEntries
+	npre   int
+	diff   string
+	known  string
 	offset uint64
 }
 
@@ -304,7 +304,7 @@ func (it *fnIter) next() bool {
 }
 
 func (it *fnIter) eof() bool {
-	return it.fi + fLen(it.diff) >= len(it.fn)
+	return it.fi+fLen(it.diff) >= len(it.fn)
 }
 
 //-------------------------------------------------------------------
