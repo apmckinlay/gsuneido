@@ -143,7 +143,11 @@ func isNil(x interface{}) bool {
 		return true
 	}
 	v := reflect.ValueOf(x)
-	return v.Kind() == reflect.Ptr && v.IsNil()
+	switch v.Kind() {
+	case reflect.Ptr, reflect.Map, reflect.Slice, reflect.Func, reflect.Chan:
+		return v.IsNil()
+	}
+	return false
 }
 
 func intEqual(x interface{}, y interface{}) bool {
