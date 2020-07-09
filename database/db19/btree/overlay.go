@@ -125,19 +125,19 @@ func ovsrcLess(x, y *ovsrc) bool {
 //-------------------------------------------------------------------
 
 func (ov *Overlay) StorSize() int {
-	return 5 + 1
+	return 5 + 1 + 5
 }
 
 func (ov *Overlay) Write(w *stor.Writer) {
 	fb := ov.under[0].(*fbtree)
-	verify.That(len(fb.moffs.nodes) == 0)
-	w.Put5(fb.root).Put1(fb.treeLevels)
+	w.Put5(fb.root).Put1(fb.treeLevels).Put5(fb.redirs)
 }
 
 func ReadOverlay(st *stor.Stor, r *stor.Reader) *Overlay {
 	root := r.Get5()
 	treeLevels := r.Get1()
-	return &Overlay{under: []tree{OpenFbtree(st, root, treeLevels)}}
+	redirs := r.Get5()
+	return &Overlay{under: []tree{OpenFbtree(st, root, treeLevels, redirs)}}
 }
 
 //-------------------------------------------------------------------
@@ -187,7 +187,7 @@ func (ov *Overlay) Save() *Overlay {
 	verify.That(ov.mb == nil)
 	ov2 := *ov // copy
 	fb := ov.under[0].(*fbtree)
-	fb = fb.save()
+	fb = fb.Save()
 	ov2.under = []tree{fb}
 	return &ov2
 }

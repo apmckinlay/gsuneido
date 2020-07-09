@@ -5,32 +5,19 @@ package btree
 
 import (
 	"bufio"
+	"fmt"
 	"log"
 	"math/rand"
 	"os"
 	"sort"
+	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/database/db19/stor"
 	. "github.com/apmckinlay/gsuneido/util/hamcrest"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
-
-func TestMemOffsets(t *testing.T) {
-	mo := memOffsets{nextOff: stor.MaxSmallOffset, nodes: make(map[uint64]fNode)}
-	Assert(t).True(mo.get(0) == nil)
-	Assert(t).True(mo.get(123) == nil)
-	n := fNode{123}
-	o1 := mo.add(n)
-	n1 := mo.get(o1)
-	Assert(t).That(n1[0], Equals(123))
-	n = fNode{99}
-	o2 := mo.add(n)
-	n2 := mo.get(o2)
-	Assert(t).That(n2[0], Equals(99))
-	n1 = mo.get(o1)
-	Assert(t).That(n1[0], Equals(123))
-}
 
 func TestFbupdate(t *testing.T) {
 	var nTimes = 10
@@ -49,8 +36,6 @@ func TestFbupdate(t *testing.T) {
 			key := randKey()
 			data[i] = key
 			up.Insert(key, uint64(i))
-			// count, _, _ := up.check()
-			// Assert(t).That(count, Equals(i+1))
 		}
 		up.checkData(t, data[:])
 	}
@@ -93,7 +78,8 @@ func (fb *fbtree) checkData(t *testing.T, data []string) {
 	for i, k := range data {
 		o := fb.Search(k)
 		if o != uint64(i) {
-			t.Error("checkData", k, "expect", i, "actual", o)
+			t.Log("checkData", k, "expect", i, "actual", o)
+			t.FailNow()
 		}
 	}
 }
@@ -121,10 +107,13 @@ func TestSampleData(t *testing.T) {
 	}
 	test := func(file string) {
 		data := fileData(file)
+		fmt.Println(len(data))
 		for si := 0; si < nShuffle; si++ {
 			rand.Shuffle(len(data),
 				func(i, j int) { data[i], data[j] = data[j], data[i] })
-			GetLeafKey = func(_ *stor.Stor, _ interface{}, i uint64) string { return data[i] }
+			GetLeafKey = func(_ *stor.Stor, _ interface{}, i uint64) string {
+				return data[i]
+			}
 			MaxNodeSize = 256
 			fb := CreateFbtree(nil)
 			up := newFbupdate(fb)
@@ -134,12 +123,15 @@ func TestSampleData(t *testing.T) {
 			up.checkData(t, data)
 		}
 	}
-	test("../../../bizpartnername.txt")
-	test("../../../bizpartnerabbrev.txt")
+	test("../../../../bizpartnername.txt")
+	test("../../../../bizpartnerabbrev.txt")
 }
 
 func fileData(filename string) []string {
-	file, _ := os.Open(filename)
+	file, err := os.Open(filename)
+	if err != nil {
+		fmt.Println("can't open", filename)
+	}
 	defer file.Close()
 	data := []string{}
 	scanner := bufio.NewScanner(file)
@@ -159,7 +151,7 @@ func TestFbdelete(t *testing.T) {
 	MaxNodeSize = 44
 	fb := CreateFbtree(nil)
 	up := newFbupdate(fb)
-	randKey := str.UniqueRandomOf(3, 6, "abcde")
+	randKey := str.UniqueRandomOf(3, 6, "abcdef")
 	for i := 0; i < n; i++ {
 		key := randKey()
 		data[i] = key
@@ -183,14 +175,47 @@ func TestFbdelete(t *testing.T) {
 	}
 }
 
+func TestFreeze(t *testing.T) {
+	GetLeafKey = func(_ *stor.Stor, _ interface{}, i uint64) string {
+		return strconv.Itoa(int(i))
+	}
+	store := stor.HeapStor(8192)
+	fb := CreateFbtree(store)
+	Assert(t).That(len(fb.moffs.redirs), Equals(1))
+	fb = fb.Update(func(up *fbupdate) {
+		up.Insert("1", 1)
+	})
+	Assert(t).That(len(fb.moffs.redirs), Equals(1))
+	Assert(t).That(fb.list(), Equals("1"))
+	fb = fb.Update(func(up *fbupdate) {
+		up.Insert("2", 2)
+	})
+	Assert(t).That(len(fb.moffs.redirs), Equals(1))
+	Assert(t).That(fb.list(), Equals("1 2"))
+
+	fb = fb.Save()
+	fb = OpenFbtree(store, fb.root, fb.treeLevels, fb.redirs)
+	Assert(t).That(len(fb.moffs.redirs), Equals(1))
+	Assert(t).That(fb.list(), Equals("1 2"))
+}
+
+func (fb *fbtree) list() string {
+	s := ""
+	iter := fb.Iter()
+	for _, o, ok := iter(); ok; _, o, ok = iter() {
+		s += strconv.Itoa(int(o)) + " "
+	}
+	return strings.TrimSpace(s)
+}
+
 func TestSave(t *testing.T) {
 	var nSaves = 50
 	if testing.Short() {
 		nSaves = 10
 	}
-	const freezesPerSave = 3
-	const insertsPerFreeze = 17
-	data := make([]string, 0, nSaves*freezesPerSave*insertsPerFreeze)
+	const updatesPerSave = 3
+	const insertsPerUpdate = 17
+	data := make([]string, 0, nSaves*updatesPerSave*insertsPerUpdate)
 	GetLeafKey = func(_ *stor.Stor, _ interface{}, i uint64) string { return data[i] }
 	MaxNodeSize = 64
 	st, err := stor.MmapStor("tmp.db", stor.CREATE)
@@ -200,9 +225,9 @@ func TestSave(t *testing.T) {
 	fb := CreateFbtree(st)
 	randKey := str.UniqueRandomOf(3, 7, "abcdef")
 	for i := 0; i < nSaves; i++ {
-		for j := 0; j < freezesPerSave; j++ {
+		for j := 0; j < updatesPerSave; j++ {
 			fb = fb.Update(func(up *fbupdate) {
-				for k := 0; k < insertsPerFreeze; k++ {
+				for k := 0; k < insertsPerUpdate; k++ {
 					key := randKey()
 					up.Insert(key, uint64(len(data)))
 					data = append(data, key)
@@ -211,7 +236,7 @@ func TestSave(t *testing.T) {
 			})
 			fb.checkData(t, data)
 		}
-		fb = fb.save()
+		fb = fb.Save()
 		fb.checkData(t, data)
 	}
 	st.Close()

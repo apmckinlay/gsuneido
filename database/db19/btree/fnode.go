@@ -6,10 +6,12 @@ package btree
 import (
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/apmckinlay/gsuneido/database/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/bytes"
 	"github.com/apmckinlay/gsuneido/util/str"
+	"github.com/apmckinlay/gsuneido/util/verify"
 )
 
 // fNode is a file based btree node with partial incremental encoding.
@@ -78,6 +80,7 @@ func (fb *fNodeBuilder) Entries() fNode {
 }
 
 func addone(key, prev, known string, embedLen int) (npre int, diff string, knownNew string) {
+	verify.That(key > prev)
 	npre = commonPrefixLen(prev, key)
 	if npre > 255 {
 		panic("key common prefix too long")
@@ -90,6 +93,7 @@ func addone(key, prev, known string, embedLen int) (npre int, diff string, known
 		// so we have to embed the missing info + embedLen
 		diff = key[len(known) : npre+embedLen]
 	}
+	verify.That(len(diff) > 0)
 	knownNew = str.Subn(key, 0, npre+embedLen)
 	return
 }
@@ -376,7 +380,7 @@ func (fn fNode) printTreeNode() {
 	it := fn.iter()
 	for it.next() {
 		offset := it.offset
-		print(strconv.Itoa(it.fi)+": {", offset, it.npre, it.diff, "}",
+		print(strconv.Itoa(it.fi)+": {", OffStr(offset), it.npre, it.diff, "}",
 			it.known)
 	}
 }
@@ -391,4 +395,17 @@ func print(args ...interface{}) {
 		}
 	}
 	fmt.Println(args...)
+}
+
+func (fn fNode) String() string {
+	s := "["
+	it := fn.iter()
+	for it.next() {
+		known := it.known
+		if known == "" {
+			known = "''"
+		}
+		s += fmt.Sprint(known, "=", it.offset) + " "
+	}
+	return strings.TrimSpace(s) + "]"
 }

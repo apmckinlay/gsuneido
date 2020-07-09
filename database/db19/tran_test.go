@@ -40,7 +40,6 @@ func TestConcurrent(t *testing.T) {
 	}
 	wg.Wait()
 	c.Stop()
-	// fmt.Println("under", btree.Under)
 
 	var nout = nclients * ntrans
 	rt := NewReadTran()
@@ -54,7 +53,7 @@ func TestConcurrent(t *testing.T) {
 func TestTran(t *testing.T) {
 	store := createDb()
 
-	const nout = 100
+	const nout = 2000
 	for i := 0; i < nout; i++ {
 		Merge(output1().Commit())
 	}
@@ -86,7 +85,6 @@ func createDb() *stor.Stor {
 		return string(st.DataSized(off))
 	}
 
-	// store := stor.HeapStor(16 * 1024)
 	store, err := stor.MmapStor("test.tmp", stor.CREATE)
 	if err != nil {
 		panic("can't create test.tmp")

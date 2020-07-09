@@ -4,37 +4,50 @@
 package btree
 
 import (
+	"strconv"
+	"strings"
+
 	"github.com/apmckinlay/gsuneido/database/db19/stor"
 )
 
 // fbupdate handles updating an immutable btree.
-// It creates new and updated nodes in memory.
+// New and updated nodes are createing in memory.
 type fbupdate struct {
 	// fb is a copy of the fbtree (so we can update it)
 	fb fbtree
 	// moffs (mutable) maps offsets to mutable new and updated in-memory nodes
 	moffs memOffsets
-	// paths is a set of nodes that will need to be path copied
-	paths map[uint64]set
 }
-
-type set struct{}
-
-var mark set
 
 func (fb *fbtree) Update(fn func(*fbupdate)) *fbtree {
 	up := newFbupdate(fb)
 	fn(up)
-	up.freeze()
-	return &up.fb
+	return up.freeze()
 }
 
 func newFbupdate(fb *fbtree) *fbupdate {
-	moffs := memOffsets{nextOff: fb.moffs.nextOff,
-		nodes: make(map[uint64]fNode, len(fb.moffs.nodes))}
-	return &fbupdate{fb: *fb, moffs: moffs,
-		paths: make(map[uint64]set, len(fb.paths))}
+	moffs := memOffsets{
+		nextOff:    fb.moffs.nextOff,
+		generation: fb.moffs.generation,
+		redirs:     make(map[uint64]redir, len(fb.moffs.redirs))}
+	for o, r := range fb.moffs.redirs {
+		moffs.redirs[o] = r
+	}
+	return &fbupdate{fb: *fb, moffs: moffs}
 }
+
+// freeze moves the changes to the fbtree.
+// It will still reference in-memory new and updated nodes
+// but they are no longer mutable.
+func (up *fbupdate) freeze() *fbtree {
+	// fmt.Println("up.moffs", &up.moffs)
+	// fmt.Println("up.fb.moffs", &up.fb.moffs)
+	up.moffs.generation++ // make new stuff immutable
+	up.fb.moffs = up.moffs
+	return &up.fb
+}
+
+//-------------------------------------------------------------------
 
 func (up *fbupdate) Search(key string) uint64 {
 	nodeOff := up.fb.root
@@ -54,7 +67,7 @@ func (up *fbupdate) Insert(key string, off uint64) {
 	nodeOff := up.fb.root
 	for i := 0; i < up.fb.treeLevels; i++ {
 		stack[i] = nodeOff
-		node := up.getPathNode(nodeOff)
+		node := up.getNode(nodeOff)
 		nodeOff, _, _ = node.search(key)
 	}
 
@@ -95,24 +108,30 @@ func (up *fbupdate) insert(nodeOff uint64, key string, off uint64,
 }
 
 func (up *fbupdate) getNode(off uint64) fNode {
-	if node := up.moffs.get(off); node != nil {
-		return node
+	if r, ok := up.moffs.redirs[off]; ok {
+		if r.mnode != nil {
+			return r.mnode
+		}
+		off = r.newOffset
 	}
-	return up.fb.getNode(off)
-}
-
-func (up *fbupdate) getPathNode(off uint64) fNode {
-	up.paths[off] = mark
-	return up.getNode(off)
+	return up.fb.readNode(off)
 }
 
 func (up *fbupdate) getMutableNode(off uint64) fNode {
-	if node := up.moffs.get(off); node != nil {
-		return node
+	var roNode fNode
+	if r, ok := up.moffs.redirs[off]; ok {
+		if r.newOffset != 0 {
+			off = r.newOffset
+		} else if r.generation == up.moffs.generation {
+			return r.mnode
+		} else {
+			roNode = r.mnode
+		}
+	} else {
+		roNode = up.fb.readNode(off)
 	}
-	imu := up.fb.getNode(off)
-	node := append(imu[:0:0], imu...)
-	up.moffs.set(off, node)
+	node := append(roNode[:0:0], roNode...)
+	up.moffs.redirs[off] = redir{mnode: node, generation: up.moffs.generation}
 	return node
 }
 
@@ -155,7 +174,7 @@ func (up *fbupdate) Delete(key string, off uint64) bool {
 	nodeOff := up.fb.root
 	for i := 0; i < up.fb.treeLevels; i++ {
 		stack[i] = nodeOff
-		node := up.getPathNode(nodeOff)
+		node := up.getNode(nodeOff)
 		nodeOff, _, _ = node.search(key)
 	}
 
@@ -201,55 +220,82 @@ func (up *fbupdate) delete(nodeOff uint64, off uint64) (fNode, bool) {
 
 //-------------------------------------------------------------------
 
-// freeze moves the changes to the fbtree.
-// It will still reference in-memory new and updated nodes
-// but they are no longer mutable.
-func (up *fbupdate) freeze() *fbtree {
-	for k, v := range up.fb.moffs.nodes {
-		if _, ok := up.moffs.nodes[k]; !ok {
-			up.moffs.nodes[k] = v
-		}
-	}
-	up.fb.moffs = up.moffs
-	up.moffs.nodes = nil
-	for k := range up.fb.paths {
-		up.paths[k] = mark
-	}
-	up.fb.paths = up.paths
-	up.paths = nil
-	return &up.fb
-}
-
-//-------------------------------------------------------------------
-
 // memOffsets is use to map offsets to temporary, in-memory, mutable nodes.
 // It is used for updated versions of existing nodes, using their old offset,
 // and for new nodes with fake offsets.
 type memOffsets struct {
-	nodes   map[uint64]fNode
-	nextOff uint64
+	redirs     map[uint64]redir
+	nextOff    uint64
+	generation uint
+}
+
+// redir is a single redirection.
+// Only one of mnode or newOffset is used at a time, the other should be nil/0.
+// Save converts mnode to newOffset.
+type redir struct {
+	// mnode is an in-memory node, mutable until freeze, shadowing an immutable node.
+	mnode fNode
+	// newOffset is the new storage location for a node.
+	newOffset uint64
+	path      [4]uint8
+	// generation is used to determine mutability,
+	// the current generation is mutable, previous generations are immutable.
+	generation uint
 }
 
 func nilMemOffsets() memOffsets {
-	return memOffsets{nextOff: stor.MaxSmallOffset}
+	return memOffsets{nextOff: stor.MaxSmallOffset, generation: 1}
 }
 
-// add returns a fake offset for a new node
+// add returns a fake offset for a new node (from split)
 func (mo *memOffsets) add(node fNode) uint64 {
 	off := mo.nextOff
 	mo.nextOff--
-	mo.nodes[off] = node
+	mo.redirs[off] = redir{mnode: node, generation: mo.generation}
 	return off
 }
 
 // set updates the node for an offset
 func (mo *memOffsets) set(off uint64, node fNode) {
-	mo.nodes[off] = node
+	r := mo.redirs[off]
+	r.mnode = node
+	mo.redirs[off] = r
 }
 
-// get retrieves a node given its offset.
-func (mo *memOffsets) get(off uint64) fNode {
-	return mo.nodes[off]
+// isMem returns true for temporary in-memory offsets
+func (mo *memOffsets) isMem(off uint64) bool {
+	return off > mo.nextOff
+}
+
+// isMut returns true if mutable
+func (mo *memOffsets) isMut(off uint64) bool {
+	r, ok := mo.redirs[off]
+	return ok && r.generation == mo.generation
+}
+
+func OffStr(off uint64) string {
+	if off > 0xffff000000 {
+		return strconv.Itoa(int(off - stor.MaxSmallOffset - 1))
+	}
+	return strconv.Itoa(int(off))
+}
+
+func (mo *memOffsets) String() string {
+	s := "{"
+	for o, r := range mo.redirs {
+		if o > mo.nextOff {
+			s += strconv.Itoa(int(mo.nextOff - o))
+		} else {
+			s += strconv.Itoa(int(o))
+		}
+		s += ": "
+		if r.newOffset != 0 {
+			s += strconv.Itoa(int(r.newOffset))
+		} else {
+			s += r.mnode.String()
+		}
+	}
+	return strings.TrimSpace(s) + "}"
 }
 
 // ------------------------------------------------------------------

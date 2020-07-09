@@ -21,11 +21,11 @@ type fbtree struct {
 	store *stor.Stor
 	// moffs (reaonly) maps offsets to updated in-memory nodes (not persisted)
 	moffs memOffsets
-	// paths is a set of nodes that will need to be path copied
-	paths map[uint64]set
 	// ixspec is an opaque value passed to GetLeafKey
 	// normally it specifies which fields make up the key, based on the schema
 	ixspec interface{}
+	// redirs is the offset of the saved redirections
+	redirs uint64
 }
 
 // MaxNodeSize is the maximum node size in bytes, split if larger.
@@ -37,14 +37,16 @@ var MaxNodeSize = 1536 // * .75 ~ 1k
 var GetLeafKey func(st *stor.Stor, ixspec interface{}, off uint64) string
 
 func CreateFbtree(st *stor.Stor) *fbtree {
-	mo := memOffsets{nextOff: stor.MaxSmallOffset, nodes: map[uint64]fNode{}}
+	mo := memOffsets{nextOff: stor.MaxSmallOffset, redirs: map[uint64]redir{}}
 	root := mo.add(fNode{})
+	mo.generation++ // so root isn't mutable
 	return &fbtree{root: root, moffs: mo, store: st}
 }
 
-func OpenFbtree(st *stor.Stor, root uint64, treeLevels int) *fbtree {
-	mo := nilMemOffsets()
-	return &fbtree{root: root, treeLevels: treeLevels, moffs: mo, store: st}
+func OpenFbtree(store *stor.Stor, root uint64, treeLevels int, redirs uint64) *fbtree {
+	moffs := readMoffs(store, redirs)
+	return &fbtree{root: root, treeLevels: treeLevels, moffs: moffs, store: store,
+		redirs: redirs}
 }
 
 func (fb *fbtree) getLeafKey(off uint64) string {
@@ -60,56 +62,54 @@ func (fb *fbtree) Search(key string) uint64 {
 	return nodeOff
 }
 
-// save writes the btree (changes) to the stor
-// and returns a new fbtree with no in-memory nodes.
-func (fb *fbtree) save() *fbtree {
-	fb = fb.Update(func(up *fbupdate) {
-		up.fb.root = up.save2(0, fb.root)
-	})
-	fb.moffs = nilMemOffsets()
-	fb.paths = nil
-	return fb
+// Save writes the btree (changes) to the stor
+// and returns a new fbtree with no in-memory nodes (but still redirections)
+func (fb *fbtree) Save() *fbtree {
+	return fb.Update(func(up *fbupdate) { up.save() })
 }
 
-func (up *fbupdate) save2(depth int, nodeOff uint64) uint64 {
-	// only traverse modified paths, not entire (possibly huge) tree
-	if up.canSkip(nodeOff) {
-		return nodeOff
-	}
-	node := up.getMutableNode(nodeOff)
-	if depth < up.fb.treeLevels {
-		// tree node, need to update any memOffsets
-		for it := node.iter(); it.next(); {
-			off := it.offset
-			off2 := up.save2(depth+1, off) // recurse
-			// bottom up
-			if off2 != off {
-				node.setOffset(it.fi, off2)
-			}
+const redirSize = (5 + 5 + 4)
+
+func (up *fbupdate) save() {
+	// save all the in-memory nodes
+	for _, r := range up.fb.moffs.redirs {
+		verify.That((r.mnode == nil) != (r.newOffset == 0))
+		if r.mnode != nil {
+			r.newOffset = r.mnode.putNode(up.fb.store)
+			r.mnode = nil
 		}
 	}
-	off := node.putNode(up.fb.store)
-	verify.That(up.canSkip(off))
-	return off
+	// save the redirections
+	size := 5 + len(up.fb.moffs.redirs) * redirSize
+	off, buf := up.fb.store.AllocSized(size)
+	w := stor.NewWriter(buf)
+	w.Put5(up.fb.moffs.nextOff)
+	for o, r := range up.fb.moffs.redirs {
+		w.Put5(o).Put5(r.newOffset).Write(r.path[:])
+	}
+	up.fb.redirs = off
 }
 
-func (up *fbupdate) canSkip(off uint64) bool {
-	if off > up.moffs.nextOff {
-		return false
+func readMoffs(store *stor.Stor, redirs uint64) memOffsets {
+	mo := nilMemOffsets()
+	if redirs == 0 {
+		return mo
 	}
-	if _, ok := up.moffs.nodes[off]; ok {
-		return false
+	buf := store.DataSized(redirs)
+	mo.redirs = make(map[uint64]redir, len(buf)/redirSize)
+	rdr := stor.NewReader(buf)
+	mo.nextOff = rdr.Get5()
+	for rdr.Remaining() > 0 {
+		oldOffset := rdr.Get5()
+		r := redir{}
+		r.newOffset = rdr.Get5()
+		rdr.Read(r.path[:])
+		mo.redirs[oldOffset] = r
 	}
-	if _, ok := up.fb.moffs.nodes[off]; ok {
-		return false
-	}
-	if _, ok := up.fb.paths[off]; ok {
-		return false
-	}
-	return true
+	return mo
 }
 
-// putNode stores the node with a leading uint16 size
+// putNode stores the node
 func (node fNode) putNode(store *stor.Stor) uint64 {
 	off, buf := store.AllocSized(len(node))
 	copy(buf, node)
@@ -117,9 +117,16 @@ func (node fNode) putNode(store *stor.Stor) uint64 {
 }
 
 func (fb *fbtree) getNode(off uint64) fNode {
-	if node := fb.moffs.get(off); node != nil {
-		return node
+	if r, ok := fb.moffs.redirs[off]; ok {
+		if r.mnode != nil {
+			return r.mnode
+		}
+		off = r.newOffset
 	}
+	return fb.readNode(off)
+}
+
+func (fb *fbtree) readNode(off uint64) fNode {
 	buf := fb.store.DataSized(off)
 	return fNode(buf)
 }
@@ -257,8 +264,6 @@ func (fb *fbtreeBuilder) Add(key string, off uint64) {
 	fb.prev = key
 }
 
-var nput = 0
-
 func (fb *fbtreeBuilder) insert(li int, key string, off uint64) {
 	if li >= len(fb.levels) {
 		fb.levels = append(fb.levels, &level{})
@@ -266,7 +271,6 @@ func (fb *fbtreeBuilder) insert(li int, key string, off uint64) {
 	lev := fb.levels[li]
 	if len(lev.builder.fe) > MaxNodeSize {
 		// flush full node to stor
-		nput++
 		offNode := lev.builder.fe.putNode(fb.store)
 		fb.insert(li+1, lev.first, offNode) // recurse
 		*lev = level{}

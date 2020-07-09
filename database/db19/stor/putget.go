@@ -90,6 +90,12 @@ func (w *Writer) PutInts(ints []int) *Writer {
 	return w
 }
 
+// Write writes buf
+func (w *Writer) Write(buf []byte) *Writer {
+	w.buf = append(w.buf, buf...)
+	return w
+}
+
 // Len returns the current position within this writer
 func (w *Writer) Len() int {
 	return len(w.buf)
@@ -162,4 +168,15 @@ func (r *Reader) GetInts() []int {
 		ints[i] = r.Get2()
 	}
 	return ints
+}
+
+// Read len(buf) bytes
+func (r *Reader) Read(buf []byte) {
+	copy(buf, r.buf)
+	r.buf = r.buf[len(buf):]
+}
+
+// Remaining returns the number of unread bytes left
+func (r *Reader) Remaining() int {
+	return len(r.buf)
 }

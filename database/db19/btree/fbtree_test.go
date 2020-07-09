@@ -54,9 +54,9 @@ func TestFbtreeBuilder(t *testing.T) {
 		bldr.Add(key, uint64(i))
 	}
 	root, treeLevels := bldr.Finish()
-	fmt.Println("treeLevels", treeLevels, "nput", nput)
+	fmt.Println("treeLevels", treeLevels)
 
-	fb := OpenFbtree(store, root, treeLevels)
+	fb := OpenFbtree(store, root, treeLevels, 0)
 	iter := fb.Iter()
 	for i := 100000; i <= limit; i++ {
 		key := strconv.Itoa(i)
@@ -65,6 +65,6 @@ func TestFbtreeBuilder(t *testing.T) {
 		Assert(t).True(strings.HasPrefix(key, k))
 		Assert(t).That(o, Equals(i))
 	}
-	_,_,ok := iter()
+	_, _, ok := iter()
 	Assert(t).False(ok)
 }
