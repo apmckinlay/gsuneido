@@ -247,3 +247,42 @@ func TestSave(t *testing.T) {
 	st.Close()
 	os.Remove("tmp.db")
 }
+
+func TestSplitDup(*testing.T) {
+	GetLeafKey = func(_ *stor.Stor, _ interface{}, i uint64) string {
+		return strconv.Itoa(int(i))
+	}
+	defer func(mns int) { MaxNodeSize = mns }(MaxNodeSize)
+	MaxNodeSize = 64
+	data := []int{}
+	for i := 3; i < 8; i++ {
+		data = append(data, i)
+	}
+	for i := 53; i < 58; i++ {
+		data = append(data, i)
+	}
+	for i := 553; i < 558; i++ {
+		data = append(data, i)
+	}
+	for i := 5553; i < 5558; i++ {
+		data = append(data, i)
+	}
+	for i := 55553; i < 55558; i++ {
+		data = append(data, i)
+	}
+	n := 100000
+	if testing.Short() {
+		n = 1000
+	}
+	for i := 0; i < n; i++ {
+		rand.Shuffle(len(data),
+			func(i, j int) { data[i], data[j] = data[j], data[i] })
+		fb := CreateFbtree(nil)
+		fb = fb.Update(func(up *fbupdate) {
+			for _, n := range data {
+				key := strconv.Itoa(n)
+				up.Insert(key, uint64(n))
+			}
+		})
+	}
+}
