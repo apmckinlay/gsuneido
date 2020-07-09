@@ -28,6 +28,7 @@ func TestFbupdate(t *testing.T) {
 		const n = 1000
 		var data [n]string
 		GetLeafKey = func(_ *stor.Stor, _ interface{}, i uint64) string { return data[i] }
+		defer func(mns int) { MaxNodeSize = mns }(MaxNodeSize)
 		MaxNodeSize = 44
 		fb := CreateFbtree(nil)
 		up := newFbupdate(fb)
@@ -46,6 +47,7 @@ func TestUnevenSplit(t *testing.T) {
 	var data [n]string
 	test := func() {
 		GetLeafKey = func(_ *stor.Stor, _ interface{}, i uint64) string { return data[i] }
+		defer func(mns int) { MaxNodeSize = mns }(MaxNodeSize)
 		MaxNodeSize = 128
 		fb := CreateFbtree(nil)
 		up := newFbupdate(fb)
@@ -114,6 +116,7 @@ func TestSampleData(t *testing.T) {
 			GetLeafKey = func(_ *stor.Stor, _ interface{}, i uint64) string {
 				return data[i]
 			}
+			defer func(mns int) { MaxNodeSize = mns }(MaxNodeSize)
 			MaxNodeSize = 256
 			fb := CreateFbtree(nil)
 			up := newFbupdate(fb)
@@ -148,6 +151,7 @@ func TestFbdelete(t *testing.T) {
 	}
 	data := make([]string, n)
 	GetLeafKey = func(_ *stor.Stor, _ interface{}, i uint64) string { return data[i] }
+	defer func(mns int) { MaxNodeSize = mns }(MaxNodeSize)
 	MaxNodeSize = 44
 	fb := CreateFbtree(nil)
 	up := newFbupdate(fb)
@@ -217,6 +221,7 @@ func TestSave(t *testing.T) {
 	const insertsPerUpdate = 17
 	data := make([]string, 0, nSaves*updatesPerSave*insertsPerUpdate)
 	GetLeafKey = func(_ *stor.Stor, _ interface{}, i uint64) string { return data[i] }
+	defer func(mns int) { MaxNodeSize = mns }(MaxNodeSize)
 	MaxNodeSize = 64
 	st, err := stor.MmapStor("tmp.db", stor.CREATE)
 	if err != nil {

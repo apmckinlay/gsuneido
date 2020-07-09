@@ -20,6 +20,7 @@ func TestFbtreeIter(t *testing.T) {
 	const n = 1000
 	var data [n]string
 	GetLeafKey = func(_ *stor.Stor, _ interface{}, i uint64) string { return data[i] }
+	defer func(mns int) { MaxNodeSize = mns }(MaxNodeSize)
 	MaxNodeSize = 440
 	fb := CreateFbtree(nil)
 	up := newFbupdate(fb)

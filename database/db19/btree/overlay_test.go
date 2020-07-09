@@ -16,6 +16,7 @@ import (
 func TestEmptyOverlay(t *testing.T) {
 	var data []string
 	GetLeafKey = func(_ *stor.Stor, _ interface{}, i uint64) string { return data[i] }
+	defer func(mns int) { MaxNodeSize = mns }(MaxNodeSize)
 	MaxNodeSize = 64
 	fb := CreateFbtree(nil)
 	mb := newMbtree(0)

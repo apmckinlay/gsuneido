@@ -27,6 +27,7 @@ func TestMerge(t *testing.T) {
 	mb := randMbtree()
 	mb.checkData(t, data)
 	GetLeafKey = func(_ *stor.Stor, _ interface{}, i uint64) string { return data[i] }
+	defer func(mns int) { MaxNodeSize = mns }(MaxNodeSize)
 	MaxNodeSize = 64
 	fb := CreateFbtree(nil)
 	fb = Merge(fb, mb)
