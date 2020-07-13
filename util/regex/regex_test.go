@@ -110,7 +110,11 @@ func pt_match(args []string, _ []bool) bool {
 			result = !result
 		} else {
 			for i, e := range args[2:] {
-				result = result && (e == args[0][res[i].pos1-1:res[i].end])
+				p := ""
+				if res[i].pos1 != 0 {
+					p = args[0][res[i].pos1-1 : res[i].end]
+				}
+				result = result && (e == p)
 			}
 		}
 	}
