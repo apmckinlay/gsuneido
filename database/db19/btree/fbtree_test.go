@@ -4,7 +4,6 @@
 package btree
 
 import (
-	"fmt"
 	"sort"
 	"strconv"
 	"strings"
@@ -55,7 +54,6 @@ func TestFbtreeBuilder(t *testing.T) {
 		bldr.Add(key, uint64(i))
 	}
 	root, treeLevels := bldr.Finish()
-	fmt.Println("treeLevels", treeLevels)
 
 	fb := OpenFbtree(store, root, treeLevels, 0)
 	iter := fb.Iter()
