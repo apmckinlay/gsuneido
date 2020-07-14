@@ -262,21 +262,17 @@ func (re *redirs) isMut(off uint64) bool {
 }
 
 func OffStr(off uint64) string {
+	s := strconv.Itoa(int(off))
 	if off > 0xffff000000 {
-		return strconv.Itoa(int(off - stor.MaxSmallOffset - 1))
+		s = "@" + s[len(s)-4:]
 	}
-	return strconv.Itoa(int(off))
+	return s
 }
 
 func (re *redirs) String() string {
 	s := "{"
 	re.tbl.ForEach(func(r *redir) {
-		if r.offset > re.nextOff {
-			s += strconv.Itoa(int(re.nextOff - r.offset))
-		} else {
-			s += strconv.Itoa(int(r.offset))
-		}
-		s += ": "
+		s += OffStr(r.offset) + ": "
 		if r.newOffset != 0 {
 			s += strconv.Itoa(int(r.newOffset))
 		} else {

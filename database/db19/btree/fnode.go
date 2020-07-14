@@ -363,7 +363,7 @@ func (fn fNode) check() int {
 func (fn fNode) print() {
 	it := fn.iter()
 	for it.next() {
-		print(it.offset, it.known)
+		print(OffStr(it.offset), it.known)
 	}
 }
 
@@ -371,7 +371,7 @@ func (fn fNode) printLeafNode(get func(uint64) string) {
 	it := fn.iter()
 	for it.next() {
 		offset := it.offset
-		print(strconv.Itoa(it.fi)+": {", offset, it.npre, it.diff, "}",
+		print(strconv.Itoa(it.fi)+": {", OffStr(offset), it.npre, it.diff, "}",
 			it.known, "("+get(offset)+")")
 	}
 }
@@ -405,7 +405,7 @@ func (fn fNode) String() string {
 		if known == "" {
 			known = "''"
 		}
-		s += fmt.Sprint(known, "=", it.offset) + " "
+		s += fmt.Sprint(known, "=", OffStr(it.offset)) + " "
 	}
 	return strings.TrimSpace(s) + "]"
 }

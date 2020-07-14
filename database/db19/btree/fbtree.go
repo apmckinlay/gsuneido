@@ -229,7 +229,7 @@ func (fb *fbtree) print() {
 }
 
 func (fb *fbtree) print1(depth int, offset uint64) {
-	print(strings.Repeat("    ", depth)+"offset", OffStr(offset), "=", offset)
+	print(strings.Repeat("    ", depth)+"offset", OffStr(offset))
 	node := fb.getNode(offset)
 	for it := node.iter(); it.next(); {
 		offset := it.offset
