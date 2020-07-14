@@ -176,21 +176,21 @@ func TestFreeze(t *testing.T) {
 	store := stor.HeapStor(8192)
 	store.Alloc(1) // avoid offset 0
 	fb := CreateFbtree(store)
-	Assert(t).That(fb.moffs.Len(), Equals(1))
+	Assert(t).That(fb.redirs.Len(), Equals(1))
 	fb = fb.Update(func(mfb *fbtree) {
 		mfb.Insert("1", 1)
 	})
-	Assert(t).That(fb.moffs.Len(), Equals(1))
+	Assert(t).That(fb.redirs.Len(), Equals(1))
 	Assert(t).That(fb.list(), Equals("1"))
 	fb = fb.Update(func(mfb *fbtree) {
 		mfb.Insert("2", 2)
 	})
-	Assert(t).That(fb.moffs.Len(), Equals(1))
+	Assert(t).That(fb.redirs.Len(), Equals(1))
 	Assert(t).That(fb.list(), Equals("1 2"))
 
 	fb = fb.Save()
-	fb = OpenFbtree(store, fb.root, fb.treeLevels, fb.redirs)
-	Assert(t).That(fb.moffs.Len(), Equals(1))
+	fb = OpenFbtree(store, fb.root, fb.treeLevels, fb.redirsOff)
+	Assert(t).That(fb.redirs.Len(), Equals(1))
 	Assert(t).That(fb.list(), Equals("1 2"))
 }
 

@@ -20,13 +20,13 @@ func (fb *fbtree) Update(fn func(*fbtree)) *fbtree {
 func (fb *fbtree) makeMutable() *fbtree {
 	mfb := *fb // copy
 	mfb.mutable = true
-	mfb.moffs.redirs = fb.moffs.redirs.Mutable()
+	mfb.redirs.tbl = fb.redirs.tbl.Mutable()
 	return &mfb
 }
 
 func (fb *fbtree) freeze() *fbtree {
-	fb.moffs.generation++ // make new stuff immutable
-	fb.moffs.redirs = fb.moffs.redirs.Freeze()
+	fb.redirs.generation++ // make new stuff immutable
+	fb.redirs.tbl = fb.redirs.tbl.Freeze()
 	fb.mutable = false
 	return fb
 }
@@ -49,7 +49,7 @@ func (fb *fbtree) Insert(key string, off uint64) {
 
 	// insert into leaf
 	node, where := fb.insert(nodeOff, key, off, fb.getLeafKey)
-	fb.moffs.set(nodeOff, node)
+	fb.redirs.set(nodeOff, node)
 	size := len(node)
 	if size <= MaxNodeSize {
 		return // fast path, just insert into leaf
@@ -61,7 +61,7 @@ func (fb *fbtree) Insert(key string, off uint64) {
 	// insert up the tree
 	for i := fb.treeLevels - 1; i >= 0; i-- {
 		node, where = fb.insert(stack[i], splitKey, rightOff, nil)
-		fb.moffs.set(stack[i], node)
+		fb.redirs.set(stack[i], node)
 		size := len(node)
 		if size <= MaxNodeSize {
 			return // finished
@@ -73,7 +73,7 @@ func (fb *fbtree) Insert(key string, off uint64) {
 	newRoot := make(fNode, 0, 24)
 	newRoot = fAppend(newRoot, uint64(fb.root), 0, "")
 	newRoot = fAppend(newRoot, uint64(rightOff), 0, splitKey)
-	fb.root = fb.moffs.add(newRoot)
+	fb.root = fb.redirs.add(newRoot)
 	fb.treeLevels++
 }
 
@@ -85,10 +85,10 @@ func (fb *fbtree) insert(nodeOff uint64, key string, off uint64,
 
 func (fb *fbtree) getMutableNode(off uint64) fNode {
 	var roNode fNode
-	if r,ok := fb.moffs.redirs.Get(off); ok {
+	if r, ok := fb.redirs.tbl.Get(off); ok {
 		if r.newOffset != 0 {
 			roNode = fb.readNode(r.newOffset)
-		} else if r.generation == fb.moffs.generation {
+		} else if r.generation == fb.redirs.generation {
 			return r.mnode
 		} else {
 			roNode = r.mnode
@@ -97,8 +97,8 @@ func (fb *fbtree) getMutableNode(off uint64) fNode {
 		roNode = fb.readNode(off)
 	}
 	node := append(roNode[:0:0], roNode...)
-	fb.moffs.redirs.Put(&redir{offset: off,
-		mnode: node, generation: fb.moffs.generation})
+	fb.redirs.tbl.Put(&redir{offset: off,
+		mnode: node, generation: fb.redirs.generation})
 	return node
 }
 
@@ -117,7 +117,7 @@ func (fb *fbtree) split(node fNode, nodeOff uint64, where int) (
 	splitKey = it.known
 
 	left := node[:it.fi]
-	fb.moffs.set(nodeOff, left)
+	fb.redirs.set(nodeOff, left)
 	right := make(fNode, 0, len(node)-it.fi+8)
 	// first entry becomes 0, ""
 	right = fAppend(right, it.offset, 0, "")
@@ -128,7 +128,7 @@ func (fb *fbtree) split(node fNode, nodeOff uint64, where int) (
 			right = append(right, node[it.fi:]...)
 		}
 	}
-	rightOff = fb.moffs.add(right)
+	rightOff = fb.redirs.add(right)
 	return
 }
 
@@ -181,7 +181,7 @@ func (fb *fbtree) delete(nodeOff uint64, off uint64) (fNode, bool) {
 	node := fb.getMutableNode(nodeOff)
 	node, ok := node.delete(off)
 	if ok {
-		fb.moffs.set(nodeOff, node)
+		fb.redirs.set(nodeOff, node)
 	}
 	return node, ok
 }
@@ -190,11 +190,12 @@ func (fb *fbtree) delete(nodeOff uint64, off uint64) (fNode, bool) {
 
 //go:generate genny -in ../../../genny/hamt/hamt.go -out redirs.go -pkg btree gen "Item=redir KeyType=uint64"
 
-// memOffsets is use to map offsets to temporary, in-memory, mutable nodes.
+// redirs is use to redirect offsets to new nodes
+// to reduce write amplification e.g. from path copying.
 // It is used for updated versions of existing nodes, using their old offset,
 // and for new nodes with fake offsets.
-type memOffsets struct {
-	redirs     RedirHamt
+type redirs struct {
+	tbl        RedirHamt
 	nextOff    uint64
 	generation uint
 }
@@ -226,23 +227,23 @@ func RedirHash(key uint64) uint32 {
 	return uint32(key * phi64)
 }
 
-func nilMemOffsets() memOffsets {
-	return memOffsets{nextOff: stor.MaxSmallOffset, generation: 1}
+func newRedirs() redirs {
+	return redirs{nextOff: stor.MaxSmallOffset, generation: 1}
 }
 
 // add returns a fake offset for a new node (from split)
-func (mo *memOffsets) add(node fNode) uint64 {
-	off := mo.nextOff
-	mo.nextOff--
-	mo.redirs.Put(&redir{offset: off, mnode: node, generation: mo.generation})
+func (re *redirs) add(node fNode) uint64 {
+	off := re.nextOff
+	re.nextOff--
+	re.tbl.Put(&redir{offset: off, mnode: node, generation: re.generation})
 	return off
 }
 
 // set updates the node for an offset
-func (mo *memOffsets) set(off uint64, node fNode) {
-	mo.redirs.Put(&redir{offset: off, mnode: node, generation: mo.generation})
+func (re *redirs) set(off uint64, node fNode) {
+	re.tbl.Put(&redir{offset: off, mnode: node, generation: re.generation})
 
-	r, ok := mo.redirs.Get(off)
+	r, ok := re.tbl.Get(off)
 	verify.That(ok)
 	verify.That(r.offset == off)
 	verify.That(r.newOffset == 0)
@@ -250,14 +251,14 @@ func (mo *memOffsets) set(off uint64, node fNode) {
 }
 
 // isMem returns true for temporary in-memory offsets
-func (mo *memOffsets) isMem(off uint64) bool {
-	return off > mo.nextOff
+func (re *redirs) isMem(off uint64) bool {
+	return off > re.nextOff
 }
 
 // isMut returns true if mutable
-func (mo *memOffsets) isMut(off uint64) bool {
-	r, ok := mo.redirs.Get(off)
-	return ok && r.generation == mo.generation
+func (re *redirs) isMut(off uint64) bool {
+	r, ok := re.tbl.Get(off)
+	return ok && r.generation == re.generation
 }
 
 func OffStr(off uint64) string {
@@ -267,11 +268,11 @@ func OffStr(off uint64) string {
 	return strconv.Itoa(int(off))
 }
 
-func (mo *memOffsets) String() string {
+func (re *redirs) String() string {
 	s := "{"
-	mo.redirs.ForEach(func(r *redir) {
-		if r.offset > mo.nextOff {
-			s += strconv.Itoa(int(mo.nextOff - r.offset))
+	re.tbl.ForEach(func(r *redir) {
+		if r.offset > re.nextOff {
+			s += strconv.Itoa(int(re.nextOff - r.offset))
 		} else {
 			s += strconv.Itoa(int(r.offset))
 		}
@@ -286,8 +287,8 @@ func (mo *memOffsets) String() string {
 	return strings.TrimSpace(s) + "}"
 }
 
-func (mo *memOffsets) Len() int {
+func (re *redirs) Len() int {
 	n := 0
-	mo.redirs.ForEach(func(r *redir) { n++ })
+	re.tbl.ForEach(func(r *redir) { n++ })
 	return n
 }

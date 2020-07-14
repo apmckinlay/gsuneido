@@ -130,14 +130,14 @@ func (ov *Overlay) StorSize() int {
 
 func (ov *Overlay) Write(w *stor.Writer) {
 	fb := ov.under[0].(*fbtree)
-	w.Put5(fb.root).Put1(fb.treeLevels).Put5(fb.redirs)
+	w.Put5(fb.root).Put1(fb.treeLevels).Put5(fb.redirsOff)
 }
 
 func ReadOverlay(st *stor.Stor, r *stor.Reader) *Overlay {
 	root := r.Get5()
 	treeLevels := r.Get1()
-	redirs := r.Get5()
-	return &Overlay{under: []tree{OpenFbtree(st, root, treeLevels, redirs)}}
+	redirsOff := r.Get5()
+	return &Overlay{under: []tree{OpenFbtree(st, root, treeLevels, redirsOff)}}
 }
 
 //-------------------------------------------------------------------
