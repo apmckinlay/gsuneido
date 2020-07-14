@@ -13,7 +13,7 @@ import (
 )
 
 func TestInfo(t *testing.T) {
-	tbl := NewInfoHtbl(0)
+	tbl := InfoHamt{}.Mutable()
 	tbl.Put(&Info{
 		Table:   "one",
 		Nrows:   100,
@@ -26,20 +26,12 @@ func TestInfo(t *testing.T) {
 		Size:    2000,
 		Indexes: []*btree.Overlay{},
 	})
-	// over := NewTableInfoHtbl(0)
-	// over.Put(&TableInfo{
-	// 	Table: "two",
-	// 	Nrows: 9,
-	// 	Size:  99,
-	// 	Indexes: []*btree.Overlay{},
-	// })
-	// merged := base.Merge(over)
 
 	st := stor.HeapStor(8192)
 	off := tbl.Write(st)
 
 	packed := NewInfoPacked(st, off)
-	Assert(t).That(*packed.Get("one"), Equals(*tbl.Get("one")))
+	Assert(t).That(*packed.Get("one"), Equals(tbl.MustGet("one")))
 	Assert(t).That(*packed.Get("two"), Equals(Info{
 		Table:   "two",
 		Nrows:   200,
@@ -47,9 +39,9 @@ func TestInfo(t *testing.T) {
 		Indexes: []*btree.Overlay{},
 	}))
 
-	reread := ReadInfoHtbl(st, off)
-	Assert(t).That(*reread.Get("one"), Equals(*tbl.Get("one")))
-	Assert(t).That(*reread.Get("two"), Equals(Info{
+	reread := ReadInfoHamt(st, off)
+	Assert(t).That(reread.MustGet("one"), Equals(tbl.MustGet("one")))
+	Assert(t).That(reread.MustGet("two"), Equals(Info{
 		Table:   "two",
 		Nrows:   200,
 		Size:    2000,
@@ -58,7 +50,7 @@ func TestInfo(t *testing.T) {
 }
 
 func TestInfo2(t *testing.T) {
-	tbl := NewInfoHtbl(0)
+	tbl := InfoHamt{}.Mutable()
 	const n = 1000
 	data := make([]string, n)
 	randStr := str.UniqueRandom(4, 4)

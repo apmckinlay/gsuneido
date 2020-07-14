@@ -13,7 +13,7 @@ import (
 )
 
 func TestOverlay(*testing.T) {
-	tbl := NewInfoHtbl(0)
+	tbl := InfoHamt{}.Mutable()
 	const n = 1000
 	data := make([]string, n)
 	randStr := str.UniqueRandom(4, 4)
@@ -21,25 +21,15 @@ func TestOverlay(*testing.T) {
 		data[i] = randStr()
 		tbl.Put(&Info{
 			Table: data[i],
-			// Schema: &TableSchema{
-			// 	Table: data[i],
-			// 	Columns: []ColumnSchema{
-			// 		{Name: "one", Field: i},
-			// 		{Name: "two", Field: i * 2},
-			// 	},
-			// 	Indexes: []IndexSchema{
-			// 		{Fields: []int{i}},
-			// 	},
-			// },
 		})
 	}
-	st := stor.HeapStor(32*1024)
+	tbl = tbl.Freeze()
+	st := stor.HeapStor(32 * 1024)
 	offInfo := tbl.Write(st)
 	offSchema := tbl.Write(st)
 	state := &Overlay{
-		baseInfo: NewInfoPacked(st, offInfo),
+		baseInfo:   NewInfoPacked(st, offInfo),
 		baseSchema: NewSchemaPacked(st, offSchema),
-		roInfo: NewInfoHtbl(0),
 	}
 	// startup - nothing in memory
 

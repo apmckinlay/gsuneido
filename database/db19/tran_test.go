@@ -103,7 +103,7 @@ func createDb() *stor.Stor {
 	})
 	baseSchema := meta.NewSchemaPacked(store, schema.Write(store))
 
-	info := meta.NewInfoHtbl(0)
+	info := meta.InfoHamt{}.Mutable()
 	info.Put(&meta.Info{
 		Table:   "mytable",
 		Indexes: []*btree.Overlay{btree.NewOverlay(store).Save()},
@@ -112,13 +112,13 @@ func createDb() *stor.Stor {
 
 	roSchema := meta.NewSchemaHtbl(0)
 	roSchemaOff := roSchema.Write(store)
-	roInfo := meta.NewInfoHtbl(0)
+	roInfo := meta.InfoHamt{}
 	roInfoOff := roInfo.Write(store)
 
 	UpdateState(func(state *DbState) {
 		state.store = store
 		state.meta = meta.NewOverlay(baseSchema, baseInfo,
-			roSchema, roSchemaOff, roInfo, roInfoOff, nil)
+			roSchema, roSchemaOff, roInfo, roInfoOff, meta.InfoHamt{})
 	})
 
 	return store

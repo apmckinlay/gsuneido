@@ -11,8 +11,8 @@ import (
 
 type Overlay struct {
 	//TODO rwSchema
-	rwInfo      *InfoHtbl
-	roInfo      *InfoHtbl
+	rwInfo      InfoHamt
+	roInfo      InfoHamt
 	roInfoOff   uint64
 	roSchema    *SchemaHtbl
 	roSchemaOff uint64
@@ -22,8 +22,8 @@ type Overlay struct {
 
 func NewOverlay(baseSchema *SchemaPacked, baseInfo *InfoPacked,
 	roSchema *SchemaHtbl, roSchemaOff uint64,
-	roInfo *InfoHtbl, roInfoOff uint64,
-	rwInfo *InfoHtbl) *Overlay {
+	roInfo InfoHamt, roInfoOff uint64,
+	rwInfo InfoHamt) *Overlay {
 	return &Overlay{
 		baseSchema:  baseSchema,
 		baseInfo:    baseInfo,
@@ -37,18 +37,18 @@ func NewOverlay(baseSchema *SchemaPacked, baseInfo *InfoPacked,
 
 // NewOverlay returns a new Overlay based on an existing one
 func (ov *Overlay) NewOverlay() *Overlay {
-	verify.That(ov.rwInfo == nil)
-	ov2 := *ov
-	ov2.rwInfo = NewInfoHtbl(0)
+	verify.That(ov.rwInfo.IsNil())
+	ov2 := *ov // copy
+	ov2.rwInfo = InfoHamt{}.Mutable()
 	return &ov2
 }
 
 func (ov *Overlay) GetRoInfo(table string) *Info {
-	if ti := ov.rwInfo.Get(table); ti != nil {
-		return ti
+	if ti, ok := ov.rwInfo.Get(table); ok {
+		return &ti
 	}
-	if ti := ov.roInfo.Get(table); ti != nil {
-		return ti
+	if ti, ok := ov.roInfo.Get(table); ok {
+		return &ti
 	}
 	ti := ov.baseInfo.Get(table)
 	ov.rwInfo.Put(ti) // cache in memory
@@ -56,15 +56,12 @@ func (ov *Overlay) GetRoInfo(table string) *Info {
 }
 
 func (ov *Overlay) GetRwInfo(table string, tranNum int) *Info {
-	var ti *Info
-	if ti = ov.rwInfo.Get(table); ti != nil {
+	if ti := ov.rwInfo.GetPtr(table); ti != nil {
 		return ti // already have mutable
 	}
-	if ti = ov.roInfo.Get(table); ti != nil {
-		ti2 := *ti // copy
-		ti = &ti2
-	} else {
-		ti = ov.baseInfo.Get(table) // this will be a copy
+	ti, ok := ov.roInfo.Get(table)
+	if !ok {
+		ti = *ov.baseInfo.Get(table)
 	}
 	// start at 0 since these are deltas
 	ti.Nrows = 0
@@ -77,8 +74,8 @@ func (ov *Overlay) GetRwInfo(table string, tranNum int) *Info {
 		ti.Indexes[i] = ti.Indexes[i].Mutable(tranNum)
 	}
 
-	ov.rwInfo.Put(ti) // cache in memory
-	return ti
+	ov.rwInfo.Put(&ti) // cache in memory
+	return ov.rwInfo.GetPtr(table)
 }
 
 //-------------------------------------------------------------------
@@ -88,12 +85,11 @@ func (ov *Overlay) GetRwInfo(table string, tranNum int) *Info {
 // reusing the structs from the transaction
 func (ov *Overlay) LayeredOnto(latest *Overlay) *Overlay {
 	// start with a copy of the latest hash table because it may have more
-	verify.That(latest.rwInfo == nil)
-	roInfo2 := latest.roInfo.Dup() // shallow copy
-	iter := ov.rwInfo.Iter()
-	for ti := iter(); ti != nil; ti = iter() {
+	verify.That(latest.rwInfo.IsNil())
+	roInfo2 := latest.roInfo.Mutable()
+	ov.rwInfo.ForEach(func(ti *Info) {
 		if ti.mutable {
-			if lti := roInfo2.Get(ti.Table); lti != nil {
+			if lti,ok := roInfo2.Get(ti.Table); ok {
 				ti.Nrows += lti.Nrows
 				ti.Size += lti.Size
 				for i := range ti.Indexes {
@@ -107,9 +103,9 @@ func (ov *Overlay) LayeredOnto(latest *Overlay) *Overlay {
 			}
 			roInfo2.Put(ti)
 		}
-	}
+	})
 	result := *latest
-	result.roInfo = roInfo2
+	result.roInfo = roInfo2.Freeze()
 	return &result
 }
 
@@ -120,7 +116,7 @@ const Noffsets = 4
 type offsets = [Noffsets]uint64
 
 func (ov *Overlay) Write(st *stor.Stor) offsets {
-	verify.That(ov.rwInfo == nil)
+	verify.That(ov.rwInfo.IsNil())
 	return offsets{
 		ov.baseSchema.Offset(),
 		ov.baseInfo.Offset(),
@@ -134,7 +130,7 @@ func FromOffsets(st *stor.Stor, offs offsets) *Overlay {
 		baseSchema: NewSchemaPacked(st, offs[0]),
 		baseInfo:   NewInfoPacked(st, offs[1]),
 		roSchema:   ReadSchemaHtbl(st, offs[2]),
-		roInfo:     ReadInfoHtbl(st, offs[3]),
+		roInfo:     ReadInfoHamt(st, offs[3]),
 	}
 	ov.roSchemaOff = offs[2]
 	ov.roInfoOff = offs[3]

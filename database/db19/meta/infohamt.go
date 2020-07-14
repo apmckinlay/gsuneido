@@ -5,11 +5,11 @@
 // Copyright Suneido Software Corp. All rights reserved.
 // Governed by the MIT license found in the LICENSE file.
 
-package btree
+package meta
 
 import "math/bits"
 
-type RedirHamt struct {
+type InfoHamt struct {
 	root       *node
 	mutable    bool
 	generation uint32 // if mutable, nodes with this generation are mutable
@@ -19,18 +19,18 @@ type node struct {
 	generation uint32
 	bmVal      uint32
 	bmPtr      uint32
-	vals       []redir
+	vals       []Info
 	ptrs       []*node
 }
 
 const bitsPerNode = 5
 const mask = 1<<bitsPerNode - 1
 
-func (ht RedirHamt) IsNil() bool {
+func (ht InfoHamt) IsNil() bool {
 	return ht.root == nil
 }
 
-func (ht RedirHamt) MustGet(key uint64) redir {
+func (ht InfoHamt) MustGet(key string) Info {
 	it, ok := ht.Get(key)
 	if !ok {
 		panic("Hamt MustGet failed")
@@ -38,28 +38,28 @@ func (ht RedirHamt) MustGet(key uint64) redir {
 	return it
 }
 
-func (ht RedirHamt) GetPtr(key uint64) *redir {
+func (ht InfoHamt) GetPtr(key string) *Info {
 	if !ht.mutable {
 		panic("can't modify an immutable Hamt")
 	}
 	return ht.get(key)
 }
 
-func (ht RedirHamt) Get(key uint64) (redir, bool) {
+func (ht InfoHamt) Get(key string) (Info, bool) {
 	it := ht.get(key)
 	if it == nil {
-		var zero redir
+		var zero Info
 		return zero, false
 	}
 	return *it, true
 }
 
-func (ht RedirHamt) get(key uint64) *redir {
+func (ht InfoHamt) get(key string) *Info {
 	nd := ht.root
 	if nd == nil {
 		return nil
 	}
-	hash := RedirHash(key)
+	hash := InfoHash(key)
 	for shift := 0; shift < 32; shift += bitsPerNode { // iterative
 		bit := nd.bit(hash, shift)
 		iv := bits.OnesCount32(nd.bmVal & (bit - 1))
@@ -90,7 +90,7 @@ func (*node) bit(hash uint32, shift int) uint32 {
 
 //-------------------------------------------------------------------
 
-func (ht RedirHamt) Mutable() RedirHamt {
+func (ht InfoHamt) Mutable() InfoHamt {
 	gen := ht.generation + 1
 	nd := ht.root
 	if nd == nil {
@@ -98,19 +98,19 @@ func (ht RedirHamt) Mutable() RedirHamt {
 	}
 	nd = nd.dup()
 	nd.generation = gen
-	return RedirHamt{root: nd, mutable: true, generation: gen}
+	return InfoHamt{root: nd, mutable: true, generation: gen}
 }
 
-func (ht RedirHamt) Put(item *redir) {
+func (ht InfoHamt) Put(item *Info) {
 	if !ht.mutable {
 		panic("can't modify an immutable Hamt")
 	}
 	key := item.Key()
-	hash := RedirHash(key)
+	hash := InfoHash(key)
 	ht.root.with(ht.generation, item, key, hash, 0)
 }
 
-func (nd *node) with(gen uint32, item *redir, key uint64, hash uint32, shift int) *node {
+func (nd *node) with(gen uint32, item *Info, key string, hash uint32, shift int) *node {
 	// recursive
 	if nd.generation != gen {
 		// path copy on the way down the tree
@@ -139,7 +139,7 @@ func (nd *node) with(gen uint32, item *redir, key uint64, hash uint32, shift int
 	if (nd.bmVal & bit) == 0 {
 		// slot is empty, insert new value
 		nd.bmVal |= bit
-		nd.vals = append(nd.vals, redir{})
+		nd.vals = append(nd.vals, Info{})
 		copy(nd.vals[iv+1:], nd.vals[iv:])
 		nd.vals[iv] = *item
 		return nd
@@ -154,7 +154,7 @@ func (nd *node) with(gen uint32, item *redir, key uint64, hash uint32, shift int
 	if shift+bitsPerNode < 32 {
 		oldval := &nd.vals[iv]
 		oldkey := oldval.Key()
-		nu = nu.with(gen, oldval, oldkey, RedirHash(oldkey), shift+bitsPerNode)
+		nu = nu.with(gen, oldval, oldkey, InfoHash(oldkey), shift+bitsPerNode)
 		nu = nu.with(gen, item, key, hash, shift+bitsPerNode)
 	} else {
 		// overflow node, no bitmaps, just list values
@@ -182,19 +182,19 @@ func (nd *node) dup() *node {
 	return &dup
 }
 
-func (ht RedirHamt) Freeze() RedirHamt {
-	return RedirHamt{root: ht.root, generation: ht.generation}
+func (ht InfoHamt) Freeze() InfoHamt {
+	return InfoHamt{root: ht.root, generation: ht.generation}
 }
 
 //-------------------------------------------------------------------
 
-func (ht RedirHamt) ForEach(fn func(*redir)) {
+func (ht InfoHamt) ForEach(fn func(*Info)) {
 	if ht.root != nil {
 		ht.root.forEach(fn)
 	}
 }
 
-func (nd *node) forEach(fn func(*redir)) {
+func (nd *node) forEach(fn func(*Info)) {
 	for i := range nd.vals {
 		fn(&nd.vals[i])
 	}

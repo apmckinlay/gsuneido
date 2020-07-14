@@ -29,11 +29,38 @@ type node struct {
 const bitsPerNode = 5
 const mask = 1<<bitsPerNode - 1
 
+func (ht ItemHamt) IsNil() bool {
+	return ht.root == nil
+}
+
+func (ht ItemHamt) MustGet(key KeyType) Item {
+	it, ok := ht.Get(key)
+	if !ok {
+		panic("Hamt MustGet failed")
+	}
+	return it
+}
+
+func (ht ItemHamt) GetPtr(key KeyType) *Item {
+	if !ht.mutable {
+		panic("can't modify an immutable Hamt")
+	}
+	return ht.get(key)
+}
+
 func (ht ItemHamt) Get(key KeyType) (Item, bool) {
-	var zero Item
+	it := ht.get(key)
+	if it == nil {
+		var zero Item
+		return zero, false
+	}
+	return *it, true
+}
+
+func (ht ItemHamt) get(key KeyType) *Item {
 	nd := ht.root
 	if nd == nil {
-		return zero, false
+		return nil
 	}
 	hash := ItemHash(key)
 	for shift := 0; shift < 32; shift += bitsPerNode { // iterative
@@ -41,12 +68,12 @@ func (ht ItemHamt) Get(key KeyType) (Item, bool) {
 		iv := bits.OnesCount32(nd.bmVal & (bit - 1))
 		if (nd.bmVal & bit) != 0 {
 			if nd.vals[iv].Key() != key {
-				return zero, false
+				return nil
 			}
-			return nd.vals[iv], true
+			return &nd.vals[iv]
 		}
 		if (nd.bmPtr & bit) == 0 {
-			return zero, false
+			return nil
 		}
 		ip := bits.OnesCount32(nd.bmPtr & (bit - 1))
 		nd = nd.ptrs[ip]
@@ -54,10 +81,10 @@ func (ht ItemHamt) Get(key KeyType) (Item, bool) {
 	// overflow node, linear search
 	for i := range nd.vals {
 		if nd.vals[i].Key() == key {
-			return nd.vals[i], true
+			return &nd.vals[i]
 		}
 	}
-	return zero, false // not found
+	return nil // not found
 }
 
 func (*node) bit(hash uint32, shift int) uint32 {

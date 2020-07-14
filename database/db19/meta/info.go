@@ -6,9 +6,8 @@ package meta
 import (
 	"github.com/apmckinlay/gsuneido/database/db19/btree"
 	"github.com/apmckinlay/gsuneido/database/db19/stor"
+	"github.com/apmckinlay/gsuneido/util/hash"
 )
-
-//go:generate genny -in ../../../genny/metahtbl/metahtbl.go -out infohtbl.go -pkg meta gen "Item=Info"
 
 type Info struct {
 	Table   string
@@ -19,7 +18,16 @@ type Info struct {
 	mutable bool
 }
 
-//-------------------------------------------------------------------
+//go:generate genny -in ../../../genny/hamt/hamt.go -out infohamt.go -pkg meta gen "Item=Info KeyType=string"
+//go:generate genny -in ../../../genny/hamt/meta.go -out infohamt2.go -pkg meta gen "Item=Info KeyType=string"
+
+func (ti *Info) Key() string {
+	return ti.Table
+}
+
+func InfoHash(key string) uint32 {
+	return hash.HashString(key)
+}
 
 func (ti *Info) storSize() int {
 	size := 2 + len(ti.Table) + 4 + 5 + 1
@@ -62,10 +70,9 @@ type overlays []*btree.Overlay
 
 type btOver = *btree.Overlay
 
-func (t *InfoHtbl) process(fn func(btOver) btOver) []update {
+func (t InfoHamt) process(fn func(btOver) btOver) []update {
 	var updates []update
-	iter := t.Iter()
-	for ti := iter(); ti != nil; ti = iter() {
+	t.ForEach(func(ti *Info) {
 		if ti.mutable {
 			updated := make(overlays, len(ti.Indexes))
 			for i, ov := range ti.Indexes {
@@ -73,14 +80,14 @@ func (t *InfoHtbl) process(fn func(btOver) btOver) []update {
 			}
 			updates = append(updates, update{table: ti.Table, overlays: updated})
 		}
-	}
+	})
 	return updates
 }
 
-func (t *InfoHtbl) withUpdates(updates []update, fn func(btOver, btOver) btOver) *InfoHtbl {
-	t2 := t.Dup()
+func (t InfoHamt) withUpdates(updates []update, fn func(btOver, btOver) btOver) InfoHamt {
+	t2 := t.Mutable()
 	for _, up := range updates {
-		ti := *t2.Get(up.table)                           // copy
+		ti, _ := t2.Get(up.table)                         // copy
 		ti.Indexes = append(overlays(nil), ti.Indexes...) // copy
 		for i, ov := range ti.Indexes {
 			if up.overlays[i] != nil {
@@ -89,9 +96,9 @@ func (t *InfoHtbl) withUpdates(updates []update, fn func(btOver, btOver) btOver)
 		}
 		t2.Put(&ti)
 	}
-	return t2
+	return t2.Freeze()
 }
 
 //-------------------------------------------------------------------
 
-//TODO Merge an InfoHtbl and an InfoPacked to make new base
+//TODO merge an InfoHamt and an InfoPacked to make new base
