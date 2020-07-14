@@ -15,7 +15,8 @@ import (
 
 func TestRandom(t *testing.T) {
 	ht := FooHamt{}.Mutable()
-	Assert(t).That(ht.Get(123), Equals(nil))
+	_, ok := ht.Get(123)
+	Assert(t).False(ok)
 	var n = 1000000
 	if testing.Short() {
 		n = 1000
@@ -34,8 +35,8 @@ func TestRandom(t *testing.T) {
 	rand.Seed(123456)
 	for i := 0; i < n; i++ {
 		f := int(rand.Int31())
-		foo := ht.Get(f)
-		Assert(t).That(foo, NotEquals(nil))
+		foo, ok := ht.Get(f)
+		Assert(t).True(ok)
 		Assert(t).That(foo.key, Equals(f))
 		Assert(t).That(foo.data, Equals(strconv.Itoa(f)))
 	}

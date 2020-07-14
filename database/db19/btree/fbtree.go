@@ -123,7 +123,7 @@ func (node fNode) putNode(store *stor.Stor) uint64 {
 }
 
 func (fb *fbtree) getNode(off uint64) fNode {
-	if r := fb.moffs.redirs.Get(off); r != nil {
+	if r,ok := fb.moffs.redirs.Get(off); ok {
 		verify.That((r.mnode == nil) != (r.newOffset == 0))
 		if r.mnode != nil {
 			return r.mnode

@@ -26,10 +26,11 @@ type node struct {
 const bitsPerNode = 5
 const mask = 1<<bitsPerNode - 1
 
-func (ht FooHamt) Get(key int) *Foo {
+func (ht FooHamt) Get(key int) (Foo, bool) {
+	var zero Foo
 	nd := ht.root
 	if nd == nil {
-		return nil
+		return zero, false
 	}
 	hash := FooHash(key)
 	for shift := 0; shift < 32; shift += bitsPerNode { // iterative
@@ -37,12 +38,12 @@ func (ht FooHamt) Get(key int) *Foo {
 		iv := bits.OnesCount32(nd.bmVal & (bit - 1))
 		if (nd.bmVal & bit) != 0 {
 			if nd.vals[iv].Key() != key {
-				return nil
+				return zero, false
 			}
-			return &nd.vals[iv]
+			return nd.vals[iv], true
 		}
 		if (nd.bmPtr & bit) == 0 {
-			return nil
+			return zero, false
 		}
 		ip := bits.OnesCount32(nd.bmPtr & (bit - 1))
 		nd = nd.ptrs[ip]
@@ -50,10 +51,10 @@ func (ht FooHamt) Get(key int) *Foo {
 	// overflow node, linear search
 	for i := range nd.vals {
 		if nd.vals[i].Key() == key {
-			return &nd.vals[i]
+			return nd.vals[i], true
 		}
 	}
-	return nil // not found
+	return zero, false // not found
 }
 
 func (*node) bit(hash uint32, shift int) uint32 {

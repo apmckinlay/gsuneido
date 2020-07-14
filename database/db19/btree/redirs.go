@@ -7,11 +7,7 @@
 
 package btree
 
-import (
-	"math/bits"
-
-	"github.com/apmckinlay/gsuneido/util/verify"
-)
+import "math/bits"
 
 type RedirHamt struct {
 	root       *node
@@ -30,10 +26,11 @@ type node struct {
 const bitsPerNode = 5
 const mask = 1<<bitsPerNode - 1
 
-func (ht RedirHamt) Get(key uint64) *redir {
+func (ht RedirHamt) Get(key uint64) (redir, bool) {
+	var zero redir
 	nd := ht.root
 	if nd == nil {
-		return nil
+		return zero, false
 	}
 	hash := RedirHash(key)
 	for shift := 0; shift < 32; shift += bitsPerNode { // iterative
@@ -41,12 +38,12 @@ func (ht RedirHamt) Get(key uint64) *redir {
 		iv := bits.OnesCount32(nd.bmVal & (bit - 1))
 		if (nd.bmVal & bit) != 0 {
 			if nd.vals[iv].Key() != key {
-				return nil
+				return zero, false
 			}
-			return &nd.vals[iv]
+			return nd.vals[iv], true
 		}
 		if (nd.bmPtr & bit) == 0 {
-			return nil
+			return zero, false
 		}
 		ip := bits.OnesCount32(nd.bmPtr & (bit - 1))
 		nd = nd.ptrs[ip]
@@ -54,10 +51,10 @@ func (ht RedirHamt) Get(key uint64) *redir {
 	// overflow node, linear search
 	for i := range nd.vals {
 		if nd.vals[i].Key() == key {
-			return &nd.vals[i]
+			return nd.vals[i], true
 		}
 	}
-	return nil // not found
+	return zero, false // not found
 }
 
 func (*node) bit(hash uint32, shift int) uint32 {
@@ -81,7 +78,6 @@ func (ht RedirHamt) Put(item *redir) {
 	if !ht.mutable {
 		panic("can't modify an immutable Hamt")
 	}
-	verify.That((item.mnode == nil) || (item.newOffset == 0))
 	key := item.Key()
 	hash := RedirHash(key)
 	ht.root.with(ht.generation, item, key, hash, 0)

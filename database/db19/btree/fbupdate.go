@@ -105,7 +105,7 @@ func (up *fbupdate) insert(nodeOff uint64, key string, off uint64,
 }
 
 func (up *fbupdate) getNode(off uint64) fNode {
-	if r := up.moffs.redirs.Get(off); r != nil {
+	if r,ok := up.moffs.redirs.Get(off); ok {
 		if r.mnode != nil {
 			return r.mnode
 		}
@@ -116,7 +116,7 @@ func (up *fbupdate) getNode(off uint64) fNode {
 
 func (up *fbupdate) getMutableNode(off uint64) fNode {
 	var roNode fNode
-	if r := up.moffs.redirs.Get(off); r != nil {
+	if r,ok := up.moffs.redirs.Get(off); ok {
 		if r.newOffset != 0 {
 			roNode = up.fb.readNode(r.newOffset)
 		} else if r.generation == up.moffs.generation {
@@ -264,7 +264,6 @@ func nilMemOffsets() memOffsets {
 func (mo *memOffsets) add(node fNode) uint64 {
 	off := mo.nextOff
 	mo.nextOff--
-	verify.That(mo.redirs.Get(off) == nil)
 	mo.redirs.Put(&redir{offset: off, mnode: node, generation: mo.generation})
 	return off
 }
@@ -273,7 +272,8 @@ func (mo *memOffsets) add(node fNode) uint64 {
 func (mo *memOffsets) set(off uint64, node fNode) {
 	mo.redirs.Put(&redir{offset: off, mnode: node, generation: mo.generation})
 
-	r := mo.redirs.Get(off)
+	r, ok := mo.redirs.Get(off)
+	verify.That(ok)
 	verify.That(r.offset == off)
 	verify.That(r.newOffset == 0)
 	verify.That(len(node) == 0 || &r.mnode[0] == &node[0])
@@ -286,8 +286,8 @@ func (mo *memOffsets) isMem(off uint64) bool {
 
 // isMut returns true if mutable
 func (mo *memOffsets) isMut(off uint64) bool {
-	r := mo.redirs.Get(off)
-	return r != nil && r.generation == mo.generation
+	r, ok := mo.redirs.Get(off)
+	return ok && r.generation == mo.generation
 }
 
 func OffStr(off uint64) string {
