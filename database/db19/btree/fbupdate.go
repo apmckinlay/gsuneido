@@ -11,129 +11,98 @@ import (
 	"github.com/apmckinlay/gsuneido/util/verify"
 )
 
-// fbupdate handles updating an immutable btree.
-// New and updated nodes are createing in memory.
-type fbupdate struct {
-	// fb is a copy of the fbtree (so we can update it)
-	fb fbtree
-	// moffs (mutable) maps offsets to mutable new and updated in-memory nodes
-	moffs memOffsets
+func (fb *fbtree) Update(fn func(*fbtree)) *fbtree {
+	mfb := fb.makeMutable()
+	fn(mfb)
+	return mfb.freeze()
 }
 
-func (fb *fbtree) Update(fn func(*fbupdate)) *fbtree {
-	up := newFbupdate(fb)
-	fn(up)
-	return up.freeze()
+func (fb *fbtree) makeMutable() *fbtree {
+	mfb := *fb // copy
+	mfb.mutable = true
+	mfb.moffs.redirs = fb.moffs.redirs.Mutable()
+	return &mfb
 }
 
-func newFbupdate(fb *fbtree) *fbupdate {
-	moffs := memOffsets{
-		nextOff:    fb.moffs.nextOff,
-		generation: fb.moffs.generation,
-		redirs:     fb.moffs.redirs.Mutable()}
-	return &fbupdate{fb: *fb, moffs: moffs}
-}
-
-// freeze moves the changes to the fbtree.
-// It will still reference in-memory new and updated nodes
-// but they are no longer mutable.
-func (up *fbupdate) freeze() *fbtree {
-	up.moffs.generation++ // make new stuff immutable
-	up.moffs.redirs = up.moffs.redirs.Freeze()
-	up.fb.moffs = up.moffs
-	return &up.fb
+func (fb *fbtree) freeze() *fbtree {
+	fb.moffs.generation++ // make new stuff immutable
+	fb.moffs.redirs = fb.moffs.redirs.Freeze()
+	fb.mutable = false
+	return fb
 }
 
 //-------------------------------------------------------------------
 
-func (up *fbupdate) Search(key string) uint64 {
-	off := up.fb.root
-	for i := 0; i <= up.fb.treeLevels; i++ {
-		node := up.getNode(off)
-		off, _, _ = node.search(key)
-	}
-	return off
-}
-
 const maxlevels = 8
 
-func (up *fbupdate) Insert(key string, off uint64) {
+func (fb *fbtree) Insert(key string, off uint64) {
+	verify.That(fb.mutable)
 	var stack [maxlevels]uint64
 
 	// search down the tree to the appropriate leaf
-	nodeOff := up.fb.root
-	for i := 0; i < up.fb.treeLevels; i++ {
+	nodeOff := fb.root
+	for i := 0; i < fb.treeLevels; i++ {
 		stack[i] = nodeOff
-		node := up.getNode(nodeOff)
+		node := fb.getNode(nodeOff)
 		nodeOff, _, _ = node.search(key)
 	}
 
 	// insert into leaf
-	node, where := up.insert(nodeOff, key, off, up.fb.getLeafKey)
-	up.moffs.set(nodeOff, node)
+	node, where := fb.insert(nodeOff, key, off, fb.getLeafKey)
+	fb.moffs.set(nodeOff, node)
 	size := len(node)
 	if size <= MaxNodeSize {
 		return // fast path, just insert into leaf
 	}
 
 	// split leaf
-	splitKey, rightOff := up.split(node, nodeOff, where)
+	splitKey, rightOff := fb.split(node, nodeOff, where)
 
 	// insert up the tree
-	for i := up.fb.treeLevels - 1; i >= 0; i-- {
-		node, where = up.insert(stack[i], splitKey, rightOff, nil)
-		up.moffs.set(stack[i], node)
+	for i := fb.treeLevels - 1; i >= 0; i-- {
+		node, where = fb.insert(stack[i], splitKey, rightOff, nil)
+		fb.moffs.set(stack[i], node)
 		size := len(node)
 		if size <= MaxNodeSize {
 			return // finished
 		}
-		splitKey, rightOff = up.split(node, stack[i], where)
+		splitKey, rightOff = fb.split(node, stack[i], where)
 	}
 
 	// split all the way up, create new root
 	newRoot := make(fNode, 0, 24)
-	newRoot = fAppend(newRoot, uint64(up.fb.root), 0, "")
+	newRoot = fAppend(newRoot, uint64(fb.root), 0, "")
 	newRoot = fAppend(newRoot, uint64(rightOff), 0, splitKey)
-	up.fb.root = up.moffs.add(newRoot)
-	up.fb.treeLevels++
+	fb.root = fb.moffs.add(newRoot)
+	fb.treeLevels++
 }
 
-func (up *fbupdate) insert(nodeOff uint64, key string, off uint64,
+func (fb *fbtree) insert(nodeOff uint64, key string, off uint64,
 	get func(uint64) string) (fNode, int) {
-	node := up.getMutableNode(nodeOff)
+	node := fb.getMutableNode(nodeOff)
 	return node.insert(key, off, get)
 }
 
-func (up *fbupdate) getNode(off uint64) fNode {
-	if r,ok := up.moffs.redirs.Get(off); ok {
-		if r.mnode != nil {
-			return r.mnode
-		}
-		off = r.newOffset
-	}
-	return up.fb.readNode(off)
-}
-
-func (up *fbupdate) getMutableNode(off uint64) fNode {
+func (fb *fbtree) getMutableNode(off uint64) fNode {
 	var roNode fNode
-	if r,ok := up.moffs.redirs.Get(off); ok {
+	if r,ok := fb.moffs.redirs.Get(off); ok {
 		if r.newOffset != 0 {
-			roNode = up.fb.readNode(r.newOffset)
-		} else if r.generation == up.moffs.generation {
+			roNode = fb.readNode(r.newOffset)
+		} else if r.generation == fb.moffs.generation {
 			return r.mnode
 		} else {
 			roNode = r.mnode
 		}
 	} else {
-		roNode = up.fb.readNode(off)
+		roNode = fb.readNode(off)
 	}
 	node := append(roNode[:0:0], roNode...)
-	up.moffs.redirs.Put(&redir{offset: off,
-		mnode: node, generation: up.moffs.generation})
+	fb.moffs.redirs.Put(&redir{offset: off,
+		mnode: node, generation: fb.moffs.generation})
 	return node
 }
 
-func (up *fbupdate) split(node fNode, nodeOff uint64, where int) (
+func (fb *fbtree) split(node fNode, nodeOff uint64, where int) (
 	splitKey string, rightOff uint64) {
 	size := len(node)
 	splitSize := size / 2
@@ -148,7 +117,7 @@ func (up *fbupdate) split(node fNode, nodeOff uint64, where int) (
 	splitKey = it.known
 
 	left := node[:it.fi]
-	up.moffs.set(nodeOff, left)
+	fb.moffs.set(nodeOff, left)
 	right := make(fNode, 0, len(node)-it.fi+8)
 	// first entry becomes 0, ""
 	right = fAppend(right, it.offset, 0, "")
@@ -159,59 +128,60 @@ func (up *fbupdate) split(node fNode, nodeOff uint64, where int) (
 			right = append(right, node[it.fi:]...)
 		}
 	}
-	rightOff = up.moffs.add(right)
+	rightOff = fb.moffs.add(right)
 	return
 }
 
 //-------------------------------------------------------------------
 
-func (up *fbupdate) Delete(key string, off uint64) bool {
+func (fb *fbtree) Delete(key string, off uint64) bool {
+	verify.That(fb.mutable)
 	var stack [maxlevels]uint64
 
 	// search down the tree to the appropriate leaf
-	nodeOff := up.fb.root
-	for i := 0; i < up.fb.treeLevels; i++ {
+	nodeOff := fb.root
+	for i := 0; i < fb.treeLevels; i++ {
 		stack[i] = nodeOff
-		node := up.getNode(nodeOff)
+		node := fb.getNode(nodeOff)
 		nodeOff, _, _ = node.search(key)
 	}
 
 	// delete from leaf
-	node, ok := up.delete(nodeOff, off)
+	node, ok := fb.delete(nodeOff, off)
 	if !ok {
 		return false
 	}
-	if len(node) != 0 || up.fb.treeLevels == 0 {
+	if len(node) != 0 || fb.treeLevels == 0 {
 		return true // usual fast path
 	}
 
 	// delete up the tree
-	for i := up.fb.treeLevels - 1; i >= 0; i-- {
-		node, ok = up.delete(stack[i], nodeOff)
+	for i := fb.treeLevels - 1; i >= 0; i-- {
+		node, ok = fb.delete(stack[i], nodeOff)
 		if !ok {
 			panic("leaf node not found in tree")
 		}
-		if (i > 0 || up.fb.treeLevels == 0) && len(node) != 0 {
+		if (i > 0 || fb.treeLevels == 0) && len(node) != 0 {
 			return true
 		}
 		nodeOff = stack[i]
 	}
 
 	// remove empty root(s)
-	for up.fb.treeLevels > 0 && len(node) == 7 {
-		up.fb.treeLevels--
-		up.fb.root = stor.ReadSmallOffset(node)
-		node = up.getNode(up.fb.root)
+	for fb.treeLevels > 0 && len(node) == 7 {
+		fb.treeLevels--
+		fb.root = stor.ReadSmallOffset(node)
+		node = fb.getNode(fb.root)
 	}
 
 	return true
 }
 
-func (up *fbupdate) delete(nodeOff uint64, off uint64) (fNode, bool) {
-	node := up.getMutableNode(nodeOff)
+func (fb *fbtree) delete(nodeOff uint64, off uint64) (fNode, bool) {
+	node := fb.getMutableNode(nodeOff)
 	node, ok := node.delete(off)
 	if ok {
-		up.moffs.set(nodeOff, node)
+		fb.moffs.set(nodeOff, node)
 	}
 	return node, ok
 }
@@ -320,61 +290,4 @@ func (mo *memOffsets) Len() int {
 	n := 0
 	mo.redirs.ForEach(func(r *redir) { n++ })
 	return n
-}
-
-// ------------------------------------------------------------------
-
-func (up *fbupdate) print() {
-	up.print1(0, up.fb.root)
-}
-
-func (up *fbupdate) print1(depth int, offset uint64) {
-	print(strings.Repeat("    ", depth)+"offset", OffStr(offset), "=", offset)
-	node := up.getNode(offset)
-	for it := node.iter(); it.next(); {
-		offset := it.offset
-		if depth < up.fb.treeLevels {
-			// tree
-			print(strings.Repeat("    ", depth)+strconv.Itoa(it.fi)+":",
-				it.npre, it.diff, "=", it.known)
-			up.print1(depth+1, offset) // recurse
-		} else {
-			// leaf
-			print(strings.Repeat("    ", depth)+strconv.Itoa(it.fi)+":",
-				OffStr(offset)+",", it.npre, it.diff, "=", it.known,
-				"("+up.fb.getLeafKey(offset)+")")
-		}
-	}
-}
-
-// check verifies that the keys are in order and returns the number of keys
-func (up *fbupdate) check() (count, size, nnodes int) {
-	return up.check1(0, up.fb.root, "")
-}
-
-func (up *fbupdate) check1(depth int, offset uint64, key string) (count, size, nnodes int) {
-	node := up.getNode(offset)
-	size += len(node)
-	nnodes++
-	for it := node.iter(); it.next(); {
-		offset := it.offset
-		if depth < up.fb.treeLevels {
-			// tree
-			if it.fi > 0 && key > it.known {
-				panic("keys out of order " + key + " " + it.known)
-			}
-			c, s, n := up.check1(depth+1, offset, it.known) // recurse
-			count += c
-			size += s
-			nnodes += n
-		} else {
-			// leaf
-			itkey := up.fb.getLeafKey(offset)
-			if key > itkey {
-				panic("keys out of order " + key + " " + itkey)
-			}
-			count++
-		}
-	}
-	return
 }

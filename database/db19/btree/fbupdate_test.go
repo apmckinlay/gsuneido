@@ -19,7 +19,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
-func TestFbupdate(t *testing.T) {
+func TestUpdate(t *testing.T) {
 	var nTimes = 10
 	if testing.Short() {
 		nTimes = 1
@@ -31,14 +31,14 @@ func TestFbupdate(t *testing.T) {
 		defer func(mns int) { MaxNodeSize = mns }(MaxNodeSize)
 		MaxNodeSize = 44
 		fb := CreateFbtree(nil)
-		up := newFbupdate(fb)
+		mfb := fb.makeMutable()
 		randKey := str.UniqueRandomOf(3, 6, "abcde")
 		for i := 0; i < n; i++ {
 			key := randKey()
 			data[i] = key
-			up.Insert(key, uint64(i))
+			mfb.Insert(key, uint64(i))
 		}
-		up.checkData(t, data[:])
+		mfb.checkData(t, data[:])
 	}
 }
 
@@ -50,18 +50,18 @@ func TestUnevenSplit(t *testing.T) {
 		defer func(mns int) { MaxNodeSize = mns }(MaxNodeSize)
 		MaxNodeSize = 128
 		fb := CreateFbtree(nil)
-		up := newFbupdate(fb)
+		mfb := fb.makeMutable()
 		for i := 0; i < n; i++ {
-			up.Insert(data[i], uint64(i))
+			mfb.Insert(data[i], uint64(i))
 		}
-		count, size, nnodes := up.check()
+		count, size, nnodes := mfb.check()
 		Assert(t).That(count, Equals(n))
 		full := float32(size) / float32(nnodes) / float32(MaxNodeSize)
 		// print("count", count, "nnodes", nnodes, "size", size, "full", full)
 		if full < .65 {
 			t.Error("expected > .65 got", full)
 		}
-		up.checkData(t, data[:])
+		mfb.checkData(t, data[:])
 	}
 	randKey := str.UniqueRandomOf(3, 6, "abcde")
 	for i := 0; i < n; i++ {
@@ -77,25 +77,12 @@ func TestUnevenSplit(t *testing.T) {
 func (fb *fbtree) checkData(t *testing.T, data []string) {
 	t.Helper()
 	count, _, _ := fb.check()
-	Assert(t).That(count, Equals(len(data)))
-	for i, k := range data {
-		o := fb.Search(k)
-		if o != uint64(i) {
-			t.Log("checkData", k, "expect", i, "actual", o)
-			t.FailNow()
-		}
-	}
-}
-
-func (up *fbupdate) checkData(t *testing.T, data []string) {
-	t.Helper()
-	count, _, _ := up.check()
 	n := 0
 	for i, k := range data {
 		if data[i] == "" {
 			continue
 		}
-		o := up.Search(k)
+		o := fb.Search(k)
 		if o != uint64(i) {
 			t.Log("checkData", k, "expect", i, "actual", o)
 			t.FailNow()
@@ -122,11 +109,11 @@ func TestSampleData(t *testing.T) {
 			defer func(mns int) { MaxNodeSize = mns }(MaxNodeSize)
 			MaxNodeSize = 256
 			fb := CreateFbtree(nil)
-			up := newFbupdate(fb)
+			mfb := fb.makeMutable()
 			for i, d := range data {
-				up.Insert(d, uint64(i))
+				mfb.Insert(d, uint64(i))
 			}
-			up.checkData(t, data)
+			mfb.checkData(t, data)
 		}
 	}
 	test("../../../../bizpartnername.txt")
@@ -157,15 +144,15 @@ func TestFbdelete(t *testing.T) {
 	defer func(mns int) { MaxNodeSize = mns }(MaxNodeSize)
 	MaxNodeSize = 44
 	fb := CreateFbtree(nil)
-	up := newFbupdate(fb)
+	mfb := fb.makeMutable()
 	randKey := str.UniqueRandomOf(3, 6, "abcdef")
 	for i := 0; i < n; i++ {
 		key := randKey()
 		data[i] = key
-		up.Insert(key, uint64(i))
+		mfb.Insert(key, uint64(i))
 	}
-	up.checkData(t, data)
-	// up.print()
+	mfb.checkData(t, data)
+	// mfb.print()
 
 	for i := 0; i < len(data); i++ {
 		off := rand.Intn(len(data))
@@ -173,11 +160,11 @@ func TestFbdelete(t *testing.T) {
 			off = (off + 1) % len(data)
 		}
 		// print("================================= delete", data[off])
-		up.Delete(data[off], uint64(off))
-		// up.print()
+		mfb.Delete(data[off], uint64(off))
+		// mfb.print()
 		data[off] = ""
 		if i%11 == 0 {
-			up.checkData(t, data)
+			mfb.checkData(t, data)
 		}
 	}
 }
@@ -190,13 +177,13 @@ func TestFreeze(t *testing.T) {
 	store.Alloc(1) // avoid offset 0
 	fb := CreateFbtree(store)
 	Assert(t).That(fb.moffs.Len(), Equals(1))
-	fb = fb.Update(func(up *fbupdate) {
-		up.Insert("1", 1)
+	fb = fb.Update(func(mfb *fbtree) {
+		mfb.Insert("1", 1)
 	})
 	Assert(t).That(fb.moffs.Len(), Equals(1))
 	Assert(t).That(fb.list(), Equals("1"))
-	fb = fb.Update(func(up *fbupdate) {
-		up.Insert("2", 2)
+	fb = fb.Update(func(mfb *fbtree) {
+		mfb.Insert("2", 2)
 	})
 	Assert(t).That(fb.moffs.Len(), Equals(1))
 	Assert(t).That(fb.list(), Equals("1 2"))
@@ -236,10 +223,10 @@ func TestSave(t *testing.T) {
 	randKey := str.UniqueRandomOf(3, 7, "abcdef")
 	for i := 0; i < nSaves; i++ {
 		for j := 0; j < updatesPerSave; j++ {
-			fb = fb.Update(func(up *fbupdate) {
+			fb = fb.Update(func(mfb *fbtree) {
 				for k := 0; k < insertsPerUpdate; k++ {
 					key := randKey()
-					up.Insert(key, uint64(len(data)))
+					mfb.Insert(key, uint64(len(data)))
 					data = append(data, key)
 				}
 			})
@@ -282,10 +269,10 @@ func TestSplitDup(*testing.T) {
 		rand.Shuffle(len(data),
 			func(i, j int) { data[i], data[j] = data[j], data[i] })
 		fb := CreateFbtree(nil)
-		fb = fb.Update(func(up *fbupdate) {
+		fb = fb.Update(func(mfb *fbtree) {
 			for _, n := range data {
 				key := strconv.Itoa(n)
-				up.Insert(key, uint64(n))
+				mfb.Insert(key, uint64(n))
 			}
 		})
 	}

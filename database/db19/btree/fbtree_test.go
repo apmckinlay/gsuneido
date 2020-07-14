@@ -21,17 +21,17 @@ func TestFbtreeIter(t *testing.T) {
 	GetLeafKey = func(_ *stor.Stor, _ interface{}, i uint64) string { return data[i] }
 	defer func(mns int) { MaxNodeSize = mns }(MaxNodeSize)
 	MaxNodeSize = 440
-	fb := CreateFbtree(nil)
-	up := newFbupdate(fb)
 	randKey := str.UniqueRandomOf(3, 6, "abcde")
 	for i := 0; i < n; i++ {
 		data[i] = randKey()
 	}
 	sort.Strings(data[:])
-	for i, k := range data {
-		up.Insert(k, uint64(i))
-	}
-	fb = up.freeze()
+	fb := CreateFbtree(nil)
+	fb = fb.Update(func(mfb *fbtree) {
+		for i, k := range data {
+			mfb.Insert(k, uint64(i))
+		}
+	})
 	i := 0
 	iter := fb.Iter()
 	for k, o, ok := iter(); ok; k, o, ok = iter() {

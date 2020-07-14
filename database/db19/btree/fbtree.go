@@ -26,6 +26,8 @@ type fbtree struct {
 	ixspec interface{}
 	// redirs is the offset of the saved redirections
 	redirs uint64
+	// mutable is true during updates
+	mutable bool
 }
 
 // MaxNodeSize is the maximum node size in bytes, split if larger.
@@ -56,43 +58,43 @@ func (fb *fbtree) getLeafKey(off uint64) string {
 }
 
 func (fb *fbtree) Search(key string) uint64 {
-	nodeOff := fb.root
+	off := fb.root
 	for i := 0; i <= fb.treeLevels; i++ {
-		node := fb.getNode(nodeOff)
-		nodeOff, _, _ = node.search(key)
+		node := fb.getNode(off)
+		off, _, _ = node.search(key)
 	}
-	return nodeOff
+	return off
 }
 
 // Save writes the btree (changes) to the stor
 // and returns a new fbtree with no in-memory nodes (but still redirections)
 func (fb *fbtree) Save() *fbtree {
-	return fb.Update(func(up *fbupdate) { up.save() })
+	return fb.Update(func(mfb *fbtree) { mfb.save() })
 }
 
 const redirSize = (5 + 5 + 4)
 
-func (up *fbupdate) save() {
+func (fb *fbtree) save() {
 	// save all the in-memory nodes
 	n := 0
-	up.fb.moffs.redirs.ForEach(func(r *redir) {
+	fb.moffs.redirs.ForEach(func(r *redir) {
 		verify.That((r.mnode == nil) != (r.newOffset == 0))
 		if r.mnode != nil {
-			newOffset := r.mnode.putNode(up.fb.store)
-			up.moffs.redirs.Put(&redir{offset: r.offset, newOffset: newOffset})
+			newOffset := r.mnode.putNode(fb.store)
+			fb.moffs.redirs.Put(&redir{offset: r.offset, newOffset: newOffset})
 		}
 		n++
 	})
 	// save the redirections
 	size := 5 + n*redirSize
-	off, buf := up.fb.store.AllocSized(size)
+	off, buf := fb.store.AllocSized(size)
 	w := stor.NewWriter(buf)
-	w.Put5(up.fb.moffs.nextOff)
-	up.moffs.redirs.ForEach(func(r *redir) {
+	w.Put5(fb.moffs.nextOff)
+	fb.moffs.redirs.ForEach(func(r *redir) {
 		verify.That((r.mnode == nil) != (r.newOffset == 0))
 		w.Put5(r.offset).Put5(r.newOffset).Write(r.path[:])
 	})
-	up.fb.redirs = off
+	fb.redirs = off
 }
 
 func readMoffs(store *stor.Stor, redirs uint64) memOffsets {
