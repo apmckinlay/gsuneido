@@ -71,7 +71,7 @@ func (ov *Overlay) GetRwInfo(table string, tranNum int) *Info {
 	ti.Size = 0
 	ti.mutable = true
 
-	// setup up index overlays
+	// set up index overlays
 	ti.Indexes = append([]*btree.Overlay(nil), ti.Indexes...) // copy
 	for i := range ti.Indexes {
 		ti.Indexes[i] = ti.Indexes[i].Mutable(tranNum)
