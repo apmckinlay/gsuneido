@@ -13,12 +13,13 @@ type Item generic.Type
 type KeyType generic.Type
 
 type ItemHamt struct {
-	generation int
-	*node
+	root       *node
+	mutable    bool
+	generation uint32 // if mutable, nodes with this generation are mutable
 }
 
 type node struct {
-	generation int
+	generation uint32
 	bmVal      uint32
 	bmPtr      uint32
 	vals       []Item
@@ -29,7 +30,7 @@ const bitsPerNode = 5
 const mask = 1<<bitsPerNode - 1
 
 func (ht ItemHamt) Get(key KeyType) *Item {
-	nd := ht.node
+	nd := ht.root
 	if nd == nil {
 		return nil
 	}
@@ -38,6 +39,9 @@ func (ht ItemHamt) Get(key KeyType) *Item {
 		bit := nd.bit(hash, shift)
 		iv := bits.OnesCount32(nd.bmVal & (bit - 1))
 		if (nd.bmVal & bit) != 0 {
+			if nd.vals[iv].Key() != key {
+				return nil
+			}
 			return &nd.vals[iv]
 		}
 		if (nd.bmPtr & bit) == 0 {
@@ -61,28 +65,29 @@ func (*node) bit(hash uint32, shift int) uint32 {
 
 //-------------------------------------------------------------------
 
-type ItemHamtUpdate struct {
-	tbl        *node
-	generation int
-}
-
-func (ht *ItemHamt) Update() *ItemHamtUpdate {
-	ht.generation++
-	return &ItemHamtUpdate{tbl: ht.node, generation: ht.generation}
-}
-
-func (hu *ItemHamtUpdate) Put(item *Item) *ItemHamtUpdate {
-	key := item.Key()
-	hash := ItemHash(key)
-	hu.tbl = hu.tbl.with(hu.generation, item, key, hash, 0)
-	return hu
-}
-
-func (nd *node) with(gen int, item *Item, key KeyType, hash uint32, shift int) *node {
-	// recursive
+func (ht ItemHamt) Mutable() ItemHamt {
+	gen := ht.generation + 1
+	nd := ht.root
 	if nd == nil {
 		nd = &node{generation: gen}
-	} else if nd.generation != gen {
+	}
+	nd = nd.dup()
+	nd.generation = gen
+	return ItemHamt{root: nd, mutable: true, generation: gen}
+}
+
+func (ht ItemHamt) Put(item *Item) {
+	if !ht.mutable {
+		panic("can't modify an immutable Hamt")
+	}
+	key := item.Key()
+	hash := ItemHash(key)
+	ht.root.with(ht.generation, item, key, hash, 0)
+}
+
+func (nd *node) with(gen uint32, item *Item, key KeyType, hash uint32, shift int) *node {
+	// recursive
+	if nd.generation != gen {
 		// path copy on the way down the tree
 		nd = nd.dup()
 		nd.generation = gen // now mutable in this generation
@@ -152,16 +157,15 @@ func (nd *node) dup() *node {
 	return &dup
 }
 
-func (hu *ItemHamtUpdate) Finish() ItemHamt {
-	return ItemHamt{node: hu.tbl, generation: hu.generation}
+func (ht ItemHamt) Freeze() ItemHamt {
+	return ItemHamt{root: ht.root, generation: ht.generation}
 }
 
 //-------------------------------------------------------------------
 
 func (ht ItemHamt) ForEach(fn func(*Item)) {
-	nd := ht.node
-	if nd != nil {
-		nd.forEach(fn)
+	if ht.root != nil {
+		ht.root.forEach(fn)
 	}
 }
 
