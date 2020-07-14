@@ -5,9 +5,8 @@ package meta
 
 import (
 	"github.com/apmckinlay/gsuneido/database/db19/stor"
+	"github.com/apmckinlay/gsuneido/util/hash"
 )
-
-//go:generate genny -in ../../../genny/metahtbl/metahtbl.go -out schemahtbl.go -pkg meta gen "Item=Schema"
 
 type Schema struct {
 	Table   string
@@ -16,6 +15,17 @@ type Schema struct {
 	//TODO foreign key target stuff
 	// mutable is used to know whether to persist
 	mutable bool
+}
+
+//go:generate genny -in ../../../genny/hamt/hamt.go -out schemahamt.go -pkg meta gen "Item=Schema KeyType=string"
+//go:generate genny -in ../../../genny/hamt/meta.go -out schemahamt2.go -pkg meta gen "Item=Schema KeyType=string"
+
+func (ti *Schema) Key() string {
+	return ti.Table
+}
+
+func SchemaHash(key string) uint32 {
+	return hash.HashString(key)
 }
 
 type ColumnSchema struct {

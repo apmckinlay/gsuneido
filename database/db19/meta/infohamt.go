@@ -10,21 +10,21 @@ package meta
 import "math/bits"
 
 type InfoHamt struct {
-	root       *node
+	root       *nodeInfo
 	mutable    bool
 	generation uint32 // if mutable, nodes with this generation are mutable
 }
 
-type node struct {
+type nodeInfo struct {
 	generation uint32
 	bmVal      uint32
 	bmPtr      uint32
 	vals       []Info
-	ptrs       []*node
+	ptrs       []*nodeInfo
 }
 
-const bitsPerNode = 5
-const mask = 1<<bitsPerNode - 1
+const bitsPerInfoNode = 5
+const maskInfo = 1<<bitsPerInfoNode - 1
 
 func (ht InfoHamt) IsNil() bool {
 	return ht.root == nil
@@ -60,7 +60,7 @@ func (ht InfoHamt) get(key string) *Info {
 		return nil
 	}
 	hash := InfoHash(key)
-	for shift := 0; shift < 32; shift += bitsPerNode { // iterative
+	for shift := 0; shift < 32; shift += bitsPerInfoNode { // iterative
 		bit := nd.bit(hash, shift)
 		iv := bits.OnesCount32(nd.bmVal & (bit - 1))
 		if (nd.bmVal & bit) != 0 {
@@ -84,8 +84,8 @@ func (ht InfoHamt) get(key string) *Info {
 	return nil // not found
 }
 
-func (*node) bit(hash uint32, shift int) uint32 {
-	return 1 << ((hash >> shift) & mask)
+func (*nodeInfo) bit(hash uint32, shift int) uint32 {
+	return 1 << ((hash >> shift) & maskInfo)
 }
 
 //-------------------------------------------------------------------
@@ -94,7 +94,7 @@ func (ht InfoHamt) Mutable() InfoHamt {
 	gen := ht.generation + 1
 	nd := ht.root
 	if nd == nil {
-		nd = &node{generation: gen}
+		nd = &nodeInfo{generation: gen}
 	}
 	nd = nd.dup()
 	nd.generation = gen
@@ -110,7 +110,7 @@ func (ht InfoHamt) Put(item *Info) {
 	ht.root.with(ht.generation, item, key, hash, 0)
 }
 
-func (nd *node) with(gen uint32, item *Info, key string, hash uint32, shift int) *node {
+func (nd *nodeInfo) with(gen uint32, item *Info, key string, hash uint32, shift int) *nodeInfo {
 	// recursive
 	if nd.generation != gen {
 		// path copy on the way down the tree
@@ -132,7 +132,7 @@ func (nd *node) with(gen uint32, item *Info, key string, hash uint32, shift int)
 	ip := bits.OnesCount32(nd.bmPtr & (bit - 1))
 	if (nd.bmPtr & bit) != 0 {
 		// recurse to child node
-		nd.ptrs[ip] = nd.ptrs[ip].with(gen, item, key, hash, shift+bitsPerNode)
+		nd.ptrs[ip] = nd.ptrs[ip].with(gen, item, key, hash, shift+bitsPerInfoNode)
 		return nd
 	}
 	iv := bits.OnesCount32(nd.bmVal & (bit - 1))
@@ -150,12 +150,12 @@ func (nd *node) with(gen uint32, item *Info, key string, hash uint32, shift int)
 		return nd
 	}
 	// collision, create new child node
-	nu := &node{generation: gen}
-	if shift+bitsPerNode < 32 {
+	nu := &nodeInfo{generation: gen}
+	if shift+bitsPerInfoNode < 32 {
 		oldval := &nd.vals[iv]
 		oldkey := oldval.Key()
-		nu = nu.with(gen, oldval, oldkey, InfoHash(oldkey), shift+bitsPerNode)
-		nu = nu.with(gen, item, key, hash, shift+bitsPerNode)
+		nu = nu.with(gen, oldval, oldkey, InfoHash(oldkey), shift+bitsPerInfoNode)
+		nu = nu.with(gen, item, key, hash, shift+bitsPerInfoNode)
 	} else {
 		// overflow node, no bitmaps, just list values
 		nu.vals = append(nu.vals, nd.vals[iv], *item)
@@ -175,7 +175,7 @@ func (nd *node) with(gen uint32, item *Info, key string, hash uint32, shift int)
 	return nd
 }
 
-func (nd *node) dup() *node {
+func (nd *nodeInfo) dup() *nodeInfo {
 	dup := *nd // shallow copy
 	dup.vals = append(nd.vals[0:0:0], nd.vals...)
 	dup.ptrs = append(nd.ptrs[0:0:0], nd.ptrs...)
@@ -194,7 +194,7 @@ func (ht InfoHamt) ForEach(fn func(*Info)) {
 	}
 }
 
-func (nd *node) forEach(fn func(*Info)) {
+func (nd *nodeInfo) forEach(fn func(*Info)) {
 	for i := range nd.vals {
 		fn(&nd.vals[i])
 	}

@@ -12,7 +12,7 @@ import (
 )
 
 func TestSchema(t *testing.T) {
-	tbl := NewSchemaHtbl(0)
+	tbl := SchemaHamt{}.Mutable()
 	const n = 1000
 	data := make([]string, n)
 	randStr := str.UniqueRandom(4, 4)
@@ -41,12 +41,13 @@ func TestSchema(t *testing.T) {
 		Assert(t).That(ts.Indexes[0].Fields, Equals([]int{i}).Comment("indexes"))
 	}
 
-	tbl = ReadSchemaHtbl(st, off)
+	tbl = ReadSchemaHamt(st, off)
 
 	packed := NewSchemaPacked(st, off)
 
 	for i, table := range data {
-		test(i, table, tbl.Get(table))
+		ts := tbl.MustGet(table)
+		test(i, table, &ts)
 		test(i, table, packed.Get(table))
 	}
 }

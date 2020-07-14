@@ -90,7 +90,7 @@ func createDb() *stor.Stor {
 		panic("can't create test.tmp")
 	}
 
-	schema := meta.NewSchemaHtbl(0)
+	schema := meta.SchemaHamt{}.Mutable()
 	schema.Put(&meta.Schema{
 		Table: "mytable",
 		Columns: []meta.ColumnSchema{
@@ -110,7 +110,7 @@ func createDb() *stor.Stor {
 	})
 	baseInfo := meta.NewInfoPacked(store, info.Write(store))
 
-	roSchema := meta.NewSchemaHtbl(0)
+	roSchema := meta.SchemaHamt{}
 	roSchemaOff := roSchema.Write(store)
 	roInfo := meta.InfoHamt{}
 	roInfoOff := roInfo.Write(store)

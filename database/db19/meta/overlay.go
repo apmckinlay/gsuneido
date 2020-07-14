@@ -14,14 +14,14 @@ type Overlay struct {
 	rwInfo      InfoHamt
 	roInfo      InfoHamt
 	roInfoOff   uint64
-	roSchema    *SchemaHtbl
+	roSchema    SchemaHamt
 	roSchemaOff uint64
 	baseInfo    *InfoPacked
 	baseSchema  *SchemaPacked
 }
 
 func NewOverlay(baseSchema *SchemaPacked, baseInfo *InfoPacked,
-	roSchema *SchemaHtbl, roSchemaOff uint64,
+	roSchema SchemaHamt, roSchemaOff uint64,
 	roInfo InfoHamt, roInfoOff uint64,
 	rwInfo InfoHamt) *Overlay {
 	return &Overlay{
@@ -129,7 +129,7 @@ func FromOffsets(st *stor.Stor, offs offsets) *Overlay {
 	ov := Overlay{
 		baseSchema: NewSchemaPacked(st, offs[0]),
 		baseInfo:   NewInfoPacked(st, offs[1]),
-		roSchema:   ReadSchemaHtbl(st, offs[2]),
+		roSchema:   ReadSchemaHamt(st, offs[2]),
 		roInfo:     ReadInfoHamt(st, offs[3]),
 	}
 	ov.roSchemaOff = offs[2]

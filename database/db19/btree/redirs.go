@@ -10,21 +10,21 @@ package btree
 import "math/bits"
 
 type RedirHamt struct {
-	root       *node
+	root       *nodeRedir
 	mutable    bool
 	generation uint32 // if mutable, nodes with this generation are mutable
 }
 
-type node struct {
+type nodeRedir struct {
 	generation uint32
 	bmVal      uint32
 	bmPtr      uint32
 	vals       []redir
-	ptrs       []*node
+	ptrs       []*nodeRedir
 }
 
-const bitsPerNode = 5
-const mask = 1<<bitsPerNode - 1
+const bitsPerRedirNode = 5
+const maskRedir = 1<<bitsPerRedirNode - 1
 
 func (ht RedirHamt) IsNil() bool {
 	return ht.root == nil
@@ -60,7 +60,7 @@ func (ht RedirHamt) get(key uint64) *redir {
 		return nil
 	}
 	hash := RedirHash(key)
-	for shift := 0; shift < 32; shift += bitsPerNode { // iterative
+	for shift := 0; shift < 32; shift += bitsPerRedirNode { // iterative
 		bit := nd.bit(hash, shift)
 		iv := bits.OnesCount32(nd.bmVal & (bit - 1))
 		if (nd.bmVal & bit) != 0 {
@@ -84,8 +84,8 @@ func (ht RedirHamt) get(key uint64) *redir {
 	return nil // not found
 }
 
-func (*node) bit(hash uint32, shift int) uint32 {
-	return 1 << ((hash >> shift) & mask)
+func (*nodeRedir) bit(hash uint32, shift int) uint32 {
+	return 1 << ((hash >> shift) & maskRedir)
 }
 
 //-------------------------------------------------------------------
@@ -94,7 +94,7 @@ func (ht RedirHamt) Mutable() RedirHamt {
 	gen := ht.generation + 1
 	nd := ht.root
 	if nd == nil {
-		nd = &node{generation: gen}
+		nd = &nodeRedir{generation: gen}
 	}
 	nd = nd.dup()
 	nd.generation = gen
@@ -110,7 +110,7 @@ func (ht RedirHamt) Put(item *redir) {
 	ht.root.with(ht.generation, item, key, hash, 0)
 }
 
-func (nd *node) with(gen uint32, item *redir, key uint64, hash uint32, shift int) *node {
+func (nd *nodeRedir) with(gen uint32, item *redir, key uint64, hash uint32, shift int) *nodeRedir {
 	// recursive
 	if nd.generation != gen {
 		// path copy on the way down the tree
@@ -132,7 +132,7 @@ func (nd *node) with(gen uint32, item *redir, key uint64, hash uint32, shift int
 	ip := bits.OnesCount32(nd.bmPtr & (bit - 1))
 	if (nd.bmPtr & bit) != 0 {
 		// recurse to child node
-		nd.ptrs[ip] = nd.ptrs[ip].with(gen, item, key, hash, shift+bitsPerNode)
+		nd.ptrs[ip] = nd.ptrs[ip].with(gen, item, key, hash, shift+bitsPerRedirNode)
 		return nd
 	}
 	iv := bits.OnesCount32(nd.bmVal & (bit - 1))
@@ -150,12 +150,12 @@ func (nd *node) with(gen uint32, item *redir, key uint64, hash uint32, shift int
 		return nd
 	}
 	// collision, create new child node
-	nu := &node{generation: gen}
-	if shift+bitsPerNode < 32 {
+	nu := &nodeRedir{generation: gen}
+	if shift+bitsPerRedirNode < 32 {
 		oldval := &nd.vals[iv]
 		oldkey := oldval.Key()
-		nu = nu.with(gen, oldval, oldkey, RedirHash(oldkey), shift+bitsPerNode)
-		nu = nu.with(gen, item, key, hash, shift+bitsPerNode)
+		nu = nu.with(gen, oldval, oldkey, RedirHash(oldkey), shift+bitsPerRedirNode)
+		nu = nu.with(gen, item, key, hash, shift+bitsPerRedirNode)
 	} else {
 		// overflow node, no bitmaps, just list values
 		nu.vals = append(nu.vals, nd.vals[iv], *item)
@@ -175,7 +175,7 @@ func (nd *node) with(gen uint32, item *redir, key uint64, hash uint32, shift int
 	return nd
 }
 
-func (nd *node) dup() *node {
+func (nd *nodeRedir) dup() *nodeRedir {
 	dup := *nd // shallow copy
 	dup.vals = append(nd.vals[0:0:0], nd.vals...)
 	dup.ptrs = append(nd.ptrs[0:0:0], nd.ptrs...)
@@ -194,7 +194,7 @@ func (ht RedirHamt) ForEach(fn func(*redir)) {
 	}
 }
 
-func (nd *node) forEach(fn func(*redir)) {
+func (nd *nodeRedir) forEach(fn func(*redir)) {
 	for i := range nd.vals {
 		fn(&nd.vals[i])
 	}
