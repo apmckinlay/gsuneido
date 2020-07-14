@@ -14,8 +14,8 @@ import (
 )
 
 func TestMbtreeRandom(t *testing.T) {
-	var nGenerate = 8
-	var nShuffle = 8
+	var nGenerate = 5
+	var nShuffle = 5
 	if testing.Short() {
 		nGenerate = 2
 		nShuffle = 2

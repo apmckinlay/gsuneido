@@ -82,8 +82,8 @@ func build(data []string) fNode {
 
 func TestFnodeRandom(*testing.T) {
 	const nData = 100
-	var nGenerate = 40
-	var nShuffle = 40
+	var nGenerate = 20
+	var nShuffle = 20
 	if testing.Short() {
 		nGenerate = 1
 		nShuffle = 4

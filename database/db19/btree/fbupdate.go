@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/database/db19/stor"
+	"github.com/apmckinlay/gsuneido/util/verify"
 )
 
 // fbupdate handles updating an immutable btree.
@@ -29,10 +30,7 @@ func newFbupdate(fb *fbtree) *fbupdate {
 	moffs := memOffsets{
 		nextOff:    fb.moffs.nextOff,
 		generation: fb.moffs.generation,
-		redirs:     make(map[uint64]redir, len(fb.moffs.redirs))}
-	for o, r := range fb.moffs.redirs {
-		moffs.redirs[o] = r
-	}
+		redirs:     fb.moffs.redirs.Mutable()}
 	return &fbupdate{fb: *fb, moffs: moffs}
 }
 
@@ -40,9 +38,8 @@ func newFbupdate(fb *fbtree) *fbupdate {
 // It will still reference in-memory new and updated nodes
 // but they are no longer mutable.
 func (up *fbupdate) freeze() *fbtree {
-	// fmt.Println("up.moffs", &up.moffs)
-	// fmt.Println("up.fb.moffs", &up.fb.moffs)
 	up.moffs.generation++ // make new stuff immutable
+	up.moffs.redirs = up.moffs.redirs.Freeze()
 	up.fb.moffs = up.moffs
 	return &up.fb
 }
@@ -50,12 +47,12 @@ func (up *fbupdate) freeze() *fbtree {
 //-------------------------------------------------------------------
 
 func (up *fbupdate) Search(key string) uint64 {
-	nodeOff := up.fb.root
+	off := up.fb.root
 	for i := 0; i <= up.fb.treeLevels; i++ {
-		node := up.getNode(nodeOff)
-		nodeOff, _, _ = node.search(key)
+		node := up.getNode(off)
+		off, _, _ = node.search(key)
 	}
-	return nodeOff
+	return off
 }
 
 const maxlevels = 8
@@ -108,7 +105,7 @@ func (up *fbupdate) insert(nodeOff uint64, key string, off uint64,
 }
 
 func (up *fbupdate) getNode(off uint64) fNode {
-	if r, ok := up.moffs.redirs[off]; ok {
+	if r := up.moffs.redirs.Get(off); r != nil {
 		if r.mnode != nil {
 			return r.mnode
 		}
@@ -119,9 +116,9 @@ func (up *fbupdate) getNode(off uint64) fNode {
 
 func (up *fbupdate) getMutableNode(off uint64) fNode {
 	var roNode fNode
-	if r, ok := up.moffs.redirs[off]; ok {
+	if r := up.moffs.redirs.Get(off); r != nil {
 		if r.newOffset != 0 {
-			off = r.newOffset
+			roNode = up.fb.readNode(r.newOffset)
 		} else if r.generation == up.moffs.generation {
 			return r.mnode
 		} else {
@@ -131,7 +128,8 @@ func (up *fbupdate) getMutableNode(off uint64) fNode {
 		roNode = up.fb.readNode(off)
 	}
 	node := append(roNode[:0:0], roNode...)
-	up.moffs.redirs[off] = redir{mnode: node, generation: up.moffs.generation}
+	up.moffs.redirs.Put(&redir{offset: off,
+		mnode: node, generation: up.moffs.generation})
 	return node
 }
 
@@ -220,11 +218,13 @@ func (up *fbupdate) delete(nodeOff uint64, off uint64) (fNode, bool) {
 
 //-------------------------------------------------------------------
 
+//go:generate genny -in ../../../genny/hamt/hamt.go -out redirs.go -pkg btree gen "Item=redir KeyType=uint64"
+
 // memOffsets is use to map offsets to temporary, in-memory, mutable nodes.
 // It is used for updated versions of existing nodes, using their old offset,
 // and for new nodes with fake offsets.
 type memOffsets struct {
-	redirs     map[uint64]redir
+	redirs     RedirHamt
 	nextOff    uint64
 	generation uint
 }
@@ -233,14 +233,27 @@ type memOffsets struct {
 // Only one of mnode or newOffset is used at a time, the other should be nil/0.
 // Save converts mnode to newOffset.
 type redir struct {
+	// offset is the "old" offset referenced by old immutable nodes
+	offset uint64
 	// mnode is an in-memory node, mutable until freeze, shadowing an immutable node.
 	mnode fNode
 	// newOffset is the new storage location for a node.
 	newOffset uint64
-	path      [4]uint8
+	// path is the path through the btree to the node containing the old offset.
+	// It is used for eventually flushing/flattening the redirs.
+	path [4]uint8
 	// generation is used to determine mutability,
 	// the current generation is mutable, previous generations are immutable.
 	generation uint
+}
+
+func (r *redir) Key() uint64 {
+	return r.offset
+}
+
+func RedirHash(key uint64) uint32 {
+	const phi64 = 11400714819323198485
+	return uint32(key * phi64)
 }
 
 func nilMemOffsets() memOffsets {
@@ -251,15 +264,19 @@ func nilMemOffsets() memOffsets {
 func (mo *memOffsets) add(node fNode) uint64 {
 	off := mo.nextOff
 	mo.nextOff--
-	mo.redirs[off] = redir{mnode: node, generation: mo.generation}
+	verify.That(mo.redirs.Get(off) == nil)
+	mo.redirs.Put(&redir{offset: off, mnode: node, generation: mo.generation})
 	return off
 }
 
 // set updates the node for an offset
 func (mo *memOffsets) set(off uint64, node fNode) {
-	r := mo.redirs[off]
-	r.mnode = node
-	mo.redirs[off] = r
+	mo.redirs.Put(&redir{offset: off, mnode: node, generation: mo.generation})
+
+	r := mo.redirs.Get(off)
+	verify.That(r.offset == off)
+	verify.That(r.newOffset == 0)
+	verify.That(len(node) == 0 || &r.mnode[0] == &node[0])
 }
 
 // isMem returns true for temporary in-memory offsets
@@ -269,8 +286,8 @@ func (mo *memOffsets) isMem(off uint64) bool {
 
 // isMut returns true if mutable
 func (mo *memOffsets) isMut(off uint64) bool {
-	r, ok := mo.redirs[off]
-	return ok && r.generation == mo.generation
+	r := mo.redirs.Get(off)
+	return r != nil && r.generation == mo.generation
 }
 
 func OffStr(off uint64) string {
@@ -282,11 +299,11 @@ func OffStr(off uint64) string {
 
 func (mo *memOffsets) String() string {
 	s := "{"
-	for o, r := range mo.redirs {
-		if o > mo.nextOff {
-			s += strconv.Itoa(int(mo.nextOff - o))
+	mo.redirs.ForEach(func(r *redir) {
+		if r.offset > mo.nextOff {
+			s += strconv.Itoa(int(mo.nextOff - r.offset))
 		} else {
-			s += strconv.Itoa(int(o))
+			s += strconv.Itoa(int(r.offset))
 		}
 		s += ": "
 		if r.newOffset != 0 {
@@ -294,14 +311,40 @@ func (mo *memOffsets) String() string {
 		} else {
 			s += r.mnode.String()
 		}
-	}
+		s += " "
+	})
 	return strings.TrimSpace(s) + "}"
+}
+
+func (mo *memOffsets) Len() int {
+	n := 0
+	mo.redirs.ForEach(func(r *redir) { n++ })
+	return n
 }
 
 // ------------------------------------------------------------------
 
 func (up *fbupdate) print() {
-	up.fb.print()
+	up.print1(0, up.fb.root)
+}
+
+func (up *fbupdate) print1(depth int, offset uint64) {
+	print(strings.Repeat("    ", depth)+"offset", OffStr(offset), "=", offset)
+	node := up.getNode(offset)
+	for it := node.iter(); it.next(); {
+		offset := it.offset
+		if depth < up.fb.treeLevels {
+			// tree
+			print(strings.Repeat("    ", depth)+strconv.Itoa(it.fi)+":",
+				it.npre, it.diff, "=", it.known)
+			up.print1(depth+1, offset) // recurse
+		} else {
+			// leaf
+			print(strings.Repeat("    ", depth)+strconv.Itoa(it.fi)+":",
+				OffStr(offset)+",", it.npre, it.diff, "=", it.known,
+				"("+up.fb.getLeafKey(offset)+")")
+		}
+	}
 }
 
 // check verifies that the keys are in order and returns the number of keys

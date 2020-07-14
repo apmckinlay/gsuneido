@@ -45,7 +45,7 @@ func TestFbtreeIter(t *testing.T) {
 func TestFbtreeBuilder(t *testing.T) {
 	store := stor.HeapStor(8192)
 	bldr := newFbtreeBuilder(store)
-	limit := 999999
+	limit := 599999
 	if testing.Short() {
 		limit = 199999
 	}

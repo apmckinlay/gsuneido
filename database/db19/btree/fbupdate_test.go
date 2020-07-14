@@ -75,6 +75,7 @@ func TestUnevenSplit(t *testing.T) {
 }
 
 func (fb *fbtree) checkData(t *testing.T, data []string) {
+	t.Helper()
 	count, _, _ := fb.check()
 	Assert(t).That(count, Equals(len(data)))
 	for i, k := range data {
@@ -87,6 +88,7 @@ func (fb *fbtree) checkData(t *testing.T, data []string) {
 }
 
 func (up *fbupdate) checkData(t *testing.T, data []string) {
+	t.Helper()
 	count, _, _ := up.check()
 	n := 0
 	for i, k := range data {
@@ -95,7 +97,8 @@ func (up *fbupdate) checkData(t *testing.T, data []string) {
 		}
 		o := up.Search(k)
 		if o != uint64(i) {
-			t.Error("checkData", k, "expect", i, "actual", o)
+			t.Log("checkData", k, "expect", i, "actual", o)
+			t.FailNow()
 		}
 		n++
 	}
@@ -103,7 +106,7 @@ func (up *fbupdate) checkData(t *testing.T, data []string) {
 }
 
 func TestSampleData(t *testing.T) {
-	var nShuffle = 16
+	var nShuffle = 12
 	if testing.Short() {
 		nShuffle = 4
 	}
@@ -145,7 +148,7 @@ func fileData(filename string) []string {
 }
 
 func TestFbdelete(t *testing.T) {
-	var n = 2000
+	var n = 1000
 	if testing.Short() {
 		n = 100
 	}
@@ -184,22 +187,23 @@ func TestFreeze(t *testing.T) {
 		return strconv.Itoa(int(i))
 	}
 	store := stor.HeapStor(8192)
+	store.Alloc(1) // avoid offset 0
 	fb := CreateFbtree(store)
-	Assert(t).That(len(fb.moffs.redirs), Equals(1))
+	Assert(t).That(fb.moffs.Len(), Equals(1))
 	fb = fb.Update(func(up *fbupdate) {
 		up.Insert("1", 1)
 	})
-	Assert(t).That(len(fb.moffs.redirs), Equals(1))
+	Assert(t).That(fb.moffs.Len(), Equals(1))
 	Assert(t).That(fb.list(), Equals("1"))
 	fb = fb.Update(func(up *fbupdate) {
 		up.Insert("2", 2)
 	})
-	Assert(t).That(len(fb.moffs.redirs), Equals(1))
+	Assert(t).That(fb.moffs.Len(), Equals(1))
 	Assert(t).That(fb.list(), Equals("1 2"))
 
 	fb = fb.Save()
 	fb = OpenFbtree(store, fb.root, fb.treeLevels, fb.redirs)
-	Assert(t).That(len(fb.moffs.redirs), Equals(1))
+	Assert(t).That(fb.moffs.Len(), Equals(1))
 	Assert(t).That(fb.list(), Equals("1 2"))
 }
 
@@ -213,7 +217,7 @@ func (fb *fbtree) list() string {
 }
 
 func TestSave(t *testing.T) {
-	var nSaves = 50
+	var nSaves = 40
 	if testing.Short() {
 		nSaves = 10
 	}
@@ -224,6 +228,7 @@ func TestSave(t *testing.T) {
 	defer func(mns int) { MaxNodeSize = mns }(MaxNodeSize)
 	MaxNodeSize = 64
 	st, err := stor.MmapStor("tmp.db", stor.CREATE)
+	st.Alloc(1) // avoid offset 0
 	if err != nil {
 		log.Fatalln(err)
 	}
@@ -237,7 +242,6 @@ func TestSave(t *testing.T) {
 					up.Insert(key, uint64(len(data)))
 					data = append(data, key)
 				}
-				up.checkData(t, data)
 			})
 			fb.checkData(t, data)
 		}
@@ -270,7 +274,7 @@ func TestSplitDup(*testing.T) {
 	for i := 55553; i < 55558; i++ {
 		data = append(data, i)
 	}
-	n := 100000
+	n := 10000
 	if testing.Short() {
 		n = 1000
 	}

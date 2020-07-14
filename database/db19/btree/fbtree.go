@@ -37,8 +37,10 @@ var MaxNodeSize = 1536 // * .75 ~ 1k
 var GetLeafKey func(st *stor.Stor, ixspec interface{}, off uint64) string
 
 func CreateFbtree(st *stor.Stor) *fbtree {
-	mo := memOffsets{nextOff: stor.MaxSmallOffset, redirs: map[uint64]redir{}}
+	mo := memOffsets{nextOff: stor.MaxSmallOffset}
+	mo.redirs = mo.redirs.Mutable()
 	root := mo.add(fNode{})
+	mo.redirs = mo.redirs.Freeze()
 	mo.generation++ // so root isn't mutable
 	return &fbtree{root: root, moffs: mo, store: st}
 }
@@ -72,21 +74,24 @@ const redirSize = (5 + 5 + 4)
 
 func (up *fbupdate) save() {
 	// save all the in-memory nodes
-	for _, r := range up.fb.moffs.redirs {
+	n := 0
+	up.fb.moffs.redirs.ForEach(func(r *redir) {
 		verify.That((r.mnode == nil) != (r.newOffset == 0))
 		if r.mnode != nil {
-			r.newOffset = r.mnode.putNode(up.fb.store)
-			r.mnode = nil
+			newOffset := r.mnode.putNode(up.fb.store)
+			up.moffs.redirs.Put(&redir{offset: r.offset, newOffset: newOffset})
 		}
-	}
+		n++
+	})
 	// save the redirections
-	size := 5 + len(up.fb.moffs.redirs) * redirSize
+	size := 5 + n*redirSize
 	off, buf := up.fb.store.AllocSized(size)
 	w := stor.NewWriter(buf)
 	w.Put5(up.fb.moffs.nextOff)
-	for o, r := range up.fb.moffs.redirs {
-		w.Put5(o).Put5(r.newOffset).Write(r.path[:])
-	}
+	up.moffs.redirs.ForEach(func(r *redir) {
+		verify.That((r.mnode == nil) != (r.newOffset == 0))
+		w.Put5(r.offset).Put5(r.newOffset).Write(r.path[:])
+	})
 	up.fb.redirs = off
 }
 
@@ -96,16 +101,17 @@ func readMoffs(store *stor.Stor, redirs uint64) memOffsets {
 		return mo
 	}
 	buf := store.DataSized(redirs)
-	mo.redirs = make(map[uint64]redir, len(buf)/redirSize)
 	rdr := stor.NewReader(buf)
 	mo.nextOff = rdr.Get5()
+	mo.redirs = mo.redirs.Mutable()
 	for rdr.Remaining() > 0 {
-		oldOffset := rdr.Get5()
-		r := redir{}
+		r := &redir{}
+		r.offset = rdr.Get5()
 		r.newOffset = rdr.Get5()
 		rdr.Read(r.path[:])
-		mo.redirs[oldOffset] = r
+		mo.redirs.Put(r)
 	}
+	mo.redirs = mo.redirs.Freeze()
 	return mo
 }
 
@@ -117,7 +123,8 @@ func (node fNode) putNode(store *stor.Stor) uint64 {
 }
 
 func (fb *fbtree) getNode(off uint64) fNode {
-	if r, ok := fb.moffs.redirs[off]; ok {
+	if r := fb.moffs.redirs.Get(off); r != nil {
+		verify.That((r.mnode == nil) != (r.newOffset == 0))
 		if r.mnode != nil {
 			return r.mnode
 		}
@@ -153,6 +160,7 @@ func (fb *fbtree) check1(depth int, offset uint64, key string) (count, size, nno
 			count += c
 			size += s
 			nnodes += n
+			key = it.known
 		} else {
 			// leaf
 			itkey := fb.getLeafKey(offset)
@@ -160,6 +168,7 @@ func (fb *fbtree) check1(depth int, offset uint64, key string) (count, size, nno
 				panic("keys out of order " + key + " " + itkey)
 			}
 			count++
+			key = itkey
 		}
 	}
 	return
@@ -218,6 +227,7 @@ func (fb *fbtree) print() {
 }
 
 func (fb *fbtree) print1(depth int, offset uint64) {
+	print(strings.Repeat("    ", depth)+"offset", OffStr(offset), "=", offset)
 	node := fb.getNode(offset)
 	for it := node.iter(); it.next(); {
 		offset := it.offset
@@ -229,7 +239,7 @@ func (fb *fbtree) print1(depth int, offset uint64) {
 		} else {
 			// leaf
 			print(strings.Repeat("    ", depth)+strconv.Itoa(it.fi)+":",
-				it.npre, it.diff, "=", it.known,
+				OffStr(offset)+",", it.npre, it.diff, "=", it.known,
 				"("+fb.getLeafKey(offset)+")")
 		}
 	}
