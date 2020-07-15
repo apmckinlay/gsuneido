@@ -4,8 +4,11 @@
 package hash
 
 import (
-	. "github.com/apmckinlay/gsuneido/util/hamcrest"
+	"hash/fnv"
+	"hash/maphash"
 	"testing"
+
+	. "github.com/apmckinlay/gsuneido/util/hamcrest"
 )
 
 func TestHash(t *testing.T) {
@@ -15,4 +18,31 @@ func TestHash(t *testing.T) {
 	}
 	test("", 0x811c9dc5)
 	test("foobar", 0xbf9cf968)
+}
+
+var Sum = uint32(0)
+var S = "now is the time for all good"
+
+func BenchmarkHashString(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		Sum += HashString(S)
+	}
+}
+
+func BenchmarkMaphash(b *testing.B) {
+	h := maphash.Hash{}
+	for i := 0; i < b.N; i++ {
+		h.Reset()
+		h.WriteString(S)
+		Sum += uint32(h.Sum64())
+	}
+}
+
+func BenchmarkFnv(b *testing.B) {
+	h := fnv.New32()
+	for i := 0; i < b.N; i++ {
+		h.Reset()
+		h.Write([]byte(S))
+		Sum += h.Sum32()
+	}
 }
