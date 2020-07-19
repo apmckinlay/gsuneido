@@ -139,7 +139,8 @@ func (nd *nodeRedir) with(gen uint32, item *redir, key uint64, hash uint32, shif
 	if (nd.bmVal & bit) == 0 {
 		// slot is empty, insert new value
 		nd.bmVal |= bit
-		nd.vals = append(nd.vals, redir{})
+		var zero redir
+		nd.vals = append(nd.vals, zero)
 		copy(nd.vals[iv+1:], nd.vals[iv:])
 		nd.vals[iv] = *item
 		return nd

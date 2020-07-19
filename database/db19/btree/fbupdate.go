@@ -21,6 +21,7 @@ func (fb *fbtree) makeMutable() *fbtree {
 	mfb := *fb // copy
 	mfb.mutable = true
 	mfb.redirs.tbl = fb.redirs.tbl.Mutable()
+	mfb.redirs.paths = fb.redirs.paths.Mutable()
 	return &mfb
 }
 
@@ -44,6 +45,7 @@ func (fb *fbtree) Insert(key string, off uint64) {
 	for i := 0; i < fb.treeLevels; i++ {
 		stack[i] = nodeOff
 		node := fb.getNode(nodeOff)
+		fb.redirs.paths.Put(&path{nodeOff})
 		nodeOff, _, _ = node.search(key)
 	}
 
@@ -57,9 +59,11 @@ func (fb *fbtree) Insert(key string, off uint64) {
 
 	// split leaf
 	splitKey, rightOff := fb.split(node, nodeOff, where)
+	// fmt.Println("split", splitKey, "old/left", OffStr(nodeOff), "new/right", OffStr(rightOff))
 
 	// insert up the tree
 	for i := fb.treeLevels - 1; i >= 0; i-- {
+		// fmt.Println("tree insert", OffStr(stack[i]), "splitKey", splitKey, "rightOff", OffStr(rightOff))
 		node, where = fb.insert(stack[i], splitKey, rightOff, nil)
 		fb.redirs.set(stack[i], node)
 		size := len(node)
@@ -67,6 +71,7 @@ func (fb *fbtree) Insert(key string, off uint64) {
 			return // finished
 		}
 		splitKey, rightOff = fb.split(node, stack[i], where)
+		// fmt.Println("split", splitKey, "old/left", OffStr(stack[i]), "new/right", OffStr(rightOff))
 	}
 
 	// split all the way up, create new root
@@ -143,6 +148,7 @@ func (fb *fbtree) Delete(key string, off uint64) bool {
 	for i := 0; i < fb.treeLevels; i++ {
 		stack[i] = nodeOff
 		node := fb.getNode(nodeOff)
+		fb.redirs.paths.Put(&path{nodeOff})
 		nodeOff, _, _ = node.search(key)
 	}
 
@@ -188,7 +194,8 @@ func (fb *fbtree) delete(nodeOff uint64, off uint64) (fNode, bool) {
 
 //-------------------------------------------------------------------
 
-//go:generate genny -in ../../../genny/hamt/hamt.go -out redirs.go -pkg btree gen "Item=redir KeyType=uint64"
+//go:generate genny -in ../../../genny/hamt/hamt.go -out redirhamt.go -pkg btree gen "Item=redir KeyType=uint64"
+//go:generate genny -in ../../../genny/hamt/hamt.go -out pathhamt.go -pkg btree gen "Item=path KeyType=uint64"
 
 // redirs is use to redirect offsets to new nodes
 // to reduce write amplification e.g. from path copying.
@@ -196,6 +203,7 @@ func (fb *fbtree) delete(nodeOff uint64, off uint64) (fNode, bool) {
 // and for new nodes with fake offsets.
 type redirs struct {
 	tbl        RedirHamt
+	paths      PathHamt
 	nextOff    uint64
 	generation uint
 }
@@ -210,9 +218,6 @@ type redir struct {
 	mnode fNode
 	// newOffset is the new storage location for a node.
 	newOffset uint64
-	// path is the path through the btree to the node containing the old offset.
-	// It is used for eventually flushing/flattening the redirs.
-	path [4]uint8
 	// generation is used to determine mutability,
 	// the current generation is mutable, previous generations are immutable.
 	generation uint
@@ -222,8 +227,21 @@ func (r *redir) Key() uint64 {
 	return r.offset
 }
 
+const phi64 = 11400714819323198485
+
 func RedirHash(key uint64) uint32 {
-	const phi64 = 11400714819323198485
+	return uint32(key * phi64)
+}
+
+type path struct {
+	off uint64
+}
+
+func (p path) Key() uint64 {
+	return p.off
+}
+
+func PathHash(key uint64) uint32 {
 	return uint32(key * phi64)
 }
 
@@ -250,8 +268,8 @@ func (re *redirs) set(off uint64, node fNode) {
 	verify.That(len(node) == 0 || &r.mnode[0] == &node[0])
 }
 
-// isMem returns true for temporary in-memory offsets
-func (re *redirs) isMem(off uint64) bool {
+// isFake returns true for temporary in-memory offsets
+func (re *redirs) isFake(off uint64) bool {
 	return off > re.nextOff
 }
 
@@ -264,7 +282,7 @@ func (re *redirs) isMut(off uint64) bool {
 func OffStr(off uint64) string {
 	s := strconv.Itoa(int(off))
 	if off > 0xffff000000 {
-		s = "@" + s[len(s)-4:]
+		s = "^" + s[len(s)-4:]
 	}
 	return s
 }

@@ -10,6 +10,7 @@ import (
 
 	"github.com/apmckinlay/gsuneido/database/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/bytes"
+	"github.com/apmckinlay/gsuneido/util/ints"
 	"github.com/apmckinlay/gsuneido/util/str"
 	"github.com/apmckinlay/gsuneido/util/verify"
 )
@@ -60,7 +61,7 @@ type fNodeBuilder struct {
 	known string
 }
 
-func (fb *fNodeBuilder) Add(key string, offset uint64) {
+func (fb *fNodeBuilder) Add(key string, offset uint64, embedLen int) {
 	if key <= fb.prev {
 		panic("fBuilder keys must be inserted in order, without duplicates")
 	}
@@ -68,11 +69,11 @@ func (fb *fNodeBuilder) Add(key string, offset uint64) {
 		fb.fe = fAppend(fb.fe, offset, 0, "")
 		fb.known = ""
 	} else {
-		npre, diff, known := addone(key, fb.prev, fb.known, 1)
+		npre, diff, known := addone(key, fb.prev, fb.known, embedLen)
 		fb.fe = fAppend(fb.fe, offset, npre, diff)
 		fb.known = known
+		fb.prev = key
 	}
-	fb.prev = key
 }
 
 func (fb *fNodeBuilder) Entries() fNode {
@@ -91,7 +92,7 @@ func addone(key, prev, known string, embedLen int) (npre int, diff string, known
 	} else {
 		// prefix is longer than what's known
 		// so we have to embed the missing info + embedLen
-		diff = key[len(known) : npre+embedLen]
+		diff = key[len(known):ints.Min(npre+embedLen, len(key))]
 	}
 	verify.That(len(diff) > 0)
 	knownNew = str.Subn(key, 0, npre+embedLen)

@@ -4,6 +4,7 @@
 package btree
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -11,7 +12,8 @@ import (
 	"github.com/apmckinlay/gsuneido/util/verify"
 )
 
-// fbtree is an immutable btree designed to be stored in a file
+// fbtree is an immutable btree designed to be stored in a file.
+// Only an unshared copy with mutable=true can be updated.
 type fbtree struct {
 	// treeLevels is how many levels of tree nodes there are (initially 0)
 	treeLevels int
@@ -19,7 +21,7 @@ type fbtree struct {
 	root uint64
 	// store is where the btree is stored
 	store *stor.Stor
-	// redirs (reaonly) maps offsets to updated in-memory nodes (not persisted)
+	// redirs maps offsets to updated in-memory nodes (not persisted)
 	redirs redirs
 	// ixspec is an opaque value passed to GetLeafKey
 	// normally it specifies which fields make up the key, based on the schema
@@ -48,7 +50,7 @@ func CreateFbtree(st *stor.Stor) *fbtree {
 }
 
 func OpenFbtree(store *stor.Stor, root uint64, treeLevels int, redirsOff uint64) *fbtree {
-	re := readRedirs(store, redirsOff)
+	re := loadRedirs(store, redirsOff)
 	return &fbtree{root: root, treeLevels: treeLevels, redirs: re, store: store,
 		redirsOff: redirsOff}
 }
@@ -66,54 +68,174 @@ func (fb *fbtree) Search(key string) uint64 {
 	return off
 }
 
+//-------------------------------------------------------------------
+
 // Save writes the btree (changes) to the stor
 // and returns a new fbtree with no in-memory nodes (but still redirections)
 func (fb *fbtree) Save() *fbtree {
 	return fb.Update(func(mfb *fbtree) { mfb.save() })
 }
 
-const redirSize = (5 + 5 + 4)
+const redirMax = 100 // ???
 
 func (fb *fbtree) save() {
+	nr := 0 // count the redirs
+	fb.redirs.tbl.ForEach(func(r *redir) { nr++ })
+
+	if nr < redirMax {
+		fb.keep(nr)
+	} else {
+		fb.flatten()
+	}
+}
+
+// keep saves the in-memory nodes but keeps the redirects
+func (fb *fbtree) keep(nr int) {
 	// save all the in-memory nodes
-	n := 0
 	fb.redirs.tbl.ForEach(func(r *redir) {
 		verify.That((r.mnode == nil) != (r.newOffset == 0))
 		if r.mnode != nil {
+			//TODO flatten node (update redirs) before saving
 			newOffset := r.mnode.putNode(fb.store)
+			trace("save", OffStr(r.offset), "=>", newOffset)
 			fb.redirs.tbl.Put(&redir{offset: r.offset, newOffset: newOffset})
 		}
-		n++
 	})
-	// save the redirections
-	size := 5 + n*redirSize
-	off, buf := fb.store.AllocSized(size)
+	fb.saveRedirs(nr)
+}
+
+// flatten saves in-memory nodes
+// and applies the redirects and then clears them
+func (fb *fbtree) flatten() {
+	trace("flatten treeLevels", fb.treeLevels)
+	fb.root = fb.flatten2(0, fb.root)
+	fb.redirs = newRedirs()
+	fb.redirsOff = 0
+}
+
+func (fb *fbtree) flatten2(depth int, nodeOff uint64) uint64 {
+	trace(depth, "flatten2 depth", depth, "nodeOff", OffStr(nodeOff))
+	var rwNode fNode
+	if depth < fb.treeLevels {
+		// tree node, need to update any redirected offsets
+		roNode := fb.getNode(nodeOff)
+		// delay making mutable copy until we need to update
+		for it := roNode.iter(); it.next(); {
+			off := it.offset
+			// only traverse modified paths, not entire (possibly huge) tree
+			if fb.shouldProcess(off, depth+1) {
+				off2 := fb.flatten2(depth+1, off) // recurse
+				// bottom up
+				if off2 != off {
+					if rwNode == nil {
+						rwNode = fb.getMutableNode(nodeOff)
+					}
+					rwNode.setOffset(it.fi, off2)
+				}
+			}
+		}
+		if rwNode == nil {
+			if r, ok := fb.redirs.tbl.Get(nodeOff); ok && r.mnode != nil {
+				trace(depth, "tree mnode")
+				rwNode = r.mnode
+			} else {
+				if ok {
+					trace(depth, "tree new offset", OffStr(r.newOffset))
+					return r.newOffset
+				}
+				trace(depth, "tree NO SAVE")
+				return nodeOff // nothing modified, don't need to save
+			}
+		} else {
+			trace(depth, "tree node modified")
+		}
+	} else {
+		// leaf node
+		r, ok := fb.redirs.tbl.Get(nodeOff)
+		verify.That(ok)
+		if r.mnode == nil {
+			trace(depth, "leaf newOffset")
+			return r.newOffset
+		}
+		rwNode = r.mnode
+		trace(depth, "leaf mnode")
+	}
+	off := rwNode.putNode(fb.store)
+	dtrace(depth, "putNode", OffStr(nodeOff), "=>", off)
+	return off
+}
+
+func (fb *fbtree) shouldProcess(off uint64, depth int) bool {
+	if off > fb.redirs.nextOff {
+		dtrace(depth, OffStr(off), "fake")
+		return true
+	}
+	if r, ok := fb.redirs.tbl.Get(off); ok {
+		if r.mnode != nil {
+			dtrace(depth, OffStr(off), "in redirs mnode")
+		} else if r.newOffset != 0 {
+			dtrace(depth, OffStr(off), "in redirs newOffset")
+		} else {
+			panic("bad redir ???")
+		}
+		return true
+	}
+	if _, ok := fb.redirs.paths.Get(off); ok {
+		dtrace(depth, OffStr(off), "in paths")
+		return true
+	}
+	return false
+}
+
+func trace(args ...interface{}) {
+	// fmt.Println(args...)
+}
+
+func dtrace(depth int, args ...interface{}) {
+	// fmt.Print(strings.Repeat("    ", depth))
+	// fmt.Println(args...)
+}
+
+func (fb *fbtree) saveRedirs(nr int) {
+	np := 0
+	fb.redirs.paths.ForEach(func(p *path) { np++ })
+	size := 5 + 2 + nr*10 + 2 + np*5
+	off, buf := fb.store.Alloc(size)
 	w := stor.NewWriter(buf)
 	w.Put5(fb.redirs.nextOff)
+	w.Put2(nr)
 	fb.redirs.tbl.ForEach(func(r *redir) {
 		verify.That((r.mnode == nil) != (r.newOffset == 0))
-		w.Put5(r.offset).Put5(r.newOffset).Write(r.path[:])
+		w.Put5(r.offset).Put5(r.newOffset)
+	})
+	w.Put2(nr)
+	fb.redirs.paths.ForEach(func(p *path) {
+		w.Put5(p.off)
 	})
 	fb.redirsOff = off
 }
 
-func readRedirs(store *stor.Stor, redirsOff uint64) redirs {
+func loadRedirs(store *stor.Stor, redirsOff uint64) redirs {
 	re := newRedirs()
 	if redirsOff == 0 {
 		return re
 	}
-	buf := store.DataSized(redirsOff)
+	buf := store.Data(redirsOff)
 	rdr := stor.NewReader(buf)
 	re.nextOff = rdr.Get5()
 	re.tbl = re.tbl.Mutable()
-	for rdr.Remaining() > 0 {
+	for n := rdr.Get2(); n > 0; n-- {
 		r := &redir{}
 		r.offset = rdr.Get5()
 		r.newOffset = rdr.Get5()
-		rdr.Read(r.path[:])
 		re.tbl.Put(r)
 	}
 	re.tbl = re.tbl.Freeze()
+	re.paths = re.paths.Mutable()
+	for n := rdr.Get2(); n > 0; n-- {
+		off := rdr.Get5()
+		re.paths.Put(&path{off})
+	}
 	return re
 }
 
@@ -144,10 +266,11 @@ func (fb *fbtree) readNode(off uint64) fNode {
 
 // check verifies that the keys are in order and returns the number of keys
 func (fb *fbtree) check() (count, size, nnodes int) {
-	return fb.check1(0, fb.root, "")
+	key := ""
+	return fb.check1(0, fb.root, &key)
 }
 
-func (fb *fbtree) check1(depth int, offset uint64, key string) (count, size, nnodes int) {
+func (fb *fbtree) check1(depth int, offset uint64, key *string) (count, size, nnodes int) {
 	node := fb.getNode(offset)
 	size += len(node)
 	nnodes++
@@ -155,22 +278,22 @@ func (fb *fbtree) check1(depth int, offset uint64, key string) (count, size, nno
 		offset := it.offset
 		if depth < fb.treeLevels {
 			// tree
-			if it.fi > 0 && key > it.known {
-				panic("keys out of order " + key + " " + it.known)
+			if it.fi > 0 && *key > it.known {
+				panic("keys out of order " + *key + " " + it.known)
 			}
-			c, s, n := fb.check1(depth+1, offset, it.known) // recurse
+			*key = it.known
+			c, s, n := fb.check1(depth+1, offset, key) // recurse
 			count += c
 			size += s
 			nnodes += n
-			key = it.known
 		} else {
 			// leaf
 			itkey := fb.getLeafKey(offset)
-			if key > itkey {
-				panic("keys out of order " + key + " " + itkey)
+			if *key > itkey {
+				panic("keys out of order " + *key + " " + itkey)
 			}
 			count++
-			key = itkey
+			*key = itkey
 		}
 	}
 	return
@@ -225,11 +348,22 @@ func (fb *fbtree) Iter() fbIter {
 // ------------------------------------------------------------------
 
 func (fb *fbtree) print() {
+	fmt.Println("---------------------------------")
 	fb.print1(0, fb.root)
+	fmt.Println("---------------------------------")
 }
 
 func (fb *fbtree) print1(depth int, offset uint64) {
-	print(strings.Repeat("    ", depth)+"offset", OffStr(offset))
+	explan := ""
+	r, ok := fb.redirs.tbl.Get(offset)
+	if ok && r.newOffset != 0 {
+		explan = " -> " + OffStr(r.newOffset)
+	} else if ok && r.mnode != nil {
+		explan = " mnode"
+	} else if ok {
+		panic("neither mnode nor newOffset")
+	}
+	print(strings.Repeat("    ", depth)+"offset", OffStr(offset)+explan)
 	node := fb.getNode(offset)
 	for it := node.iter(); it.next(); {
 		offset := it.offset
@@ -290,7 +424,11 @@ func (fb *fbtreeBuilder) insert(li int, key string, off uint64) {
 	if len(lev.builder.fe) == 0 {
 		lev.first = key
 	}
-	lev.builder.Add(key, off)
+	embedLen := 1
+	if li > 0 {
+		embedLen = 255
+	}
+	lev.builder.Add(key, off, embedLen)
 }
 
 func (fb *fbtreeBuilder) Finish() (off uint64, treeLevels int) {
@@ -298,7 +436,7 @@ func (fb *fbtreeBuilder) Finish() (off uint64, treeLevels int) {
 	for li := 0; li < len(fb.levels); li++ {
 		if li > 0 {
 			// allow node to slightly exceed max size
-			fb.levels[li].builder.Add(key, off)
+			fb.levels[li].builder.Add(key, off, 255)
 		}
 		key = fb.levels[li].first
 		off = fb.levels[li].builder.fe.putNode(fb.store)

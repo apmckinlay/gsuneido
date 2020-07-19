@@ -43,6 +43,9 @@ func TestFbtreeIter(t *testing.T) {
 }
 
 func TestFbtreeBuilder(t *testing.T) {
+	GetLeafKey = func(_ *stor.Stor, _ interface{}, i uint64) string {
+		return strconv.Itoa(int(i))
+	}
 	store := stor.HeapStor(8192)
 	bldr := newFbtreeBuilder(store)
 	limit := 599999
@@ -56,6 +59,7 @@ func TestFbtreeBuilder(t *testing.T) {
 	root, treeLevels := bldr.Finish()
 
 	fb := OpenFbtree(store, root, treeLevels, 0)
+	fb.check()
 	iter := fb.Iter()
 	for i := 100000; i <= limit; i++ {
 		key := strconv.Itoa(i)

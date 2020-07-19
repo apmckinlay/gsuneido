@@ -17,6 +17,7 @@ import (
 	"github.com/apmckinlay/gsuneido/database/db19/stor"
 	. "github.com/apmckinlay/gsuneido/util/hamcrest"
 	"github.com/apmckinlay/gsuneido/util/str"
+	"github.com/apmckinlay/gsuneido/util/verify"
 )
 
 func TestUpdate(t *testing.T) {
@@ -99,7 +100,7 @@ func TestSampleData(t *testing.T) {
 	}
 	test := func(file string) {
 		data := fileData(file)
-		fmt.Println(len(data))
+		// fmt.Println(len(data))
 		for si := 0; si < nShuffle; si++ {
 			rand.Shuffle(len(data),
 				func(i, j int) { data[i], data[j] = data[j], data[i] })
@@ -275,5 +276,73 @@ func TestSplitDup(*testing.T) {
 				mfb.Insert(key, uint64(n))
 			}
 		})
+	}
+}
+
+func TestFlatten(t *testing.T) {
+	GetLeafKey = func(_ *stor.Stor, _ interface{}, i uint64) string {
+		return strconv.Itoa(int(i))
+	}
+	defer func(mns int) { MaxNodeSize = mns }(MaxNodeSize)
+	const from, ins, to = 10000, 10050, 10400
+	var fb *fbtree
+
+	build := func() {
+		trace("==============================")
+		MaxNodeSize = 64
+		store := stor.HeapStor(8192)
+		bldr := newFbtreeBuilder(store)
+		for i := from; i < to; i++ {
+			if i != ins {
+				key := strconv.Itoa(i)
+				bldr.Add(key, uint64(i))
+			}
+		}
+		root, treeLevels := bldr.Finish()
+		verify.That(treeLevels == 2)
+		fb = OpenFbtree(store, root, treeLevels, 0)
+		fb.redirs.tbl.ForEach(func(r *redir) { panic("redir!") })
+		fb.redirs.paths.ForEach(func(p *path) { panic("path!") })
+	}
+	check := func() {
+		fb.check()
+		iter := fb.Iter()
+		for i := from; i < to; i++ {
+			key := strconv.Itoa(i)
+			k, o, ok := iter()
+			Assert(t).True(ok)
+			Assert(t).True(strings.HasPrefix(key, k))
+			Assert(t).That(o, Equals(i))
+		}
+		_, _, ok := iter()
+		Assert(t).False(ok)
+	}
+	insert := func() {
+		fb = fb.Update(func(mfb *fbtree) {
+			mfb.Insert(strconv.Itoa(ins), ins)
+		})
+		check()
+	}
+	maybeSave := func(i int) {
+		check()
+		if i == 1 {
+			fb = fb.Save()
+			check()
+			trace("---------------------------")
+		}
+	}
+	flatten := func() {
+		fb = fb.Update(func(mfb *fbtree) { mfb.flatten() })
+		check()
+	}
+
+	for i := 0; i < 2; i++ {
+		for _, mns := range []int{999, 60} {
+			build()
+			MaxNodeSize = mns // prevent or force splitting
+			insert()
+			maybeSave(i)
+			flatten()
+		}
 	}
 }

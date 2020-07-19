@@ -75,7 +75,7 @@ func build(data []string) fNode {
 	sort.Strings(data)
 	b := fNodeBuilder{}
 	for i, d := range data {
-		b.Add(d, uint64(i))
+		b.Add(d, uint64(i), 255)
 	}
 	return b.Entries()
 }
