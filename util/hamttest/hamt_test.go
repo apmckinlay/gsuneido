@@ -20,7 +20,7 @@ func TestRandom(t *testing.T) {
 	ht := FooHamt{}.Mutable()
 	_, ok := ht.Get(123)
 	Assert(t).False(ok)
-	var n = 1000000
+	var n = 100000
 	if testing.Short() {
 		n = 1000
 	}
@@ -28,12 +28,16 @@ func TestRandom(t *testing.T) {
 	for i := 0; i < n; i++ {
 		f := int(rand.Int31())
 		ht.Put(&Foo{f, strconv.Itoa(f)})
+		if i%100 == 0 {
+			ht = ht.Freeze().Mutable()
+		}
 	}
 	rand.Seed(123456)
 	for i := 0; i < n; i++ {
 		f := int(rand.Int31())
 		ht.Put(&Foo{f, strconv.Itoa(f)})
 	}
+	nums := map[int]bool{}
 	ht = ht.Freeze()
 	rand.Seed(123456)
 	for i := 0; i < n; i++ {
@@ -42,13 +46,15 @@ func TestRandom(t *testing.T) {
 		Assert(t).True(ok)
 		Assert(t).That(foo.key, Equals(f))
 		Assert(t).That(foo.data, Equals(strconv.Itoa(f)))
+		nums[f] = true
 	}
 
 	ht = ht.Mutable()
-	rand.Seed(123456)
-	for i := 0; i < n; i++ {
-		f := int(rand.Int31())
-		ht.Delete(f)
+	// ht.print()
+	for f := range nums {
+		// fmt.Println("======================= del", f)
+		verify.That(ht.Delete(f))
+		// ht.print()
 	}
 	ht.ForEach(func(*Foo) { panic("should be empty") })
 }
@@ -102,8 +108,8 @@ func TestDelete(*testing.T) {
 			// fmt.Printf("------------------------------ del %#x\n", d)
 			verify.That(dht.Delete(d))
 			// dht.print()
-		for j, d := range data {
-				x,ok := dht.Get(data[j])
+			for j, d := range data {
+				x, ok := dht.Get(data[j])
 				verify.That(ok == (j > i))
 				if ok {
 					verify.That(x.key == d)

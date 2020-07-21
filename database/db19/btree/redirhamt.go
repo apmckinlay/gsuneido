@@ -64,10 +64,9 @@ func (ht RedirHamt) get(key uint64) *redir {
 		bit := nd.bit(hash, shift)
 		iv := bits.OnesCount32(nd.bmVal & (bit - 1))
 		if (nd.bmVal & bit) != 0 {
-			if nd.vals[iv].Key() != key {
-				return nil
+			if nd.vals[iv].Key() == key {
+				return &nd.vals[iv]
 			}
-			return &nd.vals[iv]
 		}
 		if (nd.bmPtr & bit) == 0 {
 			return nil
@@ -129,12 +128,6 @@ func (nd *nodeRedir) with(gen uint32, item *redir, key uint64, hash uint32, shif
 		return nd
 	}
 	bit := nd.bit(hash, shift)
-	ip := bits.OnesCount32(nd.bmPtr & (bit - 1))
-	if (nd.bmPtr & bit) != 0 {
-		// recurse to child node
-		nd.ptrs[ip] = nd.ptrs[ip].with(gen, item, key, hash, shift+bitsPerRedirNode)
-		return nd
-	}
 	iv := bits.OnesCount32(nd.bmVal & (bit - 1))
 	if (nd.bmVal & bit) == 0 {
 		// slot is empty, insert new value
@@ -150,27 +143,21 @@ func (nd *nodeRedir) with(gen uint32, item *redir, key uint64, hash uint32, shif
 		nd.vals[iv] = *item
 		return nd
 	}
-	// collision, create new child node
-	nu := &nodeRedir{generation: gen}
-	if shift+bitsPerRedirNode < 32 {
-		oldval := &nd.vals[iv]
-		oldkey := oldval.Key()
-		nu = nu.with(gen, oldval, oldkey, RedirHash(oldkey), shift+bitsPerRedirNode)
-		nu = nu.with(gen, item, key, hash, shift+bitsPerRedirNode)
-	} else {
-		// overflow node, no bitmaps, just list values
-		nu.vals = append(nu.vals, nd.vals[iv], *item)
+
+	ip := bits.OnesCount32(nd.bmPtr & (bit - 1))
+	if (nd.bmPtr & bit) != 0 {
+		// recurse to child node
+		nd.ptrs[ip] = nd.ptrs[ip].with(gen, item, key, hash, shift+bitsPerRedirNode)
+		return nd
 	}
+	// collision, push new value down to new child node
+	child := &nodeRedir{generation: gen}
+	child = child.with(gen, item, key, hash, shift+bitsPerRedirNode)
 
-	// remove old colliding value from node
-	nd.bmVal &^= bit
-	copy(nd.vals[iv:], nd.vals[iv+1:])
-	nd.vals = nd.vals[:len(nd.vals)-1]
-
-	// point to new child node instead
+	// point to new child node
 	nd.ptrs = append(nd.ptrs, nil)
 	copy(nd.ptrs[ip+1:], nd.ptrs[ip:])
-	nd.ptrs[ip] = nu
+	nd.ptrs[ip] = child
 	nd.bmPtr |= bit
 
 	return nd
@@ -190,7 +177,6 @@ func (ht RedirHamt) Freeze() RedirHamt {
 //-------------------------------------------------------------------
 
 // Delete removes an item.
-// Empty nodes are removed, but single entry nodes are node pulled up.
 func (ht RedirHamt) Delete(key uint64) bool {
 	if !ht.mutable {
 		panic("can't modify an immutable Hamt")
@@ -232,15 +218,14 @@ func (nd *nodeRedir) without(gen uint32, key uint64, hash uint32, shift int) (*n
 			}
 			return nd, true
 		}
-		return nd, false
 	}
 	if (nd.bmPtr & bit) == 0 {
 		return nd, false
 	}
 	ip := bits.OnesCount32(nd.bmPtr & (bit - 1))
-	nu, ok := nd.ptrs[ip].without(gen, key, hash, shift+bitsPerRedirNode) // recurse
-	if nu != nil {
-		nd.ptrs[ip] = nu
+	child, ok := nd.ptrs[ip].without(gen, key, hash, shift+bitsPerRedirNode) // recurse
+	if child != nil {
+		nd.ptrs[ip] = child
 	} else { // child emptied
 		nd.bmPtr &^= bit
 		nd.ptrs = append(nd.ptrs[:ip], nd.ptrs[ip+1:]...) // preserve order
