@@ -189,6 +189,70 @@ func (ht RedirHamt) Freeze() RedirHamt {
 
 //-------------------------------------------------------------------
 
+// Delete removes an item.
+// Empty nodes are removed, but single entry nodes are node pulled up.
+func (ht RedirHamt) Delete(key uint64) bool {
+	if !ht.mutable {
+		panic("can't modify an immutable Hamt")
+	}
+	hash := RedirHash(key)
+	_, ok := ht.root.without(ht.generation, key, hash, 0)
+	return ok
+}
+
+func (nd *nodeRedir) without(gen uint32, key uint64, hash uint32, shift int) (*nodeRedir, bool) {
+	// recursive
+	if nd.generation != gen {
+		// path copy on the way down the tree
+		nd = nd.dup()
+		nd.generation = gen // now mutable in this generation
+	}
+	if shift >= 32 {
+		// overflow node
+		for i := range nd.vals { // linear search
+			if nd.vals[i].Key() == key {
+				nd.vals[i] = nd.vals[len(nd.vals)-1]
+				nd.vals = nd.vals[:len(nd.vals)-1]
+				if len(nd.vals) == 0 { // node emptied
+					nd = nil
+				}
+				return nd, true
+			}
+		}
+		return nd, false
+	}
+	bit := nd.bit(hash, shift)
+	iv := bits.OnesCount32(nd.bmVal & (bit - 1))
+	if (nd.bmVal & bit) != 0 {
+		if nd.vals[iv].Key() == key {
+			nd.bmVal &^= bit
+			nd.vals = append(nd.vals[:iv], nd.vals[iv+1:]...) // preserve order
+			if nd.bmVal == 0 && nd.bmPtr == 0 {               // node emptied
+				nd = nil
+			}
+			return nd, true
+		}
+		return nd, false
+	}
+	if (nd.bmPtr & bit) == 0 {
+		return nd, false
+	}
+	ip := bits.OnesCount32(nd.bmPtr & (bit - 1))
+	nu, ok := nd.ptrs[ip].without(gen, key, hash, shift+bitsPerRedirNode) // recurse
+	if nu != nil {
+		nd.ptrs[ip] = nu
+	} else { // child emptied
+		nd.bmPtr &^= bit
+		nd.ptrs = append(nd.ptrs[:ip], nd.ptrs[ip+1:]...) // preserve order
+		if nd.bmPtr == 0 && nd.bmVal == 0 {               // this node emptied
+			nd = nil
+		}
+	}
+	return nd, ok
+}
+
+//-------------------------------------------------------------------
+
 func (ht RedirHamt) ForEach(fn func(*redir)) {
 	if ht.root != nil {
 		ht.root.forEach(fn)

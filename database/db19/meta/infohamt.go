@@ -139,7 +139,8 @@ func (nd *nodeInfo) with(gen uint32, item *Info, key string, hash uint32, shift 
 	if (nd.bmVal & bit) == 0 {
 		// slot is empty, insert new value
 		nd.bmVal |= bit
-		nd.vals = append(nd.vals, Info{})
+		var zero Info
+		nd.vals = append(nd.vals, zero)
 		copy(nd.vals[iv+1:], nd.vals[iv:])
 		nd.vals[iv] = *item
 		return nd
@@ -184,6 +185,70 @@ func (nd *nodeInfo) dup() *nodeInfo {
 
 func (ht InfoHamt) Freeze() InfoHamt {
 	return InfoHamt{root: ht.root, generation: ht.generation}
+}
+
+//-------------------------------------------------------------------
+
+// Delete removes an item.
+// Empty nodes are removed, but single entry nodes are node pulled up.
+func (ht InfoHamt) Delete(key string) bool {
+	if !ht.mutable {
+		panic("can't modify an immutable Hamt")
+	}
+	hash := InfoHash(key)
+	_, ok := ht.root.without(ht.generation, key, hash, 0)
+	return ok
+}
+
+func (nd *nodeInfo) without(gen uint32, key string, hash uint32, shift int) (*nodeInfo, bool) {
+	// recursive
+	if nd.generation != gen {
+		// path copy on the way down the tree
+		nd = nd.dup()
+		nd.generation = gen // now mutable in this generation
+	}
+	if shift >= 32 {
+		// overflow node
+		for i := range nd.vals { // linear search
+			if nd.vals[i].Key() == key {
+				nd.vals[i] = nd.vals[len(nd.vals)-1]
+				nd.vals = nd.vals[:len(nd.vals)-1]
+				if len(nd.vals) == 0 { // node emptied
+					nd = nil
+				}
+				return nd, true
+			}
+		}
+		return nd, false
+	}
+	bit := nd.bit(hash, shift)
+	iv := bits.OnesCount32(nd.bmVal & (bit - 1))
+	if (nd.bmVal & bit) != 0 {
+		if nd.vals[iv].Key() == key {
+			nd.bmVal &^= bit
+			nd.vals = append(nd.vals[:iv], nd.vals[iv+1:]...) // preserve order
+			if nd.bmVal == 0 && nd.bmPtr == 0 {               // node emptied
+				nd = nil
+			}
+			return nd, true
+		}
+		return nd, false
+	}
+	if (nd.bmPtr & bit) == 0 {
+		return nd, false
+	}
+	ip := bits.OnesCount32(nd.bmPtr & (bit - 1))
+	nu, ok := nd.ptrs[ip].without(gen, key, hash, shift+bitsPerInfoNode) // recurse
+	if nu != nil {
+		nd.ptrs[ip] = nu
+	} else { // child emptied
+		nd.bmPtr &^= bit
+		nd.ptrs = append(nd.ptrs[:ip], nd.ptrs[ip+1:]...) // preserve order
+		if nd.bmPtr == 0 && nd.bmVal == 0 {               // this node emptied
+			nd = nil
+		}
+	}
+	return nd, ok
 }
 
 //-------------------------------------------------------------------
