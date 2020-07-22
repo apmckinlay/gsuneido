@@ -45,7 +45,7 @@ func (fb *fbtree) Insert(key string, off uint64) {
 	for i := 0; i < fb.treeLevels; i++ {
 		stack[i] = nodeOff
 		node := fb.getNode(nodeOff)
-		fb.redirs.paths.Put(&path{nodeOff})
+		fb.redirs.paths.Put(nodeOff)
 		nodeOff, _, _ = node.search(key)
 	}
 
@@ -148,7 +148,7 @@ func (fb *fbtree) Delete(key string, off uint64) bool {
 	for i := 0; i < fb.treeLevels; i++ {
 		stack[i] = nodeOff
 		node := fb.getNode(nodeOff)
-		fb.redirs.paths.Put(&path{nodeOff})
+		fb.redirs.paths.Put(nodeOff)
 		nodeOff, _, _ = node.search(key)
 	}
 
@@ -194,7 +194,7 @@ func (fb *fbtree) delete(nodeOff uint64, off uint64) (fNode, bool) {
 
 //-------------------------------------------------------------------
 
-//go:generate genny -in ../../../genny/hamt/hamt.go -out redirhamt.go -pkg btree gen "Item=redir KeyType=uint64"
+//go:generate genny -in ../../../genny/hamt/hamt.go -out redirhamt.go -pkg btree gen "Item=*redir KeyType=uint64"
 //go:generate genny -in ../../../genny/hamt/hamt.go -out pathhamt.go -pkg btree gen "Item=path KeyType=uint64"
 
 // redirs is use to redirect offsets to new nodes
@@ -223,7 +223,7 @@ type redir struct {
 	generation uint
 }
 
-func (r *redir) Key() uint64 {
+func RedirKey(r *redir) uint64 {
 	return r.offset
 }
 
@@ -233,12 +233,10 @@ func RedirHash(key uint64) uint32 {
 	return uint32(key * phi64)
 }
 
-type path struct {
-	off uint64
-}
+type path = uint64
 
-func (p path) Key() uint64 {
-	return p.off
+func PathKey(n uint64) uint64 {
+	return n
 }
 
 func PathHash(key uint64) uint32 {
@@ -271,12 +269,6 @@ func (re *redirs) set(off uint64, node fNode) {
 // isFake returns true for temporary in-memory offsets
 func (re *redirs) isFake(off uint64) bool {
 	return off > re.nextOff
-}
-
-// isMut returns true if mutable
-func (re *redirs) isMut(off uint64) bool {
-	r, ok := re.tbl.Get(off)
-	return ok && r.generation == re.generation
 }
 
 func OffStr(off uint64) string {

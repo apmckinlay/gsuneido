@@ -38,13 +38,6 @@ func (ht PathHamt) MustGet(key uint64) path {
 	return it
 }
 
-func (ht PathHamt) GetPtr(key uint64) *path {
-	if !ht.mutable {
-		panic("can't modify an immutable Hamt")
-	}
-	return ht.get(key)
-}
-
 func (ht PathHamt) Get(key uint64) (path, bool) {
 	it := ht.get(key)
 	if it == nil {
@@ -64,7 +57,7 @@ func (ht PathHamt) get(key uint64) *path {
 		bit := nd.bit(hash, shift)
 		iv := bits.OnesCount32(nd.bmVal & (bit - 1))
 		if (nd.bmVal & bit) != 0 {
-			if nd.vals[iv].Key() == key {
+			if PathKey(nd.vals[iv]) == key {
 				return &nd.vals[iv]
 			}
 		}
@@ -76,7 +69,7 @@ func (ht PathHamt) get(key uint64) *path {
 	}
 	// overflow node, linear search
 	for i := range nd.vals {
-		if nd.vals[i].Key() == key {
+		if PathKey(nd.vals[i]) == key {
 			return &nd.vals[i]
 		}
 	}
@@ -100,16 +93,16 @@ func (ht PathHamt) Mutable() PathHamt {
 	return PathHamt{root: nd, mutable: true, generation: gen}
 }
 
-func (ht PathHamt) Put(item *path) {
+func (ht PathHamt) Put(item path) {
 	if !ht.mutable {
 		panic("can't modify an immutable Hamt")
 	}
-	key := item.Key()
+	key := PathKey(item)
 	hash := PathHash(key)
 	ht.root.with(ht.generation, item, key, hash, 0)
 }
 
-func (nd *nodePath) with(gen uint32, item *path, key uint64, hash uint32, shift int) *nodePath {
+func (nd *nodePath) with(gen uint32, item path, key uint64, hash uint32, shift int) *nodePath {
 	// recursive
 	if nd.generation != gen {
 		// path copy on the way down the tree
@@ -119,12 +112,12 @@ func (nd *nodePath) with(gen uint32, item *path, key uint64, hash uint32, shift 
 	if shift >= 32 {
 		// overflow node
 		for i := range nd.vals { // linear search
-			if nd.vals[i].Key() == key {
-				nd.vals[i] = *item // update if found
+			if PathKey(nd.vals[i]) == key {
+				nd.vals[i] = item // update if found
 				return nd
 			}
 		}
-		nd.vals = append(nd.vals, *item) // not found, add it
+		nd.vals = append(nd.vals, item) // not found, add it
 		return nd
 	}
 	bit := nd.bit(hash, shift)
@@ -135,12 +128,12 @@ func (nd *nodePath) with(gen uint32, item *path, key uint64, hash uint32, shift 
 		var zero path
 		nd.vals = append(nd.vals, zero)
 		copy(nd.vals[iv+1:], nd.vals[iv:])
-		nd.vals[iv] = *item
+		nd.vals[iv] = item
 		return nd
 	}
-	if nd.vals[iv].Key() == key {
+	if PathKey(nd.vals[iv]) == key {
 		// already exists, update it
-		nd.vals[iv] = *item
+		nd.vals[iv] = item
 		return nd
 	}
 
@@ -196,7 +189,7 @@ func (nd *nodePath) without(gen uint32, key uint64, hash uint32, shift int) (*no
 	if shift >= 32 {
 		// overflow node
 		for i := range nd.vals { // linear search
-			if nd.vals[i].Key() == key {
+			if PathKey(nd.vals[i]) == key {
 				nd.vals[i] = nd.vals[len(nd.vals)-1]
 				nd.vals = nd.vals[:len(nd.vals)-1]
 				if len(nd.vals) == 0 { // node emptied
@@ -210,7 +203,7 @@ func (nd *nodePath) without(gen uint32, key uint64, hash uint32, shift int) (*no
 	bit := nd.bit(hash, shift)
 	iv := bits.OnesCount32(nd.bmVal & (bit - 1))
 	if (nd.bmVal & bit) != 0 {
-		if nd.vals[iv].Key() == key {
+		if PathKey(nd.vals[iv]) == key {
 			nd.bmVal &^= bit
 			nd.vals = append(nd.vals[:iv], nd.vals[iv+1:]...) // preserve order
 			if nd.bmVal == 0 && nd.bmPtr == 0 {               // node emptied
@@ -238,15 +231,15 @@ func (nd *nodePath) without(gen uint32, key uint64, hash uint32, shift int) (*no
 
 //-------------------------------------------------------------------
 
-func (ht PathHamt) ForEach(fn func(*path)) {
+func (ht PathHamt) ForEach(fn func(path)) {
 	if ht.root != nil {
 		ht.root.forEach(fn)
 	}
 }
 
-func (nd *nodePath) forEach(fn func(*path)) {
+func (nd *nodePath) forEach(fn func(path)) {
 	for i := range nd.vals {
-		fn(&nd.vals[i])
+		fn(nd.vals[i])
 	}
 	for _, p := range nd.ptrs {
 		p.forEach(fn)

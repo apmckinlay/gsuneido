@@ -45,10 +45,10 @@ func (ov *Overlay) NewOverlay() *Overlay {
 
 func (ov *Overlay) GetRoInfo(table string) *Info {
 	if ti, ok := ov.rwInfo.Get(table); ok {
-		return &ti
+		return ti
 	}
 	if ti, ok := ov.roInfo.Get(table); ok {
-		return &ti
+		return ti
 	}
 	ti := ov.baseInfo.Get(table)
 	ov.rwInfo.Put(ti) // cache in memory
@@ -56,12 +56,14 @@ func (ov *Overlay) GetRoInfo(table string) *Info {
 }
 
 func (ov *Overlay) GetRwInfo(table string, tranNum int) *Info {
-	if ti := ov.rwInfo.GetPtr(table); ti != nil {
-		return ti // already have mutable
+	if pti,ok := ov.rwInfo.Get(table); ok {
+		return pti // already have mutable
 	}
-	ti, ok := ov.roInfo.Get(table)
-	if !ok {
-		ti = *ov.baseInfo.Get(table)
+	var ti Info
+	if pti, ok := ov.roInfo.Get(table); ok {
+		ti = *pti // copy
+	} else {
+		ti = *ov.baseInfo.Get(table) // copy
 	}
 	// start at 0 since these are deltas
 	ti.Nrows = 0
@@ -75,7 +77,7 @@ func (ov *Overlay) GetRwInfo(table string, tranNum int) *Info {
 	}
 
 	ov.rwInfo.Put(&ti) // cache in memory
-	return ov.rwInfo.GetPtr(table)
+	return &ti
 }
 
 //-------------------------------------------------------------------

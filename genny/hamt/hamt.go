@@ -41,13 +41,6 @@ func (ht ItemHamt) MustGet(key KeyType) Item {
 	return it
 }
 
-func (ht ItemHamt) GetPtr(key KeyType) *Item {
-	if !ht.mutable {
-		panic("can't modify an immutable Hamt")
-	}
-	return ht.get(key)
-}
-
 func (ht ItemHamt) Get(key KeyType) (Item, bool) {
 	it := ht.get(key)
 	if it == nil {
@@ -67,7 +60,7 @@ func (ht ItemHamt) get(key KeyType) *Item {
 		bit := nd.bit(hash, shift)
 		iv := bits.OnesCount32(nd.bmVal & (bit - 1))
 		if (nd.bmVal & bit) != 0 {
-			if nd.vals[iv].Key() == key {
+			if ItemKey(nd.vals[iv]) == key {
 				return &nd.vals[iv]
 			}
 		}
@@ -79,7 +72,7 @@ func (ht ItemHamt) get(key KeyType) *Item {
 	}
 	// overflow node, linear search
 	for i := range nd.vals {
-		if nd.vals[i].Key() == key {
+		if ItemKey(nd.vals[i]) == key {
 			return &nd.vals[i]
 		}
 	}
@@ -103,16 +96,16 @@ func (ht ItemHamt) Mutable() ItemHamt {
 	return ItemHamt{root: nd, mutable: true, generation: gen}
 }
 
-func (ht ItemHamt) Put(item *Item) {
+func (ht ItemHamt) Put(item Item) {
 	if !ht.mutable {
 		panic("can't modify an immutable Hamt")
 	}
-	key := item.Key()
+	key := ItemKey(item)
 	hash := ItemHash(key)
 	ht.root.with(ht.generation, item, key, hash, 0)
 }
 
-func (nd *nodeItem) with(gen uint32, item *Item, key KeyType, hash uint32, shift int) *nodeItem {
+func (nd *nodeItem) with(gen uint32, item Item, key KeyType, hash uint32, shift int) *nodeItem {
 	// recursive
 	if nd.generation != gen {
 		// path copy on the way down the tree
@@ -122,12 +115,12 @@ func (nd *nodeItem) with(gen uint32, item *Item, key KeyType, hash uint32, shift
 	if shift >= 32 {
 		// overflow node
 		for i := range nd.vals { // linear search
-			if nd.vals[i].Key() == key {
-				nd.vals[i] = *item // update if found
+			if ItemKey(nd.vals[i]) == key {
+				nd.vals[i] = item // update if found
 				return nd
 			}
 		}
-		nd.vals = append(nd.vals, *item) // not found, add it
+		nd.vals = append(nd.vals, item) // not found, add it
 		return nd
 	}
 	bit := nd.bit(hash, shift)
@@ -138,12 +131,12 @@ func (nd *nodeItem) with(gen uint32, item *Item, key KeyType, hash uint32, shift
 		var zero Item
 		nd.vals = append(nd.vals, zero)
 		copy(nd.vals[iv+1:], nd.vals[iv:])
-		nd.vals[iv] = *item
+		nd.vals[iv] = item
 		return nd
 	}
-	if nd.vals[iv].Key() == key {
+	if ItemKey(nd.vals[iv]) == key {
 		// already exists, update it
-		nd.vals[iv] = *item
+		nd.vals[iv] = item
 		return nd
 	}
 
@@ -199,7 +192,7 @@ func (nd *nodeItem) without(gen uint32, key KeyType, hash uint32, shift int) (*n
 	if shift >= 32 {
 		// overflow node
 		for i := range nd.vals { // linear search
-			if nd.vals[i].Key() == key {
+			if ItemKey(nd.vals[i]) == key {
 				nd.vals[i] = nd.vals[len(nd.vals)-1]
 				nd.vals = nd.vals[:len(nd.vals)-1]
 				if len(nd.vals) == 0 { // node emptied
@@ -213,7 +206,7 @@ func (nd *nodeItem) without(gen uint32, key KeyType, hash uint32, shift int) (*n
 	bit := nd.bit(hash, shift)
 	iv := bits.OnesCount32(nd.bmVal & (bit - 1))
 	if (nd.bmVal & bit) != 0 {
-		if nd.vals[iv].Key() == key {
+		if ItemKey(nd.vals[iv]) == key {
 			nd.bmVal &^= bit
 			nd.vals = append(nd.vals[:iv], nd.vals[iv+1:]...) // preserve order
 			if nd.bmVal == 0 && nd.bmPtr == 0 {               // node emptied
@@ -241,15 +234,15 @@ func (nd *nodeItem) without(gen uint32, key KeyType, hash uint32, shift int) (*n
 
 //-------------------------------------------------------------------
 
-func (ht ItemHamt) ForEach(fn func(*Item)) {
+func (ht ItemHamt) ForEach(fn func(Item)) {
 	if ht.root != nil {
 		ht.root.forEach(fn)
 	}
 }
 
-func (nd *nodeItem) forEach(fn func(*Item)) {
+func (nd *nodeItem) forEach(fn func(Item)) {
 	for i := range nd.vals {
-		fn(&nd.vals[i])
+		fn(nd.vals[i])
 	}
 	for _, p := range nd.ptrs {
 		p.forEach(fn)

@@ -19,7 +19,7 @@ type nodeSchema struct {
 	generation uint32
 	bmVal      uint32
 	bmPtr      uint32
-	vals       []Schema
+	vals       []*Schema
 	ptrs       []*nodeSchema
 }
 
@@ -30,7 +30,7 @@ func (ht SchemaHamt) IsNil() bool {
 	return ht.root == nil
 }
 
-func (ht SchemaHamt) MustGet(key string) Schema {
+func (ht SchemaHamt) MustGet(key string) *Schema {
 	it, ok := ht.Get(key)
 	if !ok {
 		panic("Hamt MustGet failed")
@@ -38,23 +38,16 @@ func (ht SchemaHamt) MustGet(key string) Schema {
 	return it
 }
 
-func (ht SchemaHamt) GetPtr(key string) *Schema {
-	if !ht.mutable {
-		panic("can't modify an immutable Hamt")
-	}
-	return ht.get(key)
-}
-
-func (ht SchemaHamt) Get(key string) (Schema, bool) {
+func (ht SchemaHamt) Get(key string) (*Schema, bool) {
 	it := ht.get(key)
 	if it == nil {
-		var zero Schema
+		var zero *Schema
 		return zero, false
 	}
 	return *it, true
 }
 
-func (ht SchemaHamt) get(key string) *Schema {
+func (ht SchemaHamt) get(key string) **Schema {
 	nd := ht.root
 	if nd == nil {
 		return nil
@@ -64,7 +57,7 @@ func (ht SchemaHamt) get(key string) *Schema {
 		bit := nd.bit(hash, shift)
 		iv := bits.OnesCount32(nd.bmVal & (bit - 1))
 		if (nd.bmVal & bit) != 0 {
-			if nd.vals[iv].Key() == key {
+			if SchemaKey(nd.vals[iv]) == key {
 				return &nd.vals[iv]
 			}
 		}
@@ -76,7 +69,7 @@ func (ht SchemaHamt) get(key string) *Schema {
 	}
 	// overflow node, linear search
 	for i := range nd.vals {
-		if nd.vals[i].Key() == key {
+		if SchemaKey(nd.vals[i]) == key {
 			return &nd.vals[i]
 		}
 	}
@@ -104,7 +97,7 @@ func (ht SchemaHamt) Put(item *Schema) {
 	if !ht.mutable {
 		panic("can't modify an immutable Hamt")
 	}
-	key := item.Key()
+	key := SchemaKey(item)
 	hash := SchemaHash(key)
 	ht.root.with(ht.generation, item, key, hash, 0)
 }
@@ -119,12 +112,12 @@ func (nd *nodeSchema) with(gen uint32, item *Schema, key string, hash uint32, sh
 	if shift >= 32 {
 		// overflow node
 		for i := range nd.vals { // linear search
-			if nd.vals[i].Key() == key {
-				nd.vals[i] = *item // update if found
+			if SchemaKey(nd.vals[i]) == key {
+				nd.vals[i] = item // update if found
 				return nd
 			}
 		}
-		nd.vals = append(nd.vals, *item) // not found, add it
+		nd.vals = append(nd.vals, item) // not found, add it
 		return nd
 	}
 	bit := nd.bit(hash, shift)
@@ -132,15 +125,15 @@ func (nd *nodeSchema) with(gen uint32, item *Schema, key string, hash uint32, sh
 	if (nd.bmVal & bit) == 0 {
 		// slot is empty, insert new value
 		nd.bmVal |= bit
-		var zero Schema
+		var zero *Schema
 		nd.vals = append(nd.vals, zero)
 		copy(nd.vals[iv+1:], nd.vals[iv:])
-		nd.vals[iv] = *item
+		nd.vals[iv] = item
 		return nd
 	}
-	if nd.vals[iv].Key() == key {
+	if SchemaKey(nd.vals[iv]) == key {
 		// already exists, update it
-		nd.vals[iv] = *item
+		nd.vals[iv] = item
 		return nd
 	}
 
@@ -196,7 +189,7 @@ func (nd *nodeSchema) without(gen uint32, key string, hash uint32, shift int) (*
 	if shift >= 32 {
 		// overflow node
 		for i := range nd.vals { // linear search
-			if nd.vals[i].Key() == key {
+			if SchemaKey(nd.vals[i]) == key {
 				nd.vals[i] = nd.vals[len(nd.vals)-1]
 				nd.vals = nd.vals[:len(nd.vals)-1]
 				if len(nd.vals) == 0 { // node emptied
@@ -210,7 +203,7 @@ func (nd *nodeSchema) without(gen uint32, key string, hash uint32, shift int) (*
 	bit := nd.bit(hash, shift)
 	iv := bits.OnesCount32(nd.bmVal & (bit - 1))
 	if (nd.bmVal & bit) != 0 {
-		if nd.vals[iv].Key() == key {
+		if SchemaKey(nd.vals[iv]) == key {
 			nd.bmVal &^= bit
 			nd.vals = append(nd.vals[:iv], nd.vals[iv+1:]...) // preserve order
 			if nd.bmVal == 0 && nd.bmPtr == 0 {               // node emptied
@@ -246,7 +239,7 @@ func (ht SchemaHamt) ForEach(fn func(*Schema)) {
 
 func (nd *nodeSchema) forEach(fn func(*Schema)) {
 	for i := range nd.vals {
-		fn(&nd.vals[i])
+		fn(nd.vals[i])
 	}
 	for _, p := range nd.ptrs {
 		p.forEach(fn)

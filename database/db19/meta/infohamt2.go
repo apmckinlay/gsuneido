@@ -18,7 +18,7 @@ import (
 func (ht InfoHamt) list() []string {
 	keys := make([]string, 0, 16)
 	ht.ForEach(func(it *Info) {
-		keys = append(keys, it.Key())
+		keys = append(keys, InfoKey(it))
 	})
 	return keys
 }

@@ -18,10 +18,10 @@ type Info struct {
 	mutable bool
 }
 
-//go:generate genny -in ../../../genny/hamt/hamt.go -out infohamt.go -pkg meta gen "Item=Info KeyType=string"
-//go:generate genny -in ../../../genny/hamt/meta.go -out infohamt2.go -pkg meta gen "Item=Info KeyType=string"
+//go:generate genny -in ../../../genny/hamt/hamt.go -out infohamt.go -pkg meta gen "Item=*Info KeyType=string"
+//go:generate genny -in ../../../genny/hamt/meta.go -out infohamt2.go -pkg meta gen "Item=*Info KeyType=string"
 
-func (ti *Info) Key() string {
+func InfoKey(ti *Info) string {
 	return ti.Table
 }
 
@@ -87,7 +87,7 @@ func (t InfoHamt) process(fn func(btOver) btOver) []update {
 func (t InfoHamt) withUpdates(updates []update, fn func(btOver, btOver) btOver) InfoHamt {
 	t2 := t.Mutable()
 	for _, up := range updates {
-		ti, _ := t2.Get(up.table)                         // copy
+		ti := *t2.MustGet(up.table)                       // copy
 		ti.Indexes = append(overlays(nil), ti.Indexes...) // copy
 		for i, ov := range ti.Indexes {
 			if up.overlays[i] != nil {

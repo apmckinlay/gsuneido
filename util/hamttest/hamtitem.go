@@ -3,14 +3,14 @@
 
 package hamttest
 
-//go:generate genny -in ../../genny/hamt/hamt.go -out testhamt.go -pkg hamttest gen "Item=Foo KeyType=int"
+//go:generate genny -in ../../genny/hamt/hamt.go -out testhamt.go -pkg hamttest gen "Item=*Foo KeyType=int"
 
 type Foo struct {
 	key  int
 	data string
 }
 
-func (foo *Foo) Key() int {
+func FooKey(foo *Foo) int {
 	return foo.key
 }
 

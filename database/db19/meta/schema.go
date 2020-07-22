@@ -17,10 +17,10 @@ type Schema struct {
 	mutable bool
 }
 
-//go:generate genny -in ../../../genny/hamt/hamt.go -out schemahamt.go -pkg meta gen "Item=Schema KeyType=string"
-//go:generate genny -in ../../../genny/hamt/meta.go -out schemahamt2.go -pkg meta gen "Item=Schema KeyType=string"
+//go:generate genny -in ../../../genny/hamt/hamt.go -out schemahamt.go -pkg meta gen "Item=*Schema KeyType=string"
+//go:generate genny -in ../../../genny/hamt/meta.go -out schemahamt2.go -pkg meta gen "Item=*Schema KeyType=string"
 
-func (ti *Schema) Key() string {
+func SchemaKey(ti *Schema) string {
 	return ti.Table
 }
 

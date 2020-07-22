@@ -302,7 +302,7 @@ func TestFlatten(t *testing.T) {
 		verify.That(treeLevels == 2)
 		fb = OpenFbtree(store, root, treeLevels, 0)
 		fb.redirs.tbl.ForEach(func(r *redir) { panic("redir!") })
-		fb.redirs.paths.ForEach(func(p *path) { panic("path!") })
+		fb.redirs.paths.ForEach(func(p uint64) { panic("path!") })
 	}
 	check := func() {
 		t.Helper()

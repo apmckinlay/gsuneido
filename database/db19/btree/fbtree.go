@@ -136,7 +136,7 @@ func (fb *fbtree) keep2(depth int, nodeOff uint64) uint64 {
 	fb.redirs.tbl.Put(&redir{offset: r.offset, newOffset: newOffset})
 	if inPaths {
 		fb.redirs.paths.Delete(nodeOff)
-		fb.redirs.paths.Put(&path{newOffset})
+		fb.redirs.paths.Put(newOffset)
 	}
 	traced(depth, "putNode", OffStr(nodeOff), "=>", newOffset)
 	return newOffset
@@ -242,7 +242,7 @@ func traced(depth int, args ...interface{}) {
 
 func (fb *fbtree) saveRedirs(nr int) {
 	np := 0
-	fb.redirs.paths.ForEach(func(p *path) { np++ })
+	fb.redirs.paths.ForEach(func(p uint64) { np++ })
 	size := 5 + 2 + nr*10 + 2 + np*5
 	off, buf := fb.store.Alloc(size)
 	w := stor.NewWriter(buf)
@@ -253,8 +253,8 @@ func (fb *fbtree) saveRedirs(nr int) {
 		w.Put5(r.offset).Put5(r.newOffset)
 	})
 	w.Put2(nr)
-	fb.redirs.paths.ForEach(func(p *path) {
-		w.Put5(p.off)
+	fb.redirs.paths.ForEach(func(p uint64) {
+		w.Put5(p)
 	})
 	fb.redirsOff = off
 }
@@ -278,8 +278,9 @@ func loadRedirs(store *stor.Stor, redirsOff uint64) redirs {
 	re.paths = re.paths.Mutable()
 	for n := rdr.Get2(); n > 0; n-- {
 		off := rdr.Get5()
-		re.paths.Put(&path{off})
+		re.paths.Put(off)
 	}
+	re.paths = re.paths.Freeze()
 	return re
 }
 

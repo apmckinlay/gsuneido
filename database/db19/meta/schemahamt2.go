@@ -18,7 +18,7 @@ import (
 func (ht SchemaHamt) list() []string {
 	keys := make([]string, 0, 16)
 	ht.ForEach(func(it *Schema) {
-		keys = append(keys, it.Key())
+		keys = append(keys, SchemaKey(it))
 	})
 	return keys
 }

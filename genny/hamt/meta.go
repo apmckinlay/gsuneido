@@ -13,8 +13,8 @@ import (
 // list returns a list of the keys in the table
 func (ht ItemHamt) list() []string {
 	keys := make([]string, 0, 16)
-	ht.ForEach(func(it *Item) {
-		keys = append(keys, it.Key())
+	ht.ForEach(func(it Item) {
+		keys = append(keys, ItemKey(it))
 	})
 	return keys
 }
@@ -25,7 +25,7 @@ const perFingerItem = 16
 func (ht ItemHamt) Write(st *stor.Stor) uint64 {
 	nitems := 0
 	size := 2
-	ht.ForEach(func(it *Item) {
+	ht.ForEach(func(it Item) {
 		size += it.storSize()
 		nitems++
 	})
@@ -107,7 +107,7 @@ func NewItemPacked(st *stor.Stor, off uint64) *ItemPacked {
 	return &ItemPacked{stor: st, off: off, buf: buf, fingers: fingers}
 }
 
-func (p ItemPacked) Get(key string) *Item {
+func (p ItemPacked) Get(key string) Item {
 	pos := p.binarySearch(key)
 	r := stor.NewReader(p.buf[pos:])
 	count := 0

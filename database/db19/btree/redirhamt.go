@@ -19,7 +19,7 @@ type nodeRedir struct {
 	generation uint32
 	bmVal      uint32
 	bmPtr      uint32
-	vals       []redir
+	vals       []*redir
 	ptrs       []*nodeRedir
 }
 
@@ -30,7 +30,7 @@ func (ht RedirHamt) IsNil() bool {
 	return ht.root == nil
 }
 
-func (ht RedirHamt) MustGet(key uint64) redir {
+func (ht RedirHamt) MustGet(key uint64) *redir {
 	it, ok := ht.Get(key)
 	if !ok {
 		panic("Hamt MustGet failed")
@@ -38,23 +38,16 @@ func (ht RedirHamt) MustGet(key uint64) redir {
 	return it
 }
 
-func (ht RedirHamt) GetPtr(key uint64) *redir {
-	if !ht.mutable {
-		panic("can't modify an immutable Hamt")
-	}
-	return ht.get(key)
-}
-
-func (ht RedirHamt) Get(key uint64) (redir, bool) {
+func (ht RedirHamt) Get(key uint64) (*redir, bool) {
 	it := ht.get(key)
 	if it == nil {
-		var zero redir
+		var zero *redir
 		return zero, false
 	}
 	return *it, true
 }
 
-func (ht RedirHamt) get(key uint64) *redir {
+func (ht RedirHamt) get(key uint64) **redir {
 	nd := ht.root
 	if nd == nil {
 		return nil
@@ -64,7 +57,7 @@ func (ht RedirHamt) get(key uint64) *redir {
 		bit := nd.bit(hash, shift)
 		iv := bits.OnesCount32(nd.bmVal & (bit - 1))
 		if (nd.bmVal & bit) != 0 {
-			if nd.vals[iv].Key() == key {
+			if RedirKey(nd.vals[iv]) == key {
 				return &nd.vals[iv]
 			}
 		}
@@ -76,7 +69,7 @@ func (ht RedirHamt) get(key uint64) *redir {
 	}
 	// overflow node, linear search
 	for i := range nd.vals {
-		if nd.vals[i].Key() == key {
+		if RedirKey(nd.vals[i]) == key {
 			return &nd.vals[i]
 		}
 	}
@@ -104,7 +97,7 @@ func (ht RedirHamt) Put(item *redir) {
 	if !ht.mutable {
 		panic("can't modify an immutable Hamt")
 	}
-	key := item.Key()
+	key := RedirKey(item)
 	hash := RedirHash(key)
 	ht.root.with(ht.generation, item, key, hash, 0)
 }
@@ -119,12 +112,12 @@ func (nd *nodeRedir) with(gen uint32, item *redir, key uint64, hash uint32, shif
 	if shift >= 32 {
 		// overflow node
 		for i := range nd.vals { // linear search
-			if nd.vals[i].Key() == key {
-				nd.vals[i] = *item // update if found
+			if RedirKey(nd.vals[i]) == key {
+				nd.vals[i] = item // update if found
 				return nd
 			}
 		}
-		nd.vals = append(nd.vals, *item) // not found, add it
+		nd.vals = append(nd.vals, item) // not found, add it
 		return nd
 	}
 	bit := nd.bit(hash, shift)
@@ -132,15 +125,15 @@ func (nd *nodeRedir) with(gen uint32, item *redir, key uint64, hash uint32, shif
 	if (nd.bmVal & bit) == 0 {
 		// slot is empty, insert new value
 		nd.bmVal |= bit
-		var zero redir
+		var zero *redir
 		nd.vals = append(nd.vals, zero)
 		copy(nd.vals[iv+1:], nd.vals[iv:])
-		nd.vals[iv] = *item
+		nd.vals[iv] = item
 		return nd
 	}
-	if nd.vals[iv].Key() == key {
+	if RedirKey(nd.vals[iv]) == key {
 		// already exists, update it
-		nd.vals[iv] = *item
+		nd.vals[iv] = item
 		return nd
 	}
 
@@ -196,7 +189,7 @@ func (nd *nodeRedir) without(gen uint32, key uint64, hash uint32, shift int) (*n
 	if shift >= 32 {
 		// overflow node
 		for i := range nd.vals { // linear search
-			if nd.vals[i].Key() == key {
+			if RedirKey(nd.vals[i]) == key {
 				nd.vals[i] = nd.vals[len(nd.vals)-1]
 				nd.vals = nd.vals[:len(nd.vals)-1]
 				if len(nd.vals) == 0 { // node emptied
@@ -210,7 +203,7 @@ func (nd *nodeRedir) without(gen uint32, key uint64, hash uint32, shift int) (*n
 	bit := nd.bit(hash, shift)
 	iv := bits.OnesCount32(nd.bmVal & (bit - 1))
 	if (nd.bmVal & bit) != 0 {
-		if nd.vals[iv].Key() == key {
+		if RedirKey(nd.vals[iv]) == key {
 			nd.bmVal &^= bit
 			nd.vals = append(nd.vals[:iv], nd.vals[iv+1:]...) // preserve order
 			if nd.bmVal == 0 && nd.bmPtr == 0 {               // node emptied
@@ -246,7 +239,7 @@ func (ht RedirHamt) ForEach(fn func(*redir)) {
 
 func (nd *nodeRedir) forEach(fn func(*redir)) {
 	for i := range nd.vals {
-		fn(&nd.vals[i])
+		fn(nd.vals[i])
 	}
 	for _, p := range nd.ptrs {
 		p.forEach(fn)

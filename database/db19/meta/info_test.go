@@ -31,7 +31,7 @@ func TestInfo(t *testing.T) {
 	off := tbl.Write(st)
 
 	packed := NewInfoPacked(st, off)
-	Assert(t).That(*packed.Get("one"), Equals(tbl.MustGet("one")))
+	Assert(t).That(*packed.Get("one"), Equals(*tbl.MustGet("one")))
 	Assert(t).That(*packed.Get("two"), Equals(Info{
 		Table:   "two",
 		Nrows:   200,
@@ -40,8 +40,8 @@ func TestInfo(t *testing.T) {
 	}))
 
 	reread := ReadInfoHamt(st, off)
-	Assert(t).That(reread.MustGet("one"), Equals(tbl.MustGet("one")))
-	Assert(t).That(reread.MustGet("two"), Equals(Info{
+	Assert(t).That(*reread.MustGet("one"), Equals(*tbl.MustGet("one")))
+	Assert(t).That(*reread.MustGet("two"), Equals(Info{
 		Table:   "two",
 		Nrows:   200,
 		Size:    2000,
