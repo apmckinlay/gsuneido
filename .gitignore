@@ -28,3 +28,4 @@ SciLexer.dll
 install.bat
 en_US.*
 *.diff
+*.db
