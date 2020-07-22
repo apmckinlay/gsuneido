@@ -8,26 +8,26 @@
 package comp
 
 import (
-	"bytes"
+	"strings"
 
+	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/hacks"
 )
 
-func Encode(flds [][]byte) string {
-	if len(flds) == 0 {
+func Key(rec Record, fields []int) string {
+	if len(fields) == 0 {
 		return ""
 	}
-	// estimate result size
-	n := 2 * len(flds) // for separators (2 bytes extra)
-	for _, b := range flds {
-		n += len(b)
+	n := 2 * len(fields) // for separators (2 bytes extra)
+	for _, field := range fields {
+		n += len(rec.GetRaw(field))
 	}
 	n += n / 16 // allow for some escapes
 	buf := make([]byte, 0, n)
 	for f := 0; ; {
-		b := flds[f]
+		b := rec.GetRaw(fields[f])
 		for len(b) > 0 {
-			i := bytes.IndexByte(b, 0)
+			i := strings.IndexByte(b, 0)
 			if i == -1 { // no zero bytes
 				buf = append(buf, b...)
 				break
@@ -39,7 +39,7 @@ func Encode(flds [][]byte) string {
 			b = b[i:]
 		}
 		f++
-		if f == len(flds) {
+		if f == len(fields) {
 			break
 		}
 		buf = append(buf, 0, 0) // separator

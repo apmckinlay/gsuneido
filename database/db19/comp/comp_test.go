@@ -4,58 +4,73 @@
 package comp
 
 import (
-	"bytes"
 	"math/rand"
+	"strings"
 	"testing"
 
+	. "github.com/apmckinlay/gsuneido/runtime"
 	. "github.com/apmckinlay/gsuneido/util/hamcrest"
 )
 
-func TestEncode(t *testing.T) {
-	Assert(t).That(Encode([][]byte{}), Equals(""))
-	Assert(t).That(Encode([][]byte{{'a', 'b'}}), Equals("ab"))
-	Assert(t).That(Encode([][]byte{{'a'}, {'b'}}), Equals("a\x00\x00b"))
-	Assert(t).That(Encode([][]byte{{'a', 0, 'b'}}), Equals("a\x00\x01b"))
-	Assert(t).That(Encode([][]byte{{0, 'a', 'b'}}), Equals("\x00\x01ab"))
-	Assert(t).That(Encode([][]byte{{'a', 0, 0, 'b'}}), Equals("a\x00\x01\x00\x01b"))
-	Assert(t).That(Encode([][]byte{{'a', 0, 1, 'b'}}), Equals("a\x00\x01\x01b"))
-	Assert(t).That(Encode([][]byte{{'a', 'b', 0}}), Equals("ab\x00\x01"))
-	Assert(t).That(Encode([][]byte{{'a', 'b', 0, 0}}), Equals("ab\x00\x01\x00\x01"))
+func TestKey(t *testing.T) {
+	Assert(t).That(Key(mkrec("a", "b"), []int{}), Equals(""))
+	Assert(t).That(Key(mkrec("a", "b"), []int{0}), Equals("a"))
+	Assert(t).That(Key(mkrec("a", "b"), []int{1}), Equals("b"))
+	Assert(t).That(Key(mkrec("a", "b"), []int{0, 1}), Equals("a\x00\x00b"))
+	Assert(t).That(Key(mkrec("a", "b"), []int{1, 0}), Equals("b\x00\x00a"))
+
+	first := []int{0}
+	Assert(t).That(Key(mkrec("ab"), first), Equals("ab"))
+	Assert(t).That(Key(mkrec("a\x00b"), first), Equals("a\x00\x01b"))
+	Assert(t).That(Key(mkrec("\x00ab"), first), Equals("\x00\x01ab"))
+	Assert(t).That(Key(mkrec("a\x00\x00b"), first), Equals("a\x00\x01\x00\x01b"))
+	Assert(t).That(Key(mkrec("a\x00\x01b"), first), Equals("a\x00\x01\x01b"))
+	Assert(t).That(Key(mkrec("ab\x00"), first), Equals("ab\x00\x01"))
+	Assert(t).That(Key(mkrec("ab\x00\x00"), first), Equals("ab\x00\x01\x00\x01"))
+}
+
+func mkrec(args ...string) Record {
+	var b RecordBuilder
+	for _, a := range args {
+		b.AddRaw(a)
+	}
+	return b.Build()
 }
 
 const m = 3
 
 func TestEncodeRandom(t *testing.T) {
-	var n = 1000000
+	var n = 100000
 	if testing.Short() {
 		n = 10000
 	}
+	fields := []int{0, 1, 2}
 	for i := 0; i < n; i++ {
 		x := gen()
 		y := gen()
-		xenc := Encode(x)
-		yenc := Encode(y)
+		yenc := Key(y, fields)
+		xenc := Key(x, fields)
 		Assert(t).That(xenc < yenc, Equals(lt(x, y)))
 	}
 }
 
-func gen() [][]byte {
-	x := make([][]byte, m)
+func gen() Record {
+	var b RecordBuilder
 	for i := 0; i < m; i++ {
-		n := rand.Intn(6) + 1
-		x[i] = make([]byte, n)
-		for j := 0; j < n; j++ {
-			x[i][j] = byte(rand.Intn(4)) // 25% zeros
+		x := make([]byte, rand.Intn(6)+1)
+		for j := range x {
+			x[j] = byte(rand.Intn(4)) // 25% zeros
 		}
+		b.AddRaw(string(x))
 	}
-	return x
+	return b.Build()
 }
 
-func lt(x [][]byte, y [][]byte) bool {
-	for i := 0; i < len(x) && i < len(y); i++ {
-		if cmp := bytes.Compare(x[i], y[i]); cmp != 0 {
+func lt(x Record, y Record) bool {
+	for i := 0; i < x.Len() && i < y.Len(); i++ {
+		if cmp := strings.Compare(x.GetRaw(i), y.GetRaw(i)); cmp != 0 {
 			return cmp < 0
 		}
 	}
-	return len(x) < len(y)
+	return x.Len() < y.Len()
 }
