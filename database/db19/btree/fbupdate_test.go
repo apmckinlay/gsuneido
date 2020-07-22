@@ -290,7 +290,7 @@ func TestFlatten(t *testing.T) {
 
 	build := func() {
 		trace("==============================")
-		MaxNodeSize = 64
+		MaxNodeSize = 96
 		inserted = map[int]bool{}
 		store := stor.HeapStor(8192)
 		bldr := newFbtreeBuilder(store)
@@ -365,7 +365,7 @@ func TestFlatten(t *testing.T) {
 	}
 
 	for _, save := range []bool{false, true} {
-		for _, mns := range []int{999, 60} {
+		for _, mns := range []int{999, 90} {
 			build()
 			MaxNodeSize = mns // prevent or force splitting
 			insert(10051)
@@ -377,7 +377,7 @@ func TestFlatten(t *testing.T) {
 		build()
 		MaxNodeSize = 999 // no split
 		insert(10051)
-		MaxNodeSize = 60 // split all the way
+		MaxNodeSize = 90 // split all the way
 		insert(10551)
 		maybeSave(save)
 		flatten()

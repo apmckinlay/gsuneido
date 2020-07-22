@@ -461,7 +461,7 @@ func (fb *fbtreeBuilder) insert(li int, key string, off uint64) {
 		fb.levels = append(fb.levels, &level{})
 	}
 	lev := fb.levels[li]
-	if len(lev.builder.fe) > MaxNodeSize {
+	if len(lev.builder.fe) > (MaxNodeSize * 2 / 3) {
 		// flush full node to stor
 		offNode := lev.builder.fe.putNode(fb.store)
 		fb.insert(li+1, lev.first, offNode) // recurse
