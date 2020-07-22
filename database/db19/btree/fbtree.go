@@ -91,30 +91,74 @@ func (fb *fbtree) save() {
 
 // keep saves the in-memory nodes but keeps the redirects
 func (fb *fbtree) keep(nr int) {
-	// save all the in-memory nodes
-	fb.redirs.tbl.ForEach(func(r *redir) {
-		verify.That((r.mnode == nil) != (r.newOffset == 0))
-		if r.mnode != nil {
-			//TODO flatten node (update redirs) before saving
-			newOffset := r.mnode.putNode(fb.store)
-			trace("save", OffStr(r.offset), "=>", newOffset)
-			fb.redirs.tbl.Put(&redir{offset: r.offset, newOffset: newOffset})
-		}
-	})
+	// save the in-memory nodes
+	fb.root = fb.keep2(0, fb.root)
 	fb.saveRedirs(nr)
 }
+
+func (fb *fbtree) keep2(depth int, nodeOff uint64) uint64 {
+	r, ok := fb.redirs.tbl.Get(nodeOff)
+	traced(depth, "save", OffStr(nodeOff), ok)
+	inPaths := false
+	if depth < fb.treeLevels {
+		isMnode := ok && r.mnode != nil
+		inPaths = fb.pathNode(nodeOff)
+		if !(isMnode || inPaths) {
+			return nodeOff
+		}
+		// tree node
+		traced(depth, "tree node")
+		node := fb.getNode(nodeOff)
+		for it := node.iter(); it.next(); {
+			off := it.offset
+			off2 := fb.keep2(depth+1, off) // recurse
+			if off2 != off && isMnode {
+				traced(depth, "update tree", OffStr(off), "=>", off2)
+				r.mnode.setOffset(it.fi, off2)
+				fb.redirs.tbl.Delete(off) // remove flattened redirect
+			}
+		}
+		if !isMnode {
+			return nodeOff
+		}
+	} else {
+		// leaf node
+		if !ok {
+			return nodeOff
+		}
+		if r.mnode == nil {
+			traced(depth, "leaf newOffset")
+			return r.newOffset
+		}
+		traced(depth, "leaf mnode")
+	}
+	newOffset := r.mnode.putNode(fb.store)
+	fb.redirs.tbl.Put(&redir{offset: r.offset, newOffset: newOffset})
+	if inPaths {
+		fb.redirs.paths.Delete(nodeOff)
+		fb.redirs.paths.Put(&path{newOffset})
+	}
+	traced(depth, "putNode", OffStr(nodeOff), "=>", newOffset)
+	return newOffset
+}
+
+func (fb *fbtree) pathNode(off uint64) bool {
+	_, ok := fb.redirs.paths.Get(off)
+	return ok
+}
+
+//-------------------------------------------------------------------
 
 // flatten saves in-memory nodes
 // and applies the redirects and then clears them
 func (fb *fbtree) flatten() {
-	trace("flatten treeLevels", fb.treeLevels)
 	fb.root = fb.flatten2(0, fb.root)
 	fb.redirs = newRedirs()
 	fb.redirsOff = 0
 }
 
 func (fb *fbtree) flatten2(depth int, nodeOff uint64) uint64 {
-	trace(depth, "flatten2 depth", depth, "nodeOff", OffStr(nodeOff))
+	traced(depth, "flatten", OffStr(nodeOff))
 	var rwNode fNode
 	if depth < fb.treeLevels {
 		// tree node, need to update any redirected offsets
@@ -136,52 +180,52 @@ func (fb *fbtree) flatten2(depth int, nodeOff uint64) uint64 {
 		}
 		if rwNode == nil {
 			if r, ok := fb.redirs.tbl.Get(nodeOff); ok && r.mnode != nil {
-				trace(depth, "tree mnode")
+				traced(depth, "tree mnode")
 				rwNode = r.mnode
 			} else {
 				if ok {
-					trace(depth, "tree new offset", OffStr(r.newOffset))
+					traced(depth, "tree new offset", OffStr(r.newOffset))
 					return r.newOffset
 				}
-				trace(depth, "tree NO SAVE")
+				traced(depth, "tree NO SAVE")
 				return nodeOff // nothing modified, don't need to save
 			}
 		} else {
-			trace(depth, "tree node modified")
+			traced(depth, "tree node modified")
 		}
 	} else {
 		// leaf node
 		r, ok := fb.redirs.tbl.Get(nodeOff)
 		verify.That(ok)
 		if r.mnode == nil {
-			trace(depth, "leaf newOffset")
+			traced(depth, "leaf newOffset")
 			return r.newOffset
 		}
 		rwNode = r.mnode
-		trace(depth, "leaf mnode")
+		traced(depth, "leaf mnode")
 	}
 	off := rwNode.putNode(fb.store)
-	dtrace(depth, "putNode", OffStr(nodeOff), "=>", off)
+	traced(depth, "putNode", OffStr(nodeOff), "=>", off)
 	return off
 }
 
 func (fb *fbtree) shouldProcess(off uint64, depth int) bool {
 	if off > fb.redirs.nextOff {
-		dtrace(depth, OffStr(off), "fake")
+		traced(depth, OffStr(off), "fake")
 		return true
 	}
 	if r, ok := fb.redirs.tbl.Get(off); ok {
 		if r.mnode != nil {
-			dtrace(depth, OffStr(off), "in redirs mnode")
+			traced(depth, OffStr(off), "in redirs mnode")
 		} else if r.newOffset != 0 {
-			dtrace(depth, OffStr(off), "in redirs newOffset")
+			traced(depth, OffStr(off), "in redirs newOffset")
 		} else {
 			panic("bad redir ???")
 		}
 		return true
 	}
 	if _, ok := fb.redirs.paths.Get(off); ok {
-		dtrace(depth, OffStr(off), "in paths")
+		traced(depth, OffStr(off), "in paths")
 		return true
 	}
 	return false
@@ -191,7 +235,7 @@ func trace(args ...interface{}) {
 	// fmt.Println(args...)
 }
 
-func dtrace(depth int, args ...interface{}) {
+func traced(depth int, args ...interface{}) {
 	// fmt.Print(strings.Repeat("    ", depth))
 	// fmt.Println(args...)
 }
@@ -258,6 +302,7 @@ func (fb *fbtree) getNode(off uint64) fNode {
 }
 
 func (fb *fbtree) readNode(off uint64) fNode {
+	verify.That(!fb.redirs.isFake(off))
 	buf := fb.store.DataSized(off)
 	return fNode(buf)
 }

@@ -284,19 +284,19 @@ func TestFlatten(t *testing.T) {
 		return strconv.Itoa(int(i))
 	}
 	defer func(mns int) { MaxNodeSize = mns }(MaxNodeSize)
-	const from, ins, to = 10000, 10050, 10400
+	const from, to = 10000, 10800
+	inserted := map[int]bool{}
 	var fb *fbtree
 
 	build := func() {
 		trace("==============================")
 		MaxNodeSize = 64
+		inserted = map[int]bool{}
 		store := stor.HeapStor(8192)
 		bldr := newFbtreeBuilder(store)
-		for i := from; i < to; i++ {
-			if i != ins {
-				key := strconv.Itoa(i)
-				bldr.Add(key, uint64(i))
-			}
+		for i := from; i < to; i += 2 {
+			key := strconv.Itoa(i)
+			bldr.Add(key, uint64(i))
 		}
 		root, treeLevels := bldr.Finish()
 		verify.That(treeLevels == 2)
@@ -305,28 +305,56 @@ func TestFlatten(t *testing.T) {
 		fb.redirs.paths.ForEach(func(p *path) { panic("path!") })
 	}
 	check := func() {
+		t.Helper()
 		fb.check()
 		iter := fb.Iter()
 		for i := from; i < to; i++ {
+			if i%2 == 1 && !inserted[i] {
+				continue
+			}
 			key := strconv.Itoa(i)
 			k, o, ok := iter()
 			Assert(t).True(ok)
 			Assert(t).True(strings.HasPrefix(key, k))
 			Assert(t).That(o, Equals(i))
+			if o != uint64(i) {
+				t.FailNow()
+			}
 		}
 		_, _, ok := iter()
 		Assert(t).False(ok)
 	}
-	insert := func() {
+	insert := func(i int) {
 		fb = fb.Update(func(mfb *fbtree) {
-			mfb.Insert(strconv.Itoa(ins), ins)
+			mfb.Insert(strconv.Itoa(i), uint64(i))
+			inserted[i] = true
 		})
 		check()
 	}
-	maybeSave := func(i int) {
+	maybeSave := func(save bool) {
 		check()
-		if i == 1 {
+		if save {
+			// fb.print()
+			// fmt.Println("before")
+			// fb.redirs.tbl.ForEach(func(r *redir) {
+			// 	if r.mnode != nil {
+			// 		fmt.Println(OffStr(r.offset), "mnode")
+			// 	} else {
+			// 		fmt.Println(OffStr(r.offset), "=>", r.newOffset)
+			// 	}
+			// })
+			// fmt.Println("--------------------------------")
 			fb = fb.Save()
+			// fb.print()
+			// fmt.Println("after")
+			// fb.redirs.tbl.ForEach(func(r *redir) {
+			// 	if r.mnode != nil {
+			// 		fmt.Println(OffStr(r.offset), "mnode")
+			// 	} else {
+			// 		fmt.Println(OffStr(r.offset), "=>", r.newOffset)
+			// 	}
+			// })
+			// fmt.Println("--------------------------------")
 			check()
 			trace("---------------------------")
 		}
@@ -336,13 +364,22 @@ func TestFlatten(t *testing.T) {
 		check()
 	}
 
-	for i := 0; i < 2; i++ {
+	for _, save := range []bool{false, true} {
 		for _, mns := range []int{999, 60} {
 			build()
 			MaxNodeSize = mns // prevent or force splitting
-			insert()
-			maybeSave(i)
+			insert(10051)
+			maybeSave(save)
 			flatten()
 		}
+	}
+	for _, save := range []bool{false, true} {
+		build()
+		MaxNodeSize = 999 // no split
+		insert(10051)
+		MaxNodeSize = 60 // split all the way
+		insert(10551)
+		maybeSave(save)
+		flatten()
 	}
 }
