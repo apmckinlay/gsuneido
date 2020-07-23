@@ -13,20 +13,45 @@ import (
 )
 
 func TestKey(t *testing.T) {
-	Assert(t).That(Key(mkrec("a", "b"), []int{}), Equals(""))
-	Assert(t).That(Key(mkrec("a", "b"), []int{0}), Equals("a"))
-	Assert(t).That(Key(mkrec("a", "b"), []int{1}), Equals("b"))
-	Assert(t).That(Key(mkrec("a", "b"), []int{0, 1}), Equals("a\x00\x00b"))
-	Assert(t).That(Key(mkrec("a", "b"), []int{1, 0}), Equals("b\x00\x00a"))
+	Assert(t).That(Key(mkrec("a", "b"), []int{}, false), Equals(""))
+	Assert(t).That(Key(mkrec("a", "b"), []int{0}, false), Equals("a"))
+	Assert(t).That(Key(mkrec("a", "b"), []int{1}, false), Equals("b"))
+	Assert(t).That(Key(mkrec("a", "b"), []int{0, 1}, false), Equals("a\x00\x00b"))
+	Assert(t).That(Key(mkrec("a", "b"), []int{1, 0}, false), Equals("b\x00\x00a"))
 
-	first := []int{0}
-	Assert(t).That(Key(mkrec("ab"), first), Equals("ab"))
-	Assert(t).That(Key(mkrec("a\x00b"), first), Equals("a\x00\x01b"))
-	Assert(t).That(Key(mkrec("\x00ab"), first), Equals("\x00\x01ab"))
-	Assert(t).That(Key(mkrec("a\x00\x00b"), first), Equals("a\x00\x01\x00\x01b"))
-	Assert(t).That(Key(mkrec("a\x00\x01b"), first), Equals("a\x00\x01\x01b"))
-	Assert(t).That(Key(mkrec("ab\x00"), first), Equals("ab\x00\x01"))
-	Assert(t).That(Key(mkrec("ab\x00\x00"), first), Equals("ab\x00\x01\x00\x01"))
+	// omit trailing empty fields
+	fields := []int{0, 1, 2}
+	Assert(t).That(Key(mkrec("a", "b", "c"), fields, false),
+		Equals("a\x00\x00b\x00\x00c"))
+	Assert(t).That(Key(mkrec("a", "", "c"), fields, false),
+		Equals("a\x00\x00\x00\x00c"))
+	Assert(t).That(Key(mkrec("", "", "c"), fields, false),
+		Equals("\x00\x00\x00\x00c"))
+	Assert(t).That(Key(mkrec("a", "b", ""), fields, false),
+		Equals("a\x00\x00b"))
+	Assert(t).That(Key(mkrec("a", "", ""), fields, false),
+		Equals("a"))
+	Assert(t).That(Key(mkrec("", "", ""), fields, false),
+		Equals(""))
+
+	// no escape for single field
+	Assert(t).That(Key(mkrec("a\x00b"), []int{0}, false), Equals("a\x00b"))
+
+	// escaping
+	first := []int{0,1}
+	Assert(t).That(Key(mkrec("ab"), first, false), Equals("ab"))
+	Assert(t).That(Key(mkrec("a\x00b"), first, false), Equals("a\x00\x01b"))
+	Assert(t).That(Key(mkrec("\x00ab"), first, false), Equals("\x00\x01ab"))
+	Assert(t).That(Key(mkrec("a\x00\x00b"), first, false), Equals("a\x00\x01\x00\x01b"))
+	Assert(t).That(Key(mkrec("a\x00\x01b"), first, false), Equals("a\x00\x01\x01b"))
+	Assert(t).That(Key(mkrec("ab\x00"), first, false), Equals("ab\x00\x01"))
+	Assert(t).That(Key(mkrec("ab\x00\x00"), first, false), Equals("ab\x00\x01\x00\x01"))
+
+	// ts
+	Assert(t).That(Key(mkrec("a", "b"), []int{0, 1}, false), Equals("a\x00\x00b"))
+	Assert(t).That(Key(mkrec("a", "b"), []int{0, 1}, true), Equals("a"))
+	Assert(t).That(Key(mkrec("", "b"), []int{0, 1}, true), Equals("\x00\x00b"))
+
 }
 
 func mkrec(args ...string) Record {
@@ -48,8 +73,8 @@ func TestEncodeRandom(t *testing.T) {
 	for i := 0; i < n; i++ {
 		x := gen()
 		y := gen()
-		yenc := Key(y, fields)
-		xenc := Key(x, fields)
+		yenc := Key(y, fields, false)
+		xenc := Key(x, fields, false)
 		Assert(t).That(xenc < yenc, Equals(lt(x, y)))
 	}
 }

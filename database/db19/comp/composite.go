@@ -12,17 +12,36 @@ import (
 
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/hacks"
+	"github.com/apmckinlay/gsuneido/util/verify"
 )
 
-func Key(rec Record, fields []int) string {
+// Key builds a composite key string that is comparable raw.
+// If ui (unique index) is true
+// then the final field will only be added if the other fields are all empty.
+func Key(rec Record, fields []int, ui bool) string {
+	verify.That(ui == false || len(fields) >= 2)
 	if len(fields) == 0 {
 		return ""
 	}
-	n := 2 * len(fields) // for separators (2 bytes extra)
-	for _, field := range fields {
-		n += len(rec.GetRaw(field))
+	if len(fields) == 1 {
+		// don't need to encode single field keys
+		return rec.GetRaw(fields[0])
 	}
-	n += n / 16 // allow for some escapes
+	n := 0
+	lastNonEmpty := 0
+	for i, field := range fields {
+		if ui && i == len(fields)-1 && n > 0 {
+			break
+		}
+		fldlen := len(rec.GetRaw(field))
+		if fldlen > 0 {
+			lastNonEmpty = i
+		}
+		n += fldlen
+	}
+	fields = fields[:lastNonEmpty+1]
+	n += 2 * len(fields) // for separators (2 bytes extra)
+	n += n / 16          // allow for some escapes
 	buf := make([]byte, 0, n)
 	for f := 0; ; {
 		b := rec.GetRaw(fields[f])
