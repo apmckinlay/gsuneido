@@ -248,7 +248,7 @@ func (dc *dbmsClient) getHdr() *Header {
 }
 
 func (dc *dbmsClient) getRow(adr int) Row {
-	return Row([]DbRec{{Record(dc.GetStr()), adr}})
+	return Row([]DbRec{{Record: Record(dc.GetStr()), Adr: adr}})
 }
 
 // ------------------------------------------------------------------

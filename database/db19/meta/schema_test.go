@@ -47,6 +47,6 @@ func TestSchema(t *testing.T) {
 
 	for i, table := range data {
 		test(i, table, tbl.MustGet(table))
-		test(i, table, packed.Get(table))
+		test(i, table, packed.MustGet(table))
 	}
 }

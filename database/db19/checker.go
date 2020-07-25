@@ -7,8 +7,10 @@ import (
 	"time"
 )
 
-type Checker struct {
-	c chan interface{}
+// CheckCo is the concurrent, channel based interface to Check
+type CheckCo struct {
+	c       chan interface{}
+	allDone chan void
 }
 
 // message types
@@ -31,7 +33,7 @@ type ckWrite struct {
 }
 
 type ckCommit struct {
-	t   *CkTran
+	t   *UpdateTran
 	ret chan bool
 }
 
@@ -42,13 +44,13 @@ type ckAbort struct {
 	t *CkTran
 }
 
-func (ck *Checker) StartTran() *CkTran {
+func (ck *CheckCo) StartTran() *CkTran {
 	ret := make(chan *CkTran, 1)
 	ck.c <- &ckStart{ret: ret}
 	return <-ret
 }
 
-func (ck *Checker) Read(t *CkTran, table string, index int, from, to string) bool {
+func (ck *CheckCo) Read(t *CkTran, table string, index int, from, to string) bool {
 	if t.Aborted() {
 		return false
 	}
@@ -56,7 +58,7 @@ func (ck *Checker) Read(t *CkTran, table string, index int, from, to string) boo
 	return true
 }
 
-func (ck *Checker) Write(t *CkTran, table string, keys []string) bool {
+func (ck *CheckCo) Write(t *CkTran, table string, keys []string) bool {
 	if t.Aborted() {
 		return false
 	}
@@ -64,17 +66,18 @@ func (ck *Checker) Write(t *CkTran, table string, keys []string) bool {
 	return true
 }
 
-func (ck *Checker) Commit(t *CkTran) bool {
-	if t.Aborted() {
+func (ck *CheckCo) Commit(ut *UpdateTran) bool {
+	if ut.ct.Aborted() {
 		return false
 	}
 	ret := make(chan bool, 1)
-	ck.c <- &ckCommit{t: t, ret: ret}
+	ck.c <- &ckCommit{t: ut, ret: ret}
 	return <-ret
 }
 
-func (ck *Checker) Abort(t *CkTran) {
+func (ck *CheckCo) Abort(t *CkTran) bool {
 	ck.c <- &ckAbort{t: t}
+	return true
 }
 
 func (t *CkTran) Aborted() bool {
@@ -83,21 +86,29 @@ func (t *CkTran) Aborted() bool {
 
 //-------------------------------------------------------------------
 
-func NewChecker() *Checker {
+func StartCheckCo(commitChan chan *UpdateTran, allDone chan void) *CheckCo {
 	c := make(chan interface{}, 4)
-	go checker(c)
-	return &Checker{c: c}
+	go checker(c, commitChan)
+	return &CheckCo{c: c, allDone: allDone}
 }
 
-func checker(c chan interface{}) {
-	ck := NewCheck()
+func (ck *CheckCo) Stop() {
+	close(ck.c)
+	<-ck.allDone // wait
+}
+
+func checker(c chan interface{}, commitChan chan *UpdateTran) {
+	ck := NewCheck(commitChan)
 	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
 	for {
 		select {
 		case msg := <-c:
-			if msg == nil {
-				return // channel closed
+			if msg == nil { // channel closed
+				if commitChan != nil {
+					close(commitChan)
+				}
+				return
 			}
 			ck.dispatch(msg)
 		case <-ticker.C:
@@ -111,14 +122,26 @@ func (ck *Check) dispatch(msg interface{}) {
 	case *ckStart:
 		msg.ret <- ck.StartTran()
 	case *ckRead:
-		ck.Read(msg.t.start, msg.table, msg.index, msg.from, msg.to)
+		ck.Read(msg.t, msg.table, msg.index, msg.from, msg.to)
 	case *ckWrite:
-		ck.Write(msg.t.start, msg.table, msg.keys)
+		ck.Write(msg.t, msg.table, msg.keys)
 	case *ckAbort:
-		ck.Abort(msg.t.start)
+		ck.Abort(msg.t)
 	case *ckCommit:
-		msg.ret <- ck.Commit(msg.t.start)
+		msg.ret <- ck.Commit(msg.t)
 	default:
 		panic("checker unknown message type")
 	}
 }
+
+type Checker interface {
+	StartTran() *CkTran
+	Read(t *CkTran, table string, index int, from, to string) bool
+	Write(t *CkTran, table string, keys []string) bool
+	Abort(t *CkTran) bool
+	Commit(t *UpdateTran) bool
+	Stop()
+}
+
+var _ Checker = (*Check)(nil)
+var _ Checker = (*CheckCo)(nil)

@@ -14,12 +14,13 @@ import (
 	. "github.com/apmckinlay/gsuneido/util/hamcrest"
 )
 
-func TestCheckerTimeout(t *testing.T) {
+func TestCheckCoTimeout(t *testing.T) {
 	if testing.Short() {
 		return
 	}
+	defer func(ma int) { MaxAge = ma }(MaxAge)
 	MaxAge = 1
-	ck := NewChecker()
+	ck := StartCheckCo(nil, nil)
 	tran := ck.StartTran()
 	Assert(t).False(tran.Aborted())
 	time.Sleep(2 * time.Second)
@@ -27,9 +28,8 @@ func TestCheckerTimeout(t *testing.T) {
 	close(ck.c)
 }
 
-
-func TestCheckerRandom(*testing.T) {
-	ck := NewChecker()
+func TestCheckCoRandom(*testing.T) {
+	ck := StartCheckCo(nil, nil)
 	nThreads := 8
 	nTrans := 10000
 	if testing.Short() {
@@ -53,14 +53,14 @@ func TestCheckerRandom(*testing.T) {
 
 var nCommit, nConflict int64
 
-func randTran(ck *Checker) {
-	t := ck.StartTran()
+func randTran(ck *CheckCo) {
+	t := &UpdateTran{ct: ck.StartTran()}
 	nActions := rand.Intn(20)
 	for i := 0; i < nActions; i++ {
-		randAction(ck, t)
+		randAction(ck, t.ct)
 	}
 	if rand.Intn(2) == 1 {
-		ck.Abort(t)
+		ck.Abort(t.ct)
 	} else {
 		if ck.Commit(t) {
 			atomic.AddInt64(&nCommit, 1)
@@ -71,7 +71,7 @@ func randTran(ck *Checker) {
 
 }
 
-func randAction(ck *Checker, t *CkTran) {
+func randAction(ck *CheckCo, t *CkTran) {
 	nIndexes := 4
 	table := randTable()
 	if rand.Intn(3) == 1 {

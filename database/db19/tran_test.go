@@ -19,7 +19,7 @@ import (
 
 func TestConcurrent(t *testing.T) {
 	createDb()
-	c := StartConcur(100 * time.Millisecond)
+	ck = StartConcur(100 * time.Millisecond)
 	var nclients = 8
 	var ntrans = 4000
 	if testing.Short() {
@@ -33,13 +33,14 @@ func TestConcurrent(t *testing.T) {
 			defer wg.Done()
 			for j := 0; j < ntrans; j++ {
 				ut := output1()
-				c.commitChan <- ut
+				ut.Commit()
 				// time.Sleep(time.Duration(rand.Intn(900)) * time.Microsecond)
 			}
 		}()
 	}
 	wg.Wait()
-	c.Stop()
+	ck.Stop()
+	ck = nil
 
 	var nout = nclients * ntrans
 	rt := NewReadTran()
@@ -51,11 +52,16 @@ func TestConcurrent(t *testing.T) {
 }
 
 func TestTran(t *testing.T) {
+	ck = NewCheck(nil)
+	defer func() { ck = nil }()
 	store := createDb()
 
 	const nout = 2000
 	for i := 0; i < nout; i++ {
-		Merge(output1().Commit())
+		ut := output1()
+		ck.Commit(ut)
+		tn := ut.commit()
+		Merge(tn)
 	}
 
 	Persist()
@@ -127,11 +133,11 @@ func createDb() *stor.Stor {
 func output1() *UpdateTran {
 	ut := NewUpdateTran()
 	// write some data
-	data := (strconv.Itoa(ut.num) + "transaction")[:12]
+	data := (strconv.Itoa(ut.num()) + "transaction")[:12]
 	off, buf := ut.store.AllocSized(len(data))
 	copy(buf, data)
 	// add it to the indexes
-	ti := ut.meta.GetRwInfo("mytable", ut.num)
+	ti := ut.meta.GetRwInfo("mytable", ut.num())
 	ti.Nrows++
 	ti.Size += uint64(len(data))
 	ti.Indexes[0].Insert(data, off)

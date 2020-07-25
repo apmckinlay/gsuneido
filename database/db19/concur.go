@@ -9,44 +9,32 @@ import (
 
 type void struct{}
 
-type concur struct {
-	commitChan  chan *UpdateTran
-	mergeChan   chan int
-	persistChan chan void
-	allDone     chan void
+func StartConcur(persistInterval time.Duration) *CheckCo {
+	commitChan := make(chan *UpdateTran)
+	mergeChan := make(chan int)
+	persistChan := make(chan void)
+	allDone := make(chan void)
+	go committer(commitChan, mergeChan)
+	go merger(mergeChan, persistChan, persistInterval)
+	go persister(persistChan, allDone)
+	return StartCheckCo(commitChan, allDone)
 }
 
-func StartConcur(persistInterval time.Duration) *concur {
-	c := concur{
-		commitChan:  make(chan *UpdateTran),
-		mergeChan:   make(chan int),
-		persistChan: make(chan void),
-		allDone:     make(chan void),
+func committer(commitChan chan *UpdateTran, mergeChan chan int) {
+	for tran := range commitChan {
+		tn := tran.commit()
+		mergeChan <- tn
 	}
-	go c.committer()
-	go c.merger(persistInterval)
-	go c.persister()
-	return &c
+	close(mergeChan)
 }
 
-func (c *concur) Stop() {
-	close(c.commitChan)
-	<-c.allDone
-}
-
-func (c *concur) committer() {
-	for tran := range c.commitChan {
-		c.mergeChan <- tran.Commit()
-	}
-	close(c.mergeChan)
-}
-
-func (c *concur) merger(persistInterval time.Duration) {
+func merger(mergeChan chan int, persistChan chan void,
+	persistInterval time.Duration) {
 	ticker := time.NewTicker(persistInterval)
 loop:
 	for {
 		select {
-		case tn := <-c.mergeChan: // receive mergeMsg's from commit
+		case tn := <-mergeChan: // receive mergeMsg's from commit
 			if tn == 0 { // zero value means channel closed
 				break loop
 			}
@@ -54,16 +42,16 @@ loop:
 		case <-ticker.C:
 			// send ticks from here so we get back pressure
 			// fmt.Println("Persist")
-			c.persistChan <- void{}
+			persistChan <- void{}
 		}
 	}
-	c.persistChan <- void{}
-	close(c.persistChan)
+	persistChan <- void{}
+	close(persistChan)
 }
 
-func (c *concur) persister() {
-	for range c.persistChan {
+func persister(persistChan chan void, allDone chan void) {
+	for range persistChan {
 		Persist()
 	}
-	close(c.allDone)
+	close(allDone)
 }

@@ -50,20 +50,26 @@ func (ov *Overlay) GetRoInfo(table string) *Info {
 	if ti, ok := ov.roInfo.Get(table); ok {
 		return ti
 	}
-	ti := ov.baseInfo.Get(table)
-	ov.rwInfo.Put(ti) // cache in memory
-	return ti
+	if ti, ok := ov.baseInfo.Get(table); ok {
+		if !ov.rwInfo.IsNil() {
+			ov.rwInfo.Put(ti) // cache in memory
+		}
+		return ti
+	}
+	return nil
 }
 
 func (ov *Overlay) GetRwInfo(table string, tranNum int) *Info {
-	if pti,ok := ov.rwInfo.Get(table); ok {
+	if pti, ok := ov.rwInfo.Get(table); ok {
 		return pti // already have mutable
 	}
 	var ti Info
 	if pti, ok := ov.roInfo.Get(table); ok {
 		ti = *pti // copy
+	} else if pti, ok := ov.baseInfo.Get(table); ok {
+		ti = *pti // copy
 	} else {
-		ti = *ov.baseInfo.Get(table) // copy
+		return nil
 	}
 	// start at 0 since these are deltas
 	ti.Nrows = 0
@@ -80,6 +86,16 @@ func (ov *Overlay) GetRwInfo(table string, tranNum int) *Info {
 	return &ti
 }
 
+func (ov *Overlay) GetSchema(table string) *Schema {
+	if ts, ok := ov.roSchema.Get(table); ok {
+		return ts
+	}
+	if ts, ok := ov.baseSchema.Get(table); ok {
+		return ts
+	}
+	return nil
+}
+
 //-------------------------------------------------------------------
 
 // LayeredOnto takes the mutable mbtree's from a transaction
@@ -91,7 +107,7 @@ func (ov *Overlay) LayeredOnto(latest *Overlay) *Overlay {
 	roInfo2 := latest.roInfo.Mutable()
 	ov.rwInfo.ForEach(func(ti *Info) {
 		if ti.mutable {
-			if lti,ok := roInfo2.Get(ti.Table); ok {
+			if lti, ok := roInfo2.Get(ti.Table); ok {
 				ti.Nrows += lti.Nrows
 				ti.Size += lti.Size
 				for i := range ti.Indexes {

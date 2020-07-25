@@ -100,25 +100,33 @@ func (fb *fbtree) keep2(depth int, nodeOff uint64) uint64 {
 	r, ok := fb.redirs.tbl.Get(nodeOff)
 	traced(depth, "save", OffStr(nodeOff), ok)
 	inPaths := false
+	var mnode fNode
 	if depth < fb.treeLevels {
-		isMnode := ok && r.mnode != nil
+		if ok && r.mnode != nil {
+			mnode = r.mnode
+		}
 		inPaths = fb.pathNode(nodeOff)
-		if !(isMnode || inPaths) {
+		if mnode == nil && !inPaths {
 			return nodeOff
 		}
 		// tree node
 		traced(depth, "tree node")
 		node := fb.getNode(nodeOff)
+		copied := false
 		for it := node.iter(); it.next(); {
 			off := it.offset
 			off2 := fb.keep2(depth+1, off) // recurse
-			if off2 != off && isMnode {
+			if off2 != off && mnode != nil {
 				traced(depth, "update tree", OffStr(off), "=>", off2)
-				r.mnode.setOffset(it.fi, off2)
-				fb.redirs.tbl.Delete(off) // remove flattened redirect
+				if !copied {
+					copied = true
+					mnode = append(mnode[:0:0], mnode...)
+				}
+				mnode.setOffset(it.fi, off2)
+				fb.redirs.tbl.Delete(off)    // remove flattened redirect
 			}
 		}
-		if !isMnode {
+		if mnode == nil {
 			return nodeOff
 		}
 	} else {
@@ -130,9 +138,10 @@ func (fb *fbtree) keep2(depth int, nodeOff uint64) uint64 {
 			traced(depth, "leaf newOffset")
 			return r.newOffset
 		}
+		mnode = r.mnode
 		traced(depth, "leaf mnode")
 	}
-	newOffset := r.mnode.putNode(fb.store)
+	newOffset := mnode.putNode(fb.store)
 	fb.redirs.tbl.Put(&redir{offset: r.offset, newOffset: newOffset})
 	if inPaths {
 		fb.redirs.paths.Delete(nodeOff)

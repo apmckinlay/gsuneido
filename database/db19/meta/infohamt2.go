@@ -111,36 +111,35 @@ func NewInfoPacked(st *stor.Stor, off uint64) *InfoPacked {
 	return &InfoPacked{stor: st, off: off, buf: buf, fingers: fingers}
 }
 
-func (p InfoPacked) Get(key string) *Info {
+func (p InfoPacked) MustGet(key string) *Info {
+	if item, ok := p.Get(key); ok {
+		return item
+	}
+	panic("item not found")
+}
+
+func (p InfoPacked) Get(key string) (*Info, bool) {
 	pos := p.binarySearch(key)
 	r := stor.NewReader(p.buf[pos:])
-	count := 0
-	for {
+	for n := 0; n <= perFingerInfo; n++ {
 		item := ReadInfo(p.stor, r)
 		if item.Table == key {
-			return item
-		}
-		count++
-		if count > 20 {
-			panic("linear search too long")
+			return item, true
 		}
 	}
+	var zero *Info
+	return zero, false
 }
 
 // binarySearch does a binary search of the fingers
 func (p InfoPacked) binarySearch(table string) int {
 	i, j := 0, len(p.fingers)
-	count := 0
 	for i < j {
 		h := int(uint(i+j) >> 1) // i ≤ h < j
 		if table >= p.fingers[h].table {
 			i = h + 1
 		} else {
 			j = h
-		}
-		count++
-		if count > 20 {
-			panic("binary search too long")
 		}
 	}
 	// i is first one greater, so we want i-1

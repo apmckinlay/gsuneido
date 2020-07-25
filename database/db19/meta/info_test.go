@@ -31,8 +31,9 @@ func TestInfo(t *testing.T) {
 	off := tbl.Write(st)
 
 	packed := NewInfoPacked(st, off)
-	Assert(t).That(*packed.Get("one"), Equals(*tbl.MustGet("one")))
-	Assert(t).That(*packed.Get("two"), Equals(Info{
+
+	Assert(t).That(*packed.MustGet("one"), Equals(*tbl.MustGet("one")))
+	Assert(t).That(*packed.MustGet("two"), Equals(Info{
 		Table:   "two",
 		Nrows:   200,
 		Size:    2000,
@@ -66,7 +67,7 @@ func TestInfo2(t *testing.T) {
 	off := tbl.Write(st)
 	packed := NewInfoPacked(st, off)
 	for i, s := range data {
-		ti := packed.Get(s)
+		ti := packed.MustGet(s)
 		Assert(t).That(ti.Table, Equals(s).Comment("table"))
 		Assert(t).That(ti.Nrows, Equals(i).Comment("nrows"))
 	}

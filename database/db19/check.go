@@ -30,22 +30,23 @@ type Ranges = ranges.Ranges
 // randomly aborts one of the two transactions.
 // The checker serializes transaction commits.
 // A single sequence counter is used to assign unique start and end values.
+// See CheckCo for the concurrent channel based interface to Check.
 type Check struct {
 	seq    int
 	oldest int
 	// clock is used to abort long transactions
 	clock int
 	// trans hold the outstanding/overlapping update transactions
-	trans map[int]*CkTran
+	trans      map[int]*CkTran
+	commitChan chan *UpdateTran
 }
 
 type CkTran struct {
-	start  int
-	end    int
-	birth  int
-	tables map[string]*cktbl
-	// aborted should be access atomically as a string
-	conflict atomic.Value
+	start    int
+	end      int
+	birth    int
+	tables   map[string]*cktbl
+	conflict atomic.Value // string
 }
 
 type cktbl struct {
@@ -57,8 +58,9 @@ type cktbl struct {
 type ckwrites []*Set
 type ckreads []*Ranges
 
-func NewCheck() *Check {
-	return &Check{trans: make(map[int]*CkTran), oldest: ints.MaxInt}
+func NewCheck(commitChan chan *UpdateTran) *Check {
+	return &Check{trans: make(map[int]*CkTran), oldest: ints.MaxInt,
+		commitChan: commitChan}
 }
 
 func (ck *Check) StartTran() *CkTran {
@@ -79,9 +81,9 @@ func (ck *Check) next() int {
 
 // Read adds a read action.
 // Will conflict if another transaction has a write within the range.
-func (ck *Check) Read(tn int, table string, index int, from, to string) bool {
-	trace("T", tn, "read", table, "index", index, "from", from, "to", to)
-	t, ok := ck.trans[tn]
+func (ck *Check) Read(t *CkTran, table string, index int, from, to string) bool {
+	trace("T", t.start, "read", table, "index", index, "from", from, "to", to)
+	t, ok := ck.trans[t.start]
 	if !ok {
 		return false // it's gone, presumably aborted
 	}
@@ -130,9 +132,9 @@ func (cr ckreads) contains(index int, key string) bool {
 // Will conflict with another write to the same index/key or an overlapping read.
 // Updates require two calls, one with the old keys, another with the new keys.
 // NOTE: Even if an update doesn't change a key, it still has to register it.
-func (ck *Check) Write(tn int, table string, keys []string) bool {
-	trace("T", tn, "write", table, "keys", keys)
-	t, ok := ck.trans[tn]
+func (ck *Check) Write(t *CkTran, table string, keys []string) bool {
+	trace("T", t.start, "write", table, "keys", keys)
+	t, ok := ck.trans[t.start]
 	if !ok {
 		return false // it's gone, presumably aborted
 	}
@@ -219,8 +221,8 @@ func (t *CkTran) isEnded() bool {
 
 // Abort cancels a transaction.
 // It returns false if the transaction is not found (e.g. already aborted).
-func (ck *Check) Abort(tn int) bool {
-	return ck.abort(tn, "explicit")
+func (ck *Check) Abort(t *CkTran) bool {
+	return ck.abort(t.start, "explicit")
 }
 
 func (ck *Check) abort(tn int, reason string) bool {
@@ -241,11 +243,15 @@ func (ck *Check) abort(tn int, reason string) bool {
 // Commit finishes a transaction.
 // It returns false if the transaction is not found (e.g. already aborted).
 // No additional checking required since actions have already been checked.
-func (ck *Check) Commit(tn int) bool {
+func (ck *Check) Commit(ut *UpdateTran) bool {
+	tn := ut.num()
 	trace("commit", tn)
 	t, ok := ck.trans[tn]
 	if !ok {
 		return false // it's gone, presumably aborted
+	}
+	if ck.commitChan != nil {
+		ck.commitChan <- ut
 	}
 	t.end = ck.next()
 	if t.start == ck.oldest {
@@ -286,12 +292,16 @@ var MaxAge = 20 // ticks
 // to abort transactions older than maxAge.
 func (ck *Check) tick() {
 	ck.clock++
+	trace("tick", ck.clock)
 	for tn, t := range ck.trans {
 		if ck.clock-t.birth >= MaxAge {
 			trace("abort", tn, "age", ck.clock-t.birth)
 			ck.abort(tn, "transaction exceeded max age")
 		}
 	}
+}
+
+func (ck *Check) Stop() {
 }
 
 func trace(args ...interface{}) {

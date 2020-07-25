@@ -14,25 +14,25 @@ import (
 )
 
 func TestCheckStartStop(t *testing.T) {
-	ck := NewCheck()
+	ck := NewCheck(nil)
 	const ntrans = 20
-	var trans [ntrans]int
+	var trans [ntrans]*UpdateTran
 	const ntimes = 5000
 	for i := 0; i < ntimes; i++ {
 		j := rand.Intn(ntrans)
-		if trans[j] == 0 {
-			trans[j] = ck.StartTran().start
+		if trans[j] == nil {
+			trans[j] = &UpdateTran{ct: ck.StartTran()}
 		} else {
 			if rand.Intn(2) == 1 {
 				ck.Commit(trans[j])
 			} else {
-				ck.Abort(trans[j])
+				ck.Abort(trans[j].ct)
 			}
-			trans[j] = 0
+			trans[j] = nil
 		}
 	}
 	for _, tn := range trans {
-		if tn != 0 {
+		if tn != nil {
 			ck.Commit(tn)
 		}
 	}
@@ -40,7 +40,7 @@ func TestCheckStartStop(t *testing.T) {
 }
 
 func TestCheckLimit(t *testing.T) {
-	ck := NewCheck()
+	ck := NewCheck(nil)
 	for i := 0; i < maxTrans; i++ {
 		Assert(t).True(ck.StartTran() != nil)
 	}
@@ -85,31 +85,31 @@ func script(t *testing.T, s string) {
 			t.FailNow()
 		}
 	}
-	ck := NewCheck()
-	ts := []int{ck.StartTran().start, ck.StartTran().start}
+	ck := NewCheck(nil)
+	ts := []*UpdateTran{{ct: ck.StartTran()}, {ct: ck.StartTran()}}
 	for len(s) > 0 {
 		t := ts[s[0]-'1']
 		switch s[1] {
 		case 'w':
-			ok(ck.Write(t, "mytable", []string{"", s[2:3]}))
+			ok(ck.Write(t.ct, "mytable", []string{"", s[2:3]}))
 			s = s[1:]
 		case 'W':
-			fail(ck.Write(t, "mytable", []string{"", s[2:3]}))
+			fail(ck.Write(t.ct, "mytable", []string{"", s[2:3]}))
 			s = s[1:]
 		case 'r':
-			ok(ck.Read(t, "mytable", 1, s[2:3], s[3:4]))
+			ok(ck.Read(t.ct, "mytable", 1, s[2:3], s[3:4]))
 			s = s[2:]
 		case 'R':
-			fail(ck.Read(t, "mytable", 1, s[2:3], s[3:4]))
+			fail(ck.Read(t.ct, "mytable", 1, s[2:3], s[3:4]))
 			s = s[2:]
 		case 'c':
 			ok(ck.Commit(t))
 		case 'C':
 			fail(ck.Commit(t))
 		case 'a':
-			ok(ck.Abort(t))
+			ok(ck.Abort(t.ct))
 		case 'A':
-			fail(ck.Abort(t))
+			fail(ck.Abort(t.ct))
 		}
 		s = s[2:]
 		for len(s) > 0 && s[0] == ' ' {

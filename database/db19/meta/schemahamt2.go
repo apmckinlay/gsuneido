@@ -111,36 +111,35 @@ func NewSchemaPacked(st *stor.Stor, off uint64) *SchemaPacked {
 	return &SchemaPacked{stor: st, off: off, buf: buf, fingers: fingers}
 }
 
-func (p SchemaPacked) Get(key string) *Schema {
+func (p SchemaPacked) MustGet(key string) *Schema {
+	if item, ok := p.Get(key); ok {
+		return item
+	}
+	panic("item not found")
+}
+
+func (p SchemaPacked) Get(key string) (*Schema, bool) {
 	pos := p.binarySearch(key)
 	r := stor.NewReader(p.buf[pos:])
-	count := 0
-	for {
+	for n := 0; n <= perFingerSchema; n++ {
 		item := ReadSchema(p.stor, r)
 		if item.Table == key {
-			return item
-		}
-		count++
-		if count > 20 {
-			panic("linear search too long")
+			return item, true
 		}
 	}
+	var zero *Schema
+	return zero, false
 }
 
 // binarySearch does a binary search of the fingers
 func (p SchemaPacked) binarySearch(table string) int {
 	i, j := 0, len(p.fingers)
-	count := 0
 	for i < j {
 		h := int(uint(i+j) >> 1) // i ≤ h < j
 		if table >= p.fingers[h].table {
 			i = h + 1
 		} else {
 			j = h
-		}
-		count++
-		if count > 20 {
-			panic("binary search too long")
 		}
 	}
 	// i is first one greater, so we want i-1

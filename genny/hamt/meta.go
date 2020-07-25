@@ -51,7 +51,7 @@ func (ht ItemHamt) Write(st *stor.Stor) uint64 {
 		if i%16 == 0 {
 			fingers = append(fingers, w.Len())
 		}
-		it,_ := ht.Get(k)
+		it, _ := ht.Get(k)
 		it.Write(w)
 	}
 	verify.That(len(fingers) == nfingers)
@@ -107,36 +107,35 @@ func NewItemPacked(st *stor.Stor, off uint64) *ItemPacked {
 	return &ItemPacked{stor: st, off: off, buf: buf, fingers: fingers}
 }
 
-func (p ItemPacked) Get(key string) Item {
+func (p ItemPacked) MustGet(key string) Item {
+	if item,ok := p.Get(key); ok {
+		return item
+	}
+	panic("item not found")
+}
+
+func (p ItemPacked) Get(key string) (Item, bool) {
 	pos := p.binarySearch(key)
 	r := stor.NewReader(p.buf[pos:])
-	count := 0
-	for {
+	for n := 0; n <= perFingerItem; n++ {
 		item := ReadItem(p.stor, r)
 		if item.Table == key {
-			return item
-		}
-		count++
-		if count > 20 {
-			panic("linear search too long")
+			return item, true
 		}
 	}
+	var zero Item
+	return zero, false
 }
 
 // binarySearch does a binary search of the fingers
 func (p ItemPacked) binarySearch(table string) int {
 	i, j := 0, len(p.fingers)
-	count := 0
 	for i < j {
 		h := int(uint(i+j) >> 1) // i ≤ h < j
 		if table >= p.fingers[h].table {
 			i = h + 1
 		} else {
 			j = h
-		}
-		count++
-		if count > 20 {
-			panic("binary search too long")
 		}
 	}
 	// i is first one greater, so we want i-1
