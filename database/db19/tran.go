@@ -40,10 +40,12 @@ func NewUpdateTran() *UpdateTran {
 }
 
 func (t *UpdateTran) Commit() {
+	// send commit request to checker
+	// which starts the pipeline to merger to persister
 	t.ck(ck.Commit(t))
 }
 
-// commit is internal, called by concur committer
+// commit is internal, called by checker (to serialize)
 func (t *UpdateTran) commit() int {
 	UpdateState(func(state *DbState) {
 		state.meta = t.meta.LayeredOnto(state.meta)

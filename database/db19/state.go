@@ -31,6 +31,7 @@ func GetState() *DbState {
 
 // UpdateState applies the given update function to a copy of theState
 // and sets theState to the result.
+// Guarded by stateMutex so only one thread can execute at a time.
 // Note: the state passed to the update function is a *shallow* copy,
 // it is up to the function to make copies of any nested containers.
 func UpdateState(fn func(*DbState)) *DbState {

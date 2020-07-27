@@ -14,7 +14,7 @@ import (
 )
 
 func TestCheckStartStop(t *testing.T) {
-	ck := NewCheck(nil)
+	ck := NewCheck()
 	const ntrans = 20
 	var trans [ntrans]*UpdateTran
 	const ntimes = 5000
@@ -40,7 +40,7 @@ func TestCheckStartStop(t *testing.T) {
 }
 
 func TestCheckLimit(t *testing.T) {
-	ck := NewCheck(nil)
+	ck := NewCheck()
 	for i := 0; i < maxTrans; i++ {
 		Assert(t).True(ck.StartTran() != nil)
 	}
@@ -85,7 +85,7 @@ func script(t *testing.T, s string) {
 			t.FailNow()
 		}
 	}
-	ck := NewCheck(nil)
+	ck := NewCheck()
 	ts := []*UpdateTran{{ct: ck.StartTran()}, {ct: ck.StartTran()}}
 	for len(s) > 0 {
 		t := ts[s[0]-'1']

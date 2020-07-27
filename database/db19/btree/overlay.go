@@ -144,7 +144,7 @@ func ReadOverlay(st *stor.Stor, r *stor.Reader) *Overlay {
 
 // UpdateWith takes the mbtree updates from ov2 and adds them as a new layer to ov
 func (ov *Overlay) UpdateWith(latest *Overlay) {
-	// overwrite ov.under with the latest
+	// reuse the new slice and overwrite ov.under with the latest
 	ov.under = append(ov.under[:0], latest.under...)
 	// add mbtree updates
 	ov.Freeze()

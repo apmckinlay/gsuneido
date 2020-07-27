@@ -98,9 +98,11 @@ func (ov *Overlay) GetSchema(table string) *Schema {
 
 //-------------------------------------------------------------------
 
-// LayeredOnto takes the mutable mbtree's from a transaction
-// and applies them to the latest DbState
-// reusing the structs from the transaction
+// LayeredOnto layers the mutable mbtree's from a transaction
+// onto the latest/current state and returns a new state.
+// Also, the nrows and size deltas are applied.
+// Note: this does not merge the btrees, that is done later by merge.
+// Nor does it save the changes to disk, that is done later by persist.
 func (ov *Overlay) LayeredOnto(latest *Overlay) *Overlay {
 	// start with a copy of the latest hash table because it may have more
 	verify.That(latest.rwInfo.IsNil())

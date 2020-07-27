@@ -9,23 +9,27 @@ import (
 
 type void struct{}
 
+const chanBuffers = 2 // ???
+
+// StartConcur starts the database pipeline -
+// starting the goroutines and connecting them with channels.
+//
+// checker -> merger -> persister
+//
+// This is separate so we can test functionality
+// without any goroutines or channels.
+//
+// To stop we close the checker channel, and then each following stage
+// closes its output channel.
+// Finally the persister stage closes the allDone channel
+// so we know the shutdown has finished.
 func StartConcur(persistInterval time.Duration) *CheckCo {
-	commitChan := make(chan *UpdateTran)
-	mergeChan := make(chan int)
-	persistChan := make(chan void)
+	mergeChan := make(chan int, chanBuffers)
+	persistChan := make(chan void, chanBuffers)
 	allDone := make(chan void)
-	go committer(commitChan, mergeChan)
 	go merger(mergeChan, persistChan, persistInterval)
 	go persister(persistChan, allDone)
-	return StartCheckCo(commitChan, allDone)
-}
-
-func committer(commitChan chan *UpdateTran, mergeChan chan int) {
-	for tran := range commitChan {
-		tn := tran.commit()
-		mergeChan <- tn
-	}
-	close(mergeChan)
+	return StartCheckCo(mergeChan, allDone)
 }
 
 func merger(mergeChan chan int, persistChan chan void,

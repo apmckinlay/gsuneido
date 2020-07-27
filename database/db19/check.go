@@ -24,13 +24,14 @@ type Ranges = ranges.Ranges
 // Checking is designed to be single threaded i.e. run in its own goroutine.
 // It is intended to run asynchronously, i.e. callers not waiting for results.
 // This allow more concurrency (overlap) with user code.
-// Actions are checked as they are done, incrementally
+// Actions are checked as they are done, incrementally.
 // A conflict with a completed transaction aborts the current transaction.
 // A conflict with an outstanding (not completed) transaction
 // randomly aborts one of the two transactions.
 // The checker serializes transaction commits.
 // A single sequence counter is used to assign unique start and end values.
 // See CheckCo for the concurrent channel based interface to Check.
+// See Checker for the common interface to Check and CheckCo
 type Check struct {
 	seq    int
 	oldest int
@@ -38,7 +39,6 @@ type Check struct {
 	clock int
 	// trans hold the outstanding/overlapping update transactions
 	trans      map[int]*CkTran
-	commitChan chan *UpdateTran
 }
 
 type CkTran struct {
@@ -58,9 +58,8 @@ type cktbl struct {
 type ckwrites []*Set
 type ckreads []*Ranges
 
-func NewCheck(commitChan chan *UpdateTran) *Check {
-	return &Check{trans: make(map[int]*CkTran), oldest: ints.MaxInt,
-		commitChan: commitChan}
+func NewCheck() *Check {
+	return &Check{trans: make(map[int]*CkTran), oldest: ints.MaxInt}
 }
 
 func (ck *Check) StartTran() *CkTran {
@@ -249,9 +248,6 @@ func (ck *Check) Commit(ut *UpdateTran) bool {
 	t, ok := ck.trans[tn]
 	if !ok {
 		return false // it's gone, presumably aborted
-	}
-	if ck.commitChan != nil {
-		ck.commitChan <- ut
 	}
 	t.end = ck.next()
 	if t.start == ck.oldest {

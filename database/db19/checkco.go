@@ -86,9 +86,9 @@ func (t *CkTran) Aborted() bool {
 
 //-------------------------------------------------------------------
 
-func StartCheckCo(commitChan chan *UpdateTran, allDone chan void) *CheckCo {
+func StartCheckCo(mergeChan chan int, allDone chan void) *CheckCo {
 	c := make(chan interface{}, 4)
-	go checker(c, commitChan)
+	go checker(c, mergeChan)
 	return &CheckCo{c: c, allDone: allDone}
 }
 
@@ -97,27 +97,28 @@ func (ck *CheckCo) Stop() {
 	<-ck.allDone // wait
 }
 
-func checker(c chan interface{}, commitChan chan *UpdateTran) {
-	ck := NewCheck(commitChan)
+func checker(c chan interface{}, mergeChan chan int) {
+	ck := NewCheck()
 	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
 	for {
 		select {
 		case msg := <-c:
 			if msg == nil { // channel closed
-				if commitChan != nil {
-					close(commitChan)
+				if mergeChan != nil { // no channel when testing
+					close(mergeChan)
 				}
 				return
 			}
-			ck.dispatch(msg)
+			ck.dispatch(msg, mergeChan)
 		case <-ticker.C:
 			ck.tick()
 		}
 	}
 }
 
-func (ck *Check) dispatch(msg interface{}) {
+// dispatch runs in the checker goroutiner
+func (ck *Check) dispatch(msg interface{}, mergeChan chan int) {
 	switch msg := msg.(type) {
 	case *ckStart:
 		msg.ret <- ck.StartTran()
@@ -128,7 +129,17 @@ func (ck *Check) dispatch(msg interface{}) {
 	case *ckAbort:
 		ck.Abort(msg.t)
 	case *ckCommit:
-		msg.ret <- ck.Commit(msg.t)
+		result := ck.Commit(msg.t)
+		// checking complete so we can send result and let client code continue
+		msg.ret <- result
+		if result == true && mergeChan != nil { // no channel when testing
+			// passed checking so we can asynchronously commit it
+			// (can't fail at this point)
+			// Since we haven't returned, no other activity will happen
+			// until we finish the commit. i.e. serialized
+			tn := msg.t.commit()
+			mergeChan <- tn
+		}
 	default:
 		panic("checker unknown message type")
 	}

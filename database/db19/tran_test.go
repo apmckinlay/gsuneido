@@ -52,7 +52,7 @@ func TestConcurrent(t *testing.T) {
 }
 
 func TestTran(t *testing.T) {
-	ck = NewCheck(nil)
+	ck = NewCheck()
 	defer func() { ck = nil }()
 	store := createDb()
 
