@@ -16,12 +16,14 @@ const chanBuffers = 2 // ???
 //
 // checker -> merger -> persister
 //
-// This is separate so we can test functionality
+// persister is triggered by merger every persistInterval
+//
+// Concurrency is separate so we can test functionality
 // without any goroutines or channels.
 //
 // To stop we close the checker channel, and then each following stage
 // closes its output channel.
-// Finally the persister stage closes the allDone channel
+// Finally the persister closes the allDone channel
 // so we know the shutdown has finished.
 func StartConcur(persistInterval time.Duration) *CheckCo {
 	mergeChan := make(chan int, chanBuffers)

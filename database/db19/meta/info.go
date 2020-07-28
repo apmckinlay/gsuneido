@@ -70,6 +70,8 @@ type overlays []*btree.Overlay
 
 type btOver = *btree.Overlay
 
+// process is used by overlay.Merge and overlay.Persist.
+// process collects the updates which are then applied by withUpdates.
 func (t InfoHamt) process(fn func(btOver) btOver) []update {
 	var updates []update
 	t.ForEach(func(ti *Info) {

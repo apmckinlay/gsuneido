@@ -45,8 +45,9 @@ func UpdateState(fn func(*DbState)) *DbState {
 
 //-------------------------------------------------------------------
 
-// Merge updates the base fbtree's with the first overlay mbtree
-// for the given transaction number.
+// Merge updates the base fbtree's with the overlay mbtree
+// for the given transaction number (the oldest/first).
+// It is called by concur.go merger.
 func Merge(tranNum int) {
 	state := GetState()
 	updates := state.meta.Merge(tranNum) // outside UpdateState
@@ -59,13 +60,14 @@ func Merge(tranNum int) {
 
 //-------------------------------------------------------------------
 
+// Persist writes index changes (and a new state) to the database file.
+// It is called by concur.go persister.
 func Persist() uint64 {
-	// NOTE: must not run concurrent instances of this
 	state := GetState()
-	updates := state.meta.SaveIndexes() // outside UpdateState
+	updates := state.meta.Persist() // outside UpdateState
 	state = UpdateState(func(state *DbState) {
 		meta := *state.meta // copy
-		meta.ApplySave(updates)
+		meta.ApplyPersist(updates)
 		state.meta = &meta
 	})
 	return state.Write()

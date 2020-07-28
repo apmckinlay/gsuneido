@@ -159,21 +159,24 @@ func FromOffsets(st *stor.Stor, offs offsets) *Overlay {
 
 //-------------------------------------------------------------------
 
+// Merge is called by state.Merge to collect updates
+// which are then applied by ApplyMerge
 func (ov *Overlay) Merge(tranNum int) []update {
 	return ov.roInfo.process(func(bto btOver) btOver {
 		return bto.Merge(tranNum)
 	})
 }
+
 func (ov *Overlay) ApplyMerge(updates []update) {
 	ov.roInfo = ov.roInfo.withUpdates(updates, btOver.WithMerged)
 }
 
 //-------------------------------------------------------------------
 
-func (ov *Overlay) SaveIndexes() []update {
+func (ov *Overlay) Persist() []update {
 	return ov.roInfo.process(btOver.Save)
 }
 
-func (ov *Overlay) ApplySave(updates []update) {
+func (ov *Overlay) ApplyPersist(updates []update) {
 	ov.roInfo = ov.roInfo.withUpdates(updates, btOver.WithSaved)
 }
