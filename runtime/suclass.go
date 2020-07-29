@@ -6,6 +6,7 @@ package runtime
 import (
 	"sort"
 	"strings"
+	"sync/atomic"
 
 	"github.com/apmckinlay/gsuneido/runtime/types"
 	"github.com/apmckinlay/gsuneido/util/ascii"
@@ -19,7 +20,17 @@ type SuClass struct {
 	Lib      string
 	Name     string
 	Base     Gnum
+	parents  atomic.Value // used by SuInstance getParents
 	noGetter bool
+}
+
+func (c *SuClass) SetParents(parents []*SuClass) {
+	c.parents.Store(parents)
+}
+
+func (c *SuClass) GetParents() []*SuClass {
+	x,_ := c.parents.Load().([]*SuClass) // allow nil
+	return x
 }
 
 var _ Value = (*SuClass)(nil)
@@ -100,6 +111,7 @@ func (c *SuClass) get1(t *Thread, this Value, m Value) Value {
 	return nil
 }
 
+// get2 looks for m in the current Data and then the Parent's
 func (c *SuClass) get2(t *Thread, m string) Value {
 	for {
 		if x, ok := c.Data[m]; ok {
@@ -163,14 +175,28 @@ var DefaultNewMethod = &SuBuiltin0{func() Value { return nil },
 	BuiltinParams{ParamSpec: ParamSpec0}}
 
 func (c *SuClass) Lookup(t *Thread, method string) Callable {
+	return c.lookup(t, method, nil)
+}
+
+func (c *SuClass) lookup(t *Thread, method string, parents []*SuClass) Callable {
 	if f, ok := ClassMethods[method]; ok {
 		return f
 	}
 	if f, ok := BaseMethods[method]; ok {
 		return f
 	}
-	if x := c.get2(t, method); x != nil {
-		return x
+	if parents == nil {
+		if x := c.get2(t, method); x != nil {
+			return x
+		}
+	} else { // parents argument is used by SuInstance Lookup
+		verify.That(parents[0] == c)
+		for _, p := range parents {
+			if x, ok := p.Data[method]; ok {
+				verify.That(x != nil)
+				return x
+			}
+		}
 	}
 	if method == "New" {
 		return DefaultNewMethod
@@ -225,7 +251,7 @@ func (c *SuClass) Call(t *Thread, this Value, as *ArgSpec) Value {
 }
 
 func (c *SuClass) New(t *Thread, as *ArgSpec) Value {
-	ob := NewInstance(c)
+	ob := NewInstance(t, c)
 	nu := c.Lookup(t, "New")
 	nu.Call(t, ob, as)
 	return ob

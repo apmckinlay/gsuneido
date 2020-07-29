@@ -92,7 +92,7 @@ func mkObject(kind int, concurrent bool) *SuObject {
 }
 
 func mkInstance(kind int, concurrent bool) *SuInstance {
-	ob := NewInstance(nil)
+	ob := NewInstance(nil, nil)
 	switch kind {
 	case instanceNest:
 		ob.Data["ob"] = mkObject(nest, false)

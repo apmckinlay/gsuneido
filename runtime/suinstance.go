@@ -11,12 +11,45 @@ import (
 // SuInstance is an instance of an SuInstance
 type SuInstance struct {
 	MemBase
-	class *SuClass
+	class   *SuClass
+	parents []*SuClass
 	MayLock
 }
 
-func NewInstance(class *SuClass) *SuInstance {
-	return &SuInstance{MemBase: NewMemBase(), class: class}
+func NewInstance(t *Thread, class *SuClass) *SuInstance {
+	return &SuInstance{MemBase: NewMemBase(),
+		class: class, parents: getParents(t, class)}
+}
+
+// getParents captures the inheritance chain (and caches it on the class).
+// Otherwise, the chain via SuClass Base is indirect by global number,
+// and if a parent is modified incompatibly or with an error
+// then existing (running) instances can fail.
+func getParents(t *Thread, class *SuClass) []*SuClass {
+	if class == nil {
+		return nil
+	}
+	// Use cached parents on class if valid.
+	// Still have to follow inheritance chain to validate, but no allocation.
+	parents := class.GetParents()
+	c := class
+	for _, p := range parents {
+		if c != p {
+			parents = nil // cached is invalid
+			break
+		}
+		c = c.Parent(t)
+	}
+	if parents != nil {
+		return parents // cached is valid
+	}
+
+	parents = make([]*SuClass, 0, 4)
+	for c := class; c != nil; c = c.Parent(t) {
+		parents = append(parents, c)
+	}
+	class.SetParents(parents) // cache on class
+	return parents
 }
 
 func (ob *SuInstance) Base() *SuClass {
@@ -39,7 +72,8 @@ func (ob *SuInstance) ToString(t *Thread) string {
 }
 
 func (ob *SuInstance) Copy() *SuInstance {
-	return &SuInstance{MemBase: ob.MemBase.Copy(), class: ob.class}
+	return &SuInstance{MemBase: ob.MemBase.Copy(),
+		class: ob.class, parents: ob.parents}
 }
 
 // Value interface --------------------------------------------------
@@ -139,7 +173,7 @@ func (ob *SuInstance) Lookup(t *Thread, method string) Callable {
 	if f, ok := InstanceMethods[method]; ok {
 		return f
 	}
-	return ob.class.Lookup(t, method)
+	return ob.class.lookup(t, method, ob.parents)
 }
 
 func (ob *SuInstance) Call(t *Thread, _ Value, as *ArgSpec) Value {
