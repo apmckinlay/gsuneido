@@ -51,6 +51,12 @@ func QueryIDispatch(iunk uintptr) uintptr {
 	return interact()
 }
 
+func CreateInstance(progid uintptr) uintptr {
+	C.args[0] = C.msg_createinstance
+	C.args[1] = C.uintptr(progid)
+	return interact()
+}
+
 func Invoke(idisp, name, flags, args, result uintptr) int {
 	C.args[0] = C.msg_invoke
 	C.args[1] = C.uintptr(idisp)

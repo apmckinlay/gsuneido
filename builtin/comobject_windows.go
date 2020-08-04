@@ -33,7 +33,15 @@ var _ = builtin1("COMobject(progid)",
 			idisp := goc.QueryIDispatch(iunk)
 			return &suComObject{iunk: iunk, idisp: idisp}
 		}
-		panic("COMobject: only numeric implemented")
+		if s, ok := arg.ToStr(); ok {
+			defer heap.FreeTo(heap.CurSize())
+			idisp := goc.CreateInstance(uintptr(heap.CopyStr(s)))
+			if idisp == 0 {
+				return False
+			}
+			return &suComObject{iunk: idisp, idisp: idisp}
+		}
+		panic("COMobject requires integer or string")
 	})
 
 var suComObjectMethods = Methods{

@@ -35,6 +35,7 @@ enum {
 	msg_sunapp,
 	msg_traccel,
 	msg_queryidispatch,
+	msg_createinstance,
 	msg_invoke,
 	msg_release,
 	msg_interrupt,

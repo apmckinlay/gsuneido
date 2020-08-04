@@ -26,6 +26,20 @@ extern "C" uintptr queryIDispatch(uintptr iunk) {
 	return (uintptr) idisp;
 }
 
+extern "C" uintptr createInstance(char* progid) {
+	CLSID clsid;
+	int n = MultiByteToWideChar(CP_ACP, 0, progid, -1, NULL, 0);
+	LPWSTR wprogid = (LPWSTR) _alloca(n * 2);
+	MultiByteToWideChar(CP_ACP, 0, progid, -1, wprogid, n);
+	HRESULT hr = CLSIDFromProgID(wprogid, &clsid);
+	if (FAILED(hr))
+		return 0;
+	IDispatch* idisp = nullptr;
+	hr = CoCreateInstance(
+		clsid, NULL, CLSCTX_SERVER, IID_IDispatch, (void**) &idisp);
+	return (SUCCEEDED(hr) && idisp) ? (uintptr) idisp : 0;
+}
+
 static uintptr invoke2(IDispatch* idisp, char* name, WORD flags,
 	DISPPARAMS* args, VARIANT* result) {
 	if (idisp == 0)

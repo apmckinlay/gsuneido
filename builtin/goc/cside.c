@@ -104,6 +104,7 @@ static void message_loop(uintptr hdlg);
 typedef unsigned int uint32;
 long traccel(uintptr ob, uintptr msg);
 uintptr queryIDispatch(uintptr iunk);
+uintptr createInstance(char* progid);
 uintptr invoke(
 	uintptr idisp, uintptr name, uintptr flags, uintptr args, uintptr result);
 void release(uintptr iunk);
@@ -166,6 +167,10 @@ uintptr interact() {
 			break;
 		case msg_queryidispatch:
 			args[1] = queryIDispatch(args[1]);
+			args[0] = msg_result;
+			break;
+		case msg_createinstance:
+			args[1] = createInstance((char*) args[1]);
 			args[0] = msg_result;
 			break;
 		case msg_invoke:
