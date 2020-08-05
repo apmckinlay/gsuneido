@@ -64,7 +64,7 @@ func mkrec(args ...string) Record {
 
 const m = 3
 
-func TestEncodeRandom(t *testing.T) {
+func TestRandom(t *testing.T) {
 	var n = 100000
 	if testing.Short() {
 		n = 10000
@@ -76,6 +76,7 @@ func TestEncodeRandom(t *testing.T) {
 		yenc := Key(y, fields, false)
 		xenc := Key(x, fields, false)
 		Assert(t).That(xenc < yenc, Equals(lt(x, y)))
+		Assert(t).That(strings.Compare(xenc, yenc), Equals(Compare(x, y, fields)))
 	}
 }
 

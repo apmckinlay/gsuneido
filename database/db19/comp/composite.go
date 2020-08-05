@@ -65,3 +65,14 @@ func Key(rec Record, fields []int, ui bool) string {
 	}
 	return hacks.BStoS(buf)
 }
+
+// Compare compares the specified fields of the two records
+// without building keys for them
+func Compare(r1, r2 Record, fields []int) int {
+	for _, f := range fields {
+		if cmp := strings.Compare(r1.GetRaw(f), r2.GetRaw(f)); cmp != 0 {
+			return cmp
+		}
+	}
+	return 0
+}
