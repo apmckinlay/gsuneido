@@ -38,7 +38,7 @@ type Check struct {
 	// clock is used to abort long transactions
 	clock int
 	// trans hold the outstanding/overlapping update transactions
-	trans      map[int]*CkTran
+	trans map[int]*CkTran
 }
 
 type CkTran struct {
@@ -300,6 +300,6 @@ func (ck *Check) tick() {
 func (ck *Check) Stop() {
 }
 
-func trace(args ...interface{}) {
+func trace(...interface{}) {
 	// fmt.Println(args...) // comment out to disable tracing
 }
