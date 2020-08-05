@@ -19,7 +19,7 @@ import (
 
 const blockSize = 4096
 
-type block [blockSize]int
+type block [blockSize]uint64
 
 type List struct {
 	blocks []*block
@@ -30,7 +30,7 @@ var zeroBlock block
 type void struct{}
 
 type Builder struct {
-	cmp    func(x, y int) int
+	cmp    func(x, y uint64) int
 	block  *block // current block
 	i      int    // index in current block
 	blocks []*block
@@ -41,7 +41,7 @@ type Builder struct {
 
 // NewBuilder returns a new List Builder.
 // It starts the worker goroutine.
-func NewBuilder(cmp func(x, y int) int) *Builder {
+func NewBuilder(cmp func(x, y uint64) int) *Builder {
 	li := &Builder{cmp: cmp, blocks: make([]*block, 0, 4),
 		work: make(chan void), done: make(chan void)}
 	go li.worker()
@@ -50,7 +50,7 @@ func NewBuilder(cmp func(x, y int) int) *Builder {
 
 // Add appends a value to the list.
 // When a block is full it signals the worker goroutine to process it.
-func (b *Builder) Add(x int) {
+func (b *Builder) Add(x uint64) {
 	if b.block == nil {
 		b.block = new(block)
 		b.i = 0
@@ -145,11 +145,11 @@ func (b *Builder) merge(nb, size int) {
 	copy(b.blocks[nb-2*size:], out.blocks)
 }
 
-func (b *Builder) iter(startBlock, nBlocks int) func() (int, bool) {
+func (b *Builder) iter(startBlock, nBlocks int) func() (uint64, bool) {
 	blocks := b.blocks[startBlock : startBlock+nBlocks]
 	bi := 0
 	i := -1
-	return func() (int, bool) {
+	return func() (uint64, bool) {
 		if i+1 < blockSize {
 			i++
 			if blocks[bi][i] == 0 {
@@ -191,7 +191,7 @@ func newMergeOutput(parent *Builder) *mergeOutput {
 		parent: parent}
 }
 
-func (mo *mergeOutput) add(x int) {
+func (mo *mergeOutput) add(x uint64) {
 	if mo.i >= blockSize {
 		mo.blocks = append(mo.blocks, mo.parent.alloc())
 		mo.i = 0
@@ -204,7 +204,7 @@ func (mo *mergeOutput) add(x int) {
 type ablock struct {
 	*block
 	n   int
-	cmp func(x, y int) int
+	cmp func(x, y uint64) int
 }
 
 func (ab ablock) Len() int {

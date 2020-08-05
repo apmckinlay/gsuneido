@@ -40,6 +40,17 @@ func Compare(x int, y int) int {
 	}
 }
 
+// Compare returns -1 if x < y, 0 if x == y, and +1 if x > y
+func CompareUint64(x uint64, y uint64) int {
+	if x < y {
+		return -1
+	} else if x > y {
+		return +1
+	} else {
+		return 0
+	}
+}
+
 // Min returns the smaller of two int's
 func Min(x int, y int) int {
 	if x < y {

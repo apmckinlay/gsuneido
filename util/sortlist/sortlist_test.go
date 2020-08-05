@@ -8,7 +8,6 @@ import (
 	"math/rand"
 	"sort"
 	"testing"
-	"time"
 
 	. "github.com/apmckinlay/gsuneido/util/hamcrest"
 	"github.com/apmckinlay/gsuneido/util/ints"
@@ -26,7 +25,7 @@ func TestBuilder(*testing.T) {
 }
 
 func test(nitems int) {
-	bldr := NewBuilder(ints.Compare)
+	bldr := NewBuilder(ints.CompareUint64)
 	for j := 0; j < nitems; j++ {
 		bldr.Add(randint())
 	}
@@ -34,13 +33,18 @@ func test(nitems int) {
 	list.ckblocks()
 }
 
-func randint() int {
-	time.Sleep(10)
-	return 1 + int(rand.Int31()) // +1 so no zeros
+var N int
+
+func randint() uint64 {
+	// small delay to simulate work
+	for i := 0; i < 200; i++ {
+		N++
+	}
+	return 1 + uint64(rand.Int31()) // +1 so no zeros
 }
 
 func (li *List) ckblocks() {
-	prev := 0
+	prev := uint64(0)
 	for bi, b := range li.blocks {
 		for i, x := range b {
 			if x == 0 {
@@ -68,7 +72,7 @@ func TestNextPow2(t *testing.T) {
 
 const nitems = 4 * blockSize // number of blocks must be power of 2 for merging
 
-var G int
+var G uint64
 
 func BenchmarkSimple(b *testing.B) {
 	for i := 0; i < b.N; i++ {
@@ -84,14 +88,22 @@ func TestSimple(*testing.T) {
 	}
 }
 
-func mksimple() []int {
-	slice := []int{}
+func mksimple() []uint64 {
+	slice := []uint64{}
 	for j := 0; j < nitems; j++ {
 		slice = append(slice, randint())
 	}
-	sort.Ints(slice)
+	sort.Sort(uint64Slice(slice))
 	return slice
 }
+
+type uint64Slice []uint64
+
+func (p uint64Slice) Len() int { return len(p) }
+
+func (p uint64Slice) Less(i, j int) bool { return p[i] < p[j] }
+
+func (p uint64Slice) Swap(i, j int) { p[i], p[j] = p[j], p[i] }
 
 //-------------------------------------------------------------------
 
@@ -117,7 +129,7 @@ func mkchunked() *chunked {
 }
 
 func ckblocks(blocks []*block) {
-	prev := 0
+	prev := uint64(0)
 	for bi, b := range blocks {
 		for i, x := range b {
 			if x == 0 {
@@ -188,7 +200,7 @@ func newchunked() *chunked {
 	return &chunked{blocks: make([]*block, 0, 4), i: blockSize}
 }
 
-func (li *chunked) Add(x int) {
+func (li *chunked) Add(x uint64) {
 	if li.i >= blockSize {
 		li.blocks = append(li.blocks, new(block))
 		li.i = 0
@@ -226,7 +238,7 @@ func newmerged() *merged {
 		free: make([]*block, 0, 4)}
 }
 
-func (li *merged) Add(x int) {
+func (li *merged) Add(x uint64) {
 	if li.i >= blockSize {
 		li.blocks = append(li.blocks, li.alloc())
 		li.i = 0
@@ -282,11 +294,11 @@ func (li *merged) merge(size int) {
 	}
 }
 
-func (li *merged) iter(startBlock, nBlocks int) func() (int, bool) {
+func (li *merged) iter(startBlock, nBlocks int) func() (uint64, bool) {
 	blocks := li.blocks[startBlock : startBlock+nBlocks]
 	bi := 0
 	i := -1
-	return func() (int, bool) {
+	return func() (uint64, bool) {
 		if i+1 < blockSize {
 			i++
 		} else {
@@ -306,7 +318,7 @@ type chunked2 struct {
 	blocks []*block
 	i      int // index in current/last block
 	parent *merged
-	// prev   int
+	// prev   uint64
 }
 
 func newchunked2(parent *merged) *chunked2 {
@@ -314,7 +326,7 @@ func newchunked2(parent *merged) *chunked2 {
 		parent: parent}
 }
 
-func (li *chunked2) Add(x int) {
+func (li *chunked2) Add(x uint64) {
 	// verify.That(li.prev <= x)
 	// li.prev = x
 	if li.i >= blockSize {
@@ -340,7 +352,7 @@ func (li *merged) alloc() *block {
 // ablock handles sorting a possibly partial block
 type ablock2 struct {
 	*block
-	n   int
+	n int
 }
 
 func (ab ablock2) Len() int {
@@ -374,7 +386,7 @@ func newconc() *conc {
 	return li
 }
 
-func (li *conc) Add(x int) {
+func (li *conc) Add(x uint64) {
 	if li.i >= blockSize {
 		li.blocks[len(li.blocks)-1] = new(block)
 		li.i = 0
@@ -446,11 +458,11 @@ func (li *conc) merge(nb, size int) {
 	}
 }
 
-func (li *conc) iter(startBlock, nBlocks int) func() (int, bool) {
+func (li *conc) iter(startBlock, nBlocks int) func() (uint64, bool) {
 	blocks := li.blocks[startBlock : startBlock+nBlocks]
 	bi := 0
 	i := -1
-	return func() (int, bool) {
+	return func() (uint64, bool) {
 		if i+1 < blockSize {
 			i++
 		} else {
@@ -470,7 +482,7 @@ type chunked3 struct {
 	blocks []*block
 	i      int // index in current/last block
 	parent *conc
-	prev   int
+	// prev   uint64
 }
 
 func newchunked3(parent *conc) *chunked3 {
@@ -478,9 +490,9 @@ func newchunked3(parent *conc) *chunked3 {
 		parent: parent}
 }
 
-func (li *chunked3) Add(x int) {
-	verify.That(li.prev <= x)
-	li.prev = x
+func (li *chunked3) Add(x uint64) {
+	// verify.That(li.prev <= x)
+	// li.prev = x
 	if li.i >= blockSize {
 		li.blocks = append(li.blocks, li.parent.alloc())
 		li.i = 0
