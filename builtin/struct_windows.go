@@ -787,8 +787,7 @@ var _ = builtin1("DevmodeString(hdn)",
 		p := GlobalLock(handle)
 		defer GlobalUnlock(handle)
 		dm := (*DEVMODE)(p)
-		s := bufStrN(p, nDEVMODE+uintptr(dm.DriverExtra))
-		return s
+		return bufStrN(p, nDEVMODE+uintptr(dm.DriverExtra))
 	})
 
 type DEVMODE struct {
@@ -846,8 +845,7 @@ var _ = builtin1("DevnamesString(hdn)",
 			}
 			n++
 		}
-		s := bufStrN(p, n+1)
-		return s
+		return bufStrN(p, n+1)
 	})
 
 func GlobalAlloc(flags, n uintptr) HANDLE {
