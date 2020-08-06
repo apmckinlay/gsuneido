@@ -37,6 +37,48 @@ func TestNaming(t *testing.T) {
 		"Tmp.A ?.B")
 }
 
+func BenchmarkCat(b *testing.B) {
+	c := compile.Constant(
+		`function ()
+			{
+			s = ''
+			for (i = 0; i < 1000; ++i)
+				s $= "abc"
+			}`).(*SuFunc)
+	t := NewThread()
+	for i := 0; i < b.N; i++ {
+		t.Start(c, nil)
+	}
+}
+
+func BenchmarkJoin(b *testing.B) {
+	c := compile.Constant(
+		`function ()
+			{
+			ob = Object()
+			for (i = 0; i < 1000; ++i)
+				ob.Add("abc")
+			ob.Join()
+			}`).(*SuFunc)
+	t := NewThread()
+	for i := 0; i < b.N; i++ {
+		t.Start(c, nil)
+	}
+}
+
+func BenchmarkBase(b *testing.B) {
+	c := compile.Constant(
+		`function ()
+			{
+			for (i = 0; i < 1000; ++i)
+				;
+			}`).(*SuFunc)
+	t := NewThread()
+	for i := 0; i < b.N; i++ {
+		t.Start(c, nil)
+	}
+}
+
 var _ = Global.Add("Suneido", new(SuObject))
 var _ = ptest.Add("execute", pt_execute)
 var _ = ptest.Add("lang_rangeto", pt_lang_rangeto)

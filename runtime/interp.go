@@ -246,9 +246,10 @@ loop:
 			fr.locals.Unlock()
 		case op.StoreUnlock:
 			val := t.Top()
-			val.SetConcurrent()
 			fr.locals.v[atomicLocal] = val
-			fr.locals.Unlock()
+			if fr.locals.Unlock() {
+				val.SetConcurrent()
+			}
 			toUnlock = nil
 			atomicLocal = -1
 		case op.Dyload:
