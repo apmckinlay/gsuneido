@@ -101,7 +101,7 @@ func (set *Set) AnyInRange(from, to string) bool {
 			return false
 		}
 		// advance to next leaf
-		leaf = set.tree.slots[ti + 1].leaf
+		leaf = set.tree.slots[ti+1].leaf
 		li = 0
 	}
 	return leaf.slots[li] <= to
@@ -165,9 +165,5 @@ func (set *Set) String() string {
 	if set.tree != nil {
 		return "Set too big"
 	}
-	var b str.CommaBuilder
-	for i := 0; i < set.leaf.size; i++ {
-		b.Add(set.leaf.slots[i])
-	}
-	return b.String()
+	return str.Join(",", set.leaf.slots[:set.leaf.size]...)
 }

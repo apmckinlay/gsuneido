@@ -172,13 +172,31 @@ func (cb *CommaBuilder) String() string {
 	return cb.sb.String()
 }
 
-// FromList returns a comma separated string
-func FromList(list []string) string {
-	cb := CommaBuilder{}
-	for _, s := range list {
-		cb.Add(s)
+// Join joins strings with the specified format.
+func Join(fmt string, list ...string) string {
+	prefix := ""
+	suffix := ""
+	nf := len(fmt)
+	if nf > 0 && (fmt[0] == '(' || fmt[0] == '{' || fmt[0] == '[') {
+		prefix = fmt[0:1]
+		suffix = fmt[nf-1:]
+		fmt = fmt[1 : nf-1]
 	}
-	return cb.String()
+	n := len(fmt) * (nf - 1)
+	for _,s := range list {
+		n += len(s)
+	}
+	sep := ""
+	var sb strings.Builder
+	sb.Grow(n)
+	sb.WriteString(prefix)
+	for _, s := range list {
+		sb.WriteString(sep)
+		sb.WriteString(s)
+		sep = fmt
+	}
+	sb.WriteString(suffix)
+	return sb.String()
 }
 
 // Subi returns the substring specified by a starting index and a limit index

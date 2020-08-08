@@ -27,7 +27,7 @@ func TestFinal(t *testing.T) {
 			}
 		}
 		sort.Strings(list)
-		Assert(t).That(str.FromList(list), Like(expected))
+		Assert(t).That(str.Join(",", list...), Like(expected))
 	}
 	test("123", "")
 	test("x = 5", "x")                 // normal usage

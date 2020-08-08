@@ -43,3 +43,12 @@ func TestIndexFunc(t *testing.T) {
 	Assert(t).That(IndexFunc("foobar", f), Equals(-1))
 	Assert(t).That(IndexFunc("foo bar", f), Equals(3))
 }
+
+func TestJoin(t *testing.T) {
+	Assert(t).That(Join(""), Equals(""))
+	Assert(t).That(Join("", "one", "two", "three"), Equals("onetwothree"))
+	Assert(t).That(Join(",", "one", "two", "three"), Equals("one,two,three"))
+	Assert(t).That(Join(", ", "one", "two", "three"), Equals("one, two, three"))
+	Assert(t).That(Join("()", "one", "two", "three"), Equals("(onetwothree)"))
+	Assert(t).That(Join("[::]", "one", "two", "three"), Equals("[one::two::three]"))
+}
