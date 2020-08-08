@@ -20,13 +20,13 @@ func ExampleSuInt() {
 }
 
 func TestStrConvert(t *testing.T) {
-	Assert(t).That(AsStr(SuStr("123")), Equals("123"))
+	Assert(t).That(AsStr(SuStr("123")), Is("123"))
 }
 
 func TestStringGet(t *testing.T) {
 	var v Value = SuStr("hello")
 	v = v.Get(nil, SuInt(1))
-	Assert(t).That(v, Equals(Value(SuStr("e"))))
+	Assert(t).That(v, Is(Value(SuStr("e"))))
 }
 
 func TestPanics(t *testing.T) {
@@ -42,9 +42,9 @@ func TestCompare(t *testing.T) {
 		SuInt(-1), SuInt(0), SuInt(+1), SuDnum{Dnum: dnum.PosInf},
 		SuStr(""), SuStr("abc"), NewSuConcat().Add("foo"), SuStr("world")}
 	for i := 1; i < len(vals); i++ {
-		Assert(t).That(vals[i].Compare(vals[i]), Equals(0))
-		Assert(t).That(vals[i-1].Compare(vals[i]), Equals(-1).Comment(vals[i-1], vals[i]))
-		Assert(t).That(vals[i].Compare(vals[i-1]), Equals(+1))
+		Assert(t).That(vals[i].Compare(vals[i]), Is(0))
+		Assert(t).That(vals[i-1].Compare(vals[i]), Is(-1).Comment(vals[i-1], vals[i]))
+		Assert(t).That(vals[i].Compare(vals[i-1]), Is(+1))
 	}
 }
 
@@ -62,7 +62,7 @@ func TestIfStr(t *testing.T) {
 
 	test := func(s string) {
 		t.Helper()
-		Assert(t).That(ToStr(SuStr(s)), Equals(s))
+		Assert(t).That(ToStr(SuStr(s)), Is(s))
 	}
 	test("")
 	test("hello")
@@ -71,7 +71,7 @@ func TestIfStr(t *testing.T) {
 func TestToStr(t *testing.T) {
 	test := func(v Value, expected string) {
 		t.Helper()
-		Assert(t).That(AsStr(v), Equals(expected))
+		Assert(t).That(AsStr(v), Is(expected))
 	}
 	test(EmptyStr, "")
 	test(SuStr("hello"), "hello")
@@ -103,7 +103,7 @@ func TestIfInt(t *testing.T) {
 		t.Helper()
 		got, ok := v.IfInt()
 		Assert(t).True(ok)
-		Assert(t).That(got, Equals(expected))
+		Assert(t).That(got, Is(expected))
 	}
 	test(Zero, 0)            // SuInt
 	test(MaxInt, 2147483647) // SuDnum
@@ -123,7 +123,7 @@ func TestToInt(t *testing.T) {
 		t.Helper()
 		got, ok := v.ToInt()
 		Assert(t).True(ok)
-		Assert(t).That(got, Equals(expected))
+		Assert(t).That(got, Is(expected))
 	}
 	test(Zero, 0)            // SuInt
 	test(MaxInt, 2147483647) // SuDnum
@@ -135,8 +135,8 @@ func TestIntVal(t *testing.T) {
 	test := func(n int, expected string) {
 		v := IntVal(n)
 		typ := fmt.Sprintf("%T", v)
-		Assert(t).That(str.AfterFirst(typ, "."), Equals(expected))
-		Assert(t).That(ToInt(v), Equals(n))
+		Assert(t).That(str.AfterFirst(typ, "."), Is(expected))
+		Assert(t).That(ToInt(v), Is(n))
 	}
 	test(0, "smi")
 	test(123, "smi")

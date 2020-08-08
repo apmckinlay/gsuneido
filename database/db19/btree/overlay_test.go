@@ -74,8 +74,8 @@ func checkIter(t *testing.T, data []string, tr tree) {
 		}
 		k2, o2, ok := it()
 		Assert(t).True(ok)
-		Assert(t).That(k2, Equals(k))
-		Assert(t).That(o2, Equals(key2off(k)))
+		Assert(t).That(k2, Is(k))
+		Assert(t).That(o2, Is(key2off(k)))
 	}
 	_, _, ok := it()
 	Assert(t).False(ok)

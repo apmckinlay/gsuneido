@@ -12,7 +12,7 @@ import (
 func TestArgSpecString(t *testing.T) {
 	test := func(as *ArgSpec, expected string) {
 		t.Helper()
-		Assert(t).That(as.String(), Equals(expected))
+		Assert(t).That(as.String(), Is(expected))
 	}
 	test(&ArgSpec0, "ArgSpec()")
 	test(&ArgSpec3, "ArgSpec(?, ?, ?)")
@@ -37,7 +37,7 @@ func TestArgSpecEqual(t *testing.T) {
 	}
 	for i, x := range as {
 		for j, y := range as {
-			Assert(t).That(x.Equal(y), Equals(i == j))
+			Assert(t).That(x.Equal(y), Is(i == j))
 		}
 	}
 }

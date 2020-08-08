@@ -22,15 +22,15 @@ func TestBlocks(t *testing.T) {
 	w.PutInts([]int{1, 2, 3})
 
 	r := NewReader(buf)
-	Assert(t).That(r.Get1(), Equals(0x11))
-	Assert(t).That(r.Get2(), Equals(0x2222))
-	Assert(t).That(r.Get3(), Equals(0x333333))
-	Assert(t).That(r.Get4(), Equals(0x44444444))
-	Assert(t).That(r.Get5(), Equals(0x5555555555))
-	Assert(t).That(r.GetStr(), Equals("hello world"))
-	Assert(t).That(r.GetInts(), Equals([]int{1, 2, 3}))
+	Assert(t).That(r.Get1(), Is(0x11))
+	Assert(t).That(r.Get2(), Is(0x2222))
+	Assert(t).That(r.Get3(), Is(0x333333))
+	Assert(t).That(r.Get4(), Is(0x44444444))
+	Assert(t).That(r.Get5(), Is(0x5555555555))
+	Assert(t).That(r.GetStr(), Is("hello world"))
+	Assert(t).That(r.GetInts(), Is([]int{1, 2, 3}))
 	r = NewReader(buf[pos:])
-	Assert(t).That(r.Get5(), Equals(0x5555555555))
+	Assert(t).That(r.Get5(), Is(0x5555555555))
 }
 
 func BenchmarkBlocksCopy(b *testing.B) {

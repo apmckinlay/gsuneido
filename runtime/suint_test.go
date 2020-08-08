@@ -14,7 +14,7 @@ import (
 
 func TestSuInt(t *testing.T) {
 	test := func(n int) {
-		Assert(t).That(SuInt(n).toInt(), Equals(int(n)))
+		Assert(t).That(SuInt(n).toInt(), Is(int(n)))
 	}
 	test(0)
 	test(12345)
@@ -34,5 +34,5 @@ func TestSuInt(t *testing.T) {
 	s10 := SuInt(10)
 	d10 := SuDnum{Dnum: dnum.FromInt(10)}
 	Assert(t).True(s10.Equal(d10))
-	Assert(t).That(s10.Hash(), Equals(d10.Hash()))
+	Assert(t).That(s10.Hash(), Is(d10.Hash()))
 }

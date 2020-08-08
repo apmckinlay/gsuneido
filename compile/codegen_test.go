@@ -494,11 +494,11 @@ func TestBlock(t *testing.T) {
 	fn := codegen(ast)
 	block := fn.Values[0].(*SuFunc)
 
-	Assert(t).That(fn.Names, Equals([]string{"x", "b", "a|2"}))
-	Assert(t).That(block.Names, Equals([]string{"x", "b", "a"}))
-	Assert(t).That(int(block.Offset), Equals(2))
+	Assert(t).That(fn.Names, Is([]string{"x", "b", "a|2"}))
+	Assert(t).That(block.Names, Is([]string{"x", "b", "a"}))
+	Assert(t).That(int(block.Offset), Is(2))
 
-	Assert(t).That(block.ParamSpec.Params(), Equals("(a)"))
+	Assert(t).That(block.ParamSpec.Params(), Is("(a)"))
 
 	Assert(t).That(disasm(fn), Like(
 		`Closure

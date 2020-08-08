@@ -18,16 +18,16 @@ func TestSuFuncCall(t *testing.T) {
 	th.Push(SuInt(100))
 	th.Push(SuInt(1))
 	result := fn.Call(th, nil, &ArgSpec2)
-	Assert(t).That(result, Equals(SuInt(99)))
+	Assert(t).That(result, Is(SuInt(99)))
 	Global.Add("F", fn)
 
 	fn = compile.Constant("function () { F(100, 1) }").(*SuFunc)
 	result = fn.Call(th, nil, &ArgSpec0)
-	Assert(t).That(result, Equals(SuInt(99)))
+	Assert(t).That(result, Is(SuInt(99)))
 
 	fn = compile.Constant("function () { F(b: 1, a: 100) }").(*SuFunc)
 	result = fn.Call(th, nil, &ArgSpec0)
-	Assert(t).That(result, Equals(SuInt(99)))
+	Assert(t).That(result, Is(SuInt(99)))
 }
 
 func BenchmarkInt(b *testing.B) {

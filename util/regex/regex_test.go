@@ -42,12 +42,12 @@ func BenchmarkRegexStart(b *testing.B) {
 func TestRegex(t *testing.T) {
 	pat := Compile(".+foo")
 	var r Result
-	Assert(t).That(pat.match("foo", 0, 0, &r), Equals(-1))
-	Assert(t).That(pat.match("", 0, 0, &r), Equals(-1))
-	Assert(t).That(pat.match("hello", 0, 0, &r), Equals(-1))
-	Assert(t).That(pat.match("xfoo", 0, 0, &r), Equals(0))
-	Assert(t).That(pat.match("hifoo", 0, 0, &r), Equals(0))
-	Assert(t).That(pat.match("hifoobar", 0, 0, &r), Equals(0))
+	Assert(t).That(pat.match("foo", 0, 0, &r), Is(-1))
+	Assert(t).That(pat.match("", 0, 0, &r), Is(-1))
+	Assert(t).That(pat.match("hello", 0, 0, &r), Is(-1))
+	Assert(t).That(pat.match("xfoo", 0, 0, &r), Is(0))
+	Assert(t).That(pat.match("hifoo", 0, 0, &r), Is(0))
+	Assert(t).That(pat.match("hifoobar", 0, 0, &r), Is(0))
 }
 
 func TestCapture(t *testing.T) {
@@ -55,7 +55,7 @@ func TestCapture(t *testing.T) {
 	s := "now is the time"
 	var r Result
 	pat.FirstMatch(s, 0, &r)
-	Assert(t).That(r[0].Part(s), Equals("is"))
+	Assert(t).That(r[0].Part(s), Is("is"))
 }
 
 func ExamplePattern_ForEachMatch() {
@@ -78,15 +78,15 @@ func TestForEachMatch(t *testing.T) {
 	pat := Compile(`^ *`)
 	n := 0
 	pat.ForEachMatch(s, func(*Result) bool { n++; return true })
-	Assert(t).That(n, Equals(2))
+	Assert(t).That(n, Is(2))
 }
 
 func TestMatchBug(t *testing.T) {
 	pat := Compile("^Date: .*")
 	var result Result
 	pat.FirstMatch("foo\nDate: Fri, 12 Jul 2019 16:31:35 GMT\r\nbar", 0, &result)
-	Assert(t).That(result[0].pos1, Equals(4+1))
-	Assert(t).That(result[0].end, Equals(39))
+	Assert(t).That(result[0].pos1, Is(4+1))
+	Assert(t).That(result[0].end, Is(39))
 }
 
 // ptest support ---------------------------------------------------------------

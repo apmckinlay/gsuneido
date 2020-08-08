@@ -25,7 +25,7 @@ func (x ik) Equal(y interface{}) bool {
 func TestHmap(t *testing.T) {
 	data := map[int]string{}
 	hmap := Hmap{}
-	Assert(t).That(unsafe.Sizeof(hmap), Equals(uintptr(32)))
+	Assert(t).That(unsafe.Sizeof(hmap), Is(uintptr(32)))
 	check := func() {
 		check(t, data, &hmap)
 	}
@@ -43,7 +43,7 @@ func TestHmap(t *testing.T) {
 		if !ok {
 			v = nil
 		}
-		Assert(t).That(hmap.Del(ik(n)), Equals(v))
+		Assert(t).That(hmap.Del(ik(n)), Is(v))
 		delete(data, n)
 		check()
 	}
@@ -89,13 +89,13 @@ func check(t *testing.T, data map[int]string, hmap *Hmap) {
 	t.Helper()
 	//fmt.Println(data)
 	//fmt.Println(hmap)
-	Assert(t).That(hmap.Size(), Equals(len(data)).Comment("size"))
+	Assert(t).That(hmap.Size(), Is(len(data)).Comment("size"))
 	for i := 0; i < 100; i++ {
 		s, ok := data[i]
 		if ok {
-			Assert(t).That(hmap.Get(ik(i)), Equals(s))
+			Assert(t).That(hmap.Get(ik(i)), Is(s))
 		} else {
-			Assert(t).That(hmap.Get(ik(i)), Equals(nil))
+			Assert(t).That(hmap.Get(ik(i)), Is(nil))
 		}
 	}
 }
@@ -110,7 +110,7 @@ func TestHmap_full(*testing.T) {
 func TestHmap_random(t *testing.T) {
 	const N = 10000
 	hm := Hmap{}
-	Assert(t).That(hm.Size(), Equals(0))
+	Assert(t).That(hm.Size(), Is(0))
 	nums := map[int32]int{}
 	for i := 0; i < N; i++ {
 		n := rand.Int31n(N)
@@ -120,35 +120,35 @@ func TestHmap_random(t *testing.T) {
 	rand.Seed(1)
 	for i := 0; i < N; i++ {
 		n := rand.Int31n(N)
-		Assert(t).That(hm.Get(ik(n)), Equals(nums[n]))
+		Assert(t).That(hm.Get(ik(n)), Is(nums[n]))
 	}
 	rand.Seed(1)
 	for i := 0; i < N; i++ {
 		n := rand.Int31n(N)
 		v := hm.Del(ik(n))
 		if nums[n] == -1 {
-			Assert(t).That(v, Equals(nil))
+			Assert(t).That(v, Is(nil))
 		} else {
-			Assert(t).That(v, Equals(nums[n]))
+			Assert(t).That(v, Is(nums[n]))
 		}
 		nums[n] = -1
 	}
-	Assert(t).That(hm.Size(), Equals(0))
+	Assert(t).That(hm.Size(), Is(0))
 }
 
 func TestHmap_Copy(t *testing.T) {
 	h1 := Hmap{}
 	h2 := h1.Copy()
-	Assert(t).That(h2.Size(), Equals(0))
+	Assert(t).That(h2.Size(), Is(0))
 	h1.Put(ik(123), "foo")
-	Assert(t).That(h1.Size(), Equals(1))
-	Assert(t).That(h2.Size(), Equals(0))
+	Assert(t).That(h1.Size(), Is(1))
+	Assert(t).That(h2.Size(), Is(0))
 	h2 = h1.Copy()
-	Assert(t).That(h2.Size(), Equals(1))
-	Assert(t).That(h2.Get(ik(123)), Equals("foo"))
+	Assert(t).That(h2.Size(), Is(1))
+	Assert(t).That(h2.Get(ik(123)), Is("foo"))
 	h1.Put(ik(123), "bar")
-	Assert(t).That(h1.Get(ik(123)), Equals("bar"))
-	Assert(t).That(h2.Get(ik(123)), Equals("foo"))
+	Assert(t).That(h1.Get(ik(123)), Is("bar"))
+	Assert(t).That(h2.Get(ik(123)), Is("foo"))
 }
 
 func TestHmap_Iter(t *testing.T) {
@@ -159,17 +159,17 @@ func TestHmap_Iter(t *testing.T) {
 		for {
 			k, v := it()
 			if k == nil {
-				Assert(t).That(v, Equals(nil))
+				Assert(t).That(v, Is(nil))
 				break
 			}
 			ki := int(k.(ik))
-			Assert(t).That(v, Equals(-ki))
+			Assert(t).That(v, Is(-ki))
 			nums = append(nums, ki)
 		}
-		Assert(t).That(len(nums), Equals(n))
+		Assert(t).That(len(nums), Is(n))
 		sort.Ints(nums)
 		for i := 0; i < n; i++ {
-			Assert(t).That(nums[i], Equals(i))
+			Assert(t).That(nums[i], Is(i))
 		}
 	}
 	test(0)

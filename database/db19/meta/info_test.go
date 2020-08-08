@@ -32,8 +32,8 @@ func TestInfo(t *testing.T) {
 
 	packed := NewInfoPacked(st, off)
 
-	Assert(t).That(*packed.MustGet("one"), Equals(*tbl.MustGet("one")))
-	Assert(t).That(*packed.MustGet("two"), Equals(Info{
+	Assert(t).That(*packed.MustGet("one"), Is(*tbl.MustGet("one")))
+	Assert(t).That(*packed.MustGet("two"), Is(Info{
 		Table:   "two",
 		Nrows:   200,
 		Size:    2000,
@@ -41,8 +41,8 @@ func TestInfo(t *testing.T) {
 	}))
 
 	reread := ReadInfoHamt(st, off)
-	Assert(t).That(*reread.MustGet("one"), Equals(*tbl.MustGet("one")))
-	Assert(t).That(*reread.MustGet("two"), Equals(Info{
+	Assert(t).That(*reread.MustGet("one"), Is(*tbl.MustGet("one")))
+	Assert(t).That(*reread.MustGet("two"), Is(Info{
 		Table:   "two",
 		Nrows:   200,
 		Size:    2000,
@@ -68,7 +68,7 @@ func TestInfo2(t *testing.T) {
 	packed := NewInfoPacked(st, off)
 	for i, s := range data {
 		ti := packed.MustGet(s)
-		Assert(t).That(ti.Table, Equals(s).Comment("table"))
-		Assert(t).That(ti.Nrows, Equals(i).Comment("nrows"))
+		Assert(t).That(ti.Table, Is(s).Comment("table"))
+		Assert(t).That(ti.Nrows, Is(i).Comment("nrows"))
 	}
 }

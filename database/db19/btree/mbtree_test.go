@@ -74,9 +74,9 @@ func (m *mbtree) check() {
 func (m *mbtree) checkData(t *testing.T, data []string) {
 	m.check()
 	for i, key := range data {
-		Assert(t).That(m.Search(key), Equals(i))
-		Assert(t).That(m.Search(bigger(key)), Equals(0))
-		Assert(t).That(m.Search(smaller(key)), Equals(0))
+		Assert(t).That(m.Search(key), Is(i))
+		Assert(t).That(m.Search(bigger(key)), Is(0))
+		Assert(t).That(m.Search(smaller(key)), Is(0))
 	}
 }
 

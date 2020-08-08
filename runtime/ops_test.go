@@ -14,8 +14,8 @@ import (
 func TestDiv(t *testing.T) {
 	q := OpDiv(SuInt(999), SuInt(3))
 	xi, xok := SuIntToInt(q)
-	Assert(t).That(xok, Equals(true))
-	Assert(t).That(xi, Equals(333))
+	Assert(t).That(xok, Is(true))
+	Assert(t).That(xi, Is(333))
 	q = OpDiv(SuInt(1), SuInt(3))
 	_ = q.(SuDnum)
 }
@@ -25,8 +25,8 @@ func TestBool(t *testing.T) {
 	Assert(t).True(SuBool(false) == False)
 }
 func TestIndex(t *testing.T) {
-	Assert(t).That(ToIndex(SuInt(123)), Equals(123))
-	Assert(t).That(ToIndex(SuDnum{Dnum: dnum.FromInt(123)}), Equals(123))
+	Assert(t).That(ToIndex(SuInt(123)), Is(123))
+	Assert(t).That(ToIndex(SuDnum{Dnum: dnum.FromInt(123)}), Is(123))
 }
 
 var abc = SuStr("abc")

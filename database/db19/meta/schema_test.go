@@ -33,12 +33,12 @@ func TestSchema(t *testing.T) {
 	off := tbl.Write(st)
 
 	test := func(i int, table string, ts *Schema) {
-		Assert(t).That(ts.Table, Equals(table).Comment("table"))
-		Assert(t).That(ts.Columns[0].Name, Equals("one").Comment("one"))
-		Assert(t).That(ts.Columns[0].Field, Equals(i).Comment("one field"))
-		Assert(t).That(ts.Columns[1].Name, Equals("two").Comment("two"))
-		Assert(t).That(ts.Columns[0].Field, Equals(i).Comment("two field"))
-		Assert(t).That(ts.Indexes[0].Fields, Equals([]int{i}).Comment("indexes"))
+		Assert(t).That(ts.Table, Is(table).Comment("table"))
+		Assert(t).That(ts.Columns[0].Name, Is("one").Comment("one"))
+		Assert(t).That(ts.Columns[0].Field, Is(i).Comment("one field"))
+		Assert(t).That(ts.Columns[1].Name, Is("two").Comment("two"))
+		Assert(t).That(ts.Columns[0].Field, Is(i).Comment("two field"))
+		Assert(t).That(ts.Indexes[0].Fields, Is([]int{i}).Comment("indexes"))
 	}
 
 	tbl = ReadSchemaHamt(st, off)

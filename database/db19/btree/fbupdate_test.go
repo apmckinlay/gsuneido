@@ -56,7 +56,7 @@ func TestUnevenSplit(t *testing.T) {
 			mfb.Insert(data[i], uint64(i))
 		}
 		count, size, nnodes := mfb.check()
-		Assert(t).That(count, Equals(n))
+		Assert(t).That(count, Is(n))
 		full := float32(size) / float32(nnodes) / float32(MaxNodeSize)
 		// print("count", count, "nnodes", nnodes, "size", size, "full", full)
 		if full < .65 {
@@ -90,7 +90,7 @@ func (fb *fbtree) checkData(t *testing.T, data []string) {
 		}
 		n++
 	}
-	Assert(t).That(count, Equals(n))
+	Assert(t).That(count, Is(n))
 }
 
 func TestSampleData(t *testing.T) {
@@ -177,22 +177,22 @@ func TestFreeze(t *testing.T) {
 	store := stor.HeapStor(8192)
 	store.Alloc(1) // avoid offset 0
 	fb := CreateFbtree(store)
-	Assert(t).That(fb.redirs.Len(), Equals(1))
+	Assert(t).That(fb.redirs.Len(), Is(1))
 	fb = fb.Update(func(mfb *fbtree) {
 		mfb.Insert("1", 1)
 	})
-	Assert(t).That(fb.redirs.Len(), Equals(1))
-	Assert(t).That(fb.list(), Equals("1"))
+	Assert(t).That(fb.redirs.Len(), Is(1))
+	Assert(t).That(fb.list(), Is("1"))
 	fb = fb.Update(func(mfb *fbtree) {
 		mfb.Insert("2", 2)
 	})
-	Assert(t).That(fb.redirs.Len(), Equals(1))
-	Assert(t).That(fb.list(), Equals("1 2"))
+	Assert(t).That(fb.redirs.Len(), Is(1))
+	Assert(t).That(fb.list(), Is("1 2"))
 
 	fb = fb.Save()
 	fb = OpenFbtree(store, fb.root, fb.treeLevels, fb.redirsOff)
-	Assert(t).That(fb.redirs.Len(), Equals(1))
-	Assert(t).That(fb.list(), Equals("1 2"))
+	Assert(t).That(fb.redirs.Len(), Is(1))
+	Assert(t).That(fb.list(), Is("1 2"))
 }
 
 func (fb *fbtree) list() string {
@@ -316,7 +316,7 @@ func TestFlatten(t *testing.T) {
 			k, o, ok := iter()
 			Assert(t).True(ok)
 			Assert(t).True(strings.HasPrefix(key, k))
-			Assert(t).That(o, Equals(i))
+			Assert(t).That(o, Is(i))
 			if o != uint64(i) {
 				t.FailNow()
 			}

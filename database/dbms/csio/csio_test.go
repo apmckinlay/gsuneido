@@ -16,7 +16,7 @@ func TestInt(t *testing.T) {
 	test := func(n int64) {
 		rw.PutInt64(n)
 		rw.Flush()
-		Assert(t).That(rw.GetInt64(), Equals(n))
+		Assert(t).That(rw.GetInt64(), Is(n))
 		buf.Reset()
 	}
 	test(0)
@@ -33,7 +33,7 @@ func TestStr(t *testing.T) {
 	test := func(s string) {
 		rw.PutStr(s)
 		rw.Flush()
-		Assert(t).That(rw.GetStr(), Equals(s))
+		Assert(t).That(rw.GetStr(), Is(s))
 		buf.Reset()
 	}
 	test("")

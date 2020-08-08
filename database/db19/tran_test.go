@@ -45,8 +45,8 @@ func TestConcurrent(t *testing.T) {
 	var nout = nclients * ntrans
 	rt := NewReadTran()
 	ti := rt.meta.GetRoInfo("mytable")
-	Assert(t).That(ti.Nrows, Equals(nout).Comment("nrows"))
-	Assert(t).That(ti.Size, Equals(nout*12).Comment("size"))
+	Assert(t).That(ti.Nrows, Is(nout).Comment("nrows"))
+	Assert(t).That(ti.Size, Is(nout*12).Comment("size"))
 
 	GetState().store.Close()
 }
@@ -79,8 +79,8 @@ func TestTran(t *testing.T) {
 
 	rt := NewReadTran()
 	ti := rt.meta.GetRoInfo("mytable")
-	Assert(t).That(ti.Nrows, Equals(nout).Comment("nrows"))
-	Assert(t).That(ti.Size, Equals(nout*12).Comment("size"))
+	Assert(t).That(ti.Nrows, Is(nout).Comment("nrows"))
+	Assert(t).That(ti.Size, Is(nout*12).Comment("size"))
 
 	store.Close()
 	os.Remove("test.tmp")

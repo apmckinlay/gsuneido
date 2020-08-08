@@ -11,7 +11,7 @@ import (
 
 func Test_makset(t *testing.T) {
 	test := func(s, expected string) {
-		Assert(t).That(string(Set("")), Equals(""))
+		Assert(t).That(string(Set("")), Is(""))
 	}
 	test("foo", "foo")
 	test("-foo", "-foo")

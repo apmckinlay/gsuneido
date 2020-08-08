@@ -16,7 +16,7 @@ func TestPack(t *testing.T) {
 		SuInt(0), SuInt(1), SuInt(-1), dv("123.456"), dv(".1"), dv("-1e22"),
 		dv("1234"), dv("12345678"), dv("123456789012"), dv("1234567890123456")}
 	for _, v := range values {
-		Assert(t).That(Unpack(Pack(v)), Equals(v))
+		Assert(t).That(Unpack(Pack(v)), Is(v))
 	}
 }
 
@@ -25,12 +25,12 @@ func TestPackSuInt(t *testing.T) {
 		t.Helper()
 		v := IntVal(n).(Packable)
 		s := Pack(v)
-		Assert(t).That(v.PackSize3(), Equals(len(s)))
-		Assert(t).That([]byte(s), Equals(expected))
+		Assert(t).That(v.PackSize3(), Is(len(s)))
+		Assert(t).That([]byte(s), Is(expected))
 		num := UnpackNumber(s)
 		x, ok := SuIntToInt(num)
 		Assert(t).True(ok)
-		Assert(t).That(x, Equals(n))
+		Assert(t).That(x, Is(n))
 	}
 	test(0, PackPlus)
 	test(1, PackPlus, 129, 10)
@@ -45,8 +45,8 @@ func TestPackNum(t *testing.T) {
 	test := func(s string, b ...byte) {
 		t.Helper()
 		p := Pack(dv(s))
-		Assert(t).That([]byte(p), Equals(b))
-		Assert(t).That(UnpackNumber(p).String(), Equals(s))
+		Assert(t).That([]byte(p), Is(b))
+		Assert(t).That(UnpackNumber(p).String(), Is(s))
 	}
 	test("0", PackPlus)
 	test("1", PackPlus, 129, 10)

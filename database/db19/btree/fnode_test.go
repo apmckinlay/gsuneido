@@ -34,9 +34,9 @@ func TestFAppendRead(t *testing.T) {
 		var off uint64
 		npre, diff, off = fRead(fn)
 		fn = fn[fLen(diff):]
-		Assert(t).That(npre, Equals(e.npre))
-		Assert(t).That(diff, Equals(e.diff))
-		Assert(t).That(off, Equals(e.offset))
+		Assert(t).That(npre, Is(e.npre))
+		Assert(t).That(diff, Is(e.diff))
+		Assert(t).That(off, Is(e.offset))
 	}
 }
 

@@ -16,7 +16,7 @@ func TestCompile(t *testing.T) {
 		//fmt.Println("input '" + input + "'")
 		p := Compile(input).String()
 		Assert(t).That(strings.TrimSpace(p[5:len(p)-7]),
-			Equals(expected).Comment(input))
+			Is(expected).Comment(input))
 	}
 	test("", "")
 	test(".", ".")

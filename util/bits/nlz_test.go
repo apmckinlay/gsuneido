@@ -9,7 +9,7 @@ import . "github.com/apmckinlay/gsuneido/util/hamcrest"
 func Test_Nlz(t *testing.T) {
 	assert := Assert(t)
 	test := func(n uint64, expected int) {
-		assert.That(Nlz(n), Equals(expected))
+		assert.That(Nlz(n), Is(expected))
 	}
 	test(0, 64)
 	test(0xff, 56)

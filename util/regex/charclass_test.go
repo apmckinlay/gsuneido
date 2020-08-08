@@ -14,7 +14,7 @@ func TestCharClass(t *testing.T) {
 		t.Helper()
 		pat := Pattern([]inst{in})
 		var r Result
-		Assert(t).That(pat.match(s, 0, 0, &r), Equals(expected))
+		Assert(t).That(pat.match(s, 0, 0, &r), Is(expected))
 	}
 	test(digit, "x", -1)
 	test(digit, "0", 0)

@@ -19,7 +19,7 @@ func TestClassName(t *testing.T) {
 		t.Helper()
 		classNum = 0
 		p.name = in
-		Assert(t).That(p.getClassName(), Equals(expected))
+		Assert(t).That(p.getClassName(), Is(expected))
 	}
 	test("", "Class1")
 	test("?", "Class1")
@@ -39,7 +39,7 @@ func TestParseExpression(t *testing.T) {
 		p := NewParser(src)
 		p.className = className
 		result := p.expr()
-		Assert(t).That(p.Token, Equals(tok.Eof))
+		Assert(t).That(p.Token, Is(tok.Eof))
 		return result
 	}
 	xtest := func(src string, expected string) {
@@ -215,10 +215,10 @@ func TestParseParams(t *testing.T) {
 		t.Helper()
 		p := NewParser(src + "{}")
 		result := p.function(true) // method to allow dot params
-		Assert(t).That(p.Token, Equals(tok.Eof))
+		Assert(t).That(p.Token, Is(tok.Eof))
 		s := result.String()
 		s = s[8:] // remove "Function"
-		Assert(t).That(s, Equals(src))
+		Assert(t).That(s, Is(src))
 	}
 	test("()")
 	test("(@a)")
@@ -237,7 +237,7 @@ func TestParseStatements(t *testing.T) {
 		t.Helper()
 		p := NewParser(src + " }")
 		stmts := p.statements()
-		Assert(t).That(p.Token, Equals(tok.RCurly))
+		Assert(t).That(p.Token, Is(tok.RCurly))
 		s := ""
 		sep := ""
 		for _, stmt := range stmts {
@@ -322,7 +322,7 @@ func TestParseStatements(t *testing.T) {
 		actual := Catch(func() {
 			p := NewParser(src + "}")
 			p.statements()
-			Assert(t).That(p.Token, Equals(tok.Eof))
+			Assert(t).That(p.Token, Is(tok.Eof))
 		}).(string)
 		if !strings.Contains(actual, expected) {
 			t.Errorf("%#v expected: %#v but got: %#v", src, expected, actual)

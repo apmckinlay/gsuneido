@@ -60,12 +60,12 @@ func (li *List) ckblocks() {
 }
 
 func TestNextPow2(t *testing.T) {
-	Assert(t).That(nextPow2(0), Equals(0))
-	Assert(t).That(nextPow2(1), Equals(1))
-	Assert(t).That(nextPow2(2), Equals(2))
-	Assert(t).That(nextPow2(3), Equals(4))
-	Assert(t).That(nextPow2(100), Equals(128))
-	Assert(t).That(nextPow2(1000), Equals(1024))
+	Assert(t).That(nextPow2(0), Is(0))
+	Assert(t).That(nextPow2(1), Is(1))
+	Assert(t).That(nextPow2(2), Is(2))
+	Assert(t).That(nextPow2(3), Is(4))
+	Assert(t).That(nextPow2(100), Is(128))
+	Assert(t).That(nextPow2(1000), Is(1024))
 }
 
 //-------------------------------------------------------------------

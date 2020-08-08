@@ -18,7 +18,7 @@ import (
 func TestConstant(t *testing.T) {
 	test := func(src string, expected Value) {
 		t.Helper()
-		Assert(t).That(Constant(src), Equals(expected))
+		Assert(t).That(Constant(src), Is(expected))
 	}
 	test("true", True)
 	test("false", False)
@@ -32,8 +32,8 @@ func TestConstant(t *testing.T) {
 	test("'hi wo'", SuStr("hi wo"))
 	test("/* comment */ true", True)
 
-	Assert(t).That(Constant("#20140425").String(), Equals("#20140425"))
-	Assert(t).That(Constant("function () {}").Type(), Equals(types.Function))
+	Assert(t).That(Constant("#20140425").String(), Is("#20140425"))
+	Assert(t).That(Constant("function () {}").Type(), Is(types.Function))
 }
 
 // ptest ------------------------------------------------------------

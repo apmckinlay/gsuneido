@@ -13,8 +13,8 @@ import (
 
 func TestHash(t *testing.T) {
 	test := func(s string, expected uint32) {
-		Assert(t).That(HashString(s), Equals(expected))
-		Assert(t).That(HashBytes([]byte(s)), Equals(expected))
+		Assert(t).That(HashString(s), Is(expected))
+		Assert(t).That(HashBytes([]byte(s)), Is(expected))
 	}
 	test("", 0x811c9dc5)
 	test("foobar", 0xbf9cf968)

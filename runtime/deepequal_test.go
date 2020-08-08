@@ -111,11 +111,11 @@ func mkInstance(kind int, concurrent bool) *SuInstance {
 func TestExpand(t *testing.T) {
 	var slice []Value
 	expand(&slice, 1)
-	Assert(t).That(len(slice), Equals(1))
+	Assert(t).That(len(slice), Is(1))
 	expand(&slice, 10)
-	Assert(t).That(len(slice), Equals(11))
+	Assert(t).That(len(slice), Is(11))
 	expand(&slice, 1)
-	Assert(t).That(len(slice), Equals(12))
+	Assert(t).That(len(slice), Is(12))
 	expand(&slice, 100)
-	Assert(t).That(len(slice), Equals(112))
+	Assert(t).That(len(slice), Is(112))
 }

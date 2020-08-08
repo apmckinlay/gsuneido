@@ -22,14 +22,14 @@ func TestCheckVars(t *testing.T) {
 		ck := check.Check{}
 		init := ck.Check(ast)
 		sort.Strings(init)
-		Assert(t).That(fmt.Sprint(init), Equals("["+initExp+"]"))
+		Assert(t).That(fmt.Sprint(init), Is("["+initExp+"]"))
 
 		var used []string
 		for s := range ck.AllUsed {
 			used = append(used, s)
 		}
 		sort.Strings(used)
-		Assert(t).That(fmt.Sprint(used), Equals("["+usedExp+"]"))
+		Assert(t).That(fmt.Sprint(used), Is("["+usedExp+"]"))
 	}
 	test("function (a,b,c) { }", "a b c", "")
 	test("function (a,b) { c = 1; d = 2 }", "a b c d", "")
@@ -51,7 +51,7 @@ func TestCheckResults(t *testing.T) {
 		t.Helper()
 		// fmt.Println(src)
 		_, results := compile.Checked(nil, src)
-		Assert(t).That(results, Equals(expected))
+		Assert(t).That(results, Is(expected))
 	}
 
 	test("function () { return { it } }")
@@ -178,7 +178,7 @@ func TestCheckResults(t *testing.T) {
 	test("function () { switch { default: } 123 }")
 	test("function () { switch { case 0: return } 123 }",
 		"ERROR: unreachable code @40")
-		
+
 	// useless expression (no side effects)
 	test("function () { 123; return }",
 		"ERROR: useless expression @14")
@@ -187,11 +187,11 @@ func TestCheckResults(t *testing.T) {
 	test("function (f) { if (f()) return \n 123 \n return 456 }",
 		"ERROR: useless expression @33")
 	test("function (x) { try x+0 catch x=0 }")
-		
+
 	// guard clause
 	test("function (f) { if (f()) { x=5 } else { return } x  }")
 	test("function (f) { if (f()) { return } else { x=5 } x  }")
-	
+
 	// copy on write
 	test(`function (a) { if (a) b = 1 else a(c=1, b=c) return b }`)
 	test("function (a) { a ? b=1 : a(c=1, b=c); b }")

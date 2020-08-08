@@ -22,7 +22,7 @@ func TestArgs(t *testing.T) {
 	}
 	ckStack := func(vals ...int) {
 		t.Helper()
-		Assert(t).That(fmt.Sprint(th.stack[:th.sp]), Equals(fmt.Sprint(vals)))
+		Assert(t).That(fmt.Sprint(th.stack[:th.sp]), Is(fmt.Sprint(vals)))
 	}
 
 	// 0 args => 0 params
@@ -36,7 +36,7 @@ func TestArgs(t *testing.T) {
 	th.Reset()
 	th.Push(makeOb())
 	th.Args(f, as)
-	Assert(t).That(th.sp, Equals(1))
+	Assert(t).That(th.sp, Is(1))
 	Assert(t).True(th.stack[0].Equal(makeOb()))
 
 	// @+1arg => @param
@@ -45,7 +45,7 @@ func TestArgs(t *testing.T) {
 	th.Reset()
 	th.Push(makeOb())
 	th.Args(f, as)
-	Assert(t).That(th.sp, Equals(1))
+	Assert(t).That(th.sp, Is(1))
 	Assert(t).True(th.stack[0].Equal(makeOb().Slice(1)))
 
 	// 2 args => 2 params
@@ -107,8 +107,8 @@ func TestArgs(t *testing.T) {
 		Names: vals("c", "b", "a", "d"), Spec: []byte{1, 2}} // b, a
 	setStack(11, 22, 44, 33)
 	th.Args(f, as)
-	Assert(t).That(th.sp, Equals(1))
-	Assert(t).That(th.stack[0].String(), Equals(makeOb().String()))
+	Assert(t).That(th.sp, Is(1))
+	Assert(t).That(th.stack[0].String(), Is(makeOb().String()))
 
 	// @mixed => params
 	f = &ParamSpec{Nparams: 4, Flags: []Flag{0, 0, 0, 0},

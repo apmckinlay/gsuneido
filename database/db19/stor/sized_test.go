@@ -16,5 +16,5 @@ func TestSized(t *testing.T) {
 	copy(buf, "helloworld")
 
 	buf = st.DataSized(off)
-	Assert(t).That(string(buf), Equals("helloworld"))
+	Assert(t).That(string(buf), Is("helloworld"))
 }

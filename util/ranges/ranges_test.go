@@ -17,7 +17,7 @@ func TestContains(t *testing.T) {
 	rs := &Ranges{}
 	rs.Insert("b", "e")
 	rs.Insert("i", "k")
-	Assert(t).That(rs.check(), Equals(2))
+	Assert(t).That(rs.check(), Is(2))
 
 	Assert(t).False(rs.Contains("a"))
 	Assert(t).True(rs.Contains("b"))
@@ -37,9 +37,9 @@ func TestRanges(t *testing.T) {
 		rs := &Ranges{}
 		rs.Insert("c", "e")
 		rs.Insert("i", "k")
-		Assert(t).That(rs.String(), Equals("c->e i->k"))
+		Assert(t).That(rs.String(), Is("c->e i->k"))
 		rs.Insert(from, to)
-		Assert(t).That(rs.String(), Equals(expected))
+		Assert(t).That(rs.String(), Is(expected))
 		rs.check()
 	}
 	// overlap both
@@ -82,7 +82,7 @@ func TestRandom(t *testing.T) {
 	}
 	rs.check()
 	for n, in := range nums {
-		Assert(t).That(rs.Contains(strconv.Itoa(n+10000)), Equals(in))
+		Assert(t).That(rs.Contains(strconv.Itoa(n+10000)), Is(in))
 	}
 
 	if !testing.Short() {
@@ -92,12 +92,12 @@ func TestRandom(t *testing.T) {
 		}
 		rs.check()
 		for n, in := range nums {
-			Assert(t).That(rs.Contains(strconv.Itoa(n+10000)), Equals(in))
+			Assert(t).That(rs.Contains(strconv.Itoa(n+10000)), Is(in))
 		}
 	}
 
 	rs.Insert("10000", "99999")
-	Assert(t).That(rs.check(), Equals(1))
+	Assert(t).That(rs.check(), Is(1))
 }
 
 func TestRandomNonOverlapping(t *testing.T) {

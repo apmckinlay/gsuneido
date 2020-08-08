@@ -36,10 +36,10 @@ func TestFbtreeIter(t *testing.T) {
 	iter := fb.Iter()
 	for k, o, ok := iter(); ok; k, o, ok = iter() {
 		Assert(t).True(strings.HasPrefix(data[i], k))
-		Assert(t).That(o, Equals(i))
+		Assert(t).That(o, Is(i))
 		i++
 	}
-	Assert(t).That(i, Equals(n))
+	Assert(t).That(i, Is(n))
 }
 
 func TestFbtreeBuilder(t *testing.T) {
@@ -66,7 +66,7 @@ func TestFbtreeBuilder(t *testing.T) {
 		k, o, ok := iter()
 		Assert(t).True(ok)
 		Assert(t).True(strings.HasPrefix(key, k))
-		Assert(t).That(o, Equals(i))
+		Assert(t).That(o, Is(i))
 	}
 	_, _, ok := iter()
 	Assert(t).False(ok)

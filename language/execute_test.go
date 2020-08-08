@@ -21,7 +21,7 @@ func TestNaming(t *testing.T) {
 		t.Helper()
 		c := compile.Constant("function () {\n" + src + "\n}").(*SuFunc)
 		result := NewThread().Start(c, nil)
-		Assert(t).That(result, Equals(SuStr(expected)))
+		Assert(t).That(result, Is(SuStr(expected)))
 	}
 	test(`foo = function(){}; Name(foo)`, "foo")
 	test(`foo = class{}; Name(foo)`, "foo")
@@ -88,9 +88,9 @@ var _ = ptest.Add("compare_packed", pt_compare_packed)
 
 func TestBuiltinString(t *testing.T) {
 	f := Global.GetName(nil, "Type")
-	Assert(t).That(f.String(), Equals("Type /* builtin function */"))
+	Assert(t).That(f.String(), Is("Type /* builtin function */"))
 	f = Global.GetName(nil, "Object")
-	Assert(t).That(f.String(), Equals("Object /* builtin function */"))
+	Assert(t).That(f.String(), Is("Object /* builtin function */"))
 }
 
 // func TestTmp(t *testing.T) {

@@ -12,13 +12,13 @@ import (
 )
 
 func TestIntern(t *testing.T) {
-	Assert(t).That(Index("hello"), Equals(1))
-	Assert(t).That(Index("world"), Equals(2))
+	Assert(t).That(Index("hello"), Is(1))
+	Assert(t).That(Index("world"), Is(2))
 
-	Assert(t).That(String(1), Equals("hello"))
-	Assert(t).That(String(2), Equals("world"))
+	Assert(t).That(String(1), Is("hello"))
+	Assert(t).That(String(2), Is("world"))
 
-	Assert(t).That(Index("hello"), Equals(1))
+	Assert(t).That(Index("hello"), Is(1))
 
 	for c := 'a'; c <= 'z'; c++ {
 		Index(string(c))

@@ -44,8 +44,8 @@ func TestRandom(t *testing.T) {
 		f := int(rand.Int31())
 		foo, ok := ht.Get(f)
 		Assert(t).True(ok)
-		Assert(t).That(foo.key, Equals(f))
-		Assert(t).That(foo.data, Equals(strconv.Itoa(f)))
+		Assert(t).That(foo.key, Is(f))
+		Assert(t).That(foo.data, Is(strconv.Itoa(f)))
 		nums[f] = true
 	}
 
@@ -61,21 +61,21 @@ func TestRandom(t *testing.T) {
 
 func TestPersistent(t *testing.T) {
 	var ht FooHamt
-	Assert(t).That(ht.string(), Equals("{}"))
+	Assert(t).That(ht.string(), Is("{}"))
 	h2 := ht.Mutable()
 	h2.Put(&Foo{12, "12"})
 	h2.Put(&Foo{34, "34"})
 	h2 = h2.Freeze()
-	Assert(t).That(ht.string(), Equals("{}"))
-	Assert(t).That(h2.string(), Equals("{12,34}"))
+	Assert(t).That(ht.string(), Is("{}"))
+	Assert(t).That(h2.string(), Is("{12,34}"))
 	h3 := h2.Mutable()
-	Assert(t).That(h3.string(), Equals("{12,34}"))
+	Assert(t).That(h3.string(), Is("{12,34}"))
 	h3.Put(&Foo{56, "56"})
 	h3.Put(&Foo{78, "78"})
 	h3 = h3.Freeze()
-	Assert(t).That(ht.string(), Equals("{}"))
-	Assert(t).That(h2.string(), Equals("{12,34}"))
-	Assert(t).That(h3.string(), Equals("{12,34,56,78}"))
+	Assert(t).That(ht.string(), Is("{}"))
+	Assert(t).That(h2.string(), Is("{12,34}"))
+	Assert(t).That(h3.string(), Is("{12,34,56,78}"))
 }
 
 func (ht FooHamt) string() string {

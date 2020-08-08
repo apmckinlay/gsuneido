@@ -36,7 +36,7 @@ func TestCheckStartStop(t *testing.T) {
 			ck.Commit(tn)
 		}
 	}
-	Assert(t).That(len(ck.trans), Equals(0))
+	Assert(t).That(len(ck.trans), Is(0))
 }
 
 func TestCheckLimit(t *testing.T) {

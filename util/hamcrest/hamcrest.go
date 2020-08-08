@@ -106,11 +106,11 @@ type Eq interface {
 	Equal(interface{}) bool
 }
 
-// Equals returns a Tester
+// Is returns a Tester
 // that checks that the actual value is equal to the expected value
 // float64's are compared as strings
 // otherwise uses reflect.DeepEqual
-func Equals(expected interface{}) Tester {
+func Is(expected interface{}) Tester {
 	return func(actual interface{}) string {
 		if isNil(expected) && isNil(actual) {
 			return ""
@@ -217,8 +217,8 @@ func show(x interface{}) string {
 	return s1 + " (" + s2 + ")"
 }
 
-// NotEquals returns a Tester for inequality using replect.DeepEqual
-func NotEquals(expected interface{}) Tester {
+// Isnt returns a Tester for inequality using replect.DeepEqual
+func Isnt(expected interface{}) Tester {
 	return func(actual interface{}) string {
 		if !reflect.DeepEqual(expected, actual) {
 			return ""

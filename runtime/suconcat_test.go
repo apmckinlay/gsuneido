@@ -16,7 +16,7 @@ func TestSuConcat(t *testing.T) {
 	a = a.Add("hello")
 	a = a.Add("world")
 	Assert(t).True(a.buf == b.buf) // still same shared buffer
-	Assert(t).That(ToStr(b), Equals(""))
+	Assert(t).That(ToStr(b), Is(""))
 	b = b.Add("foo")
 	Assert(t).True(a.buf != b.buf) // NOT the same shared buffer
 }

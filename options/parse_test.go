@@ -40,7 +40,7 @@ func TestParse(t *testing.T) {
 		}
 		return func(expected string) {
 			t.Helper()
-			Assert(t).That(s, Equals(expected))
+			Assert(t).That(s, Is(expected))
 		}
 	}
 	parse()("")
@@ -59,7 +59,7 @@ func TestParse(t *testing.T) {
 func TestEscapeArg(t *testing.T) {
 	test := func (s, expected string) {
 		t.Helper()
-		Assert(t).That(EscapeArg(s), Equals(expected))
+		Assert(t).That(EscapeArg(s), Is(expected))
 	}
 	test(`foo`, `foo`)
 	test(`foo bar`, `"foo bar"`)
