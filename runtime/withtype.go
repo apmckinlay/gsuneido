@@ -7,19 +7,15 @@ import (
 	"fmt"
 	"strings"
 
-	cm "github.com/apmckinlay/gsuneido/util/cmatch"
-
 	"github.com/apmckinlay/gsuneido/runtime/types"
 )
-
-var binary = cm.InRange(' ', '~').Or(cm.AnyOf("\r\n\t")).Negate()
 
 func WithType(x Value) string {
 	if x == nil {
 		return "nil"
 	}
 	var s string
-	if ss, ok := x.ToStr(); ok && binary.IndexIn(ss) != -1 {
+	if ss, ok := x.ToStr(); ok && needQuote(ss) {
 		s = fmt.Sprintf("%q", ss)
 	} else {
 		s = fmt.Sprint(x)
@@ -37,4 +33,13 @@ func WithType(x Value) string {
 		}
 	}
 	return s
+}
+
+func needQuote(s string) bool {
+	for _, c := range []byte(s) {
+		if (c < ' ' || '~' < c) && c != '\t' && c != '\r' && c != '\n' {
+			return true
+		}
+	}
+	return false
 }
