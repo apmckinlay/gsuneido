@@ -19,8 +19,8 @@ func init() {
 	name, ps := paramSplit(`Date(string=false, pattern=false,
 		year=false, month=false, day=false,
 		hour=false, minute=false, second=false, millisecond=false)`)
-	Global.Builtin(name, &SuDateGlobal{
-		SuBuiltin{dateCallClass, BuiltinParams{ParamSpec: *ps}}})
+	Global.Builtin(name, &SuDateGlobal{SuBuiltin{Fn: dateCallClass,
+		BuiltinParams: BuiltinParams{ParamSpec: *ps}}})
 }
 
 func dateCallClass(_ *Thread, args []Value) Value {
