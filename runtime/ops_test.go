@@ -25,8 +25,8 @@ func TestBool(t *testing.T) {
 	Assert(t).True(SuBool(false) == False)
 }
 func TestIndex(t *testing.T) {
-	Assert(t).That(Index(SuInt(123)), Equals(123))
-	Assert(t).That(Index(SuDnum{Dnum: dnum.FromInt(123)}), Equals(123))
+	Assert(t).That(ToIndex(SuInt(123)), Equals(123))
+	Assert(t).That(ToIndex(SuDnum{Dnum: dnum.FromInt(123)}), Equals(123))
 }
 
 var abc = SuStr("abc")

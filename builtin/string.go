@@ -340,7 +340,7 @@ func init() {
 		"Substr": method2("(i, n=false)", func(this, arg1, arg2 Value) Value {
 			s := ToStr(this)
 			sn := len(s)
-			i := Index(arg1)
+			i := ToIndex(arg1)
 			if i < 0 {
 				i += sn
 				if i < 0 {

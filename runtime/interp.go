@@ -313,12 +313,12 @@ loop:
 			t.Push(val)
 		case op.RangeTo:
 			j := ToInt(t.Pop())
-			i := Index(t.Pop())
+			i := ToIndex(t.Pop())
 			val := t.Pop()
 			t.Push(val.RangeTo(i, j))
 		case op.RangeLen:
 			n := ToInt(t.Pop())
-			i := Index(t.Pop())
+			i := ToIndex(t.Pop())
 			val := t.Pop()
 			t.Push(val.RangeLen(i, n))
 		case op.Is:

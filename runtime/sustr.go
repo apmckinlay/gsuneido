@@ -86,7 +86,7 @@ func (ss SuStr) Get(_ *Thread, key Value) Value {
 
 // strGet is used by SuStr and SuConcat .Get
 func strGet(s string, key Value) Value {
-	i := Index(key)
+	i := ToIndex(key)
 	n := len(s)
 	if i < -n || n <= i {
 		return EmptyStr

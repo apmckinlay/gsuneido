@@ -198,8 +198,8 @@ func Match(x Value, y regex.Pattern) SuBool {
 	return SuBool(y.Matches(ToStr(x)))
 }
 
-// Index is used by ranges and string[i]
-func Index(key Value) int {
+// ToIndex is used by ranges and string[i]
+func ToIndex(key Value) int {
 	if n, ok := key.IfInt(); ok {
 		return n
 	}
