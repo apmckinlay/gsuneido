@@ -163,15 +163,15 @@ func (DbmsLocal) Transactions() *SuObject {
 }
 
 func (dl DbmsLocal) Unuse(lib string) bool {
-	if lib == "stdlib" || !str.ListHas(dl.libraries, lib) {
+	if lib == "stdlib" || !str.List(dl.libraries).Has(lib) {
 		return false
 	}
-	dl.libraries = str.ListRemove(dl.libraries, lib)
+	dl.libraries = str.List(dl.libraries).Without(lib)
 	return true
 }
 
 func (dl DbmsLocal) Use(lib string) bool {
-	if str.ListHas(dl.libraries, lib) {
+	if str.List(dl.libraries).Has(lib) {
 		return false
 	}
 	//TODO check schema

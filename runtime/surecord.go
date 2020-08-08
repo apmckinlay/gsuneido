@@ -82,7 +82,7 @@ func deps(row Row, hdr *Header) map[string][]string {
 			deps := strings.Split(ToStr(row.Get(hdr, f)), ",")
 			f = f[:len(f)-5]
 			for _, d := range deps {
-				if !str.ListHas(dependents[d], f) {
+				if !str.List(dependents[d]).Has(f) {
 					dependents[d] = append(dependents[d], f)
 				}
 			}
@@ -554,7 +554,7 @@ func (r *SuRecord) addDependent(from, to string) {
 	if r.dependents == nil {
 		r.dependents = make(map[string][]string)
 	}
-	if !str.ListHas(r.dependents[to], from) {
+	if !str.List(r.dependents[to]).Has(from) {
 		r.trace("add dependency for", from, "uses", to)
 		r.dependents[to] = append(r.dependents[to], from)
 	}
@@ -721,7 +721,7 @@ func (r *SuRecord) ToRecord(t *Thread, hdr *Header) Record {
 	for k, v := range r.dependents {
 		for _, d := range v {
 			d_deps := d + "_deps"
-			if str.ListHas(fields, d_deps) {
+			if str.List(fields).Has(d_deps) {
 				deps[d_deps] = append(deps[d_deps], k)
 			}
 		}

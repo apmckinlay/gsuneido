@@ -52,3 +52,44 @@ func TestJoin(t *testing.T) {
 	Assert(t).That(Join("()", "one", "two", "three"), Equals("(onetwothree)"))
 	Assert(t).That(Join("[::]", "one", "two", "three"), Equals("[one::two::three]"))
 }
+
+func TestList_Has(t *testing.T) {
+	Assert(t).False(List{}.Has("xxx"))
+	list := List{"one", "two", "three"}
+	Assert(t).True(list.Has("one"))
+	Assert(t).True(list.Has("two"))
+	Assert(t).True(list.Has("three"))
+	Assert(t).False(list.Has("o"))
+	Assert(t).False(list.Has("one1"))
+	Assert(t).False(list.Has("four"))
+}
+
+func TestList_Index(t *testing.T) {
+	Assert(t).That(List{}.Index("five"), Equals(-1))
+	list := List{"one", "two", "three", "two", "four"}
+	Assert(t).That(list.Index("five"), Equals(-1))
+	Assert(t).That(list.Index("one"), Equals(0))
+	Assert(t).That(list.Index("two"), Equals(1))
+	Assert(t).That(list.Index("four"), Equals(4))
+}
+
+func TestList_Without(t *testing.T) {
+	Assert(t).That(List{}.Without("five"), Equals([]string{}))
+	list := List{"one", "two", "three", "two", "four"}
+	Assert(t).That(list.Without("five"), Equals([]string(list)))
+	Assert(t).That(list.Without("one"),
+		Equals([]string{"two", "three", "two", "four"}))
+	Assert(t).That(list.Without("two"),
+		Equals([]string{"one", "three", "four"}))
+	Assert(t).That(list.Without("four"),
+		Equals([]string{"one", "two", "three", "two"}))
+}
+
+func TestList_Reverse(t *testing.T) {
+	list := []string{}
+	List(list).Reverse()
+	Assert(t).That(list, Equals([]string{}))
+	list = []string{"one", "two", "three"}
+	List(list).Reverse()
+	Assert(t).That(list, Equals([]string{"three", "two", "one"}))
+}

@@ -3,10 +3,15 @@
 
 package str
 
-import "sort"
+// List is a type wrapper for a slice of strings to allow additional methods.
+type List []string
 
-// ListHas returns true if the list contains the string, false otherwise
-func ListHas(list []string, str string) bool {
+// Note: This wrapper approach doesn't fit well with operations
+// that change the length of the list.
+// That's why we have Without rather than Remove.
+
+// Has returns true if the list contains the string, false otherwise
+func (list List) Has(str string) bool {
 	for _, s := range list {
 		if s == str {
 			return true
@@ -15,36 +20,33 @@ func ListHas(list []string, str string) bool {
 	return false
 }
 
-// ListRemove returns the list with the string removed (if present)
-func ListRemove(list []string, str string) []string {
+// Index returns position of the first occurrence of the given string,
+// or -1 if not found.
+func (list List) Index(str string) int {
 	for i, s := range list {
 		if s == str {
-			copy(list[i:], list[i+1:])
-			list[len(list)-1] = "" // for gc
-			return list[:len(list)-1]
+			return i
 		}
 	}
-	return list
+	return -1
 }
 
-// ListReverse reverses the elements of a list of strings
-func ListReverse(list []string) []string {
-	// could generalize by passing in swap function, like rand.Shuffle
+// Without returns a new slice of strings
+// with any occurences of a given string removed,
+// maintaining the existing order.
+func (list List) Without(str string) []string {
+	dest := make([]string, 0, len(list))
+	for _, s := range list {
+		if s != str {
+			dest = append(dest, s)
+		}
+	}
+	return dest
+}
+
+// Reverse reverses the order of elements.
+func (list List) Reverse() {
 	for i, j := 0, len(list)-1; i < j; i, j = i+1, j-1 {
 		list[i], list[j] = list[j], list[i]
 	}
-	return list
-}
-
-// ListUnique
-func ListUnique(in []string) []string {
-	sort.Strings(in)
-	j := 0
-	for i := 1; i < len(in); i++ {
-		if in[j] != in[i] {
-			j++
-			in[j] = in[i]
-		}
-	}
-	return in[:j+1]
 }

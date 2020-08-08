@@ -71,7 +71,7 @@ func TestUnevenSplit(t *testing.T) {
 	test()
 	sort.Strings(data[:])
 	test()
-	str.ListReverse(data[:])
+	str.List(data[:]).Reverse()
 	test()
 }
 

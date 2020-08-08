@@ -57,7 +57,7 @@ func (hdr *Header) EnsureMap() {
 func (hdr *Header) Rules() []string {
 	rules := []string{}
 	for _, col := range hdr.Columns {
-		if !str.ListHas(hdr.Fields[0], col) { //TODO handle multiple fields
+		if !str.List(hdr.Fields[0]).Has(col) { //TODO handle multiple fields
 			rules = append(rules, col)
 		}
 	}

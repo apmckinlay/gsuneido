@@ -59,7 +59,7 @@ func TestFnodeInsert(*testing.T) {
 		}
 		verify.That(fn.check() == len(data))
 		// reverse
-		str.ListReverse(data)
+		str.List(data).Reverse()
 		fn = nil
 		for i, d := range data {
 			fn, _ = fn.insert(d, uint64(i), get)
