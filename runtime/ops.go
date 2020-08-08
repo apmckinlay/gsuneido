@@ -21,31 +21,31 @@ var (
 	// EmptyStr defined in sustr.go
 )
 
-func Is(x Value, y Value) Value {
+func OpIs(x Value, y Value) Value {
 	return SuBool(x == y || x.Equal(y))
 }
 
-func Isnt(x Value, y Value) Value {
+func OpIsnt(x Value, y Value) Value {
 	return SuBool(!x.Equal(y))
 }
 
-func Lt(x Value, y Value) Value {
+func OpLt(x Value, y Value) Value {
 	return SuBool(x.Compare(y) < 0)
 }
 
-func Lte(x Value, y Value) Value {
+func OpLte(x Value, y Value) Value {
 	return SuBool(x.Compare(y) <= 0)
 }
 
-func Gt(x Value, y Value) Value {
+func OpGt(x Value, y Value) Value {
 	return SuBool(x.Compare(y) > 0)
 }
 
-func Gte(x Value, y Value) Value {
+func OpGte(x Value, y Value) Value {
 	return SuBool(x.Compare(y) >= 0)
 }
 
-func Add(x Value, y Value) Value {
+func OpAdd(x Value, y Value) Value {
 	if xi, xok := SuIntToInt(x); xok {
 		if yi, yok := SuIntToInt(y); yok {
 			return IntVal(xi + yi)
@@ -54,7 +54,7 @@ func Add(x Value, y Value) Value {
 	return SuDnum{Dnum: dnum.Add(ToDnum(x), ToDnum(y))}
 }
 
-func Sub(x Value, y Value) Value {
+func OpSub(x Value, y Value) Value {
 	if xi, xok := SuIntToInt(x); xok {
 		if yi, yok := SuIntToInt(y); yok {
 			return IntVal(xi - yi)
@@ -63,7 +63,7 @@ func Sub(x Value, y Value) Value {
 	return SuDnum{Dnum: dnum.Sub(ToDnum(x), ToDnum(y))}
 }
 
-func Mul(x Value, y Value) Value {
+func OpMul(x Value, y Value) Value {
 	if xi, xok := SuIntToInt(x); xok {
 		if yi, yok := SuIntToInt(y); yok {
 			return IntVal(xi * yi)
@@ -72,7 +72,7 @@ func Mul(x Value, y Value) Value {
 	return SuDnum{Dnum: dnum.Mul(ToDnum(x), ToDnum(y))}
 }
 
-func Div(x Value, y Value) Value {
+func OpDiv(x Value, y Value) Value {
 	if yi, yok := SuIntToInt(y); yok && yi != 0 {
 		if xi, xok := SuIntToInt(x); xok {
 			if xi%yi == 0 {
@@ -83,37 +83,37 @@ func Div(x Value, y Value) Value {
 	return SuDnum{Dnum: dnum.Div(ToDnum(x), ToDnum(y))}
 }
 
-func Mod(x Value, y Value) Value {
+func OpMod(x Value, y Value) Value {
 	return IntVal(ToInt(x) % ToInt(y))
 }
 
-func LeftShift(x Value, y Value) Value {
+func OpLeftShift(x Value, y Value) Value {
 	result := int32(ToInt(x)) << ToInt(y)
 	return IntVal(int(result))
 }
 
-func RightShift(x Value, y Value) Value {
+func OpRightShift(x Value, y Value) Value {
 	result := uint32(ToInt(x)) >> ToInt(y)
 	return IntVal(int(result))
 }
 
-func BitOr(x Value, y Value) Value {
+func OpBitOr(x Value, y Value) Value {
 	return IntVal(ToInt(x) | ToInt(y))
 }
 
-func BitAnd(x Value, y Value) Value {
+func OpBitAnd(x Value, y Value) Value {
 	return IntVal(ToInt(x) & ToInt(y))
 }
 
-func BitXor(x Value, y Value) Value {
+func OpBitXor(x Value, y Value) Value {
 	return IntVal(ToInt(x) ^ ToInt(y))
 }
 
-func BitNot(x Value) Value {
+func OpBitNot(x Value) Value {
 	return IntVal(^ToInt(x))
 }
 
-func Not(x Value) Value {
+func OpNot(x Value) Value {
 	if x == True {
 		return False
 	} else if x == False {
@@ -122,7 +122,7 @@ func Not(x Value) Value {
 	panic("not requires boolean")
 }
 
-func Bool(x Value) bool {
+func OpBool(x Value) bool {
 	switch x {
 	case True:
 		return true
@@ -133,21 +133,21 @@ func Bool(x Value) bool {
 	}
 }
 
-func UnaryPlus(x Value) Value {
+func OpUnaryPlus(x Value) Value {
 	if _, ok := x.(*smi); ok {
 		return x
 	}
 	return SuDnum{Dnum: ToDnum(x)}
 }
 
-func UnaryMinus(x Value) Value {
+func OpUnaryMinus(x Value) Value {
 	if xi, ok := SuIntToInt(x); ok {
 		return IntVal(-xi)
 	}
 	return SuDnum{Dnum: ToDnum(x).Neg()}
 }
 
-func Cat(t *Thread, x, y Value) Value {
+func OpCat(t *Thread, x, y Value) Value {
 	if ssx, ok := x.(SuStr); ok {
 		if ssy, ok := y.(SuStr); ok {
 			return cat2(string(ssx), string(ssy))
@@ -194,7 +194,7 @@ func catToStr(t *Thread, v Value) string {
 	return AsStr(v)
 }
 
-func Match(x Value, y regex.Pattern) SuBool {
+func OpMatch(x Value, y regex.Pattern) SuBool {
 	return SuBool(y.Matches(ToStr(x)))
 }
 

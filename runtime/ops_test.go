@@ -12,11 +12,11 @@ import (
 )
 
 func TestDiv(t *testing.T) {
-	q := Div(SuInt(999), SuInt(3))
+	q := OpDiv(SuInt(999), SuInt(3))
 	xi, xok := SuIntToInt(q)
 	Assert(t).That(xok, Equals(true))
 	Assert(t).That(xi, Equals(333))
-	q = Div(SuInt(1), SuInt(3))
+	q = OpDiv(SuInt(1), SuInt(3))
 	_ = q.(SuDnum)
 }
 
@@ -36,7 +36,7 @@ func BenchmarkCat(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		s := EmptyStr
 		for j := 0; j < 10000; j++ {
-			s = Cat(nil, s, abc)
+			s = OpCat(nil, s, abc)
 		}
 		G = s
 	}

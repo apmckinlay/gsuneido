@@ -323,73 +323,73 @@ loop:
 			t.Push(val.RangeLen(i, n))
 		case op.Is:
 			t.sp--
-			t.stack[t.sp-1] = Is(t.stack[t.sp-1], t.stack[t.sp])
+			t.stack[t.sp-1] = OpIs(t.stack[t.sp-1], t.stack[t.sp])
 		case op.Isnt:
 			t.sp--
-			t.stack[t.sp-1] = Isnt(t.stack[t.sp-1], t.stack[t.sp])
+			t.stack[t.sp-1] = OpIsnt(t.stack[t.sp-1], t.stack[t.sp])
 		case op.Match:
 			t.sp--
 			pat := t.RxCache.Get(ToStr(t.stack[t.sp]))
 			s := t.stack[t.sp-1]
-			t.stack[t.sp-1] = Match(s, pat)
+			t.stack[t.sp-1] = OpMatch(s, pat)
 		case op.MatchNot:
 			t.sp--
 			pat := t.RxCache.Get(ToStr(t.stack[t.sp]))
 			s := t.stack[t.sp-1]
-			t.stack[t.sp-1] = Match(s, pat).Not()
+			t.stack[t.sp-1] = OpMatch(s, pat).Not()
 		case op.Lt:
 			t.sp--
-			t.stack[t.sp-1] = Lt(t.stack[t.sp-1], t.stack[t.sp])
+			t.stack[t.sp-1] = OpLt(t.stack[t.sp-1], t.stack[t.sp])
 		case op.Lte:
 			t.sp--
-			t.stack[t.sp-1] = Lte(t.stack[t.sp-1], t.stack[t.sp])
+			t.stack[t.sp-1] = OpLte(t.stack[t.sp-1], t.stack[t.sp])
 		case op.Gt:
 			t.sp--
-			t.stack[t.sp-1] = Gt(t.stack[t.sp-1], t.stack[t.sp])
+			t.stack[t.sp-1] = OpGt(t.stack[t.sp-1], t.stack[t.sp])
 		case op.Gte:
 			t.sp--
-			t.stack[t.sp-1] = Gte(t.stack[t.sp-1], t.stack[t.sp])
+			t.stack[t.sp-1] = OpGte(t.stack[t.sp-1], t.stack[t.sp])
 		case op.Add:
 			t.sp--
-			t.stack[t.sp-1] = Add(t.stack[t.sp-1], t.stack[t.sp])
+			t.stack[t.sp-1] = OpAdd(t.stack[t.sp-1], t.stack[t.sp])
 		case op.Sub:
 			t.sp--
-			t.stack[t.sp-1] = Sub(t.stack[t.sp-1], t.stack[t.sp])
+			t.stack[t.sp-1] = OpSub(t.stack[t.sp-1], t.stack[t.sp])
 		case op.Cat:
 			t.sp--
-			t.stack[t.sp-1] = Cat(t, t.stack[t.sp-1], t.stack[t.sp])
+			t.stack[t.sp-1] = OpCat(t, t.stack[t.sp-1], t.stack[t.sp])
 		case op.Mul:
 			t.sp--
-			t.stack[t.sp-1] = Mul(t.stack[t.sp-1], t.stack[t.sp])
+			t.stack[t.sp-1] = OpMul(t.stack[t.sp-1], t.stack[t.sp])
 		case op.Div:
 			t.sp--
-			t.stack[t.sp-1] = Div(t.stack[t.sp-1], t.stack[t.sp])
+			t.stack[t.sp-1] = OpDiv(t.stack[t.sp-1], t.stack[t.sp])
 		case op.Mod:
 			t.sp--
-			t.stack[t.sp-1] = Mod(t.stack[t.sp-1], t.stack[t.sp])
+			t.stack[t.sp-1] = OpMod(t.stack[t.sp-1], t.stack[t.sp])
 		case op.LeftShift:
 			t.sp--
-			t.stack[t.sp-1] = LeftShift(t.stack[t.sp-1], t.stack[t.sp])
+			t.stack[t.sp-1] = OpLeftShift(t.stack[t.sp-1], t.stack[t.sp])
 		case op.RightShift:
 			t.sp--
-			t.stack[t.sp-1] = RightShift(t.stack[t.sp-1], t.stack[t.sp])
+			t.stack[t.sp-1] = OpRightShift(t.stack[t.sp-1], t.stack[t.sp])
 		case op.BitOr:
 			t.sp--
-			t.stack[t.sp-1] = BitOr(t.stack[t.sp-1], t.stack[t.sp])
+			t.stack[t.sp-1] = OpBitOr(t.stack[t.sp-1], t.stack[t.sp])
 		case op.BitAnd:
 			t.sp--
-			t.stack[t.sp-1] = BitAnd(t.stack[t.sp-1], t.stack[t.sp])
+			t.stack[t.sp-1] = OpBitAnd(t.stack[t.sp-1], t.stack[t.sp])
 		case op.BitXor:
 			t.sp--
-			t.stack[t.sp-1] = BitXor(t.stack[t.sp-1], t.stack[t.sp])
+			t.stack[t.sp-1] = OpBitXor(t.stack[t.sp-1], t.stack[t.sp])
 		case op.BitNot:
-			t.stack[t.sp-1] = BitNot(t.stack[t.sp-1])
+			t.stack[t.sp-1] = OpBitNot(t.stack[t.sp-1])
 		case op.Not:
-			t.stack[t.sp-1] = Not(t.stack[t.sp-1])
+			t.stack[t.sp-1] = OpNot(t.stack[t.sp-1])
 		case op.UnaryPlus:
-			t.stack[t.sp-1] = UnaryPlus(t.stack[t.sp-1])
+			t.stack[t.sp-1] = OpUnaryPlus(t.stack[t.sp-1])
 		case op.UnaryMinus:
-			t.stack[t.sp-1] = UnaryMinus(t.stack[t.sp-1])
+			t.stack[t.sp-1] = OpUnaryMinus(t.stack[t.sp-1])
 		case op.Bool:
 			t.topbool()
 		case op.Jump:

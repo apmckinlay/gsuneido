@@ -54,7 +54,7 @@ func (p *parser) constant() Value {
 		return p.number()
 	case tok.Sub:
 		p.next()
-		return UnaryMinus(p.number())
+		return OpUnaryMinus(p.number())
 	case tok.LParen, tok.LCurly, tok.LBracket:
 		return p.object()
 	case tok.Hash:

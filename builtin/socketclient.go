@@ -30,7 +30,7 @@ var _ = builtin("SocketClient(ipaddress, port, timeout=60, timeoutConnect=0, blo
 		ipaddr += ":" + strconv.Itoa(port)
 		var c net.Conn
 		var e error
-		toc := time.Duration(ToInt(Mul(args[3], SuInt(1000)))) * 1000 * 1000
+		toc := time.Duration(ToInt(OpMul(args[3], SuInt(1000)))) * 1000 * 1000
 		if toc <= 0 {
 			c, e = net.Dial("tcp", ipaddr)
 		} else {

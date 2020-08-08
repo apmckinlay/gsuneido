@@ -70,9 +70,9 @@ func jitfn(th *Thread) Value {
 	th.stack[0] = Zero // sum
 	th.stack[1] = Zero // i
 	for {
-		th.stack[0] = Add(th.stack[0], th.stack[1]) // sum += i
-		th.stack[1] = Add(th.stack[1], One)         // ++i
-		if Lt(th.stack[1], hundred) != True {
+		th.stack[0] = OpAdd(th.stack[0], th.stack[1]) // sum += i
+		th.stack[1] = OpAdd(th.stack[1], One)         // ++i
+		if OpLt(th.stack[1], hundred) != True {
 			break
 		}
 	}
@@ -92,9 +92,9 @@ func transpilefn() Value {
 	sum := Zero
 	i := Zero
 	for {
-		sum = Add(sum, i) // sum += i
-		i = Add(i, One)   // ++i
-		if Lt(i, hundred) != True {
+		sum = OpAdd(sum, i) // sum += i
+		i = OpAdd(i, One)   // ++i
+		if OpLt(i, hundred) != True {
 			break
 		}
 	}

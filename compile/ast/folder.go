@@ -28,13 +28,13 @@ func (f Folder) foldUnary(u *Unary) Expr {
 		val := c.Val
 		switch u.Tok {
 		case tok.Add:
-			val = UnaryPlus(val)
+			val = OpUnaryPlus(val)
 		case tok.Sub:
-			val = UnaryMinus(val)
+			val = OpUnaryMinus(val)
 		case tok.Not:
-			val = Not(val)
+			val = OpNot(val)
 		case tok.BitNot:
-			val = BitNot(val)
+			val = OpBitNot(val)
 		case tok.LParen:
 			break
 		default:
@@ -62,29 +62,29 @@ func (f Folder) foldBinary(b *Binary) Expr {
 	val2 := c2.Val
 	switch b.Tok {
 	case tok.Is:
-		val = Is(val, val2)
+		val = OpIs(val, val2)
 	case tok.Isnt:
-		val = Isnt(val, val2)
+		val = OpIsnt(val, val2)
 	case tok.Match:
 		pat := regex.Compile(ToStr(val2))
-		val = Match(val, pat)
+		val = OpMatch(val, pat)
 	case tok.MatchNot:
 		pat := regex.Compile(ToStr(val2))
-		val = Not(Match(val, pat))
+		val = OpNot(OpMatch(val, pat))
 	case tok.Lt:
-		val = Lt(val, val2)
+		val = OpLt(val, val2)
 	case tok.Lte:
-		val = Lte(val, val2)
+		val = OpLte(val, val2)
 	case tok.Gt:
-		val = Gt(val, val2)
+		val = OpGt(val, val2)
 	case tok.Gte:
-		val = Gte(val, val2)
+		val = OpGte(val, val2)
 	case tok.Mod:
-		val = Mod(val, val2)
+		val = OpMod(val, val2)
 	case tok.LShift:
-		val = LeftShift(val, val2)
+		val = OpLeftShift(val, val2)
 	case tok.RShift:
-		val = RightShift(val, val2)
+		val = OpRightShift(val, val2)
 	default:
 		panic("folder unexpected binary operator " + b.Tok.String())
 	}
@@ -140,15 +140,15 @@ func (f Folder) foldNary(n *Nary) Expr {
 	exprs := n.Exprs
 	switch n.Tok {
 	case tok.Add: // includes Sub
-		exprs = commutative(exprs, Add, nil)
+		exprs = commutative(exprs, OpAdd, nil)
 	case tok.Mul: // includes Div
 		exprs = f.foldMul(exprs)
 	case tok.BitOr:
-		exprs = commutative(exprs, BitOr, allones)
+		exprs = commutative(exprs, OpBitOr, allones)
 	case tok.BitAnd:
-		exprs = commutative(exprs, BitAnd, Zero)
+		exprs = commutative(exprs, OpBitAnd, Zero)
 	case tok.BitXor:
-		exprs = commutative(exprs, BitXor, nil)
+		exprs = commutative(exprs, OpBitXor, nil)
 	case tok.Or:
 		exprs = commutative(exprs, or, True)
 	case tok.And:
@@ -166,11 +166,11 @@ func (f Folder) foldNary(n *Nary) Expr {
 }
 
 func or(x, y Value) Value {
-	return SuBool(Bool(x) || Bool(y))
+	return SuBool(OpBool(x) || OpBool(y))
 }
 
 func and(x, y Value) Value {
-	return SuBool(Bool(x) && Bool(y))
+	return SuBool(OpBool(x) && OpBool(y))
 }
 
 type bopfn func(Value, Value) Value
@@ -208,9 +208,9 @@ func (f Folder) foldMul(exprs []Expr) []Expr {
 	dst := 0
 	for _, e := range exprs {
 		if ud := unaryDivConst(e); ud != nil {
-			div = Mul(div, ud)
+			div = OpMul(div, ud)
 		} else if c, ok := e.(*Constant); ok {
-			mul = Mul(mul, c.Val)
+			mul = OpMul(mul, c.Val)
 		} else {
 			exprs[dst] = e
 			dst++
@@ -219,7 +219,7 @@ func (f Folder) foldMul(exprs []Expr) []Expr {
 	exprs = exprs[:dst]
 
 	if !div.Equal(One) && (!mul.Equal(One) || len(exprs) == 0) {
-		mul = Div(mul, div)
+		mul = OpDiv(mul, div)
 		div = One
 	}
 	if div.Equal(One) {

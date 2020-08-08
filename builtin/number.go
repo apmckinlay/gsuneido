@@ -108,7 +108,7 @@ func init() {
 				}
 				x := this
 				for ; p > 1; p-- {
-					x = Mul(x, this)
+					x = OpMul(x, this)
 				}
 				return x
 			}
