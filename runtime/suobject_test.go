@@ -192,7 +192,7 @@ func TestSuObjectPack(t *testing.T) {
 		Assert(t).That(Unpack(s), Is(ob))
 	}
 	check()
-	ob.Add(SuStr(1))
+	ob.Add(SuInt(1))
 	check()
 	ob.Add(SuInt(2))
 	check()
