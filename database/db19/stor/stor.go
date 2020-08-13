@@ -95,6 +95,10 @@ func (s *Stor) offsetToChunk(offset Offset) int {
 	return int(offset / s.chunksize)
 }
 
+func (s *Stor) Size() uint64 {
+	return atomic.LoadUint64(&s.size)
+}
+
 // LastOffset searches backwards for a given byte slice
 // and returns the offset, or 0 if not found
 func (s *Stor) LastOffset(b []byte) uint64 {
