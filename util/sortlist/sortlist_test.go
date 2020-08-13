@@ -9,7 +9,7 @@ import (
 	"sort"
 	"testing"
 
-	. "github.com/apmckinlay/gsuneido/util/hamcrest"
+	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/ints"
 	"github.com/apmckinlay/gsuneido/util/verify"
 )
@@ -60,12 +60,13 @@ func (li *List) ckblocks() {
 }
 
 func TestNextPow2(t *testing.T) {
-	Assert(t).That(nextPow2(0), Is(0))
-	Assert(t).That(nextPow2(1), Is(1))
-	Assert(t).That(nextPow2(2), Is(2))
-	Assert(t).That(nextPow2(3), Is(4))
-	Assert(t).That(nextPow2(100), Is(128))
-	Assert(t).That(nextPow2(1000), Is(1024))
+	assert := assert.T(t).This
+	assert(nextPow2(0)).Is(0)
+	assert(nextPow2(1)).Is(1)
+	assert(nextPow2(2)).Is(2)
+	assert(nextPow2(3)).Is(4)
+	assert(nextPow2(100)).Is(128)
+	assert(nextPow2(1000)).Is(1024)
 }
 
 //-------------------------------------------------------------------

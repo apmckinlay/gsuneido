@@ -7,29 +7,29 @@ import (
 	"testing"
 	"unicode"
 
-	. "github.com/apmckinlay/gsuneido/util/hamcrest"
+	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
-func TestIsLower(t *testing.T) {
+func TestIsLower(*testing.T) {
 	for i := 0; i < 256; i++ {
-		Assert(t).That(IsLower(byte(i)), Is('a' <= i && i <= 'z'))
+		assert.This(IsLower(byte(i))).Is('a' <= i && i <= 'z')
 	}
 }
 
-func TestIsUpper(t *testing.T) {
+func TestIsUpper(*testing.T) {
 	for i := 0; i < 256; i++ {
-		Assert(t).That(IsUpper(byte(i)), Is('A' <= i && i <= 'Z'))
+		assert.This(IsUpper(byte(i))).Is('A' <= i && i <= 'Z')
 	}
 }
 
-func TestToLower(t *testing.T) {
+func TestToLower(*testing.T) {
 	for i := 0; i < 128; i++ {
-		Assert(t).That(ToLower(byte(i)), Is(byte(unicode.ToLower(rune(i)))))
+		assert.This(ToLower(byte(i))).Is(byte(unicode.ToLower(rune(i))))
 	}
 }
 
-func TestToUpper(t *testing.T) {
+func TestToUpper(*testing.T) {
 	for i := 0; i < 128; i++ {
-		Assert(t).That(ToUpper(byte(i)), Is(byte(unicode.ToUpper(rune(i)))))
+		assert.This(ToUpper(byte(i))).Is(byte(unicode.ToUpper(rune(i))))
 	}
 }
