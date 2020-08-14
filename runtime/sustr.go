@@ -216,7 +216,9 @@ func (si *stringIter) Next() Value {
 	if si.i > len(si.s) {
 		return nil
 	}
-	return SuStr(si.s[si.i-1])
+	// can't use SuStr(si.s[si.i-1])
+	// because > 127 turns into two byte string
+	return SuStr(si.s[si.i-1:si.i])
 }
 
 func (si *stringIter) Dup() Iter {
