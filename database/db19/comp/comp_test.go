@@ -9,43 +9,38 @@ import (
 	"testing"
 
 	. "github.com/apmckinlay/gsuneido/runtime"
-	. "github.com/apmckinlay/gsuneido/util/hamcrest"
+	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
 func TestKey(t *testing.T) {
-	Assert(t).That(Key(mkrec("a", "b"), []int{}), Is(""))
-	Assert(t).That(Key(mkrec("a", "b"), []int{0}), Is("a"))
-	Assert(t).That(Key(mkrec("a", "b"), []int{1}), Is("b"))
-	Assert(t).That(Key(mkrec("a", "b"), []int{0, 1}), Is("a\x00\x00b"))
-	Assert(t).That(Key(mkrec("a", "b"), []int{1, 0}), Is("b\x00\x00a"))
+	assert := assert.T(t).This
+	assert(Key(mkrec("a", "b"), []int{})).Is("")
+	assert(Key(mkrec("a", "b"), []int{0})).Is("a")
+	assert(Key(mkrec("a", "b"), []int{1})).Is("b")
+	assert(Key(mkrec("a", "b"), []int{0, 1})).Is("a\x00\x00b")
+	assert(Key(mkrec("a", "b"), []int{1, 0})).Is("b\x00\x00a")
 
 	// omit trailing empty fields
 	fields := []int{0, 1, 2}
-	Assert(t).That(Key(mkrec("a", "b", "c"), fields),
-		Is("a\x00\x00b\x00\x00c"))
-	Assert(t).That(Key(mkrec("a", "", "c"), fields),
-		Is("a\x00\x00\x00\x00c"))
-	Assert(t).That(Key(mkrec("", "", "c"), fields),
-		Is("\x00\x00\x00\x00c"))
-	Assert(t).That(Key(mkrec("a", "b", ""), fields),
-		Is("a\x00\x00b"))
-	Assert(t).That(Key(mkrec("a", "", ""), fields),
-		Is("a"))
-	Assert(t).That(Key(mkrec("", "", ""), fields),
-		Is(""))
+	assert(Key(mkrec("a", "b", "c"), fields)).Is("a\x00\x00b\x00\x00c")
+	assert(Key(mkrec("a", "", "c"), fields)).Is("a\x00\x00\x00\x00c")
+	assert(Key(mkrec("", "", "c"), fields)).Is("\x00\x00\x00\x00c")
+	assert(Key(mkrec("a", "b", ""), fields)).Is("a\x00\x00b")
+	assert(Key(mkrec("a", "", ""), fields)).Is("a")
+	assert(Key(mkrec("", "", ""), fields)).Is("")
 
 	// no escape for single field
-	Assert(t).That(Key(mkrec("a\x00b"), []int{0}), Is("a\x00b"))
+	assert(Key(mkrec("a\x00b"), []int{0})).Is("a\x00b")
 
 	// escaping
 	first := []int{0, 1}
-	Assert(t).That(Key(mkrec("ab"), first), Is("ab"))
-	Assert(t).That(Key(mkrec("a\x00b"), first), Is("a\x00\x01b"))
-	Assert(t).That(Key(mkrec("\x00ab"), first), Is("\x00\x01ab"))
-	Assert(t).That(Key(mkrec("a\x00\x00b"), first), Is("a\x00\x01\x00\x01b"))
-	Assert(t).That(Key(mkrec("a\x00\x01b"), first), Is("a\x00\x01\x01b"))
-	Assert(t).That(Key(mkrec("ab\x00"), first), Is("ab\x00\x01"))
-	Assert(t).That(Key(mkrec("ab\x00\x00"), first), Is("ab\x00\x01\x00\x01"))
+	assert(Key(mkrec("ab"), first)).Is("ab")
+	assert(Key(mkrec("a\x00b"), first)).Is("a\x00\x01b")
+	assert(Key(mkrec("\x00ab"), first)).Is("\x00\x01ab")
+	assert(Key(mkrec("a\x00\x00b"), first)).Is("a\x00\x01\x00\x01b")
+	assert(Key(mkrec("a\x00\x01b"), first)).Is("a\x00\x01\x01b")
+	assert(Key(mkrec("ab\x00"), first)).Is("ab\x00\x01")
+	assert(Key(mkrec("ab\x00\x00"), first)).Is("ab\x00\x01\x00\x01")
 }
 
 func mkrec(args ...string) Record {
@@ -59,6 +54,7 @@ func mkrec(args ...string) Record {
 const m = 3
 
 func TestRandom(t *testing.T) {
+	assert := assert.T(t).This
 	var n = 100000
 	if testing.Short() {
 		n = 10000
@@ -69,8 +65,8 @@ func TestRandom(t *testing.T) {
 		y := gen()
 		yenc := Key(y, fields)
 		xenc := Key(x, fields)
-		Assert(t).That(xenc < yenc, Is(lt(x, y)))
-		Assert(t).That(strings.Compare(xenc, yenc), Is(Compare(x, y, fields)))
+		assert(xenc < yenc).Is(lt(x, y))
+		assert(strings.Compare(xenc, yenc)).Is(Compare(x, y, fields))
 	}
 }
 
