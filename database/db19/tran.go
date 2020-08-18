@@ -64,7 +64,7 @@ func (t *UpdateTran) Output(table string, rec rt.Record) {
 	copy(buf, []byte(rec))
 	keys := make([]string, len(ts.Indexes))
 	for i, ix := range ts.Indexes {
-		keys[i] = comp.Key(rec, ix.Fields, ix.Mode == 'u')
+		keys[i] = comp.Key(rec, ix.Fields) //TODO must be unique
 		ti.Indexes[i].Insert(keys[i], off)
 	}
 	t.ck(ck.Write(t.ct, table, keys))

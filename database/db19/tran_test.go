@@ -112,7 +112,7 @@ func createDb() *stor.Stor {
 	info := meta.InfoHamt{}.Mutable()
 	info.Put(&meta.Info{
 		Table:   "mytable",
-		Indexes: []*btree.Overlay{btree.NewOverlay(store).Save()},
+		Indexes: []*btree.Overlay{btree.NewOverlay(store, nil).Save()},
 	})
 	baseInfo := meta.NewInfoPacked(store, info.Write(store))
 

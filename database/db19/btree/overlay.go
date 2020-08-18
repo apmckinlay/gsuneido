@@ -23,8 +23,8 @@ type Overlay struct {
 	mb *mbtree
 }
 
-func NewOverlay(st *stor.Stor) *Overlay {
-	return &Overlay{under: []tree{CreateFbtree(st)}}
+func NewOverlay(store *stor.Stor, ixspec interface{}) *Overlay {
+	return &Overlay{under: []tree{CreateFbtree(store, ixspec)}}
 }
 
 // var Under [8]int64

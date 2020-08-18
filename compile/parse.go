@@ -15,13 +15,14 @@ import (
 
 func NewParser(src string) *parser {
 	lxr := NewLexer(src)
-	p := &parser{lxr: lxr, Factory: ast.Folder{Factory: ast.Builder{}},
+	factory := ast.Folder{Factory: ast.Builder{}}
+	p := &parser{parserBase: parserBase{lxr: lxr, Factory: factory},
 		funcInfo: funcInfo{final: map[string]int{}}}
 	p.next()
 	return p
 }
 
-type parser struct {
+type parserBase struct {
 	lxr *Lexer
 
 	// Item is the current lexical token etc.
@@ -35,6 +36,10 @@ type parser struct {
 
 	// newline is true if the current token was preceeded by a newline
 	newline bool
+}
+
+type parser struct {
+	parserBase
 
 	// expectingCompound is used to differentiate control statement body vs. block
 	// e.g. if expr {...}
@@ -80,35 +85,20 @@ type funcInfo struct {
 // disqualified is a special value for final
 const disqualified = -1
 
-/*
-eval* methods are helpers so you can match/next after evaluating something
-match* methods verify that the current is what is expected and then advance
-next* methods just advance
-*/
 
-func (p *parser) evalMatch(result ast.Node, token tok.Token) ast.Node {
-	p.match(token)
-	return result
-}
-
-func (p *parser) evalNext(result ast.Node) ast.Node {
-	p.next()
-	return result
-}
-
-func (p *parser) match(token tok.Token) {
+func (p *parserBase) match(token tok.Token) {
 	p.mustMatch(token)
 	p.next()
 }
 
-func (p *parser) matchIdent() {
+func (p *parserBase) matchIdent() {
 	if !p.Token.IsIdent() {
 		p.error("expecting identifier")
 	}
 	p.next()
 }
 
-func (p *parser) matchIf(token tok.Token) bool {
+func (p *parserBase) matchIf(token tok.Token) bool {
 	if token == p.Token {
 		p.next()
 		return true
@@ -116,14 +106,14 @@ func (p *parser) matchIf(token tok.Token) bool {
 	return false
 }
 
-func (p *parser) mustMatch(token tok.Token) {
+func (p *parserBase) mustMatch(token tok.Token) {
 	if token != p.Token {
 		p.error("expecting ", token)
 	}
 }
 
 // next advances to the next token, setting p.Item
-func (p *parser) next() {
+func (p *parserBase) next() {
 	p.newline = false
 	for {
 		p.Item = p.lxr.Next()
@@ -140,12 +130,12 @@ func (p *parser) next() {
 // error panics with "syntax error at " + position
 // It claims to return string so it can be called inside panic
 // (so compiler knows we don't return)
-func (p *parser) error(args ...interface{}) string {
+func (p *parserBase) error(args ...interface{}) string {
 	p.errorAt(p.Item.Pos, args...)
 	return ""
 }
 
-func (p *parser) errorAt(pos int32, args ...interface{}) string {
+func (p *parserBase) errorAt(pos int32, args ...interface{}) string {
 	panic("syntax error @" + strconv.Itoa(int(pos)) + " " + fmt.Sprint(args...))
 }
 

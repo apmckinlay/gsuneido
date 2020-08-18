@@ -11,7 +11,6 @@ import (
 
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/ints"
-	"github.com/apmckinlay/gsuneido/util/verify"
 )
 
 func TestBuilder(*testing.T) {
@@ -25,12 +24,23 @@ func TestBuilder(*testing.T) {
 }
 
 func test(nitems int) {
-	bldr := NewBuilder(ints.CompareUint64)
+	bldr := NewSorting(ints.CompareUint64)
 	for j := 0; j < nitems; j++ {
 		bldr.Add(randint())
 	}
-	list := bldr.List()
-	list.ckblocks()
+	list := bldr.Finish()
+	list.ckblocks(nitems)
+	bldr.ckblocks(nitems)
+
+	bldr = NewUnsorted()
+	for j := 1; j <= nitems; j++ {
+		bldr.Add(uint64(j))
+	}
+	list = bldr.Finish()
+	list.ckblocks(nitems)
+	bldr.ckblocks(nitems)
+
+	bldr.Sort(func(x, y uint64) int { return ints.CompareUint64(y, x) })
 }
 
 var N int
@@ -43,7 +53,8 @@ func randint() uint64 {
 	return 1 + uint64(rand.Int31()) // +1 so no zeros
 }
 
-func (li *List) ckblocks() {
+func (li *List) ckblocks(nitems int) {
+	n := 0
 	prev := uint64(0)
 	for bi, b := range li.blocks {
 		for i, x := range b {
@@ -53,10 +64,27 @@ func (li *List) ckblocks() {
 			if x < prev {
 				fmt.Println("ck", bi, i, "prev", prev, "cur", x)
 			}
-			verify.That(prev <= x)
+			assert.That(prev <= x)
 			prev = x
+			n++
 		}
 	}
+	assert.This(n).Is(nitems)
+}
+
+func (b *Builder) ckblocks(nitems int) {
+	n := 0
+	prev := uint64(0)
+	iter := b.Iter()
+	for x := iter(); x != 0; x = iter() {
+		if x < prev {
+			fmt.Println("ck", n, "prev", prev, "cur", x)
+		}
+		assert.That(prev <= x)
+		prev = x
+		n++
+	}
+	assert.This(n).Is(nitems)
 }
 
 func TestNextPow2(t *testing.T) {
@@ -85,7 +113,7 @@ func BenchmarkSimple(b *testing.B) {
 func TestSimple(*testing.T) {
 	slice := mksimple()
 	for i := 1; i < nitems; i++ {
-		verify.That(slice[i-1] <= slice[i])
+		assert.That(slice[i-1] <= slice[i])
 	}
 }
 
@@ -139,7 +167,7 @@ func ckblocks(blocks []*block) {
 			if x < prev {
 				fmt.Println("ck", bi, i, "prev", prev, "cur", x)
 			}
-			verify.That(prev <= x)
+			assert.That(prev <= x)
 			prev = x
 		}
 	}
@@ -285,8 +313,8 @@ func (li *merged) merge(size int) {
 		out.Add(bval)
 		bval, bok = biter()
 	}
-	verify.That(len(out.blocks) == 2*size)
-	verify.That(out.i == blockSize)
+	assert.This(len(out.blocks)).Is(2 * size)
+	assert.This(out.i).Is(blockSize)
 	ckblocks(out.blocks)
 	// copy blocks from out
 	dest := nb - 2*size
@@ -449,8 +477,8 @@ func (li *conc) merge(nb, size int) {
 		out.Add(bval)
 		bval, bok = biter()
 	}
-	verify.That(len(out.blocks) == 2*size)
-	verify.That(out.i == blockSize)
+	assert.This(len(out.blocks)).Is(2 * size)
+	assert.This(out.i).Is(blockSize)
 	ckblocks(out.blocks)
 	// copy blocks from out
 	dest := nb - 2*size

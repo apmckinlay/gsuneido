@@ -26,7 +26,7 @@ func TestFbtreeIter(t *testing.T) {
 		data[i] = randKey()
 	}
 	sort.Strings(data[:])
-	fb := CreateFbtree(nil)
+	fb := CreateFbtree(nil, nil)
 	fb = fb.Update(func(mfb *fbtree) {
 		for i, k := range data {
 			mfb.Insert(k, uint64(i))
@@ -47,7 +47,7 @@ func TestFbtreeBuilder(t *testing.T) {
 		return strconv.Itoa(int(i))
 	}
 	store := stor.HeapStor(8192)
-	bldr := newFbtreeBuilder(store)
+	bldr := NewFbtreeBuilder(store)
 	limit := 599999
 	if testing.Short() {
 		limit = 199999

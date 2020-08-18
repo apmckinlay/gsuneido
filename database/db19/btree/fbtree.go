@@ -40,13 +40,13 @@ var MaxNodeSize = 1536 // * .75 ~ 1k
 // It is a dependency that must be injected
 var GetLeafKey func(st *stor.Stor, ixspec interface{}, off uint64) string
 
-func CreateFbtree(st *stor.Stor) *fbtree {
+func CreateFbtree(store *stor.Stor, ixspec interface{}) *fbtree {
 	re := newRedirs()
 	re.tbl = re.tbl.Mutable()
 	root := re.add(fNode{})
 	re.tbl = re.tbl.Freeze()
 	re.generation++ // so root isn't mutable
-	return &fbtree{root: root, redirs: re, store: st}
+	return &fbtree{root: root, redirs: re, store: store, ixspec: ixspec}
 }
 
 func OpenFbtree(store *stor.Stor, root uint64, treeLevels int, redirsOff uint64) *fbtree {
@@ -453,13 +453,16 @@ type level struct {
 	builder fNodeBuilder
 }
 
-func newFbtreeBuilder(store *stor.Stor) *fbtreeBuilder {
+func NewFbtreeBuilder(store *stor.Stor) *fbtreeBuilder {
 	return &fbtreeBuilder{store: store, levels: []*level{{}}}
 }
 
 func (fb *fbtreeBuilder) Add(key string, off uint64) {
-	if key <= fb.prev {
-		panic("fbtreeBuilder keys must be inserted in order, without duplicates")
+	if key == fb.prev {
+		panic("fbtreeBuilder keys must not have duplicates")
+	}
+	if key < fb.prev {
+		panic("fbtreeBuilder keys must be inserted in order")
 	}
 	fb.insert(0, key, off)
 	fb.prev = key

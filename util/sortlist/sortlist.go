@@ -39,17 +39,21 @@ type Builder struct {
 	done   chan void
 }
 
-// NewBuilder returns a new List Builder.
-// It starts the worker goroutine.
-func NewBuilder(cmp func(x, y uint64) int) *Builder {
+// NewSorting returns a new list Builder with incremental sorting.
+func NewSorting(cmp func(x, y uint64) int) *Builder {
 	li := &Builder{cmp: cmp, blocks: make([]*block, 0, 4),
 		work: make(chan void), done: make(chan void)}
 	go li.worker()
 	return li
 }
 
-// Add appends a value to the list.
-// When a block is full it signals the worker goroutine to process it.
+// NewUnsorted returns a new list Builder without sorting.
+func NewUnsorted() *Builder {
+	li := &Builder{blocks: make([]*block, 0, 4)}
+	return li
+}
+
+// Add adds a value to the list.
 func (b *Builder) Add(x uint64) {
 	if b.block == nil {
 		b.block = new(block)
@@ -57,33 +61,74 @@ func (b *Builder) Add(x uint64) {
 	}
 	b.block[b.i] = x
 	b.i++
-	if b.i >= blockSize {
-		<-b.done
+	if b.i >= blockSize { // block full
+		if b.done != nil {
+			<-b.done // wait till processing of previous block is finished
+		}
 		b.blocks = append(b.blocks, b.block)
 		b.block = nil
-		b.work <- void{}
+		if b.done != nil {
+			b.work <- void{} // single worker to process this block
+		}
 	}
 }
 
-// List finishes sorting and merging and returns the ordered List.
-// The Builder should not be used after this.
-// The worker goroutine is stopped.
-func (b *Builder) List() List {
-	<-b.done
-	close(b.work)
+// Finish completes sorting and merging and returns the ordered Finish.
+// No more values should be added after this.
+func (b *Builder) Finish() List {
+	if b.done == nil {
+		if b.block != nil { // partial last block
+			b.block[b.i] = 0 // terminator
+			b.blocks = append(b.blocks, b.block)
+			b.block = nil
+		}
+		return List{b.blocks}
+	}
+	if b.done != nil {
+		<-b.done
+		close(b.work) // end worker goroutine
+	}
 	if b.block != nil { // partial last block
-		sort.Sort(ablock{block: b.block, n: b.i, cmp: b.cmp})
+		if b.cmp != nil {
+			sort.Sort(ablock{block: b.block, n: b.i, cmp: b.cmp})
+		}
 		b.block[b.i] = 0 // terminator
 		b.blocks = append(b.blocks, b.block)
-		b.merges()
+		b.block = nil
+		b.merges(len(b.blocks))
 	}
+	b.finishMerges()
+	return List{b.blocks}
+}
+
+// Sort sorts the list by the given compare function.
+// Sort is intended for re-sorting by a different compare function.
+func (b *Builder) Sort(cmp func(x, y uint64) int) {
+	b.cmp = cmp
+	if b.block != nil { // partial last block
+		b.block[b.i] = 0 // terminator
+		b.blocks = append(b.blocks, b.block)
+		b.block = nil
+	}
+	for i, block := range b.blocks {
+		n := blockSize
+		if i == len(b.blocks)-1 {
+			n = b.i
+		}
+		sort.Sort(ablock{block: block, n: n, cmp: cmp})
+		b.merges(i+1) // merge as we sort for better cache use
+	}
+	b.finishMerges()
+}
+
+func (b *Builder) finishMerges() {
 	nb := len(b.blocks)
 	nb2 := nextPow2(nb)
 	for len(b.blocks) < nb2 {
 		b.blocks = append(b.blocks, &zeroBlock)
-		b.merges()
+		b.merges(len(b.blocks))
 	}
-	return List{b.blocks[:nb]}
+	b.blocks = b.blocks[:nb]
 }
 
 // nextPow2 returns the smallest power of 2 >= n
@@ -98,13 +143,12 @@ func (b *Builder) worker() {
 	for range b.work {
 		nb := len(b.blocks)
 		sort.Sort(ablock{block: b.blocks[nb-1], n: blockSize, cmp: b.cmp})
-		b.merges()
+		b.merges(nb)
 		b.done <- void{}
 	}
 }
 
-func (b *Builder) merges() {
-	nb := len(b.blocks)
+func (b *Builder) merges(nb int) {
 	bi := nb - 1
 	for mergeSize := 1; bi&mergeSize == mergeSize; mergeSize <<= 1 {
 		b.merge(nb, mergeSize)
@@ -140,7 +184,8 @@ func (b *Builder) merge(nb, size int) {
 		bval, bok = biter()
 	}
 	if out.i < blockSize {
-		out.blocks[len(out.blocks)-1][out.i] = 0 // terminator
+		// add terminator since recycled blocks aren't zeroed
+		out.blocks[len(out.blocks)-1][out.i] = 0
 	}
 	copy(b.blocks[nb-2*size:], out.blocks)
 }
@@ -152,9 +197,6 @@ func (b *Builder) iter(startBlock, nBlocks int) func() (uint64, bool) {
 	return func() (uint64, bool) {
 		if i+1 < blockSize {
 			i++
-			if blocks[bi][i] == 0 {
-				return 0, false
-			}
 		} else {
 			b.free = append(b.free, blocks[bi]) // recycle block
 			if bi+1 < len(blocks) {
@@ -163,6 +205,9 @@ func (b *Builder) iter(startBlock, nBlocks int) func() (uint64, bool) {
 			} else {
 				return 0, false // finished
 			}
+		}
+		if blocks[bi][i] == 0 {
+			return 0, false
 		}
 		return blocks[bi][i], true
 	}
@@ -219,4 +264,29 @@ func (ab ablock) Swap(i, j int) {
 func (ab ablock) Less(i, j int) bool {
 	b := ab.block
 	return ab.cmp(b[i], b[j]) < 0
+}
+
+func (b *Builder) Iter() func() uint64 {
+	blocks := b.blocks
+	if len(blocks) == 0 {
+		return func() uint64 { return 0 }
+	}
+	bi := 0
+	i := -1
+	return func() uint64 {
+		if i+1 < blockSize {
+			i++
+			if blocks[bi][i] == 0 {
+				return 0 // finished
+			}
+		} else {
+			if bi+1 < len(blocks) {
+				bi++
+				i = 0
+			} else {
+				return 0 // finished
+			}
+		}
+		return blocks[bi][i]
+	}
 }

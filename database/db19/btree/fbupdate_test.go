@@ -31,7 +31,7 @@ func TestUpdate(t *testing.T) {
 		GetLeafKey = func(_ *stor.Stor, _ interface{}, i uint64) string { return data[i] }
 		defer func(mns int) { MaxNodeSize = mns }(MaxNodeSize)
 		MaxNodeSize = 44
-		fb := CreateFbtree(nil)
+		fb := CreateFbtree(nil, nil)
 		mfb := fb.makeMutable()
 		randKey := str.UniqueRandomOf(3, 6, "abcde")
 		for i := 0; i < n; i++ {
@@ -50,7 +50,7 @@ func TestUnevenSplit(t *testing.T) {
 		GetLeafKey = func(_ *stor.Stor, _ interface{}, i uint64) string { return data[i] }
 		defer func(mns int) { MaxNodeSize = mns }(MaxNodeSize)
 		MaxNodeSize = 128
-		fb := CreateFbtree(nil)
+		fb := CreateFbtree(nil, nil)
 		mfb := fb.makeMutable()
 		for i := 0; i < n; i++ {
 			mfb.Insert(data[i], uint64(i))
@@ -109,7 +109,7 @@ func TestSampleData(t *testing.T) {
 			}
 			defer func(mns int) { MaxNodeSize = mns }(MaxNodeSize)
 			MaxNodeSize = 256
-			fb := CreateFbtree(nil)
+			fb := CreateFbtree(nil, nil)
 			mfb := fb.makeMutable()
 			for i, d := range data {
 				mfb.Insert(d, uint64(i))
@@ -144,7 +144,7 @@ func TestFbdelete(t *testing.T) {
 	GetLeafKey = func(_ *stor.Stor, _ interface{}, i uint64) string { return data[i] }
 	defer func(mns int) { MaxNodeSize = mns }(MaxNodeSize)
 	MaxNodeSize = 44
-	fb := CreateFbtree(nil)
+	fb := CreateFbtree(nil, nil)
 	mfb := fb.makeMutable()
 	randKey := str.UniqueRandomOf(3, 6, "abcdef")
 	for i := 0; i < n; i++ {
@@ -176,7 +176,7 @@ func TestFreeze(t *testing.T) {
 	}
 	store := stor.HeapStor(8192)
 	store.Alloc(1) // avoid offset 0
-	fb := CreateFbtree(store)
+	fb := CreateFbtree(store, nil)
 	Assert(t).That(fb.redirs.Len(), Is(1))
 	fb = fb.Update(func(mfb *fbtree) {
 		mfb.Insert("1", 1)
@@ -220,7 +220,7 @@ func TestSave(t *testing.T) {
 	if err != nil {
 		log.Fatalln(err)
 	}
-	fb := CreateFbtree(st)
+	fb := CreateFbtree(st, nil)
 	randKey := str.UniqueRandomOf(3, 7, "abcdef")
 	for i := 0; i < nSaves; i++ {
 		for j := 0; j < updatesPerSave; j++ {
@@ -269,7 +269,7 @@ func TestSplitDup(*testing.T) {
 	for i := 0; i < n; i++ {
 		rand.Shuffle(len(data),
 			func(i, j int) { data[i], data[j] = data[j], data[i] })
-		fb := CreateFbtree(nil)
+		fb := CreateFbtree(nil, nil)
 		fb = fb.Update(func(mfb *fbtree) {
 			for _, n := range data {
 				key := strconv.Itoa(n)
@@ -293,7 +293,7 @@ func TestFlatten(t *testing.T) {
 		MaxNodeSize = 96
 		inserted = map[int]bool{}
 		store := stor.HeapStor(8192)
-		bldr := newFbtreeBuilder(store)
+		bldr := NewFbtreeBuilder(store)
 		for i := from; i < to; i += 2 {
 			key := strconv.Itoa(i)
 			bldr.Add(key, uint64(i))
