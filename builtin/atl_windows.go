@@ -26,11 +26,11 @@ var atlAxGetHost = atl.MustFindProc("AtlAxGetHost").Addr()
 var _ = builtin2("AtlAxGetHost(hwnd, iunk)",
 	func(a Value, b Value) Value {
 		defer heap.FreeTo(heap.CurSize())
-		iunk := heap.Alloc(int32Size)
+		iunk := heap.Alloc(int64Size)
 		rtn := goc.Syscall2(atlAxGetHost,
 			intArg(a),
 			uintptr(iunk))
-		b.Put(nil, SuStr("x"), IntVal(int(*(*int32)(iunk))))
+		b.Put(nil, SuStr("x"), IntVal(*(*int)(iunk)))
 		return intRet(rtn)
 	})
 
@@ -39,11 +39,11 @@ var atlAxGetControl = atl.MustFindProc("AtlAxGetControl").Addr()
 var _ = builtin2("AtlAxGetControl(hwnd, iunk)",
 	func(a Value, b Value) Value {
 		defer heap.FreeTo(heap.CurSize())
-		iunk := heap.Alloc(int32Size)
+		iunk := heap.Alloc(int64Size)
 		rtn := goc.Syscall2(atlAxGetControl,
 			intArg(a),
 			uintptr(iunk))
-		b.Put(nil, SuStr("x"), IntVal(int(*(*int32)(iunk))))
+		b.Put(nil, SuStr("x"), IntVal(*(*int)(iunk)))
 		return intRet(rtn)
 	})
 
@@ -52,13 +52,13 @@ var atlAxAttachControl = atl.MustFindProc("AtlAxAttachControl").Addr()
 var _ = builtin3("AtlAxAttachControl(iunk, hwnd, unkContainer)",
 	func(a, b, c Value) Value {
 		defer heap.FreeTo(heap.CurSize())
-		iunk := heap.Alloc(int32Size)
-		*(*int32)(iunk) = getInt32(a, "x")
-		unkContainer := heap.Alloc(int32Size)
+		iunk := heap.Alloc(int64Size)
+		*(*int)(iunk) = getInt(a, "x")
+		unkContainer := heap.Alloc(int64Size)
 		rtn := goc.Syscall3(atlAxAttachControl,
 			uintptr(iunk),
 			intArg(b),
 			uintptr(unkContainer))
-		b.Put(nil, SuStr("x"), IntVal(int(*(*int32)(unkContainer))))
+		b.Put(nil, SuStr("x"), IntVal(*(*int)(unkContainer)))
 		return intRet(rtn)
 	})
