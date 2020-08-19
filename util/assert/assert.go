@@ -53,6 +53,13 @@ func (a assert) Msg(args ...interface{}) assert {
 	return a
 }
 
+// Msg adds additional information to print with the error.
+// It can be useful with That/True/False where the error is not very helpful.
+func (v value) Msg(args ...interface{}) value {
+	v.assert.msg = fmt.Sprint(args...)
+	return v
+}
+
 // Nil gives an error if the value is not nil.
 // It handles nil func/pointer/slice/map/channel using reflect.IsNil
 // For performance critical code, consider using That(value == nil)
