@@ -16,7 +16,7 @@
 // The crashes were mostly (always?) with nested callbacks.
 // see: https://github.com/lxn/walk/pull/493
 //
-// Allocated memory is zero filled by FreeTo 
+// Allocated memory is zero filled by FreeTo
 // since that is less overhead than alloc zeroing.
 package heap
 
@@ -24,7 +24,7 @@ import (
 	"bytes"
 	"unsafe"
 
-	"github.com/apmckinlay/gsuneido/util/verify"
+	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
 const align = 8 // Alloc assumes power of two
@@ -93,7 +93,7 @@ func get(p unsafe.Pointer) []byte {
 }
 
 func FreeTo(prevSize int) {
-	verify.That(prevSize <= heapnext)
+	assert.That(prevSize <= heapnext)
 	zero(heap[prevSize:heapnext])
 	heapnext = prevSize
 }

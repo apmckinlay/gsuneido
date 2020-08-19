@@ -5,7 +5,7 @@ package runtime
 
 import (
 	"github.com/apmckinlay/gsuneido/runtime/types"
-	"github.com/apmckinlay/gsuneido/util/verify"
+	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
 //-------------------------------------------------------------------
@@ -111,7 +111,7 @@ func deepEqual(x, y Value) bool {
 			if !sizesEqual {
 				return false
 			}
-			verify.That(len(xTodo) == len(yTodo))
+			assert.That(len(xTodo) == len(yTodo))
 			inProgress.push(x, y, xTodo, yTodo)
 		case types.Instance:
 			xTodo, size := xdeInstance(x.(*SuInstance), &stack)
@@ -119,7 +119,7 @@ func deepEqual(x, y Value) bool {
 			if !sizesEqual {
 				return false
 			}
-			verify.That(len(xTodo) == len(yTodo))
+			assert.That(len(xTodo) == len(yTodo))
 			inProgress.push(x, y, xTodo, yTodo)
 		default:
 			if !x.Equal(y) {

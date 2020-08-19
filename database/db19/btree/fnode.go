@@ -9,10 +9,10 @@ import (
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/database/db19/stor"
+	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/bytes"
 	"github.com/apmckinlay/gsuneido/util/ints"
 	"github.com/apmckinlay/gsuneido/util/str"
-	"github.com/apmckinlay/gsuneido/util/verify"
 )
 
 // fNode is a file based btree node with partial incremental encoding.
@@ -81,7 +81,7 @@ func (fb *fNodeBuilder) Entries() fNode {
 }
 
 func addone(key, prev, known string, embedLen int) (npre int, diff string, knownNew string) {
-	verify.That(key > prev)
+	assert.That(key > prev)
 	npre = commonPrefixLen(prev, key)
 	if npre > 255 {
 		panic("key common prefix too long")
@@ -94,7 +94,7 @@ func addone(key, prev, known string, embedLen int) (npre int, diff string, known
 		// so we have to embed the missing info + embedLen
 		diff = key[len(known):ints.Min(npre+embedLen, len(key))]
 	}
-	verify.That(len(diff) > 0)
+	assert.That(len(diff) > 0)
 	knownNew = str.Subn(key, 0, npre+embedLen)
 	return
 }

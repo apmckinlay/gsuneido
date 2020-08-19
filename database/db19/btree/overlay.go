@@ -5,7 +5,7 @@ package btree
 
 import (
 	"github.com/apmckinlay/gsuneido/database/db19/stor"
-	"github.com/apmckinlay/gsuneido/util/verify"
+	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
 type treeIter = func() (string, uint64, bool)
@@ -31,7 +31,7 @@ func NewOverlay(store *stor.Stor, ixspec interface{}) *Overlay {
 
 // Mutable returns a modifiable copy of an Overlay
 func (ov *Overlay) Mutable(tranNum int) *Overlay {
-	verify.That(ov.mb == nil)
+	assert.That(ov.mb == nil)
 	under := append([]tree(nil), ov.under...) // copy
 	// atomic.AddInt64(&Under[len(under)], 1)
 	return &Overlay{under: under, mb: newMbtree(tranNum)}
@@ -159,7 +159,7 @@ func (ov *Overlay) Freeze() {
 
 // Merge merges the mbtree for tranNum (if there is one) into the fbtree
 func (ov *Overlay) Merge(tranNum int) *Overlay {
-	verify.That(ov.mb == nil)
+	assert.That(ov.mb == nil)
 	if len(ov.under) == 1 {
 		panic("merge: missing overlay")
 	}
@@ -184,7 +184,7 @@ func (ov *Overlay) WithMerged(ov2 *Overlay) *Overlay {
 // Save writes the Overlay's base fbtree to storage
 // and returns the new fbtree (in an Overlay) to later pass to With
 func (ov *Overlay) Save() *Overlay {
-	verify.That(ov.mb == nil)
+	assert.That(ov.mb == nil)
 	ov2 := *ov // copy
 	fb := ov.under[0].(*fbtree)
 	fb = fb.Save()

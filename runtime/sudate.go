@@ -11,9 +11,9 @@ import (
 
 	"github.com/apmckinlay/gsuneido/runtime/types"
 	"github.com/apmckinlay/gsuneido/util/ascii"
+	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/ints"
 	"github.com/apmckinlay/gsuneido/util/pack"
-	"github.com/apmckinlay/gsuneido/util/verify"
 )
 
 /*
@@ -526,12 +526,12 @@ func ParseDate(s string, order string) SuDate {
 			}
 		}
 		// stop at first match
-		verify.That(p != "")
+		assert.That(p != "")
 		if t == len(p) && t == ntokens {
 			break
 		}
 	}
-	verify.That(p != "")
+	assert.That(p != "")
 
 	now := Now()
 

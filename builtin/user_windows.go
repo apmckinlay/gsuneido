@@ -15,7 +15,7 @@ import (
 	"github.com/apmckinlay/gsuneido/options"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/runtime/types"
-	"github.com/apmckinlay/gsuneido/util/verify"
+	"github.com/apmckinlay/gsuneido/util/assert"
 	"golang.org/x/sys/windows"
 )
 
@@ -473,7 +473,7 @@ var fillRect = user32.MustFindProc("FillRect").Addr()
 var _ = builtin3("FillRect(hdc, lpRect, hBrush)",
 	func(a, b, c Value) Value {
 		defer heap.FreeTo(heap.CurSize())
-		verify.That(b != Zero)
+		assert.That(b != Zero)
 		r := heap.Alloc(nRECT)
 		rtn := goc.Syscall3(fillRect,
 			intArg(a),

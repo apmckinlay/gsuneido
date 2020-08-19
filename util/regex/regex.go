@@ -9,8 +9,8 @@ import (
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/util/ascii"
+	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/ints"
-	"github.com/apmckinlay/gsuneido/util/verify"
 )
 
 //go:generate genny -in ../../genny/cache/cache.go -out cache.go -pkg regex gen "K=string V=Pattern"
@@ -191,7 +191,7 @@ outer:
 					}
 					if j > 0 {
 						// skip ahead and restart match where chars are
-						verify.That(pos == si)
+						assert.That(pos == si)
 						pos += j
 						si = pos
 						pi = -1 // -1 because loop increments

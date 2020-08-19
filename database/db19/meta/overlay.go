@@ -6,7 +6,7 @@ package meta
 import (
 	"github.com/apmckinlay/gsuneido/database/db19/btree"
 	"github.com/apmckinlay/gsuneido/database/db19/stor"
-	"github.com/apmckinlay/gsuneido/util/verify"
+	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
 type Overlay struct {
@@ -37,7 +37,7 @@ func NewOverlay(baseSchema *SchemaPacked, baseInfo *InfoPacked,
 
 // NewOverlay returns a new Overlay based on an existing one
 func (ov *Overlay) NewOverlay() *Overlay {
-	verify.That(ov.rwInfo.IsNil())
+	assert.That(ov.rwInfo.IsNil())
 	ov2 := *ov // copy
 	ov2.rwInfo = InfoHamt{}.Mutable()
 	return &ov2
@@ -105,7 +105,7 @@ func (ov *Overlay) GetSchema(table string) *Schema {
 // Nor does it save the changes to disk, that is done later by persist.
 func (ov *Overlay) LayeredOnto(latest *Overlay) *Overlay {
 	// start with a copy of the latest hash table because it may have more
-	verify.That(latest.rwInfo.IsNil())
+	assert.That(latest.rwInfo.IsNil())
 	roInfo2 := latest.roInfo.Mutable()
 	ov.rwInfo.ForEach(func(ti *Info) {
 		if ti.mutable {
@@ -136,7 +136,7 @@ const Noffsets = 4
 type offsets = [Noffsets]uint64
 
 func (ov *Overlay) Write(st *stor.Stor) offsets {
-	verify.That(ov.rwInfo.IsNil())
+	assert.That(ov.rwInfo.IsNil())
 	return offsets{
 		ov.baseSchema.Offset(),
 		ov.baseInfo.Offset(),

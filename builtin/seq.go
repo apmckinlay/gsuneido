@@ -7,7 +7,7 @@ import (
 	"math"
 
 	. "github.com/apmckinlay/gsuneido/runtime"
-	"github.com/apmckinlay/gsuneido/util/verify"
+	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
 var _ = builtin1("Seq?(value)", func(val Value) Value {
@@ -36,7 +36,7 @@ type seqIter struct {
 }
 
 func (seq *seqIter) Next() Value {
-	verify.That(seq.by != 0)
+	assert.That(seq.by != 0)
 	if seq.i >= seq.to {
 		return nil
 	}

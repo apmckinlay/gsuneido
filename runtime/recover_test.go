@@ -6,7 +6,7 @@ package runtime
 import (
 	"testing"
 
-	"github.com/apmckinlay/gsuneido/util/verify"
+	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
 // confirm the behavior of recover
@@ -20,7 +20,7 @@ func TestRecover(*testing.T) {
 func a() {
 	defer func() {
 		if e := recover(); e != nil {
-			verify.That(unwound)
+			assert.That(unwound)
 			// debug.PrintStack()
 		}
 	}()

@@ -6,7 +6,7 @@
 package hmap
 
 import (
-	"github.com/apmckinlay/gsuneido/util/verify"
+	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
 // metaData is a single byte of information about each slot
@@ -242,7 +242,7 @@ func (h *Hmap) putDirect(slot *chainIter, key Key, val Val) {
 func (h *Hmap) findPrev(slot *chainIter) chainIter {
 	iter := h.iterFromKey(slot.key())
 	for iter.nextIndex() != slot.index {
-		verify.That(iter.next())
+		assert.That(iter.next())
 	}
 	return iter
 }

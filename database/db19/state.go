@@ -10,7 +10,7 @@ import (
 
 	"github.com/apmckinlay/gsuneido/database/db19/meta"
 	"github.com/apmckinlay/gsuneido/database/db19/stor"
-	"github.com/apmckinlay/gsuneido/util/verify"
+	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
 type DbState struct {
@@ -94,8 +94,8 @@ func (state *DbState) Write() uint64 {
 func ReadState(st *stor.Stor, off uint64) *DbState {
 	buf := st.Data(off)[:stateLen]
 	i := len(magic1)
-	verify.That(string(buf[:i]) == magic1)
-	verify.That(string(buf[stateLen-len(magic2):]) == magic2)
+	assert.That(string(buf[:i]) == magic1)
+	assert.That(string(buf[stateLen-len(magic2):]) == magic2)
 	var offsets [meta.Noffsets]uint64
 	for j := range offsets {
 		offsets[j] = stor.ReadSmallOffset(buf[i:])

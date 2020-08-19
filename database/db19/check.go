@@ -7,10 +7,10 @@ import (
 	"math/rand"
 	"sync/atomic"
 
+	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/ints"
 	"github.com/apmckinlay/gsuneido/util/ordset"
 	"github.com/apmckinlay/gsuneido/util/ranges"
-	"github.com/apmckinlay/gsuneido/util/verify"
 )
 
 const maxTrans = 200
@@ -86,7 +86,7 @@ func (ck *Check) Read(t *CkTran, table string, index int, from, to string) bool 
 	if !ok {
 		return false // it's gone, presumably aborted
 	}
-	verify.That(!t.isEnded())
+	assert.That(!t.isEnded())
 	// check against overlapping transactions
 	for _, t2 := range ck.trans {
 		if t2 != t && overlap(t, t2) {
@@ -137,7 +137,7 @@ func (ck *Check) Write(t *CkTran, table string, keys []string) bool {
 	if !ok {
 		return false // it's gone, presumably aborted
 	}
-	verify.That(!t.isEnded())
+	assert.That(!t.isEnded())
 	// check against overlapping transactions
 	for _, t2 := range ck.trans {
 		if t2 != t && overlap(t, t2) {

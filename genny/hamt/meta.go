@@ -7,7 +7,7 @@ import (
 	"sort"
 
 	"github.com/apmckinlay/gsuneido/database/db19/stor"
-	"github.com/apmckinlay/gsuneido/util/verify"
+	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
 // list returns a list of the keys in the table
@@ -54,7 +54,7 @@ func (ht ItemHamt) Write(st *stor.Stor) uint64 {
 		it, _ := ht.Get(k)
 		it.Write(w)
 	}
-	verify.That(len(fingers) == nfingers)
+	assert.That(len(fingers) == nfingers)
 	for _, f := range fingers {
 		w2.Put3(f) // update with actual values
 	}
@@ -108,7 +108,7 @@ func NewItemPacked(st *stor.Stor, off uint64) *ItemPacked {
 }
 
 func (p ItemPacked) MustGet(key string) Item {
-	if item,ok := p.Get(key); ok {
+	if item, ok := p.Get(key); ok {
 		return item
 	}
 	panic("item not found")

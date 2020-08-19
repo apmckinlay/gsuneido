@@ -12,7 +12,7 @@ import (
 	"unsafe"
 
 	. "github.com/apmckinlay/gsuneido/runtime"
-	"github.com/apmckinlay/gsuneido/util/verify"
+	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
 type SuStructGlobal struct {
@@ -731,7 +731,7 @@ func bmfh(_ *Thread, args []Value) Value {
 	binary.Write(&buf, binary.LittleEndian, getInt32(args[0], "bfSize"))
 	binary.Write(&buf, binary.LittleEndian, int32(0)) // reserved
 	binary.Write(&buf, binary.LittleEndian, getInt32(args[0], "bfOffBits"))
-	verify.That(buf.Len() == nBITMAPFILEHEADER)
+	assert.That(buf.Len() == nBITMAPFILEHEADER)
 	return SuStr(buf.String())
 }
 

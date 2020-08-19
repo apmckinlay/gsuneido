@@ -8,8 +8,8 @@ package runtime
 import (
 	"strconv"
 
+	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/ints"
-	"github.com/apmckinlay/gsuneido/util/verify"
 )
 
 func (t *Thread) Args(ps *ParamSpec, as *ArgSpec) []Value {
@@ -67,8 +67,8 @@ func (t *Thread) massage(ps *ParamSpec, as *ArgSpec, args []Value) {
 	each := int(as.Each) - 1
 
 	// remove after debugged
-	verify.That(!atParam || ps.Nparams == 1)
-	verify.That(!atArg || len(as.Spec) == 0)
+	assert.That(!atParam || ps.Nparams == 1)
+	assert.That(!atArg || len(as.Spec) == 0)
 
 	if atParam {
 		if atArg {
@@ -108,7 +108,7 @@ func (t *Thread) massage(ps *ParamSpec, as *ArgSpec, args []Value) {
 		}
 	} else if len(as.Spec) > 0 {
 		// shuffle named args to match params
-		verify.That(len(as.Spec) < MaxArgs)
+		assert.That(len(as.Spec) < MaxArgs)
 		var tmp [MaxArgs]Value
 		nargs := int(as.Nargs)
 		// move named arguments aside, off the stack

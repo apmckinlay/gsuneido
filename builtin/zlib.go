@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	. "github.com/apmckinlay/gsuneido/runtime"
-	"github.com/apmckinlay/gsuneido/util/verify"
+	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
 type suZlib struct {
@@ -37,7 +37,7 @@ var zlibMethods = Methods{
 		if err != nil {
 			panic("Zlib.Compress: " + err.Error())
 		}
-		verify.That(n == len(s))
+		assert.That(n == len(s))
 		err = w.Close()
 		if err != nil {
 			panic("Zlib.Compress: " + err.Error())
@@ -56,7 +56,7 @@ var zlibMethods = Methods{
 			panic("Zlib.Uncompress: " + err.Error())
 		}
 		r.Close()
-		verify.That(int(n) == len(b.String()))
+		assert.That(int(n) == len(b.String()))
 		return SuStr(b.String())
 	}),
 }

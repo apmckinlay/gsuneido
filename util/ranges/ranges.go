@@ -6,8 +6,8 @@ package ranges
 import (
 	"strings"
 
+	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/str"
-	"github.com/apmckinlay/gsuneido/util/verify"
 )
 
 // Ranges is an ordered set of non-overlapping ranges of strings.
@@ -92,7 +92,7 @@ type iter struct {
 }
 
 func (rs *Ranges) iter(ti int, leaf *leafNode, li int) *iter {
-	verify.That(rs.tree == nil || leaf == rs.tree.slots[ti].leaf)
+	assert.That(rs.tree == nil || leaf == rs.tree.slots[ti].leaf)
 	return &iter{tree: rs.tree, ti: ti, leaf: leaf, li: li}
 }
 
@@ -116,7 +116,7 @@ func (it *iter) remove() {
 		}
 		if it.li == 0 {
 			// first slot, update separator
-			verify.That(it.leaf == it.tree.slots[it.ti].leaf)
+			assert.That(it.leaf == it.tree.slots[it.ti].leaf)
 			it.tree.slots[it.ti].val = it.leaf.slots[0].from
 		}
 	}

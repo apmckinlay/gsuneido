@@ -11,7 +11,7 @@ import (
 	"github.com/apmckinlay/gsuneido/builtin/goc"
 	"github.com/apmckinlay/gsuneido/builtin/heap"
 	. "github.com/apmckinlay/gsuneido/runtime"
-	"github.com/apmckinlay/gsuneido/util/verify"
+	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
 var gdi32 = MustLoadDLL("gdi32.dll")
@@ -713,7 +713,7 @@ var _ = builtin("ExtTextOut(hdc, x, y, fuOptions, lprc, lpString, cbCount,"+
 	func(_ *Thread, a []Value) Value {
 		defer heap.FreeTo(heap.CurSize())
 		r := heap.Alloc(nRECT)
-		verify.That(a[7].Equal(Zero))
+		assert.That(a[7].Equal(Zero))
 		rtn := goc.Syscall8(extTextOut,
 			intArg(a[0]),
 			intArg(a[1]),

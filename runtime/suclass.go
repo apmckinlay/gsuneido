@@ -10,8 +10,8 @@ import (
 
 	"github.com/apmckinlay/gsuneido/runtime/types"
 	"github.com/apmckinlay/gsuneido/util/ascii"
+	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/str"
-	"github.com/apmckinlay/gsuneido/util/verify"
 )
 
 // SuClass is a user defined (Suneido language) class
@@ -29,7 +29,7 @@ func (c *SuClass) SetParents(parents []*SuClass) {
 }
 
 func (c *SuClass) GetParents() []*SuClass {
-	x,_ := c.parents.Load().([]*SuClass) // allow nil
+	x, _ := c.parents.Load().([]*SuClass) // allow nil
 	return x
 }
 
@@ -115,7 +115,7 @@ func (c *SuClass) get1(t *Thread, this Value, m Value) Value {
 func (c *SuClass) get2(t *Thread, m string) Value {
 	for {
 		if x, ok := c.Data[m]; ok {
-			verify.That(x != nil)
+			assert.That(x != nil)
 			return x
 		}
 		if c = c.Parent(t); c == nil {
@@ -190,10 +190,10 @@ func (c *SuClass) lookup(t *Thread, method string, parents []*SuClass) Callable 
 			return x
 		}
 	} else { // parents argument is used by SuInstance Lookup
-		verify.That(parents[0] == c)
+		assert.That(parents[0] == c)
 		for _, p := range parents {
 			if x, ok := p.Data[method]; ok {
-				verify.That(x != nil)
+				assert.That(x != nil)
 				return x
 			}
 		}

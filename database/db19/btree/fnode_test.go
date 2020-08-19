@@ -9,9 +9,9 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/apmckinlay/gsuneido/util/assert"
 	. "github.com/apmckinlay/gsuneido/util/hamcrest"
 	"github.com/apmckinlay/gsuneido/util/str"
-	"github.com/apmckinlay/gsuneido/util/verify"
 )
 
 func TestFAppendRead(t *testing.T) {
@@ -57,7 +57,7 @@ func TestFnodeInsert(*testing.T) {
 			fn, _ = fn.insert(d, uint64(i), get)
 			fn.checkUpTo(i, data, get)
 		}
-		verify.That(fn.check() == len(data))
+		assert.That(fn.check() == len(data))
 		// reverse
 		str.List(data).Reverse()
 		fn = nil

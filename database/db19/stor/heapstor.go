@@ -6,7 +6,7 @@ package stor
 import (
 	"math/bits"
 
-	"github.com/apmckinlay/gsuneido/util/verify"
+	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
 type heapStor struct {
@@ -15,7 +15,7 @@ type heapStor struct {
 
 // HeapStor returns an empty in-memory stor for testing.
 func HeapStor(chunksize int) *Stor {
-	verify.That(bits.OnesCount(uint(chunksize)) == 1)
+	assert.That(bits.OnesCount(uint(chunksize)) == 1)
 	hs := &Stor{chunksize: uint64(chunksize), impl: &heapStor{chunksize}}
 	hs.chunks.Store([][]byte{make([]byte, chunksize)})
 	return hs

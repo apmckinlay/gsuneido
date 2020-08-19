@@ -3,7 +3,7 @@
 
 package runtime
 
-import "github.com/apmckinlay/gsuneido/util/verify"
+import "github.com/apmckinlay/gsuneido/util/assert"
 
 // Call pushes the arguments onto the stack and calls the function
 func (t *Thread) Call(fn Callable, args ...Value) Value {
@@ -20,7 +20,7 @@ func (t *Thread) CallLookup(this Value, method string, args ...Value) Value {
 }
 
 func (t *Thread) CallThis(fn Callable, this Value, args ...Value) Value {
-	verify.That(len(args) < AsEach)
+	assert.That(len(args) < AsEach)
 	as := &StdArgSpecs[len(args)]
 	return t.pushCall(fn, this, as, args...)
 }

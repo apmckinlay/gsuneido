@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/database/db19/stor"
-	"github.com/apmckinlay/gsuneido/util/verify"
+	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
 // fbtree is an immutable btree designed to be stored in a file.
@@ -123,7 +123,7 @@ func (fb *fbtree) keep2(depth int, nodeOff uint64) uint64 {
 					mnode = append(mnode[:0:0], mnode...)
 				}
 				mnode.setOffset(it.fi, off2)
-				fb.redirs.tbl.Delete(off)    // remove flattened redirect
+				fb.redirs.tbl.Delete(off) // remove flattened redirect
 			}
 		}
 		if mnode == nil {
@@ -205,7 +205,7 @@ func (fb *fbtree) flatten2(depth int, nodeOff uint64) uint64 {
 	} else {
 		// leaf node
 		r, ok := fb.redirs.tbl.Get(nodeOff)
-		verify.That(ok)
+		assert.That(ok)
 		if r.mnode == nil {
 			traced(depth, "leaf newOffset")
 			return r.newOffset
@@ -258,7 +258,7 @@ func (fb *fbtree) saveRedirs(nr int) {
 	w.Put5(fb.redirs.nextOff)
 	w.Put2(nr)
 	fb.redirs.tbl.ForEach(func(r *redir) {
-		verify.That((r.mnode == nil) != (r.newOffset == 0))
+		assert.That((r.mnode == nil) != (r.newOffset == 0))
 		w.Put5(r.offset).Put5(r.newOffset)
 	})
 	w.Put2(nr)
@@ -302,7 +302,7 @@ func (node fNode) putNode(store *stor.Stor) uint64 {
 
 func (fb *fbtree) getNode(off uint64) fNode {
 	if r, ok := fb.redirs.tbl.Get(off); ok {
-		verify.That((r.mnode == nil) != (r.newOffset == 0))
+		assert.That((r.mnode == nil) != (r.newOffset == 0))
 		if r.mnode != nil {
 			return r.mnode
 		}
@@ -312,7 +312,7 @@ func (fb *fbtree) getNode(off uint64) fNode {
 }
 
 func (fb *fbtree) readNode(off uint64) fNode {
-	verify.That(!fb.redirs.isFake(off))
+	assert.That(!fb.redirs.isFake(off))
 	buf := fb.store.DataSized(off)
 	return fNode(buf)
 }

@@ -14,7 +14,7 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/apmckinlay/gsuneido/util/verify"
+	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
 // Offset is an offset within storage
@@ -50,7 +50,7 @@ type Stor struct {
 // If insufficient room in the current chunk, advance to next
 // (allocations may not straddle chunks)
 func (s *Stor) Alloc(n int) (Offset, []byte) {
-	verify.That(0 < n && n <= int(s.chunksize))
+	assert.That(0 < n && n <= int(s.chunksize))
 
 	for {
 		oldsize := atomic.LoadUint64(&s.size)
@@ -106,7 +106,7 @@ func (s *Stor) LastOffset(b []byte) uint64 {
 	for c := len(chunks) - 1; c >= 0; c-- {
 		buf := chunks[c]
 		if i := bytes.LastIndex(buf, b); i != -1 {
-			return uint64(c) * s.chunksize + uint64(i)
+			return uint64(c)*s.chunksize + uint64(i)
 		}
 	}
 	return 0

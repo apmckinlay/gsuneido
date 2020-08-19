@@ -346,7 +346,7 @@ func newchunked2(parent *merged) *chunked2 {
 }
 
 func (li *chunked2) Add(x uint64) {
-	// verify.That(li.prev <= x)
+	// assert.That(li.prev <= x)
 	// li.prev = x
 	if li.i >= blockSize {
 		li.blocks = append(li.blocks, li.parent.alloc())
@@ -510,7 +510,7 @@ func newchunked3(parent *conc) *chunked3 {
 }
 
 func (li *chunked3) Add(x uint64) {
-	// verify.That(li.prev <= x)
+	// assert.That(li.prev <= x)
 	// li.prev = x
 	if li.i >= blockSize {
 		li.blocks = append(li.blocks, li.parent.alloc())

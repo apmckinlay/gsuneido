@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/lexer"
-	"github.com/apmckinlay/gsuneido/util/verify"
+	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
 // ArgSpec describes the arguments on the stack for a call
@@ -75,7 +75,7 @@ const (
 // Unnamed returns the total number of un-named arguments.
 // Not applicable with @args (each)
 func (as *ArgSpec) Unnamed() int {
-	verify.That(as.Each == 0)
+	assert.That(as.Each == 0)
 	return int(as.Nargs) - len(as.Spec)
 }
 

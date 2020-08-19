@@ -15,10 +15,10 @@ import (
 	tok "github.com/apmckinlay/gsuneido/lexer/tokens"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	op "github.com/apmckinlay/gsuneido/runtime/opcodes"
+	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/hacks"
 	"github.com/apmckinlay/gsuneido/util/ints"
 	"github.com/apmckinlay/gsuneido/util/str"
-	"github.com/apmckinlay/gsuneido/util/verify"
 )
 
 //TODO source statement position for errors
@@ -94,7 +94,7 @@ func codegenBlock(ast *ast.Function, outercg *cgen) (*SuFunc, []string) {
 	// hide parameters from outer function
 	outerNames := f.Names
 	f.Names = make([]string, len(outerNames))
-	verify.That(base <= math.MaxUint8)
+	assert.That(base <= math.MaxUint8)
 	f.Offset = uint8(base)
 	copy(f.Names, outerNames)
 	for i := 0; i < int(f.Nparams); i++ {
@@ -902,7 +902,7 @@ func (cg *cgen) call(node *ast.Call, ct calltype) {
 		cg.expr(fn)
 		cg.emit(op.CallFuncDiscard + op.Opcode(ct))
 	}
-	verify.That(argspec < math.MaxUint8)
+	assert.That(argspec < math.MaxUint8)
 	cg.emitMore(byte(argspec))
 }
 
@@ -925,7 +925,7 @@ func (cg *cgen) args(args []ast.Arg) int {
 		}
 		cg.expr(arg.E)
 	}
-	verify.That(len(args) < math.MaxUint8)
+	assert.That(len(args) < math.MaxUint8)
 	return cg.argspec(&ArgSpec{Nargs: byte(len(args)), Spec: spec})
 }
 
@@ -993,23 +993,23 @@ func (cg *cgen) emitMore(b ...byte) {
 }
 
 func (cg *cgen) emitUint8(op op.Opcode, i int) {
-	verify.That(0 <= i && i < math.MaxUint8)
+	assert.That(0 <= i && i < math.MaxUint8)
 	cg.emit(op, byte(i))
 }
 
 func (cg *cgen) emitInt16(op op.Opcode, i int) {
-	verify.That(math.MinInt16 <= i && i <= math.MaxInt16)
+	assert.That(math.MinInt16 <= i && i <= math.MaxInt16)
 	cg.emit(op, byte(i>>8), byte(i))
 }
 
 func (cg *cgen) emitUint16(op op.Opcode, i int) {
-	verify.That(0 <= i && i < math.MaxUint16)
+	assert.That(0 <= i && i < math.MaxUint16)
 	cg.emit(op, byte(i>>8), byte(i))
 }
 
 func (cg *cgen) emitJump(op op.Opcode, label int) int {
 	adr := len(cg.code)
-	verify.That(math.MinInt16 <= label && label <= math.MaxInt16)
+	assert.That(math.MinInt16 <= label && label <= math.MaxInt16)
 	cg.emit(op, byte(label>>8), byte(label))
 	return adr
 }
@@ -1027,7 +1027,7 @@ func (cg *cgen) placeLabel(i int) {
 	for ; i >= 0; i = next {
 		next = int(cg.target(i))
 		adr = len(cg.code) - (i + 3) // convert to relative offset
-		verify.That(math.MinInt16 <= adr && adr <= math.MaxInt16)
+		assert.That(math.MinInt16 <= adr && adr <= math.MaxInt16)
 		cg.code[i+1] = byte(adr >> 8)
 		cg.code[i+2] = byte(adr)
 	}

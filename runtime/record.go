@@ -172,7 +172,7 @@ func (b *RecordBuilder) Build() Record {
 	length := b.recSize(sizes)
 	buf := pack.NewEncoder(length)
 	b.build(clock, buf, length, sizes)
-	//verify.That(len(buf.String()) == length)
+	//assert.That(len(buf.String()) == length)
 	return Record(buf.String())
 }
 

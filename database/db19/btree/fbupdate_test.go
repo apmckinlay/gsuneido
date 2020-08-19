@@ -15,9 +15,9 @@ import (
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/database/db19/stor"
+	"github.com/apmckinlay/gsuneido/util/assert"
 	. "github.com/apmckinlay/gsuneido/util/hamcrest"
 	"github.com/apmckinlay/gsuneido/util/str"
-	"github.com/apmckinlay/gsuneido/util/verify"
 )
 
 func TestUpdate(t *testing.T) {
@@ -299,7 +299,7 @@ func TestFlatten(t *testing.T) {
 			bldr.Add(key, uint64(i))
 		}
 		root, treeLevels := bldr.Finish()
-		verify.That(treeLevels == 2)
+		assert.That(treeLevels == 2)
 		fb = OpenFbtree(store, root, treeLevels, 0)
 		fb.redirs.tbl.ForEach(func(r *redir) { panic("redir!") })
 		fb.redirs.paths.ForEach(func(p uint64) { panic("path!") })

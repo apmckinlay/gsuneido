@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/database/db19/stor"
-	"github.com/apmckinlay/gsuneido/util/verify"
+	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
 func (fb *fbtree) Update(fn func(*fbtree)) *fbtree {
@@ -37,7 +37,7 @@ func (fb *fbtree) freeze() *fbtree {
 const maxlevels = 8
 
 func (fb *fbtree) Insert(key string, off uint64) {
-	verify.That(fb.mutable)
+	assert.That(fb.mutable)
 	var stack [maxlevels]uint64
 
 	// search down the tree to the appropriate leaf
@@ -140,7 +140,7 @@ func (fb *fbtree) split(node fNode, nodeOff uint64, where int) (
 //-------------------------------------------------------------------
 
 func (fb *fbtree) Delete(key string, off uint64) bool {
-	verify.That(fb.mutable)
+	assert.That(fb.mutable)
 	var stack [maxlevels]uint64
 
 	// search down the tree to the appropriate leaf
@@ -260,10 +260,10 @@ func (re *redirs) set(off uint64, node fNode) {
 	re.tbl.Put(&redir{offset: off, mnode: node, generation: re.generation})
 
 	r, ok := re.tbl.Get(off)
-	verify.That(ok)
-	verify.That(r.offset == off)
-	verify.That(r.newOffset == 0)
-	verify.That(len(node) == 0 || &r.mnode[0] == &node[0])
+	assert.That(ok)
+	assert.That(r.offset == off)
+	assert.That(r.newOffset == 0)
+	assert.That(len(node) == 0 || &r.mnode[0] == &node[0])
 }
 
 // isFake returns true for temporary in-memory offsets

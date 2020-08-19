@@ -9,9 +9,9 @@ import (
 	"log"
 
 	. "github.com/apmckinlay/gsuneido/runtime"
+	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/hacks"
 	"github.com/apmckinlay/gsuneido/util/ints"
-	"github.com/apmckinlay/gsuneido/util/verify"
 
 	"github.com/apmckinlay/gsuneido/database/dbms/commands"
 )
@@ -112,7 +112,7 @@ func ck(err error) {
 // GetInt reads a zig zag encoded varint
 func (rw *ReadWrite) GetInt() int {
 	n := rw.GetInt64()
-	verify.That(int64(ints.MinInt) <= n && n <= int64(ints.MaxInt))
+	assert.That(int64(ints.MinInt) <= n && n <= int64(ints.MaxInt))
 	return int(n)
 }
 

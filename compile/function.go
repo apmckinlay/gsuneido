@@ -8,7 +8,7 @@ import (
 	. "github.com/apmckinlay/gsuneido/lexer"
 	tok "github.com/apmckinlay/gsuneido/lexer/tokens"
 	. "github.com/apmckinlay/gsuneido/runtime"
-	"github.com/apmckinlay/gsuneido/util/verify"
+	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
 // function parse a function (starting with the "function" keyword)
@@ -24,7 +24,7 @@ func (p *parser) function(inClass bool) *ast.Function {
 	pos := p.Pos
 	params := p.params(inClass)
 	body := p.compound()
-	verify.That(p.compoundNest == 0)
+	assert.That(p.compoundNest == 0)
 	fn := &ast.Function{Pos: pos, Params: params, Body: body, Final: p.final,
 		HasBlocks: p.hasBlocks}
 	p.funcInfo = funcInfoSave
@@ -35,8 +35,8 @@ func (p *parser) params(inClass bool) []ast.Param {
 	p.match(tok.LParen)
 	var params []ast.Param
 	if p.matchIf(tok.At) {
-		params = append(params, 
-			mkParam("@" + p.Text, p.Pos, p.unusedAhead(), nil))
+		params = append(params,
+			mkParam("@"+p.Text, p.Pos, p.unusedAhead(), nil))
 		p.final[p.Text] = disqualified
 		p.matchIdent()
 	} else {
