@@ -95,7 +95,7 @@ var halfpow10 = [...]uint64{
 	5000000000000000000}
 
 // NOTE: comment out body in production
-func check(cond bool) {
+func check(/*cond*/ bool) {
 	// if !cond {
 	// 	panic("check failed")
 	// }

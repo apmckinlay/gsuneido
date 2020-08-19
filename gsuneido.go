@@ -86,10 +86,10 @@ func main() {
 
 func clientErrorLog() {
 	dbms := mainThread.Dbms()
-	
+
 	log.SetFlags(log.Ldate | log.Ltime | log.Lmsgprefix)
 	log.SetPrefix(dbms.SessionId("") + " ")
-	
+
 	// unlike cSuneido, client error.log is still in current directory
 	// this is partly because stderr has already been redirected
 	f, err := os.Open(options.Errlog)
