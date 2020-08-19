@@ -23,21 +23,3 @@ func Grow(buf []byte, n int) []byte {
 	copy(buf2, buf)
 	return buf2[:l+n]
 }
-
-func Compare(x []byte, y []byte) int {
-	for i := 0; i < len(x) && i < len(y); i++ {
-		if x[i] < y[i] {
-			return -1
-		}
-		if x[i] > y[i] {
-			return +1
-		}
-	}
-	if len(x) < len(y) {
-		return -1
-	}
-	if len(x) > len(y) {
-		return +1
-	}
-	return 0
-}
