@@ -13,8 +13,9 @@
 package sortlist
 
 import (
-	"math/bits"
 	"sort"
+
+	"github.com/apmckinlay/gsuneido/util/bits"
 )
 
 const blockSize = 4096
@@ -116,26 +117,19 @@ func (b *Builder) Sort(cmp func(x, y uint64) int) {
 			n = b.i
 		}
 		sort.Sort(ablock{block: block, n: n, cmp: cmp})
-		b.merges(i+1) // merge as we sort for better cache use
+		b.merges(i + 1) // merge as we sort for better cache use
 	}
 	b.finishMerges()
 }
 
 func (b *Builder) finishMerges() {
 	nb := len(b.blocks)
-	nb2 := nextPow2(nb)
+	nb2 := bits.NextPow2(uint(nb))
 	for len(b.blocks) < nb2 {
 		b.blocks = append(b.blocks, &zeroBlock)
 		b.merges(len(b.blocks))
 	}
 	b.blocks = b.blocks[:nb]
-}
-
-// nextPow2 returns the smallest power of 2 >= n
-func nextPow2(n int) int {
-	x := uint32(n)
-	x = uint32(1) << (32 - bits.LeadingZeros32(x-1))
-	return int(x)
 }
 
 func (b *Builder) worker() {
