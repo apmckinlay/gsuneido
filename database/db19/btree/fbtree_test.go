@@ -10,8 +10,8 @@ import (
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/database/db19/stor"
-	. "github.com/apmckinlay/gsuneido/util/hamcrest"
 
+	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
@@ -35,14 +35,15 @@ func TestFbtreeIter(t *testing.T) {
 	i := 0
 	iter := fb.Iter()
 	for k, o, ok := iter(); ok; k, o, ok = iter() {
-		Assert(t).True(strings.HasPrefix(data[i], k))
-		Assert(t).That(o, Is(i))
+		assert.T(t).That(strings.HasPrefix(data[i], k))
+		assert.T(t).This(o).Is(i)
 		i++
 	}
-	Assert(t).That(i, Is(n))
+	assert.T(t).This(i).Is(n)
 }
 
 func TestFbtreeBuilder(t *testing.T) {
+	assert := assert.T(t)
 	GetLeafKey = func(_ *stor.Stor, _ interface{}, i uint64) string {
 		return strconv.Itoa(int(i))
 	}
@@ -64,10 +65,10 @@ func TestFbtreeBuilder(t *testing.T) {
 	for i := 100000; i <= limit; i++ {
 		key := strconv.Itoa(i)
 		k, o, ok := iter()
-		Assert(t).True(ok)
-		Assert(t).True(strings.HasPrefix(key, k))
-		Assert(t).That(o, Is(i))
+		assert.True(ok)
+		assert.True(strings.HasPrefix(key, k))
+		assert.This(o).Is(i)
 	}
 	_, _, ok := iter()
-	Assert(t).False(ok)
+	assert.False(ok)
 }

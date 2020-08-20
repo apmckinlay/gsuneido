@@ -6,7 +6,7 @@ package stor
 import (
 	"testing"
 
-	. "github.com/apmckinlay/gsuneido/util/hamcrest"
+	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
 func TestSized(t *testing.T) {
@@ -16,5 +16,5 @@ func TestSized(t *testing.T) {
 	copy(buf, "helloworld")
 
 	buf = st.DataSized(off)
-	Assert(t).That(string(buf), Is("helloworld"))
+	assert.T(t).This(string(buf)).Is("helloworld")
 }

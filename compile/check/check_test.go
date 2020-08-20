@@ -10,7 +10,7 @@ import (
 
 	"github.com/apmckinlay/gsuneido/compile"
 	"github.com/apmckinlay/gsuneido/compile/check"
-	. "github.com/apmckinlay/gsuneido/util/hamcrest"
+	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
 func TestCheckVars(t *testing.T) {
@@ -22,14 +22,14 @@ func TestCheckVars(t *testing.T) {
 		ck := check.Check{}
 		init := ck.Check(ast)
 		sort.Strings(init)
-		Assert(t).That(fmt.Sprint(init), Is("["+initExp+"]"))
+		assert.T(t).This(fmt.Sprint(init)).Is("[" + initExp + "]")
 
 		var used []string
 		for s := range ck.AllUsed {
 			used = append(used, s)
 		}
 		sort.Strings(used)
-		Assert(t).That(fmt.Sprint(used), Is("["+usedExp+"]"))
+		assert.T(t).This(fmt.Sprint(used)).Is("[" + usedExp + "]")
 	}
 	test("function (a,b,c) { }", "a b c", "")
 	test("function (a,b) { c = 1; d = 2 }", "a b c d", "")
@@ -51,7 +51,7 @@ func TestCheckResults(t *testing.T) {
 		t.Helper()
 		// fmt.Println(src)
 		_, results := compile.Checked(nil, src)
-		Assert(t).That(results, Is(expected))
+		assert.T(t).This(results).Is(expected)
 	}
 
 	test("function () { return { it } }")

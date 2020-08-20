@@ -4,29 +4,31 @@
 package stor
 
 import (
-	. "github.com/apmckinlay/gsuneido/util/hamcrest"
 	"os"
 	"testing"
+
+	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
 func TestAlloc(t *testing.T) {
+	assert := assert.T(t).This
 	hs := HeapStor(64)
 	offset, _ := hs.Alloc(12)
-	Assert(t).That(offset, Is(Offset(0)))
+	assert(offset).Is(Offset(0))
 	offset, _ = hs.Alloc(8)
-	Assert(t).That(offset, Is(Offset(12)))
+	assert(offset).Is(Offset(12))
 	offset, _ = hs.Alloc(8)
-	Assert(t).That(offset, Is(Offset(20)))
+	assert(offset).Is(Offset(20))
 	offset, _ = hs.Alloc(48) // requires new chunk
-	Assert(t).That(offset, Is(Offset(64)))
+	assert(offset).Is(Offset(64))
 }
 
 func TestData(t *testing.T) {
 	hs := HeapStor(64)
 	hs.Alloc(12)
 	offset, buf := hs.Alloc(12)
-	Assert(t).That(len(buf), Is(12))             // Alloc gives correct length
-	Assert(t).That(len(hs.Data(offset)), Is(52)) // Data gives to end of chunk
+	assert.T(t).This(len(buf)).Is(12)             // Alloc gives correct length
+	assert.T(t).This(len(hs.Data(offset))).Is(52) // Data gives to end of chunk
 	for i := 0; i < 12; i++ {
 		buf[i] = byte(i)
 	}
@@ -35,7 +37,7 @@ func TestData(t *testing.T) {
 func TestMmapRead(t *testing.T) {
 	ms, _ := MmapStor("stor_test.go", READ)
 	buf := ms.Data(0)
-	Assert(t).That(string(buf[:12]), Is("// Copyright"))
+	assert.T(t).This(string(buf[:12])).Is("// Copyright")
 	ms.Close()
 }
 
@@ -51,10 +53,9 @@ func TestMmapWrite(t *testing.T) {
 	ms, _ = MmapStor("stor_test.tmp", READ)
 	data := ms.Data(0)
 	for i := 0; i < N; i++ {
-		Assert(t).That(data[i], Is(byte(i)))
+		assert.T(t).This(data[i]).Is(byte(i))
 	}
 	ms.Close()
 
 	os.Remove("stor_test.tmp")
 }
-

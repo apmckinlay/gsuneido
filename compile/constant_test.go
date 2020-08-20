@@ -10,15 +10,15 @@ import (
 
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/runtime/types"
+	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/dnum"
-	. "github.com/apmckinlay/gsuneido/util/hamcrest"
 	"github.com/apmckinlay/gsuneido/util/ptest"
 )
 
 func TestConstant(t *testing.T) {
 	test := func(src string, expected Value) {
 		t.Helper()
-		Assert(t).That(Constant(src), Is(expected))
+		assert.T(t).This(Constant(src)).Is(expected)
 	}
 	test("true", True)
 	test("false", False)
@@ -32,8 +32,8 @@ func TestConstant(t *testing.T) {
 	test("'hi wo'", SuStr("hi wo"))
 	test("/* comment */ true", True)
 
-	Assert(t).That(Constant("#20140425").String(), Is("#20140425"))
-	Assert(t).That(Constant("function () {}").Type(), Is(types.Function))
+	assert.T(t).This(Constant("#20140425").String()).Is("#20140425")
+	assert.T(t).This(Constant("function () {}").Type()).Is(types.Function)
 }
 
 // ptest ------------------------------------------------------------
@@ -51,7 +51,7 @@ func pt_compile(args []string, _ []bool) bool {
 	expected := args[2]
 	var actual Value
 	ok := true
-	e := Catch(func() {
+	e := assert.Catch(func() {
 		actual = Constant(args[0])
 		if actual.Type().String() != expectedType {
 			ok = false

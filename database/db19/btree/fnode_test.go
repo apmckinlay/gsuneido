@@ -10,7 +10,6 @@ import (
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/util/assert"
-	. "github.com/apmckinlay/gsuneido/util/hamcrest"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
@@ -34,9 +33,9 @@ func TestFAppendRead(t *testing.T) {
 		var off uint64
 		npre, diff, off = fRead(fn)
 		fn = fn[fLen(diff):]
-		Assert(t).That(npre, Is(e.npre))
-		Assert(t).That(diff, Is(e.diff))
-		Assert(t).That(off, Is(e.offset))
+		assert.T(t).This(npre).Is(e.npre)
+		assert.T(t).This(diff).Is(e.diff)
+		assert.T(t).This(off).Is(e.offset)
 	}
 }
 
@@ -129,7 +128,7 @@ func TestDelete(t *testing.T) {
 	// delete at end, simplest case
 	for i := 0; i < 8; i++ {
 		fn, ok = fn.delete(uint64(len(data) - 1))
-		Assert(t).True(ok)
+		assert.That(ok)
 		data = data[:len(data)-1]
 		fn.checkData(data, get)
 	}
@@ -140,7 +139,7 @@ func TestDelete(t *testing.T) {
 	const nStart = 8
 	for i := 0; i < nStart; i++ {
 		fn, ok = fn.delete(uint64(i))
-		Assert(t).True(ok)
+		assert.That(ok)
 		data[i] = ""
 		fn.checkData(data, get)
 	}
@@ -154,7 +153,7 @@ func TestDelete(t *testing.T) {
 		}
 		// print("================================ delete", data[off])
 		fn, ok = fn.delete(uint64(off))
-		Assert(t).True(ok)
+		assert.That(ok)
 		// fn.printLeafNode(get)
 		data[off] = ""
 		fn.checkData(data, get)
@@ -173,7 +172,7 @@ func TestDelete2(t *testing.T) {
 	var ok bool
 	for i := 1; i < len(data); i++ {
 		fn, ok = fn.delete(uint64(i))
-		Assert(t).True(ok)
+		assert.That(ok)
 		// print("================================")
 		// fn.printLeafNode(get)
 		data[i] = ""

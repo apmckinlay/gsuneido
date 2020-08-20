@@ -6,28 +6,29 @@ package runtime
 import (
 	"testing"
 
-	. "github.com/apmckinlay/gsuneido/util/hamcrest"
+	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
 func TestSuConcat(t *testing.T) {
+	assert := assert.T(t)
 	a := NewSuConcat()
 	b := a
-	Assert(t).True(a.buf == b.buf) // same shared buffer
+	assert.That(a.buf == b.buf) // same shared buffer
 	a = a.Add("hello")
 	a = a.Add("world")
-	Assert(t).True(a.buf == b.buf) // still same shared buffer
-	Assert(t).That(ToStr(b), Is(""))
+	assert.That(a.buf == b.buf) // still same shared buffer
+	assert.This(ToStr(b)).Is("")
 	b = b.Add("foo")
-	Assert(t).True(a.buf != b.buf) // NOT the same shared buffer
+	assert.That(a.buf != b.buf) // NOT the same shared buffer
 }
 
 func TestSuConcat_SetConcurrent(t *testing.T) {
 	a := NewSuConcat()
 	b := a
 	a.SetConcurrent()
-	Assert(t).True(a.buf == b.buf) // same shared buffer
+	assert.T(t).That(a.buf == b.buf) // same shared buffer
 	a = a.Add("hello")
-	Assert(t).True(a.buf != b.buf) // NOT the same shared buffer
+	assert.T(t).That(a.buf != b.buf) // NOT the same shared buffer
 }
 
 func TestSuConcat_Equals(t *testing.T) {

@@ -9,7 +9,7 @@ import (
 	"sort"
 	"testing"
 
-	. "github.com/apmckinlay/gsuneido/util/hamcrest"
+	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
@@ -74,9 +74,9 @@ func (m *mbtree) check() {
 func (m *mbtree) checkData(t *testing.T, data []string) {
 	m.check()
 	for i, key := range data {
-		Assert(t).That(m.Search(key), Is(i))
-		Assert(t).That(m.Search(bigger(key)), Is(0))
-		Assert(t).That(m.Search(smaller(key)), Is(0))
+		assert.T(t).This(m.Search(key)).Is(i)
+		assert.T(t).This(m.Search(bigger(key))).Is(0)
+		assert.T(t).This(m.Search(smaller(key))).Is(0)
 	}
 }
 

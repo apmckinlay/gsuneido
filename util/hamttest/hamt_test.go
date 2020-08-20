@@ -11,15 +11,15 @@ import (
 	"strings"
 	"testing"
 
-	. "github.com/apmckinlay/gsuneido/util/hamcrest"
+	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/str"
-	"github.com/apmckinlay/gsuneido/util/verify"
 )
 
 func TestRandom(t *testing.T) {
+	assert := assert.T(t)
 	ht := FooHamt{}.Mutable()
 	_, ok := ht.Get(123)
-	Assert(t).False(ok)
+	assert.False(ok)
 	var n = 100000
 	if testing.Short() {
 		n = 1000
@@ -43,9 +43,9 @@ func TestRandom(t *testing.T) {
 	for i := 0; i < n; i++ {
 		f := int(rand.Int31())
 		foo, ok := ht.Get(f)
-		Assert(t).True(ok)
-		Assert(t).That(foo.key, Is(f))
-		Assert(t).That(foo.data, Is(strconv.Itoa(f)))
+		assert.True(ok)
+		assert.This(foo.key).Is(f)
+		assert.This(foo.data).Is(strconv.Itoa(f))
 		nums[f] = true
 	}
 
@@ -53,29 +53,30 @@ func TestRandom(t *testing.T) {
 	// ht.print()
 	for f := range nums {
 		// fmt.Println("======================= del", f)
-		verify.That(ht.Delete(f))
+		assert.That(ht.Delete(f))
 		// ht.print()
 	}
 	ht.ForEach(func(*Foo) { panic("should be empty") })
 }
 
 func TestPersistent(t *testing.T) {
+	assert := assert.T(t).This
 	var ht FooHamt
-	Assert(t).That(ht.string(), Is("{}"))
+	assert(ht.string()).Is("{}")
 	h2 := ht.Mutable()
 	h2.Put(&Foo{12, "12"})
 	h2.Put(&Foo{34, "34"})
 	h2 = h2.Freeze()
-	Assert(t).That(ht.string(), Is("{}"))
-	Assert(t).That(h2.string(), Is("{12,34}"))
+	assert(ht.string()).Is("{}")
+	assert(h2.string()).Is("{12,34}")
 	h3 := h2.Mutable()
-	Assert(t).That(h3.string(), Is("{12,34}"))
+	assert(h3.string()).Is("{12,34}")
 	h3.Put(&Foo{56, "56"})
 	h3.Put(&Foo{78, "78"})
 	h3 = h3.Freeze()
-	Assert(t).That(ht.string(), Is("{}"))
-	Assert(t).That(h2.string(), Is("{12,34}"))
-	Assert(t).That(h3.string(), Is("{12,34,56,78}"))
+	assert(ht.string()).Is("{}")
+	assert(h2.string()).Is("{12,34}")
+	assert(h3.string()).Is("{12,34,56,78}")
 }
 
 func (ht FooHamt) string() string {
@@ -106,13 +107,13 @@ func TestDelete(*testing.T) {
 		rand.Shuffle(len(data), func(i, j int) { data[i], data[j] = data[j], data[i] })
 		for i, d := range data {
 			// fmt.Printf("------------------------------ del %#x\n", d)
-			verify.That(dht.Delete(d))
+			assert.That(dht.Delete(d))
 			// dht.print()
 			for j, d := range data {
 				x, ok := dht.Get(data[j])
-				verify.That(ok == (j > i))
+				assert.That(ok == (j > i))
 				if ok {
-					verify.That(x.key == d)
+					assert.That(x.key == d)
 				}
 			}
 		}

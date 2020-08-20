@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/database/db19/stor"
-	. "github.com/apmckinlay/gsuneido/util/hamcrest"
+	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
@@ -66,6 +66,7 @@ func key2off(key string) uint64 {
 }
 
 func checkIter(t *testing.T, data []string, tr tree) {
+	assert := assert.T(t)
 	sort.Strings(data)
 	it := tr.Iter()
 	for _, k := range data {
@@ -73,10 +74,10 @@ func checkIter(t *testing.T, data []string, tr tree) {
 			continue
 		}
 		k2, o2, ok := it()
-		Assert(t).True(ok)
-		Assert(t).That(k2, Is(k))
-		Assert(t).That(o2, Is(key2off(k)))
+		assert.True(ok)
+		assert.This(k2).Is(k)
+		assert.This(o2).Is(key2off(k))
 	}
 	_, _, ok := it()
-	Assert(t).False(ok)
+	assert.False(ok)
 }

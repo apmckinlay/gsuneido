@@ -11,7 +11,7 @@ import (
 
 	"github.com/apmckinlay/gsuneido/compile/ast"
 	rt "github.com/apmckinlay/gsuneido/runtime"
-	. "github.com/apmckinlay/gsuneido/util/hamcrest"
+	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
@@ -27,7 +27,7 @@ func TestFinal(t *testing.T) {
 			}
 		}
 		sort.Strings(list)
-		Assert(t).That(str.Join(",", list...), Like(expected))
+		assert.T(t).This(str.Join(",", list...)).Like(expected)
 	}
 	test("123", "")
 	test("x = 5", "x")                 // normal usage
@@ -59,7 +59,7 @@ func TestPropFold(t *testing.T) {
 				sep = "\n"
 			}
 		}
-		Assert(t).That(s, Like(expected))
+		assert.T(t).This(s).Like(expected)
 	}
 
 	test("return 123",

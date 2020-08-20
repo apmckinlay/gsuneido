@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	. "github.com/apmckinlay/gsuneido/runtime"
-	. "github.com/apmckinlay/gsuneido/util/hamcrest"
+	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
 func Test_MethodCall(t *testing.T) {
@@ -16,5 +16,5 @@ func Test_MethodCall(t *testing.T) {
 	f := n.Lookup(th, "Round")
 	th.Push(IntVal(1))
 	result := f.Call(th, n, &ArgSpec1)
-	Assert(t).That(result, Is(NumFromString("12.3")))
+	assert.T(t).This(result).Is(NumFromString("12.3"))
 }

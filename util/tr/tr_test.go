@@ -4,14 +4,16 @@
 package tr
 
 import (
-	. "github.com/apmckinlay/gsuneido/util/hamcrest"
-	"github.com/apmckinlay/gsuneido/util/ptest"
 	"testing"
+
+	"github.com/apmckinlay/gsuneido/util/assert"
+	"github.com/apmckinlay/gsuneido/util/ptest"
 )
 
 func Test_makset(t *testing.T) {
 	test := func(s, expected string) {
-		Assert(t).That(string(Set("")), Is(""))
+		t.Helper()
+		assert.T(t).This(string(Set(""))).Is("")
 	}
 	test("foo", "foo")
 	test("-foo", "-foo")

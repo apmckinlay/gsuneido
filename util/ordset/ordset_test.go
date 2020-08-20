@@ -8,7 +8,7 @@ import (
 	"sort"
 	"testing"
 
-	. "github.com/apmckinlay/gsuneido/util/hamcrest"
+	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
@@ -59,6 +59,7 @@ func TestUnevenSplit(t *testing.T) {
 }
 
 func TestAnyInRange(t *testing.T) {
+	assert := assert.T(t)
 	const n = nodeSize * 80
 	data := make([]string, n)
 	randKey := str.UniqueRandom(3, 10)
@@ -68,10 +69,11 @@ func TestAnyInRange(t *testing.T) {
 		x.Insert(data[i])
 	}
 	yes := func(d int) {
-		Assert(t).True(x.AnyInRange(data[d], data[d]))
-		Assert(t).True(x.AnyInRange(smaller(data[d]), data[d]))
-		Assert(t).True(x.AnyInRange(data[d], bigger(data[d])))
-		Assert(t).True(x.AnyInRange(smaller(data[d]), bigger(data[d])))
+		t.Helper()
+		assert.True(x.AnyInRange(data[d], data[d]))
+		assert.True(x.AnyInRange(smaller(data[d]), data[d]))
+		assert.True(x.AnyInRange(data[d], bigger(data[d])))
+		assert.True(x.AnyInRange(smaller(data[d]), bigger(data[d])))
 	}
 	sort.Strings(data)
 	yes(0)
@@ -79,11 +81,11 @@ func TestAnyInRange(t *testing.T) {
 	const ntimes = 1000
 	for i := 0; i < ntimes; i++ {
 		d := rand.Intn(n - 1)
-		Assert(t).False(x.AnyInRange(bigger(data[d]), smaller(data[d+1])))
+		assert.False(x.AnyInRange(bigger(data[d]), smaller(data[d+1])))
 		yes(rand.Intn(n))
 		d = rand.Intn(n - 10)
 		e := d + rand.Intn(10)
-		Assert(t).True(x.AnyInRange(smaller(data[d]), bigger(data[e])))
+		assert.True(x.AnyInRange(smaller(data[d]), bigger(data[e])))
 	}
 }
 
@@ -91,9 +93,9 @@ func TestAnyInRange(t *testing.T) {
 
 func (set *Set) checkData(t *testing.T, data []string) {
 	for _, key := range data {
-		Assert(t).True(set.Contains(key))
-		Assert(t).False(set.Contains(bigger(key)))
-		Assert(t).False(set.Contains(smaller(key)))
+		assert.T(t).True(set.Contains(key))
+		assert.T(t).False(set.Contains(bigger(key)))
+		assert.T(t).False(set.Contains(smaller(key)))
 	}
 }
 

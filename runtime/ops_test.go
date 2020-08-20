@@ -7,26 +7,26 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/dnum"
-	. "github.com/apmckinlay/gsuneido/util/hamcrest"
 )
 
 func TestDiv(t *testing.T) {
 	q := OpDiv(SuInt(999), SuInt(3))
 	xi, xok := SuIntToInt(q)
-	Assert(t).That(xok, Is(true))
-	Assert(t).That(xi, Is(333))
+	assert.T(t).This(xok).Is(true)
+	assert.T(t).This(xi).Is(333)
 	q = OpDiv(SuInt(1), SuInt(3))
 	_ = q.(SuDnum)
 }
 
 func TestBool(t *testing.T) {
-	Assert(t).True(SuBool(true) == True)
-	Assert(t).True(SuBool(false) == False)
+	assert.T(t).That(SuBool(true) == True)
+	assert.T(t).That(SuBool(false) == False)
 }
 func TestIndex(t *testing.T) {
-	Assert(t).That(ToIndex(SuInt(123)), Is(123))
-	Assert(t).That(ToIndex(SuDnum{Dnum: dnum.FromInt(123)}), Is(123))
+	assert.T(t).This(ToIndex(SuInt(123))).Is(123)
+	assert.T(t).This(ToIndex(SuDnum{Dnum: dnum.FromInt(123)})).Is(123)
 }
 
 var abc = SuStr("abc")

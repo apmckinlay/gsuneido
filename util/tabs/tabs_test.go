@@ -6,12 +6,13 @@ package tabs
 import (
 	"testing"
 
-	. "github.com/apmckinlay/gsuneido/util/hamcrest"
+	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
 func TestDetab(t *testing.T) {
 	test := func(s, expected string) {
-		Assert(t).That(Detab(s), Is(expected))
+		t.Helper()
+		assert.T(t).This(Detab(s)).Is(expected)
 	}
 	test("", "")
 	test("foo bar", "foo bar")
@@ -27,7 +28,8 @@ func TestDetab(t *testing.T) {
 
 func TestEntab(t *testing.T) {
 	test := func(s, expected string) {
-		Assert(t).That(Entab(s), Is(expected))
+		t.Helper()
+		assert.T(t).This(Entab(s)).Is(expected)
 	}
 	test("", "")
 	test("foo", "foo")

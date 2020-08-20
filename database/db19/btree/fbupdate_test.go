@@ -16,7 +16,6 @@ import (
 
 	"github.com/apmckinlay/gsuneido/database/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
-	. "github.com/apmckinlay/gsuneido/util/hamcrest"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
@@ -56,7 +55,7 @@ func TestUnevenSplit(t *testing.T) {
 			mfb.Insert(data[i], uint64(i))
 		}
 		count, size, nnodes := mfb.check()
-		Assert(t).That(count, Is(n))
+		assert.T(t).This(count).Is(n)
 		full := float32(size) / float32(nnodes) / float32(MaxNodeSize)
 		// print("count", count, "nnodes", nnodes, "size", size, "full", full)
 		if full < .65 {
@@ -90,7 +89,7 @@ func (fb *fbtree) checkData(t *testing.T, data []string) {
 		}
 		n++
 	}
-	Assert(t).That(count, Is(n))
+	assert.T(t).This(count).Is(n)
 }
 
 func TestSampleData(t *testing.T) {
@@ -171,28 +170,29 @@ func TestFbdelete(t *testing.T) {
 }
 
 func TestFreeze(t *testing.T) {
+	assert := assert.T(t).This
 	GetLeafKey = func(_ *stor.Stor, _ interface{}, i uint64) string {
 		return strconv.Itoa(int(i))
 	}
 	store := stor.HeapStor(8192)
 	store.Alloc(1) // avoid offset 0
 	fb := CreateFbtree(store, nil)
-	Assert(t).That(fb.redirs.Len(), Is(1))
+	assert(fb.redirs.Len()).Is(1)
 	fb = fb.Update(func(mfb *fbtree) {
 		mfb.Insert("1", 1)
 	})
-	Assert(t).That(fb.redirs.Len(), Is(1))
-	Assert(t).That(fb.list(), Is("1"))
+	assert(fb.redirs.Len()).Is(1)
+	assert(fb.list()).Is("1")
 	fb = fb.Update(func(mfb *fbtree) {
 		mfb.Insert("2", 2)
 	})
-	Assert(t).That(fb.redirs.Len(), Is(1))
-	Assert(t).That(fb.list(), Is("1 2"))
+	assert(fb.redirs.Len()).Is(1)
+	assert(fb.list()).Is("1 2")
 
 	fb = fb.Save()
 	fb = OpenFbtree(store, fb.root, fb.treeLevels, fb.redirsOff)
-	Assert(t).That(fb.redirs.Len(), Is(1))
-	Assert(t).That(fb.list(), Is("1 2"))
+	assert(fb.redirs.Len()).Is(1)
+	assert(fb.list()).Is("1 2")
 }
 
 func (fb *fbtree) list() string {
@@ -280,6 +280,7 @@ func TestSplitDup(*testing.T) {
 }
 
 func TestFlatten(t *testing.T) {
+	assert := assert.T(t)
 	GetLeafKey = func(_ *stor.Stor, _ interface{}, i uint64) string {
 		return strconv.Itoa(int(i))
 	}
@@ -314,15 +315,15 @@ func TestFlatten(t *testing.T) {
 			}
 			key := strconv.Itoa(i)
 			k, o, ok := iter()
-			Assert(t).True(ok)
-			Assert(t).True(strings.HasPrefix(key, k))
-			Assert(t).That(o, Is(i))
+			assert.True(ok)
+			assert.True(strings.HasPrefix(key, k))
+			assert.This(o).Is(i)
 			if o != uint64(i) {
 				t.FailNow()
 			}
 		}
 		_, _, ok := iter()
-		Assert(t).False(ok)
+		assert.False(ok)
 	}
 	insert := func(i int) {
 		fb = fb.Update(func(mfb *fbtree) {

@@ -9,80 +9,82 @@ import (
 	"testing"
 	"unsafe"
 
-	. "github.com/apmckinlay/gsuneido/util/hamcrest"
+	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/ptest"
 )
 
 func Test_size(t *testing.T) {
 	// due to allignment and padding, size is 16 bytes instead of 10
-	Assert(t).That(int(unsafe.Sizeof(Dnum{})), Is(16))
+	assert.T(t).This(int(unsafe.Sizeof(Dnum{}))).Is(16)
 	var a [10]Dnum
-	Assert(t).That(int(unsafe.Sizeof(a)), Is(160))
+	assert.T(t).This(int(unsafe.Sizeof(a))).Is(160)
 }
 
 func Test_inf(t *testing.T) {
-	Assert(t).That(Inf(0), Is(Zero))
-	Assert(t).That(Inf(+1), Is(PosInf))
-	Assert(t).That(Inf(-1), Is(NegInf))
+	assert := assert.T(t).This
+	assert(Inf(0)).Is(Zero)
+	assert(Inf(+1)).Is(PosInf)
+	assert(Inf(-1)).Is(NegInf)
 }
 
 func Test_ilog10(t *testing.T) {
-	Assert(t).That(ilog10(0), Is(0))
-	Assert(t).That(ilog10(123), Is(2))
+	assert.T(t).This(ilog10(0)).Is(0)
+	assert.T(t).This(ilog10(123)).Is(2)
 }
 
 func Test_New(t *testing.T) {
-	Assert(t).That(New(signZero, 0, 0), Is(Zero))
-	Assert(t).That(New(signPos, 1, 999), Is(PosInf)) // exponent overflow
-	Assert(t).That(New(signNeg, 1, 999), Is(NegInf)) // exponent overflow
-	Assert(t).That(New(signPos, 1, -999), Is(Zero))  // exponent underflow
-	Assert(t).That(New(signNeg, 1, -999), Is(Zero))  // exponent underflow
-	Assert(t).That(New(signPos, 1, 0), Is(Dnum{1000000000000000, 1, -15}))
-	Assert(t).That(New(signPos, 123, 0), Is(Dnum{1230000000000000, 1, -13}))
+	assert := assert.T(t).This
+	assert(New(signZero, 0, 0)).Is(Zero)
+	assert(New(signPos, 1, 999)).Is(PosInf) // exponent overflow
+	assert(New(signNeg, 1, 999)).Is(NegInf) // exponent overflow
+	assert(New(signPos, 1, -999)).Is(Zero)  // exponent underflow
+	assert(New(signNeg, 1, -999)).Is(Zero)  // exponent underflow
+	assert(New(signPos, 1, 0)).Is(Dnum{1000000000000000, 1, -15})
+	assert(New(signPos, 123, 0)).Is(Dnum{1230000000000000, 1, -13})
 }
 
 func Test_String(t *testing.T) {
-	assert := Assert(t)
-	assert.That(Zero.String(), Is("0"))
-	assert.That(One.String(), Is("1"))
-	assert.That(PosInf.String(), Is("inf"))
-	assert.That(NegInf.String(), Is("-inf"))
-	assert.That(FromInt(123).String(), Is("123"))
-	assert.That(FromInt(-123).String(), Is("-123"))
+	assert := assert.T(t).This
+	assert(Zero.String()).Is("0")
+	assert(One.String()).Is("1")
+	assert(PosInf.String()).Is("inf")
+	assert(NegInf.String()).Is("-inf")
+	assert(FromInt(123).String()).Is("123")
+	assert(FromInt(-123).String()).Is("-123")
 
-	assert.That(New(signPos, 1234000000000000, -20).String(), Is("1.234e-21"))
-	assert.That(New(signPos, 1234000000000000, -2).String(), Is(".001234"))
-	assert.That(New(signPos, 1234000000000000, 0).String(), Is(".1234"))
-	assert.That(New(signPos, 1234000000000000, 2).String(), Is("12.34"))
-	assert.That(New(signPos, 1234000000000000, 4).String(), Is("1234"))
-	assert.That(New(signPos, 1234000000000000, 6).String(), Is("123400"))
-	assert.That(New(signPos, 1234000000000000, 20).String(), Is("1.234e19"))
+	assert(New(signPos, 1234000000000000, -20).String()).Is("1.234e-21")
+	assert(New(signPos, 1234000000000000, -2).String()).Is(".001234")
+	assert(New(signPos, 1234000000000000, 0).String()).Is(".1234")
+	assert(New(signPos, 1234000000000000, 2).String()).Is("12.34")
+	assert(New(signPos, 1234000000000000, 4).String()).Is("1234")
+	assert(New(signPos, 1234000000000000, 6).String()).Is("123400")
+	assert(New(signPos, 1234000000000000, 20).String()).Is("1.234e19")
 }
 
 func Test_FromStr(t *testing.T) {
-	assert := Assert(t)
-	assert.That(FromStr("inf"), Is(PosInf))
-	assert.That(FromStr("+inf"), Is(PosInf))
-	assert.That(FromStr("-inf"), Is(NegInf))
-	assert.That(FromStr("0"), Is(Zero))
-	assert.That(FromStr("+0"), Is(Zero))
-	assert.That(FromStr("-0"), Is(Zero))
-	assert.That(FromStr("0e4"), Is(Zero))
-	assert.That(FromStr("0000"), Is(Zero))
-	assert.That(FromStr("0000."), Is(Zero))
-	assert.That(FromStr(".0000"), Is(Zero))
-	assert.That(FromStr("0000.0000"), Is(Zero))
-	assert.That(FromStr("1"), Is(One))
-	assert.That(FromStr("000000000000000000001"), Is(One))
-	assert.That(FromStr("1.0000000000000000000"), Is(One))
-	assert.That(FromStr("100000000000000000000"), Is(FromStr("1e20")))
-	assert.That(FromStr(".1234567890123456789"), Is(FromStr(".1234567890123456")))
-	assert.That(FromStr(".000000000000000000001"), Is(FromStr(".1e-20")))
+	assert := assert.T(t).This
+	assert(FromStr("inf")).Is(PosInf)
+	assert(FromStr("+inf")).Is(PosInf)
+	assert(FromStr("-inf")).Is(NegInf)
+	assert(FromStr("0")).Is(Zero)
+	assert(FromStr("+0")).Is(Zero)
+	assert(FromStr("-0")).Is(Zero)
+	assert(FromStr("0e4")).Is(Zero)
+	assert(FromStr("0000")).Is(Zero)
+	assert(FromStr("0000.")).Is(Zero)
+	assert(FromStr(".0000")).Is(Zero)
+	assert(FromStr("0000.0000")).Is(Zero)
+	assert(FromStr("1")).Is(One)
+	assert(FromStr("000000000000000000001")).Is(One)
+	assert(FromStr("1.0000000000000000000")).Is(One)
+	assert(FromStr("100000000000000000000")).Is(FromStr("1e20"))
+	assert(FromStr(".1234567890123456789")).Is(FromStr(".1234567890123456"))
+	assert(FromStr(".000000000000000000001")).Is(FromStr(".1e-20"))
 }
 
 func Test_FromToStr(t *testing.T) {
 	test := func(s string) {
-		Assert(t).That(FromStr(s).String(), Is(s))
+		assert.T(t).This(FromStr(s).String()).Is(s)
 	}
 	test("inf")
 	test("-inf")
@@ -101,18 +103,18 @@ func Test_FromToStr(t *testing.T) {
 
 func Test_getExp(t *testing.T) {
 	e := getExp(&reader{"e20", 0})
-	Assert(t).That(e, Is(20))
+	assert.T(t).This(e).Is(20)
 }
 
 func Test_FromToInt(t *testing.T) {
-	assert := Assert(t)
+	assert := assert.T(t)
 	test := func(x int64) {
 		n, ok := FromInt(x).ToInt64()
 		assert.True(ok)
-		assert.That(n, Is(x))
+		assert.This(n).Is(x)
 		n, ok = FromInt(-x).ToInt64()
 		assert.True(ok)
-		assert.That(n, Is(-x))
+		assert.This(n).Is(-x)
 	}
 	test(0)
 	test(1)
@@ -126,15 +128,15 @@ func Test_FromToInt(t *testing.T) {
 }
 
 func Test_FromInt(t *testing.T) {
-	Assert(t).That(FromInt(0), Is(Zero))
-	Assert(t).That(FromInt(1), Is(Dnum{1000000000000000, +1, 1}))
-	Assert(t).That(FromInt(100), Is(Dnum{1000000000000000, +1, 3}))
-	Assert(t).That(FromInt(123), Is(Dnum{1230000000000000, +1, 3}))
-	Assert(t).That(FromInt(-123), Is(Dnum{1230000000000000, -1, 3}))
-	Assert(t).That(FromInt(coefMax), Is(Dnum{coefMax, +1, 16}))
-	Assert(t).That(FromInt(-coefMax), Is(Dnum{coefMax, -1, 16}))
-	Assert(t).That(FromInt(1000000000000000000),
-		Is(Dnum{1000000000000000, +1, 19}))
+	assert := assert.T(t).This
+	assert(FromInt(0)).Is(Zero)
+	assert(FromInt(1)).Is(Dnum{1000000000000000, +1, 1})
+	assert(FromInt(100)).Is(Dnum{1000000000000000, +1, 3})
+	assert(FromInt(123)).Is(Dnum{1230000000000000, +1, 3})
+	assert(FromInt(-123)).Is(Dnum{1230000000000000, -1, 3})
+	assert(FromInt(coefMax)).Is(Dnum{coefMax, +1, 16})
+	assert(FromInt(-coefMax)).Is(Dnum{coefMax, -1, 16})
+	assert(FromInt(1000000000000000000)).Is(Dnum{1000000000000000, +1, 19})
 }
 
 func Test_ToInt(t *testing.T) {
@@ -155,11 +157,11 @@ func Test_ToInt(t *testing.T) {
 }
 
 func Test_FromToFloat(t *testing.T) {
-	assert := Assert(t)
+	assert := assert.T(t).This
 	cvt := func(f float64) {
 		t.Helper()
-		assert.That(FromFloat(f).ToFloat(), Is(f))
-		assert.That(FromFloat(-f).ToFloat(), Is(-f))
+		assert(FromFloat(f).ToFloat()).Is(f)
+		assert(FromFloat(-f).ToFloat()).Is(-f)
 	}
 	// special cases
 	cvt(math.Inf(1))
@@ -181,19 +183,18 @@ func Test_FromToFloat(t *testing.T) {
 		cvt(f)
 	}
 
-	assert.That(FromFloat(1e200), Is(PosInf))
-	assert.That(FromFloat(-1e200), Is(NegInf))
-	assert.That(FromFloat(1e-200), Is(Zero))
-	assert.That(FromFloat(-1e-200), Is(Zero))
+	assert(FromFloat(1e200)).Is(PosInf)
+	assert(FromFloat(-1e200)).Is(NegInf)
+	assert(FromFloat(1e-200)).Is(Zero)
+	assert(FromFloat(-1e-200)).Is(Zero)
 }
 
 func Test_Neg(t *testing.T) {
-	assert := Assert(t)
 	Neg := func(x string, y string) {
 		xn := FromStr(x)
 		yn := FromStr(y)
-		assert.That(xn.Neg(), Is(yn))
-		assert.That(yn.Neg(), Is(xn))
+		assert.T(t).This(xn.Neg()).Is(yn)
+		assert.T(t).This(yn.Neg()).Is(xn)
 	}
 	Neg("0", "0")
 	Neg("123", "-123")
@@ -201,28 +202,27 @@ func Test_Neg(t *testing.T) {
 }
 
 func Test_Compare(t *testing.T) {
-	assert := Assert(t)
+	assert := assert.T(t).This
 	data := []string{
 		"-inf", "-1e9", "-123", "-1e-9", "0", "1e-9", "123", "1e9", "inf"}
 	for i, xs := range data {
 		x := FromStr(xs)
-		assert.That(Compare(x, x), Is(0).Comment(fmt.Sprint(x, " >< ", x)))
+		assert(Compare(x, x)).Msg(x, " >< ", x).Is(0)
 		for _, ys := range data[i+1:] {
 			y := FromStr(ys)
-			assert.That(Compare(x, y), Is(-1).Comment(fmt.Sprint(x, " >< ", y)))
-			assert.That(Compare(y, x), Is(1).Comment(fmt.Sprint(y, " >< ", x)))
+			assert(Compare(x, y)).Msg(x, " >< ", y).Is(-1)
+			assert(Compare(y, x)).Msg(y, " >< ", x).Is(1)
 		}
 	}
 }
 
 func Test_Add(t *testing.T) {
-	assert := Assert(t)
 	add := func(x string, y string, expected string) {
 		xn := FromStr(x)
 		yn := FromStr(y)
 		zn := FromStr(expected)
-		assert.That(Add(xn, yn), Is(zn))
-		assert.That(Add(yn, xn), Is(zn))
+		assert.T(t).This(Add(xn, yn)).Is(zn)
+		assert.T(t).This(Add(yn, xn)).Is(zn)
 	}
 	// special cases (no actual math)
 	add("123", "0", "123")
@@ -247,14 +247,13 @@ func Test_Add(t *testing.T) {
 }
 
 func Test_Sub(t *testing.T) {
-	assert := Assert(t)
 	sub := func(x string, y string, expected string) {
 		xn := FromStr(x)
 		yn := FromStr(y)
 		zn := FromStr(expected)
-		assert.That(Sub(xn, yn), Is(zn))
+		assert.T(t).This(Sub(xn, yn)).Is(zn)
 		if expected != "0" {
-			assert.That(Sub(yn, xn), Is(zn.Neg()))
+			assert.T(t).This(Sub(yn, xn)).Is(zn.Neg())
 		}
 	}
 	// special cases (no actual math)
@@ -278,13 +277,12 @@ func Test_Sub(t *testing.T) {
 }
 
 func Test_Mul(t *testing.T) {
-	assert := Assert(t)
 	mul := func(x, y, expected string) {
 		xn := FromStr(x)
 		yn := FromStr(y)
 		zn := FromStr(expected)
 		mul2 := func(x, y, zn Dnum) {
-			assert.That(Mul(xn, yn), Is(zn).Comment(fmt.Sprint(xn, " * ", yn)))
+			assert.T(t).Msg(xn, " * ", yn).This(Mul(xn, yn)).Is(zn)
 		}
 		mul2(xn, yn, zn)
 		mul2(yn, xn, zn)
@@ -315,12 +313,11 @@ func Test_Mul(t *testing.T) {
 }
 
 func Test_Div(t *testing.T) {
-	assert := Assert(t)
 	div := func(x string, y string, expected string) {
 		xn := FromStr(x)
 		yn := FromStr(y)
 		zn := FromStr(expected)
-		assert.That(Div(xn, yn), Is(zn))
+		assert.T(t).This(Div(xn, yn)).Is(zn)
 	}
 	// special cases (no actual math)
 	div("0", "0", "0")
@@ -347,7 +344,7 @@ func Test_Format(t *testing.T) {
 	test := func(s, mask, expected string) {
 		t.Helper()
 		dn := FromStr(s)
-		Assert(t).That(dn.Format(mask), Is(expected))
+		assert.T(t).This(dn.Format(mask)).Is(expected)
 	}
 	test("0", "#", "0")
 	test("inf", "#", "#")

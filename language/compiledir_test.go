@@ -20,7 +20,6 @@ import (
 
 	_ "github.com/apmckinlay/gsuneido/builtin"
 	"github.com/apmckinlay/gsuneido/compile"
-	//	. "github.com/apmckinlay/gsuneido/util/hamcrest"
 )
 
 func TestCompileDir(*testing.T) {
@@ -62,7 +61,7 @@ func walk(path string, info os.FileInfo, err error) error {
 		//return fmt.Errorf("errors")
 	}
 
-	// e := Catch(func() { Constant(text) })
+	// e := assert.Catch(func() { Constant(text) })
 	// if e != nil {
 	// 	fmt.Println("\t", e)
 	// 	return fmt.Errorf("%v", e)

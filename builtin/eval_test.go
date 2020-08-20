@@ -6,21 +6,22 @@ package builtin
 import (
 	"testing"
 
-	. "github.com/apmckinlay/gsuneido/util/hamcrest"
+	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
 func TestIsGlobal(t *testing.T) {
-	Assert(t).True(isGlobal("F"))
-	Assert(t).True(isGlobal("Foo"))
-	Assert(t).True(isGlobal("Foo_123_Bar"))
-	Assert(t).True(isGlobal("Foo!"))
-	Assert(t).True(isGlobal("Foo?"))
+	assert := assert.T(t)
+	assert.True(isGlobal("F"))
+	assert.True(isGlobal("Foo"))
+	assert.True(isGlobal("Foo_123_Bar"))
+	assert.True(isGlobal("Foo!"))
+	assert.True(isGlobal("Foo?"))
 
-	Assert(t).False(isGlobal(""))
-	Assert(t).False(isGlobal("f"))
-	Assert(t).False(isGlobal("foo"))
-	Assert(t).False(isGlobal("_foo"))
-	Assert(t).False(isGlobal("Foo!bar"))
-	Assert(t).False(isGlobal("Foo?bar"))
-	Assert(t).False(isGlobal("Foo.bar"))
+	assert.False(isGlobal(""))
+	assert.False(isGlobal("f"))
+	assert.False(isGlobal("foo"))
+	assert.False(isGlobal("_foo"))
+	assert.False(isGlobal("Foo!bar"))
+	assert.False(isGlobal("Foo?bar"))
+	assert.False(isGlobal("Foo.bar"))
 }

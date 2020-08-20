@@ -6,90 +6,95 @@ package str
 import (
 	"testing"
 
-	. "github.com/apmckinlay/gsuneido/util/hamcrest"
+	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
 func TestCapitalized(t *testing.T) {
-	Assert(t).That(Capitalized(""), Is(false))
-	Assert(t).That(Capitalized("a"), Is(false))
-	Assert(t).That(Capitalized("abc"), Is(false))
-	Assert(t).That(Capitalized("?"), Is(false))
-	Assert(t).That(Capitalized("A"), Is(true))
-	Assert(t).That(Capitalized("Abc"), Is(true))
+	assert := assert.T(t).This
+	assert(Capitalized("")).Is(false)
+	assert(Capitalized("a")).Is(false)
+	assert(Capitalized("abc")).Is(false)
+	assert(Capitalized("?")).Is(false)
+	assert(Capitalized("A")).Is(true)
+	assert(Capitalized("Abc")).Is(true)
 }
 
 func TestCapitalize(t *testing.T) {
-	Assert(t).That(Capitalize(""), Is(""))
-	Assert(t).That(Capitalize("#$%"), Is("#$%"))
-	Assert(t).That(Capitalize("abc"), Is("Abc"))
-	Assert(t).That(Capitalize("a"), Is("A"))
-	Assert(t).That(Capitalize("abC"), Is("AbC"))
+	assert := assert.T(t).This
+	assert(Capitalize("")).Is("")
+	assert(Capitalize("#$%")).Is("#$%")
+	assert(Capitalize("abc")).Is("Abc")
+	assert(Capitalize("a")).Is("A")
+	assert(Capitalize("abC")).Is("AbC")
 }
 
 func TestUnCapitalize(t *testing.T) {
-	Assert(t).That(UnCapitalize(""), Is(""))
-	Assert(t).That(UnCapitalize("#$%"), Is("#$%"))
-	Assert(t).That(UnCapitalize("abc"), Is("abc"))
-	Assert(t).That(UnCapitalize("A"), Is("a"))
-	Assert(t).That(UnCapitalize("AbC"), Is("abC"))
+	assert := assert.T(t).This
+	assert(UnCapitalize("")).Is("")
+	assert(UnCapitalize("#$%")).Is("#$%")
+	assert(UnCapitalize("abc")).Is("abc")
+	assert(UnCapitalize("A")).Is("a")
+	assert(UnCapitalize("AbC")).Is("abC")
 }
 
 func TestIndexFunc(t *testing.T) {
 	f := func(c byte) bool {
 		return c == ' '
 	}
-	Assert(t).That(IndexFunc("", f), Is(-1))
-	Assert(t).That(IndexFunc(" ", f), Is(0))
-	Assert(t).That(IndexFunc("foobar", f), Is(-1))
-	Assert(t).That(IndexFunc("foo bar", f), Is(3))
+	assert := assert.T(t).This
+	assert(IndexFunc("", f)).Is(-1)
+	assert(IndexFunc(" ", f)).Is(0)
+	assert(IndexFunc("foobar", f)).Is(-1)
+	assert(IndexFunc("foo bar", f)).Is(3)
 }
 
 func TestJoin(t *testing.T) {
-	Assert(t).That(Join(""), Is(""))
-	Assert(t).That(Join("", "one", "two", "three"), Is("onetwothree"))
-	Assert(t).That(Join(",", "one", "two", "three"), Is("one,two,three"))
-	Assert(t).That(Join(", ", "one", "two", "three"), Is("one, two, three"))
-	Assert(t).That(Join("()", "one", "two", "three"), Is("(onetwothree)"))
-	Assert(t).That(Join("[::]", "one", "two", "three"), Is("[one::two::three]"))
+	assert := assert.T(t).This
+	assert(Join("")).Is("")
+	assert(Join("", "one", "two", "three")).Is("onetwothree")
+	assert(Join(",", "one", "two", "three")).Is("one,two,three")
+	assert(Join(", ", "one", "two", "three")).Is("one, two, three")
+	assert(Join("()", "one", "two", "three")).Is("(onetwothree)")
+	assert(Join("[::]", "one", "two", "three")).Is("[one::two::three]")
 }
 
 func TestList_Has(t *testing.T) {
-	Assert(t).False(List{}.Has("xxx"))
+	assert := assert.T(t)
+	assert.False(List{}.Has("xxx"))
 	list := List{"one", "two", "three"}
-	Assert(t).True(list.Has("one"))
-	Assert(t).True(list.Has("two"))
-	Assert(t).True(list.Has("three"))
-	Assert(t).False(list.Has("o"))
-	Assert(t).False(list.Has("one1"))
-	Assert(t).False(list.Has("four"))
+	assert.True(list.Has("one"))
+	assert.True(list.Has("two"))
+	assert.True(list.Has("three"))
+	assert.False(list.Has("o"))
+	assert.False(list.Has("one1"))
+	assert.False(list.Has("four"))
 }
 
 func TestList_Index(t *testing.T) {
-	Assert(t).That(List{}.Index("five"), Is(-1))
+	assert := assert.T(t).This
+	assert(List{}.Index("five")).Is(-1)
 	list := List{"one", "two", "three", "two", "four"}
-	Assert(t).That(list.Index("five"), Is(-1))
-	Assert(t).That(list.Index("one"), Is(0))
-	Assert(t).That(list.Index("two"), Is(1))
-	Assert(t).That(list.Index("four"), Is(4))
+	assert(list.Index("five")).Is(-1)
+	assert(list.Index("one")).Is(0)
+	assert(list.Index("two")).Is(1)
+	assert(list.Index("four")).Is(4)
 }
 
 func TestList_Without(t *testing.T) {
-	Assert(t).That(List{}.Without("five"), Is([]string{}))
+	assert := assert.T(t).This
+	assert(List{}.Without("five")).Is([]string{})
 	list := List{"one", "two", "three", "two", "four"}
-	Assert(t).That(list.Without("five"), Is([]string(list)))
-	Assert(t).That(list.Without("one"),
-		Is([]string{"two", "three", "two", "four"}))
-	Assert(t).That(list.Without("two"),
-		Is([]string{"one", "three", "four"}))
-	Assert(t).That(list.Without("four"),
-		Is([]string{"one", "two", "three", "two"}))
+	assert(list.Without("five")).Is([]string(list))
+	assert(list.Without("one")).Is([]string{"two", "three", "two", "four"})
+	assert(list.Without("two")).Is([]string{"one", "three", "four"})
+	assert(list.Without("four")).Is([]string{"one", "two", "three", "two"})
 }
 
 func TestList_Reverse(t *testing.T) {
 	list := []string{}
 	List(list).Reverse()
-	Assert(t).That(list, Is([]string{}))
+	assert.T(t).This(list).Is([]string{})
 	list = []string{"one", "two", "three"}
 	List(list).Reverse()
-	Assert(t).That(list, Is([]string{"three", "two", "one"}))
+	assert.T(t).This(list).Is([]string{"three", "two", "one"})
 }

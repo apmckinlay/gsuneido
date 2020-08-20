@@ -8,17 +8,18 @@ import (
 	"runtime"
 	"testing"
 
-	. "github.com/apmckinlay/gsuneido/util/hamcrest"
+	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
 func TestIntern(t *testing.T) {
-	Assert(t).That(Index("hello"), Is(1))
-	Assert(t).That(Index("world"), Is(2))
+	assert := assert.T(t).This
+	assert(Index("hello")).Is(1)
+	assert(Index("world")).Is(2)
 
-	Assert(t).That(String(1), Is("hello"))
-	Assert(t).That(String(2), Is("world"))
+	assert(String(1)).Is("hello")
+	assert(String(2)).Is("world")
 
-	Assert(t).That(Index("hello"), Is(1))
+	assert(Index("hello")).Is(1)
 
 	for c := 'a'; c <= 'z'; c++ {
 		Index(string(c))

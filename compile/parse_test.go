@@ -10,7 +10,7 @@ import (
 	"github.com/apmckinlay/gsuneido/compile/ast"
 	tok "github.com/apmckinlay/gsuneido/lexer/tokens"
 	rt "github.com/apmckinlay/gsuneido/runtime"
-	. "github.com/apmckinlay/gsuneido/util/hamcrest"
+	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
 func TestClassName(t *testing.T) {
@@ -19,7 +19,7 @@ func TestClassName(t *testing.T) {
 		t.Helper()
 		classNum = 0
 		p.name = in
-		Assert(t).That(p.getClassName(), Is(expected))
+		assert.T(t).This(p.getClassName()).Is(expected)
 	}
 	test("", "Class1")
 	test("?", "Class1")
@@ -39,12 +39,12 @@ func TestParseExpression(t *testing.T) {
 		p := NewParser(src)
 		p.className = className
 		result := p.expr()
-		Assert(t).That(p.Token, Is(tok.Eof))
+		assert.T(t).This(p.Token).Is(tok.Eof)
 		return result
 	}
 	xtest := func(src string, expected string) {
 		t.Helper()
-		err := Catch(func() { parseExpr(src) })
+		err := assert.Catch(func() { parseExpr(src) })
 		if actual, ok := err.(string); ok {
 			if !strings.Contains(actual, expected) {
 				t.Errorf("\n%#v\nexpect: %#v\nactual: %#v", src, expected, actual)
@@ -70,7 +70,7 @@ func TestParseExpression(t *testing.T) {
 		}
 		ast := parseExpr(src)
 		actual := ast.String()
-		Assert(t).That(actual, Like(expected))
+		assert.T(t).This(actual).Like(expected)
 	}
 
 	test("123", "")
@@ -215,10 +215,10 @@ func TestParseParams(t *testing.T) {
 		t.Helper()
 		p := NewParser(src + "{}")
 		result := p.function(true) // method to allow dot params
-		Assert(t).That(p.Token, Is(tok.Eof))
+		assert.T(t).This(p.Token).Is(tok.Eof)
 		s := result.String()
 		s = s[8:] // remove "Function"
-		Assert(t).That(s, Is(src))
+		assert.T(t).This(s).Is(src)
 	}
 	test("()")
 	test("(@a)")
@@ -237,14 +237,14 @@ func TestParseStatements(t *testing.T) {
 		t.Helper()
 		p := NewParser(src + " }")
 		stmts := p.statements()
-		Assert(t).That(p.Token, Is(tok.RCurly))
+		assert.T(t).This(p.Token).Is(tok.RCurly)
 		s := ""
 		sep := ""
 		for _, stmt := range stmts {
 			s += sep + stmt.String()
 			sep = "\n"
 		}
-		Assert(t).That(s, Like(expected))
+		assert.T(t).This(s).Like(expected)
 	}
 	test("x=123;;", "Binary(Eq x 123) {}")
 
@@ -319,10 +319,10 @@ func TestParseStatements(t *testing.T) {
 
 	xtest := func(src string, expected string) {
 		t.Helper()
-		actual := Catch(func() {
+		actual := assert.Catch(func() {
 			p := NewParser(src + "}")
 			p.statements()
-			Assert(t).That(p.Token, Is(tok.Eof))
+			assert.T(t).This(p.Token).Is(tok.Eof)
 		}).(string)
 		if !strings.Contains(actual, expected) {
 			t.Errorf("%#v expected: %#v but got: %#v", src, expected, actual)

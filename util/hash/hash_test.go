@@ -8,13 +8,14 @@ import (
 	"hash/maphash"
 	"testing"
 
-	. "github.com/apmckinlay/gsuneido/util/hamcrest"
+	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
 func TestHash(t *testing.T) {
 	test := func(s string, expected uint32) {
-		Assert(t).That(HashString(s), Is(expected))
-		Assert(t).That(HashBytes([]byte(s)), Is(expected))
+		t.Helper()
+		assert.T(t).This(HashString(s)).Is(expected)
+		assert.T(t).This(HashBytes([]byte(s))).Is(expected)
 	}
 	test("", 0x811c9dc5)
 	test("foobar", 0xbf9cf968)

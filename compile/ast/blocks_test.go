@@ -8,7 +8,7 @@ import (
 
 	"github.com/apmckinlay/gsuneido/compile"
 	"github.com/apmckinlay/gsuneido/compile/ast"
-	. "github.com/apmckinlay/gsuneido/util/hamcrest"
+	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
 func TestBlocks(t *testing.T) {
@@ -18,7 +18,7 @@ func TestBlocks(t *testing.T) {
 		f := p.Function()
 		ast.Blocks(f)
 		s := f.String()
-		Assert(t).That(s[9:len(s)-1], Like(expected))
+		assert.T(t).This(s[9 : len(s)-1]).Like(expected)
 	}
 	test("", "")
 	test("a=1; b=2",

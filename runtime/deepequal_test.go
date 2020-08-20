@@ -6,7 +6,7 @@ package runtime
 import (
 	"testing"
 
-	. "github.com/apmckinlay/gsuneido/util/hamcrest"
+	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
 func TestDeepEqual(t *testing.T) {
@@ -109,13 +109,14 @@ func mkInstance(kind int, concurrent bool) *SuInstance {
 }
 
 func TestExpand(t *testing.T) {
+	assert := assert.T(t).This
 	var slice []Value
 	expand(&slice, 1)
-	Assert(t).That(len(slice), Is(1))
+	assert(len(slice)).Is(1)
 	expand(&slice, 10)
-	Assert(t).That(len(slice), Is(11))
+	assert(len(slice)).Is(11)
 	expand(&slice, 1)
-	Assert(t).That(len(slice), Is(12))
+	assert(len(slice)).Is(12)
 	expand(&slice, 100)
-	Assert(t).That(len(slice), Is(112))
+	assert(len(slice)).Is(112)
 }

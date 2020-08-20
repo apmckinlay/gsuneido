@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	. "github.com/apmckinlay/gsuneido/util/hamcrest"
+	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
 func TestCheckCoTimeout(t *testing.T) {
@@ -22,9 +22,9 @@ func TestCheckCoTimeout(t *testing.T) {
 	MaxAge = 1
 	ck := StartCheckCo(nil, nil)
 	tran := ck.StartTran()
-	Assert(t).False(tran.Aborted())
+	assert.T(t).False(tran.Aborted())
 	time.Sleep(2 * time.Second)
-	Assert(t).True(tran.Aborted())
+	assert.T(t).True(tran.Aborted())
 	close(ck.c)
 }
 

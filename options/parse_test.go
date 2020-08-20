@@ -6,7 +6,7 @@ package options
 import (
 	"testing"
 
-	. "github.com/apmckinlay/gsuneido/util/hamcrest"
+	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
 func TestParse(t *testing.T) {
@@ -40,7 +40,7 @@ func TestParse(t *testing.T) {
 		}
 		return func(expected string) {
 			t.Helper()
-			Assert(t).That(s, Is(expected))
+			assert.T(t).This(s).Is(expected)
 		}
 	}
 	parse()("")
@@ -57,9 +57,9 @@ func TestParse(t *testing.T) {
 }
 
 func TestEscapeArg(t *testing.T) {
-	test := func (s, expected string) {
+	test := func(s, expected string) {
 		t.Helper()
-		Assert(t).That(EscapeArg(s), Is(expected))
+		assert.T(t).This(EscapeArg(s)).Is(expected)
 	}
 	test(`foo`, `foo`)
 	test(`foo bar`, `"foo bar"`)

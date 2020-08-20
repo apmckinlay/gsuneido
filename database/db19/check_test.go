@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	. "github.com/apmckinlay/gsuneido/util/hamcrest"
+	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
 func TestCheckStartStop(t *testing.T) {
@@ -36,15 +36,15 @@ func TestCheckStartStop(t *testing.T) {
 			ck.Commit(tn)
 		}
 	}
-	Assert(t).That(len(ck.trans), Is(0))
+	assert.T(t).This(len(ck.trans)).Is(0)
 }
 
 func TestCheckLimit(t *testing.T) {
 	ck := NewCheck()
 	for i := 0; i < maxTrans; i++ {
-		Assert(t).True(ck.StartTran() != nil)
+		assert.T(t).That(ck.StartTran() != nil)
 	}
-	Assert(t).True(ck.StartTran() == nil)
+	assert.T(t).That(ck.StartTran() == nil)
 }
 
 func TestCheckActions(t *testing.T) {

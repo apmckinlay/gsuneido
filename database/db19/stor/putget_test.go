@@ -6,10 +6,11 @@ package stor
 import (
 	"testing"
 
-	. "github.com/apmckinlay/gsuneido/util/hamcrest"
+	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
 func TestBlocks(t *testing.T) {
+	assert := assert.T(t).This
 	buf := make([]byte, 64)
 	w := NewWriter(buf)
 	w.Put1(0x11)
@@ -22,15 +23,15 @@ func TestBlocks(t *testing.T) {
 	w.PutInts([]int{1, 2, 3})
 
 	r := NewReader(buf)
-	Assert(t).That(r.Get1(), Is(0x11))
-	Assert(t).That(r.Get2(), Is(0x2222))
-	Assert(t).That(r.Get3(), Is(0x333333))
-	Assert(t).That(r.Get4(), Is(0x44444444))
-	Assert(t).That(r.Get5(), Is(0x5555555555))
-	Assert(t).That(r.GetStr(), Is("hello world"))
-	Assert(t).That(r.GetInts(), Is([]int{1, 2, 3}))
+	assert(r.Get1()).Is(0x11)
+	assert(r.Get2()).Is(0x2222)
+	assert(r.Get3()).Is(0x333333)
+	assert(r.Get4()).Is(0x44444444)
+	assert(r.Get5()).Is(0x5555555555)
+	assert(r.GetStr()).Is("hello world")
+	assert(r.GetInts()).Is([]int{1, 2, 3})
 	r = NewReader(buf[pos:])
-	Assert(t).That(r.Get5(), Is(0x5555555555))
+	assert(r.Get5()).Is(0x5555555555)
 }
 
 func BenchmarkBlocksCopy(b *testing.B) {

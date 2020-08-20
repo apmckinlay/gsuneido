@@ -7,15 +7,15 @@ import (
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/runtime/types"
-	. "github.com/apmckinlay/gsuneido/util/hamcrest"
+	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
 func TestSuRecord(t *testing.T) {
 	r := new(SuRecord)
-	Assert(t).That(r.Type(), Is(types.Record))
-	Assert(t).That(r.String(), Is("[]"))
+	assert.T(t).This(r.Type()).Is(types.Record)
+	assert.T(t).This(r.String()).Is("[]")
 	r.Set(SuStr("a"), SuInt(123))
-	Assert(t).That(r.String(), Is("[a: 123]"))
+	assert.T(t).This(r.String()).Is("[a: 123]")
 }
 
 func TestSuRecord_ReadonlyUnpack(t *testing.T) {
@@ -32,7 +32,7 @@ func TestSuRecord_ReadonlyUnpack(t *testing.T) {
 
 	surec := SuRecordFromRow(row, hdr, nil)
 
-	Assert(t).That(surec.Get(nil, SuStr("str")), Is(SuStr("foobar")))
+	assert.T(t).This(surec.Get(nil, SuStr("str"))).Is(SuStr("foobar"))
 	surec.SetReadOnly()
-	Assert(t).That(surec.Get(nil, SuStr("num")), Is(SuInt(123)))
+	assert.T(t).This(surec.Get(nil, SuStr("num"))).Is(SuInt(123))
 }

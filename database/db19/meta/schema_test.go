@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/database/db19/stor"
-	. "github.com/apmckinlay/gsuneido/util/hamcrest"
+	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
@@ -33,12 +33,14 @@ func TestSchema(t *testing.T) {
 	off := tbl.Write(st)
 
 	test := func(i int, table string, ts *Schema) {
-		Assert(t).That(ts.Table, Is(table).Comment("table"))
-		Assert(t).That(ts.Columns[0].Name, Is("one").Comment("one"))
-		Assert(t).That(ts.Columns[0].Field, Is(i).Comment("one field"))
-		Assert(t).That(ts.Columns[1].Name, Is("two").Comment("two"))
-		Assert(t).That(ts.Columns[0].Field, Is(i).Comment("two field"))
-		Assert(t).That(ts.Indexes[0].Fields, Is([]int{i}).Comment("indexes"))
+		t.Helper()
+		assert := assert.T(t).This
+		assert(ts.Table).Msg("table").Is(table)
+		assert(ts.Columns[0].Name).Msg("one").Is("one")
+		assert(ts.Columns[0].Field).Msg("one field").Is(i)
+		assert(ts.Columns[1].Name).Msg("two").Is("two")
+		assert(ts.Columns[0].Field).Msg("two field").Is(i)
+		assert(ts.Indexes[0].Fields).Msg("indexes").Is([]int{i})
 	}
 
 	tbl = ReadSchemaHamt(st, off)

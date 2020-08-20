@@ -6,16 +6,17 @@ package runtime
 import (
 	"testing"
 
-	. "github.com/apmckinlay/gsuneido/util/hamcrest"
+	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
 func TestGlobals(t *testing.T) {
+	assert := assert.T(t).This
 	foo := Global.Num("foo")
-	Assert(t).That(Global.Num("foo"), Is(foo))
-	Assert(t).That(Global.Add("bar", nil), Is(foo+1))
-	Assert(t).That(Global.Num("bar"), Is(foo+1))
+	assert(Global.Num("foo")).Is(foo)
+	assert(Global.Add("bar", nil)).Is(foo + 1)
+	assert(Global.Num("bar")).Is(foo + 1)
 	Global.Add("baz", True)
-	Assert(t).That(func() { Global.Add("baz", False) }, Panics("duplicate"))
-	Assert(t).That(Global.Name(foo), Is("foo"))
-	Assert(t).That(Global.Name(foo+1), Is("bar"))
+	assert(func() { Global.Add("baz", False) }).Panics("duplicate")
+	assert(Global.Name(foo)).Is("foo")
+	assert(Global.Name(foo + 1)).Is("bar")
 }

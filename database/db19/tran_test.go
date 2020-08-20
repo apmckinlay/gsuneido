@@ -10,11 +10,10 @@ import (
 	"testing"
 	"time"
 
-	. "github.com/apmckinlay/gsuneido/util/hamcrest"
-
 	"github.com/apmckinlay/gsuneido/database/db19/btree"
 	"github.com/apmckinlay/gsuneido/database/db19/meta"
 	"github.com/apmckinlay/gsuneido/database/db19/stor"
+	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
 func TestConcurrent(t *testing.T) {
@@ -45,8 +44,8 @@ func TestConcurrent(t *testing.T) {
 	var nout = nclients * ntrans
 	rt := NewReadTran()
 	ti := rt.meta.GetRoInfo("mytable")
-	Assert(t).That(ti.Nrows, Is(nout).Comment("nrows"))
-	Assert(t).That(ti.Size, Is(nout*12).Comment("size"))
+	assert.T(t).Msg("nrows").This(ti.Nrows).Is(nout)
+	assert.T(t).Msg("size").This(ti.Size).Is(nout * 12)
 
 	GetState().store.Close()
 }
@@ -79,8 +78,8 @@ func TestTran(t *testing.T) {
 
 	rt := NewReadTran()
 	ti := rt.meta.GetRoInfo("mytable")
-	Assert(t).That(ti.Nrows, Is(nout).Comment("nrows"))
-	Assert(t).That(ti.Size, Is(nout*12).Comment("size"))
+	assert.T(t).Msg("nrows").This(ti.Nrows).Is(nout)
+	assert.T(t).Msg("size").This(ti.Size).Is(nout * 12)
 
 	store.Close()
 	os.Remove("test.tmp")

@@ -12,7 +12,7 @@ import (
 	"github.com/apmckinlay/gsuneido/builtin"
 	"github.com/apmckinlay/gsuneido/compile"
 	. "github.com/apmckinlay/gsuneido/runtime"
-	. "github.com/apmckinlay/gsuneido/util/hamcrest"
+	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/ptest"
 )
 
@@ -21,7 +21,7 @@ func TestNaming(t *testing.T) {
 		t.Helper()
 		c := compile.Constant("function () {\n" + src + "\n}").(*SuFunc)
 		result := NewThread().Start(c, nil)
-		Assert(t).That(result, Is(SuStr(expected)))
+		assert.T(t).This(result).Is(SuStr(expected))
 	}
 	test(`foo = function(){}; Name(foo)`, "foo")
 	test(`foo = class{}; Name(foo)`, "foo")
@@ -88,9 +88,9 @@ var _ = ptest.Add("compare_packed", pt_compare_packed)
 
 func TestBuiltinString(t *testing.T) {
 	f := Global.GetName(nil, "Type")
-	Assert(t).That(f.String(), Is("Type /* builtin function */"))
+	assert.T(t).This(f.String()).Is("Type /* builtin function */")
 	f = Global.GetName(nil, "Object")
-	Assert(t).That(f.String(), Is("Object /* builtin function */"))
+	assert.T(t).This(f.String()).Is("Object /* builtin function */")
 }
 
 // func TestTmp(t *testing.T) {
@@ -152,7 +152,7 @@ func pt_execute(args []string, _ []bool) bool {
 	var actual Value
 	if expected == "throws" {
 		expected = "throws " + args[2]
-		e := Catch(func() {
+		e := assert.Catch(func() {
 			fn := compile.Constant(src).(*SuFunc)
 			actual = th.Start(fn, nil)
 		})

@@ -7,7 +7,7 @@ import (
 	"bytes"
 	"testing"
 
-	. "github.com/apmckinlay/gsuneido/util/hamcrest"
+	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
 func TestInt(t *testing.T) {
@@ -16,7 +16,7 @@ func TestInt(t *testing.T) {
 	test := func(n int64) {
 		rw.PutInt64(n)
 		rw.Flush()
-		Assert(t).That(rw.GetInt64(), Is(n))
+		assert.T(t).This(rw.GetInt64()).Is(n)
 		buf.Reset()
 	}
 	test(0)
@@ -33,7 +33,7 @@ func TestStr(t *testing.T) {
 	test := func(s string) {
 		rw.PutStr(s)
 		rw.Flush()
-		Assert(t).That(rw.GetStr(), Is(s))
+		assert.T(t).This(rw.GetStr()).Is(s)
 		buf.Reset()
 	}
 	test("")
@@ -42,5 +42,5 @@ func TestStr(t *testing.T) {
 
 	rw.PutInt(0xffffff)
 	rw.Flush()
-	Assert(t).That(func() { rw.GetStr() }, Panics("bad io size"))
+	assert.T(t).This(func() { rw.GetStr() }).Panics("bad io size")
 }

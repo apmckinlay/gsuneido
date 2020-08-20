@@ -10,7 +10,7 @@ import (
 
 	"github.com/apmckinlay/gsuneido/compile/ast"
 	. "github.com/apmckinlay/gsuneido/runtime"
-	. "github.com/apmckinlay/gsuneido/util/hamcrest"
+	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
 func Example_parseFunction_SrcPos() {
@@ -161,7 +161,7 @@ func TestCodegenSuper(t *testing.T) {
 		m := src[0:strings.IndexByte(src, '(')]
 		fn := c.Lookup(nil, m).(*SuFunc)
 		actual := disasm(fn)
-		Assert(t).That(actual, Like(expected))
+		assert.T(t).This(actual).Like(expected)
 		// if actual != expected {
 		// 	t.Errorf("\n%s\nexpect: %s\nactual: %s", src, expected, actual)
 		// }
@@ -204,7 +204,7 @@ func TestControl(t *testing.T) {
 		buf := strings.Builder{}
 		Disasm(&buf, fn)
 		s := buf.String()
-		Assert(t).That(s, Like(expected).Comment(src))
+		assert.T(t).Msg(src).This(s).Like(expected)
 	}
 
 	test(`try F()`, `
@@ -490,21 +490,22 @@ func TestControl(t *testing.T) {
 }
 
 func TestBlock(t *testing.T) {
+	assert := assert.T(t).This
 	ast := parseFunction("function (x) {\n b = {|a| a + x }\n}")
 	fn := codegen(ast)
 	block := fn.Values[0].(*SuFunc)
 
-	Assert(t).That(fn.Names, Is([]string{"x", "b", "a|2"}))
-	Assert(t).That(block.Names, Is([]string{"x", "b", "a"}))
-	Assert(t).That(int(block.Offset), Is(2))
+	assert(fn.Names).Is([]string{"x", "b", "a|2"})
+	assert(block.Names).Is([]string{"x", "b", "a"})
+	assert(int(block.Offset)).Is(2)
 
-	Assert(t).That(block.ParamSpec.Params(), Is("(a)"))
+	assert(block.ParamSpec.Params()).Is("(a)")
 
-	Assert(t).That(disasm(fn), Like(
+	assert(disasm(fn)).Like(
 		`Closure
 		0: Load a
 		2: Load x
-		4: Add, Store b`))
+		4: Add, Store b`)
 }
 
 // parseFunction parses a function and returns an AST for it

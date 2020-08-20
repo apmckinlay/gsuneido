@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	op "github.com/apmckinlay/gsuneido/runtime/opcodes"
-	. "github.com/apmckinlay/gsuneido/util/hamcrest"
+	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
 func TestInterp(t *testing.T) {
@@ -15,14 +15,14 @@ func TestInterp(t *testing.T) {
 		fn := &SuFunc{Code: string(code)}
 		th := NewThread()
 		result := th.Start(fn, nil)
-		Assert(t).That(result, Is(SuInt(8)))
+		assert.T(t).This(result).Is(SuInt(8))
 	}
 	test(SuInt(8), byte(op.Int), 0, 3, byte(op.Int), 0, 5, byte(op.Add), byte(op.Return))
 }
 
 func TestCatchMatch(t *testing.T) {
 	match := func(e, pat string) {
-		Assert(t).True(catchMatch(e, pat))
+		assert.T(t).True(catchMatch(e, pat))
 	}
 	match("", "")
 	match("foo", "")
@@ -41,7 +41,7 @@ func TestCatchMatch(t *testing.T) {
 	match("foobar", "abc|*bar")
 
 	nomatch := func(e, pat string) {
-		Assert(t).False(catchMatch(e, pat))
+		assert.T(t).False(catchMatch(e, pat))
 	}
 	nomatch("", "foo")
 	nomatch("foo", "bar")

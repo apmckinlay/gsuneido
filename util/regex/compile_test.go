@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	. "github.com/apmckinlay/gsuneido/util/hamcrest"
+	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
 func TestCompile(t *testing.T) {
@@ -15,8 +15,8 @@ func TestCompile(t *testing.T) {
 		t.Helper()
 		//fmt.Println("input '" + input + "'")
 		p := Compile(input).String()
-		Assert(t).That(strings.TrimSpace(p[5:len(p)-7]),
-			Is(expected).Comment(input))
+		assert.T(t).Msg(input).This(strings.TrimSpace(p[5 : len(p)-7])).
+			Is(expected)
 	}
 	test("", "")
 	test(".", ".")
@@ -65,7 +65,7 @@ func TestCompile(t *testing.T) {
 
 	test("\\", "'\\'")
 
-	Assert(t).That(func() { Compile("(abc") }, Panics("missing ')'"))
-	Assert(t).That(func() { Compile("abc)def") },
-		Panics("closing ) without opening ("))
+	assert.T(t).This(func() { Compile("(abc") }).Panics("missing ')'")
+	assert.T(t).This(func() { Compile("abc)def") }).
+		Panics("closing ) without opening (")
 }

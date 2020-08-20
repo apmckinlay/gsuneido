@@ -6,7 +6,7 @@ package regex
 import (
 	"testing"
 
-	. "github.com/apmckinlay/gsuneido/util/hamcrest"
+	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
 func TestCharClass(t *testing.T) {
@@ -14,7 +14,7 @@ func TestCharClass(t *testing.T) {
 		t.Helper()
 		pat := Pattern([]inst{in})
 		var r Result
-		Assert(t).That(pat.match(s, 0, 0, &r), Is(expected))
+		assert.T(t).This(pat.match(s, 0, 0, &r)).Is(expected)
 	}
 	test(digit, "x", -1)
 	test(digit, "0", 0)

@@ -6,26 +6,27 @@ package builtin
 import (
 	"testing"
 
-	. "github.com/apmckinlay/gsuneido/util/hamcrest"
+	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
 func TestNumberPat(t *testing.T) {
-	Assert(t).True(numberPat.Matches("0"))
-	Assert(t).True(numberPat.Matches("123"))
-	Assert(t).True(numberPat.Matches("+123"))
-	Assert(t).True(numberPat.Matches("-123"))
-	Assert(t).True(numberPat.Matches(".123"))
-	Assert(t).True(numberPat.Matches("123.465"))
-	Assert(t).True(numberPat.Matches("-.5"))
-	Assert(t).True(numberPat.Matches("-1.5"))
-	Assert(t).True(numberPat.Matches("-1.5e2"))
-	Assert(t).True(numberPat.Matches("1.5e-23"))
+	assert := assert.T(t)
+	assert.True(numberPat.Matches("0"))
+	assert.True(numberPat.Matches("123"))
+	assert.True(numberPat.Matches("+123"))
+	assert.True(numberPat.Matches("-123"))
+	assert.True(numberPat.Matches(".123"))
+	assert.True(numberPat.Matches("123.465"))
+	assert.True(numberPat.Matches("-.5"))
+	assert.True(numberPat.Matches("-1.5"))
+	assert.True(numberPat.Matches("-1.5e2"))
+	assert.True(numberPat.Matches("1.5e-23"))
 
-	Assert(t).False(numberPat.Matches(""))
-	Assert(t).False(numberPat.Matches("."))
-	Assert(t).False(numberPat.Matches("+"))
-	Assert(t).False(numberPat.Matches("-"))
-	Assert(t).False(numberPat.Matches("-."))
-	Assert(t).False(numberPat.Matches("+-."))
-	Assert(t).False(numberPat.Matches("1.2.3"))
+	assert.False(numberPat.Matches(""))
+	assert.False(numberPat.Matches("."))
+	assert.False(numberPat.Matches("+"))
+	assert.False(numberPat.Matches("-"))
+	assert.False(numberPat.Matches("-."))
+	assert.False(numberPat.Matches("+-."))
+	assert.False(numberPat.Matches("1.2.3"))
 }

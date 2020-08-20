@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	. "github.com/apmckinlay/gsuneido/util/hamcrest"
+	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/ptest"
 )
 
@@ -42,12 +42,13 @@ func BenchmarkRegexStart(b *testing.B) {
 func TestRegex(t *testing.T) {
 	pat := Compile(".+foo")
 	var r Result
-	Assert(t).That(pat.match("foo", 0, 0, &r), Is(-1))
-	Assert(t).That(pat.match("", 0, 0, &r), Is(-1))
-	Assert(t).That(pat.match("hello", 0, 0, &r), Is(-1))
-	Assert(t).That(pat.match("xfoo", 0, 0, &r), Is(0))
-	Assert(t).That(pat.match("hifoo", 0, 0, &r), Is(0))
-	Assert(t).That(pat.match("hifoobar", 0, 0, &r), Is(0))
+	assert := assert.T(t).This
+	assert(pat.match("foo", 0, 0, &r)).Is(-1)
+	assert(pat.match("", 0, 0, &r)).Is(-1)
+	assert(pat.match("hello", 0, 0, &r)).Is(-1)
+	assert(pat.match("xfoo", 0, 0, &r)).Is(0)
+	assert(pat.match("hifoo", 0, 0, &r)).Is(0)
+	assert(pat.match("hifoobar", 0, 0, &r)).Is(0)
 }
 
 func TestCapture(t *testing.T) {
@@ -55,7 +56,7 @@ func TestCapture(t *testing.T) {
 	s := "now is the time"
 	var r Result
 	pat.FirstMatch(s, 0, &r)
-	Assert(t).That(r[0].Part(s), Is("is"))
+	assert.T(t).This(r[0].Part(s)).Is("is")
 }
 
 func ExamplePattern_ForEachMatch() {
@@ -78,15 +79,15 @@ func TestForEachMatch(t *testing.T) {
 	pat := Compile(`^ *`)
 	n := 0
 	pat.ForEachMatch(s, func(*Result) bool { n++; return true })
-	Assert(t).That(n, Is(2))
+	assert.T(t).This(n).Is(2)
 }
 
 func TestMatchBug(t *testing.T) {
 	pat := Compile("^Date: .*")
 	var result Result
 	pat.FirstMatch("foo\nDate: Fri, 12 Jul 2019 16:31:35 GMT\r\nbar", 0, &result)
-	Assert(t).That(result[0].pos1, Is(4+1))
-	Assert(t).That(result[0].end, Is(39))
+	assert.T(t).This(result[0].pos1).Is(4 + 1)
+	assert.T(t).This(result[0].end).Is(39)
 }
 
 // ptest support ---------------------------------------------------------------

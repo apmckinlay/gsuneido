@@ -6,15 +6,16 @@ package dnum
 import (
 	"testing"
 
-	. "github.com/apmckinlay/gsuneido/util/hamcrest"
+	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
 func TestDiv128(t *testing.T) {
-	Assert(t).That(div128(1, 4), Is(uint64(2500000000000000)))
-	Assert(t).That(div128(1, 3), Is(uint64(3333333333333333)))
-	Assert(t).That(div128(2, 3), Is(uint64(6666666666666666)))
-	Assert(t).That(div128(1, 11), Is(uint64(909090909090909)))
-	Assert(t).That(div128(11, 13), Is(uint64(8461538461538461)))
-	Assert(t).That(div128(1234567890123456, 9876543210987654),
-		Is(uint64(1249999988609374)))
+	assert := assert.T(t).This
+	assert(div128(1, 4)).Is(uint64(2500000000000000))
+	assert(div128(1, 3)).Is(uint64(3333333333333333))
+	assert(div128(2, 3)).Is(uint64(6666666666666666))
+	assert(div128(1, 11)).Is(uint64(909090909090909))
+	assert(div128(11, 13)).Is(uint64(8461538461538461))
+	assert(div128(1234567890123456, 9876543210987654)).
+		Is(uint64(1249999988609374))
 }

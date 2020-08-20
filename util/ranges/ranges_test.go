@@ -9,26 +9,27 @@ import (
 	"strconv"
 	"testing"
 
-	. "github.com/apmckinlay/gsuneido/util/hamcrest"
+	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
 func TestContains(t *testing.T) {
+	assert := assert.T(t)
 	rs := &Ranges{}
 	rs.Insert("b", "e")
 	rs.Insert("i", "k")
-	Assert(t).That(rs.check(), Is(2))
+	assert.This(rs.check()).Is(2)
 
-	Assert(t).False(rs.Contains("a"))
-	Assert(t).True(rs.Contains("b"))
-	Assert(t).True(rs.Contains("c"))
-	Assert(t).True(rs.Contains("e"))
-	Assert(t).False(rs.Contains("f"))
-	Assert(t).False(rs.Contains("h"))
-	Assert(t).True(rs.Contains("i"))
-	Assert(t).True(rs.Contains("j"))
-	Assert(t).True(rs.Contains("k"))
-	Assert(t).False(rs.Contains("z"))
+	assert.False(rs.Contains("a"))
+	assert.True(rs.Contains("b"))
+	assert.True(rs.Contains("c"))
+	assert.True(rs.Contains("e"))
+	assert.False(rs.Contains("f"))
+	assert.False(rs.Contains("h"))
+	assert.True(rs.Contains("i"))
+	assert.True(rs.Contains("j"))
+	assert.True(rs.Contains("k"))
+	assert.False(rs.Contains("z"))
 }
 
 func TestRanges(t *testing.T) {
@@ -37,9 +38,9 @@ func TestRanges(t *testing.T) {
 		rs := &Ranges{}
 		rs.Insert("c", "e")
 		rs.Insert("i", "k")
-		Assert(t).That(rs.String(), Is("c->e i->k"))
+		assert.T(t).This(rs.String()).Is("c->e i->k")
 		rs.Insert(from, to)
-		Assert(t).That(rs.String(), Is(expected))
+		assert.T(t).This(rs.String()).Is(expected)
 		rs.check()
 	}
 	// overlap both
@@ -66,6 +67,7 @@ func TestRanges(t *testing.T) {
 }
 
 func TestRandom(t *testing.T) {
+	assert := assert.T(t).This
 	var nums [90000]bool
 	random := func(rlen int) (string, string) {
 		from := 10000 + rand.Intn(90000-100)
@@ -82,7 +84,7 @@ func TestRandom(t *testing.T) {
 	}
 	rs.check()
 	for n, in := range nums {
-		Assert(t).That(rs.Contains(strconv.Itoa(n+10000)), Is(in))
+		assert(rs.Contains(strconv.Itoa(n+10000))).Is(in)
 	}
 
 	if !testing.Short() {
@@ -92,12 +94,12 @@ func TestRandom(t *testing.T) {
 		}
 		rs.check()
 		for n, in := range nums {
-			Assert(t).That(rs.Contains(strconv.Itoa(n+10000)), Is(in))
+			assert(rs.Contains(strconv.Itoa(n+10000))).Is(in)
 		}
 	}
 
 	rs.Insert("10000", "99999")
-	Assert(t).That(rs.check(), Is(1))
+	assert(rs.check()).Is(1)
 }
 
 func TestRandomNonOverlapping(t *testing.T) {

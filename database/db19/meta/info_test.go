@@ -8,11 +8,12 @@ import (
 
 	"github.com/apmckinlay/gsuneido/database/db19/btree"
 	"github.com/apmckinlay/gsuneido/database/db19/stor"
-	. "github.com/apmckinlay/gsuneido/util/hamcrest"
+	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
 func TestInfo(t *testing.T) {
+	assert := assert.T(t).This
 	tbl := InfoHamt{}.Mutable()
 	tbl.Put(&Info{
 		Table:   "one",
@@ -32,22 +33,22 @@ func TestInfo(t *testing.T) {
 
 	packed := NewInfoPacked(st, off)
 
-	Assert(t).That(*packed.MustGet("one"), Is(*tbl.MustGet("one")))
-	Assert(t).That(*packed.MustGet("two"), Is(Info{
+	assert(*packed.MustGet("one")).Is(*tbl.MustGet("one"))
+	assert(*packed.MustGet("two")).Is(Info{
 		Table:   "two",
 		Nrows:   200,
 		Size:    2000,
 		Indexes: []*btree.Overlay{},
-	}))
+	})
 
 	reread := ReadInfoHamt(st, off)
-	Assert(t).That(*reread.MustGet("one"), Is(*tbl.MustGet("one")))
-	Assert(t).That(*reread.MustGet("two"), Is(Info{
+	assert(*reread.MustGet("one")).Is(*tbl.MustGet("one"))
+	assert(*reread.MustGet("two")).Is(Info{
 		Table:   "two",
 		Nrows:   200,
 		Size:    2000,
 		Indexes: []*btree.Overlay{},
-	}))
+	})
 }
 
 func TestInfo2(t *testing.T) {
@@ -68,7 +69,7 @@ func TestInfo2(t *testing.T) {
 	packed := NewInfoPacked(st, off)
 	for i, s := range data {
 		ti := packed.MustGet(s)
-		Assert(t).That(ti.Table, Is(s).Comment("table"))
-		Assert(t).That(ti.Nrows, Is(i).Comment("nrows"))
+		assert.T(t).Msg("table").This(ti.Table).Is(s)
+		assert.T(t).Msg("nrows").This(ti.Nrows).Is(i)
 	}
 }

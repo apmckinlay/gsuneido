@@ -7,12 +7,13 @@ import (
 	"fmt"
 	"testing"
 
-	. "github.com/apmckinlay/gsuneido/util/hamcrest"
+	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
 var atParamSpec = &ParamSpec{Nparams: 1, Flags: []Flag{AtParam}}
 
 func TestArgs(t *testing.T) {
+	assert := assert.T(t).This
 	th := &Thread{}
 	setStack := func(nums ...int) {
 		th.Reset()
@@ -22,7 +23,7 @@ func TestArgs(t *testing.T) {
 	}
 	ckStack := func(vals ...int) {
 		t.Helper()
-		Assert(t).That(fmt.Sprint(th.stack[:th.sp]), Is(fmt.Sprint(vals)))
+		assert(fmt.Sprint(th.stack[:th.sp])).Is(fmt.Sprint(vals))
 	}
 
 	// 0 args => 0 params
@@ -36,8 +37,8 @@ func TestArgs(t *testing.T) {
 	th.Reset()
 	th.Push(makeOb())
 	th.Args(f, as)
-	Assert(t).That(th.sp, Is(1))
-	Assert(t).True(th.stack[0].Equal(makeOb()))
+	assert(th.sp).Is(1)
+	assert(th.stack[0]).Is(makeOb())
 
 	// @+1arg => @param
 	f = atParamSpec
@@ -45,8 +46,8 @@ func TestArgs(t *testing.T) {
 	th.Reset()
 	th.Push(makeOb())
 	th.Args(f, as)
-	Assert(t).That(th.sp, Is(1))
-	Assert(t).True(th.stack[0].Equal(makeOb().Slice(1)))
+	assert(th.sp).Is(1)
+	assert(th.stack[0]).Is(makeOb().Slice(1))
 
 	// 2 args => 2 params
 	f = &ParamSpec{Nparams: 2, Flags: []Flag{0, 0}}
@@ -59,13 +60,13 @@ func TestArgs(t *testing.T) {
 	f = &ParamSpec{Nparams: 2, Flags: []Flag{0, 0}}
 	as = &ArgSpec1
 	setStack(11)
-	Assert(t).That(func() { th.Args(f, as) }, Panics("missing argument"))
+	assert(func() { th.Args(f, as) }).Panics("missing argument")
 
 	// 2 args => 1 param
 	f = &ParamSpec{Nparams: 1, Flags: []Flag{0}}
 	as = &ArgSpec2
 	setStack(11, 22)
-	Assert(t).That(func() { th.Args(f, as) }, Panics("too many arguments"))
+	assert(func() { th.Args(f, as) }).Panics("too many arguments")
 
 	// 1 arg => 2 params with 1 default
 	f = &ParamSpec{Nparams: 2, Flags: []Flag{0, 0},
@@ -107,8 +108,8 @@ func TestArgs(t *testing.T) {
 		Names: vals("c", "b", "a", "d"), Spec: []byte{1, 2}} // b, a
 	setStack(11, 22, 44, 33)
 	th.Args(f, as)
-	Assert(t).That(th.sp, Is(1))
-	Assert(t).That(th.stack[0].String(), Is(makeOb().String()))
+	assert(th.sp).Is(1)
+	assert(th.stack[0].String()).Is(makeOb().String())
 
 	// @mixed => params
 	f = &ParamSpec{Nparams: 4, Flags: []Flag{0, 0, 0, 0},
