@@ -1,7 +1,7 @@
 # requires sh on path (e.g. from MinGW)
 BUILT=$(shell date "+%b %e %Y %X")
 
-LDFLAGS = -X 'main.builtDate=${BUILT}'
+LDFLAGS = -X 'main.builtDate=${BUILT}' -s -w
 ifdef PATHEXT
 	LDFLAGS += -H windowsgui
 endif
