@@ -126,7 +126,13 @@ func call(fn Value, args ...Value) uintptr {
 }
 
 func handler(e interface{}, state interface{}) {
+	if UIThread.InHandler {
+		Alert("Error in Handler:", e)
+		return
+	}
+	UIThread.InHandler = true
 	defer func() {
+		UIThread.InHandler = false
 		UIThread.RestoreState(state)
 		if e := recover(); e != nil {
 			Alert("Error in Handler:", e)

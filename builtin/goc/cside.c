@@ -4,7 +4,7 @@
 #include "cside.h"
 
 extern void timerId();
-int Scintilla_RegisterClasses(void *hInstance);
+int Scintilla_RegisterClasses(void* hInstance);
 
 uintptr interact();
 
@@ -117,16 +117,33 @@ void release(uintptr iunk);
 
 static DWORD main_threadid = 0;
 
+typedef struct {
+	char* text;
+	char* caption;
+} Mbargs;
+
+DWORD WINAPI message_thread(void* p) {
+	MessageBox(0, ((Mbargs*) p)->text, ((Mbargs*) p)->caption,
+		MB_OK | MB_TASKMODAL | MB_TOPMOST | MB_SETFOREGROUND);
+	return 0;
+}
+
+void msgbox(char* text, char* caption) {
+	Mbargs args;
+	args.text = text;
+	args.caption = caption;
+	HANDLE thread = CreateThread(NULL, 0, message_thread, (void*) &args, 0, NULL);
+	if (thread)
+		WaitForSingleObject(thread, INFINITE);
+	free(text);
+}
+
 void alert(char* msg) {
-	MessageBox(0, msg, "Alert",
-		MB_ICONWARNING | MB_TASKMODAL | MB_TOPMOST | MB_SETFOREGROUND);
-	free(msg);
+	msgbox(msg, "Alert");
 }
 
 void fatal(char* msg) {
-	MessageBox(0, msg, "FATAL",
-		MB_ICONERROR | MB_TASKMODAL | MB_TOPMOST | MB_SETFOREGROUND);
-	free(msg);
+	msgbox(msg, "FATAL");
 }
 
 const int CTRL_BREAK_ID = 1; // no significance to this number

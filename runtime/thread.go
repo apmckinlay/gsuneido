@@ -68,6 +68,9 @@ type Thread struct {
 
 	// Quote is used by Display to request specific quotes
 	Quote int
+
+	// InHandler is used to detect nested handler calls
+	InHandler bool
 }
 
 var nThread int32
