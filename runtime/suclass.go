@@ -17,19 +17,21 @@ import (
 // SuClass is a user defined (Suneido language) class
 type SuClass struct {
 	MemBase
-	Lib      string
-	Name     string
-	Base     Gnum
-	parents  atomic.Value // used by SuInstance getParents
-	noGetter bool
+	Lib          string
+	Name         string
+	Base         Gnum
+	parentsCache atomic.Value // used by SuInstance getParents
+	noGetter     bool
 }
 
+// NOTE: the parents argument on some SuClass methods is used by SuInstance
+
 func (c *SuClass) SetParents(parents []*SuClass) {
-	c.parents.Store(parents)
+	c.parentsCache.Store(parents)
 }
 
 func (c *SuClass) GetParents() []*SuClass {
-	x, _ := c.parents.Load().([]*SuClass) // allow nil
+	x, _ := c.parentsCache.Load().([]*SuClass) // allow nil
 	return x
 }
 
@@ -86,12 +88,12 @@ func (*SuClass) Type() types.Type {
 }
 
 func (c *SuClass) Get(t *Thread, m Value) Value {
-	return c.get1(t, c, m)
+	return c.get1(t, c, m, nil)
 }
 
-func (c *SuClass) get1(t *Thread, this Value, m Value) Value {
+func (c *SuClass) get1(t *Thread, this Value, m Value, parents []*SuClass) Value {
 	ms := AsStr(m) //TODO not quite right - allows class { "4": }[4]
-	val := c.get2(t, ms)
+	val := c.get2(t, ms, parents)
 	if val != nil {
 		if _, ok := val.(*SuFunc); ok {
 			return &SuMethod{fn: val, this: c}
@@ -99,27 +101,40 @@ func (c *SuClass) get1(t *Thread, this Value, m Value) Value {
 		return val
 	}
 	if !c.noGetter {
-		if getter := c.get2(t, "Getter_"); getter != nil {
+		if getter := c.get2(t, "Getter_", parents); getter != nil {
 			return t.CallThis(getter, this, m)
 		}
 		c.noGetter = true
 	}
 	getterName := "Getter_" + ms
-	if getter := c.get2(t, getterName); getter != nil {
+	if getter := c.get2(t, getterName, parents); getter != nil {
 		return t.CallThis(getter, this)
 	}
 	return nil
 }
 
-// get2 looks for m in the current Data and then the Parent's
-func (c *SuClass) get2(t *Thread, m string) Value {
-	for {
-		if x, ok := c.Data[m]; ok {
-			assert.That(x != nil)
-			return x
+// get2 looks for m in the current Data and then the parent's
+func (c *SuClass) get2(t *Thread, m string, parents []*SuClass) Value {
+	if parents == nil {
+		for n := 0; ; n++ {
+			if x, ok := c.Data[m]; ok {
+				assert.That(x != nil)
+				return x
+			}
+			if c = c.Parent(t); c == nil {
+				break
+			}
+			if n > inheritanceLimit {
+				panic("too many levels of inheritance")
+			}
 		}
-		if c = c.Parent(t); c == nil {
-			break
+	} else {
+		assert.That(parents[0] == c)
+		for _, p := range parents {
+			if x, ok := p.Data[m]; ok {
+				assert.That(x != nil)
+				return x
+			}
 		}
 	}
 	return nil
@@ -185,18 +200,8 @@ func (c *SuClass) lookup(t *Thread, method string, parents []*SuClass) Callable 
 	if f, ok := BaseMethods[method]; ok {
 		return f
 	}
-	if parents == nil {
-		if x := c.get2(t, method); x != nil {
-			return x
-		}
-	} else { // parents argument is used by SuInstance Lookup
-		assert.That(parents[0] == c)
-		for _, p := range parents {
-			if x, ok := p.Data[method]; ok {
-				assert.That(x != nil)
-				return x
-			}
-		}
+	if x := c.get2(t, method, parents); x != nil {
+		return x
 	}
 	if method == "New" {
 		return DefaultNewMethod
@@ -205,7 +210,7 @@ func (c *SuClass) lookup(t *Thread, method string, parents []*SuClass) Callable 
 		return x
 	}
 	//TODO explicit CallClass doesn't go to Default in cSuneido or jSuneido
-	if x := c.get2(t, "Default"); x != nil {
+	if x := c.get2(t, "Default", parents); x != nil {
 		return &defaultAdapter{x, method}
 	}
 	return nil
@@ -243,7 +248,7 @@ func (c *SuClass) Call(t *Thread, this Value, as *ArgSpec) Value {
 	if this == nil {
 		this = c
 	}
-	if f := c.get2(t, "CallClass"); f != nil {
+	if f := c.get2(t, "CallClass", nil); f != nil {
 		return f.Call(t, this, as)
 	}
 	// default for calling a class is to create an instance
@@ -265,7 +270,7 @@ func (c *SuClass) GetName() string {
 
 // Finder implements Findable
 func (c *SuClass) Finder(t *Thread, fn func(v Value, mb *MemBase) Value) Value {
-	for i := 0; i < 100; i++ {
+	for i := 0; i < inheritanceLimit; i++ {
 		if x := fn(c, &c.MemBase); x != nil {
 			return x
 		}
@@ -274,7 +279,9 @@ func (c *SuClass) Finder(t *Thread, fn func(v Value, mb *MemBase) Value) Value {
 			return nil
 		}
 	}
-	panic("too many levels of derivation (>100)")
+	panic("too many levels of inheritance")
 }
+
+var inheritanceLimit = 100
 
 var _ Findable = (*SuClass)(nil)

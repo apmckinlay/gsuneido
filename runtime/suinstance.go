@@ -5,6 +5,7 @@ package runtime
 
 import (
 	"github.com/apmckinlay/gsuneido/runtime/types"
+	"github.com/apmckinlay/gsuneido/util/assert"
 	// sync "github.com/sasha-s/go-deadlock"
 )
 
@@ -52,14 +53,10 @@ func getParents(t *Thread, class *SuClass) []*SuClass {
 	return parents
 }
 
-func (ob *SuInstance) Base() *SuClass {
-	return ob.class
-}
-
 // ToString is used by Cat, Display, and Print
 // to handle user defined ToString
 func (ob *SuInstance) ToString(t *Thread) string {
-	if f := ob.class.get2(t, "ToString"); f != nil && t != nil {
+	if f := ob.class.get2(t, "ToString", ob.parents); f != nil && t != nil {
 		x := t.CallThis(f, ob)
 		if x != nil {
 			if s, ok := x.ToStr(); ok {
@@ -108,7 +105,7 @@ func (ob *SuInstance) get(t *Thread, m Value) Value {
 	}
 	ob.Unlock() // can't hold lock because it may call getter
 	defer ob.Lock()
-	x := ob.class.get1(t, ob, m)
+	x := ob.class.get1(t, ob, m, ob.parents)
 	if m, ok := x.(*SuMethod); ok {
 		m.this = ob // fix 'this' to be instance, not method class
 	}
@@ -177,10 +174,10 @@ func (ob *SuInstance) Lookup(t *Thread, method string) Callable {
 }
 
 func (ob *SuInstance) Call(t *Thread, _ Value, as *ArgSpec) Value {
-	if f := ob.class.get2(t, "Call"); f != nil {
+	if f := ob.class.get2(t, "Call", ob.parents); f != nil {
 		return f.Call(t, ob, as)
 	}
-	if f := ob.class.get2(t, "Default"); f != nil {
+	if f := ob.class.get2(t, "Default", ob.parents); f != nil {
 		da := &defaultAdapter{f, "Call"}
 		return da.Call(t, ob, as)
 	}
@@ -188,11 +185,17 @@ func (ob *SuInstance) Call(t *Thread, _ Value, as *ArgSpec) Value {
 }
 
 // Finder implements Findable
-func (ob *SuInstance) Finder(t *Thread, fn func(Value, *MemBase) Value) Value {
+func (ob *SuInstance) Finder(_ *Thread, fn func(Value, *MemBase) Value) Value {
 	if x := fn(ob, &ob.MemBase); x != nil {
 		return x
 	}
-	return ob.class.Finder(t, fn)
+	assert.That(ob.parents[0] == ob.class)
+	for _, p := range ob.parents {
+		if x := fn(p, &p.MemBase); x != nil {
+			return x
+		}
+	}
+	return nil
 }
 
 var _ Findable = (*SuInstance)(nil)

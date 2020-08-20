@@ -28,14 +28,6 @@ func init() {
 				}
 				return this
 			}),
-		"Method?": method("(string)",
-			func(t *Thread, this Value, args []Value) Value {
-				return methodQ(t, this.(*SuInstance).Base(), args)
-			}),
-		"MethodClass": method("(string)",
-			func(t *Thread, this Value, args []Value) Value {
-				return methodClass(t, this.(*SuInstance).Base(), args)
-			}),
 		"Readonly?": method0(func(this Value) Value {
 			return False
 		}),
