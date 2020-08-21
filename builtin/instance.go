@@ -9,6 +9,20 @@ import (
 
 func init() {
 	InstanceMethods = Methods{
+		"Base?": method("(class)", func(t *Thread, this Value, args []Value) Value {
+			instance := this.(*SuInstance)
+			class := instance.Base()
+			if class == args[0] {
+				return True
+			}
+			return nilToFalse(class.Finder(t,
+				func(v Value, _ *MemBase) Value {
+					if v == args[0] {
+						return True
+					}
+					return nil
+				}))
+		}),
 		"Copy": method0(func(this Value) Value {
 			return this.(*SuInstance).Copy()
 		}),

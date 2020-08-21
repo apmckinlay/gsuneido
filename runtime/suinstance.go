@@ -53,6 +53,10 @@ func getParents(t *Thread, class *SuClass) []*SuClass {
 	return parents
 }
 
+func (ob *SuInstance) Base() *SuClass {
+	return ob.class
+}
+
 // ToString is used by Cat, Display, and Print
 // to handle user defined ToString
 func (ob *SuInstance) ToString(t *Thread) string {

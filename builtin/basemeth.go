@@ -15,15 +15,6 @@ func init() {
 		"Base": method("()", func(t *Thread, this Value, args []Value) Value {
 			return base(t, this, func(v Value, _ *MemBase) Value { return v })
 		}),
-		"Base?": method("(class)", func(t *Thread, this Value, args []Value) Value {
-			return nilToFalse(this.(Findable).Finder(t,
-				func(v Value, _ *MemBase) Value {
-					if v == args[0] {
-						return True
-					}
-					return nil
-				}))
-		}),
 		"Eval": methodRaw("(@args)",
 			func(t *Thread, as *ArgSpec, this Value, args []Value) Value {
 				return EvalAsMethod(t, as, this, args)

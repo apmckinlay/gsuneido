@@ -14,6 +14,15 @@ func init() {
 			func(t *Thread, as *ArgSpec, this Value, args []Value) Value {
 				return this.(*SuClass).New(t, as)
 			}),
+		"Base?": method("(class)", func(t *Thread, this Value, args []Value) Value {
+			return nilToFalse(this.(*SuClass).Finder(t,
+				func(v Value, _ *MemBase) Value {
+					if v == args[0] {
+						return True
+					}
+					return nil
+				}))
+		}),
 		"Method?": method("(string)",
 			func(t *Thread, this Value, args []Value) Value {
 				m := ToStr(args[0])
