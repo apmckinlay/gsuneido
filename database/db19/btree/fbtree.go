@@ -443,9 +443,10 @@ func (fb *fbtree) print1(depth int, offset uint64) {
 // The fbtree is built bottom up with no splitting or inserting.
 // All nodes will be "full" except for the right hand edge.
 type fbtreeBuilder struct {
-	levels []*level // leaf is [0]
-	prev   string
-	store  *stor.Stor
+	levels   []*level // leaf is [0]
+	prev     string
+	notFirst bool
+	store    *stor.Stor
 }
 
 type level struct {
@@ -458,11 +459,15 @@ func NewFbtreeBuilder(store *stor.Stor) *fbtreeBuilder {
 }
 
 func (fb *fbtreeBuilder) Add(key string, off uint64) {
-	if key == fb.prev {
-		panic("fbtreeBuilder keys must not have duplicates")
-	}
-	if key < fb.prev {
-		panic("fbtreeBuilder keys must be inserted in order")
+	if fb.notFirst {
+		if key == fb.prev {
+			panic("fbtreeBuilder keys must not have duplicates")
+		}
+		if key < fb.prev {
+			panic("fbtreeBuilder keys must be inserted in order")
+		}
+	} else {
+		fb.notFirst = true
 	}
 	fb.insert(0, key, off)
 	fb.prev = key
