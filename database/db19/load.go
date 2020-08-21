@@ -21,44 +21,87 @@ import (
 	"github.com/apmckinlay/gsuneido/util/sortlist"
 )
 
-func LoadTable(file string) int {
-	table := file
+//TODO handle capitalized rule fields, and _lower! fields
+
+// LoadDatabase imports a dumped database from a file.
+// It returns the number of tables loaded or panics on error.
+func LoadDatabase() int {
+	defer func() {
+		if e := recover(); e != nil {
+			panic("load failed: " + fmt.Sprint(e))
+		}
+	}()
+	f, r, store := open("database.su")
+	defer f.Close()
+	defer store.Close()
+	nTables := 0
+	for ; ; nTables++ {
+		schema := readLinePrefixed(r, "====== ")
+		if schema == "" {
+			break
+		}
+		loadTable(store, r, schema)
+		trace()
+		assert.That(nTables < 1010)
+	}
+	trace("SIZE", store.Size())
+	return nTables
+}
+
+// LoadTable imports a dumped table from a file.
+// It returns the number of records loaded or panics on error.
+func LoadTable(filename string) int {
+	table := filename
 	if strings.HasSuffix(table, ".su") {
-		table = file[:len(file)-3]
+		table = filename[:len(filename)-3]
 	}
 	defer func() {
 		if e := recover(); e != nil {
 			panic("load failed: " + table + " " + fmt.Sprint(e))
 		}
 	}()
-	f, err := os.Open(file)
+	f, r, store := open(filename)
+	defer f.Close()
+	schema := table + " " + readLinePrefixed(r, "====== ")
+	return loadTable(store, r, schema)
+}
+
+func open(filename string) (*os.File, *bufio.Reader, *stor.Stor) {
+	f, err := os.Open(filename)
 	if err != nil {
 		panic(err)
 	}
 	r := bufio.NewReader(f)
 	readLinePrefixed(r, "Suneido dump 2")
-	schema := table + " " + readLinePrefixed(r, "====== ")[7:]
-	fmt.Println(schema)
+	store, err := stor.MmapStor("tmp.db", stor.CREATE)
+	ckerr(err)
+	store.Alloc(1) // don't use offset 0
+	return f, r, store
+}
+
+func loadTable(store *stor.Stor, r *bufio.Reader, schema string) int {
+	trace(schema)
 	req := compile.ParseRequest("create " + schema).(*compile.Schema)
 
-	store, err := stor.MmapStor("tmp.db", stor.CREATE)
-	store.Alloc(1) // don't use offset 0
-	ckerr(err)
 	list := sortlist.NewUnsorted()
+	before := store.Size()
 	nrecs := readRecords(r, store, list)
+	beforeIndexes := store.Size()
+	trace("nrecs", nrecs, "data size", beforeIndexes-before)
 	list.Finish()
-	dn := store.Size()
-	fmt.Println("data size", dn)
-	key := firstShortestKey(req.Indexes)
-	for i,ix := range req.Indexes {
+	key := firstShortestKey(req)
+	for i, ix := range req.Indexes {
 		ixcols := ix.Fields
+		if len(ixcols) > 0 && strings.HasSuffix(req.Columns[ixcols[0]], "!") {
+			continue //TODO
+		}
 		if req.Indexes[i].Mode != 'k' {
 			ixcols = append(ixcols, key...)
 		}
-		fmt.Println("index", ix, "cols", ixcols)
-		if i > 0 {
-			list.Sort(mkcmp(store, ixcols))
-		}
+		trace(ix, "cols", ixcols)
+		//		if i > 0 {
+		list.Sort(mkcmp(store, ixcols))
+		//		}
 		before := store.Size()
 		bldr := btree.NewFbtreeBuilder(store)
 		iter := list.Iter()
@@ -68,19 +111,22 @@ func LoadTable(file string) int {
 			n++
 		}
 		assert.This(n).Is(nrecs)
-		fmt.Println("index size", store.Size()-before)
+		trace("size", store.Size()-before)
 	}
-	fmt.Println("total indexes size", store.Size() - dn)
+	trace("indexes size", store.Size()-beforeIndexes)
 	return nrecs
 }
 
 func readLinePrefixed(r *bufio.Reader, pre string) string {
 	s, err := r.ReadString('\n') // file header
+	if err == io.EOF {
+		return ""
+	}
 	ckerr(err)
 	if !strings.HasPrefix(s, pre) {
 		panic("not a valid dump file")
 	}
-	return s
+	return s[len(pre):]
 }
 
 func readRecords(in *bufio.Reader, store *stor.Stor, list *sortlist.Builder) int {
@@ -111,14 +157,20 @@ func ckerr(err error) {
 	}
 }
 
-func firstShortestKey(indexes []*compile.Index) []int {
+func firstShortestKey(req *compile.Schema) []int {
 	var key []int
-	for _, ix := range indexes {
-		if key == nil || len(ix.Fields) < len(key) {
+	for _, ix := range req.Indexes {
+		if usableKey(req, ix) &&
+			(key == nil || len(ix.Fields) < len(key)) {
 			key = ix.Fields
 		}
 	}
 	return key
+}
+
+func usableKey(req *compile.Schema, ix *compile.Index) bool {
+	return ix.Mode == 'k' && len(ix.Fields) > 0 &&
+		!strings.HasSuffix(req.Columns[ix.Fields[0]], "!")
 }
 
 func getLeafKey(store *stor.Stor, ixspec interface{}, off uint64) string {

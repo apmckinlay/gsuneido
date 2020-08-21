@@ -6,12 +6,23 @@ package db19
 import (
 	"fmt"
 	"testing"
+	"time"
 )
 
-func TestLoad(*testing.T) {
+func TestLoadTable(*testing.T) {
 	if testing.Short() {
 		return
 	}
-	n := LoadTable("gl_transactions.su")
-	fmt.Println("loaded", n, "records")
+	t := time.Now()
+	n := LoadTable("stdlib.su")
+	fmt.Println("loaded", n, "records in ", time.Since(t))
+}
+
+func TestLoadDatabase(*testing.T) {
+	if testing.Short() {
+		return
+	}
+	t := time.Now()
+	n := LoadDatabase()
+	fmt.Println("loaded", n, "tables in ", time.Since(t))
 }
