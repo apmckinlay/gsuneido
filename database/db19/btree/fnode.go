@@ -56,14 +56,19 @@ type fData struct {
 }
 
 type fNodeBuilder struct {
-	fe    fNode
-	prev  string
-	known string
+	fe       fNode
+	notFirst bool
+	prev     string
+	known    string
 }
 
 func (fb *fNodeBuilder) Add(key string, offset uint64, embedLen int) {
-	if key <= fb.prev {
-		panic("fBuilder keys must be inserted in order, without duplicates")
+	if fb.notFirst {
+		if key <= fb.prev {
+			panic("fBuilder keys must be inserted in order, without duplicates")
+		}
+	} else {
+		fb.notFirst = true
 	}
 	if len(fb.fe) == 0 {
 		fb.fe = fAppend(fb.fe, offset, 0, "")
