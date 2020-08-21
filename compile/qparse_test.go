@@ -31,6 +31,6 @@ func TestQueryParser(t *testing.T) {
 		fn := func() { ParseRequest(qs) }
 		assert.T(t).This(fn).Panics(err)
 	}
-	xtest("create mytable () key()", "columns must not be empty")
-	xtest("create mytable (one) index()", "index columns must not be empty")
+	xtest("create mytable () key(foo)", "invalid index column: foo")
+	xtest("create mytable (one,two,three) index(bar)", "invalid index column: bar")
 }

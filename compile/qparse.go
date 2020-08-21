@@ -47,9 +47,6 @@ func (p *qparser) create() *Schema {
 	table := p.Text
 	p.matchIdent()
 	columns := p.columns()
-	if len(columns) == 0 {
-		p.error("create: columns must not be empty")
-	}
 	indexes := p.indexes(columns)
 	return &Schema{Table: table, Columns: columns, Indexes: indexes}
 }
@@ -58,9 +55,11 @@ func (p *qparser) columns() []string {
 	p.match(tok.LParen)
 	columns := make([]string, 0, 8)
 	for p.Token != tok.RParen {
-		if p.Token == tok.Identifier || p.Token == tok.Sub {
+		if p.matchIf(tok.Sub) {
+			columns = append(columns, "-")
+		} else {
 			columns = append(columns, p.Text)
-			p.next()
+			p.matchIdent()
 		}
 		p.matchIf(tok.Comma)
 	}
