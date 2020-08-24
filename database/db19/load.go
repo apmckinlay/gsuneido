@@ -62,6 +62,7 @@ func LoadTable(filename string) int {
 	}()
 	f, r, store := open(filename)
 	defer f.Close()
+	defer store.Close()
 	schema := table + " " + readLinePrefixed(r, "====== ")
 	return loadTable(store, r, schema)
 }
