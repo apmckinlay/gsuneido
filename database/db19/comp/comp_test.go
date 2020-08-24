@@ -14,33 +14,42 @@ import (
 
 func TestKey(t *testing.T) {
 	assert := assert.T(t).This
-	assert(Key(mkrec("a", "b"), []int{})).Is("")
-	assert(Key(mkrec("a", "b"), []int{0})).Is("a")
-	assert(Key(mkrec("a", "b"), []int{1})).Is("b")
-	assert(Key(mkrec("a", "b"), []int{0, 1})).Is("a\x00\x00b")
-	assert(Key(mkrec("a", "b"), []int{1, 0})).Is("b\x00\x00a")
-
-	// omit trailing empty fields
 	fields := []int{0, 1, 2}
-	assert(Key(mkrec("a", "b", "c"), fields)).Is("a\x00\x00b\x00\x00c")
-	assert(Key(mkrec("a", "", "c"), fields)).Is("a\x00\x00\x00\x00c")
-	assert(Key(mkrec("", "", "c"), fields)).Is("\x00\x00\x00\x00c")
-	assert(Key(mkrec("a", "b", ""), fields)).Is("a\x00\x00b")
-	assert(Key(mkrec("a", "", ""), fields)).Is("a")
-	assert(Key(mkrec("", "", ""), fields)).Is("")
+	for _, flds2 := range [][]int{nil, {1, 2}} {
+		assert(Key(mkrec("a", "b"), []int{}, flds2)).Is("")
+		assert(Key(mkrec("a", "b"), []int{0}, flds2)).Is("a")
+		assert(Key(mkrec("a", "b"), []int{1}, flds2)).Is("b")
+		assert(Key(mkrec("a", "b"), []int{0, 1}, flds2)).Is("a\x00\x00b")
+		assert(Key(mkrec("a", "b"), []int{1, 0}, flds2)).Is("b\x00\x00a")
 
-	// no escape for single field
-	assert(Key(mkrec("a\x00b"), []int{0})).Is("a\x00b")
+		// omit trailing empty fields
+		assert(Key(mkrec("a", "b", "c"), fields, flds2)).Is("a\x00\x00b\x00\x00c")
+		assert(Key(mkrec("a", "", "c"), fields, flds2)).Is("a\x00\x00\x00\x00c")
+		assert(Key(mkrec("", "", "c"), fields, flds2)).Is("\x00\x00\x00\x00c")
+		assert(Key(mkrec("a", "b", ""), fields, flds2)).Is("a\x00\x00b")
+		assert(Key(mkrec("a", "", ""), fields, flds2)).Is("a")
 
-	// escaping
-	first := []int{0, 1}
-	assert(Key(mkrec("ab"), first)).Is("ab")
-	assert(Key(mkrec("a\x00b"), first)).Is("a\x00\x01b")
-	assert(Key(mkrec("\x00ab"), first)).Is("\x00\x01ab")
-	assert(Key(mkrec("a\x00\x00b"), first)).Is("a\x00\x01\x00\x01b")
-	assert(Key(mkrec("a\x00\x01b"), first)).Is("a\x00\x01\x01b")
-	assert(Key(mkrec("ab\x00"), first)).Is("ab\x00\x01")
-	assert(Key(mkrec("ab\x00\x00"), first)).Is("ab\x00\x01\x00\x01")
+		// no escape for single field
+		assert(Key(mkrec("a\x00b"), []int{0}, flds2)).Is("a\x00b")
+
+		// escaping
+		first := []int{0, 1}
+		assert(Key(mkrec("ab"), first, flds2)).Is("ab")
+		assert(Key(mkrec("a\x00b"), first, flds2)).Is("a\x00\x01b")
+		assert(Key(mkrec("\x00ab"), first, flds2)).Is("\x00\x01ab")
+		assert(Key(mkrec("a\x00\x00b"), first, flds2)).Is("a\x00\x01\x00\x01b")
+		assert(Key(mkrec("a\x00\x01b"), first, flds2)).Is("a\x00\x01\x01b")
+		assert(Key(mkrec("ab\x00"), first, flds2)).Is("ab\x00\x01")
+		assert(Key(mkrec("ab\x00\x00"), first, flds2)).Is("ab\x00\x01\x00\x01")
+	}
+
+	// fields2
+	fields2 := []int{3, 4}
+	assert(Key(mkrec("", "", ""), fields, nil)).Is("")
+	assert(Key(mkrec("", "", "", "a", "b"), fields, fields2)).
+		Is("\x00\x00\x00\x00\x00\x00a\x00\x00b")
+	assert(Key(mkrec("x", "", "", "a", "b"), fields, fields2)).
+		Is("x")
 }
 
 func mkrec(args ...string) Record {
@@ -63,10 +72,10 @@ func TestRandom(t *testing.T) {
 	for i := 0; i < n; i++ {
 		x := gen()
 		y := gen()
-		yenc := Key(y, fields)
-		xenc := Key(x, fields)
+		yenc := Key(y, fields, nil)
+		xenc := Key(x, fields, nil)
 		assert(xenc < yenc).Is(lt(x, y))
-		assert(strings.Compare(xenc, yenc)).Is(Compare(x, y, fields))
+		assert(strings.Compare(xenc, yenc)).Is(Compare(x, y, fields, nil))
 	}
 }
 

@@ -92,24 +92,30 @@ func loadTable(store *stor.Stor, r *bufio.Reader, schema string) int {
 	key := firstShortestKey(req)
 	for i, ix := range req.Indexes {
 		ixcols := ix.Fields
+		var ixcols2 []int
 		if len(ixcols) > 0 && strings.HasSuffix(req.Columns[ixcols[0]], "!") {
 			continue //TODO
 		}
-		if req.Indexes[i].Mode != 'k' {
+		switch req.Indexes[i].Mode {
+		case 'u':
+			ixcols2 = key
+		case 'i':
 			ixcols = append(ixcols, key...)
 		}
-		trace(ix, "cols", ixcols)
-		//		if i > 0 {
-		list.Sort(mkcmp(store, ixcols))
-		//		}
+
+		trace(ix, ixcols, ixcols2)
+		if i > 0 || ix.Mode != 'k' { // non-key order may be different
+			list.Sort(mkcmp(store, ixcols, ixcols2))
+		}
 		before := store.Size()
 		bldr := btree.NewFbtreeBuilder(store)
 		iter := list.Iter()
 		n := 0
 		for off := iter(); off != 0; off = iter() {
-			bldr.Add(getLeafKey(store, ixcols, off), off)
+			bldr.Add(getLeafKey(store, ixcols, ixcols2, off), off)
 			n++
 		}
+		bldr.Finish()
 		assert.This(n).Is(nrecs)
 		trace("size", store.Size()-before)
 	}
@@ -173,17 +179,16 @@ func usableKey(req *compile.Schema, ix *compile.Index) bool {
 		!strings.HasSuffix(req.Columns[ix.Fields[0]], "!")
 }
 
-func getLeafKey(store *stor.Stor, ixspec interface{}, off uint64) string {
+func getLeafKey(store *stor.Stor, ixcols, ixcols2 []int, off uint64) string {
 	rec := offToRec(store, off)
-	ixcols := ixspec.([]int)
-	return comp.Key(rt.Record(rec), ixcols)
+	return comp.Key(rt.Record(rec), ixcols, ixcols2)
 }
 
-func mkcmp(store *stor.Stor, ixcols []int) func(x, y uint64) int {
+func mkcmp(store *stor.Stor, ixcols, ixcols2 []int) func(x, y uint64) int {
 	return func(x, y uint64) int {
 		xr := offToRec(store, x)
 		yr := offToRec(store, y)
-		return comp.Compare(xr, yr, ixcols)
+		return comp.Compare(xr, yr, ixcols, ixcols2)
 	}
 }
 

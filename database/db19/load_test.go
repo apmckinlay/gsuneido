@@ -15,7 +15,7 @@ func TestLoadTable(*testing.T) {
 	}
 	t := time.Now()
 	n := LoadTable("stdlib.su")
-	fmt.Println("loaded", n, "records in ", time.Since(t))
+	fmt.Println("loaded", n, "records in", time.Since(t))
 }
 
 func TestLoadDatabase(*testing.T) {
@@ -24,5 +24,5 @@ func TestLoadDatabase(*testing.T) {
 	}
 	t := time.Now()
 	n := LoadDatabase()
-	fmt.Println("loaded", n, "tables in ", time.Since(t))
+	fmt.Println("loaded", n, "tables in", time.Since(t))
 }
