@@ -108,7 +108,7 @@ func TestFnodeRandom(*testing.T) {
 	}
 }
 
-func TestDelete(t *testing.T) {
+func TestDelete(*testing.T) {
 	var fn fNode
 	const nData = 8 + 32
 	var data = make([]string, nData)
@@ -160,7 +160,7 @@ func TestDelete(t *testing.T) {
 	}
 }
 
-func TestDelete2(t *testing.T) {
+func TestDelete2(*testing.T) {
 	data := []string{"a", "b", "c", "d", "e"}
 	get := func(i uint64) string { return data[i] }
 	var fn fNode
