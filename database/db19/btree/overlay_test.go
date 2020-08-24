@@ -8,6 +8,7 @@ import (
 	"sort"
 	"testing"
 
+	"github.com/apmckinlay/gsuneido/database/db19/ixspec"
 	"github.com/apmckinlay/gsuneido/database/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/str"
@@ -15,7 +16,7 @@ import (
 
 func TestEmptyOverlay(t *testing.T) {
 	var data []string
-	GetLeafKey = func(_ *stor.Stor, _ interface{}, i uint64) string { return data[i] }
+	GetLeafKey = func(_ *stor.Stor, _ *ixspec.T, i uint64) string { return data[i] }
 	defer func(mns int) { MaxNodeSize = mns }(MaxNodeSize)
 	MaxNodeSize = 64
 	fb := CreateFbtree(nil, nil)

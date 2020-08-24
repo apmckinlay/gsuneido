@@ -4,6 +4,7 @@
 package btree
 
 import (
+	"github.com/apmckinlay/gsuneido/database/db19/ixspec"
 	"github.com/apmckinlay/gsuneido/database/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
@@ -23,7 +24,7 @@ type Overlay struct {
 	mb *mbtree
 }
 
-func NewOverlay(store *stor.Stor, ixspec interface{}) *Overlay {
+func NewOverlay(store *stor.Stor, ixspec *ixspec.T) *Overlay {
 	return &Overlay{under: []tree{CreateFbtree(store, ixspec)}}
 }
 

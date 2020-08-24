@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/apmckinlay/gsuneido/database/db19/ixspec"
 	"github.com/apmckinlay/gsuneido/database/db19/stor"
 
 	"github.com/apmckinlay/gsuneido/util/assert"
@@ -18,7 +19,7 @@ import (
 func TestFbtreeIter(t *testing.T) {
 	const n = 1000
 	var data [n]string
-	GetLeafKey = func(_ *stor.Stor, _ interface{}, i uint64) string { return data[i] }
+	GetLeafKey = func(_ *stor.Stor, _ *ixspec.T, i uint64) string { return data[i] }
 	defer func(mns int) { MaxNodeSize = mns }(MaxNodeSize)
 	MaxNodeSize = 440
 	randKey := str.UniqueRandomOf(3, 6, "abcde")
@@ -44,7 +45,7 @@ func TestFbtreeIter(t *testing.T) {
 
 func TestFbtreeBuilder(t *testing.T) {
 	assert := assert.T(t)
-	GetLeafKey = func(_ *stor.Stor, _ interface{}, i uint64) string {
+	GetLeafKey = func(_ *stor.Stor, _ *ixspec.T, i uint64) string {
 		return strconv.Itoa(int(i))
 	}
 	store := stor.HeapStor(8192)

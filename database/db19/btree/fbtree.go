@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/apmckinlay/gsuneido/database/db19/ixspec"
 	"github.com/apmckinlay/gsuneido/database/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
@@ -25,7 +26,7 @@ type fbtree struct {
 	redirs redirs
 	// ixspec is an opaque value passed to GetLeafKey
 	// normally it specifies which fields make up the key, based on the schema
-	ixspec interface{}
+	ixspec *ixspec.T
 	// redirsOff is the offset of the saved redirections
 	redirsOff uint64
 	// mutable is true during updates
@@ -38,9 +39,9 @@ var MaxNodeSize = 1536 // * .75 ~ 1k
 
 // GetLeafKey returns the key for a data offset. (e.g. extract key from record)
 // It is a dependency that must be injected
-var GetLeafKey func(st *stor.Stor, ixspec interface{}, off uint64) string
+var GetLeafKey func(st *stor.Stor, ixspec *ixspec.T, off uint64) string
 
-func CreateFbtree(store *stor.Stor, ixspec interface{}) *fbtree {
+func CreateFbtree(store *stor.Stor, ixspec *ixspec.T) *fbtree {
 	re := newRedirs()
 	re.tbl = re.tbl.Mutable()
 	root := re.add(fNode{})

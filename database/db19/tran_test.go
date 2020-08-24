@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/apmckinlay/gsuneido/database/db19/btree"
+	"github.com/apmckinlay/gsuneido/database/db19/ixspec"
 	"github.com/apmckinlay/gsuneido/database/db19/meta"
 	"github.com/apmckinlay/gsuneido/database/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
@@ -86,7 +87,7 @@ func TestTran(t *testing.T) {
 }
 
 func createDb() *stor.Stor {
-	btree.GetLeafKey = func(st *stor.Stor, _ interface{}, off uint64) string {
+	btree.GetLeafKey = func(st *stor.Stor, _ *ixspec.T, off uint64) string {
 		return string(st.DataSized(off))
 	}
 

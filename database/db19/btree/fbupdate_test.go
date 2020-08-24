@@ -14,6 +14,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/apmckinlay/gsuneido/database/db19/ixspec"
 	"github.com/apmckinlay/gsuneido/database/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/str"
@@ -27,7 +28,7 @@ func TestUpdate(t *testing.T) {
 	for j := 0; j < nTimes; j++ {
 		const n = 1000
 		var data [n]string
-		GetLeafKey = func(_ *stor.Stor, _ interface{}, i uint64) string { return data[i] }
+		GetLeafKey = func(_ *stor.Stor, _ *ixspec.T, i uint64) string { return data[i] }
 		defer func(mns int) { MaxNodeSize = mns }(MaxNodeSize)
 		MaxNodeSize = 44
 		fb := CreateFbtree(nil, nil)
@@ -46,7 +47,7 @@ func TestUnevenSplit(t *testing.T) {
 	const n = 1000
 	var data [n]string
 	test := func() {
-		GetLeafKey = func(_ *stor.Stor, _ interface{}, i uint64) string { return data[i] }
+		GetLeafKey = func(_ *stor.Stor, _ *ixspec.T, i uint64) string { return data[i] }
 		defer func(mns int) { MaxNodeSize = mns }(MaxNodeSize)
 		MaxNodeSize = 128
 		fb := CreateFbtree(nil, nil)
@@ -103,7 +104,7 @@ func TestSampleData(t *testing.T) {
 		for si := 0; si < nShuffle; si++ {
 			rand.Shuffle(len(data),
 				func(i, j int) { data[i], data[j] = data[j], data[i] })
-			GetLeafKey = func(_ *stor.Stor, _ interface{}, i uint64) string {
+			GetLeafKey = func(_ *stor.Stor, _ *ixspec.T, i uint64) string {
 				return data[i]
 			}
 			defer func(mns int) { MaxNodeSize = mns }(MaxNodeSize)
@@ -140,7 +141,7 @@ func TestFbdelete(t *testing.T) {
 		n = 100
 	}
 	data := make([]string, n)
-	GetLeafKey = func(_ *stor.Stor, _ interface{}, i uint64) string { return data[i] }
+	GetLeafKey = func(_ *stor.Stor, _ *ixspec.T, i uint64) string { return data[i] }
 	defer func(mns int) { MaxNodeSize = mns }(MaxNodeSize)
 	MaxNodeSize = 44
 	fb := CreateFbtree(nil, nil)
@@ -171,7 +172,7 @@ func TestFbdelete(t *testing.T) {
 
 func TestFreeze(t *testing.T) {
 	assert := assert.T(t).This
-	GetLeafKey = func(_ *stor.Stor, _ interface{}, i uint64) string {
+	GetLeafKey = func(_ *stor.Stor, _ *ixspec.T, i uint64) string {
 		return strconv.Itoa(int(i))
 	}
 	store := stor.HeapStor(8192)
@@ -212,7 +213,7 @@ func TestSave(t *testing.T) {
 	const updatesPerSave = 3
 	const insertsPerUpdate = 17
 	data := make([]string, 0, nSaves*updatesPerSave*insertsPerUpdate)
-	GetLeafKey = func(_ *stor.Stor, _ interface{}, i uint64) string { return data[i] }
+	GetLeafKey = func(_ *stor.Stor, _ *ixspec.T, i uint64) string { return data[i] }
 	defer func(mns int) { MaxNodeSize = mns }(MaxNodeSize)
 	MaxNodeSize = 64
 	st, err := stor.MmapStor("tmp.db", stor.CREATE)
@@ -241,7 +242,7 @@ func TestSave(t *testing.T) {
 }
 
 func TestSplitDup(*testing.T) {
-	GetLeafKey = func(_ *stor.Stor, _ interface{}, i uint64) string {
+	GetLeafKey = func(_ *stor.Stor, _ *ixspec.T, i uint64) string {
 		return strconv.Itoa(int(i))
 	}
 	defer func(mns int) { MaxNodeSize = mns }(MaxNodeSize)
@@ -281,7 +282,7 @@ func TestSplitDup(*testing.T) {
 
 func TestFlatten(t *testing.T) {
 	assert := assert.T(t)
-	GetLeafKey = func(_ *stor.Stor, _ interface{}, i uint64) string {
+	GetLeafKey = func(_ *stor.Stor, _ *ixspec.T, i uint64) string {
 		return strconv.Itoa(int(i))
 	}
 	defer func(mns int) { MaxNodeSize = mns }(MaxNodeSize)
