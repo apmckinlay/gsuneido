@@ -14,9 +14,9 @@ func NewQueryLexer(src string) *Lexer {
 }
 
 func queryKeyword(s string) (tok.Token, string) {
-	s = strings.ToLower(s)
-	if tok, ok := queryKeywords[s]; ok {
-		return tok, s
+	ls := strings.ToLower(s)
+	if tok, ok := queryKeywords[ls]; ok {
+		return tok, ls
 	}
 	return tok.Identifier, s
 }
