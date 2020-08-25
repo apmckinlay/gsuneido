@@ -41,8 +41,7 @@ func (p *parser) pcExpr(minprec int8) ast.Expr {
 		p.next()
 		switch {
 		case token == tok.Dot:
-			id := p.Text
-			p.matchIdent()
+			id := p.matchIdent()
 			if e == nil {
 				e = p.Ident("this")
 				id = p.privatizeRef(id)

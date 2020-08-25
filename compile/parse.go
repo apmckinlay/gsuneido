@@ -91,11 +91,13 @@ func (p *parserBase) match(token tok.Token) {
 	p.next()
 }
 
-func (p *parserBase) matchIdent() {
+func (p *parserBase) matchIdent() string {
+	text := p.Text
 	if !p.Token.IsIdent() {
 		p.error("expecting identifier")
 	}
 	p.next()
+	return text
 }
 
 func (p *parserBase) matchIf(token tok.Token) bool {
