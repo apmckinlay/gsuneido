@@ -4,6 +4,7 @@
 package runtime
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/util/assert"
@@ -64,4 +65,41 @@ func TestPackNum(t *testing.T) {
 
 func dv(s string) SuDnum {
 	return SuDnum{Dnum: dnum.FromStr(s)}
+}
+
+func TestPackedToLower(t *testing.T) {
+	same := func(v Value) {
+		packed := Pack(v.(Packable))
+		assert.T(t).Msg(v).This(packed).Is(PackedToLower(packed))
+	}
+	same(EmptyStr)
+	same(True)
+	same(False)
+	same(Zero)
+	same(IntVal(12345678))
+
+	s := "Hello World!"
+	ls := strings.ToLower(s)
+	assert.T(t).Msg(s).This(PackedToLower(Pack(SuStr(s)))).Is(Pack(SuStr(ls)))
+}
+
+func TestPackedCmpLower(t *testing.T) {
+	values := []Value{EmptyStr, False, True, IntVal(-123), Zero, IntVal(12345678),
+		SuStr("ant"), SuStr("Bug"), SuStr("cow")}
+	packed := make([]string, len(values))
+	for i, v := range values {
+		packed[i] = Pack(v.(Packable))
+	}
+	for i, p1 := range packed {
+		for j := i + 1; j < len(packed); j++ {
+			p2 := packed[j]
+			assert.T(t).Msg(values[i], "<=>", values[j]).
+				This(PackedCmpLower(p1, p2)).Is(-1)
+			assert.T(t).Msg(values[j], "<=>", values[i]).
+				This(PackedCmpLower(p2, p1)).Is(+1)
+		}
+	}
+	p1 := Pack(SuStr("hello world"))
+	p2 := Pack(SuStr("Hello World"))
+	assert.T(t).This(PackedCmpLower(p1, p2)).Is(0)
 }

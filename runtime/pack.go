@@ -5,8 +5,10 @@ package runtime
 
 import (
 	"strconv"
+	"strings"
 
 	"github.com/apmckinlay/gsuneido/util/pack"
+	"github.com/apmckinlay/gsuneido/util/str"
 )
 
 // Packable is the interface to packable values
@@ -92,6 +94,24 @@ func Unpack(s string) Value {
 	default:
 		panic("invalid pack tag " + strconv.Itoa(int(s[0])))
 	}
+}
+
+// PackedToLower applies strings.ToLower to packed strings.
+// Other types of values are unchanged.
+func PackedToLower(s string) string {
+	if len(s) == 0 || s[0] != PackString {
+		return s
+	}
+	return strings.ToLower(s) // ToLower shouldn't change PackString (4)
+}
+
+// PackedCmpLower compares strings with str.CmpLower
+// and other values with strings.Compare
+func PackedCmpLower(s1, s2 string) int {
+	if len(s1) == 0 || s1[0] != PackString || len(s2) == 0 || s2[0] != PackString {
+		return strings.Compare(s1, s2)
+	}
+	return str.CmpLower(s1, s2)
 }
 
 func UnpackOld(s string) Value {
