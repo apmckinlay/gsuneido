@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/util/ascii"
+	"github.com/apmckinlay/gsuneido/util/ints"
 )
 
 // Capitalized returns true is the string starts with A-Z, otherwise false
@@ -183,7 +184,7 @@ func Join(fmt string, list ...string) string {
 		fmt = fmt[1 : nf-1]
 	}
 	n := len(fmt) * (nf - 1)
-	for _,s := range list {
+	for _, s := range list {
 		n += len(s)
 	}
 	sep := ""
@@ -235,4 +236,22 @@ func Max(s1, s2 string) string {
 		return s1
 	}
 	return s2
+}
+
+// CmpLower compares the ascii.ToLower of each character
+// returning -1, 0, or +1 similar to strings.Compare
+func CmpLower(s1, s2 string) int {
+	n1 := len(s1)
+	n2 := len(s2)
+	for i := 0; i < n1 && i < n2; i++ {
+		c1 := ascii.ToLower(s1[i])
+		c2 := ascii.ToLower(s2[i])
+		if c1 < c2 {
+			return -1
+		}
+		if c1 > c2 {
+			return +1
+		}
+	}
+	return ints.Compare(n1, n2)
 }

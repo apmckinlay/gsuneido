@@ -98,3 +98,17 @@ func TestList_Reverse(t *testing.T) {
 	List(list).Reverse()
 	assert.T(t).This(list).Is([]string{"three", "two", "one"})
 }
+
+func TestCmpLower(t *testing.T) {
+	test := func(s1, s2 string, result int) {
+		assert.T(t).Msg(s1, "<=>", s2).This(CmpLower(s1, s2)).Is(result)
+		assert.T(t).Msg(s2, "<=>", s1).This(CmpLower(s2, s1)).Is(-result)
+	}
+	test("", "", 0)
+	test("", "2", -1)
+	test("123", "123", 0)
+	test("hello world", "hello world", 0)
+	test("Hello World", "hello world", 0)
+	test("Hello", "world", -1)
+	test("hello", "World", -1)
+}
