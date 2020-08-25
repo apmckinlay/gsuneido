@@ -21,8 +21,6 @@ import (
 	"github.com/apmckinlay/gsuneido/util/sortlist"
 )
 
-//TODO handle capitalized rule fields, and _lower! fields
-
 // LoadDatabase imports a dumped database from a file.
 // It returns the number of tables loaded or panics on error.
 func LoadDatabase() int {
@@ -94,9 +92,6 @@ func loadTable(store *stor.Stor, r *bufio.Reader, schema string) int {
 	for i, ix := range req.Indexes {
 		ixcols := ix.Fields
 		var ixcols2 []int
-		if len(ixcols) > 0 && strings.HasSuffix(req.Columns[ixcols[0]], "!") {
-			continue //TODO
-		}
 		switch req.Indexes[i].Mode {
 		case 'u':
 			ixcols2 = key
@@ -167,7 +162,7 @@ func ckerr(err error) {
 func firstShortestKey(req *compile.Schema) []int {
 	var key []int
 	for _, ix := range req.Indexes {
-		if usableKey(req, ix) &&
+		if usableKey(ix) &&
 			(key == nil || len(ix.Fields) < len(key)) {
 			key = ix.Fields
 		}
@@ -175,9 +170,17 @@ func firstShortestKey(req *compile.Schema) []int {
 	return key
 }
 
-func usableKey(req *compile.Schema, ix *compile.Index) bool {
-	return ix.Mode == 'k' && len(ix.Fields) > 0 &&
-		!strings.HasSuffix(req.Columns[ix.Fields[0]], "!")
+func usableKey(ix *compile.Index) bool {
+	return ix.Mode == 'k' && len(ix.Fields) > 0 && !hasSpecial(ix.Fields)
+}
+
+func hasSpecial(fields []int) bool {
+	for _, f := range fields {
+		if f < 0 {
+			return true
+		}
+	}
+	return false
 }
 
 func getLeafKey(store *stor.Stor, ixcols, ixcols2 []int, off uint64) string {

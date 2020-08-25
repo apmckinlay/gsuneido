@@ -5,6 +5,7 @@ package compile
 
 import (
 	"strconv"
+	"strings"
 
 	"github.com/apmckinlay/gsuneido/compile/ast"
 	. "github.com/apmckinlay/gsuneido/lexer"
@@ -44,27 +45,31 @@ func (p *qparser) request() interface{} {
 
 func (p *qparser) create() *Schema {
 	p.next()
-	table := p.Text
-	p.matchIdent()
-	columns := p.columns()
+	table := p.matchIdent()
+	columns, rules := p.columns()
 	indexes := p.indexes(columns)
-	return &Schema{Table: table, Columns: columns, Indexes: indexes}
+	return &Schema{Table: table, Columns: columns, Rules: rules, Indexes: indexes}
 }
 
-func (p *qparser) columns() []string {
+func (p *qparser) columns() (columns, rules []string) {
 	p.match(tok.LParen)
-	columns := make([]string, 0, 8)
+	columns = make([]string, 0, 8)
 	for p.Token != tok.RParen {
 		if p.matchIf(tok.Sub) {
 			columns = append(columns, "-")
 		} else {
-			columns = append(columns, p.Text)
-			p.matchIdent()
+			col := p.matchIdent()
+			if str.Capitalized(col) || strings.HasSuffix(col, "_lower!") {
+				rules = append(rules, col)
+			} else {
+				columns = append(columns, col)
+			}
+
 		}
 		p.matchIf(tok.Comma)
 	}
 	p.match(tok.RParen)
-	return columns
+	return columns, rules
 }
 
 func (p *qparser) indexes(columns []string) []*Index {
@@ -100,12 +105,17 @@ func (p *qparser) indexColumns(columns []string) []int {
 	p.match(tok.LParen)
 	ixcols := make([]int, 0, 8)
 	for p.Token != tok.RParen {
-		c := str.List(columns).Index(p.Text)
-		if c == -1 || p.Text == "-" {
-			p.error("invalid index column: " + p.Text)
+		col := p.matchIdent()
+		c := str.List(columns).Index(col)
+		if strings.HasSuffix(col, "_lower!") {
+			if c = str.List(columns).Index(col[:len(col)-7]); c != -1 {
+				c = -c - 2
+			}
+		}
+		if c == -1 {
+			p.error("invalid index column: " + col)
 		}
 		ixcols = append(ixcols, c)
-		p.matchIdent()
 		p.matchIf(tok.Comma)
 	}
 	p.match(tok.RParen)
@@ -116,8 +126,7 @@ func (p *qparser) foreignKey() (table string, columns []string, mode int) {
 	if !p.matchIf(tok.In) {
 		return
 	}
-	table = p.Text
-	p.matchIdent() // table
+	table = p.matchIdent()
 	if p.matchIf(tok.LParen) {
 		for p.Token != tok.RParen {
 			columns = append(columns, p.Text)
@@ -147,11 +156,19 @@ const (
 type Schema struct {
 	Table   string
 	Columns []string
+	Rules   []string
 	Indexes []*Index
 }
 
 func (sc *Schema) String() string {
-	s := sc.Table + " " + str.Join("(,)", sc.Columns...)
+	var cb str.CommaBuilder
+	for _, c := range sc.Columns {
+		cb.Add(c)
+	}
+	for _, c := range sc.Rules {
+		cb.Add(c)
+	}
+	s := sc.Table + " (" + cb.String() + ")"
 	for _, ix := range sc.Indexes {
 		s += " " + ix.string(sc.Columns)
 	}
@@ -170,7 +187,11 @@ type Index struct {
 func (ix Index) string(columns []string) string {
 	var cb str.CommaBuilder
 	for _, c := range ix.Fields {
-		cb.Add(columns[c])
+		if c < 0 {
+			cb.Add(columns[-c-2] + "_lower!")
+		} else {
+			cb.Add(columns[c])
+		}
 	}
 	s := map[int]string{'k': "key", 'i': "index", 'u': "index unique"}[ix.Mode] +
 		"(" + cb.String() + ")"

@@ -22,9 +22,8 @@ func Key(rec Record, fields, fields2 []int) string {
 		return ""
 	}
 	if len(fields) == 1 {
-		x := rec.GetRaw(fields[0])
-		if x != "" || len(fields2) == 0 {
-			return x // don't need to encode single field keys
+		if len(fields2) == 0 || fieldLen(rec, fields[0]) > 0 {
+			return getRaw(rec, fields[0]) // don't need to encode single field keys
 		}
 	}
 	n := 0
@@ -41,7 +40,7 @@ func Key(rec Record, fields, fields2 []int) string {
 			return ""
 		}
 		for _, field := range fields2 {
-			n += len(rec.GetRaw(field))
+			n += fieldLen(rec, field)
 		}
 	} else {
 		fields = fields[:lastNonEmpty+1]
@@ -56,7 +55,7 @@ func Key(rec Record, fields, fields2 []int) string {
 		fields = fields2
 	}
 	for f := 0; ; {
-		b := rec.GetRaw(fields[f])
+		b := getRaw(rec, fields[f])
 		for len(b) > 0 {
 			i := strings.IndexByte(b, 0)
 			if i == -1 { // no zero bytes
@@ -78,14 +77,39 @@ func Key(rec Record, fields, fields2 []int) string {
 	return hacks.BStoS(buf)
 }
 
+func fieldLen(rec Record, field int) int {
+	if field < 0 {
+		field = -field - 2 // _lower!
+	}
+	return len(rec.GetRaw(field))
+}
+
+func getRaw(rec Record, field int) string {
+	if field >= 0 {
+		return rec.GetRaw(field)
+	}
+	field = -field - 2 // _lower!
+	return PackedToLower(rec.GetRaw(field))
+}
+
 // Compare compares the specified fields of the two records
 // without building keys for them
 func Compare(r1, r2 Record, fields, fields2 []int) int {
 	empty := true
 	for _, f := range fields {
-		x1 := r1.GetRaw(f)
-		x2 := r2.GetRaw(f)
-		if cmp := strings.Compare(x1, x2); cmp != 0 {
+		var x1,x2 string
+		var cmp int
+		if f < 0 { // _lower!
+			f = -f - 2
+			x1 = r1.GetRaw(f)
+			x2 = r2.GetRaw(f)
+			cmp = PackedCmpLower(x1, x2)
+		} else {
+			x1 = r1.GetRaw(f)
+			x2 = r2.GetRaw(f)
+			cmp = strings.Compare(x1, x2)
+		}
+		if cmp != 0 {
 			return cmp
 		}
 		if x1 != "" || x2 != "" {
@@ -94,6 +118,7 @@ func Compare(r1, r2 Record, fields, fields2 []int) int {
 	}
 	if empty {
 		for _, f := range fields2 {
+			// NOTE: assumes fields2 will not be _lower!
 			if cmp := strings.Compare(r1.GetRaw(f), r2.GetRaw(f)); cmp != 0 {
 				return cmp
 			}

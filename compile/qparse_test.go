@@ -27,6 +27,9 @@ func TestQueryParser(t *testing.T) {
 	test("create mytable (one,two,three) index(two) in other (six) cascade")
 	test("create mytable (one,two,three) index(two) in other (six) cascade update")
 
+	test("create mytable (one,Two,Three) key(one)")
+	test("create mytable (one,two,two_lower!) key(two_lower!)")
+
 	xtest := func(qs, err string) {
 		fn := func() { ParseRequest(qs) }
 		assert.T(t).This(fn).Panics(err)
