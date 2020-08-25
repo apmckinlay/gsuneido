@@ -32,7 +32,7 @@ import (
 
 type assert struct {
 	t   *testing.T
-	msg string
+	msg []interface{}
 }
 
 // T specifies a *testing.T to use for reporting errors
@@ -43,20 +43,20 @@ func T(t *testing.T) assert {
 // Msg adds additional information to print with the error.
 // It can be useful with That/True/False where the error is not very helpful.
 func Msg(args ...interface{}) assert {
-	return assert{msg: fmt.Sprint(args...)}
+	return assert{msg: args}
 }
 
 // Msg adds additional information to print with the error.
 // It can be useful with That/True/False where the error is not very helpful.
 func (a assert) Msg(args ...interface{}) assert {
-	a.msg = fmt.Sprint(args...)
+	a.msg = args
 	return a
 }
 
 // Msg adds additional information to print with the error.
 // It can be useful with That/True/False where the error is not very helpful.
 func (v value) Msg(args ...interface{}) value {
-	v.assert.msg = fmt.Sprint(args...)
+	v.assert.msg = args
 	return v
 }
 
@@ -339,8 +339,8 @@ func (a assert) fail(args ...interface{}) {
 	if a.t != nil {
 		a.t.Helper()
 	}
-	if a.msg != "" {
-		args = append(args, "\nmsg: "+a.msg)
+	if len(a.msg) > 0 {
+		args = append(append(args, "\nmsg: "), a.msg...)
 	}
 	s := fmt.Sprint(args...)
 	if a.t != nil {
