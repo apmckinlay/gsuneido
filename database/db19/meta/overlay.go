@@ -4,16 +4,16 @@
 package meta
 
 import (
-	"github.com/apmckinlay/gsuneido/database/db19/btree"
 	"github.com/apmckinlay/gsuneido/database/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
+// Overlay provides access to the layered meta info and schema.
 type Overlay struct {
-	//TODO rwSchema
 	rwInfo      InfoHamt
 	roInfo      InfoHamt
 	roInfoOff   uint64
+	rwSchema    SchemaHamt
 	roSchema    SchemaHamt
 	roSchemaOff uint64
 	baseInfo    *InfoPacked
@@ -22,16 +22,16 @@ type Overlay struct {
 
 func NewOverlay(baseSchema *SchemaPacked, baseInfo *InfoPacked,
 	roSchema SchemaHamt, roSchemaOff uint64,
-	roInfo InfoHamt, roInfoOff uint64,
-	rwInfo InfoHamt) *Overlay {
+	roInfo InfoHamt, roInfoOff uint64) *Overlay {
 	return &Overlay{
 		baseSchema:  baseSchema,
 		baseInfo:    baseInfo,
 		roInfo:      roInfo,
 		roInfoOff:   roInfoOff,
+		rwSchema:    SchemaHamt{},
 		roSchema:    roSchema,
 		roSchemaOff: roSchemaOff,
-		rwInfo:      rwInfo,
+		rwInfo:      InfoHamt{},
 	}
 }
 
@@ -77,7 +77,7 @@ func (ov *Overlay) GetRwInfo(table string, tranNum int) *Info {
 	ti.mutable = true
 
 	// set up index overlays
-	ti.Indexes = append([]*btree.Overlay(nil), ti.Indexes...) // copy
+	ti.Indexes = append(ti.Indexes[:0:0], ti.Indexes...) // copy
 	for i := range ti.Indexes {
 		ti.Indexes[i] = ti.Indexes[i].Mutable(tranNum)
 	}
@@ -86,7 +86,10 @@ func (ov *Overlay) GetRwInfo(table string, tranNum int) *Info {
 	return &ti
 }
 
-func (ov *Overlay) GetSchema(table string) *Schema {
+func (ov *Overlay) GetRoSchema(table string) *Schema {
+	if ts, ok := ov.rwSchema.Get(table); ok {
+		return ts
+	}
 	if ts, ok := ov.roSchema.Get(table); ok {
 		return ts
 	}
@@ -94,6 +97,28 @@ func (ov *Overlay) GetSchema(table string) *Schema {
 		return ts
 	}
 	return nil
+}
+
+func (ov *Overlay) GetRwSchema(table string) *Schema {
+	if ts, ok := ov.rwSchema.Get(table); ok {
+		return ts
+	}
+	var ts Schema
+	if pts, ok := ov.roSchema.Get(table); ok {
+		ts = *pts // copy
+	} else if pts, ok := ov.baseSchema.Get(table); ok {
+		ts = *pts // copy
+	} else {
+		return nil
+	}
+	ts.Columns = append(ts.Columns[:0:0], ts.Columns...) // copy
+	ts.Indexes = append(ts.Indexes[:0:0], ts.Indexes...) // copy
+	ov.rwSchema.Put(&ts)
+	return &ts
+}
+
+func (ov *Overlay) AddSchema(ts *Schema) {
+	ov.rwSchema.Put(ts)
 }
 
 //-------------------------------------------------------------------
@@ -124,6 +149,7 @@ func (ov *Overlay) LayeredOnto(latest *Overlay) *Overlay {
 			roInfo2.Put(ti)
 		}
 	})
+	//TODO handle rwSchema
 	result := *latest
 	result.roInfo = roInfo2.Freeze()
 	return &result

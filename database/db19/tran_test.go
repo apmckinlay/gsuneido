@@ -124,7 +124,7 @@ func createDb() *stor.Stor {
 	UpdateState(func(state *DbState) {
 		state.store = store
 		state.meta = meta.NewOverlay(baseSchema, baseInfo,
-			roSchema, roSchemaOff, roInfo, roInfoOff, meta.InfoHamt{})
+			roSchema, roSchemaOff, roInfo, roInfoOff)
 	})
 
 	return store
