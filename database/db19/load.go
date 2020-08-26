@@ -166,7 +166,6 @@ func ckerr(err error) {
 
 func getLeafKey(store *stor.Stor, is *ixspec.T, off uint64) string {
 	rec := offToRec(store, off)
-	assert.That(is != nil) //FIXME remove
 	return comp.Key(rt.Record(rec), is.Cols, is.Cols2)
 }
 

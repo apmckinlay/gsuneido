@@ -39,6 +39,16 @@ func (ov *Overlay) Mutable(tranNum int) *Overlay {
 	return &Overlay{under: under, mb: newMbtree(tranNum)}
 }
 
+func (ov *Overlay) GetIxspec() *ixspec.T {
+	return ov.under[0].(*fbtree).ixspec
+}
+
+func (ov *Overlay) SetIxspec(is *ixspec.T) {
+	fb := *ov.under[0].(*fbtree) // copy
+	fb.ixspec = is
+	ov.under[0] = &fb
+}
+
 // Insert inserts into the mutable top mbtree
 func (ov *Overlay) Insert(key string, off uint64) {
 	ov.mb.Insert(key, off)

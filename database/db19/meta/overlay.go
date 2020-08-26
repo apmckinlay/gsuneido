@@ -76,10 +76,15 @@ func (ov *Overlay) GetRwInfo(table string, tranNum int) *Info {
 	ti.Size = 0
 	ti.mutable = true
 
-	// set up index overlays
+	// set up index overlays and ixspecs
 	ti.Indexes = append(ti.Indexes[:0:0], ti.Indexes...) // copy
 	for i := range ti.Indexes {
 		ti.Indexes[i] = ti.Indexes[i].Mutable(tranNum)
+		if ti.Indexes[i].GetIxspec() == nil {
+			ts := ov.GetRoSchema(table)
+			is := &ts.Indexes[i].Ixspec
+			ti.Indexes[i].SetIxspec(is)
+		}
 	}
 
 	ov.rwInfo.Put(&ti) // cache in memory
