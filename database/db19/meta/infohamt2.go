@@ -111,13 +111,6 @@ func NewInfoPacked(st *stor.Stor, off uint64) *InfoPacked {
 	return &InfoPacked{stor: st, off: off, buf: buf, fingers: fingers}
 }
 
-func (p InfoPacked) MustGet(key string) *Info {
-	if item, ok := p.Get(key); ok {
-		return item
-	}
-	panic("item not found")
-}
-
 func (p InfoPacked) Get(key string) (*Info, bool) {
 	pos := p.binarySearch(key)
 	r := stor.NewReader(p.buf[pos:])
