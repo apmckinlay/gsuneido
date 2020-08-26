@@ -60,8 +60,8 @@ func (t *UpdateTran) num() int {
 func (t *UpdateTran) Output(table string, rec rt.Record) {
 	ts := t.getSchema(table)
 	ti := t.getInfo(table)
-	off, buf := t.store.AllocSized(len(rec))
-	copy(buf, []byte(rec))
+	off, buf := t.store.Alloc(rec.Len())
+	copy(buf, []byte(rec[:rec.Len()]))
 	keys := make([]string, len(ts.Indexes))
 	for i := range ts.Indexes {
 		is := ts.Indexes[i].Ixspec

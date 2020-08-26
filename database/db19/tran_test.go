@@ -47,7 +47,7 @@ func TestConcurrent(t *testing.T) {
 	rt := NewReadTran()
 	ti := rt.meta.GetRoInfo("mytable")
 	assert.T(t).Msg("nrows").This(ti.Nrows).Is(nout)
-	assert.T(t).Msg("size").This(ti.Size).Is(nout * 12)
+	assert.T(t).Msg("size").This(ti.Size).Is(nout * 23)
 
 	GetState().store.Close()
 }
@@ -81,17 +81,14 @@ func TestTran(t *testing.T) {
 	rt := NewReadTran()
 	ti := rt.meta.GetRoInfo("mytable")
 	assert.T(t).Msg("nrows").This(ti.Nrows).Is(nout)
-	assert.T(t).Msg("size").This(ti.Size).Is(nout * 12)
+	assert.T(t).Msg("size").This(ti.Size).Is(nout * 23)
 
 	store.Close()
 	os.Remove("test.tmp")
 }
 
 func createDb() *stor.Stor {
-	btree.GetLeafKey = func(st *stor.Stor, _ *ixspec.T, off uint64) string {
-		return string(st.DataSized(off))
-	}
-	// btree.GetLeafKey = getLeafKey
+	btree.GetLeafKey = getLeafKey
 
 	store, err := stor.MmapStor("test.tmp", stor.CREATE)
 	if err != nil {
@@ -133,16 +130,8 @@ func createDb() *stor.Stor {
 
 func output1() *UpdateTran {
 	ut := NewUpdateTran()
-	// ut.Output("mytable", mkrec(strconv.Itoa(ut.num()), "data"))
-	// write some data
 	data := (strconv.Itoa(ut.num()) + "transaction")[:12]
-	off, buf := ut.store.AllocSized(len(data))
-	copy(buf, data)
-	// add it to the indexes
-	ti := ut.meta.GetRwInfo("mytable", ut.num())
-	ti.Nrows++
-	ti.Size += uint64(len(data))
-	ti.Indexes[0].Insert(data, off)
+	ut.Output("mytable", mkrec(data, "data"))
 	return ut
 	// NOTE: does not commit
 }
@@ -150,7 +139,7 @@ func output1() *UpdateTran {
 func mkrec(args ...string) rt.Record {
 	var b rt.RecordBuilder
 	for _, a := range args {
-		b.AddRaw(a)
+		b.Add(rt.SuStr(a))
 	}
 	return b.Build()
 }
