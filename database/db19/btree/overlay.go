@@ -24,8 +24,9 @@ type Overlay struct {
 	mb *mbtree
 }
 
-func NewOverlay(store *stor.Stor, ixspec *ixspec.T) *Overlay {
-	return &Overlay{under: []tree{CreateFbtree(store, ixspec)}}
+func NewOverlay(store *stor.Stor, is *ixspec.T) *Overlay {
+	assert.That(is != nil)
+	return &Overlay{under: []tree{CreateFbtree(store, is)}}
 }
 
 // var Under [8]int64

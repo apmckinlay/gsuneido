@@ -39,19 +39,20 @@ var MaxNodeSize = 1536 // * .75 ~ 1k
 
 // GetLeafKey returns the key for a data offset. (e.g. extract key from record)
 // It is a dependency that must be injected
-var GetLeafKey func(st *stor.Stor, ixspec *ixspec.T, off uint64) string
+var GetLeafKey func(st *stor.Stor, is *ixspec.T, off uint64) string
 
-func CreateFbtree(store *stor.Stor, ixspec *ixspec.T) *fbtree {
+func CreateFbtree(store *stor.Stor, is *ixspec.T) *fbtree {
 	re := newRedirs()
 	re.tbl = re.tbl.Mutable()
 	root := re.add(fNode{})
 	re.tbl = re.tbl.Freeze()
 	re.generation++ // so root isn't mutable
-	return &fbtree{root: root, redirs: re, store: store, ixspec: ixspec}
+	return &fbtree{root: root, redirs: re, store: store, ixspec: is}
 }
 
 func OpenFbtree(store *stor.Stor, root uint64, treeLevels int, redirsOff uint64) *fbtree {
 	re := loadRedirs(store, redirsOff)
+	//FIXME need ixspec
 	return &fbtree{root: root, treeLevels: treeLevels, redirs: re, store: store,
 		redirsOff: redirsOff}
 }

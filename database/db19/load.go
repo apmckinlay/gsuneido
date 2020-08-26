@@ -164,16 +164,17 @@ func ckerr(err error) {
 	}
 }
 
-func getLeafKey(store *stor.Stor, ix *ixspec.T, off uint64) string {
+func getLeafKey(store *stor.Stor, is *ixspec.T, off uint64) string {
 	rec := offToRec(store, off)
-	return comp.Key(rt.Record(rec), ix.Cols, ix.Cols2)
+	assert.That(is != nil) //FIXME remove
+	return comp.Key(rt.Record(rec), is.Cols, is.Cols2)
 }
 
-func mkcmp(store *stor.Stor, ix *ixspec.T) func(x, y uint64) int {
+func mkcmp(store *stor.Stor, is *ixspec.T) func(x, y uint64) int {
 	return func(x, y uint64) int {
 		xr := offToRec(store, x)
 		yr := offToRec(store, y)
-		return comp.Compare(xr, yr, ix.Cols, ix.Cols2)
+		return comp.Compare(xr, yr, is.Cols, is.Cols2)
 	}
 }
 

@@ -14,6 +14,7 @@ import (
 	"github.com/apmckinlay/gsuneido/database/db19/ixspec"
 	"github.com/apmckinlay/gsuneido/database/db19/meta"
 	"github.com/apmckinlay/gsuneido/database/db19/stor"
+	rt "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
@@ -90,6 +91,7 @@ func createDb() *stor.Stor {
 	btree.GetLeafKey = func(st *stor.Stor, _ *ixspec.T, off uint64) string {
 		return string(st.DataSized(off))
 	}
+	// btree.GetLeafKey = getLeafKey
 
 	store, err := stor.MmapStor("test.tmp", stor.CREATE)
 	if err != nil {
@@ -97,22 +99,21 @@ func createDb() *stor.Stor {
 	}
 
 	schema := meta.SchemaHamt{}.Mutable()
+	is := ixspec.T{Cols: []int{0}}
 	schema.Put(&meta.Schema{
 		Table: "mytable",
 		Columns: []meta.ColumnSchema{
 			{Name: "one", Field: 0},
 			{Name: "two", Field: 1},
 		},
-		Indexes: []meta.IndexSchema{
-			{Fields: []int{0}},
-		},
+		Indexes: []meta.IndexSchema{{Fields: []int{0}, Ixspec: is}},
 	})
 	baseSchema := meta.NewSchemaPacked(store, schema.Write(store))
 
 	info := meta.InfoHamt{}.Mutable()
 	info.Put(&meta.Info{
 		Table:   "mytable",
-		Indexes: []*btree.Overlay{btree.NewOverlay(store, nil).Save()},
+		Indexes: []*btree.Overlay{btree.NewOverlay(store, &is).Save()},
 	})
 	baseInfo := meta.NewInfoPacked(store, info.Write(store))
 
@@ -132,6 +133,7 @@ func createDb() *stor.Stor {
 
 func output1() *UpdateTran {
 	ut := NewUpdateTran()
+	// ut.Output("mytable", mkrec(strconv.Itoa(ut.num()), "data"))
 	// write some data
 	data := (strconv.Itoa(ut.num()) + "transaction")[:12]
 	off, buf := ut.store.AllocSized(len(data))
@@ -143,4 +145,12 @@ func output1() *UpdateTran {
 	ti.Indexes[0].Insert(data, off)
 	return ut
 	// NOTE: does not commit
+}
+
+func mkrec(args ...string) rt.Record {
+	var b rt.RecordBuilder
+	for _, a := range args {
+		b.AddRaw(a)
+	}
+	return b.Build()
 }
