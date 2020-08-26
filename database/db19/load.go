@@ -14,6 +14,8 @@ import (
 	"github.com/apmckinlay/gsuneido/compile"
 	"github.com/apmckinlay/gsuneido/database/db19/btree"
 	"github.com/apmckinlay/gsuneido/database/db19/comp"
+	"github.com/apmckinlay/gsuneido/database/db19/ixspec"
+	"github.com/apmckinlay/gsuneido/database/db19/meta"
 	"github.com/apmckinlay/gsuneido/database/db19/stor"
 	rt "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
@@ -88,27 +90,19 @@ func loadTable(store *stor.Stor, r *bufio.Reader, schema string) int {
 	beforeIndexes := store.Size()
 	trace("nrecs", nrecs, "data size", beforeIndexes-before)
 	list.Finish()
-	key := firstShortestKey(req)
-	for i, ix := range req.Indexes {
-		ixcols := ix.Fields
-		var ixcols2 []int
-		switch req.Indexes[i].Mode {
-		case 'u':
-			ixcols2 = key
-		case 'i':
-			ixcols = append(ixcols, key...)
-		}
-
-		trace(ix, ixcols, ixcols2)
+	ts := reqToSchema(req)
+	for i := range ts.Indexes {
+		ix := ts.Indexes[i]
+		trace(ix)
 		if i > 0 || ix.Mode != 'k' { // non-key order may be different
-			list.Sort(mkcmp(store, ixcols, ixcols2))
+			list.Sort(mkcmp(store, &ix.Ixspec))
 		}
 		before := store.Size()
 		bldr := btree.NewFbtreeBuilder(store)
 		iter := list.Iter()
 		n := 0
 		for off := iter(); off != 0; off = iter() {
-			bldr.Add(getLeafKey(store, ixcols, ixcols2, off), off)
+			bldr.Add(getLeafKey(store, &ix.Ixspec, off), off)
 			n++
 		}
 		bldr.Finish()
@@ -117,6 +111,17 @@ func loadTable(store *stor.Stor, r *bufio.Reader, schema string) int {
 	}
 	trace("indexes size", store.Size()-beforeIndexes)
 	return nrecs
+}
+
+func reqToSchema(req *compile.Schema) *meta.Schema {
+	var ts meta.Schema
+	ts.Indexes = make([]meta.IndexSchema, len(req.Indexes))
+	for i := range req.Indexes {
+		ri := req.Indexes[i]
+		ts.Indexes[i] = meta.IndexSchema{Fields: ri.Fields, Mode: ri.Mode}
+	}
+	ts.Ixspecs()
+	return &ts
 }
 
 func readLinePrefixed(r *bufio.Reader, pre string) string {
@@ -159,40 +164,16 @@ func ckerr(err error) {
 	}
 }
 
-func firstShortestKey(req *compile.Schema) []int {
-	var key []int
-	for _, ix := range req.Indexes {
-		if usableKey(ix) &&
-			(key == nil || len(ix.Fields) < len(key)) {
-			key = ix.Fields
-		}
-	}
-	return key
-}
-
-func usableKey(ix *compile.Index) bool {
-	return ix.Mode == 'k' && len(ix.Fields) > 0 && !hasSpecial(ix.Fields)
-}
-
-func hasSpecial(fields []int) bool {
-	for _, f := range fields {
-		if f < 0 {
-			return true
-		}
-	}
-	return false
-}
-
-func getLeafKey(store *stor.Stor, ixcols, ixcols2 []int, off uint64) string {
+func getLeafKey(store *stor.Stor, ix *ixspec.T, off uint64) string {
 	rec := offToRec(store, off)
-	return comp.Key(rt.Record(rec), ixcols, ixcols2)
+	return comp.Key(rt.Record(rec), ix.Cols, ix.Cols2)
 }
 
-func mkcmp(store *stor.Stor, ixcols, ixcols2 []int) func(x, y uint64) int {
+func mkcmp(store *stor.Stor, ix *ixspec.T) func(x, y uint64) int {
 	return func(x, y uint64) int {
 		xr := offToRec(store, x)
 		yr := offToRec(store, y)
-		return comp.Compare(xr, yr, ixcols, ixcols2)
+		return comp.Compare(xr, yr, ix.Cols, ix.Cols2)
 	}
 }
 

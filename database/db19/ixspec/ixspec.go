@@ -6,7 +6,13 @@
 // comp.Key and Compare implement how it is used.
 package ixspec
 
+import "fmt"
+
 type T struct {
-	cols []int
-	cols2 []int
+	Cols  []int
+	Cols2 []int
+}
+
+func (is *T) String() string {
+	return fmt.Sprint("ixspec ", is.Cols, ",", is.Cols2)
 }

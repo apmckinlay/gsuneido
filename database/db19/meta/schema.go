@@ -4,6 +4,7 @@
 package meta
 
 import (
+	"github.com/apmckinlay/gsuneido/database/db19/ixspec"
 	"github.com/apmckinlay/gsuneido/database/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/hash"
 )
@@ -35,6 +36,7 @@ type ColumnSchema struct {
 
 type IndexSchema struct {
 	Fields []int
+	Ixspec ixspec.T
 	// Mode is 'k' for key, 'i' for index, 'u' for unique index
 	Mode     int
 	Fktable  string
@@ -99,5 +101,45 @@ func ReadSchema(_ *stor.Stor, r *stor.Reader) *Schema {
 			Fkfields: r.GetInts(),
 		}
 	}
+	ts.Ixspecs()
 	return &ts
+}
+
+func (sc *Schema) Ixspecs() {
+	key := sc.firstShortestKey()
+	for i := range sc.Indexes {
+		ix := &sc.Indexes[i]
+		ix.Ixspec.Cols = ix.Fields
+		switch sc.Indexes[i].Mode {
+		case 'u':
+			ix.Ixspec.Cols2 = key
+		case 'i':
+			ix.Ixspec.Cols = append(ix.Fields, key...)
+		}
+	}
+}
+
+func (sc *Schema) firstShortestKey() []int {
+	var key []int
+	for i := range sc.Indexes {
+		ix := &sc.Indexes[i]
+		if ix.usableKey() &&
+			(key == nil || len(ix.Fields) < len(key)) {
+			key = ix.Fields
+		}
+	}
+	return key
+}
+
+func (ix *IndexSchema) usableKey() bool {
+	return ix.Mode == 'k' && len(ix.Fields) > 0 && !hasSpecial(ix.Fields)
+}
+
+func hasSpecial(fields []int) bool {
+	for _, f := range fields {
+		if f < 0 {
+			return true
+		}
+	}
+	return false
 }

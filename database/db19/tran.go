@@ -63,8 +63,9 @@ func (t *UpdateTran) Output(table string, rec rt.Record) {
 	off, buf := t.store.AllocSized(len(rec))
 	copy(buf, []byte(rec))
 	keys := make([]string, len(ts.Indexes))
-	for i, ix := range ts.Indexes {
-		keys[i] = comp.Key(rec, ix.Fields, nil) //TODO make unique
+	for i := range ts.Indexes {
+		is := ts.Indexes[i].Ixspec
+		keys[i] = comp.Key(rec, is.Cols, is.Cols2)
 		ti.Indexes[i].Insert(keys[i], off)
 	}
 	t.ck(ck.Write(t.ct, table, keys))
