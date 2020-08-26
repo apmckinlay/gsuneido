@@ -52,31 +52,31 @@ const (
 	CASCADE         = CASCADE_UPDATES | CASCADE_DELETES
 )
 
-func (sc *Schema) storSize() int {
-	size := 2 + len(sc.Table)
+func (ts *Schema) storSize() int {
+	size := 2 + len(ts.Table)
 	size += 2
-	for _, col := range sc.Columns {
+	for _, col := range ts.Columns {
 		size += 2 + 2 + len(col.Name)
 	}
 	size++
-	for i := range sc.Indexes {
-		idx := &sc.Indexes[i]
+	for i := range ts.Indexes {
+		idx := &ts.Indexes[i]
 		size += 1 + 1 + 2*len(idx.Fields) +
 			2 + len(idx.Fktable) + 1 + 1 + 2*len(idx.Fkfields)
 	}
 	return size
 }
 
-func (sc *Schema) Write(w *stor.Writer) {
-	w.PutStr(sc.Table)
-	w.Put2(len(sc.Columns))
-	for i := range sc.Columns {
-		col := &sc.Columns[i]
+func (ts *Schema) Write(w *stor.Writer) {
+	w.PutStr(ts.Table)
+	w.Put2(len(ts.Columns))
+	for i := range ts.Columns {
+		col := &ts.Columns[i]
 		w.Put2(col.Field).PutStr(col.Name)
 	}
-	w.Put1(len(sc.Indexes))
-	for i := range sc.Indexes {
-		idx := &sc.Indexes[i]
+	w.Put1(len(ts.Indexes))
+	for i := range ts.Indexes {
+		idx := &ts.Indexes[i]
 		w.Put1(idx.Mode).PutInts(idx.Fields)
 		w.PutStr(idx.Fktable).Put1(idx.Fkmode).PutInts(idx.Fkfields)
 	}
@@ -105,12 +105,12 @@ func ReadSchema(_ *stor.Stor, r *stor.Reader) *Schema {
 	return &ts
 }
 
-func (sc *Schema) Ixspecs() {
-	key := sc.firstShortestKey()
-	for i := range sc.Indexes {
-		ix := &sc.Indexes[i]
+func (ts *Schema) Ixspecs() {
+	key := ts.firstShortestKey()
+	for i := range ts.Indexes {
+		ix := &ts.Indexes[i]
 		ix.Ixspec.Cols = ix.Fields
-		switch sc.Indexes[i].Mode {
+		switch ts.Indexes[i].Mode {
 		case 'u':
 			ix.Ixspec.Cols2 = key
 		case 'i':
@@ -119,10 +119,10 @@ func (sc *Schema) Ixspecs() {
 	}
 }
 
-func (sc *Schema) firstShortestKey() []int {
+func (ts *Schema) firstShortestKey() []int {
 	var key []int
-	for i := range sc.Indexes {
-		ix := &sc.Indexes[i]
+	for i := range ts.Indexes {
+		ix := &ts.Indexes[i]
 		if ix.usableKey() &&
 			(key == nil || len(ix.Fields) < len(key)) {
 			key = ix.Fields
