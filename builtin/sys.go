@@ -62,7 +62,7 @@ var _ = builtin1("DirExists?(filename)",
 	func(arg Value) Value {
 		info, err := os.Stat(ToStr(arg))
 		if err == nil {
-			return SuBool((info.Mode() & os.ModeDir) == os.ModeDir)
+			return SuBool(info.Mode().IsDir())
 		}
 		if os.IsNotExist(err) {
 			return False
@@ -81,7 +81,15 @@ var _ = builtin2("MoveFile(from, to)",
 
 var _ = builtin1("DeleteDir(dir)",
 	func(dir Value) Value {
-		err := os.RemoveAll(ToStr(dir))
+		dirname := ToStr(dir)
+		info, err := os.Stat(dirname)
+		if os.IsNotExist(err) || !info.Mode().IsDir() {
+			return False
+		}
+		if err != nil {
+			panic("DeleteDir: " + err.Error())
+		}
+		err = os.RemoveAll(dirname)
 		if err != nil {
 			panic("DeleteDir: " + err.Error())
 		}
