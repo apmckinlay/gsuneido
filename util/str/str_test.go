@@ -112,3 +112,29 @@ func TestCmpLower(t *testing.T) {
 	test("Hello", "world", -1)
 	test("hello", "World", -1)
 }
+
+func TestRemovePrefix(t *testing.T) {
+	test := func(s, pre, expected string) {
+		t.Helper()
+		assert.T(t).Msg(s, ",", pre).This(RemovePrefix(s, pre)).Is(expected)
+	}
+	test("", "", "")
+	test("", "abc", "")
+	test("abc", "", "abc")
+	test("abc", "xyz", "abc")
+	test("foobar", "foo", "bar")
+	test("foobar", "bar", "foobar")
+}
+
+func TestRemoveSuffix(t *testing.T) {
+	test := func(s, pre, expected string) {
+		t.Helper()
+		assert.T(t).Msg(s, ",", pre).This(RemoveSuffix(s, pre)).Is(expected)
+	}
+	test("", "", "")
+	test("", "abc", "")
+	test("abc", "", "abc")
+	test("abc", "xyz", "abc")
+	test("foobar", "foo", "foobar")
+	test("foobar", "bar", "foo")
+}

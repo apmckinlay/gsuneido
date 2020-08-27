@@ -255,3 +255,19 @@ func CmpLower(s1, s2 string) int {
 	}
 	return ints.Compare(n1, n2)
 }
+
+// RemovePrefix removes a prefix if it is present
+func RemovePrefix(s, pre string) string {
+	if strings.HasPrefix(s, pre) {
+		s = s[len(pre):]
+	}
+	return s
+}
+
+// RemoveSuffix removes a suffix if it is present
+func RemoveSuffix(s, suf string) string {
+	if strings.HasSuffix(s, suf) {
+		s = s[:len(s) - len(suf)]
+	}
+	return s
+}
