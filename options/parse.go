@@ -11,10 +11,10 @@ import (
 // Parse processes the command line options
 // returning the remaining arguments
 func Parse(args []string) {
-	i := 0
 loop:
-	for ; i < len(args); i++ {
-		arg := args[i]
+	for len(args) > 0 {
+		arg := args[0]
+		args = args[1:]
 		if arg == "" {
 			continue
 		}
@@ -23,35 +23,69 @@ loop:
 		}
 		switch arg {
 		case "-c", "-client":
-			Client = "127.0.0.1"
-			if i+1 < len(args) && args[i+1][0] != '-' {
-				i++
-				Client = args[i]
-			}
+			setAction("client")
+			Arg = "127.0.0.1"
+			args = optionalArg(args)
+		case "-l", "-load":
+			setAction("load")
+			args = optionalArg(args)
 		case "-r", "-repl":
-			Repl = true
+			setAction("repl")
 		case "-p", "-port":
-			if i+1 < len(args) {
-				i++
-				Port = args[i]
+			if len(args) > 0 && args[0][0] != '-' {
+				Port = args[0]
+				args = args[1:]
+			} else {
+				error(arg + " must be followed by port number")
 			}
 		case "-u", "-unattended":
 			Unattended = true
 		case "-v", "-version":
-			Version = true
+			Action = "version"
 		case "--":
-			i++
 			break loop
 		default:
-			Help = true
+			Action = "help"
+		}
+		if Action == "error" {
+			return
 		}
 	}
-	CmdLine = remainder(args[i:])
-	if Client != "" {
+	if Port != "" && Action != "client" && Action != "server" {
+		error("port should only be specifed with -server or -client, not " +
+			Action)
+	}
+	if Port == "" && (Action == "client" || Action == "server") {
+		Port = "3147"
+	}
+	CmdLine = remainder(args)
+	if Action == "client" {
 		temp := os.TempDir() + "/"
 		Errlog = temp + "suneido" + Port + ".err"
 		Outlog = temp + "suneido" + Port + ".out"
 	}
+}
+
+func setAction(action string) {
+	if Action == "" {
+		Action = action
+	} else {
+		error("only one action is allowed, can't have both " + Action +
+			" and " + action)
+	}
+}
+
+func optionalArg(args []string) []string {
+	if len(args) > 0 && args[0][0] != '-' {
+		Arg = args[0]
+		args = args[1:]
+	}
+	return args
+}
+
+func error(err string) {
+	Action = "error"
+	Error = err
 }
 
 func remainder(args []string) string {

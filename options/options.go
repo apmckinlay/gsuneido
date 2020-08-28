@@ -8,12 +8,11 @@ package options
 // command line flags
 var (
 	BuiltDate  string
-	Repl       bool
-	Client     string
-	Port       = "3147"
-	Unattended = false
-	Version    bool
-	Help       bool
+	Action     string
+	Error      string
+	Arg        string
+	Port       string
+	Unattended bool
 )
 
 // CmdLine is the remaining command line arguments

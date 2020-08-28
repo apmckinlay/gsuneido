@@ -50,17 +50,13 @@ func LoadDatabase() int {
 
 // LoadTable imports a dumped table from a file.
 // It returns the number of records loaded or panics on error.
-func LoadTable(filename string) int {
-	table := filename
-	if strings.HasSuffix(table, ".su") {
-		table = filename[:len(filename)-3]
-	}
+func LoadTable(table string) int {
 	defer func() {
 		if e := recover(); e != nil {
 			panic("load failed: " + table + " " + fmt.Sprint(e))
 		}
 	}()
-	f, r, store := open(filename)
+	f, r, store := open(table + ".su")
 	defer f.Close()
 	defer store.Close()
 	schema := table + " " + readLinePrefixed(r, "====== ")
@@ -74,7 +70,7 @@ func open(filename string) (*os.File, *bufio.Reader, *stor.Stor) {
 	}
 	r := bufio.NewReader(f)
 	readLinePrefixed(r, "Suneido dump 2")
-	store, err := stor.MmapStor("tmp.db", stor.CREATE)
+	store, err := stor.MmapStor("tmp.db", stor.CREATE) //TODO .bak
 	ckerr(err)
 	store.Alloc(1) // don't use offset 0
 	return f, r, store

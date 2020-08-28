@@ -26,7 +26,7 @@ func RedirOutput() {
 	} else {
 		LogFileAlso()
 	}
-	if options.Repl {
+	if options.Action == "repl" {
 		inputFromConsole()
 	}
 }

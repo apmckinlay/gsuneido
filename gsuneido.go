@@ -25,16 +25,19 @@ import (
 	_ "github.com/apmckinlay/gsuneido/aaainitfirst"
 	"github.com/apmckinlay/gsuneido/builtin"
 	"github.com/apmckinlay/gsuneido/compile"
+	"github.com/apmckinlay/gsuneido/database/db19"
 	"github.com/apmckinlay/gsuneido/database/dbms"
 	"github.com/apmckinlay/gsuneido/options"
 	. "github.com/apmckinlay/gsuneido/runtime"
+	"github.com/apmckinlay/gsuneido/util/str"
 )
 
 var builtDate = "Dec 16 2019" // set by: go build -ldflags "-X main.builtDate=..."
 
 var help = `options:
-    -c[lient] [ipaddress]
-    -p[ort] #
+	-c[lient] [ipaddress] (default 127.0.0.1)
+	-l[oad] [table]
+    -p[ort] # (default 3147)
     -r[epl]
     -v[ersion]`
 
@@ -48,18 +51,35 @@ func main() {
 	Global.Builtin("Suneido", suneido)
 
 	options.BuiltDate = builtDate
-	if options.Client == "" {
-		options.Repl = true
+	if options.Action == "" {
+		options.Action = "repl"
 	}
-
-	if options.Version {
+	switch options.Action {
+	case "load":
+		if options.Arg == "" {
+			n := db19.LoadDatabase()
+			println("loaded", n, "tables")
+		} else {
+			table := str.RemoveSuffix(options.Arg, ".su")
+			n := db19.LoadTable(table)
+			println("loaded", n, "records to", table)
+		}
+		os.Exit(0)
+	case "version":
 		println("gSuneido " + builtDate + " (" + runtime.Version() + " " +
 			runtime.GOARCH + " " + runtime.GOOS + ")")
 		os.Exit(0)
-	}
-	if options.Help {
+	case "help":
 		println(help)
 		os.Exit(0)
+	case "error":
+		println(options.Error)
+		os.Exit(1)
+	case "repl", "client":
+		// handled below
+	default:
+		println("invalid action:", options.Action)
+		os.Exit(1)
 	}
 	Libload = libload // dependency injection
 	mainThread = NewThread()
@@ -67,8 +87,8 @@ func main() {
 	builtin.UIThread = mainThread
 	defer mainThread.Close()
 	// dependency injection of GetDbms
-	if options.Client != "" {
-		addr := options.Client + ":" + options.Port
+	if options.Action == "client" {
+		addr := options.Arg + ":" + options.Port
 		GetDbms = func() IDbms { return dbms.NewDbmsClient(addr) }
 		clientErrorLog()
 	} else {
@@ -76,7 +96,7 @@ func main() {
 		GetDbms = func() IDbms { return dbmsLocal }
 		eval("Suneido.Print = PrintStdout;;")
 	}
-	if options.Repl {
+	if options.Action == "repl" {
 		repl()
 	} else {
 		eval("Init()")
@@ -132,7 +152,7 @@ func repl() {
 	builtin.Concat()
 
 	built := builtin.Built()
-	if options.Client != "" {
+	if options.Action == "client" {
 		built += " - client"
 	}
 	prompt(built)

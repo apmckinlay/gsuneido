@@ -11,7 +11,10 @@ import (
 )
 
 var _ = builtin0("ServerIP()", func() Value {
-	return SuStr(options.Client)
+	if options.Action == "client" {
+		return SuStr(options.Arg)
+	}
+	return EmptyStr
 })
 
 var _ = builtin0("ServerPort()", func() Value {

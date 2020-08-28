@@ -7,53 +7,45 @@ import (
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/util/assert"
+	"github.com/apmckinlay/gsuneido/util/str"
 )
 
 func TestParse(t *testing.T) {
-	parse := func(args ...string) func(string) {
-		Repl, Client, Port, Version, Help = false, "", "", false, false
+	test := func(args ...string) func(string) {
+		Action, Arg, Port, CmdLine = "", "", "", ""
 		Parse(args)
-		if len(args) == 0 {
-			args = nil
+		s := Action
+		if Arg != "" {
+			s += " " + Arg
 		}
-		s := ""
-		if Repl {
-			s += " repl"
-		}
-		if Client != "" {
-			s += " " + Client
-		}
-		if Port != "" {
+		if Port != "3147" && Port != "" {
 			s += " " + Port
-		}
-		if Version {
-			s += " version"
-		}
-		if Help {
-			s += " help"
 		}
 		if CmdLine != "" {
 			s += " | " + CmdLine
 		}
-		if s != "" {
-			s = s[1:]
+		s = str.RemovePrefix(s, " ")
+		if Action == "error" {
+			s = "error"
 		}
 		return func(expected string) {
 			t.Helper()
 			assert.T(t).This(s).Is(expected)
 		}
 	}
-	parse()("")
-	parse("-r")("repl")
-	parse("-repl")("repl")
-	parse("-c")("127.0.0.1")
-	parse("-client")("127.0.0.1")
-	parse("-c", "--")("127.0.0.1")
-	parse("-c", "1.2.3.4")("1.2.3.4")
-	parse("-p", "1234")("1234")
-	parse("-c", "-p", "1234")("127.0.0.1 1234")
-	parse("-c", "localhost", "-p", "1234")("localhost 1234")
-	parse("-c", "--", "foo", "bar")("127.0.0.1 | foo bar")
+	test()("")
+	test("-r")("repl")
+	test("-repl")("repl")
+	test("-c")("client 127.0.0.1")
+	test("-client")("client 127.0.0.1")
+	test("-c", "--")("client 127.0.0.1")
+	test("-c", "1.2.3.4")("client 1.2.3.4")
+	test("-c", "-p", "1234")("client 127.0.0.1 1234")
+	test("-c", "localhost", "-p", "1234")("client localhost 1234")
+	test("-c", "--", "foo", "bar")("client 127.0.0.1 | foo bar")
+	test("-load", "-client")("error")
+	test("-port", "1234", "-repl")("error")
+	test("-port")("error")
 }
 
 func TestEscapeArg(t *testing.T) {
