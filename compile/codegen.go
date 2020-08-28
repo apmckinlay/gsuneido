@@ -412,17 +412,18 @@ func (cg *cgen) whileStmt(node *ast.While) {
 }
 
 func (cg *cgen) dowhileStmt(node *ast.DoWhile) {
-	labels := cg.newLabels()
+	labels := &Labels{brk: -1, cont: -1}
+	loop := cg.label()
 	cg.statement(node.Body, labels, false)
+	cg.placeLabel(labels.cont)
 	cg.expr(node.Cond)
-	cg.emitBwdJump(op.JumpTrue, labels.cont)
+	cg.emitBwdJump(op.JumpTrue, loop)
 	cg.placeLabel(labels.brk)
 }
 
 func (cg *cgen) forStmt(node *ast.For) {
 	cg.exprList(node.Init)
-	labels := cg.newLabels()
-	labels.cont = -1
+	labels := &Labels{brk: -1, cont: -1}
 	cond := -1
 	if node.Cond != nil {
 		cond = cg.emitJump(op.Jump, -1)

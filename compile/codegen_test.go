@@ -431,6 +431,24 @@ func TestControl(t *testing.T) {
 		3: Load b
 		5: JumpTrue 0`)
 
+	test("do { a; continue; b } while c", `
+		0: Load a
+		2: Pop
+		3: Jump 9
+		6: Load b
+		8: Pop
+		9: Load c
+		11: JumpTrue 0`)
+
+	test("do { a; break; b } while c", `
+		0: Load a
+		2: Pop
+		3: Jump 14
+		6: Load b
+		8: Pop
+		9: Load c
+		11: JumpTrue 0`)
+
 	test("for (;a;) { b; break; continue }", `
 		0: Jump 12
 		3: Load b
