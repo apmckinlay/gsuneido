@@ -25,16 +25,16 @@ const chanBuffers = 2 // ???
 // closes its output channel.
 // Finally the persister closes the allDone channel
 // so we know the shutdown has finished.
-func StartConcur(persistInterval time.Duration) *CheckCo {
+func StartConcur(db *Database, persistInterval time.Duration) {
 	mergeChan := make(chan int, chanBuffers)
 	persistChan := make(chan void, chanBuffers)
 	allDone := make(chan void)
-	go merger(mergeChan, persistChan, persistInterval)
-	go persister(persistChan, allDone)
-	return StartCheckCo(mergeChan, allDone)
+	go merger(db, mergeChan, persistChan, persistInterval)
+	go persister(db, persistChan, allDone)
+	db.ck = StartCheckCo(mergeChan, allDone)
 }
 
-func merger(mergeChan chan int, persistChan chan void,
+func merger(db *Database, mergeChan chan int, persistChan chan void,
 	persistInterval time.Duration) {
 	ticker := time.NewTicker(persistInterval)
 loop:
@@ -44,7 +44,7 @@ loop:
 			if tn == 0 { // zero value means channel closed
 				break loop
 			}
-			Merge(tn)
+			db.Merge(tn)
 		case <-ticker.C:
 			// send ticks from here so we get back pressure
 			// fmt.Println("Persist")
@@ -55,9 +55,9 @@ loop:
 	close(persistChan)
 }
 
-func persister(persistChan chan void, allDone chan void) {
+func persister(db *Database, persistChan chan void, allDone chan void) {
 	for range persistChan {
-		Persist()
+		db.Persist()
 	}
 	close(allDone)
 }

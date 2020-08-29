@@ -6,25 +6,21 @@ package db19
 import (
 	"github.com/apmckinlay/gsuneido/database/db19/comp"
 	"github.com/apmckinlay/gsuneido/database/db19/meta"
-	"github.com/apmckinlay/gsuneido/database/db19/stor"
 	rt "github.com/apmckinlay/gsuneido/runtime"
 )
 
-// ck must be injected
-var ck Checker
-
 type tran struct {
-	meta  *meta.Overlay
-	store *stor.Stor
+	db   *Database
+	meta *meta.Overlay
 }
 
 type ReadTran struct {
 	tran
 }
 
-func NewReadTran() *ReadTran {
-	state := GetState()
-	return &ReadTran{tran: tran{meta: state.meta, store: state.store}}
+func (db *Database) NewReadTran() *ReadTran {
+	state := db.GetState()
+	return &ReadTran{tran: tran{db: db, meta: state.meta}}
 }
 
 type UpdateTran struct {
@@ -32,22 +28,22 @@ type UpdateTran struct {
 	ct *CkTran
 }
 
-func NewUpdateTran() *UpdateTran {
-	state := GetState()
+func (db *Database) NewUpdateTran() *UpdateTran {
+	state := db.GetState()
 	meta := state.meta.NewOverlay()
-	ct := ck.StartTran()
-	return &UpdateTran{ct: ct, tran: tran{meta: meta, store: state.store}}
+	ct := db.ck.StartTran()
+	return &UpdateTran{ct: ct, tran: tran{db: db, meta: meta}}
 }
 
 func (t *UpdateTran) Commit() {
 	// send commit request to checker
 	// which starts the pipeline to merger to persister
-	t.ck(ck.Commit(t))
+	t.ck(t.db.ck.Commit(t))
 }
 
 // commit is internal, called by checker (to serialize)
 func (t *UpdateTran) commit() int {
-	UpdateState(func(state *DbState) {
+	t.db.UpdateState(func(state *DbState) {
 		state.meta = t.meta.LayeredOnto(state.meta)
 	})
 	return t.num()
@@ -60,7 +56,7 @@ func (t *UpdateTran) num() int {
 func (t *UpdateTran) Output(table string, rec rt.Record) {
 	ts := t.getSchema(table)
 	ti := t.getInfo(table)
-	off, buf := t.store.Alloc(rec.Len())
+	off, buf := t.db.store.Alloc(rec.Len())
 	copy(buf, []byte(rec[:rec.Len()]))
 	keys := make([]string, len(ts.Indexes))
 	for i := range ts.Indexes {
@@ -68,7 +64,7 @@ func (t *UpdateTran) Output(table string, rec rt.Record) {
 		keys[i] = comp.Key(rec, is.Cols, is.Cols2)
 		ti.Indexes[i].Insert(keys[i], off)
 	}
-	t.ck(ck.Write(t.ct, table, keys))
+	t.ck(t.db.ck.Write(t.ct, table, keys))
 	ti.Nrows++
 	ti.Size += uint64(len(rec))
 }

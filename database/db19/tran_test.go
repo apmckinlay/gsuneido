@@ -19,8 +19,8 @@ import (
 )
 
 func TestConcurrent(t *testing.T) {
-	createDb()
-	ck = StartConcur(100 * time.Millisecond)
+	db := createDb()
+	StartConcur(db, 100 * time.Millisecond)
 	var nclients = 8
 	var ntrans = 4000
 	if testing.Short() {
@@ -33,67 +33,67 @@ func TestConcurrent(t *testing.T) {
 		go func() {
 			defer wg.Done()
 			for j := 0; j < ntrans; j++ {
-				ut := output1()
+				ut := output1(db)
 				ut.Commit()
 				// time.Sleep(time.Duration(rand.Intn(900)) * time.Microsecond)
 			}
 		}()
 	}
 	wg.Wait()
-	ck.Stop()
-	ck = nil
+	db.ck.Stop()
 
 	var nout = nclients * ntrans
-	rt := NewReadTran()
+	rt := db.NewReadTran()
 	ti := rt.meta.GetRoInfo("mytable")
 	assert.T(t).Msg("nrows").This(ti.Nrows).Is(nout)
 	assert.T(t).Msg("size").This(ti.Size).Is(nout * 23)
 
-	GetState().store.Close()
+	db.store.Close()
 }
 
 func TestTran(t *testing.T) {
-	ck = NewCheck()
-	defer func() { ck = nil }()
-	store := createDb()
+	db := createDb()
+	db.ck = NewCheck()
 
 	const nout = 2000
 	for i := 0; i < nout; i++ {
-		ut := output1()
-		ck.Commit(ut)
+		ut := output1(db)
+		db.ck.Commit(ut)
 		tn := ut.commit()
-		Merge(tn)
+		db.Merge(tn)
 	}
 
-	Persist()
-	store.Close()
+	db.Persist()
+	db.store.Close()
 
 	f, _ := os.OpenFile("test.tmp", os.O_WRONLY|os.O_APPEND, 0644)
 	f.Write([]byte("some garbage to add on the end of the file"))
 	f.Close()
 
-	store, _ = stor.MmapStor("test.tmp", stor.UPDATE)
-	off := store.LastOffset([]byte(magic1))
-	UpdateState(func(state *DbState) {
-		*state = *ReadState(store, off)
+	db.store, _ = stor.MmapStor("test.tmp", stor.UPDATE)
+	off := db.store.LastOffset([]byte(magic1))
+	db.UpdateState(func(state *DbState) {
+		*state = *ReadState(db.store, off)
 	})
 
-	rt := NewReadTran()
+	rt := db.NewReadTran()
 	ti := rt.meta.GetRoInfo("mytable")
 	assert.T(t).Msg("nrows").This(ti.Nrows).Is(nout)
 	assert.T(t).Msg("size").This(ti.Size).Is(nout * 23)
 
-	store.Close()
+	db.store.Close()
 	os.Remove("test.tmp")
 }
 
-func createDb() *stor.Stor {
-	btree.GetLeafKey = getLeafKey
+func createDb() *Database {
+	var db Database
+	db.state.set(&DbState{})
 
 	store, err := stor.MmapStor("test.tmp", stor.CREATE)
 	if err != nil {
 		panic("can't create test.tmp")
 	}
+	db.store = store
 
 	schema := meta.SchemaHamt{}.Mutable()
 	is := ixspec.T{Cols: []int{0}}
@@ -119,17 +119,17 @@ func createDb() *stor.Stor {
 	roInfo := meta.InfoHamt{}
 	roInfoOff := roInfo.Write(store)
 
-	UpdateState(func(state *DbState) {
+	db.UpdateState(func(state *DbState) {
 		state.store = store
 		state.meta = meta.NewOverlay(baseSchema, baseInfo,
 			roSchema, roSchemaOff, roInfo, roInfoOff)
 	})
 
-	return store
+	return &db
 }
 
-func output1() *UpdateTran {
-	ut := NewUpdateTran()
+func output1(db *Database) *UpdateTran {
+	ut := db.NewUpdateTran()
 	data := (strconv.Itoa(ut.num()) + "transaction")[:12]
 	ut.Output("mytable", mkrec(data, "data"))
 	return ut

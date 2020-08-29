@@ -18,15 +18,33 @@ type DbState struct {
 	meta  *meta.Overlay
 }
 
-// theState is the central immutable state of the database.
-// It must be accessed atomically and only updated via UpdateState.
-var theState = unsafe.Pointer(&DbState{})
+type stateHolder struct {
+	state unsafe.Pointer // *DbState
+	mutex sync.Mutex
+}
 
-// stateMutex guards updates to theState
-var stateMutex sync.Mutex
+func (sh *stateHolder) get() *DbState {
+	return (*DbState)(atomic.LoadPointer(&sh.state))
+}
 
-func GetState() *DbState {
-	return (*DbState)(atomic.LoadPointer(&theState))
+func (sh *stateHolder) set(newState *DbState) {
+	atomic.StorePointer(&sh.state, unsafe.Pointer(newState))
+}
+
+// GetState returns a snapshot of the state as of a point in time.
+// This state must be treated as read-only and must not be modified.
+// To modify the state use UpdateState.
+func (db *Database) GetState() *DbState {
+	return db.state.get()
+}
+
+func (sh *stateHolder) updateState(fn func(*DbState)) *DbState {
+	sh.mutex.Lock()
+	defer sh.mutex.Unlock()
+	newState := *sh.get() // shallow copy
+	fn(&newState)
+	sh.set(&newState)
+	return &newState
 }
 
 // UpdateState applies the given update function to a copy of theState
@@ -34,13 +52,8 @@ func GetState() *DbState {
 // Guarded by stateMutex so only one thread can execute at a time.
 // Note: the state passed to the update function is a *shallow* copy,
 // it is up to the function to make copies of any nested containers.
-func UpdateState(fn func(*DbState)) *DbState {
-	stateMutex.Lock()
-	defer stateMutex.Unlock()
-	newState := *GetState() // shallow copy
-	fn(&newState)
-	atomic.StorePointer(&theState, unsafe.Pointer(&newState))
-	return &newState
+func (db *Database) UpdateState(fn func(*DbState)) *DbState {
+	return db.state.updateState(fn)
 }
 
 //-------------------------------------------------------------------
@@ -48,10 +61,10 @@ func UpdateState(fn func(*DbState)) *DbState {
 // Merge updates the base fbtree's with the overlay mbtree
 // for the given transaction number (the oldest/first).
 // It is called by concur.go merger.
-func Merge(tranNum int) {
-	state := GetState()
+func (db *Database) Merge(tranNum int) {
+	state := db.GetState()
 	updates := state.meta.Merge(tranNum) // outside UpdateState
-	UpdateState(func(state *DbState) {
+	db.UpdateState(func(state *DbState) {
 		meta := *state.meta // copy
 		meta.ApplyMerge(updates)
 		state.meta = &meta
@@ -62,10 +75,10 @@ func Merge(tranNum int) {
 
 // Persist writes index changes (and a new state) to the database file.
 // It is called by concur.go persister.
-func Persist() uint64 {
-	state := GetState()
+func (db *Database) Persist() uint64 {
+	state := db.GetState()
 	updates := state.meta.Persist() // outside UpdateState
-	state = UpdateState(func(state *DbState) {
+	state = db.UpdateState(func(state *DbState) {
 		meta := *state.meta // copy
 		meta.ApplyPersist(updates)
 		state.meta = &meta
@@ -101,5 +114,5 @@ func ReadState(st *stor.Stor, off uint64) *DbState {
 		offsets[j] = stor.ReadSmallOffset(buf[i:])
 		i += stor.SmallOffsetLen
 	}
-	return &DbState{store: st, meta: meta.FromOffsets(st, offsets)}
+	return &DbState{store: st, meta: meta.ReadOverlay(st, offsets)}
 }

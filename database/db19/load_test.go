@@ -16,7 +16,7 @@ func TestLoadTable(*testing.T) {
 	}
 	t := time.Now()
 	defer os.Remove("tmp.db")
-	n := LoadTable("stdlib.su")
+	n := LoadTable("stdlib")
 	fmt.Println("loaded", n, "records in", time.Since(t))
 }
 

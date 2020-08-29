@@ -176,7 +176,7 @@ func (ov *Overlay) Write(st *stor.Stor) offsets {
 	}
 }
 
-func FromOffsets(st *stor.Stor, offs offsets) *Overlay {
+func ReadOverlay(st *stor.Stor, offs offsets) *Overlay {
 	ov := Overlay{
 		baseSchema: NewSchemaPacked(st, offs[0]),
 		baseInfo:   NewInfoPacked(st, offs[1]),
