@@ -145,6 +145,7 @@ func (ck *Check) dispatch(msg interface{}, mergeChan chan int) {
 	}
 }
 
+// Checker is the interface for Check and CheckCo
 type Checker interface {
 	StartTran() *CkTran
 	Read(t *CkTran, table string, index int, from, to string) bool

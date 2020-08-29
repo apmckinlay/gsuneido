@@ -37,7 +37,7 @@ type fbtree struct {
 // Overridden by tests.
 var MaxNodeSize = 1536 // * .75 ~ 1k
 
-// GetLeafKey returns the key for a data offset. (e.g. extract key from record)
+// GetLeafKey is used to get the key for a data offset.
 // It is a dependency that must be injected
 var GetLeafKey func(st *stor.Stor, is *ixspec.T, off uint64) string
 

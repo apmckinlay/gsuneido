@@ -282,10 +282,12 @@ func (ck *Check) cleanEnded() {
 	}
 }
 
-var MaxAge = 20 // ticks
+// MaxAge is the maximum number of ticks that a transaction can be outstanding.
+// Transactions are aborted if they exceed this limit.
+var MaxAge = 20
 
 // tick should be called regularly e.g. once per second
-// to abort transactions older than maxAge.
+// to abort transactions older than MaxAge.
 func (ck *Check) tick() {
 	ck.clock++
 	trace("tick", ck.clock)
@@ -297,7 +299,7 @@ func (ck *Check) tick() {
 	}
 }
 
-func (ck *Check) Stop() {
+func (ck *Check) Stop() { // to satisfy Checker interface
 }
 
 func trace(...interface{}) {
