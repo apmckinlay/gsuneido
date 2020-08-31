@@ -4,10 +4,10 @@
 package options
 
 import (
+	"strings"
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util/str"
 )
 
 func TestParse(t *testing.T) {
@@ -24,7 +24,7 @@ func TestParse(t *testing.T) {
 		if CmdLine != "" {
 			s += " | " + CmdLine
 		}
-		s = str.RemovePrefix(s, " ")
+		s = strings.TrimPrefix(s, " ")
 		if Action == "error" {
 			s = "error"
 		}

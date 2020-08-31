@@ -60,8 +60,8 @@ func main() {
 			n := db19.LoadDatabase()
 			println("loaded", n, "tables")
 		} else {
-			table := str.RemoveSuffix(options.Arg, ".su")
 			n := db19.LoadTable(table)
+			table := strings.TrimSuffix(options.Arg, ".su")
 			println("loaded", n, "records to", table)
 		}
 		os.Exit(0)
