@@ -12,16 +12,12 @@ import (
 // returning the remaining arguments
 func Parse(args []string) {
 loop:
-	for len(args) > 0 {
+	for len(args) > 0 && (args[0] == "" || args[0][0] == '-') {
 		arg := args[0]
 		args = args[1:]
-		if arg == "" {
-			continue
-		}
-		if arg[0] != '-' {
-			break
-		}
 		switch arg {
+		case "":
+			// ignore
 		case "-c", "-client":
 			setAction("client")
 			Arg = "127.0.0.1"

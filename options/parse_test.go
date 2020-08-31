@@ -46,6 +46,7 @@ func TestParse(t *testing.T) {
 	test("-load", "-client")("error")
 	test("-port", "1234", "-repl")("error")
 	test("-port")("error")
+	test("-c", "1.2.3.4", "foo", "bar")("client 1.2.3.4 | foo bar")
 }
 
 func TestEscapeArg(t *testing.T) {
