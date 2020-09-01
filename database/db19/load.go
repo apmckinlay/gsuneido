@@ -21,55 +21,52 @@ import (
 
 // LoadDatabase imports a dumped database from a file.
 // It returns the number of tables loaded or panics on error.
-func LoadDatabase() int {
+func LoadDatabase(from,to string) int {
 	defer func() {
 		if e := recover(); e != nil {
 			panic("load failed: " + fmt.Sprint(e))
 		}
 	}()
-	f, r, store := open("database.su")
+	f, r := open(from)
 	defer f.Close()
-	defer store.Close()
+	db := CreateDatabase(to) //TODO tmp & .bak
+	defer db.Close()
 	nTables := 0
 	for ; ; nTables++ {
 		schema := readLinePrefixed(r, "====== ")
 		if schema == "" {
 			break
 		}
-		loadTable(store, r, schema)
+		loadTable(db.store, r, schema)
 		trace()
 		assert.That(nTables < 1010)
 	}
-	trace("SIZE", store.Size())
+	trace("SIZE", db.store.Size())
 	return nTables
 }
 
 // LoadTable imports a dumped table from a file.
 // It returns the number of records loaded or panics on error.
-func LoadTable(table string) int {
+func (db *Database) LoadTable(table string) int {
 	defer func() {
 		if e := recover(); e != nil {
 			panic("load failed: " + table + " " + fmt.Sprint(e))
 		}
 	}()
-	f, r, store := open(table + ".su")
+	f, r := open(table + ".su")
 	defer f.Close()
-	defer store.Close()
 	schema := table + " " + readLinePrefixed(r, "====== ")
-	return loadTable(store, r, schema)
+	return loadTable(db.store, r, schema)
 }
 
-func open(filename string) (*os.File, *bufio.Reader, *stor.Stor) {
+func open(filename string) (*os.File, *bufio.Reader) {
 	f, err := os.Open(filename)
 	if err != nil {
 		panic(err)
 	}
 	r := bufio.NewReader(f)
 	readLinePrefixed(r, "Suneido dump 2")
-	store, err := stor.MmapStor("tmp.db", stor.CREATE) //TODO .bak
-	ckerr(err)
-	store.Alloc(1) // don't use offset 0
-	return f, r, store
+	return f, r
 }
 
 func loadTable(store *stor.Stor, r *bufio.Reader, schema string) int {

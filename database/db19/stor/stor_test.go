@@ -35,7 +35,7 @@ func TestData(t *testing.T) {
 }
 
 func TestMmapRead(t *testing.T) {
-	ms, _ := MmapStor("stor_test.go", READ)
+	ms, _ := MmapStor("stor_test.go", READ) // use code as test file
 	buf := ms.Data(0)
 	assert.T(t).This(string(buf[:12])).Is("// Copyright")
 	ms.Close()
@@ -50,8 +50,15 @@ func TestMmapWrite(t *testing.T) {
 	}
 	ms.Close()
 
-	ms, _ = MmapStor("stor_test.tmp", READ)
+	ms, _ = MmapStor("stor_test.tmp", UPDATE)
 	data := ms.Data(0)
+	for i := 0; i < N; i++ {
+		assert.T(t).This(data[i]).Is(byte(i))
+	}
+	ms.Close()
+
+	ms, _ = MmapStor("stor_test.tmp", READ)
+	data = ms.Data(0)
 	for i := 0; i < N; i++ {
 		assert.T(t).This(data[i]).Is(byte(i))
 	}

@@ -10,9 +10,9 @@ import (
 
 func (ms *mmapStor) Get(chunk int) []byte {
 	handle := syscall.Handle(ms.file.Fd())
-	prot := uint32(syscall.PAGE_READONLY)
-	if ms.mode != READ {
-		prot = syscall.PAGE_READWRITE
+	prot := uint32(syscall.PAGE_READWRITE)
+	if ms.mode == READ {
+		prot = syscall.PAGE_READONLY
 	}
 	end := int64((chunk + 1) * MMAP_CHUNKSIZE)
 	if ms.mode == READ {
@@ -31,9 +31,9 @@ func (ms *mmapStor) Get(chunk int) []byte {
 		panic(err)
 	}
 
-	access := uint32(syscall.FILE_MAP_READ)
-	if ms.mode != READ {
-		access = syscall.FILE_MAP_WRITE
+	access := uint32(syscall.FILE_MAP_WRITE)
+	if ms.mode == READ {
+		access = syscall.FILE_MAP_READ
 	}
 	offset := int64(chunk) * MMAP_CHUNKSIZE
 	size := uintptr(MMAP_CHUNKSIZE)

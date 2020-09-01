@@ -13,6 +13,7 @@ import (
 )
 
 type Database struct {
+	mode  stor.Mode
 	store *stor.Stor
 
 	// state is the central immutable state of the database.
@@ -20,6 +21,67 @@ type Database struct {
 	state stateHolder
 
 	ck Checker
+}
+
+const magic = "gsndo001"
+
+func CreateDatabase(filename string) *Database {
+	store, err := stor.MmapStor(filename, stor.CREATE)
+	if err != nil {
+		panic("can't create database " + filename)
+	}
+	var db Database
+	db.state.set(&DbState{store: store})
+
+	n := len(magic) + stor.SmallOffsetLen
+	_, buf := store.Alloc(n)
+	copy(buf, magic)
+	stor.WriteSmallOffset(buf[len(magic):], uint64(n))
+	db.store = store
+	db.mode = stor.CREATE
+	return &db
+}
+
+func OpenDatabase(filename string) *Database {
+	return openDatabase(filename, stor.UPDATE)
+}
+
+func OpenDatabaseRead(filename string) *Database {
+	return openDatabase(filename, stor.READ)
+}
+
+func openDatabase(filename string, mode stor.Mode) *Database {
+	var db Database
+
+	store, err := stor.MmapStor(filename, mode)
+	if err != nil {
+		panic("can't open database " + filename)
+	}
+
+	//TODO recovery
+	buf := store.Data(0)
+	if magic != string(buf[:len(magic)]) {
+		panic("not a valid database " + filename)
+	}
+	size := stor.ReadSmallOffset(buf[len(magic):])
+	if size != store.Size() {
+		panic("database size mismatch - not shut down properly?")
+	}
+
+	db.store = store
+	db.mode = mode
+	db.state.set(ReadState(db.store, size-uint64(stateLen)))
+	//TODO integrity check
+
+	return &db
+}
+
+func (db *Database) Close() {
+	if db.mode != stor.READ {
+		buf := db.store.Data(0)
+		stor.WriteSmallOffset(buf[len(magic):], db.store.Size())
+	}
+	db.store.Close()
 }
 
 //-------------------------------------------------------------------

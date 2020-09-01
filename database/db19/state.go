@@ -92,15 +92,17 @@ const stateLen = len(magic1) + meta.Noffsets*stor.SmallOffsetLen + len(magic2)
 
 func (state *DbState) Write() uint64 {
 	// NOTE: indexes should already have been saved
+	offsets := state.meta.Write(state.store)
 	stateOff, buf := state.store.Alloc(stateLen)
 	copy(buf, magic1)
 	i := len(magic1)
-	offsets := state.meta.Write(state.store)
 	for _, o := range offsets {
 		stor.WriteSmallOffset(buf[i:], o)
 		i += stor.SmallOffsetLen
 	}
 	copy(buf[i:], magic2)
+	i += len(magic2)
+	assert.That(i == stateLen)
 	return stateOff
 }
 

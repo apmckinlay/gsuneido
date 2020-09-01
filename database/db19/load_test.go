@@ -16,7 +16,9 @@ func TestLoadTable(*testing.T) {
 	}
 	t := time.Now()
 	defer os.Remove("tmp.db")
-	n := LoadTable("stdlib")
+	db := CreateDatabase("tmp.db")
+	defer db.Close()
+	n := db.LoadTable("stdlib")
 	fmt.Println("loaded", n, "records in", time.Since(t))
 }
 
@@ -26,6 +28,6 @@ func TestLoadDatabase(*testing.T) {
 	}
 	t := time.Now()
 	defer os.Remove("tmp.db")
-	n := LoadDatabase()
+	n := LoadDatabase("database.su", "tmp.db")
 	fmt.Println("loaded", n, "tables in", time.Since(t))
 }

@@ -11,6 +11,7 @@ package stor
 
 import (
 	"bytes"
+	"math/bits"
 	"sync"
 	"sync/atomic"
 
@@ -35,6 +36,8 @@ type Stor struct {
 	impl storage
 	// chunksize must be a power of two and must be initialized
 	chunksize uint64
+	// shift must be initialized to match chunksize
+	shift int
 	// size is the currently used amount.
 	// It must be accessed in a thread safe way.
 	size uint64
@@ -44,6 +47,12 @@ type Stor struct {
 	lock   sync.Mutex
 }
 
+func NewStor(impl storage, chunksize uint64, size uint64) *Stor {
+	shift := bits.TrailingZeros(uint(chunksize))
+	assert.That(1<<shift == chunksize) // chunksize must be power of 2
+	return &Stor{impl: impl, chunksize: chunksize, shift: shift, size: size}
+}
+
 // Alloc allocates n bytes of storage and returns its Offset and byte slice
 // Returning data here allows slicing to the correct length and capacity
 // to prevent erroneously writing too far.
@@ -51,13 +60,13 @@ type Stor struct {
 // (allocations may not straddle chunks)
 func (s *Stor) Alloc(n int) (Offset, []byte) {
 	assert.That(0 < n && n <= int(s.chunksize))
-
 	for {
 		oldsize := atomic.LoadUint64(&s.size)
 		offset := oldsize
 		newsize := offset + uint64(n)
-		if newsize&(s.chunksize-1) < uint64(n) {
-			// straddle, need to get another chunk
+		nchunks := (oldsize + s.chunksize - 1) >> s.shift
+		if newsize>>s.shift >= nchunks {
+			// need to get another chunk
 			s.lock.Lock() // note: lock does not prevent concurrent allocations
 			chunk := s.offsetToChunk(newsize)
 			chunks := s.chunks.Load().([][]byte)
@@ -95,6 +104,8 @@ func (s *Stor) offsetToChunk(offset Offset) int {
 	return int(offset / s.chunksize)
 }
 
+// Size returns the current (allocated) size of the data.
+// The actual file size will be rounded up to the next chunk size.
 func (s *Stor) Size() uint64 {
 	return atomic.LoadUint64(&s.size)
 }

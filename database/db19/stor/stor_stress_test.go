@@ -14,7 +14,7 @@ var nIterations = 1000000
 const allocSize = 32
 const chunkSize = 1024
 
-func TestStress(t *testing.T) {
+func TestStress(*testing.T) {
 	if testing.Short() {
 		nThreads = 2
 		nIterations = 10000

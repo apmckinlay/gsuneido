@@ -13,14 +13,13 @@ import (
 	"github.com/apmckinlay/gsuneido/database/db19/btree"
 	"github.com/apmckinlay/gsuneido/database/db19/ixspec"
 	"github.com/apmckinlay/gsuneido/database/db19/meta"
-	"github.com/apmckinlay/gsuneido/database/db19/stor"
 	rt "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
 func TestConcurrent(t *testing.T) {
 	db := createDb()
-	StartConcur(db, 100 * time.Millisecond)
+	StartConcur(db, 100*time.Millisecond)
 	var nclients = 8
 	var ntrans = 4000
 	if testing.Short() {
@@ -48,7 +47,8 @@ func TestConcurrent(t *testing.T) {
 	assert.T(t).Msg("nrows").This(ti.Nrows).Is(nout)
 	assert.T(t).Msg("size").This(ti.Size).Is(nout * 23)
 
-	db.store.Close()
+	db.Close()
+	os.Remove("tmp.db")
 }
 
 func TestTran(t *testing.T) {
@@ -64,37 +64,23 @@ func TestTran(t *testing.T) {
 	}
 
 	db.Persist()
-	db.store.Close()
+	db.Close()
 
-	f, _ := os.OpenFile("test.tmp", os.O_WRONLY|os.O_APPEND, 0644)
-	f.Write([]byte("some garbage to add on the end of the file"))
-	f.Close()
-
-	db.store, _ = stor.MmapStor("test.tmp", stor.UPDATE)
-	off := db.store.LastOffset([]byte(magic1))
-	db.UpdateState(func(state *DbState) {
-		*state = *ReadState(db.store, off)
-	})
+	db = OpenDatabaseRead("tmp.db")
 
 	rt := db.NewReadTran()
 	ti := rt.meta.GetRoInfo("mytable")
 	assert.T(t).Msg("nrows").This(ti.Nrows).Is(nout)
 	assert.T(t).Msg("size").This(ti.Size).Is(nout * 23)
 
-	db.store.Close()
-	os.Remove("test.tmp")
+	db.Close()
+	os.Remove("tmp.db")
 }
 
 func createDb() *Database {
-	var db Database
-	db.state.set(&DbState{})
+	db := CreateDatabase("tmp.db")
 
-	store, err := stor.MmapStor("test.tmp", stor.CREATE)
-	if err != nil {
-		panic("can't create test.tmp")
-	}
-	db.store = store
-
+	//TODO create schema via database methods
 	schema := meta.SchemaHamt{}.Mutable()
 	is := ixspec.T{Cols: []int{0}}
 	schema.Put(&meta.Schema{
@@ -105,27 +91,26 @@ func createDb() *Database {
 		},
 		Indexes: []meta.IndexSchema{{Fields: []int{0}, Ixspec: is}},
 	})
-	baseSchema := meta.NewSchemaPacked(store, schema.Write(store))
+	baseSchema := meta.NewSchemaPacked(db.store, schema.Write(db.store))
 
 	info := meta.InfoHamt{}.Mutable()
 	info.Put(&meta.Info{
 		Table:   "mytable",
-		Indexes: []*btree.Overlay{btree.NewOverlay(store, &is).Save()},
+		Indexes: []*btree.Overlay{btree.NewOverlay(db.store, &is).Save()},
 	})
-	baseInfo := meta.NewInfoPacked(store, info.Write(store))
+	baseInfo := meta.NewInfoPacked(db.store, info.Write(db.store))
 
 	roSchema := meta.SchemaHamt{}
-	roSchemaOff := roSchema.Write(store)
+	roSchemaOff := roSchema.Write(db.store)
 	roInfo := meta.InfoHamt{}
-	roInfoOff := roInfo.Write(store)
+	roInfoOff := roInfo.Write(db.store)
 
 	db.UpdateState(func(state *DbState) {
-		state.store = store
 		state.meta = meta.NewOverlay(baseSchema, baseInfo,
 			roSchema, roSchemaOff, roInfo, roInfoOff)
 	})
 
-	return &db
+	return db
 }
 
 func output1(db *Database) *UpdateTran {

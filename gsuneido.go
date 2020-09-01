@@ -29,7 +29,6 @@ import (
 	"github.com/apmckinlay/gsuneido/database/dbms"
 	"github.com/apmckinlay/gsuneido/options"
 	. "github.com/apmckinlay/gsuneido/runtime"
-	"github.com/apmckinlay/gsuneido/util/str"
 )
 
 var builtDate = "Dec 16 2019" // set by: go build -ldflags "-X main.builtDate=..."
@@ -57,11 +56,13 @@ func main() {
 	switch options.Action {
 	case "load":
 		if options.Arg == "" {
-			n := db19.LoadDatabase()
+			n := db19.LoadDatabase("database.su", "suneido.db")
 			println("loaded", n, "tables")
 		} else {
-			n := db19.LoadTable(table)
 			table := strings.TrimSuffix(options.Arg, ".su")
+			db := db19.OpenDatabase("suneido.db")
+			defer db.Close()
+			n := db.LoadTable(table)
 			println("loaded", n, "records to", table)
 		}
 		os.Exit(0)
