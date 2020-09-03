@@ -79,34 +79,20 @@ func TestTran(t *testing.T) {
 
 func createDb() *Database {
 	db := CreateDatabase("tmp.db")
-
-	//TODO create schema via database methods
-	schema := meta.SchemaHamt{}.Mutable()
 	is := ixspec.T{Cols: []int{0}}
-	schema.Put(&meta.Schema{
+	ts := &meta.Schema{
 		Table: "mytable",
 		Columns: []meta.ColumnSchema{
 			{Name: "one", Field: 0},
 			{Name: "two", Field: 1},
 		},
 		Indexes: []meta.IndexSchema{{Fields: []int{0}, Ixspec: is}},
-	})
-	baseSchema := meta.NewSchemaPacked(db.store, schema.Write(db.store))
-
-	info := meta.InfoHamt{}.Mutable()
-	info.Put(&meta.Info{
+	}
+	ti := &meta.Info{
 		Table:   "mytable",
 		Indexes: []*btree.Overlay{btree.NewOverlay(db.store, &is).Save()},
-	})
-	baseInfo := meta.NewInfoPacked(db.store, info.Write(db.store))
-
-	roSchema := meta.SchemaHamt{}
-	roInfo := meta.InfoHamt{}
-
-	db.UpdateState(func(state *DbState) {
-		state.meta = meta.NewMeta(baseSchema, baseInfo, roSchema, roInfo)
-	})
-
+	}
+	db.LoadedTable(ts, ti)
 	return db
 }
 
