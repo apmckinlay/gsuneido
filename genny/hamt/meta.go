@@ -63,6 +63,9 @@ func (ht ItemHamt) Write(st *stor.Stor) uint64 {
 }
 
 func ReadItemHamt(st *stor.Stor, off uint64) ItemHamt {
+	if off == 0 {
+		return ItemHamt{}
+	}
 	r := st.Reader(off)
 	nitems := r.Get2()
 	t := ItemHamt{}.Mutable()
@@ -94,6 +97,7 @@ type ItemFinger struct {
 }
 
 func NewItemPacked(st *stor.Stor, off uint64) *ItemPacked {
+	assert.That(off != 0)
 	buf := st.Data(off)
 	r := stor.NewReader(buf)
 	nitems := r.Get2()

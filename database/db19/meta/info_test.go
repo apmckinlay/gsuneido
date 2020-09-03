@@ -29,6 +29,7 @@ func TestInfo(t *testing.T) {
 	})
 
 	st := stor.HeapStor(8192)
+	st.Alloc(1) // avoid offset 0
 	off := tbl.Write(st)
 
 	packed := NewInfoPacked(st, off)
@@ -65,6 +66,7 @@ func TestInfo2(t *testing.T) {
 		})
 	}
 	st := stor.HeapStor(32 * 1024)
+	st.Alloc(1) // avoid offset 0
 	off := tbl.Write(st)
 	packed := NewInfoPacked(st, off)
 	for i, s := range data {

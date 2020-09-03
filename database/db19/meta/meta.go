@@ -12,25 +12,20 @@ import (
 type Meta struct {
 	rwInfo      InfoHamt
 	roInfo      InfoHamt
-	roInfoOff   uint64
 	rwSchema    SchemaHamt
 	roSchema    SchemaHamt
-	roSchemaOff uint64
 	baseInfo    *InfoPacked
 	baseSchema  *SchemaPacked
 }
 
 func NewMeta(baseSchema *SchemaPacked, baseInfo *InfoPacked,
-	roSchema SchemaHamt, roSchemaOff uint64,
-	roInfo InfoHamt, roInfoOff uint64) *Meta {
+	roSchema SchemaHamt, roInfo InfoHamt) *Meta {
 	return &Meta{
 		baseSchema:  baseSchema,
 		baseInfo:    baseInfo,
 		roInfo:      roInfo,
-		roInfoOff:   roInfoOff,
 		rwSchema:    SchemaHamt{},
 		roSchema:    roSchema,
-		roSchemaOff: roSchemaOff,
 		rwInfo:      InfoHamt{},
 	}
 }
@@ -187,12 +182,21 @@ type offsets = [Noffsets]uint64
 func (m *Meta) Write(st *stor.Stor) offsets {
 	assert.That(m.rwInfo.IsNil())
 	assert.That(m.rwSchema.IsNil())
-	return offsets{
+	offs := offsets{
 		m.baseSchema.Offset(),
 		m.baseInfo.Offset(),
 		m.roSchema.Write(st),
 		m.roInfo.Write(st),
 	}
+	if m.baseSchema.Offset() == 0 {
+		offs[0] = offs[2]
+		offs[2] = 0
+	}
+	if m.baseInfo.Offset() == 0 {
+		offs[1] = offs[3]
+		offs[3] = 0
+	}
+	return offs
 }
 
 func ReadOverlay(st *stor.Stor, offs offsets) *Meta {
@@ -202,8 +206,6 @@ func ReadOverlay(st *stor.Stor, offs offsets) *Meta {
 		roSchema:   ReadSchemaHamt(st, offs[2]),
 		roInfo:     ReadInfoHamt(st, offs[3]),
 	}
-	m.roSchemaOff = offs[2]
-	m.roInfoOff = offs[3]
 	return &m
 }
 

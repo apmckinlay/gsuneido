@@ -67,6 +67,9 @@ func (ht SchemaHamt) Write(st *stor.Stor) uint64 {
 }
 
 func ReadSchemaHamt(st *stor.Stor, off uint64) SchemaHamt {
+	if off == 0 {
+		return SchemaHamt{}
+	}
 	r := st.Reader(off)
 	nitems := r.Get2()
 	t := SchemaHamt{}.Mutable()
@@ -98,6 +101,7 @@ type SchemaFinger struct {
 }
 
 func NewSchemaPacked(st *stor.Stor, off uint64) *SchemaPacked {
+	assert.That(off != 0)
 	buf := st.Data(off)
 	r := stor.NewReader(buf)
 	nitems := r.Get2()

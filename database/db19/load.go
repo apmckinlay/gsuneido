@@ -115,7 +115,9 @@ func loadTable(db *Database, r *bufio.Reader, schema string) int {
 	}
 	trace("indexes size", store.Size()-beforeIndexes)
 	ti := &meta.Info{Table: req.Table, Nrows: nrecs, Size: dataSize, Indexes: ov}
-	db.LoadedTable(ts, ti)
+	if err := db.LoadedTable(ts, ti); err != nil {
+		panic(err.Error())
+	}
 	return nrecs
 }
 

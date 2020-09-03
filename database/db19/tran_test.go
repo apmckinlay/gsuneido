@@ -101,13 +101,10 @@ func createDb() *Database {
 	baseInfo := meta.NewInfoPacked(db.store, info.Write(db.store))
 
 	roSchema := meta.SchemaHamt{}
-	roSchemaOff := roSchema.Write(db.store)
 	roInfo := meta.InfoHamt{}
-	roInfoOff := roInfo.Write(db.store)
 
 	db.UpdateState(func(state *DbState) {
-		state.meta = meta.NewMeta(baseSchema, baseInfo,
-			roSchema, roSchemaOff, roInfo, roInfoOff)
+		state.meta = meta.NewMeta(baseSchema, baseInfo, roSchema, roInfo)
 	})
 
 	return db

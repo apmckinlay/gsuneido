@@ -24,6 +24,7 @@ func TestOverlay(*testing.T) {
 	}
 	tbl = tbl.Freeze()
 	st := stor.HeapStor(32 * 1024)
+	st.Alloc(1) // avoid offset 0
 	offInfo := tbl.Write(st)
 	offSchema := tbl.Write(st)
 	state := &Meta{
