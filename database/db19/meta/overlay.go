@@ -35,11 +35,22 @@ func NewOverlay(baseSchema *SchemaPacked, baseInfo *InfoPacked,
 	}
 }
 
+func CreateOverlay(store *stor.Stor) *Overlay {
+	return &Overlay{
+		baseInfo:   &InfoPacked{stor: store},
+		baseSchema: &SchemaPacked{stor: store},
+		roInfo: InfoHamt{},
+		roSchema: SchemaHamt{},
+	}
+}
+
 // NewOverlay returns a new Overlay based on an existing one
 func (ov *Overlay) NewOverlay() *Overlay {
 	assert.That(ov.rwInfo.IsNil())
+	assert.That(ov.rwSchema.IsNil())
 	ov2 := *ov // copy
 	ov2.rwInfo = InfoHamt{}.Mutable()
+	ov2.rwSchema = SchemaHamt{}.Mutable()
 	return &ov2
 }
 
@@ -122,8 +133,15 @@ func (ov *Overlay) GetRwSchema(table string) *Schema {
 	return &ts
 }
 
-func (ov *Overlay) AddSchema(ts *Schema) {
-	ov.rwSchema.Put(ts)
+func (ov *Overlay) Add(ts *Schema, ti *Info) *Overlay {
+	roSchema := ov.roSchema.Mutable()
+	roSchema.Put(ts)
+	roInfo := ov.roInfo.Mutable()
+	roInfo.Put(ti)
+	ov2 := *ov // copy
+	ov2.roSchema = roSchema.Freeze()
+	ov2.roInfo = roInfo.Freeze()
+	return &ov2
 }
 
 //-------------------------------------------------------------------
@@ -168,10 +186,11 @@ type offsets = [Noffsets]uint64
 
 func (ov *Overlay) Write(st *stor.Stor) offsets {
 	assert.That(ov.rwInfo.IsNil())
+	assert.That(ov.rwSchema.IsNil())
 	return offsets{
 		ov.baseSchema.Offset(),
 		ov.baseInfo.Offset(),
-		ov.roSchemaOff,
+		ov.roSchema.Write(st),
 		ov.roInfo.Write(st),
 	}
 }
@@ -203,6 +222,8 @@ func (ov *Overlay) ApplyMerge(updates []update) {
 }
 
 //-------------------------------------------------------------------
+
+//TODO schema
 
 func (ov *Overlay) Persist() []update {
 	return ov.roInfo.process(btOver.Save)

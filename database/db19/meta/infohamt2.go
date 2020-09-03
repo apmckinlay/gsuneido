@@ -59,6 +59,7 @@ func (ht InfoHamt) Write(st *stor.Stor) uint64 {
 		it.Write(w)
 	}
 	assert.That(len(fingers) == nfingers)
+	assert.That(w.Len() == size)
 	for _, f := range fingers {
 		w2.Put3(f) // update with actual values
 	}
@@ -111,7 +112,18 @@ func NewInfoPacked(st *stor.Stor, off uint64) *InfoPacked {
 	return &InfoPacked{stor: st, off: off, buf: buf, fingers: fingers}
 }
 
+func (p InfoPacked) MustGet(key string) *Info {
+	if item, ok := p.Get(key); ok {
+		return item
+	}
+	panic("item not found")
+}
+
 func (p InfoPacked) Get(key string) (*Info, bool) {
+	var zero *Info
+	if p.buf == nil {
+		return zero, false
+	}
 	pos := p.binarySearch(key)
 	r := stor.NewReader(p.buf[pos:])
 	for n := 0; n <= perFingerInfo; n++ {
@@ -120,7 +132,6 @@ func (p InfoPacked) Get(key string) (*Info, bool) {
 			return item, true
 		}
 	}
-	var zero *Info
 	return zero, false
 }
 

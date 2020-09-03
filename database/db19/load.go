@@ -19,9 +19,11 @@ import (
 	"github.com/apmckinlay/gsuneido/util/sortlist"
 )
 
+//TODO write roInfo/Schema to packed
+
 // LoadDatabase imports a dumped database from a file.
 // It returns the number of tables loaded or panics on error.
-func LoadDatabase(from,to string) int {
+func LoadDatabase(from, to string) int {
 	defer func() {
 		if e := recover(); e != nil {
 			panic("load failed: " + fmt.Sprint(e))
@@ -37,26 +39,36 @@ func LoadDatabase(from,to string) int {
 		if schema == "" {
 			break
 		}
-		loadTable(db.store, r, schema)
+		loadTable(db, r, schema)
 		trace()
 		assert.That(nTables < 1010)
 	}
 	trace("SIZE", db.store.Size())
+	db.GetState().Write()
 	return nTables
 }
 
 // LoadTable imports a dumped table from a file.
 // It returns the number of records loaded or panics on error.
-func (db *Database) LoadTable(table string) int {
+func LoadTable(table, to string) int {
 	defer func() {
 		if e := recover(); e != nil {
 			panic("load failed: " + table + " " + fmt.Sprint(e))
 		}
 	}()
+	var db *Database
+	if _, err := os.Stat(to); os.IsNotExist(err) {
+		db = CreateDatabase(to)
+	} else {
+		db = OpenDatabase(to)
+	}
+	defer db.Close()
 	f, r := open(table + ".su")
 	defer f.Close()
 	schema := table + " " + readLinePrefixed(r, "====== ")
-	return loadTable(db.store, r, schema)
+	nrecs := loadTable(db, r, schema)
+	db.GetState().Write()
+	return nrecs
 }
 
 func open(filename string) (*os.File, *bufio.Reader) {
@@ -69,17 +81,20 @@ func open(filename string) (*os.File, *bufio.Reader) {
 	return f, r
 }
 
-func loadTable(store *stor.Stor, r *bufio.Reader, schema string) int {
+func loadTable(db *Database, r *bufio.Reader, schema string) int {
 	trace(schema)
 	req := compile.ParseRequest("create " + schema).(*compile.Schema)
 
+	store := db.store
 	list := sortlist.NewUnsorted()
 	before := store.Size()
 	nrecs := readRecords(r, store, list)
 	beforeIndexes := store.Size()
-	trace("nrecs", nrecs, "data size", beforeIndexes-before)
+	dataSize := beforeIndexes - before
+	trace("nrecs", nrecs, "data size", dataSize)
 	list.Finish()
 	ts := reqToSchema(req)
+	ov := make([]*btree.Overlay, len(ts.Indexes))
 	for i := range ts.Indexes {
 		ix := ts.Indexes[i]
 		trace(ix)
@@ -94,16 +109,22 @@ func loadTable(store *stor.Stor, r *bufio.Reader, schema string) int {
 			bldr.Add(getLeafKey(store, &ix.Ixspec, off), off)
 			n++
 		}
-		bldr.Finish()
+		ov[i] = bldr.Finish()
 		assert.This(n).Is(nrecs)
 		trace("size", store.Size()-before)
 	}
 	trace("indexes size", store.Size()-beforeIndexes)
+	ti := &meta.Info{Table: req.Table, Nrows: nrecs, Size: dataSize, Indexes: ov}
+	db.LoadedTable(ts, ti)
 	return nrecs
 }
 
 func reqToSchema(req *compile.Schema) *meta.Schema {
-	var ts meta.Schema
+	ts := meta.Schema{Table: req.Table}
+	ts.Columns = make([]meta.ColumnSchema, len(req.Columns))
+	for i,c := range req.Columns {
+		ts.Columns[i] = meta.ColumnSchema{Name: c, Field: i}
+	}
 	ts.Indexes = make([]meta.IndexSchema, len(req.Indexes))
 	for i := range req.Indexes {
 		ri := req.Indexes[i]

@@ -30,6 +30,7 @@ func TestSchema(t *testing.T) {
 		})
 	}
 	st := stor.HeapStor(32 * 1024)
+	st.Alloc(1) // don't use offset 0
 	off := tbl.Write(st)
 
 	test := func(i int, table string, ts *Schema) {

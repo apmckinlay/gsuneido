@@ -40,11 +40,11 @@ func (ov *Overlay) Mutable(tranNum int) *Overlay {
 }
 
 func (ov *Overlay) GetIxspec() *ixspec.T {
-	return ov.under[0].(*fbtree).ixspec
+	return ov.base().ixspec
 }
 
 func (ov *Overlay) SetIxspec(is *ixspec.T) {
-	fb := *ov.under[0].(*fbtree) // copy
+	fb := *ov.base() // copy
 	fb.ixspec = is
 	ov.under[0] = &fb
 }
@@ -63,6 +63,10 @@ func (ov *Overlay) Delete(key string, off uint64) {
 		// key not present
 		ov.mb.Insert(key, off|tombstone)
 	}
+}
+
+func (ov *Overlay) base() *fbtree {
+	return ov.under[0].(*fbtree)
 }
 
 //-------------------------------------------------------------------
@@ -141,7 +145,7 @@ func (ov *Overlay) StorSize() int {
 }
 
 func (ov *Overlay) Write(w *stor.Writer) {
-	fb := ov.under[0].(*fbtree)
+	fb := ov.base()
 	w.Put5(fb.root).Put1(fb.treeLevels).Put5(fb.redirsOff)
 }
 
@@ -179,7 +183,7 @@ func (ov *Overlay) Merge(tranNum int) *Overlay {
 	if mb.tranNum != tranNum {
 		panic("merge: wrong tranNum")
 	}
-	fb := ov.under[0].(*fbtree)
+	fb := ov.base()
 	fb = Merge(fb, mb)
 	return &Overlay{under: []tree{fb}}
 }
@@ -198,7 +202,7 @@ func (ov *Overlay) WithMerged(ov2 *Overlay) *Overlay {
 func (ov *Overlay) Save() *Overlay {
 	assert.That(ov.mb == nil)
 	ov2 := *ov // copy
-	fb := ov.under[0].(*fbtree)
+	fb := ov.base()
 	fb = fb.Save()
 	ov2.under = []tree{fb}
 	return &ov2

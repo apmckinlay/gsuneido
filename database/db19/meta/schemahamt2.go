@@ -59,6 +59,7 @@ func (ht SchemaHamt) Write(st *stor.Stor) uint64 {
 		it.Write(w)
 	}
 	assert.That(len(fingers) == nfingers)
+	assert.That(w.Len() == size)
 	for _, f := range fingers {
 		w2.Put3(f) // update with actual values
 	}
@@ -119,6 +120,10 @@ func (p SchemaPacked) MustGet(key string) *Schema {
 }
 
 func (p SchemaPacked) Get(key string) (*Schema, bool) {
+	var zero *Schema
+	if p.buf == nil {
+		return zero, false
+	}
 	pos := p.binarySearch(key)
 	r := stor.NewReader(p.buf[pos:])
 	for n := 0; n <= perFingerSchema; n++ {
@@ -127,7 +132,6 @@ func (p SchemaPacked) Get(key string) (*Schema, bool) {
 			return item, true
 		}
 	}
-	var zero *Schema
 	return zero, false
 }
 

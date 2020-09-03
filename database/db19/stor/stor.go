@@ -123,6 +123,18 @@ func (s *Stor) LastOffset(b []byte) uint64 {
 	return 0
 }
 
+type writable interface {
+	Write(off uint64, data []byte)
+}
+
+func (s *Stor) Write(off uint64, data []byte) {
+	if w, ok := s.impl.(writable); ok {
+		w.Write(off, data)
+	} else {
+		copy(s.Data(off), data)
+	}
+}
+
 func (s *Stor) Close() {
 	s.impl.Close(int64(s.size))
 }

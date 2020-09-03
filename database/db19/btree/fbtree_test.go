@@ -58,9 +58,7 @@ func TestFbtreeBuilder(t *testing.T) {
 		key := strconv.Itoa(i)
 		bldr.Add(key, uint64(i))
 	}
-	root, treeLevels := bldr.Finish()
-
-	fb := OpenFbtree(store, root, treeLevels, 0)
+	fb := bldr.Finish().base()
 	fb.check()
 	iter := fb.Iter()
 	for i := 100000; i <= limit; i++ {

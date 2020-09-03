@@ -495,8 +495,9 @@ func (fb *fbtreeBuilder) insert(li int, key string, off uint64) {
 	lev.builder.Add(key, off, embedLen)
 }
 
-func (fb *fbtreeBuilder) Finish() (off uint64, treeLevels int) {
+func (fb *fbtreeBuilder) Finish() *Overlay {
 	var key string
+	var off uint64
 	for li := 0; li < len(fb.levels); li++ {
 		if li > 0 {
 			// allow node to slightly exceed max size
@@ -505,5 +506,7 @@ func (fb *fbtreeBuilder) Finish() (off uint64, treeLevels int) {
 		key = fb.levels[li].first
 		off = fb.levels[li].builder.fe.putNode(fb.store)
 	}
-	return off, len(fb.levels) - 1
+	treeLevels := len(fb.levels) - 1
+	bt := OpenFbtree(fb.store, off, treeLevels, 0)
+	return &Overlay{under: []tree{bt}}
 }

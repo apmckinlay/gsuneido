@@ -55,6 +55,7 @@ func (ht ItemHamt) Write(st *stor.Stor) uint64 {
 		it.Write(w)
 	}
 	assert.That(len(fingers) == nfingers)
+	assert.That(w.Len() == size)
 	for _, f := range fingers {
 		w2.Put3(f) // update with actual values
 	}
@@ -115,6 +116,10 @@ func (p ItemPacked) MustGet(key string) Item {
 }
 
 func (p ItemPacked) Get(key string) (Item, bool) {
+	var zero Item
+	if p.buf == nil {
+		return zero, false
+	}
 	pos := p.binarySearch(key)
 	r := stor.NewReader(p.buf[pos:])
 	for n := 0; n <= perFingerItem; n++ {
@@ -123,7 +128,6 @@ func (p ItemPacked) Get(key string) (Item, bool) {
 			return item, true
 		}
 	}
-	var zero Item
 	return zero, false
 }
 

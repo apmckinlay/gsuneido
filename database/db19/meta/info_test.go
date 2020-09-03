@@ -73,10 +73,3 @@ func TestInfo2(t *testing.T) {
 		assert.T(t).Msg("nrows").This(ti.Nrows).Is(i)
 	}
 }
-
-func (p InfoPacked) MustGet(key string) *Info {
-	if item, ok := p.Get(key); ok {
-		return item
-	}
-	panic("item not found")
-}

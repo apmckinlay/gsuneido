@@ -73,3 +73,8 @@ func MmapStor(filename string, mode Mode) (*Stor, error) {
 	ms.chunks.Store(chunks)
 	return ms, nil
 }
+
+// Write writes directly to the file, not via memory map
+func (ms *mmapStor) Write(off uint64, data []byte) {
+	ms.file.WriteAt(data, int64(off))
+}

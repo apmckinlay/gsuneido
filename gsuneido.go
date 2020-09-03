@@ -60,9 +60,7 @@ func main() {
 			println("loaded", n, "tables")
 		} else {
 			table := strings.TrimSuffix(options.Arg, ".su")
-			db := db19.OpenDatabase("suneido.db")
-			defer db.Close()
-			n := db.LoadTable(table)
+			n := db19.LoadTable(table, "suneido.db")
 			println("loaded", n, "records to", table)
 		}
 		os.Exit(0)

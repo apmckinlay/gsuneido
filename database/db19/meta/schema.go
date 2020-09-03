@@ -61,7 +61,7 @@ func (ts *Schema) storSize() int {
 	size++
 	for i := range ts.Indexes {
 		idx := &ts.Indexes[i]
-		size += 1 + 1 + 2*len(idx.Fields) +
+		size += 1 + 2 + 2*len(idx.Fields) +
 			2 + len(idx.Fktable) + 1 + 1 + 2*len(idx.Fkfields)
 	}
 	return size
@@ -77,8 +77,8 @@ func (ts *Schema) Write(w *stor.Writer) {
 	w.Put1(len(ts.Indexes))
 	for i := range ts.Indexes {
 		idx := &ts.Indexes[i]
-		w.Put1(idx.Mode).PutInts(idx.Fields)
-		w.PutStr(idx.Fktable).Put1(idx.Fkmode).PutInts(idx.Fkfields)
+		w.Put1(idx.Mode).Put2Ints(idx.Fields)
+		w.PutStr(idx.Fktable).Put1(idx.Fkmode).Put1Ints(idx.Fkfields)
 	}
 }
 
@@ -95,10 +95,10 @@ func ReadSchema(_ *stor.Stor, r *stor.Reader) *Schema {
 	for i := 0; i < n; i++ {
 		ts.Indexes[i] = IndexSchema{
 			Mode:     r.Get1(),
-			Fields:   r.GetInts(),
+			Fields:   r.Get2Ints(),
 			Fktable:  r.GetStr(),
 			Fkmode:   r.Get1(),
-			Fkfields: r.GetInts(),
+			Fkfields: r.Get1Ints(),
 		}
 	}
 	ts.Ixspecs()

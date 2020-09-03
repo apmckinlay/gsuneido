@@ -4,9 +4,12 @@
 package db19
 
 import (
+	"errors"
+
 	"github.com/apmckinlay/gsuneido/database/db19/btree"
 	"github.com/apmckinlay/gsuneido/database/db19/comp"
 	"github.com/apmckinlay/gsuneido/database/db19/ixspec"
+	"github.com/apmckinlay/gsuneido/database/db19/meta"
 	"github.com/apmckinlay/gsuneido/database/db19/stor"
 	rt "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/hacks"
@@ -31,7 +34,7 @@ func CreateDatabase(filename string) *Database {
 		panic("can't create database " + filename)
 	}
 	var db Database
-	db.state.set(&DbState{store: store})
+	db.state.set(&DbState{store: store, meta: meta.CreateOverlay(store)})
 
 	n := len(magic) + stor.SmallOffsetLen
 	_, buf := store.Alloc(n)
@@ -76,10 +79,25 @@ func openDatabase(filename string, mode stor.Mode) *Database {
 	return &db
 }
 
+// LoadedTable is used to add a loaded table to the state
+func (db *Database) LoadedTable(ts *meta.Schema, ti *meta.Info) error {
+	var err error
+	db.UpdateState(func(state *DbState) {
+		if nil != state.meta.GetRoSchema(ts.Table) {
+			err = errors.New("can't create " + ts.Table + " - it already exists")
+			return
+		}
+		state.meta = state.meta.Add(ts, ti)
+	})
+	return err
+}
+
 func (db *Database) Close() {
 	if db.mode != stor.READ {
-		buf := db.store.Data(0)
-		stor.WriteSmallOffset(buf[len(magic):], db.store.Size())
+		// need to use Write because all but last chunk are read-only
+		buf := make([]byte, stor.SmallOffsetLen)
+		stor.WriteSmallOffset(buf, db.store.Size())
+		db.store.Write(uint64(len(magic)), buf)
 	}
 	db.store.Close()
 }

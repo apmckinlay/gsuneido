@@ -20,7 +20,7 @@ func TestBlocks(t *testing.T) {
 	pos := w.Len()
 	w.Put5(0x5555555555)
 	w.PutStr("hello world")
-	w.PutInts([]int{1, 2, 3})
+	w.Put1Ints([]int{1, -2, 3})
 
 	r := NewReader(buf)
 	assert(r.Get1()).Is(0x11)
@@ -29,7 +29,7 @@ func TestBlocks(t *testing.T) {
 	assert(r.Get4()).Is(0x44444444)
 	assert(r.Get5()).Is(0x5555555555)
 	assert(r.GetStr()).Is("hello world")
-	assert(r.GetInts()).Is([]int{1, 2, 3})
+	assert(r.Get1Ints()).Is([]int{1, -2, 3})
 	r = NewReader(buf[pos:])
 	assert(r.Get5()).Is(0x5555555555)
 }

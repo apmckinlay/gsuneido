@@ -300,9 +300,8 @@ func TestFlatten(t *testing.T) {
 			key := strconv.Itoa(i)
 			bldr.Add(key, uint64(i))
 		}
-		root, treeLevels := bldr.Finish()
-		assert.That(treeLevels == 2)
-		fb = OpenFbtree(store, root, treeLevels, 0)
+		fb = bldr.Finish().base()
+		assert.That(fb.treeLevels == 2)
 		fb.redirs.tbl.ForEach(func(r *redir) { panic("redir!") })
 		fb.redirs.paths.ForEach(func(p uint64) { panic("path!") })
 	}

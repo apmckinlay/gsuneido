@@ -13,7 +13,7 @@ import (
 
 // Get returns a memory mapped portion of a file.
 // It panics on error.
-func (ms mmapStor) Get(chunk int) []byte {
+func (ms *mmapStor) Get(chunk int) []byte {
 	prot := syscall.PROT_READ
 	if ms.mode != READ {
 		prot |= syscall.PROT_WRITE
@@ -28,7 +28,7 @@ func (ms mmapStor) Get(chunk int) []byte {
 	return mmap
 }
 
-func (ms mmapStor) Close(size int64) {
+func (ms *mmapStor) Close(size int64) {
 	ms.file.Truncate(size)
 	ms.file.Close()
 }
