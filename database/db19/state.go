@@ -15,7 +15,7 @@ import (
 
 type DbState struct {
 	store *stor.Stor
-	meta  *meta.Overlay
+	meta  *meta.Meta
 }
 
 type stateHolder struct {

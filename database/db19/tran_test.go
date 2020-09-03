@@ -106,7 +106,7 @@ func createDb() *Database {
 	roInfoOff := roInfo.Write(db.store)
 
 	db.UpdateState(func(state *DbState) {
-		state.meta = meta.NewOverlay(baseSchema, baseInfo,
+		state.meta = meta.NewMeta(baseSchema, baseInfo,
 			roSchema, roSchemaOff, roInfo, roInfoOff)
 	})
 

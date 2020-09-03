@@ -26,20 +26,20 @@ func TestOverlay(*testing.T) {
 	st := stor.HeapStor(32 * 1024)
 	offInfo := tbl.Write(st)
 	offSchema := tbl.Write(st)
-	state := &Overlay{
+	state := &Meta{
 		baseInfo:   NewInfoPacked(st, offInfo),
 		baseSchema: NewSchemaPacked(st, offSchema),
 	}
 	// startup - nothing in memory
 
 	for i := 0; i < 4; i++ {
-		ov := state.NewOverlay()
+		m := state.NewMeta()
 		for i := 0; i < 5; i++ {
-			ov.GetRoInfo(data[rand.Intn(100)])
-			ov.GetRwInfo(data[rand.Intn(100)], 0)
+			m.GetRoInfo(data[rand.Intn(100)])
+			m.GetRwInfo(data[rand.Intn(100)], 0)
 		}
 		// end of transaction, merge back to global
-		state = ov.LayeredOnto(state)
+		state = m.LayeredOnto(state)
 	}
 
 	// persist state

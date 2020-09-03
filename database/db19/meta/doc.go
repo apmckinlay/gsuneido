@@ -3,8 +3,8 @@
 
 // Package meta handles the database metadata.
 // The metadata is split into two parts - info and schema.
-// info is the fast changing part of the metadata,
-// things that change with every update transaction.
-// schema is the slow changing columns and indexes
+// Info is the fast changing stats and indexes,
+// that change with every update.
+// Schema is the slow changing columns and indexes
 // that are changed infrequently.
 package meta

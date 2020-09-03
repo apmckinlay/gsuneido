@@ -34,7 +34,7 @@ func CreateDatabase(filename string) *Database {
 		panic("can't create database " + filename)
 	}
 	var db Database
-	db.state.set(&DbState{store: store, meta: meta.CreateOverlay(store)})
+	db.state.set(&DbState{store: store, meta: meta.CreateMeta(store)})
 
 	n := len(magic) + stor.SmallOffsetLen
 	_, buf := store.Alloc(n)
