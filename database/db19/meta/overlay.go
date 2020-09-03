@@ -44,8 +44,8 @@ func CreateMeta(store *stor.Stor) *Meta {
 	}
 }
 
-// NewMeta returns a new Meta based on an existing one
-func (m *Meta) NewMeta() *Meta {
+// Mutable returns a mutable copy of a Meta
+func (m *Meta) Mutable() *Meta {
 	assert.That(m.rwInfo.IsNil())
 	assert.That(m.rwSchema.IsNil())
 	ov2 := *m // copy
@@ -173,7 +173,7 @@ func (m *Meta) LayeredOnto(latest *Meta) *Meta {
 		}
 	})
 	//TODO handle rwSchema
-	result := *latest
+	result := *latest // copy
 	result.roInfo = roInfo2.Freeze()
 	return &result
 }

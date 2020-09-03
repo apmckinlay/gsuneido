@@ -33,7 +33,7 @@ func TestOverlay(*testing.T) {
 	// startup - nothing in memory
 
 	for i := 0; i < 4; i++ {
-		m := state.NewMeta()
+		m := state.Mutable()
 		for i := 0; i < 5; i++ {
 			m.GetRoInfo(data[rand.Intn(100)])
 			m.GetRwInfo(data[rand.Intn(100)], 0)

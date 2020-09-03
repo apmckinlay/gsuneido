@@ -30,7 +30,7 @@ type UpdateTran struct {
 
 func (db *Database) NewUpdateTran() *UpdateTran {
 	state := db.GetState()
-	meta := state.meta.NewMeta()
+	meta := state.meta.Mutable()
 	ct := db.ck.StartTran()
 	return &UpdateTran{ct: ct, tran: tran{db: db, meta: meta}}
 }
