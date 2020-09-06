@@ -54,30 +54,40 @@ func main() {
 		options.Action = "repl"
 	}
 	switch options.Action {
+	case "dump":
+		if options.Arg == "" {
+			n := db19.DumpDatabase("database.su", "suneido.db")
+			fmt.Println("dumped", n, "tables")
+		} else {
+			table := strings.TrimSuffix(options.Arg, ".su")
+			n := db19.DumpTable("suneido.db", table, "database.su")
+			fmt.Println("dumped", n, "records from", table)
+		}
+		os.Exit(0)
 	case "load":
 		if options.Arg == "" {
 			n := db19.LoadDatabase("database.su", "suneido.db")
-			println("loaded", n, "tables")
+			fmt.Println("loaded", n, "tables")
 		} else {
 			table := strings.TrimSuffix(options.Arg, ".su")
 			n := db19.LoadTable(table, "suneido.db")
-			println("loaded", n, "records to", table)
+			fmt.Println("loaded", n, "records to", table)
 		}
 		os.Exit(0)
 	case "version":
-		println("gSuneido " + builtDate + " (" + runtime.Version() + " " +
+		fmt.Println("gSuneido " + builtDate + " (" + runtime.Version() + " " +
 			runtime.GOARCH + " " + runtime.GOOS + ")")
 		os.Exit(0)
 	case "help":
-		println(help)
+		fmt.Println(help)
 		os.Exit(0)
 	case "error":
-		println(options.Error)
+		fmt.Println(options.Error)
 		os.Exit(1)
 	case "repl", "client":
 		// handled below
 	default:
-		println("invalid action:", options.Action)
+		fmt.Println("invalid action:", options.Action)
 		os.Exit(1)
 	}
 	Libload = libload // dependency injection

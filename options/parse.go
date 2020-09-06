@@ -22,6 +22,9 @@ loop:
 			setAction("client")
 			Arg = "127.0.0.1"
 			args = optionalArg(args)
+		case "-d", "-dump":
+			setAction("dump")
+			args = optionalArg(args)
 		case "-l", "-load":
 			setAction("load")
 			args = optionalArg(args)
@@ -72,7 +75,7 @@ func setAction(action string) {
 }
 
 func optionalArg(args []string) []string {
-	if len(args) > 0 && args[0][0] != '-' {
+	if len(args) > 0 && !strings.HasPrefix(args[0], "-") {
 		Arg = args[0]
 		args = args[1:]
 	}

@@ -19,8 +19,6 @@ import (
 	"github.com/apmckinlay/gsuneido/util/sortlist"
 )
 
-//TODO write roInfo/Schema to packed
-
 // LoadDatabase imports a dumped database from a file.
 // It returns the number of tables loaded or panics on error.
 func LoadDatabase(from, to string) int {
@@ -141,7 +139,7 @@ func readLinePrefixed(r *bufio.Reader, pre string) string {
 	if err == io.EOF {
 		return ""
 	}
-	ckerr(err)
+	ck(err)
 	if !strings.HasPrefix(s, pre) {
 		panic("not a valid dump file")
 	}
@@ -156,21 +154,21 @@ func readRecords(in *bufio.Reader, store *stor.Stor, list *sortlist.Builder) int
 		if err == io.EOF {
 			break
 		}
-		ckerr(err)
+		ck(err)
 		size := int(binary.BigEndian.Uint32(intbuf))
 		if size == 0 {
 			break
 		}
 		off, buf := store.Alloc(size)
 		_, err = io.ReadFull(in, buf)
-		ckerr(err)
+		ck(err)
 		list.Add(off)
 		nrecs++
 	}
 	return nrecs
 }
 
-func ckerr(err error) {
+func ck(err error) {
 	if err != nil {
 		panic(err.Error())
 	}

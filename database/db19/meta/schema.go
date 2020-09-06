@@ -4,9 +4,12 @@
 package meta
 
 import (
+	"strings"
+
 	"github.com/apmckinlay/gsuneido/database/db19/ixspec"
 	"github.com/apmckinlay/gsuneido/database/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/hash"
+	"github.com/apmckinlay/gsuneido/util/str"
 )
 
 type Schema struct {
@@ -142,4 +145,57 @@ func hasSpecial(fields []int) bool {
 		}
 	}
 	return false
+}
+
+//-------------------------------------------------------------------
+
+func (ts *Schema) String() string {
+	var sb strings.Builder
+	var cb str.CommaBuilder
+	for i := range ts.Columns {
+		col := ts.Columns[i]
+		if col.Field == -1 {
+			cb.Add("-")
+		} else {
+			cb.Add(ts.Columns[i].Name)
+		}
+	}
+	sb.WriteString("(")
+	sb.WriteString(cb.String())
+	sb.WriteString(")")
+	for i := range ts.Indexes {
+		sb.WriteString(" ")
+		sb.WriteString(ts.Indexes[i].string(ts.Columns))
+	}
+	return sb.String()
+}
+
+func (ix *IndexSchema) string(cols []ColumnSchema) string {
+	var cb str.CommaBuilder
+	for _, c := range ix.Fields {
+		if c < 0 {
+			cb.Add(cols[-c-2].Name + "_lower!")
+		} else {
+			cb.Add(cols[c].Name)
+		}
+	}
+	s := map[int]string{'k': "key", 'i': "index", 'u': "index unique"}[ix.Mode]
+	s += "(" + cb.String() + ")"
+	if ix.Fktable != "" {
+		s += " in " + ix.Fktable
+		if ix.Fkfields != nil {
+			sep := "("
+			for _, f := range ix.Fkfields {
+				s += sep + cols[f].Name
+				sep = ","
+			}
+		}
+		if ix.Fkmode&CASCADE != 0 {
+			s += " cascade"
+			if ix.Fkmode == CASCADE_UPDATES {
+				s += " update"
+			}
+		}
+	}
+	return s
 }

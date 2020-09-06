@@ -78,7 +78,7 @@ type ovsrc struct {
 	ok   bool
 }
 
-// Iter returns an treeIter function
+// Iter returns a treeIter function
 func (ov *Overlay) Iter() treeIter {
 	srcs := make([]ovsrc, 0, len(ov.under)+1)
 	if ov.mb != nil {

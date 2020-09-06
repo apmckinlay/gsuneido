@@ -123,5 +123,6 @@ func mkcmp(store *stor.Stor, is *ixspec.T) func(x, y uint64) int {
 
 func offToRec(store *stor.Stor, off uint64) rt.Record {
 	buf := store.Data(off)
-	return rt.Record(hacks.BStoS(buf))
+	rec := rt.Record(hacks.BStoS(buf))
+	return rt.Record(string(rec)[:rec.Len()])
 }
