@@ -15,7 +15,7 @@ func TestDumpTable(*testing.T) {
 		return
 	}
 	t := time.Now()
-	// defer os.Remove("tmp.su")
+	defer os.Remove("tmp.su")
 	n := DumpTable("suneido.db", "stdlib", "tmp.su")
 	fmt.Println("dumped", n, "records in", time.Since(t).Round(time.Millisecond))
 }

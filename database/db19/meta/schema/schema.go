@@ -69,7 +69,7 @@ func (ix *Index) string(cols []string) string {
 	s += "(" + cb.String() + ")"
 	if ix.Fktable != "" {
 		s += " in " + ix.Fktable
-		if ix.Fkcolumns != nil {
+		if len(ix.Fkcolumns) > 0 {
 			sep := "("
 			for _, f := range ix.Fkcolumns {
 				s += sep + f

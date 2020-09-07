@@ -21,6 +21,7 @@ import (
 	"runtime"
 	"runtime/debug"
 	"strings"
+	"time"
 
 	_ "github.com/apmckinlay/gsuneido/aaainitfirst"
 	"github.com/apmckinlay/gsuneido/builtin"
@@ -55,23 +56,29 @@ func main() {
 	}
 	switch options.Action {
 	case "dump":
+		t := time.Now()
 		if options.Arg == "" {
-			n := db19.DumpDatabase("database.su", "suneido.db")
-			fmt.Println("dumped", n, "tables")
+			n := db19.DumpDatabase("suneido.db", "database.su")
+			fmt.Println("dumped", n, "tables in",
+				time.Since(t).Round(time.Millisecond))
 		} else {
 			table := strings.TrimSuffix(options.Arg, ".su")
-			n := db19.DumpTable("suneido.db", table, "database.su")
-			fmt.Println("dumped", n, "records from", table)
+			n := db19.DumpTable("suneido.db", table, table + ".su")
+			fmt.Println("dumped", n, "records from", table,
+				"in", time.Since(t).Round(time.Millisecond))
 		}
 		os.Exit(0)
 	case "load":
+		t := time.Now()
 		if options.Arg == "" {
 			n := db19.LoadDatabase("database.su", "suneido.db")
-			fmt.Println("loaded", n, "tables")
+			fmt.Println("loaded", n, "tables in",
+				time.Since(t).Round(time.Millisecond))
 		} else {
 			table := strings.TrimSuffix(options.Arg, ".su")
 			n := db19.LoadTable(table, "suneido.db")
-			fmt.Println("loaded", n, "records to", table)
+			fmt.Println("loaded", n, "records to", table,
+				"in", time.Since(t).Round(time.Millisecond))
 		}
 		os.Exit(0)
 	case "version":

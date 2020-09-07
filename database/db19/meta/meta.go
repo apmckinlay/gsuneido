@@ -4,6 +4,7 @@
 package meta
 
 import (
+	"github.com/apmckinlay/gsuneido/database/db19/meta/schema"
 	"github.com/apmckinlay/gsuneido/database/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
@@ -138,6 +139,34 @@ func (m *Meta) Add(ts *Schema, ti *Info) *Meta {
 	ov2.roSchema = roSchema.Freeze()
 	ov2.roInfo = roInfo.Freeze()
 	return &ov2
+}
+
+func (m *Meta) ForEachSchema(fn func(*schema.Schema)) {
+	assert.That(m.rwSchema.IsNil())
+	m.roSchema.ForEach(func(sc *Schema) {
+		fn(&sc.Schema)
+	})
+	m.baseSchema.ForEach(func(sc *Schema) {
+		// skip the ones already processed from roSchema
+		if _, ok := m.roSchema.Get(sc.Table); !ok {
+			fn(&sc.Schema)
+		}
+	})
+}
+
+func (p SchemaPacked) ForEach(fn func(*Schema)) {
+	r := stor.NewReader(p.buf)
+	nitems := r.Get2()
+	if nitems == 0 {
+		return
+	}
+	nfingers := 1 + nitems/perFingerSchema
+	for i := 0; i < nfingers; i++ {
+		r.Get3() // skip the fingers
+	}
+	for ; nitems > 0; nitems-- {
+		fn(ReadSchema(p.stor, r))
+	}
 }
 
 //-------------------------------------------------------------------
