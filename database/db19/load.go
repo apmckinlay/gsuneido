@@ -81,7 +81,7 @@ func open(filename string) (*os.File, *bufio.Reader) {
 
 func loadTable(db *Database, r *bufio.Reader, schema string) int {
 	trace(schema)
-	req := compile.ParseRequest("create " + schema).(*compile.Schema)
+	sc := compile.ParseRequest("create " + schema).Schema
 
 	store := db.store
 	list := sortlist.NewUnsorted()
@@ -91,7 +91,8 @@ func loadTable(db *Database, r *bufio.Reader, schema string) int {
 	dataSize := beforeIndexes - before
 	trace("nrecs", nrecs, "data size", dataSize)
 	list.Finish()
-	ts := reqToSchema(req)
+	ts := &meta.Schema{Schema: *sc}
+	ts.Ixspecs()
 	ov := make([]*btree.Overlay, len(ts.Indexes))
 	for i := range ts.Indexes {
 		ix := ts.Indexes[i]
@@ -112,26 +113,11 @@ func loadTable(db *Database, r *bufio.Reader, schema string) int {
 		trace("size", store.Size()-before)
 	}
 	trace("indexes size", store.Size()-beforeIndexes)
-	ti := &meta.Info{Table: req.Table, Nrows: nrecs, Size: dataSize, Indexes: ov}
+	ti := &meta.Info{Table: sc.Table, Nrows: nrecs, Size: dataSize, Indexes: ov}
 	if err := db.LoadedTable(ts, ti); err != nil {
 		panic(err.Error())
 	}
 	return nrecs
-}
-
-func reqToSchema(req *compile.Schema) *meta.Schema {
-	ts := meta.Schema{Table: req.Table}
-	ts.Columns = make([]meta.ColumnSchema, len(req.Columns))
-	for i,c := range req.Columns {
-		ts.Columns[i] = meta.ColumnSchema{Name: c, Field: i}
-	}
-	ts.Indexes = make([]meta.IndexSchema, len(req.Indexes))
-	for i := range req.Indexes {
-		ri := req.Indexes[i]
-		ts.Indexes[i] = meta.IndexSchema{Fields: ri.Fields, Mode: ri.Mode}
-	}
-	ts.Ixspecs()
-	return &ts
 }
 
 func readLinePrefixed(r *bufio.Reader, pre string) string {

@@ -10,23 +10,23 @@ import (
 
 // Meta is the layered info and schema metadata
 type Meta struct {
-	rwInfo      InfoHamt
-	roInfo      InfoHamt
-	rwSchema    SchemaHamt
-	roSchema    SchemaHamt
-	baseInfo    *InfoPacked
-	baseSchema  *SchemaPacked
+	rwInfo     InfoHamt
+	roInfo     InfoHamt
+	rwSchema   SchemaHamt
+	roSchema   SchemaHamt
+	baseInfo   *InfoPacked
+	baseSchema *SchemaPacked
 }
 
 func NewMeta(baseSchema *SchemaPacked, baseInfo *InfoPacked,
 	roSchema SchemaHamt, roInfo InfoHamt) *Meta {
 	return &Meta{
-		baseSchema:  baseSchema,
-		baseInfo:    baseInfo,
-		roInfo:      roInfo,
-		rwSchema:    SchemaHamt{},
-		roSchema:    roSchema,
-		rwInfo:      InfoHamt{},
+		baseSchema: baseSchema,
+		baseInfo:   baseInfo,
+		roInfo:     roInfo,
+		rwSchema:   SchemaHamt{},
+		roSchema:   roSchema,
+		rwInfo:     InfoHamt{},
 	}
 }
 
@@ -34,8 +34,8 @@ func CreateMeta(store *stor.Stor) *Meta {
 	return &Meta{
 		baseInfo:   &InfoPacked{stor: store},
 		baseSchema: &SchemaPacked{stor: store},
-		roInfo: InfoHamt{},
-		roSchema: SchemaHamt{},
+		roInfo:     InfoHamt{},
+		roSchema:   SchemaHamt{},
 	}
 }
 
@@ -124,6 +124,7 @@ func (m *Meta) GetRwSchema(table string) *Schema {
 	}
 	ts.Columns = append(ts.Columns[:0:0], ts.Columns...) // copy
 	ts.Indexes = append(ts.Indexes[:0:0], ts.Indexes...) // copy
+	ts.mutable = true
 	m.rwSchema.Put(&ts)
 	return &ts
 }

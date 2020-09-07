@@ -6,6 +6,7 @@ package meta
 import (
 	"testing"
 
+	"github.com/apmckinlay/gsuneido/database/db19/meta/schema"
 	"github.com/apmckinlay/gsuneido/database/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/str"
@@ -18,16 +19,13 @@ func TestSchema(t *testing.T) {
 	randStr := str.UniqueRandom(4, 4)
 	for i := 0; i < n; i++ {
 		data[i] = randStr()
-		tbl.Put(&Schema{
-			Table: data[i],
-			Columns: []ColumnSchema{
-				{Name: "one", Field: i},
-				{Name: "two", Field: i * 2},
-			},
-			Indexes: []IndexSchema{
+		tbl.Put(&Schema{Schema: schema.Schema{
+			Table:   data[i],
+			Columns: []string{"one", "two"},
+			Indexes: []schema.Index{
 				{Fields: []int{i}},
 			},
-		})
+		}})
 	}
 	st := stor.HeapStor(32 * 1024)
 	st.Alloc(1) // avoid offset 0
@@ -37,10 +35,7 @@ func TestSchema(t *testing.T) {
 		t.Helper()
 		assert := assert.T(t).This
 		assert(ts.Table).Msg("table").Is(table)
-		assert(ts.Columns[0].Name).Msg("one").Is("one")
-		assert(ts.Columns[0].Field).Msg("one field").Is(i)
-		assert(ts.Columns[1].Name).Msg("two").Is("two")
-		assert(ts.Columns[0].Field).Msg("two field").Is(i)
+		assert(ts.Columns).Msg("columns").Is([]string{"one", "two"})
 		assert(ts.Indexes[0].Fields).Msg("indexes").Is([]int{i})
 	}
 

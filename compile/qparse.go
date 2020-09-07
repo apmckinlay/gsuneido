@@ -4,14 +4,17 @@
 package compile
 
 import (
-	"strconv"
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/compile/ast"
+	"github.com/apmckinlay/gsuneido/database/db19/meta/schema"
 	. "github.com/apmckinlay/gsuneido/lexer"
 	tok "github.com/apmckinlay/gsuneido/lexer/tokens"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
+
+type Schema = schema.Schema
+type Index = schema.Index
 
 type qparser struct {
 	parserBase
@@ -24,7 +27,12 @@ func NewQueryParser(src string) *qparser {
 	return p
 }
 
-func ParseRequest(src string) interface{} {
+type Request struct {
+	*Schema
+	//TODO
+}
+
+func ParseRequest(src string) *Request {
 	p := NewQueryParser(src)
 	result := p.request()
 	if p.Token != tok.Eof {
@@ -33,10 +41,10 @@ func ParseRequest(src string) interface{} {
 	return result
 }
 
-func (p *qparser) request() interface{} {
+func (p *qparser) request() *Request {
 	switch p.Token {
 	case tok.Create:
-		return p.create()
+		return &Request{p.create()}
 	//TODO: Ensure, Alter, Rename, View, Sview, Drop
 	default:
 		panic("invalid request")
@@ -46,12 +54,12 @@ func (p *qparser) request() interface{} {
 func (p *qparser) create() *Schema {
 	p.next()
 	table := p.matchIdent()
-	columns, rules := p.columns()
+	columns, derived := p.columns()
 	indexes := p.indexes(columns)
-	return &Schema{Table: table, Columns: columns, Rules: rules, Indexes: indexes}
+	return &Schema{Table: table, Columns: columns, Derived: derived, Indexes: indexes}
 }
 
-func (p *qparser) columns() (columns, rules []string) {
+func (p *qparser) columns() (columns, derived []string) {
 	p.match(tok.LParen)
 	columns = make([]string, 0, 8)
 	for p.Token != tok.RParen {
@@ -60,7 +68,7 @@ func (p *qparser) columns() (columns, rules []string) {
 		} else {
 			col := p.matchIdent()
 			if str.Capitalized(col) || strings.HasSuffix(col, "_lower!") {
-				rules = append(rules, col)
+				derived = append(derived, col)
 			} else {
 				columns = append(columns, col)
 			}
@@ -69,13 +77,13 @@ func (p *qparser) columns() (columns, rules []string) {
 		p.matchIf(tok.Comma)
 	}
 	p.match(tok.RParen)
-	return columns, rules
+	return columns, derived
 }
 
-func (p *qparser) indexes(columns []string) []*Index {
-	indexes := make([]*Index, 0, 4)
+func (p *qparser) indexes(columns []string) []Index {
+	indexes := make([]Index, 0, 4)
 	for ix := p.index(columns); ix != nil; ix = p.index(columns) {
-		indexes = append(indexes, ix)
+		indexes = append(indexes, *ix)
 	}
 	return indexes
 }
@@ -135,86 +143,12 @@ func (p *qparser) foreignKey() (table string, columns []string, mode int) {
 		}
 		p.next()
 	}
-	mode = BLOCK
+	mode = schema.Block
 	if p.matchIf(tok.Cascade) {
-		mode = CASCADE
+		mode = schema.Cascade
 		if p.matchIf(tok.Update) {
-			mode = CASCADE_UPDATES
+			mode = schema.CascadeUpdates
 		}
 	}
 	return table, columns, mode
-}
-
-// fkmode bits //TODO don't duplicate
-const (
-	BLOCK           = 0
-	CASCADE_UPDATES = 1
-	CASCADE_DELETES = 2
-	CASCADE         = CASCADE_UPDATES | CASCADE_DELETES
-)
-
-type Schema struct {
-	Table   string
-	Columns []string
-	Rules   []string
-	Indexes []*Index
-}
-
-func (sc *Schema) String() string {
-	var cb str.CommaBuilder
-	for _, c := range sc.Columns {
-		cb.Add(c)
-	}
-	for _, c := range sc.Rules {
-		cb.Add(c)
-	}
-	s := sc.Table + " (" + cb.String() + ")"
-	for _, ix := range sc.Indexes {
-		s += " " + ix.string(sc.Columns)
-	}
-	return s
-}
-
-type Index struct {
-	Fields []int
-	// Mode is 'k' for key, 'i' for index, 'u' for unique index
-	Mode      int
-	Fktable   string
-	Fkmode    int
-	Fkcolumns []string
-}
-
-func (ix Index) string(columns []string) string {
-	var cb str.CommaBuilder
-	for _, c := range ix.Fields {
-		if c < 0 {
-			cb.Add(columns[-c-2] + "_lower!")
-		} else {
-			cb.Add(columns[c])
-		}
-	}
-	s := map[int]string{'k': "key", 'i': "index", 'u': "index unique"}[ix.Mode] +
-		"(" + cb.String() + ")"
-	if ix.Fktable != "" {
-		s += " in " + ix.Fktable
-		if ix.Fkcolumns != nil {
-			s += " " + str.Join("(,)", ix.Fkcolumns...)
-		}
-		if ix.Fkmode&CASCADE != 0 {
-			s += " cascade"
-			if ix.Fkmode == CASCADE_UPDATES {
-				s += " update"
-			}
-		}
-	}
-	return s
-}
-
-func (ix Index) String() string {
-	var cb str.CommaBuilder
-	for _, c := range ix.Fields {
-		cb.Add(strconv.Itoa(c))
-	}
-	return map[int]string{'k': "key", 'i': "index", 'u': "index unique"}[ix.Mode] +
-		"(" + cb.String() + ")"
 }

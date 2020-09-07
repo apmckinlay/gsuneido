@@ -94,6 +94,29 @@ func (w *Writer) PutStr(s string) *Writer {
 	return w
 }
 
+// LenStr returns the space requirecd by PutStr
+func LenStr(s string) int {
+	return 2 + len(s)
+}
+
+// PutStrs writes a slice of up to 64k strings
+func (w *Writer) PutStrs(ss []string) *Writer {
+	w.Put2(len(ss))
+	for _, col := range ss {
+		w.PutStr(col)
+	}
+	return w
+}
+
+// LenStrs returns the space requirecd by PutStrs
+func LenStrs(ss []string) int {
+	n := 2
+	for _, s := range ss {
+		n += LenStr(s)
+	}
+	return n
+}
+
 // Put1Ints writes a slice of <256 int's using Put2s
 func (w *Writer) Put1Ints(ints []int) *Writer {
 	w.Put1(len(ints))
@@ -103,6 +126,11 @@ func (w *Writer) Put1Ints(ints []int) *Writer {
 	return w
 }
 
+// Len1Ints returns the space requirecd by Put1Ints
+func Len1Ints(ints []int) int {
+	return 1 + 2*len(ints)
+}
+
 // Put2Ints writes a slice of <64k int's using Put2s
 func (w *Writer) Put2Ints(ints []int) *Writer {
 	w.Put2(len(ints))
@@ -110,6 +138,11 @@ func (w *Writer) Put2Ints(ints []int) *Writer {
 		w.Put2s(n)
 	}
 	return w
+}
+
+// Len2Ints returns the space requirecd by Put2Ints
+func Len2Ints(ints []int) int {
+	return 2 + 2*len(ints)
 }
 
 // Write writes buf
@@ -187,6 +220,16 @@ func (r *Reader) GetStr() string {
 	s := string(r.buf[:n])
 	r.buf = r.buf[n:]
 	return s
+}
+
+// GetStrs reads a slice of strings
+func (r *Reader) GetStrs() []string {
+	n := r.Get2()
+	ss := make([]string, n)
+	for i := 0; i < n; i++ {
+		ss[i] = r.GetStr()
+	}
+	return ss
 }
 
 // Get1Ints reads a slice of int's using Get2s

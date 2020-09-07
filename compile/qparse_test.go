@@ -11,8 +11,8 @@ import (
 
 func TestQueryParser(t *testing.T) {
 	test := func(qs string) {
-		sc := ParseRequest(qs).(*Schema)
-		assert.T(t).This("create " + sc.String()).Is(qs)
+		sc := ParseRequest(qs).Schema
+		assert.T(t).This("create " + sc.Table + " " + sc.String()).Is(qs)
 	}
 	test("create mytable (one,two,three) key()")
 	test("create mytable (one,two,three) key(one)")
@@ -23,9 +23,9 @@ func TestQueryParser(t *testing.T) {
 	test("create mytable (one,two,three) index(two) in other")
 	test("create mytable (one,two,three) index(two) in other cascade")
 	test("create mytable (one,two,three) index(two) in other cascade update")
-	test("create mytable (one,two,three) index(two) in other (six)")
-	test("create mytable (one,two,three) index(two) in other (six) cascade")
-	test("create mytable (one,two,three) index(two) in other (six) cascade update")
+	test("create mytable (one,two,three) index(two) in other(six)")
+	test("create mytable (one,two,three) index(two) in other(six) cascade")
+	test("create mytable (one,two,three) index(two) in other(six) cascade update")
 
 	test("create mytable (one,Two,Three) key(one)")
 	test("create mytable (one,two,two_lower!) key(two_lower!)")

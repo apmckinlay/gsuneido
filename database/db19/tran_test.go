@@ -13,6 +13,7 @@ import (
 	"github.com/apmckinlay/gsuneido/database/db19/btree"
 	"github.com/apmckinlay/gsuneido/database/db19/ixspec"
 	"github.com/apmckinlay/gsuneido/database/db19/meta"
+	"github.com/apmckinlay/gsuneido/database/db19/meta/schema"
 	rt "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
@@ -80,14 +81,11 @@ func TestTran(t *testing.T) {
 func createDb() *Database {
 	db := CreateDatabase("tmp.db")
 	is := ixspec.T{Cols: []int{0}}
-	ts := &meta.Schema{
-		Table: "mytable",
-		Columns: []meta.ColumnSchema{
-			{Name: "one", Field: 0},
-			{Name: "two", Field: 1},
-		},
-		Indexes: []meta.IndexSchema{{Fields: []int{0}, Ixspec: is}},
-	}
+	ts := &meta.Schema{Schema: schema.Schema{
+		Table:   "mytable",
+		Columns: []string{"one", "two"},
+		Indexes: []schema.Index{{Fields: []int{0}, Ixspec: is}},
+	}}
 	ti := &meta.Info{
 		Table:   "mytable",
 		Indexes: []*btree.Overlay{btree.NewOverlay(db.store, &is).Save()},
