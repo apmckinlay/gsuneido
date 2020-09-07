@@ -9,7 +9,7 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/apmckinlay/gsuneido/database/db19/meta/schema"
+	"github.com/apmckinlay/gsuneido/database/db19/meta"
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
@@ -26,8 +26,8 @@ func DumpDatabase(dbfile, to string) int {
 	defer f.Close()
 	state := db.GetState()
 	ntables := 0
-	state.meta.ForEachSchema(func(sc *schema.Schema) {
-		dumpTable(db, sc.Table, true, w)
+	state.meta.ForEachSchema(func(sc *meta.Schema) {
+		dumpTable(db, sc, true, w)
 		ntables++
 	})
 	ck(w.Flush())
@@ -45,7 +45,12 @@ func DumpTable(dbfile, table, to string) int {
 	db, f, w := dumpOpen(dbfile, to)
 	defer db.Close()
 	defer f.Close()
-	n := dumpTable(db, table, false, w)
+	state := db.GetState()
+	schema := state.meta.GetRoSchema(table)
+	if schema == nil {
+		panic("can't find " + table)
+	}
+	n := dumpTable(db, schema, false, w)
 	ck(w.Flush())
 	return n
 }
@@ -62,18 +67,14 @@ func dumpOpen(dbfile, to string) (*Database, *os.File, *bufio.Writer) {
 
 var intbuf [4]byte
 
-func dumpTable(db *Database, table string, multi bool, w *bufio.Writer) int {
+func dumpTable(db *Database, schema *meta.Schema, multi bool, w *bufio.Writer) int {
 	state := db.GetState()
-	schema := state.meta.GetRoSchema(table)
-	if schema == nil {
-		panic("can't find " + table)
-	}
 	w.WriteString("====== ")
 	if multi {
-		w.WriteString(table + " ")
+		w.WriteString(schema.Table + " ")
 	}
 	w.WriteString(schema.String() + "\n")
-	info := state.meta.GetRoInfo(table)
+	info := state.meta.GetRoInfo(schema.Table)
 	n := 0
 	writeInt := func(n int) {
 		binary.BigEndian.PutUint32(intbuf[:], uint32(n))

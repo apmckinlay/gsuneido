@@ -4,7 +4,6 @@
 package meta
 
 import (
-	"github.com/apmckinlay/gsuneido/database/db19/meta/schema"
 	"github.com/apmckinlay/gsuneido/database/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
@@ -141,15 +140,15 @@ func (m *Meta) Add(ts *Schema, ti *Info) *Meta {
 	return &ov2
 }
 
-func (m *Meta) ForEachSchema(fn func(*schema.Schema)) {
+func (m *Meta) ForEachSchema(fn func(*Schema)) {
 	assert.That(m.rwSchema.IsNil())
 	m.roSchema.ForEach(func(sc *Schema) {
-		fn(&sc.Schema)
+		fn(sc)
 	})
 	m.baseSchema.ForEach(func(sc *Schema) {
 		// skip the ones already processed from roSchema
 		if _, ok := m.roSchema.Get(sc.Table); !ok {
-			fn(&sc.Schema)
+			fn(sc)
 		}
 	})
 }
