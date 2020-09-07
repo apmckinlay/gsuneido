@@ -147,7 +147,7 @@ func (p ItemPacked) binarySearch(table string) int {
 		}
 	}
 	// i is first one greater, so we want i-1
-	return int(p.fingers[i-1].pos)
+	return p.fingers[i-1].pos
 }
 
 func (p ItemPacked) Offset() uint64 {
