@@ -73,12 +73,12 @@ func (ts *Schema) Ixspecs() {
 	key := ts.firstShortestKey()
 	for i := range ts.Indexes {
 		ix := &ts.Indexes[i]
-		ix.Ixspec.Cols = ix.Fields
+		ix.Ixspec.Fields = ix.Fields
 		switch ts.Indexes[i].Mode {
 		case 'u':
-			ix.Ixspec.Cols2 = key
+			ix.Ixspec.Fields2 = key
 		case 'i':
-			ix.Ixspec.Cols = append(ix.Fields, key...)
+			ix.Ixspec.Fields = append(ix.Fields, key...)
 		}
 	}
 }

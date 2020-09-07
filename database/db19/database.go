@@ -110,14 +110,14 @@ func init() {
 
 func getLeafKey(store *stor.Stor, is *ixspec.T, off uint64) string {
 	rec := offToRec(store, off)
-	return comp.Key(rt.Record(rec), is.Cols, is.Cols2)
+	return comp.Key(rt.Record(rec), is.Fields, is.Fields2)
 }
 
 func mkcmp(store *stor.Stor, is *ixspec.T) func(x, y uint64) int {
 	return func(x, y uint64) int {
 		xr := offToRec(store, x)
 		yr := offToRec(store, y)
-		return comp.Compare(xr, yr, is.Cols, is.Cols2)
+		return comp.Compare(xr, yr, is.Fields, is.Fields2)
 	}
 }
 

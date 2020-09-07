@@ -61,7 +61,7 @@ func (t *UpdateTran) Output(table string, rec rt.Record) {
 	keys := make([]string, len(ts.Indexes))
 	for i := range ts.Indexes {
 		is := ts.Indexes[i].Ixspec
-		keys[i] = comp.Key(rec, is.Cols, is.Cols2)
+		keys[i] = comp.Key(rec, is.Fields, is.Fields2)
 		ti.Indexes[i].Insert(keys[i], off)
 	}
 	t.ck(t.db.ck.Write(t.ct, table, keys))

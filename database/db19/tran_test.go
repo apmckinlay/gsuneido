@@ -80,7 +80,7 @@ func TestTran(t *testing.T) {
 
 func createDb() *Database {
 	db := CreateDatabase("tmp.db")
-	is := ixspec.T{Cols: []int{0}}
+	is := ixspec.T{Fields: []int{0}}
 	ts := &meta.Schema{Schema: schema.Schema{
 		Table:   "mytable",
 		Columns: []string{"one", "two"},

@@ -9,10 +9,10 @@ package ixspec
 import "fmt"
 
 type T struct {
-	Cols  []int
-	Cols2 []int
+	Fields  []int
+	Fields2 []int
 }
 
 func (is *T) String() string {
-	return fmt.Sprint("ixspec ", is.Cols, ",", is.Cols2)
+	return fmt.Sprint("ixspec ", is.Fields, ",", is.Fields2)
 }
