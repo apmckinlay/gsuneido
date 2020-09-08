@@ -50,19 +50,31 @@ func (m *Meta) Mutable() *Meta {
 }
 
 func (m *Meta) GetRoInfo(table string) *Info {
-	if ti, ok := m.rwInfo.Get(table); ok {
-		return ti
+	if pti, ok := m.rwInfo.Get(table); ok {
+		return pti
 	}
-	if ti, ok := m.roInfo.Get(table); ok {
-		return ti
+	var ti Info
+	if pti, ok := m.roInfo.Get(table); ok {
+		ti = *pti // copy
+	} else if pti, ok := m.baseInfo.Get(table); ok {
+		ti = *pti // copy
+	} else {
+		return nil
 	}
-	if ti, ok := m.baseInfo.Get(table); ok {
-		if !m.rwInfo.IsNil() {
-			m.rwInfo.Put(ti) // cache in memory
+	// set up index overlays and ixspecs
+	ti.Indexes = append(ti.Indexes[:0:0], ti.Indexes...) // copy
+	for i := range ti.Indexes {
+		if ti.Indexes[i].GetIxspec() == nil {
+			ix := *ti.Indexes[i] // copy
+			ts := m.GetRoSchema(table)
+			ix.SetIxspec(&ts.Indexes[i].Ixspec)
+			ti.Indexes[i] = &ix
 		}
-		return ti
 	}
-	return nil
+	if !m.rwInfo.IsNil() {
+		m.rwInfo.Put(&ti) // cache in memory
+	}
+	return &ti
 }
 
 func (m *Meta) GetRwInfo(table string, tranNum int) *Info {
@@ -142,9 +154,7 @@ func (m *Meta) Add(ts *Schema, ti *Info) *Meta {
 
 func (m *Meta) ForEachSchema(fn func(*Schema)) {
 	assert.That(m.rwSchema.IsNil())
-	m.roSchema.ForEach(func(sc *Schema) {
-		fn(sc)
-	})
+	m.roSchema.ForEach(fn)
 	m.baseSchema.ForEach(func(sc *Schema) {
 		// skip the ones already processed from roSchema
 		if _, ok := m.roSchema.Get(sc.Table); !ok {

@@ -345,6 +345,9 @@ func (fb *fbtree) check1(depth int, offset uint64, key *string) (count, size, nn
 		} else {
 			// leaf
 			itkey := fb.getLeafKey(offset)
+			if !strings.HasPrefix(itkey, it.known) {
+				panic("index key does not match data")
+			}
 			if *key > itkey {
 				panic("keys out of order " + *key + " " + itkey)
 			}

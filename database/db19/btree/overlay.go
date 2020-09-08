@@ -65,6 +65,11 @@ func (ov *Overlay) Delete(key string, off uint64) {
 	}
 }
 
+func (ov *Overlay) Check() int {
+	n, _, _ := ov.base().check()
+	return n
+}
+
 func (ov *Overlay) base() *fbtree {
 	return ov.under[0].(*fbtree)
 }
@@ -149,6 +154,7 @@ func (ov *Overlay) Write(w *stor.Writer) {
 	w.Put5(fb.root).Put1(fb.treeLevels).Put5(fb.redirsOff)
 }
 
+// ReadOverlay reads an Overlay from storage BUT without ixspec
 func ReadOverlay(st *stor.Stor, r *stor.Reader) *Overlay {
 	root := r.Get5()
 	treeLevels := r.Get1()

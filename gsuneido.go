@@ -81,6 +81,14 @@ func main() {
 				"in", time.Since(t).Round(time.Millisecond))
 		}
 		os.Exit(0)
+	case "check":
+		t := time.Now()
+		if err := db19.CheckDatabase("suneido.db"); err != "" {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+		fmt.Println("checked database in", time.Since(t).Round(time.Millisecond))
+		os.Exit(0)
 	case "version":
 		fmt.Println("gSuneido " + builtDate + " (" + runtime.Version() + " " +
 			runtime.GOARCH + " " + runtime.GOOS + ")")

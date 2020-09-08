@@ -51,12 +51,12 @@ func (sc *Schema) String() string {
 	sb.WriteString(")")
 	for i := range sc.Indexes {
 		sb.WriteString(" ")
-		sb.WriteString(sc.Indexes[i].string(sc.Columns))
+		sb.WriteString(sc.Indexes[i].String(sc.Columns))
 	}
 	return sb.String()
 }
 
-func (ix *Index) string(cols []string) string {
+func (ix *Index) String(cols []string) string {
 	var cb str.CommaBuilder
 	for _, c := range ix.Fields {
 		if c < 0 {

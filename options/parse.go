@@ -22,6 +22,8 @@ loop:
 			setAction("client")
 			Arg = "127.0.0.1"
 			args = optionalArg(args)
+		case "-check":
+			setAction("check")
 		case "-d", "-dump":
 			setAction("dump")
 			args = optionalArg(args)
