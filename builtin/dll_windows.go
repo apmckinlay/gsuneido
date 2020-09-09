@@ -85,6 +85,10 @@ func intRet(rtn uintptr) Value {
 	return IntVal(int(rtn))
 }
 
+func int32Ret(rtn uintptr) Value {
+	return IntVal(int(int32(rtn)))
+}
+
 func getBool(ob Value, mem string) BOOL {
 	x := ob.Get(nil, SuStr(mem))
 	if x == nil || !ToBool(x) {
