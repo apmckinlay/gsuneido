@@ -255,9 +255,10 @@ func traced(depth int, args ...interface{}) {
 func (fb *fbtree) saveRedirs(nr int) {
 	np := 0
 	fb.redirs.paths.ForEach(func(p uint64) { np++ })
-	size := 5 + 2 + nr*10 + 2 + np*5
+	size := 2 + 5 + 2 + nr*10 + 2 + np*5 + cksum.Len
 	off, buf := fb.store.Alloc(size)
 	w := stor.NewWriter(buf)
+	w.Put2(size)
 	w.Put5(fb.redirs.nextOff)
 	w.Put2(nr)
 	fb.redirs.tbl.ForEach(func(r *redir) {
@@ -268,6 +269,7 @@ func (fb *fbtree) saveRedirs(nr int) {
 	fb.redirs.paths.ForEach(func(p uint64) {
 		w.Put5(p)
 	})
+	cksum.Update(buf)
 	fb.redirsOff = off
 }
 
@@ -278,6 +280,8 @@ func loadRedirs(store *stor.Stor, redirsOff uint64) redirs {
 	}
 	buf := store.Data(redirsOff)
 	rdr := stor.NewReader(buf)
+	size := rdr.Get2()
+	cksum.MustCheck(buf[:size])
 	re.nextOff = rdr.Get5()
 	re.tbl = re.tbl.Mutable()
 	for n := rdr.Get2(); n > 0; n-- {
