@@ -93,6 +93,8 @@ func (db *Database) LoadedTable(ts *meta.Schema, ti *meta.Info) error {
 	return err
 }
 
+// Close closes the database store, writing the current size to the start.
+// NOTE: The state must already be written.
 func (db *Database) Close() {
 	if db.mode != stor.READ {
 		// need to use Write because all but last chunk are read-only
