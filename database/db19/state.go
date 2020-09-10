@@ -11,6 +11,7 @@ import (
 	"github.com/apmckinlay/gsuneido/database/db19/meta"
 	"github.com/apmckinlay/gsuneido/database/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
+	"github.com/apmckinlay/gsuneido/util/cksum"
 )
 
 type DbState struct {
@@ -88,7 +89,9 @@ func (db *Database) Persist() uint64 {
 
 const magic1 = "\x01\x23\x45\x67\x89\xab\xcd\xef"
 const magic2 = "\xfe\xdc\xba\x98\x76\x54\x32\x10"
-const stateLen = len(magic1) + meta.Noffsets*stor.SmallOffsetLen + len(magic2)
+const stateLen = len(magic1) + meta.Noffsets*stor.SmallOffsetLen + len(magic2) +
+	cksum.Len
+const magic2at = stateLen - cksum.Len - len(magic2)
 
 func (state *DbState) Write() uint64 {
 	// NOTE: indexes should already have been saved
@@ -101,16 +104,18 @@ func (state *DbState) Write() uint64 {
 		i += stor.SmallOffsetLen
 	}
 	copy(buf[i:], magic2)
-	i += len(magic2)
+	i += len(magic2) + cksum.Len
 	assert.That(i == stateLen)
+	cksum.Update(buf)
 	return stateOff
 }
 
 func ReadState(st *stor.Stor, off uint64) *DbState {
 	buf := st.Data(off)[:stateLen]
+	cksum.MustCheck(buf)
 	i := len(magic1)
 	assert.That(string(buf[:i]) == magic1)
-	assert.That(string(buf[stateLen-len(magic2):]) == magic2)
+	assert.That(string(buf[magic2at:magic2at+len(magic2)]) == magic2)
 	var offsets [meta.Noffsets]uint64
 	for j := range offsets {
 		offsets[j] = stor.ReadSmallOffset(buf[i:])
