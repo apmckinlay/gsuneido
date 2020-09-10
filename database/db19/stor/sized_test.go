@@ -12,9 +12,11 @@ import (
 func TestSized(t *testing.T) {
 	st := HeapStor(1024)
 
-	off, buf := st.AllocSized(10)
-	copy(buf, "helloworld")
-
-	buf = st.DataSized(off)
+	off := st.SaveSized([]byte("helloworld"))
+	buf := st.DataSized(off)
 	assert.T(t).This(string(buf)).Is("helloworld")
+
+	off = st.SaveSized([]byte{})
+	buf = st.DataSized(off)
+	assert.T(t).This(buf).Is([]byte{})
 }

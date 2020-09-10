@@ -10,7 +10,9 @@ import (
 
 	"github.com/apmckinlay/gsuneido/database/db19/ixspec"
 	"github.com/apmckinlay/gsuneido/database/db19/stor"
+	"github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
+	"github.com/apmckinlay/gsuneido/util/cksum"
 )
 
 // fbtree is an immutable btree designed to be stored in a file.
@@ -294,10 +296,19 @@ func loadRedirs(store *stor.Stor, redirsOff uint64) redirs {
 	return re
 }
 
+// func init() {
+// 	rand.Seed(time.Now().UnixNano())
+// }
+
 // putNode stores the node
 func (node fNode) putNode(store *stor.Stor) uint64 {
-	off, buf := store.AllocSized(len(node))
-	copy(buf, node)
+	off := store.SaveSized(node)
+	// if len(node) > 0 && rand.Intn(500) == 42 {
+	// 	// corrupt some nodes to test checking
+	// 	fmt.Println("ZAP")
+	// 	buf := store.Data(off)
+	// 	buf[3 + rand.Intn(len(node))] = byte(rand.Intn(256))
+	// }
 	return off
 }
 
@@ -312,6 +323,20 @@ func (fb *fbtree) getNode(off uint64) fNode {
 	return fb.readNode(off)
 }
 
+func (fb *fbtree) getCkNode(off uint64) fNode {
+	if r, ok := fb.redirs.tbl.Get(off); ok {
+		assert.That((r.mnode == nil) != (r.newOffset == 0))
+		if r.mnode != nil {
+			return r.mnode
+		}
+		off = r.newOffset
+	}
+	buf := fb.store.Data(off)
+	rn := runtime.RecLen(buf)
+	cksum.MustCheck(buf[:rn+cksum.Len])
+	return fb.readNode(off)
+}
+
 func (fb *fbtree) readNode(off uint64) fNode {
 	assert.That(!fb.redirs.isFake(off))
 	buf := fb.store.DataSized(off)
@@ -321,13 +346,13 @@ func (fb *fbtree) readNode(off uint64) fNode {
 //-------------------------------------------------------------------
 
 // check verifies that the keys are in order and returns the number of keys
-func (fb *fbtree) check() (count, size, nnodes int) {
+func (fb *fbtree) check(fn func(uint64) bool) (count, size, nnodes int) {
 	key := ""
-	return fb.check1(0, fb.root, &key)
+	return fb.check1(0, fb.root, &key, fn)
 }
 
-func (fb *fbtree) check1(depth int, offset uint64, key *string) (count, size, nnodes int) {
-	node := fb.getNode(offset)
+func (fb *fbtree) check1(depth int, offset uint64, key *string, fn func(uint64) bool) (count, size, nnodes int) {
+	node := fb.getCkNode(offset)
 	size += len(node)
 	nnodes++
 	for it := node.iter(); it.next(); {
@@ -335,23 +360,26 @@ func (fb *fbtree) check1(depth int, offset uint64, key *string) (count, size, nn
 		if depth < fb.treeLevels {
 			// tree
 			if it.fi > 0 && *key > it.known {
-				panic("keys out of order " + *key + " " + it.known)
+				panic("keys out of order")
 			}
 			*key = it.known
-			c, s, n := fb.check1(depth+1, offset, key) // recurse
+			c, s, n := fb.check1(depth+1, offset, key, fn) // recurse
 			count += c
 			size += s
 			nnodes += n
 		} else {
 			// leaf
+			count++
+			if fn != nil && !fn(offset) {
+				continue
+			}
 			itkey := fb.getLeafKey(offset)
 			if !strings.HasPrefix(itkey, it.known) {
 				panic("index key does not match data")
 			}
 			if *key > itkey {
-				panic("keys out of order " + *key + " " + itkey)
+				panic("keys out of order")
 			}
-			count++
 			*key = itkey
 		}
 	}

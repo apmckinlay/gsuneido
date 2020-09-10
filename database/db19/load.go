@@ -16,6 +16,7 @@ import (
 	"github.com/apmckinlay/gsuneido/database/db19/meta"
 	"github.com/apmckinlay/gsuneido/database/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
+	"github.com/apmckinlay/gsuneido/util/cksum"
 	"github.com/apmckinlay/gsuneido/util/sortlist"
 )
 
@@ -92,26 +93,7 @@ func loadTable(db *Database, r *bufio.Reader, schema string) int {
 	trace("nrecs", nrecs, "data size", dataSize)
 	list.Finish()
 	ts := &meta.Schema{Schema: *sc}
-	ts.Ixspecs()
-	ov := make([]*btree.Overlay, len(ts.Indexes))
-	for i := range ts.Indexes {
-		ix := ts.Indexes[i]
-		trace(ix)
-		if i > 0 || ix.Mode != 'k' { // non-key order may be different
-			list.Sort(mkcmp(store, &ix.Ixspec))
-		}
-		before := store.Size()
-		bldr := btree.NewFbtreeBuilder(store)
-		iter := list.Iter()
-		n := 0
-		for off := iter(); off != 0; off = iter() {
-			bldr.Add(getLeafKey(store, &ix.Ixspec, off), off)
-			n++
-		}
-		ov[i] = bldr.Finish()
-		assert.This(n).Is(nrecs)
-		trace("size", store.Size()-before)
-	}
+	ov := buildIndexes(ts, list, store, nrecs)
 	trace("indexes size", store.Size()-beforeIndexes)
 	ti := &meta.Info{Table: sc.Table, Nrows: nrecs, Size: dataSize, Indexes: ov}
 	if err := db.LoadedTable(ts, ti); err != nil {
@@ -145,13 +127,38 @@ func readRecords(in *bufio.Reader, store *stor.Stor, list *sortlist.Builder) int
 		if size == 0 {
 			break
 		}
-		off, buf := store.Alloc(size)
-		_, err = io.ReadFull(in, buf)
+		off, buf := store.Alloc(size + cksum.Len)
+		_, err = io.ReadFull(in, buf[:size])
 		ck(err)
+		cksum.Update(buf)
 		list.Add(off)
 		nrecs++
 	}
 	return nrecs
+}
+
+func buildIndexes(ts *meta.Schema, list *sortlist.Builder, store *stor.Stor, nrecs int) []*btree.Overlay {
+	ts.Ixspecs()
+	ov := make([]*btree.Overlay, len(ts.Indexes))
+	for i := range ts.Indexes {
+		ix := ts.Indexes[i]
+		trace(ix)
+		if i > 0 || ix.Mode != 'k' {
+			list.Sort(mkcmp(store, &ix.Ixspec))
+		}
+		before := store.Size()
+		bldr := btree.NewFbtreeBuilder(store)
+		iter := list.Iter()
+		n := 0
+		for off := iter(); off != 0; off = iter() {
+			bldr.Add(getLeafKey(store, &ix.Ixspec, off), off)
+			n++
+		}
+		ov[i] = bldr.Finish()
+		assert.This(n).Is(nrecs)
+		trace("size", store.Size()-before)
+	}
+	return ov
 }
 
 func ck(err error) {

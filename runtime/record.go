@@ -66,6 +66,26 @@ func (r Record) Len() int {
 	}
 }
 
+func RecLen(r []byte) int {
+	if r[0] == 0 {
+		return 1
+	}
+	switch r[0] >> 6 {
+	case type8:
+		j := hdrlen
+		return int(r[j])
+	case type16:
+		j := hdrlen
+		return (int(r[j]) << 8) | int(r[j+1])
+	case type32:
+		j := hdrlen
+		return (int(r[j]) << 24) | (int(r[j+1]) << 16) |
+			(int(r[j+2]) << 8) | int(r[j+3])
+	default:
+		panic("invalid record type")
+	}
+}
+
 // GetVal is a convenience method to get and unpack
 func (r Record) GetVal(i int) Value {
 	return Unpack(r.GetRaw(i))
@@ -240,7 +260,7 @@ func (b *RecordBuilder) buildOffsets(dst *pack.Encoder, length int, sizes []int)
 	}
 }
 
-func mode(length int) int {
+func mode(length int) int { // length must include header
 	if length == 0 {
 		return 0
 	} else if length < 0x100 {

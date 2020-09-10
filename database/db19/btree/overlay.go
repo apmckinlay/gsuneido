@@ -65,8 +65,8 @@ func (ov *Overlay) Delete(key string, off uint64) {
 	}
 }
 
-func (ov *Overlay) Check() int {
-	n, _, _ := ov.base().check()
+func (ov *Overlay) Check(fn func(uint64) bool) int {
+	n, _, _ := ov.base().check(fn)
 	return n
 }
 

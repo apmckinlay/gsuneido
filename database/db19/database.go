@@ -12,6 +12,7 @@ import (
 	"github.com/apmckinlay/gsuneido/database/db19/meta"
 	"github.com/apmckinlay/gsuneido/database/db19/stor"
 	rt "github.com/apmckinlay/gsuneido/runtime"
+	"github.com/apmckinlay/gsuneido/util/cksum"
 	"github.com/apmckinlay/gsuneido/util/hacks"
 )
 
@@ -123,6 +124,14 @@ func mkcmp(store *stor.Stor, is *ixspec.T) func(x, y uint64) int {
 
 func offToRec(store *stor.Stor, off uint64) rt.Record {
 	buf := store.Data(off)
-	rec := rt.Record(hacks.BStoS(buf))
-	return rt.Record(string(rec)[:rec.Len()])
+	size := rt.RecLen(buf)
+	return rt.Record(hacks.BStoS(buf[:size]))
+}
+
+// offToRecCk verifies the checksum following the record
+func offToRecCk(store *stor.Stor, off uint64) rt.Record {
+	buf := store.Data(off)
+	size := rt.RecLen(buf)
+	cksum.Check(buf[:size+cksum.Len])
+	return rt.Record(hacks.BStoS(buf[:size]))
 }

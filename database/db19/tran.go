@@ -7,6 +7,7 @@ import (
 	"github.com/apmckinlay/gsuneido/database/db19/comp"
 	"github.com/apmckinlay/gsuneido/database/db19/meta"
 	rt "github.com/apmckinlay/gsuneido/runtime"
+	"github.com/apmckinlay/gsuneido/util/cksum"
 )
 
 type tran struct {
@@ -56,8 +57,10 @@ func (t *UpdateTran) num() int {
 func (t *UpdateTran) Output(table string, rec rt.Record) {
 	ts := t.getSchema(table)
 	ti := t.getInfo(table)
-	off, buf := t.db.store.Alloc(rec.Len())
-	copy(buf, []byte(rec[:rec.Len()]))
+	n := rec.Len()
+	off, buf := t.db.store.Alloc(n + cksum.Len)
+	copy(buf, rec[:n])
+	cksum.Update(buf)
 	keys := make([]string, len(ts.Indexes))
 	for i := range ts.Indexes {
 		is := ts.Indexes[i].Ixspec

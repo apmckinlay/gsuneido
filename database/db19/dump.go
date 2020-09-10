@@ -18,6 +18,7 @@ import (
 func DumpDatabase(dbfile, to string) int {
 	defer func() {
 		if e := recover(); e != nil {
+			os.Remove(to)
 			panic("dump failed: " + fmt.Sprint(e))
 		}
 	}()
@@ -39,6 +40,7 @@ func DumpDatabase(dbfile, to string) int {
 func DumpTable(dbfile, table, to string) int {
 	defer func() {
 		if e := recover(); e != nil {
+			os.Remove(to)
 			panic("dump failed: " + table + " " + fmt.Sprint(e))
 		}
 	}()
@@ -87,7 +89,7 @@ func dumpTable(db *Database, schema *meta.Schema, multi bool, w *bufio.Writer) i
 			break
 		}
 		n++
-		rec := offToRec(db.store, off)
+		rec := offToRecCk(db.store, off) // verify data checksums
 		writeInt(rec.Len())
 		w.WriteString(string(rec))
 	}

@@ -55,7 +55,7 @@ func TestUnevenSplit(t *testing.T) {
 		for i := 0; i < n; i++ {
 			mfb.Insert(data[i], uint64(i))
 		}
-		count, size, nnodes := mfb.check()
+		count, size, nnodes := mfb.check(nil)
 		assert.T(t).This(count).Is(n)
 		full := float32(size) / float32(nnodes) / float32(MaxNodeSize)
 		// print("count", count, "nnodes", nnodes, "size", size, "full", full)
@@ -77,7 +77,7 @@ func TestUnevenSplit(t *testing.T) {
 
 func (fb *fbtree) checkData(t *testing.T, data []string) {
 	t.Helper()
-	count, _, _ := fb.check()
+	count, _, _ := fb.check(nil)
 	n := 0
 	for i, k := range data {
 		if data[i] == "" {
@@ -307,7 +307,7 @@ func TestFlatten(t *testing.T) {
 	}
 	check := func() {
 		t.Helper()
-		fb.check()
+		fb.check(nil)
 		iter := fb.Iter()
 		for i := from; i < to; i++ {
 			if i%2 == 1 && !inserted[i] {

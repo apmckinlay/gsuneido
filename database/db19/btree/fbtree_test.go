@@ -59,7 +59,7 @@ func TestFbtreeBuilder(t *testing.T) {
 		bldr.Add(key, uint64(i))
 	}
 	fb := bldr.Finish().base()
-	fb.check()
+	fb.check(nil)
 	iter := fb.Iter()
 	for i := 100000; i <= limit; i++ {
 		key := strconv.Itoa(i)

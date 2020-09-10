@@ -14,7 +14,7 @@ func TestCheckDatabase(*testing.T) {
 		return
 	}
 	t := time.Now()
-	if err := CheckDatabase("suneido.db"); err != "" {
+	if err := CheckDatabase("../../suneido.db"); err != "" {
 		fmt.Println(err)
 	} else {
 		fmt.Println("checked database in", time.Since(t).Round(time.Millisecond))

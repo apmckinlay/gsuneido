@@ -295,12 +295,12 @@ func (it *fnIter) next() bool {
 		// first
 	} else if it.npre <= len(it.known) {
 		if len(it.diff) < 1 {
-			print("bad diff len, npre", it.npre, "diff", it.diff, "known", it.known)
+			// print("bad diff len, npre", it.npre, "diff", it.diff, "known", it.known)
 			panic("bad diff len")
 		}
 	} else {
 		if len(it.diff) != it.npre-len(it.known)+1 {
-			print("bad diff len, npre", it.npre, "diff", it.diff, "known", it.known)
+			// print("bad diff len, npre", it.npre, "diff", it.diff, "known", it.known)
 			panic("bad diff len")
 		}
 	}
