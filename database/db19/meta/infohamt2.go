@@ -12,6 +12,7 @@ import (
 
 	"github.com/apmckinlay/gsuneido/database/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
+	"github.com/apmckinlay/gsuneido/util/cksum"
 )
 
 // list returns a list of the keys in the table
@@ -28,7 +29,7 @@ const perFingerInfo = 16
 
 func (ht InfoHamt) Write(st *stor.Stor) uint64 {
 	nitems := 0
-	size := 2
+	size := 3 + 2
 	ht.ForEach(func(it *Info) {
 		size += it.storSize()
 		nitems++
@@ -40,8 +41,9 @@ func (ht InfoHamt) Write(st *stor.Stor) uint64 {
 	}
 	nfingers := 1 + nitems/perFingerInfo
 	size += 3 * nfingers
-	off, buf := st.Alloc(size)
+	off, buf := st.Alloc(size + cksum.Len)
 	w := stor.NewWriter(buf)
+	w.Put3(size + cksum.Len)
 	w.Put2(nitems)
 
 	keys := ht.list()
@@ -63,6 +65,7 @@ func (ht InfoHamt) Write(st *stor.Stor) uint64 {
 	for _, f := range fingers {
 		w2.Put3(f) // update with actual values
 	}
+	cksum.Update(buf)
 	return off
 }
 
@@ -70,7 +73,10 @@ func ReadInfoHamt(st *stor.Stor, off uint64) InfoHamt {
 	if off == 0 {
 		return InfoHamt{}
 	}
-	r := st.Reader(off)
+	buf := st.Data(off)
+	r := stor.NewReader(buf)
+	size := r.Get3()
+	cksum.MustCheck(buf[:size])
 	nitems := r.Get2()
 	t := InfoHamt{}.Mutable()
 	if nitems == 0 {
@@ -104,6 +110,8 @@ func NewInfoPacked(st *stor.Stor, off uint64) *InfoPacked {
 	assert.That(off != 0)
 	buf := st.Data(off)
 	r := stor.NewReader(buf)
+	size := r.Get3()
+	cksum.MustCheck(buf[:size])
 	nitems := r.Get2()
 	nfingers := 1 + nitems/perFingerInfo
 	fingers := make([]InfoFinger, nfingers)

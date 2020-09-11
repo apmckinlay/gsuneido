@@ -165,6 +165,7 @@ func (m *Meta) ForEachSchema(fn func(*Schema)) {
 
 func (p SchemaPacked) ForEach(fn func(*Schema)) {
 	r := stor.NewReader(p.buf)
+	r.Get3() // size
 	nitems := r.Get2()
 	if nitems == 0 {
 		return
