@@ -202,9 +202,15 @@ func (fb *fbtree) delete(nodeOff uint64, off uint64) (fNode, bool) {
 // It is used for updated versions of existing nodes, using their old offset,
 // and for new nodes with fake offsets.
 type redirs struct {
-	tbl        RedirHamt
-	paths      PathHamt
-	nextOff    uint64
+	tbl RedirHamt
+	// paths is a set of node offsets
+	// that are on the path to new nodes or nodes containing redirects.
+	// It is used to avoid traversing the entire key to flatten redirects.
+	paths PathHamt
+	// nextOff is the next "fake" offset to assign
+	nextOff uint64
+	// generations is use to control mutability
+	// the current generation is mutable, previous generations are immutable.
 	generation uint
 }
 
@@ -218,27 +224,31 @@ type redir struct {
 	mnode fNode
 	// newOffset is the new storage location for a node.
 	newOffset uint64
-	// generation is used to determine mutability,
+	// generation is used to control mutability,
 	// the current generation is mutable, previous generations are immutable.
 	generation uint
 }
 
+// RedirKey is used by RedirHamt
 func RedirKey(r *redir) uint64 {
 	return r.offset
 }
 
 const phi64 = 11400714819323198485
 
+// RedirHash is used by RedirHamt
 func RedirHash(key uint64) uint32 {
 	return uint32(key * phi64)
 }
 
 type path = uint64
 
+// PathKey is used by PathHamt
 func PathKey(n uint64) uint64 {
 	return n
 }
 
+// PathHash is used by PathHamt
 func PathHash(key uint64) uint32 {
 	return uint32(key * phi64)
 }

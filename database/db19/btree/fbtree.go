@@ -92,9 +92,8 @@ func (fb *fbtree) save() {
 	}
 }
 
-// keep saves the in-memory nodes but keeps the redirects
+// keep saves the in-memory nodes (like flatten) but keeps the redirects.
 func (fb *fbtree) keep(nr int) {
-	// save the in-memory nodes
 	fb.root = fb.keep2(0, fb.root)
 	fb.saveRedirs(nr)
 }
@@ -161,8 +160,8 @@ func (fb *fbtree) pathNode(off uint64) bool {
 
 //-------------------------------------------------------------------
 
-// flatten saves in-memory nodes
-// and applies the redirects and then clears them
+// flatten saves in-memory nodes (like keep)
+// and in addition it applies the redirects and then clears them
 func (fb *fbtree) flatten() {
 	fb.root = fb.flatten2(0, fb.root)
 	fb.redirs = newRedirs()
