@@ -348,6 +348,15 @@ func (fb *fbtree) readNode(off uint64) fNode {
 
 //-------------------------------------------------------------------
 
+func (fb *fbtree) quickCheck(fn func(uint64)) {
+	fb.redirs.tbl.ForEach(func (r *redir) {
+		if r.mnode == nil {
+			fn(r.newOffset)
+		}
+	})
+	//TODO check paths
+}
+
 // check verifies that the keys are in order and returns the number of keys
 func (fb *fbtree) check(fn func(uint64) bool) (count, size, nnodes int) {
 	key := ""

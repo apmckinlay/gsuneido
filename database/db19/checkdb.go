@@ -15,37 +15,68 @@ import (
 	"github.com/apmckinlay/gsuneido/util/cksum"
 )
 
-const errLimit = 20
-
-// CheckDatabase checks the integrity of the database.
-// It returns "" if no errors are found, otherwise an error message.
-func CheckDatabase(dbfile string) string {
-	db := OpenDatabaseRead(dbfile)
-	defer db.Close()
-	state := db.GetState()
-	dc := dbcheck{store: db.store, state: state}
-	dc.checkTables()
-	return strings.Join(dc.errs, "\n")
-}
-
 type dbcheck struct {
 	store *stor.Stor
 	state *DbState
 	errs  []string
 }
 
-func (dc *dbcheck) checkTables() {
+func (dc *dbcheck) addError(s string) {
+	dc.errs = append(dc.errs, s)
+	if len(dc.errs) > errLimit {
+		panic("too many errors")
+	}
+}
+
+// quick check ------------------------------------------------------
+
+// QuickCheck is the default partial checking done at start up.
+func (db *Database) QuickCheck() string {
+	dc := dbcheck{store: db.store, state: db.GetState()}
+	dc.forEachTable(dc.quickCheckTable)
+	return strings.Join(dc.errs, "\n")
+}
+
+func (dc *dbcheck) quickCheckTable(sc *meta.Schema) {
+	info := dc.state.meta.GetRoInfo(sc.Table)
+	for _, ix := range info.Indexes {
+		ix.QuickCheck(func(off uint64) {
+			buf := dc.store.Data(off)
+			size := rt.RecLen(buf)
+			if !cksum.Check(buf[:size+cksum.Len]) {
+			}
+		})
+		if len(dc.errs) > 0 {
+			break
+		}
+	}
+}
+
+// full check -------------------------------------------------------
+
+const errLimit = 20
+
+// CheckDatabase checks the integrity of the database.
+// It returns "" if no errors are found, otherwise an error message.
+func CheckDatabase(dbfile string) string {
+	db := openDatabase(dbfile, stor.READ, noCheck)
+	defer db.Close()
+	return db.Check()
+}
+
+func (db *Database) Check() string {
+	dc := dbcheck{store: db.store, state: db.GetState()}
+	dc.forEachTable(dc.checkTable)
+	return strings.Join(dc.errs, "\n")
+}
+
+func (dc *dbcheck) forEachTable(fn func(sc *meta.Schema)) {
 	defer func() {
 		if e := recover(); e != nil {
 			dc.errs = append(dc.errs, fmt.Sprint(e))
 		}
 	}()
-	dc.state.meta.ForEachSchema(func(sc *meta.Schema) {
-		dc.checkTable(sc)
-		if len(dc.errs) > errLimit {
-			panic("too many errors")
-		}
-	})
+	dc.state.meta.ForEachSchema(fn)
 }
 
 func (dc *dbcheck) checkTable(sc *meta.Schema) {

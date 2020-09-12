@@ -70,6 +70,10 @@ func (ov *Overlay) Check(fn func(uint64) bool) int {
 	return n
 }
 
+func (ov *Overlay) QuickCheck(fn func(uint64)) {
+	ov.base().quickCheck(fn)
+}
+
 func (ov *Overlay) base() *fbtree {
 	return ov.under[0].(*fbtree)
 }

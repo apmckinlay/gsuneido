@@ -47,14 +47,21 @@ func CreateDatabase(filename string) *Database {
 }
 
 func OpenDatabase(filename string) *Database {
-	return openDatabase(filename, stor.UPDATE)
+	return openDatabase(filename, stor.UPDATE, quickCheck)
 }
 
 func OpenDatabaseRead(filename string) *Database {
-	return openDatabase(filename, stor.READ)
+	return openDatabase(filename, stor.READ, quickCheck)
 }
 
-func openDatabase(filename string, mode stor.Mode) *Database {
+type checkType int
+const (
+	noCheck checkType = iota
+	quickCheck
+	fullCheck
+)
+
+func openDatabase(filename string, mode stor.Mode, ck checkType) *Database {
 	var db Database
 
 	store, err := stor.MmapStor(filename, mode)
@@ -62,21 +69,30 @@ func openDatabase(filename string, mode stor.Mode) *Database {
 		panic("can't open database " + filename)
 	}
 
-	//TODO recovery
 	buf := store.Data(0)
 	if magic != string(buf[:len(magic)]) {
 		panic("not a valid database " + filename)
 	}
 	size := stor.ReadSmallOffset(buf[len(magic):])
 	if size != store.Size() {
+		//TODO recovery
 		panic("database size mismatch - not shut down properly?")
 	}
 
 	db.store = store
 	db.mode = mode
 	db.state.set(ReadState(db.store, size-uint64(stateLen)))
-	//TODO integrity check
-
+	ckerr := ""
+	switch ck {
+	case fullCheck:
+		ckerr = db.Check()
+	case quickCheck:
+		ckerr = db.QuickCheck()
+	}
+	if ckerr != "" {
+		//TODO recovery
+		panic("database check failed - corrupt?\n" + ckerr)
+	}
 	return &db
 }
 
