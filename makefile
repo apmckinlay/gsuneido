@@ -28,6 +28,9 @@ repl: build
 client: build
 	./gsuneido.exe -c -- t@../tok
 
+zap:
+	go build -ldflags "-s -w" ./cmd/zap
+
 generate:
 	go generate -x ./...
 
@@ -40,6 +43,6 @@ clean:
 gsuneido_windows.syso : res/suneido.rc res/suneido.manifest
 	windres -F pe-x86-64 -o gsuneido_windows.syso res/suneido.rc
 
-.PHONY : build all console portable test repl client generate clean
+.PHONY : build all console portable test repl client generate clean zap
 
 # -trimpath (but breaks vscode goto)
