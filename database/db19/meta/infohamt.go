@@ -7,7 +7,11 @@
 
 package meta
 
-import "math/bits"
+import (
+	"math/bits"
+
+	"github.com/apmckinlay/gsuneido/util/assert"
+)
 
 type InfoHamt struct {
 	root       *nodeInfo
@@ -204,10 +208,24 @@ func (nd *nodeInfo) without(gen uint32, key string, hash uint32, shift int) (*no
 	iv := bits.OnesCount32(nd.bmVal & (bit - 1))
 	if (nd.bmVal & bit) != 0 {
 		if InfoKey(nd.vals[iv]) == key {
-			nd.bmVal &^= bit
-			nd.vals = append(nd.vals[:iv], nd.vals[iv+1:]...) // preserve order
-			if nd.bmVal == 0 && nd.bmPtr == 0 {               // node emptied
-				nd = nil
+			// found it
+			if (nd.bmPtr & bit) == 0 { // no child
+				nd.bmVal &^= bit
+				nd.vals = append(nd.vals[:iv], nd.vals[iv+1:]...) // preserve order
+				if nd.bmVal == 0 && nd.bmPtr == 0 {               // node emptied
+					nd = nil
+				}
+			} else {
+				// pull up child value
+				ip := bits.OnesCount32(nd.bmPtr & (bit - 1))
+				child, item := nd.ptrs[ip].pullUp(gen)
+				nd.vals[iv] = item // replace the item
+				if child != nil {
+					nd.ptrs[ip] = child
+				} else { // child emptied
+					nd.bmPtr &^= bit
+					nd.ptrs = append(nd.ptrs[:ip], nd.ptrs[ip+1:]...) // preserve order
+				}
 			}
 			return nd, true
 		}
@@ -216,17 +234,52 @@ func (nd *nodeInfo) without(gen uint32, key string, hash uint32, shift int) (*no
 		return nd, false
 	}
 	ip := bits.OnesCount32(nd.bmPtr & (bit - 1))
-	child, ok := nd.ptrs[ip].without(gen, key, hash, shift+bitsPerInfoNode) // recurse
+	child, ok := nd.ptrs[ip].without(gen, key, hash, shift+bitsPerInfoNode) // RECURSE
 	if child != nil {
 		nd.ptrs[ip] = child
 	} else { // child emptied
 		nd.bmPtr &^= bit
 		nd.ptrs = append(nd.ptrs[:ip], nd.ptrs[ip+1:]...) // preserve order
-		if nd.bmPtr == 0 && nd.bmVal == 0 {               // this node emptied
-			nd = nil
-		}
 	}
 	return nd, ok
+}
+
+func (nd *nodeInfo) pullUp(gen uint32) (*nodeInfo, *Info) {
+	// recursive
+	if nd.generation != gen {
+		// path copy on the way down the tree
+		nd = nd.dup()
+		nd.generation = gen // now mutable in this generation
+	}
+	if nd.bmPtr != 0 { // have children
+		assert.That(nd.bmVal != 0)
+		ip := len(nd.ptrs) - 1
+		child, item := nd.ptrs[ip].pullUp(gen) // RECURSE
+		if child != nil {
+			nd.ptrs[ip] = child
+		} else {
+			nd.ptrs = nd.ptrs[:ip] // drop empty child node
+			// clear highest one bit
+			nd.bmPtr = nd.clearHighestOneBit(nd.bmPtr)
+		}
+		return nd, item
+	}
+	// no children
+	iv := len(nd.vals) - 1
+	item := nd.vals[iv]
+	if iv == 0 { // last value in node
+		return nil, item
+	}
+	nd.vals = nd.vals[:iv]
+	if nd.bmVal != 0 { // not an overflow node
+		// clear highest one bit
+		nd.bmVal = nd.clearHighestOneBit(nd.bmVal)
+	}
+	return nd, item
+}
+
+func (*nodeInfo) clearHighestOneBit(n uint32) uint32 {
+	return n &^ (1 << (31 - bits.LeadingZeros32(n)))
 }
 
 //-------------------------------------------------------------------

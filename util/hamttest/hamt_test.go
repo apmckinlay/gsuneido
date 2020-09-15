@@ -28,6 +28,7 @@ func TestRandom(t *testing.T) {
 	for i := 0; i < n; i++ {
 		f := int(rand.Int31())
 		ht.Put(&Foo{f, strconv.Itoa(f)})
+		// ht.check()
 		if i%100 == 0 {
 			ht = ht.Freeze().Mutable()
 		}
@@ -36,6 +37,7 @@ func TestRandom(t *testing.T) {
 	for i := 0; i < n; i++ {
 		f := int(rand.Int31())
 		ht.Put(&Foo{f, strconv.Itoa(f)})
+		// ht.check()
 	}
 	nums := map[int]bool{}
 	ht = ht.Freeze()
@@ -54,6 +56,7 @@ func TestRandom(t *testing.T) {
 	for f := range nums {
 		// fmt.Println("======================= del", f)
 		assert.That(ht.Delete(f))
+		// ht.check()
 		// ht.print()
 	}
 	ht.ForEach(func(*Foo) { panic("should be empty") })
@@ -92,25 +95,28 @@ func TestDelete(*testing.T) {
 	data := []int{
 		0, 2, 4, 6, 8, 16, 30, // should all go in root
 		32, 34, 62, // collisions => child nodes
-		0x10000, 0x20000, 0x30000, // same hash => overflow
+		0x10000, 0x20000, 0x30000, 0x40000, // same hash => child nodes
+		0x50000, 0x60000, 0x70000, 0x80000, 0x90000, // => overflow
 	}
-	ht := FooHamt{}.Mutable()
-	for _, d := range data {
-		// fmt.Printf("------------------------------ put %#x\n", d)
-		ht.Put(&Foo{key: d})
-		// ht.print()
+	nShuffles := 10000
+	if testing.Short() {
+		nShuffles = 1000
 	}
-	ht = ht.Freeze()
-	const nShuffles = 1000
 	for i := 0; i < nShuffles; i++ {
-		dht := ht.Mutable()
 		rand.Shuffle(len(data), func(i, j int) { data[i], data[j] = data[j], data[i] })
+		ht := FooHamt{}.Mutable()
+		for _, d := range data {
+			// fmt.Printf("------------------------------ put %#x\n", d)
+			ht.Put(&Foo{key: d})
+			// ht.print()
+		}
 		for i, d := range data {
 			// fmt.Printf("------------------------------ del %#x\n", d)
-			assert.That(dht.Delete(d))
+			// fmt.Printf("delete %#x\n", d)
+			assert.That(ht.Delete(d))
 			// dht.print()
 			for j, d := range data {
-				x, ok := dht.Get(data[j])
+				x, ok := ht.Get(data[j])
 				assert.That(ok == (j > i))
 				if ok {
 					assert.That(x.key == d)
@@ -119,6 +125,20 @@ func TestDelete(*testing.T) {
 		}
 		// fmt.Println("SHUFFLE =============================")
 	}
+}
+
+func TestDeleteInsertBug(*testing.T) {
+	ht := FooHamt{}.Mutable()
+	ht.Put(&Foo{key: 0x10000})
+	ht.Put(&Foo{key: 0x20000}) // same hash, collision goes in child
+	ht.Put(&Foo{key: 0x30000}) // same hash, collision goes in child
+	ht.Put(&Foo{key: 0x40000}) // same hash, collision goes in child
+	// ht.print()
+	ht.Delete(0x10000) // will pull up 0x40000
+	// ht.print()
+	ht.Put(&Foo{key: 0x20000})
+	// ht.print()
+	ht.check()
 }
 
 func (ht FooHamt) print() {
@@ -150,4 +170,14 @@ func (nd *nodeFoo) print1(depth int) {
 			p.print1(depth + 1)
 		}
 	}
+}
+
+func (ht FooHamt) check() {
+	keys := make(map[int]bool)
+	ht.ForEach(func(foo *Foo) {
+		if _, ok := keys[foo.key]; ok {
+			panic("duplicate key")
+		}
+		keys[foo.key] = true
+	})
 }
