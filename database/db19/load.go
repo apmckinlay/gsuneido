@@ -30,7 +30,8 @@ func LoadDatabase(from, to string) int {
 	}()
 	f, r := open(from)
 	defer f.Close()
-	db := CreateDatabase(to) //TODO tmp & .bak
+	db, err := CreateDatabase(to) //TODO tmp & .bak
+	ck(err)
 	defer db.Close()
 	nTables := 0
 	for ; ; nTables++ {
@@ -56,11 +57,13 @@ func LoadTable(table, to string) int {
 		}
 	}()
 	var db *Database
+	var err error
 	if _, err := os.Stat(to); os.IsNotExist(err) {
-		db = CreateDatabase(to)
+		db, err = CreateDatabase(to)
 	} else {
-		db = OpenDatabase(to)
+		db, err = OpenDatabase(to)
 	}
+	ck(err)
 	defer db.Close()
 	f, r := open(table + ".su")
 	defer f.Close()
@@ -96,9 +99,7 @@ func loadTable(db *Database, r *bufio.Reader, schema string) int {
 	ov := buildIndexes(ts, list, store, nrecs)
 	trace("indexes size", store.Size()-beforeIndexes)
 	ti := &meta.Info{Table: sc.Table, Nrows: nrecs, Size: dataSize, Indexes: ov}
-	if err := db.LoadedTable(ts, ti); err != nil {
-		panic(err.Error())
-	}
+	db.LoadedTable(ts, ti)
 	return nrecs
 }
 

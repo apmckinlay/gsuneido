@@ -110,15 +110,19 @@ func (s *Stor) Size() uint64 {
 	return atomic.LoadUint64(&s.size)
 }
 
-// LastOffset searches backwards for a given byte slice
+// LastOffset searches backwards from a given offset for a given byte slice
 // and returns the offset, or 0 if not found
-func (s *Stor) LastOffset(b []byte) uint64 {
+func (s *Stor) LastOffset(off uint64, str string) uint64 {
+	b := []byte(str)
 	chunks := s.chunks.Load().([][]byte)
-	for c := len(chunks) - 1; c >= 0; c-- {
-		buf := chunks[c]
+	c := s.offsetToChunk(off)
+	n := off & (s.chunksize - 1)
+	for ; c >= 0; c-- {
+		buf := chunks[c][:n]
 		if i := bytes.LastIndex(buf, b); i != -1 {
 			return uint64(c)*s.chunksize + uint64(i)
 		}
+		n = s.chunksize
 	}
 	return 0
 }

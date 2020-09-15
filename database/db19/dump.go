@@ -58,7 +58,8 @@ func DumpTable(dbfile, table, to string) int {
 }
 
 func dumpOpen(dbfile, to string) (*Database, *os.File, *bufio.Writer) {
-	db := OpenDatabaseRead(dbfile)
+	db, err := OpenDatabaseRead(dbfile)
+	ck(err)
 	os.Remove(to) //TODO bak
 	f, err := os.Create(to)
 	ck(err)

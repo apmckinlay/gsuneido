@@ -14,6 +14,7 @@ dlv debug -- -c ...
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -55,6 +56,9 @@ func main() {
 		options.Action = "repl"
 	}
 	switch options.Action {
+	case "server":
+		startServer()
+		os.Exit(0)
 	case "dump":
 		t := time.Now()
 		if options.Arg == "" {
@@ -63,7 +67,7 @@ func main() {
 				time.Since(t).Round(time.Millisecond))
 		} else {
 			table := strings.TrimSuffix(options.Arg, ".su")
-			n := db19.DumpTable("suneido.db", table, table + ".su")
+			n := db19.DumpTable("suneido.db", table, table+".su")
 			fmt.Println("dumped", n, "records from", table,
 				"in", time.Since(t).Round(time.Millisecond))
 		}
@@ -83,11 +87,19 @@ func main() {
 		os.Exit(0)
 	case "check":
 		t := time.Now()
-		if err := db19.CheckDatabase("suneido.db"); err != "" {
+		if err := db19.CheckDatabase("suneido.db"); err != nil {
 			fmt.Println(err)
 			os.Exit(1)
 		}
 		fmt.Println("checked database in", time.Since(t).Round(time.Millisecond))
+		os.Exit(0)
+	case "repair":
+		t := time.Now()
+		if err := db19.Repair("suneido.db", nil); err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+		fmt.Println("repaired database in", time.Since(t).Round(time.Millisecond))
 		os.Exit(0)
 	case "version":
 		fmt.Println("gSuneido " + builtDate + " (" + runtime.Version() + " " +
@@ -158,6 +170,16 @@ func clientErrorLog() {
 			break
 		}
 	}
+}
+
+func startServer() {
+	db, err := db19.OpenDatabase("suneido.db")
+	var ec *db19.ErrCorrupt
+	if errors.As(err, &ec) {
+		db19.Repair("suneido.db", ec)
+	}
+	//TODO
+	db.Close()
 }
 
 // REPL -------------------------------------------------------------

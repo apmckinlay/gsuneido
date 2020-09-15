@@ -66,3 +66,26 @@ func TestMmapWrite(t *testing.T) {
 
 	os.Remove("stor_test.tmp")
 }
+
+func TestLastOffset(t *testing.T) {
+	assert := assert.T(t).This
+	ms, _ := MmapStor("stor_test.tmp", CREATE)
+	defer os.Remove("stor_test.tmp")
+	defer ms.Close()
+
+	const N = 10
+	const magic = "helloworld"
+	for i := 0; i < N; i++ {
+		off, buf := ms.Alloc(10)
+		assert(off).Is(i * 100)
+		copy(buf, magic)
+		ms.Alloc(90)
+	}
+
+	off := ms.Size()/2 + 10
+	for i := N / 2; i >= 0; i-- {
+		off = ms.LastOffset(off, magic)
+		assert(off).Is(i * 100)
+	}
+	assert(ms.LastOffset(off, magic)).Is(0)
+}

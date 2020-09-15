@@ -67,7 +67,8 @@ func TestTran(t *testing.T) {
 	db.Persist()
 	db.Close()
 
-	db = OpenDatabaseRead("tmp.db")
+	db, err := OpenDatabaseRead("tmp.db")
+	ck(err)
 
 	rt := db.NewReadTran()
 	ti := rt.meta.GetRoInfo("mytable")
@@ -79,7 +80,8 @@ func TestTran(t *testing.T) {
 }
 
 func createDb() *Database {
-	db := CreateDatabase("tmp.db")
+	db, err := CreateDatabase("tmp.db")
+	ck(err)
 	is := ixspec.T{Fields: []int{0}}
 	ts := &meta.Schema{Schema: schema.Schema{
 		Table:   "mytable",

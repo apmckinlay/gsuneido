@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"testing"
 	"time"
+
+	"github.com/apmckinlay/gsuneido/database/db19/stor"
 )
 
 func TestCheckDatabase(*testing.T) {
@@ -14,9 +16,22 @@ func TestCheckDatabase(*testing.T) {
 		return
 	}
 	t := time.Now()
-	if err := CheckDatabase("../../suneido.db"); err != "" {
-		fmt.Println(err)
+	if err := CheckDatabase("../../suneido.db"); err != nil {
+		fmt.Println(err, err.table)
 	} else {
-		fmt.Println("checked database in", time.Since(t).Round(time.Millisecond))
+		fmt.Println("database checked in", time.Since(t).Round(time.Millisecond))
 	}
+}
+
+func TestQuickCheck(*testing.T) {
+	if testing.Short() {
+		return
+	}
+	t := time.Now()
+	db, e := openDatabase("../../suneido.db", stor.READ, false)
+	if e != nil {
+		panic(e)
+	}
+	db.QuickCheck()
+	fmt.Println("database checked in", time.Since(t).Round(time.Millisecond))
 }

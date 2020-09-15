@@ -112,10 +112,10 @@ func (state *DbState) Write() uint64 {
 
 func ReadState(st *stor.Stor, off uint64) *DbState {
 	buf := st.Data(off)[:stateLen]
-	cksum.MustCheck(buf)
 	i := len(magic1)
 	assert.That(string(buf[:i]) == magic1)
 	assert.That(string(buf[magic2at:magic2at+len(magic2)]) == magic2)
+	cksum.MustCheck(buf)
 	var offsets [meta.Noffsets]uint64
 	for j := range offsets {
 		offsets[j] = stor.ReadSmallOffset(buf[i:])

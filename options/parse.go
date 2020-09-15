@@ -24,6 +24,8 @@ loop:
 			args = optionalArg(args)
 		case "-check":
 			setAction("check")
+		case "-repair":
+			setAction("repair")
 		case "-d", "-dump":
 			setAction("dump")
 			args = optionalArg(args)
@@ -39,6 +41,8 @@ loop:
 			} else {
 				error(arg + " must be followed by port number")
 			}
+		case "-s", "-server":
+			setAction("server")
 		case "-u", "-unattended":
 			Unattended = true
 		case "-v", "-version":

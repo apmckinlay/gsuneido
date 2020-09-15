@@ -4,9 +4,8 @@
 package db19
 
 import (
+	"errors"
 	"fmt"
-	"strconv"
-	"strings"
 
 	"github.com/apmckinlay/gsuneido/database/db19/btree"
 	"github.com/apmckinlay/gsuneido/database/db19/meta"
@@ -15,121 +14,122 @@ import (
 	"github.com/apmckinlay/gsuneido/util/cksum"
 )
 
-type dbcheck struct {
-	store *stor.Stor
-	state *DbState
-	errs  []string
-}
-
-func (dc *dbcheck) addError(s string) {
-	dc.errs = append(dc.errs, s)
-	if len(dc.errs) > errLimit {
-		panic("too many errors")
-	}
-}
+type dbcheck DbState
 
 // quick check ------------------------------------------------------
 
 // QuickCheck is the default partial checking done at start up.
-func (db *Database) QuickCheck() string {
-	dc := dbcheck{store: db.store, state: db.GetState()}
+// Panics on error.
+func (db *Database) QuickCheck() {
+	dc := (*dbcheck)(db.GetState())
 	dc.forEachTable(dc.quickCheckTable)
-	return strings.Join(dc.errs, "\n")
 }
 
-func (dc *dbcheck) quickCheckTable(sc *meta.Schema) {
-	info := dc.state.meta.GetRoInfo(sc.Table)
+func (dc dbcheck) quickCheckTable(sc *meta.Schema) {
+	info := dc.meta.GetRoInfo(sc.Table)
 	for _, ix := range info.Indexes {
 		ix.QuickCheck(func(off uint64) {
 			buf := dc.store.Data(off)
 			size := rt.RecLen(buf)
-			if !cksum.Check(buf[:size+cksum.Len]) {
-			}
+			cksum.MustCheck(buf[:size+cksum.Len])
 		})
-		if len(dc.errs) > 0 {
-			break
-		}
 	}
 }
 
 // full check -------------------------------------------------------
 
-const errLimit = 20
-
 // CheckDatabase checks the integrity of the database.
-// It returns "" if no errors are found, otherwise an error message.
-func CheckDatabase(dbfile string) string {
-	db := openDatabase(dbfile, stor.READ, noCheck)
+func CheckDatabase(dbfile string) (ec *ErrCorrupt) {
+	defer func() {
+		if e := recover(); e != nil {
+			ec = NewErrCorrupt(e)
+		}
+	}()
+	db, err := openDatabase(dbfile, stor.READ, false)
+	if err != nil {
+		return NewErrCorrupt(err)
+	}
 	defer db.Close()
-	return db.Check()
-}
-
-func (db *Database) Check() string {
-	dc := dbcheck{store: db.store, state: db.GetState()}
+	dc := (*dbcheck)(db.GetState())
 	dc.forEachTable(dc.checkTable)
-	return strings.Join(dc.errs, "\n")
+	return nil
 }
 
 func (dc *dbcheck) forEachTable(fn func(sc *meta.Schema)) {
-	defer func() {
-		if e := recover(); e != nil {
-			dc.errs = append(dc.errs, fmt.Sprint(e))
-		}
-	}()
-	dc.state.meta.ForEachSchema(fn)
+	n := 0
+	dc.meta.ForEachSchema(func(sc *meta.Schema) {
+		n++
+		fn(sc)
+	})
+	fmt.Println("processed", n, "tables")
 }
 
 func (dc *dbcheck) checkTable(sc *meta.Schema) {
-	info := dc.state.meta.GetRoInfo(sc.Table)
-	sums := make([]uint64, len(info.Indexes))
-	counts := make([]int, len(info.Indexes))
+	info := dc.meta.GetRoInfo(sc.Table)
+	sumPrev := uint64(0)
 	for i, ix := range info.Indexes {
-		counts[i], sums[i] = dc.checkIndex(sc, i, ix)
-	}
-	for i := 0; i < len(sums); i++ {
-		if counts[i] != info.Nrows || sums[i] != sums[0] {
-			err := info.Table + ": index mismatch, count " + strconv.Itoa(info.Nrows) + "\n"
-			for i := 0; i < len(counts); i++ {
-				err += fmt.Sprintln("   ", "count", counts[i], "sum", sums[i],
-					sc.Indexes[i].String(sc.Columns))
-			}
-			dc.errs = append(dc.errs, strings.TrimRight(err, "\n"))
-			break
+		count, sum := dc.checkIndex(sc, i, ix)
+		if count != info.Nrows || (i > 0 && sum != sumPrev) {
+			// fmt.Println("i", i, "nrows", info.Nrows, "count", count, "sumPrev", sumPrev, "sum", sum)
+			panic(&ErrCorrupt{table: sc.Table})
 		}
+		sumPrev = sum
 	}
 }
 
 func (dc *dbcheck) checkIndex(sc *meta.Schema, i int, ix *btree.Overlay) (int, uint64) {
-	defer func() {
-		if e := recover(); e != nil {
-			dc.errs = append(dc.errs,
-				fmt.Sprint(sc.Table, ": ", sc.Indexes[i].String(sc.Columns), " ", e))
-		}
-	}()
 	sum := uint64(0)
-	cksumerrs := 0
-	var fn func(uint64) bool
+	var fn func(uint64)
 	if i == 0 {
-		fn = func(off uint64) bool {
+		fn = func(off uint64) {
 			sum += off // addition so order doesn't matter
 			buf := dc.store.Data(off)
 			size := rt.RecLen(buf)
 			if !cksum.Check(buf[:size+cksum.Len]) {
-				cksumerrs++
-				return false
+				// fmt.Println("data checksum")
+				panic(&ErrCorrupt{table: sc.Table})
 			}
-			return true
 		}
 	} else {
-		fn = func(off uint64) bool {
+		fn = func(off uint64) {
 			sum += off // addition so order doesn't matter
-			return true
 		}
 	}
 	n := ix.Check(fn)
-	if cksumerrs > 0 {
-		dc.errs = append(dc.errs,
-			fmt.Sprint(sc.Table, ": data checksum errors (", cksumerrs, ")"))
-	}
 	return n, sum
+}
+
+//-------------------------------------------------------------------
+
+type ErrCorrupt struct {
+	err   error
+	table string
+}
+
+func (ec *ErrCorrupt) Error() string {
+	if ec.err == nil {
+		return "database corrupt"
+	}
+	return "database corrupt: " + ec.err.Error()
+}
+func (ec *ErrCorrupt) Unwrap() error {
+	return ec.err
+}
+func (ec *ErrCorrupt) Table() string {
+	if ec == nil {
+		return ""
+	}
+	return ec.table
+}
+func NewErrCorrupt(e interface{}) *ErrCorrupt {
+	if e == nil {
+		return nil
+	}
+	if e2, ok := e.(*ErrCorrupt); ok {
+		return e2
+	}
+	if e2, ok := e.(error); ok {
+		return &ErrCorrupt{err: e2}
+	}
+	return &ErrCorrupt{err: errors.New(fmt.Sprint(e))}
 }

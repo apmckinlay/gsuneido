@@ -4,8 +4,6 @@
 package db19
 
 import (
-	"errors"
-
 	"github.com/apmckinlay/gsuneido/database/db19/btree"
 	"github.com/apmckinlay/gsuneido/database/db19/comp"
 	"github.com/apmckinlay/gsuneido/database/db19/ixspec"
@@ -29,10 +27,10 @@ type Database struct {
 
 const magic = "gsndo001"
 
-func CreateDatabase(filename string) *Database {
+func CreateDatabase(filename string) (*Database, error) {
 	store, err := stor.MmapStor(filename, stor.CREATE)
 	if err != nil {
-		panic("can't create database " + filename)
+		return nil, err
 	}
 	var db Database
 	db.state.set(&DbState{store: store, meta: meta.CreateMeta(store)})
@@ -43,70 +41,50 @@ func CreateDatabase(filename string) *Database {
 	stor.WriteSmallOffset(buf[len(magic):], uint64(n))
 	db.store = store
 	db.mode = stor.CREATE
-	return &db
+	return &db, nil
 }
 
-func OpenDatabase(filename string) *Database {
-	return openDatabase(filename, stor.UPDATE, quickCheck)
+func OpenDatabase(filename string) (*Database, error) {
+	return openDatabase(filename, stor.UPDATE, true)
 }
 
-func OpenDatabaseRead(filename string) *Database {
-	return openDatabase(filename, stor.READ, quickCheck)
+func OpenDatabaseRead(filename string) (*Database, error) {
+	return openDatabase(filename, stor.READ, true)
 }
 
-type checkType int
-const (
-	noCheck checkType = iota
-	quickCheck
-	fullCheck
-)
-
-func openDatabase(filename string, mode stor.Mode, ck checkType) *Database {
-	var db Database
-
+func openDatabase(filename string, mode stor.Mode, check bool) (db *Database, err error) {
 	store, err := stor.MmapStor(filename, mode)
 	if err != nil {
-		panic("can't open database " + filename)
+		return nil, err
 	}
-
 	buf := store.Data(0)
 	if magic != string(buf[:len(magic)]) {
-		panic("not a valid database " + filename)
+		return nil, &ErrCorrupt{}
 	}
 	size := stor.ReadSmallOffset(buf[len(magic):])
 	if size != store.Size() {
-		//TODO recovery
-		panic("database size mismatch - not shut down properly?")
+		return nil, &ErrCorrupt{}
 	}
 
-	db.store = store
-	db.mode = mode
+	defer func() {
+		if e := recover(); e != nil {
+			err = NewErrCorrupt(e)
+			db = nil
+		}
+	}()
+	db = &Database{store: store, mode: mode}
 	db.state.set(ReadState(db.store, size-uint64(stateLen)))
-	ckerr := ""
-	switch ck {
-	case fullCheck:
-		ckerr = db.Check()
-	case quickCheck:
-		ckerr = db.QuickCheck()
+	if check {
+		db.QuickCheck()
 	}
-	if ckerr != "" {
-		//TODO recovery
-		panic("database check failed - corrupt?\n" + ckerr)
-	}
-	return &db
+	return db, nil
 }
 
 // LoadedTable is used to add a loaded table to the state
-func (db *Database) LoadedTable(ts *meta.Schema, ti *meta.Info) error {
-	var err error
+func (db *Database) LoadedTable(ts *meta.Schema, ti *meta.Info) {
 	db.UpdateState(func(state *DbState) {
-		if nil != state.meta.GetRoSchema(ts.Table) {
-			err = errors.New("can't create " + ts.Table + " - it already exists")
-			return
-		}
-		state.meta = state.meta.Add(ts, ti)
+		state.meta = state.meta.Put(ts, ti)
 	})
-	return err
 }
 
 // Close closes the database store, writing the current size to the start.

@@ -141,7 +141,7 @@ func (m *Meta) GetRwSchema(table string) *Schema {
 	return &ts
 }
 
-func (m *Meta) Add(ts *Schema, ti *Info) *Meta {
+func (m *Meta) Put(ts *Schema, ti *Info) *Meta {
 	roSchema := m.roSchema.Mutable()
 	roSchema.Put(ts)
 	roInfo := m.roInfo.Mutable()
