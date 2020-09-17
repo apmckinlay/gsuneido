@@ -35,9 +35,7 @@ func (ht InfoHamt) Write(st *stor.Stor) uint64 {
 		nitems++
 	})
 	if nitems == 0 {
-		off, buf := st.Alloc(3)
-		stor.NewWriter(buf).Put3(0)
-		return off
+		return 0
 	}
 	nfingers := 1 + nitems/perFingerInfo
 	size += 3 * nfingers
