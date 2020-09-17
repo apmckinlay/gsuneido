@@ -35,8 +35,8 @@ func (ht SchemaHamt) Write(st *stor.Stor) uint64 {
 		nitems++
 	})
 	if nitems == 0 {
-		off, buf := st.Alloc(2)
-		stor.NewWriter(buf).Put2(0)
+		off, buf := st.Alloc(3)
+		stor.NewWriter(buf).Put3(0)
 		return off
 	}
 	nfingers := 1 + nitems/perFingerSchema
@@ -76,6 +76,9 @@ func ReadSchemaHamt(st *stor.Stor, off uint64) SchemaHamt {
 	buf := st.Data(off)
 	r := stor.NewReader(buf)
 	size := r.Get3()
+	if size == 0 {
+		return SchemaHamt{}
+	}
 	cksum.MustCheck(buf[:size])
 	nitems := r.Get2()
 	t := SchemaHamt{}.Mutable()

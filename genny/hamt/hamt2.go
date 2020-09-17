@@ -31,8 +31,8 @@ func (ht ItemHamt) Write(st *stor.Stor) uint64 {
 		nitems++
 	})
 	if nitems == 0 {
-		off, buf := st.Alloc(2)
-		stor.NewWriter(buf).Put2(0)
+		off, buf := st.Alloc(3)
+		stor.NewWriter(buf).Put3(0)
 		return off
 	}
 	nfingers := 1 + nitems/perFingerItem
@@ -72,6 +72,9 @@ func ReadItemHamt(st *stor.Stor, off uint64) ItemHamt {
 	buf := st.Data(off)
 	r := stor.NewReader(buf)
 	size := r.Get3()
+	if size == 0 {
+		return ItemHamt{}
+	}
 	cksum.MustCheck(buf[:size])
 	nitems := r.Get2()
 	t := ItemHamt{}.Mutable()
