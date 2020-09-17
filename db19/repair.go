@@ -15,6 +15,7 @@ import (
 )
 
 func Repair(dbfile string, ec *ErrCorrupt) error {
+	fmt.Println("repair")
 	store, err := stor.MmapStor(dbfile, stor.READ)
 	if err != nil {
 		return err
@@ -24,7 +25,7 @@ func Repair(dbfile string, ec *ErrCorrupt) error {
 	for {
 		off, state = prevState(store, off)
 		if off == 0 {
-			return errors.New("repair failed")
+			return errors.New("repair failed - no valid states found")
 		}
 		if state == nil {
 			continue

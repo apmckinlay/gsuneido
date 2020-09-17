@@ -357,13 +357,37 @@ func (fb *fbtree) readNode(off uint64) fNode {
 
 //-------------------------------------------------------------------
 
+const recentSize = 32 * 1024 * 1024 // ???
+
 func (fb *fbtree) quickCheck(fn func(uint64)) {
 	fb.redirs.tbl.ForEach(func(r *redir) {
-		if r.newOffset != 0 {
-			fn(r.newOffset)
-		}
+		fn(r.newOffset)
 	})
-	//TODO check paths
+	recent := int64(fb.store.Size()) - recentSize
+	fb.quickCheck1(0, fb.root, recent, fn)
+}
+
+func (fb *fbtree) quickCheck1(depth int, offset uint64, recent int64,
+	fn func(uint64)) {
+	if depth > 0 && int64(offset) < recent {
+		if _, ok := fb.redirs.paths.Get(offset); !ok {
+			return
+		}
+	}
+	node := fb.getCkNode(offset)
+	if depth < fb.treeLevels {
+		// tree node
+		for it := node.iter(); it.next(); {
+			fb.quickCheck1(depth+1, it.offset, recent, fn)
+		}
+	} else {
+		// leaf node
+		for it := node.iter(); it.next(); {
+			if int64(it.offset) > recent {
+				fn(it.offset)
+			}
+		}
+	}
 }
 
 // check verifies that the keys are in order and returns the number of keys.
@@ -483,9 +507,9 @@ func (fb *fbtree) print1(depth int, offset uint64) {
 			fb.print1(depth+1, offset) // recurse
 		} else {
 			// leaf
-			print(strings.Repeat("    ", depth)+strconv.Itoa(it.fi)+":",
-				OffStr(offset)+",", it.npre, it.diff, "=", it.known,
-				"("+fb.getLeafKey(offset)+")")
+			// print(strings.Repeat("    ", depth)+strconv.Itoa(it.fi)+":",
+			// 	OffStr(offset)+",", it.npre, it.diff, "=", it.known,
+			// 	"("+fb.getLeafKey(offset)+")")
 		}
 	}
 }

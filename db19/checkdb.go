@@ -6,6 +6,7 @@ package db19
 import (
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/apmckinlay/gsuneido/db19/btree"
 	"github.com/apmckinlay/gsuneido/db19/meta"
@@ -21,8 +22,11 @@ type dbcheck DbState
 // QuickCheck is the default partial checking done at start up.
 // Panics on error.
 func (db *Database) QuickCheck() {
+	t := time.Now()
 	dc := (*dbcheck)(db.GetState())
-	dc.forEachTable(dc.quickCheckTable)
+	n := dc.forEachTable(dc.quickCheckTable)
+	fmt.Println("quick checked", n, "tables in",
+		time.Since(t).Round(time.Millisecond))
 }
 
 func (dc dbcheck) quickCheckTable(sc *meta.Schema) {
@@ -55,13 +59,13 @@ func CheckDatabase(dbfile string) (ec *ErrCorrupt) {
 	return nil
 }
 
-func (dc *dbcheck) forEachTable(fn func(sc *meta.Schema)) {
+func (dc *dbcheck) forEachTable(fn func(sc *meta.Schema)) int {
 	n := 0
 	dc.meta.ForEachSchema(func(sc *meta.Schema) {
 		n++
 		fn(sc)
 	})
-	fmt.Println("processed", n, "tables")
+	return n
 }
 
 func (dc *dbcheck) checkTable(sc *meta.Schema) {

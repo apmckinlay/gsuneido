@@ -1,16 +1,7 @@
 // Copyright Suneido Software Corp. All rights reserved.
 // Governed by the MIT license found in the LICENSE file.
 
-package main // import "github.com/apmckinlay/gsuneido"
-
-/*
-CheckLibrary('stdlib')
-
-TestRunner.Run(libs: #(stdlib), skipTags: #(gui, windows), quit_on_failure:);;
-TestRunner.Run(TestObserverPrint(), libs: #(stdlib), skipTags: #(gui, windows));;
-
-dlv debug -- -c ...
-*/
+package main
 
 import (
 	"bufio"
@@ -36,10 +27,15 @@ import (
 var builtDate = "Dec 16 2019" // set by: go build -ldflags "-X main.builtDate=..."
 
 var help = `options:
+	-check
 	-c[lient] [ipaddress] (default 127.0.0.1)
+	-d[ump] [table]
 	-l[oad] [table]
-    -p[ort] # (default 3147)
+	-p[ort] # (default 3147)
+	-repair
     -r[epl]
+	-s[erver]
+	-u[nattended]
     -v[ersion]`
 
 // dbmsLocal is set if running with a local/standalone database.
@@ -176,7 +172,12 @@ func startServer() {
 	db, err := db19.OpenDatabase("suneido.db")
 	var ec *db19.ErrCorrupt
 	if errors.As(err, &ec) {
-		db19.Repair("suneido.db", ec)
+		fmt.Println(ec)
+		err := db19.Repair("suneido.db", ec)
+		if err != nil {
+			fmt.Println(err)
+		}
+		os.Exit(0)
 	}
 	//TODO
 	db.Close()
