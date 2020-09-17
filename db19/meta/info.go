@@ -18,8 +18,8 @@ type Info struct {
 	mutable bool
 }
 
-//go:generate genny -in ../../../genny/hamt/hamt.go -out infohamt.go -pkg meta gen "Item=*Info KeyType=string"
-//go:generate genny -in ../../../genny/hamt/hamt2.go -out infohamt2.go -pkg meta gen "Item=*Info KeyType=string"
+//go:generate genny -in ../../genny/hamt/hamt.go -out infohamt.go -pkg meta gen "Item=*Info KeyType=string"
+//go:generate genny -in ../../genny/hamt/hamt2.go -out infohamt2.go -pkg meta gen "Item=*Info KeyType=string"
 
 func InfoKey(ti *Info) string {
 	return ti.Table

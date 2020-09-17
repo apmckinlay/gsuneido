@@ -16,8 +16,8 @@ type Schema struct {
 	mutable bool
 }
 
-//go:generate genny -in ../../../genny/hamt/hamt.go -out schemahamt.go -pkg meta gen "Item=*Schema KeyType=string"
-//go:generate genny -in ../../../genny/hamt/hamt2.go -out schemahamt2.go -pkg meta gen "Item=*Schema KeyType=string"
+//go:generate genny -in ../../genny/hamt/hamt.go -out schemahamt.go -pkg meta gen "Item=*Schema KeyType=string"
+//go:generate genny -in ../../genny/hamt/hamt2.go -out schemahamt2.go -pkg meta gen "Item=*Schema KeyType=string"
 
 func SchemaKey(ti *Schema) string {
 	return ti.Table

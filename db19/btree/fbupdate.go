@@ -194,8 +194,8 @@ func (fb *fbtree) delete(nodeOff uint64, off uint64) (fNode, bool) {
 
 //-------------------------------------------------------------------
 
-//go:generate genny -in ../../../genny/hamt/hamt.go -out redirhamt.go -pkg btree gen "Item=*redir KeyType=uint64"
-//go:generate genny -in ../../../genny/hamt/hamt.go -out pathhamt.go -pkg btree gen "Item=path KeyType=uint64"
+//go:generate genny -in ../../genny/hamt/hamt.go -out redirhamt.go -pkg btree gen "Item=*redir KeyType=uint64"
+//go:generate genny -in ../../genny/hamt/hamt.go -out pathhamt.go -pkg btree gen "Item=path KeyType=uint64"
 
 // redirs is use to redirect offsets to new nodes
 // to reduce write amplification e.g. from path copying.
