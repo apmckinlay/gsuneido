@@ -16,7 +16,7 @@ func TestCheckDatabase(*testing.T) {
 		return
 	}
 	t := time.Now()
-	if err := CheckDatabase("../../suneido.db"); err != nil {
+	if err := CheckDatabase("../suneido.db"); err != nil {
 		fmt.Println(err, err.table)
 	} else {
 		fmt.Println("database checked in", time.Since(t).Round(time.Millisecond))
@@ -28,7 +28,7 @@ func TestQuickCheck(*testing.T) {
 		return
 	}
 	t := time.Now()
-	db, e := openDatabase("../../suneido.db", stor.READ, false)
+	db, e := openDatabase("../suneido.db", stor.READ, false)
 	if e != nil {
 		panic(e)
 	}

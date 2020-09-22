@@ -117,8 +117,8 @@ func TestSampleData(t *testing.T) {
 			mfb.checkData(t, data)
 		}
 	}
-	test("../../../../bizpartnername.txt")
-	test("../../../../bizpartnerabbrev.txt")
+	test("../../../bizpartnername.txt")
+	test("../../../bizpartnerabbrev.txt")
 }
 
 func fileData(filename string) []string {
