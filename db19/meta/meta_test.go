@@ -28,8 +28,8 @@ func TestOverlay(*testing.T) {
 	offInfo := tbl.Write(st)
 	offSchema := tbl.Write(st)
 	state := &Meta{
-		baseInfo:   NewInfoPacked(st, offInfo),
-		baseSchema: NewSchemaPacked(st, offSchema),
+		oldInfo:   NewInfoPacked(st, offInfo),
+		oldSchema: NewSchemaPacked(st, offSchema),
 	}
 	// startup - nothing in memory
 
