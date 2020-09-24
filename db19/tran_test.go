@@ -7,6 +7,7 @@ import (
 	"os"
 	"strconv"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -53,6 +54,7 @@ func TestConcurrent(t *testing.T) {
 }
 
 func TestTran(t *testing.T) {
+	var err error
 	db := createDb()
 	db.ck = NewCheck()
 
@@ -62,19 +64,23 @@ func TestTran(t *testing.T) {
 		db.ck.Commit(ut)
 		tn := ut.commit()
 		db.Merge(tn)
+		if i%100 == 50 {
+			db.Persist()
+			db.Close()
+			db, err = OpenDatabase("tmp.db")
+			ck(err)
+			db.ck = NewCheck()
+		}
 	}
-
 	db.Persist()
 	db.Close()
 
-	db, err := OpenDatabaseRead("tmp.db")
+	db, err = OpenDatabaseRead("tmp.db")
 	ck(err)
-
 	rt := db.NewReadTran()
 	ti := rt.meta.GetRoInfo("mytable")
 	assert.T(t).Msg("nrows").This(ti.Nrows).Is(nout)
 	assert.T(t).Msg("size").This(ti.Size).Is(nout * 23)
-
 	db.Close()
 	os.Remove("tmp.db")
 }
@@ -96,9 +102,12 @@ func createDb() *Database {
 	return db
 }
 
+var recnum int32
+
 func output1(db *Database) *UpdateTran {
+	n := atomic.AddInt32(&recnum, 1)
 	ut := db.NewUpdateTran()
-	data := (strconv.Itoa(ut.num()) + "transaction")[:12]
+	data := (strconv.Itoa(int(n)) + "transaction")[:12]
 	ut.Output("mytable", mkrec(data, "data"))
 	return ut
 	// NOTE: does not commit

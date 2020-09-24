@@ -45,7 +45,7 @@ func (fb *fbtree) Insert(key string, off uint64) {
 	for i := 0; i < fb.treeLevels; i++ {
 		stack[i] = nodeOff
 		node := fb.getNode(nodeOff)
-		fb.redirs.paths.Put(nodeOff)
+		fb.addPath(nodeOff)
 		nodeOff, _, _ = node.search(key)
 	}
 
@@ -70,7 +70,9 @@ func (fb *fbtree) Insert(key string, off uint64) {
 		if size <= MaxNodeSize {
 			return // finished
 		}
+		// split tree node
 		splitKey, rightOff = fb.split(node, stack[i], where)
+		fb.addPath(rightOff)
 		// fmt.Println("split", splitKey, "old/left", OffStr(stack[i]), "new/right", OffStr(rightOff))
 	}
 
@@ -148,7 +150,7 @@ func (fb *fbtree) Delete(key string, off uint64) bool {
 	for i := 0; i < fb.treeLevels; i++ {
 		stack[i] = nodeOff
 		node := fb.getNode(nodeOff)
-		fb.redirs.paths.Put(nodeOff)
+		fb.addPath(nodeOff)
 		nodeOff, _, _ = node.search(key)
 	}
 
@@ -241,6 +243,17 @@ func RedirHash(key uint64) uint32 {
 	return uint32(key * phi64)
 }
 
+func (r *redir) String() string {
+	s := OffStr(r.offset) + " -> "
+	if r.mnode != nil {
+		s += "mnode"
+	}
+	if r.newOffset != 0 {
+		s += strconv.Itoa(int(r.newOffset))
+	}
+	return s
+}
+
 type path = uint64
 
 // PathKey is used by PathHamt
@@ -279,6 +292,12 @@ func (re *redirs) set(off uint64, node fNode) {
 // isFake returns true for temporary in-memory offsets
 func (re *redirs) isFake(off uint64) bool {
 	return off > re.nextOff
+}
+
+func (fb *fbtree) addPath(off uint64) {
+	if !fb.redirs.isFake(off) && off != fb.root {
+		fb.redirs.paths.Put(off)
+	}
 }
 
 func OffStr(off uint64) string {

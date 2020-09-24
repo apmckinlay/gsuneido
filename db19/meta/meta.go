@@ -50,16 +50,18 @@ func (m *Meta) Mutable() *Meta {
 }
 
 func (m *Meta) GetRoInfo(table string) *Info {
-	if pti, ok := m.rwInfo.Get(table); ok {
-		return pti
+	if ti, ok := m.rwInfo.Get(table); ok {
+		return ti
 	}
-	var ti Info
-	if pti, ok := m.roInfo.Get(table); ok {
-		ti = *pti // copy
-	} else if pti, ok := m.baseInfo.Get(table); ok {
-		ti = *pti // copy
+	ti, ok := m.roInfo.Get(table)
+	if ok {
+		var ti2 = *ti // copy
+		ti = &ti2
 	} else {
-		return nil
+		ti, ok = m.baseInfo.Get(table)
+		if !ok {
+			return nil
+		}
 	}
 	// set up index overlays and ixspecs
 	ti.Indexes = append(ti.Indexes[:0:0], ti.Indexes...) // copy
@@ -72,9 +74,9 @@ func (m *Meta) GetRoInfo(table string) *Info {
 		}
 	}
 	if !m.rwInfo.IsNil() {
-		m.rwInfo.Put(&ti) // cache in memory
+		m.rwInfo.Put(ti) // cache in memory
 	}
-	return &ti
+	return ti
 }
 
 func (m *Meta) GetRwInfo(table string, tranNum int) *Info {
@@ -164,6 +166,9 @@ func (m *Meta) ForEachSchema(fn func(*Schema)) {
 }
 
 func (p SchemaPacked) ForEach(fn func(*Schema)) {
+	if p.buf == nil {
+		return
+	}
 	r := stor.NewReader(p.buf)
 	r.Get3() // size
 	nitems := r.Get2()
@@ -192,7 +197,11 @@ func (m *Meta) LayeredOnto(latest *Meta) *Meta {
 	roInfo2 := latest.roInfo.Mutable()
 	m.rwInfo.ForEach(func(ti *Info) {
 		if ti.mutable {
-			if lti, ok := roInfo2.Get(ti.Table); ok {
+			lti, ok := roInfo2.Get(ti.Table)
+			if !ok {
+				lti, ok = latest.baseInfo.Get(ti.Table)
+			}
+			if ok {
 				ti.Nrows += lti.Nrows
 				ti.Size += lti.Size
 				for i := range ti.Indexes {
@@ -227,14 +236,6 @@ func (m *Meta) Write(st *stor.Stor) offsets {
 		m.baseInfo.Offset(),
 		m.roSchema.Write(st),
 		m.roInfo.Write(st),
-	}
-	if m.baseSchema.Offset() == 0 {
-		offs[0] = offs[2]
-		offs[2] = 0
-	}
-	if m.baseInfo.Offset() == 0 {
-		offs[1] = offs[3]
-		offs[3] = 0
 	}
 	return offs
 }
