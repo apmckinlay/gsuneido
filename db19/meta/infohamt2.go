@@ -108,7 +108,9 @@ type InfoFinger struct {
 }
 
 func NewInfoPacked(st *stor.Stor, off uint64) *InfoPacked {
-	assert.That(off != 0)
+	if off == 0 {
+		return &InfoPacked{}
+	}
 	buf := st.Data(off)
 	r := stor.NewReader(buf)
 	size := r.Get3()

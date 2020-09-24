@@ -108,7 +108,9 @@ type SchemaFinger struct {
 }
 
 func NewSchemaPacked(st *stor.Stor, off uint64) *SchemaPacked {
-	assert.That(off != 0)
+	if off == 0 {
+		return &SchemaPacked{}
+	}
 	buf := st.Data(off)
 	r := stor.NewReader(buf)
 	size := r.Get3()
