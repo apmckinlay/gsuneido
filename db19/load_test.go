@@ -19,8 +19,9 @@ func TestLoadTable(*testing.T) {
 	os.Remove("tmp.db")
 	n := LoadTable("stdlib", "tmp.db")
 	fmt.Println("loaded", n, "records in", time.Since(t).Round(time.Millisecond))
-	_, err := OpenDatabase("tmp.db")
+	db, err := OpenDatabase("tmp.db")
 	ck(err)
+	db.Close()
 }
 
 func TestLoadDatabase(*testing.T) {
@@ -31,6 +32,7 @@ func TestLoadDatabase(*testing.T) {
 	defer os.Remove("tmp.db")
 	n := LoadDatabase("database.su", "tmp.db")
 	fmt.Println("loaded", n, "tables in", time.Since(t).Round(time.Millisecond))
-	_, err := OpenDatabase("tmp.db")
+	db, err := OpenDatabase("tmp.db")
 	ck(err)
+	db.Close()
 }
