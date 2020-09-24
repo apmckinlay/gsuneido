@@ -135,8 +135,8 @@ func (fb *fbtree) keep2(depth int, nodeOff uint64) uint64 {
 		}
 		traced(depth, "tree node")
 		node := fb.getNode(nodeOff) // also handles redir
-		copied := false             // copy lazily
-		//TODO if mnode is current generation, no need to copy, set copied = true
+		// copy lazily, if current generation it's already a copy
+		copied := mnode != nil && r.generation  == fb.redirs.generation
 		for it := node.iter(); it.next(); {
 			off := it.offset
 			off2 := fb.keep2(depth+1, off) // RECURSE
