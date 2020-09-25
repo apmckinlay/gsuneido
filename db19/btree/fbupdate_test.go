@@ -286,7 +286,7 @@ func TestFlatten(t *testing.T) {
 	var fb *fbtree
 
 	build := func() {
-		trace("==============================")
+		_ = T && trace("==============================")
 		MaxNodeSize = 96
 		inserted = map[int]bool{}
 		store := stor.HeapStor(8192)
@@ -332,7 +332,7 @@ func TestFlatten(t *testing.T) {
 		if save {
 			fb = fb.Save()
 			check()
-			trace("---------------------------")
+			_ = T && trace("---------------------------")
 		}
 	}
 	flatten := func() {

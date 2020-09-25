@@ -86,7 +86,7 @@ func (fb *fbtree) save() {
 	if fb.redirCount() < redirMax {
 		fb.saveRedirs()
 	} else {
-		trace("FLATTEN")
+		_ = T && trace("FLATTEN")
 		fb.flatten()
 	}
 }
@@ -121,7 +121,7 @@ func (fb *fbtree) keep() {
 // It visits in-memory mnodes and nodes in fb.redirs.paths.
 func (fb *fbtree) keep2(depth int, nodeOff uint64) uint64 {
 	r, ok := fb.redirs.tbl.Get(nodeOff)
-	traced(depth, "keep", OffStr(nodeOff), "|", r)
+	_ = T && traced(depth, "keep", OffStr(nodeOff), "|", r)
 	inPaths := false
 	var mnode fNode
 	if depth < fb.treeLevels {
@@ -133,10 +133,10 @@ func (fb *fbtree) keep2(depth int, nodeOff uint64) uint64 {
 		if mnode == nil && !inPaths {
 			return nodeOff
 		}
-		traced(depth, "tree node")
+		_ = T && traced(depth, "tree node")
 		node := fb.getNode(nodeOff) // also handles redir
 		// copy lazily, if current generation it's already a copy
-		copied := mnode != nil && r.generation  == fb.redirs.generation
+		copied := mnode != nil && r.generation == fb.redirs.generation
 		for it := node.iter(); it.next(); {
 			off := it.offset
 			off2 := fb.keep2(depth+1, off) // RECURSE
@@ -150,9 +150,9 @@ func (fb *fbtree) keep2(depth int, nodeOff uint64) uint64 {
 			} else {
 				// If we're on an mnode
 				// then we can update it and delete the redir (flatten)
-				traced(depth, "update tree", OffStr(off), "=>", off2)
+				_ = T && traced(depth, "update tree", OffStr(off), "=>", off2)
 				if !copied {
-					traced(depth, "copy")
+					_ = T && traced(depth, "copy")
 					copied = true
 					mnode = append(mnode[:0:0], mnode...) // copy
 				}
@@ -177,15 +177,15 @@ func (fb *fbtree) keep2(depth int, nodeOff uint64) uint64 {
 			return nodeOff
 		}
 		if r.mnode == nil {
-			traced(depth, "leaf newOffset")
+			_ = T && traced(depth, "leaf newOffset")
 			return r.newOffset
 		}
 		mnode = r.mnode
-		traced(depth, "leaf mnode")
+		_ = T && traced(depth, "leaf mnode")
 	}
 	// save mnode
 	newOffset := mnode.putNode(fb.store)
-	traced(depth, "putNode", OffStr(nodeOff), "=>", newOffset)
+	_ = T && traced(depth, "putNode", OffStr(nodeOff), "=>", newOffset)
 	return newOffset
 }
 
@@ -208,7 +208,7 @@ func (fb *fbtree) flatten() {
 }
 
 func (fb *fbtree) flatten2(depth int, nodeOff uint64) uint64 {
-	traced(depth, "flatten", OffStr(nodeOff))
+	_ = T && traced(depth, "flatten", OffStr(nodeOff))
 	var rwNode fNode
 	if depth < fb.treeLevels {
 		// tree node, need to update any redirected offsets
@@ -227,23 +227,23 @@ func (fb *fbtree) flatten2(depth int, nodeOff uint64) uint64 {
 					rwNode.setOffset(it.fi, off2)
 				}
 			} else {
-				traced(depth+1, "skipped tree node", off)
+				_ = T && traced(depth+1, "skipped tree node", off)
 			}
 		}
 		if rwNode == nil {
 			if r, ok := fb.redirs.tbl.Get(nodeOff); ok && r.mnode != nil {
-				traced(depth, "tree mnode")
+				_ = T && traced(depth, "tree mnode")
 				rwNode = r.mnode
 			} else {
 				if ok {
-					traced(depth, "tree new offset", OffStr(r.newOffset))
+					_ = T && traced(depth, "tree new offset", OffStr(r.newOffset))
 					return r.newOffset
 				}
-				traced(depth, "tree NO SAVE")
+				_ = T && traced(depth, "tree NO SAVE")
 				return nodeOff // nothing modified, don't need to save
 			}
 		} else {
-			traced(depth, "tree node modified")
+			_ = T && traced(depth, "tree node modified")
 		}
 	} else {
 		// leaf node
@@ -252,24 +252,15 @@ func (fb *fbtree) flatten2(depth int, nodeOff uint64) uint64 {
 			return nodeOff
 		}
 		if r.mnode == nil {
-			traced(depth, "leaf newOffset")
+			_ = T && traced(depth, "leaf newOffset")
 			return r.newOffset
 		}
 		rwNode = r.mnode
-		traced(depth, "leaf mnode")
+		_ = T && traced(depth, "leaf mnode")
 	}
 	off := rwNode.putNode(fb.store)
-	traced(depth, "putNode", OffStr(nodeOff), "=>", off)
+	_ = T && traced(depth, "putNode", OffStr(nodeOff), "=>", off)
 	return off
-}
-
-func trace(args ...interface{}) {
-	// fmt.Println(args...)
-}
-
-func traced(depth int, args ...interface{}) {
-	// fmt.Print(strings.Repeat("    ", depth))
-	// fmt.Println(args...)
 }
 
 func (fb *fbtree) saveRedirs() {
@@ -610,4 +601,19 @@ func (fb *fbtreeBuilder) Finish() *Overlay {
 	treeLevels := len(fb.levels) - 1
 	bt := OpenFbtree(fb.store, off, treeLevels, 0)
 	return &Overlay{under: []tree{bt}}
+}
+
+// ------------------------------------------------------------------
+
+const T = false // set to true to enable tracing
+
+func trace(args ...interface{}) bool {
+	fmt.Println(args...)
+	return true
+}
+
+func traced(depth int, args ...interface{}) bool {
+	fmt.Print(strings.Repeat("    ", depth))
+	fmt.Println(args...)
+	return true
 }
