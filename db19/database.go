@@ -73,7 +73,8 @@ func openDatabase(filename string, mode stor.Mode, check bool) (db *Database, er
 		}
 	}()
 	db = &Database{store: store, mode: mode}
-	db.state.set(ReadState(db.store, size-uint64(stateLen)))
+	state, _ := ReadState(db.store, size-uint64(stateLen))
+	db.state.set(state)
 	if check {
 		db.QuickCheck()
 	}

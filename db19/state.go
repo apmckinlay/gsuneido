@@ -4,8 +4,10 @@
 package db19
 
 import (
+	"encoding/binary"
 	"sync"
 	"sync/atomic"
+	"time"
 	"unsafe"
 
 	"github.com/apmckinlay/gsuneido/db19/meta"
@@ -89,8 +91,9 @@ func (db *Database) Persist() uint64 {
 
 const magic1 = "\x01\x23\x45\x67\x89\xab\xcd\xef"
 const magic2 = "\xfe\xdc\xba\x98\x76\x54\x32\x10"
-const stateLen = len(magic1) + meta.Noffsets*stor.SmallOffsetLen + len(magic2) +
-	cksum.Len
+const dateSize = 8
+const stateLen = len(magic1) + dateSize + meta.Noffsets*stor.SmallOffsetLen +
+	len(magic2) + cksum.Len
 const magic2at = stateLen - len(magic2)
 
 func (state *DbState) Write() uint64 {
@@ -99,10 +102,13 @@ func (state *DbState) Write() uint64 {
 	return writeState(state.store, offsets)
 }
 
-func  writeState(store *stor.Stor, offsets [meta.Noffsets]uint64) uint64 {
+func writeState(store *stor.Stor, offsets [meta.Noffsets]uint64) uint64 {
 	stateOff, buf := store.Alloc(stateLen)
 	copy(buf, magic1)
 	i := len(magic1)
+	t := time.Now().Unix()
+	binary.BigEndian.PutUint64(buf[i:], uint64(t))
+	i += dateSize
 	for _, o := range offsets {
 		stor.WriteSmallOffset(buf[i:], o)
 		i += stor.SmallOffsetLen
@@ -115,21 +121,23 @@ func  writeState(store *stor.Stor, offsets [meta.Noffsets]uint64) uint64 {
 	return stateOff
 }
 
-func ReadState(st *stor.Stor, off uint64) *DbState {
-	offsets := readState(st, off)
-	return &DbState{store: st, meta: meta.ReadOverlay(st, offsets)}
+func ReadState(st *stor.Stor, off uint64) (*DbState, time.Time) {
+	offsets, t := readState(st, off)
+	return &DbState{store: st, meta: meta.ReadOverlay(st, offsets)}, t
 }
 
-func readState(st *stor.Stor, off uint64) [meta.Noffsets]uint64 {
+func readState(st *stor.Stor, off uint64) ([meta.Noffsets]uint64, time.Time) {
 	buf := st.Data(off)[:stateLen]
 	i := len(magic1)
 	assert.That(string(buf[:i]) == magic1)
 	cksum.MustCheck(buf[:magic2at])
 	assert.That(string(buf[magic2at:magic2at+len(magic2)]) == magic2)
+	t := time.Unix(int64(binary.BigEndian.Uint64(buf[i:])), 0)
+	i += dateSize
 	var offsets [meta.Noffsets]uint64
 	for j := range offsets {
 		offsets[j] = stor.ReadSmallOffset(buf[i:])
 		i += stor.SmallOffsetLen
 	}
-	return offsets
+	return offsets, t
 }

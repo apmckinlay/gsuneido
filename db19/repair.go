@@ -9,10 +9,13 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+	"time"
 
 	"github.com/apmckinlay/gsuneido/db19/meta"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 )
+
+const dtfmt = "20060102.150405"
 
 func Repair(dbfile string, ec *ErrCorrupt) error {
 	fmt.Println("repair")
@@ -22,8 +25,12 @@ func Repair(dbfile string, ec *ErrCorrupt) error {
 	}
 	off := store.Size()
 	var state *DbState
+	var t0, t time.Time
 	for {
-		off, state = prevState(store, off)
+		off, state, t = prevState(store, off)
+		if t0.IsZero() {
+			t0 = t
+		}
 		if off == 0 {
 			return errors.New("repair failed - no valid states found")
 		}
@@ -33,6 +40,7 @@ func Repair(dbfile string, ec *ErrCorrupt) error {
 		if ec = checkState(state, ec.Table()); ec == nil {
 			fmt.Println("truncating", store.Size()-off,
 				"=", store.Size(), "-", off)
+			fmt.Println("repairing to", t.Format(dtfmt), "from", t0.Format(dtfmt))
 			store.Close()
 			src, err := os.Open(dbfile)
 			if err != nil {
@@ -72,17 +80,18 @@ func Repair(dbfile string, ec *ErrCorrupt) error {
 	}
 }
 
-func prevState(store *stor.Stor, off uint64) (off2 uint64, state *DbState) {
+func prevState(store *stor.Stor, off uint64) (off2 uint64, state *DbState, t time.Time) {
 	off2 = store.LastOffset(off, magic1)
 	if off2 == 0 {
-		return 0, nil
+		return
 	}
 	defer func() {
 		if e := recover(); e != nil {
 			state = nil
 		}
 	}()
-	return off2, ReadState(store, off2)
+	state, t = ReadState(store, off2)
+	return off2, state, t
 }
 
 func checkState(state *DbState, table string) (ec *ErrCorrupt) {
