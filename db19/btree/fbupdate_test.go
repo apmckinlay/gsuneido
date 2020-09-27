@@ -189,7 +189,7 @@ func TestFreeze(t *testing.T) {
 	assert(fb.redirs.Len()).Is(1)
 	assert(fb.list()).Is("1 2")
 
-	fb = fb.Save()
+	fb = fb.Save(false)
 	fb = OpenFbtree(store, fb.root, fb.treeLevels, fb.redirsOff)
 	assert(fb.redirs.Len()).Is(0)
 	assert(fb.list()).Is("1 2")
@@ -231,7 +231,7 @@ func TestSave(t *testing.T) {
 			fb.checkData(t, data)
 			fb.ckpaths()
 		}
-		fb = fb.Save()
+		fb = fb.Save(false)
 		fb.checkData(t, data)
 	}
 }
@@ -330,13 +330,13 @@ func TestFlatten(t *testing.T) {
 	maybeSave := func(save bool) {
 		check()
 		if save {
-			fb = fb.Save()
+			fb = fb.Save(false)
 			check()
 			_ = T && trace("---------------------------")
 		}
 	}
 	flatten := func() {
-		fb = fb.Update(func(mfb *fbtree) { mfb.flatten() })
+		fb = fb.Save(true)
 		check()
 	}
 

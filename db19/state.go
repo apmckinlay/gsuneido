@@ -78,9 +78,9 @@ func (db *Database) Merge(tranNum int) {
 
 // Persist writes index changes (and a new state) to the database file.
 // It is called by concur.go persister.
-func (db *Database) Persist() uint64 {
+func (db *Database) Persist(flatten bool) uint64 {
 	state := db.GetState()
-	updates := state.meta.Persist() // outside UpdateState
+	updates := state.meta.Persist(flatten) // outside UpdateState
 	state = db.UpdateState(func(state *DbState) {
 		meta := *state.meta // copy
 		meta.ApplyPersist(updates)

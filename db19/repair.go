@@ -75,6 +75,13 @@ func Repair(dbfile string, ec *ErrCorrupt) error {
 			if err != nil {
 				return err
 			}
+			// ensure flattened (required by quick check)
+			db,err := openDatabase(dbfile, stor.UPDATE, false)
+			if err != nil {
+				return fmt.Errorf("after rebuild: %w", err)
+			}
+			defer db.Close()
+			db.Persist(true)
 			return nil
 		}
 	}

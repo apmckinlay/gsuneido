@@ -4,6 +4,7 @@
 package meta
 
 import (
+	"github.com/apmckinlay/gsuneido/db19/btree"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
@@ -270,8 +271,10 @@ func (m *Meta) ApplyMerge(updates []update) {
 
 //TODO schema
 
-func (m *Meta) Persist() []update {
-	return m.topInfo.process(btOver.Save)
+func (m *Meta) Persist(flatten bool) []update {
+	return m.topInfo.process(func (ov *btree.Overlay) *btree.Overlay {
+		return ov.Save(flatten)
+	})
 }
 
 func (m *Meta) ApplyPersist(updates []update) {

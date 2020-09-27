@@ -65,14 +65,14 @@ func TestTran(t *testing.T) {
 		tn := ut.commit()
 		db.Merge(tn)
 		if i%100 == 50 {
-			db.Persist()
+			db.Persist(true)
 			db.Close()
 			db, err = OpenDatabase("tmp.db")
 			ck(err)
 			db.ck = NewCheck()
 		}
 	}
-	db.Persist()
+	db.Persist(true)
 	db.Close()
 
 	db, err = OpenDatabaseRead("tmp.db")
@@ -96,7 +96,7 @@ func createDb() *Database {
 	}}
 	ti := &meta.Info{
 		Table:   "mytable",
-		Indexes: []*btree.Overlay{btree.NewOverlay(db.store, &is).Save()},
+		Indexes: []*btree.Overlay{btree.NewOverlay(db.store, &is).Save(false)},
 	}
 	db.LoadedTable(ts, ti)
 	return db

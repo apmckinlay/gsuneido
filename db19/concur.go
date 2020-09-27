@@ -51,13 +51,13 @@ loop:
 			persistChan <- void{}
 		}
 	}
-	persistChan <- void{}
 	close(persistChan)
 }
 
 func persister(db *Database, persistChan chan void, allDone chan void) {
 	for range persistChan {
-		db.Persist()
+		db.Persist(false)
 	}
+	db.Persist(true)
 	close(allDone)
 }

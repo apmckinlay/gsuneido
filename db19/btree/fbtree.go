@@ -19,15 +19,21 @@ import (
 // Only an unshared copy with mutable=true can be updated.
 type fbtree struct {
 	// treeLevels is how many levels of tree nodes there are (initially 0)
+	// Nodes do not store whether they are leaf or tree nodes.
+	// Since we always start at the root and descend,
+	// the code tracks the depth and compares it to treeLevels
+	// to differentiate leaf or tree nodes.
+	// When the root splits, treeLevels is incremented.
 	treeLevels int
 	// root is the offset of the root node
 	root uint64
 	// store is where the btree is stored
 	store *stor.Stor
-	// redirs maps offsets to updated in-memory nodes (not persisted)
+	// redirs temporarily maps offsets to updated nodes
+	// to allow updates without path copying.
 	redirs redirs
-	// ixspec is an opaque value passed to GetLeafKey
-	// normally it specifies which fields make up the key, based on the schema
+	// ixspec is an opaque value passed to GetLeafKey.
+	// It specifies which fields make up the key, based on the schema.
 	ixspec *ixspec.T
 	// redirsOff is the offset of the saved redirections
 	redirsOff uint64
@@ -75,15 +81,15 @@ func (fb *fbtree) Search(key string) uint64 {
 
 // Save writes the btree (changes) to the stor
 // and returns a new fbtree with no in-memory nodes (but still redirections)
-func (fb *fbtree) Save() *fbtree {
-	return fb.Update(func(mfb *fbtree) { mfb.save() })
+func (fb *fbtree) Save(flatten bool) *fbtree {
+	return fb.Update(func(mfb *fbtree) { mfb.save(flatten) })
 }
 
 const redirMax = 100 // ???
 
-func (fb *fbtree) save() {
+func (fb *fbtree) save(flatten bool) {
 	fb.keep()
-	if fb.redirCount() < redirMax {
+	if !flatten && fb.redirCount() < redirMax {
 		fb.saveRedirs()
 	} else {
 		_ = T && trace("FLATTEN")
@@ -109,6 +115,8 @@ func (fb *fbtree) pathsCount() int {
 	fb.redirs.paths.ForEach(func(uint64) { n++ })
 	return n
 }
+
+//-------------------------------------------------------------------
 
 // keep saves the in-memory nodes (like flatten) but keeps the redirects.
 func (fb *fbtree) keep() {
@@ -366,27 +374,41 @@ func (fb *fbtree) readNode(off uint64) fNode {
 }
 
 //-------------------------------------------------------------------
+// Quick check is used when opening a database. It should be fast.
+// To be fast it should only look at the end (recent) part of the file.
+// This is easier if indexes are flattened i.e. no redirects
+// since redirects allow changes at any point in the tree.
+// And we don't know their depth so it is hard to traverse from them.
+// Since keep/flatten saves nodes bottom up, all the way to the root,
+// we can traverse the tree top down, only looking at new nodes.
+// This means we have to flatten on shutdown,
+// and also after repair since it can restore to any persist state.
 
+// recentSize is the length of the tail of the file that we look at
 const recentSize = 32 * 1024 * 1024 // ???
 
 func (fb *fbtree) quickCheck(fn func(uint64)) {
+	assert.Msg("quick check requires flattened").That(fb.redirs.tbl.IsNil())
 	recent := int64(fb.store.Size()) - recentSize
 	fb.quickCheck1(0, fb.root, recent, fn)
 }
 
 func (fb *fbtree) quickCheck1(depth int, offset uint64, recent int64,
 	fn func(uint64)) {
+	// only look at nodes in the recent part of the file
+	if int64(offset) < recent {
+		return
+	}
 	node := fb.getCkNode(offset)
 	if depth < fb.treeLevels {
 		// tree node
 		for it := node.iter(); it.next(); {
-			if int64(offset) < recent || fb.pathNode(offset) {
-				fb.quickCheck1(depth+1, it.offset, recent, fn)
-			}
+			fb.quickCheck1(depth+1, it.offset, recent, fn)
 		}
 	} else {
 		// leaf node
 		for it := node.iter(); it.next(); {
+			// only checksum data records in the recent part of the file
 			if int64(it.offset) > recent {
 				fn(it.offset)
 			}

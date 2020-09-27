@@ -199,7 +199,7 @@ func (fb *fbtree) delete(nodeOff uint64, off uint64) (fNode, bool) {
 //go:generate genny -in ../../genny/hamt/hamt.go -out redirhamt.go -pkg btree gen "Item=*redir KeyType=uint64"
 //go:generate genny -in ../../genny/hamt/hamt.go -out pathhamt.go -pkg btree gen "Item=path KeyType=uint64"
 
-// redirs is use to redirect offsets to new nodes
+// redirs is use to redirect offsets to updated nodes
 // to reduce write amplification e.g. from path copying.
 // It is used for updated versions of existing nodes, using their old offset,
 // and for new nodes with fake offsets.
@@ -207,7 +207,7 @@ type redirs struct {
 	tbl RedirHamt
 	// paths is a set of node offsets
 	// that are on the path to new nodes or nodes containing redirects.
-	// It is used to avoid traversing the entire key to flatten redirects.
+	// It is used to avoid traversing the entire key for keep/flatten.
 	paths PathHamt
 	// nextOff is the next "fake" offset to assign
 	nextOff uint64
