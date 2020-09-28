@@ -41,48 +41,7 @@ func Repair(dbfile string, ec *ErrCorrupt) error {
 			fmt.Println("truncating", store.Size()-off,
 				"=", store.Size(), "-", off)
 			fmt.Println("repairing to", t.Format(dtfmt), "from", t0.Format(dtfmt))
-			store.Close()
-			src, err := os.Open(dbfile)
-			if err != nil {
-				return err
-			}
-			dst, err := ioutil.TempFile(".", "gs*.tmp")
-			if err != nil {
-				return err
-			}
-			tmpfile := dst.Name()
-			_, err = io.CopyN(dst, src, int64(off)+int64(stateLen))
-			if err != nil {
-				return err
-			}
-			buf := make([]byte, stor.SmallOffsetLen)
-			stor.WriteSmallOffset(buf, off+uint64(stateLen))
-			_, err = dst.WriteAt(buf, int64(len(magic)))
-			if err != nil {
-				return err
-			}
-			src.Close()
-			dst.Close()
-			err = os.Remove(dbfile + ".bak")
-			if err != nil && !os.IsNotExist(err) {
-				return err
-			}
-			err = os.Rename(dbfile, dbfile+".bak")
-			if err != nil {
-				return err
-			}
-			err = os.Rename(tmpfile, dbfile)
-			if err != nil {
-				return err
-			}
-			// ensure flattened (required by quick check)
-			db,err := openDatabase(dbfile, stor.UPDATE, false)
-			if err != nil {
-				return fmt.Errorf("after rebuild: %w", err)
-			}
-			defer db.Close()
-			db.Persist(true)
-			return nil
+			return truncate(dbfile, store, off)
 		}
 	}
 }
@@ -119,5 +78,61 @@ func checkState(state *DbState, table string) (ec *ErrCorrupt) {
 			dc.checkTable(sc)
 		}
 	})
+	return nil
+}
+
+func truncate(dbfile string, store *stor.Stor, off uint64) error {
+	store.Close()
+	src, err := os.Open(dbfile)
+	if err != nil {
+		return err
+	}
+	dst, err := ioutil.TempFile(".", "gs*.tmp")
+	if err != nil {
+		return err
+	}
+	tmpfile := dst.Name()
+	_, err = io.CopyN(dst, src, int64(off)+int64(stateLen))
+	if err != nil {
+		return err
+	}
+	buf := make([]byte, stor.SmallOffsetLen)
+	stor.WriteSmallOffset(buf, off+uint64(stateLen))
+	_, err = dst.WriteAt(buf, int64(len(magic)))
+	if err != nil {
+		return err
+	}
+	src.Close()
+	dst.Close()
+	if err = renameBak(tmpfile, dbfile); err != nil {
+		return err
+	}
+	return ensureFlat(dbfile)
+}
+
+func renameBak(from string, to string) error {
+	err := os.Remove(to + ".bak")
+	if err != nil && !os.IsNotExist(err) {
+		return err
+	}
+	err = os.Rename(to, to+".bak")
+	if err != nil {
+		return err
+	}
+	err = os.Rename(from, to)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func ensureFlat(dbfile string) error {
+	// ensure flattened (required by quick check)
+	db, err := openDatabase(dbfile, stor.UPDATE, false)
+	if err != nil {
+		return fmt.Errorf("after rebuild: %w", err)
+	}
+	defer db.Close()
+	db.Persist(true)
 	return nil
 }
