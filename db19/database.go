@@ -91,6 +91,9 @@ func (db *Database) LoadedTable(ts *meta.Schema, ti *meta.Info) {
 // Close closes the database store, writing the current size to the start.
 // NOTE: The state must already be written.
 func (db *Database) Close() {
+	if db.store == nil {
+		return // already closed
+	}
 	if db.mode != stor.READ {
 		// need to use Write because all but last chunk are read-only
 		buf := make([]byte, stor.SmallOffsetLen)
@@ -98,6 +101,7 @@ func (db *Database) Close() {
 		db.store.Write(uint64(len(magic)), buf)
 	}
 	db.store.Close()
+	db.store = nil
 }
 
 //-------------------------------------------------------------------

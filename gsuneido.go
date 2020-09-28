@@ -81,6 +81,12 @@ func main() {
 				"in", time.Since(t).Round(time.Millisecond))
 		}
 		os.Exit(0)
+	case "compact":
+		t := time.Now()
+		n := db19.Compact("suneido.db")
+		fmt.Println("compacted", n, "tables in",
+			time.Since(t).Round(time.Millisecond))
+		os.Exit(0)
 	case "check":
 		t := time.Now()
 		if err := db19.CheckDatabase("suneido.db"); err != nil {

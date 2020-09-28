@@ -26,6 +26,8 @@ loop:
 			setAction("check")
 		case "-repair":
 			setAction("repair")
+		case "-compact":
+			setAction("compact")
 		case "-d", "-dump":
 			setAction("dump")
 			args = optionalArg(args)
