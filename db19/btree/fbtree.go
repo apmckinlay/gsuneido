@@ -10,6 +10,7 @@ import (
 
 	"github.com/apmckinlay/gsuneido/db19/ixspec"
 	"github.com/apmckinlay/gsuneido/db19/stor"
+	"github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/cksum"
 )
@@ -392,14 +393,13 @@ func readNode(store *stor.Stor, off uint64) fNode {
 // recentSize is the length of the tail of the file that we look at
 const recentSize = 32 * 1024 * 1024 // ???
 
-func (fb *fbtree) quickCheck(fn func(uint64)) {
+func (fb *fbtree) quickCheck() {
 	assert.Msg("quick check requires flattened").That(fb.redirs.tbl.IsNil())
 	recent := int64(fb.store.Size()) - recentSize
-	fb.quickCheck1(0, fb.root, recent, fn)
+	fb.quickCheck1(0, fb.root, recent)
 }
 
-func (fb *fbtree) quickCheck1(depth int, offset uint64, recent int64,
-	fn func(uint64)) {
+func (fb *fbtree) quickCheck1(depth int, offset uint64, recent int64) {
 	// only look at nodes in the recent part of the file
 	if int64(offset) < recent {
 		return
@@ -408,14 +408,16 @@ func (fb *fbtree) quickCheck1(depth int, offset uint64, recent int64,
 	if depth < fb.treeLevels {
 		// tree node
 		for it := node.iter(); it.next(); {
-			fb.quickCheck1(depth+1, it.offset, recent, fn)
+			fb.quickCheck1(depth+1, it.offset, recent)
 		}
 	} else {
 		// leaf node
 		for it := node.iter(); it.next(); {
 			// only checksum data records in the recent part of the file
 			if int64(it.offset) > recent {
-				fn(it.offset)
+				buf := fb.store.Data(it.offset)
+				size := runtime.RecLen(buf)
+				cksum.MustCheck(buf[:size+cksum.Len])
 			}
 		}
 	}

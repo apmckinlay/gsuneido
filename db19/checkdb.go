@@ -32,11 +32,7 @@ func (db *Database) QuickCheck() {
 func (dc dbcheck) quickCheckTable(sc *meta.Schema) {
 	info := dc.meta.GetRoInfo(sc.Table)
 	for _, ix := range info.Indexes {
-		ix.QuickCheck(func(off uint64) {
-			buf := dc.store.Data(off)
-			size := rt.RecLen(buf)
-			cksum.MustCheck(buf[:size+cksum.Len])
-		})
+		ix.QuickCheck()
 	}
 }
 
