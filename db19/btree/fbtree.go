@@ -353,7 +353,7 @@ func (fb *fbtree) getNode(off uint64) fNode {
 	return fb.readNode(off)
 }
 
-func (fb *fbtree) getCkNode(off uint64) fNode {
+func (fb *fbtree) getCkNode(off uint64, check bool) fNode {
 	if r, ok := fb.redirs.tbl.Get(off); ok {
 		assert.That((r.mnode == nil) != (r.newOffset == 0))
 		if r.mnode != nil {
@@ -361,9 +361,11 @@ func (fb *fbtree) getCkNode(off uint64) fNode {
 		}
 		off = r.newOffset
 	}
-	buf := fb.store.Data(off)
-	rn := runtime.RecLen(buf)
-	cksum.MustCheck(buf[:rn+cksum.Len])
+	if check {
+		buf := fb.store.Data(off)
+		rn := runtime.RecLen(buf)
+		cksum.MustCheck(buf[:rn+cksum.Len])
+	}
 	return fb.readNode(off)
 }
 
@@ -399,7 +401,7 @@ func (fb *fbtree) quickCheck1(depth int, offset uint64, recent int64,
 	if int64(offset) < recent {
 		return
 	}
-	node := fb.getCkNode(offset)
+	node := fb.getCkNode(offset, true)
 	if depth < fb.treeLevels {
 		// tree node
 		for it := node.iter(); it.next(); {
@@ -425,7 +427,7 @@ func (fb *fbtree) check(fn func(uint64)) (count, size, nnodes int) {
 
 func (fb *fbtree) check1(depth int, offset uint64, key *string, path bool,
 	fn func(uint64)) (count, size, nnodes int) {
-	node := fb.getCkNode(offset)
+	node := fb.getCkNode(offset, true)
 	size += len(node)
 	nnodes++
 	for it := node.iter(); it.next(); {
@@ -463,24 +465,24 @@ func (fb *fbtree) check1(depth int, offset uint64, key *string, path bool,
 	return
 }
 
-// ------------------------------------------------------------------
+// iter -------------------------------------------------------------
 
 type fbIter = func() (string, uint64, bool)
 
 // Iter returns a function that can be called to return consecutive entries.
 // NOTE: The returned key is only the known prefix.
 // (unlike mbtree which returns the actual key)
-func (fb *fbtree) Iter() fbIter {
+func (fb *fbtree) Iter(check bool) fbIter {
 	var stack [maxlevels]*fnIter
 
 	// traverse down the tree to the leftmost leaf, making a stack of iterators
 	nodeOff := fb.root
 	for i := 0; i < fb.treeLevels; i++ {
-		stack[i] = fb.getNode(nodeOff).iter()
+		stack[i] = fb.getCkNode(nodeOff, check).iter()
 		stack[i].next()
 		nodeOff = stack[i].offset
 	}
-	iter := fb.getNode(nodeOff).iter()
+	iter := fb.getCkNode(nodeOff, check).iter()
 
 	return func() (string, uint64, bool) {
 		for {
@@ -500,16 +502,16 @@ func (fb *fbtree) Iter() fbIter {
 			}
 			// and then back down to the next leaf
 			for i++; i < fb.treeLevels; i++ {
-				stack[i] = fb.getNode(nodeOff).iter()
+				stack[i] = fb.getCkNode(nodeOff, check).iter()
 				stack[i].next()
 				nodeOff = stack[i].offset
 			}
-			iter = fb.getNode(nodeOff).iter()
+			iter = fb.getCkNode(nodeOff, check).iter()
 		}
 	}
 }
 
-// ------------------------------------------------------------------
+// print ------------------------------------------------------------
 
 func (fb *fbtree) print() {
 	fmt.Println("---------------------------------")
@@ -551,7 +553,7 @@ func (fb *fbtree) print1(depth int, offset uint64) {
 	}
 }
 
-// ------------------------------------------------------------------
+// builder ----------------------------------------------------------
 
 // fbtreeBuilder is used to bulk load an fbtree.
 // Keys must be added in order.
@@ -625,7 +627,7 @@ func (fb *fbtreeBuilder) Finish() *Overlay {
 	return &Overlay{under: []tree{bt}}
 }
 
-// ------------------------------------------------------------------
+// trace ------------------------------------------------------------
 
 const T = false // set to true to enable tracing
 

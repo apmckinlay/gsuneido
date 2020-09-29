@@ -12,11 +12,11 @@ import (
 type treeIter = func() (string, uint64, bool)
 
 type tree interface {
-	Iter() treeIter
+	Iter(check bool) treeIter
 }
 
 // Overlay is an immutable fbtree plus one or more mbtrees.
-// with a mutable mbtree at the top to store updates.
+// Update transactions have a mutable mbtree at the top to store updates.
 type Overlay struct {
 	// under are the underlying fbtree and mbtree's
 	under []tree
@@ -78,7 +78,7 @@ func (ov *Overlay) base() *fbtree {
 	return ov.under[0].(*fbtree)
 }
 
-//-------------------------------------------------------------------
+// iter -------------------------------------------------------------
 
 type ovsrc struct {
 	iter treeIter
@@ -88,13 +88,17 @@ type ovsrc struct {
 }
 
 // Iter returns a treeIter function
-func (ov *Overlay) Iter() treeIter {
+func (ov *Overlay) Iter(check bool) treeIter {
+	if ov.mb == nil && len(ov.under) == 1 {
+		// only fbtree, no merge needed
+		return ov.under[0].Iter(check)
+	}
 	srcs := make([]ovsrc, 0, len(ov.under)+1)
 	if ov.mb != nil {
-		srcs = append(srcs, ovsrc{iter: ov.mb.Iter()})
+		srcs = append(srcs, ovsrc{iter: ov.mb.Iter(check)})
 	}
 	for i := range ov.under {
-		srcs = append(srcs, ovsrc{iter: ov.under[i].Iter()})
+		srcs = append(srcs, ovsrc{iter: ov.under[i].Iter(check)})
 	}
 	for i := range srcs {
 		srcs[i].next()

@@ -34,7 +34,7 @@ func TestFbtreeIter(t *testing.T) {
 		}
 	})
 	i := 0
-	iter := fb.Iter()
+	iter := fb.Iter(true)
 	for k, o, ok := iter(); ok; k, o, ok = iter() {
 		assert.T(t).That(strings.HasPrefix(data[i], k))
 		assert.T(t).This(o).Is(i)
@@ -60,7 +60,7 @@ func TestFbtreeBuilder(t *testing.T) {
 	}
 	fb := bldr.Finish().base()
 	fb.check(nil)
-	iter := fb.Iter()
+	iter := fb.Iter(true)
 	for i := 100000; i <= limit; i++ {
 		key := strconv.Itoa(i)
 		k, o, ok := iter()

@@ -186,7 +186,7 @@ func (leaf *mbLeaf) forEach(fn visitor) {
 
 type mbIter = func() (string, uint64, bool)
 
-func (mb *mbtree) Iter() mbIter {
+func (mb *mbtree) Iter(bool) mbIter {
 	tree := mb.tree
 	ti := 0
 	var leaf *mbLeaf

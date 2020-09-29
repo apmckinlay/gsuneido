@@ -197,7 +197,7 @@ func TestFreeze(t *testing.T) {
 
 func (fb *fbtree) list() string {
 	s := ""
-	iter := fb.Iter()
+	iter := fb.Iter(true)
 	for _, o, ok := iter(); ok; _, o, ok = iter() {
 		s += strconv.Itoa(int(o)) + " "
 	}
@@ -303,7 +303,7 @@ func TestFlatten(t *testing.T) {
 	check := func() {
 		t.Helper()
 		fb.check(nil)
-		iter := fb.Iter()
+		iter := fb.Iter(true)
 		for i := from; i < to; i++ {
 			if i%2 == 1 && !inserted[i] {
 				continue

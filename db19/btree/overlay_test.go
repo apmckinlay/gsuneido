@@ -69,7 +69,7 @@ func key2off(key string) uint64 {
 func checkIter(t *testing.T, data []string, tr tree) {
 	assert := assert.T(t)
 	sort.Strings(data)
-	it := tr.Iter()
+	it := tr.Iter(true)
 	for _, k := range data {
 		if k == "" {
 			continue

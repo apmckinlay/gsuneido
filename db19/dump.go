@@ -83,7 +83,7 @@ func dumpTable(db *Database, schema *meta.Schema, multi bool, w *bufio.Writer) i
 		binary.BigEndian.PutUint32(intbuf[:], uint32(n))
 		w.Write(intbuf[:])
 	}
-	iter := info.Indexes[0].Iter()
+	iter := info.Indexes[0].Iter(true)
 	for {
 		_, off, ok := iter()
 		if !ok {

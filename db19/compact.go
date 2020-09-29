@@ -57,7 +57,7 @@ func compactTable(state *DbState, src *Database, ts *meta.Schema, dst *Database)
 	info := state.meta.GetRoInfo(ts.Table)
 	before := dst.store.Size()
 	list := sortlist.NewUnsorted()
-	iter := info.Indexes[0].Iter()
+	iter := info.Indexes[0].Iter(true)
 	nrecs := 0
 	for {
 		_, off, ok := iter()
