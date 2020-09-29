@@ -10,7 +10,6 @@ import (
 
 	"github.com/apmckinlay/gsuneido/db19/ixspec"
 	"github.com/apmckinlay/gsuneido/db19/stor"
-	"github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/cksum"
 )
@@ -331,7 +330,12 @@ func loadRedirs(store *stor.Stor, redirsOff uint64) redirs {
 
 // putNode stores the node
 func (node fNode) putNode(store *stor.Stor) uint64 {
-	off := store.SaveSized(node)
+	n := len(node)
+	off, buf := store.Alloc(2 + n + cksum.Len)
+	stor.NewWriter(buf).Put2(n)
+	buf = buf[2:]
+	copy(buf, node)
+	cksum.Update(buf)
 	// if len(node) > 0 && rand.Intn(500) == 42 {
 	// 	// corrupt some nodes to test checking
 	// 	fmt.Println("ZAP")
@@ -350,7 +354,7 @@ func (fb *fbtree) getNode(off uint64) fNode {
 		}
 		off = r.newOffset
 	}
-	return fb.readNode(off)
+	return readNode(fb.store, off)
 }
 
 func (fb *fbtree) getCkNode(off uint64, check bool) fNode {
@@ -361,18 +365,17 @@ func (fb *fbtree) getCkNode(off uint64, check bool) fNode {
 		}
 		off = r.newOffset
 	}
+	node := readNode(fb.store, off)
 	if check {
-		buf := fb.store.Data(off)
-		rn := runtime.RecLen(buf)
-		cksum.MustCheck(buf[:rn+cksum.Len])
+		cksum.MustCheck(node[:len(node)+cksum.Len])
 	}
-	return fb.readNode(off)
+	return node
 }
 
-func (fb *fbtree) readNode(off uint64) fNode {
-	assert.That(!fb.redirs.isFake(off))
-	buf := fb.store.DataSized(off)
-	return fNode(buf)
+func readNode(store *stor.Stor, off uint64) fNode {
+	buf := store.Data(off)
+	n := stor.NewReader(buf).Get2()
+	return fNode(buf[2 : 2+n])
 }
 
 //-------------------------------------------------------------------

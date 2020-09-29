@@ -94,14 +94,14 @@ func (fb *fbtree) getMutableNode(off uint64) fNode {
 	var roNode fNode
 	if r, ok := fb.redirs.tbl.Get(off); ok {
 		if r.newOffset != 0 {
-			roNode = fb.readNode(r.newOffset)
+			roNode = readNode(fb.store, r.newOffset)
 		} else if r.generation == fb.redirs.generation {
 			return r.mnode
 		} else {
 			roNode = r.mnode
 		}
 	} else {
-		roNode = fb.readNode(off)
+		roNode = readNode(fb.store, off)
 	}
 	node := append(roNode[:0:0], roNode...)
 	fb.redirs.tbl.Put(&redir{offset: off,

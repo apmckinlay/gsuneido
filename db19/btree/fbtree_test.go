@@ -13,8 +13,18 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/stor"
 
 	"github.com/apmckinlay/gsuneido/util/assert"
+	"github.com/apmckinlay/gsuneido/util/cksum"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
+
+func TestFbtreeIO(t *testing.T) {
+	store := stor.HeapStor(128)
+	before := fNode([]byte("helloworld"))
+	off := before.putNode(store)
+	after := readNode(store, off)
+	cksum.MustCheck(after[:len(after)+cksum.Len])
+	assert.T(t).This(string(after)).Is(string(before))
+}
 
 func TestFbtreeIter(t *testing.T) {
 	const n = 1000
