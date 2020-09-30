@@ -11,7 +11,7 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/btree"
 	"github.com/apmckinlay/gsuneido/db19/meta"
 	"github.com/apmckinlay/gsuneido/db19/stor"
-	rt "github.com/apmckinlay/gsuneido/runtime"
+	"github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/cksum"
 )
 
@@ -66,37 +66,40 @@ func (dc *dbcheck) forEachTable(fn func(sc *meta.Schema)) int {
 
 func (dc *dbcheck) checkTable(sc *meta.Schema) {
 	info := dc.meta.GetRoInfo(sc.Table)
-	sumPrev := uint64(0)
-	for i, ix := range info.Indexes {
-		count, sum := dc.checkIndex(sc, i, ix)
-		if count != info.Nrows || (i > 0 && sum != sumPrev) {
-			// fmt.Println("i", i, "nrows", info.Nrows, "count", count, "sumPrev", sumPrev, "sum", sum)
-			panic(&ErrCorrupt{table: sc.Table})
-		}
-		sumPrev = sum
+	count, sum := dc.checkFirstIndex(sc.Table, info.Indexes[0])
+	if count != info.Nrows {
+		panic(&ErrCorrupt{table: sc.Table})
+	}
+	for i := 1; i < len(info.Indexes); i++ {
+		ix := info.Indexes[i]
+		count, sum = checkOtherIndex(sc.Table, ix, count, sum)
 	}
 }
 
-func (dc *dbcheck) checkIndex(sc *meta.Schema, i int, ix *btree.Overlay) (int, uint64) {
+func (dc *dbcheck) checkFirstIndex(table string, ix *btree.Overlay) (int, uint64) {
 	sum := uint64(0)
-	var fn func(uint64)
-	if i == 0 {
-		fn = func(off uint64) {
-			sum += off // addition so order doesn't matter
-			buf := dc.store.Data(off)
-			size := rt.RecLen(buf)
-			if !cksum.Check(buf[:size+cksum.Len]) {
-				// fmt.Println("data checksum")
-				panic(&ErrCorrupt{table: sc.Table})
-			}
+	count := ix.Check(func(off uint64) {
+		sum += off // addition so order doesn't matter
+		buf := dc.store.Data(off)
+		size := runtime.RecLen(buf)
+		if !cksum.Check(buf[:size+cksum.Len]) {
+			// fmt.Println("data checksum")
+			panic(&ErrCorrupt{table: table})
 		}
-	} else {
-		fn = func(off uint64) {
-			sum += off // addition so order doesn't matter
-		}
+	})
+	return count, sum
+}
+
+func checkOtherIndex(table string, ix *btree.Overlay,
+	countPrev int, sumPrev uint64) (int, uint64) {
+	sum := uint64(0)
+	count := ix.Check(func(off uint64) {
+		sum += off // addition so order doesn't matter
+	})
+	if count != countPrev || sum != sumPrev {
+		panic(&ErrCorrupt{table: table})
 	}
-	n := ix.Check(fn)
-	return n, sum
+	return count, sum
 }
 
 //-------------------------------------------------------------------

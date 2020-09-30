@@ -10,7 +10,8 @@ import (
 
 	"github.com/apmckinlay/gsuneido/db19/meta"
 	"github.com/apmckinlay/gsuneido/db19/stor"
-	rt "github.com/apmckinlay/gsuneido/runtime"
+	"github.com/apmckinlay/gsuneido/runtime"
+	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/cksum"
 	"github.com/apmckinlay/gsuneido/util/sortlist"
 )
@@ -23,7 +24,7 @@ func Compact(dbfile string) int {
 			panic("compact failed: " + fmt.Sprint(e))
 		}
 	}()
-	src, err := OpenDatabaseRead(dbfile)
+	src, err := openDatabase(dbfile, stor.READ, false)
 	ck(err)
 	defer src.Close()
 	dst, tmpfile := tmpdb()
@@ -57,30 +58,30 @@ func compactTable(state *DbState, src *Database, ts *meta.Schema, dst *Database)
 	info := state.meta.GetRoInfo(ts.Table)
 	before := dst.store.Size()
 	list := sortlist.NewUnsorted()
-	iter := info.Indexes[0].Iter(true)
-	nrecs := 0
-	for {
-		_, off, ok := iter()
-		if !ok {
-			break
+	sum := uint64(0)
+	count := info.Indexes[0].Check(func(off uint64) {
+		sum += off // addition so order doesn't matter
+		rec := src.store.Data(off)
+		size := runtime.RecLen(rec)
+		rec = rec[:size+cksum.Len]
+		if !cksum.Check(rec) {
+			panic(&ErrCorrupt{table: info.Table})
 		}
-		rec := offToBufCk(src.store, off) // verify data checksums
-		off, buf := dst.store.Alloc(len(rec))
+		off2, buf := dst.store.Alloc(len(rec))
 		copy(buf, rec)
-		list.Add(off)
-		nrecs++
-	}
+		list.Add(off2)
+	})
 	list.Finish()
+	assert.This(count).Is(info.Nrows)
 	dataSize := dst.store.Size() - before
-	ov := buildIndexes(ts, list, dst.store, nrecs) // same as load
-	ti := &meta.Info{Table: ts.Table, Nrows: nrecs, Size: dataSize, Indexes: ov}
+	checkOtherIndexes(info, count, sum)            //TODO concurrent
+	ov := buildIndexes(ts, list, dst.store, count) // same as load
+	ti := &meta.Info{Table: ts.Table, Nrows: count, Size: dataSize, Indexes: ov}
 	dst.LoadedTable(ts, ti)
 }
 
-func offToBufCk(store *stor.Stor, off uint64) []byte {
-	buf := store.Data(off)
-	size := rt.RecLen(buf)
-	buf = buf[:size+cksum.Len]
-	cksum.Check(buf)
-	return buf
+func checkOtherIndexes(info *meta.Info, count int, sum uint64) {
+	for i := 1; i < len(info.Indexes); i++ {
+		count, sum = checkOtherIndex(info.Table, info.Indexes[i], count, sum)
+	}
 }

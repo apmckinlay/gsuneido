@@ -5,11 +5,12 @@ package db19
 
 import (
 	"bufio"
-	"encoding/binary"
 	"fmt"
+	"math"
 	"os"
 
 	"github.com/apmckinlay/gsuneido/db19/meta"
+	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
@@ -58,7 +59,7 @@ func DumpTable(dbfile, table, to string) int {
 }
 
 func dumpOpen(dbfile, to string) (*Database, *os.File, *bufio.Writer) {
-	db, err := OpenDatabaseRead(dbfile)
+	db, err := openDatabase(dbfile, stor.READ, false)
 	ck(err)
 	os.Remove(to) //TODO bak
 	f, err := os.Create(to)
@@ -68,8 +69,6 @@ func dumpOpen(dbfile, to string) (*Database, *os.File, *bufio.Writer) {
 	return db, f, w
 }
 
-var intbuf [4]byte
-
 func dumpTable(db *Database, schema *meta.Schema, multi bool, w *bufio.Writer) int {
 	state := db.GetState()
 	w.WriteString("====== ")
@@ -78,25 +77,25 @@ func dumpTable(db *Database, schema *meta.Schema, multi bool, w *bufio.Writer) i
 	}
 	w.WriteString(schema.String() + "\n")
 	info := state.meta.GetRoInfo(schema.Table)
-	n := 0
-	writeInt := func(n int) {
-		binary.BigEndian.PutUint32(intbuf[:], uint32(n))
-		w.Write(intbuf[:])
-	}
-	iter := info.Indexes[0].Iter(true)
-	for {
-		_, off, ok := iter()
-		if !ok {
-			break
-		}
-		n++
+	sum := uint64(0)
+	count := info.Indexes[0].Check(func(off uint64) {
+		sum += off                       // addition so order doesn't matter
 		rec := offToRecCk(db.store, off) // verify data checksums
-		writeInt(rec.Len())
+		writeInt(w, len(rec))
 		w.WriteString(string(rec))
-	}
-	writeInt(0)
-	assert.This(n).Is(info.Nrows)
-	return n
+	})
+	writeInt(w, 0)                      // end of table records
+	checkOtherIndexes(info, count, sum) //TODO concurrent
+	assert.This(count).Is(info.Nrows)
+	return count
+}
+
+func writeInt(w *bufio.Writer, n int) {
+	assert.That(0 <= n && n <= math.MaxUint32)
+	w.WriteByte(byte(n >> 24))
+	w.WriteByte(byte(n >> 16))
+	w.WriteByte(byte(n >> 8))
+	w.WriteByte(byte(n))
 }
 
 //TODO squeeze records when table has deleted fields
