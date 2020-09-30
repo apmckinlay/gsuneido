@@ -124,7 +124,7 @@ var suSocketClientMethods = Methods{
 		sc := scOpen(this)
 		sc.conn.SetDeadline(time.Now().Add(sc.timeout))
 		defer sc.conn.SetDeadline(noDeadline)
-		line := Readline(sc.rdr, "file.Readline: ")
+		line := Readline(sc.rdr, "socket.Readline: ")
 		if line == False {
 			panic("socket Readline lost connection or timeout")
 		}
