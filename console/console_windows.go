@@ -17,10 +17,10 @@ import (
 func RedirOutput() {
 	// try to ensure that output is captured, either to console or log
 	attachedStdout, attachedStderr := outputToConsole()
-	if !attachedStdout {
+	if !attachedStdout && !stdoutRedirected {
 		stdoutToLog()
 	}
-	if !attachedStderr {
+	if !attachedStderr && !stderrRedirected {
 		stderrToLog()
 		log.SetOutput(os.Stderr) // new Stderr
 	} else {
@@ -51,7 +51,7 @@ var stderrRedirected = redirected(windows.STD_ERROR_HANDLE)
 
 func outputToConsole() (stdoutAttached bool, stderrAttached bool) {
 	if !stdoutRedirected || !stderrRedirected {
-		// If not directed to a file, try attaching to console,
+		// If not directed to a file or pipe, try attaching to console
 		if consoleAttached {
 			if f, _ := os.OpenFile("CONOUT$", os.O_WRONLY, 0644); f != nil {
 				if !stdoutRedirected {
