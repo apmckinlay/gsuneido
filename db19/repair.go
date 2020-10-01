@@ -116,7 +116,7 @@ func renameBak(from string, to string) error {
 		return err
 	}
 	err = os.Rename(to, to+".bak")
-	if err != nil {
+	if err != nil && !os.IsNotExist(err) {
 		return err
 	}
 	err = os.Rename(from, to)

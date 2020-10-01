@@ -49,7 +49,6 @@ func Compact(dbfile string) int {
 	src.Close()
 	ics.finish("compact")
 	ck(renameBak(tmpfile, dbfile))
-
 	return ntables
 }
 

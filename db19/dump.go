@@ -6,6 +6,7 @@ package db19
 import (
 	"bufio"
 	"fmt"
+	"io/ioutil"
 	"math"
 	"os"
 	"runtime"
@@ -29,9 +30,9 @@ func DumpDatabase(dbfile, to string) int {
 			panic("dump failed: " + fmt.Sprint(e))
 		}
 	}()
-	db, f, w := dumpOpen(dbfile, to)
-	defer db.Close()
-	defer f.Close()
+	db, f, w := dumpOpen(dbfile)
+	tmpfile := f.Name()
+	defer func() { db.Close(); f.Close(); os.Remove(tmpfile) }()
 	ics := NewIndexCheckers()
 	defer ics.finish("dump")
 
@@ -45,6 +46,9 @@ func DumpDatabase(dbfile, to string) int {
 		}
 	})
 	ck(w.Flush())
+	f.Close()
+	ics.finish("dump")
+	ck(renameBak(tmpfile, to))
 	return ntables
 }
 
@@ -57,9 +61,9 @@ func DumpTable(dbfile, table, to string) int {
 			panic("dump failed: " + table + " " + fmt.Sprint(e))
 		}
 	}()
-	db, f, w := dumpOpen(dbfile, to)
-	defer db.Close()
-	defer f.Close()
+	db, f, w := dumpOpen(dbfile)
+	tmpfile := f.Name()
+	defer func() { db.Close(); f.Close(); os.Remove(tmpfile) }()
 	ics := NewIndexCheckers()
 	defer ics.finish("dump")
 
@@ -70,14 +74,16 @@ func DumpTable(dbfile, table, to string) int {
 	}
 	n := dumpTable(db, schema, false, w, ics)
 	ck(w.Flush())
+	f.Close()
+	ics.finish("dump")
+	ck(renameBak(tmpfile, to))
 	return n
 }
 
-func dumpOpen(dbfile, to string) (*Database, *os.File, *bufio.Writer) {
+func dumpOpen(dbfile string) (*Database, *os.File, *bufio.Writer) {
 	db, err := openDatabase(dbfile, stor.READ, false)
 	ck(err)
-	os.Remove(to) //TODO bak
-	f, err := os.Create(to)
+	f, err := ioutil.TempFile(".", "gs*.tmp")
 	ck(err)
 	w := bufio.NewWriter(f)
 	w.WriteString("Suneido dump 2\n")
