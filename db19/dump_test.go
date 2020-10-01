@@ -8,24 +8,28 @@ import (
 	"os"
 	"testing"
 	"time"
+
+	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
-func TestDumpTable(*testing.T) {
+func TestDumpTable(t *testing.T) {
 	if testing.Short() {
 		return
 	}
-	t := time.Now()
+	start := time.Now()
 	defer os.Remove("tmp.su")
-	n := DumpTable("../suneido.db", "stdlib", "tmp.su")
-	fmt.Println("dumped", n, "records in", time.Since(t).Round(time.Millisecond))
+	n, err := DumpTable("../suneido.db", "stdlib", "tmp.su")
+	assert.T(t).This(err).Is(nil)
+	fmt.Println("dumped", n, "records in", time.Since(start).Round(time.Millisecond))
 }
 
-func TestDumpDatabase(*testing.T) {
+func TestDumpDatabase(t *testing.T) {
 	if testing.Short() {
 		return
 	}
-	t := time.Now()
+	start := time.Now()
 	defer os.Remove("tmp.su")
-	n := DumpDatabase("../suneido.db", "tmp.su")
-	fmt.Println("dumped", n, "tables in", time.Since(t).Round(time.Millisecond))
+	n, err := DumpDatabase("../suneido.db", "tmp.su")
+	assert.T(t).This(err).Is(nil)
+	fmt.Println("dumped", n, "tables in", time.Since(start).Round(time.Millisecond))
 }

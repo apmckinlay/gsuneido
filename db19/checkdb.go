@@ -39,7 +39,7 @@ func (dc dbcheck) quickCheckTable(sc *meta.Schema) {
 // full check -------------------------------------------------------
 
 // CheckDatabase checks the integrity of the database.
-func CheckDatabase(dbfile string) (ec *ErrCorrupt) {
+func CheckDatabase(dbfile string) (ec error) {
 	defer func() {
 		if e := recover(); e != nil {
 			ec = NewErrCorrupt(e)

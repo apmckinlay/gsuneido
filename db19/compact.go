@@ -20,11 +20,10 @@ import (
 // Compact cleans up old records and index nodes that are no longer in use.
 // It does this by copying live data to a new database file.
 // In the process it does a full check of the database.
-// It panics on errors.
-func Compact(dbfile string) int {
+func Compact(dbfile string) (ntables int, err error) {
 	defer func() {
 		if e := recover(); e != nil {
-			panic("compact failed: " + fmt.Sprint(e))
+			err = fmt.Errorf("compact failed: %v", e)
 		}
 	}()
 	src, err := openDatabase(dbfile, stor.READ, false)
@@ -33,23 +32,22 @@ func Compact(dbfile string) int {
 	dst, tmpfile := tmpdb()
 	defer func() { dst.Close(); os.Remove(tmpfile) }()
 	ics := NewIndexCheckers()
-	defer ics.finish("compact")
+	defer ics.finish()
 
 	state := src.GetState()
-	ntables := 0
 	state.meta.ForEachSchema(func(sc *meta.Schema) {
 		compactTable(state, src, sc, dst, ics)
 		ntables++
 		if atomic.LoadInt32(&ics.err) != 0 {
-			panic("compact failed: database corrupt?")
+			panic("database corrupt?")
 		}
 	})
 	dst.GetState().Write()
 	dst.Close()
 	src.Close()
-	ics.finish("compact")
+	ics.finish()
 	ck(renameBak(tmpfile, dbfile))
-	return ntables
+	return ntables, nil
 }
 
 func tmpdb() (*Database, string) {

@@ -58,13 +58,15 @@ func main() {
 	case "dump":
 		t := time.Now()
 		if options.Arg == "" {
-			n := db19.DumpDatabase("suneido.db", "database.su")
-			fmt.Println("dumped", n, "tables in",
+			ntables, err := db19.DumpDatabase("suneido.db", "database.su")
+			ck(err)
+			fmt.Println("dumped", ntables, "tables in",
 				time.Since(t).Round(time.Millisecond))
 		} else {
 			table := strings.TrimSuffix(options.Arg, ".su")
-			n := db19.DumpTable("suneido.db", table, table+".su")
-			fmt.Println("dumped", n, "records from", table,
+			nrecs, err := db19.DumpTable("suneido.db", table, table+".su")
+			ck(err)
+			fmt.Println("dumped", nrecs, "records from", table,
 				"in", time.Since(t).Round(time.Millisecond))
 		}
 		os.Exit(0)
@@ -83,24 +85,19 @@ func main() {
 		os.Exit(0)
 	case "compact":
 		t := time.Now()
-		n := db19.Compact("suneido.db")
-		fmt.Println("compacted", n, "tables in",
+		ntables, err := db19.Compact("suneido.db")
+		ck(err)
+		fmt.Println("compacted", ntables, "tables in",
 			time.Since(t).Round(time.Millisecond))
 		os.Exit(0)
 	case "check":
 		t := time.Now()
-		if err := db19.CheckDatabase("suneido.db"); err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
+		ck(db19.CheckDatabase("suneido.db"))
 		fmt.Println("checked database in", time.Since(t).Round(time.Millisecond))
 		os.Exit(0)
 	case "repair":
 		t := time.Now()
-		if err := db19.Repair("suneido.db", nil); err != nil {
-			fmt.Println(err)
-			os.Exit(1)
-		}
+		ck(db19.Repair("suneido.db", nil))
 		fmt.Println("repaired database in", time.Since(t).Round(time.Millisecond))
 		os.Exit(0)
 	case "version":
@@ -139,6 +136,12 @@ func main() {
 	} else {
 		eval("Init()")
 		builtin.Run()
+	}
+}
+
+func ck(err error) {
+	if err != nil {
+		log.Fatalln(err)
 	}
 }
 

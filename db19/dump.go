@@ -5,6 +5,7 @@ package db19
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"math"
@@ -22,22 +23,20 @@ import (
 
 // DumpDatabase exports a dumped database to a file.
 // In the process it does a full check of the database.
-// It returns the number of tables dumped or panics on error.
-func DumpDatabase(dbfile, to string) int {
+func DumpDatabase(dbfile, to string) (ntables int, err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			os.Remove(to)
-			panic("dump failed: " + fmt.Sprint(e))
+			err = fmt.Errorf("dump failed: %v", e)
 		}
 	}()
 	db, f, w := dumpOpen(dbfile)
 	tmpfile := f.Name()
 	defer func() { db.Close(); f.Close(); os.Remove(tmpfile) }()
 	ics := NewIndexCheckers()
-	defer ics.finish("dump")
+	defer ics.finish()
 
 	state := db.GetState()
-	ntables := 0
 	state.meta.ForEachSchema(func(sc *meta.Schema) {
 		dumpTable(db, sc, true, w, ics)
 		ntables++
@@ -47,37 +46,37 @@ func DumpDatabase(dbfile, to string) int {
 	})
 	ck(w.Flush())
 	f.Close()
-	ics.finish("dump")
+	ics.finish()
 	ck(renameBak(tmpfile, to))
-	return ntables
+	return ntables, nil
 }
 
 // DumpTable exports a dumped table to a file.
 // It returns the number of records dumped or panics on error.
-func DumpTable(dbfile, table, to string) int {
+func DumpTable(dbfile, table, to string) (nrecs int, err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			os.Remove(to)
-			panic("dump failed: " + table + " " + fmt.Sprint(e))
+			err = fmt.Errorf("dump failed: %v", e)
 		}
 	}()
 	db, f, w := dumpOpen(dbfile)
 	tmpfile := f.Name()
 	defer func() { db.Close(); f.Close(); os.Remove(tmpfile) }()
 	ics := NewIndexCheckers()
-	defer ics.finish("dump")
+	defer ics.finish()
 
 	state := db.GetState()
 	schema := state.meta.GetRoSchema(table)
 	if schema == nil {
-		panic("can't find " + table)
+		return 0, errors.New("dump failed: can't find " + table)
 	}
-	n := dumpTable(db, schema, false, w, ics)
+	nrecs = dumpTable(db, schema, false, w, ics)
 	ck(w.Flush())
 	f.Close()
-	ics.finish("dump")
+	ics.finish()
 	ck(renameBak(tmpfile, to))
-	return n
+	return nrecs, nil
 }
 
 func dumpOpen(dbfile string) (*Database, *os.File, *bufio.Writer) {
@@ -141,6 +140,7 @@ type indexCheckers struct {
 	// indexError is set to non-zero when an error is detected.
 	// It must be accessed atomically.
 	err int32
+	finished bool
 }
 
 type indexCheck struct {
@@ -170,13 +170,13 @@ func (ics *indexCheckers) worker() {
 	}
 }
 
-func (ics *indexCheckers) finish(which string) {
-	if ics.in != nil {
+func (ics *indexCheckers) finish() {
+	if !ics.finished {
 		close(ics.in)
-		ics.in = nil
+		ics.finished = true
 	}
 	ics.wg.Wait()
 	if atomic.LoadInt32(&ics.err) != 0 {
-		panic(which + " failed: database corrupt?")
+		panic("database corrupt?")
 	}
 }
