@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"sync/atomic"
 
 	"github.com/apmckinlay/gsuneido/db19/meta"
 	"github.com/apmckinlay/gsuneido/db19/stor"
@@ -16,8 +17,10 @@ import (
 	"github.com/apmckinlay/gsuneido/util/sortlist"
 )
 
-// Compact cleans up old records and index nodes that are no longer used.
-// It does this by copying to a new database file.
+// Compact cleans up old records and index nodes that are no longer in use.
+// It does this by copying live data to a new database file.
+// In the process it does a full check of the database.
+// It panics on errors.
 func Compact(dbfile string) int {
 	defer func() {
 		if e := recover(); e != nil {
@@ -29,16 +32,22 @@ func Compact(dbfile string) int {
 	defer src.Close()
 	dst, tmpfile := tmpdb()
 	defer func() { dst.Close(); os.Remove(tmpfile) }()
+	ics := NewIndexCheckers()
+	defer ics.finish("compact")
 
 	state := src.GetState()
 	ntables := 0
 	state.meta.ForEachSchema(func(sc *meta.Schema) {
-		compactTable(state, src, sc, dst)
+		compactTable(state, src, sc, dst, ics)
 		ntables++
+		if atomic.LoadInt32(&ics.err) != 0 {
+			panic("compact failed: database corrupt?")
+		}
 	})
 	dst.GetState().Write()
 	dst.Close()
 	src.Close()
+	ics.finish("compact")
 	ck(renameBak(tmpfile, dbfile))
 
 	return ntables
@@ -54,7 +63,8 @@ func tmpdb() (*Database, string) {
 	return db, tmpfile
 }
 
-func compactTable(state *DbState, src *Database, ts *meta.Schema, dst *Database) {
+func compactTable(state *DbState, src *Database, ts *meta.Schema, dst *Database,
+	ics *indexCheckers) {
 	info := state.meta.GetRoInfo(ts.Table)
 	before := dst.store.Size()
 	list := sortlist.NewUnsorted()
@@ -73,15 +83,9 @@ func compactTable(state *DbState, src *Database, ts *meta.Schema, dst *Database)
 	})
 	list.Finish()
 	assert.This(count).Is(info.Nrows)
+	ics.checkOtherIndexes(info, count, sum) // concurrent
 	dataSize := dst.store.Size() - before
-	checkOtherIndexes(info, count, sum)            //TODO concurrent
 	ov := buildIndexes(ts, list, dst.store, count) // same as load
 	ti := &meta.Info{Table: ts.Table, Nrows: count, Size: dataSize, Indexes: ov}
 	dst.LoadedTable(ts, ti)
-}
-
-func checkOtherIndexes(info *meta.Info, count int, sum uint64) {
-	for i := 1; i < len(info.Indexes); i++ {
-		count, sum = checkOtherIndex(info.Table, info.Indexes[i], count, sum)
-	}
 }
