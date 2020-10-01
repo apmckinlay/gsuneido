@@ -9,6 +9,9 @@ import (
 )
 
 func TestRepair(*testing.T) {
-	err := Repair("../../suneido.db", nil)
+	if testing.Short() {
+		return
+	}
+	err := Repair("../suneido.db", nil)
 	fmt.Println(err)
 }

@@ -38,8 +38,8 @@ func Repair(dbfile string, ec *ErrCorrupt) error {
 			continue
 		}
 		if ec = checkState(state, ec.Table()); ec == nil {
-			fmt.Println("truncating", store.Size()-off,
-				"=", store.Size(), "-", off)
+			fmt.Println("truncating", store.Size()-(off+uint64(stateLen)),
+				"=", store.Size(), "-", off+uint64(stateLen))
 			fmt.Println("repairing to", t.Format(dtfmt), "from", t0.Format(dtfmt))
 			return truncate(dbfile, store, off)
 		}
@@ -82,6 +82,9 @@ func checkState(state *DbState, table string) (ec *ErrCorrupt) {
 }
 
 func truncate(dbfile string, store *stor.Stor, off uint64) error {
+	if off+uint64(stateLen) == store.Size() {
+		return nil // nothing to do
+	}
 	store.Close()
 	src, err := os.Open(dbfile)
 	if err != nil {
