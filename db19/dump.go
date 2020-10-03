@@ -26,14 +26,13 @@ import (
 func DumpDatabase(dbfile, to string) (ntables int, err error) {
 	defer func() {
 		if e := recover(); e != nil {
-			os.Remove(to)
 			err = fmt.Errorf("dump failed: %v", e)
 		}
 	}()
 	db, f, w := dumpOpen(dbfile)
 	tmpfile := f.Name()
 	defer func() { db.Close(); f.Close(); os.Remove(tmpfile) }()
-	ics := NewIndexCheckers()
+	ics := newIndexCheckers()
 	defer ics.finish()
 
 	state := db.GetState()
@@ -53,14 +52,13 @@ func DumpDatabase(dbfile, to string) (ntables int, err error) {
 func DumpTable(dbfile, table, to string) (nrecs int, err error) {
 	defer func() {
 		if e := recover(); e != nil {
-			os.Remove(to)
 			err = fmt.Errorf("dump failed: %v", e)
 		}
 	}()
 	db, f, w := dumpOpen(dbfile)
 	tmpfile := f.Name()
 	defer func() { db.Close(); f.Close(); os.Remove(tmpfile) }()
-	ics := NewIndexCheckers()
+	ics := newIndexCheckers()
 	defer ics.finish()
 
 	state := db.GetState()
@@ -120,7 +118,7 @@ func writeInt(w *bufio.Writer, n int) {
 // ------------------------------------------------------------------
 // Concurrent checking of additional indexes. Also used by compact.
 
-func NewIndexCheckers() *indexCheckers {
+func newIndexCheckers() *indexCheckers {
 	var ics indexCheckers
 	ics.work = make(chan indexCheck, 32) // ???
 	nw := nworkers()
@@ -154,7 +152,7 @@ func (ics *indexCheckers) checkOtherIndexes(info *meta.Info, count int, sum uint
 		select {
 		case ics.work <- indexCheck{index: info.Indexes[i], count: count, sum: sum}:
 		case <-ics.stop:
-			panic(ics.err.Load())
+			panic("")
 		}
 	}
 }
@@ -168,7 +166,7 @@ func (ics *indexCheckers) worker() {
 		ics.wg.Done()
 	}()
 	for ic := range ics.work {
-		checkOtherIndex("", ic.index, ic.count, ic.sum)
+		checkOtherIndex(ic.index, ic.count, ic.sum)
 	}
 }
 

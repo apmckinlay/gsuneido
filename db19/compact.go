@@ -30,7 +30,7 @@ func Compact(dbfile string) (ntables int, err error) {
 	defer src.Close()
 	dst, tmpfile := tmpdb()
 	defer func() { dst.Close(); os.Remove(tmpfile) }()
-	ics := NewIndexCheckers()
+	ics := newIndexCheckers()
 	defer ics.finish()
 
 	state := src.GetState()

@@ -76,7 +76,9 @@ func openDatabase(filename string, mode stor.Mode, check bool) (db *Database, er
 	state, _ := ReadState(db.store, size-uint64(stateLen))
 	db.state.set(state)
 	if check {
-		db.QuickCheck()
+		if err := db.QuickCheck(); err != nil {
+			return nil, err
+		}
 	}
 	return db, nil
 }

@@ -32,6 +32,9 @@ func TestQuickCheck(*testing.T) {
 	if e != nil {
 		panic(e)
 	}
-	db.QuickCheck()
-	fmt.Println("database checked in", time.Since(t).Round(time.Millisecond))
+	if err := db.QuickCheck(); err != nil {
+		fmt.Println(err)
+	} else {
+		fmt.Println("database checked in", time.Since(t).Round(time.Millisecond))
+	}
 }

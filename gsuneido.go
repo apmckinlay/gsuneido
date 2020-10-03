@@ -5,7 +5,6 @@ package main
 
 import (
 	"bufio"
-	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -97,8 +96,13 @@ func main() {
 		os.Exit(0)
 	case "repair":
 		t := time.Now()
-		ck(db19.Repair("suneido.db", nil))
-		fmt.Println("repaired database in", time.Since(t).Round(time.Millisecond))
+		err := db19.CheckDatabase("suneido.db")
+		if err == nil {
+			fmt.Println("database ok")
+		} else {
+			ck(db19.Repair("suneido.db", err))
+			fmt.Println("repaired database in", time.Since(t).Round(time.Millisecond))
+		}
 		os.Exit(0)
 	case "version":
 		fmt.Println("gSuneido " + builtDate + " (" + runtime.Version() + " " +
@@ -179,12 +183,11 @@ func clientErrorLog() {
 
 func startServer() {
 	db, err := db19.OpenDatabase("suneido.db")
-	var ec *db19.ErrCorrupt
-	if errors.As(err, &ec) {
-		fmt.Println(ec)
-		err := db19.Repair("suneido.db", ec)
+	if err != nil {
+		log.Println(err)
+		err := db19.Repair("suneido.db", err)
 		if err != nil {
-			fmt.Println(err)
+			log.Fatalln(err)
 		}
 		os.Exit(0)
 	}

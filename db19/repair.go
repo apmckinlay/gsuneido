@@ -17,8 +17,9 @@ import (
 
 const dtfmt = "20060102.150405"
 
-func Repair(dbfile string, ec *ErrCorrupt) error {
-	fmt.Println("repair")
+func Repair(dbfile string, err error) error {
+	ec, _ := err.(*ErrCorrupt)
+	fmt.Println("repair", err, ec.Table())
 	store, err := stor.MmapStor(dbfile, stor.READ)
 	if err != nil {
 		return err
@@ -38,11 +39,11 @@ func Repair(dbfile string, ec *ErrCorrupt) error {
 			continue
 		}
 		if ec = checkState(state, ec.Table()); ec == nil {
-			fmt.Println("truncating", store.Size()-(off+uint64(stateLen)),
-				"=", store.Size(), "-", off+uint64(stateLen))
-			fmt.Println("repairing to", t.Format(dtfmt), "from", t0.Format(dtfmt))
+			fmt.Println("good state", off, t.Format(dtfmt))
+			fmt.Println("truncating", store.Size()-(off+uint64(stateLen)))
 			return truncate(dbfile, store, off)
 		}
+		fmt.Println("bad state", off, t.Format(dtfmt))
 	}
 }
 
@@ -61,6 +62,7 @@ func prevState(store *stor.Stor, off uint64) (off2 uint64, state *DbState, t tim
 }
 
 func checkState(state *DbState, table string) (ec *ErrCorrupt) {
+	//TODO concurrent
 	defer func() {
 		if e := recover(); e != nil {
 			ec = newErrCorrupt(e)
@@ -68,8 +70,9 @@ func checkState(state *DbState, table string) (ec *ErrCorrupt) {
 	}()
 	dc := (*dbcheck)(state)
 	// If the previous check failed on a certain table,
-	// then start by checking that table.
+	// then start by checking that table first (fail faster).
 	if table != "" {
+		fmt.Println("check first", table)
 		sc := state.meta.GetRoSchema(table)
 		dc.checkTable(sc)
 	}
