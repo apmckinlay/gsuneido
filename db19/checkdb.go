@@ -58,7 +58,7 @@ func CheckDatabase(dbfile string) (ec error) {
 	tcs.dc.forEachTable(func(ts *meta.Schema) {
 		select {
 		case tcs.work <- tableCheck{ts: ts}:
-		case <- tcs.stop:
+		case <-tcs.stop:
 			panic("") // overridden by finish
 		}
 	})
@@ -161,10 +161,10 @@ func newTableCheckers() *tableCheckers {
 }
 
 type tableCheckers struct {
-	wg sync.WaitGroup
-	dc *dbcheck
-	work chan tableCheck
-	stop chan void
+	wg     sync.WaitGroup
+	dc     *dbcheck
+	work   chan tableCheck
+	stop   chan void
 	err    atomic.Value
 	closed bool
 }
@@ -178,7 +178,7 @@ func (tcs *tableCheckers) worker() {
 	defer func() {
 		if e := recover(); e != nil {
 			tcs.err.Store(&ErrCorrupt{table: table})
-			close(tcs.stop)
+			close(tcs.stop) // notify main thread
 		}
 		tcs.wg.Done()
 	}()

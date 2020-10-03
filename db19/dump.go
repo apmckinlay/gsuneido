@@ -40,9 +40,6 @@ func DumpDatabase(dbfile, to string) (ntables int, err error) {
 	state.meta.ForEachSchema(func(sc *meta.Schema) {
 		dumpTable(db, sc, true, w, ics)
 		ntables++
-		if atomic.LoadInt32(&ics.err) != 0 {
-			panic("dump failed: database corrupt?")
-		}
 	})
 	ck(w.Flush())
 	f.Close()
@@ -125,7 +122,7 @@ func writeInt(w *bufio.Writer, n int) {
 
 func NewIndexCheckers() *indexCheckers {
 	var ics indexCheckers
-	ics.in = make(chan indexCheck, 32) // ???
+	ics.work = make(chan indexCheck, 32) // ???
 	nw := nworkers()
 	ics.wg.Add(nw)
 	for i := 0; i < nw; i++ {
@@ -139,12 +136,11 @@ func nworkers() int {
 }
 
 type indexCheckers struct {
-	wg sync.WaitGroup
-	in chan indexCheck
-	// indexError is set to non-zero when an error is detected.
-	// It must be accessed atomically.
-	err      int32
-	finished bool
+	wg     sync.WaitGroup
+	work   chan indexCheck
+	stop   chan void
+	err    atomic.Value
+	closed bool
 }
 
 type indexCheck struct {
@@ -155,32 +151,34 @@ type indexCheck struct {
 
 func (ics *indexCheckers) checkOtherIndexes(info *meta.Info, count int, sum uint64) {
 	for i := 1; i < len(info.Indexes); i++ {
-		ics.in <- indexCheck{index: info.Indexes[i], count: count, sum: sum}
+		select {
+		case ics.work <- indexCheck{index: info.Indexes[i], count: count, sum: sum}:
+		case <-ics.stop:
+			panic(ics.err.Load())
+		}
 	}
 }
 
 func (ics *indexCheckers) worker() {
 	defer func() {
 		if e := recover(); e != nil {
-			atomic.StoreInt32(&ics.err, 1)
+			ics.err.Store(e)
+			close(ics.stop) // notify main thread
 		}
 		ics.wg.Done()
 	}()
-	for ic := range ics.in {
+	for ic := range ics.work {
 		checkOtherIndex("", ic.index, ic.count, ic.sum)
-		if atomic.LoadInt32(&ics.err) != 0 {
-			break
-		}
 	}
 }
 
 func (ics *indexCheckers) finish() {
-	if !ics.finished {
-		close(ics.in)
-		ics.finished = true
+	if !ics.closed {
+		close(ics.work)
+		ics.closed = true
 	}
 	ics.wg.Wait()
-	if atomic.LoadInt32(&ics.err) != 0 {
-		panic("database corrupt?")
+	if err := ics.err.Load(); err != nil {
+		panic(err)
 	}
 }

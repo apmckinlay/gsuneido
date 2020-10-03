@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"sync/atomic"
 
 	"github.com/apmckinlay/gsuneido/db19/meta"
 	"github.com/apmckinlay/gsuneido/db19/stor"
@@ -38,9 +37,6 @@ func Compact(dbfile string) (ntables int, err error) {
 	state.meta.ForEachSchema(func(sc *meta.Schema) {
 		compactTable(state, src, sc, dst, ics)
 		ntables++
-		if atomic.LoadInt32(&ics.err) != 0 {
-			panic("database corrupt?")
-		}
 	})
 	dst.GetState().Write()
 	dst.Close()
@@ -71,9 +67,7 @@ func compactTable(state *DbState, src *Database, ts *meta.Schema, dst *Database,
 		rec := src.store.Data(off)
 		size := runtime.RecLen(rec)
 		rec = rec[:size+cksum.Len]
-		if !cksum.Check(rec) {
-			panic(&ErrCorrupt{table: info.Table})
-		}
+		cksum.MustCheck(rec)
 		off2, buf := dst.store.Alloc(len(rec))
 		copy(buf, rec)
 		list.Add(off2)

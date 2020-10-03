@@ -26,13 +26,13 @@ func Update(data []byte) {
 
 // Check computes the checksum of data (excluding the checksum space)
 // and compares it to the stored value at the end of the data.
-// Panics on failure.
 func Check(data []byte) bool {
 	n := len(data) - Len
 	cs := crc32.Checksum(data[:n], crc32table)
 	return data[n] == byte(cs) && data[n+1] == byte(cs>>8)
 }
 
+// MustCheck panics on failure
 func MustCheck(data []byte) {
 	if !Check(data) {
 		panic("checksum failure")
