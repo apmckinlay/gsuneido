@@ -68,7 +68,7 @@ func openDatabase(filename string, mode stor.Mode, check bool) (db *Database, er
 
 	defer func() {
 		if e := recover(); e != nil {
-			err = NewErrCorrupt(e)
+			err = newErrCorrupt(e)
 			db = nil
 		}
 	}()

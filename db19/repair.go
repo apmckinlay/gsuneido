@@ -63,7 +63,7 @@ func prevState(store *stor.Stor, off uint64) (off2 uint64, state *DbState, t tim
 func checkState(state *DbState, table string) (ec *ErrCorrupt) {
 	defer func() {
 		if e := recover(); e != nil {
-			ec = NewErrCorrupt(e)
+			ec = newErrCorrupt(e)
 		}
 	}()
 	dc := (*dbcheck)(state)

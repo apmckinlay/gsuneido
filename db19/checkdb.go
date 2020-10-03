@@ -6,6 +6,8 @@ package db19
 import (
 	"errors"
 	"fmt"
+	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/apmckinlay/gsuneido/db19/btree"
@@ -42,17 +44,25 @@ func (dc dbcheck) quickCheckTable(sc *meta.Schema) {
 func CheckDatabase(dbfile string) (ec error) {
 	defer func() {
 		if e := recover(); e != nil {
-			ec = NewErrCorrupt(e)
+			ec = newErrCorrupt(e)
 		}
 	}()
 	db, err := openDatabase(dbfile, stor.READ, false)
 	if err != nil {
-		return NewErrCorrupt(err)
+		return newErrCorrupt(err)
 	}
 	defer db.Close()
-	dc := (*dbcheck)(db.GetState())
-	dc.forEachTable(dc.checkTable)
-	return nil
+	tcs := newTableCheckers()
+	defer tcs.finish()
+	tcs.dc = (*dbcheck)(db.GetState())
+	tcs.dc.forEachTable(func(ts *meta.Schema) {
+		select {
+		case tcs.work <- tableCheck{ts: ts}:
+		case <- tcs.stop:
+			panic("") // overridden by finish
+		}
+	})
+	return nil // may be overridden by defer/recover
 }
 
 func (dc *dbcheck) forEachTable(fn func(sc *meta.Schema)) int {
@@ -83,7 +93,6 @@ func (dc *dbcheck) checkFirstIndex(table string, ix *btree.Overlay) (int, uint64
 		buf := dc.store.Data(off)
 		size := runtime.RecLen(buf)
 		if !cksum.Check(buf[:size+cksum.Len]) {
-			// fmt.Println("data checksum")
 			panic(&ErrCorrupt{table: table})
 		}
 	})
@@ -124,7 +133,7 @@ func (ec *ErrCorrupt) Table() string {
 	}
 	return ec.table
 }
-func NewErrCorrupt(e interface{}) *ErrCorrupt {
+func newErrCorrupt(e interface{}) *ErrCorrupt {
 	if e == nil {
 		return nil
 	}
@@ -135,4 +144,57 @@ func NewErrCorrupt(e interface{}) *ErrCorrupt {
 		return &ErrCorrupt{err: e2}
 	}
 	return &ErrCorrupt{err: errors.New(fmt.Sprint(e))}
+}
+
+//-------------------------------------------------------------------
+
+func newTableCheckers() *tableCheckers {
+	var tcs tableCheckers
+	tcs.work = make(chan tableCheck, 1) // ???
+	tcs.stop = make(chan void)
+	nw := nworkers()
+	tcs.wg.Add(nw)
+	for i := 0; i < nw; i++ {
+		go tcs.worker()
+	}
+	return &tcs
+}
+
+type tableCheckers struct {
+	wg sync.WaitGroup
+	dc *dbcheck
+	work chan tableCheck
+	stop chan void
+	err    atomic.Value
+	closed bool
+}
+
+type tableCheck struct {
+	ts *meta.Schema
+}
+
+func (tcs *tableCheckers) worker() {
+	var table string
+	defer func() {
+		if e := recover(); e != nil {
+			tcs.err.Store(&ErrCorrupt{table: table})
+			close(tcs.stop)
+		}
+		tcs.wg.Done()
+	}()
+	for tc := range tcs.work {
+		table = tc.ts.Table
+		tcs.dc.checkTable(tc.ts)
+	}
+}
+
+func (tcs *tableCheckers) finish() {
+	if !tcs.closed {
+		close(tcs.work)
+		tcs.closed = true
+	}
+	tcs.wg.Wait()
+	if err := tcs.err.Load(); err != nil {
+		panic(err)
+	}
 }

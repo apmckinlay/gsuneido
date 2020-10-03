@@ -125,13 +125,17 @@ func writeInt(w *bufio.Writer, n int) {
 
 func NewIndexCheckers() *indexCheckers {
 	var ics indexCheckers
-	ics.in = make(chan indexCheck, 32)                       // ???
-	nworkers := ints.Min(8, ints.Max(1, runtime.NumCPU()-1)) // ???
-	ics.wg.Add(nworkers)
-	for i := 0; i < nworkers; i++ {
+	ics.in = make(chan indexCheck, 32) // ???
+	nw := nworkers()
+	ics.wg.Add(nw)
+	for i := 0; i < nw; i++ {
 		go ics.worker()
 	}
 	return &ics
+}
+
+func nworkers() int {
+	return ints.Min(8, ints.Max(1, runtime.NumCPU()-1)) // ???
 }
 
 type indexCheckers struct {
@@ -139,7 +143,7 @@ type indexCheckers struct {
 	in chan indexCheck
 	// indexError is set to non-zero when an error is detected.
 	// It must be accessed atomically.
-	err int32
+	err      int32
 	finished bool
 }
 
