@@ -1,4 +1,4 @@
-package main
+package cksum
 
 import (
 	"fmt"
@@ -40,6 +40,9 @@ func BenchmarkCrc32Cast(b *testing.B) {
 }
 
 func TestDetection(*testing.T) {
+	if testing.Short() {
+		return
+	}
 	table := crc32.MakeTable(crc32.Castagnoli)
 	var diff, lodiff, hidiff int
 	for i := 0; i < 100000; i++ {
