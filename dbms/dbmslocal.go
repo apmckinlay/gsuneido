@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/apmckinlay/gsuneido/db19"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
@@ -18,11 +19,12 @@ import (
 // DbmsLocal implements the Dbms interface using a local database
 // i.e. standalone
 type DbmsLocal struct {
+	db        *db19.Database
 	libraries []string //TODO concurrency
 }
 
-func NewDbmsLocal() IDbms {
-	return &DbmsLocal{}
+func NewDbmsLocal(db *db19.Database) IDbms {
+	return &DbmsLocal{db: db}
 }
 
 // Dbms interface
@@ -37,8 +39,11 @@ func (DbmsLocal) Auth(string) bool {
 	panic("Auth only allowed on clients")
 }
 
-func (DbmsLocal) Check() string {
-	panic("DbmsLocal Check not implemented")
+func (dbms DbmsLocal) Check() string {
+	if err := dbms.db.Check(); err != nil {
+		return fmt.Sprint(err)
+	}
+	return ""
 }
 
 func (DbmsLocal) Connections() Value {
@@ -53,8 +58,17 @@ func (DbmsLocal) Cursors() int {
 	panic("DbmsLocal Cursors not implemented")
 }
 
-func (DbmsLocal) Dump(string) string {
-	panic("DbmsLocal Dump not implemented")
+func (dbms DbmsLocal) Dump(table string) string {
+	var err error
+	if table == "" {
+		_, err = dbms.db.Dump("database.su")
+	} else {
+		_, err = dbms.db.DumpTable(table, table+".su")
+	}
+	if err != nil {
+		return fmt.Sprint(err)
+	}
+	return ""
 }
 
 func (DbmsLocal) Exec(t *Thread, v Value) Value {
@@ -162,20 +176,20 @@ func (DbmsLocal) Transactions() *SuObject {
 	panic("DbmsLocal Transactions not implemented")
 }
 
-func (dl DbmsLocal) Unuse(lib string) bool {
-	if lib == "stdlib" || !str.List(dl.libraries).Has(lib) {
+func (dbms DbmsLocal) Unuse(lib string) bool {
+	if lib == "stdlib" || !str.List(dbms.libraries).Has(lib) {
 		return false
 	}
-	dl.libraries = str.List(dl.libraries).Without(lib)
+	dbms.libraries = str.List(dbms.libraries).Without(lib)
 	return true
 }
 
-func (dl DbmsLocal) Use(lib string) bool {
-	if str.List(dl.libraries).Has(lib) {
+func (dbms DbmsLocal) Use(lib string) bool {
+	if str.List(dbms.libraries).Has(lib) {
 		return false
 	}
 	//TODO check schema
-	dl.libraries = append(dl.libraries, lib)
+	dbms.libraries = append(dbms.libraries, lib)
 	return true
 }
 

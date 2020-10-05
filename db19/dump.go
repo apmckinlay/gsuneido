@@ -24,12 +24,19 @@ import (
 // DumpDatabase exports a dumped database to a file.
 // In the process it concurrently does a full check of the database.
 func DumpDatabase(dbfile, to string) (ntables int, err error) {
+	db, err := openDatabase(dbfile, stor.READ, false)
+	ck(err)
+	defer db.Close()
+	return db.Dump(to)
+}
+
+func (db *Database) Dump(to string) (ntables int, err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("dump failed: %v", e)
 		}
 	}()
-	db, f, w := dumpOpen(dbfile)
+	f, w := dumpOpen()
 	tmpfile := f.Name()
 	defer func() { db.Close(); f.Close(); os.Remove(tmpfile) }()
 	ics := newIndexCheckers()
@@ -50,14 +57,21 @@ func DumpDatabase(dbfile, to string) (ntables int, err error) {
 // DumpTable exports a dumped table to a file.
 // It returns the number of records dumped or panics on error.
 func DumpTable(dbfile, table, to string) (nrecs int, err error) {
+	db, err := openDatabase(dbfile, stor.READ, false)
+	ck(err)
+	defer db.Close()
+	return db.DumpTable(table, to)
+}
+
+func (db *Database) DumpTable(table, to string) (nrecs int, err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("dump failed: %v", e)
 		}
 	}()
-	db, f, w := dumpOpen(dbfile)
+	f, w := dumpOpen()
 	tmpfile := f.Name()
-	defer func() { db.Close(); f.Close(); os.Remove(tmpfile) }()
+	defer func() { f.Close(); os.Remove(tmpfile) }()
 	ics := newIndexCheckers()
 	defer ics.finish()
 
@@ -72,16 +86,15 @@ func DumpTable(dbfile, table, to string) (nrecs int, err error) {
 	ics.finish()
 	ck(renameBak(tmpfile, to))
 	return nrecs, nil
+
 }
 
-func dumpOpen(dbfile string) (*Database, *os.File, *bufio.Writer) {
-	db, err := openDatabase(dbfile, stor.READ, false)
-	ck(err)
+func dumpOpen() (*os.File, *bufio.Writer) {
 	f, err := ioutil.TempFile(".", "gs*.tmp")
 	ck(err)
 	w := bufio.NewWriter(f)
 	w.WriteString("Suneido dump 2\n")
-	return db, f, w
+	return f, w
 }
 
 func dumpTable(db *Database, schema *meta.Schema, multi bool, w *bufio.Writer,

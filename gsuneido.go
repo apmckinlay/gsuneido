@@ -131,12 +131,12 @@ func main() {
 		GetDbms = func() IDbms { return dbms.NewDbmsClient(addr) }
 		clientErrorLog()
 	} else {
-		dbmsLocal = dbms.NewDbmsLocal()
-		GetDbms = func() IDbms { return dbmsLocal }
+		openDbms()
 		eval("Suneido.Print = PrintStdout;;")
 	}
 	if options.Action == "repl" {
 		repl()
+		closeDbms()
 	} else {
 		eval("Init()")
 		builtin.Run()
@@ -182,7 +182,16 @@ func clientErrorLog() {
 }
 
 func startServer() {
-	db, err := db19.OpenDatabase("suneido.db")
+	openDbms()
+	//TODO
+	closeDbms()
+}
+
+var db *db19.Database
+
+func openDbms() {
+	var err error
+	db, err = db19.OpenDatabase("suneido.db")
 	if err != nil {
 		log.Println(err)
 		err := db19.Repair("suneido.db", err)
@@ -191,7 +200,11 @@ func startServer() {
 		}
 		os.Exit(0)
 	}
-	//TODO
+	dbmsLocal = dbms.NewDbmsLocal(db)
+	GetDbms = func() IDbms { return dbmsLocal }
+}
+
+func closeDbms() {
 	db.Close()
 }
 

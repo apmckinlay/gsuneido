@@ -34,7 +34,7 @@ func (db *Database) QuickCheck() (err error) {
 	return nil
 }
 
-func  quickCheckTable(state *DbState, ts *meta.Schema) {
+func quickCheckTable(state *DbState, ts *meta.Schema) {
 	info := state.meta.GetRoInfo(ts.Table)
 	for _, ix := range info.Indexes {
 		ix.QuickCheck()
@@ -45,16 +45,21 @@ func  quickCheckTable(state *DbState, ts *meta.Schema) {
 
 // CheckDatabase checks the integrity of the database.
 func CheckDatabase(dbfile string) (ec error) {
-	defer func() {
-		if e := recover(); e != nil {
-			ec = newErrCorrupt(e)
-		}
-	}()
 	db, err := openDatabase(dbfile, stor.READ, false)
 	if err != nil {
 		return newErrCorrupt(err)
 	}
 	defer db.Close()
+	return db.Check()
+}
+
+func(db *Database) Check() (ec error) {
+	defer func() {
+		if e := recover(); e != nil {
+			ec = newErrCorrupt(e)
+		}
+	}()
+
 	runParallel(db.GetState(), checkTable)
 	return nil // may be overridden by defer/recover
 }
@@ -145,9 +150,9 @@ func runParallel(state *DbState, fn func(*DbState, *meta.Schema)) {
 func newTableCheckers(state *DbState, fn func(*DbState, *meta.Schema)) *tableCheckers {
 	tcs := tableCheckers{
 		state: state,
-		fn:   fn,
-		work: make(chan *meta.Schema, 1), // ???
-		stop: make(chan void),
+		fn:    fn,
+		work:  make(chan *meta.Schema, 1), // ???
+		stop:  make(chan void),
 	}
 	nw := nworkers()
 	tcs.wg.Add(nw)
