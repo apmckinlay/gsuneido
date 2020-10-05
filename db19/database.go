@@ -135,6 +135,6 @@ func offToRec(store *stor.Stor, off uint64) rt.Record {
 func offToRecCk(store *stor.Stor, off uint64) rt.Record {
 	buf := store.Data(off)
 	size := rt.RecLen(buf)
-	cksum.Check(buf[:size+cksum.Len])
+	cksum.MustCheck(buf[:size+cksum.Len])
 	return rt.Record(hacks.BStoS(buf[:size]))
 }
