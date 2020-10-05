@@ -22,7 +22,7 @@ import (
 )
 
 // DumpDatabase exports a dumped database to a file.
-// In the process it does a full check of the database.
+// In the process it concurrently does a full check of the database.
 func DumpDatabase(dbfile, to string) (ntables int, err error) {
 	defer func() {
 		if e := recover(); e != nil {
@@ -119,8 +119,7 @@ func writeInt(w *bufio.Writer, n int) {
 // Concurrent checking of additional indexes. Also used by compact.
 
 func newIndexCheckers() *indexCheckers {
-	var ics indexCheckers
-	ics.work = make(chan indexCheck, 32) // ???
+	ics := indexCheckers{work: make(chan indexCheck, 32)} // ???
 	nw := nworkers()
 	ics.wg.Add(nw)
 	for i := 0; i < nw; i++ {
@@ -152,7 +151,7 @@ func (ics *indexCheckers) checkOtherIndexes(info *meta.Info, count int, sum uint
 		select {
 		case ics.work <- indexCheck{index: info.Indexes[i], count: count, sum: sum}:
 		case <-ics.stop:
-			panic("")
+			panic("") // overridden by finish
 		}
 	}
 }

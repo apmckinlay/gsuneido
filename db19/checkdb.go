@@ -25,18 +25,17 @@ type dbcheck DbState
 func (db *Database) QuickCheck() (err error) {
 	defer func() {
 		if e := recover(); e != nil {
-			err = fmt.Errorf("dump failed: %v", e)
+			err = fmt.Errorf("check failed: %v", e)
 		}
 	}()
 	t := time.Now()
-	dc := (*dbcheck)(db.GetState())
-	dc.forEachTable(dc.quickCheckTable)
+	runParallel(db.GetState(), quickCheckTable)
 	fmt.Println("quick checked in", time.Since(t).Round(time.Millisecond))
 	return nil
 }
 
-func (dc dbcheck) quickCheckTable(sc *meta.Schema) {
-	info := dc.meta.GetRoInfo(sc.Table)
+func  quickCheckTable(state *DbState, ts *meta.Schema) {
+	info := state.meta.GetRoInfo(ts.Table)
 	for _, ix := range info.Indexes {
 		ix.QuickCheck()
 	}
@@ -56,26 +55,13 @@ func CheckDatabase(dbfile string) (ec error) {
 		return newErrCorrupt(err)
 	}
 	defer db.Close()
-	tcs := newTableCheckers()
-	defer tcs.finish()
-	tcs.dc = (*dbcheck)(db.GetState())
-	tcs.dc.forEachTable(func(ts *meta.Schema) {
-		select {
-		case tcs.work <- ts:
-		case <-tcs.stop:
-			panic("") // overridden by finish
-		}
-	})
+	runParallel(db.GetState(), checkTable)
 	return nil // may be overridden by defer/recover
 }
 
-func (dc *dbcheck) forEachTable(fn func(sc *meta.Schema)) {
-	dc.meta.ForEachSchema(fn)
-}
-
-func (dc *dbcheck) checkTable(sc *meta.Schema) {
-	info := dc.meta.GetRoInfo(sc.Table)
-	count, sum := dc.checkFirstIndex(info.Indexes[0])
+func checkTable(state *DbState, sc *meta.Schema) {
+	info := state.meta.GetRoInfo(sc.Table)
+	count, sum := checkFirstIndex(state, info.Indexes[0])
 	if count != info.Nrows {
 		panic("count != nrows")
 	}
@@ -85,11 +71,11 @@ func (dc *dbcheck) checkTable(sc *meta.Schema) {
 	}
 }
 
-func (dc *dbcheck) checkFirstIndex(ix *btree.Overlay) (int, uint64) {
+func checkFirstIndex(state *DbState, ix *btree.Overlay) (int, uint64) {
 	sum := uint64(0)
 	count := ix.Check(func(off uint64) {
 		sum += off // addition so order doesn't matter
-		buf := dc.store.Data(off)
+		buf := state.store.Data(off)
 		size := runtime.RecLen(buf)
 		cksum.MustCheck(buf[:size+cksum.Len])
 	})
@@ -144,10 +130,25 @@ func newErrCorrupt(e interface{}) *ErrCorrupt {
 
 //-------------------------------------------------------------------
 
-func newTableCheckers() *tableCheckers {
-	var tcs tableCheckers
-	tcs.work = make(chan *meta.Schema, 1) // ???
-	tcs.stop = make(chan void)
+func runParallel(state *DbState, fn func(*DbState, *meta.Schema)) {
+	tcs := newTableCheckers(state, fn)
+	defer tcs.finish()
+	tcs.state.meta.ForEachSchema(func(ts *meta.Schema) {
+		select {
+		case tcs.work <- ts:
+		case <-tcs.stop:
+			panic("") // overridden by finish
+		}
+	})
+}
+
+func newTableCheckers(state *DbState, fn func(*DbState, *meta.Schema)) *tableCheckers {
+	tcs := tableCheckers{
+		state: state,
+		fn:   fn,
+		work: make(chan *meta.Schema, 1), // ???
+		stop: make(chan void),
+	}
 	nw := nworkers()
 	tcs.wg.Add(nw)
 	for i := 0; i < nw; i++ {
@@ -157,8 +158,9 @@ func newTableCheckers() *tableCheckers {
 }
 
 type tableCheckers struct {
+	fn     func(*DbState, *meta.Schema)
 	wg     sync.WaitGroup
-	dc     *dbcheck
+	state  *DbState
 	work   chan *meta.Schema
 	stop   chan void
 	err    atomic.Value
@@ -176,7 +178,7 @@ func (tcs *tableCheckers) worker() {
 	}()
 	for ts := range tcs.work {
 		table = ts.Table
-		tcs.dc.checkTable(ts)
+		tcs.fn(tcs.state, ts)
 	}
 }
 

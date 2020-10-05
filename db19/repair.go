@@ -62,23 +62,27 @@ func prevState(store *stor.Stor, off uint64) (off2 uint64, state *DbState, t tim
 }
 
 func checkState(state *DbState, table string) (ec *ErrCorrupt) {
-	//TODO concurrent
 	defer func() {
 		if e := recover(); e != nil {
 			ec = newErrCorrupt(e)
 		}
 	}()
-	dc := (*dbcheck)(state)
+	tcs := newTableCheckers(state, checkTable)
+	defer tcs.finish()
 	// If the previous check failed on a certain table,
 	// then start by checking that table first (fail faster).
 	if table != "" {
-		fmt.Println("check first", table)
-		sc := state.meta.GetRoSchema(table)
-		dc.checkTable(sc)
+		ts := state.meta.GetRoSchema(table)
+		tcs.work <- ts
 	}
-	dc.forEachTable(func(sc *meta.Schema) {
-		if sc.Table != table {
-			dc.checkTable(sc)
+	tcs.state.meta.ForEachSchema(func(ts *meta.Schema) {
+		if ts.Table == table {
+			return // continue
+		}
+		select {
+		case tcs.work <- ts:
+		case <-tcs.stop:
+			panic("") // overridden by finish
 		}
 	})
 	return nil

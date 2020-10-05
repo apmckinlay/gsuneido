@@ -35,6 +35,6 @@ func Check(data []byte) bool {
 // MustCheck panics on failure
 func MustCheck(data []byte) {
 	if !Check(data) {
-		panic("checksum failure")
+		panic("checksum error")
 	}
 }

@@ -18,7 +18,7 @@ import (
 
 // Compact cleans up old records and index nodes that are no longer in use.
 // It does this by copying live data to a new database file.
-// In the process it does a full check of the database.
+// In the process it concurrently does a full check of the database.
 func Compact(dbfile string) (ntables int, err error) {
 	defer func() {
 		if e := recover(); e != nil {
