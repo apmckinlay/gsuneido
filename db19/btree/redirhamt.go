@@ -173,7 +173,7 @@ func (ht RedirHamt) Freeze() RedirHamt {
 
 //-------------------------------------------------------------------
 
-// Delete removes an item.
+// Delete removes an item. It returns whether the item was found.
 func (ht RedirHamt) Delete(key uint64) bool {
 	if !ht.mutable {
 		panic("can't modify an immutable Hamt")

@@ -16,7 +16,6 @@ type Meta struct {
 	difInfo   InfoHamt
 	topInfo   InfoHamt
 	oldInfo   *InfoPacked
-	difSchema SchemaHamt
 	topSchema SchemaHamt
 	oldSchema *SchemaPacked
 }
@@ -27,7 +26,6 @@ func NewMeta(oldSchema *SchemaPacked, oldInfo *InfoPacked,
 		oldSchema: oldSchema,
 		oldInfo:   oldInfo,
 		topInfo:   topInfo,
-		difSchema: SchemaHamt{},
 		topSchema: topSchema,
 		difInfo:   InfoHamt{},
 	}
@@ -45,10 +43,8 @@ func CreateMeta(store *stor.Stor) *Meta {
 // Mutable returns a mutable copy of a Meta
 func (m *Meta) Mutable() *Meta {
 	assert.That(m.difInfo.IsNil())
-	assert.That(m.difSchema.IsNil())
 	ov2 := *m // copy
 	ov2.difInfo = InfoHamt{}.Mutable()
-	ov2.difSchema = SchemaHamt{}.Mutable()
 	return &ov2
 }
 
@@ -58,6 +54,9 @@ func (m *Meta) GetRoInfo(table string) *Info {
 	}
 	ti, ok := m.topInfo.Get(table)
 	if ok {
+		if ti.isTomb() {
+			return nil
+		}
 		var ti2 = *ti // copy
 		ti = &ti2
 	} else {
@@ -88,6 +87,9 @@ func (m *Meta) GetRwInfo(table string, tranNum int) *Info {
 	}
 	var ti Info
 	if pti, ok := m.topInfo.Get(table); ok {
+		if ti.isTomb() {
+			return nil
+		}
 		ti = *pti // copy
 	} else if pti, ok := m.oldInfo.Get(table); ok {
 		ti = *pti // copy
@@ -115,10 +117,10 @@ func (m *Meta) GetRwInfo(table string, tranNum int) *Info {
 }
 
 func (m *Meta) GetRoSchema(table string) *Schema {
-	if ts, ok := m.difSchema.Get(table); ok {
-		return ts
-	}
 	if ts, ok := m.topSchema.Get(table); ok {
+		if ts.isTomb() {
+			return nil
+		}
 		return ts
 	}
 	if ts, ok := m.oldSchema.Get(table); ok {
@@ -127,25 +129,7 @@ func (m *Meta) GetRoSchema(table string) *Schema {
 	return nil
 }
 
-func (m *Meta) GetRwSchema(table string) *Schema {
-	if ts, ok := m.difSchema.Get(table); ok {
-		return ts
-	}
-	var ts Schema
-	if pts, ok := m.topSchema.Get(table); ok {
-		ts = *pts // copy
-	} else if pts, ok := m.oldSchema.Get(table); ok {
-		ts = *pts // copy
-	} else {
-		return nil
-	}
-	ts.Columns = append(ts.Columns[:0:0], ts.Columns...) // copy
-	ts.Indexes = append(ts.Indexes[:0:0], ts.Indexes...) // copy
-	ts.mutable = true
-	m.difSchema.Put(&ts)
-	return &ts
-}
-
+// Put is used by Database.LoadedTable
 func (m *Meta) Put(ts *Schema, ti *Info) *Meta {
 	topSchema := m.topSchema.Mutable()
 	topSchema.Put(ts)
@@ -157,8 +141,33 @@ func (m *Meta) Put(ts *Schema, ti *Info) *Meta {
 	return &ov2
 }
 
+func (m *Meta) DropTable(table string) *Meta {
+	assert.That(m.difInfo.IsNil())
+	_, old := m.oldSchema.Get(table)
+	topSchema := m.topSchema.Mutable()
+	if old {
+		// can't update old packed, so output tombstone
+		topSchema.Put(newSchemaTomb(table))
+	} else {
+		if !topSchema.Delete(table) {
+			return nil
+		}
+	}
+	_, old = m.oldInfo.Get(table)
+	topInfo := m.topInfo.Mutable()
+	if old {
+		// can't update old packed, so output tombstone
+		topInfo.Put(newInfoTomb(table))
+	} else {
+		topInfo.Delete(table)
+	}
+	ov2 := *m // copy
+	ov2.topSchema = topSchema.Freeze()
+	ov2.topInfo = topInfo.Freeze()
+	return &ov2
+}
+
 func (m *Meta) ForEachSchema(fn func(*Schema)) {
-	assert.That(m.difSchema.IsNil())
 	m.topSchema.ForEach(fn)
 	m.oldSchema.ForEach(func(sc *Schema) {
 		// skip the ones already processed from roSchema
@@ -204,22 +213,17 @@ func (m *Meta) LayeredOnto(latest *Meta) *Meta {
 			if !ok {
 				lti, ok = latest.oldInfo.Get(ti.Table)
 			}
-			if ok {
-				ti.Nrows += lti.Nrows
-				ti.Size += lti.Size
-				for i := range ti.Indexes {
-					ti.Indexes[i].UpdateWith(lti.Indexes[i])
-				}
-			} else {
-				// latest doesn't have this table, i.e. first update
-				for i := range ti.Indexes {
-					ti.Indexes[i].Freeze()
-				}
+			if !ok || lti.isTomb() {
+				return
+			}
+			ti.Nrows += lti.Nrows
+			ti.Size += lti.Size
+			for i := range ti.Indexes {
+				ti.Indexes[i].UpdateWith(lti.Indexes[i])
 			}
 			topInfo2.Put(ti)
 		}
 	})
-	//TODO handle difSchema
 	result := *latest // copy
 	result.topInfo = topInfo2.Freeze()
 	return &result
@@ -233,7 +237,6 @@ type offsets = [Noffsets]uint64
 
 func (m *Meta) Write(st *stor.Stor) offsets {
 	assert.That(m.difInfo.IsNil())
-	assert.That(m.difSchema.IsNil())
 	offs := offsets{
 		m.oldSchema.Offset(),
 		m.oldInfo.Offset(),
@@ -255,28 +258,32 @@ func ReadOverlay(st *stor.Stor, offs offsets) *Meta {
 
 //-------------------------------------------------------------------
 
-// Merge is called by state.Merge to collect updates
-// which are then applied by ApplyMerge
+// Merge is called by state.Merge
+// to merge the mbtree's for tranNum into the fbtree's.
+// It collect updates which are then applied by ApplyMerge
 func (m *Meta) Merge(tranNum int) []update {
 	return m.topInfo.process(func(bto btOver) btOver {
 		return bto.Merge(tranNum)
 	})
 }
 
+// ApplyMerge applies the updates collected by meta.Merge
 func (m *Meta) ApplyMerge(updates []update) {
 	m.topInfo = m.topInfo.withUpdates(updates, btOver.WithMerged)
 }
 
 //-------------------------------------------------------------------
 
-//TODO schema
-
+// Persist is called by state.Persist to write the state to the database.
+// It collects the new fbtree roots which are then applied ApplyPersist.
 func (m *Meta) Persist(flatten bool) []update {
-	return m.topInfo.process(func (ov *btree.Overlay) *btree.Overlay {
+	return m.topInfo.process(func(ov *btree.Overlay) *btree.Overlay {
 		return ov.Save(flatten)
 	})
 }
 
+// ApplyPersist takes the new fbtree roots from meta.Persist
+// and updates the state with them.
 func (m *Meta) ApplyPersist(updates []update) {
 	m.topInfo = m.topInfo.withUpdates(updates, btOver.WithSaved)
 }

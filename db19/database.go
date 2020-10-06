@@ -90,6 +90,17 @@ func (db *Database) LoadedTable(ts *meta.Schema, ti *meta.Info) {
 	})
 }
 
+func (db *Database) DropTable(table string) bool {
+	result := false
+	db.UpdateState(func(state *DbState) {
+		if m := state.meta.DropTable(table); m != nil {
+			state.meta = m
+			result = true
+		}
+	})
+	return result
+}
+
 // Close closes the database store, writing the current size to the start.
 // NOTE: The state must already be written.
 func (db *Database) Close() {

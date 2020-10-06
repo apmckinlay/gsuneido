@@ -6,6 +6,7 @@ package meta
 import (
 	"github.com/apmckinlay/gsuneido/db19/btree"
 	"github.com/apmckinlay/gsuneido/db19/stor"
+	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/hash"
 )
 
@@ -38,6 +39,7 @@ func (ti *Info) storSize() int {
 }
 
 func (ti *Info) Write(w *stor.Writer) {
+	assert.That(!ti.isTomb())
 	w.PutStr(ti.Table).
 		Put4(ti.Nrows).
 		Put5(ti.Size).
@@ -58,6 +60,14 @@ func ReadInfo(st *stor.Stor, r *stor.Reader) *Info {
 		ti.Indexes[i] = btree.ReadOverlay(st, r)
 	}
 	return &ti
+}
+
+func newInfoTomb(table string) *Info {
+	return &Info{Table: table, Nrows: -1}
+}
+
+func (ti *Info) isTomb() bool {
+	return ti.Nrows == -1
 }
 
 //-------------------------------------------------------------------

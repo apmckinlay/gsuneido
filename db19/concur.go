@@ -58,6 +58,6 @@ func persister(db *Database, persistChan chan void, allDone chan void) {
 	for range persistChan {
 		db.Persist(false)
 	}
-	db.Persist(true)
+	db.Persist(true) // flatten on shutdown (required by quick check)
 	close(allDone)
 }

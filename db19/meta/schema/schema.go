@@ -1,6 +1,7 @@
 // Copyright Suneido Software Corp. All rights reserved.
 // Governed by the MIT license found in the LICENSE file.
 
+// Package schema is a separate package so it can be used by query parsing.
 package schema
 
 import (

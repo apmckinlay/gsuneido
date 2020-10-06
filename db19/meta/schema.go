@@ -6,6 +6,7 @@ package meta
 import (
 	"github.com/apmckinlay/gsuneido/db19/meta/schema"
 	"github.com/apmckinlay/gsuneido/db19/stor"
+	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/hash"
 )
 
@@ -39,6 +40,7 @@ func (ts *Schema) storSize() int {
 }
 
 func (ts *Schema) Write(w *stor.Writer) {
+	assert.That(!ts.isTomb())
 	w.PutStr(ts.Table)
 	w.PutStrs(ts.Columns)
 	w.PutStrs(ts.Derived)
@@ -108,4 +110,10 @@ func hasSpecial(fields []int) bool {
 	return false
 }
 
-//-------------------------------------------------------------------
+func newSchemaTomb(table string) *Schema {
+	return &Schema{Schema: schema.Schema{Table: table}}
+}
+
+func (ts *Schema) isTomb() bool {
+	return ts.Indexes == nil
+}

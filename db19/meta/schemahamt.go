@@ -173,7 +173,7 @@ func (ht SchemaHamt) Freeze() SchemaHamt {
 
 //-------------------------------------------------------------------
 
-// Delete removes an item.
+// Delete removes an item. It returns whether the item was found.
 func (ht SchemaHamt) Delete(key string) bool {
 	if !ht.mutable {
 		panic("can't modify an immutable Hamt")

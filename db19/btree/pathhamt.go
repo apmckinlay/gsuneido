@@ -173,7 +173,7 @@ func (ht PathHamt) Freeze() PathHamt {
 
 //-------------------------------------------------------------------
 
-// Delete removes an item.
+// Delete removes an item. It returns whether the item was found.
 func (ht PathHamt) Delete(key uint64) bool {
 	if !ht.mutable {
 		panic("can't modify an immutable Hamt")

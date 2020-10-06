@@ -1,0 +1,19 @@
+// Copyright Suneido Software Corp. All rights reserved.
+// Governed by the MIT license found in the LICENSE file.
+
+package db19
+
+import (
+	"os"
+	"testing"
+
+	"github.com/apmckinlay/gsuneido/util/assert"
+)
+
+func TestDatabaseDropTable(t *testing.T) {
+	db := createDb()
+	defer func() { db.Close(); os.Remove("tmp.db") }()
+	assert.T(t).That(!db.DropTable("nonexistent"))
+	assert.T(t).That(db.DropTable("mytable"))
+	assert.T(t).That(!db.DropTable("mytable"))
+}

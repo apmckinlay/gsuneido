@@ -290,7 +290,7 @@ func (it *fnIter) next() bool {
 	}
 	it.npre, it.diff, it.offset = fRead(it.fn[it.fi:])
 
-	//TODO remove this validation in production
+	// maybe remove this validation in production?
 	if it.known == "" && it.npre == 0 && it.diff == "" {
 		// first
 	} else if it.npre <= len(it.known) {
