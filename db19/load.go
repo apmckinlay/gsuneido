@@ -22,7 +22,7 @@ import (
 
 // LoadDatabase imports a dumped database from a file.
 // It returns the number of tables loaded or panics on error.
-func LoadDatabase(from, to string) int {
+func LoadDatabase(from, dbfile string) int {
 	defer func() {
 		if e := recover(); e != nil {
 			panic("load failed: " + fmt.Sprint(e))
@@ -30,9 +30,8 @@ func LoadDatabase(from, to string) int {
 	}()
 	f, r := open(from)
 	defer f.Close()
-	db, err := CreateDatabase(to) //TODO tmp & .bak
-	ck(err)
-	defer db.Close()
+	db, tmpfile := tmpdb()
+	defer func() { db.Close(); os.Remove(tmpfile) }()
 	nTables := 0
 	for ; ; nTables++ {
 		schema := readLinePrefixed(r, "====== ")
@@ -45,12 +44,14 @@ func LoadDatabase(from, to string) int {
 	}
 	trace("SIZE", db.store.Size())
 	db.GetState().Write()
+	db.Close()
+	ck(renameBak(tmpfile, dbfile))
 	return nTables
 }
 
 // LoadTable imports a dumped table from a file.
 // It returns the number of records loaded or panics on error.
-func LoadTable(table, to string) int {
+func LoadTable(table, dbfile string) int {
 	defer func() {
 		if e := recover(); e != nil {
 			panic("load failed: " + table + " " + fmt.Sprint(e))
@@ -58,10 +59,10 @@ func LoadTable(table, to string) int {
 	}()
 	var db *Database
 	var err error
-	if _, err := os.Stat(to); os.IsNotExist(err) {
-		db, err = CreateDatabase(to)
+	if _, err := os.Stat(dbfile); os.IsNotExist(err) {
+		db, err = CreateDatabase(dbfile)
 	} else {
-		db, err = OpenDatabase(to)
+		db, err = OpenDatabase(dbfile)
 	}
 	ck(err)
 	defer db.Close()
