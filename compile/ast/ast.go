@@ -11,6 +11,7 @@ import (
 	"github.com/apmckinlay/gsuneido/lexer"
 	tok "github.com/apmckinlay/gsuneido/lexer/tokens"
 	. "github.com/apmckinlay/gsuneido/runtime"
+	"github.com/apmckinlay/gsuneido/util/str"
 )
 
 type Node interface {
@@ -46,6 +47,16 @@ type Ident struct {
 
 func (a *Ident) String() string {
 	return a.Name
+}
+
+func (a *Ident) ParamName() string {
+	name := a.Name
+	if name[0] == '.' {
+		name = str.UnCapitalize(name[1:])
+	} else if name[0] == '@' || name[0] == '_' {
+		name = name[1:]
+	}
+	return name
 }
 
 type Constant struct {
