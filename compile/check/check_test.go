@@ -92,6 +92,10 @@ func TestCheckResults(t *testing.T) {
 
 	// switch
 	test("function (f) { switch (a=f()) { case 1: a(); default: a() } }")
+	test("function (f) { switch (a=f()) { case 1: a(); default: a() }; a() }")
+	test("function (f) { switch (a=f()) { case 1: b=1; default: b=2 }; a + b }")
+	test("function (f) { switch (f()) { case 1: a=1; case 2: b=2;b() }; a }",
+		"WARNING: used but possibly not initialized: a @62")
 
 	// while
 	test("function () { while (false isnt x = 1) { }; x }")

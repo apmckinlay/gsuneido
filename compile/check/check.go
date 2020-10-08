@@ -167,6 +167,7 @@ func (ck *Check) statement(
 		// there will always be at least a default default that throws
 		exAll := true
 		init, _ = ck.expr(stmt.E, init)
+		var initInAll set
 		for _, c := range stmt.Cases {
 			in := init
 			for _, e := range c.Exprs {
@@ -174,14 +175,25 @@ func (ck *Check) statement(
 			}
 			in, ex := ck.statements(c.Body, in, false)
 			exAll = exAll && ex
+			if initInAll == nil {
+				initInAll = in.copy()
+			} else {
+				initInAll = initInAll.intersect(in)
+			}
 		}
 		if stmt.Default != nil { // specifically nil and not len 0
-			_, ex := ck.statements(stmt.Default, init, false)
+			in, ex := ck.statements(stmt.Default, init, false)
 			exAll = exAll && ex
+			if initInAll == nil {
+				initInAll = in.copy()
+			} else {
+				initInAll = initInAll.intersect(in)
+			}
 		}
 		if exAll {
 			exit = true
 		}
+		init = init.union(initInAll)
 	case *ast.ForIn:
 		init = ck.initVar(init, stmt.Var.Name, int(stmt.Var.Pos))
 		init, _ = ck.expr(stmt.E, init)
