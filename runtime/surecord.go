@@ -365,10 +365,7 @@ func (r *SuRecord) put(t *Thread, keyval Value, val Value) {
 			old = r.getFromRow(key)
 		}
 		r.ob.set(keyval, val)
-		if old != nil &&
-			// only compare simple values to avoid deadlock
-			old.Type() <= types.Date && val.Type() <= types.Date &&
-			val.Equal(old) {
+		if old != nil && r.same(old, val) {
 			return
 		}
 		r.invalidateDependents(key)
@@ -379,6 +376,14 @@ func (r *SuRecord) put(t *Thread, keyval Value, val Value) {
 	} else { // key not a string
 		r.ob.set(keyval, val)
 	}
+}
+
+func (*SuRecord) same(x, y Value) bool {
+	// only use Equal with simple values to avoid deadlock
+	if x.Type() <= types.Date && y.Type() <= types.Date {
+		return x.Equal(y) // compare by value
+	}
+	return x == y // compare by reference
 }
 
 func (r *SuRecord) invalidateDependents(key string) {
