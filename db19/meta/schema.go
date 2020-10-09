@@ -4,10 +4,13 @@
 package meta
 
 import (
+	"strings"
+
 	"github.com/apmckinlay/gsuneido/db19/meta/schema"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/hash"
+	"github.com/apmckinlay/gsuneido/util/str"
 )
 
 type Schema struct {
@@ -33,7 +36,7 @@ func (ts *Schema) storSize() int {
 		stor.LenStrs(ts.Columns) + stor.LenStrs(ts.Derived) + 1
 	for i := range ts.Indexes {
 		idx := ts.Indexes[i]
-		size += 1 + stor.Len2Ints(idx.Fields) +
+		size += 1 + stor.LenStrs(idx.Columns) +
 			stor.LenStr(idx.Fktable) + 1 + stor.LenStrs(idx.Fkcolumns)
 	}
 	return size
@@ -46,7 +49,7 @@ func (ts *Schema) Write(w *stor.Writer) {
 	w.PutStrs(ts.Derived)
 	w.Put1(len(ts.Indexes))
 	for _, ix := range ts.Indexes {
-		w.Put1(ix.Mode).Put2Ints(ix.Fields)
+		w.Put1(ix.Mode).PutStrs(ix.Columns)
 		w.PutStr(ix.Fktable).Put1(ix.Fkmode).PutStrs(ix.Fkcolumns)
 	}
 }
@@ -61,7 +64,7 @@ func ReadSchema(_ *stor.Stor, r *stor.Reader) *Schema {
 	for i := 0; i < n; i++ {
 		ts.Indexes[i] = schema.Index{
 			Mode:      r.Get1(),
-			Fields:    r.Get2Ints(),
+			Columns:   r.GetStrs(),
 			Fktable:   r.GetStr(),
 			Fkmode:    r.Get1(),
 			Fkcolumns: r.GetStrs(),
@@ -75,35 +78,50 @@ func (ts *Schema) Ixspecs() {
 	key := ts.firstShortestKey()
 	for i := range ts.Indexes {
 		ix := &ts.Indexes[i]
-		ix.Ixspec.Fields = ix.Fields
+		ix.Ixspec.Fields = ts.colsToFlds(ix.Columns)
 		switch ts.Indexes[i].Mode {
 		case 'u':
 			ix.Ixspec.Fields2 = key
 		case 'i':
-			ix.Ixspec.Fields = append(ix.Fields, key...)
+			ix.Ixspec.Fields = append(ix.Ixspec.Fields, key...)
 		}
 	}
+}
+
+func (ts *Schema) colsToFlds(cols []string) []int {
+	flds := make([]int, len(cols))
+	for i, col := range cols {
+		c := str.List(ts.Columns).Index(col)
+		if strings.HasSuffix(col, "_lower!") {
+			if c = str.List(ts.Columns).Index(col[:len(col)-7]); c != -1 {
+				c = -c - 2
+			}
+		}
+		assert.That(c != -1)
+		flds[i] = c
+	}
+	return flds
 }
 
 func (ts *Schema) firstShortestKey() []int {
-	var key []int
+	var key []string
 	for i := range ts.Indexes {
 		ix := &ts.Indexes[i]
 		if usableKey(ix) &&
-			(key == nil || len(ix.Fields) < len(key)) {
-			key = ix.Fields
+			(key == nil || len(ix.Columns) < len(key)) {
+			key = ix.Columns
 		}
 	}
-	return key
+	return ts.colsToFlds(key)
 }
 
 func usableKey(ix *schema.Index) bool {
-	return ix.Mode == 'k' && len(ix.Fields) > 0 && !hasSpecial(ix.Fields)
+	return ix.Mode == 'k' && len(ix.Columns) > 0 && !hasSpecial(ix.Columns)
 }
 
-func hasSpecial(fields []int) bool {
-	for _, f := range fields {
-		if f < 0 {
+func hasSpecial(cols []string) bool {
+	for _, col := range cols {
+		if strings.HasSuffix(col, "_lower!") {
 			return true
 		}
 	}

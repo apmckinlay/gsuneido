@@ -92,7 +92,7 @@ func createDb() *Database {
 	ts := &meta.Schema{Schema: schema.Schema{
 		Table:   "mytable",
 		Columns: []string{"one", "two"},
-		Indexes: []schema.Index{{Fields: []int{0}, Ixspec: is}},
+		Indexes: []schema.Index{{Columns: []string{"one"}, Ixspec: is}},
 	}}
 	ti := &meta.Info{
 		Table:   "mytable",

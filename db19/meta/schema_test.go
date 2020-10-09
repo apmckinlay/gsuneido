@@ -14,7 +14,7 @@ import (
 
 func TestSchema(t *testing.T) {
 	tbl := SchemaHamt{}.Mutable()
-	const n = 1000
+	const n = 900
 	data := make([]string, n)
 	randStr := str.UniqueRandom(4, 4)
 	for i := 0; i < n; i++ {
@@ -23,7 +23,7 @@ func TestSchema(t *testing.T) {
 			Table:   data[i],
 			Columns: []string{"one", "two"},
 			Indexes: []schema.Index{
-				{Fields: []int{i}},
+				{Columns: []string{"one"}},
 			},
 		}})
 	}
@@ -36,7 +36,7 @@ func TestSchema(t *testing.T) {
 		assert := assert.T(t).This
 		assert(ts.Table).Msg("table").Is(table)
 		assert(ts.Columns).Msg("columns").Is([]string{"one", "two"})
-		assert(ts.Indexes[0].Fields).Msg("indexes").Is([]int{i})
+		assert(ts.Indexes[0].Columns).Msg("indexes").Is([]string{"one"})
 	}
 
 	tbl = ReadSchemaHamt(st, off)

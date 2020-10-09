@@ -86,7 +86,7 @@ func open(filename string) (*os.File, *bufio.Reader) {
 
 func loadTable(db *Database, r *bufio.Reader, schema string) int {
 	trace(schema)
-	sc := compile.ParseRequest("create " + schema).Schema
+	rq := compile.ParseRequest("create " + schema)
 
 	store := db.store
 	list := sortlist.NewUnsorted()
@@ -96,10 +96,10 @@ func loadTable(db *Database, r *bufio.Reader, schema string) int {
 	dataSize := beforeIndexes - before
 	trace("nrecs", nrecs, "data size", dataSize)
 	list.Finish()
-	ts := &meta.Schema{Schema: *sc}
+	ts := &meta.Schema{Schema: rq.Schema}
 	ov := buildIndexes(ts, list, store, nrecs)
 	trace("indexes size", store.Size()-beforeIndexes)
-	ti := &meta.Info{Table: sc.Table, Nrows: nrecs, Size: dataSize, Indexes: ov}
+	ti := &meta.Info{Table: rq.Schema.Table, Nrows: nrecs, Size: dataSize, Indexes: ov}
 	db.LoadedTable(ts, ti)
 	return nrecs
 }

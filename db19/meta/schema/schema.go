@@ -21,8 +21,8 @@ type Schema struct {
 }
 
 type Index struct {
-	Fields []int
-	Ixspec ixspec.T
+	Columns []string
+	Ixspec  ixspec.T
 	// Mode is 'k' for key, 'i' for index, 'u' for unique index
 	Mode      int
 	Fktable   string
@@ -40,34 +40,30 @@ const (
 
 func (sc *Schema) String() string {
 	var sb strings.Builder
-	var cb str.CommaBuilder
-	for _, col := range sc.Columns {
-		cb.Add(col)
+	if sc.Columns != nil || sc.Derived != nil {
+		var cb str.CommaBuilder
+		for _, col := range sc.Columns {
+			cb.Add(col)
+		}
+		for _, col := range sc.Derived {
+			cb.Add(col)
+		}
+		sb.WriteString("(")
+		sb.WriteString(cb.String())
+		sb.WriteString(") ")
 	}
-	for _, col := range sc.Derived {
-		cb.Add(col)
-	}
-	sb.WriteString("(")
-	sb.WriteString(cb.String())
-	sb.WriteString(")")
+	sep := ""
 	for i := range sc.Indexes {
-		sb.WriteString(" ")
-		sb.WriteString(sc.Indexes[i].String(sc.Columns))
+		sb.WriteString(sep)
+		sb.WriteString(sc.Indexes[i].String())
+		sep = " "
 	}
 	return sb.String()
 }
 
-func (ix *Index) String(cols []string) string {
-	var cb str.CommaBuilder
-	for _, c := range ix.Fields {
-		if c < 0 {
-			cb.Add(cols[-c-2] + "_lower!")
-		} else {
-			cb.Add(cols[c])
-		}
-	}
+func (ix *Index) String() string {
 	s := map[int]string{'k': "key", 'i': "index", 'u': "index unique"}[ix.Mode]
-	s += "(" + cb.String() + ")"
+	s += str.Join("(,)", ix.Columns...)
 	if ix.Fktable != "" {
 		s += " in " + ix.Fktable
 		if len(ix.Fkcolumns) > 0 {
