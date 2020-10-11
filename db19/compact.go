@@ -70,6 +70,7 @@ func compactTable(state *DbState, src *Database, ts *meta.Schema, dst *Database,
 		cksum.MustCheck(rec)
 		off2, buf := dst.store.Alloc(len(rec))
 		copy(buf, rec)
+		//TODO squeeze records when table has deleted fields
 		list.Add(off2)
 	})
 	list.Finish()

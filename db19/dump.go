@@ -112,7 +112,6 @@ func dumpTable(db *Database, schema *meta.Schema, multi bool, w *bufio.Writer,
 		rec := offToRecCk(db.store, off) // verify data checksums
 		writeInt(w, len(rec))
 		w.WriteString(string(rec))
-		//TODO squeeze records when table has deleted fields
 	})
 	writeInt(w, 0) // end of table records
 	assert.This(count).Is(info.Nrows)
