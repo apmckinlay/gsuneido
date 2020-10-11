@@ -61,6 +61,8 @@ func (db *Database) UpdateState(fn func(*DbState)) *DbState {
 
 //-------------------------------------------------------------------
 
+// WARNING: Merge and Persist cannot run concurrently
+
 // Merge updates the base fbtree's with the overlay mbtree
 // for the given transaction number (the oldest/first).
 // It is called by concur.go merger.

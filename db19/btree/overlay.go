@@ -215,15 +215,13 @@ func (ov *Overlay) WithMerged(ov2 *Overlay) *Overlay {
 // and returns the new fbtree (in an Overlay) to later pass to With
 func (ov *Overlay) Save(flatten bool) *Overlay {
 	assert.That(ov.mb == nil)
-	ov2 := *ov // copy
 	fb := ov.base()
 	fb = fb.Save(flatten)
-	ov2.under = []tree{fb}
-	return &ov2
+	return &Overlay{under: []tree{fb}}
 }
 
-// WithSaved returns a new Overlay, combining the current state (ov)
-// with the updated fbtree (in ov2)
+// WithSaved returns a new Overlay,
+// combining the current state (ov) with the updated fbtree (in ov2)
 func (ov *Overlay) WithSaved(ov2 *Overlay) *Overlay {
 	// ov2.under[0] is the new fbtree from Save
 	ov2.under = append(ov2.under, ov.under[1:]...)
