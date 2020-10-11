@@ -107,6 +107,9 @@ func (db *Database) Close() {
 	if db.store == nil {
 		return // already closed
 	}
+	if db.ck != nil {
+		db.ck.Stop()
+	}
 	if db.mode != stor.READ {
 		// need to use Write because all but last chunk are read-only
 		buf := make([]byte, stor.SmallOffsetLen)
