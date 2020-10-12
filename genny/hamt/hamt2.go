@@ -110,7 +110,8 @@ func NewItemPacked(st *stor.Stor, off uint64) *ItemPacked {
 	buf := st.Data(off)
 	r := stor.NewReader(buf)
 	size := r.Get3()
-	cksum.MustCheck(buf[:size])
+	buf = buf[:size]
+	cksum.MustCheck(buf)
 	nitems := r.Get2()
 	nfingers := 1 + nitems/perFingerItem
 	fingers := make([]ItemFinger, nfingers)
@@ -137,7 +138,7 @@ func (p *ItemPacked) Get(key string) (Item, bool) {
 	}
 	pos := p.binarySearch(key)
 	r := stor.NewReader(p.buf[pos:])
-	for n := 0; n <= perFingerItem; n++ {
+	for n := 0; n <= perFingerItem && r.Remaining() > cksum.Len; n++ {
 		item := ReadItem(p.stor, r)
 		if item.Table == key {
 			return item, true

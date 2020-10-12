@@ -37,4 +37,6 @@
 // However, to maintain immutability, items should not be modified via pointer.
 // The code is not written to use *Item
 // because that's not what you want for e.g. string or int
+//
+// Tests are in util/hamttest
 package hamt

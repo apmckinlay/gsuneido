@@ -114,7 +114,8 @@ func NewInfoPacked(st *stor.Stor, off uint64) *InfoPacked {
 	buf := st.Data(off)
 	r := stor.NewReader(buf)
 	size := r.Get3()
-	cksum.MustCheck(buf[:size])
+	buf = buf[:size]
+	cksum.MustCheck(buf)
 	nitems := r.Get2()
 	nfingers := 1 + nitems/perFingerInfo
 	fingers := make([]InfoFinger, nfingers)
@@ -141,7 +142,7 @@ func (p *InfoPacked) Get(key string) (*Info, bool) {
 	}
 	pos := p.binarySearch(key)
 	r := stor.NewReader(p.buf[pos:])
-	for n := 0; n <= perFingerInfo; n++ {
+	for n := 0; n <= perFingerInfo && r.Remaining() > cksum.Len; n++ {
 		item := ReadInfo(p.stor, r)
 		if item.Table == key {
 			return item, true

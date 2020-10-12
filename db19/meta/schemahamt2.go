@@ -114,7 +114,8 @@ func NewSchemaPacked(st *stor.Stor, off uint64) *SchemaPacked {
 	buf := st.Data(off)
 	r := stor.NewReader(buf)
 	size := r.Get3()
-	cksum.MustCheck(buf[:size])
+	buf = buf[:size]
+	cksum.MustCheck(buf)
 	nitems := r.Get2()
 	nfingers := 1 + nitems/perFingerSchema
 	fingers := make([]SchemaFinger, nfingers)
@@ -141,7 +142,7 @@ func (p *SchemaPacked) Get(key string) (*Schema, bool) {
 	}
 	pos := p.binarySearch(key)
 	r := stor.NewReader(p.buf[pos:])
-	for n := 0; n <= perFingerSchema; n++ {
+	for n := 0; n <= perFingerSchema && r.Remaining() > cksum.Len; n++ {
 		item := ReadSchema(p.stor, r)
 		if item.Table == key {
 			return item, true

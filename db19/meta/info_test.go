@@ -73,5 +73,8 @@ func TestInfo2(t *testing.T) {
 		ti := packed.MustGet(s)
 		assert.T(t).Msg("table").This(ti.Table).Is(s)
 		assert.T(t).Msg("nrows").This(ti.Nrows).Is(i)
+
+		_, ok := packed.Get(s + "Z")
+		assert.T(t).That(!ok)
 	}
 }
