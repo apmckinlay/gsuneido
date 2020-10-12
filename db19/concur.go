@@ -35,6 +35,7 @@ func StartConcur(db *Database, persistInterval time.Duration) {
 func merger(db *Database, mergeChan chan int,
 	persistInterval time.Duration, allDone chan void) {
 	ticker := time.NewTicker(persistInterval)
+	prevState := db.GetState()
 loop:
 	for {
 		select {
@@ -45,7 +46,11 @@ loop:
 			db.Merge(tn)
 		case <-ticker.C:
 			// fmt.Println("Persist")
-			db.Persist(false)
+			state := db.GetState()
+			if state != prevState {
+				db.Persist(false)
+				prevState = state
+			}
 		}
 	}
 	db.Persist(true) // flatten on shutdown (required by quick check)

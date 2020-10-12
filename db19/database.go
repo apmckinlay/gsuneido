@@ -32,6 +32,10 @@ func CreateDatabase(filename string) (*Database, error) {
 	if err != nil {
 		return nil, err
 	}
+	return createDatabase(store)
+}
+
+func createDatabase(store *stor.Stor) (*Database, error) {
 	var db Database
 	db.state.set(&DbState{store: store, meta: meta.CreateMeta(store)})
 
