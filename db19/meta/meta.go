@@ -10,9 +10,9 @@ import (
 )
 
 // Meta is the layered info and schema metadata
+// dif is per transaction, top is recently changed, old is the rest
+// dif may override top which may override old
 type Meta struct {
-	// dif is per transaction, top is recently changed, old is the rest
-	// dif may override top which may override old
 	difInfo   InfoHamt
 	topInfo   InfoHamt
 	oldInfo   *InfoPacked
@@ -246,7 +246,7 @@ func (m *Meta) Write(st *stor.Stor) offsets {
 	return offs
 }
 
-func ReadOverlay(st *stor.Stor, offs offsets) *Meta {
+func ReadMeta(st *stor.Stor, offs offsets) *Meta {
 	m := Meta{
 		oldSchema: NewSchemaPacked(st, offs[0]),
 		oldInfo:   NewInfoPacked(st, offs[1]),

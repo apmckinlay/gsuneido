@@ -11,7 +11,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
-func TestOverlay(*testing.T) {
+func TestMeta(*testing.T) {
 	tbl := InfoHamt{}.Mutable()
 	const n = 1000
 	data := make([]string, n)

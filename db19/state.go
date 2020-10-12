@@ -125,7 +125,7 @@ func writeState(store *stor.Stor, offsets [meta.Noffsets]uint64) uint64 {
 
 func ReadState(st *stor.Stor, off uint64) (*DbState, time.Time) {
 	offsets, t := readState(st, off)
-	return &DbState{store: st, meta: meta.ReadOverlay(st, offsets)}, t
+	return &DbState{store: st, meta: meta.ReadMeta(st, offsets)}, t
 }
 
 func readState(st *stor.Stor, off uint64) ([meta.Noffsets]uint64, time.Time) {
