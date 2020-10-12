@@ -16,7 +16,7 @@ func TestConcur(t *testing.T) {
 	if testing.Short() {
 		return
 	}
-	store := stor.HeapStor(16384)
+	store := stor.HeapStor(16 * 1024)
 	db, err := createDatabase(store)
 	ck(err)
 	before := store.Size()
