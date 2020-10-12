@@ -127,14 +127,14 @@ func NewSchemaPacked(st *stor.Stor, off uint64) *SchemaPacked {
 	return &SchemaPacked{stor: st, off: off, buf: buf, fingers: fingers}
 }
 
-func (p SchemaPacked) MustGet(key string) *Schema {
+func (p *SchemaPacked) MustGet(key string) *Schema {
 	if item, ok := p.Get(key); ok {
 		return item
 	}
 	panic("item not found")
 }
 
-func (p SchemaPacked) Get(key string) (*Schema, bool) {
+func (p *SchemaPacked) Get(key string) (*Schema, bool) {
 	var zero *Schema
 	if p.buf == nil {
 		return zero, false
@@ -151,7 +151,7 @@ func (p SchemaPacked) Get(key string) (*Schema, bool) {
 }
 
 // binarySearch does a binary search of the fingers
-func (p SchemaPacked) binarySearch(table string) int {
+func (p *SchemaPacked) binarySearch(table string) int {
 	i, j := 0, len(p.fingers)
 	for i < j {
 		h := int(uint(i+j) >> 1) // i ≤ h < j
@@ -165,6 +165,6 @@ func (p SchemaPacked) binarySearch(table string) int {
 	return p.fingers[i-1].pos
 }
 
-func (p SchemaPacked) Offset() uint64 {
+func (p *SchemaPacked) Offset() uint64 {
 	return p.off
 }

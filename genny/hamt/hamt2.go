@@ -123,14 +123,14 @@ func NewItemPacked(st *stor.Stor, off uint64) *ItemPacked {
 	return &ItemPacked{stor: st, off: off, buf: buf, fingers: fingers}
 }
 
-func (p ItemPacked) MustGet(key string) Item {
+func (p *ItemPacked) MustGet(key string) Item {
 	if item, ok := p.Get(key); ok {
 		return item
 	}
 	panic("item not found")
 }
 
-func (p ItemPacked) Get(key string) (Item, bool) {
+func (p *ItemPacked) Get(key string) (Item, bool) {
 	var zero Item
 	if p.buf == nil {
 		return zero, false
@@ -147,7 +147,7 @@ func (p ItemPacked) Get(key string) (Item, bool) {
 }
 
 // binarySearch does a binary search of the fingers
-func (p ItemPacked) binarySearch(table string) int {
+func (p *ItemPacked) binarySearch(table string) int {
 	i, j := 0, len(p.fingers)
 	for i < j {
 		h := int(uint(i+j) >> 1) // i ≤ h < j
@@ -161,6 +161,6 @@ func (p ItemPacked) binarySearch(table string) int {
 	return p.fingers[i-1].pos
 }
 
-func (p ItemPacked) Offset() uint64 {
+func (p *ItemPacked) Offset() uint64 {
 	return p.off
 }
