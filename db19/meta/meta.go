@@ -18,6 +18,10 @@ type Meta struct {
 	oldInfo   *InfoPacked
 	topSchema SchemaHamt
 	oldSchema *SchemaPacked
+	offInfo   uint64
+	offSchema uint64
+	genSchema uint32
+	genInfo   uint32
 }
 
 func NewMeta(oldSchema *SchemaPacked, oldInfo *InfoPacked,
@@ -240,8 +244,18 @@ func (m *Meta) Write(st *stor.Stor) offsets {
 	offs := offsets{
 		m.oldSchema.Offset(),
 		m.oldInfo.Offset(),
-		m.topSchema.Write(st),
-		m.topInfo.Write(st),
+		m.offSchema,
+		m.offInfo,
+	}
+	if m.topSchema.generation != m.genSchema {
+		offs[2] = m.topSchema.Write(st)
+		m.genSchema = m.topSchema.generation
+		m.offSchema = offs[2]
+	}
+	if m.topInfo.generation != m.genInfo {
+		offs[3] = m.topInfo.Write(st)
+		m.genInfo = m.topInfo.generation
+		m.offInfo = offs[3]
 	}
 	return offs
 }
@@ -253,6 +267,10 @@ func ReadMeta(st *stor.Stor, offs offsets) *Meta {
 		topSchema: ReadSchemaHamt(st, offs[2]),
 		topInfo:   ReadInfoHamt(st, offs[3]),
 	}
+	m.offSchema = offs[2]
+	m.genSchema = m.topSchema.generation
+	m.offInfo = offs[3]
+	m.genInfo = m.topInfo.generation
 	return &m
 }
 
