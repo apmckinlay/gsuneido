@@ -16,8 +16,6 @@ import (
 type Schema struct {
 	schema.Schema
 	//TODO foreign key target stuff
-	// mutable is used to know whether to persist
-	mutable bool
 }
 
 //go:generate genny -in ../../genny/hamt/hamt.go -out schemahamt.go -pkg meta gen "Item=*Schema KeyType=string"
