@@ -29,23 +29,10 @@ func (m *Meta) GetRoInfo(table string) *Info {
 	if ti, ok := m.difInfo.Get(table); ok {
 		return ti
 	}
-	ti, ok := m.info.Get(table)
-	if !ok || ti.isTomb() {
-		return nil
+	if ti, ok := m.info.Get(table); ok && !ti.isTomb() {
+		return ti
 	}
-	var ti2 = *ti // copy
-	ti = &ti2
-	// set up index overlays and ixspecs
-	ti.Indexes = append(ti.Indexes[:0:0], ti.Indexes...) // copy
-	for i := range ti.Indexes {
-		if ti.Indexes[i].GetIxspec() == nil {
-			ix := *ti.Indexes[i] // copy
-			ts := m.GetRoSchema(table)
-			ix.SetIxspec(&ts.Indexes[i].Ixspec)
-			ti.Indexes[i] = &ix
-		}
-	}
-	return ti
+	return nil
 }
 
 func (m *Meta) GetRwInfo(table string, tranNum int) *Info {
@@ -61,15 +48,10 @@ func (m *Meta) GetRwInfo(table string, tranNum int) *Info {
 	ti.Nrows = 0
 	ti.Size = 0
 
-	// set up index overlays and ixspecs
+	// set up index overlays
 	ti.Indexes = append(ti.Indexes[:0:0], ti.Indexes...) // copy
 	for i := range ti.Indexes {
 		ti.Indexes[i] = ti.Indexes[i].Mutable(tranNum)
-		if ti.Indexes[i].GetIxspec() == nil {
-			ts := m.GetRoSchema(table)
-			is := &ts.Indexes[i].Ixspec
-			ti.Indexes[i].SetIxspec(is)
-		}
 	}
 
 	m.difInfo.Put(&ti)
@@ -156,6 +138,13 @@ func ReadMeta(store *stor.Stor, offSchema, offInfo uint64) *Meta {
 		schema: ReadSchemaHamt(store, offSchema),
 		info:   ReadInfoHamt(store, offInfo),
 	}
+	// set up ixspecs
+	m.info.ForEach(func(ti *Info) {
+		ts := m.schema.MustGet(ti.Table)
+		for i := range ti.Indexes {
+			ti.Indexes[i].SetIxspec(&ts.Indexes[i].Ixspec)
+		}
+	})
 	return &m
 }
 

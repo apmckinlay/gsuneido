@@ -44,9 +44,7 @@ func (ov *Overlay) GetIxspec() *ixspec.T {
 }
 
 func (ov *Overlay) SetIxspec(is *ixspec.T) {
-	fb := *ov.base() // copy
-	fb.ixspec = is
-	ov.under[0] = &fb
+	ov.base().ixspec = is
 }
 
 // Insert inserts into the mutable top mbtree
