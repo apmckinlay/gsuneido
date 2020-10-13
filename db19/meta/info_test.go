@@ -55,16 +55,7 @@ func TestInfo(t *testing.T) {
 func TestInfo2(t *testing.T) {
 	tbl := InfoHamt{}.Mutable()
 	const n = 1000
-	data := make([]string, n)
-	randStr := str.UniqueRandom(4, 4)
-	for i := 0; i < n; i++ {
-		data[i] = randStr()
-		tbl.Put(&Info{
-			Table: data[i],
-			Nrows: i,
-			Size:  1000,
-		})
-	}
+	data := mkdata(tbl, n)
 	st := stor.HeapStor(32 * 1024)
 	st.Alloc(1) // avoid offset 0
 	off := tbl.Write(st)
@@ -73,8 +64,17 @@ func TestInfo2(t *testing.T) {
 		ti := packed.MustGet(s)
 		assert.T(t).Msg("table").This(ti.Table).Is(s)
 		assert.T(t).Msg("nrows").This(ti.Nrows).Is(i)
-
 		_, ok := packed.Get(s + "Z")
 		assert.T(t).That(!ok)
 	}
+}
+
+func mkdata(tbl InfoHamt, n int) []string {
+	data := make([]string, n)
+	randStr := str.UniqueRandom(4, 4)
+	for i := 0; i < n; i++ {
+		data[i] = randStr()
+		tbl.Put(&Info{Table: data[i], Nrows: i})
+	}
+	return data
 }
