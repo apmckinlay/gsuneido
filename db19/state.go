@@ -79,16 +79,18 @@ func (db *Database) Merge(tranNum int) {
 //-------------------------------------------------------------------
 
 // Persist writes index changes (and a new state) to the database file.
-// It is called by concur.go persister.
+// It is called from concur.go
 func (db *Database) Persist(flatten bool) uint64 {
+	var off uint64
 	state := db.GetState()
 	updates := state.meta.Persist(flatten) // outside UpdateState
 	state = db.UpdateState(func(state *DbState) {
 		meta := *state.meta // copy
 		meta.ApplyPersist(updates)
 		state.meta = &meta
+		off = state.Write()
 	})
-	return state.Write()
+	return off
 }
 
 const magic1 = "\x01\x23\x45\x67\x89\xab\xcd\xef"
