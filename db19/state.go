@@ -96,27 +96,27 @@ func (db *Database) Persist(flatten bool) uint64 {
 const magic1 = "\x01\x23\x45\x67\x89\xab\xcd\xef"
 const magic2 = "\xfe\xdc\xba\x98\x76\x54\x32\x10"
 const dateSize = 8
-const stateLen = len(magic1) + dateSize + meta.Noffsets*stor.SmallOffsetLen +
+const stateLen = len(magic1) + dateSize + 2*stor.SmallOffsetLen +
 	len(magic2) + cksum.Len
 const magic2at = stateLen - len(magic2)
 
 func (state *DbState) Write() uint64 {
 	// NOTE: indexes should already have been saved
-	offsets := state.meta.Write(state.store)
-	return writeState(state.store, offsets)
+	offSchema, offInfo := state.meta.Write(state.store)
+	return writeState(state.store, offSchema, offInfo)
 }
 
-func writeState(store *stor.Stor, offsets [meta.Noffsets]uint64) uint64 {
+func writeState(store *stor.Stor, offSchema, offInfo uint64) uint64 {
 	stateOff, buf := store.Alloc(stateLen)
 	copy(buf, magic1)
 	i := len(magic1)
 	t := time.Now().Unix()
 	binary.BigEndian.PutUint64(buf[i:], uint64(t))
 	i += dateSize
-	for _, o := range offsets {
-		stor.WriteSmallOffset(buf[i:], o)
-		i += stor.SmallOffsetLen
-	}
+	stor.WriteSmallOffset(buf[i:], offSchema)
+	i += stor.SmallOffsetLen
+	stor.WriteSmallOffset(buf[i:], offInfo)
+	i += stor.SmallOffsetLen
 	i += cksum.Len
 	cksum.Update(buf[:i])
 	copy(buf[i:], magic2)
@@ -126,22 +126,21 @@ func writeState(store *stor.Stor, offsets [meta.Noffsets]uint64) uint64 {
 }
 
 func ReadState(st *stor.Stor, off uint64) (*DbState, time.Time) {
-	offsets, t := readState(st, off)
-	return &DbState{store: st, meta: meta.ReadMeta(st, offsets)}, t
+	offSchema, offInfo, t := readState(st, off)
+	return &DbState{store: st, meta: meta.ReadMeta(st, offSchema, offInfo)}, t
 }
 
-func readState(st *stor.Stor, off uint64) ([meta.Noffsets]uint64, time.Time) {
+func readState(st *stor.Stor, off uint64) (offSchema, offInfo uint64, t time.Time) {
 	buf := st.Data(off)[:stateLen]
 	i := len(magic1)
 	assert.That(string(buf[:i]) == magic1)
 	cksum.MustCheck(buf[:magic2at])
 	assert.That(string(buf[magic2at:magic2at+len(magic2)]) == magic2)
-	t := time.Unix(int64(binary.BigEndian.Uint64(buf[i:])), 0)
+	t = time.Unix(int64(binary.BigEndian.Uint64(buf[i:])), 0)
 	i += dateSize
-	var offsets [meta.Noffsets]uint64
-	for j := range offsets {
-		offsets[j] = stor.ReadSmallOffset(buf[i:])
-		i += stor.SmallOffsetLen
-	}
-	return offsets, t
+	offSchema = stor.ReadSmallOffset(buf[i:])
+	i += stor.SmallOffsetLen
+	offInfo = stor.ReadSmallOffset(buf[i:])
+	i += stor.SmallOffsetLen
+	return offSchema, offInfo, t
 }

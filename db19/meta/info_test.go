@@ -32,16 +32,6 @@ func TestInfo(t *testing.T) {
 	st.Alloc(1) // avoid offset 0
 	off := tbl.Write(st)
 
-	packed := NewInfoPacked(st, off)
-
-	assert(*packed.MustGet("one")).Is(*tbl.MustGet("one"))
-	assert(*packed.MustGet("two")).Is(Info{
-		Table:   "two",
-		Nrows:   200,
-		Size:    2000,
-		Indexes: []*btree.Overlay{},
-	})
-
 	reread := ReadInfoHamt(st, off)
 	assert(*reread.MustGet("one")).Is(*tbl.MustGet("one"))
 	assert(*reread.MustGet("two")).Is(Info{
@@ -59,12 +49,13 @@ func TestInfo2(t *testing.T) {
 	st := stor.HeapStor(32 * 1024)
 	st.Alloc(1) // avoid offset 0
 	off := tbl.Write(st)
-	packed := NewInfoPacked(st, off)
+
+	tbl = ReadInfoHamt(st, off)
 	for i, s := range data {
-		ti := packed.MustGet(s)
+		ti := tbl.MustGet(s)
 		assert.T(t).Msg("table").This(ti.Table).Is(s)
 		assert.T(t).Msg("nrows").This(ti.Nrows).Is(i)
-		_, ok := packed.Get(s + "Z")
+		_, ok := tbl.Get(s + "Z")
 		assert.T(t).That(!ok)
 	}
 }

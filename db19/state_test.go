@@ -11,9 +11,9 @@ import (
 )
 
 func TestStateReadWrite(*testing.T) {
-	offsets := [4]uint64{1, 2, 3, 4}
 	store := stor.HeapStor(1024)
-	off := writeState(store, offsets)
-	offsets2, _ := readState(store, off)
-	assert.This(offsets2).Is(offsets)
+	off := writeState(store, 1234, 5678)
+	offSchema, offInfo, _ := readState(store, off)
+	assert.This(offSchema).Is(1234)
+	assert.This(offInfo).Is(5678)
 }

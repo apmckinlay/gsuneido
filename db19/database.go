@@ -37,7 +37,7 @@ func CreateDatabase(filename string) (*Database, error) {
 
 func createDatabase(store *stor.Stor) (*Database, error) {
 	var db Database
-	db.state.set(&DbState{store: store, meta: meta.CreateMeta(store)})
+	db.state.set(&DbState{store: store, meta: &meta.Meta{}})
 
 	n := len(magic) + stor.SmallOffsetLen
 	_, buf := store.Alloc(n)

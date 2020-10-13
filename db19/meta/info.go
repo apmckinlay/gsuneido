@@ -15,8 +15,6 @@ type Info struct {
 	Nrows   int
 	Size    uint64
 	Indexes []*btree.Overlay
-	// mutable is used to know whether to persist
-	mutable bool
 }
 
 //go:generate genny -in ../../genny/hamt/hamt.go -out infohamt.go -pkg meta gen "Item=*Info KeyType=string"
@@ -80,18 +78,16 @@ type overlays []*btree.Overlay
 
 type btOver = *btree.Overlay
 
-// process is used by overlay.Merge and overlay.Persist.
+// process is used by meta.Merge and meta.Persist.
 // process collects the updates which are then applied by withUpdates.
 func (t InfoHamt) process(fn func(btOver) btOver) []update {
 	var updates []update
 	t.ForEach(func(ti *Info) {
-		if ti.mutable {
-			updated := make(overlays, len(ti.Indexes))
-			for i, ov := range ti.Indexes {
-				updated[i] = fn(ov)
-			}
-			updates = append(updates, update{table: ti.Table, overlays: updated})
+		updated := make(overlays, len(ti.Indexes))
+		for i, ov := range ti.Indexes {
+			updated[i] = fn(ov)
 		}
+		updates = append(updates, update{table: ti.Table, overlays: updated})
 	})
 	return updates
 }
@@ -110,7 +106,3 @@ func (t InfoHamt) withUpdates(updates []update, fn func(btOver, btOver) btOver) 
 	}
 	return t2.Freeze()
 }
-
-//-------------------------------------------------------------------
-
-//TODO merge an InfoHamt and an InfoPacked to make new base

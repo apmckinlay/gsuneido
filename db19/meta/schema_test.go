@@ -40,11 +40,7 @@ func TestSchema(t *testing.T) {
 	}
 
 	tbl = ReadSchemaHamt(st, off)
-
-	packed := NewSchemaPacked(st, off)
-
 	for i, table := range data {
 		test(i, table, tbl.MustGet(table))
-		test(i, table, packed.MustGet(table))
 	}
 }
