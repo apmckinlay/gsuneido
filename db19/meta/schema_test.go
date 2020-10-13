@@ -39,7 +39,7 @@ func TestSchema(t *testing.T) {
 		assert(ts.Indexes[0].Columns).Msg("indexes").Is([]string{"one"})
 	}
 
-	tbl = ReadSchemaHamt(st, off)
+	tbl = SchemaHamt{}.Mutable().Read(st, off).Freeze()
 	for i, table := range data {
 		test(i, table, tbl.MustGet(table))
 	}

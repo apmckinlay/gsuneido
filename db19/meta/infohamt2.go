@@ -42,17 +42,16 @@ func (ht InfoHamt) Write(st *stor.Stor) uint64 {
 	return off
 }
 
-func ReadInfoHamt(st *stor.Stor, off uint64) InfoHamt {
+func (ht InfoHamt) Read(st *stor.Stor, off uint64) InfoHamt {
 	if off == 0 {
-		return InfoHamt{}
+		return ht
 	}
 	buf := st.Data(off)
 	size := stor.NewReader(buf).Get3()
 	cksum.MustCheck(buf[:size])
 	r := stor.NewReader(buf[3 : size-cksum.Len])
-	ht := InfoHamt{}.Mutable()
 	for r.Remaining() > 0 {
 		ht.Put(ReadInfo(st, r))
 	}
-	return ht.Freeze()
+	return ht
 }

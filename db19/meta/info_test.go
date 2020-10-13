@@ -32,9 +32,9 @@ func TestInfo(t *testing.T) {
 	st.Alloc(1) // avoid offset 0
 	off := tbl.Write(st)
 
-	reread := ReadInfoHamt(st, off)
-	assert(*reread.MustGet("one")).Is(*tbl.MustGet("one"))
-	assert(*reread.MustGet("two")).Is(Info{
+	tbl = InfoHamt{}.Mutable().Read(st, off)
+	assert(*tbl.MustGet("one")).Is(*tbl.MustGet("one"))
+	assert(*tbl.MustGet("two")).Is(Info{
 		Table:   "two",
 		Nrows:   200,
 		Size:    2000,
@@ -50,7 +50,7 @@ func TestInfo2(t *testing.T) {
 	st.Alloc(1) // avoid offset 0
 	off := tbl.Write(st)
 
-	tbl = ReadInfoHamt(st, off)
+	tbl = InfoHamt{}.Mutable().Read(st, off).Freeze()
 	for i, s := range data {
 		ti := tbl.MustGet(s)
 		assert.T(t).Msg("table").This(ti.Table).Is(s)

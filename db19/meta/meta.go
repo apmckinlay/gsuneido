@@ -135,8 +135,8 @@ func (m *Meta) Write(store *stor.Stor) (offSchema, offInfo uint64) {
 
 func ReadMeta(store *stor.Stor, offSchema, offInfo uint64) *Meta {
 	m := Meta{
-		schema: ReadSchemaHamt(store, offSchema),
-		info:   ReadInfoHamt(store, offInfo),
+		schema: SchemaHamt{}.Mutable().Read(store, offSchema).Freeze(),
+		info:   InfoHamt{}.Mutable().Read(store, offInfo).Freeze(),
 	}
 	// set up ixspecs
 	m.info.ForEach(func(ti *Info) {

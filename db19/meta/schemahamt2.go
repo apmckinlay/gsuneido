@@ -42,17 +42,16 @@ func (ht SchemaHamt) Write(st *stor.Stor) uint64 {
 	return off
 }
 
-func ReadSchemaHamt(st *stor.Stor, off uint64) SchemaHamt {
+func (ht SchemaHamt) Read(st *stor.Stor, off uint64) SchemaHamt {
 	if off == 0 {
-		return SchemaHamt{}
+		return ht
 	}
 	buf := st.Data(off)
 	size := stor.NewReader(buf).Get3()
 	cksum.MustCheck(buf[:size])
 	r := stor.NewReader(buf[3 : size-cksum.Len])
-	ht := SchemaHamt{}.Mutable()
 	for r.Remaining() > 0 {
 		ht.Put(ReadSchema(st, r))
 	}
-	return ht.Freeze()
+	return ht
 }
