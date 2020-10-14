@@ -15,6 +15,9 @@ info
 meta
 : database metadata, consisting of layered info and schema
 
+persist
+: save the database state to storage, normally done once per minute rather than after every commit to reduce write amplification
+
 redirect
 : used in fbtree to redirect an offset to a memory node or a different offset to avoid path copying
 
