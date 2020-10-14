@@ -15,6 +15,7 @@ type Info struct {
 	Nrows   int
 	Size    uint64
 	Indexes []*btree.Overlay
+	lastmod int
 }
 
 //go:generate genny -in ../../genny/hamt/hamt.go -out infohamt.go -pkg meta gen "Item=*Info KeyType=string"
@@ -60,8 +61,8 @@ func ReadInfo(st *stor.Stor, r *stor.Reader) *Info {
 	return &ti
 }
 
-func newInfoTomb(table string) *Info {
-	return &Info{Table: table, Nrows: -1}
+func (m *Meta) newInfoTomb(table string) *Info {
+	return &Info{Table: table, Nrows: -1, lastmod: m.clock}
 }
 
 func (ti *Info) isTomb() bool {

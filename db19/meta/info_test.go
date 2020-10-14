@@ -12,6 +12,8 @@ import (
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
+func allInfo(*Info) bool { return true }
+
 func TestInfo(t *testing.T) {
 	assert := assert.T(t).This
 	tbl := InfoHamt{}.Mutable()
@@ -30,9 +32,9 @@ func TestInfo(t *testing.T) {
 
 	st := stor.HeapStor(8192)
 	st.Alloc(1) // avoid offset 0
-	off := tbl.Write(st)
+	off := tbl.Write(st, 0, allInfo)
 
-	tbl = InfoHamt{}.Mutable().Read(st, off)
+	tbl = ReadInfoChain(st, off)
 	assert(*tbl.MustGet("one")).Is(*tbl.MustGet("one"))
 	assert(*tbl.MustGet("two")).Is(Info{
 		Table:   "two",
@@ -48,9 +50,9 @@ func TestInfo2(t *testing.T) {
 	data := mkdata(tbl, n)
 	st := stor.HeapStor(32 * 1024)
 	st.Alloc(1) // avoid offset 0
-	off := tbl.Write(st)
+	off := tbl.Write(st, 0, allInfo)
 
-	tbl = InfoHamt{}.Mutable().Read(st, off).Freeze()
+	tbl = ReadInfoChain(st, off)
 	for i, s := range data {
 		ti := tbl.MustGet(s)
 		assert.T(t).Msg("table").This(ti.Table).Is(s)

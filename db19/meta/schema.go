@@ -16,6 +16,7 @@ import (
 type Schema struct {
 	schema.Schema
 	//TODO foreign key target stuff
+	lastmod int
 }
 
 //go:generate genny -in ../../genny/hamt/hamt.go -out schemahamt.go -pkg meta gen "Item=*Schema KeyType=string"
@@ -126,8 +127,8 @@ func hasSpecial(cols []string) bool {
 	return false
 }
 
-func newSchemaTomb(table string) *Schema {
-	return &Schema{Schema: schema.Schema{Table: table}}
+func (m *Meta) newSchemaTomb(table string) *Schema {
+	return &Schema{Schema: schema.Schema{Table: table}, lastmod: m.clock}
 }
 
 func (ts *Schema) isTomb() bool {

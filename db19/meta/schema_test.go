@@ -12,6 +12,8 @@ import (
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
+func allSchema(*Schema) bool { return true }
+
 func TestSchema(t *testing.T) {
 	tbl := SchemaHamt{}.Mutable()
 	const n = 900
@@ -29,7 +31,7 @@ func TestSchema(t *testing.T) {
 	}
 	st := stor.HeapStor(32 * 1024)
 	st.Alloc(1) // avoid offset 0
-	off := tbl.Write(st)
+	off := tbl.Write(st, 0, allSchema)
 
 	test := func(i int, table string, ts *Schema) {
 		t.Helper()
@@ -39,7 +41,7 @@ func TestSchema(t *testing.T) {
 		assert(ts.Indexes[0].Columns).Msg("indexes").Is([]string{"one"})
 	}
 
-	tbl = SchemaHamt{}.Mutable().Read(st, off).Freeze()
+	tbl = ReadSchemaChain(st, off)
 	for i, table := range data {
 		test(i, table, tbl.MustGet(table))
 	}

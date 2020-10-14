@@ -12,9 +12,12 @@ import (
 // Meta is the schema and info metadata
 // difInfo is per transaction, overrides info
 type Meta struct {
-	schema  SchemaHamt
-	info    InfoHamt
-	difInfo InfoHamt
+	schema    SchemaHamt
+	info      InfoHamt
+	difInfo   InfoHamt
+	offSchema uint64
+	offInfo   uint64
+	clock     int
 }
 
 // Mutable returns a mutable copy of a Meta
@@ -68,6 +71,8 @@ func (m *Meta) GetRoSchema(table string) *Schema {
 
 // Put is used by Database.LoadedTable
 func (m *Meta) Put(ts *Schema, ti *Info) *Meta {
+	ts.lastmod = m.clock
+	ti.lastmod = m.clock
 	schema := m.schema.Mutable()
 	schema.Put(ts)
 	info := m.info.Mutable()
@@ -85,9 +90,9 @@ func (m *Meta) DropTable(table string) *Meta {
 	}
 	//TODO delete without tombstone if not persisted
 	schema := m.schema.Mutable()
-	schema.Put(newSchemaTomb(table))
+	schema.Put(m.newSchemaTomb(table))
 	info := m.info.Mutable()
-	info.Put(newInfoTomb(table))
+	info.Put(m.newInfoTomb(table))
 	ov2 := *m // copy
 	ov2.schema = schema.Freeze()
 	ov2.info = info.Freeze()
@@ -119,6 +124,7 @@ func (m *Meta) LayeredOnto(latest *Meta) *Meta {
 		for i := range ti.Indexes {
 			ti.Indexes[i].UpdateWith(lti.Indexes[i])
 		}
+		ti.lastmod = m.clock
 		info.Put(ti)
 	})
 	result := *latest // copy
@@ -128,16 +134,26 @@ func (m *Meta) LayeredOnto(latest *Meta) *Meta {
 
 //-------------------------------------------------------------------
 
+func (m *Meta) modInfo(ti *Info) bool {
+	return ti.lastmod == m.clock
+}
+func (m *Meta) modSchema(ts *Schema) bool {
+	return ts.lastmod == m.clock
+}
+
 func (m *Meta) Write(store *stor.Stor) (offSchema, offInfo uint64) {
 	assert.That(m.difInfo.IsNil())
-	return m.schema.Write(store), m.info.Write(store)
+	m.offSchema = m.schema.Write(store, m.offSchema, m.modSchema)
+	m.offInfo = m.info.Write(store, m.offInfo, m.modInfo)
+	m.clock++
+	return m.offSchema, m.offInfo
 }
 
 func ReadMeta(store *stor.Stor, offSchema, offInfo uint64) *Meta {
-	m := Meta{
-		schema: SchemaHamt{}.Mutable().Read(store, offSchema).Freeze(),
-		info:   InfoHamt{}.Mutable().Read(store, offInfo).Freeze(),
-	}
+	schema := ReadSchemaChain(store, offSchema)
+	info := ReadInfoChain(store, offInfo)
+	m := Meta{schema: schema, offSchema: offSchema,
+		info: info, offInfo: offInfo}
 	// set up ixspecs
 	m.info.ForEach(func(ti *Info) {
 		ts := m.schema.MustGet(ti.Table)
