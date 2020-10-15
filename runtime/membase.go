@@ -7,6 +7,7 @@ package runtime
 type MemBase struct {
 	Data map[string]Value
 	CantConvert
+	MayLock
 }
 
 func NewMemBase() MemBase {
@@ -14,26 +15,42 @@ func NewMemBase() MemBase {
 }
 
 type Findable interface {
-	// Finder applies fn to ob and all its parents
+	// Finder applies fn to a MemBase and all its parents
 	// stopping if fn returns something other than nil, and returning that value.
 	// Implemented by SuClass and SuInstance
 	Finder(t *Thread, fn func(v Value, mb *MemBase) Value) Value
 }
 
 func (mb *MemBase) AddMembersTo(ob *SuObject) {
+	if mb.Lock() {
+		defer mb.lock.Unlock()
+	}
 	for m := range mb.Data {
 		ob.Add(SuStr(m))
 	}
 }
 
 func (mb *MemBase) Size() int {
+	if mb.Lock() {
+		defer mb.lock.Unlock()
+	}
 	return len(mb.Data)
 }
 
 func (mb *MemBase) Copy() MemBase {
+	if mb.Lock() {
+		defer mb.lock.Unlock()
+	}
 	copy := make(map[string]Value, len(mb.Data))
 	for k, v := range mb.Data {
 		copy[k] = v
 	}
 	return MemBase{Data: copy}
+}
+
+func (mb *MemBase) Get(m string) Value {
+	if mb.Lock() {
+		defer mb.lock.Unlock()
+	}
+	return mb.Data[m]
 }

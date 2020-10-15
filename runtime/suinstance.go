@@ -14,7 +14,6 @@ type SuInstance struct {
 	MemBase
 	class   *SuClass
 	parents []*SuClass
-	MayLock
 }
 
 func NewInstance(t *Thread, class *SuClass) *SuInstance {

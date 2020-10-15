@@ -169,6 +169,10 @@ func (*SuClass) Compare(Value) int {
 	panic("class compare not implemented")
 }
 
+func (*SuClass) SetConcurrent() {
+	// classes are immutable so no locking is required
+}
+
 func (c *SuClass) Parent(t *Thread) *SuClass {
 	if c.Base <= 0 {
 		return nil
