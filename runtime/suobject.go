@@ -631,12 +631,9 @@ func children(ob *SuObject, stack *[]Value) []Value {
 		return ob.list
 	}
 	defer ob.Unlock()
-	n := len(ob.list)
 	start := len(*stack)
-	expand(stack, n)
-	for i := 0; i < n; i++ {
-		(*stack)[start+i] = ob.list[i]
-	}
+	expand(stack, len(ob.list))
+	copy((*stack)[start:], ob.list)
 	return (*stack)[start:]
 }
 
