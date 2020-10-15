@@ -59,26 +59,29 @@ func Entab(s string) string {
 				break
 			}
 		}
-		// output the indent using tabs possibly followed by space
-		dstcol := 0
-		for ; dstcol+TabWidth <= col; dstcol += TabWidth {
-			buf.WriteByte('\t')
+		if i < n && s[i] != '\r' && s[i] != '\n' {
+			// output the indent using tabs possibly followed by space
+			dstcol := 0
+			for ; dstcol+TabWidth <= col; dstcol += TabWidth {
+				buf.WriteByte('\t')
+			}
+			for ; dstcol < col; dstcol++ {
+				buf.WriteByte(' ')
+			}
+			// find the end of the current line
+			end := strings.IndexAny(s[i:], "\r\n")
+			if end == -1 {
+				end = n - i
+			}
+			// back up over trailing spaces and tabs
+			j := i + end
+			for ; j-1 > i && (s[j-1] == ' ' || s[j-1] == '\t'); j-- {
+			}
+			// copy the line
+			buf.WriteString(s[i:j])
+			i += end
 		}
-		for ; dstcol < col; dstcol++ {
-			buf.WriteByte(' ')
-		}
-		// find the end of the current line
-		end := strings.IndexAny(s[i:], "\r\n")
-		if end == -1 {
-			end = n - i
-		}
-		// back up over trailing spaces and tabs
-		j := i + end
-		for ; j-1 > i && (s[j-1] == ' ' || s[j-1] == '\t'); j-- {
-		}
-		// copy the line
-		buf.WriteString(s[i:j])
-		i += end
+		// copy newlines
 		for ; i < n && (s[i] == '\r' || s[i] == '\n'); i++ {
 			buf.WriteByte(s[i])
 		}

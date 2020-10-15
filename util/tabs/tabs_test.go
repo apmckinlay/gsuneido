@@ -40,4 +40,8 @@ func TestEntab(t *testing.T) {
 	test(" \t foo  \t  ", "\t foo")
 	test("foo\tbar", "foo\tbar") // only leading converted
 	test("    foo\r\n    bar\r\n", "\tfoo\r\n\tbar\r\n")
+	test("foo\t\nbar", "foo\nbar")
+	test("foo\t\r\nbar", "foo\r\nbar")
+	test("\t", "")
+	test("\t\n", "\n")
 }
