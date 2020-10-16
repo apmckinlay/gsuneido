@@ -8,12 +8,16 @@ import (
 	"github.com/apmckinlay/gsuneido/util/regex"
 )
 
-var _ = builtin("Transaction(read=false, update=false, block=false)",
+var _ = builtin("Transaction(read=nil, update=nil, block=false)",
 	func(th *Thread, args []Value) Value {
-		read := ToBool(args[0])
-		update := ToBool(args[1])
-		if read == true && update == true {
+		if (args[0] == nil) == (args[1] == nil) {
 			panic("usage: Transaction(read:) or Transaction(update:)")
+		}
+		var update bool
+		if args[0] == nil {
+			update = ToBool(args[1])
+		} else {
+			update = !ToBool(args[0])
 		}
 		itran := th.Dbms().Transaction(update)
 		st := NewSuTran(itran, update)
