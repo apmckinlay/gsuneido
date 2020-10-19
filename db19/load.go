@@ -43,7 +43,7 @@ func LoadDatabase(from, dbfile string) int {
 		assert.That(nTables < 1010)
 	}
 	trace("SIZE", db.store.Size())
-	db.GetState().Write()
+	db.GetState().Write(true)
 	db.Close()
 	ck(renameBak(tmpfile, dbfile))
 	return nTables
@@ -70,7 +70,7 @@ func LoadTable(table, dbfile string) int {
 	defer f.Close()
 	schema := table + " " + readLinePrefixed(r, "====== ")
 	nrecs := loadTable(db, r, schema)
-	db.GetState().Write()
+	db.GetState().Write(true)
 	return nrecs
 }
 

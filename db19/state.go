@@ -88,7 +88,7 @@ func (db *Database) Persist(flatten bool) uint64 {
 		meta := *state.meta // copy
 		meta.ApplyPersist(updates)
 		state.meta = &meta
-		off = state.Write()
+		off = state.Write(flatten)
 	})
 	return off
 }
@@ -100,9 +100,9 @@ const stateLen = len(magic1) + dateSize + 2*stor.SmallOffsetLen +
 	len(magic2) + cksum.Len
 const magic2at = stateLen - len(magic2)
 
-func (state *DbState) Write() uint64 {
+func (state *DbState) Write(flatten bool) uint64 {
 	// NOTE: indexes should already have been saved
-	offSchema, offInfo := state.meta.Write(state.store)
+	offSchema, offInfo := state.meta.Write(state.store, flatten)
 	return writeState(state.store, offSchema, offInfo)
 }
 

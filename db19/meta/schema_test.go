@@ -41,7 +41,7 @@ func TestSchema(t *testing.T) {
 		assert(ts.Indexes[0].Columns).Msg("indexes").Is([]string{"one"})
 	}
 
-	tbl = ReadSchemaChain(st, off)
+	tbl,_ = ReadSchemaChain(st, off)
 	for i, table := range data {
 		test(i, table, tbl.MustGet(table))
 	}

@@ -64,11 +64,15 @@ func TestTran(t *testing.T) {
 		tn := ut.commit()
 		db.Merge(tn)
 		if i%100 == 50 {
-			db.Persist(true)
-			db.Close()
-			db, err = OpenDatabase("tmp.db")
-			ck(err)
-			db.ck = NewCheck()
+			if i%500 != 250 {
+				db.Persist(false)
+			} else {
+				db.Persist(true)
+				db.Close()
+				db, err = OpenDatabase("tmp.db")
+				ck(err)
+				db.ck = NewCheck()
+			}
 		}
 	}
 	db.Persist(true)

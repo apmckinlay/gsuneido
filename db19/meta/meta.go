@@ -4,20 +4,24 @@
 package meta
 
 import (
+	"math/bits"
+
 	"github.com/apmckinlay/gsuneido/db19/btree"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
+	"github.com/apmckinlay/gsuneido/util/ints"
 )
 
 // Meta is the schema and info metadata
 // difInfo is per transaction, overrides info
 type Meta struct {
-	schema    SchemaHamt
-	info      InfoHamt
-	difInfo   InfoHamt
-	offSchema uint64
-	offInfo   uint64
-	clock     int
+	schema      SchemaHamt
+	info        InfoHamt
+	difInfo     InfoHamt
+	schemaOffs  []uint64
+	infoOffs    []uint64
+	schemaClock int
+	infoClock   int
 }
 
 // Mutable returns a mutable copy of a Meta
@@ -71,8 +75,8 @@ func (m *Meta) GetRoSchema(table string) *Schema {
 
 // Put is used by Database.LoadedTable
 func (m *Meta) Put(ts *Schema, ti *Info) *Meta {
-	ts.lastmod = m.clock
-	ti.lastmod = m.clock
+	ts.lastmod = m.schemaClock
+	ti.lastmod = m.infoClock
 	schema := m.schema.Mutable()
 	schema.Put(ts)
 	info := m.info.Mutable()
@@ -124,7 +128,7 @@ func (m *Meta) LayeredOnto(latest *Meta) *Meta {
 		for i := range ti.Indexes {
 			ti.Indexes[i].UpdateWith(lti.Indexes[i])
 		}
-		ti.lastmod = m.clock
+		ti.lastmod = m.infoClock
 		info.Put(ti)
 	})
 	result := *latest // copy
@@ -134,26 +138,88 @@ func (m *Meta) LayeredOnto(latest *Meta) *Meta {
 
 //-------------------------------------------------------------------
 
-func (m *Meta) modInfo(ti *Info) bool {
-	return ti.lastmod == m.clock
-}
-func (m *Meta) modSchema(ts *Schema) bool {
-	return ts.lastmod == m.clock
+func (m *Meta) Write(store *stor.Stor, flatten bool) (offSchema, offInfo uint64) {
+	assert.That(m.difInfo.IsNil())
+
+	// schema
+	npersists, timespan := mergeSize(m.schemaClock, flatten)
+	// fmt.Printf("clock %d = %b npersists %d timespan %d\n", m.schemaClock, m.schemaClock, npersists, timespan)
+	filter := func(ts *Schema) bool { return true }
+	if npersists < len(m.schemaOffs) {
+		filter = func(ts *Schema) bool { return ts.lastmod >= m.schemaClock-timespan }
+	}
+	offSchema = m.schema.Write(store, nth(m.schemaOffs, npersists), filter)
+	if offSchema != 0 {
+		// fmt.Println("replace", m.schemaOffs, npersists, offSchema)
+		m.schemaOffs = replace(m.schemaOffs, npersists, offSchema)
+		// fmt.Println("    =>", m.schemaOffs)
+		m.schemaClock++
+		if len(m.schemaOffs) == 1 {
+			m.schemaClock = delayMerge
+		}
+	} else if len(m.schemaOffs) > 0 {
+		offSchema = m.schemaOffs[len(m.schemaOffs)-1]
+	}
+
+	// info
+	npersists, timespan = mergeSize(m.infoClock, flatten)
+	// fmt.Printf("clock %d = %b npersists %d timespan %d\n", m.infoClock, m.infoClock, npersists, timespan)
+	offInfo = m.info.Write(store, nth(m.infoOffs, npersists),
+		func(ti *Info) bool { return ti.lastmod >= m.infoClock-timespan })
+	// fmt.Println("replace", m.infoOffs, npersists, offInfo)
+	m.infoOffs = replace(m.infoOffs, npersists, offInfo)
+	// fmt.Println("    =>", m.infoOffs)
+	m.infoClock++
+	if len(m.infoOffs) == 1 {
+		m.infoClock = delayMerge
+	}
+
+	return offSchema, offInfo
 }
 
-func (m *Meta) Write(store *stor.Stor) (offSchema, offInfo uint64) {
-	assert.That(m.difInfo.IsNil())
-	m.offSchema = m.schema.Write(store, m.offSchema, m.modSchema)
-	m.offInfo = m.info.Write(store, m.offInfo, m.modInfo)
-	m.clock++
-	return m.offSchema, m.offInfo
+// mergeSize returns the number of persists to merge.
+// 1 means lastmod == m.clock, 2 means lastmod >= m.clock-1, etc.
+func mergeSize(clock int, flatten bool) (npersists, timespan int) {
+	if flatten {
+		clock = ints.MaxInt
+	}
+	trailingOnes := bits.TrailingZeros(^uint(clock))
+	return trailingOnes, (1 << trailingOnes) - 1
+}
+
+func nth(v []uint64, n int) uint64 {
+	if len(v) <= n {
+		return 0
+	}
+	return v[n]
+}
+
+// replace replaces the first n elements with x
+func replace(v []uint64, n int, x uint64) []uint64 {
+	if n == 0 {
+		if len(v) > 0 && v[0] == x {
+			return v
+		}
+		v = append(v, 0)
+		copy(v[1:], v)
+	} else if n < len(v) {
+		copy(v[1:], v[n:])
+		v = v[:len(v)-(n-1)]
+	} else if len(v) == 0 {
+		return []uint64{x}
+	} else {
+		v = v[:1]
+	}
+	v[0] = x
+	return v
 }
 
 func ReadMeta(store *stor.Stor, offSchema, offInfo uint64) *Meta {
-	schema := ReadSchemaChain(store, offSchema)
-	info := ReadInfoChain(store, offInfo)
-	m := Meta{schema: schema, offSchema: offSchema,
-		info: info, offInfo: offInfo}
+	schema, schemaOffs := ReadSchemaChain(store, offSchema)
+	info, infoOffs := ReadInfoChain(store, offInfo)
+	m := Meta{
+		schema: schema, schemaOffs: schemaOffs, schemaClock: clock(schemaOffs),
+		info: info, infoOffs: infoOffs, infoClock: clock(infoOffs)}
 	// set up ixspecs
 	m.info.ForEach(func(ti *Info) {
 		ts := m.schema.MustGet(ti.Table)
@@ -162,6 +228,19 @@ func ReadMeta(store *stor.Stor, offSchema, offInfo uint64) *Meta {
 		}
 	})
 	return &m
+}
+
+const delayMerge = 0b1000000 // = 64 = approx 1 hour at 1 persist per minute
+
+func clock(offs []uint64) int {
+	switch len(offs) {
+	case 0:
+		return 0
+	case 1:
+		return delayMerge
+	default:
+		return ints.MaxInt
+	}
 }
 
 //-------------------------------------------------------------------

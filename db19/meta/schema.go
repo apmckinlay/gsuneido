@@ -128,7 +128,7 @@ func hasSpecial(cols []string) bool {
 }
 
 func (m *Meta) newSchemaTomb(table string) *Schema {
-	return &Schema{Schema: schema.Schema{Table: table}, lastmod: m.clock}
+	return &Schema{Schema: schema.Schema{Table: table}, lastmod: m.schemaClock}
 }
 
 func (ts *Schema) isTomb() bool {

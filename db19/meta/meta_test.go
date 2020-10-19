@@ -8,10 +8,11 @@ import (
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/db19/stor"
+	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
-func TestMeta(*testing.T) {
+func TestMeta(t *testing.T) {
 	tbl := InfoHamt{}.Mutable()
 	const n = 1000
 	data := make([]string, n)
@@ -38,16 +39,23 @@ func TestMeta(*testing.T) {
 	}
 
 	// persist state
-	meta.Write(st)
+	meta.Write(st, true)
 
-	//TODO test that nothing written if no changes
-	// size := st.Size()
-	// meta.Write(st)
-	// assert.T(t).This(st.Size()).Is(size)
+	// test that nothing is written if no changes
+	size := st.Size()
+	meta.Write(st, false)
+	assert.T(t).This(st.Size()).Is(size)
 }
 
-// func TestMetaUnchanged(t *testing.T) {
-// 	m := CreateMeta()
-// 	offs := m.Write(nil)
-// 	assert.T(t).This(offs).Is(offsets{})
-// }
+func TestMergeSize(t *testing.T) {
+	assert := assert.T(t)
+	test := func (clock, expected_npersists, expected_timespan int) {
+		t.Helper()
+		npersists, timespan := mergeSize(clock, false)
+		assert.Msg("npersists").This(npersists).Is(expected_npersists)
+		assert.Msg("timespan").This(timespan).Is(expected_timespan)
+	}
+	test(0, 0, 0)
+	test(1, 1, 1)
+	test(0b100111, 3, 7)
+}

@@ -34,7 +34,7 @@ func TestInfo(t *testing.T) {
 	st.Alloc(1) // avoid offset 0
 	off := tbl.Write(st, 0, allInfo)
 
-	tbl = ReadInfoChain(st, off)
+	tbl,_ = ReadInfoChain(st, off)
 	assert(*tbl.MustGet("one")).Is(*tbl.MustGet("one"))
 	assert(*tbl.MustGet("two")).Is(Info{
 		Table:   "two",
@@ -52,7 +52,7 @@ func TestInfo2(t *testing.T) {
 	st.Alloc(1) // avoid offset 0
 	off := tbl.Write(st, 0, allInfo)
 
-	tbl = ReadInfoChain(st, off)
+	tbl,_ = ReadInfoChain(st, off)
 	for i, s := range data {
 		ti := tbl.MustGet(s)
 		assert.T(t).Msg("table").This(ti.Table).Is(s)

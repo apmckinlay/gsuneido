@@ -38,7 +38,7 @@ func Compact(dbfile string) (ntables int, err error) {
 		compactTable(state, src, sc, dst, ics)
 		ntables++
 	})
-	dst.GetState().Write()
+	dst.GetState().Write(true)
 	dst.Close()
 	src.Close()
 	ics.finish()
