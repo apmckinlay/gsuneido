@@ -79,7 +79,22 @@ type update struct {
 }
 type btOver = *btree.Overlay
 
-// process is used by meta.Merge and meta.Persist.
+// merge is used by meta.Merge.
+// It collects the updates which are then applied by withUpdates.
+func (t InfoHamt) merge(tn int, tables []string) []update {
+	var updates []update
+	for _,table := range tables {
+		ti := t.MustGet(table)
+		results := make([]Result, len(ti.Indexes))
+		for i, ov := range ti.Indexes {
+			results[i] = ov.Merge(tn)
+		}
+		updates = append(updates, update{table: table, results: results})
+	}
+	return updates
+}
+
+// process is used by meta.Persist.
 // process collects the updates which are then applied by withUpdates.
 func (t InfoHamt) process(fn func(btOver) Result) []update {
 	var updates []update

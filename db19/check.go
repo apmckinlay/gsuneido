@@ -242,18 +242,32 @@ func (ck *Check) abort(tn int, reason string) bool {
 // It returns false if the transaction is not found (e.g. already aborted).
 // No additional checking required since actions have already been checked.
 func (ck *Check) Commit(ut *UpdateTran) bool {
+	return ck.commit(ut) != nil
+}
+
+func (ck *Check) commit(ut *UpdateTran) []string {
 	tn := ut.num()
 	trace("commit", tn)
 	t, ok := ck.trans[tn]
 	if !ok {
-		return false // it's gone, presumably aborted
+		return nil // it's gone, presumably aborted
 	}
 	t.end = ck.next()
 	if t.start == ck.oldest {
 		ck.oldest = ints.MaxInt // need to find the new oldest
 	}
 	ck.cleanEnded()
-	return true
+	return t.tablesWritten()
+}
+
+func (t *CkTran) tablesWritten() []string {
+	tw := make([]string, 0, 8)
+	for table, tbl := range t.tables {
+		if tbl.writes != nil && !tbl.writes[0].Empty() {
+			tw = append(tw, table)
+		}
+	}
+	return tw
 }
 
 func overlap(t1, t2 *CkTran) bool {

@@ -252,10 +252,8 @@ func clock(offs []uint64) int {
 // Merge is called by state.Merge
 // to merge the mbtree's for tranNum into the fbtree's.
 // It collect updates which are then applied by ApplyMerge
-func (m *Meta) Merge(tranNum int) []update {
-	return m.info.process(func(bto btOver) Result {
-		return bto.Merge(tranNum)
-	})
+func (m *Meta) Merge(tn int, tables []string) []update {
+	return m.info.merge(tn, tables)
 }
 
 // ApplyMerge applies the updates collected by meta.Merge

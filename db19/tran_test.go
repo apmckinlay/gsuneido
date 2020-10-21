@@ -60,9 +60,9 @@ func TestTran(t *testing.T) {
 	const nout = 2000
 	for i := 0; i < nout; i++ {
 		ut := output1(db)
-		db.ck.Commit(ut)
+		tables := db.ck.(*Check).commit(ut)
 		tn := ut.commit()
-		db.Merge(tn)
+		db.Merge(tn, tables)
 		if i%100 == 50 {
 			if i%500 != 250 {
 				db.Persist(false)

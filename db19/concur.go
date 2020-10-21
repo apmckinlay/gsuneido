@@ -7,7 +7,12 @@ import (
 	"time"
 )
 
-type void struct{}
+type merge struct {
+	tn     int
+	tables []string
+}
+
+type void = struct{}
 
 const chanBuffers = 4 // ???
 
@@ -26,24 +31,24 @@ const chanBuffers = 4 // ???
 // Finally the merger closes the allDone channel
 // so we know the shutdown has finished.
 func StartConcur(db *Database, persistInterval time.Duration) {
-	mergeChan := make(chan int, chanBuffers)
+	mergeChan := make(chan merge, chanBuffers)
 	allDone := make(chan void)
 	go merger(db, mergeChan, persistInterval, allDone)
 	db.ck = StartCheckCo(mergeChan, allDone)
 }
 
-func merger(db *Database, mergeChan chan int,
+func merger(db *Database, mergeChan chan merge,
 	persistInterval time.Duration, allDone chan void) {
 	ticker := time.NewTicker(persistInterval)
 	prevState := db.GetState()
 loop:
 	for {
 		select {
-		case tn := <-mergeChan: // receive mergeMsg's from commit
-			if tn == 0 { // zero value means channel closed
+		case m := <-mergeChan: // receive mergeMsg's from commit
+			if m.tn == 0 { // zero value means channel closed
 				break loop
 			}
-			db.Merge(tn)
+			db.Merge(m.tn, m.tables)
 		case <-ticker.C:
 			// fmt.Println("Persist")
 			state := db.GetState()

@@ -190,13 +190,8 @@ type Result = *fbtree
 // Merge merges the mbtree for tranNum (if there is one) into the fbtree
 func (ov *Overlay) Merge(tranNum int) Result {
 	assert.That(ov.mb == nil)
-	if len(ov.under) == 1 {
-		return nil
-	}
 	mb := ov.under[1].(*mbtree)
-	if mb.tranNum != tranNum {
-		return nil
-	}
+	assert.That(mb.tranNum == tranNum)
 	return Merge(ov.base(), mb)
 }
 

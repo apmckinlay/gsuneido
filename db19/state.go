@@ -66,9 +66,9 @@ func (db *Database) UpdateState(fn func(*DbState)) *DbState {
 // Merge updates the base fbtree's with the overlay mbtree
 // for the given transaction number (the oldest/first).
 // It is called by concur.go merger.
-func (db *Database) Merge(tranNum int) {
+func (db *Database) Merge(tn int, tables []string) {
 	state := db.GetState()
-	updates := state.meta.Merge(tranNum) // outside UpdateState
+	updates := state.meta.Merge(tn, tables) // outside UpdateState
 	db.UpdateState(func(state *DbState) {
 		meta := *state.meta // copy
 		meta.ApplyMerge(updates)

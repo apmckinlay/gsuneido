@@ -161,6 +161,12 @@ func (leaf *leafNode) searchBinary(key string) int {
 
 //-------------------------------------------------------------------
 
+func (set *Set) Empty() bool {
+	return set.tree == nil && set.leaf.size == 0
+}
+
+//-------------------------------------------------------------------
+
 func (set *Set) String() string {
 	if set.tree != nil {
 		return "Set too big"
