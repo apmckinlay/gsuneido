@@ -71,36 +71,41 @@ func (ti *Info) isTomb() bool {
 
 //-------------------------------------------------------------------
 
-type update struct {
-	table string
-	overlays
-}
-type overlays []*btree.Overlay
+type Result = btree.Result
 
+type update struct {
+	table   string
+	results []Result
+}
 type btOver = *btree.Overlay
 
 // process is used by meta.Merge and meta.Persist.
 // process collects the updates which are then applied by withUpdates.
-func (t InfoHamt) process(fn func(btOver) btOver) []update {
+func (t InfoHamt) process(fn func(btOver) Result) []update {
 	var updates []update
 	t.ForEach(func(ti *Info) {
-		updated := make(overlays, len(ti.Indexes))
+		results := make([]Result, len(ti.Indexes))
 		for i, ov := range ti.Indexes {
-			updated[i] = fn(ov)
+			r := fn(ov)
+			if r == nil {
+				assert.That(i == 0)
+				return
+			}
+			results[i] = r
 		}
-		updates = append(updates, update{table: ti.Table, overlays: updated})
+		updates = append(updates, update{table: ti.Table, results: results})
 	})
 	return updates
 }
 
-func (t InfoHamt) withUpdates(updates []update, fn func(btOver, btOver) btOver) InfoHamt {
+func (t InfoHamt) withUpdates(updates []update, fn func(btOver, Result) btOver) InfoHamt {
 	t2 := t.Mutable()
 	for _, up := range updates {
-		ti := *t2.MustGet(up.table)                       // copy
-		ti.Indexes = append(overlays(nil), ti.Indexes...) // copy
+		ti := *t2.MustGet(up.table)                          // copy
+		ti.Indexes = append(ti.Indexes[:0:0], ti.Indexes...) // copy
 		for i, ov := range ti.Indexes {
-			if up.overlays[i] != nil {
-				ti.Indexes[i] = fn(ov, up.overlays[i])
+			if up.results[i] != nil {
+				ti.Indexes[i] = fn(ov, up.results[i])
 			}
 		}
 		t2.Put(&ti)

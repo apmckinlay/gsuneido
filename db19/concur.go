@@ -9,7 +9,7 @@ import (
 
 type void struct{}
 
-const chanBuffers = 2 // ???
+const chanBuffers = 4 // ???
 
 // StartConcur starts the database pipeline -
 // starting the goroutines and connecting them with channels.

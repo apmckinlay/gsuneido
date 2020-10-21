@@ -112,6 +112,7 @@ func checker(c chan interface{}, mergeChan chan int) {
 			}
 			ck.dispatch(msg, mergeChan)
 		case <-ticker.C:
+			// fmt.Println("checker chan", len(c), "merge chan", len(mergeChan))
 			ck.tick()
 		}
 	}

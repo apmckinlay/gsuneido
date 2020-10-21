@@ -143,7 +143,6 @@ func (ck *Check) Write(t *CkTran, table string, keys []string) bool {
 		if t2 != t && overlap(t, t2) {
 			if tbl, ok := t2.tables[table]; ok {
 				for i, key := range keys {
-					// check against other writes
 					if key != "" {
 						act2 := ""
 						if tbl.writes.contains(i, key) {

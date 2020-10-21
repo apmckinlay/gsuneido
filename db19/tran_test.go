@@ -97,9 +97,11 @@ func createDb() *Database {
 		Columns: []string{"one", "two"},
 		Indexes: []schema.Index{{Columns: []string{"one"}, Ixspec: is}},
 	}}
+	ov := btree.NewOverlay(db.store, &is)
+	ov.Save(false)
 	ti := &meta.Info{
 		Table:   "mytable",
-		Indexes: []*btree.Overlay{btree.NewOverlay(db.store, &is).Save(false)},
+		Indexes: []*btree.Overlay{ov},
 	}
 	db.LoadedTable(ts, ti)
 	return db

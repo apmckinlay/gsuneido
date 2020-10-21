@@ -185,43 +185,48 @@ func (ov *Overlay) Freeze() {
 
 //-------------------------------------------------------------------
 
+type Result = *fbtree
+
 // Merge merges the mbtree for tranNum (if there is one) into the fbtree
-func (ov *Overlay) Merge(tranNum int) *Overlay {
+func (ov *Overlay) Merge(tranNum int) Result {
 	assert.That(ov.mb == nil)
 	if len(ov.under) == 1 {
-		panic("merge: missing overlay")
+		return nil
 	}
 	mb := ov.under[1].(*mbtree)
 	if mb.tranNum != tranNum {
-		panic("merge: wrong tranNum")
+		return nil
 	}
-	fb := ov.base()
-	fb = Merge(fb, mb)
-	return &Overlay{under: []tree{fb}}
+	return Merge(ov.base(), mb)
 }
 
-func (ov *Overlay) WithMerged(ov2 *Overlay) *Overlay {
-	// ov2.under[0] is the new fbtree from Merge
-	// ov2.under[1] is the mbtree that we merged in
-	ov2.under = append(ov2.under, ov.under[2:]...)
-	return ov2
+func (ov *Overlay) WithMerged(r Result) *Overlay {
+	under := make([]tree, len(ov.under) - 1)
+	under[0] = r
+	copy(under[1:], ov.under[2:])
+	return &Overlay{under: under}
 }
 
 //-------------------------------------------------------------------
 
 // Save writes the Overlay's base fbtree to storage
 // and returns the new fbtree (in an Overlay) to later pass to With
-func (ov *Overlay) Save(flatten bool) *Overlay {
+func (ov *Overlay) Save(flatten bool) Result {
 	assert.That(ov.mb == nil)
-	fb := ov.base()
-	fb = fb.Save(flatten)
-	return &Overlay{under: []tree{fb}}
+	return ov.base().Save(flatten)
 }
 
 // WithSaved returns a new Overlay,
 // combining the current state (ov) with the updated fbtree (in ov2)
-func (ov *Overlay) WithSaved(ov2 *Overlay) *Overlay {
-	// ov2.under[0] is the new fbtree from Save
-	ov2.under = append(ov2.under, ov.under[1:]...)
-	return ov2
+func (ov *Overlay) WithSaved(r Result) *Overlay {
+	under := make([]tree, len(ov.under))
+	under[0] = r
+	copy(under[1:], ov.under[1:])
+	return &Overlay{under: under}
+}
+
+//-------------------------------------------------------------------
+
+func (ov *Overlay) CheckFlat() {
+	assert.That(len(ov.under) == 1)
 }

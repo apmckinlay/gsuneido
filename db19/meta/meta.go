@@ -107,6 +107,10 @@ func (m *Meta) ForEachSchema(fn func(*Schema)) {
 	m.schema.ForEach(fn)
 }
 
+func (m *Meta) ForEachInfo(fn func(*Info)) {
+	m.info.ForEach(fn)
+}
+
 //-------------------------------------------------------------------
 
 // LayeredOnto layers the mutable mbtree's from a transaction
@@ -249,7 +253,7 @@ func clock(offs []uint64) int {
 // to merge the mbtree's for tranNum into the fbtree's.
 // It collect updates which are then applied by ApplyMerge
 func (m *Meta) Merge(tranNum int) []update {
-	return m.info.process(func(bto btOver) btOver {
+	return m.info.process(func(bto btOver) Result {
 		return bto.Merge(tranNum)
 	})
 }
@@ -264,7 +268,7 @@ func (m *Meta) ApplyMerge(updates []update) {
 // Persist is called by state.Persist to write the state to the database.
 // It collects the new fbtree roots which are then applied ApplyPersist.
 func (m *Meta) Persist(flatten bool) []update {
-	return m.info.process(func(ov *btree.Overlay) *btree.Overlay {
+	return m.info.process(func(ov *btree.Overlay) Result {
 		return ov.Save(flatten)
 	})
 }
@@ -273,4 +277,13 @@ func (m *Meta) Persist(flatten bool) []update {
 // and updates the state with them.
 func (m *Meta) ApplyPersist(updates []update) {
 	m.info = m.info.withUpdates(updates, btOver.WithSaved)
+}
+
+//-------------------------------------------------------------------
+
+func (m *Meta) CheckAllMerged() {
+	m.info.process(func(ov *btree.Overlay) Result {
+		ov.CheckFlat()
+		return nil
+	})
 }
