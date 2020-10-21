@@ -19,7 +19,7 @@ portable:
 	go build -v -ldflags "-X 'main.builtDate=${BUILT}'" -tags portable
 
 test:
-	go test -race -short -count=1 ./...
+	go test -short -count=1 ./...
 
 repl: build
 	cmd /c start/w ./gsuneido -repl
