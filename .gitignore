@@ -31,3 +31,5 @@ en_US.*
 *.db
 sign.bat
 zap
+*.exe~
+*.prof
