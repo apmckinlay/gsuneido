@@ -8,6 +8,7 @@ import (
 	"net"
 	"os"
 	"runtime"
+	"strings"
 
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
@@ -31,12 +32,13 @@ var _ = builtin0("GetCurrentDirectory()",
 // (same as cSuneido, but different from jSuneido)
 var _ = builtin2("GetTempFileName(path, prefix)",
 	func(path, prefix Value) Value {
-		f, err := ioutil.TempFile(ToStr(path), ToStr(prefix))
+		f, err := ioutil.TempFile(ToStr(path), ToStr(prefix)+"*.tmp")
 		if err != nil {
 			panic("GetTempFileName: " + err.Error())
 		}
 		filename := f.Name()
 		f.Close()
+		filename = strings.Replace(filename, `\`, `/`, -1)
 		return SuStr(filename)
 	})
 
