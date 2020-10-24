@@ -6,6 +6,7 @@ package db19
 import (
 	"fmt"
 	"math/rand"
+	"os"
 	"sync"
 	"testing"
 	"time"
@@ -28,7 +29,8 @@ const (
 	maxidxcols    = 5
 	nrows         = 500_000
 	nthreads      = 5
-	tablesPerTran = 53
+	tablesPerTran = 7
+	rowsPerTable  = 7
 )
 
 func TestBig(*testing.T) {
@@ -37,7 +39,7 @@ func TestBig(*testing.T) {
 	}
 	fmt.Println("create tables")
 	tables := createTables()
-	// defer os.Remove(dbfile)
+	defer os.Remove(dbfile)
 	db, err := OpenDatabase(dbfile)
 	ck(err)
 	StartConcur(db, 777*time.Millisecond)
@@ -119,22 +121,25 @@ func createTables() []string {
 	return tables
 }
 
+var data = rt.SuStr(str.Random(1024, 1024))
+
 func createData(db *Database, tables []string, i, n int) {
+	rand := rand.New(rand.NewSource(time.Now().UnixNano()))
 	n += i
 	for i < n {
 		ut := db.NewUpdateTran()
 		ntables := 1 + rand.Intn(tablesPerTran)
 		for j := 0; j < ntables && i < n; j++ {
 			table := tables[rand.Intn(ntables)]
-			ncols := fromHash(table, maxcols)
-			var b rt.RecordBuilder
-			b.Add(rt.IntVal(i).(rt.Packable))
-			for k := 1; k < ncols; k++ {
-				b.Add(rt.SuStr(str.Random(0, 20)))
+			nrows := 1 + rand.Intn(rowsPerTable)
+			for k := 0; k <= nrows && i < n; k++ {
+				var b rt.RecordBuilder
+				b.Add(rt.IntVal(i ^ 0x5555).(rt.Packable))
+				b.Add(data)
+				rec := b.Build()
+				ut.Output(table, rec)
+				i++
 			}
-			rec := b.Build()
-			ut.Output(table, rec)
-			i++
 		}
 		// time.Sleep(4 * time.Millisecond) // inside tran
 		ut.Commit()

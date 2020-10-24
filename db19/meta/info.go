@@ -71,33 +71,29 @@ func (ti *Info) isTomb() bool {
 
 //-------------------------------------------------------------------
 
+type btOver = *btree.Overlay
 type Result = btree.Result
 
-type update struct {
+type Update struct {
 	table   string
-	results []Result
+	results []Result // per index
 }
-type btOver = *btree.Overlay
 
 // merge is used by meta.Merge.
 // It collects the updates which are then applied by withUpdates.
-func (t InfoHamt) merge(tn int, tables []string) []update {
-	var updates []update
-	for _,table := range tables {
-		ti := t.MustGet(table)
-		results := make([]Result, len(ti.Indexes))
-		for i, ov := range ti.Indexes {
-			results[i] = ov.Merge(tn)
-		}
-		updates = append(updates, update{table: table, results: results})
+func (t InfoHamt) merge(tn int, table string) Update {
+	ti := t.MustGet(table)
+	results := make([]Result, len(ti.Indexes))
+	for j, ov := range ti.Indexes {
+		results[j] = ov.Merge(tn)
 	}
-	return updates
+	return Update{table: table, results: results}
 }
 
 // process is used by meta.Persist.
 // process collects the updates which are then applied by withUpdates.
-func (t InfoHamt) process(fn func(btOver) Result) []update {
-	var updates []update
+func (t InfoHamt) process(fn func(btOver) Result) []Update {
+	var updates []Update
 	t.ForEach(func(ti *Info) {
 		results := make([]Result, len(ti.Indexes))
 		for i, ov := range ti.Indexes {
@@ -108,12 +104,12 @@ func (t InfoHamt) process(fn func(btOver) Result) []update {
 			}
 			results[i] = r
 		}
-		updates = append(updates, update{table: ti.Table, results: results})
+		updates = append(updates, Update{table: ti.Table, results: results})
 	})
 	return updates
 }
 
-func (t InfoHamt) withUpdates(updates []update, fn func(btOver, Result) btOver) InfoHamt {
+func (t InfoHamt) withUpdates(updates []Update, fn func(btOver, Result) btOver) InfoHamt {
 	t2 := t.Mutable()
 	for _, up := range updates {
 		ti := *t2.MustGet(up.table)                          // copy

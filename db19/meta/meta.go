@@ -24,6 +24,11 @@ type Meta struct {
 	infoClock   int
 }
 
+// Executor is used by merge to allow multithreading.
+// It must be injected.
+var	Executor func(tn int, tables []string,
+		fn func(tn int, table string) Update) []Update
+
 // Mutable returns a mutable copy of a Meta
 func (m *Meta) Mutable() *Meta {
 	assert.That(m.difInfo.IsNil())
@@ -252,12 +257,12 @@ func clock(offs []uint64) int {
 // Merge is called by state.Merge
 // to merge the mbtree's for tranNum into the fbtree's.
 // It collect updates which are then applied by ApplyMerge
-func (m *Meta) Merge(tn int, tables []string) []update {
-	return m.info.merge(tn, tables)
+func (m *Meta) Merge(tn int, tables []string) []Update {
+	return Executor(tn, tables, m.info.merge)
 }
 
 // ApplyMerge applies the updates collected by meta.Merge
-func (m *Meta) ApplyMerge(updates []update) {
+func (m *Meta) ApplyMerge(updates []Update) {
 	m.info = m.info.withUpdates(updates, btOver.WithMerged)
 }
 
@@ -265,7 +270,7 @@ func (m *Meta) ApplyMerge(updates []update) {
 
 // Persist is called by state.Persist to write the state to the database.
 // It collects the new fbtree roots which are then applied ApplyPersist.
-func (m *Meta) Persist(flatten bool) []update {
+func (m *Meta) Persist(flatten bool) []Update {
 	return m.info.process(func(ov *btree.Overlay) Result {
 		return ov.Save(flatten)
 	})
@@ -273,7 +278,7 @@ func (m *Meta) Persist(flatten bool) []update {
 
 // ApplyPersist takes the new fbtree roots from meta.Persist
 // and updates the state with them.
-func (m *Meta) ApplyPersist(updates []update) {
+func (m *Meta) ApplyPersist(updates []Update) {
 	m.info = m.info.withUpdates(updates, btOver.WithSaved)
 }
 
