@@ -41,6 +41,8 @@ func TestConcurrent(t *testing.T) {
 		}()
 	}
 	wg.Wait()
+	db.ck.Stop()
+	db.ck = nil
 
 	var nout = nclients * ntrans
 	rt := db.NewReadTran()
