@@ -121,7 +121,7 @@ func (fb *fbtree) split(node fNode, nodeOff uint64, where int) (
 	it := node.iter()
 	for it.next() && it.fi < splitSize {
 	}
-	splitKey = it.known
+	splitKey = string(it.known)
 
 	left := node[:it.fi]
 	fb.redirs.set(nodeOff, left)
@@ -130,7 +130,7 @@ func (fb *fbtree) split(node fNode, nodeOff uint64, where int) (
 	right = fAppend(right, it.offset, 0, "")
 	if it.next() {
 		// second entry becomes 0, known
-		right = fAppend(right, it.offset, 0, it.known)
+		right = fAppend(right, it.offset, 0, string(it.known))
 		if it.next() {
 			right = append(right, node[it.fi:]...)
 		}

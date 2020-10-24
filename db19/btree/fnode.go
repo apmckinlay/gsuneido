@@ -34,15 +34,15 @@ func fAppend(fn fNode, offset uint64, npre int, diff string) fNode {
 	return fn
 }
 
-func fRead(fn fNode) (npre int, diff string, offset uint64) {
+func fRead(fn fNode) (npre int, diff []byte, offset uint64) {
 	offset = stor.ReadSmallOffset(fn)
 	npre = int(fn[5])
 	dn := int(fn[6])
-	diff = string(fn[7 : 7+dn])
+	diff = fn[7 : 7+dn]
 	return
 }
 
-func fLen(diff string) int {
+func fLen(diff []byte) int {
 	return 5 + 1 + 1 + len(diff)
 }
 
@@ -86,6 +86,9 @@ func (fb *fNodeBuilder) Entries() fNode {
 }
 
 func addone(key, prev, known string, embedLen int) (npre int, diff string, knownNew string) {
+	if key <= prev {
+		print("OUT OF ORDER: prev", prev, "key", key)
+	}
 	assert.That(key > prev)
 	npre = commonPrefixLen(prev, key)
 	if npre > 255 {
@@ -112,17 +115,25 @@ func commonPrefixLen(s, t string) int {
 	}
 }
 
+func commonSlicePrefixLen(s, t []byte) int {
+	for i := 0; ; i++ {
+		if i >= len(s) || i >= len(t) || s[i] != t[i] {
+			return i
+		}
+	}
+}
+
 // search returns the offset and range
 // of the entry that could match the search string
 func (fn fNode) search(s string) (uint64, string, string) {
 	var off uint64
-	var known string
+	var known []byte
 	it := fn.iter()
-	for it.next() && s >= it.known {
+	for it.next() && s >= string(it.known) {
 		off = it.offset
-		known = it.known
+		known = append(known[:0], it.known...)
 	}
-	return off, known, it.known
+	return off, string(known), string(it.known)
 }
 
 func (fn fNode) contains(s string, get func(uint64) string) bool {
@@ -147,14 +158,23 @@ func (fn fNode) insert(keyNew string, offNew uint64, get func(uint64) string) (f
 		return fAppend(fn, offNew, 0, ""), where
 	}
 	// search
-	var cur fnIter
+	curFi := 0
+	curNpre := 0
+	curEof := false
+	var curOffset uint64
+	var curDiff, curKnown []byte
 	it := fn.iter()
-	for it.next() && keyNew >= it.known {
-		cur = *it
+	for it.next() && keyNew >= string(it.known) {
+		curFi = it.fi
+		curNpre = it.npre
+		curEof = it.eof()
+		curOffset = it.offset
+		curDiff = append(curDiff[:0], it.diff...)
+		curKnown = append(curKnown[:0], it.known...)
 	}
 
-	curoff := cur.offset
-	curkey := cur.known
+	curoff := curOffset
+	curkey := string(curKnown)
 	embedLen := 255
 	if get != nil {
 		embedLen = 1
@@ -167,32 +187,32 @@ func (fn fNode) insert(keyNew string, offNew uint64, get func(uint64) string) (f
 	var knownNew string
 	var i, j int
 	if keyNew > curkey { // newkey after curkey
-		if cur.eof() {
+		if curEof {
 			// at end
-			npre, diff, _ = addone(keyNew, curkey, cur.known, embedLen)
+			npre, diff, _ = addone(keyNew, curkey, string(curKnown), embedLen)
 			return fAppend(fn, offNew, npre, diff), insEnd
 		}
-		npre, diff, knownNew = addone(keyNew, curkey, cur.known, embedLen)
+		npre, diff, knownNew = addone(keyNew, curkey, string(curKnown), embedLen)
 		ins = fAppend(ins, offNew, npre, diff)
 		i = it.fi
 		j = it.fi
 		prev = knownNew
 	} else { // newkey before curkey
-		if cur.fi == 0 {
+		if curFi == 0 {
 			where = insStart
 		}
 		// first entry stays the same, just update offset
-		ins = fAppend(ins, offNew, cur.npre, cur.diff)
+		ins = fAppend(ins, offNew, curNpre, string(curDiff))
 		// old first key becomes second entry
-		npre, diff, knownNew = addone(curkey, keyNew, cur.known, embedLen)
+		npre, diff, knownNew = addone(curkey, keyNew, string(curKnown), embedLen)
 		ins = fAppend(ins, curoff, npre, diff)
-		i = cur.fi
+		i = curFi
 		j = it.fi
 		prev = curkey
 	}
-	if !cur.eof() {
-		npre2, diff2, _ := addone(it.known, prev, knownNew, embedLen)
-		if npre2 != it.npre || diff2 != it.diff {
+	if !curEof {
+		npre2, diff2, _ := addone(string(it.known), prev, knownNew, embedLen)
+		if npre2 != it.npre || diff2 != string(it.diff) {
 			// adjust following entry
 			ins = fAppend(ins, it.offset, npre2, diff2)
 			j += fLen(it.diff)
@@ -218,7 +238,7 @@ func (fn fNode) replace(i, j int, rep fNode) fNode {
 
 func (fn fNode) delete(offset uint64) (fNode, bool) {
 	// search
-	prevKnown := ""
+	var prevKnown []byte
 	it := fn.iter()
 	for {
 		if !it.next() {
@@ -227,7 +247,7 @@ func (fn fNode) delete(offset uint64) (fNode, bool) {
 		if stor.EqualSmallOffset(fn[it.fi:], offset) {
 			break
 		}
-		prevKnown = it.known
+		prevKnown = append(prevKnown[:0], it.known...)
 	}
 	i := it.fi
 
@@ -247,9 +267,9 @@ func (fn fNode) delete(offset uint64) (fNode, bool) {
 		// then adjust following entry if there is one
 	}
 	if it.next() {
-		npre := commonPrefixLen(prevKnown, it.known)
+		npre := commonSlicePrefixLen(prevKnown, it.known)
 		diff := it.known[npre:]
-		rep = rep.updateCopy(fn, j, npre, diff)
+		rep = rep.updateCopy(fn, j, npre, string(diff))
 		j = fn.next(j)
 	}
 	fn = fn.replace(i, j, rep)
@@ -273,8 +293,8 @@ type fnIter struct {
 	fn     fNode
 	fi     int // position in original fEntries
 	npre   int
-	diff   string
-	known  string
+	diff   []byte
+	known  []byte
 	offset uint64
 }
 
@@ -285,30 +305,30 @@ func (fn fNode) iter() *fnIter {
 func (it *fnIter) next() bool {
 	it.fi += fLen(it.diff)
 	if it.fi >= len(it.fn) {
-		it.known = ""
+		it.known = it.known[:0] // ""
 		return false
 	}
 	it.npre, it.diff, it.offset = fRead(it.fn[it.fi:])
 
 	// maybe remove this validation in production?
-	if it.known == "" && it.npre == 0 && it.diff == "" {
-		// first
-	} else if it.npre <= len(it.known) {
-		if len(it.diff) < 1 {
-			// print("bad diff len, npre", it.npre, "diff", it.diff, "known", it.known)
-			panic("bad diff len")
-		}
-	} else {
-		if len(it.diff) != it.npre-len(it.known)+1 {
-			// print("bad diff len, npre", it.npre, "diff", it.diff, "known", it.known)
-			panic("bad diff len")
-		}
-	}
+	// if it.known == "" && it.npre == 0 && it.diff == "" {
+	// 	// first
+	// } else if it.npre <= len(it.known) {
+	// 	if len(it.diff) < 1 {
+	// 		// print("bad diff len, npre", it.npre, "diff", it.diff, "known", it.known)
+	// 		panic("bad diff len")
+	// 	}
+	// } else {
+	// 	if len(it.diff) != it.npre-len(it.known)+1 {
+	// 		// print("bad diff len, npre", it.npre, "diff", it.diff, "known", it.known)
+	// 		panic("bad diff len")
+	// 	}
+	// }
 
 	if it.npre <= len(it.known) {
-		it.known = it.known[:it.npre] + it.diff
+		it.known = append(it.known[:it.npre], it.diff...)
 	} else {
-		it.known = it.known + it.diff
+		it.known = append(it.known, it.diff...)
 	}
 	return true
 }
@@ -351,16 +371,17 @@ func (fn fNode) checkUpTo(i int, data []string, get func(uint64) string) {
 
 func (fn fNode) check() int {
 	n := 0
-	var prev fnIter
+	var prev []byte
 	it := fn.iter()
 	for it.next() {
-		if it.known < prev.known {
+		if string(it.known) < string(prev) {
+			print("known", it.known, "prev", prev)
 			panic("fEntries out of order")
 		}
-		if it.fi > 7 && it.npre > len(prev.known)+(len(it.diff)-1) {
+		if it.fi > 7 && it.npre > len(prev)+(len(it.diff)-1) {
 			panic("npre > len(prev.known)")
 		}
-		prev = *it
+		prev = append(prev[:0], it.known...)
 		n++
 	}
 	return n
@@ -398,6 +419,8 @@ func print(args ...interface{}) {
 			if x == "" {
 				args[i] = "'" + x + "'"
 			}
+			case []byte:
+				args[i] = string(x)
 		}
 	}
 	fmt.Println(args...)
@@ -407,7 +430,7 @@ func (fn fNode) String() string {
 	s := "["
 	it := fn.iter()
 	for it.next() {
-		known := it.known
+		known := string(it.known)
 		if known == "" {
 			known = "''"
 		}

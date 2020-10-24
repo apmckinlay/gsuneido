@@ -29,12 +29,12 @@ func TestFAppendRead(t *testing.T) {
 	add(456, 1, "foo")
 	for _, e := range data {
 		var npre int
-		var diff string
+		var diff []byte
 		var off uint64
 		npre, diff, off = fRead(fn)
 		fn = fn[fLen(diff):]
 		assert.T(t).This(npre).Is(e.npre)
-		assert.T(t).This(diff).Is(e.diff)
+		assert.T(t).This(string(diff)).Is(e.diff)
 		assert.T(t).This(off).Is(e.offset)
 	}
 }
@@ -297,4 +297,25 @@ var words = []string{
 	"match",
 	"tasty",
 	"stick",
+}
+
+var S1 []byte
+var S2 []byte
+var FN fNode
+
+func BenchmarkFnode(b *testing.B) {
+	get := func(i uint64) string { return words[i] }
+	var fn fNode
+	for i, d := range words {
+		fn, _ = fn.insert(d, uint64(i), get)
+	}
+	FN = fn
+
+	for i := 0; i < b.N; i++ {
+		iter := fn.iter()
+		for iter.next() {
+			S1 = iter.known
+			S2 = iter.diff
+		}
+	}
 }

@@ -43,7 +43,7 @@ type fbtree struct {
 
 // MaxNodeSize is the maximum node size in bytes, split if larger.
 // Overridden by tests.
-var MaxNodeSize = 1536 // * .75 ~ 1k
+var MaxNodeSize = 256 //TODO tune
 
 // GetLeafKey is used to get the key for a data offset.
 // It is a dependency that must be injected
@@ -443,10 +443,10 @@ func (fb *fbtree) check1(depth int, offset uint64, key *string, path bool,
 			if path2 && !path {
 				panic("orphaned path node")
 			}
-			if it.fi > 0 && *key > it.known {
+			if it.fi > 0 && *key > string(it.known) {
 				panic("keys out of order")
 			}
-			*key = it.known
+			*key = string(it.known)
 			c, s, n := fb.check1(depth+1, offset, key, path2, fn) // recurse
 			count += c
 			size += s
@@ -458,7 +458,7 @@ func (fb *fbtree) check1(depth int, offset uint64, key *string, path bool,
 				fn(offset)
 			}
 			itkey := fb.getLeafKey(offset)
-			if !strings.HasPrefix(itkey, it.known) {
+			if !strings.HasPrefix(itkey, string(it.known)) {
 				panic("index key does not match data")
 			}
 			if *key > itkey {
@@ -492,7 +492,7 @@ func (fb *fbtree) Iter(check bool) fbIter {
 	return func() (string, uint64, bool) {
 		for {
 			if iter.next() {
-				return iter.known, iter.offset, true // most common path
+				return string(iter.known), iter.offset, true // most common path
 			}
 			// end of leaf, go up the tree
 			i := fb.treeLevels - 1
