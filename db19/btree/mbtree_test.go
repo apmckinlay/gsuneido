@@ -59,6 +59,22 @@ func TestMbtreeUnevenSplit(t *testing.T) {
 	m.checkData(t, data)
 }
 
+func BenchmarkMbtree(b *testing.B) {
+	r := str.UniqueRandom(4, 32)
+	const nkeys = 100
+	keys := make([]string, 100)
+	for i := 0; i < nkeys; i++ {
+		keys[i] = r()
+	}
+
+	for i := 0; i < b.N; i++ {
+		mb := &mbtree{}
+		for j := 0; j < nkeys; j++ {
+			mb.Insert(keys[j], uint64(j))
+		}
+	}
+}
+
 //-------------------------------------------------------------------
 
 func (m *mbtree) check() {

@@ -411,3 +411,38 @@ func (fb *fbtree) ckpaths1(depth int, nodeOff uint64,
 		fb.ckpaths1(depth+1, off, rset, pset) // RECURSE
 	}
 }
+
+func BenchmarkFbtreeInsert(b *testing.B) {
+	store := stor.HeapStor(8192)
+	bldr := NewFbtreeBuilder(store)
+	for i := 100000; i <= 110000; i++ {
+		key := strconv.Itoa(i)
+		bldr.Add(key, uint64(i))
+	}
+	fb := bldr.Finish().base()
+	GetLeafKey = func(_ *stor.Stor, _ *ixspec.T, i uint64) string {
+		return strconv.Itoa(int(i))
+	}
+
+	keys := []string{
+		"10000", // before first
+		"101000a",
+		"102000a",
+		"103000a",
+		"104000a",
+		"105000a",
+		"106000a",
+		"107000a",
+		"108000a",
+		"109000a",
+		"111111", // after last
+	}
+	for i := 0; i < b.N; i++ {
+		// we discard the modified fbtree each time
+		fb.Update(func(fb *fbtree) {
+			for _, key := range keys {
+				fb.Insert(key, 0)
+			}
+		})
+	}
+}
