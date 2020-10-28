@@ -72,15 +72,14 @@ func checkState(state *DbState, table string) (ec *ErrCorrupt) {
 	// If the previous check failed on a certain table,
 	// then start by checking that table first (fail faster).
 	if table != "" {
-		ts := state.meta.GetRoSchema(table)
-		tcs.work <- ts
+		tcs.work <- table
 	}
 	tcs.state.meta.ForEachSchema(func(ts *meta.Schema) {
 		if ts.Table == table {
 			return // continue
 		}
 		select {
-		case tcs.work <- ts:
+		case tcs.work <- ts.Table:
 		case <-tcs.stop:
 			panic("") // overridden by finish
 		}

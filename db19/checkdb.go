@@ -34,8 +34,8 @@ func (db *Database) QuickCheck() (err error) {
 	return nil
 }
 
-func quickCheckTable(state *DbState, ts *meta.Schema) {
-	info := state.meta.GetRoInfo(ts.Table)
+func quickCheckTable(state *DbState, table string) {
+	info := state.meta.GetRoInfo(table)
 	for _, ix := range info.Indexes {
 		ix.QuickCheck()
 	}
@@ -64,10 +64,11 @@ func(db *Database) Check() (ec error) {
 	return nil // may be overridden by defer/recover
 }
 
-func checkTable(state *DbState, sc *meta.Schema) {
-	info := state.meta.GetRoInfo(sc.Table)
+func checkTable(state *DbState, table string) {
+	info := state.meta.GetRoInfo(table)
 	count, sum := checkFirstIndex(state, info.Indexes[0])
 	if count != info.Nrows {
+		fmt.Println(table, "count", count, "nrows", info.Nrows)
 		panic("count != nrows")
 	}
 	for i := 1; i < len(info.Indexes); i++ {
@@ -78,6 +79,7 @@ func checkTable(state *DbState, sc *meta.Schema) {
 
 func checkFirstIndex(state *DbState, ix *btree.Overlay) (int, uint64) {
 	sum := uint64(0)
+	ix.CheckFlat()
 	count := ix.Check(func(off uint64) {
 		sum += off // addition so order doesn't matter
 		buf := state.store.Data(off)
@@ -135,23 +137,23 @@ func newErrCorrupt(e interface{}) *ErrCorrupt {
 
 //-------------------------------------------------------------------
 
-func runParallel(state *DbState, fn func(*DbState, *meta.Schema)) {
+func runParallel(state *DbState, fn func(*DbState, string)) {
 	tcs := newTableCheckers(state, fn)
 	defer tcs.finish()
 	tcs.state.meta.ForEachSchema(func(ts *meta.Schema) {
 		select {
-		case tcs.work <- ts:
+		case tcs.work <- ts.Table:
 		case <-tcs.stop:
 			panic("") // overridden by finish
 		}
 	})
 }
 
-func newTableCheckers(state *DbState, fn func(*DbState, *meta.Schema)) *tableCheckers {
+func newTableCheckers(state *DbState, fn func(*DbState, string)) *tableCheckers {
 	tcs := tableCheckers{
 		state: state,
 		fn:    fn,
-		work:  make(chan *meta.Schema, 1), // ???
+		work:  make(chan string, 1), // ???
 		stop:  make(chan void),
 	}
 	nw := nworkers()
@@ -163,10 +165,10 @@ func newTableCheckers(state *DbState, fn func(*DbState, *meta.Schema)) *tableChe
 }
 
 type tableCheckers struct {
-	fn     func(*DbState, *meta.Schema)
+	fn     func(*DbState, string)
 	wg     sync.WaitGroup
 	state  *DbState
-	work   chan *meta.Schema
+	work   chan string
 	stop   chan void
 	err    atomic.Value
 	closed bool
@@ -181,9 +183,8 @@ func (tcs *tableCheckers) worker() {
 		}
 		tcs.wg.Done()
 	}()
-	for ts := range tcs.work {
-		table = ts.Table
-		tcs.fn(tcs.state, ts)
+	for table := range tcs.work {
+		tcs.fn(tcs.state, table)
 	}
 }
 
