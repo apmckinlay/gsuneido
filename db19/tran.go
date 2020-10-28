@@ -63,7 +63,7 @@ func (t *UpdateTran) Output(table string, rec rt.Record) {
 	cksum.Update(buf)
 	keys := make([]string, len(ts.Indexes))
 	for i := range ts.Indexes {
-		is := ts.Indexes[i].Ixspec
+		is := ts.Indexes[i].Ixspec //TODO add Ixspec.Key(rec)
 		keys[i] = comp.Key(rec, is.Fields, is.Fields2)
 		ti.Indexes[i].Insert(keys[i], off)
 	}
