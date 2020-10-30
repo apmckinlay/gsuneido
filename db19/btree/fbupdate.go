@@ -72,7 +72,13 @@ func (fb *fbtree) Insert(key string, off uint64) {
 		}
 		// split tree node
 		splitKey, rightOff = fb.split(node, stack[i], where)
-		fb.addPath(rightOff)
+		if i == 0 {
+			// can't use addPath because it ignores root
+			fb.redirs.paths.Put(fb.root) // == stack[i]
+		}
+		if fb.pathNode(stack[i]) {
+			fb.addPath(rightOff)
+		}
 		// fmt.Println("split", splitKey, "old/left", OffStr(stack[i]), "new/right", OffStr(rightOff))
 	}
 
@@ -204,13 +210,20 @@ func (fb *fbtree) delete(nodeOff uint64, off uint64) (fNode, bool) {
 // It is used for updated versions of existing nodes, using their old offset,
 // and for new nodes with fake offsets.
 type redirs struct {
+	// tbl is the actual redirections.
+	// It is written to storage by keep and cleared out after save.
 	tbl RedirHamt
-	// paths is a set of node offsets
-	// that are on the path to new nodes or nodes containing redirects.
-	// It is used to avoid traversing the entire key for keep/flatten.
+
+	// paths is the set of offsets of nodes
+	// leading to mnodes or containing redirects,
+	// but not including the mnodes unless they lead to others.
+	// It is used to avoid traversing the entire tree for keep/flatten.
+	// It is written to storage by keep and cleared out after save.
 	paths PathHamt
+
 	// nextOff is the next "fake" offset to assign
 	nextOff uint64
+
 	// generations is use to control mutability
 	// the current generation is mutable, previous generations are immutable.
 	generation uint
@@ -244,6 +257,9 @@ func RedirHash(key uint64) uint32 {
 }
 
 func (r *redir) String() string {
+	if r == nil {
+		return "nil"
+	}
 	s := OffStr(r.offset) + " -> "
 	if r.mnode != nil {
 		s += "mnode"
@@ -270,7 +286,7 @@ func newRedirs() redirs {
 	return redirs{nextOff: stor.MaxSmallOffset, generation: 1}
 }
 
-// add returns a fake offset for a new node (from split)
+// add returns a fake offset for a new mnode (from split)
 func (re *redirs) add(node fNode) uint64 {
 	off := re.nextOff
 	re.nextOff--
@@ -295,7 +311,7 @@ func (re *redirs) isFake(off uint64) bool {
 }
 
 func (fb *fbtree) addPath(off uint64) {
-	if !fb.redirs.isFake(off) && off != fb.root {
+	if off != fb.root {
 		fb.redirs.paths.Put(off)
 	}
 }

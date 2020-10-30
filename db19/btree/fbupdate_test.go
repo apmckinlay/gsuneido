@@ -15,6 +15,7 @@ import (
 
 	"github.com/apmckinlay/gsuneido/db19/ixspec"
 	"github.com/apmckinlay/gsuneido/db19/stor"
+	"github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
@@ -39,6 +40,7 @@ func TestUpdate(t *testing.T) {
 			mfb.Insert(key, uint64(i))
 		}
 		mfb.checkData(t, data[:])
+		mfb.ckpaths()
 	}
 }
 
@@ -205,12 +207,12 @@ func (fb *fbtree) list() string {
 }
 
 func TestSave(t *testing.T) {
-	var nSaves = 40
+	var nSaves = 1000
 	if testing.Short() {
-		nSaves = 10
+		nSaves = 100
 	}
-	const updatesPerSave = 3
-	const insertsPerUpdate = 17
+	const updatesPerSave = 9
+	const insertsPerUpdate = 7
 	data := make([]string, 0, nSaves*updatesPerSave*insertsPerUpdate)
 	GetLeafKey = func(_ *stor.Stor, _ *ixspec.T, i uint64) string { return data[i] }
 	defer func(mns int) { MaxNodeSize = mns }(MaxNodeSize)
@@ -218,7 +220,7 @@ func TestSave(t *testing.T) {
 	st := stor.HeapStor(8192)
 	st.Alloc(1) // avoid offset 0
 	fb := CreateFbtree(st, nil)
-	randKey := str.UniqueRandomOf(3, 7, "abcdef")
+	randKey := str.UniqueRandomOf(5, 9, "abcdefghi")
 	for i := 0; i < nSaves; i++ {
 		for j := 0; j < updatesPerSave; j++ {
 			fb = fb.Update(func(mfb *fbtree) {
@@ -228,12 +230,61 @@ func TestSave(t *testing.T) {
 					data = append(data, key)
 				}
 			})
+		}
+		fb = fb.Save(false) // SAVE
+		if i%10 == 9 {
+			fb.ckpaths()
 			fb.checkData(t, data)
+		}
+	}
+}
+
+func (tbl *RedirHamt) print() {
+	fmt.Print("redirs")
+	tbl.ForEach(func(r *redir) {
+		fmt.Print(" ", OffStr(r.offset)+"->"+OffStr(r.newOffset))
+	})
+	fmt.Println()
+}
+
+func (p *PathHamt) print() {
+	fmt.Print("paths")
+	p.ForEach(func(o uint64) {
+		fmt.Print(" ", OffStr(o))
+	})
+	fmt.Println()
+}
+
+func TestSave2(*testing.T) {
+	if testing.Short() {
+		return
+	}
+	const nKeys = 100_000
+	keyfn := func(i uint64) string {
+		return runtime.Pack(runtime.IntVal(int(i) ^ 0x5555).(runtime.Packable))
+	}
+	GetLeafKey = func(_ *stor.Stor, _ *ixspec.T, i uint64) string {
+		return keyfn(i)
+	}
+	defer func(mns int) { MaxNodeSize = mns }(MaxNodeSize)
+	MaxNodeSize = 128
+	st := stor.HeapStor(64 * 1024)
+	st.Alloc(1) // avoid offset 0
+	fb := CreateFbtree(st, nil).makeMutable()
+	for i := uint64(0); i < nKeys; i++ {
+		key := keyfn(i)
+		fb.Insert(key, uint64(i))
+		if i%100 == 99 {
+			fb.ckpaths()
+			fb = fb.Save(false).makeMutable()
 			fb.ckpaths()
 		}
-		fb = fb.Save(false)
-		fb.checkData(t, data)
 	}
+	n, _, _ := fb.check(nil)
+	assert.This(n).Is(nKeys)
+	fb = fb.Save(true)
+	n, _, _ = fb.check(nil)
+	assert.This(n).Is(nKeys)
 }
 
 func TestSplitDup(*testing.T) {
@@ -365,50 +416,64 @@ func TestFlatten(t *testing.T) {
 // ckpaths checks that all the redirects can be reached by following the paths
 // and that all paths are in the current tree
 func (fb *fbtree) ckpaths() {
+	// rset is the set of redirects
 	var rset = make(map[uint64]bool)
 	fb.redirs.tbl.ForEach(func(r *redir) {
 		rset[r.offset] = true
 	})
+	// pset is the set of paths
 	var pset = make(map[uint64]bool)
 	fb.redirs.paths.ForEach(func(o uint64) {
 		pset[o] = true
 	})
 
+	defer func() {
+		if e := recover(); e != nil {
+			fb.print()
+			fmt.Println("root", OffStr(fb.root), "rset", rset)
+			fmt.Println("pset", pset)
+			fb.printPaths("paths")
+			panic(e)
+		}
+	}()
 	delete(rset, fb.root)
-	fb.ckpaths1(0, fb.root, rset, pset)
+	fb.ckpaths1(0, fb.root, true, rset, pset)
 	if len(rset) != 0 {
-		fb.print()
-		fmt.Println("root", fb.root, "rset", rset)
-		fb.printPaths("paths")
+		panic("redirect(s) not found")
 	}
-	assert.This(len(rset)).Is(0)
 	if len(pset) != 0 {
-		fb.print()
-		fmt.Println("pset", pset)
-		fb.printPaths("paths")
+		panic("paths not found")
 	}
-	assert.This(len(pset)).Is(0)
 }
 
-func (fb *fbtree) ckpaths1(depth int, nodeOff uint64,
+func (fb *fbtree) ckpaths1(depth int, nodeOff uint64, onPath bool,
 	rset map[uint64]bool, pset map[uint64]bool) {
+	// _, pathNode := fb.redirs.paths.Get(nodeOff)
+	pathNode := fb.pathNode(nodeOff)
+	if pathNode && !onPath /*&& depth != 1*/ {
+		panic("disconnected node in paths")
+	}
+
 	delete(pset, nodeOff)
 	if depth >= fb.treeLevels {
-		if _, pathNode := fb.redirs.paths.Get(nodeOff); pathNode {
-			fb.print()
+		// leaf node
+		if pathNode && depth != 0 {
 			panic("leaf found in paths")
 		}
-		return // skip leaf nodes
-	}
-	// tree node
-	if depth > 0 && !fb.pathNode(nodeOff) {
-		return // skip if not root and not on path
-	}
-	node := fb.getNode(nodeOff)
-	for it := node.iter(); it.next(); {
-		off := it.offset
-		delete(rset, off)
-		fb.ckpaths1(depth+1, off, rset, pset) // RECURSE
+	} else {
+		// tree node
+		node := fb.getNode(nodeOff)
+		for it := node.iter(); it.next(); {
+			off := it.offset
+			if onPath {
+				delete(rset, off)
+			}
+			_, ok := fb.redirs.tbl.Get(off)
+			if ok && !pathNode /*&& depth != 0*/ {
+				panic("redirect not on path")
+			}
+			fb.ckpaths1(depth+1, off, pathNode, rset, pset) // RECURSE
+		}
 	}
 }
 
