@@ -118,7 +118,7 @@ func checker(c chan interface{}, mergeChan chan merge) {
 	}
 }
 
-// dispatch runs in the checker goroutiner
+// dispatch runs in the checker goroutine
 func (ck *Check) dispatch(msg interface{}, mergeChan chan merge) {
 	switch msg := msg.(type) {
 	case *ckStart:
@@ -140,6 +140,7 @@ func (ck *Check) dispatch(msg interface{}, mergeChan chan merge) {
 			// until we finish the commit. i.e. serialized
 			tn := msg.t.commit()
 			mergeChan <- merge{tn: tn, tables: result}
+			//TODO commit and send merge in another goroutine ?
 		}
 	default:
 		panic("checker unknown message type")

@@ -188,17 +188,37 @@ func (ov *Overlay) Freeze() {
 type Result = *fbtree
 
 // Merge merges the mbtree for tranNum (if there is one) into the fbtree
-func (ov *Overlay) Merge(tranNum int) Result {
+func (ov *Overlay) Merge(tns []int) Result {
 	assert.That(ov.mb == nil)
-	mb := ov.under[1].(*mbtree)
-	assert.That(mb.tranNum == tranNum)
-	return Merge(ov.base(), mb)
+	for i, tn := range tns {
+		mb := ov.under[1+i].(*mbtree)
+		assert.That(mb.tranNum == tn)
+	}
+	return ov.merge(len(tns))
 }
 
-func (ov *Overlay) WithMerged(r Result) *Overlay {
-	under := make([]tree, len(ov.under) - 1)
-	under[0] = r
-	copy(under[1:], ov.under[2:])
+// merge combines the base fbtree with one or more of the mbtree's
+// to produce a new fbtree. It does not modify the original fbtree or mbtree's.
+func (ov *Overlay) merge(nmb int) *fbtree {
+	return ov.base().Update(func(fb *fbtree) {
+		// ??? maybe faster to merge-iterate the mbtree's
+		for i := 1; i <= nmb; i++ {
+			mb := ov.under[i].(*mbtree)
+			mb.ForEach(func(key string, off uint64) {
+				if (off & tombstone) == 0 {
+					fb.Insert(key, off)
+				} else {
+					fb.Delete(key, off&^tombstone)
+				}
+			})
+		}
+	})
+}
+
+func (ov *Overlay) WithMerged(fb Result, nmerged int) *Overlay {
+	under := make([]tree, len(ov.under)-nmerged)
+	under[0] = fb
+	copy(under[1:], ov.under[1+nmerged:])
 	return &Overlay{under: under}
 }
 
@@ -223,5 +243,11 @@ func (ov *Overlay) WithSaved(r Result) *Overlay {
 //-------------------------------------------------------------------
 
 func (ov *Overlay) CheckFlat() {
-	assert.That(len(ov.under) == 1)
+	assert.Msg("not flat").That(len(ov.under) == 1)
+}
+
+func (ov *Overlay) CheckTnMerged(tn int) {
+	for i := 1; i < len(ov.under); i++ {
+		assert.That(ov.under[i].(*mbtree).tranNum != tn)
+	}
 }

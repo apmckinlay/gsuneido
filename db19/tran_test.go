@@ -51,6 +51,7 @@ func TestConcurrent(t *testing.T) {
 	assert.T(t).Msg("size").This(ti.Size).Is(nout * 23)
 
 	db.Close()
+	ck(CheckDatabase("tmp.db"))
 	os.Remove("tmp.db")
 }
 
@@ -64,7 +65,9 @@ func TestTran(t *testing.T) {
 		ut := output1(db)
 		tables := db.ck.(*Check).commit(ut)
 		tn := ut.commit()
-		db.Merge(tn, tables)
+		merges := &mergeList{}
+		merges.add(merge{tn: tn, tables: tables})
+		db.Merge(mergeSingle, merges)
 		if i%100 == 50 {
 			if i%500 != 250 {
 				db.Persist(false)
@@ -87,6 +90,7 @@ func TestTran(t *testing.T) {
 	assert.T(t).Msg("nrows").This(ti.Nrows).Is(nout)
 	assert.T(t).Msg("size").This(ti.Size).Is(nout * 23)
 	db.Close()
+	ck(CheckDatabase("tmp.db"))
 	os.Remove("tmp.db")
 }
 

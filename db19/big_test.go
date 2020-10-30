@@ -8,6 +8,7 @@ import (
 	"math/rand"
 	"os"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -25,10 +26,10 @@ const (
 	dbfile        = "tmp.db"
 	ntables       = 1009
 	maxcols       = 211
-	maxidxs       = 19
+	maxidxs       = 11
 	maxidxcols    = 5
-	nrows         = 500_000
-	nthreads      = 5
+	nrows         = 1_000_000
+	nthreads      = 4        // must divide evenly into nrows
 	tablesPerTran = 7
 	rowsPerTable  = 7
 )
@@ -42,11 +43,11 @@ func TestBig(*testing.T) {
 	defer os.Remove(dbfile)
 	db, err := OpenDatabase(dbfile)
 	ck(err)
-	StartConcur(db, 777*time.Millisecond)
+	StartConcur(db, 277*time.Millisecond)
 	fmt.Println("create data")
-	var wg sync.WaitGroup
 	count := nrows / nthreads
 	start := 0
+	var wg sync.WaitGroup
 	for i := 0; i < nthreads; i++ {
 		wg.Add(1)
 		go func(start int) {
@@ -56,23 +57,26 @@ func TestBig(*testing.T) {
 		start += count
 	}
 	wg.Wait()
+	fmt.Println("finished", ntrans, "transactions", db.store.Size(), "bytes")
 
 	db.ck.Stop()
 	db.ck = nil
+
+	ck(db.Check())
+	db.Persist(true) // flatten on shutdown (required by quick check)
+	ck(db.Check())
+
 	nr := 0
 	state := db.GetState()
+	state.meta.CheckAllMerged()
 	state.meta.ForEachInfo(func(ti *meta.Info) {
 		nr += ti.Nrows
 	})
 	assert.This(nr).Is(nrows)
+	ck(db.Check())
 
 	db.Close()
-	fmt.Println("check")
-	err = CheckDatabase(dbfile)
-	ck(err)
-
-	fmt.Println("merge1", mergeTime1/time.Duration(mergeCount))
-	fmt.Println("merge2", mergeTime2/time.Duration(mergeCount))
+	ck(CheckDatabase(dbfile))
 }
 
 func createTables() []string {
@@ -121,6 +125,8 @@ func createTables() []string {
 	return tables
 }
 
+var ntrans int32
+
 var data = rt.SuStr(str.Random(1024, 1024))
 
 func createData(db *Database, tables []string, i, n int) {
@@ -128,11 +134,11 @@ func createData(db *Database, tables []string, i, n int) {
 	n += i
 	for i < n {
 		ut := db.NewUpdateTran()
-		ntables := 1 + rand.Intn(tablesPerTran)
-		for j := 0; j < ntables && i < n; j++ {
+		nt := 1 + rand.Intn(tablesPerTran)
+		for j := 0; j < nt && i < n; j++ {
 			table := tables[rand.Intn(ntables)]
-			nrows := 1 + rand.Intn(rowsPerTable)
-			for k := 0; k <= nrows && i < n; k++ {
+			nr := 1 + rand.Intn(rowsPerTable)
+			for k := 0; k <= nr && i < n; k++ {
 				var b rt.RecordBuilder
 				b.Add(rt.IntVal(i ^ 0x5555).(rt.Packable))
 				b.Add(data)
@@ -141,9 +147,10 @@ func createData(db *Database, tables []string, i, n int) {
 				i++
 			}
 		}
-		// time.Sleep(4 * time.Millisecond) // inside tran
+		// time.Sleep(1 * time.Millisecond) // inside tran
 		ut.Commit()
-		// time.Sleep(4 * time.Millisecond) // between tran
+		atomic.AddInt32(&ntrans, 1)
+		// time.Sleep(1 * time.Millisecond) // between tran
 	}
 }
 

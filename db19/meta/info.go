@@ -74,52 +74,79 @@ func (ti *Info) isTomb() bool {
 type btOver = *btree.Overlay
 type Result = btree.Result
 
-type Update struct {
+type MergeUpdate struct {
+	table   string
+	nmerged int
+	results []Result // per index
+}
+
+// Merge collects the updates which are then applied by applyMerge.
+// WARNING: must not modify meta.
+func (m *Meta) Merge(table string, tns []int) MergeUpdate {
+	// fmt.Println("Merge", table, tns)
+	ti := m.info.MustGet(table)
+	results := make([]Result, len(ti.Indexes))
+	for j, ov := range ti.Indexes {
+		results[j] = ov.Merge(tns)
+	}
+	return MergeUpdate{table: table, nmerged: len(tns), results: results}
+}
+
+// ApplyMerge applies the updates collected by Merge
+func (m *Meta) ApplyMerge(updates []MergeUpdate) {
+	t2 := m.info.Mutable()
+	for _, up := range updates {
+		// fmt.Println("applyMerge", up.table)
+		ti := *t2.MustGet(up.table)                          // copy
+		ti.Indexes = append(ti.Indexes[:0:0], ti.Indexes...) // copy
+		for i, ov := range ti.Indexes {
+			ti.Indexes[i] = ov.WithMerged(up.results[i], up.nmerged)
+		}
+		t2.Put(&ti)
+	}
+	m.info = t2.Freeze()
+}
+
+//-------------------------------------------------------------------
+
+type persistUpdate struct {
 	table   string
 	results []Result // per index
 }
 
-// merge is used by meta.Merge.
-// It collects the updates which are then applied by withUpdates.
-func (t InfoHamt) merge(tn int, table string) Update {
-	ti := t.MustGet(table)
-	results := make([]Result, len(ti.Indexes))
-	for j, ov := range ti.Indexes {
-		results[j] = ov.Merge(tn)
-	}
-	return Update{table: table, results: results}
-}
-
-// process is used by meta.Persist.
-// process collects the updates which are then applied by withUpdates.
-func (t InfoHamt) process(fn func(btOver) Result) []Update {
-	var updates []Update
-	t.ForEach(func(ti *Info) {
+// Persist is called by state.Persist to write the state to the database.
+// It collects the new fbtree roots which are then applied ApplyPersist.
+// WARNING: must not modify meta.
+func (m *Meta) Persist(flatten bool) []persistUpdate {
+	var updates []persistUpdate
+	m.info.ForEach(func(ti *Info) {
 		results := make([]Result, len(ti.Indexes))
 		for i, ov := range ti.Indexes {
-			r := fn(ov)
+			r := ov.Save(flatten)
 			if r == nil {
 				assert.That(i == 0)
 				return
 			}
 			results[i] = r
 		}
-		updates = append(updates, Update{table: ti.Table, results: results})
+		updates = append(updates, persistUpdate{table: ti.Table, results: results})
 	})
 	return updates
 }
 
-func (t InfoHamt) withUpdates(updates []Update, fn func(btOver, Result) btOver) InfoHamt {
-	t2 := t.Mutable()
+// ApplyPersist takes the new fbtree roots from Persist
+// and updates the state with them.
+func (m *Meta) ApplyPersist(updates []persistUpdate) {
+	t2 := m.info.Mutable()
 	for _, up := range updates {
 		ti := *t2.MustGet(up.table)                          // copy
 		ti.Indexes = append(ti.Indexes[:0:0], ti.Indexes...) // copy
 		for i, ov := range ti.Indexes {
 			if up.results[i] != nil {
-				ti.Indexes[i] = fn(ov, up.results[i])
+				ti.Indexes[i] = ov.WithSaved(up.results[i])
 			}
 		}
 		t2.Put(&ti)
 	}
-	return t2.Freeze()
+	m.info = t2.Freeze()
 }

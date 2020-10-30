@@ -66,10 +66,11 @@ func (db *Database) UpdateState(fn func(*DbState)) *DbState {
 // Merge updates the base fbtree's with the overlay mbtree
 // for the given transaction number (the oldest/first).
 // It is called by concur.go merger.
-func (db *Database) Merge(tn int, tables []string) {
-	state := db.GetState()
-	updates := state.meta.Merge(tn, tables) // outside UpdateState
+func (db *Database) Merge(fn func(*DbState, *mergeList) []meta.MergeUpdate,
+	merges *mergeList) {
+	// updates := fn(db.GetState(), merges) // outside UpdateState
 	db.UpdateState(func(state *DbState) {
+		updates := fn(state, merges)
 		meta := *state.meta // copy
 		meta.ApplyMerge(updates)
 		state.meta = &meta
@@ -79,12 +80,12 @@ func (db *Database) Merge(tn int, tables []string) {
 //-------------------------------------------------------------------
 
 // Persist writes index changes (and a new state) to the database file.
+// flatten refers to the redirects, not the index overlays.
 // It is called from concur.go
 func (db *Database) Persist(flatten bool) uint64 {
 	var off uint64
-	state := db.GetState()
-	updates := state.meta.Persist(flatten) // outside UpdateState
-	state = db.UpdateState(func(state *DbState) {
+	updates := db.GetState().meta.Persist(flatten) // outside UpdateState
+	db.UpdateState(func(state *DbState) {
 		meta := *state.meta // copy
 		meta.ApplyPersist(updates)
 		state.meta = &meta

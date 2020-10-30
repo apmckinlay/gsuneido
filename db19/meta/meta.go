@@ -6,7 +6,6 @@ package meta
 import (
 	"math/bits"
 
-	"github.com/apmckinlay/gsuneido/db19/btree"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/ints"
@@ -23,11 +22,6 @@ type Meta struct {
 	schemaClock int
 	infoClock   int
 }
-
-// Executor is used by merge to allow multithreading.
-// It must be injected.
-var	Executor func(tn int, tables []string,
-		fn func(tn int, table string) Update) []Update
 
 // Mutable returns a mutable copy of a Meta
 func (m *Meta) Mutable() *Meta {
@@ -254,39 +248,18 @@ func clock(offs []uint64) int {
 
 //-------------------------------------------------------------------
 
-// Merge is called by state.Merge
-// to merge the mbtree's for tranNum into the fbtree's.
-// It collect updates which are then applied by ApplyMerge
-func (m *Meta) Merge(tn int, tables []string) []Update {
-	return Executor(tn, tables, m.info.merge)
-}
-
-// ApplyMerge applies the updates collected by meta.Merge
-func (m *Meta) ApplyMerge(updates []Update) {
-	m.info = m.info.withUpdates(updates, btOver.WithMerged)
-}
-
-//-------------------------------------------------------------------
-
-// Persist is called by state.Persist to write the state to the database.
-// It collects the new fbtree roots which are then applied ApplyPersist.
-func (m *Meta) Persist(flatten bool) []Update {
-	return m.info.process(func(ov *btree.Overlay) Result {
-		return ov.Save(flatten)
+func (m *Meta) CheckAllMerged() {
+	m.info.ForEach(func(ti *Info) {
+		for _, ov := range ti.Indexes {
+			ov.CheckFlat()
+		}
 	})
 }
 
-// ApplyPersist takes the new fbtree roots from meta.Persist
-// and updates the state with them.
-func (m *Meta) ApplyPersist(updates []Update) {
-	m.info = m.info.withUpdates(updates, btOver.WithSaved)
-}
-
-//-------------------------------------------------------------------
-
-func (m *Meta) CheckAllMerged() {
-	m.info.process(func(ov *btree.Overlay) Result {
-		ov.CheckFlat()
-		return nil
+func (m *Meta) CheckTnMerged(tn int) {
+	m.info.ForEach(func(ti *Info) {
+		for _, ov := range ti.Indexes {
+			ov.CheckTnMerged(tn)
+		}
 	})
 }

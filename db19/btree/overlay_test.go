@@ -82,3 +82,33 @@ func checkIter(t *testing.T, data []string, tr tree) {
 	_, _, ok := it()
 	assert.False(ok)
 }
+
+func TestMerge(t *testing.T) {
+	randKey := str.UniqueRandomOf(3, 10, "abcdef")
+	var data []string
+	randMbtree := func() *mbtree {
+		const n = mSize * 3
+		mb := newMbtree(0)
+		for i := 0; i < n; i++ {
+			key := randKey()
+			off := uint64(len(data))
+			data = append(data, key)
+			mb.Insert(key, off)
+		}
+		return mb
+	}
+	mb := randMbtree()
+	mb.checkData(t, data)
+	GetLeafKey = func(_ *stor.Stor, _ *ixspec.T, i uint64) string { return data[i] }
+	defer func(mns int) { MaxNodeSize = mns }(MaxNodeSize)
+	MaxNodeSize = 64
+	fb := CreateFbtree(nil, nil)
+	ov := Overlay{under: []tree{fb, mb}}
+	fb = ov.merge(1)
+	fb.checkData(t, data)
+
+	mb = randMbtree()
+	ov = Overlay{under: []tree{fb, mb}}
+	fb = ov.merge(1)
+	fb.checkData(t, data)
+}
