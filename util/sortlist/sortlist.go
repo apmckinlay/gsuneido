@@ -1,7 +1,7 @@
 // Copyright Suneido Software Corp. All rights reserved.
 // Governed by the MIT license found in the LICENSE file.
 
-// Package sortlist implements a sorted list of int's that is built incrementally.
+// Package sortlist implements a sorted list of uint64 that is built incrementally.
 // The list is in blocks of blockSize.
 // Blocks are individually sorted once they are full.
 // Blocks are two-way merged.
