@@ -43,18 +43,18 @@ var _ = builtin("File(filename, mode='r', block=false)",
 	})
 
 func newSuFile(name, mode string) *suFile {
-	var perm int
+	var flag int
 	switch mode {
 	case "r":
-		perm = os.O_RDONLY
+		flag = os.O_RDONLY
 	case "a":
-		perm = os.O_WRONLY | os.O_CREATE | os.O_APPEND
+		flag = os.O_WRONLY | os.O_CREATE | os.O_APPEND
 	case "w":
-		perm = os.O_WRONLY | os.O_CREATE | os.O_TRUNC
+		flag = os.O_WRONLY | os.O_CREATE | os.O_TRUNC
 	default:
 		panic("File: invalid mode")
 	}
-	f, err := os.OpenFile(name, perm, 0644)
+	f, err := os.OpenFile(name, flag, 0644)
 	if err != nil {
 		panic("File: can't " + err.Error())
 	}
@@ -64,9 +64,6 @@ func newSuFile(name, mode string) *suFile {
 	} else { // "w" or "a"
 		sf.w = bufio.NewWriter(f)
 	}
-	if sf.mode == "a" {
-		sf.tell = sf.size()
-	}
 	return sf
 }
 
@@ -75,8 +72,11 @@ func (sf *suFile) reset() {
 	if sf.mode == "r" {
 		sf.r.Reset(sf.f)
 	} else {
-		sf.w.Flush()
+		err := sf.w.Flush()
 		sf.w.Reset(sf.f)
+		if err != nil {
+			panic("File: " + err.Error())
+		}
 	}
 }
 
@@ -88,10 +88,16 @@ func (sf *suFile) size() int64 {
 func (sf *suFile) close() {
 	nFile--
 	if sf.mode != "r" {
-		sf.w.Flush()
+		err := sf.w.Flush()
+		if err != nil {
+			defer panic("File: " + err.Error())
+		}
 	}
-	sf.f.Close()
+	err := sf.f.Close()
 	sf.f = nil
+	if err != nil {
+		panic("File: " + err.Error())
+	}
 }
 
 var _ Value = (*suFile)(nil)
@@ -153,7 +159,10 @@ var suFileMethods = Methods{
 		return nil
 	}),
 	"Flush": method0(func(this Value) Value {
-		sfOpenWrite(this).w.Flush()
+		err := sfOpenWrite(this).w.Flush()
+		if err != nil {
+			panic("File: " + err.Error())
+		}
 		return nil
 	}),
 	"Read": method1("(nbytes=false)", func(this, arg Value) Value {
