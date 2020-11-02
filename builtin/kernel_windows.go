@@ -370,17 +370,6 @@ func WriteFile(f Value, buf unsafe.Pointer, size Value, written Value) Value {
 	return boolRet(rtn)
 }
 
-// dll long Kernel32:GetFileSize(handle hf, LONG* hiword)
-var getFileSize = kernel32.MustFindProc("GetFileSize").Addr()
-var _ = builtin2("GetFileSize(a, b/*unused*/)",
-	func(a, b Value) Value {
-		rtn, _, _ := syscall.Syscall(getFileSize, 2,
-			intArg(a),
-			0,
-			0)
-		return intRet(rtn)
-	})
-
 // dll bool Kernel32:GetVolumeInformation([in] string lpRootPathName,
 //		string lpVolumeNameBuffer, long nVolumeNameSize, LONG* lpVolumeSerialNumber,
 //		LONG* lpMaximumComponentLength, LONG* lpFileSystemFlags,
