@@ -13,11 +13,16 @@ import (
 	"github.com/apmckinlay/gsuneido/runtime/types"
 )
 
+type iFile interface {
+	io.ReadWriteCloser
+	io.Seeker
+}
+
 type suFile struct {
 	CantConvert
 	name string
 	mode string
-	f    *os.File
+	f    iFile
 	r    *bufio.Reader // only one of r or w will be used
 	w    *bufio.Writer
 	// tell is used to track our own position in the file.
@@ -43,18 +48,22 @@ var _ = builtin("File(filename, mode='r', block=false)",
 	})
 
 func newSuFile(name, mode string) *suFile {
-	var flag int
-	switch mode {
-	case "r":
-		flag = os.O_RDONLY
-	case "a":
-		flag = os.O_WRONLY | os.O_CREATE | os.O_APPEND
-	case "w":
-		flag = os.O_WRONLY | os.O_CREATE | os.O_TRUNC
-	default:
-		panic("File: invalid mode")
+	var f iFile
+	var err error
+	if mode == "a" {
+		f, err = appendFile(name)
+	} else {
+		var flag int
+		switch mode {
+		case "r":
+			flag = os.O_RDONLY
+		case "w":
+			flag = os.O_WRONLY | os.O_CREATE | os.O_TRUNC
+		default:
+			panic("File: invalid mode")
+		}
+		f, err = os.OpenFile(name, flag, 0644)
 	}
-	f, err := os.OpenFile(name, flag, 0644)
 	if err != nil {
 		panic("File: can't " + err.Error())
 	}
@@ -81,8 +90,7 @@ func (sf *suFile) reset() {
 }
 
 func (sf *suFile) size() int64 {
-	info, _ := sf.f.Stat()
-	return info.Size()
+	return fileSize(sf.f)
 }
 
 func (sf *suFile) close() {
