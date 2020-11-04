@@ -220,13 +220,12 @@ func (co *compiler) simple() {
 	} else if co.match("(") {
 		co.leftCount++
 		i := co.leftCount
-		if i < maxResult {
-			co.emit(inst{op: left, i: byte(i)})
+		if i > 255 {
+			panic("regex: too many parenthesized groups")
 		}
+		co.emit(inst{op: left, i: byte(i)})
 		co.regex() // recurse
-		if i < maxResult {
-			co.emit(inst{op: right, i: byte(i)})
-		}
+		co.emit(inst{op: right, i: byte(i)})
 		co.mustMatch(")")
 	} else {
 		if co.si+1 < co.sn {

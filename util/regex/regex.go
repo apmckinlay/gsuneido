@@ -230,10 +230,14 @@ outer:
 				if pi == first {
 					first++
 				}
-				tmp[in.i] = si
+				if in.i < maxResult {
+					tmp[in.i] = si
+				}
 			case right:
-				result[in.i].pos1 = tmp[in.i] + 1
-				result[in.i].end = si
+				if in.i < maxResult {
+					result[in.i].pos1 = tmp[in.i] + 1
+					result[in.i].end = si
+				}
 			case backref:
 				m, si = backrefMatch(s, si, result[in.i], strings.HasPrefix)
 			case backrefIgnore:
