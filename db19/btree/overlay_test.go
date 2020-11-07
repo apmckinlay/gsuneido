@@ -8,6 +8,7 @@ import (
 	"sort"
 	"testing"
 
+	"github.com/apmckinlay/gsuneido/db19/btree/inter"
 	"github.com/apmckinlay/gsuneido/db19/ixspec"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
@@ -20,15 +21,15 @@ func TestEmptyOverlay(t *testing.T) {
 	defer func(mns int) { MaxNodeSize = mns }(MaxNodeSize)
 	MaxNodeSize = 64
 	fb := CreateFbtree(nil, nil)
-	mb := newMbtree(0)
-	mb2 := newMbtree(0)
-	ov := &Overlay{under: []tree{fb, mb2}, mb: mb}
+	mut := &inter.T{}
+	mb2 := &inter.T{}
+	ov := &Overlay{under: []tree{fb, mb2}, mut: mut}
 	checkIter(t, data, ov)
 
 	const n = 100
 	randKey := str.UniqueRandom(3, 8)
 
-	data = insert(data, n, randKey, mb)
+	data = insert(data, n, randKey, mut)
 	checkIter(t, data, ov)
 
 	data = insert(data, n, randKey, mb2)
@@ -86,29 +87,28 @@ func checkIter(t *testing.T, data []string, tr tree) {
 func TestMerge(t *testing.T) {
 	randKey := str.UniqueRandomOf(3, 10, "abcdef")
 	var data []string
-	randMbtree := func() *mbtree {
-		const n = mSize * 3
-		mb := newMbtree(0)
+	randMbtree := func() *inter.T {
+		const n = 300
+		mut := &inter.T{}
 		for i := 0; i < n; i++ {
 			key := randKey()
 			off := uint64(len(data))
 			data = append(data, key)
-			mb.Insert(key, off)
+			mut.Insert(key, off)
 		}
-		return mb
+		return mut
 	}
-	mb := randMbtree()
-	mb.checkData(t, data)
+	mut := randMbtree()
 	GetLeafKey = func(_ *stor.Stor, _ *ixspec.T, i uint64) string { return data[i] }
 	defer func(mns int) { MaxNodeSize = mns }(MaxNodeSize)
 	MaxNodeSize = 64
 	fb := CreateFbtree(nil, nil)
-	ov := Overlay{under: []tree{fb, mb}}
+	ov := Overlay{under: []tree{fb, mut}}
 	fb = ov.merge(1)
 	fb.checkData(t, data)
 
-	mb = randMbtree()
-	ov = Overlay{under: []tree{fb, mb}}
+	mut = randMbtree()
+	ov = Overlay{under: []tree{fb, mut}}
 	fb = ov.merge(1)
 	fb.checkData(t, data)
 }

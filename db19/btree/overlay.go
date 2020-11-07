@@ -4,6 +4,7 @@
 package btree
 
 import (
+	"github.com/apmckinlay/gsuneido/db19/btree/inter"
 	"github.com/apmckinlay/gsuneido/db19/ixspec"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
@@ -16,12 +17,12 @@ type tree interface {
 }
 
 // Overlay is an immutable fbtree plus one or more mbtrees.
-// Update transactions have a mutable mbtree at the top to store updates.
+// Update transactions have a mutable inter.T at the top to store updates.
 type Overlay struct {
-	// under are the underlying fbtree and mbtree's
+	// under are the underlying fbtree and inter.T's
 	under []tree
-	// mb is the mutable top mbtree, nil if read-only
-	mb *mbtree
+	// mut is the mutable top inter.T, nil if read-only
+	mut *inter.T
 }
 
 func NewOverlay(store *stor.Stor, is *ixspec.T) *Overlay {
@@ -33,10 +34,10 @@ func NewOverlay(store *stor.Stor, is *ixspec.T) *Overlay {
 
 // Mutable returns a modifiable copy of an Overlay
 func (ov *Overlay) Mutable(tranNum int) *Overlay {
-	assert.That(ov.mb == nil)
+	assert.That(ov.mut == nil)
 	under := append([]tree(nil), ov.under...) // copy
 	// atomic.AddInt64(&Under[len(under)], 1)
-	return &Overlay{under: under, mb: newMbtree(tranNum)}
+	return &Overlay{under: under, mut: &inter.T{TranNum: tranNum}}
 }
 
 func (ov *Overlay) GetIxspec() *ixspec.T {
@@ -47,19 +48,19 @@ func (ov *Overlay) SetIxspec(is *ixspec.T) {
 	ov.base().ixspec = is
 }
 
-// Insert inserts into the mutable top mbtree
+// Insert inserts into the mutable top inter.T
 func (ov *Overlay) Insert(key string, off uint64) {
-	ov.mb.Insert(key, off)
+	ov.mut.Insert(key, off)
 }
 
 const tombstone = 1 << 63
 
-// Delete either deletes the key/offset from the mutable mbtree
-// or inserts a tombstone into the mutable mbtree.
+// Delete either deletes the key/offset from the mutable inter.T
+// or inserts a tombstone into the mutable inter.T.
 func (ov *Overlay) Delete(key string, off uint64) {
-	if !ov.mb.Delete(key, off) {
+	if !ov.mut.Delete(key) {
 		// key not present
-		ov.mb.Insert(key, off|tombstone)
+		ov.mut.Insert(key, off|tombstone)
 	}
 }
 
@@ -87,13 +88,13 @@ type ovsrc struct {
 
 // Iter returns a treeIter function
 func (ov *Overlay) Iter(check bool) treeIter {
-	if ov.mb == nil && len(ov.under) == 1 {
+	if ov.mut == nil && len(ov.under) == 1 {
 		// only fbtree, no merge needed
 		return ov.under[0].Iter(check)
 	}
 	srcs := make([]ovsrc, 0, len(ov.under)+1)
-	if ov.mb != nil {
-		srcs = append(srcs, ovsrc{iter: ov.mb.Iter(check)})
+	if ov.mut != nil {
+		srcs = append(srcs, ovsrc{iter: ov.mut.Iter(check)})
 	}
 	for i := range ov.under {
 		srcs = append(srcs, ovsrc{iter: ov.under[i].Iter(check)})
@@ -170,41 +171,41 @@ func ReadOverlay(st *stor.Stor, r *stor.Reader) *Overlay {
 
 //-------------------------------------------------------------------
 
-// UpdateWith takes the mbtree updates from ov2 and adds them as a new layer to ov
+// UpdateWith takes the inter.T updates from ov2 and adds them as a new layer to ov
 func (ov *Overlay) UpdateWith(latest *Overlay) {
 	// reuse the new slice and overwrite ov.under with the latest
 	ov.under = append(ov.under[:0], latest.under...)
-	// add mbtree updates
+	// add inter.T updates
 	ov.Freeze()
 }
 
 func (ov *Overlay) Freeze() {
-	ov.under = append(ov.under, ov.mb)
-	ov.mb = nil
+	ov.under = append(ov.under, ov.mut)
+	ov.mut = nil
 }
 
 //-------------------------------------------------------------------
 
 type Result = *fbtree
 
-// Merge merges the mbtree for tranNum (if there is one) into the fbtree
+// Merge merges the inter.T for tranNum (if there is one) into the fbtree
 func (ov *Overlay) Merge(tns []int) Result {
-	assert.That(ov.mb == nil)
+	assert.That(ov.mut == nil)
 	for i, tn := range tns {
-		mb := ov.under[1+i].(*mbtree)
-		assert.That(mb.tranNum == tn)
+		mut := ov.under[1+i].(*inter.T)
+		assert.That(mut.TranNum == tn)
 	}
 	return ov.merge(len(tns))
 }
 
-// merge combines the base fbtree with one or more of the mbtree's
-// to produce a new fbtree. It does not modify the original fbtree or mbtree's.
+// merge combines the base fbtree with one or more of the inter.T's
+// to produce a new fbtree. It does not modify the original fbtree or inter.T's.
 func (ov *Overlay) merge(nmb int) *fbtree {
 	return ov.base().Update(func(fb *fbtree) {
-		// ??? maybe faster to merge-iterate the mbtree's
+		// ??? maybe faster to merge-iterate the inter.T's
 		for i := 1; i <= nmb; i++ {
-			mb := ov.under[i].(*mbtree)
-			mb.ForEach(func(key string, off uint64) {
+			mut := ov.under[i].(*inter.T)
+			mut.ForEach(func(key string, off uint64) {
 				if (off & tombstone) == 0 {
 					fb.Insert(key, off)
 				} else {
@@ -227,7 +228,7 @@ func (ov *Overlay) WithMerged(fb Result, nmerged int) *Overlay {
 // Save writes the Overlay's base fbtree to storage
 // and returns the new fbtree (in an Overlay) to later pass to With
 func (ov *Overlay) Save(flatten bool) Result {
-	assert.That(ov.mb == nil)
+	assert.That(ov.mut == nil)
 	return ov.base().Save(flatten)
 }
 
@@ -248,6 +249,6 @@ func (ov *Overlay) CheckFlat() {
 
 func (ov *Overlay) CheckTnMerged(tn int) {
 	for i := 1; i < len(ov.under); i++ {
-		assert.That(ov.under[i].(*mbtree).tranNum != tn)
+		assert.That(ov.under[i].(*inter.T).TranNum != tn)
 	}
 }

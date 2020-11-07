@@ -16,6 +16,7 @@ import (
 type T struct {
 	chunks  []chunk
 	size    int
+	TranNum int //TODO temporary
 }
 
 type chunk []slot
