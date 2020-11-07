@@ -127,8 +127,9 @@ func main() {
 	defer mainThread.Close()
 	// dependency injection of GetDbms
 	if options.Action == "client" {
-		addr := options.Arg + ":" + options.Port
-		GetDbms = func() IDbms { return dbms.NewDbmsClient(addr) }
+		GetDbms = func() IDbms {
+			return dbms.NewDbmsClient(options.Arg, options.Port)
+		}
 		clientErrorLog()
 	} else {
 		openDbms()

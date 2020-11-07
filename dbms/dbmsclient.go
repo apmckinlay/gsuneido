@@ -4,11 +4,13 @@
 package dbms
 
 import (
+	"bytes"
 	"io"
-	"log"
 	"net"
+	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/apmckinlay/gsuneido/dbms/commands"
 	"github.com/apmckinlay/gsuneido/dbms/csio"
@@ -27,14 +29,22 @@ type dbmsClient struct {
 // the size must match cSuneido and jSuneido
 const helloSize = 50
 
-func NewDbmsClient(addr string) *dbmsClient {
-	conn, err := net.Dial("tcp", addr)
-	if err != nil || !checkHello(conn) {
-		log.Fatalln("can't connect to " + addr + " " + err.Error())
+func NewDbmsClient(addr string, port string) *dbmsClient {
+	conn, err := net.Dial("tcp", addr+":"+port)
+	if err != nil {
+		checkServerStatus(addr, port)
+		cantConnect(err.Error())
+	}
+	if !checkHello(conn) {
+		cantConnect("invalid response from server")
 	}
 	c := &dbmsClient{ReadWrite: csio.NewReadWrite(conn), conn: conn}
 	c.sessionId = c.SessionId("")
 	return c
+}
+
+func cantConnect(s string) {
+	Fatal("Can't connect. " + s)
 }
 
 func checkHello(conn net.Conn) bool {
@@ -49,6 +59,28 @@ func checkHello(conn net.Conn) bool {
 	}
 	//TODO built date check
 	return true
+}
+
+func checkServerStatus(addr string, port string) {
+	p, err := strconv.Atoi(port)
+	if err != nil {
+		return
+	}
+	url := "http://" + addr + ":" + strconv.Itoa(p+1) + "/"
+	client := http.Client{Timeout: time.Second}
+	resp, err := client.Get(url)
+	if err != nil {
+		return
+	}
+	defer resp.Body.Close()
+	buf := make([]byte, 1024)
+	io.ReadFull(resp.Body, buf)
+	if bytes.Contains(buf, []byte("Checking database ...")) {
+		cantConnect("Database is being checked, please try again later")
+	}
+	if bytes.Contains(buf, []byte("Rebuilding database ...")) {
+		cantConnect("Database is being repaired, please try again later")
+	}
 }
 
 // Dbms interface
