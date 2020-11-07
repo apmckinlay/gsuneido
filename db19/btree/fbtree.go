@@ -499,7 +499,7 @@ type fbIter = func() (string, uint64, bool)
 
 // Iter returns a function that can be called to return consecutive entries.
 // NOTE: The returned key is only the known prefix.
-// (unlike mbtree which returns the actual key)
+// (unlike inter.Iter which returns the actual key)
 func (fb *fbtree) Iter(check bool) fbIter {
 	var stack [maxlevels]*fnIter
 

@@ -11,10 +11,10 @@ import (
 )
 
 // Ranges is an ordered set of non-overlapping ranges of strings.
-// The zero value is ready to go.
+// The zero value is ready to use.
 // It uses a specialized in-memory btree with a max size and number of levels.
 // Nodes are fixed size to reduce allocation and bounds checks.
-// ordset and mbtree use variations of this code.
+// ordset uses a variation of this code.
 type Ranges struct {
 	// tree is not embedded since it's not needed when small
 	tree *treeNode

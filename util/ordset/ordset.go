@@ -10,7 +10,7 @@ import (
 // Set is an ordered set of strings.
 // It uses a specialized in-memory btree with a max size and number of levels.
 // Nodes are fixed size to reduce allocation and bounds checks.
-// ranges and mbtree use variations of this code.
+// ranges uses a variation of this code.
 type Set struct {
 	// tree is not embedded since it's not needed when small
 	tree *treeNode

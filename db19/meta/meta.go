@@ -112,7 +112,7 @@ func (m *Meta) ForEachInfo(fn func(*Info)) {
 
 //-------------------------------------------------------------------
 
-// LayeredOnto layers the mutable mbtree's from a transaction
+// LayeredOnto layers the mutable inter's from a transaction
 // onto the latest/current state and returns a new state.
 // Also, the nrows and size deltas are applied.
 // Note: this does not merge the btrees, that is done later by merge.

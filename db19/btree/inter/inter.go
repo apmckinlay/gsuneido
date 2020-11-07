@@ -300,7 +300,7 @@ func (o *output) result() *T {
 
 //-------------------------------------------------------------------
 
-type Iter = func() (string, uint64, bool)
+type Iter = func() (key string, off uint64, ok bool)
 
 func (t *T) Iter(bool) Iter {
 	if t.size == 0 {

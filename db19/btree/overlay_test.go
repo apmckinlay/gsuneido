@@ -84,10 +84,10 @@ func checkIter(t *testing.T, data []string, tr tree) {
 	assert.False(ok)
 }
 
-func TestMerge(t *testing.T) {
+func TestOverlayMerge(t *testing.T) {
 	randKey := str.UniqueRandomOf(3, 10, "abcdef")
 	var data []string
-	randMbtree := func() *inter.T {
+	randInter := func() *inter.T {
 		const n = 300
 		mut := &inter.T{}
 		for i := 0; i < n; i++ {
@@ -98,7 +98,7 @@ func TestMerge(t *testing.T) {
 		}
 		return mut
 	}
-	mut := randMbtree()
+	mut := randInter()
 	GetLeafKey = func(_ *stor.Stor, _ *ixspec.T, i uint64) string { return data[i] }
 	defer func(mns int) { MaxNodeSize = mns }(MaxNodeSize)
 	MaxNodeSize = 64
@@ -107,7 +107,7 @@ func TestMerge(t *testing.T) {
 	fb = ov.merge(1)
 	fb.checkData(t, data)
 
-	mut = randMbtree()
+	mut = randInter()
 	ov = Overlay{under: []tree{fb, mut}}
 	fb = ov.merge(1)
 	fb.checkData(t, data)
