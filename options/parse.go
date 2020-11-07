@@ -13,43 +13,43 @@ import (
 func Parse(args []string) {
 loop:
 	for len(args) > 0 && (args[0] == "" || args[0][0] == '-') {
-		arg := args[0]
-		args = args[1:]
-		switch arg {
-		case "":
-			// ignore
-		case "-c", "-client":
+		if args[0] == "" {
+			args = args[1:]
+			continue
+		}
+		switch {
+		case match(&args, "-client"), match(&args, "-c"):
 			setAction("client")
 			Arg = "127.0.0.1"
 			args = optionalArg(args)
-		case "-check":
+		case match(&args, "-check"):
 			setAction("check")
-		case "-repair":
+		case match(&args, "-repair"):
 			setAction("repair")
-		case "-compact":
+		case match(&args, "-compact"):
 			setAction("compact")
-		case "-d", "-dump":
+		case match(&args, "-dump"), match(&args, "-d"):
 			setAction("dump")
 			args = optionalArg(args)
-		case "-l", "-load":
+		case match(&args, "-load"), match(&args, "-l"):
 			setAction("load")
 			args = optionalArg(args)
-		case "-r", "-repl":
+		case match(&args, "-repl"), match(&args, "-r"):
 			setAction("repl")
-		case "-p", "-port":
+		case match(&args, "-port"), match(&args, "-p"):
 			if len(args) > 0 && args[0][0] != '-' {
 				Port = args[0]
 				args = args[1:]
 			} else {
-				error(arg + " must be followed by port number")
+				error("port number required")
 			}
-		case "-s", "-server":
+		case match(&args, "-server"), match(&args, "-s"):
 			setAction("server")
-		case "-u", "-unattended":
+		case match(&args, "-unattended"), match(&args, "-u"):
 			Unattended = true
-		case "-v", "-version":
+		case match(&args, "-version"), match(&args, "-v"):
 			Action = "version"
-		case "--":
+		case match(&args, "--"):
 			break loop
 		default:
 			Action = "help"
@@ -71,6 +71,18 @@ loop:
 		Errlog = temp + "suneido" + Port + ".err"
 		Outlog = temp + "suneido" + Port + ".out"
 	}
+}
+
+func match(pargs *[]string, s string) bool {
+	arg := (*pargs)[0]
+	if arg == s {
+		*pargs = (*pargs)[1:]
+		return true
+	} else if strings.HasPrefix(arg, s) {
+		(*pargs)[0] = strings.TrimSpace(arg[len(s):])
+		return true
+	}
+	return false
 }
 
 func setAction(action string) {
