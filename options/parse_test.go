@@ -19,7 +19,7 @@ func TestParse(t *testing.T) {
 			s += " " + Arg
 		}
 		if Port != "3147" && Port != "" {
-			s += " " + Port
+			s += " port " + Port
 		}
 		if CmdLine != "" {
 			s += " | " + CmdLine
@@ -41,8 +41,9 @@ func TestParse(t *testing.T) {
 	test("-c", "--")("client 127.0.0.1")
 	test("-c", "1.2.3.4")("client 1.2.3.4")
 	test("-client", "1.2.3.4")("client 1.2.3.4")
-	test("-c", "-p", "1234")("client 127.0.0.1 1234")
-	test("-c", "localhost", "-p", "1234")("client localhost 1234")
+	test("-c", "-p", "1234")("client 127.0.0.1 port 1234")
+	test("-c", "localhost", "-p", "1234")("client localhost port 1234")
+	test("-c1.2.3.4", "-p1234")("client 1.2.3.4 port 1234")
 	test("-c", "--", "foo", "bar")("client 127.0.0.1 | foo bar")
 	test("-client", "--", "foo", "bar")("client 127.0.0.1 | foo bar")
 	test("-load", "-client")("error")
