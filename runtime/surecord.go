@@ -571,7 +571,7 @@ func (r *SuRecord) getSpecial(key string) Value {
 		basekey := key[0 : len(key)-7]
 		if val := r.getIfPresent(nil, SuStr(basekey)); val != nil {
 			if vs, ok := val.ToStr(); ok {
-				val = SuStr(strings.ToLower(vs))
+				val = SuStr(str.ToLower(vs))
 			}
 			return val
 		}

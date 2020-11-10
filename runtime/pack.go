@@ -96,13 +96,13 @@ func Unpack(s string) Value {
 	}
 }
 
-// PackedToLower applies strings.ToLower to packed strings.
+// PackedToLower applies str.ToLower to packed strings.
 // Other types of values are unchanged.
 func PackedToLower(s string) string {
 	if len(s) == 0 || s[0] != PackString {
 		return s
 	}
-	return strings.ToLower(s) // ToLower shouldn't change PackString (4)
+	return str.ToLower(s) // ToLower shouldn't change PackString (4)
 }
 
 // PackedCmpLower compares strings with str.CmpLower

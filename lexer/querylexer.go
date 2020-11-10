@@ -4,9 +4,8 @@
 package lexer
 
 import (
-	"strings"
-
 	tok "github.com/apmckinlay/gsuneido/lexer/tokens"
+	"github.com/apmckinlay/gsuneido/util/str"
 )
 
 func NewQueryLexer(src string) *Lexer {
@@ -14,7 +13,7 @@ func NewQueryLexer(src string) *Lexer {
 }
 
 func queryKeyword(s string) (tok.Token, string) {
-	ls := strings.ToLower(s)
+	ls := str.ToLower(s)
 	if tok, ok := queryKeywords[ls]; ok {
 		return tok, ls
 	}

@@ -11,6 +11,7 @@ import (
 
 	"github.com/apmckinlay/gsuneido/runtime/types"
 	"github.com/apmckinlay/gsuneido/util/dnum"
+	"github.com/apmckinlay/gsuneido/util/str"
 	// sync "github.com/sasha-s/go-deadlock"
 )
 
@@ -220,7 +221,7 @@ func ErrType(x Value) string {
 	if t == "String" {
 		return t
 	}
-	return strings.ToLower(t)
+	return str.ToLower(t)
 }
 
 // ToContainer converts to a Container or panics

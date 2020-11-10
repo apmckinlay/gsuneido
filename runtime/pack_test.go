@@ -4,11 +4,11 @@
 package runtime
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/dnum"
+	"github.com/apmckinlay/gsuneido/util/str"
 )
 
 func TestPack(t *testing.T) {
@@ -79,7 +79,7 @@ func TestPackedToLower(t *testing.T) {
 	same(IntVal(12345678))
 
 	s := "Hello World!"
-	ls := strings.ToLower(s)
+	ls := str.ToLower(s)
 	assert.T(t).Msg(s).This(PackedToLower(Pack(SuStr(s)))).Is(Pack(SuStr(ls)))
 }
 

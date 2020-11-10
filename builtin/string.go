@@ -192,7 +192,7 @@ func init() {
 			return SuIter{Iter: iterable.Iter()}
 		}),
 		"Lower": method0(func(this Value) Value {
-			return SuStr(strings.ToLower(ToStr(this)))
+			return SuStr(str.ToLower(ToStr(this)))
 		}),
 		"Lower?": method0(func(this Value) Value {
 			result := false
@@ -389,7 +389,7 @@ func init() {
 			return SuStr(buf.String())
 		}),
 		"Upper": method0(func(this Value) Value {
-			return SuStr(strings.ToUpper(ToStr(this)))
+			return SuStr(str.ToUpper(ToStr(this)))
 		}),
 		"Upper?": method0(func(this Value) Value {
 			result := false

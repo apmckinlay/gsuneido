@@ -255,3 +255,29 @@ func CmpLower(s1, s2 string) int {
 	}
 	return ints.Compare(n1, n2)
 }
+
+// ToLower is an ascii version of strings.ToLower
+func ToLower(s string) string {
+	var sb strings.Builder
+	sb.Grow(len(s))
+	for _, c := range []byte(s) {
+		if 'A' <= c && c <= 'Z' {
+			c += 'a' - 'A'
+		}
+		sb.WriteByte(c)
+	}
+	return sb.String()
+}
+
+// ToUpper is an ascii version os strings.ToUpper
+func ToUpper(s string) string {
+	var sb strings.Builder
+	sb.Grow(len(s))
+	for _, c := range []byte(s) {
+		if 'a' <= c && c <= 'z' {
+			c -= 'a' - 'A'
+		}
+		sb.WriteByte(c)
+	}
+	return sb.String()
+}

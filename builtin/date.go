@@ -9,6 +9,7 @@ import (
 
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/dnum"
+	"github.com/apmckinlay/gsuneido/util/str"
 )
 
 type SuDateGlobal struct {
@@ -178,7 +179,7 @@ func dayOfWeek(x Value) int {
 	if i, ok := x.IfInt(); ok {
 		return i
 	}
-	s := strings.ToLower(AsStr(x))
+	s := str.ToLower(AsStr(x))
 	days := []string{"sunday", "monday", "tuesday",
 		"wednesday", "thursday", "friday", "saturday"}
 	for i, d := range days {
