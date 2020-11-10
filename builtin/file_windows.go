@@ -17,8 +17,8 @@ var _ iFile = (*myfile)(nil)
 
 // appendFile is specifically for append on Windows
 // to handle bug with RDP shared folders
-func appendFile(name string) (iFile,error) {
-	h,err := syscall.Open(name, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
+func appendFile(name string) (iFile, error) {
+	h, err := syscall.Open(name, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
 	return &myfile{syscall.Handle(h)}, err
 }
 
@@ -44,8 +44,9 @@ func fileSize(f iFile) int64 {
 		off, err = syscall.Seek(mf.h, 0, io.SeekEnd)
 	} else {
 		var info os.FileInfo
-		info, err = f.(*os.File).Stat()
-		off = info.Size()
+		if info, err = f.(*os.File).Stat(); err == nil {
+			off = info.Size()
+		}
 	}
 	if err != nil {
 		panic("File: " + err.Error())
