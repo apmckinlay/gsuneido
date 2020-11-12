@@ -81,3 +81,27 @@ func TestFbtreeBuilder(t *testing.T) {
 	_, _, ok := iter()
 	assert.False(ok)
 }
+
+func TestFbtreeSplitKeys(*testing.T) {
+	defer func(mns int) { MaxNodeSize = mns }(MaxNodeSize)
+	MaxNodeSize = 64
+	GetLeafKey = func(_ *stor.Stor, _ *ixspec.T, i uint64) string {
+		return strconv.Itoa(int(i))
+	}
+	store := stor.HeapStor(8192)
+	bldr := NewFbtreeBuilder(store)
+	for i := 10; i <= 99; i++ {
+		key := strconv.Itoa(i)
+		bldr.Add(key, uint64(i))
+	}
+	fb := bldr.Finish().base()
+	// fb.print()
+	fb.check(nil)
+
+	fb = fb.makeMutable()
+	fb.Delete("28", 28)
+	// fb.print()
+	fb.Insert("28", 28)
+	// fb.print()
+	fb.check(nil)
+}

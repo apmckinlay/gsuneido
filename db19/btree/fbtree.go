@@ -5,6 +5,7 @@ package btree
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/db19/ixspec"
@@ -392,6 +393,7 @@ func (fb *fbtree) getNodeCk(off uint64, check bool) fNode {
 	node := readNode(fb.store, off)
 	if check {
 		cksum.MustCheck(node[:len(node)+cksum.Len])
+		assert.Msg("node too large").That(len(node) <= MaxNodeSize)
 	}
 	return node
 }
@@ -565,19 +567,25 @@ func (fb *fbtree) print1(depth int, offset uint64) {
 	}
 	print(strings.Repeat(" . ", depth)+"offset", OffStr(offset)+explan)
 	node := fb.getNode(offset)
+	var sb strings.Builder
 	for it := node.iter(); it.next(); {
 		offset := it.offset
 		if depth < fb.treeLevels {
 			// tree
-			// print(strings.Repeat(" . ", depth)+strconv.Itoa(it.fi)+":",
-			// 	it.npre, it.diff, "=", it.known)
+			print(strings.Repeat(" . ", depth)+strconv.Itoa(it.fi)+":",
+				it.npre, it.diff, "=", it.known)
 			fb.print1(depth+1, offset) // recurse
 		} else {
 			// leaf
 			// print(strings.Repeat(" . ", depth)+strconv.Itoa(it.fi)+":",
 			// 	OffStr(offset)+",", it.npre, it.diff, "=", it.known,
 			// 	"("+fb.getLeafKey(offset)+")")
+			sb.WriteString(fb.getLeafKey(offset))
+			sb.WriteByte(' ')
 		}
+	}
+	if depth == fb.treeLevels {
+		print(strings.Repeat(" . ", depth) + sb.String())
 	}
 }
 

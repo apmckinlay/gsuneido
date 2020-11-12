@@ -438,3 +438,13 @@ func (fn fNode) String() string {
 	}
 	return strings.TrimSpace(s) + "]"
 }
+
+func (fn fNode) knowns() string {
+	var sb strings.Builder
+	it := fn.iter()
+	for it.next() {
+		sb.Write(it.known)
+		sb.WriteByte(' ')
+	}
+	return sb.String()
+}
