@@ -5,6 +5,7 @@ package builtin
 
 import (
 	"log"
+	"runtime/debug"
 	"sync"
 	"time"
 
@@ -28,7 +29,7 @@ type threadList struct {
 	lock sync.Mutex
 }
 
-var threads = threadList{ list: map[int32]*Thread{} }
+var threads = threadList{list: map[int32]*Thread{}}
 
 func (ts *threadList) add(num int32, t *Thread) {
 	ts.lock.Lock()
@@ -56,12 +57,13 @@ func threadCallClass(t *Thread, args []Value) Value {
 	fn.SetConcurrent()
 	t2 := NewThread()
 	t2.Token = t.Dbms().Token()
-	
+
 	threads.add(t2.Num, t2)
 	go func() {
 		defer func() {
 			if e := recover(); e != nil {
 				log.Println("error in thread:", e)
+				log.Println(debug.Stack())
 				t2.PrintStack()
 			}
 			t2.Close()
