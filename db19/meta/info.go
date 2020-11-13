@@ -72,12 +72,12 @@ func (ti *Info) isTomb() bool {
 //-------------------------------------------------------------------
 
 type btOver = *btree.Overlay
-type Result = btree.Result
+type MergeResult = btree.MergeResult
 
 type MergeUpdate struct {
 	table   string
 	nmerged int
-	results []Result // per index
+	results []MergeResult // per index
 }
 
 // Merge collects the updates which are then applied by applyMerge.
@@ -85,7 +85,7 @@ type MergeUpdate struct {
 func (m *Meta) Merge(table string, tns []int) MergeUpdate {
 	// fmt.Println("Merge", table, tns)
 	ti := m.info.MustGet(table)
-	results := make([]Result, len(ti.Indexes))
+	results := make([]MergeResult, len(ti.Indexes))
 	for j, ov := range ti.Indexes {
 		results[j] = ov.Merge(tns)
 	}
@@ -109,20 +109,22 @@ func (m *Meta) ApplyMerge(updates []MergeUpdate) {
 
 //-------------------------------------------------------------------
 
+type SaveResult = btree.SaveResult
+
 type persistUpdate struct {
 	table   string
-	results []Result // per index
+	results []SaveResult // per index
 }
 
 // Persist is called by state.Persist to write the state to the database.
 // It collects the new fbtree roots which are then applied ApplyPersist.
 // WARNING: must not modify meta.
-func (m *Meta) Persist(flatten bool) []persistUpdate {
+func (m *Meta) Persist() []persistUpdate {
 	var updates []persistUpdate
 	m.info.ForEach(func(ti *Info) {
-		results := make([]Result, len(ti.Indexes))
+		results := make([]SaveResult, len(ti.Indexes))
 		for i, ov := range ti.Indexes {
-			r := ov.Save(flatten)
+			r := ov.Save()
 			if r == nil {
 				assert.That(i == 0)
 				return

@@ -58,9 +58,9 @@ loop:
 			merges.add(m)
 			merges.drain(mergeChan)
 			db.Merge(em.merge, merges)
-			db.GetState().meta.CheckTnMerged(m.tn)
+			// db.Merge(mergeSingle, merges)
+			// db.GetState().meta.CheckTnMerged(m.tn)
 		case <-ticker.C:
-			// fmt.Println("Persist")
 			state := db.GetState()
 			if state != prevState {
 				db.Persist(false)

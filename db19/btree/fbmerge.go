@@ -8,6 +8,8 @@ import (
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
+//TODO handle delete tombstones
+
 // merge is one node on the current path.
 // limit will be "" on the right hand edge i.e. no limit.
 // If modified is true, node is an in-memory copy that has been modified.
@@ -24,28 +26,27 @@ type state struct {
 	path []merge
 }
 
-var I int
-
 // Merge combines an fbtree and an iter.
 // It is immutable persistent, returning a new fbtree
 // that usually shares some of the structure of the original fbtree.
 // Modified nodes are written to storage.
 // It path copies.
-func (fb *fbtree) MergeAndSave(iter inter.Iter) {
-	st := state{fb: fb}
+func (fb *fbtree) MergeAndSave(iter inter.Iter) *fbtree {
+	fb2 := *fb // copy
+	st := state{fb: &fb2}
 	for {
 		key, off, ok := iter()
 		if !ok {
 			break
 		}
-		_ = T && trace("merge", I, key)
+		_ = T && trace("merge", key)
 		st.advanceTo(key)
 		st.insertInLeaf(key, off)
-		I++
 	}
 	for len(st.path) > 0 {
 		st.ascend()
 	}
+	return st.fb
 }
 
 // advanceTo traverses the tree to the leaf for key
@@ -122,7 +123,7 @@ func (st *state) ascend() {
 			parent.insertInNode(insertKey, insertOff, get)
 			if len(parent.node) >= (MaxNodeSize*3)/2 {
 				// if it gets too big, leave the node so it will be split
-				_ = T && trace("split - ascend", I)
+				_ = T && trace("split - ascend")
 				st.ascend() // tail recurse
 			}
 		}
@@ -155,7 +156,7 @@ func (fn fNode) search2(key string) (fi int, off uint64, known string) {
 }
 
 func (st *state) last() *merge {
-	return &st.path[len(st.path) - 1]
+	return &st.path[len(st.path)-1]
 }
 
 func (st *state) pop() {

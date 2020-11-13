@@ -16,36 +16,37 @@ type tree interface {
 	Iter(check bool) treeIter
 }
 
-// Overlay is an immutable fbtree plus one or more mbtrees.
-// Update transactions have a mutable inter.T at the top to store updates.
+// Overlay is an fbtree plus a base inter,
+// plus overlay inters from un-merged transactions,
+// plus a mutable inter within update transactions.
 type Overlay struct {
-	// under are the underlying fbtree and inter.T's
-	under []tree
-	// mut is the mutable top inter.T, nil if read-only
+	fb    *fbtree
+	under []*inter.T
+	// mut is the per transaction mutable top inter.T, nil if read-only
 	mut *inter.T
 }
 
 func NewOverlay(store *stor.Stor, is *ixspec.T) *Overlay {
 	assert.That(is != nil)
-	return &Overlay{under: []tree{CreateFbtree(store, is)}}
+	return &Overlay{fb: CreateFbtree(store, is),
+		under: []*inter.T{{}}}
 }
-
-// var Under [8]int64
 
 // Mutable returns a modifiable copy of an Overlay
 func (ov *Overlay) Mutable(tranNum int) *Overlay {
 	assert.That(ov.mut == nil)
-	under := append([]tree(nil), ov.under...) // copy
-	// atomic.AddInt64(&Under[len(under)], 1)
-	return &Overlay{under: under, mut: &inter.T{TranNum: tranNum}}
+	under := make([]*inter.T, len(ov.under))
+	copy(under, ov.under)
+	assert.That(len(under) >= 1)
+	return &Overlay{fb: ov.fb, under: under, mut: &inter.T{TranNum: tranNum}}
 }
 
 func (ov *Overlay) GetIxspec() *ixspec.T {
-	return ov.base().ixspec
+	return ov.fb.ixspec
 }
 
 func (ov *Overlay) SetIxspec(is *ixspec.T) {
-	ov.base().ixspec = is
+	ov.fb.ixspec = is
 }
 
 // Insert inserts into the mutable top inter.T
@@ -65,16 +66,12 @@ func (ov *Overlay) Delete(key string, off uint64) {
 }
 
 func (ov *Overlay) Check(fn func(uint64)) int {
-	n, _, _ := ov.base().check(fn)
+	n, _, _ := ov.fb.check(fn)
 	return n
 }
 
 func (ov *Overlay) QuickCheck() {
-	ov.base().quickCheck()
-}
-
-func (ov *Overlay) base() *fbtree {
-	return ov.under[0].(*fbtree)
+	ov.fb.quickCheck()
 }
 
 // iter -------------------------------------------------------------
@@ -153,92 +150,82 @@ func ovsrcLess(x, y *ovsrc) bool {
 //-------------------------------------------------------------------
 
 func (ov *Overlay) StorSize() int {
-	return 5 + 1 + 5
+	return 5 + 1
 }
 
 func (ov *Overlay) Write(w *stor.Writer) {
-	fb := ov.base()
-	w.Put5(fb.root).Put1(fb.treeLevels).Put5(fb.redirsOff)
+	fb := ov.fb
+	w.Put5(fb.root).Put1(fb.treeLevels)
 }
 
 // ReadOverlay reads an Overlay from storage BUT without ixspec
 func ReadOverlay(st *stor.Stor, r *stor.Reader) *Overlay {
 	root := r.Get5()
 	treeLevels := r.Get1()
-	redirsOff := r.Get5()
-	return &Overlay{under: []tree{OpenFbtree(st, root, treeLevels, redirsOff)}}
+	return &Overlay{fb: OpenFbtree(st, root, treeLevels), under: []*inter.T{{}}}
 }
 
 //-------------------------------------------------------------------
 
-// UpdateWith takes the inter.T updates from ov2 and adds them as a new layer to ov
+// UpdateWith combines the overlay result of a transaction
+// with the latest overlay.
+// The immutable part of ov was taken at the start of the transaction
+// so it will be out of date.
+// The checker ensures that the updates are independent.
 func (ov *Overlay) UpdateWith(latest *Overlay) {
+	ov.fb = latest.fb
 	// reuse the new slice and overwrite ov.under with the latest
 	ov.under = append(ov.under[:0], latest.under...)
-	// add inter.T updates
-	ov.Freeze()
-}
-
-func (ov *Overlay) Freeze() {
+	// add mut updates
 	ov.under = append(ov.under, ov.mut)
 	ov.mut = nil
+	assert.That(len(ov.under) >= 2)
 }
 
 //-------------------------------------------------------------------
 
-type Result = *fbtree
+type MergeResult = *inter.T
 
-// Merge merges the inter.T for tranNum (if there is one) into the fbtree
-func (ov *Overlay) Merge(tns []int) Result {
+// Merge merges the inter.T for tranNum (if there is one) into the base inter
+func (ov *Overlay) Merge(tns []int) MergeResult {
 	assert.That(ov.mut == nil)
 	for i, tn := range tns {
-		mut := ov.under[1+i].(*inter.T)
-		assert.That(mut.TranNum == tn)
+		assert.That(ov.under[1+i].TranNum == tn)
 	}
 	return ov.merge(len(tns))
 }
 
-// merge combines the base fbtree with one or more of the inter.T's
-// to produce a new fbtree. It does not modify the original fbtree or inter.T's.
-func (ov *Overlay) merge(nmb int) *fbtree {
-	return ov.base().Update(func(fb *fbtree) {
-		// ??? maybe faster to merge-iterate the inter.T's
-		for i := 1; i <= nmb; i++ {
-			mut := ov.under[i].(*inter.T)
-			mut.ForEach(func(key string, off uint64) {
-				if (off & tombstone) == 0 {
-					fb.Insert(key, off)
-				} else {
-					fb.Delete(key, off&^tombstone)
-				}
-			})
-		}
-	})
+// merge merges the base inter with one or more of the transaction inters
+// to produce a new base inter. It does not modify the original inter's.
+func (ov *Overlay) merge(nmb int) *inter.T {
+	return inter.Merge(ov.under[:nmb+1]...)
 }
 
-func (ov *Overlay) WithMerged(fb Result, nmerged int) *Overlay {
-	under := make([]tree, len(ov.under)-nmerged)
-	under[0] = fb
+func (ov *Overlay) WithMerged(mr MergeResult, nmerged int) *Overlay {
+	under := make([]*inter.T, len(ov.under)-nmerged)
+	under[0] = mr
 	copy(under[1:], ov.under[1+nmerged:])
-	return &Overlay{under: under}
+	return &Overlay{fb: ov.fb, under: under}
 }
 
 //-------------------------------------------------------------------
 
-// Save writes the Overlay's base fbtree to storage
-// and returns the new fbtree (in an Overlay) to later pass to With
-func (ov *Overlay) Save(flatten bool) Result {
+type SaveResult = *fbtree
+
+// Save updates the stored fbtree with the base inter
+// and returns the new fbtree to later pass to WithSaved
+func (ov *Overlay) Save() SaveResult {
 	assert.That(ov.mut == nil)
-	return ov.base().Save(flatten)
+	return ov.fb.MergeAndSave(ov.under[0].Iter(false))
 }
 
 // WithSaved returns a new Overlay,
 // combining the current state (ov) with the updated fbtree (in ov2)
-func (ov *Overlay) WithSaved(r Result) *Overlay {
-	under := make([]tree, len(ov.under))
-	under[0] = r
+func (ov *Overlay) WithSaved(fb SaveResult) *Overlay {
+	under := make([]*inter.T, len(ov.under))
+	under[0] = &inter.T{} // new empty base inter
 	copy(under[1:], ov.under[1:])
-	return &Overlay{under: under}
+	return &Overlay{fb: fb, under: under}
 }
 
 //-------------------------------------------------------------------
@@ -249,6 +236,6 @@ func (ov *Overlay) CheckFlat() {
 
 func (ov *Overlay) CheckTnMerged(tn int) {
 	for i := 1; i < len(ov.under); i++ {
-		assert.That(ov.under[i].(*inter.T).TranNum != tn)
+		assert.That(ov.under[i].TranNum != tn)
 	}
 }

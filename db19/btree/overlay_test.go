@@ -20,10 +20,10 @@ func TestEmptyOverlay(t *testing.T) {
 	GetLeafKey = func(_ *stor.Stor, _ *ixspec.T, i uint64) string { return data[i] }
 	defer func(mns int) { MaxNodeSize = mns }(MaxNodeSize)
 	MaxNodeSize = 64
-	fb := CreateFbtree(nil, nil)
+	fb := CreateFbtree(stor.HeapStor(8192), nil)
 	mut := &inter.T{}
-	mb2 := &inter.T{}
-	ov := &Overlay{under: []tree{fb, mb2}, mut: mut}
+	u := &inter.T{}
+	ov := &Overlay{fb: fb, under: []*inter.T{u}, mut: mut}
 	checkIter(t, data, ov)
 
 	const n = 100
@@ -32,7 +32,7 @@ func TestEmptyOverlay(t *testing.T) {
 	data = insert(data, n, randKey, mut)
 	checkIter(t, data, ov)
 
-	data = insert(data, n, randKey, mb2)
+	data = insert(data, n, randKey, u)
 	checkIter(t, data, ov)
 
 	for i := 0; i < n/2; i++ {
@@ -102,13 +102,29 @@ func TestOverlayMerge(t *testing.T) {
 	GetLeafKey = func(_ *stor.Stor, _ *ixspec.T, i uint64) string { return data[i] }
 	defer func(mns int) { MaxNodeSize = mns }(MaxNodeSize)
 	MaxNodeSize = 64
-	fb := CreateFbtree(nil, nil)
-	ov := Overlay{under: []tree{fb, mut}}
-	fb = ov.merge(1)
-	fb.checkData(t, data)
+	fb := CreateFbtree(stor.HeapStor(8192), nil)
+	bi := &inter.T{}
+	ov := Overlay{fb: fb, under: []*inter.T{bi, mut}}
+	bi = ov.merge(1)
+	checkData(t, bi, data)
 
 	mut = randInter()
-	ov = Overlay{under: []tree{fb, mut}}
-	fb = ov.merge(1)
-	fb.checkData(t, data)
+	ov = Overlay{fb: fb, under: []*inter.T{bi, mut}}
+	bi = ov.merge(1)
+	checkData(t, bi, data)
+}
+
+func checkData(t *testing.T, bi *inter.T, data []string) {
+	t.Helper()
+	assert.T(t).This(bi.Len()).Is(len(data))
+	sort.Strings(data)
+	i := 0
+	n := 0
+	it := bi.Iter(false)
+	for key,_,ok := it(); ok; key,_,ok = it() {
+		assert.T(t).This(key).Is(data[i])
+		i++
+		n++
+	}
+	assert.T(t).This(n).Is(len(data))
 }

@@ -68,9 +68,9 @@ func (db *Database) UpdateState(fn func(*DbState)) *DbState {
 // It is called by concur.go merger.
 func (db *Database) Merge(fn func(*DbState, *mergeList) []meta.MergeUpdate,
 	merges *mergeList) {
-	// updates := fn(db.GetState(), merges) // outside UpdateState
+	updates := fn(db.GetState(), merges) // outside UpdateState
 	db.UpdateState(func(state *DbState) {
-		updates := fn(state, merges)
+		// updates := fn(state, merges)
 		meta := *state.meta // copy
 		meta.ApplyMerge(updates)
 		state.meta = &meta
@@ -80,12 +80,14 @@ func (db *Database) Merge(fn func(*DbState, *mergeList) []meta.MergeUpdate,
 //-------------------------------------------------------------------
 
 // Persist writes index changes (and a new state) to the database file.
-// flatten refers to the redirects, not the index overlays.
-// It is called from concur.go
+// It is called from concur.go e.g. once per minute.
+// flatten applies to the schema and info chains.
 func (db *Database) Persist(flatten bool) uint64 {
+	// fmt.Println("Persist", flatten)
 	var off uint64
-	updates := db.GetState().meta.Persist(flatten) // outside UpdateState
+	updates := db.GetState().meta.Persist() // outside UpdateState
 	db.UpdateState(func(state *DbState) {
+		// updates := state.meta.Persist()
 		meta := *state.meta // copy
 		meta.ApplyPersist(updates)
 		state.meta = &meta

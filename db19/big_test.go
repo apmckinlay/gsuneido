@@ -23,15 +23,16 @@ import (
 )
 
 const (
-	dbfile        = "tmp.db"
-	ntables       = 1009
-	maxcols       = 211
-	maxidxs       = 11
-	maxidxcols    = 5
-	nrows         = 1_000_000
-	nthreads      = 4        // must divide evenly into nrows
-	tablesPerTran = 7
-	rowsPerTable  = 7
+	dbfile          = "tmp.db"
+	ntables         = 1009
+	maxcols         = 211
+	maxidxs         = 11
+	maxidxcols      = 5
+	nrows           = 1_000_000
+	nthreads        = 4 // must divide evenly into nrows
+	tablesPerTran   = 7
+	rowsPerTable    = 7
+	persistInterval = 500 * time.Millisecond
 )
 
 func TestBig(*testing.T) {
@@ -43,7 +44,7 @@ func TestBig(*testing.T) {
 	defer os.Remove(dbfile)
 	db, err := OpenDatabase(dbfile)
 	ck(err)
-	StartConcur(db, 277*time.Millisecond)
+	StartConcur(db, persistInterval)
 	fmt.Println("create data")
 	count := nrows / nthreads
 	start := 0
@@ -113,7 +114,7 @@ func createTables() []string {
 			}
 			idxSchema[j] = schema.Index{Columns: idxcols, Mode: mode}
 			idxInfo[j] = btree.NewOverlay(db.store, &ixspec.T{})
-			idxInfo[j].Save(false)
+			idxInfo[j].Save()
 		}
 		schema := schema.Schema{Table: table, Columns: cols, Indexes: idxSchema}
 		ts := &meta.Schema{Schema: schema}

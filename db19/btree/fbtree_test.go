@@ -37,12 +37,12 @@ func TestFbtreeIter(t *testing.T) {
 		data[i] = randKey()
 	}
 	sort.Strings(data[:])
-	fb := CreateFbtree(nil, nil)
-	fb = fb.Update(func(mfb *fbtree) {
-		for i, k := range data {
-			mfb.Insert(k, uint64(i))
-		}
-	})
+	store := stor.HeapStor(8192)
+	bldr := NewFbtreeBuilder(store)
+	for i, k := range data {
+		bldr.Add(k, uint64(i))
+	}
+	fb := bldr.Finish().fb
 	i := 0
 	iter := fb.Iter(true)
 	for k, o, ok := iter(); ok; k, o, ok = iter() {
@@ -68,7 +68,7 @@ func TestFbtreeBuilder(t *testing.T) {
 		key := strconv.Itoa(i)
 		bldr.Add(key, uint64(i))
 	}
-	fb := bldr.Finish().base()
+	fb := bldr.Finish().fb
 	fb.check(nil)
 	iter := fb.Iter(true)
 	for i := 100000; i <= limit; i++ {
@@ -80,28 +80,4 @@ func TestFbtreeBuilder(t *testing.T) {
 	}
 	_, _, ok := iter()
 	assert.False(ok)
-}
-
-func TestFbtreeSplitKeys(*testing.T) {
-	defer func(mns int) { MaxNodeSize = mns }(MaxNodeSize)
-	MaxNodeSize = 64
-	GetLeafKey = func(_ *stor.Stor, _ *ixspec.T, i uint64) string {
-		return strconv.Itoa(int(i))
-	}
-	store := stor.HeapStor(8192)
-	bldr := NewFbtreeBuilder(store)
-	for i := 10; i <= 99; i++ {
-		key := strconv.Itoa(i)
-		bldr.Add(key, uint64(i))
-	}
-	fb := bldr.Finish().base()
-	// fb.print()
-	fb.check(nil)
-
-	fb = fb.makeMutable()
-	fb.Delete("28", 28)
-	// fb.print()
-	fb.Insert("28", 28)
-	// fb.print()
-	fb.check(nil)
 }

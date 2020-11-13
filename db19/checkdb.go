@@ -68,7 +68,7 @@ func checkTable(state *DbState, table string) {
 	info := state.meta.GetRoInfo(table)
 	count, sum := checkFirstIndex(state, info.Indexes[0])
 	if count != info.Nrows {
-		fmt.Println(table, "count", count, "nrows", info.Nrows)
+		fmt.Println(table, "count", count, "info.Nrows", info.Nrows)
 		panic("count != nrows")
 	}
 	for i := 1; i < len(info.Indexes); i++ {

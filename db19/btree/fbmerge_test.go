@@ -39,7 +39,7 @@ func TestFbMerge(*testing.T) {
 		for j := 0; j < insertsPerMerge; j++ {
 			x.Insert(d.next(""))
 		}
-		fb.MergeAndSave(x.Iter(false))
+		fb = fb.MergeAndSave(x.Iter(false))
 	}
 	fb.check(nil)
 	d.check(fb)

@@ -21,7 +21,7 @@ import (
 
 func TestConcurrent(t *testing.T) {
 	db := createDb()
-	StartConcur(db, 100*time.Millisecond)
+	StartConcur(db, 50*time.Millisecond)
 	var nclients = 8
 	var ntrans = 4000
 	if testing.Short() {
@@ -44,6 +44,7 @@ func TestConcurrent(t *testing.T) {
 	db.ck.Stop()
 	db.ck = nil
 
+	ck(db.Check())
 	var nout = nclients * ntrans
 	rt := db.NewReadTran()
 	ti := rt.meta.GetRoInfo("mytable")
@@ -60,9 +61,10 @@ func TestTran(t *testing.T) {
 	db := createDb()
 	db.ck = NewCheck()
 
-	const nout = 2000
+	const nout = 4000
 	for i := 0; i < nout; i++ {
 		ut := output1(db)
+		// commit synchronously
 		tables := db.ck.(*Check).commit(ut)
 		tn := ut.commit()
 		merges := &mergeList{}
@@ -81,6 +83,7 @@ func TestTran(t *testing.T) {
 		}
 	}
 	db.Persist(true)
+	ck(db.Check())
 	db.Close()
 
 	db, err = OpenDatabaseRead("tmp.db")
@@ -104,7 +107,7 @@ func createDb() *Database {
 		Indexes: []schema.Index{{Columns: []string{"one"}, Ixspec: is}},
 	}}
 	ov := btree.NewOverlay(db.store, &is)
-	ov.Save(false)
+	ov.Save()
 	ti := &meta.Info{
 		Table:   "mytable",
 		Indexes: []*btree.Overlay{ov},
