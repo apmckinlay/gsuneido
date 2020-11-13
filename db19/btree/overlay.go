@@ -186,19 +186,11 @@ func (ov *Overlay) UpdateWith(latest *Overlay) {
 
 type MergeResult = *inter.T
 
-// Merge merges the inter.T for tranNum (if there is one) into the base inter
-func (ov *Overlay) Merge(tns []int) MergeResult {
-	assert.That(ov.mut == nil)
-	for i, tn := range tns {
-		assert.That(ov.under[1+i].TranNum == tn)
-	}
-	return ov.merge(len(tns))
-}
-
-// merge merges the base inter with one or more of the transaction inters
+// Merge merges the base inter with one or more of the transaction inters
 // to produce a new base inter. It does not modify the original inter's.
-func (ov *Overlay) merge(nmb int) *inter.T {
-	return inter.Merge(ov.under[:nmb+1]...)
+func (ov *Overlay) Merge(nmerge int) MergeResult {
+	assert.That(ov.mut == nil)
+	return inter.Merge(ov.under[:nmerge+1]...)
 }
 
 func (ov *Overlay) WithMerged(mr MergeResult, nmerged int) *Overlay {

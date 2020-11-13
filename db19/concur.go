@@ -4,16 +4,12 @@
 package db19
 
 import (
-	"sort"
 	"time"
 
 	"github.com/apmckinlay/gsuneido/db19/meta"
 )
 
-type merge struct {
-	tn     int
-	tables []string
-}
+type merge []string
 
 type void = struct{}
 
@@ -51,7 +47,7 @@ loop:
 	for {
 		select {
 		case m := <-mergeChan: // receive mergeMsg's from commit
-			if m.tn == 0 { // zero value means channel closed
+			if m == nil { // channel closed
 				break loop
 			}
 			merges.reset()
@@ -59,7 +55,6 @@ loop:
 			merges.drain(mergeChan)
 			db.Merge(em.merge, merges)
 			// db.Merge(mergeSingle, merges)
-			// db.GetState().meta.CheckTnMerged(m.tn)
 		case <-ticker.C:
 			state := db.GetState()
 			if state != prevState {
@@ -76,8 +71,8 @@ loop:
 // mergeSingle is a single threaded merge for tran_test
 func mergeSingle(state *DbState, merges *mergeList) []meta.MergeUpdate {
 	var results []meta.MergeUpdate
-	for i, table := range merges.tables {
-		result := state.meta.Merge(table, merges.tns[i:i+1])
+	for _, tn := range merges.tn {
+		result := state.meta.Merge(tn.table, tn.nmerge)
 		results = append(results, result)
 	}
 	return results
@@ -104,25 +99,16 @@ func startMergeWorkers() *execMulti {
 func (em *execMulti) merge(state *DbState, merges *mergeList) []meta.MergeUpdate {
 	//TODO if only one table, just merge it in this thread
 	// and avoid overhead of channels and worker
-	sort.Stable(merges)
-	i := 0
-	j := 0
-	n := merges.Len()
-	for ; j < n && merges.tables[j] == merges.tables[i]; j++ {
-	}
-	sent := 0
-	for i < n {
+	for i := 0; i < len(merges.tn); {
 		select {
 		case em.jobChan <- job{meta: state.meta,
-			table: merges.tables[i], tns: merges.tns[i:j]}:
-			sent++
-			for i = j; j < n && merges.tables[j] == merges.tables[i]; j++ {
-			}
+			table: merges.tn[i].table, nmerge: merges.tn[i].nmerge}:
+			i++
 		case result := <-em.resultChan:
 			merges.results = append(merges.results, result)
 		}
 	}
-	for len(merges.results) < sent {
+	for len(merges.results) < len(merges.tn) {
 		result := <-em.resultChan
 		merges.results = append(merges.results, result)
 	}
@@ -130,28 +116,37 @@ func (em *execMulti) merge(state *DbState, merges *mergeList) []meta.MergeUpdate
 }
 
 type job struct {
-	meta  *meta.Meta
-	table string
-	tns   []int
+	meta   *meta.Meta
+	table  string
+	nmerge int
 }
 
 func (em *execMulti) worker() {
 	for j := range em.jobChan {
-		em.resultChan <- j.meta.Merge(j.table, j.tns)
+		em.resultChan <- j.meta.Merge(j.table, j.nmerge)
 	}
 }
 
-// mergeList uses parallel arrays for tables and tns to allow slices of tns
 type mergeList struct {
-	tables  []string
-	tns     []int //TODO just need count
+	tn      []tableCount
 	results []meta.MergeUpdate
 }
 
+type tableCount struct {
+	table  string
+	nmerge int
+}
+
 func (ml *mergeList) add(m merge) {
-	for _, table := range m.tables {
-		ml.tns = append(ml.tns, m.tn)
-		ml.tables = append(ml.tables, table)
+outer:
+	for _, table := range m {
+		for i := range ml.tn {
+			if ml.tn[i].table == table {
+				ml.tn[i].nmerge++
+				continue outer
+			}
+		}
+		ml.tn = append(ml.tn, tableCount{table: table, nmerge: 1})
 	}
 }
 
@@ -159,7 +154,7 @@ func (ml *mergeList) drain(mergeChan chan merge) {
 	for {
 		select {
 		case m := <-mergeChan:
-			if m.tn == 0 { // zero value means channel closed
+			if m == nil { // channel closed
 				return
 			}
 			ml.add(m)
@@ -170,22 +165,6 @@ func (ml *mergeList) drain(mergeChan chan merge) {
 }
 
 func (ml *mergeList) reset() {
-	ml.tables = ml.tables[:0]
-	ml.tns = ml.tns[:0]
+	ml.tn = ml.tn[:0]
 	ml.results = ml.results[:0]
-}
-
-// sort interface
-
-func (ml *mergeList) Len() int {
-	return len(ml.tns)
-}
-
-func (ml *mergeList) Less(i, j int) bool {
-	return ml.tables[i] < ml.tables[j]
-}
-
-func (ml *mergeList) Swap(i, j int) {
-	ml.tables[i], ml.tables[j] = ml.tables[j], ml.tables[i]
-	ml.tns[i], ml.tns[j] = ml.tns[j], ml.tns[i]
 }

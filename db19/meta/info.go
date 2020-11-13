@@ -82,14 +82,14 @@ type MergeUpdate struct {
 
 // Merge collects the updates which are then applied by applyMerge.
 // WARNING: must not modify meta.
-func (m *Meta) Merge(table string, tns []int) MergeUpdate {
+func (m *Meta) Merge(table string, nmerge int) MergeUpdate {
 	// fmt.Println("Merge", table, tns)
 	ti := m.info.MustGet(table)
 	results := make([]MergeResult, len(ti.Indexes))
 	for j, ov := range ti.Indexes {
-		results[j] = ov.Merge(tns)
+		results[j] = ov.Merge(nmerge)
 	}
-	return MergeUpdate{table: table, nmerged: len(tns), results: results}
+	return MergeUpdate{table: table, nmerged: nmerge, results: results}
 }
 
 // ApplyMerge applies the updates collected by Merge

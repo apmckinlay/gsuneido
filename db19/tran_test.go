@@ -66,9 +66,9 @@ func TestTran(t *testing.T) {
 		ut := output1(db)
 		// commit synchronously
 		tables := db.ck.(*Check).commit(ut)
-		tn := ut.commit()
+		ut.commit()
 		merges := &mergeList{}
-		merges.add(merge{tn: tn, tables: tables})
+		merges.add(tables)
 		db.Merge(mergeSingle, merges)
 		if i%100 == 50 {
 			if i%500 != 250 {

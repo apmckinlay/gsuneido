@@ -105,12 +105,12 @@ func TestOverlayMerge(t *testing.T) {
 	fb := CreateFbtree(stor.HeapStor(8192), nil)
 	bi := &inter.T{}
 	ov := Overlay{fb: fb, under: []*inter.T{bi, mut}}
-	bi = ov.merge(1)
+	bi = ov.Merge(1)
 	checkData(t, bi, data)
 
 	mut = randInter()
 	ov = Overlay{fb: fb, under: []*inter.T{bi, mut}}
-	bi = ov.merge(1)
+	bi = ov.Merge(1)
 	checkData(t, bi, data)
 }
 

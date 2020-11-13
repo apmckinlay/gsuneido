@@ -138,8 +138,8 @@ func (ck *Check) dispatch(msg interface{}, mergeChan chan merge) {
 			// (can't fail at this point)
 			// Since we haven't returned, no other activity will happen
 			// until we finish the commit. i.e. serialized
-			tn := msg.t.commit()
-			mergeChan <- merge{tn: tn, tables: result}
+			msg.t.commit()
+			mergeChan <- result
 			//TODO commit and send merge in another goroutine ?
 		}
 	default:
