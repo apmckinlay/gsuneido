@@ -30,17 +30,17 @@ var _ = builtin("RunPiped(command, block=false)",
 		cmdSetup(cmd, command)
 		w, err := cmd.StdinPipe()
 		if err != nil {
-			panic("RunPiped create pipe failed: " + err.Error())
+			panic("RunPiped: create pipe failed: " + err.Error())
 		}
 		r, err := cmd.StdoutPipe()
 		if err != nil {
-			panic("RunPiped create pipe failed: " + err.Error())
+			panic("RunPiped: create pipe failed: " + err.Error())
 		}
 		cmd.Stderr = cmd.Stdout
 
 		err = cmd.Start()
 		if err != nil {
-			panic("Runpiped failed to start: " + err.Error())
+			panic("Runpiped: failed to start: " + err.Error())
 		}
 		rp := &suRunPiped{command: command, cmd: cmd, w: w, r: r}
 		nRunPiped++
@@ -154,7 +154,7 @@ var suRunPipedMethods = Methods{
 		err := cmd.Wait()
 		if err != nil {
 			if _, ok := err.(*exec.ExitError); !ok {
-				panic("RunPiped.ExitValue failed: " + err.Error())
+				panic("RunPiped: ExitValue failed: " + err.Error())
 			}
 		}
 		return IntVal(cmd.ProcessState.ExitCode())
@@ -171,7 +171,7 @@ var suRunPipedMethods = Methods{
 			return False
 		}
 		if err != nil {
-			panic("runpiped.Read " + err.Error())
+			panic("RunPiped: Read " + err.Error())
 		}
 		return SuStr(string(buf[:m]))
 	}),
@@ -181,14 +181,14 @@ var suRunPipedMethods = Methods{
 	"Write": method1("(string)", func(this, arg Value) Value {
 		_, err := io.WriteString(rpWrite(this).w, AsStr(arg))
 		if err != nil {
-			panic("runpiped.Write failed " + err.Error())
+			panic("RunPiped: Write failed " + err.Error())
 		}
 		return arg
 	}),
 	"Writeline": method1("(string)", func(this, arg Value) Value {
 		_, err := io.WriteString(rpWrite(this).w, AsStr(arg)+"\n")
 		if err != nil {
-			panic("runpiped.Writeline failed " + err.Error())
+			panic("RunPiped: Writeline failed " + err.Error())
 		}
 		return arg
 	}),
@@ -197,7 +197,7 @@ var suRunPipedMethods = Methods{
 func rpOpen(this Value) *suRunPiped {
 	rp := this.(*suRunPiped)
 	if rp.r == nil {
-		panic("can't use a closed RunPiped")
+		panic("RunPiped: can't use after Close")
 	}
 	return rp
 }
@@ -205,7 +205,7 @@ func rpOpen(this Value) *suRunPiped {
 func rpWrite(this Value) *suRunPiped {
 	rp := this.(*suRunPiped)
 	if rp.w == nil {
-		panic("can't write to a closed RunPiped")
+		panic("RunPiped: can't use after Close")
 	}
 	return rp
 }
