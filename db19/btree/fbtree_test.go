@@ -9,6 +9,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/apmckinlay/gsuneido/db19/btree/inter"
 	"github.com/apmckinlay/gsuneido/db19/ixspec"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 
@@ -70,6 +71,8 @@ func TestFbtreeBuilder(t *testing.T) {
 	}
 	fb := bldr.Finish().fb
 	fb.check(nil)
+
+	// iterate
 	iter := fb.Iter(true)
 	for i := 100000; i <= limit; i++ {
 		key := strconv.Itoa(i)
@@ -80,4 +83,57 @@ func TestFbtreeBuilder(t *testing.T) {
 	}
 	_, _, ok := iter()
 	assert.False(ok)
+
+	// search
+	for i := 100000; i <= limit; i++ {
+		key := strconv.Itoa(i)
+		assert.This(fb.Search(key)).Is(i)
+	}
+}
+
+func ExampleFbtreeBuilder2() {
+	GetLeafKey = func(_ *stor.Stor, _ *ixspec.T, i uint64) string {
+		return strconv.Itoa(int(i))
+	}
+	store := stor.HeapStor(8192)
+	bldr := NewFbtreeBuilder(store)
+	bldr.Add("1000xxxx", 1000)
+	bldr.Add("1001xxxx", 1001)
+	bldr.Add("1002xxxx", 1002)
+	bldr.Add("1003xxxx", 1003)
+	fb := bldr.Finish().fb
+	fb.print()
+	// The important thing here is that the second known (1001)
+	// is NOT "1" which would mean searches for 1000 would fail
+	// and NOT "1001xxxx" which is longer than necessary.
+
+	// Output:
+	// <<<------------------------------
+	// offset 0  LEAF
+	// '' 1001 1002 1003
+	// ------------------------------>>>
+}
+
+func ExampleFbtree_MergeAndSave() {
+	GetLeafKey = func(_ *stor.Stor, _ *ixspec.T, i uint64) string {
+		return strconv.Itoa(int(i))
+	}
+	store := stor.HeapStor(8192)
+	x := &inter.T{}
+	x.Insert("1000xxxx", 1000)
+	x.Insert("1001xxxx", 1001)
+	x.Insert("1002xxxx", 1002)
+	x.Insert("1003xxxx", 1003)
+	fb := CreateFbtree(store, nil)
+	fb = fb.MergeAndSave(x.Iter(false))
+	fb.print()
+	// The important thing here is that the second known (1001)
+	// is NOT "1" which would mean searches for 1000 would fail
+	// and NOT "1001xxxx" which is longer than necessary.
+
+	// Output:
+	// <<<------------------------------
+	// offset 4  LEAF
+	// '' 1001 1002 1003
+	// ------------------------------>>>
 }

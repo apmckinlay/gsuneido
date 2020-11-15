@@ -58,8 +58,13 @@ type fData struct {
 type fNodeBuilder struct {
 	fe       fNode
 	notFirst bool
+	fi       int
 	prev     string
 	known    string
+	offset   uint64
+	fi2      int
+	known2   string
+	offset2  uint64
 }
 
 func (fb *fNodeBuilder) Add(key string, offset uint64, embedLen int) {
@@ -74,11 +79,30 @@ func (fb *fNodeBuilder) Add(key string, offset uint64, embedLen int) {
 		fb.fe = fAppend(fb.fe, offset, 0, "")
 		fb.known = ""
 	} else {
+		fb.fi2 = fb.fi
+		fb.fi = len(fb.fe)
 		npre, diff, known := addone(key, fb.prev, fb.known, embedLen)
 		fb.fe = fAppend(fb.fe, offset, npre, diff)
+		fb.known2 = fb.known
 		fb.known = known
-		fb.prev = key
+		fb.offset2 = fb.offset
+		fb.offset = offset
 	}
+	fb.prev = key
+}
+
+// Split saves all but the last two entries as the left node
+// and initializes fb.fe with the last two entries
+func (fb *fNodeBuilder) Split(store *stor.Stor) (leftOff uint64, splitKey string) {
+	splitKey = fb.known2 // known of second last entry
+	left := fb.fe[:fb.fi2]
+	leftOff = left.putNode(store)
+	// first entry becomes 0, ""
+	right := fAppend(fb.fe[:0], fb.offset2, 0, "") // offset of second last entry
+	// second entry becomes 0, known
+	right = fAppend(right, fb.offset, 0, fb.known) // offset,known of last entry
+	fb.fe = right
+	return
 }
 
 func (fb *fNodeBuilder) Entries() fNode {
@@ -419,8 +443,11 @@ func print(args ...interface{}) {
 			if x == "" {
 				args[i] = "'" + x + "'"
 			}
-			case []byte:
-				args[i] = string(x)
+		case []byte:
+			args[i] = string(x)
+			if len(x) == 0 {
+				args[i] = "''"
+			}
 		}
 	}
 	fmt.Println(args...)

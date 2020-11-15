@@ -45,6 +45,8 @@ func TestFbMerge(*testing.T) {
 	d.check(fb)
 }
 
+//-------------------------------------------------------------------
+
 func (st *state) print() {
 	fmt.Println("state:", st.fb.treeLevels)
 	for _, m := range st.path {
@@ -87,6 +89,11 @@ func (d *dat) next(prefix string) (string, uint64) {
 }
 
 func (d *dat) check(fb *fbtree) {
+	for i,key := range d.keys {
+		off := fb.Search(key)
+		assert.That(off == uint64(i))
+	}
+
 	sort.Strings(d.keys)
 	i := 0
 	iter := fb.Iter(true)

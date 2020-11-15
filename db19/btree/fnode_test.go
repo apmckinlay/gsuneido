@@ -4,11 +4,13 @@
 package btree
 
 import (
+	"fmt"
 	"math/rand"
 	"sort"
 	"strings"
 	"testing"
 
+	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
@@ -46,6 +48,7 @@ func TestFnodeInsert(*testing.T) {
 		"a ab abc abcd",
 		"ant ants bun bunnies bunny buns cat a anti b bunn ca cats",
 		"bbb bbc abc aa ab bc c aaa ba bba bb b a",
+		"1000 1001 1002 1003",
 	}
 	for _, s := range datas {
 		data := strings.Fields(s)
@@ -318,4 +321,58 @@ func BenchmarkFnode(b *testing.B) {
 			S2 = iter.diff
 		}
 	}
+}
+
+func ExampleFnodeBuilderSplit() {
+	var fb fNodeBuilder
+	fb.Add("1234xxxx", 1234, 1)
+	fb.Add("1235xxxx", 1235, 1)
+	fb.Add("1299xxxx", 1299, 1)
+	fb.Add("1300xxxx", 1300, 1)
+	fb.Add("1305xxxx", 1305, 1)
+	store := stor.HeapStor(8192)
+	leftOff, splitKey := fb.Split(store)
+	// assert.T(t).This(splitKey).Is("13")
+	fmt.Println("splitKey", splitKey)
+	fmt.Println("LEFT ---")
+	readNode(store, leftOff).print()
+	fmt.Println("RIGHT ---")
+	fb.fe.print()
+
+	// Output:
+	// splitKey 13
+	// LEFT ---
+	// 1234 ''
+	// 1235 1235
+	// 1299 129
+	// RIGHT ---
+	// 1300 ''
+	// 1305 1305
+}
+
+func ExampleFbmergeSplit() {
+	var fb fNodeBuilder
+	fb.Add("1234xxxx", 1234, 1)
+	fb.Add("1235xxxx", 1235, 1)
+	fb.Add("1299xxxx", 1299, 1)
+	fb.Add("1300xxxx", 1300, 1)
+	fb.Add("1305xxxx", 1305, 1)
+	m := merge{node: fb.fe, modified: true}
+	left, right, splitKey := m.split()
+	// assert.T(t).This(splitKey).Is("13")
+	fmt.Println("splitKey", splitKey)
+	fmt.Println("LEFT ---")
+	left.print()
+	fmt.Println("RIGHT ---")
+	right.print()
+
+	// Output:
+	// splitKey 13
+	// LEFT ---
+	// 1234 ''
+	// 1235 1235
+	// 1299 129
+	// RIGHT ---
+	// 1300 ''
+	// 1305 1305
 }

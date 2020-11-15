@@ -11,7 +11,6 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/ixspec"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/runtime"
-	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/cksum"
 )
 
@@ -92,7 +91,6 @@ func (fb *fbtree) getNodeCk(off uint64, check bool) fNode {
 	node := readNode(fb.store, off)
 	if check {
 		cksum.MustCheck(node[:len(node)+cksum.Len])
-		assert.Msg("node too large").That(len(node) <= MaxNodeSize)
 	}
 	return node
 }
@@ -159,7 +157,7 @@ func (fb *fbtree) check1(depth int, offset uint64, key *string,
 				panic("keys out of order")
 			}
 			*key = string(it.known)
-			c, s, n := fb.check1(depth+1, offset, key, fn) // recurse
+			c, s, n := fb.check1(depth+1, offset, key, fn) // RECURSE
 			count += c
 			size += s
 			nnodes += n
@@ -244,6 +242,7 @@ func (fb *fbtree) print1(depth int, offset uint64) {
 	print(strings.Repeat(" . ", depth)+"offset", offset, explan)
 	node := fb.getNode(offset)
 	var sb strings.Builder
+	sep := ""
 	for it := node.iter(); it.next(); {
 		offset := it.offset
 		if depth < fb.treeLevels {
@@ -254,10 +253,16 @@ func (fb *fbtree) print1(depth int, offset uint64) {
 		} else {
 			// leaf
 			// print(strings.Repeat(" . ", depth)+strconv.Itoa(it.fi)+":",
-			// 	OffStr(offset)+",", it.npre, it.diff, "=", it.known,
+			// 	strconv.Itoa(int(offset))+",", it.npre, it.diff, "=", it.known,
 			// 	"("+fb.getLeafKey(offset)+")")
-			sb.WriteString(fb.getLeafKey(offset))
-			sb.WriteByte(' ')
+			sb.WriteString(sep)
+			sep = " "
+			if len(it.known) == 0 {
+				sb.WriteString("''")
+			} else {
+				sb.Write(it.known)
+			}
+			// sb.WriteString(" = " + fb.getLeafKey(offset))
 		}
 	}
 	if depth == fb.treeLevels {
@@ -272,15 +277,15 @@ func (fb *fbtree) print1(depth int, offset uint64) {
 // The fbtree is built bottom up with no splitting or inserting.
 // All nodes will be "full" except for the right hand edge.
 type fbtreeBuilder struct {
-	levels   []*level // leaf is [0]
-	prev     string
-	notFirst bool
-	store    *stor.Stor
+	levels []*level // leaf is [0]
+	prev   string
+	store  *stor.Stor
+	count  int
 }
 
 type level struct {
-	first   string
-	builder fNodeBuilder
+	splitKey string
+	builder  fNodeBuilder
 }
 
 func NewFbtreeBuilder(store *stor.Stor) *fbtreeBuilder {
@@ -288,36 +293,32 @@ func NewFbtreeBuilder(store *stor.Stor) *fbtreeBuilder {
 }
 
 func (fb *fbtreeBuilder) Add(key string, off uint64) {
-	if fb.notFirst {
+	if fb.count > 0 {
 		if key == fb.prev {
 			panic("fbtreeBuilder keys must not have duplicates")
 		}
 		if key < fb.prev {
 			panic("fbtreeBuilder keys must be inserted in order")
 		}
-	} else {
-		fb.notFirst = true
 	}
-	fb.insert(0, key, off)
+	fb.add(0, key, off)
 	fb.prev = key
+	fb.count++
 }
 
-func (fb *fbtreeBuilder) insert(li int, key string, off uint64) {
+func (fb *fbtreeBuilder) add(li int, key string, off uint64) {
 	if li >= len(fb.levels) {
 		fb.levels = append(fb.levels, &level{})
 	}
 	lev := fb.levels[li]
-	if len(lev.builder.fe) > (MaxNodeSize * 2 / 3) {
-		// flush full node to stor
-		offNode := lev.builder.fe.putNode(fb.store)
-		fb.insert(li+1, lev.first, offNode) // recurse
-		*lev = level{}
-	}
-	if len(lev.builder.fe) == 0 {
-		lev.first = key
+	if len(lev.builder.fe) > (MaxNodeSize * 3 / 4) {
+		// split full node to stor
+		offNode, splitKey := lev.builder.Split(fb.store)
+		fb.add(li+1, lev.splitKey, offNode) // RECURSE
+		lev.splitKey = splitKey
 	}
 	embedLen := 1
-	if li > 0 {
+	if li > 0 /*|| fb.count == 1*/ {
 		embedLen = 255
 	}
 	lev.builder.Add(key, off, embedLen)
@@ -331,7 +332,7 @@ func (fb *fbtreeBuilder) Finish() *Overlay {
 			// allow node to slightly exceed max size
 			fb.levels[li].builder.Add(key, off, 255)
 		}
-		key = fb.levels[li].first
+		key = fb.levels[li].splitKey
 		off = fb.levels[li].builder.fe.putNode(fb.store)
 	}
 	treeLevels := len(fb.levels) - 1
