@@ -49,10 +49,12 @@ loop:
 			Unattended = true
 		case match(&args, "-version"), match(&args, "-v"):
 			Action = "version"
+		case match(&args, "-ignoreversion"), match(&args, "-iv"):
+			// for compatibility with cSuneido
 		case match(&args, "--"):
 			break loop
 		default:
-			Action = "help"
+			error("invalid command line argument: " + args[0])
 		}
 		if Action == "error" {
 			return

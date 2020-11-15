@@ -32,10 +32,10 @@ var help = `options:
 	-l[oad] [table]
 	-p[ort] # (default 3147)
 	-repair
-    -r[epl]
+	-r[epl]
 	-s[erver]
 	-u[nattended]
-    -v[ersion]`
+	-v[ersion]`
 
 // dbmsLocal is set if running with a local/standalone database.
 var dbmsLocal IDbms
@@ -112,8 +112,7 @@ func main() {
 		fmt.Println(help)
 		os.Exit(0)
 	case "error":
-		fmt.Println(options.Error)
-		os.Exit(1)
+		Fatal(options.Error)
 	case "repl", "client":
 		// handled below
 	default:

@@ -63,6 +63,7 @@ func TestParse(t *testing.T) {
 	test("-dump", "stdlib")("dump stdlib")
 	test("-server")("server")
 	test("-repair")("repair")
+	test("-xyz")("error")
 }
 
 func TestEscapeArg(t *testing.T) {
