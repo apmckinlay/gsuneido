@@ -41,10 +41,9 @@ type parserBase struct {
 type parser struct {
 	parserBase
 
-	// expectingCompound is used to differentiate control statement body vs. block
-	// e.g. if expr {...}
-	// set by function.go used by expression.go
-	expectingCompound bool
+	// funcInfo is information gathered specific to a function
+	// it must be saved/reset/restored for nested functions
+	funcInfo
 
 	// lib is passed to named constants for Display
 	lib string
@@ -59,16 +58,17 @@ type parser struct {
 	// e.g. foo = function () { ... }; Name(foo) => "foo"
 	assignName string
 
+	// checker is used to add additional checking along with codegen
+	checker *check.Check
+
+	// expectingCompound is used to differentiate control statement body vs. block
+	// e.g. if expr {...}
+	// set by function.go used by expression.go
+	expectingCompound bool
+
 	// itUsed records whether an "it" variable is used
 	// to know whether to add an automatic "it" parameter to blocks
 	itUsed bool
-
-	// funcInfo is information gathered specific to a function
-	// it must be saved/reset/restored for nested functions
-	funcInfo
-
-	// checker is used to add additional checking along with codegen
-	checker *check.Check
 }
 
 type funcInfo struct {

@@ -42,14 +42,14 @@ func emptyOb() *SuObject {
 // If concurrent is 0, no locking, assumed to be thread contained
 // If concurrent is 1, guarded by lock, assumed to be shared
 type SuObject struct {
-	list     []Value
+	CantConvert
 	named    hmap.Hmap
-	readonly bool
-	version  int32
-	clock    int32
+	list     []Value
 	defval   Value
 	MayLock
-	CantConvert
+	version  int32
+	clock    int32
+	readonly bool
 }
 
 // NewSuObject creates an SuObject from its arguments

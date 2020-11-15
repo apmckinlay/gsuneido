@@ -15,6 +15,28 @@ import (
 // See also ArgSpec which describes the arguments of a function call
 // It also serves as the basis for callables like SuFunc
 type ParamSpec struct {
+	CantConvert
+
+	// Values contains any literals in the function
+	// starting with parameter defaults
+	Values []Value
+
+	// Flags specifies "types" of params
+	Flags []Flag
+
+	// Names normally starts with the parameters, followed by local variables
+	Names []string
+
+	// Lib is the library that the function came from
+	Lib string
+
+	// Name for library records will be the record name;
+	// for class methods, the method name;
+	// if assigned to a local variable, the variable name.
+	// It is primarily for debugging, i.e. call stack traces.
+	// See also: Name(value) builtin function
+	Name string
+
 	// Nparams is the number of arguments required on the stack
 	Nparams uint8
 
@@ -31,28 +53,6 @@ type ParamSpec struct {
 
 	// Signature is used for fast matching of simple Argspec to ParamSpec
 	Signature byte
-
-	// Flags specifies "types" of params
-	Flags []Flag
-
-	// Names normally starts with the parameters, followed by local variables
-	Names []string
-
-	// Values contains any literals in the function
-	// starting with parameter defaults
-	Values []Value
-
-	// Lib is the library that the function came from
-	Lib string
-
-	// Name for library records will be the record name;
-	// for class methods, the method name;
-	// if assigned to a local variable, the variable name.
-	// It is primarily for debugging, i.e. call stack traces.
-	// See also: Name(value) builtin function
-	Name string
-
-	CantConvert
 }
 
 // Flag is a bit set of parameter options

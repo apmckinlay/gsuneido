@@ -12,15 +12,14 @@ import (
 // the Iter is either built-in e.g. Seq or object.Members,
 // or user defined via Sequence
 type SuSequence struct {
+	CantConvert
 	// iter is the iterator we're wrapping
 	iter Iter
+	// ob is nil until the sequence is instantiated
+	ob *SuObject
 	// duped tracks whether the sequence has been duplicated
 	// this is used to decide to instantiate
 	duped bool
-	// ob is nil until the sequence is instantiated
-	ob *SuObject
-
-	CantConvert
 }
 
 func NewSuSequence(it Iter) *SuSequence {

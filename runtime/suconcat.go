@@ -18,9 +18,9 @@ import (
 // SuConcat is a Value used to optimize string concatenation
 // WARNING: zero value is not valid, use NewSuConcat
 type SuConcat struct {
+	CantConvert
 	buf *scbuf
 	n   int
-	CantConvert
 }
 
 // scbuf is the potentially shared byte slice buffer

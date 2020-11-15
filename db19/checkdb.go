@@ -165,12 +165,12 @@ func newTableCheckers(state *DbState, fn func(*DbState, string)) *tableCheckers 
 }
 
 type tableCheckers struct {
+	err    atomic.Value
 	fn     func(*DbState, string)
-	wg     sync.WaitGroup
 	state  *DbState
 	work   chan string
 	stop   chan void
-	err    atomic.Value
+	wg     sync.WaitGroup
 	closed bool
 }
 

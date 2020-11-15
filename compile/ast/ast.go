@@ -254,12 +254,12 @@ func (a *Arg) String() string {
 
 type Function struct {
 	exprNodeT
-	Pos         int32
 	Params      []Param
 	Body        []Statement
-	HasBlocks   bool
 	Final       map[string]int
 	Base        Gnum
+	Pos         int32
+	HasBlocks   bool
 	IsNewMethod bool
 	// Id is set and used by codegen for block parents
 	Id uint32

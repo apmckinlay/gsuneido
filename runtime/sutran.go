@@ -9,12 +9,12 @@ import (
 
 // SuTran is a database transaction
 type SuTran struct {
+	CantConvert
 	itran     ITran
-	updatable bool
-	state     tstate
 	conflict  string
 	data      *SuObject
-	CantConvert
+	updatable bool
+	state     tstate
 }
 
 func NewSuTran(itran ITran, updatable bool) *SuTran {

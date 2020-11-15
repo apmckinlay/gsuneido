@@ -14,8 +14,8 @@ import (
 
 // SuDnum wraps a Dnum and implements Value and Packable
 type SuDnum struct {
-	dnum.Dnum
 	CantConvert
+	dnum.Dnum
 }
 
 // Value interface --------------------------------------------------

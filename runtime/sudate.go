@@ -27,11 +27,11 @@ and to convert to human readable formats.
 (Calculations are less common.)
 */
 type SuDate struct {
+	CantConvert
 	// 21 bits for year, 4 bits for month (1-12), 5 bits for day (1-31)
 	date uint32
 	// 10 bits for hour, 6 bits for minute, 6 bits for second, 10 bits for ms
 	time uint32
-	CantConvert
 }
 
 var NilDate SuDate

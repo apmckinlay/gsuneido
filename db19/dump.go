@@ -145,10 +145,10 @@ func nworkers() int {
 }
 
 type indexCheckers struct {
-	wg     sync.WaitGroup
+	err    atomic.Value
 	work   chan indexCheck
 	stop   chan void
-	err    atomic.Value
+	wg     sync.WaitGroup
 	closed bool
 }
 

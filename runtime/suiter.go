@@ -9,8 +9,8 @@ import "github.com/apmckinlay/gsuneido/runtime/types"
 // and provides the Suneido interator interface,
 // returning itself when it reaches the end
 type SuIter struct {
-	Iter
 	CantConvert
+	Iter
 }
 
 // Value interface --------------------------------------------------
