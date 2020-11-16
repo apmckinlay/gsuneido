@@ -1,10 +1,10 @@
 // Copyright Suneido Software Corp. All rights reserved.
 // Governed by the MIT license found in the LICENSE file.
 
-package btree
+package fbtree
 
 import (
-	"github.com/apmckinlay/gsuneido/db19/btree/inter"
+	"github.com/apmckinlay/gsuneido/db19/index/ixbuf"
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
@@ -15,7 +15,7 @@ import (
 // If modified is true, node is an in-memory copy that has been modified.
 type merge struct {
 	off      uint64
-	node     fNode
+	node     fnode
 	fi       int
 	limit    string
 	modified bool
@@ -31,7 +31,7 @@ type state struct {
 // that usually shares some of the structure of the original fbtree.
 // Modified nodes are written to storage.
 // It path copies.
-func (fb *fbtree) MergeAndSave(iter inter.Iter) *fbtree {
+func (fb *fbtree) MergeAndSave(iter ixbuf.Iter) *fbtree {
 	fb2 := *fb // copy
 	st := state{fb: &fb2}
 	for {
@@ -39,7 +39,7 @@ func (fb *fbtree) MergeAndSave(iter inter.Iter) *fbtree {
 		if !ok {
 			break
 		}
-		_ = T && trace("merge", key)
+		_ = t && trace("merge", key)
 		st.advanceTo(key)
 		st.insertInLeaf(key, off)
 	}
@@ -60,20 +60,20 @@ func (st *state) advanceTo(key string) {
 		// if on the right node, just return
 		if len(st.path) == fb.treeLevels+1 &&
 			(fb.treeLevels == 0 || st.last().contains(key)) {
-			_ = T && trace("advance: already on correct node")
+			_ = t && trace("advance: already on correct node")
 			m := st.last()
 			m.fi, _, _ = m.node.search2(key) //TODO continue from last
 			return
 		}
 		// ascend tree as necessary
 		for len(st.path) > 1 && !st.last().contains(key) {
-			_ = T && trace("advance: ascend")
+			_ = t && trace("advance: ascend")
 			st.ascend()
 		}
 	}
 	// descend to appropriate leaf
 	for len(st.path) <= fb.treeLevels {
-		_ = T && trace("advance: descend")
+		_ = t && trace("advance: descend")
 		m := st.last()
 		fi, off, limit := m.node.search2(key) //TODO continue from last
 		m.fi = fi
@@ -102,7 +102,7 @@ func (st *state) ascend() {
 	insertOff := uint64(0)
 	insertKey := ""
 	if len(m.node) > MaxNodeSize {
-		_ = T && trace("split", m)
+		_ = t && trace("split", m)
 		left, right, splitKey := m.split()
 		m.node = left
 		insertKey = splitKey
@@ -112,7 +112,7 @@ func (st *state) ascend() {
 	if len(st.path) > 0 {
 		parent := st.last()
 		parent.getMutableNode()
-		_ = T && trace("update", m, "set", m.fi, off)
+		_ = t && trace("update", m, "set", m.fi, off)
 		parent.node.setOffset(parent.fi, off)
 		if insertOff != 0 {
 			get := fb.getLeafKey
@@ -123,17 +123,17 @@ func (st *state) ascend() {
 			parent.insertInNode(insertKey, insertOff, get)
 			if len(parent.node) >= (MaxNodeSize*3)/2 {
 				// if it gets too big, leave the node so it will be split
-				_ = T && trace("split - ascend")
+				_ = t && trace("split - ascend")
 				st.ascend() // tail recurse
 			}
 		}
 	} else {
 		if insertOff != 0 {
 			// split root, create new root
-			_ = T && trace("new root")
-			newRoot := make(fNode, 0, 24)
-			newRoot = fAppend(newRoot, uint64(off), 0, "")
-			newRoot = fAppend(newRoot, uint64(insertOff), 0, insertKey)
+			_ = t && trace("new root")
+			newRoot := make(fnode, 0, 24)
+			newRoot = newRoot.append(uint64(off), 0, "")
+			newRoot = newRoot.append(uint64(insertOff), 0, insertKey)
 			off = newRoot.putNode(fb.store)
 			st.push(off, newRoot, "")
 			fb.treeLevels++
@@ -146,7 +146,7 @@ func (m *merge) contains(key string) bool {
 	return m.limit == "" || key < m.limit
 }
 
-func (fn fNode) search2(key string) (fi int, off uint64, known string) {
+func (fn fnode) search2(key string) (fi int, off uint64, known string) {
 	it := fn.iter()
 	for it.next() && key >= string(it.known) {
 		fi = it.fi
@@ -163,7 +163,7 @@ func (st *state) pop() {
 	st.path = st.path[:len(st.path)-1]
 }
 
-func (st *state) push(off uint64, node fNode, limit string) {
+func (st *state) push(off uint64, node fnode, limit string) {
 	st.path = append(st.path,
 		merge{off: off, node: node, fi: -1, limit: limit})
 }
@@ -176,23 +176,23 @@ func (st *state) insertInLeaf(key string, off uint64) {
 	m.insertInNode(key, off, st.fb.getLeafKey)
 	if len(m.node) >= (MaxNodeSize*3)/2 {
 		// if it gets too big, leave the node so it will be split
-		_ = T && trace("overflow - ascend")
+		_ = t && trace("overflow - ascend")
 		st.ascend()
 	}
 }
 
 func (m *merge) insertInNode(key string, off uint64,
-	get func(uint64) string) (fNode, int) {
+	get func(uint64) string) (fnode, int) {
 	node := m.getMutableNode()
 	node, where := node.insert(key, off, get)
-	_ = T && trace("after insert", node.knowns())
+	_ = t && trace("after insert", node.knowns())
 	m.node = node
 	return node, where
 }
 
-func (m *merge) getMutableNode() fNode {
+func (m *merge) getMutableNode() fnode {
 	if !m.modified {
-		node := make(fNode, len(m.node))
+		node := make(fnode, len(m.node))
 		copy(node, m.node)
 		m.node = node
 		m.modified = true
@@ -200,7 +200,7 @@ func (m *merge) getMutableNode() fNode {
 	return m.node
 }
 
-func (m *merge) split() (left, right fNode, splitKey string) {
+func (m *merge) split() (left, right fnode, splitKey string) {
 	node := m.getMutableNode()
 	size := len(node)
 	splitSize := size / 2
@@ -211,17 +211,17 @@ func (m *merge) split() (left, right fNode, splitKey string) {
 
 	left = node[:it.fi]
 
-	right = make(fNode, 0, len(node)-it.fi+8)
+	right = make(fnode, 0, len(node)-it.fi+8)
 	// first entry becomes 0, ""
-	right = fAppend(right, it.offset, 0, "")
+	right = right.append(it.offset, 0, "")
 	if it.next() {
 		// second entry becomes 0, known
-		right = fAppend(right, it.offset, 0, string(it.known))
+		right = right.append(it.offset, 0, string(it.known))
 		if it.next() {
 			right = append(right, node[it.fi:]...)
 		}
 	}
-	if T {
+	if t {
 		trace("split at", splitKey)
 		trace("    ", node.knowns())
 		trace("    left:", left.knowns())

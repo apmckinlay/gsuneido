@@ -10,7 +10,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"github.com/apmckinlay/gsuneido/db19/btree"
+	"github.com/apmckinlay/gsuneido/db19/index"
 	"github.com/apmckinlay/gsuneido/db19/meta"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/runtime"
@@ -53,7 +53,7 @@ func CheckDatabase(dbfile string) (ec error) {
 	return db.Check()
 }
 
-func(db *Database) Check() (ec error) {
+func (db *Database) Check() (ec error) {
 	defer func() {
 		if e := recover(); e != nil {
 			ec = newErrCorrupt(e)
@@ -77,7 +77,7 @@ func checkTable(state *DbState, table string) {
 	}
 }
 
-func checkFirstIndex(state *DbState, ix *btree.Overlay) (int, uint64) {
+func checkFirstIndex(state *DbState, ix *index.Overlay) (int, uint64) {
 	sum := uint64(0)
 	ix.CheckFlat()
 	count := ix.Check(func(off uint64) {
@@ -89,7 +89,7 @@ func checkFirstIndex(state *DbState, ix *btree.Overlay) (int, uint64) {
 	return count, sum
 }
 
-func checkOtherIndex(ix *btree.Overlay,
+func checkOtherIndex(ix *index.Overlay,
 	countPrev int, sumPrev uint64) (int, uint64) {
 	sum := uint64(0)
 	count := ix.Check(func(off uint64) {

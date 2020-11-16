@@ -1,18 +1,20 @@
 // Copyright Suneido Software Corp. All rights reserved.
 // Governed by the MIT license found in the LICENSE file.
 
-package btree
+package fbtree
 
 import (
 	"fmt"
 	"strconv"
 	"strings"
 
-	"github.com/apmckinlay/gsuneido/db19/ixspec"
+	"github.com/apmckinlay/gsuneido/db19/index/ixspec"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/cksum"
 )
+
+type T = fbtree
 
 // fbtree is an immutable btree designed to be stored in a file.
 type fbtree struct {
@@ -43,13 +45,21 @@ var MaxNodeSize = 256 //TODO tune
 var GetLeafKey func(st *stor.Stor, is *ixspec.T, off uint64) string
 
 func CreateFbtree(store *stor.Stor, is *ixspec.T) *fbtree {
-	rootNode := fNode{}
+	rootNode := fnode{}
 	root := rootNode.putNode(store)
 	return &fbtree{root: root, store: store, ixspec: is}
 }
 
 func OpenFbtree(store *stor.Stor, root uint64, treeLevels int) *fbtree {
 	return &fbtree{root: root, treeLevels: treeLevels, store: store}
+}
+
+func (fb *fbtree) GetIxspec() *ixspec.T {
+	return fb.ixspec
+}
+
+func (fb *fbtree) SetIxspec(is *ixspec.T) {
+	fb.ixspec = is
 }
 
 func (fb *fbtree) getLeafKey(off uint64) string {
@@ -66,7 +76,7 @@ func (fb *fbtree) Search(key string) uint64 {
 }
 
 // putNode stores the node
-func (node fNode) putNode(store *stor.Stor) uint64 {
+func (node fnode) putNode(store *stor.Stor) uint64 {
 	n := len(node)
 	off, buf := store.Alloc(2 + n + cksum.Len)
 	stor.NewWriter(buf).Put2(n)
@@ -83,11 +93,11 @@ func (node fNode) putNode(store *stor.Stor) uint64 {
 }
 
 // getNode returns the node for a given offset
-func (fb *fbtree) getNode(off uint64) fNode {
+func (fb *fbtree) getNode(off uint64) fnode {
 	return readNode(fb.store, off)
 }
 
-func (fb *fbtree) getNodeCk(off uint64, check bool) fNode {
+func (fb *fbtree) getNodeCk(off uint64, check bool) fnode {
 	node := readNode(fb.store, off)
 	if check {
 		cksum.MustCheck(node[:len(node)+cksum.Len])
@@ -95,10 +105,10 @@ func (fb *fbtree) getNodeCk(off uint64, check bool) fNode {
 	return node
 }
 
-func readNode(store *stor.Stor, off uint64) fNode {
+func readNode(store *stor.Stor, off uint64) fnode {
 	buf := store.Data(off)
 	n := stor.NewReader(buf).Get2()
-	return fNode(buf[2 : 2+n])
+	return fnode(buf[2 : 2+n])
 }
 
 //-------------------------------------------------------------------
@@ -108,7 +118,7 @@ func readNode(store *stor.Stor, off uint64) fNode {
 // recentSize is the length of the tail of the file that we look at
 const recentSize = 32 * 1024 * 1024 // ???
 
-func (fb *fbtree) quickCheck() {
+func (fb *fbtree) QuickCheck() {
 	recent := int64(fb.store.Size()) - recentSize
 	fb.quickCheck1(0, fb.root, recent)
 }
@@ -137,9 +147,9 @@ func (fb *fbtree) quickCheck1(depth int, offset uint64, recent int64) {
 	}
 }
 
-// check verifies that the keys are in order and returns the number of keys.
+// Check verifies that the keys are in order and returns the number of keys.
 // The supplied fn is applied to each leaf offset.
-func (fb *fbtree) check(fn func(uint64)) (count, size, nnodes int) {
+func (fb *fbtree) Check(fn func(uint64)) (count, size, nnodes int) {
 	key := ""
 	return fb.check1(0, fb.root, &key, fn)
 }
@@ -186,7 +196,7 @@ type fbIter = func() (string, uint64, bool)
 
 // Iter returns a function that can be called to return consecutive entries.
 // NOTE: The returned key is only the known prefix.
-// (unlike inter.Iter which returns the actual key)
+// (unlike ixbuf.Iter which returns the actual key)
 func (fb *fbtree) Iter(check bool) fbIter {
 	var stack [maxlevels]*fnIter
 
@@ -270,87 +280,28 @@ func (fb *fbtree) print1(depth int, offset uint64) {
 	}
 }
 
-// builder ----------------------------------------------------------
+//-------------------------------------------------------------------
 
-// fbtreeBuilder is used to bulk load an fbtree.
-// Keys must be added in order.
-// The fbtree is built bottom up with no splitting or inserting.
-// All nodes will be "full" except for the right hand edge.
-type fbtreeBuilder struct {
-	levels []*level // leaf is [0]
-	prev   string
-	store  *stor.Stor
-	count  int
+func (fb *fbtree) StorSize() int {
+	return 5 + 1
 }
 
-type level struct {
-	splitKey string
-	builder  fNodeBuilder
+func (fb *fbtree) Write(w *stor.Writer) {
+	w.Put5(fb.root).Put1(fb.treeLevels)
 }
 
-func NewFbtreeBuilder(store *stor.Stor) *fbtreeBuilder {
-	return &fbtreeBuilder{store: store, levels: []*level{{}}}
-}
-
-func (fb *fbtreeBuilder) Add(key string, off uint64) {
-	if fb.count > 0 {
-		if key == fb.prev {
-			panic("fbtreeBuilder keys must not have duplicates")
-		}
-		if key < fb.prev {
-			panic("fbtreeBuilder keys must be inserted in order")
-		}
-	}
-	fb.add(0, key, off)
-	fb.prev = key
-	fb.count++
-}
-
-func (fb *fbtreeBuilder) add(li int, key string, off uint64) {
-	if li >= len(fb.levels) {
-		fb.levels = append(fb.levels, &level{})
-	}
-	lev := fb.levels[li]
-	if len(lev.builder.fe) > (MaxNodeSize * 3 / 4) {
-		// split full node to stor
-		offNode, splitKey := lev.builder.Split(fb.store)
-		fb.add(li+1, lev.splitKey, offNode) // RECURSE
-		lev.splitKey = splitKey
-	}
-	embedLen := 1
-	if li > 0 /*|| fb.count == 1*/ {
-		embedLen = 255
-	}
-	lev.builder.Add(key, off, embedLen)
-}
-
-func (fb *fbtreeBuilder) Finish() *Overlay {
-	var key string
-	var off uint64
-	for li := 0; li < len(fb.levels); li++ {
-		if li > 0 {
-			// allow node to slightly exceed max size
-			fb.levels[li].builder.Add(key, off, 255)
-		}
-		key = fb.levels[li].splitKey
-		off = fb.levels[li].builder.fe.putNode(fb.store)
-	}
-	treeLevels := len(fb.levels) - 1
-	bt := OpenFbtree(fb.store, off, treeLevels)
-	return &Overlay{fb: bt}
+// ReadOverlay reads an Overlay from storage BUT without ixspec
+func Read(st *stor.Stor, r *stor.Reader) *fbtree {
+	root := r.Get5()
+	treeLevels := r.Get1()
+	return OpenFbtree(st, root, treeLevels)
 }
 
 // trace ------------------------------------------------------------
 
-const T = false // set to true to enable tracing
+const t = false // set to true to enable tracing
 
 func trace(args ...interface{}) bool {
-	fmt.Println(args...)
-	return true
-}
-
-func traced(depth int, args ...interface{}) bool {
-	fmt.Print(strings.Repeat("    ", depth))
 	fmt.Println(args...)
 	return true
 }

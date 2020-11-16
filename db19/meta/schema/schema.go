@@ -7,7 +7,7 @@ package schema
 import (
 	"strings"
 
-	"github.com/apmckinlay/gsuneido/db19/ixspec"
+	"github.com/apmckinlay/gsuneido/db19/index/ixspec"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 

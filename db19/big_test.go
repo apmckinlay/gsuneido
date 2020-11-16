@@ -12,8 +12,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/apmckinlay/gsuneido/db19/btree"
-	"github.com/apmckinlay/gsuneido/db19/ixspec"
+	"github.com/apmckinlay/gsuneido/db19/index"
+	"github.com/apmckinlay/gsuneido/db19/index/ixspec"
 	"github.com/apmckinlay/gsuneido/db19/meta"
 	"github.com/apmckinlay/gsuneido/db19/meta/schema"
 	rt "github.com/apmckinlay/gsuneido/runtime"
@@ -96,7 +96,7 @@ func createTables() []string {
 		}
 		nidxs := fromHash(table, maxidxs)
 		idxSchema := make([]schema.Index, nidxs)
-		idxInfo := make([]*btree.Overlay, nidxs)
+		idxInfo := make([]*index.Overlay, nidxs)
 		for j := 0; j < nidxs; j++ {
 			var idxcols []string
 			var mode int
@@ -113,7 +113,7 @@ func createTables() []string {
 				mode = 'i'
 			}
 			idxSchema[j] = schema.Index{Columns: idxcols, Mode: mode}
-			idxInfo[j] = btree.NewOverlay(db.store, &ixspec.T{})
+			idxInfo[j] = index.NewOverlay(db.store, &ixspec.T{})
 			idxInfo[j].Save()
 		}
 		schema := schema.Schema{Table: table, Columns: cols, Indexes: idxSchema}

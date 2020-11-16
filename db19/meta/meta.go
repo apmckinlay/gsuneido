@@ -112,10 +112,10 @@ func (m *Meta) ForEachInfo(fn func(*Info)) {
 
 //-------------------------------------------------------------------
 
-// LayeredOnto layers the mutable inter's from a transaction
+// LayeredOnto layers the mutable ixbuf's from a transaction
 // onto the latest/current state and returns a new state.
 // Also, the nrows and size deltas are applied.
-// Note: this does not merge the btrees, that is done later by merge.
+// Note: this does not merge the ixbuf's, that is done later by merge.
 // Nor does it save the changes to disk, that is done later by persist.
 func (m *Meta) LayeredOnto(latest *Meta) *Meta {
 	// start with a snapshot of the latest hash table because it may have more

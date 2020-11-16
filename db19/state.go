@@ -61,10 +61,9 @@ func (db *Database) UpdateState(fn func(*DbState)) *DbState {
 
 //-------------------------------------------------------------------
 
-// WARNING: Merge and Persist cannot run concurrently
+// WARNING: Merge and Persist must not run concurrently
 
-// Merge updates the base fbtree's with the overlay inter
-// for the given transaction number (the oldest/first).
+// Merge updates the base ixbuf's with the ones from transactions
 // It is called by concur.go merger.
 func (db *Database) Merge(fn func(*DbState, *mergeList) []meta.MergeUpdate,
 	merges *mergeList) {

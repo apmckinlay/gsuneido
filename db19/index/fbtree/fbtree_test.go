@@ -1,7 +1,7 @@
 // Copyright Suneido Software Corp. All rights reserved.
 // Governed by the MIT license found in the LICENSE file.
 
-package btree
+package fbtree
 
 import (
 	"sort"
@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/apmckinlay/gsuneido/db19/btree/inter"
-	"github.com/apmckinlay/gsuneido/db19/ixspec"
+	"github.com/apmckinlay/gsuneido/db19/index/ixbuf"
+	"github.com/apmckinlay/gsuneido/db19/index/ixspec"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 
 	"github.com/apmckinlay/gsuneido/util/assert"
@@ -20,7 +20,7 @@ import (
 
 func TestFbtreeIO(t *testing.T) {
 	store := stor.HeapStor(128)
-	before := fNode([]byte("helloworld"))
+	before := fnode([]byte("helloworld"))
 	off := before.putNode(store)
 	after := readNode(store, off)
 	cksum.MustCheck(after[:len(after)+cksum.Len])
@@ -39,11 +39,11 @@ func TestFbtreeIter(t *testing.T) {
 	}
 	sort.Strings(data[:])
 	store := stor.HeapStor(8192)
-	bldr := NewFbtreeBuilder(store)
+	bldr := Builder(store)
 	for i, k := range data {
 		bldr.Add(k, uint64(i))
 	}
-	fb := bldr.Finish().fb
+	fb := bldr.Finish()
 	i := 0
 	iter := fb.Iter(true)
 	for k, o, ok := iter(); ok; k, o, ok = iter() {
@@ -60,7 +60,7 @@ func TestFbtreeBuilder(t *testing.T) {
 		return strconv.Itoa(int(i))
 	}
 	store := stor.HeapStor(8192)
-	bldr := NewFbtreeBuilder(store)
+	bldr := Builder(store)
 	limit := 599999
 	if testing.Short() {
 		limit = 199999
@@ -69,8 +69,8 @@ func TestFbtreeBuilder(t *testing.T) {
 		key := strconv.Itoa(i)
 		bldr.Add(key, uint64(i))
 	}
-	fb := bldr.Finish().fb
-	fb.check(nil)
+	fb := bldr.Finish()
+	fb.Check(nil)
 
 	// iterate
 	iter := fb.Iter(true)
@@ -96,12 +96,12 @@ func ExampleFbtreeBuilder2() {
 		return strconv.Itoa(int(i))
 	}
 	store := stor.HeapStor(8192)
-	bldr := NewFbtreeBuilder(store)
+	bldr := Builder(store)
 	bldr.Add("1000xxxx", 1000)
 	bldr.Add("1001xxxx", 1001)
 	bldr.Add("1002xxxx", 1002)
 	bldr.Add("1003xxxx", 1003)
-	fb := bldr.Finish().fb
+	fb := bldr.Finish()
 	fb.print()
 	// The important thing here is that the second known (1001)
 	// is NOT "1" which would mean searches for 1000 would fail
@@ -119,7 +119,7 @@ func ExampleFbtree_MergeAndSave() {
 		return strconv.Itoa(int(i))
 	}
 	store := stor.HeapStor(8192)
-	x := &inter.T{}
+	x := &ixbuf.T{}
 	x.Insert("1000xxxx", 1000)
 	x.Insert("1001xxxx", 1001)
 	x.Insert("1002xxxx", 1002)

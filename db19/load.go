@@ -12,7 +12,8 @@ import (
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/compile"
-	"github.com/apmckinlay/gsuneido/db19/btree"
+	"github.com/apmckinlay/gsuneido/db19/index"
+	"github.com/apmckinlay/gsuneido/db19/index/fbtree"
 	"github.com/apmckinlay/gsuneido/db19/meta"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
@@ -139,9 +140,9 @@ func readRecords(in *bufio.Reader, store *stor.Stor, list *sortlist.Builder) int
 	return nrecs
 }
 
-func buildIndexes(ts *meta.Schema, list *sortlist.Builder, store *stor.Stor, nrecs int) []*btree.Overlay {
+func buildIndexes(ts *meta.Schema, list *sortlist.Builder, store *stor.Stor, nrecs int) []*index.Overlay {
 	ts.Ixspecs()
-	ov := make([]*btree.Overlay, len(ts.Indexes))
+	ov := make([]*index.Overlay, len(ts.Indexes))
 	for i := range ts.Indexes {
 		ix := ts.Indexes[i]
 		trace(ix)
@@ -149,14 +150,14 @@ func buildIndexes(ts *meta.Schema, list *sortlist.Builder, store *stor.Stor, nre
 			list.Sort(mkcmp(store, &ix.Ixspec))
 		}
 		before := store.Size()
-		bldr := btree.NewFbtreeBuilder(store)
+		bldr := fbtree.Builder(store)
 		iter := list.Iter()
 		n := 0
 		for off := iter(); off != 0; off = iter() {
 			bldr.Add(getLeafKey(store, &ix.Ixspec, off), off)
 			n++
 		}
-		ov[i] = bldr.Finish()
+		ov[i] = index.OverlayFor(bldr.Finish())
 		assert.This(n).Is(nrecs)
 		trace("size", store.Size()-before)
 	}

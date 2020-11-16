@@ -14,7 +14,7 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"github.com/apmckinlay/gsuneido/db19/btree"
+	"github.com/apmckinlay/gsuneido/db19/index"
 	"github.com/apmckinlay/gsuneido/db19/meta"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
@@ -153,7 +153,7 @@ type indexCheckers struct {
 }
 
 type indexCheck struct {
-	index *btree.Overlay
+	index *index.Overlay
 	count int
 	sum   uint64
 }

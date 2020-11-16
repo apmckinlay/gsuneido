@@ -1,19 +1,21 @@
 // Copyright Suneido Software Corp. All rights reserved.
 // Governed by the MIT license found in the LICENSE file.
 
-// Package inter defines an ordered list inter.T
+// Package ixbuf defines an ordered list ixbuf.T
 // with a mutating Insert and a immutable persistent Merge.
 // It is designed for intermediate numbers of values, e.g. up to 16k or so.
 // It is used mutably for per transaction index buffers
 // and immutably for global index buffers.
-package inter
+package ixbuf
 
 import (
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/ints"
 )
 
-type T struct {
+type T = ixbuf
+
+type ixbuf struct {
 	chunks  []chunk
 	size    int
 	TranNum int //TODO temporary
@@ -26,8 +28,8 @@ type slot struct {
 	off uint64
 }
 
-func (t *T) Len() int {
-	return t.size
+func (ib *ixbuf) Len() int {
+	return ib.size
 }
 
 // goal is the desired chunk size for a given item count.
@@ -47,23 +49,23 @@ func goal(n int) int {
 }
 
 // Insert adds an element. It mutates and is NOT thread-safe.
-func (t *T) Insert(key string, off uint64) {
-	t.size++
-	if len(t.chunks) == 0 {
-		t.chunks = make([]chunk, 1, 4)
-		t.chunks[0] = make([]slot, 1, 8)
-		t.chunks[0][0] = slot{key: key, off: off}
+func (ib *ixbuf) Insert(key string, off uint64) {
+	ib.size++
+	if len(ib.chunks) == 0 {
+		ib.chunks = make([]chunk, 1, 4)
+		ib.chunks[0] = make([]slot, 1, 8)
+		ib.chunks[0][0] = slot{key: key, off: off}
 		return
 	}
-	ci := t.search(key)
+	ci := ib.search(key)
 	// insert in place
-	i := search(t.chunks[ci], key)
-	t.chunks[ci] = append(t.chunks[ci], slot{})
-	c := t.chunks[ci]
+	i := search(ib.chunks[ci], key)
+	ib.chunks[ci] = append(ib.chunks[ci], slot{})
+	c := ib.chunks[ci]
 	copy(c[i+1:], c[i:])
 	c[i] = slot{key: key, off: off}
 
-	if len(c) > goal(t.size) {
+	if len(c) > goal(ib.size) {
 		// split
 		n := len(c)
 		at := n / 2
@@ -75,28 +77,28 @@ func (t *T) Insert(key string, off uint64) {
 		left := c[:at] // re-use
 		right := make([]slot, n-at)
 		copy(right, c[at:])
-		t.chunks[ci] = left
-		t.chunks = append(t.chunks, nil)
+		ib.chunks[ci] = left
+		ib.chunks = append(ib.chunks, nil)
 		ci++
-		copy(t.chunks[ci+1:], t.chunks[ci:])
-		t.chunks[ci] = right
+		copy(ib.chunks[ci+1:], ib.chunks[ci:])
+		ib.chunks[ci] = right
 	}
 }
 
 // search does a binary search the first key in each chunk.
 // It returns len-1 if the key is greater than all keys.
-func (t *T) search(key string) int {
-	i, j := 0, len(t.chunks)
+func (ib *ixbuf) search(key string) int {
+	i, j := 0, len(ib.chunks)
 	for i < j {
 		h := int(uint(i+j) >> 1) // i ≤ h < j
-		c := t.chunks[h]
+		c := ib.chunks[h]
 		if key > c.lastKey() {
 			i = h + 1
 		} else {
 			j = h
 		}
 	}
-	return ints.Min(i, len(t.chunks)-1)
+	return ints.Min(i, len(ib.chunks)-1)
 }
 
 // search does a binary search of one chunk for a key
@@ -115,19 +117,19 @@ func search(c chunk, key string) int {
 
 //-------------------------------------------------------------------
 
-func (t *T) Delete(key string) bool {
-	ci := t.search(key)
-	c := t.chunks[ci]
+func (ib *ixbuf) Delete(key string) bool {
+	ci := ib.search(key)
+	c := ib.chunks[ci]
 	i := search(c, key)
 	if i >= len(c) || c[i].key != key {
 		return false
 	}
 	if len(c) == 1 {
-		t.chunks = append(t.chunks[:ci], t.chunks[ci+1:]...) // remove chunk
+		ib.chunks = append(ib.chunks[:ci], ib.chunks[ci+1:]...) // remove chunk
 	} else {
-		t.chunks[ci] = append(c[:i], c[i+1:]...) // remove slot
+		ib.chunks[ci] = append(c[:i], c[i+1:]...) // remove slot
 	}
-	t.size--
+	ib.size--
 	return true
 }
 
@@ -138,23 +140,23 @@ func (t *T) Delete(key string) bool {
 // as long as the inputs don't change.
 // It is immutable persistent and the result may share chunks of the inputs
 // so again, the inputs cannot change.
-func Merge(ts ...*T) *T {
-	assert.That(len(ts) > 1)
-	in := make([][]chunk, 0, len(ts))
+func Merge(ibs ...*ixbuf) *ixbuf {
+	assert.That(len(ibs) > 1)
+	in := make([][]chunk, 0, len(ibs))
 	size := 0
 	nc := 0
-	var single *T
-	for _, t := range ts {
-		if t.size == 0 {
+	var single *ixbuf
+	for _, ib := range ibs {
+		if ib.size == 0 {
 			continue
 		}
-		in = append(in, t.chunks)
-		size += t.size
-		nc += len(t.chunks)
-		single = t
+		in = append(in, ib.chunks)
+		size += ib.size
+		nc += len(ib.chunks)
+		single = ib
 	}
 	if len(in) == 0 {
-		return &T{}
+		return &ixbuf{}
 	} else if len(in) == 1 {
 		return single
 	}
@@ -280,7 +282,7 @@ func (o *output) mergeUpto(limit slot) {
 	}
 }
 
-func (o *output) result() *T {
+func (o *output) result() *ixbuf {
 	if len(o.in) >= 1 {
 		if len(o.in) > 1 {
 			o.mergeUpto(slot{})
@@ -295,30 +297,30 @@ func (o *output) result() *T {
 	if len(o.buf) > 0 {
 		o.flushbuf()
 	}
-	return &T{chunks: o.out, size: o.size}
+	return &ixbuf{chunks: o.out, size: o.size}
 }
 
 //-------------------------------------------------------------------
 
 type Iter = func() (key string, off uint64, ok bool)
 
-func (t *T) Iter(bool) Iter {
-	if t.size == 0 {
+func (ib *ixbuf) Iter(bool) Iter {
+	if ib.size == 0 {
 		return func() (string, uint64, bool) {
-				return "", 0, false
+			return "", 0, false
 		}
 	}
 	ti := 0
-	c := t.chunks[0]
+	c := ib.chunks[0]
 	i := -1
 	return func() (string, uint64, bool) {
 		i++
 		if i >= len(c) {
-			if ti+1 >= len(t.chunks) {
+			if ti+1 >= len(ib.chunks) {
 				return "", 0, false
 			}
 			ti++
-			c = t.chunks[ti]
+			c = ib.chunks[ti]
 			i = 0
 		}
 		slot := c[i]
@@ -328,8 +330,8 @@ func (t *T) Iter(bool) Iter {
 
 type Visitor func(key string, off uint64)
 
-func (t *T) ForEach(fn Visitor) {
-	for _, c := range t.chunks {
+func (ib *ixbuf) ForEach(fn Visitor) {
+	for _, c := range ib.chunks {
 		for _, slot := range c {
 			fn(slot.key, slot.off)
 		}

@@ -11,8 +11,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/apmckinlay/gsuneido/db19/btree"
-	"github.com/apmckinlay/gsuneido/db19/ixspec"
+	"github.com/apmckinlay/gsuneido/db19/index"
+	"github.com/apmckinlay/gsuneido/db19/index/ixspec"
 	"github.com/apmckinlay/gsuneido/db19/meta"
 	"github.com/apmckinlay/gsuneido/db19/meta/schema"
 	rt "github.com/apmckinlay/gsuneido/runtime"
@@ -106,11 +106,11 @@ func createDb() *Database {
 		Columns: []string{"one", "two"},
 		Indexes: []schema.Index{{Columns: []string{"one"}, Ixspec: is}},
 	}}
-	ov := btree.NewOverlay(db.store, &is)
+	ov := index.NewOverlay(db.store, &is)
 	ov.Save()
 	ti := &meta.Info{
 		Table:   "mytable",
-		Indexes: []*btree.Overlay{ov},
+		Indexes: []*index.Overlay{ov},
 	}
 	db.LoadedTable(ts, ti)
 	return db

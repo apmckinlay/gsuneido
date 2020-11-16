@@ -1,15 +1,16 @@
 // Copyright Suneido Software Corp. All rights reserved.
 // Governed by the MIT license found in the LICENSE file.
 
-package btree
+package index
 
 import (
 	"math/rand"
 	"sort"
 	"testing"
 
-	"github.com/apmckinlay/gsuneido/db19/btree/inter"
-	"github.com/apmckinlay/gsuneido/db19/ixspec"
+	"github.com/apmckinlay/gsuneido/db19/index/fbtree"
+	"github.com/apmckinlay/gsuneido/db19/index/ixbuf"
+	"github.com/apmckinlay/gsuneido/db19/index/ixspec"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/str"
@@ -17,13 +18,15 @@ import (
 
 func TestEmptyOverlay(t *testing.T) {
 	var data []string
-	GetLeafKey = func(_ *stor.Stor, _ *ixspec.T, i uint64) string { return data[i] }
-	defer func(mns int) { MaxNodeSize = mns }(MaxNodeSize)
-	MaxNodeSize = 64
-	fb := CreateFbtree(stor.HeapStor(8192), nil)
-	mut := &inter.T{}
-	u := &inter.T{}
-	ov := &Overlay{fb: fb, under: []*inter.T{u}, mut: mut}
+	fbtree.GetLeafKey = func(_ *stor.Stor, _ *ixspec.T, i uint64) string {
+		return data[i]
+	}
+	defer func(mns int) { fbtree.MaxNodeSize = mns }(fbtree.MaxNodeSize)
+	fbtree.MaxNodeSize = 64
+	fb := fbtree.CreateFbtree(stor.HeapStor(8192), nil)
+	mut := &ixbuf.T{}
+	u := &ixbuf.T{}
+	ov := &Overlay{fb: fb, under: []*ixbuf.T{u}, mut: mut}
 	checkIter(t, data, ov)
 
 	const n = 100
@@ -87,9 +90,9 @@ func checkIter(t *testing.T, data []string, tr tree) {
 func TestOverlayMerge(t *testing.T) {
 	randKey := str.UniqueRandomOf(3, 10, "abcdef")
 	var data []string
-	randInter := func() *inter.T {
+	randInter := func() *ixbuf.T {
 		const n = 300
-		mut := &inter.T{}
+		mut := &ixbuf.T{}
 		for i := 0; i < n; i++ {
 			key := randKey()
 			off := uint64(len(data))
@@ -99,29 +102,31 @@ func TestOverlayMerge(t *testing.T) {
 		return mut
 	}
 	mut := randInter()
-	GetLeafKey = func(_ *stor.Stor, _ *ixspec.T, i uint64) string { return data[i] }
-	defer func(mns int) { MaxNodeSize = mns }(MaxNodeSize)
-	MaxNodeSize = 64
-	fb := CreateFbtree(stor.HeapStor(8192), nil)
-	bi := &inter.T{}
-	ov := Overlay{fb: fb, under: []*inter.T{bi, mut}}
+	fbtree.GetLeafKey = func(_ *stor.Stor, _ *ixspec.T, i uint64) string {
+		return data[i]
+	}
+	defer func(mns int) { fbtree.MaxNodeSize = mns }(fbtree.MaxNodeSize)
+	fbtree.MaxNodeSize = 64
+	fb := fbtree.CreateFbtree(stor.HeapStor(8192), nil)
+	bi := &ixbuf.T{}
+	ov := Overlay{fb: fb, under: []*ixbuf.T{bi, mut}}
 	bi = ov.Merge(1)
 	checkData(t, bi, data)
 
 	mut = randInter()
-	ov = Overlay{fb: fb, under: []*inter.T{bi, mut}}
+	ov = Overlay{fb: fb, under: []*ixbuf.T{bi, mut}}
 	bi = ov.Merge(1)
 	checkData(t, bi, data)
 }
 
-func checkData(t *testing.T, bi *inter.T, data []string) {
+func checkData(t *testing.T, bi *ixbuf.T, data []string) {
 	t.Helper()
 	assert.T(t).This(bi.Len()).Is(len(data))
 	sort.Strings(data)
 	i := 0
 	n := 0
 	it := bi.Iter(false)
-	for key,_,ok := it(); ok; key,_,ok = it() {
+	for key, _, ok := it(); ok; key, _, ok = it() {
 		assert.T(t).This(key).Is(data[i])
 		i++
 		n++

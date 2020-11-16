@@ -1,7 +1,7 @@
 // Copyright Suneido Software Corp. All rights reserved.
 // Governed by the MIT license found in the LICENSE file.
 
-package inter
+package ixbuf
 
 import (
 	"fmt"
@@ -16,13 +16,13 @@ import (
 func TestInsert(t *testing.T) {
 	r := str.UniqueRandom(4, 8)
 	const nkeys = 16000
-	x := &T{}
+	ib := &ixbuf{}
 	for i := 0; i < nkeys; i++ {
-		x.Insert(r(), uint64(i))
+		ib.Insert(r(), uint64(i))
 	}
-	assert.T(t).This(x.size).Is(nkeys)
+	assert.T(t).This(ib.size).Is(nkeys)
 	// x.stats()
-	x.check()
+	ib.check()
 }
 
 func BenchmarkInsert(b *testing.B) {
@@ -34,54 +34,54 @@ func BenchmarkInsert(b *testing.B) {
 	}
 
 	for i := 0; i < b.N; i++ {
-		X = &T{}
+		Ib = &ixbuf{}
 		for j := 0; j < nkeys; j++ {
-			X.Insert(keys[j], uint64(j))
+			Ib.Insert(keys[j], uint64(j))
 		}
 	}
 }
 
-var X *T
+var Ib *ixbuf
 
 func TestMerge(t *testing.T) {
 	assert := assert.T(t).This
 
-	x := Merge(&T{}, &T{}, &T{})
-	assert(x.size).Is(0)
+	ib := Merge(&ixbuf{}, &ixbuf{}, &ixbuf{})
+	assert(ib.size).Is(0)
 
-	a := &T{}
+	a := &ixbuf{}
 	a.Insert("a", 1)
-	x = Merge(&T{}, a, &T{})
-	assert(x.size).Is(1)
+	ib = Merge(&ixbuf{}, a, &ixbuf{})
+	assert(ib.size).Is(1)
 
-	b := &T{}
+	b := &ixbuf{}
 	b.Insert("b", 2)
-	x = Merge(b, &T{}, a)
-	assert(x.size).Is(2)
-	assert(len(x.chunks)).Is(1)
+	ib = Merge(b, &ixbuf{}, a)
+	assert(ib.size).Is(2)
+	assert(len(ib.chunks)).Is(1)
 	// x.print()
-	x.check()
+	ib.check()
 
-	c := &T{}
+	c := &ixbuf{}
 	for i := 0; i < 25; i++ {
 		c.Insert(strconv.Itoa(i), uint64(i))
 	}
-	x = Merge(b, c, a)
-	assert(x.size).Is(a.size + b.size + c.size)
+	ib = Merge(b, c, a)
+	assert(ib.size).Is(a.size + b.size + c.size)
 	// x.print()
-	x.check()
+	ib.check()
 
 	a.Insert("c", 3)
 	b.Insert("d", 4)
-	x = Merge(b, a)
+	ib = Merge(b, a)
 	// x.print()
-	assert(x.size).Is(4)
-	assert(len(x.chunks)).Is(1)
-	x.check()
+	assert(ib.size).Is(4)
+	assert(len(ib.chunks)).Is(1)
+	ib.check()
 
 	r := str.UniqueRandom(4, 8)
-	gen := func(nkeys int) *T {
-		t := &T{}
+	gen := func(nkeys int) *ixbuf {
+		t := &ixbuf{}
 		for i := 0; i < nkeys; i++ {
 			t.Insert(r(), 1)
 		}
@@ -92,23 +92,23 @@ func TestMerge(t *testing.T) {
 	a = gen(1000)
 	b = gen(100)
 	c = gen(10)
-	x = Merge(a, b, c)
+	ib = Merge(a, b, c)
 	// x.print()
-	assert(x.size).Is(a.size + b.size + c.size)
-	x.check()
+	assert(ib.size).Is(a.size + b.size + c.size)
+	ib.check()
 	a.check()
 	b.check()
 	c.check()
 }
 
 func TestMergeBug(*testing.T) {
-	a := &T{}
+	a := &ixbuf{}
 	a.Insert("a", 1)
 	a.Insert("d", 1)
-	b := &T{}
+	b := &ixbuf{}
 	b.Insert("b", 1)
 	b.Insert("c", 1)
-	c := &T{}
+	c := &ixbuf{}
 	c.Insert("e", 1)
 	c.Insert("f", 1)
 	x := Merge(a, b, c)
@@ -124,9 +124,9 @@ func TestMergeRandom(*testing.T) {
 	for i := 0; i < n; i++ {
 		r := str.UniqueRandom(4, 8)
 		nin := 2 + rand.Intn(11)
-		in := make([]*T, nin)
+		in := make([]*ixbuf, nin)
 		for j := range in {
-			in[j] = &T{}
+			in[j] = &ixbuf{}
 			size := rand.Intn(1000)
 			for k := 0; k < size; k++ {
 				in[j].Insert(r(), 1)
@@ -138,12 +138,12 @@ func TestMergeRandom(*testing.T) {
 
 func TestMergeUneven(*testing.T) {
 	r := str.UniqueRandom(4, 8)
-	gen := func(nkeys int) *T {
-		t := &T{}
+	gen := func(nkeys int) *ixbuf {
+		ib := &ixbuf{}
 		for i := 0; i < nkeys; i++ {
-			t.Insert(r(), 1)
+			ib.Insert(r(), 1)
 		}
-		return t
+		return ib
 	}
 	x := gen(1000)
 	y := gen(1)
@@ -152,18 +152,18 @@ func TestMergeUneven(*testing.T) {
 
 func BenchmarkMerge(b *testing.B) {
 	r := str.UniqueRandom(4, 8)
-	gen := func(nkeys int) *T {
-		t := &T{}
+	gen := func(nkeys int) *ixbuf {
+		ib := &ixbuf{}
 		for i := 0; i < nkeys; i++ {
-			t.Insert(r(), 1)
+			ib.Insert(r(), 1)
 		}
-		return t
+		return ib
 	}
 	x := gen(1000)
 	y := gen(1)
 	b.Run("bench", func(b *testing.B) {
 		for i := 0; i < b.N; i++ {
-			X = Merge(x, y)
+			Ib = Merge(x, y)
 		}
 	})
 }
@@ -179,33 +179,33 @@ func TestDelete(t *testing.T) {
 	const nkeys = 1000
 	rand.Seed(12345)
 	r := str.UniqueRandom(4, 8)
-	x := &T{}
+	ib := &ixbuf{}
 	for i := 0; i < nkeys; i++ {
-		x.Insert(r(), 1)
+		ib.Insert(r(), 1)
 	}
 	r = str.UniqueRandom(8, 12)
 	for i := 0; i < nkeys; i++ {
-		assert.That(!x.Delete(r()))
+		assert.That(!ib.Delete(r()))
 	}
 	rand.Seed(12345)
 	r = str.UniqueRandom(4, 8)
 	for i := 0; i < nkeys; i++ {
-		assert.That(x.Delete(r()))
-		x.check()
+		assert.That(ib.Delete(r()))
+		ib.check()
 	}
-	assert.T(t).This(len(x.chunks)).Is(0)
+	assert.T(t).This(len(ib.chunks)).Is(0)
 }
 
 func TestIter(t *testing.T) {
-	x := &T{}
-	iter := x.Iter(false)
+	ib := &ixbuf{}
+	iter := ib.Iter(false)
 	_, _, ok := iter()
 	assert.That(!ok)
 	const nkeys = 1000
 	for i := nkeys; i < nkeys*2; i++ {
-		x.Insert(strconv.Itoa(i), 1)
+		ib.Insert(strconv.Itoa(i), 1)
 	}
-	iter = x.Iter(false)
+	iter = ib.Iter(false)
 	for i := nkeys; i < nkeys*2; i++ {
 		key, _, ok := iter()
 		assert.That(ok)
@@ -217,28 +217,28 @@ func TestIter(t *testing.T) {
 
 func TestForEach(t *testing.T) {
 	const nkeys = 1000
-	x := &T{}
+	ib := &ixbuf{}
 	for i := nkeys; i < nkeys*2; i++ {
-		x.Insert(strconv.Itoa(i), 1)
+		ib.Insert(strconv.Itoa(i), 1)
 	}
 	i := nkeys
-	x.ForEach(func (key string, _ uint64) {
+	ib.ForEach(func(key string, _ uint64) {
 		assert.T(t).This(key).Is(strconv.Itoa(i))
 		i++
 	})
-	assert.T(t).This(i).Is(nkeys*2)
+	assert.T(t).This(i).Is(nkeys * 2)
 }
 
 //-------------------------------------------------------------------
 
-func (t *T) stats() {
-	fmt.Println("size", t.size, "chunks", len(t.chunks), "avg size", t.size/len(t.chunks), "goal", goal(t.size))
+func (ib *ixbuf) stats() {
+	fmt.Println("size", ib.size, "chunks", len(ib.chunks), "avg size", ib.size/len(ib.chunks), "goal", goal(ib.size))
 }
 
-func (t *T) print() {
+func (ib *ixbuf) print() {
 	fmt.Println("<<<------------------------")
-	t.stats()
-	for i, c := range t.chunks {
+	ib.stats()
+	for i, c := range ib.chunks {
 		if i > 0 {
 			fmt.Println("+++")
 		}
@@ -253,10 +253,10 @@ func (c chunk) print() {
 	}
 }
 
-func (t *T) check() {
+func (ib *ixbuf) check() {
 	n := 0
 	prev := ""
-	for _, c := range t.chunks {
+	for _, c := range ib.chunks {
 		assert.That(len(c) > 0)
 		for _, s := range c {
 			if s.key <= prev {
@@ -266,7 +266,7 @@ func (t *T) check() {
 			n++
 		}
 	}
-	assert.This(t.size).Is(n)
+	assert.This(ib.size).Is(n)
 }
 
 func chunkstr(c chunk) string {

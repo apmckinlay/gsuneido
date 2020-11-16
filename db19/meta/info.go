@@ -4,7 +4,7 @@
 package meta
 
 import (
-	"github.com/apmckinlay/gsuneido/db19/btree"
+	"github.com/apmckinlay/gsuneido/db19/index"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/hash"
@@ -14,7 +14,7 @@ type Info struct {
 	Table   string
 	Nrows   int
 	Size    uint64
-	Indexes []*btree.Overlay
+	Indexes []*index.Overlay
 	lastmod int
 }
 
@@ -54,9 +54,9 @@ func ReadInfo(st *stor.Stor, r *stor.Reader) *Info {
 	ti.Nrows = r.Get4()
 	ti.Size = r.Get5()
 	ni := r.Get1()
-	ti.Indexes = make([]*btree.Overlay, ni)
+	ti.Indexes = make([]*index.Overlay, ni)
 	for i := 0; i < ni; i++ {
-		ti.Indexes[i] = btree.ReadOverlay(st, r)
+		ti.Indexes[i] = index.ReadOverlay(st, r)
 	}
 	return &ti
 }
@@ -71,8 +71,8 @@ func (ti *Info) isTomb() bool {
 
 //-------------------------------------------------------------------
 
-type btOver = *btree.Overlay
-type MergeResult = btree.MergeResult
+type btOver = *index.Overlay
+type MergeResult = index.MergeResult
 
 type MergeUpdate struct {
 	table   string
@@ -109,7 +109,7 @@ func (m *Meta) ApplyMerge(updates []MergeUpdate) {
 
 //-------------------------------------------------------------------
 
-type SaveResult = btree.SaveResult
+type SaveResult = index.SaveResult
 
 type persistUpdate struct {
 	table   string

@@ -1,7 +1,7 @@
 // Copyright Suneido Software Corp. All rights reserved.
 // Governed by the MIT license found in the LICENSE file.
 
-package btree
+package fbtree
 
 import (
 	"fmt"
@@ -9,8 +9,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/apmckinlay/gsuneido/db19/btree/inter"
-	"github.com/apmckinlay/gsuneido/db19/ixspec"
+	"github.com/apmckinlay/gsuneido/db19/index/ixbuf"
+	"github.com/apmckinlay/gsuneido/db19/index/ixspec"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/str"
@@ -34,14 +34,14 @@ func TestFbMerge(*testing.T) {
 	fb := CreateFbtree(store, nil)
 
 	for i := 0; i < nMerges; i++ {
-		_ = T && trace("---")
-		x := &inter.T{}
+		_ = t && trace("---")
+		x := &ixbuf.T{}
 		for j := 0; j < insertsPerMerge; j++ {
 			x.Insert(d.next(""))
 		}
 		fb = fb.MergeAndSave(x.Iter(false))
 	}
-	fb.check(nil)
+	fb.Check(nil)
 	d.check(fb)
 }
 
@@ -89,7 +89,7 @@ func (d *dat) next(prefix string) (string, uint64) {
 }
 
 func (d *dat) check(fb *fbtree) {
-	for i,key := range d.keys {
+	for i, key := range d.keys {
 		off := fb.Search(key)
 		assert.That(off == uint64(i))
 	}

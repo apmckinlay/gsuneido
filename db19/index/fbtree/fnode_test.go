@@ -1,12 +1,13 @@
 // Copyright Suneido Software Corp. All rights reserved.
 // Governed by the MIT license found in the LICENSE file.
 
-package btree
+package fbtree
 
 import (
 	"fmt"
 	"math/rand"
 	"sort"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -21,10 +22,10 @@ func TestFAppendRead(t *testing.T) {
 		npre   int
 		diff   string
 	}
-	var fn fNode
+	var fn fnode
 	var data []ent
 	add := func(offset uint64, npre int, diff string) {
-		fn = fAppend(fn, offset, npre, diff)
+		fn = fn.append(offset, npre, diff)
 		data = append(data, ent{offset, npre, diff})
 	}
 	add(123, 2, "bar")
@@ -33,7 +34,7 @@ func TestFAppendRead(t *testing.T) {
 		var npre int
 		var diff []byte
 		var off uint64
-		npre, diff, off = fRead(fn)
+		npre, diff, off = fn.read()
 		fn = fn[fLen(diff):]
 		assert.T(t).This(npre).Is(e.npre)
 		assert.T(t).This(string(diff)).Is(e.diff)
@@ -54,7 +55,7 @@ func TestFnodeInsert(*testing.T) {
 		data := strings.Fields(s)
 		get := func(i uint64) string { return data[i] }
 		// forward
-		fn := fNode{}
+		fn := fnode{}
 		for i, d := range data {
 			fn, _ = fn.insert(d, uint64(i), get)
 			fn.checkUpTo(i, data, get)
@@ -73,13 +74,37 @@ func TestFnodeInsert(*testing.T) {
 	}
 }
 
-func build(data []string) fNode {
+func build(data []string) fnode {
 	sort.Strings(data)
 	b := fNodeBuilder{}
 	for i, d := range data {
 		b.Add(d, uint64(i), 255)
 	}
 	return b.Entries()
+}
+
+func (fn fnode) checkData(data []string, get func(uint64) string) {
+	fn.checkUpTo(len(data)-1, data, get)
+}
+
+// checkUpTo is used during inserting.
+// It checks that inserted keys are present
+// and uninserted keys are not present.
+func (fn fnode) checkUpTo(i int, data []string, get func(uint64) string) {
+	n := fn.check()
+	nn := 0
+	for j, d := range data {
+		if (d != "" && j <= i) != fn.contains(d, get) {
+			panic("can't find " + d)
+		}
+		if d != "" && j <= i {
+			nn++
+		}
+	}
+	if nn != n {
+		panic("check count expected " + strconv.Itoa(n) +
+			" got " + strconv.Itoa(nn))
+	}
 }
 
 func TestFnodeRandom(*testing.T) {
@@ -101,7 +126,7 @@ func TestFnodeRandom(*testing.T) {
 		for si := 0; si < nShuffle; si++ {
 			rand.Shuffle(len(data),
 				func(i, j int) { data[i], data[j] = data[j], data[i] })
-			var fn fNode
+			var fn fnode
 			for i, d := range data {
 				fn, _ = fn.insert(d, uint64(i), get)
 				// fe.checkUpTo(i, data, get)
@@ -112,7 +137,7 @@ func TestFnodeRandom(*testing.T) {
 }
 
 func TestDelete(*testing.T) {
-	var fn fNode
+	var fn fnode
 	const nData = 8 + 32
 	var data = make([]string, nData)
 	get := func(i uint64) string { return data[i] }
@@ -166,7 +191,7 @@ func TestDelete(*testing.T) {
 func TestDelete2(*testing.T) {
 	data := []string{"a", "b", "c", "d", "e"}
 	get := func(i uint64) string { return data[i] }
-	var fn fNode
+	var fn fnode
 	for i := 0; i < len(data); i++ {
 		fn, _ = fn.insert(data[i], uint64(i), get)
 	}
@@ -190,7 +215,7 @@ func TestWords(*testing.T) {
 	for si := 0; si < nShuffle; si++ {
 		rand.Shuffle(len(data),
 			func(i, j int) { data[i], data[j] = data[j], data[i] })
-		var fn fNode
+		var fn fnode
 		for i, d := range data {
 			fn, _ = fn.insert(d, uint64(i), get)
 			// fe.checkUpto(i, data, get)
@@ -304,11 +329,11 @@ var words = []string{
 
 var S1 []byte
 var S2 []byte
-var FN fNode
+var FN fnode
 
 func BenchmarkFnode(b *testing.B) {
 	get := func(i uint64) string { return words[i] }
-	var fn fNode
+	var fn fnode
 	for i, d := range words {
 		fn, _ = fn.insert(d, uint64(i), get)
 	}

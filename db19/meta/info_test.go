@@ -6,7 +6,7 @@ package meta
 import (
 	"testing"
 
-	"github.com/apmckinlay/gsuneido/db19/btree"
+	"github.com/apmckinlay/gsuneido/db19/index"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/str"
@@ -21,26 +21,26 @@ func TestInfo(t *testing.T) {
 		Table:   "one",
 		Nrows:   100,
 		Size:    1000,
-		Indexes: []*btree.Overlay{},
+		Indexes: []*index.Overlay{},
 	})
 	tbl.Put(&Info{
 		Table:   "two",
 		Nrows:   200,
 		Size:    2000,
-		Indexes: []*btree.Overlay{},
+		Indexes: []*index.Overlay{},
 	})
 
 	st := stor.HeapStor(8192)
 	st.Alloc(1) // avoid offset 0
 	off := tbl.Write(st, 0, allInfo)
 
-	tbl,_ = ReadInfoChain(st, off)
+	tbl, _ = ReadInfoChain(st, off)
 	assert(*tbl.MustGet("one")).Is(*tbl.MustGet("one"))
 	assert(*tbl.MustGet("two")).Is(Info{
 		Table:   "two",
 		Nrows:   200,
 		Size:    2000,
-		Indexes: []*btree.Overlay{},
+		Indexes: []*index.Overlay{},
 	})
 }
 
@@ -52,7 +52,7 @@ func TestInfo2(t *testing.T) {
 	st.Alloc(1) // avoid offset 0
 	off := tbl.Write(st, 0, allInfo)
 
-	tbl,_ = ReadInfoChain(st, off)
+	tbl, _ = ReadInfoChain(st, off)
 	for i, s := range data {
 		ti := tbl.MustGet(s)
 		assert.T(t).Msg("table").This(ti.Table).Is(s)

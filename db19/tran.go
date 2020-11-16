@@ -4,7 +4,7 @@
 package db19
 
 import (
-	"github.com/apmckinlay/gsuneido/db19/comp"
+	"github.com/apmckinlay/gsuneido/db19/index/comp"
 	"github.com/apmckinlay/gsuneido/db19/meta"
 	rt "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/cksum"
