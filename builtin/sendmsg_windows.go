@@ -165,10 +165,10 @@ var _ = builtin4("SendMessageTOOLINFO(hwnd, msg, wParam, lParam)",
 			cbSize:   uint32(nTOOLINFO),
 			uFlags:   getUint32(d, "uFlags"),
 			hwnd:     getHandle(d, "hwnd"),
-			uId:      getUint32(d, "uId"),
+			uId:      getHandle(d, "uId"),
 			hinst:    getHandle(d, "hinst"),
 			lpszText: getStr(d, "lpszText"),
-			lParam:   getInt32(d, "lParam"),
+			lParam:   getHandle(d, "lParam"),
 			rect:     getRect(d, "rect"),
 		}
 		rtn := goc.Syscall4(sendMessage,
@@ -182,15 +182,15 @@ var _ = builtin4("SendMessageTOOLINFO(hwnd, msg, wParam, lParam)",
 var _ = builtin4("SendMessageTOOLINFO2(hwnd, msg, wParam, lParam)",
 	func(a, b, c, d Value) Value {
 		defer heap.FreeTo(heap.CurSize())
-		p := heap.Alloc(nTOOLINFO2)
+		p := heap.Alloc(nTOOLINFO)
 		*(*TOOLINFO2)(p) = TOOLINFO2{
-			cbSize:   uint32(nTOOLINFO2),
+			cbSize:   uint32(nTOOLINFO),
 			uFlags:   getUint32(d, "uFlags"),
 			hwnd:     getHandle(d, "hwnd"),
-			uId:      getUint32(d, "uId"),
+			uId:      getHandle(d, "uId"),
 			hinst:    getHandle(d, "hinst"),
-			lpszText: uintptr(getInt(d, "lpszText")), // for LPSTR_TEXTCALLBACK
-			lParam:   getInt32(d, "lParam"),
+			lpszText: getHandle(d, "lpszText"), // for LPSTR_TEXTCALLBACK
+			lParam:   getHandle(d, "lParam"),
 			rect:     getRect(d, "rect"),
 		}
 		rtn := goc.Syscall4(sendMessage,

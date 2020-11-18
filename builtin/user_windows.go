@@ -139,11 +139,11 @@ type TOOLINFO struct {
 	cbSize     uint32
 	uFlags     uint32
 	hwnd       HANDLE
-	uId        uint32
+	uId        uintptr
 	rect       RECT
 	hinst      HANDLE
 	lpszText   *byte
-	lParam     int32
+	lParam     uintptr
 	lpReserved uintptr
 }
 
@@ -153,15 +153,13 @@ type TOOLINFO2 struct {
 	cbSize     uint32
 	uFlags     uint32
 	hwnd       HANDLE
-	uId        uint32
+	uId        uintptr
 	rect       RECT
 	hinst      HANDLE
-	lpszText   uintptr
-	lParam     int32
+	lpszText   uintptr // the difference from TOOLINFO
+	lParam     uintptr
 	lpReserved uintptr
 }
-
-const nTOOLINFO2 = unsafe.Sizeof(TOOLINFO{})
 
 type TVITEM struct {
 	mask           uint32
