@@ -18,7 +18,10 @@ $RECYCLE.BIN/
 *.out
 *.su
 *.tmp
+*.com
+*.com~
 *.exe
+*.exe~
 gsuneido
 *.old
 *.bak
@@ -31,5 +34,4 @@ en_US.*
 *.db
 sign.bat
 zap
-*.exe~
 *.prof
