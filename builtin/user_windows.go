@@ -379,7 +379,7 @@ var _ = builtin2("EndPaint(hwnd, ps)",
 
 func psArg(ob Value, p unsafe.Pointer) unsafe.Pointer {
 	ps := (*PAINTSTRUCT)(p)
-	ps.hdc = getHandle(ob, "hdc")
+	ps.hdc = getUintptr(ob, "hdc")
 	ps.fErase = getBool(ob, "fErase")
 	ps.rcPaint = getRect(ob, "rcPaint")
 	ps.fRestore = getBool(ob, "fRestore")
@@ -683,13 +683,13 @@ var _ = builtin4("InsertMenuItem(hMenu, uItem, fByPosition, lpmii)",
 			fType:         getUint32(d, "fType"),
 			fState:        getUint32(d, "fState"),
 			wID:           getUint32(d, "wID"),
-			hSubMenu:      getHandle(d, "hSubMenu"),
-			hbmpChecked:   getHandle(d, "hbmpChecked"),
-			hbmpUnchecked: getHandle(d, "hbmpUnchecked"),
-			dwItemData:    uintptr(getInt(d, "dwItemData")),
+			hSubMenu:      getUintptr(d, "hSubMenu"),
+			hbmpChecked:   getUintptr(d, "hbmpChecked"),
+			hbmpUnchecked: getUintptr(d, "hbmpUnchecked"),
+			dwItemData:    getUintptr(d, "dwItemData"),
 			dwTypeData:    getStr(d, "dwTypeData"),
 			cch:           getUint32(d, "cch"),
-			hbmpItem:      getHandle(d, "hbmpItem"),
+			hbmpItem:      getUintptr(d, "hbmpItem"),
 		}
 		rtn := goc.Syscall4(insertMenuItem,
 			intArg(a),
@@ -768,13 +768,13 @@ var _ = builtin4("SetMenuItemInfo(hMenu, uItem, fByPosition, lpmii)",
 			fType:         getUint32(d, "fType"),
 			fState:        getUint32(d, "fState"),
 			wID:           getUint32(d, "wID"),
-			hSubMenu:      getHandle(d, "hSubMenu"),
-			hbmpChecked:   getHandle(d, "hbmpChecked"),
-			hbmpUnchecked: getHandle(d, "hbmpUnchecked"),
-			dwItemData:    uintptr(getInt(d, "dwItemData")),
+			hSubMenu:      getUintptr(d, "hSubMenu"),
+			hbmpChecked:   getUintptr(d, "hbmpChecked"),
+			hbmpUnchecked: getUintptr(d, "hbmpUnchecked"),
+			dwItemData:    getUintptr(d, "dwItemData"),
 			//dwTypeData:    getStr(d, "dwTypeData"),
 			cch:      getUint32(d, "cch"),
-			hbmpItem: getHandle(d, "hbmpItem"),
+			hbmpItem: getUintptr(d, "hbmpItem"),
 		}
 		rtn := goc.Syscall4(setMenuItemInfo,
 			intArg(a),
@@ -861,13 +861,13 @@ var _ = builtin1("RegisterClass(wc)",
 		p := heap.Alloc(nWNDCLASS)
 		*(*WNDCLASS)(p) = WNDCLASS{
 			style:      getUint32(a, "style"),
-			wndProc:    getHandle(a, "wndProc"),
+			wndProc:    getUintptr(a, "wndProc"),
 			clsExtra:   getInt32(a, "clsExtra"),
 			wndExtra:   getInt32(a, "wndExtra"),
-			instance:   getHandle(a, "instance"),
-			icon:       getHandle(a, "icon"),
-			cursor:     getHandle(a, "cursor"),
-			background: getHandle(a, "background"),
+			instance:   getUintptr(a, "instance"),
+			icon:       getUintptr(a, "icon"),
+			cursor:     getUintptr(a, "cursor"),
+			background: getUintptr(a, "background"),
 			menuName:   getStr(a, "menuName"),
 			className:  getStr(a, "className"),
 		}
@@ -1848,7 +1848,7 @@ var _ = builtin1("TrackMouseEvent(lpEventTrack)",
 		*(*TRACKMOUSEEVENT)(p) = TRACKMOUSEEVENT{
 			cbSize:      uint32(nTRACKMOUSEEVENT),
 			dwFlags:     getInt32(a, "dwFlags"),
-			hwndTrack:   getHandle(a, "hwndTrack"),
+			hwndTrack:   getUintptr(a, "hwndTrack"),
 			dwHoverTime: getInt32(a, "dwHoverTime"),
 		}
 		rtn := goc.Syscall1(trackMouseEvent,
@@ -1874,7 +1874,7 @@ var _ = builtin1("FlashWindowEx(fi)",
 		p := heap.Alloc(nFLASHWINFO)
 		*(*FLASHWINFO)(p) = FLASHWINFO{
 			cbSize:    uint32(nFLASHWINFO),
-			hwnd:      getHandle(a, "hwnd"),
+			hwnd:      getUintptr(a, "hwnd"),
 			dwFlags:   getInt32(a, "dwFlags"),
 			uCount:    getInt32(a, "uCount"),
 			dwTimeout: getInt32(a, "dwTimeout"),
@@ -2148,10 +2148,10 @@ var _ = builtin1("DispatchMessage(msg)",
 func obToMSG(ob Value) unsafe.Pointer {
 	p := heap.Alloc(nMSG)
 	*(*MSG)(p) = MSG{
-		hwnd:    getHandle(ob, "hwnd"),
+		hwnd:    getUintptr(ob, "hwnd"),
 		message: uint32(getInt(ob, "message")),
-		wParam:  getHandle(ob, "wParam"),
-		lParam:  getHandle(ob, "lParam"),
+		wParam:  getUintptr(ob, "wParam"),
+		lParam:  getUintptr(ob, "lParam"),
 		time:    uint32(getInt(ob, "time")),
 		pt:      getPoint(ob, "pt"),
 	}

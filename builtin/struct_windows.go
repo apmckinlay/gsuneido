@@ -270,14 +270,14 @@ func (*SuNMTVDISPINFO) updateStruct(ob Value, p unsafe.Pointer) {
 	tvi := ob.Get(nil, SuStr("item"))
 	x := (*NMTVDISPINFO)(p)
 	x.item.mask = getUint32(tvi, "mask")
-	x.item.hItem = getHandle(tvi, "hItem")
+	x.item.hItem = getUintptr(tvi, "hItem")
 	x.item.state = getUint32(tvi, "state")
 	x.item.stateMask = getUint32(tvi, "stateMask")
 	x.item.cchTextMax = getInt32(tvi, "cchTextMax")
 	x.item.iImage = getInt32(tvi, "iImage")
 	x.item.iSelectedImage = getInt32(tvi, "iSelectedImage")
 	x.item.cChildren = getInt32(tvi, "cChildren")
-	x.item.lParam = getHandle(tvi, "lParam")
+	x.item.lParam = getUintptr(tvi, "lParam")
 }
 
 func nmtvdispinfo(_ *Thread, args []Value) Value {
@@ -312,11 +312,11 @@ func (*SuNMTTDISPINFO) structToOb(p unsafe.Pointer) Value {
 
 func (*SuNMTTDISPINFO) updateStruct(ob Value, p unsafe.Pointer) {
 	x := (*NMTTDISPINFO)(p)
-	x.lpszText = getHandle(ob, "lpszText")
+	x.lpszText = getUintptr(ob, "lpszText")
 	getStrZbs(ob, "szText", x.szText[:])
-	x.hinst = getHandle(ob, "hinst")
+	x.hinst = getUintptr(ob, "hinst")
 	x.uFlags = getInt32(ob, "uFlags")
-	x.lParam = getHandle(ob, "lParam")
+	x.lParam = getUintptr(ob, "lParam")
 }
 
 type NMTTDISPINFO struct {

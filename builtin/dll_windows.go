@@ -306,8 +306,8 @@ func pointArg(ob Value, p unsafe.Pointer) unsafe.Pointer {
 
 //-------------------------------------------------------------------
 
-func getHandle(ob Value, mem string) HANDLE {
-	return HANDLE(getInt(ob, mem))
+func getUintptr(ob Value, mem string) uintptr {
+	return uintptr(getInt(ob, mem))
 }
 
 func getCallback(ob Value, mem string, nargs int) uintptr {

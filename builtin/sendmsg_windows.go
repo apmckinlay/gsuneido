@@ -164,11 +164,11 @@ var _ = builtin4("SendMessageTOOLINFO(hwnd, msg, wParam, lParam)",
 		*(*TOOLINFO)(p) = TOOLINFO{
 			cbSize:   uint32(nTOOLINFO),
 			uFlags:   getUint32(d, "uFlags"),
-			hwnd:     getHandle(d, "hwnd"),
-			uId:      getHandle(d, "uId"),
-			hinst:    getHandle(d, "hinst"),
+			hwnd:     getUintptr(d, "hwnd"),
+			uId:      getUintptr(d, "uId"),
+			hinst:    getUintptr(d, "hinst"),
 			lpszText: getStr(d, "lpszText"),
-			lParam:   getHandle(d, "lParam"),
+			lParam:   getUintptr(d, "lParam"),
 			rect:     getRect(d, "rect"),
 		}
 		rtn := goc.Syscall4(sendMessage,
@@ -186,11 +186,11 @@ var _ = builtin4("SendMessageTOOLINFO2(hwnd, msg, wParam, lParam)",
 		*(*TOOLINFO2)(p) = TOOLINFO2{
 			cbSize:   uint32(nTOOLINFO),
 			uFlags:   getUint32(d, "uFlags"),
-			hwnd:     getHandle(d, "hwnd"),
-			uId:      getHandle(d, "uId"),
-			hinst:    getHandle(d, "hinst"),
-			lpszText: getHandle(d, "lpszText"), // for LPSTR_TEXTCALLBACK
-			lParam:   getHandle(d, "lParam"),
+			hwnd:     getUintptr(d, "hwnd"),
+			uId:      getUintptr(d, "uId"),
+			hinst:    getUintptr(d, "hinst"),
+			lpszText: getUintptr(d, "lpszText"), // for LPSTR_TEXTCALLBACK
+			lParam:   getUintptr(d, "lParam"),
 			rect:     getRect(d, "rect"),
 		}
 		rtn := goc.Syscall4(sendMessage,
@@ -218,7 +218,7 @@ var _ = builtin4("SendMessageTreeItem(hwnd, msg, wParam, tvitem)",
 		*tvi = TVITEMEX{
 			TVITEM: TVITEM{
 				mask:           getUint32(d, "mask"),
-				hItem:          getHandle(d, "hItem"),
+				hItem:          getUintptr(d, "hItem"),
 				state:          getUint32(d, "state"),
 				stateMask:      getUint32(d, "stateMask"),
 				pszText:        pszText,
@@ -226,7 +226,7 @@ var _ = builtin4("SendMessageTreeItem(hwnd, msg, wParam, tvitem)",
 				iImage:         getInt32(d, "iImage"),
 				iSelectedImage: getInt32(d, "iSelectedImage"),
 				cChildren:      getInt32(d, "cChildren"),
-				lParam:         getHandle(d, "lParam"),
+				lParam:         getUintptr(d, "lParam"),
 			}}
 		rtn := goc.Syscall4(sendMessage,
 			intArg(a),
@@ -253,9 +253,9 @@ var _ = builtin4("SendMessageTreeSort(hwnd, msg, wParam, tvitem)",
 		defer heap.FreeTo(heap.CurSize())
 		p := heap.Alloc(nTVSORTCB)
 		*(*TVSORTCB)(p) = TVSORTCB{
-			hParent:     getHandle(d, "hParent"),
+			hParent:     getUintptr(d, "hParent"),
 			lpfnCompare: getCallback(d, "lpfnCompare", 3),
-			lParam:      getHandle(d, "lParam"),
+			lParam:      getUintptr(d, "lParam"),
 		}
 		rtn := goc.Syscall4(sendMessage,
 			intArg(a),
@@ -271,15 +271,15 @@ var _ = builtin4("SendMessageTreeInsert(hwnd, msg, wParam, tvins)",
 		p := heap.Alloc(nTVINSERTSTRUCT)
 		tvins := (*TVINSERTSTRUCT)(p)
 		*tvins = TVINSERTSTRUCT{
-			hParent:      getHandle(d, "hParent"),
-			hInsertAfter: getHandle(d, "hInsertAfter"),
+			hParent:      getUintptr(d, "hParent"),
+			hInsertAfter: getUintptr(d, "hInsertAfter"),
 		}
 		item := d.Get(nil, SuStr("item"))
 		tvi := &tvins.item
 		*tvi = TVITEMEX{
 			TVITEM: TVITEM{
 				mask:           getUint32(item, "mask"),
-				hItem:          getHandle(item, "hItem"),
+				hItem:          getUintptr(item, "hItem"),
 				state:          getUint32(item, "state"),
 				stateMask:      getUint32(item, "stateMask"),
 				pszText:        getStr(item, "pszText"),
@@ -287,7 +287,7 @@ var _ = builtin4("SendMessageTreeInsert(hwnd, msg, wParam, tvins)",
 				iImage:         getInt32(item, "iImage"),
 				iSelectedImage: getInt32(item, "iSelectedImage"),
 				cChildren:      getInt32(item, "cChildren"),
-				lParam:         getHandle(item, "lParam"),
+				lParam:         getUintptr(item, "lParam"),
 			}}
 		rtn := goc.Syscall4(sendMessage,
 			intArg(a),
@@ -325,10 +325,10 @@ var _ = builtin4("SendMessageMSG(hwnd, msg, wParam, lParam)",
 		defer heap.FreeTo(heap.CurSize())
 		p := heap.Alloc(nMSG)
 		*(*MSG)(p) = MSG{
-			hwnd:    getHandle(d, "hwnd"),
+			hwnd:    getUintptr(d, "hwnd"),
 			message: getUint32(d, "message"),
-			wParam:  getHandle(d, "message"),
-			lParam:  getHandle(d, "message"),
+			wParam:  getUintptr(d, "message"),
+			lParam:  getUintptr(d, "message"),
 			time:    getUint32(d, "message"),
 			pt:      getPoint(d, "pt"),
 		}
@@ -376,14 +376,14 @@ func obToHDITEM(ob Value, hdi *HDITEM) {
 		mask:       getInt32(ob, "mask"),
 		cxy:        getInt32(ob, "cxy"),
 		pszText:    hdi.pszText, // not handled
-		hbm:        getHandle(ob, "hbm"),
+		hbm:        getUintptr(ob, "hbm"),
 		cchTextMax: getInt32(ob, "cchTextMax"),
 		fmt:        getInt32(ob, "fmt"),
-		lParam:     getHandle(ob, "lParam"),
+		lParam:     getUintptr(ob, "lParam"),
 		iImage:     getInt32(ob, "iImage"),
 		iOrder:     getInt32(ob, "iOrder"),
 		typ:        getUint32(ob, "type"),
-		pvFilter:   getHandle(ob, "pvFilter"),
+		pvFilter:   getUintptr(ob, "pvFilter"),
 		state:      getUint32(ob, "state"),
 	}
 }
@@ -459,7 +459,7 @@ var _ = builtin4("SendMessageTreeHitTest(hwnd, msg, wParam, lParam)",
 		*ht = TVHITTESTINFO{
 			pt:    getPoint(d, "pt"),
 			flags: getInt32(d, "flags"),
-			iItem: getHandle(d, "iItem"),
+			iItem: getUintptr(d, "iItem"),
 		}
 		rtn := goc.Syscall4(sendMessage,
 			intArg(a),
@@ -576,7 +576,7 @@ func obToLVITEM(ob Value) (unsafe.Pointer, *LVITEM) {
 			pszText:    getStr(ob, "pszText"),
 			cchTextMax: getInt32(ob, "cchTextMax"),
 			iImage:     getInt32(ob, "iImage"),
-			lParam:     getHandle(ob, "lParam"),
+			lParam:     getUintptr(ob, "lParam"),
 			iIndent:    getInt32(ob, "iIndent"),
 		}
 	}

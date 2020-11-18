@@ -748,7 +748,7 @@ var _ = builtin5("ExtCreatePen(dwPenStyle, dwWidth, brush, "+
 		*(*LOGBRUSH)(p) = LOGBRUSH{
 			lbStyle: getInt32(c, "lbStyle"),
 			lbColor: getInt32(c, "lbColor"),
-			lbHatch: uintptr(getInt(c, "lbHatch")),
+			lbHatch: getUintptr(c, "lbHatch"),
 		}
 		rtn := goc.Syscall5(extCreatePen,
 			intArg(a),
