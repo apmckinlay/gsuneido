@@ -13,7 +13,7 @@ all:
 	go build -v -ldflags "$(LDFLAGS)" -a
 
 console:
-	go build -v -ldflags "-X 'main.builtDate=${BUILT}'"
+	go build -v -ldflags "-X 'main.builtDate=${BUILT}' -s -w"
 
 portable:
 	go build -v -ldflags "-X 'main.builtDate=${BUILT}'" -tags portable
