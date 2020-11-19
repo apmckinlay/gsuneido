@@ -327,9 +327,9 @@ var _ = builtin4("SendMessageMSG(hwnd, msg, wParam, lParam)",
 		*(*MSG)(p) = MSG{
 			hwnd:    getUintptr(d, "hwnd"),
 			message: getUint32(d, "message"),
-			wParam:  getUintptr(d, "message"),
-			lParam:  getUintptr(d, "message"),
-			time:    getUint32(d, "message"),
+			wParam:  getUintptr(d, "wParam"),
+			lParam:  getUintptr(d, "lParam"),
+			time:    getUint32(d, "time"),
 			pt:      getPoint(d, "pt"),
 		}
 		rtn := goc.Syscall4(sendMessage,
