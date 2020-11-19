@@ -8,6 +8,7 @@ package options
 // command line flags
 var (
 	BuiltDate  string
+	Mode       string
 	Action     string
 	Error      string
 	Arg        string
@@ -21,7 +22,6 @@ var CmdLine string
 // log file names, port is added when client
 var (
 	Errlog = "error.log"
-	Outlog = "output.log"
 )
 
 // debugging options

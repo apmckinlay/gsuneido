@@ -3,14 +3,14 @@
 
 // +build !windows portable
 
-package console
+package options
 
-func OutputToConsole() {
+import "os"
+
+func Redirected() bool {
+	return false
 }
 
-func ConsoleAttached() bool {
-	return true
-}
-
-func RedirOutput() {
+func Console(s string) {
+	os.Stdout.WriteString(s)
 }

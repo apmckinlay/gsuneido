@@ -1,32 +1,24 @@
 # requires sh on path (e.g. from MinGW)
 BUILT=$(shell date "+%b %e %Y %X")
 
-LDFLAGS = -X 'main.builtDate=${BUILT}' -s -w
+LDFLAGS = -s -w -X 'main.builtDate=${BUILT}'
+GUIFLAGS = $(LDFLAGS)
 ifdef PATHEXT
-	LDFLAGS += -H windowsgui
+	# Windows stuff
+	GUIFLAGS = $(LDFLAGS) -X main.mode=gui -H windowsgui
+	CONSOLE = go build -o gsuneido.com -ldflags "$(LDFLAGS)"
 endif
 
 build:
-	go build -v -ldflags "$(LDFLAGS)"
-
-all:
-	go build -v -ldflags "$(LDFLAGS)" -a
-
-console:
-	go build -v -ldflags "-X 'main.builtDate=${BUILT}' -s -w"
+	go build -v -ldflags "$(GUIFLAGS)" $(GUITAG)
+	$(CONSOLE)
 
 portable:
-	go build -v -ldflags "-X 'main.builtDate=${BUILT}'" -tags portable
+	# a Windows version without the Windows stuff
+	go build -o portable.exe -v -ldflags "$(LDFLAGS)" -tags portable
 
 test:
 	go test -short -count=1 ./...
-
-repl: build
-	cmd /c start/w ./gsuneido -repl
-
-# need the ./ so sh won't find an old one on the path
-client: build
-	./gsuneido.exe -c -- t@../tok
 
 zap:
 	go build -ldflags "-s -w" ./cmd/zap
@@ -43,6 +35,6 @@ clean:
 gsuneido_windows.syso : res/suneido.rc res/suneido.manifest
 	windres -F pe-x86-64 -o gsuneido_windows.syso res/suneido.rc
 
-.PHONY : build all console portable test repl client generate clean zap
+.PHONY : build portable test generate clean zap
 
 # -trimpath (but breaks vscode goto)

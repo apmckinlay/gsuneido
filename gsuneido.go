@@ -9,12 +9,12 @@ import (
 	"io"
 	"log"
 	"os"
+	"os/exec"
 	"runtime"
 	"runtime/debug"
 	"strings"
 	"time"
 
-	_ "github.com/apmckinlay/gsuneido/aaainitfirst"
 	"github.com/apmckinlay/gsuneido/builtin"
 	"github.com/apmckinlay/gsuneido/compile"
 	"github.com/apmckinlay/gsuneido/db19"
@@ -24,6 +24,7 @@ import (
 )
 
 var builtDate = "Dec 16 2019" // set by: go build -ldflags "-X main.builtDate=..."
+var mode = ""                 // set by: go build -ldflags "-X main.mode=gui"
 
 var help = `options:
 	-check
@@ -42,14 +43,24 @@ var dbmsLocal IDbms
 var mainThread *Thread
 
 func main() {
+	options.BuiltDate = builtDate
+	options.Mode = mode
+	options.Parse(os.Args[1:])
+	if options.Mode == "gui" {
+		relaunchWithRedirect()
+	}
+	if options.Action == "" {
+		if options.Mode == "gui" {
+			options.Action = "client" //TODO standalone
+		} else {
+			options.Action = "repl"
+		}
+	}
+
 	suneido := new(SuObject)
 	suneido.SetConcurrent()
 	Global.Builtin("Suneido", suneido)
 
-	options.BuiltDate = builtDate
-	if options.Action == "" {
-		options.Action = "repl"
-	}
 	switch options.Action {
 	case "server":
 		startServer()
@@ -149,14 +160,33 @@ func ck(err error) {
 	}
 }
 
+func relaunchWithRedirect() {
+	// This is the only way I found to redirect stdout/stderr
+	// for built-in output e.g. crashes
+	if options.Redirected() {
+		return // to avoid infinite loop
+	}
+	path, _ := os.Executable()
+	f, err := os.OpenFile(options.Errlog, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0666)
+	if err != nil {
+		Fatal(err.Error())
+	}
+	cmd := exec.Command(path, os.Args[1:]...)
+	cmd.Stdout = f
+	cmd.Stderr = f
+	err = cmd.Start()
+	if err != nil {
+		Fatal(err.Error())
+	}
+	os.Exit(0)
+}
+
 func clientErrorLog() {
 	dbms := mainThread.Dbms()
 
 	log.SetFlags(log.Ldate | log.Ltime | log.Lmsgprefix)
 	log.SetPrefix(dbms.SessionId("") + " ")
 
-	// unlike cSuneido, client error.log is still in current directory
-	// this is partly because stderr has already been redirected
 	f, err := os.Open(options.Errlog)
 	if err != nil {
 		return
@@ -250,7 +280,10 @@ func repl() {
 }
 
 func isTerminal() bool {
-	fm, _ := os.Stdout.Stat()
+	fm, err := os.Stdout.Stat()
+	if err != nil {
+		return true // ???
+	}
 	mode := fm.Mode()
 	return mode&os.ModeDevice == os.ModeDevice &&
 		mode&os.ModeCharDevice == os.ModeCharDevice

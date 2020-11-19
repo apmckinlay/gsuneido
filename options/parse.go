@@ -35,7 +35,11 @@ loop:
 			setAction("load")
 			args = optionalArg(args)
 		case match(&args, "-repl"), match(&args, "-r"):
-			setAction("repl")
+			if Mode == "gui" {
+				error("-repl not support for gui mode")
+			} else {
+				setAction("repl")
+			}
 		case match(&args, "-port"), match(&args, "-p"):
 			if len(args) > 0 && args[0][0] != '-' {
 				Port = args[0]
@@ -71,7 +75,6 @@ loop:
 	if Action == "client" {
 		temp := os.TempDir() + "/"
 		Errlog = temp + "suneido" + Port + ".err"
-		Outlog = temp + "suneido" + Port + ".out"
 	}
 }
 

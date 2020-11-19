@@ -8,13 +8,11 @@ import (
 	"os"
 	"sync"
 
-	"github.com/apmckinlay/gsuneido/console"
 	"github.com/apmckinlay/gsuneido/options"
 )
 
 var traceLog *os.File
 var traceLogOnce sync.Once
-var traceConOnce sync.Once
 
 func Trace(args ...interface{}) {
 	s := fmt.Sprintln(args...)
@@ -28,9 +26,6 @@ func Trace(args ...interface{}) {
 		}
 	}
 	if options.Trace&options.TraceConsole != 0 {
-		traceConOnce.Do(console.OutputToConsole)
-		if console.ConsoleAttached() {
-			os.Stdout.WriteString(s)
-		}
+		options.Console(s)
 	}
 }
