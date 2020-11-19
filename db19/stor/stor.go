@@ -36,6 +36,8 @@ type Stor struct {
 	impl storage
 	// chunksize must be a power of two and must be initialized
 	chunksize uint64
+	// threshold is the offset in a chunk where we proactively get next chunk
+	threshold uint64
 	// shift must be initialized to match chunksize
 	shift int
 	// size is the currently used amount.
@@ -50,7 +52,9 @@ type Stor struct {
 func NewStor(impl storage, chunksize uint64, size uint64) *Stor {
 	shift := bits.TrailingZeros(uint(chunksize))
 	assert.That(1<<shift == chunksize) // chunksize must be power of 2
-	return &Stor{impl: impl, chunksize: chunksize, shift: shift, size: size}
+	threshold := chunksize * 3 / 4     // ???
+	return &Stor{impl: impl, chunksize: chunksize, threshold: threshold,
+		shift: shift, size: size}
 }
 
 // Alloc allocates n bytes of storage and returns its Offset and byte slice
@@ -64,28 +68,38 @@ func (s *Stor) Alloc(n int) (Offset, []byte) {
 		oldsize := atomic.LoadUint64(&s.size)
 		offset := oldsize
 		newsize := offset + uint64(n)
-		nchunks := (oldsize + s.chunksize - 1) >> s.shift
-		if newsize>>s.shift >= nchunks {
-			// need to get another chunk
-			s.lock.Lock() // note: lock does not prevent concurrent allocations
-			chunk := s.offsetToChunk(newsize)
+		chunk := s.offsetToChunk(newsize)
+		nchunks := s.offsetToChunk(oldsize + s.chunksize - 1)
+		if chunk >= nchunks { // straddle
 			chunks := s.chunks.Load().([][]byte)
 			if chunk >= len(chunks) {
-				// no one else beat us to it
-				chunks = append(chunks, s.impl.Get(chunk))
-				s.chunks.Store(chunks)
+				s.getChunk(chunk)
 			}
-			s.lock.Unlock()
-
-			offset = uint64(chunk) * s.chunksize
+			offset = s.chunkToOffset(chunk)
 			newsize = offset + uint64(n)
 		}
 		// attempt to confirm our allocation
 		if atomic.CompareAndSwapUint64(&s.size, oldsize, newsize) {
+			// proactively get next chunk if we passed the threshold
+			i := offset & (s.chunksize - 1) // index within chunk
+			if i <= s.threshold && i+uint64(n) > s.threshold {
+				s.getChunk(s.offsetToChunk(offset)+1)
+			}
 			return offset, s.Data(offset)[:n:n] // fast path
 		}
 		// another thread beat us, loop and try again
 	}
+}
+
+func (s *Stor) getChunk(chunk int) {
+	s.lock.Lock() // note: lock does not prevent concurrent allocations
+	chunks := s.chunks.Load().([][]byte)
+	if chunk >= len(chunks) {
+		// no one else beat us to it
+		chunks = append(chunks, s.impl.Get(chunk))
+		s.chunks.Store(chunks)
+	}
+	s.lock.Unlock()
 }
 
 // Data returns a byte slice starting at the given offset
@@ -101,7 +115,11 @@ func (s *Stor) Data(offset Offset) []byte {
 }
 
 func (s *Stor) offsetToChunk(offset Offset) int {
-	return int(offset / s.chunksize)
+	return int(offset >> s.shift)
+}
+
+func (s *Stor) chunkToOffset(chunk int) Offset {
+	return uint64(chunk) << s.shift
 }
 
 // Size returns the current (allocated) size of the data.

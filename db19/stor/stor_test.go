@@ -4,8 +4,11 @@
 package stor
 
 import (
+	"math/rand"
 	"os"
+	"sync"
 	"testing"
+	"time"
 
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
@@ -88,4 +91,33 @@ func TestLastOffset(t *testing.T) {
 		assert(off).Is(i * 100)
 	}
 	assert(ms.LastOffset(off, magic)).Is(0)
+}
+
+func TestStress(*testing.T) {
+	var nThreads = 101
+	var nIterations = 1_000_000
+	const allocSize = 1024
+	if testing.Short() {
+		nThreads = 2
+		nIterations = 10000
+	}
+	var wg sync.WaitGroup
+	s, err := MmapStor("stor.tmp", CREATE)
+	defer os.Remove("stor.tmp")
+	defer s.Close()
+	if err != nil {
+		panic(err.Error())
+	}
+	for i := 0; i < nThreads; i++ {
+		wg.Add(1)
+		go func() {
+			r := rand.New(rand.NewSource(time.Now().UnixNano()))
+			for i := 0; i < nIterations; i++ {
+				n := r.Intn(allocSize) + 1
+				s.Alloc(n)
+			}
+			wg.Done()
+		}()
+	}
+	wg.Wait()
 }
