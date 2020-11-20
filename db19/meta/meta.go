@@ -41,7 +41,7 @@ func (m *Meta) GetRoInfo(table string) *Info {
 	return nil
 }
 
-func (m *Meta) GetRwInfo(table string, tranNum int) *Info {
+func (m *Meta) GetRwInfo(table string) *Info {
 	if pti, ok := m.difInfo.Get(table); ok {
 		return pti // already have mutable
 	}
@@ -57,7 +57,7 @@ func (m *Meta) GetRwInfo(table string, tranNum int) *Info {
 	// set up index overlays
 	ti.Indexes = append(ti.Indexes[:0:0], ti.Indexes...) // copy
 	for i := range ti.Indexes {
-		ti.Indexes[i] = ti.Indexes[i].Mutable(tranNum)
+		ti.Indexes[i] = ti.Indexes[i].Mutable()
 	}
 
 	m.difInfo.Put(&ti)
@@ -252,14 +252,6 @@ func (m *Meta) CheckAllMerged() {
 	m.info.ForEach(func(ti *Info) {
 		for _, ov := range ti.Indexes {
 			ov.CheckFlat()
-		}
-	})
-}
-
-func (m *Meta) CheckTnMerged(tn int) {
-	m.info.ForEach(func(ti *Info) {
-		for _, ov := range ti.Indexes {
-			ov.CheckTnMerged(tn)
 		}
 	})
 }

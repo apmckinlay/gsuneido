@@ -73,7 +73,7 @@ func (t *UpdateTran) Output(table string, rec rt.Record) {
 }
 
 func (t *UpdateTran) getInfo(table string) *meta.Info {
-	if ti := t.meta.GetRwInfo(table, t.num()); ti != nil {
+	if ti := t.meta.GetRwInfo(table); ti != nil {
 		return ti
 	}
 	panic("table not found: " + table)

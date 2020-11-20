@@ -18,7 +18,6 @@ type T = ixbuf
 type ixbuf struct {
 	chunks  []chunk
 	size    int
-	TranNum int //TODO temporary
 }
 
 type chunk []slot

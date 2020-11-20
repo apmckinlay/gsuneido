@@ -38,12 +38,12 @@ func OverlayFor(fb *fbtree.T) *Overlay {
 }
 
 // Mutable returns a modifiable copy of an Overlay
-func (ov *Overlay) Mutable(tranNum int) *Overlay {
+func (ov *Overlay) Mutable() *Overlay {
 	assert.That(ov.mut == nil)
 	under := make([]*ixbuf.T, len(ov.under))
 	copy(under, ov.under)
 	assert.That(len(under) >= 1)
-	return &Overlay{fb: ov.fb, under: under, mut: &ixbuf.T{TranNum: tranNum}}
+	return &Overlay{fb: ov.fb, under: under, mut: &ixbuf.T{}}
 }
 
 func (ov *Overlay) GetIxspec() *ixspec.T {
@@ -226,10 +226,4 @@ func (ov *Overlay) WithSaved(fb SaveResult) *Overlay {
 
 func (ov *Overlay) CheckFlat() {
 	assert.Msg("not flat").That(len(ov.under) == 1)
-}
-
-func (ov *Overlay) CheckTnMerged(tn int) {
-	for i := 1; i < len(ov.under); i++ {
-		assert.That(ov.under[i].TranNum != tn)
-	}
 }

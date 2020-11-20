@@ -32,7 +32,7 @@ func TestMeta(t *testing.T) {
 		m := meta.Mutable()
 		for i := 0; i < 5; i++ {
 			m.GetRoInfo(data[rand.Intn(100)])
-			m.GetRwInfo(data[rand.Intn(100)], 0)
+			m.GetRwInfo(data[rand.Intn(100)])
 		}
 		// end of transaction, merge back to global
 		meta = m.LayeredOnto(meta)
