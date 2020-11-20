@@ -4,7 +4,6 @@
 package db19
 
 import (
-	"github.com/apmckinlay/gsuneido/db19/index/comp"
 	"github.com/apmckinlay/gsuneido/db19/meta"
 	rt "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/cksum"
@@ -63,8 +62,8 @@ func (t *UpdateTran) Output(table string, rec rt.Record) {
 	cksum.Update(buf)
 	keys := make([]string, len(ts.Indexes))
 	for i := range ts.Indexes {
-		is := ts.Indexes[i].Ixspec //TODO add Ixspec.Key(rec)
-		keys[i] = comp.Key(rec, is.Fields, is.Fields2)
+		is := ts.Indexes[i].Ixspec
+		keys[i] = is.Key(rec)
 		ti.Indexes[i].Insert(keys[i], off)
 	}
 	t.ck(t.db.ck.Write(t.ct, table, keys))
