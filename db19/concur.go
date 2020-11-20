@@ -20,7 +20,7 @@ const chanBuffers = 4 // ???
 //
 // checker -> merger
 //
-// persist is done by merger every persistInterval
+// persist is called by merger every persistInterval
 //
 // Concurrency is separate so we can test functionality
 // without any goroutines or channels.
@@ -97,8 +97,13 @@ func startMergeWorkers() *execMulti {
 }
 
 func (em *execMulti) merge(state *DbState, merges *mergeList) []meta.MergeUpdate {
-	//TODO if only one table, just merge it in this thread
+	// if only one table, just merge it in this thread
 	// and avoid overhead of channels and worker
+	if len(merges.tn) == 1 {
+		m := merges.tn[0]
+		result := state.meta.Merge(m.table, m.nmerge)
+		return append(merges.results, result)
+	}
 	for i := 0; i < len(merges.tn); {
 		select {
 		case em.jobChan <- job{meta: state.meta,
