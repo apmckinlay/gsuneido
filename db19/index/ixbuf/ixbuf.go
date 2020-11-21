@@ -16,8 +16,8 @@ import (
 type T = ixbuf
 
 type ixbuf struct {
-	chunks  []chunk
-	size    int
+	chunks []chunk
+	size   int
 }
 
 type chunk []slot
@@ -134,7 +134,7 @@ func (ib *ixbuf) Delete(key string) bool {
 
 //-------------------------------------------------------------------
 
-// Merge combines several T into a new one.
+// Merge combines several ixbuf's into a new one.
 // It does not modify its inputs so it is thread-safe
 // as long as the inputs don't change.
 // It is immutable persistent and the result may share chunks of the inputs
@@ -159,51 +159,102 @@ func Merge(ibs ...*ixbuf) *ixbuf {
 	} else if len(in) == 1 {
 		return single
 	}
-	out := output{goal: goal(size), out: make([]chunk, 0, nc)}
-	// merge at the chunk level
-	for len(in) > 0 {
+	m := merge{goal: goal(size), in: in, out: make([]chunk, 0, nc)}
+	return m.merge()
+}
+
+type merge struct {
+	goal int
+	in   [][]chunk
+	buf  chunk
+	out  []chunk
+	size int
+}
+
+func (m *merge) merge() *ixbuf {
+	in := make([]chunk, len(m.in))
+	for i := range m.in {
+		in[i] = m.in[i][0]
+		m.in[i] = m.in[i][1:]
+	}
+	passthru := false
+	for len(m.in) > 0 {
 		// find minimum, inlined for speed
 		i := 0
-		key := in[0][0][0].key
+		key := in[0].firstKey()
 		for j := 1; j < len(in); j++ {
-			key2 := in[j][0][0].key
+			key2 := in[j].firstKey()
 			if key2 < key {
 				i = j
 				key = key2
 			}
 		}
-		out.add(in[i][0])
-		if len(in[i]) == 1 {
-			in = append(in[:i], in[i+1:]...) // remove empty input
+		if !passthru || !m.passthru(in, i) {
+			m.outputSlot(in[i][0])
+			if len(in[i]) > 1 {
+				// advance to next slot
+				in[i] = in[i][1:]
+				continue
+			}
+		}
+		if len(m.in[i]) > 0 {
+			// advance to next chunk
+			in[i] = m.in[i][0]
+			m.in[i] = m.in[i][1:]
 		} else {
-			in[i] = in[i][1:] // pop chunk
+			// remove empty input
+			in = append(in[:i], in[i+1:]...)
+			m.in = append(m.in[:i], m.in[i+1:]...)
+		}
+		passthru = true
+	}
+	return m.result()
+}
+
+func (m *merge) outputSlot(s slot) {
+	m.buf = append(m.buf, s)
+	if len(m.buf) > m.goal {
+		m.flushbuf()
+	}
+}
+
+func (m *merge) passthru(in []chunk, i int) bool {
+	// i is the minimum
+	last := in[i].lastKey()
+	for j := 0; j < len(m.in); j++ {
+		if j != i && last >= in[j].firstKey() {
+			return false
 		}
 	}
-	return out.result()
+	m.outputChunk(in[i])
+	return true
 }
 
-type output struct {
-	goal int
-	in   []chunk
-	buf  chunk // buf is between in and out
-	out  []chunk
-	size int
+func (m *merge) outputChunk(c chunk) {
+	if len(c) > m.goal/2 {
+		m.flushbuf()
+		// pass entire chunk through to output
+		m.out = append(m.out, c)
+		m.size += len(c)
+	} else {
+		m.buf = append(m.buf, c...) // could exceed goal
+	}
 }
 
-func (o *output) add(a chunk) {
-	// fmt.Println("add chunk", chunkstr(a))
-	if len(o.in) == 1 && o.in[0].lastKey() < a.firstKey() {
-		o.separate(o.in[0])
-		o.in[0] = a
+func (m *merge) flushbuf() {
+	if len(m.buf) == 0 {
 		return
 	}
-	// There are other possible scenarios for separate (non-overlapping)
-	// but they are too rare to slow down for.
-	o.in = append(o.in, a)
-	if len(o.in) == 1 { // first time
-		return
-	}
-	o.mergeUpto(a[0])
+	c := make([]slot, len(m.buf))
+	copy(c, m.buf)
+	m.out = append(m.out, c)
+	m.size += len(m.buf)
+	m.buf = m.buf[:0] // reuse buf
+}
+
+func (m *merge) result() *ixbuf {
+	m.flushbuf()
+	return &ixbuf{chunks: m.out, size: m.size}
 }
 
 func (c chunk) firstKey() string {
@@ -212,91 +263,6 @@ func (c chunk) firstKey() string {
 
 func (c chunk) lastKey() string {
 	return c[len(c)-1].key
-}
-
-func (o *output) separate(c chunk) {
-	// fmt.Println("separate", chunkstr(c))
-	// fmt.Println("goal", o.goal, "len buf", len(o.buf), "len chunk", len(c))
-	if len(c) > o.goal/2 {
-		o.flushbuf()
-		// fmt.Println("output chunk direct")
-		o.out = append(o.out, c)
-		o.size += len(c)
-	} else {
-		if len(o.buf) > o.goal {
-			o.flushbuf()
-		}
-		// fmt.Println("append to buf")
-		o.buf = append(o.buf, c...)
-	}
-}
-
-func (o *output) flushbuf() {
-	if len(o.buf) == 0 {
-		return
-	}
-	// fmt.Println("flushbuf", chunkstr(o.buf))
-	c := make([]slot, len(o.buf))
-	copy(c, o.buf)
-	o.out = append(o.out, c)
-	o.size += len(o.buf)
-	o.buf = o.buf[:0] // reuse buf
-}
-
-// mergeUpto merges at the individual key level.
-// After merging, the inputs may not be in order.
-// The last (limit) will always end up the minimum
-// because we merge everything less.
-func (o *output) mergeUpto(limit slot) {
-	// fmt.Println("mergeUpto", limit)
-	// limit off == 0 means no limit, merge everything (used for flush)
-	for len(o.in) > 1 {
-		// // fmt.Println("buf", chunkstr(o.buf))
-		// find minimum, inlined for speed (~ 5%)
-		i := 0
-		key := o.in[0][0].key
-		for j := 1; j < len(o.in); j++ {
-			key2 := o.in[j][0].key
-			if key2 < key {
-				i = j
-				key = key2
-			}
-		}
-		slot := o.in[i][0]
-		// // fmt.Println("next", slot.key)
-		if limit.off != 0 && slot.key >= limit.key {
-			// // fmt.Println("limit")
-			return
-		}
-		// assert.That(len(o.buf) == 0 || slot.key > o.buf.lastKey())
-		o.buf = append(o.buf, slot)
-		if len(o.buf) > o.goal {
-			o.flushbuf()
-		}
-		if len(o.in[i]) == 1 {
-			o.in = append(o.in[:i], o.in[i+1:]...) // remove empty input
-		} else {
-			o.in[i] = o.in[i][1:] // advance to next slot
-		}
-	}
-}
-
-func (o *output) result() *ixbuf {
-	if len(o.in) >= 1 {
-		if len(o.in) > 1 {
-			o.mergeUpto(slot{})
-		}
-		if len(o.buf) == 0 {
-			o.out = append(o.out, o.in[0])
-			o.size += len(o.in[0])
-		} else {
-			o.separate(o.in[0])
-		}
-	}
-	if len(o.buf) > 0 {
-		o.flushbuf()
-	}
-	return &ixbuf{chunks: o.out, size: o.size}
 }
 
 //-------------------------------------------------------------------
