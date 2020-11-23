@@ -11,11 +11,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
-type treeIter = func() (string, uint64, bool)
-
-type tree interface {
-	Iter(check bool) treeIter
-}
+type iter = func() (string, uint64, bool)
 
 // Overlay is an fbtree plus a base ixbuf,
 // plus overlay inters from un-merged transactions,
@@ -77,7 +73,7 @@ func (ov *Overlay) QuickCheck() {
 // iter -------------------------------------------------------------
 
 type ovsrc struct {
-	iter treeIter
+	iter
 	key  string
 	off  uint64
 }
@@ -87,7 +83,7 @@ type ovsrcs struct {
 }
 
 // Iter returns a treeIter function
-func (ov *Overlay) Iter(check bool) treeIter {
+func (ov *Overlay) Iter(check bool) iter {
 	if ov.mut == nil && len(ov.under) == 1 {
 		// only fbtree, no merge needed
 		return ov.under[0].Iter(check)

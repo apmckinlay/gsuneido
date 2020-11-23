@@ -71,9 +71,9 @@ func key2off(key string) uint64 {
 	return off
 }
 
-func checkIter(data []string, tr tree) {
+func checkIter(data []string, ov *Overlay) {
 	sort.Strings(data)
-	it := tr.Iter(true)
+	it := ov.Iter(true)
 	for _, k := range data {
 		if k == "" {
 			continue
