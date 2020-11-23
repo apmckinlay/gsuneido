@@ -59,15 +59,10 @@ func (ov *Overlay) Insert(key string, off uint64) {
 	ov.mut.Insert(key, off)
 }
 
-const tombstone = 1 << 63
-
 // Delete either deletes the key/offset from the mutable ixbuf.T
 // or inserts a tombstone into the mutable ixbuf.T.
 func (ov *Overlay) Delete(key string, off uint64) {
-	if !ov.mut.Delete(key) {
-		// key not present
-		ov.mut.Insert(key, off|tombstone)
-	}
+	ov.mut.Delete(key, off)
 }
 
 func (ov *Overlay) Check(fn func(uint64)) int {
@@ -85,7 +80,10 @@ type ovsrc struct {
 	iter treeIter
 	key  string
 	off  uint64
-	ok   bool
+}
+
+type ovsrcs struct {
+	srcs []ovsrc
 }
 
 // Iter returns a treeIter function
@@ -94,62 +92,64 @@ func (ov *Overlay) Iter(check bool) treeIter {
 		// only fbtree, no merge needed
 		return ov.under[0].Iter(check)
 	}
-	srcs := make([]ovsrc, 0, len(ov.under)+1)
-	if ov.mut != nil {
-		srcs = append(srcs, ovsrc{iter: ov.mut.Iter(check)})
-	}
+	in := ovsrcs{srcs: make([]ovsrc, 1, len(ov.under)+2)}
+	in.srcs[0] = ovsrc{iter: ov.fb.Iter(check)}
 	for i := range ov.under {
-		srcs = append(srcs, ovsrc{iter: ov.under[i].Iter(check)})
+		in.srcs = append(in.srcs, ovsrc{iter: ov.under[i].Iter(check)})
 	}
-	for i := range srcs {
-		srcs[i].next()
+	if ov.mut != nil {
+		in.srcs = append(in.srcs, ovsrc{iter: ov.mut.Iter(check)})
 	}
-	return func() (string, uint64, bool) {
-		i := ovsrcNext(srcs)
-		key, off, ok := srcs[i].key, srcs[i].off, srcs[i].ok
-		srcs[i].next()
-		return key, off >> 1, ok
+	// iterate backwards since next may remove source
+	for i := len(in.srcs)-1; i >= 0; i-- {
+		in.next(i)
+	}
+	return in.iter
+}
+
+func (in *ovsrcs) next(i int) {
+	src := &in.srcs[i]
+	var ok bool
+	src.key, src.off, ok = src.iter()
+	if !ok {
+		// remove ended source
+		copy(in.srcs[i:], in.srcs[i+1:])
+		in.srcs = in.srcs[:len(in.srcs)-1]
 	}
 }
 
-func (src *ovsrc) next() {
-	src.key, src.off, src.ok = src.iter()
-	// adjust offset so tombstone comes first
-	src.off = (src.off << 1) | ((src.off >> 63) ^ 1)
-}
-
-// ovsrcNext returns the index of the next element
-func ovsrcNext(srcs []ovsrc) int {
-	min := 0
+// iter returns the next element
+func (in *ovsrcs) iter() (string, uint64, bool) {
+outer:
 	for {
-		for i := 1; i < len(srcs); i++ {
-			if ovsrcLess(&srcs[i], &srcs[min]) {
-				min = i
+		if len(in.srcs) == 0 {
+			return "", 0, false
+		}
+		imin := 0
+		kmin := in.srcs[0].key
+		off := in.srcs[0].off
+		for i := 1; i < len(in.srcs); i++ {
+			key := in.srcs[i].key
+			if key <= kmin {
+				if key < kmin {
+					imin = i
+					kmin = in.srcs[i].key
+					off = in.srcs[i].off
+				} else { // equal
+					off = ixbuf.Combine(off, in.srcs[i].off)
+					if off == 0 {
+						// add,delete so skip
+						// may not be the final minimum, but still need to skip
+						in.next(i)
+						in.next(imin)
+						continue outer
+					}
+				}
 			}
 		}
-		if !isTombstone(srcs[min].off) {
-			return min
-		}
-		// skip over the insert matching the tombstone
-		for i := range srcs {
-			if i != min &&
-				srcs[i].key == srcs[min].key && srcs[i].off&^1 == srcs[min].off {
-				srcs[i].next()
-			}
-		}
-		srcs[min].next() // skip the tombstone itself
+		in.next(imin)
+		return kmin, off, true
 	}
-}
-
-func isTombstone(off uint64) bool {
-	return (off & 1) == 0
-}
-
-func ovsrcLess(x, y *ovsrc) bool {
-	if !x.ok {
-		return false
-	}
-	return !y.ok || x.key < y.key || (x.key == y.key && x.off < y.off)
 }
 
 //-------------------------------------------------------------------

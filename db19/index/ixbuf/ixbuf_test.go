@@ -6,7 +6,9 @@ package ixbuf
 import (
 	"fmt"
 	"math/rand"
+	"sort"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/util/assert"
@@ -117,24 +119,60 @@ func TestMergeBug(*testing.T) {
 }
 
 func TestMergeRandom(*testing.T) {
-	n := 1000
+	n := 10_000
 	if testing.Short() {
-		n = 100
+		n = 1000
 	}
+	var data chunk
+	ib := &ixbuf{}
+	var s slot
+	r := str.UniqueRandom(4, 8)
 	for i := 0; i < n; i++ {
-		r := str.UniqueRandom(4, 8)
-		nin := 2 + rand.Intn(11)
-		in := make([]*ixbuf, nin)
-		for j := range in {
-			in[j] = &ixbuf{}
-			size := rand.Intn(1000)
-			for k := 0; k < size; k++ {
-				in[j].Insert(r(), 1)
+		nacts := rand.Intn(11)
+		x := &ixbuf{}
+		for j := 0; j < nacts; j++ {
+			k := rand.Intn(4)
+			switch {
+			case k == 0 || k == 1 || len(data) == 0: // add
+				s = slot{key: r(), off: uint64(rand.Uint32())}
+				// fmt.Println("add", s)
+				data = append(data, s)
+				x.Insert(s.key, s.off)
+			case k == 2: // update
+				i := rand.Intn(len(data))
+				data[i].off = uint64(rand.Uint32())
+				s = data[i]
+				// fmt.Println("update", s)
+				x.Update(s.key, s.off)
+			case k == 3: // delete
+				i := rand.Intn(len(data))
+				s = data[i]
+				// fmt.Println("delete", s)
+				data[i] = data[len(data)-1]
+				data = data[:len(data)-1]
+				x.Delete(s.key, s.off)
 			}
 		}
-		Merge(in...).check()
+		// fmt.Println(x)
+		ib = Merge(ib, x)
+		// fmt.Println("=", ib)
+		// fmt.Println(len(data), data)
+		assert.This(ib.Len()).Is(len(data))
+	}
+	assert.This(ib.Len()).Is(len(data))
+	sort.Sort(data)
+	i := 0
+	iter := ib.Iter(false)
+	for k, o, ok := iter(); ok; k, o, ok = iter() {
+		assert.This(k).Is(data[i].key)
+		assert.This(o).Is(data[i].off)
+		i++
 	}
 }
+
+func (c chunk) Len() int           { return len(c) }
+func (c chunk) Swap(i, j int)      { c[i], c[j] = c[j], c[i] }
+func (c chunk) Less(i, j int) bool { return c[i].key < c[j].key }
 
 func TestMergeUneven(*testing.T) {
 	r := str.UniqueRandom(4, 8)
@@ -148,6 +186,29 @@ func TestMergeUneven(*testing.T) {
 	x := gen(1000)
 	y := gen(1)
 	Merge(x, y)
+}
+
+func TestMergeUpdate(t *testing.T) {
+	a := &ixbuf{}
+	a.Insert("a", 1)
+	a.Insert("b", 2)
+	a.Insert("c", 3)
+	a.Insert("d", 4)
+	b := &ixbuf{}
+	b.Update("b", 22)
+	b.Delete("c", 3)
+	x := Merge(a, b)
+	assert.T(t).This(x.String()).Is("3, a 1, b 22, d 4")
+}
+
+func (ib *ixbuf) String() string {
+	var sb strings.Builder
+	fmt.Fprint(&sb, ib.size)
+	iter := ib.Iter(false)
+	for k, o, ok := iter(); ok; k, o, ok = iter() {
+		fmt.Fprint(&sb, ", ", k, " ", o)
+	}
+	return sb.String()
 }
 
 func BenchmarkMerge(b *testing.B) {
@@ -183,14 +244,10 @@ func TestDelete(t *testing.T) {
 	for i := 0; i < nkeys; i++ {
 		ib.Insert(r(), 1)
 	}
-	r = str.UniqueRandom(8, 12)
-	for i := 0; i < nkeys; i++ {
-		assert.That(!ib.Delete(r()))
-	}
 	rand.Seed(12345)
 	r = str.UniqueRandom(4, 8)
 	for i := 0; i < nkeys; i++ {
-		assert.That(ib.Delete(r()))
+		ib.Delete(r(), 1)
 		ib.check()
 	}
 	assert.T(t).This(len(ib.chunks)).Is(0)

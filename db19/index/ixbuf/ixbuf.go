@@ -49,18 +49,31 @@ func goal(n int) int {
 
 // Insert adds an element. It mutates and is NOT thread-safe.
 func (ib *ixbuf) Insert(key string, off uint64) {
-	ib.size++
 	if len(ib.chunks) == 0 {
-		ib.chunks = make([]chunk, 1, 4)
-		ib.chunks[0] = make([]slot, 1, 8)
+		ib.size++
+		ib.chunks = make([]chunk, 1, 4)   // ???
+		ib.chunks[0] = make([]slot, 1, 8) // ???
 		ib.chunks[0][0] = slot{key: key, off: off}
 		return
 	}
 	ci := ib.search(key)
-	// insert in place
-	i := search(ib.chunks[ci], key)
-	ib.chunks[ci] = append(ib.chunks[ci], slot{})
 	c := ib.chunks[ci]
+	i := search(ib.chunks[ci], key)
+
+	if i < len(c) && c[i].key == key {
+		// already exists, combine
+		slot := &c[i]
+		slot.off = Combine(slot.off, off)
+		if slot.off == 0 {
+			ib.remove(ci, i)
+		}
+		return
+	}
+
+	// insert in place
+	ib.size++
+	c = append(c, slot{})
+	ib.chunks[ci] = c
 	copy(c[i+1:], c[i:])
 	c[i] = slot{key: key, off: off}
 
@@ -82,6 +95,16 @@ func (ib *ixbuf) Insert(key string, off uint64) {
 		copy(ib.chunks[ci+1:], ib.chunks[ci:])
 		ib.chunks[ci] = right
 	}
+}
+
+func (ib *ixbuf) remove(ci int, i int) {
+	c := ib.chunks[ci]
+	if len(c) == 1 {
+		ib.chunks = append(ib.chunks[:ci], ib.chunks[ci+1:]...)
+	} else {
+		ib.chunks[ci] = append(c[:i], c[i+1:]...)
+	}
+	ib.size--
 }
 
 // search does a binary search the first key in each chunk.
@@ -114,22 +137,14 @@ func search(c chunk, key string) int {
 	return i
 }
 
-//-------------------------------------------------------------------
+// Update combines if the key exists, otherwise it adds an update entry
+func (ib *ixbuf) Update(key string, off uint64) {
+	ib.Insert(key, off|Update)
+}
 
-func (ib *ixbuf) Delete(key string) bool {
-	ci := ib.search(key)
-	c := ib.chunks[ci]
-	i := search(c, key)
-	if i >= len(c) || c[i].key != key {
-		return false
-	}
-	if len(c) == 1 {
-		ib.chunks = append(ib.chunks[:ci], ib.chunks[ci+1:]...) // remove chunk
-	} else {
-		ib.chunks[ci] = append(c[:i], c[i+1:]...) // remove slot
-	}
-	ib.size--
-	return true
+// Delete combines if the key exists, otherwise it adds a delete tombstone.
+func (ib *ixbuf) Delete(key string, off uint64) {
+	ib.Insert(key, off|Delete)
 }
 
 //-------------------------------------------------------------------
@@ -211,20 +226,63 @@ func (m *merge) merge() *ixbuf {
 	return m.result()
 }
 
-func (m *merge) outputSlot(s slot) {
-	m.buf = append(m.buf, s)
+const Update = 1 << 62
+const Delete = 1 << 63
+
+const (
+	add_update    = 0b_00_01
+	add_delete    = 0b_00_10
+	update_update = 0b_01_01
+	update_delete = 0b_01_10
+	delete_add    = 0b_10_00
+)
+
+func Combine(off1, off2 uint64) uint64 {
+	ops := off1>>60 | off2>>62
+	switch ops {
+	case add_update:
+		return off2 &^ Update
+	case add_delete:
+		return 0 // = should be removed
+	case update_update, update_delete:
+		return off2
+	case delete_add:
+		return off2 | Update
+	default:
+		panic("invalid")
+	}
+}
+
+func (m *merge) outputSlot(s2 slot) {
+	last := len(m.buf) - 1
+	if last >= 0 {
+		s1 := &m.buf[last]
+		if s2.key == s1.key {
+			s1.off = Combine(s1.off, s2.off)
+			if s1.off == 0 {
+				m.buf = m.buf[:last]
+			}
+			return
+		}
+	}
 	if len(m.buf) > m.goal {
 		m.flushbuf()
 	}
+	m.buf = append(m.buf, s2)
 }
 
 func (m *merge) passthru(in []chunk, i int) bool {
 	// i is the minimum
-	last := in[i].lastKey()
+	lastkey := in[i].lastKey()
 	for j := 0; j < len(m.in); j++ {
-		if j != i && last >= in[j].firstKey() {
+		if j != i && lastkey >= in[j].firstKey() {
 			return false
 		}
+	}
+	// if the chunk updates the previous, we can't pass through
+	last := len(m.buf) - 1
+	if last >= 0 && in[i].firstKey() == m.buf[last].key {
+		return false
 	}
 	m.outputChunk(in[i])
 	return true

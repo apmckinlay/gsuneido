@@ -16,7 +16,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
-func TestEmptyOverlay(t *testing.T) {
+func TestEmptyOverlay(*testing.T) {
 	var data []string
 	fbtree.GetLeafKey = func(_ *stor.Stor, _ *ixspec.T, i uint64) string {
 		return data[i]
@@ -27,16 +27,16 @@ func TestEmptyOverlay(t *testing.T) {
 	mut := &ixbuf.T{}
 	u := &ixbuf.T{}
 	ov := &Overlay{fb: fb, under: []*ixbuf.T{u}, mut: mut}
-	checkIter(t, data, ov)
+	checkIter(data, ov)
 
 	const n = 100
-	randKey := str.UniqueRandom(3, 8)
+	randKey := str.UniqueRandom(3, 7)
 
 	data = insert(data, n, randKey, mut)
-	checkIter(t, data, ov)
+	checkIter(data, ov)
 
 	data = insert(data, n, randKey, u)
-	checkIter(t, data, ov)
+	checkIter(data, ov)
 
 	for i := 0; i < n/2; i++ {
 		j := rand.Intn(len(data))
@@ -45,7 +45,7 @@ func TestEmptyOverlay(t *testing.T) {
 			data[j] = ""
 		}
 	}
-	checkIter(t, data, ov)
+	checkIter(data, ov)
 }
 
 type insertable interface {
@@ -67,11 +67,11 @@ func key2off(key string) uint64 {
 	for _, c := range key {
 		off = off<<8 + uint64(c)
 	}
+	assert.That(off>>62 == 0)
 	return off
 }
 
-func checkIter(t *testing.T, data []string, tr tree) {
-	assert := assert.T(t)
+func checkIter(data []string, tr tree) {
 	sort.Strings(data)
 	it := tr.Iter(true)
 	for _, k := range data {
