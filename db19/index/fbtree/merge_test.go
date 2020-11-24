@@ -5,6 +5,7 @@ package fbtree
 
 import (
 	"fmt"
+	"math/rand"
 	"sort"
 	"strings"
 	"testing"
@@ -16,12 +17,12 @@ import (
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
-func TestFbMerge(*testing.T) {
+func TestMerge(*testing.T) {
 	nMerges := 2000
-	insertsPerMerge := 1000
+	opsPerMerge := 1000
 	if testing.Short() {
 		nMerges = 200
-		insertsPerMerge = 200
+		opsPerMerge = 200
 	}
 	d := newdat()
 	GetLeafKey = func(_ *stor.Stor, _ *ixspec.T, i uint64) string {
@@ -36,8 +37,21 @@ func TestFbMerge(*testing.T) {
 	for i := 0; i < nMerges; i++ {
 		_ = t && trace("---")
 		x := &ixbuf.T{}
-		for j := 0; j < insertsPerMerge; j++ {
-			x.Insert(d.next(""))
+		for j := 0; j < opsPerMerge; j++ {
+			k := rand.Intn(3)
+			switch {
+			case k == 0 || k == 1 || d.Len() == 0:
+				x.Insert(d.gen())
+			case k == 2:
+				_, key, _ := d.rand()
+				off := d.nextOff()
+				x.Update(key, off)
+				d.update(key, off)
+			case k == 3:
+				// 	i, key, off := d.rand()
+				// 	x.Delete(key, off)
+				// 	d.delete(i)
+			}
 		}
 		fb = fb.MergeAndSave(x.Iter(false))
 	}
@@ -70,28 +84,64 @@ func (m *merge) String() string {
 type dat struct {
 	keys []string
 	o2k  map[uint64]string
-	rand func() string
+	k2o  map[string]uint64
+	off  uint64
 }
 
 func newdat() *dat {
 	return &dat{
-		o2k:  map[uint64]string{},
-		rand: str.UniqueRandom(4, 8),
+		o2k: map[uint64]string{},
+		k2o: map[string]uint64{},
 	}
 }
 
-func (d *dat) next(prefix string) (string, uint64) {
-	key := prefix + d.rand()
-	off := uint64(len(d.keys))
+func (d *dat) Len() int {
+	return len(d.keys)
+}
+
+func (d *dat) gen() (string, uint64) {
+	for i := 0; i < 10; i++ {
+		key := str.Random(4, 8)
+		if _, ok := d.k2o[key]; !ok {
+			off := d.nextOff()
+			d.k2o[key] = off
+			d.o2k[off] = key
+			d.keys = append(d.keys, key)
+			return key, off
+		}
+	}
+	panic("too many duplicates")
+}
+
+func (d *dat) nextOff() uint64 {
+	d.off++
+	return d.off
+}
+
+func (d *dat) rand() (int, string, uint64) {
+	i := rand.Intn(len(d.keys))
+	key := d.keys[i]
+	off := d.k2o[key]
+	return i, key, off
+}
+
+func (d *dat) delete(i int) {
+	last := len(d.keys) - 1
+	d.keys[i] = d.keys[last]
+	d.keys = d.keys[:last]
+}
+
+func (d *dat) update(key string, off uint64) {
+	// oldoff := d.k2o[key]
+	d.k2o[key] = off
+	// delete(d.o2k, oldoff)
 	d.o2k[off] = key
-	d.keys = append(d.keys, key)
-	return key, off
 }
 
 func (d *dat) check(fb *fbtree) {
-	for i, key := range d.keys {
-		off := fb.Search(key)
-		assert.That(off == uint64(i))
+	for _, key := range d.keys {
+		assert.Msg(key).
+			This(fb.Search(key)).Is(d.k2o[key])
 	}
 
 	sort.Strings(d.keys)

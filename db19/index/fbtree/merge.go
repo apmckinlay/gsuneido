@@ -4,6 +4,8 @@
 package fbtree
 
 import (
+	"strconv"
+
 	"github.com/apmckinlay/gsuneido/db19/index/ixbuf"
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
@@ -39,6 +41,7 @@ func (fb *fbtree) MergeAndSave(iter ixbuf.Iter) *fbtree {
 		if !ok {
 			break
 		}
+		_ = t && trace("merge", key, offstr(off))
 		st.advanceTo(key)
 		st.insertInLeaf(key, off)
 	}
@@ -46,6 +49,17 @@ func (fb *fbtree) MergeAndSave(iter ixbuf.Iter) *fbtree {
 		st.ascend()
 	}
 	return st.fb
+}
+
+func offstr(off uint64) string {
+	pre := ""
+	if off&ixbuf.Delete != 0 {
+		pre = "-"
+	}
+	if off&ixbuf.Update != 0 {
+		pre += "="
+	}
+	return pre + strconv.Itoa(int(off&0xffffffffff))
 }
 
 // advanceTo traverses the tree to the leaf for key

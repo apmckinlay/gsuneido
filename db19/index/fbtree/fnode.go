@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/apmckinlay/gsuneido/db19/index/ixbuf"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/bytes"
@@ -139,6 +140,21 @@ func (fn fnode) insert(keyNew string, offNew uint64, get func(uint64) string) fn
 		embedLen = 1
 		curkey = get(curoff)
 	}
+
+	if offNew>>62 != 0 {
+		if keyNew == curkey {
+			if offNew&ixbuf.Delete != 0 {
+				_ = t && trace("before delete", fn.knowns())
+				fn, _ = fn.delete(curOffset)
+				_ = t && trace("after delete", fn.knowns())
+			} else {
+				fn.setOffset(curFi, offNew)
+			}
+			return fn
+		}
+		panic("update/delete on nonexistent")
+	}
+
 	var prev string
 	ins := make(fnode, 0, 64)
 	var npre int
@@ -378,6 +394,8 @@ func (fn fnode) knowns() string {
 	it := fn.iter()
 	for it.next() {
 		sb.Write(it.known)
+		sb.WriteByte(' ')
+		sb.WriteString(offstr(it.offset))
 		sb.WriteByte(' ')
 	}
 	return sb.String()
