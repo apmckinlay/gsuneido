@@ -110,18 +110,11 @@ func (fn fnode) contains(s string, get func(uint64) string) bool {
 	return s == get(offset)
 }
 
-const (
-	insMiddle = iota
-	insStart
-	insEnd
-)
-
 // insert adds a new key to a node. get will be nil for tree nodes.
 // Used by merge.
-func (fn fnode) insert(keyNew string, offNew uint64, get func(uint64) string) (fnode, int) {
-	where := insMiddle
+func (fn fnode) insert(keyNew string, offNew uint64, get func(uint64) string) fnode {
 	if len(fn) == 0 {
-		return fn.append(offNew, 0, ""), where
+		return fn.append(offNew, 0, "")
 	}
 	// search
 	curFi := 0
@@ -156,7 +149,7 @@ func (fn fnode) insert(keyNew string, offNew uint64, get func(uint64) string) (f
 		if curEof {
 			// at end
 			npre, diff, _ = addone(keyNew, curkey, string(curKnown), embedLen)
-			return fn.append(offNew, npre, diff), insEnd
+			return fn.append(offNew, npre, diff)
 		}
 		npre, diff, knownNew = addone(keyNew, curkey, string(curKnown), embedLen)
 		ins = ins.append(offNew, npre, diff)
@@ -164,9 +157,6 @@ func (fn fnode) insert(keyNew string, offNew uint64, get func(uint64) string) (f
 		j = it.fi
 		prev = knownNew
 	} else { // newkey before curkey
-		if curFi == 0 {
-			where = insStart
-		}
 		// first entry stays the same, just update offset
 		ins = ins.append(offNew, curNpre, string(curDiff))
 		// old first key becomes second entry
@@ -184,8 +174,7 @@ func (fn fnode) insert(keyNew string, offNew uint64, get func(uint64) string) (f
 			j += fLen(it.diff)
 		}
 	}
-	fn = fn.replace(i, j, ins)
-	return fn, where
+	return fn.replace(i, j, ins)
 }
 
 // replace is used by insert and delete

@@ -57,7 +57,7 @@ func TestFnodeInsert(*testing.T) {
 		// forward
 		fn := fnode{}
 		for i, d := range data {
-			fn, _ = fn.insert(d, uint64(i), get)
+			fn = fn.insert(d, uint64(i), get)
 			fn.checkUpTo(i, data, get)
 		}
 		assert.That(fn.check() == len(data))
@@ -65,7 +65,7 @@ func TestFnodeInsert(*testing.T) {
 		str.List(data).Reverse()
 		fn = nil
 		for i, d := range data {
-			fn, _ = fn.insert(d, uint64(i), get)
+			fn = fn.insert(d, uint64(i), get)
 			fn.checkUpTo(i, data, get)
 		}
 		// builder
@@ -128,7 +128,7 @@ func TestFnodeRandom(*testing.T) {
 				func(i, j int) { data[i], data[j] = data[j], data[i] })
 			var fn fnode
 			for i, d := range data {
-				fn, _ = fn.insert(d, uint64(i), get)
+				fn = fn.insert(d, uint64(i), get)
 				// fe.checkUpTo(i, data, get)
 			}
 			fn.checkData(data, get)
@@ -147,7 +147,7 @@ func TestDelete(*testing.T) {
 	}
 	sort.Strings(data)
 	for i := 0; i < len(data); i++ {
-		fn, _ = fn.insert(data[i], uint64(i), get)
+		fn = fn.insert(data[i], uint64(i), get)
 	}
 	// fn.printLeafNode(get)
 
@@ -193,7 +193,7 @@ func TestDelete2(*testing.T) {
 	get := func(i uint64) string { return data[i] }
 	var fn fnode
 	for i := 0; i < len(data); i++ {
-		fn, _ = fn.insert(data[i], uint64(i), get)
+		fn = fn.insert(data[i], uint64(i), get)
 	}
 	// fn.printLeafNode(get)
 
@@ -217,7 +217,7 @@ func TestWords(*testing.T) {
 			func(i, j int) { data[i], data[j] = data[j], data[i] })
 		var fn fnode
 		for i, d := range data {
-			fn, _ = fn.insert(d, uint64(i), get)
+			fn = fn.insert(d, uint64(i), get)
 			// fe.checkUpto(i, data, get)
 		}
 		fn.checkData(data, get)
@@ -335,7 +335,7 @@ func BenchmarkFnode(b *testing.B) {
 	get := func(i uint64) string { return words[i] }
 	var fn fnode
 	for i, d := range words {
-		fn, _ = fn.insert(d, uint64(i), get)
+		fn = fn.insert(d, uint64(i), get)
 	}
 	FN = fn
 

@@ -39,7 +39,6 @@ func (fb *fbtree) MergeAndSave(iter ixbuf.Iter) *fbtree {
 		if !ok {
 			break
 		}
-		_ = t && trace("merge", key)
 		st.advanceTo(key)
 		st.insertInLeaf(key, off)
 	}
@@ -181,13 +180,10 @@ func (st *state) insertInLeaf(key string, off uint64) {
 	}
 }
 
-func (m *merge) insertInNode(key string, off uint64,
-	get func(uint64) string) (fnode, int) {
+func (m *merge) insertInNode(key string, off uint64, get func(uint64) string) {
 	node := m.getMutableNode()
-	node, where := node.insert(key, off, get)
-	_ = t && trace("after insert", node.knowns())
-	m.node = node
-	return node, where
+	m.node = node.insert(key, off, get)
+	_ = t && trace("after insert", m.node.knowns())
 }
 
 func (m *merge) getMutableNode() fnode {
