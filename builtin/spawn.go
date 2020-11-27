@@ -9,6 +9,7 @@ import (
 	"os/exec"
 	"runtime"
 
+	"github.com/apmckinlay/gsuneido/options"
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
@@ -19,8 +20,10 @@ var _ = builtin1("System(command)",
 			panic("System: can't get " + name)
 		}
 		cmd := exec.Command(shell, flag, ToStr(arg))
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
+		if options.Mode != "gui" {
+			cmd.Stdout = os.Stdout
+			cmd.Stderr = os.Stderr
+		}
 		err := cmd.Run()
 		if err != nil {
 			if _, ok := err.(*exec.ExitError); !ok {
@@ -59,18 +62,17 @@ var _ = builtinRaw("Spawn(@args)",
 			argstr[i] = ToStr(v)
 		}
 		cmd := exec.Command(exe, argstr...)
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
+		if options.Mode != "gui" {
+			cmd.Stdout = os.Stdout
+			cmd.Stderr = os.Stderr
+		}
 		err := cmd.Start()
 		if err != nil {
 			log.Println("Spawn:", err)
 			return IntVal(-1)
 		}
 		if mode == wait {
-			err = cmd.Wait()
-			if err != nil {
-				log.Println("Spawn:", err)
-			}
+			cmd.Wait()
 			return IntVal(cmd.ProcessState.ExitCode())
 		}
 		return IntVal(cmd.Process.Pid)
