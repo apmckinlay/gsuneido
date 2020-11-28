@@ -147,7 +147,7 @@ type value struct {
 // Uses an Equal method if available on the expected value.
 // Finally, uses reflect.DeepEqual.
 func (v value) Is(expected interface{}) {
-	if !is(v.value, expected) {
+	if !Is(v.value, expected) {
 		if v.assert.t != nil {
 			v.assert.t.Helper()
 		}
@@ -159,7 +159,7 @@ func (v value) Is(expected interface{}) {
 // Isnt gives an error if the given expected value is the same
 // as the actual value supplied to This.
 func (v value) Isnt(expected interface{}) {
-	if is(v.value, expected) {
+	if Is(v.value, expected) {
 		if v.assert.t != nil {
 			v.assert.t.Helper()
 		}
@@ -167,7 +167,7 @@ func (v value) Isnt(expected interface{}) {
 	}
 }
 
-func is(actual, expected interface{}) bool {
+func Is(actual, expected interface{}) bool {
 	if isNil(expected) && isNil(actual) {
 		return true
 	}
