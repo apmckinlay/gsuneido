@@ -8,7 +8,6 @@ import (
 	"fmt"
 	"sync"
 	"sync/atomic"
-	"time"
 
 	"github.com/apmckinlay/gsuneido/db19/index"
 	"github.com/apmckinlay/gsuneido/db19/meta"
@@ -28,9 +27,9 @@ func (db *Database) QuickCheck() (err error) {
 			err = fmt.Errorf("check failed: %v", e)
 		}
 	}()
-	t := time.Now()
+	// t := time.Now()
 	runParallel(db.GetState(), quickCheckTable)
-	fmt.Println("quick checked in", time.Since(t).Round(time.Millisecond))
+	// fmt.Println("quick checked in", time.Since(t).Round(time.Millisecond))
 	return nil
 }
 
