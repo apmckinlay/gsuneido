@@ -4,6 +4,7 @@
 package fbtree
 
 import (
+	"bytes"
 	"fmt"
 	"math/rand"
 	"sort"
@@ -47,38 +48,60 @@ func TestFnodeInsert(*testing.T) {
 		"a b c d",
 		"xa xb xc xd",
 		"a ab abc abcd",
-		"ant ants bun bunnies bunny buns cat a anti b bunn ca cats",
-		"bbb bbc abc aa ab bc c aaa ba bba bb b a",
+		"a ant anti ants b bun bunn bunnies bunny buns ca cat cats",
+		"a aa aaa ab abc b ba bb bba bbb bbc bc c",
 		"1000 1001 1002 1003",
 	}
 	for _, s := range datas {
+		// fmt.Println(s)
 		data := strings.Fields(s)
 		get := func(i uint64) string { return data[i] }
+
 		// forward
-		fn := fnode{}
+		fwd := fnode{}
 		for i, d := range data {
-			fn = fn.insert(d, uint64(i), get)
-			fn.checkUpTo(i, data, get)
+			fwd = fwd.insert(d, uint64(i), get)
+			fwd.checkUpTo(i, data, get)
 		}
-		assert.That(fn.check() == len(data))
+		// fmt.Println("forward")
+		// fwd.printLeafNode(get)
+		assert.That(fwd.check(get) == len(data))
+
 		// reverse
-		str.List(data).Reverse()
-		fn = nil
-		for i, d := range data {
-			fn = fn.insert(d, uint64(i), get)
-			fn.checkUpTo(i, data, get)
+		rev := fnode{}
+		for i := len(data) - 1; i >= 0; i-- {
+			rev = rev.insert(data[i], uint64(i), get)
+			// rev.checkUpTo(i, data, get)
+			// fmt.Println()
+			// rev.printLeafNode(get)
 		}
+		// fmt.Println("reverse")
+		// rev.printLeafNode(get)
+		assert.This(rev).Is(fwd)
+
 		// builder
-		fn = build(data)
-		fn.checkData(data, get)
+		bld := build(data)
+		// fmt.Println("builder")
+		// bld.printLeafNode(get)
+		assert.This(bld).Is(fwd)
+
+		// random
+		const nperms = 100
+		for i := 0; i < nperms; i++ {
+			rnd := fnode{}
+			perm := rand.Perm(len(data))
+			for _, j := range perm {
+				rnd = rnd.insert(data[j], uint64(j), get)
+			}
+			assert.This(rnd).Is(fwd)
+		}
 	}
 }
 
 func build(data []string) fnode {
-	sort.Strings(data)
 	b := fNodeBuilder{}
 	for i, d := range data {
-		b.Add(d, uint64(i), 255)
+		b.Add(d, uint64(i), 1)
 	}
 	return b.Entries()
 }
@@ -91,7 +114,7 @@ func (fn fnode) checkData(data []string, get func(uint64) string) {
 // It checks that inserted keys are present
 // and uninserted keys are not present.
 func (fn fnode) checkUpTo(i int, data []string, get func(uint64) string) {
-	n := fn.check()
+	n := fn.check(get)
 	nn := 0
 	for j, d := range data {
 		if (d != "" && j <= i) != fn.contains(d, get) {
@@ -107,9 +130,9 @@ func (fn fnode) checkUpTo(i int, data []string, get func(uint64) string) {
 	}
 }
 
-func TestFnodeRandom(*testing.T) {
+func TestFnodeInsertRandom(*testing.T) {
 	const nData = 100
-	var nGenerate = 20
+	var nGenerate = 1000
 	var nShuffle = 20
 	if testing.Short() {
 		nGenerate = 1
@@ -136,79 +159,7 @@ func TestFnodeRandom(*testing.T) {
 	}
 }
 
-func TestDelete(*testing.T) {
-	var fn fnode
-	const nData = 8 + 32
-	var data = make([]string, nData)
-	get := func(i uint64) string { return data[i] }
-	randKey := str.UniqueRandomOf(1, 6, "abcdef")
-	for i := 0; i < nData; i++ {
-		data[i] = randKey()
-	}
-	sort.Strings(data)
-	for i := 0; i < len(data); i++ {
-		fn = fn.insert(data[i], uint64(i), get)
-	}
-	// fn.printLeafNode(get)
-
-	var ok bool
-
-	// delete at end, simplest case
-	for i := 0; i < 8; i++ {
-		fn, ok = fn.delete(uint64(len(data) - 1))
-		assert.That(ok)
-		data = data[:len(data)-1]
-		fn.checkData(data, get)
-	}
-	// print("================================")
-	// fn.printLeafNode(get)
-
-	// delete at start
-	const nStart = 8
-	for i := 0; i < nStart; i++ {
-		fn, ok = fn.delete(uint64(i))
-		assert.That(ok)
-		data[i] = ""
-		fn.checkData(data, get)
-	}
-	// print("================================")
-	// fn.printLeafNode(get)
-
-	for i := 0; i < len(data)-nStart; i++ {
-		off := rand.Intn(len(data))
-		for data[off] == "" {
-			off = (off + 1) % len(data)
-		}
-		// print("================================ delete", data[off])
-		fn, ok = fn.delete(uint64(off))
-		assert.That(ok)
-		// fn.printLeafNode(get)
-		data[off] = ""
-		fn.checkData(data, get)
-	}
-}
-
-func TestDelete2(*testing.T) {
-	data := []string{"a", "b", "c", "d", "e"}
-	get := func(i uint64) string { return data[i] }
-	var fn fnode
-	for i := 0; i < len(data); i++ {
-		fn = fn.insert(data[i], uint64(i), get)
-	}
-	// fn.printLeafNode(get)
-
-	var ok bool
-	for i := 1; i < len(data); i++ {
-		fn, ok = fn.delete(uint64(i))
-		assert.That(ok)
-		// print("================================")
-		// fn.printLeafNode(get)
-		data[i] = ""
-		fn.checkData(data, get)
-	}
-}
-
-func TestWords(*testing.T) {
+func TestFnodeInsertWords(*testing.T) {
 	data := words
 	const nShuffle = 100
 	get := func(i uint64) string { return data[i] }
@@ -325,6 +276,159 @@ var words = []string{
 	"match",
 	"tasty",
 	"stick",
+}
+
+func TestFnodeDelete(*testing.T) {
+	datas := []string{
+		"a b c d",
+		"xa xb xc xd",
+		"a ab abc abcd",
+		"a baac baacb c cbaba",
+		"a ant anti ants b bun bunn bunnies bunny buns ca cat cats",
+		"a aa aaa ab abc b ba bb bba bbb bbc bc c",
+		"1000 1001 1002 1003",
+	}
+	var data []string
+	get := func(i uint64) string { return data[i] }
+	var without, del fnode
+	finished := false
+	defer func() {
+		if !finished {
+			build(data).printLeafNode(get)
+			fmt.Println("WITHOUT")
+			without.printLeafNode(get)
+			fmt.Println("DELETED")
+			del.printLeafNode(get)
+		}
+	}()
+	const ntimes = 100000
+	for i := 0; i < ntimes; i++ {
+		if i < len(datas) {
+			data = strings.Fields(datas[i])
+		} else {
+			// random data
+			r := str.UniqueRandomOf(1, 6, "abc")
+			data = make([]string, 5)
+			for j := range data {
+				data[j] = r()
+			}
+			sort.Strings(data)
+		}
+		var datawo []string
+		for i := 0; i < len(data); i++ {
+			all := build(data)
+			datawo = append(datawo[:0], data...)
+			datawo[i] = ""
+			// if i == 2 {
+			// 	fmt.Println("===========================")
+			// 	all.printLeafNode(get)
+			// }
+			// fmt.Println("---------------------------", i, data[i])
+
+			b := fNodeBuilder{}
+			for j, d := range data {
+				if j != i {
+					b.Add(d, uint64(j), 1)
+				}
+			}
+			without = b.Entries()
+			// fmt.Println("WITHOUT")
+			// without.printLeafNode(get)
+			without.check(get)
+			without.checkData(datawo, get)
+
+			// fmt.Println("DELETED")
+			// del.printLeafNode(get)
+			del, _ = all.delete(uint64(i))
+			del.check(get)
+			del.checkData(datawo, get)
+
+			if err := compare(without, del); err != "" {
+				panic(err)
+			}
+		}
+	}
+	finished = true
+}
+
+func compare(f, g fnode) string {
+	fit := f.iter()
+	git := g.iter()
+	for {
+		fok := fit.next()
+		gok := git.next()
+		if fok != gok {
+			return "DIFFERENT lengths"
+		}
+		if !fok {
+			return "" // ok
+		}
+		switch {
+		case fit.offset != git.offset:
+			return "DIFFERENT offsets"
+		case fit.npre != git.npre:
+			return "DIFFERENT npre"
+		case !bytes.HasPrefix(git.known, fit.known):
+			return "DIFFERENT known not prefix"
+		}
+	}
+}
+
+type slot struct {
+	key string
+	off uint64
+}
+
+func TestFnodeInsertDelete(*testing.T) {
+	var ok bool
+	var fn fnode
+	var data []slot
+	dup := func(key string) bool {
+		for i := range data {
+			if data[i].key == key {
+				return true
+			}
+		}
+		return false
+	}
+	get := func(off uint64) string {
+		for i := range data {
+			if data[i].off == off {
+				return data[i].key
+			}
+		}
+		panic("get: offset not found")
+	}
+	r := func() string { return str.RandomOf(1, 6, "abc") }
+	const N = 1_000_000
+	for i := 0; i < N; i++ {
+		if rand.Intn(13)+1 > len(data) {
+			// insert
+			key := r()
+			for ; dup(key); key = r() {
+			}
+			off := uint64(i)
+			// print("insert", key, off)
+			fn = fn.insert(key, off, get)
+			data = append(data, slot{key: key, off: off})
+		} else {
+			// delete
+			i := rand.Intn(len(data))
+			// print("delete", data[i].key, data[i].off)
+			fn, ok = fn.delete(data[i].off)
+			assert.That(ok)
+			data[i] = data[len(data)-1]
+			data = data[:len(data)-1]
+		}
+		assert.This(fn.check(get)).Is(len(data))
+		for _, s := range data {
+			if !fn.contains(s.key, get) {
+				print(data)
+				fn.printLeafNode(get)
+				panic("lookup failed " + s.key)
+			}
+		}
+	}
 }
 
 var S1 []byte

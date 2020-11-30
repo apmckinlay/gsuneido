@@ -51,8 +51,8 @@ func (fb *builder) add(li int, key string, off uint64) {
 		lev.splitKey = splitKey
 	}
 	embedLen := 1
-	if li > 0 /*|| fb.count == 1*/ {
-		embedLen = 255
+	if li > 0 {
+		embedLen = embedAll
 	}
 	lev.builder.Add(key, off, embedLen)
 }
@@ -63,7 +63,7 @@ func (fb *builder) Finish() *fbtree {
 	for li := 0; li < len(fb.levels); li++ {
 		if li > 0 {
 			// allow node to slightly exceed max size
-			fb.levels[li].builder.Add(key, off, 255)
+			fb.levels[li].builder.Add(key, off, embedAll)
 		}
 		key = fb.levels[li].splitKey
 		off = fb.levels[li].builder.fe.putNode(fb.store)

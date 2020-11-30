@@ -38,7 +38,7 @@ func TestMerge(*testing.T) {
 		_ = t && trace("---")
 		x := &ixbuf.T{}
 		for j := 0; j < opsPerMerge; j++ {
-			k := rand.Intn(3)
+			k := rand.Intn(4)
 			switch {
 			case k == 0 || k == 1 || d.Len() == 0:
 				x.Insert(d.gen())
@@ -48,9 +48,9 @@ func TestMerge(*testing.T) {
 				x.Update(key, off)
 				d.update(key, off)
 			case k == 3:
-				// 	i, key, off := d.rand()
-				// 	x.Delete(key, off)
-				// 	d.delete(i)
+				i, key, off := d.rand()
+				x.Delete(key, off)
+				d.delete(i)
 			}
 		}
 		fb = fb.MergeAndSave(x.Iter(false))

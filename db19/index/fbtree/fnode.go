@@ -28,6 +28,8 @@ import (
 //		- key part bytes (variable length)
 type fnode []byte
 
+const embedAll = 255
+
 func (fn fnode) append(offset uint64, npre int, diff string) fnode {
 	fn = stor.AppendSmallOffset(fn, offset)
 	fn = append(fn, byte(npre), byte(len(diff)))
@@ -51,6 +53,9 @@ func (fn fnode) next(i int) int {
 	return i + 7 + int(fn[i+6])
 }
 
+// addone calculates the encoding for a new entry.
+//
+// NOTE: if key is a known (not a full value) then embedLen should be embedAll
 func addone(key, prev, known string, embedLen int) (npre int, diff string, knownNew string) {
 	if key <= prev {
 		print("OUT OF ORDER: prev", prev, "key", key)
@@ -106,7 +111,6 @@ func (fn fnode) contains(s string, get func(uint64) string) bool {
 	if len(fn) == 0 {
 		return false
 	}
-
 	offset, _, _ := fn.search(s)
 	return s == get(offset)
 }
@@ -135,7 +139,7 @@ func (fn fnode) insert(keyNew string, offNew uint64, get func(uint64) string) fn
 
 	curoff := curOffset
 	curkey := string(curKnown)
-	embedLen := 255
+	embedLen := embedAll
 	if get != nil {
 		embedLen = 1
 		curkey = get(curoff)
@@ -168,6 +172,8 @@ func (fn fnode) insert(keyNew string, offNew uint64, get func(uint64) string) fn
 			return fn.append(offNew, npre, diff)
 		}
 		npre, diff, knownNew = addone(keyNew, curkey, string(curKnown), embedLen)
+		// print("after:", "key", keyNew, "prev", curkey, "known", curKnown,
+		// 	"=>", "npre", npre, "diff", diff, "knownNew", knownNew)
 		ins = ins.append(offNew, npre, diff)
 		i = it.fi
 		j = it.fi
@@ -177,14 +183,18 @@ func (fn fnode) insert(keyNew string, offNew uint64, get func(uint64) string) fn
 		ins = ins.append(offNew, curNpre, string(curDiff))
 		// old first key becomes second entry
 		npre, diff, knownNew = addone(curkey, keyNew, string(curKnown), embedLen)
+		// print("before:", "key", curkey, "prev", keyNew, "known", curKnown,
+		// 	"=>", "npre", npre, "diff", diff, "knownNew", knownNew)
 		ins = ins.append(curoff, npre, diff)
 		i = curFi
 		j = it.fi
 		prev = curkey
 	}
 	if !curEof {
-		npre2, diff2, _ := addone(string(it.known), prev, knownNew, embedLen)
+		npre2, diff2, _ := addone(string(it.known), prev, knownNew, embedAll)
 		if npre2 != it.npre || diff2 != string(it.diff) {
+			// print("following:", "key", it.known, "prev", prev, "known", knownNew,
+			// 	"=>", "npre", npre, "diff", diff)
 			// adjust following entry
 			ins = ins.append(it.offset, npre2, diff2)
 			j += fLen(it.diff)
@@ -209,38 +219,59 @@ func (fn fnode) replace(i, j int, rep fnode) fnode {
 
 func (fn fnode) delete(offset uint64) (fnode, bool) {
 	// search
-	var prevKnown []byte
+	var prev []byte
 	it := fn.iter()
 	for {
 		if !it.next() {
 			return nil, false // not found
 		}
-		if stor.EqualSmallOffset(fn[it.fi:], offset) {
+		if it.offset == offset {
 			break
 		}
-		prevKnown = append(prevKnown[:0], it.known...)
+		prev = append(prev[:0], it.known...)
 	}
 	i := it.fi
+	// print("i", i)
 
 	j := fn.next(i)
 	if j >= len(fn) {
 		// delete last item, simplest case, no adjustments
 		return fn[:i], true
 	}
+	// print("1 prev", string(prev), "fi", it.fi, "known", string(it.known))
 
 	rep := make(fnode, 0, 64)
 	if i == 0 {
 		// deleting first entry so make following into first
+		if !it.next() {
+			fn = append(fn[:5], 0, 0)
+			return fn, true
+		}
 		rep = rep.updateCopy(fn, j, 0, "")
 		j = fn.next(j)
-		prevKnown = it.known
-		it.next()
-		// then adjust following entry if there is one
+
+		// adjust following entry if there is one
+		if it.next() {
+			diff := string(it.known)
+			rep = rep.updateCopy(fn, j, it.npre, diff)
+			j = fn.next(j)
+			// print("2 prev", string(prev), "known", string(it.known), "diff", diff)
+		}
+		fn = fn.replace(i, j, rep)
+		return fn, true
+	}
+	calced := append([]byte{}, prev...) // copy
+	if it.npre > len(prev) {
+		calced = append(calced[:0], it.known[:it.npre]...)
 	}
 	if it.next() {
-		npre := commonSlicePrefixLen(prevKnown, it.known)
-		diff := it.known[npre:]
-		rep = rep.updateCopy(fn, j, npre, string(diff))
+		// adjust the following entry
+		npre := commonSlicePrefixLen(calced, it.known)
+		ndif := commonSlicePrefixLen(prev, it.known)
+		diff := string(it.known[ndif:])
+		// print("3 prev", string(prev), "calced", calced, "fi", it.fi, "known", string(it.known))
+		// print("npre", npre, "n", n, "diff", diff)
+		rep = rep.updateCopy(fn, j, npre, diff)
 		j = fn.next(j)
 	}
 	fn = fn.replace(i, j, rep)
@@ -248,7 +279,7 @@ func (fn fnode) delete(offset uint64) (fnode, bool) {
 }
 
 func (fn fnode) updateCopy(src fnode, i int, npre int, diff string) fnode {
-	fn = append(fn, src[i:i+5]...) // offset
+	fn = append(fn, src[i:i+5]...) // copy offset
 	fn = append(fn, byte(npre), byte(len(diff)))
 	fn = append(fn, diff...)
 	return fn
@@ -311,24 +342,34 @@ func (it *fnIter) eof() bool {
 //-------------------------------------------------------------------
 
 func (fn fnode) stats() {
-	n := fn.check()
+	n := fn.check(nil)
 	avg := float32(len(fn)-7*n) / float32(n)
 	print("    n", n, "len", len(fn), "avg", avg)
 }
 
-func (fn fnode) check() int {
+func (fn fnode) check(get func(uint64) string) int {
 	n := 0
-	var prev []byte
+	var knownPrev []byte
+	var keyPrev string
 	it := fn.iter()
 	for it.next() {
-		if string(it.known) < string(prev) {
-			print("known", it.known, "prev", prev)
-			panic("fEntries out of order")
+		known := string(it.known)
+		if known < string(knownPrev) {
+			panic("out of order: known " + known + ", prev " + string(knownPrev))
 		}
-		if it.fi > 7 && it.npre > len(prev)+(len(it.diff)-1) {
-			panic("npre > len(prev.known)")
+		if get != nil {
+			key := get(it.offset)
+			npre := commonPrefixLen(keyPrev, key)
+			if npre > len(known) {
+				panic("insufficient known: prev key " + keyPrev +
+					", key " + key + ", known" + known)
+			}
+			if !strings.HasPrefix(key, known) {
+				panic("mismatch: known " + known + ", key " + key)
+			}
+			keyPrev = key
 		}
-		prev = append(prev[:0], it.known...)
+		knownPrev = append(knownPrev[:0], it.known...)
 		n++
 	}
 	return n
@@ -345,7 +386,8 @@ func (fn fnode) printLeafNode(get func(uint64) string) {
 	it := fn.iter()
 	for it.next() {
 		offset := it.offset
-		print(strconv.Itoa(it.fi)+": {", offset, it.npre, it.diff, "}",
+		print(strconv.Itoa(it.fi)+":"+
+			"{", strconv.Itoa(int(offset))+":", it.npre, it.diff, "}",
 			it.known, "("+get(offset)+")")
 	}
 }
