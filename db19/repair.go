@@ -142,6 +142,5 @@ func ensureFlat(dbfile string) error {
 		return fmt.Errorf("after rebuild: %w", err)
 	}
 	defer db.Close()
-	db.Persist(true)
 	return nil
 }

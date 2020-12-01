@@ -147,11 +147,11 @@ func (m *Meta) Write(store *stor.Stor, flatten bool) (offSchema, offInfo uint64)
 	// schema
 	npersists, timespan := mergeSize(m.schemaClock, flatten)
 	// fmt.Printf("clock %d = %b npersists %d timespan %d\n", m.schemaClock, m.schemaClock, npersists, timespan)
-	filter := func(ts *Schema) bool { return true }
-	if npersists < len(m.schemaOffs) {
-		filter = func(ts *Schema) bool { return ts.lastmod >= m.schemaClock-timespan }
+	sfilter := func(ts *Schema) bool { return ts.lastmod >= m.schemaClock-timespan }
+	if flatten || npersists >= len(m.schemaOffs) {
+		sfilter = func(ts *Schema) bool { return !ts.isTomb() }
 	}
-	offSchema = m.schema.Write(store, nth(m.schemaOffs, npersists), filter)
+	offSchema = m.schema.Write(store, nth(m.schemaOffs, npersists), sfilter)
 	if offSchema != 0 {
 		// fmt.Println("replace", m.schemaOffs, npersists, offSchema)
 		m.schemaOffs = replace(m.schemaOffs, npersists, offSchema)
@@ -167,8 +167,11 @@ func (m *Meta) Write(store *stor.Stor, flatten bool) (offSchema, offInfo uint64)
 	// info
 	npersists, timespan = mergeSize(m.infoClock, flatten)
 	// fmt.Printf("clock %d = %b npersists %d timespan %d\n", m.infoClock, m.infoClock, npersists, timespan)
-	offInfo = m.info.Write(store, nth(m.infoOffs, npersists),
-		func(ti *Info) bool { return ti.lastmod >= m.infoClock-timespan })
+	ifilter := func(ti *Info) bool { return ti.lastmod >= m.infoClock-timespan }
+	if flatten || npersists >= len(m.infoOffs) {
+		ifilter = func(ti *Info) bool { return !ti.isTomb() }
+	}
+	offInfo = m.info.Write(store, nth(m.infoOffs, npersists), ifilter)
 	// fmt.Println("replace", m.infoOffs, npersists, offInfo)
 	m.infoOffs = replace(m.infoOffs, npersists, offInfo)
 	// fmt.Println("    =>", m.infoOffs)

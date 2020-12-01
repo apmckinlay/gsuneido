@@ -70,6 +70,10 @@ func (ov *Overlay) QuickCheck() {
 	ov.fb.QuickCheck()
 }
 
+func (ov *Overlay) Modified() bool {
+	return ov.under[0].Len() > 0
+}
+
 // iter -------------------------------------------------------------
 
 type ovsrc struct {

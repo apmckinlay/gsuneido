@@ -63,10 +63,11 @@ func (db *Database) UpdateState(fn func(*DbState)) *DbState {
 
 // WARNING: Merge and Persist must not run concurrently
 
+type mergefn func(*DbState, *mergeList) []meta.MergeUpdate
+
 // Merge updates the base ixbuf's with the ones from transactions
 // It is called by concur.go merger.
-func (db *Database) Merge(fn func(*DbState, *mergeList) []meta.MergeUpdate,
-	merges *mergeList) {
+func (db *Database) Merge(fn mergefn, merges *mergeList) {
 	updates := fn(db.GetState(), merges) // outside UpdateState
 	db.UpdateState(func(state *DbState) {
 		// updates := fn(state, merges)
@@ -78,13 +79,16 @@ func (db *Database) Merge(fn func(*DbState, *mergeList) []meta.MergeUpdate,
 
 //-------------------------------------------------------------------
 
+type persistfn func(*DbState) []meta.PersistUpdate
+
 // Persist writes index changes (and a new state) to the database file.
 // It is called from concur.go e.g. once per minute.
 // flatten applies to the schema and info chains.
-func (db *Database) Persist(flatten bool) uint64 {
+func (db *Database) Persist(exec execPersist, flatten bool) uint64 {
 	// fmt.Println("Persist", flatten)
 	var off uint64
-	updates := db.GetState().meta.Persist() // outside UpdateState
+	db.GetState().meta.Persist(exec.Submit) // outside UpdateState
+	updates := exec.Results()
 	db.UpdateState(func(state *DbState) {
 		// updates := state.meta.Persist()
 		meta := *state.meta // copy

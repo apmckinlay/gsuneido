@@ -40,6 +40,8 @@ func merger(db *Database, mergeChan chan merge,
 	persistInterval time.Duration, allDone chan void) {
 
 	em := startMergeWorkers()
+	ep := startExecPersistMulti()
+	// ep := &execPersistSingle{}
 	merges := &mergeList{}
 	ticker := time.NewTicker(persistInterval)
 	prevState := db.GetState()
@@ -58,13 +60,13 @@ loop:
 		case <-ticker.C:
 			state := db.GetState()
 			if state != prevState {
-				db.Persist(false)
+				db.Persist(ep, false)
 				prevState = state
 			}
 		}
 	}
 	close(em.jobChan)
-	db.Persist(true) // flatten on shutdown (required by quick check)
+	db.Persist(ep, true)
 	close(allDone)
 }
 
@@ -172,4 +174,74 @@ func (ml *mergeList) drain(mergeChan chan merge) {
 func (ml *mergeList) reset() {
 	ml.tn = ml.tn[:0]
 	ml.results = ml.results[:0]
+}
+
+// ------------------------------------------------------------------
+
+type execPersist interface {
+	Submit(fn func() meta.PersistUpdate)
+	Results() []meta.PersistUpdate
+}
+
+type execPersistSingle struct {
+	results []meta.PersistUpdate
+}
+
+func (ep *execPersistSingle) Submit(fn func() meta.PersistUpdate) {
+	result := fn()
+	ep.results = append(ep.results, result)
+
+}
+
+func (ep *execPersistSingle) Results() []meta.PersistUpdate {
+	return ep.results
+}
+
+//-------------------------------------------------------------------
+
+type execPersistMulti struct {
+	count      int
+	results    []meta.PersistUpdate
+	workChan   chan func() meta.PersistUpdate
+	resultChan chan meta.PersistUpdate
+}
+
+const nPersistWorkers = 8 // ???
+
+func startExecPersistMulti() *execPersistMulti {
+	workChan := make(chan func() meta.PersistUpdate, 1)
+	resultChan := make(chan meta.PersistUpdate, 1)
+	for i := 0; i < nPersistWorkers; i++ {
+		go persistWorker(workChan, resultChan)
+	}
+	return &execPersistMulti{workChan: workChan, resultChan: resultChan}
+}
+
+func (ep *execPersistMulti) Submit(fn func() meta.PersistUpdate) {
+	for {
+		select {
+		case ep.workChan <- fn:
+			ep.count++
+			return
+		case result := <-ep.resultChan:
+			ep.count--
+			ep.results = append(ep.results, result)
+		}
+	}
+}
+
+func (ep *execPersistMulti) Results() []meta.PersistUpdate {
+	for ; ep.count > 0; ep.count-- {
+		result := <-ep.resultChan
+		ep.results = append(ep.results, result)
+	}
+	return ep.results
+}
+
+func persistWorker(
+	workChan chan func() meta.PersistUpdate,
+	resultChan chan meta.PersistUpdate) {
+	for fn := range workChan {
+		resultChan <- fn()
+	}
 }

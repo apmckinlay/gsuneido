@@ -113,6 +113,8 @@ func (db *Database) Close() {
 	}
 	if db.ck != nil {
 		db.ck.Stop()
+	} else if db.mode != stor.READ {
+		db.Persist(&execPersistSingle{}, true)
 	}
 	if db.mode != stor.READ {
 		// need to use Write because all but last chunk are read-only

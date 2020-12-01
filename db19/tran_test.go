@@ -72,9 +72,9 @@ func TestTran(t *testing.T) {
 		db.Merge(mergeSingle, merges)
 		if i%100 == 50 {
 			if i%500 != 250 {
-				db.Persist(false)
+				db.Persist(&execPersistSingle{}, false)
 			} else {
-				db.Persist(true)
+				db.Persist(&execPersistSingle{}, true)
 				db.Close()
 				db, err = OpenDatabase("tmp.db")
 				ck(err)
@@ -82,7 +82,7 @@ func TestTran(t *testing.T) {
 			}
 		}
 	}
-	db.Persist(true)
+	db.Persist(&execPersistSingle{}, true)
 	ck(db.Check())
 	db.Close()
 

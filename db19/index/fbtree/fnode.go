@@ -151,7 +151,7 @@ func (fn fnode) insert(keyNew string, offNew uint64, get func(uint64) string) fn
 				_ = t && trace("before delete", fn.knowns())
 				fn, _ = fn.delete(curOffset)
 				_ = t && trace("after delete", fn.knowns())
-			} else {
+			} else { // update
 				fn.setOffset(curFi, offNew)
 			}
 			return fn

@@ -42,7 +42,6 @@ func (ts *Schema) storSize() int {
 }
 
 func (ts *Schema) Write(w *stor.Writer) {
-	assert.That(!ts.isTomb())
 	w.PutStr(ts.Table)
 	w.PutStrs(ts.Columns)
 	w.PutStrs(ts.Derived)
@@ -132,5 +131,5 @@ func (m *Meta) newSchemaTomb(table string) *Schema {
 }
 
 func (ts *Schema) isTomb() bool {
-	return ts.Indexes == nil
+	return len(ts.Indexes) == 0
 }

@@ -6,7 +6,6 @@ package meta
 import (
 	"github.com/apmckinlay/gsuneido/db19/index"
 	"github.com/apmckinlay/gsuneido/db19/stor"
-	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/hash"
 )
 
@@ -38,7 +37,6 @@ func (ti *Info) storSize() int {
 }
 
 func (ti *Info) Write(w *stor.Writer) {
-	assert.That(!ti.isTomb())
 	w.PutStr(ti.Table).
 		Put4(ti.Nrows).
 		Put5(ti.Size).
@@ -62,11 +60,11 @@ func ReadInfo(st *stor.Stor, r *stor.Reader) *Info {
 }
 
 func (m *Meta) newInfoTomb(table string) *Info {
-	return &Info{Table: table, Nrows: -1, lastmod: m.infoClock}
+	return &Info{Table: table, lastmod: m.infoClock}
 }
 
 func (ti *Info) isTomb() bool {
-	return ti.Nrows == -1
+	return len(ti.Indexes) == 0
 }
 
 //-------------------------------------------------------------------
@@ -111,34 +109,32 @@ func (m *Meta) ApplyMerge(updates []MergeUpdate) {
 
 type SaveResult = index.SaveResult
 
-type persistUpdate struct {
+type PersistUpdate struct {
 	table   string
 	results []SaveResult // per index
 }
 
+
 // Persist is called by state.Persist to write the state to the database.
 // It collects the new fbtree roots which are then applied ApplyPersist.
 // WARNING: must not modify meta.
-func (m *Meta) Persist() []persistUpdate {
-	var updates []persistUpdate
+func (m *Meta) Persist(exec func(func() PersistUpdate)) {
 	m.info.ForEach(func(ti *Info) {
-		results := make([]SaveResult, len(ti.Indexes))
-		for i, ov := range ti.Indexes {
-			r := ov.Save()
-			if r == nil {
-				assert.That(i == 0)
-				return
-			}
-			results[i] = r
+		if len(ti.Indexes) >= 1 && ti.Indexes[0].Modified() {
+			exec(func() PersistUpdate {
+				results := make([]SaveResult, len(ti.Indexes))
+				for i, ov := range ti.Indexes {
+					results[i] = ov.Save()
+				}
+				return PersistUpdate{table: ti.Table, results: results}
+			})
 		}
-		updates = append(updates, persistUpdate{table: ti.Table, results: results})
 	})
-	return updates
 }
 
 // ApplyPersist takes the new fbtree roots from Persist
 // and updates the state with them.
-func (m *Meta) ApplyPersist(updates []persistUpdate) {
+func (m *Meta) ApplyPersist(updates []PersistUpdate) {
 	t2 := m.info.Mutable()
 	for _, up := range updates {
 		ti := *t2.MustGet(up.table)                          // copy

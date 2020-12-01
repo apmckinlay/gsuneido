@@ -39,6 +39,7 @@ func TestBig(*testing.T) {
 	if testing.Short() {
 		return
 	}
+	assert.That(nrows%nthreads == 0)
 	fmt.Println("create tables")
 	tables := createTables()
 	defer os.Remove(dbfile)
@@ -63,8 +64,6 @@ func TestBig(*testing.T) {
 	db.ck.Stop()
 	db.ck = nil
 
-	ck(db.Check())
-	db.Persist(true) // flatten on shutdown (required by quick check)
 	ck(db.Check())
 
 	nr := 0
@@ -121,7 +120,6 @@ func createTables() []string {
 		ti := &meta.Info{Table: table, Indexes: idxInfo}
 		db.LoadedTable(ts, ti)
 	}
-	db.Persist(true)
 	db.Close()
 	return tables
 }
