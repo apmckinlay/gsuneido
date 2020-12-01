@@ -425,6 +425,11 @@ func (p *parser) argumentList(closing tok.Token) []ast.Arg {
 		}
 		if p.matchIf(tok.Comma) {
 			handlePending(p.Constant(True))
+		} else if p.newline && p.checker != nil && pending == nil {
+			switch p.Token {
+			case tok.LParen, tok.LBracket, tok.LCurly, tok.Dot, tok.Add, tok.Sub:
+				p.checker.AddResult(int(p.Pos), "ERROR: missing comma")
+			}
 		}
 	}
 	p.match(closing)

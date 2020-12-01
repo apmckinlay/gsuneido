@@ -54,7 +54,7 @@ func (ck *Check) Check(f *ast.Function) set {
 // It is also called by compile constant to check class base.
 func (ck *Check) CheckGlobal(name string, pos int) {
 	if nil == Global.FindName(ck.t, name) {
-		ck.addResult(pos, "ERROR: can't find: "+name)
+		ck.AddResult(pos, "ERROR: can't find: "+name)
 	}
 }
 
@@ -97,7 +97,7 @@ func (ck *Check) statements(
 	stmts []ast.Statement, init set, fnBody bool) (initOut set, exit bool) {
 	for si, stmt := range stmts {
 		if exit {
-			ck.addResult(stmt.Position(), "ERROR: unreachable code")
+			ck.AddResult(stmt.Position(), "ERROR: unreachable code")
 		}
 		init, exit = ck.statement(stmt, init, fnBody && si == len(stmts)-1)
 	}
@@ -120,7 +120,7 @@ func (ck *Check) statement(
 	case *ast.ExprStmt:
 		init, effects = ck.expr(stmt.E, init)
 		if !last && !effects {
-			ck.addResult(stmt.Pos, "ERROR: useless expression")
+			ck.AddResult(stmt.Pos, "ERROR: useless expression")
 		}
 	case *ast.Return:
 		init, _ = ck.expr(stmt.E, init)
@@ -372,7 +372,7 @@ func (ck *Check) block(b *ast.Block, init set) set {
 		if !p.Unused {
 			id := p.Name.ParamName()
 			if _, ok := ck.AllUsed[id]; !ok {
-				ck.addResult(int(p.Name.Pos),
+				ck.AddResult(int(p.Name.Pos),
 					"WARNING: initialized but not used: "+id)
 			}
 		}
@@ -412,7 +412,7 @@ func (ck *Check) usedVar(init set, id string, pos int) set {
 		if _, ok := ck.AllInit[id]; ok {
 			p = "WARNING: used but possibly"
 		}
-		ck.addResult(pos, p+" not initialized: "+id)
+		ck.AddResult(pos, p+" not initialized: "+id)
 	}
 	ck.AllUsed[id] = struct{}{}
 	return init
@@ -429,12 +429,12 @@ func (ck *Check) process(params []ast.Param, init set) {
 			} else if pos, ok := ck.AllInit[id]; ok {
 				at = int(pos)
 			}
-			ck.addResult(at, "WARNING: initialized but not used: "+id)
+			ck.AddResult(at, "WARNING: initialized but not used: "+id)
 		}
 	}
 	for id, pos := range ck.AllInit {
 		if _, ok := ck.AllUsed[id]; !ok && !init.has(id) {
-			ck.addResult(pos, "WARNING: initialized but not used: "+id)
+			ck.AddResult(pos, "WARNING: initialized but not used: "+id)
 		}
 	}
 }
@@ -449,7 +449,7 @@ func paramPos(params []ast.Param, id string) int {
 
 //-------------------------------------------------------------------
 
-func (ck *Check) addResult(pos int, str string) {
+func (ck *Check) AddResult(pos int, str string) {
 	ck.resultPos = append(ck.resultPos, pos)
 	ck.results = append(ck.results, str+" @"+strconv.Itoa(pos))
 }

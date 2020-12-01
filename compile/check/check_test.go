@@ -10,6 +10,7 @@ import (
 
 	"github.com/apmckinlay/gsuneido/compile"
 	"github.com/apmckinlay/gsuneido/compile/check"
+	"github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
@@ -199,6 +200,41 @@ func TestCheckResults(t *testing.T) {
 	test("function (f) { if (f()) { return } else { x=5 } x  }")
 
 	// copy on write
-	test(`function (a) { if (a) b = 1 else a(c=1, b=c) return b }`)
+	test("function (a) { if (a) b = 1 else a(c=1, b=c) return b }")
 	test("function (a) { a ? b=1 : a(c=1, b=c); b }")
+
+	// missing comma
+	runtime.Global.TestDef("Object", runtime.False)
+	test(`function (f, x) { f(x[0]) }`)
+	test(`function (f, x) { f(x(0)) }`)
+	test(`function (f, x) { f(x{}) }`)
+	test(`function (f, x) { f(x.y) }`)
+	test(`function (f, x) { f(x+1) }`)
+	test(`function (f, x) { f(x-1) }`)
+
+	test(`function (f, x) { f(x,
+		[0]) }`)
+	test(`function (f, x) { f(x,
+		(0)) }`)
+	test(`function (f, x) { f(x,
+		{}) }`)
+	test(`function (f, x) { f(x,
+		.y) }`)
+	test(`function (f, x) { f(x,
+		+1) }`)
+	test(`function (f, x) { f(x,
+		-1) }`)
+
+	test(`function (f, x) { f(x
+		[0]) }`, "ERROR: missing comma @24")
+	test(`function (f, x) { f(x
+		(0)) }`, "ERROR: missing comma @24")
+	test(`function (f, x) { f(x
+		{}) }`, "ERROR: missing comma @24")
+	test(`function (f, x) { f(x
+		.y) }`, "ERROR: missing comma @24")
+	test(`function (f, x) { f(x
+		+1) }`, "ERROR: missing comma @24")
+	test(`function (f, x) { f(x
+		-1) }`, "ERROR: missing comma @24")
 }
