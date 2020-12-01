@@ -110,7 +110,9 @@ func (a assert) False(b bool) {
 // That gives an error if the value is not true.
 // That(x) is the same as True(x)
 func That(cond bool) {
-	assert{}.That(cond)
+	if !cond { // redundant inline for speed
+		assert{}.That(cond)
+	}
 }
 
 // That gives an error if the value is not true.
