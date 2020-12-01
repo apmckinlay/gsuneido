@@ -7,6 +7,7 @@ enum { maxargs = 20 };
 extern uintptr args[maxargs];
 
 extern unsigned long threadid;
+extern uintptr notifyHwnd;
 
 enum {
 	ncb2s = 32,

@@ -45,6 +45,10 @@ func CThreadId() uintptr {
 	return uintptr(C.threadid)
 }
 
+func CNotifyHwnd() uintptr {
+	return uintptr(C.notifyHwnd)
+}
+
 func QueryIDispatch(iunk uintptr) uintptr {
 	C.args[0] = C.msg_queryidispatch
 	C.args[1] = C.uintptr(iunk)
