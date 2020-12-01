@@ -38,7 +38,7 @@ func notifyCside() {
 	r, _, _ := syscall.Syscall6(postMessage, 4,
 		goc.CNotifyHwnd(), WM_USER, 0xffffffff, 0, 0, 0)
 	if r == 0 {
-		log.Panicln("postMessage failed")
+		log.Panicln("notifyCside PostMessage failed")
 	}
 }
 
