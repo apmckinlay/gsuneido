@@ -262,12 +262,6 @@ static void message_loop(uintptr hdlg) {
 			msg.message == WM_NULL && msg.wParam == END_MSG_LOOP &&
 			msg.lParam == END_MSG_LOOP)
 			return;
-		if (msg.message == WM_USER && msg.hwnd == 0 &&
-			msg.wParam == 0xffffffff) { // from notifyMessageLoop
-			args[0] = msg_updateui;
-			interact();
-			continue;
-		}
 		HWND window = GetAncestor(msg.hwnd, GA_ROOT);
 		if (window != 0) {
 			HACCEL haccel = (HACCEL) GetWindowLongPtrA(window, GWLP_USERDATA);
@@ -302,12 +296,45 @@ static VOID CALLBACK timer(
 }
 
 const int timerIntervalMS = 50;
+uintptr notifyHwnd = 0;
+
+static LRESULT CALLBACK notifyWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+    if (uMsg == WM_USER && wParam == 0xffffffff) {
+        args[0] = msg_updateui;
+		interact();
+    } else {
+        return DefWindowProc(hwnd, uMsg, wParam, lParam);
+    }
+    return 0;
+}
+
+static int setupNotify() {
+    WNDCLASS wc;
+    memset(&wc, 0, sizeof wc);
+    wc.lpszClassName = "notify";
+    wc.lpfnWndProc = notifyWndProc;
+    if (!RegisterClass(&wc)) {
+        return FALSE;
+    }
+
+    HWND hwnd = CreateWindow("notify", "notify", WS_OVERLAPPEDWINDOW, 
+		0, 0, 0, 0,
+        HWND_MESSAGE, NULL, NULL, NULL);
+    if (!hwnd) {
+        return FALSE;
+    }
+
+	notifyHwnd = (uintptr)hwnd;
+	return TRUE;
+}
+
 
 static DWORD WINAPI thread(LPVOID lpParameter) {
 	RegisterHotKey(0, CTRL_BREAK_ID, MOD_CONTROL, VK_CANCEL);
 	main_threadid = GetCurrentThreadId();
 	hook = SetWindowsHookExA(WH_GETMESSAGE, message_hook, 0, main_threadid);
 	CreateThread(NULL, 8192, timer_thread, 0, 0, 0);
+	setupNotify();
 	signalAndWait();
 	interact(); // allow go side to run init, finishing with result
 	SetTimer(0, 0, timerIntervalMS, timer);
