@@ -27,18 +27,18 @@ var _ = builtin("UpdateUI(block)",
 			block := args[0]
 			block.SetConcurrent()
 			uuiChan <- block
-			notifyMessageLoop()
+			notifyCside()
 		}
 		return nil
 	})
 
-// notifyMessageLoop is used by UpdateUI and SetTimer
-func notifyMessageLoop() {
+// notifyCside is used by UpdateUI and SetTimer
+func notifyCside() {
 	// NOTE: this has to be the Go Syscall, not goc.Syscall
-	r, _, _ := syscall.Syscall6(postThreadMessage, 4,
-		goc.CThreadId(), WM_USER, 0xffffffff, 0, 0, 0)
+	r, _, _ := syscall.Syscall6(postMessage, 4,
+		goc.CNotifyHwnd(), WM_USER, 0xffffffff, 0, 0, 0)
 	if r == 0 {
-		log.Panicln("PostThreadMessage failed")
+		log.Panicln("postMessage failed")
 	}
 }
 

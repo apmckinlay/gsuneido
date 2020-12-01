@@ -923,7 +923,7 @@ var _ = builtin4("SetTimer(hwnd, id, ms, f)",
 		d.SetConcurrent() // since callback will be from different thread
 		ts := timerSpec{hwnd: a, id: b, ms: c, cb: d, ret: make(chan Value, 1)}
 		timerChan <- ts
-		notifyMessageLoop()
+		notifyCside()
 		first := true
 		for {
 			select {
@@ -961,7 +961,7 @@ var _ = builtin2("KillTimer(hwnd, id)",
 		}
 		ts := timerSpec{hwnd: a, id: b, ret: make(chan Value, 1)}
 		timerChan <- ts
-		notifyMessageLoop()
+		notifyCside()
 		first := true
 		for {
 			select {
