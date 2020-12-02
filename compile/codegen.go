@@ -12,7 +12,7 @@ import (
 	"sync/atomic"
 
 	"github.com/apmckinlay/gsuneido/compile/ast"
-	tok "github.com/apmckinlay/gsuneido/lexer/tokens"
+	tok "github.com/apmckinlay/gsuneido/compile/tokens"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	op "github.com/apmckinlay/gsuneido/runtime/opcodes"
 	"github.com/apmckinlay/gsuneido/util/assert"

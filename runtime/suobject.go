@@ -10,7 +10,7 @@ import (
 
 	"sync/atomic"
 
-	"github.com/apmckinlay/gsuneido/lexer"
+	"github.com/apmckinlay/gsuneido/compile/lexer"
 	"github.com/apmckinlay/gsuneido/runtime/types"
 	"github.com/apmckinlay/gsuneido/util/hmap"
 	"github.com/apmckinlay/gsuneido/util/ints"

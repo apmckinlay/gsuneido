@@ -21,8 +21,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	lex "github.com/apmckinlay/gsuneido/lexer"
-	tok "github.com/apmckinlay/gsuneido/lexer/tokens"
+	lex "github.com/apmckinlay/gsuneido/compile/lexer"
+	tok "github.com/apmckinlay/gsuneido/compile/tokens"
 )
 
 type parser struct {

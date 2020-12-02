@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/apmckinlay/gsuneido/lexer"
+	"github.com/apmckinlay/gsuneido/compile/lexer"
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 

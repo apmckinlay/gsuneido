@@ -4,8 +4,8 @@
 package builtin
 
 import (
-	"github.com/apmckinlay/gsuneido/lexer"
-	"github.com/apmckinlay/gsuneido/lexer/tokens"
+	"github.com/apmckinlay/gsuneido/compile/lexer"
+	"github.com/apmckinlay/gsuneido/compile/tokens"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/runtime/types"
 )

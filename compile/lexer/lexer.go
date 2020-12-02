@@ -7,7 +7,7 @@ package lexer
 import (
 	"strings"
 
-	tok "github.com/apmckinlay/gsuneido/lexer/tokens"
+	tok "github.com/apmckinlay/gsuneido/compile/tokens"
 	. "github.com/apmckinlay/gsuneido/util/ascii"
 	"github.com/apmckinlay/gsuneido/util/str"
 )

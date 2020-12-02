@@ -9,8 +9,8 @@ import (
 
 	"github.com/apmckinlay/gsuneido/compile/ast"
 	"github.com/apmckinlay/gsuneido/compile/check"
-	. "github.com/apmckinlay/gsuneido/lexer"
-	tok "github.com/apmckinlay/gsuneido/lexer/tokens"
+	. "github.com/apmckinlay/gsuneido/compile/lexer"
+	tok "github.com/apmckinlay/gsuneido/compile/tokens"
 )
 
 func NewParser(src string) *parser {
@@ -84,7 +84,6 @@ type funcInfo struct {
 
 // disqualified is a special value for final
 const disqualified = -1
-
 
 func (p *parserBase) match(token tok.Token) {
 	p.mustMatch(token)

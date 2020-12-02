@@ -6,7 +6,7 @@ package ast
 import (
 	"fmt"
 
-	tok "github.com/apmckinlay/gsuneido/lexer/tokens"
+	tok "github.com/apmckinlay/gsuneido/compile/tokens"
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
 

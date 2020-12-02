@@ -6,7 +6,7 @@ package lexer
 import (
 	"testing"
 
-	tok "github.com/apmckinlay/gsuneido/lexer/tokens"
+	tok "github.com/apmckinlay/gsuneido/compile/tokens"
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
@@ -55,7 +55,7 @@ func TestLexer(t *testing.T) {
 		for i := 0; i < len(expected); {
 			item := lexer.Next()
 			if item.Token == tok.Eof {
-				assert(i).Msg("too few tokens").Is(len(expected)-1)
+				assert(i).Msg("too few tokens").Is(len(expected) - 1)
 				break
 			} else if item.Token == tok.Whitespace || item.Token == tok.Newline {
 				continue

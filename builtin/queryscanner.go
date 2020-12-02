@@ -4,7 +4,7 @@
 package builtin
 
 import (
-	"github.com/apmckinlay/gsuneido/lexer"
+	"github.com/apmckinlay/gsuneido/compile/lexer"
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
 

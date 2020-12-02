@@ -7,9 +7,9 @@ import (
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/compile/ast"
+	"github.com/apmckinlay/gsuneido/compile/lexer"
+	tok "github.com/apmckinlay/gsuneido/compile/tokens"
 	"github.com/apmckinlay/gsuneido/db19/meta/schema"
-	"github.com/apmckinlay/gsuneido/lexer"
-	tok "github.com/apmckinlay/gsuneido/lexer/tokens"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
