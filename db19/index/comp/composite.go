@@ -15,16 +15,14 @@ import (
 )
 
 // Key builds a composite key string that is comparable raw.
-// fields2 is used for unique indexes.
+// fields2 is used for unique indexes (that allow multiple empty keys).
 // fields2 will only be added if all of the fields value are empty.
 func Key(rec Record, fields, fields2 []int) string {
 	if len(fields) == 0 {
 		return ""
 	}
-	if len(fields) == 1 {
-		if len(fields2) == 0 || fieldLen(rec, fields[0]) > 0 {
-			return getRaw(rec, fields[0]) // don't need to encode single field keys
-		}
+	if len(fields) == 1 && len(fields2) == 0 {
+		return getRaw(rec, fields[0]) // don't need to encode single field keys
 	}
 	n := 0
 	lastNonEmpty := -1
@@ -97,7 +95,7 @@ func getRaw(rec Record, field int) string {
 func Compare(r1, r2 Record, fields, fields2 []int) int {
 	empty := true
 	for _, f := range fields {
-		var x1,x2 string
+		var x1, x2 string
 		var cmp int
 		if f < 0 { // _lower!
 			f = -f - 2

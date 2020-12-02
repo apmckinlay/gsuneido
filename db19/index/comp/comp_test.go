@@ -14,6 +14,10 @@ import (
 
 func TestKey(t *testing.T) {
 	assert := assert.T(t).This
+	
+	// no escape for single field
+	assert(Key(mkrec("a\x00b"), []int{0}, nil)).Is("a\x00b")
+
 	fields := []int{0, 1, 2}
 	for _, flds2 := range [][]int{nil, {1, 2}} {
 		assert(Key(mkrec("a", "b"), []int{}, flds2)).Is("")
@@ -28,9 +32,6 @@ func TestKey(t *testing.T) {
 		assert(Key(mkrec("", "", "c"), fields, flds2)).Is("\x00\x00\x00\x00c")
 		assert(Key(mkrec("a", "b", ""), fields, flds2)).Is("a\x00\x00b")
 		assert(Key(mkrec("a", "", ""), fields, flds2)).Is("a")
-
-		// no escape for single field
-		assert(Key(mkrec("a\x00b"), []int{0}, flds2)).Is("a\x00b")
 
 		// escaping
 		first := []int{0, 1}
@@ -61,6 +62,14 @@ func mkrec(args ...string) Record {
 }
 
 const m = 3
+
+func TestKeyBug(t *testing.T) {
+	fields := []int{0}
+	fields2 := []int{1}
+	k1 := Key(mkrec("", "foo"), fields, fields2)
+	k2 := Key(mkrec("\x00\x00foo"), fields, fields2)
+	assert.T(t).That(k1 != k2)
+}
 
 func TestRandom(t *testing.T) {
 	assert := assert.T(t).This
