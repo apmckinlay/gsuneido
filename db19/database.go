@@ -4,9 +4,8 @@
 package db19
 
 import (
-	"github.com/apmckinlay/gsuneido/db19/index/comp"
 	"github.com/apmckinlay/gsuneido/db19/index/fbtree"
-	"github.com/apmckinlay/gsuneido/db19/index/ixspec"
+	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/db19/meta"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	rt "github.com/apmckinlay/gsuneido/runtime"
@@ -132,15 +131,15 @@ func init() {
 	fbtree.GetLeafKey = getLeafKey
 }
 
-func getLeafKey(store *stor.Stor, is *ixspec.T, off uint64) string {
+func getLeafKey(store *stor.Stor, is *ixkey.Spec, off uint64) string {
 	return is.Key(offToRec(store, off))
 }
 
-func mkcmp(store *stor.Stor, is *ixspec.T) func(x, y uint64) int {
+func mkcmp(store *stor.Stor, is *ixkey.Spec) func(x, y uint64) int {
 	return func(x, y uint64) int {
 		xr := offToRec(store, x)
 		yr := offToRec(store, y)
-		return comp.Compare(xr, yr, is.Fields, is.Fields2)
+		return ixkey.Compare(xr, yr, is.Fields, is.Fields2)
 	}
 }
 

@@ -1,7 +1,7 @@
 // Copyright Suneido Software Corp. All rights reserved.
 // Governed by the MIT license found in the LICENSE file.
 
-package comp
+package ixkey
 
 import (
 	"math/rand"
@@ -14,7 +14,7 @@ import (
 
 func TestKey(t *testing.T) {
 	assert := assert.T(t).This
-	
+
 	// no escape for single field
 	assert(Key(mkrec("a\x00b"), []int{0}, nil)).Is("a\x00b")
 

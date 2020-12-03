@@ -10,7 +10,7 @@ import (
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/db19/index/ixbuf"
-	"github.com/apmckinlay/gsuneido/db19/index/ixspec"
+	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 
 	"github.com/apmckinlay/gsuneido/util/assert"
@@ -30,7 +30,7 @@ func TestFbtreeIO(t *testing.T) {
 func TestFbtreeIter(t *testing.T) {
 	const n = 1000
 	var data [n]string
-	GetLeafKey = func(_ *stor.Stor, _ *ixspec.T, i uint64) string { return data[i] }
+	GetLeafKey = func(_ *stor.Stor, _ *ixkey.Spec, i uint64) string { return data[i] }
 	defer func(mns int) { MaxNodeSize = mns }(MaxNodeSize)
 	MaxNodeSize = 440
 	randKey := str.UniqueRandomOf(3, 6, "abcde")
@@ -56,7 +56,7 @@ func TestFbtreeIter(t *testing.T) {
 
 func TestFbtreeBuilder(t *testing.T) {
 	assert := assert.T(t)
-	GetLeafKey = func(_ *stor.Stor, _ *ixspec.T, i uint64) string {
+	GetLeafKey = func(_ *stor.Stor, _ *ixkey.Spec, i uint64) string {
 		return strconv.Itoa(int(i))
 	}
 	store := stor.HeapStor(8192)
@@ -92,7 +92,7 @@ func TestFbtreeBuilder(t *testing.T) {
 }
 
 func ExampleFbtreeBuilder2() {
-	GetLeafKey = func(_ *stor.Stor, _ *ixspec.T, i uint64) string {
+	GetLeafKey = func(_ *stor.Stor, _ *ixkey.Spec, i uint64) string {
 		return strconv.Itoa(int(i))
 	}
 	store := stor.HeapStor(8192)
@@ -115,7 +115,7 @@ func ExampleFbtreeBuilder2() {
 }
 
 func ExampleFbtree_MergeAndSave() {
-	GetLeafKey = func(_ *stor.Stor, _ *ixspec.T, i uint64) string {
+	GetLeafKey = func(_ *stor.Stor, _ *ixkey.Spec, i uint64) string {
 		return strconv.Itoa(int(i))
 	}
 	store := stor.HeapStor(8192)

@@ -10,7 +10,7 @@ import (
 
 	"github.com/apmckinlay/gsuneido/db19/index/fbtree"
 	"github.com/apmckinlay/gsuneido/db19/index/ixbuf"
-	"github.com/apmckinlay/gsuneido/db19/index/ixspec"
+	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/str"
@@ -18,7 +18,7 @@ import (
 
 func TestEmptyOverlay(*testing.T) {
 	var data []string
-	fbtree.GetLeafKey = func(_ *stor.Stor, _ *ixspec.T, i uint64) string {
+	fbtree.GetLeafKey = func(_ *stor.Stor, _ *ixkey.Spec, i uint64) string {
 		return data[i]
 	}
 	defer func(mns int) { fbtree.MaxNodeSize = mns }(fbtree.MaxNodeSize)
@@ -102,7 +102,7 @@ func TestOverlayMerge(t *testing.T) {
 		return mut
 	}
 	mut := randInter()
-	fbtree.GetLeafKey = func(_ *stor.Stor, _ *ixspec.T, i uint64) string {
+	fbtree.GetLeafKey = func(_ *stor.Stor, _ *ixkey.Spec, i uint64) string {
 		return data[i]
 	}
 	defer func(mns int) { fbtree.MaxNodeSize = mns }(fbtree.MaxNodeSize)

@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/apmckinlay/gsuneido/db19/index/ixspec"
+	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/cksum"
@@ -31,7 +31,7 @@ type fbtree struct {
 	store *stor.Stor
 	// ixspec is an opaque value passed to GetLeafKey.
 	// It specifies which fields make up the key, based on the schema.
-	ixspec *ixspec.T
+	ixspec *ixkey.Spec
 }
 
 const maxlevels = 8
@@ -42,9 +42,9 @@ var MaxNodeSize = 256 //TODO tune
 
 // GetLeafKey is used to get the key for a data offset.
 // It is a dependency that must be injected
-var GetLeafKey func(st *stor.Stor, is *ixspec.T, off uint64) string
+var GetLeafKey func(st *stor.Stor, is *ixkey.Spec, off uint64) string
 
-func CreateFbtree(store *stor.Stor, is *ixspec.T) *fbtree {
+func CreateFbtree(store *stor.Stor, is *ixkey.Spec) *fbtree {
 	rootNode := fnode{}
 	root := rootNode.putNode(store)
 	return &fbtree{root: root, store: store, ixspec: is}
@@ -54,11 +54,11 @@ func OpenFbtree(store *stor.Stor, root uint64, treeLevels int) *fbtree {
 	return &fbtree{root: root, treeLevels: treeLevels, store: store}
 }
 
-func (fb *fbtree) GetIxspec() *ixspec.T {
+func (fb *fbtree) GetIxspec() *ixkey.Spec {
 	return fb.ixspec
 }
 
-func (fb *fbtree) SetIxspec(is *ixspec.T) {
+func (fb *fbtree) SetIxspec(is *ixkey.Spec) {
 	fb.ixspec = is
 }
 

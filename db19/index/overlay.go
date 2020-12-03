@@ -6,7 +6,7 @@ package index
 import (
 	"github.com/apmckinlay/gsuneido/db19/index/fbtree"
 	"github.com/apmckinlay/gsuneido/db19/index/ixbuf"
-	"github.com/apmckinlay/gsuneido/db19/index/ixspec"
+	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
@@ -23,7 +23,7 @@ type Overlay struct {
 	mut *ixbuf.T
 }
 
-func NewOverlay(store *stor.Stor, is *ixspec.T) *Overlay {
+func NewOverlay(store *stor.Stor, is *ixkey.Spec) *Overlay {
 	assert.That(is != nil)
 	return &Overlay{fb: fbtree.CreateFbtree(store, is),
 		under: []*ixbuf.T{{}}}
@@ -42,11 +42,11 @@ func (ov *Overlay) Mutable() *Overlay {
 	return &Overlay{fb: ov.fb, under: under, mut: &ixbuf.T{}}
 }
 
-func (ov *Overlay) GetIxspec() *ixspec.T {
+func (ov *Overlay) GetIxspec() *ixkey.Spec {
 	return ov.fb.GetIxspec()
 }
 
-func (ov *Overlay) SetIxspec(is *ixspec.T) {
+func (ov *Overlay) SetIxspec(is *ixkey.Spec) {
 	ov.fb.SetIxspec(is)
 }
 
@@ -78,8 +78,8 @@ func (ov *Overlay) Modified() bool {
 
 type ovsrc struct {
 	iter
-	key  string
-	off  uint64
+	key string
+	off uint64
 }
 
 type ovsrcs struct {
@@ -101,7 +101,7 @@ func (ov *Overlay) Iter(check bool) iter {
 		in.srcs = append(in.srcs, ovsrc{iter: ov.mut.Iter(check)})
 	}
 	// iterate backwards since next may remove source
-	for i := len(in.srcs)-1; i >= 0; i-- {
+	for i := len(in.srcs) - 1; i >= 0; i-- {
 		in.next(i)
 	}
 	return in.iter

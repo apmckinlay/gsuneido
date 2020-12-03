@@ -1,11 +1,7 @@
 // Copyright Suneido Software Corp. All rights reserved.
 // Governed by the MIT license found in the LICENSE file.
 
-// Package comp implements encoding composite keys
-// so they can be compared as strings of bytes.
-// Fields are separated by two zero bytes 0,0
-// Zero bytes are encoded as 0,1
-package comp
+package ixkey
 
 import (
 	"strings"
@@ -14,9 +10,11 @@ import (
 	"github.com/apmckinlay/gsuneido/util/hacks"
 )
 
-// Key builds a composite key string that is comparable raw.
+// Key builds a composite key string that is directly comparable.
+// Fields are separated by two zero bytes 0,0.
+// Zero bytes are encoded as 0,1.
 // fields2 is used for unique indexes (that allow multiple empty keys).
-// fields2 will only be added if all of the fields value are empty.
+// fields2 will only be used if all of the fields value are empty.
 func Key(rec Record, fields, fields2 []int) string {
 	if len(fields) == 0 {
 		return ""

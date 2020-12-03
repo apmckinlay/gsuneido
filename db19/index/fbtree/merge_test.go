@@ -11,7 +11,7 @@ import (
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/db19/index/ixbuf"
-	"github.com/apmckinlay/gsuneido/db19/index/ixspec"
+	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/str"
@@ -25,7 +25,7 @@ func TestMerge(*testing.T) {
 		opsPerMerge = 200
 	}
 	d := newdat()
-	GetLeafKey = func(_ *stor.Stor, _ *ixspec.T, i uint64) string {
+	GetLeafKey = func(_ *stor.Stor, _ *ixkey.Spec, i uint64) string {
 		return d.o2k[i]
 	}
 	defer func(mns int) { MaxNodeSize = mns }(MaxNodeSize)

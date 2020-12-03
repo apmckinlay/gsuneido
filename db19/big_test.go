@@ -13,7 +13,7 @@ import (
 	"time"
 
 	"github.com/apmckinlay/gsuneido/db19/index"
-	"github.com/apmckinlay/gsuneido/db19/index/ixspec"
+	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/db19/meta"
 	"github.com/apmckinlay/gsuneido/db19/meta/schema"
 	rt "github.com/apmckinlay/gsuneido/runtime"
@@ -112,7 +112,7 @@ func createTables() []string {
 				mode = 'i'
 			}
 			idxSchema[j] = schema.Index{Columns: idxcols, Mode: mode}
-			idxInfo[j] = index.NewOverlay(db.store, &ixspec.T{})
+			idxInfo[j] = index.NewOverlay(db.store, &ixkey.Spec{})
 			idxInfo[j].Save()
 		}
 		schema := schema.Schema{Table: table, Columns: cols, Indexes: idxSchema}

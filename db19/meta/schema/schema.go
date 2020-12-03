@@ -7,7 +7,7 @@ package schema
 import (
 	"strings"
 
-	"github.com/apmckinlay/gsuneido/db19/index/ixspec"
+	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
@@ -22,7 +22,7 @@ type Schema struct {
 
 type Index struct {
 	Columns []string
-	Ixspec  ixspec.T
+	Ixspec  ixkey.Spec
 	// Mode is 'k' for key, 'i' for index, 'u' for unique index
 	Mode      int
 	Fktable   string
