@@ -1,25 +1,38 @@
 // Copyright Suneido Software Corp. All rights reserved.
 // Governed by the MIT license found in the LICENSE file.
 
+// Package ixkey handles specifying and encoding index keys
 package ixkey
 
 import (
+	"fmt"
 	"strings"
 
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/hacks"
 )
 
+// Spec specifies the field(s) in an index key
+type Spec struct {
+	Fields  []int
+	Fields2 []int
+}
+
+func (spec *Spec) String() string {
+	return fmt.Sprint("ixspec ", spec.Fields, ",", spec.Fields2)
+}
+
 // Key builds a composite key string that is directly comparable.
 // Fields are separated by two zero bytes 0,0.
 // Zero bytes are encoded as 0,1.
 // fields2 is used for unique indexes (that allow multiple empty keys).
 // fields2 will only be used if all of the fields value are empty.
-func Key(rec Record, fields, fields2 []int) string {
+func (spec *Spec) Key(rec Record) string {
+	fields := spec.Fields
 	if len(fields) == 0 {
 		return ""
 	}
-	if len(fields) == 1 && len(fields2) == 0 {
+	if len(fields) == 1 && len(spec.Fields2) == 0 {
 		return getRaw(rec, fields[0]) // don't need to encode single field keys
 	}
 	n := 0
@@ -32,10 +45,10 @@ func Key(rec Record, fields, fields2 []int) string {
 		n += fldlen
 	}
 	if lastNonEmpty == -1 { // fields all empty
-		if len(fields2) == 0 {
+		if len(spec.Fields2) == 0 {
 			return ""
 		}
-		for _, field := range fields2 {
+		for _, field := range spec.Fields2 {
 			n += fieldLen(rec, field)
 		}
 	} else {
@@ -48,7 +61,7 @@ func Key(rec Record, fields, fields2 []int) string {
 		for range fields {
 			buf = append(buf, 0, 0) // separator
 		}
-		fields = fields2
+		fields = spec.Fields2
 	}
 	for f := 0; ; {
 		b := getRaw(rec, fields[f])
@@ -90,9 +103,9 @@ func getRaw(rec Record, field int) string {
 
 // Compare compares the specified fields of the two records
 // without building keys for them
-func Compare(r1, r2 Record, fields, fields2 []int) int {
+func (spec *Spec) Compare(r1, r2 Record) int {
 	empty := true
-	for _, f := range fields {
+	for _, f := range spec.Fields {
 		var x1, x2 string
 		var cmp int
 		if f < 0 { // _lower!
@@ -113,7 +126,7 @@ func Compare(r1, r2 Record, fields, fields2 []int) int {
 		}
 	}
 	if empty {
-		for _, f := range fields2 {
+		for _, f := range spec.Fields2 {
 			// NOTE: assumes fields2 will not be _lower!
 			if cmp := strings.Compare(r1.GetRaw(f), r2.GetRaw(f)); cmp != 0 {
 				return cmp

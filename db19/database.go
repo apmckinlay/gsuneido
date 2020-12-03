@@ -139,7 +139,7 @@ func mkcmp(store *stor.Stor, is *ixkey.Spec) func(x, y uint64) int {
 	return func(x, y uint64) int {
 		xr := offToRec(store, x)
 		yr := offToRec(store, y)
-		return ixkey.Compare(xr, yr, is.Fields, is.Fields2)
+		return is.Compare(xr, yr)
 	}
 }
 
