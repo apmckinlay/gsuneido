@@ -26,7 +26,7 @@ func init() {
 	goc.Callback3 = callback3
 	goc.Callback4 = callback4
 	goc.SunAPP = sunAPP
-	goc.UpdateUI = updateUI2
+	goc.UpdateUI = updateUI
 	UpdateUI = updateUI // runtime
 	Interrupt = goc.Interrupt
 
@@ -40,14 +40,3 @@ func init() {
 func Run() {
 	goc.Run()
 }
-
-type timerSpec struct {
-	hwnd Value
-	id   Value
-	ms   Value // nil for KillTimer
-	cb   Value
-	ret  chan Value
-}
-
-// timerChan is used for cross thread SetTimer and KillTimer requests
-var timerChan = make(chan timerSpec, 1)

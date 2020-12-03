@@ -905,8 +905,6 @@ var _ = builtin1("SetFocus(hwnd)",
 		return intRet(rtn)
 	})
 
-var postThreadMessage = user32.MustFindProc("PostThreadMessageA").Addr()
-
 const WM_USER = 0x400
 
 // dll User32:SetTimer(pointer hwnd, long id, long ms, TIMERPROC f) long
@@ -921,13 +919,15 @@ var _ = builtin4("SetTimer(hwnd, id, ms, f)",
 		}
 		// WARNING: don't use heap from background thread
 		d.SetConcurrent() // since callback will be from different thread
-		ts := timerSpec{hwnd: a, id: b, ms: c, cb: d, ret: make(chan Value, 1)}
-		timerChan <- ts
+		ret := make(chan Value, 1)
+		uuiChan <- func() {
+			ret <- gocSetTimer(a, b, c, d)
+		}
 		notifyCside()
 		first := true
 		for {
 			select {
-			case id := <-ts.ret:
+			case id := <-ret:
 				return id
 			case <-time.After(5 * time.Second):
 				if first {
@@ -959,13 +959,15 @@ var _ = builtin2("KillTimer(hwnd, id)",
 		if windows.GetCurrentThreadId() == uiThreadId {
 			return gocKillTimer(a, b)
 		}
-		ts := timerSpec{hwnd: a, id: b, ret: make(chan Value, 1)}
-		timerChan <- ts
+		ret := make(chan Value, 1)
+		uuiChan <- func() {
+			ret <- gocKillTimer(a, b)
+		}
 		notifyCside()
 		first := true
 		for {
 			select {
-			case id := <-ts.ret:
+			case id := <-ret:
 				return id
 			case <-time.After(5 * time.Second):
 				if first {

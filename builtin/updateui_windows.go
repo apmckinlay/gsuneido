@@ -15,8 +15,8 @@ import (
 )
 
 // uuiChan is used for cross thread UpdateUI (e.g. Print)
-// Need buffer of 1 so UpdateUI can send to channel and then SendThreadMessage
-var uuiChan = make(chan Value, 1)
+// Need buffer so we can send to channel and then notifyCside
+var uuiChan = make(chan func(), 1)
 
 // UpdateUI runs the block on the main UI thread
 var _ = builtin("UpdateUI(block)",
@@ -26,7 +26,7 @@ var _ = builtin("UpdateUI(block)",
 		} else {
 			block := args[0]
 			block.SetConcurrent()
-			uuiChan <- block
+			uuiChan <- func () { runUI(block) }
 			notifyCside()
 		}
 		return nil
@@ -42,31 +42,12 @@ func notifyCside() {
 	}
 }
 
-// updateUI2 is called via goc.UpdateUI
-func updateUI2() {
-	for {
-		select {
-		case block := <-uuiChan:
-			runUI(block)
-		case t := <-timerChan:
-			if t.ms != nil {
-				t.ret <- gocSetTimer(t.hwnd, t.id, t.ms, t.cb)
-			} else {
-				t.ret <- gocKillTimer(t.hwnd, t.id)
-			}
-		default: // non-blocking
-			return
-		}
-	}
-}
-
-// updateUI is called via runtime.UpdateUI
-// including by interp
+// updateUI is called from goc.UpdateUI and runtime.UpdateUI
 func updateUI() {
 	for {
 		select {
-		case block := <-uuiChan:
-			runUI(block)
+		case fn := <-uuiChan:
+			fn()
 		default: // non-blocking
 			return
 		}
