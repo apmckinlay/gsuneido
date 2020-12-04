@@ -32,7 +32,7 @@ enum {
 	msg_callback4,
 	msg_msgloop,
 	msg_timerid,
-	msg_updateui,
+	msg_runongoside,
 	msg_sunapp,
 	msg_traccel,
 	msg_queryidispatch,

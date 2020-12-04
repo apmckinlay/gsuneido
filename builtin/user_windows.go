@@ -920,7 +920,7 @@ var _ = builtin4("SetTimer(hwnd, id, ms, f)",
 		// WARNING: don't use heap from background thread
 		d.SetConcurrent() // since callback will be from different thread
 		ret := make(chan Value, 1)
-		uuiChan <- func() {
+		rogsChan <- func() {
 			ret <- gocSetTimer(a, b, c, d)
 		}
 		notifyCside()
@@ -960,7 +960,7 @@ var _ = builtin2("KillTimer(hwnd, id)",
 			return gocKillTimer(a, b)
 		}
 		ret := make(chan Value, 1)
-		uuiChan <- func() {
+		rogsChan <- func() {
 			ret <- gocKillTimer(a, b)
 		}
 		notifyCside()

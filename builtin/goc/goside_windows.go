@@ -132,7 +132,7 @@ var TimerId func(a uintptr)
 var Callback2 func(i, a, b uintptr) uintptr
 var Callback3 func(i, a, b, c uintptr) uintptr
 var Callback4 func(i, a, b, c, d uintptr) uintptr
-var UpdateUI func()
+var RunOnGoSide func()
 var SunAPP func(string) string
 
 func interact() uintptr {
@@ -161,8 +161,8 @@ func interact() uintptr {
 		case C.msg_timerid:
 			TimerId(uintptr(C.args[1]))
 			C.args[0] = C.msg_result
-		case C.msg_updateui:
-			UpdateUI()
+		case C.msg_runongoside:
+			RunOnGoSide()
 			C.args[0] = C.msg_result
 		case C.msg_sunapp:
 			s := SunAPP(C.GoString((*C.char)(unsafe.Pointer(uintptr(C.args[1])))))

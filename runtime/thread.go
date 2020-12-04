@@ -218,7 +218,7 @@ func (t *Thread) Close() {
 }
 
 // SubThread is a NewThread with the same dbms as this thread.
-// This is used for the UpdateUI and SuneidoAPP threads.
+// This is used for the RunOnGoSide and SuneidoAPP threads.
 // We want a new thread for isolation e.g. for exceptions or dynamic variables
 // but we don't need the overhead of another dbms connection.
 // WARNING: This should only be used where it is guaranteed

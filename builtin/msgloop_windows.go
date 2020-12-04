@@ -26,8 +26,8 @@ func init() {
 	goc.Callback3 = callback3
 	goc.Callback4 = callback4
 	goc.SunAPP = sunAPP
-	goc.UpdateUI = updateUI
-	UpdateUI = updateUI // runtime
+	goc.RunOnGoSide = runOnGoSide
+	RunOnGoSide = runOnGoSide // runtime
 	Interrupt = goc.Interrupt
 
 	// used to detect calls from other threads (not allowed)

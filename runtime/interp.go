@@ -11,8 +11,8 @@ import (
 	op "github.com/apmckinlay/gsuneido/runtime/opcodes"
 )
 
-// UpdateUI is injected
-var UpdateUI = func() {}
+// RunOnGoSide is injected
+var RunOnGoSide = func() {}
 var Interrupt = func() bool { return false }
 
 var BlockBreak = BuiltinSuExcept("block:break")
@@ -178,7 +178,7 @@ loop:
 		// fmt.Printf("%d: %d: %s\n", t.fp, fr.ip, da)
 		if t.OpCount == 0 {
 			if t.Poll {
-				UpdateUI()
+				RunOnGoSide()
 				if Interrupt() {
 					panic("interrupt")
 				}

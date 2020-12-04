@@ -135,3 +135,18 @@ func (spec *Spec) Compare(r1, r2 Record) int {
 	}
 	return 0
 }
+
+// Increment adds the smallest amount to a key,
+// used to convert > to >= or <= to <
+func (spec *Spec) Increment(key string) string {
+	if spec.raw() {
+		return key + "\x00"
+	}
+	// encoded
+	return key + "\x00\x00" // add empty field trailing field
+}
+
+func (spec *Spec) raw() bool {
+	return len(spec.Fields) == 0 ||
+		(len(spec.Fields) == 1 && len(spec.Fields2) == 0)
+}

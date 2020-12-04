@@ -290,7 +290,7 @@ static VOID CALLBACK timer(
 	HWND hwnd, UINT uMsg, UINT_PTR idEvent, DWORD dwTime) {
 	if (ticks <= 3) {
 		// our message loop isnt running
-		args[0] = msg_updateui;
+		args[0] = msg_runongoside;
 		interact();
 	}
 }
@@ -300,7 +300,7 @@ uintptr notifyHwnd = 0;
 
 static LRESULT CALLBACK notifyWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
     if (uMsg == WM_USER && wParam == 0xffffffff) {
-        args[0] = msg_updateui;
+        args[0] = msg_runongoside;
 		interact();
     } else {
         return DefWindowProc(hwnd, uMsg, wParam, lParam);
@@ -317,7 +317,7 @@ static int setupNotify() {
         return FALSE;
     }
 
-    HWND hwnd = CreateWindow("notify", "notify", WS_OVERLAPPEDWINDOW, 
+    HWND hwnd = CreateWindow("notify", "notify", WS_OVERLAPPEDWINDOW,
 		0, 0, 0, 0,
         HWND_MESSAGE, NULL, NULL, NULL);
     if (!hwnd) {

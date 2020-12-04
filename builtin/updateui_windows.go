@@ -14,9 +14,9 @@ import (
 	"golang.org/x/sys/windows"
 )
 
-// uuiChan is used for cross thread UpdateUI (e.g. Print)
+// rogsChan is used by other threads to Run code On the Go Side UI thread
 // Need buffer so we can send to channel and then notifyCside
-var uuiChan = make(chan func(), 1)
+var rogsChan = make(chan func(), 1)
 
 // UpdateUI runs the block on the main UI thread
 var _ = builtin("UpdateUI(block)",
@@ -26,13 +26,13 @@ var _ = builtin("UpdateUI(block)",
 		} else {
 			block := args[0]
 			block.SetConcurrent()
-			uuiChan <- func () { runUI(block) }
+			rogsChan <- func () { runUI(block) }
 			notifyCside()
 		}
 		return nil
 	})
 
-// notifyCside is used by UpdateUI and SetTimer
+// notifyCside is used by UpdateUI, SetTimer, and KillTimer
 func notifyCside() {
 	// NOTE: this has to be the Go Syscall, not goc.Syscall
 	r, _, _ := syscall.Syscall6(postMessage, 4,
@@ -42,11 +42,11 @@ func notifyCside() {
 	}
 }
 
-// updateUI is called from goc.UpdateUI and runtime.UpdateUI
-func updateUI() {
+// runOnGoSide is called from goc.RunOnGoSide and runtime.RunOnGoSide
+func runOnGoSide() {
 	for {
 		select {
-		case fn := <-uuiChan:
+		case fn := <-rogsChan:
 			fn()
 		default: // non-blocking
 			return
