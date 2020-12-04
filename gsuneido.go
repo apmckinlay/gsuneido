@@ -132,7 +132,7 @@ func main() {
 	}
 	Libload = libload // dependency injection
 	mainThread = NewThread()
-	mainThread.Poll = true
+	mainThread.UIThread = true
 	builtin.UIThread = mainThread
 	defer mainThread.Close()
 	// dependency injection of GetDbms

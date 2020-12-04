@@ -177,7 +177,7 @@ loop:
 		// _, da := Disasm1(fr.fn, fr.ip)
 		// fmt.Printf("%d: %d: %s\n", t.fp, fr.ip, da)
 		if t.OpCount == 0 {
-			if t.Poll {
+			if t.UIThread {
 				RunOnGoSide()
 				if Interrupt() {
 					panic("interrupt")

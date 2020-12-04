@@ -60,8 +60,9 @@ type Thread struct {
 	// Name is the name of the thread (default is Thread-#)
 	Name string
 
-	// Poll is whether or not interp should poll (only set for main thread)
-	Poll bool
+	// UIThread is only set for the main UI thread.
+	// It controls whether interp checks for UI requests from other threads.
+	UIThread bool
 
 	// OpCount counts op codes in interp, for polling
 	OpCount int
