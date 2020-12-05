@@ -49,14 +49,13 @@ func (ts *threadList) count() int {
 	return len(ts.list)
 }
 
-func threadCallClass(t *Thread, args []Value) Value {
+func threadCallClass(_ *Thread, args []Value) Value {
 	if options.ThreadDisabled {
 		return nil
 	}
 	fn := args[0]
 	fn.SetConcurrent()
 	t2 := NewThread()
-	t2.Token = t.Dbms().Token()
 
 	threads.add(t2.Num, t2)
 	go func() {
@@ -111,10 +110,9 @@ func (d *SuThreadGlobal) String() string {
 }
 
 var _ = builtin("Scheduled(ms, block)",
-	func(t *Thread, args []Value) Value {
+	func(_ *Thread, args []Value) Value {
 		ms := time.Duration(ToInt(args[0])) * time.Millisecond
 		t2 := NewThread()
-		t2.Token = t.Dbms().Token()
 		block := args[1]
 		block.SetConcurrent()
 		go func() {

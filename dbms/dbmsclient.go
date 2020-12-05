@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/apmckinlay/gsuneido/dbms/commands"
@@ -18,6 +19,12 @@ import (
 	"github.com/apmckinlay/gsuneido/util/ascii"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
+
+// token is to authorize the next connection
+var token string
+
+// tokenLock guards token
+var tokenLock sync.Mutex
 
 type dbmsClient struct {
 	*csio.ReadWrite
@@ -40,6 +47,12 @@ func NewDbmsClient(addr string, port string) *dbmsClient {
 	}
 	c := &dbmsClient{ReadWrite: csio.NewReadWrite(conn), conn: conn}
 	c.sessionId = c.SessionId("")
+	tokenLock.Lock()
+	defer tokenLock.Unlock()
+	if token != "" {
+		c.auth(token)
+		token = c.Token()
+	}
 	return c
 }
 
@@ -92,6 +105,18 @@ func (dc *dbmsClient) Admin(request string) {
 }
 
 func (dc *dbmsClient) Auth(s string) bool {
+	if !dc.auth(s) {
+		return false
+	}
+	tokenLock.Lock()
+	defer tokenLock.Unlock()
+	if token == "" {
+		token = dc.Token()
+	}
+	return true
+}
+
+func (dc *dbmsClient) auth(s string) bool {
 	if s == "" {
 		return false
 	}

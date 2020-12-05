@@ -51,9 +51,6 @@ type Thread struct {
 	// dbms is the database (client or local) for this Thread
 	dbms IDbms
 
-	// Token is an authorization token
-	Token string
-
 	// Num is a unique number assigned to the thread
 	Num int32
 
@@ -205,9 +202,6 @@ var GetDbms func() IDbms
 func (t *Thread) Dbms() IDbms {
 	if t.dbms == nil {
 		t.dbms = GetDbms()
-		if t.Token != "" {
-			t.dbms.Auth(t.Token)
-		}
 	}
 	return t.dbms
 }
