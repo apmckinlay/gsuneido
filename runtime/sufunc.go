@@ -34,6 +34,10 @@ type SuFunc struct {
 	SrcPos string
 	// SrcBase is the starting point for the SrcPos source deltas
 	SrcBase int
+
+	// cover is used for coverage tracking. nil means no tracking.
+	// If len(cover) < len(Code) then bool coverage else counts.
+	cover []uint16
 }
 
 // Value interface (mostly handled by ParamSpec) --------------------
@@ -101,4 +105,27 @@ func (f *SuFunc) CodeToSrcPos(ip int) int {
 		}
 	}
 	return sp // ???
+}
+
+func (f *SuFunc) StartCoverage(count bool) {
+	f.startCoverage(count)
+	for _,v := range f.Values {
+		if g,ok := v.(*SuFunc); ok {
+			g.StartCoverage(count) // recursive
+		}
+	}
+}
+
+func (f *SuFunc) startCoverage(count bool) {
+	n := len(f.Code)
+	if !count {
+		n = n/16
+	}
+	f.cover = make([]uint16, n + 1)
+}
+
+func (f *SuFunc) StopCoverage() []uint16 {
+	cover := f.cover
+	f.cover = nil
+	return cover
 }

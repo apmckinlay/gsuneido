@@ -39,6 +39,9 @@ func (b *SuClosure) Call(t *Thread, this Value, as *ArgSpec) Value {
 		this = b.this
 	}
 	t.frames[t.fp] = Frame{fn: bf, locals: b.locals, this: this}
+	if bf.cover != nil {
+		coverage(bf, 0)
+	}
 	return t.run()
 }
 

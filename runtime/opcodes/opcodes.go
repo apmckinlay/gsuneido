@@ -141,6 +141,8 @@ const (
 	// if equal it pops the second value and pushes True,
 	// else it leaves the second value on the stack
 	In
+	// Cover is used for coverage
+	Cover
 	// Jump <int16> jumps to a relative location in the code
 	Jump
 	// JumpTrue <int16> pops and if true jumps, else it continues

@@ -4,18 +4,35 @@
 package builtin
 
 import (
-	"strings"
-
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
 func init() {
 	SuFuncMethods = Methods{
-		"Disasm": method0(func(this Value) Value {
+		"Disasm": method1("(source = false)", func(this, a Value) Value {
 			fn := this.(*SuFunc)
-			buf := &strings.Builder{}
-			Disasm(buf, fn)
-			return SuStr(buf.String())
+			if a == False {
+				return SuStr(DisasmOps(fn))
+			}
+			return SuStr(DisasmMixed(fn, ToStr(a)))
+		}),
+		"StartCoverage": method1("(count = false)", func(this, a Value) Value {
+			fn := this.(*SuFunc)
+			fn.StartCoverage(ToBool(a))
+			return nil
+		}),
+		"StopCoverage": method0(func(this Value) Value {
+			fn := this.(*SuFunc)
+			fn.StopCoverage()
+			return nil
+			// cover := fn.StopCoverage()
+			// ob := &SuObject{}
+			// for _, c := range cover {
+			// 	for i := 0; i < 16; i++ {
+			// 		ob.Add(SuBool(c&(1<<i) != 0))
+			// 	}
+			// }
+			// return ob
 		}),
 	}
 }

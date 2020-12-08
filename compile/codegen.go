@@ -357,6 +357,7 @@ func (cg *cgen) ifStmt(node *ast.If, labels *Labels) {
 	cg.statement(node.Then, labels, false)
 	if node.Else != nil {
 		end := cg.emitJump(op.Jump, -1)
+		cg.savePos(node.ElsePos)
 		cg.placeLabel(f)
 		cg.statement(node.Else, labels, false)
 		cg.placeLabel(end)
@@ -394,6 +395,7 @@ func (cg *cgen) switchStmt(node *ast.Switch, labels *Labels) {
 }
 
 func (cg *cgen) foreverStmt(node *ast.Forever) {
+	cg.emit(op.Cover)
 	labels := cg.newLabels()
 	cg.statement(node.Body, labels, false)
 	cg.emitJump(op.Jump, labels.cont-len(cg.code)-3)
@@ -405,6 +407,7 @@ func (cg *cgen) whileStmt(node *ast.While) {
 	cond := cg.emitJump(op.Jump, -1)
 	loop := cg.label()
 	cg.statement(node.Body, labels, false)
+	cg.emit(op.Cover)
 	cg.placeLabel(cond)
 	cg.expr(node.Cond)
 	cg.emitBwdJump(op.JumpTrue, loop)
@@ -412,6 +415,7 @@ func (cg *cgen) whileStmt(node *ast.While) {
 }
 
 func (cg *cgen) dowhileStmt(node *ast.DoWhile) {
+	cg.emit(op.Cover)
 	labels := &Labels{brk: -1, cont: -1}
 	loop := cg.label()
 	cg.statement(node.Body, labels, false)
@@ -435,6 +439,7 @@ func (cg *cgen) forStmt(node *ast.For) {
 	if node.Cond == nil {
 		cg.emitBwdJump(op.Jump, loop)
 	} else {
+		cg.emit(op.Cover)
 		cg.placeLabel(cond)
 		cg.expr(node.Cond)
 		cg.emitBwdJump(op.JumpTrue, loop)
@@ -466,6 +471,9 @@ func (cg *cgen) tryCatchStmt(node *ast.TryCatch, labels *Labels) {
 	cg.statement(node.Try, labels, false)
 	after := cg.emitJump(op.Catch, -1)
 	cg.placeLabel(catch)
+	if node.Catch != nil {
+		cg.savePos(node.CatchPos)
+	}
 	if node.CatchVar.Name != "" {
 		cg.emit(op.Store, byte(cg.name(node.CatchVar.Name)))
 	}
@@ -965,6 +973,7 @@ func (cg *cgen) argSpecEq(a1, a2 *ArgSpec) bool {
 var funcId uint32 = 1
 
 func (cg *cgen) block(b *ast.Block) {
+	cg.savePos(int(b.Pos))
 	f := &b.Function
 	var fn *SuFunc
 	if b.CompileAsFunction {

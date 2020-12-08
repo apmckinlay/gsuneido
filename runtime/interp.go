@@ -28,6 +28,9 @@ func (t *Thread) Start(fn *SuFunc, this Value) Value {
 	}
 	t.frames[t.fp] = Frame{fn: fn, this: this,
 		locals: Locals{v: t.stack[t.sp-int(fn.Nlocals) : t.sp], MayLock: &MayLock{}}}
+	if fn.cover != nil {
+		coverage(fn, 0)
+	}
 	return t.run()
 }
 
@@ -78,6 +81,9 @@ func (t *Thread) run() Value {
 		t.fp = fp
 		fr := &t.frames[t.fp-1]
 		fr.ip = catchJump
+		if fr.fn.cover != nil {
+			coverage(fr.fn, fr.ip)
+		}
 		catchJump = 0 // no longer catching
 		catchSp = -1
 		t.Push(result) // SuExcept
@@ -394,17 +400,28 @@ loop:
 			t.topbool()
 		case op.Jump:
 			jump()
+			fallthrough
+		case op.Cover:
+			if fr.fn.cover != nil {
+				coverage(fr.fn, fr.ip)
+			}
 		case op.JumpTrue:
 			if t.popbool() {
 				jump()
 			} else {
 				fr.ip += 2
 			}
+			if fr.fn.cover != nil {
+				coverage(fr.fn, fr.ip)
+			}
 		case op.JumpFalse:
 			if !t.popbool() {
 				jump()
 			} else {
 				fr.ip += 2
+			}
+			if fr.fn.cover != nil {
+				coverage(fr.fn, fr.ip)
 			}
 		case op.And:
 			if !t.topbool() {
@@ -413,6 +430,9 @@ loop:
 				fr.ip += 2
 				t.Pop()
 			}
+			if fr.fn.cover != nil {
+				coverage(fr.fn, fr.ip)
+			}
 		case op.Or:
 			if t.topbool() {
 				jump()
@@ -420,11 +440,17 @@ loop:
 				fr.ip += 2
 				t.Pop()
 			}
+			if fr.fn.cover != nil {
+				coverage(fr.fn, fr.ip)
+			}
 		case op.QMark:
 			if !t.popbool() {
 				jump()
 			} else {
 				fr.ip += 2
+			}
+			if fr.fn.cover != nil {
+				coverage(fr.fn, fr.ip)
 			}
 		case op.In:
 			y := t.Pop()
@@ -436,6 +462,9 @@ loop:
 				fr.ip += 2
 				t.Push(x)
 			}
+			if fr.fn.cover != nil {
+				coverage(fr.fn, fr.ip)
+			}
 		case op.JumpIs:
 			y := t.Pop()
 			x := t.Pop()
@@ -445,6 +474,9 @@ loop:
 				fr.ip += 2
 				t.Push(x)
 			}
+			if fr.fn.cover != nil {
+				coverage(fr.fn, fr.ip)
+			}
 		case op.JumpIsnt:
 			y := t.Pop()
 			x := t.Pop()
@@ -453,6 +485,9 @@ loop:
 				jump()
 			} else {
 				fr.ip += 2
+			}
+			if fr.fn.cover != nil {
+				coverage(fr.fn, fr.ip)
 			}
 		case op.Iter:
 			x := t.Pop()
@@ -474,6 +509,9 @@ loop:
 			} else {
 				fr.ip += brk - 1 // break
 			}
+			if fr.fn.cover != nil {
+				coverage(fr.fn, fr.ip)
+			}
 		case op.ReturnNil:
 			t.Push(nil)
 			fallthrough
@@ -486,6 +524,9 @@ loop:
 		case op.Catch:
 			fr.ip += fetchInt16()
 			*catchJump = 0 // no longer catching
+			if fr.fn.cover != nil {
+				coverage(fr.fn, fr.ip)
+			}
 		case op.Throw:
 			panic(t.Pop())
 		case op.Closure:
@@ -620,4 +661,15 @@ func catchMatch(e, pat string) bool {
 		}
 	}
 	return false
+}
+
+func coverage(fn *SuFunc, ip int) {
+	if len(fn.cover) < len(fn.Code) {
+		fn.cover[ip>>4] |= 1 << (ip & 15)
+	} else { // count
+		x := fn.cover[ip] + 1
+		if x != 0 {
+			fn.cover[ip] = x
+		}
+	}
 }

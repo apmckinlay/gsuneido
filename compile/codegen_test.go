@@ -4,38 +4,14 @@
 package compile
 
 import (
-	"os"
 	"strings"
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/compile/ast"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
+	"github.com/apmckinlay/gsuneido/util/str"
 )
-
-func Example_parseFunction_SrcPos() {
-	src := `function (x, y) {
-		a = x
-		b = y
-		return a + b
-		}`
-	ast := parseFunction(src)
-	fn := codegen(ast)
-	DisasmMixed(os.Stdout, fn, src)
-	// Output:
-	// 20: a = x
-	// 	0: Load x
-	// 	2: Store a
-	// 	4: Pop
-	// 28: b = y
-	// 	5: Load y
-	// 	7: Store b
-	// 	9: Pop
-	// 36: return a + b
-	// 	10: Load a
-	// 	12: Load b
-	// 	14: Add
-}
 
 func TestCodegen(t *testing.T) {
 	DefaultSingleQuotes = true
@@ -175,23 +151,25 @@ func TestCodegenSuper(t *testing.T) {
 
 	test("F(){super.Bar(0,1)}", "This, Zero, One, Value 'Bar', Super Foo, CallMethNilOk (?, ?)")
 
-	test("F() { 1.Times() { super.Push(123) } }", `One, Closure
-		0: This
-		1: Int 123
-		4: Value 'Push'
-		6: Super Foo
-		9: CallMethNilOk (?), Value 'Times', CallMethNilOk (block:)`)
+	test("F() { 1.Times() { super.Push(123) } }",
+		"One, Closure, "+
+			"{This, Int 123, Value 'Push', Super Foo, CallMethNilOk (?), Value 'Times'}, "+
+			"CallMethNilOk (block:)")
 }
 
 func disasm(fn *SuFunc) string {
-	da := []string{}
-	var s string
-	for i := 0; i < len(fn.Code); {
-		i, s = Disasm1(fn, i)
-		// s = str.BeforeFirst(s, "\n")
-		da = append(da, s)
-	}
-	return strings.Join(da, ", ")
+	var ops []string
+	nestPrev := 0
+	Disasm(fn, func(_ *SuFunc, nest, i int, s string, _ int) {
+		if nest > nestPrev {
+			s = "{" + s
+		} else if nest < nestPrev {
+			s += "}"
+		}
+		nestPrev = nest
+		ops = append(ops, s)
+	})
+	return str.Join(", ", ops...)
 }
 
 func TestControl(t *testing.T) {
@@ -201,9 +179,7 @@ func TestControl(t *testing.T) {
 		t.Helper()
 		ast := parseFunction("function () {\n" + src + "\n}")
 		fn := codegen(ast)
-		buf := strings.Builder{}
-		Disasm(&buf, fn)
-		s := buf.String()
+		s := DisasmOps(fn)
 		assert.T(t).Msg(src).This(s).Like(expected)
 	}
 
@@ -519,11 +495,7 @@ func TestBlock(t *testing.T) {
 
 	assert(block.ParamSpec.Params()).Is("(a)")
 
-	assert(disasm(fn)).Like(
-		`Closure
-		0: Load a
-		2: Load x
-		4: Add, Store b`)
+	assert(disasm(fn)).Is("Closure, {Load a, Load x, Add, Store b}")
 }
 
 // parseFunction parses a function and returns an AST for it

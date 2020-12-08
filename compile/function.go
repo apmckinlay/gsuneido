@@ -210,11 +210,11 @@ func (p *parser) semi(stmt ast.Statement) ast.Statement {
 func (p *parser) ifStmt() *ast.If {
 	expr := p.ctrlExpr()
 	t := p.statement()
-	var f ast.Statement
+	stmt := &ast.If{Cond: expr, Then: t, ElsePos: int(p.Pos)}
 	if p.matchIf(tok.Else) {
-		f = p.statement()
+		stmt.Else = p.statement()
 	}
-	return &ast.If{Cond: expr, Then: t, Else: f}
+	return stmt
 }
 
 func (p *parser) switchStmt() *ast.Switch {
@@ -378,6 +378,7 @@ func (p *parser) tryStmt() *ast.TryCatch {
 	var catchFilter string
 	var catch ast.Statement
 	var unused bool
+	catchPos := int(p.Pos)
 	if p.matchIf(tok.Catch) {
 		if p.matchIf(tok.LParen) {
 			catchVar = p.Text
@@ -394,6 +395,7 @@ func (p *parser) tryStmt() *ast.TryCatch {
 		catch = p.statement()
 	}
 	return &ast.TryCatch{Try: try, Catch: catch,
+		CatchPos:       catchPos,
 		CatchVar:       ast.Ident{Name: catchVar, Pos: varPos},
 		CatchVarUnused: unused,
 		CatchFilter:    catchFilter}
