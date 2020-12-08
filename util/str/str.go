@@ -111,37 +111,45 @@ func Doesc(s string, i int) (byte, int) {
 	return '\\', i
 }
 
-// BeforeFirst returns s up to the first occurrence of pre
-// or all of s if pre is not found.
-func BeforeFirst(s, pre string) string {
-	i := strings.Index(s, pre)
+// BeforeFirst returns s up to the first occurrence of sub
+// or all of s if sub is not found.
+func BeforeFirst(s, sub string) string {
+	i := strings.Index(s, sub)
 	if i == -1 {
 		return s
 	}
 	return s[:i]
 }
 
-// AfterFirst returns s up to the first occurrence of pre
-// or all of s if pre is not found.
-func AfterFirst(s, pre string) string {
-	i := strings.Index(s, pre)
+// AfterFirst returns s up to the first occurrence of sub
+// or all of s if sub is not found.
+func AfterFirst(s, sub string) string {
+	i := strings.Index(s, sub)
 	if i == -1 {
 		return s // different from stdlib which returns ""
 	}
-	return s[i+1:]
+	return s[i+len(sub):]
 }
 
-/*
-// AfterLast returns s after the last occurrence of pre
-// or all of s if pre is not found.
-func AfterLast(s, pre string) string {
-	i := strings.LastIndex(s, pre)
+// BeforerLast returns s before the last occurrence of sub
+// or all of s if sub is not found.
+func BeforeLast(s, sub string) string {
+	i := strings.LastIndex(s, sub)
 	if i == -1 {
 		return s
 	}
-	return s[i + len(pre):]
+	return s[:i]
 }
-*/
+
+// AfterLast returns s after the last occurrence of sub
+// or all of s if sub is not found.
+func AfterLast(s, sub string) string {
+	i := strings.LastIndex(s, sub)
+	if i == -1 {
+		return s
+	}
+	return s[i + len(sub):]
+}
 
 // Opt returns "" if any of the strings are ""
 // else it returns the concatenation of the strings.

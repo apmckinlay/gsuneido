@@ -112,3 +112,39 @@ func TestCmpLower(t *testing.T) {
 	test("Hello", "world", -1)
 	test("hello", "World", -1)
 }
+
+func TestBeforeFirst(t *testing.T) {
+	assert := assert.T(t).This
+	assert(BeforeFirst("", "")).Is("")
+	assert(BeforeFirst("^1234512345$", "^")).Is("")
+	assert(BeforeFirst("^1234512345$", "z")).Is("^1234512345$")
+	assert(BeforeFirst("^1234512345$", "4")).Is("^123")
+	assert(BeforeFirst("^1234512345$", "51")).Is("^1234")
+}
+
+func TestAfterFirst(t *testing.T) {
+	assert := assert.T(t).This
+	assert(AfterFirst("", "")).Is("")
+	assert(AfterFirst("^1234512345$", "z")).Is("^1234512345$")
+	assert(AfterFirst("^1234512345$", "$")).Is("")
+	assert(AfterFirst("^1234512345$", "4")).Is("512345$")
+	assert(AfterFirst("^1234512345$", "51")).Is("2345$")
+}
+
+func TestBeforeLast(t *testing.T) {
+	assert := assert.T(t).This
+	assert(BeforeLast("", "")).Is("")
+	assert(BeforeLast("^1234512345$", "z")).Is("^1234512345$")
+	assert(BeforeLast("^1234512345$", "^")).Is("")
+	assert(BeforeLast("^1234512345$", "4")).Is("^12345123")
+	assert(BeforeLast("^1234512345$", "51")).Is("^1234")
+}
+
+func TestAfterLast(t *testing.T) {
+	assert := assert.T(t).This
+	assert(AfterLast("", "")).Is("")
+	assert(AfterLast("^1234512345$", "z")).Is("^1234512345$")
+	assert(AfterLast("^1234512345$", "$")).Is("")
+	assert(AfterLast("^1234512345$", "4")).Is("5$")
+	assert(AfterLast("^1234512345$", "51")).Is("2345$")
+}
