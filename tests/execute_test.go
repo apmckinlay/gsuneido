@@ -47,6 +47,7 @@ func BenchmarkCat(b *testing.B) {
 			}`).(*SuFunc)
 	t := NewThread()
 	for i := 0; i < b.N; i++ {
+		t.Reset()
 		t.Start(c, nil)
 	}
 }
@@ -62,6 +63,7 @@ func BenchmarkJoin(b *testing.B) {
 			}`).(*SuFunc)
 	t := NewThread()
 	for i := 0; i < b.N; i++ {
+		t.Reset()
 		t.Start(c, nil)
 	}
 }
@@ -75,6 +77,7 @@ func BenchmarkBase(b *testing.B) {
 			}`).(*SuFunc)
 	t := NewThread()
 	for i := 0; i < b.N; i++ {
+		t.Reset()
 		t.Start(c, nil)
 	}
 }
