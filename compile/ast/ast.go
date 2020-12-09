@@ -432,10 +432,9 @@ func (x *Compound) Children(fn func(Node) Node) {
 
 type If struct {
 	stmtNodeT
-	Cond    Expr
-	Then    Statement
-	ElsePos int
-	Else    Statement // may be nil
+	Cond Expr
+	Then Statement
+	Else Statement // may be nil
 }
 
 func (x *If) String() string {

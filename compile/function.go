@@ -210,7 +210,7 @@ func (p *parser) semi(stmt ast.Statement) ast.Statement {
 func (p *parser) ifStmt() *ast.If {
 	expr := p.ctrlExpr()
 	t := p.statement()
-	stmt := &ast.If{Cond: expr, Then: t, ElsePos: int(p.Pos)}
+	stmt := &ast.If{Cond: expr, Then: t}
 	if p.matchIf(tok.Else) {
 		stmt.Else = p.statement()
 	}

@@ -5,7 +5,6 @@ package runtime
 
 import (
 	"fmt"
-	"math"
 	"strings"
 
 	op "github.com/apmckinlay/gsuneido/runtime/opcodes"
@@ -94,29 +93,16 @@ func Disasm(fn *SuFunc, out outfn) {
 
 func disasm(nest int, fn *SuFunc, out outfn) {
 	d := &dasm{fn: fn, out: out, nest: nest}
-	if len(fn.cover) >= len(fn.Code) {
-		d.cover = coverCount
-	} else if fn.cover != nil {
-		d.cover = coverBool
-	}
 	for d.i < len(fn.Code) {
 		d.next()
 	}
 }
 
-const (
-	coverNone = iota
-	coverBool
-	coverCount
-)
-
 type dasm struct {
-	fn     *SuFunc
-	i      int
-	nest   int
-	cover  int
-	covstr string
-	out    outfn
+	fn   *SuFunc
+	i    int
+	nest int
+	out  outfn
 }
 
 func (d *dasm) next() {
@@ -133,29 +119,11 @@ func (d *dasm) next() {
 		return int(uint16(d.fn.Code[d.i-2])<<8 + uint16(d.fn.Code[d.i-1]))
 	}
 
-	if d.cover == coverBool {
-		// d.covstr = "  "
-		c := d.fn.cover[d.i>>4] >> (d.i & 15) & 1
-		if c == 1 {
-			d.covstr = "* "
-		}
-	} else if d.cover == coverCount {
-		// d.covstr = "       "
-		c := d.fn.cover[d.i]
-		if c == math.MaxUint16 {
-			d.covstr = " >64k "
-		} else if c > 0 {
-			covstr := fmt.Sprintf("%5d* ", c)
-			if covstr > d.covstr {
-				d.covstr = covstr
-			}
-		}
-	}
 	ip := d.i
 	oc := op.Opcode(d.fn.Code[ip])
 	d.i++
 	var nestedfn *SuFunc
-	s := d.covstr + oc.String()
+	s := oc.String()
 	switch oc {
 	case op.Int:
 		n := fetchInt16()
@@ -205,15 +173,6 @@ func (d *dasm) next() {
 			s += d.fn.ArgSpecs[ai-len(StdArgSpecs)].String()[7:]
 		}
 	}
-	if d.cover != coverNone {
-		if isBranch(d.fn.Code[ip]) {
-			if d.cover == coverBool {
-				d.covstr = "  "
-			} else if d.cover == coverCount {
-				d.covstr = "       "
-			}
-		}
-	}
 	srcLim := ints.MaxInt
 	if nestedfn != nil {
 		srcLim = nestedfn.SrcBase
@@ -222,15 +181,4 @@ func (d *dasm) next() {
 	if nestedfn != nil {
 		disasm(d.nest+1, nestedfn, d.out)
 	}
-}
-
-func isBranch(b byte) bool {
-	switch op.Opcode(b) {
-	case op.Jump, op.JumpTrue, op.JumpFalse, op.JumpIs, op.JumpIsnt,
-		op.And, op.Or, op.QMark, op.In, op.ForIn, 
-		op.Return, op.ReturnNil, op.Throw, op.Catch,
-		op.BlockBreak, op.BlockContinue, op.BlockReturn, op.BlockReturnNil:
-		return true
-	}
-	return false
 }

@@ -4,8 +4,16 @@
 package builtin
 
 import (
+	"sync/atomic"
+
+	"github.com/apmckinlay/gsuneido/options"
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
+
+var _ = builtin0("EnableCoverage()", func() Value {
+	atomic.StoreInt64(&options.Coverage, 1)
+	return nil
+})
 
 func init() {
 	SuFuncMethods = Methods{
@@ -17,22 +25,16 @@ func init() {
 			return SuStr(DisasmMixed(fn, ToStr(a)))
 		}),
 		"StartCoverage": method1("(count = false)", func(this, a Value) Value {
+			if atomic.LoadInt64(&options.Coverage) == 0 {
+				panic("coverage not enabled")
+			}
 			fn := this.(*SuFunc)
 			fn.StartCoverage(ToBool(a))
 			return nil
 		}),
 		"StopCoverage": method0(func(this Value) Value {
 			fn := this.(*SuFunc)
-			fn.StopCoverage()
-			return nil
-			// cover := fn.StopCoverage()
-			// ob := &SuObject{}
-			// for _, c := range cover {
-			// 	for i := 0; i < 16; i++ {
-			// 		ob.Add(SuBool(c&(1<<i) != 0))
-			// 	}
-			// }
-			// return ob
+			return fn.StopCoverage()
 		}),
 	}
 }

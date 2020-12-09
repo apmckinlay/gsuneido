@@ -13,6 +13,7 @@ import (
 
 	"github.com/apmckinlay/gsuneido/compile/ast"
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
+	"github.com/apmckinlay/gsuneido/options"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	op "github.com/apmckinlay/gsuneido/runtime/opcodes"
 	"github.com/apmckinlay/gsuneido/util/assert"
@@ -36,9 +37,11 @@ type cgen struct {
 	// srcPos contains pairs of source and code position deltas
 	srcPos []byte
 	// srcBase is the starting point for the srcPos source deltas
-	srcBase  int
-	srcPrev  int
-	codePrev int
+	srcBase   int
+	srcPrev   int
+	codePrev  int
+	cover     bool
+	coverPrev int
 }
 
 type calltype int
@@ -61,8 +64,9 @@ func codegen(fn *ast.Function) *SuFunc {
 }
 
 func codegen2(fn *ast.Function, outerFn *ast.Function) *SuFunc {
+	cover := atomic.LoadInt64(&options.Coverage) == 1
 	cg := cgen{outerFn: outerFn, base: fn.Base, isNew: fn.IsNewMethod,
-		isBlock: fn != outerFn}
+		isBlock: fn != outerFn, cover: cover}
 	return cg.codegen(fn)
 }
 
@@ -86,7 +90,8 @@ func (cg *cgen) codegen(fn *ast.Function) *SuFunc {
 
 func codegenBlock(ast *ast.Function, outercg *cgen) (*SuFunc, []string) {
 	base := len(outercg.Names)
-	cg := cgen{outerFn: outercg.outerFn, base: outercg.base, isBlock: true}
+	cg := cgen{outerFn: outercg.outerFn, base: outercg.base, isBlock: true,
+		cover: outercg.cover}
 	cg.Names = outercg.Names
 
 	f := cg.codegen(ast)
@@ -264,6 +269,10 @@ func (cg *cgen) statement(node ast.Node, labels *Labels, lastStmt bool) {
 		return
 	}
 	cg.savePos(node.(ast.Statement).Position())
+	if cg.cover && cg.coverPrev != len(cg.code)-1 {
+		cg.coverPrev = len(cg.code)
+		cg.emit(op.Cover)
+	}
 	switch node := node.(type) {
 	case *ast.Compound:
 		cg.statements(node.Body, labels)
@@ -356,7 +365,6 @@ func (cg *cgen) ifStmt(node *ast.If, labels *Labels) {
 	cg.statement(node.Then, labels, false)
 	if node.Else != nil {
 		end := cg.emitJump(op.Jump, -1)
-		cg.savePos(node.ElsePos)
 		cg.placeLabel(f)
 		cg.statement(node.Else, labels, false)
 		cg.placeLabel(end)
@@ -394,7 +402,6 @@ func (cg *cgen) switchStmt(node *ast.Switch, labels *Labels) {
 }
 
 func (cg *cgen) foreverStmt(node *ast.Forever) {
-	cg.emit(op.Cover)
 	labels := cg.newLabels()
 	cg.statement(node.Body, labels, false)
 	cg.emitJump(op.Jump, labels.cont-len(cg.code)-3)
@@ -406,7 +413,6 @@ func (cg *cgen) whileStmt(node *ast.While) {
 	cond := cg.emitJump(op.Jump, -1)
 	loop := cg.label()
 	cg.statement(node.Body, labels, false)
-	cg.emit(op.Cover)
 	cg.placeLabel(cond)
 	cg.expr(node.Cond)
 	cg.emitBwdJump(op.JumpTrue, loop)
@@ -414,7 +420,6 @@ func (cg *cgen) whileStmt(node *ast.While) {
 }
 
 func (cg *cgen) dowhileStmt(node *ast.DoWhile) {
-	cg.emit(op.Cover)
 	labels := &Labels{brk: -1, cont: -1}
 	loop := cg.label()
 	cg.statement(node.Body, labels, false)
@@ -438,7 +443,6 @@ func (cg *cgen) forStmt(node *ast.For) {
 	if node.Cond == nil {
 		cg.emitBwdJump(op.Jump, loop)
 	} else {
-		cg.emit(op.Cover)
 		cg.placeLabel(cond)
 		cg.expr(node.Cond)
 		cg.emitBwdJump(op.JumpTrue, loop)

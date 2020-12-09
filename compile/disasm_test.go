@@ -45,18 +45,18 @@ func TestDisasm(t *testing.T) {
 			return 1
 		}`,
 		`17: if x
-			    0: Load x
-			    2: JumpFalse 10
-	    25: {
-	    30: return 0
-	       }
-			    5: Zero
-			    6: Return
-			    7: Jump 12
-	    46: else
-	    54: return 1
-			   10: One
-			   11: Return`)
+				0: Load x
+				2: JumpFalse 10
+		25: {
+		30: return 0
+			}
+			else
+				5: Zero
+				6: Return
+				7: Jump 12
+		54: return 1
+				10: One
+				11: Return`)
 
 	test(`function (x) {
 		try

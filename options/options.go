@@ -32,6 +32,10 @@ const (
 	ClearCallbackDisabled = false
 )
 
+// Coverage controls whether Cover op codes are added by codegen.
+// Should be accessed atomically. Zero means disabled.
+var Coverage int64
+
 var Trace = 0
 
 const (

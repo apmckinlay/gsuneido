@@ -5,6 +5,7 @@ package runtime
 
 import (
 	"github.com/apmckinlay/gsuneido/runtime/types"
+	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
@@ -106,11 +107,16 @@ func (f *SuFunc) CodeToSrcPos(ip int) int {
 	return sp
 }
 
+// coverage ---------------------------------------------------------
+
 func (f *SuFunc) StartCoverage(count bool) {
 	f.startCoverage(count)
-	for _,v := range f.Values {
-		if g,ok := v.(*SuFunc); ok {
-			g.StartCoverage(count) // recursive
+	for _, v := range f.Values {
+		if g, ok := v.(*SuFunc); ok {
+			g.StartCoverage(count) // RECURSE
+		}
+		if c, ok := v.(*SuClass); ok {
+			c.StartCoverage(count)
 		}
 	}
 }
@@ -118,13 +124,45 @@ func (f *SuFunc) StartCoverage(count bool) {
 func (f *SuFunc) startCoverage(count bool) {
 	n := len(f.Code)
 	if !count {
-		n = n/16
+		n /= 16
 	}
-	f.cover = make([]uint16, n + 1)
+	f.cover = make([]uint16, n+1)
 }
 
-func (f *SuFunc) StopCoverage() []uint16 {
-	cover := f.cover
+func (f *SuFunc) StopCoverage() *SuObject {
+	ob := &SuObject{}
+	f.getCoverage(ob, len(f.cover) >= len(f.Code))
 	f.cover = nil
-	return cover
+	return ob
+}
+
+func (f *SuFunc) getCoverage(ob *SuObject, counts bool) {
+	f.coverToOb(ob, counts)
+	assert.That(counts == (len(f.cover) >= len(f.Code)))
+	for _, v := range f.Values {
+		if g, ok := v.(*SuFunc); ok {
+			g.getCoverage(ob, counts) // RECURSE
+		}
+	}
+}
+
+func (f *SuFunc) coverToOb(ob *SuObject, counts bool) {
+	for i, c := range f.cover {
+		if c != 0 {
+			if counts {
+				srcpos := IntVal(f.CodeToSrcPos(i))
+				val := IntVal(int(c))
+				if x := ob.getIfPresent(srcpos); x != nil {
+					val = OpAdd(x, val)
+				}
+				ob.set(srcpos, val)
+			} else {
+				for j := 0; j < 16; j++ {
+					if c&(1<<j) != 0 {
+						ob.Set(IntVal(f.CodeToSrcPos(i*16+j)), True)
+					}
+				}
+			}
+		}
+	}
 }

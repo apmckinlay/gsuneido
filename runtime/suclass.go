@@ -289,3 +289,39 @@ func (c *SuClass) Finder(t *Thread, fn func(v Value, mb *MemBase) Value) Value {
 var inheritanceLimit = 100
 
 var _ Findable = (*SuClass)(nil)
+
+// coverage ---------------------------------------------------------
+
+func (c *SuClass) StartCoverage(count bool) {
+	for _, v := range c.Data {
+		if c2, ok := v.(*SuClass); ok {
+			c2.StartCoverage(count) // RECURSE
+		}
+		if f, ok := v.(*SuFunc); ok {
+			f.StartCoverage(count)
+		}
+	}
+}
+
+func (c *SuClass) StopCoverage() *SuObject {
+	ob := &SuObject{}
+	first := true
+	count := false
+	c.stopCoverage(ob, &first, &count)
+	return ob
+}
+
+func (c *SuClass) stopCoverage(ob *SuObject, first, count *bool) {
+	for _, v := range c.Data {
+		if c2, ok := v.(*SuClass); ok {
+			c2.stopCoverage(ob, first, count) // RECURSE
+		}
+		if f, ok := v.(*SuFunc); ok {
+			if *first {
+				*count = len(f.cover) >= len(f.Code)
+				*first = false
+			}
+			f.getCoverage(ob, *count)
+		}
+	}
+}

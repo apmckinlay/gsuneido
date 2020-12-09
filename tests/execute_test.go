@@ -7,10 +7,12 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"sync/atomic"
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/builtin"
 	"github.com/apmckinlay/gsuneido/compile"
+	"github.com/apmckinlay/gsuneido/options"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/ptest"
@@ -318,4 +320,21 @@ func BenchmarkCall(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		f.Call(th, nil, as)
 	}
+}
+
+func TestCoverage(t *testing.T) {
+	atomic.StoreInt64(&options.Coverage, 1)
+	fn := compile.Constant(`function()
+		{
+		x = 0
+		for (i = 0; i < 10; ++i)
+			x += i
+		return x
+		}`).(*SuFunc)
+	fn.StartCoverage(true)
+	th := &Thread{}
+	th.Start(fn, nil)
+	cover := fn.StopCoverage()
+	assert.T(t).This(cover).
+		Is(compile.Constant("#(17: 1, 25: 1, 53: 10, 62: 1)").(*SuObject))
 }
