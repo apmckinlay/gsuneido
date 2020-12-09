@@ -1,5 +1,11 @@
 # Glossary
 
+block
+: in-line anonymous function written {|params| ... }. Compiled as a normal function if it is not a **closure**
+
+closure
+: a **block** that shares variables with its containing function
+
 column
 : string name of a database column (see also field)
 
