@@ -243,7 +243,6 @@ func (cg *cgen) savePos(sp int) {
 	if cg.srcPos == nil {
 		cg.srcBase = sp
 		cg.srcPrev = sp
-		cg.codePrev = len(cg.code)
 		cg.srcPos = make([]byte, 0, 8)
 	} else {
 		ds := sp - cg.srcPrev
@@ -256,8 +255,8 @@ func (cg *cgen) savePos(sp int) {
 			dc -= nc
 		}
 		cg.srcPrev = sp
-		cg.codePrev = len(cg.code)
 	}
+	cg.codePrev = len(cg.code)
 }
 
 func (cg *cgen) statement(node ast.Node, labels *Labels, lastStmt bool) {
