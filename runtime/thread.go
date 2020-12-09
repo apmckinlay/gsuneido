@@ -141,7 +141,7 @@ func (t *Thread) Callstack() *SuObject {
 		fr := t.frames[i]
 		call := &SuObject{}
 		call.Set(SuStr("fn"), fr.fn)
-		call.Set(SuStr("srcpos"), IntVal(fr.fn.CodeToSrcPos(fr.ip)))
+		call.Set(SuStr("srcpos"), IntVal(fr.fn.CodeToSrcPos(fr.ip-1)))
 		call.Set(SuStr("locals"), t.locals(i))
 		cs.Add(call)
 	}

@@ -93,7 +93,6 @@ func (f *SuFunc) String() string {
 }
 
 func (f *SuFunc) CodeToSrcPos(ip int) int {
-	ip-- // because interp will have already incremented
 	sp := f.SrcBase
 	cp := 0
 	for i := 0; i < len(f.SrcPos); i += 2 {
@@ -104,7 +103,7 @@ func (f *SuFunc) CodeToSrcPos(ip int) int {
 			return prev
 		}
 	}
-	return sp // ???
+	return sp
 }
 
 func (f *SuFunc) StartCoverage(count bool) {
