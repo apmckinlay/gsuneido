@@ -5,9 +5,10 @@
 // including command line flags
 package options
 
+var BuiltDate string
+
 // command line flags
 var (
-	BuiltDate  string
 	Mode       string
 	Action     string
 	Error      string
