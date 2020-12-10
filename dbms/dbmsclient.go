@@ -15,6 +15,7 @@ import (
 
 	"github.com/apmckinlay/gsuneido/dbms/commands"
 	"github.com/apmckinlay/gsuneido/dbms/csio"
+	"github.com/apmckinlay/gsuneido/options"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/ascii"
 	"github.com/apmckinlay/gsuneido/util/str"
@@ -157,7 +158,11 @@ func (dc *dbmsClient) Dump(table string) string {
 }
 
 func (dc *dbmsClient) Exec(_ *Thread, args Value) Value {
-	dc.PutCmd(commands.Exec).PutVal(args).Request()
+	dc.PutCmd(commands.Exec)
+	if options.Trace&options.TraceClientServer != 0 {
+		Trace(args)
+	}
+	dc.PutVal(args).Request()
 	return dc.ValueResult()
 }
 
@@ -355,7 +360,7 @@ func (tc *TranClient) Request(request string) int {
 
 func (tc *TranClient) Update(adr int, rec Record) int {
 	tc.dc.PutCmd(commands.Update).
-		PutInt(tc.tn).PutInt(adr).PutStr(string(rec)).Request()
+		PutInt(tc.tn).PutInt(adr).PutRec(rec).Request()
 	return tc.dc.GetInt()
 }
 
@@ -452,7 +457,7 @@ func (q *clientQuery) Get(dir Dir) Row {
 }
 
 func (q *clientQuery) Output(rec Record) {
-	q.dc.PutCmd(commands.Output).PutInt(q.id).PutStr(string(rec)).Request()
+	q.dc.PutCmd(commands.Output).PutInt(q.id).PutRec(rec).Request()
 }
 
 // clientCursor implements IQuery ------------------------------------

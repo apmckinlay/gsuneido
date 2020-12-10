@@ -29,3 +29,7 @@ func Trace(args ...interface{}) {
 		options.Console(s)
 	}
 }
+
+func ConPrintln(args ...interface{}) {
+	options.Console(fmt.Sprintln(args...))
+}

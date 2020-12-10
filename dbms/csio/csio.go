@@ -8,6 +8,7 @@ import (
 	"io"
 	"log"
 
+	"github.com/apmckinlay/gsuneido/options"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/hacks"
@@ -32,6 +33,9 @@ func NewReadWrite(rw io.ReadWriter) *ReadWrite {
 
 // PutCmd writes a command byte
 func (rw *ReadWrite) PutCmd(cmd commands.Command) *ReadWrite {
+	if options.Trace&options.TraceClientServer != 0 {
+		Trace(">>>", cmd)
+	}
 	rw.w.WriteByte(byte(cmd))
 	return rw
 }
@@ -57,6 +61,17 @@ func (rw *ReadWrite) PutStr(s string) *ReadWrite {
 	limit(int64(len(s)))
 	rw.PutInt(len(s))
 	rw.w.WriteString(s)
+	if options.Trace&options.TraceClientServer != 0 {
+		Trace(s)
+	}
+	return rw
+}
+
+// PutRec writes a record, same as PutStr but no trace
+func (rw *ReadWrite) PutRec(r Record) *ReadWrite {
+	limit(int64(len(r)))
+	rw.PutInt(len(r))
+	rw.w.WriteString(string(r))
 	return rw
 }
 
@@ -79,7 +94,7 @@ func (rw *ReadWrite) PutInt64(i int64) *ReadWrite {
 
 // PutVal writes a packed value
 func (rw *ReadWrite) PutVal(v Value) *ReadWrite {
-	return rw.PutStr(PackValue(v))
+	return rw.PutRec(Record(PackValue(v)))
 }
 
 //-------------------------------------------------------------------
@@ -184,6 +199,9 @@ func (rw *ReadWrite) Request() {
 	ck(rw.w.Flush())
 	if !rw.GetBool() {
 		err := rw.GetStr()
+		if options.Trace&options.TraceClientServer != 0 {
+			Trace(err)
+		}
 		panic(err + " (from server)")
 	}
 }
