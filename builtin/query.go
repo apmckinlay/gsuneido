@@ -43,7 +43,7 @@ func extractQuery(
 	th *Thread, ps *ParamSpec, as *ArgSpec, args []Value) (string, []Value) {
 	where := queryWhere(as, args)
 	args = th.Args(ps, as)
-	query := AsStr(args[0]) + where
+	query := AsStr(args[0])
 	return query + where, args
 }
 
