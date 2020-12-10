@@ -10,8 +10,12 @@ import (
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
-var _ = builtin0("EnableCoverage()", func() Value {
-	atomic.StoreInt64(&options.Coverage, 1)
+var _ = builtin1("CoverageEnable(enable)", func(a Value) Value {
+	if ToBool(a) {
+		atomic.StoreInt64(&options.Coverage, 1)
+	} else {
+		atomic.StoreInt64(&options.Coverage, 0)
+	}
 	return nil
 })
 
