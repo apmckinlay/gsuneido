@@ -3,6 +3,8 @@
 
 package hamttest
 
+import "github.com/apmckinlay/gsuneido/db19/stor"
+
 //go:generate genny -in ../../genny/hamt/hamt.go -out testhamt.go -pkg hamttest gen "Item=*Foo KeyType=int"
 
 type Foo struct {
@@ -16,4 +18,15 @@ func FooKey(foo *Foo) int {
 
 func FooHash(key int) uint32 {
 	return uint32(key) & 0xffff // reduce bits to force overflows
+}
+
+func (f *Foo) storSize() int {
+	return 0
+}
+
+func (f *Foo) Write(*stor.Writer) {
+}
+
+func ReadFoo(*stor.Stor, *stor.Reader) *Foo {
+	return nil
 }
