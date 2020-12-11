@@ -31,6 +31,7 @@ var help = `options:
 	-c[lient] [ipaddress] (default 127.0.0.1)
 	-d[ump] [table]
 	-l[oad] [table]
+	-n[o]r[elaunch]
 	-p[ort] # (default 3147)
 	-repair
 	-r[epl]
@@ -163,7 +164,7 @@ func ck(err error) {
 func relaunchWithRedirect() {
 	// This is the only way I found to redirect stdout/stderr
 	// for built-in output e.g. crashes
-	if options.Redirected() {
+	if options.NoRelaunch || options.Redirected() {
 		return // to avoid infinite loop
 	}
 	path, _ := os.Executable()
