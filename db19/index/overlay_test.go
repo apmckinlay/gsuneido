@@ -26,7 +26,7 @@ func TestEmptyOverlay(*testing.T) {
 	fb := fbtree.CreateFbtree(stor.HeapStor(8192), nil)
 	mut := &ixbuf.T{}
 	u := &ixbuf.T{}
-	ov := &Overlay{fb: fb, under: []*ixbuf.T{u}, mut: mut}
+	ov := &Overlay{fb: fb, layers: []*ixbuf.T{u}, mut: mut}
 	checkIter(data, ov)
 
 	const n = 100
@@ -109,12 +109,12 @@ func TestOverlayMerge(t *testing.T) {
 	fbtree.MaxNodeSize = 64
 	fb := fbtree.CreateFbtree(stor.HeapStor(8192), nil)
 	bi := &ixbuf.T{}
-	ov := Overlay{fb: fb, under: []*ixbuf.T{bi, mut}}
+	ov := Overlay{fb: fb, layers: []*ixbuf.T{bi, mut}}
 	bi = ov.Merge(1)
 	checkData(t, bi, data)
 
 	mut = randInter()
-	ov = Overlay{fb: fb, under: []*ixbuf.T{bi, mut}}
+	ov = Overlay{fb: fb, layers: []*ixbuf.T{bi, mut}}
 	bi = ov.Merge(1)
 	checkData(t, bi, data)
 }
