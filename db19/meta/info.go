@@ -14,6 +14,7 @@ type Info struct {
 	Nrows   int
 	Size    uint64
 	Indexes []*index.Overlay
+	// lastmod is used for persist chaining/flattening
 	lastmod int
 }
 
