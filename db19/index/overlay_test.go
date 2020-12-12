@@ -8,6 +8,7 @@ import (
 	"sort"
 	"testing"
 
+	"github.com/apmckinlay/gsuneido/db19/index/testdata"
 	"github.com/apmckinlay/gsuneido/db19/index/fbtree"
 	"github.com/apmckinlay/gsuneido/db19/index/ixbuf"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
@@ -18,9 +19,6 @@ import (
 
 func TestEmptyOverlay(*testing.T) {
 	var data []string
-	fbtree.GetLeafKey = func(_ *stor.Stor, _ *ixkey.Spec, i uint64) string {
-		return data[i]
-	}
 	defer func(mns int) { fbtree.MaxNodeSize = mns }(fbtree.MaxNodeSize)
 	fbtree.MaxNodeSize = 64
 	fb := fbtree.CreateFbtree(stor.HeapStor(8192), nil)
@@ -48,11 +46,7 @@ func TestEmptyOverlay(*testing.T) {
 	checkIter(data, ov)
 }
 
-type insertable interface {
-	Insert(key string, off uint64)
-}
-
-func insert(data []string, n int, randKey func() string, dest insertable) []string {
+func insert(data []string, n int, randKey func() string, dest *ixbuf.T) []string {
 	for i := 0; i < n; i++ {
 		key := randKey()
 		off := key2off(key)
@@ -85,6 +79,33 @@ func checkIter(data []string, ov *Overlay) {
 	}
 	_, _, ok := it()
 	assert.False(ok)
+}
+
+func TestOverlayBug(*testing.T) {
+	d := testdata.New()
+	fbtree.GetLeafKey = d.GetLeafKey
+	defer func(mns int) { fbtree.MaxNodeSize = mns }(fbtree.MaxNodeSize)
+	fbtree.MaxNodeSize = 64
+	const n = 100
+
+	fb := fbtree.CreateFbtree(stor.HeapStor(8192), nil)
+	ov := &Overlay{fb: fb}
+	d.CheckIter(ov.Iter(false))
+
+	u := &ixbuf.T{}
+	insertTestData(d, n, u)
+	ov.layers = []*ixbuf.T{u}
+	d.CheckIter(ov.Iter(false))
+
+	ov.fb = ov.fb.MergeAndSave(u.Iter(false))
+	ov.layers[0] = &ixbuf.T{}
+	d.CheckIter(ov.Iter(false))
+}
+
+func insertTestData(dat *testdata.T, n int, dest *ixbuf.T) {
+	for i := 0; i < n; i++ {
+		dest.Insert(dat.Gen())
+	}
 }
 
 func TestOverlayMerge(t *testing.T) {

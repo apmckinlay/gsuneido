@@ -87,11 +87,11 @@ type ovsrcs struct {
 	srcs []ovsrc
 }
 
-// Iter returns a treeIter function
+// Iter returns an iterator function
 func (ov *Overlay) Iter(check bool) iter {
-	if ov.mut == nil && len(ov.layers) == 1 {
+	if ov.mut == nil && len(ov.layers) == 0 {
 		// only fbtree, no merge needed
-		return ov.layers[0].Iter(check)
+		return ov.fb.Iter(check)
 	}
 	in := ovsrcs{srcs: make([]ovsrc, 1, len(ov.layers)+2)}
 	in.srcs[0] = ovsrc{iter: ov.fb.Iter(check)}
