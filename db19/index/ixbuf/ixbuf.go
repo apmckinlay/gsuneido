@@ -360,3 +360,95 @@ func (ib *ixbuf) ForEach(fn Visitor) {
 		}
 	}
 }
+
+//-------------------------------------------------------------------
+
+type Iterator struct {
+	ib *ixbuf
+	state
+	// ci, i, and c point to the current slot = ib.chunks[ci][i]
+	ci int
+	i  int
+	c  chunk
+	// cur is the current key and offset.
+	// We need to keep a copy of it because the ixbuf could change.
+	cur slot
+}
+
+type state byte
+
+const (
+	rewound state = iota
+	within
+	eof
+)
+
+func (ib *ixbuf) Iterator() *Iterator {
+	return &Iterator{ib: ib, state: rewound}
+}
+
+func (it *Iterator) Eof() bool {
+	return it.ib.size == 0 || it.state == eof
+}
+
+func (it *Iterator) Cur() (string, uint64) {
+	return it.cur.key, it.cur.off
+}
+
+func (it *Iterator) Next() {
+	if it.state == eof {
+		return // stick at eof
+	}
+	if it.state == rewound {
+		if it.ib.size == 0 {
+			it.state = eof
+			return
+		}
+		it.state = within
+		it.ci = 0
+		it.i = -1
+		it.c = it.ib.chunks[0]
+	}
+	it.i++
+	if it.i >= len(it.c) {
+		if it.ci+1 >= len(it.ib.chunks) {
+			it.state = eof
+			return
+		}
+		it.ci++
+		it.c = it.ib.chunks[it.ci]
+		it.i = 0
+	}
+	it.cur = it.c[it.i]
+}
+
+func (it *Iterator) Prev() {
+	if it.state == eof {
+		return // stick at eof
+	}
+	if it.state == rewound {
+		if it.ib.size == 0 {
+			it.state = eof
+			return
+		}
+		it.state = within
+		it.ci = len(it.ib.chunks) - 1
+		it.c = it.ib.chunks[it.ci]
+		it.i = len(it.c)
+	}
+	it.i--
+	if it.i < 0 {
+		if it.ci <= 0 {
+			it.state = eof
+			return
+		}
+		it.ci--
+		it.c = it.ib.chunks[it.ci]
+		it.i = len(it.c) - 1
+	}
+	it.cur = it.c[it.i]
+}
+
+func (it *Iterator) Rewind() {
+	it.state = rewound
+}

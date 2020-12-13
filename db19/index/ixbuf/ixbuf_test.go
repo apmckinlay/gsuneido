@@ -286,6 +286,59 @@ func TestForEach(t *testing.T) {
 	assert.T(t).This(i).Is(nkeys * 2)
 }
 
+func TestIterator(t *testing.T) {
+	assert := assert.T(t)
+	ib := &ixbuf{}
+	it := ib.Iterator()
+	test := func(expected int) {
+		if expected == -1 {
+			assert.That(it.Eof())
+		} else {
+			key, off := it.Cur()
+			assert.This(key).Is(strconv.Itoa(expected))
+			assert.This(off).Is(uint64(expected))
+		}
+	}
+	testNext := func(expected int) { it.Next(); test(expected) }
+	testPrev := func(expected int) { it.Prev(); test(expected) }
+
+	assert.That(it.Eof())
+	testNext(-1)
+	testPrev(-1)
+	it.Rewind()
+	testNext(-1)
+	testPrev(-1)
+
+	for i := 0; i < 10; i++ {
+		ib.Insert(strconv.Itoa(i), uint64(i))
+	}
+	it.Rewind()
+	for i := 0; i < 10; i++ {
+		testNext(i)
+	}
+	testNext(-1)
+
+	it.Rewind()
+	for i := 9; i >= 0; i-- {
+		testPrev(i)
+	}
+	testPrev(-1)
+
+	it.Rewind()
+	testNext(0)
+	testPrev(-1) // stick at eof
+	testPrev(-1)
+	testNext(-1)
+
+	it.Rewind()
+	testPrev(9)
+	testPrev(8)
+	testPrev(7)
+	testNext(8)
+	testNext(9) // last
+	testPrev(8)
+}
+
 //-------------------------------------------------------------------
 
 func (ib *ixbuf) stats() {
