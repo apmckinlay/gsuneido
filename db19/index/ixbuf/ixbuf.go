@@ -16,8 +16,11 @@ import (
 type T = ixbuf
 
 type ixbuf struct {
-	chunks []chunk
-	size   int
+	chunks   []chunk
+	size     int32
+	// modCount is used by Iterator to detect modifications.
+	// No locking since ixbuf is thread contained when mutable.
+	modCount int32
 }
 
 type chunk []slot
@@ -28,12 +31,12 @@ type slot struct {
 }
 
 func (ib *ixbuf) Len() int {
-	return ib.size
+	return int(ib.size)
 }
 
 // goal is the desired chunk size for a given item count.
 // It is chosen so the size of the chunk list is roughly the chunk size.
-func goal(n int) int {
+func goal(n int32) int {
 	// add 50% because average size is 2/3 full
 	switch {
 	case n < 256:
@@ -49,6 +52,7 @@ func goal(n int) int {
 
 // Insert adds an element. It mutates and is NOT thread-safe.
 func (ib *ixbuf) Insert(key string, off uint64) {
+	ib.modCount++
 	if len(ib.chunks) == 0 {
 		ib.size++
 		ib.chunks = make([]chunk, 1, 4)   // ???
@@ -56,7 +60,7 @@ func (ib *ixbuf) Insert(key string, off uint64) {
 		ib.chunks[0][0] = slot{key: key, off: off}
 		return
 	}
-	ci := ib.search(key)
+	ci := ib.searchChunks(key)
 	c := ib.chunks[ci]
 	i := search(ib.chunks[ci], key)
 
@@ -107,9 +111,16 @@ func (ib *ixbuf) remove(ci int, i int) {
 	ib.size--
 }
 
-// search does a binary search the first key in each chunk.
+func (ib *ixbuf) search(key string) (int, chunk, int) {
+	ci := ib.searchChunks(key)
+	c := ib.chunks[ci]
+	i := search(ib.chunks[ci], key)
+	return ci, c, i
+}
+
+// searchChunks does a binary search of the first key in each chunk.
 // It returns len-1 if the key is greater than all keys.
-func (ib *ixbuf) search(key string) int {
+func (ib *ixbuf) searchChunks(key string) int {
 	i, j := 0, len(ib.chunks)
 	for i < j {
 		h := int(uint(i+j) >> 1) // i ≤ h < j
@@ -157,7 +168,7 @@ func (ib *ixbuf) Delete(key string, off uint64) {
 func Merge(ibs ...*ixbuf) *ixbuf {
 	assert.That(len(ibs) > 1)
 	in := make([][]chunk, 0, len(ibs))
-	size := 0
+	size := int32(0)
 	nc := 0
 	var single *ixbuf
 	for _, ib := range ibs {
@@ -312,7 +323,7 @@ func (m *merge) flushbuf() {
 
 func (m *merge) result() *ixbuf {
 	m.flushbuf()
-	return &ixbuf{chunks: m.out, size: m.size}
+	return &ixbuf{chunks: m.out, size: int32(m.size)}
 }
 
 func (c chunk) firstKey() string {
@@ -365,6 +376,7 @@ func (ib *ixbuf) ForEach(fn Visitor) {
 
 type Iterator struct {
 	ib *ixbuf
+	modCount int32
 	state
 	// ci, i, and c point to the current slot = ib.chunks[ci][i]
 	ci int
@@ -384,7 +396,7 @@ const (
 )
 
 func (ib *ixbuf) Iterator() *Iterator {
-	return &Iterator{ib: ib, state: rewound}
+	return &Iterator{ib: ib, modCount: ib.modCount, state: rewound}
 }
 
 func (it *Iterator) Eof() bool {
@@ -408,6 +420,10 @@ func (it *Iterator) Next() {
 		it.ci = 0
 		it.i = -1
 		it.c = it.ib.chunks[0]
+	} else if it.modCount != it.ib.modCount {
+		// ixbuf has been modified
+		it.ci, it.c, it.i = it.ib.search(it.cur.key)
+		it.modCount = it.ib.modCount
 	}
 	it.i++
 	if it.i >= len(it.c) {
@@ -435,6 +451,10 @@ func (it *Iterator) Prev() {
 		it.ci = len(it.ib.chunks) - 1
 		it.c = it.ib.chunks[it.ci]
 		it.i = len(it.c)
+	} else if it.modCount != it.ib.modCount {
+		// ixbuf has been modified
+		it.ci, it.c, it.i = it.ib.search(it.cur.key)
+		it.modCount = it.ib.modCount
 	}
 	it.i--
 	if it.i < 0 {

@@ -304,6 +304,7 @@ func TestIterator(t *testing.T) {
 
 	assert.That(it.Eof())
 	testNext(-1)
+	it.Rewind()
 	testPrev(-1)
 	it.Rewind()
 	testNext(-1)
@@ -337,12 +338,30 @@ func TestIterator(t *testing.T) {
 	testNext(8)
 	testNext(9) // last
 	testPrev(8)
+
+	it.Rewind()
+	testNext(0)
+	testNext(1)
+	ib.Insert("11", uint64(11))
+	testNext(11)
+	testNext(2)
+	ib.Delete("11", uint64(11))
+	testPrev(1)
+
+	it.Rewind()
+	testPrev(9)
+	testPrev(8)
+	ib.Insert("77", uint64(77))
+	testPrev(77)
+	ib.modCount++
+	testPrev(7)
 }
 
 //-------------------------------------------------------------------
 
 func (ib *ixbuf) stats() {
-	fmt.Println("size", ib.size, "chunks", len(ib.chunks), "avg size", ib.size/len(ib.chunks), "goal", goal(ib.size))
+	fmt.Println("size", ib.size, "chunks", len(ib.chunks),
+		"avg size", int(ib.size)/len(ib.chunks), "goal", goal(ib.size))
 }
 
 func (ib *ixbuf) print() {
