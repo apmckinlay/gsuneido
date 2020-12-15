@@ -10,7 +10,7 @@ import (
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
-// Fold traverses an AST and does constant propagation and folding
+// PropFold traverses an AST and does constant propagation and folding,
 // modifying the AST
 func PropFold(fn *Function) *Function {
 	// Final variables (set once, not modified) are determined during parse
@@ -27,11 +27,11 @@ func propfold(fn *Function, vars map[string]int) {
 			f.vars[id] = nil
 		}
 	}
-	defer func(f *fold) {
+	defer func() {
 		if e := recover(); e != nil {
 			panic(fmt.Sprintf("compile error @%d %s", f.srcpos, e))
 		}
-	}(&f)
+	}()
 	fn.Children(f.visit)
 }
 
@@ -42,10 +42,10 @@ type fold struct {
 }
 
 func (f *fold) visit(node Node) Node {
+	node.Children(f.visit) // recurse
 	if stmt, ok := node.(Statement); ok {
 		f.srcpos = stmt.Position() // for error reporting
 	}
-	node.Children(f.visit) // recurse
 	node = f.fold(node)
 	if node != nil {
 		node = f.findConst(node)
