@@ -22,8 +22,6 @@ import (
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
-//TODO source statement position for errors
-
 // cgen is the context/results for compiling a function or block
 type cgen struct {
 	outerFn        *ast.Function
@@ -71,6 +69,11 @@ func codegen2(fn *ast.Function, outerFn *ast.Function) *SuFunc {
 }
 
 func (cg *cgen) codegen(fn *ast.Function) *SuFunc {
+	defer func() {
+		if e := recover(); e != nil {
+			panic(fmt.Sprintf("compile error @%d %s", cg.srcPrev, e))
+		}
+	}()
 	cg.function(fn)
 	cg.finishParamSpec()
 	for _, as := range cg.argspecs {
