@@ -16,8 +16,8 @@ import (
 type T = ixbuf
 
 type ixbuf struct {
-	chunks   []chunk
-	size     int32
+	chunks []chunk
+	size   int32
 	// modCount is used by Iterator to detect modifications.
 	// No locking since ixbuf is thread contained when mutable.
 	modCount int32
@@ -375,7 +375,7 @@ func (ib *ixbuf) ForEach(fn Visitor) {
 //-------------------------------------------------------------------
 
 type Iterator struct {
-	ib *ixbuf
+	ib       *ixbuf
 	modCount int32
 	state
 	// ci, i, and c point to the current slot = ib.chunks[ci][i]
@@ -403,6 +403,10 @@ func (it *Iterator) Eof() bool {
 	return it.ib.size == 0 || it.state == eof
 }
 
+func (it *Iterator) Modified() bool {
+	return it.modCount != it.ib.modCount
+}
+
 func (it *Iterator) Cur() (string, uint64) {
 	return it.cur.key, it.cur.off
 }
@@ -421,9 +425,9 @@ func (it *Iterator) Next() {
 		it.i = -1
 		it.c = it.ib.chunks[0]
 	} else if it.modCount != it.ib.modCount {
-		// ixbuf has been modified
-		it.ci, it.c, it.i = it.ib.search(it.cur.key)
-		it.modCount = it.ib.modCount
+		if !it.Seek(it.cur.key) {
+			return // didn't find cur, so already on next
+		}
 	}
 	it.i++
 	if it.i >= len(it.c) {
@@ -452,9 +456,7 @@ func (it *Iterator) Prev() {
 		it.c = it.ib.chunks[it.ci]
 		it.i = len(it.c)
 	} else if it.modCount != it.ib.modCount {
-		// ixbuf has been modified
-		it.ci, it.c, it.i = it.ib.search(it.cur.key)
-		it.modCount = it.ib.modCount
+		it.Seek(it.cur.key)
 	}
 	it.i--
 	if it.i < 0 {
@@ -471,4 +473,17 @@ func (it *Iterator) Prev() {
 
 func (it *Iterator) Rewind() {
 	it.state = rewound
+}
+
+// Seek returns true if the key was found
+func (it *Iterator) Seek(key string) bool {
+	it.ci, it.c, it.i = it.ib.search(key)
+	it.modCount = it.ib.modCount
+	if it.i >= len(it.c) {
+		it.state = eof
+		return false
+	}
+	it.cur = it.c[it.i]
+	it.state = within
+	return it.cur.key == key
 }

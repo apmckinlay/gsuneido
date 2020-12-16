@@ -5,14 +5,23 @@ package index
 
 type iterator interface {
 	Eof() bool
+	Modified() bool
 	Cur() (key string, off uint64)
 	Next()
 	Prev()
 	Rewind()
+	// Seek returns true if the key was found
+	Seek(key string) bool
 }
 
+type mergeCallback func(modCount int) (int, []iterator)
+
 type MergeIter struct {
-	iters []iterator
+	callback mergeCallback
+	iters    []iterator
+	modCount int
+	curKey   string
+	curOff   uint64
 	// curIter is the iterator containing the current item = iters[curIter]
 	curIter int
 	state
@@ -34,10 +43,9 @@ const (
 	prev dir = -1
 )
 
-func NewMergeIter(iters []iterator) *MergeIter {
-	its := make([]iterator, len(iters))
-	copy(its, iters)
-	return &MergeIter{iters: its}
+func NewMergeIter(callback mergeCallback) *MergeIter {
+	modCount, iters := callback(-1)
+	return &MergeIter{callback: callback, modCount: modCount, iters: iters}
 }
 
 func (mi *MergeIter) Eof() bool {
@@ -48,7 +56,7 @@ func (mi *MergeIter) Cur() (string, uint64) {
 	if mi.state != within {
 		return "", 0
 	}
-	return mi.iters[mi.curIter].Cur()
+	return mi.curKey, mi.curOff
 }
 
 func (mi *MergeIter) Next() {
@@ -58,14 +66,14 @@ func (mi *MergeIter) Next() {
 	if mi.state == rewound {
 		mi.all(iterator.Next)
 		mi.state = within
-	} else if mi.lastDir == next {
-		mi.iters[mi.curIter].Next()
-	} else { // switch direction
-		mi.all(nextRewind)
+	} else {
+		mi.modNext()
 	}
 	mi.curIter = mi.minIter()
 	if mi.curIter == -1 {
 		mi.state = eof
+	} else {
+		mi.curKey, mi.curOff = mi.iters[mi.curIter].Cur()
 	}
 	mi.lastDir = next
 }
@@ -73,6 +81,26 @@ func (mi *MergeIter) Next() {
 func (mi *MergeIter) all(fn func(it iterator)) {
 	for _, it := range mi.iters {
 		fn(it)
+	}
+}
+
+func (mi *MergeIter) modNext() {
+	modCount, iters := mi.callback(mi.modCount)
+	modified := iters != nil
+	mi.modCount = modCount
+	if modified {
+		mi.iters = iters
+	}
+	for i, it := range mi.iters {
+		if modified || it.Modified() {
+			if it.Seek(mi.curKey) {
+				it.Next()
+			}
+		} else if mi.lastDir != next {
+			nextRewind(it)
+		} else if i == mi.curIter {
+			it.Next()
+		}
 	}
 }
 
@@ -106,16 +134,35 @@ func (mi *MergeIter) Prev() {
 	if mi.state == rewound {
 		mi.all(iterator.Prev)
 		mi.state = within
-	} else if mi.lastDir == prev {
-		mi.iters[mi.curIter].Prev()
-	} else { // switch direction
-		mi.all(prevRewind)
+	} else {
+		mi.modPrev()
 	}
 	mi.curIter = mi.maxIter()
 	if mi.curIter == -1 {
 		mi.state = eof
+	} else {
+		mi.curKey, mi.curOff = mi.iters[mi.curIter].Cur()
 	}
 	mi.lastDir = prev
+}
+
+func (mi *MergeIter) modPrev() {
+	modCount, iters := mi.callback(mi.modCount)
+	modified := iters != nil
+	mi.modCount = modCount
+	if modified {
+		mi.iters = iters
+	}
+	for i, it := range mi.iters {
+		if modified || it.Modified() {
+			it.Seek(mi.curKey)
+			prevRewind(it)
+		} else if mi.lastDir != prev {
+			prevRewind(it)
+		} else if i == mi.curIter {
+			it.Prev()
+		}
+	}
 }
 
 func prevRewind(it iterator) {
@@ -144,4 +191,7 @@ func (mi *MergeIter) maxIter() int {
 func (mi *MergeIter) Rewind() {
 	mi.all(iterator.Rewind)
 	mi.state = rewound
+	mi.curIter = -1
+	mi.curKey = ""
+	mi.curOff = 0
 }

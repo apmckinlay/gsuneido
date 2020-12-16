@@ -291,6 +291,7 @@ func TestIterator(t *testing.T) {
 	ib := &ixbuf{}
 	it := ib.Iterator()
 	test := func(expected int) {
+		t.Helper()
 		if expected == -1 {
 			assert.That(it.Eof())
 		} else {
@@ -299,8 +300,8 @@ func TestIterator(t *testing.T) {
 			assert.This(off).Is(uint64(expected))
 		}
 	}
-	testNext := func(expected int) { it.Next(); test(expected) }
-	testPrev := func(expected int) { it.Prev(); test(expected) }
+	testNext := func(expected int) { t.Helper(); it.Next(); test(expected) }
+	testPrev := func(expected int) { t.Helper(); it.Prev(); test(expected) }
 
 	assert.That(it.Eof())
 	testNext(-1)
@@ -316,12 +317,18 @@ func TestIterator(t *testing.T) {
 	it.Rewind()
 	for i := 0; i < 10; i++ {
 		testNext(i)
+		if i == 5 {
+			it.modCount-- // invalidate
+		}
 	}
 	testNext(-1)
 
 	it.Rewind()
 	for i := 9; i >= 0; i-- {
 		testPrev(i)
+		if i == 5 {
+			it.modCount-- // invalidate
+		}
 	}
 	testPrev(-1)
 
