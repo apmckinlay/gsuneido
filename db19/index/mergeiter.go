@@ -3,6 +3,7 @@
 
 package index
 
+// iterator is the interface for a Suneido style iterator
 type iterator interface {
 	Eof() bool
 	Modified() bool
@@ -14,8 +15,20 @@ type iterator interface {
 	Seek(key string) bool
 }
 
+// mergeCallback is a function passed into a MergeIter
+// so it can determine if the underlying container (normally an Overlay)
+// has been modified.
+// The iterator passes its last known modCount
+// and if the container's modCount has changed,
+// it returns the new modCount and the new source iterators.
+// If the modCount has not changed, it returns nil instead of new iterators.
 type mergeCallback func(modCount int) (int, []iterator)
 
+// MergeIter is a Suneido style iterator
+// that merges several other Suneido style iterators.
+//
+// We need to keep our own curKey/Off independent of the source iterators
+// because new source iterators may be returned by the callback.
 type MergeIter struct {
 	callback mergeCallback
 	iters    []iterator
@@ -53,9 +66,6 @@ func (mi *MergeIter) Eof() bool {
 }
 
 func (mi *MergeIter) Cur() (string, uint64) {
-	if mi.state != within {
-		return "", 0
-	}
 	return mi.curKey, mi.curOff
 }
 
@@ -64,6 +74,10 @@ func (mi *MergeIter) Next() {
 		return // stick at eof
 	}
 	if mi.state == rewound {
+		modCount, iters := mi.callback(mi.modCount)
+		if iters != nil { // modified
+			mi.modCount, mi.iters = modCount, iters
+		}
 		mi.all(iterator.Next)
 		mi.state = within
 	} else {
@@ -132,6 +146,10 @@ func (mi *MergeIter) Prev() {
 		return // stick at eof
 	}
 	if mi.state == rewound {
+		modCount, iters := mi.callback(mi.modCount)
+		if iters != nil { // modified
+			mi.modCount, mi.iters = modCount, iters
+		}
 		mi.all(iterator.Prev)
 		mi.state = within
 	} else {

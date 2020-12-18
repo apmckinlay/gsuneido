@@ -34,6 +34,12 @@ func (ib *ixbuf) Len() int {
 	return int(ib.size)
 }
 
+func (ib *ixbuf) Clear()  {
+	ib.size = 0
+	ib.chunks = nil
+	ib.modCount++
+}
+
 // goal is the desired chunk size for a given item count.
 // It is chosen so the size of the chunk list is roughly the chunk size.
 func goal(n int32) int {
@@ -374,6 +380,7 @@ func (ib *ixbuf) ForEach(fn Visitor) {
 
 //-------------------------------------------------------------------
 
+// Iterator is a Suneido style iterator for an ixbuf.
 type Iterator struct {
 	ib       *ixbuf
 	modCount int32
@@ -477,6 +484,10 @@ func (it *Iterator) Rewind() {
 
 // Seek returns true if the key was found
 func (it *Iterator) Seek(key string) bool {
+	if len(it.ib.chunks) == 0 {
+		it.state = eof
+		return false
+	}
 	it.ci, it.c, it.i = it.ib.search(key)
 	it.modCount = it.ib.modCount
 	if it.i >= len(it.c) {
