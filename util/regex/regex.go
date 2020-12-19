@@ -20,15 +20,15 @@ type Pattern []inst
 
 // inst is a single compiled pattern instruction
 type inst struct {
-	op byte
-	// i is used by left, right, and backref
-	i byte
+	// data is used by chars and charclass
+	data string
 	// jump is used by jump and branch
 	jump int16
 	// alt is used by branch
 	alt int16
-	// data is used by chars and charclass
-	data string
+	op byte
+	// i is used by left, right, and backref
+	i byte
 }
 
 // op codes
