@@ -197,6 +197,7 @@ outer:
 						pi = -1 // -1 because loop increments
 						continue
 					}
+					// else j == 0, m stays true
 				} else {
 					m = si+len(in.data) <= len(s) && strings.HasPrefix(s[si:], in.data)
 				}
@@ -243,7 +244,7 @@ outer:
 			case backrefIgnore:
 				m, si = backrefMatch(s, si, result[in.i], hasPrefixIgnore)
 			case startOfLine:
-				m = si == 0 || s[si-1] == '\r' || s[si-1] == '\n'
+				m = si == 0 || s[si-1] == '\n'
 				if !m && pi == first && incdec == +1 && ai == 0 {
 					j := strings.IndexByte(s[si:], '\n')
 					if j == -1 {
@@ -252,7 +253,8 @@ outer:
 					pos = si + j // skip ahead
 				}
 			case endOfLine:
-				m = si >= len(s) || s[si] == '\r' || s[si] == '\n'
+				m = si >= len(s) || s[si] == '\r' ||
+					(s[si] == '\n' && (si < 1 || s[si-1] != '\r'))
 			case startOfString:
 				m = si == 0
 				if !m && pi == first && incdec == +1 && ai == 0 {
