@@ -301,7 +301,10 @@ func TestFnodeDelete(*testing.T) {
 			del.printLeafNode(get)
 		}
 	}()
-	const ntimes = 100000
+	var ntimes = 100000
+	if testing.Short() {
+		ntimes = 10000
+	}
 	for i := 0; i < ntimes; i++ {
 		if i < len(datas) {
 			data = strings.Fields(datas[i])
@@ -400,7 +403,10 @@ func TestFnodeInsertDelete(*testing.T) {
 		panic("get: offset not found")
 	}
 	r := func() string { return str.RandomOf(1, 6, "abc") }
-	const N = 1_000_000
+	var N = 1_000_000
+	if testing.Short() {
+		N = 100_000
+	}
 	for i := 0; i < N; i++ {
 		if rand.Intn(13)+1 > len(data) {
 			// insert
