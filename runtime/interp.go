@@ -208,6 +208,8 @@ loop:
 			t.Push(Zero)
 		case op.One:
 			t.Push(One)
+		case op.MinusOne:
+			t.Push(MinusOne)
 		case op.MaxInt:
 			t.Push(MaxInt)
 		case op.EmptyStr:

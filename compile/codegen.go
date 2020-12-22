@@ -687,7 +687,7 @@ func (cg *cgen) nary(node *ast.Nary) {
 		cg.andorExpr(node)
 	} else if node.Tok == tok.Mul {
 		cg.muldivExpr(node)
-	} else {
+	} else { // Add, Sub, Cat, BitOr, BitAnd, BitXor
 		o := tok2op[node.Tok]
 		cg.expr(node.Exprs[0])
 		for _, e := range node.Exprs[1:] {
@@ -789,6 +789,8 @@ func (cg *cgen) emitValue(val Value) {
 		cg.emit(op.Zero)
 	} else if val == One {
 		cg.emit(op.One)
+	} else if val == MinusOne {
+		cg.emit(op.MinusOne)
 	} else if val == EmptyStr {
 		cg.emit(op.EmptyStr)
 	} else if i, ok := SuIntToInt(val); ok {

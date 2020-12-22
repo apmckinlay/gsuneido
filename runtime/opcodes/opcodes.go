@@ -40,6 +40,8 @@ const (
 	Zero
 	// One pushes One (1)
 	One
+	// MinusOne pushes One (1)
+	MinusOne
 	// MaxInt pushes int32 max, used by RangeTo and RangeLen
 	MaxInt
 	// EmptyStr pushes EmptyStr ("")
