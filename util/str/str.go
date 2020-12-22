@@ -151,6 +151,13 @@ func AfterLast(s, sub string) string {
 	return s[i + len(sub):]
 }
 
+func RemovePrefix(s, pre string) string {
+	if strings.HasPrefix(s, pre) {
+		s = s[len(pre):]
+	}
+	return s
+}
+
 // Opt returns "" if any of the strings are ""
 // else it returns the concatenation of the strings.
 // e.g. Opt("=", s) or Opt(s, ",") or Opt("<", s, ">")
