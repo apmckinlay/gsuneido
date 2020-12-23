@@ -95,6 +95,12 @@ func (seq *SuSequence) Put(t *Thread, key Value, val Value) {
 	seq.ob.Put(t, key, val)
 }
 
+func (seq *SuSequence) GetPut(t *Thread, key Value, val Value,
+	op func (x,y Value) Value, retOrig bool) Value {
+	seq.instantiate()
+	return seq.ob.GetPut(t, key, val, op, retOrig)
+}
+
 func (seq *SuSequence) RangeTo(i int, j int) Value {
 	seq.instantiate()
 	return seq.ob.RangeTo(i, j)

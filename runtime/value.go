@@ -56,7 +56,14 @@ type Value interface {
 	// The thread is necessary to call getters
 	Get(t *Thread, key Value) Value
 
+	// Put sets its key member to val.
+	// Implemented by SuObject, SuRecord, and SuInstance.
+	// t is required by SuRecord to call observers.
 	Put(t *Thread, key Value, val Value)
+
+	// GetPut is used for update operations like += and ++ atomically
+	GetPut(t *Thread, key Value, val Value,
+		op func(x, y Value) Value, retOrig bool) Value
 
 	RangeTo(i int, j int) Value
 	RangeLen(i int, n int) Value

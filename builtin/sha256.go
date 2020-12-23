@@ -42,6 +42,10 @@ func (*SuSha256) Put(*Thread, Value, Value) {
 	panic("Sha256 does not support put")
 }
 
+func (*SuSha256) GetPut(*Thread, Value, Value, func(x, y Value) Value, bool) Value {
+	panic("Sha256 does not support update")
+}
+
 func (*SuSha256) RangeTo(int, int) Value {
 	panic("Sha256 does not support range")
 }

@@ -101,7 +101,7 @@ func (p *parser) functionValue() Value {
 	if p.checker != nil {
 		p.checker.Check(ast)
 	}
-	f := codegen(ast)
+	f := p.codegen(ast)
 	f.Lib = p.lib
 	f.Name = p.name
 	return f
@@ -202,7 +202,7 @@ func (p *parser) member(ob container, closing tok.Token, base Gnum) {
 		if p.checker != nil {
 			p.checker.Check(ast)
 		}
-		fn := codegen(ast)
+		fn := p.codegen(ast)
 		fn.Lib = p.lib
 		fn.Name = p.name
 		p.name = prevName

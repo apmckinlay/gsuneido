@@ -67,10 +67,10 @@ func (f Folder) foldBinary(b *Binary) Expr {
 		val = OpIsnt(val, val2)
 	case tok.Match:
 		pat := regex.Compile(ToStr(val2))
-		val = OpMatch(val, pat)
+		val = SuBool(pat.Matches(ToStr(val)))
 	case tok.MatchNot:
 		pat := regex.Compile(ToStr(val2))
-		val = OpNot(OpMatch(val, pat))
+		val = SuBool(!pat.Matches(ToStr(val)))
 	case tok.Lt:
 		val = OpLt(val, val2)
 	case tok.Lte:

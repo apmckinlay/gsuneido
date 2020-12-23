@@ -118,6 +118,10 @@ func (*suFile) Put(*Thread, Value, Value) {
 	panic("File does not support put")
 }
 
+func (*suFile) GetPut(*Thread, Value, Value, func(x, y Value) Value, bool) Value {
+	panic("File does not support update")
+}
+
 func (*suFile) RangeTo(int, int) Value {
 	panic("File does not support range")
 }

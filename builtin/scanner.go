@@ -32,6 +32,10 @@ func (sc *SuScanner) Put(*Thread, Value, Value) {
 	panic(sc.name + " does not support put")
 }
 
+func (sc *SuScanner) GetPut(*Thread, Value, Value, func(x, y Value) Value, bool) Value {
+	panic(sc.name + " does not support update")
+}
+
 func (sc *SuScanner) RangeTo(int, int) Value {
 	panic(sc.name + " does not support range")
 }

@@ -59,6 +59,10 @@ func (SuBool) Put(*Thread, Value, Value) {
 	panic("boolean does not support put")
 }
 
+func (SuBool) GetPut(*Thread, Value, Value, func(x, y Value) Value, bool) Value {
+	panic("boolean does not support update")
+}
+
 func (SuBool) RangeTo(int, int) Value {
 	panic("boolean does not support range")
 }

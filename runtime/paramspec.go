@@ -123,11 +123,15 @@ func (*ParamSpec) Put(*Thread, Value, Value) {
 	panic("function does not support put")
 }
 
-func (ParamSpec) RangeTo(int, int) Value {
+func (*ParamSpec) GetPut(*Thread, Value, Value, func(x, y Value) Value, bool) Value {
+	panic("function does not support update")
+}
+
+func (*ParamSpec) RangeTo(int, int) Value {
 	panic("function does not support range")
 }
 
-func (ParamSpec) RangeLen(int, int) Value {
+func (*ParamSpec) RangeLen(int, int) Value {
 	panic("function does not support range")
 }
 

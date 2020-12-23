@@ -94,6 +94,10 @@ func (*suRunPiped) Put(*Thread, Value, Value) {
 	panic("RunPiped does not support put")
 }
 
+func (*suRunPiped) GetPut(*Thread, Value, Value, func(x, y Value) Value, bool) Value {
+	panic("RunPiped does not support update")
+}
+
 func (*suRunPiped) RangeTo(int, int) Value {
 	panic("RunPiped does not support range")
 }

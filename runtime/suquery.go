@@ -31,6 +31,10 @@ func (qc *SuQueryCursor) Put(*Thread, Value, Value) {
 	panic(qc.which + " does not support put")
 }
 
+func (qc *SuQueryCursor) GetPut(*Thread, Value, Value, func(x, y Value) Value, bool) Value {
+	panic(qc.which + " does not support update")
+}
+
 func (qc *SuQueryCursor) RangeTo(int, int) Value {
 	panic(qc.which + " does not support range")
 }

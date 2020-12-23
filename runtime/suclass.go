@@ -144,6 +144,10 @@ func (*SuClass) Put(*Thread, Value, Value) {
 	panic("class does not support put")
 }
 
+func (*SuClass) GetPut(*Thread, Value, Value, func(x, y Value) Value, bool) Value {
+	panic("class does not support update")
+}
+
 func (*SuClass) RangeTo(int, int) Value {
 	panic("class does not support range")
 }

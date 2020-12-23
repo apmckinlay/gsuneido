@@ -50,6 +50,10 @@ func (SuDnum) Put(*Thread, Value, Value) {
 	panic("number does not support put")
 }
 
+func (SuDnum) GetPut(*Thread, Value, Value, func(x, y Value) Value, bool) Value {
+	panic("number does not support update")
+}
+
 func (SuDnum) RangeTo(int, int) Value {
 	panic("number does not support range")
 }

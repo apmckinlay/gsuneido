@@ -4,10 +4,13 @@
 package runtime
 
 import (
+	"encoding/base64"
 	"math"
+	"runtime"
+	"strings"
 
 	"github.com/apmckinlay/gsuneido/util/dnum"
-	"github.com/apmckinlay/gsuneido/util/regex"
+	"github.com/apmckinlay/gsuneido/util/hacks"
 )
 
 var (
@@ -23,7 +26,7 @@ var (
 )
 
 func OpIs(x Value, y Value) Value {
-	return SuBool(x == y || x.Equal(y))
+	return SuBool(x.Equal(y))
 }
 
 func OpIsnt(x Value, y Value) Value {
@@ -195,8 +198,9 @@ func catToStr(t *Thread, v Value) string {
 	return AsStr(v)
 }
 
-func OpMatch(x Value, y regex.Pattern) SuBool {
-	return SuBool(y.Matches(ToStr(x)))
+func OpMatch(t *Thread, x Value, y Value) SuBool {
+	pat := t.RxCache.Get(ToStr(y))
+	return SuBool(pat.Matches(ToStr(x)))
 }
 
 // ToIndex is used by ranges and string[i]
@@ -241,4 +245,64 @@ func prepLen(len int, size int) int {
 		len = size
 	}
 	return len
+}
+
+func OpIter(x Value) SuIter {
+	iterable, ok := x.(interface{ Iter() Iter })
+	if !ok {
+		panic("can't iterate " + x.Type().String())
+	}
+	return SuIter{Iter: iterable.Iter()}
+}
+
+func OpCatch(t *Thread, e interface{}, catchPat string) *SuExcept {
+	se, ok := e.(*SuExcept)
+	if !ok {
+		// first catch creates SuExcept with callstack
+		var ss SuStr
+		if re, ok := e.(runtime.Error); ok {
+			// debug.PrintStack()
+			ss = SuStr(re.Error())
+		} else if s, ok := e.(string); ok {
+			ss = SuStr(s)
+		} else {
+			ss = SuStr(ToStr(e.(Value)))
+		}
+		se = NewSuExcept(t, ss)
+	}
+	if catchMatch(string(se.SuStr), catchPat) {
+		return se
+	}
+	panic(se) // propagate panic if not caught
+}
+
+// catchMatch matches an exception string with a catch pattern
+func catchMatch(e, pat string) bool {
+	for {
+		p := pat
+		i := strings.IndexByte(p, '|')
+		if i >= 0 {
+			pat = pat[i+1:]
+			p = p[:i]
+		}
+		if strings.HasPrefix(p, "*") {
+			if strings.Contains(e, p[1:]) {
+				return true
+			}
+		} else if strings.HasPrefix(e, p) {
+			return true
+		}
+		if i < 0 {
+			break
+		}
+	}
+	return false
+}
+
+func Unpack64(s string) Value {
+	data, err := base64.StdEncoding.DecodeString(s)
+	if err != nil {
+		panic("Unpack64 bad data")
+	}
+	return Unpack(hacks.BStoS(data))
 }

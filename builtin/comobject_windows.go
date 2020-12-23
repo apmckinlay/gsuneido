@@ -71,6 +71,10 @@ func (sco *suComObject) Put(_ *Thread, mem Value, val Value) {
 
 }
 
+func (*suComObject) GetPut(*Thread, Value, Value, func(x, y Value) Value, bool) Value {
+	panic("COMobject does not support update")
+}
+
 func (*suComObject) RangeTo(int, int) Value {
 	panic("COMobject does not support range")
 }

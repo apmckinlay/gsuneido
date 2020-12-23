@@ -42,6 +42,10 @@ func (*SuSha1) Put(*Thread, Value, Value) {
 	panic("Sha1 does not support put")
 }
 
+func (*SuSha1) GetPut(*Thread, Value, Value, func(x, y Value) Value, bool) Value {
+	panic("Sha1 does not support update")
+}
+
 func (*SuSha1) RangeTo(int, int) Value {
 	panic("Sha1 does not support range")
 }

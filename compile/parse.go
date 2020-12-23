@@ -11,12 +11,14 @@ import (
 	"github.com/apmckinlay/gsuneido/compile/check"
 	. "github.com/apmckinlay/gsuneido/compile/lexer"
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
+	"github.com/apmckinlay/gsuneido/runtime"
 )
 
 func NewParser(src string) *parser {
 	lxr := NewLexer(src)
 	factory := ast.Folder{Factory: ast.Builder{}}
 	p := &parser{parserBase: parserBase{lxr: lxr, Factory: factory},
+		codegen: codegen,
 		funcInfo: funcInfo{final: map[string]int{}}}
 	p.next()
 	return p
@@ -57,6 +59,10 @@ type parser struct {
 	// assignName is used to pass the variable name through an assignment
 	// e.g. foo = function () { ... }; Name(foo) => "foo"
 	assignName string
+
+	// codegen is used to compile an ast.Function to an SuFunc.
+	// It is indirect so it can be overridden by gogen.
+	codegen func(*ast.Function) *runtime.SuFunc
 
 	// checker is used to add additional checking along with codegen
 	checker *check.Check

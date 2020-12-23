@@ -65,6 +65,10 @@ func (*SuMethod) Put(*Thread, Value, Value) {
 	panic("method does not support put")
 }
 
+func (*SuMethod) GetPut(*Thread, Value, Value, func(x, y Value) Value, bool) Value {
+	panic("method does not support update")
+}
+
 func (*SuMethod) RangeTo(int, int) Value {
 	panic("method does not support range")
 }

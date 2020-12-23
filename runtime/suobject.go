@@ -163,6 +163,20 @@ func (ob *SuObject) put(_ *Thread, key Value, val Value) {
 	ob.set(key, val)
 }
 
+func (ob *SuObject) GetPut(t *Thread, m Value, v Value,
+	op func (x,y Value) Value, retOrig bool) Value {
+	if ob.Lock() {
+		defer ob.Unlock()
+	}
+	orig := ob.get(t, m)
+	v = op(orig, v)
+	ob.set(m, v)
+	if retOrig {
+		return orig
+	}
+	return v
+}
+
 // Set implements Put, doesn't require thread.
 // The value will be added to the list if the key is the "next"
 func (ob *SuObject) Set(key Value, val Value) {

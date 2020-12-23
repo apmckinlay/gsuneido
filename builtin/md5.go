@@ -42,6 +42,10 @@ func (*SuMd5) Put(*Thread, Value, Value) {
 	panic("Md5 does not support put")
 }
 
+func (*SuMd5) GetPut(*Thread, Value, Value, func(x, y Value) Value, bool) Value {
+	panic("Md5 does not support update")
+}
+
 func (*SuMd5) RangeTo(int, int) Value {
 	panic("Md5 does not support range")
 }

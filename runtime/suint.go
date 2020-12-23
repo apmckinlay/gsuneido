@@ -97,6 +97,10 @@ func (*smi) Put(*Thread, Value, Value) {
 	panic("number does not support put")
 }
 
+func (*smi) GetPut(*Thread, Value, Value, func(x, y Value) Value, bool) Value {
+	panic("number does not support update")
+}
+
 func (*smi) RangeTo(int, int) Value {
 	panic("number does not support range")
 }

@@ -94,7 +94,7 @@ func (*SuInstance) Type() types.Type {
 
 func (ob *SuInstance) Get(t *Thread, m Value) Value {
 	if ob.Lock() {
-		defer ob.lock.Unlock()
+		defer ob.Unlock()
 	}
 	return ob.get(t, m)
 }
@@ -117,10 +117,24 @@ func (ob *SuInstance) get(t *Thread, m Value) Value {
 
 func (ob *SuInstance) Put(t *Thread, m Value, v Value) {
 	if ob.Lock() {
-		defer ob.lock.Unlock()
+		defer ob.Unlock()
 		v.SetConcurrent()
 	}
 	ob.put(t, m, v)
+}
+
+func (ob *SuInstance) GetPut(t *Thread, m Value, v Value,
+	op func (x,y Value) Value, retOrig bool) Value {
+	if ob.Lock() {
+		defer ob.Unlock()
+	}
+	orig := ob.get(t, m)
+	v = op(orig, v)
+	ob.put(t, m, v)
+	if retOrig {
+		return orig
+	}
+	return v
 }
 
 func (ob *SuInstance) put(_ *Thread, m Value, v Value) {
@@ -205,14 +219,14 @@ var _ Findable = (*SuInstance)(nil)
 
 func (ob *SuInstance) Delete(key Value) {
 	if ob.Lock() {
-		defer ob.lock.Unlock()
+		defer ob.Unlock()
 	}
 	delete(ob.Data, ToStr(key))
 }
 
 func (ob *SuInstance) Clear() {
 	if ob.Lock() {
-		defer ob.lock.Unlock()
+		defer ob.Unlock()
 	}
 	ob.Data = map[string]Value{}
 }

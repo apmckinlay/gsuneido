@@ -720,6 +720,10 @@ func (SuDate) Put(*Thread, Value, Value) {
 	panic("date does not support put")
 }
 
+func (SuDate) GetPut(*Thread, Value, Value, func(x, y Value) Value, bool) Value {
+	panic("date does not support update")
+}
+
 func (SuDate) RangeTo(int, int) Value {
 	panic("date does not support range")
 }

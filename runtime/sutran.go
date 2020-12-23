@@ -40,6 +40,10 @@ func (*SuTran) Put(*Thread, Value, Value) {
 	panic("transaction does not support put")
 }
 
+func (*SuTran) GetPut(*Thread, Value, Value, func(x, y Value) Value, bool) Value {
+	panic("transaction does not support update")
+}
+
 func (*SuTran) RangeTo(int, int) Value {
 	panic("transaction does not support range")
 }

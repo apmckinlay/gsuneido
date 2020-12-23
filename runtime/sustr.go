@@ -98,7 +98,11 @@ func strGet(s string, key Value) Value {
 }
 
 func (SuStr) Put(*Thread, Value, Value) {
-	panic("strings do not support put")
+	panic("string does not support put")
+}
+
+func (SuStr) GetPut(*Thread, Value, Value, func(x, y Value) Value, bool) Value {
+	panic("string does not support update")
 }
 
 func (ss SuStr) RangeTo(from int, to int) Value {
@@ -218,7 +222,7 @@ func (si *stringIter) Next() Value {
 	}
 	// can't use SuStr(si.s[si.i-1])
 	// because > 127 turns into two byte string
-	return SuStr(si.s[si.i-1:si.i])
+	return SuStr(si.s[si.i-1 : si.i])
 }
 
 func (si *stringIter) Dup() Iter {

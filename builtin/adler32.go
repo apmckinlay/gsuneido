@@ -42,6 +42,10 @@ func (*SuAdler32) Put(*Thread, Value, Value) {
 	panic("Adler32 does not support put")
 }
 
+func (*SuAdler32) GetPut(*Thread, Value, Value, func(x, y Value) Value, bool) Value {
+	panic("Adler32 does not support update")
+}
+
 func (*SuAdler32) RangeTo(int, int) Value {
 	panic("Adler32 does not support range")
 }

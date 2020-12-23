@@ -48,6 +48,10 @@ func (SuIter) Put(*Thread, Value, Value) {
 	panic("iterator does not support put")
 }
 
+func (SuIter) GetPut(*Thread, Value, Value, func(x, y Value) Value, bool) Value {
+	panic("iterator does not support update")
+}
+
 func (SuIter) RangeTo(int, int) Value {
 	panic("iterator does not support range")
 }

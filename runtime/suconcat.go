@@ -100,7 +100,11 @@ func (c SuConcat) Get(_ *Thread, key Value) Value {
 }
 
 func (SuConcat) Put(*Thread, Value, Value) {
-	panic("strings do not support put")
+	panic("string does not support put")
+}
+
+func (SuConcat) GetPut(*Thread, Value, Value, func(x, y Value) Value, bool) Value {
+	panic("string does not support update")
 }
 
 func (c SuConcat) RangeTo(from int, to int) Value {

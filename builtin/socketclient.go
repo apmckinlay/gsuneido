@@ -58,6 +58,10 @@ func (*suSocketClient) Put(*Thread, Value, Value) {
 	panic("SocketClient does not support put")
 }
 
+func (*suSocketClient) GetPut(*Thread, Value, Value, func(x, y Value) Value, bool) Value {
+	panic("SocketClient does not support update")
+}
+
 func (*suSocketClient) RangeTo(int, int) Value {
 	panic("SocketClient does not support range")
 }

@@ -393,6 +393,20 @@ func (r *SuRecord) invalidateDependents(key string) {
 	}
 }
 
+func (r *SuRecord) GetPut(t *Thread, m Value, v Value,
+	op func (x,y Value) Value, retOrig bool) Value {
+	if r.Lock() {
+		defer r.Unlock()
+	}
+	orig := r.get(t, m)
+	v = op(orig, v)
+	r.put(t, m, v)
+	if retOrig {
+		return orig
+	}
+	return v
+}
+
 func (r *SuRecord) Invalidate(t *Thread, key string) {
 	r.invalidate(key)
 	r.callObservers(t, key)

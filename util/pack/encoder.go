@@ -31,6 +31,11 @@ func (e *Encoder) String() string {
 	return hacks.BStoS(e.buf)
 }
 
+// Buffer returns the accumulated data as a byte slice
+func (e *Encoder) Buffer() []byte {
+	return e.buf
+}
+
 // Put appends a byte slice
 func (e *Encoder) Put(b []byte) *Encoder {
 	e.buf = e.buf[:len(e.buf)+len(b)]

@@ -5,8 +5,6 @@ package runtime
 
 import (
 	"log"
-	"runtime"
-	"strings"
 
 	op "github.com/apmckinlay/gsuneido/runtime/opcodes"
 )
@@ -150,25 +148,8 @@ func (t *Thread) interp(catchJump, catchSp *int) (ret Value) {
 		if *catchJump == 0 {
 			panic(e) // not catching
 		}
-		se, ok := e.(*SuExcept)
-		if !ok {
-			// first catch creates SuExcept with callstack
-			var ss SuStr
-			if re, ok := e.(runtime.Error); ok {
-				// debug.PrintStack()
-				ss = SuStr(re.Error())
-			} else if s, ok := e.(string); ok {
-				ss = SuStr(s)
-			} else {
-				ss = SuStr(ToStr(e.(Value)))
-			}
-			se = NewSuExcept(t, ss)
-		}
-		if catchMatch(string(se.SuStr), catchPat) {
-			ret = se // tells run we're catching
-		} else {
-			panic(se)
-		}
+		// return value (ret) tells run we're catching
+		ret = OpCatch(t, e, catchPat)
 	}()
 
 loop:
@@ -331,14 +312,10 @@ loop:
 			t.stack[t.sp-1] = OpIsnt(t.stack[t.sp-1], t.stack[t.sp])
 		case op.Match:
 			t.sp--
-			pat := t.RxCache.Get(ToStr(t.stack[t.sp]))
-			s := t.stack[t.sp-1]
-			t.stack[t.sp-1] = OpMatch(s, pat)
+			t.stack[t.sp-1] = OpMatch(t, t.stack[t.sp-1], t.stack[t.sp])
 		case op.MatchNot:
 			t.sp--
-			pat := t.RxCache.Get(ToStr(t.stack[t.sp]))
-			s := t.stack[t.sp-1]
-			t.stack[t.sp-1] = OpMatch(s, pat).Not()
+			t.stack[t.sp-1] = OpMatch(t, t.stack[t.sp-1], t.stack[t.sp]).Not()
 		case op.Lt:
 			t.sp--
 			t.stack[t.sp-1] = OpLt(t.stack[t.sp-1], t.stack[t.sp])
@@ -457,12 +434,7 @@ loop:
 				fr.ip += 2
 			}
 		case op.Iter:
-			x := t.Pop()
-			iterable, ok := x.(interface{ Iter() Iter })
-			if !ok {
-				panic("can't iterate " + x.Type().String())
-			}
-			t.Push(SuIter{Iter: iterable.Iter()})
+			t.stack[t.sp-1] = OpIter(t.stack[t.sp-1])
 		case op.ForIn:
 			brk := fetchInt16()
 			local := fetchUint8()
@@ -612,27 +584,4 @@ func (t *Thread) dyload(fr *Frame, idx int) Value {
 		}
 	}
 	panic("uninitialized variable: " + name)
-}
-
-// catchMatch matches an exception string with a catch pattern
-func catchMatch(e, pat string) bool {
-	for {
-		p := pat
-		i := strings.IndexByte(p, '|')
-		if i >= 0 {
-			pat = pat[i+1:]
-			p = p[:i]
-		}
-		if strings.HasPrefix(p, "*") {
-			if strings.Contains(e, p[1:]) {
-				return true
-			}
-		} else if strings.HasPrefix(e, p) {
-			return true
-		}
-		if i < 0 {
-			break
-		}
-	}
-	return false
 }
