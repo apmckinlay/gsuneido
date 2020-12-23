@@ -10,6 +10,6 @@ import (
 
 var _ = builtin1("QueryScanner(string)",
 	func(arg Value) Value {
-		return &SuScanner{name: "QueryScanner",
+		return &suScanner{name: "QueryScanner",
 			lxr: *lexer.NewQueryLexer(ToStr(arg))}
 	})

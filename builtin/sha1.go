@@ -13,14 +13,14 @@ import (
 	"github.com/apmckinlay/gsuneido/runtime/types"
 )
 
-type SuSha1 struct {
+type suSha1 struct {
 	CantConvert
 	hash hash.Hash
 }
 
 var _ = builtinRaw("Sha1(@args)",
 	func(th *Thread, as *ArgSpec, args []Value) Value {
-		sa := &SuSha1{hash: sha1.New()}
+		sa := &suSha1{hash: sha1.New()}
 		iter := NewArgsIter(as, args)
 		k, v := iter()
 		if v == nil {
@@ -32,72 +32,72 @@ var _ = builtinRaw("Sha1(@args)",
 		return sa.value()
 	})
 
-var _ Value = (*SuSha1)(nil)
+var _ Value = (*suSha1)(nil)
 
-func (*SuSha1) Get(*Thread, Value) Value {
+func (*suSha1) Get(*Thread, Value) Value {
 	panic("Sha1 does not support get")
 }
 
-func (*SuSha1) Put(*Thread, Value, Value) {
+func (*suSha1) Put(*Thread, Value, Value) {
 	panic("Sha1 does not support put")
 }
 
-func (*SuSha1) GetPut(*Thread, Value, Value, func(x, y Value) Value, bool) Value {
+func (*suSha1) GetPut(*Thread, Value, Value, func(x, y Value) Value, bool) Value {
 	panic("Sha1 does not support update")
 }
 
-func (*SuSha1) RangeTo(int, int) Value {
+func (*suSha1) RangeTo(int, int) Value {
 	panic("Sha1 does not support range")
 }
 
-func (*SuSha1) RangeLen(int, int) Value {
+func (*suSha1) RangeLen(int, int) Value {
 	panic("Sha1 does not support range")
 }
 
-func (*SuSha1) Hash() uint32 {
+func (*suSha1) Hash() uint32 {
 	panic("Sha1 hash not implemented")
 }
 
-func (*SuSha1) Hash2() uint32 {
+func (*suSha1) Hash2() uint32 {
 	panic("Sha1 hash not implemented")
 }
 
-func (*SuSha1) Compare(Value) int {
+func (*suSha1) Compare(Value) int {
 	panic("Sha1 compare not implemented")
 }
 
-func (*SuSha1) Call(*Thread, Value, *ArgSpec) Value {
+func (*suSha1) Call(*Thread, Value, *ArgSpec) Value {
 	panic("can't call Sha1")
 }
 
-func (*SuSha1) String() string {
+func (*suSha1) String() string {
 	return "aSha1"
 }
 
-func (*SuSha1) Type() types.Type {
+func (*suSha1) Type() types.Type {
 	return types.BuiltinClass
 }
 
-func (sa *SuSha1) Equal(other interface{}) bool {
-	sa2, ok := other.(*SuSha1)
+func (sa *suSha1) Equal(other interface{}) bool {
+	sa2, ok := other.(*suSha1)
 	return ok && sa == sa2
 }
 
-func (*SuSha1) Lookup(_ *Thread, method string) Callable {
+func (*suSha1) Lookup(_ *Thread, method string) Callable {
 	return sha1Methods[method]
 }
 
 var sha1Methods = Methods{
 	"Update": method1("(string)", func(this, arg Value) Value {
-		io.WriteString(this.(*SuSha1).hash, ToStr(arg))
+		io.WriteString(this.(*suSha1).hash, ToStr(arg))
 		return this
 	}),
 	"Value": method0(func(this Value) Value {
-		return this.(*SuSha1).value()
+		return this.(*suSha1).value()
 	}),
 }
 
-func (sa *SuSha1) value() Value {
+func (sa *suSha1) value() Value {
 	var buf [sha1.Size]byte
 	return SuStr(string(sa.hash.Sum(buf[0:0])))
 }

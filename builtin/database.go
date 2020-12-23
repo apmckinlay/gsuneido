@@ -7,13 +7,13 @@ import (
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
-type SuDatabaseGlobal struct {
+type suDatabaseGlobal struct {
 	SuBuiltin
 }
 
 func init() {
 	name, ps := paramSplit("Database(string)")
-	Global.Builtin(name, &SuDatabaseGlobal{
+	Global.Builtin(name, &suDatabaseGlobal{
 		SuBuiltin{Fn: databaseCallClass,
 			BuiltinParams: BuiltinParams{ParamSpec: *ps}}})
 }
@@ -71,14 +71,14 @@ var databaseMethods = Methods{
 	}),
 }
 
-func (d *SuDatabaseGlobal) Lookup(t *Thread, method string) Callable {
+func (d *suDatabaseGlobal) Lookup(t *Thread, method string) Callable {
 	if f, ok := databaseMethods[method]; ok {
 		return f
 	}
 	return d.SuBuiltin.Lookup(t, method) // for Params
 }
 
-func (d *SuDatabaseGlobal) String() string {
+func (d *suDatabaseGlobal) String() string {
 	return "Database /* builtin class */"
 }
 

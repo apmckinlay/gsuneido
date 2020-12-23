@@ -10,7 +10,7 @@ import (
 	"github.com/apmckinlay/gsuneido/runtime/types"
 )
 
-type SuScanner struct {
+type suScanner struct {
 	CantConvert
 	lxr  lexer.Lexer
 	item lexer.Item
@@ -19,79 +19,79 @@ type SuScanner struct {
 
 var _ = builtin1("Scanner(string)",
 	func(arg Value) Value {
-		return &SuScanner{lxr: *lexer.NewLexer(ToStr(arg)), name: "Scanner"}
+		return &suScanner{lxr: *lexer.NewLexer(ToStr(arg)), name: "Scanner"}
 	})
 
-var _ Value = (*SuScanner)(nil)
+var _ Value = (*suScanner)(nil)
 
-func (sc *SuScanner) Get(*Thread, Value) Value {
+func (sc *suScanner) Get(*Thread, Value) Value {
 	panic(sc.name + " does not support get")
 }
 
-func (sc *SuScanner) Put(*Thread, Value, Value) {
+func (sc *suScanner) Put(*Thread, Value, Value) {
 	panic(sc.name + " does not support put")
 }
 
-func (sc *SuScanner) GetPut(*Thread, Value, Value, func(x, y Value) Value, bool) Value {
+func (sc *suScanner) GetPut(*Thread, Value, Value, func(x, y Value) Value, bool) Value {
 	panic(sc.name + " does not support update")
 }
 
-func (sc *SuScanner) RangeTo(int, int) Value {
+func (sc *suScanner) RangeTo(int, int) Value {
 	panic(sc.name + " does not support range")
 }
 
-func (sc *SuScanner) RangeLen(int, int) Value {
+func (sc *suScanner) RangeLen(int, int) Value {
 	panic(sc.name + " does not support range")
 }
 
-func (sc *SuScanner) Hash() uint32 {
+func (sc *suScanner) Hash() uint32 {
 	panic(sc.name + " hash not implemented")
 }
 
-func (sc *SuScanner) Hash2() uint32 {
+func (sc *suScanner) Hash2() uint32 {
 	panic(sc.name + " hash not implemented")
 }
 
-func (sc *SuScanner) Compare(Value) int {
+func (sc *suScanner) Compare(Value) int {
 	panic(sc.name + " compare not implemented")
 }
 
-func (sc *SuScanner) Call(*Thread, Value, *ArgSpec) Value {
+func (sc *suScanner) Call(*Thread, Value, *ArgSpec) Value {
 	panic("can't call " + sc.name)
 }
 
-func (sc *SuScanner) String() string {
+func (sc *suScanner) String() string {
 	return "a" + sc.name
 }
 
-func (*SuScanner) Type() types.Type {
+func (*suScanner) Type() types.Type {
 	return types.BuiltinInstance
 }
 
-func (sc *SuScanner) Equal(other interface{}) bool {
-	sc2, ok := other.(*SuScanner)
+func (sc *suScanner) Equal(other interface{}) bool {
+	sc2, ok := other.(*suScanner)
 	return ok && sc == sc2
 }
 
-func (*SuScanner) Lookup(_ *Thread, method string) Callable {
+func (*suScanner) Lookup(_ *Thread, method string) Callable {
 	return scannerMethods[method]
 }
 
 var scannerMethods = Methods{
 	"Keyword?": method0(func(this Value) Value {
-		return SuBool(this.(*SuScanner).isKeyword())
+		return SuBool(this.(*suScanner).isKeyword())
 	}),
 	"Length": method0(func(this Value) Value {
-		sc := this.(*SuScanner)
+		sc := this.(*suScanner)
 		from := sc.item.Pos
 		to := sc.lxr.Position()
 		return IntVal(to - int(from))
 	}),
 	"Next": method0(func(this Value) Value {
-		return this.(*SuScanner).next()
+		return this.(*suScanner).next()
 	}),
 	"Next2": method0(func(this Value) Value {
-		sc := this.(*SuScanner)
+		sc := this.(*suScanner)
 		sc.item = sc.lxr.Next()
 		if sc.item.Token == tokens.Eof {
 			return sc
@@ -99,20 +99,20 @@ var scannerMethods = Methods{
 		return SuStr(sc.type2())
 	}),
 	"Position": method0(func(this Value) Value {
-		return IntVal(this.(*SuScanner).lxr.Position())
+		return IntVal(this.(*suScanner).lxr.Position())
 	}),
 	"Text": method0(func(this Value) Value {
-		return this.(*SuScanner).text()
+		return this.(*suScanner).text()
 	}),
 	"Type": method0(func(this Value) Value {
-		return SuStr(this.(*SuScanner).type2())
+		return SuStr(this.(*suScanner).type2())
 	}),
 	"Value": method0(func(this Value) Value {
-		return SuStr(this.(*SuScanner).item.Text)
+		return SuStr(this.(*suScanner).item.Text)
 	}),
 }
 
-func (sc *SuScanner) next() Value {
+func (sc *suScanner) next() Value {
 	sc.item = sc.lxr.Next()
 	if sc.item.Token == tokens.Eof {
 		return sc
@@ -120,14 +120,14 @@ func (sc *SuScanner) next() Value {
 	return sc.text()
 }
 
-func (sc *SuScanner) text() Value {
+func (sc *suScanner) text() Value {
 	src := sc.lxr.Source()
 	from := sc.item.Pos
 	to := sc.lxr.Position()
 	return SuStr(src[from:to])
 }
 
-func (sc *SuScanner) type2() string {
+func (sc *suScanner) type2() string {
 	if sc.item.Token.IsOperator() {
 		return ""
 	}
@@ -154,27 +154,27 @@ func (sc *SuScanner) type2() string {
 	}
 }
 
-func (sc *SuScanner) isKeyword() bool {
+func (sc *suScanner) isKeyword() bool {
 	return sc.item.Token != tokens.Identifier && sc.item.Token.IsIdent()
 }
 
 // iterator ---------------------------------------------------------
 
-func (sc *SuScanner) Iter() Iter {
+func (sc *suScanner) Iter() Iter {
 	return sc
 }
 
-func (sc *SuScanner) Next() Value {
+func (sc *suScanner) Next() Value {
 	if tok := sc.next(); tok != sc {
 		return tok
 	}
 	return nil
 }
 
-func (sc *SuScanner) Dup() Iter {
-	return &SuScanner{lxr: *sc.lxr.Dup()}
+func (sc *suScanner) Dup() Iter {
+	return &suScanner{lxr: *sc.lxr.Dup()}
 }
 
-func (sc *SuScanner) Infinite() bool {
+func (sc *suScanner) Infinite() bool {
 	return false
 }

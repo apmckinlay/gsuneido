@@ -15,67 +15,59 @@ import (
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
-type SuStructGlobal struct {
+type suStructGlobal struct {
 	SuBuiltin
 	size int
 }
 
 func init() {
 	Global.Builtin("INITCOMMONCONTROLSEX",
-		&SuStructGlobal{size: int(unsafe.Sizeof(INITCOMMONCONTROLSEX{}))})
+		&suStructGlobal{size: int(unsafe.Sizeof(INITCOMMONCONTROLSEX{}))})
 	Global.Builtin("MENUITEMINFO",
-		&SuStructGlobal{size: int(unsafe.Sizeof(MENUITEMINFO{}))})
+		&suStructGlobal{size: int(unsafe.Sizeof(MENUITEMINFO{}))})
 	Global.Builtin("MONITORINFO",
-		&SuStructGlobal{size: int(unsafe.Sizeof(MONITORINFO{}))})
+		&suStructGlobal{size: int(unsafe.Sizeof(MONITORINFO{}))})
 	Global.Builtin("SCROLLINFO",
-		&SuStructGlobal{size: int(unsafe.Sizeof(SCROLLINFO{}))})
+		&suStructGlobal{size: int(unsafe.Sizeof(SCROLLINFO{}))})
 	Global.Builtin("TRACKMOUSEEVENT",
-		&SuStructGlobal{size: int(unsafe.Sizeof(TRACKMOUSEEVENT{}))})
+		&suStructGlobal{size: int(unsafe.Sizeof(TRACKMOUSEEVENT{}))})
 	Global.Builtin("SHELLEXECUTEINFO",
-		&SuStructGlobal{size: int(unsafe.Sizeof(SHELLEXECUTEINFO{}))})
+		&suStructGlobal{size: int(unsafe.Sizeof(SHELLEXECUTEINFO{}))})
 	Global.Builtin("TOOLINFO",
-		&SuStructGlobal{size: int(unsafe.Sizeof(TOOLINFO{}))})
+		&suStructGlobal{size: int(unsafe.Sizeof(TOOLINFO{}))})
 	Global.Builtin("WINDOWPLACEMENT",
-		&SuStructGlobal{size: int(unsafe.Sizeof(WINDOWPLACEMENT{}))})
+		&suStructGlobal{size: int(unsafe.Sizeof(WINDOWPLACEMENT{}))})
 	Global.Builtin("OPENFILENAME",
-		&SuStructGlobal{size: int(nOPENFILENAME)})
+		&suStructGlobal{size: int(nOPENFILENAME)})
 	Global.Builtin("TPMPARAMS",
-		&SuStructGlobal{size: int(nTPMPARAMS)})
+		&suStructGlobal{size: int(nTPMPARAMS)})
 	Global.Builtin("DRAWTEXTPARAMS",
-		&SuStructGlobal{size: int(nDRAWTEXTPARAMS)})
+		&suStructGlobal{size: int(nDRAWTEXTPARAMS)})
 	Global.Builtin("SYSTEMTIME",
-		&SuStructGlobal{size: int(nSYSTEMTIME)})
+		&suStructGlobal{size: int(nSYSTEMTIME)})
 	Global.Builtin("PRINTDLG",
-		&SuStructGlobal{size: int(nPRINTDLG)})
+		&suStructGlobal{size: int(nPRINTDLG)})
 	Global.Builtin("PAGESETUPDLG",
-		&SuStructGlobal{size: int(nPAGESETUPDLG)})
+		&suStructGlobal{size: int(nPAGESETUPDLG)})
 	Global.Builtin("DOCINFO",
-		&SuStructGlobal{size: int(nDOCINFO)})
+		&suStructGlobal{size: int(nDOCINFO)})
 	Global.Builtin("PRINTDLGEX",
-		&SuStructGlobal{size: int(nPRINTDLGEX)})
+		&suStructGlobal{size: int(nPRINTDLGEX)})
 	Global.Builtin("CHOOSEFONT",
-		&SuStructGlobal{size: int(nCHOOSEFONT)})
+		&suStructGlobal{size: int(nCHOOSEFONT)})
 	Global.Builtin("CHOOSECOLOR",
-		&SuStructGlobal{size: int(nCHOOSECOLOR)})
+		&suStructGlobal{size: int(nCHOOSECOLOR)})
 	Global.Builtin("FLASHWINFO",
-		&SuStructGlobal{size: int(nFLASHWINFO)})
+		&suStructGlobal{size: int(nFLASHWINFO)})
 	Global.Builtin("EDITBALLOONTIP",
-		&SuStructGlobal{size: int(nEDITBALLOONTIP)})
+		&suStructGlobal{size: int(nEDITBALLOONTIP)})
 }
 
-func (*SuStructGlobal) Call(*Thread, Value, *ArgSpec) Value {
+func (*suStructGlobal) Call(*Thread, Value, *ArgSpec) Value {
 	panic("can't call struct")
 }
 
-type callableStruct struct {
-	SuStructGlobal
-}
-
-func (cs *callableStruct) Call(t *Thread, this Value, as *ArgSpec) Value {
-	return cs.SuBuiltin.Call(t, this, as)
-}
-
-func (sg *SuStructGlobal) Size() int {
+func (sg *suStructGlobal) Size() int {
 	return sg.size
 }
 
@@ -85,15 +77,23 @@ var structSize = method0(func(this Value) Value {
 	return IntVal(this.(sizeable).Size())
 })
 
-func (*SuStructGlobal) Lookup(_ *Thread, method string) Callable {
+func (*suStructGlobal) Lookup(_ *Thread, method string) Callable {
 	if method == "Size" {
 		return structSize
 	}
 	return nil
 }
 
-func (*SuStructGlobal) String() string {
+func (*suStructGlobal) String() string {
 	return "/* builtin struct */"
+}
+
+type callableStruct struct {
+	suStructGlobal
+}
+
+func (cs *callableStruct) Call(t *Thread, this Value, as *ArgSpec) Value {
+	return cs.SuBuiltin.Call(t, this, as)
 }
 
 //-------------------------------------------------------------------
@@ -124,20 +124,20 @@ var _ = builtin("StructModify(type, address, block)",
 //-------------------------------------------------------------------
 
 var _ = Global.Builtin("RECT",
-	&SuRect{callableStruct{SuStructGlobal{size: int(unsafe.Sizeof(RECT{})),
+	&suRect{callableStruct{suStructGlobal{size: int(unsafe.Sizeof(RECT{})),
 		SuBuiltin: SuBuiltin{
 			BuiltinParams: BuiltinParams{ParamSpec: ParamSpec1},
 			Fn:            rect}}}})
 
-type SuRect struct {
+type suRect struct {
 	callableStruct
 }
 
-func (*SuRect) structToOb(p unsafe.Pointer) Value {
+func (*suRect) structToOb(p unsafe.Pointer) Value {
 	return urectToOb(p, nil)
 }
 
-func (*SuRect) updateStruct(ob Value, p unsafe.Pointer) {
+func (*suRect) updateStruct(ob Value, p unsafe.Pointer) {
 	*(*RECT)(p) = obToRect(ob)
 }
 
@@ -149,10 +149,10 @@ func rect(_ *Thread, args []Value) Value {
 //-------------------------------------------------------------------
 
 var _ = Global.Builtin("MINMAXINFO",
-	&SuMinMaxInfo{SuStructGlobal{size: int(unsafe.Sizeof(MINMAXINFO{}))}})
+	&suMinMaxInfo{suStructGlobal{size: int(unsafe.Sizeof(MINMAXINFO{}))}})
 
-type SuMinMaxInfo struct {
-	SuStructGlobal
+type suMinMaxInfo struct {
+	suStructGlobal
 }
 
 type MINMAXINFO struct {
@@ -163,7 +163,7 @@ type MINMAXINFO struct {
 	maxTrackSize POINT
 }
 
-func (typ *SuMinMaxInfo) structToOb(p unsafe.Pointer) Value {
+func (typ *suMinMaxInfo) structToOb(p unsafe.Pointer) Value {
 	mmi := (*MINMAXINFO)(p)
 	ob := NewSuObject()
 	ob.Put(nil, SuStr("maxSize"), pointToOb(&mmi.maxSize, nil))
@@ -173,7 +173,7 @@ func (typ *SuMinMaxInfo) structToOb(p unsafe.Pointer) Value {
 	return ob
 }
 
-func (typ *SuMinMaxInfo) updateStruct(ob Value, p unsafe.Pointer) {
+func (typ *suMinMaxInfo) updateStruct(ob Value, p unsafe.Pointer) {
 	mmi := (*MINMAXINFO)(p)
 	mmi.maxSize = getPoint(ob, "maxSize")
 	mmi.maxPosition = getPoint(ob, "maxPosition")
@@ -249,16 +249,16 @@ func tvitemToOb(tvi *TVITEM) *SuObject {
 //-------------------------------------------------------------------
 
 var _ = Global.Builtin("NMTVDISPINFO2",
-	&SuNMTVDISPINFO{callableStruct{SuStructGlobal{size: int(unsafe.Sizeof(NMTVDISPINFO{})),
+	&suNMTVDISPINFO{callableStruct{suStructGlobal{size: int(unsafe.Sizeof(NMTVDISPINFO{})),
 		SuBuiltin: SuBuiltin{
 			BuiltinParams: BuiltinParams{ParamSpec: ParamSpec1},
 			Fn:            nmtvdispinfo}}}})
 
-type SuNMTVDISPINFO struct {
+type suNMTVDISPINFO struct {
 	callableStruct
 }
 
-func (*SuNMTVDISPINFO) structToOb(p unsafe.Pointer) Value {
+func (*suNMTVDISPINFO) structToOb(p unsafe.Pointer) Value {
 	x := (*NMTVDISPINFO)(p)
 	ob := NewSuObject()
 	ob.Put(nil, SuStr("hdr"), nmhdrToOb(&x.nmhdr))
@@ -266,7 +266,7 @@ func (*SuNMTVDISPINFO) structToOb(p unsafe.Pointer) Value {
 	return ob
 }
 
-func (*SuNMTVDISPINFO) updateStruct(ob Value, p unsafe.Pointer) {
+func (*suNMTVDISPINFO) updateStruct(ob Value, p unsafe.Pointer) {
 	tvi := ob.Get(nil, SuStr("item"))
 	x := (*NMTVDISPINFO)(p)
 	x.item.mask = getUint32(tvi, "mask")
@@ -285,20 +285,20 @@ func nmtvdispinfo(_ *Thread, args []Value) Value {
 	if adr == 0 {
 		return False
 	}
-	var x *SuNMTVDISPINFO
+	var x *suNMTVDISPINFO
 	return x.structToOb(unsafe.Pointer(uintptr(adr)))
 }
 
 //-------------------------------------------------------------------
 
 var _ = Global.Builtin("NMTTDISPINFO2",
-	&SuNMTTDISPINFO{SuStructGlobal{size: int(unsafe.Sizeof(NMTTDISPINFO{}))}})
+	&suNMTTDISPINFO{suStructGlobal{size: int(unsafe.Sizeof(NMTTDISPINFO{}))}})
 
-type SuNMTTDISPINFO struct {
-	SuStructGlobal
+type suNMTTDISPINFO struct {
+	suStructGlobal
 }
 
-func (*SuNMTTDISPINFO) structToOb(p unsafe.Pointer) Value {
+func (*suNMTTDISPINFO) structToOb(p unsafe.Pointer) Value {
 	x := (*NMTTDISPINFO)(p)
 	ob := NewSuObject()
 	ob.Put(nil, SuStr("hdr"), nmhdrToOb(&x.hdr))
@@ -310,7 +310,7 @@ func (*SuNMTTDISPINFO) structToOb(p unsafe.Pointer) Value {
 	return ob
 }
 
-func (*SuNMTTDISPINFO) updateStruct(ob Value, p unsafe.Pointer) {
+func (*suNMTTDISPINFO) updateStruct(ob Value, p unsafe.Pointer) {
 	x := (*NMTTDISPINFO)(p)
 	x.lpszText = getUintptr(ob, "lpszText")
 	getStrZbs(ob, "szText", x.szText[:])
@@ -408,14 +408,10 @@ var _ = builtin1("NMTVKEYDOWN(address)",
 //-------------------------------------------------------------------
 
 var _ = Global.Builtin("LONG",
-	&SuAccel{callableStruct{SuStructGlobal{size: int(int32Size),
+	&callableStruct{suStructGlobal{size: int(int32Size),
 		SuBuiltin: SuBuiltin{
 			BuiltinParams: BuiltinParams{ParamSpec: ParamSpec1},
-			Fn:            long}}}})
-
-type SuLong struct {
-	callableStruct
-}
+			Fn:            long}}})
 
 func long(_ *Thread, args []Value) Value {
 	n := getInt32(args[0], "x")
@@ -427,14 +423,10 @@ func long(_ *Thread, args []Value) Value {
 //-------------------------------------------------------------------
 
 var _ = Global.Builtin("ACCEL",
-	&SuAccel{callableStruct{SuStructGlobal{size: int(unsafe.Sizeof(ACCEL{})),
+	&callableStruct{suStructGlobal{size: int(unsafe.Sizeof(ACCEL{})),
 		SuBuiltin: SuBuiltin{
 			BuiltinParams: BuiltinParams{ParamSpec: ParamSpec1},
-			Fn:            accel}}}})
-
-type SuAccel struct {
-	callableStruct
-}
+			Fn:            accel}}})
 
 type ACCEL struct {
 	fVirt byte
@@ -686,13 +678,13 @@ type NMLISTVIEW struct {
 //-------------------------------------------------------------------
 
 var _ = Global.Builtin("NMDAYSTATE",
-	&SuNMDAYSTATE{SuStructGlobal{size: int(unsafe.Sizeof(NMDAYSTATE{}))}})
+	&suNMDAYSTATE{suStructGlobal{size: int(unsafe.Sizeof(NMDAYSTATE{}))}})
 
-type SuNMDAYSTATE struct {
-	SuStructGlobal
+type suNMDAYSTATE struct {
+	suStructGlobal
 }
 
-func (*SuNMDAYSTATE) structToOb(p unsafe.Pointer) Value {
+func (*suNMDAYSTATE) structToOb(p unsafe.Pointer) Value {
 	x := (*NMDAYSTATE)(p)
 	ob := NewSuObject()
 	ob.Put(nil, SuStr("stStart"), SYSTEMTIMEtoOb(&x.stStart, NewSuObject()))
@@ -700,7 +692,7 @@ func (*SuNMDAYSTATE) structToOb(p unsafe.Pointer) Value {
 	return ob
 }
 
-func (*SuNMDAYSTATE) updateStruct(ob Value, p unsafe.Pointer) {
+func (*suNMDAYSTATE) updateStruct(ob Value, p unsafe.Pointer) {
 	x := (*NMDAYSTATE)(p)
 	x.stStart = obToSYSTEMTIME(ob.Get(nil, SuStr("stStart")))
 	x.cDayState = getInt32(ob, "cDayState")
@@ -716,14 +708,10 @@ type NMDAYSTATE struct {
 //-------------------------------------------------------------------
 
 var _ = Global.Builtin("BITMAPFILEHEADER",
-	&SuAccel{callableStruct{SuStructGlobal{size: int(nBITMAPFILEHEADER),
+	&callableStruct{suStructGlobal{size: int(nBITMAPFILEHEADER),
 		SuBuiltin: SuBuiltin{
 			BuiltinParams: BuiltinParams{ParamSpec: ParamSpec1},
-			Fn:            bmfh}}}})
-
-type SuBMFH struct {
-	callableStruct
-}
+			Fn:            bmfh}}})
 
 func bmfh(_ *Thread, args []Value) Value {
 	var buf strings.Builder
@@ -749,14 +737,10 @@ const nBITMAPFILEHEADER = 14
 //-------------------------------------------------------------------
 
 var _ = Global.Builtin("BITMAPINFOHEADER",
-	&SuAccel{callableStruct{SuStructGlobal{size: int(nBITMAPINFOHEADER),
+	&callableStruct{suStructGlobal{size: int(nBITMAPINFOHEADER),
 		SuBuiltin: SuBuiltin{
 			BuiltinParams: BuiltinParams{ParamSpec: ParamSpec1},
-			Fn:            bmih}}}})
-
-type SuBMIH struct {
-	callableStruct
-}
+			Fn:            bmih}}})
 
 func bmih(_ *Thread, args []Value) Value {
 	bmih := obToBMIH(args[0])

@@ -12,7 +12,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
-type SuDateGlobal struct {
+type suDateGlobal struct {
 	SuBuiltin
 }
 
@@ -20,7 +20,7 @@ func init() {
 	name, ps := paramSplit(`Date(string=false, pattern=false,
 		year=nil, month=nil, day=nil,
 		hour=nil, minute=nil, second=nil, millisecond=nil)`)
-	Global.Builtin(name, &SuDateGlobal{SuBuiltin{Fn: dateCallClass,
+	Global.Builtin(name, &suDateGlobal{SuBuiltin{Fn: dateCallClass,
 		BuiltinParams: BuiltinParams{ParamSpec: *ps}}})
 }
 
@@ -96,7 +96,7 @@ func named(args []Value) Value {
 	return NormalizeDate(year, month, day, hour, minute, second, millisecond)
 }
 
-func (d *SuDateGlobal) Lookup(t *Thread, method string) Callable {
+func (d *suDateGlobal) Lookup(t *Thread, method string) Callable {
 	if method == "Begin" {
 		return method0(func(Value) Value { return DateFromLiteral("#17000101") })
 	}
@@ -106,7 +106,7 @@ func (d *SuDateGlobal) Lookup(t *Thread, method string) Callable {
 	return d.SuBuiltin.Lookup(t, method) // for Params
 }
 
-func (d *SuDateGlobal) String() string {
+func (d *suDateGlobal) String() string {
 	return "Date /* builtin class */"
 }
 
