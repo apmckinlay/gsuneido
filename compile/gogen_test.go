@@ -125,6 +125,7 @@ func TestGoGen(t *testing.T) {
 	test("a += b",
 		"return func(){ _r_ := OpAdd(a, b); a = _r_; return _r_ }()")
 	test("a[b] += 1", "return a.GetPut(t, b, One, OpAdd, false)")
+	test("a[b] $= 'x'", "return a.GetPut(t, b, _c0_, t.Cat, false)")
 	test("++x;;", "x = OpAdd(x, One)")
 	test("--x", "return func(){ _r_ := OpSub(x, One); x = _r_; return _r_ }()")
 	test("x--;;", "x = OpSub(x, One)")

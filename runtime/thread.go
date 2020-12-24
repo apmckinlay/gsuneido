@@ -223,3 +223,7 @@ func (t *Thread) SubThread() *Thread {
 	t2.dbms = t.dbms
 	return t2
 }
+
+func (t *Thread) Cat(x, y Value) Value {
+	return OpCat(t, x, y)
+}

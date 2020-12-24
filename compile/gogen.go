@@ -491,7 +491,7 @@ var opfn = map[tok.Token]string{
 	tok.RShift:   "OpRShift(",
 	tok.AddEq:    "OpAdd",
 	tok.SubEq:    "OpSub",
-	tok.CatEq:    "OpCat",
+	tok.CatEq:    "t.Cat",
 	tok.MulEq:    "OpMul",
 	tok.DivEq:    "OpDiv",
 	tok.ModEq:    "OpMod",
