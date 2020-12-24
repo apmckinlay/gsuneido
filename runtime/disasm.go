@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/apmckinlay/gsuneido/compile/tokens"
 	op "github.com/apmckinlay/gsuneido/runtime/opcodes"
 	"github.com/apmckinlay/gsuneido/util/ints"
 	"github.com/apmckinlay/gsuneido/util/str"
@@ -148,6 +149,13 @@ func (d *dasm) next() {
 	case op.Load, op.LoadLock, op.Store, op.Dyload:
 		idx := fetchUint8()
 		s += " " + d.fn.Names[idx]
+	case op.GetPut:
+		i := fetchUint8()
+		op := tokens.Token(uint8(tokens.AddEq) + i>>1)
+		s += " " + op.String()
+		if i&1 == 1 {
+			s += " retOrig"
+		}
 	case op.Global, op.Super:
 		gn := fetchUint16()
 		s += " " + Global.Name(gn)

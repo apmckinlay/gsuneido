@@ -123,8 +123,6 @@ func (t *Thread) interp(catchJump, catchSp *int) (ret Value) {
 	}
 
 	var atomicLocal = -1
-	var atomicObject Value
-	var atomicMember Value
 	var toUnlock interface{ Unlock() bool }
 
 	defer func() {
@@ -255,45 +253,21 @@ loop:
 				panic("uninitialized member: " + m.String())
 			}
 			t.Push(val)
-		case op.GetLock:
-			if atomicObject != nil {
-				log.Fatalln("lockedObject already set in GetLock")
-			}
-			if atomicMember != nil {
-				log.Fatalln("lockedMember already set in GetLock")
-			}
-			atomicMember = t.Pop()
-			atomicObject = t.Pop()
-			var val Value
-			if lockable, ok := atomicObject.(Lockable); ok {
-				lockable.Lock()
-				toUnlock = lockable
-				val = lockable.get(t, atomicMember)
-			} else {
-				val = atomicObject.Get(t, atomicMember)
-			}
-			if val == nil {
-				panic("uninitialized member: " + atomicMember.String())
-			}
-			t.Push(val)
 		case op.Put:
 			val := t.Pop()
 			m := t.Pop()
 			ob := t.Pop()
 			ob.Put(t, m, val)
 			t.Push(val)
-		case op.PutUnlock:
+		case op.GetPut:
+			i := fetchUint8()
+			op := [11]func(x, y Value) Value{
+				OpAdd, OpSub, t.Cat, OpMul, OpDiv, OpMod,
+				OpLeftShift, OpRightShift, OpBitOr, OpBitAnd, OpBitXor}[i>>1]
 			val := t.Pop()
-			if toUnlock != nil {
-				atomicObject.(Lockable).put(t, atomicMember, val)
-				toUnlock.Unlock()
-				toUnlock = nil
-			} else {
-				atomicObject.Put(t, atomicMember, val)
-			}
-			atomicObject = nil
-			atomicMember = nil
-			t.Push(val)
+			m := t.Pop()
+			ob := t.Pop()
+			t.Push(ob.GetPut(t, m, val, op, i&1 != 0))
 		case op.RangeTo:
 			j := ToInt(t.Pop())
 			i := ToIndex(t.Pop())

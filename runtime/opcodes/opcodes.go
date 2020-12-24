@@ -7,8 +7,6 @@ package opcodes
 
 //go:generate stringer -type=Opcode
 
-// to make stringer: go generate
-
 // Where applicable there are matching methods in thread.go or ops.go
 // e.g. t.Pop or ops.Add
 
@@ -66,10 +64,8 @@ const (
 	Get
 	// Put pops the top three values (ob, mem, val) and does ob.Put(mem, val)
 	Put
-	// GetLock locks the object and then does Get
-	GetLock
-	// PutUnlock does Put and then unlocks the object
-	PutUnlock
+	// GetPut updates the member of an object for e.g. += and --
+	GetPut
 	// RangeTo replaces the top three values (x,i,j) with x.RangeTo(i,j)
 	RangeTo
 	// RangeLen replaces the top three values (x,i,n) with x.RangeLen(i,n)
