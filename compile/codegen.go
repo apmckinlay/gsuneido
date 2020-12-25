@@ -625,29 +625,19 @@ func (cg *cgen) unary(node *ast.Unary, ct calltype) {
 	o := utok2op[node.Tok]
 	if tok.Inc <= node.Tok && node.Tok <= tok.PostDec {
 		ref := cg.lvalue(node.E)
-		if _, ok := node.E.(*ast.Ident); ok {
-			cg.loadLock(ref)
-			if node.Tok == tok.PostInc || node.Tok == tok.PostDec {
-				cg.emit(op.Dup)
-				cg.emit(op.One)
-				cg.emit(o)
-				cg.emit(op.StoreUnlock)
-				cg.emit(op.Pop)
-			} else {
-				cg.emit(op.One)
-				cg.emit(o)
-				cg.emit(op.StoreUnlock)
-			}
-		} else { // member
-			cg.emit(op.One)
-			i := byte(0) // add
-			if node.Tok == tok.Dec || node.Tok == tok.PostDec {
-				i = 0b10 // sub
-			}
-			if node.Tok == tok.PostInc || node.Tok == tok.PostDec {
-				i |= 1 // retOrig
-			}
+		cg.emit(op.One)
+		i := byte(0) // add
+		if node.Tok == tok.Dec || node.Tok == tok.PostDec {
+			i = 0b10 // sub
+		}
+		if node.Tok == tok.PostInc || node.Tok == tok.PostDec {
+			i |= 1 // retOrig
+		}
+		if ref == memRef {
 			cg.emit(op.GetPut, i)
+		} else { // local
+			cg.emitUint8(op.LoadStore, ref)
+			cg.emitMore(i)
 		}
 	} else {
 		cg.expr(node.E)
@@ -675,21 +665,14 @@ func (cg *cgen) binary(node *ast.Binary) {
 		cg.store(ref)
 	case tok.AddEq, tok.SubEq, tok.CatEq, tok.MulEq, tok.DivEq, tok.ModEq,
 		tok.LShiftEq, tok.RShiftEq, tok.BitOrEq, tok.BitAndEq, tok.BitXorEq:
-		if _, ok := node.Lhs.(*ast.Ident); ok {
-			cg.expr(node.Rhs)
-			ref := cg.lvalue(node.Lhs)
-			cg.loadLock(ref)
-			switch node.Tok {
-			case tok.CatEq, tok.SubEq, tok.DivEq, tok.ModEq, tok.LShiftEq, tok.RShiftEq:
-				cg.emit(op.Swap) // need to swap non-commutative
-			}
-			cg.emit(tok2op[node.Tok])
-			cg.emit(op.StoreUnlock)
-		} else { // Member
-			cg.lvalue(node.Lhs)
-			cg.expr(node.Rhs)
-			i := byte(node.Tok-tok.AddEq) << 1
+		ref := cg.lvalue(node.Lhs)
+		cg.expr(node.Rhs)
+		i := byte(node.Tok-tok.AddEq) << 1
+		if ref == memRef {
 			cg.emit(op.GetPut, i)
+		} else { // local
+			cg.emitUint8(op.LoadStore, ref)
+			cg.emitMore(i)
 		}
 	case tok.Is, tok.Isnt, tok.Match, tok.MatchNot, tok.Mod,
 		tok.LShift, tok.RShift, tok.Lt, tok.Lte, tok.Gt, tok.Gte:
@@ -838,6 +821,7 @@ func (cg *cgen) value(v Value) int {
 
 const memRef = -1
 
+// lvalue returns memRef or the index of the local variable
 func (cg *cgen) lvalue(node ast.Expr) int {
 	switch node := node.(type) {
 	case *ast.Ident:
@@ -861,14 +845,6 @@ func (cg *cgen) load(ref int) {
 		} else {
 			cg.emitUint8(op.Load, ref)
 		}
-	}
-}
-
-func (cg *cgen) loadLock(ref int) {
-	if cg.Names[ref][0] == '_' {
-		cg.emitUint8(op.Dyload, ref)
-	} else {
-		cg.emitUint8(op.LoadLock, ref)
 	}
 }
 

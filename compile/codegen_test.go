@@ -62,10 +62,10 @@ func TestCodegen(t *testing.T) {
 	test("_dyn = 123", "Int 123, Store _dyn")
 	test("a = b = c", "Load c, Store b, Store a")
 	test("a = b; not a", "Load b, Store a, Pop, Load a, Not")
-	test("n += 5", "Int 5, LoadLock n, Add, StoreUnlock")
-	test("n /= 5", "Int 5, LoadLock n, Swap, Div, StoreUnlock")
-	test("++n", "LoadLock n, One, Add, StoreUnlock")
-	test("n--", "LoadLock n, Dup, One, Sub, StoreUnlock, Pop")
+	test("n += 5", "Int 5, LoadStore n AddEq")
+	test("n /= 5", "Int 5, LoadStore n DivEq")
+	test("++n", "One, LoadStore n AddEq")
+	test("n--", "One, LoadStore n SubEq retOrig")
 	test("a.b", "Load a, Value 'b', Get")
 	test("a[2]", "Load a, Int 2, Get")
 	test("a.b = 123", "Load a, Value 'b', Int 123, Put")
@@ -436,40 +436,36 @@ func TestControl(t *testing.T) {
 
 	test("for (i = 0; i < 9; ++i) body", `
 		0: Zero
-        1: Store i
-        3: Pop
-        4: Jump 16
-        7: Load body
-        9: Pop
-        10: LoadLock i
-        12: One
-        13: Add
-        14: StoreUnlock
-        15: Pop
-        16: Load i
-        18: Int 9
-        21: Lt
-        22: JumpTrue 7`)
+		1: Store i
+		3: Pop
+		4: Jump 15
+		7: Load body
+		9: Pop
+		10: One
+		11: LoadStore i AddEq
+		14: Pop
+		15: Load i
+		17: Int 9
+		20: Lt
+		21: JumpTrue 7`)
 
 	test("for (i = 0; i < 9; ++i) { a; continue; b }", `
 		0: Zero
-        1: Store i
-        3: Pop
-        4: Jump 22
-        7: Load a
-        9: Pop
-        10: Jump 16
-        13: Load b
-        15: Pop
-        16: LoadLock i
-        18: One
-        19: Add
-        20: StoreUnlock
-        21: Pop
-        22: Load i
-        24: Int 9
-        27: Lt
-        28: JumpTrue 7`)
+		1: Store i
+		3: Pop
+		4: Jump 21
+		7: Load a
+		9: Pop
+		10: Jump 16
+		13: Load b
+		15: Pop
+		16: One
+		17: LoadStore i AddEq
+		20: Pop
+		21: Load i
+		23: Int 9
+		26: Lt
+		27: JumpTrue 7`)
 
 	test(`for (x in y) { a; break; continue }`, `
 		0: Load y

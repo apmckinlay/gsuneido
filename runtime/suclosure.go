@@ -10,8 +10,9 @@ import (
 // SuClosure is an instance of a closure block
 type SuClosure struct {
 	SuFunc
-	locals Locals
-	this   Value
+	locals     Locals
+	this       Value
+	concurrent bool
 }
 
 // Value interface
@@ -29,16 +30,21 @@ func (b *SuClosure) Call(t *Thread, this Value, as *ArgSpec) Value {
 	args := t.Args(&b.ParamSpec, as)
 
 	// copy args
-	b.locals.Lock()
 	for i := 0; i < int(b.Nparams); i++ {
 		b.locals.v[int(bf.Offset)+i] = args[i]
 	}
-	b.locals.Unlock()
 
 	if this == nil {
 		this = b.this
 	}
-	t.frames[t.fp] = Frame{fn: bf, locals: b.locals, this: this}
+	fr := Frame{fn: bf, locals: b.locals, this: this}
+	if b.concurrent {
+		// make a mutable copy of the locals for the frame
+		v := make([]Value, len(b.locals.v))
+		copy(v, b.locals.v)
+		fr.locals.v = v
+	}
+	t.frames[t.fp] = fr
 	return t.run()
 }
 
@@ -47,8 +53,20 @@ func (*SuClosure) Type() types.Type {
 }
 
 func (b *SuClosure) SetConcurrent() {
-	b.locals.SetConcurrent()
-	if b.this != nil {
-		b.this.SetConcurrent()
+	if b.concurrent {
+		return
 	}
+	b.concurrent = true
+	// make a copy of the locals - read-only since it will be shared
+	v := make([]Value, len(b.locals.v))
+	copy(v, b.locals.v)
+	for _, x := range v {
+		if x != nil {
+			x.SetConcurrent()
+		}
+	}
+}
+
+func (b *SuClosure) IsConcurrent() bool {
+	return b.concurrent
 }

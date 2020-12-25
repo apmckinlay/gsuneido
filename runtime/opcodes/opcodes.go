@@ -51,10 +51,9 @@ const (
 	Load
 	// Store <uint8> pops the top value off the stack into a local variable
 	Store
-	// LoadLock <uint8> locks the locals and then does Load
-	LoadLock
-	// StoreUnlock <uint8> does Store and then unlocks the locals
-	StoreUnlock
+	// LoadStore <local uint8> <op uint8> replaces the top value
+	// with ob[m] op= val
+	LoadStore
 	// Dyload <uint8> pushes a dynamic variable onto the stack
 	// It looks up the frame stack to find it, and copies it locally
 	Dyload
@@ -64,7 +63,8 @@ const (
 	Get
 	// Put pops the top three values (ob, mem, val) and does ob.Put(mem, val)
 	Put
-	// GetPut updates the member of an object for e.g. += and --
+	// GetPut <uint8> replaces the top 3 values (ob, mem, val)
+	// with ob[m] op= val
 	GetPut
 	// RangeTo replaces the top three values (x,i,j) with x.RangeTo(i,j)
 	RangeTo

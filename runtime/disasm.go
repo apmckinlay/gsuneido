@@ -146,9 +146,13 @@ func (d *dasm) next() {
 			s += fmt.Sprint(" ", f.Id)
 		}
 		nestedfn = f
-	case op.Load, op.LoadLock, op.Store, op.Dyload:
+	case op.Load, op.Store, op.Dyload:
 		idx := fetchUint8()
 		s += " " + d.fn.Names[idx]
+	case op.LoadStore:
+		idx := fetchUint8()
+		s += " " + d.fn.Names[idx]
+		fallthrough
 	case op.GetPut:
 		i := fetchUint8()
 		op := tokens.Token(uint8(tokens.AddEq) + i>>1)

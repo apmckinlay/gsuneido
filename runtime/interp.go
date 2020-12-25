@@ -4,8 +4,6 @@
 package runtime
 
 import (
-	"log"
-
 	op "github.com/apmckinlay/gsuneido/runtime/opcodes"
 )
 
@@ -25,7 +23,7 @@ func (t *Thread) Start(fn *SuFunc, this Value) Value {
 		t.Push(nil)
 	}
 	t.frames[t.fp] = Frame{fn: fn, this: this,
-		locals: Locals{v: t.stack[t.sp-int(fn.Nlocals) : t.sp], MayLock: &MayLock{}}}
+		locals: Locals{v: t.stack[t.sp-int(fn.Nlocals) : t.sp]}}
 	return t.run()
 }
 
@@ -122,13 +120,7 @@ func (t *Thread) interp(catchJump, catchSp *int) (ret Value) {
 		}
 	}
 
-	var atomicLocal = -1
-	var toUnlock interface{ Unlock() bool }
-
 	defer func() {
-		if toUnlock != nil {
-			toUnlock.Unlock()
-		}
 		// this is an optimization to avoid unnecessary recover/repanic
 		if *catchJump == 0 && fr.fn.Id == 0 {
 			return // this frame isn't catching
@@ -199,45 +191,52 @@ loop:
 			t.Push(fr.fn.Values[fetchUint8()])
 		case op.Load:
 			i := fetchUint8()
-			fr.locals.Lock()
 			val := fr.locals.v[i]
-			fr.locals.Unlock()
 			if val == nil {
 				panic("uninitialized variable: " + fr.fn.Names[i])
 			}
 			t.Push(val)
-		case op.LoadLock:
-			if atomicLocal != -1 {
-				log.Fatalln("lockedLocal already set in LoadLock")
-			}
-			atomicLocal = fetchUint8()
-			fr.locals.Lock()
-			toUnlock = fr.locals.MayLock
-			val := fr.locals.v[atomicLocal]
-			if val == nil {
-				panic("uninitialized variable: " + fr.fn.Names[atomicLocal])
-			}
-			t.Push(val)
 		case op.Store:
-			val := t.Top()
-			if fr.locals.Lock() {
-				val.SetConcurrent()
+			fr.locals.v[fetchUint8()] = t.Top()
+		case op.LoadStore:
+			i := fetchUint8()
+			op := fetchUint8()
+			x := fr.locals.v[i]
+			y := t.stack[t.sp-1]
+			var result Value
+			switch op >> 1 {
+			case 0:
+				result = OpAdd(x, y)
+			case 1:
+				result = OpSub(x, y)
+			case 2:
+				result = OpCat(t, x, y)
+			case 3:
+				result = OpMul(x, y)
+			case 4:
+				result = OpDiv(x, y)
+			case 5:
+				result = OpMod(x, y)
+			case 6:
+				result = OpLeftShift(x, y)
+			case 7:
+				result = OpRightShift(x, y)
+			case 8:
+				result = OpBitOr(x, y)
+			case 9:
+				result = OpBitAnd(x, y)
+			case 10:
+				result = OpBitXor(x, y)
 			}
-			fr.locals.v[fetchUint8()] = val
-			fr.locals.Unlock()
-		case op.StoreUnlock:
-			val := t.Top()
-			fr.locals.v[atomicLocal] = val
-			if fr.locals.Unlock() {
-				val.SetConcurrent()
+			fr.locals.v[i] = result
+			if op&1 == 0 {
+				t.stack[t.sp-1] = result
+			} else { // retOrig
+				t.stack[t.sp-1] = x
 			}
-			toUnlock = nil
-			atomicLocal = -1
 		case op.Dyload:
 			i := fetchUint8()
-			fr.locals.Lock()
 			val := fr.locals.v[i]
-			fr.locals.Unlock()
 			if val == nil {
 				val = t.dyload(fr, i)
 			}
@@ -261,7 +260,7 @@ loop:
 			t.Push(val)
 		case op.GetPut:
 			i := fetchUint8()
-			op := [11]func(x, y Value) Value{
+			op := []func(x, y Value) Value{
 				OpAdd, OpSub, t.Cat, OpMul, OpDiv, OpMod,
 				OpLeftShift, OpRightShift, OpBitOr, OpBitAnd, OpBitXor}[i>>1]
 			val := t.Pop()
@@ -416,9 +415,7 @@ loop:
 			nextable := iter.(interface{ Next() Value })
 			next := nextable.Next()
 			if next != nil {
-				fr.locals.Lock()
 				fr.locals.v[local] = next
-				fr.locals.Unlock()
 			} else {
 				fr.ip += brk - 1 // break
 			}
@@ -545,13 +542,9 @@ func (t *Thread) dyload(fr *Frame, idx int) Value {
 		fr2 := &t.frames[i]
 		for j, s := range fr2.fn.Names {
 			if s == name {
-				fr2.locals.Lock()
 				x := fr2.locals.v[j]
-				fr2.locals.Unlock()
 				if x != nil {
-					fr.locals.Lock()
 					fr.locals.v[idx] = x
-					fr.locals.Unlock()
 					return x
 				}
 			}

@@ -122,3 +122,56 @@ func specialized() Value {
 	}
 	return SuInt(sum)
 }
+
+var r Value
+
+func BenchmarkLoadStore(b *testing.B) {
+	x := One
+	y := One
+	for n := 0; n < b.N; n++ {
+		switch n % 11 {
+		case 0:
+			r = OpAdd(x, y)
+		case 1:
+			r = OpSub(x, y)
+		case 2:
+			r = OpCat(nil, x, y)
+		case 3:
+			r = OpMul(x, y)
+		case 4:
+			r = OpDiv(x, y)
+		case 5:
+			r = OpMod(x, y)
+		case 6:
+			r = OpLeftShift(x, y)
+		case 7:
+			r = OpRightShift(x, y)
+		case 8:
+			r = OpBitOr(x, y)
+		case 9:
+			r = OpBitAnd(x, y)
+		case 10:
+			r = OpBitXor(x, y)
+		}
+	}
+}
+
+func BenchmarkLoadStore2(b *testing.B) {
+	x := One
+	y := One
+	var t *Thread
+	for n := 0; n < b.N; n++ {
+		op := []func(x, y Value) Value{
+			OpAdd, OpSub, t.Cat, OpMul, OpDiv, OpMod,
+			OpLeftShift, OpRightShift, OpBitOr, OpBitAnd, OpBitXor}[n % 11]
+		r = op(x, y)
+	}
+}
+
+func BenchmarkLoadStore3(b *testing.B) {
+	x := One
+	y := MinusOne
+	for n := 0; n < b.N; n++ {
+		r = OpSub(x, y)
+	}
+}

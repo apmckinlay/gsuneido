@@ -10,10 +10,14 @@ import (
 	"github.com/apmckinlay/gsuneido/runtime/types"
 )
 
+type concur interface {
+	IsConcurrent() bool
+}
+
 var _ = builtin1("Concurrent?(value)",
 	func(v Value) Value {
-		if x, ok := v.(Lockable); ok {
-			return SuBool(x.IsConcurrent())
+		if c, ok := v.(concur); ok {
+			return SuBool(c.IsConcurrent())
 		}
 		return EmptyStr
 	})
