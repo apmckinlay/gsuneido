@@ -93,7 +93,7 @@ var threadMethods = Methods{
 		return ob
 	}),
 	"Sleep": method1("(ms)", func(this, ms Value) Value {
-		time.Sleep(time.Duration(1000000 * ToInt(ms)))
+		time.Sleep(time.Duration(ToInt(ms)) * time.Millisecond)
 		return nil
 	}),
 }

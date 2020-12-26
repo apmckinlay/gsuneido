@@ -12,6 +12,6 @@ import (
 var _ = builtin1("Sleep(ms)",
 	func(arg Value) Value {
 		ms := ToInt(arg)
-		time.Sleep(time.Duration(int64(ms) * 1000000))
+		time.Sleep(time.Duration(ms) * time.Millisecond)
 		return nil
 	})

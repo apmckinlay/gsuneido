@@ -9,9 +9,8 @@ import (
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
-var _ = builtinRaw("Sequence(iter)", // raw to get thread
-	func(t *Thread, as *ArgSpec, args []Value) Value {
-		args = t.Args(&ParamSpec1, as)
+var _ = builtin("Sequence(iter)",
+	func(t *Thread, args []Value) Value {
 		return NewSuSequence(&wrapIter{iter: args[0], t: t})
 	})
 
