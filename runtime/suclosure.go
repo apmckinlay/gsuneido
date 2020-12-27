@@ -65,6 +65,7 @@ func (b *SuClosure) SetConcurrent() {
 			x.SetConcurrent()
 		}
 	}
+	b.locals.v = v
 }
 
 func (b *SuClosure) IsConcurrent() bool {
