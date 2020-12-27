@@ -79,7 +79,6 @@ func (ob *SuInstance) Copy() *SuInstance {
 // Value interface --------------------------------------------------
 
 var _ Value = (*SuInstance)(nil)
-var _ Lockable = (*SuInstance)(nil)
 
 func (ob *SuInstance) String() string {
 	if ob.class.Name != "" {

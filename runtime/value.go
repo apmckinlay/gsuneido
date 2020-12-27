@@ -362,13 +362,3 @@ func (x *MayLock) Unlock() bool {
 func (x *MayLock) IsConcurrent() bool {
 	return x.concurrent
 }
-
-type Lockable interface {
-	Lock() bool
-	Unlock() bool
-	// get is like Get but doesn't lock, caller handles locking
-	get(t *Thread, key Value) Value
-	// put is like Put but doesn't lock, caller handles locking
-	put(t *Thread, key Value, val Value)
-	IsConcurrent() bool
-}
