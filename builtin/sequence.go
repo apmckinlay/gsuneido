@@ -15,8 +15,8 @@ var _ = builtin("Sequence(iter)",
 	})
 
 // wrapIter adapts a Suneido iterator (a class with Next,Dup,Infinite)
-// to the runtime.Iter interface
-// for the reverse see runtime.SuIter
+// to the runtime.Iter interface.
+// For the reverse see runtime.SuIter.
 type wrapIter struct {
 	iter Value
 	t    *Thread
