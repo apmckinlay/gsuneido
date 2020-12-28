@@ -236,7 +236,7 @@ func (r *SuRecord) HasKey(key Value) bool {
 	return false
 }
 
-func (r *SuRecord) Set(key Value, val Value) {
+func (r *SuRecord) Set(key, val Value) {
 	r.Put(nil, key, val)
 }
 
@@ -348,7 +348,7 @@ func (r *SuRecord) Iter() Iter {
 
 // ------------------------------------------------------------------
 
-func (r *SuRecord) Put(t *Thread, keyval Value, val Value) {
+func (r *SuRecord) Put(t *Thread, keyval, val Value) {
 	if r.Lock() {
 		defer r.Unlock()
 	}
@@ -356,7 +356,7 @@ func (r *SuRecord) Put(t *Thread, keyval Value, val Value) {
 }
 
 // put implements Put without locking
-func (r *SuRecord) put(t *Thread, keyval Value, val Value) {
+func (r *SuRecord) put(t *Thread, keyval, val Value) {
 	r.trace("Put", keyval, "=", val)
 	if key, ok := keyval.ToStr(); ok {
 		delete(r.invalid, key)
@@ -393,8 +393,8 @@ func (r *SuRecord) invalidateDependents(key string) {
 	}
 }
 
-func (r *SuRecord) GetPut(t *Thread, m Value, v Value,
-	op func (x,y Value) Value, retOrig bool) Value {
+func (r *SuRecord) GetPut(t *Thread, m, v Value,
+	op func(x, y Value) Value, retOrig bool) Value {
 	if r.Lock() {
 		defer r.Unlock()
 	}

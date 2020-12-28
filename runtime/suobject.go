@@ -16,7 +16,6 @@ import (
 	"github.com/apmckinlay/gsuneido/util/ints"
 	"github.com/apmckinlay/gsuneido/util/pack"
 	"github.com/apmckinlay/gsuneido/util/varint"
-	// sync "github.com/sasha-s/go-deadlock"
 )
 
 /*
@@ -154,16 +153,11 @@ func (ob *SuObject) namedGet(key Value) Value {
 
 // Put adds or updates the given key and value
 // The value will be added to the list if the key is the "next"
-func (ob *SuObject) Put(_ *Thread, key Value, val Value) {
+func (ob *SuObject) Put(_ *Thread, key, val Value) {
 	ob.Set(key, val)
 }
 
-// put implements Put without locking
-func (ob *SuObject) put(_ *Thread, key Value, val Value) {
-	ob.set(key, val)
-}
-
-func (ob *SuObject) GetPut(t *Thread, m Value, v Value,
+func (ob *SuObject) GetPut(t *Thread, m, v Value,
 	op func(x, y Value) Value, retOrig bool) Value {
 	if ob.Lock() {
 		defer ob.Unlock()
@@ -179,7 +173,7 @@ func (ob *SuObject) GetPut(t *Thread, m Value, v Value,
 
 // Set implements Put, doesn't require thread.
 // The value will be added to the list if the key is the "next"
-func (ob *SuObject) Set(key Value, val Value) {
+func (ob *SuObject) Set(key, val Value) {
 	if ob.Lock() {
 		defer ob.Unlock()
 	}
@@ -187,7 +181,7 @@ func (ob *SuObject) Set(key Value, val Value) {
 }
 
 // set implements Set without locking
-func (ob *SuObject) set(key Value, val Value) {
+func (ob *SuObject) set(key, val Value) {
 	if ob.concurrent {
 		val.SetConcurrent()
 	}
@@ -740,6 +734,7 @@ func (ob *SuObject) Iter2(list, named bool) func() (Value, Value) {
 			return key.(Value), val.(Value)
 		}
 	}
+	// else named && list
 	return func() (Value, Value) {
 		ob.modificationCheck(version)
 		i := next
