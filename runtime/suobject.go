@@ -43,9 +43,9 @@ func emptyOb() *SuObject {
 // If concurrent is 1, guarded by lock, assumed to be shared
 type SuObject struct {
 	CantConvert
-	named    hmap.Hmap
-	list     []Value
-	defval   Value
+	named  hmap.Hmap
+	list   []Value
+	defval Value
 	MayLock
 	version  int32
 	clock    int32
@@ -73,7 +73,7 @@ func (ob *SuObject) slice(n int) (ob2 SuObject) {
 	ob2.named = *ob.named.Copy()
 	ob2.defval = ob.defval
 	if n < len(ob.list) {
-		ob2.list = append(ob.list[:0:0], ob.list[n:]...)
+		ob2.list = append(ob.list[:0:0], ob.list[n:]...) // copy
 	}
 	return
 }
@@ -164,7 +164,7 @@ func (ob *SuObject) put(_ *Thread, key Value, val Value) {
 }
 
 func (ob *SuObject) GetPut(t *Thread, m Value, v Value,
-	op func (x,y Value) Value, retOrig bool) Value {
+	op func(x, y Value) Value, retOrig bool) Value {
 	if ob.Lock() {
 		defer ob.Unlock()
 	}
