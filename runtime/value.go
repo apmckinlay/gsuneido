@@ -83,8 +83,14 @@ type Value interface {
 
 	Callable
 
+	// Lookup returns a Callable or nil if the method isn't found
 	Lookup(t *Thread, method string) Callable
 
+	// SetConcurrent is called when a Value is
+	// about to become reachable by multiple threads.
+	// At the point where SetConcurrent is called it is still thread contained.
+	// SetConcurrent should be called on any other Value's reachable from this.
+	// Additional calls to SetConcurrent should be ignored.
 	SetConcurrent()
 }
 
