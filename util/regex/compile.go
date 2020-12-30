@@ -306,8 +306,7 @@ func (co *compiler) charClass() {
 }
 
 func (co *compiler) matchRange() bool {
-	if co.src[co.si+1] == '-' &&
-		co.si+2 < co.sn && co.src[co.si+2] != ']' {
+	if co.si+2 < co.sn && co.src[co.si+1] == '-' && co.src[co.si+2] != ']' {
 		co.si += 3
 		return true
 	}
