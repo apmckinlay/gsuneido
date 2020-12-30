@@ -12,4 +12,5 @@ type Iter interface {
 	Dup() Iter
 	Infinite() bool
 	SetConcurrent()
+	IsConcurrent() bool
 }

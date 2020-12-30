@@ -76,3 +76,7 @@ func (SuIter) Compare(Value) int {
 func (it SuIter) SetConcurrent() {
 	it.Iter.SetConcurrent()
 }
+
+func (it SuIter) IsConcurrent() bool {
+	return it.Iter.IsConcurrent()
+}

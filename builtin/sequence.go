@@ -47,6 +47,10 @@ func (wi *wrapIter) SetConcurrent() {
 	wi.it.SetConcurrent()
 }
 
+func (wi *wrapIter) IsConcurrent() bool {
+	return wi.t == nil
+}
+
 var threadPool = sync.Pool{New: func() interface{} { return NewThread() }}
 
 func (wi *wrapIter) call(method string) Value {

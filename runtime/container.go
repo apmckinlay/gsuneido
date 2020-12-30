@@ -24,6 +24,7 @@ type Container interface {
 	HasKey(key Value) bool
 	ToObject() *SuObject
 	ToRecord(t *Thread, hdr *Header) Record
+	IsConcurrent() bool
 }
 
 // iterators
@@ -71,4 +72,7 @@ func (it *obIter) Infinite() bool {
 }
 func (it *obIter) SetConcurrent() {
 	it.ob.SetConcurrent()
+}
+func (it *obIter) IsConcurrent() bool {
+	return it.ob.IsConcurrent()
 }
