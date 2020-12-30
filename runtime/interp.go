@@ -15,9 +15,9 @@ var BlockBreak = BuiltinSuExcept("block:break")
 var BlockContinue = BuiltinSuExcept("block:continue")
 var BlockReturn = BuiltinSuExcept("block return")
 
-// Start sets up a frame to Run a compiled Suneido function
+// Invoke sets up a frame to Run a compiled Suneido function
 // The stack must already be in the form required by the function (massaged)
-func (t *Thread) Start(fn *SuFunc, this Value) Value {
+func (t *Thread) Invoke(fn *SuFunc, this Value) Value {
 	// reserve stack space for locals
 	for expand := fn.Nlocals - fn.Nparams; expand > 0; expand-- {
 		t.Push(nil)
@@ -30,7 +30,7 @@ func (t *Thread) Start(fn *SuFunc, this Value) Value {
 // run is needed in addition to interp
 // because we can only recover panic on the way out of a function
 // so if the exception is caught we have to re-enter interp
-// Called by Thread.Start and SuClosure.Call
+// Called by Thread.Invoke and SuClosure.Call
 func (t *Thread) run() Value {
 	// fmt.Println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
 	// fmt.Println(strings.Repeat("    ", t.fp) + "run:", t.frames[t.fp].fn)

@@ -22,7 +22,7 @@ func TestNaming(t *testing.T) {
 	test := func(src, expected string) {
 		t.Helper()
 		c := compile.Constant("function () {\n" + src + "\n}").(*SuFunc)
-		result := NewThread().Start(c, nil)
+		result := NewThread().Invoke(c, nil)
 		assert.T(t).This(result).Is(SuStr(expected))
 	}
 	test(`foo = function(){}; Name(foo)`, "foo")
@@ -50,7 +50,7 @@ func BenchmarkCat(b *testing.B) {
 	t := NewThread()
 	for i := 0; i < b.N; i++ {
 		t.Reset()
-		t.Start(c, nil)
+		t.Invoke(c, nil)
 	}
 }
 
@@ -66,7 +66,7 @@ func BenchmarkJoin(b *testing.B) {
 	t := NewThread()
 	for i := 0; i < b.N; i++ {
 		t.Reset()
-		t.Start(c, nil)
+		t.Invoke(c, nil)
 	}
 }
 
@@ -80,7 +80,7 @@ func BenchmarkBase(b *testing.B) {
 	t := NewThread()
 	for i := 0; i < b.N; i++ {
 		t.Reset()
-		t.Start(c, nil)
+		t.Invoke(c, nil)
 	}
 }
 
@@ -159,7 +159,7 @@ func pt_execute(args []string, _ []bool) bool {
 		expected = "throws " + args[2]
 		e := assert.Catch(func() {
 			fn := compile.Constant(src).(*SuFunc)
-			actual = th.Start(fn, nil)
+			actual = th.Invoke(fn, nil)
 		})
 		if e == nil {
 			success = false
@@ -178,7 +178,7 @@ func pt_execute(args []string, _ []bool) bool {
 		}
 	} else {
 		fn := compile.Constant(src).(*SuFunc)
-		actual = th.Start(fn, nil)
+		actual = th.Invoke(fn, nil)
 		if actual == nil {
 			success = expected == "nil"
 		} else if expected == "**notfalse**" {
@@ -305,7 +305,7 @@ func BenchmarkInterp(b *testing.B) {
 	th := &Thread{}
 	for n := 0; n < b.N; n++ {
 		th.Reset()
-		result := th.Start(fn, nil)
+		result := th.Invoke(fn, nil)
 		if !result.Equal(SuInt(4950)) {
 			panic("wrong result " + result.String())
 		}
@@ -333,7 +333,7 @@ func TestCoverage(t *testing.T) {
 		}`).(*SuFunc)
 	fn.StartCoverage(true)
 	th := &Thread{}
-	th.Start(fn, nil)
+	th.Invoke(fn, nil)
 	cover := fn.StopCoverage()
 	assert.T(t).This(cover).
 		Is(compile.Constant("#(17: 1, 25: 1, 53: 10, 62: 1)").(*SuObject))

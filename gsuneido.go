@@ -326,7 +326,7 @@ func eval(src string) {
 	// DisasmMixed(os.Stdout, fn, src)
 
 	mainThread.Reset()
-	result := mainThread.Start(fn, nil)
+	result := mainThread.Invoke(fn, nil)
 	if result != nil {
 		fmt.Println(WithType(result)) // NOTE: doesn't use ToString
 	}
