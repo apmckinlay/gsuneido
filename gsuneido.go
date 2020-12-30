@@ -23,7 +23,7 @@ import (
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
-var builtDate = "Dec 16 2019" // set by: go build -ldflags "-X main.builtDate=..."
+var builtDate = "Dec 29 2020" // set by: go build -ldflags "-X main.builtDate=..."
 var mode = ""                 // set by: go build -ldflags "-X main.mode=gui"
 
 var help = `options:
