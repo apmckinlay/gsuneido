@@ -636,6 +636,7 @@ func (cg *cgen) unary(node *ast.Unary, ct calltype) {
 		if ref == memRef {
 			cg.emit(op.GetPut, i)
 		} else { // local
+			cg.handleDynamic(ref)
 			cg.emitUint8(op.LoadStore, ref)
 			cg.emitMore(i)
 		}
@@ -671,6 +672,7 @@ func (cg *cgen) binary(node *ast.Binary) {
 		if ref == memRef {
 			cg.emit(op.GetPut, i)
 		} else { // local
+			cg.handleDynamic(ref)
 			cg.emitUint8(op.LoadStore, ref)
 			cg.emitMore(i)
 		}
@@ -681,6 +683,13 @@ func (cg *cgen) binary(node *ast.Binary) {
 		cg.emit(tok2op[node.Tok])
 	default:
 		panic("unhandled binary operation " + node.Tok.String())
+	}
+}
+
+func (cg *cgen) handleDynamic(ref int) {
+	if cg.Names[ref][0] == '_' {
+		cg.emitUint8(op.Dyload, ref)
+		cg.emit(op.Pop)
 	}
 }
 
