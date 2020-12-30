@@ -328,7 +328,6 @@ static int setupNotify() {
 	return TRUE;
 }
 
-
 static DWORD WINAPI thread(LPVOID lpParameter) {
 	RegisterHotKey(0, CTRL_BREAK_ID, MOD_CONTROL, VK_CANCEL);
 	main_threadid = GetCurrentThreadId();
