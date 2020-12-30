@@ -12,7 +12,6 @@ import (
 
 	"github.com/apmckinlay/gsuneido/compile/lexer"
 	"github.com/apmckinlay/gsuneido/runtime/types"
-	"github.com/apmckinlay/gsuneido/util/hmap"
 	"github.com/apmckinlay/gsuneido/util/ints"
 	"github.com/apmckinlay/gsuneido/util/pack"
 	"github.com/apmckinlay/gsuneido/util/varint"
@@ -42,7 +41,7 @@ func emptyOb() *SuObject {
 // If concurrent is 1, guarded by lock, assumed to be shared
 type SuObject struct {
 	CantConvert
-	named  hmap.Hmap
+	named  Hmap
 	list   []Value
 	defval Value
 	MayLock
@@ -148,7 +147,7 @@ func (ob *SuObject) namedGet(key Value) Value {
 	if val == nil {
 		return nil
 	}
-	return val.(Value)
+	return val
 }
 
 // Put adds or updates the given key and value
@@ -288,7 +287,7 @@ func (ob *SuObject) DeleteAll() {
 	}
 	defer ob.endMutate(ob.startMutate())
 	ob.list = []Value{}
-	ob.named = hmap.Hmap{}
+	ob.named = Hmap{}
 }
 
 func (ob *SuObject) RangeTo(from int, to int) Value {
@@ -396,7 +395,7 @@ func (ob *SuObject) migrate() {
 		if x == nil {
 			break
 		}
-		ob.list = append(ob.list, x.(Value))
+		ob.list = append(ob.list, x)
 	}
 }
 
@@ -465,18 +464,18 @@ func (ob *SuObject) vecstr(t *Thread, buf *limitBuf, inProgress vstack) string {
 	return sep
 }
 
-func entstr(t *Thread, buf *limitBuf, k interface{}, v interface{}, sep string, inProgress vstack) string {
+func entstr(t *Thread, buf *limitBuf, k Value, v Value, sep string, inProgress vstack) string {
 	buf.WriteString(sep)
 	sep = ", "
 	if ks, ok := k.(SuStr); ok && unquoted(string(ks)) {
 		buf.WriteString(string(ks))
 	} else {
-		valstr(t, buf, k.(Value), inProgress)
+		valstr(t, buf, k, inProgress)
 	}
 	buf.WriteString(":")
 	if v != True {
 		buf.WriteString(" ")
-		valstr(t, buf, v.(Value), inProgress)
+		valstr(t, buf, v, inProgress)
 	}
 	return sep
 }
@@ -511,7 +510,7 @@ func (ob *SuObject) show(before, after string, inProgress vstack) string {
 		if k == nil {
 			break
 		}
-		mems = append(mems, k.(Value))
+		mems = append(mems, k)
 	}
 	sort.Slice(mems,
 		func(i, j int) bool { return mems[i].Compare(mems[j]) < 0 })
@@ -555,8 +554,8 @@ func (ob *SuObject) Hash() uint32 {
 			if k == nil {
 				break
 			}
-			hash = 31*hash + k.(Value).Hash2()
-			hash = 31*hash + v.(Value).Hash2()
+			hash = 31*hash + k.Hash2()
+			hash = 31*hash + v.Hash2()
 		}
 	}
 	return hash
@@ -680,8 +679,8 @@ func (ob *SuObject) Find(val Value) Value {
 	}
 	named := ob.named.Iter()
 	for k, v := named(); k != nil; k, v = named() {
-		if v.(Value).Equal(val) {
-			return k.(Value)
+		if v.Equal(val) {
+			return k
 		}
 	}
 	return False
@@ -709,7 +708,7 @@ func (ob *SuObject) ArgsIter() func() (Value, Value) {
 		if key == nil {
 			return nil, nil
 		}
-		return key.(Value), val.(Value)
+		return key, val
 	}
 }
 
@@ -746,7 +745,7 @@ func (ob *SuObject) Iter2(list, named bool) func() (Value, Value) {
 			if key == nil {
 				return nil, nil
 			}
-			return key.(Value), val.(Value)
+			return key, val
 		}
 	}
 	// else named && list
@@ -764,7 +763,7 @@ func (ob *SuObject) Iter2(list, named bool) func() (Value, Value) {
 		if key == nil {
 			return nil, nil
 		}
-		return key.(Value), val.(Value)
+		return key, val
 	}
 }
 
@@ -862,8 +861,8 @@ func (ob *SuObject) SetConcurrent() {
 	}
 	iter := ob.named.Iter()
 	for k, v := iter(); k != nil; k, v = iter() {
-		k.(Value).SetConcurrent()
-		v.(Value).SetConcurrent()
+		k.SetConcurrent()
+		v.SetConcurrent()
 	}
 	if ob.defval != nil {
 		ob.defval.SetConcurrent()
@@ -979,12 +978,12 @@ func (ob *SuObject) PackSize2(clock int32, stack packStack) int {
 	return ps
 }
 
-func packSize(x interface{}, clock int32, stack packStack) int {
+func packSize(x Value, clock int32, stack packStack) int {
 	if p, ok := x.(Packable); ok {
 		n := p.PackSize2(clock, stack)
 		return varint.Len(uint64(n)) + n
 	}
-	panic("can't pack " + ErrType(x.(Value)))
+	panic("can't pack " + ErrType(x))
 }
 
 func (ob *SuObject) PackSize3() int {
@@ -1007,12 +1006,12 @@ func (ob *SuObject) PackSize3() int {
 	return ps
 }
 
-func packSize3(x interface{}) int {
+func packSize3(x Value) int {
 	if p, ok := x.(Packable); ok {
 		n := p.PackSize3()
 		return varint.Len(uint64(n)) + n
 	}
-	panic("can't pack " + ErrType(x.(Value)))
+	panic("can't pack " + ErrType(x))
 }
 
 func (ob *SuObject) Pack(clock int32, buf *pack.Encoder) {
@@ -1042,7 +1041,7 @@ func (ob *SuObject) pack(clock int32, buf *pack.Encoder, tag byte) {
 	}
 }
 
-func packValue(x interface{}, clock int32, buf *pack.Encoder) {
+func packValue(x Value, clock int32, buf *pack.Encoder) {
 	n := x.(Packable).PackSize3()
 	buf.VarUint(uint64(n))
 	x.(Packable).Pack(clock, buf)

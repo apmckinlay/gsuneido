@@ -1,7 +1,7 @@
 // Copyright Suneido Software Corp. All rights reserved.
 // Governed by the MIT license found in the LICENSE file.
 
-package hmap
+package runtime
 
 import (
 	"math/rand"
@@ -12,16 +12,6 @@ import (
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
-type ik int
-
-func (x ik) Hash() uint32 {
-	return uint32(x)
-}
-
-func (x ik) Equal(y interface{}) bool {
-	return x == y.(ik)
-}
-
 func TestHmap(t *testing.T) {
 	data := map[int]string{}
 	hmap := Hmap{}
@@ -31,19 +21,18 @@ func TestHmap(t *testing.T) {
 	}
 	put := func(n int, s string) {
 		t.Helper()
-		hmap.Put(ik(n), s)
+		hmap.Put(SuInt(n), SuStr(s))
 		data[n] = s
 		check()
 	}
 	del := func(n int) {
 		t.Helper()
-		var v Val
-		var ok bool
-		v, ok = data[n]
+		s, ok := data[n]
+		v := Value(SuStr(s))
 		if !ok {
 			v = nil
 		}
-		assert.T(t).This(hmap.Del(ik(n))).Is(v)
+		assert.T(t).This(hmap.Del(SuInt(n))).Is(v)
 		delete(data, n)
 		check()
 	}
@@ -94,9 +83,9 @@ func check(t *testing.T, data map[int]string, hmap *Hmap) {
 	for i := 0; i < 100; i++ {
 		s, ok := data[i]
 		if ok {
-			assert(hmap.Get(ik(i))).Is(s)
+			assert(hmap.Get(SuInt(i))).Is(SuStr(s))
 		} else {
-			assert(hmap.Get(ik(i))).Is(nil)
+			assert(hmap.Get(SuInt(i))).Is(nil)
 		}
 	}
 }
@@ -104,7 +93,7 @@ func check(t *testing.T, data map[int]string, hmap *Hmap) {
 func TestHmap_full(*testing.T) {
 	h := Hmap{}
 	for i := 0; i < 80; i++ {
-		h.Put(ik(i), nil)
+		h.Put(SuInt(i), nil)
 	}
 }
 
@@ -113,25 +102,25 @@ func TestHmap_random(t *testing.T) {
 	const N = 10000
 	hm := Hmap{}
 	assert(hm.Size()).Is(0)
-	nums := map[int32]int{}
+	nums := map[int]int{}
 	for i := 0; i < N; i++ {
-		n := rand.Int31n(N)
-		hm.Put(ik(n), i)
+		n := rand.Intn(N)
+		hm.Put(SuInt(n), SuInt(i))
 		nums[n] = i
 	}
 	rand.Seed(1)
 	for i := 0; i < N; i++ {
-		n := rand.Int31n(N)
-		assert(hm.Get(ik(n))).Is(nums[n])
+		n := rand.Intn(N)
+		assert(hm.Get(SuInt(n))).Is(SuInt(nums[n]))
 	}
 	rand.Seed(1)
 	for i := 0; i < N; i++ {
-		n := rand.Int31n(N)
-		v := hm.Del(ik(n))
+		n := rand.Intn(N)
+		v := hm.Del(SuInt(n))
 		if nums[n] == -1 {
 			assert(v).Is(nil)
 		} else {
-			assert(v).Is(nums[n])
+			assert(v).Is(SuInt(nums[n]))
 		}
 		nums[n] = -1
 	}
@@ -143,15 +132,15 @@ func TestHmap_Copy(t *testing.T) {
 	h1 := Hmap{}
 	h2 := h1.Copy()
 	assert(h2.Size()).Is(0)
-	h1.Put(ik(123), "foo")
+	h1.Put(SuInt(123), SuStr("foo"))
 	assert(h1.Size()).Is(1)
 	assert(h2.Size()).Is(0)
 	h2 = h1.Copy()
 	assert(h2.Size()).Is(1)
-	assert(h2.Get(ik(123))).Is("foo")
-	h1.Put(ik(123), "bar")
-	assert(h1.Get(ik(123))).Is("bar")
-	assert(h2.Get(ik(123))).Is("foo")
+	assert(h2.Get(SuInt(123))).Is(SuStr("foo"))
+	h1.Put(SuInt(123), SuStr("bar"))
+	assert(h1.Get(SuInt(123))).Is(SuStr("bar"))
+	assert(h2.Get(SuInt(123))).Is(SuStr("foo"))
 }
 
 func TestHmap_Iter(t *testing.T) {
@@ -166,8 +155,8 @@ func TestHmap_Iter(t *testing.T) {
 				assert(v).Is(nil)
 				break
 			}
-			ki := int(k.(ik))
-			assert(v).Is(-ki)
+			ki := ToInt(k)
+			assert(v).Is(SuInt(-ki))
 			nums = append(nums, ki)
 		}
 		assert(len(nums)).Is(n)
@@ -177,12 +166,12 @@ func TestHmap_Iter(t *testing.T) {
 		}
 	}
 	test(0)
-	hm.Put(ik(0), 0)
+	hm.Put(SuInt(0), SuInt(0))
 	test(1)
-	hm.Put(ik(1), -1)
+	hm.Put(SuInt(1), SuInt(-1))
 	test(2)
 	for i := 2; i < 50; i++ {
-		hm.Put(ik(i), -i)
+		hm.Put(SuInt(i), SuInt(-i))
 		test(i + 1)
 	}
 }
@@ -190,20 +179,20 @@ func TestHmap_Iter(t *testing.T) {
 func TestHmap_Iter_modified(t *testing.T) {
 	hm := Hmap{}
 	it := hm.Iter()
-	hm.Put(ik(123), "foo")
+	hm.Put(SuInt(123), SuStr("foo"))
 	assert.T(t).This(func() { it() }).Panics("hmap modified during iteration")
 	it = hm.Iter()
-	hm.Del(ik(999)) // non-existent
+	hm.Del(SuInt(999)) // non-existent
 	it()            // shouldn't panic
 }
 
 func BenchmarkHmap_Get(b *testing.B) {
 	hm := &Hmap{}
 	for i := 0; i < 100; i++ {
-		hm.Put(ik(i), i)
+		hm.Put(SuInt(i), SuInt(i))
 	}
 	for n := 0; n < b.N; n++ {
-		hm.Get(ik(n % 100))
+		hm.Get(SuInt(n % 100))
 	}
 }
 
@@ -211,25 +200,25 @@ func BenchmarkHmap_Put(b *testing.B) {
 	for n := 0; n < b.N; n++ {
 		hm := &Hmap{}
 		for i := 0; i < 100; i++ {
-			hm.Put(mix(i), i)
+			hm.Put(mix(i), SuInt(i))
 		}
 	}
 }
 
-func mix(n int) ik {
+func mix(n int) Value {
 	n = ^n + (n << 15)
 	n = n ^ (n >> 12)
 	n = n + (n << 2)
 	n = n ^ (n >> 4)
 	n = n * 2057
 	n = n ^ (n >> 16)
-	return ik(n)
+	return IntVal(n)
 }
 
 func BenchmarkHmap_chainIter(b *testing.B) {
 	h := &Hmap{}
 	h.grow()
-	var k Key = ik(123)
+	var k Value = SuInt(123)
 	var iter chainIter
 	for n := 0; n < b.N; n++ {
 		iter = h.iterFromKey(k)

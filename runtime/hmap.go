@@ -1,13 +1,20 @@
 // Copyright Suneido Software Corp. All rights reserved.
 // Governed by the MIT license found in the LICENSE file.
 
-// Package hmap implements a hash map
-// Based on: https://github.com/skarupke/flat_hash_map bytell_hash_map
-package hmap
+package runtime
 
-import (
-	"github.com/apmckinlay/gsuneido/util/assert"
-)
+import "github.com/apmckinlay/gsuneido/util/assert"
+
+// Hmap implements a hash map for SuObject
+// based on: https://github.com/skarupke/flat_hash_map bytell_hash_map
+// Its zero value is a valid empty table.
+type Hmap struct {
+	blocks   []block
+	size     int32
+	version  uint16
+	capShift uint8
+	growing  bool
+}
 
 // metaData is a single byte of information about each slot
 // one bit is used for whether the slot is "direct" or not
@@ -48,15 +55,6 @@ var jumpSize = [...]int{
 	5529475, 12437578, 27986421, 62972253, 141700195, 318819126, 717314626,
 }
 
-// Val holds any value
-type Val = interface{}
-
-// Key is anything with Hash and Equal
-type Key interface {
-	Hash() uint32
-	Equal(Val) bool
-}
-
 const (
 	blockSize      = 8 // must be power of two
 	blockSizeMask  = 7
@@ -67,18 +65,8 @@ const (
 // This is to eliminate padding while still maintaining locality
 type block struct {
 	meta [blockSize]metaData
-	key  [blockSize]Key
-	val  [blockSize]Val
-}
-
-// Hmap is the hash table
-// Its zero value is a valid empty table
-type Hmap struct {
-	blocks   []block
-	size     int32
-	version  uint16
-	capShift uint8
-	growing  bool
+	key  [blockSize]Value
+	val  [blockSize]Value
 }
 
 // cap returns the raw capacity
@@ -118,8 +106,8 @@ func (h *Hmap) keepInRange(index int) int {
 	return index & (h.cap() - 1)
 }
 
-// Get returns the value for the Key or nil if not found
-func (h *Hmap) Get(key Key) Val {
+// Get returns the value for the Value or nil if not found
+func (h *Hmap) Get(key Value) Value {
 	if h.size == 0 {
 		return nil
 	}
@@ -143,7 +131,7 @@ func (h *Hmap) Get(key Key) Val {
 }
 
 // Put adds or updates an entry
-func (h *Hmap) Put(key Key, val Val) {
+func (h *Hmap) Put(key Value, val Value) {
 	h.version++
 	if h.cap() == 0 {
 		h.grow()
@@ -203,7 +191,7 @@ func (h *Hmap) grow() {
 
 // putDirect starts a new chain
 // i.e. it handles when this is the first entry with a certain hash index
-func (h *Hmap) putDirect(slot *chainIter, key Key, val Val) {
+func (h *Hmap) putDirect(slot *chainIter, key Value, val Value) {
 	if h.isFull() {
 		h.grow()
 		h.Put(key, val) // recursive restart
@@ -261,7 +249,7 @@ func (h *Hmap) findEmpty(index int) (int, chainIter) {
 }
 
 // putChain adds to the end of a chain
-func (h *Hmap) putChain(iter *chainIter, key Key, val Val) {
+func (h *Hmap) putChain(iter *chainIter, key Value, val Value) {
 	if h.isFull() {
 		h.grow()
 		h.Put(key, val) // recursive restart
@@ -279,7 +267,7 @@ func (h *Hmap) putChain(iter *chainIter, key Key, val Val) {
 }
 
 // Del deletes a key and returns its old value, or nil if it didn't exist
-func (h *Hmap) Del(key Key) Val {
+func (h *Hmap) Del(key Value) Value {
 	if h.size == 0 {
 		return nil
 	}
@@ -324,10 +312,10 @@ func (h *Hmap) Copy() *Hmap {
 
 // Iter returns a function (closure) that is called to get the next item.
 // It returns nil,nil at the end.
-func (h *Hmap) Iter() func() (Key, Val) {
+func (h *Hmap) Iter() func() (Value, Value) {
 	i := len(h.blocks) * blockSize
 	ver := h.version
-	return func() (Key, Val) {
+	return func() (Value, Value) {
 		if ver != h.version {
 			panic("hmap modified during iteration")
 		}
@@ -354,7 +342,7 @@ type chainIter struct {
 }
 
 // iterFromKey creates an iterator from a key
-func (h *Hmap) iterFromKey(key Key) chainIter {
+func (h *Hmap) iterFromKey(key Value) chainIter {
 	index := h.hashToIndex(key.Hash())
 	b := &h.blocks[whichBlock(index)]
 	ib := indexInBlock(index)
@@ -385,22 +373,22 @@ func (it *chainIter) meta() metaData {
 }
 
 // key returns the key for an iterator's slot
-func (it *chainIter) key() Key {
+func (it *chainIter) key() Value {
 	return it.b.key[it.ib]
 }
 
 // keySet sets the key for an iterator's slot
-func (it *chainIter) keySet(key Key) {
+func (it *chainIter) keySet(key Value) {
 	it.b.key[it.ib] = key
 }
 
 // val returns the value for an iterator's slot
-func (it *chainIter) val() Val {
+func (it *chainIter) val() Value {
 	return it.b.val[it.ib]
 }
 
 // valSet sets the value for an iterator's slot
-func (it *chainIter) valSet(val Val) {
+func (it *chainIter) valSet(val Value) {
 	it.b.val[it.ib] = val
 }
 
@@ -416,7 +404,7 @@ func (it *chainIter) jumpSet(jump int) {
 }
 
 // set updates the contents of a slot
-func (it *chainIter) set(meta metaData, key Key, val Val) {
+func (it *chainIter) set(meta metaData, key Value, val Value) {
 	it.b.meta[it.ib] = meta
 	it.b.key[it.ib] = key
 	it.b.val[it.ib] = val
