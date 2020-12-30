@@ -25,10 +25,12 @@ var _ = builtin3("Seq(from=false, to=false, by=1)",
 			from = Zero
 		}
 		f := ToInt(from)
-		return NewSuSequence(&seqIter{f, ToInt(to), ToInt(by), f})
+		return NewSuSequence(
+			&seqIter{from: f, to: ToInt(to), by: ToInt(by), i: f})
 	})
 
 type seqIter struct {
+	MayLock
 	from int
 	to   int
 	by   int
@@ -36,6 +38,9 @@ type seqIter struct {
 }
 
 func (seq *seqIter) Next() Value {
+	if seq.Lock() {
+		defer seq.Unlock()
+	}
 	assert.That(seq.by != 0)
 	if seq.i >= seq.to {
 		return nil
@@ -46,9 +51,17 @@ func (seq *seqIter) Next() Value {
 }
 
 func (seq *seqIter) Dup() Iter {
-	return &seqIter{seq.from, seq.to, seq.by, seq.from}
+	if seq.Lock() {
+		defer seq.Unlock()
+	}
+	return &seqIter{from: seq.from, to: seq.to, by: seq.by, i: seq.from}
 }
 
 func (seq *seqIter) Infinite() bool {
-	return seq.to == math.MaxInt32 // has to match runtime.MaxInt
+	// to is read-only so no locking required
+	return seq.to == math.MaxInt32 // has to match MaxInt opcode
+}
+
+func (seq *seqIter) SetConcurrent() {
+	seq.SetConcurrentFlag()
 }

@@ -13,12 +13,13 @@ import (
 // or user defined via Sequence
 type SuSequence struct {
 	CantConvert
+	MayLock
 	// iter is the iterator we're wrapping
 	iter Iter
 	// ob is nil until the sequence is instantiated
 	ob *SuObject
-	// duped tracks whether the sequence has been duplicated
-	// this is used to decide to instantiate
+	// duped tracks whether the sequence has been duplicated.
+	// This is set by Iter() and used by asSeq() to decide to instantiate
 	duped bool
 }
 
@@ -27,34 +28,71 @@ func NewSuSequence(it Iter) *SuSequence {
 }
 
 func (seq *SuSequence) Iter() Iter {
-	if seq.Instantiated() {
-		return seq.ob.Iter()
+	iter, ob := seq.iter2()
+	if ob != nil {
+		return ob.Iter()
+	}
+	return iter.Dup() // may lock
+}
+
+func (seq *SuSequence) iter2() (Iter, *SuObject) {
+	if seq.Lock() {
+		defer seq.Unlock()
+	}
+	if seq.ob != nil {
+		return nil, seq.ob
 	}
 	seq.duped = true
-	return seq.iter.Dup()
+	return seq.iter, nil
 }
 
 func (seq *SuSequence) Instantiated() bool {
+	if seq.Lock() {
+		defer seq.Unlock()
+	}
 	return seq.ob != nil
 }
 
-func (seq *SuSequence) Infinite() bool {
-	return seq.iter.Infinite()
-}
-
-func (seq *SuSequence) Copy() *SuObject {
-	return iterToObject(seq.iter.Dup())
-}
-
-func (seq *SuSequence) instantiate() {
-	if seq.ob == nil {
-		seq.ob = iterToObject(seq.iter)
+func (seq *SuSequence) snapshot() (Iter, *SuObject) {
+	if seq.Lock() {
+		defer seq.Unlock()
 	}
+	return seq.iter, seq.ob
+}
+
+func (seq *SuSequence) Infinite() bool {
+	iter, ob := seq.snapshot()
+	return ob == nil && iter.Infinite() // may lock
+}
+
+func (seq *SuSequence) Copy() Value {
+	iter, ob := seq.snapshot()
+	if ob != nil {
+		return ob.Copy()
+	}
+	return seq.iterToObject(iter.Dup()) // may lock
+}
+
+func (seq *SuSequence) instantiate() *SuObject {
+	iter, ob := seq.snapshot()
+	if ob == nil {
+		ob = seq.iterToObject(iter) // may lock
+		seq.setOb(ob)               // race, but should be benign/idempotent
+	}
+	return ob
+}
+
+func (seq *SuSequence) setOb(ob *SuObject) {
+	if seq.Lock() {
+		defer seq.Unlock()
+	}
+	seq.ob = ob
+	seq.iter = nil
 }
 
 const max_instantiate = 16000
 
-func iterToObject(iter Iter) *SuObject {
+func (seq *SuSequence) iterToObject(iter Iter) *SuObject { // may lock
 	if iter.Infinite() {
 		panic("can't instantiate infinite sequence")
 	}
@@ -65,6 +103,9 @@ func iterToObject(iter Iter) *SuObject {
 			panic("can't instantiate sequence larger than 16000")
 		}
 	}
+	if seq.concurrent {
+		ob.SetConcurrent()
+	}
 	return ob
 }
 
@@ -73,61 +114,51 @@ func iterToObject(iter Iter) *SuObject {
 var _ Value = (*SuSequence)(nil)
 
 func (seq *SuSequence) String() string {
-	if seq.iter.Infinite() {
+	if seq.Infinite() {
 		return "infiniteSequence"
 	}
-	seq.instantiate()
-	return seq.ob.String()
+	return seq.instantiate().String()
 }
 
 func (seq *SuSequence) ToContainer() (Container, bool) {
-	seq.instantiate()
-	return seq.ob, true
+	return seq.instantiate(), true
 }
 
 func (seq *SuSequence) Get(t *Thread, key Value) Value {
-	seq.instantiate()
-	return seq.ob.Get(t, key)
+	return seq.instantiate().Get(t, key)
 }
 
 func (seq *SuSequence) Put(t *Thread, key Value, val Value) {
-	seq.instantiate()
-	seq.ob.Put(t, key, val)
+	seq.instantiate().Put(t, key, val)
 }
 
 func (seq *SuSequence) GetPut(t *Thread, key Value, val Value,
-	op func (x,y Value) Value, retOrig bool) Value {
-	seq.instantiate()
-	return seq.ob.GetPut(t, key, val, op, retOrig)
+	op func(x, y Value) Value, retOrig bool) Value {
+	return seq.instantiate().GetPut(t, key, val, op, retOrig)
 }
 
 func (seq *SuSequence) RangeTo(i int, j int) Value {
-	seq.instantiate()
-	return seq.ob.RangeTo(i, j)
+	return seq.instantiate().RangeTo(i, j)
 }
 
 func (seq *SuSequence) RangeLen(i int, n int) Value {
-	seq.instantiate()
-	return seq.ob.RangeLen(i, n)
+	return seq.instantiate().RangeLen(i, n)
 }
 
 func (seq *SuSequence) Equal(other interface{}) bool {
-	seq.instantiate()
+	x := seq.instantiate()
 	if y, ok := other.(*SuSequence); ok {
-		y.instantiate()
-		other = y.ob
+		other = y.instantiate()
 	}
-	return seq.ob.Equal(other)
+	return x.Equal(other)
 }
 
 func (seq *SuSequence) Hash() uint32 {
-	seq.instantiate()
-	return seq.ob.Hash()
+	return seq.instantiate().Hash()
 }
 
 func (seq *SuSequence) Hash2() uint32 {
-	seq.instantiate()
-	return seq.ob.Hash2()
+	return seq.instantiate().Hash2()
 }
 
 func (*SuSequence) Type() types.Type {
@@ -135,8 +166,7 @@ func (*SuSequence) Type() types.Type {
 }
 
 func (seq *SuSequence) Compare(other Value) int {
-	seq.instantiate()
-	return seq.ob.Compare(other)
+	return seq.instantiate().Compare(other)
 }
 
 func (*SuSequence) Call(*Thread, Value, *ArgSpec) Value {
@@ -154,13 +184,29 @@ func (seq *SuSequence) Lookup(t *Thread, method string) Callable {
 			return m
 		}
 	}
-	seq.instantiate()
-	return seq.ob.Lookup(t, method)
+	return seq.instantiate().Lookup(t, method)
 }
 
 func (seq *SuSequence) asSeq(method string) bool {
-	return method == "Instantiated?" ||
-		(!seq.Instantiated() && (!seq.duped || seq.Infinite()))
+	if method == "Instantiated?" || seq.Infinite() {
+		return true
+	}
+	if seq.Instantiated() {
+		return false
+	}
+	if seq.Lock() {
+		defer seq.Unlock()
+	}
+	return !seq.duped
+}
+
+func (seq *SuSequence) SetConcurrent() {
+	seq.concurrent = true
+	if seq.ob != nil {
+		seq.ob.SetConcurrent()
+	} else {
+		seq.iter.SetConcurrent()
+	}
 }
 
 // Packable ---------------------------------------------------------
@@ -168,21 +214,17 @@ func (seq *SuSequence) asSeq(method string) bool {
 var _ Packable = (*SuSequence)(nil)
 
 func (seq *SuSequence) PackSize(clock *int32) int {
-	seq.instantiate()
-	return seq.ob.PackSize(clock)
+	return seq.instantiate().PackSize(clock)
 }
 
 func (seq *SuSequence) Pack(clock int32, buf *pack.Encoder) {
-	seq.instantiate()
-	seq.ob.Pack(clock, buf)
+	seq.instantiate().Pack(clock, buf)
 }
 
 func (seq *SuSequence) PackSize2(clock int32, stack packStack) int {
-	seq.instantiate()
-	return seq.ob.PackSize2(clock, stack)
+	return seq.instantiate().PackSize2(clock, stack)
 }
 
 func (seq *SuSequence) PackSize3() int {
-	seq.instantiate()
-	return seq.ob.PackSize3()
+	return seq.instantiate().PackSize3()
 }

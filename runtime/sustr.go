@@ -162,7 +162,7 @@ func (ss SuStr) Call(t *Thread, _ Value, as *ArgSpec) Value {
 	method := string(ss)
 	fn := v.Lookup(t, method)
 	if fn == nil {
-		panic("method not found " + ErrType(v) + "." + method)
+		panic("method not found: " + ErrType(v) + "." + method)
 	}
 	return fn.Call(t, v, as.DropFirst())
 }
@@ -207,6 +207,7 @@ func (ss SuStr) Pack(_ int32, buf *pack.Encoder) {
 // iterator ---------------------------------------------------------
 
 type stringIter struct {
+	MayLock
 	s string
 	i int
 }
@@ -216,6 +217,9 @@ func (ss SuStr) Iter() Iter {
 }
 
 func (si *stringIter) Next() Value {
+	if si.Lock() {
+		defer si.Unlock()
+	}
 	si.i++
 	if si.i > len(si.s) {
 		return nil
@@ -231,4 +235,8 @@ func (si *stringIter) Dup() Iter {
 
 func (si *stringIter) Infinite() bool {
 	return false
+}
+
+func (si *stringIter) SetConcurrent() {
+	si.concurrent = true
 }

@@ -5,7 +5,8 @@ package builtin
 
 import (
 	"log"
-	"runtime/debug"
+	"os"
+	"runtime"
 	"sync"
 	"time"
 
@@ -62,8 +63,12 @@ func threadCallClass(_ *Thread, args []Value) Value {
 		defer func() {
 			if e := recover(); e != nil {
 				log.Println("error in thread:", e)
-				log.Println(debug.Stack())
 				t2.PrintStack()
+				if _, ok := e.(runtime.Error); ok {
+					buf := make([]byte, 512)
+					n := runtime.Stack(buf, false)
+					os.Stderr.Write(buf[:n])
+				}
 			}
 			t2.Close()
 			threads.remove(t2.Num)

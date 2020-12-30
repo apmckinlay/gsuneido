@@ -4,9 +4,12 @@
 package runtime
 
 // Iter is the internal type for iterators.
-// builtin.SuIter wraps Iter and implements Value and methods
+// See also: SuIter and wrapIter.
 type Iter interface {
+	// Next returns nil when there are no more values
 	Next() Value
-	Infinite() bool
+	// Dup returns a copy of this Iter that starts at the beginning
 	Dup() Iter
+	Infinite() bool
+	SetConcurrent()
 }

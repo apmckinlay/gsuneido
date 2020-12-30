@@ -689,10 +689,16 @@ func (ob *SuObject) Find(val Value) Value {
 
 // ArgsIter is similar to Iter2 but it returns a nil key for list elements
 func (ob *SuObject) ArgsIter() func() (Value, Value) {
-	version := atomic.LoadInt32(&ob.version)
+	if ob.Lock() {
+		defer ob.Unlock()
+	}
+	version := ob.version
 	next := 0
 	named := ob.named.Iter()
 	return func() (Value, Value) {
+		if ob.Lock() {
+			defer ob.Unlock()
+		}
 		ob.modificationCheck(version)
 		i := next
 		next++
@@ -710,10 +716,16 @@ func (ob *SuObject) ArgsIter() func() (Value, Value) {
 // Iter2 iterates through list and named elements.
 // List elements are returned with their numeric key index.
 func (ob *SuObject) Iter2(list, named bool) func() (Value, Value) {
-	version := atomic.LoadInt32(&ob.version)
+	if ob.Lock() {
+		defer ob.Unlock()
+	}
+	version := ob.version
 	next := 0
 	if list && !named {
 		return func() (Value, Value) {
+			if ob.Lock() {
+				defer ob.Unlock()
+			}
 			ob.modificationCheck(version)
 			i := next
 			if i < len(ob.list) {
@@ -726,6 +738,9 @@ func (ob *SuObject) Iter2(list, named bool) func() (Value, Value) {
 	namedIter := ob.named.Iter()
 	if named && !list {
 		return func() (Value, Value) {
+			if ob.Lock() {
+				defer ob.Unlock()
+			}
 			ob.modificationCheck(version)
 			key, val := namedIter()
 			if key == nil {
@@ -736,6 +751,9 @@ func (ob *SuObject) Iter2(list, named bool) func() (Value, Value) {
 	}
 	// else named && list
 	return func() (Value, Value) {
+		if ob.Lock() {
+			defer ob.Unlock()
+		}
 		ob.modificationCheck(version)
 		i := next
 		if i < len(ob.list) {
@@ -751,7 +769,7 @@ func (ob *SuObject) Iter2(list, named bool) func() (Value, Value) {
 }
 
 func (ob *SuObject) modificationCheck(version int32) {
-	if atomic.LoadInt32(&ob.version) != version {
+	if ob.version != version {
 		panic("object modified during iteration")
 	}
 }
@@ -838,28 +856,42 @@ func (ob *SuObject) SetConcurrent() {
 		return
 	}
 	ob.concurrent = true
-	iter := ob.Iter2(true, true)
 	// recursive, deep
+	for i := 0; i < len(ob.list); i++ {
+		ob.list[i].SetConcurrent()
+	}
+	iter := ob.named.Iter()
 	for k, v := iter(); k != nil; k, v = iter() {
-		k.SetConcurrent()
-		v.SetConcurrent()
+		k.(Value).SetConcurrent()
+		v.(Value).SetConcurrent()
+	}
+	if ob.defval != nil {
+		ob.defval.SetConcurrent()
 	}
 }
 
 func (ob *SuObject) SetReadOnly() {
-	ob.Lock()
-	if ob.readonly {
-		ob.Unlock()
+	if !ob.setReadOnly() {
 		return
 	}
-	ob.readonly = true
-	ob.Unlock() // don't hold multiple locks
+	// can't hold lock while accessing other objects
 	iter := ob.Iter2(true, true)
 	for k, v := iter(); k != nil; k, v = iter() {
 		if x, ok := v.ToContainer(); ok {
 			x.SetReadOnly() // recursive, deep
 		}
 	}
+}
+
+func (ob *SuObject) setReadOnly() bool {
+	if ob.Lock() {
+		defer ob.Unlock()
+	}
+	if ob.readonly {
+		return false
+	}
+	ob.readonly = true
+	return true
 }
 
 func (ob *SuObject) IsReadOnly() bool {

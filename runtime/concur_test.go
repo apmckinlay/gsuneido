@@ -10,9 +10,15 @@ import (
 	"time"
 
 	"github.com/apmckinlay/gsuneido/util/assert"
+	"github.com/apmckinlay/gsuneido/util/race"
 )
 
-func TestConcurrentAtomic(*testing.T) {
+// NOTE: these tests depend on the race detector to find problems
+
+func TestConcurrentAtomic(t *testing.T) {
+	if !race.Enabled {
+		t.Skip("RACE NOT ENABLED")
+	}
 	// This is equivalent to what the code does
 	var concurrent bool
 	var mu sync.Mutex
@@ -29,9 +35,11 @@ func TestConcurrentAtomic(*testing.T) {
 	time.Sleep(10 * time.Millisecond)
 }
 
-func TestConcurrentMutex(*testing.T) {
+func TestConcurrentMutex(t *testing.T) {
+	if !race.Enabled {
+		t.Skip("RACE NOT ENABLED")
+	}
 	// This demonstrates that atomic is also sufficient
-	// although the code doesn't currently work like this
 	var x int
 	var m int64
 	go func() {
@@ -43,4 +51,20 @@ func TestConcurrentMutex(*testing.T) {
 	x = 123
 	atomic.StoreInt64(&m, 1)
 	time.Sleep(10 * time.Millisecond)
+}
+
+func TestConcurrentSuObjectIter(t *testing.T) {
+	if !race.Enabled {
+		t.Skip("RACE NOT ENABLED")
+	}
+	ob := NewSuObject()
+	ob.SetConcurrent()
+	for i := 0; i < 4; i++ {
+		go func() {
+			time.Sleep(5 * time.Millisecond)
+			iter := ob.Iter2(true, true)
+			iter()
+		}()
+	}
+	ob.Add(One)
 }

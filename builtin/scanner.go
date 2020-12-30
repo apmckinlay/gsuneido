@@ -12,8 +12,10 @@ import (
 
 type suScanner struct {
 	CantConvert
+	MayLock
 	lxr  lexer.Lexer
 	item lexer.Item
+	// name is either "Scanner" or "QueryScanner"
 	name string
 }
 
@@ -83,6 +85,9 @@ var scannerMethods = Methods{
 	}),
 	"Length": method0(func(this Value) Value {
 		sc := this.(*suScanner)
+		if sc.Lock() {
+			defer sc.Unlock()
+		}
 		from := sc.item.Pos
 		to := sc.lxr.Position()
 		return IntVal(to - int(from))
@@ -92,6 +97,9 @@ var scannerMethods = Methods{
 	}),
 	"Next2": method0(func(this Value) Value {
 		sc := this.(*suScanner)
+		if sc.Lock() {
+			defer sc.Unlock()
+		}
 		sc.item = sc.lxr.Next()
 		if sc.item.Token == tokens.Eof {
 			return sc
@@ -99,20 +107,35 @@ var scannerMethods = Methods{
 		return SuStr(sc.type2())
 	}),
 	"Position": method0(func(this Value) Value {
-		return IntVal(this.(*suScanner).lxr.Position())
+		sc := this.(*suScanner)
+		if sc.Lock() {
+			defer sc.Unlock()
+		}
+		return IntVal(sc.lxr.Position())
 	}),
 	"Text": method0(func(this Value) Value {
 		return this.(*suScanner).text()
 	}),
 	"Type": method0(func(this Value) Value {
-		return SuStr(this.(*suScanner).type2())
+		sc := this.(*suScanner)
+		if sc.Lock() {
+			defer sc.Unlock()
+		}
+		return SuStr(sc.type2())
 	}),
 	"Value": method0(func(this Value) Value {
-		return SuStr(this.(*suScanner).item.Text)
+		sc := this.(*suScanner)
+		if sc.Lock() {
+			defer sc.Unlock()
+		}
+		return SuStr(sc.item.Text)
 	}),
 }
 
 func (sc *suScanner) next() Value {
+	if sc.Lock() {
+		defer sc.Unlock()
+	}
 	sc.item = sc.lxr.Next()
 	if sc.item.Token == tokens.Eof {
 		return sc
@@ -121,12 +144,16 @@ func (sc *suScanner) next() Value {
 }
 
 func (sc *suScanner) text() Value {
+	if sc.Lock() {
+		defer sc.Unlock()
+	}
 	src := sc.lxr.Source()
 	from := sc.item.Pos
 	to := sc.lxr.Position()
 	return SuStr(src[from:to])
 }
 
+// type2 caller must lock
 func (sc *suScanner) type2() string {
 	if sc.item.Token.IsOperator() {
 		return ""
@@ -155,6 +182,9 @@ func (sc *suScanner) type2() string {
 }
 
 func (sc *suScanner) isKeyword() bool {
+	if sc.Lock() {
+		defer sc.Unlock()
+	}
 	return sc.item.Token != tokens.Identifier && sc.item.Token.IsIdent()
 }
 
@@ -172,9 +202,18 @@ func (sc *suScanner) Next() Value {
 }
 
 func (sc *suScanner) Dup() Iter {
+	if sc.Lock() {
+		defer sc.Unlock()
+	}
 	return &suScanner{lxr: *sc.lxr.Dup()}
 }
 
 func (sc *suScanner) Infinite() bool {
 	return false
 }
+
+func (sc *suScanner) SetConcurrent() {
+	sc.SetConcurrentFlag()
+}
+
+var _ Iter = (*suScanner)(nil)

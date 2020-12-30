@@ -346,6 +346,10 @@ func (x *MayLock) SetConcurrent() {
 	log.Fatalln("SetConcurrent must be defined")
 }
 
+func (x *MayLock) SetConcurrentFlag() {
+	x.concurrent = true
+}
+
 func (x *MayLock) Lock() bool {
 	if x == nil {
 		log.Fatal("Lock nil")

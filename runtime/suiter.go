@@ -6,7 +6,7 @@ package runtime
 import "github.com/apmckinlay/gsuneido/runtime/types"
 
 // SuIter is a Value that wraps a runtime.Iter
-// and provides the Suneido interator interface,
+// and provides the Suneido interator interface (Next,Dup,Infinite)
 // returning itself when it reaches the end
 type SuIter struct {
 	CantConvert
@@ -21,6 +21,7 @@ func (SuIter) Call(*Thread, Value, *ArgSpec) Value {
 	panic("can't call Iterator")
 }
 
+// IterMethods is set by builtin/iter.go
 var IterMethods Methods
 
 func (SuIter) Lookup(_ *Thread, method string) Callable {
@@ -70,4 +71,8 @@ func (SuIter) Hash2() uint32 {
 
 func (SuIter) Compare(Value) int {
 	panic("iterator compare not implemented")
+}
+
+func (it SuIter) SetConcurrent() {
+	it.Iter.SetConcurrent()
 }

@@ -5,47 +5,57 @@ package builtin
 
 import (
 	"strings"
+	"sync"
 
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
 var _ = builtin("Sequence(iter)",
 	func(t *Thread, args []Value) Value {
-		return NewSuSequence(&wrapIter{iter: args[0], t: t})
+		return NewSuSequence(&wrapIter{it: args[0], t: t})
 	})
 
 // wrapIter adapts a Suneido iterator (a class with Next,Dup,Infinite)
-// to the runtime.Iter interface.
-// For the reverse see runtime.SuIter.
+// to the runtime.Iter interface. For the reverse see SuIter.
+// No locking since not mutable.
 type wrapIter struct {
-	iter Value
-	t    *Thread
+	it Value
+	// t is nil when concurrent.
+	// When not concurrent we use the creating thread.
+	t *Thread
 }
 
 func (wi *wrapIter) Next() Value {
 	x := wi.call("Next")
-	if x == wi.iter {
+	if x == wi.it {
 		return nil
 	}
 	return x
 }
 
 func (wi *wrapIter) Infinite() (result bool) {
-	defer func() {
-		if e := recover(); e != nil {
-			result = false
-		}
-	}()
 	return wi.call("Infinite?") == True
 }
 
 func (wi *wrapIter) Dup() Iter {
 	it := wi.call("Dup")
-	return &wrapIter{iter: it, t: wi.t}
+	return &wrapIter{it: it, t: wi.t}
 }
 
+func (wi *wrapIter) SetConcurrent() {
+	wi.t = nil
+	wi.it.SetConcurrent()
+}
+
+var threadPool = sync.Pool{New: func() interface{} { return NewThread() }}
+
 func (wi *wrapIter) call(method string) Value {
-	return wi.t.CallLookup(wi.iter, method)
+	t := wi.t
+	if t == nil {
+		t = threadPool.Get().(*Thread)
+		defer threadPool.Put(t)
+	}
+	return t.CallLookup(wi.it, method)
 }
 
 var _ Iter = (*wrapIter)(nil)
@@ -66,7 +76,7 @@ func init() {
 		"Iter": method0(func(this Value) Value {
 			iter := this.(*SuSequence).Iter()
 			if wi, ok := iter.(*wrapIter); ok {
-				return wi.iter
+				return wi.it
 			}
 			return SuIter{Iter: iter}
 		}),

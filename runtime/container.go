@@ -47,10 +47,11 @@ func IterAssocs(ob Container, list, named bool) Iter {
 }
 
 type obIter struct {
-	ob          Container
-	list, named bool
-	iter        func() (Value, Value)
-	result      func(Value, Value) Value
+	ob     Container
+	list   bool
+	named  bool
+	iter   func() (Value, Value)
+	result func(Value, Value) Value
 }
 
 func (it *obIter) Next() Value {
@@ -67,4 +68,7 @@ func (it *obIter) Dup() Iter {
 }
 func (it *obIter) Infinite() bool {
 	return false
+}
+func (it *obIter) SetConcurrent() {
+	it.ob.SetConcurrent()
 }
