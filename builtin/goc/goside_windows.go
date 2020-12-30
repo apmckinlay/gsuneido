@@ -136,10 +136,8 @@ var RunOnGoSide func()
 var SunAPP func(string) string
 
 func interact() uintptr {
-	//TODO use Suneido thread instead of Windows thread
 	if uiThreadId != windows.GetCurrentThreadId() {
-		log.Println("illegal UI call from background thread")
-		runtime.Goexit()
+		panic("illegal UI call from background thread")
 	}
 	for {
 		switch C.args[0] {
