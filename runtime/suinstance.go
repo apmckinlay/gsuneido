@@ -97,8 +97,6 @@ func (ob *SuInstance) Get(t *Thread, m Value) Value {
 	}
 	return ob.get(t, m)
 }
-
-// get should only be called when ob is locked
 func (ob *SuInstance) get(t *Thread, m Value) Value {
 	if ms, ok := m.ToStr(); ok {
 		if x, ok := ob.Data[ms]; ok {
@@ -121,9 +119,12 @@ func (ob *SuInstance) Put(t *Thread, m Value, v Value) {
 	}
 	ob.put(t, m, v)
 }
+func (ob *SuInstance) put(_ *Thread, m Value, v Value) {
+	ob.Data[AsStr(m)] = v
+}
 
 func (ob *SuInstance) GetPut(t *Thread, m Value, v Value,
-	op func (x,y Value) Value, retOrig bool) Value {
+	op func(x, y Value) Value, retOrig bool) Value {
 	if ob.Lock() {
 		defer ob.Unlock()
 	}
@@ -134,10 +135,6 @@ func (ob *SuInstance) GetPut(t *Thread, m Value, v Value,
 		return orig
 	}
 	return v
-}
-
-func (ob *SuInstance) put(_ *Thread, m Value, v Value) {
-	ob.Data[AsStr(m)] = v
 }
 
 func (*SuInstance) RangeTo(int, int) Value {

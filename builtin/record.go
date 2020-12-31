@@ -38,13 +38,14 @@ func init() {
 			}),
 		"Invalidate": methodRaw("(@args)",
 			func(t *Thread, as *ArgSpec, this Value, args []Value) Value {
+				r := this.(*SuRecord)
 				iter := NewArgsIter(as, args)
 				for {
 					k, v := iter()
 					if k != nil || v == nil {
 						break
 					}
-					this.(*SuRecord).Invalidate(t, AsStr(v))
+					r.Invalidate(t, AsStr(v))
 				}
 				return nil
 			}),

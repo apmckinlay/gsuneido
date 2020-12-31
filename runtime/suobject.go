@@ -116,8 +116,6 @@ func (ob *SuObject) GetIfPresent(_ *Thread, key Value) Value {
 	}
 	return ob.getIfPresent(key)
 }
-
-// getIfPresent implements GetIfPresent without locking
 func (ob *SuObject) getIfPresent(key Value) Value {
 	if i, ok := key.IfInt(); ok && 0 <= i && i < len(ob.list) {
 		return ob.list[i]
@@ -130,6 +128,9 @@ func (ob *SuObject) HasKey(key Value) bool {
 	if ob.Lock() {
 		defer ob.Unlock()
 	}
+	return ob.hasKey(key)
+}
+func (ob *SuObject) hasKey(key Value) bool {
 	i, ok := key.IfInt()
 	return (ok && 0 <= i && i < len(ob.list)) || ob.named.Get(key) != nil
 }
@@ -285,6 +286,9 @@ func (ob *SuObject) DeleteAll() {
 	if ob.Lock() {
 		defer ob.Unlock()
 	}
+	ob.deleteAll()
+}
+func (ob *SuObject) deleteAll() {
 	defer ob.endMutate(ob.startMutate())
 	ob.list = []Value{}
 	ob.named = Hmap{}
@@ -718,6 +722,9 @@ func (ob *SuObject) Iter2(list, named bool) func() (Value, Value) {
 	if ob.Lock() {
 		defer ob.Unlock()
 	}
+	return ob.iter2(list, named)
+}
+func (ob *SuObject) iter2(list, named bool) func() (Value, Value) {
 	version := ob.version
 	next := 0
 	if list && !named {
