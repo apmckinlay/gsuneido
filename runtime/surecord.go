@@ -398,9 +398,6 @@ func (r *SuRecord) put(t *Thread, keyval, val Value) {
 			return
 		}
 		r.invalidateDependents(key)
-		if r.Unlock() { // can't hold lock while calling observers
-			defer r.Lock()
-		}
 		r.callObservers(t, key)
 	} else { // key not a string
 		r.ob.set(keyval, val)
@@ -494,7 +491,12 @@ func (r *SuRecord) callObservers2(t *Thread, key string) {
 			func(ofn Value, key string) {
 				r.activeObservers.Push(activeObserver{ofn, key})
 				defer r.activeObservers.Pop()
-				t.pushCall(ofn, r, argSpecMember, SuStr(key))
+				func() {
+					if r.Unlock() { // can't hold lock while calling observer
+						defer r.Lock()
+					}
+					t.pushCall(ofn, r, argSpecMember, SuStr(key))
+				}()
 			}(ofn, key)
 		}
 	}
