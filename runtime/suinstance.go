@@ -129,6 +129,9 @@ func (ob *SuInstance) GetPut(t *Thread, m Value, v Value,
 		defer ob.Unlock()
 	}
 	orig := ob.get(t, m)
+	if orig == nil {
+		panic("uninitialized member: " + m.String())
+	}
 	v = op(orig, v)
 	ob.put(t, m, v)
 	if retOrig {

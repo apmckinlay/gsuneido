@@ -428,6 +428,9 @@ func (r *SuRecord) GetPut(t *Thread, m, v Value,
 		defer r.Unlock()
 	}
 	orig := r.get(t, m)
+	if orig == nil {
+		panic("uninitialized member: " + m.String())
+	}
 	v = op(orig, v)
 	r.put(t, m, v)
 	if retOrig {

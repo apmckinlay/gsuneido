@@ -163,6 +163,9 @@ func (ob *SuObject) GetPut(t *Thread, m, v Value,
 		defer ob.Unlock()
 	}
 	orig := ob.get(t, m)
+	if orig == nil {
+		panic("uninitialized member: " + m.String())
+	}
 	v = op(orig, v)
 	ob.set(m, v)
 	if retOrig {
