@@ -4,8 +4,6 @@
 package runtime
 
 import (
-	"math"
-
 	"github.com/apmckinlay/gsuneido/runtime/types"
 	"github.com/apmckinlay/gsuneido/util/dnum"
 	"github.com/apmckinlay/gsuneido/util/ints"
@@ -285,47 +283,4 @@ func UnpackNumber(s string) Value {
 		return SuInt(n)
 	}
 	return SuDnum{Dnum: dn}
-}
-
-// old format -------------------------------------------------------
-
-const maxShiftable = math.MaxUint16 / 10000
-
-func UnpackNumberOld(s string) SuDnum {
-	if len(s) <= 1 {
-		return SuDnum{Dnum: dnum.Zero}
-	}
-	buf := pack.NewDecoder(s)
-	sign := int8(+1)
-	if buf.Get1() == PackMinus {
-		sign = -1
-	}
-	exp := int8(buf.Get1())
-	if exp == 0 {
-		return SuDnum{Dnum: dnum.NegInf}
-	}
-	if exp == -1 {
-		return SuDnum{Dnum: dnum.PosInf}
-	}
-	if sign < 0 {
-		exp = ^exp
-	}
-	exp = exp ^ -128
-	exp = exp - int8(buf.Remaining()/2)
-
-	coef := unpackLongPartOld(buf, sign < 0)
-
-	return SuDnum{Dnum: dnum.New(sign, coef, int(exp)*4+16)}
-}
-
-func unpackLongPartOld(buf *pack.Decoder, minus bool) uint64 {
-	flip := uint16(0)
-	if minus {
-		flip = 0xffff
-	}
-	n := uint64(0)
-	for buf.Remaining() > 0 {
-		n = n*10000 + uint64(buf.Uint16()^flip)
-	}
-	return n
 }

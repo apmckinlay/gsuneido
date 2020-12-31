@@ -113,27 +113,3 @@ func PackedCmpLower(s1, s2 string) int {
 	}
 	return str.CmpLower(s1, s2)
 }
-
-func UnpackOld(s string) Value {
-	if len(s) == 0 {
-		return EmptyStr
-	}
-	switch s[0] {
-	case PackFalse:
-		return False
-	case PackTrue:
-		return True
-	case PackString:
-		return SuStr(s[1:])
-	case PackDate:
-		return UnpackDate(s)
-	case PackPlus, PackMinus:
-		return UnpackNumberOld(s)
-	case PackObject:
-		return UnpackObjectOld(s)
-	case PackRecord:
-		return UnpackRecordOld(s)
-	default:
-		panic("invalid pack tag " + strconv.Itoa(int(s[0])))
-	}
-}

@@ -1083,35 +1083,3 @@ func unpackValue(buf *pack.Decoder) Value {
 	size := int(buf.VarUint())
 	return Unpack(buf.Get(size))
 }
-
-// old format
-
-func UnpackObjectOld(s string) *SuObject {
-	return unpackObjectOld(s, &SuObject{})
-}
-
-func unpackObjectOld(s string, ob *SuObject) *SuObject {
-	if len(s) <= 1 {
-		return ob
-	}
-	buf := pack.NewDecoder(s[1:])
-	var v Value
-	n := buf.Int32()
-	for i := 0; i < n; i++ {
-		v = unpackValueOld(buf)
-		ob.add(v)
-	}
-	var k Value
-	n = buf.Int32()
-	for i := 0; i < n; i++ {
-		k = unpackValueOld(buf)
-		v = unpackValueOld(buf)
-		ob.set(k, v)
-	}
-	return ob
-}
-
-func unpackValueOld(buf *pack.Decoder) Value {
-	size := buf.Int32()
-	return UnpackOld(buf.Get(size))
-}
