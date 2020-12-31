@@ -290,14 +290,14 @@ func (r *SuRecord) IsNew() bool {
 }
 
 func (r *SuRecord) Delete(t *Thread, key Value) bool {
-	return r.delete(t, key, r.ob.Delete)
+	return r.delete(t, key, r.ob.delete)
 }
 
 func (r *SuRecord) Erase(t *Thread, key Value) bool {
-	return r.delete(t, key, r.ob.Erase)
+	return r.delete(t, key, r.ob.erase)
 }
 
-func (r *SuRecord) delete(t *Thread, key Value, fn func(*Thread, Value) bool) bool {
+func (r *SuRecord) delete(t *Thread, key Value, fn func(Value) bool) bool {
 	if r.ob.Lock() {
 		defer r.ob.Unlock()
 	}
@@ -308,7 +308,7 @@ func (r *SuRecord) delete(t *Thread, key Value, fn func(*Thread, Value) bool) bo
 	// have to remove row
 	// because we assume if field is missing from object we can use row data
 	r.row = nil
-	if fn(t, key) {
+	if fn(key) {
 		if keystr, ok := key.ToStr(); ok {
 			r.invalidateDependents(keystr)
 			r.callObservers(t, keystr)

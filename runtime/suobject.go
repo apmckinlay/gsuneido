@@ -204,6 +204,9 @@ func (ob *SuObject) Delete(_ *Thread, key Value) bool {
 	if ob.Lock() {
 		defer ob.Unlock()
 	}
+	return ob.delete(key)
+}
+func (ob *SuObject) delete(key Value) bool {
 	defer ob.endMutate(ob.startMutate())
 	if i, ok := key.IfInt(); ok && 0 <= i && i < len(ob.list) {
 		ob.listDelete(i)
@@ -226,6 +229,9 @@ func (ob *SuObject) Erase(_ *Thread, key Value) bool {
 	if ob.Lock() {
 		defer ob.Unlock()
 	}
+	return ob.erase(key)
+}
+func (ob *SuObject) erase(key Value) bool {
 	defer ob.endMutate(ob.startMutate())
 	if i, ok := key.IfInt(); ok && 0 <= i && i < len(ob.list) {
 		// migrate following list elements to named
