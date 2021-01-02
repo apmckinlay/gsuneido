@@ -8,6 +8,8 @@ package builtin
 import (
 	"fmt"
 	"log"
+	"os"
+	"runtime"
 	"sync"
 	"time"
 
@@ -127,6 +129,13 @@ func call(fn Value, args ...Value) uintptr {
 
 func handler(e interface{}, state interface{}) {
 	if UIThread.InHandler {
+		UIThread.PrintStack()
+		if _, ok := e.(runtime.Error); ok {
+			buf := make([]byte, 1024)
+			n := runtime.Stack(buf, false)
+			os.Stderr.Write(buf[:n])
+			os.Stderr.Write([]byte{'\n'})
+		}
 		Alert("Error in Handler:", e)
 		return
 	}
@@ -135,6 +144,13 @@ func handler(e interface{}, state interface{}) {
 		UIThread.InHandler = false
 		UIThread.RestoreState(state)
 		if e := recover(); e != nil {
+			UIThread.PrintStack()
+			if _, ok := e.(runtime.Error); ok {
+				buf := make([]byte, 1024)
+				n := runtime.Stack(buf, false)
+				os.Stderr.Write(buf[:n])
+				os.Stderr.Write([]byte{'\n'})
+			}
 			Alert("Error in Handler:", e)
 		}
 	}()
