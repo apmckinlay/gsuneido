@@ -436,7 +436,7 @@ loop:
 		case op.Closure:
 			fr.locals.moveToHeap()
 			fn := fr.fn.Values[fetchUint8()].(*SuFunc)
-			block := &SuClosure{SuFunc: *fn, locals: fr.locals, this: fr.this}
+			block := &SuClosure{SuFunc: *fn, locals: fr.locals.v, this: fr.this}
 			t.Push(block)
 		case op.BlockBreak:
 			panic(BlockBreak)
