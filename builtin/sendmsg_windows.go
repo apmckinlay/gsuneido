@@ -57,7 +57,7 @@ var _ = builtin4("SendMessageTextOut(hwnd, msg, wParam = 0, bufsize = 1024)",
 			intArg(b),
 			intArg(c),
 			uintptr(buf))
-		ob := NewSuObject()
+		ob := &SuObject{}
 		ob.Put(nil, SuStr("text"), SuStr(heap.GetStrZ(buf, int(n))))
 		ob.Put(nil, SuStr("result"), intRet(rtn))
 		return ob
@@ -636,7 +636,7 @@ var _ = builtin4("SendMessageListColumnOrder(hwnd, msg, wParam, lParam)",
 		p := heap.Alloc(uintptr(n) * int32Size)
 		colsob := d.Get(nil, SuStr("order"))
 		if colsob == nil {
-			colsob = NewSuObject()
+			colsob = &SuObject{}
 			d.Put(nil, SuStr("order"), colsob)
 		}
 		for i := 0; i < n; i++ {

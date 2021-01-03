@@ -1810,7 +1810,7 @@ var _ = builtin5("DrawTextExOut(hdc, text, rect, flags, params)",
 			intArg(d),
 			uintptr(drawTextParams(e)))
 		urectToOb(r, c)
-		ob := NewSuObject()
+		ob := &SuObject{}
 		ob.Put(nil, SuStr("text"), SuStr(heap.GetStrZ(buf, bufsize)))
 		ob.Put(nil, SuStr("result"), intRet(rtn))
 		return ob

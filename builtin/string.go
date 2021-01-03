@@ -335,7 +335,7 @@ func init() {
 			for i, str := range strs {
 				vals[i] = SuStr(str)
 			}
-			return NewSuObject(vals...)
+			return NewSuObject(vals)
 		}),
 		"Substr": method2("(i, n=false)", func(this, arg1, arg2 Value) Value {
 			s := ToStr(this)

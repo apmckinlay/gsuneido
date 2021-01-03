@@ -223,7 +223,7 @@ func (dc *dbmsClient) Libraries() *SuObject {
 
 func (dc *dbmsClient) getStrings() *SuObject {
 	n := dc.GetInt()
-	ob := NewSuObject()
+	ob := &SuObject{}
 	for ; n > 0; n-- {
 		ob.Add(SuStr(dc.GetStr()))
 	}
@@ -271,7 +271,7 @@ func (dc *dbmsClient) Transaction(update bool) ITran {
 
 func (dc *dbmsClient) Transactions() *SuObject {
 	dc.PutCmd(commands.Transactions).Request()
-	ob := NewSuObject()
+	ob := &SuObject{}
 	for n := dc.GetInt(); n > 0; n-- {
 		ob.Add(IntVal(dc.GetInt()))
 	}
@@ -406,7 +406,7 @@ func (qc *clientQueryCursor) Header() *Header {
 func (qc *clientQueryCursor) Keys() *SuObject {
 	if qc.keys == nil { // cached
 		qc.dc.PutCmd(commands.Keys).PutInt(qc.id).PutByte(byte(qc.qc)).Request()
-		qc.keys = NewSuObject()
+		qc.keys = &SuObject{}
 		nk := qc.dc.GetInt()
 		for ; nk > 0; nk-- {
 			cb := str.CommaBuilder{}

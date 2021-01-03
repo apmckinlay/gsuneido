@@ -100,7 +100,7 @@ var _ = builtin1("DeleteDir(dir)",
 
 var _ = builtin0("GetMacAddresses()",
 	func() Value {
-		ob := NewSuObject()
+		ob := &SuObject{}
 		if intfcs, err := net.Interfaces(); err == nil {
 			for _, intfc := range intfcs {
 				if s := string(intfc.HardwareAddr); s != "" {

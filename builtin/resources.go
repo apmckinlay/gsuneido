@@ -6,7 +6,7 @@ package builtin
 import . "github.com/apmckinlay/gsuneido/runtime"
 
 var _ = builtin0("ResourceCounts()", func() Value {
-	ob := NewSuObject()
+	ob := &SuObject{}
 	add(ob, "File", nFile)
 	add(ob, "RunPiped", nRunPiped)
 	add(ob, "SocketClient", nSocketClient)

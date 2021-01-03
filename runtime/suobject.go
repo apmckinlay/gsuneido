@@ -25,38 +25,35 @@ Private methods must NOT lock
 */
 
 // EmptyObject is a readonly empty SuObject
-var EmptyObject = emptyOb()
-
-func emptyOb() *SuObject {
-	ob := NewSuObject()
-	ob.SetReadOnly()
-	return ob
-}
+var EmptyObject = &SuObject{readonly: true}
 
 // SuObject is a Suneido object
 // i.e. a container with both list and named members.
 // Zero value is a valid empty object.
-//
-// If concurrent is 0, no locking, assumed to be thread contained
-// If concurrent is 1, guarded by lock, assumed to be shared
 type SuObject struct {
 	CantConvert
+	MayLock
 	named  Hmap
 	list   []Value
 	defval Value
-	MayLock
-	version  int32
+	// version is incrmented by operations that change one of the sizes.
+	// i.e. not by just updating a value in-place.
+	// It is used to detect modification during iteration.
+	version int32
+	// clock is incremented by any modification, including in-place updates.
+	// It is used to detect modification during packing.
 	clock    int32
 	readonly bool
 }
 
-// NewSuObject creates an SuObject from its arguments
-func NewSuObject(args ...Value) *SuObject {
-	ob := &SuObject{list: make([]Value, len(args))}
-	for i, arg := range args {
-		ob.list[i] = arg
-	}
-	return ob
+// NewSuObject creates an SuObject from a slice of Value's
+func NewSuObject(args []Value) *SuObject {
+	return &SuObject{list: args}
+}
+
+// SuObjectOf returns an SuObject from its arguments
+func SuObjectOf(args ...Value) *SuObject {
+	return &SuObject{list: args}
 }
 
 func (ob *SuObject) Copy() Container {
@@ -67,6 +64,8 @@ func (ob *SuObject) Copy() Container {
 	return &ob2
 }
 
+// slice returns a copy of an object, excluding the named members,
+// and with only a prefix of the list values
 func (ob *SuObject) slice(n int) (ob2 SuObject) {
 	ob2.named = *ob.named.Copy()
 	ob2.defval = ob.defval

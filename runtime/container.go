@@ -44,7 +44,7 @@ func IterMembers(ob Container, list, named bool) Iter {
 func IterAssocs(ob Container, list, named bool) Iter {
 	return &obIter{ob: ob, list: list, named: named,
 		iter:   ob.Iter2(list, named),
-		result: func(k, v Value) Value { return NewSuObject(k, v) }}
+		result: func(k, v Value) Value { return SuObjectOf(k, v) }}
 }
 
 type obIter struct {

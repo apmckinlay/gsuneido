@@ -122,13 +122,13 @@ func TestArgs(t *testing.T) {
 
 	// @list
 	th.Reset()
-	th.Push(NewSuObject(SuInt(1), SuInt(2), SuInt(3), SuInt(4)))
+	th.Push(SuObjectOf(SuInt(1), SuInt(2), SuInt(3), SuInt(4)))
 	th.Args(f, as)
 	ckStack(1, 2, 3, 4)
 
 	// @+1 list
 	th.Reset()
-	th.Push(NewSuObject(SuInt(1), SuInt(2), SuInt(3), SuInt(4), SuInt(5)))
+	th.Push(SuObjectOf(SuInt(1), SuInt(2), SuInt(3), SuInt(4), SuInt(5)))
 	th.Args(f, &ArgSpecEach1)
 	ckStack(2, 3, 4, 5)
 
@@ -137,7 +137,7 @@ func TestArgs(t *testing.T) {
 		Names: []string{"a"}}
 	as = &ArgSpecEach0
 	th.Reset()
-	th.Push(NewSuObject(SuInt(123)))
+	th.Push(SuObjectOf(SuInt(123)))
 	th.Args(f, as)
 	ckStack(123)
 

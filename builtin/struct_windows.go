@@ -165,7 +165,7 @@ type MINMAXINFO struct {
 
 func (typ *suMinMaxInfo) structToOb(p unsafe.Pointer) Value {
 	mmi := (*MINMAXINFO)(p)
-	ob := NewSuObject()
+	ob := &SuObject{}
 	ob.Put(nil, SuStr("maxSize"), pointToOb(&mmi.maxSize, nil))
 	ob.Put(nil, SuStr("maxPosition"), pointToOb(&mmi.maxPosition, nil))
 	ob.Put(nil, SuStr("minTrackSize"), pointToOb(&mmi.minTrackSize, nil))
@@ -201,7 +201,7 @@ var _ = builtin1("NMHDR(address)",
 	})
 
 func nmhdrToOb(nmh *NMHDR) *SuObject {
-	ob := NewSuObject()
+	ob := &SuObject{}
 	ob.Put(nil, SuStr("hwndFrom"), IntVal(int(nmh.hwndFrom)))
 	ob.Put(nil, SuStr("idFrom"), IntVal(int(nmh.idFrom)))
 	ob.Put(nil, SuStr("code"), IntVal(int(nmh.code)))
@@ -232,7 +232,7 @@ var _ = builtin1("NMTVDISPINFO(address)",
 	})
 
 func tvitemToOb(tvi *TVITEM) *SuObject {
-	ob := NewSuObject()
+	ob := &SuObject{}
 	ob.Put(nil, SuStr("mask"), IntVal(int(tvi.mask)))
 	ob.Put(nil, SuStr("hItem"), IntVal(int(tvi.hItem)))
 	ob.Put(nil, SuStr("state"), IntVal(int(tvi.state)))
@@ -260,7 +260,7 @@ type suNMTVDISPINFO struct {
 
 func (*suNMTVDISPINFO) structToOb(p unsafe.Pointer) Value {
 	x := (*NMTVDISPINFO)(p)
-	ob := NewSuObject()
+	ob := &SuObject{}
 	ob.Put(nil, SuStr("hdr"), nmhdrToOb(&x.nmhdr))
 	ob.Put(nil, SuStr("item"), tvitemToOb(&x.item))
 	return ob
@@ -300,7 +300,7 @@ type suNMTTDISPINFO struct {
 
 func (*suNMTTDISPINFO) structToOb(p unsafe.Pointer) Value {
 	x := (*NMTTDISPINFO)(p)
-	ob := NewSuObject()
+	ob := &SuObject{}
 	ob.Put(nil, SuStr("hdr"), nmhdrToOb(&x.hdr))
 	ob.Put(nil, SuStr("szText"), bsStrZ(x.szText[:]))
 	ob.Put(nil, SuStr("lpszText"), IntVal(int(x.lpszText)))
@@ -344,12 +344,12 @@ var _ = builtin1("NMHEADER(address)",
 			return False
 		}
 		x := (*NMHEADER)(unsafe.Pointer(uintptr(adr)))
-		ob := NewSuObject()
+		ob := &SuObject{}
 		ob.Put(nil, SuStr("hdr"), nmhdrToOb(&x.hdr))
 		ob.Put(nil, SuStr("iItem"), IntVal(int(x.iItem)))
 		ob.Put(nil, SuStr("iButton"), IntVal(int(x.iButton)))
 		if x.pitem != nil {
-			hdi := hditemToOb(x.pitem, NewSuObject())
+			hdi := hditemToOb(x.pitem, &SuObject{})
 			hdi.Put(nil, SuStr("pszText"),
 				IntVal(int(uintptr(unsafe.Pointer(x.pitem.pszText)))))
 			ob.Put(nil, SuStr("pitem"), hdi)
@@ -374,7 +374,7 @@ var _ = builtin1("NMTREEVIEW(address)",
 			return False
 		}
 		x := (*NMTREEVIEW)(unsafe.Pointer(uintptr(adr)))
-		ob := NewSuObject()
+		ob := &SuObject{}
 		ob.Put(nil, SuStr("hdr"), nmhdrToOb(&x.hdr))
 		ob.Put(nil, SuStr("action"), IntVal(int(x.action)))
 		ob.Put(nil, SuStr("itemOld"), tvitemToOb(&x.itemOld))
@@ -398,7 +398,7 @@ var _ = builtin1("NMTVKEYDOWN(address)",
 			return False
 		}
 		x := (*NMTVKEYDOWN)(unsafe.Pointer(uintptr(adr)))
-		ob := NewSuObject()
+		ob := &SuObject{}
 		ob.Put(nil, SuStr("hdr"), nmhdrToOb(&x.hdr))
 		ob.Put(nil, SuStr("wVKey"), IntVal(int(x.wVKey)))
 		ob.Put(nil, SuStr("flags"), IntVal(int(x.flags)))
@@ -443,7 +443,7 @@ func accel(_ *Thread, args []Value) Value {
 			return False
 		}
 		ac := (*ACCEL)(unsafe.Pointer(uintptr(a)))
-		ob := NewSuObject()
+		ob := &SuObject{}
 		ob.Put(nil, SuStr("fVirt"), IntVal(int(ac.fVirt)))
 		ob.Put(nil, SuStr("pad"), IntVal(int(ac.pad)))
 		ob.Put(nil, SuStr("key"), IntVal(int(ac.key)))
@@ -553,7 +553,7 @@ var _ = builtin1("DRAWITEMSTRUCT(address)",
 			return False
 		}
 		dis := (*DRAWITEMSTRUCT)(unsafe.Pointer(uintptr(adr)))
-		ob := NewSuObject()
+		ob := &SuObject{}
 		ob.Put(nil, SuStr("CtlType"), IntVal(int(dis.CtlType)))
 		ob.Put(nil, SuStr("CtlID"), IntVal(int(dis.CtlID)))
 		ob.Put(nil, SuStr("itemID"), IntVal(int(dis.itemID)))
@@ -575,7 +575,7 @@ var _ = builtin1("MSG(address)",
 			return False
 		}
 		msg := (*MSG)(unsafe.Pointer(uintptr(adr)))
-		ob := NewSuObject()
+		ob := &SuObject{}
 		ob.Put(nil, SuStr("hwnd"), IntVal(int(msg.hwnd)))
 		ob.Put(nil, SuStr("message"), IntVal(int(msg.message)))
 		ob.Put(nil, SuStr("wParam"), IntVal(int(msg.wParam)))
@@ -594,7 +594,7 @@ var _ = builtin1("CWPRETSTRUCT(address)",
 			return False
 		}
 		x := (*CWPRETSTRUCT)(unsafe.Pointer(uintptr(adr)))
-		ob := NewSuObject()
+		ob := &SuObject{}
 		ob.Put(nil, SuStr("lResult"), IntVal(int(x.lResult)))
 		ob.Put(nil, SuStr("lParam"), IntVal(int(x.lParam)))
 		ob.Put(nil, SuStr("wParam"), IntVal(int(x.wParam)))
@@ -620,9 +620,9 @@ var _ = builtin1("NMLVDISPINFO(address)",
 			return False
 		}
 		x := (*NMLVDISPINFO)(unsafe.Pointer(uintptr(adr)))
-		ob := NewSuObject()
+		ob := &SuObject{}
 		ob.Put(nil, SuStr("hdr"), nmhdrToOb(&x.hdr))
-		item := NewSuObject()
+		item := &SuObject{}
 		item.Put(nil, SuStr("mask"), IntVal(int(x.item.mask)))
 		item.Put(nil, SuStr("iItem"), IntVal(int(x.item.iItem)))
 		item.Put(nil, SuStr("iSubItem"), IntVal(int(x.item.iSubItem)))
@@ -652,7 +652,7 @@ var _ = builtin1("NMLISTVIEW(address)",
 			return False
 		}
 		x := (*NMLISTVIEW)(unsafe.Pointer(uintptr(adr)))
-		ob := NewSuObject()
+		ob := &SuObject{}
 		ob.Put(nil, SuStr("hdr"), nmhdrToOb(&x.hdr))
 		ob.Put(nil, SuStr("iItem"), IntVal(int(x.iItem)))
 		ob.Put(nil, SuStr("iSubItem"), IntVal(int(x.iSubItem)))
@@ -686,8 +686,8 @@ type suNMDAYSTATE struct {
 
 func (*suNMDAYSTATE) structToOb(p unsafe.Pointer) Value {
 	x := (*NMDAYSTATE)(p)
-	ob := NewSuObject()
-	ob.Put(nil, SuStr("stStart"), SYSTEMTIMEtoOb(&x.stStart, NewSuObject()))
+	ob := &SuObject{}
+	ob.Put(nil, SuStr("stStart"), SYSTEMTIMEtoOb(&x.stStart, &SuObject{}))
 	ob.Put(nil, SuStr("cDayState"), IntVal(int(x.cDayState)))
 	return ob
 }

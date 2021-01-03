@@ -51,7 +51,7 @@ func init() {
 			if args[0] == True {
 				args[0] = nil
 			}
-			list := NewSuObject()
+			list := &SuObject{}
 			this.(Findable).Finder(t, func(v Value, mb *MemBase) Value {
 				mb.AddMembersTo(list)
 				return args[0]

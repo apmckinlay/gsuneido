@@ -57,7 +57,7 @@ func TestConcurrentSuObjectIter(t *testing.T) {
 	if !race.Enabled {
 		t.Skip("RACE NOT ENABLED")
 	}
-	ob := NewSuObject()
+	ob := SuObjectOf(One, True)
 	ob.SetConcurrent()
 	for i := 0; i < 4; i++ {
 		go func() {

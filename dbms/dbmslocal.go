@@ -125,7 +125,7 @@ func (DbmsLocal) LibGet(name string) (result []string) {
 }
 
 func (DbmsLocal) Libraries() *SuObject {
-	return NewSuObject()
+	return &SuObject{}
 }
 
 func (DbmsLocal) Log(s string) {

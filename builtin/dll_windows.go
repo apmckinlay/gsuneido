@@ -250,7 +250,7 @@ func urectToOb(p unsafe.Pointer, ob Value) Value {
 
 func rectToOb(r *RECT, ob Value) Value {
 	if ob == nil {
-		ob = NewSuObject()
+		ob = &SuObject{}
 	} else if ob.Equal(Zero) {
 		return ob
 	}
@@ -279,7 +279,7 @@ func upointToOb(p unsafe.Pointer, ob Value) Value {
 
 func pointToOb(pt *POINT, ob Value) Value {
 	if ob == nil {
-		ob = NewSuObject()
+		ob = &SuObject{}
 	}
 	ob.Put(nil, SuStr("x"), IntVal(int(pt.x)))
 	ob.Put(nil, SuStr("y"), IntVal(int(pt.y)))

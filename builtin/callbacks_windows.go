@@ -259,7 +259,7 @@ func ClearCallback(fn Value) bool {
 }
 
 var _ = builtin0("Callbacks()", func() Value {
-	ob := NewSuObject()
+	ob := &SuObject{}
 	for _, c := range cbs {
 		for _, cb := range c {
 			if !cb.used {

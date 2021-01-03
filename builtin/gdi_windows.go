@@ -961,7 +961,7 @@ var _ = builtin1("GetObjectBrush(h)",
 		if rtn != nLOGBRUSH {
 			return False
 		}
-		ob := NewSuObject()
+		ob := &SuObject{}
 		ob.Put(nil, SuStr("lbStyle"), IntVal(int(lb.lbStyle)))
 		ob.Put(nil, SuStr("lbColor"), IntVal(int(lb.lbColor)))
 		ob.Put(nil, SuStr("lbHatch"), IntVal(int(lb.lbHatch)))
@@ -980,7 +980,7 @@ var _ = builtin1("GetObjectBitmap(h)",
 		if rtn != nBITMAP {
 			return False
 		}
-		ob := NewSuObject()
+		ob := &SuObject{}
 		ob.Put(nil, SuStr("bmType"), IntVal(int(bm.bmType)))
 		ob.Put(nil, SuStr("bmWidth"), IntVal(int(bm.bmWidth)))
 		ob.Put(nil, SuStr("bmHeight"), IntVal(int(bm.bmHeight)))

@@ -89,7 +89,7 @@ var threadMethods = Methods{
 		return IntVal(threads.count())
 	}),
 	"List": method0(func(this Value) Value {
-		ob := NewSuObject()
+		ob := &SuObject{}
 		threads.lock.Lock()
 		defer threads.lock.Unlock()
 		for _, t := range threads.list {

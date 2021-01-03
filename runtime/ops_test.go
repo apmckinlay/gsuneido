@@ -44,7 +44,7 @@ func BenchmarkCat(b *testing.B) {
 
 func BenchmarkJoin(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		ob := NewSuObject()
+		ob := &SuObject{}
 		for j := 0; j < 10000; j++ {
 			ob.Add(abc)
 		}

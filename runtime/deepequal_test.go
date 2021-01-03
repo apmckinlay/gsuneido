@@ -60,7 +60,7 @@ func mk(kind int, concurrent bool) Value {
 }
 
 func mkObject(kind int, concurrent bool) *SuObject {
-	ob := NewSuObject()
+	ob := &SuObject{}
 	switch kind {
 	case zero:
 		ob.Add(Zero)

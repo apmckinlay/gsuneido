@@ -518,7 +518,7 @@ var _ = builtin0("OSVersion()", func() Value {
 	if rtn == 0 {
 		return False
 	}
-	ob := NewSuObject()
+	ob := &SuObject{}
 	ob.Add(IntVal(hiword(pffi.dwFileVersionMS)))
 	ob.Add(IntVal(loword(pffi.dwFileVersionMS)))
 	ob.Add(IntVal(hiword(pffi.dwFileVersionLS)))

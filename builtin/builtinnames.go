@@ -14,7 +14,7 @@ var builtinNames *SuObject
 
 var _ = builtin0("BuiltinNames()", func() Value {
 	builtinNamesOnce.Do(func() {
-		builtinNames = NewSuObject(BuiltinNames()...)
+		builtinNames = NewSuObject(BuiltinNames())
 		builtinNames.Sort(nil, False)
 		builtinNames.SetReadOnly()
 	})
