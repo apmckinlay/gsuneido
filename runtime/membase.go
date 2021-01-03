@@ -48,9 +48,10 @@ func (mb *MemBase) Copy() MemBase {
 	return MemBase{Data: copy}
 }
 
-func (mb *MemBase) Get(m string) Value {
+func (mb *MemBase) Has(m string) bool {
 	if mb.Lock() {
 		defer mb.lock.Unlock()
 	}
-	return mb.Data[m]
+	_,ok := mb.Data[m]
+	return ok
 }

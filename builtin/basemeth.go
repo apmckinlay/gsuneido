@@ -40,7 +40,7 @@ func init() {
 		"Member?": method("(string)", func(t *Thread, this Value, arg []Value) Value {
 			m := ToStr(arg[0])
 			result := this.(Findable).Finder(t, func(v Value, mb *MemBase) Value {
-				if mb.Get(m) != nil {
+				if mb.Has(m) {
 					return True
 				}
 				return nil
