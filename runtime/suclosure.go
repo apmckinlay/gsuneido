@@ -10,9 +10,9 @@ import (
 // SuClosure is an instance of a closure block
 type SuClosure struct {
 	SuFunc
-	locals []Value
-	this   Value
-	owner  *Thread
+	locals     []Value
+	this       Value
+	concurrent bool
 }
 
 // Value interface
@@ -37,8 +37,8 @@ func (b *SuClosure) Call(t *Thread, this Value, as *ArgSpec) Value {
 	if this == nil {
 		this = b.this
 	}
-	if b.concurrent {
 	fr := Frame{fn: bf, locals: Locals{v: b.locals, onHeap: true}, this: this}
+	if b.concurrent {
 		// make a mutable copy of the locals for the frame
 		v := make([]Value, len(b.locals))
 		copy(v, b.locals)
@@ -60,6 +60,7 @@ func (b *SuClosure) SetConcurrent() {
 	// make a copy of the locals - read-only since it will be shared
 	v := make([]Value, len(b.locals))
 	copy(v, b.locals)
+	// make them concurrent
 	for _, x := range v {
 		if x != nil {
 			x.SetConcurrent()
