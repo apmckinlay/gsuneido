@@ -13,6 +13,9 @@ build:
 	go build -v -ldflags "$(GUIFLAGS)" $(GUITAG)
 	$(CONSOLE)
 
+race:
+	go build -v -ldflags "$(GUIFLAGS)" $(GUITAG) -race
+
 portable:
 	# a Windows version without the Windows stuff
 	go build -o portable.exe -v -ldflags "$(LDFLAGS)" -tags portable
@@ -35,6 +38,6 @@ clean:
 gsuneido_windows.syso : res/suneido.rc res/suneido.manifest
 	windres -F pe-x86-64 -o gsuneido_windows.syso res/suneido.rc
 
-.PHONY : build portable test generate clean zap
+.PHONY : build portable test generate clean zap race
 
 # -trimpath (but breaks vscode goto)
