@@ -60,18 +60,16 @@ func (ob *SuObject) Copy() Container {
 	if ob.Lock() {
 		defer ob.Unlock()
 	}
-	ob2 := ob.slice(0)
-	return &ob2
+	return ob.slice(0)
 }
 
 // slice returns a copy of an object, omitting the first n list values
-func (ob *SuObject) slice(n int) (ob2 SuObject) {
-	ob2.named = *ob.named.Copy()
-	ob2.defval = ob.defval
+func (ob *SuObject) slice(n int) *SuObject {
+	var list []Value
 	if n < len(ob.list) {
-		ob2.list = append(ob.list[:0:0], ob.list[n:]...) // copy
+		list = append(ob.list[:0:0], ob.list[n:]...) // copy
 	}
-	return
+	return &SuObject{defval: ob.defval, named: *ob.named.Copy(), list: list}
 }
 
 var _ Container = (*SuObject)(nil) // includes Value and Lockable
@@ -81,7 +79,7 @@ func (ob *SuObject) ToObject() *SuObject {
 }
 
 // Get returns the value associated with a key, or defval if not found
-func (ob *SuObject) Get(t *Thread, key Value) Value {
+func (ob *SuObject) Get(_ *Thread, key Value) Value {
 	if ob.Lock() {
 		defer ob.Unlock()
 	}
@@ -681,8 +679,7 @@ func (ob *SuObject) Slice(n int) Container {
 	if ob.Lock() {
 		defer ob.Unlock()
 	}
-	ob2 := ob.slice(n)
-	return &ob2
+	return ob.slice(n)
 }
 
 // Find returns the key of the first occurence of the value.

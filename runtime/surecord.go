@@ -99,10 +99,11 @@ func (r *SuRecord) Copy() Container {
 	return r.slice(0)
 }
 
+// slice returns a copy of a record, omitting the first n list values
 func (r *SuRecord) slice(n int) *SuRecord {
 	// keep row and hdr even if unpacked, to help ToRecord
 	return &SuRecord{
-		ob:         r.ob.slice(n),
+		ob:         *r.ob.slice(n),
 		row:        r.row,
 		hdr:        r.hdr,
 		userow:     r.userow,
