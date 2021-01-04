@@ -84,6 +84,13 @@ func (ob *SuObject) Get(_ *Thread, key Value) Value {
 		defer ob.Unlock()
 	}
 	return ob.get(key)
+	// val := ob.get(key)
+	// if ob.concurrent && !ob.readonly && IsConcurrent(val) == False {
+	// 	log.Println("ERROR: non-concurrent value in concurrent object",
+	// 		key, val)
+	// 	t.PrintStack()
+	// }
+	// return val
 }
 
 func (ob *SuObject) get(key Value) Value {

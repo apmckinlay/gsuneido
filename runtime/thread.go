@@ -4,7 +4,6 @@
 package runtime
 
 import (
-	"fmt"
 	"log"
 	"strconv"
 	"sync/atomic"
@@ -172,27 +171,27 @@ func (t *Thread) PrintStack() {
 }
 
 func PrintStack(cs *SuObject) {
-	toStr := func(x Value) (s string) {
-		defer func() {
-			if e := recover(); e != nil {
-				s = fmt.Sprint(e)
-			}
-		}()
-		s = x.String()
-		if len(s) > 230 {
-			s = s[:230] + "..."
-		}
-		return s
-	}
 	if cs == nil {
 		return
 	}
+	// toStr := func(x Value) (s string) {
+	// 	defer func() {
+	// 		if e := recover(); e != nil {
+	// 			s = fmt.Sprint(e)
+	// 		}
+	// 	}()
+	// 	s = x.String()
+	// 	if len(s) > 230 {
+	// 		s = s[:230] + "..."
+	// 	}
+	// 	return s
+	// }
 	for i := 0; i < cs.ListSize(); i++ {
 		frame := cs.ListGet(i)
 		fn := frame.Get(nil, SuStr("fn"))
 		log.Println(fn)
-		locals := frame.Get(nil, SuStr("locals"))
-		log.Println("   " + toStr(locals))
+		// locals := frame.Get(nil, SuStr("locals"))
+		// log.Println("   " + toStr(locals))
 	}
 }
 

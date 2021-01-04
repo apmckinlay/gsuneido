@@ -62,7 +62,7 @@ func threadCallClass(_ *Thread, args []Value) Value {
 	go func() {
 		defer func() {
 			if e := recover(); e != nil {
-				log.Println("error in thread:", e)
+				log.Println("ERROR in thread:", e)
 				t2.PrintStack()
 				if _, ok := e.(runtime.Error); ok {
 					buf := make([]byte, 512)

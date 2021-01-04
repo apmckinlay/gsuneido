@@ -59,7 +59,8 @@ var updateThread *Thread
 func runUI(block Value) {
 	defer func() {
 		if e := recover(); e != nil {
-			log.Println("error in UpdateUI:", e)
+			log.Println("ERROR in UpdateUI:", e)
+			UIThread.PrintStack()
 		}
 	}()
 	if updateThread == nil {
