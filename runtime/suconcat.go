@@ -41,8 +41,8 @@ func (c SuConcat) SetConcurrent() {
 	c.buf.concurrent = true
 }
 
-func (c SuConcat) IsConcurrent() bool {
-	return c.buf.concurrent
+func (c SuConcat) IsConcurrent() Value {
+	return SuBool(c.buf.concurrent)
 }
 
 // Len returns the length of an SuConcat

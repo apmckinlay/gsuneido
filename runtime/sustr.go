@@ -237,6 +237,11 @@ func (si *stringIter) Infinite() bool {
 	return false
 }
 
-func (si *stringIter) SetConcurrent() {
-	si.concurrent = true
+func (si *stringIter) Instantiate() *SuObject {
+	InstantiateMax(len(si.s))
+	list := make([]Value, len(si.s))
+	for i := 0; i < len(si.s); i++ {
+		list[i] = SuStr(si.s[i : i+1])
+	}
+	return NewSuObject(list)
 }

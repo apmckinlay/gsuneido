@@ -177,6 +177,10 @@ func (*SuClass) SetConcurrent() {
 	// classes are immutable so no locking is required
 }
 
+func (*SuClass) IsConcurrent() Value {
+	return EmptyStr
+}
+
 func (c *SuClass) Parent(t *Thread) *SuClass {
 	if c.Base <= 0 {
 		return nil

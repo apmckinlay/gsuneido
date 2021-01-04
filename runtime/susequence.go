@@ -70,14 +70,17 @@ func (seq *SuSequence) Copy() Value {
 	if ob != nil {
 		return ob.Copy()
 	}
-	return seq.iterToObject(iter.Dup()) // may lock
+	return iter.Dup().Instantiate() // may lock
 }
 
 func (seq *SuSequence) instantiate() *SuObject {
 	iter, ob := seq.snapshot()
 	if ob == nil {
-		ob = seq.iterToObject(iter) // may lock
-		seq.setOb(ob)               // race, but should be benign/idempotent
+		ob = iter.Instantiate() // may lock
+		if seq.concurrent {
+			ob.SetConcurrent()
+		}
+		seq.setOb(ob) // race, but should be benign/idempotent
 	}
 	return ob
 }
@@ -88,25 +91,6 @@ func (seq *SuSequence) setOb(ob *SuObject) {
 	}
 	seq.ob = ob
 	seq.iter = nil
-}
-
-const max_instantiate = 16000
-
-func (seq *SuSequence) iterToObject(iter Iter) *SuObject { // may lock
-	if iter.Infinite() {
-		panic("can't instantiate infinite sequence")
-	}
-	ob := &SuObject{}
-	for x := iter.Next(); x != nil; x = iter.Next() {
-		ob.Add(x)
-		if ob.Size() >= max_instantiate {
-			panic("can't instantiate sequence larger than 16000")
-		}
-	}
-	if seq.concurrent {
-		ob.SetConcurrent()
-	}
-	return ob
 }
 
 // Value interface --------------------------------------------------
@@ -201,6 +185,9 @@ func (seq *SuSequence) asSeq(method string) bool {
 }
 
 func (seq *SuSequence) SetConcurrent() {
+	if seq.concurrent {
+		return
+	}
 	seq.concurrent = true
 	if seq.ob != nil {
 		seq.ob.SetConcurrent()

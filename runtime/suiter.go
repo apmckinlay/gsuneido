@@ -77,6 +77,6 @@ func (it SuIter) SetConcurrent() {
 	it.Iter.SetConcurrent()
 }
 
-func (it SuIter) IsConcurrent() bool {
+func (it SuIter) IsConcurrent() Value {
 	return it.Iter.IsConcurrent()
 }

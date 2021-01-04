@@ -69,6 +69,6 @@ func (b *SuClosure) SetConcurrent() {
 	b.locals = v
 }
 
-func (b *SuClosure) IsConcurrent() bool {
-	return b.concurrent
+func (b *SuClosure) IsConcurrent() Value {
+	return SuBool(b.concurrent)
 }

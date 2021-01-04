@@ -24,7 +24,7 @@ type Container interface {
 	HasKey(key Value) bool
 	ToObject() *SuObject
 	ToRecord(t *Thread, hdr *Header) Record
-	IsConcurrent() bool
+	IsConcurrent() Value
 }
 
 // iterators
@@ -62,17 +62,43 @@ func (it *obIter) Next() Value {
 	}
 	return it.result(k, v)
 }
+
 func (it *obIter) Dup() Iter {
 	oi := *it
 	oi.iter = it.ob.Iter2(it.list, it.named)
 	return &oi
 }
+
 func (it *obIter) Infinite() bool {
 	return false
 }
+
 func (it *obIter) SetConcurrent() {
 	it.ob.SetConcurrent()
 }
-func (it *obIter) IsConcurrent() bool {
+
+func (it *obIter) IsConcurrent() Value {
 	return it.ob.IsConcurrent()
 }
+
+func (it *obIter) Instantiate() *SuObject {
+	n := 0
+	if it.list && !it.named {
+		n = it.ob.ListSize()
+	} else if !it.list && it.named {
+		n = it.ob.NamedSize()
+	} else {
+		n = it.ob.ListSize() + it.ob.NamedSize()
+	}
+	InstantiateMax(n)
+	list := make([]Value, n)
+	i := 0
+	for k, v := it.iter(); v != nil; k, v = it.iter() {
+		list[i] = it.result(k, v)
+		InstantiateMax(len(list))
+		i++
+	}
+	return NewSuObject(list)
+}
+
+var _ Iter = (*obIter)(nil)

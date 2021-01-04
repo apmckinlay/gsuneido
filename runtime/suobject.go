@@ -20,8 +20,8 @@ import (
 /*
 WARNING: sync.Mutex lock is NOT reentrant
 Methods that lock must not call other methods that lock.
-Public methods must lock (if concurrent)
-Private methods must NOT lock
+The convention is that public methods should lock (if concurrent)
+and private methods should not lock
 */
 
 // EmptyObject is a readonly empty SuObject
@@ -64,8 +64,7 @@ func (ob *SuObject) Copy() Container {
 	return &ob2
 }
 
-// slice returns a copy of an object, excluding the named members,
-// and with only a prefix of the list values
+// slice returns a copy of an object, omitting the first n list values
 func (ob *SuObject) slice(n int) (ob2 SuObject) {
 	ob2.named = *ob.named.Copy()
 	ob2.defval = ob.defval
@@ -86,10 +85,10 @@ func (ob *SuObject) Get(t *Thread, key Value) Value {
 	if ob.Lock() {
 		defer ob.Unlock()
 	}
-	return ob.get(t, key)
+	return ob.get(key)
 }
 
-func (ob *SuObject) get(_ *Thread, key Value) Value {
+func (ob *SuObject) get(key Value) Value {
 	if val := ob.getIfPresent(key); val != nil {
 		return val
 	}
@@ -142,6 +141,7 @@ func (ob *SuObject) ListGet(i int) Value {
 	return ob.list[i]
 }
 
+// namedGet returns a named member or nil if it doesn't exist.
 func (ob *SuObject) namedGet(key Value) Value {
 	val := ob.named.Get(key)
 	if val == nil {
@@ -153,15 +153,18 @@ func (ob *SuObject) namedGet(key Value) Value {
 // Put adds or updates the given key and value
 // The value will be added to the list if the key is the "next"
 func (ob *SuObject) Put(_ *Thread, key, val Value) {
-	ob.Set(key, val)
+	if ob.Lock() {
+		defer ob.Unlock()
+	}
+	ob.set(key, val)
 }
 
-func (ob *SuObject) GetPut(t *Thread, m, v Value,
+func (ob *SuObject) GetPut(_ *Thread, m, v Value,
 	op func(x, y Value) Value, retOrig bool) Value {
 	if ob.Lock() {
 		defer ob.Unlock()
 	}
-	orig := ob.get(t, m)
+	orig := ob.get(m)
 	if orig == nil {
 		panic("uninitialized member: " + m.String())
 	}
@@ -411,6 +414,8 @@ func (ob *SuObject) migrate() {
 	}
 }
 
+// vstack is used by Display and Show
+// to track what is in progress to detect self reference
 type vstack []*SuObject
 
 func (vs *vstack) Push(ob *SuObject) bool {
@@ -505,6 +510,8 @@ func unquoted(s string) bool {
 	return (s != "true" && s != "false") && lexer.IsIdentifier(s)
 }
 
+// Show is like Display except that it sorts named members.
+// It is used for tests.
 func (ob *SuObject) Show() string {
 	return ob.show("#(", ")", nil)
 }
@@ -669,7 +676,7 @@ func (*SuObject) Lookup(t *Thread, method string) Callable {
 	return Lookup(t, ObjectMethods, gnObjects, method)
 }
 
-// Slice returns a copy of the object, with the first n list elements removed
+// Slice returns a copy of the object, omitting the first n list values
 func (ob *SuObject) Slice(n int) Container {
 	if ob.Lock() {
 		defer ob.Unlock()
@@ -882,6 +889,16 @@ func (ob *SuObject) SetConcurrent() {
 	if ob.defval != nil {
 		ob.defval.SetConcurrent()
 	}
+}
+
+func (ob *SuObject) IsConcurrent() Value {
+	if ob.concurrent {
+		return True
+	}
+	if ob.readonly {
+		return EmptyStr
+	}
+	return False
 }
 
 func (ob *SuObject) SetReadOnly() {

@@ -213,7 +213,11 @@ func (sc *suScanner) Infinite() bool {
 }
 
 func (sc *suScanner) SetConcurrent() {
-	sc.SetConcurrentFlag()
+	sc.MayLock.SetConcurrent()
+}
+
+func (sc *suScanner) Instantiate() *SuObject {
+	return InstantiateIter(sc)
 }
 
 var _ Iter = (*suScanner)(nil)

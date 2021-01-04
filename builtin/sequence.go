@@ -47,8 +47,8 @@ func (wi *wrapIter) SetConcurrent() {
 	wi.it.SetConcurrent()
 }
 
-func (wi *wrapIter) IsConcurrent() bool {
-	return wi.t == nil
+func (wi *wrapIter) IsConcurrent() Value {
+	return SuBool(wi.t == nil)
 }
 
 var threadPool = sync.Pool{New: func() interface{} { return NewThread() }}
@@ -60,6 +60,10 @@ func (wi *wrapIter) call(method string) Value {
 		defer threadPool.Put(t)
 	}
 	return t.CallLookup(wi.it, method)
+}
+
+func (wi *wrapIter) Instantiate() *SuObject {
+	return InstantiateIter(wi)
 }
 
 var _ Iter = (*wrapIter)(nil)

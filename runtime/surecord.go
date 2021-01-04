@@ -192,7 +192,7 @@ func (r *SuRecord) Lock() bool {
 func (r *SuRecord) Unlock() bool {
 	return r.ob.Unlock()
 }
-func (r *SuRecord) IsConcurrent() bool {
+func (r *SuRecord) IsConcurrent() Value {
 	return r.ob.IsConcurrent()
 }
 

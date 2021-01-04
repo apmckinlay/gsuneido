@@ -338,15 +338,11 @@ func Int64Val(n int64) Value {
 // so it should not require atomic or locked access.
 // Before concurrent is set, no locking is done.
 type MayLock struct {
-	concurrent bool
 	lock       sync.Mutex
+	concurrent bool
 }
 
 func (x *MayLock) SetConcurrent() {
-	log.Fatalln("SetConcurrent must be defined")
-}
-
-func (x *MayLock) SetConcurrentFlag() {
 	x.concurrent = true
 }
 
@@ -369,6 +365,13 @@ func (x *MayLock) Unlock() bool {
 	return false
 }
 
-func (x *MayLock) IsConcurrent() bool {
-	return x.concurrent
+func (x *MayLock) IsConcurrent() Value {
+	return SuBool(x.concurrent)
+}
+
+func IsConcurrent(x interface{}) Value {
+	if ic, ok := x.(interface{ IsConcurrent() Value }); ok {
+		return ic.IsConcurrent()
+	}
+	return EmptyStr
 }

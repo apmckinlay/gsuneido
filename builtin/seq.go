@@ -62,6 +62,14 @@ func (seq *seqIter) Infinite() bool {
 	return seq.to == math.MaxInt32 // has to match MaxInt opcode
 }
 
-func (seq *seqIter) SetConcurrent() {
-	seq.SetConcurrentFlag()
+func (seq *seqIter) Instantiate() *SuObject {
+	n := (seq.to - seq.from + (seq.by - 1)) / seq.by
+	InstantiateMax(n)
+	list := make([]Value, n)
+	i := seq.from
+	for j := 0; i < seq.to; j++ {
+		list[j] = IntVal(i)
+		i += seq.by
+	}
+	return NewSuObject(list)
 }

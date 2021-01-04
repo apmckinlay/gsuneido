@@ -112,14 +112,14 @@ func (ob *SuInstance) get(t *Thread, m Value) Value {
 	return x
 }
 
-func (ob *SuInstance) Put(t *Thread, m Value, v Value) {
+func (ob *SuInstance) Put(_ *Thread, m Value, v Value) {
 	if ob.Lock() {
 		defer ob.Unlock()
 		v.SetConcurrent()
 	}
-	ob.put(t, m, v)
+	ob.put(m, v)
 }
-func (ob *SuInstance) put(_ *Thread, m Value, v Value) {
+func (ob *SuInstance) put(m Value, v Value) {
 	ob.Data[AsStr(m)] = v
 }
 
@@ -133,7 +133,7 @@ func (ob *SuInstance) GetPut(t *Thread, m Value, v Value,
 		panic("uninitialized member: " + m.String())
 	}
 	v = op(orig, v)
-	ob.put(t, m, v)
+	ob.put(m, v)
 	if retOrig {
 		return orig
 	}
