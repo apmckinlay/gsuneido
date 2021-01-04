@@ -51,9 +51,11 @@ func (typeGlobal) Builtin(name string, value Value) Value {
 }
 
 func BuiltinNames() []Value {
-	names := make([]Value, 0, len(g.builtins))
+	names := make([]Value, len(g.builtins))
+	i := 0
 	for gn := range g.builtins {
-		names = append(names, SuStr(Global.Name(gn)))
+		names[i] = SuStr(Global.Name(gn))
+		i++
 	}
 	return names
 }
