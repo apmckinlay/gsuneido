@@ -3,17 +3,9 @@
 
 package index
 
-// iterator is the interface for a Suneido style iterator
-type iterator interface {
-	Eof() bool
-	Modified() bool
-	Cur() (key string, off uint64)
-	Next()
-	Prev()
-	Rewind()
-	// Seek returns true if the key was found
-	Seek(key string) bool
-}
+import "github.com/apmckinlay/gsuneido/db19/index/iterator"
+
+type iterT = iterator.T
 
 // mergeCallback is a function passed into a MergeIter
 // so it can determine if the underlying container (normally an Overlay)
@@ -22,7 +14,7 @@ type iterator interface {
 // and if the container's modCount has changed,
 // it returns the new modCount and the new source iterators.
 // If the modCount has not changed, it returns nil instead of new iterators.
-type mergeCallback func(modCount int) (int, []iterator)
+type mergeCallback func(modCount int) (int, []iterT)
 
 // MergeIter is a Suneido style iterator
 // that merges several other Suneido style iterators.
@@ -31,7 +23,7 @@ type mergeCallback func(modCount int) (int, []iterator)
 // because new source iterators may be returned by the callback.
 type MergeIter struct {
 	callback mergeCallback
-	iters    []iterator
+	iters    []iterT
 	modCount int
 	curKey   string
 	curOff   uint64
@@ -78,7 +70,7 @@ func (mi *MergeIter) Next() {
 		if iters != nil { // modified
 			mi.modCount, mi.iters = modCount, iters
 		}
-		mi.all(iterator.Next)
+		mi.all(iterT.Next)
 		mi.state = within
 	} else {
 		mi.modNext()
@@ -92,7 +84,7 @@ func (mi *MergeIter) Next() {
 	mi.lastDir = next
 }
 
-func (mi *MergeIter) all(fn func(it iterator)) {
+func (mi *MergeIter) all(fn func(it iterT)) {
 	for _, it := range mi.iters {
 		fn(it)
 	}
@@ -118,7 +110,7 @@ func (mi *MergeIter) modNext() {
 	}
 }
 
-func nextRewind(it iterator) {
+func nextRewind(it iterT) {
 	if it.Eof() {
 		it.Rewind()
 	}
@@ -150,7 +142,7 @@ func (mi *MergeIter) Prev() {
 		if iters != nil { // modified
 			mi.modCount, mi.iters = modCount, iters
 		}
-		mi.all(iterator.Prev)
+		mi.all(iterT.Prev)
 		mi.state = within
 	} else {
 		mi.modPrev()
@@ -183,7 +175,7 @@ func (mi *MergeIter) modPrev() {
 	}
 }
 
-func prevRewind(it iterator) {
+func prevRewind(it iterT) {
 	if it.Eof() {
 		it.Rewind()
 	}
@@ -207,7 +199,7 @@ func (mi *MergeIter) maxIter() int {
 }
 
 func (mi *MergeIter) Rewind() {
-	mi.all(iterator.Rewind)
+	mi.all(iterT.Rewind)
 	mi.state = rewound
 	mi.curIter = -1
 	mi.curKey = ""

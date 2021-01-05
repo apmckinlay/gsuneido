@@ -91,7 +91,7 @@ func TestFbtreeBuilder(t *testing.T) {
 	}
 }
 
-func ExampleFbtreeBuilder2() {
+func ExampleBuilder() {
 	GetLeafKey = func(_ *stor.Stor, _ *ixkey.Spec, i uint64) string {
 		return strconv.Itoa(int(i))
 	}
@@ -114,7 +114,7 @@ func ExampleFbtreeBuilder2() {
 	// ------------------------------>>>
 }
 
-func ExampleFbtree_MergeAndSave() {
+func Examplefbtree_MergeAndSave() {
 	GetLeafKey = func(_ *stor.Stor, _ *ixkey.Spec, i uint64) string {
 		return strconv.Itoa(int(i))
 	}

@@ -288,11 +288,12 @@ func TestForEach(t *testing.T) {
 
 func TestIterator(t *testing.T) {
 	assert := assert.T(t)
+	const eof = -1
 	ib := &ixbuf{}
 	it := ib.Iterator()
 	test := func(expected int) {
 		t.Helper()
-		if expected == -1 {
+		if expected == eof {
 			assert.That(it.Eof())
 		} else {
 			key, off := it.Cur()
@@ -304,12 +305,12 @@ func TestIterator(t *testing.T) {
 	testPrev := func(expected int) { t.Helper(); it.Prev(); test(expected) }
 
 	assert.That(it.Eof())
-	testNext(-1)
+	testNext(eof)
 	it.Rewind()
-	testPrev(-1)
+	testPrev(eof)
 	it.Rewind()
-	testNext(-1)
-	testPrev(-1)
+	testNext(eof)
+	testPrev(eof)
 
 	for i := 0; i < 10; i++ {
 		ib.Insert(strconv.Itoa(i), uint64(i))
@@ -321,7 +322,7 @@ func TestIterator(t *testing.T) {
 			it.modCount-- // invalidate
 		}
 	}
-	testNext(-1)
+	testNext(eof)
 
 	it.Rewind()
 	for i := 9; i >= 0; i-- {
@@ -330,13 +331,13 @@ func TestIterator(t *testing.T) {
 			it.modCount-- // invalidate
 		}
 	}
-	testPrev(-1)
+	testPrev(eof)
 
 	it.Rewind()
 	testNext(0)
-	testPrev(-1) // stick at eof
-	testPrev(-1)
-	testNext(-1)
+	testPrev(eof) // stick at eof
+	testPrev(eof)
+	testNext(eof)
 
 	it.Rewind()
 	testPrev(9)
@@ -362,6 +363,12 @@ func TestIterator(t *testing.T) {
 	testPrev(77)
 	ib.modCount++
 	testPrev(7)
+
+	// Seek to nonexistent
+	assert.That(!it.Seek("00"))
+	test(1) // leaves us on next
+	assert.That(!it.Seek("99"))
+	test(eof) // or eof
 }
 
 //-------------------------------------------------------------------

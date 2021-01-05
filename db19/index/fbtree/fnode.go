@@ -102,7 +102,7 @@ func (fn fnode) search(s string) (uint64, string, string) {
 	it := fn.iter()
 	for it.next() && s >= string(it.known) {
 		off = it.offset
-		known = append(known[:0], it.known...)
+		known = append(known[:0], it.known...) // copy over
 	}
 	return off, string(known), string(it.known)
 }
@@ -129,12 +129,13 @@ func (fn fnode) insert(keyNew string, offNew uint64, get func(uint64) string) fn
 	var curDiff, curKnown []byte
 	it := fn.iter()
 	for it.next() && keyNew >= string(it.known) {
+		//TODO switch to fnIter.copyFrom
 		curFi = it.fi
 		curNpre = it.npre
 		curEof = it.eof()
 		curOffset = it.offset
-		curDiff = append(curDiff[:0], it.diff...)
-		curKnown = append(curKnown[:0], it.known...)
+		curDiff = it.diff
+		curKnown = append(curKnown[:0], it.known...) // copy over
 	}
 
 	curoff := curOffset
@@ -293,7 +294,7 @@ func (fn fnode) setOffset(fi int, off uint64) {
 
 type fnIter struct {
 	fn     fnode
-	fi     int // position in original fEntries
+	fi     int // position in fn
 	npre   int
 	diff   []byte
 	known  []byte
@@ -337,6 +338,14 @@ func (it *fnIter) next() bool {
 
 func (it *fnIter) eof() bool {
 	return it.fi+fLen(it.diff) >= len(it.fn)
+}
+
+func (it *fnIter) copyFrom(src *fnIter) {
+	it.fi = src.fi
+	it.npre = src.npre
+	it.offset = src.offset
+	it.diff = src.diff
+	it.known = append(it.known[:0], src.known...) // copy over
 }
 
 //-------------------------------------------------------------------

@@ -9,6 +9,7 @@
 package ixbuf
 
 import (
+	"github.com/apmckinlay/gsuneido/db19/index/iterator"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/ints"
 )
@@ -34,7 +35,7 @@ func (ib *ixbuf) Len() int {
 	return int(ib.size)
 }
 
-func (ib *ixbuf) Clear()  {
+func (ib *ixbuf) Clear() {
 	ib.size = 0
 	ib.chunks = nil
 	ib.modCount++
@@ -393,6 +394,8 @@ type Iterator struct {
 	// We need to keep a copy of it because the ixbuf could change.
 	cur slot
 }
+
+var _ iterator.T = (*Iterator)(nil)
 
 type state byte
 

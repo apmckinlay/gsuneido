@@ -377,11 +377,6 @@ func compare(f, g fnode) string {
 	}
 }
 
-type slot struct {
-	key string
-	off uint64
-}
-
 func TestFnodeInsertDelete(*testing.T) {
 	var ok bool
 	var fn fnode
@@ -458,7 +453,7 @@ func BenchmarkFnode(b *testing.B) {
 	}
 }
 
-func ExampleFnodeBuilderSplit() {
+func Example_fnode_BuilderSplit() {
 	var fb fNodeBuilder
 	fb.Add("1234xxxx", 1234, 1)
 	fb.Add("1235xxxx", 1235, 1)
@@ -485,7 +480,7 @@ func ExampleFnodeBuilderSplit() {
 	// 1305 1305
 }
 
-func ExampleFbmergeSplit() {
+func Example_merge_split() {
 	var fb fNodeBuilder
 	fb.Add("1234xxxx", 1234, 1)
 	fb.Add("1235xxxx", 1235, 1)

@@ -26,11 +26,11 @@ func TestMergeIter(t *testing.T) {
 	even := from(0, 2, 4, 6, 8)
 	odd := from(1, 3, 5, 7, 9)
 	modCount := 0
-	callback := func(mc int) (int, []iterator) {
+	callback := func(mc int) (int, []iterT) {
 		if mc == modCount {
 			return mc, nil
 		}
-		return modCount, []iterator{even.Iterator(), odd.Iterator()}
+		return modCount, []iterT{even.Iterator(), odd.Iterator()}
 	}
 	it := NewMergeIter(callback)
 	test := func(expected int) {
@@ -111,11 +111,11 @@ func TestMergeIterRandom(*testing.T) {
 	which := map[string]int{}
 	ibs := [3]ixbuf.T{}
 	modCount := 0
-	callback := func(mc int) (int, []iterator) {
+	callback := func(mc int) (int, []iterT) {
 		if mc == modCount {
 			return mc, nil
 		}
-		return modCount, []iterator{
+		return modCount, []iterT{
 			ibs[0].Iterator(), ibs[1].Iterator(), ibs[2].Iterator()}
 	}
 	mi := NewMergeIter(callback)
