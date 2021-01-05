@@ -347,6 +347,9 @@ func init() {
 					i = 0
 				}
 			}
+			if i > sn {
+				i = sn
+			}
 			n := sn - i
 			if arg2 != False {
 				n = ToInt(arg2)
@@ -356,6 +359,9 @@ func init() {
 						n = 0
 					}
 				}
+			}
+			if i + n > sn {
+				n = sn - i
 			}
 			return SuStr(s[i : i+n])
 		}),
