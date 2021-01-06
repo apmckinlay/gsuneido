@@ -11,7 +11,7 @@ type Iterator struct {
 	state iterState
 	// stack is the path to the current position
 	// stack[0] is the leaf, stack[treeLevels] is the root
-	stack  [maxlevels]*fnIter
+	stack  [maxlevels]nodeIter
 	curKey string
 	curOff uint64
 }
@@ -20,13 +20,6 @@ var _ iterator.T = (*Iterator)(nil)
 
 func (fb *fbtree) Iterator() *Iterator {
 	return &Iterator{fb: fb, state: rewound}
-}
-
-type chunk []slot
-
-type slot struct {
-	key string
-	off uint64
 }
 
 type iterState byte
@@ -50,10 +43,7 @@ func (it *Iterator) Rewind() {
 }
 
 func (it *Iterator) Modified() bool {
-	return false //TODO ???
-}
-
-func (it *Iterator) Prev() {
+	return false
 }
 
 func (it *Iterator) Next() {
@@ -70,7 +60,7 @@ func (it *Iterator) Next() {
 func (it *Iterator) next() {
 	for {
 		if it.stack[0].next() {
-			it.curOff = it.stack[0].offset
+			it.curOff = it.stack[0].off()
 			it.curKey = it.fb.getLeafKey(it.curOff)
 			return
 		} else if !it.nextLeaf() {
@@ -80,7 +70,7 @@ func (it *Iterator) next() {
 	}
 }
 
-func (it *Iterator) descendLeft() { // maybe use Seek ???
+func (it *Iterator) descendLeft() {
 	fb := it.fb
 	nodeOff := fb.root
 	for i := fb.treeLevels; ; i-- {
@@ -89,7 +79,7 @@ func (it *Iterator) descendLeft() { // maybe use Seek ???
 			return
 		}
 		it.stack[i].next()
-		nodeOff = it.stack[i].offset
+		nodeOff = it.stack[i].off()
 	}
 }
 
@@ -100,7 +90,7 @@ func (it *Iterator) nextLeaf() bool {
 	// end of leaf, go up the tree as necessary
 	for ; i <= fb.treeLevels; i++ {
 		if it.stack[i].next() {
-			nodeOff = it.stack[i].offset
+			nodeOff = it.stack[i].off()
 			break
 		} // else end of tree node, keep going up
 	}
@@ -115,11 +105,79 @@ func (it *Iterator) nextLeaf() bool {
 			return true
 		}
 		it.stack[i].next()
-		nodeOff = it.stack[i].offset
+		nodeOff = it.stack[i].off()
 	}
 }
 
-// Seek returns true if the key was found
+//-------------------------------------------------------------------
+
+func (it *Iterator) Prev() {
+	if it.state == eof {
+		return // stick at eof
+	}
+	if it.state == rewound {
+		it.descendRight()
+		it.state = within
+	}
+	it.prev()
+}
+
+func (it *Iterator) descendRight() {
+	fb := it.fb
+	nodeOff := fb.root
+	for i := fb.treeLevels; ; i-- {
+		it.stack[i] = fb.getNode(nodeOff).iter().toChunk(fb, i == 0)
+		if i == 0 {
+			return
+		}
+		it.stack[i].prev()
+		nodeOff = it.stack[i].off()
+	}
+}
+
+func (it *Iterator) prev() {
+	for {
+		it.stack[0] = it.stack[0].toChunk(it.fb, true)
+		if it.stack[0].prev() {
+			it.curOff = it.stack[0].off()
+			it.curKey = it.fb.getLeafKey(it.curOff)
+			return
+		} else if !it.prevLeaf() {
+			it.state = eof
+			return
+		}
+	}
+}
+
+func (it *Iterator) prevLeaf() bool {
+	fb := it.fb
+	i := 1
+	var nodeOff uint64
+	// end of leaf, go up the tree as necessary
+	for ; i <= fb.treeLevels; i++ {
+		it.stack[i] = it.stack[i].toChunk(it.fb, i == 0)
+		if it.stack[i].prev() {
+			nodeOff = it.stack[i].off()
+			break
+		} // else end of tree node, keep going up
+	}
+	if i > fb.treeLevels {
+		return false // eof
+	}
+	// then descend back down
+	for {
+		i--
+		it.stack[i] = fb.getNode(nodeOff).iter().toChunk(fb, i == 0)
+		if i == 0 {
+			return true
+		}
+		it.stack[i].prev()
+		nodeOff = it.stack[i].off()
+	}
+}
+
+//-------------------------------------------------------------------
+
 func (it *Iterator) Seek(key string) bool {
 	fb := it.fb
 	off := fb.root
@@ -131,7 +189,7 @@ func (it *Iterator) Seek(key string) bool {
 	it.state = within
 	for i := fb.treeLevels; ; i-- {
 		it.stack[i] = node.seek(key)
-		off = it.stack[i].offset
+		off = it.stack[i].off()
 		if i == 0 {
 			k := fb.getLeafKey(off)
 			if key > k {
@@ -156,19 +214,77 @@ func (fn fnode) seek(key string) *fnIter {
 	return &itPrev
 }
 
-// fnodeToChunk is used when we need to iterate reverse (Prev)
-// since we can't do that on an fnode.
-func (it *Iterator) fnodeToChunk(fn fnode, leaf bool) chunk {
+//-------------------------------------------------------------------
+
+type nodeIter interface {
+	// next returns false if it hits the end
+	next() bool
+	// prev returns false if it hits the start
+	prev() bool
+	// off returns the current offset
+	off() uint64
+	// toChunk converts fnIter to chunkIter, to allow Prev
+	toChunk(fb *fbtree, leaf bool) nodeIter
+}
+
+func (fi *fnIter) off() uint64 {
+	return fi.offset
+}
+
+func (fi *fnIter) prev() bool {
+	panic("shouldn't get here")
+}
+
+// toChunk converts an fnIter to a chunkIter (to allow prev)
+func (fi *fnIter) toChunk(fb *fbtree, leaf bool) nodeIter {
+	fn := fi.fn
 	var c chunk
+	i := -1
 	var key string
 	fit := fn.iter()
 	for fit.next() {
+		if fit.fi == fi.fi {
+			i = len(c)
+		}
 		if leaf {
-			key = it.fb.getLeafKey(fit.offset)
+			key = fb.getLeafKey(fit.offset)
 		} else {
 			key = string(fit.known)
 		}
 		c = append(c, slot{key: key, off: fit.offset})
 	}
-	return c
+	return &chunkIter{c: c, i: i}
+}
+
+type chunk []slot
+
+type slot struct {
+	key string
+	off uint64
+}
+
+type chunkIter struct {
+	c chunk
+	i int
+}
+
+func (ci *chunkIter) next() bool {
+	ci.i++
+	return ci.i < len(ci.c)
+}
+
+func (ci *chunkIter) prev() bool {
+	if ci.i == -1 {
+		ci.i = len(ci.c)
+	}
+	ci.i--
+	return ci.i >= 0
+}
+
+func (ci *chunkIter) off() uint64 {
+	return ci.c[ci.i].off
+}
+
+func (ci *chunkIter) toChunk(*fbtree, bool) nodeIter {
+	return ci
 }
