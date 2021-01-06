@@ -304,7 +304,7 @@ func TestIterator(t *testing.T) {
 	testNext := func(expected int) { t.Helper(); it.Next(); test(expected) }
 	testPrev := func(expected int) { t.Helper(); it.Prev(); test(expected) }
 
-	assert.That(it.Eof())
+	test(eof)
 	testNext(eof)
 	it.Rewind()
 	testPrev(eof)
@@ -318,18 +318,12 @@ func TestIterator(t *testing.T) {
 	it.Rewind()
 	for i := 0; i < 10; i++ {
 		testNext(i)
-		if i == 5 {
-			it.modCount-- // invalidate
-		}
 	}
 	testNext(eof)
 
 	it.Rewind()
 	for i := 9; i >= 0; i-- {
 		testPrev(i)
-		if i == 5 {
-			it.modCount-- // invalidate
-		}
 	}
 	testPrev(eof)
 
@@ -346,23 +340,6 @@ func TestIterator(t *testing.T) {
 	testNext(8)
 	testNext(9) // last
 	testPrev(8)
-
-	it.Rewind()
-	testNext(0)
-	testNext(1)
-	ib.Insert("11", uint64(11))
-	testNext(11)
-	testNext(2)
-	ib.Delete("11", uint64(11))
-	testPrev(1)
-
-	it.Rewind()
-	testPrev(9)
-	testPrev(8)
-	ib.Insert("77", uint64(77))
-	testPrev(77)
-	ib.modCount++
-	testPrev(7)
 
 	// Seek to nonexistent
 	assert.That(!it.Seek("00"))

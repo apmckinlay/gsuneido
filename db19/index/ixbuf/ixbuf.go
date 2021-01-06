@@ -434,10 +434,6 @@ func (it *Iterator) Next() {
 		it.ci = 0
 		it.i = -1
 		it.c = it.ib.chunks[0]
-	} else if it.modCount != it.ib.modCount {
-		if !it.Seek(it.cur.key) {
-			return // didn't find cur, so already on next
-		}
 	}
 	it.i++
 	if it.i >= len(it.c) {
@@ -465,8 +461,6 @@ func (it *Iterator) Prev() {
 		it.ci = len(it.ib.chunks) - 1
 		it.c = it.ib.chunks[it.ci]
 		it.i = len(it.c)
-	} else if it.modCount != it.ib.modCount {
-		it.Seek(it.cur.key)
 	}
 	it.i--
 	if it.i < 0 {
@@ -485,7 +479,6 @@ func (it *Iterator) Rewind() {
 	it.state = rewound
 }
 
-// Seek returns true if the key was found
 func (it *Iterator) Seek(key string) bool {
 	if len(it.ib.chunks) == 0 {
 		it.state = eof
