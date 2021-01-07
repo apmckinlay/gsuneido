@@ -61,11 +61,13 @@ func TestFbtreeBuilder(t *testing.T) {
 	}
 	store := stor.HeapStor(8192)
 	bldr := Builder(store)
-	limit := 599999
+	start := 100000
+	limit := 999999
 	if testing.Short() {
-		limit = 199999
+		start = 10000
+		limit = 99999
 	}
-	for i := 100000; i <= limit; i++ {
+	for i := start; i <= limit; i++ {
 		key := strconv.Itoa(i)
 		bldr.Add(key, uint64(i))
 	}
@@ -74,7 +76,7 @@ func TestFbtreeBuilder(t *testing.T) {
 
 	// iterate
 	iter := fb.Iter(true)
-	for i := 100000; i <= limit; i++ {
+	for i := start; i <= limit; i++ {
 		key := strconv.Itoa(i)
 		k, o, ok := iter()
 		assert.True(ok)
@@ -84,10 +86,11 @@ func TestFbtreeBuilder(t *testing.T) {
 	_, _, ok := iter()
 	assert.False(ok)
 
-	// search
-	for i := 100000; i <= limit; i++ {
+	// Lookup
+	for i := start; i <= limit; i++ {
 		key := strconv.Itoa(i)
-		assert.This(fb.Search(key)).Is(i)
+		assert.This(fb.Lookup(key)).Is(i)
+		assert.This(fb.Lookup(key + "0")).Is(0) // nonexistent
 	}
 }
 

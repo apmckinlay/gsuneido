@@ -66,11 +66,15 @@ func (fb *fbtree) getLeafKey(off uint64) string {
 	return GetLeafKey(fb.store, fb.ixspec, off)
 }
 
-func (fb *fbtree) Search(key string) uint64 {
+// Lookup returns the offset for a key, or 0 if not found.
+func (fb *fbtree) Lookup(key string) uint64 {
 	off := fb.root
 	for i := 0; i <= fb.treeLevels; i++ {
 		node := fb.getNode(off)
-		off, _, _ = node.search(key)
+		off = node.search(key)
+	}
+	if fb.getLeafKey(off) != key {
+		return 0
 	}
 	return off
 }

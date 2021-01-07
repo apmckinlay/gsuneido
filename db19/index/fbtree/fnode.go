@@ -94,25 +94,14 @@ func commonSlicePrefixLen(s, t []byte) int {
 	}
 }
 
-// search returns the offset and range
-// of the entry that could match the search string
-func (fn fnode) search(s string) (uint64, string, string) {
+// search returns the offset of the entry that could match the key
+func (fn fnode) search(key string) uint64 {
 	var off uint64
-	var known []byte
 	it := fn.iter()
-	for it.next() && s >= string(it.known) {
+	for it.next() && key >= string(it.known) {
 		off = it.offset
-		known = append(known[:0], it.known...) // copy over
 	}
-	return off, string(known), string(it.known)
-}
-
-func (fn fnode) contains(s string, get func(uint64) string) bool {
-	if len(fn) == 0 {
-		return false
-	}
-	offset, _, _ := fn.search(s)
-	return s == get(offset)
+	return off
 }
 
 // insert adds a new key to a node. get will be nil for tree nodes.

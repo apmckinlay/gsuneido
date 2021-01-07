@@ -130,6 +130,14 @@ func (fn fnode) checkUpTo(i int, data []string, get func(uint64) string) {
 	}
 }
 
+func (fn fnode) contains(s string, get func(uint64) string) bool {
+	if len(fn) == 0 {
+		return false
+	}
+	offset := fn.search(s)
+	return s == get(offset)
+}
+
 func TestFnodeInsertRandom(*testing.T) {
 	const nData = 100
 	var nGenerate = 1000

@@ -80,14 +80,14 @@ func (d *dat) Update(key string, off uint64) {
 type iter = func() (string, uint64, bool)
 
 type tree interface {
-	Search(key string) uint64
+	Lookup(key string) uint64
 	Iter(bool) iter
 }
 
 func (d *dat) Check(fb tree) {
 	for _, key := range d.keys {
 		assert.Msg(key).
-			This(fb.Search(key)).Is(d.k2o[key])
+			This(fb.Lookup(key)).Is(d.k2o[key])
 	}
 	d.CheckIter(fb.Iter(true))
 }
