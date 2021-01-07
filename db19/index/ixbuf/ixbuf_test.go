@@ -253,6 +253,24 @@ func TestDelete(t *testing.T) {
 	assert.T(t).This(len(ib.chunks)).Is(0)
 }
 
+func TestLookup(*testing.T) {
+	const nkeys = 1000
+	rand.Seed(12345)
+	r := str.UniqueRandom(4, 8)
+	ib := &ixbuf{}
+	for i := 1; i < nkeys; i++ {
+		ib.Insert(r(), uint64(i))
+	}
+	rand.Seed(12345)
+	r = str.UniqueRandom(4, 8)
+	for i := 1; i < nkeys; i++ {
+		assert.This(ib.Lookup(r())).Is(i)
+	}
+	for i := 0; i < nkeys; i++ {
+		assert.This(ib.Lookup(r())).Is(0) // nonexistent
+	}
+}
+
 func TestIter(t *testing.T) {
 	ib := &ixbuf{}
 	iter := ib.Iter(false)

@@ -141,7 +141,8 @@ func (ib *ixbuf) searchChunks(key string) int {
 	return ints.Min(i, len(ib.chunks)-1)
 }
 
-// search does a binary search of one chunk for a key
+// search does a binary search of one chunk for a key.
+// It returns len if the key is greater than all keys in the chunk.
 func search(c chunk, key string) int {
 	i, j := 0, len(c)
 	for i < j {
@@ -339,6 +340,18 @@ func (c chunk) firstKey() string {
 
 func (c chunk) lastKey() string {
 	return c[len(c)-1].key
+}
+
+//-------------------------------------------------------------------
+
+// Lookup searches for a key returns its associated offset or 0 if not found.
+// Note: It may return offsets with the Delete or Update bits set.
+func (ib *ixbuf) Lookup(key string) uint64 {
+	_, c, i := ib.search(key)
+	if i >= len(c) || c[i].key != key {
+		return 0
+	}
+	return c[i].off
 }
 
 //-------------------------------------------------------------------
