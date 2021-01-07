@@ -7,6 +7,7 @@ package builtin
 
 import (
 	"log"
+	"syscall"
 	"time"
 	"unsafe"
 
@@ -2174,3 +2175,21 @@ var _ = builtin3("MapWindowRect(hwndfrom, hwndto, r)",
 		urectToOb(r, c)
 		return intRet(rtn)
 	})
+
+var getGuiResources = user32.MustFindProc("GetGuiResources").Addr()
+
+const GR_GDIOBJECTS = 0
+const GR_USEROBJECTS = 1
+
+func GetGuiResources() (int, int) {
+	hProcess, _ := syscall.GetCurrentProcess()
+	gdi, _, _ := syscall.Syscall(getGuiResources, 2,
+		uintptr(hProcess),
+		uintptr(GR_GDIOBJECTS),
+		0)
+	user, _, _ := syscall.Syscall(getGuiResources, 2,
+		uintptr(hProcess),
+		uintptr(GR_USEROBJECTS),
+		0)
+	return int(gdi), int(user)
+}

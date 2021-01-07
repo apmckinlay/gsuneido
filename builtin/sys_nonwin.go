@@ -53,3 +53,7 @@ func CallbacksCount() int {
 func WndProcCount() int {
 	return 0
 }
+
+func GetGuiResources() (int, int) {
+	return 0, 0
+}

@@ -12,6 +12,9 @@ var _ = builtin0("ResourceCounts()", func() Value {
 	add(ob, "SocketClient", nSocketClient)
 	add(ob, "Callbacks", CallbacksCount())
 	add(ob, "WndProcs", WndProcCount())
+	gdi,user := GetGuiResources()
+	add(ob, "gdiobj", gdi)
+	add(ob, "userobj", user)
 	return ob
 })
 
