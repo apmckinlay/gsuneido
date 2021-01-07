@@ -1,7 +1,13 @@
 // Copyright Suneido Software Corp. All rights reserved.
 // Governed by the MIT license found in the LICENSE file.
 
-// Package ixkey handles specifying and encoding index keys
+// Package ixkey handles specifying and encoding index key strings
+// that are directly comparable.
+// Single field keys are not encoded.
+// Fields are separated by two zero bytes 0,0.
+// Zero bytes are encoded as 0,1.
+// Normally the values will be packed,
+// but this is not required as long as they compare directly.
 package ixkey
 
 import (
@@ -14,7 +20,10 @@ import (
 
 // Spec specifies the field(s) in an index key
 type Spec struct {
-	Fields  []int
+	// Fields specifies the fields in the key.
+	Fields []int
+	// Fields2 is used for unique indexes (that allow multiple empty keys).
+	// It will only be used if all of the Fields value are empty.
 	Fields2 []int
 }
 
@@ -22,11 +31,30 @@ func (spec *Spec) String() string {
 	return fmt.Sprint("ixspec ", spec.Fields, ",", spec.Fields2)
 }
 
-// Key builds a composite key string that is directly comparable.
-// Fields are separated by two zero bytes 0,0.
-// Zero bytes are encoded as 0,1.
-// fields2 is used for unique indexes (that allow multiple empty keys).
-// fields2 will only be used if all of the fields value are empty.
+// Encoder builds keys incrementally.
+// Note: Do not use this for single field keys - they should not be encoded.
+type Encoder struct {
+	buf []byte
+}
+
+// Add appends a field value
+func (b *Encoder) Add(fld string) {
+	if b.buf == nil {
+		b.buf = make([]byte, 0, 2*(len(fld)+2))
+	} else {
+		b.buf = append(b.buf, 0, 0) // separator
+	}
+	b.buf = encode(b.buf, fld)
+}
+
+// String returns the key and resets the Encoder to be empty.
+func (b *Encoder) String() string {
+	s := hacks.BStoS(b.buf)
+	b.buf = nil // reset
+	return s
+}
+
+// Key builds a key from a data Record using a Spec.
 func (spec *Spec) Key(rec Record) string {
 	fields := spec.Fields
 	if len(fields) == 0 {
@@ -63,27 +91,29 @@ func (spec *Spec) Key(rec Record) string {
 		}
 		fields = spec.Fields2
 	}
-	for f := 0; ; {
-		b := getRaw(rec, fields[f])
-		for len(b) > 0 {
-			i := strings.IndexByte(b, 0)
-			if i == -1 { // no zero bytes
-				buf = append(buf, b...)
-				break
-			}
-			// b[i] == 0
-			i++
-			buf = append(buf, b[:i]...) // copy up to and including zero
-			buf = append(buf, 1)
-			b = b[i:]
+	for i, f := range fields {
+		if i > 0 {
+			buf = append(buf, 0, 0) // separator
 		}
-		f++
-		if f == len(fields) {
-			break
-		}
-		buf = append(buf, 0, 0) // separator
+		buf = encode(buf, getRaw(rec, f))
 	}
 	return hacks.BStoS(buf)
+}
+
+func encode(buf []byte, b string) []byte {
+	for len(b) > 0 {
+		i := strings.IndexByte(b, 0)
+		if i == -1 { // no zero bytes
+			buf = append(buf, b...)
+			break
+		}
+		// b[i] == 0
+		i++
+		buf = append(buf, b[:i]...) // copy up to and including zero
+		buf = append(buf, 1)
+		b = b[i:]
+	}
+	return buf
 }
 
 func fieldLen(rec Record, field int) int {
