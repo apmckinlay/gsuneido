@@ -16,7 +16,7 @@ type iter = func() (string, uint64, bool)
 // Overlay is the composite in-memory representation of an index
 type Overlay struct {
 	// fb is the stored base fbtree
-	fb    *fbtree.T
+	fb *fbtree.T
 	// layers is a base ixbuf of merged but not persisted changes,
 	// plus ixbuf's from completed but un-merged transactions
 	layers []*ixbuf.T
@@ -60,6 +60,21 @@ func (ov *Overlay) Insert(key string, off uint64) {
 // or inserts a tombstone into the mutable ixbuf.T.
 func (ov *Overlay) Delete(key string, off uint64) {
 	ov.mut.Delete(key, off)
+}
+
+func (ov *Overlay) Lookup(key string) uint64 {
+	if off := ov.mut.Lookup(key); off != 0 {
+		return off
+	}
+	for i := len(ov.layers)-1; i >= 0; i-- {
+		if off := ov.layers[i].Lookup(key); off != 0 {
+			return off
+		}
+	}
+	if off := ov.fb.Lookup(key); off != 0 {
+		return off
+	}
+	return 0
 }
 
 func (ov *Overlay) Check(fn func(uint64)) int {
@@ -189,7 +204,7 @@ func (ov *Overlay) UpdateWith(latest *Overlay) {
 
 type MergeResult = *ixbuf.T
 
-// Merge merges the base ixbuf with one or more of the transaction inters
+// Merge merges the base ixbuf with one or more of the transaction ixbuf's
 // to produce a new base ixbuf. It does not modify the original ixbuf's.
 func (ov *Overlay) Merge(nmerge int) MergeResult {
 	assert.That(ov.mut == nil)

@@ -17,35 +17,35 @@ import (
 type T = dat
 
 type dat struct {
-	keys []string
-	o2k  map[uint64]string
-	k2o  map[string]uint64
+	Keys []string
+	O2k  map[uint64]string
+	K2o  map[string]uint64
 	off  uint64
 }
 
 func New() *dat {
 	return &dat{
-		o2k: map[uint64]string{},
-		k2o: map[string]uint64{},
+		O2k: map[uint64]string{},
+		K2o: map[string]uint64{},
 	}
 }
 
 func (d *dat) GetLeafKey(_ *stor.Stor, _ *ixkey.Spec, i uint64) string {
-	return d.o2k[i]
+	return d.O2k[i]
 }
 
 func (d *dat) Len() int {
-	return len(d.keys)
+	return len(d.Keys)
 }
 
 func (d *dat) Gen() (string, uint64) {
 	for i := 0; i < 10; i++ {
 		key := str.Random(4, 8)
-		if _, ok := d.k2o[key]; !ok {
+		if _, ok := d.K2o[key]; !ok {
 			off := d.NextOff()
-			d.k2o[key] = off
-			d.o2k[off] = key
-			d.keys = append(d.keys, key)
+			d.K2o[key] = off
+			d.O2k[off] = key
+			d.Keys = append(d.Keys, key)
 			return key, off
 		}
 	}
@@ -58,23 +58,23 @@ func (d *dat) NextOff() uint64 {
 }
 
 func (d *dat) Rand() (int, string, uint64) {
-	i := rand.Intn(len(d.keys))
-	key := d.keys[i]
-	off := d.k2o[key]
+	i := rand.Intn(len(d.Keys))
+	key := d.Keys[i]
+	off := d.K2o[key]
 	return i, key, off
 }
 
 func (d *dat) Delete(i int) {
-	last := len(d.keys) - 1
-	d.keys[i] = d.keys[last]
-	d.keys = d.keys[:last]
+	last := len(d.Keys) - 1
+	d.Keys[i] = d.Keys[last]
+	d.Keys = d.Keys[:last]
 }
 
 func (d *dat) Update(key string, off uint64) {
 	// oldoff := d.k2o[key]
-	d.k2o[key] = off
+	d.K2o[key] = off
 	// delete(d.o2k, oldoff)
-	d.o2k[off] = key
+	d.O2k[off] = key
 }
 
 type iter = func() (string, uint64, bool)
@@ -85,21 +85,21 @@ type tree interface {
 }
 
 func (d *dat) Check(fb tree) {
-	for _, key := range d.keys {
+	for _, key := range d.Keys {
 		assert.Msg(key).
-			This(fb.Lookup(key)).Is(d.k2o[key])
+			This(fb.Lookup(key)).Is(d.K2o[key])
 	}
 	d.CheckIter(fb.Iter(true))
 }
 
 func (d *dat) CheckIter(it iter) {
-	sort.Strings(d.keys)
+	sort.Strings(d.Keys)
 	i := 0
 	for k, o, ok := it(); ok; k, o, ok = it() {
-		assert.Msg("expect prefix of " + d.keys[i] + " got " + k).
-			That(strings.HasPrefix(d.keys[i], k))
-		assert.This(d.o2k[o]).Is(d.keys[i])
+		assert.Msg("expect prefix of " + d.Keys[i] + " got " + k).
+			That(strings.HasPrefix(d.Keys[i], k))
+		assert.This(d.O2k[o]).Is(d.Keys[i])
 		i++
 	}
-	assert.This(i).Is(len(d.keys))
+	assert.This(i).Is(len(d.Keys))
 }
