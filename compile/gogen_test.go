@@ -13,7 +13,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
-func Example_GoGen1() {
+func ExampleGoGen_a() {
 	src := GoGen(`function (a, b) { a + b }`)
 	fmt.Println(src)
 	// output:
@@ -23,7 +23,7 @@ func Example_GoGen1() {
 	// }
 }
 
-func Example_GoGen2() {
+func ExampleGoGen_b() {
 	src := GoGen(`function (n)
 		{
 		sum = 0
@@ -47,7 +47,7 @@ func Example_GoGen2() {
 	// }
 }
 
-func Example_GoGen3() {
+func ExampleGoGen_c() {
 	src := GoGen(`function ()
 		{
 		s = "hello"
