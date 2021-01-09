@@ -4,9 +4,13 @@
 package db19
 
 import (
+	"github.com/apmckinlay/gsuneido/db19/index"
 	"github.com/apmckinlay/gsuneido/db19/meta"
+	"github.com/apmckinlay/gsuneido/runtime"
 	rt "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/cksum"
+	"github.com/apmckinlay/gsuneido/util/hacks"
+	"github.com/apmckinlay/gsuneido/util/str"
 )
 
 type tran struct {
@@ -22,6 +26,32 @@ func (db *Database) NewReadTran() *ReadTran {
 	state := db.GetState()
 	return &ReadTran{tran: tran{db: db, meta: state.meta}}
 }
+
+// TEMPORARY methods
+
+func (t *ReadTran) GetIndex(table string, cols []string) *index.Overlay {
+	ts := t.meta.GetRoSchema(table)
+	ti := t.meta.GetRoInfo(table)
+	for i, ix := range ts.Indexes {
+		if str.Equal(cols, ix.Columns) {
+			return ti.Indexes[i]
+		}
+	}
+	return nil
+}
+
+func (t *ReadTran) GetRecord(off uint64) rt.Record {
+	buf := t.db.store.Data(off)
+	size := runtime.RecLen(buf)
+	return rt.Record(hacks.BStoS(buf[:size]))
+}
+
+func (t *ReadTran) ColToFld(table, col string) int {
+	ts := t.meta.GetRoSchema(table)
+	return str.List(ts.Columns).Index(col)
+}
+
+//-------------------------------------------------------------------
 
 type UpdateTran struct {
 	tran

@@ -5,13 +5,11 @@ package dbms
 
 import (
 	"fmt"
-	"hash/adler32"
-	"io/ioutil"
 	"log"
-	"strconv"
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/db19"
+	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
@@ -102,24 +100,31 @@ func (DbmsLocal) Load(string) int {
 	panic("DbmsLocal Load not implemented")
 }
 
-func (DbmsLocal) LibGet(name string) (result []string) {
-	// Temporary version that reads from text files
+func (dbms DbmsLocal) LibGet(name string) (result []string) {
 	defer func() {
 		if e := recover(); e != nil {
+			// debug.PrintStack()
 			panic("error loading " + name + " " + fmt.Sprint(e))
 		}
 	}()
-	dir := "../stdlib/"
-	hash := adler32.Checksum([]byte(name))
-	name = strings.ReplaceAll(name, "?", "Q")
-	file := dir + name + "_" + strconv.FormatUint(uint64(hash), 16)
-	s, err := ioutil.ReadFile(file)
-	if err != nil {
+
+	// TODO
+	rt := dbms.db.NewReadTran()
+	ix := rt.GetIndex("stdlib", []string{"name", "group"})
+	var rb ixkey.Encoder
+	rb.Add(Pack(SuStr(name)))
+	rb.Add(Pack(SuInt(-1))) // group
+	key := rb.String()
+	off := ix.Lookup(key)
+	if off == 0 {
 		if !strings.HasPrefix(name, "Rule_") {
-			fmt.Println("LOAD", file, "NOT FOUND")
+			fmt.Println("LibGet", name, "NOT FOUND")
 		}
 		return nil
 	}
+	rec := rt.GetRecord(off)
+	s := rec.GetStr(rt.ColToFld("stdlib", "text"))
+
 	// fmt.Println("LOAD", name, "SUCCEEDED")
 	return []string{"stdlib", string(s)}
 }
