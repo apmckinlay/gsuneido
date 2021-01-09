@@ -91,6 +91,15 @@ func (r Record) GetVal(i int) Value {
 	return Unpack(r.GetRaw(i))
 }
 
+// GetStr is a more direct method to get a packed string
+func (r Record) GetStr(i int) string {
+	s := r.GetRaw(i)
+	if s[0] != PackString {
+		panic("Record GetStr not string")
+	}
+	return s[1:]
+}
+
 // Get returns one of the (usually packed) values
 func (r Record) GetRaw(i int) string {
 	if i >= r.Count() {
