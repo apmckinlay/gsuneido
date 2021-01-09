@@ -9,7 +9,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
-func TestQueryParserCreate(t *testing.T) {
+func TestParseRequest(t *testing.T) {
 	test := func(qs string) {
 		t.Helper()
 		rq := ParseRequest(qs)
