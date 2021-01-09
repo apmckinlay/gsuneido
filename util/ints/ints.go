@@ -51,6 +51,19 @@ func CompareUint64(x uint64, y uint64) int {
 	}
 }
 
+// Equal returns true if two slices of integers are equal
+func Equal(x, y []int) bool {
+	if len(x) != len(y) {
+		return false
+	}
+	for i := 0; i < len(x); i++ {
+		if x[i] != y[i] {
+			return false
+		}
+	}
+	return true
+}
+
 // Min returns the smaller of two int's
 func Min(x int, y int) int {
 	if x < y {
