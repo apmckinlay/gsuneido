@@ -11,11 +11,11 @@ import (
 	"os"
 	"strings"
 
-	"github.com/apmckinlay/gsuneido/compile"
 	"github.com/apmckinlay/gsuneido/db19/index"
 	"github.com/apmckinlay/gsuneido/db19/index/fbtree"
 	"github.com/apmckinlay/gsuneido/db19/meta"
 	"github.com/apmckinlay/gsuneido/db19/stor"
+	"github.com/apmckinlay/gsuneido/dbms/query"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/cksum"
 	"github.com/apmckinlay/gsuneido/util/sortlist"
@@ -87,7 +87,7 @@ func open(filename string) (*os.File, *bufio.Reader) {
 
 func loadTable(db *Database, r *bufio.Reader, schema string) int {
 	trace(schema)
-	rq := compile.ParseRequest("create " + schema)
+	rq := query.ParseRequest("create " + schema)
 
 	store := db.store
 	list := sortlist.NewUnsorted()

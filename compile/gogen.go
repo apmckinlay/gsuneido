@@ -21,7 +21,7 @@ func GoGen(src string) string {
 	p.codegen = gogen
 	f := p.constant().(*SuFunc)
 	if p.Token != tok.Eof {
-		p.error("did not consume all input")
+		p.Error("did not consume all input")
 	}
 	return f.Code
 }

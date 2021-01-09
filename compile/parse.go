@@ -17,15 +17,15 @@ import (
 func NewParser(src string) *parser {
 	lxr := NewLexer(src)
 	factory := ast.Folder{Factory: ast.Builder{}}
-	p := &parser{parserBase: parserBase{lxr: lxr, Factory: factory},
+	p := &parser{ParserBase: ParserBase{Lxr: lxr, Factory: factory},
 		codegen: codegen,
 		funcInfo: funcInfo{final: map[string]int{}}}
-	p.next()
+	p.Next()
 	return p
 }
 
-type parserBase struct {
-	lxr *Lexer
+type ParserBase struct {
+	Lxr *Lexer
 
 	// Item is the current lexical token etc.
 	Item
@@ -41,7 +41,7 @@ type parserBase struct {
 }
 
 type parser struct {
-	parserBase
+	ParserBase
 
 	// funcInfo is information gathered specific to a function
 	// it must be saved/reset/restored for nested functions
@@ -91,41 +91,41 @@ type funcInfo struct {
 // disqualified is a special value for final
 const disqualified = -1
 
-func (p *parserBase) match(token tok.Token) {
-	p.mustMatch(token)
-	p.next()
+func (p *ParserBase) Match(token tok.Token) {
+	p.MustMatch(token)
+	p.Next()
 }
 
-func (p *parserBase) matchIdent() string {
+func (p *ParserBase) MatchIdent() string {
 	text := p.Text
 	if !p.Token.IsIdent() {
-		p.error("expecting identifier")
+		p.Error("expecting identifier")
 	}
-	p.next()
+	p.Next()
 	return text
 }
 
-func (p *parserBase) matchIf(token tok.Token) bool {
+func (p *ParserBase) MatchIf(token tok.Token) bool {
 	if token == p.Token {
-		p.next()
+		p.Next()
 		return true
 	}
 	return false
 }
 
-func (p *parserBase) mustMatch(token tok.Token) {
+func (p *ParserBase) MustMatch(token tok.Token) {
 	if token != p.Token {
-		p.error("expecting ", token)
+		p.Error("expecting ", token)
 	}
 }
 
-// next advances to the next token, setting p.Item
-func (p *parserBase) next() {
+// Next advances to the Next token, setting p.Item
+func (p *ParserBase) Next() {
 	p.newline = false
 	for {
-		p.Item = p.lxr.Next()
+		p.Item = p.Lxr.Next()
 		if p.Token == tok.Newline {
-			if p.lxr.AheadSkip(0).Token != tok.QMark {
+			if p.Lxr.AheadSkip(0).Token != tok.QMark {
 				p.newline = true
 			}
 		} else if p.Token != tok.Comment && p.Token != tok.Whitespace {
@@ -134,15 +134,15 @@ func (p *parserBase) next() {
 	}
 }
 
-// error panics with "syntax error at " + position
+// Error panics with "syntax Error at " + position
 // It claims to return string so it can be called inside panic
 // (so compiler knows we don't return)
-func (p *parserBase) error(args ...interface{}) string {
-	p.errorAt(p.Item.Pos, args...)
+func (p *ParserBase) Error(args ...interface{}) string {
+	p.ErrorAt(p.Item.Pos, args...)
 	return ""
 }
 
-func (p *parserBase) errorAt(pos int32, args ...interface{}) string {
+func (p *ParserBase) ErrorAt(pos int32, args ...interface{}) string {
 	panic("syntax error @" + strconv.Itoa(int(pos)) + " " + fmt.Sprint(args...))
 }
 

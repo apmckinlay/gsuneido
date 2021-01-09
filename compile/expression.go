@@ -38,10 +38,10 @@ func (p *parser) pcExpr(minprec int8) ast.Expr {
 		if p.newline {
 			break
 		}
-		p.next()
+		p.Next()
 		switch {
 		case token == tok.Dot:
-			id := p.matchIdent()
+			id := p.MatchIdent()
 			if e == nil {
 				e = p.Ident("this")
 				id = p.privatizeRef(id)
@@ -59,7 +59,7 @@ func (p *parser) pcExpr(minprec int8) ast.Expr {
 		case token == tok.In:
 			e = p.in(e)
 		case token == tok.Not:
-			p.match(tok.In)
+			p.Match(tok.In)
 			e = p.Unary(tok.Not, p.in(e))
 		case token == tok.LBracket:
 			var expr ast.Expr
@@ -70,7 +70,7 @@ func (p *parser) pcExpr(minprec int8) ast.Expr {
 			}
 			if p.Token == tok.RangeTo || p.Token == tok.RangeLen {
 				rtype := p.Token
-				p.next()
+				p.Next()
 				var expr2 ast.Expr
 				if p.Token == tok.RBracket {
 					expr2 = nil
@@ -85,7 +85,7 @@ func (p *parser) pcExpr(minprec int8) ast.Expr {
 			} else {
 				e = p.Mem(e, expr)
 			}
-			p.match(tok.RBracket)
+			p.Match(tok.RBracket)
 		case tok.AssignStart < token && token < tok.AssignEnd:
 			p.ckLvalue(e)
 			if id, ok := e.(*ast.Ident); ok {
@@ -108,7 +108,7 @@ func (p *parser) pcExpr(minprec int8) ast.Expr {
 			e = p.Binary(e, token, rhs)
 		case token == tok.QMark:
 			t := p.expr()
-			p.match(tok.Colon)
+			p.Match(tok.Colon)
 			f := p.expr()
 			e = p.Trinary(e, t, f)
 		case token == tok.LParen: // function call
@@ -129,7 +129,7 @@ func (p *parser) pcExpr(minprec int8) ast.Expr {
 				if !p.same(listtype, token) {
 					break
 				}
-				p.next()
+				p.Next()
 			}
 			e = p.Nary(listtype, es)
 		default: // other left associative binary operators
@@ -151,7 +151,7 @@ func (p *parser) privatizeRef(name string) string {
 	if p.className != "" && ascii.IsLower(name[0]) {
 		if strings.HasPrefix(name, "getter_") {
 			if len(name) <= 7 || !ascii.IsLower(name[7]) {
-				p.error("invalid getter (" + name + ")")
+				p.Error("invalid getter (" + name + ")")
 			}
 		} else {
 			name = p.className + "_" + name
@@ -159,21 +159,21 @@ func (p *parser) privatizeRef(name string) string {
 		return name
 	} else if strings.HasPrefix(name, "Getter_") && len(name) > 7 &&
 		!ascii.IsUpper(name[7]) {
-		p.error("invalid getter (" + name + ")")
+		p.Error("invalid getter (" + name + ")")
 	}
 	return name
 }
 
 func (p *parser) in(e ast.Expr) ast.Expr {
 	list := []ast.Expr{}
-	p.match(tok.LParen)
+	p.Match(tok.LParen)
 	for p.Token != tok.RParen {
 		list = append(list, p.expr())
 		if p.Token == tok.Comma {
-			p.next()
+			p.Next()
 		}
 	}
-	p.match(tok.RParen)
+	p.Match(tok.RParen)
 	return p.In(e, list)
 }
 
@@ -183,13 +183,13 @@ func (p *parser) ckLvalue(e ast.Expr) {
 		return
 	case *ast.Ident:
 		if e.Name == "this" || e.Name == "super" {
-			p.error("this and super are read-only")
+			p.Error("this and super are read-only")
 		}
 		if isLocal(e.Name) {
 			return
 		}
 	}
-	p.error("lvalue required")
+	p.Error("lvalue required")
 }
 
 func flip(token tok.Token) tok.Token {
@@ -219,14 +219,14 @@ func (p *parser) atom() ast.Expr {
 	case tok.String:
 		// don't call p.constant() because it allows concatenation
 		s := p.Text
-		p.match(tok.String)
+		p.Match(tok.String)
 		return p.Constant(SuStr(s))
 	case tok.True, tok.False, tok.Number, tok.Hash:
 		return p.Constant(p.constant())
 	case tok.LParen:
-		p.next()
+		p.Next()
 		e := p.expr()
-		p.match(tok.RParen)
+		p.Match(tok.RParen)
 		// need unary for (ob.m)() [not a method call]
 		return p.Unary(tok.LParen, e)
 	case tok.LCurly:
@@ -234,10 +234,10 @@ func (p *parser) atom() ast.Expr {
 	case tok.LBracket:
 		return p.record()
 	case tok.Add, tok.Sub, tok.Not, tok.BitNot:
-		p.next()
+		p.Next()
 		return p.Unary(token, p.pcExpr(precedence[tok.LParen]))
 	case tok.Inc, tok.Dec:
-		p.next()
+		p.Next()
 		e := p.pcExpr(precedence[tok.Dot])
 		p.ckLvalue(e)
 		if id := localVar(e); id != "" {
@@ -253,10 +253,10 @@ func (p *parser) atom() ast.Expr {
 	case tok.Class:
 		return p.Constant(p.noName(p.class))
 	case tok.New:
-		p.next()
+		p.Next()
 		expr := p.pcExpr(precedence[tok.Dot])
 		var args []ast.Arg
-		if p.matchIf(tok.LParen) {
+		if p.MatchIf(tok.LParen) {
 			args = p.arguments(tok.LParen)
 		} else {
 			args = []ast.Arg{}
@@ -266,11 +266,11 @@ func (p *parser) atom() ast.Expr {
 	default:
 		if p.Token.IsIdent() {
 			if p.Text[0] == '_' && len(p.Text) > 1 && ascii.IsUpper(p.Text[1]) &&
-				p.Text[1:] != p.name && p.lxr.AheadSkip(0).Token != tok.Colon {
-				p.error("invalid reference to " + p.Text)
+				p.Text[1:] != p.name && p.Lxr.AheadSkip(0).Token != tok.Colon {
+				p.Error("invalid reference to " + p.Text)
 			}
 			if !p.expectingCompound &&
-				okBase(p.Text) && p.lxr.AheadSkip(0).Token == tok.LCurly {
+				okBase(p.Text) && p.Lxr.AheadSkip(0).Token == tok.LCurly {
 				// MyClass { ... } => class
 				return p.Constant(p.noName(p.class))
 			}
@@ -278,14 +278,14 @@ func (p *parser) atom() ast.Expr {
 				p.itUsed = true
 			}
 			if p.Text == "dll" || p.Text == "callback" || p.Text == "struct" {
-				p.error("gSuneido does not implement " + p.Text)
+				p.Error("gSuneido does not implement " + p.Text)
 			}
 			e := p.Ident(p.Text)
-			p.next()
+			p.Next()
 			return e
 		}
 	}
-	panic(p.error("unexpected " + p.Item.String()))
+	panic(p.Error("unexpected " + p.Item.String()))
 }
 
 func (p *parser) noName(f func() Value) Value {
@@ -349,7 +349,7 @@ var call = Item{Text: "call"}
 func (p *parser) arguments(opening tok.Token) []ast.Arg {
 	var args []ast.Arg
 	if opening == tok.LParen {
-		if p.matchIf(tok.At) {
+		if p.MatchIf(tok.At) {
 			return p.atArgument()
 		}
 		args = p.argumentList(tok.RParen)
@@ -366,15 +366,15 @@ var blockArg = SuStr("block")
 
 func (p *parser) atArgument() []ast.Arg {
 	which := atArg
-	if p.matchIf(tok.Add) {
+	if p.MatchIf(tok.Add) {
 		if p.Item.Text != "1" {
 			panic("only @+1 is supported")
 		}
-		p.match(tok.Number)
+		p.Match(tok.Number)
 		which = at1Arg
 	}
 	expr := p.expr()
-	p.match(tok.RParen)
+	p.Match(tok.RParen)
 	return []ast.Arg{{Name: which, E: expr}}
 }
 
@@ -383,14 +383,14 @@ func (p *parser) argumentList(closing tok.Token) []ast.Arg {
 	haveNamed := false
 	unnamed := func(val ast.Expr) {
 		if haveNamed {
-			p.error("un-named arguments must come before named arguments")
+			p.Error("un-named arguments must come before named arguments")
 		}
 		args = append(args, ast.Arg{E: val})
 	}
 	named := func(name Value, val ast.Expr) {
 		for _, a := range args {
 			if name.Equal(a.Name) {
-				p.error("duplicate argument name: " + ToStrOrString(name))
+				p.Error("duplicate argument name: " + ToStrOrString(name))
 			}
 		}
 		args = append(args, ast.Arg{Name: name, E: val})
@@ -405,16 +405,16 @@ func (p *parser) argumentList(closing tok.Token) []ast.Arg {
 	}
 	for p.Token != closing {
 		var expr ast.Expr
-		if p.matchIf(tok.Colon) {
+		if p.MatchIf(tok.Colon) {
 			if !IsLower(p.Text[0]) {
-				p.error("expecting local variable name")
+				p.Error("expecting local variable name")
 			}
 			handlePending(p.Constant(True))
 			named(SuStr(p.Text), p.Ident(p.Text))
-			p.matchIdent()
+			p.MatchIdent()
 		} else {
 			expr = p.expr() // could be name or value
-			if name := p.argname(expr); name != nil && p.matchIf(tok.Colon) {
+			if name := p.argname(expr); name != nil && p.MatchIf(tok.Colon) {
 				handlePending(p.Constant(True))
 				pending = name // it's a name but don't know value yet
 			} else if pending != nil {
@@ -423,7 +423,7 @@ func (p *parser) argumentList(closing tok.Token) []ast.Arg {
 				unnamed(expr)
 			}
 		}
-		if p.matchIf(tok.Comma) {
+		if p.MatchIf(tok.Comma) {
 			handlePending(p.Constant(True))
 		} else if p.newline && p.checker != nil && pending == nil {
 			switch p.Token {
@@ -432,7 +432,7 @@ func (p *parser) argumentList(closing tok.Token) []ast.Arg {
 			}
 		}
 	}
-	p.match(closing)
+	p.Match(closing)
 	handlePending(p.Constant(True))
 	return args
 }
@@ -448,7 +448,7 @@ func (p *parser) argname(expr ast.Expr) Value {
 }
 
 func (p *parser) record() ast.Expr {
-	p.match(tok.LBracket)
+	p.Match(tok.LBracket)
 	args := p.argumentList(tok.RBracket)
 	fn := "Record"
 	if hasUnnamed(args) {
@@ -467,10 +467,10 @@ func (p *parser) block() *ast.Block {
 	itUsedPrev := p.itUsed
 	p.itUsed = false
 	pos := p.Pos
-	p.match(tok.LCurly)
+	p.Match(tok.LCurly)
 	params := p.blockParams()
 	body := p.statements()
-	p.match(tok.RCurly)
+	p.Match(tok.RCurly)
 	if p.itUsed && len(params) == 0 {
 		params = append(params, mkParam("it", pos, false, nil))
 	}
@@ -480,22 +480,22 @@ func (p *parser) block() *ast.Block {
 
 func (p *parser) blockParams() []ast.Param {
 	var params []ast.Param
-	if p.matchIf(tok.BitOr) {
-		if p.matchIf(tok.At) {
+	if p.MatchIf(tok.BitOr) {
+		if p.MatchIf(tok.At) {
 			params = append(params,
 				mkParam("@"+p.Text, p.Pos, p.unusedAhead(), nil))
 			p.final[p.Text] = disqualified
-			p.matchIdent()
+			p.MatchIdent()
 		} else {
 			for p.Token.IsIdent() {
 				params = append(params,
 					mkParam(p.Text, p.Pos, p.unusedAhead(), nil))
 				p.final[unDyn(p.Text)] = disqualified
-				p.matchIdent()
-				p.matchIf(tok.Comma)
+				p.MatchIdent()
+				p.MatchIf(tok.Comma)
 			}
 		}
-		p.match(tok.BitOr)
+		p.Match(tok.BitOr)
 	}
 	return params
 }

@@ -1,11 +1,12 @@
 // Copyright Suneido Software Corp. All rights reserved.
 // Governed by the MIT license found in the LICENSE file.
 
-package compile
+package query
 
 import (
 	"strings"
 
+	"github.com/apmckinlay/gsuneido/compile"
 	"github.com/apmckinlay/gsuneido/compile/ast"
 	"github.com/apmckinlay/gsuneido/compile/lexer"
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
@@ -17,13 +18,13 @@ type Schema = schema.Schema
 type Index = schema.Index
 
 type qparser struct {
-	parserBase
+	compile.ParserBase
 }
 
 func NewQueryParser(src string) *qparser {
 	lxr := lexer.NewQueryLexer(src)
-	p := &qparser{parserBase{lxr: lxr, Factory: ast.Builder{}}} //TODO query factory
-	p.next()
+	p := &qparser{compile.ParserBase{Lxr: lxr, Factory: ast.Builder{}}} //TODO query factory
+	p.Next()
 	return p
 }
 
@@ -43,24 +44,24 @@ func ParseRequest(src string) *Request {
 	p := NewQueryParser(src)
 	result := p.request()
 	if p.Token != tok.Eof {
-		p.error("did not parse all input")
+		p.Error("did not parse all input")
 	}
 	return result
 }
 
 func (p *qparser) request() *Request {
 	switch {
-	case p.matchIf(tok.Create):
+	case p.MatchIf(tok.Create):
 		return &Request{Action: "create", Schema: p.schema(true)}
-	case p.matchIf(tok.Ensure):
+	case p.MatchIf(tok.Ensure):
 		return &Request{Action: "ensure", Schema: p.schema(false)}
-	case p.matchIf(tok.Drop):
-		table := p.matchIdent()
+	case p.MatchIf(tok.Drop):
+		table := p.MatchIdent()
 		return &Request{Action: "drop", Schema: Schema{Table: table}}
-	case p.matchIf(tok.Rename):
+	case p.MatchIf(tok.Rename):
 		rename := p.rename()
 		return &Request{Action: "rename", Renames: []Rename{rename}}
-	case p.matchIf(tok.Alter):
+	case p.MatchIf(tok.Alter):
 		return p.alter()
 	//TODO: View, Sview
 	default:
@@ -69,22 +70,22 @@ func (p *qparser) request() *Request {
 }
 
 func (p *qparser) rename() Rename {
-	from := p.matchIdent()
-	p.match(tok.To)
-	to := p.matchIdent()
+	from := p.MatchIdent()
+	p.Match(tok.To)
+	to := p.MatchIdent()
 	return Rename{From: from, To: to}
 }
 
 func (p *qparser) alter() *Request {
-	table := p.matchIdent()
+	table := p.MatchIdent()
 	switch {
-	case p.matchIf(tok.Create):
+	case p.MatchIf(tok.Create):
 		return &Request{Action: "alter", SubAction: "create",
 			Schema: p.schema2(table, false)}
-	case p.matchIf(tok.Drop):
+	case p.MatchIf(tok.Drop):
 		return &Request{Action: "alter", SubAction: "drop",
 			Schema: p.schema2(table, false)}
-	case p.matchIf(tok.Rename):
+	case p.MatchIf(tok.Rename):
 		return &Request{Action: "alter", SubAction: "rename",
 			Schema: p.schema2(table, false), Renames: p.renames()}
 	default:
@@ -96,14 +97,14 @@ func (p *qparser) renames() []Rename {
 	var renames []Rename
 	for {
 		renames = append(renames, p.rename())
-		if !p.matchIf(tok.Comma) {
+		if !p.MatchIf(tok.Comma) {
 			return renames
 		}
 	}
 }
 
 func (p *qparser) schema(full bool) Schema {
-	table := p.matchIdent()
+	table := p.MatchIdent()
 	return p.schema2(table, full)
 }
 
@@ -117,13 +118,13 @@ func (p *qparser) columns(full bool) (columns, derived []string) {
 	if !full && p.Token != tok.LParen {
 		return
 	}
-	p.match(tok.LParen)
+	p.Match(tok.LParen)
 	columns = make([]string, 0, 8)
 	for p.Token != tok.RParen {
-		if p.matchIf(tok.Sub) {
+		if p.MatchIf(tok.Sub) {
 			columns = append(columns, "-")
 		} else {
-			col := p.matchIdent()
+			col := p.MatchIdent()
 			if str.Capitalized(col) {
 				derived = append(derived, col)
 			} else if strings.HasSuffix(col, "_lower!") {
@@ -137,9 +138,9 @@ func (p *qparser) columns(full bool) (columns, derived []string) {
 			}
 
 		}
-		p.matchIf(tok.Comma)
+		p.MatchIf(tok.Comma)
 	}
-	p.match(tok.RParen)
+	p.Match(tok.RParen)
 	return columns, derived
 }
 
@@ -164,13 +165,13 @@ func (p *qparser) index(columns, derived []string, full bool) *Index {
 	if p.Token == tok.Key {
 		mode = 'k'
 	}
-	p.next()
-	if mode != 'k' && p.matchIf(tok.Unique) {
+	p.Next()
+	if mode != 'k' && p.MatchIf(tok.Unique) {
 		mode = 'u'
 	}
 	ixcols := p.indexColumns(columns, derived, full)
 	if mode != 'k' && len(ixcols) == 0 {
-		p.error("index columns must not be empty")
+		p.Error("index columns must not be empty")
 	}
 	ix := &Index{Columns: ixcols, Mode: mode}
 	ix.Fktable, ix.Fkcolumns, ix.Fkmode = p.foreignKey()
@@ -178,38 +179,38 @@ func (p *qparser) index(columns, derived []string, full bool) *Index {
 }
 
 func (p *qparser) indexColumns(columns, derived []string, full bool) []string {
-	p.match(tok.LParen)
+	p.Match(tok.LParen)
 	ixcols := make([]string, 0, 8)
 	for p.Token != tok.RParen {
-		col := p.matchIdent()
+		col := p.MatchIdent()
 		if full && !str.List(columns).Has(col) &&
 			(!strings.HasSuffix(col, "_lower!") || !str.List(derived).Has(col)) {
-			p.error("invalid index column: " + col)
+			p.Error("invalid index column: " + col)
 		}
 		ixcols = append(ixcols, col)
-		p.matchIf(tok.Comma)
+		p.MatchIf(tok.Comma)
 	}
-	p.match(tok.RParen)
+	p.Match(tok.RParen)
 	return ixcols
 }
 
 func (p *qparser) foreignKey() (table string, columns []string, mode int) {
-	if !p.matchIf(tok.In) {
+	if !p.MatchIf(tok.In) {
 		return
 	}
-	table = p.matchIdent()
-	if p.matchIf(tok.LParen) {
+	table = p.MatchIdent()
+	if p.MatchIf(tok.LParen) {
 		for p.Token != tok.RParen {
 			columns = append(columns, p.Text)
-			p.matchIdent()
-			p.matchIf(tok.Comma)
+			p.MatchIdent()
+			p.MatchIf(tok.Comma)
 		}
-		p.next()
+		p.Next()
 	}
 	mode = schema.Block
-	if p.matchIf(tok.Cascade) {
+	if p.MatchIf(tok.Cascade) {
 		mode = schema.Cascade
-		if p.matchIf(tok.Update) {
+		if p.MatchIf(tok.Update) {
 			mode = schema.CascadeUpdates
 		}
 	}

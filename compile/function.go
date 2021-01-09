@@ -13,7 +13,7 @@ import (
 
 // function parse a function (starting with the "function" keyword)
 func (p *parser) Function() *ast.Function {
-	p.match(tok.Function)
+	p.Match(tok.Function)
 	return p.function(false)
 }
 
@@ -32,47 +32,47 @@ func (p *parser) function(inClass bool) *ast.Function {
 }
 
 func (p *parser) params(inClass bool) []ast.Param {
-	p.match(tok.LParen)
+	p.Match(tok.LParen)
 	var params []ast.Param
-	if p.matchIf(tok.At) {
+	if p.MatchIf(tok.At) {
 		params = append(params,
 			mkParam("@"+p.Text, p.Pos, p.unusedAhead(), nil))
 		p.final[p.Text] = disqualified
-		p.matchIdent()
+		p.MatchIdent()
 	} else {
 		defs := false
 		for p.Token != tok.RParen {
-			dot := p.matchIf(tok.Dot)
+			dot := p.MatchIf(tok.Dot)
 			name := p.Text
 			p.final[unDyn(name)] = disqualified
 			pos := p.Pos
 			if dot {
 				if !inClass {
-					p.error("dot parameters only allowed in class methods")
+					p.Error("dot parameters only allowed in class methods")
 				}
 				name = "." + name
 			}
 			unused := p.unusedAhead()
-			p.matchIdent()
+			p.MatchIdent()
 			p.checkForDupParam(params, name)
-			if p.matchIf(tok.Eq) {
+			if p.MatchIf(tok.Eq) {
 				was_string := p.Token == tok.String
 				defs = true
 				def := p.constant()
 				if _, ok := def.(SuStr); ok && !was_string {
-					p.error("parameter defaults must be constants")
+					p.Error("parameter defaults must be constants")
 				}
 				params = append(params, mkParam(name, pos, unused, def))
 			} else {
 				if defs {
-					p.error("default parameters must come last")
+					p.Error("default parameters must come last")
 				}
 				params = append(params, mkParam(name, pos, unused, nil))
 			}
-			p.matchIf(tok.Comma)
+			p.MatchIf(tok.Comma)
 		}
 	}
-	p.match(tok.RParen)
+	p.Match(tok.RParen)
 	return params
 }
 
@@ -95,23 +95,23 @@ func unDyn(id string) string {
 // unusedAhead detects whether /*unused*/ is next
 func (p *parser) unusedAhead() bool {
 	i := 0
-	for ; p.lxr.Ahead(i).Token == tok.Whitespace; i++ {
+	for ; p.Lxr.Ahead(i).Token == tok.Whitespace; i++ {
 	}
-	return p.lxr.Ahead(i).Text == "/*unused*/"
+	return p.Lxr.Ahead(i).Text == "/*unused*/"
 }
 
 func (p *parser) checkForDupParam(params []ast.Param, name string) {
 	for _, a := range params {
 		if a.Name.Name == name {
-			p.error("duplicate function parameter (" + name + ")")
+			p.Error("duplicate function parameter (" + name + ")")
 		}
 	}
 }
 
 func (p *parser) compound() []ast.Statement {
-	p.match(tok.LCurly)
+	p.Match(tok.LCurly)
 	stmts := p.statements()
-	p.match(tok.RCurly)
+	p.Match(tok.RCurly)
 	return stmts
 }
 
@@ -139,41 +139,41 @@ func (p *parser) statement2() ast.Statement {
 	token := p.Token
 	switch token {
 	case tok.Semicolon:
-		p.next()
+		p.Next()
 		return &ast.Compound{Body: []ast.Statement{}}
 	case tok.LCurly:
 		return &ast.Compound{Body: p.compound()}
 	case tok.Return:
-		p.next()
+		p.Next()
 		return p.returnStmt()
 	case tok.If:
-		p.next()
+		p.Next()
 		return p.ifStmt()
 	case tok.Switch:
-		p.next()
+		p.Next()
 		return p.switchStmt()
 	case tok.Forever:
-		p.next()
+		p.Next()
 		return p.foreverStmt()
 	case tok.While:
-		p.next()
+		p.Next()
 		return p.whileStmt()
 	case tok.Do:
-		p.next()
+		p.Next()
 		return p.semi(p.dowhileStmt())
 	case tok.For:
 		return p.forStmt()
 	case tok.Throw:
-		p.next()
+		p.Next()
 		return &ast.Throw{E: p.trailingExpr()}
 	case tok.Try:
-		p.next()
+		p.Next()
 		return p.tryStmt()
 	case tok.Break:
-		p.next()
+		p.Next()
 		return p.semi(&ast.Break{})
 	case tok.Continue:
-		p.next()
+		p.Next()
 		return p.semi(&ast.Continue{})
 	default:
 		return &ast.ExprStmt{E: p.trailingExpr()}
@@ -189,21 +189,21 @@ func (p *parser) trailingExpr() ast.Expr {
 	expr := p.expr()
 	switch p.Token {
 	case tok.Semicolon:
-		p.next()
+		p.Next()
 	case tok.RCurly, tok.Return, tok.If, tok.Else, tok.Switch, tok.Forever,
 		tok.While, tok.Do, tok.For, tok.Throw, tok.Try, tok.Catch,
 		tok.Break, tok.Continue, tok.Case, tok.Default:
 		// ok
 	default:
 		if !p.newline {
-			p.error()
+			p.Error()
 		}
 	}
 	return expr
 }
 
 func (p *parser) semi(stmt ast.Statement) ast.Statement {
-	p.matchIf(tok.Semicolon)
+	p.MatchIf(tok.Semicolon)
 	return stmt
 }
 
@@ -211,7 +211,7 @@ func (p *parser) ifStmt() *ast.If {
 	expr := p.ctrlExpr()
 	t := p.statement()
 	stmt := &ast.If{Cond: expr, Then: t}
-	if p.matchIf(tok.Else) {
+	if p.MatchIf(tok.Else) {
 		stmt.Else = p.statement()
 	}
 	return stmt
@@ -225,16 +225,16 @@ func (p *parser) switchStmt() *ast.Switch {
 	} else {
 		expr = p.exprExpecting(true)
 	}
-	p.match(tok.LCurly)
+	p.Match(tok.LCurly)
 	var cases []ast.Case
-	for p.matchIf(tok.Case) {
+	for p.MatchIf(tok.Case) {
 		cases = append(cases, p.switchCase())
 	}
 	var def []ast.Statement
-	if p.matchIf(tok.Default) {
+	if p.MatchIf(tok.Default) {
 		def = p.switchBody()
 	}
-	p.match(tok.RCurly)
+	p.Match(tok.RCurly)
 	p.compoundNest--
 	return &ast.Switch{E: expr, Cases: cases, Default: def}
 }
@@ -243,7 +243,7 @@ func (p *parser) switchCase() ast.Case {
 	var exprs []ast.Expr
 	for {
 		exprs = append(exprs, p.expr())
-		if !p.matchIf(tok.Comma) {
+		if !p.MatchIf(tok.Comma) {
 			break
 		}
 	}
@@ -252,7 +252,7 @@ func (p *parser) switchCase() ast.Case {
 }
 
 func (p *parser) switchBody() []ast.Statement {
-	p.match(tok.Colon)
+	p.Match(tok.Colon)
 	stmts := []ast.Statement{}
 	for p.Token != tok.RCurly && p.Token != tok.Case && p.Token != tok.Default {
 		stmts = append(stmts, p.statement())
@@ -273,7 +273,7 @@ func (p *parser) whileStmt() *ast.While {
 
 func (p *parser) dowhileStmt() *ast.DoWhile {
 	body := p.statement()
-	p.match(tok.While)
+	p.Match(tok.While)
 	cond := p.expr()
 	return &ast.DoWhile{Body: body, Cond: cond}
 }
@@ -281,7 +281,7 @@ func (p *parser) dowhileStmt() *ast.DoWhile {
 func (p *parser) forStmt() ast.Statement {
 	// easier to check before matching For so everything is ahead
 	forIn := p.isForIn()
-	p.match(tok.For)
+	p.Match(tok.For)
 	if forIn {
 		return p.forIn()
 	}
@@ -290,41 +290,41 @@ func (p *parser) forStmt() ast.Statement {
 
 func (p *parser) isForIn() bool {
 	i := 0
-	if p.lxr.AheadSkip(i).Token == tok.LParen {
+	if p.Lxr.AheadSkip(i).Token == tok.LParen {
 		i++
 	}
-	if !p.lxr.AheadSkip(i).Token.IsIdent() {
+	if !p.Lxr.AheadSkip(i).Token.IsIdent() {
 		return false
 	}
-	return p.lxr.AheadSkip(i+1).Token == tok.In
+	return p.Lxr.AheadSkip(i+1).Token == tok.In
 }
 
 func (p *parser) forIn() *ast.ForIn {
-	parens := p.matchIf(tok.LParen)
+	parens := p.MatchIf(tok.LParen)
 	id := p.Text
 	p.final[id] = disqualified
 	pos := p.Pos
-	p.matchIdent()
-	p.match(tok.In)
+	p.MatchIdent()
+	p.Match(tok.In)
 	expr := p.exprExpecting(!parens)
 	if parens {
-		p.match(tok.RParen)
+		p.Match(tok.RParen)
 	}
 	body := p.statement()
 	return &ast.ForIn{Var: ast.Ident{Name: id, Pos: pos}, E: expr, Body: body}
 }
 
 func (p *parser) forClassic() *ast.For {
-	p.match(tok.LParen)
+	p.Match(tok.LParen)
 	init := p.optExprList(tok.Semicolon)
-	p.match(tok.Semicolon)
+	p.Match(tok.Semicolon)
 	var cond ast.Expr
 	if p.Token != tok.Semicolon {
 		cond = p.expr()
 	}
-	p.match(tok.Semicolon)
+	p.Match(tok.Semicolon)
 	inc := p.optExprList(tok.RParen)
-	p.match(tok.RParen)
+	p.Match(tok.RParen)
 	body := p.statement()
 	return &ast.For{Init: init, Cond: cond, Inc: inc, Body: body}
 }
@@ -337,7 +337,7 @@ func (p *parser) optExprList(after tok.Token) []ast.Expr {
 			if p.Token != tok.Comma {
 				break
 			}
-			p.next()
+			p.Next()
 		}
 	}
 	return exprs
@@ -345,10 +345,10 @@ func (p *parser) optExprList(after tok.Token) []ast.Expr {
 
 // used by if, while, and do-while
 func (p *parser) ctrlExpr() ast.Expr {
-	parens := p.matchIf(tok.LParen)
+	parens := p.MatchIf(tok.LParen)
 	expr := p.exprExpecting(!parens)
 	if parens {
-		p.match(tok.RParen)
+		p.Match(tok.RParen)
 	}
 	return expr
 }
@@ -361,7 +361,7 @@ func (p *parser) exprExpecting(expecting bool) ast.Expr {
 }
 
 func (p *parser) returnStmt() *ast.Return {
-	if p.newline || p.matchIf(tok.Semicolon) || p.Token == tok.RCurly {
+	if p.newline || p.MatchIf(tok.Semicolon) || p.Token == tok.RCurly {
 		return &ast.Return{}
 	}
 	return &ast.Return{E: p.trailingExpr()}
@@ -379,18 +379,18 @@ func (p *parser) tryStmt() *ast.TryCatch {
 	var catch ast.Statement
 	var unused bool
 	catchPos := int(p.Pos)
-	if p.matchIf(tok.Catch) {
-		if p.matchIf(tok.LParen) {
+	if p.MatchIf(tok.Catch) {
+		if p.MatchIf(tok.LParen) {
 			catchVar = p.Text
 			p.final[catchVar] = disqualified
 			varPos = p.Pos
 			unused = p.unusedAhead()
-			p.matchIdent()
-			if p.matchIf(tok.Comma) {
+			p.MatchIdent()
+			if p.MatchIf(tok.Comma) {
 				catchFilter = p.Text
-				p.match(tok.String)
+				p.Match(tok.String)
 			}
-			p.match(tok.RParen)
+			p.Match(tok.RParen)
 		}
 		catch = p.statement()
 	}

@@ -27,7 +27,7 @@ func NamedConstant(lib, name, src string) Value {
 	p.name = name
 	result := p.constant()
 	if p.Token != tok.Eof {
-		p.error("did not parse all input")
+		p.Error("did not parse all input")
 	}
 	return result
 }
@@ -38,7 +38,7 @@ func Checked(t *Thread, src string) (Value, []string) {
 	p.checker = check.New(t)
 	v := p.constant()
 	if p.Token != tok.Eof {
-		p.error("did not parse all input")
+		p.Error("did not parse all input")
 	}
 	return v, p.checker.Results()
 }
@@ -48,17 +48,17 @@ func (p *parser) constant() Value {
 	case tok.String:
 		return p.string()
 	case tok.Add:
-		p.next()
+		p.Next()
 		fallthrough
 	case tok.Number:
 		return p.number()
 	case tok.Sub:
-		p.next()
+		p.Next()
 		return OpUnaryMinus(p.number())
 	case tok.LParen, tok.LCurly, tok.LBracket:
 		return p.object()
 	case tok.Hash:
-		p.next()
+		p.Next()
 		switch p.Token {
 		case tok.Number:
 			return p.date()
@@ -67,10 +67,10 @@ func (p *parser) constant() Value {
 		}
 		panic("not implemented #" + p.Text)
 	case tok.True:
-		p.next()
+		p.Next()
 		return True
 	case tok.False:
-		p.next()
+		p.Next()
 		return False
 	case tok.Function:
 		return p.functionValue()
@@ -78,19 +78,19 @@ func (p *parser) constant() Value {
 		return p.class()
 	default:
 		if p.Token.IsIdent() {
-			if okBase(p.Text) && p.lxr.AheadSkip(0).Token == tok.LCurly {
+			if okBase(p.Text) && p.Lxr.AheadSkip(0).Token == tok.LCurly {
 				return p.class()
 			}
-			if p.lxr.Ahead(0).Token != tok.Colon &&
+			if p.Lxr.Ahead(0).Token != tok.Colon &&
 				(p.Text == "struct" || p.Text == "dll" || p.Text == "callback") {
-				p.error("gSuneido does not implement " + p.Text)
+				p.Error("gSuneido does not implement " + p.Text)
 			}
 			s := p.Text
-			p.next()
+			p.Next()
 			return SuStr(s)
 		}
 	}
-	panic(p.error("invalid constant, unexpected " + p.Token.String()))
+	panic(p.Error("invalid constant, unexpected " + p.Token.String()))
 }
 
 func (p *parser) functionValue() Value {
@@ -111,27 +111,27 @@ func (p *parser) string() Value {
 	s := ""
 	for {
 		s += p.Text
-		p.match(tok.String)
-		if p.Token != tok.Cat || p.lxr.AheadSkip(0).Token != tok.String {
+		p.Match(tok.String)
+		if p.Token != tok.Cat || p.Lxr.AheadSkip(0).Token != tok.String {
 			break
 		}
-		p.next()
+		p.Next()
 	}
 	return SuStr(s)
 }
 
 func (p *parser) number() Value {
 	s := p.Text
-	p.match(tok.Number)
+	p.Match(tok.Number)
 	return NumFromString(s)
 }
 
 func (p *parser) date() Value {
 	s := p.Text
-	p.match(tok.Number)
+	p.Match(tok.Number)
 	date := DateFromLiteral(s)
 	if date == NilDate {
-		p.error("bad date literal ", s)
+		p.Error("bad date literal ", s)
 	}
 	return date
 }
@@ -146,7 +146,7 @@ const noBase = -1
 
 func (p *parser) object() Value {
 	close := closing[p.Token]
-	p.next()
+	p.Next()
 	var ob container
 	if close == tok.RParen {
 		ob = new(SuObject)
@@ -179,10 +179,10 @@ func (p *parser) memberList(ob container, closing tok.Token, base Gnum) {
 	for p.Token != closing {
 		p.member(ob, closing, base)
 		if p.Token == tok.Comma || p.Token == tok.Semicolon {
-			p.next()
+			p.Next()
 		}
 	}
-	p.next()
+	p.Next()
 }
 
 func (p *parser) member(ob container, closing tok.Token, base Gnum) {
@@ -208,7 +208,7 @@ func (p *parser) member(ob container, closing tok.Token, base Gnum) {
 		p.name = prevName
 		fn.ClassName = p.className
 		p.putMem(ob, SuStr(name), fn, pos)
-	} else if p.matchIf(tok.Colon) {
+	} else if p.MatchIf(tok.Colon) {
 		if inClass {
 			m = SuStr(p.privatizeDef(m))
 		}
@@ -230,19 +230,19 @@ func (p *parser) member(ob container, closing tok.Token, base Gnum) {
 func (p *parser) privatizeDef(m Value) string {
 	ss, ok := m.(SuStr)
 	if !ok {
-		p.error("class member names must be strings")
+		p.Error("class member names must be strings")
 	}
 	name := string(ss)
 	if strings.HasPrefix(name, "Getter_") &&
 		len(name) > 7 && !ascii.IsUpper(name[7]) {
-		p.error("invalid getter (" + name + ")")
+		p.Error("invalid getter (" + name + ")")
 	}
 	if !ascii.IsLower(name[0]) {
 		return name
 	}
 	if strings.HasPrefix(name, "getter_") {
 		if len(name) <= 7 || !ascii.IsLower(name[7]) {
-			p.error("invalid getter (" + name + ")")
+			p.Error("invalid getter (" + name + ")")
 		}
 		return "Getter_" + p.className + name[6:]
 	}
@@ -251,7 +251,7 @@ func (p *parser) privatizeDef(m Value) string {
 
 func (p *parser) putMem(ob container, m Value, v Value, pos int32) {
 	if ob.HasKey(m) {
-		p.errorAt(pos, "duplicate member name (" + m.String() + ")")
+		p.ErrorAt(pos, "duplicate member name (" + m.String() + ")")
 	} else {
 		ob.Set(m, v)
 	}
@@ -265,17 +265,17 @@ var classNum int32
 // like object, it builds a value rather than an ast
 func (p *parser) class() Value {
 	if p.Token == tok.Class {
-		p.match(tok.Class)
+		p.Match(tok.Class)
 		if p.Token == tok.Colon {
-			p.match(tok.Colon)
+			p.Match(tok.Colon)
 		}
 	}
 	var base Gnum
 	if p.Token == tok.Identifier {
 		base = p.ckBase(p.Text)
-		p.matchIdent()
+		p.MatchIdent()
 	}
-	p.match(tok.LCurly)
+	p.Match(tok.LCurly)
 	prevClassName := p.className
 	p.className = p.getClassName()
 	mems := classcon{}
@@ -286,11 +286,11 @@ func (p *parser) class() Value {
 
 func (p *parser) ckBase(name string) Gnum {
 	if !okBase(name) {
-		p.error("base class must be global defined in library, got: ", name)
+		p.Error("base class must be global defined in library, got: ", name)
 	}
 	if name[0] == '_' {
 		if name == "_" || name[1:] != p.name {
-			p.error("invalid reference to " + name)
+			p.Error("invalid reference to " + name)
 		}
 		return Global.Copy(name[1:])
 	}
