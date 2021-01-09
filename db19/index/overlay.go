@@ -63,10 +63,12 @@ func (ov *Overlay) Delete(key string, off uint64) {
 }
 
 func (ov *Overlay) Lookup(key string) uint64 {
-	if off := ov.mut.Lookup(key); off != 0 {
-		return off
+	if ov.mut != nil {
+		if off := ov.mut.Lookup(key); off != 0 {
+			return off
+		}
 	}
-	for i := len(ov.layers)-1; i >= 0; i-- {
+	for i := len(ov.layers) - 1; i >= 0; i-- {
 		if off := ov.layers[i].Lookup(key); off != 0 {
 			return off
 		}

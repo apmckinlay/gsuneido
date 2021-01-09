@@ -347,6 +347,9 @@ func (c chunk) lastKey() string {
 // Lookup searches for a key returns its associated offset or 0 if not found.
 // Note: It may return offsets with the Delete or Update bits set.
 func (ib *ixbuf) Lookup(key string) uint64 {
+	if ib.size == 0 {
+		return 0
+	}
 	_, c, i := ib.search(key)
 	if i >= len(c) || c[i].key != key {
 		return 0
