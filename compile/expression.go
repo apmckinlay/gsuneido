@@ -15,8 +15,8 @@ import (
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
-// expression parses a Suneido expression and builds an AST
-func (p *parser) expr() ast.Expr {
+// Expression parses a Suneido expression and builds an AST
+func (p *Parser) Expression() ast.Expr {
 	return p.pcExpr(1)
 }
 
@@ -25,7 +25,7 @@ func (p *parser) expr() ast.Expr {
 // each call processes at least one atom
 // a given call processes everything >= minprec
 // it recurses to process the right hand side of each operator
-func (p *parser) pcExpr(minprec int8) ast.Expr {
+func (p *Parser) pcExpr(minprec int8) ast.Expr {
 	e := p.atom()
 	// fmt.Println("pcExpr minprec", minprec, "atom", e)
 	for p.Token != tok.Eof {
@@ -66,7 +66,7 @@ func (p *parser) pcExpr(minprec int8) ast.Expr {
 			if p.Token == tok.RangeTo || p.Token == tok.RangeLen {
 				expr = nil
 			} else {
-				expr = p.expr()
+				expr = p.Expression()
 			}
 			if p.Token == tok.RangeTo || p.Token == tok.RangeLen {
 				rtype := p.Token
@@ -75,7 +75,7 @@ func (p *parser) pcExpr(minprec int8) ast.Expr {
 				if p.Token == tok.RBracket {
 					expr2 = nil
 				} else {
-					expr2 = p.expr()
+					expr2 = p.Expression()
 				}
 				if rtype == tok.RangeTo {
 					e = &ast.RangeTo{E: e, From: expr, To: expr2}
@@ -103,13 +103,13 @@ func (p *parser) pcExpr(minprec int8) ast.Expr {
 					p.final[name] = disqualified
 				}
 			}
-			rhs := p.expr()
+			rhs := p.Expression()
 			p.assignName = ""
 			e = p.Binary(e, token, rhs)
 		case token == tok.QMark:
-			t := p.expr()
+			t := p.Expression()
 			p.Match(tok.Colon)
-			f := p.expr()
+			f := p.Expression()
 			e = p.Trinary(e, t, f)
 		case token == tok.LParen: // function call
 			e = p.Call(e, p.arguments(token))
@@ -147,7 +147,7 @@ func (p *parser) pcExpr(minprec int8) ast.Expr {
 	return e
 }
 
-func (p *parser) privatizeRef(name string) string {
+func (p *Parser) privatizeRef(name string) string {
 	if p.className != "" && ascii.IsLower(name[0]) {
 		if strings.HasPrefix(name, "getter_") {
 			if len(name) <= 7 || !ascii.IsLower(name[7]) {
@@ -164,11 +164,11 @@ func (p *parser) privatizeRef(name string) string {
 	return name
 }
 
-func (p *parser) in(e ast.Expr) ast.Expr {
+func (p *Parser) in(e ast.Expr) ast.Expr {
 	list := []ast.Expr{}
 	p.Match(tok.LParen)
 	for p.Token != tok.RParen {
-		list = append(list, p.expr())
+		list = append(list, p.Expression())
 		if p.Token == tok.Comma {
 			p.Next()
 		}
@@ -177,7 +177,7 @@ func (p *parser) in(e ast.Expr) ast.Expr {
 	return p.In(e, list)
 }
 
-func (p *parser) ckLvalue(e ast.Expr) {
+func (p *Parser) ckLvalue(e ast.Expr) {
 	switch e := e.(type) {
 	case *ast.Mem:
 		return
@@ -203,7 +203,7 @@ func flip(token tok.Token) tok.Token {
 	}
 }
 
-func (p *parser) same(listtype tok.Token, next tok.Token) bool {
+func (p *Parser) same(listtype tok.Token, next tok.Token) bool {
 	if p.newline {
 		return false
 	}
@@ -214,7 +214,7 @@ func (p *parser) same(listtype tok.Token, next tok.Token) bool {
 
 // ------------------------------------------------------------------
 // atom handles atoms and prefix operators
-func (p *parser) atom() ast.Expr {
+func (p *Parser) atom() ast.Expr {
 	switch token := p.Token; token {
 	case tok.String:
 		// don't call p.constant() because it allows concatenation
@@ -225,7 +225,7 @@ func (p *parser) atom() ast.Expr {
 		return p.Constant(p.constant())
 	case tok.LParen:
 		p.Next()
-		e := p.expr()
+		e := p.Expression()
 		p.Match(tok.RParen)
 		// need unary for (ob.m)() [not a method call]
 		return p.Unary(tok.LParen, e)
@@ -288,7 +288,7 @@ func (p *parser) atom() ast.Expr {
 	panic(p.Error("unexpected " + p.Item.String()))
 }
 
-func (p *parser) noName(f func() Value) Value {
+func (p *Parser) noName(f func() Value) Value {
 	prevName := p.name
 	name := p.assignName
 	if p.assignName == "" {
@@ -346,7 +346,7 @@ var precedence = [tok.Ntokens]int8{
 
 var call = Item{Text: "call"}
 
-func (p *parser) arguments(opening tok.Token) []ast.Arg {
+func (p *Parser) arguments(opening tok.Token) []ast.Arg {
 	var args []ast.Arg
 	if opening == tok.LParen {
 		if p.MatchIf(tok.At) {
@@ -364,7 +364,7 @@ var atArg = SuStr("@")
 var at1Arg = SuStr("@+1")
 var blockArg = SuStr("block")
 
-func (p *parser) atArgument() []ast.Arg {
+func (p *Parser) atArgument() []ast.Arg {
 	which := atArg
 	if p.MatchIf(tok.Add) {
 		if p.Item.Text != "1" {
@@ -373,12 +373,12 @@ func (p *parser) atArgument() []ast.Arg {
 		p.Match(tok.Number)
 		which = at1Arg
 	}
-	expr := p.expr()
+	expr := p.Expression()
 	p.Match(tok.RParen)
 	return []ast.Arg{{Name: which, E: expr}}
 }
 
-func (p *parser) argumentList(closing tok.Token) []ast.Arg {
+func (p *Parser) argumentList(closing tok.Token) []ast.Arg {
 	var args []ast.Arg
 	haveNamed := false
 	unnamed := func(val ast.Expr) {
@@ -413,7 +413,7 @@ func (p *parser) argumentList(closing tok.Token) []ast.Arg {
 			named(SuStr(p.Text), p.Ident(p.Text))
 			p.MatchIdent()
 		} else {
-			expr = p.expr() // could be name or value
+			expr = p.Expression() // could be name or value
 			if name := p.argname(expr); name != nil && p.MatchIf(tok.Colon) {
 				handlePending(p.Constant(True))
 				pending = name // it's a name but don't know value yet
@@ -437,7 +437,7 @@ func (p *parser) argumentList(closing tok.Token) []ast.Arg {
 	return args
 }
 
-func (p *parser) argname(expr ast.Expr) Value {
+func (p *Parser) argname(expr ast.Expr) Value {
 	if id, ok := expr.(*ast.Ident); ok {
 		return SuStr(id.Name)
 	}
@@ -447,7 +447,7 @@ func (p *parser) argname(expr ast.Expr) Value {
 	return nil
 }
 
-func (p *parser) record() ast.Expr {
+func (p *Parser) record() ast.Expr {
 	p.Match(tok.LBracket)
 	args := p.argumentList(tok.RBracket)
 	fn := "Record"
@@ -462,7 +462,7 @@ func hasUnnamed(args []ast.Arg) bool {
 	return len(args) > 0 && args[0].Name == nil
 }
 
-func (p *parser) block() *ast.Block {
+func (p *Parser) block() *ast.Block {
 	p.hasBlocks = true
 	itUsedPrev := p.itUsed
 	p.itUsed = false
@@ -478,7 +478,7 @@ func (p *parser) block() *ast.Block {
 	return &ast.Block{Function: ast.Function{Pos: pos, Params: params, Body: body}}
 }
 
-func (p *parser) blockParams() []ast.Param {
+func (p *Parser) blockParams() []ast.Param {
 	var params []ast.Param
 	if p.MatchIf(tok.BitOr) {
 		if p.MatchIf(tok.At) {

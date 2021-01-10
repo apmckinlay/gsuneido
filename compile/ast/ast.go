@@ -214,6 +214,27 @@ func (a *In) Children(fn func(Node) Node) {
 	}
 }
 
+// InVals is used by queries
+type InVals struct {
+	exprNodeT
+	E    Expr
+	Vals []Value
+}
+
+func (a *InVals) String() string {
+	s := "In(" + a.E.String() + " ["
+	sep := ""
+	for _, e := range a.Vals {
+		s += sep + e.String()
+		sep = " "
+	}
+	return s + "])"
+}
+
+func (a *InVals) Children(fn func(Node) Node) {
+	applyExpr(fn, &a.E)
+}
+
 type Call struct {
 	exprNodeT
 	Fn   Expr

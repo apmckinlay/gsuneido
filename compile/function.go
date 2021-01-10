@@ -12,13 +12,13 @@ import (
 )
 
 // function parse a function (starting with the "function" keyword)
-func (p *parser) Function() *ast.Function {
+func (p *Parser) Function() *ast.Function {
 	p.Match(tok.Function)
 	return p.function(false)
 }
 
 // function parses a function or method (without the "function" keyword)
-func (p *parser) function(inClass bool) *ast.Function {
+func (p *Parser) function(inClass bool) *ast.Function {
 	funcInfoSave := p.funcInfo
 	p.funcInfo = funcInfo{final: map[string]int{}}
 	pos := p.Pos
@@ -31,7 +31,7 @@ func (p *parser) function(inClass bool) *ast.Function {
 	return fn
 }
 
-func (p *parser) params(inClass bool) []ast.Param {
+func (p *Parser) params(inClass bool) []ast.Param {
 	p.Match(tok.LParen)
 	var params []ast.Param
 	if p.MatchIf(tok.At) {
@@ -93,14 +93,14 @@ func unDyn(id string) string {
 }
 
 // unusedAhead detects whether /*unused*/ is next
-func (p *parser) unusedAhead() bool {
+func (p *Parser) unusedAhead() bool {
 	i := 0
 	for ; p.Lxr.Ahead(i).Token == tok.Whitespace; i++ {
 	}
 	return p.Lxr.Ahead(i).Text == "/*unused*/"
 }
 
-func (p *parser) checkForDupParam(params []ast.Param, name string) {
+func (p *Parser) checkForDupParam(params []ast.Param, name string) {
 	for _, a := range params {
 		if a.Name.Name == name {
 			p.Error("duplicate function parameter (" + name + ")")
@@ -108,14 +108,14 @@ func (p *parser) checkForDupParam(params []ast.Param, name string) {
 	}
 }
 
-func (p *parser) compound() []ast.Statement {
+func (p *Parser) compound() []ast.Statement {
 	p.Match(tok.LCurly)
 	stmts := p.statements()
 	p.Match(tok.RCurly)
 	return stmts
 }
 
-func (p *parser) statements() []ast.Statement {
+func (p *Parser) statements() []ast.Statement {
 	p.compoundNest++
 	list := []ast.Statement{}
 	for p.Token != tok.RCurly {
@@ -128,14 +128,14 @@ func (p *parser) statements() []ast.Statement {
 
 var code = Item{Token: tok.LCurly, Text: "STMTS"}
 
-func (p *parser) statement() ast.Statement {
+func (p *Parser) statement() ast.Statement {
 	pos := p.Pos
 	stmt := p.statement2()
 	stmt.SetPos(int(pos))
 	return stmt
 }
 
-func (p *parser) statement2() ast.Statement {
+func (p *Parser) statement2() ast.Statement {
 	token := p.Token
 	switch token {
 	case tok.Semicolon:
@@ -185,8 +185,8 @@ func (p *parser) statement2() ast.Statement {
 // because this is not very readable and often a mistake
 // cSuneido and jSuneido only allowed catch, while, or else to follow
 // but here we are more lenient and allow any statement keyword
-func (p *parser) trailingExpr() ast.Expr {
-	expr := p.expr()
+func (p *Parser) trailingExpr() ast.Expr {
+	expr := p.Expression()
 	switch p.Token {
 	case tok.Semicolon:
 		p.Next()
@@ -202,12 +202,12 @@ func (p *parser) trailingExpr() ast.Expr {
 	return expr
 }
 
-func (p *parser) semi(stmt ast.Statement) ast.Statement {
+func (p *Parser) semi(stmt ast.Statement) ast.Statement {
 	p.MatchIf(tok.Semicolon)
 	return stmt
 }
 
-func (p *parser) ifStmt() *ast.If {
+func (p *Parser) ifStmt() *ast.If {
 	expr := p.ctrlExpr()
 	t := p.statement()
 	stmt := &ast.If{Cond: expr, Then: t}
@@ -217,7 +217,7 @@ func (p *parser) ifStmt() *ast.If {
 	return stmt
 }
 
-func (p *parser) switchStmt() *ast.Switch {
+func (p *Parser) switchStmt() *ast.Switch {
 	p.compoundNest++
 	var expr ast.Expr
 	if p.Token == tok.LCurly {
@@ -239,10 +239,10 @@ func (p *parser) switchStmt() *ast.Switch {
 	return &ast.Switch{E: expr, Cases: cases, Default: def}
 }
 
-func (p *parser) switchCase() ast.Case {
+func (p *Parser) switchCase() ast.Case {
 	var exprs []ast.Expr
 	for {
-		exprs = append(exprs, p.expr())
+		exprs = append(exprs, p.Expression())
 		if !p.MatchIf(tok.Comma) {
 			break
 		}
@@ -251,7 +251,7 @@ func (p *parser) switchCase() ast.Case {
 	return ast.Case{Exprs: exprs, Body: body}
 }
 
-func (p *parser) switchBody() []ast.Statement {
+func (p *Parser) switchBody() []ast.Statement {
 	p.Match(tok.Colon)
 	stmts := []ast.Statement{}
 	for p.Token != tok.RCurly && p.Token != tok.Case && p.Token != tok.Default {
@@ -260,25 +260,25 @@ func (p *parser) switchBody() []ast.Statement {
 	return stmts
 }
 
-func (p *parser) foreverStmt() *ast.Forever {
+func (p *Parser) foreverStmt() *ast.Forever {
 	body := p.statement()
 	return &ast.Forever{Body: body}
 }
 
-func (p *parser) whileStmt() *ast.While {
+func (p *Parser) whileStmt() *ast.While {
 	cond := p.ctrlExpr()
 	body := p.statement()
 	return &ast.While{Cond: cond, Body: body}
 }
 
-func (p *parser) dowhileStmt() *ast.DoWhile {
+func (p *Parser) dowhileStmt() *ast.DoWhile {
 	body := p.statement()
 	p.Match(tok.While)
-	cond := p.expr()
+	cond := p.Expression()
 	return &ast.DoWhile{Body: body, Cond: cond}
 }
 
-func (p *parser) forStmt() ast.Statement {
+func (p *Parser) forStmt() ast.Statement {
 	// easier to check before matching For so everything is ahead
 	forIn := p.isForIn()
 	p.Match(tok.For)
@@ -288,7 +288,7 @@ func (p *parser) forStmt() ast.Statement {
 	return p.forClassic()
 }
 
-func (p *parser) isForIn() bool {
+func (p *Parser) isForIn() bool {
 	i := 0
 	if p.Lxr.AheadSkip(i).Token == tok.LParen {
 		i++
@@ -299,7 +299,7 @@ func (p *parser) isForIn() bool {
 	return p.Lxr.AheadSkip(i+1).Token == tok.In
 }
 
-func (p *parser) forIn() *ast.ForIn {
+func (p *Parser) forIn() *ast.ForIn {
 	parens := p.MatchIf(tok.LParen)
 	id := p.Text
 	p.final[id] = disqualified
@@ -314,13 +314,13 @@ func (p *parser) forIn() *ast.ForIn {
 	return &ast.ForIn{Var: ast.Ident{Name: id, Pos: pos}, E: expr, Body: body}
 }
 
-func (p *parser) forClassic() *ast.For {
+func (p *Parser) forClassic() *ast.For {
 	p.Match(tok.LParen)
 	init := p.optExprList(tok.Semicolon)
 	p.Match(tok.Semicolon)
 	var cond ast.Expr
 	if p.Token != tok.Semicolon {
-		cond = p.expr()
+		cond = p.Expression()
 	}
 	p.Match(tok.Semicolon)
 	inc := p.optExprList(tok.RParen)
@@ -329,11 +329,11 @@ func (p *parser) forClassic() *ast.For {
 	return &ast.For{Init: init, Cond: cond, Inc: inc, Body: body}
 }
 
-func (p *parser) optExprList(after tok.Token) []ast.Expr {
+func (p *Parser) optExprList(after tok.Token) []ast.Expr {
 	exprs := []ast.Expr{}
 	if p.Token != after {
 		for {
-			exprs = append(exprs, p.expr())
+			exprs = append(exprs, p.Expression())
 			if p.Token != tok.Comma {
 				break
 			}
@@ -344,7 +344,7 @@ func (p *parser) optExprList(after tok.Token) []ast.Expr {
 }
 
 // used by if, while, and do-while
-func (p *parser) ctrlExpr() ast.Expr {
+func (p *Parser) ctrlExpr() ast.Expr {
 	parens := p.MatchIf(tok.LParen)
 	expr := p.exprExpecting(!parens)
 	if parens {
@@ -353,25 +353,25 @@ func (p *parser) ctrlExpr() ast.Expr {
 	return expr
 }
 
-func (p *parser) exprExpecting(expecting bool) ast.Expr {
+func (p *Parser) exprExpecting(expecting bool) ast.Expr {
 	p.expectingCompound = expecting
-	expr := p.expr()
+	expr := p.Expression()
 	p.expectingCompound = false
 	return expr
 }
 
-func (p *parser) returnStmt() *ast.Return {
+func (p *Parser) returnStmt() *ast.Return {
 	if p.newline || p.MatchIf(tok.Semicolon) || p.Token == tok.RCurly {
 		return &ast.Return{}
 	}
 	return &ast.Return{E: p.trailingExpr()}
 }
 
-func (p *parser) throwStmt() *ast.Throw {
-	return &ast.Throw{E: p.expr()}
+func (p *Parser) throwStmt() *ast.Throw {
+	return &ast.Throw{E: p.Expression()}
 }
 
-func (p *parser) tryStmt() *ast.TryCatch {
+func (p *Parser) tryStmt() *ast.TryCatch {
 	try := p.statement()
 	var catchVar string
 	var varPos int32

@@ -109,11 +109,17 @@ const (
 	While
 	// query keywords
 	QueryStart
-	Alter
+	SummarizeStart
 	Average
+	Count
+	List
+	Max
+	Min
+	Total
+	SummarizeEnd
+	Alter
 	By
 	Cascade
-	Count
 	Create
 	Delete
 	Drop
@@ -127,10 +133,7 @@ const (
 	Join
 	Key
 	Leftjoin
-	List
 	Lower
-	Max
-	Min
 	Minus
 	Project
 	Remove
@@ -142,7 +145,6 @@ const (
 	Sview
 	Times
 	To
-	Total
 	Union
 	Unique
 	Update
@@ -184,8 +186,8 @@ var isIdent = [Ntokens]bool{ // note: array rather than map
 	While:      true,
 }
 
-// IsIdent returns whether a token is an identifier
-// token must be within the valid range
+// IsIdent returns whether a token is an identifier.
+// The token must be within the valid range.
 func (token Token) IsIdent() bool {
 	return token > QueryStart || isIdent[token]
 }

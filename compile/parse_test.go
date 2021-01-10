@@ -38,7 +38,7 @@ func TestParseExpression(t *testing.T) {
 		t.Helper()
 		p := NewParser(src)
 		p.className = className
-		result := p.expr()
+		result := p.Expression()
 		assert.T(t).This(p.Token).Is(tok.Eof)
 		return result
 	}

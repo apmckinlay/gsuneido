@@ -14,34 +14,29 @@ import (
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
-type Schema = schema.Schema
-type Index = schema.Index
-
-type qparser struct {
+type reqparser struct {
 	compile.ParserBase
 }
 
-func NewQueryParser(src string) *qparser {
+func NewRequestParser(src string) *reqparser {
 	lxr := lexer.NewQueryLexer(src)
-	p := &qparser{compile.ParserBase{Lxr: lxr, Factory: ast.Builder{}}} //TODO query factory
+	p := &reqparser{compile.ParserBase{Lxr: lxr, Factory: ast.Builder{}}}
 	p.Next()
 	return p
 }
+
+type Schema = schema.Schema
+type Index = schema.Index
 
 type Request struct {
 	Action    string
 	SubAction string
 	Schema
-	Renames []Rename
-}
-
-type Rename struct {
-	From string
-	To   string
+	Renames []Rename1
 }
 
 func ParseRequest(src string) *Request {
-	p := NewQueryParser(src)
+	p := NewRequestParser(src)
 	result := p.request()
 	if p.Token != tok.Eof {
 		p.Error("did not parse all input")
@@ -49,7 +44,7 @@ func ParseRequest(src string) *Request {
 	return result
 }
 
-func (p *qparser) request() *Request {
+func (p *reqparser) request() *Request {
 	switch {
 	case p.MatchIf(tok.Create):
 		return &Request{Action: "create", Schema: p.schema(true)}
@@ -59,8 +54,8 @@ func (p *qparser) request() *Request {
 		table := p.MatchIdent()
 		return &Request{Action: "drop", Schema: Schema{Table: table}}
 	case p.MatchIf(tok.Rename):
-		rename := p.rename()
-		return &Request{Action: "rename", Renames: []Rename{rename}}
+		rename := p.rename1()
+		return &Request{Action: "rename", Renames: []Rename1{rename}}
 	case p.MatchIf(tok.Alter):
 		return p.alter()
 	//TODO: View, Sview
@@ -69,14 +64,14 @@ func (p *qparser) request() *Request {
 	}
 }
 
-func (p *qparser) rename() Rename {
+func (p *reqparser) rename1() Rename1 {
 	from := p.MatchIdent()
 	p.Match(tok.To)
 	to := p.MatchIdent()
-	return Rename{From: from, To: to}
+	return Rename1{from: from, to: to}
 }
 
-func (p *qparser) alter() *Request {
+func (p *reqparser) alter() *Request {
 	table := p.MatchIdent()
 	switch {
 	case p.MatchIf(tok.Create):
@@ -93,28 +88,28 @@ func (p *qparser) alter() *Request {
 	}
 }
 
-func (p *qparser) renames() []Rename {
-	var renames []Rename
+func (p *reqparser) renames() []Rename1 {
+	var renames []Rename1
 	for {
-		renames = append(renames, p.rename())
+		renames = append(renames, p.rename1())
 		if !p.MatchIf(tok.Comma) {
 			return renames
 		}
 	}
 }
 
-func (p *qparser) schema(full bool) Schema {
+func (p *reqparser) schema(full bool) Schema {
 	table := p.MatchIdent()
 	return p.schema2(table, full)
 }
 
-func (p *qparser) schema2(table string, full bool) Schema {
+func (p *reqparser) schema2(table string, full bool) Schema {
 	columns, derived := p.columns(full)
 	indexes := p.indexes(columns, derived, full)
 	return Schema{Table: table, Columns: columns, Derived: derived, Indexes: indexes}
 }
 
-func (p *qparser) columns(full bool) (columns, derived []string) {
+func (p *reqparser) columns(full bool) (columns, derived []string) {
 	if !full && p.Token != tok.LParen {
 		return
 	}
@@ -144,7 +139,7 @@ func (p *qparser) columns(full bool) (columns, derived []string) {
 	return columns, derived
 }
 
-func (p *qparser) indexes(columns, derived []string, full bool) []Index {
+func (p *reqparser) indexes(columns, derived []string, full bool) []Index {
 	hasKey := false
 	indexes := make([]Index, 0, 4)
 	for ix := p.index(columns, derived, full); ix != nil; ix = p.index(columns, derived, full) {
@@ -157,7 +152,7 @@ func (p *qparser) indexes(columns, derived []string, full bool) []Index {
 	return indexes
 }
 
-func (p *qparser) index(columns, derived []string, full bool) *Index {
+func (p *reqparser) index(columns, derived []string, full bool) *Index {
 	if p.Token != tok.Key && p.Token != tok.Index {
 		return nil
 	}
@@ -178,7 +173,7 @@ func (p *qparser) index(columns, derived []string, full bool) *Index {
 	return ix
 }
 
-func (p *qparser) indexColumns(columns, derived []string, full bool) []string {
+func (p *reqparser) indexColumns(columns, derived []string, full bool) []string {
 	p.Match(tok.LParen)
 	ixcols := make([]string, 0, 8)
 	for p.Token != tok.RParen {
@@ -194,7 +189,7 @@ func (p *qparser) indexColumns(columns, derived []string, full bool) []string {
 	return ixcols
 }
 
-func (p *qparser) foreignKey() (table string, columns []string, mode int) {
+func (p *reqparser) foreignKey() (table string, columns []string, mode int) {
 	if !p.MatchIf(tok.In) {
 		return
 	}
@@ -246,8 +241,4 @@ func (rq *Request) String() string {
 		}
 	}
 	return s
-}
-
-func (rn Rename) String() string {
-	return rn.From + " to " + rn.To
 }

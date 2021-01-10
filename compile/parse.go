@@ -14,14 +14,18 @@ import (
 	"github.com/apmckinlay/gsuneido/runtime"
 )
 
-func NewParser(src string) *parser {
+func NewParser(src string) *Parser {
 	lxr := NewLexer(src)
 	factory := ast.Folder{Factory: ast.Builder{}}
-	p := &parser{ParserBase: ParserBase{Lxr: lxr, Factory: factory},
-		codegen: codegen,
-		funcInfo: funcInfo{final: map[string]int{}}}
+	p := &Parser{ParserBase: ParserBase{Lxr: lxr, Factory: factory},
+		codegen:  codegen}
+	p.Init()
 	p.Next()
 	return p
+}
+
+func (p *Parser) Init() {
+	p.funcInfo.final = map[string]int{}
 }
 
 type ParserBase struct {
@@ -40,7 +44,7 @@ type ParserBase struct {
 	newline bool
 }
 
-type parser struct {
+type Parser struct {
 	ParserBase
 
 	// funcInfo is information gathered specific to a function
@@ -146,6 +150,6 @@ func (p *ParserBase) ErrorAt(pos int32, args ...interface{}) string {
 	panic("syntax error @" + strconv.Itoa(int(pos)) + " " + fmt.Sprint(args...))
 }
 
-func (p *parser) Ident(name string) ast.Expr {
+func (p *Parser) Ident(name string) ast.Expr {
 	return p.Factory.Ident(name, p.Pos)
 }

@@ -43,7 +43,7 @@ func Checked(t *Thread, src string) (Value, []string) {
 	return v, p.checker.Results()
 }
 
-func (p *parser) constant() Value {
+func (p *Parser) constant() Value {
 	switch p.Token {
 	case tok.String:
 		return p.string()
@@ -93,7 +93,7 @@ func (p *parser) constant() Value {
 	panic(p.Error("invalid constant, unexpected " + p.Token.String()))
 }
 
-func (p *parser) functionValue() Value {
+func (p *Parser) functionValue() Value {
 	prevClassName := p.className
 	p.className = "" // prevent privatization in standalone function
 	ast := p.Function()
@@ -107,7 +107,7 @@ func (p *parser) functionValue() Value {
 	return f
 }
 
-func (p *parser) string() Value {
+func (p *Parser) string() Value {
 	s := ""
 	for {
 		s += p.Text
@@ -120,13 +120,13 @@ func (p *parser) string() Value {
 	return SuStr(s)
 }
 
-func (p *parser) number() Value {
+func (p *Parser) number() Value {
 	s := p.Text
 	p.Match(tok.Number)
 	return NumFromString(s)
 }
 
-func (p *parser) date() Value {
+func (p *Parser) date() Value {
 	s := p.Text
 	p.Match(tok.Number)
 	date := DateFromLiteral(s)
@@ -144,7 +144,7 @@ var closing = map[tok.Token]tok.Token{
 
 const noBase = -1
 
-func (p *parser) object() Value {
+func (p *Parser) object() Value {
 	close := closing[p.Token]
 	p.Next()
 	var ob container
@@ -175,7 +175,7 @@ type protectable interface {
 	SetReadOnly()
 }
 
-func (p *parser) memberList(ob container, closing tok.Token, base Gnum) {
+func (p *Parser) memberList(ob container, closing tok.Token, base Gnum) {
 	for p.Token != closing {
 		p.member(ob, closing, base)
 		if p.Token == tok.Comma || p.Token == tok.Semicolon {
@@ -185,7 +185,7 @@ func (p *parser) memberList(ob container, closing tok.Token, base Gnum) {
 	p.Next()
 }
 
-func (p *parser) member(ob container, closing tok.Token, base Gnum) {
+func (p *Parser) member(ob container, closing tok.Token, base Gnum) {
 	start := p.Token
 	pos := p.Item.Pos
 	m := p.constant()
@@ -227,7 +227,7 @@ func (p *parser) member(ob container, closing tok.Token, base Gnum) {
 	}
 }
 
-func (p *parser) privatizeDef(m Value) string {
+func (p *Parser) privatizeDef(m Value) string {
 	ss, ok := m.(SuStr)
 	if !ok {
 		p.Error("class member names must be strings")
@@ -249,7 +249,7 @@ func (p *parser) privatizeDef(m Value) string {
 	return p.className + "_" + name
 }
 
-func (p *parser) putMem(ob container, m Value, v Value, pos int32) {
+func (p *Parser) putMem(ob container, m Value, v Value, pos int32) {
 	if ob.HasKey(m) {
 		p.ErrorAt(pos, "duplicate member name (" + m.String() + ")")
 	} else {
@@ -263,7 +263,7 @@ var classNum int32
 
 // class parses a class definition
 // like object, it builds a value rather than an ast
-func (p *parser) class() Value {
+func (p *Parser) class() Value {
 	if p.Token == tok.Class {
 		p.Match(tok.Class)
 		if p.Token == tok.Colon {
@@ -284,7 +284,7 @@ func (p *parser) class() Value {
 	return &SuClass{Base: base, MemBase: MemBase{Data: mems}, Lib: p.lib, Name: p.name}
 }
 
-func (p *parser) ckBase(name string) Gnum {
+func (p *Parser) ckBase(name string) Gnum {
 	if !okBase(name) {
 		p.Error("base class must be global defined in library, got: ", name)
 	}
@@ -305,7 +305,7 @@ func okBase(name string) bool {
 		(name[0] == '_' && len(name) > 1 && ascii.IsUpper(name[1]))
 }
 
-func (p *parser) getClassName() string {
+func (p *Parser) getClassName() string {
 	last := p.name
 	i := strings.LastIndexAny(last, " .")
 	if i != -1 {
