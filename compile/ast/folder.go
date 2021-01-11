@@ -11,16 +11,17 @@ import (
 )
 
 // Folder implements constant folding for expressions.
-// It is a "decorator" Factory that wraps another Factory (e.g. Builder)
 // Doing the folding as the AST is built is implicitly bottom up
 // without requiring an explicit tree traversal.
 // It also means we only build the folded tree.
-type Folder struct {
-	Factory
+type Folder struct{}
+
+func (f Folder) Constant(val Value) *Constant {
+	return &Constant{Val: val}
 }
 
 func (f Folder) Unary(token tok.Token, expr Expr) Expr {
-	return f.foldUnary(f.Factory.Unary(token, expr).(*Unary))
+	return f.foldUnary(&Unary{Tok: token, E: expr})
 }
 
 func (f Folder) foldUnary(u *Unary) Expr {
@@ -46,7 +47,7 @@ func (f Folder) foldUnary(u *Unary) Expr {
 }
 
 func (f Folder) Binary(lhs Expr, token tok.Token, rhs Expr) Expr {
-	return f.foldBinary(f.Factory.Binary(lhs, token, rhs).(*Binary))
+	return f.foldBinary(&Binary{Lhs: lhs, Tok: token, Rhs: rhs})
 }
 
 func (f Folder) foldBinary(b *Binary) Expr {
@@ -92,7 +93,7 @@ func (f Folder) foldBinary(b *Binary) Expr {
 }
 
 func (f Folder) Trinary(cond Expr, e1 Expr, e2 Expr) Expr {
-	return f.foldTrinary(f.Factory.Trinary(cond, e1, e2).(*Trinary))
+	return f.foldTrinary(&Trinary{Cond: cond, T: e1, F: e2})
 }
 
 func (f Folder) foldTrinary(t *Trinary) Expr {
@@ -110,7 +111,7 @@ func (f Folder) foldTrinary(t *Trinary) Expr {
 }
 
 func (f Folder) In(e Expr, exprs []Expr) Expr {
-	return f.foldIn(f.Factory.In(e, exprs).(*In))
+	return f.foldIn(&In{E: e, Exprs: exprs})
 }
 
 func (f Folder) foldIn(in *In) Expr {
@@ -133,7 +134,7 @@ func (f Folder) foldIn(in *In) Expr {
 var allones Value = SuDnum{Dnum: dnum.FromInt(0xffffffff)}
 
 func (f Folder) Nary(token tok.Token, exprs []Expr) Expr {
-	return f.foldNary(f.Factory.Nary(token, exprs).(*Nary))
+	return f.foldNary(&Nary{Tok: token, Exprs: exprs})
 }
 
 func (f Folder) foldNary(n *Nary) Expr {

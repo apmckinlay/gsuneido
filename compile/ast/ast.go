@@ -360,50 +360,6 @@ func (a *Block) Children(fn func(Node) Node) {
 	a.Function = *fn(&a.Function).(*Function)
 }
 
-type Factory interface {
-	Ident(name string, pos int32) Expr
-	Constant(val Value) Expr
-	Unary(tok tok.Token, expr Expr) Expr
-	Binary(lhs Expr, tok tok.Token, rhs Expr) Expr
-	Mem(e Expr, m Expr) Expr
-	Trinary(cond Expr, t Expr, f Expr) Expr
-	Nary(tok tok.Token, exprs []Expr) Expr
-	In(e Expr, exprs []Expr) Expr
-	Call(fn Expr, args []Arg) Expr
-}
-
-type Builder struct{}
-
-func (Builder) Ident(name string, pos int32) Expr {
-	return &Ident{Name: name, Pos: pos}
-}
-func (Builder) Constant(val Value) Expr {
-	return &Constant{Val: val}
-}
-func (Builder) Unary(tok tok.Token, expr Expr) Expr {
-	return &Unary{Tok: tok, E: expr}
-}
-func (Builder) Binary(lhs Expr, tok tok.Token, rhs Expr) Expr {
-	return &Binary{Lhs: lhs, Tok: tok, Rhs: rhs}
-}
-func (Builder) Trinary(cond Expr, t Expr, f Expr) Expr {
-	return &Trinary{Cond: cond, T: t, F: f}
-}
-func (Builder) Nary(tok tok.Token, exprs []Expr) Expr {
-	return &Nary{Tok: tok, Exprs: exprs}
-}
-func (Builder) Mem(e Expr, m Expr) Expr {
-	return &Mem{E: e, M: m}
-}
-func (Builder) In(e Expr, exprs []Expr) Expr {
-	return &In{E: e, Exprs: exprs}
-}
-func (Builder) Call(fn Expr, args []Arg) Expr {
-	return &Call{Fn: fn, Args: args}
-}
-
-var _ Factory = Builder{}
-
 // Statement nodes implement the Stmt interface.
 type Statement interface {
 	Node

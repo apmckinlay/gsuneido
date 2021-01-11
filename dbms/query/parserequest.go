@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/compile"
-	"github.com/apmckinlay/gsuneido/compile/ast"
 	"github.com/apmckinlay/gsuneido/compile/lexer"
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
 	"github.com/apmckinlay/gsuneido/db19/meta/schema"
@@ -20,7 +19,7 @@ type reqparser struct {
 
 func NewRequestParser(src string) *reqparser {
 	lxr := lexer.NewQueryLexer(src)
-	p := &reqparser{compile.ParserBase{Lxr: lxr, Factory: ast.Builder{}}}
+	p := &reqparser{compile.ParserBase{Lxr: lxr}}
 	p.Next()
 	return p
 }

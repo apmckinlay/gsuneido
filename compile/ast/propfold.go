@@ -20,8 +20,7 @@ func PropFold(fn *Function) *Function {
 
 // propfold - constant propagation and folding
 func propfold(fn *Function, vars map[string]int) {
-	f := fold{vars: map[string]Value{}, srcpos: -1,
-		Folder: Folder{Factory: Builder{}}}
+	f := fold{vars: map[string]Value{}, srcpos: -1}
 	for id, lev := range vars {
 		if lev != -1 {
 			f.vars[id] = nil

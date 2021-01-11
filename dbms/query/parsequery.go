@@ -10,14 +10,15 @@ import (
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
 )
 
+type Expr = ast.Expr
+
 type qparser struct {
 	compile.Parser
 }
 
 func NewQueryParser(src string) *qparser {
 	lxr := lexer.NewQueryLexer(src)
-	p := &qparser{compile.Parser{
-			ParserBase: compile.ParserBase{Lxr: lxr, Factory: ast.Builder{}}}}
+	p := &qparser{compile.Parser{ParserBase: compile.ParserBase{Lxr: lxr}}}
 	p.Init()
 	p.Next()
 	return p

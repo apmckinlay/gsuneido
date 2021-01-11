@@ -16,9 +16,7 @@ import (
 
 func NewParser(src string) *Parser {
 	lxr := NewLexer(src)
-	factory := ast.Folder{Factory: ast.Builder{}}
-	p := &Parser{ParserBase: ParserBase{Lxr: lxr, Factory: factory},
-		codegen:  codegen}
+	p := &Parser{ParserBase: ParserBase{Lxr: lxr}, codegen:  codegen}
 	p.Init()
 	p.Next()
 	return p
@@ -34,11 +32,8 @@ type ParserBase struct {
 	// Item is the current lexical token etc.
 	Item
 
-	// Factory is used by expression.go
-	// because expressions are shared by both language and queries
-	// and generate different types of AST nodes
-	// and also to handle folding.
-	ast.Factory
+	// Folder handles constant folding in expressions
+	ast.Folder
 
 	// newline is true if the current token was preceeded by a newline
 	newline bool
@@ -150,6 +145,6 @@ func (p *ParserBase) ErrorAt(pos int32, args ...interface{}) string {
 	panic("syntax error @" + strconv.Itoa(int(pos)) + " " + fmt.Sprint(args...))
 }
 
-func (p *Parser) Ident(name string) ast.Expr {
-	return p.Factory.Ident(name, p.Pos)
+func (p *Parser) Ident(name string) *ast.Ident {
+	return &ast.Ident{Name: name, Pos: p.Pos}
 }
