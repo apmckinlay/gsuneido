@@ -28,6 +28,7 @@ type suFile struct {
 	// tell is used to track our own position in the file.
 	// We can't use f.Tell() because of buffering.
 	// Any reads or writes must update this.
+	// Not used for "a" (append) mode.
 	tell int64
 }
 
@@ -48,24 +49,24 @@ var _ = builtin("File(filename, mode='r', block=false)",
 	})
 
 func newSuFile(name, mode string) *suFile {
-	var f iFile
-	var err error
-	if mode == "a" {
-		f, err = appendFile(name)
-	} else {
-		var flag int
-		switch mode {
-		case "r":
-			flag = os.O_RDONLY
-		case "w":
-			flag = os.O_WRONLY | os.O_CREATE | os.O_TRUNC
-		default:
-			panic("File: invalid mode")
-		}
-		f, err = os.OpenFile(name, flag, 0644)
+	var flag int
+	switch mode {
+	case "r":
+		flag = os.O_RDONLY
+	case "a":
+		flag = os.O_WRONLY | os.O_CREATE
+	case "w":
+		flag = os.O_WRONLY | os.O_CREATE | os.O_TRUNC
+	default:
+		panic("File: invalid mode")
 	}
+	var f iFile
+	f, err := os.OpenFile(name, flag, 0644)
 	if err != nil {
 		panic("File: can't " + err.Error())
+	}
+	if mode == "a" {
+		f = appender{f}
 	}
 	sf := &suFile{name: name, mode: mode, f: f}
 	if sf.mode == "r" {
@@ -90,7 +91,11 @@ func (sf *suFile) reset() {
 }
 
 func (sf *suFile) size() int64 {
-	return fileSize(sf.f)
+	info, err := sf.f.(*os.File).Stat()
+	if err != nil {
+		panic("File: " + err.Error())
+	}
+	return info.Size()
 }
 
 func (sf *suFile) close() {
@@ -311,4 +316,31 @@ func readline(rdr io.Reader, errPrefix string) (Value, int) {
 	s := buf.String()
 	s = strings.TrimRight(s, "\r")
 	return SuStr(s), nr
+}
+
+// appender is a workaround for a Windows bug
+// where normal append doesn't work on RDP shares.
+// e.g. \\tsclient\C\...
+type appender struct {
+	f iFile
+}
+
+func (a appender) Write(buf []byte) (int, error) {
+	_, err := a.f.Seek(0, io.SeekEnd)
+	if err != nil {
+		panic("File: " + err.Error())
+	}
+	return a.f.Write(buf)
+}
+
+func (a appender) Read([]byte) (int, error) {
+	panic("appender Read not implemented")
+}
+
+func (a appender) Seek(int64, int) (int64, error) {
+	panic("appender Seek not implemented")
+}
+
+func (a appender) Close() error {
+	return a.f.Close()
 }

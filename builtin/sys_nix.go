@@ -7,7 +7,6 @@ package builtin
 
 import (
 	"encoding/binary"
-	"os"
 	"syscall"
 
 	. "github.com/apmckinlay/gsuneido/runtime"
@@ -30,13 +29,3 @@ var _ = builtin1("GetDiskFreeSpace(dir = '.')", func(arg Value) Value {
 	freeBytes := stat.Bavail * uint64(stat.Bsize)
 	return Int64Val(int64(freeBytes))
 })
-
-// appendFile is specialized for Windows
-func appendFile(name string) (iFile, error) {
-	return os.OpenFile(name, os.O_WRONLY|os.O_CREATE|os.O_APPEND, 0644)
-}
-
-func fileSize(f iFile) int64 {
-	info, _ := f.(*os.File).Stat()
-	return info.Size()
-}
