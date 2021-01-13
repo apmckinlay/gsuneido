@@ -224,7 +224,7 @@ func (f Folder) foldMul(exprs []Expr) []Expr {
 		div = One
 	}
 	if div.Equal(One) {
-		if !mul.Equal(One) {
+		if !mul.Equal(One) || len(exprs) == 0 {
 			exprs = append(exprs, f.Constant(mul))
 		}
 	} else {
