@@ -496,7 +496,7 @@ func (r *SuRecord) callObservers2(t *Thread, key string) {
 					if r.Unlock() { // can't hold lock while calling observer
 						defer r.Lock()
 					}
-					t.pushCall(ofn, r, argSpecMember, SuStr(key))
+					t.PushCall(ofn, r, argSpecMember, SuStr(key))
 				}()
 			}(ofn, key)
 		}

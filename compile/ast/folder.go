@@ -26,22 +26,7 @@ func (f Folder) Unary(token tok.Token, expr Expr) Expr {
 
 func (f Folder) foldUnary(u *Unary) Expr {
 	if c, ok := u.E.(*Constant); ok && u.Tok != tok.Div {
-		val := c.Val
-		switch u.Tok {
-		case tok.Add:
-			val = OpUnaryPlus(val)
-		case tok.Sub:
-			val = OpUnaryMinus(val)
-		case tok.Not:
-			val = OpNot(val)
-		case tok.BitNot:
-			val = OpBitNot(val)
-		case tok.LParen:
-			break
-		default:
-			panic("folder unexpected unary operator " + u.Tok.String())
-		}
-		return f.Constant(val)
+		return f.Constant(u.eval(c.Val))
 	}
 	return u
 }
@@ -59,37 +44,7 @@ func (f Folder) foldBinary(b *Binary) Expr {
 	if !ok {
 		return b
 	}
-	val := c1.Val
-	val2 := c2.Val
-	switch b.Tok {
-	case tok.Is:
-		val = OpIs(val, val2)
-	case tok.Isnt:
-		val = OpIsnt(val, val2)
-	case tok.Match:
-		pat := regex.Compile(ToStr(val2))
-		val = SuBool(pat.Matches(ToStr(val)))
-	case tok.MatchNot:
-		pat := regex.Compile(ToStr(val2))
-		val = SuBool(!pat.Matches(ToStr(val)))
-	case tok.Lt:
-		val = OpLt(val, val2)
-	case tok.Lte:
-		val = OpLte(val, val2)
-	case tok.Gt:
-		val = OpGt(val, val2)
-	case tok.Gte:
-		val = OpGte(val, val2)
-	case tok.Mod:
-		val = OpMod(val, val2)
-	case tok.LShift:
-		val = OpLeftShift(val, val2)
-	case tok.RShift:
-		val = OpRightShift(val, val2)
-	default:
-		panic("folder unexpected binary operator " + b.Tok.String())
-	}
-	return f.Constant(val)
+	return f.Constant(b.eval(lhs.Val, rhs.Val))
 }
 
 func (f Folder) Trinary(cond Expr, e1 Expr, e2 Expr) Expr {

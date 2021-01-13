@@ -73,4 +73,7 @@ func TestParseQuery2(t *testing.T) {
 		"table where Nary(And a b c)")
 	test("table where n in (1,2,3)",
 		"table where In(n [1 2 3])")
+
+	test("table where Func(a)",
+		"table where Call(Func a)")
 }

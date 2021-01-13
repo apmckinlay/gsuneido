@@ -76,6 +76,8 @@ func TestPropFold(t *testing.T) {
 		"Binary(Eq x 5) \n Unary(PostDec x) \n x") // don't inline after update
 	test("F(1 + 2)",
 		"Call(F 3)") // simple fold
+	test("F(1 + 2 * 3 / 6)",
+		"Call(F 2)") // simple fold
 	test("x = 2 * 4; F(x)",
 		"8 \n Call(F 8)") // fold & propagate
 	test("x = 2; y = 1 << x; F(y)",

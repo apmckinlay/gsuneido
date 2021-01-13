@@ -32,6 +32,7 @@ func (*astNodeT) Children(func(Node) Node) {
 type Expr interface {
 	Node
 	exprNode()
+	Eval(*Context) Value
 }
 type exprNodeT struct {
 	astNodeT
@@ -150,7 +151,8 @@ type RangeTo struct {
 }
 
 func (a *RangeTo) String() string {
-	return "RangeTo(" + a.E.String() + " " + fmt.Sprint(a.From) + " " + fmt.Sprint(a.To) + ")"
+	return "RangeTo(" + a.E.String() + " " + fmt.Sprint(a.From) + " " +
+		fmt.Sprint(a.To) + ")"
 }
 
 func (a *RangeTo) Children(fn func(Node) Node) {
@@ -167,7 +169,8 @@ type RangeLen struct {
 }
 
 func (a *RangeLen) String() string {
-	return "RangeLen(" + a.E.String() + " " + fmt.Sprint(a.From) + " " + fmt.Sprint(a.Len) + ")"
+	return "RangeLen(" + a.E.String() + " " + fmt.Sprint(a.From) + " " +
+		fmt.Sprint(a.Len) + ")"
 }
 
 func (a *RangeLen) Children(fn func(Node) Node) {
