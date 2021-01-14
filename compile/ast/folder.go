@@ -36,12 +36,17 @@ func (f Folder) Binary(lhs Expr, token tok.Token, rhs Expr) Expr {
 }
 
 func (f Folder) foldBinary(b *Binary) Expr {
-	c1, ok := b.Lhs.(*Constant)
+	rhs, ok := b.Rhs.(*Constant)
 	if !ok {
 		return b
 	}
-	c2, ok := b.Rhs.(*Constant)
+	lhs, ok := b.Lhs.(*Constant)
 	if !ok {
+		if b.Tok == tok.Match || b.Tok == tok.MatchNot {
+			if s, ok := rhs.Val.(SuStr); ok {
+				rhs.Val = SuRegex{Pat: regex.Compile(string(s))}
+			}
+		}
 		return b
 	}
 	return f.Constant(b.eval(lhs.Val, rhs.Val))

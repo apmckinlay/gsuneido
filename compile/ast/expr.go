@@ -9,7 +9,6 @@ import (
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util/regex"
 )
 
 type Context struct {
@@ -58,11 +57,9 @@ func (b *Binary) eval(lhs, rhs Value) Value {
 	case tok.Isnt:
 		return OpIsnt(lhs, rhs)
 	case tok.Match:
-		pat := regex.Compile(ToStr(rhs)) //TODO cache
-		return SuBool(pat.Matches(ToStr(lhs)))
+		return OpMatch(nil, lhs, rhs)
 	case tok.MatchNot:
-		pat := regex.Compile(ToStr(rhs)) //TODO cache
-		return SuBool(!pat.Matches(ToStr(lhs)))
+		return OpMatch(nil, lhs, rhs).Not()
 	case tok.Lt:
 		return OpLt(lhs, rhs)
 	case tok.Lte:

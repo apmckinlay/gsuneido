@@ -105,6 +105,9 @@ func TestPropFold(t *testing.T) {
 	test("1 << 4", "16")
 	test("'foobar' =~ 'oo'", "true")
 	test("'foobar' !~ 'obo'", "true")
+	test("s =~ 'x'", "Binary(Match s SuRegex)")
+	test("'hello' =~ 'lo'", "true")
+	test("s = 'hello'; s =~ 'lo'", "'hello'\ntrue")
 
 	// trinary
 	test("true ? b : c", "b")  // fold

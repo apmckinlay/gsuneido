@@ -301,6 +301,10 @@ func (CantConvert) ToStr() (string, bool) {
 	return "", false
 }
 
+func (CantConvert) Lookup(*Thread, string) Callable {
+	return nil
+}
+
 func (CantConvert) SetConcurrent() {
 }
 
