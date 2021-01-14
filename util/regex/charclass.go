@@ -123,16 +123,29 @@ func (b *builder) ignore() {
 				b.data[lo>>3] |= (1 << (lo & 7))
 			}
 		}
-	} else {
-		s := ""
+	} else if b.hasLetter() {
+		buf := make([]byte, 0, len(b.data))
 		for _, c := range b.data {
 			if ascii.IsLetter(c) {
-				s += string(ascii.ToLower(c)) + string(ascii.ToUpper(c))
+				buf = append(buf, ascii.ToLower(c), ascii.ToUpper(c))
+			} else {
+				buf = append(buf, c)
 			}
 		}
-		b.data = b.data[:0]
-		b.addChars(s)
+		b.data = buf
+		if len(b.data) > maxList {
+			b.toSet()
+		}
 	}
+}
+
+func (b *builder) hasLetter() bool {
+	for _, c := range b.data {
+		if ascii.IsLetter(c) {
+			return true
+		}
+	}
+	return false
 }
 
 func (b *builder) empty() bool {
