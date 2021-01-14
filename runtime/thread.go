@@ -40,9 +40,9 @@ type Thread struct {
 	blockReturnId uint32
 
 	// RxCache is per thread so no locking is required
-	RxCache *regex.PatternCache
+	RxCache regex.Cache
 	// TrCache is per thread so no locking is required
-	TrCache *tr.TrsetCache
+	TrCache tr.Cache
 
 	// rules is a stack of the currently running rules, used by SuRecord
 	rules activeRules
@@ -77,8 +77,6 @@ var nThread int32
 func NewThread() *Thread {
 	n := atomic.AddInt32(&nThread, 1)
 	return &Thread{
-		RxCache: regex.NewPatternCache(100, regex.Compile),
-		TrCache: tr.NewTrsetCache(100, tr.Set),
 		Num:     n,
 		Name:    "Thread-" + strconv.Itoa(int(n))}
 }
