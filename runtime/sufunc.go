@@ -110,6 +110,9 @@ func (f *SuFunc) CodeToSrcPos(ip int) int {
 // coverage ---------------------------------------------------------
 
 func (f *SuFunc) StartCoverage(count bool) {
+	if len(f.Code) == 0 {
+		return
+	}
 	f.startCoverage(count)
 	for _, v := range f.Values {
 		if g, ok := v.(*SuFunc); ok {
@@ -137,8 +140,11 @@ func (f *SuFunc) StopCoverage() *SuObject {
 }
 
 func (f *SuFunc) getCoverage(ob *SuObject, counts bool) {
-	f.coverToOb(ob, counts)
+	if len(f.Code) == 0 || len(f.cover) == 0 {
+		return
+	}
 	assert.That(counts == (len(f.cover) >= len(f.Code)))
+	f.coverToOb(ob, counts)
 	for _, v := range f.Values {
 		if g, ok := v.(*SuFunc); ok {
 			g.getCoverage(ob, counts) // RECURSE
