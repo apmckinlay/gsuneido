@@ -4,6 +4,7 @@
 package runtime
 
 import (
+	"github.com/apmckinlay/gsuneido/runtime/opcodes"
 	"github.com/apmckinlay/gsuneido/runtime/types"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/str"
@@ -153,22 +154,20 @@ func (f *SuFunc) getCoverage(ob *SuObject, counts bool) {
 }
 
 func (f *SuFunc) coverToOb(ob *SuObject, counts bool) {
-	for i, c := range f.cover {
-		if c != 0 {
-			if counts {
-				srcpos := IntVal(f.CodeToSrcPos(i))
-				val := IntVal(int(c))
-				if x := ob.getIfPresent(srcpos); x != nil {
-					val = OpAdd(x, val)
-				}
-				ob.set(srcpos, val)
+	DisasmRaw(f.Code, func(i int) {
+		if f.Code[i] != byte(opcodes.Cover) {
+			return
+		}
+		var v Value
+		if counts {
+			v = IntVal(int(f.cover[i]))
+		} else {
+			if f.cover[i>>4] & (1 << (i & 15)) == 0 {
+				v = False
 			} else {
-				for j := 0; j < 16; j++ {
-					if c&(1<<j) != 0 {
-						ob.Set(IntVal(f.CodeToSrcPos(i*16+j)), True)
-					}
-				}
+				v = True
 			}
 		}
-	}
+		ob.Set(IntVal(f.CodeToSrcPos(i)), v)
+	})
 }

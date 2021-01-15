@@ -194,3 +194,20 @@ func (d *dasm) next() {
 		disasm(d.nest+1, nestedfn, d.out)
 	}
 }
+
+func DisasmRaw(code string, fn func(i int)) {
+	for i := 0; i < len(code); i++ {
+		fn(i)
+		switch op.Opcode(code[i]) {
+		case op.Value, op.Closure, op.Load, op.Store, op.Dyload, op.LoadStore,
+			op.GetPut, op.CallFuncDiscard, op.CallFuncNoNil, op.CallFuncNilOk,
+			op.CallMethDiscard, op.CallMethNoNil, op.CallMethNilOk:
+			i++
+		case op.Int, op.Global, op.Super, op.Jump, op.JumpTrue, op.JumpFalse,
+			op.And, op.Or, op.QMark, op.In, op.JumpIs, op.JumpIsnt, op.Catch:
+			i += 2
+		case op.ForIn, op.Try:
+			i += 3
+		}
+	}
+}

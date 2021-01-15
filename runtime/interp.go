@@ -493,7 +493,7 @@ loop:
 		case op.Cover:
 			fn := fr.fn
 			if fn.cover != nil {
-				ip := fr.ip
+				ip := fr.ip-1
 				if len(fn.cover) < len(fn.Code) {
 					fn.cover[ip>>4] |= 1 << (ip & 15)
 				} else { // count
