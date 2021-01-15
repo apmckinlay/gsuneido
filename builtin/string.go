@@ -360,7 +360,7 @@ func init() {
 					}
 				}
 			}
-			if i + n > sn {
+			if i+n > sn {
 				n = sn - i
 			}
 			return SuStr(s[i : i+n])
@@ -412,7 +412,7 @@ func init() {
 }
 
 func replace(t *Thread, s string, patarg string, reparg Value, count int) Value {
-	if count <= 0 {
+	if count <= 0 || (patarg == "" && reparg == EmptyStr) {
 		return SuStr(s)
 	}
 	pat := t.RxCache.Get(patarg)
