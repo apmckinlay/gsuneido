@@ -366,6 +366,48 @@ func TestIterator(t *testing.T) {
 	test(eof) // or eof
 }
 
+func TestIterRange(t *testing.T) {
+	ib := &ixbuf{}
+	data := strings.Fields("a b c d e f g h")
+	for _,d := range data {
+		ib.Insert(d, 1)
+	}
+	it := ib.Iterator()
+	test := func(fn func(), expected string) {
+		fn()
+		assert.This(it.cur.key).Is(expected)
+	}
+	test(it.Next, "a")
+	it.Rewind()
+	test(it.Prev, "h")
+
+	it.Range(Range{Org: "c"})
+	test(it.Next, "c")
+	it.Range(Range{Org: "c+"})
+	test(it.Next, "d")
+
+	it.Range(Range{End: "f"})
+	test(it.Prev, "e")
+	it.Range(Range{End: "f+"})
+	test(it.Prev, "f")
+
+	it.Range(Range{Org: "c", End: "g"})
+	test(it.Next, "c")
+	test(it.Next, "d")
+	test(it.Next, "e")
+	test(it.Next, "f")
+	it.Next()
+	assert.T(t).That(it.Eof())
+
+	it.Rewind()
+	test(it.Prev, "f")
+	test(it.Prev, "e")
+	test(it.Prev, "d")
+	test(it.Prev, "c")
+	it.Prev()
+	assert.T(t).That(it.Eof())
+}
+
 //-------------------------------------------------------------------
 
 func (ib *ixbuf) stats() {

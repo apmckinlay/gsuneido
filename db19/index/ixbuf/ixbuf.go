@@ -397,6 +397,8 @@ func (ib *ixbuf) ForEach(fn Visitor) {
 
 //-------------------------------------------------------------------
 
+type Range = iterator.Range
+
 // Iterator is a Suneido style iterator for an ixbuf.
 type Iterator struct {
 	ib       *ixbuf
@@ -409,6 +411,8 @@ type Iterator struct {
 	// cur is the current key and offset.
 	// We need to keep a copy of it because the ixbuf could change.
 	cur slot
+	// rng is the Range of the iterator
+	rng Range
 }
 
 var _ iterator.T = (*Iterator)(nil)
@@ -422,7 +426,13 @@ const (
 )
 
 func (ib *ixbuf) Iterator() *Iterator {
-	return &Iterator{ib: ib, modCount: ib.modCount, state: rewound}
+	return &Iterator{ib: ib, modCount: ib.modCount, state: rewound,
+		rng: iterator.All}
+}
+
+func (it *Iterator) Range(rng Range) {
+	it.rng = rng
+	it.Rewind()
 }
 
 func (it *Iterator) Eof() bool {
@@ -434,6 +444,7 @@ func (it *Iterator) Modified() bool {
 }
 
 func (it *Iterator) Cur() (string, uint64) {
+	assert.That(it.state == within)
 	return it.cur.key, it.cur.off
 }
 
@@ -442,14 +453,8 @@ func (it *Iterator) Next() {
 		return // stick at eof
 	}
 	if it.state == rewound {
-		if it.ib.size == 0 {
-			it.state = eof
-			return
-		}
-		it.state = within
-		it.ci = 0
-		it.i = -1
-		it.c = it.ib.chunks[0]
+		it.Seek(it.rng.Org)
+		return
 	}
 	it.i++
 	if it.i >= len(it.c) {
@@ -462,6 +467,9 @@ func (it *Iterator) Next() {
 		it.i = 0
 	}
 	it.cur = it.c[it.i]
+	if it.cur.key >= it.rng.End {
+		it.state = eof
+	}
 }
 
 func (it *Iterator) Prev() {
@@ -469,14 +477,11 @@ func (it *Iterator) Prev() {
 		return // stick at eof
 	}
 	if it.state == rewound {
-		if it.ib.size == 0 {
-			it.state = eof
-			return
+		it.Seek(it.rng.End)
+		if it.ib.size > 0 && it.i >= len(it.c) { // past end
+			it.state = within
 		}
-		it.state = within
-		it.ci = len(it.ib.chunks) - 1
-		it.c = it.ib.chunks[it.ci]
-		it.i = len(it.c)
+		// Seek goes to >= so fallthrough to do previous
 	}
 	it.i--
 	if it.i < 0 {
@@ -489,6 +494,9 @@ func (it *Iterator) Prev() {
 		it.i = len(it.c) - 1
 	}
 	it.cur = it.c[it.i]
+	if it.cur.key < it.rng.Org {
+		it.state = eof
+	}
 }
 
 func (it *Iterator) Rewind() {

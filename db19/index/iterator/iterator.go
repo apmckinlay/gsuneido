@@ -31,4 +31,20 @@ type T interface {
 	// It returns true if the key was found.
 	// After Seek, Modified returns false.
 	Seek(key string) bool
+
+	// Range sets the range for the iterator
+	// Range(Range)
 }
+
+// Range specifies (key >= org && key < end)
+// For key > org, increment org.
+// For key <= end, incrment end
+type Range struct {
+	Org string
+	End string
+}
+
+const Min = ""
+const Max = "\xff\xff\xff\xff\xff\xff\xff\xff"
+
+var All = Range{Org: Min, End: Max}
