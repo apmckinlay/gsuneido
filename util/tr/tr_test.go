@@ -13,11 +13,14 @@ import (
 func Test_makset(t *testing.T) {
 	test := func(s, expected string) {
 		t.Helper()
-		assert.T(t).This(string(Set(""))).Is("")
+		assert.T(t).This(string(Set(s))).Is(expected)
 	}
+	test("", "")
 	test("foo", "foo")
+	test("^foo", "^foo")
 	test("-foo", "-foo")
 	test("foo-", "foo-")
+	test("m-p", "mnop")
 	test("-0-9-", "-0123456789-")
 }
 
