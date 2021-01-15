@@ -23,7 +23,7 @@ func (c *Cache) Get(rx string) Pattern {
 	// CacheGet++
 	i := c.i
 	for {
-		if c.slots[c.i].rx == rx {
+		if c.slots[c.i].rx == rx && c.slots[c.i].pat != nil {
 			// CacheHit++
 			return c.slots[c.i].pat
 		}
