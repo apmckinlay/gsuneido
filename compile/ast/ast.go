@@ -32,13 +32,19 @@ func (*astNodeT) Children(func(Node) Node) {
 type Expr interface {
 	Node
 	exprNode()
+	// Eval and CanEvalRaw are used by queries
 	Eval(*Context) Value
+	CanEvalRaw(fields []string) bool
 }
 type exprNodeT struct {
 	astNodeT
 }
 
 func (*exprNodeT) exprNode() {}
+
+func (en *exprNodeT) CanEvalRaw([]string) bool {
+	return false
+}
 
 type Ident struct {
 	exprNodeT
@@ -63,6 +69,8 @@ func (a *Ident) ParamName() string {
 type Constant struct {
 	exprNodeT
 	Val Value
+	// packed is used for queries
+	packed string
 }
 
 func (a *Constant) String() string {
@@ -88,6 +96,10 @@ type Binary struct {
 	Lhs Expr
 	Tok tok.Token
 	Rhs Expr
+	// rawFlds is used by queries.
+	// If non-nil, then for these fields, this can be evaluated "raw"
+	// without unpacking the values.
+	rawFlds []string
 }
 
 func (a *Binary) String() string {
@@ -198,6 +210,11 @@ type In struct {
 	exprNodeT
 	E     Expr
 	Exprs []Expr
+	// rawFlds is used by queries.
+	// If non-nil, then for these fields, this can be evaluated "raw"
+	// without unpacking the values.
+	rawFlds []string
+	packed  []string
 }
 
 func (a *In) String() string {

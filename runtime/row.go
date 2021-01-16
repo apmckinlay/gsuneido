@@ -63,3 +63,7 @@ func (hdr *Header) Rules() []string {
 	}
 	return rules
 }
+
+func (hdr *Header) GetFields() []string {
+	return hdr.Fields[0] //TODO handle multiple fields
+}

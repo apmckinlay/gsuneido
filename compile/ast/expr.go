@@ -9,6 +9,7 @@ import (
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
+	"github.com/apmckinlay/gsuneido/util/str"
 )
 
 type Context struct {
@@ -46,7 +47,93 @@ func (u *Unary) eval(val Value) Value {
 	}
 }
 
+// Binary -----------------------------------------------------------
+
+var notEvalRaw = []string{}
+
+// CanEvalRaw returns true if Eval doesn't need to unpack the values.
+// It sets b.rawFlds which is later used by Eval.
+func (b *Binary) CanEvalRaw(fields []string) bool {
+	if b.rawFlds == nil {
+		if b.canEvalRaw2(fields) {
+			b.rawFlds = fields
+			c := b.Rhs.(*Constant)
+			c.packed = Pack(c.Val.(Packable))
+			return true
+		}
+		b.rawFlds = notEvalRaw
+		return false
+	}
+	return str.Equal(b.rawFlds, fields)
+}
+
+func (b *Binary) canEvalRaw2(fields []string) bool {
+	if !b.rawOp() {
+		return false
+	}
+	if IsField(b.Lhs, fields) && isConstant(b.Rhs) {
+		return true
+	}
+	if isConstant(b.Lhs) && IsField(b.Rhs, fields) {
+		b.Lhs, b.Rhs = b.Rhs, b.Lhs // reverse
+		b.Tok = reverseBinary[b.Tok]
+		return true
+	}
+	return false
+}
+
+func (b *Binary) rawOp() bool {
+	switch b.Tok {
+	case tok.Is, tok.Isnt, tok.Lt, tok.Lte, tok.Gt, tok.Gte:
+		return true
+	}
+	return false
+}
+
+func IsField(e Expr, fields []string) bool {
+	if id, ok := e.(*Ident); ok && str.List(fields).Has(id.Name) {
+		return true
+	}
+	return false
+}
+
+func isConstant(e Expr) bool {
+	_, ok := e.(*Constant)
+	return ok
+}
+
+var reverseBinary = map[tok.Token]tok.Token{
+	tok.Is:   tok.Isnt,
+	tok.Isnt: tok.Is,
+	tok.Lt:   tok.Gt,
+	tok.Lte:  tok.Gte,
+	tok.Gt:   tok.Lt,
+	tok.Gte:  tok.Lte,
+}
+
 func (b *Binary) Eval(c *Context) Value {
+	// NOTE: we only Eval raw if b.rawFlds was set by CanEvalRaw
+	if b.rawFlds != nil && str.Equal(b.rawFlds, c.Hdr.GetFields()) {
+		id := b.Lhs.(*Ident)
+		lhs := c.Row.GetRaw(c.Hdr, id.Name)
+		rhs := b.Rhs.(*Constant).packed
+		switch b.Tok {
+		case tok.Is:
+			return SuBool(lhs == rhs)
+		case tok.Isnt:
+			return SuBool(lhs != rhs)
+		case tok.Lt:
+			return SuBool(lhs < rhs)
+		case tok.Lte:
+			return SuBool(lhs <= rhs)
+		case tok.Gt:
+			return SuBool(lhs > rhs)
+		case tok.Gte:
+			return SuBool(lhs >= rhs)
+		default:
+			panic("shouldn't reach here")
+		}
+	}
 	return b.eval(b.Lhs.Eval(c), b.Rhs.Eval(c))
 }
 
@@ -172,9 +259,49 @@ func evalOr(e Expr, c *Context, v Value) Value {
 	return e.Eval(c)
 }
 
-// ------------------------------------------------------------------
+// In ---------------------------------------------------------------
+
+// CanEvalRaw returns true if Eval doesn't need to unpack the values.
+// It sets b.rawFlds which is later used by Eval.
+func (a *In) CanEvalRaw(fields []string) bool {
+	if a.rawFlds == nil {
+		if a.canEvalRaw2(fields) {
+			a.rawFlds = fields
+			return true
+		}
+		a.rawFlds = notEvalRaw
+		return false
+	}
+	return str.Equal(a.rawFlds, fields)
+}
+
+func (a *In) canEvalRaw2(fields []string) bool {
+	if !IsField(a.E, fields) {
+		return false
+	}
+	packed := make([]string, len(a.Exprs))
+	for i, e := range a.Exprs {
+		c, ok := e.(*Constant)
+		if !ok {
+			return false
+		}
+		packed[i] = Pack(c.Val.(Packable))
+	}
+	a.packed = packed
+	return true
+}
 
 func (a *In) Eval(c *Context) Value {
+	if a.rawFlds != nil && str.Equal(a.rawFlds, c.Hdr.GetFields()) {
+		id := a.E.(*Ident)
+		e := c.Row.GetRaw(c.Hdr, id.Name)
+		for _, p := range a.packed {
+			if e == p {
+				return True
+			}
+		}
+		return False
+	}
 	x := a.E.Eval(c)
 	for _, e := range a.Exprs {
 		y := e.Eval(c)
@@ -184,6 +311,8 @@ func (a *In) Eval(c *Context) Value {
 	}
 	return False
 }
+
+// ------------------------------------------------------------------
 
 func (a *Mem) Eval(c *Context) Value {
 	e := a.E.Eval(c)
