@@ -63,8 +63,23 @@ func (ps *packStack) push(x Value) {
 
 // Note: no pop required because of passing slice by value
 
+var emptyStr = EmptyStr.(SuStr)
+var boolTrue = True.(SuBool)
+var boolFalse = False.(SuBool)
+var zeroNum = Zero.(*smi)
+
 // Pack is a convenience function that packs a single Packable
 func Pack(x Packable) string {
+	switch x {
+	case emptyStr:
+		return ""
+	case boolTrue:
+		return "\x01" // PackTrue
+	case boolFalse:
+		return "\x00" // PackFalse
+	case zeroNum:
+		return "\x03"
+	}
 	var clock int32
 	buf := pack.NewEncoder(x.PackSize(&clock))
 	x.Pack(clock, buf)

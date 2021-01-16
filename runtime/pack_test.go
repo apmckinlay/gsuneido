@@ -103,3 +103,11 @@ func TestPackedCmpLower(t *testing.T) {
 	p2 := Pack(SuStr("Hello World"))
 	assert.T(t).This(PackedCmpLower(p1, p2)).Is(0)
 }
+
+func BenchmarkPack(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		bench = Pack(emptyStr)
+	}
+}
+
+var bench string
