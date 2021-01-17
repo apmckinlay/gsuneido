@@ -68,6 +68,9 @@ type Thread struct {
 
 	// InHandler is used to detect nested handler calls
 	InHandler bool
+
+	// Profile is used to track heavily executed functions
+	Profile map[*SuFunc]int
 }
 
 var nThread int32
@@ -77,8 +80,8 @@ var nThread int32
 func NewThread() *Thread {
 	n := atomic.AddInt32(&nThread, 1)
 	return &Thread{
-		Num:     n,
-		Name:    "Thread-" + strconv.Itoa(int(n))}
+		Num:  n,
+		Name: "Thread-" + strconv.Itoa(int(n))}
 }
 
 // Push pushes a value onto the value stack

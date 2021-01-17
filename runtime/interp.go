@@ -153,7 +153,11 @@ loop:
 				if Interrupt() {
 					panic("interrupt")
 				}
-				t.OpCount = 1009
+				t.OpCount = 1009 // otherwise it won't trigger again
+			}
+			if t.Profile != nil {
+				t.Profile[fr.fn]++
+				t.OpCount = 1009 // otherwise it won't trigger again
 			}
 		}
 		t.OpCount--
