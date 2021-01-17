@@ -689,7 +689,7 @@ func (ob *SuObject) Slice(n int) Container {
 	return ob.slice(n)
 }
 
-// Find returns the key of the first occurence of the value.
+// Find returns the key of the first occurence of the value else False.
 // Lock to avoid object-modified-during-iteration.
 func (ob *SuObject) Find(val Value) Value {
 	if ob.Lock() {
