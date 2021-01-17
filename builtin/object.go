@@ -96,6 +96,9 @@ func init() {
 				}
 				return args[1]
 			}),
+		"Has?": method1("(value)", func(this Value, val Value) Value {
+			return SuBool(ToContainer(this).ToObject().Find(val) != False)
+		}),
 		"Iter": method0(func(this Value) Value {
 			return SuIter{Iter: IterValues(ToContainer(this), true, true)}
 		}),
@@ -116,6 +119,19 @@ func init() {
 			}
 			return SuStr(sb.String())
 		}),
+		"Max": method0(func(this Value) Value {
+			iter := ToContainer(this).Iter2(true, true)
+			_, max := iter()
+			if max == nil {
+				panic("cannot use Max on empty object")
+			}
+			for _, v := iter(); v != nil; _, v = iter() {
+				if v.Compare(max) > 0 {
+					max = v
+				}
+			}
+			return max
+		}),
 		"Members": methodRaw("(list = true, named = true)",
 			func(_ *Thread, as *ArgSpec, this Value, args []Value) Value {
 				list, named := iterWhich(as, args)
@@ -123,6 +139,19 @@ func init() {
 			}),
 		"Member?": method1("(member)", func(this Value, val Value) Value {
 			return SuBool(ToContainer(this).HasKey(val))
+		}),
+		"Min": method0(func(this Value) Value {
+			iter := ToContainer(this).Iter2(true, true)
+			_, min := iter()
+			if min == nil {
+				panic("cannot use Min on empty object")
+			}
+			for _, v := iter(); v != nil; _, v = iter() {
+				if v.Compare(min) < 0 {
+					min = v
+				}
+			}
+			return min
 		}),
 		"PopFirst": method0(func(this Value) Value {
 			x := ToContainer(this).ToObject().PopFirst()
@@ -132,7 +161,7 @@ func init() {
 			return x
 		}),
 		"PopLast": method0(func(this Value) Value {
-			x :=  ToContainer(this).ToObject().PopLast()
+			x := ToContainer(this).ToObject().PopLast()
 			if x == nil {
 				return this
 			}
