@@ -4,6 +4,7 @@
 package fbtree
 
 import (
+	"fmt"
 	"sort"
 	"testing"
 
@@ -23,6 +24,15 @@ func TestFbiterEmpty(*testing.T) {
 	assert.That(it.Eof())
 	it.Rewind()
 	it.Next()
+	assert.That(it.Eof())
+
+	it.Rewind()
+	it.Prev()
+	assert.That(it.Eof())
+	it.Prev()
+	assert.That(it.Eof())
+	it.Rewind()
+	it.Prev()
 	assert.That(it.Eof())
 }
 
@@ -44,12 +54,16 @@ func TestFbiter(*testing.T) {
 	}
 	fb := bldr.Finish()
 
-	// test Iterator Next
 	it := fb.Iterator()
+	test := func(i int) {
+		assert.This(it.curOff - 1).Is(i)
+		assert.This(it.curKey).Is(data[i])
+	}
+
+	// test Iterator Next
 	for i := 0; i < n; i++ {
 		it.Next()
-		assert.This(it.curOff).Is(i + 1)
-		assert.This(it.curKey).Is(data[i])
+		test(i)
 	}
 	it.Next()
 	assert.That(it.Eof())
@@ -58,8 +72,7 @@ func TestFbiter(*testing.T) {
 	it = fb.Iterator()
 	for i := n - 1; i >= 0; i-- {
 		it.Prev()
-		assert.This(it.curOff).Is(i + 1)
-		assert.This(it.curKey).Is(data[i])
+		test(i)
 	}
 	it.Prev()
 	assert.That(it.Eof())
@@ -67,24 +80,21 @@ func TestFbiter(*testing.T) {
 	// test Seek between keys
 	for i, k := range data {
 		k += "0" // increment to nonexistent
-		assert.That(!it.Seek(k))
+		it.Seek(k)
 		if i+1 < len(data) {
-			assert.This(it.curOff).Is(i + 2)
-			assert.This(it.curKey).Is(data[i+1])
+			test(i + 1)
 		} else {
-			assert.That(it.Eof())
+			test(n - 1)
 		}
 	}
 
 	// test Seek & Next
 	for i, k := range data {
-		assert.That(it.Seek(k))
-		assert.This(it.curOff).Is(i + 1)
-		assert.This(it.curKey).Is(k)
+		it.Seek(k)
+		test(i)
 		it.Next()
 		if i+1 < len(data) {
-			assert.This(it.curOff).Is(i + 2)
-			assert.This(it.curKey).Is(data[i+1])
+			test(i + 1)
 		} else {
 			assert.That(it.Eof())
 		}
@@ -92,24 +102,21 @@ func TestFbiter(*testing.T) {
 
 	// test Seek & Prev
 	for i, k := range data {
-		assert.That(it.Seek(k))
-		assert.This(it.curOff).Is(i + 1)
-		assert.This(it.curKey).Is(k)
+		it.Seek(k)
+		test(i)
 		it.Prev()
 		if i-1 >= 0 {
-			assert.This(it.curOff).Is(i)
-			assert.This(it.curKey).Is(data[i-1])
+			test(i - 1)
 		} else {
 			assert.That(it.Eof())
 		}
 	}
 
-	assert.That(!it.Seek("")) // before first
-	assert.This(it.curOff).Is(1)
-	assert.This(it.curKey).Is(data[0])
+	it.Seek("") // before first
+	test(0)
 
-	assert.That(!it.Seek("~")) // after last
-	assert.That(it.Eof())
+	it.Seek("~") // after last
+	test(n - 1)
 }
 
 func TestFbiterToChunk(t *testing.T) {
@@ -138,4 +145,47 @@ func TestFbiterToChunk(t *testing.T) {
 	assert(fi.offset).Is(2)
 	ci = fi.toChunk(fb, false).(*chunkIter)
 	assert(ci.off()).Is(2)
+}
+
+//-------------------------------------------------------------------
+
+func (it *Iterator) printStack() {
+	for i := 0; i <= it.fb.treeLevels; i++ {
+		it.printLevel(i)
+	}
+}
+
+func (it *Iterator) printLevel(i int) {
+	if fi, ok := it.stack[i].(*fnIter); ok {
+		fmt.Print(i, " | ")
+		fit := fi.fn.iter()
+		for fit.next() {
+			if fit.fi == fi.fi {
+				fmt.Print("(")
+			}
+			if i == 0 {
+				fmt.Print(it.fb.getLeafKey(fit.offset), " ")
+			} else if len(fit.known) == 0 {
+				fmt.Print("'' ")
+			} else {
+				fmt.Print(string(fit.known), " ")
+			}
+		}
+		if fi.fi >= fit.fi {
+			fmt.Print("(")
+		}
+	} else {
+		fmt.Print(i, " + ")
+		ci := it.stack[i].(*chunkIter)
+		for j, s := range ci.c {
+			if j == ci.i {
+				fmt.Print("(")
+			}
+			fmt.Print(s.key, " ")
+		}
+		if ci.i >= len(ci.c) {
+			fmt.Print("(")
+		}
+	}
+	fmt.Println()
 }

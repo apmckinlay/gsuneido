@@ -28,12 +28,12 @@ type T interface {
 	Rewind()
 
 	// Seek leaves Cur at the first item >= the given key.
-	// It returns true if the key was found.
 	// After Seek, Modified returns false.
-	Seek(key string) bool
+	Seek(key string)
 
-	// Range sets the range for the iterator
-	// Range(Range)
+	// Range sets the range for the iterator.
+	// It also does Rewind.
+	Range(Range)
 }
 
 // Range specifies (key >= org && key < end)
@@ -46,5 +46,9 @@ type Range struct {
 
 const Min = ""
 const Max = "\xff\xff\xff\xff\xff\xff\xff\xff"
+// Technically there is no maximum key string.
+// However, in practice keys are packed values, encoded when composite.
+// Packed values start with a type byte from 0 to 7 so 0xff will be larger.
+// And 0xff will be larger than any ascii strings.
 
 var All = Range{Org: Min, End: Max}

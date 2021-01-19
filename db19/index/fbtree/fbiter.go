@@ -3,7 +3,10 @@
 
 package fbtree
 
-import "github.com/apmckinlay/gsuneido/db19/index/iterator"
+import (
+	"github.com/apmckinlay/gsuneido/db19/index/iterator"
+	"github.com/apmckinlay/gsuneido/util/assert"
+)
 
 // Iterator is a Suneido style iterator with Next/Prev/Rewind
 type Iterator struct {
@@ -14,12 +17,16 @@ type Iterator struct {
 	stack  [maxlevels]nodeIter
 	curKey string
 	curOff uint64
+	// rng is the Range of the iterator
+	rng Range
 }
+
+type Range = iterator.Range
 
 var _ iterator.T = (*Iterator)(nil)
 
 func (fb *fbtree) Iterator() *Iterator {
-	return &Iterator{fb: fb, state: rewound}
+	return &Iterator{fb: fb, state: rewound, rng: iterator.All}
 }
 
 type iterState byte
@@ -30,11 +37,17 @@ const (
 	eof
 )
 
+func (it *Iterator) Range(rng Range) {
+	it.rng = rng
+	it.Rewind()
+}
+
 func (it *Iterator) Eof() bool {
 	return it.state == eof
 }
 
 func (it *Iterator) Cur() (string, uint64) {
+	assert.Msg("Cur when not within").That(it.state == within)
 	return it.curKey, it.curOff
 }
 
@@ -46,13 +59,15 @@ func (it *Iterator) Modified() bool {
 	return false
 }
 
+// Next -------------------------------------------------------------
+
 func (it *Iterator) Next() {
 	if it.state == eof {
 		return // stick at eof
 	}
 	if it.state == rewound {
-		it.descendLeft()
-		it.state = within
+		it.Seek(it.rng.Org)
+		return
 	}
 	it.next()
 }
@@ -67,19 +82,6 @@ func (it *Iterator) next() {
 			it.state = eof
 			return
 		}
-	}
-}
-
-func (it *Iterator) descendLeft() {
-	fb := it.fb
-	nodeOff := fb.root
-	for i := fb.treeLevels; ; i-- {
-		it.stack[i] = fb.getNode(nodeOff).iter()
-		if i == 0 {
-			return
-		}
-		it.stack[i].next()
-		nodeOff = it.stack[i].off()
 	}
 }
 
@@ -109,30 +111,25 @@ func (it *Iterator) nextLeaf() bool {
 	}
 }
 
-//-------------------------------------------------------------------
+// Prev -------------------------------------------------------------
 
 func (it *Iterator) Prev() {
 	if it.state == eof {
 		return // stick at eof
 	}
 	if it.state == rewound {
-		it.descendRight()
-		it.state = within
-	}
-	it.prev()
-}
-
-func (it *Iterator) descendRight() {
-	fb := it.fb
-	nodeOff := fb.root
-	for i := fb.treeLevels; ; i-- {
-		it.stack[i] = fb.getNode(nodeOff).iter().toChunk(fb, i == 0)
-		if i == 0 {
+		it.Seek(it.rng.End)
+		if it.Eof() {
 			return
 		}
-		it.stack[i].prev()
-		nodeOff = it.stack[i].off()
+		key, _ := it.Cur()
+		if key < it.rng.End {
+			return
+		}
+		it.state = within
+		// Seek went to >= so fallthrough to do previous
 	}
+	it.prev()
 }
 
 func (it *Iterator) prev() {
@@ -153,7 +150,7 @@ func (it *Iterator) prevLeaf() bool {
 	fb := it.fb
 	i := 1
 	var nodeOff uint64
-	// end of leaf, go up the tree as necessary
+	// go up the tree as necessary
 	for ; i <= fb.treeLevels; i++ {
 		it.stack[i] = it.stack[i].toChunk(it.fb, i == 0)
 		if it.stack[i].prev() {
@@ -176,29 +173,32 @@ func (it *Iterator) prevLeaf() bool {
 	}
 }
 
-//-------------------------------------------------------------------
+// Seek -------------------------------------------------------------
 
-func (it *Iterator) Seek(key string) bool {
+func (it *Iterator) Seek(key string) {
 	fb := it.fb
 	off := fb.root
 	node := fb.getNode(off)
 	if len(node) == 0 {
 		it.state = eof
-		return false
+		return
 	}
+	rightEdge := true
 	it.state = within
 	for i := fb.treeLevels; ; i-- {
-		it.stack[i] = node.seek(key)
+		fit := node.seek(key)
+		rightEdge = rightEdge && fit.eof()
+		it.stack[i] = fit
 		off = it.stack[i].off()
 		if i == 0 {
 			k := fb.getLeafKey(off)
-			if key > k {
+			if key > k && !rightEdge {
 				it.next()
-				return false
+				return
 			}
 			it.curOff = off
 			it.curKey = k
-			return key == k
+			return
 		}
 		node = fb.getNode(off)
 	}
@@ -225,6 +225,8 @@ type nodeIter interface {
 	off() uint64
 	// toChunk converts fnIter to chunkIter, to allow Prev
 	toChunk(fb *fbtree, leaf bool) nodeIter
+	// eof returns true if on the last slot
+	eof() bool
 }
 
 func (fi *fnIter) off() uint64 {
@@ -266,6 +268,10 @@ type slot struct {
 type chunkIter struct {
 	c chunk
 	i int
+}
+
+func (ci *chunkIter) eof() bool {
+	return ci.i+1 >= len(ci.c)
 }
 
 func (ci *chunkIter) next() bool {

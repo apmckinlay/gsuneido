@@ -99,8 +99,12 @@ func (mi *MergeIter) modNext() {
 	}
 	for i, it := range mi.iters {
 		if modified || it.Modified() {
-			if it.Seek(mi.curKey) {
-				it.Next()
+			it.Seek(mi.curKey)
+			if !it.Eof() {
+				key, _ := it.Cur()
+				if key <= mi.curKey {
+					it.Next()
+				}
 			}
 		} else if mi.lastDir != next {
 			nextRewind(it)
@@ -166,7 +170,12 @@ func (mi *MergeIter) modPrev() {
 	for i, it := range mi.iters {
 		if modified || it.Modified() {
 			it.Seek(mi.curKey)
-			prevRewind(it)
+			if !it.Eof() {
+				key, _ := it.Cur()
+				if key >= mi.curKey {
+					it.Prev()
+				}
+			}
 		} else if mi.lastDir != prev {
 			prevRewind(it)
 		} else if i == mi.curIter {

@@ -115,8 +115,8 @@ func TestMergeIterRandom(*testing.T) {
 		if mc == modCount {
 			return mc, nil
 		}
-		return modCount, []iterT{
-			ibs[0].Iterator(), ibs[1].Iterator(), ibs[2].Iterator()}
+		return modCount,
+			[]iterT{ibs[0].Iterator(), ibs[1].Iterator(), ibs[2].Iterator()}
 	}
 	mi := NewMergeIter(callback)
 	check := func() {
@@ -133,19 +133,19 @@ func TestMergeIterRandom(*testing.T) {
 	}
 	defer func() {
 		if e := recover(); e != nil {
-			fmt.Println("+ + +")
+			traceln("===== merge")
 			mi.Rewind()
 			for mi.Next(); !mi.Eof(); mi.Next() {
 				key, _ := mi.Cur()
 				traceln(mi.curIter, key)
 			}
-			fmt.Println("+ + +")
+			traceln("===== dumb")
 			it.Rewind()
 			for it.Next(); !it.Eof(); it.Next() {
 				key := it.Cur()
 				traceln(key)
 			}
-			fmt.Println("+ + +")
+			traceln("=====")
 			panic(e)
 		}
 	}()

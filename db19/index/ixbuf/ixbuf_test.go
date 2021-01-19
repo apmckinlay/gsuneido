@@ -360,10 +360,10 @@ func TestIterator(t *testing.T) {
 	testPrev(8)
 
 	// Seek to nonexistent
-	assert.That(!it.Seek("00"))
+	it.Seek("00")
 	test(1) // leaves us on next
-	assert.That(!it.Seek("99"))
-	test(eof) // or eof
+	it.Seek("99")
+	test(9) // or last
 }
 
 func TestIterRange(t *testing.T) {

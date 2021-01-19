@@ -444,7 +444,7 @@ func (it *Iterator) Modified() bool {
 }
 
 func (it *Iterator) Cur() (string, uint64) {
-	assert.That(it.state == within)
+	assert.Msg("Cur when not within").That(it.state == within)
 	return it.cur.key, it.cur.off
 }
 
@@ -478,8 +478,8 @@ func (it *Iterator) Prev() {
 	}
 	if it.state == rewound {
 		it.Seek(it.rng.End)
-		if it.ib.size > 0 && it.i >= len(it.c) { // past end
-			it.state = within
+		if it.Eof() || it.cur.key < it.rng.End {
+			return
 		}
 		// Seek goes to >= so fallthrough to do previous
 	}
@@ -503,18 +503,16 @@ func (it *Iterator) Rewind() {
 	it.state = rewound
 }
 
-func (it *Iterator) Seek(key string) bool {
+func (it *Iterator) Seek(key string) {
 	if len(it.ib.chunks) == 0 {
 		it.state = eof
-		return false
+		return
 	}
 	it.ci, it.c, it.i = it.ib.search(key)
 	it.modCount = it.ib.modCount
 	if it.i >= len(it.c) {
-		it.state = eof
-		return false
+		it.i--
 	}
 	it.cur = it.c[it.i]
 	it.state = within
-	return it.cur.key == key
 }
