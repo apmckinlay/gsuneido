@@ -4,7 +4,9 @@
 package builtin
 
 import (
+	"errors"
 	"io/ioutil"
+	"log"
 	"net"
 	"os"
 	"runtime"
@@ -56,7 +58,11 @@ var _ = builtin1("DeleteFileApi(filename)",
 
 var _ = builtin1("FileExists?(filename)",
 	func(arg Value) Value {
-		_, err := os.Stat(ToStr(arg))
+		filename := ToStr(arg)
+		_, err := os.Stat(filename)
+		if err != nil && !errors.Is(err, os.ErrNotExist) {
+			log.Println("FileExists?", filename, err)
+		}
 		return SuBool(err == nil)
 	})
 
@@ -69,7 +75,7 @@ var _ = builtin1("DirExists?(filename)",
 		if os.IsNotExist(err) {
 			return False
 		}
-		panic("DirExists: " + err.Error())
+		panic("DirExists?: " + err.Error())
 	})
 
 var _ = builtin2("MoveFile(from, to)",
