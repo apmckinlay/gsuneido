@@ -6,7 +6,6 @@
 package builtin
 
 import (
-	"fmt"
 	"log"
 	"os"
 	"runtime"
@@ -158,11 +157,7 @@ func handler(e interface{}, state interface{}) {
 	// UIThread.PrintStack()
 	// log.Println("panic in callback:", e, "<<<<<<<<<<<<<<<<")
 
-	se, ok := e.(*SuExcept)
-	if !ok {
-		s := fmt.Sprint(e) // TODO avoid fmt
-		se = NewSuExcept(UIThread, SuStr(s))
-	}
+	se := ToSuExcept(UIThread, e)
 	handler := Global.GetName(UIThread, "Handler")
 	UIThread.Call(handler, se, Zero, se.Callstack)
 }

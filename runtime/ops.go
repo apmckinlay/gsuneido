@@ -6,7 +6,6 @@ package runtime
 import (
 	"encoding/base64"
 	"math"
-	"runtime"
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/util/dnum"
@@ -201,7 +200,7 @@ func catToStr(t *Thread, v Value) string {
 
 func OpMatch(t *Thread, x Value, y Value) SuBool {
 	var pat regex.Pattern
-	if r,ok := y.(SuRegex); ok {
+	if r, ok := y.(SuRegex); ok {
 		pat = r.Pat
 	} else if t != nil {
 		pat = t.RxCache.Get(ToStr(y))
@@ -264,13 +263,21 @@ func OpIter(x Value) SuIter {
 }
 
 func OpCatch(t *Thread, e interface{}, catchPat string) *SuExcept {
+	se := ToSuExcept(t, e)
+	if catchMatch(string(se.SuStr), catchPat) {
+		return se
+	}
+	panic(se) // propagate panic if not caught
+}
+
+func ToSuExcept(t *Thread, e interface{}) *SuExcept {
 	se, ok := e.(*SuExcept)
 	if !ok {
 		// first catch creates SuExcept with callstack
 		var ss SuStr
-		if re, ok := e.(runtime.Error); ok {
+		if err, ok := e.(error); ok {
 			// debug.PrintStack()
-			ss = SuStr(re.Error())
+			ss = SuStr(err.Error())
 		} else if s, ok := e.(string); ok {
 			ss = SuStr(s)
 		} else {
@@ -278,10 +285,7 @@ func OpCatch(t *Thread, e interface{}, catchPat string) *SuExcept {
 		}
 		se = NewSuExcept(t, ss)
 	}
-	if catchMatch(string(se.SuStr), catchPat) {
-		return se
-	}
-	panic(se) // propagate panic if not caught
+	return se
 }
 
 // catchMatch matches an exception string with a catch pattern
