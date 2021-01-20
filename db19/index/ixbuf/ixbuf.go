@@ -58,6 +58,7 @@ func goal(n int32) int {
 }
 
 // Insert adds an element. It mutates and is NOT thread-safe.
+// off can have the update or delete bit set.
 func (ib *ixbuf) Insert(key string, off uint64) {
 	ib.modCount++
 	if len(ib.chunks) == 0 {
@@ -74,7 +75,7 @@ func (ib *ixbuf) Insert(key string, off uint64) {
 	if i < len(c) && c[i].key == key {
 		// already exists, combine
 		slot := &c[i]
-		slot.off = Combine(slot.off, off)
+		slot.off = Combine(slot.off, off) // handles update/delete
 		if slot.off == 0 {
 			ib.remove(ci, i)
 		}

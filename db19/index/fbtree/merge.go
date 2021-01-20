@@ -10,8 +10,6 @@ import (
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
-//TODO handle delete tombstones
-
 // merge is one node on the current path.
 // limit will be "" on the right hand edge i.e. no limit.
 // If modified is true, node is an in-memory copy that has been modified.
@@ -196,7 +194,7 @@ func (st *state) insertInLeaf(key string, off uint64) {
 
 func (m *merge) insertInNode(key string, off uint64, get func(uint64) string) {
 	node := m.getMutableNode()
-	m.node = node.insert(key, off, get)
+	m.node = node.insert(key, off, get) // handles updates and deletes
 	_ = t && trace("after insert", m.node.knowns())
 }
 
