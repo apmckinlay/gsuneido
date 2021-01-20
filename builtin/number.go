@@ -140,3 +140,74 @@ func fromFloat(f float64) Value {
 	}
 	return SuDnum{Dnum: dnum.FromFloat(f)}
 }
+
+// Max and Min aren't specific to numbers,
+// but that's normally what they're used for
+
+var _ = builtinRaw("Max(@args)",
+	func(_ *Thread, as *ArgSpec, args []Value) Value {
+		if as.Nargs == 0 {
+			panic("Max requires at least one value")
+		}
+		if as.Each == 0 {
+			max := args[0]
+			for i := 1; i < int(as.Nargs); i++ {
+				if args[i].Compare(max) > 0 {
+					max = args[i]
+				}
+			}
+			return max
+		}
+		iterable, ok := args[0].(interface{ Iter() Iter })
+		if !ok {
+			panic("can't iterate " + args[0].Type().String())
+		}
+		it := iterable.Iter()
+		max := it.Next()
+		if as.Each == EACH1 && max != nil {
+			max = it.Next()
+		}
+		if max == nil {
+			panic("Max requires at least one value")
+		}
+		for v := it.Next(); v != nil; v = it.Next() {
+			if v.Compare(max) > 0 {
+				max = v
+			}
+		}
+		return max
+	})
+
+var _ = builtinRaw("Min(@args)",
+	func(_ *Thread, as *ArgSpec, args []Value) Value {
+		if as.Nargs == 0 {
+			panic("Min requires at least one value")
+		}
+		if as.Each == 0 {
+			min := args[0]
+			for i := 1; i < int(as.Nargs); i++ {
+				if args[i].Compare(min) < 0 {
+					min = args[i]
+				}
+			}
+			return min
+		}
+		iterable, ok := args[0].(interface{ Iter() Iter })
+		if !ok {
+			panic("can't iterate " + args[0].Type().String())
+		}
+		it := iterable.Iter()
+		min := it.Next()
+		if as.Each == EACH1 && min != nil {
+			min = it.Next()
+		}
+		if min == nil {
+			panic("Min requires at least one value")
+		}
+		for v := it.Next(); v != nil; v = it.Next() {
+			if v.Compare(min) < 0 {
+				min = v
+			}
+		}
+		return min
+	})
