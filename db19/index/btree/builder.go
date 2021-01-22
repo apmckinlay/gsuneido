@@ -5,125 +5,125 @@ package btree
 
 import "github.com/apmckinlay/gsuneido/db19/stor"
 
-// builder is used to bulk load an fbtree.
+// builder is used to bulk load an btree.
 // Keys must be added in order.
-// The fbtree is built bottom up with no splitting or inserting.
+// The btree is built bottom up with no splitting or inserting.
 // All nodes will be "full" except for the right hand edge.
 type builder struct {
 	levels []*level // leaf is [0]
 	prev   string
-	store  *stor.Stor
+	stor   *stor.Stor
 	count  int
 }
 
 type level struct {
 	splitKey string
-	builder  fNodeBuilder
+	nb       nodeBuilder
 }
 
-func Builder(store *stor.Stor) *builder {
-	return &builder{store: store, levels: []*level{{}}}
+func Builder(st *stor.Stor) *builder {
+	return &builder{stor: st, levels: []*level{{}}}
 }
 
-func (fb *builder) Add(key string, off uint64) {
-	if fb.count > 0 {
-		if key == fb.prev {
-			panic("fbtreeBuilder keys must not have duplicates")
+func (b *builder) Add(key string, off uint64) {
+	if b.count > 0 {
+		if key == b.prev {
+			panic("btreeBuilder keys must not have duplicates")
 		}
-		if key < fb.prev {
-			panic("fbtreeBuilder keys must be inserted in order")
+		if key < b.prev {
+			panic("btreeBuilder keys must be inserted in order")
 		}
 	}
-	fb.add(0, key, off)
-	fb.prev = key
-	fb.count++
+	b.add(0, key, off)
+	b.prev = key
+	b.count++
 }
 
-func (fb *builder) add(li int, key string, off uint64) {
-	if li >= len(fb.levels) {
-		fb.levels = append(fb.levels, &level{})
+func (b *builder) add(li int, key string, off uint64) {
+	if li >= len(b.levels) {
+		b.levels = append(b.levels, &level{})
 	}
-	lev := fb.levels[li]
-	if len(lev.builder.fe) > (MaxNodeSize * 3 / 4) {
+	lev := b.levels[li]
+	if len(lev.nb.node) > (MaxNodeSize * 3 / 4) {
 		// split full node to stor
-		offNode, splitKey := lev.builder.Split(fb.store)
-		fb.add(li+1, lev.splitKey, offNode) // RECURSE
+		offNode, splitKey := lev.nb.Split(b.stor)
+		b.add(li+1, lev.splitKey, offNode) // RECURSE
 		lev.splitKey = splitKey
 	}
 	embedLen := 1
 	if li > 0 {
 		embedLen = embedAll
 	}
-	lev.builder.Add(key, off, embedLen)
+	lev.nb.Add(key, off, embedLen)
 }
 
-func (fb *builder) Finish() *fbtree {
+func (b *builder) Finish() *btree {
 	var key string
 	var off uint64
-	for li := 0; li < len(fb.levels); li++ {
+	for li := 0; li < len(b.levels); li++ {
 		if li > 0 {
 			// allow node to slightly exceed max size
-			fb.levels[li].builder.Add(key, off, embedAll)
+			b.levels[li].nb.Add(key, off, embedAll)
 		}
-		key = fb.levels[li].splitKey
-		off = fb.levels[li].builder.fe.putNode(fb.store)
+		key = b.levels[li].splitKey
+		off = b.levels[li].nb.node.putNode(b.stor)
 	}
-	treeLevels := len(fb.levels) - 1
-	return OpenFbtree(fb.store, off, treeLevels)
+	treeLevels := len(b.levels) - 1
+	return OpenBtree(b.stor, off, treeLevels)
 }
 
 //-------------------------------------------------------------------
 
-type fNodeBuilder struct {
-	fe       fnode
+type nodeBuilder struct {
+	node     node
 	notFirst bool
-	fi       int
+	pos      int
 	prev     string
 	known    string
 	offset   uint64
-	fi2      int
+	pos2     int
 	known2   string
 	offset2  uint64
 }
 
-func (fb *fNodeBuilder) Add(key string, offset uint64, embedLen int) {
-	if fb.notFirst {
-		if key <= fb.prev {
+func (b *nodeBuilder) Add(key string, offset uint64, embedLen int) {
+	if b.notFirst {
+		if key <= b.prev {
 			panic("fBuilder keys must be inserted in order, without duplicates")
 		}
 	} else {
-		fb.notFirst = true
+		b.notFirst = true
 	}
-	if len(fb.fe) == 0 {
-		fb.fe = fb.fe.append(offset, 0, "")
-		fb.known = ""
+	if len(b.node) == 0 {
+		b.node = b.node.append(offset, 0, "")
+		b.known = ""
 	} else {
-		fb.fi2 = fb.fi
-		fb.fi = len(fb.fe)
-		npre, diff, known := addone(key, fb.prev, fb.known, embedLen)
-		fb.fe = fb.fe.append(offset, npre, diff)
-		fb.known2 = fb.known
-		fb.known = known
-		fb.offset2 = fb.offset
-		fb.offset = offset
+		b.pos2 = b.pos
+		b.pos = len(b.node)
+		npre, diff, known := addone(key, b.prev, b.known, embedLen)
+		b.node = b.node.append(offset, npre, diff)
+		b.known2 = b.known
+		b.known = known
+		b.offset2 = b.offset
+		b.offset = offset
 	}
-	fb.prev = key
+	b.prev = key
 }
 
 // Split saves all but the last two entries as the left node
-// and initializes fb.fe with the last two entries
-func (fb *fNodeBuilder) Split(store *stor.Stor) (leftOff uint64, splitKey string) {
-	splitKey = fb.known2 // known of second last entry
-	left := fb.fe[:fb.fi2]
-	leftOff = left.putNode(store)
+// and sets the builder node to the last two entries
+func (b *nodeBuilder) Split(st *stor.Stor) (leftOff uint64, splitKey string) {
+	splitKey = b.known2 // known of second last entry
+	left := b.node[:b.pos2]
+	leftOff = left.putNode(st)
 	// first entry becomes 0, ""
-	right := fb.fe[:0].append(fb.offset2, 0, "") // offset of second last entry
+	right := b.node[:0].append(b.offset2, 0, "") // offset of second last entry
 	// second entry becomes 0, known
-	right = right.append(fb.offset, 0, fb.known) // offset,known of last entry
-	fb.fe = right
+	right = right.append(b.offset, 0, b.known) // offset,known of last entry
+	b.node = right
 	return
 }
 
-func (fb *fNodeBuilder) Entries() fnode {
-	return fb.fe
+func (b *nodeBuilder) Entries() node {
+	return b.node
 }

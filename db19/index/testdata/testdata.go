@@ -81,9 +81,9 @@ type tree interface {
 	Lookup(key string) uint64
 }
 
-func (d *dat) Check(fb tree) {
+func (d *dat) Check(t tree) {
 	for _, key := range d.Keys {
-		assert.Msg(key).This(fb.Lookup(key)).Is(d.K2o[key])
+		assert.Msg(key).This(t.Lookup(key)).Is(d.K2o[key])
 	}
 }
 

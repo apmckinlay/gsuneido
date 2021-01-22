@@ -14,10 +14,10 @@ import (
 	"github.com/apmckinlay/gsuneido/util/cksum"
 )
 
-type T = fbtree
+type T = btree
 
-// fbtree is an immutable btree designed to be stored in a file.
-type fbtree struct {
+// btree is an immutable btree designed to be stored in a file.
+type btree struct {
 	// treeLevels is how many levels of tree nodes there are (initially 0)
 	// Nodes do not store whether they are leaf or tree nodes.
 	// Since we always start at the root and descend,
@@ -27,8 +27,8 @@ type fbtree struct {
 	treeLevels int
 	// root is the offset of the root node
 	root uint64
-	// store is where the btree is stored
-	store *stor.Stor
+	// stor is where the btree is stored
+	stor *stor.Stor
 	// ixspec is an opaque value passed to GetLeafKey.
 	// It specifies which fields make up the key, based on the schema.
 	ixspec *ixkey.Spec
@@ -44,75 +44,75 @@ var MaxNodeSize = 256 //TODO tune
 // It is a dependency that must be injected
 var GetLeafKey func(st *stor.Stor, is *ixkey.Spec, off uint64) string
 
-func CreateFbtree(store *stor.Stor, is *ixkey.Spec) *fbtree {
-	rootNode := fnode{}
-	root := rootNode.putNode(store)
-	return &fbtree{root: root, store: store, ixspec: is}
+func CreateBtree(st *stor.Stor, is *ixkey.Spec) *btree {
+	rootNode := node{}
+	root := rootNode.putNode(st)
+	return &btree{root: root, stor: st, ixspec: is}
 }
 
-func OpenFbtree(store *stor.Stor, root uint64, treeLevels int) *fbtree {
-	return &fbtree{root: root, treeLevels: treeLevels, store: store}
+func OpenBtree(st *stor.Stor, root uint64, treeLevels int) *btree {
+	return &btree{root: root, treeLevels: treeLevels, stor: st}
 }
 
-func (fb *fbtree) GetIxspec() *ixkey.Spec {
-	return fb.ixspec
+func (bt *btree) GetIxspec() *ixkey.Spec {
+	return bt.ixspec
 }
 
-func (fb *fbtree) SetIxspec(is *ixkey.Spec) {
-	fb.ixspec = is
+func (bt *btree) SetIxspec(is *ixkey.Spec) {
+	bt.ixspec = is
 }
 
-func (fb *fbtree) getLeafKey(off uint64) string {
-	return GetLeafKey(fb.store, fb.ixspec, off)
+func (bt *btree) getLeafKey(off uint64) string {
+	return GetLeafKey(bt.stor, bt.ixspec, off)
 }
 
 // Lookup returns the offset for a key, or 0 if not found.
-func (fb *fbtree) Lookup(key string) uint64 {
-	off := fb.root
-	for i := 0; i <= fb.treeLevels; i++ {
-		node := fb.getNode(off)
-		off = node.search(key)
+func (bt *btree) Lookup(key string) uint64 {
+	off := bt.root
+	for i := 0; i <= bt.treeLevels; i++ {
+		nd := bt.getNode(off)
+		off = nd.search(key)
 	}
-	if fb.getLeafKey(off) != key {
+	if bt.getLeafKey(off) != key {
 		return 0
 	}
 	return off
 }
 
 // putNode stores the node
-func (node fnode) putNode(store *stor.Stor) uint64 {
-	n := len(node)
-	off, buf := store.Alloc(2 + n + cksum.Len)
+func (nd node) putNode(st *stor.Stor) uint64 {
+	n := len(nd)
+	off, buf := st.Alloc(2 + n + cksum.Len)
 	stor.NewWriter(buf).Put2(n)
 	buf = buf[2:]
-	copy(buf, node)
+	copy(buf, nd)
 	cksum.Update(buf)
-	// if len(node) > 0 && rand.Intn(500) == 42 {
+	// if len(nd) > 0 && rand.Intn(500) == 42 {
 	// 	// corrupt some nodes to test checking
 	// 	fmt.Println("ZAP")
-	// 	buf := store.Data(off)
-	// 	buf[3 + rand.Intn(len(node))] = byte(rand.Intn(256))
+	// 	buf := st.Data(off)
+	// 	buf[3 + rand.Intn(len(nd))] = byte(rand.Intn(256))
 	// }
 	return off
 }
 
 // getNode returns the node for a given offset
-func (fb *fbtree) getNode(off uint64) fnode {
-	return readNode(fb.store, off)
+func (bt *btree) getNode(off uint64) node {
+	return readNode(bt.stor, off)
 }
 
-func (fb *fbtree) getNodeCk(off uint64, check bool) fnode {
-	node := readNode(fb.store, off)
+func (bt *btree) getNodeCk(off uint64, check bool) node {
+	nd := readNode(bt.stor, off)
 	if check {
-		cksum.MustCheck(node[:len(node)+cksum.Len])
+		cksum.MustCheck(nd[:len(nd)+cksum.Len])
 	}
-	return node
+	return nd
 }
 
-func readNode(store *stor.Stor, off uint64) fnode {
-	buf := store.Data(off)
+func readNode(st *stor.Stor, off uint64) node {
+	buf := st.Data(off)
 	n := stor.NewReader(buf).Get2()
-	return fnode(buf[2 : 2+n])
+	return node(buf[2 : 2+n])
 }
 
 //-------------------------------------------------------------------
@@ -122,28 +122,28 @@ func readNode(store *stor.Stor, off uint64) fnode {
 // recentSize is the length of the tail of the file that we look at
 const recentSize = 32 * 1024 * 1024 // ???
 
-func (fb *fbtree) QuickCheck() {
-	recent := int64(fb.store.Size()) - recentSize
-	fb.quickCheck1(0, fb.root, recent)
+func (bt *btree) QuickCheck() {
+	recent := int64(bt.stor.Size()) - recentSize
+	bt.quickCheck1(0, bt.root, recent)
 }
 
-func (fb *fbtree) quickCheck1(depth int, offset uint64, recent int64) {
+func (bt *btree) quickCheck1(depth int, offset uint64, recent int64) {
 	// only look at nodes in the recent part of the file
 	if int64(offset) < recent {
 		return
 	}
-	node := fb.getNodeCk(offset, true)
-	if depth < fb.treeLevels {
+	nd := bt.getNodeCk(offset, true)
+	if depth < bt.treeLevels {
 		// tree node
-		for it := node.iter(); it.next(); {
-			fb.quickCheck1(depth+1, it.offset, recent)
+		for it := nd.iter(); it.next(); {
+			bt.quickCheck1(depth+1, it.offset, recent)
 		}
 	} else {
 		// leaf node
-		for it := node.iter(); it.next(); {
+		for it := nd.iter(); it.next(); {
 			// only checksum data records in the recent part of the file
 			if int64(it.offset) > recent {
-				buf := fb.store.Data(it.offset)
+				buf := bt.stor.Data(it.offset)
 				size := runtime.RecLen(buf)
 				cksum.MustCheck(buf[:size+cksum.Len])
 			}
@@ -152,26 +152,26 @@ func (fb *fbtree) quickCheck1(depth int, offset uint64, recent int64) {
 }
 
 // Check verifies that the keys are in order and returns the number of keys.
-// The supplied fn is applied to each leaf offset.
-func (fb *fbtree) Check(fn func(uint64)) (count, size, nnodes int) {
+// If the supplied function is not nil, it is applied to each leaf offset.
+func (bt *btree) Check(fn func(uint64)) (count, size, nnodes int) {
 	key := ""
-	return fb.check1(0, fb.root, &key, fn)
+	return bt.check1(0, bt.root, &key, fn)
 }
 
-func (fb *fbtree) check1(depth int, offset uint64, key *string,
+func (bt *btree) check1(depth int, offset uint64, key *string,
 	fn func(uint64)) (count, size, nnodes int) {
-	node := fb.getNodeCk(offset, true)
-	size += len(node)
+	nd := bt.getNodeCk(offset, true)
+	size += len(nd)
 	nnodes++
-	for it := node.iter(); it.next(); {
+	for it := nd.iter(); it.next(); {
 		offset := it.offset
-		if depth < fb.treeLevels {
+		if depth < bt.treeLevels {
 			// tree
-			if it.fi > 0 && *key > string(it.known) {
+			if it.pos > 0 && *key > string(it.known) {
 				panic("keys out of order")
 			}
 			*key = string(it.known)
-			c, s, n := fb.check1(depth+1, offset, key, fn) // RECURSE
+			c, s, n := bt.check1(depth+1, offset, key, fn) // RECURSE
 			count += c
 			size += s
 			nnodes += n
@@ -181,7 +181,7 @@ func (fb *fbtree) check1(depth int, offset uint64, key *string,
 			if fn != nil {
 				fn(offset)
 			}
-			itkey := fb.getLeafKey(offset)
+			itkey := bt.getLeafKey(offset)
 			if !strings.HasPrefix(itkey, string(it.known)) {
 				panic("index key does not match data")
 			}
@@ -196,33 +196,33 @@ func (fb *fbtree) check1(depth int, offset uint64, key *string,
 
 // print ------------------------------------------------------------
 
-func (fb *fbtree) print() {
+func (bt *btree) print() {
 	fmt.Println("<<<------------------------------")
-	fb.print1(0, fb.root)
+	bt.print1(0, bt.root)
 	fmt.Println("------------------------------>>>")
 }
 
-func (fb *fbtree) print1(depth int, offset uint64) {
+func (bt *btree) print1(depth int, offset uint64) {
 	explan := ""
-	if depth >= fb.treeLevels {
+	if depth >= bt.treeLevels {
 		explan += " LEAF"
 	}
 	print(strings.Repeat(" . ", depth)+"offset", offset, explan)
-	node := fb.getNode(offset)
+	nd := bt.getNode(offset)
 	var sb strings.Builder
 	sep := ""
-	for it := node.iter(); it.next(); {
+	for it := nd.iter(); it.next(); {
 		offset := it.offset
-		if depth < fb.treeLevels {
+		if depth < bt.treeLevels {
 			// tree
-			print(strings.Repeat(" . ", depth)+strconv.Itoa(it.fi)+":",
+			print(strings.Repeat(" . ", depth)+strconv.Itoa(it.pos)+":",
 				it.npre, it.diff, "=", it.known)
-			fb.print1(depth+1, offset) // recurse
+			bt.print1(depth+1, offset) // recurse
 		} else {
 			// leaf
-			// print(strings.Repeat(" . ", depth)+strconv.Itoa(it.fi)+":",
+			// print(strings.Repeat(" . ", depth)+strconv.Itoa(it.pos)+":",
 			// 	strconv.Itoa(int(offset))+",", it.npre, it.diff, "=", it.known,
-			// 	"("+fb.getLeafKey(offset)+")")
+			// 	"("+bt.getLeafKey(offset)+")")
 			sb.WriteString(sep)
 			sep = " "
 			if len(it.known) == 0 {
@@ -230,29 +230,29 @@ func (fb *fbtree) print1(depth int, offset uint64) {
 			} else {
 				sb.Write(it.known)
 			}
-			// sb.WriteString(" = " + fb.getLeafKey(offset))
+			// sb.WriteString(" = " + bt.getLeafKey(offset))
 		}
 	}
-	if depth == fb.treeLevels {
+	if depth == bt.treeLevels {
 		print(strings.Repeat(" . ", depth) + sb.String())
 	}
 }
 
 //-------------------------------------------------------------------
 
-func (fb *fbtree) StorSize() int {
+func (bt *btree) StorSize() int {
 	return 5 + 1
 }
 
-func (fb *fbtree) Write(w *stor.Writer) {
-	w.Put5(fb.root).Put1(fb.treeLevels)
+func (bt *btree) Write(w *stor.Writer) {
+	w.Put5(bt.root).Put1(bt.treeLevels)
 }
 
 // ReadOverlay reads an Overlay from storage BUT without ixspec
-func Read(st *stor.Stor, r *stor.Reader) *fbtree {
+func Read(st *stor.Stor, r *stor.Reader) *btree {
 	root := r.Get5()
 	treeLevels := r.Get1()
-	return OpenFbtree(st, root, treeLevels)
+	return OpenBtree(st, root, treeLevels)
 }
 
 // trace ------------------------------------------------------------

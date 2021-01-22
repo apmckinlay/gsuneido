@@ -101,10 +101,10 @@ func TestMergeIterCombine(*testing.T) {
 	var data []string
 	defer func(mns int) { btree.MaxNodeSize = mns }(btree.MaxNodeSize)
 	btree.MaxNodeSize = 64
-	fb := btree.CreateFbtree(stor.HeapStor(8192), nil)
+	bt := btree.CreateBtree(stor.HeapStor(8192), nil)
 	mut := &ixbuf.T{}
 	u := &ixbuf.T{}
-	ov := &Overlay{fb: fb, layers: []*ixbuf.T{u}, mut: mut}
+	ov := &Overlay{bt: bt, layers: []*ixbuf.T{u}, mut: mut}
 	checkIter(data, ov)
 
 	const n = 100
@@ -136,7 +136,7 @@ func checkIterator(data []string, ov *Overlay) int {
 	callback := func(mc int) (int, []iterT) {
 		if mc == -1 {
 			its := make([]iterT, 0, 2+len(ov.layers))
-			its = append(its, ov.fb.Iterator())
+			its = append(its, ov.bt.Iterator())
 			for _, ib := range ov.layers {
 				its = append(its, ib.Iterator())
 			}

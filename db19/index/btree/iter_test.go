@@ -14,10 +14,9 @@ import (
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
-func TestFbiterEmpty(*testing.T) {
-	store := stor.HeapStor(256)
-	fb := CreateFbtree(store, nil)
-	it := fb.Iterator()
+func TestIteratorEmpty(*testing.T) {
+	bt := CreateBtree(stor.HeapStor(256), nil)
+	it := bt.Iterator()
 	it.Next()
 	assert.That(it.Eof())
 	it.Next()
@@ -36,7 +35,7 @@ func TestFbiterEmpty(*testing.T) {
 	assert.That(it.Eof())
 }
 
-func TestFbiter(*testing.T) {
+func TestIterator(*testing.T) {
 	const n = 1000
 	var data [n]string
 	GetLeafKey = func(_ *stor.Stor, _ *ixkey.Spec, i uint64) string { return data[i-1] }
@@ -47,14 +46,13 @@ func TestFbiter(*testing.T) {
 		data[i] = randKey()
 	}
 	sort.Strings(data[:])
-	store := stor.HeapStor(8192)
-	bldr := Builder(store)
+	bldr := Builder(stor.HeapStor(8192))
 	for i, k := range data {
 		bldr.Add(k, uint64(i+1)) // +1 to avoid zero
 	}
-	fb := bldr.Finish()
+	bt := bldr.Finish()
 
-	it := fb.Iterator()
+	it := bt.Iterator()
 	test := func(i int) {
 		assert.This(it.curOff - 1).Is(i)
 		assert.This(it.curKey).Is(data[i])
@@ -69,7 +67,7 @@ func TestFbiter(*testing.T) {
 	assert.That(it.Eof())
 
 	// test Iterator Prev
-	it = fb.Iterator()
+	it = bt.Iterator()
 	for i := n - 1; i >= 0; i-- {
 		it.Prev()
 		test(i)
@@ -119,59 +117,59 @@ func TestFbiter(*testing.T) {
 	test(n - 1)
 }
 
-func TestFbiterToChunk(t *testing.T) {
+func TestToChunk(t *testing.T) {
 	assert := assert.T(t).This
 	data := []string{"ant", "cat", "dog"}
-	b := fNodeBuilder{}
+	b := nodeBuilder{}
 	for i, k := range data {
 		b.Add(k, uint64(i+1), 1) // +1 to avoid zero
 	}
-	fn := b.Entries()
+	nd := b.Entries()
 	GetLeafKey = func(_ *stor.Stor, _ *ixkey.Spec, i uint64) string { return data[i-1] }
 
-	fb := &fbtree{}
-	fi := fn.iter()
-	ci := fi.toChunk(fb, true).(*chunkIter) // leaf
+	bt := &btree{}
+	it := nd.iter()
+	ci := it.toChunk(bt, true).(*chunkIter) // leaf
 	ci.next()
 	assert(ci.i).Is(0)
 	assert(ci.c).Is(chunk{{key: "ant", off: 1}, {key: "cat", off: 2},
 		{key: "dog", off: 3}})
-	ci = fi.toChunk(fb, false).(*chunkIter) // tree
+	ci = it.toChunk(bt, false).(*chunkIter) // tree
 	assert(ci.c).Is(chunk{{key: "", off: 1}, {key: "c", off: 2},
 		{key: "d", off: 3}})
 
-	fi.next()
-	fi.next()
-	assert(fi.offset).Is(2)
-	ci = fi.toChunk(fb, false).(*chunkIter)
+	it.next()
+	it.next()
+	assert(it.offset).Is(2)
+	ci = it.toChunk(bt, false).(*chunkIter)
 	assert(ci.off()).Is(2)
 }
 
 //-------------------------------------------------------------------
 
 func (it *Iterator) printStack() {
-	for i := 0; i <= it.fb.treeLevels; i++ {
+	for i := 0; i <= it.bt.treeLevels; i++ {
 		it.printLevel(i)
 	}
 }
 
 func (it *Iterator) printLevel(i int) {
-	if fi, ok := it.stack[i].(*fnIter); ok {
+	if ni, ok := it.stack[i].(*nodeIter); ok {
 		fmt.Print(i, " | ")
-		fit := fi.fn.iter()
-		for fit.next() {
-			if fit.fi == fi.fi {
+		ni2 := ni.node.iter()
+		for ni2.next() {
+			if ni2.pos == ni.pos {
 				fmt.Print("(")
 			}
 			if i == 0 {
-				fmt.Print(it.fb.getLeafKey(fit.offset), " ")
-			} else if len(fit.known) == 0 {
+				fmt.Print(it.bt.getLeafKey(ni2.offset), " ")
+			} else if len(ni2.known) == 0 {
 				fmt.Print("'' ")
 			} else {
-				fmt.Print(string(fit.known), " ")
+				fmt.Print(string(ni2.known), " ")
 			}
 		}
-		if fi.fi >= fit.fi {
+		if ni.pos >= ni2.pos {
 			fmt.Print("(")
 		}
 	} else {

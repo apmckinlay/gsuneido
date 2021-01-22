@@ -15,8 +15,8 @@ type iter = func() (string, uint64, bool)
 
 // Overlay is the composite in-memory representation of an index
 type Overlay struct {
-	// fb is the stored base btree
-	fb *btree.T
+	// bt is the stored base btree
+	bt *btree.T
 	// layers is a base ixbuf of merged but not persisted changes,
 	// plus ixbuf's from completed but un-merged transactions
 	layers []*ixbuf.T
@@ -26,12 +26,12 @@ type Overlay struct {
 
 func NewOverlay(store *stor.Stor, is *ixkey.Spec) *Overlay {
 	assert.That(is != nil)
-	return &Overlay{fb: btree.CreateFbtree(store, is),
+	return &Overlay{bt: btree.CreateBtree(store, is),
 		layers: []*ixbuf.T{{}}}
 }
 
-func OverlayFor(fb *btree.T) *Overlay {
-	return &Overlay{fb: fb, layers: []*ixbuf.T{{}}}
+func OverlayFor(bt *btree.T) *Overlay {
+	return &Overlay{bt: bt, layers: []*ixbuf.T{{}}}
 }
 
 // Mutable returns a modifiable copy of an Overlay
@@ -40,15 +40,15 @@ func (ov *Overlay) Mutable() *Overlay {
 	layers := make([]*ixbuf.T, len(ov.layers))
 	copy(layers, ov.layers)
 	assert.That(len(layers) >= 1)
-	return &Overlay{fb: ov.fb, layers: layers, mut: &ixbuf.T{}}
+	return &Overlay{bt: ov.bt, layers: layers, mut: &ixbuf.T{}}
 }
 
 func (ov *Overlay) GetIxspec() *ixkey.Spec {
-	return ov.fb.GetIxspec()
+	return ov.bt.GetIxspec()
 }
 
 func (ov *Overlay) SetIxspec(is *ixkey.Spec) {
-	ov.fb.SetIxspec(is)
+	ov.bt.SetIxspec(is)
 }
 
 // Insert inserts into the mutable top ixbuf.T
@@ -73,19 +73,19 @@ func (ov *Overlay) Lookup(key string) uint64 {
 			return off
 		}
 	}
-	if off := ov.fb.Lookup(key); off != 0 {
+	if off := ov.bt.Lookup(key); off != 0 {
 		return off
 	}
 	return 0
 }
 
 func (ov *Overlay) Check(fn func(uint64)) int {
-	n, _, _ := ov.fb.Check(fn)
+	n, _, _ := ov.bt.Check(fn)
 	return n
 }
 
 func (ov *Overlay) QuickCheck() {
-	ov.fb.QuickCheck()
+	ov.bt.QuickCheck()
 }
 
 func (ov *Overlay) Modified() bool {
@@ -96,7 +96,7 @@ func (ov *Overlay) Iterator() *MergeIter {
 	callback := func(mc int) (int, []iterT) {
 		if mc == -1 {
 			its := make([]iterT, 0, 2+len(ov.layers))
-			its = append(its, ov.fb.Iterator())
+			its = append(its, ov.bt.Iterator())
 			for _, ib := range ov.layers {
 				its = append(its, ib.Iterator())
 			}
@@ -113,16 +113,16 @@ func (ov *Overlay) Iterator() *MergeIter {
 //-------------------------------------------------------------------
 
 func (ov *Overlay) StorSize() int {
-	return ov.fb.StorSize()
+	return ov.bt.StorSize()
 }
 
 func (ov *Overlay) Write(w *stor.Writer) {
-	ov.fb.Write(w)
+	ov.bt.Write(w)
 }
 
 // ReadOverlay reads an Overlay from storage BUT without ixspec
 func ReadOverlay(st *stor.Stor, r *stor.Reader) *Overlay {
-	return &Overlay{fb: btree.Read(st, r), layers: []*ixbuf.T{{}}}
+	return &Overlay{bt: btree.Read(st, r), layers: []*ixbuf.T{{}}}
 }
 
 //-------------------------------------------------------------------
@@ -133,7 +133,7 @@ func ReadOverlay(st *stor.Stor, r *stor.Reader) *Overlay {
 // so it will be out of date.
 // The checker ensures that the updates are independent.
 func (ov *Overlay) UpdateWith(latest *Overlay) {
-	ov.fb = latest.fb
+	ov.bt = latest.bt
 	// reuse the new slice and overwrite ov.layers with the latest
 	ov.layers = append(ov.layers[:0], latest.layers...)
 	// add mut updates
@@ -157,7 +157,7 @@ func (ov *Overlay) WithMerged(mr MergeResult, nmerged int) *Overlay {
 	layers := make([]*ixbuf.T, len(ov.layers)-nmerged)
 	layers[0] = mr
 	copy(layers[1:], ov.layers[1+nmerged:])
-	return &Overlay{fb: ov.fb, layers: layers}
+	return &Overlay{bt: ov.bt, layers: layers}
 }
 
 //-------------------------------------------------------------------
@@ -168,16 +168,16 @@ type SaveResult = *btree.T
 // and returns the new btree to later pass to WithSaved
 func (ov *Overlay) Save() SaveResult {
 	assert.That(ov.mut == nil)
-	return ov.fb.MergeAndSave(ov.layers[0].Iter())
+	return ov.bt.MergeAndSave(ov.layers[0].Iter())
 }
 
 // WithSaved returns a new Overlay,
 // combining the current state (ov) with the updated btree (in ov2)
-func (ov *Overlay) WithSaved(fb SaveResult) *Overlay {
+func (ov *Overlay) WithSaved(bt SaveResult) *Overlay {
 	layers := make([]*ixbuf.T, len(ov.layers))
 	layers[0] = &ixbuf.T{} // new empty base ixbuf
 	copy(layers[1:], ov.layers[1:])
-	return &Overlay{fb: fb, layers: layers}
+	return &Overlay{bt: bt, layers: layers}
 }
 
 //-------------------------------------------------------------------

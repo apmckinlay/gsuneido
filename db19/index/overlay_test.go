@@ -21,10 +21,10 @@ func TestOverlay(*testing.T) {
 	var data []string
 	defer func(mns int) { btree.MaxNodeSize = mns }(btree.MaxNodeSize)
 	btree.MaxNodeSize = 64
-	fb := btree.CreateFbtree(stor.HeapStor(8192), nil)
+	bt := btree.CreateBtree(stor.HeapStor(8192), nil)
 	mut := &ixbuf.T{}
 	u := &ixbuf.T{}
-	ov := &Overlay{fb: fb, layers: []*ixbuf.T{u}, mut: mut}
+	ov := &Overlay{bt: bt, layers: []*ixbuf.T{u}, mut: mut}
 	checkIter(data, ov)
 
 	const n = 100
@@ -89,8 +89,8 @@ func TestOverlayBug(*testing.T) {
 	btree.MaxNodeSize = 64
 	const n = 100
 
-	fb := btree.CreateFbtree(stor.HeapStor(8192), nil)
-	ov := &Overlay{fb: fb}
+	bt := btree.CreateBtree(stor.HeapStor(8192), nil)
+	ov := &Overlay{bt: bt}
 	d.CheckIter(ov.Iterator())
 
 	u := &ixbuf.T{}
@@ -98,7 +98,7 @@ func TestOverlayBug(*testing.T) {
 	ov.layers = []*ixbuf.T{u}
 	d.CheckIter(ov.Iterator())
 
-	ov.fb = ov.fb.MergeAndSave(u.Iter())
+	ov.bt = ov.bt.MergeAndSave(u.Iter())
 	ov.layers[0] = &ixbuf.T{}
 	d.CheckIter(ov.Iterator())
 }
@@ -129,14 +129,14 @@ func TestOverlayMerge(t *testing.T) {
 	}
 	defer func(mns int) { btree.MaxNodeSize = mns }(btree.MaxNodeSize)
 	btree.MaxNodeSize = 64
-	fb := btree.CreateFbtree(stor.HeapStor(8192), nil)
+	bt := btree.CreateBtree(stor.HeapStor(8192), nil)
 	bi := &ixbuf.T{}
-	ov := Overlay{fb: fb, layers: []*ixbuf.T{bi, mut}}
+	ov := Overlay{bt: bt, layers: []*ixbuf.T{bi, mut}}
 	bi = ov.Merge(1)
 	checkData(t, bi, data)
 
 	mut = randIxbuf()
-	ov = Overlay{fb: fb, layers: []*ixbuf.T{bi, mut}}
+	ov = Overlay{bt: bt, layers: []*ixbuf.T{bi, mut}}
 	bi = ov.Merge(1)
 	checkData(t, bi, data)
 }
@@ -162,7 +162,7 @@ func TestOverlayLookup(*testing.T) {
 	defer func(mns int) { btree.MaxNodeSize = mns }(btree.MaxNodeSize)
 	btree.MaxNodeSize = 128
 	store := stor.HeapStor(8192)
-	randFbtree := func(nkeys int) *btree.T {
+	randBtree := func(nkeys int) *btree.T {
 		for i := 0; i < nkeys; i++ {
 			dat.Gen()
 		}
@@ -180,10 +180,10 @@ func TestOverlayLookup(*testing.T) {
 		}
 		return ib
 	}
-	fb := randFbtree(10000)
+	bt := randBtree(10000)
 	layers := []*ixbuf.T{randIxbuf(1000), randIxbuf(100)}
 	mut := randIxbuf(100)
-	ov := &Overlay{fb: fb, layers: layers, mut: mut}
+	ov := &Overlay{bt: bt, layers: layers, mut: mut}
 	for _, k := range dat.Keys {
 		assert.This(ov.Lookup(k)).Is(dat.K2o[k])
 		assert.This(ov.Lookup(k + "0")).Is(0) // nonexistent

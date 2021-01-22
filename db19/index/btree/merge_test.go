@@ -24,9 +24,9 @@ func TestMergeAndSave(*testing.T) {
 	GetLeafKey = d.GetLeafKey
 	defer func(mns int) { MaxNodeSize = mns }(MaxNodeSize)
 	MaxNodeSize = 64
-	store := stor.HeapStor(8192)
-	store.Alloc(1) // avoid offset 0
-	fb := CreateFbtree(store, nil)
+	st := stor.HeapStor(8192)
+	st.Alloc(1) // avoid offset 0
+	bt := CreateBtree(st, nil)
 
 	for i := 0; i < nMerges; i++ {
 		_ = t && trace("---")
@@ -47,17 +47,17 @@ func TestMergeAndSave(*testing.T) {
 				d.Delete(i)
 			}
 		}
-		fb = fb.MergeAndSave(x.Iter())
+		bt = bt.MergeAndSave(x.Iter())
 	}
-	fb.Check(nil)
-	d.Check(fb)
-	d.CheckIter(fb.Iterator())
+	bt.Check(nil)
+	d.Check(bt)
+	d.CheckIter(bt.Iterator())
 }
 
 //-------------------------------------------------------------------
 
 func (st *state) print() {
-	fmt.Println("state:", st.fb.treeLevels)
+	fmt.Println("state:", st.bt.treeLevels)
 	for _, m := range st.path {
 		fmt.Println("   ", &m)
 		fmt.Println("       ", m.node.knowns())
@@ -73,5 +73,5 @@ func (m *merge) String() string {
 	if m.modified {
 		mod = " modified"
 	}
-	return fmt.Sprint("off ", m.off, " fi ", m.fi, " limit ", limit, mod)
+	return fmt.Sprint("off ", m.off, " pos ", m.pos, " limit ", limit, mod)
 }

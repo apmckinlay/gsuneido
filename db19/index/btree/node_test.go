@@ -17,16 +17,16 @@ import (
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
-func TestFAppendRead(t *testing.T) {
+func TestNodeAppendRead(t *testing.T) {
 	type ent struct {
 		offset uint64
 		npre   int
 		diff   string
 	}
-	var fn fnode
+	var nd node
 	var data []ent
 	add := func(offset uint64, npre int, diff string) {
-		fn = fn.append(offset, npre, diff)
+		nd = nd.append(offset, npre, diff)
 		data = append(data, ent{offset, npre, diff})
 	}
 	add(123, 2, "bar")
@@ -35,15 +35,15 @@ func TestFAppendRead(t *testing.T) {
 		var npre int
 		var diff []byte
 		var off uint64
-		npre, diff, off = fn.read()
-		fn = fn[fLen(diff):]
+		npre, diff, off = nd.read()
+		nd = nd[fLen(diff):]
 		assert.T(t).This(npre).Is(e.npre)
 		assert.T(t).This(string(diff)).Is(e.diff)
 		assert.T(t).This(off).Is(e.offset)
 	}
 }
 
-func TestFnodeInsert(*testing.T) {
+func TestNodeInsert(*testing.T) {
 	datas := []string{
 		"a b c d",
 		"xa xb xc xd",
@@ -58,7 +58,7 @@ func TestFnodeInsert(*testing.T) {
 		get := func(i uint64) string { return data[i] }
 
 		// forward
-		fwd := fnode{}
+		fwd := node{}
 		for i, d := range data {
 			fwd = fwd.insert(d, uint64(i), get)
 			fwd.checkUpTo(i, data, get)
@@ -68,7 +68,7 @@ func TestFnodeInsert(*testing.T) {
 		assert.That(fwd.check(get) == len(data))
 
 		// reverse
-		rev := fnode{}
+		rev := node{}
 		for i := len(data) - 1; i >= 0; i-- {
 			rev = rev.insert(data[i], uint64(i), get)
 			// rev.checkUpTo(i, data, get)
@@ -88,7 +88,7 @@ func TestFnodeInsert(*testing.T) {
 		// random
 		const nperms = 100
 		for i := 0; i < nperms; i++ {
-			rnd := fnode{}
+			rnd := node{}
 			perm := rand.Perm(len(data))
 			for _, j := range perm {
 				rnd = rnd.insert(data[j], uint64(j), get)
@@ -98,26 +98,26 @@ func TestFnodeInsert(*testing.T) {
 	}
 }
 
-func build(data []string) fnode {
-	b := fNodeBuilder{}
+func build(data []string) node {
+	b := nodeBuilder{}
 	for i, d := range data {
 		b.Add(d, uint64(i), 1)
 	}
 	return b.Entries()
 }
 
-func (fn fnode) checkData(data []string, get func(uint64) string) {
-	fn.checkUpTo(len(data)-1, data, get)
+func (nd node) checkData(data []string, get func(uint64) string) {
+	nd.checkUpTo(len(data)-1, data, get)
 }
 
 // checkUpTo is used during inserting.
 // It checks that inserted keys are present
 // and uninserted keys are not present.
-func (fn fnode) checkUpTo(i int, data []string, get func(uint64) string) {
-	n := fn.check(get)
+func (nd node) checkUpTo(i int, data []string, get func(uint64) string) {
+	n := nd.check(get)
 	nn := 0
 	for j, d := range data {
-		if (d != "" && j <= i) != fn.contains(d, get) {
+		if (d != "" && j <= i) != nd.contains(d, get) {
 			panic("can't find " + d)
 		}
 		if d != "" && j <= i {
@@ -130,15 +130,15 @@ func (fn fnode) checkUpTo(i int, data []string, get func(uint64) string) {
 	}
 }
 
-func (fn fnode) contains(s string, get func(uint64) string) bool {
-	if len(fn) == 0 {
+func (nd node) contains(s string, get func(uint64) string) bool {
+	if len(nd) == 0 {
 		return false
 	}
-	offset := fn.search(s)
+	offset := nd.search(s)
 	return s == get(offset)
 }
 
-func TestFnodeInsertRandom(*testing.T) {
+func TestNodeInsertRandom(*testing.T) {
 	const nData = 100
 	var nGenerate = 1000
 	var nShuffle = 20
@@ -157,29 +157,29 @@ func TestFnodeInsertRandom(*testing.T) {
 		for si := 0; si < nShuffle; si++ {
 			rand.Shuffle(len(data),
 				func(i, j int) { data[i], data[j] = data[j], data[i] })
-			var fn fnode
+			var nd node
 			for i, d := range data {
-				fn = fn.insert(d, uint64(i), get)
+				nd = nd.insert(d, uint64(i), get)
 				// fe.checkUpTo(i, data, get)
 			}
-			fn.checkData(data, get)
+			nd.checkData(data, get)
 		}
 	}
 }
 
-func TestFnodeInsertWords(*testing.T) {
+func TestNodeInsertWords(*testing.T) {
 	data := words
 	const nShuffle = 100
 	get := func(i uint64) string { return data[i] }
 	for si := 0; si < nShuffle; si++ {
 		rand.Shuffle(len(data),
 			func(i, j int) { data[i], data[j] = data[j], data[i] })
-		var fn fnode
+		var nd node
 		for i, d := range data {
-			fn = fn.insert(d, uint64(i), get)
+			nd = nd.insert(d, uint64(i), get)
 			// fe.checkUpto(i, data, get)
 		}
-		fn.checkData(data, get)
+		nd.checkData(data, get)
 	}
 }
 
@@ -286,7 +286,7 @@ var words = []string{
 	"stick",
 }
 
-func TestFnodeDelete(*testing.T) {
+func TestNodeDelete(*testing.T) {
 	datas := []string{
 		"a b c d",
 		"xa xb xc xd",
@@ -298,7 +298,7 @@ func TestFnodeDelete(*testing.T) {
 	}
 	var data []string
 	get := func(i uint64) string { return data[i] }
-	var without, del fnode
+	var without, del node
 	finished := false
 	defer func() {
 		if !finished {
@@ -336,7 +336,7 @@ func TestFnodeDelete(*testing.T) {
 			// }
 			// fmt.Println("---------------------------", i, data[i])
 
-			b := fNodeBuilder{}
+			b := nodeBuilder{}
 			for j, d := range data {
 				if j != i {
 					b.Add(d, uint64(j), 1)
@@ -362,32 +362,32 @@ func TestFnodeDelete(*testing.T) {
 	finished = true
 }
 
-func compare(f, g fnode) string {
-	fit := f.iter()
-	git := g.iter()
+func compare(nd1, nd2 node) string {
+	it1 := nd1.iter()
+	it2 := nd2.iter()
 	for {
-		fok := fit.next()
-		gok := git.next()
-		if fok != gok {
+		ok1 := it1.next()
+		ok2 := it2.next()
+		if ok1 != ok2 {
 			return "DIFFERENT lengths"
 		}
-		if !fok {
+		if !ok1 {
 			return "" // ok
 		}
 		switch {
-		case fit.offset != git.offset:
+		case it1.offset != it2.offset:
 			return "DIFFERENT offsets"
-		case fit.npre != git.npre:
+		case it1.npre != it2.npre:
 			return "DIFFERENT npre"
-		case !bytes.HasPrefix(git.known, fit.known):
+		case !bytes.HasPrefix(it2.known, it1.known):
 			return "DIFFERENT known not prefix"
 		}
 	}
 }
 
-func TestFnodeInsertDelete(*testing.T) {
+func TestNodeInsertDelete(*testing.T) {
 	var ok bool
-	var fn fnode
+	var nd node
 	var data []slot
 	dup := func(key string) bool {
 		for i := range data {
@@ -418,22 +418,22 @@ func TestFnodeInsertDelete(*testing.T) {
 			}
 			off := uint64(i)
 			// print("insert", key, off)
-			fn = fn.insert(key, off, get)
+			nd = nd.insert(key, off, get)
 			data = append(data, slot{key: key, off: off})
 		} else {
 			// delete
 			i := rand.Intn(len(data))
 			// print("delete", data[i].key, data[i].off)
-			fn, ok = fn.delete(data[i].off)
+			nd, ok = nd.delete(data[i].off)
 			assert.That(ok)
 			data[i] = data[len(data)-1]
 			data = data[:len(data)-1]
 		}
-		assert.This(fn.check(get)).Is(len(data))
+		assert.This(nd.check(get)).Is(len(data))
 		for _, s := range data {
-			if !fn.contains(s.key, get) {
+			if !nd.contains(s.key, get) {
 				print(data)
-				fn.printLeafNode(get)
+				nd.printLeafNode(get)
 				panic("lookup failed " + s.key)
 			}
 		}
@@ -442,18 +442,18 @@ func TestFnodeInsertDelete(*testing.T) {
 
 var S1 []byte
 var S2 []byte
-var FN fnode
+var ND node
 
-func BenchmarkFnode(b *testing.B) {
+func BenchmarkNode(b *testing.B) {
 	get := func(i uint64) string { return words[i] }
-	var fn fnode
+	var nd node
 	for i, d := range words {
-		fn = fn.insert(d, uint64(i), get)
+		nd = nd.insert(d, uint64(i), get)
 	}
-	FN = fn
+	ND = nd
 
 	for i := 0; i < b.N; i++ {
-		iter := fn.iter()
+		iter := nd.iter()
 		for iter.next() {
 			S1 = iter.known
 			S2 = iter.diff
@@ -461,21 +461,21 @@ func BenchmarkFnode(b *testing.B) {
 	}
 }
 
-func Example_fnode_BuilderSplit() {
-	var fb fNodeBuilder
-	fb.Add("1234xxxx", 1234, 1)
-	fb.Add("1235xxxx", 1235, 1)
-	fb.Add("1299xxxx", 1299, 1)
-	fb.Add("1300xxxx", 1300, 1)
-	fb.Add("1305xxxx", 1305, 1)
-	store := stor.HeapStor(8192)
-	leftOff, splitKey := fb.Split(store)
+func Example_node_BuilderSplit() {
+	var b nodeBuilder
+	b.Add("1234xxxx", 1234, 1)
+	b.Add("1235xxxx", 1235, 1)
+	b.Add("1299xxxx", 1299, 1)
+	b.Add("1300xxxx", 1300, 1)
+	b.Add("1305xxxx", 1305, 1)
+	st := stor.HeapStor(8192)
+	leftOff, splitKey := b.Split(st)
 	// assert.T(t).This(splitKey).Is("13")
 	fmt.Println("splitKey", splitKey)
 	fmt.Println("LEFT ---")
-	readNode(store, leftOff).print()
+	readNode(st, leftOff).print()
 	fmt.Println("RIGHT ---")
-	fb.fe.print()
+	b.node.print()
 
 	// Output:
 	// splitKey 13
@@ -489,13 +489,13 @@ func Example_fnode_BuilderSplit() {
 }
 
 func Example_merge_split() {
-	var fb fNodeBuilder
-	fb.Add("1234xxxx", 1234, 1)
-	fb.Add("1235xxxx", 1235, 1)
-	fb.Add("1299xxxx", 1299, 1)
-	fb.Add("1300xxxx", 1300, 1)
-	fb.Add("1305xxxx", 1305, 1)
-	m := merge{node: fb.fe, modified: true}
+	var b nodeBuilder
+	b.Add("1234xxxx", 1234, 1)
+	b.Add("1235xxxx", 1235, 1)
+	b.Add("1299xxxx", 1299, 1)
+	b.Add("1300xxxx", 1300, 1)
+	b.Add("1305xxxx", 1305, 1)
+	m := merge{node: b.node, modified: true}
 	left, right, splitKey := m.split()
 	// assert.T(t).This(splitKey).Is("13")
 	fmt.Println("splitKey", splitKey)

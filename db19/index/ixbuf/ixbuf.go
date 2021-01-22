@@ -362,7 +362,7 @@ func (ib *ixbuf) Lookup(key string) uint64 {
 
 type Iter = func() (key string, off uint64, ok bool)
 
-// Iter is used with fbtree.MergeAndSave
+// Iter is used with btree.MergeAndSave
 func (ib *ixbuf) Iter() Iter {
 	if ib.size == 0 {
 		return func() (string, uint64, bool) {

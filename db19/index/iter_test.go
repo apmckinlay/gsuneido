@@ -35,17 +35,17 @@ func TestIterRange(*testing.T) {
 	testIterRange(ib.Iterator())
 
 	store := stor.HeapStor(8192)
-	testIterEmpty(btree.CreateFbtree(store, nil).Iterator())
+	testIterEmpty(btree.CreateBtree(store, nil).Iterator())
 	bldr := btree.Builder(store)
 	for i := start; i <= limit; i++ {
 		key := itoa(i)
 		bldr.Add(key, uint64(i))
 	}
-	fb := bldr.Finish()
+	bt := bldr.Finish()
 	btree.GetLeafKey = func(_ *stor.Stor, _ *ixkey.Spec, i uint64) string {
 		return itoa(int(i))
 	}
-	testIterRange(fb.Iterator())
+	testIterRange(bt.Iterator())
 }
 
 func testIterEmpty(it iterator.T) {
