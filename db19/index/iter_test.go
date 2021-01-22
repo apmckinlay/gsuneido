@@ -8,7 +8,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/apmckinlay/gsuneido/db19/index/fbtree"
+	"github.com/apmckinlay/gsuneido/db19/index/btree"
 	"github.com/apmckinlay/gsuneido/db19/index/iterator"
 	"github.com/apmckinlay/gsuneido/db19/index/ixbuf"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
@@ -16,7 +16,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
-// test for both ixbuf.Iterator and fbtree.Iterator
+// test for both ixbuf.Iterator and btree.Iterator
 
 type Range = iterator.Range
 
@@ -35,14 +35,14 @@ func TestIterRange(*testing.T) {
 	testIterRange(ib.Iterator())
 
 	store := stor.HeapStor(8192)
-	testIterEmpty(fbtree.CreateFbtree(store, nil).Iterator())
-	bldr := fbtree.Builder(store)
+	testIterEmpty(btree.CreateFbtree(store, nil).Iterator())
+	bldr := btree.Builder(store)
 	for i := start; i <= limit; i++ {
 		key := itoa(i)
 		bldr.Add(key, uint64(i))
 	}
 	fb := bldr.Finish()
-	fbtree.GetLeafKey = func(_ *stor.Stor, _ *ixkey.Spec, i uint64) string {
+	btree.GetLeafKey = func(_ *stor.Stor, _ *ixkey.Spec, i uint64) string {
 		return itoa(int(i))
 	}
 	testIterRange(fb.Iterator())

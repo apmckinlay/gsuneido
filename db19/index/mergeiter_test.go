@@ -10,7 +10,7 @@ import (
 	"strconv"
 	"testing"
 
-	"github.com/apmckinlay/gsuneido/db19/index/fbtree"
+	"github.com/apmckinlay/gsuneido/db19/index/btree"
 	"github.com/apmckinlay/gsuneido/db19/index/ixbuf"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
@@ -99,9 +99,9 @@ func TestMergeIter(t *testing.T) {
 
 func TestMergeIterCombine(*testing.T) {
 	var data []string
-	defer func(mns int) { fbtree.MaxNodeSize = mns }(fbtree.MaxNodeSize)
-	fbtree.MaxNodeSize = 64
-	fb := fbtree.CreateFbtree(stor.HeapStor(8192), nil)
+	defer func(mns int) { btree.MaxNodeSize = mns }(btree.MaxNodeSize)
+	btree.MaxNodeSize = 64
+	fb := btree.CreateFbtree(stor.HeapStor(8192), nil)
 	mut := &ixbuf.T{}
 	u := &ixbuf.T{}
 	ov := &Overlay{fb: fb, layers: []*ixbuf.T{u}, mut: mut}

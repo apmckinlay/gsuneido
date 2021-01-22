@@ -12,7 +12,7 @@ import (
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/db19/index"
-	"github.com/apmckinlay/gsuneido/db19/index/fbtree"
+	"github.com/apmckinlay/gsuneido/db19/index/btree"
 	"github.com/apmckinlay/gsuneido/db19/meta"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/dbms/query"
@@ -150,7 +150,7 @@ func buildIndexes(ts *meta.Schema, list *sortlist.Builder, store *stor.Stor, nre
 			list.Sort(mkcmp(store, &ix.Ixspec))
 		}
 		before := store.Size()
-		bldr := fbtree.Builder(store)
+		bldr := btree.Builder(store)
 		iter := list.Iter()
 		n := 0
 		for off := iter(); off != 0; off = iter() {

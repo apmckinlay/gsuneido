@@ -4,7 +4,7 @@
 package db19
 
 import (
-	"github.com/apmckinlay/gsuneido/db19/index/fbtree"
+	"github.com/apmckinlay/gsuneido/db19/index/btree"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/db19/meta"
 	"github.com/apmckinlay/gsuneido/db19/stor"
@@ -128,7 +128,7 @@ func (db *Database) Close() {
 //-------------------------------------------------------------------
 
 func init() {
-	fbtree.GetLeafKey = getLeafKey
+	btree.GetLeafKey = getLeafKey
 }
 
 func getLeafKey(store *stor.Stor, is *ixkey.Spec, off uint64) string {

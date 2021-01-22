@@ -4,7 +4,7 @@
 package index
 
 import (
-	"github.com/apmckinlay/gsuneido/db19/index/fbtree"
+	"github.com/apmckinlay/gsuneido/db19/index/btree"
 	"github.com/apmckinlay/gsuneido/db19/index/ixbuf"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/db19/stor"
@@ -15,8 +15,8 @@ type iter = func() (string, uint64, bool)
 
 // Overlay is the composite in-memory representation of an index
 type Overlay struct {
-	// fb is the stored base fbtree
-	fb *fbtree.T
+	// fb is the stored base btree
+	fb *btree.T
 	// layers is a base ixbuf of merged but not persisted changes,
 	// plus ixbuf's from completed but un-merged transactions
 	layers []*ixbuf.T
@@ -26,11 +26,11 @@ type Overlay struct {
 
 func NewOverlay(store *stor.Stor, is *ixkey.Spec) *Overlay {
 	assert.That(is != nil)
-	return &Overlay{fb: fbtree.CreateFbtree(store, is),
+	return &Overlay{fb: btree.CreateFbtree(store, is),
 		layers: []*ixbuf.T{{}}}
 }
 
-func OverlayFor(fb *fbtree.T) *Overlay {
+func OverlayFor(fb *btree.T) *Overlay {
 	return &Overlay{fb: fb, layers: []*ixbuf.T{{}}}
 }
 
@@ -122,7 +122,7 @@ func (ov *Overlay) Write(w *stor.Writer) {
 
 // ReadOverlay reads an Overlay from storage BUT without ixspec
 func ReadOverlay(st *stor.Stor, r *stor.Reader) *Overlay {
-	return &Overlay{fb: fbtree.Read(st, r), layers: []*ixbuf.T{{}}}
+	return &Overlay{fb: btree.Read(st, r), layers: []*ixbuf.T{{}}}
 }
 
 //-------------------------------------------------------------------
@@ -162,17 +162,17 @@ func (ov *Overlay) WithMerged(mr MergeResult, nmerged int) *Overlay {
 
 //-------------------------------------------------------------------
 
-type SaveResult = *fbtree.T
+type SaveResult = *btree.T
 
-// Save updates the stored fbtree with the base ixbuf
-// and returns the new fbtree to later pass to WithSaved
+// Save updates the stored btree with the base ixbuf
+// and returns the new btree to later pass to WithSaved
 func (ov *Overlay) Save() SaveResult {
 	assert.That(ov.mut == nil)
 	return ov.fb.MergeAndSave(ov.layers[0].Iter())
 }
 
 // WithSaved returns a new Overlay,
-// combining the current state (ov) with the updated fbtree (in ov2)
+// combining the current state (ov) with the updated btree (in ov2)
 func (ov *Overlay) WithSaved(fb SaveResult) *Overlay {
 	layers := make([]*ixbuf.T, len(ov.layers))
 	layers[0] = &ixbuf.T{} // new empty base ixbuf

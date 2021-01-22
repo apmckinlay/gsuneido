@@ -8,7 +8,7 @@ import (
 	"sort"
 	"testing"
 
-	"github.com/apmckinlay/gsuneido/db19/index/fbtree"
+	"github.com/apmckinlay/gsuneido/db19/index/btree"
 	"github.com/apmckinlay/gsuneido/db19/index/ixbuf"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/db19/index/testdata"
@@ -19,9 +19,9 @@ import (
 
 func TestOverlay(*testing.T) {
 	var data []string
-	defer func(mns int) { fbtree.MaxNodeSize = mns }(fbtree.MaxNodeSize)
-	fbtree.MaxNodeSize = 64
-	fb := fbtree.CreateFbtree(stor.HeapStor(8192), nil)
+	defer func(mns int) { btree.MaxNodeSize = mns }(btree.MaxNodeSize)
+	btree.MaxNodeSize = 64
+	fb := btree.CreateFbtree(stor.HeapStor(8192), nil)
 	mut := &ixbuf.T{}
 	u := &ixbuf.T{}
 	ov := &Overlay{fb: fb, layers: []*ixbuf.T{u}, mut: mut}
@@ -84,12 +84,12 @@ func checkIter(data []string, ov *Overlay) {
 
 func TestOverlayBug(*testing.T) {
 	d := testdata.New()
-	fbtree.GetLeafKey = d.GetLeafKey
-	defer func(mns int) { fbtree.MaxNodeSize = mns }(fbtree.MaxNodeSize)
-	fbtree.MaxNodeSize = 64
+	btree.GetLeafKey = d.GetLeafKey
+	defer func(mns int) { btree.MaxNodeSize = mns }(btree.MaxNodeSize)
+	btree.MaxNodeSize = 64
 	const n = 100
 
-	fb := fbtree.CreateFbtree(stor.HeapStor(8192), nil)
+	fb := btree.CreateFbtree(stor.HeapStor(8192), nil)
 	ov := &Overlay{fb: fb}
 	d.CheckIter(ov.Iterator())
 
@@ -124,12 +124,12 @@ func TestOverlayMerge(t *testing.T) {
 		return mut
 	}
 	mut := randIxbuf()
-	fbtree.GetLeafKey = func(_ *stor.Stor, _ *ixkey.Spec, i uint64) string {
+	btree.GetLeafKey = func(_ *stor.Stor, _ *ixkey.Spec, i uint64) string {
 		return data[i]
 	}
-	defer func(mns int) { fbtree.MaxNodeSize = mns }(fbtree.MaxNodeSize)
-	fbtree.MaxNodeSize = 64
-	fb := fbtree.CreateFbtree(stor.HeapStor(8192), nil)
+	defer func(mns int) { btree.MaxNodeSize = mns }(btree.MaxNodeSize)
+	btree.MaxNodeSize = 64
+	fb := btree.CreateFbtree(stor.HeapStor(8192), nil)
 	bi := &ixbuf.T{}
 	ov := Overlay{fb: fb, layers: []*ixbuf.T{bi, mut}}
 	bi = ov.Merge(1)
@@ -158,16 +158,16 @@ func checkData(t *testing.T, bi *ixbuf.T, data []string) {
 
 func TestOverlayLookup(*testing.T) {
 	dat := testdata.New()
-	fbtree.GetLeafKey = dat.GetLeafKey
-	defer func(mns int) { fbtree.MaxNodeSize = mns }(fbtree.MaxNodeSize)
-	fbtree.MaxNodeSize = 128
+	btree.GetLeafKey = dat.GetLeafKey
+	defer func(mns int) { btree.MaxNodeSize = mns }(btree.MaxNodeSize)
+	btree.MaxNodeSize = 128
 	store := stor.HeapStor(8192)
-	randFbtree := func(nkeys int) *fbtree.T {
+	randFbtree := func(nkeys int) *btree.T {
 		for i := 0; i < nkeys; i++ {
 			dat.Gen()
 		}
 		sort.Strings(dat.Keys)
-		b := fbtree.Builder(store)
+		b := btree.Builder(store)
 		for _, k := range dat.Keys {
 			b.Add(k, dat.K2o[k])
 		}
