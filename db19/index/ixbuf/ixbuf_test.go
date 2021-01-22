@@ -162,7 +162,7 @@ func TestMergeRandom(*testing.T) {
 	assert.This(ib.Len()).Is(len(data))
 	sort.Sort(data)
 	i := 0
-	iter := ib.Iter(false)
+	iter := ib.Iter()
 	for k, o, ok := iter(); ok; k, o, ok = iter() {
 		assert.This(k).Is(data[i].key)
 		assert.This(o).Is(data[i].off)
@@ -204,7 +204,7 @@ func TestMergeUpdate(t *testing.T) {
 func (ib *ixbuf) String() string {
 	var sb strings.Builder
 	fmt.Fprint(&sb, ib.size)
-	iter := ib.Iter(false)
+	iter := ib.Iter()
 	for k, o, ok := iter(); ok; k, o, ok = iter() {
 		fmt.Fprint(&sb, ", ", k, " ", o)
 	}
@@ -273,14 +273,14 @@ func TestLookup(*testing.T) {
 
 func TestIter(t *testing.T) {
 	ib := &ixbuf{}
-	iter := ib.Iter(false)
+	iter := ib.Iter()
 	_, _, ok := iter()
 	assert.That(!ok)
 	const nkeys = 1000
 	for i := nkeys; i < nkeys*2; i++ {
 		ib.Insert(strconv.Itoa(i), 1)
 	}
-	iter = ib.Iter(false)
+	iter = ib.Iter()
 	for i := nkeys; i < nkeys*2; i++ {
 		key, _, ok := iter()
 		assert.That(ok)
@@ -288,20 +288,6 @@ func TestIter(t *testing.T) {
 	}
 	_, _, ok = iter()
 	assert.That(!ok)
-}
-
-func TestForEach(t *testing.T) {
-	const nkeys = 1000
-	ib := &ixbuf{}
-	for i := nkeys; i < nkeys*2; i++ {
-		ib.Insert(strconv.Itoa(i), 1)
-	}
-	i := nkeys
-	ib.ForEach(func(key string, _ uint64) {
-		assert.T(t).This(key).Is(strconv.Itoa(i))
-		i++
-	})
-	assert.T(t).This(i).Is(nkeys * 2)
 }
 
 func TestIterator(t *testing.T) {
@@ -369,7 +355,7 @@ func TestIterator(t *testing.T) {
 func TestIterRange(t *testing.T) {
 	ib := &ixbuf{}
 	data := strings.Fields("a b c d e f g h")
-	for _,d := range data {
+	for _, d := range data {
 		ib.Insert(d, 1)
 	}
 	it := ib.Iterator()

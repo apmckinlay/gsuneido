@@ -14,7 +14,7 @@ type Iterator struct {
 	state iterState
 	// stack is the path to the current position
 	// stack[0] is the leaf, stack[treeLevels] is the root
-	stack  [maxlevels]nodeIter
+	stack  [maxlevels + 1]nodeIter
 	curKey string
 	curOff uint64
 	// rng is the Range of the iterator

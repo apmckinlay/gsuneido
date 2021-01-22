@@ -13,7 +13,7 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/stor"
 )
 
-func TestMerge(*testing.T) {
+func TestMergeAndSave(*testing.T) {
 	nMerges := 2000
 	opsPerMerge := 1000
 	if testing.Short() {
@@ -47,10 +47,11 @@ func TestMerge(*testing.T) {
 				d.Delete(i)
 			}
 		}
-		fb = fb.MergeAndSave(x.Iter(false))
+		fb = fb.MergeAndSave(x.Iter())
 	}
 	fb.Check(nil)
 	d.Check(fb)
+	d.CheckIter(fb.Iterator())
 }
 
 //-------------------------------------------------------------------

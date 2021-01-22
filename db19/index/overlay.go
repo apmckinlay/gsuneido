@@ -92,82 +92,22 @@ func (ov *Overlay) Modified() bool {
 	return ov.layers[0].Len() > 0
 }
 
-// iter -------------------------------------------------------------
-
-type ovsrc struct {
-	iter
-	key string
-	off uint64
-}
-
-type ovsrcs struct {
-	srcs []ovsrc
-}
-
-// Iter returns an iterator function
-func (ov *Overlay) Iter(check bool) iter {
-	if ov.mut == nil && len(ov.layers) == 0 {
-		// only fbtree, no merge needed
-		return ov.fb.Iter(check)
-	}
-	in := ovsrcs{srcs: make([]ovsrc, 1, len(ov.layers)+2)}
-	in.srcs[0] = ovsrc{iter: ov.fb.Iter(check)}
-	for i := range ov.layers {
-		in.srcs = append(in.srcs, ovsrc{iter: ov.layers[i].Iter(check)})
-	}
-	if ov.mut != nil {
-		in.srcs = append(in.srcs, ovsrc{iter: ov.mut.Iter(check)})
-	}
-	// iterate backwards since next may remove source
-	for i := len(in.srcs) - 1; i >= 0; i-- {
-		in.next(i)
-	}
-	return in.iter
-}
-
-func (in *ovsrcs) next(i int) {
-	src := &in.srcs[i]
-	var ok bool
-	src.key, src.off, ok = src.iter()
-	if !ok {
-		// remove ended source
-		copy(in.srcs[i:], in.srcs[i+1:])
-		in.srcs = in.srcs[:len(in.srcs)-1]
-	}
-}
-
-// iter returns the next element
-func (in *ovsrcs) iter() (string, uint64, bool) {
-outer:
-	for {
-		if len(in.srcs) == 0 {
-			return "", 0, false
-		}
-		imin := 0
-		kmin := in.srcs[0].key
-		off := in.srcs[0].off
-		for i := 1; i < len(in.srcs); i++ {
-			key := in.srcs[i].key
-			if key <= kmin {
-				if key < kmin {
-					imin = i
-					kmin = in.srcs[i].key
-					off = in.srcs[i].off
-				} else { // equal
-					off = ixbuf.Combine(off, in.srcs[i].off)
-					if off == 0 {
-						// add,delete so skip
-						// may not be the final minimum, but still need to skip
-						in.next(i)
-						in.next(imin)
-						continue outer
-					}
-				}
+func (ov *Overlay) Iterator() *MergeIter {
+	callback := func(mc int) (int, []iterT) {
+		if mc == -1 {
+			its := make([]iterT, 0, 2+len(ov.layers))
+			its = append(its, ov.fb.Iterator())
+			for _, ib := range ov.layers {
+				its = append(its, ib.Iterator())
 			}
+			if ov.mut != nil {
+				its = append(its, ov.mut.Iterator())
+			}
+			return 0, its
 		}
-		in.next(imin)
-		return kmin, off, true
+		return mc, nil //FIXME handle modifications
 	}
+	return NewMergeIter(callback)
 }
 
 //-------------------------------------------------------------------
@@ -228,7 +168,7 @@ type SaveResult = *fbtree.T
 // and returns the new fbtree to later pass to WithSaved
 func (ov *Overlay) Save() SaveResult {
 	assert.That(ov.mut == nil)
-	return ov.fb.MergeAndSave(ov.layers[0].Iter(false))
+	return ov.fb.MergeAndSave(ov.layers[0].Iter())
 }
 
 // WithSaved returns a new Overlay,

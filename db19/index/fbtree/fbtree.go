@@ -194,52 +194,6 @@ func (fb *fbtree) check1(depth int, offset uint64, key *string,
 	return
 }
 
-// iter -------------------------------------------------------------
-
-type fbIter = func() (string, uint64, bool)
-
-// Iter returns a function that can be called to return consecutive entries.
-// NOTE: The returned key is only the known prefix.
-// (unlike ixbuf.Iter which returns the actual key)
-func (fb *fbtree) Iter(check bool) fbIter {
-	var stack [maxlevels]*fnIter
-
-	// traverse down the tree to the leftmost leaf, making a stack of iterators
-	nodeOff := fb.root
-	for i := 0; i < fb.treeLevels; i++ {
-		stack[i] = fb.getNodeCk(nodeOff, check).iter()
-		stack[i].next()
-		nodeOff = stack[i].offset
-	}
-	iter := fb.getNodeCk(nodeOff, check).iter()
-
-	return func() (string, uint64, bool) {
-		for {
-			if iter.next() {
-				return string(iter.known), iter.offset, true // most common path
-			}
-			// end of leaf, go up the tree
-			i := fb.treeLevels - 1
-			for ; i >= 0; i-- {
-				if stack[i].next() {
-					nodeOff = stack[i].offset
-					break
-				}
-			}
-			if i == -1 {
-				return "", 0, false // eof
-			}
-			// and then back down to the next leaf
-			for i++; i < fb.treeLevels; i++ {
-				stack[i] = fb.getNodeCk(nodeOff, check).iter()
-				stack[i].next()
-				nodeOff = stack[i].offset
-			}
-			iter = fb.getNodeCk(nodeOff, check).iter()
-		}
-	}
-}
-
 // print ------------------------------------------------------------
 
 func (fb *fbtree) print() {

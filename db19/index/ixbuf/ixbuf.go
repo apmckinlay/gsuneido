@@ -362,7 +362,8 @@ func (ib *ixbuf) Lookup(key string) uint64 {
 
 type Iter = func() (key string, off uint64, ok bool)
 
-func (ib *ixbuf) Iter(bool) Iter {
+// Iter is used with fbtree.MergeAndSave
+func (ib *ixbuf) Iter() Iter {
 	if ib.size == 0 {
 		return func() (string, uint64, bool) {
 			return "", 0, false
@@ -383,16 +384,6 @@ func (ib *ixbuf) Iter(bool) Iter {
 		}
 		slot := c[i]
 		return slot.key, slot.off, true
-	}
-}
-
-type Visitor func(key string, off uint64)
-
-func (ib *ixbuf) ForEach(fn Visitor) {
-	for _, c := range ib.chunks {
-		for _, slot := range c {
-			fn(slot.key, slot.off)
-		}
 	}
 }
 

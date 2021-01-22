@@ -17,7 +17,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
-func TestEmptyOverlay(*testing.T) {
+func TestOverlay(*testing.T) {
 	var data []string
 	defer func(mns int) { fbtree.MaxNodeSize = mns }(fbtree.MaxNodeSize)
 	fbtree.MaxNodeSize = 64
@@ -67,18 +67,19 @@ func key2off(key string) uint64 {
 
 func checkIter(data []string, ov *Overlay) {
 	sort.Strings(data)
-	it := ov.Iter(true)
+	it := ov.Iterator()
 	for _, k := range data {
 		if k == "" {
 			continue
 		}
-		k2, o2, ok := it()
-		assert.True(ok)
+		it.Next()
+		assert.False(it.Eof())
+		k2, o2 := it.Cur()
 		assert.This(k2).Is(k)
 		assert.This(o2).Is(key2off(k))
 	}
-	_, _, ok := it()
-	assert.False(ok)
+	it.Next()
+	assert.True(it.Eof())
 }
 
 func TestOverlayBug(*testing.T) {
@@ -90,16 +91,16 @@ func TestOverlayBug(*testing.T) {
 
 	fb := fbtree.CreateFbtree(stor.HeapStor(8192), nil)
 	ov := &Overlay{fb: fb}
-	d.CheckIter(ov.Iter(false))
+	d.CheckIter(ov.Iterator())
 
 	u := &ixbuf.T{}
 	insertTestData(d, n, u)
 	ov.layers = []*ixbuf.T{u}
-	d.CheckIter(ov.Iter(false))
+	d.CheckIter(ov.Iterator())
 
-	ov.fb = ov.fb.MergeAndSave(u.Iter(false))
+	ov.fb = ov.fb.MergeAndSave(u.Iter())
 	ov.layers[0] = &ixbuf.T{}
-	d.CheckIter(ov.Iter(false))
+	d.CheckIter(ov.Iterator())
 }
 
 func insertTestData(dat *testdata.T, n int, dest *ixbuf.T) {
@@ -146,7 +147,7 @@ func checkData(t *testing.T, bi *ixbuf.T, data []string) {
 	sort.Strings(data)
 	i := 0
 	n := 0
-	it := bi.Iter(false)
+	it := bi.Iter()
 	for key, _, ok := it(); ok; key, _, ok = it() {
 		assert.T(t).This(key).Is(data[i])
 		i++
@@ -167,7 +168,7 @@ func TestOverlayLookup(*testing.T) {
 		}
 		sort.Strings(dat.Keys)
 		b := fbtree.Builder(store)
-		for _,k := range dat.Keys {
+		for _, k := range dat.Keys {
 			b.Add(k, dat.K2o[k])
 		}
 		return b.Finish()
@@ -183,7 +184,7 @@ func TestOverlayLookup(*testing.T) {
 	layers := []*ixbuf.T{randIxbuf(1000), randIxbuf(100)}
 	mut := randIxbuf(100)
 	ov := &Overlay{fb: fb, layers: layers, mut: mut}
-	for _,k := range dat.Keys {
+	for _, k := range dat.Keys {
 		assert.This(ov.Lookup(k)).Is(dat.K2o[k])
 		assert.This(ov.Lookup(k + "0")).Is(0) // nonexistent
 	}

@@ -77,29 +77,33 @@ func (d *dat) Update(key string, off uint64) {
 	d.O2k[off] = key
 }
 
-type iter = func() (string, uint64, bool)
-
 type tree interface {
 	Lookup(key string) uint64
-	Iter(bool) iter
 }
 
 func (d *dat) Check(fb tree) {
 	for _, key := range d.Keys {
-		assert.Msg(key).
-			This(fb.Lookup(key)).Is(d.K2o[key])
+		assert.Msg(key).This(fb.Lookup(key)).Is(d.K2o[key])
 	}
-	d.CheckIter(fb.Iter(true))
 }
 
-func (d *dat) CheckIter(it iter) {
+func (d *dat) CheckIter(it nextable) {
 	sort.Strings(d.Keys)
 	i := 0
-	for k, o, ok := it(); ok; k, o, ok = it() {
+	it.Rewind()
+	for it.Next(); !it.Eof(); it.Next() {
+		k, o := it.Cur()
 		assert.Msg("expect prefix of " + d.Keys[i] + " got " + k).
 			That(strings.HasPrefix(d.Keys[i], k))
 		assert.This(d.O2k[o]).Is(d.Keys[i])
 		i++
 	}
 	assert.This(i).Is(len(d.Keys))
+}
+
+type nextable interface {
+	Next()
+	Rewind()
+	Eof() bool
+	Cur() (string, uint64)
 }
