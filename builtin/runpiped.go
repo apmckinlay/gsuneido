@@ -80,6 +80,11 @@ func (rp *suRunPiped) close() {
 	nRunPiped--
 	rp.r.Close()
 	rp.r = nil
+	if rp.w != nil {
+		rp.w.Close()
+		rp.w = nil
+	}
+	rp.cmd.Process.Release()
 }
 
 // Value ------------------------------------------------------------
