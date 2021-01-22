@@ -24,9 +24,7 @@ func TestMergeAndSave(*testing.T) {
 	GetLeafKey = d.GetLeafKey
 	defer func(mns int) { MaxNodeSize = mns }(MaxNodeSize)
 	MaxNodeSize = 64
-	st := stor.HeapStor(8192)
-	st.Alloc(1) // avoid offset 0
-	bt := CreateBtree(st, nil)
+	bt := CreateBtree(stor.HeapStor(8192), nil)
 
 	for i := 0; i < nMerges; i++ {
 		_ = t && trace("---")

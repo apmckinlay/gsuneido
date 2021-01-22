@@ -24,8 +24,6 @@ func TestMeta(t *testing.T) {
 		})
 	}
 	tbl = tbl.Freeze()
-	st := stor.HeapStor(32 * 1024)
-	st.Alloc(1) // avoid offset 0
 	meta := &Meta{info: tbl}
 
 	for i := 0; i < 4; i++ {
@@ -39,6 +37,7 @@ func TestMeta(t *testing.T) {
 	}
 
 	// persist state
+	st := stor.HeapStor(32 * 1024)
 	meta.Write(st, true)
 
 	// test that nothing is written if no changes
