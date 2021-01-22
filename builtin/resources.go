@@ -3,7 +3,11 @@
 
 package builtin
 
-import . "github.com/apmckinlay/gsuneido/runtime"
+import (
+	"runtime"
+
+	. "github.com/apmckinlay/gsuneido/runtime"
+)
 
 var _ = builtin0("ResourceCounts()", func() Value {
 	ob := &SuObject{}
@@ -12,9 +16,10 @@ var _ = builtin0("ResourceCounts()", func() Value {
 	add(ob, "SocketClient", nSocketClient)
 	add(ob, "Callbacks", CallbacksCount())
 	add(ob, "WndProcs", WndProcCount())
-	gdi,user := GetGuiResources()
+	gdi, user := GetGuiResources()
 	add(ob, "gdiobj", gdi)
 	add(ob, "userobj", user)
+	add(ob, "goroutines", runtime.NumGoroutine())
 	return ob
 })
 
