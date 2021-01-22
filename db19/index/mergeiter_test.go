@@ -6,10 +6,13 @@ package index
 import (
 	"fmt"
 	"math/rand"
+	"sort"
 	"strconv"
 	"testing"
 
+	"github.com/apmckinlay/gsuneido/db19/index/fbtree"
 	"github.com/apmckinlay/gsuneido/db19/index/ixbuf"
+	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
@@ -92,6 +95,73 @@ func TestMergeIter(t *testing.T) {
 	testPrev(77)
 	modCount++
 	testPrev(7)
+}
+
+func TestMergeIterCombine(*testing.T) {
+	var data []string
+	defer func(mns int) { fbtree.MaxNodeSize = mns }(fbtree.MaxNodeSize)
+	fbtree.MaxNodeSize = 64
+	fb := fbtree.CreateFbtree(stor.HeapStor(8192), nil)
+	mut := &ixbuf.T{}
+	u := &ixbuf.T{}
+	ov := &Overlay{fb: fb, layers: []*ixbuf.T{u}, mut: mut}
+	checkIter(data, ov)
+
+	const n = 100
+	randKey := str.UniqueRandom(3, 7)
+
+	data = insert(data, n, randKey, mut)
+	checkIterator(data, ov)
+
+	data = insert(data, n, randKey, u)
+	checkIterator(data, ov)
+
+	count := len(data)
+	assert.This(count).Is(n * 2)
+
+	for i := 0; i < n/2; i++ {
+		j := rand.Intn(len(data))
+		if data[j] != "" {
+			ov.Delete(data[j], key2off(data[j]))
+			data[j] = ""
+			count--
+		}
+	}
+	count2 := checkIterator(data, ov)
+	assert.This(count2).Is(count)
+}
+
+func checkIterator(data []string, ov *Overlay) int {
+	sort.Strings(data)
+	callback := func(mc int) (int, []iterT) {
+		if mc == -1 {
+			its := make([]iterT, 0, 2+len(ov.layers))
+			its = append(its, ov.fb.Iterator())
+			for _, ib := range ov.layers {
+				its = append(its, ib.Iterator())
+			}
+			if ov.mut != nil {
+				its = append(its, ov.mut.Iterator())
+			}
+			return 0, its
+		}
+		return mc, nil
+	}
+	count := 0
+	it := NewMergeIter(callback)
+	for _, k := range data {
+		if k == "" {
+			continue
+		}
+		it.Next()
+		k2, o2 := it.Cur()
+		assert.This(k2).Is(k)
+		assert.This(o2).Is(key2off(k))
+		count++
+	}
+	it.Next()
+	assert.True(it.Eof())
+	return count
 }
 
 func TestMergeIterRandom(*testing.T) {

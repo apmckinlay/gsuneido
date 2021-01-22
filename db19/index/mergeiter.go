@@ -3,7 +3,10 @@
 
 package index
 
-import "github.com/apmckinlay/gsuneido/db19/index/iterator"
+import (
+	"github.com/apmckinlay/gsuneido/db19/index/iterator"
+	"github.com/apmckinlay/gsuneido/db19/index/ixbuf"
+)
 
 type iterT = iterator.T
 
@@ -75,11 +78,9 @@ func (mi *MergeIter) Next() {
 	} else {
 		mi.modNext()
 	}
-	mi.curIter = mi.minIter()
+	mi.curIter, mi.curKey, mi.curOff = mi.minIter()
 	if mi.curIter == -1 {
 		mi.state = eof
-	} else {
-		mi.curKey, mi.curOff = mi.iters[mi.curIter].Cur()
 	}
 	mi.lastDir = next
 }
@@ -121,20 +122,34 @@ func nextRewind(it iterT) {
 	it.Next()
 }
 
-// minIter returns the index of the iterator with the minimum current value
-func (mi *MergeIter) minIter() int {
-	itMin := -1
-	var keyMin string
-	for i, it := range mi.iters {
-		if !it.Eof() {
-			key, _ := it.Cur()
-			if itMin == -1 || key < keyMin {
-				itMin = i
-				keyMin = key
+// minIter finds the the minimum current key
+func (mi *MergeIter) minIter() (int, string, uint64) {
+outer:
+	for {
+		itMin := -1
+		var keyMin string
+		var offMin uint64
+		for i, it := range mi.iters {
+			if !it.Eof() {
+				key, off := it.Cur()
+				if itMin == -1 || key < keyMin {
+					itMin = i
+					keyMin = key
+					offMin = off
+				} else if key == keyMin {
+					off = ixbuf.Combine(offMin, off)
+					if off == 0 {
+						// add,delete so skip
+						// may not be the final minimum, but still need to skip
+						it.Next()
+						mi.iters[itMin].Next()
+						continue outer
+					}
+				}
 			}
 		}
+		return itMin, keyMin, offMin
 	}
-	return itMin
 }
 
 func (mi *MergeIter) Prev() {
@@ -151,11 +166,9 @@ func (mi *MergeIter) Prev() {
 	} else {
 		mi.modPrev()
 	}
-	mi.curIter = mi.maxIter()
+	mi.curIter, mi.curKey, mi.curOff = mi.maxIter()
 	if mi.curIter == -1 {
 		mi.state = eof
-	} else {
-		mi.curKey, mi.curOff = mi.iters[mi.curIter].Cur()
 	}
 	mi.lastDir = prev
 }
@@ -191,20 +204,34 @@ func prevRewind(it iterT) {
 	it.Prev()
 }
 
-// maxIter returns the index of the iterator with the maximum current value
-func (mi *MergeIter) maxIter() int {
-	itMax := -1
-	var keyMax string
-	for i, it := range mi.iters {
-		if !it.Eof() {
-			key, _ := it.Cur()
-			if itMax == -1 || key > keyMax {
-				itMax = i
-				keyMax = key
+// maxIter finds the maximum current key
+func (mi *MergeIter) maxIter() (int, string, uint64) {
+outer:
+	for {
+		itMax := -1
+		var keyMax string
+		var offMax uint64
+		for i, it := range mi.iters {
+			if !it.Eof() {
+				key, off := it.Cur()
+				if itMax == -1 || key > keyMax {
+					itMax = i
+					keyMax = key
+					offMax = off
+				} else if key == keyMax {
+					off = ixbuf.Combine(offMax, off)
+					if off == 0 {
+						// add,delete so skip
+						// may not be the final minimum, but still need to skip
+						it.Next()
+						mi.iters[itMax].Next()
+						continue outer
+					}
+				}
 			}
 		}
+		return itMax, keyMax, offMax
 	}
-	return itMax
 }
 
 func (mi *MergeIter) Rewind() {
