@@ -23,8 +23,28 @@ func TestInsert(t *testing.T) {
 		ib.Insert(r(), uint64(i))
 	}
 	assert.T(t).This(ib.size).Is(nkeys)
-	// x.stats()
+	// ib.stats()
 	ib.check()
+}
+
+func TestBig(t *testing.T) {
+	big := &ixbuf{}
+	r := str.UniqueRandom(4, 8)
+	n := 256
+	if testing.Short() {
+		n = 64
+	}
+	const m = 1000
+	for j := 0; j < n; j++ {
+		ib := &ixbuf{}
+		for i := 0; i < m; i++ {
+			ib.Insert(r(), uint64(i))
+		}
+		big = Merge(big, ib)
+	}
+	assert.T(t).This(big.size).Is(n * m)
+	// big.stats()
+	big.check()
 }
 
 func BenchmarkInsert(b *testing.B) {
@@ -398,7 +418,7 @@ func TestIterRange(t *testing.T) {
 
 func (ib *ixbuf) stats() {
 	fmt.Println("size", ib.size, "chunks", len(ib.chunks),
-		"avg size", int(ib.size)/len(ib.chunks), "goal", goal(ib.size))
+		"avg size", int(ib.size)/len(ib.chunks), "goal", goal(ib.size)*2/3)
 }
 
 func (ib *ixbuf) print() {

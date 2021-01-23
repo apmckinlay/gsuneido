@@ -50,10 +50,14 @@ func goal(n int32) int {
 		return 16 + 16/2
 	case n < 1024:
 		return 32 + 32/2
-	case n < 4096:
+	case n < 4 * 1024:
 		return 64 + 64/2
-	default:
+	case n < 16 * 1024:
 		return 128 + 128/2
+	case n < 64 * 1024:
+		return 256 + 256/2
+	default:
+		return 512 + 512/2
 	}
 }
 
