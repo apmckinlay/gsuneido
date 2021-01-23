@@ -18,8 +18,6 @@ import (
 
 // test for both ixbuf.Iterator and btree.Iterator
 
-type Range = iterator.Range
-
 var itoa = strconv.Itoa
 
 func TestIterRange(*testing.T) {

@@ -10,6 +10,8 @@ import (
 
 type iterT = iterator.T
 
+type Range = iterator.Range
+
 // mergeCallback is a function passed into a MergeIter
 // so it can determine if the underlying container (normally an Overlay)
 // has been modified.
@@ -34,6 +36,7 @@ type MergeIter struct {
 	curIter int
 	state
 	lastDir dir
+	rng     Range
 }
 
 type state byte
@@ -62,6 +65,14 @@ func (mi *MergeIter) Eof() bool {
 
 func (mi *MergeIter) Cur() (string, uint64) {
 	return mi.curKey, mi.curOff
+}
+
+func (mi *MergeIter) Range(rng Range) {
+	 mi.rng = rng
+	 mi.state = rewound
+	 for _,it := range mi.iters {
+		it.Range(rng)
+	 }
 }
 
 func (mi *MergeIter) Next() {

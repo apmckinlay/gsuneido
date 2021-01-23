@@ -95,6 +95,17 @@ func TestMergeIter(t *testing.T) {
 	testPrev(77)
 	modCount++
 	testPrev(7)
+
+	it.Range(Range{Org: "3", End: "6"})
+	testNext(3)
+	testNext(4)
+	testPrev(3)
+	testPrev(-1)
+	it.Rewind()
+	testPrev(5)
+	testPrev(4)
+	testNext(5)
+	testNext(-1)
 }
 
 func TestMergeIterCombine(*testing.T) {
