@@ -17,7 +17,15 @@ import (
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
-func TestMergeIter(t *testing.T) {
+type testTran struct {
+	getIndex func() *Overlay
+}
+
+func (t *testTran) GetIndex(string, string) *Overlay {
+	return t.getIndex()
+}
+
+func TestOverIter(t *testing.T) {
 	assert := assert.T(t)
 	from := func(args ...int) *ixbuf.T {
 		ib := &ixbuf.T{}
@@ -28,14 +36,8 @@ func TestMergeIter(t *testing.T) {
 	}
 	even := from(0, 2, 4, 6, 8)
 	odd := from(1, 3, 5, 7, 9)
-	modCount := 0
-	callback := func(mc int) (int, []iterT) {
-		if mc == modCount {
-			return mc, nil
-		}
-		return modCount, []iterT{even.Iterator(), odd.Iterator()}
-	}
-	it := NewOverIter(callback)
+	bt := btree.CreateBtree(stor.HeapStor(8192), nil)
+	it := NewOverIter("", "")
 	test := func(expected int) {
 		t.Helper()
 		if expected == -1 {
@@ -46,12 +48,18 @@ func TestMergeIter(t *testing.T) {
 			assert.This(off).Is(uint64(expected))
 		}
 	}
-	testNext := func(expected int) { it.Next(); t.Helper(); test(expected) }
-	testPrev := func(expected int) { it.Prev(); t.Helper(); test(expected) }
+	newTran := func() *testTran {
+		return &testTran{getIndex: func() *Overlay {
+			return &Overlay{bt: bt, layers: []*ixbuf.T{even, odd}}
+		}}
+	}
+	tran := newTran()
+	testNext := func(expected int) { it.Next(tran); t.Helper(); test(expected) }
+	testPrev := func(expected int) { it.Prev(tran); t.Helper(); test(expected) }
 	for i := 0; i < 10; i++ {
 		testNext(i)
 		if i == 5 {
-			modCount++
+			tran = newTran()
 		}
 	}
 	testNext(-1)
@@ -60,7 +68,7 @@ func TestMergeIter(t *testing.T) {
 	for i := 9; i >= 0; i-- {
 		testPrev(i)
 		if i == 5 {
-			modCount++
+			tran = newTran()
 		}
 	}
 	testPrev(-1)
@@ -83,17 +91,19 @@ func TestMergeIter(t *testing.T) {
 	testNext(0)
 	testNext(1)
 	even.Insert("11", 11)
+	tran = newTran()
 	testNext(11)
 	testNext(2)
 	even.Delete("11", 11)
+	tran = newTran()
 	testPrev(1) // modified AND changed direction
 
 	it.Rewind()
 	testPrev(9)
 	testPrev(8)
 	odd.Insert("77", 77)
+	tran = newTran()
 	testPrev(77)
-	modCount++
 	testPrev(7)
 
 	it.Range(Range{Org: "3", End: "6"})
@@ -108,7 +118,7 @@ func TestMergeIter(t *testing.T) {
 	testNext(-1)
 }
 
-func TestMergeIterCombine(*testing.T) {
+func TestOverIterCombine(*testing.T) {
 	var data []string
 	defer func(mns int) { btree.MaxNodeSize = mns }(btree.MaxNodeSize)
 	btree.MaxNodeSize = 64
@@ -144,38 +154,25 @@ func TestMergeIterCombine(*testing.T) {
 
 func checkIterator(data []string, ov *Overlay) int {
 	sort.Strings(data)
-	callback := func(mc int) (int, []iterT) {
-		if mc == -1 {
-			its := make([]iterT, 0, 2+len(ov.layers))
-			its = append(its, ov.bt.Iterator())
-			for _, ib := range ov.layers {
-				its = append(its, ib.Iterator())
-			}
-			if ov.mut != nil {
-				its = append(its, ov.mut.Iterator())
-			}
-			return 0, its
-		}
-		return mc, nil
-	}
 	count := 0
-	it := NewOverIter(callback)
+	it := NewOverIter("", "")
+	tran := &testTran{getIndex: func() *Overlay { return ov }}
 	for _, k := range data {
 		if k == "" {
 			continue
 		}
-		it.Next()
+		it.Next(tran)
 		k2, o2 := it.Cur()
 		assert.This(k2).Is(k)
 		assert.This(o2).Is(key2off(k))
 		count++
 	}
-	it.Next()
+	it.Next(tran)
 	assert.True(it.Eof())
 	return count
 }
 
-func TestMergeIterRandom(*testing.T) {
+func TestOverIterRandom(*testing.T) {
 	trace := func(args ...interface{}) {
 		// fmt.Print(args...)
 	}
@@ -190,16 +187,11 @@ func TestMergeIterRandom(*testing.T) {
 	data := new(dummy)
 	it := &dumIter{d: data}
 	which := map[string]int{}
-	ibs := [3]ixbuf.T{}
-	modCount := 0
-	callback := func(mc int) (int, []iterT) {
-		if mc == modCount {
-			return mc, nil
-		}
-		return modCount,
-			[]iterT{ibs[0].Iterator(), ibs[1].Iterator(), ibs[2].Iterator()}
-	}
-	mi := NewOverIter(callback)
+	bt := btree.CreateBtree(stor.HeapStor(8192), nil)
+	ibs := []*ixbuf.T{{}, {}, {}}
+	ov := &Overlay{bt: bt, layers: ibs}
+	tran := &testTran{getIndex: func() *Overlay { return ov }}
+	mi := NewOverIter("", "")
 	check := func() {
 		if it.Eof() {
 			traceln("EOF")
@@ -216,7 +208,7 @@ func TestMergeIterRandom(*testing.T) {
 		if e := recover(); e != nil {
 			traceln("===== merge")
 			mi.Rewind()
-			for mi.Next(); !mi.Eof(); mi.Next() {
+			for mi.Next(tran); !mi.Eof(); mi.Next(tran) {
 				key, _ := mi.Cur()
 				traceln(mi.curIter, key)
 			}
@@ -260,15 +252,15 @@ func TestMergeIterRandom(*testing.T) {
 			mi.Rewind()
 		case 2:
 			traceln("invalidate")
-			modCount++
+			tran = &testTran{getIndex: func() *Overlay { return ov }}
 		case 3, 4: // next
 			it.Next()
-			mi.Next()
+			mi.Next(tran)
 			trace("next ")
 			check()
 		case 5, 6: // prev
 			it.Prev()
-			mi.Prev()
+			mi.Prev(tran)
 			trace("prev ")
 			check()
 		}
@@ -302,7 +294,7 @@ func (d dat) delete(key string) {
 
 // dummy and dumIter are a very simple, and therefore hopefully correct,
 // version of an ordered iterable container.
-// They are used by TestMergeIterRandom to verify the behavior of MergeIter.
+// They are used by TestOverIterRandom to verify the behavior of OverIter.
 type dummy struct {
 	keys []string
 }

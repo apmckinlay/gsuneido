@@ -12,22 +12,14 @@ type iterT = iterator.T
 
 type Range = iterator.Range
 
-// mergeCallback is a function passed into a MergeIter
-// so it can determine if the underlying container (normally an Overlay)
-// has been modified.
-// The iterator passes its last known modCount
-// and if the container's modCount has changed,
-// it returns the new modCount and the new source iterators.
-// If the modCount has not changed, it returns nil instead of new iterators.
-type mergeCallback func(modCount int) (int, []iterT)
-
 // OverIter is a Suneido style iterator
 // that merges several other Suneido style iterators.
 //
 // We need to keep our own curKey/Off independent of the source iterators
 // because new source iterators may be returned by the callback.
 type OverIter struct {
-	callback mergeCallback
+	table    string
+	ixcols   string
 	iters    []iterT
 	modCount int
 	curKey   string
@@ -37,6 +29,8 @@ type OverIter struct {
 	state
 	lastDir dir
 	rng     Range
+	tran    oiTran
+	overlay *Overlay
 }
 
 type state byte
@@ -54,9 +48,12 @@ const (
 	prev dir = -1
 )
 
-func NewOverIter(callback mergeCallback) *OverIter {
-	modCount, iters := callback(-1)
-	return &OverIter{callback: callback, modCount: modCount, iters: iters}
+type oiTran interface {
+	GetIndex(table, columns string) *Overlay
+}
+
+func NewOverIter(table, ixcols string) *OverIter {
+	return &OverIter{table: table, ixcols: ixcols, rng: iterator.All}
 }
 
 func (mi *OverIter) Eof() bool {
@@ -75,19 +72,22 @@ func (mi *OverIter) Range(rng Range) {
 	}
 }
 
-func (mi *OverIter) Next() {
+func (mi *OverIter) Next(t oiTran) {
 	if mi.state == eof {
 		return // stick at eof
 	}
 	if mi.state == rewound {
-		modCount, iters := mi.callback(mi.modCount)
-		if iters != nil { // modified
-			mi.modCount, mi.iters = modCount, iters
+		if t != mi.tran {
+			// some of the iterators may still be valid
+			// but simplest is just to get fresh iterators
+			ov := t.GetIndex(mi.table, mi.ixcols)
+			mi.newIters(ov)
+			mi.tran = t
 		}
 		mi.all(iterT.Next)
 		mi.state = within
 	} else {
-		mi.modNext()
+		mi.modNext(t)
 	}
 	mi.curIter, mi.curKey, mi.curOff = mi.minIter()
 	if mi.curIter == -1 {
@@ -96,18 +96,37 @@ func (mi *OverIter) Next() {
 	mi.lastDir = next
 }
 
+func (mi *OverIter) newIters(ov *Overlay) {
+	its := make([]iterT, 0, 2+len(ov.layers))
+	its = append(its, ov.bt.Iterator())
+	for _, ib := range ov.layers {
+		its = append(its, ib.Iterator())
+	}
+	if ov.mut != nil {
+		its = append(its, ov.mut.Iterator())
+	}
+	for _, it := range its {
+		it.Range(mi.rng)
+	}
+	mi.iters = its
+	mi.overlay = ov
+}
+
 func (mi *OverIter) all(fn func(it iterT)) {
 	for _, it := range mi.iters {
 		fn(it)
 	}
 }
 
-func (mi *OverIter) modNext() {
-	modCount, iters := mi.callback(mi.modCount)
-	modified := iters != nil
-	mi.modCount = modCount
-	if modified {
-		mi.iters = iters
+func (mi *OverIter) modNext(t oiTran) {
+	modified := false
+	if t != mi.tran {
+		ov := t.GetIndex(mi.table, mi.ixcols)
+		if !mi.keepIters(ov) {
+			mi.newIters(ov)
+			modified = true
+		}
+		mi.tran = t
 	}
 	for i, it := range mi.iters {
 		if modified || it.Modified() {
@@ -119,18 +138,28 @@ func (mi *OverIter) modNext() {
 				}
 			}
 		} else if mi.lastDir != next {
-			nextRewind(it)
+			if it.Eof() {
+				it.Rewind()
+			}
+			it.Next()
 		} else if i == mi.curIter {
 			it.Next()
 		}
 	}
 }
 
-func nextRewind(it iterT) {
-	if it.Eof() {
-		it.Rewind()
+func (mi *OverIter) keepIters(ov *Overlay) bool {
+	if ov.bt != mi.overlay.bt ||
+		len(ov.layers) != len(mi.overlay.layers) ||
+		(ov.mut == nil) != (mi.overlay.mut == nil) {
+		return false
 	}
-	it.Next()
+	for i, layer := range mi.overlay.layers {
+		if layer != ov.layers[i] {
+			return false
+		}
+	}
+	return true
 }
 
 // minIter finds the the minimum current key
@@ -163,19 +192,22 @@ outer:
 	}
 }
 
-func (mi *OverIter) Prev() {
+func (mi *OverIter) Prev(t oiTran) {
 	if mi.state == eof {
 		return // stick at eof
 	}
 	if mi.state == rewound {
-		modCount, iters := mi.callback(mi.modCount)
-		if iters != nil { // modified
-			mi.modCount, mi.iters = modCount, iters
+		if t != mi.tran {
+			// some of the iterators may still be valid
+			// but simplest just to get fresh iterators
+			ov := t.GetIndex(mi.table, mi.ixcols)
+			mi.newIters(ov)
+			mi.tran = t
 		}
 		mi.all(iterT.Prev)
 		mi.state = within
 	} else {
-		mi.modPrev()
+		mi.modPrev(t)
 	}
 	mi.curIter, mi.curKey, mi.curOff = mi.maxIter()
 	if mi.curIter == -1 {
@@ -184,12 +216,15 @@ func (mi *OverIter) Prev() {
 	mi.lastDir = prev
 }
 
-func (mi *OverIter) modPrev() {
-	modCount, iters := mi.callback(mi.modCount)
-	modified := iters != nil
-	mi.modCount = modCount
-	if modified {
-		mi.iters = iters
+func (mi *OverIter) modPrev(t oiTran) {
+	modified := false
+	if t != mi.tran {
+		ov := t.GetIndex(mi.table, mi.ixcols)
+		if !mi.keepIters(ov) {
+			mi.newIters(ov)
+			modified = true
+		}
+		mi.tran = t
 	}
 	for i, it := range mi.iters {
 		if modified || it.Modified() {
@@ -201,18 +236,14 @@ func (mi *OverIter) modPrev() {
 				}
 			}
 		} else if mi.lastDir != prev {
-			prevRewind(it)
+			if it.Eof() {
+				it.Rewind()
+			}
+			it.Prev()
 		} else if i == mi.curIter {
 			it.Prev()
 		}
 	}
-}
-
-func prevRewind(it iterT) {
-	if it.Eof() {
-		it.Rewind()
-	}
-	it.Prev()
 }
 
 // maxIter finds the maximum current key

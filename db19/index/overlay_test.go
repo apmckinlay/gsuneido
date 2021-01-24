@@ -6,6 +6,7 @@ package index
 import (
 	"math/rand"
 	"sort"
+	"strings"
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/db19/index/btree"
@@ -67,18 +68,19 @@ func key2off(key string) uint64 {
 
 func checkIter(data []string, ov *Overlay) {
 	sort.Strings(data)
-	it := ov.Iterator()
+	it := NewOverIter("", "")
+	tran := &testTran{getIndex: func() *Overlay { return ov }}
 	for _, k := range data {
 		if k == "" {
 			continue
 		}
-		it.Next()
+		it.Next(tran)
 		assert.False(it.Eof())
 		k2, o2 := it.Cur()
 		assert.This(k2).Is(k)
 		assert.This(o2).Is(key2off(k))
 	}
-	it.Next()
+	it.Next(tran)
 	assert.True(it.Eof())
 }
 
@@ -91,22 +93,37 @@ func TestOverlayBug(*testing.T) {
 
 	bt := btree.CreateBtree(stor.HeapStor(8192), nil)
 	ov := &Overlay{bt: bt}
-	d.CheckIter(ov.Iterator())
+	checkOver(d, ov)
 
 	u := &ixbuf.T{}
 	insertTestData(d, n, u)
 	ov.layers = []*ixbuf.T{u}
-	d.CheckIter(ov.Iterator())
+	checkOver(d, ov)
 
 	ov.bt = ov.bt.MergeAndSave(u.Iter())
 	ov.layers[0] = &ixbuf.T{}
-	d.CheckIter(ov.Iterator())
+	checkOver(d, ov)
 }
 
 func insertTestData(dat *testdata.T, n int, dest *ixbuf.T) {
 	for i := 0; i < n; i++ {
 		dest.Insert(dat.Gen())
 	}
+}
+
+func checkOver(d *testdata.T, ov *Overlay) {
+	t := &testTran{getIndex: func() *Overlay { return ov }}
+	sort.Strings(d.Keys)
+	i := 0
+	it := NewOverIter("", "")
+	for it.Next(t); !it.Eof(); it.Next(t) {
+		k, o := it.Cur()
+		assert.Msg("expect prefix of " + d.Keys[i] + " got " + k).
+			That(strings.HasPrefix(d.Keys[i], k))
+		assert.This(d.O2k[o]).Is(d.Keys[i])
+		i++
+	}
+	assert.This(i).Is(len(d.Keys))
 }
 
 func TestOverlayMerge(t *testing.T) {

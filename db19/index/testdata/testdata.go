@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/apmckinlay/gsuneido/db19/index/iterator"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
@@ -87,7 +88,7 @@ func (d *dat) Check(t tree) {
 	}
 }
 
-func (d *dat) CheckIter(it nextable) {
+func (d *dat) CheckIter(it iterator.T) {
 	sort.Strings(d.Keys)
 	i := 0
 	it.Rewind()
@@ -99,11 +100,4 @@ func (d *dat) CheckIter(it nextable) {
 		i++
 	}
 	assert.This(i).Is(len(d.Keys))
-}
-
-type nextable interface {
-	Next()
-	Rewind()
-	Eof() bool
-	Cur() (string, uint64)
 }

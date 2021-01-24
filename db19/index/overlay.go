@@ -96,24 +96,6 @@ func (ov *Overlay) Modified() bool {
 	return ov.layers[0].Len() > 0
 }
 
-func (ov *Overlay) Iterator() *OverIter {
-	callback := func(mc int) (int, []iterT) {
-		if mc == -1 { // first time
-			its := make([]iterT, 0, 2+len(ov.layers))
-			its = append(its, ov.bt.Iterator())
-			for _, ib := range ov.layers {
-				its = append(its, ib.Iterator())
-			}
-			if ov.mut != nil {
-				its = append(its, ov.mut.Iterator())
-			}
-			return 0, its
-		}
-		return mc, nil
-	}
-	return NewOverIter(callback)
-}
-
 //-------------------------------------------------------------------
 
 func (ov *Overlay) StorSize() int {
