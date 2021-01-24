@@ -21,12 +21,12 @@ type Range = iterator.Range
 // If the modCount has not changed, it returns nil instead of new iterators.
 type mergeCallback func(modCount int) (int, []iterT)
 
-// MergeIter is a Suneido style iterator
+// OverIter is a Suneido style iterator
 // that merges several other Suneido style iterators.
 //
 // We need to keep our own curKey/Off independent of the source iterators
 // because new source iterators may be returned by the callback.
-type MergeIter struct {
+type OverIter struct {
 	callback mergeCallback
 	iters    []iterT
 	modCount int
@@ -54,28 +54,28 @@ const (
 	prev dir = -1
 )
 
-func NewMergeIter(callback mergeCallback) *MergeIter {
+func NewOverIter(callback mergeCallback) *OverIter {
 	modCount, iters := callback(-1)
-	return &MergeIter{callback: callback, modCount: modCount, iters: iters}
+	return &OverIter{callback: callback, modCount: modCount, iters: iters}
 }
 
-func (mi *MergeIter) Eof() bool {
+func (mi *OverIter) Eof() bool {
 	return mi.state == eof
 }
 
-func (mi *MergeIter) Cur() (string, uint64) {
+func (mi *OverIter) Cur() (string, uint64) {
 	return mi.curKey, mi.curOff
 }
 
-func (mi *MergeIter) Range(rng Range) {
-	 mi.rng = rng
-	 mi.state = rewound
-	 for _,it := range mi.iters {
+func (mi *OverIter) Range(rng Range) {
+	mi.rng = rng
+	mi.state = rewound
+	for _, it := range mi.iters {
 		it.Range(rng)
-	 }
+	}
 }
 
-func (mi *MergeIter) Next() {
+func (mi *OverIter) Next() {
 	if mi.state == eof {
 		return // stick at eof
 	}
@@ -96,13 +96,13 @@ func (mi *MergeIter) Next() {
 	mi.lastDir = next
 }
 
-func (mi *MergeIter) all(fn func(it iterT)) {
+func (mi *OverIter) all(fn func(it iterT)) {
 	for _, it := range mi.iters {
 		fn(it)
 	}
 }
 
-func (mi *MergeIter) modNext() {
+func (mi *OverIter) modNext() {
 	modCount, iters := mi.callback(mi.modCount)
 	modified := iters != nil
 	mi.modCount = modCount
@@ -134,7 +134,7 @@ func nextRewind(it iterT) {
 }
 
 // minIter finds the the minimum current key
-func (mi *MergeIter) minIter() (int, string, uint64) {
+func (mi *OverIter) minIter() (int, string, uint64) {
 outer:
 	for {
 		itMin := -1
@@ -163,7 +163,7 @@ outer:
 	}
 }
 
-func (mi *MergeIter) Prev() {
+func (mi *OverIter) Prev() {
 	if mi.state == eof {
 		return // stick at eof
 	}
@@ -184,7 +184,7 @@ func (mi *MergeIter) Prev() {
 	mi.lastDir = prev
 }
 
-func (mi *MergeIter) modPrev() {
+func (mi *OverIter) modPrev() {
 	modCount, iters := mi.callback(mi.modCount)
 	modified := iters != nil
 	mi.modCount = modCount
@@ -216,7 +216,7 @@ func prevRewind(it iterT) {
 }
 
 // maxIter finds the maximum current key
-func (mi *MergeIter) maxIter() (int, string, uint64) {
+func (mi *OverIter) maxIter() (int, string, uint64) {
 outer:
 	for {
 		itMax := -1
@@ -245,7 +245,7 @@ outer:
 	}
 }
 
-func (mi *MergeIter) Rewind() {
+func (mi *OverIter) Rewind() {
 	mi.all(iterT.Rewind)
 	mi.state = rewound
 	mi.curIter = -1

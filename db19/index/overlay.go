@@ -88,13 +88,17 @@ func (ov *Overlay) QuickCheck() {
 	ov.bt.QuickCheck()
 }
 
+// Modified is used by info.Persist.
+// It only looks at the base ixbuf (layer[0])
+// which accumulates changes between persists
+// via merging other per transaction ixbuf's.
 func (ov *Overlay) Modified() bool {
 	return ov.layers[0].Len() > 0
 }
 
-func (ov *Overlay) Iterator() *MergeIter {
+func (ov *Overlay) Iterator() *OverIter {
 	callback := func(mc int) (int, []iterT) {
-		if mc == -1 {
+		if mc == -1 { // first time
 			its := make([]iterT, 0, 2+len(ov.layers))
 			its = append(its, ov.bt.Iterator())
 			for _, ib := range ov.layers {
@@ -105,9 +109,9 @@ func (ov *Overlay) Iterator() *MergeIter {
 			}
 			return 0, its
 		}
-		return mc, nil //FIXME handle modifications
+		return mc, nil
 	}
-	return NewMergeIter(callback)
+	return NewOverIter(callback)
 }
 
 //-------------------------------------------------------------------

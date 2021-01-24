@@ -35,7 +35,7 @@ func TestMergeIter(t *testing.T) {
 		}
 		return modCount, []iterT{even.Iterator(), odd.Iterator()}
 	}
-	it := NewMergeIter(callback)
+	it := NewOverIter(callback)
 	test := func(expected int) {
 		t.Helper()
 		if expected == -1 {
@@ -159,7 +159,7 @@ func checkIterator(data []string, ov *Overlay) int {
 		return mc, nil
 	}
 	count := 0
-	it := NewMergeIter(callback)
+	it := NewOverIter(callback)
 	for _, k := range data {
 		if k == "" {
 			continue
@@ -199,7 +199,7 @@ func TestMergeIterRandom(*testing.T) {
 		return modCount,
 			[]iterT{ibs[0].Iterator(), ibs[1].Iterator(), ibs[2].Iterator()}
 	}
-	mi := NewMergeIter(callback)
+	mi := NewOverIter(callback)
 	check := func() {
 		if it.Eof() {
 			traceln("EOF")
