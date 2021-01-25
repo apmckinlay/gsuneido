@@ -150,9 +150,8 @@ const (
 	Update
 	View
 	Where
+	Ntokens
 )
-
-const Ntokens = int(While + 1)
 
 var isIdent = [Ntokens]bool{ // note: array rather than map
 	Identifier: true,

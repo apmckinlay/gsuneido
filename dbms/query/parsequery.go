@@ -167,24 +167,16 @@ func (p *qparser) remove(q Query) Query {
 }
 
 func (p *qparser) rename(q Query) Query {
-	return &Rename{Query1: Query1{source: q}, renames: p.renames()}
-}
-
-func (p *qparser) renames() []Rename1 {
-	var renames []Rename1
+	var from, to []string
 	for {
-		renames = append(renames, p.rename1())
+		from = append(from, p.MatchIdent())
+		p.Match(tok.To)
+		to = append(to, p.MatchIdent())
 		if !p.MatchIf(tok.Comma) {
-			return renames
+			break
 		}
 	}
-}
-
-func (p *qparser) rename1() Rename1 {
-	from := p.MatchIdent()
-	p.Match(tok.To)
-	to := p.MatchIdent()
-	return Rename1{from: from, to: to}
+	return &Rename{Query1: Query1{source: q}, from: from, to: to}
 }
 
 func (p *qparser) summarize(q Query) Query {

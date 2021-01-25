@@ -31,7 +31,12 @@ type Request struct {
 	Action    string
 	SubAction string
 	Schema
-	Renames []Rename1
+	Renames
+}
+
+type Renames struct {
+	From []string
+	To   []string
 }
 
 func ParseRequest(src string) *Request {
@@ -53,8 +58,9 @@ func (p *reqparser) request() *Request {
 		table := p.MatchIdent()
 		return &Request{Action: "drop", Schema: Schema{Table: table}}
 	case p.MatchIf(tok.Rename):
-		rename := p.rename1()
-		return &Request{Action: "rename", Renames: []Rename1{rename}}
+		from, to := p.rename1()
+		return &Request{Action: "rename",
+			Renames: Renames{From: []string{from}, To: []string{to}}}
 	case p.MatchIf(tok.Alter):
 		return p.alter()
 	//TODO: View, Sview
@@ -63,11 +69,11 @@ func (p *reqparser) request() *Request {
 	}
 }
 
-func (p *reqparser) rename1() Rename1 {
+func (p *reqparser) rename1() (string, string) {
 	from := p.MatchIdent()
 	p.Match(tok.To)
 	to := p.MatchIdent()
-	return Rename1{from: from, to: to}
+	return from, to
 }
 
 func (p *reqparser) alter() *Request {
@@ -87,10 +93,12 @@ func (p *reqparser) alter() *Request {
 	}
 }
 
-func (p *reqparser) renames() []Rename1 {
-	var renames []Rename1
+func (p *reqparser) renames() Renames {
+	var renames Renames
 	for {
-		renames = append(renames, p.rename1())
+		from, to := p.rename1()
+		renames.From = append(renames.From, from)
+		renames.To = append(renames.To, to)
 		if !p.MatchIf(tok.Comma) {
 			return renames
 		}
@@ -225,19 +233,25 @@ func (rq *Request) String() string {
 	}
 	switch rq.Action {
 	case "rename":
-		s += " " + rq.Renames[0].String()
+		s += rq.Renames.String()
 	case "alter":
 		s += " " + rq.SubAction
 		switch rq.SubAction {
 		case "create", "drop":
 			s += " " + rq.Schema.String()
 		case "rename":
-			sep := " "
-			for _, rn := range rq.Renames {
-				s += sep + rn.String()
-				sep = ", "
-			}
+			s += rq.Renames.String()
 		}
+	}
+	return s
+}
+
+func (r *Renames) String() string {
+	s := " "
+	sep := ""
+	for i, from := range r.From {
+		s += sep + from + " to " + r.To[i]
+		sep = ", "
 	}
 	return s
 }
