@@ -4,7 +4,7 @@
 package query
 
 type Minus struct {
-	Query2
+	Compatible
 }
 
 func (m *Minus) String() string {

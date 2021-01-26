@@ -126,8 +126,8 @@ func (p *qparser) extend(q Query) Query {
 }
 
 func (p *qparser) intersect(q Query) Query {
-	return &Intersect{Query2: Query2{Query1: Query1{source: q},
-		source2: p.source()}}
+	return &Intersect{Compatible: Compatible{
+		Query2: Query2{Query1: Query1{source: q}, source2: p.source()}}}
 }
 
 func (p *qparser) join(q Query) Query {
@@ -154,8 +154,8 @@ func (p *qparser) joinBy() []string {
 }
 
 func (p *qparser) minus(q Query) Query {
-	return &Minus{Query2: Query2{Query1: Query1{source: q},
-		source2: p.source()}}
+	return &Minus{Compatible: Compatible{
+		Query2: Query2{Query1: Query1{source: q}, source2: p.source()}}}
 }
 
 func (p *qparser) project(q Query) Query {
@@ -230,8 +230,8 @@ func (p *qparser) times(q Query) Query {
 }
 
 func (p *qparser) union(q Query) Query {
-	return &Union{Query2: Query2{Query1: Query1{source: q},
-		source2: p.source()}}
+	return &Union{Compatible: Compatible{
+		Query2: Query2{Query1: Query1{source: q}, source2: p.source()}}}
 }
 
 func (p *qparser) where(q Query) Query {

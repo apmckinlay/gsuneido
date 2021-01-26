@@ -4,11 +4,15 @@
 package query
 
 type Union struct {
-	Query2
+	Compatible
 }
 
 func (u *Union) String() string {
 	return u.Query2.String("union")
+}
+
+func (u *Union) Columns() []string {
+	return u.allCols
 }
 
 func (u *Union) Transform() Query {

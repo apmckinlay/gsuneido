@@ -3,7 +3,10 @@
 
 package query
 
-import "github.com/apmckinlay/gsuneido/util/str"
+import (
+	"github.com/apmckinlay/gsuneido/util/sset"
+	"github.com/apmckinlay/gsuneido/util/str"
+)
 
 type Join struct {
 	Query2
@@ -20,6 +23,10 @@ func (jn *Join) string(op string) string {
 		by = "by" + str.Join("(,)", jn.by...) + " "
 	}
 	return jn.Query1.String() + " " + op + " " + by + jn.source2.String()
+}
+
+func (jn *Join) Columns() []string {
+	return sset.Union(jn.source.Columns(), jn.source2.Columns())
 }
 
 func (jn *Join) Transform() Query {

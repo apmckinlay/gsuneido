@@ -13,3 +13,7 @@ type Project struct {
 func (p *Project) String() string {
 	return p.Query1.String() + " project " + str.Join(", ", p.columns...)
 }
+
+func (p *Project) Columns() []string {
+	return p.columns
+}

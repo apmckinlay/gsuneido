@@ -3,12 +3,18 @@
 
 package query
 
+import "github.com/apmckinlay/gsuneido/util/sset"
+
 type Intersect struct {
-	Query2
+	Compatible
 }
 
 func (it *Intersect) String() string {
 	return it.Query2.String("intersect")
+}
+
+func (it *Intersect) Columns() []string {
+	return sset.Intersect(it.source.Columns(), it.source2.Columns())
 }
 
 func (it *Intersect) Transform() Query {

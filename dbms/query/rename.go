@@ -3,7 +3,12 @@
 
 package query
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/apmckinlay/gsuneido/util/sset"
+	"github.com/apmckinlay/gsuneido/util/str"
+)
 
 type Rename struct {
 	Query1
@@ -22,6 +27,21 @@ func (r *Rename) String() string {
 		sep = ", "
 	}
 	return r.Query1.String() + " rename " + sb.String()
+}
+
+func (r *Rename) Columns() []string {
+	return renameCols(r.source.Columns(), r.from, r.to)
+}
+
+func renameCols(cols, from, to []string) []string {
+	newCols := sset.Copy(cols)
+	for i := 0; i < len(cols); i++ {
+		j := str.List(from).Index(cols[i])
+		if j != -1 {
+			newCols[i] = to[j]
+		}
+	}
+	return newCols
 }
 
 func (r *Rename) Transform() Query {

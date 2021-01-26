@@ -3,14 +3,18 @@
 
 package query
 
-import "github.com/apmckinlay/gsuneido/util/str"
+import (
+	"github.com/apmckinlay/gsuneido/util/sset"
+	"github.com/apmckinlay/gsuneido/util/str"
+)
 
 type Summarize struct {
 	Query1
-	by   []string
-	cols []string
-	ops  []string
-	ons  []string
+	by       []string
+	cols     []string
+	ops      []string
+	ons      []string
+	wholeRow bool
 }
 
 func (su *Summarize) String() string {
@@ -31,6 +35,13 @@ func (su *Summarize) String() string {
 		}
 	}
 	return s
+}
+
+func (su *Summarize) Columns() []string {
+	if su.wholeRow {
+		return sset.Union(su.cols, su.source.Columns())
+	}
+	return sset.Union(su.by, su.cols)
 }
 
 func (su *Summarize) Transform() Query {

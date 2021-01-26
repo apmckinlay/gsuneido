@@ -9,13 +9,13 @@ import (
 
 type Query interface {
 	Init()
+	Columns() []string
 	Transform() Query
 
 	// Header() runtime.Header
 	// Order() []string
 	// Fixed() []Fixed
 	// Updateable() bool
-	// Columns() []string
 	// Keys() [][]string
 	// Indexes() [][]string
 
@@ -59,6 +59,10 @@ func (q1 *Query1) Init() {
 func (q1 *Query1) Transform() Query { //TODO remove - temporary
 	// q1.source = q1.source.Transform()
 	panic("not implemented")
+}
+
+func (q1 *Query1) Columns() []string {
+	return q1.source.Columns()
 }
 
 type Query2 struct {

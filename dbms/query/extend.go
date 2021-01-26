@@ -3,6 +3,8 @@
 
 package query
 
+import "github.com/apmckinlay/gsuneido/util/sset"
+
 type Extend struct {
 	Query1
 	cols  []string
@@ -20,6 +22,10 @@ func (e *Extend) String() string {
 		}
 	}
 	return s
+}
+
+func (e *Extend) Columns() []string {
+	return sset.Union(e.source.Columns(), e.cols)
 }
 
 func (e *Extend) Transform() Query {

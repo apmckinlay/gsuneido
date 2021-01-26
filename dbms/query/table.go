@@ -14,6 +14,10 @@ func (tbl *Table) String() string {
 func (tbl *Table) Init() {
 }
 
+func (tbl *Table) Columns() []string {
+	return []string{} //TODO
+}
+
 func (tbl *Table) Transform() Query {
 	return tbl
 }
