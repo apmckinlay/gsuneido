@@ -9,6 +9,7 @@ import (
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
+	"github.com/apmckinlay/gsuneido/util/sset"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
@@ -22,8 +23,16 @@ func (c *Constant) Eval(*Context) Value {
 	return c.Val
 }
 
+func (c *Constant) Columns() []string {
+	return []string{}
+}
+
 func (id *Ident) Eval(c *Context) Value {
 	return c.Row.Get(c.Hdr, id.Name)
+}
+
+func (id *Ident) Columns() []string {
+	return []string{id.Name}
 }
 
 func (u *Unary) Eval(c *Context) Value {
@@ -45,6 +54,10 @@ func (u *Unary) eval(val Value) Value {
 	default:
 		panic("unexpected unary operator " + u.Tok.String())
 	}
+}
+
+func (u *Unary) Columns() []string {
+	return u.E.Columns()
 }
 
 // Binary -----------------------------------------------------------
@@ -166,12 +179,21 @@ func (b *Binary) eval(lhs, rhs Value) Value {
 	}
 }
 
+func (b *Binary) Columns() []string {
+	return sset.Union(b.Lhs.Columns(), b.Rhs.Columns())
+}
+
 func (tri *Trinary) Eval(c *Context) Value {
 	cond := tri.Cond.Eval(c)
 	if cond == True {
 		return tri.T.Eval(c)
 	}
 	return tri.F.Eval(c)
+}
+
+func (tri *Trinary) Columns() []string {
+	return sset.Union(tri.Cond.Columns(),
+		sset.Union(tri.T.Columns(), tri.F.Columns()))
 }
 
 // Nary -------------------------------------------------------------
@@ -236,6 +258,14 @@ func muldiv(exprs []Expr, c *Context) Value {
 	return result
 }
 
+func (a *Nary) Columns() []string {
+	cols := a.Exprs[0].Columns()
+	for _, e := range a.Exprs[1:] {
+		cols = sset.Union(cols, e.Columns())
+	}
+	return cols
+}
+
 // Range ------------------------------------------------------------
 
 func (a *RangeTo) Eval(c *Context) Value {
@@ -245,11 +275,21 @@ func (a *RangeTo) Eval(c *Context) Value {
 	return e.RangeTo(ToIndex(from), ToInt(to))
 }
 
+func (a *RangeTo) Columns() []string {
+	return sset.Union(a.E.Columns(),
+		sset.Union(a.From.Columns(), a.To.Columns()))
+}
+
 func (a *RangeLen) Eval(c *Context) Value {
 	e := a.E.Eval(c)
 	from := evalOr(a.From, c, Zero)
 	n := evalOr(a.Len, c, MaxInt)
 	return e.RangeLen(ToIndex(from), ToInt(n))
+}
+
+func (a *RangeLen) Columns() []string {
+	return sset.Union(a.E.Columns(),
+		sset.Union(a.From.Columns(), a.Len.Columns()))
 }
 
 func evalOr(e Expr, c *Context, v Value) Value {
@@ -312,6 +352,14 @@ func (a *In) Eval(c *Context) Value {
 	return False
 }
 
+func (a *In) Columns() []string {
+	cols := a.E.Columns()
+	for _, e := range a.Exprs {
+		cols = sset.Union(cols, e.Columns())
+	}
+	return cols
+}
+
 // ------------------------------------------------------------------
 
 func (a *Mem) Eval(c *Context) Value {
@@ -322,6 +370,10 @@ func (a *Mem) Eval(c *Context) Value {
 		panic("uninitialized member: " + m.String())
 	}
 	return result
+}
+
+func (a *Mem) Columns() []string {
+	return sset.Union(a.E.Columns(), a.M.Columns())
 }
 
 func (a *Call) Eval(c *Context) Value {
@@ -374,10 +426,26 @@ func argspec(args []Arg) *ArgSpec {
 	return &as
 }
 
+func (a *Call) Columns() []string {
+	cols := a.Fn.Columns()
+	for _, e := range a.Args {
+		cols = sset.Union(cols, e.E.Columns())
+	}
+	return cols
+}
+
 func (a *Block) Eval(*Context) Value {
 	panic("queries do not support blocks")
 }
 
+func (a *Block) Columns() []string {
+	panic("queries do not support blocks")
+}
+
 func (a *Function) Eval(*Context) Value {
+	panic("queries do not support functions")
+}
+
+func (a *Function) Columns() []string {
 	panic("queries do not support functions")
 }

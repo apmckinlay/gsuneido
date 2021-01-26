@@ -32,9 +32,10 @@ func (*astNodeT) Children(func(Node) Node) {
 type Expr interface {
 	Node
 	exprNode()
-	// Eval and CanEvalRaw are used by queries
+	// Eval, CanEvalRaw, and Columns are used by queries
 	Eval(*Context) Value
 	CanEvalRaw(fields []string) bool
+	Columns() []string
 }
 type exprNodeT struct {
 	astNodeT

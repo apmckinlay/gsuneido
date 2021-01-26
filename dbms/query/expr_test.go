@@ -4,6 +4,7 @@
 package query
 
 import (
+	"strings"
 	"testing"
 
 	_ "github.com/apmckinlay/gsuneido/builtin"
@@ -25,7 +26,7 @@ func TestExprEval(t *testing.T) {
 		// fmt.Println(expr)
 		assert.That(expr.CanEvalRaw(hdr.GetFields()) == raw)
 		result := expr.Eval(&ast.Context{T: th, Row: row, Hdr: hdr})
-		assert.T(t).This(result.String()).Is(expected)
+		assert.T(t).Msg(src).This(result.String()).Is(expected)
 	}
 	test("123", "123")
 	test("x + 2", "6")
@@ -87,4 +88,27 @@ func BenchmarkEval_raw(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		expr.Eval(ctx)
 	}
+}
+
+func TestExprColumns(t *testing.T) {
+	test := func(src string, expected string) {
+		t.Helper()
+		p := NewQueryParser(src)
+		expr := p.Expression()
+		assert.T(t).This(p.Token).Is(tok.Eof)
+		result := strings.Join(expr.Columns(), " ")
+		assert.T(t).Msg(src).This(result).Is(expected)
+	}
+	test("123", "")
+	test("foo", "foo")
+	test("-x", "x")
+	test("a < b", "a b")
+	test("a * b / c", "a b c")
+	test("a ? b : c", "a b c")
+	test("a[b..c]", "a b c")
+	test("a[b::c]", "a b c")
+	test("a in (b, c)", "a b c")
+	test("a.b", "a")
+	test("a[b]", "a b")
+	test("a(b, c)", "a b c")
 }
