@@ -6,6 +6,7 @@ package builtin
 import (
 	"io"
 	"os/exec"
+	"runtime"
 	"strings"
 
 	. "github.com/apmckinlay/gsuneido/runtime"
@@ -195,13 +196,21 @@ var suRunPipedMethods = Methods{
 		return arg
 	}),
 	"Writeline": method1("(string)", func(this, arg Value) Value {
-		_, err := io.WriteString(rpWrite(this).w, AsStr(arg)+"\n")
+		w := rpWrite(this).w
+		_, err := io.WriteString(w, AsStr(arg)+newline)
 		if err != nil {
 			panic("RunPiped: Writeline failed " + err.Error())
 		}
 		return arg
 	}),
 }
+
+var newline = func() string {
+	if runtime.GOOS == "windows" {
+		return "\r\n"
+	}
+	return "\n"
+}()
 
 func rpOpen(this Value) *suRunPiped {
 	rp := this.(*suRunPiped)

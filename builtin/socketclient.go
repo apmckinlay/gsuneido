@@ -103,7 +103,7 @@ func (*suSocketClient) Lookup(_ *Thread, method string) Callable {
 	return suSocketClientMethods[method]
 }
 
-var newline = []byte{'\r', '\n'}
+var crnl = []byte{'\r', '\n'}
 
 var noDeadline time.Time
 
@@ -154,7 +154,7 @@ var suSocketClientMethods = Methods{
 		if e != nil {
 			panic("socketClient.Writeline: " + e.Error())
 		}
-		_, e = sc.conn.Write(newline)
+		_, e = sc.conn.Write(crnl)
 		if e != nil {
 			panic("socketClient.Writeline: " + e.Error())
 		}

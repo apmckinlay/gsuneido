@@ -252,7 +252,7 @@ var suFileMethods = Methods{
 		s := AsStr(arg)
 		sf := sfOpen(this)
 		sf.w.WriteString(s)
-		_, err := sf.w.WriteString("\n")
+		_, err := sf.w.WriteString("\r\n")
 		if err != nil {
 			panic("File: Writeline: " + err.Error())
 		}
