@@ -64,6 +64,29 @@ func TestEqual(*testing.T) {
 	assert.That(!Equal(x, y))
 }
 
+func TestSubset(*testing.T) {
+	test := func(x, y string, expected bool) {
+		assert.Msg(x + " : " + y).
+			That(expected == Subset(strings.Fields(x), strings.Fields(y)))
+	}
+	test("", "", true)
+	test("a b c", "a b c", true)
+	test("a b c", "c a b", true)
+	test("a b c", "c a", true)
+	test("c a", "a b c", false)
+}
+
+func TestDisjoint(*testing.T) {
+	test := func(x, y string, expected bool) {
+		assert.Msg(x + " : " + y).
+			That(expected == Disjoint(strings.Fields(x), strings.Fields(y)))
+	}
+	test("", "", true)
+	test("a b c", "a b c", false)
+	test("a b c", "c a b", false)
+	test("a b c", "d e f", true)
+}
+
 func BenchmarkEqual(b *testing.B) {
 	const n = 100
 	x := randOptim(n)
@@ -100,7 +123,7 @@ func TestUnion(*testing.T) {
 	test("", "a b c", "a b c")
 	test("a b c", "a b c", "a b c")
 	test("a b c d", "e f", "a b c d e f")
-	test("e f", "a b c d", "a b c d e f")
+	test("e f", "a b c d", "e f a b c d")
 	test("a b c d", "c d e f", "a b c d e f")
 
 	x := randOptim(100)
