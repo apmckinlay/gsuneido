@@ -66,28 +66,28 @@ var notEvalRaw = []string{}
 
 // CanEvalRaw returns true if Eval doesn't need to unpack the values.
 // It sets b.rawFlds which is later used by Eval.
-func (b *Binary) CanEvalRaw(fields []string) bool {
-	if b.rawFlds == nil {
-		if b.canEvalRaw2(fields) {
-			b.rawFlds = fields
+func (b *Binary) CanEvalRaw(cols []string) bool {
+	if b.RawCols == nil {
+		if b.canEvalRaw2(cols) {
+			b.RawCols = cols
 			c := b.Rhs.(*Constant)
 			c.packed = Pack(c.Val.(Packable))
 			return true
 		}
-		b.rawFlds = notEvalRaw
+		b.RawCols = notEvalRaw
 		return false
 	}
-	return str.Equal(b.rawFlds, fields)
+	return str.Equal(b.RawCols, cols)
 }
 
-func (b *Binary) canEvalRaw2(fields []string) bool {
+func (b *Binary) canEvalRaw2(cols []string) bool {
 	if !b.rawOp() {
 		return false
 	}
-	if IsField(b.Lhs, fields) && isConstant(b.Rhs) {
+	if IsColumn(b.Lhs, cols) && isConstant(b.Rhs) {
 		return true
 	}
-	if isConstant(b.Lhs) && IsField(b.Rhs, fields) {
+	if isConstant(b.Lhs) && IsColumn(b.Rhs, cols) {
 		b.Lhs, b.Rhs = b.Rhs, b.Lhs // reverse
 		b.Tok = reverseBinary[b.Tok]
 		return true
@@ -103,8 +103,8 @@ func (b *Binary) rawOp() bool {
 	return false
 }
 
-func IsField(e Expr, fields []string) bool {
-	if id, ok := e.(*Ident); ok && str.List(fields).Has(id.Name) {
+func IsColumn(e Expr, cols []string) bool {
+	if id, ok := e.(*Ident); ok && str.List(cols).Has(id.Name) {
 		return true
 	}
 	return false
@@ -126,7 +126,7 @@ var reverseBinary = map[tok.Token]tok.Token{
 
 func (b *Binary) Eval(c *Context) Value {
 	// NOTE: we only Eval raw if b.rawFlds was set by CanEvalRaw
-	if b.rawFlds != nil && str.Equal(b.rawFlds, c.Hdr.GetFields()) {
+	if b.RawCols != nil && str.Equal(b.RawCols, c.Hdr.GetFields()) {
 		id := b.Lhs.(*Ident)
 		lhs := c.Row.GetRaw(c.Hdr, id.Name)
 		rhs := b.Rhs.(*Constant).packed
@@ -303,20 +303,20 @@ func evalOr(e Expr, c *Context, v Value) Value {
 
 // CanEvalRaw returns true if Eval doesn't need to unpack the values.
 // It sets b.rawFlds which is later used by Eval.
-func (a *In) CanEvalRaw(fields []string) bool {
-	if a.rawFlds == nil {
-		if a.canEvalRaw2(fields) {
-			a.rawFlds = fields
+func (a *In) CanEvalRaw(cols []string) bool {
+	if a.RawCols == nil {
+		if a.canEvalRaw2(cols) {
+			a.RawCols = cols
 			return true
 		}
-		a.rawFlds = notEvalRaw
+		a.RawCols = notEvalRaw
 		return false
 	}
-	return str.Equal(a.rawFlds, fields)
+	return str.Equal(a.RawCols, cols)
 }
 
-func (a *In) canEvalRaw2(fields []string) bool {
-	if !IsField(a.E, fields) {
+func (a *In) canEvalRaw2(cols []string) bool {
+	if !IsColumn(a.E, cols) {
 		return false
 	}
 	packed := make([]string, len(a.Exprs))
@@ -327,15 +327,15 @@ func (a *In) canEvalRaw2(fields []string) bool {
 		}
 		packed[i] = Pack(c.Val.(Packable))
 	}
-	a.packed = packed
+	a.Packed = packed
 	return true
 }
 
 func (a *In) Eval(c *Context) Value {
-	if a.rawFlds != nil && str.Equal(a.rawFlds, c.Hdr.GetFields()) {
+	if a.RawCols != nil && str.Equal(a.RawCols, c.Hdr.GetFields()) {
 		id := a.E.(*Ident)
 		e := c.Row.GetRaw(c.Hdr, id.Name)
-		for _, p := range a.packed {
+		for _, p := range a.Packed {
 			if e == p {
 				return True
 			}
@@ -448,4 +448,39 @@ func (a *Function) Eval(*Context) Value {
 
 func (a *Function) Columns() []string {
 	panic("queries do not support functions")
+}
+
+func CantBeEmpty(e Expr, cols []string) bool {
+	if !e.CanEvalRaw(cols) {
+		return false
+	}
+	switch e := e.(type) {
+	case *Binary:
+		c := e.Rhs.(*Constant)
+		switch e.Tok {
+		case tok.Is:
+			return c.Val != EmptyStr
+		case tok.Isnt:
+			return c.Val == EmptyStr
+		case tok.Lt:
+			return c.Val.Compare(EmptyStr) <= 0
+		case tok.Lte:
+			return c.Val.Compare(EmptyStr) < 0
+		case tok.Gt:
+			return c.Val.Compare(EmptyStr) >= 0
+		case tok.Gte:
+			return c.Val.Compare(EmptyStr) > 0
+		default:
+			return false
+		}
+	case *In:
+		for _, p := range e.Packed {
+			if p == "" {
+				return false
+			}
+		}
+		return true
+	default:
+		return false
+	}
 }

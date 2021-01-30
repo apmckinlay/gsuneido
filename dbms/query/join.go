@@ -13,8 +13,23 @@ type Join struct {
 	by []string
 }
 
+func (jn *Join) Init() {
+	jn.source.Init()
+	jn.source2.Init()
+	by := sset.Intersect(jn.source.Columns(), jn.source2.Columns())
+	if len(by) == 0 {
+		panic("join: common columns required")
+	}
+	if jn.by == nil {
+		jn.by = by
+	} else if !sset.Equal(jn.by, by) {
+		panic("join: by does not match common columns")
+	}
+	//TODO whether by contains key
+}
+
 func (jn *Join) String() string {
-	return jn.string("join")
+	return jn.string("JOIN")
 }
 
 func (jn *Join) string(op string) string {
@@ -22,7 +37,7 @@ func (jn *Join) string(op string) string {
 	if len(jn.by) > 0 {
 		by = "by" + str.Join("(,)", jn.by...) + " "
 	}
-	return jn.Query1.String() + " " + op + " " + by + jn.source2.String()
+	return paren(jn.source) + " " + op + " " + by + paren(jn.source2)
 }
 
 func (jn *Join) Columns() []string {
@@ -35,12 +50,18 @@ func (jn *Join) Transform() Query {
 	return jn
 }
 
+func (jn *Join) Fixed() []Fixed {
+	return combineFixed(jn.source.Fixed(), jn.source2.Fixed())
+}
+
+// LeftJoin ---------------------------------------------------------
+
 type LeftJoin struct {
 	Join
 }
 
 func (lj *LeftJoin) String() string {
-	return lj.string("leftjoin")
+	return lj.string("LEFTJOIN")
 }
 
 func (lj *LeftJoin) Transform() Query {

@@ -10,7 +10,7 @@ type Times struct {
 }
 
 func (t *Times) String() string {
-	return t.Query2.String("times")
+	return t.Query2.String("TIMES")
 }
 
 func (t *Times) Columns() []string {

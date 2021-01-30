@@ -10,8 +10,6 @@ import (
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
 )
 
-type Expr = ast.Expr
-
 type qparser struct {
 	compile.Parser
 }
@@ -110,10 +108,10 @@ func (p *qparser) operation(pq *Query) bool {
 
 func (p *qparser) extend(q Query) Query {
 	cols := make([]string, 0, 4)
-	exprs := make([]Expr, 0, 4)
+	exprs := make([]ast.Expr, 0, 4)
 	for {
 		cols = append(cols, p.MatchIdent())
-		var expr Expr
+		var expr ast.Expr
 		if p.MatchIf(tok.Eq) {
 			expr = p.Expression()
 		}
@@ -235,7 +233,11 @@ func (p *qparser) union(q Query) Query {
 }
 
 func (p *qparser) where(q Query) Query {
-	return &Where{Query1: Query1{source: q}, expr: p.Expression()}
+	expr := p.Expression()
+	if nary, ok := expr.(*ast.Nary); !ok || nary.Tok != tok.And {
+		expr = &ast.Nary{Tok: tok.And, Exprs: []ast.Expr{expr}}
+	}
+	return &Where{Query1: Query1{source: q}, expr: expr.(*ast.Nary)}
 }
 
 func (p *qparser) parenList() []string {

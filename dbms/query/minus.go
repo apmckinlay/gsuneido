@@ -8,11 +8,15 @@ type Minus struct {
 }
 
 func (m *Minus) String() string {
-	return m.Query2.String("minus")
+	return m.Query2.String("MINUS")
 }
 
 func (m *Minus) Transform() Query {
-	m.source = m.source.Transform()
-	m.source2 = m.source2.Transform()
-	return m
+	if m.disjoint == "" {
+		m.source = m.source.Transform()
+		m.source2 = m.source2.Transform()
+		return m
+	}
+	// remove if disjoint
+	return m.source.Transform()
 }

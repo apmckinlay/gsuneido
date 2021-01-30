@@ -12,7 +12,7 @@ type Sort struct {
 }
 
 func (sort *Sort) String() string {
-	s := sort.Query1.String() + " sort "
+	s := sort.Query1.String() + " SORT "
 	if sort.reverse {
 		s += "reverse "
 	}

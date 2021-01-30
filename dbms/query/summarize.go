@@ -18,7 +18,7 @@ type Summarize struct {
 }
 
 func (su *Summarize) String() string {
-	s := su.Query1.String() + " summarize "
+	s := paren(su.source) + " SUMMARIZE "
 	if len(su.by) > 0 {
 		s += str.Join(", ", su.by...) + ", "
 	}

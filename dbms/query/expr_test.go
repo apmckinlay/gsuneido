@@ -112,3 +112,33 @@ func TestExprColumns(t *testing.T) {
 	test("a[b]", "a b")
 	test("a(b, c)", "a b c")
 }
+
+func TestExprRename(t *testing.T) {
+	from := []string{"b", "d"}
+	to := []string{"B", "D"}
+	test := func(src string, expected string) {
+		t.Helper()
+		p := NewQueryParser(src)
+		expr := p.Expression()
+		assert.T(t).This(p.Token).Is(tok.Eof)
+		result := renameExpr(expr, from, to)
+		assert.T(t).Msg(src).This(result.Echo()).Is(expected)
+	}
+	test("123", "123")
+	test("foo", "foo")
+	test("b", "B")
+	test("-x", "-x")
+	test("-d", "-D")
+	test("a < b", "a < B")
+	test("a * b * c * d", "a * B * c * D")
+	test("a ? b : c", "a ? B : c")
+	test("a[b..c]", "a[B..c]")
+	test("b[c::d]", "B[c::D]")
+	test("a in (b, c)", "a in (B, c)")
+	test("a.b", "a.b")
+	test("b.d", "B.d")
+	test("a[c]", "a[c]")
+	test("b[d]", "B[D]")
+	test("f(x, y)", "f(x, y)")
+	test("b(c, d)", "B(c, D)")
+}

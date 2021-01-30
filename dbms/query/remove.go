@@ -3,7 +3,11 @@
 
 package query
 
-import "github.com/apmckinlay/gsuneido/util/str"
+import (
+	"strings"
+
+	"github.com/apmckinlay/gsuneido/util/sset"
+)
 
 type Remove struct {
 	Query1
@@ -11,11 +15,11 @@ type Remove struct {
 }
 
 func (rm *Remove) String() string {
-	return rm.Query1.String() + " remove " + str.Join(", ", rm.columns...)
+	return paren(rm.source) + " REMOVE " + strings.Join(rm.columns, ", ")
 }
 
-// func (rm *Remove) Transform() Query {
-// 	cols := sset.Difference(rm.source.Columns(), rm.columns)
-// 	p := &Project{Query1: rm.Query1, columns: cols}
-// 	return p.Transform()
-// }
+func (rm *Remove) Transform() Query {
+	cols := sset.Difference(rm.source.Columns(), rm.columns)
+	p := &Project{Query1: rm.Query1, columns: cols}
+	return p.Transform()
+}

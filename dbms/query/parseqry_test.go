@@ -7,13 +7,14 @@ import (
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/util/assert"
+	"github.com/apmckinlay/gsuneido/util/str"
 )
 
 func TestParseQuery(t *testing.T) {
 	test := func(s string) {
 		t.Helper()
 		q := ParseQuery(s)
-		assert.T(t).This(q.String()).Is(s)
+		assert.T(t).This(str.ToLower(q.String())).Is(s)
 	}
 	test("table")
 	test("table sort one")
@@ -39,9 +40,9 @@ func TestParseQuery(t *testing.T) {
 	test("table summarize total one, count, max two")
 	test("table summarize one, two, count")
 
-	test("one union two join three")
+	test("(one union two) join three")
 	test("one join two sort a, b")
-	test("one join two project a, b, c rename b to bb sort a, c")
+	test("((one join two) project a, b, c) rename b to bb sort a, c")
 
 	xtest := func(s, err string) {
 		fn := func() { ParseQuery(s) }
@@ -56,24 +57,18 @@ func TestParseQuery(t *testing.T) {
 }
 
 func TestParseQuery2(t *testing.T) {
-	test := func(s, expected string) {
+	test := func(s string) {
 		t.Helper()
 		q := ParseQuery(s)
-		assert.T(t).This(q.String()).Is(expected)
+		assert.T(t).This(str.ToLower(q.String())).Is(s)
 	}
 
-	test("table extend one",
-		"table extend one")
-	test("table extend one, two = a + b",
-		"table extend one, two = Nary(Add a b)")
+	test("table extend one")
+	test("table extend one, two = a + b")
 
-	test("table where x > 1",
-		"table where Binary(Gt x 1)")
-	test("table where a and b and c",
-		"table where Nary(And a b c)")
-	test("table where n in (1,2,3)",
-		"table where In(n [1 2 3])")
+	test("table where x > 1")
+	test("table where a and b and c")
+	test("table where n in (1, 2, 3)")
 
-	test("table where Func(a)",
-		"table where Call(Func a)")
+	test("table where fn(a)")
 }

@@ -7,6 +7,7 @@ package ast
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/apmckinlay/gsuneido/compile/lexer"
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
@@ -14,6 +15,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
+// Node is embedded by Expr and Statement
 type Node interface {
 	astNode()
 	String() string
@@ -32,9 +34,10 @@ func (*astNodeT) Children(func(Node) Node) {
 type Expr interface {
 	Node
 	exprNode()
+	Echo() string
 	// Eval, CanEvalRaw, and Columns are used by queries
 	Eval(*Context) Value
-	CanEvalRaw(fields []string) bool
+	CanEvalRaw(cols []string) bool
 	Columns() []string
 }
 type exprNodeT struct {
@@ -47,6 +50,10 @@ func (en *exprNodeT) CanEvalRaw([]string) bool {
 	return false
 }
 
+func (en *exprNodeT) Echo() string {
+	panic("not implemented")
+}
+
 type Ident struct {
 	exprNodeT
 	Name string
@@ -54,6 +61,10 @@ type Ident struct {
 }
 
 func (a *Ident) String() string {
+	return a.Name
+}
+
+func (a *Ident) Echo() string {
 	return a.Name
 }
 
@@ -78,6 +89,10 @@ func (a *Constant) String() string {
 	return a.Val.String()
 }
 
+func (a *Constant) Echo() string {
+	return a.Val.String()
+}
+
 type Unary struct {
 	exprNodeT
 	Tok tok.Token
@@ -86,6 +101,13 @@ type Unary struct {
 
 func (a *Unary) String() string {
 	return "Unary(" + a.Tok.String() + " " + a.E.String() + ")"
+}
+
+func (a *Unary) Echo() string {
+	if a.Tok == tok.LParen {
+		return "(" + a.E.Echo() + ")"
+	}
+	return strings.TrimSpace(tokEcho[a.Tok]) + a.E.Echo()
 }
 
 func (a *Unary) Children(fn func(Node) Node) {
@@ -97,14 +119,37 @@ type Binary struct {
 	Lhs Expr
 	Tok tok.Token
 	Rhs Expr
-	// rawFlds is used by queries.
+	// RawCols is used by queries.
 	// If non-nil, then for these fields, this can be evaluated "raw"
 	// without unpacking the values.
-	rawFlds []string
+	RawCols []string
 }
 
 func (a *Binary) String() string {
 	return "Binary(" + a.Tok.String() + " " + a.Lhs.String() + " " + a.Rhs.String() + ")"
+}
+
+var tokEcho = map[tok.Token]string{
+	tok.Is:       " is ",
+	tok.Isnt:     " isnt ",
+	tok.Lt:       " < ",
+	tok.Lte:      " <= ",
+	tok.Gt:       " > ",
+	tok.Gte:      " >= ",
+	tok.Match:    " =~ ",
+	tok.MatchNot: " !~ ",
+	tok.Add:      " + ",
+	tok.Sub:      " - ",
+	tok.Cat:      " $ ",
+	tok.Mul:      " * ",
+	tok.Div:      " / ",
+	tok.Mod:      " % ",
+	tok.And:      " and ",
+	tok.Or:       " or ",
+}
+
+func (a *Binary) Echo() string {
+	return a.Lhs.Echo() + tokEcho[a.Tok] + a.Rhs.Echo()
 }
 
 func applyExpr(fn func(Node) Node, pexpr *Expr) {
@@ -129,6 +174,10 @@ func (a *Trinary) String() string {
 	return "Trinary(" + a.Cond.String() + " " + a.T.String() + " " + a.F.String() + ")"
 }
 
+func (a *Trinary) Echo() string {
+	return a.Cond.Echo() + " ? " + a.T.Echo() + " : " + a.F.Echo()
+}
+
 func (a *Trinary) Children(fn func(Node) Node) {
 	applyExpr(fn, &a.Cond)
 	applyExpr(fn, &a.T)
@@ -150,6 +199,14 @@ func (a *Nary) String() string {
 	return s + ")"
 }
 
+func (a *Nary) Echo() string {
+	s := a.Exprs[0].Echo()
+	for _, e := range a.Exprs[1:] {
+		s += tokEcho[a.Tok] + e.Echo()
+	}
+	return s
+}
+
 func (a *Nary) Children(fn func(Node) Node) {
 	for i := range a.Exprs {
 		applyExpr(fn, &a.Exprs[i])
@@ -166,6 +223,10 @@ type RangeTo struct {
 func (a *RangeTo) String() string {
 	return "RangeTo(" + a.E.String() + " " + fmt.Sprint(a.From) + " " +
 		fmt.Sprint(a.To) + ")"
+}
+
+func (a *RangeTo) Echo() string {
+	return a.E.String() + "[" + a.From.Echo() + ".." + a.To.Echo() + "]"
 }
 
 func (a *RangeTo) Children(fn func(Node) Node) {
@@ -186,6 +247,10 @@ func (a *RangeLen) String() string {
 		fmt.Sprint(a.Len) + ")"
 }
 
+func (a *RangeLen) Echo() string {
+	return a.E.Echo() + "[" + a.From.Echo() + "::" + a.Len.Echo() + "]"
+}
+
 func (a *RangeLen) Children(fn func(Node) Node) {
 	applyExpr(fn, &a.E)
 	applyExpr(fn, &a.From)
@@ -202,6 +267,16 @@ func (a *Mem) String() string {
 	return "Mem(" + a.E.String() + " " + a.M.String() + ")"
 }
 
+func (a *Mem) Echo() string {
+	s := a.E.String()
+	if c, ok := a.M.(*Constant); ok {
+		if cs, ok := c.Val.(SuStr); ok && lexer.IsIdentifier(string(cs)) {
+			return s + "." + string(cs)
+		}
+	}
+	return s + "[" + a.M.Echo() + "]"
+}
+
 func (a *Mem) Children(fn func(Node) Node) {
 	applyExpr(fn, &a.E)
 	applyExpr(fn, &a.M)
@@ -211,11 +286,11 @@ type In struct {
 	exprNodeT
 	E     Expr
 	Exprs []Expr
-	// rawFlds is used by queries.
+	// RawCols is used by queries.
 	// If non-nil, then for these fields, this can be evaluated "raw"
 	// without unpacking the values.
-	rawFlds []string
-	packed  []string
+	RawCols []string
+	Packed  []string
 }
 
 func (a *In) String() string {
@@ -226,6 +301,16 @@ func (a *In) String() string {
 		sep = " "
 	}
 	return s + "])"
+}
+
+func (a *In) Echo() string {
+	s := a.E.Echo() + " in ("
+	sep := ""
+	for _, e := range a.Exprs {
+		s += sep + e.Echo()
+		sep = ", "
+	}
+	return s + ")"
 }
 
 func (a *In) Children(fn func(Node) Node) {
@@ -270,6 +355,16 @@ func (a *Call) String() string {
 	return s + ")"
 }
 
+func (a *Call) Echo() string {
+	s := a.Fn.Echo() + "("
+	sep := ""
+	for _, arg := range a.Args {
+		s += sep + arg.Echo()
+		sep = ", "
+	}
+	return s + ")"
+}
+
 func (a *Call) Children(fn func(Node) Node) {
 	applyExpr(fn, &a.Fn)
 	for i := range a.Args {
@@ -292,6 +387,18 @@ func (a *Arg) String() string {
 		}
 	}
 	return s + a.E.String()
+}
+
+func (a *Arg) Echo() string {
+	s := ""
+	if a.Name != nil {
+		if ks, ok := a.Name.(SuStr); ok && lexer.IsIdentifier(string(ks)) {
+			s += string(ks) + ":"
+		} else {
+			s += a.Name.String() + ":"
+		}
+	}
+	return s + a.E.Echo()
 }
 
 type Function struct {

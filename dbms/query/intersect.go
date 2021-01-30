@@ -10,7 +10,7 @@ type Intersect struct {
 }
 
 func (it *Intersect) String() string {
-	return it.Query2.String("intersect")
+	return it.Query2.String("INTERSECT")
 }
 
 func (it *Intersect) Columns() []string {

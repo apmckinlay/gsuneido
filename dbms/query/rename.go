@@ -26,7 +26,7 @@ func (r *Rename) String() string {
 		sb.WriteString(r.to[i])
 		sep = ", "
 	}
-	return r.Query1.String() + " rename " + sb.String()
+	return paren(r.source) + " RENAME " + sb.String()
 }
 
 func (r *Rename) Columns() []string {
