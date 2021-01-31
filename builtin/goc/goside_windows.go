@@ -84,6 +84,8 @@ func Traccel(ob int, msg unsafe.Pointer) int {
 	return int(interact())
 }
 
+// Interrupt checks if control+break has been pressed.
+// It is called regularly by Interp.
 func Interrupt() bool {
 	C.args[0] = C.msg_interrupt
 	return interact() == 1
@@ -136,8 +138,9 @@ var RunOnGoSide func()
 var SunAPP func(string) string
 
 func interact() uintptr {
-	if uiThreadId != windows.GetCurrentThreadId() {
-		panic("illegal UI call from background thread")
+	if windows.GetCurrentThreadId() != uiThreadId {
+		log.Println("illegal UI call from background thread")
+		runtime.Goexit()
 	}
 	for {
 		switch C.args[0] {
