@@ -212,6 +212,7 @@ var suFileMethods = Methods{
 		if sf.mode == "a" {
 			panic("file.Seek: invalid with mode 'a'")
 		}
+		sf.reset()
 		offset := ToInt64(arg1)
 		switch ToStr(arg2) {
 		case "set":
@@ -228,7 +229,6 @@ var suFileMethods = Methods{
 			panic("file.Seek: " + err.Error())
 		}
 		sf.tell = offset
-		sf.reset()
 		return nil
 	}),
 	"Tell": method0(func(this Value) Value {
@@ -256,7 +256,7 @@ var suFileMethods = Methods{
 		if err != nil {
 			panic("File: Writeline: " + err.Error())
 		}
-		sf.tell += int64(len(s) + 1)
+		sf.tell += int64(len(s) + 2)
 		return arg
 	}),
 }
