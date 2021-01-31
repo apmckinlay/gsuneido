@@ -146,7 +146,7 @@ void fatal(char* msg) {
 	msgbox(msg, "FATAL");
 }
 
-const int CTRL_BREAK_ID = 1; // no significance to this number
+const int CTRL_BREAK_ID = 1; // arbitrary value passed to RegisterHotKey
 
 static int interrupt() {
 	MSG msg;
