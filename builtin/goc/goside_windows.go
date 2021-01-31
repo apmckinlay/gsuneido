@@ -50,45 +50,29 @@ func CNotifyHwnd() uintptr {
 }
 
 func QueryIDispatch(iunk uintptr) uintptr {
-	C.args[0] = C.msg_queryidispatch
-	C.args[1] = C.uintptr(iunk)
-	return interact()
+	return interact(C.msg_queryidispatch, iunk)
 }
 
 func CreateInstance(progid uintptr) uintptr {
-	C.args[0] = C.msg_createinstance
-	C.args[1] = C.uintptr(progid)
-	return interact()
+	return interact(C.msg_createinstance, progid)
 }
 
 func Invoke(idisp, name, flags, args, result uintptr) int {
-	C.args[0] = C.msg_invoke
-	C.args[1] = C.uintptr(idisp)
-	C.args[2] = C.uintptr(name)
-	C.args[3] = C.uintptr(flags)
-	C.args[4] = C.uintptr(args)
-	C.args[5] = C.uintptr(result)
-	return int(interact())
+	return int(interact(C.msg_invoke, idisp, name, flags, args, result))
 }
 
 func Release(iunk uintptr) {
-	C.args[0] = C.msg_release
-	C.args[1] = C.uintptr(iunk)
-	interact()
+	interact(C.msg_release, iunk)
 }
 
 func Traccel(ob int, msg unsafe.Pointer) int {
-	C.args[0] = C.msg_traccel
-	C.args[1] = C.uintptr(ob)
-	C.args[2] = C.uintptr(uintptr(msg))
-	return int(interact())
+	return int(interact(C.msg_traccel, uintptr(ob), uintptr(msg)))
 }
 
 // Interrupt checks if control+break has been pressed.
 // It is called regularly by Interp.
 func Interrupt() bool {
-	C.args[0] = C.msg_interrupt
-	return interact() == 1
+	return interact(C.msg_interrupt) == 1
 }
 
 func GetCallback(nargs, i int) uintptr {
@@ -137,15 +121,16 @@ var Callback4 func(i, a, b, c, d uintptr) uintptr
 var RunOnGoSide func()
 var SunAPP func(string) string
 
-func interact() uintptr {
+func interact(args ...uintptr) uintptr {
 	if windows.GetCurrentThreadId() != uiThreadId {
 		log.Println("illegal UI call from background thread")
 		runtime.Goexit()
 	}
+	for i,a := range args {
+		C.args[i] = C.uintptr(a)
+	}
 	for {
 		switch C.args[0] {
-		case C.msg_syscall:
-			break
 		case C.msg_callback2:
 			C.args[0] = C.msg_result
 			C.args[1] = C.uintptr(Callback2(uintptr(C.args[1]),
@@ -179,184 +164,48 @@ func interact() uintptr {
 }
 
 func MessageLoop(hdlg uintptr) {
-	C.args[0] = C.msg_msgloop
-	C.args[1] = C.uintptr(hdlg)
-	interact()
+	interact(C.msg_msgloop, hdlg)
 }
 
 func Syscall0(adr uintptr) uintptr {
-	C.args[0] = C.msg_syscall
-	C.args[1] = C.uintptr(adr)
-	C.args[2] = 0
-	return interact()
+	return interact(C.msg_syscall, adr, 0)
 }
 func Syscall1(adr, a uintptr) uintptr {
-	C.args[0] = C.msg_syscall
-	C.args[1] = C.uintptr(adr)
-	C.args[2] = 1
-	C.args[3] = C.uintptr(a)
-	return interact()
+	return interact(C.msg_syscall, adr, 1, a)
 }
 func Syscall2(adr, a, b uintptr) uintptr {
-	C.args[0] = C.msg_syscall
-	C.args[1] = C.uintptr(adr)
-	C.args[2] = 2
-	C.args[3] = C.uintptr(a)
-	C.args[4] = C.uintptr(b)
-	return interact()
+	return interact(C.msg_syscall, adr, 2, a, b)
 }
 func Syscall3(adr, a, b, c uintptr) uintptr {
-	C.args[0] = C.msg_syscall
-	C.args[1] = C.uintptr(adr)
-	C.args[2] = 3
-	C.args[3] = C.uintptr(a)
-	C.args[4] = C.uintptr(b)
-	C.args[5] = C.uintptr(c)
-	return interact()
+	return interact(C.msg_syscall, adr, 3, a, b, c)
 }
 func Syscall4(adr, a, b, c, d uintptr) uintptr {
-	C.args[0] = C.msg_syscall
-	C.args[1] = C.uintptr(adr)
-	C.args[2] = 4
-	C.args[3] = C.uintptr(a)
-	C.args[4] = C.uintptr(b)
-	C.args[5] = C.uintptr(c)
-	C.args[6] = C.uintptr(d)
-	return interact()
+	return interact(C.msg_syscall, adr, 4, a, b, c, d)
 }
 func Syscall5(adr, a, b, c, d, e uintptr) uintptr {
-	C.args[0] = C.msg_syscall
-	C.args[1] = C.uintptr(adr)
-	C.args[2] = 5
-	C.args[3] = C.uintptr(a)
-	C.args[4] = C.uintptr(b)
-	C.args[5] = C.uintptr(c)
-	C.args[6] = C.uintptr(d)
-	C.args[7] = C.uintptr(e)
-	return interact()
+	return interact(C.msg_syscall, adr, 5, a, b, c, d, e)
 }
 func Syscall6(adr, a, b, c, d, e, f uintptr) uintptr {
-	C.args[0] = C.msg_syscall
-	C.args[1] = C.uintptr(adr)
-	C.args[2] = 6
-	C.args[3] = C.uintptr(a)
-	C.args[4] = C.uintptr(b)
-	C.args[5] = C.uintptr(c)
-	C.args[6] = C.uintptr(d)
-	C.args[7] = C.uintptr(e)
-	C.args[8] = C.uintptr(f)
-	return interact()
+	return interact(C.msg_syscall, adr, 6, a, b, c, d, e, f)
 }
 func Syscall7(adr, a, b, c, d, e, f, g uintptr) uintptr {
-	C.args[0] = C.msg_syscall
-	C.args[1] = C.uintptr(adr)
-	C.args[2] = 7
-	C.args[3] = C.uintptr(a)
-	C.args[4] = C.uintptr(b)
-	C.args[5] = C.uintptr(c)
-	C.args[6] = C.uintptr(d)
-	C.args[7] = C.uintptr(e)
-	C.args[8] = C.uintptr(f)
-	C.args[9] = C.uintptr(g)
-	return interact()
+	return interact(C.msg_syscall, adr, 7, a, b, c, d, e, f, g)
 }
 func Syscall8(adr, a, b, c, d, e, f, g, h uintptr) uintptr {
-	C.args[0] = C.msg_syscall
-	C.args[1] = C.uintptr(adr)
-	C.args[2] = 8
-	C.args[3] = C.uintptr(a)
-	C.args[4] = C.uintptr(b)
-	C.args[5] = C.uintptr(c)
-	C.args[6] = C.uintptr(d)
-	C.args[7] = C.uintptr(e)
-	C.args[8] = C.uintptr(f)
-	C.args[9] = C.uintptr(g)
-	C.args[10] = C.uintptr(h)
-	return interact()
+	return interact(C.msg_syscall, adr, 8, a, b, c, d, e, f, g, h)
 }
 func Syscall9(adr, a, b, c, d, e, f, g, h, i uintptr) uintptr {
-	C.args[0] = C.msg_syscall
-	C.args[1] = C.uintptr(adr)
-	C.args[2] = 9
-	C.args[3] = C.uintptr(a)
-	C.args[4] = C.uintptr(b)
-	C.args[5] = C.uintptr(c)
-	C.args[6] = C.uintptr(d)
-	C.args[7] = C.uintptr(e)
-	C.args[8] = C.uintptr(f)
-	C.args[9] = C.uintptr(g)
-	C.args[10] = C.uintptr(h)
-	C.args[11] = C.uintptr(i)
-	return interact()
+	return interact(C.msg_syscall, adr, 9, a, b, c, d, e, f, g, h, i)
 }
 func Syscall10(adr, a, b, c, d, e, f, g, h, i, j uintptr) uintptr {
-	C.args[0] = C.msg_syscall
-	C.args[1] = C.uintptr(adr)
-	C.args[2] = 10
-	C.args[3] = C.uintptr(a)
-	C.args[4] = C.uintptr(b)
-	C.args[5] = C.uintptr(c)
-	C.args[6] = C.uintptr(d)
-	C.args[7] = C.uintptr(e)
-	C.args[8] = C.uintptr(f)
-	C.args[9] = C.uintptr(g)
-	C.args[10] = C.uintptr(h)
-	C.args[11] = C.uintptr(i)
-	C.args[12] = C.uintptr(j)
-	return interact()
+	return interact(C.msg_syscall, adr, 10, a, b, c, d, e, f, g, h, i, j)
 }
 func Syscall11(adr, a, b, c, d, e, f, g, h, i, j, k uintptr) uintptr {
-	C.args[0] = C.msg_syscall
-	C.args[1] = C.uintptr(adr)
-	C.args[2] = 11
-	C.args[3] = C.uintptr(a)
-	C.args[4] = C.uintptr(b)
-	C.args[5] = C.uintptr(c)
-	C.args[6] = C.uintptr(d)
-	C.args[7] = C.uintptr(e)
-	C.args[8] = C.uintptr(f)
-	C.args[9] = C.uintptr(g)
-	C.args[10] = C.uintptr(h)
-	C.args[11] = C.uintptr(i)
-	C.args[12] = C.uintptr(j)
-	C.args[13] = C.uintptr(k)
-	return interact()
+	return interact(C.msg_syscall, adr, 11, a, b, c, d, e, f, g, h, i, j, k)
 }
 func Syscall12(adr, a, b, c, d, e, f, g, h, i, j, k, l uintptr) uintptr {
-	C.args[0] = C.msg_syscall
-	C.args[1] = C.uintptr(adr)
-	C.args[2] = 12
-	C.args[3] = C.uintptr(a)
-	C.args[4] = C.uintptr(b)
-	C.args[5] = C.uintptr(c)
-	C.args[6] = C.uintptr(d)
-	C.args[7] = C.uintptr(e)
-	C.args[8] = C.uintptr(f)
-	C.args[9] = C.uintptr(g)
-	C.args[10] = C.uintptr(h)
-	C.args[11] = C.uintptr(i)
-	C.args[12] = C.uintptr(j)
-	C.args[13] = C.uintptr(k)
-	C.args[14] = C.uintptr(l)
-	return interact()
+	return interact(C.msg_syscall, adr, 12, a, b, c, d, e, f, g, h, i, j, k, l)
 }
 func Syscall14(adr, a, b, c, d, e, f, g, h, i, j, k, l, m, n uintptr) uintptr {
-	C.args[0] = C.msg_syscall
-	C.args[1] = C.uintptr(adr)
-	C.args[2] = 14
-	C.args[3] = C.uintptr(a)
-	C.args[4] = C.uintptr(b)
-	C.args[5] = C.uintptr(c)
-	C.args[6] = C.uintptr(d)
-	C.args[7] = C.uintptr(e)
-	C.args[8] = C.uintptr(f)
-	C.args[9] = C.uintptr(g)
-	C.args[10] = C.uintptr(h)
-	C.args[11] = C.uintptr(i)
-	C.args[12] = C.uintptr(j)
-	C.args[13] = C.uintptr(k)
-	C.args[14] = C.uintptr(l)
-	C.args[15] = C.uintptr(m)
-	C.args[16] = C.uintptr(n)
-	return interact()
+	return interact(C.msg_syscall, adr, 14, a, b, c, d, e, f, g, h, i, j, k, l, m, n)
 }
