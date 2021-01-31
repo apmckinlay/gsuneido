@@ -1,10 +1,12 @@
 # requires sh on path (e.g. from MinGW)
 BUILT=$(shell date "+%b %e %Y %X")
 
+EXE = gsuneido
 LDFLAGS = -s -w -X 'main.builtDate=${BUILT}'
 GUIFLAGS = $(LDFLAGS)
 ifdef PATHEXT
 	# Windows stuff
+	EXE = gsuneido.exe gsuneido.com
 	GUIFLAGS = $(LDFLAGS) -X main.mode=gui -H windowsgui
 	CONSOLE = go build -o gsuneido.com -ldflags "$(LDFLAGS)"
 endif
@@ -30,6 +32,7 @@ generate:
 	go generate -x ./...
 
 clean:
+	rm $(EXE)
 	go clean -cache -testcache
 
 # need 64 bit windres e.g. from mingw64
