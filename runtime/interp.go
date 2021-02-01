@@ -22,6 +22,9 @@ func (t *Thread) Invoke(fn *SuFunc, this Value) Value {
 	for expand := fn.Nlocals - fn.Nparams; expand > 0; expand-- {
 		t.Push(nil)
 	}
+	if t.fp >= len(t.frames) {
+		panic("function call overflow")
+	}
 	t.frames[t.fp] = Frame{fn: fn, this: this,
 		locals: Locals{v: t.stack[t.sp-int(fn.Nlocals) : t.sp]}}
 	return t.run()
@@ -497,7 +500,7 @@ loop:
 		case op.Cover:
 			fn := fr.fn
 			if fn.cover != nil {
-				ip := fr.ip-1
+				ip := fr.ip - 1
 				if len(fn.cover) < len(fn.Code) {
 					fn.cover[ip>>4] |= 1 << (ip & 15)
 				} else { // count
