@@ -132,7 +132,8 @@ void msgbox(char* text, char* caption) {
 	Mbargs args;
 	args.text = text;
 	args.caption = caption;
-	HANDLE thread = CreateThread(NULL, 0, message_thread, (void*) &args, 0, NULL);
+	HANDLE thread =
+		CreateThread(NULL, 0, message_thread, (void*) &args, 0, NULL);
 	if (thread)
 		WaitForSingleObject(thread, INFINITE);
 	free(text);
@@ -164,12 +165,8 @@ uintptr interact() {
 	if (GetCurrentThreadId() != main_threadid)
 		exit(666);
 	for (;;) {
+		// these are the messages sent from go-side to c-side
 		switch (args[0]) {
-		case msg_callback2:
-		case msg_callback3:
-		case msg_callback4:
-		case msg_timerid:
-			break;
 		case msg_syscall:
 			args[1] = syscall();
 			args[0] = msg_result;
@@ -298,33 +295,33 @@ static VOID CALLBACK timer(
 const int timerIntervalMS = 50;
 uintptr notifyHwnd = 0;
 
-static LRESULT CALLBACK notifyWndProc(HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
-    if (uMsg == WM_USER && wParam == 0xffffffff) {
-        args[0] = msg_runongoside;
+static LRESULT CALLBACK notifyWndProc(
+	HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
+	if (uMsg == WM_USER && wParam == 0xffffffff) {
+		args[0] = msg_runongoside;
 		interact();
-    } else {
-        return DefWindowProc(hwnd, uMsg, wParam, lParam);
-    }
-    return 0;
+	} else {
+		return DefWindowProc(hwnd, uMsg, wParam, lParam);
+	}
+	return 0;
 }
 
 static int setupNotify() {
-    WNDCLASS wc;
-    memset(&wc, 0, sizeof wc);
-    wc.lpszClassName = "notify";
-    wc.lpfnWndProc = notifyWndProc;
-    if (!RegisterClass(&wc)) {
-        return FALSE;
-    }
+	WNDCLASS wc;
+	memset(&wc, 0, sizeof wc);
+	wc.lpszClassName = "notify";
+	wc.lpfnWndProc = notifyWndProc;
+	if (!RegisterClass(&wc)) {
+		return FALSE;
+	}
 
-    HWND hwnd = CreateWindow("notify", "notify", WS_OVERLAPPEDWINDOW,
-		0, 0, 0, 0,
-        HWND_MESSAGE, NULL, NULL, NULL);
-    if (!hwnd) {
-        return FALSE;
-    }
+	HWND hwnd = CreateWindow("notify", "notify", WS_OVERLAPPEDWINDOW, 0, 0, 0,
+		0, HWND_MESSAGE, NULL, NULL, NULL);
+	if (!hwnd) {
+		return FALSE;
+	}
 
-	notifyHwnd = (uintptr)hwnd;
+	notifyHwnd = (uintptr) hwnd;
 	return TRUE;
 }
 
@@ -355,6 +352,7 @@ void start() {
 	EnterCriticalSection(&lock); // wait for thread to be in signalAndWait
 }
 
+// suneidoAPP is called by sunapp.cpp
 buf_t suneidoAPP(char* url) {
 	args[0] = msg_sunapp;
 	args[1] = (uintptr) url;

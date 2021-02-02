@@ -130,6 +130,7 @@ func interact(args ...uintptr) uintptr {
 		C.args[i] = C.uintptr(a)
 	}
 	for {
+		// these are the messages sent from c-side to go-side
 		switch C.args[0] {
 		case C.msg_callback2:
 			C.args[0] = C.msg_result
