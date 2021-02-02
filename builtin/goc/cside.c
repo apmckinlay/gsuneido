@@ -166,8 +166,9 @@ const int STDERR = 2;
 
 uintptr interact() {
 	if (GetCurrentThreadId() != main_threadid) {
-		write(STDERR, "FATAL: interact called from different thread\r\n", 46);
-		exit(666);
+		const char* msg = "FATAL: interact called from different thread\r\n";
+		write(STDERR, msg, strlen(msg));
+		exit(1);
 	}
 	for (;;) {
 		// these are the messages sent from go-side to c-side
@@ -298,14 +299,16 @@ static VOID CALLBACK timer(
 }
 
 const int timerIntervalMS = 50;
-uintptr notifyHwnd = 0;
+uintptr helperHwnd = 0; // set by setupHelper
+const WPARAM notifyWparam = 0xffffffff;
+const WPARAM sunappWparam = 0xeeeeeeee;
 
-static LRESULT CALLBACK notifyWndProc(
+static LRESULT CALLBACK helperWndProc(
 	HWND hwnd, UINT uMsg, WPARAM wParam, LPARAM lParam) {
-	if (uMsg == WM_USER && wParam == 0xffffffff) {
+	if (uMsg == WM_USER && wParam == notifyWparam) {
 		args[0] = msg_runongoside;
 		interact();
-	} else if (uMsg == WM_USER && wParam == 0xeeeeeeee) {
+	} else if (uMsg == WM_USER && wParam == sunappWparam) {
 		buf_t* buf = (buf_t*) lParam;
 		args[0] = msg_sunapp;
 		args[1] = (uintptr) buf->buf;
@@ -317,22 +320,22 @@ static LRESULT CALLBACK notifyWndProc(
 	return 0;
 }
 
-static int setupNotify() {
+static int setupHelper() {
 	WNDCLASS wc;
 	memset(&wc, 0, sizeof wc);
-	wc.lpszClassName = "notify";
-	wc.lpfnWndProc = notifyWndProc;
+	wc.lpszClassName = "helper";
+	wc.lpfnWndProc = helperWndProc;
 	if (!RegisterClass(&wc)) {
 		return FALSE;
 	}
 
-	HWND hwnd = CreateWindow("notify", "notify", WS_OVERLAPPEDWINDOW, 0, 0, 0,
+	HWND hwnd = CreateWindow("helper", "helper", WS_OVERLAPPEDWINDOW, 0, 0, 0,
 		0, HWND_MESSAGE, NULL, NULL, NULL);
 	if (!hwnd) {
 		return FALSE;
 	}
 
-	notifyHwnd = (uintptr) hwnd;
+	helperHwnd = (uintptr) hwnd;
 	return TRUE;
 }
 
@@ -344,7 +347,7 @@ static DWORD WINAPI thread(LPVOID lpParameter) {
 	main_threadid = GetCurrentThreadId();
 	hook = SetWindowsHookExA(WH_GETMESSAGE, message_hook, 0, main_threadid);
 	CreateThread(NULL, 8192, timer_thread, 0, 0, 0);
-	setupNotify();
+	setupHelper();
 	signalAndWait();
 	interact(); // allow go side to run init, finishing with result
 	SetTimer(0, 0, timerIntervalMS, timer);
@@ -368,7 +371,7 @@ buf_t suneidoAPP(char* url) {
 	buf_t buf;
 	if (GetCurrentThreadId() != main_threadid) {
 		buf.buf = url;
-		SendMessageA((HWND) notifyHwnd, WM_USER, 0xeeeeeeee, (LPARAM) &buf);
+		SendMessageA((HWND) helperHwnd, WM_USER, sunappWparam, (LPARAM) &buf);
 		return buf;
 	}
 	args[0] = msg_sunapp;

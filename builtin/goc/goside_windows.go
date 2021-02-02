@@ -45,8 +45,8 @@ func CThreadId() uintptr {
 	return uintptr(C.threadid)
 }
 
-func CNotifyHwnd() uintptr {
-	return uintptr(C.notifyHwnd)
+func CHelperHwnd() uintptr {
+	return uintptr(C.helperHwnd)
 }
 
 func QueryIDispatch(iunk uintptr) uintptr {

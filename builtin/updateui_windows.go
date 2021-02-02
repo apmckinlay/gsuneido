@@ -32,11 +32,13 @@ var _ = builtin("UpdateUI(block)",
 		return nil
 	})
 
+const notifyWparam = 0xffffffff
+
 // notifyCside is used by UpdateUI, SetTimer, and KillTimer
 func notifyCside() {
 	// NOTE: this has to be the Go Syscall, not goc.Syscall
 	r, _, _ := syscall.Syscall6(postMessage, 4,
-		goc.CNotifyHwnd(), WM_USER, 0xffffffff, 0, 0, 0)
+		goc.CHelperHwnd(), WM_USER, notifyWparam, 0, 0, 0)
 	if r == 0 {
 		log.Panicln("notifyCside PostMessage failed")
 	}
