@@ -161,9 +161,14 @@ static int interrupt() {
 	return hotkey;
 }
 
+#include <io.h>
+const int STDERR = 2;
+
 uintptr interact() {
-	if (GetCurrentThreadId() != main_threadid)
+	if (GetCurrentThreadId() != main_threadid) {
+		write(STDERR, "FATAL: interact called from different thread\r\n", 46);
 		exit(666);
+	}
 	for (;;) {
 		// these are the messages sent from go-side to c-side
 		switch (args[0]) {
@@ -300,6 +305,12 @@ static LRESULT CALLBACK notifyWndProc(
 	if (uMsg == WM_USER && wParam == 0xffffffff) {
 		args[0] = msg_runongoside;
 		interact();
+	} else if (uMsg == WM_USER && wParam == 0xeeeeeeee) {
+		buf_t* buf = (buf_t*) lParam;
+		args[0] = msg_sunapp;
+		args[1] = (uintptr) buf->buf;
+		buf->buf = (char*) interact();
+		buf->size = args[2];
 	} else {
 		return DefWindowProc(hwnd, uMsg, wParam, lParam);
 	}
@@ -325,7 +336,10 @@ static int setupNotify() {
 	return TRUE;
 }
 
+int sunapp_register_classes();
+
 static DWORD WINAPI thread(LPVOID lpParameter) {
+	sunapp_register_classes();
 	RegisterHotKey(0, CTRL_BREAK_ID, MOD_CONTROL, VK_CANCEL);
 	main_threadid = GetCurrentThreadId();
 	hook = SetWindowsHookExA(WH_GETMESSAGE, message_hook, 0, main_threadid);
@@ -339,13 +353,10 @@ static DWORD WINAPI thread(LPVOID lpParameter) {
 	exit(0);
 }
 
-int sunapp_register_classes();
-
 DWORD threadid;
 
 void start() {
 	Scintilla_RegisterClasses(GetModuleHandle(NULL));
-	sunapp_register_classes();
 	InitializeCriticalSection(&lock);
 	EnterCriticalSection(&lock);
 	CreateThread(NULL, stack_size, thread, 0, 0, &threadid);
@@ -354,12 +365,15 @@ void start() {
 
 // suneidoAPP is called by sunapp.cpp
 buf_t suneidoAPP(char* url) {
+	buf_t buf;
+	if (GetCurrentThreadId() != main_threadid) {
+		buf.buf = url;
+		SendMessageA((HWND) notifyHwnd, WM_USER, 0xeeeeeeee, (LPARAM) &buf);
+		return buf;
+	}
 	args[0] = msg_sunapp;
 	args[1] = (uintptr) url;
-	uintptr p = interact();
-	char* s = (char*) p;
-	buf_t result;
-	result.size = args[2];
-	result.buf = s;
-	return result;
+	buf.buf = (char*) interact();
+	buf.size = args[2];
+	return buf;
 }
