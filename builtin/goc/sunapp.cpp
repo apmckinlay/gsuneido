@@ -143,6 +143,7 @@ HRESULT STDMETHODCALLTYPE CSuneidoAPP::Start(
 	InternetCanonicalizeUrl(url, buf, &buflen, ICU_DECODE | ICU_NO_ENCODE);
 
 	buf_t result = suneidoAPP(buf);
+	delete buf;
 	str = result.buf;
 	len = result.size;
 	pos = 0;
