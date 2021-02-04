@@ -143,6 +143,10 @@ func (r *SuRecord) Display(t *Thread) string {
 }
 
 func (r *SuRecord) rstring(t *Thread, buf *limitBuf, inProgress vstack) {
+	if !inProgress.Push(&r.ob) {
+		buf.WriteString("...")
+		return
+	} // no pop necessary because we pass inProgress vstack slice by value
 	r.ToObject().rstring2(t, buf, "[", "]", inProgress)
 }
 

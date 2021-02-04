@@ -425,7 +425,7 @@ type vstack []*SuObject
 
 func (vs *vstack) Push(ob *SuObject) bool {
 	for _, v := range *vs {
-		if v == ob { // deliberately == not Equal
+		if v == ob { // deliberately == (pointers) not Equal (contents)
 			return false
 		}
 	}
@@ -444,6 +444,10 @@ func (ob *SuObject) Display(t *Thread) string {
 }
 
 func (ob *SuObject) rstring(t *Thread, buf *limitBuf, inProgress vstack) {
+	if !inProgress.Push(ob) {
+		buf.WriteString("...")
+		return
+	} // no pop necessary because we pass inProgress vstack slice by value
 	ob.rstring2(t, buf, "#(", ")", inProgress)
 }
 
@@ -454,13 +458,8 @@ type recursable interface {
 var _ recursable = (*SuObject)(nil)
 
 func (ob *SuObject) rstring2(t *Thread, buf *limitBuf, before, after string, inProgress vstack) {
-	if !inProgress.Push(ob) {
-		buf.WriteString("...")
-		return
-	}
-	// no pop necessary because we pass vstack slice by value
 	buf.WriteString(before)
-	// ok to lock recursively because of inProgress check
+	// ok to lock recursively because of inProgress check in rstring
 	if ob.Lock() {
 		defer ob.Unlock()
 	}
