@@ -12,6 +12,7 @@ import (
 	"github.com/apmckinlay/gsuneido/builtin/heap"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
+	"github.com/apmckinlay/gsuneido/util/ints"
 )
 
 var gdi32 = MustLoadDLL("gdi32.dll")
@@ -515,18 +516,30 @@ var _ = builtin6("PatBlt(hdc, nXLeft, nYLeft, nWidth, nHeight, dwRop)",
 		return boolRet(rtn)
 	})
 
-// dll bool Gdi32:Polygon(
+// dll bool Gdi32:PolygonApi(
 // 	pointer hdc,		// handle to device context
-// 	[in] string lppt,		// array of points
-// 	long cCount		// count of points
+// 	[in] string lppt,	// array of points
+// 	long cCount			// count of points
 // 	)
 var polygon = gdi32.MustFindProc("Polygon").Addr()
-var _ = builtin3("Polygon(hdc, lppt, cCount)",
+var _ = builtin3("Polygon(hdc, points, npoints = false)",
 	func(a, b, c Value) Value {
 		defer heap.FreeTo(heap.CurSize())
+		ob := ToContainer(b)
+		var n int
+		if c == False {
+			n = ob.ListSize()
+		} else {
+			n = ToInt(c)
+		}
+		p := heap.Alloc(uintptr(n) * nPOINT)
+		for i := 0; i < ints.Min(n, ob.ListSize()); i++ {
+			*(*POINT)(unsafe.Pointer(uintptr(p) + uintptr(i)*nPOINT)) =
+				obToPoint(ob.ListGet(i))
+		}
 		rtn := goc.Syscall3(polygon,
 			intArg(a),
-			uintptr(stringArg(b)),
+			uintptr(p),
 			intArg(c))
 		return boolRet(rtn)
 	})
