@@ -32,7 +32,7 @@ generate:
 	go generate -x ./...
 
 clean:
-	rm $(EXE)
+	rm -f $(EXE)
 	go clean -cache -testcache
 
 # need 64 bit windres e.g. from mingw64
