@@ -61,7 +61,7 @@ type Parser struct {
 
 	// codegen is used to compile an ast.Function to an SuFunc.
 	// It is indirect so it can be overridden by gogen.
-	codegen func(*ast.Function) *runtime.SuFunc
+	codegen func(lib, name string, fn *ast.Function) *runtime.SuFunc
 
 	// checker is used to add additional checking along with codegen
 	checker *check.Check

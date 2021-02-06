@@ -20,7 +20,7 @@ func TestCodegen(t *testing.T) {
 		t.Helper()
 		classNum = 0
 		ast := parseFunction("function () {\n" + src + "\n}")
-		fn := codegen(ast)
+		fn := codegen("", "", ast)
 		actual := disasm(fn)
 		if actual != expected {
 			t.Errorf("\n%s\nexpect: %s\nactual: %s", src, expected, actual)
@@ -178,7 +178,7 @@ func TestControl(t *testing.T) {
 	test := func(src, expected string) {
 		t.Helper()
 		ast := parseFunction("function () {\n" + src + "\n}")
-		fn := codegen(ast)
+		fn := codegen("", "", ast)
 		s := DisasmOps(fn)
 		assert.T(t).Msg(src).This(s).Like(expected)
 	}
@@ -482,7 +482,7 @@ func TestControl(t *testing.T) {
 func TestBlock(t *testing.T) {
 	assert := assert.T(t).This
 	ast := parseFunction("function (x) {\n b = {|a| a + x }\n}")
-	fn := codegen(ast)
+	fn := codegen("", "", ast)
 	block := fn.Values[0].(*SuFunc)
 
 	assert(fn.Names).Is([]string{"x", "b", "a|2"})

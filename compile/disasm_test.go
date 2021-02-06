@@ -13,7 +13,7 @@ import (
 func TestDisasm(t *testing.T) {
 	test := func(src, expected string) {
 		ast := parseFunction(src)
-		fn := codegen(ast)
+		fn := codegen("", "", ast)
 		s := DisasmMixed(fn, src)
 		assert.T(t).This(s).Like(expected)
 	}

@@ -12,7 +12,6 @@ import (
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/ascii"
 	. "github.com/apmckinlay/gsuneido/util/ascii"
-	"github.com/apmckinlay/gsuneido/util/str"
 )
 
 // Expression parses a Suneido expression and builds an AST
@@ -230,6 +229,7 @@ func (p *Parser) atom() ast.Expr {
 		// need unary for (ob.m)() [not a method call]
 		return p.Unary(tok.LParen, e)
 	case tok.LCurly:
+		defer p.noName()()
 		return p.block()
 	case tok.LBracket:
 		return p.record()
@@ -249,9 +249,11 @@ func (p *Parser) atom() ast.Expr {
 		p.newline = false
 		return nil // to indicate it should be privatized
 	case tok.Function:
-		return p.Constant(p.noName(p.functionValue))
+		defer p.noName()()
+		return p.Constant(p.functionValue())
 	case tok.Class:
-		return p.Constant(p.noName(p.class))
+		defer p.noName()()
+		return p.Constant(p.class())
 	case tok.New:
 		p.Next()
 		expr := p.pcExpr(precedence[tok.Dot])
@@ -272,7 +274,8 @@ func (p *Parser) atom() ast.Expr {
 			if !p.expectingCompound &&
 				okBase(p.Text) && p.Lxr.AheadSkip(0).Token == tok.LCurly {
 				// MyClass { ... } => class
-				return p.Constant(p.noName(p.class))
+				defer p.noName()()
+				return p.Constant(p.class())
 			}
 			if p.Text == "it" {
 				p.itUsed = true
@@ -288,16 +291,13 @@ func (p *Parser) atom() ast.Expr {
 	panic(p.Error("unexpected " + p.Item.String()))
 }
 
-func (p *Parser) noName(f func() Value) Value {
+// noName assigns names to anonymous functions and classes.
+// Usage: defer p.noName()()
+func (p *Parser) noName() func() {
 	prevName := p.name
-	name := p.assignName
-	if p.assignName == "" {
-		name = "?"
-	}
-	p.name = str.Opt(p.name, " ") + name
-	result := f()
-	p.name = prevName
-	return result
+	// assignName is set by pcExpr
+	p.name = strings.TrimSpace(p.name + " " + p.assignName)
+	return func() { p.name = prevName }
 }
 
 var precedence = [tok.Ntokens]int8{
@@ -355,6 +355,7 @@ func (p *Parser) arguments(opening tok.Token) []ast.Arg {
 		args = p.argumentList(tok.RParen)
 	}
 	if p.Token == tok.LCurly && !p.expectingCompound {
+		defer p.noName()()
 		args = append(args, ast.Arg{Name: blockArg, E: p.block()})
 	}
 	return args
@@ -475,7 +476,8 @@ func (p *Parser) block() *ast.Block {
 		params = append(params, mkParam("it", pos, false, nil))
 	}
 	p.itUsed = itUsedPrev
-	return &ast.Block{Function: ast.Function{Pos: pos, Params: params, Body: body}}
+	return &ast.Block{Name: p.name,
+		Function: ast.Function{Pos: pos, Params: params, Body: body}}
 }
 
 func (p *Parser) blockParams() []ast.Param {

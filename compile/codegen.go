@@ -51,20 +51,23 @@ const (
 )
 
 // codegen compiles an Ast to an SuFunc
-func codegen(fn *ast.Function) *SuFunc {
+func codegen(lib, name string, fn *ast.Function) *SuFunc {
 	if len(fn.Final) > 0 {
 		ast.PropFold(fn)
 	}
 	if fn.HasBlocks {
 		ast.Blocks(fn)
 	}
-	return codegen2(fn, fn)
+	f := codegen2(lib, name, fn, fn)
+	return f
 }
 
-func codegen2(fn *ast.Function, outerFn *ast.Function) *SuFunc {
+func codegen2(lib, name string, fn *ast.Function, outerFn *ast.Function) *SuFunc {
 	cover := atomic.LoadInt64(&options.Coverage) == 1
 	cg := cgen{outerFn: outerFn, base: fn.Base, isNew: fn.IsNewMethod,
 		isBlock: fn != outerFn, cover: cover}
+	cg.Lib = lib
+	cg.Name = name
 	return cg.codegen(fn)
 }
 
@@ -81,12 +84,12 @@ func (cg *cgen) codegen(fn *ast.Function) *SuFunc {
 	}
 
 	return &SuFunc{
-		Code:      hacks.BStoS(cg.code), //TODO shrink to fit
+		Code:      hacks.BStoS(cg.code),
 		Nlocals:   uint8(len(cg.Names)),
 		ParamSpec: cg.ParamSpec,
 		ArgSpecs:  cg.argspecs, //TODO shrink to fit
 		Id:        fn.Id,
-		SrcPos:    hacks.BStoS(cg.srcPos), //TODO shrink to fit
+		SrcPos:    hacks.BStoS(cg.srcPos),
 		SrcBase:   cg.srcBase,
 	}
 }
@@ -96,6 +99,8 @@ func codegenBlock(ast *ast.Function, outercg *cgen) (*SuFunc, []string) {
 	cg := cgen{outerFn: outercg.outerFn, base: outercg.base, isBlock: true,
 		cover: outercg.cover}
 	cg.Names = outercg.Names
+	cg.Lib = outercg.Lib
+	cg.Name = outercg.Name
 
 	f := cg.codegen(ast)
 
@@ -548,9 +553,6 @@ func (cg *cgen) expr2(node ast.Expr, ct calltype) {
 		cg.inExpr(node)
 	case *ast.Call:
 		cg.call(node, ct)
-	case *ast.Function:
-		fn := codegen(node)
-		cg.emitValue(fn)
 	case *ast.Block:
 		cg.block(node)
 	default:
@@ -977,7 +979,7 @@ func (cg *cgen) block(b *ast.Block) {
 	f := &b.Function
 	var fn *SuFunc
 	if b.CompileAsFunction {
-		fn = codegen2(f, cg.outerFn)
+		fn = codegen2(cg.Lib, b.Name, f, cg.outerFn)
 		cg.emitValue(fn)
 	} else {
 		// closure

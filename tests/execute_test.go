@@ -28,15 +28,20 @@ func TestNaming(t *testing.T) {
 	test(`foo = function(){}; Name(foo)`, "foo")
 	test(`foo = class{}; Name(foo)`, "foo")
 	test(`foo = bar = class{}; Name(bar)`, "bar")
+	test(`Def('Tmp', 'function(){}'); Name(Tmp)`, "Tmp")
+	test(`Def('Tmp', 'function(){ return function(){} }'); Name(Tmp())`, "Tmp")
+	test(`Def('Tmp', 'function(){ return {} }'); Name(Tmp())`, "Tmp")
+	test(`Def('Tmp', 'function(){ fn = function(){} }'); Name(Tmp())`, "Tmp fn")
+	test(`Def('Tmp', 'function(){ b = {} }'); Name(Tmp())`, "Tmp b")
 	test(`Def('Tmp', 'class { F(){} }'); Name(Tmp.F)`, "Tmp.F")
 	test(`Def('Tmp', 'class { Inner: class { F(){} } }');
 		Name(Tmp.Inner.F)`, "Tmp.Inner.F")
 	test(`Def('Tmp', 'function(){ myclass = class { F(){} } }');
 		Name(Tmp().F)`, "Tmp myclass.F")
 	test(`Def('Tmp', 'function() { Object(class{}) }'); Name(Tmp()[0])`,
-		"Tmp ?")
+		"Tmp")
 	test(`Def('Tmp', 'class { A() { class { B(){} } } }'); Name(Tmp.A().B)`,
-		"Tmp.A ?.B")
+		"Tmp.A.B")
 }
 
 func BenchmarkCat(b *testing.B) {

@@ -87,6 +87,8 @@ func (f *SuFunc) String() string {
 	s += "/* " + str.Opt(f.Lib, " ")
 	if f.ClassName != "" {
 		s += "method"
+	} else if f.OuterId != 0 {
+		s += "block"
 	} else {
 		s += "function"
 	}

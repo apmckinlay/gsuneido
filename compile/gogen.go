@@ -28,7 +28,7 @@ func GoGen(src string) string {
 
 // gogen compiles an ast.Function to Go source code placed in SuFunc.Code.
 // Using SuFunc for output is for compatibility with byte code codegen.
-func gogen(f *ast.Function) *SuFunc {
+func gogen(_, _ string, f *ast.Function) *SuFunc {
 	var g ggen
 	g.locals = make(map[string]struct{})
 	g.function(f)

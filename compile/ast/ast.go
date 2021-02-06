@@ -472,6 +472,7 @@ func (p *Param) String() string {
 }
 
 type Block struct {
+	Name string
 	Function
 	CompileAsFunction bool
 }
