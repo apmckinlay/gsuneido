@@ -37,7 +37,25 @@ func TestSuObject(t *testing.T) {
 func TestSuObjectString(t *testing.T) {
 	DefaultSingleQuotes = true
 	defer func() { DefaultSingleQuotes = false }()
+
+	ob := SuObject{}
+	assert.T(t).This(ob.String()).Is("#()")
+	ob.Add(Zero)
+	assert.T(t).This(ob.String()).Is("#(0)")
+	ob.Add(One)
+	assert.T(t).This(ob.String()).Is("#(0, 1)")
+	ob = SuObject{}
+	ob.Set(SuInt(123), Zero)
+	assert.T(t).This(ob.String()).Is("#(123: 0)")
+	ob.Set(EmptyStr, False)
+	assert.T(t).This(ob.Show()).Is("#(123: 0, '': false)")
+	ob.Set(SuStr("a"), True)
+	assert.T(t).This(ob.Show()).Is("#(123: 0, '': false, a:)")
+	ob.Add(True)
+	assert.T(t).This(ob.Show()).Is("#(true, 123: 0, '': false, a:)")
+
 	test := func(k string, expected string) {
+		t.Helper()
 		ob := SuObject{}
 		ob.Set(SuStr(k), SuInt(123))
 		assert.T(t).This(ob.String()).Is(expected)
