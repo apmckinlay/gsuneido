@@ -29,7 +29,7 @@ type level struct {
 	cp  int
 }
 
-// DisasmMixed returns a listing of the source code and its disassembled byte code
+// DisasmMixed returns a listing of the source and its disassembled byte code
 func DisasmMixed(fn *SuFunc, src string) string {
 	var sb strings.Builder
 	src = str.BeforeLast(src, "}")
@@ -78,6 +78,9 @@ func DisasmMixed(fn *SuFunc, src string) string {
 					printSrc(in, s[sp:])
 				}
 				cp = ints.MaxInt
+				if nest == 0 {
+					sp = len(src)
+				}
 			}
 		}
 		fmt.Fprintf(&sb, "%s        %5d: %s\n", in, i, s)
@@ -186,12 +189,12 @@ func (d *dasm) next() {
 		}
 	}
 	srcLim := ints.MaxInt
-	if nestedfn != nil {
+	if nestedfn != nil && nestedfn.SrcBase > 0 {
 		srcLim = nestedfn.SrcBase
 	}
 	d.out(d.fn, d.nest, ip, s, srcLim)
-	if nestedfn != nil {
-		disasm(d.nest+1, nestedfn, d.out)
+	if nestedfn != nil && nestedfn.SrcBase > 0 {
+		disasm(d.nest+1, nestedfn, d.out) // recursive
 	}
 }
 

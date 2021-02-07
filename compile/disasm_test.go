@@ -12,11 +12,58 @@ import (
 
 func TestDisasm(t *testing.T) {
 	test := func(src, expected string) {
+		t.Helper()
 		ast := parseFunction(src)
 		fn := codegen("", "", ast)
 		s := DisasmMixed(fn, src)
 		assert.T(t).This(s).Like(expected)
 	}
+
+	test(`function () {
+		return function() { f() }
+		}`,
+		`16: return function() {
+				0: Value /* function */
+        >    36: f() }
+		>            0: Load f
+		>            2: CallFuncNilOk ()`)
+
+	test(`function () {
+		return function() { f(); g() }
+		}`,
+		`16: return function() {
+                    0: Value /* function */
+        >    36: f();
+        >             0: Load f
+        >             2: CallFuncDiscard ()
+        >    41: g() }
+        >             4: Load g
+        >             6: CallFuncNilOk ()`)
+
+	test(`function () {
+		fn = function(){}
+		fn()
+		}`,
+		`16: fn = function(){}
+		36: fn()
+				0: Value fn /* function */
+				2: CallFuncNilOk ()`)
+
+	test(`function(){}`,
+		``)
+
+	test(`function(){ f() }`,
+		`12: f()
+				0: Load f
+				2: CallFuncNilOk ()`)
+
+	test(`function(){ f(); g() }`,
+		`12: f();
+				0: Load f
+				2: CallFuncDiscard ()
+		17: g()
+				4: Load g
+				6: CallFuncNilOk ()`)
 
 	test(`function (x, y) {
 		a = x
