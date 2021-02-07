@@ -280,12 +280,17 @@ func show(x interface{}) string {
 // Leading and trailing whitespace is removed,
 // runs of whitespace are converted to a single space.
 func (v value) Like(expected interface{}) {
-	if !like(expected.(string), v.value.(string)) {
+	exp := expected.(string)
+	val := v.value.(string)
+	if !like(exp, val) {
 		if v.assert.t != nil {
 			v.assert.t.Helper()
 		}
-		v.assert.fail(fmt.Sprintf("expected: %s\nbut got: %s",
-			expected, v.value))
+		sep := " "
+		if strings.Contains(exp, "\n") || strings.Contains(val, "\n") {
+			sep = "\n"
+		}
+		v.assert.fail("expected:" + sep + exp + "\nbut got:" + sep + val)
 	}
 }
 
