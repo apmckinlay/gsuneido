@@ -272,11 +272,11 @@ func (cg *cgen) savePos(sp int) {
 	cg.codePrev = len(cg.code)
 }
 
-func (cg *cgen) statement(node ast.Node, labels *Labels, lastStmt bool) {
+func (cg *cgen) statement(node ast.Statement, labels *Labels, lastStmt bool) {
 	if node == nil {
 		return
 	}
-	cg.savePos(node.(ast.Statement).Position())
+	cg.savePos(node.Position())
 	if cg.cover && cg.coverPrev != len(cg.code)-1 {
 		cg.coverPrev = len(cg.code)
 		cg.emit(op.Cover)
