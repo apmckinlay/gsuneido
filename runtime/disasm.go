@@ -202,12 +202,13 @@ func DisasmRaw(code string, fn func(i int)) {
 	for i := 0; i < len(code); i++ {
 		fn(i)
 		switch op.Opcode(code[i]) {
-		case op.Value, op.Closure, op.Load, op.Store, op.Dyload, op.LoadStore,
+		case op.Value, op.Closure, op.Load, op.Store, op.Dyload,
 			op.GetPut, op.CallFuncDiscard, op.CallFuncNoNil, op.CallFuncNilOk,
 			op.CallMethDiscard, op.CallMethNoNil, op.CallMethNilOk:
 			i++
-		case op.Int, op.Global, op.Super, op.Jump, op.JumpTrue, op.JumpFalse,
-			op.And, op.Or, op.QMark, op.In, op.JumpIs, op.JumpIsnt, op.Catch:
+		case op.Int, op.LoadStore, op.Global, op.Super,
+			op.Jump, op.JumpTrue, op.JumpFalse, op.JumpIs, op.JumpIsnt,
+			 op.And, op.Or, op.QMark, op.In, op.Catch:
 			i += 2
 		case op.ForIn, op.Try:
 			i += 3

@@ -39,7 +39,7 @@ type cgen struct {
 	srcPrev   int
 	codePrev  int
 	cover     bool
-	coverPrev int
+	coverEmit bool
 }
 
 type calltype int
@@ -205,6 +205,7 @@ func (cg *cgen) chainNew(fn *ast.Function) {
 	if !fn.IsNewMethod || hasSuperCall(fn.Body) || cg.base <= 0 {
 		return
 	}
+	cg.savePos(int(fn.Pos))
 	cg.emit(op.This)
 	cg.emitValue(SuStr("New"))
 	cg.emitUint16(op.Super, cg.base)
@@ -277,10 +278,7 @@ func (cg *cgen) statement(node ast.Statement, labels *Labels, lastStmt bool) {
 		return
 	}
 	cg.savePos(node.Position())
-	if cg.cover && cg.coverPrev != len(cg.code)-1 {
-		cg.coverPrev = len(cg.code)
-		cg.emit(op.Cover)
-	}
+	cg.coverEmit = cg.cover
 	switch node := node.(type) {
 	case *ast.Compound:
 		cg.statements(node.Body, labels)
@@ -477,6 +475,7 @@ func (cg *cgen) emitForIn(name string, labels *Labels) {
 }
 
 func (cg *cgen) tryCatchStmt(node *ast.TryCatch, labels *Labels) {
+	cg.coverEmit = false
 	catch := cg.emitJump(op.Try, -1)
 	cg.emitMore(byte(cg.value(SuStr(node.CatchFilter))))
 	cg.statement(node.Try, labels, false)
@@ -975,7 +974,6 @@ func (cg *cgen) argSpecEq(a1, a2 *ArgSpec) bool {
 var funcId uint32 = 1
 
 func (cg *cgen) block(b *ast.Block) {
-	cg.savePos(int(b.Pos))
 	f := &b.Function
 	var fn *SuFunc
 	if b.CompileAsFunction {
@@ -996,8 +994,16 @@ func (cg *cgen) block(b *ast.Block) {
 // helpers ---------------------------------------------------------------------
 
 // emit is used to append an op code
-func (cg *cgen) emit(op op.Opcode, b ...byte) {
-	cg.code = append(append(cg.code, byte(op)), b...)
+func (cg *cgen) emit(oc op.Opcode, b ...byte) {
+	cg.emitCover()
+	cg.code = append(append(cg.code, byte(oc)), b...)
+}
+
+func (cg *cgen) emitCover() {
+	if cg.coverEmit {
+		cg.code = append(cg.code, byte(op.Cover))
+		cg.coverEmit = false
+	}
 }
 
 func (cg *cgen) emitMore(b ...byte) {
@@ -1020,14 +1026,14 @@ func (cg *cgen) emitUint16(op op.Opcode, i int) {
 }
 
 func (cg *cgen) emitJump(op op.Opcode, label int) int {
-	adr := len(cg.code)
 	assert.That(math.MinInt16 <= label && label <= math.MaxInt16)
 	cg.emit(op, byte(label>>8), byte(label))
-	return adr
+	return len(cg.code) - 3
 }
 
 func (cg *cgen) emitBwdJump(op op.Opcode, label int) {
-	cg.emitJump(op, label-len(cg.code)-3)
+	cg.emitCover() // so relative is correct
+	cg.emitJump(op, label-len(cg.code)-3) // convert to relative offset
 }
 
 func (cg *cgen) label() int {
