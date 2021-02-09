@@ -12,16 +12,30 @@ import (
 
 type Extend struct {
 	Query1
-	cols     []string
-	exprs    []ast.Expr
+	cols     []string   // modified by Project.transform
+	exprs    []ast.Expr // modified by Project.transform
 	exprCols []string
 	fixed    []Fixed
 }
 
 func (e *Extend) Init() {
 	e.source.Init()
-	//TODO checkDependencies()
+	e.checkDependencies()
 	e.init()
+}
+
+func (e *Extend) checkDependencies() {
+	avail := sset.Copy(e.source.Columns())
+	for i := range e.cols {
+		if e.exprs[i] != nil {
+			ecols := e.exprs[i].Columns()
+			if !sset.Subset(avail, ecols) {
+				panic("extend: invalid column(s) in expressions: " +
+					str.Join(", ", sset.Difference(ecols, avail)...))
+			}
+		}
+		avail = append(avail, e.cols[i])
+	}
 }
 
 func (e *Extend) init() {
