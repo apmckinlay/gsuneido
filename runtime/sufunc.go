@@ -26,11 +26,7 @@ type SuFunc struct {
 	// ClassName is used to privatize dot params
 	ClassName string
 
-	// Id is a unique identifier for a function defining blocks
-	Id uint32
-	// OuterId is the Id of the outer SuFunc
-	// It is used by interp to handle block return
-	OuterId uint32
+	IsBlock bool
 
 	// SrcPos contains pairs of source and code position deltas
 	SrcPos string
@@ -63,7 +59,7 @@ func (f *SuFunc) Call(t *Thread, this Value, as *ArgSpec) Value {
 }
 
 func (f *SuFunc) Type() types.Type {
-	if f.OuterId != 0 {
+	if f.IsBlock {
 		return types.Block
 	}
 	return types.Function
@@ -87,7 +83,7 @@ func (f *SuFunc) String() string {
 	s += "/* " + str.Opt(f.Lib, " ")
 	if f.ClassName != "" {
 		s += "method"
-	} else if f.OuterId != 0 {
+	} else if f.IsBlock {
 		s += "block"
 	} else {
 		s += "function"
@@ -164,7 +160,7 @@ func (f *SuFunc) coverToOb(ob *SuObject, counts bool) {
 		if counts {
 			v = IntVal(int(f.cover[i]))
 		} else {
-			if f.cover[i>>4] & (1 << (i & 15)) == 0 {
+			if f.cover[i>>4]&(1<<(i&15)) == 0 {
 				v = False
 			} else {
 				v = True

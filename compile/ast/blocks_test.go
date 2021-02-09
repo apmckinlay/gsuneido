@@ -76,4 +76,13 @@ func TestBlocks(t *testing.T) {
 		`Binary(Eq _x 5)
         	Binary(Eq b Block(
         	_x))`)
+
+	// block return requires closure
+	test("b = { return }",
+		`Binary(Eq b Block(
+        	Return()))`)
+	test("b1 = { b2 = { return } }",
+		`Binary(Eq b1 Block(
+        	Binary(Eq b2 Block(
+        	Return()))))`)
 }

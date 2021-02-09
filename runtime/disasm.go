@@ -136,18 +136,10 @@ func (d *dasm) next() {
 		v := d.fn.Values[fetchUint8()]
 		s += fmt.Sprintf(" %v", v)
 		if f, ok := v.(*SuFunc); ok {
-			if f.Id != 0 {
-				s += fmt.Sprint(" ", f.Id)
-			}
 			nestedfn = f
 		}
-	case op.BlockReturn:
-		s += fmt.Sprint(" ", d.fn.OuterId)
 	case op.Closure:
 		f := d.fn.Values[fetchUint8()].(*SuFunc)
-		if f.Id != 0 {
-			s += fmt.Sprint(" ", f.Id)
-		}
 		nestedfn = f
 	case op.Load, op.Store, op.Dyload:
 		idx := fetchUint8()

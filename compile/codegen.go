@@ -88,13 +88,12 @@ func (cg *cgen) codegen(fn *ast.Function) *SuFunc {
 		Nlocals:   uint8(len(cg.Names)),
 		ParamSpec: cg.ParamSpec,
 		ArgSpecs:  cg.argspecs, //TODO shrink to fit
-		Id:        fn.Id,
 		SrcPos:    hacks.BStoS(cg.srcPos),
 		SrcBase:   cg.srcBase,
 	}
 }
 
-func codegenBlock(ast *ast.Function, outercg *cgen) (*SuFunc, []string) {
+func codegenClosureBlock(ast *ast.Function, outercg *cgen) (*SuFunc, []string) {
 	base := len(outercg.Names)
 	cg := cgen{outerFn: outercg.outerFn, base: outercg.base, isBlock: true,
 		cover: outercg.cover}
@@ -971,8 +970,6 @@ func (cg *cgen) argSpecEq(a1, a2 *ArgSpec) bool {
 	return true
 }
 
-var funcId uint32 = 1
-
 func (cg *cgen) block(b *ast.Block) {
 	f := &b.Function
 	var fn *SuFunc
@@ -981,14 +978,11 @@ func (cg *cgen) block(b *ast.Block) {
 		cg.emitValue(fn)
 	} else {
 		// closure
-		fn, cg.Names = codegenBlock(f, cg)
+		fn, cg.Names = codegenClosureBlock(f, cg)
 		i := cg.value(fn)
 		cg.emitUint8(op.Closure, i)
 	}
-	if cg.outerFn.Id == 0 {
-		cg.outerFn.Id = atomic.AddUint32(&funcId, 1)
-	}
-	fn.OuterId = cg.outerFn.Id
+	fn.IsBlock = true
 }
 
 // helpers ---------------------------------------------------------------------

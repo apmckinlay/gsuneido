@@ -18,6 +18,9 @@ type Frame struct {
 
 	// this is the instance if we're running a method
 	this Value
+
+	// blockParent is used for block returns
+	blockParent *Frame
 }
 
 type Locals struct {

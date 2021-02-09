@@ -13,6 +13,9 @@ type SuClosure struct {
 	locals     []Value
 	this       Value
 	concurrent bool
+	// parent is the Frame of the outer function that created this closure.
+	// It is used by interp to handle block returns.
+	parent *Frame
 }
 
 // Value interface
@@ -37,7 +40,8 @@ func (b *SuClosure) Call(t *Thread, this Value, as *ArgSpec) Value {
 	if this == nil {
 		this = b.this
 	}
-	fr := Frame{fn: bf, locals: Locals{v: b.locals, onHeap: true}, this: this}
+	fr := Frame{fn: bf, this: this, blockParent: b.parent,
+		locals: Locals{v: b.locals, onHeap: true}}
 	if b.concurrent {
 		// make a mutable copy of the locals for the frame
 		v := make([]Value, len(b.locals))

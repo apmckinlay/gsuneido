@@ -410,8 +410,6 @@ type Function struct {
 	Pos         int32
 	HasBlocks   bool
 	IsNewMethod bool
-	// Id is set and used by codegen for block parents
-	Id uint32
 }
 
 func (a *Function) String() string {

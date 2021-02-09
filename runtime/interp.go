@@ -125,7 +125,7 @@ func (t *Thread) interp(catchJump, catchSp *int) (ret Value) {
 
 	defer func() {
 		// this is an optimization to avoid unnecessary recover/repanic
-		if *catchJump == 0 && fr.fn.Id == 0 {
+		if *catchJump == 0 && t.blockReturnFrame == nil {
 			return // this frame isn't catching
 		}
 		e := recover()
@@ -133,7 +133,7 @@ func (t *Thread) interp(catchJump, catchSp *int) (ret Value) {
 			return // not panic'ing, normal return
 		}
 		if e == BlockReturn {
-			if t.blockReturnId != fr.fn.Id {
+			if t.blockReturnFrame != fr {
 				panic(e) // not our block, rethrow
 			}
 			return // normal return
@@ -443,7 +443,12 @@ loop:
 		case op.Closure:
 			fr.locals.moveToHeap()
 			fn := fr.fn.Values[fetchUint8()].(*SuFunc)
-			block := &SuClosure{SuFunc: *fn, locals: fr.locals.v, this: fr.this}
+			parent := fr
+			if fr.blockParent != nil {
+				parent = fr.blockParent
+			}
+			block := &SuClosure{SuFunc: *fn, locals: fr.locals.v, this: fr.this,
+				parent: parent}
 			t.Push(block)
 		case op.BlockBreak:
 			panic(BlockBreak)
@@ -453,7 +458,7 @@ loop:
 			t.Push(nil)
 			fallthrough
 		case op.BlockReturn:
-			t.blockReturnId = fr.fn.OuterId
+			t.blockReturnFrame = fr.blockParent
 			panic(BlockReturn)
 		case op.CallFuncDiscard, op.CallFuncNoNil, op.CallFuncNilOk:
 			f := t.Pop()

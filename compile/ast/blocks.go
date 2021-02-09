@@ -20,6 +20,7 @@ type blok struct {
 	parent *blok
 	params set
 	vars   set
+	hasRet bool
 }
 
 type bloks struct {
@@ -50,7 +51,7 @@ func Blocks(f *Function) {
 	for i, x := range b.bloks {
 		_, this := x.vars["this"]
 		_, super := x.vars["super"]
-		if this || super || shares(x.vars, vars) ||
+		if this || super || x.hasRet || shares(x.vars, vars) ||
 			(x.parent != nil && shares(x.vars, x.parent.params)) {
 			closure(x)
 			continue
@@ -106,6 +107,9 @@ func (b *bloks) statement(stmt Statement, vars set) {
 	case *ExprStmt:
 		b.expr(stmt.E, vars)
 	case *Return:
+		if b.cur != nil {
+			b.cur.hasRet = true
+		}
 		b.expr(stmt.E, vars)
 	case *Throw:
 		b.expr(stmt.E, vars)
@@ -210,7 +214,7 @@ func (b *bloks) block(block *Block) {
 	parent := b.cur
 	params := make(set)
 	b.params(block.Params, params)
-	b.cur = &blok{block, parent, params, nil}
+	b.cur = &blok{block: block, parent: parent, params: params}
 	blockVars := make(set)
 	for _, stmt := range block.Body {
 		b.statement(stmt, blockVars)
