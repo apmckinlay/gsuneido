@@ -13,8 +13,6 @@ import (
 	"github.com/apmckinlay/gsuneido/util/ints"
 )
 
-//go:generate genny -in ../../genny/cache/cache.go -out cache.go -pkg regex gen "K=string V=Pattern"
-
 // Pattern is a compiled regular expression
 type Pattern []inst
 
