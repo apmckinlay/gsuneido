@@ -169,7 +169,7 @@ func disasm(fn *SuFunc) string {
 		nestPrev = nest
 		ops = append(ops, s)
 	})
-	return str.Join(", ", ops...)
+	return str.Join(", ", ops)
 }
 
 func TestControl(t *testing.T) {

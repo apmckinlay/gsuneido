@@ -35,7 +35,7 @@ func (jn *Join) String() string {
 func (jn *Join) string(op string) string {
 	by := ""
 	if len(jn.by) > 0 {
-		by = "by" + str.Join("(,)", jn.by...) + " "
+		by = "by" + str.Join("(,)", jn.by) + " "
 	}
 	return paren(jn.source) + " " + op + " " + by + paren(jn.source2)
 }

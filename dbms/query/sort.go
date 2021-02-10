@@ -16,7 +16,7 @@ func (sort *Sort) String() string {
 	if sort.reverse {
 		s += "reverse "
 	}
-	return s + str.Join(", ", sort.columns...)
+	return s + str.Join(", ", sort.columns)
 }
 
 func (sort *Sort) Transform() Query {

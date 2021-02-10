@@ -50,12 +50,13 @@ func TestIndexFunc(t *testing.T) {
 
 func TestJoin(t *testing.T) {
 	assert := assert.T(t).This
-	assert(Join("")).Is("")
-	assert(Join("", "one", "two", "three")).Is("onetwothree")
-	assert(Join(",", "one", "two", "three")).Is("one,two,three")
-	assert(Join(", ", "one", "two", "three")).Is("one, two, three")
-	assert(Join("()", "one", "two", "three")).Is("(onetwothree)")
-	assert(Join("[::]", "one", "two", "three")).Is("[one::two::three]")
+	assert(Join("", nil)).Is("")
+	assert(Join("", []string{})).Is("")
+	assert(Join("", []string{"one", "two", "three"})).Is("onetwothree")
+	assert(Join(",", []string{"one", "two", "three"})).Is("one,two,three")
+	assert(Join(", ", []string{"one", "two", "three"})).Is("one, two, three")
+	assert(Join("()", []string{"one", "two", "three"})).Is("(onetwothree)")
+	assert(Join("[::]", []string{"one", "two", "three"})).Is("[one::two::three]")
 }
 
 func TestList_Has(t *testing.T) {

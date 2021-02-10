@@ -20,7 +20,7 @@ type Summarize struct {
 func (su *Summarize) String() string {
 	s := paren(su.source) + " SUMMARIZE "
 	if len(su.by) > 0 {
-		s += str.Join(", ", su.by...) + ", "
+		s += str.Join(", ", su.by) + ", "
 	}
 	sep := ""
 	for i := range su.cols {

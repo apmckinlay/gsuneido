@@ -88,7 +88,7 @@ func (ht FooHamt) string() string {
 		list = append(list, f.data)
 	})
 	sort.Strings(list)
-	return str.Join("{,}", list...)
+	return str.Join("{,}", list)
 }
 
 func TestDelete(*testing.T) {

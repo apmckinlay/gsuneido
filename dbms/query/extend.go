@@ -31,7 +31,7 @@ func (e *Extend) checkDependencies() {
 			ecols := e.exprs[i].Columns()
 			if !sset.Subset(avail, ecols) {
 				panic("extend: invalid column(s) in expressions: " +
-					str.Join(", ", sset.Difference(ecols, avail)...))
+					str.Join(", ", sset.Difference(ecols, avail)))
 			}
 		}
 		avail = append(avail, e.cols[i])

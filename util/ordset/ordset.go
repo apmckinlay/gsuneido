@@ -171,5 +171,5 @@ func (set *Set) String() string {
 	if set.tree != nil {
 		return "Set too big"
 	}
-	return str.Join(",", set.leaf.slots[:set.leaf.size]...)
+	return str.Join(",", set.leaf.slots[:set.leaf.size])
 }

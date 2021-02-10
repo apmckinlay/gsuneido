@@ -183,7 +183,7 @@ func (cb *CommaBuilder) String() string {
 
 // Join joins strings with the specified format.
 // The format may include delimiters e.g. "(,)"
-func Join(fmt string, list ...string) string {
+func Join(fmt string, list []string) string {
 	prefix := ""
 	suffix := ""
 	nf := len(fmt)

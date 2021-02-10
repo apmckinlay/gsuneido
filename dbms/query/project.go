@@ -15,7 +15,7 @@ type Project struct {
 }
 
 func (p *Project) String() string {
-	return paren(p.source) + " PROJECT " + str.Join(", ", p.columns...)
+	return paren(p.source) + " PROJECT " + str.Join(", ", p.columns)
 }
 
 func (p *Project) Columns() []string {
