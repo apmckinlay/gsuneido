@@ -3,12 +3,23 @@
 
 package query
 
-import "github.com/apmckinlay/gsuneido/util/str"
+import (
+	"github.com/apmckinlay/gsuneido/util/sset"
+	"github.com/apmckinlay/gsuneido/util/str"
+)
 
 type Sort struct {
 	Query1
 	reverse bool
 	columns []string
+}
+
+func (sort *Sort) Init() {
+	sort.Query1.Init()
+	if !sset.Subset(sort.source.Columns(), sort.columns) {
+		panic("sort: nonexistent columns: " +
+			str.Join(", ", sset.Difference(sort.columns, sort.source.Columns())))
+	}
 }
 
 func (sort *Sort) String() string {

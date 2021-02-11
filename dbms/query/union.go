@@ -21,6 +21,39 @@ func (u *Union) Columns() []string {
 	return u.allCols
 }
 
+func (u *Union) Keys() [][]string {
+	if u.disjoint == "" {
+		return [][]string{u.allCols}
+	}
+	var keys [][]string
+	for _, k1 := range u.source.Keys() {
+		for _, k2 := range u.source2.Keys() {
+			key := sset.Copy(k1)
+			for _, k := range k2 {
+				if !sset.Contains(key, k) {
+					key = append(key, k)
+				}
+			}
+			if !sset.Contains(key, u.disjoint) {
+				key = append(key, u.disjoint)
+			}
+			keys = append(keys, key)
+		}
+	}
+	// exclude any keys that are super-sets of another key
+	var keys2 [][]string
+outer:
+	for i := 0; i < len(keys); i++ {
+		for j := 0; j < len(keys); j++ {
+			if i != j && sset.Subset(keys[i], keys[j]) {
+				continue outer
+			}
+		}
+		keys2 = append(keys2, keys[i])
+	}
+	return keys2
+}
+
 func (u *Union) Transform() Query {
 	u.source = u.source.Transform()
 	u.source2 = u.source2.Transform()

@@ -38,6 +38,30 @@ func (tbl *Table) Columns() []string { //TODO
 	panic("unknown table: " + tbl.name)
 }
 
+func (tbl *Table) Keys() [][]string { //TODO
+	switch tbl.name {
+	case "customer":
+		return [][]string{{"id"}}
+	case "hist":
+		return [][]string{{"date", "item", "id"}}
+	case "hist2":
+		return [][]string{{"date"}}
+	case "trans":
+		return [][]string{{"date", "item", "id"}}
+	case "inven":
+		return [][]string{{"item"}}
+	case "table":
+		return [][]string{{"a"}}
+	case "table2":
+		return [][]string{{"e"}}
+	case "tables":
+		return [][]string{{"table"}, {"tablename"}}
+	case "columns":
+		return [][]string{{"table", "column"}}
+	}
+	panic("unknown table: " + tbl.name)
+}
+
 func (tbl *Table) Transform() Query {
 	return tbl
 }

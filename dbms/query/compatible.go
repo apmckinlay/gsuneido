@@ -15,8 +15,7 @@ type Compatible struct {
 }
 
 func (c *Compatible) Init() {
-	c.source.Init()
-	c.source2.Init()
+	c.Query2.Init()
 	c.allCols = sset.Union(c.source.Columns(), c.source2.Columns())
 	fixed1 := c.source.Fixed()
 	fixed2 := c.source2.Fixed()

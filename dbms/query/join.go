@@ -5,17 +5,28 @@ package query
 
 import (
 	"github.com/apmckinlay/gsuneido/util/sset"
+	"github.com/apmckinlay/gsuneido/util/ssset"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
 type Join struct {
 	Query2
 	by []string
+	joinType
 }
 
+type joinType int
+
+const (
+	one_one joinType = iota
+	one_n
+	n_one
+	n_n
+)
+
 func (jn *Join) Init() {
-	jn.source.Init()
-	jn.source2.Init()
+	jn.Query2.Init()
+
 	by := sset.Intersect(jn.source.Columns(), jn.source2.Columns())
 	if len(by) == 0 {
 		panic("join: common columns required")
@@ -25,7 +36,27 @@ func (jn *Join) Init() {
 	} else if !sset.Equal(jn.by, by) {
 		panic("join: by does not match common columns")
 	}
-	//TODO whether by contains key
+
+	k1 := jn.containsKey(jn.source.Keys())
+	k2 := jn.containsKey(jn.source2.Keys())
+	if k1 && k2 {
+		jn.joinType = one_one
+	} else if k1 {
+		jn.joinType = one_n
+	} else if k2 {
+		jn.joinType = n_one
+	} else {
+		jn.joinType = n_n
+	}
+}
+
+func (jn *Join) containsKey(keys [][]string) bool {
+	for _, k := range keys {
+		if sset.Subset(jn.by, k) {
+			return true
+		}
+	}
+	return false
 }
 
 func (jn *Join) String() string {
@@ -42,6 +73,21 @@ func (jn *Join) string(op string) string {
 
 func (jn *Join) Columns() []string {
 	return sset.Union(jn.source.Columns(), jn.source2.Columns())
+}
+
+func (jn *Join) Keys() [][]string {
+	switch jn.joinType {
+	case one_one:
+		return ssset.Union(jn.source.Keys(), jn.source2.Keys())
+	case one_n:
+		return jn.source2.Keys()
+	case n_one:
+		return jn.source.Keys()
+	case n_n:
+		return jn.keypairs()
+	default:
+		panic("unknown join type")
+	}
 }
 
 func (jn *Join) Transform() Query {
@@ -62,6 +108,17 @@ type LeftJoin struct {
 
 func (lj *LeftJoin) String() string {
 	return lj.string("LEFTJOIN")
+}
+
+func (lj *LeftJoin) Keys() [][]string {
+	switch lj.joinType {
+	case one_one, n_one:
+		return lj.source.Keys()
+	case one_n, n_n:
+		return lj.keypairs()
+	default:
+		panic("unknown join type")
+	}
 }
 
 func (lj *LeftJoin) Transform() Query {

@@ -4,28 +4,12 @@
 package sset
 
 import (
-	"sort"
 	"strings"
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
-
-func TestOptim(*testing.T) {
-	test := func(x, expected string) {
-		assert.Msg(x).
-			This(Optim(strings.Fields(x))).
-			Is(strings.Fields(expected))
-	}
-	test("", "")
-	test("a b c", "a b c")
-	test("a b a b c", "a b c")
-	x := randList(100)
-	y := Copy(x)
-	sort.Strings(y)
-	assert.This(Optim(x)).Is(y)
-}
 
 func TestContains(*testing.T) {
 	test := func(x, y string, expected bool) {
@@ -54,7 +38,7 @@ func TestEqual(*testing.T) {
 	test("a b c", "", false)
 	test("a b c", "a B c", false)
 	test("a b c", "a b a", false) // duplicates on right side
-	x := randOptim(100)
+	x := randList(100)
 	assert.That(Equal(x, x))
 	y := Copy(x)
 	assert.That(Equal(x, y))
@@ -89,7 +73,7 @@ func TestDisjoint(*testing.T) {
 
 func BenchmarkEqual(b *testing.B) {
 	const n = 100
-	x := randOptim(n)
+	x := randList(n)
 	y := append([]string{}, x...)
 	x[n-1] = "~" // differ at the end
 	for i := 0; i < b.N; i++ {
@@ -98,10 +82,6 @@ func BenchmarkEqual(b *testing.B) {
 }
 
 var BM bool
-
-func randOptim(n int) []string {
-	return Optim(randList(n))
-}
 
 func randList(n int) []string {
 	r := str.UniqueRandom(4, 16)
@@ -126,13 +106,13 @@ func TestUnion(*testing.T) {
 	test("e f", "a b c d", "e f a b c d")
 	test("a b c d", "c d e f", "a b c d e f")
 
-	x := randOptim(100)
+	x := randList(100)
 	assert.This(Union(x, x)).Is(x)
 	y := Copy(x)
 	assert.This(Union(x, y)).Is(x)
 	y = y[2:98]
 	assert.This(Union(x, y)).Is(x)
-	assert.This(Union(y, x)).Is(x)
+	assert.That(Equal(x, Union(y, x)))
 }
 
 func TestIntersect(*testing.T) {
@@ -148,7 +128,7 @@ func TestIntersect(*testing.T) {
 	test("a b c d", "c", "c")
 	test("a b c", "a b c", "a b c")
 
-	x := randOptim(100)
+	x := randList(100)
 	assert.This(Intersect(x, x)).Is(x)
 	y := Copy(x)
 	assert.This(Intersect(x, y)).Is(y)
@@ -169,7 +149,7 @@ func TestDifference(*testing.T) {
 	test("a b c d", "c", "a b d")
 	test("a b c", "a b c", "")
 
-	x := randOptim(100)
+	x := randList(100)
 	assert.This(Difference(x, []string{})).Is(x)
 	assert.This(Difference(x, x)).Is([]string{})
 	assert.This(Difference([]string{}, x)).Is([]string{})

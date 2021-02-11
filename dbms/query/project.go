@@ -4,6 +4,8 @@
 package query
 
 import (
+	"strings"
+
 	"github.com/apmckinlay/gsuneido/compile/ast"
 	"github.com/apmckinlay/gsuneido/util/sset"
 	"github.com/apmckinlay/gsuneido/util/str"
@@ -11,15 +13,87 @@ import (
 
 type Project struct {
 	Query1
-	columns []string
+	columns  []string
+	strategy projectStrategy
+}
+
+type projectStrategy int
+
+const (
+	projCopy projectStrategy = iota + 1
+	projSeq
+	projLookup
+)
+
+func (p *Project) Init() {
+	p.Query1.Init()
+	srcCols := p.source.Columns()
+	if !sset.Subset(srcCols, p.columns) {
+		panic("project: nonexistent column(s): " +
+			str.Join(", ", sset.Difference(p.columns, srcCols)))
+	}
+	for _, col := range p.columns {
+		if strings.HasSuffix(col, "_lower!") {
+			panic("can't project _lower! fields")
+		}
+	}
+	if hasKey(p.source.Keys(), p.columns) {
+		p.strategy = projCopy
+		p.includeDeps(srcCols)
+	}
+}
+
+// hasKey returns true if there is a key containing cols
+func hasKey(keys [][]string, cols []string) bool {
+	for _, k := range keys {
+		if sset.Subset(k, cols) {
+			return true
+		}
+	}
+	return false
+}
+
+func (p *Project) includeDeps(cols []string) {
+	for _, f := range p.columns {
+		deps := f + "_deps"
+		if sset.Contains(cols, deps) {
+			p.columns = sset.AddUnique(p.columns, deps)
+		}
+	}
 }
 
 func (p *Project) String() string {
-	return paren(p.source) + " PROJECT " + str.Join(", ", p.columns)
+	s := paren(p.source) + " PROJECT"
+	switch p.strategy {
+	case projSeq:
+		s += "-SEQ"
+	case projCopy:
+		s += "-COPY"
+	case projLookup:
+		s += "-LOOKUP"
+	}
+	return s + " " + str.Join(", ", p.columns)
 }
 
 func (p *Project) Columns() []string {
 	return p.columns
+}
+
+func (p *Project) Keys() [][]string {
+	return projectKeys(p.source.Keys(), p.columns)
+}
+
+func projectKeys(keys [][]string, cols []string) [][]string {
+	var keys2 [][]string
+	for _, k := range keys {
+		if sset.Subset(cols, k) {
+			keys2 = append(keys2, k)
+		}
+	}
+	if len(keys2) == 0 {
+		keys2 = append(keys2, cols)
+	}
+	return keys2
 }
 
 func (p *Project) Transform() Query {

@@ -8,12 +8,21 @@ import (
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
 	"github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/sset"
+	"github.com/apmckinlay/gsuneido/util/str"
 )
 
 type Where struct {
 	Query1
 	expr  *ast.Nary // And
 	fixed []Fixed
+}
+
+func (w *Where) Init() {
+	w.Query1.Init()
+	if !sset.Subset(w.source.Columns(), w.expr.Columns()) {
+		panic("select: nonexistent columns: " + str.Join(", ",
+			sset.Difference(w.expr.Columns(), w.source.Columns())))
+	}
 }
 
 func (w *Where) String() string {

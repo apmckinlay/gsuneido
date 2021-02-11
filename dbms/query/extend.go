@@ -19,7 +19,7 @@ type Extend struct {
 }
 
 func (e *Extend) Init() {
-	e.source.Init()
+	e.Query1.Init()
 	e.checkDependencies()
 	e.init()
 }

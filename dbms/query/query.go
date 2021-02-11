@@ -5,6 +5,9 @@ package query
 
 import (
 	"github.com/apmckinlay/gsuneido/runtime"
+	"github.com/apmckinlay/gsuneido/util/assert"
+	"github.com/apmckinlay/gsuneido/util/sset"
+	"github.com/apmckinlay/gsuneido/util/ssset"
 )
 
 type Query interface {
@@ -16,7 +19,7 @@ type Query interface {
 	// Order() []string
 	Fixed() []Fixed
 	// Updateable() bool
-	// Keys() [][]string
+	Keys() [][]string
 	// Indexes() [][]string
 
 	// Lookup returns the row matching the given key, or nil if not found
@@ -52,13 +55,12 @@ func (q1 *Query1) Init() {
 	q1.source.Init()
 }
 
-func (q1 *Query1) Transform() Query { //TODO remove - temporary
-	// q1.source = q1.source.Transform()
-	panic("not implemented")
-}
-
 func (q1 *Query1) Columns() []string {
 	return q1.source.Columns()
+}
+
+func (q1 *Query1) Keys() [][]string {
+	return q1.source.Keys()
 }
 
 func (q1 *Query1) Fixed() []Fixed {
@@ -67,7 +69,14 @@ func (q1 *Query1) Fixed() []Fixed {
 
 type Query2 struct {
 	Query1
+	disallow
 	source2 Query
+}
+
+type disallow struct{}
+
+func (disallow) Keys() [][]string {
+	return nil
 }
 
 func (q2 *Query2) String(op string) string {
@@ -79,10 +88,15 @@ func (q2 *Query2) Init() {
 	q2.source2.Init()
 }
 
-func (q2 *Query2) Transform() Query { //TODO remove - temporary
-	// 	q2.source = q2.source.Transform()
-	// 	q2.source2 = q2.source2.Transform()
-	panic("not implemented")
+func (q2 *Query2) keypairs() [][]string {
+	var keys [][]string
+	for _, k1 := range q2.source.Keys() {
+		for _, k2 := range q2.source2.Keys() {
+			keys = ssset.AddUnique(keys, sset.Union(k1, k2))
+		}
+	}
+	assert.That(len(keys) != 0)
+	return keys
 }
 
 func paren(q Query) string {

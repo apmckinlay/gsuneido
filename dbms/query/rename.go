@@ -16,6 +16,36 @@ type Rename struct {
 	to   []string
 }
 
+func (r *Rename) Init() {
+	r.Query1.Init()
+	srcCols := r.source.Columns()
+	if !sset.Subset(srcCols, r.from) {
+		panic("rename: nonexistent column(s): " +
+			str.Join(", ", sset.Difference(r.from, srcCols)))
+	}
+	if !sset.Disjoint(srcCols, r.to) {
+		panic("rename: column(s) already exist: " +
+			str.Join(", ", sset.Intersect(srcCols, r.to)))
+	}
+	r.renameDependencies(srcCols)
+}
+
+func (r *Rename) renameDependencies(src []string) {
+	copy := false
+	for i := 0; i < len(r.from); i++ {
+		deps := r.from[i] + "_deps"
+		if sset.Contains(src, deps) {
+			if !copy {
+				r.from = sset.Copy(r.from)
+				r.to = sset.Copy(r.to)
+				copy = true
+			}
+			r.from = append(r.from, deps)
+			r.to = append(r.to, r.to[i]+"_deps")
+		}
+	}
+}
+
 func (r *Rename) String() string {
 	sep := ""
 	var sb strings.Builder
@@ -30,18 +60,30 @@ func (r *Rename) String() string {
 }
 
 func (r *Rename) Columns() []string {
-	return renameCols(r.source.Columns(), r.from, r.to)
+	return renameColumns(r.source.Columns(), r.from, r.to)
 }
 
-func renameCols(cols, from, to []string) []string {
-	newCols := sset.Copy(cols)
+func renameColumns(cols, from, to []string) []string {
+	cols2 := sset.Copy(cols)
 	for i := 0; i < len(cols); i++ {
 		j := str.List(from).Index(cols[i])
 		if j != -1 {
-			newCols[i] = to[j]
+			cols2[i] = to[j]
 		}
 	}
-	return newCols
+	return cols2
+}
+
+func (r *Rename) Keys() [][]string {
+	return renameIndexes(r.source.Keys(), r.from, r.to)
+}
+
+func renameIndexes(idxs [][]string, from, to []string) [][]string {
+	idxs2 := make([][]string, len(idxs))
+	for i, ix := range idxs {
+		idxs2[i] = renameColumns(ix, from, to)
+	}
+	return idxs2
 }
 
 func (r *Rename) Transform() Query {
