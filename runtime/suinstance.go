@@ -6,10 +6,9 @@ package runtime
 import (
 	"github.com/apmckinlay/gsuneido/runtime/types"
 	"github.com/apmckinlay/gsuneido/util/assert"
-	// sync "github.com/sasha-s/go-deadlock"
 )
 
-// SuInstance is an instance of an SuInstance
+// SuInstance is an instance of an SuClass
 type SuInstance struct {
 	MemBase
 	class   *SuClass
