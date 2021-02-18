@@ -303,3 +303,9 @@ func Equal(x, y []string) bool {
 	}
 	return true
 }
+
+// Contains returns whether the string contains the given byte.
+// Equivalent to strings.ContainsRune but slightly simpler.
+func Contains(s string, c byte) bool {
+	return strings.IndexByte(s, c) >= 0
+}
