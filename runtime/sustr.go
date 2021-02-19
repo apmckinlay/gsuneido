@@ -4,13 +4,16 @@
 package runtime
 
 import (
+	"strconv"
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/runtime/types"
 	"github.com/apmckinlay/gsuneido/util/dnum"
+	"github.com/apmckinlay/gsuneido/util/hacks"
 	"github.com/apmckinlay/gsuneido/util/hash"
 	"github.com/apmckinlay/gsuneido/util/ints"
 	"github.com/apmckinlay/gsuneido/util/pack"
+	"github.com/apmckinlay/gsuneido/util/str"
 )
 
 // SuStr is a string Value
@@ -63,21 +66,120 @@ func (ss SuStr) Display(t *Thread) string {
 	return escapeStr(string(ss), q)
 }
 
-func escapeStr(s string, q int) string {
-	if q == 0 &&
-		strings.ContainsRune(s, '\\') && !strings.ContainsAny(s, "`\x00") {
-		return "`" + s + "`"
+const singleQuote = '\''
+const doubleQuote = '"'
+const backQuote = '`'
+
+func escapeStr(s string, which int) string {
+	var q byte
+	switch which {
+	case 0:
+		if DefaultSingleQuotes {
+			q = singleQuote
+		} else {
+			q = bestQuote(s)
+		}
+	case 1:
+		q = singleQuote
+	case 2:
+		q = doubleQuote
 	}
-	s = strings.ReplaceAll(s, `\`, `\\`)
-	s = strings.ReplaceAll(s, "\x00", `\x00`)
-	if q == 0 && !strings.ContainsRune(s, '\'') &&
-		(DefaultSingleQuotes || strings.ContainsRune(s, '"')) {
-		return "'" + s + "'"
+	if q == backQuote {
+		buf := make([]byte, 2+len(s))
+		buf[0] = backQuote
+		copy(buf[1:], s)
+		buf[1+len(s)] = backQuote
+		return hacks.BStoS(buf)
 	}
-	if q == 1 {
-		return "'" + strings.ReplaceAll(s, "'", `\'`) + "'"
+	return escape(s, q)
+}
+
+func bestQuote(s string) byte {
+	badForSingle := 0
+	badForDouble := 0
+	canBack := true
+	for _, c := range []byte(s) {
+		switch c {
+		case singleQuote:
+			badForSingle++
+		case doubleQuote:
+			badForDouble++
+		case '\\':
+			badForSingle++
+			badForDouble++
+		default:
+			if c == backQuote {
+				canBack = false
+			}
+			if c < ' ' || '~' < c {
+				canBack = false
+				badForSingle++
+				badForDouble++
+			}
+		}
 	}
-	return `"` + strings.ReplaceAll(s, `"`, `\"`) + `"`
+	if len(s) == 1 && (badForSingle == 0 ||
+		(!canBack && badForSingle <= badForDouble)) {
+		// prefer single quotes for single characters
+		return singleQuote
+	}
+	if badForDouble == 0 {
+		return doubleQuote
+	}
+	if badForSingle == 0 {
+		return singleQuote
+	}
+	if canBack {
+		return backQuote
+	}
+	if badForSingle < badForDouble {
+		return singleQuote
+	}
+	return doubleQuote
+}
+
+func escape(s string, q byte) string {
+	i := 0
+	for ; i < len(s); i++ {
+		c := s[i]
+		if c == q || c == '\\' || c < ' ' || '~' < c {
+			break
+		}
+	}
+	buf := make([]byte, 0, 2+len(s))
+	buf = append(buf, q)
+	buf = append(buf, s[:i]...)
+	for ; i < len(s); i++ {
+		switch c := s[i]; c {
+		case q:
+			buf = append(buf, '\\', q)
+		case '\t':
+			buf = append(buf, '\\', 't')
+		case '\r':
+			buf = append(buf, '\\', 'r')
+		case '\n':
+			buf = append(buf, '\\', 'n')
+		case '\\':
+			if i+1 == len(s) ||
+				(i+1 < len(s) && str.Contains(`trnx\'"`, s[i+1])) {
+				buf = append(buf, '\\', '\\')
+			} else {
+				buf = append(buf, '\\')
+			}
+		default:
+			if c < ' ' || '~' < c {
+				buf = append(buf, '\\', 'x')
+				if c < 10 {
+					buf = append(buf, '0')
+				}
+				buf = strconv.AppendInt(buf, int64(c), 16)
+			} else {
+				buf = append(buf, c)
+			}
+		}
+	}
+	buf = append(buf, q)
+	return hacks.BStoS(buf)
 }
 
 func (ss SuStr) Get(_ *Thread, key Value) Value {
