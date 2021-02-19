@@ -5,9 +5,9 @@ package builtin
 
 import . "github.com/apmckinlay/gsuneido/runtime"
 
-var _ = builtin("Display(value, quotes=0)", // raw to get thread
+var _ = builtin("Display(value, quotes=0)",
 	func(t *Thread, args []Value) Value {
+		defer func(q int) { t.Quote = q }(t.Quote)
 		t.Quote = ToInt(args[1])
-		defer func() { t.Quote = 0 }()
 		return SuStr(Display(t, args[0]))
 	})
