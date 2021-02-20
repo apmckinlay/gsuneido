@@ -54,7 +54,7 @@ var _ = builtin5("ImageList_Create(cx, cy, flags, cInitial, cGrow)",
 var imageList_Destroy = comctl32.MustFindProc("ImageList_Destroy").Addr()
 var _ = builtin1("ImageList_Destroy(himl)",
 	func(a Value) Value {
-		rtn := goc.Syscall1(initCommonControlsEx,
+		rtn := goc.Syscall1(imageList_Destroy,
 			intArg(a))
 		return boolRet(rtn)
 	})
@@ -135,7 +135,7 @@ var _ = builtin6("ImageList_Merge(himl1, i1, himl2, i2, dx, dy)",
 			intArg(f))
 		return intRet(rtn)
 	})
-	
+
 // dll long Comctl32:ImageList_Add(pointer imagelist, pointer image, pointer mask)
 var imageList_Add = comctl32.MustFindProc("ImageList_Add").Addr()
 var _ = builtin3("ImageList_Add(imagelist, image, mask)",
@@ -146,7 +146,7 @@ var _ = builtin3("ImageList_Add(imagelist, image, mask)",
 			intArg(c))
 		return intRet(rtn)
 	})
-	
+
 // dll long ComCtl32:ImageList_AddMasked(pointer himl, pointer hbmImage,
 // 		long crMask)
 var imageList_AddMasked = comctl32.MustFindProc("ImageList_AddMasked").Addr()
