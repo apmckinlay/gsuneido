@@ -12,6 +12,7 @@ ifdef PATHEXT
 endif
 
 build:
+	@go version
 	go build -v -ldflags "$(GUIFLAGS)" $(GUITAG)
 	$(CONSOLE)
 
