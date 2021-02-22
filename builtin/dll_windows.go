@@ -147,6 +147,14 @@ func stringArg(v Value) unsafe.Pointer {
 	return heap.CopyStr(ToStr(v))
 }
 
+// bufToPtr copies data to an unsafe.Pointer
+// WARNING: p must point to at least len(s) bytes
+func bufToPtr(s string, p unsafe.Pointer) {
+	for i := 0; i < len(s); i++ {
+		*(*byte)(unsafe.Pointer(uintptr(p) + uintptr(i))) = s[i]
+	}
+}
+
 // strToPtr copies a nul terminated string to an unsafe.Pointer
 // WARNING: p must point to at least len(s)+1 bytes
 func strToPtr(s string, p unsafe.Pointer) {

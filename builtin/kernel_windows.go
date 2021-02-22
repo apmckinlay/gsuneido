@@ -13,6 +13,7 @@ import (
 
 	"github.com/apmckinlay/gsuneido/builtin/goc"
 	. "github.com/apmckinlay/gsuneido/runtime"
+	"github.com/apmckinlay/gsuneido/util/str"
 	reg "golang.org/x/sys/windows/registry"
 )
 
@@ -113,48 +114,91 @@ var _ = builtin0("GetProcessHeap()",
 		return intRet(rtn)
 	})
 
+// Global -----------------------------------------------------------
+
 // dll Kernel32:GlobalAlloc(long flags, long size) pointer
 var globalAlloc = kernel32.MustFindProc("GlobalAlloc").Addr()
+
+func GlobalAlloc(flags, n uintptr) HANDLE {
+	rtn, _, _ := syscall.Syscall(globalAlloc, 2, flags, n, 0)
+	return rtn
+}
+
 var _ = builtin2("GlobalAlloc(flags, size)",
 	func(a, b Value) Value {
-		rtn, _, _ := syscall.Syscall(globalAlloc, 2,
-			intArg(a),
-			intArg(b),
-			0)
-		return intRet(rtn)
+		return intRet(GlobalAlloc(intArg(a), intArg(b)))
 	})
 
 // dll Kernel32:GlobalLock(pointer handle) pointer
 var globalLock = kernel32.MustFindProc("GlobalLock").Addr()
+
+func GlobalLock(handle HANDLE) unsafe.Pointer {
+	rtn, _, _ := syscall.Syscall(globalLock, 1, handle, 0, 0)
+	return unsafe.Pointer(rtn)
+}
+
 var _ = builtin1("GlobalLock(hMem)",
 	func(a Value) Value {
-		rtn, _, _ := syscall.Syscall(globalLock, 1,
-			intArg(a),
-			0, 0)
-		return intRet(rtn)
+		return intRet(uintptr(GlobalLock(intArg(a))))
 	})
 
+// dll Kernel32:GlobalSize(pointer handle) bool
 var globalSize = kernel32.MustFindProc("GlobalSize").Addr()
-var _ = builtin1("GlobalLockString(hMem)",
+
+func GlobalSize(handle HANDLE) uintptr {
+	rtn, _, _ := syscall.Syscall(globalSize, 1, handle, 0, 0)
+	return rtn
+}
+
+var _ = builtin1("GlobalSize(hMem)",
 	func(a Value) Value {
-		// NOTE: assumes string takes up entire globalSize
-		n, _, _ := syscall.Syscall(globalSize, 1,
-			intArg(a),
-			0, 0)
-		rtn, _, _ := syscall.Syscall(globalLock, 1,
-			intArg(a),
-			0, 0)
-		return bufStrZ(unsafe.Pointer(rtn), n)
+		return intRet(GlobalSize(intArg(a)))
+	})
+
+const GMEM_MOVEABLE = 2
+const GMEM_ZEROINIT = 0x40
+
+var _ = builtin1("GlobalAllocData(s)",
+	func(a Value) Value {
+		s := ToStr(a)
+		handle := GlobalAlloc(GMEM_MOVEABLE, uintptr(len(s)))
+		p := GlobalLock(handle)
+		defer GlobalUnlock(handle)
+		bufToPtr(s, p)
+		return intRet(handle) // caller must GlobalFree
+	})
+
+var _ = builtin1("GlobalAllocString(s)",
+	func(a Value) Value {
+		s := ToStr(a)
+		s = str.BeforeFirst(s, "\x00")
+		handle := GlobalAlloc(GMEM_MOVEABLE, uintptr(len(s))+1)
+		p := GlobalLock(handle)
+		defer GlobalUnlock(handle)
+		strToPtr(s, p)
+		return intRet(handle) // caller must GlobalFree
+	})
+
+var _ = builtin1("GlobalData(hMem)",
+	func(a Value) Value {
+		hm := intArg(a)
+		n := GlobalSize(hm)
+		p := GlobalLock(hm)
+		defer GlobalUnlock(hm)
+		return bufStrN(p, n)
 	})
 
 // dll Kernel32:GlobalUnlock(pointer handle) bool
 var globalUnlock = kernel32.MustFindProc("GlobalUnlock").Addr()
+
+func GlobalUnlock(handle HANDLE) uintptr {
+	rtn, _, _ := syscall.Syscall(globalUnlock, 1, handle, 0, 0)
+	return rtn
+}
+
 var _ = builtin1("GlobalUnlock(hMem)",
 	func(a Value) Value {
-		rtn, _, _ := syscall.Syscall(globalUnlock, 1,
-			intArg(a),
-			0, 0)
-		return boolRet(rtn)
+		return boolRet(GlobalUnlock(intArg(a)))
 	})
 
 // dll pointer Kernel32:GlobalFree(pointer hglb)
@@ -166,6 +210,8 @@ var _ = builtin1("GlobalFree(hglb)",
 			0, 0)
 		return intRet(rtn)
 	})
+
+//-------------------------------------------------------------------
 
 // dll Kernel32:HeapAlloc(pointer hHeap, long dwFlags, long dwBytes) pointer
 var heapAlloc = kernel32.MustFindProc("HeapAlloc").Addr()
