@@ -157,7 +157,9 @@ func (t *Thread) dyn(name string) Value {
 		fr := t.frames[i]
 		for j, s := range fr.fn.Names {
 			if s == name {
-				return fr.locals.v[j] // not concurrent at this point
+				if x := fr.locals.v[j]; x != nil {
+					return x
+				}
 			}
 		}
 	}

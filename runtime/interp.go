@@ -554,8 +554,7 @@ func (t *Thread) dyload(fr *Frame, idx int) Value {
 		fr2 := &t.frames[i]
 		for j, s := range fr2.fn.Names {
 			if s == name {
-				x := fr2.locals.v[j]
-				if x != nil {
+				if x := fr2.locals.v[j]; x != nil {
 					fr.locals.v[idx] = x
 					return x
 				}
