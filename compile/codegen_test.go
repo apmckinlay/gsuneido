@@ -64,6 +64,7 @@ func TestCodegen(t *testing.T) {
 	test("a = b; not a", "Load b, Store a, Pop, Load a, Not")
 	test("n += 5", "Int 5, LoadStore n AddEq")
 	test("n /= 5", "Int 5, LoadStore n DivEq")
+	test("s =~ '^a'", "Load s, Value SuRegex, Match")
 	test("++n", "One, LoadStore n AddEq")
 	test("n--", "One, LoadStore n SubEq retOrig")
 	test("a.b", "Load a, Value 'b', Get")

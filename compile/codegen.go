@@ -19,6 +19,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/hacks"
 	"github.com/apmckinlay/gsuneido/util/ints"
+	"github.com/apmckinlay/gsuneido/util/regex"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
@@ -676,7 +677,14 @@ func (cg *cgen) binary(node *ast.Binary) {
 			cg.emitUint8(op.LoadStore, ref)
 			cg.emitMore(i)
 		}
-	case tok.Is, tok.Isnt, tok.Match, tok.MatchNot, tok.Mod,
+	case tok.Match, tok.MatchNot:
+		if rhs, ok := node.Rhs.(*ast.Constant); ok {
+			if s, ok := rhs.Val.(SuStr); ok {
+				rhs.Val = SuRegex{Pat: regex.Compile(string(s))}
+			}
+		}
+		fallthrough
+	case tok.Is, tok.Isnt, tok.Mod,
 		tok.LShift, tok.RShift, tok.Lt, tok.Lte, tok.Gt, tok.Gte:
 		cg.expr(node.Lhs)
 		cg.expr(node.Rhs)

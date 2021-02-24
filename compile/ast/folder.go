@@ -7,7 +7,6 @@ import (
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/dnum"
-	"github.com/apmckinlay/gsuneido/util/regex"
 )
 
 // Folder implements constant folding for expressions.
@@ -42,11 +41,6 @@ func (f Folder) foldBinary(b *Binary) Expr {
 	}
 	lhs, ok := b.Lhs.(*Constant)
 	if !ok {
-		if b.Tok == tok.Match || b.Tok == tok.MatchNot {
-			if s, ok := rhs.Val.(SuStr); ok {
-				rhs.Val = SuRegex{Pat: regex.Compile(string(s))}
-			}
-		}
 		return b
 	}
 	return f.Constant(b.eval(lhs.Val, rhs.Val))
