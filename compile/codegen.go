@@ -52,7 +52,7 @@ const (
 )
 
 // codegen compiles an Ast to an SuFunc
-func codegen(lib, name string, fn *ast.Function) *SuFunc {
+func codegen(lib, name string, fn *ast.Function) Value {
 	if len(fn.Final) > 0 {
 		ast.PropFold(fn)
 	}
@@ -1034,7 +1034,7 @@ func (cg *cgen) emitJump(op op.Opcode, label int) int {
 }
 
 func (cg *cgen) emitBwdJump(op op.Opcode, label int) {
-	cg.emitCover() // so relative is correct
+	cg.emitCover()                        // so relative is correct
 	cg.emitJump(op, label-len(cg.code)-3) // convert to relative offset
 }
 

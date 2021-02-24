@@ -271,6 +271,8 @@ func TestParseStatements(t *testing.T) {
 	test("if (a) stmt else stmt2", "If(a stmt \n else stmt2)")
 	test("if f() { stmt } else stmt2", "If(Call(f) stmt \n else stmt2)")
 	test("if F { stmt }", "If(F stmt)")
+	test("if ((a = b) is true) { stmt }",
+		"If(Unary(LParen Binary(Is Unary(LParen Binary(Eq a b)) true)) stmt)")
 
 	// switch
 	test("switch { case 1: b }",

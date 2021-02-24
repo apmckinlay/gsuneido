@@ -108,7 +108,7 @@ func (lxr *Lexer) next() Item {
 		if p := lxr.peek(); p == '_' || IsLetter(p) {
 			lxr.matchIdentTail()
 			val := lxr.src[start+1 : lxr.si]
-			return Item{val, int32(start), tok.String}
+			return Item{val, int32(start), tok.Symbol}
 		}
 		return it(tok.Hash)
 	case '(':

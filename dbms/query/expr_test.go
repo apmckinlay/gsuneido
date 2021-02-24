@@ -45,7 +45,7 @@ func TestExprEval(t *testing.T) {
 	test("(s $ t).Size()", "6")
 	test("[a: 123].a", "123")
 	test("Object(s, x, :t)", `#("foo", 4, t: "bar")`)
-	test("t[1::1]", `"a"`)
+	test("t[1::1]", "'a'")
 	raw = true
 	test("x in (3, 4, 5)", "true")
 	test("t in (3, 4, 5)", "false")

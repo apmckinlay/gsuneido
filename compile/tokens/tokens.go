@@ -18,6 +18,8 @@ const (
 	Identifier
 	Number
 	String
+	// Symbol is a #identifier string
+	Symbol
 	Whitespace
 	Comment
 	Newline

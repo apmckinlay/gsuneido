@@ -58,7 +58,7 @@ func main() {
 		}
 	}
 
-	suneido := new(SuObject)
+	suneido := new(SuneidoObject)
 	suneido.SetConcurrent()
 	Global.Builtin("Suneido", suneido)
 

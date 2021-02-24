@@ -41,6 +41,10 @@ func New(t *Thread) *Check {
 
 // Check is the main entry point.
 // It can be called more than once (for nested functions).
+func (ck *Check) CheckFunc(f *ast.Function) {
+	ck.Check(f)
+}
+
 func (ck *Check) Check(f *ast.Function) set {
 	ck.AllInit = make(map[string]int)
 	ck.AllUsed = make(map[string]struct{})
@@ -54,12 +58,12 @@ func (ck *Check) Check(f *ast.Function) set {
 // It is also called by compile constant to check class base.
 func (ck *Check) CheckGlobal(name string, pos int) {
 	if nil == Global.FindName(ck.t, name) {
-		ck.AddResult(pos, "ERROR: can't find: "+name)
+		ck.CheckResult(pos, "ERROR: can't find: "+name)
 	}
 }
 
 // Results returns the results sorted by code position
-func (ck *Check) Results() []string {
+func (ck *Check) CheckResults() []string {
 	sort.Sort(resultsByPos{ck})
 	return ck.results
 }
@@ -97,7 +101,7 @@ func (ck *Check) statements(
 	stmts []ast.Statement, init set, fnBody bool) (initOut set, exit bool) {
 	for si, stmt := range stmts {
 		if exit {
-			ck.AddResult(stmt.Position(), "ERROR: unreachable code")
+			ck.CheckResult(stmt.Position(), "ERROR: unreachable code")
 		}
 		init, exit = ck.statement(stmt, init, fnBody && si == len(stmts)-1)
 	}
@@ -120,7 +124,7 @@ func (ck *Check) statement(
 	case *ast.ExprStmt:
 		init, effects = ck.expr(stmt.E, init)
 		if !last && !effects {
-			ck.AddResult(stmt.Pos, "ERROR: useless expression")
+			ck.CheckResult(stmt.Pos, "ERROR: useless expression")
 		}
 	case *ast.Return:
 		init, _ = ck.expr(stmt.E, init)
@@ -372,7 +376,7 @@ func (ck *Check) block(b *ast.Block, init set) set {
 		if !p.Unused {
 			id := p.Name.ParamName()
 			if _, ok := ck.AllUsed[id]; !ok {
-				ck.AddResult(int(p.Name.Pos),
+				ck.CheckResult(int(p.Name.Pos),
 					"WARNING: initialized but not used: "+id)
 			}
 		}
@@ -412,7 +416,7 @@ func (ck *Check) usedVar(init set, id string, pos int) set {
 		if _, ok := ck.AllInit[id]; ok {
 			p = "WARNING: used but possibly"
 		}
-		ck.AddResult(pos, p+" not initialized: "+id)
+		ck.CheckResult(pos, p+" not initialized: "+id)
 	}
 	ck.AllUsed[id] = struct{}{}
 	return init
@@ -429,12 +433,12 @@ func (ck *Check) process(params []ast.Param, init set) {
 			} else if pos, ok := ck.AllInit[id]; ok {
 				at = int(pos)
 			}
-			ck.AddResult(at, "WARNING: initialized but not used: "+id)
+			ck.CheckResult(at, "WARNING: initialized but not used: "+id)
 		}
 	}
 	for id, pos := range ck.AllInit {
 		if _, ok := ck.AllUsed[id]; !ok && !init.has(id) {
-			ck.AddResult(pos, "WARNING: initialized but not used: "+id)
+			ck.CheckResult(pos, "WARNING: initialized but not used: "+id)
 		}
 	}
 }
@@ -449,7 +453,7 @@ func paramPos(params []ast.Param, id string) int {
 
 //-------------------------------------------------------------------
 
-func (ck *Check) AddResult(pos int, str string) {
+func (ck *Check) CheckResult(pos int, str string) {
 	ck.resultPos = append(ck.resultPos, pos)
 	ck.results = append(ck.results, str+" @"+strconv.Itoa(pos))
 }

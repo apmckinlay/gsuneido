@@ -13,10 +13,17 @@ import (
 // Doing the folding as the AST is built is implicitly bottom up
 // without requiring an explicit tree traversal.
 // It also means we only build the folded tree.
+// Some methods are split so they can be used by propfold.
 type Folder struct{}
 
-func (f Folder) Constant(val Value) *Constant {
+var _ Builder = (*Folder)(nil)
+
+func (f Folder) Constant(val Value) Expr {
 	return &Constant{Val: val}
+}
+
+func (f Folder) Symbol(s SuStr) Expr {
+	return &Constant{Val: s}
 }
 
 func (f Folder) Unary(token tok.Token, expr Expr) Expr {

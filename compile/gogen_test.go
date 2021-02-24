@@ -50,22 +50,17 @@ func ExampleGoGen_b() {
 func ExampleGoGen_c() {
 	src := GoGen(`function ()
 		{
-		s = "hello"
-		s + 123
+		"hello"
 		}`)
 	fmt.Println(src)
 	fmt.Println("_c0_", Unpack64(`BGhlbGxv`))
-	fmt.Println("_c1_", Unpack64(`A4MMHg==`))
 	// output:
 	//
 	// var _c0_ = Unpack64(`BGhlbGxv`)
-	// var _c1_ = Unpack64(`A4MMHg==`)
 	// func() Value {
-	// (s := _c0_)
-	// return OpAdd(s, _c1_)
+	// return _c0_
 	// }
 	// _c0_ "hello"
-	// _c1_ 123
 }
 
 func TestPack64(t *testing.T) {
@@ -113,7 +108,6 @@ func TestGoGen(t *testing.T) {
 	test("a << b;;", "OpLShift(a, b)")
 
 	test("a = 1;;", "(a = One)")
-	test("z = 1;;", "(z := One)")
 	test("a = b", "return func(){ _r_ := b; (a = _r_); return _r_ }()")
 	test("a[b] = 0;;", "a.Put(b, Zero)")
 	test("a[b] = 0",

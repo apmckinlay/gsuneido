@@ -479,7 +479,7 @@ func (ob *SuObject) vecstr(t *Thread, buf *limitBuf, inProgress vstack) string {
 }
 
 func entstr(t *Thread, buf *limitBuf, k Value, v Value, inProgress vstack) {
-	if ks, ok := k.(SuStr); ok && unquoted(string(ks)) {
+	if ks := Unquoted(k); ks != "" {
 		buf.WriteString(string(ks))
 	} else {
 		valstr(t, buf, k, inProgress)
@@ -505,9 +505,15 @@ func valstr(t *Thread, buf *limitBuf, v Value, inProgress vstack) {
 	}
 }
 
-func unquoted(s string) bool {
-	// want true/false to be quoted to avoid ambiguity
-	return (s != "true" && s != "false") && lexer.IsIdentifier(s)
+func Unquoted(k Value) string {
+	if ss, ok := k.(SuStr); ok {
+		s := string(ss)
+		// want true/false to be quoted to avoid ambiguity
+		if (s != "true" && s != "false") && lexer.IsIdentifier(s) {
+			return s
+		}
+	}
+	return ""
 }
 
 // Show is like Display except that it sorts named members.

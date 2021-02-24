@@ -17,8 +17,7 @@ import (
 )
 
 func GoGen(src string) string {
-	p := NewParser(src)
-	p.codegen = gogen
+	p := GogenParser(src)
 	f := p.constant().(*SuFunc)
 	if p.Token != tok.Eof {
 		p.Error("did not consume all input")
@@ -28,7 +27,10 @@ func GoGen(src string) string {
 
 // gogen compiles an ast.Function to Go source code placed in SuFunc.Code.
 // Using SuFunc for output is for compatibility with byte code codegen.
-func gogen(_, _ string, f *ast.Function) *SuFunc {
+func (*gogenAspects) codegen(_, _ string, f *ast.Function) Value {
+	if len(f.Final) > 0 {
+		ast.PropFold(f)
+	}
 	var g ggen
 	g.locals = make(map[string]struct{})
 	g.function(f)

@@ -168,7 +168,7 @@ func (sc *suScanner) type2() string {
 		return "IDENTIFIER"
 	case tokens.Number:
 		return "NUMBER"
-	case tokens.String:
+	case tokens.String, tokens.Symbol:
 		return "STRING"
 	case tokens.Whitespace:
 		return "WHITESPACE"

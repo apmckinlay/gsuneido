@@ -15,8 +15,29 @@ import (
 )
 
 func NewParser(src string) *Parser {
-	lxr := NewLexer(src)
-	p := &Parser{ParserBase: ParserBase{Lxr: lxr}, codegen:  codegen}
+	return newParser(NewLexer(src), &cgAspects{})
+}
+
+func CheckParser(src string, t *runtime.Thread) *Parser {
+	a := &cgckAspects{}
+	a.Check = check.New(t)
+	return newParser(NewLexer(src), a)
+}
+
+func AstParser(src string) *Parser {
+	return newParser(NewLexer(src), &astAspects{})
+}
+
+func GogenParser(src string) *Parser {
+	return newParser(NewLexer(src), &gogenAspects{})
+}
+
+func QueryParser(src string) *Parser {
+	return newParser(NewQueryLexer(src), &cgAspects{})
+}
+
+func newParser(lxr *Lexer, a Aspects) *Parser {
+	p := &Parser{ParserBase: ParserBase{Lxr: lxr, Aspects: a}}
 	p.Init()
 	p.Next()
 	return p
@@ -32,11 +53,10 @@ type ParserBase struct {
 	// Item is the current lexical token etc.
 	Item
 
-	// Folder handles constant folding in expressions
-	ast.Folder
-
 	// newline is true if the current token was preceeded by a newline
 	newline bool
+
+	Aspects
 }
 
 type Parser struct {
@@ -58,13 +78,6 @@ type Parser struct {
 	// assignName is used to pass the variable name through an assignment
 	// e.g. foo = function () { ... }; Name(foo) => "foo"
 	assignName string
-
-	// codegen is used to compile an ast.Function to an SuFunc.
-	// It is indirect so it can be overridden by gogen.
-	codegen func(lib, name string, fn *ast.Function) *runtime.SuFunc
-
-	// checker is used to add additional checking along with codegen
-	checker *check.Check
 
 	// expectingCompound is used to differentiate control statement body vs. block
 	// e.g. if expr {...}
@@ -91,6 +104,9 @@ type funcInfo struct {
 const disqualified = -1
 
 func (p *ParserBase) Match(token tok.Token) {
+	if token == tok.String && p.Token == tok.Symbol {
+		token = tok.Symbol
+	}
 	p.MustMatch(token)
 	p.Next()
 }

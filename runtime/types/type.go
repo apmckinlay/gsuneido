@@ -29,6 +29,7 @@ const (
 	Query
 	Cursor
 	File
+	AstNode
 	BuiltinClass
 	BuiltinInstance
 	N

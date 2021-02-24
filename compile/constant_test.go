@@ -30,6 +30,7 @@ func TestConstant(t *testing.T) {
 	test("0xffffffff", SuDnum{Dnum: dnum.FromInt(-1)})
 	test("0377", SuInt(377))
 	test("'hi wo'", SuStr("hi wo"))
+	test("#foo", SuStr("foo"))
 	test("/* comment */ true", True)
 
 	assert.T(t).This(Constant("#20140425").String()).Is("#20140425")

@@ -14,7 +14,7 @@ func TestDisasm(t *testing.T) {
 	test := func(src, expected string) {
 		t.Helper()
 		ast := parseFunction(src)
-		fn := codegen("", "", ast)
+		fn := codegen("", "", ast).(*SuFunc)
 		s := DisasmMixed(fn, src)
 		assert.T(t).This(s).Like(expected)
 	}

@@ -64,10 +64,10 @@ func TestBlocks(t *testing.T) {
 			x))`)
 	test("b = { .x }", // "this" requires closure
 		`Binary(Eq b Block(
-			Mem(this "x")))`)
+			Mem(this 'x')))`)
 	test("b = { super.F() }", // "super" requires closure
 		`Binary(Eq b Block(
-			Call(Mem(super "F"))))`)
+			Call(Mem(super 'F'))))`)
 	test("b1 = {|p| b2 = { p }}", // inner references outer param
 		`Binary(Eq b1 Block(p
         	Binary(Eq b2 Block(

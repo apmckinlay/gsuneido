@@ -6,7 +6,6 @@ package query
 import (
 	"github.com/apmckinlay/gsuneido/compile"
 	"github.com/apmckinlay/gsuneido/compile/ast"
-	"github.com/apmckinlay/gsuneido/compile/lexer"
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
 )
 
@@ -15,11 +14,7 @@ type qparser struct {
 }
 
 func NewQueryParser(src string) *qparser {
-	lxr := lexer.NewQueryLexer(src)
-	p := &qparser{compile.Parser{ParserBase: compile.ParserBase{Lxr: lxr}}}
-	p.Init()
-	p.Next()
-	return p
+	return &qparser{*compile.QueryParser(src)}
 }
 
 func ParseQuery(src string) Query {

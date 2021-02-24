@@ -21,9 +21,13 @@ type Node interface {
 	String() string
 	// Children calls the given function for each child node
 	Children(func(Node) Node)
+	// Get is for the Value interface for Suneido.Parse
+	Get(*Thread, Value) Value
 }
 
-type astNodeT struct{}
+type astNodeT struct{
+	AstNodeValue
+}
 
 func (*astNodeT) astNode() {}
 
@@ -91,6 +95,10 @@ func (a *Constant) String() string {
 
 func (a *Constant) Echo() string {
 	return a.Val.String()
+}
+
+type Symbol struct {
+	Constant
 }
 
 type Unary struct {
@@ -472,6 +480,7 @@ func (p *Param) String() string {
 type Block struct {
 	Name string
 	Function
+	// CompileAsFunction is set and used by codegen
 	CompileAsFunction bool
 }
 

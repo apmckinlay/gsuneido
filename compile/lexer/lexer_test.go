@@ -30,8 +30,8 @@ func TestLexer(t *testing.T) {
 	}
 	first("function", "function", tok.Function)
 	first("foo", "foo", tok.Identifier)
-	first("#foo", "foo", tok.String)
-	first("#_foo?", "_foo?", tok.String)
+	first("#foo", "foo", tok.Symbol)
+	first("#_foo?", "_foo?", tok.Symbol)
 	first("is", "is", tok.Is)
 	first("is:", "is", tok.Identifier)
 	first("0xff", "0xff", tok.Number)

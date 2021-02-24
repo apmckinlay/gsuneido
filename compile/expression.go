@@ -153,7 +153,7 @@ func (p *Parser) privatizeRef(name string) string {
 				p.Error("invalid getter (" + name + ")")
 			}
 		} else {
-			name = p.className + "_" + name
+			name = p.privatize(name, p.className)
 		}
 		return name
 	} else if strings.HasPrefix(name, "Getter_") && len(name) > 7 &&
@@ -217,9 +217,13 @@ func (p *Parser) atom() ast.Expr {
 	switch token := p.Token; token {
 	case tok.String:
 		// don't call p.constant() because it allows concatenation
-		s := p.Text
-		p.Match(tok.String)
-		return p.Constant(SuStr(s))
+		s := SuStr(p.Text)
+		p.Next()
+		return p.Constant(s)
+	case tok.Symbol:
+		s := SuStr(p.Text)
+		p.Next()
+		return p.Symbol(s)
 	case tok.True, tok.False, tok.Number, tok.Hash:
 		return p.Constant(p.constant())
 	case tok.LParen:
@@ -426,10 +430,10 @@ func (p *Parser) argumentList(closing tok.Token) []ast.Arg {
 		}
 		if p.MatchIf(tok.Comma) {
 			handlePending(p.Constant(True))
-		} else if p.newline && p.checker != nil && pending == nil {
+		} else if p.newline && pending == nil {
 			switch p.Token {
 			case tok.LParen, tok.LBracket, tok.LCurly, tok.Dot, tok.Add, tok.Sub:
-				p.checker.AddResult(int(p.Pos), "ERROR: missing comma")
+				p.CheckResult(int(p.Pos), "ERROR: missing comma")
 			}
 		}
 	}

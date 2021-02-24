@@ -56,7 +56,7 @@ func (p *Parser) params(inClass bool) []ast.Param {
 			p.MatchIdent()
 			p.checkForDupParam(params, name)
 			if p.MatchIf(tok.Eq) {
-				was_string := p.Token == tok.String
+				was_string := p.Token == tok.String || p.Token == tok.Symbol
 				defs = true
 				def := p.constant()
 				if _, ok := def.(SuStr); ok && !was_string {
@@ -139,7 +139,8 @@ func (p *Parser) statement2() ast.Statement {
 	token := p.Token
 	switch token {
 	case tok.Semicolon:
-		p.Next()
+		for p.MatchIf(tok.Semicolon) {
+		}
 		return &ast.Compound{Body: []ast.Statement{}}
 	case tok.LCurly:
 		return &ast.Compound{Body: p.compound()}
@@ -346,9 +347,13 @@ func (p *Parser) optExprList(after tok.Token) []ast.Expr {
 // used by if, while, and do-while
 func (p *Parser) ctrlExpr() ast.Expr {
 	parens := p.MatchIf(tok.LParen)
+	keepParens := p.Token == tok.LParen
 	expr := p.exprExpecting(!parens)
 	if parens {
 		p.Match(tok.RParen)
+	}
+	if keepParens {
+		return p.Unary(tok.LParen, expr)
 	}
 	return expr
 }

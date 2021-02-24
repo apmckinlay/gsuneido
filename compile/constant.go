@@ -8,7 +8,6 @@ import (
 	"strings"
 	"sync/atomic"
 
-	"github.com/apmckinlay/gsuneido/compile/check"
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/ascii"
@@ -34,19 +33,26 @@ func NamedConstant(lib, name, src string) Value {
 
 // can't do AST check after compile because that would miss nested functions
 func Checked(t *Thread, src string) (Value, []string) {
-	p := NewParser(src)
-	p.checker = check.New(t)
+	p := CheckParser(src, t)
 	v := p.constant()
 	if p.Token != tok.Eof {
 		p.Error("did not parse all input")
 	}
-	return v, p.checker.Results()
+	return v, p.CheckResults()
+}
+
+func (p *Parser) Const() Value {
+	return p.constant()
 }
 
 func (p *Parser) constant() Value {
 	switch p.Token {
 	case tok.String:
 		return p.string()
+	case tok.Symbol:
+		s := SuStr(p.Text)
+		p.Next()
+		return s
 	case tok.Add:
 		p.Next()
 		fallthrough
@@ -98,23 +104,28 @@ func (p *Parser) functionValue() Value {
 	p.className = "" // prevent privatization in standalone function
 	ast := p.Function()
 	p.className = prevClassName
-	if p.checker != nil {
-		p.checker.Check(ast)
-	}
+	p.CheckFunc(ast)
 	return p.codegen(p.lib, p.name, ast)
 }
 
+// string handles compile time concatenation
 func (p *Parser) string() Value {
-	s := ""
-	for {
-		s += p.Text
-		p.Match(tok.String)
-		if p.Token != tok.Cat || p.Lxr.AheadSkip(0).Token != tok.String {
-			break
-		}
-		p.Next()
+	s := p.Text
+	p.Match(tok.String)
+	if !p.moreStr() {
+		return SuStr(s) // normal case
 	}
-	return SuStr(s)
+	strs := []string{s}
+	for p.moreStr() {
+		p.Match(tok.Cat)
+		strs = append(strs, p.Text)
+		p.Match(tok.String)
+	}
+	return p.mkConcat(strs)
+}
+
+func (p *Parser) moreStr() bool {
+	return p.Token == tok.Cat && p.Lxr.AheadSkip(0).Token == tok.String
 }
 
 func (p *Parser) number() Value {
@@ -146,26 +157,18 @@ func (p *Parser) object() Value {
 	p.Next()
 	var ob container
 	if close == tok.RParen {
-		ob = new(SuObject)
+		ob = p.mkObject()
 	} else {
-		ob = NewSuRecord()
+		ob = p.mkRecord()
 	}
 	p.memberList(ob, close, noBase)
-	if close == tok.RBracket && ob.(*SuRecord).ListSize() > 0 {
-		suob := *ob.(*SuRecord).ToObject()
-		ob = &suob
+	if close == tok.RBracket {
+		ob = p.mkRecOrOb(ob)
 	}
 	if p, ok := ob.(protectable); ok {
 		p.SetReadOnly()
 	}
 	return ob.(Value)
-}
-
-// container allows using memberList etc. for both objects and classes
-type container interface {
-	Add(Value)
-	HasKey(Value) bool
-	Set(Value, Value)
 }
 
 type protectable interface {
@@ -196,12 +199,12 @@ func (p *Parser) member(ob container, closing tok.Token, base Gnum) {
 		if name == "New" {
 			ast.IsNewMethod = true
 		}
-		if p.checker != nil {
-			p.checker.Check(ast)
-		}
+		p.CheckFunc(ast)
 		fn := p.codegen(p.lib, p.name, ast)
 		p.name = prevName
-		fn.ClassName = p.className
+		if f, ok := fn.(*SuFunc); ok {
+			f.ClassName = p.className
+		}
 		p.putMem(ob, SuStr(name), fn, pos)
 	} else if p.MatchIf(tok.Colon) {
 		if inClass {
@@ -239,14 +242,14 @@ func (p *Parser) privatizeDef(m Value) string {
 		if len(name) <= 7 || !ascii.IsLower(name[7]) {
 			p.Error("invalid getter (" + name + ")")
 		}
-		return "Getter_" + p.className + name[6:]
+		return p.privatize(name[7:], "Getter_"+p.className)
 	}
-	return p.className + "_" + name
+	return p.privatize(name, p.className)
 }
 
 func (p *Parser) putMem(ob container, m Value, v Value, pos int32) {
 	if ob.HasKey(m) {
-		p.ErrorAt(pos, "duplicate member name (" + m.String() + ")")
+		p.ErrorAt(pos, "duplicate member name ("+m.String()+")")
 	} else {
 		ob.Set(m, v)
 	}
@@ -266,17 +269,23 @@ func (p *Parser) class() Value {
 		}
 	}
 	var base Gnum
+	baseName := "class"
 	if p.Token == tok.Identifier {
-		base = p.ckBase(p.Text)
+		baseName = p.Text
+		base = p.ckBase(baseName)
 		p.MatchIdent()
 	}
 	p.Match(tok.LCurly)
 	prevClassName := p.className
 	p.className = p.getClassName()
-	mems := classcon{}
+	mems := p.mkClass(baseName)
 	p.memberList(mems, tok.RCurly, base)
 	p.className = prevClassName
-	return &SuClass{Base: base, MemBase: MemBase{Data: mems}, Lib: p.lib, Name: p.name}
+	if cc, ok := mems.(classBuilder); ok {
+		return &SuClass{Base: base, Lib: p.lib, Name: p.name,
+			MemBase: MemBase{Data: cc}}
+	}
+	return mems.(Value)
 }
 
 func (p *Parser) ckBase(name string) Gnum {
@@ -289,9 +298,7 @@ func (p *Parser) ckBase(name string) Gnum {
 		}
 		return Global.Copy(name[1:])
 	}
-	if p.checker != nil {
-		p.checker.CheckGlobal(name, int(p.Pos))
-	}
+	p.CheckGlobal(name, int(p.Pos))
 	return Global.Num(name)
 }
 
@@ -312,20 +319,4 @@ func (p *Parser) getClassName() string {
 		return className
 	}
 	return last
-}
-
-type classcon map[string]Value
-
-func (c classcon) Add(Value) {
-	panic("class members must be named")
-}
-func (c classcon) HasKey(m Value) bool {
-	if s, ok := m.(SuStr); ok {
-		_, ok = c[string(s)]
-		return ok
-	}
-	panic("class member names must be strings")
-}
-func (c classcon) Set(m, v Value) {
-	c[string(m.(SuStr))] = v
 }
