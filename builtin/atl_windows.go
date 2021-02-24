@@ -11,7 +11,7 @@ import (
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
-var atl = MustLoadDLL("atl.dll")
+var atl = MustLoadDLL("atl100.dll")
 
 // dll bool atl:AtlAxWinInit()
 var atlAxWinInit = atl.MustFindProc("AtlAxWinInit").Addr()
