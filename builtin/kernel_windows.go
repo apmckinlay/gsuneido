@@ -13,6 +13,7 @@ import (
 
 	"github.com/apmckinlay/gsuneido/builtin/goc"
 	. "github.com/apmckinlay/gsuneido/runtime"
+	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/str"
 	reg "golang.org/x/sys/windows/registry"
 )
@@ -156,15 +157,17 @@ var _ = builtin1("GlobalSize(hMem)",
 	})
 
 const GMEM_MOVEABLE = 2
-const GMEM_ZEROINIT = 0x40
 
 var _ = builtin1("GlobalAllocData(s)",
 	func(a Value) Value {
 		s := ToStr(a)
 		handle := GlobalAlloc(GMEM_MOVEABLE, uintptr(len(s)))
-		p := GlobalLock(handle)
-		defer GlobalUnlock(handle)
-		bufToPtr(s, p)
+		if len(s) > 0 {
+			p := GlobalLock(handle)
+			assert.That(p != nil)
+			defer GlobalUnlock(handle)
+			bufToPtr(s, p)
+		}
 		return intRet(handle) // caller must GlobalFree
 	})
 
@@ -174,6 +177,7 @@ var _ = builtin1("GlobalAllocString(s)",
 		s = str.BeforeFirst(s, "\x00")
 		handle := GlobalAlloc(GMEM_MOVEABLE, uintptr(len(s))+1)
 		p := GlobalLock(handle)
+		assert.That(p != nil)
 		defer GlobalUnlock(handle)
 		strToPtr(s, p)
 		return intRet(handle) // caller must GlobalFree
@@ -183,7 +187,11 @@ var _ = builtin1("GlobalData(hMem)",
 	func(a Value) Value {
 		hm := intArg(a)
 		n := GlobalSize(hm)
+		if n == 0 {
+			return EmptyStr
+		}
 		p := GlobalLock(hm)
+		assert.That(p != nil)
 		defer GlobalUnlock(hm)
 		return bufStrN(p, n)
 	})

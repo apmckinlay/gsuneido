@@ -172,7 +172,7 @@ func bsStrZ(buf []byte) Value {
 // bufStrZ copies a nul terminated string from an unsafe.Pointer.
 // If nul is not found, then the entire length is returned.
 func bufStrZ(p unsafe.Pointer, n uintptr) Value {
-	if p == nil {
+	if p == nil || n == 0 {
 		return False
 	}
 	i := uintptr(0)
@@ -188,6 +188,9 @@ func bufStrZ(p unsafe.Pointer, n uintptr) Value {
 // It includes the nuls in the result.
 // If nuls are not found, then the entire length is returned.
 func bufStrZ2(p unsafe.Pointer, n uintptr) Value {
+	if p == nil || n == 0 {
+		return EmptyStr
+	}
 	i := uintptr(2)
 	for ; i < n; i++ {
 		if *(*byte)(unsafe.Pointer(uintptr(p) + i - 2)) == 0 &&
@@ -200,7 +203,7 @@ func bufStrZ2(p unsafe.Pointer, n uintptr) Value {
 
 // bufStrN copies a string of a given length from an unsafe.Pointer
 func bufStrN(p unsafe.Pointer, n uintptr) Value {
-	if p == nil {
+	if p == nil || n == 0 {
 		return EmptyStr
 	}
 	buf := make([]byte, n)
