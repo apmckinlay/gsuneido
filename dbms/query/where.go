@@ -15,6 +15,7 @@ type Where struct {
 	Query1
 	expr  *ast.Nary // And
 	fixed []Fixed
+	t     QueryTran
 }
 
 func (w *Where) Init() {
@@ -23,6 +24,11 @@ func (w *Where) Init() {
 		panic("select: nonexistent columns: " + str.Join(", ",
 			sset.Difference(w.expr.Columns(), w.source.Columns())))
 	}
+}
+
+func (w *Where) SetTran(t QueryTran) {
+	w.t = t
+	w.source.SetTran(t)
 }
 
 func (w *Where) String() string {

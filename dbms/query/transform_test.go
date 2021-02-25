@@ -20,6 +20,7 @@ func TestTransform(t *testing.T) {
 			expected = from
 		}
 		q := ParseQuery(from)
+		q.SetTran(testTran{})
 		q.Init()
 		q = q.Transform()
 		assert.T(t).This(str.ToLower(q.String())).Is(str.ToLower(expected))
@@ -139,4 +140,32 @@ func TestTransform(t *testing.T) {
 	// ... but only if project includes join fields
 	test("(trans join by(id) customer) project city, item",
 		"(trans JOIN by(id) customer) PROJECT city, item")
+}
+
+type testTran struct{}
+
+var testSchemas = map[string]*Schema{
+	"tables": {Columns: []string{"table", "tablename"},
+		Indexes: []Index{{Mode: 'k', Columns: []string{"table"}},
+			{Mode: 'k', Columns: []string{"tablename"}}}},
+	"columns":  {Columns: []string{"table", "column"},
+		Indexes: []Index{{Mode: 'k', Columns: []string{"table", "column"}}}},
+	"table":    {Columns: []string{"a", "b", "c"},
+		Indexes: []Index{{Mode: 'k', Columns: []string{"a"}}}},
+	"table2":   {Columns: []string{"c", "d", "e"},
+		Indexes: []Index{{Mode: 'k', Columns: []string{"e"}}}},
+	"customer": {Columns: []string{"id", "name", "city"},
+		Indexes: []Index{{Mode: 'k', Columns: []string{"id"}}}},
+	"hist":     {Columns: []string{"date", "item", "id", "cost"},
+		Indexes: []Index{{Mode: 'k', Columns: []string{"date", "item", "id"}}}},
+	"hist2":    {Columns: []string{"date", "item", "id", "cost"},
+		Indexes: []Index{{Mode: 'k', Columns: []string{"date"}}}},
+	"trans":    {Columns: []string{"item", "id", "cost", "date"},
+		Indexes: []Index{{Mode: 'k', Columns: []string{"date", "item", "id"}}}},
+	"inven":    {Columns: []string{"item", "qty"},
+		Indexes: []Index{{Mode: 'k', Columns: []string{"item"}}}},
+}
+
+func (testTran) GetSchema(table string) *Schema {
+	return testSchemas[table]
 }

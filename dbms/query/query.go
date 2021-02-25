@@ -4,6 +4,7 @@
 package query
 
 import (
+	"github.com/apmckinlay/gsuneido/db19/meta/schema"
 	"github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/sset"
@@ -14,6 +15,7 @@ type Query interface {
 	Init()
 	Columns() []string
 	Transform() Query
+	SetTran(tran QueryTran)
 
 	// Header() runtime.Header
 	// Order() []string
@@ -30,6 +32,10 @@ type Query interface {
 	// Get(dir runtime.Dir) runtime.Row
 
 	String() string
+}
+
+type QueryTran interface {
+	GetSchema(table string) *schema.Schema
 }
 
 // Setup prepares a parsed query for execution
@@ -67,6 +73,10 @@ func (q1 *Query1) Fixed() []Fixed {
 	return q1.source.Fixed()
 }
 
+func (q1 *Query1) SetTran(t QueryTran) {
+	q1.source.SetTran(t)
+}
+
 type Query2 struct {
 	Query1
 	disallow
@@ -86,6 +96,11 @@ func (q2 *Query2) String(op string) string {
 func (q2 *Query2) Init() {
 	q2.source.Init()
 	q2.source2.Init()
+}
+
+func (q2 *Query2) SetTran(t QueryTran) {
+	q2.source.SetTran(t)
+	q2.source2.SetTran(t)
 }
 
 func (q2 *Query2) keypairs() [][]string {

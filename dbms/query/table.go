@@ -5,6 +5,7 @@ package query
 
 type Table struct {
 	name string
+	t    QueryTran
 }
 
 func (tbl *Table) String() string {
@@ -14,52 +15,33 @@ func (tbl *Table) String() string {
 func (tbl *Table) Init() {
 }
 
-func (tbl *Table) Columns() []string { //TODO
-	switch tbl.name {
-	case "customer":
-		return []string{"id", "name", "city"}
-	case "hist":
-		return []string{"date", "item", "id", "cost"}
-	case "hist2":
-		return []string{"date", "item", "id", "cost"}
-	case "trans":
-		return []string{"item", "id", "cost", "date"}
-	case "inven":
-		return []string{"item", "qty"}
-	case "table":
-		return []string{"a", "b", "c"}
-	case "table2":
-		return []string{"c", "d", "e"}
-	case "tables":
-		return []string{"table", "tablename"}
-	case "columns":
-		return []string{"table", "column"}
-	}
-	panic("unknown table: " + tbl.name)
+func (tbl *Table) SetTran(t QueryTran) {
+	tbl.t = t
 }
 
-func (tbl *Table) Keys() [][]string { //TODO
-	switch tbl.name {
-	case "customer":
-		return [][]string{{"id"}}
-	case "hist":
-		return [][]string{{"date", "item", "id"}}
-	case "hist2":
-		return [][]string{{"date"}}
-	case "trans":
-		return [][]string{{"date", "item", "id"}}
-	case "inven":
-		return [][]string{{"item"}}
-	case "table":
-		return [][]string{{"a"}}
-	case "table2":
-		return [][]string{{"e"}}
-	case "tables":
-		return [][]string{{"table"}, {"tablename"}}
-	case "columns":
-		return [][]string{{"table", "column"}}
+func (tbl *Table) Columns() []string {
+	schema := tbl.t.GetSchema(tbl.name)
+	if schema == nil {
+		panic("nonexistent table: " + tbl.name)
 	}
-	panic("unknown table: " + tbl.name)
+	allcols := make([]string, 0, len(schema.Columns)+len(schema.Derived))
+	allcols = append(allcols, schema.Columns...)
+	allcols = append(allcols, schema.Derived...)
+	return allcols
+}
+
+func (tbl *Table) Keys() [][]string {
+	schema := tbl.t.GetSchema(tbl.name)
+	if schema == nil {
+		panic("nonexistent table: " + tbl.name)
+	}
+	keys := make([][]string, 0, 1)
+	for _, ix := range schema.Indexes {
+		if ix.Mode == 'k' {
+			keys = append(keys, ix.Columns)
+		}
+	}
+	return keys
 }
 
 func (tbl *Table) Transform() Query {
