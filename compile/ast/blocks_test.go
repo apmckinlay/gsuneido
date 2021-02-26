@@ -85,4 +85,12 @@ func TestBlocks(t *testing.T) {
 		`Binary(Eq b1 Block(
         	Binary(Eq b2 Block(
         	Return()))))`)
+
+	// bug from continue after finding "a" for first block
+	test(`a = F(); F({ x = F(a) }); F({ F(x) })`,
+		`Binary(Eq a Call(F))
+		Call(F Block(
+			Binary(Eq x Call(F a))))
+		Call(F Block(
+			Call(F x)))`)
 }

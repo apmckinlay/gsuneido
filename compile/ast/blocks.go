@@ -54,7 +54,6 @@ func Blocks(f *Function) {
 		if this || super || x.hasRet || shares(x.vars, vars) ||
 			(x.parent != nil && shares(x.vars, x.parent.params)) {
 			closure(x)
-			continue
 		}
 		for j := i + 1; j < len(b.bloks); j++ {
 			y := b.bloks[j]
