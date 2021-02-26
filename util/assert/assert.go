@@ -315,6 +315,7 @@ func (v value) Panics(expected string) {
 		}
 		v.assert.fail(fmt.Sprintf("expected panic of '%v' but it did not panic",
 			expected))
+		return
 	}
 	if err, ok := e.(error); ok {
 		e = err.Error()
