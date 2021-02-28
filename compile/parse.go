@@ -44,7 +44,7 @@ func newParser(lxr *Lexer, a Aspects) *Parser {
 }
 
 func (p *Parser) Init() {
-	p.funcInfo.final = map[string]int{}
+	p.funcInfo.final = map[string]uint8{}
 }
 
 type ParserBase struct {
@@ -91,17 +91,14 @@ type Parser struct {
 
 type funcInfo struct {
 	// final is used to identify final variables
-	final map[string]int
-
-	// compoundNest is the compound nesting level, used for final
-	compoundNest int
+	final map[string]uint8
 
 	// hasBlocks is whether the function has any blocks
 	hasBlocks bool
 }
 
 // disqualified is a special value for final
-const disqualified = -1
+const disqualified = 2
 
 func (p *ParserBase) Match(token tok.Token) {
 	if token == tok.String && p.Token == tok.Symbol {

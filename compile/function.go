@@ -8,7 +8,6 @@ import (
 	. "github.com/apmckinlay/gsuneido/compile/lexer"
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
 	. "github.com/apmckinlay/gsuneido/runtime"
-	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
 // function parse a function (starting with the "function" keyword)
@@ -20,11 +19,15 @@ func (p *Parser) Function() *ast.Function {
 // function parses a function or method (without the "function" keyword)
 func (p *Parser) function(inClass bool) *ast.Function {
 	funcInfoSave := p.funcInfo
-	p.funcInfo = funcInfo{final: map[string]int{}}
+	p.funcInfo = funcInfo{final: map[string]uint8{}}
 	pos := p.Pos
 	params := p.params(inClass)
 	body := p.compound()
-	assert.That(p.compoundNest == 0)
+	for k,n := range p.final {
+		if n != 1 {
+			delete(p.final, k)
+		}
+	}
 	fn := &ast.Function{Pos: pos, Params: params, Body: body, Final: p.final,
 		HasBlocks: p.hasBlocks}
 	p.funcInfo = funcInfoSave
@@ -116,13 +119,11 @@ func (p *Parser) compound() []ast.Statement {
 }
 
 func (p *Parser) statements() []ast.Statement {
-	p.compoundNest++
 	list := []ast.Statement{}
 	for p.Token != tok.RCurly {
 		stmt := p.statement()
 		list = append(list, stmt)
 	}
-	p.compoundNest--
 	return list
 }
 
@@ -219,7 +220,6 @@ func (p *Parser) ifStmt() *ast.If {
 }
 
 func (p *Parser) switchStmt() *ast.Switch {
-	p.compoundNest++
 	var expr ast.Expr
 	if p.Token == tok.LCurly {
 		expr = p.Constant(True)
@@ -236,7 +236,6 @@ func (p *Parser) switchStmt() *ast.Switch {
 		def = p.switchBody()
 	}
 	p.Match(tok.RCurly)
-	p.compoundNest--
 	return &ast.Switch{E: expr, Cases: cases, Default: def}
 }
 

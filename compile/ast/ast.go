@@ -3,6 +3,20 @@
 
 // Package ast defines the node types
 // used by the compiler to build syntax trees
+//
+// 	Expr
+//		Ident
+// 		Constant, Symbol, Function, Block
+//		Unary, Binary, Trinary, Nary, In
+//		Mem, RangeTo, RangeLen
+//		Call
+//	Statement
+//		ExprStmt
+//		Compound
+//		Return, Throw, Break, Continue
+//		TryCatch
+//		If, Switch
+//		For, ForIn, Forever, While, DoWhile
 package ast
 
 import (
@@ -25,7 +39,7 @@ type Node interface {
 	Get(*Thread, Value) Value
 }
 
-type astNodeT struct{
+type astNodeT struct {
 	AstNodeValue
 }
 
@@ -119,7 +133,7 @@ func (a *Unary) Echo() string {
 }
 
 func (a *Unary) Children(fn func(Node) Node) {
-	applyExpr(fn, &a.E)
+	childExpr(fn, &a.E)
 }
 
 type Binary struct {
@@ -160,15 +174,15 @@ func (a *Binary) Echo() string {
 	return a.Lhs.Echo() + tokEcho[a.Tok] + a.Rhs.Echo()
 }
 
-func applyExpr(fn func(Node) Node, pexpr *Expr) {
+func childExpr(fn func(Node) Node, pexpr *Expr) {
 	if *pexpr != nil {
 		*pexpr = fn(*pexpr).(Expr)
 	}
 }
 
 func (a *Binary) Children(fn func(Node) Node) {
-	applyExpr(fn, &a.Lhs)
-	applyExpr(fn, &a.Rhs)
+	childExpr(fn, &a.Lhs)
+	childExpr(fn, &a.Rhs)
 }
 
 type Trinary struct {
@@ -187,9 +201,9 @@ func (a *Trinary) Echo() string {
 }
 
 func (a *Trinary) Children(fn func(Node) Node) {
-	applyExpr(fn, &a.Cond)
-	applyExpr(fn, &a.T)
-	applyExpr(fn, &a.F)
+	childExpr(fn, &a.Cond)
+	childExpr(fn, &a.T)
+	childExpr(fn, &a.F)
 }
 
 // Nary is used for associative binary operators e.g. add, multiply, and, or
@@ -217,7 +231,7 @@ func (a *Nary) Echo() string {
 
 func (a *Nary) Children(fn func(Node) Node) {
 	for i := range a.Exprs {
-		applyExpr(fn, &a.Exprs[i])
+		childExpr(fn, &a.Exprs[i])
 	}
 }
 
@@ -238,9 +252,9 @@ func (a *RangeTo) Echo() string {
 }
 
 func (a *RangeTo) Children(fn func(Node) Node) {
-	applyExpr(fn, &a.E)
-	applyExpr(fn, &a.From)
-	applyExpr(fn, &a.To)
+	childExpr(fn, &a.E)
+	childExpr(fn, &a.From)
+	childExpr(fn, &a.To)
 }
 
 type RangeLen struct {
@@ -260,9 +274,9 @@ func (a *RangeLen) Echo() string {
 }
 
 func (a *RangeLen) Children(fn func(Node) Node) {
-	applyExpr(fn, &a.E)
-	applyExpr(fn, &a.From)
-	applyExpr(fn, &a.Len)
+	childExpr(fn, &a.E)
+	childExpr(fn, &a.From)
+	childExpr(fn, &a.Len)
 }
 
 type Mem struct {
@@ -286,8 +300,8 @@ func (a *Mem) Echo() string {
 }
 
 func (a *Mem) Children(fn func(Node) Node) {
-	applyExpr(fn, &a.E)
-	applyExpr(fn, &a.M)
+	childExpr(fn, &a.E)
+	childExpr(fn, &a.M)
 }
 
 type In struct {
@@ -322,9 +336,9 @@ func (a *In) Echo() string {
 }
 
 func (a *In) Children(fn func(Node) Node) {
-	applyExpr(fn, &a.E)
+	childExpr(fn, &a.E)
 	for i := range a.Exprs {
-		applyExpr(fn, &a.Exprs[i])
+		childExpr(fn, &a.Exprs[i])
 	}
 }
 
@@ -353,9 +367,9 @@ func (a *Call) Echo() string {
 }
 
 func (a *Call) Children(fn func(Node) Node) {
-	applyExpr(fn, &a.Fn)
+	childExpr(fn, &a.Fn)
 	for i := range a.Args {
-		applyExpr(fn, &a.Args[i].E)
+		childExpr(fn, &a.Args[i].E)
 	}
 }
 
@@ -392,7 +406,7 @@ type Function struct {
 	exprNodeT
 	Params      []Param
 	Body        []Statement
-	Final       map[string]int
+	Final       map[string]uint8
 	Base        Gnum
 	Pos         int32
 	HasBlocks   bool
@@ -424,7 +438,7 @@ func (a *Function) str(which string) string {
 	return s + ")"
 }
 
-func applyStmt(fn func(Node) Node, pstmt *Statement) {
+func childStmt(fn func(Node) Node, pstmt *Statement) {
 	if *pstmt != nil {
 		stmt := fn(*pstmt)
 		if stmt == nil {
@@ -437,7 +451,7 @@ func applyStmt(fn func(Node) Node, pstmt *Statement) {
 
 func (a *Function) Children(fn func(Node) Node) {
 	for i := range a.Body {
-		applyStmt(fn, &a.Body[i])
+		childStmt(fn, &a.Body[i])
 	}
 }
 
@@ -518,7 +532,7 @@ func (x *Compound) String() string {
 
 func (x *Compound) Children(fn func(Node) Node) {
 	for i := range x.Body {
-		applyStmt(fn, &x.Body[i])
+		childStmt(fn, &x.Body[i])
 	}
 }
 
@@ -530,7 +544,12 @@ type If struct {
 }
 
 func (x *If) String() string {
-	s := "If(" + x.Cond.String() + " " + x.Then.String()
+	s := "If(" + x.Cond.String() + " "
+	// if x.Then == nil {
+	// 	s += "nil"
+	// } else {
+		s += x.Then.String()
+	// }
 	if x.Else != nil {
 		s += "\nelse " + x.Else.String()
 	}
@@ -538,9 +557,9 @@ func (x *If) String() string {
 }
 
 func (x *If) Children(fn func(Node) Node) {
-	applyExpr(fn, &x.Cond)
-	applyStmt(fn, &x.Then)
-	applyStmt(fn, &x.Else)
+	childExpr(fn, &x.Cond)
+	childStmt(fn, &x.Then)
+	childStmt(fn, &x.Else)
 }
 
 type Return struct {
@@ -557,7 +576,7 @@ func (x *Return) String() string {
 }
 
 func (x *Return) Children(fn func(Node) Node) {
-	applyExpr(fn, &x.E)
+	childExpr(fn, &x.E)
 }
 
 type Throw struct {
@@ -570,7 +589,7 @@ func (x *Throw) String() string {
 }
 
 func (x *Throw) Children(fn func(Node) Node) {
-	applyExpr(fn, &x.E)
+	childExpr(fn, &x.E)
 }
 
 type TryCatch struct {
@@ -600,9 +619,8 @@ func (x *TryCatch) String() string {
 }
 
 func (x *TryCatch) Children(fn func(Node) Node) {
-	// TODO what about CatchVar ?
-	applyStmt(fn, &x.Try)
-	applyStmt(fn, &x.Catch)
+	childStmt(fn, &x.Try)
+	childStmt(fn, &x.Catch)
 }
 
 type Forever struct {
@@ -615,7 +633,7 @@ func (x *Forever) String() string {
 }
 
 func (x *Forever) Children(fn func(Node) Node) {
-	applyStmt(fn, &x.Body)
+	childStmt(fn, &x.Body)
 }
 
 type ForIn struct {
@@ -630,9 +648,8 @@ func (x *ForIn) String() string {
 }
 
 func (x *ForIn) Children(fn func(Node) Node) {
-	// TODO what about Var ?
-	applyExpr(fn, &x.E)
-	applyStmt(fn, &x.Body)
+	childExpr(fn, &x.E)
+	childStmt(fn, &x.Body)
 }
 
 type For struct {
@@ -665,13 +682,13 @@ func (x *For) String() string {
 
 func (x *For) Children(fn func(Node) Node) {
 	for i := range x.Init {
-		applyExpr(fn, &x.Init[i])
+		childExpr(fn, &x.Init[i])
 	}
-	applyExpr(fn, &x.Cond)
+	childExpr(fn, &x.Cond)
+	childStmt(fn, &x.Body)
 	for i := range x.Inc {
-		applyExpr(fn, &x.Inc[i])
+		childExpr(fn, &x.Inc[i])
 	}
-	applyStmt(fn, &x.Body)
 }
 
 type While struct {
@@ -685,8 +702,8 @@ func (x *While) String() string {
 }
 
 func (x *While) Children(fn func(Node) Node) {
-	applyExpr(fn, &x.Cond)
-	applyStmt(fn, &x.Body)
+	childExpr(fn, &x.Cond)
+	childStmt(fn, &x.Body)
 }
 
 type DoWhile struct {
@@ -700,8 +717,8 @@ func (x *DoWhile) String() string {
 }
 
 func (x *DoWhile) Children(fn func(Node) Node) {
-	applyStmt(fn, &x.Body)
-	applyExpr(fn, &x.Cond)
+	childStmt(fn, &x.Body)
+	childExpr(fn, &x.Cond)
 }
 
 type Break struct {
@@ -726,11 +743,11 @@ type ExprStmt struct {
 }
 
 func (x *ExprStmt) String() string {
-	return x.E.String()
+	return x.E.String() // NOTE: doesn't say "ExprStmt"
 }
 
 func (x *ExprStmt) Children(fn func(Node) Node) {
-	applyExpr(fn, &x.E)
+	childExpr(fn, &x.E)
 }
 
 type Switch struct {
@@ -775,17 +792,17 @@ func (x *Switch) String() string {
 }
 
 func (x *Switch) Children(fn func(Node) Node) {
-	applyExpr(fn, &x.E)
+	childExpr(fn, &x.E)
 	for i := range x.Cases {
 		c := &x.Cases[i]
 		for j := range c.Exprs {
-			applyExpr(fn, &c.Exprs[j])
+			childExpr(fn, &c.Exprs[j])
 		}
 		for j := range c.Body {
-			applyStmt(fn, &c.Body[j])
+			childStmt(fn, &c.Body[j])
 		}
 	}
 	for i := range x.Default {
-		applyStmt(fn, &x.Default[i])
+		childStmt(fn, &x.Default[i])
 	}
 }

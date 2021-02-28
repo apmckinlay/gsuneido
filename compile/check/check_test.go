@@ -71,7 +71,7 @@ func TestCheckResults(t *testing.T) {
 		"ERROR: used but not initialized: a @14")
 	test("function () { a += 1 }",
 		"ERROR: used but not initialized: a @14")
-	test("function () { a=1+a }",
+	test("function () { a=1+a; a=2 }",
 		"ERROR: used but not initialized: a @18")
 	test("function () { a + a }",
 		"ERROR: used but not initialized: a @14",
@@ -84,18 +84,18 @@ func TestCheckResults(t *testing.T) {
 		"ERROR: used but not initialized: b @22")
 	test("function (a) { if a { b=5 } }",
 		"WARNING: initialized but not used: b @22")
-	test("function (a) { if a { b=5 } if a { b() } }",
+	test("function (a) { if a { b=a } if a { b() } }",
 		"WARNING: used but possibly not initialized: b @35")
 	test("function (a) { if (a) { b=1 } else { b=2 } b }")
 	test("function (a) { a ? b=1 : b=2; b }")
-	test("function (a) { a ? b=1 : 2; b }",
+	test("function (a) { a ? b=a : 2; b }",
 		"WARNING: used but possibly not initialized: b @28")
 
 	// switch
 	test("function (f) { switch (a=f()) { case 1: a(); default: a() } }")
 	test("function (f) { switch (a=f()) { case 1: a(); default: a() }; a() }")
 	test("function (f) { switch (a=f()) { case 1: b=1; default: b=2 }; a + b }")
-	test("function (f) { switch (f()) { case 1: a=1; case 2: b=2;b() }; a }",
+	test("function (f) { switch (f()) { case 1: a=f; case 2: b=2;b() }; a }",
 		"WARNING: used but possibly not initialized: a @62")
 
 	// while
@@ -156,16 +156,16 @@ func TestCheckResults(t *testing.T) {
 		"ERROR: used but not initialized: c @35")
 
 	// and/or conditions
-	test("function (f) { (f and (b=0)) ? b : 0 }")
-	test("function (f) { (f or (b=0)) ? 0 : b }")
-	test("function (f) { (f and (b=0)) ? 0 : b }",
+	test("function (f) { (f and (b=f)) ? b : 0 }")
+	test("function (f) { (f or (b=f)) ? 0 : b }")
+	test("function (f) { (f and (b=f)) ? 0 : b }",
 		"WARNING: used but possibly not initialized: b @35")
-	test("function (f) { (f and (b=0)) ? f() : f(); b }",
+	test("function (f) { (f and (b=f)) ? f() : f(); b }",
 		"WARNING: used but possibly not initialized: b @42")
-	test("function (f) { if (f and (b=0)) { b() } }")
-	test("function (f) { if (f or (b=0)) {} else { b() } }")
-	test("function (f) { while (f and (b=0)) { b() } }")
-	test("function (f) { while (f and (b=0)) { } b }",
+	test("function (f) { if (f and (b=f)) { b() } }")
+	test("function (f) { if (f or (b=f)) {} else { b() } }")
+	test("function (f) { while (f and (b=f)) { b() } }")
+	test("function (f) { while (f and (b=f)) { } b }",
 		"WARNING: used but possibly not initialized: b @39")
 
 	// unreachable
@@ -196,8 +196,8 @@ func TestCheckResults(t *testing.T) {
 	test("function (x) { try x+0 catch x=0 }")
 
 	// guard clause
-	test("function (f) { if (f()) { x=5 } else { return } x  }")
-	test("function (f) { if (f()) { return } else { x=5 } x  }")
+	test("function (f) { if (f()) { x=f } else { return } x  }")
+	test("function (f) { if (f()) { return } else { x=f } x  }")
 
 	// copy on write
 	test("function (a) { if (a) b = 1 else a(c=1, b=c) return b }")

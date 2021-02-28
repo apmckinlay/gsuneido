@@ -92,11 +92,7 @@ func (p *Parser) pcExpr(minprec int8) ast.Expr {
 				if token == tok.Eq {
 					p.assignName = name
 					if ascii.IsLower(name[0]) {
-						if _, ok := p.final[name]; ok {
-							p.final[name] = disqualified // multiple assignment
-						} else {
-							p.final[name] = p.compoundNest
-						}
+						p.final[name]++
 					}
 				} else {
 					p.final[name] = disqualified
@@ -134,13 +130,6 @@ func (p *Parser) pcExpr(minprec int8) ast.Expr {
 		default: // other left associative binary operators
 			rhs := p.pcExpr(prec + 1) // +1 for left associative
 			e = p.Binary(e, token, rhs)
-		}
-	}
-	if id := localVar(e); id != "" {
-		// disqualify if used in a more outer compound
-		// because the initialization may be conditional
-		if nest, ok := p.final[id]; !ok || nest > p.compoundNest {
-			p.final[id] = disqualified
 		}
 	}
 	return e
@@ -240,7 +229,7 @@ func (p *Parser) atom() ast.Expr {
 	case tok.Add, tok.Sub, tok.Not, tok.BitNot:
 		p.Next()
 		return p.Unary(token, p.pcExpr(precedence[tok.LParen]))
-	case tok.Inc, tok.Dec:
+	case tok.Inc, tok.Dec: // prefix
 		p.Next()
 		e := p.pcExpr(precedence[tok.Dot])
 		p.ckLvalue(e)
@@ -478,6 +467,7 @@ func (p *Parser) block() *ast.Block {
 	p.Match(tok.RCurly)
 	if p.itUsed && len(params) == 0 {
 		params = append(params, mkParam("it", pos, false, nil))
+		p.final["it"] = disqualified
 	}
 	p.itUsed = itUsedPrev
 	return &ast.Block{Name: p.name,

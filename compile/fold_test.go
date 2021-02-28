@@ -21,8 +21,8 @@ func TestFinal(t *testing.T) {
 		p := NewParser("function (p) {\n" + src + "\n}")
 		f := p.Function()
 		list := []string{}
-		for v, lev := range f.Final {
-			if lev != disqualified {
+		for v, n := range f.Final {
+			if n == 1 {
 				list = append(list, v)
 			}
 		}
@@ -36,18 +36,19 @@ func TestFinal(t *testing.T) {
 	test("x = 5; ++x", "")             // modification
 	test("x = 5; x += 2", "")          // modification
 	test("x = 5; x = 6", "")           // modification
-	test("x; x = 5", "")               // assignment after usage
 	test("x = 5; b = {|x| }", "b")     // block parameters
 	test("x = 5; b = {|@x| }", "b")    // block parameters
-	test("x = 5; forever { x }", "x")  // usage in inner nesting level
-	test("forever\n{ x = 5 }\n x", "") // usage at outer nesting level
+	test(`x = 0
+		for (i = 0; i < 10; ++i)
+			x += i
+		return x`, "")
 }
 
 func TestPropFold(t *testing.T) {
+	rt.DefaultSingleQuotes = true
+	defer func() { rt.DefaultSingleQuotes = false }()
 	test := func(src string, expected string) {
 		t.Helper()
-		rt.DefaultSingleQuotes = true
-		defer func() { rt.DefaultSingleQuotes = false }()
 		p := NewParser("function () {\n" + src + "\n}")
 		f := p.Function()
 		f = ast.PropFold(f) // this is what we're testing
@@ -61,6 +62,34 @@ func TestPropFold(t *testing.T) {
 		}
 		assert.T(t).This(s).Like(expected)
 	}
+	utest := func(src string) {
+		t.Helper()
+		p := NewParser("function () {\n" + src + "\n}")
+		f := p.Function()
+		assert.T(t).This(func() { ast.PropFold(f) }).
+			Panics("uninitialized variable: u")
+	}
+
+	test("b = { it = it + 1 }",
+		"Binary(Eq b Block(it \n Binary(Eq it Nary(Add it 1))))")
+	test("b = {|x| x = x + 1 }",
+		"Binary(Eq b Block(x \n Binary(Eq x Nary(Add x 1))))")
+
+	test("x = 'x'; x $ 'a' $ x", "'x' \n 'xax'")
+
+	test("a = b; a", "Binary(Eq a b) \n a")
+
+	utest("throw u = 5; u")
+
+	utest("for (; ; u=5) { u }")
+	// t.SkipNow()
+	test("f(a = 5) and g(b = 6) and h(a + b)",
+		"Nary(And Call(f 5) Call(g 6) Call(h 11))")
+	utest("a and (u = 5); u")
+	utest("a ? u = 5 : u")
+
+	utest("if x { u = 5 } if y { f(u) }")
+	utest("if false { u = true } if u is 'hello' { hello } world")
 
 	test("return 123",
 		"Return(123)") // no change
@@ -68,8 +97,10 @@ func TestPropFold(t *testing.T) {
 		"5 \n Call(F 5)") // propagate
 	test("x = 5; F(-x)",
 		"5 \n Call(F -5)") // unary
+	test("a = b = c = 0; a + b + c",
+		"0 \n 0")
 	test("x = 5; x = 6; x",
-		"Binary(Eq x 5) \n Binary(Eq x 6) \n x") // propagate
+		"Binary(Eq x 5) \n Binary(Eq x 6) \n x") // not final
 	test("x = 5; ++x",
 		"Binary(Eq x 5) \n Unary(Inc x)") // don't inline lvalue
 	test("x = 5; x--; x",
@@ -92,6 +123,8 @@ func TestPropFold(t *testing.T) {
 		"Binary(Eq i true) \n While(i Binary(Eq i false))")
 	test("n = 5; b = { n }",
 		"5 \n Binary(Eq b Block( \n 5))")
+	test("if x { a = 5; f(a) } b",
+		"If(x { \n 5 \n Call(f 5) \n }) \n b")
 
 	// folding ------------------------------------------------------
 
