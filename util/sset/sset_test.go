@@ -158,3 +158,18 @@ func TestDifference(*testing.T) {
 	assert.This(Difference(x, y[:50])).Is(x[50:])
 	assert.This(Difference(x, y[50:])).Is(x[:50])
 }
+
+func TestStartsWithSet(*testing.T) {
+	assert.That(StartsWithSet([]string{"a", "b", "c"}, []string{}))
+	assert.That(StartsWithSet([]string{"a", "b", "c"}, []string{"a"}))
+	assert.That(!StartsWithSet([]string{"a", "b", "c"}, []string{"b"}))
+	assert.That(!StartsWithSet([]string{"a", "b", "c"}, []string{"c"}))
+	assert.That(StartsWithSet([]string{"a", "b", "c"}, []string{"a", "b"}))
+	assert.That(StartsWithSet([]string{"a", "b", "c"}, []string{"b", "a"}))
+	assert.That(!StartsWithSet([]string{"a", "b", "c"}, []string{"c", "a"}))
+	assert.That(StartsWithSet([]string{"a", "b", "c"}, []string{"a", "b", "c"}))
+	assert.That(StartsWithSet([]string{"a", "b", "c"}, []string{"c", "a", "b"}))
+	assert.That(!StartsWithSet([]string{"a", "b", "c"}, []string{"c", "a", "d"}))
+	assert.That(!StartsWithSet([]string{"a"}, []string{"b"}))
+	assert.That(!StartsWithSet([]string{"a"}, []string{"b", "a"}))
+}

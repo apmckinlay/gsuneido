@@ -8,3 +8,15 @@ package sset
 func eq(x, y string) bool {
 	return x == y
 }
+
+func StartsWithSet(x, set []string) bool {
+	if len(x) < len(set) {
+		return false
+	}
+	for _, xs := range x[:len(set)] {
+		if !Contains(set, xs) {
+			return false
+		}
+	}
+	return true
+}
