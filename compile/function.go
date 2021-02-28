@@ -19,19 +19,34 @@ func (p *Parser) Function() *ast.Function {
 // function parses a function or method (without the "function" keyword)
 func (p *Parser) function(inClass bool) *ast.Function {
 	funcInfoSave := p.funcInfo
-	p.funcInfo = funcInfo{final: map[string]uint8{}}
+	p.InitFuncInfo()
 	pos := p.Pos
 	params := p.params(inClass)
 	body := p.compound()
-	for k,n := range p.final {
-		if n != 1 {
-			delete(p.final, k)
-		}
-	}
+	p.processFinal()
 	fn := &ast.Function{Pos: pos, Params: params, Body: body, Final: p.final,
 		HasBlocks: p.hasBlocks}
 	p.funcInfo = funcInfoSave
 	return fn
+}
+
+func (p *Parser) processFinal() {
+	finalConst := false
+	for k, n := range p.final {
+		if n == 1 && p.assignConst[k] {
+			finalConst = true
+			break
+		}
+	}
+	if !finalConst {
+		p.final = nil
+		return
+	}
+	for k, n := range p.final {
+		if n != 1 {
+			delete(p.final, k)
+		}
+	}
 }
 
 func (p *Parser) params(inClass bool) []ast.Param {

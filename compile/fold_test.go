@@ -21,23 +21,24 @@ func TestFinal(t *testing.T) {
 		p := NewParser("function (p) {\n" + src + "\n}")
 		f := p.Function()
 		list := []string{}
-		for v, n := range f.Final {
-			if n == 1 {
-				list = append(list, v)
-			}
+		for v := range f.Final {
+			list = append(list, v)
 		}
 		sort.Strings(list)
 		assert.T(t).This(str.Join(",", list)).Like(expected)
 	}
+
 	test("123", "")
 	test("x = 5", "x")                 // normal usage
 	test("x = 5; y = 6; x + y", "x,y") // normal usage
-	test("p = 5", "")                  // parameter
-	test("x = 5; ++x", "")             // modification
-	test("x = 5; x += 2", "")          // modification
-	test("x = 5; x = 6", "")           // modification
-	test("x = 5; b = {|x| }", "b")     // block parameters
-	test("x = 5; b = {|@x| }", "b")    // block parameters
+	test("f = function(){ x = F() }; f()", "f")
+	test("x = #foo", "x")
+	test("p = 5", "")              // parameter
+	test("x = 5; ++x", "")         // modification
+	test("x = 5; x += 2", "")      // modification
+	test("x = 5; x = 6", "")       // modification
+	test("x = 5; b = {|x| }", "")  // block parameters
+	test("x = 5; b = {|@x| }", "") // block parameters
 	test(`x = 0
 		for (i = 0; i < 10; ++i)
 			x += i

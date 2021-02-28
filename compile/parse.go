@@ -38,13 +38,13 @@ func QueryParser(src string) *Parser {
 
 func newParser(lxr *Lexer, a Aspects) *Parser {
 	p := &Parser{ParserBase: ParserBase{Lxr: lxr, Aspects: a}}
-	p.Init()
 	p.Next()
 	return p
 }
 
-func (p *Parser) Init() {
+func (p *Parser) InitFuncInfo() {
 	p.funcInfo.final = map[string]uint8{}
+	p.funcInfo.assignConst = map[string]bool{}
 }
 
 type ParserBase struct {
@@ -92,6 +92,7 @@ type Parser struct {
 type funcInfo struct {
 	// final is used to identify final variables
 	final map[string]uint8
+	assignConst map[string]bool
 
 	// hasBlocks is whether the function has any blocks
 	hasBlocks bool

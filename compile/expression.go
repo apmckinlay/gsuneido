@@ -87,11 +87,13 @@ func (p *Parser) pcExpr(minprec int8) ast.Expr {
 			p.Match(tok.RBracket)
 		case tok.AssignStart < token && token < tok.AssignEnd:
 			p.ckLvalue(e)
+			assignToLocal := ""
 			if id, ok := e.(*ast.Ident); ok {
 				name := id.Name
 				if token == tok.Eq {
 					p.assignName = name
 					if ascii.IsLower(name[0]) {
+						assignToLocal = name
 						p.final[name]++
 					}
 				} else {
@@ -99,6 +101,11 @@ func (p *Parser) pcExpr(minprec int8) ast.Expr {
 				}
 			}
 			rhs := p.Expression()
+			if assignToLocal != "" {
+				if _,ok := rhs.(*ast.Constant); ok {
+					p.assignConst[assignToLocal] = true
+				}
+			}
 			p.assignName = ""
 			e = p.Binary(e, token, rhs)
 		case token == tok.QMark:

@@ -38,6 +38,7 @@ func TestParseExpression(t *testing.T) {
 		t.Helper()
 		p := NewParser(src)
 		p.className = className
+		p.InitFuncInfo()
 		result := p.Expression()
 		assert.T(t).This(p.Token).Is(tok.Eof)
 		return result
@@ -236,6 +237,7 @@ func TestParseStatements(t *testing.T) {
 	test := func(src string, expected string) {
 		t.Helper()
 		p := NewParser(src + " }")
+		p.InitFuncInfo()
 		stmts := p.statements()
 		assert.T(t).This(p.Token).Is(tok.RCurly)
 		s := ""
