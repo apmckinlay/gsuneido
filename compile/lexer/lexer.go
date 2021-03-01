@@ -271,7 +271,7 @@ func (lxr *Lexer) whitespace(start int, c byte) Item {
 }
 
 func (lxr *Lexer) lineComment(start int) Item {
-	// does NOT absorb newline
+	// does NOT absorb \r\n
 loop:
 	for {
 		switch lxr.read() {
@@ -279,6 +279,9 @@ loop:
 			break loop
 		case '\n':
 			lxr.si--
+			if lxr.src[lxr.si-1] == '\r' {
+				lxr.si--
+			}
 			break loop
 		}
 	}
