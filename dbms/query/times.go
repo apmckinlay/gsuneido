@@ -5,6 +5,7 @@ package query
 
 import (
 	"github.com/apmckinlay/gsuneido/util/sset"
+	"github.com/apmckinlay/gsuneido/util/ssset"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
@@ -32,6 +33,10 @@ func (t *Times) Keys() [][]string {
 	// there are no columns in common so no keys in common
 	// so there won't be any duplicates in the result
 	return t.keypairs()
+}
+
+func (t *Times) Indexes() [][]string {
+	return ssset.Union(t.source.Indexes(), t.source2.Indexes())
 }
 
 func (t *Times) Transform() Query {

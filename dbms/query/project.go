@@ -84,16 +84,25 @@ func (p *Project) Keys() [][]string {
 }
 
 func projectKeys(keys [][]string, cols []string) [][]string {
-	var keys2 [][]string
-	for _, k := range keys {
-		if sset.Subset(cols, k) {
-			keys2 = append(keys2, k)
-		}
-	}
+	keys2 := projectIndexes(keys, cols)
 	if len(keys2) == 0 {
-		keys2 = append(keys2, cols)
+		return [][]string{cols}
 	}
 	return keys2
+}
+
+func (p *Project) Indexes() [][]string {
+	return projectIndexes(p.source.Indexes(), p.columns)
+}
+
+func projectIndexes(idxs [][]string, cols []string) [][]string {
+	var idxs2 [][]string
+	for _, k := range idxs {
+		if sset.Subset(cols, k) {
+			idxs2 = append(idxs2, k)
+		}
+	}
+	return idxs2
 }
 
 func (p *Project) Transform() Query {

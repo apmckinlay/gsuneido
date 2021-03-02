@@ -13,16 +13,29 @@ import (
 
 type Query interface {
 	Init()
+
+	// Columns is all the available columns, including derived
 	Columns() []string
+
+	// Transform refactors the query for more efficient execution.
+	// This stage is not cost based, transforms are applied whenever possible.
 	Transform() Query
+
 	SetTran(tran QueryTran)
 
 	// Header() runtime.Header
+
 	// Order() []string
+
 	Fixed() []Fixed
+
 	// Updateable() bool
+
+	// Indexes returns all the indexes
+	Indexes() [][]string
+
+	// Keys returns the indexes that are keys
 	Keys() [][]string
-	// Indexes() [][]string
 
 	// Lookup returns the row matching the given key, or nil if not found
 	// Lookup(index []string, key string) runtime.Row
@@ -69,6 +82,10 @@ func (q1 *Query1) Keys() [][]string {
 	return q1.source.Keys()
 }
 
+func (q1 *Query1) Indexes() [][]string {
+	return q1.source.Indexes()
+}
+
 func (q1 *Query1) Fixed() []Fixed {
 	return q1.source.Fixed()
 }
@@ -86,6 +103,10 @@ type Query2 struct {
 type disallow struct{}
 
 func (disallow) Keys() [][]string {
+	return nil
+}
+
+func (disallow) Indexes() [][]string {
 	return nil
 }
 

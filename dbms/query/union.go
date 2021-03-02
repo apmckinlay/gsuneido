@@ -6,6 +6,7 @@ package query
 import (
 	"github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/sset"
+	"github.com/apmckinlay/gsuneido/util/ssset"
 )
 
 type Union struct {
@@ -25,20 +26,9 @@ func (u *Union) Keys() [][]string {
 	if u.disjoint == "" {
 		return [][]string{u.allCols}
 	}
-	var keys [][]string
-	for _, k1 := range u.source.Keys() {
-		for _, k2 := range u.source2.Keys() {
-			key := sset.Copy(k1)
-			for _, k := range k2 {
-				if !sset.Contains(key, k) {
-					key = append(key, k)
-				}
-			}
-			if !sset.Contains(key, u.disjoint) {
-				key = append(key, u.disjoint)
-			}
-			keys = append(keys, key)
-		}
+	keys := u.keypairs()
+	for i := range keys {
+		keys[i] = sset.AddUnique(keys[i], u.disjoint)
 	}
 	// exclude any keys that are super-sets of another key
 	var keys2 [][]string
@@ -52,6 +42,13 @@ outer:
 		keys2 = append(keys2, keys[i])
 	}
 	return keys2
+}
+
+func (u *Union) Indexes() [][]string {
+	// NOTE: there are more possible indexes
+	return ssset.Intersect(
+		ssset.Intersect(u.source.Keys(), u.source.Indexes()),
+		ssset.Intersect(u.source2.Keys(), u.source2.Indexes()))
 }
 
 func (u *Union) Transform() Query {

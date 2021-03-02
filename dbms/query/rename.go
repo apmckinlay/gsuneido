@@ -78,6 +78,10 @@ func (r *Rename) Keys() [][]string {
 	return renameIndexes(r.source.Keys(), r.from, r.to)
 }
 
+func (r *Rename) Indexes() [][]string {
+	return renameIndexes(r.source.Indexes(), r.from, r.to)
+}
+
 func renameIndexes(idxs [][]string, from, to []string) [][]string {
 	idxs2 := make([][]string, len(idxs))
 	for i, ix := range idxs {

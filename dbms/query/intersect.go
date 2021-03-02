@@ -28,6 +28,10 @@ func (it *Intersect) Keys() [][]string {
 	return k
 }
 
+func (it *Intersect) Indexes() [][]string {
+	return ssset.Union(it.source.Indexes(), it.source2.Indexes())
+}
+
 func (it *Intersect) Transform() Query {
 	it.source = it.source.Transform()
 	it.source2 = it.source2.Transform()

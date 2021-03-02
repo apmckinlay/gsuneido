@@ -15,6 +15,10 @@ func (m *Minus) Keys() [][]string {
 	return m.source.Keys()
 }
 
+func (m *Minus) Indexes() [][]string {
+	return m.source.Indexes()
+}
+
 func (m *Minus) Transform() Query {
 	if m.disjoint == "" {
 		m.source = m.source.Transform()

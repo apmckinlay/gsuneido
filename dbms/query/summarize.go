@@ -87,6 +87,29 @@ func (su *Summarize) Keys() [][]string {
 	return projectKeys(su.source.Keys(), su.by)
 }
 
+func (su *Summarize) Indexes() [][]string {
+	if len(su.by) == 0 || containsKey(su.by, su.source.Keys()) {
+		return su.source.Indexes()
+	}
+	var idxs [][]string
+	for _, src := range su.source.Indexes() {
+		if sset.StartsWithSet(src, su.by) {
+			idxs = append(idxs, src)
+		}
+	}
+	return idxs
+}
+
+// containsKey returns true if a set of columns contain one of the keys
+func containsKey(cols []string, keys [][]string) bool {
+	for _, key := range keys {
+		if sset.Subset(cols, key) {
+			return true
+		}
+	}
+	return false
+}
+
 func (su *Summarize) Transform() Query {
 	su.source = su.source.Transform()
 	return su

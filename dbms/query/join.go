@@ -37,8 +37,8 @@ func (jn *Join) Init() {
 		panic("join: by does not match common columns")
 	}
 
-	k1 := jn.containsKey(jn.source.Keys())
-	k2 := jn.containsKey(jn.source2.Keys())
+	k1 := containsKey(jn.by, jn.source.Keys())
+	k2 := containsKey(jn.by, jn.source2.Keys())
 	if k1 && k2 {
 		jn.joinType = one_one
 	} else if k1 {
@@ -48,15 +48,6 @@ func (jn *Join) Init() {
 	} else {
 		jn.joinType = n_n
 	}
-}
-
-func (jn *Join) containsKey(keys [][]string) bool {
-	for _, k := range keys {
-		if sset.Subset(jn.by, k) {
-			return true
-		}
-	}
-	return false
 }
 
 func (jn *Join) String() string {
@@ -73,6 +64,33 @@ func (jn *Join) string(op string) string {
 
 func (jn *Join) Columns() []string {
 	return sset.Union(jn.source.Columns(), jn.source2.Columns())
+}
+
+func (jn *Join) Indexes() [][]string {
+	switch jn.joinType {
+	case one_one:
+		return ssset.Union(jn.source.Indexes(), jn.source2.Indexes())
+	case one_n:
+		return jn.source2.Indexes()
+	case n_one:
+		return jn.source.Indexes()
+	case n_n:
+		// union of indexes that don't include joincols
+		idxs := [][]string{}
+		for _, ix := range jn.source.Indexes() {
+			if sset.Disjoint(ix, jn.by) {
+				idxs = append(idxs, ix)
+			}
+		}
+		for _, ix := range jn.source2.Indexes() {
+			if sset.Disjoint(ix, jn.by) {
+				ssset.AddUnique(idxs, ix)
+			}
+		}
+		return idxs
+	default:
+		panic("unknown join type")
+	}
 }
 
 func (jn *Join) Keys() [][]string {
