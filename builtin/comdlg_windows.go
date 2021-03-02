@@ -236,9 +236,11 @@ var _ = builtin1("ChooseColor(x)",
 		defer heap.FreeTo(heap.CurSize())
 		custColors := (*CustColors)(heap.Alloc(nCustColors * int32Size))
 		ccs := a.Get(nil, SuStr("custColors"))
-		for i := 0; i < nCustColors; i++ {
-			if x := ccs.Get(nil, SuInt(i)); x != nil {
-				custColors[i] = int32(ToInt(x))
+		if ccs != nil {
+			for i := 0; i < nCustColors; i++ {
+				if x := ccs.Get(nil, SuInt(i)); x != nil {
+					custColors[i] = int32(ToInt(x))
+				}
 			}
 		}
 		p := heap.Alloc(nCHOOSECOLOR)
@@ -258,8 +260,10 @@ var _ = builtin1("ChooseColor(x)",
 			uintptr(p))
 		a.Put(nil, SuStr("rgbResult"), IntVal(int(cc.rgbResult)))
 		a.Put(nil, SuStr("flags"), IntVal(int(cc.flags)))
-		for i := 0; i < nCustColors; i++ {
-			ccs.Put(nil, SuInt(i), IntVal(int(custColors[i])))
+		if ccs != nil {
+			for i := 0; i < nCustColors; i++ {
+				ccs.Put(nil, SuInt(i), IntVal(int(custColors[i])))
+			}
 		}
 		return boolRet(rtn)
 	})
