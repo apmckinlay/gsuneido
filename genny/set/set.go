@@ -75,10 +75,10 @@ func Same(x, y []T) bool {
 // WARNING: If either x or y is empty, it returns the *original* of the other.
 func Union(x, y []T) []T {
 	if len(x) == 0 {
-		return y
+		return y[:len(y):len(y)] // so append won't share
 	}
 	if len(y) == 0 {
-		return x
+		return x[:len(x):len(x)] // so append won't share
 	}
 	z := make([]T, 0, len(x)+len(y))
 	z = append(z, x...)
@@ -104,7 +104,7 @@ func Difference(x, y []T) []T {
 		return []T{}
 	}
 	if len(y) == 0 {
-		return x
+		return x[:len(x):len(x)] // so append won't share
 	}
 	if Same(x, y) {
 		return []T{}
@@ -130,7 +130,7 @@ outer:
 // WARNING: duplicates the inputs may give duplicates in the result
 func Intersect(x, y []T) []T {
 	if Same(x, y) {
-		return x
+		return x[:len(x):len(x)] // so append won't share
 	}
 	if len(x) == 0 || len(y) == 0 {
 		return []T{}
