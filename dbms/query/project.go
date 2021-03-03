@@ -263,3 +263,7 @@ func (p *Project) Fixed() []Fixed {
 	}
 	return fixed
 }
+
+func (p *Project) Updateable() bool {
+		return p.strategy == projCopy && p.source.Updateable()
+}

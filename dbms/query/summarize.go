@@ -114,3 +114,7 @@ func (su *Summarize) Transform() Query {
 	su.source = su.source.Transform()
 	return su
 }
+
+func (su *Summarize) Updateable() bool {
+	return false // override Query1 source.Updateable
+}

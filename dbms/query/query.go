@@ -29,7 +29,7 @@ type Query interface {
 
 	Fixed() []Fixed
 
-	// Updateable() bool
+	Updateable() bool
 
 	// Indexes returns all the indexes
 	Indexes() [][]string
@@ -90,6 +90,10 @@ func (q1 *Query1) Fixed() []Fixed {
 	return q1.source.Fixed()
 }
 
+func (q1 *Query1) Updateable() bool {
+	return q1.source.Updateable()
+}
+
 func (q1 *Query1) SetTran(t QueryTran) {
 	q1.source.SetTran(t)
 }
@@ -123,6 +127,12 @@ func (q2 *Query2) SetTran(t QueryTran) {
 	q2.source.SetTran(t)
 	q2.source2.SetTran(t)
 }
+
+func (q2 *Query2) Updateable() bool {
+	return false
+}
+
+//-------------------------------------------------------------------
 
 func (q2 *Query2) keypairs() [][]string {
 	var keys [][]string

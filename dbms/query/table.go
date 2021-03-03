@@ -56,3 +56,7 @@ func (tbl *Table) Transform() Query {
 func (tbl *Table) Fixed() []Fixed {
 	return nil
 }
+
+func (tbl *Table) Updateable() bool {
+	return true
+}
