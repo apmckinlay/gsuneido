@@ -4,6 +4,7 @@
 package query
 
 type Table struct {
+	cache
 	name   string
 	t      QueryTran
 	schema *Schema // cached

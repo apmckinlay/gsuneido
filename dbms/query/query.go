@@ -12,21 +12,22 @@
 			Project / Remove
 			Summarize
 			TempIndex
-			Sort 
-		Query2
-			Compatible
-				Union
-				Intersect
-				Minus
-			Join
-				LeftJoin
-			Times
+			Sort
+			Query2
+				Compatible
+					Union
+					Intersect
+					Minus
+				Join
+					LeftJoin
+				Times
 */
 package query
 
 import (
+	"math"
+
 	"github.com/apmckinlay/gsuneido/db19/meta/schema"
-	"github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/sset"
 	"github.com/apmckinlay/gsuneido/util/ssset"
@@ -69,6 +70,9 @@ type Query interface {
 	// Get(dir runtime.Dir) runtime.Row
 
 	String() string
+
+	cacheAdd(index []string, cost Cost)
+	cacheGet(index []string) Cost
 }
 
 type QueryTran interface {
@@ -76,17 +80,23 @@ type QueryTran interface {
 }
 
 // Setup prepares a parsed query for execution
-func Setup(q Query, isCursor bool, t runtime.ITran) Query {
+func Setup(q Query, readonly bool, t QueryTran) Query {
 	return q //TODO
 }
 
 type Cost float64
 
-func Optimize(index, needs []string, isCursor, freeze bool) Cost {
+const IMPOSSIBLE = math.MaxFloat64 / 100 // allow for adding IMPOSSIBLE's
+
+func Optimize(q Query, index []string, readonly, freeze bool) Cost {
+	if !sset.Subset(q.Columns(), index) {
+		return IMPOSSIBLE
+	}
 	return 0 //TODO
 }
 
 type Query1 struct {
+	cache
 	source Query
 }
 
