@@ -1,6 +1,27 @@
 // Copyright Suneido Software Corp. All rights reserved.
 // Governed by the MIT license found in the LICENSE file.
 
+// Package query implements query parsing, optimization, and execution.
+/*
+	Query
+		Table
+		Query1
+			Where
+			Extend
+			Rename
+			Project / Remove
+			Summarize
+			TempIndex
+			Sort 
+		Query2
+			Compatible
+				Union
+				Intersect
+				Minus
+			Join
+				LeftJoin
+			Times
+*/
 package query
 
 import (
@@ -21,14 +42,17 @@ type Query interface {
 	// This stage is not cost based, transforms are applied whenever possible.
 	Transform() Query
 
+	// SetTran sets the transaction to be used by the query
 	SetTran(tran QueryTran)
 
 	// Header() runtime.Header
 
 	// Order() []string
 
+	// Fixed returns the field values that are constant from Extend or Where
 	Fixed() []Fixed
 
+	// Updateable returns whether the rows from the query can be updated
 	Updateable() bool
 
 	// Indexes returns all the indexes
