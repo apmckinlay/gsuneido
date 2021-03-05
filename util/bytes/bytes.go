@@ -23,3 +23,10 @@ func Grow(buf []byte, n int) []byte {
 	copy(buf2, buf)
 	return buf2[:l+n]
 }
+
+// Fill sets all the elements of data to value
+func Fill(data []byte, value byte) {
+	for i := 0; i < len(data); i++ {
+		data[i] = value
+	}
+}

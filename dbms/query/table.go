@@ -3,15 +3,27 @@
 
 package query
 
+import (
+	"github.com/apmckinlay/gsuneido/db19/index/btree"
+	"github.com/apmckinlay/gsuneido/util/str"
+)
+
 type Table struct {
 	cache
+	useTempIndex
 	name   string
 	t      QueryTran
 	schema *Schema // cached
+	// index is the index that will be used to access the data.
+	// It is set by optimize.
+	index  []string
 }
 
 func (tbl *Table) String() string {
-	return tbl.name
+	if tbl.index == nil {
+		return tbl.name
+	}
+	return tbl.name + "^" + str.Join("(,)", tbl.index)
 }
 
 func (tbl *Table) Init() {
@@ -60,4 +72,29 @@ func (tbl *Table) Fixed() []Fixed {
 
 func (tbl *Table) Updateable() bool {
 	return true
+}
+
+func (tbl *Table) optimize(index []string, _, freeze bool) Cost {
+	i := 0
+	if index == nil {
+		index = tbl.schema.Indexes[0].Columns
+	} else if i = tbl.findIndex(index); i < 0 {
+		return impossible
+	}
+	if freeze {
+		tbl.index = index
+	}
+	info := tbl.t.GetInfo(tbl.name)
+	indexCost := info.Nrows * btree.EntrySize
+	dataCost := int(info.Size)
+	return indexCost + dataCost
+}
+
+func (tbl *Table) findIndex(index []string) int {
+	for i := range tbl.schema.Indexes {
+		if str.Equal(index, tbl.schema.Indexes[i].Columns) {
+			return i
+		}
+	}
+	return -1
 }
