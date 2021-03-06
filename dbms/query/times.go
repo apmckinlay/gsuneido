@@ -22,7 +22,7 @@ func (t *Times) Init() {
 }
 
 func (t *Times) String() string {
-	return t.Query2.String("TIMES")
+	return t.Query2.String2("TIMES")
 }
 
 func (t *Times) Columns() []string {

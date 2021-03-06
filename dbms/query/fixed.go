@@ -31,14 +31,14 @@ func combineFixed(fixed1, fixed2 []Fixed) []Fixed {
 	result := make([]Fixed, len(fixed1))
 	copy(result, fixed1)
 	for _, f2 := range fixed2 {
-		if !hasColumn(fixed1, f2.col) {
+		if !isFixed(fixed1, f2.col) {
 			result = append(result, f2)
 		}
 	}
 	return result
 }
 
-func hasColumn(fixed []Fixed, col string) bool {
+func isFixed(fixed []Fixed, col string) bool {
 	for _, f := range fixed {
 		if col == f.col {
 			return true

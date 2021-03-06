@@ -58,6 +58,14 @@ func (w *Where) addFixed(e ast.Expr) {
 	}
 }
 
+func (w *Where) nrows() int {
+	return w.source.nrows() / 2 //TODO
+}
+
+func (w *Where) dataSize() int {
+	return w.source.dataSize() / 2 //TODO
+}
+
 func (w *Where) Transform() Query {
 	if len(w.expr.Exprs) == 0 {
 		// remove empty where

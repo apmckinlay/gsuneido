@@ -22,11 +22,15 @@
 					LeftJoin
 				Times
 
-	The cost model is based on the number of bytes read.
+The cost model is based on the number of bytes read.
 */
 package query
 
 import (
+	"fmt"
+	"strings"
+
+	"github.com/apmckinlay/gsuneido/db19/index/btree"
 	"github.com/apmckinlay/gsuneido/db19/meta"
 	"github.com/apmckinlay/gsuneido/db19/meta/schema"
 	"github.com/apmckinlay/gsuneido/util/assert"
@@ -64,6 +68,12 @@ type Query interface {
 	// Keys returns the indexes that are keys
 	Keys() [][]string
 
+	// nrows returns the number of rows in the query, estimated for operations
+	nrows() int
+
+	// dataSize returns the number of bytes of data, estimated for operations
+	dataSize() int
+
 	// Lookup returns the row matching the given key, or nil if not found
 	// Lookup(index []string, key string) runtime.Row
 
@@ -76,78 +86,131 @@ type Query interface {
 	cacheAdd(index []string, cost Cost)
 	cacheGet(index []string) Cost
 
-	optimize(index []string, readonly, freeze bool) Cost
+	optimize(mode Mode, index []string, act action) Cost
+	addTempIndex(tran QueryTran) Query
 
 	setTempIndex(index []string)
 	getTempIndex() []string
 }
+
+type Mode int
+
+const (
+	cursorMode Mode = iota
+	readMode
+	updateMode
+)
+
+type Cost = int
 
 type QueryTran interface {
 	GetSchema(table string) *schema.Schema
 	GetInfo(table string) *meta.Info
 }
 
-// Setup prepares a parsed query for execution
-func Setup(q Query, readonly bool, t QueryTran) Query {
+// Setup prepares a parsed query for execution.
+// It calls transform and optimize.
+// The resulting Query is ready for execution.
+func Setup(q Query, mode Mode, t QueryTran) Query {
 	q.SetTran(t)
 	q.Init()
 	q = q.Transform()
-	cost := q.optimize(nil, readonly, true)
+	cost := q.optimize(mode, nil, freeze)
 	if cost >= impossible {
 		panic("invalid query " + q.String())
 	}
-	// q = q.addTempIndex(t) //TODO
+	q = q.addTempIndex(t) //TODO
 	return q
 }
 
-type Cost = int
+const impossible = Cost(ints.MaxInt / 64) // allow for adding IMPOSSIBLE's
 
-const impossible Cost = ints.MaxInt / 64 // allow for adding IMPOSSIBLE's
+func gin(args ...interface{}) string {
+	trace(args...)
+	indent++
+	return args[0].(string)
+}
+func trace(args ...interface{}) {
+	fmt.Print(strings.Repeat(" ", 4*indent))
+	fmt.Println(args...)
+}
+func be(arg string) {
+	fmt.Println(strings.Repeat(" ", 4*indent)+"end", arg)
+	indent--
+}
+
+var indent = 0
 
 // Optimize is the start of optimization.
 // It handles whether or not to use a temp index.
-func Optimize(q Query, index []string, readonly, freeze bool) Cost {
+func Optimize(q Query, mode Mode, index []string, act action) Cost {
+	defer be(gin("Optimize", q, index, act))
 	if !sset.Subset(q.Columns(), index) {
 		return impossible
 	}
-	if !readonly || !q.Updateable() {
-		return optimize1(q, index, readonly, freeze)
+	if mode != readMode {
+		return optimize1(q, mode, index, act)
 	}
-	cost1 := optimize1(q, index, readonly, false)
-	noIndexCost := optimize1(q, nil, readonly, false)
-	tempIndexCost := 0 //TODO
-	cost2 := noIndexCost + Cost(tempIndexCost)
+	cost1 := optimize1(q, mode, index, false)
+	noIndexCost := optimize1(q, mode, nil, false)
+	tempIndexReadCost := q.nrows() * btree.EntrySize
+	tempIndexWriteCost := tempIndexReadCost // ???
+	tempIndexCost := tempIndexWriteCost + tempIndexReadCost +
+		q.dataSize() + q.dataSize() / 100 // slight overhead for via query
+	cost2 := noIndexCost + tempIndexCost
 	assert.That(cost2 >= 0)
+	trace("cost1", cost1, "cost2 (temp index)", cost2)
 
 	cost := ints.Min(cost1, cost2)
 	if cost >= impossible {
 		return impossible
 	}
-	if freeze {
-		if cost2 < cost2 {
+	if act {
+		if cost2 < cost1 {
 			q.setTempIndex(index)
 			index = nil
 		}
-		optimize1(q, index, readonly, true)
+		optimize1(q, mode, index, true)
 	}
 	return cost
 }
 
+type action bool
+
+const (
+	assess action = false
+	freeze action = true
+)
+
+func (act action) String() string {
+	if act == freeze {
+		return "freeze"
+	}
+	return "assess"
+}
+
 // optimize1 handles caching
-func optimize1(q Query, index []string, readonly, freeze bool) Cost {
+func optimize1(q Query, mode Mode, index []string, act action) Cost {
 	var cost Cost
-	if !freeze {
+	if !act {
 		cost = q.cacheGet(index)
 		if cost >= 0 {
 			return cost
 		}
 	}
-	cost = q.optimize(index, readonly, freeze)
+	cost = q.optimize(mode, index, act)
 	assert.That(cost >= 0)
-	if !freeze {
+	if !act {
 		q.cacheAdd(index, cost)
 	}
 	return cost
+}
+
+func addTempIndex(q Query, tran QueryTran) Query {
+	if ti := q.getTempIndex(); ti != nil {
+		return &TempIndex{Query1: Query1{source: q}, order: ti, tran: tran}
+	}
+	return q
 }
 
 // Query1 -----------------------------------------------------------
@@ -178,6 +241,14 @@ func (q1 *Query1) Indexes() [][]string {
 	return q1.source.Indexes()
 }
 
+func (q1 *Query1) nrows() int {
+	return q1.source.nrows()
+}
+
+func (q1 *Query1) dataSize() int {
+	return q1.source.dataSize()
+}
+
 func (q1 *Query1) Fixed() []Fixed {
 	return q1.source.Fixed()
 }
@@ -190,29 +261,35 @@ func (q1 *Query1) SetTran(t QueryTran) {
 	q1.source.SetTran(t)
 }
 
-func (q1 *Query1) optimize(index []string, readonly, freeze bool) Cost {
-	return 0
-} //TODO remove (temporary)
+func (q1 *Query1) Transform() Query {
+	panic("should be overridden")
+}
+
+func (q1 *Query1) optimize(mode Mode, index []string, act action) Cost {
+	return q1.source.optimize(mode, index, act)
+}
+
+func (q1 *Query1) addTempIndex(tran QueryTran) Query {
+	q1.source = addTempIndex(q1.source, tran)
+	return addTempIndex(q1, tran)
+}
 
 // Query2 -----------------------------------------------------------
 
 type Query2 struct {
 	Query1
-	disallow
 	source2 Query
 }
 
-type disallow struct{}
-
-func (disallow) Keys() [][]string {
-	return nil
+func (q2 *Query2) Keys() [][]string {
+	panic("should be overridden")
 }
 
-func (disallow) Indexes() [][]string {
-	return nil
+func (q2 *Query2) Indexes() [][]string {
+	panic("should be overridden")
 }
 
-func (q2 *Query2) String(op string) string {
+func (q2 *Query2) String2(op string) string {
 	return paren(q2.source) + " " + op + " " + paren(q2.source2)
 }
 
@@ -228,6 +305,20 @@ func (q2 *Query2) SetTran(t QueryTran) {
 
 func (q2 *Query2) Updateable() bool {
 	return false
+}
+
+func (q2 *Query2) Transform() Query {
+	panic("should be overridden")
+}
+
+func (q2 *Query2) optimize(Mode, []string, action) Cost {
+	panic("should be overridden")
+}
+
+func (q2 *Query2) addTempIndex(tran QueryTran) Query {
+	q2.source = addTempIndex(q2.source, tran)
+	q2.source2 = addTempIndex(q2.source2, tran)
+	return addTempIndex(q2, tran)
 }
 
 // temp index -------------------------------------------------------
@@ -257,9 +348,63 @@ func (q2 *Query2) keypairs() [][]string {
 	return keys
 }
 
+// paren is a helper to String methods
 func paren(q Query) string {
 	if tbl, ok := q.(*Table); ok {
 		return tbl.String()
 	}
 	return "(" + q.String() + ")"
+}
+
+type bestIndex struct {
+	index []string
+	cost  Cost
+}
+
+func (bi *bestIndex) update(index []string, cost Cost) {
+	if bi.index == nil || cost < bi.cost {
+		bi.index = index
+		bi.cost = cost
+	}
+}
+
+// bestPrefixed returns the best index that supplies the required order
+// taking fixed into account
+func (q1 *Query1) bestPrefixed(indexes [][]string, order []string,
+	mode Mode) bestIndex {
+	var best bestIndex
+	best.cost = impossible
+	fixed := q1.source.Fixed()
+	for _, ix := range indexes {
+		if q1.prefixed(ix, order, fixed) {
+			// optimize1 to bypass tempindex
+			cost := optimize1(q1.source, mode, ix, false)
+			best.update(ix, cost)
+		}
+	}
+	return best
+}
+
+// prefixed returns whether an index supplies an order, given what's fixed
+func (*Query1) prefixed(index []string, order []string, fixed []Fixed) bool {
+	i := 0
+	o := 0
+	in := len(index)
+	on := len(order)
+	for i < in && o < on {
+		if index[i] == order[o] {
+			o++
+			i++
+		} else if isFixed(fixed, index[i]) {
+			i++
+		} else if isFixed(fixed, order[o]) {
+			o++
+		} else {
+			return false
+		}
+	}
+	for o < on && isFixed(fixed, order[o]) {
+		o++
+	}
+	return o >= on
 }

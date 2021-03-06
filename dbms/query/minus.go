@@ -8,7 +8,7 @@ type Minus struct {
 }
 
 func (m *Minus) String() string {
-	return m.Query2.String("MINUS")
+	return m.Query2.String2("MINUS")
 }
 
 func (m *Minus) Keys() [][]string {

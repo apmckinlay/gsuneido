@@ -13,7 +13,7 @@ type Intersect struct {
 }
 
 func (it *Intersect) String() string {
-	return it.Query2.String("INTERSECT")
+	return it.Query2.String2("INTERSECT")
 }
 
 func (it *Intersect) Columns() []string {

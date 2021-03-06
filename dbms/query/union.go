@@ -15,7 +15,7 @@ type Union struct {
 }
 
 func (u *Union) String() string {
-	return u.Query2.String("UNION")
+	return u.Query2.String2("UNION")
 }
 
 func (u *Union) Columns() []string {
