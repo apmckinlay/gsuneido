@@ -32,6 +32,9 @@ func (id *Ident) Eval(c *Context) Value {
 }
 
 func (id *Ident) Columns() []string {
+	if str.Capitalized(id.Name) {
+		return nil
+	}
 	return []string{id.Name}
 }
 

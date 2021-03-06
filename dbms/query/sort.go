@@ -45,15 +45,16 @@ func (sort *Sort) Transform() Query {
 func (sort *Sort) optimize(mode Mode, index []string, act action) Cost {
 	assert.That(index == nil)
 	src := sort.source
+	cost := Optimize(src, mode, sort.columns, assess)
 	best := sort.bestPrefixed(src.Indexes(), sort.columns, mode)
-	cost := Optimize(src, mode, sort.columns, false)
-	if !act {
+	trace("SORT", "cost", cost, "best", best.cost)
+	if act == assess {
 		return ints.Min(cost, best.cost)
 	}
 	sort.frozen = true
 	if cost <= best.cost {
-		return Optimize(src, mode, sort.columns, true)
+		return Optimize(src, mode, sort.columns, freeze)
 	}
 	// optimize1 to avoid tempindex
-	return optimize1(src, mode, best.index, true)
+	return optimize1(src, mode, best.index, freeze)
 }

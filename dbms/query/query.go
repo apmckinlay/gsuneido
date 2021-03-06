@@ -27,9 +27,6 @@ The cost model is based on the number of bytes read.
 package query
 
 import (
-	"fmt"
-	"strings"
-
 	"github.com/apmckinlay/gsuneido/db19/index/btree"
 	"github.com/apmckinlay/gsuneido/db19/meta"
 	"github.com/apmckinlay/gsuneido/db19/meta/schema"
@@ -115,7 +112,7 @@ func Setup(q Query, mode Mode, t QueryTran) Query {
 	q.SetTran(t)
 	q.Init()
 	q = q.Transform()
-	cost := q.optimize(mode, nil, freeze)
+	cost := Optimize(q, mode, nil, freeze)
 	if cost >= impossible {
 		panic("invalid query " + q.String())
 	}
@@ -131,11 +128,11 @@ func gin(args ...interface{}) string {
 	return args[0].(string)
 }
 func trace(args ...interface{}) {
-	fmt.Print(strings.Repeat(" ", 4*indent))
-	fmt.Println(args...)
+	// fmt.Print(strings.Repeat(" ", 4*indent))
+	// fmt.Println(args...)
 }
 func be(arg string) {
-	fmt.Println(strings.Repeat(" ", 4*indent)+"end", arg)
+	// fmt.Println(strings.Repeat(" ", 4*indent)+"end", arg)
 	indent--
 }
 
@@ -148,15 +145,14 @@ func Optimize(q Query, mode Mode, index []string, act action) Cost {
 	if !sset.Subset(q.Columns(), index) {
 		return impossible
 	}
-	if mode != readMode {
+	if index == nil || !tempIndexable(q, mode) {
 		return optimize1(q, mode, index, act)
 	}
-	cost1 := optimize1(q, mode, index, false)
-	noIndexCost := optimize1(q, mode, nil, false)
+	cost1 := optimize1(q, mode, index, assess)
+	noIndexCost := optimize1(q, mode, nil, assess)
 	tempIndexReadCost := q.nrows() * btree.EntrySize
 	tempIndexWriteCost := tempIndexReadCost // ???
-	tempIndexCost := tempIndexWriteCost + tempIndexReadCost +
-		q.dataSize() + q.dataSize() / 100 // slight overhead for via query
+	tempIndexCost := tempIndexWriteCost + tempIndexReadCost + q.dataSize()
 	cost2 := noIndexCost + tempIndexCost
 	assert.That(cost2 >= 0)
 	trace("cost1", cost1, "cost2 (temp index)", cost2)
@@ -165,14 +161,26 @@ func Optimize(q Query, mode Mode, index []string, act action) Cost {
 	if cost >= impossible {
 		return impossible
 	}
-	if act {
+	if act == freeze {
 		if cost2 < cost1 {
 			q.setTempIndex(index)
 			index = nil
 		}
-		optimize1(q, mode, index, true)
+		optimize1(q, mode, index, freeze)
 	}
 	return cost
+}
+
+func tempIndexable(q Query, mode Mode) bool {
+	if mode == readMode {
+		return true
+	}
+	if mode == cursorMode {
+		return false
+	}
+	// else updateMode, tempIndex only directly on Table
+	_, ok := q.(*Table)
+	return ok
 }
 
 type action bool
@@ -190,19 +198,18 @@ func (act action) String() string {
 }
 
 // optimize1 handles caching
-func optimize1(q Query, mode Mode, index []string, act action) Cost {
-	var cost Cost
-	if !act {
-		cost = q.cacheGet(index)
-		if cost >= 0 {
-			return cost
-		}
+func optimize1(q Query, mode Mode, index []string, act action) (cost Cost) {
+	defer be(gin("optimize1", q, index, act))
+	defer func() { trace("=>", cost) }()
+	if act == freeze {
+		return q.optimize(mode, index, freeze)
 	}
-	cost = q.optimize(mode, index, act)
+	if cost = q.cacheGet(index); cost >= 0 {
+		return cost
+	}
+	cost = q.optimize(mode, index, assess)
 	assert.That(cost >= 0)
-	if !act {
-		q.cacheAdd(index, cost)
-	}
+	q.cacheAdd(index, cost)
 	return cost
 }
 
@@ -266,7 +273,7 @@ func (q1 *Query1) Transform() Query {
 }
 
 func (q1 *Query1) optimize(mode Mode, index []string, act action) Cost {
-	return q1.source.optimize(mode, index, act)
+	return Optimize(q1.source, mode, index, act)
 }
 
 func (q1 *Query1) addTempIndex(tran QueryTran) Query {
@@ -378,7 +385,7 @@ func (q1 *Query1) bestPrefixed(indexes [][]string, order []string,
 	for _, ix := range indexes {
 		if q1.prefixed(ix, order, fixed) {
 			// optimize1 to bypass tempindex
-			cost := optimize1(q1.source, mode, ix, false)
+			cost := optimize1(q1.source, mode, ix, assess)
 			best.update(ix, cost)
 		}
 	}

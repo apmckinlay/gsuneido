@@ -23,6 +23,10 @@ func TestOptimize(t *testing.T) {
 	test("tables sort tablename", "tables^(tablename)")
 	test("table rename b to bb sort c",
 		"table^(a) TEMPINDEX(c) RENAME b to bb")
+	test("table extend x = F() sort c",
+		"table^(a) TEMPINDEX(c) EXTEND x = F()")
+	test("table extend x = F() sort x",
+		"table^(a) EXTEND x = F() TEMPINDEX(x)")
 
 	mode = updateMode
 	test("table rename b to bb sort c",

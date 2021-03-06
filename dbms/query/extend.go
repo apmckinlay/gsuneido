@@ -130,3 +130,10 @@ func (e *Extend) Fixed() []Fixed {
 	e.fixed = combineFixed(e.fixed, e.source.Fixed())
 	return e.fixed
 }
+
+func (e *Extend) optimize(mode Mode, index []string, act action) Cost {
+	if !sset.Disjoint(index, e.cols) {
+		return impossible
+	}
+	return Optimize(e.source, mode, index, act)
+}

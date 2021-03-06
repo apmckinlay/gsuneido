@@ -19,7 +19,6 @@ type Table struct {
 	// index is the index that will be used to access the data.
 	// It is set by optimize.
 	index     []string
-	tempIndex []string
 }
 
 func (tbl *Table) String() string {
@@ -90,38 +89,29 @@ func (tbl *Table) Updateable() bool {
 	return true
 }
 
-func (tbl *Table) optimize(mode Mode, index []string, act action) Cost {
-	i := 0
-	if index == nil {
-		index = tbl.schema.Indexes[0].Columns
-	} else if i = tbl.findIndex(index); i < 0 && mode == cursorMode {
+func (tbl *Table) optimize(_ Mode, index []string, act action) Cost {
+	index = tbl.findIndex(index)
+	if  index == nil {
 		return impossible
 	}
 	if act == freeze {
-		if i >= 0 {
-			tbl.index = index
-		} else {
-			tbl.index = tbl.schema.Indexes[0].Columns
-			tbl.tempIndex = index
-		}
+		tbl.index = index
 	}
 	indexReadCost := tbl.info.Nrows * btree.EntrySize
 	dataReadCost := int(tbl.info.Size)
-	cost := indexReadCost + dataReadCost
-	if i < 0 {
-		indexWriteCost := indexReadCost // ???
-		cost += indexReadCost + dataReadCost + indexWriteCost
-	}
-	return cost
+	return indexReadCost + dataReadCost
 }
 
-func (tbl *Table) findIndex(index []string) int {
+func (tbl *Table) findIndex(index []string)  []string {
+	if index == nil {
+		return tbl.schema.Indexes[0].Columns
+	}
 	for i := range tbl.schema.Indexes {
 		if str.Equal(index, tbl.schema.Indexes[i].Columns) {
-			return i
+			return index
 		}
 	}
-	return -1
+	return nil
 }
 
 func (tbl *Table) addTempIndex(tran QueryTran) Query {
