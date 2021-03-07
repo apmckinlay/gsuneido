@@ -120,6 +120,7 @@ func Setup(q Query, mode Mode, t QueryTran) Query {
 	return q
 }
 
+const outOfOrder = 10 // minimal penalty for executing out of order
 const impossible = Cost(ints.MaxInt / 64) // allow for adding IMPOSSIBLE's
 
 func gin(args ...interface{}) string {
@@ -281,6 +282,59 @@ func (q1 *Query1) addTempIndex(tran QueryTran) Query {
 	return addTempIndex(q1, tran)
 }
 
+// bestPrefixed returns the best index that supplies the required order
+// taking fixed into account
+func (q1 *Query1) bestPrefixed(indexes [][]string, order []string,
+	mode Mode) bestIndex {
+	var best bestIndex
+	best.cost = impossible
+	fixed := q1.source.Fixed()
+	for _, ix := range indexes {
+		if q1.prefixed(ix, order, fixed) {
+			// optimize1 to bypass tempindex
+			cost := optimize1(q1.source, mode, ix, assess)
+			best.update(ix, cost)
+		}
+	}
+	return best
+}
+
+// prefixed returns whether an index supplies an order, given what's fixed
+func (*Query1) prefixed(index []string, order []string, fixed []Fixed) bool {
+	i := 0
+	o := 0
+	in := len(index)
+	on := len(order)
+	for i < in && o < on {
+		if index[i] == order[o] {
+			o++
+			i++
+		} else if isFixed(fixed, index[i]) {
+			i++
+		} else if isFixed(fixed, order[o]) {
+			o++
+		} else {
+			return false
+		}
+	}
+	for o < on && isFixed(fixed, order[o]) {
+		o++
+	}
+	return o >= on
+}
+
+type bestIndex struct {
+	index []string
+	cost  Cost
+}
+
+func (bi *bestIndex) update(index []string, cost Cost) {
+	if bi.index == nil || cost < bi.cost {
+		bi.index = index
+		bi.cost = cost
+	}
+}
+
 // Query2 -----------------------------------------------------------
 
 type Query2 struct {
@@ -328,6 +382,17 @@ func (q2 *Query2) addTempIndex(tran QueryTran) Query {
 	return addTempIndex(q2, tran)
 }
 
+func (q2 *Query2) keypairs() [][]string {
+	var keys [][]string
+	for _, k1 := range q2.source.Keys() {
+		for _, k2 := range q2.source2.Keys() {
+			keys = ssset.AddUnique(keys, sset.Union(k1, k2))
+		}
+	}
+	assert.That(len(keys) != 0)
+	return keys
+}
+
 // temp index -------------------------------------------------------
 
 type useTempIndex struct {
@@ -344,17 +409,6 @@ func (uti *useTempIndex) getTempIndex() []string {
 
 //-------------------------------------------------------------------
 
-func (q2 *Query2) keypairs() [][]string {
-	var keys [][]string
-	for _, k1 := range q2.source.Keys() {
-		for _, k2 := range q2.source2.Keys() {
-			keys = ssset.AddUnique(keys, sset.Union(k1, k2))
-		}
-	}
-	assert.That(len(keys) != 0)
-	return keys
-}
-
 // paren is a helper to String methods
 func paren(q Query) string {
 	if tbl, ok := q.(*Table); ok {
@@ -363,55 +417,15 @@ func paren(q Query) string {
 	return "(" + q.String() + ")"
 }
 
-type bestIndex struct {
-	index []string
-	cost  Cost
-}
-
-func (bi *bestIndex) update(index []string, cost Cost) {
-	if bi.index == nil || cost < bi.cost {
-		bi.index = index
-		bi.cost = cost
-	}
-}
-
-// bestPrefixed returns the best index that supplies the required order
-// taking fixed into account
-func (q1 *Query1) bestPrefixed(indexes [][]string, order []string,
-	mode Mode) bestIndex {
-	var best bestIndex
-	best.cost = impossible
-	fixed := q1.source.Fixed()
-	for _, ix := range indexes {
-		if q1.prefixed(ix, order, fixed) {
-			// optimize1 to bypass tempindex
-			cost := optimize1(q1.source, mode, ix, assess)
-			best.update(ix, cost)
+func bestKey(q Query, mode Mode) []string {
+	var best []string
+	bestCost := impossible
+	for _,key := range q.Keys() {
+		cost := Optimize(q, mode, key, assess)
+		cost += (len(key) - 1) * cost / 20 // ??? prefer shorter keys
+		if cost < bestCost {
+			best = key
 		}
 	}
 	return best
-}
-
-// prefixed returns whether an index supplies an order, given what's fixed
-func (*Query1) prefixed(index []string, order []string, fixed []Fixed) bool {
-	i := 0
-	o := 0
-	in := len(index)
-	on := len(order)
-	for i < in && o < on {
-		if index[i] == order[o] {
-			o++
-			i++
-		} else if isFixed(fixed, index[i]) {
-			i++
-		} else if isFixed(fixed, order[o]) {
-			o++
-		} else {
-			return false
-		}
-	}
-	for o < on && isFixed(fixed, order[o]) {
-		o++
-	}
-	return o >= on
 }

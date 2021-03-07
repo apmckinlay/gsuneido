@@ -12,6 +12,7 @@ type Compatible struct {
 	Query2
 	allCols  []string
 	disjoint string
+	keyIndex []string
 }
 
 func (c *Compatible) Init() {

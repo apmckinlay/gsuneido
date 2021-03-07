@@ -3,6 +3,8 @@
 
 package query
 
+import "github.com/apmckinlay/gsuneido/db19/index/btree"
+
 type Minus struct {
 	Compatible
 }
@@ -27,4 +29,15 @@ func (m *Minus) Transform() Query {
 	}
 	// remove if disjoint
 	return m.source.Transform()
+}
+
+func (m *Minus) optimize(mode Mode, index []string, act action) Cost {
+	m.keyIndex = bestKey(m.source2, mode)
+	// iterate source and lookups on source2
+	cost := Optimize(m.source, mode, index, act) +
+		(m.source.nrows() * btree.EntrySize * btree.TreeHeight)
+	if act == freeze {
+		Optimize(m.source2, mode, m.keyIndex, freeze)
+	}
+	return cost
 }

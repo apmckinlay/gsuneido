@@ -40,8 +40,11 @@ const maxlevels = 8
 // Overridden by tests.
 var MaxNodeSize = 256 //TODO tune
 
-// EntrySize is an estimated average entry size
+// EntrySize is the estimated average entry size
 const EntrySize = 12
+
+// TreeHeight is the estimated average tree height
+const TreeHeight = 4
 
 // GetLeafKey is used to get the key for a data offset.
 // It is a dependency that must be injected

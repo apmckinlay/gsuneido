@@ -19,14 +19,22 @@ func TestOptimize(t *testing.T) {
 		assert.T(t).This(q.String()).Is(expected)
 	}
 	mode = readMode
-	test("tables", "tables^(table)")
-	test("tables sort tablename", "tables^(tablename)")
+	test("tables",
+		"tables^(table)")
+	test("tables sort tablename",
+		"tables^(tablename)")
 	test("table rename b to bb sort c",
 		"table^(a) TEMPINDEX(c) RENAME b to bb")
 	test("table extend x = F() sort c",
 		"table^(a) TEMPINDEX(c) EXTEND x = F()")
 	test("table extend x = F() sort x",
 		"table^(a) EXTEND x = F() TEMPINDEX(x)")
+	test("table minus table",
+		"table^(a) MINUS table^(a)")
+	test("hist intersect hist2",
+		"hist^(date,item,id) INTERSECT hist2^(date)")
+	test("hist2 intersect hist",
+		"hist^(date,item,id) INTERSECT hist2^(date)")
 
 	mode = updateMode
 	test("table rename b to bb sort c",
@@ -40,6 +48,8 @@ func TestOptimize(t *testing.T) {
 var testInfo = map[string]*meta.Info{
 	"tables": {Nrows: 100, Size: 10000},
 	"table":  {Nrows: 100, Size: 10000},
+	"hist":   {Nrows: 100, Size: 10000},
+	"hist2":  {Nrows: 1000, Size: 100000},
 }
 
 func (testTran) GetInfo(table string) *meta.Info {
