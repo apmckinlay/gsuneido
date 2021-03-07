@@ -74,7 +74,7 @@ func (b *Builder) Add(x uint64) {
 	}
 }
 
-// Finish completes sorting and merging and returns the ordered Finish.
+// Finish completes sorting and merging and returns the ordered List.
 // No more values should be added after this.
 func (b *Builder) Finish() List {
 	if b.done == nil {
@@ -103,7 +103,7 @@ func (b *Builder) Finish() List {
 }
 
 // Sort sorts the list by the given compare function.
-// Sort is intended for re-sorting by a different compare function.
+// It is used to re-sort by a different compare function.
 func (b *Builder) Sort(cmp func(x, y uint64) int) {
 	b.cmp = cmp
 	if b.block != nil { // partial last block
