@@ -4,7 +4,6 @@
 package query
 
 import (
-	"github.com/apmckinlay/gsuneido/db19/index/btree"
 	"github.com/apmckinlay/gsuneido/util/ints"
 	"github.com/apmckinlay/gsuneido/util/sset"
 	"github.com/apmckinlay/gsuneido/util/ssset"
@@ -15,7 +14,7 @@ type Intersect struct {
 }
 
 func (it *Intersect) String() string {
-	return it.Query2.String2("INTERSECT")
+	return it.String2("INTERSECT")
 }
 
 func (it *Intersect) Columns() []string {
@@ -62,6 +61,6 @@ func (*Intersect) cost(source, source2 Query, mode Mode, index []string) (
 	key = bestKey(source2, mode)
 	// iterate source and lookups on source2
 	cost = Optimize(source, mode, index, assess) +
-		(source.nrows() * btree.EntrySize * btree.TreeHeight)
+		(source.nrows() * source2.lookupCost())
 	return
 }

@@ -3,14 +3,12 @@
 
 package query
 
-import "github.com/apmckinlay/gsuneido/db19/index/btree"
-
 type Minus struct {
 	Compatible
 }
 
 func (m *Minus) String() string {
-	return m.Query2.String2("MINUS")
+	return m.String2("MINUS")
 }
 
 func (m *Minus) Keys() [][]string {
@@ -35,7 +33,7 @@ func (m *Minus) optimize(mode Mode, index []string, act action) Cost {
 	m.keyIndex = bestKey(m.source2, mode)
 	// iterate source and lookups on source2
 	cost := Optimize(m.source, mode, index, act) +
-		(m.source.nrows() * btree.EntrySize * btree.TreeHeight)
+		(m.source.nrows() * m.source2.lookupCost())
 	if act == freeze {
 		Optimize(m.source2, mode, m.keyIndex, freeze)
 	}

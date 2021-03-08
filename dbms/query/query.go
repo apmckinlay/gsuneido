@@ -85,6 +85,7 @@ type Query interface {
 
 	optimize(mode Mode, index []string, act action) Cost
 	addTempIndex(tran QueryTran) Query
+	lookupCost() Cost //TODO temporary, combine with optimize
 
 	setTempIndex(index []string)
 	getTempIndex() []string
@@ -184,11 +185,11 @@ func tempIndexable(q Query, mode Mode) bool {
 	return ok
 }
 
-type action bool
+type action byte
 
 const (
-	assess action = false
-	freeze action = true
+	assess action = 0
+	freeze action = 1
 )
 
 func (act action) String() string {
@@ -280,6 +281,10 @@ func (q1 *Query1) optimize(mode Mode, index []string, act action) Cost {
 func (q1 *Query1) addTempIndex(tran QueryTran) Query {
 	q1.source = addTempIndex(q1.source, tran)
 	return addTempIndex(q1, tran)
+}
+
+func (q1 *Query1) lookupCost() Cost {
+	return q1.source.lookupCost()
 }
 
 // bestPrefixed returns the best index that supplies the required order

@@ -117,3 +117,11 @@ func (tbl *Table) findIndex(index []string)  []string {
 func (tbl *Table) addTempIndex(tran QueryTran) Query {
 	return addTempIndex(tbl, tran)
 }
+
+// lookupCost returns the cost of one lookup
+func (tbl *Table) lookupCost() Cost {
+	// average node size is 2/3 of max, on average we read half = 1/3
+	nodeScan := btree.MaxNodeSize / 3
+	recSize := tbl.dataSize() / tbl.nrows()
+	return (nodeScan * btree.TreeHeight) + recSize
+}

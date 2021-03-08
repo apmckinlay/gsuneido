@@ -43,3 +43,10 @@ func (c *Compatible) Init() {
 		}
 	}
 }
+
+func (c *Compatible) String2(op string) string {
+	if c.disjoint != "" {
+		op += "-DISJOINT(" + c.disjoint + ")"
+	}
+	return c.Query2.String2(op)
+}

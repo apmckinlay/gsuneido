@@ -35,6 +35,16 @@ func TestOptimize(t *testing.T) {
 		"hist^(date,item,id) INTERSECT hist2^(date)")
 	test("hist2 intersect hist",
 		"hist^(date,item,id) INTERSECT hist2^(date)")
+	test("hist union hist2",
+		"hist^(date,item,id) UNION-LOOKUP hist2^(date)")
+	test("hist2 union hist",
+		"hist^(date,item,id) UNION-LOOKUP hist2^(date)")
+	test("hist union hist sort date",
+		"hist^(date,item,id) UNION-MERGE hist^(date,item,id)")
+	test("table union table",
+		"table^(a) UNION-MERGE table^(a)")
+	test("(table where a is 1) union (table where a is 2)",
+		"(table^(a) WHERE a is 1) UNION-FOLLOW-DISJOINT(a) (table^(a) WHERE a is 2)")
 
 	mode = updateMode
 	test("table rename b to bb sort c",
