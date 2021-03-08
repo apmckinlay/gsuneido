@@ -45,6 +45,16 @@ func TestOptimize(t *testing.T) {
 		"table^(a) UNION-MERGE table^(a)")
 	test("(table where a is 1) union (table where a is 2)",
 		"(table^(a) WHERE a is 1) UNION-FOLLOW-DISJOINT(a) (table^(a) WHERE a is 2)")
+	test("tables project table",
+		"tables^(table) PROJECT-COPY table")
+	test("tables project tablename sort tablename",
+		"tables^(tablename) PROJECT-COPY tablename")
+	test("abc project a",
+		"abc^(a) PROJECT-SEQ a")
+	test("columns project column",
+		"columns^(table,column) PROJECT-LOOKUP column")
+	// test("columns where table is 1 project column",
+	// 	"(columns^(table,column) WHERE table is 1) PROJECT-COPY column")
 
 	mode = updateMode
 	test("table rename b to bb sort c",
@@ -56,12 +66,12 @@ func TestOptimize(t *testing.T) {
 }
 
 var testInfo = map[string]*meta.Info{
-	"tables": {Nrows: 100, Size: 10000},
-	"table":  {Nrows: 100, Size: 10000},
-	"hist":   {Nrows: 100, Size: 10000},
-	"hist2":  {Nrows: 1000, Size: 100000},
+	"hist2":   {Nrows: 1000, Size: 100000},
 }
 
 func (testTran) GetInfo(table string) *meta.Info {
-	return testInfo[table]
+	if ti, ok := testInfo[table]; ok {
+		return ti
+	}
+	return &meta.Info{Nrows: 100, Size: 10000}
 }

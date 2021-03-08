@@ -91,6 +91,8 @@ type Query interface {
 	getTempIndex() []string
 }
 
+// Mode is the transaction context - cursor, read, or update.
+// It affects the use of temporary indexes.
 type Mode int
 
 const (

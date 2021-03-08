@@ -34,7 +34,7 @@ func TestCostModel(*testing.T) {
 	}
 	// random reads
 	sum := byte(0)
-	const nreads = 100_000
+	const nreads = 10_000
 	for readSize := 16; readSize <= 64*1024; readSize *= 2 {
 		t := time.Now()
 		for i := 0; i < nreads; i++ {

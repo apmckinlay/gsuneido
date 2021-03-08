@@ -15,13 +15,17 @@ type Project struct {
 	Query1
 	columns  []string
 	strategy projectStrategy
+	index    []string
 }
 
 type projectStrategy int
 
 const (
+	// projCopy is when the columns contain a key, so it's just pass through
 	projCopy projectStrategy = iota + 1
+	// projSeq orders by the columns so duplicates are consecutive
 	projSeq
+	// projLookup builds a temp hash index to identify duplicates
 	projLookup
 )
 
@@ -45,8 +49,9 @@ func (p *Project) Init() {
 
 // hasKey returns true if there is a key containing cols
 func hasKey(keys [][]string, cols []string) bool {
+	//FIXME use fixed
 	for _, k := range keys {
-		if sset.Subset(k, cols) {
+		if sset.Subset(cols, k) {
 			return true
 		}
 	}
@@ -265,5 +270,88 @@ func (p *Project) Fixed() []Fixed {
 }
 
 func (p *Project) Updateable() bool {
-		return p.strategy == projCopy && p.source.Updateable()
+	return p.strategy == projCopy && p.source.Updateable()
+}
+
+func (p *Project) optimize(mode Mode, index []string, act action) Cost {
+	if p.strategy == projCopy {
+		return Optimize(p.source, mode, index, act)
+	}
+	idx, cost := p.bestIndex(mode, index)
+	if idx == nil {
+		if mode != readMode {
+			return impossible
+		}
+		if act == freeze {
+			p.strategy = projLookup
+		}
+		cost = Optimize(p.source, mode, index, act)
+		hashCost := 0 //TODO ???
+		// read once, build hash, read again filtering by hash
+		return cost + hashCost + cost
+	}
+	// else have an idx
+	if act != freeze {
+		return cost
+	}
+	p.strategy = projSeq
+	p.index = idx
+	// optimize1 to bypass temp index
+	return optimize1(p.source, mode, idx, freeze)
+}
+
+func (p *Project) bestIndex(mode Mode, index []string) ([]string, Cost) {
+	var indexes [][]string
+	if index == nil {
+		indexes = p.source.Indexes()
+	} else {
+		indexes = [][]string{index}
+	}
+	fixed := p.source.Fixed()
+	nColsUnfixed := countUnfixed(p.columns, fixed)
+	var bestIdx []string
+	bestCost := impossible
+	for _, idx := range indexes {
+		if p.prefixed(fixed, idx, p.columns, nColsUnfixed) {
+			// optimize1 to bypass temp index
+			cost := optimize1(p.source, mode, idx, assess)
+			if cost < bestCost {
+				bestCost = cost
+				bestIdx = idx
+			}
+		}
+	}
+	return bestIdx, bestCost
+}
+
+func countUnfixed(cols []string, fixed []Fixed) int {
+	nunfixed := 0
+	for _, col := range cols {
+		if !isFixed(fixed, col) {
+			nunfixed++
+		}
+	}
+	return nunfixed
+}
+
+// prefixed returns true if idx has cols (in any order) as a prefix
+// taking fixed into consideration
+func (*Project) prefixed(fixed []Fixed, idx []string, cols []string, nColsUnfixed int) bool {
+	if len(idx) < nColsUnfixed {
+		return false
+	}
+	n := 0
+	for _, col := range idx {
+		if isFixed(fixed, col) {
+			continue
+		}
+		if !sset.Contains(cols, col) {
+			return false
+		}
+		n++
+		if n == nColsUnfixed {
+			return true
+		}
+	}
+	return false
 }

@@ -29,7 +29,7 @@ func TestKeys(t *testing.T) {
 	test("hist2 project date, item", "date")
 	test("tables times inven", "table+item, tablename+item")
 	test("abc union abc", "a+b+c") // not disjoint
-	test("(abc where a is 1) union (abc where a is 2)", "a")
+	test("(bcd where b is 1) union (bcd where b is 2)", "b")
 }
 
 func TestByContainsKey(t *testing.T) {

@@ -61,26 +61,26 @@ func TestTransform(t *testing.T) {
 		"customer WHERE id is 3")
 	// remove empty extends
 	test("customer extend zone = 3 project id, city",
-		"customer PROJECT id, city")
+		"customer PROJECT-COPY id, city")
 	// remove empty renames
 	test("customer rename name to nom project id, city",
-		"customer PROJECT id, city")
+		"customer PROJECT-COPY id, city")
 
 	// move project before rename
 	test("customer rename id to num, name to nom project num, city",
-		"(customer PROJECT id, city) RENAME id to num")
+		"(customer PROJECT-COPY id, city) RENAME id to num")
 	// move project before rename & remove empty rename
 	test("customer rename id to num, name to nom project city",
 		"customer PROJECT city")
 	// move project before extend
 	test("customer extend a = 5, b = 6 project id, a, name",
-		"(customer PROJECT id, name) EXTEND a = 5")
+		"(customer PROJECT-COPY id, name) EXTEND a = 5")
 	// ... but not if extend uses fields not in project
 	test("customer extend a = city, b = 6 project id, a, name",
-		"(customer EXTEND a = city, b = 6) PROJECT id, a, name")
+		"(customer EXTEND a = city, b = 6) PROJECT-COPY id, a, name")
 	// move project before extend & remove empty extend
 	test("customer extend a = 5, b = 6 project id, name",
-		"customer PROJECT id, name")
+		"customer PROJECT-COPY id, name")
 
 	// move where before project
 	test("trans project id,cost where id is 5",
@@ -164,14 +164,14 @@ var testSchemas = map[string]*Schema{
 		Indexes: []Index{{Mode: 'k', Columns: []string{"date", "item", "id"}}}},
 	"inven": {Columns: []string{"item", "qty"},
 		Indexes: []Index{{Mode: 'k', Columns: []string{"item"}}}},
-	"abc": {Columns: []string{"a", "b", "c"},
-		Indexes: []Index{{Mode: 'k', Columns: []string{"a"}},
-			{Mode: 'k', Columns: []string{"b"}},
-			{Mode: 'k', Columns: []string{"c"}}}},
-	"bcd": {Columns: []string{"b", "c", "d"},
-		Indexes: []Index{{Mode: 'k', Columns: []string{"b"}},
-			{Mode: 'k', Columns: []string{"c"}},
-			{Mode: 'k', Columns: []string{"d"}}}},
+	"abc": {Columns: []string{"a", "b", "c"}, Indexes: []Index{
+		{Mode: 'i', Columns: []string{"a"}},
+		{Mode: 'k', Columns: []string{"b"}},
+		{Mode: 'k', Columns: []string{"c"}}}},
+	"bcd": {Columns: []string{"b", "c", "d"}, Indexes: []Index{
+		{Mode: 'k', Columns: []string{"b"}},
+		{Mode: 'k', Columns: []string{"c"}},
+		{Mode: 'i', Columns: []string{"d"}}}},
 }
 
 func (testTran) GetSchema(table string) *Schema {
