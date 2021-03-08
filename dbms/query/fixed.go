@@ -10,6 +10,16 @@ type Fixed struct {
 	values []runtime.Value
 }
 
+func fixedStr(fixed []Fixed) string {
+	s := "["
+	sep := ""
+	for _, fxd := range fixed {
+		s += sep + fxd.String()
+		sep = ", "
+	}
+	return s + "]"
+}
+
 func (f *Fixed) String() string {
 	s := f.col + "=("
 	sep := ""

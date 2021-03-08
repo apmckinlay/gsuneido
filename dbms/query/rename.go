@@ -90,6 +90,20 @@ func renameIndexes(idxs [][]string, from, to []string) [][]string {
 	return idxs2
 }
 
+func (r *Rename) Fixed() []Fixed {
+	fixed := r.source.Fixed()
+	result := make([]Fixed, len(fixed))
+	for i,fxd := range fixed {
+		j := str.List(r.from).Index(fxd.col)
+		if j == -1 {
+			result[i] = fxd
+		} else {
+			result[i] = Fixed{col: r.to[j], values: fxd.values}
+		}
+	}
+	return result
+}
+
 func (r *Rename) Transform() Query {
 	// remove empty Renames
 	if len(r.from) == 0 {
