@@ -53,8 +53,8 @@ func TestOptimize(t *testing.T) {
 		"abc^(a) PROJECT-SEQ a")
 	test("columns project column",
 		"columns^(table,column) PROJECT-LOOKUP column")
-	// test("columns where table is 1 project column",
-	// 	"(columns^(table,column) WHERE table is 1) PROJECT-COPY column")
+	test("columns where table is 1 project column",
+		"(columns^(table,column) WHERE table is 1) PROJECT-COPY column")
 
 	mode = updateMode
 	test("table rename b to bb sort c",

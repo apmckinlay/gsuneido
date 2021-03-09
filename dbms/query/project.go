@@ -41,19 +41,22 @@ func (p *Project) Init() {
 			panic("can't project _lower! fields")
 		}
 	}
-	if hasKey(p.source.Keys(), p.columns) {
+	if hasKey(p.source.Keys(), p.columns, p.source.Fixed()) {
 		p.strategy = projCopy
 		p.includeDeps(srcCols)
 	}
 }
 
-// hasKey returns true if there is a key containing cols
-func hasKey(keys [][]string, cols []string) bool {
-	//FIXME use fixed
-	for _, k := range keys {
-		if sset.Subset(cols, k) {
-			return true
+// hasKey returns true if cols contains a key
+func hasKey(keys [][]string, cols []string, fixed []Fixed) bool {
+outer:
+	for _, key := range keys {
+		for _, k := range key {
+			if !isFixed(fixed, k) && !sset.Contains(cols, k) {
+				continue outer
+			}
 		}
+		return true
 	}
 	return false
 }
