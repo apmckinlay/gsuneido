@@ -156,12 +156,16 @@ var testSchemas = map[string]*Schema{
 		Indexes: []Index{{Mode: 'k', Columns: []string{"e"}}}},
 	"customer": {Columns: []string{"id", "name", "city"},
 		Indexes: []Index{{Mode: 'k', Columns: []string{"id"}}}},
+	"supplier": {Columns: []string{"id", "name", "city"}, Indexes: []Index{
+		{Mode: 'k', Columns: []string{"id"}},
+		{Mode: 'i', Columns: []string{"city"}}}},
 	"hist": {Columns: []string{"date", "item", "id", "cost"},
 		Indexes: []Index{{Mode: 'k', Columns: []string{"date", "item", "id"}}}},
 	"hist2": {Columns: []string{"date", "item", "id", "cost"},
 		Indexes: []Index{{Mode: 'k', Columns: []string{"date"}}}},
-	"trans": {Columns: []string{"item", "id", "cost", "date"},
-		Indexes: []Index{{Mode: 'k', Columns: []string{"date", "item", "id"}}}},
+	"trans": {Columns: []string{"item", "id", "cost", "date"}, Indexes: []Index{
+		{Mode: 'k', Columns: []string{"date", "item", "id"}},
+		{Mode: 'i', Columns: []string{"item"}}}},
 	"inven": {Columns: []string{"item", "qty"},
 		Indexes: []Index{{Mode: 'k', Columns: []string{"item"}}}},
 	"abc": {Columns: []string{"a", "b", "c"}, Indexes: []Index{

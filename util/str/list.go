@@ -50,3 +50,16 @@ func (list List) Reverse() {
 		list[i], list[j] = list[j], list[i]
 	}
 }
+
+// HasPrefix returns true if list2 is a prefix of list
+func (list List) HasPrefix(list2 []string) bool {
+	if len(list) < len(list2) {
+		return false
+	}
+	for i := range list2 {
+		if list[i] != list2[i] {
+			return false
+		}
+	}
+	return true
+}

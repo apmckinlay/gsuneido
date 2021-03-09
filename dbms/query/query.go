@@ -119,11 +119,12 @@ func Setup(q Query, mode Mode, t QueryTran) Query {
 	if cost >= impossible {
 		panic("invalid query " + q.String())
 	}
-	q = q.addTempIndex(t) //TODO
+	q = q.addTempIndex(t)
 	return q
 }
 
 const outOfOrder = 10 // minimal penalty for executing out of order
+
 const impossible = Cost(ints.MaxInt / 64) // allow for adding IMPOSSIBLE's
 
 func gin(args ...interface{}) string {
@@ -427,7 +428,7 @@ func paren(q Query) string {
 func bestKey(q Query, mode Mode) []string {
 	var best []string
 	bestCost := impossible
-	for _,key := range q.Keys() {
+	for _, key := range q.Keys() {
 		cost := Optimize(q, mode, key, assess)
 		cost += (len(key) - 1) * cost / 20 // ??? prefer shorter keys
 		if cost < bestCost {
