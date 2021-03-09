@@ -6,7 +6,6 @@ package query
 import (
 	"testing"
 
-	"github.com/apmckinlay/gsuneido/db19/meta"
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
@@ -91,6 +90,11 @@ func TestOptimize(t *testing.T) {
 	test("supplier summarize max city", // index
 		"supplier^(city) SUMMARIZE-IDX max_city = max city")
 
+	test("customer times inven",
+		"customer^(id) TIMES inven^(item)")
+	test("inven times customer sort id",
+		"customer^(id) TIMES inven^(item)")
+
 	mode = updateMode
 	test("table rename b to bb sort c",
 		"table^(a) TEMPINDEX(c) RENAME b to bb")
@@ -98,15 +102,4 @@ func TestOptimize(t *testing.T) {
 	mode = cursorMode
 	assert.T(t).This(func() { test("table rename b to bb sort c", "") }).
 		Panics("invalid query")
-}
-
-var testInfo = map[string]*meta.Info{
-	"hist2": {Nrows: 1000, Size: 100000},
-}
-
-func (testTran) GetInfo(table string) *meta.Info {
-	if ti, ok := testInfo[table]; ok {
-		return ti
-	}
-	return &meta.Info{Nrows: 100, Size: 10000}
 }
