@@ -91,11 +91,14 @@ var _ = builtin1("DeleteDir(dir)",
 	func(dir Value) Value {
 		dirname := ToStr(dir)
 		info, err := os.Stat(dirname)
-		if os.IsNotExist(err) || !info.Mode().IsDir() {
+		if errors.Is(err, os.ErrNotExist) {
 			return False
 		}
 		if err != nil {
 			panic("DeleteDir: " + err.Error())
+		}
+		if !info.Mode().IsDir() {
+			return False
 		}
 		err = os.RemoveAll(dirname)
 		if err != nil {
