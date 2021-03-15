@@ -56,7 +56,7 @@ func (r *Rename) String() string {
 		sb.WriteString(r.to[i])
 		sep = ", "
 	}
-	return paren(r.source) + " RENAME " + sb.String()
+	return parenQ2(r.source) + " RENAME " + sb.String()
 }
 
 func (r *Rename) Columns() []string {
@@ -93,7 +93,7 @@ func renameIndexes(idxs [][]string, from, to []string) [][]string {
 func (r *Rename) Fixed() []Fixed {
 	fixed := r.source.Fixed()
 	result := make([]Fixed, len(fixed))
-	for i,fxd := range fixed {
+	for i, fxd := range fixed {
 		j := str.List(r.from).Index(fxd.col)
 		if j == -1 {
 			result[i] = fxd

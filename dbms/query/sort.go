@@ -26,7 +26,7 @@ func (sort *Sort) Init() {
 }
 
 func (sort *Sort) String() string {
-	s := sort.Query1.String()
+	s := sort.source.String()
 	r := ""
 	if sort.reverse {
 		r = " reverse"

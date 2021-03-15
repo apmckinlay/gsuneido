@@ -18,18 +18,14 @@ type Table struct {
 	info   *meta.Info
 	// index is the index that will be used to access the data.
 	// It is set by optimize.
-	index     []string
+	index []string
 }
 
 func (tbl *Table) String() string {
 	if tbl.index == nil {
 		return tbl.name
 	}
-	s := tbl.name + "^" + str.Join("(,)", tbl.index)
-	if tbl.tempIndex != nil {
-		s += " TEMPINDEX" + str.Join("(,)", tbl.tempIndex)
-	}
-	return s
+	return tbl.name + "^" + str.Join("(,)", tbl.index)
 }
 
 func (tbl *Table) Init() {
@@ -73,8 +69,8 @@ func (tbl *Table) nrows() int {
 	return tbl.info.Nrows
 }
 
-func (tbl *Table) dataSize() int {
-	return int(tbl.info.Size)
+func (tbl *Table) rowSize() int {
+	return int(tbl.info.Size) / tbl.info.Nrows
 }
 
 func (tbl *Table) Transform() Query {
@@ -91,7 +87,7 @@ func (tbl *Table) Updateable() bool {
 
 func (tbl *Table) optimize(_ Mode, index []string, act action) Cost {
 	index = tbl.findIndex(index)
-	if  index == nil {
+	if index == nil {
 		return impossible
 	}
 	if act == freeze {
@@ -102,7 +98,7 @@ func (tbl *Table) optimize(_ Mode, index []string, act action) Cost {
 	return indexReadCost + dataReadCost
 }
 
-func (tbl *Table) findIndex(index []string)  []string {
+func (tbl *Table) findIndex(index []string) []string {
 	if index == nil {
 		return tbl.schema.Indexes[0].Columns
 	}
@@ -114,14 +110,12 @@ func (tbl *Table) findIndex(index []string)  []string {
 	return nil
 }
 
-func (tbl *Table) addTempIndex(tran QueryTran) Query {
-	return addTempIndex(tbl, tran)
+func (tbl *Table) addTempIndex(QueryTran) {
 }
 
 // lookupCost returns the cost of one lookup
 func (tbl *Table) lookupCost() Cost {
 	// average node size is 2/3 of max, on average we read half = 1/3
 	nodeScan := btree.MaxNodeSize / 3
-	recSize := tbl.dataSize() / tbl.nrows()
-	return (nodeScan * btree.TreeHeight) + recSize
+	return (nodeScan * btree.TreeHeight) + tbl.rowSize()
 }

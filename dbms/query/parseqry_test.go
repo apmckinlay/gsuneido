@@ -42,7 +42,7 @@ func TestParseQuery(t *testing.T) {
 
 	test("(one union two) join three")
 	test("one join two sort a, b")
-	test("((one join two) project a, b, c) rename b to bb sort a, c")
+	test("(one join two) project a, b, c rename b to bb sort a, c")
 
 	xtest := func(s, err string) {
 		fn := func() { ParseQuery(s) }

@@ -73,6 +73,19 @@ func (u *Union) Indexes() [][]string {
 		ssset.Intersect(u.source2.Keys(), u.source2.Indexes()))
 }
 
+func (u *Union) nrows() int {
+	return u.nrowsCalc(u.source.nrows(), u.source2.nrows())
+}
+
+func (u *Union) nrowsCalc(n1, n2 int) int {
+	if u.disjoint != "" {
+		return n1 + n2
+	}
+	min := ints.Max(n1, n2) // smaller could be all duplicates
+	max := n1 + n2 // could be no duplicates
+	return (min + max) / 2 // guess half way between
+}
+
 func (u *Union) Transform() Query {
 	u.source = u.source.Transform()
 	u.source2 = u.source2.Transform()

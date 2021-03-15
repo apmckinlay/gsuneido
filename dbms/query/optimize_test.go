@@ -15,13 +15,15 @@ func TestOptimize(t *testing.T) {
 		t.Helper()
 		q := ParseQuery(query)
 		Setup(q, mode, testTran{})
-		assert.T(t).This(q.String()).Is(expected)
+		assert.T(t).Msg(query).This(q.String()).Is(expected)
 	}
 	mode = readMode
 	test("tables",
 		"tables^(table)")
 	test("tables sort tablename",
 		"tables^(tablename)")
+	test("table sort c",
+		"table^(a) TEMPINDEX(c)")
 
 	test("table rename b to bb sort c",
 		"table^(a) TEMPINDEX(c) RENAME b to bb")
@@ -35,20 +37,20 @@ func TestOptimize(t *testing.T) {
 		"table^(a) MINUS table^(a)")
 
 	test("hist intersect hist2",
-		"hist^(date,item,id) INTERSECT hist2^(date)")
+		"hist^(date) INTERSECT hist2^(date)")
 	test("hist2 intersect hist",
-		"hist^(date,item,id) INTERSECT hist2^(date)")
+		"hist^(date) INTERSECT hist2^(date)")
 
 	test("hist union hist2",
-		"hist^(date,item,id) UNION-LOOKUP hist2^(date)")
+		"hist^(date) UNION-LOOKUP hist2^(date)")
 	test("hist2 union hist",
-		"hist^(date,item,id) UNION-LOOKUP hist2^(date)")
+		"hist^(date) UNION-LOOKUP hist2^(date)")
 	test("hist union hist sort date",
 		"hist^(date,item,id) UNION-MERGE hist^(date,item,id)")
 	test("table union table",
 		"table^(a) UNION-MERGE table^(a)")
 	test("(table where a is 1) union (table where a is 2)",
-		"(table^(a) WHERE a is 1) UNION-FOLLOW-DISJOINT(a) (table^(a) WHERE a is 2)")
+		"table^(a) WHERE a is 1 UNION-FOLLOW-DISJOINT(a) (table^(a) WHERE a is 2)")
 
 	test("tables project table",
 		"tables^(table) PROJECT-COPY table")
@@ -59,7 +61,7 @@ func TestOptimize(t *testing.T) {
 	test("columns project column",
 		"columns^(table,column) PROJECT-LOOKUP column")
 	test("columns where table is 1 project column",
-		"(columns^(table,column) WHERE table is 1) PROJECT-COPY column")
+		"columns^(table,column) WHERE table is 1 PROJECT-COPY column")
 	test("customer project id,name",
 		"customer^(id) PROJECT-COPY id, name")
 	test("trans project item",
@@ -83,10 +85,10 @@ func TestOptimize(t *testing.T) {
 		"trans^(item) SUMMARIZE-SEQ item, total_cost = total cost")
 	test("trans summarize id, total cost",
 		"trans^(date,item,id) SUMMARIZE-MAP id, total_cost = total cost")
-	test("supplier summarize max id", // key
-		"supplier^(id) SUMMARIZE-IDX max_id = max id")
-	test("supplier summarize max id sort name", // ignore sort
-		"supplier^(id) SUMMARIZE-IDX max_id = max id")
+	test("supplier summarize max supplier", // key
+		"supplier^(supplier) SUMMARIZE-IDX max_supplier = max supplier")
+	test("supplier summarize max supplier sort name", // ignore sort
+		"supplier^(supplier) SUMMARIZE-IDX max_supplier = max supplier")
 	test("supplier summarize max city", // index
 		"supplier^(city) SUMMARIZE-IDX max_city = max city")
 
@@ -95,11 +97,44 @@ func TestOptimize(t *testing.T) {
 	test("inven times customer sort id",
 		"customer^(id) TIMES inven^(item)")
 
+	test("hist join customer",
+		"hist^(date) JOIN n:1 by(id) customer^(id)")
+	test("customer join hist",
+		"hist^(date) JOIN n:1 by(id) customer^(id)")
+	test("trans join inven",
+		"inven^(item) JOIN 1:n by(item) trans^(item)")
+	test("task join co",
+		"co^(tnum) JOIN 1:1 by(tnum) task^(tnum)")
+	test("customer join alias",
+		"alias^(id) JOIN 1:1 by(id) customer^(id)")
+	// test("(trans join customer) union (hist join customer)",
+	// 	"(trans^(date,item,id) JOIN n:1 by(id) customer^(id)) "+
+	// 		"UNION-MERGE^(date,item,id) (hist^(date,item,id) "+
+	// 		"JOIN n:1 by(id) customer^(id)")
+	// test("(trans join customer) intersect (hist join customer)",
+	// 	"(trans^(date,item,id) JOIN n:1 by(id) customer^(id)) "+
+	// 		"INTERSECT (hist^(date,item,id) "+
+	// 		"JOIN n:1 by(id) customer^(id))")
+	test("task join co join cus",
+		"(co^(tnum) JOIN 1:1 by(tnum) task^(tnum)) "+
+			"JOIN n:1 by(cnum) cus^(cnum)")
+	test("inven leftjoin trans",
+		"inven^(item) LEFTJOIN 1:n by(item) trans^(item)")
+	test("customer leftjoin hist2",
+		"customer^(id) LEFTJOIN 1:n by(id) hist2^(id)")
+	test("customer leftjoin hist2 sort date",
+		"(customer^(id) LEFTJOIN 1:n by(id) hist2^(id)) TEMPINDEX(date)")
+
 	mode = updateMode
 	test("table rename b to bb sort c",
 		"table^(a) TEMPINDEX(c) RENAME b to bb")
 
 	mode = cursorMode
+	test("trans join customer",
+		"trans^(date,item,id) JOIN n:1 by(id) customer^(id)")
+	test("trans join inven join customer",
+		"(inven^(item) JOIN 1:n by(item) trans^(item)) "+
+			"JOIN n:1 by(id) customer^(id)")
 	assert.T(t).This(func() { test("table rename b to bb sort c", "") }).
 		Panics("invalid query")
 }

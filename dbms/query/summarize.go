@@ -68,7 +68,7 @@ func (su *Summarize) minmax1() bool {
 }
 
 func (su *Summarize) String() string {
-	s := paren(su.source) + " SUMMARIZE"
+	s := parenQ2(su.source) + " SUMMARIZE"
 	switch su.strategy {
 	case sumSeq:
 		s += "-SEQ"
@@ -127,6 +127,20 @@ func containsKey(cols []string, keys [][]string) bool {
 		}
 	}
 	return false
+}
+
+func (su *Summarize) nrows() int {
+	nr := su.source.nrows()
+	if len(su.by) == 0 {
+		nr = 1
+	} else if !containsKey(su.by, su.source.Keys()) {
+		nr /= 2 // ???
+	}
+	return nr
+}
+
+func (su *Summarize) rowSize() int {
+	return su.source.rowSize() + len(su.cols) * 8
 }
 
 func (su *Summarize) Updateable() bool {

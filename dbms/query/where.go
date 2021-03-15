@@ -32,7 +32,7 @@ func (w *Where) SetTran(t QueryTran) {
 }
 
 func (w *Where) String() string {
-	return paren(w.source) + " WHERE " + w.expr.Echo()
+	return parenQ2(w.source) + " WHERE " + w.expr.Echo()
 }
 
 func (w *Where) Fixed() []Fixed {
@@ -60,10 +60,6 @@ func (w *Where) addFixed(e ast.Expr) {
 
 func (w *Where) nrows() int {
 	return w.source.nrows() / 2 //TODO
-}
-
-func (w *Where) dataSize() int {
-	return w.source.dataSize() / 2 //TODO
 }
 
 func (w *Where) Transform() Query {

@@ -33,6 +33,19 @@ func (it *Intersect) Indexes() [][]string {
 	return ssset.Union(it.source.Indexes(), it.source2.Indexes())
 }
 
+func (it *Intersect) nrows() int {
+	if it.disjoint != "" {
+		return 0
+	}
+	min := 0
+	max := ints.Min(it.source.nrows(), it.source2.nrows())
+	return (min + max) / 2  // guess half way between
+}
+
+func (it *Intersect) rowSize() int {
+	return (it.source.rowSize() + it.source2.rowSize()) / 2
+}
+
 func (it *Intersect) Transform() Query {
 	it.source = it.source.Transform()
 	it.source2 = it.source2.Transform()

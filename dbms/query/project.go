@@ -71,7 +71,7 @@ func (p *Project) includeDeps(cols []string) {
 }
 
 func (p *Project) String() string {
-	s := paren(p.source) + " PROJECT"
+	s := parenQ2(p.source) + " PROJECT"
 	switch p.strategy {
 	case projSeq:
 		s += "-SEQ"
@@ -111,6 +111,14 @@ func projectIndexes(idxs [][]string, cols []string) [][]string {
 		}
 	}
 	return idxs2
+}
+
+func (p *Project) nrows() int {
+	nr := p.source.nrows()
+	if p.strategy != projCopy {
+		nr /= 2 // ???
+	}
+	return nr
 }
 
 func (p *Project) Transform() Query {

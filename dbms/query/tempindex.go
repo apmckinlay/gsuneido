@@ -16,5 +16,5 @@ func (ti *TempIndex) Transform() Query {
 }
 
 func (ti *TempIndex) String() string {
-	return ti.source.String() + " TEMPINDEX" + str.Join("(,)", ti.order)
+	return parenQ2(ti.source) + " TEMPINDEX" + str.Join("(,)", ti.order)
 }

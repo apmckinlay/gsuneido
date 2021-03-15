@@ -53,7 +53,7 @@ func (e *Extend) init() {
 }
 
 func (e *Extend) String() string {
-	s := paren(e.source) + " EXTEND "
+	s := parenQ2(e.source) + " EXTEND "
 	sep := ""
 	for i, c := range e.cols {
 		s += sep + c
@@ -67,6 +67,12 @@ func (e *Extend) String() string {
 
 func (e *Extend) Columns() []string {
 	return sset.Union(e.source.Columns(), e.cols)
+}
+
+func (e *Extend) rowSize() int {
+	nsc := len(e.source.Columns())
+	nc := len(e.Columns())
+	return e.source.rowSize() * nc / nsc
 }
 
 func (e *Extend) Transform() Query {

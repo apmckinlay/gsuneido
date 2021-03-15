@@ -4,6 +4,7 @@
 package query
 
 import (
+	"github.com/apmckinlay/gsuneido/util/ints"
 	"github.com/apmckinlay/gsuneido/util/sset"
 	"github.com/apmckinlay/gsuneido/util/ssset"
 	"github.com/apmckinlay/gsuneido/util/str"
@@ -13,16 +14,31 @@ type Join struct {
 	Query2
 	by []string
 	joinType
+	nr int
 }
 
 type joinType int
 
 const (
-	one_one joinType = iota
+	one_one joinType = iota + 1
 	one_n
 	n_one
-	n_n
 )
+
+func (jt joinType) String() string {
+	switch jt {
+	case 0:
+		return ""
+	case one_one:
+		return "1:1"
+	case one_n:
+		return "1:n"
+	case n_one:
+		return "n:1"
+	default:
+		panic("bad joinType")
+	}
+}
 
 func (jn *Join) Init() {
 	jn.Query2.Init()
@@ -46,7 +62,7 @@ func (jn *Join) Init() {
 	} else if k2 {
 		jn.joinType = n_one
 	} else {
-		jn.joinType = n_n
+		panic("join: does not support many to many")
 	}
 }
 
@@ -59,7 +75,8 @@ func (jn *Join) string(op string) string {
 	if len(jn.by) > 0 {
 		by = "by" + str.Join("(,)", jn.by) + " "
 	}
-	return paren(jn.source) + " " + op + " " + by + paren(jn.source2)
+	return parenQ2(jn.source) + " " + op + " " +
+		str.Opt(jn.joinType.String(), " ") + by + paren(jn.source2)
 }
 
 func (jn *Join) Columns() []string {
@@ -67,30 +84,9 @@ func (jn *Join) Columns() []string {
 }
 
 func (jn *Join) Indexes() [][]string {
-	switch jn.joinType {
-	case one_one:
-		return ssset.Union(jn.source.Indexes(), jn.source2.Indexes())
-	case one_n:
-		return jn.source2.Indexes()
-	case n_one:
-		return jn.source.Indexes()
-	case n_n:
-		// union of indexes that don't include joincols
-		idxs := [][]string{}
-		for _, ix := range jn.source.Indexes() {
-			if sset.Disjoint(ix, jn.by) {
-				idxs = append(idxs, ix)
-			}
-		}
-		for _, ix := range jn.source2.Indexes() {
-			if sset.Disjoint(ix, jn.by) {
-				ssset.AddUnique(idxs, ix)
-			}
-		}
-		return idxs
-	default:
-		panic("unknown join type")
-	}
+	// can really only provide source.indexes() but optimize may swap.
+	// optimize will return impossible for source2 indexes.
+	return ssset.Union(jn.source.Indexes(), jn.source2.Indexes())
 }
 
 func (jn *Join) Keys() [][]string {
@@ -101,11 +97,13 @@ func (jn *Join) Keys() [][]string {
 		return jn.source2.Keys()
 	case n_one:
 		return jn.source.Keys()
-	case n_n:
-		return jn.keypairs()
 	default:
 		panic("unknown join type")
 	}
+}
+
+func (jn *Join) Fixed() []Fixed {
+	return combineFixed(jn.source.Fixed(), jn.source2.Fixed())
 }
 
 func (jn *Join) Transform() Query {
@@ -114,8 +112,81 @@ func (jn *Join) Transform() Query {
 	return jn
 }
 
-func (jn *Join) Fixed() []Fixed {
-	return combineFixed(jn.source.Fixed(), jn.source2.Fixed())
+func (jn *Join) optimize(mode Mode, index []string, act action) Cost {
+	defer be(gin("Join", jn, index))
+	cost1 := jn.opt(jn.source, jn.source2, jn.joinType, mode, index, assess)
+	cost2 := outOfOrder +
+		jn.opt(jn.source2, jn.source, jn.joinType.reverse(), mode, index, assess)
+	trace("cost1", cost1, "cost2 (reverse)", cost2)
+	cost := ints.Min(cost1, cost2)
+	if cost >= impossible {
+		return impossible
+	}
+	if act == freeze {
+		if cost2 < cost1 { // swap
+			jn.source, jn.source2 = jn.source2, jn.source
+			jn.joinType = jn.joinType.reverse()
+		}
+		jn.opt(jn.source, jn.source2, jn.joinType, mode, index, freeze)
+	}
+	return cost
+}
+
+func (jt joinType) reverse() joinType {
+	switch jt {
+	case one_n:
+		return n_one
+	case n_one:
+		return one_n
+	}
+	return jt
+}
+
+func (jn *Join) opt(src1, src2 Query, joinType joinType,
+	mode Mode, index []string, act action) Cost {
+	trace("OPT", paren(src1), "JOIN", joinType, paren(src2))
+	// always have to read all of source 1
+	cost1 := Optimize(src1, mode, index, act)
+	if cost1 >= impossible {
+		return impossible
+	}
+	cost2 := Optimize(src2, mode, jn.by, act)
+	if cost2 >= impossible {
+		return impossible
+	}
+	nrows1 := src1.nrows()
+	// should only be taking a portion of the variable cost2,
+	// not the fixed temp index cost2 (so 2/3 instead of 1/2)
+	cost := cost1 + (nrows1 * src2.lookupCost()) + (cost2 * 2 / 3)
+	trace("join opt", cost1, "+ (", nrows1, "*", src2.lookupCost(), ") + (",
+		cost2, "* 2/3 ) =", cost)
+	return cost
+}
+
+func (jn *Join) nrows() int {
+	// n_one and one_n assume records will have matching counterparts
+	nrows1 := jn.source.nrows()
+	nrows2 := jn.source2.nrows()
+	var nrows int
+	switch jn.joinType {
+	case one_one:
+		nrows = ints.Min(nrows1, nrows2)
+	case n_one:
+		nrows = nrows1
+	case one_n:
+		nrows = nrows2
+	default:
+		panic("shouldn't reach here")
+	}
+	return nrows / 2 // actual will be between 0 and nrows so guess halfway
+}
+
+func (jn *Join) rowSize() int {
+	return jn.source.rowSize() + jn.source2.rowSize()
+}
+
+func (jn *Join) lookupCost() int {
+	return jn.source.lookupCost() * 2 // ???
 }
 
 // LeftJoin ---------------------------------------------------------
@@ -129,10 +200,12 @@ func (lj *LeftJoin) String() string {
 }
 
 func (lj *LeftJoin) Keys() [][]string {
+	// can't use source2.Keys() like Join.Keys()
+	// because multiple right sides can be missing/blank
 	switch lj.joinType {
 	case one_one, n_one:
 		return lj.source.Keys()
-	case one_n, n_n:
+	case one_n:
 		return lj.keypairs()
 	default:
 		panic("unknown join type")
@@ -143,4 +216,12 @@ func (lj *LeftJoin) Transform() Query {
 	lj.source = lj.source.Transform()
 	lj.source2 = lj.source2.Transform()
 	return lj
+}
+
+func (lj *LeftJoin) optimize(mode Mode, index []string, act action) Cost {
+	return lj.opt(lj.source, lj.source2, lj.joinType, mode, index, act)
+}
+
+func (lj *LeftJoin) nrows() int {
+	return lj.source.nrows()
 }

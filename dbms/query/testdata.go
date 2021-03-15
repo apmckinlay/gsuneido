@@ -19,13 +19,15 @@ var testSchemas = map[string]*Schema{
 		Indexes: []Index{{Mode: 'k', Columns: []string{"e"}}}},
 	"customer": {Columns: []string{"id", "name", "city"},
 		Indexes: []Index{{Mode: 'k', Columns: []string{"id"}}}},
-	"supplier": {Columns: []string{"id", "name", "city"}, Indexes: []Index{
-		{Mode: 'k', Columns: []string{"id"}},
+	"supplier": {Columns: []string{"supplier", "name", "city"}, Indexes: []Index{
+		{Mode: 'k', Columns: []string{"supplier"}},
 		{Mode: 'i', Columns: []string{"city"}}}},
-	"hist": {Columns: []string{"date", "item", "id", "cost"},
-		Indexes: []Index{{Mode: 'k', Columns: []string{"date", "item", "id"}}}},
-	"hist2": {Columns: []string{"date", "item", "id", "cost"},
-		Indexes: []Index{{Mode: 'k', Columns: []string{"date"}}}},
+	"hist": {Columns: []string{"date", "item", "id", "cost"}, Indexes: []Index{
+		{Mode: 'i', Columns: []string{"date"}},
+		{Mode: 'k', Columns: []string{"date", "item", "id"}}}},
+	"hist2": {Columns: []string{"date", "item", "id", "cost"}, Indexes: []Index{
+		{Mode: 'i', Columns: []string{"id"}},
+		{Mode: 'k', Columns: []string{"date"}}}},
 	"trans": {Columns: []string{"item", "id", "cost", "date"}, Indexes: []Index{
 		{Mode: 'k', Columns: []string{"date", "item", "id"}},
 		{Mode: 'i', Columns: []string{"item"}}}},
@@ -39,6 +41,14 @@ var testSchemas = map[string]*Schema{
 		{Mode: 'k', Columns: []string{"b"}},
 		{Mode: 'k', Columns: []string{"c"}},
 		{Mode: 'i', Columns: []string{"d"}}}},
+	"cus": {Columns: []string{"cnum", "abbrev", "name"},
+		Indexes: []Index{{Mode: 'k', Columns: []string{"cnum"}}}},
+	"task": {Columns: []string{"tnum", "cnum"},
+		Indexes: []Index{{Mode: 'k', Columns: []string{"tnum"}}}},
+	"co": {Columns: []string{"tnum", "signed"},
+		Indexes: []Index{{Mode: 'k', Columns: []string{"tnum"}}}},
+	"alias": {Columns: []string{"id", "name2"},
+		Indexes: []Index{{Mode: 'k', Columns: []string{"id"}}}},
 }
 
 func (testTran) GetSchema(table string) *Schema {
@@ -46,8 +56,10 @@ func (testTran) GetSchema(table string) *Schema {
 }
 
 var testInfo = map[string]*meta.Info{
+	"alias": {Nrows: 10, Size: 1000},
+	"task":  {Nrows: 200, Size: 20000},
+	"trans": {Nrows: 1000, Size: 100000},
 	"hist2": {Nrows: 1000, Size: 100000},
-	"supplier": {Nrows: 1000, Size: 100000},
 }
 
 func (testTran) GetInfo(table string) *meta.Info {
