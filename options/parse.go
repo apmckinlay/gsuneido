@@ -4,7 +4,6 @@
 package options
 
 import (
-	"os"
 	"strings"
 )
 
@@ -75,8 +74,7 @@ loop:
 	}
 	CmdLine = remainder(args)
 	if Action == "client" {
-		temp := os.TempDir() + "/"
-		Errlog = temp + "suneido" + Port + ".err"
+		Errlog = "suneido" + Port + ".err"
 	}
 }
 

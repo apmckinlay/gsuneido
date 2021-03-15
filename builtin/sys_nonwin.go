@@ -57,3 +57,7 @@ func WndProcCount() int {
 func GetGuiResources() (int, int) {
 	return 0, 0
 }
+
+func ErrlogDir() string {
+	return os.TempDir()
+}

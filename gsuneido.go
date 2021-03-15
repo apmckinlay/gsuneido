@@ -167,11 +167,12 @@ func relaunchWithRedirect() {
 	if options.NoRelaunch || options.Redirected() {
 		return // to avoid infinite loop
 	}
-	path, _ := os.Executable()
-	f, err := os.OpenFile(options.Errlog, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0666)
+	errlog := builtin.ErrlogDir() + options.Errlog
+	f, err := os.OpenFile(errlog, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0666)
 	if err != nil {
 		Fatal(err.Error())
 	}
+	path, _ := os.Executable()
 	cmd := exec.Command(path, os.Args[1:]...)
 	cmd.Stdout = f
 	cmd.Stderr = f

@@ -6,6 +6,8 @@
 package builtin
 
 import (
+	"bytes"
+	"syscall"
 	"unsafe"
 
 	"github.com/apmckinlay/gsuneido/builtin/goc"
@@ -57,7 +59,7 @@ var _ = builtin2("DragQueryFile(hDrop, iFile)",
 			intArg(a),
 			intArg(b),
 			uintptr(buf),
-			n + 1)
+			n+1)
 		return SuStr(heap.GetStrN(buf, int(n)))
 	})
 
@@ -203,3 +205,22 @@ type BROWSEINFO struct {
 }
 
 const nBROWSEINFO = unsafe.Sizeof(BROWSEINFO{})
+
+var shGetFolderPath = shell32.MustFindProc("SHGetFolderPathA").Addr()
+
+func ErrlogDir() string {
+	const CSIDL_APPDATA = 0x001a
+	const CSIDL_FLAG_CREATE = 0x8000
+	var buf [MAX_PATH]byte
+	rtn, _, _ := syscall.Syscall6(shGetFolderPath, 5,
+		0,
+		CSIDL_APPDATA|CSIDL_FLAG_CREATE,
+		0,
+		0,
+		uintptr(unsafe.Pointer(&buf[0])),
+		0)
+	if rtn < 0 {
+		return "" // failed
+	}
+	return string(buf[:bytes.IndexByte(buf[:], 0)]) + `\`
+}
