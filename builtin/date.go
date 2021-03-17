@@ -93,7 +93,11 @@ func named(args []Value) Value {
 	if args[8] != nil {
 		millisecond = ToInt(args[8])
 	}
-	return NormalizeDate(year, month, day, hour, minute, second, millisecond)
+	d := NormalizeDate(year, month, day, hour, minute, second, millisecond)
+	if d == NilDate {
+		return False
+	}
+	return d
 }
 
 func (d *suDateGlobal) Lookup(t *Thread, method string) Callable {
