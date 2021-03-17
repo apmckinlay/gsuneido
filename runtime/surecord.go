@@ -581,7 +581,7 @@ func (r *SuRecord) getFromRow(key string) Value {
 // using the already packed value from the row when possible.
 // It does not add dependencies or handle special fields (e.g. _lower!)
 func (r *SuRecord) getPacked(t *Thread, key string) string {
-	result := r.ob.getIfPresent(SuStr(key))
+	result := r.ob.getIfPresent(SuStr(key)) // NOTE: ob.getIfPresent
 	packed := ""
 	if result == nil && r.row != nil { // even if !r.userow
 		if s := r.row.GetRaw(r.hdr, key); s != "" {
@@ -818,7 +818,7 @@ func (r *SuRecord) ToRecord(t *Thread, hdr *Header) Record {
 		}
 	}
 	if tsField != "" && !r.isReadOnly() {
-		r.put(t, SuStr(tsField), ts)
+		r.ob.set(SuStr(tsField), ts) // NOTE: ob.set
 	}
 	return rb.Build()
 }
