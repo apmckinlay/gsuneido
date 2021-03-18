@@ -321,6 +321,18 @@ func (q1 *Query1) bestPrefixed(indexes [][]string, order []string,
 	return best
 }
 
+type bestIndex struct {
+	index []string
+	cost  Cost
+}
+
+func (bi *bestIndex) update(index []string, cost Cost) {
+	if bi.index == nil || cost < bi.cost {
+		bi.index = index
+		bi.cost = cost
+	}
+}
+
 // prefixed returns whether an index supplies an order, given what's fixed
 func (*Query1) prefixed(index []string, order []string, fixed []Fixed) bool {
 	i := 0
@@ -343,18 +355,6 @@ func (*Query1) prefixed(index []string, order []string, fixed []Fixed) bool {
 		o++
 	}
 	return o >= on
-}
-
-type bestIndex struct {
-	index []string
-	cost  Cost
-}
-
-func (bi *bestIndex) update(index []string, cost Cost) {
-	if bi.index == nil || cost < bi.cost {
-		bi.index = index
-		bi.cost = cost
-	}
 }
 
 // Query2 -----------------------------------------------------------
