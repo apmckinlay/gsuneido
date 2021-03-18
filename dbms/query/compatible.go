@@ -8,6 +8,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/sset"
 )
 
+// Compatible is shared by Intersect, Minus, and Union
 type Compatible struct {
 	Query2
 	allCols  []string

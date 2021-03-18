@@ -12,7 +12,7 @@ import (
 
 type Union struct {
 	Compatible
-	fixed    []Fixed
+	fixed    []Fixed // lazy, calculated by Fixed()
 	strategy unionStrategy
 }
 
@@ -82,8 +82,8 @@ func (u *Union) nrowsCalc(n1, n2 int) int {
 		return n1 + n2
 	}
 	min := ints.Max(n1, n2) // smaller could be all duplicates
-	max := n1 + n2 // could be no duplicates
-	return (min + max) / 2 // guess half way between
+	max := n1 + n2          // could be no duplicates
+	return (min + max) / 2  // guess half way between
 }
 
 func (u *Union) Transform() Query {
@@ -93,6 +93,7 @@ func (u *Union) Transform() Query {
 }
 
 func (u *Union) Fixed() []Fixed {
+	//TODO why not just do this in Init ?
 	if u.fixed != nil { // once only
 		return u.fixed
 	}

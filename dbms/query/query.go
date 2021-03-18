@@ -15,8 +15,8 @@
 			Where
 			Query2
 				Compatible
-					Minus
 					Intersect
+					Minus
 					Union
 				Join
 					LeftJoin
@@ -139,6 +139,7 @@ const outOfOrder = 10 // minimal penalty for executing out of order
 
 const impossible = Cost(ints.MaxInt / 64) // allow for adding IMPOSSIBLE's
 
+// gin is used with be e.g. defer be(gin(...))
 func gin(args ...interface{}) string {
 	trace(args...)
 	indent++
