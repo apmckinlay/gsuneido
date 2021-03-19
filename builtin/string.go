@@ -337,34 +337,6 @@ func init() {
 			}
 			return NewSuObject(vals)
 		}),
-		"Substr": method2("(i, n=false)", func(this, arg1, arg2 Value) Value {
-			s := ToStr(this)
-			sn := len(s)
-			i := ToIndex(arg1)
-			if i < 0 {
-				i += sn
-				if i < 0 {
-					i = 0
-				}
-			}
-			if i > sn {
-				i = sn
-			}
-			n := sn - i
-			if arg2 != False {
-				n = ToInt(arg2)
-				if n < 0 {
-					n += sn - i
-					if n < 0 {
-						n = 0
-					}
-				}
-			}
-			if i+n > sn {
-				n = sn - i
-			}
-			return SuStr(s[i : i+n])
-		}),
 		"Suffix?": method1("(string)", func(this, arg Value) Value {
 			return SuBool(strings.HasSuffix(ToStr(this), ToStr(arg)))
 		}),
