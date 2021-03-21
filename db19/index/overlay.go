@@ -79,6 +79,10 @@ func (ov *Overlay) Lookup(key string) uint64 {
 	return 0
 }
 
+func (ov *Overlay) RangeFrac(org, end string) float32 {
+	return ov.bt.RangeFrac(org, end)
+}
+
 func (ov *Overlay) Check(fn func(uint64)) int {
 	n, _, _ := ov.bt.Check(fn)
 	return n

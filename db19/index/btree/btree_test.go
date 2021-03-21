@@ -4,6 +4,7 @@
 package btree
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 	"testing"
@@ -107,4 +108,48 @@ func Examplebtree_MergeAndSave() {
 	// offset 4  LEAF
 	// '' 1001 1002 1003
 	// ------------------------------>>>
+}
+
+func TestBtreeFracPos(t *testing.T) {
+	var bt *btree
+	makeBtree := func(size int) {
+		b := Builder(stor.HeapStor(8192))
+		for i := 0; i < size; i++ {
+			key := fmt.Sprintf("%04d", i)
+			b.Add(key, 1)
+		}
+		bt = b.Finish()
+	}
+	test := func(key string, expected float32) {
+		t.Helper()
+		fracPos := bt.fracPos(key)
+		diff := expected - fracPos
+		if diff < 0 {
+			diff = -diff
+		}
+		if diff > .02 {
+			t.Error("\nkey", fmt.Sprintf("%q", key),
+				"got", fracPos, "expected", expected, "difference", diff)
+		}
+	}
+	makeBtree(10) // single root leaf node
+	test(ixkey.Min, 0)
+	test(" ", 0)
+	test("0000", 0)
+	test("0001", .1)
+	test("0009", .9)
+	test("~", .9)
+	test(ixkey.Max, 1)
+
+	makeBtree(10000)
+	// var diff float32
+	for i := 0; i < 10000; i += 250 {
+		key := fmt.Sprintf("%04d", i)
+		// f := bt.fracPos(key)
+		exp := float32(i) / 10000
+		test(key, exp)
+		// fmt.Printf("%d %.3f %+.3f\n", i, f, f - exp)
+		// diff += f - exp
+	}
+	// fmt.Println("total diff", diff, "avg", diff / 40)
 }

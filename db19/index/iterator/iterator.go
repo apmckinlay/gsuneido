@@ -3,6 +3,8 @@
 
 package iterator
 
+import "github.com/apmckinlay/gsuneido/db19/index/ixkey"
+
 // T is the interface for a Suneido style iterator
 type T interface {
 	// Eof returns true if the index is empty,
@@ -44,11 +46,4 @@ type Range struct {
 	End string
 }
 
-const Min = ""
-const Max = "\xff\xff\xff\xff\xff\xff\xff\xff"
-// Technically there is no maximum key string.
-// However, in practice keys are packed values, encoded when composite.
-// Packed values start with a type byte from 0 to 7 so 0xff will be larger.
-// And 0xff will be larger than any ascii strings.
-
-var All = Range{Org: Min, End: Max}
+var All = Range{Org: ixkey.Min, End: ixkey.Max}

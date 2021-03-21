@@ -18,6 +18,13 @@ import (
 	"github.com/apmckinlay/gsuneido/util/hacks"
 )
 
+const Min = ""
+const Max = "\xff\xff\xff\xff\xff\xff\xff\xff"
+// Technically there is no maximum key string.
+// However, in practice keys are packed values, encoded when composite.
+// Packed values start with a type byte from 0 to 7 so 0xff will be larger.
+// And 0xff will be larger than any ascii strings.
+
 // Spec specifies the field(s) in an index key
 type Spec struct {
 	// Fields specifies the fields in the key.

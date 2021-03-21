@@ -41,10 +41,13 @@ const maxlevels = 8
 var MaxNodeSize = 256 //TODO tune
 
 // EntrySize is the estimated average entry size
-const EntrySize = 12
+const EntrySize = 11
 
 // TreeHeight is the estimated average tree height
 const TreeHeight = 4
+
+var AvgNodeSize = MaxNodeSize // mostly full due to compact
+var Fanout = AvgNodeSize / EntrySize
 
 // GetLeafKey is used to get the key for a data offset.
 // It is a dependency that must be injected
@@ -259,6 +262,80 @@ func Read(st *stor.Stor, r *stor.Reader) *btree {
 	root := r.Get5()
 	treeLevels := r.Get1()
 	return OpenBtree(st, root, treeLevels)
+}
+
+//-------------------------------------------------------------------
+
+// RangeFrac returns the fraction of the btree (0 to 1) in the range org to end
+func (bt *btree) RangeFrac(org, end string) float32 {
+	if bt.empty() {
+		return 1
+	}
+	frac := bt.fracPos(end) - bt.fracPos(org)
+	const minFrac = 1e-9
+	if frac < minFrac {
+		return minFrac
+	}
+	return frac
+}
+
+func (bt *btree) empty() bool {
+	if bt.treeLevels > 0 {
+		return false
+	}
+	root := bt.getNode(bt.root)
+	return len(root) == 0
+}
+
+func (bt *btree) fracPos(key string) float32 {
+	if key == ixkey.Min {
+		return 0
+	}
+	if key == ixkey.Max {
+		return 1
+	}
+	off := bt.root
+	node := bt.getNode(off)
+	i := 0
+	n := 0
+	for it := node.iter(); it.next(); n++ {
+		if key >= string(it.known) {
+			i = n
+			off = it.offset
+		}
+	}
+	frac := float32(i) / float32(n)
+	if bt.treeLevels == 0 {
+		return frac
+	}
+	//===
+	div := float32(n) // each node is 1/n of the keys
+	node = bt.getNode(off)
+	i, n = 0, 0
+	for it := node.iter(); it.next(); n++ {
+		if key >= string(it.known) {
+			i = n
+			off = it.offset
+		}
+	}
+	f := float32(i) / float32(n)
+	frac += f / div
+	if bt.treeLevels == 1 {
+		return frac
+	}
+	//===
+	div *= float32(Fanout)
+	node = bt.getNode(off)
+	i, n = 0, 0
+	for it := node.iter(); it.next(); n++ {
+		if key >= string(it.known) {
+			i = n
+			off = it.offset
+		}
+	}
+	f = float32(i) / float32(n)
+	frac += f / div
+	return frac
 }
 
 // trace ------------------------------------------------------------

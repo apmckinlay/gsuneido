@@ -342,7 +342,7 @@ func (it *nodeIter) copyFrom(src *nodeIter) {
 func (nd node) stats() {
 	n := nd.check(nil)
 	avg := float32(len(nd)-7*n) / float32(n)
-	print("    n", n, "len", len(nd), "avg", avg)
+	print("n", n, "len", len(nd), "avg", avg)
 }
 
 func (nd node) check(get func(uint64) string) int {
