@@ -11,13 +11,16 @@ import (
 
 type Table struct {
 	cache
-	useTempIndex
 	name   string
 	t      QueryTran
 	schema *Schema
 	info   *meta.Info
 	// index is the index that will be used to access the data.
 	// It is set by optimize.
+	index []string
+}
+
+type tableApproach struct {
 	index []string
 }
 
@@ -85,17 +88,14 @@ func (tbl *Table) Updateable() bool {
 	return true
 }
 
-func (tbl *Table) optimize(_ Mode, index []string, act action) Cost {
+func (tbl *Table) optimize(_ Mode, index []string) (Cost, interface{}) {
 	index = tbl.findIndex(index)
 	if index == nil {
-		return impossible
-	}
-	if act == freeze {
-		tbl.index = index
+		return impossible, nil
 	}
 	indexReadCost := tbl.info.Nrows * btree.EntrySize
 	dataReadCost := int(tbl.info.Size)
-	return indexReadCost + dataReadCost
+	return indexReadCost + dataReadCost, tableApproach{index: index}
 }
 
 func (tbl *Table) findIndex(index []string) []string {
@@ -110,7 +110,8 @@ func (tbl *Table) findIndex(index []string) []string {
 	return nil
 }
 
-func (tbl *Table) addTempIndex(QueryTran) {
+func (tbl *Table) setApproach(_ []string, approach interface{}, _ QueryTran) {
+	tbl.index = approach.(tableApproach).index
 }
 
 // lookupCost returns the cost of one lookup

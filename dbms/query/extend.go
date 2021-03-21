@@ -137,9 +137,13 @@ func (e *Extend) Fixed() []Fixed {
 	return e.fixed
 }
 
-func (e *Extend) optimize(mode Mode, index []string, act action) Cost {
+func (e *Extend) optimize(mode Mode, index []string) (Cost, interface{}) {
 	if !sset.Disjoint(index, e.cols) {
-		return impossible
+		return impossible, nil
 	}
-	return Optimize(e.source, mode, index, act)
+	return Optimize(e.source, mode, index), nil
+}
+
+func (e *Extend) setApproach(index []string, _ interface{}, tran QueryTran) {
+	e.source = SetApproach(e.source, index, tran)
 }

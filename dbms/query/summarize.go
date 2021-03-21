@@ -19,8 +19,12 @@ type Summarize struct {
 	ops      []string
 	ons      []string
 	wholeRow bool
+	summarizeApproach
+}
+
+type summarizeApproach struct {
 	strategy sumStrategy
-	via      []string
+	index    []string
 }
 
 type sumStrategy int
@@ -140,7 +144,7 @@ func (su *Summarize) nrows() int {
 }
 
 func (su *Summarize) rowSize() int {
-	return su.source.rowSize() + len(su.cols) * 8
+	return su.source.rowSize() + len(su.cols)*8
 }
 
 func (su *Summarize) Updateable() bool {
@@ -152,43 +156,28 @@ func (su *Summarize) Transform() Query {
 	return su
 }
 
-func (su *Summarize) optimize(mode Mode, index []string, act action) Cost {
-	seqCost := su.seqCost(mode, index, assess)
-	idxCost := su.idxCost(mode, assess)
-	mapCost := su.mapCost(mode, index, assess)
-
-	if act == assess {
-		return ints.Min(seqCost, ints.Min(idxCost, mapCost))
-	}
-
-	if seqCost <= idxCost && seqCost <= mapCost {
-		return su.seqCost(mode, index, freeze)
-	} else if idxCost <= mapCost {
-		return su.idxCost(mode, freeze)
-	} else {
-		return su.mapCost(mode, index, freeze)
-	}
+func (su *Summarize) optimize(mode Mode, index []string) (Cost, interface{}) {
+	seqCost, seqApp := su.seqCost(mode, index)
+	idxCost, idxApp := su.idxCost(mode)
+	mapCost, mapApp := su.mapCost(mode, index)
+	return min3(seqCost, seqApp, idxCost, idxApp, mapCost, mapApp)
 }
 
-func (su *Summarize) seqCost(mode Mode, index []string, act action) Cost {
-	if act == freeze {
-		su.strategy = sumSeq
-	}
+func (su *Summarize) seqCost(mode Mode, index []string) (Cost, interface{}) {
+	approach := &summarizeApproach{strategy: sumSeq}
 	if len(su.by) == 0 || containsKey(su.by, su.source.Keys()) {
-		if len(su.by) == 0 {
-			su.via = nil
-		} else {
-			su.via = index
+		if len(su.by) != 0 {
+			approach.index = index
 		}
-		return Optimize(su.source, mode, su.via, freeze)
+		cost := Optimize(su.source, mode, su.index)
+		return cost, approach
 	}
 	best := su.bestPrefixed(su.sourceIndexes(index), su.by, mode)
-	if act == assess || best.cost >= impossible {
-		return best.cost
+	if best.cost >= impossible {
+		return impossible, nil
 	}
-	su.via = best.index
-	// optimize1 to bypass temp index
-	return optimize1(su.source, mode, best.index, freeze)
+	approach.index = best.index
+	return best.cost, approach
 }
 func (su *Summarize) sourceIndexes(index []string) [][]string {
 	if index == nil {
@@ -204,32 +193,29 @@ func (su *Summarize) sourceIndexes(index []string) [][]string {
 	return indexes
 }
 
-func (su *Summarize) idxCost(mode Mode, act action) Cost {
+func (su *Summarize) idxCost(mode Mode) (Cost, interface{}) {
 	if !su.minmax1() {
-		return impossible
+		return impossible, nil
 	}
-	// optimize1 to bypass temp index
 	// dividing by nrecords since we're only reading one record
 	nr := ints.Max(1, su.source.nrows())
-	cost := optimize1(su.source, mode, su.ons, freeze) / nr
-	if act == freeze {
-		su.strategy = sumIdx
-		su.via = su.ons
-	}
-	return cost
+	cost := Optimize(su.source, mode, su.ons) / nr
+	approach := &summarizeApproach{strategy: sumIdx, index: su.ons}
+	return cost, approach
 }
 
-func (su *Summarize) mapCost(mode Mode, index []string, act action) Cost {
+func (su *Summarize) mapCost(mode Mode, index []string) (Cost, interface{}) {
 	// can only provide 'by' as index
 	if !str.List(su.by).HasPrefix(index) {
-		return impossible
+		return impossible, nil
 	}
-	// optimize1 to bypass temp index
-	cost := optimize1(su.source, mode, nil, freeze)
-	// add 50% for map overhead
-	cost += cost / 2
-	if act == freeze {
-		su.strategy = sumMap
-	}
-	return cost
+	cost := Optimize(su.source, mode, nil)
+	cost += cost / 2 // add 50% for map overhead
+	approach := &summarizeApproach{strategy: sumMap}
+	return cost, approach
+}
+
+func (su *Summarize) setApproach(_ []string, approach interface{}, tran QueryTran) {
+	su.summarizeApproach = *approach.(*summarizeApproach)
+	su.source = SetApproach(su.source, su.index, tran)
 }

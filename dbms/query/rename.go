@@ -135,3 +135,7 @@ func (r *Rename) Transform() Query {
 	r.source = r.source.Transform()
 	return r
 }
+
+func (r *Rename) setApproach(index []string, _ interface{}, tran QueryTran) {
+	r.source = SetApproach(r.source, index, tran)
+}

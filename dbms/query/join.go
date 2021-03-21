@@ -17,6 +17,10 @@ type Join struct {
 	nr int
 }
 
+type joinApproach struct {
+	reverse bool
+}
+
 type joinType int
 
 const (
@@ -112,24 +116,21 @@ func (jn *Join) Transform() Query {
 	return jn
 }
 
-func (jn *Join) optimize(mode Mode, index []string, act action) Cost {
+func (jn *Join) optimize(mode Mode, index []string) (Cost, interface{}) {
 	defer be(gin("Join", jn, index))
-	cost1 := jn.opt(jn.source, jn.source2, jn.joinType, mode, index, assess)
+	cost := jn.opt(jn.source, jn.source2, jn.joinType, mode, index)
 	cost2 := outOfOrder +
-		jn.opt(jn.source2, jn.source, jn.joinType.reverse(), mode, index, assess)
-	trace("cost1", cost1, "cost2 (reverse)", cost2)
-	cost := ints.Min(cost1, cost2)
+		jn.opt(jn.source2, jn.source, jn.joinType.reverse(), mode, index)
+	trace("cost1", cost, "cost2 (reverse)", cost2)
+	approach := &joinApproach{}
+	if cost2 < cost {
+		cost = cost2
+		approach.reverse = true
+	}
 	if cost >= impossible {
-		return impossible
+		return impossible, nil
 	}
-	if act == freeze {
-		if cost2 < cost1 { // swap
-			jn.source, jn.source2 = jn.source2, jn.source
-			jn.joinType = jn.joinType.reverse()
-		}
-		jn.opt(jn.source, jn.source2, jn.joinType, mode, index, freeze)
-	}
-	return cost
+	return cost, approach
 }
 
 func (jt joinType) reverse() joinType {
@@ -143,14 +144,14 @@ func (jt joinType) reverse() joinType {
 }
 
 func (jn *Join) opt(src1, src2 Query, joinType joinType,
-	mode Mode, index []string, act action) Cost {
+	mode Mode, index []string) Cost {
 	trace("OPT", paren(src1), "JOIN", joinType, paren(src2))
 	// always have to read all of source 1
-	cost1 := Optimize(src1, mode, index, act)
+	cost1 := Optimize(src1, mode, index)
 	if cost1 >= impossible {
 		return impossible
 	}
-	cost2 := Optimize(src2, mode, jn.by, act)
+	cost2 := Optimize(src2, mode, jn.by)
 	if cost2 >= impossible {
 		return impossible
 	}
@@ -161,6 +162,16 @@ func (jn *Join) opt(src1, src2 Query, joinType joinType,
 	trace("join opt", cost1, "+ (", nrows1, "*", src2.lookupCost(), ") + (",
 		cost2, "* 2/3 ) =", cost)
 	return cost
+}
+
+func (jn *Join) setApproach(index []string, approach interface{}, tran QueryTran) {
+	ap := approach.(*joinApproach)
+	if ap.reverse {
+		jn.source, jn.source2 = jn.source2, jn.source
+		jn.joinType = jn.joinType.reverse()
+	}
+	jn.source = SetApproach(jn.source, index, tran)
+	jn.source2 = SetApproach(jn.source2, jn.by, tran)
 }
 
 func (jn *Join) nrows() int {
@@ -178,7 +189,7 @@ func (jn *Join) nrows() int {
 	default:
 		panic("shouldn't reach here")
 	}
-	return nrows / 2 // actual will be between 0 and nrows so guess halfway
+	return nrows / 2 // actual will be between 0 and nrows so estimate halfway
 }
 
 func (jn *Join) rowSize() int {
@@ -218,8 +229,15 @@ func (lj *LeftJoin) Transform() Query {
 	return lj
 }
 
-func (lj *LeftJoin) optimize(mode Mode, index []string, act action) Cost {
-	return lj.opt(lj.source, lj.source2, lj.joinType, mode, index, act)
+func (lj *LeftJoin) optimize(mode Mode, index []string) (Cost, interface{}) {
+	approach := &joinApproach{}
+	cost := lj.opt(lj.source, lj.source2, lj.joinType, mode, index)
+	return cost, approach
+}
+
+func (lj *LeftJoin) setApproach(index []string, _ interface{}, tran QueryTran) {
+	lj.source = SetApproach(lj.source, index, tran)
+	lj.source2 = SetApproach(lj.source2, lj.by, tran)
 }
 
 func (lj *LeftJoin) nrows() int {

@@ -251,3 +251,7 @@ func (w *Where) split(q2 *Query2) bool {
 	}
 	return false
 }
+
+func (w *Where) setApproach(index []string, _ interface{}, tran QueryTran) {
+	w.source = SetApproach(w.source, index, tran)
+}

@@ -9,6 +9,10 @@ type Minus struct {
 	Compatible
 }
 
+type minusApproach struct {
+	keyIndex []string
+}
+
 func (m *Minus) String() string {
 	return m.String2("MINUS")
 }
@@ -38,13 +42,21 @@ func (m *Minus) Transform() Query {
 	return m.source.Transform()
 }
 
-func (m *Minus) optimize(mode Mode, index []string, act action) Cost {
-	m.keyIndex = bestKey(m.source2, mode)
+func (m *Minus) optimize(mode Mode, index []string) (Cost, interface{}) {
 	// iterate source and lookups on source2
-	cost := Optimize(m.source, mode, index, act) +
+	cost := Optimize(m.source, mode, index) +
 		(m.source.nrows() * m.source2.lookupCost())
-	if act == freeze {
-		Optimize(m.source2, mode, m.keyIndex, freeze)
+	keyIndex := bestKey(m.source2, mode)
+	if keyIndex == nil {
+		return impossible, nil
 	}
-	return cost
+	approach := &minusApproach{keyIndex: keyIndex}
+	return cost, approach
+}
+
+func (m *Minus) setApproach(index []string, approach interface{}, tran QueryTran) {
+	ap := approach.(*minusApproach)
+	m.keyIndex = ap.keyIndex
+	m.source = SetApproach(m.source, index, tran)
+	m.source2 = SetApproach(m.source2, m.keyIndex, tran)
 }

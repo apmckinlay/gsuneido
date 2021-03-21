@@ -9,16 +9,21 @@ import (
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
-func TestCache(*testing.T) {
+func TestCache(t *testing.T) {
 	var c cache
-	assert.This(int(c.cacheGet(nil))).Is(-1)
+	test := func (idx []string, expected int) {
+		t.Helper()
+		cost,_ := c.cacheGet(idx)
+		assert.T(t).This(cost).Is(expected)
+	}
+	test(nil, -1)
 	ix1 := []string{"one"}
-	assert.This(int(c.cacheGet(ix1))).Is(-1)
-	c.cacheAdd(ix1, 123)
-	assert.This(int(c.cacheGet(ix1))).Is(123)
+	test(ix1, -1)
+	c.cacheAdd(ix1, 123, nil)
+	test(ix1, 123)
 	ix2 := []string{"one", "two"}
-	assert.This(int(c.cacheGet(ix2))).Is(-1)
-	c.cacheAdd(ix2, 456)
-	assert.This(int(c.cacheGet(ix1))).Is(123)
-	assert.This(int(c.cacheGet(ix2))).Is(456)
+	test(ix2, -1)
+	c.cacheAdd(ix2, 456, nil)
+	test(ix1, 123)
+	test(ix2, 456)
 }

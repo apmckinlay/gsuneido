@@ -13,6 +13,11 @@ type Intersect struct {
 	Compatible
 }
 
+type intersectApproach struct {
+	keyIndex []string
+	reverse  bool
+}
+
 func (it *Intersect) String() string {
 	return it.String2("INTERSECT")
 }
@@ -39,7 +44,7 @@ func (it *Intersect) nrows() int {
 	}
 	min := 0
 	max := ints.Min(it.source.nrows(), it.source2.nrows())
-	return (min + max) / 2  // guess half way between
+	return (min + max) / 2 // estimate half way between
 }
 
 func (it *Intersect) rowSize() int {
@@ -52,28 +57,35 @@ func (it *Intersect) Transform() Query {
 	return it
 }
 
-func (it *Intersect) optimize(mode Mode, index []string, act action) Cost {
+func (it *Intersect) optimize(mode Mode, index []string) (Cost, interface{}) {
 	it.keyIndex = it.source2.Keys()[0]
 	cost1, key1 := it.cost(it.source, it.source2, mode, index)
 	cost2, key2 := it.cost(it.source2, it.source, mode, index) // reversed
 	cost2 += outOfOrder
 	cost := ints.Min(cost1, cost2)
-	if act == freeze {
-		if cost2 < cost1 {
-			it.source, it.source2, key1 = it.source2, it.source, key2
-		}
-		it.keyIndex = key1
-		Optimize(it.source, mode, index, freeze)
-		Optimize(it.source2, mode, it.keyIndex, freeze)
+	app := intersectApproach{keyIndex: key1}
+	if cost2 < cost1 {
+		app = intersectApproach{keyIndex: key2, reverse: true}
 	}
-	return cost
+	return cost, &app
 }
 
 func (*Intersect) cost(source, source2 Query, mode Mode, index []string) (
 	cost Cost, key []string) {
 	key = bestKey(source2, mode)
 	// iterate source and lookups on source2
-	cost = Optimize(source, mode, index, assess) +
-		(source.nrows() * source2.lookupCost())
-	return
+	cost = Optimize(source, mode, index) +
+		LookupCost(source2, mode, key, source.nrows())
+	return cost, key
+}
+
+func (it *Intersect) setApproach(index []string, approach interface{},
+	tran QueryTran) {
+	ap := approach.(*intersectApproach)
+	it.keyIndex = ap.keyIndex
+	if ap.reverse {
+		it.source, it.source2 = it.source2, it.source
+	}
+	it.source = SetApproach(it.source, index, tran)
+	it.source2 = SetApproach(it.source2, it.keyIndex, tran)
 }

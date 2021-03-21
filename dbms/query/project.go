@@ -13,7 +13,12 @@ import (
 
 type Project struct {
 	Query1
-	columns  []string
+	columns []string
+	unique  bool
+	projectApproach
+}
+
+type projectApproach struct {
 	strategy projectStrategy
 	index    []string
 }
@@ -42,7 +47,7 @@ func (p *Project) Init() {
 		}
 	}
 	if hasKey(p.source.Keys(), p.columns, p.source.Fixed()) {
-		p.strategy = projCopy
+		p.unique = true
 		p.includeDeps(srcCols)
 	}
 }
@@ -284,31 +289,23 @@ func (p *Project) Updateable() bool {
 	return p.strategy == projCopy && p.source.Updateable()
 }
 
-func (p *Project) optimize(mode Mode, index []string, act action) Cost {
-	if p.strategy == projCopy {
-		return Optimize(p.source, mode, index, act)
+func (p *Project) optimize(mode Mode, index []string) (Cost, interface{}) {
+	if p.unique {
+		approach := &projectApproach{strategy: projCopy, index: index}
+		return Optimize(p.source, mode, index), approach
 	}
-	idx, cost := p.bestIndex(mode, index)
-	if idx == nil {
-		if mode != readMode {
-			return impossible
-		}
-		if act == freeze {
-			p.strategy = projLookup
-		}
-		cost = Optimize(p.source, mode, index, act)
-		hashCost := 0 //TODO ???
-		// read once, build hash, read again filtering by hash
-		return cost + hashCost + cost
+	if idx, cost := p.bestIndex(mode, index); idx != nil {
+		approach := &projectApproach{strategy: projSeq, index: idx}
+		return cost, approach
 	}
-	// else have an idx
-	if act != freeze {
-		return cost
+	if mode != readMode {
+		return impossible, nil
 	}
-	p.strategy = projSeq
-	p.index = idx
-	// optimize1 to bypass temp index
-	return optimize1(p.source, mode, idx, freeze)
+	// read once, build hash, read again filtering by hash
+	hashCost := 0 //TODO ???
+	cost := 2 * Optimize(p.source, mode, index) + hashCost
+	approach := &projectApproach{strategy: projLookup, index: index}
+	return cost + hashCost + cost, approach
 }
 
 func (p *Project) bestIndex(mode Mode, index []string) ([]string, Cost) {
@@ -324,8 +321,7 @@ func (p *Project) bestIndex(mode Mode, index []string) ([]string, Cost) {
 	bestCost := impossible
 	for _, idx := range indexes {
 		if p.prefixed(fixed, idx, p.columns, nColsUnfixed) {
-			// optimize1 to bypass temp index
-			cost := optimize1(p.source, mode, idx, assess)
+			cost := Optimize(p.source, mode, idx)
 			if cost < bestCost {
 				bestCost = cost
 				bestIdx = idx
@@ -365,4 +361,9 @@ func (*Project) prefixed(fixed []Fixed, idx []string, cols []string, nColsUnfixe
 		}
 	}
 	return false
+}
+
+func (p *Project) setApproach(_ []string, approach interface{}, tran QueryTran) {
+	p.projectApproach = *approach.(*projectApproach)
+	p.source = SetApproach(p.source, p.index, tran)
 }

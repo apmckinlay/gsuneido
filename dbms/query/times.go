@@ -4,7 +4,6 @@
 package query
 
 import (
-	"github.com/apmckinlay/gsuneido/util/ints"
 	"github.com/apmckinlay/gsuneido/util/sset"
 	"github.com/apmckinlay/gsuneido/util/ssset"
 	"github.com/apmckinlay/gsuneido/util/str"
@@ -46,22 +45,21 @@ func (t *Times) Transform() Query {
 	return t
 }
 
-func (t *Times) optimize(mode Mode, index []string, act action) Cost {
-	cost1 := Optimize(t.source, mode, index, assess) +
-		t.source.nrows() * Optimize(t.source2, mode, nil, assess)
-	cost2 := Optimize(t.source2, mode, index, assess) +
-		t.source2.nrows() * Optimize(t.source, mode, nil, assess) + outOfOrder
-	cost := ints.Min(cost1, cost2)
-	if cost >= impossible {
-		return impossible
+func (t *Times) optimize(mode Mode, index []string) (Cost, interface{}) {
+	cost := Optimize(t.source, mode, index) +
+		t.source.nrows()*Optimize(t.source2, mode, nil)
+	costRev := Optimize(t.source2, mode, index) +
+		t.source2.nrows()*Optimize(t.source, mode, nil) + outOfOrder
+	if cost < costRev {
+		return cost, false
 	}
-	if act == assess {
-		return cost
+	return costRev, true
+}
+
+func (t *Times) setApproach(index []string, approach interface{}, tran QueryTran) {
+	if approach.(bool) {
+		t.source, t.source2 = t.source2, t.source
 	}
-	if cost2 < cost1 {
-		t.source, t.source2 = t.source2, t.source // swap
-	}
-	Optimize(t.source, mode, index, freeze)
-	Optimize(t.source2, mode, nil, freeze)
-	return cost
+	t.source = SetApproach(t.source, index, tran)
+	t.source2 = SetApproach(t.source2, nil, tran)
 }

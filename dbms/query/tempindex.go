@@ -11,10 +11,10 @@ type TempIndex struct {
 	tran  QueryTran
 }
 
-func (ti *TempIndex) Transform() Query {
-	return ti
-}
-
 func (ti *TempIndex) String() string {
 	return parenQ2(ti.source) + " TEMPINDEX" + str.Join("(,)", ti.order)
+}
+
+func (ti *TempIndex) Transform() Query {
+	return ti
 }

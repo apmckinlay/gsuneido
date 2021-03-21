@@ -45,7 +45,7 @@ func TestTransform(t *testing.T) {
 		"customer EXTEND a = 5, b = 6")
 	// combine project's
 	test("customer project id, name project id",
-		"customer PROJECT-COPY id")
+		"customer PROJECT id")
 	// combine rename's
 	test("customer rename id to x rename name to y",
 		"customer RENAME id to x, name to y")
@@ -60,26 +60,26 @@ func TestTransform(t *testing.T) {
 		"customer WHERE id is 3")
 	// remove empty extends
 	test("customer extend zone = 3 project id, city",
-		"customer PROJECT-COPY id, city")
+		"customer PROJECT id, city")
 	// remove empty renames
 	test("customer rename name to nom project id, city",
-		"customer PROJECT-COPY id, city")
+		"customer PROJECT id, city")
 
 	// move project before rename
 	test("customer rename id to num, name to nom project num, city",
-		"customer PROJECT-COPY id, city RENAME id to num")
+		"customer PROJECT id, city RENAME id to num")
 	// move project before rename & remove empty rename
 	test("customer rename id to num, name to nom project city",
 		"customer PROJECT city")
 	// move project before extend
 	test("customer extend a = 5, b = 6 project id, a, name",
-		"customer PROJECT-COPY id, name EXTEND a = 5")
+		"customer PROJECT id, name EXTEND a = 5")
 	// ... but not if extend uses fields not in project
 	test("customer extend a = city, b = 6 project id, a, name",
-		"customer EXTEND a = city, b = 6 PROJECT-COPY id, a, name")
+		"customer EXTEND a = city, b = 6 PROJECT id, a, name")
 	// move project before extend & remove empty extend
 	test("customer extend a = 5, b = 6 project id, name",
-		"customer PROJECT-COPY id, name")
+		"customer PROJECT id, name")
 
 	// move where before project
 	test("trans project id,cost where id is 5",

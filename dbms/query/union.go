@@ -16,6 +16,13 @@ type Union struct {
 	strategy unionStrategy
 }
 
+type unionApproach struct {
+	keyIndex   []string
+	strategy   unionStrategy
+	idx1, idx2 []string
+	reverse    bool
+}
+
 type unionStrategy int
 
 const (
@@ -83,7 +90,7 @@ func (u *Union) nrowsCalc(n1, n2 int) int {
 	}
 	min := ints.Max(n1, n2) // smaller could be all duplicates
 	max := n1 + n2          // could be no duplicates
-	return (min + max) / 2  // guess half way between
+	return (min + max) / 2  // estimate half way between
 }
 
 func (u *Union) Transform() Query {
@@ -93,7 +100,6 @@ func (u *Union) Transform() Query {
 }
 
 func (u *Union) Fixed() []Fixed {
-	//TODO why not just do this in Init ?
 	if u.fixed != nil { // once only
 		return u.fixed
 	}
@@ -126,89 +132,82 @@ func (u *Union) Fixed() []Fixed {
 	return u.fixed
 }
 
-func (u *Union) optimize(mode Mode, index []string, act action) Cost {
+func (u *Union) optimize(mode Mode, index []string) (Cost, interface{}) {
 	// if there is a required index, use Merge
 	if index != nil {
 		// if not disjoint then index must also be a key
 		if u.disjoint == "" && (!ssset.Contains(u.source.Keys(), index) ||
 			!ssset.Contains(u.source2.Keys(), index)) {
-			return impossible
+			return impossible, nil
 		}
-		if act == freeze {
-			u.keyIndex = index
-			u.strategy = unionMerge
-		}
-		return Optimize(u.source, mode, index, act) +
-			Optimize(u.source2, mode, index, act)
+		cost := Optimize(u.source, mode, index) + Optimize(u.source2, mode, index)
+		approach := &unionApproach{keyIndex: index, strategy: unionMerge,
+			idx1: index, idx2: index}
+		return cost, approach
 	}
 	// else no required index
 	if u.disjoint != "" {
-		// if disjoint use Follow
-		if act == freeze {
-			u.strategy = unionFollow
-		}
-		return Optimize(u.source, mode, nil, act) +
-			Optimize(u.source2, mode, nil, act)
+		cost := Optimize(u.source, mode, nil) + Optimize(u.source2, mode, nil)
+		approach := &unionApproach{strategy: unionFollow}
+		return cost, approach
 	}
 	// else not disjoint
-	mergeCost, mergeKey := u.optMerge(u.source, u.source2, mode)
-	lookupCost, lookupKey := u.optLookup(u.source, u.source2, mode)
-	lookupCostRev, lookupKeyRev := u.optLookup(u.source2, u.source, mode)
-	lookupCostRev += outOfOrder
-	cost := ints.Min(mergeCost, ints.Min(lookupCost, lookupCostRev))
+	mergeCost, mergeApp := u.optMerge(u.source, u.source2, mode)
+	lookupCost, lookupApp := u.optLookup(u.source, u.source2, mode)
+	lookupCostRev, lookupAppRev := u.optLookup(u.source2, u.source, mode)
+	cost, approach := min3(mergeCost, mergeApp,
+		lookupCost, lookupApp, lookupCostRev, lookupAppRev)
 	if cost >= impossible {
-		return impossible
+		return impossible, nil
 	}
-	if act == freeze {
-		if cost == mergeCost {
-			u.strategy = unionMerge
-			u.keyIndex = mergeKey
-			// optimize1 to bypass temp index
-			optimize1(u.source, mode, mergeKey, freeze)
-			optimize1(u.source2, mode, mergeKey, freeze)
-		} else {
-			u.strategy = unionLookup
-			if cost == lookupCostRev {
-				u.source, u.source2, lookupKey =
-					u.source2, u.source, lookupKeyRev // swap
-			}
-			u.keyIndex = lookupKey
-			// optimize1 to bypass temp index
-			optimize1(u.source, mode, nil, freeze)
-			optimize1(u.source2, mode, u.keyIndex, freeze)
-		}
-	}
-	return cost
+	return cost, approach
 }
 
-func (*Union) optMerge(source, source2 Query, mode Mode) (Cost, []string) {
+func (*Union) optMerge(source, source2 Query, mode Mode) (Cost, interface{}) {
 	keyidxs := ssset.Intersect(
 		ssset.Intersect(source.Keys(), source.Indexes()),
 		ssset.Intersect(source2.Keys(), source2.Indexes()))
 	var mergeKey []string
 	mergeCost := impossible
 	for _, k := range keyidxs {
-		// optimize1 to bypass temp index
-		cost := optimize1(source, mode, k, assess) +
-			optimize1(source2, mode, k, assess)
+		cost := Optimize(source, mode, k) + Optimize(source2, mode, k)
 		if cost < mergeCost {
 			mergeKey = k
 			mergeCost = cost
 		}
 	}
-	return mergeCost, mergeKey
+	approach := &unionApproach{keyIndex: mergeKey, strategy: unionMerge,
+		idx1: mergeKey, idx2: mergeKey}
+	return mergeCost, approach
 }
 
-func (*Union) optLookup(source, source2 Query, mode Mode) (Cost, []string) {
+func (u *Union) optLookup(source, source2 Query, mode Mode) (Cost, interface{}) {
 	var bestKey []string
 	bestCost := impossible
 	for _, key := range source2.Keys() {
-		cost := optimize1(source, mode, nil, assess) +
-			source.nrows()*source2.lookupCost()
-		if cost < bestCost {
+		cost := Optimize(source, mode, nil) +
+			LookupCost(source2, mode, key, source.nrows())
+		if cost < bestCost && Optimize(source2, mode, key) < impossible {
 			bestKey = key
 			bestCost = cost
 		}
 	}
-	return bestCost, bestKey
+	approach := &unionApproach{keyIndex: bestKey, strategy: unionLookup,
+		idx1: nil, idx2: bestKey}
+	if source == u.source2 {
+		approach.reverse = true
+		bestCost += outOfOrder
+	}
+	return bestCost, approach
+}
+
+func (u *Union) setApproach(_ []string, approach interface{}, tran QueryTran) {
+	app := approach.(*unionApproach)
+	u.strategy = app.strategy
+	u.keyIndex = app.keyIndex
+	if app.reverse {
+		u.source, u.source2 = u.source2, u.source
+	}
+	u.source = SetApproach(u.source, app.idx1, tran)
+	u.source2 = SetApproach(u.source2, app.idx2, tran)
 }

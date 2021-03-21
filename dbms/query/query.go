@@ -27,6 +27,8 @@ The cost model is based on the number of bytes read.
 package query
 
 import (
+	"fmt"
+
 	"github.com/apmckinlay/gsuneido/db19/index/btree"
 	"github.com/apmckinlay/gsuneido/db19/meta"
 	"github.com/apmckinlay/gsuneido/db19/meta/schema"
@@ -80,15 +82,16 @@ type Query interface {
 
 	String() string
 
-	cacheAdd(index []string, cost Cost)
-	cacheGet(index []string) Cost
+	cacheAdd(index []string, cost Cost, approach interface{})
 
-	optimize(mode Mode, index []string, act action) Cost
-	addTempIndex(tran QueryTran)
-	lookupCost() Cost //TODO temporary, combine with optimize
+	// cacheGet returns the cost and approach associated with an index
+	// or -1 if the index as not been added.
+	cacheGet(index []string) (Cost, interface{})
 
-	setTempIndex(index []string)
-	getTempIndex() []string
+	optimize(mode Mode, index []string) (cost Cost, approach interface{})
+	setApproach(index []string, approach interface{}, tran QueryTran)
+
+	lookupCost() Cost
 }
 
 // Mode is the transaction context - cursor, read, or update.
@@ -128,11 +131,12 @@ func Setup(q Query, mode Mode, t QueryTran) Query {
 	q.SetTran(t)
 	q.Init()
 	q = q.Transform()
-	cost := Optimize(q, mode, nil, freeze)
+	cost := Optimize(q, mode, nil)
 	if cost >= impossible {
 		panic("invalid query " + q.String())
 	}
-	return addTempIndex(q, t)
+	q = SetApproach(q, nil, t)
+	return q
 }
 
 const outOfOrder = 10 // minimal penalty for executing out of order
@@ -156,19 +160,28 @@ func be(arg string) {
 
 var indent = 0
 
-// Optimize is the start of optimization.
-// It handles whether or not to use a temp index.
-func Optimize(q Query, mode Mode, index []string, act action) (cost Cost) {
-	defer be(gin("Optimize", q, mode, index, act))
+// Optimize determines the best (lowest estimated cost) query execution approach
+func Optimize(q Query, mode Mode, index []string) (cost Cost) {
+	if cost, _ = q.cacheGet(index); cost >= 0 {
+		return cost
+	}
+	cost, app := optTempIndex(q, mode, index)
+	q.cacheAdd(index, cost, app)
+	return cost
+}
+
+func optTempIndex(q Query, mode Mode, index []string) (
+	cost Cost, approach interface{}) {
+	defer be(gin("Optimize", q, mode, index))
 	defer func() { trace("=>", cost) }()
 	if !sset.Subset(q.Columns(), index) {
-		return impossible
+		return impossible, nil
 	}
 	if index == nil || !tempIndexable(q, mode) {
-		return optimize1(q, mode, index, act)
+		return q.optimize(mode, index)
 	}
-	cost1 := optimize1(q, mode, index, assess)
-	noIndexCost := optimize1(q, mode, nil, assess)
+	cost1, app1 := q.optimize(mode, index)
+	noIndexCost, app2 := q.optimize(mode, nil)
 	tempIndexReadCost := q.nrows() * btree.EntrySize
 	tempIndexWriteCost := tempIndexReadCost * 2 // surcharge for memory ???
 	dataReadCost := q.nrows() * q.rowSize()
@@ -176,20 +189,19 @@ func Optimize(q Query, mode Mode, index []string, act action) (cost Cost) {
 	cost2 := noIndexCost + tempIndexCost
 	assert.That(cost2 >= 0)
 	trace("cost1", cost1, "cost2 (temp index)", cost2)
-
-	cost = ints.Min(cost1, cost2)
+	cost, approach = min(cost1, app1, cost2, app2)
 	if cost >= impossible {
-		return impossible
+		return impossible, nil
 	}
-	if act == freeze {
-		if cost2 < cost1 {
-			q.setTempIndex(index)
-			index = nil
-			trace("tempIndexCost", tempIndexCost)
-		}
-		optimize1(q, mode, index, freeze)
+	if cost2 < cost1 {
+		approach = &tempIndex{approach: approach, index: index}
 	}
-	return cost
+	return cost, approach
+}
+
+type tempIndex struct {
+	approach interface{}
+	index    []string
 }
 
 func tempIndexable(q Query, mode Mode) bool {
@@ -204,39 +216,46 @@ func tempIndexable(q Query, mode Mode) bool {
 	return ok
 }
 
-type action byte
-
-const (
-	assess action = 0
-	freeze action = 1
-)
-
-func (act action) String() string {
-	if act == freeze {
-		return "freeze"
+func min(cost1 Cost, app1 interface{}, cost2 Cost, app2 interface{}) (
+	Cost, interface{}) {
+	if cost1 <= cost2 {
+		return cost1, app1
 	}
-	return "assess"
+	return cost2, app2
 }
 
-// optimize1 handles caching
-func optimize1(q Query, mode Mode, index []string, act action) (cost Cost) {
-	if act == freeze {
-		return q.optimize(mode, index, freeze)
+func min3(cost1 Cost, app1 interface{}, cost2 Cost, app2 interface{},
+	cost3 Cost, app3 interface{}) (Cost, interface{}) {
+	cost, app := cost1, app1
+	if cost2 < cost {
+		cost, app = cost2, app2
 	}
-	if cost = q.cacheGet(index); cost >= 0 {
-		return cost
+	if cost3 < cost {
+		cost, app = cost3, app3
 	}
-	cost = q.optimize(mode, index, assess)
+	return cost, app
+}
+
+func LookupCost(q Query, mode Mode, index []string, nrows int) Cost {
+	if Optimize(q, mode, index) >= impossible {
+		return impossible
+	}
+	return q.lookupCost() * nrows
+}
+
+// SetApproach locks in the best approach.
+// It also adds temp indexes where required.
+func SetApproach(q Query, index []string, tran QueryTran) Query {
+	cost, approach := q.cacheGet(index)
+	if cost < 0 {
+		panic(fmt.Sprintln("MISSING", q, index))
+	}
 	assert.That(cost >= 0)
-	q.cacheAdd(index, cost)
-	return cost
-}
-
-func addTempIndex(q Query, tran QueryTran) Query {
-	q.addTempIndex(tran)
-	if ti := q.getTempIndex(); ti != nil {
-		return &TempIndex{Query1: Query1{source: q}, order: ti, tran: tran}
+	if app, ok := approach.(*tempIndex); ok {
+		q.setApproach(nil, app.approach, tran)
+		return &TempIndex{Query1: Query1{source: q}, order: app.index, tran: tran}
 	}
+	q.setApproach(index, approach, tran)
 	return q
 }
 
@@ -244,7 +263,6 @@ func addTempIndex(q Query, tran QueryTran) Query {
 
 type Query1 struct {
 	cache
-	useTempIndex
 	source Query
 }
 
@@ -288,16 +306,12 @@ func (q1 *Query1) SetTran(t QueryTran) {
 	q1.source.SetTran(t)
 }
 
-func (q1 *Query1) Transform() Query {
-	panic("should be overridden")
+func (q1 *Query1) optimize(mode Mode, index []string) (Cost, interface{}) {
+	return Optimize(q1.source, mode, index), nil
 }
 
-func (q1 *Query1) optimize(mode Mode, index []string, act action) Cost {
-	return Optimize(q1.source, mode, index, act)
-}
-
-func (q1 *Query1) addTempIndex(tran QueryTran) {
-	q1.source = addTempIndex(q1.source, tran)
+func (q1 *Query1) setApproach(_ []string, _ interface{}, _ QueryTran) {
+	panic("shouldn't reach here")
 }
 
 func (q1 *Query1) lookupCost() Cost {
@@ -313,8 +327,7 @@ func (q1 *Query1) bestPrefixed(indexes [][]string, order []string,
 	fixed := q1.source.Fixed()
 	for _, ix := range indexes {
 		if q1.prefixed(ix, order, fixed) {
-			// optimize1 to bypass tempindex
-			cost := optimize1(q1.source, mode, ix, assess)
+			cost := Optimize(q1.source, mode, ix)
 			best.update(ix, cost)
 		}
 	}
@@ -390,17 +403,8 @@ func (q2 *Query2) Updateable() bool {
 	return false
 }
 
-func (q2 *Query2) Transform() Query {
+func (q2 *Query2) optimize(Mode, []string) Cost {
 	panic("should be overridden")
-}
-
-func (q2 *Query2) optimize(Mode, []string, action) Cost {
-	panic("should be overridden")
-}
-
-func (q2 *Query2) addTempIndex(tran QueryTran) {
-	q2.source = addTempIndex(q2.source, tran)
-	q2.source2 = addTempIndex(q2.source2, tran)
 }
 
 func (q2 *Query2) keypairs() [][]string {
@@ -419,20 +423,6 @@ type q2i interface {
 }
 
 func (*Query2) tagQuery2() {
-}
-
-// temp index -------------------------------------------------------
-
-type useTempIndex struct {
-	tempIndex []string
-}
-
-func (uti *useTempIndex) setTempIndex(index []string) {
-	uti.tempIndex = index
-}
-
-func (uti *useTempIndex) getTempIndex() []string {
-	return uti.tempIndex
 }
 
 //-------------------------------------------------------------------
@@ -456,7 +446,7 @@ func bestKey(q Query, mode Mode) []string {
 	var best []string
 	bestCost := impossible
 	for _, key := range q.Keys() {
-		cost := Optimize(q, mode, key, assess)
+		cost := Optimize(q, mode, key)
 		cost += (len(key) - 1) * cost / 20 // ??? prefer shorter keys
 		if cost < bestCost {
 			best = key
