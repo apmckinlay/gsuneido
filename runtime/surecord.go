@@ -714,7 +714,8 @@ func (r *SuRecord) getRule(t *Thread, key string) Value {
 		assert.That(rule != nil)
 		return rule
 	}
-	if r.ob.defval != nil && t != nil {
+	//TODO key should be identifier but we have foobar?__protect
+	if r.ob.defval != nil && t != nil && key != "" {
 		return Global.FindName(t, "Rule_"+key)
 	}
 	return nil
