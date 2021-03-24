@@ -202,6 +202,9 @@ var GetDbms func() IDbms
 func (t *Thread) Dbms() IDbms {
 	if t.dbms == nil {
 		t.dbms = GetDbms()
+		if !t.UIThread {
+			t.dbms.SessionId(t.dbms.SessionId("") + ":" + t.Name)
+		}
 	}
 	return t.dbms
 }
