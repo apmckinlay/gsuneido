@@ -40,7 +40,7 @@ type T interface {
 
 // Range specifies (key >= org && key < end)
 // For key > org, increment org.
-// For key <= end, incrment end
+// For key <= end, increment end
 type Range struct {
 	Org string
 	End string
