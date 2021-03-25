@@ -5,7 +5,6 @@ package builtin
 
 import (
 	"strings"
-	"sync"
 
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
@@ -51,13 +50,12 @@ func (wi *wrapIter) IsConcurrent() Value {
 	return SuBool(wi.t == nil)
 }
 
-var threadPool = sync.Pool{New: func() interface{} { return NewThread() }}
-
 func (wi *wrapIter) call(method string) Value {
 	t := wi.t
 	if t == nil {
-		t = threadPool.Get().(*Thread)
-		defer threadPool.Put(t)
+		t = &Thread{}
+		t.Name = "*internal*"
+		defer t.Close()
 	}
 	return t.CallLookup(wi.it, method)
 }

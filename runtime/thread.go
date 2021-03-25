@@ -212,6 +212,7 @@ func (t *Thread) Dbms() IDbms {
 func (t *Thread) Close() {
 	if t.dbms != nil {
 		t.dbms.Close()
+		t.dbms = nil
 	}
 }
 
