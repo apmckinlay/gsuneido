@@ -133,3 +133,25 @@ func lt(x Record, y Record) bool {
 	}
 	return x.Len() < y.Len()
 }
+
+func TestDup(t *testing.T) {
+	var enc Encoder
+	enc2 := enc.Dup()
+	enc2.Add("foo")
+	s := enc2.String()
+	x := Decode(s)
+	assert.T(t).This(len(x)).Is(1)
+	assert.T(t).This(x[0]).Is("foo")
+}
+
+func TestDecode(t *testing.T) {
+	assert.T(t).This(Decode("")).Is(nil)
+	assert.T(t).This(Decode("foo")).Is([]string{"foo"})
+	assert.T(t).This(Decode("\x00\x00")).Is([]string{"", ""})
+	assert.T(t).This(Decode("foo\x00\x00bar")).Is([]string{"foo", "bar"})
+	var enc Encoder
+	enc.Add("\x00\x01")
+	enc.Add("\x01\x00")
+	s := enc.String()
+	assert.T(t).This(Decode(s)).Is([]string{"\x00\x01", "\x01\x00"})
+}

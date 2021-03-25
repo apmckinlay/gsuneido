@@ -11,10 +11,14 @@ import (
 
 type Table struct {
 	cache
-	name   string
-	t      QueryTran
-	schema *Schema
-	info   *meta.Info
+	name      string
+	columns   []string
+	indexes   [][]string
+	keys      [][]string
+	singleton bool
+	t         QueryTran
+	schema    *Schema
+	info      *meta.Info
 	// index is the index that will be used to access the data.
 	// It is set by optimize.
 	index []string
@@ -41,31 +45,37 @@ func (tbl *Table) SetTran(t QueryTran) {
 		panic("nonexistent table: " + tbl.name)
 	}
 	tbl.info = t.GetInfo(tbl.name)
+
+	cols := make([]string, 0, len(tbl.schema.Columns)+len(tbl.schema.Derived))
+	cols = append(cols, tbl.schema.Columns...)
+	cols = append(cols, tbl.schema.Derived...)
+	tbl.columns = cols
+
+	idxs := make([][]string, 0, len(tbl.schema.Indexes))
+	keys := make([][]string, 0, 1)
+	for _, ix := range tbl.schema.Indexes {
+		idxs = append(idxs, ix.Columns)
+		if ix.Mode == 'k' {
+			keys = append(keys, ix.Columns)
+			if len(ix.Columns) == 0 {
+				tbl.singleton = true
+			}
+		}
+	}
+	tbl.indexes = idxs
+	tbl.keys = keys
 }
 
 func (tbl *Table) Columns() []string {
-	allcols := make([]string, 0, len(tbl.schema.Columns)+len(tbl.schema.Derived))
-	allcols = append(allcols, tbl.schema.Columns...)
-	allcols = append(allcols, tbl.schema.Derived...)
-	return allcols
+	return tbl.columns
 }
 
 func (tbl *Table) Indexes() [][]string {
-	idxs := make([][]string, 0, 1)
-	for _, ix := range tbl.schema.Indexes {
-		idxs = append(idxs, ix.Columns)
-	}
-	return idxs
+	return tbl.indexes
 }
 
 func (tbl *Table) Keys() [][]string {
-	keys := make([][]string, 0, 1)
-	for _, ix := range tbl.schema.Indexes {
-		if ix.Mode == 'k' {
-			keys = append(keys, ix.Columns)
-		}
-	}
-	return keys
+	return tbl.keys
 }
 
 func (tbl *Table) nrows() int {
@@ -101,6 +111,9 @@ func (tbl *Table) optimize(_ Mode, index []string) (Cost, interface{}) {
 func (tbl *Table) findIndex(index []string) []string {
 	if index == nil {
 		return tbl.schema.Indexes[0].Columns
+	}
+	if tbl.singleton {
+		return index
 	}
 	for i := range tbl.schema.Indexes {
 		if str.Equal(index, tbl.schema.Indexes[i].Columns) {

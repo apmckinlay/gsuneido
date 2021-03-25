@@ -68,13 +68,13 @@ func (u *Unary) Columns() []string {
 var notEvalRaw = []string{}
 
 // CanEvalRaw returns true if Eval doesn't need to unpack the values.
-// It sets b.rawFlds which is later used by Eval.
+// It sets b.RawCols which is later used by Eval.
 func (b *Binary) CanEvalRaw(cols []string) bool {
 	if b.RawCols == nil {
 		if b.canEvalRaw2(cols) {
 			b.RawCols = cols
 			c := b.Rhs.(*Constant)
-			c.packed = Pack(c.Val.(Packable))
+			c.Packed = Pack(c.Val.(Packable))
 			return true
 		}
 		b.RawCols = notEvalRaw
@@ -132,7 +132,7 @@ func (b *Binary) Eval(c *Context) Value {
 	if b.RawCols != nil && str.Equal(b.RawCols, c.Hdr.GetFields()) {
 		id := b.Lhs.(*Ident)
 		lhs := c.Row.GetRaw(c.Hdr, id.Name)
-		rhs := b.Rhs.(*Constant).packed
+		rhs := b.Rhs.(*Constant).Packed
 		switch b.Tok {
 		case tok.Is:
 			return SuBool(lhs == rhs)

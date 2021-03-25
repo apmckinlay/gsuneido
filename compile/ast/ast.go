@@ -99,8 +99,8 @@ func (a *Ident) ParamName() string {
 type Constant struct {
 	exprNodeT
 	Val Value
-	// packed is used for queries
-	packed string
+	// Packed is used for queries
+	Packed string
 }
 
 func (a *Constant) String() string {
@@ -222,6 +222,9 @@ func (a *Nary) String() string {
 }
 
 func (a *Nary) Echo() string {
+	if len(a.Exprs) == 0 {
+		return ""
+	}
 	s := a.Exprs[0].Echo()
 	for _, e := range a.Exprs[1:] {
 		s += tokEcho[a.Tok] + e.Echo()

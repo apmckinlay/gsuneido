@@ -4,8 +4,12 @@
 package query
 
 import (
+	"sort"
+
 	"github.com/apmckinlay/gsuneido/compile/ast"
+	"github.com/apmckinlay/gsuneido/compile/tokens"
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
+	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/sset"
 	"github.com/apmckinlay/gsuneido/util/str"
@@ -13,17 +17,27 @@ import (
 
 type Where struct {
 	Query1
-	expr  *ast.Nary // And
-	fixed []Fixed
-	t     QueryTran
+	expr     *ast.Nary // And
+	fixed    []Fixed
+	t        QueryTran
+	tbl      *Table
+	colSels  map[string]filter
+	ffracs   map[string]float32
+	conflict bool
+	index    []string
+}
+
+type whereApproach struct {
+	index []string
 }
 
 func (w *Where) Init() {
 	w.Query1.Init()
 	if !sset.Subset(w.source.Columns(), w.expr.Columns()) {
-		panic("select: nonexistent columns: " + str.Join(", ",
+		panic("where: nonexistent columns: " + str.Join(", ",
 			sset.Difference(w.expr.Columns(), w.source.Columns())))
 	}
+	w.tbl, _ = w.source.(*Table)
 }
 
 func (w *Where) SetTran(t QueryTran) {
@@ -32,7 +46,11 @@ func (w *Where) SetTran(t QueryTran) {
 }
 
 func (w *Where) String() string {
-	return parenQ2(w.source) + " WHERE " + w.expr.Echo()
+	s := parenQ2(w.source) + " WHERE"
+	if len(w.expr.Exprs) > 0 {
+		s += " " + w.expr.Echo()
+	}
+	return s
 }
 
 func (w *Where) Fixed() []Fixed {
@@ -252,6 +270,398 @@ func (w *Where) split(q2 *Query2) bool {
 	return false
 }
 
-func (w *Where) setApproach(index []string, _ interface{}, tran QueryTran) {
-	w.source = SetApproach(w.source, index, tran)
+// optimize ---------------------------------------------------------
+
+func (w *Where) optimize(mode Mode, index []string) (Cost, interface{}) {
+	if w.tbl == nil || w.tbl.singleton {
+		// just act as filter
+		cost := Optimize(w.source, mode, index)
+		return cost, nil
+	}
+	if w.colSels == nil {
+		w.optInit()
+	}
+	if w.conflict {
+		return 0, nil
+	}
+	cost, index := w.bestIndex()
+	if cost >= impossible {
+		return impossible, nil
+	}
+	return cost, whereApproach{index: index}
+}
+
+func (w *Where) optInit() {
+	w.Fixed() // calc before altering expression
+	w.colSels = make(map[string]filter)
+	w.ffracs = make(map[string]float32)
+	cmps := w.extractCompares() // NOTE: modifies expr
+	if w.conflict {
+		return
+	}
+	colSels := w.comparesToFilters(cmps)
+	if w.conflict {
+		return
+	}
+	w.colSelsToIdxSels(colSels)
+}
+
+// extractCompares finds sub-expressions like <field> <op> <constant>
+func (w *Where) extractCompares() []cmpExpr {
+	cols := w.tbl.schema.Columns
+	exprs2 := make([]ast.Expr, 0, len(w.expr.Exprs))
+	cmps := make([]cmpExpr, 0, 4)
+	for _, expr := range w.expr.Exprs {
+		if c, ok := expr.(*ast.Constant); ok && c.Val == runtime.False {
+			w.conflict = true
+			return nil
+		}
+		if expr.CanEvalRaw(cols) {
+			if bin, ok := expr.(*ast.Binary); ok && bin.Tok != tokens.Isnt {
+				cmp := cmpExpr{
+					col: bin.Lhs.(*ast.Ident).Name,
+					op:  bin.Tok,
+					val: bin.Rhs.(*ast.Constant).Packed,
+				}
+				cmps = append(cmps, cmp)
+				continue
+			} else if in, ok := expr.(*ast.In); ok {
+				cmp := cmpExpr{
+					col:  in.E.(*ast.Ident).Name,
+					op:   tokens.In,
+					vals: in.Packed,
+				}
+				cmps = append(cmps, cmp)
+				continue
+			}
+		}
+		exprs2 = append(exprs2, expr)
+	}
+	if len(exprs2) != len(w.expr.Exprs) {
+		w.expr = &ast.Nary{Tok: tokens.And, Exprs: exprs2}
+	}
+	return cmps
+}
+
+func (w *Where) comparesToFilters(cmps []cmpExpr) map[string]filter {
+	// sort to group columns
+	sort.Slice(cmps, func(i, j int) bool { return cmps[i].col < cmps[j].col })
+	filters := make(map[string]filter)
+	f := filterAll
+	for i := range cmps {
+		f.andWith(cmps[i].toFilter())
+		if i+1 >= len(cmps) || cmps[i].col != cmps[i+1].col {
+			// end of a group of one column
+			if f.none() {
+				w.conflict = true
+				return nil
+			}
+			if !f.all() {
+				filters[cmps[i].col] = f
+			}
+			f = filterAll
+		}
+	}
+	return filters
+}
+
+func (w *Where) bestIndex() (Cost, []string) {
+	return 0, nil //TODO
+}
+
+func (w *Where) setApproach(index []string, app interface{}, tran QueryTran) {
+	if app != nil {
+		w.index = app.(whereApproach).index
+	} else {
+		w.source = SetApproach(w.source, index, tran)
+	}
+}
+
+// cmpExpr is <field> <op> <constant> or <field> in (<constants>)
+// which can be evaluated packed
+type cmpExpr struct {
+	col  string
+	op   tokens.Token
+	val  string   // packed (binary)
+	vals []string // packed (in)
+}
+
+func (cmp cmpExpr) String() string {
+	s := cmp.col + " " + cmp.op.String() + " "
+	if cmp.vals == nil {
+		s += packToStr(cmp.val)
+	} else {
+		sep := "("
+		for _, val := range cmp.vals {
+			s += sep + packToStr(val)
+			sep = ", "
+		}
+		s += ")"
+	}
+	return s
+}
+
+func (cmp *cmpExpr) toFilter() filter {
+	if cmp.op == tokens.In {
+		return filter{vals: cmp.vals}
+	}
+	// else binary
+	switch cmp.op {
+	case tokens.Is:
+		return filter{vals: []string{cmp.val}}
+	case tokens.Lt:
+		return filter{end: cmp.val}
+	case tokens.Lte:
+		return filter{end: ixkey.Increment(cmp.val)}
+	case tokens.Gt:
+		return filter{org: ixkey.Increment(cmp.val), end: ixkey.Max}
+	case tokens.Gte:
+		return filter{org: cmp.val, end: ixkey.Max}
+	default:
+		panic("shouldn't reach here")
+	}
+}
+
+//-------------------------------------------------------------------
+
+// filter is either a range or a list of values
+type filter struct {
+	// org is inclusive
+	org string
+	// end is exclusive
+	end string
+	// vals is nil for a range (org and end)
+	vals []string
+}
+
+var filterAll = filter{org: ixkey.Min, end: ixkey.Max}
+
+func (f filter) String() string {
+	if f.all() {
+		return "<all>"
+	}
+	if f.none() {
+		return "<none>"
+	}
+	if f.vals == nil {
+		return "(" + runtime.Unpack(f.org).String() + ".." +
+			packToStr(f.end) + ")"
+	}
+	s := "["
+	sep := ""
+	for _, v := range f.vals {
+		s += sep + packToStr(v)
+		sep = ","
+	}
+	return s + "]"
+}
+
+func (f *filter) isRange() bool {
+	return len(f.vals) == 0
+}
+
+func (f *filter) all() bool {
+	return len(f.vals) == 0 && f.org == ixkey.Min && f.end == ixkey.Max
+}
+
+func (f *filter) none() bool {
+	return len(f.vals) == 0 && f.org >= f.end
+}
+
+func (f *filter) andWith(cs2 filter) {
+	if f.isRange() && cs2.isRange() {
+		if cs2.org > f.org {
+			f.org = cs2.org
+		}
+		if cs2.end < f.end {
+			f.end = cs2.end
+		}
+	} else if !f.isRange() && !cs2.isRange() {
+		f.vals = sset.Intersect(f.vals, cs2.vals)
+		f.org, f.end = "", ""
+	} else { // set & range => set
+		if f.isRange() {
+			f.vals = cs2.vals
+			cs2.org, cs2.end = f.org, f.end
+		}
+		vals := make([]string, 0, len(f.vals)/2)
+		for _, v := range f.vals {
+			if cs2.org <= v && v < cs2.end {
+				vals = append(vals, v)
+			}
+		}
+		f.vals = vals
+		f.org, f.end = "", ""
+	}
+}
+
+func packToStr(s string) string {
+	if s == "" {
+		return "''"
+	}
+	if s[0] == 0xff {
+		return "<max>"
+	}
+	return runtime.Unpack(s).String()
+}
+
+//-------------------------------------------------------------------
+
+type idxSel struct {
+	index   []string
+	filters []filter
+}
+
+func (is idxSel) String() string {
+	s := str.Join(",", is.index)
+	sep := ": "
+	for _, f := range is.filters {
+		for _, v := range f.vals {
+			s += sep + showKey(is.index, v)
+			sep = " | "
+		}
+		if len(f.vals) == 0 {
+			s += sep + showKey(is.index, f.org) + ".." + showKey(is.index, f.end)
+			sep = " | "
+		}
+	}
+	return s
+}
+
+func showKey(index []string, key string) string {
+	if len(index) == 1 {
+		return packToStr(key)
+	}
+	s := ""
+	sep := ""
+	for _, t := range ixkey.Decode(key) {
+		s += sep + packToStr(t)
+		sep = ","
+	}
+	return s
+}
+
+// colSelsToIdxSels takes filters on individual columns
+// and returns filters on indexes (possibly multi-column).
+// We can use an index if leading columns have vals
+// and optionally a final column has a range.
+// This does not need to be all the index columns, it can be a prefix of them.
+func (w *Where) colSelsToIdxSels(colSels map[string]filter) []idxSel {
+	indexes := w.tbl.Indexes()
+	idxSels := make([]idxSel, 0, len(indexes)/2)
+	for _, idx := range indexes {
+		if filters, count := colSelsToIdxSel(colSels, idx); len(filters) > 0 {
+			exploded := explodeFilters(filters, [][]filter{nil})
+			filters := compositeFilters(idx, exploded, count)
+			idxSels = append(idxSels, idxSel{index: idx, filters: filters})
+		}
+	}
+	return idxSels
+}
+
+// colSelsToIdxSel returns filters for the columns of an index
+// or else nil if not possible.
+func colSelsToIdxSel(colSels map[string]filter, idx []string) ([]filter, int) {
+	const maxCount = 8 * 1024 // ???
+	filters := make([]filter, 0, len(idx))
+	count := 1
+	for _, col := range idx {
+		f, ok := colSels[col]
+		if !ok {
+			break
+		}
+		if len(f.vals) > 1 {
+			count *= len(f.vals)
+			if count > maxCount {
+				return nil, 0
+			}
+		}
+		filters = append(filters, f)
+		if f.isRange() {
+			count = -count
+			break // can't have anything after range
+		}
+	}
+	return filters, count
+}
+
+// explodeFilters converts multi vals filters to multi single vals filters.
+// e.g. (1|2)+(3|4) => 1+3, 1+4, 2+3, 2+4
+// The resulting lists of filters will contain only single vals or ranges.
+// Each recursion processes one element from remaining, adding to prefixes.
+func explodeFilters(remaining []filter, prefixes [][]filter) [][]filter {
+	f := remaining[0]
+	if len(f.vals) <= 1 { // single value or final range
+		for i := range prefixes {
+			prefixes[i] = append(prefixes[i], f)
+		}
+	} else { // len(f.vals) > 1
+		newpre := make([][]filter, 0, len(f.vals)*len(prefixes))
+		for i := range prefixes {
+			pre := prefixes[i]
+			// set cap to len so each append will make a new copy (COW)
+			pre = pre[:len(pre):len(pre)]
+			for _, v := range f.vals {
+				p := append(pre, filter{vals: []string{v}})
+				newpre = append(newpre, p)
+			}
+		}
+		prefixes = newpre
+	}
+	if len(remaining) > 1 {
+		return explodeFilters(remaining[1:], prefixes) // RECURSE
+	}
+	return prefixes
+}
+
+func compositeFilters(idx []string, filters [][]filter, count int) []filter {
+	encode := len(idx) > 1
+	if count > 0 {
+		return singleFilter(filters, encode)
+	}
+	// range
+	return multiFilters(filters, encode)
+}
+
+func singleFilter(filters [][]filter, encode bool) []filter {
+	vals := make([]string, len(filters))
+	for i, fltr := range filters {
+		if !encode {
+			vals[i] = fltr[0].vals[0]
+		} else {
+			var enc ixkey.Encoder
+			for _, f := range fltr {
+				enc.Add(f.vals[0])
+			}
+			vals[i] = enc.String()
+		}
+	}
+	return []filter{{vals: vals}}
+}
+
+func multiFilters(filters [][]filter, encode bool) []filter {
+	result := make([]filter, 0, len(filters))
+outer:
+	for _, fltr := range filters {
+		if !encode {
+			result = append(result, fltr[0])
+		} else {
+			var enc ixkey.Encoder
+			for _, f := range fltr {
+				if len(f.vals) == 1 {
+					enc.Add(f.vals[0])
+				} else { // final range
+					enc2 := enc.Dup()
+					enc.Add(f.org)
+					enc2.Add(f.end)
+					result = append(result,
+						filter{org: enc.String(), end: enc2.String()})
+					continue outer
+				}
+			}
+			result = append(result,
+				filter{vals: []string{enc.String()}})
+		}
+	}
+	return result
 }

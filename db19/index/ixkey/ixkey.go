@@ -3,7 +3,8 @@
 
 // Package ixkey handles specifying and encoding index key strings
 // that are directly comparable.
-// Single field keys are not encoded.
+// Single field index keys are not encoded.
+// But a single value for a multi-field index still needs to be encoded.
 // Fields are separated by two zero bytes 0,0.
 // Zero bytes are encoded as 0,1.
 // Normally the values will be packed,
@@ -20,6 +21,7 @@ import (
 
 const Min = ""
 const Max = "\xff\xff\xff\xff\xff\xff\xff\xff"
+
 // Technically there is no maximum key string.
 // However, in practice keys are packed values, encoded when composite.
 // Packed values start with a type byte from 0 to 7 so 0xff will be larger.
@@ -45,20 +47,27 @@ type Encoder struct {
 }
 
 // Add appends a field value
-func (b *Encoder) Add(fld string) {
-	if b.buf == nil {
-		b.buf = make([]byte, 0, 2*(len(fld)+2))
+func (e *Encoder) Add(fld string) {
+	if e.buf == nil {
+		e.buf = make([]byte, 0, 2*(len(fld)+2))
 	} else {
-		b.buf = append(b.buf, 0, 0) // separator
+		e.buf = append(e.buf, 0, 0) // separator
 	}
-	b.buf = encode(b.buf, fld)
+	e.buf = encode(e.buf, fld)
 }
 
 // String returns the key and resets the Encoder to be empty.
-func (b *Encoder) String() string {
-	s := hacks.BStoS(b.buf)
-	b.buf = nil // reset
+func (e *Encoder) String() string {
+	s := hacks.BStoS(e.buf)
+	e.buf = nil // reset
 	return s
+}
+
+func (e *Encoder) Dup() *Encoder {
+	var e2 Encoder
+	// use append so if e.buf is nil, e2.buf will be nil
+	e2.buf = append([]byte(nil), e.buf...)
+	return &e2
 }
 
 // Key builds a key from a data Record using a Spec.
@@ -175,15 +184,20 @@ func (spec *Spec) Compare(r1, r2 Record) int {
 
 // Increment adds the smallest amount to a key,
 // used to convert > to >= or <= to <
-func (spec *Spec) Increment(key string) string {
-	if spec.raw() {
-		return key + "\x00"
-	}
-	// encoded
-	return key + "\x00\x00" // add empty field trailing field
+func Increment(key string) string {
+	// two nuls for composite to add empty field trailing field
+	return key + "\x00\x00"
 }
 
-func (spec *Spec) raw() bool {
-	return len(spec.Fields) == 0 ||
-		(len(spec.Fields) == 1 && len(spec.Fields2) == 0)
+// Decode is used for tests and debugging
+func Decode(comp string) []string {
+	if comp == "" {
+		return nil
+	}
+	parts := strings.Split(comp, "\x00\x00")
+	result := make([]string, len(parts))
+	for i, p := range parts {
+		result[i] = strings.ReplaceAll(p, "\x00\x01", "\x00")
+	}
+	return result
 }
