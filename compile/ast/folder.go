@@ -113,6 +113,7 @@ func (f Folder) foldNary(n *Nary) Expr {
 		exprs = commutative(exprs, OpBitXor, nil)
 	case tok.Or:
 		exprs = commutative(exprs, or, True)
+		exprs = foldOrToIn(exprs)
 	case tok.And:
 		exprs = commutative(exprs, and, False)
 	case tok.Cat:
@@ -161,6 +162,47 @@ func commutative(exprs []Expr, bop bopfn, fold Value) []Expr {
 		}
 	}
 	return exprs[:dst]
+}
+
+func foldOrToIn(exprs []Expr) []Expr {
+	var idPrev *Ident
+	var in []Expr
+	newExprs := make([]Expr, 0, len(exprs))
+	for _, expr := range exprs {
+		id, e := idIs(expr)
+		if id != nil && idPrev != nil && idPrev.Name == id.Name {
+			// accumulate
+			in = append(in, e)
+			if len(in) > 1 {
+				continue
+			}
+		} else {
+			if len(in) > 1 {
+				// flush
+				newExprs[len(newExprs)-1] = &In{E: idPrev, Exprs: in}
+			}
+			if id == nil {
+				idPrev, in = nil, nil
+			} else {
+				idPrev = id
+				in = []Expr{e}
+			}
+		}
+		newExprs = append(newExprs, expr)
+	}
+	if len(in) > 1 {
+		// flush
+		newExprs[len(newExprs)-1] = &In{E: idPrev, Exprs: in}
+	}
+	return newExprs
+}
+func idIs(e Expr) (*Ident, Expr) {
+	if bin, ok := e.(*Binary); ok && bin.Tok == tok.Is {
+		if id, ok := bin.Lhs.(*Ident); ok {
+			return id, bin.Rhs
+		}
+	}
+	return nil, nil
 }
 
 func (f Folder) foldMul(exprs []Expr) []Expr {

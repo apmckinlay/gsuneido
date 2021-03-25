@@ -143,6 +143,14 @@ func TestPropFold(t *testing.T) {
 	test("'hello' =~ 'lo'", "true")
 	test("s = 'hello'; s =~ 'lo'", "'hello'\ntrue")
 
+	// or => in
+	test("a is 1 or a is 2", "In(a [1 2])")
+	test("a is 1 or a is 2 or b is 3 or b is 4",
+		"Nary(Or In(a [1 2]) In(b [3 4]))")
+	test("x or a is 1 or a is 2 or y or b is 3 or b is 4 or z",
+		"Nary(Or x In(a [1 2]) y In(b [3 4]) z)")
+	test("a is 1 or b is 2", "Nary(Or Binary(Is a 1) Binary(Is b 2))")
+
 	// trinary
 	test("true ? b : c", "b")  // fold
 	test("false ? b : c", "c") // fold
