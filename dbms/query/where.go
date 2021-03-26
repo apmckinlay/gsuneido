@@ -17,14 +17,13 @@ import (
 
 type Where struct {
 	Query1
-	expr     *ast.Nary // And
-	fixed    []Fixed
-	t        QueryTran
-	tbl      *Table
-	colSels  map[string]filter
-	ffracs   map[string]float32
-	conflict bool
-	index    []string
+	expr      *ast.Nary // And
+	fixed     []Fixed
+	t         QueryTran
+	tbl       *Table
+	optInited bool
+	conflict  bool
+	index     []string
 }
 
 type whereApproach struct {
@@ -278,7 +277,7 @@ func (w *Where) optimize(mode Mode, index []string) (Cost, interface{}) {
 		cost := Optimize(w.source, mode, index)
 		return cost, nil
 	}
-	if w.colSels == nil {
+	if !w.optInited {
 		w.optInit()
 	}
 	if w.conflict {
@@ -293,8 +292,6 @@ func (w *Where) optimize(mode Mode, index []string) (Cost, interface{}) {
 
 func (w *Where) optInit() {
 	w.Fixed() // calc before altering expression
-	w.colSels = make(map[string]filter)
-	w.ffracs = make(map[string]float32)
 	cmps := w.extractCompares() // NOTE: modifies expr
 	if w.conflict {
 		return
@@ -508,28 +505,26 @@ func packToStr(s string) string {
 //-------------------------------------------------------------------
 
 type idxSel struct {
-	index   []string
-	filters []filter
+	index  []string
+	ptrngs []pointRange
 }
 
 func (is idxSel) String() string {
+	encode := len(is.index) > 1
 	s := str.Join(",", is.index)
 	sep := ": "
-	for _, f := range is.filters {
-		for _, v := range f.vals {
-			s += sep + showKey(is.index, v)
-			sep = " | "
-		}
-		if len(f.vals) == 0 {
-			s += sep + showKey(is.index, f.org) + ".." + showKey(is.index, f.end)
-			sep = " | "
+	for _, pr := range is.ptrngs {
+		s += sep + showKey(encode, pr.org)
+		sep = " | "
+		if pr.isRange() {
+			s += ".." + showKey(encode, pr.end)
 		}
 	}
 	return s
 }
 
-func showKey(index []string, key string) string {
-	if len(index) == 1 {
+func showKey(encode bool, key string) string {
+	if !encode {
 		return packToStr(key)
 	}
 	s := ""
@@ -551,9 +546,9 @@ func (w *Where) colSelsToIdxSels(colSels map[string]filter) []idxSel {
 	idxSels := make([]idxSel, 0, len(indexes)/2)
 	for _, idx := range indexes {
 		if filters, count := colSelsToIdxSel(colSels, idx); len(filters) > 0 {
-			exploded := explodeFilters(filters, [][]filter{nil})
-			filters := compositeFilters(idx, exploded, count)
-			idxSels = append(idxSels, idxSel{index: idx, filters: filters})
+			exploded := explodeFilters(filters, [][]pointRange{nil})
+			filters := compositePtrngs(idx, exploded, count)
+			idxSels = append(idxSels, idxSel{index: idx, ptrngs: filters})
 		}
 	}
 	return idxSels
@@ -585,24 +580,54 @@ func colSelsToIdxSel(colSels map[string]filter, idx []string) ([]filter, int) {
 	return filters, count
 }
 
+// pointRange holds either a range or a single key (in org with end = "")
+type pointRange struct {
+	org string
+	end string
+}
+
+func (f *filter) toPtRng() pointRange {
+	if len(f.vals) == 1 {
+		return pointRange{org: f.vals[0]}
+	}
+	return pointRange{org: f.org, end: f.end}
+}
+
+func (pr pointRange) isPoint() bool {
+	return pr.end == ""
+}
+
+func (pr pointRange) isRange() bool {
+	return pr.end != ""
+}
+
+func (pr pointRange) String() string {
+	// WARNING: does NOT decode, intended for explode output
+	// use idxSel.String for compositePtrngs output
+	s := packToStr(pr.org)
+	if pr.isRange() {
+		s += ".." + packToStr(pr.end)
+	}
+	return s
+}
+
 // explodeFilters converts multi vals filters to multi single vals filters.
 // e.g. (1|2)+(3|4) => 1+3, 1+4, 2+3, 2+4
-// The resulting lists of filters will contain only single vals or ranges.
 // Each recursion processes one element from remaining, adding to prefixes.
-func explodeFilters(remaining []filter, prefixes [][]filter) [][]filter {
+func explodeFilters(remaining []filter, prefixes [][]pointRange) [][]pointRange {
 	f := remaining[0]
 	if len(f.vals) <= 1 { // single value or final range
 		for i := range prefixes {
-			prefixes[i] = append(prefixes[i], f)
+			prefixes[i] = append(prefixes[i], f.toPtRng())
 		}
 	} else { // len(f.vals) > 1
-		newpre := make([][]filter, 0, len(f.vals)*len(prefixes))
+		newpre := make([][]pointRange, 0, len(f.vals)*len(prefixes))
 		for i := range prefixes {
 			pre := prefixes[i]
 			// set cap to len so each append will make a new copy (COW)
 			pre = pre[:len(pre):len(pre)]
 			for _, v := range f.vals {
-				p := append(pre, filter{vals: []string{v}})
+				p := append(pre, pointRange{org: v})
 				newpre = append(newpre, p)
 			}
 		}
@@ -614,53 +639,52 @@ func explodeFilters(remaining []filter, prefixes [][]filter) [][]filter {
 	return prefixes
 }
 
-func compositeFilters(idx []string, filters [][]filter, count int) []filter {
+func compositePtrngs(idx []string, ptrngs [][]pointRange, count int) []pointRange {
 	encode := len(idx) > 1
 	if count > 0 {
-		return singleFilter(filters, encode)
+		return singleFilter(ptrngs, encode)
 	}
 	// range
-	return multiFilters(filters, encode)
+	return multiFilters(ptrngs, encode)
 }
 
-func singleFilter(filters [][]filter, encode bool) []filter {
-	vals := make([]string, len(filters))
-	for i, fltr := range filters {
+func singleFilter(ptrngs [][]pointRange, encode bool) []pointRange {
+	prs := make([]pointRange, len(ptrngs))
+	for i, pr := range ptrngs {
 		if !encode {
-			vals[i] = fltr[0].vals[0]
+			prs[i] = pr[0]
 		} else {
 			var enc ixkey.Encoder
-			for _, f := range fltr {
-				enc.Add(f.vals[0])
+			for _, f := range pr {
+				enc.Add(f.org)
 			}
-			vals[i] = enc.String()
+			prs[i] = pointRange{org: enc.String()}
 		}
 	}
-	return []filter{{vals: vals}}
+	return prs
 }
 
-func multiFilters(filters [][]filter, encode bool) []filter {
-	result := make([]filter, 0, len(filters))
+func multiFilters(ptrngs [][]pointRange, encode bool) []pointRange {
+	result := make([]pointRange, 0, len(ptrngs))
 outer:
-	for _, fltr := range filters {
+	for _, prs := range ptrngs {
 		if !encode {
-			result = append(result, fltr[0])
+			result = append(result, prs[0])
 		} else {
 			var enc ixkey.Encoder
-			for _, f := range fltr {
-				if len(f.vals) == 1 {
-					enc.Add(f.vals[0])
+			for _, pr := range prs {
+				if pr.isPoint() {
+					enc.Add(pr.org)
 				} else { // final range
 					enc2 := enc.Dup()
-					enc.Add(f.org)
-					enc2.Add(f.end)
+					enc.Add(pr.org)
+					enc2.Add(pr.end)
 					result = append(result,
-						filter{org: enc.String(), end: enc2.String()})
+						pointRange{org: enc.String(), end: enc2.String()})
 					continue outer
 				}
 			}
-			result = append(result,
-				filter{vals: []string{enc.String()}})
+			result = append(result, pointRange{org: enc.String()})
 		}
 	}
 	return result

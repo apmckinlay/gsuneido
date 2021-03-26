@@ -93,20 +93,20 @@ func TestExplodeFilters(t *testing.T) {
 		w := q.(*Where)
 		cmps := w.extractCompares()
 		colSels := w.comparesToFilters(cmps)
-		idxSels, _ := colSelsToIdxSel(colSels, idx)
-		filters := explodeFilters(idxSels, [][]filter{nil})
-		assert.T(t).This(fmt.Sprint(filters)).Is("[" + expected + "]")
+		filters, _ := colSelsToIdxSel(colSels, idx)
+		ptrngs := explodeFilters(filters, [][]pointRange{nil})
+		assert.T(t).This(fmt.Sprint(ptrngs)).Is("[" + expected + "]")
 	}
-	test("a is 1", "[[1]]")
-	test("a is 1 and b is 2", "[[1] [2]]")
-	test("a is 1 and b is 2 and c is 3", "[[1] [2] [3]]")
-	test("a > 4", "[(4..<max>)]")
-	test("a is 2 and b > 4", "[[2] (4..<max>)]")
-	test("a in (1,2) and b in (3,4)", "[[1] [3]] [[1] [4]] [[2] [3]] [[2] [4]]")
-	test("a in (1,2) and b > 4", "[[1] (4..<max>)] [[2] (4..<max>)]")
+	test("a is 1", "[1]")
+	test("a is 1 and b is 2", "[1 2]")
+	test("a is 1 and b is 2 and c is 3", "[1 2 3]")
+	test("a > 4", "[4..<max>]")
+	test("a is 2 and b > 4", "[2 4..<max>]")
+	test("a in (1,2) and b in (3,4)", "[1 3] [1 4] [2 3] [2 4]")
+	test("a in (1,2) and b > 4", "[1 4..<max>] [2 4..<max>]")
 }
 
-func TestCompositeFilters(t *testing.T) {
+func TestCompositePtrngs(t *testing.T) {
 	test := func(query string, expected string) {
 		t.Helper()
 		q := ParseQuery("comp where " + query)
