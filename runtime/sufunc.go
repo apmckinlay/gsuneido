@@ -14,28 +14,28 @@ import (
 type SuFunc struct {
 	ParamSpec
 
-	// Nlocals is the number of parameters and local variables
-	Nlocals uint8
+	// ArgSpecs used by calls in the code
+	ArgSpecs []ArgSpec
+
+	// cover is used for coverage tracking. nil means no tracking.
+	// If len(cover) < len(Code) then bool coverage else counts.
+	cover []uint16
 
 	// Code is the actual byte code
 	Code string
 
-	// ArgSpecs used by calls in the code
-	ArgSpecs []ArgSpec
-
 	// ClassName is used to privatize dot params
 	ClassName string
-
-	IsBlock bool
 
 	// SrcPos contains pairs of source and code position deltas
 	SrcPos string
 	// SrcBase is the starting point for the SrcPos source deltas
 	SrcBase int
 
-	// cover is used for coverage tracking. nil means no tracking.
-	// If len(cover) < len(Code) then bool coverage else counts.
-	cover []uint16
+	// Nlocals is the number of parameters and local variables
+	Nlocals uint8
+
+	IsBlock bool
 }
 
 // Value interface (mostly handled by ParamSpec) --------------------

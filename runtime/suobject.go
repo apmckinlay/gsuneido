@@ -32,10 +32,10 @@ var EmptyObject = &SuObject{readonly: true}
 // Zero value is a valid empty object.
 type SuObject struct {
 	CantConvert
-	MayLock
 	named  Hmap
 	list   []Value
 	defval Value
+	MayLock
 	// version is incrmented by operations that change one of the sizes.
 	// i.e. not by just updating a value in-place.
 	// It is used to detect modification during iteration.
