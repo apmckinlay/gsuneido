@@ -70,7 +70,7 @@ func TestColSelsToIdxSel(t *testing.T) {
 		w := q.(*Where)
 		cmps := w.extractCompares()
 		colSels := w.comparesToFilters(cmps)
-		idxSels, _ := colSelsToIdxSel(colSels, idx)
+		idxSels := colSelsToIdxSel(colSels, idx)
 		assert.T(t).This(fmt.Sprint(idxSels)).Is("[" + expected + "]")
 	}
 	test("a is 1", "[1]")
@@ -93,7 +93,7 @@ func TestExplodeFilters(t *testing.T) {
 		w := q.(*Where)
 		cmps := w.extractCompares()
 		colSels := w.comparesToFilters(cmps)
-		filters, _ := colSelsToIdxSel(colSels, idx)
+		filters := colSelsToIdxSel(colSels, idx)
 		ptrngs := explodeFilters(filters, [][]pointRange{nil})
 		assert.T(t).This(fmt.Sprint(ptrngs)).Is("[" + expected + "]")
 	}
@@ -118,11 +118,11 @@ func TestCompositePtrngs(t *testing.T) {
 		idxSels := w.colSelsToIdxSels(colSels)
 		assert.T(t).This(fmt.Sprint(idxSels)).Is("[" + expected + "]")
 	}
-	test("a is 1", "a,b,c: 1")
-	test("a is 1 and b is 2", "a,b,c: 1,2")
+	test("a is 1", "a,b,c: 1*")
+	test("a is 1 and b is 2", "a,b,c: 1,2*")
 	test("a is 1 and b is 2 and c is 3", "a,b,c: 1,2,3")
 	test("a > 4", "a,b,c: 4..<max>")
 	test("a is 2 and b > 4", "a,b,c: 2,4..2,<max>")
-	test("a in (1,2) and b in (3,4)", "a,b,c: 1,3 | 1,4 | 2,3 | 2,4")
+	test("a in (1,2) and b in (3,4)", "a,b,c: 1,3* | 1,4* | 2,3* | 2,4*")
 	test("a in (1,2) and b > 4", "a,b,c: 1,4..1,<max> | 2,4..2,<max>")
 }

@@ -291,7 +291,7 @@ func (w *Where) optimize(mode Mode, index []string) (Cost, interface{}) {
 }
 
 func (w *Where) optInit() {
-	w.Fixed() // calc before altering expression
+	w.Fixed()                   // calc before altering expression
 	cmps := w.extractCompares() // NOTE: modifies expr
 	if w.conflict {
 		return
@@ -517,7 +517,11 @@ func (is idxSel) String() string {
 		s += sep + showKey(encode, pr.org)
 		sep = " | "
 		if pr.isRange() {
-			s += ".." + showKey(encode, pr.end)
+			if pr.end == ixkey.Increment(pr.org) {
+				s += "*"
+			} else {
+				s += ".." + showKey(encode, pr.end)
+			}
 		}
 	}
 	return s
@@ -544,11 +548,26 @@ func showKey(encode bool, key string) string {
 func (w *Where) colSelsToIdxSels(colSels map[string]filter) []idxSel {
 	indexes := w.tbl.Indexes()
 	idxSels := make([]idxSel, 0, len(indexes)/2)
-	for _, idx := range indexes {
-		if filters, count := colSelsToIdxSel(colSels, idx); len(filters) > 0 {
+	for i := range w.tbl.schema.Indexes {
+		schix := &w.tbl.schema.Indexes[i]
+		idx := schix.Columns
+		key := schix.Mode == 'k'
+		uniq := schix.Mode == 'u'
+		encode := len(idx) > 1
+		if filters := colSelsToIdxSel(colSels, idx); len(filters) > 0 {
 			exploded := explodeFilters(filters, [][]pointRange{nil})
-			filters := compositePtrngs(idx, exploded, count)
-			idxSels = append(idxSels, idxSel{index: idx, ptrngs: filters})
+			comp := compositePtrngs(encode, exploded)
+			for i := range comp {
+				c := &comp[i]
+				if c.end == "" {
+					lookup := len(exploded[i]) == len(idx) &&
+						(key || (uniq && c.org != ""))
+					if !lookup {
+						c.end = ixkey.Increment(c.org)
+					}
+				}
+			}
+			idxSels = append(idxSels, idxSel{index: idx, ptrngs: comp})
 		}
 	}
 	return idxSels
@@ -556,7 +575,7 @@ func (w *Where) colSelsToIdxSels(colSels map[string]filter) []idxSel {
 
 // colSelsToIdxSel returns filters for the columns of an index
 // or else nil if not possible.
-func colSelsToIdxSel(colSels map[string]filter, idx []string) ([]filter, int) {
+func colSelsToIdxSel(colSels map[string]filter, idx []string) []filter {
 	const maxCount = 8 * 1024 // ???
 	filters := make([]filter, 0, len(idx))
 	count := 1
@@ -568,16 +587,15 @@ func colSelsToIdxSel(colSels map[string]filter, idx []string) ([]filter, int) {
 		if len(f.vals) > 1 {
 			count *= len(f.vals)
 			if count > maxCount {
-				return nil, 0
+				return nil
 			}
 		}
 		filters = append(filters, f)
 		if f.isRange() {
-			count = -count
 			break // can't have anything after range
 		}
 	}
-	return filters, count
+	return filters
 }
 
 // pointRange holds either a range or a single key (in org with end = "")
@@ -639,37 +657,12 @@ func explodeFilters(remaining []filter, prefixes [][]pointRange) [][]pointRange 
 	return prefixes
 }
 
-func compositePtrngs(idx []string, ptrngs [][]pointRange, count int) []pointRange {
-	encode := len(idx) > 1
-	if count > 0 {
-		return singleFilter(ptrngs, encode)
-	}
-	// range
-	return multiFilters(ptrngs, encode)
-}
-
-func singleFilter(ptrngs [][]pointRange, encode bool) []pointRange {
-	prs := make([]pointRange, len(ptrngs))
-	for i, pr := range ptrngs {
-		if !encode {
-			prs[i] = pr[0]
-		} else {
-			var enc ixkey.Encoder
-			for _, f := range pr {
-				enc.Add(f.org)
-			}
-			prs[i] = pointRange{org: enc.String()}
-		}
-	}
-	return prs
-}
-
-func multiFilters(ptrngs [][]pointRange, encode bool) []pointRange {
-	result := make([]pointRange, 0, len(ptrngs))
+func compositePtrngs(encode bool, ptrngs [][]pointRange) []pointRange {
+	result := make([]pointRange, len(ptrngs))
 outer:
-	for _, prs := range ptrngs {
+	for i, prs := range ptrngs {
 		if !encode {
-			result = append(result, prs[0])
+			result[i] = prs[0]
 		} else {
 			var enc ixkey.Encoder
 			for _, pr := range prs {
@@ -679,12 +672,11 @@ outer:
 					enc2 := enc.Dup()
 					enc.Add(pr.org)
 					enc2.Add(pr.end)
-					result = append(result,
-						pointRange{org: enc.String(), end: enc2.String()})
+					result[i] = pointRange{org: enc.String(), end: enc2.String()}
 					continue outer
 				}
 			}
-			result = append(result, pointRange{org: enc.String()})
+			result[i] = pointRange{org: enc.String()}
 		}
 	}
 	return result

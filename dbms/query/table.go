@@ -51,7 +51,7 @@ func (tbl *Table) SetTran(t QueryTran) {
 	cols = append(cols, tbl.schema.Derived...)
 	tbl.columns = cols
 
-	idxs := make([][]string, 0, len(tbl.schema.Indexes))
+	idxs := make([][]string, 0, len(tbl.schema.Indexes)-1)
 	keys := make([][]string, 0, 1)
 	for _, ix := range tbl.schema.Indexes {
 		idxs = append(idxs, ix.Columns)
