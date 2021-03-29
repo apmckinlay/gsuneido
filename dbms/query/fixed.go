@@ -41,16 +41,26 @@ func combineFixed(fixed1, fixed2 []Fixed) []Fixed {
 	result := make([]Fixed, len(fixed1))
 	copy(result, fixed1)
 	for _, f2 := range fixed2 {
-		if !isFixed(fixed1, f2.col) {
+		if !hasCol(fixed1, f2.col) {
 			result = append(result, f2)
 		}
 	}
 	return result
 }
 
-func isFixed(fixed []Fixed, col string) bool {
+func hasCol(fixed []Fixed, col string) bool {
 	for _, f := range fixed {
 		if col == f.col {
+			return true
+		}
+	}
+	return false
+}
+
+// isFixed returns true if col is fixed with a single value
+func isFixed(fixed []Fixed, col string) bool {
+	for _, f := range fixed {
+		if col == f.col && len(f.values) == 1 {
 			return true
 		}
 	}
