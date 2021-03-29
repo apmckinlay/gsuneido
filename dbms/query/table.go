@@ -99,8 +99,9 @@ func (tbl *Table) Updateable() bool {
 }
 
 func (tbl *Table) optimize(_ Mode, index []string) (Cost, interface{}) {
-	index = tbl.findIndex(index)
 	if index == nil {
+		index = tbl.schema.Indexes[0].Columns
+	} else if !tbl.singleton && tbl.findIndex(index) < 0 {
 		return impossible, nil
 	}
 	indexReadCost := tbl.info.Nrows * btree.EntrySize
@@ -108,19 +109,13 @@ func (tbl *Table) optimize(_ Mode, index []string) (Cost, interface{}) {
 	return indexReadCost + dataReadCost, tableApproach{index: index}
 }
 
-func (tbl *Table) findIndex(index []string) []string {
-	if index == nil {
-		return tbl.schema.Indexes[0].Columns
-	}
-	if tbl.singleton {
-		return index
-	}
+func (tbl *Table) findIndex(index []string) int {
 	for i := range tbl.schema.Indexes {
 		if str.Equal(index, tbl.schema.Indexes[i].Columns) {
-			return index
+			return i
 		}
 	}
-	return nil
+	return -1 // not found
 }
 
 func (tbl *Table) setApproach(_ []string, approach interface{}, _ QueryTran) {

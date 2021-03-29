@@ -3,7 +3,11 @@
 
 package query
 
-import "github.com/apmckinlay/gsuneido/db19/meta"
+import (
+	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
+	"github.com/apmckinlay/gsuneido/db19/meta"
+	"github.com/apmckinlay/gsuneido/runtime"
+)
 
 type testTran struct{}
 
@@ -62,6 +66,7 @@ var testInfo = map[string]*meta.Info{
 	"task":  {Nrows: 200, Size: 20000},
 	"trans": {Nrows: 1000, Size: 100000},
 	"hist2": {Nrows: 1000, Size: 100000},
+	"comp":  {Nrows: 1000, Size: 100000},
 }
 
 func (testTran) GetInfo(table string) *meta.Info {
@@ -69,4 +74,39 @@ func (testTran) GetInfo(table string) *meta.Info {
 		return ti
 	}
 	return &meta.Info{Nrows: 100, Size: 10000}
+}
+
+func (t testTran) RangeFrac(table string, iIndex int, org, end string) float64 {
+	schema := t.GetSchema(table)
+	decode := len(schema.Indexes[iIndex].Columns) > 1
+	orgPos := t.fracPos(org, decode)
+	endPos := t.fracPos(end, decode)
+	return endPos - orgPos
+}
+
+// fracPos treats keys as multi-digit decimal numbers.
+// Each component of the key should be an integer from 0 to 9.
+func (t testTran) fracPos(key string, decode bool) float64 {
+	var vals []string
+	if decode {
+		vals = ixkey.Decode(key)
+	} else {
+		vals = []string{key}
+	}
+	var f float64
+	mul := float64(.1)
+	for i, s := range vals {
+		var n int
+		if s == ixkey.Max {
+			n = 10
+		} else {
+			n = runtime.ToInt(runtime.Unpack(s))
+			if i+1 < len(vals) && vals[i+1] == "" {
+				n++
+			}
+		}
+		f += mul * float64(n)
+		mul /= 10
+	}
+	return f
 }

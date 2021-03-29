@@ -122,6 +122,7 @@ type Cost = int
 type QueryTran interface {
 	GetSchema(table string) *schema.Schema
 	GetInfo(table string) *meta.Info
+	RangeFrac(table string, iIndex int, org, end string) float64
 }
 
 // Setup prepares a parsed query for execution.

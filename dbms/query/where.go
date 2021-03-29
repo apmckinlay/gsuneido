@@ -5,6 +5,7 @@ package query
 
 import (
 	"sort"
+	"strconv"
 
 	"github.com/apmckinlay/gsuneido/compile/ast"
 	"github.com/apmckinlay/gsuneido/compile/tokens"
@@ -507,6 +508,7 @@ func packToStr(s string) string {
 type idxSel struct {
 	index  []string
 	ptrngs []pointRange
+	frac   float64
 }
 
 func (is idxSel) String() string {
@@ -523,6 +525,9 @@ func (is idxSel) String() string {
 				s += ".." + showKey(encode, pr.end)
 			}
 		}
+	}
+	if is.frac != 0 {
+		s += " = " + strconv.FormatFloat(is.frac, 'g', 4, 64)
 	}
 	return s
 }
@@ -567,7 +572,9 @@ func (w *Where) colSelsToIdxSels(colSels map[string]filter) []idxSel {
 					}
 				}
 			}
-			idxSels = append(idxSels, idxSel{index: idx, ptrngs: comp})
+			frac := w.idxFrac(idx, comp)
+			idxSels = append(idxSels,
+				idxSel{index: idx, ptrngs: comp, frac: frac})
 		}
 	}
 	return idxSels
@@ -680,4 +687,21 @@ outer:
 		}
 	}
 	return result
+}
+
+func (w *Where) idxFrac(idx []string, ptrngs []pointRange) float64 {
+	iIndex := w.tbl.findIndex(idx)
+	if iIndex < 0 {
+		panic("index not found")
+	}
+	var frac float64
+	nrows := float64(w.tbl.nrows())
+	for _, pr := range ptrngs {
+		if pr.end == "" { // lookup
+			frac += 1 / nrows
+		} else { // range
+			frac += float64(w.t.RangeFrac(w.tbl.name, iIndex, pr.org, pr.end))
+		}
+	}
+	return frac
 }
