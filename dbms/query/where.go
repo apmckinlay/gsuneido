@@ -19,11 +19,17 @@ import (
 
 type Where struct {
 	Query1
-	expr      *ast.Nary // And
-	fixed     []Fixed
-	t         QueryTran
+	expr  *ast.Nary // And
+	fixed []Fixed
+	t     QueryTran
+	// tbl will be set if the source is a Table, nil otherwise
 	tbl       *Table
 	optInited bool
+	// exprMore is whether expr has more than the minimum idxSel
+	exprMore bool
+	// singleton is true if we know the result is at most one record
+	// because there is a single point select on a key
+	singleton bool
 	idxSels   []idxSel
 	conflict  bool
 	index     []string
@@ -49,8 +55,11 @@ func (w *Where) SetTran(t QueryTran) {
 
 func (w *Where) String() string {
 	s := parenQ2(w.source) + " WHERE"
-	if w.tbl != nil && len(w.index) > 0 {
-		s += "^" + str.Join("(,)", w.index)
+	// if w.tbl != nil && len(w.index) > 0 {
+	// 	s += "^" + str.Join("(,)", w.index)
+	// }
+	if w.singleton {
+		s += "*1"
 	}
 	if len(w.expr.Exprs) > 0 {
 		s += " " + w.expr.Echo()
@@ -102,7 +111,7 @@ func (w *Where) nrows() int {
 			nmin = n
 		}
 	}
-	if len(w.idxSels) > 1 || len(w.expr.Exprs) > 0 {
+	if w.exprMore {
 		nmin /= 2 // ??? adjust for additional restrictions
 	}
 	return nmin
@@ -325,17 +334,25 @@ func (w *Where) optInit() {
 	if w.conflict {
 		return
 	}
+	w.exprMore = len(cmps) < len(w.expr.Exprs)
 	colSels := w.comparesToFilters(cmps)
 	if w.conflict {
 		return
 	}
 	w.idxSels = w.colSelsToIdxSels(colSels)
+	w.exprMore = w.exprMore || len(w.idxSels) > 1
+	if !w.exprMore {
+		// check if any colSels were not used by idxSels
+		for _, col := range w.idxSels[0].index {
+			delete(colSels, col)
+		}
+		w.exprMore = w.exprMore || len(colSels) > 0
+	}
 }
 
 // extractCompares finds sub-expressions like <field> <op> <constant>
 func (w *Where) extractCompares() []cmpExpr {
 	cols := w.tbl.schema.Columns
-	exprs2 := make([]ast.Expr, 0, len(w.expr.Exprs))
 	cmps := make([]cmpExpr, 0, 4)
 	for _, expr := range w.expr.Exprs {
 		if c, ok := expr.(*ast.Constant); ok && c.Val == runtime.False {
@@ -350,7 +367,6 @@ func (w *Where) extractCompares() []cmpExpr {
 					val: bin.Rhs.(*ast.Constant).Packed,
 				}
 				cmps = append(cmps, cmp)
-				continue
 			} else if in, ok := expr.(*ast.In); ok {
 				cmp := cmpExpr{
 					col:  in.E.(*ast.Ident).Name,
@@ -358,13 +374,8 @@ func (w *Where) extractCompares() []cmpExpr {
 					vals: in.Packed,
 				}
 				cmps = append(cmps, cmp)
-				continue
 			}
 		}
-		exprs2 = append(exprs2, expr)
-	}
-	if len(exprs2) != len(w.expr.Exprs) {
-		w.expr = &ast.Nary{Tok: tokens.And, Exprs: exprs2}
 	}
 	return cmps
 }
@@ -394,6 +405,9 @@ func (w *Where) comparesToFilters(cmps []cmpExpr) map[string]filter {
 // bestIndex returns the best (lowest cost) index
 // that satisfies the required order (or impossible)
 func (w *Where) bestIndex(order []string) (Cost, []string) {
+	if w.singleton {
+		order = nil
+	}
 	best := bestIndex{cost: impossible}
 	for _, idx := range w.source.Indexes() {
 		if w.prefixed(idx, order, w.fixed) {
@@ -423,6 +437,7 @@ func (w *Where) getIdxSel(index []string) *idxSel {
 func (w *Where) setApproach(index []string, app interface{}, tran QueryTran) {
 	if app != nil {
 		w.index = app.(whereApproach).index
+		w.tbl.index = w.index
 	} else {
 		w.source = SetApproach(w.source, index, tran)
 	}
@@ -602,6 +617,12 @@ func (is idxSel) isRanges() bool {
 	return is.ptrngs[0].isRange()
 }
 
+// singleton returns true if we know the result is at most one record
+// because there is a single point select on a key
+func (is idxSel) singleton() bool {
+	return len(is.ptrngs) == 1 && is.ptrngs[0].end == ""
+}
+
 // colSelsToIdxSels takes filters on individual columns
 // and returns filters on indexes (possibly multi-column).
 // We can use an index if leading columns have vals
@@ -630,8 +651,9 @@ func (w *Where) colSelsToIdxSels(colSels map[string]filter) []idxSel {
 				}
 			}
 			frac := w.idxFrac(idx, comp)
-			idxSels = append(idxSels,
-				idxSel{index: idx, ptrngs: comp, frac: frac})
+			idxSel := idxSel{index: idx, ptrngs: comp, frac: frac}
+			w.singleton = w.singleton || idxSel.singleton()
+			idxSels = append(idxSels, idxSel)
 		}
 	}
 	return idxSels

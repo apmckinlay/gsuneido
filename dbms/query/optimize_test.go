@@ -52,7 +52,8 @@ func TestOptimize(t *testing.T) {
 	test("table union table",
 		"table^(a) UNION-MERGE table^(a)")
 	test("(table where a is 1) union (table where a is 2)",
-		"table WHERE^(a) UNION-FOLLOW-DISJOINT(a) (table WHERE^(a))")
+		`table^(a) WHERE*1 a is 1
+			UNION-FOLLOW-DISJOINT(a) (table^(a) WHERE*1 a is 2)`)
 
 	test("tables project table",
 		"tables^(table) PROJECT-COPY table")
@@ -63,7 +64,7 @@ func TestOptimize(t *testing.T) {
 	test("columns project column",
 		"columns^(table,column) PROJECT-LOOKUP column")
 	test("columns where table is 1 project column",
-		"columns WHERE^(table,column) PROJECT-COPY column")
+		"columns^(table,column) WHERE table is 1 PROJECT-COPY column")
 	test("customer project id,name",
 		"customer^(id) PROJECT-COPY id, name")
 	test("trans project item",
@@ -127,7 +128,10 @@ func TestOptimize(t *testing.T) {
 	test("customer leftjoin hist2 sort date",
 		"(customer^(id) LEFTJOIN 1:n by(id) hist2^(id)) TEMPINDEX(date)")
 
-	test("hist2 where date is 1 sort id", "hist2^(id) WHERE") // singleton
+	test("hist2 where date > 1 sort id",
+		"hist2^(id) WHERE date > 1")
+	test("hist2 where date is 1 sort id",
+		"hist2^(date) WHERE*1 date is 1")
 
 	mode = updateMode
 	test("table rename b to bb sort c",
