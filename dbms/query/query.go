@@ -184,12 +184,13 @@ func optTempIndex(q Query, mode Mode, index []string) (
 	cost1, app1 := q.optimize(mode, index)
 	noIndexCost, app2 := q.optimize(mode, nil)
 	tempIndexReadCost := q.nrows() * btree.EntrySize
-	tempIndexWriteCost := tempIndexReadCost * 2 // surcharge for memory ???
+	tempIndexWriteCost := tempIndexReadCost * 2 // ??? surcharge (for memory)
 	dataReadCost := q.nrows() * q.rowSize()
 	tempIndexCost := tempIndexWriteCost + tempIndexReadCost + dataReadCost
 	cost2 := noIndexCost + tempIndexCost
 	assert.That(cost2 >= 0)
-	trace("cost1", cost1, "cost2 (temp index)", cost2)
+	trace("cost1", cost1, "noIndexCost",
+		noIndexCost, "tempIndexCost", tempIndexCost, "cost2", cost2)
 	cost, approach = min(cost1, app1, cost2, app2)
 	if cost >= impossible {
 		return impossible, nil
@@ -323,8 +324,7 @@ func (q1 *Query1) lookupCost() Cost {
 // taking fixed into account
 func (q1 *Query1) bestPrefixed(indexes [][]string, order []string,
 	mode Mode) bestIndex {
-	var best bestIndex
-	best.cost = impossible
+	best := bestIndex{cost: impossible}
 	fixed := q1.source.Fixed()
 	for _, ix := range indexes {
 		if q1.prefixed(ix, order, fixed) {
@@ -335,13 +335,14 @@ func (q1 *Query1) bestPrefixed(indexes [][]string, order []string,
 	return best
 }
 
+// bestIndex should be initialized e.g. best := bestIndex{cost: impossible}
 type bestIndex struct {
 	index []string
 	cost  Cost
 }
 
 func (bi *bestIndex) update(index []string, cost Cost) {
-	if bi.index == nil || cost < bi.cost {
+	if cost < bi.cost {
 		bi.index = index
 		bi.cost = cost
 	}

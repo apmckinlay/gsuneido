@@ -15,13 +15,15 @@ func TestOptimize(t *testing.T) {
 		t.Helper()
 		q := ParseQuery(query)
 		Setup(q, mode, testTran{})
-		assert.T(t).Msg(query).This(q.String()).Is(expected)
+		assert.T(t).Msg(query).This(q.String()).Like(expected)
 	}
 	mode = readMode
 	test("tables",
 		"tables^(table)")
 	test("tables sort tablename",
 		"tables^(tablename)")
+	test("columns sort table",
+		"columns^(table,column)")
 	test("table sort c",
 		"table^(a) TEMPINDEX(c)")
 
@@ -49,8 +51,8 @@ func TestOptimize(t *testing.T) {
 		"hist^(date,item,id) UNION-MERGE hist^(date,item,id)")
 	test("table union table",
 		"table^(a) UNION-MERGE table^(a)")
-	// test("(table where a is 1) union (table where a is 2)",
-	// 	"table^(a) WHERE UNION-FOLLOW-DISJOINT(a) (table^(a) WHERE)")
+	test("(table where a is 1) union (table where a is 2)",
+		"table WHERE^(a) UNION-FOLLOW-DISJOINT(a) (table WHERE^(a))")
 
 	test("tables project table",
 		"tables^(table) PROJECT-COPY table")
@@ -60,8 +62,8 @@ func TestOptimize(t *testing.T) {
 		"abc^(a) PROJECT-SEQ a")
 	test("columns project column",
 		"columns^(table,column) PROJECT-LOOKUP column")
-	// test("columns where table is 1 project column",
-	// 	"columns^(table,column) WHERE PROJECT-COPY column")
+	test("columns where table is 1 project column",
+		"columns WHERE^(table,column) PROJECT-COPY column")
 	test("customer project id,name",
 		"customer^(id) PROJECT-COPY id, name")
 	test("trans project item",
@@ -107,14 +109,14 @@ func TestOptimize(t *testing.T) {
 		"co^(tnum) JOIN 1:1 by(tnum) task^(tnum)")
 	test("customer join alias",
 		"alias^(id) JOIN 1:1 by(id) customer^(id)")
-	// test("(trans join customer) union (hist join customer)",
-	// 	"(trans^(date,item,id) JOIN n:1 by(id) customer^(id)) "+
-	// 		"UNION-MERGE^(date,item,id) (hist^(date,item,id) "+
-	// 		"JOIN n:1 by(id) customer^(id)")
-	// test("(trans join customer) intersect (hist join customer)",
-	// 	"(trans^(date,item,id) JOIN n:1 by(id) customer^(id)) "+
-	// 		"INTERSECT (hist^(date,item,id) "+
-	// 		"JOIN n:1 by(id) customer^(id))")
+	test("tables join columns",
+		"tables^(table) JOIN 1:n by(table) columns^(table,column)")
+	test("(tables join columns) union (tables join columns)",
+		`(tables^(table) JOIN 1:n by(table) columns^(table,column))
+			TEMPINDEX(table,column)
+		UNION-MERGE
+		((tables^(table) JOIN 1:n by(table) columns^(table,column))
+			TEMPINDEX(table,column))`)
 	test("task join co join cus",
 		"(co^(tnum) JOIN 1:1 by(tnum) task^(tnum)) "+
 			"JOIN n:1 by(cnum) cus^(cnum)")
@@ -125,11 +127,17 @@ func TestOptimize(t *testing.T) {
 	test("customer leftjoin hist2 sort date",
 		"(customer^(id) LEFTJOIN 1:n by(id) hist2^(id)) TEMPINDEX(date)")
 
+	test("hist2 where date is 1 sort id", "hist2^(id) WHERE")
+
 	mode = updateMode
 	test("table rename b to bb sort c",
 		"table^(a) TEMPINDEX(c) RENAME b to bb")
 
 	mode = cursorMode
+	test("(tables join columns) union (tables join columns)",
+		`(tables^(table) JOIN 1:n by(table) columns^(table,column))
+		UNION-LOOKUP
+		(columns^(table,column) JOIN n:1 by(table) tables^(table))`)
 	test("trans join customer",
 		"trans^(date,item,id) JOIN n:1 by(id) customer^(id)")
 	test("trans join inven join customer",

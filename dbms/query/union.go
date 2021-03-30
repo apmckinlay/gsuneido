@@ -28,7 +28,7 @@ type unionStrategy int
 const (
 	// unionMerge is a merge of source and source2
 	unionMerge unionStrategy = iota + 1
-	// unionLookup is source that aren't in source2, followed by source2
+	// unionLookup is source that aren't in source2, followed by source2 (unordered)
 	unionLookup
 	// unionFollow is source followed by source2 (disjoint)
 	unionFollow

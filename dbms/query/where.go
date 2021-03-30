@@ -23,6 +23,7 @@ type Where struct {
 	t         QueryTran
 	tbl       *Table
 	optInited bool
+	idxSels   []idxSel
 	conflict  bool
 	index     []string
 }
@@ -47,6 +48,9 @@ func (w *Where) SetTran(t QueryTran) {
 
 func (w *Where) String() string {
 	s := parenQ2(w.source) + " WHERE"
+	if w.tbl != nil && len(w.index) > 0 {
+		s += "^" + str.Join("(,)", w.index)
+	}
 	if len(w.expr.Exprs) > 0 {
 		s += " " + w.expr.Echo()
 	}
@@ -273,10 +277,10 @@ func (w *Where) split(q2 *Query2) bool {
 // optimize ---------------------------------------------------------
 
 func (w *Where) optimize(mode Mode, index []string) (Cost, interface{}) {
+	// we always have the option of just filtering (no specific index use)
+	filterCost := Optimize(w.source, mode, index)
 	if w.tbl == nil || w.tbl.singleton {
-		// just act as filter
-		cost := Optimize(w.source, mode, index)
-		return cost, nil
+		return filterCost, nil
 	}
 	if !w.optInited {
 		w.optInit()
@@ -284,9 +288,9 @@ func (w *Where) optimize(mode Mode, index []string) (Cost, interface{}) {
 	if w.conflict {
 		return 0, nil
 	}
-	cost, index := w.bestIndex()
-	if cost >= impossible {
-		return impossible, nil
+	cost, index := w.bestIndex(index)
+	if cost >= filterCost {
+		return filterCost, nil
 	}
 	return cost, whereApproach{index: index}
 }
@@ -301,7 +305,7 @@ func (w *Where) optInit() {
 	if w.conflict {
 		return
 	}
-	w.colSelsToIdxSels(colSels)
+	w.idxSels = w.colSelsToIdxSels(colSels)
 }
 
 // extractCompares finds sub-expressions like <field> <op> <constant>
@@ -363,8 +367,33 @@ func (w *Where) comparesToFilters(cmps []cmpExpr) map[string]filter {
 	return filters
 }
 
-func (w *Where) bestIndex() (Cost, []string) {
-	return 0, nil //TODO
+// bestIndex returns the best (lowest cost) index
+// that satisfies the required order (or impossible)
+func (w *Where) bestIndex(order []string) (Cost, []string) {
+	best := bestIndex{cost: impossible}
+	for _, idx := range w.source.Indexes() {
+		if w.prefixed(idx, order, w.fixed) {
+			if is := w.getIdxSel(idx); is != nil {
+				cost := w.source.lookupCost() * len(is.ptrngs)
+				if is.isRanges() {
+					tblCost,_ := w.tbl.optimize(0, idx)
+					cost += int(is.frac * float64(tblCost))
+				}
+				best.update(idx, cost)
+			}
+		}
+	}
+	return best.cost, best.index
+}
+
+func (w *Where) getIdxSel(index []string) *idxSel {
+	for i := range w.idxSels {
+		is := &w.idxSels[i]
+		if str.Equal(index, is.index) {
+			return is
+		}
+	}
+	return nil
 }
 
 func (w *Where) setApproach(index []string, app interface{}, tran QueryTran) {
@@ -543,6 +572,10 @@ func showKey(encode bool, key string) string {
 		sep = ","
 	}
 	return s
+}
+
+func (is idxSel) isRanges() bool {
+	return is.ptrngs[0].isRange()
 }
 
 // colSelsToIdxSels takes filters on individual columns
