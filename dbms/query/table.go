@@ -101,17 +101,31 @@ func (tbl *Table) Updateable() bool {
 func (tbl *Table) optimize(_ Mode, index []string) (Cost, interface{}) {
 	if index == nil {
 		index = tbl.schema.Indexes[0].Columns
-	} else if !tbl.singleton && tbl.findIndex(index) < 0 {
-		return impossible, nil
+	} else if !tbl.singleton {
+		i := tbl.indexFor(index)
+		if i < 0 {
+			return impossible, nil
+		}
+		index = tbl.indexes[i]
 	}
 	indexReadCost := tbl.info.Nrows * btree.EntrySize
 	dataReadCost := int(tbl.info.Size)
 	return indexReadCost + dataReadCost, tableApproach{index: index}
 }
 
+// find an index that satisfies the required order
+func (tbl *Table) indexFor(order []string) int {
+	for i, ix := range tbl.indexes {
+		if str.List(ix).HasPrefix(order) {
+			return i
+		}
+	}
+	return -1 // not found
+}
+
 func (tbl *Table) findIndex(index []string) int {
-	for i := range tbl.schema.Indexes {
-		if str.Equal(index, tbl.schema.Indexes[i].Columns) {
+	for i, ix := range tbl.indexes {
+		if str.Equal(index, ix) {
 			return i
 		}
 	}
