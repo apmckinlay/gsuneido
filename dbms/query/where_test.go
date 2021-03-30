@@ -146,3 +146,20 @@ func TestFracPos(t *testing.T) {
 	test(.5, 5)
 	test(.234, 2, 3, 4)
 }
+
+func TestWhereNrows(t *testing.T) {
+	test := func(query string, nrows int) {
+		t.Helper()
+		q := ParseQuery(query)
+		q.SetTran(testTran{})
+		q.Init()
+		w := q.(*Where)
+		w.optInit()
+		assert.T(t).This(w.nrows()).Is(nrows)
+	}
+	test("tables where table < 3 and table > 3", 0) // conflict
+	test("tables where table is 1", 1)
+	test("tables where table in (1,2,3)", 3)
+	test("tables where table > 2 and table < 4", 20)
+	test("tables where table > 2 and table < 4 and tablename", 10)
+}

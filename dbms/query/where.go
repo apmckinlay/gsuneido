@@ -12,6 +12,7 @@ import (
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/runtime"
+	"github.com/apmckinlay/gsuneido/util/ints"
 	"github.com/apmckinlay/gsuneido/util/sset"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
@@ -81,7 +82,30 @@ func (w *Where) addFixed(e ast.Expr) {
 }
 
 func (w *Where) nrows() int {
-	return w.source.nrows() / 2 //TODO
+	if w.conflict {
+		return 0
+	}
+	if len(w.idxSels) == 0 {
+		return w.source.nrows() / 2
+	}
+	var n int
+	nmin := ints.MaxInt
+	nsrc := float64(w.source.nrows())
+	for i := range w.idxSels {
+		ix := &w.idxSels[i]
+		if ix.isRanges() {
+			n = int(ix.frac * nsrc)
+		} else { // points
+			n = len(ix.ptrngs)
+		}
+		if n < nmin {
+			nmin = n
+		}
+	}
+	if len(w.idxSels) > 1 || len(w.expr.Exprs) > 0 {
+		nmin /= 2 // ??? adjust for additional restrictions
+	}
+	return nmin
 }
 
 func (w *Where) Transform() Query {
@@ -376,7 +400,7 @@ func (w *Where) bestIndex(order []string) (Cost, []string) {
 			if is := w.getIdxSel(idx); is != nil {
 				cost := w.source.lookupCost() * len(is.ptrngs)
 				if is.isRanges() {
-					tblCost,_ := w.tbl.optimize(0, idx)
+					tblCost, _ := w.tbl.optimize(0, idx)
 					cost += int(is.frac * float64(tblCost))
 				}
 				best.update(idx, cost)

@@ -127,7 +127,7 @@ func TestOptimize(t *testing.T) {
 	test("customer leftjoin hist2 sort date",
 		"(customer^(id) LEFTJOIN 1:n by(id) hist2^(id)) TEMPINDEX(date)")
 
-	test("hist2 where date is 1 sort id", "hist2^(id) WHERE")
+	test("hist2 where date is 1 sort id", "hist2^(id) WHERE") // singleton
 
 	mode = updateMode
 	test("table rename b to bb sort c",
