@@ -6,6 +6,7 @@ package iterator
 import "github.com/apmckinlay/gsuneido/db19/index/ixkey"
 
 // T is the interface for a Suneido style iterator
+// implemented by btree and ixbuf
 type T interface {
 	// Eof returns true if the index is empty,
 	// Next hit the end, or Prev hit the beginning

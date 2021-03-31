@@ -32,6 +32,7 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/index/btree"
 	"github.com/apmckinlay/gsuneido/db19/meta"
 	"github.com/apmckinlay/gsuneido/db19/meta/schema"
+	"github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/ints"
 	"github.com/apmckinlay/gsuneido/util/sset"
@@ -74,11 +75,13 @@ type Query interface {
 	rowSize() int
 
 	// Lookup returns the row matching the given key, or nil if not found
-	// Lookup(index []string, key string) runtime.Row
+	// Lookup(key string) runtime.Row
 
 	// Rewind()
 
 	// Get(dir runtime.Dir) runtime.Row
+
+	// Select(org, end string)
 
 	String() string
 
@@ -123,6 +126,7 @@ type QueryTran interface {
 	GetSchema(table string) *schema.Schema
 	GetInfo(table string) *meta.Info
 	RangeFrac(table string, iIndex int, org, end string) float64
+	Lookup(table string, iIndex int, key string) runtime.DbRec
 }
 
 // Setup prepares a parsed query for execution.

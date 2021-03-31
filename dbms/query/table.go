@@ -6,6 +6,7 @@ package query
 import (
 	"github.com/apmckinlay/gsuneido/db19/index/btree"
 	"github.com/apmckinlay/gsuneido/db19/meta"
+	"github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
@@ -141,4 +142,10 @@ func (tbl *Table) lookupCost() Cost {
 	// average node size is 2/3 of max, on average we read half = 1/3
 	nodeScan := btree.MaxNodeSize / 3
 	return (nodeScan * btree.TreeHeight) + tbl.rowSize()
+}
+
+func (tbl *Table) Lookup(key string) runtime.Row {
+	iIndex := tbl.findIndex(tbl.index) //TODO cache
+	rec := tbl.t.Lookup(tbl.name, iIndex, key)
+	return runtime.Row{rec}
 }

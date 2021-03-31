@@ -4,6 +4,8 @@
 package query
 
 import (
+	"strings"
+
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/db19/meta"
 	"github.com/apmckinlay/gsuneido/runtime"
@@ -110,4 +112,19 @@ func (t testTran) fracPos(key string, decode bool) float64 {
 		mul /= 10
 	}
 	return f
+}
+
+func (t testTran) Lookup(_ string, _ int, key string) runtime.DbRec {
+	// WARNING: assumes key columns match table columns
+	var vals []string
+	if strings.Contains(key, "\x00\x00") {
+		vals = ixkey.Decode(key)
+	} else {
+		vals = []string{key}
+	}
+	var rb runtime.RecordBuilder
+	for _, v := range vals {
+		rb.AddRaw(v)
+	}
+	return runtime.DbRec{Record: rb.Build()}
 }

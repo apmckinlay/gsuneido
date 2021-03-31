@@ -55,9 +55,6 @@ func (w *Where) SetTran(t QueryTran) {
 
 func (w *Where) String() string {
 	s := parenQ2(w.source) + " WHERE"
-	// if w.tbl != nil && len(w.index) > 0 {
-	// 	s += "^" + str.Join("(,)", w.index)
-	// }
 	if w.singleton {
 		s += "*1"
 	}
