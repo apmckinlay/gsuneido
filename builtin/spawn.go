@@ -15,11 +15,14 @@ import (
 
 var _ = builtin1("System(command)",
 	func(arg Value) Value {
-		shell, name, flag := getShell()
-		if shell == "" {
-			panic("System: can't get " + name)
+		shell, flag := getShell()
+		command := ToStr(arg)
+		cmd := exec.Command(shell)
+		if runtime.GOOS == "windows" {
+			cmdSetup(cmd, shell+" "+flag+" "+command)
+		} else {
+			cmd.Args = []string{shell, flag, command}
 		}
-		cmd := exec.Command(shell, flag, ToStr(arg))
 		if options.Mode != "gui" {
 			cmd.Stdout = os.Stdout
 			cmd.Stderr = os.Stderr
@@ -33,11 +36,18 @@ var _ = builtin1("System(command)",
 		return IntVal(cmd.ProcessState.ExitCode())
 	})
 
-func getShell() (string, string, string) {
+func getShell() (string, string) {
+	var name, flag string
 	if runtime.GOOS == "windows" {
-		return os.Getenv("COMSPEC"), "COMSPEC", "/c"
+		name, flag = "COMSPEC", "/c"
+	} else {
+		name, flag = "SHELL", "-c"
 	}
-	return os.Getenv("SHELL"), "SHELL", "-c"
+	shell := os.Getenv(name)
+	if shell == "" {
+		panic("System: can't get " + name)
+	}
+	return shell, flag
 }
 
 var _ = builtinRaw("Spawn(@args)",

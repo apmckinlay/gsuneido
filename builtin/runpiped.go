@@ -27,8 +27,12 @@ var _ = builtin("RunPiped(command, block=false)",
 	func(t *Thread, args []Value) Value {
 		command := ToStr(args[0])
 		cmdargs := splitCommand(command)
-		cmd := exec.Command(cmdargs[0], cmdargs[1:]...)
-		cmdSetup(cmd, command)
+		cmd := exec.Command(cmdargs[0])
+		if runtime.GOOS == "windows" {
+			cmdSetup(cmd, command)
+		} else {
+			cmd.Args = cmdargs
+		}
 		w, err := cmd.StdinPipe()
 		if err != nil {
 			panic("RunPiped: create pipe failed: " + err.Error())
