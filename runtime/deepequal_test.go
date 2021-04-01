@@ -11,6 +11,7 @@ import (
 
 func TestDeepEqual(t *testing.T) {
 	test := func(xkind, ykind, conc int) {
+		t.Helper()
 		x := mk(xkind, conc&xconc == xconc)
 		y := mk(ykind, conc&yconc == yconc)
 		defer func() {
@@ -92,7 +93,7 @@ func mkObject(kind int, concurrent bool) *SuObject {
 }
 
 func mkInstance(kind int, concurrent bool) *SuInstance {
-	ob := NewInstance(nil, nil)
+	ob := &SuInstance{MemBase: NewMemBase(), useDeepEquals: true}
 	switch kind {
 	case instanceNest:
 		ob.Data["ob"] = mkObject(nest, false)

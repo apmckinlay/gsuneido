@@ -11,13 +11,16 @@ import (
 // SuInstance is an instance of an SuClass
 type SuInstance struct {
 	MemBase
-	class   *SuClass
-	parents []*SuClass
+	parents       []*SuClass
+	class         *SuClass
+	useDeepEquals bool
 }
 
 func NewInstance(t *Thread, class *SuClass) *SuInstance {
+	parents := getParents(t, class)
 	return &SuInstance{MemBase: NewMemBase(),
-		class: class, parents: getParents(t, class)}
+		class: class, parents: parents,
+		useDeepEquals: class.get2(t, "UseDeepEquals", parents) == True}
 }
 
 // getParents captures the inheritance chain (and caches it on the class).
@@ -72,7 +75,7 @@ func (ob *SuInstance) ToString(t *Thread) string {
 
 func (ob *SuInstance) Copy() *SuInstance {
 	return &SuInstance{MemBase: ob.MemBase.Copy(),
-		class: ob.class, parents: ob.parents}
+		class: ob.class, parents: ob.parents, useDeepEquals: ob.useDeepEquals}
 }
 
 // Value interface --------------------------------------------------
@@ -155,10 +158,17 @@ func (*SuInstance) Hash2() uint32 {
 	panic("instance hash not implemented")
 }
 
-// Equal returns true if two instances have the same class and data
+// Equal uses deepEqual if both instances have UseDeepEquals,
+// otherwise it uses reference/pointer equality like Same?
 func (ob *SuInstance) Equal(other interface{}) bool {
 	ob2, ok := other.(*SuInstance)
-	return ok && deepEqual(ob, ob2)
+	if !ok || ob.class != ob2.class {
+		return false
+	}
+	if ob.useDeepEquals && ob2.useDeepEquals {
+		return deepEqual(ob, ob2)
+	}
+	return ob == ob2
 }
 
 func (*SuInstance) Compare(Value) int {
