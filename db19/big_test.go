@@ -59,7 +59,7 @@ func TestBig(*testing.T) {
 		start += count
 	}
 	wg.Wait()
-	fmt.Println("finished", ntrans, "transactions", db.store.Size(), "bytes")
+	fmt.Println("finished", ntrans, "transactions", db.Store.Size(), "bytes")
 
 	db.ck.Stop()
 	db.ck = nil
@@ -68,8 +68,8 @@ func TestBig(*testing.T) {
 
 	nr := 0
 	state := db.GetState()
-	state.meta.CheckAllMerged()
-	state.meta.ForEachInfo(func(ti *meta.Info) {
+	state.Meta.CheckAllMerged()
+	state.Meta.ForEachInfo(func(ti *meta.Info) {
 		nr += ti.Nrows
 	})
 	assert.This(nr).Is(nrows)
@@ -112,7 +112,7 @@ func createTables() []string {
 				mode = 'i'
 			}
 			idxSchema[j] = schema.Index{Columns: idxcols, Mode: mode}
-			idxInfo[j] = index.NewOverlay(db.store, &ixkey.Spec{})
+			idxInfo[j] = index.NewOverlay(db.Store, &ixkey.Spec{})
 			idxInfo[j].Save()
 		}
 		schema := schema.Schema{Table: table, Columns: cols, Indexes: idxSchema}

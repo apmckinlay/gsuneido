@@ -106,7 +106,7 @@ func createDb() *Database {
 		Columns: []string{"one", "two"},
 		Indexes: []schema.Index{{Columns: []string{"one"}, Ixspec: is}},
 	}}
-	ov := index.NewOverlay(db.store, &is)
+	ov := index.NewOverlay(db.Store, &is)
 	ov.Save()
 	ti := &meta.Info{
 		Table:   "mytable",
@@ -133,4 +133,10 @@ func mkrec(args ...string) rt.Record {
 		b.Add(rt.SuStr(a))
 	}
 	return b.Build()
+}
+
+func ck(err error) {
+	if err != nil {
+		panic(err.Error())
+	}
 }

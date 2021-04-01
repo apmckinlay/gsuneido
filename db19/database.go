@@ -15,7 +15,7 @@ import (
 
 type Database struct {
 	mode  stor.Mode
-	store *stor.Stor
+	Store *stor.Stor
 
 	// state is the central immutable state of the database.
 	// It must be accessed atomically and only updated via UpdateState.
@@ -36,26 +36,26 @@ func CreateDatabase(filename string) (*Database, error) {
 
 func createDatabase(store *stor.Stor) (*Database, error) {
 	var db Database
-	db.state.set(&DbState{store: store, meta: &meta.Meta{}})
+	db.state.set(&DbState{store: store, Meta: &meta.Meta{}})
 
 	n := len(magic) + stor.SmallOffsetLen
 	_, buf := store.Alloc(n)
 	copy(buf, magic)
 	stor.WriteSmallOffset(buf[len(magic):], uint64(n))
-	db.store = store
+	db.Store = store
 	db.mode = stor.CREATE
 	return &db, nil
 }
 
 func OpenDatabase(filename string) (*Database, error) {
-	return openDatabase(filename, stor.UPDATE, true)
+	return OpenDb(filename, stor.UPDATE, true)
 }
 
 func OpenDatabaseRead(filename string) (*Database, error) {
-	return openDatabase(filename, stor.READ, true)
+	return OpenDb(filename, stor.READ, true)
 }
 
-func openDatabase(filename string, mode stor.Mode, check bool) (db *Database, err error) {
+func OpenDb(filename string, mode stor.Mode, check bool) (db *Database, err error) {
 	store, err := stor.MmapStor(filename, mode)
 	if err != nil {
 		return nil, err
@@ -75,8 +75,8 @@ func openDatabase(filename string, mode stor.Mode, check bool) (db *Database, er
 			db = nil
 		}
 	}()
-	db = &Database{store: store, mode: mode}
-	state, _ := ReadState(db.store, size-uint64(stateLen))
+	db = &Database{Store: store, mode: mode}
+	state, _ := ReadState(db.Store, size-uint64(stateLen))
 	db.state.set(state)
 	if check {
 		if err := db.QuickCheck(); err != nil {
@@ -89,15 +89,15 @@ func openDatabase(filename string, mode stor.Mode, check bool) (db *Database, er
 // LoadedTable is used to add a loaded table to the state
 func (db *Database) LoadedTable(ts *meta.Schema, ti *meta.Info) {
 	db.UpdateState(func(state *DbState) {
-		state.meta = state.meta.Put(ts, ti)
+		state.Meta = state.Meta.Put(ts, ti)
 	})
 }
 
 func (db *Database) DropTable(table string) bool {
 	result := false
 	db.UpdateState(func(state *DbState) {
-		if m := state.meta.DropTable(table); m != nil {
-			state.meta = m
+		if m := state.Meta.DropTable(table); m != nil {
+			state.Meta = m
 			result = true
 		}
 	})
@@ -107,7 +107,7 @@ func (db *Database) DropTable(table string) bool {
 // Close closes the database store, writing the current size to the start.
 // NOTE: The state must already be written.
 func (db *Database) Close() {
-	if db.store == nil {
+	if db.Store == nil {
 		return // already closed
 	}
 	if db.ck != nil {
@@ -118,11 +118,11 @@ func (db *Database) Close() {
 	if db.mode != stor.READ {
 		// need to use Write because all but last chunk are read-only
 		buf := make([]byte, stor.SmallOffsetLen)
-		stor.WriteSmallOffset(buf, db.store.Size())
-		db.store.Write(uint64(len(magic)), buf)
+		stor.WriteSmallOffset(buf, db.Store.Size())
+		db.Store.Write(uint64(len(magic)), buf)
 	}
-	db.store.Close()
-	db.store = nil
+	db.Store.Close()
+	db.Store = nil
 }
 
 //-------------------------------------------------------------------
@@ -132,25 +132,17 @@ func init() {
 }
 
 func getLeafKey(store *stor.Stor, is *ixkey.Spec, off uint64) string {
-	return is.Key(offToRec(store, off))
+	return is.Key(OffToRec(store, off))
 }
 
-func mkcmp(store *stor.Stor, is *ixkey.Spec) func(x, y uint64) int {
-	return func(x, y uint64) int {
-		xr := offToRec(store, x)
-		yr := offToRec(store, y)
-		return is.Compare(xr, yr)
-	}
-}
-
-func offToRec(store *stor.Stor, off uint64) rt.Record {
+func OffToRec(store *stor.Stor, off uint64) rt.Record {
 	buf := store.Data(off)
 	size := rt.RecLen(buf)
 	return rt.Record(hacks.BStoS(buf[:size]))
 }
 
-// offToRecCk verifies the checksum following the record
-func offToRecCk(store *stor.Stor, off uint64) rt.Record {
+// OffToRecCk verifies the checksum following the record
+func OffToRecCk(store *stor.Stor, off uint64) rt.Record {
 	buf := store.Data(off)
 	size := rt.RecLen(buf)
 	cksum.MustCheck(buf[:size+cksum.Len])

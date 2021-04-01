@@ -18,6 +18,7 @@ import (
 	"github.com/apmckinlay/gsuneido/builtin"
 	"github.com/apmckinlay/gsuneido/compile"
 	"github.com/apmckinlay/gsuneido/db19"
+	"github.com/apmckinlay/gsuneido/db19/tools"
 	"github.com/apmckinlay/gsuneido/dbms"
 	"github.com/apmckinlay/gsuneido/options"
 	. "github.com/apmckinlay/gsuneido/runtime"
@@ -69,13 +70,13 @@ func main() {
 	case "dump":
 		t := time.Now()
 		if options.Arg == "" {
-			ntables, err := db19.DumpDatabase("suneido.db", "database.su")
+			ntables, err := tools.DumpDatabase("suneido.db", "database.su")
 			ck(err)
 			fmt.Println("dumped", ntables, "tables in",
 				time.Since(t).Round(time.Millisecond))
 		} else {
 			table := strings.TrimSuffix(options.Arg, ".su")
-			nrecs, err := db19.DumpTable("suneido.db", table, table+".su")
+			nrecs, err := tools.DumpTable("suneido.db", table, table+".su")
 			ck(err)
 			fmt.Println("dumped", nrecs, "records from", table,
 				"in", time.Since(t).Round(time.Millisecond))
@@ -84,19 +85,19 @@ func main() {
 	case "load":
 		t := time.Now()
 		if options.Arg == "" {
-			n := db19.LoadDatabase("database.su", "suneido.db")
+			n := tools.LoadDatabase("database.su", "suneido.db")
 			fmt.Println("loaded", n, "tables in",
 				time.Since(t).Round(time.Millisecond))
 		} else {
 			table := strings.TrimSuffix(options.Arg, ".su")
-			n := db19.LoadTable(table, "suneido.db")
+			n := tools.LoadTable(table, "suneido.db")
 			fmt.Println("loaded", n, "records to", table,
 				"in", time.Since(t).Round(time.Millisecond))
 		}
 		os.Exit(0)
 	case "compact":
 		t := time.Now()
-		ntables, err := db19.Compact("suneido.db")
+		ntables, err := tools.Compact("suneido.db")
 		ck(err)
 		fmt.Println("compacted", ntables, "tables in",
 			time.Since(t).Round(time.Millisecond))

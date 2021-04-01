@@ -74,7 +74,7 @@ func checkState(state *DbState, table string) (ec *ErrCorrupt) {
 	if table != "" {
 		tcs.work <- table
 	}
-	tcs.state.meta.ForEachSchema(func(ts *meta.Schema) {
+	tcs.state.Meta.ForEachSchema(func(ts *meta.Schema) {
 		if ts.Table == table {
 			return // continue
 		}
@@ -113,13 +113,13 @@ func truncate(dbfile string, store *stor.Stor, off uint64) error {
 	}
 	src.Close()
 	dst.Close()
-	if err = renameBak(tmpfile, dbfile); err != nil {
+	if err = RenameBak(tmpfile, dbfile); err != nil {
 		return err
 	}
 	return ensureFlat(dbfile)
 }
 
-func renameBak(from string, to string) error {
+func RenameBak(from string, to string) error { //TODO move to util
 	err := os.Remove(to + ".bak")
 	if err != nil && !os.IsNotExist(err) {
 		return err
@@ -137,7 +137,7 @@ func renameBak(from string, to string) error {
 
 func ensureFlat(dbfile string) error {
 	// ensure flattened (required by quick check)
-	db, err := openDatabase(dbfile, stor.UPDATE, false)
+	db, err := OpenDb(dbfile, stor.UPDATE, false)
 	if err != nil {
 		return fmt.Errorf("after rebuild: %w", err)
 	}

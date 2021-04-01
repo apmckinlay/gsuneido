@@ -10,6 +10,7 @@ import (
 
 	"github.com/apmckinlay/gsuneido/db19"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
+	"github.com/apmckinlay/gsuneido/db19/tools"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
@@ -59,9 +60,9 @@ func (DbmsLocal) Cursors() int {
 func (dbms DbmsLocal) Dump(table string) string {
 	var err error
 	if table == "" {
-		_, err = dbms.db.Dump("database.su")
+		_, err = tools.Dump(dbms.db, "database.su")
 	} else {
-		_, err = dbms.db.DumpTable(table, table+".su")
+		_, err = tools.DumpDbTable(dbms.db, table, table+".su")
 	}
 	if err != nil {
 		return fmt.Sprint(err)

@@ -1,7 +1,7 @@
 // Copyright Suneido Software Corp. All rights reserved.
 // Governed by the MIT license found in the LICENSE file.
 
-package db19
+package tools
 
 import (
 	"bufio"
@@ -11,8 +11,10 @@ import (
 	"os"
 	"strings"
 
+	. "github.com/apmckinlay/gsuneido/db19"
 	"github.com/apmckinlay/gsuneido/db19/index"
 	"github.com/apmckinlay/gsuneido/db19/index/btree"
+	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/db19/meta"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/dbms/query"
@@ -43,10 +45,10 @@ func LoadDatabase(from, dbfile string) int {
 		trace()
 		assert.That(nTables < 1010)
 	}
-	trace("SIZE", db.store.Size())
+	trace("SIZE", db.Store.Size())
 	db.GetState().Write(true)
 	db.Close()
-	ck(renameBak(tmpfile, dbfile))
+	ck(RenameBak(tmpfile, dbfile))
 	return nTables
 }
 
@@ -89,7 +91,7 @@ func loadTable(db *Database, r *bufio.Reader, schema string) int {
 	trace(schema)
 	rq := query.ParseRequest("create " + schema)
 
-	store := db.store
+	store := db.Store
 	list := sortlist.NewUnsorted()
 	before := store.Size()
 	nrecs := readRecords(r, store, list)
@@ -154,7 +156,7 @@ func buildIndexes(ts *meta.Schema, list *sortlist.Builder, store *stor.Stor, nre
 		iter := list.Iter()
 		n := 0
 		for off := iter(); off != 0; off = iter() {
-			bldr.Add(getLeafKey(store, &ix.Ixspec, off), off)
+			bldr.Add(btree.GetLeafKey(store, &ix.Ixspec, off), off)
 			n++
 		}
 		ov[i] = index.OverlayFor(bldr.Finish())
@@ -164,8 +166,20 @@ func buildIndexes(ts *meta.Schema, list *sortlist.Builder, store *stor.Stor, nre
 	return ov
 }
 
+func mkcmp(store *stor.Stor, is *ixkey.Spec) func(x, y uint64) int {
+	return func(x, y uint64) int {
+		xr := OffToRec(store, x)
+		yr := OffToRec(store, y)
+		return is.Compare(xr, yr)
+	}
+}
+
 func ck(err error) {
 	if err != nil {
 		panic(err.Error())
 	}
+}
+
+func trace(...interface{}) {
+	// fmt.Println(args...) // comment out to disable tracing
 }

@@ -1,13 +1,15 @@
 // Copyright Suneido Software Corp. All rights reserved.
 // Governed by the MIT license found in the LICENSE file.
 
-package db19
+package tools
 
 import (
 	"fmt"
 	"os"
 	"testing"
 	"time"
+
+	. "github.com/apmckinlay/gsuneido/db19"
 )
 
 func TestLoadTable(*testing.T) {

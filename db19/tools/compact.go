@@ -1,13 +1,14 @@
 // Copyright Suneido Software Corp. All rights reserved.
 // Governed by the MIT license found in the LICENSE file.
 
-package db19
+package tools
 
 import (
 	"fmt"
 	"io/ioutil"
 	"os"
 
+	. "github.com/apmckinlay/gsuneido/db19"
 	"github.com/apmckinlay/gsuneido/db19/meta"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/runtime"
@@ -25,7 +26,7 @@ func Compact(dbfile string) (ntables int, err error) {
 			err = fmt.Errorf("compact failed: %v", e)
 		}
 	}()
-	src, err := openDatabase(dbfile, stor.READ, false)
+	src, err := OpenDb(dbfile, stor.READ, false)
 	ck(err)
 	defer src.Close()
 	dst, tmpfile := tmpdb()
@@ -34,7 +35,7 @@ func Compact(dbfile string) (ntables int, err error) {
 	defer ics.finish()
 
 	state := src.GetState()
-	state.meta.ForEachSchema(func(sc *meta.Schema) {
+	state.Meta.ForEachSchema(func(sc *meta.Schema) {
 		compactTable(state, src, sc, dst, ics)
 		ntables++
 	})
@@ -42,7 +43,7 @@ func Compact(dbfile string) (ntables int, err error) {
 	dst.Close()
 	src.Close()
 	ics.finish()
-	ck(renameBak(tmpfile, dbfile))
+	ck(RenameBak(tmpfile, dbfile))
 	return ntables, nil
 }
 
@@ -58,17 +59,17 @@ func tmpdb() (*Database, string) {
 
 func compactTable(state *DbState, src *Database, ts *meta.Schema, dst *Database,
 	ics *indexCheckers) {
-	info := state.meta.GetRoInfo(ts.Table)
-	before := dst.store.Size()
+	info := state.Meta.GetRoInfo(ts.Table)
+	before := dst.Store.Size()
 	list := sortlist.NewUnsorted()
 	sum := uint64(0)
 	count := info.Indexes[0].Check(func(off uint64) {
 		sum += off // addition so order doesn't matter
-		rec := src.store.Data(off)
+		rec := src.Store.Data(off)
 		size := runtime.RecLen(rec)
 		rec = rec[:size+cksum.Len]
 		cksum.MustCheck(rec)
-		off2, buf := dst.store.Alloc(len(rec))
+		off2, buf := dst.Store.Alloc(len(rec))
 		copy(buf, rec)
 		//TODO squeeze records when table has deleted fields
 		list.Add(off2)
@@ -76,8 +77,8 @@ func compactTable(state *DbState, src *Database, ts *meta.Schema, dst *Database,
 	list.Finish()
 	assert.This(count).Is(info.Nrows)
 	ics.checkOtherIndexes(info, count, sum) // concurrent
-	dataSize := dst.store.Size() - before
-	ov := buildIndexes(ts, list, dst.store, count) // same as load
+	dataSize := dst.Store.Size() - before
+	ov := buildIndexes(ts, list, dst.Store, count) // same as load
 	ti := &meta.Info{Table: ts.Table, Nrows: count, Size: dataSize, Indexes: ov}
 	dst.LoadedTable(ts, ti)
 }

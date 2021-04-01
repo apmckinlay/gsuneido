@@ -74,7 +74,7 @@ loop:
 func mergeSingle(state *DbState, merges *mergeList) []meta.MergeUpdate {
 	var results []meta.MergeUpdate
 	for _, tn := range merges.tn {
-		result := state.meta.Merge(tn.table, tn.nmerge)
+		result := state.Meta.Merge(tn.table, tn.nmerge)
 		results = append(results, result)
 	}
 	return results
@@ -103,12 +103,12 @@ func (em *execMulti) merge(state *DbState, merges *mergeList) []meta.MergeUpdate
 	// and avoid overhead of channels and worker
 	if len(merges.tn) == 1 {
 		m := merges.tn[0]
-		result := state.meta.Merge(m.table, m.nmerge)
+		result := state.Meta.Merge(m.table, m.nmerge)
 		return append(merges.results, result)
 	}
 	for i := 0; i < len(merges.tn); {
 		select {
-		case em.jobChan <- job{meta: state.meta,
+		case em.jobChan <- job{meta: state.Meta,
 			table: merges.tn[i].table, nmerge: merges.tn[i].nmerge}:
 			i++
 		case result := <-em.resultChan:

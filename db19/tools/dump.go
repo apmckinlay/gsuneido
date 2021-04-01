@@ -1,7 +1,7 @@
 // Copyright Suneido Software Corp. All rights reserved.
 // Governed by the MIT license found in the LICENSE file.
 
-package db19
+package tools
 
 import (
 	"bufio"
@@ -10,27 +10,27 @@ import (
 	"io/ioutil"
 	"math"
 	"os"
-	"runtime"
 	"sync"
 	"sync/atomic"
 
+	. "github.com/apmckinlay/gsuneido/db19"
 	"github.com/apmckinlay/gsuneido/db19/index"
 	"github.com/apmckinlay/gsuneido/db19/meta"
 	"github.com/apmckinlay/gsuneido/db19/stor"
+	"github.com/apmckinlay/gsuneido/options"
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util/ints"
 )
 
 // DumpDatabase exports a dumped database to a file.
 // In the process it concurrently does a full check of the database.
 func DumpDatabase(dbfile, to string) (ntables int, err error) {
-	db, err := openDatabase(dbfile, stor.READ, false)
+	db, err := OpenDb(dbfile, stor.READ, false)
 	ck(err)
 	defer db.Close()
-	return db.Dump(to)
+	return Dump(db, to)
 }
 
-func (db *Database) Dump(to string) (ntables int, err error) {
+func Dump(db *Database, to string) (ntables int, err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("dump failed: %v", e)
@@ -43,27 +43,27 @@ func (db *Database) Dump(to string) (ntables int, err error) {
 	defer ics.finish()
 
 	state := db.GetState()
-	state.meta.ForEachSchema(func(sc *meta.Schema) {
-		dumpTable(db, sc, true, w, ics)
+	state.Meta.ForEachSchema(func(sc *meta.Schema) {
+		dumpTable2(db, sc, true, w, ics)
 		ntables++
 	})
 	ck(w.Flush())
 	f.Close()
 	ics.finish()
-	ck(renameBak(tmpfile, to))
+	ck(RenameBak(tmpfile, to))
 	return ntables, nil
 }
 
 // DumpTable exports a dumped table to a file.
 // It returns the number of records dumped or panics on error.
 func DumpTable(dbfile, table, to string) (nrecs int, err error) {
-	db, err := openDatabase(dbfile, stor.READ, false)
+	db, err := OpenDb(dbfile, stor.READ, false)
 	ck(err)
 	defer db.Close()
-	return db.DumpTable(table, to)
+	return DumpDbTable(db, table, to)
 }
 
-func (db *Database) DumpTable(table, to string) (nrecs int, err error) {
+func DumpDbTable(db *Database, table, to string) (nrecs int, err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("dump failed: %v", e)
@@ -76,15 +76,15 @@ func (db *Database) DumpTable(table, to string) (nrecs int, err error) {
 	defer ics.finish()
 
 	state := db.GetState()
-	schema := state.meta.GetRoSchema(table)
+	schema := state.Meta.GetRoSchema(table)
 	if schema == nil {
 		return 0, errors.New("dump failed: can't find " + table)
 	}
-	nrecs = dumpTable(db, schema, false, w, ics)
+	nrecs = dumpTable2(db, schema, false, w, ics)
 	ck(w.Flush())
 	f.Close()
 	ics.finish()
-	ck(renameBak(tmpfile, to))
+	ck(RenameBak(tmpfile, to))
 	return nrecs, nil
 
 }
@@ -97,7 +97,7 @@ func dumpOpen() (*os.File, *bufio.Writer) {
 	return f, w
 }
 
-func dumpTable(db *Database, schema *meta.Schema, multi bool, w *bufio.Writer,
+func dumpTable2(db *Database, schema *meta.Schema, multi bool, w *bufio.Writer,
 	ics *indexCheckers) int {
 	state := db.GetState()
 	w.WriteString("====== ")
@@ -105,11 +105,11 @@ func dumpTable(db *Database, schema *meta.Schema, multi bool, w *bufio.Writer,
 		w.WriteString(schema.Table + " ")
 	}
 	w.WriteString(schema.String() + "\n")
-	info := state.meta.GetRoInfo(schema.Table)
+	info := state.Meta.GetRoInfo(schema.Table)
 	sum := uint64(0)
 	count := info.Indexes[0].Check(func(off uint64) {
 		sum += off                       // addition so order doesn't matter
-		rec := offToRecCk(db.store, off) // verify data checksums
+		rec := OffToRecCk(db.Store, off) // verify data checksums
 		writeInt(w, len(rec))
 		w.WriteString(string(rec))
 	})
@@ -132,7 +132,7 @@ func writeInt(w *bufio.Writer, n int) {
 
 func newIndexCheckers() *indexCheckers {
 	ics := indexCheckers{work: make(chan indexCheck, 32)} // ???
-	nw := nworkers()
+	nw := options.Nworkers
 	ics.wg.Add(nw)
 	for i := 0; i < nw; i++ {
 		go ics.worker()
@@ -140,9 +140,7 @@ func newIndexCheckers() *indexCheckers {
 	return &ics
 }
 
-func nworkers() int {
-	return ints.Min(8, ints.Max(1, runtime.NumCPU()-1)) // ???
-}
+type void struct{}
 
 type indexCheckers struct {
 	err    atomic.Value
@@ -177,7 +175,7 @@ func (ics *indexCheckers) worker() {
 		ics.wg.Done()
 	}()
 	for ic := range ics.work {
-		checkOtherIndex(ic.index, ic.count, ic.sum)
+		CheckOtherIndex(ic.index, ic.count, ic.sum)
 	}
 }
 

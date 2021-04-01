@@ -18,7 +18,7 @@ import (
 
 type DbState struct {
 	store *stor.Stor
-	meta  *meta.Meta
+	Meta  *meta.Meta
 }
 
 type stateHolder struct {
@@ -71,9 +71,9 @@ func (db *Database) Merge(fn mergefn, merges *mergeList) {
 	updates := fn(db.GetState(), merges) // outside UpdateState
 	db.UpdateState(func(state *DbState) {
 		// updates := fn(state, merges)
-		meta := *state.meta // copy
+		meta := *state.Meta // copy
 		meta.ApplyMerge(updates)
-		state.meta = &meta
+		state.Meta = &meta
 	})
 }
 
@@ -87,13 +87,13 @@ type persistfn func(*DbState) []meta.PersistUpdate
 func (db *Database) Persist(exec execPersist, flatten bool) uint64 {
 	// fmt.Println("Persist", flatten)
 	var off uint64
-	db.GetState().meta.Persist(exec.Submit) // outside UpdateState
+	db.GetState().Meta.Persist(exec.Submit) // outside UpdateState
 	updates := exec.Results()
 	db.UpdateState(func(state *DbState) {
 		// updates := state.meta.Persist()
-		meta := *state.meta // copy
+		meta := *state.Meta // copy
 		meta.ApplyPersist(updates)
-		state.meta = &meta
+		state.Meta = &meta
 		off = state.Write(flatten)
 	})
 	return off
@@ -108,7 +108,7 @@ const magic2at = stateLen - len(magic2)
 
 func (state *DbState) Write(flatten bool) uint64 {
 	// NOTE: indexes should already have been saved
-	offSchema, offInfo := state.meta.Write(state.store, flatten)
+	offSchema, offInfo := state.Meta.Write(state.store, flatten)
 	return writeState(state.store, offSchema, offInfo)
 }
 
@@ -133,7 +133,7 @@ func writeState(store *stor.Stor, offSchema, offInfo uint64) uint64 {
 
 func ReadState(st *stor.Stor, off uint64) (*DbState, time.Time) {
 	offSchema, offInfo, t := readState(st, off)
-	return &DbState{store: st, meta: meta.ReadMeta(st, offSchema, offInfo)}, t
+	return &DbState{store: st, Meta: meta.ReadMeta(st, offSchema, offInfo)}, t
 }
 
 func readState(st *stor.Stor, off uint64) (offSchema, offInfo uint64, t time.Time) {

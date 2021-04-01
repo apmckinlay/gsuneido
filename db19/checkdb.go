@@ -12,6 +12,7 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/index"
 	"github.com/apmckinlay/gsuneido/db19/meta"
 	"github.com/apmckinlay/gsuneido/db19/stor"
+	"github.com/apmckinlay/gsuneido/options"
 	"github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/cksum"
 )
@@ -34,7 +35,7 @@ func (db *Database) QuickCheck() (err error) {
 }
 
 func quickCheckTable(state *DbState, table string) {
-	info := state.meta.GetRoInfo(table)
+	info := state.Meta.GetRoInfo(table)
 	for _, ix := range info.Indexes {
 		ix.QuickCheck()
 	}
@@ -44,7 +45,7 @@ func quickCheckTable(state *DbState, table string) {
 
 // CheckDatabase checks the integrity of the database.
 func CheckDatabase(dbfile string) (ec error) {
-	db, err := openDatabase(dbfile, stor.READ, false)
+	db, err := OpenDb(dbfile, stor.READ, false)
 	if err != nil {
 		return newErrCorrupt(err)
 	}
@@ -64,7 +65,7 @@ func (db *Database) Check() (ec error) {
 }
 
 func checkTable(state *DbState, table string) {
-	info := state.meta.GetRoInfo(table)
+	info := state.Meta.GetRoInfo(table)
 	count, sum := checkFirstIndex(state, info.Indexes[0])
 	if count != info.Nrows {
 		fmt.Println(table, "count", count, "info.Nrows", info.Nrows)
@@ -72,7 +73,7 @@ func checkTable(state *DbState, table string) {
 	}
 	for i := 1; i < len(info.Indexes); i++ {
 		ix := info.Indexes[i]
-		count, sum = checkOtherIndex(ix, count, sum)
+		count, sum = CheckOtherIndex(ix, count, sum)
 	}
 }
 
@@ -88,7 +89,7 @@ func checkFirstIndex(state *DbState, ix *index.Overlay) (int, uint64) {
 	return count, sum
 }
 
-func checkOtherIndex(ix *index.Overlay,
+func CheckOtherIndex(ix *index.Overlay,
 	countPrev int, sumPrev uint64) (int, uint64) {
 	sum := uint64(0)
 	count := ix.Check(func(off uint64) {
@@ -139,7 +140,7 @@ func newErrCorrupt(e interface{}) *ErrCorrupt {
 func runParallel(state *DbState, fn func(*DbState, string)) {
 	tcs := newTableCheckers(state, fn)
 	defer tcs.finish()
-	tcs.state.meta.ForEachSchema(func(ts *meta.Schema) {
+	tcs.state.Meta.ForEachSchema(func(ts *meta.Schema) {
 		select {
 		case tcs.work <- ts.Table:
 		case <-tcs.stop:
@@ -155,7 +156,7 @@ func newTableCheckers(state *DbState, fn func(*DbState, string)) *tableCheckers 
 		work:  make(chan string, 1), // ???
 		stop:  make(chan void),
 	}
-	nw := nworkers()
+	nw := options.Nworkers
 	tcs.wg.Add(nw)
 	for i := 0; i < nw; i++ {
 		go tcs.worker()

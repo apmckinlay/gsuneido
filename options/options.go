@@ -5,6 +5,12 @@
 // including command line flags
 package options
 
+import (
+	"runtime"
+
+	"github.com/apmckinlay/gsuneido/util/ints"
+)
+
 var BuiltDate string
 
 // command line flags
@@ -63,3 +69,7 @@ const (
 
 	TraceJoinOpt
 )
+
+var Nworkers = func() int {
+	return ints.Min(8, ints.Max(1, runtime.NumCPU()-1)) // ???
+}()

@@ -28,7 +28,7 @@ func TestQuickCheck(*testing.T) {
 		return
 	}
 	t := time.Now()
-	db, e := openDatabase("../suneido.db", stor.READ, false)
+	db, e := OpenDb("../suneido.db", stor.READ, false)
 	if e != nil {
 		panic(e)
 	}

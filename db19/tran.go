@@ -24,7 +24,7 @@ type ReadTran struct {
 
 func (db *Database) NewReadTran() *ReadTran {
 	state := db.GetState()
-	return &ReadTran{tran: tran{db: db, meta: state.meta}}
+	return &ReadTran{tran: tran{db: db, meta: state.Meta}}
 }
 
 // TEMPORARY methods
@@ -41,7 +41,7 @@ func (t *ReadTran) GetIndex(table string, cols []string) *index.Overlay {
 }
 
 func (t *ReadTran) GetRecord(off uint64) rt.Record {
-	buf := t.db.store.Data(off)
+	buf := t.db.Store.Data(off)
 	size := runtime.RecLen(buf)
 	return rt.Record(hacks.BStoS(buf[:size]))
 }
@@ -60,7 +60,7 @@ type UpdateTran struct {
 
 func (db *Database) NewUpdateTran() *UpdateTran {
 	state := db.GetState()
-	meta := state.meta.Mutable()
+	meta := state.Meta.Mutable()
 	ct := db.ck.StartTran()
 	return &UpdateTran{ct: ct, tran: tran{db: db, meta: meta}}
 }
@@ -74,7 +74,7 @@ func (t *UpdateTran) Commit() {
 // commit is internal, called by checker (to serialize)
 func (t *UpdateTran) commit() int {
 	t.db.UpdateState(func(state *DbState) {
-		state.meta = t.meta.LayeredOnto(state.meta)
+		state.Meta = t.meta.LayeredOnto(state.Meta)
 	})
 	return t.num()
 }
@@ -87,7 +87,7 @@ func (t *UpdateTran) Output(table string, rec rt.Record) {
 	ts := t.getSchema(table)
 	ti := t.getInfo(table)
 	n := rec.Len()
-	off, buf := t.db.store.Alloc(n + cksum.Len)
+	off, buf := t.db.Store.Alloc(n + cksum.Len)
 	copy(buf, rec[:n])
 	cksum.Update(buf)
 	keys := make([]string, len(ts.Indexes))
