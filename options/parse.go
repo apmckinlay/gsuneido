@@ -17,16 +17,16 @@ loop:
 			continue
 		}
 		switch {
+		case match(&args, "-check"):
+			setAction("check")
+		case match(&args, "-compact"):
+			setAction("compact")
 		case match(&args, "-client"), match(&args, "-c"):
 			setAction("client")
 			Arg = "127.0.0.1"
 			args = optionalArg(args)
-		case match(&args, "-check"):
-			setAction("check")
 		case match(&args, "-repair"):
 			setAction("repair")
-		case match(&args, "-compact"):
-			setAction("compact")
 		case match(&args, "-dump"), match(&args, "-d"):
 			setAction("dump")
 			args = optionalArg(args)
