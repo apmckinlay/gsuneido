@@ -9,37 +9,24 @@ import (
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
 )
 
-type qparser struct {
+type queryParser struct {
 	compile.Parser
 }
 
-func NewQueryParser(src string) *qparser {
-	return &qparser{*compile.QueryParser(src)}
+func NewQueryParser(src string) *queryParser {
+	return &queryParser{*compile.QueryParser(src)}
 }
 
 func ParseQuery(src string) Query {
 	p := NewQueryParser(src)
-	result := p.query()
+	result := p.sort()
 	if p.Token != tok.Eof {
 		p.Error("did not parse all input")
 	}
 	return result
 }
 
-func (p *qparser) query() Query {
-	switch {
-	case p.MatchIf(tok.Insert):
-		return nil //p.insert() //TODO
-	case p.MatchIf(tok.Update):
-		return nil //p.update() //TODO
-	case p.MatchIf(tok.Delete):
-		return nil //p.delete() //TODO
-	default:
-		return p.sort()
-	}
-}
-
-func (p *qparser) sort() Query {
+func (p *queryParser) sort() Query {
 	q := p.baseQuery()
 	if p.MatchIf(tok.Sort) {
 		reverse := p.MatchIf(tok.Reverse)
@@ -49,14 +36,14 @@ func (p *qparser) sort() Query {
 	return q
 }
 
-func (p *qparser) baseQuery() Query {
+func (p *queryParser) baseQuery() Query {
 	q := p.source()
 	for p.operation(&q) {
 	}
 	return q
 }
 
-func (p *qparser) source() Query {
+func (p *queryParser) source() Query {
 	if p.MatchIf(tok.LParen) {
 		q := p.baseQuery()
 		p.Match(tok.RParen)
@@ -65,11 +52,11 @@ func (p *qparser) source() Query {
 	return p.table()
 }
 
-func (p *qparser) table() Query {
+func (p *queryParser) table() Query {
 	return &Table{name: p.MatchIdent()}
 }
 
-func (p *qparser) operation(pq *Query) bool {
+func (p *queryParser) operation(pq *Query) bool {
 	switch {
 	case p.MatchIf(tok.Extend):
 		*pq = p.extend(*pq)
@@ -101,7 +88,7 @@ func (p *qparser) operation(pq *Query) bool {
 	return true
 }
 
-func (p *qparser) extend(q Query) Query {
+func (p *queryParser) extend(q Query) Query {
 	cols := make([]string, 0, 4)
 	exprs := make([]ast.Expr, 0, 4)
 	for {
@@ -118,24 +105,24 @@ func (p *qparser) extend(q Query) Query {
 	return &Extend{Query1: Query1{source: q}, cols: cols, exprs: exprs}
 }
 
-func (p *qparser) intersect(q Query) Query {
+func (p *queryParser) intersect(q Query) Query {
 	return &Intersect{Compatible: Compatible{
 		Query2: Query2{Query1: Query1{source: q}, source2: p.source()}}}
 }
 
-func (p *qparser) join(q Query) Query {
+func (p *queryParser) join(q Query) Query {
 	by := p.joinBy()
 	return &Join{Query2: Query2{Query1: Query1{source: q},
 		source2: p.source()}, by: by}
 }
 
-func (p *qparser) leftjoin(q Query) Query {
+func (p *queryParser) leftjoin(q Query) Query {
 	by := p.joinBy()
 	return &LeftJoin{Join: Join{Query2: Query2{Query1: Query1{source: q},
 		source2: p.source()}, by: by}}
 }
 
-func (p *qparser) joinBy() []string {
+func (p *queryParser) joinBy() []string {
 	if p.MatchIf(tok.By) {
 		by := p.parenList()
 		if len(by) == 0 {
@@ -146,20 +133,20 @@ func (p *qparser) joinBy() []string {
 	return nil
 }
 
-func (p *qparser) minus(q Query) Query {
+func (p *queryParser) minus(q Query) Query {
 	return &Minus{Compatible: Compatible{
 		Query2: Query2{Query1: Query1{source: q}, source2: p.source()}}}
 }
 
-func (p *qparser) project(q Query) Query {
+func (p *queryParser) project(q Query) Query {
 	return &Project{Query1: Query1{source: q}, columns: p.commaList()}
 }
 
-func (p *qparser) remove(q Query) Query {
+func (p *queryParser) remove(q Query) Query {
 	return &Remove{Query1: Query1{source: q}, columns: p.commaList()}
 }
 
-func (p *qparser) rename(q Query) Query {
+func (p *queryParser) rename(q Query) Query {
 	var from, to []string
 	for {
 		from = append(from, p.MatchIdent())
@@ -172,14 +159,14 @@ func (p *qparser) rename(q Query) Query {
 	return &Rename{Query1: Query1{source: q}, from: from, to: to}
 }
 
-func (p *qparser) summarize(q Query) Query {
+func (p *queryParser) summarize(q Query) Query {
 	su := &Summarize{Query1: Query1{source: q}}
 	su.by = p.sumBy()
 	p.sumOps(su)
 	return su
 }
 
-func (p *qparser) sumBy() []string {
+func (p *queryParser) sumBy() []string {
 	var by []string
 	for p.Token == tok.Identifier &&
 		!isSumOp(p.Token) &&
@@ -190,7 +177,7 @@ func (p *qparser) sumBy() []string {
 	return by
 }
 
-func (p *qparser) sumOps(su *Summarize) {
+func (p *queryParser) sumOps(su *Summarize) {
 	for {
 		var col, op, on string
 		if p.Lxr.Ahead(1).Token == tok.Eq {
@@ -217,17 +204,17 @@ func isSumOp(t tok.Token) bool {
 	return tok.SummarizeStart < t && t < tok.SummarizeEnd
 }
 
-func (p *qparser) times(q Query) Query {
+func (p *queryParser) times(q Query) Query {
 	return &Times{Query2: Query2{Query1: Query1{source: q},
 		source2: p.source()}}
 }
 
-func (p *qparser) union(q Query) Query {
+func (p *queryParser) union(q Query) Query {
 	return &Union{Compatible: Compatible{
 		Query2: Query2{Query1: Query1{source: q}, source2: p.source()}}}
 }
 
-func (p *qparser) where(q Query) Query {
+func (p *queryParser) where(q Query) Query {
 	expr := p.Expression()
 	if nary, ok := expr.(*ast.Nary); !ok || nary.Tok != tok.And {
 		expr = &ast.Nary{Tok: tok.And, Exprs: []ast.Expr{expr}}
@@ -235,7 +222,7 @@ func (p *qparser) where(q Query) Query {
 	return &Where{Query1: Query1{source: q}, expr: expr.(*ast.Nary)}
 }
 
-func (p *qparser) parenList() []string {
+func (p *queryParser) parenList() []string {
 	p.Match(tok.LParen)
 	if p.MatchIf(tok.RParen) {
 		return nil
@@ -245,7 +232,7 @@ func (p *qparser) parenList() []string {
 	return list
 }
 
-func (p *qparser) commaList() []string {
+func (p *queryParser) commaList() []string {
 	list := make([]string, 0, 4)
 	for {
 		list = append(list, p.MatchIdent())

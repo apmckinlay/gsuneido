@@ -40,6 +40,8 @@ const (
 
 func (sc *Schema) String() string {
 	var sb strings.Builder
+	sb.WriteString(sc.Table)
+	sb.WriteString(" ")
 	if sc.Columns != nil || sc.Derived != nil {
 		var cb str.CommaBuilder
 		for _, col := range sc.Columns {

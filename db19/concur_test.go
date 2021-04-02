@@ -17,7 +17,7 @@ func TestConcur(t *testing.T) {
 		return
 	}
 	store := stor.HeapStor(16 * 1024)
-	db, err := createDatabase(store)
+	db, err := CreateDb(store)
 	ck(err)
 	before := store.Size()
 	persistInterval := time.Millisecond

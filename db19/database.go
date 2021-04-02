@@ -31,10 +31,10 @@ func CreateDatabase(filename string) (*Database, error) {
 	if err != nil {
 		return nil, err
 	}
-	return createDatabase(store)
+	return CreateDb(store)
 }
 
-func createDatabase(store *stor.Stor) (*Database, error) {
+func CreateDb(store *stor.Stor) (*Database, error) {
 	var db Database
 	db.state.set(&DbState{store: store, Meta: &meta.Meta{}})
 

@@ -9,17 +9,18 @@ import (
 	"github.com/apmckinlay/gsuneido/compile"
 	"github.com/apmckinlay/gsuneido/compile/lexer"
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
+	"github.com/apmckinlay/gsuneido/db19"
 	"github.com/apmckinlay/gsuneido/db19/meta/schema"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
-type reqparser struct {
+type requestParser struct {
 	compile.ParserBase
 }
 
-func NewRequestParser(src string) *reqparser {
+func NewRequestParser(src string) *requestParser {
 	lxr := lexer.NewQueryLexer(src)
-	p := &reqparser{compile.ParserBase{Lxr: lxr}}
+	p := &requestParser{compile.ParserBase{Lxr: lxr}}
 	p.Next()
 	return p
 }
@@ -27,11 +28,9 @@ func NewRequestParser(src string) *reqparser {
 type Schema = schema.Schema
 type Index = schema.Index
 
-type Request struct {
-	Action    string
-	SubAction string
-	Schema
-	Renames
+type Request interface {
+	execute(db *db19.Database)
+	String() string
 }
 
 type Renames struct {
@@ -39,7 +38,7 @@ type Renames struct {
 	To   []string
 }
 
-func ParseRequest(src string) *Request {
+func ParseRequest(src string) Request {
 	p := NewRequestParser(src)
 	result := p.request()
 	if p.Token != tok.Eof {
@@ -48,75 +47,76 @@ func ParseRequest(src string) *Request {
 	return result
 }
 
-func (p *reqparser) request() *Request {
+func (p *requestParser) request() Request {
 	switch {
 	case p.MatchIf(tok.Create):
-		return &Request{Action: "create", Schema: p.schema(true)}
+		return &createRequest{p.schema(true)}
 	case p.MatchIf(tok.Ensure):
-		return &Request{Action: "ensure", Schema: p.schema(false)}
-	case p.MatchIf(tok.Drop):
-		table := p.MatchIdent()
-		return &Request{Action: "drop", Schema: Schema{Table: table}}
+		return &ensureRequest{p.schema(false)}
 	case p.MatchIf(tok.Rename):
 		from, to := p.rename1()
-		return &Request{Action: "rename",
-			Renames: Renames{From: []string{from}, To: []string{to}}}
+		return &renameRequest{from: from, to: to}
 	case p.MatchIf(tok.Alter):
 		return p.alter()
 	//TODO: View, Sview
+	case p.MatchIf(tok.Drop):
+		table := p.MatchIdent()
+		return &dropRequest{table}
 	default:
 		panic("invalid request")
 	}
 }
 
-func (p *reqparser) rename1() (string, string) {
+func (p *requestParser) alter() Request {
+	table := p.MatchIdent()
+	switch {
+	case p.MatchIf(tok.Create):
+		return &alterCreateRequest{p.schema2(table, false)}
+	case p.MatchIf(tok.Drop):
+		return &alterDropRequest{p.schema2(table, false)}
+	case p.MatchIf(tok.Rename):
+		return p.alterRename(table)
+	default:
+		panic("invalid request")
+	}
+}
+
+func (p *requestParser) alterRename(table string) Request {
+	var from, to []string
+	for {
+		f, t := p.rename1()
+		from = append(from, f)
+		to = append(to, t)
+		if !p.MatchIf(tok.Comma) {
+			break
+		}
+	}
+	return &alterRenameRequest{table: table, from: from, to: to}
+}
+
+func (p *requestParser) rename1() (string, string) {
 	from := p.MatchIdent()
 	p.Match(tok.To)
 	to := p.MatchIdent()
 	return from, to
 }
 
-func (p *reqparser) alter() *Request {
-	table := p.MatchIdent()
-	switch {
-	case p.MatchIf(tok.Create):
-		return &Request{Action: "alter", SubAction: "create",
-			Schema: p.schema2(table, false)}
-	case p.MatchIf(tok.Drop):
-		return &Request{Action: "alter", SubAction: "drop",
-			Schema: p.schema2(table, false)}
-	case p.MatchIf(tok.Rename):
-		return &Request{Action: "alter", SubAction: "rename",
-			Schema: p.schema2(table, false), Renames: p.renames()}
-	default:
-		panic("invalid request")
-	}
+func (p *requestParser) Schema() Schema {
+	return p.schema(true)
 }
 
-func (p *reqparser) renames() Renames {
-	var renames Renames
-	for {
-		from, to := p.rename1()
-		renames.From = append(renames.From, from)
-		renames.To = append(renames.To, to)
-		if !p.MatchIf(tok.Comma) {
-			return renames
-		}
-	}
-}
-
-func (p *reqparser) schema(full bool) Schema {
+func (p *requestParser) schema(full bool) Schema {
 	table := p.MatchIdent()
 	return p.schema2(table, full)
 }
 
-func (p *reqparser) schema2(table string, full bool) Schema {
+func (p *requestParser) schema2(table string, full bool) Schema {
 	columns, derived := p.columns(full)
 	indexes := p.indexes(columns, derived, full)
 	return Schema{Table: table, Columns: columns, Derived: derived, Indexes: indexes}
 }
 
-func (p *reqparser) columns(full bool) (columns, derived []string) {
+func (p *requestParser) columns(full bool) (columns, derived []string) {
 	if !full && p.Token != tok.LParen {
 		return
 	}
@@ -146,7 +146,7 @@ func (p *reqparser) columns(full bool) (columns, derived []string) {
 	return columns, derived
 }
 
-func (p *reqparser) indexes(columns, derived []string, full bool) []Index {
+func (p *requestParser) indexes(columns, derived []string, full bool) []Index {
 	hasKey := false
 	indexes := make([]Index, 0, 4)
 	for ix := p.index(columns, derived, full); ix != nil; ix = p.index(columns, derived, full) {
@@ -159,7 +159,7 @@ func (p *reqparser) indexes(columns, derived []string, full bool) []Index {
 	return indexes
 }
 
-func (p *reqparser) index(columns, derived []string, full bool) *Index {
+func (p *requestParser) index(columns, derived []string, full bool) *Index {
 	if p.Token != tok.Key && p.Token != tok.Index {
 		return nil
 	}
@@ -180,7 +180,7 @@ func (p *reqparser) index(columns, derived []string, full bool) *Index {
 	return ix
 }
 
-func (p *reqparser) indexColumns(columns, derived []string, full bool) []string {
+func (p *requestParser) indexColumns(columns, derived []string, full bool) []string {
 	p.Match(tok.LParen)
 	ixcols := make([]string, 0, 8)
 	for p.Token != tok.RParen {
@@ -196,7 +196,7 @@ func (p *reqparser) indexColumns(columns, derived []string, full bool) []string 
 	return ixcols
 }
 
-func (p *reqparser) foreignKey() (table string, columns []string, mode int) {
+func (p *requestParser) foreignKey() (table string, columns []string, mode int) {
 	if !p.MatchIf(tok.In) {
 		return
 	}
@@ -217,41 +217,4 @@ func (p *reqparser) foreignKey() (table string, columns []string, mode int) {
 		}
 	}
 	return table, columns, mode
-}
-
-//--------------------------------------------------------------------
-
-func (rq *Request) String() string {
-	s := rq.Action
-	switch rq.Action {
-	case "drop", "create", "ensure", "alter":
-		s += " " + rq.Table
-	}
-	switch rq.Action {
-	case "create", "ensure":
-		s += " " + rq.Schema.String()
-	}
-	switch rq.Action {
-	case "rename":
-		s += rq.Renames.String()
-	case "alter":
-		s += " " + rq.SubAction
-		switch rq.SubAction {
-		case "create", "drop":
-			s += " " + rq.Schema.String()
-		case "rename":
-			s += rq.Renames.String()
-		}
-	}
-	return s
-}
-
-func (r *Renames) String() string {
-	s := " "
-	sep := ""
-	for i, from := range r.From {
-		s += sep + from + " to " + r.To[i]
-		sep = ", "
-	}
-	return s
 }

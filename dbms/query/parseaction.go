@@ -1,0 +1,92 @@
+// Copyright Suneido Software Corp. All rights reserved.
+// Governed by the MIT license found in the LICENSE file.
+
+package query
+
+import (
+	"github.com/apmckinlay/gsuneido/compile/ast"
+	tok "github.com/apmckinlay/gsuneido/compile/tokens"
+	"github.com/apmckinlay/gsuneido/db19"
+	"github.com/apmckinlay/gsuneido/runtime"
+)
+
+type Action interface {
+	execute(ut *db19.UpdateTran) int
+	String() string
+}
+
+type actionParser struct {
+	queryParser
+}
+
+// ParseAction parses insert, update, and delete actions
+func ParseAction(src string) Action {
+	p := actionParser{*NewQueryParser(src)}
+	result := p.action()
+	if p.Token != tok.Eof {
+		p.Error("did not parse all input")
+	}
+	return result
+}
+
+func (p *actionParser) action() Action {
+	switch {
+	case p.MatchIf(tok.Insert):
+		return p.insert()
+	case p.MatchIf(tok.Update):
+		return p.update()
+	case p.MatchIf(tok.Delete):
+		return p.delete()
+	default:
+		panic(p.Error("action must be insert, update, or delete"))
+	}
+}
+
+func (p *actionParser) insert() Action {
+	if p.Token ==tok.LCurly || p.Token == tok.LBracket {
+		return p.insertRecord()
+	}
+	return p.insertQuery()
+}
+
+func (p *actionParser) insertRecord() Action {
+	record := p.record()
+	p.Match(tok.Into)
+	query := p.baseQuery()
+	return &insertRecordAction{record: record, query: query}
+}
+
+func (p *actionParser) record() *runtime.SuRecord {
+	if p.Token != tok.LCurly && p.Token != tok.LBracket {
+		p.Error("record expected e.g. { a: 1, b: 2 }")
+	}
+	return p.Const().(*runtime.SuRecord)
+}
+
+func (p *actionParser) insertQuery() Action {
+	query := p.baseQuery()
+	p.Match(tok.Into)
+	table := p.Text
+	p.Match(tok.Identifier)
+	return &insertQueryAction{query: query, table: table}
+}
+
+func (p *actionParser) update() Action {
+	query := p.baseQuery()
+	p.Match(tok.Set)
+	var cols []string
+	var exprs []ast.Expr
+	for p.Token == tok.Identifier {
+		cols = append(cols, p.Text)
+		p.Match(tok.Identifier)
+		p.Match(tok.Eq)
+		exprs = append(exprs, p.Expression())
+		p.MatchIf(tok.Comma)
+	}
+	return &updateAction{query: query, cols: cols, exprs: exprs}
+}
+
+func (p *actionParser) delete() Action {
+	query := p.baseQuery()
+	return &deleteAction{query: query}
+}
