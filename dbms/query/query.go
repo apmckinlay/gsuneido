@@ -399,8 +399,8 @@ func (*Query1) Get(runtime.Dir) runtime.Row {
 	panic("not implemented")
 }
 
-func (*Query1) Rewind() {
-	panic("not implemented")
+func (q1 *Query1) Rewind() {
+	q1.source.Rewind()
 }
 
 // Query2 -----------------------------------------------------------

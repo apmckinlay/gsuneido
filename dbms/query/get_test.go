@@ -74,7 +74,7 @@ func TestTableGet(t *testing.T) {
 		return s
 	}
 	test := func(query, expected string) {
-		q := ParseQuery("customer")
+		q := ParseQuery(query)
 		tran := db.NewReadTran()
 		Setup(q, readMode, tran)
 		assert.T(t).This(get(q, rt.Next)).Like(expected)
@@ -86,4 +86,28 @@ func TestTableGet(t *testing.T) {
 		'c'	'calac'	'calgary'
 		'e'	'emerald'	'vancouver'
 		'i'	'intercon'	'saskatoon'`)
+	test("customer sort id",
+		`id	name	city
+		'a'	'axon'	'saskatoon'
+		'c'	'calac'	'calgary'
+		'e'	'emerald'	'vancouver'
+		'i'	'intercon'	'saskatoon'`)
+	test("customer sort reverse id",
+		`id	name	city
+		'i'	'intercon'	'saskatoon'
+		'e'	'emerald'	'vancouver'
+		'c'	'calac'	'calgary'
+		'a'	'axon'	'saskatoon'`)
+	test("hist",
+		`date	item	id	cost
+		970101	'disk'	'a'	100
+		970101	'disk'	'e'	200
+		970102	'mouse'	'c'	200
+		970103	'pencil'	'e'	300`)
+	test("trans",
+		`item		id	cost	date
+		'disk'		'a'	100	970101
+		'eraser'	'c'	150	970201
+		'mouse'		'e'	200	960204
+		'mouse'		'c'	200	970101`)
 }

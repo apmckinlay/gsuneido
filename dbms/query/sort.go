@@ -4,6 +4,7 @@
 package query
 
 import (
+	"github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/sset"
 	"github.com/apmckinlay/gsuneido/util/str"
@@ -60,4 +61,15 @@ func (sort *Sort) optimize(mode Mode, index []string) (Cost, interface{}) {
 func (sort *Sort) setApproach(_ []string, approach interface{}, tran QueryTran) {
 	sort.sortApproach = approach.(sortApproach)
 	sort.source = SetApproach(sort.source, sort.index, tran)
+}
+
+func (sort *Sort) Header() *runtime.Header {
+	return sort.source.Header()
+}
+
+func (sort *Sort) Get(dir runtime.Dir) runtime.Row {
+	if sort.reverse {
+		dir = dir.Reverse()
+	}
+	return sort.source.Get(dir)
 }

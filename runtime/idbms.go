@@ -138,6 +138,16 @@ const (
 	Prev Dir = '-'
 )
 
+func (dir Dir) Reverse() Dir {
+	switch dir {
+	case Next:
+		return Prev
+	case Prev:
+		return Next
+	}
+	return dir
+}
+
 // IQuery is the interface to a database query,
 // either local (not implemented yet) or QueryClient.
 type IQuery interface {
