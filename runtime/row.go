@@ -8,6 +8,9 @@ import (
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
+// Row is the result of database queries.
+// It is a list of DbRec so that operations e.g. join
+// can avoid building new records.
 type Row []DbRec
 
 func (row Row) Get(hdr *Header, fld string) Value {
