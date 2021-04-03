@@ -26,10 +26,7 @@ func TestSuRecord_ReadonlyUnpack(t *testing.T) {
 	dbrec := DbRec{Record: rec}
 	row := Row{dbrec}
 
-	hdr := &Header{Columns: []string{"num", "str"},
-		Fields: [][]string{{"num", "str"}}}
-	hdr.EnsureMap()
-
+	hdr := NewHeader([][]string{{"num", "str"}}, []string{"num", "str"})
 	surec := SuRecordFromRow(row, hdr, nil)
 
 	assert.T(t).This(surec.Get(nil, SuStr("str"))).Is(SuStr("foobar"))

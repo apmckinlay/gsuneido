@@ -21,7 +21,7 @@ type testTran struct {
 	getIndex func() *Overlay
 }
 
-func (t *testTran) GetIndex(string, string) *Overlay {
+func (t *testTran) GetIndex(string, []string) *Overlay {
 	return t.getIndex()
 }
 
@@ -37,7 +37,7 @@ func TestOverIter(t *testing.T) {
 	even := from(0, 2, 4, 6, 8)
 	odd := from(1, 3, 5, 7, 9)
 	bt := btree.CreateBtree(stor.HeapStor(8192), nil)
-	it := NewOverIter("", "")
+	it := NewOverIter("", nil)
 	test := func(expected int) {
 		t.Helper()
 		if expected == -1 {
@@ -155,7 +155,7 @@ func TestOverIterCombine(*testing.T) {
 func checkIterator(data []string, ov *Overlay) int {
 	sort.Strings(data)
 	count := 0
-	it := NewOverIter("", "")
+	it := NewOverIter("", nil)
 	tran := &testTran{getIndex: func() *Overlay { return ov }}
 	for _, k := range data {
 		if k == "" {
@@ -191,7 +191,7 @@ func TestOverIterRandom(*testing.T) {
 	ibs := []*ixbuf.T{{}, {}, {}}
 	ov := &Overlay{bt: bt, layers: ibs}
 	tran := &testTran{getIndex: func() *Overlay { return ov }}
-	mi := NewOverIter("", "")
+	mi := NewOverIter("", nil)
 	check := func() {
 		if it.Eof() {
 			traceln("EOF")

@@ -63,9 +63,8 @@ func hdr_row() (*Header, Row) {
 	rec := rb.Build()
 	dbrec := DbRec{Record: rec}
 	row := Row{dbrec}
-	hdr := &Header{Columns: []string{"x", "y", "s", "t"},
-		Fields: [][]string{{"x", "y", "s", "t"}}}
-	hdr.EnsureMap()
+	hdr := NewHeader([][]string{{"x", "y", "s", "t"}},
+		[]string{"x", "y", "s", "t"})
 	return hdr, row
 }
 

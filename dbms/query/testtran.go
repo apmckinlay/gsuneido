@@ -6,6 +6,7 @@ package query
 import (
 	"strings"
 
+	"github.com/apmckinlay/gsuneido/db19/index"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/db19/meta"
 	"github.com/apmckinlay/gsuneido/runtime"
@@ -127,4 +128,16 @@ func (t testTran) Lookup(_ string, _ int, key string) runtime.DbRec {
 		rb.AddRaw(v)
 	}
 	return runtime.DbRec{Record: rb.Build()}
+}
+
+func (t testTran) Output(string, runtime.Record) {
+	panic("should not be called")
+}
+
+func (t testTran) GetIndex(string, []string) *index.Overlay {
+	panic("should not be called")
+}
+
+func (t testTran) GetRecord(uint64) runtime.Record {
+	panic("should not be called")
 }

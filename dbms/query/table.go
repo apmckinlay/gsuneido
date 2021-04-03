@@ -4,6 +4,7 @@
 package query
 
 import (
+	"github.com/apmckinlay/gsuneido/db19/index"
 	"github.com/apmckinlay/gsuneido/db19/index/btree"
 	"github.com/apmckinlay/gsuneido/db19/meta"
 	"github.com/apmckinlay/gsuneido/runtime"
@@ -17,12 +18,13 @@ type Table struct {
 	indexes   [][]string
 	keys      [][]string
 	singleton bool
-	t         QueryTran
+	tran      QueryTran
 	schema    *Schema
 	info      *meta.Info
 	// index is the index that will be used to access the data.
 	// It is set by optimize.
 	index []string
+	iter  *index.OverIter
 }
 
 type tableApproach struct {
@@ -40,7 +42,7 @@ func (tbl *Table) Init() {
 }
 
 func (tbl *Table) SetTran(t QueryTran) {
-	tbl.t = t
+	tbl.tran = t
 	tbl.schema = t.GetSchema(tbl.name)
 	if tbl.schema == nil {
 		panic("nonexistent table: " + tbl.name)
@@ -144,8 +146,42 @@ func (tbl *Table) lookupCost() Cost {
 	return (nodeScan * btree.TreeHeight) + tbl.rowSize()
 }
 
+// execution --------------------------------------------------------
+
 func (tbl *Table) Lookup(key string) runtime.Row {
 	iIndex := tbl.findIndex(tbl.index) //TODO cache
-	rec := tbl.t.Lookup(tbl.name, iIndex, key)
+	rec := tbl.tran.Lookup(tbl.name, iIndex, key)
 	return runtime.Row{rec}
+}
+
+func (tbl *Table) Header() *runtime.Header {
+	physical := [][]string{tbl.schema.Columns}
+	return runtime.NewHeader(physical, tbl.columns)
+}
+
+func (tbl *Table) Output(rec runtime.Record) {
+	tbl.tran.Output(tbl.name, rec)
+}
+
+func (tbl *Table) Rewind() {
+	if tbl.iter != nil {
+		tbl.iter.Rewind()
+	}
+}
+
+func (tbl *Table) Get(dir runtime.Dir) runtime.Row {
+	if tbl.iter == nil {
+		tbl.iter = index.NewOverIter(tbl.name, tbl.index)
+	}
+	if dir == runtime.Prev {
+		tbl.iter.Prev(tbl.tran)
+	} else {
+		tbl.iter.Next(tbl.tran)
+	}
+	if tbl.iter.Eof() {
+		return nil
+	}
+	_, off := tbl.iter.Cur()
+	rec := tbl.tran.GetRecord(off)
+	return runtime.Row{runtime.DbRec{Record: rec, Off: off}}
 }

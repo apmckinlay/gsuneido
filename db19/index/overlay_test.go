@@ -68,7 +68,7 @@ func key2off(key string) uint64 {
 
 func checkIter(data []string, ov *Overlay) {
 	sort.Strings(data)
-	it := NewOverIter("", "")
+	it := NewOverIter("", nil)
 	tran := &testTran{getIndex: func() *Overlay { return ov }}
 	for _, k := range data {
 		if k == "" {
@@ -115,7 +115,7 @@ func checkOver(d *testdata.T, ov *Overlay) {
 	t := &testTran{getIndex: func() *Overlay { return ov }}
 	sort.Strings(d.Keys)
 	i := 0
-	it := NewOverIter("", "")
+	it := NewOverIter("",nil)
 	for it.Next(t); !it.Eof(); it.Next(t) {
 		k, o := it.Cur()
 		assert.Msg("expect prefix of " + d.Keys[i] + " got " + k).

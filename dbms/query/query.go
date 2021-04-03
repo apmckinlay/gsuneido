@@ -29,6 +29,7 @@ package query
 import (
 	"fmt"
 
+	"github.com/apmckinlay/gsuneido/db19/index"
 	"github.com/apmckinlay/gsuneido/db19/index/btree"
 	"github.com/apmckinlay/gsuneido/db19/meta"
 	"github.com/apmckinlay/gsuneido/db19/meta/schema"
@@ -75,13 +76,16 @@ type Query interface {
 	rowSize() int
 
 	// Lookup returns the row matching the given key, or nil if not found
-	// Lookup(key string) runtime.Row
+	Lookup(key string) runtime.Row
 
-	// Rewind()
+	Rewind()
 
-	// Get(dir runtime.Dir) runtime.Row
+	Get(dir runtime.Dir) runtime.Row
 
 	// Select(org, end string)
+
+	Header() *runtime.Header
+	Output(rec runtime.Record)
 
 	String() string
 
@@ -127,6 +131,9 @@ type QueryTran interface {
 	GetInfo(table string) *meta.Info
 	RangeFrac(table string, iIndex int, org, end string) float64
 	Lookup(table string, iIndex int, key string) runtime.DbRec
+	Output(table string, rec runtime.Record)
+	GetIndex(table string, cols []string) *index.Overlay
+	GetRecord(off uint64) runtime.Record
 }
 
 // Setup prepares a parsed query for execution.
@@ -374,6 +381,26 @@ func (*Query1) prefixed(index []string, order []string, fixed []Fixed) bool {
 		o++
 	}
 	return o >= on
+}
+
+func (*Query1) Lookup(string) runtime.Row {
+	panic("not implemented")
+}
+
+func (*Query1) Header() *runtime.Header {
+	panic("not implemented")
+}
+
+func (*Query1) Output(runtime.Record) {
+	panic("not implemented")
+}
+
+func (*Query1) Get(runtime.Dir) runtime.Row {
+	panic("not implemented")
+}
+
+func (*Query1) Rewind() {
+	panic("not implemented")
 }
 
 // Query2 -----------------------------------------------------------

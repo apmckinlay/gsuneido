@@ -176,9 +176,9 @@ func (dc *dbmsClient) Get(tn int, query string, dir Dir) (Row, *Header) {
 	if !dc.GetBool() {
 		return nil, nil
 	}
-	adr := dc.GetInt()
+	off := dc.GetInt()
 	hdr := dc.getHdr()
-	row := dc.getRow(adr)
+	row := dc.getRow(off)
 	return row, hdr
 }
 
@@ -306,11 +306,11 @@ func (dc *dbmsClient) getHdr() *Header {
 			columns = append(columns, s)
 		}
 	}
-	return &Header{Fields: [][]string{fields}, Columns: columns}
+	return NewHeader([][]string{fields}, columns)
 }
 
-func (dc *dbmsClient) getRow(adr int) Row {
-	return Row([]DbRec{{Record: Record(dc.GetStr()), Adr: adr}})
+func (dc *dbmsClient) getRow(off int) Row {
+	return Row([]DbRec{{Record: Record(dc.GetStr()), Off: uint64(off)}})
 }
 
 // ------------------------------------------------------------------
@@ -334,8 +334,8 @@ func (tc *TranClient) Complete() string {
 	return tc.dc.GetStr()
 }
 
-func (tc *TranClient) Erase(adr int) {
-	tc.dc.PutCmd(commands.Erase).PutInt(tc.tn).PutInt(adr).Request()
+func (tc *TranClient) Erase(off uint64) {
+	tc.dc.PutCmd(commands.Erase).PutInt(tc.tn).PutInt(int(off)).Request()
 }
 
 func (tc *TranClient) Get(query string, dir Dir) (Row, *Header) {
@@ -358,10 +358,10 @@ func (tc *TranClient) Request(request string) int {
 	return tc.dc.GetInt()
 }
 
-func (tc *TranClient) Update(adr int, rec Record) int {
+func (tc *TranClient) Update(off uint64, rec Record) uint64 {
 	tc.dc.PutCmd(commands.Update).
-		PutInt(tc.tn).PutInt(adr).PutRec(rec).Request()
-	return tc.dc.GetInt()
+		PutInt(tc.tn).PutInt(int(off)).PutRec(rec).Request()
+	return uint64(tc.dc.GetInt())
 }
 
 func (tc *TranClient) WriteCount() int {
@@ -451,8 +451,8 @@ func (q *clientQuery) Get(dir Dir) Row {
 	if !q.dc.GetBool() {
 		return nil
 	}
-	adr := q.dc.GetInt()
-	row := q.dc.getRow(adr)
+	off := q.dc.GetInt()
+	row := q.dc.getRow(off)
 	return row
 }
 
@@ -477,7 +477,7 @@ func (q *clientCursor) Get(tran ITran, dir Dir) Row {
 	if !q.dc.GetBool() {
 		return nil
 	}
-	adr := q.dc.GetInt()
-	row := q.dc.getRow(adr)
+	off := q.dc.GetInt()
+	row := q.dc.getRow(off)
 	return row
 }

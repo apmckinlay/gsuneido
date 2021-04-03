@@ -3,11 +3,15 @@
 
 package runtime
 
-import "github.com/apmckinlay/gsuneido/util/str"
+import (
+	"github.com/apmckinlay/gsuneido/util/assert"
+	"github.com/apmckinlay/gsuneido/util/str"
+)
 
 type Row []DbRec
 
 func (row Row) Get(hdr *Header, fld string) Value {
+	assert.That(hdr.Map != nil)
 	at, ok := hdr.Map[fld]
 	if !ok || int(at.Reci) >= len(row) {
 		return nil
@@ -16,6 +20,7 @@ func (row Row) Get(hdr *Header, fld string) Value {
 }
 
 func (row Row) GetRaw(hdr *Header, fld string) string {
+	assert.That(hdr.Map != nil)
 	at, ok := hdr.Map[fld]
 	if !ok || int(at.Reci) >= len(row) {
 		return ""
@@ -29,10 +34,10 @@ type RowAt struct {
 	Fldi int16
 }
 
-// DbRec is a Record along with its address
+// DbRec is a Record along with its offset
 type DbRec struct {
 	Record
-	Adr int
+	Off uint64
 }
 
 // Header specifies the fields (physical) and columns (logical) for a query
@@ -42,15 +47,15 @@ type Header struct {
 	Map     map[string]RowAt
 }
 
-func (hdr *Header) EnsureMap() {
-	if hdr.Map == nil { //TODO concurrency
-		hdr.Map = make(map[string]RowAt, len(hdr.Fields))
-		for ri, r := range hdr.Fields {
-			for fi, f := range r {
-				hdr.Map[f] = RowAt{int16(ri), int16(fi)}
-			}
+func NewHeader(fields [][]string, columns []string) *Header {
+	hdr := Header{Fields: fields, Columns: columns}
+	hdr.Map = make(map[string]RowAt, len(hdr.Fields))
+	for ri, r := range hdr.Fields {
+		for fi, f := range r {
+			hdr.Map[f] = RowAt{int16(ri), int16(fi)}
 		}
 	}
+	return &hdr
 }
 
 // Rules is a list of the rule columns i.e. columns that are not fields

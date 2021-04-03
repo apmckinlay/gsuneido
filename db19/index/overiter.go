@@ -19,7 +19,7 @@ type Range = iterator.Range
 // because new source iterators may be returned by the callback.
 type OverIter struct {
 	table    string
-	ixcols   string
+	ixcols   []string
 	iters    []iterT
 	modCount int
 	curKey   string
@@ -49,10 +49,10 @@ const (
 )
 
 type oiTran interface {
-	GetIndex(table, columns string) *Overlay
+	GetIndex(table string, columns []string) *Overlay
 }
 
-func NewOverIter(table, ixcols string) *OverIter {
+func NewOverIter(table string, ixcols []string) *OverIter {
 	return &OverIter{table: table, ixcols: ixcols, rng: iterator.All}
 }
 

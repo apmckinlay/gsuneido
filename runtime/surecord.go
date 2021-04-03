@@ -38,8 +38,8 @@ type SuRecord struct {
 	hdr *Header
 	// tran is the database transaction used to read the record
 	tran *SuTran
-	// recadr is the record address in the database
-	recadr int
+	// recoff is the record offset in the database
+	recoff uint64
 	// status
 	status Status
 	// userow is true when we want to use data in row as well as ob
@@ -69,9 +69,8 @@ func SuRecordFromObject(ob *SuObject) *SuRecord {
 }
 
 func SuRecordFromRow(row Row, hdr *Header, tran *SuTran) *SuRecord {
-	hdr.EnsureMap()
 	dependents := deps(row, hdr)
-	return &SuRecord{row: row, hdr: hdr, tran: tran, recadr: row[0].Adr,
+	return &SuRecord{row: row, hdr: hdr, tran: tran, recoff: row[0].Off,
 		ob: SuObject{defval: EmptyStr}, dependents: dependents, userow: true,
 		status: OLD}
 }
@@ -871,7 +870,7 @@ func (r *SuRecord) DbDelete() {
 		defer r.Unlock()
 	}
 	r.ckModify("Delete")
-	r.tran.Erase(r.recadr)
+	r.tran.Erase(r.recoff)
 	r.status = DELETED
 }
 
@@ -886,17 +885,17 @@ func (r *SuRecord) DbUpdate(t *Thread, ob Value) {
 		defer r.Unlock()
 	}
 	r.ckModify("Update")
-	r.recadr = r.tran.Update(r.recadr, rec) // ??? ok while locked ???
+	r.recoff = r.tran.Update(r.recoff, rec) // ??? ok while locked ???
 }
 
 func (r *SuRecord) ckModify(op string) {
-	if r.recadr == 0 {
+	if r.recoff == 0 {
 		panic("record." + op + ": not a database record")
 	}
 	if r.tran == nil {
 		panic("record." + op + ": no Transaction")
 	}
-	if r.status != OLD || r.recadr == 0 {
+	if r.status != OLD || r.recoff == 0 {
 		panic("record." + op + ": not a database record")
 	}
 }

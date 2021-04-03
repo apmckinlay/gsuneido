@@ -107,7 +107,7 @@ type ITran interface {
 	Complete() string
 
 	// Erase deletes a record
-	Erase(adr int)
+	Erase(off uint64)
 
 	// Get returns a single record, for Query1 (which = '1'),
 	// QueryFirst (which = '+'), or QueryLast (which = '-')
@@ -124,7 +124,7 @@ type ITran interface {
 	Request(request string) int
 
 	// Update modifies a record
-	Update(adr int, rec Record) int
+	Update(off uint64, rec Record) uint64
 
 	// WriteCount returns the number of writes done by the transaction
 	WriteCount() int

@@ -5,6 +5,7 @@ package query
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
@@ -35,4 +36,54 @@ func TestTableLookup(t *testing.T) {
 	}
 	test("tables", key(123), "[<123>]")
 	test("columns", key(12, 34), "[<12, 34>]")
+}
+
+func TestTableGet(t *testing.T) {
+	db := testDb()
+	defer db.Close()
+	reverse := func(rows []rt.Row) {
+		for i, j := 0, len(rows)-1; i < j; i, j = i+1, j-1 {
+			rows[i], rows[j] = rows[j], rows[i]
+		}
+	}
+	get := func(q Query, dir rt.Dir) string {
+		var rows []rt.Row
+		q.Rewind()
+		for row := q.Get(dir); row != nil; row = q.Get(dir) {
+			rows = append(rows, row)
+		}
+		if dir == rt.Prev {
+			reverse(rows)
+		}
+		hdr := q.Header()
+		var sb strings.Builder
+		for _, col := range hdr.Columns {
+			sb.WriteString(col)
+			sb.WriteString("\t")
+		}
+		sb.WriteString("\n")
+		for _, row := range rows {
+			for _, col := range hdr.Columns {
+				sb.WriteString(row.Get(hdr, col).String())
+				sb.WriteString("\t")
+			}
+			sb.WriteString("\n")
+		}
+		s := sb.String()
+		s = strings.ReplaceAll(s, `"`, "'")
+		return s
+	}
+	test := func(query, expected string) {
+		q := ParseQuery("customer")
+		tran := db.NewReadTran()
+		Setup(q, readMode, tran)
+		assert.T(t).This(get(q, rt.Next)).Like(expected)
+		assert.T(t).This(get(q, rt.Prev)).Like(expected)
+	}
+	test("customer",
+		`id	name	city
+		'a'	'axon'	'saskatoon'
+		'c'	'calac'	'calgary'
+		'e'	'emerald'	'vancouver'
+		'i'	'intercon'	'saskatoon'`)
 }

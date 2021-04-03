@@ -32,7 +32,7 @@ func (r *createRequest) execute(db *db19.Database) {
 	ts.Ixspecs()
 	ov := make([]*index.Overlay, len(ts.Indexes))
 	for i := range ov {
-		bt := btree.CreateBtree(db.Store, nil)
+		bt := btree.CreateBtree(db.Store, &ts.Indexes[i].Ixspec)
 		ov[i] = index.OverlayFor(bt)
 	}
 	ti := &meta.Info{Table: r.schema.Table, Indexes: ov}

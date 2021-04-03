@@ -24,7 +24,11 @@ func (a *insertRecordAction) String() string {
 }
 
 func (a *insertRecordAction) execute(ut *db19.UpdateTran) int {
-	return 0 //TODO
+	a.query.SetTran(ut)
+	var th runtime.Thread // ???
+	rec := a.record.ToRecord(&th, a.query.Header())
+	a.query.Output(rec)
+	return 1
 }
 
 type insertQueryAction struct {

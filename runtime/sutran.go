@@ -113,9 +113,9 @@ func (st *SuTran) Ended() bool {
 	return st.state != active
 }
 
-func (st *SuTran) Erase(adr int) {
+func (st *SuTran) Erase(off uint64) {
 	st.ckActive()
-	st.itran.Erase(adr)
+	st.itran.Erase(off)
 }
 
 func (st *SuTran) GetRow(query string, dir Dir) (Row, *Header) {
@@ -152,9 +152,9 @@ func (st *SuTran) Updatable() bool {
 	return st.updatable
 }
 
-func (st *SuTran) Update(adr int, rec Record) int {
+func (st *SuTran) Update(off uint64, rec Record) uint64 {
 	st.ckActive()
-	return st.itran.Update(adr, rec)
+	return st.itran.Update(off, rec)
 }
 
 func (st *SuTran) WriteCount() int {

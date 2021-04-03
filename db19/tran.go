@@ -6,7 +6,7 @@ package db19
 import (
 	"github.com/apmckinlay/gsuneido/db19/index"
 	"github.com/apmckinlay/gsuneido/db19/meta"
-	"github.com/apmckinlay/gsuneido/runtime"
+	"github.com/apmckinlay/gsuneido/db19/meta/schema"
 	rt "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/cksum"
 	"github.com/apmckinlay/gsuneido/util/hacks"
@@ -18,6 +18,23 @@ type tran struct {
 	meta *meta.Meta
 }
 
+func (t *tran) GetInfo(table string) *meta.Info {
+	return t.meta.GetRoInfo(table)
+}
+
+func (t *tran) GetSchema(table string) *schema.Schema {
+	return &t.getSchema(table).Schema
+}
+
+func (t *tran) getSchema(table string) *meta.Schema {
+	if ts := t.meta.GetRoSchema(table); ts != nil {
+		return ts
+	}
+	panic("table not found: " + table)
+}
+
+//-------------------------------------------------------------------
+
 type ReadTran struct {
 	tran
 }
@@ -26,8 +43,6 @@ func (db *Database) NewReadTran() *ReadTran {
 	state := db.GetState()
 	return &ReadTran{tran: tran{db: db, meta: state.Meta}}
 }
-
-// TEMPORARY methods
 
 func (t *ReadTran) GetIndex(table string, cols []string) *index.Overlay {
 	ts := t.meta.GetRoSchema(table)
@@ -42,7 +57,7 @@ func (t *ReadTran) GetIndex(table string, cols []string) *index.Overlay {
 
 func (t *ReadTran) GetRecord(off uint64) rt.Record {
 	buf := t.db.Store.Data(off)
-	size := runtime.RecLen(buf)
+	size := rt.RecLen(buf)
 	return rt.Record(hacks.BStoS(buf[:size]))
 }
 
@@ -51,10 +66,22 @@ func (t *ReadTran) ColToFld(table, col string) int {
 	return str.List(ts.Columns).Index(col)
 }
 
+func (t *ReadTran) RangeFrac(table string, iIndex int, org, end string) float64 {
+	return 0 //TODO
+}
+
+func (t *ReadTran) Lookup(table string, iIndex int, key string) rt.DbRec {
+	return rt.DbRec{} // TODO
+}
+
+func (t *ReadTran) Output(string, rt.Record) {
+	panic("can't output to read-only transaction")
+}
+
 //-------------------------------------------------------------------
 
 type UpdateTran struct {
-	tran
+	ReadTran
 	ct *CkTran
 }
 
@@ -62,7 +89,8 @@ func (db *Database) NewUpdateTran() *UpdateTran {
 	state := db.GetState()
 	meta := state.Meta.Mutable()
 	ct := db.ck.StartTran()
-	return &UpdateTran{ct: ct, tran: tran{db: db, meta: meta}}
+	return &UpdateTran{ct: ct,
+		ReadTran: ReadTran{tran: tran{db: db, meta: meta}}}
 }
 
 func (t *UpdateTran) Commit() {
@@ -104,13 +132,6 @@ func (t *UpdateTran) Output(table string, rec rt.Record) {
 func (t *UpdateTran) getInfo(table string) *meta.Info {
 	if ti := t.meta.GetRwInfo(table); ti != nil {
 		return ti
-	}
-	panic("table not found: " + table)
-}
-
-func (t *UpdateTran) getSchema(table string) *meta.Schema {
-	if ts := t.meta.GetRoSchema(table); ts != nil {
-		return ts
 	}
 	panic("table not found: " + table)
 }
