@@ -20,5 +20,5 @@ func TestAssert(t *testing.T) {
 	assert.This(nil).Is(nil)
 	assert.This([]byte(nil)).Is(nil)
 	assert.This(func() { panic("a test err") }).Panics("test")
-	assert.This(" one\t\ntwo ").Like("one two")
+	assert.This(" one\t\ntwo ").Like("one\ntwo")
 }

@@ -52,8 +52,8 @@ func TestOptimize(t *testing.T) {
 	test("table union table",
 		"table^(a) UNION-MERGE table^(a)")
 	test("(table where a is 1) union (table where a is 2)",
-		`table^(a) WHERE*1 a is 1
-			UNION-FOLLOW-DISJOINT(a) (table^(a) WHERE*1 a is 2)`)
+		"table^(a) WHERE*1 a is 1 "+
+			"UNION-FOLLOW-DISJOINT(a) (table^(a) WHERE*1 a is 2)")
 
 	test("tables project table",
 		"tables^(table) PROJECT-COPY table")
@@ -113,11 +113,11 @@ func TestOptimize(t *testing.T) {
 	test("tables join columns",
 		"tables^(table) JOIN 1:n by(table) columns^(table,column)")
 	test("(tables join columns) union (tables join columns)",
-		`(tables^(table) JOIN 1:n by(table) columns^(table,column))
-			TEMPINDEX(table,column)
-		UNION-MERGE
-		((tables^(table) JOIN 1:n by(table) columns^(table,column))
-			TEMPINDEX(table,column))`)
+		"(tables^(table) JOIN 1:n by(table) columns^(table,column))"+
+			"	TEMPINDEX(table,column) "+
+			"UNION-MERGE "+
+			"((tables^(table) JOIN 1:n by(table) columns^(table,column))"+
+			"	TEMPINDEX(table,column))")
 	test("task join co join cus",
 		"(co^(tnum) JOIN 1:1 by(tnum) task^(tnum)) "+
 			"JOIN n:1 by(cnum) cus^(cnum)")
@@ -139,9 +139,9 @@ func TestOptimize(t *testing.T) {
 
 	mode = cursorMode
 	test("(tables join columns) union (tables join columns)",
-		`(tables^(table) JOIN 1:n by(table) columns^(table,column))
-		UNION-LOOKUP
-		(columns^(table,column) JOIN n:1 by(table) tables^(table))`)
+		"(tables^(table) JOIN 1:n by(table) columns^(table,column)) "+
+			"UNION-LOOKUP "+
+			"(columns^(table,column) JOIN n:1 by(table) tables^(table))")
 	test("trans join customer",
 		"trans^(date,item,id) JOIN n:1 by(id) customer^(id)")
 	test("trans join inven join customer",

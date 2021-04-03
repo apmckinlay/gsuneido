@@ -248,7 +248,7 @@ func TestParseStatements(t *testing.T) {
 		}
 		assert.T(t).This(s).Like(expected)
 	}
-	test("x=123;;", "Binary(Eq x 123) {}")
+	test("x=123;;", "Binary(Eq x 123)\n{}")
 
 	// return
 	test("return", "Return()")
@@ -297,9 +297,9 @@ func TestParseStatements(t *testing.T) {
 	test("do stmt while e", "DoWhile(stmt e)")
 
 	// for-in
-	test("for x in ob\nstmt", "ForIn(x ob stmt)")
-	test("for x in ob { stmt }", "ForIn(x ob stmt)")
-	test("for (x in ob) stmt", "ForIn(x ob stmt)")
+	test("for x in ob\nstmt", "ForIn(x ob\nstmt)")
+	test("for x in ob { stmt }", "ForIn(x ob\nstmt)")
+	test("for (x in ob) stmt", "ForIn(x ob\nstmt)")
 
 	// for
 	test("for (;;) stmt", "For(; ; \n stmt)")
@@ -313,12 +313,12 @@ func TestParseStatements(t *testing.T) {
 	test("try stmt catch (e, 'err') stmt2", "Try(stmt \n catch (e,'err') stmt2)")
 
 	// newline handling
-	test("+a \n -b", "Unary(Add a) Unary(Sub b)")
-	test("a + b \n -c", "Nary(Add a b) Unary(Sub c)")
+	test("+a \n -b", "Unary(Add a)\nUnary(Sub b)")
+	test("a + b \n -c", "Nary(Add a b)\nUnary(Sub c)")
 	test("a + \n b + c", "Nary(Add a b c)")
-	test("a = b; .F()", "Binary(Eq a b) Call(Mem(this 'F'))")
-	test("a = b; \n .F()", "Binary(Eq a b) Call(Mem(this 'F'))")
-	test("a = b \n .F()", "Binary(Eq a b) Call(Mem(this 'F'))")
+	test("a = b; .F()", "Binary(Eq a b)\nCall(Mem(this 'F'))")
+	test("a = b; \n .F()", "Binary(Eq a b)\nCall(Mem(this 'F'))")
+	test("a = b \n .F()", "Binary(Eq a b)\nCall(Mem(this 'F'))")
 	test("a = b .F()", "Binary(Eq a Call(Mem(b 'F')))")
 
 	xtest := func(src string, expected string) {

@@ -300,11 +300,15 @@ func like(expected, actual string) bool {
 
 func canon(s string) string {
 	s = strings.TrimSpace(s)
-	// can't use tr because it causes cycle in imports
-	return whitespace.ReplaceAllString(s, " ")
+	s = leadingSpace.ReplaceAllString(s, "")
+	s = trailingSpace.ReplaceAllString(s, "")
+	s = whitespace.ReplaceAllString(s, " ")
+	return s
 }
 
-var whitespace = regexp.MustCompile("[ \t\r\n]+")
+var leadingSpace = regexp.MustCompile("(?m)^[ \t]+")
+var trailingSpace = regexp.MustCompile("(?m)[ \t]+$")
+var whitespace = regexp.MustCompile("[ \t]+")
 
 // Panics checks if a function panics
 func (v value) Panics(expected string) {
