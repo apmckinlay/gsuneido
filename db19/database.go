@@ -89,6 +89,9 @@ func OpenDb(filename string, mode stor.Mode, check bool) (db *Database, err erro
 // LoadedTable is used to add a loaded table to the state
 func (db *Database) LoadedTable(ts *meta.Schema, ti *meta.Info) {
 	db.UpdateState(func(state *DbState) {
+		if state.Meta.GetRoSchema(ts.Table) != nil {
+			panic("can't create existing table: " + ts.Table)
+		}
 		state.Meta = state.Meta.Put(ts, ti)
 	})
 }

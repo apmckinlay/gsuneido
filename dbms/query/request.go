@@ -17,6 +17,20 @@ func DoRequest(db *db19.Database, request string) {
 	r.execute(db)
 }
 
+func checkForSystemTable(op, table string) {
+	if isSystemTable(table) {
+		panic("can't " + op + " system table: " + table)
+	}
+}
+
+func isSystemTable(table string) bool {
+	switch table {
+	case "tables", "columns", "indexes", "views":
+		return true
+	}
+	return false
+}
+
 //-------------------------------------------------------------------
 
 type createRequest struct {
@@ -28,6 +42,7 @@ func (r *createRequest) String() string {
 }
 
 func (r *createRequest) execute(db *db19.Database) {
+	checkForSystemTable("create", r.schema.Table)
 	ts := &meta.Schema{Schema: r.schema}
 	ts.Ixspecs()
 	ov := make([]*index.Overlay, len(ts.Indexes))
@@ -129,5 +144,8 @@ func (r *dropRequest) String() string {
 }
 
 func (r *dropRequest) execute(db *db19.Database) {
-	//TODO
+	checkForSystemTable("drop", r.table)
+	if !db.DropTable(r.table) {
+		panic("can't drop nonexistent table: " + r.table)
+	}
 }

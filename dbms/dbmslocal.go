@@ -11,6 +11,7 @@ import (
 	"github.com/apmckinlay/gsuneido/db19"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/db19/tools"
+	qry "github.com/apmckinlay/gsuneido/dbms/query"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
@@ -30,8 +31,8 @@ func NewDbmsLocal(db *db19.Database) IDbms {
 
 var _ IDbms = (*DbmsLocal)(nil)
 
-func (DbmsLocal) Admin(string) {
-	panic("DbmsLocal Admin not implemented")
+func (dbms DbmsLocal) Admin(req string) {
+	qry.DoRequest(dbms.db, req)
 }
 
 func (DbmsLocal) Auth(string) bool {

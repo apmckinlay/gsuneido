@@ -53,6 +53,7 @@ func LoadDatabase(from, dbfile string) int {
 }
 
 // LoadTable imports a dumped table from a file.
+// It will replace an already existing table.
 // It returns the number of records loaded or panics on error.
 func LoadTable(table, dbfile string) int {
 	defer func() {
@@ -66,6 +67,7 @@ func LoadTable(table, dbfile string) int {
 		db, err = CreateDatabase(dbfile)
 	} else {
 		db, err = OpenDatabase(dbfile)
+		db.DropTable(table)
 	}
 	ck(err)
 	defer db.Close()
