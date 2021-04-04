@@ -77,13 +77,15 @@ func SuRecordFromRow(row Row, hdr *Header, tran *SuTran) *SuRecord {
 
 func deps(row Row, hdr *Header) map[string][]string {
 	dependents := map[string][]string{}
-	for _, f := range hdr.Fields[0] {
-		if strings.HasSuffix(f, "_deps") {
-			deps := strings.Split(ToStr(row.Get(hdr, f)), ",")
-			f = f[:len(f)-5]
-			for _, d := range deps {
-				if !str.List(dependents[d]).Has(f) {
-					dependents[d] = append(dependents[d], f)
+	for _, flds := range hdr.Fields {
+		for _, f := range flds {
+			if strings.HasSuffix(f, "_deps") {
+				deps := strings.Split(ToStr(row.Get(hdr, f)), ",")
+				f = f[:len(f)-5]
+				for _, d := range deps {
+					if !str.List(dependents[d]).Has(f) {
+						dependents[d] = append(dependents[d], f)
+					}
 				}
 			}
 		}
