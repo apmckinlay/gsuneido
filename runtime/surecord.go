@@ -69,10 +69,14 @@ func SuRecordFromObject(ob *SuObject) *SuRecord {
 }
 
 func SuRecordFromRow(row Row, hdr *Header, tran *SuTran) *SuRecord {
-	dependents := deps(row, hdr)
 	return &SuRecord{row: row, hdr: hdr, tran: tran, recoff: row[0].Off,
-		ob: SuObject{defval: EmptyStr}, dependents: dependents, userow: true,
-		status: OLD}
+		ob: SuObject{defval: EmptyStr}, userow: true, status: OLD}
+}
+
+func (r *SuRecord) ensureDeps() {
+	if r.dependents == nil  && r.row != nil {
+		r.dependents = deps(r.row, r.hdr)
+	}
 }
 
 func deps(row Row, hdr *Header) map[string][]string {
@@ -303,6 +307,7 @@ func (r *SuRecord) delete(t *Thread, key Value, fn func(Value) bool) bool {
 	if r.ob.Lock() {
 		defer r.ob.Unlock()
 	}
+	r.ensureDeps()
 	r.ob.mustBeMutable()
 	// have to unpack
 	// because we have no way to delete from row
@@ -389,6 +394,7 @@ func (r *SuRecord) Put(t *Thread, keyval, val Value) {
 }
 func (r *SuRecord) put(t *Thread, keyval, val Value) {
 	r.trace("Put", keyval, "=", val)
+	r.ensureDeps()
 	if key, ok := keyval.ToStr(); ok {
 		delete(r.invalid, key)
 		old := r.ob.getIfPresent(keyval)
@@ -442,6 +448,7 @@ func (r *SuRecord) Invalidate(t *Thread, key string) {
 	if r.Lock() {
 		defer r.Unlock()
 	}
+	r.ensureDeps()
 	r.invalidate(key)
 	r.callObservers(t, key)
 }
@@ -635,6 +642,7 @@ func (r *SuRecord) getSpecial(key string) Value {
 }
 
 func (r *SuRecord) callRule(t *Thread, key string) Value {
+	r.ensureDeps()
 	delete(r.invalid, key)
 	if rule := r.getRule(t, key); rule != nil && !t.rules.has(r, key) {
 		r.trace("call rule", key)
@@ -736,6 +744,7 @@ func (r *SuRecord) GetDeps(key string) Value {
 	if r.Lock() {
 		defer r.Unlock()
 	}
+	r.ensureDeps()
 	var sb strings.Builder
 	sep := ""
 	for to, froms := range r.dependents {
@@ -757,6 +766,7 @@ func (r *SuRecord) SetDeps(key, deps string) {
 	if deps == "" {
 		return
 	}
+	r.ensureDeps()
 outer:
 	for _, to := range strings.Split(deps, ",") {
 		to = strings.TrimSpace(to)
@@ -781,6 +791,7 @@ func (r *SuRecord) ToRecord(t *Thread, hdr *Header) Record {
 	if r.Lock() {
 		defer r.Unlock()
 	}
+	r.ensureDeps()
 	fields := hdr.Fields[0]
 
 	// access all the fields to ensure dependencies are created
