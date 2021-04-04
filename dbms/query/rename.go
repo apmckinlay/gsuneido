@@ -6,6 +6,7 @@ package query
 import (
 	"strings"
 
+	"github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/sset"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
@@ -138,4 +139,21 @@ func (r *Rename) Transform() Query {
 
 func (r *Rename) setApproach(index []string, _ interface{}, tran QueryTran) {
 	r.source = SetApproach(r.source, index, tran)
+}
+
+// execution --------------------------------------------------------
+
+func (r *Rename) Header() *runtime.Header {
+	hdr := r.source.Header()
+	cols := renameColumns(hdr.Columns, r.from, r.to)
+	flds := renameIndexes(hdr.Fields, r.from, r.to)
+	return runtime.NewHeader(flds, cols)
+}
+
+func (r *Rename) Get(dir runtime.Dir) runtime.Row {
+	return r.source.Get(dir)
+}
+
+func (r *Rename) Output(rec runtime.Record) {
+	r.source.Output(rec)
 }

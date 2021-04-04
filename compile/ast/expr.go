@@ -305,7 +305,7 @@ func evalOr(e Expr, c *Context, v Value) Value {
 // In ---------------------------------------------------------------
 
 // CanEvalRaw returns true if Eval doesn't need to unpack the values.
-// It sets b.rawFlds which is later used by Eval.
+// It sets RawCols which is later used by Eval.
 func (a *In) CanEvalRaw(cols []string) bool {
 	if a.RawCols == nil {
 		if a.canEvalRaw2(cols) {

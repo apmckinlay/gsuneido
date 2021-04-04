@@ -63,6 +63,8 @@ func (sort *Sort) setApproach(_ []string, approach interface{}, tran QueryTran) 
 	sort.source = SetApproach(sort.source, sort.index, tran)
 }
 
+// execution --------------------------------------------------------
+
 func (sort *Sort) Header() *runtime.Header {
 	return sort.source.Header()
 }
@@ -72,4 +74,8 @@ func (sort *Sort) Get(dir runtime.Dir) runtime.Row {
 		dir = dir.Reverse()
 	}
 	return sort.source.Get(dir)
+}
+
+func (sort *Sort) Output(rec runtime.Record) {
+	sort.source.Output(rec)
 }

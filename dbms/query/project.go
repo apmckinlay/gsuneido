@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/compile/ast"
+	"github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/sset"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
@@ -303,7 +304,7 @@ func (p *Project) optimize(mode Mode, index []string) (Cost, interface{}) {
 	}
 	// read once, build hash, read again filtering by hash
 	hashCost := 0 //TODO ???
-	cost := 2 * Optimize(p.source, mode, index) + hashCost
+	cost := 2*Optimize(p.source, mode, index) + hashCost
 	approach := &projectApproach{strategy: projLookup, index: index}
 	return cost + hashCost + cost, approach
 }
@@ -366,4 +367,42 @@ func (*Project) prefixed(fixed []Fixed, idx []string, cols []string, nColsUnfixe
 func (p *Project) setApproach(_ []string, approach interface{}, tran QueryTran) {
 	p.projectApproach = *approach.(*projectApproach)
 	p.source = SetApproach(p.source, p.index, tran)
+}
+
+// execution --------------------------------------------------------
+
+func (p *Project) Header() *runtime.Header {
+	hdr := p.source.Header()
+	newflds := make([][]string, len(hdr.Fields))
+	for i, fs := range hdr.Fields {
+		newflds[i] = projectFields(fs, p.columns)
+	}
+	return runtime.NewHeader(newflds, p.columns)
+}
+
+func projectFields(fs []string, pcols []string) []string {
+	flds := make([]string, len(fs))
+	for i, f := range fs {
+		if sset.Contains(pcols, f) {
+			flds[i] = f
+		} else {
+			flds[i] = "-"
+		}
+	}
+	return flds
+}
+
+func (p *Project) Get(dir runtime.Dir) runtime.Row {
+	switch p.strategy {
+	case projCopy:
+		return p.source.Get(dir)
+	}
+	panic("not implemented") //TODO
+}
+
+func (p *Project) Output(rec runtime.Record) {
+	if p.strategy != projCopy {
+		panic("can't output to a project that doesn't include a key")
+	}
+	p.source.Output(rec)
 }

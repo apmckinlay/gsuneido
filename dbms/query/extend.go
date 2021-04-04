@@ -16,6 +16,7 @@ type Extend struct {
 	exprs    []ast.Expr // modified by Project.transform
 	exprCols []string
 	fixed    []Fixed
+	hdr      *runtime.Header
 }
 
 func (e *Extend) Init() {
@@ -146,4 +147,37 @@ func (e *Extend) optimize(mode Mode, index []string) (Cost, interface{}) {
 
 func (e *Extend) setApproach(index []string, _ interface{}, tran QueryTran) {
 	e.source = SetApproach(e.source, index, tran)
+}
+
+// execution --------------------------------------------------------
+
+func (e *Extend) Header() *runtime.Header {
+	hdr := e.source.Header()
+	cols := sset.Union(hdr.Columns, e.cols)
+	flds := append(hdr.Fields, e.cols)
+	return runtime.NewHeader(flds, cols)
+}
+
+func (e *Extend) Get(dir runtime.Dir) runtime.Row {
+	row := e.source.Get(dir)
+	if row == nil {
+		return nil // eof
+	}
+	if e.hdr == nil {
+		e.hdr = e.Header()
+	}
+	var th runtime.Thread // ???
+	context := ast.Context{T: &th, Hdr: e.hdr, Row: row}
+	var rb runtime.RecordBuilder
+	for i := range e.cols {
+		context.Row = append(row, runtime.DbRec{Record: rb.Build()})
+		if e := e.exprs[i]; e != nil {
+			rb.Add(e.Eval(&context).(runtime.Packable))
+		}
+	}
+	return append(row, runtime.DbRec{Record: rb.Build()})
+}
+
+func (e *Extend) Output(rec runtime.Record) {
+	e.source.Output(rec)
 }

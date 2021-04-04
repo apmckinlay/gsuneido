@@ -43,6 +43,8 @@ type DbRec struct {
 	Off uint64
 }
 
+//-------------------------------------------------------------------
+
 // Header specifies the fields (physical) and columns (logical) for a query
 type Header struct {
 	Fields  [][]string
