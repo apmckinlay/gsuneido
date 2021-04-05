@@ -74,7 +74,7 @@ func SuRecordFromRow(row Row, hdr *Header, tran *SuTran) *SuRecord {
 }
 
 func (r *SuRecord) ensureDeps() {
-	if r.dependents == nil  && r.row != nil {
+	if r.dependents == nil && r.row != nil {
 		r.dependents = deps(r.row, r.hdr)
 	}
 }
@@ -582,6 +582,16 @@ func (r *SuRecord) getFromRow(key string) Value {
 		return val
 	}
 	return nil
+}
+
+// GetRaw is used by query expr raw Eval for Where
+func (r *SuRecord) GetRaw(key string) (string, bool) {
+	if r.row != nil {
+		if raw := r.row.GetRaw(r.hdr, key); raw != "" {
+			return raw, true
+		}
+	}
+	return "", false
 }
 
 // getPacked is used by ToRecord to build a Record for the database.

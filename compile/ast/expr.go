@@ -15,8 +15,7 @@ import (
 
 type Context struct {
 	T   *Thread
-	Hdr *Header
-	Row Row
+	Rec *SuRecord
 }
 
 func (c *Constant) Eval(*Context) Value {
@@ -28,7 +27,7 @@ func (c *Constant) Columns() []string {
 }
 
 func (id *Ident) Eval(c *Context) Value {
-	return c.Row.Get(c.Hdr, id.Name)
+	return c.Rec.Get(c.T, SuStr(id.Name))
 }
 
 func (id *Ident) Columns() []string {
@@ -65,22 +64,16 @@ func (u *Unary) Columns() []string {
 
 // Binary -----------------------------------------------------------
 
-var notEvalRaw = []string{}
-
 // CanEvalRaw returns true if Eval doesn't need to unpack the values.
-// It sets b.RawCols which is later used by Eval.
+// It sets b.evalRaw which is later used by Eval.
 func (b *Binary) CanEvalRaw(cols []string) bool {
-	if b.RawCols == nil {
-		if b.canEvalRaw2(cols) {
-			b.RawCols = cols
-			c := b.Rhs.(*Constant)
-			c.Packed = Pack(c.Val.(Packable))
-			return true
-		}
-		b.RawCols = notEvalRaw
-		return false
+	if b.canEvalRaw2(cols) {
+		b.evalRaw = true
+		c := b.Rhs.(*Constant)
+		c.Packed = Pack(c.Val.(Packable))
+		return true
 	}
-	return str.Equal(b.RawCols, cols)
+	return false
 }
 
 func (b *Binary) canEvalRaw2(cols []string) bool {
@@ -91,7 +84,7 @@ func (b *Binary) canEvalRaw2(cols []string) bool {
 		return true
 	}
 	if isConstant(b.Lhs) && IsColumn(b.Rhs, cols) {
-		b.Lhs, b.Rhs = b.Rhs, b.Lhs // reverse
+		b.Lhs, b.Rhs = b.Rhs, b.Lhs // swap
 		b.Tok = reverseBinary[b.Tok]
 		return true
 	}
@@ -128,26 +121,25 @@ var reverseBinary = map[tok.Token]tok.Token{
 }
 
 func (b *Binary) Eval(c *Context) Value {
-	// NOTE: we only Eval raw if b.rawFlds was set by CanEvalRaw
-	if b.RawCols != nil && str.Equal(b.RawCols, c.Hdr.GetFields()) {
+	// NOTE: only Eval raw if b.evalRaw was set by CanEvalRaw
+	if b.evalRaw {
 		id := b.Lhs.(*Ident)
-		lhs := c.Row.GetRaw(c.Hdr, id.Name)
-		rhs := b.Rhs.(*Constant).Packed
-		switch b.Tok {
-		case tok.Is:
-			return SuBool(lhs == rhs)
-		case tok.Isnt:
-			return SuBool(lhs != rhs)
-		case tok.Lt:
-			return SuBool(lhs < rhs)
-		case tok.Lte:
-			return SuBool(lhs <= rhs)
-		case tok.Gt:
-			return SuBool(lhs > rhs)
-		case tok.Gte:
-			return SuBool(lhs >= rhs)
-		default:
-			panic("shouldn't reach here")
+		if lhs, ok := c.Rec.GetRaw(id.Name); ok {
+			rhs := b.Rhs.(*Constant).Packed
+			switch b.Tok {
+			case tok.Is:
+				return SuBool(lhs == rhs)
+			case tok.Isnt:
+				return SuBool(lhs != rhs)
+			case tok.Lt:
+				return SuBool(lhs < rhs)
+			case tok.Lte:
+				return SuBool(lhs <= rhs)
+			case tok.Gt:
+				return SuBool(lhs > rhs)
+			case tok.Gte:
+				return SuBool(lhs >= rhs)
+			}
 		}
 	}
 	return b.eval(b.Lhs.Eval(c), b.Rhs.Eval(c))
@@ -305,20 +297,8 @@ func evalOr(e Expr, c *Context, v Value) Value {
 // In ---------------------------------------------------------------
 
 // CanEvalRaw returns true if Eval doesn't need to unpack the values.
-// It sets RawCols which is later used by Eval.
+// It sets Packed which is later used by Eval.
 func (a *In) CanEvalRaw(cols []string) bool {
-	if a.RawCols == nil {
-		if a.canEvalRaw2(cols) {
-			a.RawCols = cols
-			return true
-		}
-		a.RawCols = notEvalRaw
-		return false
-	}
-	return str.Equal(a.RawCols, cols)
-}
-
-func (a *In) canEvalRaw2(cols []string) bool {
 	if !IsColumn(a.E, cols) {
 		return false
 	}
@@ -335,15 +315,16 @@ func (a *In) canEvalRaw2(cols []string) bool {
 }
 
 func (a *In) Eval(c *Context) Value {
-	if a.RawCols != nil && str.Equal(a.RawCols, c.Hdr.GetFields()) {
+	if a.Packed != nil {
 		id := a.E.(*Ident)
-		e := c.Row.GetRaw(c.Hdr, id.Name)
-		for _, p := range a.Packed {
-			if e == p {
-				return True
+		if e, ok := c.Rec.GetRaw(id.Name); ok {
+			for _, p := range a.Packed {
+				if e == p {
+					return True
+				}
 			}
+			return False
 		}
-		return False
 	}
 	x := a.E.Eval(c)
 	for _, e := range a.Exprs {

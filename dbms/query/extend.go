@@ -167,12 +167,14 @@ func (e *Extend) Get(dir runtime.Dir) runtime.Row {
 		e.hdr = e.Header()
 	}
 	var th runtime.Thread // ???
-	context := ast.Context{T: &th, Hdr: e.hdr, Row: row}
+	context := ast.Context{T: &th,
+		Rec: runtime.SuRecordFromRow(row, e.hdr, nil)}
 	var rb runtime.RecordBuilder
-	for i := range e.cols {
-		context.Row = append(row, runtime.DbRec{Record: rb.Build()})
+	for i, col := range e.cols {
 		if e := e.exprs[i]; e != nil {
-			rb.Add(e.Eval(&context).(runtime.Packable))
+			val := e.Eval(&context)
+			rb.Add(val.(runtime.Packable))
+			context.Rec.PreSet(runtime.SuStr(col), val)
 		}
 	}
 	return append(row, runtime.DbRec{Record: rb.Build()})

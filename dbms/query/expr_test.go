@@ -16,7 +16,7 @@ import (
 
 func TestExprEval(t *testing.T) {
 	th := NewThread()
-	hdr, row := hdr_row()
+	rec, flds := mkrec()
 	raw := false
 	test := func(src string, expected string) {
 		t.Helper()
@@ -24,8 +24,8 @@ func TestExprEval(t *testing.T) {
 		expr := p.Expression()
 		assert.T(t).This(p.Token).Is(tok.Eof)
 		// fmt.Println(expr)
-		assert.That(expr.CanEvalRaw(hdr.GetFields()) == raw)
-		result := expr.Eval(&ast.Context{T: th, Row: row, Hdr: hdr})
+		assert.That(expr.CanEvalRaw(flds) == raw)
+		result := expr.Eval(&ast.Context{T: th, Rec: rec})
 		assert.T(t).Msg(src).This(result.String()).Is(expected)
 	}
 	test("123", "123")
@@ -54,7 +54,7 @@ func TestExprEval(t *testing.T) {
 	test("s is 'foo'", "true")
 }
 
-func hdr_row() (*Header, Row) {
+func mkrec() (*SuRecord, []string) {
 	rb := RecordBuilder{}
 	rb.Add(SuInt(4))
 	rb.Add(SuInt(5))
@@ -63,27 +63,27 @@ func hdr_row() (*Header, Row) {
 	rec := rb.Build()
 	dbrec := DbRec{Record: rec}
 	row := Row{dbrec}
-	hdr := NewHeader([][]string{{"x", "y", "s", "t"}},
-		[]string{"x", "y", "s", "t"})
-	return hdr, row
+	flds := []string{"x", "y", "s", "t"}
+	hdr := NewHeader([][]string{flds}, flds)
+	return SuRecordFromRow(row, hdr, nil), flds
 }
 
 func BenchmarkEval(b *testing.B) {
-	hdr, row := hdr_row()
-	p := NewQueryParser("s is 'foo'")
+	rec, _ := mkrec()
+	p := NewQueryParser("x is 123.456")
 	expr := p.Expression()
-	ctx := &ast.Context{Row: row, Hdr: hdr}
+	ctx := &ast.Context{Rec: rec}
 	for i := 0; i < b.N; i++ {
 		expr.Eval(ctx)
 	}
 }
 
 func BenchmarkEval_raw(b *testing.B) {
-	hdr, row := hdr_row()
-	p := NewQueryParser("s is 'foo'")
+	rec, flds := mkrec()
+	p := NewQueryParser("x is 123.456")
 	expr := p.Expression()
-	expr.CanEvalRaw(hdr.GetFields())
-	ctx := &ast.Context{Row: row, Hdr: hdr}
+	assert.That(expr.CanEvalRaw(flds))
+	ctx := &ast.Context{Rec: rec}
 	for i := 0; i < b.N; i++ {
 		expr.Eval(ctx)
 	}

@@ -138,13 +138,10 @@ func (a *Unary) Children(fn func(Node) Node) {
 
 type Binary struct {
 	exprNodeT
-	Lhs Expr
-	Tok tok.Token
-	Rhs Expr
-	// RawCols is used by queries.
-	// If non-nil, then for these fields, this can be evaluated "raw"
-	// without unpacking the values.
-	RawCols []string
+	Lhs     Expr
+	Rhs     Expr
+	Tok     tok.Token
+	evalRaw bool
 }
 
 func (a *Binary) String() string {
@@ -309,13 +306,10 @@ func (a *Mem) Children(fn func(Node) Node) {
 
 type In struct {
 	exprNodeT
-	E     Expr
-	Exprs []Expr
-	// RawCols is used by queries.
-	// If non-nil, then for these fields, this can be evaluated "raw"
-	// without unpacking the values.
-	RawCols []string
-	Packed  []string
+	E      Expr
+	Exprs  []Expr
+	// Packed is set by CanEvalRaw
+	Packed []string
 }
 
 func (a *In) String() string {
@@ -551,7 +545,7 @@ func (x *If) String() string {
 	// if x.Then == nil {
 	// 	s += "nil"
 	// } else {
-		s += x.Then.String()
+	s += x.Then.String()
 	// }
 	if x.Else != nil {
 		s += "\nelse " + x.Else.String()
