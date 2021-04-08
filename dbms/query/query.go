@@ -391,8 +391,8 @@ func (*Query1) Header() *runtime.Header {
 	panic("not implemented")
 }
 
-func (*Query1) Output(runtime.Record) {
-	panic("not implemented")
+func (q1 *Query1) Output(rec runtime.Record) {
+	q1.source.Output(rec)
 }
 
 func (*Query1) Get(runtime.Dir) runtime.Row {
@@ -434,6 +434,10 @@ func (q2 *Query2) SetTran(t QueryTran) {
 
 func (q2 *Query2) Updateable() bool {
 	return false
+}
+
+func (*Query2) Output(runtime.Record) {
+	panic("can't output to this query")
 }
 
 func (q2 *Query2) optimize(Mode, []string) Cost {

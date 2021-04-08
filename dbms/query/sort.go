@@ -75,7 +75,3 @@ func (sort *Sort) Get(dir runtime.Dir) runtime.Row {
 	}
 	return sort.source.Get(dir)
 }
-
-func (sort *Sort) Output(rec runtime.Record) {
-	sort.source.Output(rec)
-}

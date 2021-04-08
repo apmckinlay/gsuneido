@@ -248,7 +248,7 @@ func (w *Where) Transform() Query {
 
 func (w *Where) leftJoinToJoin() *LeftJoin {
 	if lj, ok := w.source.(*LeftJoin); ok {
-		cols := lj.source2.Columns() //TODO .Header().Columns()
+		cols := lj.source2.Header().GetFields()
 		cols = sset.Difference(cols, lj.by)
 		for _, e := range w.expr.Exprs {
 			if sset.Subset(cols, e.Columns()) && ast.CantBeEmpty(e, cols) {
@@ -918,8 +918,4 @@ func (w *Where) advance(dir runtime.Dir) bool {
 func (w *Where) Rewind() {
 	w.source.Rewind()
 	w.idxSelPos = -1
-}
-
-func (w *Where) Output(rec runtime.Record) {
-	w.source.Output(rec)
 }

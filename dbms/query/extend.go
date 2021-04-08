@@ -179,7 +179,3 @@ func (e *Extend) Get(dir runtime.Dir) runtime.Row {
 	}
 	return append(row, runtime.DbRec{Record: rb.Build()})
 }
-
-func (e *Extend) Output(rec runtime.Record) {
-	e.source.Output(rec)
-}

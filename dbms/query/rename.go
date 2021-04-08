@@ -153,7 +153,3 @@ func (r *Rename) Header() *runtime.Header {
 func (r *Rename) Get(dir runtime.Dir) runtime.Row {
 	return r.source.Get(dir)
 }
-
-func (r *Rename) Output(rec runtime.Record) {
-	r.source.Output(rec)
-}

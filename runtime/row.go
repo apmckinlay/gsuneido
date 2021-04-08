@@ -5,7 +5,7 @@ package runtime
 
 import (
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util/str"
+	"github.com/apmckinlay/gsuneido/util/sset"
 )
 
 // Row is the result of database queries.
@@ -67,13 +67,32 @@ func NewHeader(fields [][]string, columns []string) *Header {
 func (hdr *Header) Rules() []string {
 	rules := []string{}
 	for _, col := range hdr.Columns {
-		if !str.List(hdr.Fields[0]).Has(col) { //TODO handle multiple fields
+		if !hdr.hasField(col) {
 			rules = append(rules, col)
 		}
 	}
 	return rules
 }
 
+func (hdr *Header) hasField(col string) bool {
+	for _, fields := range hdr.Fields {
+		if sset.Contains(fields, col) {
+			return true
+		}
+	}
+	return false
+}
+
 func (hdr *Header) GetFields() []string {
-	return hdr.Fields[0] //TODO handle multiple fields
+	if len(hdr.Fields) == 1 {
+		return hdr.Fields[0]
+	}
+	result := make([]string, len(hdr.Fields[0]))
+	copy(result, hdr.Fields[0])
+	for _, fields := range hdr.Fields[1:] {
+		for _, fld := range fields {
+			result = sset.AddUnique(result, fld)
+		}
+	}
+	return result
 }

@@ -6,6 +6,7 @@ package query
 import (
 	"strings"
 
+	"github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/ints"
 	"github.com/apmckinlay/gsuneido/util/sset"
 	"github.com/apmckinlay/gsuneido/util/ssset"
@@ -149,6 +150,10 @@ func (su *Summarize) rowSize() int {
 
 func (su *Summarize) Updateable() bool {
 	return false // override Query1 source.Updateable
+}
+
+func (*Summarize) Output(runtime.Record) {
+	panic("can't output to this query")
 }
 
 func (su *Summarize) Transform() Query {
