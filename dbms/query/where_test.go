@@ -52,38 +52,41 @@ func TestComparesToColSelects(t *testing.T) {
 		colSels := w.comparesToFilters(cmps)
 		assert.T(t).This(fmt.Sprint(colSels)).Is("map[" + expected + "]")
 	}
-	test("a > 2", "a:(2..<max>)")
-	test("a is 1 and b is 2", "a:[1] b:[2]")
+	test("a >= 2", "a:(2..<max>)")
+	test("a > 2", "a:(2+..<max>)")
+	test("a is 1 and b is 2", "a:1 b:2")
 	test("a in (1,2,3)", "a:[1,2,3]")
 	test("a in (1,2,3,4) and a in (3,4,5,6)", "a:[3,4]")
 	test("a in (1,2,3,4) and a > 2", "a:[3,4]")
 	test("a in (1,2,3,4) and a < 3", "a:[1,2]")
-	test("a > 1 and a < 3", "a:(1..3)")
-	test("a > 1 and a > 2", "a:(2..<max>)")
+	test("a >= 1 and a < 3", "a:(1..3)")
+	test("a > 1 and a >= 2", "a:(2..<max>)")
 	test("a > 5 and a < 3", "") // conflict
 }
 
-func TestColSelsToIdxSel(t *testing.T) {
+func TestColSelsToIdxFilter(t *testing.T) {
 	idx := []string{"a", "b", "c"}
 	test := func(query string, expected string) {
 		t.Helper()
-		q := ParseQuery("comp where " + query)
+		q := ParseQuery(query)
 		q.SetTran(testTran{})
 		q.Init()
 		w := q.(*Where)
 		cmps := w.extractCompares()
 		colSels := w.comparesToFilters(cmps)
-		idxSels := colSelsToIdxSel(colSels, idx)
-		assert.T(t).This(fmt.Sprint(idxSels)).Is("[" + expected + "]")
+		filters := colSelsToIdxFilters(colSels, idx)
+		assert.T(t).This(fmt.Sprint(filters)).Is("[" + expected + "]")
 	}
-	test("a is 1", "[1]")
-	test("a is 1 and c is 2", "[1]")
-	test("a is 1 and b is 2", "[1] [2]")
-	test("a is 1 and b is 2 and c is 3", "[1] [2] [3]")
-	test("a > 4", "(4..<max>)")
-	test("a > 4 and b is 2", "(4..<max>)")
-	test("a is 2 and b > 4", "[2] (4..<max>)")
-	test("a in (1,2) and b in (3,4)", "[1,2] [3,4]")
+	test("comp where a is 1", "1")
+	test("comp where a is 1 and c is 2", "1")
+	test("comp where a is 1 and b is 2", "1 2")
+	test("comp where a is 1 and b is 2 and c is 3", "1 2 3")
+	test("comp where a >= 4", "(4..<max>)")
+	test("comp where a >= 4 and b is 2", "(4..<max>)")
+	test("comp where a is 2 and b >= 4", "2 (4..<max>)")
+	test("comp where a in (1,2) and b in (3,4)", "[1,2] [3,4]")
+	idx = []string{"id"}
+	test("customer where id is 'e'", "'e'")
 }
 
 func TestExplodeFilters(t *testing.T) {
@@ -96,20 +99,20 @@ func TestExplodeFilters(t *testing.T) {
 		w := q.(*Where)
 		cmps := w.extractCompares()
 		colSels := w.comparesToFilters(cmps)
-		filters := colSelsToIdxSel(colSels, idx)
-		ptrngs := explodeFilters(filters, [][]pointRange{nil})
-		assert.T(t).This(fmt.Sprint(ptrngs)).Is("[" + expected + "]")
+		filters := colSelsToIdxFilters(colSels, idx)
+		exploded := explodeFilters(filters, [][]filter{nil})
+		assert.T(t).This(fmt.Sprint(exploded)).Is("[" + expected + "]")
 	}
 	test("a is 1", "[1]")
 	test("a is 1 and b is 2", "[1 2]")
 	test("a is 1 and b is 2 and c is 3", "[1 2 3]")
-	test("a > 4", "[4..<max>]")
-	test("a is 2 and b > 4", "[2 4..<max>]")
+	test("a >= 4", "[(4..<max>)]")
+	test("a is 2 and b >= 4", "[2 (4..<max>)]")
 	test("a in (1,2) and b in (3,4)", "[1 3] [1 4] [2 3] [2 4]")
-	test("a in (1,2) and b > 4", "[1 4..<max>] [2 4..<max>]")
+	test("a in (1,2) and b >= 4", "[1 (4..<max>)] [2 (4..<max>)]")
 }
 
-func TestCompositePtrngs(t *testing.T) {
+func TestColSelsToIdxSels(t *testing.T) {
 	test := func(query string, expected string) {
 		t.Helper()
 		q := ParseQuery("comp where " + query)
@@ -121,13 +124,16 @@ func TestCompositePtrngs(t *testing.T) {
 		idxSels := w.colSelsToIdxSels(colSels)
 		assert.T(t).This(fmt.Sprint(idxSels)).Is("[" + expected + "]")
 	}
-	test("a is 1", "a,b,c: 1* = 0.1")
-	test("a is 1 and b is 2", "a,b,c: 1,2* = 0.01")
+	test("a is 1", "a,b,c: 1..1,<max> = 0.1")
+	test("a is 1 and b is 2", "a,b,c: 1,2..1,2,<max> = 0.01")
 	test("a is 1 and b is 2 and c is 3", "a,b,c: 1,2,3 = 0.001")
-	test("a > 4", "a,b,c: 4..<max> = 0.6")
-	test("a is 2 and b > 4", "a,b,c: 2,4..2,<max> = 0.06")
-	test("a in (1,2) and b in (3,4)", "a,b,c: 1,3* | 1,4* | 2,3* | 2,4* = 0.04")
-	test("a in (1,2) and b > 4", "a,b,c: 1,4..1,<max> | 2,4..2,<max> = 0.12")
+	test("a > 4", "a,b,c: 4,''..<max> = 0.5")
+	test("a <= 4", "a,b,c: ..4,'' = 0.5")
+	test("a is 2 and b >= 4", "a,b,c: 2,4..2,<max> = 0.06")
+	test("a in (1,2) and b in (3,4)", "a,b,c: 1,3..1,3,<max> | 1,4..1,4,<max> | "+
+		"2,3..2,3,<max> | 2,4..2,4,<max> = 0.04")
+	test("a in (1,2) and b > 4",
+		"a,b,c: 1,4,''..1,<max> | 2,4,''..2,<max> = 0.1")
 }
 
 func TestFracPos(t *testing.T) {
@@ -157,6 +163,8 @@ func TestWhereNrows(t *testing.T) {
 		w.optInit()
 		assert.T(t).This(w.nrows()).Is(nrows)
 	}
+	test("tables where F()", 50)
+	test("columns where column > 'm'", 500)
 	test("tables where table < 3 and table > 3", 0) // conflict
 	test("tables where table is 1", 1)
 	test("tables where table in (1,2,3)", 3)

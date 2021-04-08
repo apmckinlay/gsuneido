@@ -17,11 +17,11 @@ func TestAlloc(t *testing.T) {
 	assert := assert.T(t).This
 	hs := HeapStor(64)
 	offset, _ := hs.Alloc(12)
-	assert(offset).Is(Offset(1))
+	assert(offset).Is(Offset(0))
 	offset, _ = hs.Alloc(8)
-	assert(offset).Is(Offset(13))
+	assert(offset).Is(Offset(12))
 	offset, _ = hs.Alloc(8)
-	assert(offset).Is(Offset(21))
+	assert(offset).Is(Offset(20))
 	offset, _ = hs.Alloc(48) // requires new chunk
 	assert(offset).Is(Offset(64))
 }
@@ -31,7 +31,7 @@ func TestData(t *testing.T) {
 	hs.Alloc(12)
 	offset, buf := hs.Alloc(12)
 	assert.T(t).This(len(buf)).Is(12)             // Alloc gives correct length
-	assert.T(t).This(len(hs.Data(offset))).Is(51) // Data gives to end of chunk
+	assert.T(t).This(len(hs.Data(offset))).Is(52) // Data gives to end of chunk
 	for i := 0; i < 12; i++ {
 		buf[i] = byte(i)
 	}

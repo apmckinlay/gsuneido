@@ -6,12 +6,14 @@ package query
 import (
 	"sort"
 	"strconv"
+	"strings"
 
 	"github.com/apmckinlay/gsuneido/compile/ast"
 	"github.com/apmckinlay/gsuneido/compile/tokens"
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/runtime"
+	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/ints"
 	"github.com/apmckinlay/gsuneido/util/sset"
 	"github.com/apmckinlay/gsuneido/util/str"
@@ -33,6 +35,10 @@ type Where struct {
 	idxSels   []idxSel
 	conflict  bool
 	index     []string
+	idxSel    *idxSel
+	idxSelPos int
+	inRange   bool
+	hdr       *runtime.Header
 }
 
 type whereApproach struct {
@@ -340,8 +346,10 @@ func (w *Where) optInit() {
 	w.exprMore = w.exprMore || len(w.idxSels) > 1
 	if !w.exprMore {
 		// check if any colSels were not used by idxSels
-		for _, col := range w.idxSels[0].index {
-			delete(colSels, col)
+		for _, idxSel := range w.idxSels {
+			for _, col := range idxSel.index {
+				delete(colSels, col)
+			}
 		}
 		w.exprMore = w.exprMore || len(colSels) > 0
 	}
@@ -434,7 +442,10 @@ func (w *Where) getIdxSel(index []string) *idxSel {
 func (w *Where) setApproach(index []string, app interface{}, tran QueryTran) {
 	if app != nil {
 		w.index = app.(whereApproach).index
+		assert.That(index == nil || w.singleton || str.Equal(index, w.index))
 		w.tbl.index = w.index
+		w.idxSel = w.getIdxSel(w.index)
+		w.idxSelPos = -1
 	} else {
 		w.source = SetApproach(w.source, index, tran)
 	}
@@ -473,13 +484,13 @@ func (cmp *cmpExpr) toFilter() filter {
 	case tokens.Is:
 		return filter{vals: []string{cmp.val}}
 	case tokens.Lt:
-		return filter{end: cmp.val}
+		return filter{end: limit{val: cmp.val}}
 	case tokens.Lte:
-		return filter{end: ixkey.Increment(cmp.val)}
+		return filter{end: limit{val: cmp.val, inc: 1}}
 	case tokens.Gt:
-		return filter{org: ixkey.Increment(cmp.val), end: ixkey.Max}
+		return filter{org: limit{val: cmp.val, inc: 1}, end: limitMax}
 	case tokens.Gte:
-		return filter{org: cmp.val, end: ixkey.Max}
+		return filter{org: limit{val: cmp.val}, end: limitMax}
 	default:
 		panic("shouldn't reach here")
 	}
@@ -489,15 +500,15 @@ func (cmp *cmpExpr) toFilter() filter {
 
 // filter is either a range or a list of values
 type filter struct {
-	// org is inclusive
-	org string
-	// end is exclusive
-	end string
+	// org is inclusive (>=)
+	org limit
+	// end is exclusive (<)
+	end limit
 	// vals is nil for a range (org and end)
 	vals []string
 }
 
-var filterAll = filter{org: ixkey.Min, end: ixkey.Max}
+var filterAll = filter{org: limit{val: ixkey.Min}, end: limit{val: ixkey.Max}}
 
 func (f filter) String() string {
 	if f.all() {
@@ -507,8 +518,10 @@ func (f filter) String() string {
 		return "<none>"
 	}
 	if f.vals == nil {
-		return "(" + runtime.Unpack(f.org).String() + ".." +
-			packToStr(f.end) + ")"
+		return "(" + f.org.String() + ".." + f.end.String() + ")"
+	}
+	if len(f.vals) == 1 {
+		return packToStr(f.vals[0])
 	}
 	s := "["
 	sep := ""
@@ -523,39 +536,76 @@ func (f *filter) isRange() bool {
 	return len(f.vals) == 0
 }
 
+func (f *filter) isPoint() bool {
+	return len(f.vals) == 1
+}
+
 func (f *filter) all() bool {
-	return len(f.vals) == 0 && f.org == ixkey.Min && f.end == ixkey.Max
+	return len(f.vals) == 0 && f.org == limitMin && f.end == limitMax
 }
 
 func (f *filter) none() bool {
-	return len(f.vals) == 0 && f.org >= f.end
+	return len(f.vals) == 0 && cmp(f.org, f.end) >= 0
 }
 
-func (f *filter) andWith(cs2 filter) {
-	if f.isRange() && cs2.isRange() {
-		if cs2.org > f.org {
-			f.org = cs2.org
+func (f *filter) andWith(f2 filter) {
+	if f.isRange() && f2.isRange() {
+		if cmp(f2.org, f.org) > 0 {
+			f.org = f2.org
 		}
-		if cs2.end < f.end {
-			f.end = cs2.end
+		if cmp(f2.end, f.end) < 0 {
+			f.end = f2.end
 		}
-	} else if !f.isRange() && !cs2.isRange() {
-		f.vals = sset.Intersect(f.vals, cs2.vals)
-		f.org, f.end = "", ""
+	} else if !f.isRange() && !f2.isRange() {
+		f.vals = sset.Intersect(f.vals, f2.vals)
+		f.org, f.end = limit{}, limit{}
 	} else { // set & range => set
 		if f.isRange() {
-			f.vals = cs2.vals
-			cs2.org, cs2.end = f.org, f.end
+			f.vals = f2.vals
+			f2.org, f2.end = f.org, f.end
 		}
 		vals := make([]string, 0, len(f.vals)/2)
 		for _, v := range f.vals {
-			if cs2.org <= v && v < cs2.end {
+			lim := limit{val: v}
+			if cmp(f2.org, lim) <= 0 && cmp(lim, f2.end) < 0 {
 				vals = append(vals, v)
 			}
 		}
 		f.vals = vals
-		f.org, f.end = "", ""
+		f.org, f.end = limit{}, limit{}
 	}
+}
+
+type limit struct {
+	val string
+	inc int
+}
+
+var limitMin = limit{}
+var limitMax = limit{val: ixkey.Max}
+
+func cmp(x, y limit) int {
+	cmp := strings.Compare(x.val, y.val)
+	if cmp == 0 {
+		cmp = ints.Compare(x.inc, y.inc)
+	}
+	return cmp
+}
+
+// valRaw is for non-encoded (single field keys)
+func (lim limit) valRaw() string {
+	if lim.inc == 0 {
+		return lim.val
+	}
+	return lim.val + "\x00"
+}
+
+func (lim limit) String() string {
+	s := packToStr(lim.val)
+	if lim.inc > 0 {
+		s += "+"
+	}
+	return s
 }
 
 func packToStr(s string) string {
@@ -584,11 +634,7 @@ func (is idxSel) String() string {
 		s += sep + showKey(encode, pr.org)
 		sep = " | "
 		if pr.isRange() {
-			if pr.end == ixkey.Increment(pr.org) {
-				s += "*"
-			} else {
-				s += ".." + showKey(encode, pr.end)
-			}
+			s += ".." + showKey(encode, pr.end)
 		}
 	}
 	if is.frac != 0 {
@@ -633,17 +679,22 @@ func (w *Where) colSelsToIdxSels(colSels map[string]filter) []idxSel {
 		idx := schix.Columns
 		key := schix.Mode == 'k'
 		uniq := schix.Mode == 'u'
-		encode := len(idx) > 1
-		if filters := colSelsToIdxSel(colSels, idx); len(filters) > 0 {
-			exploded := explodeFilters(filters, [][]pointRange{nil})
+		encode := !key || len(idx) > 1
+		if filters := colSelsToIdxFilters(colSels, idx); len(filters) > 0 {
+			exploded := explodeFilters(filters, [][]filter{nil})
 			comp := compositePtrngs(encode, exploded)
 			for i := range comp {
 				c := &comp[i]
-				if c.end == "" {
+				if c.isPoint() {
 					lookup := len(exploded[i]) == len(idx) &&
 						(key || (uniq && c.org != ""))
 					if !lookup {
-						c.end = ixkey.Increment(c.org)
+						// convert point to range
+						if !encode {
+							c.end = c.org + "\x00"
+						} else {
+							c.end = c.org + ixkey.Sep + ixkey.Max
+						}
 					}
 				}
 			}
@@ -656,9 +707,9 @@ func (w *Where) colSelsToIdxSels(colSels map[string]filter) []idxSel {
 	return idxSels
 }
 
-// colSelsToIdxSel returns filters for the columns of an index
+// colSelsToIdxFilters returns filters for the columns of an index
 // or else nil if not possible.
-func colSelsToIdxSel(colSels map[string]filter, idx []string) []filter {
+func colSelsToIdxFilters(colSels map[string]filter, idx []string) []filter {
 	const maxCount = 8 * 1024 // ???
 	filters := make([]filter, 0, len(idx))
 	count := 1
@@ -687,13 +738,6 @@ type pointRange struct {
 	end string
 }
 
-func (f *filter) toPtRng() pointRange {
-	if len(f.vals) == 1 {
-		return pointRange{org: f.vals[0]}
-	}
-	return pointRange{org: f.org, end: f.end}
-}
-
 func (pr pointRange) isPoint() bool {
 	return pr.end == ""
 }
@@ -715,20 +759,20 @@ func (pr pointRange) String() string {
 // explodeFilters converts multi vals filters to multi single vals filters.
 // e.g. (1|2)+(3|4) => 1+3, 1+4, 2+3, 2+4
 // Each recursion processes one element from remaining, adding to prefixes.
-func explodeFilters(remaining []filter, prefixes [][]pointRange) [][]pointRange {
+func explodeFilters(remaining []filter, prefixes [][]filter) [][]filter {
 	f := remaining[0]
 	if len(f.vals) <= 1 { // single value or final range
 		for i := range prefixes {
-			prefixes[i] = append(prefixes[i], f.toPtRng())
+			prefixes[i] = append(prefixes[i], f)
 		}
 	} else { // len(f.vals) > 1
-		newpre := make([][]pointRange, 0, len(f.vals)*len(prefixes))
+		newpre := make([][]filter, 0, len(f.vals)*len(prefixes))
 		for i := range prefixes {
 			pre := prefixes[i]
 			// set cap to len so each append will make a new copy (COW)
 			pre = pre[:len(pre):len(pre)]
 			for _, v := range f.vals {
-				p := append(pre, pointRange{org: v})
+				p := append(pre, filter{vals: []string{v}})
 				newpre = append(newpre, p)
 			}
 		}
@@ -740,21 +784,33 @@ func explodeFilters(remaining []filter, prefixes [][]pointRange) [][]pointRange 
 	return prefixes
 }
 
-func compositePtrngs(encode bool, ptrngs [][]pointRange) []pointRange {
-	result := make([]pointRange, len(ptrngs))
+func compositePtrngs(encode bool, filters [][]filter) []pointRange {
+	result := make([]pointRange, len(filters))
 outer:
-	for i, prs := range ptrngs {
+	for i, fs := range filters {
 		if !encode {
-			result[i] = prs[0]
+			assert.That(len(fs) == 1)
+			f := fs[0]
+			if f.isPoint() {
+				result[i] = pointRange{org: f.vals[0]}
+			} else { // range
+				result[i] = pointRange{org: f.org.valRaw(), end: f.end.valRaw()}
+			}
 		} else {
 			var enc ixkey.Encoder
-			for _, pr := range prs {
-				if pr.isPoint() {
-					enc.Add(pr.org)
+			for _, f := range fs {
+				if f.isPoint() {
+					enc.Add(f.vals[0])
 				} else { // final range
 					enc2 := enc.Dup()
-					enc.Add(pr.org)
-					enc2.Add(pr.end)
+					enc.Add(f.org.val)
+					if f.org.inc == 1 {
+						enc.Add("")
+					}
+					enc2.Add(f.end.val)
+					if f.end.inc == 1 {
+						enc2.Add("")
+					}
 					result[i] = pointRange{org: enc.String(), end: enc2.String()}
 					continue outer
 				}
@@ -780,4 +836,90 @@ func (w *Where) idxFrac(idx []string, ptrngs []pointRange) float64 {
 		}
 	}
 	return frac
+}
+
+// execution --------------------------------------------------------
+
+func (w *Where) Header() *runtime.Header {
+	return w.source.Header()
+}
+
+func (w *Where) Get(dir runtime.Dir) runtime.Row {
+	if w.conflict {
+		return nil
+	}
+	if w.hdr == nil {
+		w.hdr = w.source.Header()
+	}
+	var th runtime.Thread // ???
+	context := ast.Context{T: &th}
+	for { // filter
+		row := w.get(dir)
+		if row == nil {
+			return nil
+		}
+		context.Rec = runtime.SuRecordFromRow(row, w.hdr, nil)
+		if w.expr.Eval(&context) == runtime.True {
+			return row
+		}
+	}
+}
+
+func (w *Where) get(dir runtime.Dir) runtime.Row {
+	if w.idxSel == nil {
+		return w.tbl.Get(dir)
+	}
+	if w.idxSel.isRanges() {
+		return w.getRange(dir)
+	}
+	return w.getPoint(dir)
+}
+
+func (w *Where) getRange(dir runtime.Dir) runtime.Row {
+	for {
+		if w.idxSelPos != -1 {
+			if row := w.tbl.Get(dir); row != nil {
+				return row
+			}
+		}
+		if !w.advance(dir) {
+			return nil // eof
+		}
+		pr := w.idxSel.ptrngs[w.idxSelPos]
+		w.tbl.Select(pr.org, pr.end)
+		w.inRange = true
+	}
+}
+
+func (w *Where) getPoint(dir runtime.Dir) runtime.Row {
+	if !w.advance(dir) {
+		return nil
+	}
+	return w.tbl.Lookup(w.idxSel.ptrngs[w.idxSelPos].org)
+}
+
+func (w *Where) advance(dir runtime.Dir) bool {
+	if w.idxSelPos == -1 { // rewound
+		if dir == runtime.Prev {
+			w.idxSelPos = len(w.idxSel.ptrngs)
+		}
+	}
+	if dir == runtime.Prev {
+		w.idxSelPos--
+	} else { // Next
+		w.idxSelPos++
+	}
+	if w.idxSelPos < 0 || len(w.idxSel.ptrngs) <= w.idxSelPos {
+		return false // eof
+	}
+	return true
+}
+
+func (w *Where) Rewind() {
+	w.source.Rewind()
+	w.idxSelPos = -1
+}
+
+func (w *Where) Output(rec runtime.Record) {
+	w.source.Output(rec)
 }

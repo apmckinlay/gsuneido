@@ -130,7 +130,7 @@ type QueryTran interface {
 	GetSchema(table string) *schema.Schema
 	GetInfo(table string) *meta.Info
 	RangeFrac(table string, iIndex int, org, end string) float64
-	Lookup(table string, iIndex int, key string) runtime.DbRec
+	Lookup(table string, iIndex int, key string) *runtime.DbRec
 	Output(table string, rec runtime.Record)
 	GetIndex(table string, cols []string) *index.Overlay
 	GetRecord(off uint64) runtime.Record

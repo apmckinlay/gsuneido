@@ -74,8 +74,9 @@ func TestTableGet(t *testing.T) {
 		return s
 	}
 	test := func(query, expected string) {
+		t.Helper()
 		q := ParseQuery(query)
-		tran := db.NewReadTran()
+		tran := sizeTran{db.NewReadTran()}
 		Setup(q, readMode, tran)
 		assert.T(t).This(get(q, rt.Next)).Like(expected)
 		assert.T(t).This(get(q, rt.Prev)).Like(expected)
@@ -188,6 +189,7 @@ func TestTableGet(t *testing.T) {
 	// test("trans intersect hist",
 	// 	`item	id	cost	date
 	// 	'disk'	'a'	100	970101`)
+
 	// test("trans minus hist sort date",
 	// 	`item	id	cost	date
 	// 	'mouse'	'e'	200	960204
@@ -195,6 +197,7 @@ func TestTableGet(t *testing.T) {
 	// 	'eraser'	'c'	150	970201`)
 	// test("(trans minus hist) where id = 9",
 	// 	`item	id	cost	date`)
+
 	// test("trans union hist", // merge
 	// 	`item	id	cost	date
 	// 	'mouse'	'e'	200	960204
@@ -211,6 +214,7 @@ func TestTableGet(t *testing.T) {
 	// 	970101	'disk'	'e'	200
 	// 	970102	'mouse'	'c'	200
 	// 	970103	'pencil'	'e'	300`)
+
 	// test("hist join customer",
 	// 	`date	item	id	cost	name	city
 	// 	970101	'disk'	'a'	100	'axon'	'saskatoon'
@@ -241,47 +245,49 @@ func TestTableGet(t *testing.T) {
 	// 	'e'	'emerald'	'vancouver'	970102	'disk'	200
 	// 	'e'	'emerald'	'vancouver'	970103	'pencil'	300
 	// 	'i'	'intercon'	'saskatoon'	''	''	''`)
-	// test("customer where id > 'd'",
-	// 	`id	name	city
-	// 	'e'	'emerald'	'vancouver'
-	// 	'i'	'intercon'	'saskatoon'`)
-	// test("customer where id > 'd' and id < 'j'",
-	// 	`id	name	city
-	// 	'e'	'emerald'	'vancouver'
-	// 	'i'	'intercon'	'saskatoon'`)
-	// test("customer where id = 'e'",
-	// 	`id	name	city
-	// 	'e'	'emerald'	'vancouver'`)
-	// test("customer where id = 'd'",
-	// 	`id	name	city`)
-	// test("inven where qty > 0",
-	// 	`item	qty
-	// 	'disk'	5
-	// 	'mouse'	2
-	// 	'pencil'	7`)
-	// test("inven where item =~ 'i'",
-	// 	`item	qty
-	// 	'disk'	5
-	// 	'pencil'	7`)
-	// test("inven where item =~ 'i'",
-	// 	`item	qty
-	// 	'disk'	5
-	// 	'pencil'	7`)
-	// test("inven where item in ('disk', 'mouse', 'pencil')",
-	// 	`item	qty
-	// 	'disk'	5
-	// 	'mouse'	2
-	// 	'pencil'	7`)
-	// test("inven where item <= 'e' or item >= 'p'",
-	// 	`item	qty
-	// 	'disk'	5
-	// 	'pencil'	7`)
-	// test("cus where cnum = 2 and abbrev = 'b'",
-	// 	`cnum	abbrev	name
-	// 	2	'b'	'bill'`)
-	// test("cus where cnum = 2 and abbrev >= 'b' and abbrev < 'c'",
-	// 	`cnum	abbrev	name
-	// 	2	'b'	'bill'`)
+
+	test("customer where id > 'd'", // range
+		`id	name	city
+		'e'	'emerald'	'vancouver'
+		'i'	'intercon'	'saskatoon'`)
+	test("customer where id > 'd' and id < 'j'", // range
+		`id	name	city
+		'e'	'emerald'	'vancouver'
+		'i'	'intercon'	'saskatoon'`)
+	test("customer where id is 'e'", // point
+		`id	name	city
+		'e'	'emerald'	'vancouver'`)
+	test("customer where id is 'd'", // point
+		`id	name	city`)
+	test("inven where qty > 0", // filter
+		`item	qty
+		'disk'	5
+		'mouse'	2
+		'pencil'	7`)
+	test("inven where item =~ 'i'", // filter
+		`item	qty
+		'disk'	5
+		'pencil'	7`)
+	test("inven where item in ('disk', 'mouse', 'pencil')", // points
+		`item	qty
+		'disk'	5
+		'mouse'	2
+		'pencil'	7`)
+	test("inven where item <= 'e' or item >= 'p'", // filter
+		`item	qty
+		'disk'	5
+		'pencil'	7`)
+	test("cus where cnum is 2 and abbrev is 'b'", // points
+		`cnum	abbrev	name
+		2	'b'	'bill'`)
+	test("cus where cnum is 2 and abbrev >= 'b' and abbrev < 'c'", // point
+		`cnum	abbrev	name
+		2	'b'	'bill'`)
+	test("hist where date in (970101, 970102) and item < 'z'", // ranges
+		`date	item	id	cost
+        970101	'disk'	'a'	100
+        970101	'disk'	'e'	200
+        970102	'mouse'	'c'	200`)
 
 	// test("hist summarize count", // by is empty
 	// 	`count

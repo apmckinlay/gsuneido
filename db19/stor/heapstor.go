@@ -18,7 +18,6 @@ func HeapStor(chunksize int) *Stor {
 	assert.That(bits.OnesCount(uint(chunksize)) == 1)
 	hs := NewStor(&heapStor{chunksize}, uint64(chunksize), 0)
 	hs.chunks.Store([][]byte{make([]byte, chunksize)})
-	hs.Alloc(1) // to avoid offset 0 which sometimes has special meaning
 	return hs
 }
 

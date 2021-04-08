@@ -151,7 +151,10 @@ func (tbl *Table) lookupCost() Cost {
 func (tbl *Table) Lookup(key string) runtime.Row {
 	iIndex := tbl.findIndex(tbl.index) //TODO cache
 	rec := tbl.tran.Lookup(tbl.name, iIndex, key)
-	return runtime.Row{rec}
+	if rec == nil {
+		return nil
+	}
+	return runtime.Row{*rec}
 }
 
 func (tbl *Table) Header() *runtime.Header {
@@ -170,9 +173,7 @@ func (tbl *Table) Rewind() {
 }
 
 func (tbl *Table) Get(dir runtime.Dir) runtime.Row {
-	if tbl.iter == nil {
-		tbl.iter = index.NewOverIter(tbl.name, tbl.index)
-	}
+	tbl.ensureIter()
 	if dir == runtime.Prev {
 		tbl.iter.Prev(tbl.tran)
 	} else {
@@ -184,4 +185,15 @@ func (tbl *Table) Get(dir runtime.Dir) runtime.Row {
 	_, off := tbl.iter.Cur()
 	rec := tbl.tran.GetRecord(off)
 	return runtime.Row{runtime.DbRec{Record: rec, Off: off}}
+}
+
+func (tbl *Table) Select(org, end string) {
+	tbl.ensureIter()
+	tbl.iter.Range(index.Range{Org: org, End: end})
+}
+
+func (tbl *Table) ensureIter() {
+	if tbl.iter == nil {
+		tbl.iter = index.NewOverIter(tbl.name, tbl.index)
+	}
 }

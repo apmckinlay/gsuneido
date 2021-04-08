@@ -7,11 +7,13 @@ import (
 	"time"
 
 	"github.com/apmckinlay/gsuneido/db19"
+	"github.com/apmckinlay/gsuneido/db19/meta"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 )
 
 func testDb() *db19.Database {
-	db, err := db19.CreateDb(stor.HeapStor(8192))
+	store := stor.HeapStor(8192)
+	db, err := db19.CreateDb(store)
 	ck(err)
 	db19.StartConcur(db, 50*time.Millisecond)
 	req := func(req string) {
@@ -88,6 +90,11 @@ func testDb() *db19.Database {
 	act("insert { date: #20010301 } into dates")
 	act("insert { date: #20010401 } into dates")
 
+	// close and reopen to force persist
+	db.Close()
+	db, err = db19.OpenDbStor(store, stor.READ, true)
+	ck(err)
+	db19.StartConcur(db, 50*time.Millisecond)
 	return db
 }
 
@@ -95,4 +102,24 @@ func ck(err error) {
 	if err != nil {
 		panic(err.Error())
 	}
+}
+
+//-------------------------------------------------------------------
+
+// sizeTran wraps an actual transaction and overrides Nrows and Size
+// since testDb does not have enough data to test query optimization
+type sizeTran struct {
+	QueryTran
+}
+
+func (t sizeTran) GetInfo(table string) *meta.Info {
+	ti := t.QueryTran.GetInfo(table)
+	if ti != nil {
+		ti.Nrows = 1000
+		if table == "trans" || table == "hist" || table == "hist2" {
+			ti.Nrows = 10_000
+		}
+		ti.Size = uint64(ti.Nrows) * 100
+	}
+	return ti
 }

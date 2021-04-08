@@ -67,11 +67,18 @@ func (t *ReadTran) ColToFld(table, col string) int {
 }
 
 func (t *ReadTran) RangeFrac(table string, iIndex int, org, end string) float64 {
-	return 0 //TODO
+	idx := t.meta.GetRoInfo(table).Indexes[iIndex]
+	return float64(idx.RangeFrac(org, end))
 }
 
-func (t *ReadTran) Lookup(table string, iIndex int, key string) rt.DbRec {
-	return rt.DbRec{} // TODO
+// Lookup returns the DbRec for a key, or nil if not found
+func (t *ReadTran) Lookup(table string, iIndex int, key string) *rt.DbRec {
+	idx := t.meta.GetRoInfo(table).Indexes[iIndex]
+	off := idx.Lookup(key)
+	if off == 0 {
+		return nil
+	}
+	return &rt.DbRec{Off: off, Record: t.GetRecord(off)}
 }
 
 func (t *ReadTran) Output(string, rt.Record) {

@@ -62,14 +62,15 @@ func (it *Iterator) Modified() bool {
 // Next -------------------------------------------------------------
 
 func (it *Iterator) Next() {
-	if it.state == eof {
+	if it.Eof() {
 		return // stick at eof
 	}
 	if it.state == rewound {
 		it.Seek(it.rng.Org)
-		return
+	} else {
+		it.next()
 	}
-	it.next()
+	it.checkRange()
 }
 
 func (it *Iterator) next() {
@@ -122,14 +123,15 @@ func (it *Iterator) Prev() {
 		if it.Eof() {
 			return
 		}
-		key, _ := it.Cur()
-		if key < it.rng.End {
+		if it.curKey < it.rng.End {
+			it.checkRange()
 			return
 		}
 		it.state = within
 		// Seek went to >= so fallthrough to do previous
 	}
 	it.prev()
+	it.checkRange()
 }
 
 func (it *Iterator) prev() {
@@ -212,6 +214,14 @@ func (nd node) seek(key string) *nodeIter {
 		itPrev.copyFrom(it)
 	}
 	return &itPrev
+}
+
+func (it *Iterator) checkRange() {
+	if it.curKey < it.rng.Org || it.rng.End <= it.curKey {
+		it.curOff = 0
+		it.curKey = ""
+		it.state = eof
+	}
 }
 
 //-------------------------------------------------------------------

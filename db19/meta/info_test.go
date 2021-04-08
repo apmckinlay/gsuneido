@@ -31,6 +31,7 @@ func TestInfo(t *testing.T) {
 	})
 
 	st := stor.HeapStor(8192)
+	st.Alloc(1) // avoid offset 0
 	off := tbl.Write(st, 0, allInfo)
 
 	tbl, _ = ReadInfoChain(st, off)
@@ -48,6 +49,7 @@ func TestInfo2(t *testing.T) {
 	const n = 1000
 	data := mkdata(tbl, n)
 	st := stor.HeapStor(32 * 1024)
+	st.Alloc(1) // avoid offset 0
 	off := tbl.Write(st, 0, allInfo)
 
 	tbl, _ = ReadInfoChain(st, off)
