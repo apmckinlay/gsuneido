@@ -13,6 +13,11 @@ import (
 // can avoid building new records.
 type Row []DbRec
 
+func JoinRows(row1, row2 Row) Row {
+	result := make(Row, 0, len(row1) + len(row2))
+	return append(append(result, row1...), row2...)
+}
+
 func (row Row) Get(hdr *Header, fld string) Value {
 	assert.That(hdr.Map != nil)
 	at, ok := hdr.Map[fld]
@@ -61,6 +66,13 @@ func NewHeader(fields [][]string, columns []string) *Header {
 		}
 	}
 	return &hdr
+}
+
+func JoinHeaders(x, y *Header) *Header {
+	fields := make([][]string, 0, len(x.Fields) + len(y.Fields))
+	fields = append(append(fields, x.Fields...), y.Fields...)
+	columns := sset.Union(x.Columns, y.Columns)
+	return NewHeader(fields, columns)
 }
 
 // Rules is a list of the rule columns i.e. columns that are not fields

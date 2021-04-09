@@ -4,6 +4,7 @@
 package query
 
 import (
+	"github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/sset"
 	"github.com/apmckinlay/gsuneido/util/ssset"
 	"github.com/apmckinlay/gsuneido/util/str"
@@ -11,10 +12,13 @@ import (
 
 type Times struct {
 	Query2
+	rewound bool
+	row1    runtime.Row
 }
 
 func (t *Times) Init() {
 	t.Query2.Init()
+	t.rewound = true
 	if !sset.Disjoint(t.source.Columns(), t.source2.Columns()) {
 		panic("times: common columns not allowed: " + str.Join(", ",
 			sset.Intersect(t.source.Columns(), t.source2.Columns())))
@@ -62,4 +66,32 @@ func (t *Times) setApproach(index []string, approach interface{}, tran QueryTran
 	}
 	t.source = SetApproach(t.source, index, tran)
 	t.source2 = SetApproach(t.source2, nil, tran)
+}
+
+// execution --------------------------------------------------------
+
+func (t *Times) Rewind() {
+	t.rewound = true
+	t.source.Rewind()
+	t.source2.Rewind()
+}
+
+func (t *Times) Get(dir runtime.Dir) runtime.Row {
+	row2 := t.source2.Get(dir)
+	if t.rewound {
+		t.rewound = false
+		t.row1 = t.source.Get(dir)
+		if t.row1 == nil || row2 == nil {
+			return nil
+		}
+	}
+	if row2 == nil {
+		t.row1 = t.source.Get(dir)
+		if t.row1 == nil {
+			return nil
+		}
+		t.source2.Rewind()
+		row2 = t.source2.Get(dir)
+	}
+	return  runtime.JoinRows(t.row1, row2)
 }

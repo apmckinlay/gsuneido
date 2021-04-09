@@ -172,20 +172,21 @@ func TestTableGet(t *testing.T) {
 		'mouse'	'e'	200	960204	220	'220*'
 		'mouse'	'c'	200	970101	220	'220*'`)
 
-	// test("customer times inven",
-	// 	`id	name	city	item	qty
-	// 	'a'	'axon'	'saskatoon'	'disk'	5
-	// 	'a'	'axon'	'saskatoon'	'mouse'	2
-	// 	'a'	'axon'	'saskatoon'	'pencil'	7
-	// 	'c'	'calac'	'calgary'	'disk'	5
-	// 	'c'	'calac'	'calgary'	'mouse'	2
-	// 	'c'	'calac'	'calgary'	'pencil'	7
-	// 	'e'	'emerald'	'vancouver'	'disk'	5
-	// 	'e'	'emerald'	'vancouver'	'mouse'	2
-	// 	'e'	'emerald'	'vancouver'	'pencil'	7
-	// 	'i'	'intercon'	'saskatoon'	'disk'	5
-	// 	'i'	'intercon'	'saskatoon'	'mouse'	2
-	// 	'i'	'intercon'	'saskatoon'	'pencil'	7`)
+	test("customer times inven",
+		`id	name	city	item	qty
+		'a'	'axon'	'saskatoon'	'disk'	5
+		'a'	'axon'	'saskatoon'	'mouse'	2
+		'a'	'axon'	'saskatoon'	'pencil'	7
+		'c'	'calac'	'calgary'	'disk'	5
+		'c'	'calac'	'calgary'	'mouse'	2
+		'c'	'calac'	'calgary'	'pencil'	7
+		'e'	'emerald'	'vancouver'	'disk'	5
+		'e'	'emerald'	'vancouver'	'mouse'	2
+		'e'	'emerald'	'vancouver'	'pencil'	7
+		'i'	'intercon'	'saskatoon'	'disk'	5
+		'i'	'intercon'	'saskatoon'	'mouse'	2
+		'i'	'intercon'	'saskatoon'	'pencil'	7`)
+
 	// test("trans intersect hist",
 	// 	`item	id	cost	date
 	// 	'disk'	'a'	100	970101`)
@@ -288,6 +289,12 @@ func TestTableGet(t *testing.T) {
         970101	'disk'	'a'	100
         970101	'disk'	'e'	200
         970102	'mouse'	'c'	200`)
+	test("customer where (id not in ())",
+		`id	name	city
+		'a'	'axon'	'saskatoon'
+		'c'	'calac'	'calgary'
+		'e'	'emerald'	'vancouver'
+		'i'	'intercon'	'saskatoon'`)
 
 	// test("hist summarize count", // by is empty
 	// 	`count
@@ -323,11 +330,4 @@ func TestTableGet(t *testing.T) {
 	// test("hist summarize max cost", // not indexed
 	// 	`max_cost
 	// 	300`)
-
-	// test("customer where (id not in ())",
-	// 	`id	name	city
-	// 	'a'	'axon'	'saskatoon'
-	// 	'c'	'calac'	'calgary'
-	// 	'e'	'emerald'	'vancouver'
-	// 	'i'	'intercon'	'saskatoon'`)
 }

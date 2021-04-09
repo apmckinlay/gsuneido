@@ -387,8 +387,8 @@ func (*Query1) Lookup(string) runtime.Row {
 	panic("not implemented")
 }
 
-func (*Query1) Header() *runtime.Header {
-	panic("not implemented")
+func (q1 *Query1) Header() *runtime.Header {
+	return q1.source.Header()
 }
 
 func (q1 *Query1) Output(rec runtime.Record) {
@@ -430,6 +430,10 @@ func (q2 *Query2) Init() {
 func (q2 *Query2) SetTran(t QueryTran) {
 	q2.source.SetTran(t)
 	q2.source2.SetTran(t)
+}
+
+func (q2 *Query2) Header() *runtime.Header {
+	return runtime.JoinHeaders(q2.source.Header(), q2.source2.Header())
 }
 
 func (q2 *Query2) Updateable() bool {
