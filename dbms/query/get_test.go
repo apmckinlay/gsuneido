@@ -119,28 +119,28 @@ func TestTableGet(t *testing.T) {
 		'e'	'emerald'	'vancouver'
 		'c'	'calac'	'calgary'
 		'a'	'axon'	'saskatoon'`)
-	// test("customer sort city", // tempindex1
-	// 	`id	name	city
-	// 	'c'	'calac'	'calgary'
-	// 	'a'	'axon'	'saskatoon'
-	// 	'i'	'intercon'	'saskatoon'
-	// 	'e'	'emerald'	'vancouver'`)
-	// test("customer sort reverse city", // tempindex1
-	// 	`id	name	city
-	// 	'e'	'emerald'	'vancouver'
-	// 	'i'	'intercon'	'saskatoon'
-	// 	'a'	'axon'	'saskatoon'
-	// 	'c'	'calac'	'calgary'`)
-	// test("task sort cnum, tnum",
-	// 	`tnum	cnum
-	// 	100	1
-	// 	104	1
-	// 	101	2
-	// 	105	2
-	// 	102	3
-	// 	106	3
-	// 	103	4
-	// 	107	4`)
+	test("customer sort city", // tempindex
+		`id	name	city
+		'c'	'calac'	'calgary'
+		'a'	'axon'	'saskatoon'
+		'i'	'intercon'	'saskatoon'
+		'e'	'emerald'	'vancouver'`)
+	test("customer sort reverse city", // tempindex
+		`id	name	city
+		'e'	'emerald'	'vancouver'
+		'i'	'intercon'	'saskatoon'
+		'a'	'axon'	'saskatoon'
+		'c'	'calac'	'calgary'`)
+	test("task sort cnum, tnum", // tempindex
+		`tnum	cnum
+		100	1
+		104	1
+		101	2
+		105	2
+		102	3
+		106	3
+		103	4
+		107	4`)
 
 	test("customer project city, id", // copy
 		`city	id

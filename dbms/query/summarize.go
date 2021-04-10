@@ -152,6 +152,10 @@ func (su *Summarize) Updateable() bool {
 	return false // override Query1 source.Updateable
 }
 
+func (su *Summarize) SingleTable() bool {
+	return false
+}
+
 func (*Summarize) Output(runtime.Record) {
 	panic("can't output to this query")
 }

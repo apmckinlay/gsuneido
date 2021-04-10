@@ -155,3 +155,11 @@ func OffToRecCk(store *stor.Stor, off uint64) rt.Record {
 	cksum.MustCheck(buf[:size+cksum.Len])
 	return rt.Record(hacks.BStoS(buf[:size]))
 }
+
+func (db *Database) MakeCompare(is *ixkey.Spec) func(x, y uint64) int {
+	return func(x, y uint64) int {
+		xr := OffToRec(db.Store, x)
+		yr := OffToRec(db.Store, y)
+		return is.Compare(xr, yr)
+	}
+}

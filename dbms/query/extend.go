@@ -138,6 +138,10 @@ func (e *Extend) Fixed() []Fixed {
 	return e.fixed
 }
 
+func (e *Extend) SingleTable() bool {
+	return false
+}
+
 func (e *Extend) optimize(mode Mode, index []string) (Cost, interface{}) {
 	if !sset.Disjoint(index, e.cols) {
 		return impossible, nil

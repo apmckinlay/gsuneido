@@ -31,6 +31,7 @@ import (
 
 	"github.com/apmckinlay/gsuneido/db19/index"
 	"github.com/apmckinlay/gsuneido/db19/index/btree"
+	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/db19/meta"
 	"github.com/apmckinlay/gsuneido/db19/meta/schema"
 	"github.com/apmckinlay/gsuneido/runtime"
@@ -62,6 +63,9 @@ type Query interface {
 
 	// Updateable returns whether the rows from the query can be updated
 	Updateable() bool
+
+	// SingleTable is used by temp indexes
+	SingleTable() bool
 
 	// Indexes returns all the indexes
 	Indexes() [][]string
@@ -134,6 +138,7 @@ type QueryTran interface {
 	Output(table string, rec runtime.Record)
 	GetIndex(table string, cols []string) *index.Overlay
 	GetRecord(off uint64) runtime.Record
+	MakeCompare(is *ixkey.Spec) func(x, y uint64) int
 }
 
 // Setup prepares a parsed query for execution.
@@ -315,6 +320,10 @@ func (q1 *Query1) Updateable() bool {
 	return q1.source.Updateable()
 }
 
+func (q1 *Query1) SingleTable() bool {
+	return q1.source.SingleTable()
+}
+
 func (q1 *Query1) SetTran(t QueryTran) {
 	q1.source.SetTran(t)
 }
@@ -437,6 +446,10 @@ func (q2 *Query2) Header() *runtime.Header {
 }
 
 func (q2 *Query2) Updateable() bool {
+	return false
+}
+
+func (q2 *Query2) SingleTable() bool {
 	return false
 }
 

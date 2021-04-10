@@ -141,3 +141,7 @@ func (t testTran) GetIndex(string, []string) *index.Overlay {
 func (t testTran) GetRecord(uint64) runtime.Record {
 	panic("should not be called")
 }
+
+func (t testTran) MakeCompare(*ixkey.Spec) func(x, y uint64) int {
+	panic("should not be called")
+}

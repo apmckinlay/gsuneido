@@ -5,6 +5,7 @@ package db19
 
 import (
 	"github.com/apmckinlay/gsuneido/db19/index"
+	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/db19/meta"
 	"github.com/apmckinlay/gsuneido/db19/meta/schema"
 	rt "github.com/apmckinlay/gsuneido/runtime"
@@ -83,6 +84,10 @@ func (t *ReadTran) Lookup(table string, iIndex int, key string) *rt.DbRec {
 
 func (t *ReadTran) Output(string, rt.Record) {
 	panic("can't output to read-only transaction")
+}
+
+func (t *ReadTran) MakeCompare(is *ixkey.Spec) func(x, y uint64) int {
+	return t.db.MakeCompare(is)
 }
 
 //-------------------------------------------------------------------

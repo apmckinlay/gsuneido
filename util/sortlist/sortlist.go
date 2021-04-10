@@ -15,6 +15,7 @@ package sortlist
 import (
 	"sort"
 
+	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/bits"
 )
 
@@ -56,6 +57,7 @@ func NewUnsorted() *Builder {
 
 // Add adds a value to the list.
 func (b *Builder) Add(x uint64) {
+	assert.That(x != 0)
 	if b.block == nil {
 		b.block = new(block)
 		b.i = 0
@@ -283,4 +285,51 @@ func (b *Builder) Iter() func() uint64 {
 		}
 		return blocks[bi][i]
 	}
+}
+
+// Iter is used by tempindex
+type Iter struct {
+	blocks []*block
+	bi     int
+	i      int
+}
+
+func (list List) Iter() *Iter {
+	return &Iter{blocks: list.blocks, bi: 0, i: -1}
+}
+
+func (it *Iter) Rewind() {
+	it.bi = 0
+	it.i = -1
+}
+
+func (it *Iter) Next() uint64 {
+	it.i++
+	if it.i >= blockSize {
+		it.bi++
+		if it.bi >= len(it.blocks) {
+			return 0 // eof
+		}
+		it.i = 0
+	}
+	return it.blocks[it.bi][it.i]
+}
+
+func (it *Iter) Prev() uint64 {
+	if it.i == -1 && it.bi == 0 { // rewound
+		it.bi = len(it.blocks) - 1
+		b := it.blocks[it.bi]
+		for it.i = blockSize - 1; b[it.i] == 0; it.i-- {
+		}
+	} else {
+		it.i--
+		if it.i < 0 {
+			it.bi--
+			if it.bi < 0 {
+				return 0 // eof
+			}
+			it.i = 0
+		}
+	}
+	return it.blocks[it.bi][it.i]
 }

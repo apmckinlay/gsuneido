@@ -101,6 +101,14 @@ func (tbl *Table) Updateable() bool {
 	return true
 }
 
+func (tbl *Table) SingleTable() bool {
+	switch tbl.name {
+	case "tables", "columns", "indexes":
+		return false
+	}
+	return true
+}
+
 func (tbl *Table) optimize(_ Mode, index []string) (Cost, interface{}) {
 	if index == nil {
 		index = tbl.schema.Indexes[0].Columns
