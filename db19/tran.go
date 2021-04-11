@@ -138,7 +138,7 @@ func (t *UpdateTran) Output(table string, rec rt.Record) {
 	}
 	t.ck(t.db.ck.Write(t.ct, table, keys))
 	ti.Nrows++
-	ti.Size += uint64(len(rec))
+	ti.Size += uint64(n)
 }
 
 func (t *UpdateTran) getInfo(table string) *meta.Info {
