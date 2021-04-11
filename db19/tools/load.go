@@ -10,18 +10,29 @@ import (
 	"io"
 	"os"
 	"strings"
+	"sync"
 
 	. "github.com/apmckinlay/gsuneido/db19"
 	"github.com/apmckinlay/gsuneido/db19/index"
 	"github.com/apmckinlay/gsuneido/db19/index/btree"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/db19/meta"
+	"github.com/apmckinlay/gsuneido/db19/meta/schema"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/dbms/query"
+	"github.com/apmckinlay/gsuneido/options"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/cksum"
 	"github.com/apmckinlay/gsuneido/util/sortlist"
 )
+
+type loadJob struct {
+	sch   schema.Schema
+	list  *sortlist.Builder
+	nrecs int
+	size  uint64
+	db    *Database
+}
 
 // LoadDatabase imports a dumped database from a file.
 // It returns the number of tables loaded or panics on error.
@@ -35,16 +46,28 @@ func LoadDatabase(from, dbfile string) int {
 	defer f.Close()
 	db, tmpfile := tmpdb()
 	defer func() { db.Close(); os.Remove(tmpfile) }()
+	var wg sync.WaitGroup
+	channel := make(chan loadJob)
+	for i := 0; i < options.Nworkers; i++ {
+		wg.Add(1)
+		go func() {
+			defer wg.Done()
+			for job := range channel {
+				loadTable2(job.sch, job.list, job.nrecs, job.size, job.db)
+			}
+		}()
+	}
 	nTables := 0
 	for ; ; nTables++ {
 		schema := readLinePrefixed(r, "====== ")
 		if schema == "" {
 			break
 		}
-		loadTable(db, r, schema)
+		loadTable(db, r, schema, channel)
 		trace()
-		assert.That(nTables < 1010)
 	}
+	close(channel)
+	wg.Wait()
 	trace("SIZE", db.Store.Size())
 	db.GetState().Write(true)
 	db.Close()
@@ -74,7 +97,7 @@ func LoadTable(table, dbfile string) int {
 	f, r := open(table + ".su")
 	defer f.Close()
 	schema := table + " " + readLinePrefixed(r, "====== ")
-	nrecs := loadTable(db, r, schema)
+	nrecs := loadTable(db, r, schema, nil)
 	db.GetState().Write(true)
 	return nrecs
 }
@@ -89,24 +112,32 @@ func open(filename string) (*os.File, *bufio.Reader) {
 	return f, r
 }
 
-func loadTable(db *Database, r *bufio.Reader, schema string) int {
+func loadTable(db *Database, r *bufio.Reader, schema string, channel chan loadJob) int {
 	trace(schema)
 	sch := query.NewRequestParser(schema).Schema()
-
 	store := db.Store
 	list := sortlist.NewUnsorted()
-	before := store.Size()
-	nrecs := readRecords(r, store, list)
-	beforeIndexes := store.Size()
-	dataSize := beforeIndexes - before
-	trace("nrecs", nrecs, "data size", dataSize)
+	nrecs, size := readRecords(r, store, list)
+	trace("nrecs", nrecs, "data size", size)
 	list.Finish()
-	ts := &meta.Schema{Schema: sch}
-	ov := buildIndexes(ts, list, store, nrecs)
-	trace("indexes size", store.Size()-beforeIndexes)
-	ti := &meta.Info{Table: sch.Table, Nrows: nrecs, Size: dataSize, Indexes: ov}
-	db.LoadedTable(ts, ti)
+	if channel == nil { // not concurrent
+		loadTable2(sch, list, nrecs, size, db)
+	} else {
+		channel <- loadJob{db: db, sch: sch, list: list, nrecs: nrecs, size: size}
+	}
 	return nrecs
+}
+
+func loadTable2(sch schema.Schema, list *sortlist.Builder, nrecs int, size uint64, db *Database) {
+	defer func() {
+		if e := recover(); e != nil {
+			fmt.Println("ERROR:", sch.Table, e)
+		}
+	}()
+	ts := &meta.Schema{Schema: sch}
+	ovs := buildIndexes(ts, list, db.Store, nrecs)
+	ti := &meta.Info{Table: sch.Table, Nrows: nrecs, Size: size, Indexes: ovs}
+	db.LoadedTable(ts, ti)
 }
 
 func readLinePrefixed(r *bufio.Reader, pre string) string {
@@ -121,8 +152,8 @@ func readLinePrefixed(r *bufio.Reader, pre string) string {
 	return s[len(pre):]
 }
 
-func readRecords(in *bufio.Reader, store *stor.Stor, list *sortlist.Builder) int {
-	nrecs := 0
+func readRecords(in *bufio.Reader, store *stor.Stor, list *sortlist.Builder) (
+	nrecs int, size uint64) {
 	intbuf := make([]byte, 4)
 	for { // each record
 		_, err := io.ReadFull(in, intbuf)
@@ -130,18 +161,19 @@ func readRecords(in *bufio.Reader, store *stor.Stor, list *sortlist.Builder) int
 			break
 		}
 		ck(err)
-		size := int(binary.BigEndian.Uint32(intbuf))
-		if size == 0 {
+		n := int(binary.BigEndian.Uint32(intbuf))
+		if n == 0 {
 			break
 		}
-		off, buf := store.Alloc(size + cksum.Len)
-		_, err = io.ReadFull(in, buf[:size])
+		off, buf := store.Alloc(n + cksum.Len)
+		_, err = io.ReadFull(in, buf[:n])
 		ck(err)
 		cksum.Update(buf)
 		list.Add(off)
 		nrecs++
+		size += uint64(n)
 	}
-	return nrecs
+	return nrecs, size
 }
 
 func buildIndexes(ts *meta.Schema, list *sortlist.Builder, store *stor.Stor, nrecs int) []*index.Overlay {

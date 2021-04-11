@@ -7,10 +7,13 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"sort"
+	"sync"
 
 	. "github.com/apmckinlay/gsuneido/db19"
 	"github.com/apmckinlay/gsuneido/db19/meta"
 	"github.com/apmckinlay/gsuneido/db19/stor"
+	"github.com/apmckinlay/gsuneido/options"
 	"github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/cksum"
@@ -31,18 +34,48 @@ func Compact(dbfile string) (ntables int, err error) {
 	defer src.Close()
 	dst, tmpfile := tmpdb()
 	defer func() { dst.Close(); os.Remove(tmpfile) }()
-	ics := newIndexCheckers()
-	defer ics.finish()
 
 	state := src.GetState()
+	type schemaSize struct {
+		sc    *meta.Schema
+		nrows int
+	}
+	schemas := make([]schemaSize, 0, 128)
 	state.Meta.ForEachSchema(func(sc *meta.Schema) {
-		compactTable(state, src, sc, dst, ics)
+		ti := state.Meta.GetRoInfo(sc.Table)
+		ss := schemaSize{sc: sc, nrows: ti.Nrows}
+		schemas = append(schemas, ss)
 		ntables++
 	})
+	// sort reverse to start largest first
+	sort.Slice(schemas, func(i, j int) bool {
+		return schemas[i].nrows > schemas[j].nrows
+	})
+	type compactJob struct {
+		state *DbState
+		src   *Database
+		ts    *meta.Schema
+		dst   *Database
+	}
+	var wg sync.WaitGroup
+	channel := make(chan compactJob)
+	for i := 0; i < options.Nworkers; i++ {
+		wg.Add(1)
+		go func() {
+			for job := range channel {
+				compactTable(job.state, job.src, job.ts, job.dst)
+			}
+			wg.Done()
+		}()
+	}
+	for _, sc := range schemas {
+		channel <- compactJob{state: state, src: src, ts: sc.sc, dst: dst}
+	}
+	close(channel)
+	wg.Wait()
 	dst.GetState().Write(true)
 	dst.Close()
 	src.Close()
-	ics.finish()
 	ck(RenameBak(tmpfile, dbfile))
 	return ntables, nil
 }
@@ -57,8 +90,7 @@ func tmpdb() (*Database, string) {
 	return db, tmpfile
 }
 
-func compactTable(state *DbState, src *Database, ts *meta.Schema, dst *Database,
-	ics *indexCheckers) {
+func compactTable(state *DbState, src *Database, ts *meta.Schema, dst *Database) {
 	info := state.Meta.GetRoInfo(ts.Table)
 	before := dst.Store.Size()
 	list := sortlist.NewUnsorted()
@@ -76,7 +108,16 @@ func compactTable(state *DbState, src *Database, ts *meta.Schema, dst *Database,
 	})
 	list.Finish()
 	assert.This(count).Is(info.Nrows)
-	ics.checkOtherIndexes(info, count, sum) // concurrent
+	for i := 1; i < len(info.Indexes); i++ {
+		func() {
+			defer func() {
+				if e := recover(); e != nil {
+					fmt.Println(ts.Table, ts.Indexes[i].Columns, e)
+				}
+			}()
+			CheckOtherIndex(info.Indexes[i], count, sum)
+		}()
+	}
 	dataSize := dst.Store.Size() - before
 	ov := buildIndexes(ts, list, dst.Store, count) // same as load
 	ti := &meta.Info{Table: ts.Table, Nrows: count, Size: dataSize, Indexes: ov}
