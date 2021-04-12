@@ -68,12 +68,11 @@ func checkTable(state *DbState, table string) {
 	info := state.Meta.GetRoInfo(table)
 	count, sum := checkFirstIndex(state, info.Indexes[0])
 	if count != info.Nrows {
-		fmt.Println(table, "count", count, "info.Nrows", info.Nrows)
-		panic("count != nrows")
+		panic("count != nrows" + fmt.Sprint(count, info.Nrows))
 	}
 	for i := 1; i < len(info.Indexes); i++ {
 		ix := info.Indexes[i]
-		count, sum = CheckOtherIndex(ix, count, sum)
+		CheckOtherIndex(ix, count, sum)
 	}
 }
 
@@ -89,16 +88,17 @@ func checkFirstIndex(state *DbState, ix *index.Overlay) (int, uint64) {
 	return count, sum
 }
 
-func CheckOtherIndex(ix *index.Overlay,
-	countPrev int, sumPrev uint64) (int, uint64) {
+func CheckOtherIndex(ix *index.Overlay, countPrev int, sumPrev uint64) {
 	sum := uint64(0)
 	count := ix.Check(func(off uint64) {
 		sum += off // addition so order doesn't matter
 	})
-	if count != countPrev || sum != sumPrev {
-		panic("count/sum mismatch")
+	if count != countPrev {
+		panic("count mismatch " + fmt.Sprint(countPrev, count))
 	}
-	return count, sum
+	if sum != sumPrev {
+		panic("checksum mismatch")
+	}
 }
 
 //-------------------------------------------------------------------
