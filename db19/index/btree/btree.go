@@ -37,8 +37,10 @@ type btree struct {
 const maxlevels = 8
 
 // MaxNodeSize is the maximum node size in bytes, split if larger.
-// Overridden by tests.
-var MaxNodeSize = 256 //TODO tune
+// var rather than const because it is overridden by tests.
+// WARNING: if this is too small (e.g. 256)
+// then Builder can't handle large keys and the index may end up corrupt.
+var MaxNodeSize = 1024 //TODO tune
 
 // EntrySize is the estimated average entry size
 const EntrySize = 11

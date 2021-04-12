@@ -111,13 +111,20 @@ func Examplebtree_MergeAndSave() {
 }
 
 func TestBtreeFracPos(t *testing.T) {
+	defer func(mns int) { MaxNodeSize = mns }(MaxNodeSize)
+	MaxNodeSize = 256
 	var bt *btree
-	makeBtree := func(size int) {
+	key := func(i int) string {
+		return fmt.Sprintf("%05d", i)
+	}
+	makeBtree := func(n int) {
+		// for consistent results we need the root to be quite full
+		// since Builder splits unevenly due to building in order
 		b := Builder(stor.HeapStor(8192))
-		for i := 0; i < size; i++ {
-			key := fmt.Sprintf("%04d", i)
-			b.Add(key, 1)
+		for i := 0; i < n; i++ {
+			b.Add(key(i), 1)
 		}
+		assert.That(len(b.levels[len(b.levels)-1].nb.node) > 190)
 		bt = b.Finish()
 	}
 	test := func(key string, expected float32) {
@@ -132,24 +139,21 @@ func TestBtreeFracPos(t *testing.T) {
 				"got", fracPos, "expected", expected, "difference", diff)
 		}
 	}
-	makeBtree(10) // single root leaf node
+	n := 24 // full single root node
+	makeBtree(n)
+	assert.Msg("tree levels").This(bt.treeLevels).Is(0)
 	test(ixkey.Min, 0)
-	test(" ", 0)
-	test("0000", 0)
-	test("0001", .1)
-	test("0009", .9)
-	test("~", .9)
+	for i := 0; i < n; i++ {
+		test(key(i), float32(i) / float32(n))
+	}
 	test(ixkey.Max, 1)
 
-	makeBtree(10000)
-	// var diff float32
-	for i := 0; i < 10000; i += 250 {
-		key := fmt.Sprintf("%04d", i)
-		// f := bt.fracPos(key)
-		exp := float32(i) / 10000
-		test(key, exp)
-		// fmt.Printf("%d %.3f %+.3f\n", i, f, f - exp)
-		// diff += f - exp
+	n = 9500 // three levels, full root
+	makeBtree(n)
+	assert.Msg("tree levels").This(bt.treeLevels).Is(2)
+	for i := 0; i < n; i += 200 {
+		exp := float32(i) / float32(n)
+		test(key(i), exp)
 	}
-	// fmt.Println("total diff", diff, "avg", diff / 40)
+	test(ixkey.Max, 1)
 }
