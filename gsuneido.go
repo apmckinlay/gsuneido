@@ -48,6 +48,9 @@ func main() {
 	options.BuiltDate = builtDate
 	options.Mode = mode
 	options.Parse(os.Args[1:])
+	if options.Action == "client" {
+		options.Errlog = builtin.ErrlogDir() + "suneido" + options.Port + ".err"
+	}
 	if options.Mode == "gui" {
 		relaunchWithRedirect()
 	}
@@ -168,8 +171,8 @@ func relaunchWithRedirect() {
 	if options.NoRelaunch || options.Redirected() {
 		return // to avoid infinite loop
 	}
-	errlog := builtin.ErrlogDir() + options.Errlog
-	f, err := os.OpenFile(errlog, os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0666)
+	f, err := os.OpenFile(options.Errlog,
+		os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0666)
 	if err != nil {
 		Fatal(err.Error())
 	}

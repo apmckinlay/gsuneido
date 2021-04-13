@@ -73,9 +73,6 @@ loop:
 		Port = "3147"
 	}
 	CmdLine = remainder(args)
-	if Action == "client" {
-		Errlog = "suneido" + Port + ".err"
-	}
 }
 
 func match(pargs *[]string, s string) bool {
