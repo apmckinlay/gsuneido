@@ -142,6 +142,6 @@ func (t testTran) GetRecord(uint64) runtime.Record {
 	panic("should not be called")
 }
 
-func (t testTran) MakeCompare(*ixkey.Spec) func(x, y uint64) int {
+func (t testTran) MakeLess(*ixkey.Spec) func(x, y uint64) bool {
 	panic("should not be called")
 }

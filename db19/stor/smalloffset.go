@@ -8,7 +8,7 @@ package stor
 // 5 bytes = 40 bits = 1tb
 // In memory we use int64.
 // Beware of padding or you won't actually save space.
-type SmallOffset [5]byte
+type SmallOffset [SmallOffsetLen]byte
 
 const MaxSmallOffset = 1<<40 - 1
 const SmallOffsetLen = 5

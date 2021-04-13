@@ -141,6 +141,20 @@ func TestTableGet(t *testing.T) {
 		106	3
 		103	4
 		107	4`)
+	test("customer times inven sort qty, id",
+		`id	name	city	item	qty
+		'a'	'axon'	'saskatoon'	'mouse'	2
+		'c'	'calac'	'calgary'	'mouse'	2
+		'e'	'emerald'	'vancouver'	'mouse'	2
+		'i'	'intercon'	'saskatoon'	'mouse'	2
+		'a'	'axon'	'saskatoon'	'disk'	5
+		'c'	'calac'	'calgary'	'disk'	5
+		'e'	'emerald'	'vancouver'	'disk'	5
+		'i'	'intercon'	'saskatoon'	'disk'	5
+		'a'	'axon'	'saskatoon'	'pencil'	7
+		'c'	'calac'	'calgary'	'pencil'	7
+		'e'	'emerald'	'vancouver'	'pencil'	7
+		'i'	'intercon'	'saskatoon'	'pencil'	7`)
 
 	test("customer project city, id", // copy
 		`city	id

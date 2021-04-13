@@ -36,6 +36,10 @@ func (row Row) GetRaw(hdr *Header, fld string) string {
 	return row[at.Reci].GetRaw(int(at.Fldi))
 }
 
+func (row Row) GetRawAt(at RowAt) string {
+	return row[at.Reci].GetRaw(int(at.Fldi))
+}
+
 // RowAt specifies the position of a field within a Row
 type RowAt struct {
 	Reci int16

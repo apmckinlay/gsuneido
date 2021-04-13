@@ -86,8 +86,8 @@ func (t *ReadTran) Output(string, rt.Record) {
 	panic("can't output to read-only transaction")
 }
 
-func (t *ReadTran) MakeCompare(is *ixkey.Spec) func(x, y uint64) int {
-	return t.db.MakeCompare(is)
+func (t *ReadTran) MakeLess(is *ixkey.Spec) func(x, y uint64) bool {
+	return t.db.MakeLess(is)
 }
 
 //-------------------------------------------------------------------

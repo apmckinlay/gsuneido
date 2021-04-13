@@ -10,7 +10,6 @@ import (
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util/ints"
 )
 
 func TestBuilder(*testing.T) {
@@ -24,7 +23,7 @@ func TestBuilder(*testing.T) {
 }
 
 func test(nitems int) {
-	bldr := NewSorting(ints.CompareUint64)
+	bldr := NewSorting(func(x, y uint64) bool { return x < y })
 	for j := 0; j < nitems; j++ {
 		bldr.Add(randint())
 	}
@@ -40,7 +39,7 @@ func test(nitems int) {
 	list.ckblocks(nitems)
 	bldr.ckblocks(nitems)
 
-	bldr.Sort(func(x, y uint64) int { return ints.CompareUint64(y, x) })
+	bldr.Sort(func(x, y uint64) bool { return y < x }) // reverse
 }
 
 var N int

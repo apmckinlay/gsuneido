@@ -32,7 +32,7 @@ var zeroBlock block
 type void struct{}
 
 type Builder struct {
-	cmp    func(x, y uint64) int
+	less    func(x, y uint64) bool
 	block  *block // current block
 	i      int    // index in current block
 	blocks []*block
@@ -42,8 +42,8 @@ type Builder struct {
 }
 
 // NewSorting returns a new list Builder with incremental sorting.
-func NewSorting(cmp func(x, y uint64) int) *Builder {
-	li := &Builder{cmp: cmp, blocks: make([]*block, 0, 4),
+func NewSorting(less func(x, y uint64) bool) *Builder {
+	li := &Builder{less: less, blocks: make([]*block, 0, 4),
 		work: make(chan void), done: make(chan void)}
 	go li.worker()
 	return li
@@ -92,8 +92,8 @@ func (b *Builder) Finish() List {
 		close(b.work) // end worker goroutine
 	}
 	if b.block != nil { // partial last block
-		if b.cmp != nil {
-			sort.Sort(ablock{block: b.block, n: b.i, cmp: b.cmp})
+		if b.less != nil {
+			sort.Sort(ablock{block: b.block, n: b.i, less: b.less})
 		}
 		b.block[b.i] = 0 // terminator
 		b.blocks = append(b.blocks, b.block)
@@ -106,8 +106,8 @@ func (b *Builder) Finish() List {
 
 // Sort sorts the list by the given compare function.
 // It is used to re-sort by a different compare function.
-func (b *Builder) Sort(cmp func(x, y uint64) int) {
-	b.cmp = cmp
+func (b *Builder) Sort(less func(x, y uint64) bool) {
+	b.less = less
 	if b.block != nil { // partial last block
 		b.block[b.i] = 0 // terminator
 		b.blocks = append(b.blocks, b.block)
@@ -118,7 +118,7 @@ func (b *Builder) Sort(cmp func(x, y uint64) int) {
 		if i == len(b.blocks)-1 {
 			n = b.i
 		}
-		sort.Sort(ablock{block: block, n: n, cmp: cmp})
+		sort.Sort(ablock{block: block, n: n, less: less})
 		b.merges(i + 1) // merge as we sort for better cache use
 	}
 	b.finishMerges()
@@ -138,7 +138,7 @@ func (b *Builder) worker() {
 	b.done <- void{}
 	for range b.work {
 		nb := len(b.blocks)
-		sort.Sort(ablock{block: b.blocks[nb-1], n: blockSize, cmp: b.cmp})
+		sort.Sort(ablock{block: b.blocks[nb-1], n: blockSize, less: b.less})
 		b.merges(nb)
 		b.done <- void{}
 	}
@@ -154,7 +154,7 @@ func (b *Builder) merges(nb int) {
 func (b *Builder) merge(nb, size int) {
 	leftLast := b.blocks[nb-size-1][blockSize-1]
 	rightFirst := b.blocks[nb-size][0]
-	if rightFirst == 0 || b.cmp(leftLast, rightFirst) <= 0 {
+	if rightFirst == 0 || b.less(leftLast, rightFirst) {
 		return // nothing to do
 	}
 	out := newMergeOutput(b)
@@ -163,7 +163,7 @@ func (b *Builder) merge(nb, size int) {
 	aval, aok := aiter()
 	bval, bok := biter()
 	for aok && bok {
-		if b.cmp(aval, bval) <= 0 {
+		if b.less(aval, bval) {
 			out.add(aval)
 			aval, aok = aiter()
 		} else {
@@ -245,7 +245,7 @@ func (mo *mergeOutput) add(x uint64) {
 type ablock struct {
 	*block
 	n   int
-	cmp func(x, y uint64) int
+	less func(x, y uint64) bool
 }
 
 func (ab ablock) Len() int {
@@ -259,7 +259,7 @@ func (ab ablock) Swap(i, j int) {
 
 func (ab ablock) Less(i, j int) bool {
 	b := ab.block
-	return ab.cmp(b[i], b[j]) < 0
+	return ab.less(b[i], b[j])
 }
 
 func (b *Builder) Iter() func() uint64 {

@@ -183,7 +183,7 @@ func buildIndexes(ts *meta.Schema, list *sortlist.Builder, store *stor.Stor, nre
 		ix := ts.Indexes[i]
 		trace(ix)
 		if i > 0 || ix.Mode != 'k' {
-			list.Sort(mkcmp(store, &ix.Ixspec))
+			list.Sort(makeLess(store, &ix.Ixspec))
 		}
 		before := store.Size()
 		bldr := btree.Builder(store)
@@ -200,11 +200,11 @@ func buildIndexes(ts *meta.Schema, list *sortlist.Builder, store *stor.Stor, nre
 	return ov
 }
 
-func mkcmp(store *stor.Stor, is *ixkey.Spec) func(x, y uint64) int {
-	return func(x, y uint64) int {
+func makeLess(store *stor.Stor, is *ixkey.Spec) func(x, y uint64) bool {
+	return func(x, y uint64) bool {
 		xr := OffToRec(store, x)
 		yr := OffToRec(store, y)
-		return is.Compare(xr, yr)
+		return is.Compare(xr, yr) < 0
 	}
 }
 

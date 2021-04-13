@@ -156,10 +156,10 @@ func OffToRecCk(store *stor.Stor, off uint64) rt.Record {
 	return rt.Record(hacks.BStoS(buf[:size]))
 }
 
-func (db *Database) MakeCompare(is *ixkey.Spec) func(x, y uint64) int {
-	return func(x, y uint64) int {
+func (db *Database) MakeLess(is *ixkey.Spec) func(x, y uint64) bool {
+	return func(x, y uint64) bool {
 		xr := OffToRec(db.Store, x)
 		yr := OffToRec(db.Store, y)
-		return is.Compare(xr, yr)
+		return is.Compare(xr, yr) < 0
 	}
 }
