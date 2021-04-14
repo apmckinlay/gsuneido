@@ -155,6 +155,12 @@ func TestTableGet(t *testing.T) {
 		'c'	'calac'	'calgary'	'pencil'	7
 		'e'	'emerald'	'vancouver'	'pencil'	7
 		'i'	'intercon'	'saskatoon'	'pencil'	7`)
+	test("customer extend up = city.Upper() sort up",
+		`id	name	city	up
+		'c'	'calac'	'calgary'	'CALGARY'
+		'a'	'axon'	'saskatoon'	'SASKATOON'
+		'i'	'intercon'	'saskatoon'	'SASKATOON'
+		'e'	'emerald'	'vancouver'	'VANCOUVER'`)
 
 	test("customer project city, id", // copy
 		`city	id

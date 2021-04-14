@@ -114,8 +114,8 @@ func (ti *TempIndex) multi() rowIter {
 		it.fields[i] = hdr.Map[f]
 	}
 	it.nrecs = len(hdr.Fields)
-	it.heap = stor.HeapStor(8192) // ???
-	it.heap.Alloc(1)              // avoid offset 0
+	it.heap = stor.HeapStor(8192)
+	it.heap.Alloc(1) // avoid offset 0
 	b := sortlist.NewSorting(it.multiLess)
 	for {
 		row := ti.source.Get(Next)
@@ -123,16 +123,32 @@ func (ti *TempIndex) multi() rowIter {
 			break
 		}
 		assert.That(len(row) == it.nrecs)
-		off, buf := it.heap.Alloc(it.nrecs * stor.SmallOffsetLen)
+		n := it.nrecs * stor.SmallOffsetLen
 		for _, dbrec := range row {
-			stor.WriteSmallOffset(buf, dbrec.Off)
-			buf = buf[stor.SmallOffsetLen:]
+			if dbrec.Off == 0 { // derived record e.g. from extend
+				n += len(dbrec.Record)
+			}
+		}
+		off, buf := it.heap.Alloc(n)
+		for _, dbrec := range row {
+			if dbrec.Off > 0 {
+				stor.WriteSmallOffset(buf, dbrec.Off)
+				buf = buf[stor.SmallOffsetLen:]
+			} else { // derived
+				size := len(dbrec.Record)
+				stor.WriteSmallOffset(buf, multiMask|uint64(size))
+				buf = buf[stor.SmallOffsetLen:]
+				copy(buf, dbrec.Record)
+				buf = buf[size:]
+			}
 		}
 		b.Add(off)
 	}
 	it.iter = b.Finish().Iter()
 	return &it
 }
+
+const multiMask = 0xffff000000
 
 func (it *multiIter) Rewind() {
 	it.iter.Rewind()
@@ -150,12 +166,27 @@ func (it *multiIter) Get(dir Dir) Row {
 	}
 	row := make([]DbRec, it.nrecs)
 	buf := it.heap.Data(off)
+	var rec Record
 	for i := 0; i < it.nrecs; i++ {
-		off := stor.ReadSmallOffset(buf)
-		buf = buf[stor.SmallOffsetLen:]
-		row[i] = DbRec{Record: it.tran.GetRecord(off), Off: off}
+		buf, rec, off = it.getRec(buf)
+		row[i] = DbRec{Record: rec, Off: off}
 	}
 	return row
+}
+
+func (it *multiIter) getRec(buf []byte) ([]byte, Record, uint64) {
+	off := stor.ReadSmallOffset(buf)
+	buf = buf[stor.SmallOffsetLen:]
+	var rec Record
+	if off < multiMask {
+		rec = it.tran.GetRecord(off)
+	} else { // derived
+		size := off &^ multiMask
+		rec = Record(buf[:size])
+		buf = buf[size:]
+		off = 0
+	}
+	return buf, rec, off
 }
 
 func (it *multiIter) multiLess(x, y uint64) bool {
@@ -164,12 +195,8 @@ func (it *multiIter) multiLess(x, y uint64) bool {
 	xbuf := it.heap.Data(x)
 	ybuf := it.heap.Data(y)
 	for i := 0; i < it.nrecs; i++ {
-		xoff := stor.ReadSmallOffset(xbuf)
-		xbuf = xbuf[stor.SmallOffsetLen:]
-		xrow[i] = it.tran.GetRecord(xoff)
-		yoff := stor.ReadSmallOffset(ybuf)
-		ybuf = ybuf[stor.SmallOffsetLen:]
-		yrow[i] = it.tran.GetRecord(yoff)
+		xbuf, xrow[i], _ = it.getRec(xbuf)
+		ybuf, yrow[i], _ = it.getRec(ybuf)
 	}
 	for _, at := range it.fields {
 		x := xrow[at.Reci].GetRaw(int(at.Fldi))
