@@ -73,28 +73,31 @@ func TestTableGet(t *testing.T) {
 		s = strings.ReplaceAll(s, `"`, "'")
 		return s
 	}
-	test := func(query, expected string) {
+	test := func(query, strategy, expected string) {
 		t.Helper()
 		q := ParseQuery(query)
 		tran := sizeTran{db.NewReadTran()}
 		Setup(q, readMode, tran)
-		// fmt.Println(q)
+		assert.T(t).This(q.String()).Is(strategy)
 		assert.T(t).This(get(q, rt.Next)).Like(expected)
 		assert.T(t).This(get(q, rt.Prev)).Like(expected)
 	}
 	test("customer",
+		"customer^(id)",
 		`id	name	city
 		'a'	'axon'	'saskatoon'
 		'c'	'calac'	'calgary'
 		'e'	'emerald'	'vancouver'
 		'i'	'intercon'	'saskatoon'`)
 	test("hist",
+		"hist^(date)",
 		`date	item	id	cost
 		970101	'disk'	'a'	100
 		970101	'disk'	'e'	200
 		970102	'mouse'	'c'	200
 		970103	'pencil'	'e'	300`)
 	test("trans",
+		"trans^(item)",
 		`item		id	cost	date
 		'disk'		'a'	100	970101
 		'eraser'	'c'	150	970201
@@ -102,6 +105,7 @@ func TestTableGet(t *testing.T) {
 		'mouse'		'c'	200	970101`)
 
 	test("trans rename id to code, date to when",
+		"trans^(item) RENAME id to code, date to when",
 		`item	code	cost	when
 		'disk'	'a'	100	970101
 		'eraser'	'c'	150	970201
@@ -109,30 +113,35 @@ func TestTableGet(t *testing.T) {
 		'mouse'	'c'	200	970101`)
 
 	test("customer sort id",
+		"customer^(id)",
 		`id	name	city
 		'a'	'axon'	'saskatoon'
 		'c'	'calac'	'calgary'
 		'e'	'emerald'	'vancouver'
 		'i'	'intercon'	'saskatoon'`)
 	test("customer sort reverse id",
+		"customer^(id) reverse",
 		`id	name	city
 		'i'	'intercon'	'saskatoon'
 		'e'	'emerald'	'vancouver'
 		'c'	'calac'	'calgary'
 		'a'	'axon'	'saskatoon'`)
-	test("customer sort city", // tempindex
+	test("customer sort city",
+		"customer^(id) TEMPINDEX(city)",
 		`id	name	city
 		'c'	'calac'	'calgary'
 		'a'	'axon'	'saskatoon'
 		'i'	'intercon'	'saskatoon'
 		'e'	'emerald'	'vancouver'`)
-	test("customer sort reverse city", // tempindex
+	test("customer sort reverse city",
+		"customer^(id) TEMPINDEX(city) reverse",
 		`id	name	city
 		'e'	'emerald'	'vancouver'
 		'i'	'intercon'	'saskatoon'
 		'a'	'axon'	'saskatoon'
 		'c'	'calac'	'calgary'`)
-	test("task sort cnum, tnum", // tempindex
+	test("task sort cnum, tnum",
+		"task^(tnum) TEMPINDEX(cnum,tnum)",
 		`tnum	cnum
 		100	1
 		104	1
@@ -143,6 +152,7 @@ func TestTableGet(t *testing.T) {
 		103	4
 		107	4`)
 	test("customer times inven sort qty, id",
+		"(customer^(id) TIMES inven^(item)) TEMPINDEX(qty,id)",
 		`id	name	city	item	qty
 		'a'	'axon'	'saskatoon'	'mouse'	2
 		'c'	'calac'	'calgary'	'mouse'	2
@@ -157,41 +167,48 @@ func TestTableGet(t *testing.T) {
 		'e'	'emerald'	'vancouver'	'pencil'	7
 		'i'	'intercon'	'saskatoon'	'pencil'	7`)
 	test("customer extend up = city.Upper() sort up",
+		"customer^(id) EXTEND up = city.Upper() TEMPINDEX(up)",
 		`id	name	city	up
 		'c'	'calac'	'calgary'	'CALGARY'
 		'a'	'axon'	'saskatoon'	'SASKATOON'
 		'i'	'intercon'	'saskatoon'	'SASKATOON'
 		'e'	'emerald'	'vancouver'	'VANCOUVER'`)
 
-	test("customer project city, id", // copy
+	test("customer project city, id",
+		"customer^(id) PROJECT-COPY city, id",
 		`city	id
 		'saskatoon'	'a'
 		'calgary'	'c'
 		'vancouver'	'e'
 		'saskatoon'	'i'`)
-	test("supplier project city", // sequential
+	test("supplier project city",
+		"supplier^(city) PROJECT-SEQ city",
 		`city
 		'calgary'
 		'saskatoon'
 		'vancouver'`)
 	test("trans project item", // sequential
+		"trans^(item) PROJECT-SEQ item",
 		`item
 		'disk'
 		'eraser'
 		'mouse'`)
 	// test("customer project city", // lookup
+	// "",
 	// 	`city
 	// 	'saskatoon'
 	// 	'calgary'
 	// 	'vancouver'`)
 
 	test("trans extend newcost = cost * 1.1",
+		"trans^(item) EXTEND newcost = cost * 1.1",
 		`item	id	cost	date	newcost
 		'disk'	'a'	100	970101	110
 		'eraser'	'c'	150	970201	165
 		'mouse'	'e'	200	960204	220
 		'mouse'	'c'	200	970101	220`)
 	test("trans extend x = cost * 1.1, y = x $ '*'",
+		"trans^(item) EXTEND x = cost * 1.1, y = x $ '*'",
 		`item	id	cost	date	x	y
 		'disk'	'a'	100	970101	110	'110*'
 		'eraser'	'c'	150	970201	165	'165*'
@@ -199,6 +216,7 @@ func TestTableGet(t *testing.T) {
 		'mouse'	'c'	200	970101	220	'220*'`)
 
 	test("customer times inven",
+		"customer^(id) TIMES inven^(item)",
 		`id	name	city	item	qty
 		'a'	'axon'	'saskatoon'	'disk'	5
 		'a'	'axon'	'saskatoon'	'mouse'	2
@@ -274,48 +292,60 @@ func TestTableGet(t *testing.T) {
 	// 	'i'	'intercon'	'saskatoon'	''	''	''`)
 
 	test("customer where id > 'd'", // range
+		"customer^(id) WHERE id > 'd'",
 		`id	name	city
 		'e'	'emerald'	'vancouver'
 		'i'	'intercon'	'saskatoon'`)
 	test("customer where id > 'd' and id < 'j'", // range
+		"customer^(id) WHERE id > 'd' and id < 'j'",
 		`id	name	city
 		'e'	'emerald'	'vancouver'
 		'i'	'intercon'	'saskatoon'`)
 	test("customer where id is 'e'", // point
+		"customer^(id) WHERE*1 id is 'e'",
 		`id	name	city
 		'e'	'emerald'	'vancouver'`)
 	test("customer where id is 'd'", // point
+		"customer^(id) WHERE*1 id is 'd'",
 		`id	name	city`)
 	test("inven where qty > 0", // filter
+		"inven^(item) WHERE qty > 0",
 		`item	qty
 		'disk'	5
 		'mouse'	2
 		'pencil'	7`)
 	test("inven where item =~ 'i'", // filter
+		"inven^(item) WHERE item =~ 'i'",
 		`item	qty
 		'disk'	5
 		'pencil'	7`)
 	test("inven where item in ('disk', 'mouse', 'pencil')", // points
+		`inven^(item) WHERE item in ("disk", "mouse", "pencil")`,
 		`item	qty
 		'disk'	5
 		'mouse'	2
 		'pencil'	7`)
 	test("inven where item <= 'e' or item >= 'p'", // filter
+		"inven^(item) WHERE item <= 'e' or item >= 'p'",
 		`item	qty
 		'disk'	5
 		'pencil'	7`)
 	test("cus where cnum is 2 and abbrev is 'b'", // points
+		"cus^(cnum) WHERE*1 cnum is 2 and abbrev is 'b'",
 		`cnum	abbrev	name
 		2	'b'	'bill'`)
 	test("cus where cnum is 2 and abbrev >= 'b' and abbrev < 'c'", // point
+		"cus^(cnum) WHERE*1 cnum is 2 and abbrev >= 'b' and abbrev < 'c'",
 		`cnum	abbrev	name
 		2	'b'	'bill'`)
 	test("hist where date in (970101, 970102) and item < 'z'", // ranges
+		"hist^(date) WHERE date in (970101, 970102) and item < 'z'",
 		`date	item	id	cost
         970101	'disk'	'a'	100
         970101	'disk'	'e'	200
         970102	'mouse'	'c'	200`)
-	test("customer where (id not in ())",
+	test("customer where id not in ()",
+		"customer^(id) WHERE not id in ()",
 		`id	name	city
 		'a'	'axon'	'saskatoon'
 		'c'	'calac'	'calgary'

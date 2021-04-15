@@ -21,7 +21,6 @@ package ast
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/apmckinlay/gsuneido/compile/lexer"
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
@@ -129,7 +128,12 @@ func (a *Unary) Echo() string {
 	if a.Tok == tok.LParen {
 		return "(" + a.E.Echo() + ")"
 	}
-	return strings.TrimSpace(tokEcho[a.Tok]) + a.E.Echo()
+	var op = map[tok.Token]string{
+		tok.Add: "+",
+		tok.Sub: "-",
+		tok.Not: "not ",
+	}
+	return op[a.Tok] + a.E.Echo()
 }
 
 func (a *Unary) Children(fn func(Node) Node) {
@@ -306,8 +310,8 @@ func (a *Mem) Children(fn func(Node) Node) {
 
 type In struct {
 	exprNodeT
-	E      Expr
-	Exprs  []Expr
+	E     Expr
+	Exprs []Expr
 	// Packed is set by CanEvalRaw
 	Packed []string
 }
