@@ -17,6 +17,10 @@ type Project struct {
 	columns []string
 	unique  bool
 	projectApproach
+	rewound bool
+	prevRow runtime.Row
+	curRow  runtime.Row
+	projHdr *runtime.Header
 }
 
 type projectApproach struct {
@@ -51,6 +55,7 @@ func (p *Project) Init() {
 		p.unique = true
 		p.includeDeps(srcCols)
 	}
+	p.rewound = true
 }
 
 // hasKey returns true if cols contains a key
@@ -290,6 +295,8 @@ func (p *Project) Updateable() bool {
 	return p.strategy == projCopy && p.source.Updateable()
 }
 
+// optimize ---------------------------------------------------------
+
 func (p *Project) optimize(mode Mode, index []string) (Cost, interface{}) {
 	if p.unique {
 		approach := &projectApproach{strategy: projCopy, index: index}
@@ -392,12 +399,61 @@ func projectFields(fs []string, pcols []string) []string {
 	return flds
 }
 
+func (p *Project) Rewind() {
+	p.rewound = true
+	p.source.Rewind()
+}
+
 func (p *Project) Get(dir runtime.Dir) runtime.Row {
+	if p.projHdr == nil {
+		p.projHdr = p.Header()
+	}
 	switch p.strategy {
 	case projCopy:
 		return p.source.Get(dir)
+	case projSeq:
+		return p.getSeq(dir)
 	}
 	panic("not implemented") //TODO
+}
+
+func (p *Project) getSeq(dir runtime.Dir) runtime.Row {
+	if dir == runtime.Next {
+		// output the first of each group
+		// i.e. skip over rows the same as previous output
+		for {
+			row := p.source.Get(dir)
+			if row == nil {
+				return nil
+			}
+			if p.rewound || !p.projHdr.EqualRows(row, p.curRow) {
+				p.rewound = false
+				p.prevRow = p.curRow
+				p.curRow = row
+				return row
+			}
+		}
+	} else { // Prev
+		// output the last of each group
+		// i.e. output when next record is different
+		// (to get the same records as NEXT)
+		if p.rewound {
+			p.prevRow = p.source.Get(dir)
+		}
+		p.rewound = false
+		for {
+			if p.prevRow == nil {
+				return nil
+			}
+			row := p.prevRow
+			p.prevRow = p.source.Get(dir)
+			if p.prevRow == nil || !p.projHdr.EqualRows(row, p.prevRow) {
+				// output the last row of a group
+				p.curRow = row
+				return row
+			}
+		}
+	}
 }
 
 func (p *Project) Output(rec runtime.Record) {

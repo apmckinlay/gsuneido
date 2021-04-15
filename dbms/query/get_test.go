@@ -78,6 +78,7 @@ func TestTableGet(t *testing.T) {
 		q := ParseQuery(query)
 		tran := sizeTran{db.NewReadTran()}
 		Setup(q, readMode, tran)
+		// fmt.Println(q)
 		assert.T(t).This(get(q, rt.Next)).Like(expected)
 		assert.T(t).This(get(q, rt.Prev)).Like(expected)
 	}
@@ -168,11 +169,16 @@ func TestTableGet(t *testing.T) {
 		'calgary'	'c'
 		'vancouver'	'e'
 		'saskatoon'	'i'`)
-	// test("trans project item", // sequential
-	// 	`item
-	// 	'disk'
-	// 	'eraser'
-	// 	'mouse'`)
+	test("supplier project city", // sequential
+		`city
+		'calgary'
+		'saskatoon'
+		'vancouver'`)
+	test("trans project item", // sequential
+		`item
+		'disk'
+		'eraser'
+		'mouse'`)
 	// test("customer project city", // lookup
 	// 	`city
 	// 	'saskatoon'

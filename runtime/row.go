@@ -14,7 +14,7 @@ import (
 type Row []DbRec
 
 func JoinRows(row1, row2 Row) Row {
-	result := make(Row, 0, len(row1) + len(row2))
+	result := make(Row, 0, len(row1)+len(row2))
 	return append(append(result, row1...), row2...)
 }
 
@@ -73,7 +73,7 @@ func NewHeader(fields [][]string, columns []string) *Header {
 }
 
 func JoinHeaders(x, y *Header) *Header {
-	fields := make([][]string, 0, len(x.Fields) + len(y.Fields))
+	fields := make([][]string, 0, len(x.Fields)+len(y.Fields))
 	fields = append(append(fields, x.Fields...), y.Fields...)
 	columns := sset.Union(x.Columns, y.Columns)
 	return NewHeader(fields, columns)
@@ -111,4 +111,13 @@ func (hdr *Header) GetFields() []string {
 		}
 	}
 	return result
+}
+
+func (hdr *Header) EqualRows(r1, r2 Row) bool {
+	for _, col := range hdr.Columns {
+		if r1.GetRaw(hdr, col) != r2.GetRaw(hdr, col) {
+			return false
+		}
+	}
+	return true
 }
