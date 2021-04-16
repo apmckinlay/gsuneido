@@ -39,8 +39,4 @@ func TestStr(t *testing.T) {
 	test("")
 	test("hello world")
 	test("now is the time for all good men to come to the aid of their party")
-
-	rw.PutInt(0xffffff)
-	rw.Flush()
-	assert.T(t).This(func() { rw.GetStr() }).Panics("bad io size")
 }

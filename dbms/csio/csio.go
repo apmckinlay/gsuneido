@@ -6,7 +6,6 @@ package csio
 import (
 	"bufio"
 	"io"
-	"log"
 
 	"github.com/apmckinlay/gsuneido/options"
 	. "github.com/apmckinlay/gsuneido/runtime"
@@ -108,7 +107,8 @@ func (rw *ReadWrite) GetBool() bool {
 	case 1:
 		return true
 	default:
-		panic("bad boolean")
+		Fatal("invalid boolean value from server")
+		panic("unreachable")
 	}
 }
 
@@ -120,7 +120,7 @@ func (rw *ReadWrite) getByte() byte {
 
 func ck(err error) {
 	if err != nil {
-		log.Fatalln("client:", err)
+		Fatal("client:", err)
 	}
 }
 
@@ -185,12 +185,12 @@ func (rw *ReadWrite) Flush() {
 	rw.w.Flush()
 }
 
-// limit panics if the size is negative or greater than maxio
+// limit checks if the size is negative or greater than maxio
 func limit(n int64) int {
-	if 0 <= n && n < maxio {
-		return int(n)
+	if n < 0 || maxio < n {
+		Fatal("bad io size")
 	}
-	panic("bad io size")
+	return int(n)
 }
 
 // Request does Flush and GetBool for the result.
