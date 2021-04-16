@@ -291,19 +291,6 @@ func ToUpper(s string) string {
 	return sb.String()
 }
 
-// Equal returns true if two slices of strings are equal
-func Equal(x, y []string) bool {
-	if len(x) != len(y) {
-		return false
-	}
-	for i := 0; i < len(x); i++ {
-		if x[i] != y[i] {
-			return false
-		}
-	}
-	return true
-}
-
 // Contains returns whether the string contains the given byte.
 // Equivalent to strings.ContainsRune but slightly simpler.
 func Contains(s string, c byte) bool {

@@ -34,7 +34,7 @@ func (c *cache) cacheAdd(index []string, cost Cost, approach interface{}) {
 // or -1 if the index as not been added.
 func (c *cache) cacheGet(index []string) (Cost, interface{}) {
 	for i := range c.entries {
-		if str.Equal(index, c.entries[i].index) {
+		if str.List(index).Equal(c.entries[i].index) {
 			return c.entries[i].cost, c.entries[i].approach
 		}
 	}

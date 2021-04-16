@@ -49,7 +49,7 @@ func (t *ReadTran) GetIndex(table string, cols []string) *index.Overlay {
 	ts := t.meta.GetRoSchema(table)
 	ti := t.meta.GetRoInfo(table)
 	for i, ix := range ts.Indexes {
-		if str.Equal(cols, ix.Columns) {
+		if str.List(cols).Equal(ix.Columns) {
 			return ti.Indexes[i]
 		}
 	}

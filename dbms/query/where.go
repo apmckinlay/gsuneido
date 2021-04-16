@@ -432,7 +432,7 @@ func (w *Where) bestIndex(order []string) (Cost, []string) {
 func (w *Where) getIdxSel(index []string) *idxSel {
 	for i := range w.idxSels {
 		is := &w.idxSels[i]
-		if str.Equal(index, is.index) {
+		if str.List(index).Equal(is.index) {
 			return is
 		}
 	}
@@ -442,7 +442,7 @@ func (w *Where) getIdxSel(index []string) *idxSel {
 func (w *Where) setApproach(index []string, app interface{}, tran QueryTran) {
 	if app != nil {
 		w.index = app.(whereApproach).index
-		assert.That(index == nil || w.singleton || str.Equal(index, w.index))
+		assert.That(index == nil || w.singleton || str.List(index).Equal(w.index))
 		w.tbl.index = w.index
 		w.idxSel = w.getIdxSel(w.index)
 		w.idxSelPos = -1

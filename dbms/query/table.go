@@ -136,7 +136,7 @@ func (tbl *Table) indexFor(order []string) int {
 
 func (tbl *Table) findIndex(index []string) int {
 	for i, ix := range tbl.indexes {
-		if str.Equal(index, ix) {
+		if str.List(index).Equal(ix) {
 			return i
 		}
 	}

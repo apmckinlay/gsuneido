@@ -63,3 +63,16 @@ func (list List) HasPrefix(list2 []string) bool {
 	}
 	return true
 }
+
+// Equal returns true if list2 is equal to list
+func (list List) Equal(list2 []string) bool {
+	if len(list) != len(list2) {
+		return false
+	}
+	for i := 0; i < len(list); i++ {
+		if list[i] != list2[i] {
+			return false
+		}
+	}
+	return true
+}
