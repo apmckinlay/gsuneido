@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/compile/ast"
+	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/sset"
 	"github.com/apmckinlay/gsuneido/util/str"
@@ -20,7 +21,10 @@ type Project struct {
 	rewound bool
 	prevRow runtime.Row
 	curRow  runtime.Row
+	srcHdr  *runtime.Header
 	projHdr *runtime.Header
+	indexed bool
+	results map[string]runtime.Row
 }
 
 type projectApproach struct {
@@ -56,6 +60,7 @@ func (p *Project) Init() {
 		p.includeDeps(srcCols)
 	}
 	p.rewound = true
+	p.getHeaders()
 }
 
 // hasKey returns true if cols contains a key
@@ -379,12 +384,16 @@ func (p *Project) setApproach(_ []string, approach interface{}, tran QueryTran) 
 // execution --------------------------------------------------------
 
 func (p *Project) Header() *runtime.Header {
-	hdr := p.source.Header()
-	newflds := make([][]string, len(hdr.Fields))
-	for i, fs := range hdr.Fields {
+	return p.projHdr
+}
+
+func (p *Project) getHeaders() {
+	p.srcHdr = p.source.Header()
+	newflds := make([][]string, len(p.srcHdr.Fields))
+	for i, fs := range p.srcHdr.Fields {
 		newflds[i] = projectFields(fs, p.columns)
 	}
-	return runtime.NewHeader(newflds, p.columns)
+	p.projHdr = runtime.NewHeader(newflds, p.columns)
 }
 
 func projectFields(fs []string, pcols []string) []string {
@@ -406,6 +415,7 @@ func (p *Project) Rewind() {
 
 func (p *Project) Get(dir runtime.Dir) runtime.Row {
 	if p.projHdr == nil {
+		p.srcHdr = p.source.Header()
 		p.projHdr = p.Header()
 	}
 	switch p.strategy {
@@ -413,8 +423,10 @@ func (p *Project) Get(dir runtime.Dir) runtime.Row {
 		return p.source.Get(dir)
 	case projSeq:
 		return p.getSeq(dir)
+	case projLookup:
+		return p.getLookup(dir)
 	}
-	panic("not implemented") //TODO
+	panic("should not reach here")
 }
 
 func (p *Project) getSeq(dir runtime.Dir) runtime.Row {
@@ -454,6 +466,63 @@ func (p *Project) getSeq(dir runtime.Dir) runtime.Row {
 			}
 		}
 	}
+}
+
+func (p *Project) getLookup(dir runtime.Dir) runtime.Row {
+	if p.rewound {
+		p.rewound = false
+		if p.results == nil {
+			p.results = make(map[string]runtime.Row)
+		}
+		if dir == runtime.Prev && !p.indexed {
+			p.buildLookupIndex()
+		}
+	}
+	for {
+		row := p.source.Get(dir)
+		if row == nil {
+			break
+		}
+		key := projectRow(row, p.srcHdr, p.columns)
+		result, ok := p.results[key]
+		if !ok {
+			p.results[key] = row
+			return row
+		}
+		if row.SameAs(result) {
+			return row
+		}
+	}
+	if dir == runtime.Next {
+		p.indexed = true
+	}
+	return nil
+}
+
+func (p *Project) buildLookupIndex() {
+	for {
+		row := p.source.Get(runtime.Next)
+		if row == nil {
+			break
+		}
+		key := projectRow(row, p.srcHdr, p.columns)
+		if _, ok := p.results[key]; !ok {
+			p.results[key] = row
+		}
+	}
+	p.source.Rewind()
+	p.indexed = true
+}
+
+func projectRow(row runtime.Row, hdr *runtime.Header, cols []string) string {
+	if len(cols) == 1 {
+		return row.GetRaw(hdr, cols[0])
+	}
+	enc := ixkey.Encoder{}
+	for _, col := range cols {
+		enc.Add(row.GetRaw(hdr, col))
+	}
+	return enc.String()
 }
 
 func (p *Project) Output(rec runtime.Record) {

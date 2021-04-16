@@ -52,6 +52,29 @@ type DbRec struct {
 	Off uint64
 }
 
+// SameAs returns true if the db records have the same Off's
+// and derived records (with Off == 0) are equal
+func (row Row) SameAs(row2 Row) bool {
+	if len(row) != len(row2) {
+		return false
+	}
+	for i := range row {
+		if (row[i].Off == 0) != (row2[i].Off == 0) {
+			return false
+		}
+		if row[i].Off == 0 {
+			if row[i].Record != row2[i].Record {
+				return false
+			}
+		} else {
+			if row[i].Off != row2[i].Off {
+				return false
+			}
+		}
+	}
+	return true
+}
+
 //-------------------------------------------------------------------
 
 // Header specifies the fields (physical) and columns (logical) for a query

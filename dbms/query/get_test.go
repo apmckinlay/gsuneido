@@ -79,8 +79,8 @@ func TestTableGet(t *testing.T) {
 		tran := sizeTran{db.NewReadTran()}
 		Setup(q, readMode, tran)
 		assert.T(t).This(q.String()).Is(strategy)
-		assert.T(t).This(get(q, rt.Next)).Like(expected)
-		assert.T(t).This(get(q, rt.Prev)).Like(expected)
+		assert.T(t).Msg("forward").This(get(q, rt.Next)).Like(expected)
+		assert.T(t).Msg("reverse").This(get(q, rt.Prev)).Like(expected)
 	}
 	test("customer",
 		"customer^(id)",
@@ -187,18 +187,18 @@ func TestTableGet(t *testing.T) {
 		'calgary'
 		'saskatoon'
 		'vancouver'`)
-	test("trans project item", // sequential
+	test("trans project item",
 		"trans^(item) PROJECT-SEQ item",
 		`item
 		'disk'
 		'eraser'
 		'mouse'`)
-	// test("customer project city", // lookup
-	// "",
-	// 	`city
-	// 	'saskatoon'
-	// 	'calgary'
-	// 	'vancouver'`)
+	test("customer project city",
+		"customer^(id) PROJECT-LOOKUP city",
+		`city
+		'saskatoon'
+		'calgary'
+		'vancouver'`)
 
 	test("trans extend newcost = cost * 1.1",
 		"trans^(item) EXTEND newcost = cost * 1.1",
