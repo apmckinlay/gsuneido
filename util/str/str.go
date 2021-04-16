@@ -296,3 +296,16 @@ func ToUpper(s string) string {
 func Contains(s string, c byte) bool {
 	return strings.IndexByte(s, c) >= 0
 }
+
+// EqualCI checks if two strings are equal ignoring (ascii) case
+func EqualCI(x, y string) bool {
+	if len(x) != len(y) {
+		return false
+	}
+	for i := 0; i < len(x); i++ {
+		if ascii.ToLower(x[i]) != ascii.ToLower(y[i]) {
+			return false
+		}
+	}
+	return true
+}

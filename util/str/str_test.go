@@ -108,3 +108,63 @@ func TestAfterLast(t *testing.T) {
 	assert(AfterLast("^1234512345$", "4")).Is("5$")
 	assert(AfterLast("^1234512345$", "51")).Is("2345$")
 }
+
+func TestEqualCI(t *testing.T) {
+	test := func(x, y string) {
+		assert.T(t).That(EqualCI(x, y))
+		assert.T(t).That(EqualCI(y, x))
+	}
+	test("", "")
+	test("foo bar", "foo bar")
+	test("Foo Bar", "foo bar")
+	test("Foo Bar", "FOO BAR")
+	xtest := func(x, y string) {
+		assert.T(t).That(!EqualCI(x, y))
+		assert.T(t).That(!EqualCI(y, x))
+	}
+	xtest("", "xyz")
+	xtest("foo", "food")
+	xtest("foo", "bar")
+}
+
+func BenchmarkEqualCI(b *testing.B) {
+	strs := []string{
+		"Now Is The Time",
+		"For All Good men",
+		"To Come To The",
+		"Aid Of Their Party",
+		"FOO BAR",
+		"bar foo",
+		"",
+		"!@#$$%%^&^&*&*(",
+	}
+	var a bool
+	for i := 0; i < b.N; i++ {
+		x := strs[i%len(strs)]
+		y := strs[(i+1)%len(strs)]
+		a = a || EqualCI(x, y)
+	}
+	B = a
+}
+
+func BenchmarkEqualLower(b *testing.B) {
+	strs := []string{
+		"Now Is The Time",
+		"For All Good men",
+		"To Come To The",
+		"Aid Of Their Party",
+		"FOO BAR",
+		"bar foo",
+		"",
+		"!@#$$%%^&^&*&*(",
+	}
+	var a bool
+	for i := 0; i < b.N; i++ {
+		x := strs[i%len(strs)]
+		y := strs[(i+1)%len(strs)]
+		a = a || ToLower(x) == ToLower(y)
+	}
+	B = a
+}
+
+var B bool
