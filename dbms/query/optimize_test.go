@@ -89,9 +89,9 @@ func TestOptimize(t *testing.T) {
 	test("trans summarize id, total cost",
 		"trans^(date,item,id) SUMMARIZE-MAP id, total_cost = total cost")
 	test("supplier summarize max supplier", // key
-		"supplier^(supplier) SUMMARIZE-IDX max_supplier = max supplier")
+		"supplier^(supplier) SUMMARIZE-IDX* max_supplier = max supplier")
 	test("supplier summarize max supplier sort name", // ignore sort
-		"supplier^(supplier) SUMMARIZE-IDX max_supplier = max supplier")
+		"supplier^(supplier) SUMMARIZE-IDX* max_supplier = max supplier")
 	test("supplier summarize max city", // index
 		"supplier^(city) SUMMARIZE-IDX max_city = max city")
 

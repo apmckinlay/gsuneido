@@ -104,6 +104,7 @@ func TestTableGet(t *testing.T) {
 		'mouse'		'e'	200	960204
 		'mouse'		'c'	200	970101`)
 
+	// rename
 	test("trans rename id to code, date to when",
 		"trans^(item) RENAME id to code, date to when",
 		`item	code	cost	when
@@ -112,6 +113,7 @@ func TestTableGet(t *testing.T) {
 		'mouse'	'e'	200	960204
 		'mouse'	'c'	200	970101`)
 
+	// sort
 	test("customer sort id",
 		"customer^(id)",
 		`id	name	city
@@ -174,6 +176,7 @@ func TestTableGet(t *testing.T) {
 		'i'	'intercon'	'saskatoon'	'SASKATOON'
 		'e'	'emerald'	'vancouver'	'VANCOUVER'`)
 
+	// project
 	test("customer project city, id",
 		"customer^(id) PROJECT-COPY city, id",
 		`city	id
@@ -200,6 +203,7 @@ func TestTableGet(t *testing.T) {
 		'calgary'
 		'vancouver'`)
 
+	// extend
 	test("trans extend newcost = cost * 1.1",
 		"trans^(item) EXTEND newcost = cost * 1.1",
 		`item	id	cost	date	newcost
@@ -215,6 +219,7 @@ func TestTableGet(t *testing.T) {
 		'mouse'	'e'	200	960204	220	'220*'
 		'mouse'	'c'	200	970101	220	'220*'`)
 
+	// times
 	test("customer times inven",
 		"customer^(id) TIMES inven^(item)",
 		`id	name	city	item	qty
@@ -291,6 +296,7 @@ func TestTableGet(t *testing.T) {
 	// 	'e'	'emerald'	'vancouver'	970103	'pencil'	300
 	// 	'i'	'intercon'	'saskatoon'	''	''	''`)
 
+	// where
 	test("customer where id > 'd'", // range
 		"customer^(id) WHERE id > 'd'",
 		`id	name	city
@@ -352,38 +358,88 @@ func TestTableGet(t *testing.T) {
 		'e'	'emerald'	'vancouver'
 		'i'	'intercon'	'saskatoon'`)
 
-	// test("hist summarize count", // by is empty
-	// 	`count
-	// 	4`)
-	// test("hist summarize min cost, average cost, max cost, sum = total cost",
-	// 	`min_cost	average_cost	max_cost	sum
-	// 	100	200	300	800`)
-	// test("hist summarize item, total cost",
-	// 	`item	total_cost
-	// 	'disk'	300
-	// 	'mouse'	200
-	// 	'pencil'	300`)
-	// test("hist summarize date, list id",
-	// 	`date	list_id
-	// 	970101	#('a', 'e')
-	// 	970102	#('c')
-	// 	970103	#('e')`)
-	// test("hist summarize list id",
-	// 	`list_id
-	// 	#('a', 'c', 'e')`)
-	// test("cus summarize max cnum sort name", // key so whole record
-	// 	`cnum	abbrev	name	max_cnum
-	// 	4	'd'	'dick'	4`)
-	// test("supplier summarize min city", // indexed
-	// 	`min_city
-	// 	'calgary'`)
-	// test("supplier summarize max city", // indexed
-	// 	`max_city
-	// 	'vancouver'`)
-	// test("supplier summarize min city, max city",
-	// 	`min_city	max_city
-	// 	'calgary'	'vancouver'`)
-	// test("hist summarize max cost", // not indexed
-	// 	`max_cost
-	// 	300`)
+	// summarize
+	test("customer summarize count",
+		"customer^(id) SUMMARIZE-TBL count = count",
+		`count
+		1000`)
+	test("hist summarize max date",
+		"hist^(date) SUMMARIZE-IDX max_date = max date",
+		`max_date
+		970103`)
+	test("customer summarize max id",
+		"customer^(id) SUMMARIZE-IDX* max_id = max id",
+		`id	name		city		max_id
+		'i'	'intercon'	'saskatoon' 'i'`)
+	test("hist summarize item, total cost",
+		"hist^(date) SUMMARIZE-MAP item, total_cost = total cost",
+		`item		total_cost
+		'disk'		300
+		'mouse'		200
+		'pencil'	300`)
+	test("hist summarize item, total cost, max id, average cost",
+		"hist^(date) SUMMARIZE-MAP item, total_cost = total cost, "+
+			"max_id = max id, average_cost = average cost",
+		`item		total_cost	max_id	average_cost
+        'disk'		300			'e'		150
+        'mouse'		200			'c'		200
+        'pencil'	300			'e'		300`)
+	test("hist summarize item, total cost sort total_cost, item",
+		"hist^(date) SUMMARIZE-MAP item, total_cost = total cost "+
+			"TEMPINDEX(total_cost,item)",
+		`item		total_cost
+		'mouse'		200
+		'disk'		300
+		'pencil'	300`)
+	test("customer summarize max name",
+		"customer^(id) SUMMARIZE-SEQ max_name = max name",
+		`max_name
+		'intercon'`)
+	test("hist summarize min cost, average cost, max cost, sum = total cost",
+		"hist^(date) SUMMARIZE-SEQ min_cost = min cost, "+
+			"average_cost = average cost, max_cost = max cost, sum = total cost",
+		`min_cost	average_cost	max_cost	sum
+		100			200				300			800`)
+	test("hist summarize item, total cost, count",
+		"hist^(date) SUMMARIZE-MAP item, total_cost = total cost, count = count",
+		`item		total_cost	count
+		'disk'		300			2
+		'mouse'		200			1
+		'pencil'	300			1`)
+	test("hist summarize date, item, max id",
+		"hist^(date,item,id) SUMMARIZE-SEQ* date, item, max_id = max id",
+		`date	item		id	cost	max_id
+        970101	'disk'		'e'	200		'e'
+        970102	'mouse'		'c'	200		'c'
+        970103	'pencil'	'e'	300		'e'`)
+	test("hist summarize date, list id",
+		"hist^(date) SUMMARIZE-SEQ date, list_id = list id",
+		`date	list_id
+		970101	#('a', 'e')
+		970102	#('c')
+		970103	#('e')`)
+	test("hist summarize list id",
+		"hist^(date) SUMMARIZE-SEQ list_id = list id",
+		`list_id
+		#('a', 'c', 'e')`)
+	test("cus summarize max cnum sort name",
+		"cus^(cnum) SUMMARIZE-IDX* max_cnum = max cnum",
+		`cnum	abbrev	name	max_cnum
+		4		'd'		'dick'	4`)
+	test("supplier summarize min city",
+		"supplier^(city) SUMMARIZE-IDX min_city = min city",
+		`min_city
+		'calgary'`)
+	test("supplier summarize max city",
+		"supplier^(city) SUMMARIZE-IDX max_city = max city",
+		`max_city
+		'vancouver'`)
+	test("supplier summarize min city, max city",
+		"supplier^(supplier) SUMMARIZE-SEQ min_city = min city, max_city = max city",
+		`min_city	max_city
+		'calgary'	'vancouver'`)
+	test("hist summarize max cost",
+		"hist^(date) SUMMARIZE-SEQ max_cost = max cost",
+		`max_cost
+		300`)
 }

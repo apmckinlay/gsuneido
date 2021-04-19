@@ -7,6 +7,7 @@ import (
 	"github.com/apmckinlay/gsuneido/compile"
 	"github.com/apmckinlay/gsuneido/compile/ast"
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
+	"github.com/apmckinlay/gsuneido/util/str"
 )
 
 type queryParser struct {
@@ -187,7 +188,7 @@ func (p *queryParser) sumOps(su *Summarize) {
 		if !isSumOp(p.Token) {
 			p.Error("expected count, total, min, max, or list")
 		}
-		op = p.MatchIdent()
+		op = str.ToLower(p.MatchIdent())
 		if op != "count" {
 			on = p.MatchIdent()
 		}
