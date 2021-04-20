@@ -3,7 +3,10 @@
 
 package query
 
-import "github.com/apmckinlay/gsuneido/util/ints"
+import (
+	"github.com/apmckinlay/gsuneido/runtime"
+	"github.com/apmckinlay/gsuneido/util/ints"
+)
 
 type Minus struct {
 	Compatible
@@ -60,3 +63,21 @@ func (m *Minus) setApproach(index []string, approach interface{}, tran QueryTran
 	m.source = SetApproach(m.source, index, tran)
 	m.source2 = SetApproach(m.source2, m.keyIndex, tran)
 }
+
+func (m *Minus) Header() *runtime.Header {
+	return m.source.Header()
+}
+
+func (m *Minus) Get(dir runtime.Dir) runtime.Row {
+	if m.disjoint != "" {
+		return m.source.Get(dir)
+	}
+	for {
+		row := m.source.Get(dir)
+		if row == nil || !m.source2Has(row) {
+			return row
+		}
+	}
+}
+
+// COULD have a "merge" strategy (like Union)

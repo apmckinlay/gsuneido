@@ -4,6 +4,7 @@
 package query
 
 import (
+	"github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/ints"
 	"github.com/apmckinlay/gsuneido/util/sset"
 	"github.com/apmckinlay/gsuneido/util/ssset"
@@ -89,3 +90,22 @@ func (it *Intersect) setApproach(index []string, approach interface{},
 	it.source = SetApproach(it.source, index, tran)
 	it.source2 = SetApproach(it.source2, it.keyIndex, tran)
 }
+
+func (it *Intersect) Header() *runtime.Header {
+	hdr := it.source.Header()
+	return runtime.NewHeader(hdr.Fields, it.Columns())
+}
+
+func (it *Intersect) Get(dir runtime.Dir) runtime.Row {
+	if it.disjoint != "" {
+		return nil
+	}
+	for {
+		row := it.source.Get(dir)
+		if row == nil || it.source2Has(row) {
+			return row
+		}
+	}
+}
+
+// COULD have a "merge" strategy (like Union)

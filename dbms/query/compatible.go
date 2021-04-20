@@ -14,6 +14,8 @@ type Compatible struct {
 	allCols  []string
 	disjoint string
 	keyIndex []string
+	hdr1     *Header
+	hdr2     *Header
 }
 
 func (c *Compatible) Init() {
@@ -50,4 +52,30 @@ func (c *Compatible) String2(op string) string {
 		op += "-DISJOINT(" + c.disjoint + ")"
 	}
 	return c.Query2.String2(op)
+}
+
+// source2Has returns true if a row from source exists in source2
+func (c *Compatible) source2Has(row Row) bool {
+	if c.disjoint != "" {
+		return false
+	}
+	if c.hdr1 == nil {
+		c.hdr1 = c.source.Header()
+		c.hdr2 = c.source2.Header()
+	}
+	key := projectRow(row, c.hdr1, c.keyIndex)
+	row2 := c.source2.Lookup(key)
+	return row2 != nil && c.equal(row, row2)
+}
+
+func (c *Compatible) equal(row1, row2 Row) bool {
+	if c.disjoint != "" {
+		return false
+	}
+	for _, col := range c.allCols {
+		if row1.GetRaw(c.hdr1, col) != row2.GetRaw(c.hdr2, col) {
+			return false
+		}
+	}
+	return true
 }

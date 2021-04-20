@@ -64,6 +64,9 @@ func TestTableGet(t *testing.T) {
 		sb.WriteString("\n")
 		for _, row := range rows {
 			for _, col := range hdr.Columns {
+				if row.Get(hdr, col) == nil {
+					fmt.Println(col, "is nil in", row)
+				}
 				sb.WriteString(row.Get(hdr, col).String())
 				sb.WriteString("\t")
 			}
@@ -175,6 +178,12 @@ func TestTableGet(t *testing.T) {
 		'a'	'axon'	'saskatoon'	'SASKATOON'
 		'i'	'intercon'	'saskatoon'	'SASKATOON'
 		'e'	'emerald'	'vancouver'	'VANCOUVER'`)
+	test("trans minus hist sort id, cost",
+		"(trans^(item) MINUS hist^(date,item,id)) TEMPINDEX(id,cost)",
+		`item		id	cost	date
+		'eraser'	'c'	150		970201
+		'mouse'		'c'	200		970101
+		'mouse'		'e'	200		960204`)
 
 	// project
 	test("customer project city, id",
@@ -236,17 +245,45 @@ func TestTableGet(t *testing.T) {
 		'i'	'intercon'	'saskatoon'	'mouse'	2
 		'i'	'intercon'	'saskatoon'	'pencil'	7`)
 
-	// test("trans intersect hist",
-	// 	`item	id	cost	date
-	// 	'disk'	'a'	100	970101`)
+	// minus
+	test("trans minus trans",
+		"trans^(item) MINUS trans^(date,item,id)",
+		`item		id	cost	date`)
+	test("hist minus hist2",
+		"hist^(date) MINUS hist2^(date)",
+		`date	item	id	cost
+        970101	'disk'	'e'	200
+        970102	'mouse'	'c'	200`)
+	test("trans minus hist",
+		"trans^(item) MINUS hist^(date,item,id)",
+		`item		id	cost	date
+		'eraser'	'c'	150		970201
+		'mouse'		'e'	200		960204
+		'mouse'		'c'	200		970101`)
+	test("trans minus hist sort date",
+		"trans^(date,item,id) MINUS hist^(date,item,id)",
+		`item		id	cost	date
+		'mouse'		'e'	200		960204
+		'mouse'		'c'	200		970101
+		'eraser'	'c'	150		970201`)
 
-	// test("trans minus hist sort date",
-	// 	`item	id	cost	date
-	// 	'mouse'	'e'	200	960204
-	// 	'mouse'	'c'	200	970101
-	// 	'eraser'	'c'	150	970201`)
-	// test("(trans minus hist) where id = 9",
-	// 	`item	id	cost	date`)
+	// intersect
+	test("trans intersect trans",
+		"trans^(item) INTERSECT trans^(date,item,id)",
+		`item		id	cost	date
+		'disk'		'a'	100	970101
+		'eraser'	'c'	150	970201
+		'mouse'		'e'	200	960204
+		'mouse'		'c'	200	970101`)
+	test("trans intersect hist",
+		"trans^(item) INTERSECT hist^(date,item,id)",
+		`item	id	cost	date
+		'disk'	'a'	100		970101`)
+	test("hist intersect hist2",
+		"hist^(date) INTERSECT hist2^(date)",
+		`date	item		id	cost
+        970101	'disk'		'a'	100
+        970103	'pencil'	'e'	300`)
 
 	// test("trans union hist", // merge
 	// 	`item	id	cost	date
