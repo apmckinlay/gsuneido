@@ -123,7 +123,7 @@ var SunAPP func(string) string
 
 func interact(args ...uintptr) uintptr {
 	if windows.GetCurrentThreadId() != uiThreadId {
-		log.Println("illegal UI call from background thread")
+		log.Println("ERROR: illegal UI call from background thread")
 		runtime.Goexit()
 	}
 	for i,a := range args {

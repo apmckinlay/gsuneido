@@ -78,7 +78,7 @@ var _ = builtinRaw("Spawn(@args)",
 		}
 		err := cmd.Start()
 		if err != nil {
-			log.Println("Spawn:", err)
+			log.Println("ERROR: Spawn:", err)
 			return IntVal(-1)
 		}
 		if mode == wait {

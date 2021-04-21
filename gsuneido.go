@@ -229,7 +229,7 @@ func openDbms() {
 	var err error
 	db, err = db19.OpenDatabase("suneido.db")
 	if err != nil {
-		log.Println(err)
+		log.Println("ERROR:", err)
 		err := db19.Repair("suneido.db", err)
 		if err != nil {
 			log.Fatalln(err)

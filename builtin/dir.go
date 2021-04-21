@@ -57,7 +57,7 @@ func forEachDir(dir string, justfiles, details bool, fn func(entry Value)) {
 		// should panic, but cSuneido doesn't
 		if !strings.Contains(err.Error(), "cannot find the file specified") &&
 			!strings.Contains(err.Error(), "syntax is incorrect") {
-			log.Println("Dir:", err)
+			log.Println("ERROR: Dir:", err)
 		}
 		return
 	}

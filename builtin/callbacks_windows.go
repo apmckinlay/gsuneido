@@ -98,7 +98,7 @@ func callback4(i, a, b, c, d uintptr) uintptr {
 
 func (cb *callback) callv(args ...Value) uintptr {
 	if !cb.active && cb.keepTill < clock() {
-		log.Println("CALLBACK TO INACTIVE!!!", cb.fn,
+		log.Println("ERROR: callback to inactive", cb.fn,
 			"keepTill", cb.keepTill, "clock", clock())
 	}
 	return call(cb.fn, args...)
@@ -240,7 +240,7 @@ func ClearCallback(fn Value) bool {
 		}
 	}
 	if foundInactive {
-		log.Println("ClearCallback FOUND INACTIVE", fn)
+		log.Println("ERROR: ClearCallback found inactive", fn)
 	} else {
 		for hwnd, cbfn := range hwndToCb {
 			if cbfn == fn {
