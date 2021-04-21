@@ -53,7 +53,7 @@ func TestOptimize(t *testing.T) {
 		"table^(a) UNION-MERGE table^(a)")
 	test("(table where a is 1) union (table where a is 2)",
 		"table^(a) WHERE*1 a is 1 "+
-			"UNION-FOLLOW-DISJOINT(a) (table^(a) WHERE*1 a is 2)")
+			"UNION-LOOKUP-DISJOINT(a) (table^(a) WHERE*1 a is 2)")
 
 	test("tables project table",
 		"tables^(table) PROJECT-COPY table")

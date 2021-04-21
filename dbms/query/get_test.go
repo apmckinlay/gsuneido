@@ -285,22 +285,39 @@ func TestTableGet(t *testing.T) {
         970101	'disk'		'a'	100
         970103	'pencil'	'e'	300`)
 
-	// test("trans union hist", // merge
-	// 	`item	id	cost	date
-	// 	'mouse'	'e'	200	960204
-	// 	'disk'	'a'	100	970101
-	// 	'disk'	'e'	200	970101
-	// 	'mouse'	'c'	200	970101
-	// 	'mouse'	'c'	200	970102
-	// 	'pencil'	'e'	300	970103
-	// 	'eraser'	'c'	150	970201`)
-	// test("hist2 union hist", // lookup
-	// 	`date	item	id	cost
-	// 	970102	'disk'	'e'	200
-	// 	970101	'disk'	'a'	100
-	// 	970101	'disk'	'e'	200
-	// 	970102	'mouse'	'c'	200
-	// 	970103	'pencil'	'e'	300`)
+	// union
+	test("hist2 union hist",
+		"hist2^(date) UNION-LOOKUP hist^(date,item,id)",
+		`date	item	 id		cost
+		970102	'disk'	 'e'	200
+		970101	'disk'	 'a'	100
+		970101	'disk'	 'e'	200
+		970102	'mouse'	 'c'	200
+		970103	'pencil' 'e'	300`)
+	test("hist2 union trans",
+		"hist2^(date) UNION-LOOKUP trans^(date,item,id)",
+		`date	item	 id		cost
+        970102	'disk'	 'e'	200
+        970103	'pencil' 'e'	300
+        960204	'mouse'	 'e'	200
+        970101	'disk'	 'a'	100
+        970101	'mouse'	 'c'	200
+        970201	'eraser' 'c'	150`)
+	test("alias union alias",
+		"alias^(id) UNION-MERGE alias^(id)",
+		`id name2
+        'a'	'abc'
+		'c'	'trical'`)
+	test("trans union hist",
+		"trans^(date,item,id) UNION-MERGE hist^(date,item,id)",
+		`item	id	cost	date
+		'mouse'	'e'	200	960204
+		'disk'	'a'	100	970101
+		'disk'	'e'	200	970101
+		'mouse'	'c'	200	970101
+		'mouse'	'c'	200	970102
+		'pencil'	'e'	300	970103
+		'eraser'	'c'	150	970201`)
 
 	// test("hist join customer",
 	// 	`date	item	id	cost	name	city

@@ -4,6 +4,8 @@
 package runtime
 
 import (
+	"fmt"
+
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/sset"
 )
@@ -19,21 +21,25 @@ func JoinRows(row1, row2 Row) Row {
 }
 
 func (row Row) Get(hdr *Header, fld string) Value {
-	assert.That(hdr.Map != nil)
-	at, ok := hdr.Map[fld]
-	if !ok || int(at.Reci) >= len(row) {
-		return nil
-	}
-	return row[at.Reci].GetVal(int(at.Fldi))
+	return Unpack(row.GetRaw(hdr, fld))
 }
 
 func (row Row) GetRaw(hdr *Header, fld string) string {
-	assert.That(hdr.Map != nil)
-	at, ok := hdr.Map[fld]
-	if !ok || int(at.Reci) >= len(row) {
-		return ""
+	for {
+		assert.That(hdr.Map != nil)
+		at, ok := hdr.Map[fld]
+		if !ok || int(at.Reci) >= len(row) {
+			return ""
+		}
+		if row[at.Reci].Record != "" {
+			return row[at.Reci].GetRaw(int(at.Fldi))
+		}
+		if hdr.Next == nil {
+			return ""
+		}
+		row = row[len(hdr.Fields):]
+		hdr = hdr.Next
 	}
-	return row[at.Reci].GetRaw(int(at.Fldi))
 }
 
 func (row Row) GetRawAt(at RowAt) string {
@@ -82,6 +88,8 @@ type Header struct {
 	Fields  [][]string
 	Columns []string
 	Map     map[string]RowAt
+	// Next is used by Union
+	Next *Header
 }
 
 func NewHeader(fields [][]string, columns []string) *Header {
@@ -100,6 +108,16 @@ func JoinHeaders(x, y *Header) *Header {
 	fields = append(append(fields, x.Fields...), y.Fields...)
 	columns := sset.Union(x.Columns, y.Columns)
 	return NewHeader(fields, columns)
+}
+
+func (hdr *Header) String() string {
+	s := "Header\n"
+	for hdr != nil {
+		s += fmt.Sprintln("Fields:", hdr.Fields)
+		s += fmt.Sprintln("Columns:", hdr.Columns)
+		hdr = hdr.Next
+	}
+	return s
 }
 
 // Rules is a list of the rule columns i.e. columns that are not fields

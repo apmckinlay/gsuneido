@@ -4,7 +4,8 @@
 package query
 
 import (
-	"github.com/apmckinlay/gsuneido/runtime"
+	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
+	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/ints"
 	"github.com/apmckinlay/gsuneido/util/sset"
 	"github.com/apmckinlay/gsuneido/util/ssset"
@@ -14,6 +15,15 @@ type Union struct {
 	Compatible
 	fixed    []Fixed // lazy, calculated by Fixed()
 	strategy unionStrategy
+	rewound  bool
+	empty    Row
+	src1     bool
+	src2     bool
+	key1     string
+	key2     string
+	row1     Row
+	row2     Row
+	curKey   string
 }
 
 type unionApproach struct {
@@ -27,11 +37,9 @@ type unionStrategy int
 
 const (
 	// unionMerge is a merge of source and source2
-	unionMerge unionStrategy = iota + 1
-	// unionLookup is source that aren't in source2, followed by source2 (unordered)
+	unionMerge unionStrategy = iota + 2
+	// unionLookup is source not in source2, followed by source2 (unordered)
 	unionLookup
-	// unionFollow is source followed by source2 (disjoint)
-	unionFollow
 )
 
 func (u *Union) String() string {
@@ -41,8 +49,6 @@ func (u *Union) String() string {
 		op += "-MERGE"
 	case unionLookup:
 		op += "-LOOKUP"
-	case unionFollow:
-		op += "-FOLLOW"
 	}
 	return u.String2(op)
 }
@@ -115,7 +121,7 @@ func (u *Union) Fixed() []Fixed {
 		}
 	}
 	cols2 := u.source2.Columns()
-	emptyStr := []runtime.Value{runtime.EmptyStr}
+	emptyStr := []Value{EmptyStr}
 	for _, f1 := range fixed1 {
 		if !sset.Contains(cols2, f1.col) {
 			u.fixed = append(u.fixed,
@@ -148,7 +154,7 @@ func (u *Union) optimize(mode Mode, index []string) (Cost, interface{}) {
 	// else no required index
 	if u.disjoint != "" {
 		cost := Optimize(u.source, mode, nil) + Optimize(u.source2, mode, nil)
-		approach := &unionApproach{strategy: unionFollow}
+		approach := &unionApproach{strategy: unionLookup}
 		return cost, approach
 	}
 	// else not disjoint
@@ -210,4 +216,156 @@ func (u *Union) setApproach(_ []string, approach interface{}, tran QueryTran) {
 	}
 	u.source = SetApproach(u.source, app.idx1, tran)
 	u.source2 = SetApproach(u.source2, app.idx2, tran)
+
+	u.empty = makeEmpty(len(u.source.Header().Fields))
+}
+
+func makeEmpty(n int) Row {
+	row := make(Row, n)
+	for i := range row {
+		row[i] = DbRec{}
+	}
+	return row
+}
+
+// execution --------------------------------------------------------
+
+func (u *Union) Header() *Header {
+	hdr := *u.source.Header()   // copy
+	hdr2 := *u.source2.Header() // copy
+	hdr.Next = &hdr2            // chain
+	hdr.Columns = sset.Union(hdr.Columns, hdr2.Columns)
+	hdr2.Columns = nil
+	return &hdr
+}
+
+func (u *Union) Rewind() {
+	u.source.Rewind()
+	u.source2.Rewind()
+	u.rewound = true
+}
+
+func (u *Union) Get(dir Dir) Row {
+	defer func() { u.rewound = false }()
+	switch u.strategy {
+	case unionLookup:
+		return u.getLookup(dir)
+	case unionMerge:
+		return u.getMerge(dir)
+	}
+	panic("shouldn't reach here")
+}
+
+func (u *Union) getLookup(dir Dir) Row {
+	if u.rewound {
+		u.src1 = (dir == Next)
+	}
+	var row Row
+	for {
+		if u.src1 {
+			for {
+				row = u.source.Get(dir)
+				if row == nil {
+					break
+				}
+				if !u.source2Has(row) {
+					return row
+				}
+			}
+			if dir == Prev {
+				return nil
+			}
+			u.src1 = false
+		} else { // source2
+			row = u.source2.Get(dir)
+			if row != nil {
+				return JoinRows(u.empty, row)
+			}
+			if dir == Next {
+				return nil
+			}
+			u.src1 = true
+			// continue
+		}
+	}
+}
+
+func (u *Union) getMerge(dir Dir) Row {
+	if u.hdr1 == nil {
+		u.hdr1 = u.source.Header()
+		u.hdr2 = u.source2.Header()
+	}
+
+	// read from the appropriate source(s)
+	if u.rewound {
+		u.fetch1(dir)
+		u.fetch2(dir)
+	} else {
+		// curkey is required for changing direction
+		if u.src1 || u.before(dir, u.key1, u.curKey, true) {
+			u.fetch1(dir)
+		}
+		if u.src2 || u.before(dir, u.key2, u.curKey, false) {
+			u.fetch2(dir)
+		}
+	}
+
+	u.src1, u.src2 = false, false
+	if u.row1 == nil && u.row2 == nil {
+		u.curKey = u.key1
+		u.src1 = true
+		return nil
+	} else if u.row1 != nil && u.row2 != nil && u.equal(u.row1, u.row2) {
+		// rows same so return either one
+		u.curKey = u.key1
+		u.src1, u.src2 = true, true
+		return u.row1
+	} else if u.row1 != nil &&
+		(u.row2 == nil || u.before(dir, u.key1, u.key2, true)) {
+		u.curKey = u.key1
+		u.src1 = true
+		return u.row1
+	} else {
+		u.curKey = u.key2
+		u.src2 = true
+		return JoinRows(u.empty, u.row2)
+	}
+}
+
+func (u *Union) fetch1(dir Dir) {
+	u.row1 = u.source.Get(dir)
+	if u.row1 == nil {
+		u.key1 = endKey(dir)
+	} else {
+		u.key1 = projectRow(u.row1, u.hdr1, u.keyIndex)
+	}
+}
+
+func (u *Union) fetch2(dir Dir) {
+	u.row2 = u.source2.Get(dir)
+	if u.row2 == nil {
+		u.key2 = endKey(dir)
+	} else {
+		u.key2 = projectRow(u.row2, u.hdr2, u.keyIndex)
+	}
+}
+
+func (*Union) before(dir Dir, key1, key2 string, x bool) bool {
+	if key1 == key2 {
+		if dir == Next {
+			return x
+		}
+		return !x
+	}
+	if dir == Next {
+		return key1 < key2
+	}
+	return key1 > key2
+}
+
+func endKey(dir Dir) string {
+	if dir == Next {
+		return ixkey.Max
+	} // else Prev
+	return ixkey.Min
 }

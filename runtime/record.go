@@ -132,6 +132,9 @@ func (r Record) mode() byte {
 }
 
 func (r Record) String() string {
+	if r == "" {
+		return "<nil>"
+	}
 	var sb strings.Builder
 	sep := "<"
 	for i := 0; i < r.Count(); i++ {
