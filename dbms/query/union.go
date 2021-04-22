@@ -337,7 +337,7 @@ func (u *Union) fetch1(dir Dir) {
 	if u.row1 == nil {
 		u.key1 = endKey(dir)
 	} else {
-		u.key1 = projectRow(u.row1, u.hdr1, u.keyIndex)
+		u.key1 = projectKey(u.row1, u.hdr1, u.keyIndex)
 	}
 }
 
@@ -346,7 +346,7 @@ func (u *Union) fetch2(dir Dir) {
 	if u.row2 == nil {
 		u.key2 = endKey(dir)
 	} else {
-		u.key2 = projectRow(u.row2, u.hdr2, u.keyIndex)
+		u.key2 = projectKey(u.row2, u.hdr2, u.keyIndex)
 	}
 }
 

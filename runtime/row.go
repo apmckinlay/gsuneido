@@ -95,8 +95,10 @@ type Header struct {
 func NewHeader(fields [][]string, columns []string) *Header {
 	hdr := Header{Fields: fields, Columns: columns}
 	hdr.Map = make(map[string]RowAt, len(hdr.Fields))
-	for ri, r := range hdr.Fields {
-		for fi, f := range r {
+	// reverse is necessary for LeftJoin
+	for ri := len(hdr.Fields) - 1; ri >= 0; ri-- {
+		flds := hdr.Fields[ri]
+		for fi, f := range flds {
 			hdr.Map[f] = RowAt{int16(ri), int16(fi)}
 		}
 	}

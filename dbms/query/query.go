@@ -86,7 +86,8 @@ type Query interface {
 
 	Get(dir runtime.Dir) runtime.Row
 
-	// Select(org, end string)
+	Select(org, end string)
+	Select1(key string)
 
 	Header() *runtime.Header
 	Output(rec runtime.Record)
@@ -393,6 +394,14 @@ func (*Query1) prefixed(index []string, order []string, fixed []Fixed) bool {
 }
 
 func (*Query1) Lookup(string) runtime.Row {
+	panic("not implemented")
+}
+
+func (*Query1) Select(string, string) {
+	panic("not implemented")
+}
+
+func (*Query1) Select1(string) {
 	panic("not implemented")
 }
 

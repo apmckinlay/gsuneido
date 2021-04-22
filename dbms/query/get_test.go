@@ -319,36 +319,46 @@ func TestTableGet(t *testing.T) {
 		'pencil'	'e'	300	970103
 		'eraser'	'c'	150	970201`)
 
+	test("customer join alias",
+		"customer^(id) JOIN 1:1 by(id) alias^(id)",
+		`id	name	city	name2
+        'a'	'axon'	'saskatoon'	'abc'
+        'c'	'calac'	'calgary'	'trical'`)
+	test("trans join inven",
+		"inven^(item) JOIN 1:n by(item) trans^(item)",
+		`item	qty	id	cost	date
+		'disk'	5	'a'	100	970101
+		'mouse'	2	'e'	200	960204
+		'mouse'	2	'c'	200	970101`)
+	test("customer leftjoin alias",
+		"customer^(id) LEFTJOIN 1:1 by(id) alias^(id)",
+		`id	name	city	name2
+        'a'	'axon'	'saskatoon'	'abc'
+        'c'	'calac'	'calgary'	'trical'
+        'e'	'emerald'	'vancouver'	''
+        'i'	'intercon'	'saskatoon'	''`)
+	test("inven leftjoin trans",
+		"inven^(item) LEFTJOIN 1:n by(item) trans^(item)",
+		`item	qty	id	cost date
+		'disk'	 5	'a'	100	 970101
+		'mouse'	 2	'e'	200	 960204
+		'mouse'	 2	'c'	200	 970101
+		'pencil' 7	''	''	 ''`)
+	test("customer leftjoin hist2",
+		"customer^(id) LEFTJOIN 1:n by(id) hist2^(id)",
+		`id	name	city	date	item	cost
+		'a'	'axon'	'saskatoon'	970101	'disk'	100
+		'c'	'calac'	'calgary'	''	''	''
+		'e'	'emerald'	'vancouver'	970102	'disk'	200
+		'e'	'emerald'	'vancouver'	970103	'pencil'	300
+		'i'	'intercon'	'saskatoon'	''	''	''`)
 	// test("hist join customer",
+	// 	"customer^(id) JOIN 1:n by(id) (hist^(date) TEMPINDEX(id))",
 	// 	`date	item	id	cost	name	city
 	// 	970101	'disk'	'a'	100	'axon'	'saskatoon'
 	// 	970101	'disk'	'e'	200	'emerald'	'vancouver'
 	// 	970102	'mouse'	'c'	200	'calac'	'calgary'
 	// 	970103	'pencil'	'e'	300	'emerald'	'vancouver'`)
-	// test("trans join inven",
-	// 	`item	qty	id	cost	date
-	// 	'disk'	5	'a'	100	970101
-	// 	'mouse'	2	'e'	200	960204
-	// 	'mouse'	2	'c'	200	970101`)
-	// test("customer join alias",
-	// 	`id	name2	name	city
-	// 	'a'	'abc'	'axon'	'saskatoon'
-	// 	'c'	'trical'	'calac'	'calgary'`)
-	// test("customer join supplier",
-	// 	`supplier	name	city	id`)
-	// test("inven leftjoin trans",
-	// 	`item	qty	id	cost	date
-	// 	'disk'	5	'a'	100	970101
-	// 	'mouse'	2	'e'	200	960204
-	// 	'mouse'	2	'c'	200	970101
-	// 	'pencil'	7	''	''	''`)
-	// test("customer leftjoin hist2",
-	// 	`id	name	city	date	item	cost
-	// 	'a'	'axon'	'saskatoon'	970101	'disk'	100
-	// 	'c'	'calac'	'calgary'	''	''	''
-	// 	'e'	'emerald'	'vancouver'	970102	'disk'	200
-	// 	'e'	'emerald'	'vancouver'	970103	'pencil'	300
-	// 	'i'	'intercon'	'saskatoon'	''	''	''`)
 
 	// where
 	test("customer where id > 'd'", // range

@@ -483,7 +483,7 @@ func (p *Project) getLookup(dir runtime.Dir) runtime.Row {
 		if row == nil {
 			break
 		}
-		key := projectRow(row, p.srcHdr, p.columns)
+		key := projectKey(row, p.srcHdr, p.columns)
 		result, ok := p.results[key]
 		if !ok {
 			p.results[key] = row
@@ -505,7 +505,7 @@ func (p *Project) buildLookupIndex() {
 		if row == nil {
 			break
 		}
-		key := projectRow(row, p.srcHdr, p.columns)
+		key := projectKey(row, p.srcHdr, p.columns)
 		if _, ok := p.results[key]; !ok {
 			p.results[key] = row
 		}
@@ -514,8 +514,8 @@ func (p *Project) buildLookupIndex() {
 	p.indexed = true
 }
 
-func projectRow(row runtime.Row, hdr *runtime.Header, cols []string) string {
-	if len(cols) == 1 {
+func projectKey(row runtime.Row, hdr *runtime.Header, cols []string) string {
+	if len(cols) == 1 { // WARNING: only correct for keys
 		return row.GetRaw(hdr, cols[0])
 	}
 	enc := ixkey.Encoder{}

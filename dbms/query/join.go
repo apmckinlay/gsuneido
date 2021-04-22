@@ -4,6 +4,8 @@
 package query
 
 import (
+	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
+	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/ints"
 	"github.com/apmckinlay/gsuneido/util/sset"
 	"github.com/apmckinlay/gsuneido/util/ssset"
@@ -14,7 +16,11 @@ type Join struct {
 	Query2
 	by []string
 	joinType
-	nr int
+	nr     int
+	encode bool
+	hdr1   *Header
+	row1   Row
+	row2   Row
 }
 
 type joinApproach struct {
@@ -172,6 +178,7 @@ func (jn *Join) setApproach(index []string, approach interface{}, tran QueryTran
 	}
 	jn.source = SetApproach(jn.source, index, tran)
 	jn.source2 = SetApproach(jn.source2, jn.by, tran)
+	jn.encode = len(jn.by) > 1 || !ssset.Contains(jn.source2.Keys(), jn.by)
 }
 
 func (jn *Join) nrows() int {
@@ -200,10 +207,54 @@ func (jn *Join) lookupCost() int {
 	return jn.source.lookupCost() * 2 // ???
 }
 
+// execution
+
+func (jn *Join) Rewind() {
+	jn.source.Rewind()
+	jn.row1 = nil
+	jn.row2 = nil
+}
+
+func (jn *Join) Get(dir Dir) Row {
+	if jn.hdr1 == nil {
+		jn.hdr1 = jn.source.Header()
+	}
+	for {
+		if jn.row2 == nil && !jn.nextRow1(dir) {
+			return nil
+		}
+		jn.row2 = jn.source2.Get(dir)
+		if jn.row2 != nil {
+			return JoinRows(jn.row1, jn.row2)
+		}
+	}
+}
+
+func (jn *Join) nextRow1(dir Dir) bool {
+	jn.row1 = jn.source.Get(dir)
+	if jn.row1 == nil {
+		return false
+	}
+	jn.source2.Select1(jn.projectRow(jn.row1))
+	return true
+}
+
+func (jn *Join) projectRow(row Row) string {
+	if !jn.encode {
+		return row.GetRaw(jn.hdr1, jn.by[0])
+	}
+	enc := ixkey.Encoder{}
+	for _, col := range jn.by {
+		enc.Add(row.GetRaw(jn.hdr1, col))
+	}
+	return enc.String()
+}
+
 // LeftJoin ---------------------------------------------------------
 
 type LeftJoin struct {
 	Join
+	row1out bool
 }
 
 func (lj *LeftJoin) String() string {
@@ -238,8 +289,42 @@ func (lj *LeftJoin) optimize(mode Mode, index []string) (Cost, interface{}) {
 func (lj *LeftJoin) setApproach(index []string, _ interface{}, tran QueryTran) {
 	lj.source = SetApproach(lj.source, index, tran)
 	lj.source2 = SetApproach(lj.source2, lj.by, tran)
+	lj.encode = len(lj.by) > 1 || !ssset.Contains(lj.source2.Keys(), lj.by)
 }
 
 func (lj *LeftJoin) nrows() int {
 	return lj.source.nrows()
+}
+
+// execution
+
+func (lj *LeftJoin) Get(dir Dir) Row {
+	if lj.hdr1 == nil {
+		lj.hdr1 = lj.source.Header()
+	}
+	for {
+		if lj.row2 == nil && !lj.nextRow1(dir) {
+			return nil
+		}
+		lj.row2 = lj.source2.Get(dir)
+		if lj.shouldOutput(lj.row2) {
+			if lj.row2 == nil {
+				return lj.row1
+			}
+			return JoinRows(lj.row1, lj.row2)
+		}
+	}
+}
+
+func (lj *LeftJoin) nextRow1(dir Dir) bool {
+	lj.row1out = false
+	return lj.Join.nextRow1(dir)
+}
+
+func (lj *LeftJoin) shouldOutput(row Row) bool {
+	if !lj.row1out {
+		lj.row1out = true
+		return true
+	}
+	return row != nil
 }

@@ -6,8 +6,10 @@ package query
 import (
 	"github.com/apmckinlay/gsuneido/db19/index"
 	"github.com/apmckinlay/gsuneido/db19/index/btree"
+	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/db19/meta"
 	"github.com/apmckinlay/gsuneido/runtime"
+	"github.com/apmckinlay/gsuneido/util/ssset"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
@@ -23,8 +25,9 @@ type Table struct {
 	info      *meta.Info
 	// index is the index that will be used to access the data.
 	// It is set by optimize.
-	index []string
-	iter  *index.OverIter
+	index       []string
+	indexEncode bool
+	iter        *index.OverIter
 }
 
 type tableApproach struct {
@@ -145,6 +148,7 @@ func (tbl *Table) findIndex(index []string) int {
 
 func (tbl *Table) setApproach(_ []string, approach interface{}, _ QueryTran) {
 	tbl.index = approach.(tableApproach).index
+	tbl.indexEncode = len(tbl.index) > 1 || !ssset.Contains(tbl.keys, tbl.index)
 }
 
 // lookupCost returns the cost of one lookup
@@ -193,6 +197,16 @@ func (tbl *Table) Get(dir runtime.Dir) runtime.Row {
 	_, off := tbl.iter.Cur()
 	rec := tbl.tran.GetRecord(off)
 	return runtime.Row{runtime.DbRec{Record: rec, Off: off}}
+}
+
+func (tbl *Table) Select1(org string) {
+	var end string
+	if tbl.indexEncode {
+		end = org + ixkey.Sep + ixkey.Max
+	} else {
+		end = org + "\x00"
+	}
+	tbl.Select(org, end)
 }
 
 func (tbl *Table) Select(org, end string) {
