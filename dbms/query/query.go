@@ -86,8 +86,9 @@ type Query interface {
 
 	Get(dir runtime.Dir) runtime.Row
 
+	// Select limits the query to the specified range.
+	// Pass "" for end to select a single value.
 	Select(org, end string)
-	Select1(key string)
 
 	Header() *runtime.Header
 	Output(rec runtime.Record)
@@ -398,10 +399,6 @@ func (*Query1) Lookup(string) runtime.Row {
 }
 
 func (*Query1) Select(string, string) {
-	panic("not implemented")
-}
-
-func (*Query1) Select1(string) {
 	panic("not implemented")
 }
 

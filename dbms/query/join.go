@@ -235,7 +235,7 @@ func (jn *Join) nextRow1(dir Dir) bool {
 	if jn.row1 == nil {
 		return false
 	}
-	jn.source2.Select1(jn.projectRow(jn.row1))
+	jn.source2.Select(jn.projectRow(jn.row1), "")
 	return true
 }
 

@@ -25,6 +25,7 @@ type block [blockSize]uint64
 
 type List struct {
 	blocks []*block
+	size   int
 }
 
 var zeroBlock block
@@ -32,7 +33,7 @@ var zeroBlock block
 type void struct{}
 
 type Builder struct {
-	less    func(x, y uint64) bool
+	less   func(x, y uint64) bool
 	block  *block // current block
 	i      int    // index in current block
 	blocks []*block
@@ -79,13 +80,14 @@ func (b *Builder) Add(x uint64) {
 // Finish completes sorting and merging and returns the ordered List.
 // No more values should be added after this.
 func (b *Builder) Finish() List {
+	size := len(b.blocks)*blockSize + b.i
 	if b.done == nil {
 		if b.block != nil { // partial last block
 			b.block[b.i] = 0 // terminator
 			b.blocks = append(b.blocks, b.block)
 			b.block = nil
 		}
-		return List{b.blocks}
+		return List{blocks: b.blocks, size: size}
 	}
 	if b.done != nil {
 		<-b.done
@@ -101,7 +103,7 @@ func (b *Builder) Finish() List {
 		b.merges(len(b.blocks))
 	}
 	b.finishMerges()
-	return List{b.blocks}
+	return List{blocks: b.blocks, size: size}
 }
 
 // Sort sorts the list by the given compare function.
@@ -244,7 +246,7 @@ func (mo *mergeOutput) add(x uint64) {
 // ablock handles sorting a possibly partial block
 type ablock struct {
 	*block
-	n   int
+	n    int
 	less func(x, y uint64) bool
 }
 
@@ -290,46 +292,89 @@ func (b *Builder) Iter() func() uint64 {
 // Iter is used by tempindex
 type Iter struct {
 	blocks []*block
-	bi     int
+	size   int
+	less   func(x uint64, key string) bool
 	i      int
+	state
 }
 
-func (list List) Iter() *Iter {
-	return &Iter{blocks: list.blocks, bi: 0, i: -1}
+type state int
+
+const (
+	rewound state = 1
+	eof     state = 2
+)
+
+func (list List) Iter(less func(x uint64, key string) bool) *Iter {
+	return &Iter{blocks: list.blocks, size: list.size, state: rewound, less: less}
 }
 
 func (it *Iter) Rewind() {
-	it.bi = 0
+	it.state = rewound
 	it.i = -1
 }
 
-func (it *Iter) Next() uint64 {
-	it.i++
-	if it.i >= blockSize {
-		it.bi++
-		if it.bi >= len(it.blocks) {
-			return 0 // eof
-		}
+func (it *Iter) Next() {
+	switch it.state {
+	case rewound:
 		it.i = 0
+		it.state = 0
+	case eof:
+		// stick
+	default:
+		it.i++
+		if it.i >= it.size {
+			it.state = eof
+		}
 	}
-	return it.blocks[it.bi][it.i]
 }
 
-func (it *Iter) Prev() uint64 {
-	if it.i == -1 && it.bi == 0 { // rewound
-		it.bi = len(it.blocks) - 1
-		b := it.blocks[it.bi]
-		for it.i = blockSize - 1; b[it.i] == 0; it.i-- {
-		}
-	} else {
+func (it *Iter) Prev() {
+	switch it.state {
+	case rewound:
+		it.i = it.size - 1
+		it.state = 0
+	case eof:
+		// stick
+	default:
 		it.i--
 		if it.i < 0 {
-			it.bi--
-			if it.bi < 0 {
-				return 0 // eof
-			}
-			it.i = 0
+			it.state = eof
 		}
 	}
-	return it.blocks[it.bi][it.i]
+}
+
+func (it *Iter) Eof() bool {
+	return it.state == eof
+}
+
+func (it *Iter) Cur() uint64 {
+	assert.That(it.state == 0)
+	return it.blocks[it.i/blockSize][it.i%blockSize]
+}
+
+func (it *Iter) Seek(key string) {
+	first := 0
+	n := it.size
+	for n > 0 {
+		half := n >> 1
+		middle := first + half
+		if it.less(it.get(middle), key) {
+			first = middle + 1
+			n -= half + 1
+		} else {
+			n = half
+		}
+	}
+	if first >= it.size {
+		it.state = eof
+		it.i = -1
+	} else {
+		it.i = first
+		it.state = 0
+	}
+}
+
+func (it *Iter) get(i int) uint64 {
+	return it.blocks[i/blockSize][i%blockSize]
 }

@@ -43,6 +43,7 @@ func TestOverIter(t *testing.T) {
 		if expected == -1 {
 			assert.That(it.Eof())
 		} else {
+			assert.That(!it.Eof())
 			key, off := it.Cur()
 			assert.This(key).Is(strconv.Itoa(expected))
 			assert.This(off).Is(uint64(expected))

@@ -199,17 +199,14 @@ func (tbl *Table) Get(dir runtime.Dir) runtime.Row {
 	return runtime.Row{runtime.DbRec{Record: rec, Off: off}}
 }
 
-func (tbl *Table) Select1(org string) {
-	var end string
-	if tbl.indexEncode {
-		end = org + ixkey.Sep + ixkey.Max
-	} else {
-		end = org + "\x00"
-	}
-	tbl.Select(org, end)
-}
-
 func (tbl *Table) Select(org, end string) {
+	if end == "" {
+		if tbl.indexEncode {
+			end = org + ixkey.Sep + ixkey.Max
+		} else {
+			end = org + "\x00"
+		}
+	}
 	tbl.ensureIter()
 	tbl.iter.Range(index.Range{Org: org, End: end})
 }

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"math/rand"
 	"sort"
+	"strconv"
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/util/assert"
@@ -84,6 +85,63 @@ func (b *Builder) ckblocks(nitems int) {
 		n++
 	}
 	assert.This(n).Is(nitems)
+}
+
+//-------------------------------------------------------------------
+
+func TestIter(t *testing.T) {
+	b := NewSorting(func(x, y uint64) bool { return x < y })
+	for j := 1; j <= 10; j++ {
+		b.Add(uint64(j))
+	}
+	list := b.Finish()
+	less := func(x uint64, k string) bool {
+		y, _ := strconv.Atoi(k)
+		return x < uint64(y)
+	}
+	const eof = -1
+	it := list.Iter(less)
+	test := func(expected int) {
+		t.Helper()
+		if expected == eof {
+			assert.Msg(expected, "should be eof").That(it.Eof())
+		} else {
+			assert.Msg(expected, "should not be eof", ).That(!it.Eof())
+			assert.This(it.Cur()).Is(uint64(expected))
+		}
+	}
+	testNext := func(expected int) { it.Next(); t.Helper(); test(expected) }
+	testPrev := func(expected int) { it.Prev(); t.Helper(); test(expected) }
+
+	for i := 1; i <= 10; i++ {
+		testNext(i)
+	}
+	testNext(eof)
+
+	it.Rewind()
+	for i := 10; i >= 1; i-- {
+		testPrev(i)
+	}
+	testPrev(eof)
+
+	it.Rewind()
+	testNext(1)
+	testPrev(eof) // stick at eof
+	testPrev(eof)
+	testNext(eof)
+
+	it.Rewind()
+	testPrev(10)
+	testPrev(9)
+	testPrev(8)
+	testNext(9)
+	testNext(10) // last
+	testPrev(9)
+
+	for i := 1; i <= 10; i++ {
+		it.Seek(strconv.Itoa(i))
+		test(i)
+	}
 }
 
 //-------------------------------------------------------------------

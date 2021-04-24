@@ -352,13 +352,13 @@ func TestTableGet(t *testing.T) {
 		'e'	'emerald'	'vancouver'	970102	'disk'	200
 		'e'	'emerald'	'vancouver'	970103	'pencil'	300
 		'i'	'intercon'	'saskatoon'	''	''	''`)
-	// test("hist join customer",
-	// 	"customer^(id) JOIN 1:n by(id) (hist^(date) TEMPINDEX(id))",
-	// 	`date	item	id	cost	name	city
-	// 	970101	'disk'	'a'	100	'axon'	'saskatoon'
-	// 	970101	'disk'	'e'	200	'emerald'	'vancouver'
-	// 	970102	'mouse'	'c'	200	'calac'	'calgary'
-	// 	970103	'pencil'	'e'	300	'emerald'	'vancouver'`)
+	test("hist join customer",
+		"customer^(id) JOIN 1:n by(id) (hist^(date) TEMPINDEX(id))",
+		`id name	  city			date	item	 cost
+		'a'	'axon'	  'saskatoon'	970101	'disk'	 100
+		'c'	'calac'	  'calgary'		970102	'mouse'	 200
+		'e'	'emerald' 'vancouver'	970101	'disk'	 200
+		'e'	'emerald' 'vancouver'	970103	'pencil' 300`)
 
 	// where
 	test("customer where id > 'd'", // range

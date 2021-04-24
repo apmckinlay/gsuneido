@@ -196,7 +196,7 @@ func (spec *Spec) raw() bool {
 		(len(spec.Fields) == 1 && len(spec.Fields2) == 0)
 }
 
-// Decode is used for tests and debugging
+// Decode is for tests and debugging
 func Decode(comp string) []string {
 	if comp == "" {
 		return nil

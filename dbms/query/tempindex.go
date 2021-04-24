@@ -14,9 +14,13 @@ import (
 
 type TempIndex struct {
 	Query1
-	order []string
-	tran  QueryTran
-	iter  rowIter
+	order   []string
+	tran    QueryTran
+	srcHdr  *Header
+	iter    rowIter
+	rewound bool
+	selOrg  string
+	selEnd  string
 }
 
 func (ti *TempIndex) String() string {
@@ -33,23 +37,64 @@ func (ti *TempIndex) Rewind() {
 	if ti.iter != nil {
 		ti.iter.Rewind()
 	}
-	ti.source.Rewind()
+	ti.rewound = true
+}
+
+func (ti *TempIndex) Select(org, end string) {
+	if end == "" {
+		if len(ti.order) == 1 {
+			end = org + "\x00"
+		} else {
+			end = org + ixkey.Sep + ixkey.Max
+		}
+	}
+	ti.selOrg, ti.selEnd = org, end
+	ti.rewound = true
 }
 
 func (ti *TempIndex) Get(dir Dir) Row {
 	if ti.iter == nil {
+		ti.srcHdr = ti.source.Header()
 		if ti.source.SingleTable() {
 			ti.iter = ti.single()
 		} else {
 			ti.iter = ti.multi()
 		}
+		if ti.selEnd == "" {
+			ti.selEnd = ixkey.Max
+		}
+		ti.rewound = true
 	}
-	return ti.iter.Get(dir)
+	var row Row
+	if ti.rewound {
+		if dir == Next {
+			row = ti.iter.Seek(ti.selOrg)
+		} else { // Prev
+			row = ti.iter.Seek(ti.selEnd)
+			if row == nil {
+				ti.iter.Rewind()
+			}
+			row = ti.iter.Get(dir)
+		}
+		ti.rewound = false
+	} else {
+		row = ti.iter.Get(dir)
+	}
+	if row == nil || !ti.selected(row) {
+		return nil
+	}
+	return row
 }
 
 type rowIter interface {
 	Get(Dir) Row
 	Rewind()
+	Seek(key string) Row
+}
+
+func (ti *TempIndex) selected(row Row) bool {
+	key := ti.rowKey(row)
+	return ti.selOrg <= key && key < ti.selEnd
 }
 
 type singleIter struct {
@@ -58,7 +103,8 @@ type singleIter struct {
 }
 
 func (ti *TempIndex) single() rowIter {
-	b := sortlist.NewSorting(ti.tran.MakeLess(ti.ixspec()))
+	spec := ti.ixspec()
+	b := sortlist.NewSorting(ti.tran.MakeLess(spec))
 	for {
 		row := ti.source.Get(Next)
 		if row == nil {
@@ -66,12 +112,16 @@ func (ti *TempIndex) single() rowIter {
 		}
 		b.Add(row[0].Off)
 	}
-	return &singleIter{tran: ti.tran, iter: b.Finish().Iter()}
+	less := func(off uint64, key string) bool {
+		rec := ti.tran.GetRecord(off)
+		return spec.Key(rec) < key
+	}
+	return &singleIter{tran: ti.tran, iter: b.Finish().Iter(less)}
 }
 
 func (ti *TempIndex) ixspec() *ixkey.Spec {
-	fields := ti.source.Header().Fields[0]
-	flds := make([]int, len(fields))
+	fields := ti.srcHdr.Fields[0]
+	flds := make([]int, len(ti.order))
 	for i, f := range ti.order {
 		fi := str.List(fields).Index(f)
 		assert.That(fi >= 0)
@@ -81,17 +131,29 @@ func (ti *TempIndex) ixspec() *ixkey.Spec {
 }
 
 func (it singleIter) Get(dir Dir) Row {
-	var off uint64
 	if dir == Next {
-		off = it.iter.Next()
+		it.iter.Next()
 	} else {
-		off = it.iter.Prev()
+		it.iter.Prev()
 	}
-	if off == 0 {
+	if it.iter.Eof() {
 		return nil
 	}
+	return it.get()
+}
+
+func (it singleIter) get() Row {
+	if it.iter.Eof() {
+		return nil
+	}
+	off := it.iter.Cur()
 	dbrec := DbRec{Record: it.tran.GetRecord(off), Off: off}
 	return Row{dbrec}
+}
+
+func (it singleIter) Seek(key string) Row {
+	it.iter.Seek(key)
+	return it.get()
 }
 
 func (it singleIter) Rewind() {
@@ -144,26 +206,52 @@ func (ti *TempIndex) multi() rowIter {
 		}
 		b.Add(off)
 	}
-	it.iter = b.Finish().Iter()
+	less := func(off uint64, key string) bool {
+		row := it.get(off)
+		return ti.rowKey(row) < key
+	}
+	it.iter = b.Finish().Iter(less)
 	return &it
 }
 
+func (ti *TempIndex) rowKey(row Row) string {
+	if len(ti.order) == 1 {
+		return row.GetRaw(ti.srcHdr, ti.order[0])
+	}
+	var enc ixkey.Encoder
+	for _, col := range ti.order {
+		enc.Add(row.GetRaw(ti.srcHdr, col))
+	}
+	return enc.String()
+}
+
 const multiMask = 0xffff000000
+
+func (it *multiIter) Seek(key string) Row {
+	it.iter.Seek(key)
+	if it.iter.Eof() {
+		return nil
+	}
+	return it.get(it.iter.Cur())
+}
 
 func (it *multiIter) Rewind() {
 	it.iter.Rewind()
 }
 
 func (it *multiIter) Get(dir Dir) Row {
-	var off uint64
 	if dir == Next {
-		off = it.iter.Next()
+		it.iter.Next()
 	} else {
-		off = it.iter.Prev()
+		it.iter.Prev()
 	}
-	if off == 0 {
+	if it.iter.Eof() {
 		return nil
 	}
+	return it.get(it.iter.Cur())
+}
+
+func (it *multiIter) get(off uint64) Row {
 	row := make([]DbRec, it.nrecs)
 	buf := it.heap.Data(off)
 	var rec Record
