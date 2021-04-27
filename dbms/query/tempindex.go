@@ -40,15 +40,9 @@ func (ti *TempIndex) Rewind() {
 	ti.rewound = true
 }
 
-func (ti *TempIndex) Select(org, end string) {
-	if end == "" {
-		if len(ti.order) == 1 {
-			end = org + "\x00"
-		} else {
-			end = org + ixkey.Sep + ixkey.Max
-		}
-	}
-	ti.selOrg, ti.selEnd = org, end
+func (ti *TempIndex) Select(cols, orgs, ends []string) {
+	encode := len(ti.order) > 1
+	ti.selOrg, ti.selEnd = selKeys(encode, cols, ti.order, orgs, ends)
 	ti.rewound = true
 }
 

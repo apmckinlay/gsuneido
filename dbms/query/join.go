@@ -4,7 +4,6 @@
 package query
 
 import (
-	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/ints"
 	"github.com/apmckinlay/gsuneido/util/sset"
@@ -235,19 +234,16 @@ func (jn *Join) nextRow1(dir Dir) bool {
 	if jn.row1 == nil {
 		return false
 	}
-	jn.source2.Select(jn.projectRow(jn.row1), "")
+	jn.source2.Select(jn.by, jn.projectRow(jn.row1), nil)
 	return true
 }
 
-func (jn *Join) projectRow(row Row) string {
-	if !jn.encode {
-		return row.GetRaw(jn.hdr1, jn.by[0])
+func (jn *Join) projectRow(row Row) []string {
+	key := make([]string, len(jn.by))
+	for i, col := range jn.by {
+		key[i] = row.GetRaw(jn.hdr1, col)
 	}
-	enc := ixkey.Encoder{}
-	for _, col := range jn.by {
-		enc.Add(row.GetRaw(jn.hdr1, col))
-	}
-	return enc.String()
+	return key
 }
 
 // LeftJoin ---------------------------------------------------------

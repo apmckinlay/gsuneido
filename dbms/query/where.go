@@ -867,7 +867,7 @@ func (w *Where) Get(dir runtime.Dir) runtime.Row {
 
 func (w *Where) get(dir runtime.Dir) runtime.Row {
 	if w.idxSel == nil {
-		return w.tbl.Get(dir)
+		return w.source.Get(dir)
 	}
 	if w.idxSel.isRanges() {
 		return w.getRange(dir)
@@ -886,7 +886,7 @@ func (w *Where) getRange(dir runtime.Dir) runtime.Row {
 			return nil // eof
 		}
 		pr := w.idxSel.ptrngs[w.idxSelPos]
-		w.tbl.Select(pr.org, pr.end)
+		w.tbl.SelectRaw(pr.org, pr.end)
 		w.inRange = true
 	}
 }

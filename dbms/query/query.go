@@ -54,8 +54,6 @@ type Query interface {
 	// SetTran sets the transaction to be used by the query
 	SetTran(tran QueryTran)
 
-	// Header() runtime.Header
-
 	// Order() []string
 
 	// Fixed returns the field values that are constant from Extend or Where
@@ -86,9 +84,9 @@ type Query interface {
 
 	Get(dir runtime.Dir) runtime.Row
 
-	// Select limits the query to the specified range.
-	// Pass "" for end to select a single value.
-	Select(org, end string)
+	// Select limits the query to the specified range (of packed values).
+	// Pass nil for end to select a single value.
+	Select(cols, org, end []string)
 
 	Header() *runtime.Header
 	Output(rec runtime.Record)
@@ -398,7 +396,7 @@ func (*Query1) Lookup(string) runtime.Row {
 	panic("not implemented")
 }
 
-func (*Query1) Select(string, string) {
+func (*Query1) Select([]string, []string, []string) {
 	panic("not implemented")
 }
 
