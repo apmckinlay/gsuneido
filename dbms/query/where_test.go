@@ -160,14 +160,15 @@ func TestWhereNrows(t *testing.T) {
 		q.SetTran(testTran{})
 		q.Init()
 		w := q.(*Where)
+		assert.That(w.tbl != nil)
 		w.optInit()
 		assert.T(t).This(w.nrows()).Is(nrows)
 	}
-	test("tables where F()", 50)
-	test("columns where column > 'm'", 500)
-	test("tables where table < 3 and table > 3", 0) // conflict
-	test("tables where table is 1", 1)
-	test("tables where table in (1,2,3)", 3)
-	test("tables where table > 2 and table < 4", 20)
-	test("tables where table > 2 and table < 4 and tablename", 10)
+	test("table where F()", 50)
+	test("inven where item >= 5", 50)
+	test("inven where item < 3 and item > 3", 0) // conflict
+	test("inven where item is 1", 1)
+	test("inven where item in (1,2,3)", 3)
+	test("inven where item > 2 and item < 4", 20)
+	test("inven where item > 2 and item < 4 and qty", 10)
 }

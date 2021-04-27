@@ -34,6 +34,19 @@ func (t *tran) getSchema(table string) *meta.Schema {
 	panic("table not found: " + table)
 }
 
+func (t *tran) GetAllInfo() []*meta.Info {
+	infos := make([]*meta.Info, 0, 32)
+	t.meta.ForEachInfo(func(info *meta.Info) { infos = append(infos, info) })
+	return infos
+}
+
+func (t *tran) GetAllSchema() []*meta.Schema {
+	schemas := make([]*meta.Schema, 0, 32)
+	t.meta.ForEachSchema(
+		func(schema *meta.Schema) { schemas = append(schemas, schema) })
+	return schemas
+}
+
 //-------------------------------------------------------------------
 
 type ReadTran struct {

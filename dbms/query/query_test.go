@@ -19,15 +19,15 @@ func TestKeys(t *testing.T) {
 		// q = q.Transform()
 		assert.T(t).This(idxsToS(q.Keys())).Is(expected)
 	}
-	test("tables", "table, tablename")
+	test("tables", "table")
 	test("columns", "table+column")
 	test("columns rename column to col", "table+col")
-	test("tables extend x=1,b=2", "table, tablename")
-	test("tables intersect tables", "table, tablename")
+	test("tables extend x=1,b=2", "table")
+	test("tables intersect tables", "table")
 	test("abc intersect bcd", "b, c")
 	test("hist project item, cost", "item+cost")
 	test("hist2 project date, item", "date")
-	test("tables times inven", "table+item, tablename+item")
+	test("abc times inven", "b+item, c+item")
 	test("abc union abc", "a+b+c") // not disjoint
 	test("(bcd where b is 1) union (bcd where b is 2)", "b")
 }

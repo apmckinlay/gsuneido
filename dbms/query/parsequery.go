@@ -54,7 +54,7 @@ func (p *queryParser) source() Query {
 }
 
 func (p *queryParser) table() Query {
-	return &Table{name: p.MatchIdent()}
+	return NewTable(p.MatchIdent())
 }
 
 func (p *queryParser) operation(pq *Query) bool {

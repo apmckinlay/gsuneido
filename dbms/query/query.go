@@ -133,6 +133,8 @@ type Cost = int
 type QueryTran interface {
 	GetSchema(table string) *schema.Schema
 	GetInfo(table string) *meta.Info
+	GetAllInfo() []*meta.Info
+	GetAllSchema() []*meta.Schema
 	RangeFrac(table string, iIndex int, org, end string) float64
 	Lookup(table string, iIndex int, key string) *runtime.DbRec
 	Output(table string, rec runtime.Record)
@@ -487,8 +489,9 @@ func (*Query2) tagQuery2() {
 
 // paren is a helper to String methods
 func paren(q Query) string {
-	if tbl, ok := q.(*Table); ok {
-		return tbl.String()
+	switch q.(type) {
+	case *Table, *Tables, *Columns, *Indexes:
+		return q.String()
 	}
 	return "(" + q.String() + ")"
 }

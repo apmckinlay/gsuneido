@@ -15,11 +15,6 @@ import (
 type testTran struct{}
 
 var testSchemas = map[string]*Schema{
-	"tables": {Columns: []string{"table", "tablename"},
-		Indexes: []Index{{Mode: 'k', Columns: []string{"table"}},
-			{Mode: 'k', Columns: []string{"tablename"}}}},
-	"columns": {Columns: []string{"table", "column"},
-		Indexes: []Index{{Mode: 'k', Columns: []string{"table", "column"}}}},
 	"table": {Columns: []string{"a", "b", "c"},
 		Indexes: []Index{{Mode: 'k', Columns: []string{"a"}}}},
 	"table2": {Columns: []string{"c", "d", "e"},
@@ -78,6 +73,28 @@ func (testTran) GetInfo(table string) *meta.Info {
 		return ti
 	}
 	return &meta.Info{Nrows: 100, Size: 10000}
+}
+
+func (testTran) GetAllInfo() []*meta.Info {
+	infos := make([]*meta.Info, 0, len(testSchemas))
+	for table := range testSchemas {
+		info := meta.Info{Table: table, Nrows: 100, Size: 10000}
+		if ti, ok := testInfo[table]; ok {
+			info.Nrows, info.Size = ti.Nrows, ti.Size
+		}
+		infos = append(infos, &info)
+	}
+	return infos
+}
+
+func (testTran) GetAllSchema() []*meta.Schema {
+	schemas := make([]*meta.Schema, 0, len(testSchemas))
+	for table, schema := range testSchemas {
+		schema.Table = table
+		schemas = append(schemas,
+			&meta.Schema{Schema: *schema})
+	}
+	return schemas
 }
 
 func (t testTran) RangeFrac(table string, iIndex int, org, end string) float64 {

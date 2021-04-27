@@ -14,6 +14,19 @@ import (
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
+func NewTable(name string) Query {
+	switch name {
+	case "tables":
+		return &Tables{}
+	case "columns":
+		return &Columns{}
+	case "indexes":
+		return &Indexes{}
+	default:
+		return &Table{name: name}
+	}
+}
+
 type Table struct {
 	cache
 	name      string
@@ -213,7 +226,7 @@ func selKeys(encode bool, srcCols, dstCols, orgs, ends []string) (string, string
 	} else if !encode {
 		end = org + "\x00"
 	} else {
-			end = org + ixkey.Sep + ixkey.Max
+		end = org + ixkey.Sep + ixkey.Max
 	}
 	return org, end
 }
@@ -221,7 +234,7 @@ func selKeys(encode bool, srcCols, dstCols, orgs, ends []string) (string, string
 func selEncode(encode bool, srcCols, dstCols, vals []string) string {
 	if !encode {
 		return selGet(dstCols[0], srcCols, vals)
-		} else {
+	} else {
 		enc := ixkey.Encoder{}
 		for _, col := range dstCols {
 			enc.Add(selGet(col, srcCols, vals))

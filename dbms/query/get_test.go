@@ -34,8 +34,8 @@ func TestTableLookup(t *testing.T) {
 		row := q.(*Table).Lookup(key)
 		assert.T(t).This(fmt.Sprint(row)).Is(expected)
 	}
-	test("tables", key(123), "[<123>]")
-	test("columns", key(12, 34), "[<12, 34>]")
+	test("table", key(123), "[<123>]")
+	test("customer", key(12, 34), "[<12, 34>]")
 }
 
 func TestTableGet(t *testing.T) {
@@ -85,6 +85,83 @@ func TestTableGet(t *testing.T) {
 		assert.T(t).Msg("forward").This(get(q, rt.Next)).Like(expected)
 		assert.T(t).Msg("reverse").This(get(q, rt.Prev)).Like(expected)
 	}
+	test("indexes",
+		"indexes",
+		`table		columns			key
+        'alias'		'id'			true
+        'co'		'tnum'			true
+        'cus'		'cnum'			true
+        'cus'		'abbrev'		true
+        'customer'	'id'			true
+        'dates'		'date'			true
+        'hist'		'date'			false
+        'hist'		'date,item,id'	true
+        'hist2'		'date'			true
+        'hist2'		'id'			false
+        'inven'		'item'			true
+        'supplier'	'supplier'		true
+        'supplier'	'city'			false
+        'task'		'tnum'			true
+        'trans'		'item'			false
+        'trans'		'date,item,id'	true`)
+	test("columns",
+		"columns",
+		`table		column
+        'alias'		'id'
+        'alias'		'name2'
+        'co'		'tnum'
+        'co'		'signed'
+        'columns'	'table'
+        'columns'	'column'
+        'cus'		'cnum'
+        'cus'		'abbrev'
+        'cus'		'name'
+        'customer'	'id'
+        'customer'	'name'
+        'customer'	'city'
+        'dates'		'date'
+        'hist'		'date'
+        'hist'		'item'
+        'hist'		'id'
+        'hist'		'cost'
+        'hist2'		'date'
+        'hist2'		'item'
+        'hist2'		'id'
+        'hist2'		'cost'
+        'indexes'	'table'
+        'indexes'	'columns'
+        'indexes'	'key'
+        'inven'		'item'
+        'inven'		'qty'
+        'supplier'	'supplier'
+        'supplier'	'name'
+        'supplier'	'city'
+        'tables'	'table'
+        'tables'	'nrows'
+        'tables'	'totalsize'
+        'task'		'tnum'
+        'task'		'cnum'
+        'trans'		'item'
+        'trans'		'id'
+        'trans'		'cost'
+        'trans'		'date'`)
+	test("tables",
+		"tables",
+		`table		nrows	totalsize
+        'alias'		2		25
+        'co'		4		55
+        'columns'	0		0
+        'cus'		4		64
+        'customer'	4		98
+        'dates'		4		52
+        'hist'		4		91
+        'hist2'		3		68
+        'indexes'	16		0
+        'inven'		3		42
+        'supplier'	4		128
+        'tables'	14		0
+        'task'		8		95
+        'trans'		4		92`)
 	test("customer",
 		"customer^(id)",
 		`id	name	city

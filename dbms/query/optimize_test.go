@@ -18,12 +18,12 @@ func TestOptimize(t *testing.T) {
 		assert.T(t).Msg(query).This(q.String()).Like(expected)
 	}
 	mode = readMode
-	test("tables",
-		"tables^(table)")
-	test("tables sort tablename",
-		"tables^(tablename)")
-	test("columns sort table",
-		"columns^(table,column)")
+	test("table",
+		"table^(a)")
+	test("table sort a",
+		"table^(a)")
+	test("trans sort date",
+		"trans^(date,item,id)")
 	test("table sort c",
 		"table^(a) TEMPINDEX(c)")
 
@@ -55,16 +55,16 @@ func TestOptimize(t *testing.T) {
 		"table^(a) WHERE*1 a is 1 "+
 			"UNION-LOOKUP-DISJOINT(a) (table^(a) WHERE*1 a is 2)")
 
-	test("tables project table",
-		"tables^(table) PROJECT-COPY table")
-	test("tables project tablename sort tablename",
-		"tables^(tablename) PROJECT-COPY tablename")
+	test("table project a",
+		"table^(a) PROJECT-COPY a")
+	test("table project a sort a",
+		"table^(a) PROJECT-COPY a")
 	test("abc project a",
 		"abc^(a) PROJECT-SEQ a")
-	test("columns project column",
-		"columns^(table,column) PROJECT-LOOKUP column")
-	test("columns where table is 1 project column",
-		"columns^(table,column) WHERE table is 1 PROJECT-COPY column")
+	test("comp project b",
+		"comp^(a,b,c) PROJECT-LOOKUP b")
+	test("comp where a is 1 and b is 2 project c",
+		"comp^(a,b,c) WHERE a is 1 and b is 2 PROJECT-COPY c")
 	test("customer project id,name",
 		"customer^(id) PROJECT-COPY id, name")
 	test("trans project item",
@@ -110,14 +110,12 @@ func TestOptimize(t *testing.T) {
 		"co^(tnum) JOIN 1:1 by(tnum) task^(tnum)")
 	test("customer join alias",
 		"alias^(id) JOIN 1:1 by(id) customer^(id)")
-	test("tables join columns",
-		"tables^(table) JOIN 1:n by(table) columns^(table,column)")
-	test("(tables join columns) union (tables join columns)",
-		"(tables^(table) JOIN 1:n by(table) columns^(table,column))"+
-			"	TEMPINDEX(table,column) "+
+	test("(inven join trans) union (inven join trans)",
+		"(inven^(item) JOIN 1:n by(item) trans^(item))"+
+			"	TEMPINDEX(date,item,id) "+
 			"UNION-MERGE "+
-			"((tables^(table) JOIN 1:n by(table) columns^(table,column))"+
-			"	TEMPINDEX(table,column))")
+			"((inven^(item) JOIN 1:n by(item) trans^(item))"+
+			"	TEMPINDEX(date,item,id))")
 	test("task join co join cus",
 		"(co^(tnum) JOIN 1:1 by(tnum) task^(tnum)) "+
 			"JOIN n:1 by(cnum) cus^(cnum)")
@@ -138,10 +136,10 @@ func TestOptimize(t *testing.T) {
 		"table^(a) TEMPINDEX(c) RENAME b to bb")
 
 	mode = cursorMode
-	test("(tables join columns) union (tables join columns)",
-		"(tables^(table) JOIN 1:n by(table) columns^(table,column)) "+
+	test("(inven join trans) union (inven join trans)",
+		"(inven^(item) JOIN 1:n by(item) trans^(item)) "+
 			"UNION-LOOKUP "+
-			"(columns^(table,column) JOIN n:1 by(table) tables^(table))")
+			"(trans^(date,item,id) JOIN n:1 by(item) inven^(item))")
 	test("trans join customer",
 		"trans^(date,item,id) JOIN n:1 by(id) customer^(id)")
 	test("trans join inven join customer",
