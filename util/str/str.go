@@ -209,6 +209,14 @@ func Join(fmt string, list []string) string {
 	return sb.String()
 }
 
+// Split returns nil if s is "", otherwise it returns strings.Split
+func Split(s, sep string) []string {
+	if s == "" {
+		return nil
+	}
+	return strings.Split(s, sep)
+}
+
 // Subi returns the substring specified by a starting index and a limit index
 // allowing indexes to exceed the string
 func Subi(s string, i, j int) string {
