@@ -24,3 +24,7 @@ func (rm *Remove) Transform() Query {
 	p := &Project{Query1: rm.Query1, columns: cols}
 	return p.Transform()
 }
+
+func (*Remove) Select([]string, []string) {
+	panic("shouldn't reach here")
+}

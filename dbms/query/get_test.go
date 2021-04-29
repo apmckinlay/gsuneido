@@ -81,7 +81,8 @@ func TestTableGet(t *testing.T) {
 		q := ParseQuery(query)
 		tran := sizeTran{db.NewReadTran()}
 		Setup(q, readMode, tran)
-		assert.T(t).This(q.String()).Is(strategy)
+		qs := strings.ReplaceAll(q.String(), `"`, "'")
+		assert.T(t).This(qs).Is(strategy)
 		assert.T(t).Msg("forward").This(get(q, rt.Next)).Like(expected)
 		assert.T(t).Msg("reverse").This(get(q, rt.Prev)).Like(expected)
 	}
@@ -396,6 +397,7 @@ func TestTableGet(t *testing.T) {
 		'pencil'	'e'	300	970103
 		'eraser'	'c'	150	970201`)
 
+	// join
 	test("customer join alias",
 		"customer^(id) JOIN 1:1 by(id) alias^(id)",
 		`id	name	city	name2
@@ -467,7 +469,7 @@ func TestTableGet(t *testing.T) {
 		'disk'	5
 		'pencil'	7`)
 	test("inven where item in ('disk', 'mouse', 'pencil')", // points
-		`inven^(item) WHERE item in ("disk", "mouse", "pencil")`,
+		"inven^(item) WHERE item in ('disk', 'mouse', 'pencil')",
 		`item	qty
 		'disk'	5
 		'mouse'	2

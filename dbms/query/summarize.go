@@ -492,6 +492,11 @@ func (su *Summarize) seqRow(curRow Row, sums []sumOp) Row {
 	return row
 }
 
+func (su *Summarize) Select(cols, org []string) {
+	su.source.Select(cols, org)
+	su.rewound = true
+}
+
 // operations -------------------------------------------------------
 
 func (su *Summarize) newSums() []sumOp {

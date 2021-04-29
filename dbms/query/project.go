@@ -531,3 +531,11 @@ func (p *Project) Output(rec runtime.Record) {
 	}
 	p.source.Output(rec)
 }
+
+func (p *Project) Select(cols, org []string) {
+	p.source.Select(cols, org)
+	if p.strategy == projLookup {
+		p.indexed = false
+	}
+	p.rewound = true
+}

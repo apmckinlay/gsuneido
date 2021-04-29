@@ -234,7 +234,7 @@ func (jn *Join) nextRow1(dir Dir) bool {
 	if jn.row1 == nil {
 		return false
 	}
-	jn.source2.Select(jn.by, jn.projectRow(jn.row1), nil)
+	jn.source2.Select(jn.by, jn.projectRow(jn.row1))
 	return true
 }
 
@@ -244,6 +244,11 @@ func (jn *Join) projectRow(row Row) []string {
 		key[i] = row.GetRaw(jn.hdr1, col)
 	}
 	return key
+}
+
+func (jn *Join) Select(cols, org []string) {
+	jn.source.Select(cols, org)
+	jn.row2 = nil
 }
 
 // LeftJoin ---------------------------------------------------------

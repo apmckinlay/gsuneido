@@ -75,3 +75,7 @@ func (sort *Sort) Get(dir runtime.Dir) runtime.Row {
 	}
 	return sort.source.Get(dir)
 }
+
+func (sort *Sort) Select(cols, org []string) {
+	sort.source.Select(cols, org)
+}

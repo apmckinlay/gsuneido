@@ -80,4 +80,8 @@ func (m *Minus) Get(dir runtime.Dir) runtime.Row {
 	}
 }
 
+func (m *Minus) Select(cols, org []string) {
+	m.source.Select(cols, org)
+}
+
 // COULD have a "merge" strategy (like Union)

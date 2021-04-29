@@ -73,7 +73,7 @@ func (st *schemaTable) Lookup(string) Row {
 	panic("shouldn't reach here")
 }
 
-func (st *schemaTable) Select(cols, orgs, ends []string) {
+func (st *schemaTable) Select([]string, []string) {
 	panic("shouldn't reach here")
 }
 

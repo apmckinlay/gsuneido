@@ -39,6 +39,8 @@ type Where struct {
 	idxSelPos int
 	inRange   bool
 	hdr       *runtime.Header
+	selOrg string
+	selEnd string
 }
 
 type whereApproach struct {
@@ -621,20 +623,20 @@ func packToStr(s string) string {
 //-------------------------------------------------------------------
 
 type idxSel struct {
-	index  []string
-	ptrngs []pointRange
-	frac   float64
+	index   []string
+	encoded bool
+	ptrngs  []pointRange
+	frac    float64
 }
 
 func (is idxSel) String() string {
-	encode := len(is.index) > 1
 	s := str.Join(",", is.index)
 	sep := ": "
 	for _, pr := range is.ptrngs {
-		s += sep + showKey(encode, pr.org)
+		s += sep + showKey(is.encoded, pr.org)
 		sep = " | "
 		if pr.isRange() {
-			s += ".." + showKey(encode, pr.end)
+			s += ".." + showKey(is.encoded, pr.end)
 		}
 	}
 	if is.frac != 0 {
@@ -699,7 +701,7 @@ func (w *Where) colSelsToIdxSels(colSels map[string]filter) []idxSel {
 				}
 			}
 			frac := w.idxFrac(idx, comp)
-			idxSel := idxSel{index: idx, ptrngs: comp, frac: frac}
+			idxSel := idxSel{index: idx, ptrngs: comp, frac: frac, encoded: encode}
 			w.singleton = w.singleton || idxSel.singleton()
 			idxSels = append(idxSels, idxSel)
 		}
@@ -918,4 +920,23 @@ func (w *Where) advance(dir runtime.Dir) bool {
 func (w *Where) Rewind() {
 	w.source.Rewind()
 	w.idxSelPos = -1
+}
+
+func (w *Where) Select(cols, vals []string) {
+	if w.conflict {
+		return
+	}
+	// same as selKeys, but with fixed
+	if !w.idxSel.encoded {
+		w.selOrg = selGet(w.idxSel.index[0], cols, vals)
+		w.selEnd = w.selOrg + "\x00"
+	} else {
+		enc := ixkey.Encoder{}
+		for _, col := range w.idxSel.index {
+			//TODO fixed
+			enc.Add(selGet(col, cols, vals))
+		}
+		w.selOrg = enc.String()
+		w.selEnd = w.selOrg + ixkey.Sep + ixkey.Max
+	}
 }

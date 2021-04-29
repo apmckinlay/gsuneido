@@ -213,17 +213,15 @@ func (tbl *Table) Get(dir runtime.Dir) runtime.Row {
 	return runtime.Row{runtime.DbRec{Record: rec, Off: off}}
 }
 
-func (tbl *Table) Select(cols, orgs, ends []string) {
-	org, end := selKeys(tbl.indexEncode, cols, tbl.index, orgs, ends)
+func (tbl *Table) Select(cols, orgs []string) {
+	org, end := selKeys(tbl.indexEncode, cols, tbl.index, orgs)
 	tbl.SelectRaw(org, end)
 }
 
-func selKeys(encode bool, srcCols, dstCols, orgs, ends []string) (string, string) {
+func selKeys(encode bool, srcCols, dstCols, orgs []string) (string, string) {
 	org := selEncode(encode, srcCols, dstCols, orgs)
 	var end string
-	if ends != nil {
-		end = selEncode(encode, srcCols, dstCols, ends)
-	} else if !encode {
+	if !encode {
 		end = org + "\x00"
 	} else {
 		end = org + ixkey.Sep + ixkey.Max
@@ -234,13 +232,12 @@ func selKeys(encode bool, srcCols, dstCols, orgs, ends []string) (string, string
 func selEncode(encode bool, srcCols, dstCols, vals []string) string {
 	if !encode {
 		return selGet(dstCols[0], srcCols, vals)
-	} else {
-		enc := ixkey.Encoder{}
-		for _, col := range dstCols {
-			enc.Add(selGet(col, srcCols, vals))
-		}
-		return enc.String()
 	}
+	enc := ixkey.Encoder{}
+	for _, col := range dstCols {
+		enc.Add(selGet(col, srcCols, vals))
+	}
+	return enc.String()
 }
 
 func selGet(col string, cols, vals []string) string {

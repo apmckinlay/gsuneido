@@ -5,9 +5,10 @@ package query
 
 import (
 	"github.com/apmckinlay/gsuneido/compile/ast"
-	"github.com/apmckinlay/gsuneido/runtime"
+	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/sset"
 	"github.com/apmckinlay/gsuneido/util/str"
+	"github.com/apmckinlay/gsuneido/util/strs"
 )
 
 type Extend struct {
@@ -16,7 +17,7 @@ type Extend struct {
 	exprs    []ast.Expr // modified by Project.transform
 	exprCols []string
 	fixed    []Fixed
-	hdr      *runtime.Header
+	hdr      *Header
 }
 
 func (e *Extend) Init() {
@@ -130,7 +131,7 @@ func (e *Extend) Fixed() []Fixed {
 		if expr := e.exprs[i]; expr != nil {
 			if c, ok := expr.(*ast.Constant); ok {
 				e.fixed = append(e.fixed,
-					Fixed{col: e.cols[i], values: []runtime.Value{c.Val}})
+					Fixed{col: e.cols[i], values: []Value{c.Val}})
 			}
 		}
 	}
@@ -155,14 +156,14 @@ func (e *Extend) setApproach(index []string, _ interface{}, tran QueryTran) {
 
 // execution --------------------------------------------------------
 
-func (e *Extend) Header() *runtime.Header {
+func (e *Extend) Header() *Header {
 	hdr := e.source.Header()
 	cols := sset.Union(hdr.Columns, e.cols)
 	flds := append(hdr.Fields, e.cols)
-	return runtime.NewHeader(flds, cols)
+	return NewHeader(flds, cols)
 }
 
-func (e *Extend) Get(dir runtime.Dir) runtime.Row {
+func (e *Extend) Get(dir Dir) Row {
 	row := e.source.Get(dir)
 	if row == nil {
 		return nil // eof
@@ -170,16 +171,28 @@ func (e *Extend) Get(dir runtime.Dir) runtime.Row {
 	if e.hdr == nil {
 		e.hdr = e.Header()
 	}
-	var th runtime.Thread // ???
+	var th Thread // ???
 	context := ast.Context{T: &th,
-		Rec: runtime.SuRecordFromRow(row, e.hdr, nil)}
-	var rb runtime.RecordBuilder
+		Rec: SuRecordFromRow(row, e.hdr, nil)}
+	var rb RecordBuilder
 	for i, col := range e.cols {
 		if e := e.exprs[i]; e != nil {
 			val := e.Eval(&context)
-			rb.Add(val.(runtime.Packable))
-			context.Rec.PreSet(runtime.SuStr(col), val)
+			rb.Add(val.(Packable))
+			context.Rec.PreSet(SuStr(col), val)
 		}
 	}
-	return append(row, runtime.DbRec{Record: rb.Build()})
+	return append(row, DbRec{Record: rb.Build()})
+}
+
+func (e *Extend) Select(cols, org []string) {
+	cols = strs.Cow(cols)
+	org = strs.Cow(org)
+	for _, fix := range e.Fixed() {
+		if len(fix.values) == 1 {
+			cols = append(cols, fix.col)
+			org = append(org, Pack(fix.values[0].(Packable)))
+		}
+	}
+	e.source.Select(cols, org)
 }
