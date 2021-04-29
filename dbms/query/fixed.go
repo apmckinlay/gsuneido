@@ -7,7 +7,12 @@ import "github.com/apmckinlay/gsuneido/runtime"
 
 type Fixed struct {
 	col    string
-	values []runtime.Value
+	values []string
+}
+
+func NewFixed(col string, val runtime.Value) Fixed {
+	packed := runtime.Pack(val.(runtime.Packable))
+	return Fixed{col: col, values: []string{packed}}
 }
 
 func fixedStr(fixed []Fixed) string {
@@ -24,7 +29,7 @@ func (f *Fixed) String() string {
 	s := f.col + "=("
 	sep := ""
 	for _, v := range f.values {
-		s += sep + v.String()
+		s += sep + runtime.Unpack(v).String()
 		sep = ","
 	}
 	return s + ")"

@@ -88,8 +88,7 @@ func (w *Where) addFixed(e ast.Expr) {
 	if b, ok := e.(*ast.Binary); ok && b.Tok == tok.Is {
 		if id, ok := b.Lhs.(*ast.Ident); ok {
 			if c, ok := b.Rhs.(*ast.Constant); ok {
-				w.fixed = append(w.fixed,
-					Fixed{col: id.Name, values: []runtime.Value{c.Val}})
+				w.fixed = append(w.fixed, NewFixed(id.Name, c.Val))
 			}
 		}
 	}

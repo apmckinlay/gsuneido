@@ -130,8 +130,7 @@ func (e *Extend) Fixed() []Fixed {
 	for i := 0; i < len(e.cols); i++ {
 		if expr := e.exprs[i]; expr != nil {
 			if c, ok := expr.(*ast.Constant); ok {
-				e.fixed = append(e.fixed,
-					Fixed{col: e.cols[i], values: []Value{c.Val}})
+				e.fixed = append(e.fixed, NewFixed(e.cols[i], c.Val))
 			}
 		}
 	}
@@ -191,7 +190,7 @@ func (e *Extend) Select(cols, org []string) {
 	for _, fix := range e.Fixed() {
 		if len(fix.values) == 1 {
 			cols = append(cols, fix.col)
-			org = append(org, Pack(fix.values[0].(Packable)))
+			org = append(org, fix.values[0])
 		}
 	}
 	e.source.Select(cols, org)

@@ -115,24 +115,24 @@ func (u *Union) Fixed() []Fixed {
 		for _, f2 := range fixed2 {
 			if f1.col == f2.col {
 				u.fixed = append(u.fixed,
-					Fixed{f1.col, vUnion(f1.values, f2.values)})
+					Fixed{f1.col, sset.Union(f1.values, f2.values)})
 				break
 			}
 		}
 	}
 	cols2 := u.source2.Columns()
-	emptyStr := []Value{EmptyStr}
+	emptyStr := []string{""}
 	for _, f1 := range fixed1 {
 		if !sset.Contains(cols2, f1.col) {
 			u.fixed = append(u.fixed,
-				Fixed{f1.col, vUnion(f1.values, emptyStr)})
+				Fixed{f1.col, sset.Union(f1.values, emptyStr)})
 		}
 	}
 	cols1 := u.source.Columns()
 	for _, f2 := range fixed2 {
 		if !sset.Contains(cols1, f2.col) {
 			u.fixed = append(u.fixed,
-				Fixed{f2.col, vUnion(f2.values, emptyStr)})
+				Fixed{f2.col, sset.Union(f2.values, emptyStr)})
 		}
 	}
 	return u.fixed

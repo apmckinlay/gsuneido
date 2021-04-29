@@ -7,13 +7,12 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
 func TestPrefixed(t *testing.T) {
 	p := Project{}
-	oneval := []runtime.Value{nil}
+	oneval := []string{""}
 	fixed := []Fixed{{col: "f1", values: oneval}, {col: "f2", values: oneval}}
 	test := func(sidx, scols string) {
 		t.Helper()
