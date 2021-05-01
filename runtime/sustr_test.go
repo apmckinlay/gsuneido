@@ -45,7 +45,7 @@ func TestEscape(t *testing.T) {
 	test(`foo'"bar`, bq(`foo'"bar`))
 	test("foo'\"\tbar", dq(`foo'\"\tbar`))
 	test(`\/`, bq(`\/`))
-	test("\x00\xff", dq(`\x00\xff`))
+	test("\x00\x01\x05\x0c\x0f\xf0\xff", dq(`\x00\x01\x05\x0c\x0f\xf0\xff`))
 	test("\n", sq(`\n`))
 	which = 2
 	test(`\`, dq(`\\`))

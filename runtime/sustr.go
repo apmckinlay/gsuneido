@@ -169,7 +169,7 @@ func escape(s string, q byte) string {
 		default:
 			if c < ' ' || '~' < c {
 				buf = append(buf, '\\', 'x')
-				if c < 10 {
+				if c < 16 {
 					buf = append(buf, '0')
 				}
 				buf = strconv.AppendInt(buf, int64(c), 16)
