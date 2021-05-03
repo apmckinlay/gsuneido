@@ -4,6 +4,7 @@
 package runtime
 
 import (
+	"math/rand"
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/compile/lexer"
@@ -23,7 +24,7 @@ func TestEscape(t *testing.T) {
 		it := lxr.Next()
 		assert.This(it.Token == tokens.String)
 		if it.Text != s {
-			t.Errorf("%d want %q got %q", which, s, it.Text)
+			t.Errorf("%d\nwant %x\n got %x\n via %s", which, s, it.Text, got)
 		}
 	}
 	sq := func(s string) string {
@@ -47,6 +48,44 @@ func TestEscape(t *testing.T) {
 	test(`\/`, bq(`\/`))
 	test("\x00\x01\x05\x0c\x0f\xf0\xff", dq(`\x00\x01\x05\x0c\x0f\xf0\xff`))
 	test("\n", sq(`\n`))
+	test("\x19\x09", dq(`\x19\t`))
 	which = 2
 	test(`\`, dq(`\\`))
+
+	for which = 0; which <= 2; which++ {
+		// every 1 and 2 byte combination
+		buf := make([]byte, 2)
+		for i := 0; i < 256; i++ {
+			buf[0] = byte(i)
+			test(string(buf[:1]), "")
+			for j := 0; j < 256; j++ {
+				buf[1] = byte(j)
+				test(string(buf), "")
+			}
+		}
+
+		N := 10000
+		if testing.Short() {
+			N = 100
+		}
+
+		// random 8 byte strings
+		buf = make([]byte, 8)
+		for i := 0; i < N; i++ {
+			for i := range buf {
+				buf[i] = byte(rand.Intn(256))
+			}
+			test(string(buf), "")
+		}
+
+		// shuffles of all possible bytes
+		buf = make([]byte, 256)
+		for i := 0; i < 256; i++ {
+			buf[i] = byte(i)
+		}
+		for i := 0; i < N; i++ {
+			rand.Shuffle(256, func(i, j int) { buf[i], buf[j] = buf[j], buf[i] })
+			test(string(buf), "")
+		}
+	}
 }

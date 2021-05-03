@@ -13,7 +13,6 @@ import (
 	"github.com/apmckinlay/gsuneido/util/hash"
 	"github.com/apmckinlay/gsuneido/util/ints"
 	"github.com/apmckinlay/gsuneido/util/pack"
-	"github.com/apmckinlay/gsuneido/util/str"
 )
 
 // SuStr is a string Value
@@ -160,12 +159,7 @@ func escape(s string, q byte) string {
 		case '\n':
 			buf = append(buf, '\\', 'n')
 		case '\\':
-			if i+1 == len(s) ||
-				(i+1 < len(s) && str.Contains(`trnx\'"`, s[i+1])) {
-				buf = append(buf, '\\', '\\')
-			} else {
-				buf = append(buf, '\\')
-			}
+			buf = append(buf, '\\', '\\')
 		default:
 			if c < ' ' || '~' < c {
 				buf = append(buf, '\\', 'x')
