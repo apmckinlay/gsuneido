@@ -414,9 +414,9 @@ func (w *Where) bestIndex(order []string) (Cost, []string) {
 	if w.singleton {
 		order = nil
 	}
-	best := bestIndex{cost: impossible}
+	best := newBestIndex()
 	for _, idx := range w.source.Indexes() {
-		if w.prefixed(idx, order, w.fixed) {
+		if ordered(idx, order, w.fixed) {
 			if is := w.getIdxSel(idx); is != nil {
 				cost := w.source.lookupCost() * len(is.ptrngs)
 				if is.isRanges() {

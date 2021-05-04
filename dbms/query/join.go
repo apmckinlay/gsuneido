@@ -6,8 +6,9 @@ package query
 import (
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/ints"
+	"github.com/apmckinlay/gsuneido/util/setord"
+	"github.com/apmckinlay/gsuneido/util/setset"
 	"github.com/apmckinlay/gsuneido/util/sset"
-	"github.com/apmckinlay/gsuneido/util/ssset"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
@@ -24,6 +25,7 @@ type Join struct {
 
 type joinApproach struct {
 	reverse bool
+	index2  []string
 }
 
 type joinType int
@@ -95,13 +97,13 @@ func (jn *Join) Columns() []string {
 func (jn *Join) Indexes() [][]string {
 	// can really only provide source.indexes() but optimize may swap.
 	// optimize will return impossible for source2 indexes.
-	return ssset.Union(jn.source.Indexes(), jn.source2.Indexes())
+	return setord.Union(jn.source.Indexes(), jn.source2.Indexes())
 }
 
 func (jn *Join) Keys() [][]string {
 	switch jn.joinType {
 	case one_one:
-		return ssset.Union(jn.source.Keys(), jn.source2.Keys())
+		return setset.Union(jn.source.Keys(), jn.source2.Keys())
 	case one_n:
 		return jn.source2.Keys()
 	case n_one:
@@ -123,19 +125,20 @@ func (jn *Join) Transform() Query {
 
 func (jn *Join) optimize(mode Mode, index []string) (Cost, interface{}) {
 	defer be(gin("Join", jn, index))
-	cost := jn.opt(jn.source, jn.source2, jn.joinType, mode, index)
-	cost2 := outOfOrder +
-		jn.opt(jn.source2, jn.source, jn.joinType.reverse(), mode, index)
-	trace("cost1", cost, "cost2 (reverse)", cost2)
+	fwd := jn.opt(jn.source, jn.source2, jn.joinType, mode, index)
+	rev := jn.opt(jn.source2, jn.source, jn.joinType.reverse(), mode, index)
+	rev.cost += outOfOrder
+	trace("forward", fwd, "reverse", rev)
 	approach := &joinApproach{}
-	if cost2 < cost {
-		cost = cost2
+	if rev.cost < fwd.cost {
+		fwd = rev
 		approach.reverse = true
 	}
-	if cost >= impossible {
+	if fwd.index == nil {
 		return impossible, nil
 	}
-	return cost, approach
+	approach.index2 = fwd.index
+	return fwd.cost, approach
 }
 
 func (jt joinType) reverse() joinType {
@@ -149,24 +152,25 @@ func (jt joinType) reverse() joinType {
 }
 
 func (jn *Join) opt(src1, src2 Query, joinType joinType,
-	mode Mode, index []string) Cost {
+	mode Mode, index []string) bestIndex {
 	trace("OPT", paren(src1), "JOIN", joinType, paren(src2))
 	// always have to read all of source 1
 	cost1 := Optimize(src1, mode, index)
 	if cost1 >= impossible {
-		return impossible
+		return newBestIndex()
 	}
-	cost2 := Optimize(src2, mode, jn.by)
-	if cost2 >= impossible {
-		return impossible
+	best := bestGrouped(src2, mode, nil, jn.by)
+	if best.index == nil {
+		return best
 	}
 	nrows1 := src1.nrows()
 	// should only be taking a portion of the variable cost2,
 	// not the fixed temp index cost2 (so 2/3 instead of 1/2)
-	cost := cost1 + (nrows1 * src2.lookupCost()) + (cost2 * 2 / 3)
+	cost := cost1 + (nrows1 * src2.lookupCost()) + (best.cost * 2 / 3)
 	trace("join opt", cost1, "+ (", nrows1, "*", src2.lookupCost(), ") + (",
-		cost2, "* 2/3 ) =", cost)
-	return cost
+		best.cost, "* 2/3 ) =", cost)
+	best.cost = cost
+	return best
 }
 
 func (jn *Join) setApproach(index []string, approach interface{}, tran QueryTran) {
@@ -176,8 +180,8 @@ func (jn *Join) setApproach(index []string, approach interface{}, tran QueryTran
 		jn.joinType = jn.joinType.reverse()
 	}
 	jn.source = SetApproach(jn.source, index, tran)
-	jn.source2 = SetApproach(jn.source2, jn.by, tran)
-	jn.encode = len(jn.by) > 1 || !ssset.Contains(jn.source2.Keys(), jn.by)
+	jn.source2 = SetApproach(jn.source2, ap.index2, tran)
+	jn.encode = len(jn.by) > 1 || !setset.Contains(jn.source2.Keys(), jn.by)
 }
 
 func (jn *Join) nrows() int {
@@ -282,15 +286,14 @@ func (lj *LeftJoin) Transform() Query {
 }
 
 func (lj *LeftJoin) optimize(mode Mode, index []string) (Cost, interface{}) {
-	approach := &joinApproach{}
-	cost := lj.opt(lj.source, lj.source2, lj.joinType, mode, index)
-	return cost, approach
+	best := lj.opt(lj.source, lj.source2, lj.joinType, mode, index)
+	return best.cost, &joinApproach{index2: best.index}
 }
 
 func (lj *LeftJoin) setApproach(index []string, _ interface{}, tran QueryTran) {
 	lj.source = SetApproach(lj.source, index, tran)
 	lj.source2 = SetApproach(lj.source2, lj.by, tran)
-	lj.encode = len(lj.by) > 1 || !ssset.Contains(lj.source2.Keys(), lj.by)
+	lj.encode = len(lj.by) > 1 || !setset.Contains(lj.source2.Keys(), lj.by)
 }
 
 func (lj *LeftJoin) nrows() int {

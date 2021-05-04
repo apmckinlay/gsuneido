@@ -10,7 +10,7 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/meta"
 	"github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util/ssset"
+	"github.com/apmckinlay/gsuneido/util/setset"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
@@ -162,7 +162,7 @@ func (tbl *Table) findIndex(index []string) int {
 
 func (tbl *Table) setApproach(_ []string, approach interface{}, _ QueryTran) {
 	tbl.index = approach.(tableApproach).index
-	tbl.indexEncode = len(tbl.index) > 1 || !ssset.Contains(tbl.keys, tbl.index)
+	tbl.indexEncode = len(tbl.index) > 1 || !setset.Contains(tbl.keys, tbl.index)
 }
 
 // lookupCost returns the cost of one lookup

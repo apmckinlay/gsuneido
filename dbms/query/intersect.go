@@ -6,8 +6,9 @@ package query
 import (
 	"github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/ints"
+	"github.com/apmckinlay/gsuneido/util/setord"
+	"github.com/apmckinlay/gsuneido/util/setset"
 	"github.com/apmckinlay/gsuneido/util/sset"
-	"github.com/apmckinlay/gsuneido/util/ssset"
 )
 
 type Intersect struct {
@@ -28,7 +29,7 @@ func (it *Intersect) Columns() []string {
 }
 
 func (it *Intersect) Keys() [][]string {
-	k := ssset.Intersect(it.source.Keys(), it.source2.Keys())
+	k := setset.Intersect(it.source.Keys(), it.source2.Keys())
 	if len(k) == 0 {
 		k = [][]string{it.Columns()}
 	}
@@ -36,7 +37,7 @@ func (it *Intersect) Keys() [][]string {
 }
 
 func (it *Intersect) Indexes() [][]string {
-	return ssset.Union(it.source.Indexes(), it.source2.Indexes())
+	return setord.Union(it.source.Indexes(), it.source2.Indexes())
 }
 
 func (it *Intersect) nrows() int {

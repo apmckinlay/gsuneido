@@ -11,8 +11,8 @@ import (
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/ints"
+	"github.com/apmckinlay/gsuneido/util/setset"
 	"github.com/apmckinlay/gsuneido/util/sset"
-	"github.com/apmckinlay/gsuneido/util/ssset"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
@@ -25,7 +25,7 @@ type Summarize struct {
 	wholeRow bool
 	summarizeApproach
 	rewound bool
-	srcHdr *Header
+	srcHdr  *Header
 	get     func(su *Summarize, dir Dir) Row
 }
 
@@ -67,7 +67,7 @@ func (su *Summarize) Init() {
 	}
 	// if single min or max, and by+on is a key, then we can give the whole row
 	key := append(su.by, su.ons...)
-	su.wholeRow = su.minmax1() && ssset.Contains(su.source.Keys(), key)
+	su.wholeRow = su.minmax1() && setset.Contains(su.source.Keys(), key)
 }
 
 func check(cols []string) {
@@ -201,25 +201,12 @@ func (su *Summarize) seqCost(mode Mode, index []string) (Cost, interface{}) {
 		cost := Optimize(su.source, mode, approach.index)
 		return cost, approach
 	}
-	best := su.bestPrefixed(su.sourceIndexes(index), su.by, mode)
-	if best.cost >= impossible {
+	best := bestGrouped(su.source, mode, index, su.by)
+	if best.index == nil {
 		return impossible, nil
 	}
 	approach.index = best.index
 	return best.cost, approach
-}
-func (su *Summarize) sourceIndexes(index []string) [][]string {
-	if index == nil {
-		return su.source.Indexes()
-	}
-	fixed := su.source.Fixed()
-	var indexes [][]string
-	for _, idx := range su.source.Indexes() {
-		if su.prefixed(idx, index, fixed) {
-			indexes = append(indexes, idx)
-		}
-	}
-	return indexes
 }
 
 func (su *Summarize) idxCost(Mode) (Cost, interface{}) {

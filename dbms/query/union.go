@@ -7,8 +7,10 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/ints"
+	"github.com/apmckinlay/gsuneido/util/setord"
+	"github.com/apmckinlay/gsuneido/util/setset"
 	"github.com/apmckinlay/gsuneido/util/sset"
-	"github.com/apmckinlay/gsuneido/util/ssset"
+	"github.com/apmckinlay/gsuneido/util/strs"
 )
 
 type Union struct {
@@ -80,10 +82,8 @@ outer:
 }
 
 func (u *Union) Indexes() [][]string {
-	// NOTE: there are more possible indexes
-	return ssset.Intersect(
-		ssset.Intersect(u.source.Keys(), u.source.Indexes()),
-		ssset.Intersect(u.source2.Keys(), u.source2.Indexes()))
+	// lookup can read via any index
+	return setord.Union(u.source.Indexes(), u.source2.Indexes())
 }
 
 func (u *Union) nrows() int {
@@ -142,8 +142,8 @@ func (u *Union) optimize(mode Mode, index []string) (Cost, interface{}) {
 	// if there is a required index, use Merge
 	if index != nil {
 		// if not disjoint then index must also be a key
-		if u.disjoint == "" && (!ssset.Contains(u.source.Keys(), index) ||
-			!ssset.Contains(u.source2.Keys(), index)) {
+		if u.disjoint == "" && (!setset.Contains(u.source.Keys(), index) ||
+			!setset.Contains(u.source2.Keys(), index)) {
 			return impossible, nil
 		}
 		cost := Optimize(u.source, mode, index) + Optimize(u.source2, mode, index)
@@ -170,21 +170,33 @@ func (u *Union) optimize(mode Mode, index []string) (Cost, interface{}) {
 }
 
 func (*Union) optMerge(source, source2 Query, mode Mode) (Cost, interface{}) {
-	keyidxs := ssset.Intersect(
-		ssset.Intersect(source.Keys(), source.Indexes()),
-		ssset.Intersect(source2.Keys(), source2.Indexes()))
-	var mergeKey []string
-	mergeCost := impossible
-	for _, k := range keyidxs {
-		cost := Optimize(source, mode, k) + Optimize(source2, mode, k)
-		if cost < mergeCost {
-			mergeKey = k
-			mergeCost = cost
+	// need key (unique) index to eliminate duplicates
+	keys := setset.Intersect(source.Keys(), source2.Keys())
+	var bestKey, bestIdx1, bestIdx2 []string
+	bestCost := impossible
+	for _, key := range keys {
+		for _, idx1 := range source.Indexes() {
+			if !sset.Subset(idx1, key) {
+				continue
+			}
+			ik1 := sset.Intersect(idx1, key)
+			for _, idx2 := range source2.Indexes() {
+				ik2 := sset.Intersect(idx2, key)
+				if strs.Equal(ik1, ik2) {
+					cost := Optimize(source, mode, idx1) +
+						Optimize(source2, mode, idx2)
+					if cost < bestCost {
+						bestKey = key
+						bestCost = cost
+						bestIdx1, bestIdx2 = idx1, idx2
+					}
+				}
+			}
 		}
 	}
-	approach := &unionApproach{keyIndex: mergeKey, strategy: unionMerge,
-		idx1: mergeKey, idx2: mergeKey}
-	return mergeCost, approach
+	approach := &unionApproach{keyIndex: bestKey, strategy: unionMerge,
+		idx1: bestIdx1, idx2: bestIdx2}
+	return bestCost, approach
 }
 
 func (u *Union) optLookup(source, source2 Query, mode Mode) (Cost, interface{}) {

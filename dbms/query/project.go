@@ -39,8 +39,8 @@ const (
 	projCopy projectStrategy = iota + 1
 	// projSeq orders by the columns so duplicates are consecutive
 	projSeq
-	// projLookup builds a temp hash index to identify duplicates
-	projLookup
+	// projHash builds a temp hash index to identify duplicates
+	projHash
 )
 
 func (p *Project) Init() {
@@ -63,7 +63,8 @@ func (p *Project) Init() {
 	p.getHeaders()
 }
 
-// hasKey returns true if cols contains a key
+// hasKey returns whether cols contains a key
+// taking fixed into consideration
 func hasKey(keys [][]string, cols []string, fixed []Fixed) bool {
 outer:
 	for _, key := range keys {
@@ -93,8 +94,8 @@ func (p *Project) String() string {
 		s += "-SEQ"
 	case projCopy:
 		s += "-COPY"
-	case projLookup:
-		s += "-LOOKUP"
+	case projHash:
+		s += "-HASH"
 	}
 	return s + " " + str.Join(", ", p.columns)
 }
@@ -307,73 +308,23 @@ func (p *Project) optimize(mode Mode, index []string) (Cost, interface{}) {
 		approach := &projectApproach{strategy: projCopy, index: index}
 		return Optimize(p.source, mode, index), approach
 	}
-	if idx, cost := p.bestIndex(mode, index); idx != nil {
-		approach := &projectApproach{strategy: projSeq, index: idx}
-		return cost, approach
+	seq := bestGrouped(p.source, mode, index, p.columns)
+	hash := p.hashCost(mode, index)
+	trace("PROJECT, seq", seq.cost, "hash", hash)
+	if hash < seq.cost {
+		return hash, &projectApproach{strategy: projHash}
 	}
+	return seq.cost, &projectApproach{strategy: projSeq, index: seq.index}
+}
+
+func (p *Project) hashCost(mode Mode, index []string) Cost {
 	if mode != readMode {
-		return impossible, nil
+		return impossible
 	}
-	// read once, build hash, read again filtering by hash
+	// assume we're reading Next (normal)
+	cost := Optimize(p.source, mode, index)
 	hashCost := 0 //TODO ???
-	cost := 2*Optimize(p.source, mode, index) + hashCost
-	approach := &projectApproach{strategy: projLookup, index: index}
-	return cost + hashCost + cost, approach
-}
-
-func (p *Project) bestIndex(mode Mode, index []string) ([]string, Cost) {
-	var indexes [][]string
-	if index == nil {
-		indexes = p.source.Indexes()
-	} else {
-		indexes = [][]string{index}
-	}
-	fixed := p.source.Fixed()
-	nColsUnfixed := countUnfixed(p.columns, fixed)
-	var bestIdx []string
-	bestCost := impossible
-	for _, idx := range indexes {
-		if p.prefixed(fixed, idx, p.columns, nColsUnfixed) {
-			cost := Optimize(p.source, mode, idx)
-			if cost < bestCost {
-				bestCost = cost
-				bestIdx = idx
-			}
-		}
-	}
-	return bestIdx, bestCost
-}
-
-func countUnfixed(cols []string, fixed []Fixed) int {
-	nunfixed := 0
-	for _, col := range cols {
-		if !isFixed(fixed, col) {
-			nunfixed++
-		}
-	}
-	return nunfixed
-}
-
-// prefixed returns true if idx has cols (in any order) as a prefix
-// taking fixed into consideration
-func (*Project) prefixed(fixed []Fixed, idx []string, cols []string, nColsUnfixed int) bool {
-	if len(idx) < nColsUnfixed {
-		return false
-	}
-	n := 0
-	for _, col := range idx {
-		if isFixed(fixed, col) {
-			continue
-		}
-		if !sset.Contains(cols, col) {
-			return false
-		}
-		n++
-		if n == nColsUnfixed {
-			return true
-		}
-	}
-	return false
+	return cost + hashCost
 }
 
 func (p *Project) setApproach(_ []string, approach interface{}, tran QueryTran) {
@@ -423,8 +374,8 @@ func (p *Project) Get(dir runtime.Dir) runtime.Row {
 		return p.source.Get(dir)
 	case projSeq:
 		return p.getSeq(dir)
-	case projLookup:
-		return p.getLookup(dir)
+	case projHash:
+		return p.getHash(dir)
 	}
 	panic("should not reach here")
 }
@@ -468,14 +419,14 @@ func (p *Project) getSeq(dir runtime.Dir) runtime.Row {
 	}
 }
 
-func (p *Project) getLookup(dir runtime.Dir) runtime.Row {
+func (p *Project) getHash(dir runtime.Dir) runtime.Row {
 	if p.rewound {
 		p.rewound = false
 		if p.results == nil {
 			p.results = make(map[string]runtime.Row)
 		}
 		if dir == runtime.Prev && !p.indexed {
-			p.buildLookupIndex()
+			p.buildHash()
 		}
 	}
 	for {
@@ -499,7 +450,7 @@ func (p *Project) getLookup(dir runtime.Dir) runtime.Row {
 	return nil
 }
 
-func (p *Project) buildLookupIndex() {
+func (p *Project) buildHash() {
 	for {
 		row := p.source.Get(runtime.Next)
 		if row == nil {
@@ -534,7 +485,7 @@ func (p *Project) Output(rec runtime.Record) {
 
 func (p *Project) Select(cols, org []string) {
 	p.source.Select(cols, org)
-	if p.strategy == projLookup {
+	if p.strategy == projHash {
 		p.indexed = false
 	}
 	p.rewound = true

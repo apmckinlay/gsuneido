@@ -10,8 +10,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
-func TestPrefixed(t *testing.T) {
-	p := Project{}
+func TestGrouped(t *testing.T) {
 	oneval := []string{""}
 	fixed := []Fixed{{col: "f1", values: oneval}, {col: "f2", values: oneval}}
 	test := func(sidx, scols string) {
@@ -19,11 +18,11 @@ func TestPrefixed(t *testing.T) {
 		idx := strings.Fields(sidx)
 		cols := strings.Fields(scols)
 		nu := countUnfixed(cols, fixed)
-		assert.T(t).That(p.prefixed(fixed, idx, cols, nu))
+		assert.T(t).That(grouped(idx, cols, nu, fixed))
 		idx = append(idx, "x")
-		assert.T(t).That(p.prefixed(fixed, idx, cols, nu))
+		assert.T(t).That(grouped(idx, cols, nu, fixed))
 		cols = append(cols, "y")
-		assert.T(t).That(!p.prefixed(fixed, idx, cols, nu+1))
+		assert.T(t).That(!grouped(idx, cols, nu+1, fixed))
 	}
 	test("a", "a")
 	test("a b", "a")

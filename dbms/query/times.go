@@ -5,8 +5,8 @@ package query
 
 import (
 	"github.com/apmckinlay/gsuneido/runtime"
+	"github.com/apmckinlay/gsuneido/util/setord"
 	"github.com/apmckinlay/gsuneido/util/sset"
-	"github.com/apmckinlay/gsuneido/util/ssset"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
@@ -40,7 +40,7 @@ func (t *Times) Keys() [][]string {
 }
 
 func (t *Times) Indexes() [][]string {
-	return ssset.Union(t.source.Indexes(), t.source2.Indexes())
+	return setord.Union(t.source.Indexes(), t.source2.Indexes())
 }
 
 func (t *Times) Transform() Query {
@@ -93,7 +93,7 @@ func (t *Times) Get(dir runtime.Dir) runtime.Row {
 		t.source2.Rewind()
 		row2 = t.source2.Get(dir)
 	}
-	return  runtime.JoinRows(t.row1, row2)
+	return runtime.JoinRows(t.row1, row2)
 }
 
 func (t *Times) Select(cols, org []string) {

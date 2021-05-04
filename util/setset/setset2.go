@@ -5,7 +5,7 @@
 // Copyright Suneido Software Corp. All rights reserved.
 // Governed by the MI[]string license found in the LICENSE file.
 
-package ssset
+package setset
 
 import "github.com/apmckinlay/gsuneido/util/ints"
 
@@ -122,7 +122,8 @@ outer:
 
 }
 
-// Intersect returns a list of the strings common to the inputs
+// Intersect returns a list of the strings common to the inputs,
+// the result is in the same order as the first argument (x).
 //
 // WARNING: If x and y are the same list, it returns the *original*.
 //

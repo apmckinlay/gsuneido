@@ -50,12 +50,27 @@ func (sort *Sort) optimize(mode Mode, index []string) (Cost, interface{}) {
 	assert.That(index == nil)
 	src := sort.source
 	cost := Optimize(src, mode, sort.columns)
-	best := sort.bestPrefixed(src.Indexes(), sort.columns, mode)
+	best := sort.bestOrdered(src.Indexes(), sort.columns, mode)
 	trace("SORT", "cost", cost, "best", best.cost)
 	if cost <= best.cost {
 		return cost, sortApproach{index: sort.columns}
 	}
 	return best.cost, sortApproach{index: best.index}
+}
+
+// bestOrdered returns the best index that supplies the required order
+// taking fixed into consideration.
+func (q1 *Query1) bestOrdered(indexes [][]string, order []string,
+	mode Mode) bestIndex {
+	best := newBestIndex()
+	fixed := q1.source.Fixed()
+	for _, ix := range indexes {
+		if ordered(ix, order, fixed) {
+			cost := Optimize(q1.source, mode, ix)
+			best.update(ix, cost)
+		}
+	}
+	return best
 }
 
 func (sort *Sort) setApproach(_ []string, approach interface{}, tran QueryTran) {

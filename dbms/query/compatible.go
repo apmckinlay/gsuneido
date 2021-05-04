@@ -79,3 +79,16 @@ func (c *Compatible) equal(row1, row2 Row) bool {
 	}
 	return true
 }
+
+func bestKey(q Query, mode Mode) []string {
+	var best []string
+	bestCost := impossible
+	for _, key := range q.Keys() {
+		cost := Optimize(q, mode, key)
+		cost += (len(key) - 1) * cost / 20 // ??? prefer shorter keys
+		if cost < bestCost {
+			best = key
+		}
+	}
+	return best
+}

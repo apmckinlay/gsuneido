@@ -86,6 +86,22 @@ func TestTableGet(t *testing.T) {
 		assert.T(t).Msg("forward").This(get(q, rt.Next)).Like(expected)
 		assert.T(t).Msg("reverse").This(get(q, rt.Prev)).Like(expected)
 	}
+	// test("inven leftjoin (trans where item is 'mouse')",
+	// 	"inven^(item) LEFTJOIN 1:n by(item) (trans^(item) WHERE item is 'mouse')",
+	// 	`item	qty	id	cost date
+	// 	'disk'	 5	''	''	 ''
+	// 	'mouse'	 2	'e'	200	 960204
+	// 	'mouse'	 2	'c'	200	 970101
+	// 	'pencil' 7	''	''	 ''`)
+	// test("hist leftjoin (histjoin where item is 'disk')",
+	// 	"hist^(date) LEFTJOIN 1:1 by(date,item,id) "+
+	// 		"(histjoin^(date,item,id) WHERE item is 'disk')",
+	// 	`date	item	 id		cost	qty
+    //     970101	'disk'	 'a'	100		1
+    //     970101	'disk'	 'e'	200		2
+    //     970102	'mouse'	 'c'	200		''
+    //     970103	'pencil' 'e'	300		''`)
+	// t.SkipNow()
 	test("indexes",
 		"indexes",
 		`table		columns			key
@@ -284,7 +300,7 @@ func TestTableGet(t *testing.T) {
 		'eraser'
 		'mouse'`)
 	test("customer project city",
-		"customer^(id) PROJECT-LOOKUP city",
+		"customer^(id) PROJECT-HASH city",
 		`city
 		'saskatoon'
 		'calgary'

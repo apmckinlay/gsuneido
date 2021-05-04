@@ -62,7 +62,7 @@ func TestOptimize(t *testing.T) {
 	test("abc project a",
 		"abc^(a) PROJECT-SEQ a")
 	test("comp project b",
-		"comp^(a,b,c) PROJECT-LOOKUP b")
+		"comp^(a,b,c) PROJECT-HASH b")
 	test("comp where a is 1 and b is 2 project c",
 		"comp^(a,b,c) WHERE a is 1 and b is 2 PROJECT-COPY c")
 	test("customer project id,name",
@@ -76,9 +76,11 @@ func TestOptimize(t *testing.T) {
 	test("hist project date,item",
 		"hist^(date,item,id) PROJECT-SEQ date, item")
 	test("customer project city",
-		"customer^(id) PROJECT-LOOKUP city")
+		"customer^(id) PROJECT-HASH city")
 	test("customer project id,city project city",
-		"customer^(id) PROJECT-LOOKUP city")
+		"customer^(id) PROJECT-HASH city")
+	test("customer project city sort city",
+		"customer^(id) PROJECT-HASH city TEMPINDEX(city)")
 
 	test("trans summarize total cost", // by is empty
 		"trans^(date,item,id) SUMMARIZE-SEQ total_cost = total cost")

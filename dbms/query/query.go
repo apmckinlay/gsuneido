@@ -37,8 +37,8 @@ import (
 	"github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/ints"
+	"github.com/apmckinlay/gsuneido/util/setset"
 	"github.com/apmckinlay/gsuneido/util/sset"
-	"github.com/apmckinlay/gsuneido/util/ssset"
 )
 
 type Query interface {
@@ -68,7 +68,9 @@ type Query interface {
 	// Indexes returns all the indexes
 	Indexes() [][]string
 
-	// Keys returns the indexes that are keys
+	// Keys returns sets of fields that are unique keys.
+	// On a table this will be the key indexes, but on other operations
+	// this is logical, there may not necessarily be an index.
 	Keys() [][]string
 
 	// nrows returns the number of rows in the query, estimated for operations
@@ -267,7 +269,7 @@ func LookupCost(q Query, mode Mode, index []string, nrows int) Cost {
 func SetApproach(q Query, index []string, tran QueryTran) Query {
 	cost, approach := q.cacheGet(index)
 	if cost < 0 {
-		panic(fmt.Sprintln("MISSING", q, index))
+		panic(fmt.Sprintln("NOT IN CACHE:", q, index))
 	}
 	assert.That(cost >= 0)
 	if app, ok := approach.(*tempIndex); ok {
@@ -339,58 +341,6 @@ func (q1 *Query1) setApproach(_ []string, _ interface{}, _ QueryTran) {
 
 func (q1 *Query1) lookupCost() Cost {
 	return q1.source.lookupCost()
-}
-
-// bestPrefixed returns the best index that supplies the required order
-// taking fixed into account
-func (q1 *Query1) bestPrefixed(indexes [][]string, order []string,
-	mode Mode) bestIndex {
-	best := bestIndex{cost: impossible}
-	fixed := q1.source.Fixed()
-	for _, ix := range indexes {
-		if q1.prefixed(ix, order, fixed) {
-			cost := Optimize(q1.source, mode, ix)
-			best.update(ix, cost)
-		}
-	}
-	return best
-}
-
-// bestIndex should be initialized e.g. best := bestIndex{cost: impossible}
-type bestIndex struct {
-	index []string
-	cost  Cost
-}
-
-func (bi *bestIndex) update(index []string, cost Cost) {
-	if cost < bi.cost {
-		bi.index = index
-		bi.cost = cost
-	}
-}
-
-// prefixed returns whether an index supplies an order, given what's fixed
-func (*Query1) prefixed(index []string, order []string, fixed []Fixed) bool {
-	i := 0
-	o := 0
-	in := len(index)
-	on := len(order)
-	for i < in && o < on {
-		if index[i] == order[o] {
-			o++
-			i++
-		} else if isFixed(fixed, index[i]) {
-			i++
-		} else if isFixed(fixed, order[o]) {
-			o++
-		} else {
-			return false
-		}
-	}
-	for o < on && isFixed(fixed, order[o]) {
-		o++
-	}
-	return o >= on
 }
 
 func (*Query1) Lookup(string) runtime.Row {
@@ -466,7 +416,7 @@ func (q2 *Query2) keypairs() [][]string {
 	var keys [][]string
 	for _, k1 := range q2.source.Keys() {
 		for _, k2 := range q2.source2.Keys() {
-			keys = ssset.AddUnique(keys, sset.Union(k1, k2))
+			keys = setset.AddUnique(keys, sset.Union(k1, k2))
 		}
 	}
 	assert.That(len(keys) != 0)
@@ -482,7 +432,7 @@ func (*Query2) tagQuery2() {
 
 //-------------------------------------------------------------------
 
-// paren is a helper to String methods
+// paren is a helper for Query String methods
 func paren(q Query) string {
 	switch q.(type) {
 	case *Table, *Tables, *Columns, *Indexes:
@@ -498,15 +448,105 @@ func parenQ2(q Query) string {
 	return q.String()
 }
 
-func bestKey(q Query, mode Mode) []string {
-	var best []string
-	bestCost := impossible
-	for _, key := range q.Keys() {
-		cost := Optimize(q, mode, key)
-		cost += (len(key) - 1) * cost / 20 // ??? prefer shorter keys
-		if cost < bestCost {
-			best = key
+//-------------------------------------------------------------------
+
+type bestIndex struct {
+	index []string
+	cost  Cost
+}
+
+func newBestIndex() bestIndex {
+	return bestIndex{cost: impossible}
+}
+
+func (bi *bestIndex) update(index []string, cost Cost) {
+	if cost < bi.cost {
+		bi.index = index
+		bi.cost = cost
+	}
+}
+
+// bestGrouped finds the best index with cols (in any order) as a prefix
+// taking fixed into consideration.
+// It is used by Project, Summarize, and Join.
+func bestGrouped(source Query, mode Mode, index, cols []string) bestIndex {
+	var indexes [][]string
+	if index == nil {
+		indexes = source.Indexes()
+	} else {
+		indexes = [][]string{index}
+	}
+	fixed := source.Fixed()
+	nColsUnfixed := countUnfixed(cols, fixed)
+	best := newBestIndex()
+	for _, idx := range indexes {
+		if grouped(idx, cols, nColsUnfixed, fixed) {
+			cost := Optimize(source, mode, idx)
+			best.update(idx, cost)
+		}
+	}
+	if best.index == nil {
+		best.cost = Optimize(source, mode, cols)
+		if best.cost < impossible {
+			best.index = cols
 		}
 	}
 	return best
+}
+
+func countUnfixed(cols []string, fixed []Fixed) int {
+	nunfixed := 0
+	for _, col := range cols {
+		if !isFixed(fixed, col) {
+			nunfixed++
+		}
+	}
+	return nunfixed
+}
+
+// grouped returns whether an index has cols (in any order) as a prefix
+// taking fixed into consideration
+func grouped(index []string, cols []string, nColsUnfixed int, fixed []Fixed) bool {
+	if len(index) < nColsUnfixed {
+		return false
+	}
+	n := 0
+	for _, col := range index {
+		if isFixed(fixed, col) {
+			continue
+		}
+		if !sset.Contains(cols, col) {
+			return false
+		}
+		n++
+		if n == nColsUnfixed {
+			return true
+		}
+	}
+	return false
+}
+
+// ordered returns whether an index supplies an order
+// taking fixed into consideration.
+func ordered(index []string, order []string, fixed []Fixed) bool {
+	i := 0
+	o := 0
+	in := len(index)
+	on := len(order)
+	for i < in && o < on {
+		if index[i] == order[o] {
+			o++
+			i++
+		} else if isFixed(fixed, index[i]) {
+			i++
+		} else if isFixed(fixed, order[o]) {
+			o++
+		} else {
+			return false
+		}
+	}
+	for o < on && isFixed(fixed, order[o]) {
+		o++
+	}
+	return o >= on
 }

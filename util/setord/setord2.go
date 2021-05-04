@@ -3,19 +3,19 @@
 // see https://github.com/cheekybits/genny
 
 // Copyright Suneido Software Corp. All rights reserved.
-// Governed by the MIString license found in the LICENSE file.
+// Governed by the MI[]string license found in the LICENSE file.
 
-package sset
+package setord
 
 import "github.com/apmckinlay/gsuneido/util/ints"
 
-// this provides set operations on []String.
+// this provides set operations on [][]string.
 // Operations do not modify their inputs
 // but may return an input unmodified, rather than a copy.
 // Where applicable, the order of the values is maintained.
 
 // Contains returns true if x contains s
-func Contains(x []string, s string) bool {
+func Contains(x [][]string, s []string) bool {
 	// no point checking for sorted because that will do a full scan
 	for _, xs := range x {
 		if eq(xs, s) {
@@ -26,8 +26,8 @@ func Contains(x []string, s string) bool {
 }
 
 // Copy returns a copy of the set
-func Copy(x []string) []string {
-	z := make([]string, len(x))
+func Copy(x [][]string) [][]string {
+	z := make([][]string, len(x))
 	copy(z, x)
 	return z
 }
@@ -35,7 +35,7 @@ func Copy(x []string) []string {
 // AddUnique appends s unless it is already in the set
 //
 // WARNING: it does append so usage must be: x = AddUnique(x, y)
-func AddUnique(x []string, s string) []string {
+func AddUnique(x [][]string, s []string) [][]string {
 	if Contains(x, s) {
 		return x
 	}
@@ -45,7 +45,7 @@ func AddUnique(x []string, s string) []string {
 // Equal returns true if x and y contain the same set of strings.
 //
 // WARNING: requires that x does not contain duplicates
-func Equal(x, y []string) bool {
+func Equal(x, y [][]string) bool {
 	if len(x) != len(y) {
 		return false
 	}
@@ -64,7 +64,7 @@ outer:
 	return true
 }
 
-func Same(x, y []string) bool {
+func Same(x, y [][]string) bool {
 	return len(x) > 0 && len(y) > 0 && len(x) == len(y) && &x[0] == &y[0]
 }
 
@@ -72,14 +72,14 @@ func Same(x, y []string) bool {
 // If either input contains duplicates, so will the output.
 //
 // WARNING: If either x or y is empty, it returns the *original* of the other.
-func Union(x, y []string) []string {
+func Union(x, y [][]string) [][]string {
 	if len(x) == 0 {
 		return y[:len(y):len(y)] // so append won't share
 	}
 	if len(y) == 0 {
 		return x[:len(x):len(x)] // so append won't share
 	}
-	z := make([]string, 0, len(x)+len(y))
+	z := make([][]string, 0, len(x)+len(y))
 	z = append(z, x...)
 outer:
 	for _, ys := range y {
@@ -98,17 +98,17 @@ outer:
 // WARNING: If y is empty, it returns the *original* x.
 //
 // WARNING: duplicates the inputs may give duplicates in the result
-func Difference(x, y []string) []string {
+func Difference(x, y [][]string) [][]string {
 	if len(x) == 0 {
-		return []string{}
+		return [][]string{}
 	}
 	if len(y) == 0 {
 		return x[:len(x):len(x)] // so append won't share
 	}
 	if Same(x, y) {
-		return []string{}
+		return [][]string{}
 	}
-	z := make([]string, 0, len(x))
+	z := make([][]string, 0, len(x))
 outer:
 	for _, xs := range x {
 		for _, ys := range y {
@@ -128,14 +128,14 @@ outer:
 // WARNING: If x and y are the same list, it returns the *original*.
 //
 // WARNING: duplicates the inputs may give duplicates in the result
-func Intersect(x, y []string) []string {
+func Intersect(x, y [][]string) [][]string {
 	if Same(x, y) {
 		return x[:len(x):len(x)] // so append won't share
 	}
 	if len(x) == 0 || len(y) == 0 {
-		return []string{}
+		return [][]string{}
 	}
-	z := make([]string, 0, ints.Min(len(x), len(y))/2) // ???
+	z := make([][]string, 0, ints.Min(len(x), len(y))/2) // ???
 outer:
 	for _, xs := range x {
 		for _, ys := range y {
@@ -150,7 +150,7 @@ outer:
 
 // Subset returns true is y is a subset of x
 // i.e. x contains all of y
-func Subset(x, y []string) bool {
+func Subset(x, y [][]string) bool {
 outer:
 	for _, ys := range y {
 		for _, xs := range x {
@@ -165,7 +165,7 @@ outer:
 
 // Disjoint returns true if x and y have no elements in common.
 // i.e. Intersect(x, y) is empty
-func Disjoint(x, y []string) bool {
+func Disjoint(x, y [][]string) bool {
 	for _, xs := range x {
 		for _, ys := range y {
 			if eq(xs, ys) {
