@@ -40,9 +40,9 @@ func (ti *TempIndex) Rewind() {
 	ti.rewound = true
 }
 
-func (ti *TempIndex) Select(cols, orgs []string) {
+func (ti *TempIndex) Select(cols, vals []string) {
 	encode := len(ti.order) > 1
-	ti.selOrg, ti.selEnd = selKeys(encode, cols, ti.order, orgs)
+	ti.selOrg, ti.selEnd = selKeys(encode, ti.order, cols, vals)
 	ti.rewound = true
 }
 

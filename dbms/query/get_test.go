@@ -86,22 +86,6 @@ func TestTableGet(t *testing.T) {
 		assert.T(t).Msg("forward").This(get(q, rt.Next)).Like(expected)
 		assert.T(t).Msg("reverse").This(get(q, rt.Prev)).Like(expected)
 	}
-	// test("inven leftjoin (trans where item is 'mouse')",
-	// 	"inven^(item) LEFTJOIN 1:n by(item) (trans^(item) WHERE item is 'mouse')",
-	// 	`item	qty	id	cost date
-	// 	'disk'	 5	''	''	 ''
-	// 	'mouse'	 2	'e'	200	 960204
-	// 	'mouse'	 2	'c'	200	 970101
-	// 	'pencil' 7	''	''	 ''`)
-	// test("hist leftjoin (histjoin where item is 'disk')",
-	// 	"hist^(date) LEFTJOIN 1:1 by(date,item,id) "+
-	// 		"(histjoin^(date,item,id) WHERE item is 'disk')",
-	// 	`date	item	 id		cost	qty
-    //     970101	'disk'	 'a'	100		1
-    //     970101	'disk'	 'e'	200		2
-    //     970102	'mouse'	 'c'	200		''
-    //     970103	'pencil' 'e'	300		''`)
-	// t.SkipNow()
 	test("indexes",
 		"indexes",
 		`table		columns			key
@@ -454,6 +438,20 @@ func TestTableGet(t *testing.T) {
 		'c'	'calac'	  'calgary'		970102	'mouse'	 200
 		'e'	'emerald' 'vancouver'	970101	'disk'	 200
 		'e'	'emerald' 'vancouver'	970103	'pencil' 300`)
+	test("customer leftjoin (alias where name2 is 'abc')",
+		"customer^(id) LEFTJOIN 1:1 by(id) (alias^(id) WHERE name2 is 'abc')",
+		`id	name	city	name2
+        'a'	'axon'	'saskatoon'	'abc'
+        'c'	'calac'	'calgary'	''
+        'e'	'emerald'	'vancouver'	''
+        'i'	'intercon'	'saskatoon'	''`)
+	test("customer leftjoin (alias where id is 'c')",
+		"customer^(id) LEFTJOIN 1:1 by(id) (alias^(id) WHERE*1 id is 'c')",
+		`id	name	city	name2
+        'a'	'axon'	'saskatoon'	''
+        'c'	'calac'	'calgary'	'trical'
+        'e'	'emerald'	'vancouver'	''
+        'i'	'intercon'	'saskatoon'	''`)
 
 	// where
 	test("customer where id > 'd'", // range

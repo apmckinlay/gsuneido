@@ -213,13 +213,13 @@ func (tbl *Table) Get(dir runtime.Dir) runtime.Row {
 	return runtime.Row{runtime.DbRec{Record: rec, Off: off}}
 }
 
-func (tbl *Table) Select(cols, orgs []string) {
-	org, end := selKeys(tbl.indexEncode, cols, tbl.index, orgs)
+func (tbl *Table) Select(cols, vals []string) {
+	org, end := selKeys(tbl.indexEncode, tbl.index, cols, vals)
 	tbl.SelectRaw(org, end)
 }
 
-func selKeys(encode bool, srcCols, dstCols, orgs []string) (string, string) {
-	org := selEncode(encode, srcCols, dstCols, orgs)
+func selKeys(encode bool, dstCols, srcCols, vals []string) (string, string) {
+	org := selEncode(encode, dstCols, srcCols, vals)
 	var end string
 	if !encode {
 		end = org + "\x00"
@@ -229,7 +229,7 @@ func selKeys(encode bool, srcCols, dstCols, orgs []string) (string, string) {
 	return org, end
 }
 
-func selEncode(encode bool, srcCols, dstCols, vals []string) string {
+func selEncode(encode bool, dstCols, srcCols, vals []string) string {
 	if !encode {
 		return selGet(dstCols[0], srcCols, vals)
 	}

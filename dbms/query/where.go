@@ -17,6 +17,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/ints"
 	"github.com/apmckinlay/gsuneido/util/sset"
 	"github.com/apmckinlay/gsuneido/util/str"
+	"github.com/apmckinlay/gsuneido/util/strs"
 )
 
 type Where struct {
@@ -33,14 +34,18 @@ type Where struct {
 	// because there is a single point select on a key
 	singleton bool
 	idxSels   []idxSel
-	conflict  bool
-	index     []string
-	idxSel    *idxSel
+	// conflict is true if the expression conflicts and selects nothing
+	conflict bool
+	// idxSel is for the chosen index
+	idxSel *idxSel
+	// idxSelPos is the current index in idxSel.ptrngs
 	idxSelPos int
-	inRange   bool
-	hdr       *runtime.Header
-	selOrg string
-	selEnd string
+	// curPtrng is idxSel.ptrngs[idxSelPos] adjusted by Select (selOrg, selEnd)
+	curPtrng pointRange
+	hdr      *runtime.Header
+	// sel is set by Select
+	sel    string
+	selSet bool
 }
 
 type whereApproach struct {
@@ -442,10 +447,10 @@ func (w *Where) getIdxSel(index []string) *idxSel {
 
 func (w *Where) setApproach(index []string, app interface{}, tran QueryTran) {
 	if app != nil {
-		w.index = app.(whereApproach).index
-		assert.That(index == nil || w.singleton || str.List(index).Equal(w.index))
-		w.tbl.index = w.index
-		w.idxSel = w.getIdxSel(w.index)
+		idx := app.(whereApproach).index
+		assert.That(index == nil || w.singleton || strs.Equal(idx, index))
+		w.tbl.index = idx
+		w.idxSel = w.getIdxSel(idx)
 		w.idxSelPos = -1
 	} else {
 		w.source = SetApproach(w.source, index, tran)
@@ -748,6 +753,9 @@ func (pr pointRange) isRange() bool {
 }
 
 func (pr pointRange) String() string {
+	if pr.conflict() {
+		return "<empty>"
+	}
 	// WARNING: does NOT decode, intended for explode output
 	// use idxSel.String for compositePtrngs output
 	s := packToStr(pr.org)
@@ -755,6 +763,29 @@ func (pr pointRange) String() string {
 		s += ".." + packToStr(pr.end)
 	}
 	return s
+}
+
+func (pr pointRange) intersect(sel string, encode bool) pointRange {
+	if pr.isPoint() {
+		if pr.org == sel {
+			return pr
+		}
+	} else { // range
+		if pr.org <= sel && sel < pr.end {
+			pr.org = sel
+			if !encode {
+				pr.end = sel + "\x00"
+			} else {
+				pr.end = sel + ixkey.Sep + ixkey.Max
+			}
+			return pr
+		}
+	}
+	return pointRange{org: "z", end: "a"} // conflict
+}
+
+func (pr pointRange) conflict() bool {
+	return pr.end != "" && pr.end < pr.org
 }
 
 // explodeFilters converts multi vals filters to multi single vals filters.
@@ -886,9 +917,7 @@ func (w *Where) getRange(dir runtime.Dir) runtime.Row {
 		if !w.advance(dir) {
 			return nil // eof
 		}
-		pr := w.idxSel.ptrngs[w.idxSelPos]
-		w.tbl.SelectRaw(pr.org, pr.end)
-		w.inRange = true
+		w.tbl.SelectRaw(w.curPtrng.org, w.curPtrng.end)
 	}
 }
 
@@ -896,7 +925,7 @@ func (w *Where) getPoint(dir runtime.Dir) runtime.Row {
 	if !w.advance(dir) {
 		return nil
 	}
-	return w.tbl.Lookup(w.idxSel.ptrngs[w.idxSelPos].org)
+	return w.tbl.Lookup(w.curPtrng.org)
 }
 
 func (w *Where) advance(dir runtime.Dir) bool {
@@ -905,15 +934,25 @@ func (w *Where) advance(dir runtime.Dir) bool {
 			w.idxSelPos = len(w.idxSel.ptrngs)
 		}
 	}
-	if dir == runtime.Prev {
-		w.idxSelPos--
-	} else { // Next
-		w.idxSelPos++
+	for {
+		if dir == runtime.Prev {
+			w.idxSelPos--
+		} else { // Next
+			w.idxSelPos++
+		}
+		if w.idxSelPos < 0 || len(w.idxSel.ptrngs) <= w.idxSelPos {
+			return false // eof
+		}
+		pr := w.idxSel.ptrngs[w.idxSelPos]
+		if w.selSet {
+			pr = pr.intersect(w.sel, w.idxSel.encoded)
+			if pr.conflict() {
+				continue
+			}
+		}
+		w.curPtrng = pr
+		return true
 	}
-	if w.idxSelPos < 0 || len(w.idxSel.ptrngs) <= w.idxSelPos {
-		return false // eof
-	}
-	return true
 }
 
 func (w *Where) Rewind() {
@@ -925,17 +964,11 @@ func (w *Where) Select(cols, vals []string) {
 	if w.conflict {
 		return
 	}
-	// same as selKeys, but with fixed
-	if !w.idxSel.encoded {
-		w.selOrg = selGet(w.idxSel.index[0], cols, vals)
-		w.selEnd = w.selOrg + "\x00"
-	} else {
-		enc := ixkey.Encoder{}
-		for _, col := range w.idxSel.index {
-			//TODO fixed
-			enc.Add(selGet(col, cols, vals))
-		}
-		w.selOrg = enc.String()
-		w.selEnd = w.selOrg + ixkey.Sep + ixkey.Max
+	if w.idxSel == nil {
+		w.source.Select(cols, vals)
+		return
 	}
+	w.sel = selEncode(w.idxSel.encoded, w.idxSel.index, cols, vals)
+	w.Rewind()
+	w.selSet = true
 }
