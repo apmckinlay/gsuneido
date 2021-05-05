@@ -107,7 +107,9 @@ uintptr queryIDispatch(uintptr iunk);
 uintptr createInstance(char* progid);
 uintptr invoke(
 	uintptr idisp, uintptr name, uintptr flags, uintptr args, uintptr result);
-void release(uintptr iunk);
+long release(uintptr iunk);
+long EmbedBrowserObject(uintptr hwnd, uintptr pBrowserObject, uintptr pPtr);
+void UnEmbedBrowserObject(uintptr browserObject, uintptr ptr);
 
 #undef UNICODE
 #undef _UNICODE
@@ -198,11 +200,19 @@ uintptr interact() {
 			args[0] = msg_result;
 			break;
 		case msg_release:
-			release(args[1]);
+			args[1] = release(args[1]);
 			args[0] = msg_result;
 			break;
 		case msg_interrupt:
 			args[1] = interrupt();
+			args[0] = msg_result;
+			break;
+		case msg_embedbrowserobject:
+			args[1] = EmbedBrowserObject(args[1], args[2], args[3]);
+			args[0] = msg_result;
+			break;
+		case msg_unembedbrowserobject:
+			UnEmbedBrowserObject(args[1], args[2]);
 			args[0] = msg_result;
 			break;
 		case msg_result:

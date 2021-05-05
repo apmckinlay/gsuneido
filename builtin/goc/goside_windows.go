@@ -61,12 +61,20 @@ func Invoke(idisp, name, flags, args, result uintptr) int {
 	return int(interact(C.msg_invoke, idisp, name, flags, args, result))
 }
 
-func Release(iunk uintptr) {
-	interact(C.msg_release, iunk)
+func Release(iunk uintptr) int {
+	return int(interact(C.msg_release, iunk))
 }
 
 func Traccel(ob int, msg unsafe.Pointer) int {
 	return int(interact(C.msg_traccel, uintptr(ob), uintptr(msg)))
+}
+
+func EmbedBrowserObject(hwnd, iunk, pptr uintptr) uintptr {
+	return interact(C.msg_embedbrowserobject, hwnd, iunk, pptr)
+}
+
+func UnEmbedBrowserObject(iunk, ptr uintptr) {
+	interact(C.msg_unembedbrowserobject, iunk, ptr)
 }
 
 // Interrupt checks if control+break has been pressed.

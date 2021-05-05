@@ -40,6 +40,8 @@ enum {
 	msg_invoke,
 	msg_release,
 	msg_interrupt,
+	msg_embedbrowserobject,
+	msg_unembedbrowserobject
 };
 
 typedef uintptr(__stdcall* cb2_t)(uintptr a, uintptr b);

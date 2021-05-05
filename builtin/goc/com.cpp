@@ -7,9 +7,10 @@
 #include <malloc.h>
 #include "cside.h"
 
-extern "C" void release(uintptr iunk) {
+extern "C" long release(uintptr iunk) {
 	if (iunk)
-		((IUnknown*) iunk)->Release();
+		return ((IUnknown*) iunk)->Release();
+	return 0;
 }
 
 extern "C" uintptr queryIDispatch(uintptr iunk) {
@@ -19,10 +20,9 @@ extern "C" uintptr queryIDispatch(uintptr iunk) {
 	IDispatch* idisp = nullptr;
 	HRESULT hr =
 		((IUnknown*) iunk)->QueryInterface(IID_IDispatch, (void**) &idisp);
-	if (FAILED(hr) || idisp == 0) {
+	if (FAILED(hr)) {
 		return 0;
 	}
-	release(iunk);
 	return (uintptr) idisp;
 }
 
@@ -44,7 +44,7 @@ static uintptr invoke2(IDispatch* idisp, char* name, WORD flags,
 	DISPPARAMS* args, VARIANT* result) {
 	if (idisp == 0)
 		return -1;
-		
+
 	// get id from name
 	int n = MultiByteToWideChar(CP_ACP, 0, name, -1, NULL, 0);
 	LPWSTR wname = (LPWSTR) _alloca(n * 2);

@@ -20,8 +20,8 @@ import (
 
 type suComObject struct {
 	CantConvert
-	iunk  uintptr // always set
-	idisp uintptr // only set if IDispatch
+	ptr   uintptr
+	idisp bool // true if IDispatch
 }
 
 var _ Value = (*suComObject)(nil)
@@ -29,9 +29,12 @@ var _ Value = (*suComObject)(nil)
 var _ = builtin1("COMobject(progid)",
 	func(arg Value) Value {
 		if n, ok := arg.ToInt(); ok {
-			iunk := uintptr(n)
-			idisp := goc.QueryIDispatch(iunk)
-			return &suComObject{iunk: iunk, idisp: idisp}
+			ptr := uintptr(n)
+			if idisp := goc.QueryIDispatch(ptr); idisp != 0 {
+				goc.Release(ptr)
+				return &suComObject{ptr: idisp, idisp: true}
+			}
+			return &suComObject{ptr: ptr}
 		}
 		if s, ok := arg.ToStr(); ok {
 			defer heap.FreeTo(heap.CurSize())
@@ -39,35 +42,34 @@ var _ = builtin1("COMobject(progid)",
 			if idisp == 0 {
 				return False
 			}
-			return &suComObject{iunk: idisp, idisp: idisp}
+			return &suComObject{ptr: idisp, idisp: true}
 		}
 		panic("COMobject requires integer or string")
 	})
 
 var suComObjectMethods = Methods{
 	"Dispatch?": method0(func(this Value) Value {
-		return SuBool(this.(*suComObject).idisp != 0)
+		return SuBool(this.(*suComObject).idisp)
 	}),
 	"Release": method0(func(this Value) Value {
-		goc.Release(this.(*suComObject).iunk)
-		return nil
+		return IntVal(goc.Release(this.(*suComObject).ptr))
 	}),
 }
 
 var _ Value = (*suComObject)(nil)
 
 func (sco *suComObject) Get(_ *Thread, mem Value) Value {
-	if sco.idisp == 0 {
+	if !sco.idisp {
 		panic("COMobject can't get property of IUnknown")
 	}
-	return GetProperty(sco.idisp, ToStr(mem))
+	return GetProperty(sco.ptr, ToStr(mem))
 }
 
 func (sco *suComObject) Put(_ *Thread, mem Value, val Value) {
-	if sco.idisp == 0 {
+	if !sco.idisp {
 		panic("COMobject can't put property of IUnknown")
 	}
-	PutProperty(sco.idisp, ToStr(mem), val)
+	PutProperty(sco.ptr, ToStr(mem), val)
 
 }
 
@@ -130,13 +132,13 @@ func (sco *suComObject) Lookup(_ *Thread, method string) Callable {
 }
 
 func (sco *suComObject) call(method string, as *ArgSpec, args []Value) Value {
-	if sco.idisp == 0 {
+	if !sco.idisp {
 		panic("COMobject can't call method of IUnknown")
 	}
 	if as.Spec != nil || as.Each != 0 {
 		panic("COMobject invalid call arguments")
 	}
-	return CallMethod(sco.idisp, method, args[:as.Nargs])
+	return CallMethod(sco.ptr, method, args[:as.Nargs])
 }
 
 //-------------------------------------------------------------------
@@ -228,13 +230,12 @@ func suToVariant(x Value, v *VARIANT) {
 		v.vt = VT_BSTR
 		v.val = int64(uintptr(stringArg(x))) // C side converts
 	} else if sco, ok := x.(*suComObject); ok {
-		if sco.idisp != 0 {
+		if sco.idisp {
 			v.vt = VT_DISPATCH
-			v.val = int64(sco.idisp)
 		} else {
 			v.vt = VT_UNKNOWN
-			v.val = int64(sco.iunk)
 		}
+		v.val = int64(sco.ptr)
 	} else {
 		panic("COMobject can't convert " + ErrType(x))
 	}
@@ -287,16 +288,15 @@ func variantToSu(v *VARIANT) Value {
 		result = SuStr(bstrToString(v))
 		VariantClear(v)
 	case VT_DISPATCH:
-		idisp := uintptr(v.val)
-		result = &suComObject{idisp: idisp}
+		result = &suComObject{ptr: uintptr(v.val), idisp: true}
 	case VT_UNKNOWN:
 		iunk := uintptr(v.val)
-		idisp := goc.QueryIDispatch(iunk)
-		if idisp != 0 {
+		if idisp := goc.QueryIDispatch(iunk); idisp != 0 {
 			goc.Release(iunk)
-			iunk = idisp
+			result = &suComObject{ptr: idisp, idisp: true}
+		} else {
+			result = &suComObject{ptr: iunk}
 		}
-		result = &suComObject{iunk: iunk, idisp: idisp}
 	default:
 		panic("COMobject: can't convert to Suneido value")
 	}
