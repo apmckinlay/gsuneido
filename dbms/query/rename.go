@@ -154,6 +154,6 @@ func (r *Rename) Get(dir runtime.Dir) runtime.Row {
 	return r.source.Get(dir)
 }
 
-func (r *Rename) Select(cols, org []string) {
-	r.source.Select(renameColumns(cols, r.from, r.to), org)
+func (r *Rename) Select(cols, vals []string) {
+	r.source.Select(renameColumns(cols, r.from, r.to), vals)
 }

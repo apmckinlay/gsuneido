@@ -250,8 +250,8 @@ func (jn *Join) projectRow(row Row) []string {
 	return key
 }
 
-func (jn *Join) Select(cols, org []string) {
-	jn.source.Select(cols, org)
+func (jn *Join) Select(cols, vals []string) {
+	jn.source.Select(cols, vals)
 	jn.row2 = nil
 }
 

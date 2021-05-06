@@ -483,8 +483,8 @@ func (p *Project) Output(rec runtime.Record) {
 	p.source.Output(rec)
 }
 
-func (p *Project) Select(cols, org []string) {
-	p.source.Select(cols, org)
+func (p *Project) Select(cols, vals []string) {
+	p.source.Select(cols, vals)
 	if p.strategy == projHash {
 		p.indexed = false
 	}

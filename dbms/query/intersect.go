@@ -109,8 +109,8 @@ func (it *Intersect) Get(dir runtime.Dir) runtime.Row {
 	}
 }
 
-func (it *Intersect) Select(cols, org []string) {
-	it.source.Select(cols, org)
+func (it *Intersect) Select(cols, vals []string) {
+	it.source.Select(cols, vals)
 }
 
 // COULD have a "merge" strategy (like Union)

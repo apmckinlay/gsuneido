@@ -43,7 +43,7 @@ func (ti *TempIndex) Rewind() {
 func (ti *TempIndex) Select(cols, vals []string) {
 	encode := len(ti.order) > 1
 	ti.selOrg, ti.selEnd = selKeys(encode, ti.order, cols, vals)
-	ti.rewound = true
+	ti.Rewind()
 }
 
 func (ti *TempIndex) Get(dir Dir) Row {

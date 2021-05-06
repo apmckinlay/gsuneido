@@ -382,8 +382,8 @@ func endKey(dir Dir) string {
 	return ixkey.Min
 }
 
-func (u *Union) Select(cols, org []string) {
-	u.source.Select(cols, org)
-	u.source2.Select(cols, org)
+func (u *Union) Select(cols, vals []string) {
+	u.source.Select(cols, vals)
+	u.source2.Select(cols, vals)
 	u.rewound = true
 }

@@ -96,8 +96,8 @@ func (t *Times) Get(dir runtime.Dir) runtime.Row {
 	return runtime.JoinRows(t.row1, row2)
 }
 
-func (t *Times) Select(cols, org []string) {
-	t.source.Select(cols, org)
+func (t *Times) Select(cols, vals []string) {
+	t.source.Select(cols, vals)
 	t.source2.Rewind()
 	t.rewound = true
 }

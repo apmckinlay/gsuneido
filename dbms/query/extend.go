@@ -184,14 +184,14 @@ func (e *Extend) Get(dir Dir) Row {
 	return append(row, DbRec{Record: rb.Build()})
 }
 
-func (e *Extend) Select(cols, org []string) {
+func (e *Extend) Select(cols, vals []string) {
 	cols = strs.Cow(cols)
-	org = strs.Cow(org)
+	vals = strs.Cow(vals)
 	for _, fix := range e.Fixed() {
 		if len(fix.values) == 1 {
 			cols = append(cols, fix.col)
-			org = append(org, fix.values[0])
+			vals = append(vals, fix.values[0])
 		}
 	}
-	e.source.Select(cols, org)
+	e.source.Select(cols, vals)
 }
