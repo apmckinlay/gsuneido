@@ -318,7 +318,7 @@ func (p *Project) optimize(mode Mode, index []string) (Cost, interface{}) {
 }
 
 func (p *Project) hashCost(mode Mode, index []string) Cost {
-	if mode != readMode {
+	if mode != ReadMode {
 		return impossible
 	}
 	// assume we're reading Next (normal)

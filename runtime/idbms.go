@@ -38,9 +38,9 @@ type IDbms interface {
 	// Final returns the current number of final transactions
 	Final() int
 
-	// Get returns a single record, for Query1 (which = '1'),
-	// QueryFirst (which = '+'), or QueryLast (which = '-')
-	Get(tn int, query string, dir Dir) (Row, *Header)
+	// Get returns a single record, for Query1 (dir = One),
+	// QueryFirst (dir = Next), or QueryLast (dir = Prev)
+	Get(query string, dir Dir) (Row, *Header)
 
 	// Info returns an object containing database information
 	Info() Value
@@ -95,7 +95,7 @@ type IDbms interface {
 	Use(lib string) bool
 }
 
-// ITran is the interface to a database transaction,
+// ITran is the interface to a dbms transaction,
 // either local (not implemented yet) or TranClient.
 type ITran interface {
 	String() string
@@ -109,15 +109,12 @@ type ITran interface {
 	// Erase deletes a record
 	Erase(off uint64)
 
-	// Get returns a single record, for Query1 (which = '1'),
-	// QueryFirst (which = '+'), or QueryLast (which = '-')
+	// Get returns a single record, for Query1 (dir = One),
+	// QueryFirst (dir = Next), or QueryLast (dir = Prev)
 	Get(query string, dir Dir) (Row, *Header)
 
 	// Query starts a query
 	Query(query string) IQuery
-
-	// ReadCount returns the number of reads done by the transaction
-	ReadCount() int
 
 	// Request executes an insert, update, or delete
 	// and returns the number of records processed
@@ -125,6 +122,9 @@ type ITran interface {
 
 	// Update modifies a record
 	Update(off uint64, rec Record) uint64
+
+	// ReadCount returns the number of reads done by the transaction
+	ReadCount() int
 
 	// WriteCount returns the number of writes done by the transaction
 	WriteCount() int

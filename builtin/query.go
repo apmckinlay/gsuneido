@@ -24,13 +24,11 @@ var _ = builtinRaw("QueryLast(@args)",
 		return queryOne(t, as, args, Prev)
 	})
 
-const noTran = 0
-
 var queryParams = params("(query)")
 
 func queryOne(t *Thread, as *ArgSpec, args []Value, dir Dir) Value {
 	query, _ := extractQuery(t, queryParams, as, args)
-	row, hdr := t.Dbms().Get(noTran, query, dir)
+	row, hdr := t.Dbms().Get(query, dir)
 	if hdr == nil {
 		return False
 	}

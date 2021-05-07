@@ -17,7 +17,7 @@ func TestOptimize(t *testing.T) {
 		Setup(q, mode, testTran{})
 		assert.T(t).Msg(query).This(q.String()).Like(expected)
 	}
-	mode = readMode
+	mode = ReadMode
 	test("table",
 		"table^(a)")
 	test("table sort a",
@@ -133,11 +133,11 @@ func TestOptimize(t *testing.T) {
 	test("hist2 where date is 1 sort id",
 		"hist2^(date) WHERE*1 date is 1")
 
-	mode = updateMode
+	mode = UpdateMode
 	test("table rename b to bb sort c",
 		"table^(a) TEMPINDEX(c) RENAME b to bb")
 
-	mode = cursorMode
+	mode = CursorMode
 	test("(inven join trans) union (inven join trans)",
 		"(inven^(item) JOIN 1:n by(item) trans^(item)) "+
 			"UNION-LOOKUP "+

@@ -217,7 +217,7 @@ func (su *Summarize) idxCost(Mode) (Cost, interface{}) {
 	// NOTE: this is not correct if there is any fixed cost
 	nr := ints.Max(1, su.source.nrows())
 	// cursorMode to bypass temp index
-	cost := Optimize(su.source, cursorMode, su.ons) / nr
+	cost := Optimize(su.source, CursorMode, su.ons) / nr
 	approach := &summarizeApproach{strategy: sumIdx, index: su.ons}
 	return cost, approach
 }

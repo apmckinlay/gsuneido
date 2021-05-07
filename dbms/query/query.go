@@ -111,18 +111,18 @@ type Query interface {
 type Mode int
 
 const (
-	cursorMode Mode = iota
-	readMode
-	updateMode
+	CursorMode Mode = iota
+	ReadMode
+	UpdateMode
 )
 
 func (mode Mode) String() string {
 	switch mode {
-	case cursorMode:
+	case CursorMode:
 		return "cursorMode"
-	case readMode:
+	case ReadMode:
 		return "readMode"
-	case updateMode:
+	case UpdateMode:
 		return "updateMode"
 	default:
 		panic("invalid mode")
@@ -226,10 +226,10 @@ type tempIndex struct {
 }
 
 func tempIndexable(q Query, mode Mode) bool {
-	if mode == readMode {
+	if mode == ReadMode {
 		return true
 	}
-	if mode == cursorMode {
+	if mode == CursorMode {
 		return false
 	}
 	// else updateMode, tempIndex only directly on Table

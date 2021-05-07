@@ -86,8 +86,28 @@ func (DbmsLocal) Final() int {
 	panic("DbmsLocal Final not implemented")
 }
 
-func (DbmsLocal) Get(int, string, Dir) (Row, *Header) {
-	panic("DbmsLocal Get not implemented")
+func (dbms DbmsLocal) Get(query string, dir Dir) (Row, *Header) {
+	tran := dbms.db.NewReadTran()
+	defer tran.Complete()
+	return get(tran, query, dir)
+}
+
+func get(tran qry.QueryTran, query string, dir Dir) (Row, *Header) {
+	q := qry.ParseQuery(query)
+	qry.Setup(q, qry.ReadMode, tran)
+	only := false
+	if dir == Only {
+		only = true
+		dir = Next
+	}
+	row := q.Get(dir)
+	if row == nil {
+		return nil, nil
+	}
+	if only && q.Get(dir) != nil {
+		panic("Query1 not unique: " + query)
+	}
+	return row, q.Header()
 }
 
 func (DbmsLocal) Info() Value {
@@ -164,8 +184,11 @@ func (DbmsLocal) Token() string {
 	panic("DbmsLocal Token not implemented")
 }
 
-func (DbmsLocal) Transaction(bool) ITran {
-	panic("DbmsLocal Transaction not implemented")
+func (dbms DbmsLocal) Transaction(update bool) ITran {
+	if update {
+		return &UpdateTranLocal{dbms.db.NewUpdateTran()}
+	}
+	return &ReadTranLocal{dbms.db.NewReadTran()}
 }
 
 var prevTimestamp SuDate
@@ -201,4 +224,40 @@ func (dbms DbmsLocal) Use(lib string) bool {
 }
 
 func (DbmsLocal) Close() {
+}
+
+// ReadTranLocal --------------------------------------------------------
+
+type ReadTranLocal struct {
+	*db19.ReadTran
+}
+
+func (t ReadTranLocal) Get(query string, dir Dir) (Row, *Header) {
+	return get(t.ReadTran, query, dir)
+}
+
+func (t ReadTranLocal) Query(query string) IQuery {
+	panic("ReadTranLocal Query not implemented") //TODO
+}
+
+func (t ReadTranLocal) Request(request string) int {
+	panic("ReadTranLocal Request not implemented") //TODO
+}
+
+// UpdateTranLocal --------------------------------------------------------
+
+type UpdateTranLocal struct {
+	*db19.UpdateTran
+}
+
+func (t UpdateTranLocal) Get(query string, dir Dir) (Row, *Header) {
+	return get(t.UpdateTran, query, dir)
+}
+
+func (t UpdateTranLocal) Query(query string) IQuery {
+	panic("UpdateTranLocal Query not implemented") //TODO
+}
+
+func (t UpdateTranLocal) Request(request string) int {
+	panic("UpdateTranLocal Request not implemented") //TODO
 }

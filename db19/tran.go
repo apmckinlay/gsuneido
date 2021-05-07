@@ -58,6 +58,10 @@ func (db *Database) NewReadTran() *ReadTran {
 	return &ReadTran{tran: tran{db: db, meta: state.Meta}}
 }
 
+func (t *ReadTran) String() string {
+	return "ReadTran"
+}
+
 func (t *ReadTran) GetIndex(table string, cols []string) *index.Overlay {
 	ts := t.meta.GetRoSchema(table)
 	ti := t.meta.GetRoInfo(table)
@@ -99,8 +103,31 @@ func (t *ReadTran) Output(string, rt.Record) {
 	panic("can't output to read-only transaction")
 }
 
+func (t *ReadTran) Erase(uint64) {
+	panic("can't delete from read-only transaction")
+}
+
+func (t *ReadTran) Update(uint64, rt.Record) uint64 {
+	panic("can't update from read-only transaction")
+}
+
+func (t *ReadTran) ReadCount() int {
+	return 0
+}
+
+func (t *ReadTran) WriteCount() int {
+	return 0
+}
+
 func (t *ReadTran) MakeLess(is *ixkey.Spec) func(x, y uint64) bool {
 	return t.db.MakeLess(is)
+}
+
+func (t *ReadTran) Complete() string {
+	return ""
+}
+
+func (t *ReadTran) Abort() {
 }
 
 //-------------------------------------------------------------------
@@ -118,6 +145,17 @@ func (db *Database) NewUpdateTran() *UpdateTran {
 		ReadTran: ReadTran{tran: tran{db: db, meta: meta}}}
 }
 
+func (t *UpdateTran) String() string {
+	return "UpdateTran"
+}
+
+func (t *UpdateTran) Complete() string {
+	if !t.db.ck.Commit(t) {
+		return "commit failed" //TODO conflict description
+	}
+	return ""
+}
+
 func (t *UpdateTran) Commit() {
 	// send commit request to checker
 	// which starts the pipeline to merger to persister
@@ -130,6 +168,10 @@ func (t *UpdateTran) commit() int {
 		state.Meta = t.meta.LayeredOnto(state.Meta)
 	})
 	return t.num()
+}
+
+func (t *UpdateTran) Abort() {
+	t.ck(t.db.ck.Abort(t.ct))
 }
 
 func (t *UpdateTran) num() int {
@@ -169,4 +211,12 @@ func (t *UpdateTran) ck(result bool) {
 		}
 		panic("transaction aborted: " + conflict.(string))
 	}
+}
+
+func (t *UpdateTran) Erase(uint64) {
+	panic("Erase not implemented") //TODO
+}
+
+func (t *UpdateTran) Update(uint64, rt.Record) uint64 {
+	panic("Update not implemented") //TODO
 }
