@@ -157,7 +157,7 @@ func (t *UpdateTran) Complete() string {
 }
 
 func (t *UpdateTran) Commit() {
-	// send commit request to checker
+	// send commit to checker
 	// which starts the pipeline to merger to persister
 	t.ck(t.db.ck.Commit(t))
 }

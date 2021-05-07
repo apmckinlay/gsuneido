@@ -9,11 +9,11 @@ import (
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
-func TestParseRequest(t *testing.T) {
-	test := func(qs string) {
+func TestParseAdmin(t *testing.T) {
+	test := func(cmd string) {
 		t.Helper()
-		rq := ParseRequest(qs)
-		assert.T(t).This(rq.String()).Is(qs)
+		admin := ParseAdmin(cmd)
+		assert.T(t).This(admin.String()).Is(cmd)
 	}
 	test("drop mytable")
 
@@ -41,8 +41,8 @@ func TestParseRequest(t *testing.T) {
 	test("alter mytable create (one,two,three) index(two)")
 	test("alter mytable rename one to two, three to four")
 
-	xtest := func(qs, err string) {
-		fn := func() { ParseRequest(qs) }
+	xtest := func(cmd, err string) {
+		fn := func() { ParseAdmin(cmd) }
 		assert.T(t).This(fn).Panics(err)
 	}
 	xtest("create mytable () key(foo)", "invalid index column: foo")

@@ -40,7 +40,7 @@ const (
 	Output
 	Query
 	ReadCount
-	Request
+	Action
 	Rewind
 	Run
 	SessionId

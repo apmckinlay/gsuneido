@@ -12,9 +12,9 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/meta"
 )
 
-func DoRequest(db *db19.Database, request string) {
-	r := ParseRequest(request)
-	r.execute(db)
+func DoAdmin(db *db19.Database, cmd string) {
+	admin := ParseAdmin(cmd)
+	admin.execute(db)
 }
 
 func checkForSystemTable(op, table string) {
@@ -33,15 +33,15 @@ func isSystemTable(table string) bool {
 
 //-------------------------------------------------------------------
 
-type createRequest struct {
+type createAdmin struct {
 	schema Schema
 }
 
-func (r *createRequest) String() string {
+func (r *createAdmin) String() string {
 	return "create " + r.schema.String()
 }
 
-func (r *createRequest) execute(db *db19.Database) {
+func (r *createAdmin) execute(db *db19.Database) {
 	checkForSystemTable("create", r.schema.Table)
 	ts := &meta.Schema{Schema: r.schema}
 	ts.Ixspecs()
@@ -56,42 +56,42 @@ func (r *createRequest) execute(db *db19.Database) {
 
 //-------------------------------------------------------------------
 
-type ensureRequest struct {
+type ensureAdmin struct {
 	schema Schema
 }
 
-func (r *ensureRequest) String() string {
+func (r *ensureAdmin) String() string {
 	return "ensure " + r.schema.String()
 }
 
-func (r *ensureRequest) execute(db *db19.Database) {
+func (r *ensureAdmin) execute(db *db19.Database) {
 	//TODO
 }
 
 //-------------------------------------------------------------------
 
-type renameRequest struct {
+type renameAdmin struct {
 	from string
 	to   string
 }
 
-func (r *renameRequest) String() string {
+func (r *renameAdmin) String() string {
 	return "rename " + r.from + " to " + r.to
 }
 
-func (r *renameRequest) execute(db *db19.Database) {
+func (r *renameAdmin) execute(db *db19.Database) {
 	//TODO
 }
 
 //-------------------------------------------------------------------
 
-type alterRenameRequest struct {
+type alterRenameAdmin struct {
 	table string
 	from  []string
 	to    []string
 }
 
-func (r *alterRenameRequest) String() string {
+func (r *alterRenameAdmin) String() string {
 	s := "alter " + r.table + " rename "
 	sep := ""
 	for i, from := range r.from {
@@ -101,49 +101,49 @@ func (r *alterRenameRequest) String() string {
 	return s
 }
 
-func (r *alterRenameRequest) execute(db *db19.Database) {
+func (r *alterRenameAdmin) execute(db *db19.Database) {
 	//TODO
 }
 
 //-------------------------------------------------------------------
 
-type alterCreateRequest struct {
+type alterCreateAdmin struct {
 	schema Schema
 }
 
-func (r *alterCreateRequest) String() string {
+func (r *alterCreateAdmin) String() string {
 	return "alter " + strings.Replace(r.schema.String(), " ", " create ", 1)
 }
 
-func (r *alterCreateRequest) execute(db *db19.Database) {
+func (r *alterCreateAdmin) execute(db *db19.Database) {
 	//TODO
 }
 
 //-------------------------------------------------------------------
 
-type alterDropRequest struct {
+type alterDropAdmin struct {
 	schema Schema
 }
 
-func (r *alterDropRequest) String() string {
+func (r *alterDropAdmin) String() string {
 	return "alter " + strings.Replace(r.schema.String(), " ", " drop ", 1)
 }
 
-func (r *alterDropRequest) execute(db *db19.Database) {
+func (r *alterDropAdmin) execute(db *db19.Database) {
 	//TODO
 }
 
 //-------------------------------------------------------------------
 
-type dropRequest struct {
+type dropAdmin struct {
 	table string
 }
 
-func (r *dropRequest) String() string {
+func (r *dropAdmin) String() string {
 	return "drop " + r.table
 }
 
-func (r *dropRequest) execute(db *db19.Database) {
+func (r *dropAdmin) execute(db *db19.Database) {
 	checkForSystemTable("drop", r.table)
 	if !db.DropTable(r.table) {
 		panic("can't drop nonexistent table: " + r.table)

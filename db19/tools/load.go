@@ -114,7 +114,7 @@ func open(filename string) (*os.File, *bufio.Reader) {
 
 func loadTable(db *Database, r *bufio.Reader, schema string, channel chan loadJob) int {
 	trace(schema)
-	sch := query.NewRequestParser(schema).Schema()
+	sch := query.NewAdminParser(schema).Schema()
 	store := db.Store
 	list := sortlist.NewUnsorted()
 	nrecs, size := readRecords(r, store, list)

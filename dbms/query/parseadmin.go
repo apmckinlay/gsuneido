@@ -14,13 +14,13 @@ import (
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
-type requestParser struct {
+type adminParser struct {
 	compile.ParserBase
 }
 
-func NewRequestParser(src string) *requestParser {
+func NewAdminParser(src string) *adminParser {
 	lxr := lexer.NewQueryLexer(src)
-	p := &requestParser{compile.ParserBase{Lxr: lxr}}
+	p := &adminParser{compile.ParserBase{Lxr: lxr}}
 	p.Next()
 	return p
 }
@@ -28,7 +28,7 @@ func NewRequestParser(src string) *requestParser {
 type Schema = schema.Schema
 type Index = schema.Index
 
-type Request interface {
+type Admin interface {
 	execute(db *db19.Database)
 	String() string
 }
@@ -38,50 +38,50 @@ type Renames struct {
 	To   []string
 }
 
-func ParseRequest(src string) Request {
-	p := NewRequestParser(src)
-	result := p.request()
+func ParseAdmin(src string) Admin {
+	p := NewAdminParser(src)
+	result := p.admin()
 	if p.Token != tok.Eof {
 		p.Error("did not parse all input")
 	}
 	return result
 }
 
-func (p *requestParser) request() Request {
+func (p *adminParser) admin() Admin {
 	switch {
 	case p.MatchIf(tok.Create):
-		return &createRequest{p.schema(true)}
+		return &createAdmin{p.schema(true)}
 	case p.MatchIf(tok.Ensure):
-		return &ensureRequest{p.schema(false)}
+		return &ensureAdmin{p.schema(false)}
 	case p.MatchIf(tok.Rename):
 		from, to := p.rename1()
-		return &renameRequest{from: from, to: to}
+		return &renameAdmin{from: from, to: to}
 	case p.MatchIf(tok.Alter):
 		return p.alter()
 	//TODO: View, Sview
 	case p.MatchIf(tok.Drop):
 		table := p.MatchIdent()
-		return &dropRequest{table}
+		return &dropAdmin{table}
 	default:
-		panic("invalid request")
+		panic("invalid admin")
 	}
 }
 
-func (p *requestParser) alter() Request {
+func (p *adminParser) alter() Admin {
 	table := p.MatchIdent()
 	switch {
 	case p.MatchIf(tok.Create):
-		return &alterCreateRequest{p.schema2(table, false)}
+		return &alterCreateAdmin{p.schema2(table, false)}
 	case p.MatchIf(tok.Drop):
-		return &alterDropRequest{p.schema2(table, false)}
+		return &alterDropAdmin{p.schema2(table, false)}
 	case p.MatchIf(tok.Rename):
 		return p.alterRename(table)
 	default:
-		panic("invalid request")
+		panic("invalid admin")
 	}
 }
 
-func (p *requestParser) alterRename(table string) Request {
+func (p *adminParser) alterRename(table string) Admin {
 	var from, to []string
 	for {
 		f, t := p.rename1()
@@ -91,32 +91,32 @@ func (p *requestParser) alterRename(table string) Request {
 			break
 		}
 	}
-	return &alterRenameRequest{table: table, from: from, to: to}
+	return &alterRenameAdmin{table: table, from: from, to: to}
 }
 
-func (p *requestParser) rename1() (string, string) {
+func (p *adminParser) rename1() (string, string) {
 	from := p.MatchIdent()
 	p.Match(tok.To)
 	to := p.MatchIdent()
 	return from, to
 }
 
-func (p *requestParser) Schema() Schema {
+func (p *adminParser) Schema() Schema {
 	return p.schema(true)
 }
 
-func (p *requestParser) schema(full bool) Schema {
+func (p *adminParser) schema(full bool) Schema {
 	table := p.MatchIdent()
 	return p.schema2(table, full)
 }
 
-func (p *requestParser) schema2(table string, full bool) Schema {
+func (p *adminParser) schema2(table string, full bool) Schema {
 	columns, derived := p.columns(full)
 	indexes := p.indexes(columns, derived, full)
 	return Schema{Table: table, Columns: columns, Derived: derived, Indexes: indexes}
 }
 
-func (p *requestParser) columns(full bool) (columns, derived []string) {
+func (p *adminParser) columns(full bool) (columns, derived []string) {
 	if !full && p.Token != tok.LParen {
 		return
 	}
@@ -146,7 +146,7 @@ func (p *requestParser) columns(full bool) (columns, derived []string) {
 	return columns, derived
 }
 
-func (p *requestParser) indexes(columns, derived []string, full bool) []Index {
+func (p *adminParser) indexes(columns, derived []string, full bool) []Index {
 	hasKey := false
 	indexes := make([]Index, 0, 4)
 	for ix := p.index(columns, derived, full); ix != nil; ix = p.index(columns, derived, full) {
@@ -159,7 +159,7 @@ func (p *requestParser) indexes(columns, derived []string, full bool) []Index {
 	return indexes
 }
 
-func (p *requestParser) index(columns, derived []string, full bool) *Index {
+func (p *adminParser) index(columns, derived []string, full bool) *Index {
 	if p.Token != tok.Key && p.Token != tok.Index {
 		return nil
 	}
@@ -180,7 +180,7 @@ func (p *requestParser) index(columns, derived []string, full bool) *Index {
 	return ix
 }
 
-func (p *requestParser) indexColumns(columns, derived []string, full bool) []string {
+func (p *adminParser) indexColumns(columns, derived []string, full bool) []string {
 	p.Match(tok.LParen)
 	ixcols := make([]string, 0, 8)
 	for p.Token != tok.RParen {
@@ -196,7 +196,7 @@ func (p *requestParser) indexColumns(columns, derived []string, full bool) []str
 	return ixcols
 }
 
-func (p *requestParser) foreignKey() (table string, columns []string, mode int) {
+func (p *adminParser) foreignKey() (table string, columns []string, mode int) {
 	if !p.MatchIf(tok.In) {
 		return
 	}

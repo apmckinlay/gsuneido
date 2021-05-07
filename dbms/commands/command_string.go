@@ -37,7 +37,7 @@ func _() {
 	_ = x[Output-26]
 	_ = x[Query-27]
 	_ = x[ReadCount-28]
-	_ = x[Request-29]
+	_ = x[Action-29]
 	_ = x[Rewind-30]
 	_ = x[Run-31]
 	_ = x[SessionId-32]
@@ -50,9 +50,9 @@ func _() {
 	_ = x[WriteCount-39]
 }
 
-const _Command_name = "AbortAdminAuthCheckCloseCommitConnectionsCursorCursorsDumpEraseExecStrategyFinalGetGet1HeaderInfoKeysKillLibGetLibrariesLoadLogNonceOrderOutputQueryReadCountRequestRewindRunSessionIdSizeTimestampTokenTransactionTransactionsUpdateWriteCount"
+const _Command_name = "AbortAdminAuthCheckCloseCommitConnectionsCursorCursorsDumpEraseExecStrategyFinalGetGet1HeaderInfoKeysKillLibGetLibrariesLoadLogNonceOrderOutputQueryReadCountActionRewindRunSessionIdSizeTimestampTokenTransactionTransactionsUpdateWriteCount"
 
-var _Command_index = [...]uint8{0, 5, 10, 14, 19, 24, 30, 41, 47, 54, 58, 63, 67, 75, 80, 83, 87, 93, 97, 101, 105, 111, 120, 124, 127, 132, 137, 143, 148, 157, 164, 170, 173, 182, 186, 195, 200, 211, 223, 229, 239}
+var _Command_index = [...]uint8{0, 5, 10, 14, 19, 24, 30, 41, 47, 54, 58, 63, 67, 75, 80, 83, 87, 93, 97, 101, 105, 111, 120, 124, 127, 132, 137, 143, 148, 157, 163, 169, 172, 181, 185, 194, 199, 210, 222, 228, 238}
 
 func (i Command) String() string {
 	if i >= Command(len(_Command_index)-1) {

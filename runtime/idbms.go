@@ -6,7 +6,7 @@ package runtime
 // IDbms is the interface to the dbms package.
 // The two implementations, DbmsLocal and DbmsClient, are in the dbms package
 type IDbms interface {
-	// Admin executes a database request
+	// Admin executes a schema change (create, alter, drop)
 	Admin(s string)
 
 	// Auth authorizes the connection with the server
@@ -116,9 +116,9 @@ type ITran interface {
 	// Query starts a query
 	Query(query string) IQuery
 
-	// Request executes an insert, update, or delete
+	// Action executes an insert, update, or delete
 	// and returns the number of records processed
-	Request(request string) int
+	Action(action string) int
 
 	// Update modifies a record
 	Update(off uint64, rec Record) uint64

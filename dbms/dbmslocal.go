@@ -31,8 +31,8 @@ func NewDbmsLocal(db *db19.Database) IDbms {
 
 var _ IDbms = (*DbmsLocal)(nil)
 
-func (dbms DbmsLocal) Admin(req string) {
-	qry.DoRequest(dbms.db, req)
+func (dbms DbmsLocal) Admin(admin string) {
+	qry.DoAdmin(dbms.db, admin)
 }
 
 func (DbmsLocal) Auth(string) bool {
@@ -240,8 +240,8 @@ func (t ReadTranLocal) Query(query string) IQuery {
 	panic("ReadTranLocal Query not implemented") //TODO
 }
 
-func (t ReadTranLocal) Request(request string) int {
-	panic("ReadTranLocal Request not implemented") //TODO
+func (t ReadTranLocal) Action(action string) int {
+	panic("cannot do action in read-only transaction")
 }
 
 // UpdateTranLocal --------------------------------------------------------
@@ -258,6 +258,6 @@ func (t UpdateTranLocal) Query(query string) IQuery {
 	panic("UpdateTranLocal Query not implemented") //TODO
 }
 
-func (t UpdateTranLocal) Request(request string) int {
-	panic("UpdateTranLocal Request not implemented") //TODO
+func (t UpdateTranLocal) Action(action string) int {
+	panic("UpdateTranLocal Action not implemented") //TODO
 }

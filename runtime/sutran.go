@@ -133,9 +133,9 @@ func (st *SuTran) ReadCount() int {
 	return st.itran.ReadCount()
 }
 
-func (st *SuTran) Request(req string) int {
+func (st *SuTran) Action(action string) int {
 	st.ckActive()
-	return st.itran.Request(req)
+	return st.itran.Action(action)
 }
 
 func (st *SuTran) Rollback() {

@@ -101,8 +101,8 @@ func checkServerStatus(addr string, port string) {
 
 var _ IDbms = (*dbmsClient)(nil)
 
-func (dc *dbmsClient) Admin(request string) {
-	dc.PutCmd(commands.Admin).PutStr(request).Request()
+func (dc *dbmsClient) Admin(admin string) {
+	dc.PutCmd(commands.Admin).PutStr(admin).Request()
 }
 
 func (dc *dbmsClient) Auth(s string) bool {
@@ -357,8 +357,8 @@ func (tc *TranClient) ReadCount() int {
 	return tc.dc.GetInt()
 }
 
-func (tc *TranClient) Request(request string) int {
-	tc.dc.PutCmd(commands.Request).PutInt(tc.tn).PutStr(request).Request()
+func (tc *TranClient) Action(action string) int {
+	tc.dc.PutCmd(commands.Action).PutInt(tc.tn).PutStr(action).Request()
 	return tc.dc.GetInt()
 }
 

@@ -61,7 +61,7 @@ func init() {
 		"Query": methodRaw("(@args)",
 			func(th *Thread, as *ArgSpec, this Value, args []Value) Value {
 				query, args := extractQuery(th, queryBlockParams, as, args)
-				mustNotBeRequest(query)
+				mustNotBeAction(query)
 				q := this.(*SuTran).Query(query)
 				if args[1] == False {
 					return q
@@ -77,7 +77,7 @@ func init() {
 		"QueryDo": methodRaw("(@args)",
 			func(th *Thread, as *ArgSpec, this Value, args []Value) Value {
 				query, _ := extractQuery(th, queryParams, as, args)
-				return IntVal(this.(*SuTran).Request(query))
+				return IntVal(this.(*SuTran).Action(query))
 			}),
 		"Query1": methodRaw("(@args)",
 			func(th *Thread, as *ArgSpec, this Value, args []Value) Value {
@@ -118,7 +118,7 @@ func tranQueryOne(th *Thread, st *SuTran, as *ArgSpec, args []Value, dir Dir) Va
 
 var requestRegex = regex.Compile(`(?i)\A(insert|delete|update)\>`)
 
-func mustNotBeRequest(query string) {
+func mustNotBeAction(query string) {
 	if requestRegex.Matches(query) {
 		panic("transaction.Query: use QueryDo for insert, delete, or update requests")
 	}
