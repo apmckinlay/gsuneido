@@ -4,10 +4,7 @@
 package db19
 
 import (
-	"bytes"
-	"fmt"
 	"math/rand"
-	"strings"
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/util/assert"
@@ -118,25 +115,25 @@ func script(t *testing.T, s string) {
 	}
 }
 
-func (t *CkTran) String() string {
-	b := new(bytes.Buffer)
-	fmt.Fprint(b, "T", t.start)
-	if t.isEnded() {
-		fmt.Fprint(b, "->", t.end)
-	}
-	fmt.Fprintln(b)
-	for name, tbl := range t.tables {
-		fmt.Fprintln(b, "    ", name)
-		for i, writes := range tbl.writes {
-			if writes != nil {
-				fmt.Fprintln(b, "        writes", i, writes.String())
-			}
-		}
-		for i, reads := range tbl.reads {
-			if reads != nil {
-				fmt.Fprintln(b, "        reads", i, reads.String())
-			}
-		}
-	}
-	return strings.TrimSpace(b.String())
-}
+// func (t *CkTran) String() string {
+// 	b := new(bytes.Buffer)
+// 	fmt.Fprint(b, "T", t.start)
+// 	if t.isEnded() {
+// 		fmt.Fprint(b, "->", t.end)
+// 	}
+// 	fmt.Fprintln(b)
+// 	for name, tbl := range t.tables {
+// 		fmt.Fprintln(b, "    ", name)
+// 		for i, writes := range tbl.writes {
+// 			if writes != nil {
+// 				fmt.Fprintln(b, "        writes", i, writes.String())
+// 			}
+// 		}
+// 		for i, reads := range tbl.reads {
+// 			if reads != nil {
+// 				fmt.Fprintln(b, "        reads", i, reads.String())
+// 			}
+// 		}
+// 	}
+// 	return strings.TrimSpace(b.String())
+// }

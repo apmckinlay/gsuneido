@@ -43,6 +43,10 @@ func (st *schemaTable) Fixed() []Fixed {
 	return nil
 }
 
+func (*schemaTable) Ordering() []string {
+	return nil
+}
+
 func (st *schemaTable) Updateable() bool {
 	return false
 }

@@ -237,10 +237,12 @@ func (t ReadTranLocal) Get(query string, dir Dir) (Row, *Header) {
 }
 
 func (t ReadTranLocal) Query(query string) IQuery {
-	panic("ReadTranLocal Query not implemented") //TODO
+	q := qry.ParseQuery(query)
+	qry.Setup(q, qry.ReadMode, t.ReadTran)
+	return queryLocal{Query: q}
 }
 
-func (t ReadTranLocal) Action(action string) int {
+func (t ReadTranLocal) Action(string) int {
 	panic("cannot do action in read-only transaction")
 }
 
@@ -255,9 +257,47 @@ func (t UpdateTranLocal) Get(query string, dir Dir) (Row, *Header) {
 }
 
 func (t UpdateTranLocal) Query(query string) IQuery {
-	panic("UpdateTranLocal Query not implemented") //TODO
+	q := qry.ParseQuery(query)
+	qry.Setup(q, qry.UpdateMode, t.UpdateTran)
+	return queryLocal{Query: q}
 }
 
 func (t UpdateTranLocal) Action(action string) int {
-	panic("UpdateTranLocal Action not implemented") //TODO
+	return qry.DoAction(t.UpdateTran, action)
+}
+
+// queryLocal
+
+type queryLocal struct {
+	// Query is embedded so most methods are "inherited" directly
+	qry.Query
+	keys *SuObject // cache
+}
+
+func (q queryLocal) Keys() *SuObject {
+	if q.keys == nil {
+		keys := q.Query.Keys()
+		kv := make([]Value, len(keys))
+		for i, k := range keys {
+			kv[i] = SuStr(str.Join(",", k))
+		}
+		q.keys = NewSuObject(kv)
+	}
+	return q.keys
+}
+
+func (q queryLocal) Strategy() string {
+	return q.String()
+}
+
+func (q queryLocal) Order() *SuObject {
+	ord := q.Query.Ordering()
+	list := make([]Value, len(ord))
+	for i, s := range ord {
+		list[i] = SuStr(s)
+	}
+	return NewSuObject(list)
+}
+
+func (q queryLocal) Close() {
 }

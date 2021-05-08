@@ -4,7 +4,9 @@
 package db19
 
 import (
+	"log"
 	"math/rand"
+	"strconv"
 	"sync/atomic"
 
 	"github.com/apmckinlay/gsuneido/util/assert"
@@ -57,6 +59,10 @@ type cktbl struct {
 
 type ckwrites []*Set
 type ckreads []*Ranges
+
+func (t *CkTran) String() string {
+	return "ut" + strconv.Itoa(t.start)
+}
 
 func NewCheck() *Check {
 	return &Check{trans: make(map[int]*CkTran), oldest: ints.MaxInt}
@@ -307,6 +313,7 @@ func (ck *Check) tick() {
 	for tn, t := range ck.trans {
 		if ck.clock-t.birth >= MaxAge {
 			trace("abort", tn, "age", ck.clock-t.birth)
+			log.Println("aborted", t, "update transaction longer than", MaxAge, "seconds")
 			ck.abort(tn, "transaction exceeded max age")
 		}
 	}

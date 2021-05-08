@@ -236,6 +236,7 @@ func openDbms() {
 		}
 		os.Exit(0)
 	}
+	db19.StartConcur(db, 1*time.Minute)
 	dbmsLocal = dbms.NewDbmsLocal(db)
 	GetDbms = func() IDbms { return dbmsLocal }
 }

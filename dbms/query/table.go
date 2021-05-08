@@ -98,6 +98,10 @@ func (tbl *Table) Keys() [][]string {
 	return tbl.keys
 }
 
+func (*Table) Ordering() []string {
+	return nil
+}
+
 func (tbl *Table) nrows() int {
 	return tbl.info.Nrows
 }

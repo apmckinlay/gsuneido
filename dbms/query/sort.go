@@ -94,3 +94,7 @@ func (sort *Sort) Get(dir runtime.Dir) runtime.Row {
 func (sort *Sort) Select(cols, vals []string) {
 	sort.source.Select(cols, vals)
 }
+
+func (sort *Sort) Ordering() []string {
+	return sort.columns
+}

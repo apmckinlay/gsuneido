@@ -54,7 +54,7 @@ type Query interface {
 	// SetTran sets the transaction to be used by the query
 	SetTran(tran QueryTran)
 
-	// Order() []string
+	Ordering() []string
 
 	// Fixed returns the field values that are constant from Extend or Where
 	Fixed() []Fixed
@@ -313,6 +313,10 @@ func (q1 *Query1) nrows() int {
 
 func (q1 *Query1) rowSize() int {
 	return q1.source.rowSize()
+}
+
+func (*Query1) Ordering() []string {
+	return nil
 }
 
 func (q1 *Query1) Fixed() []Fixed {

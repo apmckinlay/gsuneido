@@ -4,6 +4,9 @@
 package db19
 
 import (
+	"strconv"
+	"sync/atomic"
+
 	"github.com/apmckinlay/gsuneido/db19/index"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/db19/meta"
@@ -51,15 +54,19 @@ func (t *tran) GetAllSchema() []*meta.Schema {
 
 type ReadTran struct {
 	tran
+	num int
 }
+
+var nextReadTran int32
 
 func (db *Database) NewReadTran() *ReadTran {
 	state := db.GetState()
-	return &ReadTran{tran: tran{db: db, meta: state.Meta}}
+	return &ReadTran{tran: tran{db: db, meta: state.Meta},
+		num: int(atomic.AddInt32(&nextReadTran, 1))}
 }
 
 func (t *ReadTran) String() string {
-	return "ReadTran"
+	return "rt" + strconv.Itoa(t.num)
 }
 
 func (t *ReadTran) GetIndex(table string, cols []string) *index.Overlay {
@@ -146,7 +153,7 @@ func (db *Database) NewUpdateTran() *UpdateTran {
 }
 
 func (t *UpdateTran) String() string {
-	return "UpdateTran"
+	return t.ct.String()
 }
 
 func (t *UpdateTran) Complete() string {
