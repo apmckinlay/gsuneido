@@ -40,7 +40,7 @@ const hdrlen = 2
 
 // Count returns the number of values in the record
 func (r Record) Count() int {
-	if r[0] == 0 {
+	if r == "" || r[0] == 0 {
 		return 0
 	}
 	return (int(r[0])<<8 + int(r[1])) & sizeMask

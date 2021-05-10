@@ -18,7 +18,8 @@ type Union struct {
 	fixed    []Fixed // lazy, calculated by Fixed()
 	strategy unionStrategy
 	rewound  bool
-	empty    Row
+	empty1   Row
+	empty2   Row
 	src1     bool
 	src2     bool
 	key1     string
@@ -229,27 +230,13 @@ func (u *Union) setApproach(_ []string, approach interface{}, tran QueryTran) {
 	u.source = SetApproach(u.source, app.idx1, tran)
 	u.source2 = SetApproach(u.source2, app.idx2, tran)
 
-	u.empty = makeEmpty(len(u.source.Header().Fields))
-}
+	u.empty1 = make(Row, len(u.source.Header().Fields))
+	u.empty2 = make(Row, len(u.source2.Header().Fields))
 
-func makeEmpty(n int) Row {
-	row := make(Row, n)
-	for i := range row {
-		row[i] = DbRec{}
-	}
-	return row
+	u.rewound = true
 }
 
 // execution --------------------------------------------------------
-
-func (u *Union) Header() *Header {
-	hdr := *u.source.Header()   // copy
-	hdr2 := *u.source2.Header() // copy
-	hdr.Next = &hdr2            // chain
-	hdr.Columns = sset.Union(hdr.Columns, hdr2.Columns)
-	hdr2.Columns = nil
-	return &hdr
-}
 
 func (u *Union) Rewind() {
 	u.source.Rewind()
@@ -281,7 +268,7 @@ func (u *Union) getLookup(dir Dir) Row {
 					break
 				}
 				if !u.source2Has(row) {
-					return row
+					return JoinRows(row, u.empty2)
 				}
 			}
 			if dir == Prev {
@@ -291,7 +278,7 @@ func (u *Union) getLookup(dir Dir) Row {
 		} else { // source2
 			row = u.source2.Get(dir)
 			if row != nil {
-				return JoinRows(u.empty, row)
+				return JoinRows(u.empty1, row)
 			}
 			if dir == Next {
 				return nil
@@ -331,16 +318,16 @@ func (u *Union) getMerge(dir Dir) Row {
 		// rows same so return either one
 		u.curKey = u.key1
 		u.src1, u.src2 = true, true
-		return u.row1
+		return JoinRows(u.row1, u.empty2)
 	} else if u.row1 != nil &&
 		(u.row2 == nil || u.before(dir, u.key1, u.key2, true)) {
 		u.curKey = u.key1
 		u.src1 = true
-		return u.row1
+		return JoinRows(u.row1, u.empty2)
 	} else {
 		u.curKey = u.key2
 		u.src2 = true
-		return JoinRows(u.empty, u.row2)
+		return JoinRows(u.empty1, u.row2)
 	}
 }
 

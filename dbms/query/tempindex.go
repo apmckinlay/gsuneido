@@ -155,23 +155,22 @@ func (it singleIter) Rewind() {
 }
 
 type multiIter struct {
-	tran   QueryTran
-	nrecs  int
-	heap   *stor.Stor
-	fields []RowAt
-	iter   *sortlist.Iter
+	tran  QueryTran
+	nrecs int
+	heap  *stor.Stor
+	hdr   *Header
+	order []string
+	iter  *sortlist.Iter
 }
 
 func (ti *TempIndex) multi() rowIter {
 	it := multiIter{tran: ti.tran}
 	hdr := ti.source.Header()
-	it.fields = make([]RowAt, len(ti.order))
-	for i, f := range ti.order {
-		it.fields[i] = hdr.Map[f]
-	}
 	it.nrecs = len(hdr.Fields)
 	it.heap = stor.HeapStor(8192)
 	it.heap.Alloc(1) // avoid offset 0
+	it.hdr = hdr
+	it.order = ti.order
 	b := sortlist.NewSorting(it.multiLess)
 	for {
 		row := ti.source.Get(Next)
@@ -272,17 +271,17 @@ func (it *multiIter) getRec(buf []byte) ([]byte, Record, uint64) {
 }
 
 func (it *multiIter) multiLess(x, y uint64) bool {
-	xrow := make([]Record, it.nrecs)
-	yrow := make([]Record, it.nrecs)
+	xrow := make(Row, it.nrecs)
+	yrow := make(Row, it.nrecs)
 	xbuf := it.heap.Data(x)
 	ybuf := it.heap.Data(y)
 	for i := 0; i < it.nrecs; i++ {
-		xbuf, xrow[i], _ = it.getRec(xbuf)
-		ybuf, yrow[i], _ = it.getRec(ybuf)
+		xbuf, xrow[i].Record, _ = it.getRec(xbuf)
+		ybuf, yrow[i].Record, _ = it.getRec(ybuf)
 	}
-	for _, at := range it.fields {
-		x := xrow[at.Reci].GetRaw(int(at.Fldi))
-		y := yrow[at.Reci].GetRaw(int(at.Fldi))
+	for _, col := range it.order {
+		x := xrow.GetRaw(it.hdr, col)
+		y := yrow.GetRaw(it.hdr, col)
 		if x != y {
 			if x < y {
 				return true

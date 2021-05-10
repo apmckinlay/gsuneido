@@ -4,10 +4,9 @@
 package runtime
 
 import (
-	"fmt"
-
-	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/sset"
+	"github.com/apmckinlay/gsuneido/util/str"
+	"github.com/apmckinlay/gsuneido/util/strs"
 )
 
 // Row is the result of database queries.
@@ -25,21 +24,27 @@ func (row Row) Get(hdr *Header, fld string) Value {
 }
 
 func (row Row) GetRaw(hdr *Header, fld string) string {
-	for {
-		assert.That(hdr.Map != nil)
-		at, ok := hdr.Map[fld]
-		if !ok || int(at.Reci) >= len(row) {
+	at, ok := hdr.Map[fld]
+	if !ok {
+		at, ok = hdr.Find(fld)
+		if !ok {
 			return ""
 		}
-		if row[at.Reci].Record != "" {
-			return row[at.Reci].GetRaw(int(at.Fldi))
-		}
-		if hdr.Next == nil {
-			return ""
-		}
-		row = row[len(hdr.Fields):]
-		hdr = hdr.Next
+		hdr.Map[fld] = at // cache
 	}
+	if row[at.Reci].Record != "" {
+		// normal fast path
+		return row[at.Reci].GetRaw(int(at.Fldi))
+	}
+	// this is only used for Union
+	for reci := int(at.Reci + 1); reci < len(hdr.Fields); reci++ {
+		if fldi := str.List(hdr.Fields[reci]).Index(fld); fldi >= 0 {
+			if row[reci].Record != "" {
+				return row[reci].GetRaw(int(fldi))
+			}
+		}
+	}
+	return ""
 }
 
 func (row Row) GetRawAt(at RowAt) string {
@@ -87,22 +92,14 @@ func (row Row) SameAs(row2 Row) bool {
 type Header struct {
 	Fields  [][]string
 	Columns []string
-	Map     map[string]RowAt
-	// Next is used by Union
-	Next *Header
+	// Map is used to cache the location of fields.
+	// WARNING: assumed to not be concurrent (no locking)
+	Map map[string]RowAt
 }
 
 func NewHeader(fields [][]string, columns []string) *Header {
-	hdr := Header{Fields: fields, Columns: columns}
-	hdr.Map = make(map[string]RowAt, len(hdr.Fields))
-	// reverse is necessary for LeftJoin
-	for ri := len(hdr.Fields) - 1; ri >= 0; ri-- {
-		flds := hdr.Fields[ri]
-		for fi, f := range flds {
-			hdr.Map[f] = RowAt{int16(ri), int16(fi)}
-		}
-	}
-	return &hdr
+	return &Header{Fields: fields, Columns: columns,
+		Map: make(map[string]RowAt)}
 }
 
 func JoinHeaders(x, y *Header) *Header {
@@ -110,16 +107,6 @@ func JoinHeaders(x, y *Header) *Header {
 	fields = append(append(fields, x.Fields...), y.Fields...)
 	columns := sset.Union(x.Columns, y.Columns)
 	return NewHeader(fields, columns)
-}
-
-func (hdr *Header) String() string {
-	s := "Header\n"
-	for hdr != nil {
-		s += fmt.Sprintln("Fields:", hdr.Fields)
-		s += fmt.Sprintln("Columns:", hdr.Columns)
-		hdr = hdr.Next
-	}
-	return s
 }
 
 // Rules is a list of the rule columns i.e. columns that are not fields
@@ -140,6 +127,15 @@ func (hdr *Header) hasField(col string) bool {
 		}
 	}
 	return false
+}
+
+func (hdr *Header) Find(fld string) (RowAt, bool) {
+	for reci, fields := range hdr.Fields {
+		if fldi := strs.Index(fields, fld); fldi >= 0 {
+			return RowAt{Reci: int16(reci), Fldi: int16(fldi)}, true
+		}
+	}
+	return RowAt{}, false
 }
 
 func (hdr *Header) GetFields() []string {

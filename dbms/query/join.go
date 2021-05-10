@@ -260,6 +260,7 @@ func (jn *Join) Select(cols, vals []string) {
 type LeftJoin struct {
 	Join
 	row1out bool
+	empty2 Row
 }
 
 func (lj *LeftJoin) String() string {
@@ -294,6 +295,7 @@ func (lj *LeftJoin) setApproach(index []string, _ interface{}, tran QueryTran) {
 	lj.source = SetApproach(lj.source, index, tran)
 	lj.source2 = SetApproach(lj.source2, lj.by, tran)
 	lj.encode = len(lj.by) > 1 || !setset.Contains(lj.source2.Keys(), lj.by)
+	lj.empty2 = make(Row, len(lj.source2.Header().Fields))
 }
 
 func (lj *LeftJoin) nrows() int {
@@ -313,7 +315,7 @@ func (lj *LeftJoin) Get(dir Dir) Row {
 		lj.row2 = lj.source2.Get(dir)
 		if lj.shouldOutput(lj.row2) {
 			if lj.row2 == nil {
-				return lj.row1
+				return JoinRows(lj.row1, lj.empty2)
 			}
 			return JoinRows(lj.row1, lj.row2)
 		}

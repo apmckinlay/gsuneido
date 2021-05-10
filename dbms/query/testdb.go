@@ -113,13 +113,15 @@ type sizeTran struct {
 }
 
 func (t sizeTran) GetInfo(table string) *meta.Info {
-	ti := t.QueryTran.GetInfo(table)
-	if ti != nil {
-		ti.Nrows = 1000
-		if table == "trans" || table == "hist" || table == "hist2" {
-			ti.Nrows = 10_000
-		}
-		ti.Size = uint64(ti.Nrows) * 100
+	info := t.QueryTran.GetInfo(table)
+	if info == nil {
+		return nil
 	}
-	return ti
+	ti := *info // copy
+	ti.Nrows = 1000
+	if table == "trans" || table == "hist" || table == "hist2" {
+		ti.Nrows = 10_000
+	}
+	ti.Size = uint64(ti.Nrows) * 100
+	return &ti
 }

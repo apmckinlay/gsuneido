@@ -38,7 +38,7 @@ func TestTableLookup(t *testing.T) {
 	test("customer", key(12, 34), "[<12, 34>]")
 }
 
-func TestTableGet(t *testing.T) {
+func TestQueryGet(t *testing.T) {
 	db := testDb()
 	defer db.Close()
 	reverse := func(rows []rt.Row) {
@@ -87,9 +87,6 @@ func TestTableGet(t *testing.T) {
 		assert.T(t).Msg("forward").This(get(q, rt.Next)).Like(expected)
 		assert.T(t).Msg("reverse").This(get(q, rt.Prev)).Like(expected)
 	}
-	// test("trans union trans sort id",
-	// 	"(trans^(date,item,id) UNION-MERGE trans^(date,item,id)) TEMPINDEX(id)",
-	// 	``)
 	test("indexes",
 		"indexes",
 		`table		columns			key
@@ -401,6 +398,13 @@ func TestTableGet(t *testing.T) {
 		'mouse'	'c'	200	970102
 		'pencil'	'e'	300	970103
 		'eraser'	'c'	150	970201`)
+	test("trans union trans sort id",
+		"(trans^(date,item,id) UNION-MERGE trans^(date,item,id)) TEMPINDEX(id)",
+		`item		id	cost	date
+		'disk'		'a'	100	970101
+		'mouse'		'c'	200	970101
+		'eraser'	'c'	150	970201
+		'mouse'		'e'	200	960204`)
 
 	// join
 	test("customer join alias",
