@@ -10,15 +10,18 @@ import (
 	"github.com/apmckinlay/gsuneido/runtime/types"
 )
 
+// WithType is used by the repl
 func WithType(x Value) string {
 	if x == nil {
 		return "nil"
 	}
 	var s string
-	if ss, ok := x.ToStr(); ok && needQuote(ss) {
-		s = fmt.Sprintf("%q", ss)
-	} else {
-		s = fmt.Sprint(x)
+	if ss, ok := x.ToStr(); ok {
+		if needQuote(ss) {
+			s = fmt.Sprint(x)
+		} else {
+			s = fmt.Sprint(ss)
+		}
 	}
 	if x.Type() != types.Boolean {
 		if _, ok := x.(SuStr); !ok {
