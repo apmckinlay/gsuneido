@@ -12,6 +12,7 @@ import (
 
 	"github.com/apmckinlay/gsuneido/compile/lexer"
 	"github.com/apmckinlay/gsuneido/runtime/types"
+	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/ints"
 	"github.com/apmckinlay/gsuneido/util/pack"
 	"github.com/apmckinlay/gsuneido/util/varint"
@@ -810,6 +811,7 @@ func (ob *SuObject) ToRecord(t *Thread, hdr *Header) Record {
 	if ob.Lock() {
 		defer ob.Unlock()
 	}
+	assert.That(len(hdr.Fields) == 1)
 	fields := hdr.Fields[0]
 	rb := RecordBuilder{}
 	var tsField string

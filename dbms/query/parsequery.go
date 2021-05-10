@@ -216,6 +216,8 @@ func (p *queryParser) union(q Query) Query {
 }
 
 func (p *queryParser) where(q Query) Query {
+	p.EqToIs = true
+	defer func() { p.EqToIs = false }()
 	expr := p.Expression()
 	if nary, ok := expr.(*ast.Nary); !ok || nary.Tok != tok.And {
 		expr = &ast.Nary{Tok: tok.And, Exprs: []ast.Expr{expr}}

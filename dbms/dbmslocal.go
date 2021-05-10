@@ -24,7 +24,7 @@ type DbmsLocal struct {
 }
 
 func NewDbmsLocal(db *db19.Database) IDbms {
-	return &DbmsLocal{db: db}
+	return &DbmsLocal{db: db, libraries: []string{"stdlib"}}
 }
 
 // Dbms interface
@@ -55,7 +55,8 @@ func (DbmsLocal) Cursor(string) ICursor {
 }
 
 func (DbmsLocal) Cursors() int {
-	panic("DbmsLocal Cursors not implemented")
+	log.Println("TODO: DbmsLocal Cursors not implemented")
+	return 0
 }
 
 func (dbms DbmsLocal) Dump(table string) string {
@@ -140,19 +141,18 @@ func (dbms DbmsLocal) LibGet(name string) (result []string) {
 	off := ix.Lookup(key)
 	if off == 0 {
 		if !strings.HasPrefix(name, "Rule_") {
-			fmt.Println("LibGet", name, "NOT FOUND")
+			log.Println("LibGet", name, "NOT FOUND")
 		}
 		return nil
 	}
 	rec := rt.GetRecord(off)
 	s := rec.GetStr(rt.ColToFld("stdlib", "text"))
 
-	// fmt.Println("LOAD", name, "SUCCEEDED")
 	return []string{"stdlib", string(s)}
 }
 
-func (DbmsLocal) Libraries() *SuObject {
-	return &SuObject{}
+func (dbms DbmsLocal) Libraries() *SuObject {
+	return strsToOb(dbms.libraries)
 }
 
 func (DbmsLocal) Log(s string) {
@@ -176,8 +176,8 @@ func (DbmsLocal) SessionId(id string) string {
 	return sessionId
 }
 
-func (DbmsLocal) Size() int64 {
-	panic("DbmsLocal Size not implemented")
+func (dbms DbmsLocal) Size() int64 {
+	return int64(dbms.db.Size())
 }
 
 func (DbmsLocal) Token() string {
@@ -203,7 +203,8 @@ func (DbmsLocal) Timestamp() SuDate {
 }
 
 func (DbmsLocal) Transactions() *SuObject {
-	panic("DbmsLocal Transactions not implemented")
+	log.Println("TODO: DbmsLocal Transactions not implemented")
+	return &SuObject{}
 }
 
 func (dbms DbmsLocal) Unuse(lib string) bool {
@@ -291,12 +292,24 @@ func (q queryLocal) Strategy() string {
 }
 
 func (q queryLocal) Order() *SuObject {
-	ord := q.Query.Ordering()
-	list := make([]Value, len(ord))
-	for i, s := range ord {
+	return strsToOb(q.Query.Ordering())
+}
+
+func strsToOb(strs []string) *SuObject {
+	list := make([]Value, len(strs))
+	for i, s := range strs {
 		list[i] = SuStr(s)
 	}
 	return NewSuObject(list)
+}
+
+func (q queryLocal) Get(dir Dir) Row {
+	row := q.Query.Get(dir)
+	if row == nil {
+		// this is required for SuQuery to stick at eof unidirectionally
+		q.Query.Rewind()
+	}
+	return row
 }
 
 func (q queryLocal) Close() {

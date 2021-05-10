@@ -98,10 +98,10 @@ func (ts *Tables) Transform() Query {
 }
 
 func (*Tables) Keys() [][]string {
-	return [][]string{{"table"}}
+	return [][]string{{"table"}, {"tablename"}}
 }
 
-var tablesFields = [][]string{{"table", "nrows", "totalsize"}}
+var tablesFields = [][]string{{"table", "tablename", "nrows", "totalsize"}}
 
 func (*Tables) Columns() []string {
 	return tablesFields[0]
@@ -142,13 +142,13 @@ func (ts *Tables) Get(dir Dir) Row {
 		ts.i--
 	}
 	if ts.i < 0 || len(ts.info) <= ts.i {
-		ts.state = eof
 		return nil
 	}
 	ts.state = within
 	info := ts.info[ts.i]
 	var rb RecordBuilder
 	rb.Add(SuStr(info.Table))
+	rb.Add(SuStr(info.Table)) // tablename
 	rb.Add(IntVal(info.Nrows).(Packable))
 	rb.Add(Int64Val(int64(info.Size)).(Packable))
 	rec := rb.Build()

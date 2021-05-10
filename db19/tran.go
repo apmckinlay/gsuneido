@@ -4,6 +4,7 @@
 package db19
 
 import (
+	"log"
 	"strconv"
 	"sync/atomic"
 
@@ -224,6 +225,7 @@ func (t *UpdateTran) Erase(uint64) {
 	panic("Erase not implemented") //TODO
 }
 
-func (t *UpdateTran) Update(uint64, rt.Record) uint64 {
-	panic("Update not implemented") //TODO
+func (t *UpdateTran) Update(off uint64, _ rt.Record) uint64 {
+	log.Println("ERROR: Update not implemented") //TODO
+	return off
 }

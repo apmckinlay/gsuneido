@@ -111,6 +111,10 @@ func (db *Database) DropTable(table string) bool {
 	return result
 }
 
+func (db *Database) Size() uint64 {
+	return db.Store.Size()
+}
+
 // Close closes the database store, writing the current size to the start.
 // NOTE: The state must already be written.
 func (db *Database) Close() {

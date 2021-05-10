@@ -47,6 +47,7 @@ func TestTableGet(t *testing.T) {
 		}
 	}
 	get := func(q Query, dir rt.Dir) string {
+		t.Helper()
 		var rows []rt.Row
 		q.Rewind()
 		for row := q.Get(dir); row != nil; row = q.Get(dir) {
@@ -86,6 +87,9 @@ func TestTableGet(t *testing.T) {
 		assert.T(t).Msg("forward").This(get(q, rt.Next)).Like(expected)
 		assert.T(t).Msg("reverse").This(get(q, rt.Prev)).Like(expected)
 	}
+	// test("trans union trans sort id",
+	// 	"(trans^(date,item,id) UNION-MERGE trans^(date,item,id)) TEMPINDEX(id)",
+	// 	``)
 	test("indexes",
 		"indexes",
 		`table		columns			key
@@ -138,6 +142,7 @@ func TestTableGet(t *testing.T) {
         'supplier'	'name'
         'supplier'	'city'
         'tables'	'table'
+        'tables'	'tablename'
         'tables'	'nrows'
         'tables'	'totalsize'
         'task'		'tnum'
@@ -148,21 +153,21 @@ func TestTableGet(t *testing.T) {
         'trans'		'date'`)
 	test("tables",
 		"tables",
-		`table		nrows	totalsize
-        'alias'		2		25
-        'co'		4		55
-        'columns'	0		0
-        'cus'		4		64
-        'customer'	4		98
-        'dates'		4		52
-        'hist'		4		91
-        'hist2'		3		68
-        'indexes'	16		0
-        'inven'		3		42
-        'supplier'	4		128
-        'tables'	14		0
-        'task'		8		95
-        'trans'		4		92`)
+		`table   tablename       nrows   totalsize
+        'alias' 'alias' 2       25
+        'co'    'co'    4       55
+        'columns'       'columns'       0       0
+        'cus'   'cus'   4       64
+        'customer'      'customer'      4       98
+        'dates' 'dates' 4       52
+        'hist'  'hist'  4       91
+        'hist2' 'hist2' 3       68
+        'indexes'       'indexes'       16      0
+        'inven' 'inven' 3       42
+        'supplier'      'supplier'      4       128
+        'tables'        'tables'        14      0
+        'task'  'task'  8       95
+        'trans' 'trans' 4       92`)
 	test("customer",
 		"customer^(id)",
 		`id	name	city

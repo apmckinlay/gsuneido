@@ -56,6 +56,8 @@ type ParserBase struct {
 	// newline is true if the current token was preceeded by a newline
 	newline bool
 
+	EqToIs bool
+
 	Aspects
 }
 
@@ -91,7 +93,7 @@ type Parser struct {
 
 type funcInfo struct {
 	// final is used to identify final variables
-	final map[string]uint8
+	final       map[string]uint8
 	assignConst map[string]bool
 
 	// hasBlocks is whether the function has any blocks
@@ -144,6 +146,9 @@ func (p *ParserBase) Next() {
 		} else if p.Token != tok.Comment && p.Token != tok.Whitespace {
 			break
 		}
+	}
+	if p.EqToIs && p.Token == tok.Eq {
+		p.Token = tok.Is
 	}
 }
 

@@ -54,12 +54,8 @@ func main() {
 	if options.Mode == "gui" {
 		relaunchWithRedirect()
 	}
-	if options.Action == "" {
-		if options.Mode == "gui" {
-			options.Action = "client" //TODO standalone
-		} else {
-			options.Action = "repl"
-		}
+	if options.Action == "" && options.Mode != "gui" {
+		options.Action = "repl"
 	}
 
 	suneido := new(SuneidoObject)
@@ -67,6 +63,8 @@ func main() {
 	Global.Builtin("Suneido", suneido)
 
 	switch options.Action {
+	case "":
+		break
 	case "server":
 		startServer()
 		os.Exit(0)
@@ -148,12 +146,13 @@ func main() {
 		clientErrorLog()
 	} else {
 		openDbms()
-		eval("Suneido.Print = PrintStdout;;")
 	}
 	if options.Action == "repl" {
+		eval("Suneido.Print = PrintStdout;;")
 		repl()
 		closeDbms()
 	} else {
+		fmt.Println("before Init")
 		eval("Init()")
 		builtin.Run()
 	}
@@ -321,6 +320,7 @@ func eval(src string) {
 			} else {
 				PrintStack(mainThread.Callstack())
 			}
+			os.Exit(1) //FIXME
 		}
 	}()
 	src = "function () {\n" + src + "\n}"
