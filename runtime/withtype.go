@@ -16,12 +16,10 @@ func WithType(x Value) string {
 		return "nil"
 	}
 	var s string
-	if ss, ok := x.ToStr(); ok {
-		if needQuote(ss) {
-			s = fmt.Sprint(x)
-		} else {
-			s = fmt.Sprint(ss)
-		}
+	if ss, ok := x.ToStr(); ok && !needQuote(ss) {
+		s = fmt.Sprint(ss)
+	} else {
+		s = fmt.Sprint(x)
 	}
 	if x.Type() != types.Boolean {
 		if _, ok := x.(SuStr); !ok {
