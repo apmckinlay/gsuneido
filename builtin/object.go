@@ -277,3 +277,17 @@ func iterWhich(as *ArgSpec, args []Value) (list bool, named bool) {
 	}
 	return
 }
+
+// EvalAsMethod runs a function as if it were a method of an object
+// i.e. object.Eval
+func EvalAsMethod(t *Thread, as *ArgSpec, ob Value, args []Value) Value {
+	// first argument is function
+	k, f := NewArgsIter(as, args)()
+	if k != nil || f == nil {
+		panic("usage: object.Eval(callable, ...)")
+	}
+	if m, ok := f.(*SuMethod); ok {
+		f = m.GetFn()
+	}
+	return f.Call(t, ob, as.DropFirst())
+}

@@ -74,7 +74,7 @@ func init() {
 			return SuStr(tabs.Entab(ToStr(this)))
 		}),
 		"Eval": method("()", func(t *Thread, this Value, args []Value) Value {
-			result := EvalString(t, ToStr(this))
+			result := compile.EvalString(t, ToStr(this))
 			if result == nil {
 				return EmptyStr
 			}
@@ -82,7 +82,7 @@ func init() {
 		}),
 		"Eval2": method("()", func(t *Thread, this Value, args []Value) Value {
 			ob := &SuObject{}
-			if result := EvalString(t, ToStr(this)); result != nil {
+			if result := compile.EvalString(t, ToStr(this)); result != nil {
 				ob.Add(result)
 			}
 			return ob

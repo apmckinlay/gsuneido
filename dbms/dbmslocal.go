@@ -163,8 +163,9 @@ func (DbmsLocal) Nonce() string {
 	panic("nonce only allowed on clients")
 }
 
-func (DbmsLocal) Run(string) Value {
-	panic("DbmsLocal Run not implemented")
+func (DbmsLocal) Run(s string) Value {
+	var t Thread //TODO don't alloc every time
+	return compile.EvalString(&t, s)
 }
 
 var sessionId string
