@@ -16,6 +16,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/cksum"
 	"github.com/apmckinlay/gsuneido/util/hacks"
 	"github.com/apmckinlay/gsuneido/util/str"
+	"github.com/apmckinlay/gsuneido/util/strs"
 )
 
 type tran struct {
@@ -89,7 +90,7 @@ func (t *ReadTran) GetRecord(off uint64) rt.Record {
 
 func (t *ReadTran) ColToFld(table, col string) int {
 	ts := t.meta.GetRoSchema(table)
-	return str.List(ts.Columns).Index(col)
+	return strs.Index(ts.Columns, col)
 }
 
 func (t *ReadTran) RangeFrac(table string, iIndex int, org, end string) float64 {

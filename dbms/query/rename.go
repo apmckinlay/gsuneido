@@ -9,6 +9,7 @@ import (
 	"github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/sset"
 	"github.com/apmckinlay/gsuneido/util/str"
+	"github.com/apmckinlay/gsuneido/util/strs"
 )
 
 type Rename struct {
@@ -67,7 +68,7 @@ func (r *Rename) Columns() []string {
 func renameColumns(cols, from, to []string) []string {
 	cols2 := sset.Copy(cols)
 	for i := 0; i < len(cols); i++ {
-		j := str.List(from).Index(cols[i])
+		j := strs.Index(from, cols[i])
 		if j != -1 {
 			cols2[i] = to[j]
 		}
@@ -95,7 +96,7 @@ func (r *Rename) Fixed() []Fixed {
 	fixed := r.source.Fixed()
 	result := make([]Fixed, len(fixed))
 	for i, fxd := range fixed {
-		j := str.List(r.from).Index(fxd.col)
+		j := strs.Index(r.from, fxd.col)
 		if j == -1 {
 			result[i] = fxd
 		} else {

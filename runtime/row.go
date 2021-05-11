@@ -5,7 +5,6 @@ package runtime
 
 import (
 	"github.com/apmckinlay/gsuneido/util/sset"
-	"github.com/apmckinlay/gsuneido/util/str"
 	"github.com/apmckinlay/gsuneido/util/strs"
 )
 
@@ -38,7 +37,7 @@ func (row Row) GetRaw(hdr *Header, fld string) string {
 	}
 	// this is only used for Union
 	for reci := int(at.Reci + 1); reci < len(hdr.Fields); reci++ {
-		if fldi := str.List(hdr.Fields[reci]).Index(fld); fldi >= 0 {
+		if fldi := strs.Index(hdr.Fields[reci], fld); fldi >= 0 {
 			if row[reci].Record != "" {
 				return row[reci].GetRaw(int(fldi))
 			}

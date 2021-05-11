@@ -12,6 +12,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/setset"
 	"github.com/apmckinlay/gsuneido/util/str"
+	"github.com/apmckinlay/gsuneido/util/strs"
 )
 
 func NewTable(name string) Query {
@@ -245,7 +246,7 @@ func selEncode(encode bool, dstCols, srcCols, vals []string) string {
 }
 
 func selGet(col string, cols, vals []string) string {
-	i := str.List(cols).Index(col)
+	i := strs.Index(cols, col)
 	assert.That(i != -1)
 	return vals[i]
 }

@@ -22,16 +22,6 @@ func TestList_Has(t *testing.T) {
 	assert.False(list.Has("four"))
 }
 
-func TestList_Index(t *testing.T) {
-	assert := assert.T(t).This
-	assert(List{}.Index("five")).Is(-1)
-	list := List{"one", "two", "three", "two", "four"}
-	assert(list.Index("five")).Is(-1)
-	assert(list.Index("one")).Is(0)
-	assert(list.Index("two")).Is(1)
-	assert(list.Index("four")).Is(4)
-}
-
 func TestList_Without(t *testing.T) {
 	assert := assert.T(t).This
 	assert(List{}.Without("five")).Is([]string{})

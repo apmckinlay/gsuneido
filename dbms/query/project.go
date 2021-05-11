@@ -11,6 +11,7 @@ import (
 	"github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/sset"
 	"github.com/apmckinlay/gsuneido/util/str"
+	"github.com/apmckinlay/gsuneido/util/strs"
 )
 
 type Project struct {
@@ -228,7 +229,7 @@ func (p *Project) transformRename(r *Rename) Query {
 	// rename fields
 	var newCols []string
 	for _, col := range p.columns {
-		if i := str.List(to).Index(col); i != -1 {
+		if i := strs.Index(to, col); i != -1 {
 			newCols = append(newCols, from[i])
 		} else {
 			newCols = append(newCols, col)

@@ -112,7 +112,7 @@ func (e *Extend) needRule(cols []string) bool {
 }
 
 func (e *Extend) needRule2(col string) bool {
-	i := str.List(e.cols).Index(col)
+	i := strs.Index(e.cols, col)
 	if i == -1 {
 		return false // fld is not a result of extend
 	}

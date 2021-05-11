@@ -10,6 +10,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/sortlist"
 	"github.com/apmckinlay/gsuneido/util/str"
+	"github.com/apmckinlay/gsuneido/util/strs"
 )
 
 type TempIndex struct {
@@ -117,7 +118,7 @@ func (ti *TempIndex) ixspec() *ixkey.Spec {
 	fields := ti.srcHdr.Fields[0]
 	flds := make([]int, len(ti.order))
 	for i, f := range ti.order {
-		fi := str.List(fields).Index(f)
+		fi := strs.Index(fields, f)
 		assert.That(fi >= 0)
 		flds[i] = fi
 	}

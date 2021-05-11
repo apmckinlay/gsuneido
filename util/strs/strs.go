@@ -23,3 +23,14 @@ func Cow(ss []string) []string {
 	n := len(ss)
 	return ss[:n:n]
 }
+
+// Index returns the position of the first occurrence of the given string,
+// or -1 if not found.
+func Index(list []string, str string) int {
+	for i, s := range list {
+		if s == str {
+			return i
+		}
+	}
+	return -1
+}

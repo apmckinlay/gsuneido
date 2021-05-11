@@ -20,17 +20,6 @@ func (list List) Has(str string) bool {
 	return false
 }
 
-// Index returns position of the first occurrence of the given string,
-// or -1 if not found.
-func (list List) Index(str string) int {
-	for i, s := range list {
-		if s == str {
-			return i
-		}
-	}
-	return -1
-}
-
 // Without returns a new slice of strings
 // with any occurences of a given string removed,
 // maintaining the existing order.

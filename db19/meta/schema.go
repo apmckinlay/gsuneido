@@ -10,7 +10,7 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/hash"
-	"github.com/apmckinlay/gsuneido/util/str"
+	"github.com/apmckinlay/gsuneido/util/strs"
 )
 
 type Schema struct {
@@ -88,9 +88,9 @@ func (ts *Schema) Ixspecs() {
 func (ts *Schema) colsToFlds(cols []string) []int {
 	flds := make([]int, len(cols))
 	for i, col := range cols {
-		c := str.List(ts.Columns).Index(col)
+		c := strs.Index(ts.Columns, col)
 		if strings.HasSuffix(col, "_lower!") {
-			if c = str.List(ts.Columns).Index(col[:len(col)-7]); c != -1 {
+			if c = strs.Index(ts.Columns, col[:len(col)-7]); c != -1 {
 				c = -c - 2
 			}
 		}
