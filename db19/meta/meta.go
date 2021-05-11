@@ -103,11 +103,19 @@ func (m *Meta) DropTable(table string) *Meta {
 }
 
 func (m *Meta) ForEachSchema(fn func(*Schema)) {
-	m.schema.ForEach(fn)
+	m.schema.ForEach(func(schema *Schema) {
+		if !schema.isTomb() {
+			fn(schema)
+		}
+	})
 }
 
 func (m *Meta) ForEachInfo(fn func(*Info)) {
-	m.info.ForEach(fn)
+	m.info.ForEach(func(info *Info) {
+		if !info.isTomb() {
+			fn(info)
+		}
+	})
 }
 
 //-------------------------------------------------------------------

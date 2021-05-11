@@ -320,7 +320,6 @@ func eval(src string) {
 			} else {
 				PrintStack(mainThread.Callstack())
 			}
-			os.Exit(1) //FIXME
 		}
 	}()
 	src = "function () {\n" + src + "\n}"
