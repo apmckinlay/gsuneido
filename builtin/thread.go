@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 	"runtime"
+	"strings"
 	"sync"
 	"time"
 
@@ -64,7 +65,7 @@ func threadCallClass(_ *Thread, args []Value) Value {
 			if e := recover(); e != nil {
 				log.Println("ERROR in thread:", e)
 				t2.PrintStack()
-				if _, ok := e.(runtime.Error); ok {
+				if internalError(e) {
 					buf := make([]byte, 512)
 					n := runtime.Stack(buf, false)
 					os.Stderr.Write(buf[:n])
@@ -76,6 +77,16 @@ func threadCallClass(_ *Thread, args []Value) Value {
 		t2.Call(fn)
 	}()
 	return nil
+}
+
+func internalError(e interface{}) bool {
+	if _, ok := e.(runtime.Error); ok {
+		return true
+	}
+	if s, ok := e.(string); ok && strings.HasPrefix(s, "assert failed: ") {
+		return true
+	}
+	return false
 }
 
 var threadMethods = Methods{

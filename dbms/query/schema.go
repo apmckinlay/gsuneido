@@ -55,6 +55,10 @@ func (st *schemaTable) SingleTable() bool {
 	return false
 }
 
+func (*schemaTable) rowSize() int {
+	return 32 // ???
+}
+
 func (st *schemaTable) Output(Record) {
 	panic("shouldn't reach here")
 }
@@ -70,7 +74,8 @@ func (st *schemaTable) setApproach([]string, interface{}, QueryTran) {
 }
 
 func (st *schemaTable) lookupCost() Cost {
-	return impossible
+	// no indexes, so lookups only from TempIndex
+	return lookupCost(st.rowSize())
 }
 
 func (st *schemaTable) Lookup(string) Row {
@@ -114,10 +119,6 @@ func (*Tables) Header() *Header {
 func (ts *Tables) nrows() int {
 	ts.ensure()
 	return len(ts.info)
-}
-
-func (*Tables) rowSize() int {
-	return 32 // ???
 }
 
 func (ts *Tables) Rewind() {
@@ -207,11 +208,11 @@ func (*Columns) Header() *Header {
 
 func (cs *Columns) nrows() int {
 	cs.ensure()
-	return len(cs.schema)
-}
-
-func (*Columns) rowSize() int {
-	return 32 // ???
+	n := 0
+	for _, schema := range cs.schema {
+		n += len(schema.Columns)
+	}
+	return n
 }
 
 func (cs *Columns) Rewind() {
@@ -311,11 +312,11 @@ func (*Indexes) Header() *Header {
 
 func (is *Indexes) nrows() int {
 	is.ensure()
-	return len(is.schema)
-}
-
-func (*Indexes) rowSize() int {
-	return 32 // ???
+	n := 0
+	for _, schema := range is.schema {
+		n += len(schema.Indexes)
+	}
+	return n
 }
 
 func (is *Indexes) Rewind() {

@@ -108,6 +108,9 @@ func (tbl *Table) nrows() int {
 }
 
 func (tbl *Table) rowSize() int {
+	if tbl.info.Nrows == 0 {
+		return 0
+	}
 	return int(tbl.info.Size) / tbl.info.Nrows
 }
 
@@ -172,9 +175,13 @@ func (tbl *Table) setApproach(_ []string, approach interface{}, _ QueryTran) {
 
 // lookupCost returns the cost of one lookup
 func (tbl *Table) lookupCost() Cost {
+	return lookupCost(tbl.rowSize())
+}
+
+func lookupCost(rowSize int) Cost {
 	// average node size is 2/3 of max, on average we read half = 1/3
 	nodeScan := btree.MaxNodeSize / 3
-	return (nodeScan * btree.TreeHeight) + tbl.rowSize()
+	return (nodeScan * btree.TreeHeight) + rowSize
 }
 
 // execution --------------------------------------------------------

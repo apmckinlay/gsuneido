@@ -152,7 +152,6 @@ func main() {
 		repl()
 		closeDbms()
 	} else {
-		fmt.Println("before Init")
 		eval("Init()")
 		builtin.Run()
 	}

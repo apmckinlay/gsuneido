@@ -8,6 +8,7 @@ import (
 	"log"
 	"strings"
 
+	"github.com/apmckinlay/gsuneido/compile"
 	"github.com/apmckinlay/gsuneido/db19"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/db19/tools"
@@ -55,8 +56,7 @@ func (DbmsLocal) Cursor(string) ICursor {
 }
 
 func (DbmsLocal) Cursors() int {
-	log.Println("TODO: DbmsLocal Cursors not implemented")
-	return 0
+	return 0 //FIXME
 }
 
 func (dbms DbmsLocal) Dump(table string) string {
@@ -140,9 +140,9 @@ func (dbms DbmsLocal) LibGet(name string) (result []string) {
 	key := rb.String()
 	off := ix.Lookup(key)
 	if off == 0 {
-		if !strings.HasPrefix(name, "Rule_") {
-			log.Println("LibGet", name, "NOT FOUND")
-		}
+		// if !strings.HasPrefix(name, "Rule_") {
+		// 	log.Println("LibGet", name, "NOT FOUND")
+		// }
 		return nil
 	}
 	rec := rt.GetRecord(off)
@@ -181,17 +181,6 @@ func (dbms DbmsLocal) Size() int64 {
 	return int64(dbms.db.Size())
 }
 
-func (DbmsLocal) Token() string {
-	panic("DbmsLocal Token not implemented")
-}
-
-func (dbms DbmsLocal) Transaction(update bool) ITran {
-	if update {
-		return &UpdateTranLocal{dbms.db.NewUpdateTran()}
-	}
-	return &ReadTranLocal{dbms.db.NewReadTran()}
-}
-
 var prevTimestamp SuDate
 
 func (DbmsLocal) Timestamp() SuDate {
@@ -203,9 +192,19 @@ func (DbmsLocal) Timestamp() SuDate {
 	return t
 }
 
+func (DbmsLocal) Token() string {
+	panic("DbmsLocal Token not implemented")
+}
+
+func (dbms DbmsLocal) Transaction(update bool) ITran {
+	if update {
+		return &UpdateTranLocal{dbms.db.NewUpdateTran()}
+	}
+	return &ReadTranLocal{dbms.db.NewReadTran()}
+}
+
 func (DbmsLocal) Transactions() *SuObject {
-	log.Println("TODO: DbmsLocal Transactions not implemented")
-	return &SuObject{}
+	return &SuObject{} //FIXME
 }
 
 func (dbms DbmsLocal) Unuse(lib string) bool {

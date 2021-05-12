@@ -153,7 +153,7 @@ func Setup(q Query, mode Mode, t QueryTran) Query {
 	q = q.Transform()
 	cost := Optimize(q, mode, nil)
 	if cost >= impossible {
-		panic("invalid query " + q.String())
+		panic("invalid query: " + q.String())
 	}
 	q = SetApproach(q, nil, t)
 	return q
