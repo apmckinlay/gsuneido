@@ -10,6 +10,7 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/hash"
+	"github.com/apmckinlay/gsuneido/util/sset"
 	"github.com/apmckinlay/gsuneido/util/strs"
 )
 
@@ -75,12 +76,18 @@ func (ts *Schema) Ixspecs() {
 	key := ts.firstShortestKey()
 	for i := range ts.Indexes {
 		ix := &ts.Indexes[i]
-		ix.Ixspec.Fields = ts.colsToFlds(ix.Columns)
-		switch ts.Indexes[i].Mode {
+		switch ix.Mode {
 		case 'u':
-			ix.Ixspec.Fields2 = key
+			cols := sset.Difference(key, ix.Columns)
+			ix.Ixspec.Fields2 = ts.colsToFlds(cols)
+			fallthrough
+		case 'k':
+			ix.Ixspec.Fields = ts.colsToFlds(ix.Columns)
 		case 'i':
-			ix.Ixspec.Fields = append(ix.Ixspec.Fields, key...)
+			cols := sset.Union(ix.Columns, key)
+			ix.Ixspec.Fields = ts.colsToFlds(cols)
+		default:
+			panic("Ixspecs invalid mode")
 		}
 	}
 }
@@ -100,7 +107,7 @@ func (ts *Schema) colsToFlds(cols []string) []int {
 	return flds
 }
 
-func (ts *Schema) firstShortestKey() []int {
+func (ts *Schema) firstShortestKey() []string {
 	var key []string
 	for i := range ts.Indexes {
 		ix := &ts.Indexes[i]
@@ -109,7 +116,7 @@ func (ts *Schema) firstShortestKey() []int {
 			key = ix.Columns
 		}
 	}
-	return ts.colsToFlds(key)
+	return key
 }
 
 func usableKey(ix *schema.Index) bool {

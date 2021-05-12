@@ -25,7 +25,7 @@ func TestSchema(t *testing.T) {
 			Table:   data[i],
 			Columns: []string{"one", "two"},
 			Indexes: []schema.Index{
-				{Columns: []string{"one"}},
+				{Mode: 'k', Columns: []string{"one"}},
 			},
 		}})
 	}

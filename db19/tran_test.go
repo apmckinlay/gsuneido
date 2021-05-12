@@ -104,7 +104,7 @@ func createDb() *Database {
 	ts := &meta.Schema{Schema: schema.Schema{
 		Table:   "mytable",
 		Columns: []string{"one", "two"},
-		Indexes: []schema.Index{{Columns: []string{"one"}, Ixspec: is}},
+		Indexes: []schema.Index{{Mode: 'k', Columns: []string{"one"}, Ixspec: is}},
 	}}
 	ov := index.NewOverlay(db.Store, &is)
 	ov.Save()
