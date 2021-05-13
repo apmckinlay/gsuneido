@@ -4,6 +4,7 @@
 package db19
 
 import (
+	"fmt"
 	"log"
 	"strconv"
 	"sync/atomic"
@@ -196,9 +197,13 @@ func (t *UpdateTran) Output(table string, rec rt.Record) {
 	cksum.Update(buf)
 	keys := make([]string, len(ts.Indexes))
 	for i := range ts.Indexes {
+		ix := ti.Indexes[i]
 		is := ts.Indexes[i].Ixspec
 		keys[i] = is.Key(rec)
-		ti.Indexes[i].Insert(keys[i], off)
+		if ix.Lookup(keys[i]) != 0 {
+			panic(fmt.Sprint("duplicate key: ", table, " ", ts.Indexes[i].Columns))
+		}
+		ix.Insert(keys[i], off)
 	}
 	t.ck(t.db.ck.Write(t.ct, table, keys))
 	ti.Nrows++

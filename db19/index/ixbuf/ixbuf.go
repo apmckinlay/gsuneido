@@ -9,6 +9,8 @@
 package ixbuf
 
 import (
+	"log"
+
 	"github.com/apmckinlay/gsuneido/db19/index/iterator"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/ints"
@@ -50,11 +52,11 @@ func goal(n int32) int {
 		return 16 + 16/2
 	case n < 1024:
 		return 32 + 32/2
-	case n < 4 * 1024:
+	case n < 4*1024:
 		return 64 + 64/2
-	case n < 16 * 1024:
+	case n < 16*1024:
 		return 128 + 128/2
-	case n < 64 * 1024:
+	case n < 64*1024:
 		return 256 + 256/2
 	default:
 		return 512 + 512/2
@@ -273,7 +275,8 @@ func Combine(off1, off2 uint64) uint64 {
 	case delete_add:
 		return off2 | Update
 	default:
-		panic("invalid")
+		log.Printf("ixbuf invalid Combine %x\n", ops)
+		panic("ixbuf invalid Combine")
 	}
 }
 
