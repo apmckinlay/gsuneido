@@ -122,8 +122,8 @@ func (tbl *Table) Fixed() []Fixed {
 	return nil
 }
 
-func (tbl *Table) Updateable() bool {
-	return true
+func (tbl *Table) Updateable() string {
+	return tbl.name
 }
 
 func (tbl *Table) SingleTable() bool {

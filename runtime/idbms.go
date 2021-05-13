@@ -40,7 +40,7 @@ type IDbms interface {
 
 	// Get returns a single record, for Query1 (dir = One),
 	// QueryFirst (dir = Next), or QueryLast (dir = Prev)
-	Get(query string, dir Dir) (Row, *Header)
+	Get(query string, dir Dir) (Row, *Header, string)
 
 	// Info returns an object containing database information
 	Info() Value
@@ -106,12 +106,12 @@ type ITran interface {
 	// Complete commits the transaction
 	Complete() string
 
-	// Erase deletes a record
-	Erase(off uint64)
+	// Delete deletes a record
+	Delete(table string, off uint64)
 
 	// Get returns a single record, for Query1 (dir = One),
 	// QueryFirst (dir = Next), or QueryLast (dir = Prev)
-	Get(query string, dir Dir) (Row, *Header)
+	Get(query string, dir Dir) (Row, *Header, string)
 
 	// Query starts a query
 	Query(query string) IQuery
@@ -154,7 +154,8 @@ type IQuery interface {
 	IQueryCursor
 
 	// Get returns the next or previous row from a query
-	Get(dir Dir) Row
+	// and its table if the query is updateable
+	Get(dir Dir) (Row, string)
 
 	// Output outputs a record to a query
 	Output(rec Record)
@@ -166,7 +167,8 @@ type ICursor interface {
 	IQueryCursor
 
 	// Get returns the next or previous row from a cursor
-	Get(tran ITran, dir Dir) Row
+	// and its table if the query is updateable
+	Get(tran ITran, dir Dir) (Row, string)
 }
 
 type IQueryCursor interface {

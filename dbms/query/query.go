@@ -59,8 +59,9 @@ type Query interface {
 	// Fixed returns the field values that are constant from Extend or Where
 	Fixed() []Fixed
 
-	// Updateable returns whether the rows from the query can be updated
-	Updateable() bool
+	// Updateable returns the table name if the rows from the query can be updated
+	// else ""
+	Updateable() string
 
 	// SingleTable is used by temp indexes
 	SingleTable() bool
@@ -323,7 +324,7 @@ func (q1 *Query1) Fixed() []Fixed {
 	return q1.source.Fixed()
 }
 
-func (q1 *Query1) Updateable() bool {
+func (q1 *Query1) Updateable() string {
 	return q1.source.Updateable()
 }
 
@@ -400,8 +401,8 @@ func (q2 *Query2) Header() *runtime.Header {
 	return runtime.JoinHeaders(q2.source.Header(), q2.source2.Header())
 }
 
-func (q2 *Query2) Updateable() bool {
-	return false
+func (q2 *Query2) Updateable() string {
+	return ""
 }
 
 func (q2 *Query2) SingleTable() bool {

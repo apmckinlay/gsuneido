@@ -171,19 +171,19 @@ func (dc *dbmsClient) Final() int {
 	return dc.GetInt()
 }
 
-func (dc *dbmsClient) Get(query string, dir Dir) (Row, *Header) {
+func (dc *dbmsClient) Get(query string, dir Dir) (Row, *Header, string) {
 	return dc.get(0, query, dir)
 }
 
-func (dc *dbmsClient) get(tn int, query string, dir Dir) (Row, *Header) {
+func (dc *dbmsClient) get(tn int, query string, dir Dir) (Row, *Header, string) {
 	dc.PutCmd(commands.Get1).PutByte(byte(dir)).PutInt(tn).PutStr(query).Request()
 	if !dc.GetBool() {
-		return nil, nil
+		return nil, nil, ""
 	}
 	off := dc.GetInt()
 	hdr := dc.getHdr()
 	row := dc.getRow(off)
-	return row, hdr
+	return row, hdr, "updateable"
 }
 
 func (dc *dbmsClient) Info() Value {
@@ -338,11 +338,11 @@ func (tc *TranClient) Complete() string {
 	return tc.dc.GetStr()
 }
 
-func (tc *TranClient) Erase(off uint64) {
-	tc.dc.PutCmd(commands.Erase).PutInt(tc.tn).PutInt(int(off)).Request()
+func (tc *TranClient) Delete(_ string, off uint64) {
+	tc.dc.PutCmd(commands.Delete).PutInt(tc.tn).PutInt(int(off)).Request()
 }
 
-func (tc *TranClient) Get(query string, dir Dir) (Row, *Header) {
+func (tc *TranClient) Get(query string, dir Dir) (Row, *Header, string) {
 	return tc.dc.get(tc.tn, query, dir)
 }
 
@@ -449,15 +449,15 @@ func newClientQuery(dc *dbmsClient, qn int) *clientQuery {
 
 var _ IQuery = (*clientQuery)(nil)
 
-func (q *clientQuery) Get(dir Dir) Row {
+func (q *clientQuery) Get(dir Dir) (Row, string) {
 	q.dc.PutCmd(commands.Get).
 		PutByte(byte(dir)).PutInt(0).PutInt(q.id).Request()
 	if !q.dc.GetBool() {
-		return nil
+		return nil, ""
 	}
 	off := q.dc.GetInt()
 	row := q.dc.getRow(off)
-	return row
+	return row, "updateable"
 }
 
 func (q *clientQuery) Output(rec Record) {
@@ -475,13 +475,13 @@ func newClientCursor(dc *dbmsClient, cn int) *clientCursor {
 
 var _ ICursor = (*clientCursor)(nil)
 
-func (q *clientCursor) Get(tran ITran, dir Dir) Row {
+func (q *clientCursor) Get(tran ITran, dir Dir) (Row, string) {
 	t := tran.(*TranClient)
 	q.dc.PutCmd(commands.Get).PutByte(byte(dir)).PutInt(t.tn).PutInt(q.id).Request()
 	if !q.dc.GetBool() {
-		return nil
+		return nil, ""
 	}
 	off := q.dc.GetInt()
 	row := q.dc.getRow(off)
-	return row
+	return row, "updateable"
 }

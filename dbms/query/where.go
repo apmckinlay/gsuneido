@@ -890,7 +890,7 @@ func (w *Where) Get(dir runtime.Dir) runtime.Row {
 		if row == nil {
 			return nil
 		}
-		context.Rec = runtime.SuRecordFromRow(row, w.hdr, nil)
+		context.Rec = runtime.SuRecordFromRow(row, w.hdr, "", nil)
 		if w.expr.Eval(&context) == runtime.True {
 			return row
 		}

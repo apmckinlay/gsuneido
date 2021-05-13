@@ -109,11 +109,11 @@ func init() {
 
 func tranQueryOne(th *Thread, st *SuTran, as *ArgSpec, args []Value, dir Dir) Value {
 	query, _ := extractQuery(th, queryParams, as, args)
-	row, hdr := st.GetRow(query, dir)
+	row, hdr, table := st.GetRow(query, dir)
 	if row == nil {
 		return False
 	}
-	return SuRecordFromRow(row, hdr, st)
+	return SuRecordFromRow(row, hdr, table, st)
 }
 
 var requestRegex = regex.Compile(`(?i)\A(insert|delete|update)\>`)

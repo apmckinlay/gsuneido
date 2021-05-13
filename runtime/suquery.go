@@ -156,13 +156,13 @@ func (q *SuQuery) GetRec(dir Dir) Value {
 	if q.tran.Ended() {
 		panic("can't use ended transaction")
 	}
-	row := q.iqc.(IQuery).Get(dir)
+	row, table := q.iqc.(IQuery).Get(dir)
 	if row == nil {
 		q.eof = dir
 		return False
 	}
 	q.eof = 0
-	return SuRecordFromRow(row, q.iqc.Header(), q.tran)
+	return SuRecordFromRow(row, q.iqc.Header(), table, q.tran)
 }
 
 func (q *SuQuery) Output(th *Thread, ob Container) {
@@ -204,11 +204,11 @@ func (q *SuCursor) GetRec(tran *SuTran, dir Dir) Value {
 	if dir == q.eof {
 		return False
 	}
-	row := q.iqc.(ICursor).Get(tran.itran, dir)
+	row, table := q.iqc.(ICursor).Get(tran.itran, dir)
 	if row == nil {
 		q.eof = dir
 		return False
 	}
 	q.eof = 0
-	return SuRecordFromRow(row, q.iqc.Header(), tran)
+	return SuRecordFromRow(row, q.iqc.Header(), table, tran)
 }

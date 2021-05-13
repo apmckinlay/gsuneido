@@ -65,7 +65,7 @@ func mkrec() (*SuRecord, []string) {
 	row := Row{dbrec}
 	flds := []string{"x", "y", "s", "t"}
 	hdr := NewHeader([][]string{flds}, flds)
-	return SuRecordFromRow(row, hdr, nil), flds
+	return SuRecordFromRow(row, hdr, "", nil), flds
 }
 
 func BenchmarkEval(b *testing.B) {

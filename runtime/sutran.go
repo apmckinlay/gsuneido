@@ -113,12 +113,12 @@ func (st *SuTran) Ended() bool {
 	return st.state != active
 }
 
-func (st *SuTran) Erase(off uint64) {
+func (st *SuTran) Delete(table string, off uint64) {
 	st.ckActive()
-	st.itran.Erase(off)
+	st.itran.Delete(table, off)
 }
 
-func (st *SuTran) GetRow(query string, dir Dir) (Row, *Header) {
+func (st *SuTran) GetRow(query string, dir Dir) (Row, *Header, string) {
 	st.ckActive()
 	return st.itran.Get(query, dir)
 }

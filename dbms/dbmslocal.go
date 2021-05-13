@@ -87,13 +87,13 @@ func (DbmsLocal) Final() int {
 	panic("DbmsLocal Final not implemented")
 }
 
-func (dbms DbmsLocal) Get(query string, dir Dir) (Row, *Header) {
+func (dbms DbmsLocal) Get(query string, dir Dir) (Row, *Header, string) {
 	tran := dbms.db.NewReadTran()
 	defer tran.Complete()
 	return get(tran, query, dir)
 }
 
-func get(tran qry.QueryTran, query string, dir Dir) (Row, *Header) {
+func get(tran qry.QueryTran, query string, dir Dir) (Row, *Header, string) {
 	q := qry.ParseQuery(query)
 	qry.Setup(q, qry.ReadMode, tran)
 	only := false
@@ -103,12 +103,12 @@ func get(tran qry.QueryTran, query string, dir Dir) (Row, *Header) {
 	}
 	row := q.Get(dir)
 	if row == nil {
-		return nil, nil
+		return nil, nil, ""
 	}
 	if only && q.Get(dir) != nil {
 		panic("Query1 not unique: " + query)
 	}
-	return row, q.Header()
+	return row, q.Header(), q.Updateable()
 }
 
 func (DbmsLocal) Info() Value {
@@ -233,7 +233,7 @@ type ReadTranLocal struct {
 	*db19.ReadTran
 }
 
-func (t ReadTranLocal) Get(query string, dir Dir) (Row, *Header) {
+func (t ReadTranLocal) Get(query string, dir Dir) (Row, *Header, string) {
 	return get(t.ReadTran, query, dir)
 }
 
@@ -253,7 +253,7 @@ type UpdateTranLocal struct {
 	*db19.UpdateTran
 }
 
-func (t UpdateTranLocal) Get(query string, dir Dir) (Row, *Header) {
+func (t UpdateTranLocal) Get(query string, dir Dir) (Row, *Header, string) {
 	return get(t.UpdateTran, query, dir)
 }
 
@@ -303,13 +303,13 @@ func strsToOb(strs []string) *SuObject {
 	return NewSuObject(list)
 }
 
-func (q queryLocal) Get(dir Dir) Row {
+func (q queryLocal) Get(dir Dir) (Row, string) {
 	row := q.Query.Get(dir)
 	if row == nil {
 		// this is required for SuQuery to stick at eof unidirectionally
 		q.Query.Rewind()
 	}
-	return row
+	return row, q.Query.Updateable()
 }
 
 func (q queryLocal) Close() {

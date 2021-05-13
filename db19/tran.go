@@ -113,7 +113,7 @@ func (t *ReadTran) Output(string, rt.Record) {
 	panic("can't output to read-only transaction")
 }
 
-func (t *ReadTran) Erase(uint64) {
+func (t *ReadTran) Delete(string, uint64) {
 	panic("can't delete from read-only transaction")
 }
 
@@ -227,8 +227,21 @@ func (t *UpdateTran) ck(result bool) {
 	}
 }
 
-func (t *UpdateTran) Erase(uint64) {
-	panic("Erase not implemented") //TODO
+func (t *UpdateTran) Delete(table string, off uint64) {
+	ts := t.getSchema(table)
+	ti := t.getInfo(table)
+	rec := t.GetRecord(off)
+	n := rec.Len()
+	keys := make([]string, len(ts.Indexes))
+	for i := range ts.Indexes {
+		ix := ti.Indexes[i]
+		is := ts.Indexes[i].Ixspec
+		keys[i] = is.Key(rec)
+		ix.Delete(keys[i], off)
+	}
+	t.ck(t.db.ck.Write(t.ct, table, keys))
+	ti.Nrows--
+	ti.Size -= uint64(n)
 }
 
 func (t *UpdateTran) Update(off uint64, _ rt.Record) uint64 {

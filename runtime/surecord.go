@@ -40,6 +40,8 @@ type SuRecord struct {
 	tran *SuTran
 	// recoff is the record offset in the database
 	recoff uint64
+	// table is the table the record came from if it's updateable, else ""
+	table string
 	// status
 	status Status
 	// userow is true when we want to use data in row as well as ob
@@ -68,9 +70,14 @@ func SuRecordFromObject(ob *SuObject) *SuRecord {
 		ob: SuObject{list: ob.list, named: ob.named, defval: EmptyStr}}
 }
 
-func SuRecordFromRow(row Row, hdr *Header, tran *SuTran) *SuRecord {
-	return &SuRecord{row: row, hdr: hdr, tran: tran, recoff: row[0].Off,
+func SuRecordFromRow(row Row, hdr *Header, table string, tran *SuTran) *SuRecord {
+	rec := SuRecord{row: row, hdr: hdr, tran: tran,
 		ob: SuObject{defval: EmptyStr}, userow: true, status: OLD}
+	if table != "" {
+		rec.table = table
+		rec.recoff = row[0].Off
+	}
+	return &rec
 }
 
 func (r *SuRecord) ensureDeps() {
@@ -894,7 +901,7 @@ func (r *SuRecord) DbDelete() {
 		defer r.Unlock()
 	}
 	r.ckModify("Delete")
-	r.tran.Erase(r.recoff)
+	r.tran.Delete(r.table, r.recoff)
 	r.status = DELETED
 }
 

@@ -27,7 +27,7 @@ func TestSuRecord_ReadonlyUnpack(t *testing.T) {
 	row := Row{dbrec}
 
 	hdr := NewHeader([][]string{{"num", "str"}}, []string{"num", "str"})
-	surec := SuRecordFromRow(row, hdr, nil)
+	surec := SuRecordFromRow(row, hdr, "", nil)
 
 	assert.T(t).This(surec.Get(nil, SuStr("str"))).Is(SuStr("foobar"))
 	surec.SetReadOnly()

@@ -9,7 +9,7 @@ package commands
 
 type Command byte
 
-// command values must match cSuneido and jSuneido
+// command values must match jSuneido
 const (
 	Abort Command = iota
 	Admin
@@ -21,7 +21,7 @@ const (
 	Cursor
 	Cursors
 	Dump
-	Erase
+	Delete
 	Exec
 	Strategy
 	Final

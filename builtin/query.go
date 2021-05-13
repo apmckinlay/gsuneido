@@ -28,11 +28,11 @@ var queryParams = params("(query)")
 
 func queryOne(t *Thread, as *ArgSpec, args []Value, dir Dir) Value {
 	query, _ := extractQuery(t, queryParams, as, args)
-	row, hdr := t.Dbms().Get(query, dir)
+	row, hdr, table := t.Dbms().Get(query, dir)
 	if hdr == nil {
 		return False
 	}
-	return SuRecordFromRow(row, hdr, nil)
+	return SuRecordFromRow(row, hdr, table, nil)
 }
 
 // extractQuery does queryWhere then Args and returns the query and the args.

@@ -163,8 +163,8 @@ func (su *Summarize) rowSize() int {
 	return su.source.rowSize() + len(su.cols)*8
 }
 
-func (su *Summarize) Updateable() bool {
-	return false // override Query1 source.Updateable
+func (su *Summarize) Updateable() string {
+	return "" // override Query1 source.Updateable
 }
 
 func (su *Summarize) SingleTable() bool {

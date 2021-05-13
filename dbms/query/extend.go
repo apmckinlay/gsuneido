@@ -172,7 +172,7 @@ func (e *Extend) Get(dir Dir) Row {
 	}
 	var th Thread // ???
 	context := ast.Context{T: &th,
-		Rec: SuRecordFromRow(row, e.hdr, nil)}
+		Rec: SuRecordFromRow(row, e.hdr, "", nil)}
 	var rb RecordBuilder
 	for i, col := range e.cols {
 		if e := e.exprs[i]; e != nil {

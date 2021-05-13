@@ -47,8 +47,8 @@ func (*schemaTable) Ordering() []string {
 	return nil
 }
 
-func (st *schemaTable) Updateable() bool {
-	return false
+func (st *schemaTable) Updateable() string {
+	return ""
 }
 
 func (st *schemaTable) SingleTable() bool {

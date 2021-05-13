@@ -298,8 +298,11 @@ func (p *Project) Fixed() []Fixed {
 	return fixed
 }
 
-func (p *Project) Updateable() bool {
-	return p.strategy == projCopy && p.source.Updateable()
+func (p *Project) Updateable() string {
+	if p.strategy == projCopy {
+		return p.source.Updateable()
+	}
+	return ""
 }
 
 // optimize ---------------------------------------------------------
