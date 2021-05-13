@@ -68,7 +68,7 @@ func (en *exprNodeT) CanEvalRaw([]string) bool {
 }
 
 func (en *exprNodeT) Echo() string {
-	panic("not implemented")
+	panic("Echo not implemented")
 }
 
 type Ident struct {

@@ -348,7 +348,7 @@ func (q1 *Query1) lookupCost() Cost {
 }
 
 func (*Query1) Lookup(string) runtime.Row {
-	panic("not implemented")
+	panic("Lookup not implemented")
 }
 
 func (q1 *Query1) Header() *runtime.Header {
@@ -360,7 +360,7 @@ func (q1 *Query1) Output(rec runtime.Record) {
 }
 
 func (*Query1) Get(runtime.Dir) runtime.Row {
-	panic("not implemented")
+	panic("Get not implemented")
 }
 
 func (q1 *Query1) Rewind() {
