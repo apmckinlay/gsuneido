@@ -5,7 +5,6 @@ package db19
 
 import (
 	"fmt"
-	"log"
 	"strconv"
 	"sync/atomic"
 
@@ -36,6 +35,13 @@ func (t *tran) GetSchema(table string) *schema.Schema {
 func (t *tran) getSchema(table string) *meta.Schema {
 	if ts := t.meta.GetRoSchema(table); ts != nil {
 		return ts
+	}
+	panic("table not found: " + table)
+}
+
+func (t *UpdateTran) getInfo(table string) *meta.Info {
+	if ti := t.meta.GetRwInfo(table); ti != nil {
+		return ti
 	}
 	panic("table not found: " + table)
 }
@@ -117,7 +123,7 @@ func (t *ReadTran) Delete(string, uint64) {
 	panic("can't delete from read-only transaction")
 }
 
-func (t *ReadTran) Update(uint64, rt.Record) uint64 {
+func (t *ReadTran) Update(string, uint64, rt.Record) uint64 {
 	panic("can't update from read-only transaction")
 }
 
@@ -210,23 +216,6 @@ func (t *UpdateTran) Output(table string, rec rt.Record) {
 	ti.Size += uint64(n)
 }
 
-func (t *UpdateTran) getInfo(table string) *meta.Info {
-	if ti := t.meta.GetRwInfo(table); ti != nil {
-		return ti
-	}
-	panic("table not found: " + table)
-}
-
-func (t *UpdateTran) ck(result bool) {
-	if !result {
-		conflict := t.ct.conflict.Load()
-		if conflict == nil {
-			panic("transaction already ended")
-		}
-		panic("transaction aborted: " + conflict.(string))
-	}
-}
-
 func (t *UpdateTran) Delete(table string, off uint64) {
 	ts := t.getSchema(table)
 	ti := t.getInfo(table)
@@ -244,7 +233,42 @@ func (t *UpdateTran) Delete(table string, off uint64) {
 	ti.Size -= uint64(n)
 }
 
-func (t *UpdateTran) Update(off uint64, _ rt.Record) uint64 {
-	log.Println("ERROR: Update not implemented") //TODO
-	return off
+func (t *UpdateTran) Update(table string, oldoff uint64, newrec rt.Record) uint64 {
+	n := newrec.Len()
+	newrec = newrec[:n]
+	oldrec := t.GetRecord(oldoff)
+	if newrec == oldrec {
+		return oldoff
+	}
+	newoff, buf := t.db.Store.Alloc(n + cksum.Len)
+	copy(buf, newrec)
+	cksum.Update(buf)
+	ts := t.getSchema(table)
+	ti := t.getInfo(table)
+	keys := make([]string, 0, 2*len(ts.Indexes))
+	for i := range ts.Indexes {
+		ix := ti.Indexes[i]
+		is := ts.Indexes[i].Ixspec
+		oldkey := is.Key(oldrec)
+		newkey := is.Key(newrec)
+		ix.Delete(oldkey, oldoff)
+		if ix.Lookup(newkey) != 0 {
+			panic(fmt.Sprint("duplicate key: ", table, " ", ts.Indexes[i].Columns))
+		}
+		ix.Insert(newkey, newoff)
+		keys = append(keys, oldkey, newkey)
+	}
+	t.ck(t.db.ck.Write(t.ct, table, keys))
+	ti.Size += uint64(len(newrec) - len(oldrec))
+	return newoff
+}
+
+func (t *UpdateTran) ck(result bool) {
+	if !result {
+		conflict := t.ct.conflict.Load()
+		if conflict == nil {
+			panic("transaction already ended")
+		}
+		panic("transaction aborted: " + conflict.(string))
+	}
 }

@@ -916,7 +916,7 @@ func (r *SuRecord) DbUpdate(t *Thread, ob Value) {
 		defer r.Unlock()
 	}
 	r.ckModify("Update")
-	r.recoff = r.tran.Update(r.recoff, rec) // ??? ok while locked ???
+	r.recoff = r.tran.Update(r.table, r.recoff, rec) // ??? ok while locked ???
 }
 
 func (r *SuRecord) ckModify(op string) {

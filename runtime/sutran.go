@@ -152,9 +152,9 @@ func (st *SuTran) Updatable() bool {
 	return st.updatable
 }
 
-func (st *SuTran) Update(off uint64, rec Record) uint64 {
+func (st *SuTran) Update(table string, off uint64, rec Record) uint64 {
 	st.ckActive()
-	return st.itran.Update(off, rec)
+	return st.itran.Update(table, off, rec)
 }
 
 func (st *SuTran) WriteCount() int {

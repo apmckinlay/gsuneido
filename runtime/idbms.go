@@ -121,7 +121,7 @@ type ITran interface {
 	Action(action string) int
 
 	// Update modifies a record
-	Update(off uint64, rec Record) uint64
+	Update(table string, off uint64, rec Record) uint64
 
 	// ReadCount returns the number of reads done by the transaction
 	ReadCount() int

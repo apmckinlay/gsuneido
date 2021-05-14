@@ -362,7 +362,7 @@ func (tc *TranClient) Action(action string) int {
 	return tc.dc.GetInt()
 }
 
-func (tc *TranClient) Update(off uint64, rec Record) uint64 {
+func (tc *TranClient) Update(_ string, off uint64, rec Record) uint64 {
 	tc.dc.PutCmd(commands.Update).
 		PutInt(tc.tn).PutInt(int(off)).PutRec(rec).Request()
 	return uint64(tc.dc.GetInt())
