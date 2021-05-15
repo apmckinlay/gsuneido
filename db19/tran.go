@@ -251,11 +251,15 @@ func (t *UpdateTran) Update(table string, oldoff uint64, newrec rt.Record) uint6
 		is := ts.Indexes[i].Ixspec
 		oldkey := is.Key(oldrec)
 		newkey := is.Key(newrec)
-		ix.Delete(oldkey, oldoff)
-		if ix.Lookup(newkey) != 0 {
-			panic(fmt.Sprint("duplicate key: ", table, " ", ts.Indexes[i].Columns))
+		if oldkey == newkey {
+			ix.Update(oldkey, newoff)
+		} else {
+			ix.Delete(oldkey, oldoff)
+			if ix.Lookup(newkey) != 0 {
+				panic(fmt.Sprint("duplicate key: ", table, " ", ts.Indexes[i].Columns))
+			}
+			ix.Insert(newkey, newoff)
 		}
-		ix.Insert(newkey, newoff)
 		keys = append(keys, oldkey, newkey)
 	}
 	t.ck(t.db.ck.Write(t.ct, table, keys))

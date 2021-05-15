@@ -56,7 +56,7 @@ func (DbmsLocal) Cursor(string) ICursor {
 }
 
 func (DbmsLocal) Cursors() int {
-	return 0 //FIXME
+	return 0 //TODO
 }
 
 func (dbms DbmsLocal) Dump(table string) string {
@@ -193,7 +193,7 @@ func (DbmsLocal) Timestamp() SuDate {
 }
 
 func (DbmsLocal) Token() string {
-	panic("DbmsLocal Token not implemented")
+	return "1234567890123456" //TODO
 }
 
 func (dbms DbmsLocal) Transaction(update bool) ITran {
@@ -204,7 +204,7 @@ func (dbms DbmsLocal) Transaction(update bool) ITran {
 }
 
 func (DbmsLocal) Transactions() *SuObject {
-	return &SuObject{} //FIXME
+	return &SuObject{} //TODO
 }
 
 func (dbms DbmsLocal) Unuse(lib string) bool {

@@ -62,6 +62,10 @@ func (ov *Overlay) Delete(key string, off uint64) {
 	ov.mut.Delete(key, off)
 }
 
+func (ov *Overlay) Update(key string, off uint64) {
+	ov.mut.Update(key, off)
+}
+
 // Lookup returns the offset of the record specified by the key
 // or 0 if it's not found.
 // It handles the Delete bit and removes the Update bit.
