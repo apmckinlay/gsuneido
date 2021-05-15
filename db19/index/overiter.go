@@ -170,22 +170,25 @@ outer:
 		var keyMin string
 		var offMin uint64
 		for i, it := range mi.iters {
-			if !it.Eof() {
-				key, off := it.Cur()
-				if itMin == -1 || key < keyMin {
-					itMin = i
-					keyMin = key
-					offMin = off
-				} else if key == keyMin {
-					off = ixbuf.Combine(offMin, off)
-					if off == 0 {
-						// add,delete so skip
-						// may not be the final minimum, but still need to skip
-						it.Next()
-						mi.iters[itMin].Next()
-						continue outer
-					}
+			if it.Eof() {
+				continue
+			}
+			key, off := it.Cur()
+			if itMin == -1 || key < keyMin {
+				itMin = i
+				keyMin = key
+				offMin = off
+			} else if key == keyMin {
+				off = ixbuf.Combine(offMin, off)
+				mi.iters[itMin].Next()
+				if off == 0 {
+					// add,delete so skip
+					// may not be the final minimum, but still need to skip
+					it.Next()
+					continue outer
 				}
+				itMin = i
+				offMin = off
 			}
 		}
 		return itMin, keyMin, offMin

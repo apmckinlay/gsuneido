@@ -273,6 +273,24 @@ func TestOverIterRandom(*testing.T) {
 	}
 }
 
+func TestOverIterDups(*testing.T) {
+	bt := btree.CreateBtree(stor.HeapStor(8192), nil)
+	u := &ixbuf.T{}
+	u.Insert("", 1)
+	mut := &ixbuf.T{}
+	mut.Insert("", 2|ixbuf.Update)
+	ov := &Overlay{bt: bt, layers: []*ixbuf.T{u}, mut: mut}
+	it := NewOverIter("", nil)
+	tran := &testTran{getIndex: func() *Overlay { return ov }}
+	it.Next(tran)
+	assert.That(!it.Eof())
+	key, off := it.Cur()
+	assert.This(key).Is("")
+	assert.This(off).Is(2)
+	it.Next(tran)
+	assert.That(it.Eof())
+}
+
 //-------------------------------------------------------------------
 
 type dat map[string]struct{}
