@@ -224,7 +224,8 @@ func (dbms DbmsLocal) Use(lib string) bool {
 	return true
 }
 
-func (DbmsLocal) Close() {
+func (dbms DbmsLocal) Close() {
+	dbms.db.Close()
 }
 
 // ReadTranLocal --------------------------------------------------------

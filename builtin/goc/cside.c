@@ -99,7 +99,7 @@ uintptr syscall() {
 	}
 }
 
-static void message_loop(uintptr hdlg);
+static int message_loop(uintptr hdlg);
 
 typedef unsigned int uint32;
 long traccel(uintptr ob, uintptr msg);
@@ -252,7 +252,7 @@ static LRESULT CALLBACK message_hook(int code, WPARAM wParam, LPARAM lParam) {
 	return CallNextHookEx(hook, code, wParam, lParam);
 }
 
-static void message_loop(uintptr hdlg) {
+static int message_loop(uintptr hdlg) {
 	MSG msg;
 	for (;;) {
 		ticks = 0; // stop timer
@@ -269,12 +269,12 @@ static void message_loop(uintptr hdlg) {
 		if (msg.message == WM_QUIT) {
 			if (hdlg != 0)
 				PostQuitMessage(msg.wParam);
-			return;
+			return msg.wParam;
 		}
 		if (hdlg != 0 && (uintptr)(msg.hwnd) == hdlg &&
 			msg.message == WM_NULL && msg.wParam == END_MSG_LOOP &&
 			msg.lParam == END_MSG_LOOP)
-			return;
+			return 0;
 		HWND window = GetAncestor(msg.hwnd, GA_ROOT);
 		if (window != 0) {
 			HACCEL haccel = (HACCEL) GetWindowLongPtrA(window, GWLP_USERDATA);
@@ -361,9 +361,11 @@ static DWORD WINAPI thread(LPVOID lpParameter) {
 	signalAndWait();
 	interact(); // allow go side to run init, finishing with result
 	SetTimer(0, 0, timerIntervalMS, timer);
-	message_loop(0);
+	int exitcode = message_loop(0);
 	destroy_windows();
-	exit(0);
+	args[0] = msg_shutdown;
+	args[1] = exitcode;
+	interact();
 }
 
 DWORD threadid;

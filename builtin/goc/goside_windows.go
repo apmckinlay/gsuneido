@@ -128,13 +128,14 @@ var Callback3 func(i, a, b, c uintptr) uintptr
 var Callback4 func(i, a, b, c, d uintptr) uintptr
 var RunOnGoSide func()
 var SunAPP func(string) string
+var Shutdown func(exitcode int)
 
 func interact(args ...uintptr) uintptr {
 	if windows.GetCurrentThreadId() != uiThreadId {
 		log.Println("ERROR: illegal UI call from background thread")
 		runtime.Goexit()
 	}
-	for i,a := range args {
+	for i, a := range args {
 		C.args[i] = C.uintptr(a)
 	}
 	for {
@@ -165,6 +166,8 @@ func interact(args ...uintptr) uintptr {
 			C.args[1] = (C.uintptr)(uintptr(unsafe.Pointer(C.CString(s))))
 			// C.CString will malloc, sunapp will free
 			C.args[2] = (C.uintptr)(len(s))
+		case C.msg_shutdown:
+			Shutdown(int(C.args[1]))
 		case C.msg_result:
 			return uintptr(C.args[1])
 		}

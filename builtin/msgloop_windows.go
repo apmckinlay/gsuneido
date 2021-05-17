@@ -10,6 +10,7 @@ import (
 
 	"github.com/apmckinlay/gsuneido/builtin/goc"
 	. "github.com/apmckinlay/gsuneido/runtime"
+	"github.com/apmckinlay/gsuneido/util/exit"
 	"golang.org/x/sys/windows"
 )
 
@@ -29,6 +30,7 @@ func init() {
 	goc.RunOnGoSide = runOnGoSide
 	RunOnGoSide = runOnGoSide // runtime
 	Interrupt = goc.Interrupt
+	goc.Shutdown = shutdown
 
 	// used to detect calls from other threads (not allowed)
 	runtime.LockOSThread()
@@ -39,4 +41,8 @@ func init() {
 
 func Run() {
 	goc.Run()
+}
+
+func shutdown(exitcode int) {
+	exit.Exit(exitcode)
 }

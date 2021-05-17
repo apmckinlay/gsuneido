@@ -6,15 +6,14 @@
 package builtin
 
 import (
-	"os"
-
 	. "github.com/apmckinlay/gsuneido/runtime"
+	"github.com/apmckinlay/gsuneido/util/exit"
 )
 
 var _ = builtin1("Exit(code = 0)",
 	func(arg Value) Value {
 		if arg == True {
-			os.Exit(0)
+			exit.Exit(0) // immediate exit
 		}
 		PostQuitMessage(uintptr(IfInt(arg)))
 		return nil

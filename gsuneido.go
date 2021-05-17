@@ -22,6 +22,7 @@ import (
 	"github.com/apmckinlay/gsuneido/dbms"
 	"github.com/apmckinlay/gsuneido/options"
 	. "github.com/apmckinlay/gsuneido/runtime"
+	"github.com/apmckinlay/gsuneido/util/exit"
 )
 
 var builtDate = "Dec 29 2020" // set by: go build -ldflags "-X main.builtDate=..."
@@ -237,6 +238,7 @@ func openDbms() {
 	db19.StartConcur(db, 1*time.Minute)
 	dbmsLocal = dbms.NewDbmsLocal(db)
 	GetDbms = func() IDbms { return dbmsLocal }
+	exit.Add( dbmsLocal.Close )
 }
 
 func closeDbms() {
