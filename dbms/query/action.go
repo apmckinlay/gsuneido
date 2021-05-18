@@ -73,5 +73,16 @@ func (a *deleteAction) String() string {
 }
 
 func (a *deleteAction) execute(ut *db19.UpdateTran) int {
-	return 0 //TODO
+	q := a.query
+	Setup(q, UpdateMode, ut)
+	table := q.Updateable()
+	if table == "" {
+		panic("delete: query not updateable")
+	}
+	n := 0
+	for row := q.Get(runtime.Next); row != nil; row = q.Get(runtime.Next) {
+		ut.Delete(table, row[0].Off)
+		n++
+	}
+	return n
 }
