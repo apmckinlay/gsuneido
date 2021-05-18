@@ -25,7 +25,7 @@ type cacheEntry struct {
 // It does *not* check if the item already exists
 // because it assumes you previously tried cacheGet.
 func (c *cache) cacheAdd(index []string, cost Cost, approach interface{}) {
-	assert.That(cost >= 0)
+	assert.Msg("cache cost < 0").That(cost >= 0)
 	c.entries = append(c.entries,
 		cacheEntry{index: index, cost: cost, approach: approach})
 }

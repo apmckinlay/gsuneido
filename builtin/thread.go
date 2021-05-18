@@ -83,8 +83,11 @@ func internalError(e interface{}) bool {
 	if _, ok := e.(runtime.Error); ok {
 		return true
 	}
-	if s, ok := e.(string); ok && strings.HasPrefix(s, "assert failed: ") {
-		return true
+	if s, ok := e.(string); ok {
+		return strings.HasPrefix(s, "assert failed")
+	}
+	if se, ok := e.(*SuExcept); ok {
+		return strings.HasPrefix(string(se.SuStr), "assert failed")
 	}
 	return false
 }
