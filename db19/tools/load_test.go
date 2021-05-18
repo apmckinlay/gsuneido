@@ -30,7 +30,7 @@ func TestLoadDatabase(*testing.T) {
 	}
 	t := time.Now()
 	defer os.Remove("tmp.db")
-	n := LoadDatabase("database.su", "tmp.db")
+	n := LoadDatabase("../../database.su", "tmp.db")
 	fmt.Println("loaded", n, "tables in", time.Since(t).Round(time.Millisecond))
 	ck(CheckDatabase("tmp.db"))
 }

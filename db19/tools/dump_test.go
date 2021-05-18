@@ -18,7 +18,7 @@ func TestDumpTable(t *testing.T) {
 	}
 	start := time.Now()
 	defer os.Remove("tmp.su")
-	n, err := DumpTable("../suneido.db", "stdlib", "tmp.su")
+	n, err := DumpTable("../../suneido.db", "stdlib", "tmp.su")
 	assert.T(t).This(err).Is(nil)
 	fmt.Println("dumped", n, "records in", time.Since(start).Round(time.Millisecond))
 }
@@ -29,7 +29,7 @@ func TestDumpDatabase(t *testing.T) {
 	}
 	start := time.Now()
 	defer os.Remove("tmp.su")
-	n, err := DumpDatabase("../suneido.db", "tmp.su")
+	n, err := DumpDatabase("../../suneido.db", "tmp.su")
 	assert.T(t).This(err).Is(nil)
 	fmt.Println("dumped", n, "tables in", time.Since(start).Round(time.Millisecond))
 }
