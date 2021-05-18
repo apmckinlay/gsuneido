@@ -233,12 +233,15 @@ func openDbms() {
 		if err != nil {
 			log.Fatalln(err)
 		}
-		os.Exit(0)
+		db, err = db19.OpenDatabase("suneido.db")
+		if err != nil {
+			log.Fatalln(err)
+		}
 	}
 	db19.StartConcur(db, 1*time.Minute)
 	dbmsLocal = dbms.NewDbmsLocal(db)
 	GetDbms = func() IDbms { return dbmsLocal }
-	exit.Add( dbmsLocal.Close )
+	exit.Add(dbmsLocal.Close)
 }
 
 func closeDbms() {

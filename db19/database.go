@@ -64,6 +64,11 @@ func OpenDb(filename string, mode stor.Mode, check bool) (db *Database, err erro
 }
 
 func OpenDbStor(store *stor.Stor, mode stor.Mode, check bool) (db *Database, err error) {
+	defer func() {
+		if err != nil {
+			store.Close()
+		}
+	}()
 	buf := store.Data(0)
 	if magic != string(buf[:len(magic)]) {
 		return nil, &ErrCorrupt{}
