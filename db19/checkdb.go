@@ -183,7 +183,7 @@ func (tcs *tableCheckers) worker() {
 		}
 		tcs.wg.Done()
 	}()
-	for table := range tcs.work {
+	for table = range tcs.work {
 		tcs.fn(tcs.state, table)
 	}
 }

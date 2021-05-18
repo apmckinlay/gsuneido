@@ -348,6 +348,8 @@ func Catch(f func()) (result interface{}) {
 //-------------------------------------------------------------------
 
 func (a assert) fail(args ...interface{}) {
+	// fmt.Println("==============================")
+	// debug.PrintStack()
 	if a.t != nil {
 		a.t.Helper()
 	}

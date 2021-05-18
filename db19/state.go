@@ -139,9 +139,13 @@ func ReadState(st *stor.Stor, off uint64) (*DbState, time.Time) {
 func readState(st *stor.Stor, off uint64) (offSchema, offInfo uint64, t time.Time) {
 	buf := st.Data(off)[:stateLen]
 	i := len(magic1)
-	assert.That(string(buf[:i]) == magic1)
+	if string(buf[:i]) != magic1 {
+		panic("ReadState bad magic1")
+	}
 	cksum.MustCheck(buf[:magic2at])
-	assert.That(string(buf[magic2at:magic2at+len(magic2)]) == magic2)
+	if string(buf[magic2at:magic2at+len(magic2)]) != magic2 {
+		panic("ReadState bad magic2")
+	}
 	t = time.Unix(int64(binary.BigEndian.Uint64(buf[i:])), 0)
 	i += dateSize
 	offSchema = stor.ReadSmallOffset(buf[i:])

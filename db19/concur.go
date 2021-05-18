@@ -58,15 +58,16 @@ loop:
 			db.Merge(em.merge, merges)
 			// db.Merge(mergeSingle, merges)
 		case <-ticker.C:
-			state := db.GetState()
-			if state != prevState {
+			if db.GetState() != prevState {
 				db.Persist(ep, false)
-				prevState = state
+				prevState = db.GetState()
 			}
 		}
 	}
 	close(em.jobChan)
-	db.Persist(ep, true)
+	if db.GetState() != prevState {
+		db.Persist(ep, false)
+	}
 	close(allDone)
 }
 

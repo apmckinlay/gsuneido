@@ -83,7 +83,7 @@ func (s *Stor) Alloc(n int) (Offset, []byte) {
 			// proactively get next chunk if we passed the threshold
 			i := offset & (s.chunksize - 1) // index within chunk
 			if i <= s.threshold && i+uint64(n) > s.threshold {
-				s.getChunk(s.offsetToChunk(offset)+1)
+				s.getChunk(s.offsetToChunk(offset) + 1)
 			}
 			return offset, s.Data(offset)[:n:n] // fast path
 		}
