@@ -25,7 +25,6 @@ $RECYCLE.BIN/
 gsuneido
 *.old
 *.bak
-convert/convert
 *.dll
 *.log
 install.bat
@@ -33,5 +32,6 @@ en_US.*
 *.diff
 *.db
 sign.bat
-zap
+/zap
 *.prof
+/zapend
