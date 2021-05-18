@@ -10,10 +10,12 @@ import (
 )
 
 type Info struct {
-	Table   string
-	Nrows   int
-	Size    uint64
-	Indexes []*index.Overlay
+	Table     string
+	Nrows     int
+	Size      uint64
+	origNrows int
+	origSize  uint64
+	Indexes   []*index.Overlay
 	// lastmod is used for persist chaining/flattening
 	lastmod int
 }

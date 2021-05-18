@@ -50,9 +50,8 @@ func (m *Meta) GetRwInfo(table string) *Info {
 		return nil
 	}
 	ti := *pti // copy
-	// start at 0 since these are deltas
-	ti.Nrows = 0
-	ti.Size = 0
+	ti.origNrows = ti.Nrows
+	ti.origSize = ti.Size
 
 	// set up index overlays
 	ti.Indexes = append(ti.Indexes[:0:0], ti.Indexes...) // copy
@@ -134,8 +133,10 @@ func (m *Meta) LayeredOnto(latest *Meta) *Meta {
 		if !ok || lti.isTomb() {
 			return
 		}
-		ti.Nrows += lti.Nrows
-		ti.Size += lti.Size
+		ti.Nrows = lti.Nrows + (ti.Nrows - ti.origNrows)
+		ti.Size = lti.Size + (ti.Size - ti.origSize)
+		ti.origNrows = 0
+		ti.origSize = 0
 		for i := range ti.Indexes {
 			ti.Indexes[i].UpdateWith(lti.Indexes[i])
 		}

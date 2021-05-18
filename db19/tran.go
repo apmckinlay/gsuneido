@@ -13,6 +13,7 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/meta"
 	"github.com/apmckinlay/gsuneido/db19/meta/schema"
 	rt "github.com/apmckinlay/gsuneido/runtime"
+	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/cksum"
 	"github.com/apmckinlay/gsuneido/util/hacks"
 	"github.com/apmckinlay/gsuneido/util/str"
@@ -229,7 +230,9 @@ func (t *UpdateTran) Delete(table string, off uint64) {
 		ix.Delete(keys[i], off)
 	}
 	t.ck(t.db.ck.Write(t.ct, table, keys))
+	assert.Msg("Delete Nrows").That(ti.Nrows > 0)
 	ti.Nrows--
+	assert.Msg("Delete Size").That(ti.Size >= uint64(n))
 	ti.Size -= uint64(n)
 }
 
@@ -263,7 +266,9 @@ func (t *UpdateTran) Update(table string, oldoff uint64, newrec rt.Record) uint6
 		keys = append(keys, oldkey, newkey)
 	}
 	t.ck(t.db.ck.Write(t.ct, table, keys))
-	ti.Size += uint64(len(newrec) - len(oldrec))
+	d := int64(len(newrec) - len(oldrec))
+	assert.Msg("Update Size").That(int64(ti.Size)+d > 0)
+	ti.Size = uint64(int64(ti.Size) + d)
 	return newoff
 }
 
