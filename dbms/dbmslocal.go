@@ -33,34 +33,34 @@ func NewDbmsLocal(db *db19.Database) IDbms {
 
 var _ IDbms = (*DbmsLocal)(nil)
 
-func (dbms DbmsLocal) Admin(admin string) {
+func (dbms *DbmsLocal) Admin(admin string) {
 	qry.DoAdmin(dbms.db, admin)
 }
 
-func (DbmsLocal) Auth(string) bool {
+func (*DbmsLocal) Auth(string) bool {
 	panic("Auth only allowed on clients")
 }
 
-func (dbms DbmsLocal) Check() string {
+func (dbms *DbmsLocal) Check() string {
 	if err := dbms.db.Check(); err != nil {
 		return fmt.Sprint(err)
 	}
 	return ""
 }
 
-func (DbmsLocal) Connections() Value {
+func (*DbmsLocal) Connections() Value {
 	return EmptyObject
 }
 
-func (DbmsLocal) Cursor(string) ICursor {
+func (*DbmsLocal) Cursor(string) ICursor {
 	panic("DbmsLocal Cursor not implemented")
 }
 
-func (DbmsLocal) Cursors() int {
+func (*DbmsLocal) Cursors() int {
 	return 0 //TODO
 }
 
-func (dbms DbmsLocal) Dump(table string) string {
+func (dbms *DbmsLocal) Dump(table string) string {
 	var err error
 	if table == "" {
 		_, err = tools.Dump(dbms.db, "database.su")
@@ -73,7 +73,7 @@ func (dbms DbmsLocal) Dump(table string) string {
 	return ""
 }
 
-func (DbmsLocal) Exec(t *Thread, v Value) Value {
+func (*DbmsLocal) Exec(t *Thread, v Value) Value {
 	fname := ToStr(ToContainer(v).ListGet(0))
 	if i := strings.IndexByte(fname, '.'); i != -1 {
 		ob := Global.GetName(t, fname[:i])
@@ -84,11 +84,11 @@ func (DbmsLocal) Exec(t *Thread, v Value) Value {
 	return t.CallEach1(fn, v)
 }
 
-func (DbmsLocal) Final() int {
+func (*DbmsLocal) Final() int {
 	panic("DbmsLocal Final not implemented")
 }
 
-func (dbms DbmsLocal) Get(query string, dir Dir) (Row, *Header, string) {
+func (dbms *DbmsLocal) Get(query string, dir Dir) (Row, *Header, string) {
 	tran := dbms.db.NewReadTran()
 	defer tran.Complete()
 	return get(tran, query, dir)
@@ -112,19 +112,19 @@ func get(tran qry.QueryTran, query string, dir Dir) (Row, *Header, string) {
 	return row, q.Header(), q.Updateable()
 }
 
-func (DbmsLocal) Info() Value {
+func (*DbmsLocal) Info() Value {
 	panic("DbmsLocal Info not implemented")
 }
 
-func (DbmsLocal) Kill(string) int {
+func (*DbmsLocal) Kill(string) int {
 	panic("DbmsLocal Kill not implemented")
 }
 
-func (DbmsLocal) Load(string) int {
+func (*DbmsLocal) Load(string) int {
 	panic("DbmsLocal Load not implemented")
 }
 
-func (dbms DbmsLocal) LibGet(name string) (result []string) {
+func (dbms *DbmsLocal) LibGet(name string) (result []string) {
 	defer func() {
 		if e := recover(); e != nil {
 			// debug.PrintStack()
@@ -152,39 +152,39 @@ func (dbms DbmsLocal) LibGet(name string) (result []string) {
 	return []string{"stdlib", string(s)}
 }
 
-func (dbms DbmsLocal) Libraries() *SuObject {
+func (dbms *DbmsLocal) Libraries() *SuObject {
 	return strsToOb(dbms.libraries)
 }
 
-func (DbmsLocal) Log(s string) {
+func (*DbmsLocal) Log(s string) {
 	log.Println(s)
 }
 
-func (DbmsLocal) Nonce() string {
+func (*DbmsLocal) Nonce() string {
 	panic("nonce only allowed on clients")
 }
 
-func (DbmsLocal) Run(s string) Value {
+func (*DbmsLocal) Run(s string) Value {
 	var t Thread //TODO don't alloc every time
 	return compile.EvalString(&t, s)
 }
 
 var sessionId string
 
-func (DbmsLocal) SessionId(id string) string {
+func (*DbmsLocal) SessionId(id string) string {
 	if id != "" {
 		sessionId = id
 	}
 	return sessionId
 }
 
-func (dbms DbmsLocal) Size() int64 {
+func (dbms *DbmsLocal) Size() int64 {
 	return int64(dbms.db.Size())
 }
 
 var prevTimestamp SuDate
 
-func (DbmsLocal) Timestamp() SuDate {
+func (*DbmsLocal) Timestamp() SuDate {
 	t := Now()
 	if t.Equal(prevTimestamp) {
 		t = t.Plus(0, 0, 0, 0, 0, 0, 1)
@@ -193,22 +193,22 @@ func (DbmsLocal) Timestamp() SuDate {
 	return t
 }
 
-func (DbmsLocal) Token() string {
+func (*DbmsLocal) Token() string {
 	return "1234567890123456" //TODO
 }
 
-func (dbms DbmsLocal) Transaction(update bool) ITran {
+func (dbms *DbmsLocal) Transaction(update bool) ITran {
 	if update {
 		return &UpdateTranLocal{dbms.db.NewUpdateTran()}
 	}
 	return &ReadTranLocal{dbms.db.NewReadTran()}
 }
 
-func (DbmsLocal) Transactions() *SuObject {
+func (*DbmsLocal) Transactions() *SuObject {
 	return &SuObject{} //TODO
 }
 
-func (dbms DbmsLocal) Unuse(lib string) bool {
+func (dbms *DbmsLocal) Unuse(lib string) bool {
 	if lib == "stdlib" || !strs.Contains(dbms.libraries, lib) {
 		return false
 	}
@@ -216,7 +216,7 @@ func (dbms DbmsLocal) Unuse(lib string) bool {
 	return true
 }
 
-func (dbms DbmsLocal) Use(lib string) bool {
+func (dbms *DbmsLocal) Use(lib string) bool {
 	if strs.Contains(dbms.libraries, lib) {
 		return false
 	}
@@ -225,7 +225,7 @@ func (dbms DbmsLocal) Use(lib string) bool {
 	return true
 }
 
-func (dbms DbmsLocal) Close() {
+func (dbms *DbmsLocal) Close() {
 	dbms.db.Close()
 }
 
