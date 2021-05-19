@@ -12,6 +12,7 @@ import (
 	"github.com/apmckinlay/gsuneido/db19"
 	"github.com/apmckinlay/gsuneido/db19/meta/schema"
 	"github.com/apmckinlay/gsuneido/util/str"
+	"github.com/apmckinlay/gsuneido/util/strs"
 )
 
 type adminParser struct {
@@ -131,7 +132,7 @@ func (p *adminParser) columns(full bool) (columns, derived []string) {
 				derived = append(derived, col)
 			} else if strings.HasSuffix(col, "_lower!") {
 				if full &&
-					!str.List(columns).Has(strings.TrimSuffix(col, "_lower!")) {
+					!strs.Contains(columns, strings.TrimSuffix(col, "_lower!")) {
 					panic("_lower! base column not found")
 				}
 				derived = append(derived, col)
@@ -185,8 +186,8 @@ func (p *adminParser) indexColumns(columns, derived []string, full bool) []strin
 	ixcols := make([]string, 0, 8)
 	for p.Token != tok.RParen {
 		col := p.MatchIdent()
-		if full && !str.List(columns).Has(col) &&
-			(!strings.HasSuffix(col, "_lower!") || !str.List(derived).Has(col)) {
+		if full && !strs.Contains(columns, col) &&
+			(!strings.HasSuffix(col, "_lower!") || !strs.Contains(derived, col)) {
 			p.Error("invalid index column: " + col)
 		}
 		ixcols = append(ixcols, col)

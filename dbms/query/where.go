@@ -18,6 +18,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/sset"
 	"github.com/apmckinlay/gsuneido/util/str"
 	"github.com/apmckinlay/gsuneido/util/strs"
+	"github.com/apmckinlay/gsuneido/util/strss"
 )
 
 type Where struct {
@@ -438,7 +439,7 @@ func (w *Where) bestIndex(order []string) (Cost, []string) {
 func (w *Where) getIdxSel(index []string) *idxSel {
 	for i := range w.idxSels {
 		is := &w.idxSels[i]
-		if str.List(index).Equal(is.index) {
+		if strs.Equal(index, is.index) {
 			return is
 		}
 	}
@@ -854,7 +855,7 @@ outer:
 }
 
 func (w *Where) idxFrac(idx []string, ptrngs []pointRange) float64 {
-	iIndex := w.tbl.findIndex(idx)
+	iIndex := strss.Index(w.tbl.indexes, idx)
 	if iIndex < 0 {
 		panic("index not found")
 	}

@@ -24,6 +24,17 @@ func Cow(ss []string) []string {
 	return ss[:n:n]
 }
 
+// Contains returns whether the list contains the string
+// or -1 if not found.
+func Contains(list []string, str string) bool {
+	for _, s := range list {
+		if s == str {
+			return true
+		}
+	}
+	return false
+}
+
 // Index returns the position of the first occurrence of the given string,
 // or -1 if not found.
 func Index(list []string, str string) int {
@@ -33,4 +44,30 @@ func Index(list []string, str string) int {
 		}
 	}
 	return -1
+}
+
+// HasPrefix returns true if list2 is a prefix of list
+func HasPrefix(list, list2 []string) bool {
+	if len(list) < len(list2) {
+		return false
+	}
+	for i := range list2 {
+		if list[i] != list2[i] {
+			return false
+		}
+	}
+	return true
+}
+
+// Without returns a new slice of strings
+// with any occurences of a given string removed,
+// maintaining the existing order.
+func Without(list []string, str string) []string {
+	dest := make([]string, 0, len(list))
+	for _, s := range list {
+		if s != str {
+			dest = append(dest, s)
+		}
+	}
+	return dest
 }

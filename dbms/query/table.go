@@ -14,6 +14,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/setset"
 	"github.com/apmckinlay/gsuneido/util/str"
 	"github.com/apmckinlay/gsuneido/util/strs"
+	"github.com/apmckinlay/gsuneido/util/strss"
 )
 
 func NewTable(name string) Query {
@@ -40,8 +41,8 @@ type Table struct {
 	schema    *Schema
 	info      *meta.Info
 	// index is the index that will be used to access the data.
-	// It is set by optimize.
 	index       []string
+	iIndex      int
 	indexEncode bool
 	iter        *index.OverIter
 }
@@ -153,16 +154,7 @@ func (tbl *Table) optimize(_ Mode, index []string) (Cost, interface{}) {
 // find an index that satisfies the required order
 func (tbl *Table) indexFor(order []string) int {
 	for i, ix := range tbl.indexes {
-		if str.List(ix).HasPrefix(order) {
-			return i
-		}
-	}
-	return -1 // not found
-}
-
-func (tbl *Table) findIndex(index []string) int {
-	for i, ix := range tbl.indexes {
-		if str.List(index).Equal(ix) {
+		if strs.HasPrefix(ix, order) {
 			return i
 		}
 	}
@@ -171,6 +163,7 @@ func (tbl *Table) findIndex(index []string) int {
 
 func (tbl *Table) setApproach(_ []string, approach interface{}, _ QueryTran) {
 	tbl.index = approach.(tableApproach).index
+	tbl.iIndex = strss.Index(tbl.indexes, tbl.index)
 	tbl.indexEncode = len(tbl.index) > 1 || !setset.Contains(tbl.keys, tbl.index)
 }
 
@@ -188,8 +181,7 @@ func lookupCost(rowSize int) Cost {
 // execution --------------------------------------------------------
 
 func (tbl *Table) Lookup(key string) runtime.Row {
-	iIndex := tbl.findIndex(tbl.index) //TODO cache
-	rec := tbl.tran.Lookup(tbl.name, iIndex, key)
+	rec := tbl.tran.Lookup(tbl.name, tbl.iIndex, key)
 	if rec == nil {
 		return nil
 	}

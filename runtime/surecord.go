@@ -12,6 +12,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/pack"
 	"github.com/apmckinlay/gsuneido/util/str"
+	"github.com/apmckinlay/gsuneido/util/strs"
 )
 
 // SuRecord is an SuObject with observers and rules and a default value of "".
@@ -94,7 +95,7 @@ func deps(row Row, hdr *Header) map[string][]string {
 				deps := str.Split(ToStr(row.Get(hdr, f)), ",")
 				f = f[:len(f)-5]
 				for _, d := range deps {
-					if !str.List(dependents[d]).Has(f) {
+					if !strs.Contains(dependents[d], f) {
 						dependents[d] = append(dependents[d], f)
 					}
 				}
@@ -638,7 +639,7 @@ func (r *SuRecord) addDependent(from, to string) {
 	if r.dependents == nil {
 		r.dependents = make(map[string][]string)
 	}
-	if !str.List(r.dependents[to]).Has(from) {
+	if !strs.Contains(r.dependents[to], from) {
 		r.trace("add dependency for", from, "uses", to)
 		r.dependents[to] = append(r.dependents[to], from)
 	}
@@ -823,7 +824,7 @@ func (r *SuRecord) ToRecord(t *Thread, hdr *Header) Record {
 	for k, v := range r.dependents {
 		for _, d := range v {
 			d_deps := d + "_deps"
-			if str.List(fields).Has(d_deps) {
+			if strs.Contains(fields, d_deps) {
 				deps[d_deps] = append(deps[d_deps], k)
 			}
 		}

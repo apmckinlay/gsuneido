@@ -15,6 +15,7 @@ import (
 	qry "github.com/apmckinlay/gsuneido/dbms/query"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/str"
+	"github.com/apmckinlay/gsuneido/util/strs"
 )
 
 // DbmsLocal implements the Dbms interface using a local database
@@ -208,15 +209,15 @@ func (DbmsLocal) Transactions() *SuObject {
 }
 
 func (dbms DbmsLocal) Unuse(lib string) bool {
-	if lib == "stdlib" || !str.List(dbms.libraries).Has(lib) {
+	if lib == "stdlib" || !strs.Contains(dbms.libraries, lib) {
 		return false
 	}
-	dbms.libraries = str.List(dbms.libraries).Without(lib)
+	dbms.libraries = strs.Without(dbms.libraries, lib)
 	return true
 }
 
 func (dbms DbmsLocal) Use(lib string) bool {
-	if str.List(dbms.libraries).Has(lib) {
+	if strs.Contains(dbms.libraries, lib) {
 		return false
 	}
 	//TODO check schema

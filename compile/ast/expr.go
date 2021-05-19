@@ -11,6 +11,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/sset"
 	"github.com/apmckinlay/gsuneido/util/str"
+	"github.com/apmckinlay/gsuneido/util/strs"
 )
 
 type Context struct {
@@ -100,7 +101,7 @@ func (b *Binary) rawOp() bool {
 }
 
 func IsColumn(e Expr, cols []string) bool {
-	if id, ok := e.(*Ident); ok && str.List(cols).Has(id.Name) {
+	if id, ok := e.(*Ident); ok && strs.Contains(cols, id.Name) {
 		return true
 	}
 	return false

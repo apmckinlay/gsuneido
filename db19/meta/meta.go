@@ -31,6 +31,7 @@ func (m *Meta) Mutable() *Meta {
 	return &ov2
 }
 
+// GetRoInfo returns read-only Info for the table or nil if not found
 func (m *Meta) GetRoInfo(table string) *Info {
 	if ti, ok := m.difInfo.Get(table); ok {
 		return ti

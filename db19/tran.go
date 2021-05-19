@@ -16,7 +16,6 @@ import (
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/cksum"
 	"github.com/apmckinlay/gsuneido/util/hacks"
-	"github.com/apmckinlay/gsuneido/util/str"
 	"github.com/apmckinlay/gsuneido/util/strs"
 )
 
@@ -25,6 +24,7 @@ type tran struct {
 	meta *meta.Meta
 }
 
+// GetInfo returns read-only Info for the table or nil if not found
 func (t *tran) GetInfo(table string) *meta.Info {
 	return t.meta.GetRoInfo(table)
 }
@@ -83,7 +83,7 @@ func (t *ReadTran) GetIndex(table string, cols []string) *index.Overlay {
 	ts := t.meta.GetRoSchema(table)
 	ti := t.meta.GetRoInfo(table)
 	for i, ix := range ts.Indexes {
-		if str.List(cols).Equal(ix.Columns) {
+		if strs.Equal(cols, ix.Columns) {
 			return ti.Indexes[i]
 		}
 	}
