@@ -160,6 +160,23 @@ func Setup(q Query, mode Mode, t QueryTran) Query {
 	return q
 }
 
+// SetupKey is like Setup but it ensures a key index
+func SetupKey(q Query, mode Mode, t QueryTran) Query {
+	q.SetTran(t)
+	q.Init()
+	q = q.Transform()
+	best := newBestIndex()
+	for _, key := range q.Keys() {
+		b := bestGrouped(q, mode, nil, key)
+		best.update(b.index, b.cost)
+	}
+	if best.cost >= impossible {
+		panic("invalid query: " + q.String())
+	}
+	q = SetApproach(q, best.index, t)
+	return q
+}
+
 const outOfOrder = 10 // minimal penalty for executing out of order
 
 const impossible = Cost(ints.MaxInt / 64) // allow for adding IMPOSSIBLE's

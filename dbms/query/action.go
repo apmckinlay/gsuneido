@@ -6,7 +6,7 @@ package query
 import (
 	"github.com/apmckinlay/gsuneido/compile/ast"
 	"github.com/apmckinlay/gsuneido/db19"
-	"github.com/apmckinlay/gsuneido/runtime"
+	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
 func DoAction(ut *db19.UpdateTran, action string) int {
@@ -15,7 +15,7 @@ func DoAction(ut *db19.UpdateTran, action string) int {
 }
 
 type insertRecordAction struct {
-	record *runtime.SuRecord
+	record *SuRecord
 	query  Query
 }
 
@@ -25,7 +25,7 @@ func (a *insertRecordAction) String() string {
 
 func (a *insertRecordAction) execute(ut *db19.UpdateTran) int {
 	a.query.SetTran(ut)
-	var th runtime.Thread // ???
+	var th Thread // ???
 	rec := a.record.ToRecord(&th, a.query.Header())
 	a.query.Output(rec)
 	return 1
@@ -61,7 +61,30 @@ func (a *updateAction) String() string {
 }
 
 func (a *updateAction) execute(ut *db19.UpdateTran) int {
-	return 0 //TODO
+	q := SetupKey(a.query, UpdateMode, ut)
+	table := q.Updateable()
+	if table == "" {
+		panic("update: query not updateable")
+	}
+	hdr := q.Header()
+	th := &Thread{}
+	var prev uint64
+	n := 0
+	for row := q.Get(Next); row != nil; row = q.Get(Next) {
+		// avoid getting stuck on the same record
+		if row[0].Off == prev {
+			continue
+		}
+		r := SuRecordFromRow(row, hdr, table, nil)
+		context := &ast.Context{T: th, Rec: r}
+		for i, col := range a.cols {
+			r.Put(th, SuStr(col), a.exprs[i].Eval(context))
+		}
+		newrec := r.ToRecord(th, hdr)
+		prev = ut.Update(table, row[0].Off, newrec)
+		n++
+	}
+	return n
 }
 
 type deleteAction struct {
@@ -73,14 +96,13 @@ func (a *deleteAction) String() string {
 }
 
 func (a *deleteAction) execute(ut *db19.UpdateTran) int {
-	q := a.query
-	Setup(q, UpdateMode, ut)
+	q := Setup(a.query, UpdateMode, ut)
 	table := q.Updateable()
 	if table == "" {
 		panic("delete: query not updateable")
 	}
 	n := 0
-	for row := q.Get(runtime.Next); row != nil; row = q.Get(runtime.Next) {
+	for row := q.Get(Next); row != nil; row = q.Get(Next) {
 		ut.Delete(table, row[0].Off)
 		n++
 	}
