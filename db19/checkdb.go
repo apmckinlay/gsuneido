@@ -66,6 +66,9 @@ func (db *Database) Check() (ec error) {
 
 func checkTable(state *DbState, table string) {
 	info := state.Meta.GetRoInfo(table)
+	if info == nil {
+		panic("info missing for " + table)
+	}
 	count, sum := checkFirstIndex(state, info.Indexes[0])
 	if count != info.Nrows {
 		panic("count != nrows " + fmt.Sprint(count, info.Nrows))
@@ -170,6 +173,7 @@ type tableCheckers struct {
 	state  *DbState
 	work   chan string
 	stop   chan void
+	once   sync.Once
 	wg     sync.WaitGroup
 	closed bool
 }
@@ -179,7 +183,7 @@ func (tcs *tableCheckers) worker() {
 	defer func() {
 		if e := recover(); e != nil {
 			tcs.err.Store(&ErrCorrupt{err: e, table: table})
-			close(tcs.stop) // notify main thread
+			tcs.once.Do(func() { close(tcs.stop) }) // notify main thread
 		}
 		tcs.wg.Done()
 	}()
