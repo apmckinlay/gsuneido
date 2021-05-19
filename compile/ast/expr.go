@@ -303,13 +303,13 @@ func (a *In) CanEvalRaw(cols []string) bool {
 	if !IsColumn(a.E, cols) {
 		return false
 	}
-	packed := make([]string, len(a.Exprs))
-	for i, e := range a.Exprs {
+	packed := make([]string, 0, len(a.Exprs))
+	for _, e := range a.Exprs {
 		c, ok := e.(*Constant)
 		if !ok {
 			return false
 		}
-		packed[i] = Pack(c.Val.(Packable))
+		packed = sset.AddUnique(packed, Pack(c.Val.(Packable)))
 	}
 	a.Packed = packed
 	return true

@@ -491,8 +491,8 @@ func TestQueryGet(t *testing.T) {
 		`item	qty
 		'disk'	5
 		'pencil'	7`)
-	test("inven where item in ('disk', 'mouse', 'pencil')", // points
-		"inven^(item) WHERE item in ('disk', 'mouse', 'pencil')",
+	test("inven where item in ('disk', 'mouse', 'disk', 'pencil')", // points
+		"inven^(item) WHERE item in ('disk', 'mouse', 'disk', 'pencil')",
 		`item	qty
 		'disk'	5
 		'mouse'	2
