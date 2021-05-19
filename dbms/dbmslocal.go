@@ -96,7 +96,7 @@ func (dbms DbmsLocal) Get(query string, dir Dir) (Row, *Header, string) {
 
 func get(tran qry.QueryTran, query string, dir Dir) (Row, *Header, string) {
 	q := qry.ParseQuery(query)
-	qry.Setup(q, qry.ReadMode, tran)
+	q = qry.Setup(q, qry.ReadMode, tran)
 	only := false
 	if dir == Only {
 		only = true
@@ -241,7 +241,7 @@ func (t ReadTranLocal) Get(query string, dir Dir) (Row, *Header, string) {
 
 func (t ReadTranLocal) Query(query string) IQuery {
 	q := qry.ParseQuery(query)
-	qry.Setup(q, qry.ReadMode, t.ReadTran)
+	q = qry.Setup(q, qry.ReadMode, t.ReadTran)
 	return queryLocal{Query: q}
 }
 
@@ -261,7 +261,7 @@ func (t UpdateTranLocal) Get(query string, dir Dir) (Row, *Header, string) {
 
 func (t UpdateTranLocal) Query(query string) IQuery {
 	q := qry.ParseQuery(query)
-	qry.Setup(q, qry.UpdateMode, t.UpdateTran)
+	q = qry.Setup(q, qry.UpdateMode, t.UpdateTran)
 	return queryLocal{Query: q}
 }
 

@@ -148,6 +148,8 @@ type QueryTran interface {
 // Setup prepares a parsed query for execution.
 // It calls transform and optimize.
 // The resulting Query is ready for execution.
+//
+// NOTE: Correct usage is: q = Setup(q, mode, t)
 func Setup(q Query, mode Mode, t QueryTran) Query {
 	q.SetTran(t)
 	q.Init()

@@ -14,7 +14,7 @@ func TestOptimize(t *testing.T) {
 	test := func(query, expected string) {
 		t.Helper()
 		q := ParseQuery(query)
-		Setup(q, mode, testTran{})
+		q = Setup(q, mode, testTran{})
 		assert.T(t).Msg(query).This(q.String()).Like(expected)
 	}
 	mode = ReadMode
@@ -37,6 +37,8 @@ func TestOptimize(t *testing.T) {
 
 	test("table minus table",
 		"table^(a) MINUS table^(a)")
+	test("(table extend x = 1) minus hist",
+		"table^(a) EXTEND x = 1")
 
 	test("hist intersect hist2",
 		"hist^(date) INTERSECT hist2^(date)")
