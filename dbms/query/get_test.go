@@ -608,4 +608,12 @@ func TestQueryGet(t *testing.T) {
 		"hist^(date) SUMMARIZE-SEQ max_cost = max cost",
 		`max_cost
 		300`)
+
+	// tempindex
+	test("tables intersect columns",
+		"tables INTERSECT (columns TEMPINDEX(table,column))",
+		`table`)
+	test("tables minus tables",
+		"tables MINUS (tables TEMPINDEX(tablename))",
+		`table	tablename	nrows	totalsize`)
 }

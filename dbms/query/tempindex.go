@@ -47,14 +47,16 @@ func (ti *TempIndex) Select(cols, vals []string) {
 	ti.Rewind()
 }
 
+func (ti *TempIndex) Lookup(key string) Row {
+	if ti.iter == nil {
+		ti.iter = ti.makeIter()
+	}
+	return ti.iter.Seek(key)
+}
+
 func (ti *TempIndex) Get(dir Dir) Row {
 	if ti.iter == nil {
-		ti.srcHdr = ti.source.Header()
-		if ti.source.SingleTable() {
-			ti.iter = ti.single()
-		} else {
-			ti.iter = ti.multi()
-		}
+		ti.iter = ti.makeIter()
 		if ti.selEnd == "" {
 			ti.selEnd = ixkey.Max
 		}
@@ -85,6 +87,14 @@ type rowIter interface {
 	Get(Dir) Row
 	Rewind()
 	Seek(key string) Row
+}
+
+func (ti *TempIndex) makeIter() rowIter {
+	ti.srcHdr = ti.source.Header()
+	if ti.source.SingleTable() {
+		return ti.single()
+	}
+	return ti.multi()
 }
 
 func (ti *TempIndex) selected(row Row) bool {
