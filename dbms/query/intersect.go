@@ -60,16 +60,13 @@ func (it *Intersect) Transform() Query {
 }
 
 func (it *Intersect) optimize(mode Mode, index []string) (Cost, interface{}) {
-	it.keyIndex = it.source2.Keys()[0]
 	cost1, key1 := it.cost(it.source, it.source2, mode, index)
 	cost2, key2 := it.cost(it.source2, it.source, mode, index) // reversed
 	cost2 += outOfOrder
-	cost := ints.Min(cost1, cost2)
-	app := intersectApproach{keyIndex: key1}
-	if cost2 < cost1 {
-		app = intersectApproach{keyIndex: key2, reverse: true}
+	if cost1 < cost2 {
+		return cost1, &intersectApproach{keyIndex: key1}
 	}
-	return cost, &app
+	return cost2, &intersectApproach{keyIndex: key2, reverse: true}
 }
 
 func (*Intersect) cost(source, source2 Query, mode Mode, index []string) (
