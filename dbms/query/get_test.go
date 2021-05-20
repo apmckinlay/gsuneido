@@ -108,46 +108,47 @@ func TestQueryGet(t *testing.T) {
         'trans'		'date,item,id'	true`)
 	test("columns",
 		"columns",
-		`table		column
-        'alias'		'id'
-        'alias'		'name2'
-        'co'		'tnum'
-        'co'		'signed'
-        'columns'	'table'
-        'columns'	'column'
-        'cus'		'cnum'
-        'cus'		'abbrev'
-        'cus'		'name'
-        'customer'	'id'
-        'customer'	'name'
-        'customer'	'city'
-        'dates'		'date'
-        'hist'		'date'
-        'hist'		'item'
-        'hist'		'id'
-        'hist'		'cost'
-        'hist2'		'date'
-        'hist2'		'item'
-        'hist2'		'id'
-        'hist2'		'cost'
-        'indexes'	'table'
-        'indexes'	'columns'
-        'indexes'	'key'
-        'inven'		'item'
-        'inven'		'qty'
-        'supplier'	'supplier'
-        'supplier'	'name'
-        'supplier'	'city'
-        'tables'	'table'
-        'tables'	'tablename'
-        'tables'	'nrows'
-        'tables'	'totalsize'
-        'task'		'tnum'
-        'task'		'cnum'
-        'trans'		'item'
-        'trans'		'id'
-        'trans'		'cost'
-        'trans'		'date'`)
+		`table   column  field
+        'alias' 'id'    0
+        'alias' 'name2' 1
+        'co'    'tnum'  0
+        'co'    'signed'        1
+        'columns'       'table' 0
+        'columns'       'column'        1
+        'columns'       'field' 2
+        'cus'   'cnum'  0
+        'cus'   'abbrev'        1
+        'cus'   'name'  2
+        'customer'      'id'    0
+        'customer'      'name'  1
+        'customer'      'city'  2
+        'dates' 'date'  0
+        'hist'  'date'  0
+        'hist'  'item'  1
+        'hist'  'id'    2
+        'hist'  'cost'  3
+        'hist2' 'date'  0
+        'hist2' 'item'  1
+        'hist2' 'id'    2
+        'hist2' 'cost'  3
+        'indexes'       'table' 0
+        'indexes'       'columns'       1
+        'indexes'       'key'   2
+        'inven' 'item'  0
+        'inven' 'qty'   1
+        'supplier'      'supplier'      0
+        'supplier'      'name'  1
+        'supplier'      'city'  2
+        'tables'        'table' 0
+        'tables'        'tablename'     1
+        'tables'        'nrows' 2
+        'tables'        'totalsize'     3
+        'task'  'tnum'  0
+        'task'  'cnum'  1
+        'trans' 'item'  0
+        'trans' 'id'    1
+        'trans' 'cost'  2
+        'trans' 'date'  3`)
 	test("tables",
 		"tables",
 		`table   tablename       nrows   totalsize

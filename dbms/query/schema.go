@@ -193,10 +193,10 @@ func (cs *Columns) Transform() Query {
 }
 
 func (*Columns) Keys() [][]string {
-	return columnsFields
+	return [][]string{{"table", "column"}}
 }
 
-var columnsFields = [][]string{{"table", "column"}}
+var columnsFields = [][]string{{"table", "column", "field"}}
 
 func (cs *Columns) Columns() []string {
 	return columnsFields[0]
@@ -225,12 +225,14 @@ func (cs *Columns) Get(dir Dir) Row {
 	if cs.state == eof {
 		return nil
 	}
+	var col string
+	var fld int
 	if dir == Next {
 		if cs.state == rewound {
 			cs.si, cs.ci = 0, 0
 		} else {
 			cs.ci++
-			if cs.ci >= len(cs.schema[cs.si].Columns) {
+			if cs.ci >= len(cs.schema[cs.si].Columns)+len(cs.schema[cs.si].Derived) {
 				cs.si++
 				if cs.si >= len(cs.schema) {
 					cs.state = eof
@@ -241,27 +243,36 @@ func (cs *Columns) Get(dir Dir) Row {
 		}
 	} else { // Prev
 		if cs.state == rewound {
-			cs.si = len(cs.schema) - 1
-			cs.ci = len(cs.schema[cs.si].Columns) - 1
-		} else {
-			cs.ci--
-			if cs.ci < 0 {
-				cs.si--
-				if cs.si < 0 {
-					cs.state = eof
-					return nil
-				}
-				cs.ci = len(cs.schema[cs.si].Columns) - 1
+			cs.si = len(cs.schema)
+			cs.ci = 0
+		}
+		cs.ci--
+		if cs.ci < 0 {
+			cs.si--
+			if cs.si < 0 {
+				cs.state = eof
+				return nil
 			}
+			cs.ci = len(cs.schema[cs.si].Columns) + len(cs.schema[cs.si].Derived) - 1
 		}
 	}
+	col, fld = columnOrDerived(cs.schema[cs.si], cs.ci)
 	cs.state = within
 	schema := cs.schema[cs.si]
 	var rb RecordBuilder
 	rb.Add(SuStr(schema.Table))
-	rb.Add(SuStr(schema.Columns[cs.ci]))
+	rb.Add(SuStr(col))
+	rb.Add(IntVal(fld).(Packable))
 	rec := rb.Build()
 	return Row{DbRec{Record: rec}}
+}
+
+func columnOrDerived(schema *meta.Schema, i int) (string, int) {
+	if i >= len(schema.Columns) {
+		i -= len(schema.Columns)
+		return str.UnCapitalize(schema.Derived[i]), -1
+	}
+	return schema.Columns[i], i
 }
 
 func (cs *Columns) ensure() {

@@ -71,7 +71,9 @@ func (tbl *Table) SetTran(t QueryTran) {
 
 	cols := make([]string, 0, len(tbl.schema.Columns)+len(tbl.schema.Derived))
 	cols = append(cols, tbl.schema.Columns...)
-	cols = append(cols, tbl.schema.Derived...)
+	for _, col := range tbl.schema.Derived {
+		cols = append(cols, str.UnCapitalize(col))
+	}
 	tbl.columns = cols
 
 	idxs := make([][]string, 0, len(tbl.schema.Indexes)-1)
