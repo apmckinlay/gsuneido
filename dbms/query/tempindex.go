@@ -17,7 +17,7 @@ type TempIndex struct {
 	Query1
 	order   []string
 	tran    QueryTran
-	srcHdr  *Header
+	hdr     *Header
 	iter    rowIter
 	rewound bool
 	selOrg  string
@@ -51,7 +51,11 @@ func (ti *TempIndex) Lookup(key string) Row {
 	if ti.iter == nil {
 		ti.iter = ti.makeIter()
 	}
-	return ti.iter.Seek(key)
+	row := ti.iter.Seek(key)
+	if row == nil || ti.rowKey(row) != key {
+		return nil
+	}
+	return row
 }
 
 func (ti *TempIndex) Get(dir Dir) Row {
@@ -90,7 +94,7 @@ type rowIter interface {
 }
 
 func (ti *TempIndex) makeIter() rowIter {
-	ti.srcHdr = ti.source.Header()
+	ti.hdr = ti.source.Header()
 	if ti.source.SingleTable() {
 		return ti.single()
 	}
@@ -101,6 +105,19 @@ func (ti *TempIndex) selected(row Row) bool {
 	key := ti.rowKey(row)
 	return ti.selOrg <= key && key < ti.selEnd
 }
+
+func (ti *TempIndex) rowKey(row Row) string {
+	if len(ti.order) == 1 {
+		return row.GetRaw(ti.hdr, ti.order[0])
+	}
+	var enc ixkey.Encoder
+	for _, col := range ti.order {
+		enc.Add(row.GetRaw(ti.hdr, col))
+	}
+	return enc.String()
+}
+
+//-------------------------------------------------------------------
 
 type singleIter struct {
 	tran QueryTran
@@ -125,7 +142,7 @@ func (ti *TempIndex) single() rowIter {
 }
 
 func (ti *TempIndex) ixspec() *ixkey.Spec {
-	fields := ti.srcHdr.Fields[0]
+	fields := ti.hdr.Fields[0]
 	flds := make([]int, len(ti.order))
 	for i, f := range ti.order {
 		fi := strs.Index(fields, f)
@@ -135,7 +152,7 @@ func (ti *TempIndex) ixspec() *ixkey.Spec {
 	return &ixkey.Spec{Fields: flds}
 }
 
-func (it singleIter) Get(dir Dir) Row {
+func (it *singleIter) Get(dir Dir) Row {
 	if dir == Next {
 		it.iter.Next()
 	} else {
@@ -147,7 +164,7 @@ func (it singleIter) Get(dir Dir) Row {
 	return it.get()
 }
 
-func (it singleIter) get() Row {
+func (it *singleIter) get() Row {
 	if it.iter.Eof() {
 		return nil
 	}
@@ -156,14 +173,19 @@ func (it singleIter) get() Row {
 	return Row{dbrec}
 }
 
-func (it singleIter) Seek(key string) Row {
+func (it *singleIter) Seek(key string) Row {
 	it.iter.Seek(key)
+	if it.iter.Eof() {
+		return nil
+	}
 	return it.get()
 }
 
-func (it singleIter) Rewind() {
+func (it *singleIter) Rewind() {
 	it.iter.Rewind()
 }
+
+//-------------------------------------------------------------------
 
 type multiIter struct {
 	tran  QueryTran
@@ -175,13 +197,9 @@ type multiIter struct {
 }
 
 func (ti *TempIndex) multi() rowIter {
-	it := multiIter{tran: ti.tran}
-	hdr := ti.source.Header()
-	it.nrecs = len(hdr.Fields)
-	it.heap = stor.HeapStor(8192)
+	it := multiIter{tran: ti.tran, hdr: ti.hdr, order: ti.order,
+		nrecs: len(ti.hdr.Fields), heap: stor.HeapStor(8192)}
 	it.heap.Alloc(1) // avoid offset 0
-	it.hdr = hdr
-	it.order = ti.order
 	b := sortlist.NewSorting(it.multiLess)
 	for {
 		row := ti.source.Get(Next)
@@ -216,17 +234,6 @@ func (ti *TempIndex) multi() rowIter {
 	}
 	it.iter = b.Finish().Iter(less)
 	return &it
-}
-
-func (ti *TempIndex) rowKey(row Row) string {
-	if len(ti.order) == 1 {
-		return row.GetRaw(ti.srcHdr, ti.order[0])
-	}
-	var enc ixkey.Encoder
-	for _, col := range ti.order {
-		enc.Add(row.GetRaw(ti.srcHdr, col))
-	}
-	return enc.String()
 }
 
 const multiMask = 0xffff000000
