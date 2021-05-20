@@ -102,7 +102,7 @@ func (r Record) GetStr(i int) string {
 
 // Get returns one of the (usually packed) values
 func (r Record) GetRaw(i int) string {
-	if i >= r.Count() {
+	if i < 0 || r.Count() <= i {
 		return ""
 	}
 	var pos, end int

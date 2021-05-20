@@ -82,6 +82,9 @@ func (t *ReadTran) String() string {
 func (t *ReadTran) GetIndex(table string, cols []string) *index.Overlay {
 	ts := t.meta.GetRoSchema(table)
 	ti := t.meta.GetRoInfo(table)
+	if ts == nil || ti == nil {
+		return nil
+	}
 	for i, ix := range ts.Indexes {
 		if strs.Equal(cols, ix.Columns) {
 			return ti.Indexes[i]

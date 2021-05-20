@@ -132,24 +132,39 @@ func (dbms *DbmsLocal) LibGet(name string) (result []string) {
 		}
 	}()
 
-	// TODO
+	results := make([]string, 0, 2)
 	rt := dbms.db.NewReadTran()
-	ix := rt.GetIndex("stdlib", []string{"name", "group"})
+	for _, lib := range dbms.libraries {
+		s := libGet(rt, lib, name)
+		if s != "" {
+			results = append(results, lib, string(s))
+		}
+	}
+	return results
+}
+
+var libKey = []string{"name", "group"}
+
+func libGet(rt *db19.ReadTran, lib, name string) string {
+	defer func() {
+		if e := recover(); e != nil {
+			log.Println("libGet", lib, name, e)
+		}
+	}()
+	ix := rt.GetIndex(lib, libKey)
+	if ix == nil {
+		panic("not a valid library")
+	}
 	var rb ixkey.Encoder
 	rb.Add(Pack(SuStr(name)))
-	rb.Add(Pack(SuInt(-1))) // group
+	rb.Add(Pack(SuInt(-1)))
 	key := rb.String()
 	off := ix.Lookup(key)
 	if off == 0 {
-		// if !strings.HasPrefix(name, "Rule_") {
-		// 	log.Println("LibGet", name, "NOT FOUND")
-		// }
-		return nil
+		return ""
 	}
 	rec := rt.GetRecord(off)
-	s := rec.GetStr(rt.ColToFld("stdlib", "text"))
-
-	return []string{"stdlib", string(s)}
+	return rec.GetStr(rt.ColToFld(lib, "text"))
 }
 
 func (dbms *DbmsLocal) Libraries() *SuObject {
@@ -220,7 +235,6 @@ func (dbms *DbmsLocal) Use(lib string) bool {
 	if strs.Contains(dbms.libraries, lib) {
 		return false
 	}
-	//TODO check schema
 	dbms.libraries = append(dbms.libraries, lib)
 	return true
 }
