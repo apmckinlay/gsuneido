@@ -97,7 +97,7 @@ outer:
 //
 // WARNING: If y is empty, it returns the *original* x.
 //
-// WARNING: duplicates the inputs may give duplicates in the result
+// WARNING: duplicates in the inputs may give duplicates in the result
 func Difference(x, y []string) []string {
 	if len(x) == 0 {
 		return []string{}
@@ -127,7 +127,7 @@ outer:
 //
 // WARNING: If x and y are the same list, it returns the *original*.
 //
-// WARNING: duplicates the inputs may give duplicates in the result
+// WARNING: duplicates in the inputs may give duplicates in the result
 func Intersect(x, y []string) []string {
 	if Same(x, y) {
 		return x[:len(x):len(x)] // so append won't share

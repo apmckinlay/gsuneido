@@ -159,17 +159,40 @@ func TestDifference(*testing.T) {
 	assert.This(Difference(x, y[50:])).Is(x[:50])
 }
 
-func TestStartsWithSet(*testing.T) {
-	assert.That(StartsWithSet([]string{"a", "b", "c"}, []string{}))
-	assert.That(StartsWithSet([]string{"a", "b", "c"}, []string{"a"}))
-	assert.That(!StartsWithSet([]string{"a", "b", "c"}, []string{"b"}))
-	assert.That(!StartsWithSet([]string{"a", "b", "c"}, []string{"c"}))
-	assert.That(StartsWithSet([]string{"a", "b", "c"}, []string{"a", "b"}))
-	assert.That(StartsWithSet([]string{"a", "b", "c"}, []string{"b", "a"}))
-	assert.That(!StartsWithSet([]string{"a", "b", "c"}, []string{"c", "a"}))
-	assert.That(StartsWithSet([]string{"a", "b", "c"}, []string{"a", "b", "c"}))
-	assert.That(StartsWithSet([]string{"a", "b", "c"}, []string{"c", "a", "b"}))
-	assert.That(!StartsWithSet([]string{"a", "b", "c"}, []string{"c", "a", "d"}))
-	assert.That(!StartsWithSet([]string{"a"}, []string{"b"}))
-	assert.That(!StartsWithSet([]string{"a"}, []string{"b", "a"}))
+func TestStartsWithSet(t *testing.T) {
+	assert := assert.T(t).That
+	assert(StartsWithSet([]string{"a", "b", "c"}, []string{}))
+	assert(StartsWithSet([]string{"a", "b", "c"}, []string{"a"}))
+	assert(!StartsWithSet([]string{"a", "b", "c"}, []string{"b"}))
+	assert(!StartsWithSet([]string{"a", "b", "c"}, []string{"c"}))
+	assert(StartsWithSet([]string{"a", "b", "c"}, []string{"a", "b"}))
+	assert(StartsWithSet([]string{"a", "b", "c"}, []string{"b", "a"}))
+	assert(!StartsWithSet([]string{"a", "b", "c"}, []string{"c", "a"}))
+	assert(StartsWithSet([]string{"a", "b", "c"}, []string{"a", "b", "c"}))
+	assert(StartsWithSet([]string{"a", "b", "c"}, []string{"c", "a", "b"}))
+	assert(!StartsWithSet([]string{"a", "b", "c"}, []string{"c", "a", "d"}))
+	assert(!StartsWithSet([]string{"a"}, []string{"b"}))
+	assert(!StartsWithSet([]string{"a"}, []string{"b", "a"}))
+}
+
+func TestUnique(*testing.T) {
+	uniq := func(list ...string) list {
+		return list
+	}
+	uniq().is()
+	uniq("a").is()
+	uniq("a", "b", "c").is()
+	uniq("a", "a", "b").is("a", "b")
+	uniq("a", "b", "b").is("a", "b")
+	uniq("a", "b", "b", "c").is("a", "b", "c")
+}
+
+type list []string
+
+func (input list) is(expected ...string) {
+	if len(expected) == 0 {
+		assert.This(Unique(input)).Is([]string(input))
+	} else {
+		assert.This(Unique(input)).Is(expected)
+	}
 }

@@ -46,6 +46,7 @@ const (
 
 func (p *Project) Init() {
 	p.Query1.Init()
+	p.columns = sset.Unique(p.columns)
 	srcCols := p.source.Columns()
 	if !sset.Subset(srcCols, p.columns) {
 		panic("project: nonexistent column(s): " +

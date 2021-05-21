@@ -20,3 +20,22 @@ func StartsWithSet(x, set []string) bool {
 	}
 	return true
 }
+
+// Unique returns a list with duplicates removed, retaining the original order.
+//
+// NOTE: If there are no duplicate it returns the *original* list.
+func Unique(x []string) []string {
+	i := 0
+	n := len(x)
+	for i := 1; i < n && !Contains(x[:i], x[i]); i++ {
+	}
+	if i == n {
+		return x // no duplicates
+	}
+	z := make([]string, 0, len(x))
+	copy(z, x[:i])
+	for _, s := range x[i:] {
+		z = AddUnique(z, s)
+	}
+	return z
+}

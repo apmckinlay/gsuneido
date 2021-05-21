@@ -98,7 +98,7 @@ outer:
 //
 // WARNING: If y is empty, it returns the *original* x.
 //
-// WARNING: duplicates the inputs may give duplicates in the result
+// WARNING: duplicates in the inputs may give duplicates in the result
 func Difference(x, y []T) []T {
 	if len(x) == 0 {
 		return []T{}
@@ -128,7 +128,7 @@ outer:
 //
 // WARNING: If x and y are the same list, it returns the *original*.
 //
-// WARNING: duplicates the inputs may give duplicates in the result
+// WARNING: duplicates in the inputs may give duplicates in the result
 func Intersect(x, y []T) []T {
 	if Same(x, y) {
 		return x[:len(x):len(x)] // so append won't share
