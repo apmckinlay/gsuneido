@@ -8,6 +8,7 @@ import (
 	"strconv"
 	"sync/atomic"
 
+	"github.com/apmckinlay/gsuneido/options"
 	"github.com/apmckinlay/gsuneido/util/regex"
 	"github.com/apmckinlay/gsuneido/util/tr"
 )
@@ -210,7 +211,7 @@ func (t *Thread) Dbms() IDbms {
 }
 
 func (t *Thread) Close() {
-	if t.dbms != nil {
+	if t.dbms != nil && options.Action == "client" {
 		t.dbms.Close()
 		t.dbms = nil
 	}
