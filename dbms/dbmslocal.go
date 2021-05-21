@@ -52,8 +52,10 @@ func (*DbmsLocal) Connections() Value {
 	return EmptyObject
 }
 
-func (*DbmsLocal) Cursor(string) ICursor {
-	panic("DbmsLocal Cursor not implemented")
+func (dbms *DbmsLocal) Cursor(query string) ICursor {
+	q := qry.ParseQuery(query)
+	q = qry.Setup(q, qry.CursorMode, dbms.db.NewReadTran())
+	return cursorLocal{queryLocal{Query: q}}
 }
 
 func (*DbmsLocal) Cursors() int {
@@ -329,4 +331,15 @@ func (q queryLocal) Get(dir Dir) (Row, string) {
 }
 
 func (q queryLocal) Close() {
+}
+
+// cursorLocal
+
+type cursorLocal struct {
+	queryLocal
+}
+
+func (q cursorLocal) Get(t ITran, dir Dir) (Row, string) {
+	q.Query.SetTran(t.(qry.QueryTran))
+	return q.queryLocal.Get(dir)
 }
