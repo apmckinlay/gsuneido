@@ -231,3 +231,25 @@ func TestParseDate(t *testing.T) {
 	noparse("19991233", "yMd")
 	noparse("30010303", "yMd")
 }
+
+func TestIncrement(t *testing.T) {
+	d := SuDate{}
+	assert.T(t).This(d.time).Is(0)
+	d = d.Increment()
+	assert.T(t).This(d.time).Is(1)
+	d = d.Increment()
+	assert.T(t).This(d.time).Is(2)
+	d.time = 999
+	d = d.Increment()
+	assert.T(t).This(d.Millisecond()).Is(0)
+	assert.T(t).This(d.Second()).Is(1)
+	d.time = 1024 + 999
+	d = d.Increment()
+	assert.T(t).This(d.Millisecond()).Is(0)
+	assert.T(t).This(d.Second()).Is(2)
+
+	d = NormalizeDate(2021, 5, 21, 23, 59, 59, 999)
+	d2 := d.Increment()
+	assert.T(t).This(d2.time).Is(0)
+	assert.T(t).This(d2.date).Is(d.date + 1)
+}

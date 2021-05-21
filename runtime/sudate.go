@@ -177,6 +177,19 @@ func NormalizeDate(yr int, mon int, day int, hr int, min int, sec int, ms int) S
 	return fromGoTime(t)
 }
 
+func (d SuDate) Increment() SuDate {
+	orig := d
+	d.time++ // millisecond
+	if d.Millisecond() < 1000 {
+		return d
+	}
+	d.time += 1024 - 1000
+	if d.Second() < mmSecond.max {
+		return d
+	}
+	return orig.Plus(0, 0, 0, 0, 0, 0, 1) // slower fallback
+}
+
 // WeekDay returns the day of the week - Sun is 0, Sat is 6
 func (d SuDate) WeekDay() int {
 	return int(d.toGoTime().Weekday())

@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"sync"
 
 	"github.com/apmckinlay/gsuneido/compile"
 	"github.com/apmckinlay/gsuneido/db19"
@@ -25,7 +26,10 @@ type DbmsLocal struct {
 	libraries []string //TODO concurrency
 }
 
+var once sync.Once
+
 func NewDbmsLocal(db *db19.Database) IDbms {
+	once.Do(func() { StartTimestamps() })
 	return &DbmsLocal{db: db, libraries: []string{"stdlib"}}
 }
 
@@ -59,7 +63,7 @@ func (dbms *DbmsLocal) Cursor(query string) ICursor {
 }
 
 func (*DbmsLocal) Cursors() int {
-	return 0 //TODO
+	return 0
 }
 
 func (dbms *DbmsLocal) Dump(table string) string {
@@ -199,15 +203,8 @@ func (dbms *DbmsLocal) Size() int64 {
 	return int64(dbms.db.Size())
 }
 
-var prevTimestamp SuDate
-
 func (*DbmsLocal) Timestamp() SuDate {
-	t := Now()
-	if t.Equal(prevTimestamp) {
-		t = t.Plus(0, 0, 0, 0, 0, 0, 1)
-	}
-	prevTimestamp = t
-	return t
+	return Timestamp()
 }
 
 func (*DbmsLocal) Token() string {
