@@ -28,9 +28,9 @@ func (m *Minus) Indexes() [][]string {
 	return m.source.Indexes()
 }
 
-func (m *Minus) nrows() int {
-	n1 := m.source.nrows()
-	min := ints.Max(0, n1-m.source2.nrows())
+func (m *Minus) Nrows() int {
+	n1 := m.source.Nrows()
+	min := ints.Max(0, n1-m.source2.Nrows())
 	max := n1
 	return (min + max) / 2
 }
@@ -48,7 +48,7 @@ func (m *Minus) Transform() Query {
 func (m *Minus) optimize(mode Mode, index []string) (Cost, interface{}) {
 	// iterate source and lookups on source2
 	cost := Optimize(m.source, mode, index) +
-		(m.source.nrows() * m.source2.lookupCost())
+		(m.source.Nrows() * m.source2.lookupCost())
 	keyIndex := bestKey(m.source2, mode)
 	if keyIndex == nil {
 		return impossible, nil

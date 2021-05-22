@@ -51,9 +51,9 @@ func (t *Times) Transform() Query {
 
 func (t *Times) optimize(mode Mode, index []string) (Cost, interface{}) {
 	cost := Optimize(t.source, mode, index) +
-		t.source.nrows()*Optimize(t.source2, mode, nil)
+		t.source.Nrows()*Optimize(t.source2, mode, nil)
 	costRev := Optimize(t.source2, mode, index) +
-		t.source2.nrows()*Optimize(t.source, mode, nil) + outOfOrder
+		t.source2.Nrows()*Optimize(t.source, mode, nil) + outOfOrder
 	if cost < costRev {
 		return cost, false
 	}

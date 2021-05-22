@@ -58,8 +58,8 @@ func (*DbmsLocal) Connections() Value {
 
 func (dbms *DbmsLocal) Cursor(query string) ICursor {
 	q := qry.ParseQuery(query)
-	q = qry.Setup(q, qry.CursorMode, dbms.db.NewReadTran())
-	return cursorLocal{queryLocal{Query: q}}
+	q, cost := qry.Setup(q, qry.CursorMode, dbms.db.NewReadTran())
+	return cursorLocal{queryLocal{Query: q, cost: cost, mode: qry.CursorMode}}
 }
 
 func (*DbmsLocal) Cursors() int {
@@ -102,7 +102,7 @@ func (dbms *DbmsLocal) Get(query string, dir Dir) (Row, *Header, string) {
 
 func get(tran qry.QueryTran, query string, dir Dir) (Row, *Header, string) {
 	q := qry.ParseQuery(query)
-	q = qry.Setup(q, qry.ReadMode, tran)
+	q, _ = qry.Setup(q, qry.ReadMode, tran)
 	only := false
 	if dir == Only {
 		only = true
@@ -254,8 +254,8 @@ func (t ReadTranLocal) Get(query string, dir Dir) (Row, *Header, string) {
 
 func (t ReadTranLocal) Query(query string) IQuery {
 	q := qry.ParseQuery(query)
-	q = qry.Setup(q, qry.ReadMode, t.ReadTran)
-	return queryLocal{Query: q}
+	q, cost := qry.Setup(q, qry.ReadMode, t.ReadTran)
+	return queryLocal{Query: q, cost: cost, mode: qry.ReadMode}
 }
 
 func (t ReadTranLocal) Action(string) int {
@@ -274,8 +274,8 @@ func (t UpdateTranLocal) Get(query string, dir Dir) (Row, *Header, string) {
 
 func (t UpdateTranLocal) Query(query string) IQuery {
 	q := qry.ParseQuery(query)
-	q = qry.Setup(q, qry.UpdateMode, t.UpdateTran)
-	return queryLocal{Query: q}
+	q, cost := qry.Setup(q, qry.UpdateMode, t.UpdateTran)
+	return queryLocal{Query: q, cost: cost, mode: qry.UpdateMode}
 }
 
 func (t UpdateTranLocal) Action(action string) int {
@@ -287,6 +287,8 @@ func (t UpdateTranLocal) Action(action string) int {
 type queryLocal struct {
 	// Query is embedded so most methods are "inherited" directly
 	qry.Query
+	cost qry.Cost
+	mode qry.Mode
 	keys *SuObject // cache
 }
 
@@ -303,7 +305,8 @@ func (q queryLocal) Keys() *SuObject {
 }
 
 func (q queryLocal) Strategy() string {
-	return q.String()
+	return fmt.Sprint(q.String(),
+		" [nrecs~ ", q.Nrows(), " cost~ ", q.cost, " ", q.mode, "]")
 }
 
 func (q queryLocal) Order() *SuObject {

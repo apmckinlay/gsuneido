@@ -162,7 +162,7 @@ func TestWhereNrows(t *testing.T) {
 		w := q.(*Where)
 		assert.That(w.tbl != nil)
 		w.optInit()
-		assert.T(t).This(w.nrows()).Is(nrows)
+		assert.T(t).This(w.Nrows()).Is(nrows)
 	}
 	test("table where F()", 50)
 	test("inven where item >= 5", 50)

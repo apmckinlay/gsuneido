@@ -107,7 +107,7 @@ func (*Table) Ordering() []string {
 	return nil
 }
 
-func (tbl *Table) nrows() int {
+func (tbl *Table) Nrows() int {
 	return tbl.info.Nrows
 }
 

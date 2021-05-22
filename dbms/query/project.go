@@ -132,8 +132,8 @@ func projectIndexes(idxs [][]string, cols []string) [][]string {
 	return idxs2
 }
 
-func (p *Project) nrows() int {
-	nr := p.source.nrows()
+func (p *Project) Nrows() int {
+	nr := p.source.Nrows()
 	if p.strategy != projCopy {
 		nr /= 2 // ???
 	}

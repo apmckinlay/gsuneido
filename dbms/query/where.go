@@ -100,16 +100,16 @@ func (w *Where) addFixed(e ast.Expr) {
 	}
 }
 
-func (w *Where) nrows() int {
+func (w *Where) Nrows() int {
 	if w.conflict {
 		return 0
 	}
 	if len(w.idxSels) == 0 {
-		return w.source.nrows() / 2
+		return w.source.Nrows() / 2
 	}
 	var n int
 	nmin := ints.MaxInt
-	nsrc := float64(w.source.nrows())
+	nsrc := float64(w.source.Nrows())
 	for i := range w.idxSels {
 		ix := &w.idxSels[i]
 		if ix.isRanges() {
@@ -860,7 +860,7 @@ func (w *Where) idxFrac(idx []string, ptrngs []pointRange) float64 {
 		panic("index not found")
 	}
 	var frac float64
-	nrows := float64(w.tbl.nrows())
+	nrows := float64(w.tbl.Nrows())
 	for _, pr := range ptrngs {
 		if pr.end == "" { // lookup
 			frac += 1 / nrows

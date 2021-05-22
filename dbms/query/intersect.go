@@ -40,12 +40,12 @@ func (it *Intersect) Indexes() [][]string {
 	return setord.Union(it.source.Indexes(), it.source2.Indexes())
 }
 
-func (it *Intersect) nrows() int {
+func (it *Intersect) Nrows() int {
 	if it.disjoint != "" {
 		return 0
 	}
 	min := 0
-	max := ints.Min(it.source.nrows(), it.source2.nrows())
+	max := ints.Min(it.source.Nrows(), it.source2.Nrows())
 	return (min + max) / 2 // estimate half way between
 }
 
@@ -74,7 +74,7 @@ func (*Intersect) cost(source, source2 Query, mode Mode, index []string) (
 	key = bestKey(source2, mode)
 	// iterate source and lookups on source2
 	cost = Optimize(source, mode, index) +
-		LookupCost(source2, mode, key, source.nrows())
+		LookupCost(source2, mode, key, source.Nrows())
 	return cost, key
 }
 

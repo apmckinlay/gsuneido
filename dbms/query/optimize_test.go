@@ -14,7 +14,7 @@ func TestOptimize(t *testing.T) {
 	test := func(query, expected string) {
 		t.Helper()
 		q := ParseQuery(query)
-		q = Setup(q, mode, testTran{})
+		q, _ = Setup(q, mode, testTran{})
 		assert.T(t).Msg(query).This(q.String()).Like(expected)
 	}
 	mode = ReadMode

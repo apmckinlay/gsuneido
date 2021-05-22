@@ -163,7 +163,7 @@ func (jn *Join) opt(src1, src2 Query, joinType joinType,
 	if best.index == nil {
 		return best
 	}
-	nrows1 := src1.nrows()
+	nrows1 := src1.Nrows()
 	// should only be taking a portion of the variable cost2,
 	// not the fixed temp index cost2 (so 2/3 instead of 1/2)
 	cost := cost1 + (nrows1 * src2.lookupCost()) + (best.cost * 2 / 3)
@@ -184,10 +184,10 @@ func (jn *Join) setApproach(index []string, approach interface{}, tran QueryTran
 	jn.encode = len(jn.by) > 1 || !setset.Contains(jn.source2.Keys(), jn.by)
 }
 
-func (jn *Join) nrows() int {
+func (jn *Join) Nrows() int {
 	// n_one and one_n assume records will have matching counterparts
-	nrows1 := jn.source.nrows()
-	nrows2 := jn.source2.nrows()
+	nrows1 := jn.source.Nrows()
+	nrows2 := jn.source2.Nrows()
 	var nrows int
 	switch jn.joinType {
 	case one_one:
@@ -298,8 +298,8 @@ func (lj *LeftJoin) setApproach(index []string, _ interface{}, tran QueryTran) {
 	lj.empty2 = make(Row, len(lj.source2.Header().Fields))
 }
 
-func (lj *LeftJoin) nrows() int {
-	return lj.source.nrows()
+func (lj *LeftJoin) Nrows() int {
+	return lj.source.Nrows()
 }
 
 // execution

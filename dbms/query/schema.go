@@ -116,7 +116,7 @@ func (*Tables) Header() *Header {
 	return NewHeader(tablesFields, tablesFields[0])
 }
 
-func (ts *Tables) nrows() int {
+func (ts *Tables) Nrows() int {
 	ts.ensure()
 	return len(ts.info)
 }
@@ -206,7 +206,7 @@ func (*Columns) Header() *Header {
 	return NewHeader(columnsFields, columnsFields[0])
 }
 
-func (cs *Columns) nrows() int {
+func (cs *Columns) Nrows() int {
 	cs.ensure()
 	n := 0
 	for _, schema := range cs.schema {
@@ -321,7 +321,7 @@ func (*Indexes) Header() *Header {
 	return NewHeader(indexesFields, indexesFields[0])
 }
 
-func (is *Indexes) nrows() int {
+func (is *Indexes) Nrows() int {
 	is.ensure()
 	n := 0
 	for _, schema := range is.schema {

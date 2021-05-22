@@ -74,8 +74,8 @@ type Query interface {
 	// this is logical, there may not necessarily be an index.
 	Keys() [][]string
 
-	// nrows returns the number of rows in the query, estimated for operations
-	nrows() int
+	// Nrows returns the number of rows in the query, estimated for operations
+	Nrows() int
 
 	// rowSize returns the average number of bytes per row
 	rowSize() int
@@ -150,7 +150,7 @@ type QueryTran interface {
 // The resulting Query is ready for execution.
 //
 // NOTE: Correct usage is: q = Setup(q, mode, t)
-func Setup(q Query, mode Mode, t QueryTran) Query {
+func Setup(q Query, mode Mode, t QueryTran) (Query, Cost) {
 	q.SetTran(t)
 	q.Init()
 	q = q.Transform()
@@ -159,7 +159,7 @@ func Setup(q Query, mode Mode, t QueryTran) Query {
 		panic("invalid query: " + q.String())
 	}
 	q = SetApproach(q, nil, t)
-	return q
+	return q, cost
 }
 
 // SetupKey is like Setup but it ensures a key index
@@ -222,9 +222,9 @@ func optTempIndex(q Query, mode Mode, index []string) (
 	}
 	cost1, app1 := q.optimize(mode, index)
 	noIndexCost, app2 := q.optimize(mode, nil)
-	tempIndexReadCost := q.nrows() * btree.EntrySize
+	tempIndexReadCost := q.Nrows() * btree.EntrySize
 	tempIndexWriteCost := tempIndexReadCost * 2 // ??? surcharge (for memory)
-	dataReadCost := q.nrows() * q.rowSize()
+	dataReadCost := q.Nrows() * q.rowSize()
 	tempIndexCost := tempIndexWriteCost + tempIndexReadCost + dataReadCost
 	cost2 := noIndexCost + tempIndexCost
 	assert.That(cost2 >= 0) // ???
@@ -327,8 +327,8 @@ func (q1 *Query1) Indexes() [][]string {
 	return q1.source.Indexes()
 }
 
-func (q1 *Query1) nrows() int {
-	return q1.source.nrows()
+func (q1 *Query1) Nrows() int {
+	return q1.source.Nrows()
 }
 
 func (q1 *Query1) rowSize() int {

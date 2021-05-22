@@ -87,8 +87,8 @@ func (u *Union) Indexes() [][]string {
 	return setord.Union(u.source.Indexes(), u.source2.Indexes())
 }
 
-func (u *Union) nrows() int {
-	return u.nrowsCalc(u.source.nrows(), u.source2.nrows())
+func (u *Union) Nrows() int {
+	return u.nrowsCalc(u.source.Nrows(), u.source2.Nrows())
 }
 
 func (u *Union) nrowsCalc(n1, n2 int) int {
@@ -205,7 +205,7 @@ func (u *Union) optLookup(source, source2 Query, mode Mode) (Cost, interface{}) 
 	bestCost := impossible
 	for _, key := range source2.Keys() {
 		cost := Optimize(source, mode, nil) +
-			LookupCost(source2, mode, key, source.nrows())
+			LookupCost(source2, mode, key, source.Nrows())
 		if cost < bestCost && Optimize(source2, mode, key) < impossible {
 			bestKey = key
 			bestCost = cost
