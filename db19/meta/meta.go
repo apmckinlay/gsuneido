@@ -80,10 +80,14 @@ func (m *Meta) Put(ts *Schema, ti *Info) *Meta {
 	schema.Put(ts)
 	info := m.info.Mutable()
 	info.Put(ti)
-	ov2 := *m // copy
-	ov2.schema = schema.Freeze()
-	ov2.info = info.Freeze()
-	return &ov2
+	return m.freeze(schema, info)
+}
+
+func (m *Meta) freeze(schema SchemaHamt, info InfoHamt) *Meta {
+	cp := *m // copy
+	cp.schema = schema.Freeze()
+	cp.info = info.Freeze()
+	return &cp
 }
 
 func (m *Meta) RenameTable(from, to string) *Meta {
@@ -107,11 +111,7 @@ func (m *Meta) RenameTable(from, to string) *Meta {
 	schema.Put(ts)
 	ti.Table = to
 	info.Put(ti)
-
-	ov2 := *m // copy
-	ov2.schema = schema.Freeze()
-	ov2.info = info.Freeze()
-	return &ov2
+	return m.freeze(schema, info)
 }
 
 func (m *Meta) DropTable(table string) *Meta {
@@ -124,10 +124,7 @@ func (m *Meta) DropTable(table string) *Meta {
 	schema.Put(m.newSchemaTomb(table))
 	info := m.info.Mutable()
 	info.Put(m.newInfoTomb(table))
-	ov2 := *m // copy
-	ov2.schema = schema.Freeze()
-	ov2.info = info.Freeze()
-	return &ov2
+	return m.freeze(schema, info)
 }
 
 func (m *Meta) ForEachSchema(fn func(*Schema)) {

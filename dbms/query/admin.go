@@ -89,6 +89,20 @@ func (r *renameAdmin) execute(db *db19.Database) {
 
 //-------------------------------------------------------------------
 
+type alterCreateAdmin struct {
+	schema Schema
+}
+
+func (r *alterCreateAdmin) String() string {
+	return "alter " + strings.Replace(r.schema.String(), " ", " create ", 1)
+}
+
+func (r *alterCreateAdmin) execute(db *db19.Database) {
+	//TODO
+}
+
+//-------------------------------------------------------------------
+
 type alterRenameAdmin struct {
 	table string
 	from  []string
@@ -106,20 +120,6 @@ func (r *alterRenameAdmin) String() string {
 }
 
 func (r *alterRenameAdmin) execute(db *db19.Database) {
-	//TODO
-}
-
-//-------------------------------------------------------------------
-
-type alterCreateAdmin struct {
-	schema Schema
-}
-
-func (r *alterCreateAdmin) String() string {
-	return "alter " + strings.Replace(r.schema.String(), " ", " create ", 1)
-}
-
-func (r *alterCreateAdmin) execute(db *db19.Database) {
 	//TODO
 }
 
