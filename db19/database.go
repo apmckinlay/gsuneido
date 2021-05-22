@@ -105,6 +105,17 @@ func (db *Database) LoadedTable(ts *meta.Schema, ti *meta.Info) {
 	})
 }
 
+func (db *Database) RenameTable(from, to string) bool {
+	result := false
+	db.UpdateState(func(state *DbState) {
+		if m := state.Meta.RenameTable(from, to); m != nil {
+			state.Meta = m
+			result = true
+		}
+	})
+	return result
+}
+
 func (db *Database) DropTable(table string) bool {
 	result := false
 	db.UpdateState(func(state *DbState) {

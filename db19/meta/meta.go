@@ -86,6 +86,34 @@ func (m *Meta) Put(ts *Schema, ti *Info) *Meta {
 	return &ov2
 }
 
+func (m *Meta) RenameTable(from, to string) *Meta {
+	assert.That(m.difInfo.IsNil())
+	ts, ok := m.schema.Get(from)
+	if !ok || ts.isTomb() {
+		return nil // from doesn't exist
+	}
+	if tmp, ok := m.schema.Get(to); ok && !tmp.isTomb() {
+		return nil // to exists
+	}
+	ti, ok := m.info.Get(from)
+	assert.That(ok && ti != nil)
+
+	schema := m.schema.Mutable()
+	schema.Put(m.newSchemaTomb(from))
+	info := m.info.Mutable()
+	info.Put(m.newInfoTomb(from))
+
+	ts.Table = to
+	schema.Put(ts)
+	ti.Table = to
+	info.Put(ti)
+
+	ov2 := *m // copy
+	ov2.schema = schema.Freeze()
+	ov2.info = info.Freeze()
+	return &ov2
+}
+
 func (m *Meta) DropTable(table string) *Meta {
 	assert.That(m.difInfo.IsNil())
 	if ts, ok := m.schema.Get(table); !ok || ts.isTomb() {
