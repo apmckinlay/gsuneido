@@ -65,7 +65,7 @@ func threadCallClass(_ *Thread, args []Value) Value {
 			if e := recover(); e != nil {
 				log.Println("ERROR in thread:", e)
 				t2.PrintStack()
-				if internalError(e) {
+				if InternalError(e) {
 					buf := make([]byte, 512)
 					n := runtime.Stack(buf, false)
 					os.Stderr.Write(buf[:n])
@@ -79,7 +79,7 @@ func threadCallClass(_ *Thread, args []Value) Value {
 	return nil
 }
 
-func internalError(e interface{}) bool {
+func InternalError(e interface{}) bool {
 	if _, ok := e.(runtime.Error); ok {
 		return true
 	}

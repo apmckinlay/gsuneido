@@ -315,7 +315,7 @@ func eval(src string) {
 	defer func() {
 		if e := recover(); e != nil {
 			log.Println("ERROR:", e)
-			if internal(e) {
+			if builtin.InternalError(e) {
 				debug.PrintStack()
 				fmt.Println("---")
 				PrintStack(mainThread.Callstack())
@@ -339,15 +339,6 @@ func eval(src string) {
 	if result != nil {
 		fmt.Println(WithType(result)) // NOTE: doesn't use ToString
 	}
-}
-
-type internalError interface {
-	RuntimeError()
-}
-
-func internal(e interface{}) bool {
-	_, ok := e.(internalError)
-	return ok
 }
 
 // libload loads a name from the dbms
