@@ -6,9 +6,11 @@ package meta
 import (
 	"math/bits"
 
+	"github.com/apmckinlay/gsuneido/db19/meta/schema"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/ints"
+	"github.com/apmckinlay/gsuneido/util/strs"
 )
 
 // Meta is the schema and info metadata
@@ -96,21 +98,23 @@ func (m *Meta) RenameTable(from, to string) *Meta {
 	if !ok || ts.isTomb() {
 		return nil // from doesn't exist
 	}
+	tsNew := *ts // copy
 	if tmp, ok := m.schema.Get(to); ok && !tmp.isTomb() {
 		return nil // to exists
 	}
 	ti, ok := m.info.Get(from)
 	assert.That(ok && ti != nil)
+	tiNew := *ti // copy
 
 	schema := m.schema.Mutable()
 	schema.Put(m.newSchemaTomb(from))
 	info := m.info.Mutable()
 	info.Put(m.newInfoTomb(from))
 
-	ts.Table = to
-	schema.Put(ts)
-	ti.Table = to
-	info.Put(ti)
+	tsNew.Table = to
+	schema.Put(&tsNew)
+	tiNew.Table = to
+	info.Put(&tiNew)
 	return m.freeze(schema, info)
 }
 
@@ -125,6 +129,27 @@ func (m *Meta) DropTable(table string) *Meta {
 	info := m.info.Mutable()
 	info.Put(m.newInfoTomb(table))
 	return m.freeze(schema, info)
+}
+
+func (m *Meta) AlterRename(table string, from, to []string) *Meta {
+	ts, ok := m.schema.Get(table)
+	if !ok || ts.isTomb() {
+		return nil // nonexistent
+	}
+	tsNew := *ts // copy
+	tsNew.Columns = strs.Replace(ts.Columns, from, to)
+	tsNew.Derived = strs.Replace(ts.Derived, from, to)
+	tsNew.Indexes = make([]schema.Index, len(ts.Indexes))
+	copy(tsNew.Indexes, ts.Indexes)
+	for i := range tsNew.Indexes {
+		ix := &tsNew.Indexes[i]
+		ix.Columns = strs.Replace(ix.Columns, from, to)
+	}
+	schema := m.schema.Mutable()
+	schema.Put(&tsNew)
+	cp := *m // copy
+	cp.schema = schema.Freeze()
+	return &cp
 }
 
 func (m *Meta) ForEachSchema(fn func(*Schema)) {

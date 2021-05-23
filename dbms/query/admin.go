@@ -83,7 +83,7 @@ func (r *renameAdmin) execute(db *db19.Database) {
 	checkForSystemTable("rename", r.from)
 	checkForSystemTable("rename to", r.to)
 	if !db.RenameTable(r.from, r.to) {
-		panic("can't rename: " + r.from + " to " + r.to)
+		panic("can't " + r.String())
 	}
 }
 
@@ -120,7 +120,10 @@ func (r *alterRenameAdmin) String() string {
 }
 
 func (r *alterRenameAdmin) execute(db *db19.Database) {
-	//TODO
+	checkForSystemTable("alter", r.table)
+	if !db.AlterRename(r.table, r.from, r.to) {
+		panic("can't " + r.String())
+	}
 }
 
 //-------------------------------------------------------------------

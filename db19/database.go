@@ -127,6 +127,17 @@ func (db *Database) DropTable(table string) bool {
 	return result
 }
 
+func (db *Database) AlterRename(table string, from, to []string) bool {
+	result := false
+	db.UpdateState(func(state *DbState) {
+		if m := state.Meta.AlterRename(table, from, to); m != nil {
+			state.Meta = m
+			result = true
+		}
+	})
+	return result
+}
+
 func (db *Database) Size() uint64 {
 	return db.Store.Size()
 }
