@@ -71,3 +71,17 @@ func Without(list []string, str string) []string {
 	}
 	return dest
 }
+
+// Replace returns a new list with occurrences of from
+// replaced by the corresponding value from to
+func Replace(list, from, to []string) []string {
+	list2 := make([]string, len(list))
+	for i := range list {
+		if j := Index(from, list[i]); j != -1 {
+			list2[i] = to[j]
+		} else {
+			list2[i] = list[i]
+		}
+	}
+	return list2
+}

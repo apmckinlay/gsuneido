@@ -62,18 +62,7 @@ func (r *Rename) String() string {
 }
 
 func (r *Rename) Columns() []string {
-	return renameColumns(r.source.Columns(), r.from, r.to)
-}
-
-func renameColumns(cols, from, to []string) []string {
-	cols2 := sset.Copy(cols)
-	for i := 0; i < len(cols); i++ {
-		j := strs.Index(from, cols[i])
-		if j != -1 {
-			cols2[i] = to[j]
-		}
-	}
-	return cols2
+	return strs.Replace(r.source.Columns(), r.from, r.to)
 }
 
 func (r *Rename) Keys() [][]string {
@@ -87,7 +76,7 @@ func (r *Rename) Indexes() [][]string {
 func renameIndexes(idxs [][]string, from, to []string) [][]string {
 	idxs2 := make([][]string, len(idxs))
 	for i, ix := range idxs {
-		idxs2[i] = renameColumns(ix, from, to)
+		idxs2[i] = strs.Replace(ix, from, to)
 	}
 	return idxs2
 }
@@ -146,7 +135,7 @@ func (r *Rename) setApproach(index []string, _ interface{}, tran QueryTran) {
 
 func (r *Rename) Header() *runtime.Header {
 	hdr := r.source.Header()
-	cols := renameColumns(hdr.Columns, r.from, r.to)
+	cols := strs.Replace(hdr.Columns, r.from, r.to)
 	flds := renameIndexes(hdr.Fields, r.from, r.to)
 	return runtime.NewHeader(flds, cols)
 }
@@ -156,5 +145,5 @@ func (r *Rename) Get(dir runtime.Dir) runtime.Row {
 }
 
 func (r *Rename) Select(cols, vals []string) {
-	r.source.Select(renameColumns(cols, r.from, r.to), vals)
+	r.source.Select(strs.Replace(cols, r.from, r.to), vals)
 }

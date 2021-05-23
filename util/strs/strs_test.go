@@ -56,7 +56,7 @@ func TestContains(t *testing.T) {
 	assert.False(Contains(list, "four"))
 }
 
-func TestList_HasPrefix(t *testing.T) {
+func TestHasPrefix(t *testing.T) {
 	test := func(slist, slist2 string, expected bool) {
 		t.Helper()
 		list := strings.Fields(slist)
@@ -71,7 +71,7 @@ func TestList_HasPrefix(t *testing.T) {
 	test("a b c", "a x c", false)
 }
 
-func TestList_Without(t *testing.T) {
+func TestWithout(t *testing.T) {
 	assert := assert.T(t).This
 	assert(Without([]string{}, "five")).Is([]string{})
 	list := []string{"one", "two", "three", "two", "four"}
@@ -79,4 +79,13 @@ func TestList_Without(t *testing.T) {
 	assert(Without(list, "one")).Is([]string{"two", "three", "two", "four"})
 	assert(Without(list, "two")).Is([]string{"one", "three", "four"})
 	assert(Without(list, "four")).Is([]string{"one", "two", "three", "two"})
+}
+
+func TestReplace(t *testing.T) {
+	assert := assert.T(t).This
+	list := []string{"one", "two", "three", "two", "four"}
+	assert(Replace(list, nil, nil)).Is(list)
+	from := []string{"two", "five", "one"}
+	to := []string{"2", "5", "1"}
+	assert(Replace(list, from, to)).Is([]string{"1", "2", "three", "2", "four"})
 }
