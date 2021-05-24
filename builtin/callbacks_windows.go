@@ -129,7 +129,7 @@ func call(fn Value, args ...Value) uintptr {
 func handler(e interface{}, state interface{}) {
 	if UIThread.InHandler {
 		UIThread.PrintStack()
-		if internalError(e) {
+		if InternalError(e) {
 			buf := make([]byte, 2048)
 			n := runtime.Stack(buf, false)
 			os.Stderr.Write(buf[:n])
@@ -144,7 +144,7 @@ func handler(e interface{}, state interface{}) {
 		UIThread.RestoreState(state)
 		if e := recover(); e != nil {
 			UIThread.PrintStack()
-			if internalError(e) {
+			if InternalError(e) {
 				buf := make([]byte, 2048)
 				n := runtime.Stack(buf, false)
 				os.Stderr.Write(buf[:n])
