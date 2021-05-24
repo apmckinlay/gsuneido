@@ -177,7 +177,7 @@ func readRecords(in *bufio.Reader, store *stor.Stor, list *sortlist.Builder) (
 }
 
 func buildIndexes(ts *meta.Schema, list *sortlist.Builder, store *stor.Stor, nrecs int) []*index.Overlay {
-	ts.Ixspecs()
+	ts.Ixspecs(ts.Indexes)
 	ov := make([]*index.Overlay, len(ts.Indexes))
 	for i := range ts.Indexes {
 		ix := ts.Indexes[i]

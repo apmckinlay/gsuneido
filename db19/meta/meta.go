@@ -7,6 +7,7 @@ import (
 	"math/bits"
 
 	"github.com/apmckinlay/gsuneido/db19/index"
+	"github.com/apmckinlay/gsuneido/db19/index/btree"
 	"github.com/apmckinlay/gsuneido/db19/meta/schema"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
@@ -148,29 +149,72 @@ func (m *Meta) AlterRename(table string, from, to []string) *Meta {
 	return m.Put(&tsNew, nil)
 }
 
-func (m *Meta) AlterDrop(ad *schema.Schema) *Meta {
-	ts, ok := m.schema.Get(ad.Table)
+func (m *Meta) AlterCreate(ac *schema.Schema, store *stor.Stor) *Meta {
+	ts, ti := m.alterGet(ac.Table)
+	if ti.Nrows > 0 && len(ac.Indexes) > 0 {
+		panic("creating indexes on tables with data not implemented")
+	}
+	if !createColumns(ts, ac.Columns) ||
+		!createIndexes(ts, ti, ac.Indexes, store) {
+		return nil
+	}
+	return m.Put(ts, ti)
+}
+
+func (m *Meta) alterGet(table string) (*Schema, *Info) {
+	ts, ok := m.schema.Get(table)
 	if !ok || ts.isTomb() {
-		return nil // nonexistent
+		return nil, nil // nonexistent
 	}
 	tsNew := *ts // copy
-	ti, ok := m.info.Get(ad.Table)
+	ti, ok := m.info.Get(table)
 	assert.That(ok && ti != nil)
 	tiNew := *ti // copy
+	return &tsNew, &tiNew
+}
 
+func createColumns(ts *Schema, cols []string) bool {
+	if !sset.Disjoint(ts.Columns, cols) {
+		return false
+	}
+	ts.Columns = append(strs.Cow(ts.Columns), cols...)
+	return true
+}
+
+func createIndexes(ts *Schema, ti *Info, idxs []schema.Index, store *stor.Stor) bool {
+	if len(idxs) == 0 {
+		return true
+	}
+	for i := range idxs {
+		if !sset.Subset(ts.Columns, idxs[i].Columns) {
+			return false
+		}
+	}
+	ts.Ixspecs(idxs)
+	n := len(ts.Indexes)
+	ts.Indexes = append(ts.Indexes[:n:n], idxs...)
+	n = len(ti.Indexes)
+	ti.Indexes = ti.Indexes[:n:n]
+	for i := range idxs {
+		bt := btree.CreateBtree(store, &ts.Indexes[i].Ixspec)
+		ti.Indexes = append(ti.Indexes, index.OverlayFor(bt))
+	}
+	return true
+}
+
+func (m *Meta) AlterDrop(ad *schema.Schema) *Meta {
+	ts, ti := m.alterGet(ad.Table)
 	// need to drop indexes before columns
 	// in case we drop a column and an index that contains it
 	if len(ad.Indexes) > 0 {
-		dropIndexes(&tsNew, &tiNew, ad.Indexes)
+		dropIndexes(ts, ti, ad.Indexes)
 	}
-
 	if len(ad.Columns) > 0 {
-		if !dropColumns(&tsNew, ad.Columns) {
+		if !dropColumns(ts, ad.Columns) {
 			return nil
 		}
 	}
-
-	return m.Put(&tsNew, &tiNew)
+	return m.Put(ts, ti)
 }
 
 func dropIndexes(ts *Schema, ti *Info, idxs []schema.Index) {

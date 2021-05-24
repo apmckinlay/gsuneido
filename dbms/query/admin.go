@@ -10,6 +10,7 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/index"
 	"github.com/apmckinlay/gsuneido/db19/index/btree"
 	"github.com/apmckinlay/gsuneido/db19/meta"
+	"github.com/apmckinlay/gsuneido/db19/meta/schema"
 )
 
 func DoAdmin(db *db19.Database, cmd string) {
@@ -34,24 +35,33 @@ func isSystemTable(table string) bool {
 //-------------------------------------------------------------------
 
 type createAdmin struct {
-	schema Schema
+	Schema
 }
 
 func (r *createAdmin) String() string {
-	return "create " + r.schema.String()
+	return "create " + r.Schema.String()
 }
 
 func (r *createAdmin) execute(db *db19.Database) {
-	checkForSystemTable("create", r.schema.Table)
-	ts := &meta.Schema{Schema: r.schema}
-	ts.Ixspecs()
+	checkForSystemTable("create", r.Table)
+	ts := &meta.Schema{Schema: r.Schema}
+	ts.Ixspecs(ts.Indexes)
 	ov := make([]*index.Overlay, len(ts.Indexes))
 	for i := range ov {
 		bt := btree.CreateBtree(db.Store, &ts.Indexes[i].Ixspec)
 		ov[i] = index.OverlayFor(bt)
 	}
-	ti := &meta.Info{Table: r.schema.Table, Indexes: ov}
+	ti := &meta.Info{Table: r.Schema.Table, Indexes: ov}
 	db.LoadedTable(ts, ti)
+}
+
+func createIndexes(db *db19.Database, idxs []schema.Index) []*index.Overlay {
+	ov := make([]*index.Overlay, len(idxs))
+	for i := range ov {
+		bt := btree.CreateBtree(db.Store, &idxs[i].Ixspec)
+		ov[i] = index.OverlayFor(bt)
+	}
+	return ov
 }
 
 //-------------------------------------------------------------------
@@ -90,15 +100,18 @@ func (r *renameAdmin) execute(db *db19.Database) {
 //-------------------------------------------------------------------
 
 type alterCreateAdmin struct {
-	schema Schema
+	Schema
 }
 
 func (r *alterCreateAdmin) String() string {
-	return "alter " + strings.Replace(r.schema.String(), " ", " create ", 1)
+	return "alter " + strings.Replace(r.Schema.String(), " ", " create ", 1)
 }
 
 func (r *alterCreateAdmin) execute(db *db19.Database) {
-	//TODO
+	checkForSystemTable("alter", r.Table)
+	if !db.AlterCreate(&r.Schema) {
+		panic("can't " + r.String())
+	}
 }
 
 //-------------------------------------------------------------------

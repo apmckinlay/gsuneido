@@ -139,6 +139,17 @@ func (db *Database) AlterRename(table string, from, to []string) bool {
 	return result
 }
 
+func (db *Database) AlterCreate(schema *schema.Schema) bool {
+	result := false
+	db.UpdateState(func(state *DbState) {
+		if m := state.Meta.AlterCreate(schema, db.Store); m != nil {
+			state.Meta = m
+			result = true
+		}
+	})
+	return result
+}
+
 func (db *Database) AlterDrop(schema *schema.Schema) bool {
 	result := false
 	db.UpdateState(func(state *DbState) {

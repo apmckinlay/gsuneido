@@ -68,14 +68,14 @@ func ReadSchema(_ *stor.Stor, r *stor.Reader) *Schema {
 			Fkcolumns: r.GetStrs(),
 		}
 	}
-	ts.Ixspecs()
+	ts.Ixspecs(ts.Indexes)
 	return &ts
 }
 
-func (ts *Schema) Ixspecs() {
+func (ts *Schema) Ixspecs(idxs []schema.Index) {
 	key := ts.firstShortestKey()
-	for i := range ts.Indexes {
-		ix := &ts.Indexes[i]
+	for i := range idxs {
+		ix := &idxs[i]
 		switch ix.Mode {
 		case 'u':
 			cols := sset.Difference(key, ix.Columns)

@@ -38,6 +38,15 @@ func TestAdminRename(t *testing.T) {
 	assert.T(t).This(db.Schema("foo")).Is("foo " + tmpschema)
 }
 
+func TestAdminAlterCreate(t *testing.T) {
+	db := createTestDb()
+	assert.T(t).This(func() { DoAdmin(db, "alter tables create (x)") }).
+		Panics("can't alter system table: tables")
+	DoAdmin(db, "alter tmp create (x) index(x)")
+	assert.T(t).This(db.Schema("tmp")).
+		Is("tmp (a,b,c,d,x) key(a) index(b,c) index(x)")
+}
+
 func TestAdminAlterRename(t *testing.T) {
 	db := createTestDb()
 	assert.T(t).This(func() { DoAdmin(db, "alter tables rename table to foo") }).
