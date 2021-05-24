@@ -25,13 +25,27 @@ func createTestDb() *db19.Database {
 
 func TestAdminCreate(t *testing.T) {
 	db := createTestDb()
+	defer db.Close()
 	assert.T(t).This(db.Schema("tmp")).Is("tmp " + tmpschema)
 	assert.T(t).This(func() { DoAdmin(db, "create tables (a) key(a)") }).
 		Panics("can't create system table: tables")
 }
 
+func TestAdminEnsure(t *testing.T) {
+	db := createTestDb()
+	defer db.Close()
+	assert.T(t).This(func() { DoAdmin(db, "ensure tables (a) key(a)") }).
+		Panics("can't ensure system table: tables")
+	DoAdmin(db, "ensure tmp " + tmpschema)
+	assert.T(t).This(db.Schema("tmp")).Is("tmp " + tmpschema)
+	DoAdmin(db, "ensure tmp (a, c, e, f) index(b,c) index(e,f)")
+	assert.T(t).This(db.Schema("tmp")).
+		Is("tmp (a,b,c,d,e,f) key(a) index(b,c) index(e,f)")
+}
+
 func TestAdminRename(t *testing.T) {
 	db := createTestDb()
+	defer db.Close()
 	assert.T(t).This(func() { DoAdmin(db, "rename tmp to indexes") }).
 		Panics("can't rename to system table: indexes")
 	DoAdmin(db, "rename tmp to foo")
@@ -40,6 +54,7 @@ func TestAdminRename(t *testing.T) {
 
 func TestAdminAlterCreate(t *testing.T) {
 	db := createTestDb()
+	defer db.Close()
 	assert.T(t).This(func() { DoAdmin(db, "alter tables create (x)") }).
 		Panics("can't alter system table: tables")
 	DoAdmin(db, "alter tmp create (x) index(x)")
@@ -49,6 +64,7 @@ func TestAdminAlterCreate(t *testing.T) {
 
 func TestAdminAlterRename(t *testing.T) {
 	db := createTestDb()
+	defer db.Close()
 	assert.T(t).This(func() { DoAdmin(db, "alter tables rename table to foo") }).
 		Panics("can't alter system table: tables")
 	DoAdmin(db, "alter tmp rename b to x")
@@ -57,6 +73,7 @@ func TestAdminAlterRename(t *testing.T) {
 
 func TestAdminAlterDrop(t *testing.T) {
 	db := createTestDb()
+	defer db.Close()
 	assert.T(t).This(func() { DoAdmin(db, "alter tables drop (table)") }).
 		Panics("can't alter system table: tables")
 	DoAdmin(db, "alter tmp drop (d)")
@@ -67,6 +84,7 @@ func TestAdminAlterDrop(t *testing.T) {
 
 func TestAdminDrop(t *testing.T) {
 	db := createTestDb()
+	defer db.Close()
 	assert.T(t).This(func() { DoAdmin(db, "drop columns") }).
 		Panics("can't drop system table: columns")
 	DoAdmin(db, "drop tmp")

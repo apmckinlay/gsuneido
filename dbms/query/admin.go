@@ -67,15 +67,18 @@ func createIndexes(db *db19.Database, idxs []schema.Index) []*index.Overlay {
 //-------------------------------------------------------------------
 
 type ensureAdmin struct {
-	schema Schema
+	Schema
 }
 
 func (r *ensureAdmin) String() string {
-	return "ensure " + r.schema.String()
+	return "ensure " + r.Schema.String()
 }
 
 func (r *ensureAdmin) execute(db *db19.Database) {
-	//TODO
+	checkForSystemTable("ensure", r.Table)
+	if !db.Ensure(&r.Schema) {
+		panic("can't " + r.String())
+	}
 }
 
 //-------------------------------------------------------------------

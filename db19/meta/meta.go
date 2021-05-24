@@ -93,6 +93,33 @@ func (m *Meta) Put(ts *Schema, ti *Info) *Meta {
 	return &cp
 }
 
+// admin schema changes ---------------------------------------------
+
+//TODO Derived
+
+func (m *Meta) Ensure(a *schema.Schema, store *stor.Stor) *Meta {
+	ts, ti := m.alterGet(a.Table)
+	newCols := sset.Difference(a.Columns, ts.Columns)
+	newIdxs := []schema.Index{}
+outer:
+	for i := range a.Indexes {
+		for j := range ts.Indexes {
+			if strs.Equal(a.Indexes[i].Columns, ts.Indexes[j].Columns) {
+				continue outer
+			}
+		}
+		newIdxs = append(newIdxs, a.Indexes[i])
+	}
+	if ti.Nrows > 0 && len(newIdxs) > 0 {
+		panic("creating indexes on tables with data not implemented") //TODO
+	}
+	if !createColumns(ts, newCols) ||
+		!createIndexes(ts, ti, newIdxs, store) {
+		return nil
+	}
+	return m.Put(ts, ti)
+}
+
 func (m *Meta) RenameTable(from, to string) *Meta {
 	ts, ok := m.schema.Get(from)
 	if !ok || ts.isTomb() {
@@ -152,7 +179,7 @@ func (m *Meta) AlterRename(table string, from, to []string) *Meta {
 func (m *Meta) AlterCreate(ac *schema.Schema, store *stor.Stor) *Meta {
 	ts, ti := m.alterGet(ac.Table)
 	if ti.Nrows > 0 && len(ac.Indexes) > 0 {
-		panic("creating indexes on tables with data not implemented")
+		panic("creating indexes on tables with data not implemented") //TODO
 	}
 	if !createColumns(ts, ac.Columns) ||
 		!createIndexes(ts, ti, ac.Indexes, store) {
@@ -245,6 +272,8 @@ func dropColumns(ts *Schema, cols []string) bool {
 	}
 	return true
 }
+
+//-------------------------------------------------------------------
 
 func (m *Meta) ForEachSchema(fn func(*Schema)) {
 	m.schema.ForEach(func(schema *Schema) {
