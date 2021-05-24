@@ -6,10 +6,12 @@ package meta
 import (
 	"math/bits"
 
+	"github.com/apmckinlay/gsuneido/db19/index"
 	"github.com/apmckinlay/gsuneido/db19/meta/schema"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/ints"
+	"github.com/apmckinlay/gsuneido/util/sset"
 	"github.com/apmckinlay/gsuneido/util/strs"
 )
 
@@ -74,26 +76,23 @@ func (m *Meta) GetRoSchema(table string) *Schema {
 	return ts
 }
 
-// Put is used by Database.LoadedTable
+// Put is used by Database.LoadedTable and admin schema changes
 func (m *Meta) Put(ts *Schema, ti *Info) *Meta {
+	cp := *m // copy
 	ts.lastmod = m.schemaClock
-	ti.lastmod = m.infoClock
 	schema := m.schema.Mutable()
 	schema.Put(ts)
-	info := m.info.Mutable()
-	info.Put(ti)
-	return m.freeze(schema, info)
-}
-
-func (m *Meta) freeze(schema SchemaHamt, info InfoHamt) *Meta {
-	cp := *m // copy
 	cp.schema = schema.Freeze()
-	cp.info = info.Freeze()
+	if ti != nil {
+		ti.lastmod = m.infoClock
+		info := m.info.Mutable()
+		info.Put(ti)
+		cp.info = info.Freeze()
+	}
 	return &cp
 }
 
 func (m *Meta) RenameTable(from, to string) *Meta {
-	assert.That(m.difInfo.IsNil())
 	ts, ok := m.schema.Get(from)
 	if !ok || ts.isTomb() {
 		return nil // from doesn't exist
@@ -108,27 +107,28 @@ func (m *Meta) RenameTable(from, to string) *Meta {
 
 	schema := m.schema.Mutable()
 	schema.Put(m.newSchemaTomb(from))
+	tsNew.Table = to
+	tsNew.lastmod = m.schemaClock
+	schema.Put(&tsNew)
+
 	info := m.info.Mutable()
 	info.Put(m.newInfoTomb(from))
-
-	tsNew.Table = to
-	schema.Put(&tsNew)
 	tiNew.Table = to
+	tiNew.lastmod = m.infoClock
 	info.Put(&tiNew)
-	return m.freeze(schema, info)
+
+	cp := *m // copy
+	cp.schema = schema.Freeze()
+	cp.info = info.Freeze()
+	return &cp
 }
 
 func (m *Meta) DropTable(table string) *Meta {
-	assert.That(m.difInfo.IsNil())
 	if ts, ok := m.schema.Get(table); !ok || ts.isTomb() {
 		return nil // nonexistent
 	}
 	//TODO delete without tombstone if not persisted
-	schema := m.schema.Mutable()
-	schema.Put(m.newSchemaTomb(table))
-	info := m.info.Mutable()
-	info.Put(m.newInfoTomb(table))
-	return m.freeze(schema, info)
+	return m.Put(m.newSchemaTomb(table), m.newInfoTomb(table))
 }
 
 func (m *Meta) AlterRename(table string, from, to []string) *Meta {
@@ -145,11 +145,61 @@ func (m *Meta) AlterRename(table string, from, to []string) *Meta {
 		ix := &tsNew.Indexes[i]
 		ix.Columns = strs.Replace(ix.Columns, from, to)
 	}
-	schema := m.schema.Mutable()
-	schema.Put(&tsNew)
-	cp := *m // copy
-	cp.schema = schema.Freeze()
-	return &cp
+	return m.Put(&tsNew, nil)
+}
+
+func (m *Meta) AlterDrop(ad *schema.Schema) *Meta {
+	ts, ok := m.schema.Get(ad.Table)
+	if !ok || ts.isTomb() {
+		return nil // nonexistent
+	}
+	tsNew := *ts // copy
+	ti, ok := m.info.Get(ad.Table)
+	assert.That(ok && ti != nil)
+	tiNew := *ti // copy
+
+	// need to drop indexes before columns
+	// in case we drop a column and an index that contains it
+	if len(ad.Indexes) > 0 {
+		dropIndexes(&tsNew, &tiNew, ad.Indexes)
+	}
+
+	if len(ad.Columns) > 0 {
+		if !dropColumns(&tsNew, ad.Columns) {
+			return nil
+		}
+	}
+
+	return m.Put(&tsNew, &tiNew)
+}
+
+func dropIndexes(ts *Schema, ti *Info, idxs []schema.Index) {
+	tsIdxs := make([]schema.Index, 0, len(ts.Indexes))
+	tiIdxs := make([]*index.Overlay, 0, len(ti.Indexes))
+outer:
+	for i := range ts.Indexes {
+		for j := range idxs {
+			if strs.Equal(ts.Indexes[i].Columns, idxs[j].Columns) {
+				continue outer // i.e. don't copy deletion
+			}
+		}
+		tsIdxs = append(tsIdxs, ts.Indexes[i])
+		tiIdxs = append(tiIdxs, ti.Indexes[i])
+	}
+	ts.Indexes = tsIdxs
+	ti.Indexes = tiIdxs
+}
+
+func dropColumns(ts *Schema, cols []string) bool {
+	for i := range ts.Indexes {
+		if !sset.Disjoint(ts.Indexes[i].Columns, cols) {
+			return false // can't drop if used by index
+		}
+	}
+	for _, col := range cols {
+		ts.Columns = strs.Replace1(ts.Columns, col, "-")
+	}
+	return true
 }
 
 func (m *Meta) ForEachSchema(fn func(*Schema)) {

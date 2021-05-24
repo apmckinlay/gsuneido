@@ -25,7 +25,6 @@ func Cow(ss []string) []string {
 }
 
 // Contains returns whether the list contains the string
-// or -1 if not found.
 func Contains(list []string, str string) bool {
 	for _, s := range list {
 		if s == str {
@@ -70,6 +69,19 @@ func Without(list []string, str string) []string {
 		}
 	}
 	return dest
+}
+
+// Replace1 returns a new list with occurrences of from replaced by to
+func Replace1(list []string, from, to string) []string {
+	list2 := make([]string, len(list))
+	for i := range list {
+		if list[i] == from {
+			list2[i] = to
+		} else {
+			list2[i] = list[i]
+		}
+	}
+	return list2
 }
 
 // Replace returns a new list with occurrences of from

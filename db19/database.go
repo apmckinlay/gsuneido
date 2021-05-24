@@ -7,6 +7,7 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/index/btree"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/db19/meta"
+	"github.com/apmckinlay/gsuneido/db19/meta/schema"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	rt "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/cksum"
@@ -136,6 +137,26 @@ func (db *Database) AlterRename(table string, from, to []string) bool {
 		}
 	})
 	return result
+}
+
+func (db *Database) AlterDrop(schema *schema.Schema) bool {
+	result := false
+	db.UpdateState(func(state *DbState) {
+		if m := state.Meta.AlterDrop(schema); m != nil {
+			state.Meta = m
+			result = true
+		}
+	})
+	return result
+}
+
+func (db *Database) Schema(table string) string {
+	state := db.GetState()
+	ts := state.Meta.GetRoSchema(table)
+	if ts == nil {
+		return ""
+	}
+	return ts.Schema.String()
 }
 
 func (db *Database) Size() uint64 {

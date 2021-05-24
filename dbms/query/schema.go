@@ -227,36 +227,41 @@ func (cs *Columns) Get(dir Dir) Row {
 	}
 	var col string
 	var fld int
-	if dir == Next {
-		if cs.state == rewound {
-			cs.si, cs.ci = 0, 0
-		} else {
-			cs.ci++
-			if cs.ci >= len(cs.schema[cs.si].Columns)+len(cs.schema[cs.si].Derived) {
-				cs.si++
-				if cs.si >= len(cs.schema) {
+	for {
+		if dir == Next {
+			if cs.state == rewound {
+				cs.si, cs.ci = 0, 0
+			} else {
+				cs.ci++
+				if cs.ci >= len(cs.schema[cs.si].Columns)+len(cs.schema[cs.si].Derived) {
+					cs.si++
+					if cs.si >= len(cs.schema) {
+						cs.state = eof
+						return nil
+					}
+					cs.ci = 0
+				}
+			}
+		} else { // Prev
+			if cs.state == rewound {
+				cs.si = len(cs.schema)
+				cs.ci = 0
+			}
+			cs.ci--
+			if cs.ci < 0 {
+				cs.si--
+				if cs.si < 0 {
 					cs.state = eof
 					return nil
 				}
-				cs.ci = 0
+				cs.ci = len(cs.schema[cs.si].Columns) + len(cs.schema[cs.si].Derived) - 1
 			}
 		}
-	} else { // Prev
-		if cs.state == rewound {
-			cs.si = len(cs.schema)
-			cs.ci = 0
-		}
-		cs.ci--
-		if cs.ci < 0 {
-			cs.si--
-			if cs.si < 0 {
-				cs.state = eof
-				return nil
-			}
-			cs.ci = len(cs.schema[cs.si].Columns) + len(cs.schema[cs.si].Derived) - 1
+		col, fld = columnOrDerived(cs.schema[cs.si], cs.ci)
+		if col != "-" {
+			break
 		}
 	}
-	col, fld = columnOrDerived(cs.schema[cs.si], cs.ci)
 	cs.state = within
 	schema := cs.schema[cs.si]
 	var rb RecordBuilder

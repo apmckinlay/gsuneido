@@ -129,15 +129,18 @@ func (r *alterRenameAdmin) execute(db *db19.Database) {
 //-------------------------------------------------------------------
 
 type alterDropAdmin struct {
-	schema Schema
+	Schema
 }
 
 func (r *alterDropAdmin) String() string {
-	return "alter " + strings.Replace(r.schema.String(), " ", " drop ", 1)
+	return "alter " + strings.Replace(r.Schema.String(), " ", " drop ", 1)
 }
 
 func (r *alterDropAdmin) execute(db *db19.Database) {
-	//TODO
+	checkForSystemTable("alter", r.Table)
+	if !db.AlterDrop(&r.Schema) {
+		panic("can't " + r.String())
+	}
 }
 
 //-------------------------------------------------------------------
