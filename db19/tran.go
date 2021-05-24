@@ -171,7 +171,7 @@ func (t *UpdateTran) String() string {
 
 func (t *UpdateTran) Complete() string {
 	if !t.db.ck.Commit(t) {
-		return "commit failed" //TODO conflict description
+		return t.ct.conflict.Load().(string)
 	}
 	return ""
 }
@@ -240,38 +240,48 @@ func (t *UpdateTran) Delete(table string, off uint64) {
 }
 
 func (t *UpdateTran) Update(table string, oldoff uint64, newrec rt.Record) uint64 {
+	ts := t.getSchema(table)
+	ti := t.getInfo(table)
 	n := newrec.Len()
 	newrec = newrec[:n]
 	oldrec := t.GetRecord(oldoff)
-	if newrec == oldrec {
-		return oldoff
+	newoff := oldoff
+	if newrec != oldrec {
+		off, buf := t.db.Store.Alloc(n + cksum.Len)
+		copy(buf, newrec)
+		cksum.Update(buf)
+		newoff = off
 	}
-	newoff, buf := t.db.Store.Alloc(n + cksum.Len)
-	copy(buf, newrec)
-	cksum.Update(buf)
-	ts := t.getSchema(table)
-	ti := t.getInfo(table)
-	keys := make([]string, 0, 2*len(ts.Indexes))
+	oldkeys := make([]string, len(ts.Indexes))
+	newkeys := make([]string, len(ts.Indexes))
 	for i := range ts.Indexes {
 		ix := ti.Indexes[i]
 		is := ts.Indexes[i].Ixspec
 		oldkey := is.Key(oldrec)
-		newkey := is.Key(newrec)
-		if oldkey == newkey {
-			ix.Update(oldkey, newoff)
+		if newoff == oldoff {
+			oldkeys[i] = oldkey
 		} else {
-			ix.Delete(oldkey, oldoff)
-			if ix.Lookup(newkey) != 0 {
-				panic(fmt.Sprint("duplicate key: ", table, " ", ts.Indexes[i].Columns))
+			newkey := is.Key(newrec)
+			if oldkey == newkey {
+				ix.Update(oldkey, newoff)
+			} else {
+				ix.Delete(oldkey, oldoff)
+				if ix.Lookup(newkey) != 0 {
+					panic(fmt.Sprint("duplicate key: ", table, " ", ts.Indexes[i].Columns))
+				}
+				ix.Insert(newkey, newoff)
 			}
-			ix.Insert(newkey, newoff)
+			oldkeys[i] = oldkey
+			newkeys[i] = newkey
 		}
-		keys = append(keys, oldkey, newkey)
 	}
-	t.ck(t.db.ck.Write(t.ct, table, keys))
-	d := int64(len(newrec) - len(oldrec))
-	assert.Msg("Update Size").That(int64(ti.Size)+d > 0)
-	ti.Size = uint64(int64(ti.Size) + d)
+	t.ck(t.db.ck.Write(t.ct, table, oldkeys))
+	if newoff != oldoff {
+		t.ck(t.db.ck.Write(t.ct, table, newkeys))
+		d := int64(len(newrec) - len(oldrec))
+		assert.Msg("Update Size").That(int64(ti.Size)+d > 0)
+		ti.Size = uint64(int64(ti.Size) + d)
+	}
 	return newoff
 }
 

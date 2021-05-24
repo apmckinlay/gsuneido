@@ -135,6 +135,7 @@ func (cr ckreads) contains(index int, key string) bool {
 
 // Write adds output/update/delete actions.
 // Will conflict with another write to the same index/key or an overlapping read.
+// The keys are parallel with the indexes i.e. keys[i] is for indexes[i].
 // Updates require two calls, one with the old keys, another with the new keys.
 // NOTE: Even if an update doesn't change a key, it still has to register it.
 func (ck *Check) Write(t *CkTran, table string, keys []string) bool {
