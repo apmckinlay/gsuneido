@@ -38,20 +38,20 @@ type createAdmin struct {
 	Schema
 }
 
-func (r *createAdmin) String() string {
-	return "create " + r.Schema.String()
+func (a *createAdmin) String() string {
+	return "create " + a.Schema.String()
 }
 
-func (r *createAdmin) execute(db *db19.Database) {
-	checkForSystemTable("create", r.Table)
-	ts := &meta.Schema{Schema: r.Schema}
+func (a *createAdmin) execute(db *db19.Database) {
+	checkForSystemTable("create", a.Table)
+	ts := &meta.Schema{Schema: a.Schema}
 	ts.Ixspecs(ts.Indexes)
 	ov := make([]*index.Overlay, len(ts.Indexes))
 	for i := range ov {
 		bt := btree.CreateBtree(db.Store, &ts.Indexes[i].Ixspec)
 		ov[i] = index.OverlayFor(bt)
 	}
-	ti := &meta.Info{Table: r.Schema.Table, Indexes: ov}
+	ti := &meta.Info{Table: a.Schema.Table, Indexes: ov}
 	db.LoadedTable(ts, ti)
 }
 
@@ -70,14 +70,14 @@ type ensureAdmin struct {
 	Schema
 }
 
-func (r *ensureAdmin) String() string {
-	return "ensure " + r.Schema.String()
+func (a *ensureAdmin) String() string {
+	return "ensure " + a.Schema.String()
 }
 
-func (r *ensureAdmin) execute(db *db19.Database) {
-	checkForSystemTable("ensure", r.Table)
-	if !db.Ensure(&r.Schema) {
-		panic("can't " + r.String())
+func (a *ensureAdmin) execute(db *db19.Database) {
+	checkForSystemTable("ensure", a.Table)
+	if !db.Ensure(&a.Schema) {
+		panic("can't " + a.String())
 	}
 }
 
@@ -88,15 +88,15 @@ type renameAdmin struct {
 	to   string
 }
 
-func (r *renameAdmin) String() string {
-	return "rename " + r.from + " to " + r.to
+func (a *renameAdmin) String() string {
+	return "rename " + a.from + " to " + a.to
 }
 
-func (r *renameAdmin) execute(db *db19.Database) {
-	checkForSystemTable("rename", r.from)
-	checkForSystemTable("rename to", r.to)
-	if !db.RenameTable(r.from, r.to) {
-		panic("can't " + r.String())
+func (a *renameAdmin) execute(db *db19.Database) {
+	checkForSystemTable("rename", a.from)
+	checkForSystemTable("rename to", a.to)
+	if !db.RenameTable(a.from, a.to) {
+		panic("can't " + a.String())
 	}
 }
 
@@ -106,14 +106,14 @@ type alterCreateAdmin struct {
 	Schema
 }
 
-func (r *alterCreateAdmin) String() string {
-	return "alter " + strings.Replace(r.Schema.String(), " ", " create ", 1)
+func (a *alterCreateAdmin) String() string {
+	return "alter " + strings.Replace(a.Schema.String(), " ", " create ", 1)
 }
 
-func (r *alterCreateAdmin) execute(db *db19.Database) {
-	checkForSystemTable("alter", r.Table)
-	if !db.AlterCreate(&r.Schema) {
-		panic("can't " + r.String())
+func (a *alterCreateAdmin) execute(db *db19.Database) {
+	checkForSystemTable("alter", a.Table)
+	if !db.AlterCreate(&a.Schema) {
+		panic("can't " + a.String())
 	}
 }
 
@@ -125,20 +125,20 @@ type alterRenameAdmin struct {
 	to    []string
 }
 
-func (r *alterRenameAdmin) String() string {
-	s := "alter " + r.table + " rename "
+func (a *alterRenameAdmin) String() string {
+	s := "alter " + a.table + " rename "
 	sep := ""
-	for i, from := range r.from {
-		s += sep + from + " to " + r.to[i]
+	for i, from := range a.from {
+		s += sep + from + " to " + a.to[i]
 		sep = ", "
 	}
 	return s
 }
 
-func (r *alterRenameAdmin) execute(db *db19.Database) {
-	checkForSystemTable("alter", r.table)
-	if !db.AlterRename(r.table, r.from, r.to) {
-		panic("can't " + r.String())
+func (a *alterRenameAdmin) execute(db *db19.Database) {
+	checkForSystemTable("alter", a.table)
+	if !db.AlterRename(a.table, a.from, a.to) {
+		panic("can't " + a.String())
 	}
 }
 
@@ -148,14 +148,14 @@ type alterDropAdmin struct {
 	Schema
 }
 
-func (r *alterDropAdmin) String() string {
-	return "alter " + strings.Replace(r.Schema.String(), " ", " drop ", 1)
+func (a *alterDropAdmin) String() string {
+	return "alter " + strings.Replace(a.Schema.String(), " ", " drop ", 1)
 }
 
-func (r *alterDropAdmin) execute(db *db19.Database) {
-	checkForSystemTable("alter", r.Table)
-	if !db.AlterDrop(&r.Schema) {
-		panic("can't " + r.String())
+func (a *alterDropAdmin) execute(db *db19.Database) {
+	checkForSystemTable("alter", a.Table)
+	if !db.AlterDrop(&a.Schema) {
+		panic("can't " + a.String())
 	}
 }
 
@@ -165,13 +165,13 @@ type dropAdmin struct {
 	table string
 }
 
-func (r *dropAdmin) String() string {
-	return "drop " + r.table
+func (a *dropAdmin) String() string {
+	return "drop " + a.table
 }
 
-func (r *dropAdmin) execute(db *db19.Database) {
-	checkForSystemTable("drop", r.table)
-	if !db.DropTable(r.table) {
-		panic("can't drop nonexistent table: " + r.table)
+func (a *dropAdmin) execute(db *db19.Database) {
+	checkForSystemTable("drop", a.table)
+	if !db.DropTable(a.table) {
+		panic("can't drop nonexistent table: " + a.table)
 	}
 }

@@ -77,6 +77,22 @@ func (m *Meta) GetRoSchema(table string) *Schema {
 	return ts
 }
 
+func (m *Meta) ForEachSchema(fn func(*Schema)) {
+	m.schema.ForEach(func(schema *Schema) {
+		if !schema.isTomb() {
+			fn(schema)
+		}
+	})
+}
+
+func (m *Meta) ForEachInfo(fn func(*Info)) {
+	m.info.ForEach(func(info *Info) {
+		if !info.isTomb() {
+			fn(info)
+		}
+	})
+}
+
 // Put is used by Database.LoadedTable and admin schema changes
 func (m *Meta) Put(ts *Schema, ti *Info) *Meta {
 	cp := *m // copy
@@ -271,24 +287,6 @@ func dropColumns(ts *Schema, cols []string) bool {
 		ts.Columns = strs.Replace1(ts.Columns, col, "-")
 	}
 	return true
-}
-
-//-------------------------------------------------------------------
-
-func (m *Meta) ForEachSchema(fn func(*Schema)) {
-	m.schema.ForEach(func(schema *Schema) {
-		if !schema.isTomb() {
-			fn(schema)
-		}
-	})
-}
-
-func (m *Meta) ForEachInfo(fn func(*Info)) {
-	m.info.ForEach(func(info *Info) {
-		if !info.isTomb() {
-			fn(info)
-		}
-	})
 }
 
 //-------------------------------------------------------------------

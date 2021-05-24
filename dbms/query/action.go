@@ -14,6 +14,8 @@ func DoAction(ut *db19.UpdateTran, action string) int {
 	return a.execute(ut)
 }
 
+//-------------------------------------------------------------------
+
 type insertRecordAction struct {
 	record *SuRecord
 	query  Query
@@ -43,6 +45,8 @@ func (a *insertQueryAction) String() string {
 func (a *insertQueryAction) execute(ut *db19.UpdateTran) int {
 	return 0 //TODO
 }
+
+//-------------------------------------------------------------------
 
 type updateAction struct {
 	query Query
@@ -86,6 +90,8 @@ func (a *updateAction) execute(ut *db19.UpdateTran) int {
 	}
 	return n
 }
+
+//-------------------------------------------------------------------
 
 type deleteAction struct {
 	query Query
