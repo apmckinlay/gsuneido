@@ -151,7 +151,7 @@ func (t testTran) Output(string, runtime.Record) {
 	panic("should not be called")
 }
 
-func (t testTran) GetIndex(string, []string) *index.Overlay {
+func (t testTran) GetIndexI(string, int) *index.Overlay {
 	panic("should not be called")
 }
 

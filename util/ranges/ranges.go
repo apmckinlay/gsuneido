@@ -11,6 +11,7 @@ import (
 )
 
 // Ranges is an ordered set of non-overlapping ranges of strings.
+// Ranges are inclusive e.g. Insert(from, to) means: from <= x <= to.
 // The zero value is ready to use.
 // It uses a specialized in-memory btree with a max size and number of levels.
 // Nodes are fixed size to reduce allocation and bounds checks.

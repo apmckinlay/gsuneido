@@ -81,16 +81,23 @@ func (t *ReadTran) String() string {
 
 func (t *ReadTran) GetIndex(table string, cols []string) *index.Overlay {
 	ts := t.meta.GetRoSchema(table)
-	ti := t.meta.GetRoInfo(table)
-	if ts == nil || ti == nil {
+	if ts == nil {
 		return nil
 	}
 	for i, ix := range ts.Indexes {
 		if strs.Equal(cols, ix.Columns) {
-			return ti.Indexes[i]
+			return t.GetIndexI(table, i)
 		}
 	}
 	return nil
+}
+
+func (t *ReadTran) GetIndexI(table string, iIndex int) *index.Overlay {
+	ti := t.meta.GetRoInfo(table)
+	if ti == nil {
+		return nil
+	}
+	return ti.Indexes[iIndex]
 }
 
 func (t *ReadTran) GetRecord(off uint64) rt.Record {

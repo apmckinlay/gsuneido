@@ -140,7 +140,7 @@ type QueryTran interface {
 	RangeFrac(table string, iIndex int, org, end string) float64
 	Lookup(table string, iIndex int, key string) *runtime.DbRec
 	Output(table string, rec runtime.Record)
-	GetIndex(table string, cols []string) *index.Overlay
+	GetIndexI(table string, iIndex int) *index.Overlay
 	GetRecord(off uint64) runtime.Record
 	MakeLess(is *ixkey.Spec) func(x, y uint64) bool
 }

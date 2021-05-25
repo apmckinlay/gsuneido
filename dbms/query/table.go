@@ -164,7 +164,11 @@ func (tbl *Table) indexFor(order []string) int {
 }
 
 func (tbl *Table) setApproach(_ []string, approach interface{}, _ QueryTran) {
-	tbl.index = approach.(tableApproach).index
+	tbl.setIndex(approach.(tableApproach).index)
+}
+
+func (tbl *Table) setIndex(index []string) {
+	tbl.index = index
 	tbl.iIndex = strss.Index(tbl.indexes, tbl.index)
 	tbl.indexEncode = len(tbl.index) > 1 || !setset.Contains(tbl.keys, tbl.index)
 }
@@ -261,6 +265,6 @@ func (tbl *Table) SelectRaw(org, end string) {
 
 func (tbl *Table) ensureIter() {
 	if tbl.iter == nil {
-		tbl.iter = index.NewOverIter(tbl.name, tbl.index)
+		tbl.iter = index.NewOverIter(tbl.name, tbl.iIndex)
 	}
 }

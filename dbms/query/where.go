@@ -450,7 +450,7 @@ func (w *Where) setApproach(index []string, app interface{}, tran QueryTran) {
 	if app != nil {
 		idx := app.(whereApproach).index
 		assert.That(index == nil || w.singleton || strs.Equal(idx, index))
-		w.tbl.index = idx
+		w.tbl.setIndex(idx)
 		w.idxSel = w.getIdxSel(idx)
 		w.idxSelPos = -1
 	} else {

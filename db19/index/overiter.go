@@ -19,7 +19,7 @@ type Range = iterator.Range
 // because new source iterators may be returned by the callback.
 type OverIter struct {
 	table    string
-	ixcols   []string
+	iIndex   int
 	iters    []iterT
 	modCount int
 	curKey   string
@@ -49,11 +49,11 @@ const (
 )
 
 type oiTran interface {
-	GetIndex(table string, columns []string) *Overlay
+	GetIndexI(table string, iIndex int) *Overlay
 }
 
-func NewOverIter(table string, ixcols []string) *OverIter {
-	return &OverIter{table: table, ixcols: ixcols, rng: iterator.All}
+func NewOverIter(table string, iIndex int) *OverIter {
+	return &OverIter{table: table, iIndex: iIndex, rng: iterator.All}
 }
 
 func (mi *OverIter) Eof() bool {
@@ -80,7 +80,7 @@ func (mi *OverIter) Next(t oiTran) {
 		if t != mi.tran {
 			// some of the iterators may still be valid
 			// but simplest is just to get fresh iterators
-			ov := t.GetIndex(mi.table, mi.ixcols)
+			ov := t.GetIndexI(mi.table, mi.iIndex)
 			mi.newIters(ov)
 			mi.tran = t
 		}
@@ -121,7 +121,7 @@ func (mi *OverIter) all(fn func(it iterT)) {
 func (mi *OverIter) modNext(t oiTran) {
 	modified := false
 	if t != mi.tran {
-		ov := t.GetIndex(mi.table, mi.ixcols)
+		ov := t.GetIndexI(mi.table, mi.iIndex)
 		if !mi.keepIters(ov) {
 			mi.newIters(ov)
 			modified = true
@@ -203,7 +203,7 @@ func (mi *OverIter) Prev(t oiTran) {
 		if t != mi.tran {
 			// some of the iterators may still be valid
 			// but simplest just to get fresh iterators
-			ov := t.GetIndex(mi.table, mi.ixcols)
+			ov := t.GetIndexI(mi.table, mi.iIndex)
 			mi.newIters(ov)
 			mi.tran = t
 		}
@@ -222,7 +222,7 @@ func (mi *OverIter) Prev(t oiTran) {
 func (mi *OverIter) modPrev(t oiTran) {
 	modified := false
 	if t != mi.tran {
-		ov := t.GetIndex(mi.table, mi.ixcols)
+		ov := t.GetIndexI(mi.table, mi.iIndex)
 		if !mi.keepIters(ov) {
 			mi.newIters(ov)
 			modified = true
