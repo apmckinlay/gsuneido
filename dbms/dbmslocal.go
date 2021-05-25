@@ -118,8 +118,10 @@ func get(tran qry.QueryTran, query string, dir Dir) (Row, *Header, string) {
 	return row, q.Header(), q.Updateable()
 }
 
-func (*DbmsLocal) Info() Value {
-	panic("DbmsLocal Info not implemented")
+func (dbms *DbmsLocal) Info() Value {
+	ob := &SuObject{}
+	ob.Set(SuStr("currentSize"), Int64Val(int64(dbms.db.Size())))
+	return ob
 }
 
 func (*DbmsLocal) Kill(string) int {
