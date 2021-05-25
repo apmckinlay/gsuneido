@@ -14,15 +14,21 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/index/ixbuf"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
+	"github.com/apmckinlay/gsuneido/util/ranges"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
 type testTran struct {
 	getIndex func() *Overlay
+	reads    ranges.Ranges
 }
 
 func (t *testTran) GetIndexI(string, int) *Overlay {
 	return t.getIndex()
+}
+
+func (t *testTran) Read(_ string, _ int, from, to string) {
+	t.reads.Insert(from, to)
 }
 
 func TestOverIter(t *testing.T) {
@@ -117,6 +123,49 @@ func TestOverIter(t *testing.T) {
 	testPrev(4)
 	testNext(5)
 	testNext(-1)
+}
+
+func TestOverIterReads(*testing.T) {
+	bt := btree.CreateBtree(stor.HeapStor(8192), nil)
+	ib := &ixbuf.T{}
+	for i := 0; i < 10; i++ {
+		ib.Insert(strconv.Itoa(i), uint64(i))
+	}
+	t := &testTran{getIndex: func() *Overlay {
+		return &Overlay{bt: bt, layers: []*ixbuf.T{ib}}
+	}}
+	assert.This(t.reads.String()).Is("")
+	it := NewOverIter("", 0)
+	it.Next(t)
+	assert.This(t.reads.String()).Is("->0")
+	it.Next(t)
+	assert.This(t.reads.String()).Is("->1")
+	it.Prev(t)
+	it.Prev(t)
+	assert.That(it.Eof())
+	assert.This(t.reads.String()).Is("->1")
+	it.Rewind()
+	it.Prev(t)
+	it.Prev(t)
+	assert.This(t.reads.String()).Is("->1 8->\xff\xff\xff\xff\xff\xff\xff\xff")
+	it.Next(t)
+	it.Next(t)
+	assert.This(t.reads.String()).Is("->1 8->\xff\xff\xff\xff\xff\xff\xff\xff")
+	it.Rewind()
+	it.Next(t)
+	it.Next(t)
+	it.Next(t)
+	assert.This(t.reads.String()).Is("->2 8->\xff\xff\xff\xff\xff\xff\xff\xff")
+
+	t.reads = ranges.Ranges{} // reset
+	for it.Rewind(); !it.Eof(); it.Next(t) {
+	}
+	assert.This(t.reads.String()).Is("->\xff\xff\xff\xff\xff\xff\xff\xff")
+
+	t.reads = ranges.Ranges{} // reset
+	for it.Rewind(); !it.Eof(); it.Prev(t) {
+	}
+	assert.This(t.reads.String()).Is("->\xff\xff\xff\xff\xff\xff\xff\xff")
 }
 
 func TestOverIterCombine(*testing.T) {
@@ -385,7 +434,7 @@ func (it *dumIter) Next() {
 			return
 		}
 		it.cur = it.d.keys[0]
-		it.state = within
+		it.state = front
 		return
 	}
 	for _, k := range it.d.keys {
@@ -407,7 +456,7 @@ func (it *dumIter) Prev() {
 			return
 		}
 		it.cur = it.d.keys[len(it.d.keys)-1]
-		it.state = within
+		it.state = back
 		return
 	}
 	for i := len(it.d.keys) - 1; i >= 0; i-- {

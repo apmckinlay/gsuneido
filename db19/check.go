@@ -57,8 +57,12 @@ type cktbl struct {
 	reads  ckreads
 }
 
-type ckwrites []*Set
-type ckreads []*Ranges
+// ckwrites and ckreads have one element per index
+// in parallel with the schema and info indexes
+type (
+	ckwrites []*Set
+	ckreads  []*Ranges
+)
 
 func (t *CkTran) String() string {
 	return "ut" + strconv.Itoa(t.start)

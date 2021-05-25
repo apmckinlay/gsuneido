@@ -162,3 +162,6 @@ func (t testTran) GetRecord(uint64) runtime.Record {
 func (t testTran) MakeLess(*ixkey.Spec) func(x, y uint64) bool {
 	panic("should not be called")
 }
+
+func (t testTran) Read(string, int, string, string) {
+}

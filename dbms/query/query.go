@@ -143,6 +143,7 @@ type QueryTran interface {
 	GetIndexI(table string, iIndex int) *index.Overlay
 	GetRecord(off uint64) runtime.Record
 	MakeLess(is *ixkey.Spec) func(x, y uint64) bool
+	Read(string, int, string, string)
 }
 
 // Setup prepares a parsed query for execution.

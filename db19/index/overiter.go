@@ -15,15 +15,16 @@ type Range = iterator.Range
 // OverIter is a Suneido style iterator
 // that merges several other Suneido style iterators.
 //
-// We need to keep our own curKey/Off independent of the source iterators
-// because new source iterators may be returned by the callback.
+// OverIter also tracks read ranges for transaction conflict checking.
 type OverIter struct {
 	table    string
 	iIndex   int
 	iters    []iterT
 	modCount int
-	curKey   string
-	curOff   uint64
+	// We need to keep our own curKey/Off independent of the source iterators
+	// because new source iterators may be returned by the callback.
+	curKey string
+	curOff uint64
 	// curIter is the iterator containing the current item = iters[curIter]
 	curIter int
 	state
@@ -37,7 +38,8 @@ type state byte
 
 const (
 	rewound state = iota
-	within
+	front
+	back
 	eof
 )
 
@@ -50,6 +52,7 @@ const (
 
 type oiTran interface {
 	GetIndexI(table string, iIndex int) *Overlay
+	Read(table string, iIndex int, from, to string)
 }
 
 func NewOverIter(table string, iIndex int) *OverIter {
@@ -85,15 +88,23 @@ func (mi *OverIter) Next(t oiTran) {
 			mi.tran = t
 		}
 		mi.all(iterT.Next)
-		mi.state = within
+		mi.state = front
 	} else {
 		mi.modNext(t)
 	}
+	lastState := mi.state
 	mi.curIter, mi.curKey, mi.curOff = mi.minIter()
 	if mi.curIter == -1 {
 		mi.state = eof
 	}
 	mi.lastDir = next
+	if lastState == front {
+		if mi.state == eof {
+			mi.tran.Read(mi.table, mi.iIndex, mi.rng.Org, mi.rng.End)
+		} else {
+			mi.tran.Read(mi.table, mi.iIndex, mi.rng.Org, mi.curKey)
+		}
+	}
 }
 
 func (mi *OverIter) newIters(ov *Overlay) {
@@ -208,15 +219,23 @@ func (mi *OverIter) Prev(t oiTran) {
 			mi.tran = t
 		}
 		mi.all(iterT.Prev)
-		mi.state = within
+		mi.state = back
 	} else {
 		mi.modPrev(t)
 	}
+	lastState := mi.state
 	mi.curIter, mi.curKey, mi.curOff = mi.maxIter()
 	if mi.curIter == -1 {
 		mi.state = eof
 	}
 	mi.lastDir = prev
+	if lastState == back {
+		if mi.state == eof {
+			mi.tran.Read(mi.table, mi.iIndex, mi.rng.Org, mi.rng.End)
+		} else {
+			mi.tran.Read(mi.table, mi.iIndex, mi.curKey, mi.rng.End)
+		}
+	}
 }
 
 func (mi *OverIter) modPrev(t oiTran) {

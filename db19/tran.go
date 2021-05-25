@@ -126,6 +126,11 @@ func (t *ReadTran) Lookup(table string, iIndex int, key string) *rt.DbRec {
 	return &rt.DbRec{Off: off, Record: t.GetRecord(off)}
 }
 
+func (t *ReadTran) Read(string, int, string, string) {
+	// Read transactions don't need to track reads.
+	// See UpdateTran Read.
+}
+
 func (t *ReadTran) Output(string, rt.Record) {
 	panic("can't output to read-only transaction")
 }
@@ -203,6 +208,16 @@ func (t *UpdateTran) Abort() {
 
 func (t *UpdateTran) num() int {
 	return t.ct.start
+}
+
+// Lookup returns the DbRec for a key, or nil if not found
+func (t *UpdateTran) Lookup(table string, iIndex int, key string) *rt.DbRec {
+	t.Read(table, iIndex, key, key)
+	return t.ReadTran.Lookup(table, iIndex, key)
+}
+
+func (t *UpdateTran) Read(table string, iIndex int, from, to string) {
+	t.ck(t.db.ck.Read(t.ct, table, iIndex, from, to))
 }
 
 func (t *UpdateTran) Output(table string, rec rt.Record) {
