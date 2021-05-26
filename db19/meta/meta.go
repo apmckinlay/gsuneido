@@ -13,6 +13,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/ints"
 	"github.com/apmckinlay/gsuneido/util/sset"
+	"github.com/apmckinlay/gsuneido/util/str"
 	"github.com/apmckinlay/gsuneido/util/strs"
 )
 
@@ -139,11 +140,11 @@ outer:
 func (m *Meta) RenameTable(from, to string) *Meta {
 	ts, ok := m.schema.Get(from)
 	if !ok || ts.isTomb() {
-		return nil // from doesn't exist
+		panic("can't rename nonexistent table: " + from)
 	}
 	tsNew := *ts // copy
 	if tmp, ok := m.schema.Get(to); ok && !tmp.isTomb() {
-		return nil // to exists
+		panic("can't rename to existing table: " + to)
 	}
 	ti, ok := m.info.Get(from)
 	assert.That(ok && ti != nil)
@@ -178,7 +179,15 @@ func (m *Meta) DropTable(table string) *Meta {
 func (m *Meta) AlterRename(table string, from, to []string) *Meta {
 	ts, ok := m.schema.Get(table)
 	if !ok || ts.isTomb() {
-		return nil // nonexistent
+		panic("can't alter nonexistent table: " + table)
+	}
+	missing := sset.Difference(from, ts.Columns)
+	if len(missing) > 0 {
+		panic("can't rename nonexistent column(s): " + str.Join(", ", missing))
+	}
+	existing := sset.Intersect(to, ts.Columns)
+	if len(existing) > 0 {
+		panic("can't renamte to existing column(s): " + str.Join(", ", existing))
 	}
 	tsNew := *ts // copy
 	tsNew.Columns = strs.Replace(ts.Columns, from, to)
@@ -207,7 +216,7 @@ func (m *Meta) AlterCreate(ac *schema.Schema, store *stor.Stor) *Meta {
 func (m *Meta) alterGet(table string) (*Schema, *Info) {
 	ts, ok := m.schema.Get(table)
 	if !ok || ts.isTomb() {
-		return nil, nil // nonexistent
+		panic("can't alter nonexistent table: " + table)
 	}
 	tsNew := *ts // copy
 	ti, ok := m.info.Get(table)
@@ -217,8 +226,9 @@ func (m *Meta) alterGet(table string) (*Schema, *Info) {
 }
 
 func createColumns(ts *Schema, cols []string) bool {
-	if !sset.Disjoint(ts.Columns, cols) {
-		return false
+	existing := sset.Intersect(cols, ts.Columns)
+	if len(existing) > 0 {
+		panic("can't create existing column(s): " + str.Join(", ", existing))
 	}
 	ts.Columns = append(strs.Cow(ts.Columns), cols...)
 	return true
@@ -229,8 +239,9 @@ func createIndexes(ts *Schema, ti *Info, idxs []schema.Index, store *stor.Stor) 
 		return true
 	}
 	for i := range idxs {
-		if !sset.Subset(ts.Columns, idxs[i].Columns) {
-			return false
+		missing := sset.Difference(idxs[i].Columns, ts.Columns)
+		if len(missing) > 0 {
+			panic("can't create index on nonexistent column(s): " + str.Join(", ", missing))
 		}
 	}
 	ts.Ixspecs(idxs)
@@ -261,6 +272,15 @@ func (m *Meta) AlterDrop(ad *schema.Schema) *Meta {
 }
 
 func dropIndexes(ts *Schema, ti *Info, idxs []schema.Index) {
+loop:
+	for j := range idxs {
+		for i := range ts.Indexes {
+			if strs.Equal(ts.Indexes[i].Columns, idxs[j].Columns) {
+				continue loop
+			}
+		}
+		panic("can't drop nonexistent index: " + str.Join(",", idxs[j].Columns))
+	}
 	tsIdxs := make([]schema.Index, 0, len(ts.Indexes))
 	tiIdxs := make([]*index.Overlay, 0, len(ti.Indexes))
 outer:
@@ -278,6 +298,10 @@ outer:
 }
 
 func dropColumns(ts *Schema, cols []string) bool {
+	missing := sset.Difference(cols, ts.Columns)
+	if len(missing) > 0 {
+		panic("can't drop nonexistent column(s): " + str.Join(", ", missing))
+	}
 	for i := range ts.Indexes {
 		if !sset.Disjoint(ts.Indexes[i].Columns, cols) {
 			return false // can't drop if used by index

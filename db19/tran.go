@@ -37,14 +37,14 @@ func (t *tran) getSchema(table string) *meta.Schema {
 	if ts := t.meta.GetRoSchema(table); ts != nil {
 		return ts
 	}
-	panic("table not found: " + table)
+	panic("nonexistent table: " + table)
 }
 
 func (t *UpdateTran) getInfo(table string) *meta.Info {
 	if ti := t.meta.GetRwInfo(table); ti != nil {
 		return ti
 	}
-	panic("table not found: " + table)
+	panic("nonexistent table: " + table)
 }
 
 func (t *tran) GetAllInfo() []*meta.Info {

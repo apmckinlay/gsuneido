@@ -29,6 +29,8 @@ func TestAdminCreate(t *testing.T) {
 	assert.T(t).This(db.Schema("tmp")).Is("tmp " + tmpschema)
 	assert.T(t).This(func() { DoAdmin(db, "create tables (a) key(a)") }).
 		Panics("can't create system table: tables")
+	assert.T(t).This(func() { DoAdmin(db, "create tmp (a) key(a)") }).
+		Panics("can't create existing table: tmp")
 }
 
 func TestAdminEnsure(t *testing.T) {
@@ -48,6 +50,10 @@ func TestAdminRename(t *testing.T) {
 	defer db.Close()
 	assert.T(t).This(func() { DoAdmin(db, "rename tmp to indexes") }).
 		Panics("can't rename to system table: indexes")
+	assert.T(t).This(func() { DoAdmin(db, "rename nonex to foo") }).
+		Panics("nonexistent table: nonex")
+	assert.T(t).This(func() { DoAdmin(db, "rename tmp to tmp") }).
+		Panics("existing table: tmp")
 	DoAdmin(db, "rename tmp to foo")
 	assert.T(t).This(db.Schema("foo")).Is("foo " + tmpschema)
 }
@@ -57,6 +63,12 @@ func TestAdminAlterCreate(t *testing.T) {
 	defer db.Close()
 	assert.T(t).This(func() { DoAdmin(db, "alter tables create (x)") }).
 		Panics("can't alter system table: tables")
+	assert.T(t).This(func() { DoAdmin(db, "alter nonex create (x)") }).
+		Panics("nonexistent table: nonex")
+	assert.T(t).This(func() { DoAdmin(db, "alter tmp create (b)") }).
+		Panics("can't create existing column(s): b")
+	assert.T(t).This(func() { DoAdmin(db, "alter tmp create index(x)") }).
+		Panics("can't create index on nonexistent column(s): x")
 	DoAdmin(db, "alter tmp create (x) index(x)")
 	assert.T(t).This(db.Schema("tmp")).
 		Is("tmp (a,b,c,d,x) key(a) index(b,c) index(x)")
@@ -67,6 +79,12 @@ func TestAdminAlterRename(t *testing.T) {
 	defer db.Close()
 	assert.T(t).This(func() { DoAdmin(db, "alter tables rename table to foo") }).
 		Panics("can't alter system table: tables")
+	assert.T(t).This(func() { DoAdmin(db, "alter nonex rename x to y") }).
+		Panics("nonexistent table: nonex")
+	assert.T(t).This(func() { DoAdmin(db, "alter tmp rename x to y") }).
+		Panics("can't rename nonexistent column(s): x")
+	assert.T(t).This(func() { DoAdmin(db, "alter nonex rename b to a") }).
+		Panics("can't alter nonexistent table: nonex")
 	DoAdmin(db, "alter tmp rename b to x")
 	assert.T(t).This(db.Schema("tmp")).Is("tmp (a,x,c,d) key(a) index(x,c)")
 }
@@ -76,6 +94,12 @@ func TestAdminAlterDrop(t *testing.T) {
 	defer db.Close()
 	assert.T(t).This(func() { DoAdmin(db, "alter tables drop (table)") }).
 		Panics("can't alter system table: tables")
+	assert.T(t).This(func() { DoAdmin(db, "alter nonex drop (table)") }).
+		Panics("nonexistent table: nonex")
+	assert.T(t).This(func() { DoAdmin(db, "alter tmp drop (x)") }).
+		Panics("can't drop nonexistent column(s): x")
+	assert.T(t).This(func() { DoAdmin(db, "alter tmp drop index(x)") }).
+		Panics("can't drop nonexistent index: x")
 	DoAdmin(db, "alter tmp drop (d)")
 	assert.T(t).This(db.Schema("tmp")).Is("tmp (a,b,c,-) key(a) index(b,c)")
 	DoAdmin(db, "alter tmp drop (b) index(b,c)")
@@ -87,6 +111,8 @@ func TestAdminDrop(t *testing.T) {
 	defer db.Close()
 	assert.T(t).This(func() { DoAdmin(db, "drop columns") }).
 		Panics("can't drop system table: columns")
+	assert.T(t).This(func() { DoAdmin(db, "drop nonex") }).
+		Panics("can't drop nonexistent table: nonex")
 	DoAdmin(db, "drop tmp")
 	assert.T(t).This(db.Schema("tmp")).Is("")
 }
