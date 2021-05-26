@@ -810,7 +810,6 @@ func (r *SuRecord) ToRecord(t *Thread, hdr *Header) Record {
 		defer r.Unlock()
 	}
 	r.ensureDeps()
-	assert.Msg("SuRecord ToRecord").That(len(hdr.Fields) == 1)
 	fields := hdr.Fields[0]
 
 	// access all the fields to ensure dependencies are created
