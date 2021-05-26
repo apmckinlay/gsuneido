@@ -317,7 +317,7 @@ func (v value) Panics(expected string) {
 		if v.assert.t != nil {
 			v.assert.t.Helper()
 		}
-		v.assert.fail(fmt.Sprintf("expected panic of '%v' but it did not panic",
+		v.assert.fail(fmt.Sprintf("expected panic with '%v' but it did not panic",
 			expected))
 		return
 	}
@@ -328,7 +328,7 @@ func (v value) Panics(expected string) {
 		if v.assert.t != nil {
 			v.assert.t.Helper()
 		}
-		v.assert.fail(fmt.Sprintf("expected panic of '%v' but got '%v'",
+		v.assert.fail(fmt.Sprintf("expected panic with '%v' but got '%v'",
 			expected, e))
 	}
 }
