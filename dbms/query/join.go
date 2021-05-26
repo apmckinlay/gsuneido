@@ -10,6 +10,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/setset"
 	"github.com/apmckinlay/gsuneido/util/sset"
 	"github.com/apmckinlay/gsuneido/util/str"
+	"github.com/apmckinlay/gsuneido/util/strs"
 )
 
 type Join struct {
@@ -84,7 +85,7 @@ func (jn *Join) String() string {
 func (jn *Join) string(op string) string {
 	by := ""
 	if len(jn.by) > 0 {
-		by = "by" + str.Join("(,)", jn.by) + " "
+		by = "by" + strs.Join("(,)", jn.by) + " "
 	}
 	return parenQ2(jn.source) + " " + op + " " +
 		str.Opt(jn.joinType.String(), " ") + by + paren(jn.source2)

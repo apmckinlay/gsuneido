@@ -16,7 +16,6 @@ import (
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/ints"
 	"github.com/apmckinlay/gsuneido/util/sset"
-	"github.com/apmckinlay/gsuneido/util/str"
 	"github.com/apmckinlay/gsuneido/util/strs"
 	"github.com/apmckinlay/gsuneido/util/strss"
 )
@@ -56,7 +55,7 @@ type whereApproach struct {
 func (w *Where) Init() {
 	w.Query1.Init()
 	if !sset.Subset(w.source.Columns(), w.expr.Columns()) {
-		panic("where: nonexistent columns: " + str.Join(", ",
+		panic("where: nonexistent columns: " + strs.Join(", ",
 			sset.Difference(w.expr.Columns(), w.source.Columns())))
 	}
 	w.tbl, _ = w.source.(*Table)
@@ -635,7 +634,7 @@ type idxSel struct {
 }
 
 func (is idxSel) String() string {
-	s := str.Join(",", is.index)
+	s := strs.Join(",", is.index)
 	sep := ": "
 	for _, pr := range is.ptrngs {
 		s += sep + showKey(is.encoded, pr.org)

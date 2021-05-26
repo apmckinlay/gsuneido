@@ -55,7 +55,7 @@ func (tbl *Table) String() string {
 	if tbl.index == nil {
 		return tbl.name
 	}
-	return tbl.name + "^" + str.Join("(,)", tbl.index)
+	return tbl.name + "^" + strs.Join("(,)", tbl.index)
 }
 
 func (tbl *Table) Init() {

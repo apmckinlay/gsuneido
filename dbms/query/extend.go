@@ -7,7 +7,6 @@ import (
 	"github.com/apmckinlay/gsuneido/compile/ast"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/sset"
-	"github.com/apmckinlay/gsuneido/util/str"
 	"github.com/apmckinlay/gsuneido/util/strs"
 )
 
@@ -33,7 +32,7 @@ func (e *Extend) checkDependencies() {
 			ecols := e.exprs[i].Columns()
 			if !sset.Subset(avail, ecols) {
 				panic("extend: invalid column(s) in expressions: " +
-					str.Join(", ", sset.Difference(ecols, avail)))
+					strs.Join(", ", sset.Difference(ecols, avail)))
 			}
 		}
 		avail = append(avail, e.cols[i])

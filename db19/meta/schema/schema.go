@@ -9,6 +9,7 @@ import (
 
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/util/str"
+	"github.com/apmckinlay/gsuneido/util/strs"
 )
 
 type Schema struct {
@@ -65,7 +66,7 @@ func (sc *Schema) String() string {
 
 func (ix *Index) String() string {
 	s := map[int]string{'k': "key", 'i': "index", 'u': "index unique"}[ix.Mode]
-	s += str.Join("(,)", ix.Columns)
+	s += strs.Join("(,)", ix.Columns)
 	if ix.Fktable != "" {
 		s += " in " + ix.Fktable
 		if len(ix.Fkcolumns) > 0 {

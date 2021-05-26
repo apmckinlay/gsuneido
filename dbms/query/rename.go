@@ -8,7 +8,6 @@ import (
 
 	"github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/sset"
-	"github.com/apmckinlay/gsuneido/util/str"
 	"github.com/apmckinlay/gsuneido/util/strs"
 )
 
@@ -23,11 +22,11 @@ func (r *Rename) Init() {
 	srcCols := r.source.Columns()
 	if !sset.Subset(srcCols, r.from) {
 		panic("rename: nonexistent column(s): " +
-			str.Join(", ", sset.Difference(r.from, srcCols)))
+			strs.Join(", ", sset.Difference(r.from, srcCols)))
 	}
 	if !sset.Disjoint(srcCols, r.to) {
 		panic("rename: column(s) already exist: " +
-			str.Join(", ", sset.Intersect(srcCols, r.to)))
+			strs.Join(", ", sset.Intersect(srcCols, r.to)))
 	}
 	r.renameDependencies(srcCols)
 }

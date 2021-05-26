@@ -12,7 +12,7 @@ import (
 	"github.com/apmckinlay/gsuneido/compile/ast"
 	rt "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util/str"
+	"github.com/apmckinlay/gsuneido/util/strs"
 )
 
 func TestFinal(t *testing.T) {
@@ -25,7 +25,7 @@ func TestFinal(t *testing.T) {
 			list = append(list, v)
 		}
 		sort.Strings(list)
-		assert.T(t).This(str.Join(",", list)).Like(expected)
+		assert.T(t).This(strs.Join(",", list)).Like(expected)
 	}
 
 	test("123", "")

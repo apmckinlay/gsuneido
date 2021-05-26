@@ -9,7 +9,6 @@ import (
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/sortlist"
-	"github.com/apmckinlay/gsuneido/util/str"
 	"github.com/apmckinlay/gsuneido/util/strs"
 )
 
@@ -25,7 +24,7 @@ type TempIndex struct {
 }
 
 func (ti *TempIndex) String() string {
-	return parenQ2(ti.source) + " TEMPINDEX" + str.Join("(,)", ti.order)
+	return parenQ2(ti.source) + " TEMPINDEX" + strs.Join("(,)", ti.order)
 }
 
 func (ti *TempIndex) Transform() Query {

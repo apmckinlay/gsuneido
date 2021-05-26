@@ -4,6 +4,8 @@
 // Package strs has miscellaneous functions for slices of strings
 package strs
 
+import "strings"
+
 // Equal returns true if list2 is equal to list
 func Equal(x, y []string) bool {
 	if len(x) != len(y) {
@@ -96,4 +98,32 @@ func Replace(list, from, to []string) []string {
 		}
 	}
 	return list2
+}
+
+// Join joins strings with the specified format.
+// The format may include delimiters e.g. "(,)"
+func Join(fmt string, list []string) string {
+	prefix := ""
+	suffix := ""
+	nf := len(fmt)
+	if nf > 0 && (fmt[0] == '(' || fmt[0] == '{' || fmt[0] == '[') {
+		prefix = fmt[0:1]
+		suffix = fmt[nf-1:]
+		fmt = fmt[1 : nf-1]
+	}
+	n := len(fmt) * (nf - 1)
+	for _, s := range list {
+		n += len(s)
+	}
+	sep := ""
+	var sb strings.Builder
+	sb.Grow(n)
+	sb.WriteString(prefix)
+	for _, s := range list {
+		sb.WriteString(sep)
+		sb.WriteString(s)
+		sep = fmt
+	}
+	sb.WriteString(suffix)
+	return sb.String()
 }

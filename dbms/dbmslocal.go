@@ -15,7 +15,6 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/tools"
 	qry "github.com/apmckinlay/gsuneido/dbms/query"
 	. "github.com/apmckinlay/gsuneido/runtime"
-	"github.com/apmckinlay/gsuneido/util/str"
 	"github.com/apmckinlay/gsuneido/util/strs"
 )
 
@@ -299,7 +298,7 @@ func (q queryLocal) Keys() *SuObject {
 		keys := q.Query.Keys()
 		kv := make([]Value, len(keys))
 		for i, k := range keys {
-			kv[i] = SuStr(str.Join(",", k))
+			kv[i] = SuStr(strs.Join(",", k))
 		}
 		q.keys = NewSuObject(kv)
 	}

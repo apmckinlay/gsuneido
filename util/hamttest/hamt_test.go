@@ -12,7 +12,7 @@ import (
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util/str"
+	"github.com/apmckinlay/gsuneido/util/strs"
 )
 
 func TestRandom(t *testing.T) {
@@ -88,7 +88,7 @@ func (ht FooHamt) string() string {
 		list = append(list, f.data)
 	})
 	sort.Strings(list)
-	return str.Join("{,}", list)
+	return strs.Join("{,}", list)
 }
 
 func TestDelete(*testing.T) {

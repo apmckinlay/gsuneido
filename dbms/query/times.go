@@ -7,7 +7,7 @@ import (
 	"github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/setord"
 	"github.com/apmckinlay/gsuneido/util/sset"
-	"github.com/apmckinlay/gsuneido/util/str"
+	"github.com/apmckinlay/gsuneido/util/strs"
 )
 
 type Times struct {
@@ -20,7 +20,7 @@ func (t *Times) Init() {
 	t.Query2.Init()
 	t.rewound = true
 	if !sset.Disjoint(t.source.Columns(), t.source2.Columns()) {
-		panic("times: common columns not allowed: " + str.Join(", ",
+		panic("times: common columns not allowed: " + strs.Join(", ",
 			sset.Intersect(t.source.Columns(), t.source2.Columns())))
 	}
 }

@@ -89,3 +89,14 @@ func TestReplace(t *testing.T) {
 	to := []string{"2", "5", "1"}
 	assert(Replace(list, from, to)).Is([]string{"1", "2", "three", "2", "four"})
 }
+
+func TestJoin(t *testing.T) {
+	assert := assert.T(t).This
+	assert(Join("", nil)).Is("")
+	assert(Join("", []string{})).Is("")
+	assert(Join("", []string{"one", "two", "three"})).Is("onetwothree")
+	assert(Join(",", []string{"one", "two", "three"})).Is("one,two,three")
+	assert(Join(", ", []string{"one", "two", "three"})).Is("one, two, three")
+	assert(Join("()", []string{"one", "two", "three"})).Is("(onetwothree)")
+	assert(Join("[::]", []string{"one", "two", "three"})).Is("[one::two::three]")
+}

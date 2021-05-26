@@ -48,17 +48,6 @@ func TestIndexFunc(t *testing.T) {
 	assert(IndexFunc("foo bar", f)).Is(3)
 }
 
-func TestJoin(t *testing.T) {
-	assert := assert.T(t).This
-	assert(Join("", nil)).Is("")
-	assert(Join("", []string{})).Is("")
-	assert(Join("", []string{"one", "two", "three"})).Is("onetwothree")
-	assert(Join(",", []string{"one", "two", "three"})).Is("one,two,three")
-	assert(Join(", ", []string{"one", "two", "three"})).Is("one, two, three")
-	assert(Join("()", []string{"one", "two", "three"})).Is("(onetwothree)")
-	assert(Join("[::]", []string{"one", "two", "three"})).Is("[one::two::three]")
-}
-
 func TestCmpLower(t *testing.T) {
 	test := func(s1, s2 string, result int) {
 		assert.T(t).Msg(s1, "<=>", s2).This(CmpLower(s1, s2)).Is(result)

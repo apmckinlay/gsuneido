@@ -3,9 +3,7 @@
 
 package ordset
 
-import (
-	"github.com/apmckinlay/gsuneido/util/str"
-)
+import "github.com/apmckinlay/gsuneido/util/strs"
 
 // Set is an ordered set of strings.
 // It uses a specialized in-memory btree with a max size and number of levels.
@@ -171,5 +169,5 @@ func (set *Set) String() string {
 	if set.tree != nil {
 		return "Set too big"
 	}
-	return str.Join(",", set.leaf.slots[:set.leaf.size])
+	return strs.Join(",", set.leaf.slots[:set.leaf.size])
 }

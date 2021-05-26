@@ -181,34 +181,6 @@ func (cb *CommaBuilder) String() string {
 	return cb.sb.String()
 }
 
-// Join joins strings with the specified format.
-// The format may include delimiters e.g. "(,)"
-func Join(fmt string, list []string) string {
-	prefix := ""
-	suffix := ""
-	nf := len(fmt)
-	if nf > 0 && (fmt[0] == '(' || fmt[0] == '{' || fmt[0] == '[') {
-		prefix = fmt[0:1]
-		suffix = fmt[nf-1:]
-		fmt = fmt[1 : nf-1]
-	}
-	n := len(fmt) * (nf - 1)
-	for _, s := range list {
-		n += len(s)
-	}
-	sep := ""
-	var sb strings.Builder
-	sb.Grow(n)
-	sb.WriteString(prefix)
-	for _, s := range list {
-		sb.WriteString(sep)
-		sb.WriteString(s)
-		sep = fmt
-	}
-	sb.WriteString(suffix)
-	return sb.String()
-}
-
 // Split returns nil if s is "", otherwise it returns strings.Split
 func Split(s, sep string) []string {
 	if s == "" {

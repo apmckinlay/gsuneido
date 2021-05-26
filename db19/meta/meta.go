@@ -13,7 +13,6 @@ import (
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/ints"
 	"github.com/apmckinlay/gsuneido/util/sset"
-	"github.com/apmckinlay/gsuneido/util/str"
 	"github.com/apmckinlay/gsuneido/util/strs"
 )
 
@@ -183,11 +182,11 @@ func (m *Meta) AlterRename(table string, from, to []string) *Meta {
 	}
 	missing := sset.Difference(from, ts.Columns)
 	if len(missing) > 0 {
-		panic("can't rename nonexistent column(s): " + str.Join(", ", missing))
+		panic("can't rename nonexistent column(s): " + strs.Join(", ", missing))
 	}
 	existing := sset.Intersect(to, ts.Columns)
 	if len(existing) > 0 {
-		panic("can't renamte to existing column(s): " + str.Join(", ", existing))
+		panic("can't renamte to existing column(s): " + strs.Join(", ", existing))
 	}
 	tsNew := *ts // copy
 	tsNew.Columns = strs.Replace(ts.Columns, from, to)
@@ -228,7 +227,7 @@ func (m *Meta) alterGet(table string) (*Schema, *Info) {
 func createColumns(ts *Schema, cols []string) bool {
 	existing := sset.Intersect(cols, ts.Columns)
 	if len(existing) > 0 {
-		panic("can't create existing column(s): " + str.Join(", ", existing))
+		panic("can't create existing column(s): " + strs.Join(", ", existing))
 	}
 	ts.Columns = append(strs.Cow(ts.Columns), cols...)
 	return true
@@ -241,7 +240,7 @@ func createIndexes(ts *Schema, ti *Info, idxs []schema.Index, store *stor.Stor) 
 	for i := range idxs {
 		missing := sset.Difference(idxs[i].Columns, ts.Columns)
 		if len(missing) > 0 {
-			panic("can't create index on nonexistent column(s): " + str.Join(", ", missing))
+			panic("can't create index on nonexistent column(s): " + strs.Join(", ", missing))
 		}
 	}
 	ts.Ixspecs(idxs)
@@ -279,7 +278,7 @@ loop:
 				continue loop
 			}
 		}
-		panic("can't drop nonexistent index: " + str.Join(",", idxs[j].Columns))
+		panic("can't drop nonexistent index: " + strs.Join(",", idxs[j].Columns))
 	}
 	tsIdxs := make([]schema.Index, 0, len(ts.Indexes))
 	tiIdxs := make([]*index.Overlay, 0, len(ti.Indexes))
@@ -300,7 +299,7 @@ outer:
 func dropColumns(ts *Schema, cols []string) bool {
 	missing := sset.Difference(cols, ts.Columns)
 	if len(missing) > 0 {
-		panic("can't drop nonexistent column(s): " + str.Join(", ", missing))
+		panic("can't drop nonexistent column(s): " + strs.Join(", ", missing))
 	}
 	for i := range ts.Indexes {
 		if !sset.Disjoint(ts.Indexes[i].Columns, cols) {

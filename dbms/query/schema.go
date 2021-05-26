@@ -10,6 +10,7 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/meta/schema"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/str"
+	"github.com/apmckinlay/gsuneido/util/strs"
 )
 
 // schema implements pseudo schema tables
@@ -380,7 +381,7 @@ func (is *Indexes) Get(dir Dir) Row {
 	var rb RecordBuilder
 	rb.Add(SuStr(schema.Table))
 	idx := schema.Indexes[is.ci]
-	rb.Add(SuStr(str.Join(",", idx.Columns)))
+	rb.Add(SuStr(strs.Join(",", idx.Columns)))
 	switch idx.Mode {
 	case 'k':
 		rb.Add(True.(Packable))

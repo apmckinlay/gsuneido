@@ -10,7 +10,6 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/sset"
-	"github.com/apmckinlay/gsuneido/util/str"
 	"github.com/apmckinlay/gsuneido/util/strs"
 )
 
@@ -50,7 +49,7 @@ func (p *Project) Init() {
 	srcCols := p.source.Columns()
 	if !sset.Subset(srcCols, p.columns) {
 		panic("project: nonexistent column(s): " +
-			str.Join(", ", sset.Difference(p.columns, srcCols)))
+			strs.Join(", ", sset.Difference(p.columns, srcCols)))
 	}
 	for _, col := range p.columns {
 		if strings.HasSuffix(col, "_lower!") {
@@ -99,7 +98,7 @@ func (p *Project) String() string {
 	case projHash:
 		s += "-HASH"
 	}
-	return s + " " + str.Join(", ", p.columns)
+	return s + " " + strs.Join(", ", p.columns)
 }
 
 func (p *Project) Columns() []string {
