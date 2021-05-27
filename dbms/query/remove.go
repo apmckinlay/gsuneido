@@ -22,6 +22,7 @@ func (rm *Remove) Transform() Query {
 	// convert to Project
 	cols := sset.Difference(rm.source.Columns(), rm.columns)
 	p := &Project{Query1: rm.Query1, columns: cols}
+	p.Init()
 	return p.Transform()
 }
 
