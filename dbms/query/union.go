@@ -51,7 +51,9 @@ func (u *Union) String() string {
 	case unionMerge:
 		op += "-MERGE"
 	case unionLookup:
-		op += "-LOOKUP"
+		if u.disjoint == "" {
+			op += "-LOOKUP"
+		}
 	}
 	return u.String2(op)
 }
