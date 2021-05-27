@@ -7,10 +7,6 @@ import (
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/db19"
-	"github.com/apmckinlay/gsuneido/db19/index"
-	"github.com/apmckinlay/gsuneido/db19/index/btree"
-	"github.com/apmckinlay/gsuneido/db19/meta"
-	"github.com/apmckinlay/gsuneido/db19/meta/schema"
 )
 
 func DoAdmin(db *db19.Database, cmd string) {
@@ -44,24 +40,7 @@ func (a *createAdmin) String() string {
 
 func (a *createAdmin) execute(db *db19.Database) {
 	checkForSystemTable("create", a.Table)
-	ts := &meta.Schema{Schema: a.Schema}
-	ts.Ixspecs(ts.Indexes)
-	ov := make([]*index.Overlay, len(ts.Indexes))
-	for i := range ov {
-		bt := btree.CreateBtree(db.Store, &ts.Indexes[i].Ixspec)
-		ov[i] = index.OverlayFor(bt)
-	}
-	ti := &meta.Info{Table: a.Schema.Table, Indexes: ov}
-	db.LoadedTable(ts, ti)
-}
-
-func createIndexes(db *db19.Database, idxs []schema.Index) []*index.Overlay {
-	ov := make([]*index.Overlay, len(idxs))
-	for i := range ov {
-		bt := btree.CreateBtree(db.Store, &idxs[i].Ixspec)
-		ov[i] = index.OverlayFor(bt)
-	}
-	return ov
+	db.Create(&a.Schema)
 }
 
 //-------------------------------------------------------------------

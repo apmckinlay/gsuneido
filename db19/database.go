@@ -4,6 +4,7 @@
 package db19
 
 import (
+	"github.com/apmckinlay/gsuneido/db19/index"
 	"github.com/apmckinlay/gsuneido/db19/index/btree"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/db19/meta"
@@ -106,12 +107,41 @@ func (db *Database) LoadedTable(ts *meta.Schema, ti *meta.Info) {
 	})
 }
 
+func (db *Database) Create(schema *schema.Schema) {
+	ts := &meta.Schema{Schema: *schema}
+	ts.Ixspecs(ts.Indexes)
+	ov := make([]*index.Overlay, len(ts.Indexes))
+	for i := range ov {
+		bt := btree.CreateBtree(db.Store, &ts.Indexes[i].Ixspec)
+		ov[i] = index.OverlayFor(bt)
+	}
+	ti := &meta.Info{Table: schema.Table, Indexes: ov}
+	db.LoadedTable(ts, ti)
+}
+
+func (db *Database) createIndexes(idxs []schema.Index) []*index.Overlay {
+	ov := make([]*index.Overlay, len(idxs))
+	for i := range ov {
+		bt := btree.CreateBtree(db.Store, &idxs[i].Ixspec)
+		ov[i] = index.OverlayFor(bt)
+	}
+	return ov
+}
+
 func (db *Database) Ensure(schema *schema.Schema) bool {
+	state := db.GetState()
+	if ts := state.Meta.GetRoSchema(schema.Table); ts == nil {
+		db.Create(schema)
+		return true
+	}
 	result := false
 	db.UpdateState(func(state *DbState) {
-		if m := state.Meta.Ensure(schema, db.Store); m != nil {
+		m, create := state.Meta.Ensure(schema, db.Store)
+		if m != nil {
 			state.Meta = m
 			result = true
+		} else if create {
+
 		}
 	})
 	return result

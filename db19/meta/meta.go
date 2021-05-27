@@ -113,7 +113,11 @@ func (m *Meta) Put(ts *Schema, ti *Info) *Meta {
 
 //TODO Derived
 
-func (m *Meta) Ensure(a *schema.Schema, store *stor.Stor) *Meta {
+func (m *Meta) Ensure(a *schema.Schema, store *stor.Stor) (*Meta, bool) {
+	ts, ok := m.schema.Get(a.Table)
+	if !ok || ts.isTomb() {
+		return nil, true
+	}
 	ts, ti := m.alterGet(a.Table)
 	newCols := sset.Difference(a.Columns, ts.Columns)
 	newIdxs := []schema.Index{}
@@ -131,9 +135,9 @@ outer:
 	}
 	if !createColumns(ts, newCols) ||
 		!createIndexes(ts, ti, newIdxs, store) {
-		return nil
+		return nil, false
 	}
-	return m.Put(ts, ti)
+	return m.Put(ts, ti), false
 }
 
 func (m *Meta) RenameTable(from, to string) *Meta {
