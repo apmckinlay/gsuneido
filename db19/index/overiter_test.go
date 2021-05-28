@@ -12,6 +12,7 @@ import (
 
 	"github.com/apmckinlay/gsuneido/db19/index/btree"
 	"github.com/apmckinlay/gsuneido/db19/index/ixbuf"
+	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/ranges"
@@ -123,6 +124,35 @@ func TestOverIter(t *testing.T) {
 	testPrev(4)
 	testNext(5)
 	testNext(-1)
+}
+
+func TestOverIterDeletePrevBug(*testing.T) {
+	btree.GetLeafKey = func(_ *stor.Stor, _ *ixkey.Spec, i uint64) string {
+		return strconv.Itoa(int(i))
+	}
+	bldr := btree.Builder(stor.HeapStor(8192))
+	for i := 1; i <= 9; i++ {
+		bldr.Add(strconv.Itoa(i), uint64(i))
+	}
+	bt := bldr.Finish()
+	ib := &ixbuf.T{}
+	ov := &Overlay{bt: bt, layers: []*ixbuf.T{}, mut: ib}
+	t := &testTran{getIndex: func() *Overlay { return ov }}
+
+	// it := NewOverIter("", 0)
+	// it.Prev(t)
+	// assert.That(!it.Eof())
+	// key, off := it.Cur()
+	// assert.This(key).Is("9")
+	// assert.This(off).Is(9)
+
+	ov.Delete("9", uint64(9))
+	it := NewOverIter("", 0)
+	it.Prev(t)
+	assert.That(!it.Eof())
+	key, off := it.Cur()
+	assert.This(key).Is("8")
+	assert.This(off).Is(8)
 }
 
 func TestOverIterReads(*testing.T) {
@@ -329,14 +359,24 @@ func TestOverIterDups(*testing.T) {
 	mut := &ixbuf.T{}
 	mut.Insert("", 2|ixbuf.Update)
 	ov := &Overlay{bt: bt, layers: []*ixbuf.T{u}, mut: mut}
-	it := NewOverIter("", 0)
 	tran := &testTran{getIndex: func() *Overlay { return ov }}
+	
+	it := NewOverIter("", 0)
 	it.Next(tran)
 	assert.That(!it.Eof())
 	key, off := it.Cur()
 	assert.This(key).Is("")
 	assert.This(off).Is(2)
 	it.Next(tran)
+	assert.That(it.Eof())
+
+	it = NewOverIter("", 0)
+	it.Prev(tran)
+	assert.That(!it.Eof())
+	key, off = it.Cur()
+	assert.This(key).Is("")
+	assert.This(off).Is(2)
+	it.Prev(tran)
 	assert.That(it.Eof())
 }
 

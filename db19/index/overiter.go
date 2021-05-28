@@ -284,13 +284,15 @@ outer:
 					offMax = off
 				} else if key == keyMax {
 					off = ixbuf.Combine(offMax, off)
+					mi.iters[itMax].Prev()
 					if off == 0 {
 						// add,delete so skip
 						// may not be the final minimum, but still need to skip
-						it.Next()
-						mi.iters[itMax].Next()
+						it.Prev()
 						continue outer
 					}
+				itMax = i
+				offMax = off
 				}
 			}
 		}
