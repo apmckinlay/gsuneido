@@ -79,7 +79,7 @@ func (a *updateAction) execute(ut *db19.UpdateTran) int {
 		if row[0].Off == prev {
 			continue
 		}
-		r := SuRecordFromRow(row, hdr, table, nil)
+		r := SuRecordFromRow(row, hdr, table, MakeSuTran(ut))
 		context := &ast.Context{T: th, Rec: r}
 		for i, col := range a.cols {
 			r.Put(th, SuStr(col), a.exprs[i].Eval(context))

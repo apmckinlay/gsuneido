@@ -32,7 +32,7 @@ func queryOne(t *Thread, as *ArgSpec, args []Value, dir Dir) Value {
 	if hdr == nil {
 		return False
 	}
-	return SuRecordFromRow(row, hdr, table, nil)
+	return SuRecordFromRow(row, hdr, table, nil) // no transaction
 }
 
 // extractQuery does queryWhere then Args and returns the query and the args.

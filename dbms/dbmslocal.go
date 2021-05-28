@@ -245,6 +245,25 @@ func (dbms *DbmsLocal) Close() {
 
 // ReadTranLocal --------------------------------------------------------
 
+func init() {
+	qry.MakeSuTran = func(qt qry.QueryTran) *SuTran {
+		if qt == nil {
+			return nil
+		}
+		switch t := qt.(type) {
+		case *ReadTranLocal:
+			return NewSuTran(t, false)
+		case *UpdateTranLocal:
+			return NewSuTran(t, true)
+		case *db19.ReadTran:
+			return NewSuTran(&ReadTranLocal{t}, false)
+		case *db19.UpdateTran:
+			return NewSuTran(&UpdateTranLocal{t}, true)
+		}
+		panic(fmt.Sprintf("NewSuTran unhandled type %#v", qt))
+	}
+}
+
 type ReadTranLocal struct {
 	*db19.ReadTran
 }

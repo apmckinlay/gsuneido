@@ -876,6 +876,9 @@ func (w *Where) Header() *runtime.Header {
 	return w.source.Header()
 }
 
+// MakeSuTran is injected by dbms to avoid import cycle
+var MakeSuTran func(qt QueryTran) *runtime.SuTran
+
 func (w *Where) Get(dir runtime.Dir) runtime.Row {
 	if w.conflict {
 		return nil
@@ -890,7 +893,7 @@ func (w *Where) Get(dir runtime.Dir) runtime.Row {
 		if row == nil {
 			return nil
 		}
-		context.Rec = runtime.SuRecordFromRow(row, w.hdr, "", nil)
+		context.Rec = runtime.SuRecordFromRow(row, w.hdr, "", MakeSuTran(w.t))
 		if w.expr.Eval(&context) == runtime.True {
 			return row
 		}

@@ -39,6 +39,7 @@ func TestTableLookup(t *testing.T) {
 }
 
 func TestQueryGet(t *testing.T) {
+	MakeSuTran = func(qt QueryTran) *rt.SuTran { return nil }
 	db := testDb()
 	defer db.Close()
 	reverse := func(rows []rt.Row) {
