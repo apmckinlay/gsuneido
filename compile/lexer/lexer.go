@@ -20,6 +20,7 @@ type Lexer struct {
 	si      int
 	ahead   []Item
 	keyword func(s string) (tok.Token, string)
+	nlwhite bool
 }
 
 // NewLexer returns a new Lexer
@@ -260,7 +261,7 @@ func it(token tok.Token, pos int, txt string) Item {
 func (lxr *Lexer) whitespace(start int, c byte) Item {
 	result := tok.Whitespace
 	for ; IsSpace(c); c = lxr.read() {
-		if c == '\n' || c == '\r' {
+		if !lxr.nlwhite && (c == '\n' || c == '\r') {
 			result = tok.Newline
 		}
 	}

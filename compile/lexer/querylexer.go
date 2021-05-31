@@ -9,7 +9,7 @@ import (
 )
 
 func NewQueryLexer(src string) *Lexer {
-	return &Lexer{src: src, keyword: queryKeyword}
+	return &Lexer{src: src, keyword: queryKeyword, nlwhite: true}
 }
 
 func queryKeyword(s string) (tok.Token, string) {
