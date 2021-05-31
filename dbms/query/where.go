@@ -448,7 +448,8 @@ func (w *Where) getIdxSel(index []string) *idxSel {
 func (w *Where) setApproach(index []string, app interface{}, tran QueryTran) {
 	if app != nil {
 		idx := app.(whereApproach).index
-		assert.That(index == nil || w.singleton || strs.Equal(idx, index))
+		assert.Msg("index", index, "idx", idx).
+			That(index == nil || w.singleton || strs.HasPrefix(idx, index))
 		w.tbl.setIndex(idx)
 		w.idxSel = w.getIdxSel(idx)
 		w.idxSelPos = -1
