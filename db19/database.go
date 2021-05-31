@@ -4,6 +4,8 @@
 package db19
 
 import (
+	"errors"
+
 	"github.com/apmckinlay/gsuneido/db19/index"
 	"github.com/apmckinlay/gsuneido/db19/index/btree"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
@@ -73,11 +75,11 @@ func OpenDbStor(store *stor.Stor, mode stor.Mode, check bool) (db *Database, err
 	}()
 	buf := store.Data(0)
 	if magic != string(buf[:len(magic)]) {
-		return nil, &ErrCorrupt{}
+		return nil, errors.New("bad magic")
 	}
 	size := stor.ReadSmallOffset(buf[len(magic):])
 	if size != store.Size() {
-		return nil, &ErrCorrupt{}
+		return nil, errors.New("bad size, not shut down properly?")
 	}
 
 	defer func() {
@@ -227,13 +229,17 @@ func (db *Database) Close() {
 		db.Persist(&execPersistSingle{}, true)
 	}
 	if db.mode != stor.READ {
-		// need to use Write because all but last chunk are read-only
-		buf := make([]byte, stor.SmallOffsetLen)
-		stor.WriteSmallOffset(buf, db.Store.Size())
-		db.Store.Write(uint64(len(magic)), buf)
+		db.writeSize()
 	}
 	db.Store.Close()
 	db.Store = nil
+}
+
+func (db *Database) writeSize() {
+	// need to use Write because all but last chunk are read-only
+	buf := make([]byte, stor.SmallOffsetLen)
+	stor.WriteSmallOffset(buf, db.Store.Size())
+	db.Store.Write(uint64(len(magic)), buf)
 }
 
 //-------------------------------------------------------------------

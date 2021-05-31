@@ -19,7 +19,7 @@ const dtfmt = "20060102.150405"
 
 func Repair(dbfile string, err error) error {
 	ec, _ := err.(*ErrCorrupt)
-	fmt.Println("repair", err, ec.Table())
+	fmt.Println("repair:", err, ec.Table())
 	store, err := stor.MmapStor(dbfile, stor.READ)
 	if err != nil {
 		return err
@@ -88,10 +88,12 @@ func checkState(state *DbState, table string) (ec *ErrCorrupt) {
 }
 
 func truncate(dbfile string, store *stor.Stor, off uint64) error {
-	if off+uint64(stateLen) == store.Size() {
-		return nil // nothing to do
-	}
 	store.Close()
+	size := off + uint64(stateLen)
+	if size == store.Size() {
+		fixHeader(dbfile, size)
+		return nil
+	}
 	src, err := os.Open(dbfile)
 	if err != nil {
 		return err
@@ -101,22 +103,38 @@ func truncate(dbfile string, store *stor.Stor, off uint64) error {
 		return err
 	}
 	tmpfile := dst.Name()
-	_, err = io.CopyN(dst, src, int64(off)+int64(stateLen))
+	_, err = io.CopyN(dst, src, int64(size))
 	if err != nil {
 		return err
 	}
 	buf := make([]byte, stor.SmallOffsetLen)
-	stor.WriteSmallOffset(buf, off+uint64(stateLen))
+	stor.WriteSmallOffset(buf, size)
 	_, err = dst.WriteAt(buf, int64(len(magic)))
 	if err != nil {
 		return err
 	}
 	src.Close()
 	dst.Close()
-	if err = RenameBak(tmpfile, dbfile); err != nil {
+	err = RenameBak(tmpfile, dbfile)
+	return err
+}
+
+func fixHeader(dbfile string, size uint64) error {
+	f, err := os.OpenFile(dbfile, os.O_WRONLY, 0)
+	if err != nil {
 		return err
 	}
-	return ensureFlat(dbfile)
+	_, err = f.WriteAt([]byte(magic), 0)
+	if err != nil {
+		return err
+	}
+	buf := make([]byte, stor.SmallOffsetLen)
+	stor.WriteSmallOffset(buf, size)
+	_, err = f.WriteAt(buf, int64(len(magic)))
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func RenameBak(from string, to string) error { //TODO move to util
@@ -132,15 +150,5 @@ func RenameBak(from string, to string) error { //TODO move to util
 	if err != nil {
 		return err
 	}
-	return nil
-}
-
-func ensureFlat(dbfile string) error {
-	// ensure flattened (required by quick check)
-	db, err := OpenDb(dbfile, stor.UPDATE, false)
-	if err != nil {
-		return fmt.Errorf("after rebuild: %w", err)
-	}
-	defer db.Close()
 	return nil
 }
