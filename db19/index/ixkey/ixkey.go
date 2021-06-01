@@ -61,6 +61,9 @@ func (e *Encoder) Add(fld string) {
 func (e *Encoder) String() string {
 	s := hacks.BStoS(e.buf)
 	e.buf = nil // reset
+	for strings.HasSuffix(s, "\x00\x00") {
+		s = s[:len(s)-2]
+	}
 	return s
 }
 

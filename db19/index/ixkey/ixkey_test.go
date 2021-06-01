@@ -70,7 +70,15 @@ func TestKey(t *testing.T) {
 
 func key(rec Record, flds, flds2 []int) string {
 	spec := Spec{Fields: flds, Fields2: flds2}
-	return spec.Key(rec)
+	k := spec.Key(rec)
+	if len(flds) > 1 && len(flds2) == 0 {
+		enc := Encoder{}
+		for _, f := range flds {
+			enc.Add(rec.GetRaw(f))
+		}
+		assert.This(enc.String()).Is(k)
+	}
+	return k
 }
 
 func mkrec(args ...string) Record {

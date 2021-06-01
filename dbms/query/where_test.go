@@ -127,13 +127,13 @@ func TestColSelsToIdxSels(t *testing.T) {
 	test("a is 1", "a,b,c: 1..1,<max> = 0.1")
 	test("a is 1 and b is 2", "a,b,c: 1,2..1,2,<max> = 0.01")
 	test("a is 1 and b is 2 and c is 3", "a,b,c: 1,2,3 = 0.001")
-	test("a > 4", "a,b,c: 4,''..<max> = 0.5")
-	test("a <= 4", "a,b,c: ..4,'' = 0.5")
+	test("a > 4", "a,b,c: 4..<max> = 0.6")
+	test("a <= 4", "a,b,c: ..4 = 0.4")
 	test("a is 2 and b >= 4", "a,b,c: 2,4..2,<max> = 0.06")
 	test("a in (1,2) and b in (3,4)", "a,b,c: 1,3..1,3,<max> | 1,4..1,4,<max> | "+
 		"2,3..2,3,<max> | 2,4..2,4,<max> = 0.04")
 	test("a in (1,2) and b > 4",
-		"a,b,c: 1,4,''..1,<max> | 2,4,''..2,<max> = 0.1")
+		"a,b,c: 1,4..1,<max> | 2,4..2,<max> = 0.12")
 }
 
 func TestFracPos(t *testing.T) {
