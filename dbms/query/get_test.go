@@ -574,12 +574,10 @@ func TestQueryGet(t *testing.T) {
 		'disk'		300			2
 		'mouse'		200			1
 		'pencil'	300			1`)
-	test("hist summarize date, item, max id",
-		"hist^(date,item,id) SUMMARIZE-SEQ* date, item, max_id = max id",
-		`date	item		id	cost	max_id
-        970101	'disk'		'e'	200		'e'
-        970102	'mouse'		'c'	200		'c'
-        970103	'pencil'	'e'	300		'e'`)
+	test("inven summarize max item",
+		"inven^(item) SUMMARIZE-IDX* max_item = max item",
+		`item	qty	max_item
+		'pencil'	7	'pencil'`)
 	test("hist summarize date, list id",
 		"hist^(date) SUMMARIZE-SEQ date, list_id = list id",
 		`date	list_id

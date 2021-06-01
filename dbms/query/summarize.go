@@ -66,9 +66,8 @@ func (su *Summarize) Init() {
 			}
 		}
 	}
-	// if single min or max, and by+on is a key, then we can give the whole row
-	key := append(su.by, su.ons...)
-	su.wholeRow = su.minmax1() && setset.Contains(su.source.Keys(), key)
+	// if single min or max, and on is a key, then we can give the whole row
+	su.wholeRow = su.minmax1() && setset.Contains(su.source.Keys(), su.ons)
 }
 
 func check(cols []string) {
@@ -80,7 +79,8 @@ func check(cols []string) {
 }
 
 func (su *Summarize) minmax1() bool {
-	return len(su.ops) == 1 && (su.ops[0] == "min" || su.ops[0] == "max")
+	return len(su.by) == 0 &&
+		len(su.ops) == 1 && (su.ops[0] == "min" || su.ops[0] == "max")
 }
 
 func (su *Summarize) String() string {
