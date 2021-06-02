@@ -380,12 +380,16 @@ func (m *Meta) Write(store *stor.Stor, flatten bool) (offSchema, offInfo uint64)
 		ifilter = func(ti *Info) bool { return !ti.isTomb() }
 	}
 	offInfo = m.info.Write(store, nth(m.infoOffs, npersists), ifilter)
+	if offInfo != 0 {
 	// fmt.Println("replace", m.infoOffs, npersists, offInfo)
 	m.infoOffs = replace(m.infoOffs, npersists, offInfo)
 	// fmt.Println("    =>", m.infoOffs)
 	m.infoClock++
 	if len(m.infoOffs) == 1 {
 		m.infoClock = delayMerge
+	}
+	} else if len(m.infoOffs) > 0 {
+		offInfo = m.infoOffs[len(m.infoOffs)-1]
 	}
 
 	return offSchema, offInfo
