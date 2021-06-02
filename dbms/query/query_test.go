@@ -13,7 +13,7 @@ import (
 func TestKeys(t *testing.T) {
 	test := func(query, expected string) {
 		t.Helper()
-		q := ParseQuery(query)
+		q := ParseQuery(query, nil)
 		q.SetTran(testTran{})
 		q.Init()
 		// q = q.Transform()

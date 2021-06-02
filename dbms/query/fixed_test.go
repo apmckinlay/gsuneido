@@ -15,7 +15,7 @@ func TestFixed(t *testing.T) {
 	defer func() { runtime.DefaultSingleQuotes = false }()
 	test := func(query, expected string) {
 		t.Helper()
-		q := ParseQuery(query)
+		q := ParseQuery(query, nil)
 		q.SetTran(testTran{})
 		assert.T(t).This(fixedStr(q.Fixed())).Is(expected)
 	}

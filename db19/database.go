@@ -160,10 +160,11 @@ func (db *Database) RenameTable(from, to string) bool {
 	return result
 }
 
-func (db *Database) DropTable(table string) bool {
+// Drop removes a table or view
+func (db *Database) Drop(table string) bool {
 	result := false
 	db.UpdateState(func(state *DbState) {
-		if m := state.Meta.DropTable(table); m != nil {
+		if m := state.Meta.Drop(table); m != nil {
 			state.Meta = m
 			result = true
 		}
@@ -202,6 +203,21 @@ func (db *Database) AlterDrop(schema *schema.Schema) bool {
 		}
 	})
 	return result
+}
+
+func (db *Database) AddView(name, def string) bool {
+	result := false
+	db.UpdateState(func(state *DbState) {
+		if m := state.Meta.AddView(name, def); m != nil {
+			state.Meta = m
+			result = true
+		}
+	})
+	return result
+}
+
+func (db *Database) GetView(name string) string {
+	return db.GetState().Meta.GetView(name)
 }
 
 func (db *Database) Schema(table string) string {

@@ -59,7 +59,6 @@ func (db *Database) Check() (ec error) {
 			ec = newErrCorrupt(e)
 		}
 	}()
-
 	runParallel(db.GetState(), checkTable)
 	return nil // may be overridden by defer/recover
 }

@@ -90,7 +90,7 @@ func LoadTable(table, dbfile string) int {
 		db, err = CreateDatabase(dbfile)
 	} else {
 		db, err = OpenDatabase(dbfile)
-		db.DropTable(table)
+		db.Drop(table)
 	}
 	ck(err)
 	defer db.Close()

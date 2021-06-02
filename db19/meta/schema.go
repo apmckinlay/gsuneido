@@ -14,6 +14,9 @@ import (
 	"github.com/apmckinlay/gsuneido/util/strs"
 )
 
+// Note: views are stored with the name in Schema.Table prefixed by '='
+// and the definition in Schema.Columns[0]
+
 type Schema struct {
 	schema.Schema
 	//TODO foreign key target stuff
@@ -72,6 +75,7 @@ func ReadSchema(_ *stor.Stor, r *stor.Reader) *Schema {
 	return &ts
 }
 
+// Ixspecs sets up the ixspecs for a table's indexes.
 func (ts *Schema) Ixspecs(idxs []schema.Index) {
 	key := ts.firstShortestKey()
 	for i := range idxs {
@@ -133,9 +137,21 @@ func hasSpecial(cols []string) bool {
 }
 
 func (m *Meta) newSchemaTomb(table string) *Schema {
-	return &Schema{Schema: schema.Schema{Table: table}, lastmod: m.schemaClock}
+	return &Schema{Schema: schema.Schema{Table: table}}
+}
+
+func (m *Meta) newSchemaView(name, def string) *Schema {
+	return &Schema{Schema: schema.Schema{Table: "=" + name, Columns: []string{def}}}
 }
 
 func (ts *Schema) isTomb() bool {
-	return len(ts.Indexes) == 0
+	return len(ts.Columns) == 0
+}
+
+func (ts *Schema) isView() bool {
+	return ts.Table[0] == '=' && !ts.isTomb()
+}
+
+func (ts *Schema) isTable() bool {
+	return !ts.isTomb() && !ts.isView()
 }

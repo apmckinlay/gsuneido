@@ -19,7 +19,7 @@ func TestTransform(t *testing.T) {
 		if expected == "" {
 			expected = from
 		}
-		q := ParseQuery(from)
+		q := ParseQuery(from, nil)
 		q.SetTran(testTran{})
 		q.Init()
 		q = q.Transform()

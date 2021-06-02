@@ -29,7 +29,7 @@ func TestTableLookup(t *testing.T) {
 	}
 	test := func(query, key, expected string) {
 		t.Helper()
-		q := ParseQuery(query)
+		q := ParseQuery(query, nil)
 		q, _ = Setup(q, ReadMode, testTran{})
 		row := q.(*Table).Lookup(key)
 		assert.T(t).This(fmt.Sprint(row)).Is(expected)
@@ -80,7 +80,7 @@ func TestQueryGet(t *testing.T) {
 	}
 	test := func(query, strategy, expected string) {
 		t.Helper()
-		q := ParseQuery(query)
+		q := ParseQuery(query, nil)
 		tran := sizeTran{db.NewReadTran()}
 		q, _ = Setup(q, ReadMode, tran)
 		qs := strings.ReplaceAll(q.String(), `"`, "'")

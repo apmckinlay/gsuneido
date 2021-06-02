@@ -8,18 +8,26 @@ import (
 	"github.com/apmckinlay/gsuneido/compile/ast"
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
 	"github.com/apmckinlay/gsuneido/util/str"
+	"github.com/apmckinlay/gsuneido/util/strs"
 )
 
 type queryParser struct {
 	compile.Parser
+	vg       viewGetter
+	viewNest []string
 }
 
-func NewQueryParser(src string) *queryParser {
-	return &queryParser{*compile.QueryParser(src)}
+type viewGetter func(string) string
+
+func NewQueryParser(src string, vg viewGetter) *queryParser {
+	if vg == nil {
+		vg = func(string) string { return "" }
+	}
+	return &queryParser{Parser: *compile.QueryParser(src), vg: vg}
 }
 
-func ParseQuery(src string) Query {
-	p := NewQueryParser(src)
+func ParseQuery(src string, vg viewGetter) Query {
+	p := NewQueryParser(src, vg)
 	result := p.sort()
 	if p.Token != tok.Eof {
 		p.Error("did not parse all input")
@@ -54,7 +62,19 @@ func (p *queryParser) source() Query {
 }
 
 func (p *queryParser) table() Query {
-	return NewTable(p.MatchIdent())
+	table := p.MatchIdent()
+	if !strs.Contains(p.viewNest, table) {
+		if def := p.vg(table); def != "" {
+			vg := func(name string) string {
+				if name == table {
+					return "" // prevent infinite recursion
+				}
+				return p.vg(name)
+			}
+			return ParseQuery(def, vg)
+		}
+	}
+	return NewTable(table)
 }
 
 func (p *queryParser) operation(pq *Query) bool {

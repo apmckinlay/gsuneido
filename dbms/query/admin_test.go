@@ -38,13 +38,13 @@ func TestAdminEnsure(t *testing.T) {
 	defer db.Close()
 	assert.T(t).This(func() { DoAdmin(db, "ensure tables (a) key(a)") }).
 		Panics("can't ensure system table: tables")
-	DoAdmin(db, "ensure tmp " + tmpschema)
+	DoAdmin(db, "ensure tmp "+tmpschema)
 	assert.T(t).This(db.Schema("tmp")).Is("tmp " + tmpschema)
 	DoAdmin(db, "ensure tmp (a, c, e, f) index(b,c) index(e,f)")
 	assert.T(t).This(db.Schema("tmp")).
 		Is("tmp (a,b,c,d,e,f) key(a) index(b,c) index(e,f)")
 
-	DoAdmin(db, "ensure tmp2 " + tmpschema) // create
+	DoAdmin(db, "ensure tmp2 "+tmpschema) // create
 	assert.T(t).This(db.Schema("tmp2")).Is("tmp2 " + tmpschema)
 }
 
@@ -118,4 +118,20 @@ func TestAdminDrop(t *testing.T) {
 		Panics("can't drop nonexistent table: nonex")
 	DoAdmin(db, "drop tmp")
 	assert.T(t).This(db.Schema("tmp")).Is("")
+}
+
+func TestView(t *testing.T) {
+	db := createTestDb()
+	defer db.Close()
+	assert.T(t).This(db.GetView("nonexistent")).Is("")
+	assert.T(t).This(func() { DoAdmin(db, "view columns = def") }).
+		Panics("can't create view: system table: columns")
+	DoAdmin(db, "view foo = bar baz")
+	assert.T(t).This(db.GetView("foo")).Is("bar baz")
+	assert.T(t).This(func() { DoAdmin(db, "view foo = dup def") }).
+		Panics("view: 'foo' already exists")
+	DoAdmin(db, "drop foo")
+	assert.T(t).This(db.GetView("foo")).Is("")
+	DoAdmin(db, "view tmp = over ride")
+	assert.T(t).This(db.GetView("tmp")).Is("over ride")
 }

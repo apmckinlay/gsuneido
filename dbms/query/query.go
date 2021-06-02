@@ -137,6 +137,8 @@ type QueryTran interface {
 	GetInfo(table string) *meta.Info
 	GetAllInfo() []*meta.Info
 	GetAllSchema() []*meta.Schema
+	GetAllViews() []string
+	GetView(string) string
 	RangeFrac(table string, iIndex int, org, end string) float64
 	Lookup(table string, iIndex int, key string) *runtime.DbRec
 	Output(table string, rec runtime.Record)

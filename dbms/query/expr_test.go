@@ -20,7 +20,7 @@ func TestExprEval(t *testing.T) {
 	raw := false
 	test := func(src string, expected string) {
 		t.Helper()
-		p := NewQueryParser(src)
+		p := NewQueryParser(src, nil)
 		expr := p.Expression()
 		assert.T(t).This(p.Token).Is(tok.Eof)
 		// fmt.Println(expr)
@@ -70,7 +70,7 @@ func mkrec() (*SuRecord, []string) {
 
 func BenchmarkEval(b *testing.B) {
 	rec, _ := mkrec()
-	p := NewQueryParser("x is 123.456")
+	p := NewQueryParser("x is 123.456", nil)
 	expr := p.Expression()
 	ctx := &ast.Context{Rec: rec}
 	for i := 0; i < b.N; i++ {
@@ -80,7 +80,7 @@ func BenchmarkEval(b *testing.B) {
 
 func BenchmarkEval_raw(b *testing.B) {
 	rec, flds := mkrec()
-	p := NewQueryParser("x is 123.456")
+	p := NewQueryParser("x is 123.456", nil)
 	expr := p.Expression()
 	assert.That(expr.CanEvalRaw(flds))
 	ctx := &ast.Context{Rec: rec}
@@ -92,7 +92,7 @@ func BenchmarkEval_raw(b *testing.B) {
 func TestExprColumns(t *testing.T) {
 	test := func(src string, expected string) {
 		t.Helper()
-		p := NewQueryParser(src)
+		p := NewQueryParser(src, nil)
 		expr := p.Expression()
 		assert.T(t).This(p.Token).Is(tok.Eof)
 		result := strings.Join(expr.Columns(), " ")
@@ -117,7 +117,7 @@ func TestExprRename(t *testing.T) {
 	to := []string{"B", "D"}
 	test := func(src string, expected string) {
 		t.Helper()
-		p := NewQueryParser(src)
+		p := NewQueryParser(src, nil)
 		expr := p.Expression()
 		assert.T(t).This(p.Token).Is(tok.Eof)
 		result := renameExpr(expr, from, to)

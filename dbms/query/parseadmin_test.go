@@ -41,6 +41,8 @@ func TestParseAdmin(t *testing.T) {
 	test("alter mytable create (one,two,three) index(two)")
 	test("alter mytable rename one to two, three to four")
 
+	test("view tc = tables join columns")
+
 	xtest := func(cmd, err string) {
 		fn := func() { ParseAdmin(cmd) }
 		assert.T(t).This(fn).Panics(err)

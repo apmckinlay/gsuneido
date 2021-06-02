@@ -97,6 +97,14 @@ func (testTran) GetAllSchema() []*meta.Schema {
 	return schemas
 }
 
+func (testTran) GetAllViews() []string {
+	return nil
+}
+
+func (t testTran) GetView(string) string {
+	return ""
+}
+
 func (t testTran) RangeFrac(table string, iIndex int, org, end string) float64 {
 	schema := t.GetSchema(table)
 	decode := len(schema.Indexes[iIndex].Columns) > 1

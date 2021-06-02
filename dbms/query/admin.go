@@ -140,6 +140,22 @@ func (a *alterDropAdmin) execute(db *db19.Database) {
 
 //-------------------------------------------------------------------
 
+type viewAdmin struct {
+	name string
+	def  string
+}
+
+func (a *viewAdmin) String() string {
+	return "view " + a.name + " = " + a.def
+}
+
+func (a *viewAdmin) execute(db *db19.Database) {
+	checkForSystemTable("create view:", a.name)
+	db.AddView(a.name, a.def)
+}
+
+//-------------------------------------------------------------------
+
 type dropAdmin struct {
 	table string
 }
@@ -150,7 +166,7 @@ func (a *dropAdmin) String() string {
 
 func (a *dropAdmin) execute(db *db19.Database) {
 	checkForSystemTable("drop", a.table)
-	if !db.DropTable(a.table) {
+	if !db.Drop(a.table) {
 		panic("can't drop nonexistent table: " + a.table)
 	}
 }

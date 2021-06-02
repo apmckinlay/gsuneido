@@ -10,7 +10,7 @@ import (
 )
 
 func DoAction(ut *db19.UpdateTran, action string) int {
-	a := ParseAction(action)
+	a := ParseAction(action, ut.GetView)
 	return a.execute(ut)
 }
 

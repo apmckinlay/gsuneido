@@ -60,6 +60,17 @@ func (t *tran) GetAllSchema() []*meta.Schema {
 	return schemas
 }
 
+func (t *tran) GetAllViews() []string {
+	defs := make([]string, 0, 16)
+	t.meta.ForEachView(func(name, def string) {
+		defs = append(defs, name, def) })
+	return defs
+}
+
+func (t *tran) GetView(name string) string {
+	return t.db.GetView(name)
+}
+
 //-------------------------------------------------------------------
 
 type ReadTran struct {

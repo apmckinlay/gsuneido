@@ -13,7 +13,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/strs"
 )
 
-// schema implements pseudo schema tables
+// schema implements virtual tables for tables, columns, indexes, and views
 
 type schemaTable struct {
 	cache
@@ -319,7 +319,7 @@ func (*Indexes) Keys() [][]string {
 
 var indexesFields = [][]string{{"table", "columns", "key"}}
 
-func (is *Indexes) Columns() []string {
+func (*Indexes) Columns() []string {
 	return indexesFields[0]
 }
 
@@ -403,4 +403,93 @@ func (is *Indexes) ensure() {
 	is.schema = is.tran.GetAllSchema()
 	sort.Slice(is.schema,
 		func(i, j int) bool { return is.schema[i].Table < is.schema[j].Table })
+}
+
+//-------------------------------------------------------------------
+
+type Views struct {
+	schemaTable
+	state
+	views []string
+	i     int
+}
+
+func (*Views) String() string {
+	return "views"
+}
+
+func (vs *Views) Transform() Query {
+	return vs
+}
+
+func (*Views) Keys() [][]string {
+	return [][]string{{"view_name"}}
+}
+
+var viewsFields = [][]string{{"view_name", "view_definition"}}
+
+func (*Views) Columns() []string {
+	return viewsFields[0]
+}
+
+func (*Views) Header() *Header {
+	return NewHeader(viewsFields, viewsFields[0])
+}
+
+func (vs *Views) Nrows() int {
+	vs.ensure()
+	return len(vs.views) / 2
+}
+
+func (vs *Views) Rewind() {
+	vs.i = -2
+	vs.state = rewound
+}
+
+func (vs *Views) Get(dir Dir) Row {
+	vs.ensure()
+	if vs.state == eof {
+		return nil
+	}
+	if dir == Next {
+		if vs.state == rewound {
+			vs.i = -2
+		}
+		vs.i += 2
+	} else { // Prev
+		if vs.state == rewound {
+			vs.i = len(vs.views)
+		}
+		vs.i -= 2
+	}
+	if vs.i < 0 || len(vs.views) <= vs.i {
+		return nil
+	}
+	vs.state = within
+	var rb RecordBuilder
+	rb.Add(SuStr(vs.views[vs.i]))   // name
+	rb.Add(SuStr(vs.views[vs.i+1])) // definition
+	rec := rb.Build()
+	return Row{DbRec{Record: rec}}
+}
+
+func (vs *Views) ensure() {
+	if vs.views != nil {
+		return
+	}
+	vs.views = vs.tran.GetAllViews()
+	sort.Sort(vs)
+}
+
+func (vs *Views) Len() int {
+	return len(vs.views) / 2
+}
+func (vs *Views) Less(i, j int) bool {
+	return vs.views[i*2] < vs.views[j*2]
+}
+func (vs *Views) Swap(i, j int) {
+	i *= 2
+	j *= 2
+	vs.views[i], vs.views[j] = vs.views[j], vs.views[i]
+	vs.views[i+1], vs.views[j+1] = vs.views[j+1], vs.views[i+1]
 }

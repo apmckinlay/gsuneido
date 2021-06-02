@@ -59,7 +59,9 @@ func (p *adminParser) admin() Admin {
 		return &renameAdmin{from: from, to: to}
 	case p.MatchIf(tok.Alter):
 		return p.alter()
-	//TODO: View, Sview
+	case p.MatchIf(tok.View):
+		return p.view()
+	//TODO: Sview
 	case p.MatchIf(tok.Drop):
 		table := p.MatchIdent()
 		return &dropAdmin{table}
@@ -218,4 +220,17 @@ func (p *adminParser) foreignKey() (table string, columns []string, mode int) {
 		}
 	}
 	return table, columns, mode
+}
+
+func (p *adminParser) view() Admin {
+	name := p.viewName()
+	def := strings.TrimSpace(p.Lxr.Remainder())
+	return &viewAdmin{name: name, def: def}
+}
+
+func (p *adminParser) viewName() string {
+	name := p.MatchIdent()
+	p.MustMatch(tok.Eq)
+	p.Token = tok.Eof
+	return name
 }

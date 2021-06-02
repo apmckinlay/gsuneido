@@ -9,6 +9,7 @@ import (
 
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
 	. "github.com/apmckinlay/gsuneido/util/ascii"
+	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
@@ -93,6 +94,14 @@ func (lxr *Lexer) AheadSkip(i int) Item {
 			i--
 		}
 	}
+}
+
+// Remainder is used by ParseAdmin to get view definitions
+func (lxr *Lexer) Remainder() string {
+	assert.That(len(lxr.ahead) == 0)
+	si := lxr.si
+	lxr.si = len(lxr.src)
+	return lxr.src[si:]
 }
 
 func (lxr *Lexer) next() Item {

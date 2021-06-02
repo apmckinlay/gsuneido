@@ -12,7 +12,7 @@ import (
 func TestExtendInit(t *testing.T) {
 	test := func(query string) {
 		t.Helper()
-		q := ParseQuery(query)
+		q := ParseQuery(query, nil)
 		q.SetTran(testTran{})
 		q.Init()
 	}
@@ -21,7 +21,7 @@ func TestExtendInit(t *testing.T) {
 
 	xtest := func(query, expected string) {
 		t.Helper()
-		q := ParseQuery(query)
+		q := ParseQuery(query, nil)
 		q.SetTran(testTran{})
 		assert.T(t).Msg(query).
 			This(func() { q.Init() }).Panics(expected)

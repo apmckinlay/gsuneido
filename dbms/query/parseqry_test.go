@@ -13,7 +13,7 @@ import (
 func TestParseQuery(t *testing.T) {
 	test := func(s string) {
 		t.Helper()
-		q := ParseQuery(s)
+		q := ParseQuery(s, nil)
 		assert.T(t).This(str.ToLower(q.String())).Is(s)
 	}
 	test("table")
@@ -45,7 +45,7 @@ func TestParseQuery(t *testing.T) {
 	test("(one join two) project a, b, c rename b to bb sort a, c")
 
 	xtest := func(s, err string) {
-		fn := func() { ParseQuery(s) }
+		fn := func() { ParseQuery(s, nil) }
 		assert.T(t).This(fn).Panics(err)
 	}
 	xtest("table project", "expecting identifier")
@@ -59,7 +59,7 @@ func TestParseQuery(t *testing.T) {
 func TestParseQuery2(t *testing.T) {
 	test := func(s string) {
 		t.Helper()
-		q := ParseQuery(s)
+		q := ParseQuery(s, nil)
 		assert.T(t).This(str.ToLower(q.String())).Is(s)
 	}
 
@@ -71,4 +71,15 @@ func TestParseQuery2(t *testing.T) {
 	test("table where n in (1, 2, 3)")
 
 	test("table where fn(a)")
+}
+
+func TestParseQueryView(t *testing.T) {
+	vg := func(name string) string {
+		if name == "foo" {
+			return "bar join foo"
+		}
+		return ""
+	}
+	q := ParseQuery("table union foo", vg)
+	assert.T(t).This(q.String()).Is("table UNION (bar JOIN foo)")
 }

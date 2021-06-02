@@ -13,7 +13,7 @@ func TestOptimize(t *testing.T) {
 	var mode Mode
 	test := func(query, expected string) {
 		t.Helper()
-		q := ParseQuery(query)
+		q := ParseQuery(query, nil)
 		q, _ = Setup(q, mode, testTran{})
 		assert.T(t).Msg(query).This(q.String()).Like(expected)
 	}

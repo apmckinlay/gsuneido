@@ -25,6 +25,8 @@ func NewTable(name string) Query {
 		return &Columns{}
 	case "indexes":
 		return &Indexes{}
+	case "views":
+		return &Views{}
 	default:
 		return &Table{name: name}
 	}

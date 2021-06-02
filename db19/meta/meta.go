@@ -71,16 +71,32 @@ func (m *Meta) GetRwInfo(table string) *Info {
 
 func (m *Meta) GetRoSchema(table string) *Schema {
 	ts, ok := m.schema.Get(table)
-	if !ok || ts.isTomb() {
+	if !ok || !ts.isTable() {
 		return nil
 	}
 	return ts
 }
 
+func (m *Meta) GetView(name string) string {
+	ts, ok := m.schema.Get("=" + name)
+	if !ok || !ts.isView() {
+		return ""
+	}
+	return ts.Columns[0]
+}
+
 func (m *Meta) ForEachSchema(fn func(*Schema)) {
 	m.schema.ForEach(func(schema *Schema) {
-		if !schema.isTomb() {
+		if schema.isTable() {
 			fn(schema)
+		}
+	})
+}
+
+func (m *Meta) ForEachView(fn func(name, def string)) {
+	m.schema.ForEach(func(schema *Schema) {
+		if schema.isView() {
+			fn(schema.Table[1:], schema.Columns[0])
 		}
 	})
 }
@@ -171,12 +187,16 @@ func (m *Meta) RenameTable(from, to string) *Meta {
 	return &cp
 }
 
-func (m *Meta) DropTable(table string) *Meta {
-	if ts, ok := m.schema.Get(table); !ok || ts.isTomb() {
+// Drop removes a table or view
+func (m *Meta) Drop(name string) *Meta {
+	//TODO delete without tombstone if not persisted e.g. tests
+	if m.GetView(name) != "" {
+		return m.Put(m.newSchemaTomb("="+name), nil)
+	}
+	if ts, ok := m.schema.Get(name); !ok || ts.isTomb() {
 		return nil // nonexistent
 	}
-	//TODO delete without tombstone if not persisted
-	return m.Put(m.newSchemaTomb(table), m.newInfoTomb(table))
+	return m.Put(m.newSchemaTomb(name), m.newInfoTomb(name))
 }
 
 func (m *Meta) AlterRename(table string, from, to []string) *Meta {
@@ -316,6 +336,13 @@ func dropColumns(ts *Schema, cols []string) bool {
 	return true
 }
 
+func (m *Meta) AddView(name, def string) *Meta {
+	if m.GetView(name) != "" {
+		panic("view: '" + name + "' already exists")
+	}
+	return m.Put(m.newSchemaView(name, def), nil)
+}
+
 //-------------------------------------------------------------------
 
 // LayeredOnto layers the mutable ixbuf's from a transaction
@@ -381,13 +408,13 @@ func (m *Meta) Write(store *stor.Stor, flatten bool) (offSchema, offInfo uint64)
 	}
 	offInfo = m.info.Write(store, nth(m.infoOffs, npersists), ifilter)
 	if offInfo != 0 {
-	// fmt.Println("replace", m.infoOffs, npersists, offInfo)
-	m.infoOffs = replace(m.infoOffs, npersists, offInfo)
-	// fmt.Println("    =>", m.infoOffs)
-	m.infoClock++
-	if len(m.infoOffs) == 1 {
-		m.infoClock = delayMerge
-	}
+		// fmt.Println("replace", m.infoOffs, npersists, offInfo)
+		m.infoOffs = replace(m.infoOffs, npersists, offInfo)
+		// fmt.Println("    =>", m.infoOffs)
+		m.infoClock++
+		if len(m.infoOffs) == 1 {
+			m.infoClock = delayMerge
+		}
 	} else if len(m.infoOffs) > 0 {
 		offInfo = m.infoOffs[len(m.infoOffs)-1]
 	}
