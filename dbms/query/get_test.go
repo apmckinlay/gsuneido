@@ -366,6 +366,10 @@ func TestQueryGet(t *testing.T) {
 		`date	item		id	cost
         970101	'disk'		'a'	100
         970103	'pencil'	'e'	300`)
+	test("(hist intersect hist2) where cost = 100",
+		"hist^(date) WHERE cost is 100 INTERSECT (hist2^(date) WHERE cost is 100)",
+		`date	item		id	cost
+        970101	'disk'		'a'	100`)
 
 	// union
 	test("hist2 union hist",
@@ -407,6 +411,26 @@ func TestQueryGet(t *testing.T) {
 		'mouse'		'c'	200	970101
 		'eraser'	'c'	150	970201
 		'mouse'		'e'	200	960204`)
+	test("(hist2 rename cost to amt) union (trans rename cost to amt)",
+		"hist2^(date) RENAME cost to amt UNION-LOOKUP "+
+			"(trans^(date,item,id) RENAME cost to amt)",
+		`date	item	 id		amt
+        970102	'disk'	 'e'	200
+        970103	'pencil' 'e'	300
+        960204	'mouse'	 'e'	200
+        970101	'disk'	 'a'	100
+        970101	'mouse'	 'c'	200
+        970201	'eraser' 'c'	150`)
+	test("(hist2 extend x = 1) union (trans extend x = 1)",
+		"hist2^(date) EXTEND x = 1 UNION-LOOKUP "+
+			"(trans^(date,item,id) EXTEND x = 1)",
+		`date	item	 id		cost  x
+        970102	'disk'	 'e'	200   1
+        970103	'pencil' 'e'	300   1
+        960204	'mouse'	 'e'	200   1
+        970101	'disk'	 'a'	100   1
+        970101	'mouse'	 'c'	200   1
+        970201	'eraser' 'c'	150   1`)
 
 	// join
 	test("customer join alias",

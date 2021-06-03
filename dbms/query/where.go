@@ -44,8 +44,9 @@ type Where struct {
 	curPtrng pointRange
 	hdr      *runtime.Header
 	// sel is set by Select
-	sel    string
-	selSet bool
+	sel     string
+	selSet  bool
+	context *ast.Context
 }
 
 type whereApproach struct {
@@ -884,18 +885,9 @@ func (w *Where) Get(dir runtime.Dir) runtime.Row {
 	if w.conflict {
 		return nil
 	}
-	if w.hdr == nil {
-		w.hdr = w.source.Header()
-	}
-	var th runtime.Thread // ???
-	context := ast.Context{T: &th}
-	for { // filter
+	for {
 		row := w.get(dir)
-		if row == nil {
-			return nil
-		}
-		context.Rec = runtime.SuRecordFromRow(row, w.hdr, "", MakeSuTran(w.t))
-		if w.expr.Eval(&context) == runtime.True {
+		if w.filter(row) {
 			return row
 		}
 	}
@@ -909,6 +901,20 @@ func (w *Where) get(dir runtime.Dir) runtime.Row {
 		return w.getRange(dir)
 	}
 	return w.getPoint(dir)
+}
+
+func (w *Where) filter(row runtime.Row) bool {
+	if row == nil {
+		return true
+	}
+	if w.context == nil {
+		w.context = &ast.Context{T: &runtime.Thread{}}
+	}
+	if w.hdr == nil {
+		w.hdr = w.source.Header()
+	}
+	w.context.Rec = runtime.SuRecordFromRow(row, w.hdr, "", MakeSuTran(w.t))
+	return w.expr.Eval(w.context) == runtime.True
 }
 
 func (w *Where) getRange(dir runtime.Dir) runtime.Row {
@@ -975,4 +981,12 @@ func (w *Where) Select(cols, vals []string) {
 	w.sel = selEncode(w.idxSel.encoded, w.idxSel.index, cols, vals)
 	w.Rewind()
 	w.selSet = true
+}
+
+func (w *Where) Lookup(key string) runtime.Row {
+	row := w.source.Lookup(key)
+	if ! w.filter(row) {
+		row = nil
+	}
+	return row
 }

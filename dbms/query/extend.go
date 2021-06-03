@@ -163,6 +163,10 @@ func (e *Extend) Header() *Header {
 
 func (e *Extend) Get(dir Dir) Row {
 	row := e.source.Get(dir)
+	return e.extendRow(row)
+}
+
+func (e *Extend) extendRow(row Row) Row {
 	if row == nil {
 		return nil // eof
 	}
@@ -193,4 +197,9 @@ func (e *Extend) Select(cols, vals []string) {
 		}
 	}
 	e.source.Select(cols, vals)
+}
+
+func (e *Extend) Lookup(key string) Row {
+	row := e.source.Lookup(key)
+	return e.extendRow(row)
 }
