@@ -242,13 +242,8 @@ static CFactory factory;
 
 extern "C"
 int sunapp_register_classes() {
-	HRESULT hr;
-	hr = CoInitializeEx(NULL, COINIT_APARTMENTTHREADED);
-	if (FAILED(hr))
-		return false;
-
 	IInternetSession* iis;
-	hr = CoInternetGetSession(0, &iis, 0);
+	HRESULT hr = CoInternetGetSession(0, &iis, 0);
 	if (FAILED(hr))
 		return false;
 	else {

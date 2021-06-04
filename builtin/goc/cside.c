@@ -116,6 +116,7 @@ void UnEmbedBrowserObject(uintptr browserObject, uintptr ptr);
 #define WIN32_LEAN_AND_MEAN
 #include <windows.h>
 #include <synchapi.h>
+#include <ole2.h>
 
 static DWORD main_threadid = 0;
 
@@ -352,6 +353,7 @@ static int setupHelper() {
 int sunapp_register_classes();
 
 static DWORD WINAPI thread(LPVOID lpParameter) {
+	OleInitialize(NULL);
 	sunapp_register_classes();
 	RegisterHotKey(0, CTRL_BREAK_ID, MOD_CONTROL, VK_CANCEL);
 	main_threadid = GetCurrentThreadId();
