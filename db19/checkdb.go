@@ -111,10 +111,14 @@ type ErrCorrupt struct {
 }
 
 func (ec *ErrCorrupt) Error() string {
-	if ec.err == nil {
-		return "database corrupt"
+	s := "database corrupt"
+	if ec.table != "" {
+		s += ": " + ec.table
 	}
-	return fmt.Sprint("database corrupt: ", ec.err)
+	if ec.err != nil {
+		s += ": " + fmt.Sprint(ec.err)
+	}
+	return s
 }
 
 func (ec *ErrCorrupt) Table() string {

@@ -275,7 +275,7 @@ func Combine(off1, off2 uint64) uint64 {
 	case delete_add:
 		return off2 | Update
 	default:
-		log.Printf("ixbuf invalid Combine %x\n", ops)
+		log.Printf("ixbuf invalid Combine %b\n", ops)
 		panic("ixbuf invalid Combine")
 	}
 }

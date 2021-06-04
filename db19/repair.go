@@ -43,7 +43,7 @@ func Repair(dbfile string, err error) error {
 			fmt.Println("truncating", store.Size()-(off+uint64(stateLen)))
 			return truncate(dbfile, store, off)
 		}
-		fmt.Println("bad state", off, t.Format(dtfmt))
+		fmt.Println("bad state", off, t.Format(dtfmt), ec)
 	}
 }
 
