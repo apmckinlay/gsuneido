@@ -188,14 +188,6 @@ func (e *Extend) extendRow(row Row) Row {
 }
 
 func (e *Extend) Select(cols, vals []string) {
-	cols = strs.Cow(cols)
-	vals = strs.Cow(vals)
-	for _, fix := range e.Fixed() {
-		if len(fix.values) == 1 {
-			cols = append(cols, fix.col)
-			vals = append(vals, fix.values[0])
-		}
-	}
 	e.source.Select(cols, vals)
 }
 

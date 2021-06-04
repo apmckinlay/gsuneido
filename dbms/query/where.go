@@ -974,6 +974,14 @@ func (w *Where) Select(cols, vals []string) {
 	if w.conflict {
 		return
 	}
+	cols = strs.Cow(cols)
+	vals = strs.Cow(vals)
+	for _, fix := range w.Fixed() {
+		if len(fix.values) == 1 {
+			cols = append(cols, fix.col)
+			vals = append(vals, fix.values[0])
+		}
+	}
 	if w.idxSel == nil {
 		w.source.Select(cols, vals)
 		return
@@ -985,7 +993,7 @@ func (w *Where) Select(cols, vals []string) {
 
 func (w *Where) Lookup(key string) runtime.Row {
 	row := w.source.Lookup(key)
-	if ! w.filter(row) {
+	if !w.filter(row) {
 		row = nil
 	}
 	return row

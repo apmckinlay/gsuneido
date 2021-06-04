@@ -88,6 +88,8 @@ func TestQueryGet(t *testing.T) {
 		assert.T(t).Msg("forward").This(get(q, rt.Next)).Like(expected)
 		assert.T(t).Msg("reverse").This(get(q, rt.Prev)).Like(expected)
 	}
+	// t.SkipNow()
+
 	test("indexes",
 		"indexes",
 		`table		columns			key
@@ -487,6 +489,14 @@ func TestQueryGet(t *testing.T) {
         'c'	'calac'	'calgary'	'trical'
         'e'	'emerald'	'vancouver'	''
         'i'	'intercon'	'saskatoon'	''`)
+	test("customer leftjoin (trans where date = 970101 and item = 'mouse')",
+		"customer^(id) LEFTJOIN 1:n by(id) "+
+			"(trans^(date,item,id) WHERE date is 970101 and item is 'mouse')",
+		`id	name	city	item	cost	date
+        'a'	'axon'	'saskatoon'	''	''	''
+        'c'	'calac'	'calgary'	'mouse'	200	970101
+        'e'	'emerald'	'vancouver'	''	''	''
+        'i'	'intercon'	'saskatoon'	''	''	''`)
 
 	// where
 	test("customer where id > 'd'", // range
