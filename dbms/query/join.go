@@ -18,7 +18,6 @@ type Join struct {
 	by []string
 	joinType
 	nr     int
-	encode bool
 	hdr1   *Header
 	row1   Row
 	row2   Row
@@ -182,7 +181,6 @@ func (jn *Join) setApproach(index []string, approach interface{}, tran QueryTran
 	}
 	jn.source = SetApproach(jn.source, index, tran)
 	jn.source2 = SetApproach(jn.source2, ap.index2, tran)
-	jn.encode = len(jn.by) > 1 || !setset.Contains(jn.source2.Keys(), jn.by)
 }
 
 func (jn *Join) Nrows() int {
@@ -292,10 +290,10 @@ func (lj *LeftJoin) optimize(mode Mode, index []string) (Cost, interface{}) {
 	return best.cost, &joinApproach{index2: best.index}
 }
 
-func (lj *LeftJoin) setApproach(index []string, _ interface{}, tran QueryTran) {
+func (lj *LeftJoin) setApproach(index []string, approach interface{}, tran QueryTran) {
+	ap := approach.(*joinApproach)
 	lj.source = SetApproach(lj.source, index, tran)
-	lj.source2 = SetApproach(lj.source2, lj.by, tran)
-	lj.encode = len(lj.by) > 1 || !setset.Contains(lj.source2.Keys(), lj.by)
+	lj.source2 = SetApproach(lj.source2, ap.index2, tran)
 	lj.empty2 = make(Row, len(lj.source2.Header().Fields))
 }
 
