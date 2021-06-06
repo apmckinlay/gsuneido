@@ -88,7 +88,7 @@ type Query interface {
 	Get(dir runtime.Dir) runtime.Row
 
 	// Select limits the query to the specified range (of packed values).
-	Select(cols, org []string)
+	Select(cols, vals []string)
 
 	Header() *runtime.Header
 	Output(rec runtime.Record)

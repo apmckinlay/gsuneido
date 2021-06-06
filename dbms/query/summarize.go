@@ -480,8 +480,8 @@ func (su *Summarize) seqRow(curRow Row, sums []sumOp) Row {
 	return row
 }
 
-func (su *Summarize) Select(cols, org []string) {
-	su.source.Select(cols, org)
+func (su *Summarize) Select(cols, vals []string) {
+	su.source.Select(cols, vals)
 	su.rewound = true
 }
 
