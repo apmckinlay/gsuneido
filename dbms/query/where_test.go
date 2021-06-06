@@ -37,8 +37,6 @@ func TestExtractCompares(t *testing.T) {
 	test("a is 1 or a is 2", "[a In (1, 2)]")
 	test("a is 1 and b is 2", "[a Is 1 b Is 2]")
 	test("a in (1, 2, 3)", "[a In (1, 2, 3)]")
-	w := test("1 is 2", "[]")
-	assert.T(t).That(w.conflict)
 }
 
 func TestComparesToColSelects(t *testing.T) {

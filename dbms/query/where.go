@@ -69,6 +69,9 @@ func (w *Where) SetTran(t QueryTran) {
 
 func (w *Where) String() string {
 	s := parenQ2(w.source) + " WHERE"
+	if w.conflict {
+		return s + " nothing"
+	}
 	if w.singleton {
 		s += "*1"
 	}
@@ -159,6 +162,7 @@ func (w *Where) Transform() Query {
 			} else {
 				q.source = &Where{Query1: Query1{source: q.source},
 					expr: newExpr.(*ast.Nary)}
+				q.source.Init()
 			}
 			return q.Transform()
 		case *Extend:
@@ -174,6 +178,7 @@ func (w *Where) Transform() Query {
 			if src1 != nil {
 				q.source = &Where{Query1: Query1{source: q.source},
 					expr: &ast.Nary{Tok: tok.And, Exprs: src1}}
+				q.source.Init()
 			}
 			if rest != nil {
 				w.expr = &ast.Nary{Tok: tok.And, Exprs: rest}
@@ -194,6 +199,7 @@ func (w *Where) Transform() Query {
 			if src1 != nil {
 				q.source = &Where{Query1: Query1{source: q.source},
 					expr: &ast.Nary{Tok: tok.And, Exprs: src1}}
+				q.source.Init()
 			}
 			if rest != nil {
 				w.expr = &ast.Nary{Tok: tok.And, Exprs: rest}
@@ -203,20 +209,26 @@ func (w *Where) Transform() Query {
 		case *Intersect:
 			// distribute where over intersect
 			q.source = &Where{Query1: Query1{source: q.source}, expr: w.expr}
+			q.source.Init()
 			q.source2 = &Where{Query1: Query1{source: q.source2}, expr: w.expr}
+			q.source2.Init()
 			moved = true
 		case *Minus:
 			// distribute where over minus
 			q.source = &Where{Query1: Query1{source: q.source}, expr: w.expr}
+			q.source.Init()
 			q.source2 = &Where{Query1: Query1{source: q.source2},
 				expr: w.project(q.source2)}
+			q.source2.Init()
 			moved = true
 		case *Union:
 			// distribute where over union
 			q.source = &Where{Query1: Query1{source: q.source},
 				expr: w.project(q.source)}
+			q.source.Init()
 			q.source2 = &Where{Query1: Query1{source: q.source2},
 				expr: w.project(q.source2)}
+			q.source.Init()
 			moved = true
 		case *Times:
 			// split where over product
@@ -238,6 +250,7 @@ func (w *Where) Transform() Query {
 			if src1 != nil {
 				q.source = &Where{Query1: Query1{source: q.source},
 					expr: &ast.Nary{Tok: tok.And, Exprs: src1}}
+				q.source.Init()
 			}
 			if common != nil {
 				w.expr = &ast.Nary{Tok: tok.And, Exprs: common}
@@ -320,6 +333,10 @@ func (w *Where) split(q2 *Query2) bool {
 // optimize ---------------------------------------------------------
 
 func (w *Where) optimize(mode Mode, index []string) (Cost, interface{}) {
+	w.conflictCheck()
+	if w.conflict {
+		return 0, nil
+	}
 	// we always have the option of just filtering (no specific index use)
 	filterCost := Optimize(w.source, mode, index)
 	if w.tbl == nil || w.tbl.singleton {
@@ -328,14 +345,20 @@ func (w *Where) optimize(mode Mode, index []string) (Cost, interface{}) {
 	if !w.optInited {
 		w.optInit()
 	}
-	if w.conflict {
-		return 0, nil
-	}
 	cost, index := w.bestIndex(index)
 	if cost >= filterCost {
 		return filterCost, nil
 	}
 	return cost, whereApproach{index: index}
+}
+
+func (w *Where) conflictCheck() {
+	for _, expr := range w.expr.Exprs {
+		if c, ok := expr.(*ast.Constant); ok && c.Val == runtime.False {
+			w.conflict = true
+			return
+		}
+	}
 }
 
 func (w *Where) optInit() {
@@ -367,10 +390,6 @@ func (w *Where) extractCompares() []cmpExpr {
 	cols := w.tbl.schema.Columns
 	cmps := make([]cmpExpr, 0, 4)
 	for _, expr := range w.expr.Exprs {
-		if c, ok := expr.(*ast.Constant); ok && c.Val == runtime.False {
-			w.conflict = true
-			return nil
-		}
 		if expr.CanEvalRaw(cols) {
 			if bin, ok := expr.(*ast.Binary); ok && bin.Tok != tokens.Isnt {
 				cmp := cmpExpr{
@@ -447,6 +466,9 @@ func (w *Where) getIdxSel(index []string) *idxSel {
 }
 
 func (w *Where) setApproach(index []string, app interface{}, tran QueryTran) {
+	if w.conflict {
+		return
+	}
 	if app != nil {
 		idx := app.(whereApproach).index
 		assert.Msg("index", index, "idx", idx).

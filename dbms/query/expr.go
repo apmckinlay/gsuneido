@@ -131,6 +131,8 @@ func renameArgs(args []Arg, from, to []string) []Arg {
 	return newArgs
 }
 
+var aFolder Folder
+
 func replaceExpr(expr Expr, from []string, to []Expr) Expr {
 	switch e := expr.(type) {
 	case *Constant:
@@ -147,14 +149,14 @@ func replaceExpr(expr Expr, from []string, to []Expr) Expr {
 		if newExpr == expr {
 			return expr
 		}
-		return &Unary{Tok: e.Tok, E: newExpr}
+		return aFolder.Unary(e.Tok, newExpr)
 	case *Binary:
 		lhs := replaceExpr(e.Lhs, from, to)
 		rhs := replaceExpr(e.Rhs, from, to)
 		if lhs == e.Lhs && rhs == e.Rhs {
 			return expr
 		}
-		return &Binary{Tok: e.Tok, Lhs: lhs, Rhs: rhs}
+		return aFolder.Binary(lhs, e.Tok, rhs)
 	case *Mem:
 		e2 := replaceExpr(e.E, from, to)
 		m := replaceExpr(e.M, from, to)
@@ -169,7 +171,7 @@ func replaceExpr(expr Expr, from []string, to []Expr) Expr {
 		if cond == e.Cond && t == e.T && f == e.F {
 			return expr
 		}
-		return &Trinary{Cond: cond, T: t, F: f}
+		return aFolder.Trinary(cond, t, f)
 	case *RangeTo:
 		cond := replaceExpr(e.E, from, to)
 		f := replaceExpr(e.From, from, to)
@@ -191,7 +193,7 @@ func replaceExpr(expr Expr, from []string, to []Expr) Expr {
 		if exprs == nil {
 			return expr
 		}
-		return &Nary{Tok: e.Tok, Exprs: exprs}
+		return aFolder.Nary(e.Tok, exprs)
 	case *Call:
 		fn := replaceExpr(e.Fn, from, to)
 		args := replaceArgs(e.Args, from, to)
@@ -211,7 +213,7 @@ func replaceExpr(expr Expr, from []string, to []Expr) Expr {
 		if exprs == nil {
 			exprs = e.Exprs
 		}
-		return &In{E: e2, Exprs: exprs}
+		return aFolder.In(e2, exprs)
 	default:
 		panic("shouldn't reach here")
 	}

@@ -141,3 +141,19 @@ func TestExprRename(t *testing.T) {
 	test("f(x, y)", "f(x, y)")
 	test("b(c, d)", "B(c, D)")
 }
+
+func TestExprReplace(t *testing.T) {
+	from := []string{"x"}
+	expr := NewQueryParser("5", nil).Expression()
+	to := []ast.Expr{expr}
+	test := func(src string, expected string) {
+		t.Helper()
+		p := NewQueryParser(src, nil)
+		expr := p.Expression()
+		assert.T(t).This(p.Token).Is(tok.Eof)
+		result := replaceExpr(expr, from, to)
+		assert.T(t).Msg(src).This(result.Echo()).Is(expected)
+	}
+	test("x is y", "5 is y")
+	test("x is 6", "false") // folded
+}
