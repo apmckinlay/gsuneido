@@ -81,7 +81,7 @@ type Query interface {
 	rowSize() int
 
 	// Lookup returns the row matching the given key, or nil if not found
-	Lookup(key string) runtime.Row
+	Lookup(cols, vals []string) runtime.Row
 
 	Rewind()
 
@@ -370,7 +370,7 @@ func (q1 *Query1) lookupCost() Cost {
 	return q1.source.lookupCost()
 }
 
-func (*Query1) Lookup(string) runtime.Row {
+func (*Query1) Lookup([]string, []string) runtime.Row {
 	panic("Lookup not implemented")
 }
 

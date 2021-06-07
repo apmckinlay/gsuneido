@@ -188,7 +188,12 @@ func lookupCost(rowSize int) Cost {
 
 // execution --------------------------------------------------------
 
-func (tbl *Table) Lookup(key string) runtime.Row {
+func (tbl *Table) Lookup(cols, vals []string) runtime.Row {
+	key := selEncode(tbl.indexEncode, tbl.index, cols, vals)
+	return tbl.lookup(key)
+}
+
+func (tbl *Table) lookup(key string) runtime.Row {
 	rec := tbl.tran.Lookup(tbl.name, tbl.iIndex, key)
 	if rec == nil {
 		return nil

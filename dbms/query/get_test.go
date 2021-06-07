@@ -8,34 +8,30 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	rt "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
 func TestTableLookup(t *testing.T) {
-	pack := func(n int) string {
-		return rt.Pack(rt.IntVal(n).(rt.Packable))
+	ss := func(args ...string) []string {
+		return args
 	}
-	key := func(vals ...int) string {
-		if len(vals) == 1 {
-			return pack(vals[0])
+	is := func(args ...int) []string {
+		ss := make([]string, len(args))
+		for i, n := range args {
+			ss[i] = rt.Pack(rt.IntVal(n).(rt.Packable))
 		}
-		var enc ixkey.Encoder
-		for _, v := range vals {
-			enc.Add(pack(v))
-		}
-		return enc.String()
+		return ss
 	}
-	test := func(query, key, expected string) {
+	test := func(query string, cols, vals []string, expected string) {
 		t.Helper()
 		q := ParseQuery(query, nil)
 		q, _ = Setup(q, ReadMode, testTran{})
-		row := q.(*Table).Lookup(key)
+		row := q.(*Table).Lookup(cols, vals)
 		assert.T(t).This(fmt.Sprint(row)).Is(expected)
 	}
-	test("table", key(123), "[<123>]")
-	test("customer", key(12, 34), "[<12, 34>]")
+	test("table", ss("a"), is(123), "[<123>]")
+	test("comp", ss("a", "b", "c"), is(12, 34, 56), "[<12, 34, 56>]")
 }
 
 func TestQueryGet(t *testing.T) {

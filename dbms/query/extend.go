@@ -191,7 +191,7 @@ func (e *Extend) Select(cols, vals []string) {
 	e.source.Select(cols, vals)
 }
 
-func (e *Extend) Lookup(key string) Row {
-	row := e.source.Lookup(key)
+func (e *Extend) Lookup(cols, vals []string) Row {
+	row := e.source.Lookup(cols, vals)
 	return e.extendRow(row)
 }

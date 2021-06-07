@@ -46,10 +46,12 @@ func (ti *TempIndex) Select(cols, vals []string) {
 	ti.Rewind()
 }
 
-func (ti *TempIndex) Lookup(key string) Row {
+func (ti *TempIndex) Lookup(cols, vals []string) Row {
 	if ti.iter == nil {
 		ti.iter = ti.makeIter()
 	}
+	encode := len(ti.order) > 1
+	key := selEncode(encode, ti.order, cols, vals)
 	row := ti.iter.Seek(key)
 	if row == nil || ti.rowKey(row) != key {
 		return nil

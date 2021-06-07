@@ -147,6 +147,6 @@ func (r *Rename) Select(cols, vals []string) {
 	r.source.Select(strs.Replace(cols, r.from, r.to), vals)
 }
 
-func (r *Rename) Lookup(key string) runtime.Row {
-	return r.source.Lookup(key)
+func (r *Rename) Lookup(cols, vals []string) runtime.Row {
+	return r.source.Lookup(cols, vals)
 }

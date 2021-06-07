@@ -957,7 +957,7 @@ func (w *Where) getPoint(dir runtime.Dir) runtime.Row {
 	if !w.advance(dir) {
 		return nil
 	}
-	return w.tbl.Lookup(w.curPtrng.org)
+	return w.tbl.lookup(w.curPtrng.org)
 }
 
 func (w *Where) advance(dir runtime.Dir) bool {
@@ -1013,8 +1013,8 @@ func (w *Where) Select(cols, vals []string) {
 	w.selSet = true
 }
 
-func (w *Where) Lookup(key string) runtime.Row {
-	row := w.source.Lookup(key)
+func (w *Where) Lookup(cols, vals []string) runtime.Row {
+	row := w.source.Lookup(cols, vals)
 	if !w.filter(row) {
 		row = nil
 	}

@@ -63,8 +63,11 @@ func (c *Compatible) source2Has(row Row) bool {
 		c.hdr1 = c.source.Header()
 		c.hdr2 = c.source2.Header()
 	}
-	key := projectKey(row, c.hdr1, c.keyIndex)
-	row2 := c.source2.Lookup(key)
+	vals := make([]string, len(c.keyIndex))
+	for i, col := range c.keyIndex {
+		vals[i] = row.GetRaw(c.hdr1, col)
+	}
+	row2 := c.source2.Lookup(c.keyIndex, vals)
 	return row2 != nil && c.equal(row, row2)
 }
 

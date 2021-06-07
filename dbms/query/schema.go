@@ -79,7 +79,7 @@ func (st *schemaTable) lookupCost() Cost {
 	return lookupCost(st.rowSize())
 }
 
-func (st *schemaTable) Lookup(string) Row {
+func (st *schemaTable) Lookup([]string, []string) Row {
 	panic("shouldn't reach here")
 }
 
