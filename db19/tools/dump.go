@@ -19,6 +19,7 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/options"
 	"github.com/apmckinlay/gsuneido/util/assert"
+	"github.com/apmckinlay/gsuneido/util/str"
 )
 
 // DumpDatabase exports a dumped database to a file.
@@ -101,10 +102,11 @@ func dumpTable2(db *Database, schema *meta.Schema, multi bool, w *bufio.Writer,
 	ics *indexCheckers) int {
 	state := db.GetState()
 	w.WriteString("====== ")
-	if multi {
-		w.WriteString(schema.Table + " ")
+	s := schema.String()
+	if !multi {
+		s = str.AfterFirst(s, " ")
 	}
-	w.WriteString(schema.String() + "\n")
+	w.WriteString(s + "\n")
 	info := state.Meta.GetRoInfo(schema.Table)
 	sum := uint64(0)
 	count := info.Indexes[0].Check(func(off uint64) {
