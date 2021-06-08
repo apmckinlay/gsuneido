@@ -61,7 +61,7 @@ var _ = builtin1("FileExists?(filename)",
 		filename := ToStr(arg)
 		_, err := os.Stat(filename)
 		if err != nil && !errors.Is(err, os.ErrNotExist) {
-			log.Println("ERROR: FileExists?", filename, err)
+			log.Println("INFO: FileExists?", filename, err)
 		}
 		return SuBool(err == nil)
 	})
