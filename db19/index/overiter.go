@@ -196,7 +196,7 @@ outer:
 					// add,delete so skip
 					// may not be the final minimum, but still need to skip
 					it.Next()
-					continue outer
+					continue outer // restart
 				}
 				itMin = i
 				offMin = off
@@ -291,8 +291,8 @@ outer:
 						it.Prev()
 						continue outer
 					}
-				itMax = i
-				offMax = off
+					itMax = i
+					offMax = off
 				}
 			}
 		}

@@ -60,7 +60,7 @@ func randTran(ck *CheckCo) {
 		randAction(ck, t.ct)
 	}
 	if rand.Intn(2) == 1 {
-		ck.Abort(t.ct)
+		ck.Abort(t.ct, "")
 	} else {
 		if ck.Commit(t) {
 			atomic.AddInt64(&nCommit, 1)

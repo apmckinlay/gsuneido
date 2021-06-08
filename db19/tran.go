@@ -63,7 +63,8 @@ func (t *tran) GetAllSchema() []*meta.Schema {
 func (t *tran) GetAllViews() []string {
 	defs := make([]string, 0, 16)
 	t.meta.ForEachView(func(name, def string) {
-		defs = append(defs, name, def) })
+		defs = append(defs, name, def)
+	})
 	return defs
 }
 
@@ -192,16 +193,20 @@ func (t *UpdateTran) String() string {
 	return t.ct.String()
 }
 
+// Complete returns "" on success, otherwise an error
 func (t *UpdateTran) Complete() string {
 	if !t.db.ck.Commit(t) {
-		return t.ct.conflict.Load().(string)
+		conflict := t.ct.conflict.Load()
+		if conflict == nil {
+			return "transaction already ended"
+		}
+		return conflict.(string)
 	}
 	return ""
 }
 
+// Commit is used by tests. It panics on error.
 func (t *UpdateTran) Commit() {
-	// send commit to checker
-	// which starts the pipeline to merger to persister
 	t.ck(t.db.ck.Commit(t))
 }
 
@@ -214,7 +219,7 @@ func (t *UpdateTran) commit() int {
 }
 
 func (t *UpdateTran) Abort() {
-	t.ck(t.db.ck.Abort(t.ct))
+	t.ck(t.db.ck.Abort(t.ct, "aborted"))
 }
 
 func (t *UpdateTran) num() int {
@@ -244,6 +249,7 @@ func (t *UpdateTran) Output(table string, rec rt.Record) {
 		is := ts.Indexes[i].Ixspec
 		keys[i] = is.Key(rec)
 		if ix.Lookup(keys[i]) != 0 {
+			t.db.ck.Abort(t.ct, "duplicate key")
 			panic(fmt.Sprint("duplicate key: ", table, " ", ts.Indexes[i].Columns))
 		}
 		ix.Insert(keys[i], off)
@@ -300,6 +306,7 @@ func (t *UpdateTran) Update(table string, oldoff uint64, newrec rt.Record) uint6
 			} else {
 				ix.Delete(oldkey, oldoff)
 				if ix.Lookup(newkey) != 0 {
+					t.db.ck.Abort(t.ct, "duplicate key")
 					panic(fmt.Sprint("duplicate key: ", table, " ", ts.Indexes[i].Columns))
 				}
 				ix.Insert(newkey, newoff)

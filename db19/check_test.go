@@ -23,7 +23,7 @@ func TestCheckStartStop(t *testing.T) {
 			if rand.Intn(2) == 1 {
 				ck.Commit(trans[j])
 			} else {
-				ck.Abort(trans[j].ct)
+				ck.Abort(trans[j].ct, "")
 			}
 			trans[j] = nil
 		}
@@ -104,9 +104,9 @@ func script(t *testing.T, s string) {
 		case 'C':
 			fail(ck.Commit(t))
 		case 'a':
-			ok(ck.Abort(t.ct))
+			ok(ck.Abort(t.ct, ""))
 		case 'A':
-			fail(ck.Abort(t.ct))
+			fail(ck.Abort(t.ct, ""))
 		}
 		s = s[2:]
 		for len(s) > 0 && s[0] == ' ' {

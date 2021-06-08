@@ -230,8 +230,8 @@ func (t *CkTran) isEnded() bool {
 
 // Abort cancels a transaction.
 // It returns false if the transaction is not found (e.g. already aborted).
-func (ck *Check) Abort(t *CkTran) bool {
-	return ck.abort(t.start, "explicit")
+func (ck *Check) Abort(t *CkTran, reason string) bool {
+	return ck.abort(t.start, reason)
 }
 
 func (ck *Check) abort(tn int, reason string) bool {

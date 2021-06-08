@@ -9,6 +9,7 @@
 package ixbuf
 
 import (
+	"fmt"
 	"log"
 
 	"github.com/apmckinlay/gsuneido/db19/index/iterator"
@@ -255,6 +256,24 @@ func (m *merge) merge() *ixbuf {
 const Update = 1 << 62
 const Delete = 1 << 63
 
+// OffString is for debugging
+func OffString(off uint64) string {
+	s := fmt.Sprintf("%d", off&0xffffffffff)
+	off &^= 0xffffffffff
+	if off&Update != 0 {
+		s += " update"
+		off &^= Update
+	}
+	if off&Delete != 0 {
+		s += " delete"
+		off &^= Delete
+	}
+	if off != 0 {
+		s += fmt.Sprintf("BAD BITS %x", off>>40)
+	}
+	return s
+}
+
 const (
 	add_update    = 0b_00_01
 	add_delete    = 0b_00_10
@@ -267,10 +286,12 @@ func Combine(off1, off2 uint64) uint64 {
 	ops := off1>>60 | off2>>62
 	switch ops {
 	case add_update:
-		return off2 &^ Update
+		return off2 &^ Update // => add
 	case add_delete:
-		return 0 // = should be removed
+		return 0 // => should be removed
 	case update_update, update_delete:
+		// update_delete needs to keep delete (not return 0)
+		// because the add is in another layer
 		return off2
 	case delete_add:
 		return off2 | Update

@@ -70,7 +70,6 @@ type mergefn func(*DbState, *mergeList) []meta.MergeUpdate
 func (db *Database) Merge(fn mergefn, merges *mergeList) {
 	updates := fn(db.GetState(), merges) // outside UpdateState
 	db.UpdateState(func(state *DbState) {
-		// updates := fn(state, merges)
 		meta := *state.Meta // copy
 		meta.ApplyMerge(updates)
 		state.Meta = &meta
@@ -90,7 +89,6 @@ func (db *Database) Persist(exec execPersist, flatten bool) uint64 {
 	db.GetState().Meta.Persist(exec.Submit) // outside UpdateState
 	updates := exec.Results()
 	db.UpdateState(func(state *DbState) {
-		// updates := state.meta.Persist()
 		meta := *state.Meta // copy
 		meta.ApplyPersist(updates)
 		state.Meta = &meta

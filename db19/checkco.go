@@ -41,7 +41,8 @@ type ckResult struct {
 }
 
 type ckAbort struct {
-	t *CkTran
+	t      *CkTran
+	reason string
 }
 
 func (ck *CheckCo) StartTran() *CkTran {
@@ -75,8 +76,8 @@ func (ck *CheckCo) Commit(ut *UpdateTran) bool {
 	return <-ret
 }
 
-func (ck *CheckCo) Abort(t *CkTran) bool {
-	ck.c <- &ckAbort{t: t}
+func (ck *CheckCo) Abort(t *CkTran, reason string) bool {
+	ck.c <- &ckAbort{t: t, reason: reason}
 	return true
 }
 
@@ -128,7 +129,7 @@ func (ck *Check) dispatch(msg interface{}, mergeChan chan merge) {
 	case *ckWrite:
 		ck.Write(msg.t, msg.table, msg.keys)
 	case *ckAbort:
-		ck.Abort(msg.t)
+		ck.Abort(msg.t, msg.reason)
 	case *ckCommit:
 		result := ck.commit(msg.t)
 		// checking complete so we can send result and let client code continue
@@ -152,7 +153,7 @@ type Checker interface {
 	StartTran() *CkTran
 	Read(t *CkTran, table string, index int, from, to string) bool
 	Write(t *CkTran, table string, keys []string) bool
-	Abort(t *CkTran) bool
+	Abort(t *CkTran, reason string) bool
 	Commit(t *UpdateTran) bool
 	Stop()
 }
