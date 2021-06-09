@@ -139,6 +139,7 @@ func (w *Where) Transform() Query {
 		// convert leftjoin to join
 		w.source = &Join{Query2: Query2{Query1: Query1{source: lj.source},
 			source2: lj.source2}}
+		w.source.Init()
 	}
 	moved := false
 	for {
@@ -161,7 +162,7 @@ func (w *Where) Transform() Query {
 				q.source = w
 			} else {
 				q.source = &Where{Query1: Query1{source: q.source},
-					expr: newExpr.(*ast.Nary)}
+					expr: newExpr.(*ast.Nary), t: w.t}
 				q.source.Init()
 			}
 			return q.Transform()
@@ -177,7 +178,7 @@ func (w *Where) Transform() Query {
 			}
 			if src1 != nil {
 				q.source = &Where{Query1: Query1{source: q.source},
-					expr: &ast.Nary{Tok: tok.And, Exprs: src1}}
+					expr: &ast.Nary{Tok: tok.And, Exprs: src1}, t: w.t}
 				q.source.Init()
 			}
 			if rest != nil {
@@ -198,7 +199,7 @@ func (w *Where) Transform() Query {
 			}
 			if src1 != nil {
 				q.source = &Where{Query1: Query1{source: q.source},
-					expr: &ast.Nary{Tok: tok.And, Exprs: src1}}
+					expr: &ast.Nary{Tok: tok.And, Exprs: src1}, t: w.t}
 				q.source.Init()
 			}
 			if rest != nil {
@@ -208,26 +209,26 @@ func (w *Where) Transform() Query {
 			}
 		case *Intersect:
 			// distribute where over intersect
-			q.source = &Where{Query1: Query1{source: q.source}, expr: w.expr}
+			q.source = &Where{Query1: Query1{source: q.source}, expr: w.expr, t: w.t}
 			q.source.Init()
-			q.source2 = &Where{Query1: Query1{source: q.source2}, expr: w.expr}
+			q.source2 = &Where{Query1: Query1{source: q.source2}, expr: w.expr, t: w.t}
 			q.source2.Init()
 			moved = true
 		case *Minus:
 			// distribute where over minus
-			q.source = &Where{Query1: Query1{source: q.source}, expr: w.expr}
+			q.source = &Where{Query1: Query1{source: q.source}, expr: w.expr, t: w.t}
 			q.source.Init()
 			q.source2 = &Where{Query1: Query1{source: q.source2},
-				expr: w.project(q.source2)}
+				expr: w.project(q.source2), t: w.t}
 			q.source2.Init()
 			moved = true
 		case *Union:
 			// distribute where over union
 			q.source = &Where{Query1: Query1{source: q.source},
-				expr: w.project(q.source)}
+				expr: w.project(q.source), t: w.t}
 			q.source.Init()
 			q.source2 = &Where{Query1: Query1{source: q.source2},
-				expr: w.project(q.source2)}
+				expr: w.project(q.source2), t: w.t}
 			q.source.Init()
 			moved = true
 		case *Times:
@@ -249,7 +250,7 @@ func (w *Where) Transform() Query {
 			}
 			if src1 != nil {
 				q.source = &Where{Query1: Query1{source: q.source},
-					expr: &ast.Nary{Tok: tok.And, Exprs: src1}}
+					expr: &ast.Nary{Tok: tok.And, Exprs: src1}, t: w.t}
 				q.source.Init()
 			}
 			if common != nil {
@@ -283,7 +284,11 @@ func (w *Where) project(q Query) *ast.Nary {
 	srcCols := q.Columns()
 	exprCols := w.expr.Columns()
 	missing := sset.Difference(exprCols, srcCols)
-	return replaceExpr(w.expr, missing, nEmpty(len(missing))).(*ast.Nary)
+	expr := replaceExpr(w.expr, missing, nEmpty(len(missing)))
+	if nary, ok := expr.(*ast.Nary); !ok || nary.Tok != tok.And {
+		expr = &ast.Nary{Tok: tok.And, Exprs: []ast.Expr{expr}}
+	}
+	return expr.(*ast.Nary)
 }
 
 var emptyConstant = ast.Constant{Val: runtime.EmptyStr}
@@ -1014,6 +1019,9 @@ func (w *Where) Select(cols, vals []string) {
 }
 
 func (w *Where) Lookup(cols, vals []string) runtime.Row {
+	if w.conflict {
+		return nil
+	}
 	row := w.source.Lookup(cols, vals)
 	if !w.filter(row) {
 		row = nil
