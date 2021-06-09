@@ -149,7 +149,7 @@ func main() {
 		openDbms()
 	}
 	if options.Action == "repl" {
-		eval("Suneido.Print = PrintStdout;;")
+		eval("Init.Repl()")
 		repl()
 		closeDbms()
 	} else {
