@@ -49,25 +49,27 @@ const (
 	sumTbl
 )
 
-func (su *Summarize) Init() {
-	su.Query1.Init()
-	if !sset.Subset(su.source.Columns(), su.by) {
+func NewSummarize(src Query, by, cols, ops, ons []string) *Summarize {
+	if !sset.Subset(src.Columns(), by) {
 		panic("summarize: nonexistent columns: " +
-			strs.Join(", ", sset.Difference(su.by, su.source.Columns())))
+			strs.Join(", ", sset.Difference(by, src.Columns())))
 	}
-	check(su.by)
-	check(su.ons)
-	for i := 0; i < len(su.cols); i++ {
-		if su.cols[i] == "" {
-			if su.ons[i] == "" {
-				su.cols[i] = "count"
+	check(by)
+	check(ons)
+	for i := 0; i < len(cols); i++ {
+		if cols[i] == "" {
+			if ons[i] == "" {
+				cols[i] = "count"
 			} else {
-				su.cols[i] = su.ops[i] + "_" + su.ons[i]
+				cols[i] = ops[i] + "_" + ons[i]
 			}
 		}
 	}
+	su := &Summarize{Query1: Query1{source: src},
+		by: by, cols: cols, ops: ops, ons: ons}
 	// if single min or max, and on is a key, then we can give the whole row
-	su.wholeRow = su.minmax1() && setset.Contains(su.source.Keys(), su.ons)
+	su.wholeRow = su.minmax1() && setset.Contains(src.Keys(), ons)
+	return su
 }
 
 func check(cols []string) {

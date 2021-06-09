@@ -12,19 +12,15 @@ import (
 func TestExtendInit(t *testing.T) {
 	test := func(query string) {
 		t.Helper()
-		q := ParseQuery(query, nil)
-		q.SetTran(testTran{})
-		q.Init()
+		ParseQuery(query, testTran{})
 	}
 	test("hist extend price = cost")
 	test("columns extend a = 1, b = 2, c = a + b")
 
 	xtest := func(query, expected string) {
 		t.Helper()
-		q := ParseQuery(query, nil)
-		q.SetTran(testTran{})
 		assert.T(t).Msg(query).
-			This(func() { q.Init() }).Panics(expected)
+			This(func() { ParseQuery(query, testTran{}) }).Panics(expected)
 	}
 	xtest("inven extend qty = 1",
 		"extend: column(s) already exist")

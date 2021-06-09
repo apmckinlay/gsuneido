@@ -53,13 +53,17 @@ type whereApproach struct {
 	index []string
 }
 
-func (w *Where) Init() {
-	w.Query1.Init()
-	if !sset.Subset(w.source.Columns(), w.expr.Columns()) {
+func NewWhere(src Query, expr ast.Expr, t QueryTran) *Where {
+	if !sset.Subset(src.Columns(), expr.Columns()) {
 		panic("where: nonexistent columns: " + strs.Join(", ",
-			sset.Difference(w.expr.Columns(), w.source.Columns())))
+			sset.Difference(expr.Columns(), src.Columns())))
 	}
-	w.tbl, _ = w.source.(*Table)
+	if nary, ok := expr.(*ast.Nary); !ok || nary.Tok != tok.And {
+		expr = &ast.Nary{Tok: tok.And, Exprs: []ast.Expr{expr}}
+	}
+	w := &Where{Query1: Query1{source: src}, expr: expr.(*ast.Nary), t: t}
+	w.tbl, _ = src.(*Table)
+	return w
 }
 
 func (w *Where) SetTran(t QueryTran) {
@@ -137,9 +141,7 @@ func (w *Where) Transform() Query {
 	}
 	if lj := w.leftJoinToJoin(); lj != nil {
 		// convert leftjoin to join
-		w.source = &Join{Query2: Query2{Query1: Query1{source: lj.source},
-			source2: lj.source2}}
-		w.source.Init()
+		w.source = NewJoin(lj.source, lj.source2, lj.by)
 	}
 	moved := false
 	for {
@@ -161,9 +163,8 @@ func (w *Where) Transform() Query {
 			if newExpr == w.expr {
 				q.source = w
 			} else {
-				q.source = &Where{Query1: Query1{source: q.source},
-					expr: newExpr.(*ast.Nary), t: w.t}
-				q.source.Init()
+				q.source = NewWhere(q.source, newExpr.(*ast.Nary), w.t)
+
 			}
 			return q.Transform()
 		case *Extend:
@@ -177,9 +178,8 @@ func (w *Where) Transform() Query {
 				}
 			}
 			if src1 != nil {
-				q.source = &Where{Query1: Query1{source: q.source},
-					expr: &ast.Nary{Tok: tok.And, Exprs: src1}, t: w.t}
-				q.source.Init()
+				q.source = NewWhere(q.source,
+					&ast.Nary{Tok: tok.And, Exprs: src1}, w.t)
 			}
 			if rest != nil {
 				w.expr = &ast.Nary{Tok: tok.And, Exprs: rest}
@@ -198,9 +198,8 @@ func (w *Where) Transform() Query {
 				}
 			}
 			if src1 != nil {
-				q.source = &Where{Query1: Query1{source: q.source},
-					expr: &ast.Nary{Tok: tok.And, Exprs: src1}, t: w.t}
-				q.source.Init()
+				q.source = NewWhere(q.source,
+					&ast.Nary{Tok: tok.And, Exprs: src1}, w.t)
 			}
 			if rest != nil {
 				w.expr = &ast.Nary{Tok: tok.And, Exprs: rest}
@@ -209,27 +208,18 @@ func (w *Where) Transform() Query {
 			}
 		case *Intersect:
 			// distribute where over intersect
-			q.source = &Where{Query1: Query1{source: q.source}, expr: w.expr, t: w.t}
-			q.source.Init()
-			q.source2 = &Where{Query1: Query1{source: q.source2}, expr: w.expr, t: w.t}
-			q.source2.Init()
+			q.source = NewWhere(q.source, w.expr, w.t)
+			q.source2 = NewWhere(q.source2, w.expr, w.t)
 			moved = true
 		case *Minus:
 			// distribute where over minus
-			q.source = &Where{Query1: Query1{source: q.source}, expr: w.expr, t: w.t}
-			q.source.Init()
-			q.source2 = &Where{Query1: Query1{source: q.source2},
-				expr: w.project(q.source2), t: w.t}
-			q.source2.Init()
+			q.source = NewWhere(q.source, w.expr, w.t)
+			q.source2 = NewWhere(q.source2, w.project(q.source2), w.t)
 			moved = true
 		case *Union:
 			// distribute where over union
-			q.source = &Where{Query1: Query1{source: q.source},
-				expr: w.project(q.source), t: w.t}
-			q.source.Init()
-			q.source2 = &Where{Query1: Query1{source: q.source2},
-				expr: w.project(q.source2), t: w.t}
-			q.source.Init()
+			q.source = NewWhere(q.source, w.project(q.source), w.t)
+			q.source2 = NewWhere(q.source2, w.project(q.source2), w.t)
 			moved = true
 		case *Times:
 			// split where over product
@@ -249,9 +239,8 @@ func (w *Where) Transform() Query {
 				}
 			}
 			if src1 != nil {
-				q.source = &Where{Query1: Query1{source: q.source},
-					expr: &ast.Nary{Tok: tok.And, Exprs: src1}, t: w.t}
-				q.source.Init()
+				q.source = NewWhere(q.source,
+					&ast.Nary{Tok: tok.And, Exprs: src1}, w.t)
 			}
 			if common != nil {
 				w.expr = &ast.Nary{Tok: tok.And, Exprs: common}
@@ -320,12 +309,10 @@ func (w *Where) split(q2 *Query2) bool {
 		}
 	}
 	if src1 != nil {
-		q2.source = &Where{Query1: Query1{source: q2.source},
-			expr: &ast.Nary{Tok: tok.And, Exprs: src1}}
+		q2.source = NewWhere(q2.source, &ast.Nary{Tok: tok.And, Exprs: src1}, w.t)
 	}
 	if src2 != nil {
-		q2.source2 = &Where{Query1: Query1{source: q2.source2},
-			expr: &ast.Nary{Tok: tok.And, Exprs: src2}}
+		q2.source2 = NewWhere(q2.source2, &ast.Nary{Tok: tok.And, Exprs: src2}, w.t)
 	}
 	if common != nil {
 		w.expr = &ast.Nary{Tok: tok.And, Exprs: common}

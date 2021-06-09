@@ -20,8 +20,8 @@ type actionParser struct {
 }
 
 // ParseAction parses insert, update, and delete actions
-func ParseAction(src string, vg viewGetter) Action {
-	p := actionParser{*NewQueryParser(src, vg)}
+func ParseAction(src string, t QueryTran) Action {
+	p := actionParser{*NewQueryParser(src, t)}
 	result := p.action()
 	if p.Token != tok.Eof {
 		p.Error("did not parse all input")

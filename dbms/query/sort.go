@@ -21,12 +21,12 @@ type sortApproach struct {
 	index []string
 }
 
-func (sort *Sort) Init() {
-	sort.Query1.Init()
-	if !sset.Subset(sort.source.Columns(), sort.columns) {
+func NewSort(src Query, reverse bool, cols []string) *Sort {
+	if !sset.Subset(src.Columns(), cols) {
 		panic("sort: nonexistent columns: " +
-			strs.Join(", ", sset.Difference(sort.columns, sort.source.Columns())))
+			strs.Join(", ", sset.Difference(cols, src.Columns())))
 	}
+	return &Sort{Query1: Query1{source: src}, reverse: reverse, columns: cols}
 }
 
 func (sort *Sort) String() string {

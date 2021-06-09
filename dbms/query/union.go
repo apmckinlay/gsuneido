@@ -45,6 +45,13 @@ const (
 	unionLookup
 )
 
+func NewUnion(src, src2 Query) *Union {
+	u := &Union{Compatible: Compatible{
+		Query2: Query2{Query1: Query1{source: src}, source2: src2}}}
+	u.init()
+	return u
+}
+
 func (u *Union) String() string {
 	op := "UNION"
 	switch u.strategy {

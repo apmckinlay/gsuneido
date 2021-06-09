@@ -56,7 +56,7 @@ func (*DbmsLocal) Connections() Value {
 }
 
 func (dbms *DbmsLocal) Cursor(query string) ICursor {
-	q := qry.ParseQuery(query, dbms.db.GetView)
+	q := qry.ParseQuery(query, dbms.db.NewReadTran())
 	q, cost := qry.Setup(q, qry.CursorMode, dbms.db.NewReadTran())
 	return cursorLocal{queryLocal{Query: q, cost: cost, mode: qry.CursorMode}}
 }
@@ -100,7 +100,7 @@ func (dbms *DbmsLocal) Get(query string, dir Dir) (Row, *Header, string) {
 }
 
 func get(tran qry.QueryTran, query string, dir Dir) (Row, *Header, string) {
-	q := qry.ParseQuery(query, tran.GetView)
+	q := qry.ParseQuery(query, tran)
 	q, _ = qry.Setup(q, qry.ReadMode, tran)
 	only := false
 	if dir == Only {
@@ -273,7 +273,7 @@ func (t ReadTranLocal) Get(query string, dir Dir) (Row, *Header, string) {
 }
 
 func (t ReadTranLocal) Query(query string) IQuery {
-	q := qry.ParseQuery(query, t.GetView)
+	q := qry.ParseQuery(query, t.ReadTran)
 	q, cost := qry.Setup(q, qry.ReadMode, t.ReadTran)
 	return queryLocal{Query: q, cost: cost, mode: qry.ReadMode}
 }
@@ -293,7 +293,7 @@ func (t UpdateTranLocal) Get(query string, dir Dir) (Row, *Header, string) {
 }
 
 func (t UpdateTranLocal) Query(query string) IQuery {
-	q := qry.ParseQuery(query, t.GetView)
+	q := qry.ParseQuery(query, t.UpdateTran)
 	q, cost := qry.Setup(q, qry.UpdateMode, t.UpdateTran)
 	return queryLocal{Query: q, cost: cost, mode: qry.UpdateMode}
 }

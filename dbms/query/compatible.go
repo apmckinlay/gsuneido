@@ -18,8 +18,7 @@ type Compatible struct {
 	hdr2     *Header
 }
 
-func (c *Compatible) Init() {
-	c.Query2.Init()
+func (c *Compatible) init() {
 	c.allCols = sset.Union(c.source.Columns(), c.source2.Columns())
 	fixed1 := c.source.Fixed()
 	fixed2 := c.source2.Fixed()

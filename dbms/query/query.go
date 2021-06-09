@@ -42,8 +42,6 @@ import (
 )
 
 type Query interface {
-	Init()
-
 	// Columns is all the available columns, including derived
 	Columns() []string
 
@@ -51,7 +49,7 @@ type Query interface {
 	// This stage is not cost based, transforms are applied whenever possible.
 	Transform() Query
 
-	// SetTran sets the transaction to be used by the query
+	// SetTran is used for cursors
 	SetTran(tran QueryTran)
 
 	Ordering() []string
@@ -154,8 +152,6 @@ type QueryTran interface {
 //
 // NOTE: Correct usage is: q = Setup(q, mode, t)
 func Setup(q Query, mode Mode, t QueryTran) (Query, Cost) {
-	q.SetTran(t)
-	q.Init()
 	q = q.Transform()
 	cost := Optimize(q, mode, nil)
 	if cost >= impossible {
@@ -167,8 +163,6 @@ func Setup(q Query, mode Mode, t QueryTran) (Query, Cost) {
 
 // SetupKey is like Setup but it ensures a key index
 func SetupKey(q Query, mode Mode, t QueryTran) Query {
-	q.SetTran(t)
-	q.Init()
 	q = q.Transform()
 	best := newBestIndex()
 	for _, key := range q.Keys() {
@@ -314,10 +308,6 @@ func (q1 *Query1) String() string {
 	panic("should be overridden")
 }
 
-func (q1 *Query1) Init() {
-	q1.source.Init()
-}
-
 func (q1 *Query1) Columns() []string {
 	return q1.source.Columns()
 }
@@ -407,11 +397,6 @@ func (q2 *Query2) Indexes() [][]string {
 
 func (q2 *Query2) String2(op string) string {
 	return parenQ2(q2.source) + " " + op + " " + paren(q2.source2)
-}
-
-func (q2 *Query2) Init() {
-	q2.source.Init()
-	q2.source2.Init()
 }
 
 func (q2 *Query2) SetTran(t QueryTran) {

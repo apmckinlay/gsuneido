@@ -20,6 +20,13 @@ type intersectApproach struct {
 	reverse  bool
 }
 
+func NewIntersect(src, src2 Query) *Intersect {
+	it := &Intersect{Compatible: Compatible{
+		Query2: Query2{Query1: Query1{source: src}, source2: src2}}}
+	it.init()
+	return it
+}
+
 func (it *Intersect) String() string {
 	return it.String2("INTERSECT")
 }

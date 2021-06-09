@@ -19,9 +19,7 @@ func TestTransform(t *testing.T) {
 		if expected == "" {
 			expected = from
 		}
-		q := ParseQuery(from, nil)
-		q.SetTran(testTran{})
-		q.Init()
+		q := ParseQuery(from, testTran{})
 		q = q.Transform()
 		assert.T(t).This(str.ToLower(q.String())).Is(str.ToLower(expected))
 	}
@@ -119,11 +117,11 @@ func TestTransform(t *testing.T) {
 
 	// convert LEFTJOIN to JOIN
 	test("(tables leftjoin columns) where column isnt ''",
-		"tables JOIN (columns WHERE column isnt '')")
+		"tables JOIN 1:n by(table) (columns WHERE column isnt '')")
 	test("(tables leftjoin columns) where column is 123",
-		"tables JOIN (columns WHERE column is 123)")
+		"tables JOIN 1:n by(table) (columns WHERE column is 123)")
 	test("(tables leftjoin columns) where column in (123)",
-		"tables JOIN (columns WHERE column in (123))")
+		"tables JOIN 1:n by(table) (columns WHERE column in (123))")
 	test("(tables leftjoin columns) where table isnt ''",
 		"tables WHERE table isnt '' LEFTJOIN 1:n by(table) columns")
 

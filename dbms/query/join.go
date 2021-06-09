@@ -51,21 +51,19 @@ func (jt joinType) String() string {
 	}
 }
 
-func (jn *Join) Init() {
-	jn.Query2.Init()
-
-	by := sset.Intersect(jn.source.Columns(), jn.source2.Columns())
-	if len(by) == 0 {
+func NewJoin(src, src2 Query, by []string) *Join {
+	b := sset.Intersect(src.Columns(), src2.Columns())
+	if len(b) == 0 {
 		panic("join: common columns required")
 	}
-	if jn.by == nil {
-		jn.by = by
-	} else if !sset.Equal(jn.by, by) {
+	if by == nil {
+		by = b
+	} else if !sset.Equal(by, b) {
 		panic("join: by does not match common columns")
 	}
-
-	k1 := containsKey(jn.by, jn.source.Keys())
-	k2 := containsKey(jn.by, jn.source2.Keys())
+	jn := &Join{Query2: Query2{Query1: Query1{source: src},	source2: src2}, by: by}
+	k1 := containsKey(by, src.Keys())
+	k2 := containsKey(by, src2.Keys())
 	if k1 && k2 {
 		jn.joinType = one_one
 	} else if k1 {
@@ -75,6 +73,7 @@ func (jn *Join) Init() {
 	} else {
 		panic("join: does not support many to many")
 	}
+	return jn
 }
 
 func (jn *Join) String() string {
@@ -260,6 +259,10 @@ type LeftJoin struct {
 	Join
 	row1out bool
 	empty2 Row
+}
+
+func NewLeftJoin(src, src2 Query, by []string) *LeftJoin {
+	return &LeftJoin{Join: *NewJoin(src, src2, by)}
 }
 
 func (lj *LeftJoin) String() string {

@@ -101,7 +101,10 @@ func (testTran) GetAllViews() []string {
 	return nil
 }
 
-func (t testTran) GetView(string) string {
+func (t testTran) GetView(table string) string {
+	if table == "myview" {
+		return "cus join task"
+	}
 	return ""
 }
 

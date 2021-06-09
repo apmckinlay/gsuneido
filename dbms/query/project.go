@@ -43,25 +43,30 @@ const (
 	projHash
 )
 
-func (p *Project) Init() {
-	p.Query1.Init()
-	p.columns = sset.Unique(p.columns)
-	srcCols := p.source.Columns()
-	if !sset.Subset(srcCols, p.columns) {
+func NewProject(src Query, cols []string) *Project {
+	cols = sset.Unique(cols)
+	srcCols := src.Columns()
+	if !sset.Subset(srcCols, cols) {
 		panic("project: nonexistent column(s): " +
-			strs.Join(", ", sset.Difference(p.columns, srcCols)))
+			strs.Join(", ", sset.Difference(cols, srcCols)))
 	}
-	for _, col := range p.columns {
+	for _, col := range cols {
 		if strings.HasSuffix(col, "_lower!") {
 			panic("can't project _lower! fields")
 		}
 	}
-	if hasKey(p.source.Keys(), p.columns, p.source.Fixed()) {
+	p := &Project{Query1: Query1{source: src}, columns: cols, rewound: true}
+	if hasKey(p.source.Keys(), cols, p.source.Fixed()) {
 		p.unique = true
 		p.includeDeps(srcCols)
 	}
-	p.rewound = true
 	p.getHeaders()
+	return p
+}
+
+func NewRemove(src Query, cols []string) *Project {
+	cols = sset.Difference(src.Columns(), cols)
+	return NewProject(src, cols)
 }
 
 // hasKey returns whether cols contains a key
@@ -189,25 +194,25 @@ func (p *Project) Transform() Query {
 }
 
 func (p *Project) splitOver(q2 *Query2) {
-	q2.source = &Project{Query1: Query1{source: q2.source},
-		columns: sset.Intersect(p.columns, q2.source.Columns())}
-	q2.source2 = &Project{Query1: Query1{source: q2.source2},
-		columns: sset.Intersect(p.columns, q2.source2.Columns())}
+	q2.source = NewProject(q2.source,
+		sset.Intersect(p.columns, q2.source.Columns()))
+	q2.source2 = NewProject(q2.source2,
+		sset.Intersect(p.columns, q2.source2.Columns()))
 }
 
 func (p *Project) splitOver2(c *Compatible) bool {
 	if c.disjoint != "" && !sset.Contains(p.columns, c.disjoint) {
 		cols := append(sset.Copy(p.columns), c.disjoint)
-		c.source = &Project{Query1: Query1{source: c.source},
-			columns: sset.Intersect(cols, c.source.Columns())}
-		c.source2 = &Project{Query1: Query1{source: c.source2},
-			columns: sset.Intersect(cols, c.source2.Columns())}
+		c.source = NewProject(c.source,
+			sset.Intersect(cols, c.source.Columns()))
+		c.source2 = NewProject(c.source2,
+			sset.Intersect(cols, c.source2.Columns()))
 		return false
 	}
-	c.source = &Project{Query1: Query1{source: c.source},
-		columns: sset.Intersect(p.columns, c.source.Columns())}
-	c.source2 = &Project{Query1: Query1{source: c.source2},
-		columns: sset.Intersect(p.columns, c.source2.Columns())}
+	c.source = NewProject(c.source,
+		sset.Intersect(p.columns, c.source.Columns()))
+	c.source2 = NewProject(c.source2,
+		sset.Intersect(p.columns, c.source2.Columns()))
 	return true
 }
 

@@ -17,19 +17,22 @@ import (
 	"github.com/apmckinlay/gsuneido/util/strss"
 )
 
-func NewTable(name string) Query {
+func NewTable(t QueryTran, name string) Query {
+	var tbl Query
 	switch name {
 	case "tables":
-		return &Tables{}
+		tbl = &Tables{}
 	case "columns":
-		return &Columns{}
+		tbl = &Columns{}
 	case "indexes":
-		return &Indexes{}
+		tbl = &Indexes{}
 	case "views":
-		return &Views{}
+		tbl = &Views{}
 	default:
-		return &Table{name: name}
+		tbl = &Table{name: name}
 	}
+	tbl.SetTran(t)
+	return tbl
 }
 
 type Table struct {
@@ -58,9 +61,6 @@ func (tbl *Table) String() string {
 		return tbl.name
 	}
 	return tbl.name + "^" + strs.Join("(,)", tbl.index)
-}
-
-func (tbl *Table) Init() {
 }
 
 func (tbl *Table) SetTran(t QueryTran) {

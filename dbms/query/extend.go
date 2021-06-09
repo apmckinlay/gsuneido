@@ -19,10 +19,11 @@ type Extend struct {
 	hdr      *Header
 }
 
-func (e *Extend) Init() {
-	e.Query1.Init()
+func NewExtend(src Query, cols []string, exprs []ast.Expr) *Extend {
+	e := &Extend{Query1: Query1{source: src}, cols: cols, exprs: exprs}
 	e.checkDependencies()
 	e.init()
+	return e
 }
 
 func (e *Extend) checkDependencies() {

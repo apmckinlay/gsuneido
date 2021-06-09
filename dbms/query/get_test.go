@@ -25,7 +25,7 @@ func TestTableLookup(t *testing.T) {
 	}
 	test := func(query string, cols, vals []string, expected string) {
 		t.Helper()
-		q := ParseQuery(query, nil)
+		q := ParseQuery(query, testTran{})
 		q, _ = Setup(q, ReadMode, testTran{})
 		row := q.(*Table).Lookup(cols, vals)
 		assert.T(t).This(fmt.Sprint(row)).Is(expected)
@@ -76,16 +76,14 @@ func TestQueryGet(t *testing.T) {
 	}
 	test := func(query, strategy, expected string) {
 		t.Helper()
-		q := ParseQuery(query, nil)
 		tran := sizeTran{db.NewReadTran()}
+		q := ParseQuery(query, tran)
 		q, _ = Setup(q, ReadMode, tran)
 		qs := strings.ReplaceAll(q.String(), `"`, "'")
 		assert.T(t).This(qs).Is(strategy)
 		assert.T(t).Msg("forward").This(get(q, rt.Next)).Like(expected)
 		assert.T(t).Msg("reverse").This(get(q, rt.Prev)).Like(expected)
 	}
-	// t.SkipNow()
-
 	test("indexes",
 		"indexes",
 		`table		columns			key
@@ -346,6 +344,10 @@ func TestQueryGet(t *testing.T) {
 		'mouse'		'e'	200		960204
 		'mouse'		'c'	200		970101
 		'eraser'	'c'	150		970201`)
+	test("(trans minus trans) where item = 0",
+		"trans^(item) WHERE item is 0 MINUS "+
+			"(trans^(item) WHERE item is 0 TEMPINDEX(date,item,id))",
+		`item		id	cost	date`)
 
 	// intersect
 	test("trans intersect trans",

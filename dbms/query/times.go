@@ -16,13 +16,13 @@ type Times struct {
 	row1    runtime.Row
 }
 
-func (t *Times) Init() {
-	t.Query2.Init()
-	t.rewound = true
-	if !sset.Disjoint(t.source.Columns(), t.source2.Columns()) {
+func NewTimes(src, src2 Query) *Times {
+	if !sset.Disjoint(src.Columns(), src2.Columns()) {
 		panic("times: common columns not allowed: " + strs.Join(", ",
-			sset.Intersect(t.source.Columns(), t.source2.Columns())))
+			sset.Intersect(src.Columns(), src2.Columns())))
 	}
+	return &Times{Query2: Query2{Query1: Query1{source: src}, source2: src2},
+		rewound: true}
 }
 
 func (t *Times) String() string {

@@ -17,18 +17,19 @@ type Rename struct {
 	to   []string
 }
 
-func (r *Rename) Init() {
-	r.Query1.Init()
-	srcCols := r.source.Columns()
-	if !sset.Subset(srcCols, r.from) {
+func NewRename(src Query, from, to []string) *Rename {
+	srcCols := src.Columns()
+	if !sset.Subset(srcCols, from) {
 		panic("rename: nonexistent column(s): " +
-			strs.Join(", ", sset.Difference(r.from, srcCols)))
+			strs.Join(", ", sset.Difference(from, srcCols)))
 	}
-	if !sset.Disjoint(srcCols, r.to) {
+	if !sset.Disjoint(srcCols, to) {
 		panic("rename: column(s) already exist: " +
-			strs.Join(", ", sset.Intersect(srcCols, r.to)))
+			strs.Join(", ", sset.Intersect(srcCols, to)))
 	}
+	r := &Rename{Query1: Query1{source: src}, from: from, to: to}
 	r.renameDependencies(srcCols)
+	return r
 }
 
 func (r *Rename) renameDependencies(src []string) {

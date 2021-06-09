@@ -13,10 +13,7 @@ import (
 func TestKeys(t *testing.T) {
 	test := func(query, expected string) {
 		t.Helper()
-		q := ParseQuery(query, nil)
-		q.SetTran(testTran{})
-		q.Init()
-		// q = q.Transform()
+		q := ParseQuery(query, testTran{})
 		assert.T(t).This(idxsToS(q.Keys())).Is(expected)
 	}
 	test("tables", "table, tablename")

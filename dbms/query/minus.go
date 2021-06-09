@@ -16,6 +16,13 @@ type minusApproach struct {
 	keyIndex []string
 }
 
+func NewMinus(src, src2 Query) *Minus {
+	m := &Minus{Compatible: Compatible{
+		Query2: Query2{Query1: Query1{source: src}, source2: src2}}}
+	m.init()
+	return m
+}
+
 func (m *Minus) String() string {
 	return m.String2("MINUS")
 }
