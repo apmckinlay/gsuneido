@@ -52,7 +52,7 @@ func (sort *Sort) optimize(mode Mode, index []string) (Cost, interface{}) {
 	cost := Optimize(src, mode, sort.columns)
 	best := sort.bestOrdered(src.Indexes(), sort.columns, mode)
 	trace("SORT", "cost", cost, "best", best.cost)
-	if cost <= best.cost {
+	if cost < best.cost {
 		return cost, sortApproach{index: sort.columns}
 	}
 	return best.cost, sortApproach{index: best.index}

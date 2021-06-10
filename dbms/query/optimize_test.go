@@ -135,6 +135,9 @@ func TestOptimize(t *testing.T) {
 	test("hist2 where date is 1 sort id",
 		"hist2^(date) WHERE*1 date is 1")
 
+	test("comp where a = 1 sort b",
+		"comp^(a,b,c) WHERE a is 1")
+
 	mode = UpdateMode
 	test("table rename b to bb sort c",
 		"table^(a) TEMPINDEX(c) RENAME b to bb")
