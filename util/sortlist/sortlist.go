@@ -323,9 +323,9 @@ func (it *Iter) Next() {
 		// stick
 	default:
 		it.i++
-		if it.i >= it.size {
-			it.state = eof
-		}
+	}
+	if it.i >= it.size {
+		it.state = eof
 	}
 }
 
@@ -338,9 +338,9 @@ func (it *Iter) Prev() {
 		// stick
 	default:
 		it.i--
-		if it.i < 0 {
-			it.state = eof
-		}
+	}
+	if it.i < 0 {
+		it.state = eof
 	}
 }
 

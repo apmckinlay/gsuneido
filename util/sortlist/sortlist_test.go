@@ -89,6 +89,25 @@ func (b *Builder) ckblocks(nitems int) {
 
 //-------------------------------------------------------------------
 
+func TestIterEmpty(t *testing.T) {
+	b := NewSorting(nil)
+	list := b.Finish() // empty
+
+	it := list.Iter(nil)
+	it.Next()
+	assert.T(t).That(it.Eof())
+	it.Rewind()
+	it.Next()
+	assert.T(t).That(it.Eof())
+
+	it = list.Iter(nil)
+	it.Prev()
+	assert.T(t).That(it.Eof())
+	it.Rewind()
+	it.Prev()
+	assert.T(t).That(it.Eof())
+}
+
 func TestIter(t *testing.T) {
 	b := NewSorting(func(x, y uint64) bool { return x < y })
 	for j := 1; j <= 10; j++ {
