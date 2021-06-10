@@ -135,7 +135,8 @@ func (p *adminParser) columns(full bool) (columns, derived []string) {
 			} else if strings.HasSuffix(col, "_lower!") {
 				if full &&
 					!strs.Contains(columns, strings.TrimSuffix(col, "_lower!")) {
-					panic("_lower! base column not found")
+					panic("_lower! nonexistent column: " +
+						strings.TrimSuffix(col, "_lower!"))
 				}
 				derived = append(derived, col)
 			} else {

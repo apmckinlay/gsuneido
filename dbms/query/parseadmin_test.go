@@ -44,6 +44,7 @@ func TestParseAdmin(t *testing.T) {
 	test("view tc = tables join columns")
 
 	xtest := func(cmd, err string) {
+		t.Helper()
 		fn := func() { ParseAdmin(cmd) }
 		assert.T(t).This(fn).Panics(err)
 	}
@@ -51,5 +52,5 @@ func TestParseAdmin(t *testing.T) {
 	xtest("create mytable (one,two,three) index(one)", "key required")
 	xtest("create mytable (one,two,three) key(bar)", "invalid index column: bar")
 	xtest("create mytable (one,two,three_lower!) key(one)",
-		"_lower! base column not found")
+		"_lower! nonexistent column: three")
 }
