@@ -12,8 +12,7 @@ import (
 )
 
 func Alert(args ...interface{}) {
-	s := fmt.Sprintln(args...)
-	log.Print("Alert: ", s)
+	fmt.Println(args...)
 }
 
 func Fatal(args ...interface{}) {

@@ -17,6 +17,8 @@ loop:
 			continue
 		}
 		switch {
+		case match(&args, "-help"), match(&args, "-h"), match(&args, "-?"):
+			setAction("help")
 		case match(&args, "-check"):
 			setAction("check")
 		case match(&args, "-compact"):

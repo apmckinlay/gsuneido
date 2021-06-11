@@ -32,6 +32,7 @@ var help = `options:
 	-check
 	-c[lient] [ipaddress] (default 127.0.0.1)
 	-d[ump] [table]
+	-h[elp] or -?
 	-l[oad] [table]
 	-n[o]r[elaunch]
 	-p[ort] # (default 3147)
@@ -120,18 +121,18 @@ func main() {
 		}
 		os.Exit(0)
 	case "version":
-		fmt.Println("gSuneido " + builtDate + " (" + runtime.Version() + " " +
+		Alert("gSuneido " + builtDate + " (" + runtime.Version() + " " +
 			runtime.GOARCH + " " + runtime.GOOS + ")")
 		os.Exit(0)
 	case "help":
-		fmt.Println(help)
+		Alert(help)
 		os.Exit(0)
 	case "error":
 		Fatal(options.Error)
 	case "repl", "client":
 		// handled below
 	default:
-		fmt.Println("invalid action:", options.Action)
+		Alert("invalid action:", options.Action)
 		os.Exit(1)
 	}
 	Libload = libload // dependency injection
