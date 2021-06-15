@@ -250,7 +250,8 @@ func (t *UpdateTran) Output(table string, rec rt.Record) {
 		keys[i] = is.Key(rec)
 		if ix.Lookup(keys[i]) != 0 {
 			t.db.ck.Abort(t.ct, "duplicate key")
-			panic(fmt.Sprint("duplicate key: ", table, " ", ts.Indexes[i].Columns))
+			panic(fmt.Sprint("duplicate key: ",
+				strs.Join(",", ts.Indexes[i].Columns), " in ", table))
 		}
 		ix.Insert(keys[i], off)
 	}
@@ -307,7 +308,8 @@ func (t *UpdateTran) Update(table string, oldoff uint64, newrec rt.Record) uint6
 				ix.Delete(oldkey, oldoff)
 				if ix.Lookup(newkey) != 0 {
 					t.db.ck.Abort(t.ct, "duplicate key")
-					panic(fmt.Sprint("duplicate key: ", table, " ", ts.Indexes[i].Columns))
+					panic(fmt.Sprint("duplicate key: ",
+						strs.Join(",", ts.Indexes[i].Columns), " in ", table))
 				}
 				ix.Insert(newkey, newoff)
 			}
