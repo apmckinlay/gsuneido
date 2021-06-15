@@ -68,7 +68,7 @@ func TestOptimize(t *testing.T) {
 	test("comp where a is 1 and b is 2 project c",
 		"comp^(a,b,c) WHERE a is 1 and b is 2 PROJECT-COPY c")
 	test("customer project id,name",
-		"customer^(id) PROJECT-COPY id, name")
+		"customer^(id) PROJECT-COPY id,name")
 	test("trans project item",
 		"trans^(item) PROJECT-SEQ item")
 	test("trans project item,id,cost,date project item",
@@ -76,7 +76,7 @@ func TestOptimize(t *testing.T) {
 	test("trans project item,id,cost project item,id project item",
 		"trans^(item) PROJECT-SEQ item")
 	test("hist project date,item",
-		"hist^(date,item,id) PROJECT-SEQ date, item")
+		"hist^(date,item,id) PROJECT-SEQ date,item")
 	test("customer project city",
 		"customer^(id) PROJECT-HASH city")
 	test("customer project id,city project city",

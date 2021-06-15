@@ -103,7 +103,7 @@ func (p *Project) String() string {
 	case projHash:
 		s += "-HASH"
 	}
-	return s + " " + strs.Join(", ", p.columns)
+	return s + " " + strs.Join(",", p.columns)
 }
 
 func (p *Project) Columns() []string {

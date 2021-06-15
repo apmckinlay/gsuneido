@@ -26,7 +26,7 @@ func TestParseQuery(t *testing.T) {
 	test("table sort a")
 	test("table sort reverse a, b")
 	test("table project a")
-	test("table project a, b, c")
+	test("table project a,b,c")
 	test("table rename a to aa")
 	test("table rename a to aa, c to cc")
 	test("table intersect table2")
@@ -57,7 +57,7 @@ func TestParseQuery(t *testing.T) {
 	test("cus join task sort tnum",
 		"cus join 1:n by(cnum) task sort tnum")
 	test("(cus join task) project cnum, abbrev, tnum rename cnum to c sort tnum, c",
-		"(cus join 1:n by(cnum) task) project cnum, abbrev, tnum"+
+		"(cus join 1:n by(cnum) task) project cnum,abbrev,tnum"+
 		" rename cnum to c sort tnum, c")
 
 	xtest := func(s, err string) {

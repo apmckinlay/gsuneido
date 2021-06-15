@@ -265,7 +265,7 @@ func TestQueryGet(t *testing.T) {
 
 	// project
 	test("customer project city, id",
-		"customer^(id) PROJECT-COPY city, id",
+		"customer^(id) PROJECT-COPY city,id",
 		`city	id
 		'saskatoon'	'a'
 		'calgary'	'c'
