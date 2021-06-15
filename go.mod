@@ -1,11 +1,11 @@
 module github.com/apmckinlay/gsuneido
 
-go 1.15
+go 1.16
 
 require (
 	github.com/google/uuid v1.2.0
-	golang.org/x/sys v0.0.0-20210124154548-22da62e12c0c
-	golang.org/x/text v0.3.5
+	golang.org/x/sys v0.0.0-20210615035016-665e8c7367d1
+	golang.org/x/text v0.3.6
 )
 
 // NOTE: to update dependencies run: go get -u
