@@ -10,7 +10,7 @@ import "unsafe"
 // WARNING: this should only be used when the byte slice is final.
 // If the byte slice is modified the string may change
 // which is illegal since strings are immutable.
-// This is an optimization that should not be overused.
+// This is an optimization (to avoid allocation) that should not be overused.
 func BStoS(bs []byte) string {
 	return *(*string)(unsafe.Pointer(&bs))
 	// return string(bs)
