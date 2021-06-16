@@ -184,7 +184,7 @@ func (p *queryParser) summarize(q Query) Query {
 
 func (p *queryParser) sumBy() []string {
 	var by []string
-	for p.Token == tok.Identifier &&
+	for p.Token.IsIdent() &&
 		!isSumOp(p.Token) &&
 		p.Lxr.Ahead(1).Token != tok.Eq {
 		by = append(by, p.MatchIdent())

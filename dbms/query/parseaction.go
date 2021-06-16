@@ -76,9 +76,8 @@ func (p *actionParser) update() Action {
 	p.Match(tok.Set)
 	var cols []string
 	var exprs []ast.Expr
-	for p.Token == tok.Identifier {
-		cols = append(cols, p.Text)
-		p.Match(tok.Identifier)
+	for p.Token.IsIdent() {
+		cols = append(cols, p.MatchIdent())
 		p.Match(tok.Eq)
 		exprs = append(exprs, p.Expression())
 		p.MatchIf(tok.Comma)

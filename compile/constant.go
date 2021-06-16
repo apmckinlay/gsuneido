@@ -270,7 +270,7 @@ func (p *Parser) class() Value {
 	}
 	var base Gnum
 	baseName := "class"
-	if p.Token == tok.Identifier {
+	if p.Token.IsIdent() {
 		baseName = p.Text
 		base = p.ckBase(baseName)
 		p.MatchIdent()
