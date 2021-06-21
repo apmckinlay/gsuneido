@@ -178,10 +178,11 @@ func TestPropFold(t *testing.T) {
 	test("1 + 2 - 3", "0")
 	test("1 | 2 | 4", "7")
 	test("255 & 15", "15")
-	test("a and true and true", "Nary(And a true)")
-	test("a or false or false", "Nary(Or a false)")
-	test("a or true or b", "true")     // short circuit
-	test("a and false and b", "false") // short circuit
+	test("a and true and true", "Nary(And a true)") // keep op
+	test("a and true and b", "Nary(And a b)")       // remove identity
+	test("a or false or false", "Nary(Or a false)") // keep op
+	test("a or true or b", "true")                  // short circuit
+	test("a and false and b", "false")              // short circuit
 
 	test("1 + a + b + 2", "Nary(Add 3 a b)")
 	test("5 + a + b - 2", "Nary(Add 3 a b)")
@@ -211,4 +212,6 @@ func TestPropFold(t *testing.T) {
 	test(`'foo' $
 		'bar' $
 		'baz'`, "'foobarbaz'")
+
+	test("a in ()", "false")
 }

@@ -76,6 +76,9 @@ func (f Folder) In(e Expr, exprs []Expr) Expr {
 }
 
 func (f Folder) foldIn(in *In) Expr {
+	if len(in.Exprs) == 0 {
+		return f.Constant(False)
+	}
 	c, ok := in.E.(*Constant)
 	if !ok {
 		return in
@@ -102,20 +105,20 @@ func (f Folder) foldNary(n *Nary) Expr {
 	exprs := n.Exprs
 	switch n.Tok {
 	case tok.Add: // includes Sub
-		exprs = commutative(exprs, OpAdd, nil)
+		exprs = commutative(exprs, OpAdd, nil, Zero)
 	case tok.Mul: // includes Div
 		exprs = f.foldMul(exprs)
 	case tok.BitOr:
-		exprs = commutative(exprs, OpBitOr, allones)
+		exprs = commutative(exprs, OpBitOr, allones, Zero)
 	case tok.BitAnd:
-		exprs = commutative(exprs, OpBitAnd, Zero)
+		exprs = commutative(exprs, OpBitAnd, Zero, allones)
 	case tok.BitXor:
-		exprs = commutative(exprs, OpBitXor, nil)
+		exprs = commutative(exprs, OpBitXor, nil, Zero)
 	case tok.Or:
-		exprs = commutative(exprs, or, True)
+		exprs = commutative(exprs, or, True, False)
 		exprs = foldOrToIn(exprs)
 	case tok.And:
-		exprs = commutative(exprs, and, False)
+		exprs = commutative(exprs, and, False, True)
 	case tok.Cat:
 		exprs = foldCat(exprs)
 	default:
@@ -139,8 +142,8 @@ func and(x, y Value) Value {
 type bopfn func(Value, Value) Value
 
 // commutative folds constants in a list of expressions
-// fold is a short circuit value e.g. zero for multiply
-func commutative(exprs []Expr, bop bopfn, fold Value) []Expr {
+// zero is a short circuit value e.g. false for and
+func commutative(exprs []Expr, bop bopfn, zero, identity Value) []Expr {
 	var first *Constant
 	dst := 0
 	for _, e := range exprs {
@@ -148,9 +151,12 @@ func commutative(exprs []Expr, bop bopfn, fold Value) []Expr {
 			exprs[dst] = e
 			dst++
 		} else {
-			if c.Val.Equal(fold) {
+			if c.Val.Equal(zero) {
 				exprs[0] = c
 				return exprs[:1]
+			}
+			if c.Val.Equal(identity) {
+				continue
 			}
 			if first == nil {
 				first = c
@@ -160,6 +166,15 @@ func commutative(exprs []Expr, bop bopfn, fold Value) []Expr {
 				first.Val = bop(first.Val, c.Val)
 			}
 		}
+	}
+	if dst == 1 && first != nil {
+		// compile-time type check
+		bop(identity, first.Val)
+	}
+	if dst <= 1 && first == nil {
+		// keep operation as run-time type check
+		exprs[dst] = &Constant{Val: identity}
+		dst++
 	}
 	return exprs[:dst]
 }
