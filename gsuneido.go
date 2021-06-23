@@ -149,7 +149,8 @@ func main() {
 	} else {
 		openDbms()
 	}
-	if options.Action == "repl" {
+	if options.Action == "repl" ||
+		(options.Action == "client" && options.Mode != "gui") {
 		eval("Init.Repl()")
 		repl()
 		closeDbms()
@@ -246,7 +247,9 @@ func openDbms() {
 }
 
 func closeDbms() {
-	db.Close()
+	if db != nil {
+		db.Close()
+	}
 }
 
 // REPL -------------------------------------------------------------
@@ -330,7 +333,7 @@ func eval(src string) {
 	src = "function () {\n" + src + "\n}"
 	v, results := compile.Checked(mainThread, src)
 	for _, s := range results {
-		fmt.Println(s)
+		fmt.Println("(" + s + ")")
 	}
 	fn := v.(*SuFunc)
 	// DisasmMixed(os.Stdout, fn, src)
