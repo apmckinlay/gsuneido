@@ -77,7 +77,6 @@ type Thread struct {
 var nThread int32
 
 // NewThread creates a new thread
-// zero value does not handle rxcache and trcache
 func NewThread() *Thread {
 	n := atomic.AddInt32(&nThread, 1)
 	return &Thread{

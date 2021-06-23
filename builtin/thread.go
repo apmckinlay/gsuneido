@@ -13,6 +13,7 @@ import (
 
 	"github.com/apmckinlay/gsuneido/options"
 	. "github.com/apmckinlay/gsuneido/runtime"
+	"github.com/apmckinlay/gsuneido/util/str"
 )
 
 type suThreadGlobal struct {
@@ -95,7 +96,7 @@ func InternalError(e interface{}) bool {
 var threadMethods = Methods{
 	"Name": method("(name=false)", func(t *Thread, _ Value, args []Value) Value {
 		if args[0] != False {
-			t.Name = ToStr(args[0])
+			t.Name = str.BeforeFirst(t.Name, " ") + " " + ToStr(args[0])
 		}
 		return SuStr(t.Name)
 	}),
