@@ -46,3 +46,7 @@ func Run() {
 func shutdown(exitcode int) {
 	exit.Exit(exitcode)
 }
+
+func OnUiThread() bool {
+	return windows.GetCurrentThreadId() == uiThreadId
+}

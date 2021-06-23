@@ -267,7 +267,7 @@ func (c *SuClass) Call(t *Thread, this Value, as *ArgSpec) Value {
 	return c.New(t, as)
 }
 
-func (c *SuClass) New(t *Thread, as *ArgSpec) Value {
+func (c *SuClass) New(t *Thread, as *ArgSpec) *SuInstance {
 	ob := NewInstance(t, c)
 	nu := c.Lookup(t, "New")
 	nu.Call(t, ob, as)

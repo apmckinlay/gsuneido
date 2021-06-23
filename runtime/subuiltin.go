@@ -221,3 +221,7 @@ func (b *SuBuiltinMethodRaw) Call(t *Thread, this Value, as *ArgSpec) Value {
 	args := t.stack[base : base+int(as.Nargs)]
 	return b.Fn(t, as, this, args)
 }
+
+func (b *SuBuiltinMethodRaw) Type() types.Type {
+	return types.Method
+}

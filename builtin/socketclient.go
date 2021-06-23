@@ -172,7 +172,10 @@ func (sc *suSocketClient) close() {
 }
 
 func scOpen(this Value) *suSocketClient {
-	sc := this.(*suSocketClient)
+	sc, ok := this.(*suSocketClient)
+	if !ok {
+		sc = &this.(*suServerConnect).client
+	}
 	if sc.conn == nil {
 		panic("can't use a closed SocketClient")
 	}

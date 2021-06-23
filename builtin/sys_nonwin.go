@@ -61,3 +61,7 @@ func GetGuiResources() (int, int) {
 func ErrlogDir() string {
 	return os.TempDir()
 }
+
+func OnUiThread() bool {
+	return false
+}

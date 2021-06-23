@@ -124,7 +124,7 @@ func method3(p string, f func(this, a1, a2, a3 Value) Value) Callable {
 }
 
 func methodRaw(p string,
-	f func(t *Thread, as *ArgSpec, this Value, args []Value) Value) Callable {
+	f func(t *Thread, as *ArgSpec, this Value, args []Value) Value) *SuBuiltinMethodRaw {
 	// params are just for documentation, SuBuiltinMethodRaw doesn't use them
 	return &SuBuiltinMethodRaw{Fn: f, ParamSpec: *params(p)}
 }
