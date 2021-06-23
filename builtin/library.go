@@ -11,11 +11,13 @@ var _ = builtin("Libraries()", func(t *Thread, args []Value) Value {
 
 var _ = builtin("Use(library)",
 	func(t *Thread, args []Value) Value {
+		Global.UnloadAll()
 		return SuBool(t.Dbms().Use(ToStr(args[0])))
 	})
 
 var _ = builtin("Unuse(library)",
 	func(t *Thread, args []Value) Value {
+		Global.UnloadAll()
 		return SuBool(t.Dbms().Unuse(ToStr(args[0])))
 	})
 

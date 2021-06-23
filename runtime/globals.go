@@ -220,6 +220,9 @@ func (typeGlobal) UnloadAll() {
 	for i := range g.values {
 		g.values[i] = nil
 	}
+	for k := range g.errors {
+		delete(g.errors, k)
+	}
 	g.lock.Unlock()
 }
 
