@@ -249,10 +249,12 @@ func (t *UpdateTran) Output(table string, rec rt.Record) {
 		is := ts.Indexes[i].Ixspec
 		keys[i] = is.Key(rec)
 		if ix.Lookup(keys[i]) != 0 {
-			t.db.ck.Abort(t.ct, "duplicate key")
 			panic(fmt.Sprint("duplicate key: ",
 				strs.Join(",", ts.Indexes[i].Columns), " in ", table))
 		}
+	}
+	for i := range ts.Indexes {
+		ix := ti.Indexes[i]
 		ix.Insert(keys[i], off)
 	}
 	t.ck(t.db.ck.Write(t.ct, table, keys))
@@ -295,26 +297,28 @@ func (t *UpdateTran) Update(table string, oldoff uint64, newrec rt.Record) uint6
 	oldkeys := make([]string, len(ts.Indexes))
 	newkeys := make([]string, len(ts.Indexes))
 	for i := range ts.Indexes {
-		ix := ti.Indexes[i]
 		is := ts.Indexes[i].Ixspec
-		oldkey := is.Key(oldrec)
-		if newoff == oldoff {
-			oldkeys[i] = oldkey
-		} else {
-			newkey := is.Key(newrec)
-			if oldkey == newkey {
-				ix.Update(oldkey, newoff)
-			} else {
-				ix.Delete(oldkey, oldoff)
-				if ix.Lookup(newkey) != 0 {
-					t.db.ck.Abort(t.ct, "duplicate key")
+		oldkeys[i] = is.Key(oldrec)
+		if newoff != oldoff {
+			newkeys[i] = is.Key(newrec)
+			if oldkeys[i] != newkeys[i] {
+				ix := ti.Indexes[i]
+				if ix.Lookup(newkeys[i]) != 0 {
 					panic(fmt.Sprint("duplicate key: ",
 						strs.Join(",", ts.Indexes[i].Columns), " in ", table))
 				}
-				ix.Insert(newkey, newoff)
 			}
-			oldkeys[i] = oldkey
-			newkeys[i] = newkey
+		}
+	}
+	if newoff != oldoff {
+		for i := range ts.Indexes {
+			ix := ti.Indexes[i]
+			if oldkeys[i] == newkeys[i] {
+				ix.Update(oldkeys[i], newoff)
+			} else {
+				ix.Delete(oldkeys[i], oldoff)
+				ix.Insert(newkeys[i], newoff)
+			}
 		}
 	}
 	t.ck(t.db.ck.Write(t.ct, table, oldkeys))
