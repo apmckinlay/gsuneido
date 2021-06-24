@@ -602,6 +602,27 @@ func (r *SuRecord) GetRaw(key string) (string, bool) {
 	return "", false
 }
 
+// deps is used by ToRecord to create the dependencies for a field
+// but without unpacking if it's in the row
+func (r *SuRecord) deps(t *Thread, key string) {
+	result := r.ob.getIfPresent(SuStr(key))
+	if t != nil {
+		if ar := t.rules.top(); ar.rec == r { // identity (not Equal)
+			r.addDependent(ar.key, key)
+		}
+	}
+	if result == nil && r.userow {
+		if s := r.row.GetRaw(r.hdr, key); s != "" {
+			result = True
+		}
+	}
+	if result == nil || r.invalid[key] {
+		if x := r.getSpecial(key); x == nil {
+			r.callRule(t, key)
+		}
+	}
+}
+
 // getPacked is used by ToRecord to build a Record for the database.
 // It is like Get except it returns the value packed,
 // using the already packed value from the row when possible.
@@ -812,10 +833,11 @@ func (r *SuRecord) ToRecord(t *Thread, hdr *Header) Record {
 	r.ensureDeps()
 	fields := hdr.Fields[0]
 
-	// access all the fields to ensure dependencies are created
+	// ensure dependencies are created
 	for _, f := range fields {
-		// use getPacked so we don't force unpack on every field
-		r.getPacked(t, f)
+		if f != "-" {
+			r.deps(t, f)
+		}
 	}
 
 	// invert stored dependencies
