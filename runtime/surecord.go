@@ -833,7 +833,7 @@ func (r *SuRecord) ToRecord(t *Thread, hdr *Header) Record {
 	var tsField string
 	var ts SuDate
 	for _, f := range fields {
-		if f == "" {
+		if f == "-" {
 			rb.AddRaw("")
 		} else if strings.HasSuffix(f, "_TS") { // also done in SuObject ToRecord
 			if tsField != "" {
