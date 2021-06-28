@@ -5,6 +5,7 @@ package db19
 
 import (
 	"fmt"
+	"math"
 	"strconv"
 	"sync/atomic"
 
@@ -124,8 +125,13 @@ func (t *ReadTran) ColToFld(table, col string) int {
 }
 
 func (t *ReadTran) RangeFrac(table string, iIndex int, org, end string) float64 {
-	idx := t.meta.GetRoInfo(table).Indexes[iIndex]
-	return float64(idx.RangeFrac(org, end))
+	info := t.meta.GetRoInfo(table)
+	idx := info.Indexes[iIndex]
+	f := float64(idx.RangeFrac(org, end))
+	if info.Nrows > 0 {
+		f = math.Max(f, 1/float64(info.Nrows))
+	}
+	return f
 }
 
 // Lookup returns the DbRec for a key, or nil if not found

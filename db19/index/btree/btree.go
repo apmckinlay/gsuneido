@@ -271,7 +271,9 @@ func Read(st *stor.Stor, r *stor.Reader) *btree {
 // RangeFrac returns the fraction of the btree (0 to 1) in the range org to end
 func (bt *btree) RangeFrac(org, end string) float32 {
 	if bt.empty() {
-		return 1
+		// don't know if table is empty or if there are records are in the ixbufs
+		// fraction is between 0 and 1 so just return half
+		return .5
 	}
 	frac := bt.fracPos(end) - bt.fracPos(org)
 	const minFrac = 1e-9
