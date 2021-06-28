@@ -17,6 +17,7 @@ func TestExtractCompares(t *testing.T) {
 	test := func(query string, expected string) *Where {
 		t.Helper()
 		w := ParseQuery("table where " + query, testTran{}).(*Where)
+		w.optInit()
 		before := w.expr.String()
 		cmps := w.extractCompares()
 		if expected == "" {
@@ -40,6 +41,7 @@ func TestComparesToColSelects(t *testing.T) {
 	test := func(query string, expected string) {
 		t.Helper()
 		w := ParseQuery("table where " + query, testTran{}).(*Where)
+		w.optInit()
 		cmps := w.extractCompares()
 		colSels := w.comparesToFilters(cmps)
 		assert.T(t).This(fmt.Sprint(colSels)).Is("map[" + expected + "]")
@@ -61,6 +63,7 @@ func TestColSelsToIdxFilter(t *testing.T) {
 	test := func(query string, expected string) {
 		t.Helper()
 		w := ParseQuery(query, testTran{}).(*Where)
+		w.optInit()
 		cmps := w.extractCompares()
 		colSels := w.comparesToFilters(cmps)
 		filters := colSelsToIdxFilters(colSels, idx)
@@ -83,6 +86,7 @@ func TestExplodeFilters(t *testing.T) {
 	test := func(query string, expected string) {
 		t.Helper()
 		w := ParseQuery("comp where " + query, testTran{}).(*Where)
+		w.optInit()
 		cmps := w.extractCompares()
 		colSels := w.comparesToFilters(cmps)
 		filters := colSelsToIdxFilters(colSels, idx)
@@ -102,6 +106,7 @@ func TestColSelsToIdxSels(t *testing.T) {
 	test := func(query string, expected string) {
 		t.Helper()
 		w := ParseQuery("comp where " + query, testTran{}).(*Where)
+		w.optInit()
 		cmps := w.extractCompares()
 		colSels := w.comparesToFilters(cmps)
 		idxSels := w.colSelsToIdxSels(colSels)
@@ -140,8 +145,8 @@ func TestWhereNrows(t *testing.T) {
 	test := func(query string, nrows int) {
 		t.Helper()
 		w := ParseQuery(query, testTran{}).(*Where)
-		assert.That(w.tbl != nil)
 		w.optInit()
+		assert.That(w.tbl != nil)
 		assert.T(t).This(w.Nrows()).Is(nrows)
 	}
 	test("table where F()", 50)

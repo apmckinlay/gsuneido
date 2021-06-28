@@ -329,16 +329,17 @@ func (w *Where) optimize(mode Mode, index []string) (Cost, interface{}) {
 	if w.conflict {
 		return 0, nil
 	}
+	if !w.optInited {
+		w.optInit()
+	}
 	// we always have the option of just filtering (no specific index use)
 	filterCost := Optimize(w.source, mode, index)
 	if w.tbl == nil || w.tbl.singleton {
 		return filterCost, nil
 	}
-	if !w.optInited {
-		w.optInit()
-	}
 	cost, index := w.bestIndex(index)
-	if cost >= filterCost {
+	if cost >= impossible {
+		// only use the filter if there are no possible idxSel
 		return filterCost, nil
 	}
 	return cost, whereApproach{index: index}
@@ -354,8 +355,11 @@ func (w *Where) conflictCheck() {
 }
 
 func (w *Where) optInit() {
-	w.Fixed()                   // calc before altering expression
-	cmps := w.extractCompares() // NOTE: modifies expr
+	if w.tbl, _ = w.source.(*Table); w.tbl == nil {
+		return
+	}
+	w.Fixed()
+	cmps := w.extractCompares()
 	if w.conflict {
 		return
 	}
@@ -425,7 +429,7 @@ func (w *Where) comparesToFilters(cmps []cmpExpr) map[string]filter {
 	return filters
 }
 
-// bestIndex returns the best (lowest cost) index
+// bestIndex returns the best (lowest cost) index with an idxSel
 // that satisfies the required order (or impossible)
 func (w *Where) bestIndex(order []string) (Cost, []string) {
 	if w.singleton {
