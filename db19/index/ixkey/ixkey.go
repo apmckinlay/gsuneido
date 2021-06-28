@@ -211,3 +211,20 @@ func Decode(comp string) []string {
 	}
 	return result
 }
+
+func DecodeValues(comp string) []Value {
+	if comp == "" {
+		return nil
+	}
+	parts := strings.Split(comp, Sep)
+	result := make([]Value, len(parts))
+	for i, p := range parts {
+		s := strings.ReplaceAll(p, "\x00\x01", "\x00")
+		if s == Max {
+			result[i] = SuStr("<max>")
+		} else {
+			result[i] = Unpack(s)
+		}
+	}
+	return result
+}
