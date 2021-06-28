@@ -160,8 +160,10 @@ func (ck *Check) Write(t *CkTran, table string, keys []string) bool {
 							act2 = "write"
 						} else if tbl.reads.contains(i, key) {
 							act2 = "read"
+						} else {
+							continue
 						}
-						if act2 != "" && ck.abort1of(t, t2, "write", act2) {
+						if ck.abort1of(t, t2, "write", act2) {
 							return false // this transaction got aborted
 						}
 					}
