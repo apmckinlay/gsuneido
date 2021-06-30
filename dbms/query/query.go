@@ -78,7 +78,8 @@ type Query interface {
 	// rowSize returns the average number of bytes per row
 	rowSize() int
 
-	// Lookup returns the row matching the given key, or nil if not found
+	// Lookup returns the row matching the given key, or nil if not found.
+	// It is used by Compatible (Intersect, Minus, Union)
 	Lookup(cols, vals []string) runtime.Row
 
 	Rewind()
@@ -86,6 +87,7 @@ type Query interface {
 	Get(dir runtime.Dir) runtime.Row
 
 	// Select limits the query to the specified range (of packed values).
+	// It is used by Join and LeftJoin.
 	Select(cols, vals []string)
 
 	Header() *runtime.Header

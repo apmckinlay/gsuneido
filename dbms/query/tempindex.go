@@ -41,6 +41,10 @@ func (ti *TempIndex) Rewind() {
 }
 
 func (ti *TempIndex) Select(cols, vals []string) {
+	if cols == nil && vals == nil { // clear select
+		ti.selOrg, ti.selEnd = ixkey.Min, ixkey.Max
+		return
+	}
 	encode := len(ti.order) > 1
 	ti.selOrg, ti.selEnd = selKeys(encode, ti.order, cols, vals)
 	ti.Rewind()
@@ -62,9 +66,6 @@ func (ti *TempIndex) Lookup(cols, vals []string) Row {
 func (ti *TempIndex) Get(dir Dir) Row {
 	if ti.iter == nil {
 		ti.iter = ti.makeIter()
-		if ti.selEnd == "" {
-			ti.selEnd = ixkey.Max
-		}
 		ti.rewound = true
 	}
 	var row Row
@@ -95,6 +96,9 @@ type rowIter interface {
 }
 
 func (ti *TempIndex) makeIter() rowIter {
+	if ti.selEnd == "" {
+		ti.selEnd = ixkey.Max
+	}
 	ti.hdr = ti.source.Header()
 	if ti.source.SingleTable() {
 		return ti.single()

@@ -431,6 +431,42 @@ func TestQueryGet(t *testing.T) {
         970101	'disk'	 'a'	100   1
         970101	'mouse'	 'c'	200   1
         970201	'eraser' 'c'	150   1`)
+	test("(co where tnum = 100 remove signed) union "+
+		"(co where tnum = 100 remove signed)",
+		"co^(tnum) WHERE*1 tnum is 100 PROJECT-COPY tnum UNION-LOOKUP "+
+			"(co^(tnum) WHERE*1 tnum is 100 PROJECT-COPY tnum)",
+		`tnum
+        100`)
+	test("(co where tnum = 100 remove tnum) union "+
+		"(co where tnum = 100 remove tnum)",
+		"co^(tnum) WHERE*1 tnum is 100 PROJECT-COPY signed UNION-LOOKUP "+
+			"(co^(tnum) WHERE*1 tnum is 100 PROJECT-COPY signed)",
+		`signed
+        990101`)
+	test("((co where tnum = 100) union (co where tnum = 102)) union "+
+		"(co where tnum = 100)",
+		"co^(tnum) WHERE*1 tnum is 100 UNION-LOOKUP " +
+			"(co^(tnum) WHERE*1 tnum is 100 UNION-MERGE-DISJOINT(tnum) "+
+				"(co^(tnum) WHERE*1 tnum is 102))",
+		`tnum	signed
+        100		990101
+        102		990102`)
+	test("(((co where tnum = 100) union (co where tnum = 102)) remove tnum)"+
+		" union "+
+		"(((co where tnum = 104) union (co where tnum = 106)) remove tnum)",
+		"(co^(tnum) WHERE*1 tnum is 100 UNION-MERGE-DISJOINT(tnum) (co^(tnum) WHERE*1 tnum is 102)) PROJECT-SEQ signed UNION-LOOKUP ((co^(tnum) WHERE*1 tnum is 104 UNION-MERGE-DISJOINT(tnum) (co^(tnum) WHERE*1 tnum is 106)) PROJECT-SEQ signed)",
+		`signed
+        990101
+        990102
+        990103
+        990104`)
+	test(`((co where tnum = 104 remove tnum) union (co where tnum = 106 remove tnum))
+		union
+		((co where tnum = 104 remove tnum) union (co where tnum = 106 remove tnum))`,
+		"(co^(tnum) WHERE*1 tnum is 104 PROJECT-COPY signed UNION-LOOKUP (co^(tnum) WHERE*1 tnum is 106 PROJECT-COPY signed)) UNION-LOOKUP ((co^(tnum) WHERE*1 tnum is 104 PROJECT-COPY signed UNION-LOOKUP (co^(tnum) WHERE*1 tnum is 106 PROJECT-COPY signed)) TEMPINDEX(signed))",
+		`signed
+        990103
+        990104`)
 
 	// join
 	test("customer join alias",

@@ -6,6 +6,7 @@ package query
 import (
 	"github.com/apmckinlay/gsuneido/db19/index"
 	"github.com/apmckinlay/gsuneido/db19/index/btree"
+	"github.com/apmckinlay/gsuneido/db19/index/iterator"
 	"github.com/apmckinlay/gsuneido/db19/index/ixbuf"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/db19/meta"
@@ -233,6 +234,10 @@ func (tbl *Table) Get(dir runtime.Dir) runtime.Row {
 }
 
 func (tbl *Table) Select(cols, vals []string) {
+	if cols == nil && vals == nil { // clear select
+		tbl.iter.Range(iterator.All)
+		return
+	}
 	org, end := selKeys(tbl.indexEncode, tbl.index, cols, vals)
 	tbl.SelectRaw(org, end)
 }

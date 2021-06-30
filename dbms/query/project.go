@@ -66,6 +66,9 @@ func NewProject(src Query, cols []string) *Project {
 
 func NewRemove(src Query, cols []string) *Project {
 	cols = sset.Difference(src.Columns(), cols)
+	if len(cols) == 0 {
+		panic("remove: can't remove all columns")
+	}
 	return NewProject(src, cols)
 }
 
@@ -498,4 +501,14 @@ func (p *Project) Select(cols, vals []string) {
 		p.indexed = false
 	}
 	p.rewound = true
+}
+
+func (p *Project) Lookup(cols, vals []string) runtime.Row {
+	if p.strategy == projCopy {
+		return p.source.Lookup(cols, vals)
+	}
+	p.Select(cols, vals)
+	row := p.Get(runtime.Next)
+	p.Select(nil, nil) // clear select
+	return row
 }

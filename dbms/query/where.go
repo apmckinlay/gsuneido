@@ -1011,6 +1011,17 @@ func (w *Where) Lookup(cols, vals []string) runtime.Row {
 	if w.conflict {
 		return nil
 	}
+	if w.singleton {
+		// can't use source.Lookup because cols may not match source index
+		w.Rewind()
+		row := w.Get(runtime.Next)
+		for i, col := range cols {
+			if row.GetRaw(w.hdr, col) != vals[i] {
+				return nil
+			}
+		}
+		return row
+	}
 	row := w.source.Lookup(cols, vals)
 	if !w.filter(row) {
 		row = nil

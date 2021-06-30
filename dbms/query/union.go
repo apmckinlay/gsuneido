@@ -215,7 +215,7 @@ func (u *Union) optLookup(source, source2 Query, mode Mode) (Cost, interface{}) 
 	for _, key := range source2.Keys() {
 		cost := Optimize(source, mode, nil) +
 			LookupCost(source2, mode, key, source.Nrows())
-		if cost < bestCost && Optimize(source2, mode, key) < impossible {
+		if cost < bestCost {
 			bestKey = key
 			bestCost = cost
 		}
@@ -284,6 +284,7 @@ func (u *Union) getLookup(dir Dir) Row {
 				return nil
 			}
 			u.src1 = false
+			u.source2.Rewind()
 		} else { // source2
 			row = u.source2.Get(dir)
 			if row != nil {
@@ -382,4 +383,24 @@ func (u *Union) Select(cols, vals []string) {
 	u.source.Select(cols, vals)
 	u.source2.Select(cols, vals)
 	u.rewound = true
+}
+
+func (u *Union) Lookup(cols, vals []string) Row {
+	u.Select(cols, vals)
+	row := u.Get(Next)
+	u.Select(nil, nil) // clear select
+	return row
+}
+
+// unpack is for debugging output
+func unpack(packed []string) []Value {
+	vals := make([]Value, len(packed))
+	for i, p := range packed {
+		if p == ixkey.Max {
+			vals[i] = SuStr("<max>")
+		} else {
+			vals[i] = Unpack(p)
+		}
+	}
+	return vals
 }
