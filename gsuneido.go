@@ -240,6 +240,7 @@ func openDbms() {
 			log.Fatalln(err)
 		}
 	}
+	db19.StartTimestamps()
 	db19.StartConcur(db, 10*time.Second) //1*time.Minute) //FIXME
 	dbmsLocal = dbms.NewDbmsLocal(db)
 	GetDbms = func() IDbms { return dbmsLocal }

@@ -4,6 +4,8 @@
 package query
 
 import (
+	"strings"
+
 	"github.com/apmckinlay/gsuneido/compile/ast"
 	"github.com/apmckinlay/gsuneido/db19"
 	. "github.com/apmckinlay/gsuneido/runtime"
@@ -33,6 +35,10 @@ func (a *insertRecordAction) execute(ut *db19.UpdateTran) int {
 	return 1
 }
 
+//-------------------------------------------------------------------
+
+// NOTE: doesn't execute rules or output _deps
+
 type insertQueryAction struct {
 	query Query
 	table string
@@ -43,7 +49,30 @@ func (a *insertQueryAction) String() string {
 }
 
 func (a *insertQueryAction) execute(ut *db19.UpdateTran) int {
-	return 0 //TODO
+	qr, _ := Setup(a.query, ReadMode, ut)
+	hdr := qr.Header()
+	fields := ut.GetSchema(a.table).Columns
+	n := 0
+	for row := qr.Get(Next); row != nil; row = qr.Get(Next) {
+		rb := RecordBuilder{}
+		var tsField string
+		for _, f := range fields {
+			if f == "-" || strings.HasSuffix(f, "_deps") {
+				rb.AddRaw("")
+			} else if strings.HasSuffix(f, "_TS") {
+				if tsField != "" {
+					panic("multiple _TS fields not supported")
+				}
+				rb.Add(db19.Timestamp())
+			} else {
+				rb.AddRaw(row.GetRaw(hdr, f))
+			}
+		}
+		rec := rb.Build()
+		ut.Output(a.table, rec)
+		n++
+	}
+	return n
 }
 
 //-------------------------------------------------------------------
