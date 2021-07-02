@@ -101,8 +101,8 @@ func (a *updateAction) execute(ut *db19.UpdateTran) int {
 	}
 	hdr := q.Header()
 	th := &Thread{}
-	var prev uint64
 	n := 0
+	prev := uint64(0)
 	for row := q.Get(Next); row != nil; row = q.Get(Next) {
 		// avoid getting stuck on the same record
 		if row[0].Off == prev {
@@ -137,7 +137,12 @@ func (a *deleteAction) execute(ut *db19.UpdateTran) int {
 		panic("delete: query not updateable")
 	}
 	n := 0
+	prev := uint64(0)
 	for row := q.Get(Next); row != nil; row = q.Get(Next) {
+		if row[0].Off == prev {
+			continue
+		}
+		prev = row[0].Off
 		ut.Delete(table, row[0].Off)
 		n++
 	}
