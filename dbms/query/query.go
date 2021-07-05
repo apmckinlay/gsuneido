@@ -152,7 +152,7 @@ type QueryTran interface {
 // It calls transform and optimize.
 // The resulting Query is ready for execution.
 //
-// NOTE: Correct usage is: q = Setup(q, mode, t)
+// NOTE: Correct usage is: q, cost = Setup(q, mode, t)
 func Setup(q Query, mode Mode, t QueryTran) (Query, Cost) {
 	q = q.Transform()
 	cost := Optimize(q, mode, nil)
