@@ -15,8 +15,8 @@ import (
 
 	"github.com/apmckinlay/gsuneido/dbms/commands"
 	"github.com/apmckinlay/gsuneido/dbms/csio"
-	"github.com/apmckinlay/gsuneido/options"
 	. "github.com/apmckinlay/gsuneido/runtime"
+	"github.com/apmckinlay/gsuneido/runtime/trace"
 	"github.com/apmckinlay/gsuneido/util/ascii"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
@@ -159,9 +159,7 @@ func (dc *dbmsClient) Dump(table string) string {
 
 func (dc *dbmsClient) Exec(_ *Thread, args Value) Value {
 	dc.PutCmd(commands.Exec)
-	if options.Trace&options.TraceClientServer != 0 {
-		Trace(args)
-	}
+	trace.ClientServer.Println(args)
 	dc.PutVal(args).Request()
 	return dc.ValueResult()
 }

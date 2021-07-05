@@ -43,33 +43,6 @@ const (
 // Should be accessed atomically. Zero means disabled.
 var Coverage int64
 
-var Trace = 0
-
-const (
-	TraceFunctions = 1 << iota
-	TraceStatements
-	TraceOpcodes
-	TraceRecords
-	TraceLibraries
-	TraceSlowQuery
-	TraceQuery
-	TraceSymbol
-	TraceAllIndex
-	TraceTable
-	TraceSelect
-	TraceTempIndex
-	TraceQueryOpt
-
-	TraceConsole
-	TraceLogFile
-
-	TraceClientServer
-	TraceExceptions
-	TraceGlobals
-
-	TraceJoinOpt
-)
-
 var Nworkers = func() int {
 	return ints.Min(8, ints.Max(1, runtime.NumCPU()-1)) // ???
 }()

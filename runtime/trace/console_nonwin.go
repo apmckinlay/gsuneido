@@ -3,8 +3,10 @@
 
 // +build !windows portable
 
-package options
+package trace
 
-func Redirected() bool {
-	return false
+import "os"
+
+func consolePrintln(s string) {
+	os.Stdout.WriteString(s)
 }

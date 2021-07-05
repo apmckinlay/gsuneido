@@ -4,8 +4,8 @@
 package builtin
 
 import (
-	"github.com/apmckinlay/gsuneido/options"
 	. "github.com/apmckinlay/gsuneido/runtime"
+	"github.com/apmckinlay/gsuneido/runtime/trace"
 )
 
 var _ = builtin("Trace(value, block = false)",
@@ -14,16 +14,12 @@ var _ = builtin("Trace(value, block = false)",
 			if args[1] != False {
 				panic("usage: Trace(string) or Trace(flags, block)")
 			}
-			Trace(s)
+			trace.Print(s + "\n")
 		} else {
-			oldFlags := options.Trace
-			options.Trace = ToInt(args[0])
-			if 0 == (options.Trace & (options.TraceConsole | options.TraceLogFile)) {
-				options.Trace |= options.TraceConsole | options.TraceLogFile
-			}
+			prev := trace.Set(ToInt(args[0]))
 			if args[1] != False {
 				defer func() {
-					options.Trace = oldFlags
+					trace.Set(prev)
 				}()
 				return t.Call(args[1])
 			}

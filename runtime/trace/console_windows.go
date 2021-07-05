@@ -3,24 +3,25 @@
 
 // +build !portable
 
-package options
+package trace
 
 import (
 	"os"
 	"sync"
 	"syscall"
 
+	"github.com/apmckinlay/gsuneido/options"
 	"golang.org/x/sys/windows"
 )
 
 var traceConOnce sync.Once
 var traceCon *os.File
 
-func Console(s string) {
+func consolePrintln(s string) {
 	traceConOnce.Do(func() {
 		traceCon = os.Stdout
-		if Mode == "gui" {
-			AllocConsole()
+		if options.Mode == "gui" {
+			allocConsole()
 			f, err := os.OpenFile("CONOUT$", os.O_WRONLY, 0644)
 			if err == nil && f != nil {
 				traceCon = f
@@ -32,9 +33,9 @@ func Console(s string) {
 
 var kernel32 = windows.MustLoadDLL("kernel32.dll")
 
-var allocConsole = kernel32.MustFindProc("AllocConsole").Addr()
+var allocConsoleAddr = kernel32.MustFindProc("AllocConsole").Addr()
 
-func AllocConsole() bool {
-	rtn, _, _ := syscall.Syscall(allocConsole, 0, 0, 0, 0)
+func allocConsole() bool {
+	rtn, _, _ := syscall.Syscall(allocConsoleAddr, 0, 0, 0, 0)
 	return rtn != 0
 }

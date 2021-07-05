@@ -3,7 +3,10 @@
 
 package builtin
 
-import . "github.com/apmckinlay/gsuneido/runtime"
+import (
+	. "github.com/apmckinlay/gsuneido/runtime"
+	"github.com/apmckinlay/gsuneido/runtime/trace"
+)
 
 var _ = builtin("Record(@args)",
 	func(_ *Thread, args []Value) Value {
@@ -33,6 +36,7 @@ func init() {
 				if k != nil || v != nil {
 					return obDelete(t, as, this, args)
 				}
+				trace.Dbms.Println("Record Delete", this)
 				this.(*SuRecord).DbDelete()
 				return nil
 			}),
@@ -76,6 +80,7 @@ func init() {
 		}),
 		"Update": method("(record = false)",
 			func(t *Thread, this Value, args []Value) Value {
+				trace.Dbms.Println("Record Update", this)
 				this.(*SuRecord).DbUpdate(t, args[0])
 				return nil
 			}),

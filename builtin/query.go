@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	. "github.com/apmckinlay/gsuneido/runtime"
+	"github.com/apmckinlay/gsuneido/runtime/trace"
 )
 
 var _ = builtinRaw("Query1(@args)",
@@ -98,6 +99,7 @@ func init() {
 		}),
 		"Output": method("(record)",
 			func(th *Thread, this Value, args []Value) Value {
+				trace.Dbms.Println("Query Output", args[0], "INTO", this)
 				this.(*SuQuery).Output(th, ToContainer(args[0]))
 				return nil
 			}),

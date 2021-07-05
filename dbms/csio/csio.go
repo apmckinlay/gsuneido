@@ -7,8 +7,8 @@ import (
 	"bufio"
 	"io"
 
-	"github.com/apmckinlay/gsuneido/options"
 	. "github.com/apmckinlay/gsuneido/runtime"
+	"github.com/apmckinlay/gsuneido/runtime/trace"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/hacks"
 	"github.com/apmckinlay/gsuneido/util/ints"
@@ -32,9 +32,7 @@ func NewReadWrite(rw io.ReadWriter) *ReadWrite {
 
 // PutCmd writes a command byte
 func (rw *ReadWrite) PutCmd(cmd commands.Command) *ReadWrite {
-	if options.Trace&options.TraceClientServer != 0 {
-		Trace(">>>", cmd)
-	}
+	trace.ClientServer.Println(">>>", cmd)
 	rw.w.WriteByte(byte(cmd))
 	return rw
 }
@@ -60,9 +58,7 @@ func (rw *ReadWrite) PutStr(s string) *ReadWrite {
 	limit(int64(len(s)))
 	rw.PutInt(len(s))
 	rw.w.WriteString(s)
-	if options.Trace&options.TraceClientServer != 0 {
-		Trace(s)
-	}
+	trace.ClientServer.Println(s)
 	return rw
 }
 
@@ -199,9 +195,7 @@ func (rw *ReadWrite) Request() {
 	ck(rw.w.Flush())
 	if !rw.GetBool() {
 		err := rw.GetStr()
-		if options.Trace&options.TraceClientServer != 0 {
-			Trace(err)
-		}
+		trace.ClientServer.Println(err)
 		panic(err + " (from server)")
 	}
 }

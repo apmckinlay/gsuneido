@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/apmckinlay/gsuneido/options"
+	"github.com/apmckinlay/gsuneido/runtime/trace"
 	"github.com/apmckinlay/gsuneido/runtime/types"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/pack"
@@ -954,8 +954,6 @@ func (r *SuRecord) ckModify(op string) {
 }
 
 func (r *SuRecord) trace(args ...interface{}) {
-	if options.Trace&options.TraceRecords != 0 {
-		Trace(fmt.Sprintf("RECORDS %p ", r))
-		Trace(args...)
-	}
+	// %p is the address of the record
+	trace.Records.Println(fmt.Sprintf("%p ", r), args...)
 }

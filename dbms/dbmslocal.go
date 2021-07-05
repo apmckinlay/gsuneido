@@ -14,6 +14,7 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/tools"
 	qry "github.com/apmckinlay/gsuneido/dbms/query"
 	. "github.com/apmckinlay/gsuneido/runtime"
+	"github.com/apmckinlay/gsuneido/runtime/trace"
 	"github.com/apmckinlay/gsuneido/util/strs"
 )
 
@@ -33,6 +34,7 @@ func NewDbmsLocal(db *db19.Database) IDbms {
 var _ IDbms = (*DbmsLocal)(nil)
 
 func (dbms *DbmsLocal) Admin(admin string) {
+	trace.Dbms.Println("Admin", admin)
 	qry.DoAdmin(dbms.db, admin)
 }
 
@@ -75,6 +77,7 @@ func (dbms *DbmsLocal) Dump(table string) string {
 }
 
 func (*DbmsLocal) Exec(t *Thread, v Value) Value {
+	trace.Dbms.Println("Exec", v)
 	fname := ToStr(ToContainer(v).ListGet(0))
 	if i := strings.IndexByte(fname, '.'); i != -1 {
 		ob := Global.GetName(t, fname[:i])
@@ -183,6 +186,7 @@ func (*DbmsLocal) Nonce() string {
 }
 
 func (*DbmsLocal) Run(s string) Value {
+	trace.Dbms.Println("Run", s)
 	var t Thread //TODO don't alloc every time
 	return compile.EvalString(&t, s)
 }
@@ -295,6 +299,7 @@ func (t UpdateTranLocal) Query(query string) IQuery {
 }
 
 func (t UpdateTranLocal) Action(action string) int {
+	trace.Dbms.Println("Action", action)
 	return qry.DoAction(t.UpdateTran, action)
 }
 
