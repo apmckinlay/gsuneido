@@ -58,6 +58,7 @@ func (e *Encoder) Add(fld string) {
 }
 
 // String returns the key and resets the Encoder to be empty.
+// Trailing field separators (empty fields) are trimmed.
 func (e *Encoder) String() string {
 	s := hacks.BStoS(e.buf)
 	e.buf = nil // reset

@@ -355,6 +355,7 @@ func (w *Where) conflictCheck() {
 }
 
 func (w *Where) optInit() {
+	w.optInited = true
 	if w.tbl, _ = w.source.(*Table); w.tbl == nil {
 		return
 	}
@@ -855,11 +856,11 @@ outer:
 					enc2 := enc.Dup()
 					enc.Add(f.org.val)
 					if f.org.inc == 1 {
-						enc.Add("")
+						enc.Add(ixkey.Max)
 					}
 					enc2.Add(f.end.val)
 					if f.end.inc == 1 {
-						enc2.Add("")
+						enc2.Add(ixkey.Max)
 					}
 					result[i] = pointRange{org: enc.String(), end: enc2.String()}
 					continue outer
