@@ -188,9 +188,8 @@ type UpdateTran struct {
 }
 
 func (db *Database) NewUpdateTran() *UpdateTran {
-	state := db.GetState()
-	meta := state.Meta.Mutable()
 	ct := db.ck.StartTran()
+	meta := ct.state.Meta.Mutable()
 	return &UpdateTran{ct: ct,
 		ReadTran: ReadTran{tran: tran{db: db, meta: meta}}}
 }

@@ -76,6 +76,22 @@ func (db *Database) Merge(fn mergefn, merges *mergeList) {
 	})
 }
 
+// CommitMerge is for tests.
+// It merges synchronously after each commit.
+func (db *Database) CommitMerge(ut *UpdateTran) {
+	tables := db.ck.(*Check).commit(ut)
+	ut.commit()
+	merges := &mergeList{}
+	merges.add(tables)
+	db.Merge(mergeSingle, merges)
+}
+
+// CheckerSync is for tests.
+// It assigns a synchronous transaction checker to the database.
+func (db *Database) CheckerSync() {
+	db.ck = NewCheck(db)
+}
+
 //-------------------------------------------------------------------
 
 type persistfn func(*DbState) []meta.PersistUpdate

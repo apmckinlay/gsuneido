@@ -59,7 +59,7 @@ func TestConcurrent(t *testing.T) {
 func TestTran(t *testing.T) {
 	var err error
 	db := createDb()
-	db.ck = NewCheck()
+	db.ck = NewCheck(db)
 
 	const nout = 4000
 	for i := 0; i < nout; i++ {
@@ -78,7 +78,7 @@ func TestTran(t *testing.T) {
 				db.Close()
 				db, err = OpenDatabase("tmp.db")
 				ck(err)
-				db.ck = NewCheck()
+				db.ck = NewCheck(db)
 			}
 		}
 	}

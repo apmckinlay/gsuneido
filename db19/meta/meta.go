@@ -360,6 +360,7 @@ func (m *Meta) LayeredOnto(latest *Meta) *Meta {
 			return
 		}
 		ti.Nrows = lti.Nrows + (ti.Nrows - ti.origNrows)
+		assert.That(ti.Nrows >= 0)
 		ti.Size = lti.Size + (ti.Size - ti.origSize)
 		ti.origNrows = 0
 		ti.origSize = 0

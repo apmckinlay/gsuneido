@@ -33,7 +33,7 @@ func StartConcur(db *Database, persistInterval time.Duration) {
 	mergeChan := make(chan merge, chanBuffers)
 	allDone := make(chan void)
 	go merger(db, mergeChan, persistInterval, allDone)
-	db.ck = StartCheckCo(mergeChan, allDone)
+	db.ck = StartCheckCo(db, mergeChan, allDone)
 }
 
 func merger(db *Database, mergeChan chan merge,

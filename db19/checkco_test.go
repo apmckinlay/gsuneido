@@ -20,7 +20,7 @@ func TestCheckCoTimeout(t *testing.T) {
 	}
 	defer func(ma int) { MaxAge = ma }(MaxAge)
 	MaxAge = 1
-	ck := StartCheckCo(nil, nil)
+	ck := StartCheckCo(nil, nil, nil)
 	tran := ck.StartTran()
 	assert.T(t).False(tran.Aborted())
 	time.Sleep(2 * time.Second)
@@ -29,7 +29,7 @@ func TestCheckCoTimeout(t *testing.T) {
 }
 
 func TestCheckCoRandom(*testing.T) {
-	ck := StartCheckCo(nil, nil)
+	ck := StartCheckCo(nil, nil, nil)
 	nThreads := 8
 	nTrans := 10000
 	if testing.Short() {

@@ -87,9 +87,10 @@ func (t *CkTran) Aborted() bool {
 
 //-------------------------------------------------------------------
 
-func StartCheckCo(mergeChan chan merge, allDone chan void) *CheckCo {
+func StartCheckCo(db *Database, mergeChan chan merge, allDone chan void) *CheckCo {
+	ck := NewCheck(db)
 	c := make(chan interface{}, 4)
-	go checker(c, mergeChan)
+	go checker(ck, c, mergeChan)
 	return &CheckCo{c: c, allDone: allDone}
 }
 
@@ -98,8 +99,7 @@ func (ck *CheckCo) Stop() {
 	<-ck.allDone // wait
 }
 
-func checker(c chan interface{}, mergeChan chan merge) {
-	ck := NewCheck()
+func checker(ck *Check, c chan interface{}, mergeChan chan merge) {
 	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
 	for {

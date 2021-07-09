@@ -35,6 +35,7 @@ type Ranges = ranges.Ranges
 // See CheckCo for the concurrent channel based interface to Check.
 // See Checker for the common interface to Check and CheckCo
 type Check struct {
+	db     *Database
 	seq    int
 	oldest int
 	// clock is used to abort long transactions
@@ -48,6 +49,7 @@ type CkTran struct {
 	end      int
 	birth    int
 	tables   map[string]*cktbl
+	state    *DbState
 	conflict atomic.Value // string
 }
 
@@ -68,8 +70,8 @@ func (t *CkTran) String() string {
 	return "ut" + strconv.Itoa(t.start)
 }
 
-func NewCheck() *Check {
-	return &Check{trans: make(map[int]*CkTran), oldest: ints.MaxInt}
+func NewCheck(db *Database) *Check {
+	return &Check{db: db, trans: make(map[int]*CkTran), oldest: ints.MaxInt}
 }
 
 func (ck *Check) StartTran() *CkTran {
@@ -77,8 +79,12 @@ func (ck *Check) StartTran() *CkTran {
 		return nil
 	}
 	start := ck.next()
+	var state *DbState
+	if ck.db != nil {
+		state = ck.db.GetState()
+	}
 	t := &CkTran{start: start, end: ints.MaxInt, birth: ck.clock,
-		tables: make(map[string]*cktbl)}
+		tables: make(map[string]*cktbl), state: state}
 	ck.trans[start] = t
 	return t
 }

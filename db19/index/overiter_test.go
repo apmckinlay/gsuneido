@@ -360,7 +360,7 @@ func TestOverIterDups(*testing.T) {
 	mut.Insert("", 2|ixbuf.Update)
 	ov := &Overlay{bt: bt, layers: []*ixbuf.T{u}, mut: mut}
 	tran := &testTran{getIndex: func() *Overlay { return ov }}
-	
+
 	it := NewOverIter("", 0)
 	it.Next(tran)
 	assert.That(!it.Eof())
