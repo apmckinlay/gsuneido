@@ -5,7 +5,10 @@ package runtime
 
 import (
 	"encoding/base64"
+	"log"
 	"math"
+	"runtime"
+	"runtime/debug"
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/util/dnum"
@@ -276,7 +279,10 @@ func ToSuExcept(t *Thread, e interface{}) *SuExcept {
 		// first catch creates SuExcept with callstack
 		var ss SuStr
 		if err, ok := e.(error); ok {
-			// debug.PrintStack()
+			if _, ok := e.(runtime.Error); ok {
+				log.Println(e)
+				debug.PrintStack()
+			}
 			ss = SuStr(err.Error())
 		} else if s, ok := e.(string); ok {
 			ss = SuStr(s)
