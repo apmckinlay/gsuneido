@@ -6,6 +6,7 @@ package index
 import (
 	"github.com/apmckinlay/gsuneido/db19/index/iterator"
 	"github.com/apmckinlay/gsuneido/db19/index/ixbuf"
+	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
 type iterT = iterator.T
@@ -64,6 +65,7 @@ func (mi *OverIter) Eof() bool {
 }
 
 func (mi *OverIter) Cur() (string, uint64) {
+	assert.Msg("OverIter Cur deleted").That(mi.curOff&ixbuf.Delete == 0)
 	return mi.curKey, mi.curOff
 }
 
@@ -192,8 +194,8 @@ outer:
 			} else if key == keyMin {
 				off = ixbuf.Combine(offMin, off)
 				mi.iters[itMin].Next()
-				if off == 0 {
-					// add,delete so skip
+				if off == 0 || off&ixbuf.Delete != 0 {
+					// delete so skip
 					// may not be the final minimum, but still need to skip
 					it.Next()
 					continue outer // restart
@@ -202,7 +204,7 @@ outer:
 				offMin = off
 			}
 		}
-		return itMin, keyMin, offMin
+		return itMin, keyMin, offMin &^ ixbuf.Update
 	}
 }
 
@@ -285,7 +287,7 @@ outer:
 				} else if key == keyMax {
 					off = ixbuf.Combine(offMax, off)
 					mi.iters[itMax].Prev()
-					if off == 0 {
+					if off == 0 || off&ixbuf.Delete != 0 {
 						// add,delete so skip
 						// may not be the final minimum, but still need to skip
 						it.Prev()
@@ -296,7 +298,7 @@ outer:
 				}
 			}
 		}
-		return itMax, keyMax, offMax
+		return itMax, keyMax, offMax &^ ixbuf.Update
 	}
 }
 

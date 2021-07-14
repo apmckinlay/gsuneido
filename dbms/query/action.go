@@ -131,6 +131,7 @@ func (a *deleteAction) String() string {
 }
 
 func (a *deleteAction) execute(ut *db19.UpdateTran) int {
+	//TODO optimize deleting all records of table
 	q, _ := Setup(a.query, UpdateMode, ut)
 	table := q.Updateable()
 	if table == "" {
@@ -147,4 +148,13 @@ func (a *deleteAction) execute(ut *db19.UpdateTran) int {
 		n++
 	}
 	return n
+
+	// offs := []uint64{}
+	// for row := q.Get(Next); row != nil; row = q.Get(Next) {
+	// 	offs = append(offs, row[0].Off)
+	// }
+	// for _, off := range offs {
+	// 	ut.Delete(table, off)
+	// }
+	// return len(offs)
 }

@@ -414,6 +414,16 @@ func TestIterRange(t *testing.T) {
 	assert.T(t).That(it.Eof())
 }
 
+func TestIxbufSearch(t *testing.T) {
+	ib := &ixbuf{}
+	ib.Insert("a\x00\x001", 11)
+	ib.Insert("b\x00\x002", 22)
+	_, _, i := ib.search("a")
+	assert.T(t).This(i).Is(0)
+	_, _, i = ib.search("a\x00\x00\xff")
+	assert.T(t).This(i).Is(1)
+}
+
 //-------------------------------------------------------------------
 
 func (ib *ixbuf) stats() {

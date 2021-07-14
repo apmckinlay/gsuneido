@@ -7,7 +7,6 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/index"
 	"github.com/apmckinlay/gsuneido/db19/index/btree"
 	"github.com/apmckinlay/gsuneido/db19/index/iterator"
-	"github.com/apmckinlay/gsuneido/db19/index/ixbuf"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/db19/meta"
 	"github.com/apmckinlay/gsuneido/runtime"
@@ -228,7 +227,6 @@ func (tbl *Table) Get(dir runtime.Dir) runtime.Row {
 		return nil
 	}
 	_, off := tbl.iter.Cur()
-	off = off &^ ixbuf.Update
 	rec := tbl.tran.GetRecord(off)
 	return runtime.Row{runtime.DbRec{Record: rec, Off: off}}
 }

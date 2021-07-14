@@ -47,6 +47,16 @@ func (m *Meta) GetRoInfo(table string) *Info {
 	return nil
 }
 
+// copyInfo is for debugging
+func copyInfo(ti *Info) *Info {
+	cp := *ti
+	cp.Indexes = append(cp.Indexes[:0:0], cp.Indexes...) // copy
+	for i, ov := range cp.Indexes {
+		cp.Indexes[i] = ov.Copy()
+	}
+	return &cp
+}
+
 func (m *Meta) GetRwInfo(table string) *Info {
 	if pti, ok := m.difInfo.Get(table); ok {
 		return pti // already have mutable
@@ -345,7 +355,8 @@ func (m *Meta) AddView(name, def string) *Meta {
 
 //-------------------------------------------------------------------
 
-// LayeredOnto layers the mutable ixbuf's from a transaction
+// LayeredOnto is done by transaction commit.
+// It layers the mutable ixbuf's from transactions
 // onto the latest/current state and returns a new state.
 // Also, the nrows and size deltas are applied.
 // Note: this does not merge the ixbuf's, that is done later by merge.
