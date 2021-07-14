@@ -536,3 +536,20 @@ func (it *Iterator) Seek(key string) {
 	it.cur = it.c[it.i]
 	it.state = within
 }
+
+func (ib *ixbuf) Print() {
+	fmt.Println("<<<------------------------")
+	for i, c := range ib.chunks {
+		if i > 0 {
+			fmt.Println("+++")
+		}
+		c.print()
+	}
+	fmt.Println("------------------------>>>")
+}
+
+func (c chunk) print() {
+	for _, s := range c {
+		fmt.Printf("%q %x\n", s.key, s.off)
+	}
+}

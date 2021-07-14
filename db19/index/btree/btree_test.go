@@ -75,7 +75,7 @@ func ExampleBuilder() {
 	bldr.Add("1002xxxx", 1002)
 	bldr.Add("1003xxxx", 1003)
 	bt := bldr.Finish()
-	bt.print()
+	bt.Print()
 	// The important thing here is that the second known (1001)
 	// is NOT "1" which would mean searches for 1000 would fail
 	// and NOT "1001xxxx" which is longer than necessary.
@@ -98,7 +98,7 @@ func Examplebtree_MergeAndSave() {
 	x.Insert("1003xxxx", 1003)
 	bt := CreateBtree(stor.HeapStor(8192), nil)
 	bt = bt.MergeAndSave(x.Iter())
-	bt.print()
+	bt.Print()
 	// The important thing here is that the second known (1001)
 	// is NOT "1" which would mean searches for 1000 would fail
 	// and NOT "1001xxxx" which is longer than necessary.

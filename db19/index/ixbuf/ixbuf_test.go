@@ -421,24 +421,6 @@ func (ib *ixbuf) stats() {
 		"avg size", int(ib.size)/len(ib.chunks), "goal", goal(ib.size)*2/3)
 }
 
-func (ib *ixbuf) print() {
-	fmt.Println("<<<------------------------")
-	ib.stats()
-	for i, c := range ib.chunks {
-		if i > 0 {
-			fmt.Println("+++")
-		}
-		c.print()
-	}
-	fmt.Println("------------------------>>>")
-}
-
-func (c chunk) print() {
-	for _, s := range c {
-		fmt.Println(s.key, s.off)
-	}
-}
-
 func (ib *ixbuf) check() {
 	n := 0
 	prev := ""

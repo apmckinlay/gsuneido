@@ -207,7 +207,7 @@ func (bt *btree) check1(depth int, offset uint64, key *string,
 
 // print ------------------------------------------------------------
 
-func (bt *btree) print() {
+func (bt *btree) Print() {
 	fmt.Println("<<<------------------------------")
 	bt.print1(0, bt.root)
 	fmt.Println("------------------------------>>>")
@@ -241,7 +241,8 @@ func (bt *btree) print1(depth int, offset uint64) {
 			} else {
 				sb.Write(it.known)
 			}
-			// sb.WriteString(" = " + bt.getLeafKey(offset))
+			// sb.WriteString(/*" = " +*/ bt.getLeafKey(offset) + " " +
+			// 	strconv.FormatInt(int64(offset), 16))
 		}
 	}
 	if depth == bt.treeLevels {

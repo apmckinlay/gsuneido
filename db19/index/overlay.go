@@ -4,6 +4,8 @@
 package index
 
 import (
+	"fmt"
+
 	"github.com/apmckinlay/gsuneido/db19/index/btree"
 	"github.com/apmckinlay/gsuneido/db19/index/ixbuf"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
@@ -41,6 +43,15 @@ func (ov *Overlay) Mutable() *Overlay {
 	copy(layers, ov.layers)
 	assert.That(len(layers) >= 1)
 	return &Overlay{bt: ov.bt, layers: layers, mut: &ixbuf.T{}}
+}
+
+// Copy is for debugging
+func (ov *Overlay) Copy() *Overlay {
+	assert.That(ov.mut == nil)
+	layers := make([]*ixbuf.T, len(ov.layers))
+	copy(layers, ov.layers)
+	assert.That(len(layers) >= 1)
+	return &Overlay{bt: ov.bt, layers: layers}
 }
 
 func (ov *Overlay) GetIxspec() *ixkey.Spec {
@@ -187,4 +198,17 @@ func (ov *Overlay) WithSaved(bt SaveResult) *Overlay {
 
 func (ov *Overlay) CheckFlat() {
 	assert.Msg("not flat").That(len(ov.layers) == 1)
+}
+
+func (ov *Overlay) Print() {
+	fmt.Println("btree")
+	ov.bt.Print()
+	for i, ixb := range ov.layers {
+		fmt.Println("layer", i)
+		ixb.Print()
+	}
+	if ov.mut != nil {
+		fmt.Println("mut")
+		ov.mut.Print()
+	}
 }
