@@ -104,7 +104,7 @@ func mkParam(name string, pos int32, unused bool, def Value) ast.Param {
 
 // unDyn removes the leading underscore from dynamic parameters
 func unDyn(id string) string {
-	if id[0] == '_' {
+	if len(id) > 0 && id[0] == '_' {
 		return id[1:]
 	}
 	return id
