@@ -367,6 +367,9 @@ func libload(t *Thread, gn Gnum, name string) (result Value) {
 		if s, ok := LibraryOverrides[lib+":"+name]; ok {
 			src = s
 		}
+		if mode == "gui" && strings.HasSuffix(lib, "webgui") {
+			continue
+		}
 		// want to pass the name from the start (rather than adding after)
 		// so it propagates to nested Named values
 		result = compile.NamedConstant(lib, name, src)
