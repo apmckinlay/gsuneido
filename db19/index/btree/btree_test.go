@@ -65,7 +65,7 @@ func TestBtreeBuilder(t *testing.T) {
 	}
 }
 
-func ExampleBuilder() {
+func TestBuilder(t *testing.T) {
 	GetLeafKey = func(_ *stor.Stor, _ *ixkey.Spec, i uint64) string {
 		return strconv.Itoa(int(i))
 	}
@@ -75,19 +75,19 @@ func ExampleBuilder() {
 	bldr.Add("1002xxxx", 1002)
 	bldr.Add("1003xxxx", 1003)
 	bt := bldr.Finish()
-	bt.Print()
-	// The important thing here is that the second known (1001)
-	// is NOT "1" which would mean searches for 1000 would fail
-	// and NOT "1001xxxx" which is longer than necessary.
-
-	// Output:
-	// <<<------------------------------
-	// offset 0  LEAF
-	// '' 1001 1002 1003
-	// ------------------------------>>>
+	nd := bt.getNode(bt.root)
+	assert.T(t).This(nodeKnowns(nd)).Is([]string{"", "1001", "1002", "1003"})
 }
 
-func Examplebtree_MergeAndSave() {
+func nodeKnowns(nd node) []string {
+	keys := []string{}
+	for it := nd.iter(); it.next(); {
+		keys = append(keys, string(it.known))
+	}
+	return keys
+}
+
+func TestBtreeMergeAndSave(t *testing.T) {
 	GetLeafKey = func(_ *stor.Stor, _ *ixkey.Spec, i uint64) string {
 		return strconv.Itoa(int(i))
 	}
@@ -98,16 +98,8 @@ func Examplebtree_MergeAndSave() {
 	x.Insert("1003xxxx", 1003)
 	bt := CreateBtree(stor.HeapStor(8192), nil)
 	bt = bt.MergeAndSave(x.Iter())
-	bt.Print()
-	// The important thing here is that the second known (1001)
-	// is NOT "1" which would mean searches for 1000 would fail
-	// and NOT "1001xxxx" which is longer than necessary.
-
-	// Output:
-	// <<<------------------------------
-	// offset 4  LEAF
-	// '' 1001 1002 1003
-	// ------------------------------>>>
+	nd := bt.getNode(bt.root)
+	assert.T(t).This(nodeKnowns(nd)).Is([]string{"", "1001", "1002", "1003"})
 }
 
 func TestBtreeFracPos(t *testing.T) {
