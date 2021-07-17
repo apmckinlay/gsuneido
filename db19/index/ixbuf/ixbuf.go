@@ -497,8 +497,8 @@ func (it *Iterator) Prev() {
 		return // stick at eof
 	}
 	if it.state == rewound {
-		it.Seek(it.rng.End)
-		if it.Eof() || it.cur.key < it.rng.End {
+		it.SeekAll(it.rng.End)
+		if it.Eof() || (it.rng.Org <= it.cur.key && it.cur.key < it.rng.End) {
 			return
 		}
 		// Seek goes to >= so fallthrough to do previous
@@ -514,7 +514,7 @@ func (it *Iterator) Prev() {
 		it.i = len(it.c) - 1
 	}
 	it.cur = it.c[it.i]
-	if it.cur.key < it.rng.Org {
+	if it.cur.key < it.rng.Org || it.rng.End <= it.cur.key {
 		it.state = eof
 	}
 }
@@ -524,6 +524,13 @@ func (it *Iterator) Rewind() {
 }
 
 func (it *Iterator) Seek(key string) {
+	it.SeekAll(key)
+	if it.cur.key < it.rng.Org || it.rng.End <= it.cur.key {
+		it.state = eof
+	}
+}
+
+func (it *Iterator) SeekAll(key string) {
 	if len(it.ib.chunks) == 0 {
 		it.state = eof
 		return

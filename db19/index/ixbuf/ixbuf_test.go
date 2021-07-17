@@ -11,6 +11,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
@@ -381,15 +382,16 @@ func TestIterRange(t *testing.T) {
 	it := ib.Iterator()
 	test := func(fn func(), expected string) {
 		fn()
+		assert.That(it.state == within)
 		assert.This(it.cur.key).Is(expected)
 	}
 	test(it.Next, "a")
 	it.Rewind()
 	test(it.Prev, "h")
 
-	it.Range(Range{Org: "c"})
+	it.Range(Range{Org: "c", End: ixkey.Max})
 	test(it.Next, "c")
-	it.Range(Range{Org: "c+"})
+	it.Range(Range{Org: "c+", End: ixkey.Max})
 	test(it.Next, "d")
 
 	it.Range(Range{End: "f"})
@@ -411,6 +413,16 @@ func TestIterRange(t *testing.T) {
 	test(it.Prev, "d")
 	test(it.Prev, "c")
 	it.Prev()
+	assert.T(t).That(it.Eof())
+
+	it.Range(Range{Org: "c", End: "g"})
+	it.Seek("c")
+	assert.T(t).This(it.cur.key).Is("c")
+	it.Seek("b")
+	assert.T(t).That(it.Eof())
+	it.Seek("f")
+	assert.T(t).This(it.cur.key).Is("f")
+	it.Seek("g")
 	assert.T(t).That(it.Eof())
 }
 

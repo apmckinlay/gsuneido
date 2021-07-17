@@ -235,14 +235,14 @@ func (bt *btree) print1(depth int, offset uint64) {
 			// 	strconv.Itoa(int(offset))+",", it.npre, it.diff, "=", it.known,
 			// 	"("+bt.getLeafKey(offset)+")")
 			sb.WriteString(sep)
-			sep = " "
-			if len(it.known) == 0 {
-				sb.WriteString("''")
-			} else {
-				sb.Write(it.known)
-			}
-			// sb.WriteString(/*" = " +*/ bt.getLeafKey(offset) + " " +
-			// 	strconv.FormatInt(int64(offset), 16))
+			sep = "\n"
+			// if len(it.known) == 0 {
+			// 	sb.WriteString("''")
+			// } else {
+			// 	sb.Write(it.known)
+			// }
+			sb.WriteString(/*" = " +*/
+				fmt.Sprintf("%q %x", bt.getLeafKey(offset), offset))
 		}
 	}
 	if depth == bt.treeLevels {

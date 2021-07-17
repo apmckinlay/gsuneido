@@ -48,7 +48,7 @@ func TestOverIter(t *testing.T) {
 	test := func(expected int) {
 		t.Helper()
 		if expected == -1 {
-			assert.That(it.Eof())
+			assert.Msg("expected Eof").That(it.Eof())
 		} else {
 			assert.That(!it.Eof())
 			key, off := it.Cur()
@@ -405,6 +405,47 @@ func TestOverIterBug(*testing.T) {
 	tran = &testTran{getIndex: func() *Overlay { return ov }}
 
 	it = NewOverIter("", 0)
+	it.Prev(tran)
+	assert.That(it.Eof())
+}
+
+func TestOverIterBug2(*testing.T) {
+	b := btree.Builder(stor.HeapStor(8192))
+	b.Add("1111", 1111)
+	b.Add("2222", 2222)
+	bt := b.Finish()
+	layers := []*ixbuf.T{{}}
+	layers[0].Insert("1111", 1111 | ixbuf.Delete)
+	layers[0].Insert("2222", 2222 | ixbuf.Delete)
+	ov := &Overlay{bt: bt, layers: layers}
+	btree.GetLeafKey = func(_ *stor.Stor, _ *ixkey.Spec, i uint64) string {
+		return strconv.Itoa(int(i))
+	}
+	tran := &testTran{getIndex: func() *Overlay { return ov }}
+	it := NewOverIter("", 0)
+	it.Next(tran)
+	assert.That(it.Eof())
+}
+
+func TestOverIterBug3(*testing.T) {
+	b := btree.Builder(stor.HeapStor(8192))
+	b.Add("1111", 1111)
+	bt := b.Finish()
+	layers := []*ixbuf.T{{}}
+	layers[0].Insert("1111", 1111 | ixbuf.Delete)
+	ov := &Overlay{bt: bt, layers: layers}
+	btree.GetLeafKey = func(_ *stor.Stor, _ *ixkey.Spec, i uint64) string {
+		return strconv.Itoa(int(i))
+	}
+	tran := &testTran{getIndex: func() *Overlay { return ov }}
+	
+	it := NewOverIter("", 0)
+	it.Range(Range{Org: "5555", End: "55559999"})
+	it.Next(tran)
+	assert.That(it.Eof())
+
+	it = NewOverIter("", 0)
+	it.Range(Range{Org: "5555", End: "55559999"})
 	it.Prev(tran)
 	assert.That(it.Eof())
 }

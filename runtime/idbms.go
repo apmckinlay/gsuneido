@@ -148,6 +148,10 @@ func (dir Dir) Reverse() Dir {
 	return dir
 }
 
+func (dir Dir) String() string {
+	return map[Dir]string{Only: "Only", Next: "Next", Prev: "Prev"}[dir]
+}
+
 // IQuery is the interface to a database query,
 // either local (not implemented yet) or QueryClient.
 type IQuery interface {

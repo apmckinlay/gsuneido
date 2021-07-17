@@ -34,6 +34,10 @@ type T interface {
 	// After Seek, Modified returns false.
 	Seek(key string)
 
+	// SeekAll is the same as Seek
+	// except it does NOT use the range to set eof
+	SeekAll(key string)
+
 	// Range sets the range for the iterator.
 	// It also does Rewind.
 	Range(Range)

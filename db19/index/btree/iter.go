@@ -66,7 +66,7 @@ func (it *Iterator) Next() {
 		return // stick at eof
 	}
 	if it.state == rewound {
-		it.Seek(it.rng.Org)
+		it.SeekAll(it.rng.Org)
 	} else {
 		it.next()
 	}
@@ -119,7 +119,7 @@ func (it *Iterator) Prev() {
 		return // stick at eof
 	}
 	if it.state == rewound {
-		it.Seek(it.rng.End)
+		it.SeekAll(it.rng.End)
 		if it.Eof() {
 			return
 		}
@@ -178,6 +178,11 @@ func (it *Iterator) prevLeaf() bool {
 // Seek -------------------------------------------------------------
 
 func (it *Iterator) Seek(key string) {
+	it.SeekAll(key)
+	it.checkRange()
+}
+
+func (it *Iterator) SeekAll(key string) {
 	bt := it.bt
 	off := bt.root
 	nd := bt.getNode(off)

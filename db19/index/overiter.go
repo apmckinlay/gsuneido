@@ -65,6 +65,7 @@ func (mi *OverIter) Eof() bool {
 }
 
 func (mi *OverIter) Cur() (string, uint64) {
+	assert.Msg("OverIter Cur eof").That(mi.state != eof && mi.state != rewound)
 	assert.Msg("OverIter Cur deleted").That(mi.curOff&ixbuf.Delete == 0)
 	return mi.curKey, mi.curOff
 }
@@ -78,6 +79,7 @@ func (mi *OverIter) Range(rng Range) {
 }
 
 func (mi *OverIter) Next(t oiTran) {
+	// NOTE: keep this code in sync with Prev
 	if mi.state == eof {
 		return // stick at eof
 	}
@@ -132,6 +134,7 @@ func (mi *OverIter) all(fn func(it iterT)) {
 }
 
 func (mi *OverIter) modNext(t oiTran) {
+	// NOTE: keep this code in sync with modPrev
 	modified := false
 	if t != mi.tran {
 		ov := t.GetIndexI(mi.table, mi.iIndex)
@@ -177,6 +180,7 @@ func (mi *OverIter) keepIters(ov *Overlay) bool {
 
 // minIter finds the the minimum current key
 func (mi *OverIter) minIter() (int, string, uint64) {
+	// NOTE: keep this code in sync with maxIter
 outer:
 	for {
 		itMin := -1
@@ -191,6 +195,8 @@ outer:
 				itMin = i
 				keyMin = key
 				offMin = off
+				// may get update first
+				// e.g. add, update => add, but then restart gets update
 			} else if key == keyMin {
 				off = ixbuf.Combine(offMin, off)
 				mi.iters[itMin].Next()
@@ -209,6 +215,7 @@ outer:
 }
 
 func (mi *OverIter) Prev(t oiTran) {
+	// NOTE: keep this code in sync with Next
 	if mi.state == eof {
 		return // stick at eof
 	}
@@ -241,6 +248,7 @@ func (mi *OverIter) Prev(t oiTran) {
 }
 
 func (mi *OverIter) modPrev(t oiTran) {
+	// NOTE: keep this code in sync with modNext
 	modified := false
 	if t != mi.tran {
 		ov := t.GetIndexI(mi.table, mi.iIndex)
@@ -252,7 +260,7 @@ func (mi *OverIter) modPrev(t oiTran) {
 	}
 	for i, it := range mi.iters {
 		if modified || it.Modified() {
-			it.Seek(mi.curKey)
+			it.SeekAll(mi.curKey)
 			if !it.Eof() {
 				key, _ := it.Cur()
 				if key >= mi.curKey {
@@ -272,30 +280,32 @@ func (mi *OverIter) modPrev(t oiTran) {
 
 // maxIter finds the maximum current key
 func (mi *OverIter) maxIter() (int, string, uint64) {
+	// NOTE: keep this code in sync with minIter
 outer:
 	for {
 		itMax := -1
 		var keyMax string
 		var offMax uint64
 		for i, it := range mi.iters {
-			if !it.Eof() {
-				key, off := it.Cur()
-				if itMax == -1 || key > keyMax {
-					itMax = i
-					keyMax = key
-					offMax = off
-				} else if key == keyMax {
-					off = ixbuf.Combine(offMax, off)
-					mi.iters[itMax].Prev()
-					if off == 0 || off&ixbuf.Delete != 0 {
-						// add,delete so skip
-						// may not be the final minimum, but still need to skip
-						it.Prev()
-						continue outer
-					}
-					itMax = i
-					offMax = off
+			if it.Eof() {
+				continue
+			}
+			key, off := it.Cur()
+			if itMax == -1 || key > keyMax {
+				itMax = i
+				keyMax = key
+				offMax = off
+			} else if key == keyMax {
+				off = ixbuf.Combine(offMax, off)
+				mi.iters[itMax].Prev()
+				if off == 0 || off&ixbuf.Delete != 0 {
+					// add,delete so skip
+					// may not be the final minimum, but still need to skip
+					it.Prev()
+					continue outer
 				}
+				itMax = i
+				offMax = off
 			}
 		}
 		return itMax, keyMax, offMax &^ ixbuf.Update

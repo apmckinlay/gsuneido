@@ -142,6 +142,10 @@ func TestIterator(*testing.T) {
 	}
 	it.Next()
 	assert.That(it.Eof())
+	it.Seek(data[0])
+	assert.That(it.Eof())
+	it.Seek(data[end])
+	assert.That(it.Eof())
 
 	it.Range(Range{Org: data[org], End: ixkey.Max})
 	for i := n-1; i >= org; i-- {
