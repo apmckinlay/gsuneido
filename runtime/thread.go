@@ -13,6 +13,9 @@ import (
 	"github.com/apmckinlay/gsuneido/util/tr"
 )
 
+// MainThread is injected by gsuneido.go to use for debugging
+var MainThread *Thread
+
 // See interp.go and args.go for the rest of the Thread methods
 
 // maxStack is the size of the value stack, fixed size for performance
