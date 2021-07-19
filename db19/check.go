@@ -97,7 +97,7 @@ func (ck *Check) next() int {
 // Read adds a read action.
 // Will conflict if another transaction has a write within the range.
 func (ck *Check) Read(t *CkTran, table string, index int, from, to string) bool {
-	trace("T", t.start, "read", table, "index", index, "from", from, "to", to)
+	traceln("T", t.start, "read", table, "index", index, "from", from, "to", to)
 	t, ok := ck.trans[t.start]
 	if !ok {
 		return false // it's gone, presumably aborted
@@ -149,7 +149,7 @@ func (cr ckreads) contains(index int, key string) bool {
 // Updates require two calls, one with the old keys, another with the new keys.
 // NOTE: Even if an update doesn't change a key, it still has to register it.
 func (ck *Check) Write(t *CkTran, table string, keys []string) bool {
-	trace("T", t.start, "write", table, "keys", keys)
+	traceln("T", t.start, "write", table, "keys", keys)
 	t, ok := ck.trans[t.start]
 	if !ok {
 		return false // it's gone, presumably aborted
@@ -221,7 +221,7 @@ var checkerAbortT1 = false
 // If t2 is committed, abort t1, otherwise choose randomly.
 // It returns true if t1 is aborted, false if t2 is aborted.
 func (ck *Check) abort1of(t1, t2 *CkTran, act1, act2 string) bool {
-	trace("conflict with", t2)
+	traceln("conflict with", t2)
 	if t2.isEnded() || checkerAbortT1 || rand.Intn(2) == 1 {
 		ck.abort(t1.start, act1+" in this transaction conflicted with "+
 			act2+" in another transaction")
@@ -243,7 +243,7 @@ func (ck *Check) Abort(t *CkTran, reason string) bool {
 }
 
 func (ck *Check) abort(tn int, reason string) bool {
-	trace("abort", tn)
+	traceln("abort", tn)
 	t, ok := ck.trans[tn]
 	if !ok {
 		return false
@@ -266,7 +266,7 @@ func (ck *Check) Commit(ut *UpdateTran) bool {
 
 func (ck *Check) commit(ut *UpdateTran) []string {
 	tn := ut.num()
-	trace("commit", tn)
+	traceln("commit", tn)
 	t, ok := ck.trans[tn]
 	if !ok {
 		return nil // it's gone, presumably aborted
@@ -303,12 +303,12 @@ func (ck *Check) cleanEnded() {
 				ck.oldest = t.start
 			}
 		}
-		trace("OLDEST", ck.oldest)
+		traceln("OLDEST", ck.oldest)
 	}
 	// remove any ended transactions older than this
 	for tn, t := range ck.trans {
 		if t.end != ints.MaxInt && t.end < ck.oldest {
-			trace("REMOVE", tn, "->", t.end)
+			traceln("REMOVE", tn, "->", t.end)
 			delete(ck.trans, tn)
 		}
 	}
@@ -322,10 +322,10 @@ var MaxAge = 20
 // to abort transactions older than MaxAge.
 func (ck *Check) tick() {
 	ck.clock++
-	trace("tick", ck.clock)
+	traceln("tick", ck.clock)
 	for tn, t := range ck.trans {
 		if ck.clock-t.birth >= MaxAge {
-			trace("abort", tn, "age", ck.clock-t.birth)
+			traceln("abort", tn, "age", ck.clock-t.birth)
 			log.Println("aborted", t, "update transaction longer than", MaxAge, "seconds")
 			ck.abort(tn, "transaction exceeded max age")
 		}
@@ -335,6 +335,6 @@ func (ck *Check) tick() {
 func (ck *Check) Stop() { // to satisfy Checker interface
 }
 
-func trace(...interface{}) {
+func traceln(...interface{}) {
 	// fmt.Println(args...) // comment out to disable tracing
 }
