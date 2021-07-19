@@ -57,9 +57,6 @@ var databaseMethods = Methods{
 	"Nonce": method("()", func(t *Thread, this Value, args []Value) Value {
 		return SuStr(t.Dbms().Nonce())
 	}),
-	"Schema": method("(table)", func(t *Thread, this Value, args []Value) Value {
-		return SuStr(t.Dbms().SessionId(ToStr(args[0])))
-	}),
 	"SessionId": method("(id = '')", func(t *Thread, this Value, args []Value) Value {
 		return SuStr(t.Dbms().SessionId(ToStr(args[0])))
 	}),
