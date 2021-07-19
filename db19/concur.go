@@ -4,6 +4,7 @@
 package db19
 
 import (
+	"log"
 	"time"
 
 	"github.com/apmckinlay/gsuneido/db19/meta"
@@ -38,7 +39,11 @@ func StartConcur(db *Database, persistInterval time.Duration) {
 
 func merger(db *Database, mergeChan chan merge,
 	persistInterval time.Duration, allDone chan void) {
-
+	defer func() {
+		if e := recover(); e != nil {
+			log.Fatalln("FATAL ERROR in merger:", e)
+		}
+	}()
 	em := startMergeWorkers()
 	ep := startExecPersistMulti()
 	// ep := &execPersistSingle{}

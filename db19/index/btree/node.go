@@ -58,7 +58,7 @@ func (nd node) next(i int) int {
 // NOTE: if key is a known (not a full value) then embedLen should be embedAll
 func addone(key, prev, known string, embedLen int) (npre int, diff string, knownNew string) {
 	if key <= prev {
-		print("OUT OF ORDER: prev", prev, "key", key)
+		fmt.Printf("OUT OF ORDER: prev %q key %q\n", prev, key)
 	}
 	assert.That(key > prev)
 	npre = commonPrefixLen(prev, key)
