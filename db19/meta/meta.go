@@ -281,9 +281,9 @@ func createIndexes(ts *Schema, ti *Info, idxs []schema.Index, store *stor.Stor) 
 	n := len(ts.Indexes)
 	ts.Indexes = append(ts.Indexes[:n:n], idxs...)
 	n = len(ti.Indexes)
-	ti.Indexes = ti.Indexes[:n:n]
+	ti.Indexes = ti.Indexes[:n:n] // copy on write
 	for i := range idxs {
-		bt := btree.CreateBtree(store, &ts.Indexes[i].Ixspec)
+		bt := btree.CreateBtree(store, &ts.Indexes[n+i].Ixspec)
 		ti.Indexes = append(ti.Indexes, index.OverlayFor(bt))
 	}
 	return true
