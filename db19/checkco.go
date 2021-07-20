@@ -132,17 +132,11 @@ func (ck *Check) dispatch(msg interface{}, mergeChan chan merge) {
 		ck.Abort(msg.t, msg.reason)
 	case *ckCommit:
 		result := ck.commit(msg.t)
-		// checking complete so we can send result and let client code continue
-		msg.ret <- result != nil
 		if result != nil && mergeChan != nil { // no channel when testing
-			// passed checking so we can asynchronously commit it
-			// (can't fail at this point)
-			// Since we haven't returned, no other activity will happen
-			// until we finish the commit. i.e. serialized
 			msg.t.commit()
 			mergeChan <- result
-			//TODO commit and send merge in another goroutine ?
 		}
+		msg.ret <- result != nil
 	default:
 		panic("checker unknown message type")
 	}
