@@ -5,12 +5,12 @@ package db19
 
 import (
 	"log"
+	"runtime/debug"
 	"time"
 
 	"github.com/apmckinlay/gsuneido/db19/meta"
+	"github.com/apmckinlay/gsuneido/db19/meta/schema"
 )
-
-type merge []string
 
 type void = struct{}
 
@@ -31,16 +31,26 @@ const chanBuffers = 4 // ???
 // Finally the merger closes the allDone channel
 // so we know the shutdown has finished.
 func StartConcur(db *Database, persistInterval time.Duration) {
-	mergeChan := make(chan merge, chanBuffers)
+	mergeChan := make(chan interface{}, chanBuffers)
+	resultChan := make(chan error)
 	allDone := make(chan void)
-	go merger(db, mergeChan, persistInterval, allDone)
-	db.ck = StartCheckCo(db, mergeChan, allDone)
+	go merger(db, mergeChan, resultChan, persistInterval, allDone)
+	db.ck = StartCheckCo(db, mergeChan, resultChan, allDone)
 }
 
-func merger(db *Database, mergeChan chan merge,
+type mergeT struct {
+	db         *Database
+	mergeChan  chan interface{}
+	merges     *mergeList
+	em         *execMulti
+	resultChan chan error
+}
+
+func merger(db *Database, mergeChan chan interface{}, resultChan chan error,
 	persistInterval time.Duration, allDone chan void) {
 	defer func() {
 		if e := recover(); e != nil {
+			debug.PrintStack()
 			log.Fatalln("FATAL ERROR in merger:", e)
 		}
 	}()
@@ -48,6 +58,8 @@ func merger(db *Database, mergeChan chan merge,
 	ep := startExecPersistMulti()
 	// ep := &execPersistSingle{}
 	merges := &mergeList{}
+	mt := mergeT{db: db, mergeChan: mergeChan, merges: merges, em: em,
+		resultChan: resultChan}
 	ticker := time.NewTicker(persistInterval)
 	prevState := db.GetState()
 loop:
@@ -57,11 +69,7 @@ loop:
 			if m == nil { // channel closed
 				break loop
 			}
-			merges.reset()
-			merges.add(m)
-			merges.drain(mergeChan)
-			db.Merge(em.merge, merges)
-			// db.Merge(mergeSingle, merges)
+			mt.dispatch(m)
 		case <-ticker.C:
 			if db.GetState() != prevState {
 				db.Persist(ep, false)
@@ -74,6 +82,28 @@ loop:
 		db.Persist(ep, false)
 	}
 	close(allDone)
+}
+
+func (mt *mergeT) dispatch(m interface{}) {
+	for {
+		switch m2 := m.(type) {
+		case []string: // merge
+			mt.merges.reset()
+			mt.merges.add(m2)
+			m = mt.merges.drain(mt.mergeChan)
+			mt.db.Merge(mt.em.merge, mt.merges)
+			// db.Merge(mergeSingle, merges)
+			if m == nil {
+				return
+			}
+		case *schema.Schema: // create
+			mt.resultChan <- mt.db.create(m2)
+			return
+		case string: // drop
+			mt.resultChan <- mt.db.drop(m2)
+			return
+		}
+	}
 }
 
 // mergeSingle is a single threaded merge for tran_test
@@ -150,7 +180,7 @@ type tableCount struct {
 	nmerge int
 }
 
-func (ml *mergeList) add(m merge) {
+func (ml *mergeList) add(m []string) {
 outer:
 	for _, table := range m {
 		for i := range ml.tn {
@@ -163,16 +193,20 @@ outer:
 	}
 }
 
-func (ml *mergeList) drain(mergeChan chan merge) {
+func (ml *mergeList) drain(mergeChan chan interface{}) interface{} {
 	for {
 		select {
 		case m := <-mergeChan:
 			if m == nil { // channel closed
-				return
+				return nil
 			}
-			ml.add(m)
-		default:
-			return
+			if m2, ok := m.([]string); ok {
+				ml.add(m2)
+			} else {
+				return m // create or drop that needs to be handled
+			}
+		default: // channel empty
+			return nil
 		}
 	}
 }

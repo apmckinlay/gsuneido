@@ -11,6 +11,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
@@ -20,7 +21,7 @@ func TestCheckCoTimeout(t *testing.T) {
 	}
 	defer func(ma int) { MaxAge = ma }(MaxAge)
 	MaxAge = 1
-	ck := StartCheckCo(nil, nil, nil)
+	ck := StartCheckCo(nil, nil, nil, nil)
 	tran := ck.StartTran()
 	assert.T(t).False(tran.Aborted())
 	time.Sleep(2 * time.Second)
@@ -29,7 +30,9 @@ func TestCheckCoTimeout(t *testing.T) {
 }
 
 func TestCheckCoRandom(*testing.T) {
-	ck := StartCheckCo(nil, nil, nil)
+	db, err := CreateDb(stor.HeapStor(8192))
+	assert.That(err == nil)
+	db.ck = StartCheckCo(db, mergeSink(), resultSink(), nil)
 	nThreads := 8
 	nTrans := 10000
 	if testing.Short() {
@@ -42,27 +45,44 @@ func TestCheckCoRandom(*testing.T) {
 		go func() {
 			defer wg.Done()
 			for i := 0; i < nTrans; i++ {
-				randTran(ck)
+				randTran(db)
 			}
 		}()
 	}
 	wg.Wait()
-	close(ck.c)
 	// fmt.Println("commit", nCommit, "conflict", nConflict)
+}
+
+func mergeSink() chan interface{} {
+	c := make(chan interface{})
+	go func() {
+		for range c {
+		}
+	}()
+	return c
+}
+
+func resultSink() chan error {
+	c := make(chan error)
+	go func() {
+		for range c {
+		}
+	}()
+	return c
 }
 
 var nCommit, nConflict int64
 
-func randTran(ck *CheckCo) {
-	t := &UpdateTran{ct: ck.StartTran()}
+func randTran(db *Database) {
+	t := db.NewUpdateTran()
 	nActions := rand.Intn(20)
 	for i := 0; i < nActions; i++ {
-		randAction(ck, t.ct)
+		randAction(db.ck, t.ct)
 	}
 	if rand.Intn(2) == 1 {
-		ck.Abort(t.ct, "")
+		db.ck.Abort(t.ct, "")
 	} else {
-		if ck.Commit(t) {
+		if db.ck.Commit(t) {
 			atomic.AddInt64(&nCommit, 1)
 		} else {
 			atomic.AddInt64(&nConflict, 1)
@@ -71,7 +91,7 @@ func randTran(ck *CheckCo) {
 
 }
 
-func randAction(ck *CheckCo, t *CkTran) {
+func randAction(ck Checker, t *CkTran) {
 	nIndexes := 4
 	table := randTable()
 	if rand.Intn(3) == 1 {

@@ -166,7 +166,7 @@ func (a *dropAdmin) String() string {
 
 func (a *dropAdmin) execute(db *db19.Database) {
 	checkForSystemTable("drop", a.table)
-	if !db.Drop(a.table) {
-		panic("can't drop nonexistent table: " + a.table)
+	if err := db.Drop(a.table); err != nil {
+		panic(err)
 	}
 }

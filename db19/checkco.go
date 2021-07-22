@@ -4,7 +4,11 @@
 package db19
 
 import (
+	"log"
+	"runtime/debug"
 	"time"
+
+	"github.com/apmckinlay/gsuneido/db19/meta/schema"
 )
 
 // CheckCo is the concurrent, channel based interface to Check
@@ -14,6 +18,16 @@ type CheckCo struct {
 }
 
 // message types
+
+type ckCreate struct {
+	schema *schema.Schema
+	ret    chan error
+}
+
+type ckDrop struct {
+	table string
+	ret   chan error
+}
 
 type ckStart struct {
 	ret chan *CkTran
@@ -43,6 +57,18 @@ type ckResult struct {
 type ckAbort struct {
 	t      *CkTran
 	reason string
+}
+
+func (ck *CheckCo) Create(schema *schema.Schema) error {
+	ret := make(chan error, 1)
+	ck.c <- &ckCreate{schema: schema, ret: ret}
+	return <-ret
+}
+
+func (ck *CheckCo) Drop(table string) error {
+	ret := make(chan error, 1)
+	ck.c <- &ckDrop{table: table, ret: ret}
+	return <-ret
 }
 
 func (ck *CheckCo) StartTran() *CkTran {
@@ -87,10 +113,11 @@ func (t *CkTran) Aborted() bool {
 
 //-------------------------------------------------------------------
 
-func StartCheckCo(db *Database, mergeChan chan merge, allDone chan void) *CheckCo {
+func StartCheckCo(db *Database, mergeChan chan interface{}, resultChan chan error,
+	allDone chan void) *CheckCo {
 	ck := NewCheck(db)
 	c := make(chan interface{}, 4)
-	go checker(ck, c, mergeChan)
+	go checker(ck, c, mergeChan, resultChan)
 	return &CheckCo{c: c, allDone: allDone}
 }
 
@@ -99,7 +126,13 @@ func (ck *CheckCo) Stop() {
 	<-ck.allDone // wait
 }
 
-func checker(ck *Check, c chan interface{}, mergeChan chan merge) {
+func checker(ck *Check, c chan interface{}, mergeChan chan interface{}, resultChan chan error) {
+	defer func() {
+		if e := recover(); e != nil {
+			debug.PrintStack()
+			log.Fatalln("FATAL ERROR in checker:", e)
+		}
+	}()
 	ticker := time.NewTicker(time.Second)
 	defer ticker.Stop()
 	for {
@@ -111,7 +144,7 @@ func checker(ck *Check, c chan interface{}, mergeChan chan merge) {
 				}
 				return
 			}
-			ck.dispatch(msg, mergeChan)
+			ck.dispatch(msg, mergeChan, resultChan)
 		case <-ticker.C:
 			// fmt.Println("checker chan", len(c), "merge chan", len(mergeChan))
 			ck.tick()
@@ -120,8 +153,16 @@ func checker(ck *Check, c chan interface{}, mergeChan chan merge) {
 }
 
 // dispatch runs in the checker goroutine
-func (ck *Check) dispatch(msg interface{}, mergeChan chan merge) {
+func (ck *Check) dispatch(msg interface{}, mergeChan chan interface{}, resultChan chan error) {
 	switch msg := msg.(type) {
+	case *ckCreate:
+		mergeChan <- msg.schema
+		err := <-resultChan
+		msg.ret <- err
+	case *ckDrop:
+		mergeChan <- msg.table
+		err := <-resultChan
+		msg.ret <- err
 	case *ckStart:
 		msg.ret <- ck.StartTran()
 	case *ckRead:
@@ -132,11 +173,12 @@ func (ck *Check) dispatch(msg interface{}, mergeChan chan merge) {
 		ck.Abort(msg.t, msg.reason)
 	case *ckCommit:
 		result := ck.commit(msg.t)
-		if result != nil && mergeChan != nil { // no channel when testing
-			msg.t.commit()
-			mergeChan <- result
+		if result == nil {
+			msg.ret <- false
 		}
-		msg.ret <- result != nil
+		msg.t.commit()
+		msg.ret <- true
+		mergeChan <- result
 	default:
 		panic("checker unknown message type")
 	}
@@ -144,6 +186,8 @@ func (ck *Check) dispatch(msg interface{}, mergeChan chan merge) {
 
 // Checker is the interface for Check and CheckCo
 type Checker interface {
+	Create(schema *schema.Schema) error
+	Drop(table string) error
 	StartTran() *CkTran
 	Read(t *CkTran, table string, index int, from, to string) bool
 	Write(t *CkTran, table string, keys []string) bool

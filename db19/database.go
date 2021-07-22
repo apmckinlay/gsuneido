@@ -101,15 +101,29 @@ func OpenDbStor(store *stor.Stor, mode stor.Mode, check bool) (db *Database, err
 
 // LoadedTable is used to add a loaded table to the state
 func (db *Database) LoadedTable(ts *meta.Schema, ti *meta.Info) {
+	if err := db.loadedTable(ts, ti); err != nil {
+		panic(err)
+	}
+}
+
+func (db *Database) loadedTable(ts *meta.Schema, ti *meta.Info) error {
+	var err error
 	db.UpdateState(func(state *DbState) {
 		if state.Meta.GetRoSchema(ts.Table) != nil {
-			panic("can't create existing table: " + ts.Table)
+			err = errors.New("can't create existing table: " + ts.Table)
 		}
 		state.Meta = state.Meta.Put(ts, ti)
 	})
+	return err
 }
 
 func (db *Database) Create(schema *schema.Schema) {
+	if err := db.ck.Create(schema); err != nil {
+		panic(err)
+	}
+}
+
+func (db *Database) create(schema *schema.Schema) error {
 	ts := &meta.Schema{Schema: *schema}
 	ts.Ixspecs(ts.Indexes)
 	ov := make([]*index.Overlay, len(ts.Indexes))
@@ -118,7 +132,7 @@ func (db *Database) Create(schema *schema.Schema) {
 		ov[i] = index.OverlayFor(bt)
 	}
 	ti := &meta.Info{Table: schema.Table, Indexes: ov}
-	db.LoadedTable(ts, ti)
+	return db.loadedTable(ts, ti)
 }
 
 func (db *Database) createIndexes(idxs []schema.Index) []*index.Overlay {
@@ -143,7 +157,7 @@ func (db *Database) Ensure(schema *schema.Schema) bool {
 			state.Meta = m
 			result = true
 		} else if create {
-
+			//FIXME ???
 		}
 	})
 	return result
@@ -161,15 +175,20 @@ func (db *Database) RenameTable(from, to string) bool {
 }
 
 // Drop removes a table or view
-func (db *Database) Drop(table string) bool {
-	result := false
+func (db *Database) Drop(table string) error {
+	return db.ck.Drop(table)
+}
+
+func (db *Database) drop(table string) error {
+	var err error
 	db.UpdateState(func(state *DbState) {
 		if m := state.Meta.Drop(table); m != nil {
 			state.Meta = m
-			result = true
+		} else {
+			err = errors.New("can't drop nonexistent table: " + table)
 		}
 	})
-	return result
+	return err
 }
 
 func (db *Database) AlterRename(table string, from, to []string) bool {
