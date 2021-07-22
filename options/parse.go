@@ -82,9 +82,6 @@ func match(pargs *[]string, s string) bool {
 	if arg == s {
 		*pargs = (*pargs)[1:]
 		return true
-	} else if strings.HasPrefix(arg, s) {
-		(*pargs)[0] = strings.TrimSpace(arg[len(s):])
-		return true
 	}
 	return false
 }
