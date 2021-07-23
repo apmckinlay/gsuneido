@@ -62,7 +62,7 @@ func ReadInfo(st *stor.Stor, r *stor.Reader) *Info {
 }
 
 func (m *Meta) newInfoTomb(table string) *Info {
-	return &Info{Table: table, lastmod: m.infoClock}
+	return &Info{Table: table}
 }
 
 func (ti *Info) isTomb() bool {

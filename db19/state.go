@@ -99,18 +99,19 @@ type persistfn func(*DbState) []meta.PersistUpdate
 // Persist writes index changes (and a new state) to the database file.
 // It is called from concur.go e.g. once per minute.
 // flatten applies to the schema and info chains.
-func (db *Database) Persist(exec execPersist, flatten bool) uint64 {
+func (db *Database) Persist(exec execPersist, flatten bool) *DbState {
 	// fmt.Println("Persist", flatten)
-	var off uint64
+	var newState *DbState
 	db.GetState().Meta.Persist(exec.Submit) // outside UpdateState
 	updates := exec.Results()
 	db.UpdateState(func(state *DbState) {
 		meta := *state.Meta // copy
 		meta.ApplyPersist(updates)
 		state.Meta = &meta
-		off = state.Write(flatten)
+		state.Write(flatten)
+		newState = state
 	})
-	return off
+	return newState
 }
 
 const magic1 = "\x01\x23\x45\x67\x89\xab\xcd\xef"

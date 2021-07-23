@@ -72,8 +72,7 @@ loop:
 			mt.dispatch(m)
 		case <-ticker.C:
 			if db.GetState() != prevState {
-				db.Persist(ep, false)
-				prevState = db.GetState()
+				prevState = db.Persist(ep, false)
 			}
 		}
 	}
@@ -234,7 +233,9 @@ func (ep *execPersistSingle) Submit(fn func() meta.PersistUpdate) {
 }
 
 func (ep *execPersistSingle) Results() []meta.PersistUpdate {
-	return ep.results
+	results := ep.results
+	ep.results = ep.results[:0]
+	return results
 }
 
 //-------------------------------------------------------------------
@@ -275,7 +276,9 @@ func (ep *execPersistMulti) Results() []meta.PersistUpdate {
 		result := <-ep.resultChan
 		ep.results = append(ep.results, result)
 	}
-	return ep.results
+	results := ep.results
+	ep.results = ep.results[:0]
+	return results
 }
 
 func persistWorker(
