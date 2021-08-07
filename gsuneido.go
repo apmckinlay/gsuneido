@@ -152,12 +152,34 @@ func main() {
 	}
 	if options.Action == "repl" ||
 		(options.Action == "client" && options.Mode != "gui") {
-		eval("Init.Repl()")
+		run("Init.Repl()")
 		repl()
 		closeDbms()
 	} else {
-		eval("Init()")
+		run("Init()")
 		builtin.Run()
+	}
+}
+
+func run(src string) {
+	defer func() {
+		if e := recover(); e != nil {
+			printStack(e)
+			Fatal("ERROR from "+src+" ", e)
+		}
+	}()
+	compile.EvalString(mainThread, src)
+}
+
+func printStack(e interface{}) {
+	if builtin.InternalError(e) {
+		debug.PrintStack()
+		fmt.Println("---")
+		PrintStack(mainThread.Callstack())
+	} else if se, ok := e.(*SuExcept); ok {
+		PrintStack(se.Callstack)
+	} else {
+		PrintStack(mainThread.Callstack())
 	}
 }
 
@@ -321,15 +343,7 @@ func eval(src string) {
 	defer func() {
 		if e := recover(); e != nil {
 			log.Println("ERROR:", e)
-			if builtin.InternalError(e) {
-				debug.PrintStack()
-				fmt.Println("---")
-				PrintStack(mainThread.Callstack())
-			} else if se, ok := e.(*SuExcept); ok {
-				PrintStack(se.Callstack)
-			} else {
-				PrintStack(mainThread.Callstack())
-			}
+			printStack(e)
 		}
 	}()
 	src = "function () {\n" + src + "\n}"
