@@ -10,7 +10,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/regex"
 )
 
-// Eval executes string containing Suneido code
+// EvalString executes string containing Suneido code
 // i.e. string.Eval()
 func EvalString(t *Thread, s string) Value {
 	s = strings.Trim(s, " \t\r\n")
