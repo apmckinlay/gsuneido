@@ -2,6 +2,7 @@
 // Governed by the MIT license found in the LICENSE file.
 
 // +build !portable
+// +build !com
 
 package builtin
 

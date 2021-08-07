@@ -1,14 +1,13 @@
 // Copyright Suneido Software Corp. All rights reserved.
 // Governed by the MIT license found in the LICENSE file.
 
-// +build !windows portable
+// +build !windows portable com
 
 package builtin
 
 import (
-	"os"
-
 	. "github.com/apmckinlay/gsuneido/runtime"
+	"github.com/apmckinlay/gsuneido/util/exit"
 )
 
 var _ = builtin1("Exit(code = 0)",
@@ -17,6 +16,6 @@ var _ = builtin1("Exit(code = 0)",
 		if arg != True {
 			code = IfInt(arg)
 		}
-		os.Exit(code)
+		exit.Exit(code)
 		return nil
 	})

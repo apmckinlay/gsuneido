@@ -12,13 +12,13 @@ import "C"
 import (
 	"fmt"
 	"log"
-	"os"
 	"runtime"
 	"sync"
 	"time"
 	"unsafe"
 
 	"github.com/apmckinlay/gsuneido/options"
+	"github.com/apmckinlay/gsuneido/util/exit"
 	"golang.org/x/sys/windows"
 )
 
@@ -112,12 +112,12 @@ func Fatal(args ...interface{}) {
 		log.Print("FATAL: ", s)
 		go func() {
 			time.Sleep(10 * time.Second)
-			os.Exit(1)
+			exit.Exit(1)
 		}()
 		if !options.Unattended {
 			C.fatal(C.CString(s[:len(s)-1]))
 		}
-		os.Exit(1)
+		exit.Exit(1)
 	})
 }
 

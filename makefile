@@ -8,7 +8,7 @@ ifdef PATHEXT
 	# Windows stuff
 	EXE = gsuneido.exe gsuneido.com
 	GUIFLAGS = $(LDFLAGS) -X main.mode=gui -H windowsgui
-	CONSOLE = go build -o gsuneido.com -ldflags "$(LDFLAGS)"
+	CONSOLE = go build -o gsuneido.com -ldflags "$(LDFLAGS)" -tags com
 endif
 
 build:
