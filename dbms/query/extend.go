@@ -183,6 +183,8 @@ func (e *Extend) extendRow(row Row) Row {
 			val := e.Eval(&context)
 			rb.Add(val.(Packable))
 			context.Rec.PreSet(SuStr(col), val)
+		} else {
+			rb.Add(EmptyStr.(Packable))
 		}
 	}
 	return append(row, DbRec{Record: rb.Build()})
