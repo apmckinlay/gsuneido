@@ -318,22 +318,36 @@ func (dc *dbmsClient) getRow(off int) Row {
 // ------------------------------------------------------------------
 
 type TranClient struct {
-	dc *dbmsClient
-	tn int
+	dc       *dbmsClient
+	tn       int
+	conflict string
+	ended    bool
 }
 
 var _ ITran = (*TranClient)(nil)
 
-func (tc *TranClient) Abort() {
+func (tc *TranClient) Abort() string {
+	tc.ended = true
 	tc.dc.PutCmd(commands.Abort).PutInt(tc.tn).Request()
+	return ""
 }
 
 func (tc *TranClient) Complete() string {
+	tc.ended = true
 	tc.dc.PutCmd(commands.Commit).PutInt(tc.tn).Request()
 	if tc.dc.GetBool() {
 		return ""
 	}
-	return tc.dc.GetStr()
+	tc.conflict = tc.dc.GetStr()
+	return tc.conflict
+}
+
+func (tc *TranClient) Conflict() string {
+	return tc.conflict
+}
+
+func (tc *TranClient) Ended() bool {
+	return tc.ended
 }
 
 func (tc *TranClient) Delete(_ string, off uint64) {

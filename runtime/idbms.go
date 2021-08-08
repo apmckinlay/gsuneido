@@ -101,10 +101,15 @@ type ITran interface {
 	String() string
 
 	// Abort rolls back the transaction
-	Abort()
+	Abort() string
 
-	// Complete commits the transaction
+	// Complete commits the transaction.
+	// It returns "" on success, otherwise the conflict.
 	Complete() string
+
+	Conflict() string
+
+	Ended() bool
 
 	// Delete deletes a record
 	Delete(table string, off uint64)

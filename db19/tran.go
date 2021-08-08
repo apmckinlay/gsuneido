@@ -21,9 +21,19 @@ import (
 )
 
 type tran struct {
-	db   *Database
-	meta *meta.Meta
+	db    *Database
+	meta  *meta.Meta
+	state tstate
 }
+
+type tstate byte
+
+const (
+	active tstate = iota
+	completed
+	commitFailed
+	aborted
+)
 
 // GetInfo returns read-only Info for the table or nil if not found
 func (t *tran) GetInfo(table string) *meta.Info {
@@ -71,6 +81,10 @@ func (t *tran) GetAllViews() []string {
 
 func (t *tran) GetView(name string) string {
 	return t.db.GetView(name)
+}
+
+func (t *tran) Ended() bool {
+	return t.state != active
 }
 
 //-------------------------------------------------------------------
@@ -174,17 +188,28 @@ func (t *ReadTran) MakeLess(is *ixkey.Spec) func(x, y uint64) bool {
 }
 
 func (t *ReadTran) Complete() string {
+	if t.state == aborted {
+		return "can't Complete a transaction after failure or Abort"
+	}
+	t.state = completed
 	return ""
 }
 
-func (t *ReadTran) Abort() {
+func (t *ReadTran) Conflict() string {
+	return ""
+}
+
+func (t *ReadTran) Abort() string {
+	t.state = aborted
+	return ""
 }
 
 //-------------------------------------------------------------------
 
 type UpdateTran struct {
 	ReadTran
-	ct *CkTran
+	ct       *CkTran
+	conflict string
 }
 
 func (db *Database) NewUpdateTran() *UpdateTran {
@@ -200,14 +225,25 @@ func (t *UpdateTran) String() string {
 
 // Complete returns "" on success, otherwise an error
 func (t *UpdateTran) Complete() string {
-	if !t.db.ck.Commit(t) {
+	if t.state == aborted || t.state == commitFailed {
+		return "can't Complete a transaction after failure or Abort"
+	}
+	if t.db.ck.Commit(t) {
+		t.state = completed
+	} else {
+		t.state = commitFailed
 		conflict := t.ct.conflict.Load()
 		if conflict == nil {
 			return "transaction already ended"
 		}
-		return conflict.(string)
+		t.conflict = conflict.(string)
+		return t.conflict
 	}
 	return ""
+}
+
+func (t *UpdateTran) Conflict() string {
+	return t.conflict
 }
 
 // Commit is used by tests. It panics on error.
@@ -223,8 +259,18 @@ func (t *UpdateTran) commit() int {
 	return t.num()
 }
 
-func (t *UpdateTran) Abort() {
-	t.ck(t.db.ck.Abort(t.ct, "aborted"))
+func (t *UpdateTran) Abort() string {
+	switch t.state {
+	case aborted, commitFailed:
+		return ""
+	case completed:
+		return "already completed"
+	}
+	if !t.db.ck.Abort(t.ct, "aborted") {
+		return "abort failed"
+	}
+	t.state = aborted
+	return ""
 }
 
 func (t *UpdateTran) num() int {

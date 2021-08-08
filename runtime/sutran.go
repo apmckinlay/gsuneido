@@ -11,24 +11,13 @@ import (
 type SuTran struct {
 	CantConvert
 	itran     ITran
-	conflict  string
 	data      *SuObject
 	updatable bool
-	state     tstate
 }
 
 func NewSuTran(itran ITran, updatable bool) *SuTran {
 	return &SuTran{itran: itran, updatable: updatable}
 }
-
-type tstate byte
-
-const (
-	active tstate = iota
-	committed
-	commitFailed
-	aborted
-)
 
 var _ Value = (*SuTran)(nil)
 
@@ -93,24 +82,17 @@ func (*SuTran) Lookup(t *Thread, method string) Callable {
 //-------------------------------------------------------------------
 
 func (st *SuTran) Complete() {
-	if st.state == aborted || st.state == commitFailed {
-		panic("can't Complete a transaction after failure or Rollback")
-	}
-	st.conflict = st.itran.Complete()
-	if st.conflict == "" {
-		st.state = committed
-	} else {
-		st.state = commitFailed
-		panic("transaction.Complete failed: " + st.conflict)
+	if conflict := st.itran.Complete(); conflict != "" {
+		panic("transaction.Complete failed: " + conflict)
 	}
 }
 
 func (st *SuTran) Conflict() string {
-	return st.conflict
+	return st.itran.Conflict()
 }
 
 func (st *SuTran) Ended() bool {
-	return st.state != active
+	return st.itran.Ended()
 }
 
 func (st *SuTran) Delete(table string, off uint64) {
@@ -139,12 +121,8 @@ func (st *SuTran) Action(action string) int {
 }
 
 func (st *SuTran) Rollback() {
-	if st.state == committed {
-		panic("can't Rollback transaction after Complete")
-	}
-	if st.state != aborted {
-		st.itran.Abort()
-		st.state = aborted
+	if err := st.itran.Abort(); err != "" {
+		panic("transaction Rollback failed: " + err)
 	}
 }
 
@@ -162,7 +140,7 @@ func (st *SuTran) WriteCount() int {
 }
 
 func (st *SuTran) ckActive() {
-	if st.state != active {
+	if st.itran.Ended() {
 		panic("can't use ended transaction")
 	}
 }
