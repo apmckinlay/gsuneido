@@ -699,13 +699,27 @@ func (r *SuRecord) catchRule(t *Thread, rule Value, key string) Value {
 	defer func() {
 		t.rules.pop()
 		if e := recover(); e != nil {
-			panic(toStr(e) + " (rule for " + key + ")")
+			WrapPanic(e, "rule for " + key)
 		}
 	}()
 	if r.Unlock() { // can't hold lock while calling observers
 		defer r.Lock()
 	}
 	return t.CallThis(rule, r)
+}
+
+func WrapPanic(e interface{}, suffix string) {
+	switch e := e.(type) {
+	case *SuExcept:
+		s := string(e.SuStr) + " (" + suffix + ")"
+		panic(&SuExcept{SuStr: SuStr(s), Callstack: e.Callstack})
+	case error:
+		panic(fmt.Errorf("%w (%s)", e, suffix))
+	case Value:
+		panic(ToStrOrString(e) + " (" + suffix + ")")
+	default:
+		panic(fmt.Sprint(e) + " (" + suffix + ")")
+	}
 }
 
 // activeRules stack
@@ -736,25 +750,6 @@ func (ar *activeRules) has(r *SuRecord, key string) bool {
 		}
 	}
 	return false
-}
-
-type strable interface{ String() string }
-type errable interface{ Error() string }
-
-func toStr(e interface{}) string {
-	if s, ok := e.(string); ok {
-		return s
-	}
-	if v, ok := e.(Value); ok {
-		return AsStr(v)
-	}
-	if sa, ok := e.(strable); ok {
-		return sa.String()
-	}
-	if ea, ok := e.(errable); ok {
-		return ea.Error()
-	}
-	return "???"
 }
 
 func (r *SuRecord) getRule(t *Thread, key string) Value {
