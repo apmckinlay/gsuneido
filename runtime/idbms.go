@@ -28,6 +28,9 @@ type IDbms interface {
 	// Cursors returns the current number of cursors
 	Cursors() int
 
+	DisableTrigger(table string)
+	EnableTrigger(table string)
+
 	// Dump dumps a table or the entire database like -dump
 	// It returns "" or an error message.
 	Dump(table string) string

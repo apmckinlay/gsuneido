@@ -20,6 +20,9 @@ import (
 )
 
 func TestConcurrent(t *testing.T) {
+	MakeSuTran = func(ut *UpdateTran) *rt.SuTran {
+		return rt.NewSuTran(nil, true)
+	}
 	db := createDb()
 	StartConcur(db, 50*time.Millisecond)
 	var nclients = 8

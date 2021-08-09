@@ -26,6 +26,7 @@ type Database struct {
 	state stateHolder
 
 	ck Checker
+	triggers
 }
 
 const magic = "gsndo001"

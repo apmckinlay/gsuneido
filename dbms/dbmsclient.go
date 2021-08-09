@@ -152,6 +152,13 @@ func (dc *dbmsClient) Cursors() int {
 	return dc.GetInt()
 }
 
+func (dc *dbmsClient) DisableTrigger(string) {
+	panic("DoWithoutTriggers can't be used by a client")
+}
+func (dc *dbmsClient) EnableTrigger(string) {
+	panic("shouldn't reach here")
+}
+
 func (dc *dbmsClient) Dump(table string) string {
 	dc.PutCmd(commands.Dump).PutStr(table).Request()
 	return dc.GetStr()

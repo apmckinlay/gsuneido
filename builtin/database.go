@@ -82,7 +82,14 @@ func (d *suDatabaseGlobal) String() string {
 	return "Database /* builtin class */"
 }
 
-var _ = builtin("DoWithoutTriggers()",
+var _ = builtin("DoWithoutTriggers(tables, block)",
 	func(t *Thread, args []Value) Value {
-		panic("DoWithoutTriggers can't be used when running as a client")
+		dbms := t.Dbms()
+		ob := ToContainer(args[0])
+		for i := ob.ListSize() - 1; i >= 0; i-- {
+			table := ToStr(ob.ListGet(i))
+			dbms.DisableTrigger(table)
+			defer dbms.EnableTrigger(table)
+		}
+		return t.Call(args[1])
 	})

@@ -9,6 +9,7 @@ import (
 
 	"github.com/apmckinlay/gsuneido/db19"
 	"github.com/apmckinlay/gsuneido/db19/stor"
+	"github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
@@ -47,6 +48,9 @@ func xTestDeleteBug2(*testing.T) {
 }
 
 func TestDeleteBug(*testing.T) {
+	db19.MakeSuTran = func(ut *db19.UpdateTran) *runtime.SuTran {
+		return runtime.NewSuTran(nil, true)
+	}
 	store := stor.HeapStor(8192)
 	db, err := db19.CreateDb(store)
 	ck(err)

@@ -63,6 +63,13 @@ func (*DbmsLocal) Cursors() int {
 	return 0
 }
 
+func (dbms *DbmsLocal) DisableTrigger(table string) {
+	dbms.db.DisableTrigger(table)
+}
+func (dbms *DbmsLocal) EnableTrigger(table string) {
+	dbms.db.EnableTrigger(table)
+}
+
 func (dbms *DbmsLocal) Dump(table string) string {
 	var err error
 	if table == "" {
@@ -261,6 +268,9 @@ func init() {
 			return NewSuTran(&UpdateTranLocal{t}, true)
 		}
 		panic(fmt.Sprintf("NewSuTran unhandled type %#v", qt))
+	}
+	db19.MakeSuTran = func(ut *db19.UpdateTran) *SuTran {
+		return NewSuTran(&UpdateTranLocal{ut}, true)
 	}
 }
 

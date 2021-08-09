@@ -101,6 +101,10 @@ func NewHeader(fields [][]string, columns []string) *Header {
 		Map: make(map[string]RowAt)}
 }
 
+func SimpleHeader(fields []string) *Header {
+	return NewHeader([][]string{fields}, fields)
+}
+
 func JoinHeaders(x, y *Header) *Header {
 	fields := make([][]string, 0, len(x.Fields)+len(y.Fields))
 	fields = append(append(fields, x.Fields...), y.Fields...)

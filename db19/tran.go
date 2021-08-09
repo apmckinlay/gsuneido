@@ -210,6 +210,7 @@ type UpdateTran struct {
 	ReadTran
 	ct       *CkTran
 	conflict string
+	th       *rt.Thread // for triggers
 }
 
 func (db *Database) NewUpdateTran() *UpdateTran {
@@ -311,6 +312,14 @@ func (t *UpdateTran) Output(table string, rec rt.Record) {
 	t.ck(t.db.ck.Write(t.ct, table, keys))
 	ti.Nrows++
 	ti.Size += uint64(n)
+	t.db.CallTrigger(t.thread(), t, table, "", rec)
+}
+
+func (t *UpdateTran) thread() *rt.Thread {
+	if t.th == nil {
+		t.th = &rt.Thread{}
+	}
+	return t.th
 }
 
 func (t *UpdateTran) Delete(table string, off uint64) {
@@ -330,6 +339,7 @@ func (t *UpdateTran) Delete(table string, off uint64) {
 	ti.Nrows--
 	assert.Msg("Delete Size").That(ti.Size >= uint64(n))
 	ti.Size -= uint64(n)
+	t.db.CallTrigger(t.thread(), t, table, rec, "")
 }
 
 func (t *UpdateTran) Update(table string, oldoff uint64, newrec rt.Record) uint64 {
@@ -379,6 +389,7 @@ func (t *UpdateTran) Update(table string, oldoff uint64, newrec rt.Record) uint6
 		assert.Msg("Update Size").That(int64(ti.Size)+d > 0)
 		ti.Size = uint64(int64(ti.Size) + d)
 	}
+	t.db.CallTrigger(t.thread(), t, table, oldrec, newrec)
 	return newoff
 }
 
