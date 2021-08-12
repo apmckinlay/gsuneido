@@ -317,7 +317,8 @@ func (*Indexes) Keys() [][]string {
 	return [][]string{{"table", "columns"}}
 }
 
-var indexesFields = [][]string{{"table", "columns", "key"}}
+var indexesFields = [][]string{{"table", "columns", "key",
+	"fktable", "fkcolumns", "fkmode"}}
 
 func (*Indexes) Columns() []string {
 	return indexesFields[0]
@@ -391,6 +392,11 @@ func (is *Indexes) Get(dir Dir) Row {
 		rb.Add(SuStr("u"))
 	default:
 		panic("shouldn't reach here")
+	}
+	if idx.Fk.Table != "" {
+		rb.Add(SuStr(idx.Fk.Table))
+		rb.Add(SuStr(strs.Join(",", idx.Fk.Columns)))
+		rb.Add(SuInt(idx.Fk.Mode))
 	}
 	rec := rb.Build()
 	return Row{DbRec{Record: rec}}

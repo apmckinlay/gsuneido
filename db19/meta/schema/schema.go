@@ -25,13 +25,19 @@ type Index struct {
 	Columns []string
 	Ixspec  ixkey.Spec
 	// Mode is 'k' for key, 'i' for index, 'u' for unique index
-	Mode      int
-	Fktable   string
-	Fkmode    int
-	Fkcolumns []string
+	Mode int
+	Fk   Fkey
+	// FkToHere is other foreign keys that reference this one
+	FkToHere []Fkey
 }
 
-// fkmode bits
+type Fkey struct {
+	Table   string
+	Columns []string
+	Mode    int
+}
+
+// Fkey mode bits
 const (
 	Block          = 0
 	CascadeUpdates = 1
@@ -67,22 +73,20 @@ func (sc *Schema) String() string {
 func (ix *Index) String() string {
 	s := map[int]string{'k': "key", 'i': "index", 'u': "index unique"}[ix.Mode]
 	s += strs.Join("(,)", ix.Columns)
-	if ix.Fktable != "" {
-		s += " in " + ix.Fktable
-		if len(ix.Fkcolumns) > 0 {
-			sep := "("
-			for _, f := range ix.Fkcolumns {
-				s += sep + f
-				sep = ","
-			}
-			s += ")"
+	if ix.Fk.Table != "" {
+		s += " in " + ix.Fk.Table
+		if !strs.Equal(ix.Fk.Columns, ix.Columns) {
+			s += strs.Join("(,)", ix.Fk.Columns)
 		}
-		if ix.Fkmode&Cascade != 0 {
+		if ix.Fk.Mode&Cascade != 0 {
 			s += " cascade"
-			if ix.Fkmode == CascadeUpdates {
+			if ix.Fk.Mode == CascadeUpdates {
 				s += " update"
 			}
 		}
+	}
+	for _, fk := range ix.FkToHere {
+		s += " from " + fk.Table + strs.Join("(,)", fk.Columns)
 	}
 	return s
 }

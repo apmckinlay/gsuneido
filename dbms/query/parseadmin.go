@@ -180,7 +180,10 @@ func (p *adminParser) index(columns, derived []string, full bool) *Index {
 		p.Error("index columns must not be empty")
 	}
 	ix := &Index{Columns: ixcols, Mode: mode}
-	ix.Fktable, ix.Fkcolumns, ix.Fkmode = p.foreignKey()
+	ix.Fk.Table, ix.Fk.Columns, ix.Fk.Mode = p.foreignKey()
+	if ix.Fk.Columns == nil {
+		ix.Fk.Columns = ixcols
+	}
 	return ix
 }
 

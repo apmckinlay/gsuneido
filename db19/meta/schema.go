@@ -19,7 +19,6 @@ import (
 
 type Schema struct {
 	schema.Schema
-	//TODO foreign key target stuff
 	lastmod int
 }
 
@@ -39,7 +38,7 @@ func (ts *Schema) storSize() int {
 	for i := range ts.Indexes {
 		idx := ts.Indexes[i]
 		size += 1 + stor.LenStrs(idx.Columns) +
-			stor.LenStr(idx.Fktable) + 1 + stor.LenStrs(idx.Fkcolumns)
+			stor.LenStr(idx.Fk.Table) + 1 + stor.LenStrs(idx.Fk.Columns)
 	}
 	return size
 }
@@ -51,7 +50,7 @@ func (ts *Schema) Write(w *stor.Writer) {
 	w.Put1(len(ts.Indexes))
 	for _, ix := range ts.Indexes {
 		w.Put1(ix.Mode).PutStrs(ix.Columns)
-		w.PutStr(ix.Fktable).Put1(ix.Fkmode).PutStrs(ix.Fkcolumns)
+		w.PutStr(ix.Fk.Table).Put1(ix.Fk.Mode).PutStrs(ix.Fk.Columns)
 	}
 }
 
@@ -64,11 +63,12 @@ func ReadSchema(_ *stor.Stor, r *stor.Reader) *Schema {
 	ts.Indexes = make([]schema.Index, n)
 	for i := 0; i < n; i++ {
 		ts.Indexes[i] = schema.Index{
-			Mode:      r.Get1(),
-			Columns:   r.GetStrs(),
-			Fktable:   r.GetStr(),
-			Fkmode:    r.Get1(),
-			Fkcolumns: r.GetStrs(),
+			Mode:    r.Get1(),
+			Columns: r.GetStrs(),
+			Fk: schema.Fkey{
+				Table:   r.GetStr(),
+				Mode:    r.Get1(),
+				Columns: r.GetStrs()},
 		}
 	}
 	ts.Ixspecs(ts.Indexes)

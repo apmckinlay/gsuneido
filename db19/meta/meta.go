@@ -4,6 +4,7 @@
 package meta
 
 import (
+	"fmt"
 	"math/bits"
 
 	"github.com/apmckinlay/gsuneido/db19/index"
@@ -471,17 +472,47 @@ func replace(v []uint64, n int, x uint64) []uint64 {
 	return v
 }
 
+type Fkey = schema.Fkey
+
 func ReadMeta(store *stor.Stor, offSchema, offInfo uint64) *Meta {
 	schema, schemaOffs := ReadSchemaChain(store, offSchema)
 	info, infoOffs := ReadInfoChain(store, offInfo)
 	m := Meta{
 		schema: schema, schemaOffs: schemaOffs, schemaClock: clock(schemaOffs),
 		info: info, infoOffs: infoOffs, infoClock: clock(infoOffs)}
-	// set up ixspecs
+	// copy Ixspec to Info from Schema (constructed by ReadSchema)
 	m.info.ForEach(func(ti *Info) {
 		ts := m.schema.MustGet(ti.Table)
 		for i := range ti.Indexes {
 			ti.Indexes[i].SetIxspec(&ts.Indexes[i].Ixspec)
+		}
+	})
+	// link foreign keys to targets
+	m.schema.ForEach(func(s *Schema) {
+		for i := range s.Indexes {
+			fk := s.Indexes[i].Fk
+			if fk.Table != "" {
+				fkCols := fk.Columns
+				if len(fkCols) == 0 {
+					fkCols = s.Indexes[i].Columns
+				}
+				// fmt.Println(s.Table, s.Indexes[i].Columns, "=>", fk.Table, fkCols)
+				target, ok := m.schema.Get(fk.Table)
+				if !ok {
+					fmt.Println("can't find", fk.Table, "(from " + s.Table + ")")
+					continue
+				}
+				for j := range target.Indexes {
+					ix := &target.Indexes[j]
+					if strs.Equal(fkCols, ix.Columns) {
+						// fmt.Println("found", ix)
+						ix.FkToHere = append(ix.FkToHere,
+							Fkey{Table: s.Table, Columns: s.Indexes[i].Columns, Mode: fk.Mode})
+						// fmt.Println(ix.FkToHere)
+					}
+				}
+				// fmt.Println("=>", target)
+			}
 		}
 	})
 	return &m

@@ -135,3 +135,19 @@ func TestView(t *testing.T) {
 	DoAdmin(db, "view tmp = over ride")
 	assert.T(t).This(db.GetView("tmp")).Is("over ride")
 }
+
+func TestFkey(t *testing.T) {
+	db := createTestDb()
+	store := stor.HeapStor(8192)
+	db, err := db19.CreateDb(store)
+	ck(err)
+	db19.StartConcur(db, 50*time.Millisecond)
+	defer db.Close()
+	DoAdmin(db, "create hdr (a,b) key(a)")
+	DoAdmin(db, "create lin (c,d) key(c) index(d) in hdr(a)")
+	DoAdmin(db, "create two (e,a) key(e) index(a) in hdr")
+	db.Close()
+	db, err = db19.OpenDbStor(store, stor.READ, false)
+	ck(err)
+	assert.T(t).This(db.Schema("hdr")).Is("hdr (a,b) key(a) from two(a) from lin(d)")
+}

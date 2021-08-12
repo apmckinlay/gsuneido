@@ -84,8 +84,8 @@ func TestQueryGet(t *testing.T) {
 		assert.T(t).Msg("forward").This(get(q, rt.Next)).Like(expected)
 		assert.T(t).Msg("reverse").This(get(q, rt.Prev)).Like(expected)
 	}
-	test("indexes",
-		"indexes",
+	test("indexes project table, columns, key",
+		"indexes PROJECT-COPY table,columns,key",
 		`table		columns			key
         'alias'		'id'			true
         'co'		'tnum'			true
@@ -131,6 +131,9 @@ func TestQueryGet(t *testing.T) {
         'indexes'       'table' 0
         'indexes'       'columns'       1
         'indexes'       'key'   2
+        'indexes'		'fktable'	3
+        'indexes'		'fkcolumns'	4
+        'indexes'		'fkmode'	5
         'inven' 'item'  0
         'inven' 'qty'   1
         'supplier'      'supplier'      0
@@ -445,9 +448,9 @@ func TestQueryGet(t *testing.T) {
         990101`)
 	test("((co where tnum = 100) union (co where tnum = 102)) union "+
 		"(co where tnum = 100)",
-		"co^(tnum) WHERE*1 tnum is 100 UNION-LOOKUP " +
+		"co^(tnum) WHERE*1 tnum is 100 UNION-LOOKUP "+
 			"(co^(tnum) WHERE*1 tnum is 100 UNION-MERGE-DISJOINT(tnum) "+
-				"(co^(tnum) WHERE*1 tnum is 102))",
+			"(co^(tnum) WHERE*1 tnum is 102))",
 		`tnum	signed
         100		990101
         102		990102`)
