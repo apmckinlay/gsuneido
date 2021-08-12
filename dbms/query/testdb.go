@@ -9,6 +9,7 @@ import (
 	"github.com/apmckinlay/gsuneido/db19"
 	"github.com/apmckinlay/gsuneido/db19/meta"
 	"github.com/apmckinlay/gsuneido/db19/stor"
+	"github.com/apmckinlay/gsuneido/runtime"
 )
 
 func testDb() *db19.Database {
@@ -16,6 +17,9 @@ func testDb() *db19.Database {
 	db, err := db19.CreateDb(store)
 	ck(err)
 	db19.StartConcur(db, 50*time.Millisecond)
+	db19.MakeSuTran = func(ut *db19.UpdateTran) *runtime.SuTran {
+		return runtime.NewSuTran(nil, true)
+	}
 	adm := func(admin string) {
 		DoAdmin(db, admin)
 	}
