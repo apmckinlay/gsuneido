@@ -96,6 +96,18 @@ func (ts *Schema) Ixspecs(idxs []schema.Index) {
 	}
 }
 
+func (ts *Schema) firstShortestKey() []string {
+	var key []string
+	for i := range ts.Indexes {
+		ix := &ts.Indexes[i]
+		if usableKey(ix) &&
+			(key == nil || len(ix.Columns) < len(key)) {
+			key = ix.Columns
+		}
+	}
+	return key
+}
+
 func (ts *Schema) colsToFlds(cols []string) []int {
 	flds := make([]int, len(cols))
 	for i, col := range cols {
@@ -109,18 +121,6 @@ func (ts *Schema) colsToFlds(cols []string) []int {
 		flds[i] = c
 	}
 	return flds
-}
-
-func (ts *Schema) firstShortestKey() []string {
-	var key []string
-	for i := range ts.Indexes {
-		ix := &ts.Indexes[i]
-		if usableKey(ix) &&
-			(key == nil || len(ix.Columns) < len(key)) {
-			key = ix.Columns
-		}
-	}
-	return key
 }
 
 func usableKey(ix *schema.Index) bool {
