@@ -127,11 +127,7 @@ func (db *Database) Create(schema *schema.Schema) {
 func (db *Database) create(schema *schema.Schema) error {
 	ts := &meta.Schema{Schema: *schema}
 	ts.Ixspecs(ts.Indexes)
-	ov := make([]*index.Overlay, len(ts.Indexes))
-	for i := range ov {
-		bt := btree.CreateBtree(db.Store, &ts.Indexes[i].Ixspec)
-		ov[i] = index.OverlayFor(bt)
-	}
+	ov := db.createIndexes(ts.Indexes)
 	ti := &meta.Info{Table: schema.Table, Indexes: ov}
 	return db.loadedTable(ts, ti)
 }
