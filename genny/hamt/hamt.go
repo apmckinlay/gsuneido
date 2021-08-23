@@ -6,7 +6,9 @@ package hamt
 import (
 	"math/bits"
 
+	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
+	"github.com/apmckinlay/gsuneido/util/cksum"
 	"github.com/cheekybits/genny/generic"
 )
 
