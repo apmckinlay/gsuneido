@@ -156,4 +156,12 @@ func TestFkey(t *testing.T) {
 	db, err = db19.OpenDbStor(store, stor.READ, false)
 	ck(err)
 	assert.T(t).This(db.Schema("hdr")).Is("hdr (a,b) key(a) from two(a) from lin(d)")
+
+	DoAdmin(db, "alter two create (f) index(f) in hdr(a)")
+	assert.T(t).This(db.Schema("hdr")).
+		Is("hdr (a,b) key(a) from two(a) from lin(d) from two(f)")
+
+	DoAdmin(db, "alter two drop index(a)")
+	assert.T(t).This(db.Schema("hdr")).
+		Is("hdr (a,b) key(a) from lin(d) from two(f)")
 }

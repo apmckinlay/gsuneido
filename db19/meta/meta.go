@@ -4,7 +4,7 @@
 package meta
 
 import (
-	"fmt"
+	"log"
 	"math/bits"
 
 	"github.com/apmckinlay/gsuneido/db19/index"
@@ -136,6 +136,35 @@ func (m *Meta) Put(ts *Schema, ti *Info) *Meta {
 	return &cp
 }
 
+type metaUpdate struct {
+	meta   *Meta      // original
+	schema SchemaHamt // mutable
+	info   InfoHamt   // mutable
+}
+
+func newMetaUpdate(m *Meta) *metaUpdate {
+	return &metaUpdate{meta: m,
+		schema: m.schema.Mutable(),
+		info:   m.info.Mutable()}
+}
+
+func (mu *metaUpdate) putSchema(ts *Schema) {
+	ts.lastmod = mu.meta.schemaClock
+	mu.schema.Put(ts)
+}
+
+func (mu *metaUpdate) putInfo(ti *Info) {
+	ti.lastmod = mu.meta.infoClock
+	mu.info.Put(ti)
+}
+
+func (mu *metaUpdate) freeze() *Meta {
+	cp := *mu.meta
+	cp.schema = mu.schema.Freeze()
+	cp.info = mu.info.Freeze()
+	return &cp
+}
+
 // admin schema changes ---------------------------------------------
 
 //TODO Derived
@@ -171,29 +200,21 @@ func (m *Meta) RenameTable(from, to string) *Meta {
 		panic("can't rename nonexistent table: " + from)
 	}
 	tsNew := *ts // copy
+	tsNew.Table = to
 	if tmp, ok := m.schema.Get(to); ok && !tmp.isTomb() {
 		panic("can't rename to existing table: " + to)
 	}
 	ti, ok := m.info.Get(from)
 	assert.That(ok && ti != nil)
 	tiNew := *ti // copy
-
-	schema := m.schema.Mutable()
-	schema.Put(m.newSchemaTomb(from))
-	tsNew.Table = to
-	tsNew.lastmod = m.schemaClock
-	schema.Put(&tsNew)
-
-	info := m.info.Mutable()
-	info.Put(m.newInfoTomb(from))
 	tiNew.Table = to
-	tiNew.lastmod = m.infoClock
-	info.Put(&tiNew)
 
-	cp := *m // copy
-	cp.schema = schema.Freeze()
-	cp.info = info.Freeze()
-	return &cp
+	mu := newMetaUpdate(m)
+	mu.putSchema(m.newSchemaTomb(from))
+	mu.putSchema(&tsNew)
+	mu.putInfo(m.newInfoTomb(from))
+	mu.putInfo(&tiNew)
+	return mu.freeze()
 }
 
 // Drop removes a table or view
@@ -230,6 +251,7 @@ func (m *Meta) AlterRename(table string, from, to []string) *Meta {
 		ix := &tsNew.Indexes[i]
 		ix.Columns = strs.Replace(ix.Columns, from, to)
 	}
+	// ixspecs are ok since they are field indexes, not names
 	return m.Put(&tsNew, nil)
 }
 
@@ -240,7 +262,11 @@ func (m *Meta) AlterCreate(ac *schema.Schema, store *stor.Stor) *Meta {
 	}
 	createColumns(ts, ac.Columns)
 	createIndexes(ts, ti, ac.Indexes, store)
-	return m.Put(ts, ti)
+	mu := newMetaUpdate(m)
+	mu.putSchema(ts)
+	mu.putInfo(ti)
+	m.createFkeys(mu, ac)
+	return mu.freeze()
 }
 
 func (m *Meta) alterGet(table string) (*Schema, *Info) {
@@ -284,6 +310,35 @@ func createIndexes(ts *Schema, ti *Info, idxs []schema.Index, store *stor.Stor) 
 	}
 }
 
+func (m *Meta) createFkeys(mu *metaUpdate, ac *schema.Schema) {
+	idxs := ac.Indexes
+	for i := range idxs {
+		fk := idxs[i].Fk
+		if fk.Table != "" {
+			fkCols := fk.Columns
+			if len(fkCols) == 0 {
+				fkCols = idxs[i].Columns
+			}
+			target, ok := m.schema.Get(fk.Table)
+			if !ok {
+				log.Println("foreign key: can't find", fk.Table, "(from "+ac.Table+")")
+				continue
+			}
+			target.Indexes = append(target.Indexes[:0:0], target.Indexes...) // copy
+			for j := range target.Indexes {
+				ix := target.Indexes[j] // copy
+				if strs.Equal(fkCols, ix.Columns) {
+					n := len(ix.FkToHere)
+					ix.FkToHere = append(ix.FkToHere[:n:n], // copy on write
+						Fkey{Table: ac.Table, Columns: idxs[i].Columns, Mode: fk.Mode})
+					target.Indexes[j] = ix
+				}
+			}
+			mu.putSchema(target)
+		}
+	}
+}
+
 func (m *Meta) AlterDrop(ad *schema.Schema) *Meta {
 	ts, ti := m.alterGet(ad.Table)
 	// need to drop indexes before columns
@@ -296,7 +351,11 @@ func (m *Meta) AlterDrop(ad *schema.Schema) *Meta {
 			return nil
 		}
 	}
-	return m.Put(ts, ti)
+	mu := newMetaUpdate(m)
+	mu.putSchema(ts)
+	mu.putInfo(ti)
+	m.dropFkeys(mu, ad)
+	return mu.freeze()
 }
 
 func dropIndexes(ts *Schema, ti *Info, idxs []schema.Index) {
@@ -339,6 +398,56 @@ func dropColumns(ts *Schema, cols []string) bool {
 		ts.Columns = strs.Replace1(ts.Columns, col, "-")
 	}
 	return true
+}
+
+func (m *Meta) dropFkeys(mu *metaUpdate, ad *schema.Schema) {
+	// unlike createFkeys
+	// we need to get the actual schema to get the foreign key information
+	schema := &m.GetRoSchema(ad.Table).Schema
+	idxs := ad.Indexes
+	for i := range idxs {
+		idx := findIndex(schema, idxs[i].Columns)
+		fk := idx.Fk
+		if fk.Table == "" {
+			continue
+		}
+		fkCols := fk.Columns
+		if len(fkCols) == 0 {
+			fkCols = idx.Columns
+		}
+		target, ok := m.schema.Get(fk.Table)
+		if !ok {
+			log.Println("foreign key: can't find", fk.Table, "(from "+ad.Table+")")
+			continue
+		}
+		target.Indexes = append(target.Indexes[:0:0], target.Indexes...) // copy
+		for j := range target.Indexes {
+			ix := target.Indexes[j] // copy
+			if strs.Equal(fkCols, ix.Columns) {
+				fkToHere := make([]Fkey, 0, len(ix.FkToHere))
+				for k := range ix.FkToHere {
+					fk := ix.FkToHere[k]
+					if ad.Table != fk.Table ||
+						!strs.Equal(idx.Columns, fk.Columns) {
+						fkToHere = append(fkToHere, fk)
+					}
+				}
+				ix.FkToHere = fkToHere
+				target.Indexes[j] = ix
+			}
+		}
+		mu.putSchema(target)
+	}
+}
+
+func findIndex(schema *schema.Schema, cols []string) *schema.Index {
+	for i := range schema.Indexes {
+		idx := &schema.Indexes[i]
+		if strs.Equal(cols, idx.Columns) {
+			return idx
+		}
+	}
+	return nil
 }
 
 func (m *Meta) AddView(name, def string) *Meta {
@@ -493,7 +602,7 @@ func ReadMeta(store *stor.Stor, offSchema, offInfo uint64) *Meta {
 				// fmt.Println(s.Table, s.Indexes[i].Columns, "=>", fk.Table, fkCols)
 				target, ok := m.schema.Get(fk.Table)
 				if !ok {
-					fmt.Println("can't find", fk.Table, "(from " + s.Table + ")")
+					log.Println("foreign key: can't find", fk.Table, "(from "+s.Table+")")
 					continue
 				}
 				for j := range target.Indexes {
