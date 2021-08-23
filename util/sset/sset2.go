@@ -64,6 +64,9 @@ outer:
 	return true
 }
 
+// Equal returns true if x and y contain the same set of strings.
+//
+// WARNING: requires that x does not contain duplicates
 func Same(x, y []string) bool {
 	return len(x) > 0 && len(y) > 0 && len(x) == len(y) && &x[0] == &y[0]
 }
