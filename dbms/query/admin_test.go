@@ -36,15 +36,21 @@ func TestAdminCreate(t *testing.T) {
 func TestAdminEnsure(t *testing.T) {
 	db := createTestDb()
 	defer db.Close()
+
 	assert.T(t).This(func() { DoAdmin(db, "ensure tables (a) key(a)") }).
 		Panics("can't ensure system table: tables")
+
+	// nothing to do
 	DoAdmin(db, "ensure tmp "+tmpschema)
 	assert.T(t).This(db.Schema("tmp")).Is("tmp " + tmpschema)
+
+	// modify
 	DoAdmin(db, "ensure tmp (a, c, e, f) index(b,c) index(e,f)")
 	assert.T(t).This(db.Schema("tmp")).
 		Is("tmp (a,b,c,d,e,f) key(a) index(b,c) index(e,f)")
 
-	DoAdmin(db, "ensure tmp2 "+tmpschema) // create
+	// create
+	DoAdmin(db, "ensure tmp2 "+tmpschema)
 	assert.T(t).This(db.Schema("tmp2")).Is("tmp2 " + tmpschema)
 }
 

@@ -55,9 +55,7 @@ func (a *ensureAdmin) String() string {
 
 func (a *ensureAdmin) execute(db *db19.Database) {
 	checkForSystemTable("ensure", a.Table)
-	if !db.Ensure(&a.Schema) {
-		panic("can't " + a.String())
-	}
+	db.Ensure(&a.Schema)
 }
 
 //-------------------------------------------------------------------

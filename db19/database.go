@@ -141,23 +141,15 @@ func (db *Database) createIndexes(idxs []schema.Index) []*index.Overlay {
 	return ov
 }
 
-func (db *Database) Ensure(schema *schema.Schema) bool {
+func (db *Database) Ensure(schema *schema.Schema) {
 	state := db.GetState()
-	if ts := state.Meta.GetRoSchema(schema.Table); ts == nil {
+	if state.Meta.GetRoSchema(schema.Table) == nil {
 		db.Create(schema)
-		return true
+		return
 	}
-	result := false
 	db.UpdateState(func(state *DbState) {
-		m, create := state.Meta.Ensure(schema, db.Store)
-		if m != nil {
-			state.Meta = m
-			result = true
-		} else if create {
-			//FIXME ???
-		}
+		state.Meta = state.Meta.Ensure(schema, db.Store)
 	})
-	return result
 }
 
 func (db *Database) RenameTable(from, to string) bool {

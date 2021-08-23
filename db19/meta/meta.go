@@ -140,10 +140,10 @@ func (m *Meta) Put(ts *Schema, ti *Info) *Meta {
 
 //TODO Derived
 
-func (m *Meta) Ensure(a *schema.Schema, store *stor.Stor) (*Meta, bool) {
+func (m *Meta) Ensure(a *schema.Schema, store *stor.Stor) *Meta {
 	ts, ok := m.schema.Get(a.Table)
 	if !ok || ts.isTomb() {
-		return nil, true
+		panic("ensure: couldn't find " + a.Table)
 	}
 	ts, ti := m.alterGet(a.Table)
 	newCols := sset.Difference(a.Columns, ts.Columns)
@@ -160,11 +160,9 @@ outer:
 	if ti.Nrows > 0 && len(newIdxs) > 0 {
 		panic("creating indexes on tables with data not implemented") //TODO
 	}
-	if !createColumns(ts, newCols) ||
-		!createIndexes(ts, ti, newIdxs, store) {
-		return nil, false
-	}
-	return m.Put(ts, ti), false
+	createColumns(ts, newCols)
+	createIndexes(ts, ti, newIdxs, store)
+	return m.Put(ts, ti)
 }
 
 func (m *Meta) RenameTable(from, to string) *Meta {
@@ -240,10 +238,8 @@ func (m *Meta) AlterCreate(ac *schema.Schema, store *stor.Stor) *Meta {
 	if ti.Nrows > 0 && len(ac.Indexes) > 0 {
 		panic("creating indexes on tables with data not implemented") //TODO
 	}
-	if !createColumns(ts, ac.Columns) ||
-		!createIndexes(ts, ti, ac.Indexes, store) {
-		return nil
-	}
+	createColumns(ts, ac.Columns)
+	createIndexes(ts, ti, ac.Indexes, store)
 	return m.Put(ts, ti)
 }
 
@@ -259,18 +255,17 @@ func (m *Meta) alterGet(table string) (*Schema, *Info) {
 	return &tsNew, &tiNew
 }
 
-func createColumns(ts *Schema, cols []string) bool {
+func createColumns(ts *Schema, cols []string) {
 	existing := sset.Intersect(cols, ts.Columns)
 	if len(existing) > 0 {
 		panic("can't create existing column(s): " + strs.Join(", ", existing))
 	}
 	ts.Columns = append(strs.Cow(ts.Columns), cols...)
-	return true
 }
 
-func createIndexes(ts *Schema, ti *Info, idxs []schema.Index, store *stor.Stor) bool {
+func createIndexes(ts *Schema, ti *Info, idxs []schema.Index, store *stor.Stor) {
 	if len(idxs) == 0 {
-		return true
+		return
 	}
 	for i := range idxs {
 		missing := sset.Difference(idxs[i].Columns, ts.Columns)
@@ -287,7 +282,6 @@ func createIndexes(ts *Schema, ti *Info, idxs []schema.Index, store *stor.Stor) 
 		bt := btree.CreateBtree(store, &ts.Indexes[n+i].Ixspec)
 		ti.Indexes = append(ti.Indexes, index.OverlayFor(bt))
 	}
-	return true
 }
 
 func (m *Meta) AlterDrop(ad *schema.Schema) *Meta {
