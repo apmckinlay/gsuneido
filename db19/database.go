@@ -15,6 +15,7 @@ import (
 	rt "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/cksum"
 	"github.com/apmckinlay/gsuneido/util/hacks"
+	"github.com/apmckinlay/gsuneido/util/sset"
 )
 
 type Database struct {
@@ -143,13 +144,29 @@ func (db *Database) createIndexes(idxs []schema.Index) []*index.Overlay {
 
 func (db *Database) Ensure(schema *schema.Schema) {
 	state := db.GetState()
-	if state.Meta.GetRoSchema(schema.Table) == nil {
+	ts := state.Meta.GetRoSchema(schema.Table)
+	if ts == nil {
 		db.Create(schema)
+		return
+	}
+	if schemaSame(schema, ts) {
 		return
 	}
 	db.UpdateState(func(state *DbState) {
 		state.Meta = state.Meta.Ensure(schema, db.Store)
 	})
+}
+
+func schemaSame(schema *schema.Schema, ts *meta.Schema) bool {
+	if !sset.Equal(schema.Columns, ts.Columns) {
+		return false
+	}
+	for i := range schema.Indexes {
+		if nil == ts.FindIndex(schema.Indexes[i].Columns) {
+			return false
+		}
+	}
+	return true
 }
 
 func (db *Database) RenameTable(from, to string) bool {

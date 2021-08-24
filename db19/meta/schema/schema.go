@@ -90,3 +90,13 @@ func (ix *Index) String() string {
 	}
 	return s
 }
+
+func (sc *Schema) FindIndex(cols []string) *Index {
+	for i := range sc.Indexes {
+		idx := &sc.Indexes[i]
+		if strs.Equal(cols, idx.Columns) {
+			return idx
+		}
+	}
+	return nil
+}

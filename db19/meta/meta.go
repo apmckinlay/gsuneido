@@ -406,7 +406,7 @@ func (m *Meta) dropFkeys(mu *metaUpdate, ad *schema.Schema) {
 	schema := &m.GetRoSchema(ad.Table).Schema
 	idxs := ad.Indexes
 	for i := range idxs {
-		idx := findIndex(schema, idxs[i].Columns)
+		idx := schema.FindIndex(idxs[i].Columns)
 		fk := idx.Fk
 		if fk.Table == "" {
 			continue
@@ -438,16 +438,6 @@ func (m *Meta) dropFkeys(mu *metaUpdate, ad *schema.Schema) {
 		}
 		mu.putSchema(target)
 	}
-}
-
-func findIndex(schema *schema.Schema, cols []string) *schema.Index {
-	for i := range schema.Indexes {
-		idx := &schema.Indexes[i]
-		if strs.Equal(cols, idx.Columns) {
-			return idx
-		}
-	}
-	return nil
 }
 
 func (m *Meta) AddView(name, def string) *Meta {
