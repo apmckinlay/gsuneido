@@ -143,7 +143,6 @@ func TestView(t *testing.T) {
 }
 
 func TestFkey(t *testing.T) {
-	db := createTestDb()
 	store := stor.HeapStor(8192)
 	db, err := db19.CreateDb(store)
 	ck(err)
