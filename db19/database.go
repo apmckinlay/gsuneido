@@ -120,7 +120,12 @@ func (db *Database) loadedTable(ts *meta.Schema, ti *meta.Info) error {
 }
 
 func (db *Database) Create(schema *schema.Schema) {
-	if err := db.ck.Create(schema); err != nil {
+	db.run(func() error { return db.create(schema) })
+}
+
+func (db *Database) run(fn func() error) {
+	err := db.ck.Run(fn)
+	if err != nil {
 		panic(err)
 	}
 }
@@ -145,16 +150,10 @@ func (db *Database) createIndexes(idxs []schema.Index) []*index.Overlay {
 func (db *Database) Ensure(schema *schema.Schema) {
 	state := db.GetState()
 	ts := state.Meta.GetRoSchema(schema.Table)
-	if ts == nil {
-		db.Create(schema)
+	if ts != nil && schemaSame(schema, ts) {
 		return
 	}
-	if schemaSame(schema, ts) {
-		return
-	}
-	db.UpdateState(func(state *DbState) {
-		state.Meta = state.Meta.Ensure(schema, db.Store)
-	})
+	db.run(func() error { return db.ensure(schema) })
 }
 
 func schemaSame(schema *schema.Schema, ts *meta.Schema) bool {
@@ -167,6 +166,16 @@ func schemaSame(schema *schema.Schema, ts *meta.Schema) bool {
 		}
 	}
 	return true
+}
+
+func (db *Database) ensure(schema *schema.Schema) error {
+	if nil == db.GetState().Meta.GetRoSchema(schema.Table) {
+		return db.create(schema)
+	}
+	db.UpdateState(func(state *DbState) {
+		state.Meta = state.Meta.Ensure(schema, db.Store)
+	})
+	return nil
 }
 
 func (db *Database) RenameTable(from, to string) bool {
@@ -182,7 +191,7 @@ func (db *Database) RenameTable(from, to string) bool {
 
 // Drop removes a table or view
 func (db *Database) Drop(table string) error {
-	return db.ck.Drop(table)
+	return db.ck.Run(func() error { return db.drop(table) })
 }
 
 func (db *Database) drop(table string) error {

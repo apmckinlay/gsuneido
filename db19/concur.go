@@ -4,12 +4,12 @@
 package db19
 
 import (
+	"fmt"
 	"log"
 	"runtime/debug"
 	"time"
 
 	"github.com/apmckinlay/gsuneido/db19/meta"
-	"github.com/apmckinlay/gsuneido/db19/meta/schema"
 )
 
 type void = struct{}
@@ -95,14 +95,20 @@ func (mt *mergeT) dispatch(m interface{}) {
 			if m == nil {
 				return
 			}
-		case *schema.Schema: // create
-			mt.resultChan <- mt.db.create(m2)
-			return
-		case string: // drop
-			mt.resultChan <- mt.db.drop(m2)
+		case func() error: // run
+			mt.resultChan <- run(m2)
 			return
 		}
 	}
+}
+
+func run(fn func() error) (err error) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = fmt.Errorf("%v", e)
+		}
+	}()
+	return fn()
 }
 
 // mergeSingle is a single threaded merge for tran_test

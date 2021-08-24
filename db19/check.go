@@ -9,7 +9,6 @@ import (
 	"strconv"
 	"sync/atomic"
 
-	"github.com/apmckinlay/gsuneido/db19/meta/schema"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/ints"
 	"github.com/apmckinlay/gsuneido/util/ordset"
@@ -75,12 +74,8 @@ func NewCheck(db *Database) *Check {
 	return &Check{db: db, trans: make(map[int]*CkTran), oldest: ints.MaxInt}
 }
 
-func (ck *Check) Create(schema *schema.Schema) error {
-	return ck.db.create(schema)
-}
-
-func (ck *Check) Drop(table string) error {
-	return ck.db.drop(table)
+func (ck *Check) Run(fn func() error) error {
+	return fn()
 }
 
 func (ck *Check) StartTran() *CkTran {

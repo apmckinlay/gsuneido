@@ -7,8 +7,6 @@ import (
 	"log"
 	"runtime/debug"
 	"time"
-
-	"github.com/apmckinlay/gsuneido/db19/meta/schema"
 )
 
 // CheckCo is the concurrent, channel based interface to Check
@@ -19,14 +17,9 @@ type CheckCo struct {
 
 // message types
 
-type ckCreate struct {
-	schema *schema.Schema
-	ret    chan error
-}
-
-type ckDrop struct {
-	table string
-	ret   chan error
+type ckRun struct {
+	fn  func() error
+	ret chan error
 }
 
 type ckStart struct {
@@ -59,15 +52,9 @@ type ckAbort struct {
 	reason string
 }
 
-func (ck *CheckCo) Create(schema *schema.Schema) error {
+func (ck *CheckCo) Run(fn func() error) error {
 	ret := make(chan error, 1)
-	ck.c <- &ckCreate{schema: schema, ret: ret}
-	return <-ret
-}
-
-func (ck *CheckCo) Drop(table string) error {
-	ret := make(chan error, 1)
-	ck.c <- &ckDrop{table: table, ret: ret}
+	ck.c <- &ckRun{fn: fn, ret: ret}
 	return <-ret
 }
 
@@ -155,12 +142,8 @@ func checker(ck *Check, c chan interface{}, mergeChan chan interface{}, resultCh
 // dispatch runs in the checker goroutine
 func (ck *Check) dispatch(msg interface{}, mergeChan chan interface{}, resultChan chan error) {
 	switch msg := msg.(type) {
-	case *ckCreate:
-		mergeChan <- msg.schema
-		err := <-resultChan
-		msg.ret <- err
-	case *ckDrop:
-		mergeChan <- msg.table
+	case *ckRun:
+		mergeChan <- msg.fn
 		err := <-resultChan
 		msg.ret <- err
 	case *ckStart:
@@ -186,8 +169,7 @@ func (ck *Check) dispatch(msg interface{}, mergeChan chan interface{}, resultCha
 
 // Checker is the interface for Check and CheckCo
 type Checker interface {
-	Create(schema *schema.Schema) error
-	Drop(table string) error
+	Run(fn func() error) error
 	StartTran() *CkTran
 	Read(t *CkTran, table string, index int, from, to string) bool
 	Write(t *CkTran, table string, keys []string) bool
