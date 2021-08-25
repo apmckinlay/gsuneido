@@ -125,7 +125,7 @@ type PersistUpdate struct {
 }
 
 // Persist is called by state.Persist to write the state to the database.
-// It collects the new btree roots which are then applied ApplyPersist.
+// It collects the new btree roots which are then applied by ApplyPersist.
 // WARNING: must not modify meta.
 func (m *Meta) Persist(exec func(func() PersistUpdate)) {
 	m.info.ForEach(func(ti *Info) {
