@@ -36,14 +36,6 @@ func (ht ItemHamt) IsNil() bool {
 	return ht.root == nil
 }
 
-func (ht ItemHamt) MustGet(key KeyType) Item {
-	it, ok := ht.Get(key)
-	if !ok {
-		panic("Hamt MustGet failed")
-	}
-	return it
-}
-
 func (ht ItemHamt) Get(key KeyType) (Item, bool) {
 	it := ht.get(key)
 	if it == nil {

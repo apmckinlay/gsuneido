@@ -36,14 +36,6 @@ func (ht SchemaHamt) IsNil() bool {
 	return ht.root == nil
 }
 
-func (ht SchemaHamt) MustGet(key string) *Schema {
-	it, ok := ht.Get(key)
-	if !ok {
-		panic("Hamt MustGet failed")
-	}
-	return it
-}
-
 func (ht SchemaHamt) Get(key string) (*Schema, bool) {
 	it := ht.get(key)
 	if it == nil {

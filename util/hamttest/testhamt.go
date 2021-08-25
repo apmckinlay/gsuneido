@@ -36,14 +36,6 @@ func (ht FooHamt) IsNil() bool {
 	return ht.root == nil
 }
 
-func (ht FooHamt) MustGet(key int) *Foo {
-	it, ok := ht.Get(key)
-	if !ok {
-		panic("Hamt MustGet failed")
-	}
-	return it
-}
-
 func (ht FooHamt) Get(key int) (*Foo, bool) {
 	it := ht.get(key)
 	if it == nil {

@@ -32,6 +32,14 @@ func SchemaHash(key string) uint32 {
 	return hash.HashString(key)
 }
 
+func (ht SchemaHamt) MustGet(key string) *Schema {
+	it, ok := ht.Get(key)
+	if !ok || it.isTomb() {
+		panic("schema MustGet failed")
+	}
+	return it
+}
+
 func (ts *Schema) storSize() int {
 	size := stor.LenStr(ts.Table) +
 		stor.LenStrs(ts.Columns) + stor.LenStrs(ts.Derived) + 1

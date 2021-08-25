@@ -69,6 +69,14 @@ func (ti *Info) isTomb() bool {
 	return len(ti.Indexes) == 0
 }
 
+func (ht InfoHamt) MustGet(key string) *Info {
+	it, ok := ht.Get(key)
+	if !ok || it.isTomb() {
+		panic("info MustGet failed")
+	}
+	return it
+}
+
 //-------------------------------------------------------------------
 
 type btOver = *index.Overlay
