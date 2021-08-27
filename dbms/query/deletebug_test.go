@@ -13,6 +13,12 @@ import (
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
+func init() {
+	db19.MakeSuTran = func(ut *db19.UpdateTran) *runtime.SuTran {
+		return runtime.NewSuTran(nil, true)
+	}
+}
+
 func xTestDeleteBug2(*testing.T) {
 	// store := stor.HeapStor(8192)
 	// db, err := db19.CreateDb(store)
@@ -48,9 +54,6 @@ func xTestDeleteBug2(*testing.T) {
 }
 
 func TestDeleteBug(*testing.T) {
-	db19.MakeSuTran = func(ut *db19.UpdateTran) *runtime.SuTran {
-		return runtime.NewSuTran(nil, true)
-	}
 	store := stor.HeapStor(8192)
 	db, err := db19.CreateDb(store)
 	ck(err)
@@ -62,7 +65,11 @@ func TestDeleteBug(*testing.T) {
 		assert.This(n).Is(1)
 	}
 	DoAdmin(db, "create tmp(k) key(k)")
-	for i := 0; i < 10000; i++ {
+	N := 10000
+	if testing.Short() {
+		N = 1000
+	}
+	for i := 0; i < N; i++ {
 		act("insert { k: 1 } into tmp")
 		act("delete tmp")
 	}
@@ -79,7 +86,11 @@ func TestDeleteSynch(*testing.T) {
 		db.CommitMerge(ut)
 	}
 	DoAdmin(db, "create tmp(k) key(k)")
-	for i := 0; i < 100000; i++ {
+	N := 10000
+	if testing.Short() {
+		N = 1000
+	}
+	for i := 0; i < N; i++ {
 		act("insert { k: 1 } into tmp")
 		act("delete tmp")
 	}

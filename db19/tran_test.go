@@ -19,10 +19,13 @@ import (
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
-func TestConcurrent(t *testing.T) {
+func init() {
 	MakeSuTran = func(ut *UpdateTran) *rt.SuTran {
 		return rt.NewSuTran(nil, true)
 	}
+}
+
+func TestConcurrent(t *testing.T) {
 	db := createDb()
 	StartConcur(db, 50*time.Millisecond)
 	var nclients = 8
@@ -67,12 +70,7 @@ func TestTran(t *testing.T) {
 	const nout = 4000
 	for i := 0; i < nout; i++ {
 		ut := output1(db)
-		// commit synchronously
-		tables := db.ck.(*Check).commit(ut)
-		ut.commit()
-		merges := &mergeList{}
-		merges.add(tables)
-		db.Merge(mergeSingle, merges)
+		db.CommitMerge(ut) // commit synchronously
 		if i%100 == 50 {
 			if i%500 != 250 {
 				db.Persist(&execPersistSingle{}, false)
