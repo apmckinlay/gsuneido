@@ -35,7 +35,7 @@ func SchemaHash(key string) uint32 {
 func (ht SchemaHamt) MustGet(key string) *Schema {
 	it, ok := ht.Get(key)
 	if !ok || it.isTomb() {
-		panic("schema MustGet failed")
+		panic("schema MustGet failed for " + key)
 	}
 	return it
 }

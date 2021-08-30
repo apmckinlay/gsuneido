@@ -73,7 +73,7 @@ func (ti *Info) isTomb() bool {
 func (ht InfoHamt) MustGet(key string) *Info {
 	it, ok := ht.Get(key)
 	if !ok || it.isTomb() {
-		panic("info MustGet failed")
+		panic("info MustGet failed for " + key)
 	}
 	return it
 }
