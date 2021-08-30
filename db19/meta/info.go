@@ -53,10 +53,11 @@ func ReadInfo(st *stor.Stor, r *stor.Reader) *Info {
 	ti.Table = r.GetStr()
 	ti.Nrows = r.Get4()
 	ti.Size = r.Get5()
-	ni := r.Get1()
-	ti.Indexes = make([]*index.Overlay, ni)
-	for i := 0; i < ni; i++ {
-		ti.Indexes[i] = index.ReadOverlay(st, r)
+	if ni := r.Get1(); ni > 0 {
+		ti.Indexes = make([]*index.Overlay, ni)
+		for i := 0; i < ni; i++ {
+			ti.Indexes[i] = index.ReadOverlay(st, r)
+		}
 	}
 	return &ti
 }
@@ -66,7 +67,7 @@ func (m *Meta) newInfoTomb(table string) *Info {
 }
 
 func (ti *Info) isTomb() bool {
-	return len(ti.Indexes) == 0
+	return ti.Indexes == nil
 }
 
 func (ht InfoHamt) MustGet(key string) *Info {
@@ -90,14 +91,38 @@ type MergeUpdate struct {
 
 // Merge collects the updates which are then applied by applyMerge.
 // WARNING: must not modify meta.
-func (m *Meta) Merge(table string, nmerge int) MergeUpdate {
+func (m *Meta) Merge(metaWas *Meta, table string, nmerge int) MergeUpdate {
 	// fmt.Println("Merge", table, tns)
+	cur, ok := m.schema.Get(table)
+	if !ok || cur.isTomb() {
+		return MergeUpdate{} // table dropped
+	}
+	was := metaWas.schema.MustGet(table)
 	ti := m.info.MustGet(table)
 	results := make([]MergeResult, len(ti.Indexes))
-	for j, ov := range ti.Indexes {
-		results[j] = ov.Merge(nmerge)
+	for i, ov := range ti.Indexes {
+		if !skipIndex(was, cur, i) {
+			results[i] = ov.Merge(nmerge)
+		}
 	}
 	return MergeUpdate{table: table, nmerged: nmerge, results: results}
+}
+
+func skipIndex(was, cur *Schema, i int) bool {
+	if was == cur {
+		return false
+	}
+	cols := was.Indexes[i].Columns
+	curIdx := cur.FindIndex(cols)
+	if curIdx == nil {
+		return true // index dropped
+	}
+	wasIdx := was.FindIndex(cols)
+	return curIdx != wasIdx // index modified
+}
+
+func (mu *MergeUpdate) Skip() bool {
+	return mu.table == ""
 }
 
 // ApplyMerge applies the updates collected by Merge

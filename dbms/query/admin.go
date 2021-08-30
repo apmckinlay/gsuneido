@@ -89,9 +89,7 @@ func (a *alterCreateAdmin) String() string {
 
 func (a *alterCreateAdmin) execute(db *db19.Database) {
 	checkForSystemTable("alter", a.Table)
-	if !db.AlterCreate(&a.Schema) {
-		panic("can't " + a.String())
-	}
+	db.AlterCreate(&a.Schema)
 }
 
 //-------------------------------------------------------------------

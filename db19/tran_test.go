@@ -11,10 +11,8 @@ import (
 	"testing"
 	"time"
 
-	"github.com/apmckinlay/gsuneido/db19/index"
-	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
-	"github.com/apmckinlay/gsuneido/db19/meta"
 	"github.com/apmckinlay/gsuneido/db19/meta/schema"
+	"github.com/apmckinlay/gsuneido/db19/stor"
 	rt "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
@@ -65,7 +63,7 @@ func TestConcurrent(t *testing.T) {
 func TestTran(t *testing.T) {
 	var err error
 	db := createDb()
-	db.ck = NewCheck(db)
+	db.CheckerSync()
 
 	const nout = 4000
 	for i := 0; i < nout; i++ {
@@ -79,7 +77,7 @@ func TestTran(t *testing.T) {
 				db.Close()
 				db, err = OpenDatabase("tmp.db")
 				ck(err)
-				db.ck = NewCheck(db)
+				db.CheckerSync()
 			}
 		}
 	}
@@ -101,20 +99,16 @@ func TestTran(t *testing.T) {
 func createDb() *Database {
 	db, err := CreateDatabase("tmp.db")
 	ck(err)
-	is := ixkey.Spec{Fields: []int{0}}
-	ts := &meta.Schema{Schema: schema.Schema{
+	createTbl(db)
+	return db
+}
+
+func createTbl(db *Database) {
+	db.Create(&schema.Schema{
 		Table:   "mytable",
 		Columns: []string{"one", "two"},
-		Indexes: []schema.Index{{Mode: 'k', Columns: []string{"one"}, Ixspec: is}},
-	}}
-	ov := index.NewOverlay(db.Store, &is)
-	ov.Save()
-	ti := &meta.Info{
-		Table:   "mytable",
-		Indexes: []*index.Overlay{ov},
-	}
-	db.LoadedTable(ts, ti)
-	return db
+		Indexes: []schema.Index{{Mode: 'k', Columns: []string{"one"}}},
+	})
 }
 
 var recnum int32
@@ -140,4 +134,58 @@ func ck(err error) {
 	if err != nil {
 		panic(err.Error())
 	}
+}
+
+func TestSchemaChange(*testing.T) {
+	store := stor.HeapStor(8192)
+	db, err := CreateDb(store)
+	ck(err)
+	createTbl(db)
+	db.CheckerSync()
+	db.AlterCreate(&schema.Schema{
+		Table:   "mytable",
+		Indexes: []schema.Index{{Mode: 'i', Columns: []string{"two"}}}})
+
+	state0 := db.GetState()
+	testWith := func(fn func()) {
+		ut := output1(db)
+		// commit synchronously
+		tables := db.ck.(*Check).commit(ut)
+		ut.commit()
+
+		fn()
+
+		merges := &mergeList{}
+		merges.add(tables)
+		db.Merge(ut.meta, mergeSingle, merges)
+
+		// restore state
+		db.UpdateState(func(state *DbState) {
+			*state = *state0
+		})
+	}
+	testWith(func() {
+		// no changes
+	})
+	testWith(func() {
+		// drop table
+		ck(db.Drop("mytable"))
+	})
+	testWith(func() {
+		// modify table
+		db.UpdateState(func(state *DbState) {
+			state.Meta = state.Meta.TouchTable("mytable")
+		})
+	})
+	testWith(func() {
+		// drop index
+		assert.That(db.AlterDrop(&schema.Schema{Table: "mytable",
+			Indexes: []schema.Index{{Columns: []string{"two"}}}}))
+	})
+	testWith(func() {
+		// modify indexes
+		db.UpdateState(func(state *DbState) {
+			state.Meta = state.Meta.TouchIndexes("mytable")
+		})
+	})
 }

@@ -66,20 +66,24 @@ func ReadSchema(_ *stor.Stor, r *stor.Reader) *Schema {
 	ts := Schema{}
 	ts.Table = r.GetStr()
 	ts.Columns = r.GetStrs()
-	ts.Derived = r.GetStrs()
-	n := r.Get1()
-	ts.Indexes = make([]schema.Index, n)
-	for i := 0; i < n; i++ {
-		ts.Indexes[i] = schema.Index{
-			Mode:    r.Get1(),
-			Columns: r.GetStrs(),
-			Fk: schema.Fkey{
-				Table:   r.GetStr(),
-				Mode:    r.Get1(),
-				Columns: r.GetStrs()},
-		}
+	if len(ts.Columns) == 0 {
+		ts.Columns = nil
 	}
-	ts.Ixspecs(ts.Indexes)
+	ts.Derived = r.GetStrs()
+	if n := r.Get1(); n > 0 {
+		ts.Indexes = make([]schema.Index, n)
+		for i := 0; i < n; i++ {
+			ts.Indexes[i] = schema.Index{
+				Mode:    r.Get1(),
+				Columns: r.GetStrs(),
+				Fk: schema.Fkey{
+					Table:   r.GetStr(),
+					Mode:    r.Get1(),
+					Columns: r.GetStrs()},
+			}
+		}
+		ts.Ixspecs(ts.Indexes)
+	}
 	return &ts
 }
 
@@ -153,11 +157,11 @@ func (m *Meta) newSchemaView(name, def string) *Schema {
 }
 
 func (ts *Schema) isTomb() bool {
-	return len(ts.Columns) == 0
+	return ts.Columns == nil
 }
 
 func (ts *Schema) isView() bool {
-	return ts.Table[0] == '=' && !ts.isTomb()
+	return !ts.isTomb() && ts.Table[0] == '='
 }
 
 func (ts *Schema) isTable() bool {

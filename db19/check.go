@@ -275,6 +275,15 @@ func (ck *Check) commit(ut *UpdateTran) []string {
 	if !ok {
 		return nil // it's gone, presumably aborted
 	}
+
+	//TODO make this more specific
+	// only have to abort if an index was added to a table that was written
+	if ck.db != nil && // for tests
+		!ut.meta.SameSchemaAs(ck.db.GetState().Meta) {
+		ck.abort(tn, "concurrent schema modification")
+		return nil
+	}
+
 	t.end = ck.next()
 	if t.start == ck.oldest {
 		ck.oldest = ints.MaxInt // need to find the new oldest

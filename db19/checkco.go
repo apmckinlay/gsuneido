@@ -100,7 +100,7 @@ func (t *CkTran) Aborted() bool {
 
 //-------------------------------------------------------------------
 
-func StartCheckCo(db *Database, mergeChan chan interface{}, resultChan chan error,
+func StartCheckCo(db *Database, mergeChan chan todo, resultChan chan error,
 	allDone chan void) *CheckCo {
 	ck := NewCheck(db)
 	c := make(chan interface{}, 4)
@@ -113,7 +113,7 @@ func (ck *CheckCo) Stop() {
 	<-ck.allDone // wait
 }
 
-func checker(ck *Check, c chan interface{}, mergeChan chan interface{}, resultChan chan error) {
+func checker(ck *Check, c chan interface{}, mergeChan chan todo, resultChan chan error) {
 	defer func() {
 		if e := recover(); e != nil {
 			debug.PrintStack()
@@ -140,10 +140,10 @@ func checker(ck *Check, c chan interface{}, mergeChan chan interface{}, resultCh
 }
 
 // dispatch runs in the checker goroutine
-func (ck *Check) dispatch(msg interface{}, mergeChan chan interface{}, resultChan chan error) {
+func (ck *Check) dispatch(msg interface{}, mergeChan chan todo, resultChan chan error) {
 	switch msg := msg.(type) {
 	case *ckRun:
-		mergeChan <- msg.fn
+		mergeChan <- todo{fn: msg.fn}
 		err := <-resultChan
 		msg.ret <- err
 	case *ckStart:
@@ -158,10 +158,11 @@ func (ck *Check) dispatch(msg interface{}, mergeChan chan interface{}, resultCha
 		result := ck.commit(msg.t)
 		if result == nil {
 			msg.ret <- false
+			return
 		}
 		msg.t.commit()
 		msg.ret <- true
-		mergeChan <- result
+		mergeChan <- todo{tables: result, meta: msg.t.meta}
 	default:
 		panic("checker unknown message type")
 	}

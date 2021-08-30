@@ -53,8 +53,8 @@ func TestCheckCoRandom(*testing.T) {
 	// fmt.Println("commit", nCommit, "conflict", nConflict)
 }
 
-func mergeSink() chan interface{} {
-	c := make(chan interface{})
+func mergeSink() chan todo {
+	c := make(chan todo)
 	go func() {
 		for range c {
 		}

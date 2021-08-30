@@ -31,7 +31,7 @@ const chanBuffers = 4 // ???
 // Finally the merger closes the allDone channel
 // so we know the shutdown has finished.
 func StartConcur(db *Database, persistInterval time.Duration) {
-	mergeChan := make(chan interface{}, chanBuffers)
+	mergeChan := make(chan todo, chanBuffers)
 	resultChan := make(chan error)
 	allDone := make(chan void)
 	go merger(db, mergeChan, resultChan, persistInterval, allDone)
@@ -40,13 +40,13 @@ func StartConcur(db *Database, persistInterval time.Duration) {
 
 type mergeT struct {
 	db         *Database
-	mergeChan  chan interface{}
+	mergeChan  chan todo
 	merges     *mergeList
 	em         *execMulti
 	resultChan chan error
 }
 
-func merger(db *Database, mergeChan chan interface{}, resultChan chan error,
+func merger(db *Database, mergeChan chan todo, resultChan chan error,
 	persistInterval time.Duration, allDone chan void) {
 	defer func() {
 		if e := recover(); e != nil {
@@ -65,8 +65,8 @@ func merger(db *Database, mergeChan chan interface{}, resultChan chan error,
 loop:
 	for {
 		select {
-		case m := <-mergeChan: // receive mergeMsg's from commit
-			if m == nil { // channel closed
+		case m := <-mergeChan: // receive todo's from commit
+			if m.isZero() { // channel closed
 				break loop
 			}
 			mt.dispatch(m)
@@ -83,20 +83,27 @@ loop:
 	close(allDone)
 }
 
-func (mt *mergeT) dispatch(m interface{}) {
+type todo struct {
+	tables []string
+	meta   *meta.Meta
+	fn     func() error
+}
+
+func (td todo) isZero() bool {
+	return td.tables == nil && td.meta == nil && td.fn == nil
+}
+
+func (mt *mergeT) dispatch(m todo) {
 	for {
-		switch m2 := m.(type) {
-		case []string: // merge
-			mt.merges.reset()
-			mt.merges.add(m2)
-			m = mt.merges.drain(mt.mergeChan)
-			mt.db.Merge(mt.em.merge, mt.merges)
-			// db.Merge(mergeSingle, merges)
-			if m == nil {
-				return
-			}
-		case func() error: // run
-			mt.resultChan <- run(m2)
+		if m.fn != nil {
+			mt.resultChan <- run(m.fn)
+			return
+		}
+		mt.merges.start(m)
+		m = mt.merges.drain(mt.mergeChan)
+		mt.db.Merge(mt.merges.meta, mt.em.merge, mt.merges)
+		// mt.db.Merge(mergeSingle, merges)
+		if m.isZero() {
 			return
 		}
 	}
@@ -112,11 +119,13 @@ func run(fn func() error) (err error) {
 }
 
 // mergeSingle is a single threaded merge for tran_test
-func mergeSingle(state *DbState, merges *mergeList) []meta.MergeUpdate {
+func mergeSingle(metaWas, metaCur *meta.Meta, merges *mergeList) []meta.MergeUpdate {
 	var results []meta.MergeUpdate
 	for _, tn := range merges.tn {
-		result := state.Meta.Merge(tn.table, tn.nmerge)
-		results = append(results, result)
+		result := metaCur.Merge(metaWas, tn.table, tn.nmerge)
+		if !result.Skip() {
+			results = append(results, result)
+		}
 	}
 	return results
 }
@@ -139,17 +148,19 @@ func startMergeWorkers() *execMulti {
 	return em
 }
 
-func (em *execMulti) merge(state *DbState, merges *mergeList) []meta.MergeUpdate {
+func (em *execMulti) merge(metaWas, metaCur *meta.Meta, merges *mergeList) []meta.MergeUpdate {
 	// if only one table, just merge it in this thread
 	// and avoid overhead of channels and worker
 	if len(merges.tn) == 1 {
 		m := merges.tn[0]
-		result := state.Meta.Merge(m.table, m.nmerge)
-		return append(merges.results, result)
+		result := metaCur.Merge(metaWas, m.table, m.nmerge)
+		if !result.Skip() {
+			return append(merges.results, result)
+		}
 	}
 	for i := 0; i < len(merges.tn); {
 		select {
-		case em.jobChan <- job{meta: state.Meta,
+		case em.jobChan <- job{metaCur: metaCur, metaWas: metaWas,
 			table: merges.tn[i].table, nmerge: merges.tn[i].nmerge}:
 			i++
 		case result := <-em.resultChan:
@@ -164,18 +175,23 @@ func (em *execMulti) merge(state *DbState, merges *mergeList) []meta.MergeUpdate
 }
 
 type job struct {
-	meta   *meta.Meta
-	table  string
-	nmerge int
+	metaWas *meta.Meta
+	metaCur *meta.Meta
+	table   string
+	nmerge  int
 }
 
 func (em *execMulti) worker() {
 	for j := range em.jobChan {
-		em.resultChan <- j.meta.Merge(j.table, j.nmerge)
+		result := j.metaCur.Merge(j.metaWas, j.table, j.nmerge)
+		if !result.Skip() {
+			em.resultChan <- result
+		}
 	}
 }
 
 type mergeList struct {
+	meta    *meta.Meta
 	tn      []tableCount
 	results []meta.MergeUpdate
 }
@@ -185,9 +201,16 @@ type tableCount struct {
 	nmerge int
 }
 
-func (ml *mergeList) add(m []string) {
+func (ml *mergeList) start(m todo) {
+	ml.meta = m.meta
+	ml.tn = ml.tn[:0]
+	ml.results = ml.results[:0]
+	ml.add(m.tables)
+}
+
+func (ml *mergeList) add(tables []string) {
 outer:
-	for _, table := range m {
+	for _, table := range tables {
 		for i := range ml.tn {
 			if ml.tn[i].table == table {
 				ml.tn[i].nmerge++
@@ -198,27 +221,24 @@ outer:
 	}
 }
 
-func (ml *mergeList) drain(mergeChan chan interface{}) interface{} {
+// drain returns the next message that can't be added to the mergeList
+// and must be processed separately
+func (ml *mergeList) drain(mergeChan chan todo) todo {
 	for {
 		select {
 		case m := <-mergeChan:
-			if m == nil { // channel closed
-				return nil
+			if m.isZero() { // channel closed
+				return todo{}
 			}
-			if m2, ok := m.([]string); ok {
-				ml.add(m2)
+			if m.fn == nil && ml.meta.SameSchemaAs(m.meta) {
+				ml.add(m.tables)
 			} else {
-				return m // create or drop that needs to be handled
+				return m // not added to merge
 			}
 		default: // channel empty
-			return nil
+			return todo{}
 		}
 	}
-}
-
-func (ml *mergeList) reset() {
-	ml.tn = ml.tn[:0]
-	ml.results = ml.results[:0]
 }
 
 // ------------------------------------------------------------------

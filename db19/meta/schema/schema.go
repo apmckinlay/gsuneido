@@ -91,6 +91,8 @@ func (ix *Index) String() string {
 	return s
 }
 
+// FindIndex returns a pointer to the Index with the given columns
+// or else nil if not found
 func (sc *Schema) FindIndex(cols []string) *Index {
 	for i := range sc.Indexes {
 		idx := &sc.Indexes[i]

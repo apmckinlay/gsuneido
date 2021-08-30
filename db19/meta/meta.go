@@ -4,6 +4,7 @@
 package meta
 
 import (
+	"errors"
 	"log"
 	"math/bits"
 
@@ -35,6 +36,10 @@ func (m *Meta) Mutable() *Meta {
 	ov2 := *m // copy
 	ov2.difInfo = InfoHamt{}.Mutable()
 	return &ov2
+}
+
+func (m *Meta) SameSchemaAs(m2 *Meta) bool {
+	return m.schema.root == m2.schema.root
 }
 
 // GetRoInfo returns read-only Info for the table or nil if not found
@@ -143,25 +148,33 @@ type metaUpdate struct {
 }
 
 func newMetaUpdate(m *Meta) *metaUpdate {
-	return &metaUpdate{meta: m,
-		schema: m.schema.Mutable(),
-		info:   m.info.Mutable()}
+	return &metaUpdate{meta: m}
 }
 
 func (mu *metaUpdate) putSchema(ts *Schema) {
+	if mu.schema == (SchemaHamt{}) {
+		mu.schema = mu.meta.schema.Mutable()
+	}
 	ts.lastmod = mu.meta.schemaClock
 	mu.schema.Put(ts)
 }
 
 func (mu *metaUpdate) putInfo(ti *Info) {
+	if mu.info == (InfoHamt{}) {
+		mu.info = mu.meta.info.Mutable()
+	}
 	ti.lastmod = mu.meta.infoClock
 	mu.info.Put(ti)
 }
 
 func (mu *metaUpdate) freeze() *Meta {
 	cp := *mu.meta
-	cp.schema = mu.schema.Freeze()
-	cp.info = mu.info.Freeze()
+	if mu.schema != (SchemaHamt{}) {
+		cp.schema = mu.schema.Freeze()
+	}
+	if mu.info != (InfoHamt{}) {
+		cp.info = mu.info.Freeze()
+	}
 	return &cp
 }
 
@@ -169,7 +182,7 @@ func (mu *metaUpdate) freeze() *Meta {
 
 //TODO Derived
 
-func (m *Meta) Ensure(a *schema.Schema, store *stor.Stor) *Meta {
+func (m *Meta) Ensure(a *schema.Schema, store *stor.Stor) (*Meta, error) {
 	ts, ok := m.schema.Get(a.Table)
 	if !ok || ts.isTomb() {
 		panic("ensure: couldn't find " + a.Table)
@@ -177,21 +190,21 @@ func (m *Meta) Ensure(a *schema.Schema, store *stor.Stor) *Meta {
 	ts, ti := m.alterGet(a.Table)
 	newCols := sset.Difference(a.Columns, ts.Columns)
 	newIdxs := []schema.Index{}
-outer:
 	for i := range a.Indexes {
-		for j := range ts.Indexes {
-			if strs.Equal(a.Indexes[i].Columns, ts.Indexes[j].Columns) {
-				continue outer
-			}
+		if nil == ts.FindIndex(a.Indexes[i].Columns) {
+			newIdxs = append(newIdxs, a.Indexes[i])
 		}
-		newIdxs = append(newIdxs, a.Indexes[i])
 	}
 	if ti.Nrows > 0 && len(newIdxs) > 0 {
 		panic("creating indexes on tables with data not implemented") //TODO
 	}
-	createColumns(ts, newCols)
-	createIndexes(ts, ti, newIdxs, store)
-	return m.Put(ts, ti)
+	if err := createColumns(ts, newCols); err != nil {
+		return nil, err
+	}
+	if err := createIndexes(ts, ti, newIdxs, store); err != nil {
+		return nil, err
+	}
+	return m.Put(ts, ti), nil
 }
 
 func (m *Meta) RenameTable(from, to string) *Meta {
@@ -255,18 +268,22 @@ func (m *Meta) AlterRename(table string, from, to []string) *Meta {
 	return m.Put(&tsNew, nil)
 }
 
-func (m *Meta) AlterCreate(ac *schema.Schema, store *stor.Stor) *Meta {
+func (m *Meta) AlterCreate(ac *schema.Schema, store *stor.Stor) (*Meta, error) {
 	ts, ti := m.alterGet(ac.Table)
 	if ti.Nrows > 0 && len(ac.Indexes) > 0 {
 		panic("creating indexes on tables with data not implemented") //TODO
 	}
-	createColumns(ts, ac.Columns)
-	createIndexes(ts, ti, ac.Indexes, store)
+	if err := createColumns(ts, ac.Columns); err != nil {
+		return nil, err
+	}
+	if err := createIndexes(ts, ti, ac.Indexes, store); err != nil {
+		return nil, err
+	}
 	mu := newMetaUpdate(m)
 	mu.putSchema(ts)
 	mu.putInfo(ti)
 	m.createFkeys(mu, ac)
-	return mu.freeze()
+	return mu.freeze(), nil
 }
 
 func (m *Meta) alterGet(table string) (*Schema, *Info) {
@@ -281,22 +298,25 @@ func (m *Meta) alterGet(table string) (*Schema, *Info) {
 	return &tsNew, &tiNew
 }
 
-func createColumns(ts *Schema, cols []string) {
+func createColumns(ts *Schema, cols []string) error {
 	existing := sset.Intersect(cols, ts.Columns)
 	if len(existing) > 0 {
-		panic("can't create existing column(s): " + strs.Join(", ", existing))
+		return errors.New("can't create existing column(s): " +
+			strs.Join(", ", existing))
 	}
 	ts.Columns = append(strs.Cow(ts.Columns), cols...)
+	return nil
 }
 
-func createIndexes(ts *Schema, ti *Info, idxs []schema.Index, store *stor.Stor) {
+func createIndexes(ts *Schema, ti *Info, idxs []schema.Index, store *stor.Stor) error {
 	if len(idxs) == 0 {
-		return
+		return nil
 	}
 	for i := range idxs {
 		missing := sset.Difference(idxs[i].Columns, ts.Columns)
 		if len(missing) > 0 {
-			panic("can't create index on nonexistent column(s): " + strs.Join(", ", missing))
+			return errors.New("can't create index on nonexistent column(s): " +
+				strs.Join(", ", missing))
 		}
 	}
 	ts.Ixspecs(idxs)
@@ -308,6 +328,7 @@ func createIndexes(ts *Schema, ti *Info, idxs []schema.Index, store *stor.Stor) 
 		bt := btree.CreateBtree(store, &ts.Indexes[n+i].Ixspec)
 		ti.Indexes = append(ti.Indexes, index.OverlayFor(bt))
 	}
+	return nil
 }
 
 func (m *Meta) createFkeys(mu *metaUpdate, ac *schema.Schema) {
@@ -447,6 +468,23 @@ func (m *Meta) AddView(name, def string) *Meta {
 	return m.Put(m.newSchemaView(name, def), nil)
 }
 
+// TouchTable is for tests
+func (m *Meta) TouchTable(table string) *Meta {
+	schema := *m.GetRoSchema(table) // copy
+	mu := newMetaUpdate(m)
+	mu.putSchema(&schema)
+	return mu.freeze()
+}
+
+// TouchIndexes is for tests
+func (m *Meta) TouchIndexes(table string) *Meta {
+	schema := *m.GetRoSchema(table)                                  // copy
+	schema.Indexes = append(schema.Indexes[:0:0], schema.Indexes...) // copy
+	mu := newMetaUpdate(m)
+	mu.putSchema(&schema)
+	return mu.freeze()
+}
+
 //-------------------------------------------------------------------
 
 // LayeredOnto is done by transaction commit.
@@ -575,6 +613,9 @@ func ReadMeta(store *stor.Stor, offSchema, offInfo uint64) *Meta {
 		info: info, infoOffs: infoOffs, infoClock: clock(infoOffs)}
 	// copy Ixspec to Info from Schema (constructed by ReadSchema)
 	m.info.ForEach(func(ti *Info) {
+		if ti.isTomb() {
+			return
+		}
 		ts := m.schema.MustGet(ti.Table)
 		for i := range ti.Indexes {
 			ti.Indexes[i].SetIxspec(&ts.Indexes[i].Ixspec)
@@ -582,6 +623,9 @@ func ReadMeta(store *stor.Stor, offSchema, offInfo uint64) *Meta {
 	})
 	// link foreign keys to targets
 	m.schema.ForEach(func(s *Schema) {
+		if s.isTomb() {
+			return
+		}
 		for i := range s.Indexes {
 			fk := s.Indexes[i].Fk
 			if fk.Table != "" {

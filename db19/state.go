@@ -37,17 +37,10 @@ func (sh *stateHolder) set(newState *DbState) {
 // GetState returns a snapshot of the state as of a point in time.
 // This state must be treated as read-only and must not be modified.
 // To modify the state use UpdateState.
+//
+// GetState is atomic, it is not blocked by UpdateState.
 func (db *Database) GetState() *DbState {
 	return db.state.get()
-}
-
-func (sh *stateHolder) updateState(fn func(*DbState)) *DbState {
-	sh.mutex.Lock()
-	defer sh.mutex.Unlock()
-	newState := *sh.get() // shallow copy
-	fn(&newState)
-	sh.set(&newState)
-	return &newState
 }
 
 // UpdateState applies the given update function to a copy of theState
@@ -55,20 +48,33 @@ func (sh *stateHolder) updateState(fn func(*DbState)) *DbState {
 // Guarded by stateMutex so only one thread can execute at a time.
 // Note: the state passed to the update function is a *shallow* copy,
 // it is up to the function to make copies of any nested containers.
-func (db *Database) UpdateState(fn func(*DbState)) *DbState {
-	return db.state.updateState(fn)
+//
+// UpdateState is guarded by a mutex
+func (db *Database) UpdateState(fn func(*DbState)) {
+	db.state.updateState(fn)
+}
+
+func (sh *stateHolder) updateState(fn func(*DbState)) {
+	sh.mutex.Lock()
+	defer sh.mutex.Unlock()
+	oldState := sh.get()
+	newState := *oldState // shallow copy
+	fn(&newState)
+	if newState.Meta != oldState.Meta {
+		sh.set(&newState)
+	}
 }
 
 //-------------------------------------------------------------------
 
 // WARNING: Merge and Persist must not run concurrently
 
-type mergefn func(*DbState, *mergeList) []meta.MergeUpdate
+type mergefn func(metaWas, metaCur *meta.Meta, merges *mergeList) []meta.MergeUpdate
 
 // Merge updates the base ixbuf's with the ones from transactions
 // It is called by concur.go merger.
-func (db *Database) Merge(fn mergefn, merges *mergeList) {
-	updates := fn(db.GetState(), merges) // outside UpdateState
+func (db *Database) Merge(metaWas *meta.Meta, fn mergefn, merges *mergeList) {
+	updates := fn(metaWas, db.GetState().Meta, merges) // outside UpdateState
 	db.UpdateState(func(state *DbState) {
 		meta := *state.Meta // copy
 		meta.ApplyMerge(updates)
@@ -83,13 +89,7 @@ func (db *Database) CommitMerge(ut *UpdateTran) {
 	ut.commit()
 	merges := &mergeList{}
 	merges.add(tables)
-	db.Merge(mergeSingle, merges)
-}
-
-// CheckerSync is for tests.
-// It assigns a synchronous transaction checker to the database.
-func (db *Database) CheckerSync() {
-	db.ck = NewCheck(db)
+	db.Merge(ut.meta, mergeSingle, merges)
 }
 
 //-------------------------------------------------------------------

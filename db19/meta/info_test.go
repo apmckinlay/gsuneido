@@ -6,7 +6,6 @@ package meta
 import (
 	"testing"
 
-	"github.com/apmckinlay/gsuneido/db19/index"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/str"
@@ -16,32 +15,29 @@ func allInfo(*Info) bool { return true }
 
 func TestInfo(t *testing.T) {
 	assert := assert.T(t).This
+	one := &Info{
+		Table: "one",
+		Nrows: 100,
+		Size:  1000,
+	}
+	two := &Info{
+		Table: "two",
+		Nrows: 200,
+		Size:  2000,
+	}
 	tbl := InfoHamt{}.Mutable()
-	tbl.Put(&Info{
-		Table:   "one",
-		Nrows:   100,
-		Size:    1000,
-		Indexes: []*index.Overlay{},
-	})
-	tbl.Put(&Info{
-		Table:   "two",
-		Nrows:   200,
-		Size:    2000,
-		Indexes: []*index.Overlay{},
-	})
+	tbl.Put(one)
+	tbl.Put(two)
 
 	st := stor.HeapStor(8192)
 	st.Alloc(1) // avoid offset 0
 	off := tbl.Write(st, 0, allInfo)
 
 	tbl, _ = ReadInfoChain(st, off)
-	assert(*tbl.MustGet("one")).Is(*tbl.MustGet("one"))
-	assert(*tbl.MustGet("two")).Is(Info{
-		Table:   "two",
-		Nrows:   200,
-		Size:    2000,
-		Indexes: []*index.Overlay{},
-	})
+	x, _ := tbl.Get("one")
+	assert(*x).Is(*one)
+	x, _ = tbl.Get("two")
+	assert(*x).Is(*two)
 }
 
 func TestInfo2(t *testing.T) {
@@ -54,7 +50,7 @@ func TestInfo2(t *testing.T) {
 
 	tbl, _ = ReadInfoChain(st, off)
 	for i, s := range data {
-		ti := tbl.MustGet(s)
+		ti, _ := tbl.Get(s)
 		assert.T(t).Msg("table").This(ti.Table).Is(s)
 		assert.T(t).Msg("nrows").This(ti.Nrows).Is(i)
 		_, ok := tbl.Get(s + "Z")

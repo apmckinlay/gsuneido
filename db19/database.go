@@ -101,6 +101,12 @@ func OpenDbStor(store *stor.Stor, mode stor.Mode, check bool) (db *Database, err
 	return db, nil
 }
 
+// CheckerSync is for tests.
+// It assigns a synchronous transaction checker to the database.
+func (db *Database) CheckerSync() {
+	db.ck = NewCheck(db)
+}
+
 // LoadedTable is used to add a loaded table to the state
 func (db *Database) LoadedTable(ts *meta.Schema, ti *meta.Info) {
 	if err := db.loadedTable(ts, ti); err != nil {
@@ -119,23 +125,26 @@ func (db *Database) loadedTable(ts *meta.Schema, ti *meta.Info) error {
 	return err
 }
 
-func (db *Database) Create(schema *schema.Schema) {
-	db.run(func() error { return db.create(schema) })
-}
+// schema changes ---------------------------------------------------
+//
+// Creating new indexes on an existing table (ensure and alter create)
+// must be serialized with check/merge
+// to ensure that merge sees a state consistent with the transaction.
 
-func (db *Database) run(fn func() error) {
-	err := db.ck.Run(fn)
+func (db *Database) Create(schema *schema.Schema) {
+	ts, ti := db.create(schema)
+	err := db.loadedTable(ts, ti)
 	if err != nil {
 		panic(err)
 	}
 }
 
-func (db *Database) create(schema *schema.Schema) error {
+func (db *Database) create(schema *schema.Schema) (*meta.Schema, *meta.Info) {
 	ts := &meta.Schema{Schema: *schema}
 	ts.Ixspecs(ts.Indexes)
 	ov := db.createIndexes(ts.Indexes)
 	ti := &meta.Info{Table: schema.Table, Indexes: ov}
-	return db.loadedTable(ts, ti)
+	return ts, ti
 }
 
 func (db *Database) createIndexes(idxs []schema.Index) []*index.Overlay {
@@ -148,16 +157,32 @@ func (db *Database) createIndexes(idxs []schema.Index) []*index.Overlay {
 }
 
 func (db *Database) Ensure(schema *schema.Schema) {
-	state := db.GetState()
-	ts := state.Meta.GetRoSchema(schema.Table)
-	if ts != nil && schemaSame(schema, ts) {
-		return
+	handled := false
+	db.UpdateState(func(state *DbState) {
+		ts := state.Meta.GetRoSchema(schema.Table)
+		if ts == nil {
+			// TODO check if schema is "full" (see parseadmin.go)
+			// else you could get assertion failures
+			ts, ti := db.create(schema)
+			state.Meta = state.Meta.Put(ts, ti)
+			handled = true
+
+		} else if schemaSubset(schema, ts) {
+			handled = true // common fast case
+		}
+	})
+	if !handled {
+		// TODO only use ck.Run if adding indexes
+		err := db.ck.Run(func() error { return db.ensure(schema) })
+		if err != nil {
+			panic(err)
+		}
 	}
-	db.run(func() error { return db.ensure(schema) })
 }
 
-func schemaSame(schema *schema.Schema, ts *meta.Schema) bool {
-	if !sset.Equal(schema.Columns, ts.Columns) {
+// schemaSubset returns whether the table (ts) already has the ensure schema
+func schemaSubset(schema *schema.Schema, ts *meta.Schema) bool {
+	if !sset.Subset(ts.Columns, schema.Columns) {
 		return false
 	}
 	for i := range schema.Indexes {
@@ -168,14 +193,15 @@ func schemaSame(schema *schema.Schema, ts *meta.Schema) bool {
 	return true
 }
 
-func (db *Database) ensure(schema *schema.Schema) error {
-	if nil == db.GetState().Meta.GetRoSchema(schema.Table) {
-		return db.create(schema)
-	}
+func (db *Database) ensure(schema *schema.Schema) (err error) {
 	db.UpdateState(func(state *DbState) {
-		state.Meta = state.Meta.Ensure(schema, db.Store)
+		var meta *meta.Meta
+		meta, err = state.Meta.Ensure(schema, db.Store)
+		if err == nil {
+			state.Meta = meta
+		}
 	})
-	return nil
+	return err
 }
 
 func (db *Database) RenameTable(from, to string) bool {
@@ -191,10 +217,6 @@ func (db *Database) RenameTable(from, to string) bool {
 
 // Drop removes a table or view
 func (db *Database) Drop(table string) error {
-	return db.ck.Run(func() error { return db.drop(table) })
-}
-
-func (db *Database) drop(table string) error {
 	var err error
 	db.UpdateState(func(state *DbState) {
 		if m := state.Meta.Drop(table); m != nil {
@@ -206,6 +228,7 @@ func (db *Database) drop(table string) error {
 	return err
 }
 
+// AlterRename renames columns
 func (db *Database) AlterRename(table string, from, to []string) bool {
 	result := false
 	db.UpdateState(func(state *DbState) {
@@ -217,17 +240,26 @@ func (db *Database) AlterRename(table string, from, to []string) bool {
 	return result
 }
 
-func (db *Database) AlterCreate(schema *schema.Schema) bool {
-	result := false
-	db.UpdateState(func(state *DbState) {
-		if m := state.Meta.AlterCreate(schema, db.Store); m != nil {
-			state.Meta = m
-			result = true
-		}
-	})
-	return result
+// AlterCreate creates columns or indexes
+func (db *Database) AlterCreate(schema *schema.Schema) {
+	err := db.ck.Run(func() error { return db.alterCreate(schema) })
+	if err != nil {
+		panic(err)
+	}
 }
 
+func (db *Database) alterCreate(schema *schema.Schema) (err error) {
+	db.UpdateState(func(state *DbState) {
+		var meta *meta.Meta
+		meta, err = state.Meta.AlterCreate(schema, db.Store)
+		if err == nil {
+			state.Meta = meta
+		}
+	})
+	return err
+}
+
+// AlterCreate removes columns or indexes
 func (db *Database) AlterDrop(schema *schema.Schema) bool {
 	result := false
 	db.UpdateState(func(state *DbState) {
@@ -253,6 +285,8 @@ func (db *Database) AddView(name, def string) bool {
 func (db *Database) GetView(name string) string {
 	return db.GetState().Meta.GetView(name)
 }
+
+//-------------------------------------------------------------------
 
 func (db *Database) Schema(table string) string {
 	state := db.GetState()
