@@ -265,6 +265,13 @@ func TestQueryGet(t *testing.T) {
 		'eraser'	'c'	150		970201
 		'mouse'		'c'	200		970101
 		'mouse'		'e'	200		960204`)
+	test("customer rename id to id_new sort id_new",
+		"customer^(id) RENAME id to id_new",
+		`id_new	name	city
+		'a'		'axon'	'saskatoon'
+		'c'		'calac'	'calgary'
+		'e'		'emerald'	'vancouver'
+		'i'		'intercon'	'saskatoon'`)
 
 	// project
 	test("customer project city, id",

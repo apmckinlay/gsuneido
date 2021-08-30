@@ -127,8 +127,12 @@ func (r *Rename) Transform() Query {
 	return r
 }
 
+func (r *Rename) optimize(mode Mode, index []string) (Cost, interface{}) {
+	return Optimize(r.source, mode, strs.Replace(index, r.to, r.from)), nil
+}
+
 func (r *Rename) setApproach(index []string, _ interface{}, tran QueryTran) {
-	r.source = SetApproach(r.source, index, tran)
+	r.source = SetApproach(r.source, strs.Replace(index, r.to, r.from), tran)
 }
 
 // execution --------------------------------------------------------
@@ -145,9 +149,9 @@ func (r *Rename) Get(dir runtime.Dir) runtime.Row {
 }
 
 func (r *Rename) Select(cols, vals []string) {
-	r.source.Select(strs.Replace(cols, r.from, r.to), vals)
+	r.source.Select(strs.Replace(cols, r.to, r.from), vals)
 }
 
 func (r *Rename) Lookup(cols, vals []string) runtime.Row {
-	return r.source.Lookup(cols, vals)
+	return r.source.Lookup(strs.Replace(cols, r.to, r.from), vals)
 }
