@@ -284,7 +284,7 @@ func repl() {
 	log.SetFlags(log.Ltime)
 	log.SetPrefix("")
 
-	if !isTerminal() {
+	if !isTerminal(os.Stdin) || !isTerminal(os.Stdout) {
 		prompt = func(string) {}
 	}
 
@@ -317,8 +317,8 @@ func repl() {
 	}
 }
 
-func isTerminal() bool {
-	fm, err := os.Stdout.Stat()
+func isTerminal(f *os.File) bool {
+	fm, err := f.Stat()
 	if err != nil {
 		return true // ???
 	}
