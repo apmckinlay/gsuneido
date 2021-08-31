@@ -73,7 +73,6 @@ func TestTran(t *testing.T) {
 			if i%500 != 250 {
 				db.Persist(&execPersistSingle{}, false)
 			} else {
-				db.Persist(&execPersistSingle{}, true)
 				db.Close()
 				db, err = OpenDatabase("tmp.db")
 				ck(err)

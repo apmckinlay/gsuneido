@@ -126,17 +126,19 @@ func (db *Database) loadedTable(ts *meta.Schema, ti *meta.Info) error {
 }
 
 // schema changes ---------------------------------------------------
-//
+
 // Creating new indexes on an existing table (ensure and alter create)
 // must be serialized with check/merge
 // to ensure that merge sees a state consistent with the transaction.
 
 func (db *Database) Create(schema *schema.Schema) {
 	ts, ti := db.create(schema)
-	err := db.loadedTable(ts, ti)
-	if err != nil {
-		panic(err)
-	}
+	db.UpdateState(func(state *DbState) {
+		if state.Meta.GetRoSchema(ts.Table) != nil {
+			panic("can't create existing table: " + ts.Table)
+		}
+		state.Meta = state.Meta.PutNew(ts, ti, schema)
+	})
 }
 
 func (db *Database) create(schema *schema.Schema) (*meta.Schema, *meta.Info) {

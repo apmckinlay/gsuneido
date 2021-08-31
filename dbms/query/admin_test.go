@@ -142,24 +142,50 @@ func TestView(t *testing.T) {
 	assert.T(t).This(db.GetView("tmp")).Is("over ride")
 }
 
-func TestFkey(t *testing.T) {
+func TestFkey(*testing.T) {
 	store := stor.HeapStor(8192)
 	db, err := db19.CreateDb(store)
 	ck(err)
+	db.CheckerSync()
+
+	schemas := map[string]string{}
+	check := func() {
+		for table, schema := range schemas {
+			assert.This(db.Schema(table)).Is(schema)
+		}
+	}
+
 	DoAdmin(db, "create hdr (a,b) key(a)")
+	schemas["hdr"] = "hdr (a,b) key(a)"
+	check()
+
 	DoAdmin(db, "create lin (c,d) key(c) index(d) in hdr(a)")
+	schemas["lin"] = "lin (c,d) key(c) index(d) in hdr(a)"
+	schemas["hdr"] = "hdr (a,b) key(a) from lin(d)"
+	check()
+
 	DoAdmin(db, "create two (e,a) key(e) index(a) in hdr")
+	schemas["two"] = "two (e,a) key(e) index(a) in hdr"
+	schemas["hdr"] = "hdr (a,b) key(a) from lin(d) from two(a)"
+	check()
+
+	DoAdmin(db, "alter two create (f) index(f) in hdr(a)")
+	schemas["two"] = "two (e,a,f) key(e) index(a) in hdr index(f) in hdr(a)"
+	schemas["hdr"] = "hdr (a,b) key(a) from lin(d) from two(a) from two(f)"
+	check()
+
+	DoAdmin(db, "alter two drop index(a)")
+	schemas["two"] = "two (e,a,f) key(e) index(f) in hdr(a)"
+	schemas["hdr"] = "hdr (a,b) key(a) from lin(d) from two(f)"
+	check()
+
+	DoAdmin(db, "create three (f,e) key(f) index(e) in two")
+	schemas["three"] = "three (f,e) key(f) index(e) in two"
+	schemas["two"] = "two (e,a,f) key(e) from three(e) index(f) in hdr(a)"
+	check()
+
 	db.Close()
 	db, err = db19.OpenDbStor(store, stor.READ, false)
 	ck(err)
-	db.CheckerSync()
-	assert.T(t).This(db.Schema("hdr")).Is("hdr (a,b) key(a) from two(a) from lin(d)")
-
-	DoAdmin(db, "alter two create (f) index(f) in hdr(a)")
-	assert.T(t).This(db.Schema("hdr")).
-		Is("hdr (a,b) key(a) from two(a) from lin(d) from two(f)")
-
-	DoAdmin(db, "alter two drop index(a)")
-	assert.T(t).This(db.Schema("hdr")).
-		Is("hdr (a,b) key(a) from lin(d) from two(f)")
+	check()
 }

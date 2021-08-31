@@ -5,6 +5,7 @@
 package schema
 
 import (
+	"sort"
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
@@ -85,9 +86,14 @@ func (ix *Index) String() string {
 			}
 		}
 	}
-	for _, fk := range ix.FkToHere {
-		s += " from " + fk.Table + strs.Join("(,)", fk.Columns)
+	fkToHere := make([]string, len(ix.FkToHere))
+	for i, fk := range ix.FkToHere {
+		fkToHere[i] = " from " + fk.Table + strs.Join("(,)", fk.Columns)
 	}
+	// sort for consistency in tests
+	sort.Slice(fkToHere, func(i, j int) bool { return fkToHere[i] < fkToHere[j] })
+	s += strs.Join("", fkToHere)
+
 	return s
 }
 

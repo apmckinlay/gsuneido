@@ -346,6 +346,7 @@ func (ck *Check) tick() {
 }
 
 func (ck *Check) Stop() { // to satisfy Checker interface
+	ck.db.Persist(&execPersistSingle{}, true) // for tests
 }
 
 func traceln(...interface{}) {

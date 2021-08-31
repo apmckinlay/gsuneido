@@ -279,11 +279,15 @@ func (m *Meta) AlterCreate(ac *schema.Schema, store *stor.Stor) (*Meta, error) {
 	if err := createIndexes(ts, ti, ac.Indexes, store); err != nil {
 		return nil, err
 	}
+	return m.PutNew(ts, ti, ac), nil
+}
+
+func (m *Meta) PutNew(ts *Schema, ti *Info, ac *schema.Schema) *Meta {
 	mu := newMetaUpdate(m)
 	mu.putSchema(ts)
 	mu.putInfo(ti)
 	m.createFkeys(mu, ac)
-	return mu.freeze(), nil
+	return mu.freeze()
 }
 
 func (m *Meta) alterGet(table string) (*Schema, *Info) {
