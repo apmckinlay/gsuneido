@@ -66,9 +66,6 @@ func ReadSchema(_ *stor.Stor, r *stor.Reader) *Schema {
 	ts := Schema{}
 	ts.Table = r.GetStr()
 	ts.Columns = r.GetStrs()
-	if len(ts.Columns) == 0 {
-		ts.Columns = nil
-	}
 	ts.Derived = r.GetStrs()
 	if n := r.Get1(); n > 0 {
 		ts.Indexes = make([]schema.Index, n)

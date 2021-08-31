@@ -3,8 +3,6 @@
 
 package stor
 
-import "math"
-
 // Put methods return the writer so they can be chained.
 
 type Writer struct {
@@ -30,17 +28,6 @@ func (w *Writer) Put1(n int) *Writer {
 func (w *Writer) Put2(n int) *Writer {
 	if n < 0 || 1<<16 <= n {
 		panic("stor.Writer.Put2 value outside range")
-	}
-	w.buf = append(w.buf,
-		byte(n),
-		byte(n>>8))
-	return w
-}
-
-// Put2s writes a signed two byte value
-func (w *Writer) Put2s(n int) *Writer {
-	if n < math.MinInt16 || math.MaxInt16 <= n {
-		panic("stor.Writer.Put2s value outside range")
 	}
 	w.buf = append(w.buf,
 		byte(n),
@@ -117,40 +104,6 @@ func LenStrs(ss []string) int {
 	return n
 }
 
-// Put1Ints writes a slice of <256 int's using Put2s
-func (w *Writer) Put1Ints(ints []int) *Writer {
-	w.Put1(len(ints))
-	for _, n := range ints {
-		w.Put2s(n)
-	}
-	return w
-}
-
-// Len1Ints returns the space requirecd by Put1Ints
-func Len1Ints(ints []int) int {
-	return 1 + 2*len(ints)
-}
-
-// Put2Ints writes a slice of <64k int's using Put2s
-func (w *Writer) Put2Ints(ints []int) *Writer {
-	w.Put2(len(ints))
-	for _, n := range ints {
-		w.Put2s(n)
-	}
-	return w
-}
-
-// Len2Ints returns the space requirecd by Put2Ints
-func Len2Ints(ints []int) int {
-	return 2 + 2*len(ints)
-}
-
-// Write writes buf
-func (w *Writer) Write(buf []byte) *Writer {
-	w.buf = append(w.buf, buf...)
-	return w
-}
-
 // Len returns the current position within this writer
 func (w *Writer) Len() int {
 	return len(w.buf)
@@ -183,13 +136,6 @@ func (r *Reader) Get2() int {
 	n := int(r.buf[0]) + int(r.buf[1])<<8
 	r.buf = r.buf[2:]
 	return n
-}
-
-// Get2s reads an unsigned two byte value
-func (r *Reader) Get2s() int {
-	n := int16(r.buf[0]) + int16(r.buf[1])<<8
-	r.buf = r.buf[2:]
-	return int(n)
 }
 
 // Get3 reads an unsigned three byte value
@@ -225,37 +171,14 @@ func (r *Reader) GetStr() string {
 // GetStrs reads a slice of strings
 func (r *Reader) GetStrs() []string {
 	n := r.Get2()
+	if n == 0 {
+		return nil
+	}
 	ss := make([]string, n)
 	for i := 0; i < n; i++ {
 		ss[i] = r.GetStr()
 	}
 	return ss
-}
-
-// Get1Ints reads a slice of int's using Get2s
-func (r *Reader) Get1Ints() []int {
-	n := r.Get1()
-	ints := make([]int, n)
-	for i := 0; i < n; i++ {
-		ints[i] = r.Get2s()
-	}
-	return ints
-}
-
-// Get2Ints reads a slice of int's using Get2s
-func (r *Reader) Get2Ints() []int {
-	n := r.Get2()
-	ints := make([]int, n)
-	for i := 0; i < n; i++ {
-		ints[i] = r.Get2s()
-	}
-	return ints
-}
-
-// Read len(buf) bytes
-func (r *Reader) Read(buf []byte) {
-	copy(buf, r.buf)
-	r.buf = r.buf[len(buf):]
 }
 
 // Remaining returns the number of unread bytes left
