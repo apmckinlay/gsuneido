@@ -253,7 +253,7 @@ func (m *Meta) AlterRename(table string, from, to []string) *Meta {
 	}
 	existing := sset.Intersect(to, ts.Columns)
 	if len(existing) > 0 {
-		panic("can't renamte to existing column(s): " + strs.Join(", ", existing))
+		panic("can't rename to existing column(s): " + strs.Join(", ", existing))
 	}
 	tsNew := *ts // copy
 	tsNew.Columns = strs.Replace(ts.Columns, from, to)
