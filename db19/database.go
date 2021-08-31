@@ -170,7 +170,7 @@ func (db *Database) Ensure(schema *schema.Schema) {
 			handled = true
 
 		} else if schemaSubset(schema, ts) {
-			handled = true // common fast case
+			handled = true // nothing to do, common fast case
 		}
 	})
 	if !handled {

@@ -184,6 +184,12 @@ func TestFkey(*testing.T) {
 	schemas["two"] = "two (e,a,f) key(e) from three(e) index(f) in hdr(a)"
 	check()
 
+	DoAdmin(db, "create four (g) key(g)")
+	DoAdmin(db, "ensure four (h) index(h) in lin(c)")
+	schemas["four"] = "four (g,h) key(g) index(h) in lin(c)"
+	schemas["lin"] = "lin (c,d) key(c) from four(h) index(d) in hdr(a)"
+	check()
+
 	db.Close()
 	db, err = db19.OpenDbStor(store, stor.READ, false)
 	ck(err)

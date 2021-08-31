@@ -204,7 +204,8 @@ func (m *Meta) Ensure(a *schema.Schema, store *stor.Stor) (*Meta, error) {
 	if err := createIndexes(ts, ti, newIdxs, store); err != nil {
 		return nil, err
 	}
-	return m.Put(ts, ti), nil
+	ac := &schema.Schema{Table: a.Table, Indexes: newIdxs}
+	return m.PutNew(ts, ti, ac), nil
 }
 
 func (m *Meta) RenameTable(from, to string) *Meta {
