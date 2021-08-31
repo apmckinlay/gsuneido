@@ -18,6 +18,7 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/meta"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/options"
+	rt "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
@@ -44,6 +45,7 @@ func Dump(db *Database, to string) (ntables int, err error) {
 	defer ics.finish()
 
 	state := db.GetState()
+	dumpViews(state, w)
 	state.Meta.ForEachSchema(func(sc *meta.Schema) {
 		dumpTable2(db, sc, true, w, ics)
 		ntables++
@@ -127,6 +129,22 @@ func writeInt(w *bufio.Writer, n int) {
 	w.WriteByte(byte(n >> 16))
 	w.WriteByte(byte(n >> 8))
 	w.WriteByte(byte(n))
+}
+
+func dumpViews(state *DbState, w *bufio.Writer) int {
+	w.WriteString("====== views (view_name,view_definition) key(view_name)\n")
+	nrecs := 0
+	state.Meta.ForEachView(func(name, def string) {
+		var b rt.RecordBuilder
+		b.Add(rt.SuStr(name))
+		b.Add(rt.SuStr(def))
+		rec := b.Build()
+		writeInt(w, len(rec))
+		w.WriteString(string(rec))
+		nrecs++
+	})
+	writeInt(w, 0) // end of table records
+	return nrecs
 }
 
 // ------------------------------------------------------------------

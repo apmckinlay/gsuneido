@@ -21,8 +21,10 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/dbms/query"
 	"github.com/apmckinlay/gsuneido/options"
+	rt "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/cksum"
+	"github.com/apmckinlay/gsuneido/util/hacks"
 	"github.com/apmckinlay/gsuneido/util/sortlist"
 )
 
@@ -114,6 +116,9 @@ func open(filename string) (*os.File, *bufio.Reader) {
 
 func loadTable(db *Database, r *bufio.Reader, schema string, channel chan loadJob) int {
 	trace(schema)
+	if strings.HasPrefix(schema, "views") {
+		return loadViews(db, r, schema)
+	}
 	sch := query.NewAdminParser(schema).Schema()
 	store := db.Store
 	list := sortlist.NewUnsorted()
@@ -206,6 +211,34 @@ func makeLess(store *stor.Stor, is *ixkey.Spec) func(x, y uint64) bool {
 		yr := OffToRec(store, y)
 		return is.Compare(xr, yr) < 0
 	}
+}
+
+func loadViews(db *Database, in *bufio.Reader, schema string) int {
+	assert.That(strings.HasPrefix(schema, "views (view_name,view_definition)"))
+	intbuf := make([]byte, 4)
+	buf := make([]byte, 32768)
+	nrecs := 0
+	for { // each record
+		_, err := io.ReadFull(in, intbuf)
+		if err == io.EOF {
+			break
+		}
+		ck(err)
+		n := int(binary.BigEndian.Uint32(intbuf))
+		if n == 0 {
+			break
+		}
+		_, err = io.ReadFull(in, buf[:n])
+		ck(err)
+
+		rec := rt.Record(hacks.BStoS(buf[:n]))
+		name := rec.GetStr(0)
+		def := rec.GetStr(1)
+		db.AddView(name, def)
+
+		nrecs++
+	}
+	return nrecs
 }
 
 func ck(err error) {
