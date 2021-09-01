@@ -190,10 +190,22 @@ func TestFkey(*testing.T) {
 	schemas["lin"] = "lin (c,d) key(c) from four(h) index(d) in hdr(a)"
 	check()
 
+	DoAdmin(db, "rename four to newfour")
+	schemas["newfour"] = "newfour (g,h) key(g) index(h) in lin(c)"
+	schemas["four"] = ""
+	schemas["lin"] = "lin (c,d) key(c) from newfour(h) index(d) in hdr(a)"
+	check()
+
+	DoAdmin(db, "alter newfour rename h to hh")
+	schemas["newfour"] = "newfour (g,hh) key(g) index(hh) in lin(c)"
+	schemas["lin"] = "lin (c,d) key(c) from newfour(hh) index(d) in hdr(a)"
+	check()
+
 	DoAdmin(db, "drop two")
 	schemas["two"] = ""
 	schemas["hdr"] = "hdr (a,b) key(a) from lin(d)"
 	check()
+	// Note: this will cause a dangling foreign key from three (harmless)
 
 	db.Close()
 	db, err = db19.OpenDbStor(store, stor.READ, false)

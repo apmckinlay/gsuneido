@@ -228,6 +228,8 @@ func (m *Meta) RenameTable(from, to string) *Meta {
 	mu.putSchema(&tsNew)
 	mu.putInfo(m.newInfoTomb(from))
 	mu.putInfo(&tiNew)
+	m.dropFkeys(mu, &ts.Schema)
+	m.createFkeys(mu, &tsNew.Schema)
 	return mu.freeze()
 }
 
@@ -271,7 +273,11 @@ func (m *Meta) AlterRename(table string, from, to []string) *Meta {
 		ix.Columns = strs.Replace(ix.Columns, from, to)
 	}
 	// ixspecs are ok since they are field indexes, not names
-	return m.Put(&tsNew, nil)
+	mu := newMetaUpdate(m)
+	mu.putSchema(&tsNew)
+	m.dropFkeys(mu, &ts.Schema)
+	m.createFkeys(mu, &tsNew.Schema)
+	return mu.freeze()
 }
 
 func (m *Meta) AlterCreate(ac *schema.Schema, store *stor.Stor) (*Meta, error) {
