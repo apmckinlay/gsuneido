@@ -237,10 +237,15 @@ func (m *Meta) Drop(name string) *Meta {
 	if m.GetView(name) != "" {
 		return m.Put(m.newSchemaTomb("="+name), nil)
 	}
-	if ts, ok := m.schema.Get(name); !ok || ts.isTomb() {
+	ts, ok := m.schema.Get(name)
+	if !ok || ts.isTomb() {
 		return nil // nonexistent
 	}
-	return m.Put(m.newSchemaTomb(name), m.newInfoTomb(name))
+	mu := newMetaUpdate(m)
+	mu.putSchema(m.newSchemaTomb(name))
+	mu.putInfo(m.newInfoTomb(name))
+	m.dropFkeys(mu, &ts.Schema)
+	return mu.freeze()
 }
 
 func (m *Meta) AlterRename(table string, from, to []string) *Meta {

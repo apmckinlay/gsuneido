@@ -190,6 +190,11 @@ func TestFkey(*testing.T) {
 	schemas["lin"] = "lin (c,d) key(c) from four(h) index(d) in hdr(a)"
 	check()
 
+	DoAdmin(db, "drop two")
+	schemas["two"] = ""
+	schemas["hdr"] = "hdr (a,b) key(a) from lin(d)"
+	check()
+
 	db.Close()
 	db, err = db19.OpenDbStor(store, stor.READ, false)
 	ck(err)
