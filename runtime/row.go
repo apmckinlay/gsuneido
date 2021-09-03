@@ -4,7 +4,10 @@
 package runtime
 
 import (
+	"strings"
+
 	"github.com/apmckinlay/gsuneido/util/sset"
+	"github.com/apmckinlay/gsuneido/util/str"
 	"github.com/apmckinlay/gsuneido/util/strs"
 )
 
@@ -18,19 +21,35 @@ func JoinRows(row1, row2 Row) Row {
 	return append(append(result, row1...), row2...)
 }
 
-func (row Row) Get(hdr *Header, fld string) Value {
-	return Unpack(row.GetRaw(hdr, fld))
+// GetVal is primarily for query summarize (to minimize creating SuRecord's)
+func (row Row) GetVal(hdr *Header, fld string) Value {
+	if !strs.Contains(hdr.Columns, fld) {
+		return EmptyStr
+	}
+	if at, ok := hdr.Find(fld); ok {
+		return Unpack(row.GetRawAt(hdr, fld, at))
+	}
+	if strings.HasSuffix(fld, "_lower!") {
+		base := fld[:len(fld)-7]
+		if at, ok := hdr.Find(base); ok {
+			val := Unpack(row.GetRawAt(hdr, fld, at))
+			return SuStr(str.ToLower(ToStr(val)))
+		}
+		return EmptyStr
+	}
+	// else construct SuRecord to handle rules
+	return SuRecordFromRow(row, hdr, "", nil).Get(&Thread{}, SuStr(fld))
+	//TODO don't alloc thread every time
 }
 
 func (row Row) GetRaw(hdr *Header, fld string) string {
-	at, ok := hdr.Map[fld]
-	if !ok {
-		at, ok = hdr.Find(fld)
-		if !ok {
-			return ""
-		}
-		hdr.Map[fld] = at // cache
+	if at, ok := hdr.Find(fld); ok {
+		return row.GetRawAt(hdr, fld, at)
 	}
+	return ""
+}
+
+func (row Row) GetRawAt(hdr *Header, fld string, at RowAt) string {
 	if row[at.Reci].Record != "" {
 		// normal fast path
 		return row[at.Reci].GetRaw(int(at.Fldi))
@@ -44,10 +63,6 @@ func (row Row) GetRaw(hdr *Header, fld string) string {
 		}
 	}
 	return ""
-}
-
-func (row Row) GetRawAt(at RowAt) string {
-	return row[at.Reci].GetRaw(int(at.Fldi))
 }
 
 // RowAt specifies the position of a field within a Row
@@ -132,13 +147,19 @@ func (hdr *Header) hasField(col string) bool {
 	return false
 }
 
+// Find searches hdr.Fields and caches the result
 func (hdr *Header) Find(fld string) (RowAt, bool) {
+	if at, ok := hdr.Map[fld]; ok {
+		return at, true
+	}
 	for reci, fields := range hdr.Fields {
 		if fldi := strs.Index(fields, fld); fldi >= 0 {
-			return RowAt{Reci: int16(reci), Fldi: int16(fldi)}, true
+			at := RowAt{Reci: int16(reci), Fldi: int16(fldi)}
+			hdr.Map[fld] = at // cache
+			return at, true
 		}
 	}
-	return RowAt{}, false
+	return RowAt{}, false // could cache ???
 }
 
 func (hdr *Header) GetFields() []string {

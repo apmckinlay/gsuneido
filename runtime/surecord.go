@@ -92,7 +92,8 @@ func deps(row Row, hdr *Header) map[string][]string {
 	for _, flds := range hdr.Fields {
 		for _, f := range flds {
 			if strings.HasSuffix(f, "_deps") {
-				deps := str.Split(ToStr(row.Get(hdr, f)), ",")
+				val := Unpack(row.GetRaw(hdr, f))
+				deps := str.Split(ToStr(val), ",")
 				f = f[:len(f)-5]
 				for _, d := range deps {
 					if !strs.Contains(dependents[d], f) {

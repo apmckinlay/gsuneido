@@ -62,10 +62,10 @@ func TestQueryGet(t *testing.T) {
 		sb.WriteString("\n")
 		for _, row := range rows {
 			for _, col := range hdr.Columns {
-				if row.Get(hdr, col) == nil {
+				if row.GetVal(hdr, col) == nil {
 					fmt.Println(col, "is nil in", row)
 				}
-				sb.WriteString(row.Get(hdr, col).String())
+				sb.WriteString(row.GetVal(hdr, col).String())
 				sb.WriteString("\t")
 			}
 			sb.WriteString("\n")
