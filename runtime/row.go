@@ -16,65 +16,54 @@ import (
 // can avoid building new records.
 type Row []DbRec
 
+// DbRec is a Record along with its offset
+type DbRec struct {
+	Record
+	Off uint64
+}
+
 func JoinRows(row1, row2 Row) Row {
 	result := make(Row, 0, len(row1)+len(row2))
 	return append(append(result, row1...), row2...)
 }
 
 // GetVal is primarily for query summarize (to minimize creating SuRecord's)
-func (row Row) GetVal(hdr *Header, fld string) Value {
+func (row Row) GetVal(hdr *Header, fld string, th *Thread, tran *SuTran) Value {
 	if !strs.Contains(hdr.Columns, fld) {
 		return EmptyStr
 	}
-	if at, ok := hdr.Find(fld); ok {
-		return Unpack(row.GetRawAt(hdr, fld, at))
+	if raw, ok := row.getRaw2(hdr, fld); ok {
+		return Unpack(raw)
 	}
 	if strings.HasSuffix(fld, "_lower!") {
 		base := fld[:len(fld)-7]
-		if at, ok := hdr.Find(base); ok {
-			val := Unpack(row.GetRawAt(hdr, fld, at))
-			return SuStr(str.ToLower(ToStr(val)))
-		}
-		return EmptyStr
+		val := Unpack(row.GetRaw(hdr, base))
+		return SuStr(str.ToLower(ToStr(val)))
 	}
 	// else construct SuRecord to handle rules
-	return SuRecordFromRow(row, hdr, "", nil).Get(&Thread{}, SuStr(fld))
-	//TODO don't alloc thread every time
+	return SuRecordFromRow(row, hdr, "", tran).Get(th, SuStr(fld))
 }
 
+// GetRaw does NOT handle _lower! or rules
 func (row Row) GetRaw(hdr *Header, fld string) string {
-	if at, ok := hdr.Find(fld); ok {
-		return row.GetRawAt(hdr, fld, at)
-	}
-	return ""
+	x, _ := row.getRaw2(hdr, fld)
+	return x
 }
 
-func (row Row) GetRawAt(hdr *Header, fld string, at RowAt) string {
-	if row[at.Reci].Record != "" {
-		// normal fast path
-		return row[at.Reci].GetRaw(int(at.Fldi))
+func (row Row) getRaw2(hdr *Header, fld string) (string, bool) {
+	at, ok := hdr.find(fld)
+	if ok && row[at.Reci].Record != "" { // not empty side of union
+		return row[at.Reci].GetRaw(int(at.Fldi)), true
 	}
-	// this is only used for Union
+	// handle nil records from Union
 	for reci := int(at.Reci + 1); reci < len(hdr.Fields); reci++ {
 		if fldi := strs.Index(hdr.Fields[reci], fld); fldi >= 0 {
 			if row[reci].Record != "" {
-				return row[reci].GetRaw(int(fldi))
+				return row[reci].GetRaw(int(fldi)), true
 			}
 		}
 	}
-	return ""
-}
-
-// RowAt specifies the position of a field within a Row
-type RowAt struct {
-	Reci int16
-	Fldi int16
-}
-
-// DbRec is a Record along with its offset
-type DbRec struct {
-	Record
-	Off uint64
+	return "", false
 }
 
 // SameAs returns true if the db records have the same Off's
@@ -106,14 +95,20 @@ func (row Row) SameAs(row2 Row) bool {
 type Header struct {
 	Fields  [][]string
 	Columns []string
-	// Map is used to cache the location of fields.
+	// cache the location of fields.
 	// WARNING: assumed to not be concurrent (no locking)
-	Map map[string]RowAt
+	cache map[string]rowAt
+}
+
+// rowAt specifies the position of a field within a Row
+type rowAt struct {
+	Reci int16
+	Fldi int16
 }
 
 func NewHeader(fields [][]string, columns []string) *Header {
 	return &Header{Fields: fields, Columns: columns,
-		Map: make(map[string]RowAt)}
+		cache: make(map[string]rowAt)}
 }
 
 func SimpleHeader(fields []string) *Header {
@@ -147,19 +142,20 @@ func (hdr *Header) hasField(col string) bool {
 	return false
 }
 
-// Find searches hdr.Fields and caches the result
-func (hdr *Header) Find(fld string) (RowAt, bool) {
-	if at, ok := hdr.Map[fld]; ok {
+// find returns the location of the first occurence of fld in hdr.Fields
+// and caches the result. (Multiple occurrences come from union.)
+func (hdr *Header) find(fld string) (rowAt, bool) {
+	if at, ok := hdr.cache[fld]; ok {
 		return at, true
 	}
 	for reci, fields := range hdr.Fields {
 		if fldi := strs.Index(fields, fld); fldi >= 0 {
-			at := RowAt{Reci: int16(reci), Fldi: int16(fldi)}
-			hdr.Map[fld] = at // cache
+			at := rowAt{Reci: int16(reci), Fldi: int16(fldi)}
+			hdr.cache[fld] = at // cache
 			return at, true
 		}
 	}
-	return RowAt{}, false // could cache ???
+	return rowAt{}, false
 }
 
 func (hdr *Header) GetFields() []string {

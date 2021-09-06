@@ -27,6 +27,7 @@ type Summarize struct {
 	rewound bool
 	srcHdr  *Header
 	get     func(su *Summarize, dir Dir) Row
+	t       QueryTran
 }
 
 type summarizeApproach struct {
@@ -82,6 +83,11 @@ func check(cols []string) {
 func (su *Summarize) minmax1() bool {
 	return len(su.by) == 0 &&
 		len(su.ops) == 1 && (su.ops[0] == "min" || su.ops[0] == "max")
+}
+
+func (su *Summarize) SetTran(t QueryTran) {
+	su.t = t
+	su.source.SetTran(t)
 }
 
 func (su *Summarize) String() string {
@@ -354,6 +360,7 @@ func (t *sumMapT) getMap(su *Summarize, dir Dir) Row {
 func (su *Summarize) buildMap() []mapPair {
 	hdr := su.source.Header()
 	sumMap := make(map[Record][]sumOp)
+	var thread Thread
 	for {
 		row := su.source.Get(Next)
 		if row == nil {
@@ -369,7 +376,7 @@ func (su *Summarize) buildMap() []mapPair {
 			}
 		}
 		for i := range sums {
-			sums[i].add(row.GetVal(hdr, su.ons[i]), nil)
+			sums[i].add(row.GetVal(hdr, su.ons[i], &thread, MakeSuTran(su.t)), nil)
 		}
 	}
 	i := 0
@@ -432,9 +439,10 @@ func (t *sumSeqT) getSeq(su *Summarize, dir Dir) Row {
 	for i := range t.sums {
 		t.sums[i].reset()
 	}
+	var thread Thread
 	for {
 		for i := range t.sums {
-			t.sums[i].add(t.nextRow.GetVal(su.srcHdr, su.ons[i]),
+			t.sums[i].add(t.nextRow.GetVal(su.srcHdr, su.ons[i], &thread, MakeSuTran(su.t)),
 				su.sumRow(t.nextRow))
 		}
 		t.nextRow = su.source.Get(dir)
