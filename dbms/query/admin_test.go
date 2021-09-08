@@ -142,7 +142,7 @@ func TestView(t *testing.T) {
 	assert.T(t).This(db.GetView("tmp")).Is("over ride")
 }
 
-func TestFkey(*testing.T) {
+func TestFkey(t *testing.T) {
 	store := stor.HeapStor(8192)
 	db, err := db19.CreateDb(store)
 	ck(err)
@@ -150,8 +150,9 @@ func TestFkey(*testing.T) {
 
 	schemas := map[string]string{}
 	check := func() {
+		t.Helper()
 		for table, schema := range schemas {
-			assert.This(db.Schema(table)).Is(schema)
+			assert.T(t).This(db.Schema(table)).Is(schema)
 		}
 	}
 
@@ -207,6 +208,15 @@ func TestFkey(*testing.T) {
 	check()
 	// Note: this will cause a dangling foreign key from three (harmless)
 
+	// recursive foreign key
+	DoAdmin(db, "create recur (a,b) key(a) index(b) in recur(a)")
+	schemas["recur"] = "recur (a,b) key(a) from recur(b) index(b) in recur(a)"
+	check()
+	DoAdmin(db, "drop recur")
+	delete(schemas, "recur")
+	check()
+
+	db.Check()
 	db.Close()
 	db, err = db19.OpenDbStor(store, stor.READ, false)
 	ck(err)

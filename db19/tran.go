@@ -284,6 +284,7 @@ func (t *UpdateTran) Lookup(table string, iIndex int, key string) *rt.DbRec {
 	return t.ReadTran.Lookup(table, iIndex, key)
 }
 
+// Read adds a transaction read event to the checker
 func (t *UpdateTran) Read(table string, iIndex int, from, to string) {
 	t.ck(t.db.ck.Read(t.ct, table, iIndex, from, to))
 }
@@ -304,15 +305,29 @@ func (t *UpdateTran) Output(table string, rec rt.Record) {
 			panic(fmt.Sprint("duplicate key: ",
 				strs.Join(",", ts.Indexes[i].Columns), " in ", table))
 		}
+		t.fkeyOutputBlock(ts, i, rec)
 	}
 	for i := range ts.Indexes {
-		ix := ti.Indexes[i]
-		ix.Insert(keys[i], off)
+		ti.Indexes[i].Insert(keys[i], off)
 	}
 	t.ck(t.db.ck.Write(t.ct, table, keys))
 	ti.Nrows++
 	ti.Size += uint64(n)
 	t.db.CallTrigger(t.thread(), t, table, "", rec)
+}
+
+func (t *UpdateTran) fkeyOutputBlock(ts *meta.Schema, i int, rec rt.Record) {
+	ix := &ts.Indexes[i]
+	fk := ix.Fk
+	if fk.Table != "" && fk.Mode == schema.Block {
+		n := len(ix.Columns)
+		is := ix.Ixspec
+		fkis := ixkey.Spec{Fields: is.Fields[:n]}
+		key := fkis.Key(rec)
+		if !t.exists(fk.Table, fk.IIndex, key) {
+			panic("output blocked by foreign key")
+		}
+	}
 }
 
 func (t *UpdateTran) thread() *rt.Thread {
@@ -329,10 +344,12 @@ func (t *UpdateTran) Delete(table string, off uint64) {
 	n := rec.Len()
 	keys := make([]string, len(ts.Indexes))
 	for i := range ts.Indexes {
-		ix := ti.Indexes[i]
 		is := ts.Indexes[i].Ixspec
 		keys[i] = is.Key(rec)
-		ix.Delete(keys[i], off)
+		t.fkeyDeleteBlock(ts.Indexes[i].FkToHere, keys[i])
+	}
+	for i := range ts.Indexes {
+		ti.Indexes[i].Delete(keys[i], off)
 	}
 	t.ck(t.db.ck.Write(t.ct, table, keys))
 	assert.Msg("Delete Nrows").That(ti.Nrows > 0)
@@ -340,6 +357,26 @@ func (t *UpdateTran) Delete(table string, off uint64) {
 	assert.Msg("Delete Size").That(ti.Size >= uint64(n))
 	ti.Size -= uint64(n)
 	t.db.CallTrigger(t.thread(), t, table, rec, "")
+}
+
+func (t *UpdateTran) fkeyDeleteBlock(fkToHere []schema.Fkey, key string) {
+	for i := range fkToHere {
+		fk := &fkToHere[i]
+		if fk.Mode == schema.Block && t.exists(fk.Table, fk.IIndex, key) {
+			panic("delete blocked by foreign key")
+		}
+	}
+}
+
+func (t *UpdateTran) exists(table string, iIndex int, key string) bool {
+	//TODO make a version of Lookup instead of needing iterator
+	if nil == t.meta.GetRoInfo(table) {
+		return false
+	}
+	iter := index.NewOverIter(table, iIndex)
+	iter.Range(index.Range{Org: key, End: key + ixkey.Sep + ixkey.Max})
+	iter.Next(t)
+	return !iter.Eof()
 }
 
 func (t *UpdateTran) Update(table string, oldoff uint64, newrec rt.Record) uint64 {
@@ -368,6 +405,8 @@ func (t *UpdateTran) Update(table string, oldoff uint64, newrec rt.Record) uint6
 					panic(fmt.Sprint("duplicate key: ",
 						strs.Join(",", ts.Indexes[i].Columns), " in ", table))
 				}
+				t.fkeyDeleteBlock(ts.Indexes[i].FkToHere, oldkeys[i])
+				t.fkeyOutputBlock(ts, i, newrec)
 			}
 		}
 	}

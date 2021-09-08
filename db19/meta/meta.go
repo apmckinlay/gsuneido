@@ -30,7 +30,7 @@ type Meta struct {
 	infoClock   int
 }
 
-// Mutable returns a mutable copy of a Meta
+// Mutable returns a mutable copy of a Meta. Used by UpdateTran.
 func (m *Meta) Mutable() *Meta {
 	assert.That(m.difInfo.IsNil())
 	ov2 := *m // copy
@@ -350,13 +350,13 @@ func createIndexes(ts *Schema, ti *Info, idxs []schema.Index, store *stor.Stor) 
 func (m *Meta) createFkeys(mu *metaUpdate, ac *schema.Schema) {
 	idxs := ac.Indexes
 	for i := range idxs {
-		fk := idxs[i].Fk
+		fk := &idxs[i].Fk
 		if fk.Table != "" {
 			fkCols := fk.Columns
 			if len(fkCols) == 0 {
 				fkCols = idxs[i].Columns
 			}
-			target, ok := m.schema.Get(fk.Table)
+			target, ok := mu.schema.Get(fk.Table)
 			if !ok {
 				log.Println("foreign key: can't find", fk.Table, "(from "+ac.Table+")")
 				continue
@@ -365,9 +365,11 @@ func (m *Meta) createFkeys(mu *metaUpdate, ac *schema.Schema) {
 			for j := range target.Indexes {
 				ix := target.Indexes[j] // copy
 				if strs.Equal(fkCols, ix.Columns) {
+					fk.IIndex = j
 					n := len(ix.FkToHere)
 					ix.FkToHere = append(ix.FkToHere[:n:n], // copy on write
-						Fkey{Table: ac.Table, Columns: idxs[i].Columns, Mode: fk.Mode})
+						Fkey{Table: ac.Table,
+							Columns: idxs[i].Columns, IIndex: i, Mode: fk.Mode})
 					target.Indexes[j] = ix
 				}
 			}
@@ -445,7 +447,7 @@ func (m *Meta) dropFkeys(mu *metaUpdate, ad *schema.Schema) {
 	for i := range idxs {
 		idx := schema.FindIndex(idxs[i].Columns)
 		fk := idx.Fk
-		if fk.Table == "" {
+		if fk.Table == "" || fk.Table == ad.Table {
 			continue
 		}
 		fkCols := fk.Columns
@@ -461,6 +463,7 @@ func (m *Meta) dropFkeys(mu *metaUpdate, ad *schema.Schema) {
 		for j := range target.Indexes {
 			ix := target.Indexes[j] // copy
 			if strs.Equal(fkCols, ix.Columns) {
+				fk.IIndex = j
 				fkToHere := make([]Fkey, 0, len(ix.FkToHere))
 				for k := range ix.FkToHere {
 					fk := ix.FkToHere[k]
@@ -643,13 +646,13 @@ func ReadMeta(store *stor.Stor, offSchema, offInfo uint64) *Meta {
 			return
 		}
 		for i := range s.Indexes {
-			fk := s.Indexes[i].Fk
+			fk := &s.Indexes[i].Fk
 			if fk.Table != "" {
 				fkCols := fk.Columns
 				if len(fkCols) == 0 {
 					fkCols = s.Indexes[i].Columns
 				}
-				// fmt.Println(s.Table, s.Indexes[i].Columns, "=>", fk.Table, fkCols)
+				// ok to modify actual schema because it's not shared yet
 				target, ok := m.schema.Get(fk.Table)
 				if !ok {
 					log.Println("foreign key: can't find", fk.Table, "(from "+s.Table+")")
@@ -658,13 +661,12 @@ func ReadMeta(store *stor.Stor, offSchema, offInfo uint64) *Meta {
 				for j := range target.Indexes {
 					ix := &target.Indexes[j]
 					if strs.Equal(fkCols, ix.Columns) {
-						// fmt.Println("found", ix)
+						fk.IIndex = j
 						ix.FkToHere = append(ix.FkToHere,
-							Fkey{Table: s.Table, Columns: s.Indexes[i].Columns, Mode: fk.Mode})
-						// fmt.Println(ix.FkToHere)
+							Fkey{Table: s.Table, Mode: fk.Mode,
+								Columns: s.Indexes[i].Columns, IIndex: i})
 					}
 				}
-				// fmt.Println("=>", target)
 			}
 		}
 	})

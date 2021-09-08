@@ -132,7 +132,7 @@ func (a *deleteAction) String() string {
 }
 
 func (a *deleteAction) execute(ut *db19.UpdateTran) int {
-	//TODO optimize deleting all records of table
+	//TODO optimize deleting all records of table (but still check foreign keys)
 	q, _ := Setup(a.query, UpdateMode, ut)
 	table := q.Updateable()
 	if table == "" {

@@ -28,13 +28,14 @@ type Index struct {
 	// Mode is 'k' for key, 'i' for index, 'u' for unique index
 	Mode int
 	Fk   Fkey
-	// FkToHere is other foreign keys that reference this one
-	FkToHere []Fkey
+	// FkToHere is other foreign keys that reference this index
+	FkToHere []Fkey // filled in by meta
 }
 
 type Fkey struct {
 	Table   string
 	Columns []string
+	IIndex  int
 	Mode    int
 }
 
