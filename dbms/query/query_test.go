@@ -98,9 +98,14 @@ func TestForeignKeys(*testing.T) {
 
 	assert.This(func() { act("insert { a: 9, c: 6 } into lin") }).
 		Panics("blocked by foreign key")
+	act("insert { a: '', c: 6 } into lin") // '' allowed
+
+	act("insert { a: '', b: 22 } into hdr")
+	act("delete hdr where a = ''")
 
 	assert.This(func() { act("update lin set a = 9") }).
 		Panics("blocked by foreign key")
 	assert.This(func() { act("update hdr set a = 9") }).
 		Panics("blocked by foreign key")
+	act("update lin where a = 1 set a = ''") // '' allowed
 }

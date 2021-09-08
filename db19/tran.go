@@ -319,12 +319,12 @@ func (t *UpdateTran) Output(table string, rec rt.Record) {
 func (t *UpdateTran) fkeyOutputBlock(ts *meta.Schema, i int, rec rt.Record) {
 	ix := &ts.Indexes[i]
 	fk := ix.Fk
-	if fk.Table != "" && fk.Mode == schema.Block {
+	if fk.Table != "" {
 		n := len(ix.Columns)
 		is := ix.Ixspec
 		fkis := ixkey.Spec{Fields: is.Fields[:n]}
 		key := fkis.Key(rec)
-		if !t.exists(fk.Table, fk.IIndex, key) {
+		if key != "" && !t.exists(fk.Table, fk.IIndex, key) {
 			panic("output blocked by foreign key")
 		}
 	}
@@ -360,6 +360,9 @@ func (t *UpdateTran) Delete(table string, off uint64) {
 }
 
 func (t *UpdateTran) fkeyDeleteBlock(fkToHere []schema.Fkey, key string) {
+	if key == "" {
+		return
+	}
 	for i := range fkToHere {
 		fk := &fkToHere[i]
 		if fk.Mode == schema.Block && t.exists(fk.Table, fk.IIndex, key) {
@@ -368,6 +371,7 @@ func (t *UpdateTran) fkeyDeleteBlock(fkToHere []schema.Fkey, key string) {
 	}
 }
 
+// exists is used by fkeyOutputBlock and fkeyDeleteBlock
 func (t *UpdateTran) exists(table string, iIndex int, key string) bool {
 	//TODO make a version of Lookup instead of needing iterator
 	if nil == t.meta.GetRoInfo(table) {
