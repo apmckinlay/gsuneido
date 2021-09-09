@@ -924,13 +924,14 @@ func (w *Where) filter(row runtime.Row) bool {
 	if row == nil {
 		return true
 	}
-	if w.context == nil {
-		w.context = &ast.Context{T: &runtime.Thread{}}
-	}
 	if w.hdr == nil {
 		w.hdr = w.source.Header()
 	}
-	w.context.Rec = runtime.SuRecordFromRow(row, w.hdr, "", MakeSuTran(w.t))
+	if w.context == nil {
+		w.context = &ast.Context{Th: &runtime.Thread{}, Hdr: w.hdr}
+	}
+	w.context.Tran = MakeSuTran(w.t)
+	w.context.Row = row
 	return w.expr.Eval(w.context) == runtime.True
 }
 

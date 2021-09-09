@@ -16,7 +16,7 @@ import (
 
 func TestExprEval(t *testing.T) {
 	th := NewThread()
-	rec, flds := mkrec()
+	row, hdr := mkrow()
 	raw := false
 	test := func(src string, expected string) {
 		t.Helper()
@@ -24,8 +24,8 @@ func TestExprEval(t *testing.T) {
 		expr := p.Expression()
 		assert.T(t).This(p.Token).Is(tok.Eof)
 		// fmt.Println(expr)
-		assert.That(expr.CanEvalRaw(flds) == raw)
-		result := expr.Eval(&ast.Context{T: th, Rec: rec})
+		assert.That(expr.CanEvalRaw(hdr.Columns) == raw)
+		result := expr.Eval(&ast.Context{Th: th, Row: row, Hdr: hdr})
 		assert.T(t).Msg(src).This(result.String()).Is(expected)
 	}
 	test("123", "123")
@@ -54,7 +54,7 @@ func TestExprEval(t *testing.T) {
 	test("s is 'foo'", "true")
 }
 
-func mkrec() (*SuRecord, []string) {
+func mkrow() (Row, *Header) {
 	rb := RecordBuilder{}
 	rb.Add(SuInt(4))
 	rb.Add(SuInt(5))
@@ -65,25 +65,25 @@ func mkrec() (*SuRecord, []string) {
 	row := Row{dbrec}
 	flds := []string{"x", "y", "s", "t"}
 	hdr := NewHeader([][]string{flds}, flds)
-	return SuRecordFromRow(row, hdr, "", nil), flds
+	return row, hdr
 }
 
 func BenchmarkEval(b *testing.B) {
-	rec, _ := mkrec()
+	row, hdr := mkrow()
 	p := NewQueryParser("x is 123.456", nil)
 	expr := p.Expression()
-	ctx := &ast.Context{Rec: rec}
+	ctx := &ast.Context{Row: row, Hdr: hdr}
 	for i := 0; i < b.N; i++ {
 		expr.Eval(ctx)
 	}
 }
 
 func BenchmarkEval_raw(b *testing.B) {
-	rec, flds := mkrec()
+	row, hdr := mkrow()
 	p := NewQueryParser("x is 123.456", nil)
 	expr := p.Expression()
-	assert.That(expr.CanEvalRaw(flds))
-	ctx := &ast.Context{Rec: rec}
+	assert.That(expr.CanEvalRaw(hdr.Columns))
+	ctx := &ast.Context{Row: row, Hdr: hdr}
 	for i := 0; i < b.N; i++ {
 		expr.Eval(ctx)
 	}

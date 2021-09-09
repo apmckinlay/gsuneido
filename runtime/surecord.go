@@ -92,7 +92,8 @@ func deps(row Row, hdr *Header) map[string][]string {
 	for _, flds := range hdr.Fields {
 		for _, f := range flds {
 			if strings.HasSuffix(f, "_deps") {
-				deps := str.Split(ToStr(row.Get(hdr, f)), ",")
+				val := Unpack(row.GetRaw(hdr, f))
+				deps := str.Split(ToStr(val), ",")
 				f = f[:len(f)-5]
 				for _, d := range deps {
 					if !strs.Contains(dependents[d], f) {
@@ -174,7 +175,7 @@ func (r *SuRecord) Compare(other Value) int {
 }
 
 func (r *SuRecord) Equal(other interface{}) bool {
-	return r.ToObject().Equal(other)
+	return r.ToObject().Equal(other) //FIXME not symmetrical with SuObject.Equal
 }
 
 func (r *SuRecord) Hash() uint32 {
@@ -592,16 +593,6 @@ func (r *SuRecord) getFromRow(key string) Value {
 	return nil
 }
 
-// GetRaw is used by query expr raw Eval for Where
-func (r *SuRecord) GetRaw(key string) (string, bool) {
-	if r.row != nil {
-		if raw := r.row.GetRaw(r.hdr, key); raw != "" {
-			return raw, true
-		}
-	}
-	return "", false
-}
-
 // deps is used by ToRecord to create the dependencies for a field
 // but without unpacking if it's in the row
 func (r *SuRecord) deps(t *Thread, key string) {
@@ -699,7 +690,7 @@ func (r *SuRecord) catchRule(t *Thread, rule Value, key string) Value {
 	defer func() {
 		t.rules.pop()
 		if e := recover(); e != nil {
-			WrapPanic(e, "rule for " + key)
+			WrapPanic(e, "rule for "+key)
 		}
 	}()
 	if r.Unlock() { // can't hold lock while calling observers

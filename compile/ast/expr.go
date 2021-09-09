@@ -15,8 +15,10 @@ import (
 )
 
 type Context struct {
-	T   *Thread
-	Rec *SuRecord
+	Th   *Thread
+	Tran *SuTran
+	Hdr  *Header
+	Row  Row
 }
 
 func (c *Constant) Eval(*Context) Value {
@@ -28,7 +30,7 @@ func (c *Constant) Columns() []string {
 }
 
 func (id *Ident) Eval(c *Context) Value {
-	return c.Rec.Get(c.T, SuStr(id.Name))
+	return c.Row.GetVal(c.Hdr, id.Name, c.Th, c.Tran)
 }
 
 func (id *Ident) Columns() []string {
@@ -125,7 +127,7 @@ func (b *Binary) Eval(c *Context) Value {
 	// NOTE: only Eval raw if b.evalRaw was set by CanEvalRaw
 	if b.evalRaw {
 		id := b.Lhs.(*Ident)
-		if lhs, ok := c.Rec.GetRaw(id.Name); ok {
+		if lhs := c.Row.GetRaw(c.Hdr, id.Name); lhs != "" {
 			rhs := b.Rhs.(*Constant).Packed
 			switch b.Tok {
 			case tok.Is:
@@ -318,7 +320,7 @@ func (a *In) CanEvalRaw(cols []string) bool {
 func (a *In) Eval(c *Context) Value {
 	if a.Packed != nil {
 		id := a.E.(*Ident)
-		if e, ok := c.Rec.GetRaw(id.Name); ok {
+		if e := c.Row.GetRaw(c.Hdr, id.Name); e != "" {
 			for _, p := range a.Packed {
 				if e == p {
 					return True
@@ -371,15 +373,15 @@ func (a *Call) Eval(c *Context) Value {
 	var this Value
 	switch f := a.Fn.(type) {
 	case *Ident:
-		fn = Global.GetName(c.T, f.Name)
+		fn = Global.GetName(c.Th, f.Name)
 	case *Mem:
 		this = f.E.Eval(c)
 		meth := f.M.Eval(c)
-		fn = c.T.Lookup(this, ToStr(meth))
+		fn = c.Th.Lookup(this, ToStr(meth))
 	default:
 		fn = a.Fn.Eval(c)
 	}
-	return c.T.PushCall(fn, this, as, args...)
+	return c.Th.PushCall(fn, this, as, args...)
 }
 
 func argspec(args []Arg) *ArgSpec {

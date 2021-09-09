@@ -6,7 +6,11 @@ package query
 import (
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/apmckinlay/gsuneido/db19"
+	"github.com/apmckinlay/gsuneido/db19/stor"
+	rt "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
@@ -67,4 +71,41 @@ func idxsToS(idxs [][]string) string {
 		tmp[i] = strings.Join(ix, "+")
 	}
 	return strings.Join(tmp, ", ")
+}
+
+func TestForeignKeys(*testing.T) {
+	store := stor.HeapStor(8192)
+	db, err := db19.CreateDb(store)
+	ck(err)
+	db19.StartConcur(db, 50*time.Millisecond)
+	defer db.Close()
+	MakeSuTran = func(qt QueryTran) *rt.SuTran { return nil }
+	act := func(act string) {
+		ut := db.NewUpdateTran()
+		defer ut.Commit()
+		n := DoAction(ut, act)
+		assert.This(n).Is(1)
+	}
+	DoAdmin(db, "create hdr (a,b) key(a)")
+	act("insert { a: 1, b: 2 } into hdr")
+	act("insert { a: 3, b: 4 } into hdr")
+	DoAdmin(db, "create lin (a,c) key(c) index(a) in hdr")
+	act("insert { a: 1, c: 5 } into lin")
+
+	assert.This(func() { act("delete hdr where a = 1") }).
+		Panics("blocked by foreign key")
+	act("delete hdr where a = 3") // no lin so ok
+
+	assert.This(func() { act("insert { a: 9, c: 6 } into lin") }).
+		Panics("blocked by foreign key")
+	act("insert { a: '', c: 6 } into lin") // '' allowed
+
+	act("insert { a: '', b: 22 } into hdr")
+	act("delete hdr where a = ''")
+
+	assert.This(func() { act("update lin set a = 9") }).
+		Panics("blocked by foreign key")
+	assert.This(func() { act("update hdr set a = 9") }).
+		Panics("blocked by foreign key")
+	act("update lin where a = 1 set a = ''") // '' allowed
 }

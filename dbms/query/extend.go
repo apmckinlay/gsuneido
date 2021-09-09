@@ -17,6 +17,7 @@ type Extend struct {
 	exprCols []string
 	fixed    []Fixed
 	hdr      *Header
+	t        QueryTran
 }
 
 func NewExtend(src Query, cols []string, exprs []ast.Expr) *Extend {
@@ -52,6 +53,11 @@ func (e *Extend) init() {
 		}
 	}
 	e.exprCols = cols
+}
+
+func (e *Extend) SetTran(t QueryTran) {
+	e.t = t
+	e.source.SetTran(t)
 }
 
 func (e *Extend) String() string {
@@ -157,8 +163,14 @@ func (e *Extend) setApproach(index []string, _ interface{}, tran QueryTran) {
 
 func (e *Extend) Header() *Header {
 	hdr := e.source.Header()
-	cols := sset.Union(hdr.Columns, e.cols)
-	flds := append(hdr.Fields, e.cols)
+	cols := append(hdr.Columns, e.cols...)
+	physical := make([]string, 0, len(cols))
+	for i, col := range e.cols {
+		if e.exprs[i] != nil {
+			physical = append(physical, col)
+		}
+	}
+	flds := append(hdr.Fields, physical)
 	return NewHeader(flds, cols)
 }
 
@@ -175,16 +187,13 @@ func (e *Extend) extendRow(row Row) Row {
 		e.hdr = e.Header()
 	}
 	var th Thread // ???
-	context := ast.Context{T: &th,
-		Rec: SuRecordFromRow(row, e.hdr, "", nil)}
+	context := ast.Context{Th: &th, Tran: MakeSuTran(e.t), Hdr: e.hdr}
 	var rb RecordBuilder
-	for i, col := range e.cols {
-		if e := e.exprs[i]; e != nil {
+	for _, e := range e.exprs {
+		if e != nil {
+			context.Row = append(row, DbRec{Record: rb.Build()})
 			val := e.Eval(&context)
 			rb.Add(val.(Packable))
-			context.Rec.PreSet(SuStr(col), val)
-		} else {
-			rb.Add(EmptyStr.(Packable))
 		}
 	}
 	return append(row, DbRec{Record: rb.Build()})
