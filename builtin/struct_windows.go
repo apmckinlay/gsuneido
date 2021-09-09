@@ -528,6 +528,7 @@ func scnToOb(scn *SCNotification) *SuObject {
 	ob.Put(nil, SuStr("x"), IntVal(int(scn.x)))
 	ob.Put(nil, SuStr("y"), IntVal(int(scn.y)))
 	ob.Put(nil, SuStr("token"), IntVal(int(scn.token)))
+	ob.Put(nil, SuStr("updated"), IntVal(int(scn.updated)))
 	return ob
 }
 
