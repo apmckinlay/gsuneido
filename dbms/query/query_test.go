@@ -4,6 +4,7 @@
 package query
 
 import (
+	"fmt"
 	"strings"
 	"testing"
 	"time"
@@ -108,4 +109,48 @@ func TestForeignKeys(*testing.T) {
 	assert.This(func() { act("update hdr set a = 9") }).
 		Panics("blocked by foreign key")
 	act("update lin where a = 1 set a = ''") // '' allowed
+
+	DoAdmin(db, "create master (m) key(m)")
+	act("insert { m: 1 } into master")
+	DoAdmin(db, "create detail (m, d) key(d) index(m) in master cascade")
+	act("insert { m: 1, d: 10 } into detail")
+	act("insert { m: 1, d: 11 } into detail")
+	act("insert { m: 1, d: 12 } into detail")
+	assert.This(db.GetState().Meta.GetRoInfo("detail").Nrows).Is(3)
+	act("delete master") // cascade
+	assert.This(db.GetState().Meta.GetRoInfo("detail").Nrows).Is(0)
+
+	DoAdmin(db, "create header (m) key(m)")
+	act("insert { m: 1 } into header")
+	DoAdmin(db, "create lines (m, d) key(d) index(m) in header cascade")
+	act("insert { m: 1, d: 10 } into lines")
+	act("insert { m: 1, d: 11 } into lines")
+	act("insert { m: 1, d: 12 } into lines")
+	assert.This(queryAll(db, "lines")).
+		Is("m=1 d=10 | m=1 d=11 | m=1 d=12")
+	act("update header set m = 2")
+	assert.This(queryAll(db, "lines")).
+		Is("m=2 d=10 | m=2 d=11 | m=2 d=12")
+
+	db.Check()
+}
+
+func queryAll(db *db19.Database, query string) string {
+	tran := sizeTran{db.NewReadTran()}
+	q := ParseQuery(query, tran)
+	q, _ = Setup(q, ReadMode, tran)
+	hdr := q.Header()
+	sep := ""
+	var sb strings.Builder
+	for row := q.Get(rt.Next); row != nil; row = q.Get(rt.Next) {
+		sep2 := ""
+		sb.WriteString(sep)
+		for _, col := range hdr.Columns {
+			val := row.GetVal(hdr, col, nil, nil)
+			fmt.Fprint(&sb, sep2, col, "=", val.String())
+			sep2 = " "
+		}
+		sep = " | "
+	}
+	return sb.String()
 }

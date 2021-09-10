@@ -350,6 +350,7 @@ func (t *UpdateTran) Delete(table string, off uint64) {
 	}
 	for i := range ts.Indexes {
 		ti.Indexes[i].Delete(keys[i], off)
+		t.fkeyDeleteCascade(ts.Indexes[i].FkToHere, keys[i])
 	}
 	t.ck(t.db.ck.Write(t.ct, table, keys))
 	assert.Msg("Delete Nrows").That(ti.Nrows > 0)
@@ -371,9 +372,26 @@ func (t *UpdateTran) fkeyDeleteBlock(fkToHere []schema.Fkey, key string) {
 	}
 }
 
+func (t *UpdateTran) fkeyDeleteCascade(fkToHere []schema.Fkey, key string) {
+	if key == "" {
+		return
+	}
+	for i := range fkToHere {
+		fk := &fkToHere[i]
+		if fk.Mode&schema.CascadeDeletes != 0 {
+			iter := index.NewOverIter(fk.Table, fk.IIndex)
+			iter.Range(index.Range{Org: key, End: key + ixkey.Sep + ixkey.Max})
+			for iter.Next(t); !iter.Eof(); iter.Next(t) {
+				_, off := iter.Cur()
+				t.Delete(fk.Table, off)
+			}
+		}
+	}
+}
+
 // exists is used by fkeyOutputBlock and fkeyDeleteBlock
 func (t *UpdateTran) exists(table string, iIndex int, key string) bool {
-	//TODO make a version of Lookup instead of needing iterator
+	//TODO make a version of Lookup instead of needing an iterator
 	if nil == t.meta.GetRoInfo(table) {
 		return false
 	}
@@ -422,6 +440,8 @@ func (t *UpdateTran) Update(table string, oldoff uint64, newrec rt.Record) uint6
 			} else {
 				ix.Delete(oldkeys[i], oldoff)
 				ix.Insert(newkeys[i], newoff)
+				t.fkeyUpdate(ts.Indexes[i].FkToHere,
+					newrec, oldkeys[i], ts.Columns, ts.Indexes[i].Columns)
 			}
 		}
 	}
@@ -434,6 +454,35 @@ func (t *UpdateTran) Update(table string, oldoff uint64, newrec rt.Record) uint6
 	}
 	t.db.CallTrigger(t.thread(), t, table, oldrec, newrec)
 	return newoff
+}
+
+func (t *UpdateTran) fkeyUpdate(fkToHere []schema.Fkey,
+	rec rt.Record, key string, cols, ixcols []string) {
+	for i := range fkToHere {
+		fk := &fkToHere[i]
+		if fk.Mode&schema.CascadeUpdates == 0 {
+			continue
+		}
+		ts := t.GetSchema(fk.Table)
+		ixcols2 := fk.Columns
+		iter := index.NewOverIter(fk.Table, fk.IIndex)
+		iter.Range(index.Range{Org: key, End: key + ixkey.Sep + ixkey.Max})
+		for iter.Next(t); !iter.Eof(); iter.Next(t) {
+			_, off := iter.Cur()
+			oldrec := t.GetRecord(off)
+			rb := rt.RecordBuilder{}
+			for i, col := range ts.Columns {
+				if j := strs.Index(ixcols2, col); j != -1 {
+					k := strs.Index(cols, ixcols[j])
+					rb.AddRaw(rec.GetRaw(k))
+				} else {
+					rb.AddRaw(oldrec.GetRaw(i))
+				}
+			}
+			newrec := rb.Build() //TODO trim
+			t.Update(fk.Table, off, newrec)
+		}
+	}
 }
 
 func (t *UpdateTran) ck(result bool) {
