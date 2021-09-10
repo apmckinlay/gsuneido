@@ -163,7 +163,11 @@ func (b *RecordBuilder) Add(p Packable) *RecordBuilder {
 
 // AddRaw appends a string containing an already packed value
 func (b *RecordBuilder) AddRaw(s string) *RecordBuilder {
-	b.Add(Packed(s))
+	if s == "" {
+		b.Add(SuStr(""))
+	} else {
+		b.Add(Packed(s))
+	}
 	return b
 }
 
@@ -184,6 +188,16 @@ func (p Packed) PackSize2(int32, packStack) int {
 
 func (p Packed) PackSize3() int {
 	return len(p)
+}
+
+// Trim removes trailing empty fields
+func (b *RecordBuilder) Trim() *RecordBuilder {
+	n := len(b.vals)
+	for n > 0 && b.vals[n-1] == SuStr("") {
+		n--
+	}
+	b.vals = b.vals[:n]
+	return b
 }
 
 // Build

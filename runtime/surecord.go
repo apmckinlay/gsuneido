@@ -859,7 +859,7 @@ func (r *SuRecord) ToRecord(t *Thread, hdr *Header) Record {
 	if tsField != "" && !r.isReadOnly() {
 		r.ob.set(SuStr(tsField), ts) // NOTE: ob.set
 	}
-	return rb.Build()
+	return rb.Trim().Build()
 }
 
 // RecordMethods is initialized by the builtin package

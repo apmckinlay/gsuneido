@@ -479,7 +479,7 @@ func (t *UpdateTran) fkeyUpdate(fkToHere []schema.Fkey,
 					rb.AddRaw(oldrec.GetRaw(i))
 				}
 			}
-			newrec := rb.Build() //TODO trim
+			newrec := rb.Trim().Build()
 			t.Update(fk.Table, off, newrec)
 		}
 	}

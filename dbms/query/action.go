@@ -68,7 +68,7 @@ func (a *insertQueryAction) execute(ut *db19.UpdateTran) int {
 				rb.AddRaw(row.GetRaw(hdr, f))
 			}
 		}
-		rec := rb.Build()
+		rec := rb.Trim().Build()
 		ut.Output(a.table, rec)
 		n++
 	}

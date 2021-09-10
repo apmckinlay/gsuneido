@@ -833,7 +833,7 @@ func (ob *SuObject) ToRecord(t *Thread, hdr *Header) Record {
 	if tsField != "" && !ob.readonly {
 		ob.set(SuStr(tsField), ts)
 	}
-	return rb.Build()
+	return rb.Trim().Build()
 }
 
 func (ob *SuObject) Sort(t *Thread, lt Value) {

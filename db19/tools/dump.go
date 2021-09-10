@@ -138,7 +138,7 @@ func dumpViews(state *DbState, w *bufio.Writer) int {
 		var b rt.RecordBuilder
 		b.Add(rt.SuStr(name))
 		b.Add(rt.SuStr(def))
-		rec := b.Build()
+		rec := b.Trim().Build()
 		writeInt(w, len(rec))
 		w.WriteString(string(rec))
 		nrecs++
