@@ -4,6 +4,7 @@
 package runtime
 
 import (
+	"log"
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/util/sset"
@@ -46,6 +47,9 @@ func (row Row) GetVal(hdr *Header, fld string, th *Thread, tran *SuTran) Value {
 
 // GetRaw does NOT handle _lower! or rules
 func (row Row) GetRaw(hdr *Header, fld string) string {
+	if strings.HasSuffix(fld, "_lower!") {
+		log.Println("ERROR: unhandled GetRaw on:", fld)
+	}
 	x, _ := row.getRaw2(hdr, fld)
 	return x
 }
@@ -173,10 +177,21 @@ func (hdr *Header) GetFields() []string {
 }
 
 func (hdr *Header) EqualRows(r1, r2 Row) bool {
-	for _, col := range hdr.Columns {
-		if r1.GetRaw(hdr, col) != r2.GetRaw(hdr, col) {
+	return EqualRows(hdr, r1, hdr, r2, hdr.Columns)
+}
+
+func EqualRows(hdr1 *Header, r1 Row, hdr2 *Header, r2 Row, cols []string) bool {
+	for _, col := range cols {
+		if r1.equalGet(hdr1, col) != r2.equalGet(hdr2, col) {
 			return false
 		}
 	}
 	return true
+}
+
+func (row Row) equalGet(hdr *Header, col string) string {
+	if strings.HasSuffix(col, "_lower!") {
+		col = col[:len(col)-7]
+	}
+	return row.GetRaw(hdr, col)
 }

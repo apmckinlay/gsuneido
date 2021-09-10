@@ -74,12 +74,7 @@ func (c *Compatible) equal(row1, row2 Row) bool {
 	if c.disjoint != "" {
 		return false
 	}
-	for _, col := range c.allCols {
-		if row1.GetRaw(c.hdr1, col) != row2.GetRaw(c.hdr2, col) {
-			return false
-		}
-	}
-	return true
+	return EqualRows(c.hdr1, row1, c.hdr2, row2, c.allCols)
 }
 
 func bestKey(q Query, mode Mode) []string {
