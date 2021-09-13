@@ -221,7 +221,10 @@ func (*DbmsLocal) Token() string {
 
 func (dbms *DbmsLocal) Transaction(update bool) ITran {
 	if update {
-		return &UpdateTranLocal{dbms.db.NewUpdateTran()}
+		if t := dbms.db.NewUpdateTran(); t != nil {
+			return &UpdateTranLocal{t}
+		}
+		return nil
 	}
 	return &ReadTranLocal{dbms.db.NewReadTran()}
 }

@@ -139,8 +139,8 @@ func TestSchemaChange(*testing.T) {
 	store := stor.HeapStor(8192)
 	db, err := CreateDb(store)
 	ck(err)
-	createTbl(db)
 	db.CheckerSync()
+	createTbl(db)
 	db.AlterCreate(&schema.Schema{
 		Table:   "mytable",
 		Indexes: []schema.Index{{Mode: 'i', Columns: []string{"two"}}}})
@@ -188,3 +188,15 @@ func TestSchemaChange(*testing.T) {
 		})
 	})
 }
+
+func TestTooMany(*testing.T) {
+	store := stor.HeapStor(8192)
+	db, err := CreateDb(store)
+	ck(err)
+	db.CheckerSync()
+	for i := 0; i < maxTrans; i++ {
+		assert.That(nil != db.NewUpdateTran())
+	}
+	assert.That(nil == db.NewUpdateTran())
+}
+

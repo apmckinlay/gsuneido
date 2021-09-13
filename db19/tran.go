@@ -215,6 +215,9 @@ type UpdateTran struct {
 
 func (db *Database) NewUpdateTran() *UpdateTran {
 	ct := db.ck.StartTran()
+	if ct == nil {
+		return nil
+	}
 	meta := ct.state.Meta.Mutable()
 	return &UpdateTran{ct: ct,
 		ReadTran: ReadTran{tran: tran{db: db, meta: meta}}}
@@ -252,7 +255,7 @@ func (t *UpdateTran) Commit() {
 	t.ck(t.db.ck.Commit(t))
 }
 
-// commit is internal, called by checker (to serialize)
+// commit is internal, called by checkco (to serialize)
 func (t *UpdateTran) commit() int {
 	t.db.UpdateState(func(state *DbState) {
 		state.Meta = t.meta.LayeredOnto(state.Meta)
