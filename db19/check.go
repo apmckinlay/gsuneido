@@ -5,12 +5,12 @@ package db19
 
 import (
 	"log"
+	"math"
 	"math/rand"
 	"strconv"
 	"sync/atomic"
 
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util/ints"
 	"github.com/apmckinlay/gsuneido/util/ordset"
 	"github.com/apmckinlay/gsuneido/util/ranges"
 )
@@ -71,7 +71,7 @@ func (t *CkTran) String() string {
 }
 
 func NewCheck(db *Database) *Check {
-	return &Check{db: db, trans: make(map[int]*CkTran), oldest: ints.MaxInt}
+	return &Check{db: db, trans: make(map[int]*CkTran), oldest: math.MaxInt}
 }
 
 func (ck *Check) Run(fn func() error) error {
@@ -87,7 +87,7 @@ func (ck *Check) StartTran() *CkTran {
 	if ck.db != nil {
 		state = ck.db.GetState()
 	}
-	t := &CkTran{start: start, end: ints.MaxInt, birth: ck.clock,
+	t := &CkTran{start: start, end: math.MaxInt, birth: ck.clock,
 		tables: make(map[string]*cktbl), state: state}
 	ck.trans[start] = t
 	return t
@@ -237,7 +237,7 @@ func (ck *Check) abort1of(t1, t2 *CkTran, act1, act2 string) bool {
 }
 
 func (t *CkTran) isEnded() bool {
-	return t.end != ints.MaxInt
+	return t.end != math.MaxInt
 }
 
 // Abort cancels a transaction.
@@ -255,7 +255,7 @@ func (ck *Check) abort(tn int, reason string) bool {
 	t.conflict.Store(reason)
 	delete(ck.trans, tn)
 	if tn == ck.oldest {
-		ck.oldest = ints.MaxInt // need to find the new oldest
+		ck.oldest = math.MaxInt // need to find the new oldest
 	}
 	ck.cleanEnded()
 	return true
@@ -286,7 +286,7 @@ func (ck *Check) commit(ut *UpdateTran) []string {
 
 	t.end = ck.next()
 	if t.start == ck.oldest {
-		ck.oldest = ints.MaxInt // need to find the new oldest
+		ck.oldest = math.MaxInt // need to find the new oldest
 	}
 	ck.cleanEnded()
 	return t.tablesWritten()
@@ -310,9 +310,9 @@ func overlap(t1, t2 *CkTran) bool {
 // that finished before the earliest outstanding start time.
 func (ck *Check) cleanEnded() {
 	// find oldest start of non-ended (would be faster with a heap)
-	if ck.oldest == ints.MaxInt {
+	if ck.oldest == math.MaxInt {
 		for _, t := range ck.trans {
-			if t.end == ints.MaxInt && t.start < ck.oldest {
+			if t.end == math.MaxInt && t.start < ck.oldest {
 				ck.oldest = t.start
 			}
 		}
@@ -320,7 +320,7 @@ func (ck *Check) cleanEnded() {
 	}
 	// remove any ended transactions older than this
 	for tn, t := range ck.trans {
-		if t.end != ints.MaxInt && t.end < ck.oldest {
+		if t.end != math.MaxInt && t.end < ck.oldest {
 			traceln("REMOVE", tn, "->", t.end)
 			delete(ck.trans, tn)
 		}

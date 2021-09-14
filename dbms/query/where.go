@@ -4,6 +4,7 @@
 package query
 
 import (
+	"math"
 	"sort"
 	"strconv"
 	"strings"
@@ -115,7 +116,7 @@ func (w *Where) Nrows() int {
 		return w.source.Nrows() / 2
 	}
 	var n int
-	nmin := ints.MaxInt
+	nmin := math.MaxInt
 	nsrc := float64(w.source.Nrows())
 	for i := range w.idxSels {
 		ix := &w.idxSels[i]

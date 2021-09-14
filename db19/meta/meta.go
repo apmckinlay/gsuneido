@@ -6,6 +6,7 @@ package meta
 import (
 	"errors"
 	"log"
+	"math"
 	"math/bits"
 
 	"github.com/apmckinlay/gsuneido/db19/index"
@@ -13,7 +14,6 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/meta/schema"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util/ints"
 	"github.com/apmckinlay/gsuneido/util/sset"
 	"github.com/apmckinlay/gsuneido/util/strs"
 )
@@ -589,7 +589,7 @@ func (m *Meta) Write(store *stor.Stor, flatten bool) (offSchema, offInfo uint64)
 // 1 means lastmod == m.clock, 2 means lastmod >= m.clock-1, etc.
 func mergeSize(clock int, flatten bool) (npersists, timespan int) {
 	if flatten {
-		clock = ints.MaxInt
+		clock = math.MaxInt
 	}
 	trailingOnes := bits.TrailingZeros(^uint(clock))
 	return trailingOnes, (1 << trailingOnes) - 1
@@ -682,7 +682,7 @@ func clock(offs []uint64) int {
 	case 1:
 		return delayMerge
 	default:
-		return ints.MaxInt
+		return math.MaxInt
 	}
 }
 

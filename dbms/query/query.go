@@ -28,6 +28,7 @@ package query
 
 import (
 	"fmt"
+	"math"
 
 	"github.com/apmckinlay/gsuneido/db19/index"
 	"github.com/apmckinlay/gsuneido/db19/index/btree"
@@ -36,7 +37,6 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/meta/schema"
 	"github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util/ints"
 	"github.com/apmckinlay/gsuneido/util/setset"
 	"github.com/apmckinlay/gsuneido/util/sset"
 )
@@ -180,7 +180,7 @@ func SetupKey(q Query, mode Mode, t QueryTran) Query {
 
 const outOfOrder = 10 // minimal penalty for executing out of order
 
-const impossible = Cost(ints.MaxInt / 64) // allow for adding IMPOSSIBLE's
+const impossible = Cost(math.MaxInt / 64) // allow for adding IMPOSSIBLE's
 
 // gin is used with be e.g. defer be(gin(...))
 func gin(args ...interface{}) string {

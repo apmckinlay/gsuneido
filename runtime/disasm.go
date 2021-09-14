@@ -5,6 +5,7 @@ package runtime
 
 import (
 	"fmt"
+	"math"
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/compile/tokens"
@@ -77,7 +78,7 @@ func DisasmMixed(fn *SuFunc, src string) string {
 				if sp < len(s) {
 					printSrc(in, s[sp:])
 				}
-				cp = ints.MaxInt
+				cp = math.MaxInt
 				if nest == 0 {
 					sp = len(src)
 				}
@@ -180,7 +181,7 @@ func (d *dasm) next() {
 			s += d.fn.ArgSpecs[ai-len(StdArgSpecs)].String()[7:]
 		}
 	}
-	srcLim := ints.MaxInt
+	srcLim := math.MaxInt
 	if nestedfn != nil && nestedfn.SrcBase > 0 {
 		srcLim = nestedfn.SrcBase
 	}
@@ -200,7 +201,7 @@ func DisasmRaw(code string, fn func(i int)) {
 			i++
 		case op.Int, op.LoadStore, op.Global, op.Super,
 			op.Jump, op.JumpTrue, op.JumpFalse, op.JumpIs, op.JumpIsnt,
-			 op.And, op.Or, op.QMark, op.In, op.Catch:
+			op.And, op.Or, op.QMark, op.In, op.Catch:
 			i += 2
 		case op.ForIn, op.Try:
 			i += 3

@@ -4,6 +4,7 @@
 package builtin
 
 import (
+	"math"
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/util/ints"
@@ -296,7 +297,7 @@ func init() {
 		}),
 		"Replace": method("(pattern, block = '', count = false)",
 			func(t *Thread, this Value, args []Value) Value {
-				count := ints.MaxInt
+				count := math.MaxInt
 				if args[2] != False {
 					count = ToInt(args[2])
 				}

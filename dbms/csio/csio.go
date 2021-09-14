@@ -6,12 +6,12 @@ package csio
 import (
 	"bufio"
 	"io"
+	"math"
 
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/runtime/trace"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/hacks"
-	"github.com/apmckinlay/gsuneido/util/ints"
 
 	"github.com/apmckinlay/gsuneido/dbms/commands"
 )
@@ -123,7 +123,7 @@ func ck(err error) {
 // GetInt reads a zig zag encoded varint
 func (rw *ReadWrite) GetInt() int {
 	n := rw.GetInt64()
-	assert.That(int64(ints.MinInt) <= n && n <= int64(ints.MaxInt))
+	assert.That(int64(math.MinInt) <= n && n <= int64(math.MaxInt))
 	return int(n)
 }
 
