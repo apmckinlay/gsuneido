@@ -37,6 +37,7 @@ type ckWrite struct {
 	t     *CkTran
 	table string
 	keys  []string
+	ret   chan bool
 }
 
 type ckCommit struct {
@@ -76,8 +77,9 @@ func (ck *CheckCo) Write(t *CkTran, table string, keys []string) bool {
 	if t.Aborted() {
 		return false
 	}
-	ck.c <- &ckWrite{t: t, table: table, keys: keys}
-	return true
+	ret := make(chan bool, 1)
+	ck.c <- &ckWrite{t: t, table: table, keys: keys, ret: ret}
+	return <-ret
 }
 
 func (ck *CheckCo) Commit(ut *UpdateTran) bool {
@@ -151,7 +153,7 @@ func (ck *Check) dispatch(msg interface{}, mergeChan chan todo, resultChan chan 
 	case *ckRead:
 		ck.Read(msg.t, msg.table, msg.index, msg.from, msg.to)
 	case *ckWrite:
-		ck.Write(msg.t, msg.table, msg.keys)
+		msg.ret <- ck.Write(msg.t, msg.table, msg.keys)
 	case *ckAbort:
 		ck.Abort(msg.t, msg.reason)
 	case *ckCommit:
