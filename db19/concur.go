@@ -34,10 +34,10 @@ func StartConcur(db *Database, persistInterval time.Duration) {
 }
 
 type mergeT struct {
-	db         *Database
-	mergeChan  chan todo
-	merges     *mergeList
-	em         *execMulti
+	db        *Database
+	mergeChan chan todo
+	merges    *mergeList
+	em        *execMulti
 }
 
 func merger(db *Database, mergeChan chan todo,

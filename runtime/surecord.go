@@ -928,9 +928,6 @@ func (r *SuRecord) DbUpdate(t *Thread, ob Value) {
 }
 
 func (r *SuRecord) ckModify(op string) {
-	if r.recoff == 0 {
-		panic("record." + op + ": not a database record")
-	}
 	if r.tran == nil {
 		panic("record." + op + ": no Transaction")
 	}
