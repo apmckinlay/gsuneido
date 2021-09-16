@@ -5,6 +5,7 @@ package db19
 
 import (
 	"errors"
+	"sync/atomic"
 
 	"github.com/apmckinlay/gsuneido/db19/index"
 	"github.com/apmckinlay/gsuneido/db19/index/btree"
@@ -15,6 +16,7 @@ import (
 	rt "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/cksum"
 	"github.com/apmckinlay/gsuneido/util/hacks"
+	"github.com/apmckinlay/gsuneido/util/sortlist"
 	"github.com/apmckinlay/gsuneido/util/sset"
 )
 
@@ -28,6 +30,8 @@ type Database struct {
 
 	ck Checker
 	triggers
+	// schemaLock is used to prevent concurrent schema modification
+	schemaLock int64
 }
 
 const magic = "gsndo001"
@@ -132,6 +136,8 @@ func (db *Database) loadedTable(ts *meta.Schema, ti *meta.Info) error {
 // to ensure that merge sees a state consistent with the transaction.
 
 func (db *Database) Create(schema *schema.Schema) {
+	db.lockSchema()
+	defer db.unlockSchema()
 	ts, ti := db.create(schema)
 	db.UpdateState(func(state *DbState) {
 		if state.Meta.GetRoSchema(ts.Table) != nil {
@@ -139,6 +145,16 @@ func (db *Database) Create(schema *schema.Schema) {
 		}
 		state.Meta = state.Meta.PutNew(ts, ti, schema)
 	})
+}
+
+func (db *Database) lockSchema() {
+	if !atomic.CompareAndSwapInt64(&db.schemaLock, 0, 1) {
+		panic("concurrent schema modifications are not allowed")
+	}
+}
+
+func (db *Database) unlockSchema() {
+	atomic.StoreInt64(&db.schemaLock, 0)
 }
 
 func (db *Database) create(schema *schema.Schema) (*meta.Schema, *meta.Info) {
@@ -158,27 +174,39 @@ func (db *Database) createIndexes(idxs []schema.Index) []*index.Overlay {
 	return ov
 }
 
-func (db *Database) Ensure(schema *schema.Schema) {
+func (db *Database) Ensure(sch *schema.Schema) {
+	db.lockSchema()
+	defer db.unlockSchema()
 	handled := false
+	var newIdxs []schema.Index
 	db.UpdateState(func(state *DbState) {
-		ts := state.Meta.GetRoSchema(schema.Table)
-		if ts == nil {
+		ts := state.Meta.GetRoSchema(sch.Table)
+		if ts == nil { // table doesn't exist
 			// TODO check if schema is "full" (see parseadmin.go)
 			// else you could get assertion failures
-			ts, ti := db.create(schema)
+			ts, ti := db.create(sch)
 			state.Meta = state.Meta.Put(ts, ti)
 			handled = true
 
-		} else if schemaSubset(schema, ts) {
+		} else if schemaSubset(sch, ts) {
 			handled = true // nothing to do, common fast case
+		} else {
+			var meta *meta.Meta
+			var err error
+			newIdxs, meta, err = state.Meta.Ensure(sch, db.Store)
+			if err != nil {
+				panic(err)
+			}
+			if len(newIdxs) == 0 {
+				state.Meta = meta
+				handled = true
+			}
+			// else discard meta and just use newIdxs, run Ensure again later
 		}
 	})
+	// outside UpdateState
 	if !handled {
-		// TODO only use ck.Run if adding indexes
-		err := db.ck.Run(func() error { return db.ensure(schema) })
-		if err != nil {
-			panic(err)
-		}
+		db.ensure(sch, newIdxs)
 	}
 }
 
@@ -195,18 +223,78 @@ func schemaSubset(schema *schema.Schema, ts *meta.Schema) bool {
 	return true
 }
 
-func (db *Database) ensure(schema *schema.Schema) (err error) {
+func (db *Database) ensure(sch *schema.Schema, newIdxs []schema.Index) {
+	db.addExclusive(sch.Table)
+	defer db.ck.EndExclusive(sch.Table)
+
+	ov := db.buildIndexes(sch.Table, newIdxs)
+
 	db.UpdateState(func(state *DbState) {
-		var meta *meta.Meta
-		meta, err = state.Meta.Ensure(schema, db.Store)
-		if err == nil {
-			state.Meta = meta
+		_, meta, err := state.Meta.Ensure(sch, db.Store) // final run
+		// now meta and table info are copies
+		if err != nil {
+			panic(err)
 		}
+		if ov != nil {
+			// add newly created indexes
+			ti := meta.GetRoInfo(sch.Table) // not actually read-only
+			i := len(ti.Indexes) - len(ov)
+			copy(ti.Indexes[i:], ov)
+		}
+		state.Meta = meta
 	})
-	return err
+}
+
+func (db *Database) addExclusive(table string) {
+	if !db.ck.AddExclusive(table) {
+		panic("index creation: can't get exclusive access to " + table)
+	}
+}
+
+// buildIndexes creates the new btrees & overlays
+func (db *Database) buildIndexes(table string, newIdxs []schema.Index) []*index.Overlay {
+	if len(newIdxs) == 0 {
+		return nil
+	}
+	rt := db.NewReadTran()
+	ti := rt.meta.GetRoInfo(table)
+	if ti.Nrows == 0 {
+		return nil
+	}
+	nlayers := ti.Indexes[0].Nlayers()
+	list := sortlist.NewUnsorted()
+	iter := index.NewOverIter(table, 0)
+	for iter.Next(rt); !iter.Eof(); iter.Next(rt) {
+		_, off := iter.Cur()
+		list.Add(off)
+	}
+	ov := make([]*index.Overlay, len(newIdxs))
+	for i := range newIdxs {
+		ix := &newIdxs[i]
+		list.Sort(MakeLess(db.Store, &ix.Ixspec))
+		bldr := btree.Builder(db.Store)
+		iter := list.Iter()
+		for off := iter(); off != 0; off = iter() {
+			bldr.Add(btree.GetLeafKey(db.Store, &ix.Ixspec, off), off)
+		}
+		bt := bldr.Finish()
+		bt.SetIxspec(&ix.Ixspec)
+		ov[i] = index.OverlayForN(bt, nlayers)
+	}
+	return ov
+}
+
+func MakeLess(store *stor.Stor, is *ixkey.Spec) func(x, y uint64) bool {
+	return func(x, y uint64) bool {
+		xr := OffToRec(store, x)
+		yr := OffToRec(store, y)
+		return is.Compare(xr, yr) < 0
+	}
 }
 
 func (db *Database) RenameTable(from, to string) bool {
+	db.lockSchema()
+	defer db.unlockSchema()
 	result := false
 	db.UpdateState(func(state *DbState) {
 		if m := state.Meta.RenameTable(from, to); m != nil {
@@ -219,6 +307,8 @@ func (db *Database) RenameTable(from, to string) bool {
 
 // Drop removes a table or view
 func (db *Database) Drop(table string) error {
+	db.lockSchema()
+	defer db.unlockSchema()
 	var err error
 	db.UpdateState(func(state *DbState) {
 		if m := state.Meta.Drop(table); m != nil {
@@ -232,6 +322,8 @@ func (db *Database) Drop(table string) error {
 
 // AlterRename renames columns
 func (db *Database) AlterRename(table string, from, to []string) bool {
+	db.lockSchema()
+	defer db.unlockSchema()
 	result := false
 	db.UpdateState(func(state *DbState) {
 		if m := state.Meta.AlterRename(table, from, to); m != nil {
@@ -243,26 +335,33 @@ func (db *Database) AlterRename(table string, from, to []string) bool {
 }
 
 // AlterCreate creates columns or indexes
-func (db *Database) AlterCreate(schema *schema.Schema) {
-	err := db.ck.Run(func() error { return db.alterCreate(schema) })
-	if err != nil {
-		panic(err)
-	}
-}
+func (db *Database) AlterCreate(sch *schema.Schema) {
+	db.lockSchema()
+	defer db.unlockSchema()
+	db.addExclusive(sch.Table)
+	defer db.ck.EndExclusive(sch.Table)
 
-func (db *Database) alterCreate(schema *schema.Schema) (err error) {
+	ov := db.buildIndexes(sch.Table, sch.Indexes)
 	db.UpdateState(func(state *DbState) {
-		var meta *meta.Meta
-		meta, err = state.Meta.AlterCreate(schema, db.Store)
-		if err == nil {
-			state.Meta = meta
+		meta, err := state.Meta.AlterCreate(sch, db.Store)
+		// now meta and table info are copies
+		if err != nil {
+			panic(err)
 		}
+		if ov != nil {
+			// add newly created indexes
+			ti := meta.GetRoInfo(sch.Table) // not really read-only
+			i := len(ti.Indexes) - len(ov)
+			copy(ti.Indexes[i:], ov)
+		}
+		state.Meta = meta
 	})
-	return err
 }
 
 // AlterCreate removes columns or indexes
 func (db *Database) AlterDrop(schema *schema.Schema) bool {
+	db.lockSchema()
+	defer db.unlockSchema()
 	result := false
 	db.UpdateState(func(state *DbState) {
 		if m := state.Meta.AlterDrop(schema); m != nil {

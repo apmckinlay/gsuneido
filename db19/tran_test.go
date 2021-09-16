@@ -200,3 +200,35 @@ func TestTooMany(*testing.T) {
 	assert.That(nil == db.NewUpdateTran())
 }
 
+func TestExclusive(*testing.T) {
+	store := stor.HeapStor(8192)
+	db, err := CreateDb(store)
+	ck(err)
+	db.CheckerSync()
+
+	test := func() {
+		createTbl(db)
+		assert.That(db.ck.AddExclusive("mytable"))
+		ut := db.NewUpdateTran()
+		assert.This(db.ck.Write(ut.ct, "mytable", []string{""})).Is(false)
+		assert.This(ut.ct.conflict.Load()).Is("conflict with index creation (mytable)")
+		db.ck.EndExclusive("mytable")
+
+		ut = db.NewUpdateTran()
+		assert.That(db.ck.Write(ut.ct, "mytable", []string{""}))
+		assert.This(db.ck.AddExclusive("mytable")).Is(false)
+		ut.Abort()
+
+		ut = db.NewUpdateTran()
+		assert.That(db.ck.Write(ut.ct, "mytable", []string{""}))
+		ut.Commit()
+	}
+
+	test()
+
+	db, err = CreateDb(store)
+	ck(err)
+	StartConcur(db, 50*time.Millisecond)
+
+	test()
+}

@@ -21,7 +21,7 @@ func TestCheckCoTimeout(t *testing.T) {
 	}
 	defer func(ma int) { MaxAge = ma }(MaxAge)
 	MaxAge = 1
-	ck := StartCheckCo(nil, nil, nil, nil)
+	ck := StartCheckCo(nil, nil, nil)
 	tran := ck.StartTran()
 	assert.T(t).False(tran.Aborted())
 	time.Sleep(2 * time.Second)
@@ -32,7 +32,7 @@ func TestCheckCoTimeout(t *testing.T) {
 func TestCheckCoRandom(*testing.T) {
 	db, err := CreateDb(stor.HeapStor(8192))
 	assert.That(err == nil)
-	db.ck = StartCheckCo(db, mergeSink(), resultSink(), nil)
+	db.ck = StartCheckCo(db, mergeSink(), nil)
 	nThreads := 8
 	nTrans := 10000
 	if testing.Short() {
@@ -55,15 +55,6 @@ func TestCheckCoRandom(*testing.T) {
 
 func mergeSink() chan todo {
 	c := make(chan todo)
-	go func() {
-		for range c {
-		}
-	}()
-	return c
-}
-
-func resultSink() chan error {
-	c := make(chan error)
 	go func() {
 		for range c {
 		}

@@ -17,11 +17,6 @@ type CheckCo struct {
 
 // message types
 
-type ckRun struct {
-	fn  func() error
-	ret chan error
-}
-
 type ckStart struct {
 	ret chan *CkTran
 }
@@ -53,10 +48,13 @@ type ckAbort struct {
 	reason string
 }
 
-func (ck *CheckCo) Run(fn func() error) error {
-	ret := make(chan error, 1)
-	ck.c <- &ckRun{fn: fn, ret: ret}
-	return <-ret
+type ckAddExcl struct {
+	tables []string
+	ret   chan bool
+}
+
+type ckEndExcl struct {
+	tables []string
 }
 
 func (ck *CheckCo) StartTran() *CkTran {
@@ -100,13 +98,23 @@ func (t *CkTran) Aborted() bool {
 	return t.conflict.Load() != nil
 }
 
+// AddExclusive also does sync (handled in dispatch)
+func (ck *CheckCo) AddExclusive(tables ...string) bool {
+	ret := make(chan bool, 1)
+	ck.c <- &ckAddExcl{ret: ret, tables: tables}
+	return <-ret
+}
+
+func (ck *CheckCo) EndExclusive(tables ...string) {
+	ck.c <- &ckEndExcl{tables: tables}
+}
+
 //-------------------------------------------------------------------
 
-func StartCheckCo(db *Database, mergeChan chan todo, resultChan chan error,
-	allDone chan void) *CheckCo {
+func StartCheckCo(db *Database, mergeChan chan todo, allDone chan void) *CheckCo {
 	ck := NewCheck(db)
 	c := make(chan interface{}, 4)
-	go checker(ck, c, mergeChan, resultChan)
+	go checker(ck, c, mergeChan)
 	return &CheckCo{c: c, allDone: allDone}
 }
 
@@ -115,7 +123,7 @@ func (ck *CheckCo) Stop() {
 	<-ck.allDone // wait
 }
 
-func checker(ck *Check, c chan interface{}, mergeChan chan todo, resultChan chan error) {
+func checker(ck *Check, c chan interface{}, mergeChan chan todo) {
 	defer func() {
 		if e := recover(); e != nil {
 			debug.PrintStack()
@@ -133,7 +141,7 @@ func checker(ck *Check, c chan interface{}, mergeChan chan todo, resultChan chan
 				}
 				return
 			}
-			ck.dispatch(msg, mergeChan, resultChan)
+			ck.dispatch(msg, mergeChan)
 		case <-ticker.C:
 			// fmt.Println("checker chan", len(c), "merge chan", len(mergeChan))
 			ck.tick()
@@ -142,12 +150,8 @@ func checker(ck *Check, c chan interface{}, mergeChan chan todo, resultChan chan
 }
 
 // dispatch runs in the checker goroutine
-func (ck *Check) dispatch(msg interface{}, mergeChan chan todo, resultChan chan error) {
+func (ck *Check) dispatch(msg interface{}, mergeChan chan todo) {
 	switch msg := msg.(type) {
-	case *ckRun:
-		mergeChan <- todo{fn: msg.fn}
-		err := <-resultChan
-		msg.ret <- err
 	case *ckStart:
 		msg.ret <- ck.StartTran()
 	case *ckRead:
@@ -165,6 +169,17 @@ func (ck *Check) dispatch(msg interface{}, mergeChan chan todo, resultChan chan 
 		msg.t.commit()
 		msg.ret <- true
 		mergeChan <- todo{tables: result, meta: msg.t.meta}
+	case *ckAddExcl:
+		if !ck.AddExclusive(msg.tables...) {
+			msg.ret <- false
+		}
+		// ensure pending merges are all complete
+		sync := make(chan struct{})
+		mergeChan <- todo{sync: sync}
+		<-sync
+		msg.ret <- true
+	case *ckEndExcl:
+		ck.EndExclusive(msg.tables...)
 	default:
 		panic("checker unknown message type")
 	}
@@ -172,12 +187,13 @@ func (ck *Check) dispatch(msg interface{}, mergeChan chan todo, resultChan chan 
 
 // Checker is the interface for Check and CheckCo
 type Checker interface {
-	Run(fn func() error) error
 	StartTran() *CkTran
 	Read(t *CkTran, table string, index int, from, to string) bool
 	Write(t *CkTran, table string, keys []string) bool
 	Abort(t *CkTran, reason string) bool
 	Commit(t *UpdateTran) bool
+	AddExclusive(tables ...string) bool
+	EndExclusive(tables ...string)
 	Stop()
 }
 

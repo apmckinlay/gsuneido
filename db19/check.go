@@ -42,6 +42,8 @@ type Check struct {
 	clock int
 	// trans hold the outstanding/overlapping update transactions
 	trans map[int]*CkTran
+	// exclusive controls access to tables
+	exclusive map[string]int
 }
 
 type CkTran struct {
@@ -71,7 +73,8 @@ func (t *CkTran) String() string {
 }
 
 func NewCheck(db *Database) *Check {
-	return &Check{db: db, trans: make(map[int]*CkTran), oldest: math.MaxInt}
+	return &Check{db: db, trans: make(map[int]*CkTran), oldest: math.MaxInt,
+		exclusive: make(map[string]int)}
 }
 
 func (ck *Check) Run(fn func() error) error {
@@ -96,6 +99,29 @@ func (ck *Check) StartTran() *CkTran {
 func (ck *Check) next() int {
 	ck.seq++
 	return ck.seq
+}
+
+// AddExclusive is used for creating indexes on existing tables
+func (ck *Check) AddExclusive(tables ...string) bool {
+	for _, table := range tables {
+		for _, t2 := range ck.trans {
+			if tbl, ok := t2.tables[table]; ok && len(tbl.writes) > 0 {
+				return false
+			}
+		}
+	}
+	for _, table := range tables {
+		ck.exclusive[table] = math.MaxInt
+	}
+	return true
+}
+
+func (ck *Check) EndExclusive(tables ...string) {
+	end := ck.next()
+	for _, table := range tables {
+		ck.exclusive[table] = end
+		// after ending, we still block transactions that started previously
+	}
 }
 
 // Read adds a read action.
@@ -159,6 +185,10 @@ func (ck *Check) Write(t *CkTran, table string, keys []string) bool {
 		return false // it's gone, presumably aborted
 	}
 	assert.That(!t.isEnded())
+	if t.start < ck.exclusive[table] {
+		ck.abort(t.start, "conflict with index creation ("+table+")")
+		return false
+	}
 	// check against overlapping transactions
 	for _, t2 := range ck.trans {
 		if t2 != t && overlap(t, t2) {
@@ -269,21 +299,12 @@ func (ck *Check) Commit(ut *UpdateTran) bool {
 }
 
 func (ck *Check) commit(ut *UpdateTran) []string {
-	tn := ut.num()
+	tn := ut.ct.start
 	traceln("commit", tn)
 	t, ok := ck.trans[tn]
 	if !ok {
 		return nil // it's gone, presumably aborted
 	}
-
-	//TODO make this more specific
-	// only have to abort if an index was added to a table that was written
-	if ck.db != nil && // for tests
-		!ut.meta.SameSchemaAs(ck.db.GetState().Meta) {
-		ck.abort(tn, "concurrent schema modification")
-		return nil
-	}
-
 	t.end = ck.next()
 	if t.start == ck.oldest {
 		ck.oldest = math.MaxInt // need to find the new oldest

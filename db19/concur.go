@@ -4,7 +4,6 @@
 package db19
 
 import (
-	"fmt"
 	"log"
 	"runtime/debug"
 	"time"
@@ -23,19 +22,15 @@ const chanBuffers = 4 // ???
 //
 // persist is called by merger every persistInterval
 //
-// Concurrency is separate so we can test functionality
-// without any goroutines or channels.
-//
 // To stop we close the checker channel, and then each following stage
 // closes its output channel.
 // Finally the merger closes the allDone channel
 // so we know the shutdown has finished.
 func StartConcur(db *Database, persistInterval time.Duration) {
 	mergeChan := make(chan todo, chanBuffers)
-	resultChan := make(chan error)
 	allDone := make(chan void)
-	go merger(db, mergeChan, resultChan, persistInterval, allDone)
-	db.ck = StartCheckCo(db, mergeChan, resultChan, allDone)
+	go merger(db, mergeChan, persistInterval, allDone)
+	db.ck = StartCheckCo(db, mergeChan, allDone)
 }
 
 type mergeT struct {
@@ -43,10 +38,9 @@ type mergeT struct {
 	mergeChan  chan todo
 	merges     *mergeList
 	em         *execMulti
-	resultChan chan error
 }
 
-func merger(db *Database, mergeChan chan todo, resultChan chan error,
+func merger(db *Database, mergeChan chan todo,
 	persistInterval time.Duration, allDone chan void) {
 	defer func() {
 		if e := recover(); e != nil {
@@ -58,8 +52,7 @@ func merger(db *Database, mergeChan chan todo, resultChan chan error,
 	ep := startExecPersistMulti()
 	// ep := &execPersistSingle{}
 	merges := &mergeList{}
-	mt := mergeT{db: db, mergeChan: mergeChan, merges: merges, em: em,
-		resultChan: resultChan}
+	mt := mergeT{db: db, mergeChan: mergeChan, merges: merges, em: em}
 	ticker := time.NewTicker(persistInterval)
 	prevState := db.GetState()
 loop:
@@ -86,17 +79,17 @@ loop:
 type todo struct {
 	tables []string
 	meta   *meta.Meta
-	fn     func() error
+	sync   chan struct{}
 }
 
 func (td todo) isZero() bool {
-	return td.tables == nil && td.meta == nil && td.fn == nil
+	return td.tables == nil && td.meta == nil && td.sync == nil
 }
 
 func (mt *mergeT) dispatch(m todo) {
 	for {
-		if m.fn != nil {
-			mt.resultChan <- run(m.fn)
+		if m.sync != nil {
+			m.sync <- struct{}{}
 			return
 		}
 		mt.merges.start(m)
@@ -107,15 +100,6 @@ func (mt *mergeT) dispatch(m todo) {
 			return
 		}
 	}
-}
-
-func run(fn func() error) (err error) {
-	defer func() {
-		if e := recover(); e != nil {
-			err = fmt.Errorf("%v", e)
-		}
-	}()
-	return fn()
 }
 
 // mergeSingle is a single threaded merge for tran_test
@@ -230,7 +214,7 @@ func (ml *mergeList) drain(mergeChan chan todo) todo {
 			if m.isZero() { // channel closed
 				return todo{}
 			}
-			if m.fn == nil && ml.meta.SameSchemaAs(m.meta) {
+			if m.sync == nil && ml.meta.SameSchemaAs(m.meta) {
 				ml.add(m.tables)
 			} else {
 				return m // not added to merge

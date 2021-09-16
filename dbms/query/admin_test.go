@@ -222,3 +222,21 @@ func TestFkey(t *testing.T) {
 	ck(err)
 	check()
 }
+
+func TestCreateIndexOnExistingTable(*testing.T) {
+	db := createTestDb()
+	act := func(act string) {
+		ut := db.NewUpdateTran()
+		defer ut.Commit()
+		n := DoAction(ut, act)
+		assert.This(n).Is(1)
+	}
+	act("insert { a: 1, b: 2, c: 3, d: 4 } into tmp")
+	act("insert { a: 3, b: 4 } into tmp")
+	time.Sleep(60 * time.Millisecond)
+	assert.This(db.Check()).Is(nil)
+	DoAdmin(db, "ensure tmp index(d)")
+	assert.This(db.Check()).Is(nil)
+	DoAdmin(db, "ensure tmp key(c,d)")
+	assert.This(db.Check()).Is(nil)
+}

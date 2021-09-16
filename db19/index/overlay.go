@@ -36,6 +36,18 @@ func OverlayFor(bt *btree.T) *Overlay {
 	return &Overlay{bt: bt, layers: []*ixbuf.T{{}}}
 }
 
+func OverlayForN(bt *btree.T, nlayers int) *Overlay {
+	layers := make([]*ixbuf.T, nlayers)
+	for i := range layers {
+		layers[i] = &ixbuf.T{}
+	}
+	return &Overlay{bt: bt, layers: layers}
+}
+
+func (ov *Overlay) Nlayers() int {
+	return len(ov.layers)
+}
+
 // Mutable returns a modifiable copy of an Overlay
 func (ov *Overlay) Mutable() *Overlay {
 	assert.That(ov.mut == nil)

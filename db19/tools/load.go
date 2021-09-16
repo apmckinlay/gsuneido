@@ -15,7 +15,6 @@ import (
 	. "github.com/apmckinlay/gsuneido/db19"
 	"github.com/apmckinlay/gsuneido/db19/index"
 	"github.com/apmckinlay/gsuneido/db19/index/btree"
-	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/db19/meta"
 	"github.com/apmckinlay/gsuneido/db19/meta/schema"
 	"github.com/apmckinlay/gsuneido/db19/stor"
@@ -188,7 +187,7 @@ func buildIndexes(ts *meta.Schema, list *sortlist.Builder, store *stor.Stor, nre
 		ix := ts.Indexes[i]
 		trace(ix)
 		if i > 0 || ix.Mode != 'k' {
-			list.Sort(makeLess(store, &ix.Ixspec))
+			list.Sort(MakeLess(store, &ix.Ixspec))
 		}
 		before := store.Size()
 		bldr := btree.Builder(store)
@@ -203,14 +202,6 @@ func buildIndexes(ts *meta.Schema, list *sortlist.Builder, store *stor.Stor, nre
 		trace("size", store.Size()-before)
 	}
 	return ov
-}
-
-func makeLess(store *stor.Stor, is *ixkey.Spec) func(x, y uint64) bool {
-	return func(x, y uint64) bool {
-		xr := OffToRec(store, x)
-		yr := OffToRec(store, y)
-		return is.Compare(xr, yr) < 0
-	}
 }
 
 func loadViews(db *Database, in *bufio.Reader, schema string) int {

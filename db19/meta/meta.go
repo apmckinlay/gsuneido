@@ -151,6 +151,14 @@ func newMetaUpdate(m *Meta) *metaUpdate {
 	return &metaUpdate{meta: m}
 }
 
+func (mu *metaUpdate) getSchema(table string) *Schema {
+	if ti, ok := mu.schema.Get(table); ok {
+		cp := *ti // copy
+		return &cp
+	}
+	return nil
+}
+
 func (mu *metaUpdate) putSchema(ts *Schema) {
 	if mu.schema == (SchemaHamt{}) {
 		mu.schema = mu.meta.schema.Mutable()
@@ -182,7 +190,7 @@ func (mu *metaUpdate) freeze() *Meta {
 
 //TODO Derived
 
-func (m *Meta) Ensure(a *schema.Schema, store *stor.Stor) (*Meta, error) {
+func (m *Meta) Ensure(a *schema.Schema, store *stor.Stor) ([]schema.Index, *Meta, error) {
 	ts, ok := m.schema.Get(a.Table)
 	if !ok || ts.isTomb() {
 		panic("ensure: couldn't find " + a.Table)
@@ -195,17 +203,14 @@ func (m *Meta) Ensure(a *schema.Schema, store *stor.Stor) (*Meta, error) {
 			newIdxs = append(newIdxs, a.Indexes[i])
 		}
 	}
-	if ti.Nrows > 0 && len(newIdxs) > 0 {
-		panic("creating indexes on tables with data not implemented") //TODO
-	}
 	if err := createColumns(ts, newCols); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	if err := createIndexes(ts, ti, newIdxs, store); err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	ac := &schema.Schema{Table: a.Table, Indexes: newIdxs}
-	return m.PutNew(ts, ti, ac), nil
+	return newIdxs, m.PutNew(ts, ti, ac), nil
 }
 
 func (m *Meta) RenameTable(from, to string) *Meta {
@@ -282,9 +287,6 @@ func (m *Meta) AlterRename(table string, from, to []string) *Meta {
 
 func (m *Meta) AlterCreate(ac *schema.Schema, store *stor.Stor) (*Meta, error) {
 	ts, ti := m.alterGet(ac.Table)
-	if ti.Nrows > 0 && len(ac.Indexes) > 0 {
-		panic("creating indexes on tables with data not implemented") //TODO
-	}
 	if err := createColumns(ts, ac.Columns); err != nil {
 		return nil, err
 	}
@@ -356,8 +358,8 @@ func (m *Meta) createFkeys(mu *metaUpdate, ac *schema.Schema) {
 			if len(fkCols) == 0 {
 				fkCols = idxs[i].Columns
 			}
-			target, ok := mu.schema.Get(fk.Table)
-			if !ok {
+			target := mu.getSchema(fk.Table)
+			if target == nil {
 				log.Println("foreign key: can't find", fk.Table, "(from "+ac.Table+")")
 				continue
 			}
