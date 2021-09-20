@@ -4,9 +4,10 @@
 package runtime
 
 import (
-	"log"
 	"strings"
 
+	"github.com/apmckinlay/gsuneido/util/ascii"
+	"github.com/apmckinlay/gsuneido/util/hacks"
 	"github.com/apmckinlay/gsuneido/util/sset"
 	"github.com/apmckinlay/gsuneido/util/str"
 	"github.com/apmckinlay/gsuneido/util/strs"
@@ -45,13 +46,34 @@ func (row Row) GetVal(hdr *Header, fld string, th *Thread, tran *SuTran) Value {
 	return SuRecordFromRow(row, hdr, "", tran).Get(th, SuStr(fld))
 }
 
-// GetRaw does NOT handle _lower! or rules
-func (row Row) GetRaw(hdr *Header, fld string) string {
+// GetRaw does NOT handle rules
+func (row Row) GetRaw(hdr *Header, fld string) (x string) {
 	if strings.HasSuffix(fld, "_lower!") {
-		log.Println("ERROR: unhandled GetRaw on:", fld)
+		base := fld[:len(fld)-7]
+		x, _ = row.getRaw2(hdr, base)
+		return lowerRaw(x)
 	}
-	x, _ := row.getRaw2(hdr, fld)
+	x, _ = row.getRaw2(hdr, fld)
 	return x
+}
+
+func lowerRaw(x string) string {
+	if x == "" || x[0] != PackString {
+		return x
+	}
+	hasUpper := false
+	for i := 0; i < len(x); i++ {
+		hasUpper = hasUpper || ascii.IsUpper(x[i])
+	}
+	if !hasUpper {
+		return x
+	}
+	buf := make([]byte, len(x))
+	buf[0] = x[0]
+	for i := 1; i < len(buf); i++ {
+		buf[i] = ascii.ToLower(x[i])
+	}
+	return hacks.BStoS(buf)
 }
 
 func (row Row) getRaw2(hdr *Header, fld string) (string, bool) {
