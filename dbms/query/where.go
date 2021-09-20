@@ -211,16 +211,19 @@ func (w *Where) Transform() Query {
 			}
 		case *Intersect:
 			// distribute where over intersect
+			// no project because Intersect Columns are the intersection
 			q.source = NewWhere(q.source, w.expr, w.t)
 			q.source2 = NewWhere(q.source2, w.expr, w.t)
 			moved = true
 		case *Minus:
 			// distribute where over minus
+			// need project because Minus Columns are just the left side's
 			q.source = NewWhere(q.source, w.expr, w.t)
 			q.source2 = NewWhere(q.source2, w.project(q.source2), w.t)
 			moved = true
 		case *Union:
 			// distribute where over union
+			// need project because Union Columns is the union
 			q.source = NewWhere(q.source, w.project(q.source), w.t)
 			q.source2 = NewWhere(q.source2, w.project(q.source2), w.t)
 			moved = true
