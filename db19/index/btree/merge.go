@@ -26,11 +26,12 @@ type state struct {
 	path []merge
 }
 
-// Merge combines an btree and an iter.
+// MergeAndSave combines an btree and an iter.
 // It is immutable persistent, returning a new btree
 // that usually shares some of the structure of the original btree.
 // Modified nodes are written to storage.
 // It path copies.
+// Normally iter will be small relative to the btree.
 func (bt *btree) MergeAndSave(iter ixbuf.Iter) *btree {
 	bt2 := *bt // copy
 	st := state{bt: &bt2}
@@ -41,7 +42,7 @@ func (bt *btree) MergeAndSave(iter ixbuf.Iter) *btree {
 		}
 		_ = t && trace("merge", key, offstr(off))
 		st.advanceTo(key)
-		st.insertInLeaf(key, off)
+		st.updateLeaf(key, off)
 	}
 	for len(st.path) > 0 {
 		st.ascend()
@@ -98,10 +99,11 @@ func (st *state) advanceTo(key string) {
 	assert.That(len(st.path) == bt.treeLevels+1)
 }
 
-// ascend moves up the tree one level.
+// ascend moves up the tree, normally one level.
 // It saves the node at the current level and updates its parent.
 // It splits if the node is too large.
-// Splitting may propagate up the tree, including making a new root.
+// Splitting may propagate up the tree, possibly making a new root.
+// It removes empty nodes, which may also propagate up the tree.
 func (st *state) ascend() {
 	// _ = T && trace("ascend")
 	m := st.last()
@@ -110,6 +112,20 @@ func (st *state) ascend() {
 		return
 	}
 	bt := st.bt
+
+	// delete empty non-root node
+	if len(m.node) == 0 && len(st.path) > 0 {
+		parent := st.last()
+		parent.getMutableNode()
+		nd,ok := parent.node.delete(m.off)
+		assert.That(ok)
+		parent.node = nd
+		if len(st.path) > 1 {
+			st.ascend() // tail recurse
+		}
+		return
+	}
+
 	insertOff := uint64(0)
 	insertKey := ""
 	if len(m.node) > MaxNodeSize {
@@ -131,7 +147,7 @@ func (st *state) ascend() {
 				get = nil
 			}
 			assert.That(parent.contains(insertKey))
-			parent.insertInNode(insertKey, insertOff, get)
+			parent.updateNode(insertKey, insertOff, get)
 			if len(parent.node) >= (MaxNodeSize*3)/2 {
 				// if it gets too big, leave the node so it will be split
 				_ = t && trace("split - ascend")
@@ -179,12 +195,12 @@ func (st *state) push(off uint64, nd node, limit string) {
 		merge{off: off, node: nd, pos: -1, limit: limit})
 }
 
-func (st *state) insertInLeaf(key string, off uint64) {
+func (st *state) updateLeaf(key string, off uint64) {
 	m := st.last()
 	if m.limit != "" {
 		assert.Msg("key > limit").That(key < m.limit)
 	}
-	m.insertInNode(key, off, st.bt.getLeafKey)
+	m.updateNode(key, off, st.bt.getLeafKey)
 	if len(m.node) >= (MaxNodeSize*3)/2 {
 		// if it gets too big, leave the node so it will be split
 		_ = t && trace("overflow - ascend")
@@ -192,10 +208,10 @@ func (st *state) insertInLeaf(key string, off uint64) {
 	}
 }
 
-func (m *merge) insertInNode(key string, off uint64, get func(uint64) string) {
+func (m *merge) updateNode(key string, off uint64, get func(uint64) string) {
 	nd := m.getMutableNode()
-	m.node = nd.insert(key, off, get) // handles updates and deletes
-	_ = t && trace("after insert", m.node.knowns())
+	m.node = nd.update(key, off, get) // handles updates and deletes
+	_ = t && trace("after update", m.node.knowns())
 }
 
 func (m *merge) getMutableNode() node {

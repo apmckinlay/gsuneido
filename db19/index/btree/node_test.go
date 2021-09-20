@@ -60,7 +60,7 @@ func TestNodeInsert(*testing.T) {
 		// forward
 		fwd := node{}
 		for i, d := range data {
-			fwd = fwd.insert(d, uint64(i), get)
+			fwd = fwd.update(d, uint64(i), get)
 			fwd.checkUpTo(i, data, get)
 		}
 		// fmt.Println("forward")
@@ -70,7 +70,7 @@ func TestNodeInsert(*testing.T) {
 		// reverse
 		rev := node{}
 		for i := len(data) - 1; i >= 0; i-- {
-			rev = rev.insert(data[i], uint64(i), get)
+			rev = rev.update(data[i], uint64(i), get)
 			// rev.checkUpTo(i, data, get)
 			// fmt.Println()
 			// rev.printLeafNode(get)
@@ -91,7 +91,7 @@ func TestNodeInsert(*testing.T) {
 			rnd := node{}
 			perm := rand.Perm(len(data))
 			for _, j := range perm {
-				rnd = rnd.insert(data[j], uint64(j), get)
+				rnd = rnd.update(data[j], uint64(j), get)
 			}
 			assert.This(rnd).Is(fwd)
 		}
@@ -159,7 +159,7 @@ func TestNodeInsertRandom(*testing.T) {
 				func(i, j int) { data[i], data[j] = data[j], data[i] })
 			var nd node
 			for i, d := range data {
-				nd = nd.insert(d, uint64(i), get)
+				nd = nd.update(d, uint64(i), get)
 				// fe.checkUpTo(i, data, get)
 			}
 			nd.checkData(data, get)
@@ -176,7 +176,7 @@ func TestNodeInsertWords(*testing.T) {
 			func(i, j int) { data[i], data[j] = data[j], data[i] })
 		var nd node
 		for i, d := range data {
-			nd = nd.insert(d, uint64(i), get)
+			nd = nd.update(d, uint64(i), get)
 			// fe.checkUpto(i, data, get)
 		}
 		nd.checkData(data, get)
@@ -418,7 +418,7 @@ func TestNodeInsertDelete(*testing.T) {
 			}
 			off := uint64(i)
 			// print("insert", key, off)
-			nd = nd.insert(key, off, get)
+			nd = nd.update(key, off, get)
 			data = append(data, slot{key: key, off: off})
 		} else {
 			// delete
@@ -448,7 +448,7 @@ func BenchmarkNode(b *testing.B) {
 	get := func(i uint64) string { return words[i] }
 	var nd node
 	for i, d := range words {
-		nd = nd.insert(d, uint64(i), get)
+		nd = nd.update(d, uint64(i), get)
 	}
 	ND = nd
 

@@ -104,9 +104,10 @@ func (nd node) search(key string) uint64 {
 	return off
 }
 
-// insert adds a new key to a node. get will be nil for tree nodes.
+// update adds, updates, or deletes a key in a node.
+// get will be nil for tree nodes.
 // Used by merge.
-func (nd node) insert(keyNew string, offNew uint64, get func(uint64) string) node {
+func (nd node) update(keyNew string, offNew uint64, get func(uint64) string) node {
 	if len(nd) == 0 {
 		return nd.append(offNew, 0, "")
 	}

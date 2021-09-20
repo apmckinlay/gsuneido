@@ -233,7 +233,7 @@ func TestCreateIndexOnExistingTable(*testing.T) {
 	}
 	act("insert { a: 1, b: 2, c: 3, d: 4 } into tmp")
 	act("insert { a: 3, b: 4 } into tmp")
-	time.Sleep(60 * time.Millisecond)
+	time.Sleep(100 * time.Millisecond) // ensure persisted
 	assert.This(db.Check()).Is(nil)
 	DoAdmin(db, "ensure tmp index(d)")
 	assert.This(db.Check()).Is(nil)

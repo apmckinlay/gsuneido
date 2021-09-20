@@ -6,12 +6,45 @@ package btree
 import (
 	"fmt"
 	"math/rand"
+	"strconv"
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/db19/index/ixbuf"
+	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/db19/index/testdata"
 	"github.com/apmckinlay/gsuneido/db19/stor"
+	"github.com/apmckinlay/gsuneido/util/assert"
 )
+
+func TestMergeDeleteAll(*testing.T) {
+	GetLeafKey = func(_ *stor.Stor, _ *ixkey.Spec, i uint64) string {
+		return strconv.Itoa(int(i))
+	}
+	defer func(mns int) { MaxNodeSize = mns }(MaxNodeSize)
+	MaxNodeSize = 64
+
+	org, end := 100, 999
+	bldr := Builder(stor.HeapStor(8192))
+	for i := org; i < end; i++ {
+		key := strconv.Itoa(i)
+		bldr.Add(key, uint64(i))
+	}
+	bt := bldr.Finish()
+	// bt.Print()
+
+	ib := &ixbuf.T{}
+	for i := org; i < end; i++ {
+		key := strconv.Itoa(i)
+		ib.Insert(key, ixbuf.Delete|uint64(i))
+	}
+
+	out := bt.MergeAndSave(ib.Iter())
+	// out.Print()
+
+	iter := out.Iterator()
+	iter.Next()
+	assert.That(iter.Eof())
+}
 
 func TestMergeAndSave(*testing.T) {
 	nMerges := 2000
