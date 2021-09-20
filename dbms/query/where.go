@@ -149,7 +149,9 @@ func (w *Where) Transform() Query {
 		switch q := w.source.(type) {
 		case *Where:
 			// combine where's
-			w.expr.Exprs = append(q.expr.Exprs, w.expr.Exprs...)
+			n := len(q.expr.Exprs)
+			exprs := append(q.expr.Exprs[:n:n], w.expr.Exprs...) // copy on write
+			w.expr = &ast.Nary{Tok: tok.And, Exprs: exprs}
 			w.source = q.source
 			continue
 		case *Project:
