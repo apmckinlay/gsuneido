@@ -309,6 +309,9 @@ func (bt *btree) fracPos(key string) float32 {
 			off = it.offset
 		}
 	}
+	if n == 0 {
+		return 0
+	}
 	frac := float32(i) / float32(n)
 	if bt.treeLevels == 0 {
 		return frac
@@ -322,6 +325,9 @@ func (bt *btree) fracPos(key string) float32 {
 			i = n
 			off = it.offset
 		}
+	}
+	if n == 0 {
+		return frac
 	}
 	f := float32(i) / float32(n)
 	frac += f / div
@@ -337,6 +343,9 @@ func (bt *btree) fracPos(key string) float32 {
 			i = n
 			off = it.offset
 		}
+	}
+	if n == 0 {
+		return frac
 	}
 	f = float32(i) / float32(n)
 	frac += f / div
