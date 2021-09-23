@@ -42,6 +42,7 @@ enum {
 	msg_interrupt,
 	msg_embedbrowserobject,
 	msg_unembedbrowserobject,
+    msg_createlexer,
 	msg_shutdown,
 };
 

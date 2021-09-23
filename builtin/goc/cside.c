@@ -110,6 +110,7 @@ uintptr invoke(
 long release(uintptr iunk);
 long EmbedBrowserObject(uintptr hwnd, uintptr pBrowserObject, uintptr pPtr);
 void UnEmbedBrowserObject(uintptr browserObject, uintptr ptr);
+uintptr CreateLexer(const char* name);
 
 #undef UNICODE
 #undef _UNICODE
@@ -216,6 +217,10 @@ uintptr interact() {
 			UnEmbedBrowserObject(args[1], args[2]);
 			args[0] = msg_result;
 			break;
+        case msg_createlexer:
+            args[1] = CreateLexer((const char*)args[1]);
+            args[0] = msg_result;
+            break;
 		case msg_result:
 			return args[1];
 		}
