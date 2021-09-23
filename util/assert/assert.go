@@ -356,7 +356,8 @@ func (a assert) fail(args ...interface{}) {
 	if len(a.msg) > 0 {
 		args = append(append(args, "\nmsg: "), a.msg...)
 	}
-	s := fmt.Sprint(args...)
+	s := fmt.Sprintln(args...)
+	s = strings.TrimRight(s, "\r\n")
 	if a.t != nil {
 		a.t.Error("\n" + s)
 	} else {
