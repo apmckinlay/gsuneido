@@ -165,9 +165,10 @@ func (dc *dbmsClient) Dump(table string) string {
 }
 
 func (dc *dbmsClient) Exec(_ *Thread, args Value) Value {
-	dc.PutCmd(commands.Exec)
+	packed := PackValue(args) // do this first because it could panic
 	trace.ClientServer.Println(args)
-	dc.PutVal(args).Request()
+	dc.PutCmd(commands.Exec)
+	dc.PutRec(Record(packed)).Request()
 	return dc.ValueResult()
 }
 

@@ -87,11 +87,6 @@ func (rw *ReadWrite) PutInt64(i int64) *ReadWrite {
 	return rw
 }
 
-// PutVal writes a packed value
-func (rw *ReadWrite) PutVal(v Value) *ReadWrite {
-	return rw.PutRec(Record(PackValue(v)))
-}
-
 //-------------------------------------------------------------------
 
 // GetBool reads a boolean
