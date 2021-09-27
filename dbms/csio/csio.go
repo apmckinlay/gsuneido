@@ -179,7 +179,7 @@ func (rw *ReadWrite) Flush() {
 // limit checks if the size is negative or greater than maxio
 func limit(n int64) int {
 	if n < 0 || maxio < n {
-		Fatal("bad io size")
+		Fatal("bad io size:", n)
 	}
 	return int(n)
 }
