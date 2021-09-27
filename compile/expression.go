@@ -407,7 +407,7 @@ func (p *Parser) argumentList(closing tok.Token) []ast.Arg {
 	for p.Token != closing {
 		var expr ast.Expr
 		if p.MatchIf(tok.Colon) {
-			if !IsLower(p.Text[0]) {
+			if !p.Token.IsIdent() || !IsLower(p.Text[0]) {
 				p.Error("expecting local variable name")
 			}
 			handlePending(p.Constant(True))
