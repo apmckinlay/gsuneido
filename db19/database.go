@@ -192,11 +192,7 @@ func (db *Database) Ensure(sch *schema.Schema) {
 			handled = true // nothing to do, common fast case
 		} else {
 			var meta *meta.Meta
-			var err error
-			newIdxs, meta, err = state.Meta.Ensure(sch, db.Store)
-			if err != nil {
-				panic(err)
-			}
+			newIdxs, meta = state.Meta.Ensure(sch, db.Store)
 			if len(newIdxs) == 0 {
 				state.Meta = meta
 				handled = true
@@ -230,11 +226,8 @@ func (db *Database) ensure(sch *schema.Schema, newIdxs []schema.Index) {
 	ov := db.buildIndexes(sch.Table, newIdxs)
 
 	db.UpdateState(func(state *DbState) {
-		_, meta, err := state.Meta.Ensure(sch, db.Store) // final run
+		_, meta := state.Meta.Ensure(sch, db.Store) // final run
 		// now meta and table info are copies
-		if err != nil {
-			panic(err)
-		}
 		if ov != nil {
 			// add newly created indexes
 			ti := meta.GetRoInfo(sch.Table) // not actually read-only
@@ -343,11 +336,8 @@ func (db *Database) AlterCreate(sch *schema.Schema) {
 
 	ov := db.buildIndexes(sch.Table, sch.Indexes)
 	db.UpdateState(func(state *DbState) {
-		meta, err := state.Meta.AlterCreate(sch, db.Store)
+		meta := state.Meta.AlterCreate(sch, db.Store)
 		// now meta and table info are copies
-		if err != nil {
-			panic(err)
-		}
 		if ov != nil {
 			// add newly created indexes
 			ti := meta.GetRoInfo(sch.Table) // not really read-only

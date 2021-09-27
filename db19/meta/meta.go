@@ -4,7 +4,6 @@
 package meta
 
 import (
-	"errors"
 	"log"
 	"math"
 	"math/bits"
@@ -190,7 +189,7 @@ func (mu *metaUpdate) freeze() *Meta {
 
 //TODO Derived
 
-func (m *Meta) Ensure(a *schema.Schema, store *stor.Stor) ([]schema.Index, *Meta, error) {
+func (m *Meta) Ensure(a *schema.Schema, store *stor.Stor) ([]schema.Index, *Meta) {
 	ts, ok := m.schema.Get(a.Table)
 	if !ok || ts.isTomb() {
 		panic("ensure: couldn't find " + a.Table)
@@ -203,14 +202,10 @@ func (m *Meta) Ensure(a *schema.Schema, store *stor.Stor) ([]schema.Index, *Meta
 			newIdxs = append(newIdxs, a.Indexes[i])
 		}
 	}
-	if err := createColumns(ts, newCols); err != nil {
-		return nil, nil, err
-	}
-	if err := createIndexes(ts, ti, newIdxs, store); err != nil {
-		return nil, nil, err
-	}
+	createColumns(ts, newCols)
+	createIndexes(ts, ti, newIdxs, store)
 	ac := &schema.Schema{Table: a.Table, Indexes: newIdxs}
-	return newIdxs, m.PutNew(ts, ti, ac), nil
+	return newIdxs, m.PutNew(ts, ti, ac)
 }
 
 func (m *Meta) RenameTable(from, to string) *Meta {
@@ -305,15 +300,11 @@ func (m *Meta) AlterRename(table string, from, to []string) *Meta {
 	return mu.freeze()
 }
 
-func (m *Meta) AlterCreate(ac *schema.Schema, store *stor.Stor) (*Meta, error) {
+func (m *Meta) AlterCreate(ac *schema.Schema, store *stor.Stor) *Meta {
 	ts, ti := m.alterGet(ac.Table)
-	if err := createColumns(ts, ac.Columns); err != nil {
-		return nil, err
-	}
-	if err := createIndexes(ts, ti, ac.Indexes, store); err != nil {
-		return nil, err
-	}
-	return m.PutNew(ts, ti, ac), nil
+	createColumns(ts, ac.Columns)
+	createIndexes(ts, ti, ac.Indexes, store)
+	return m.PutNew(ts, ti, ac)
 }
 
 // PutNew puts the schema & info and creates Fkeys
@@ -337,26 +328,22 @@ func (m *Meta) alterGet(table string) (*Schema, *Info) {
 	return &tsNew, &tiNew
 }
 
-func createColumns(ts *Schema, cols []string) error {
-	//TODO panic instead of returning error
+func createColumns(ts *Schema, cols []string) {
 	existing := sset.Intersect(cols, ts.Columns)
 	if len(existing) > 0 {
-		return errors.New("can't create existing column(s): " +
-			strs.Join(", ", existing))
+		panic("can't create existing column(s): " + strs.Join(", ", existing))
 	}
 	ts.Columns = append(strs.Cow(ts.Columns), cols...)
-	return nil
 }
 
-func createIndexes(ts *Schema, ti *Info, idxs []schema.Index, store *stor.Stor) error {
-	//TODO panic instead of returning error
+func createIndexes(ts *Schema, ti *Info, idxs []schema.Index, store *stor.Stor) {
 	if len(idxs) == 0 {
-		return nil
+		return
 	}
 	for i := range idxs {
 		missing := sset.Difference(idxs[i].Columns, ts.Columns)
 		if len(missing) > 0 {
-			return errors.New("can't create index on nonexistent column(s): " +
+			panic("can't create index on nonexistent column(s): " +
 				strs.Join(", ", missing))
 		}
 	}
@@ -369,7 +356,6 @@ func createIndexes(ts *Schema, ti *Info, idxs []schema.Index, store *stor.Stor) 
 		bt := btree.CreateBtree(store, &ts.Indexes[n+i].Ixspec)
 		ti.Indexes = append(ti.Indexes, index.OverlayFor(bt))
 	}
-	return nil
 }
 
 func (*Meta) createFkeys(mu *metaUpdate, ts, ac *schema.Schema) {
