@@ -212,8 +212,12 @@ func schemaSubset(schema *schema.Schema, ts *meta.Schema) bool {
 		return false
 	}
 	for i := range schema.Indexes {
-		if nil == ts.FindIndex(schema.Indexes[i].Columns) {
+		ix := ts.FindIndex(schema.Indexes[i].Columns)
+		if ix == nil {
 			return false
+		}
+		if !ix.Equal(&schema.Indexes[i]) {
+			panic("Ensure: index exists but is different")
 		}
 	}
 	return true

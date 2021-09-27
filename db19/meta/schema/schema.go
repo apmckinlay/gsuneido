@@ -121,3 +121,11 @@ func (sc *Schema) IIndex(cols []string) int {
 	}
 	panic("IIndex not found" + sc.Table + strs.Join(",", cols))
 }
+
+func (ix *Index) Equal(iy *Index) bool {
+	return strs.Equal(ix.Columns, iy.Columns) &&
+		ix.Mode == iy.Mode &&
+		ix.Fk.Table == iy.Fk.Table &&
+		ix.Fk.Mode == iy.Fk.Mode &&
+		strs.Equal(ix.Fk.Columns, iy.Fk.Columns)
+}
