@@ -70,7 +70,7 @@ func (mi *OverIter) Cur() (string, uint64) {
 	return mi.curKey, mi.curOff
 }
 
-func (mi *OverIter) Range(rng Range) {
+func (mi *OverIter) Range(rng Range) { //TODO org & end params
 	mi.rng = rng
 	mi.state = rewound
 	for _, it := range mi.iters {

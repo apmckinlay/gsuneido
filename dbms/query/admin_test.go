@@ -151,8 +151,26 @@ func TestFkey(t *testing.T) {
 	schemas := map[string]string{}
 	check := func() {
 		t.Helper()
+		rt := db.NewReadTran()
 		for table, schema := range schemas {
 			assert.T(t).This(db.Schema(table)).Is(schema)
+			if schema == "" {
+				continue
+			}
+			sch := rt.GetSchema(table)
+			for _, ix := range sch.Indexes {
+				if ix.Fk.Table != "" && rt.GetInfo(ix.Fk.Table) != nil {
+					sch2 := rt.GetSchema(ix.Fk.Table)
+					assert.T(t).
+						Msg(table, ix.Columns, "Fk", ix.Fk).
+						This(sch2.Indexes[ix.Fk.IIndex].Columns).Is(ix.Fk.Columns)
+				}
+				for _, fk := range ix.FkToHere {
+					sch2 := rt.GetSchema(fk.Table)
+					assert.T(t).Msg(table, ix.Columns, "FkToHere", fk).
+						This(sch2.Indexes[fk.IIndex].Columns).Is(fk.Columns)
+				}
+			}
 		}
 	}
 
@@ -180,6 +198,9 @@ func TestFkey(t *testing.T) {
 	schemas["hdr"] = "hdr (a,b) key(a) from lin(d) from two(f)"
 	check()
 
+	assert.T(t).This(func() { DoAdmin(db, "alter hdr drop key(a)") }).
+		Panics("can't drop index used by foreign keys")
+
 	DoAdmin(db, "create three (f,e) key(f) index(e) in two")
 	schemas["three"] = "three (f,e) key(f) index(e) in two"
 	schemas["two"] = "two (e,a,f) key(e) from three(e) index(f) in hdr(a)"
@@ -202,17 +223,14 @@ func TestFkey(t *testing.T) {
 	schemas["lin"] = "lin (c,d) key(c) from newfour(hh) index(d) in hdr(a)"
 	check()
 
-	DoAdmin(db, "drop two")
-	schemas["two"] = ""
-	schemas["hdr"] = "hdr (a,b) key(a) from lin(d)"
-	check()
-	// Note: this will cause a dangling foreign key from three (harmless)
+	assert.T(t).This(func() { DoAdmin(db, "drop hdr") }).
+		Panics("can't drop table used by foreign keys")
 
 	// recursive foreign key
 	DoAdmin(db, "create recur (a,b) key(a) index(b) in recur(a)")
 	schemas["recur"] = "recur (a,b) key(a) from recur(b) index(b) in recur(a)"
 	check()
-	DoAdmin(db, "drop recur")
+	DoAdmin(db, "drop recur") // has FkToHere, but only to itself
 	delete(schemas, "recur")
 	check()
 

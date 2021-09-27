@@ -234,7 +234,7 @@ func (m *Meta) RenameTable(from, to string) *Meta {
 	mu.putInfo(m.newInfoTomb(from))
 	mu.putInfo(&tiNew)
 	m.dropFkeys(mu, &ts.Schema)
-	m.createFkeys(mu, &tsNew.Schema)
+	m.createFkeys(mu, &tsNew.Schema, &tsNew.Schema)
 	return mu.freeze()
 }
 
@@ -242,17 +242,37 @@ func (m *Meta) RenameTable(from, to string) *Meta {
 func (m *Meta) Drop(name string) *Meta {
 	//TODO delete without tombstone if not persisted e.g. tests
 	if m.GetView(name) != "" {
+		// view
 		return m.Put(m.newSchemaTomb("="+name), nil)
 	}
+	// table
 	ts, ok := m.schema.Get(name)
 	if !ok || ts.isTomb() {
 		return nil // nonexistent
+	}
+	if list := fkToHere(&ts.Schema); list != nil {
+		panic("can't drop table used by foreign keys: " +
+			name + " <- " + strs.Join(",", list))
 	}
 	mu := newMetaUpdate(m)
 	mu.putSchema(m.newSchemaTomb(name))
 	mu.putInfo(m.newInfoTomb(name))
 	m.dropFkeys(mu, &ts.Schema)
 	return mu.freeze()
+}
+
+func fkToHere(ts *schema.Schema) []string {
+	var list []string
+	for i := range ts.Indexes {
+		ix := ts.Indexes[i]
+		for j := range ix.FkToHere {
+			fk := ix.FkToHere[j]
+			if fk.Table != ts.Table {
+				list = append(list, fk.Table)
+			}
+		}
+	}
+	return list
 }
 
 func (m *Meta) AlterRename(table string, from, to []string) *Meta {
@@ -281,7 +301,7 @@ func (m *Meta) AlterRename(table string, from, to []string) *Meta {
 	mu := newMetaUpdate(m)
 	mu.putSchema(&tsNew)
 	m.dropFkeys(mu, &ts.Schema)
-	m.createFkeys(mu, &tsNew.Schema)
+	m.createFkeys(mu, &tsNew.Schema, &tsNew.Schema)
 	return mu.freeze()
 }
 
@@ -296,11 +316,12 @@ func (m *Meta) AlterCreate(ac *schema.Schema, store *stor.Stor) (*Meta, error) {
 	return m.PutNew(ts, ti, ac), nil
 }
 
+// PutNew puts the schema & info and creates Fkeys
 func (m *Meta) PutNew(ts *Schema, ti *Info, ac *schema.Schema) *Meta {
 	mu := newMetaUpdate(m)
 	mu.putSchema(ts)
 	mu.putInfo(ti)
-	m.createFkeys(mu, ac)
+	m.createFkeys(mu, &ts.Schema, ac)
 	return mu.freeze()
 }
 
@@ -317,6 +338,7 @@ func (m *Meta) alterGet(table string) (*Schema, *Info) {
 }
 
 func createColumns(ts *Schema, cols []string) error {
+	//TODO panic instead of returning error
 	existing := sset.Intersect(cols, ts.Columns)
 	if len(existing) > 0 {
 		return errors.New("can't create existing column(s): " +
@@ -327,6 +349,7 @@ func createColumns(ts *Schema, cols []string) error {
 }
 
 func createIndexes(ts *Schema, ti *Info, idxs []schema.Index, store *stor.Stor) error {
+	//TODO panic instead of returning error
 	if len(idxs) == 0 {
 		return nil
 	}
@@ -349,35 +372,82 @@ func createIndexes(ts *Schema, ti *Info, idxs []schema.Index, store *stor.Stor) 
 	return nil
 }
 
-func (m *Meta) createFkeys(mu *metaUpdate, ac *schema.Schema) {
+func (*Meta) createFkeys(mu *metaUpdate, ts, ac *schema.Schema) {
 	idxs := ac.Indexes
 	for i := range idxs {
 		fk := &idxs[i].Fk
-		if fk.Table != "" {
-			fkCols := fk.Columns
-			if len(fkCols) == 0 {
-				fkCols = idxs[i].Columns
+		if fk.Table == "" {
+			continue
+		}
+		fkCols := fk.Columns
+		if len(fkCols) == 0 {
+			fkCols = idxs[i].Columns
+		}
+		target := mu.getSchema(fk.Table)
+		if target == nil {
+			panic("can't create foreign key to nonexistent table: " +
+				ac.Table + " -> " + fk.Table)
+		}
+		found := false
+		target.Indexes = append(target.Indexes[:0:0], target.Indexes...) // copy
+		for j := range target.Indexes {
+			ix := &target.Indexes[j]
+			if strs.Equal(fkCols, ix.Columns) {
+				found = true
+				fk.IIndex = j
+				ii := ts.IIndex(idxs[i].Columns)
+				n := len(ix.FkToHere)
+				ix.FkToHere = append(ix.FkToHere[:n:n], // copy on write
+					Fkey{Table: ac.Table,
+						Columns: idxs[i].Columns, IIndex: ii, Mode: fk.Mode})
 			}
-			target := mu.getSchema(fk.Table)
-			if target == nil {
-				log.Println("foreign key: can't find", fk.Table, "(from "+ac.Table+")")
-				continue
-			}
-			target.Indexes = append(target.Indexes[:0:0], target.Indexes...) // copy
-			for j := range target.Indexes {
-				ix := target.Indexes[j] // copy
-				if strs.Equal(fkCols, ix.Columns) {
-					fk.IIndex = j
-					n := len(ix.FkToHere)
-					ix.FkToHere = append(ix.FkToHere[:n:n], // copy on write
-						Fkey{Table: ac.Table,
-							Columns: idxs[i].Columns, IIndex: i, Mode: fk.Mode})
-					target.Indexes[j] = ix
-				}
-			}
-			mu.putSchema(target)
+		}
+		if !found {
+			panic("can't create foreign key to nonexistent index: " +
+				ac.Table + " -> " + fk.Table + strs.Join("(,)", fkCols))
+		}
+		mu.putSchema(target)
+	}
+}
+
+func updateFkeysIIndex(mu *metaUpdate, sch *schema.Schema) {
+	for i := range sch.Indexes {
+		ix := &sch.Indexes[i]
+		if ix.Fk.Table != "" {
+			updateOtherFkToHere(mu, sch.Table, &ix.Fk, i)
+		}
+		for j := range ix.FkToHere {
+			updateOtherFk(mu, sch.Table, &ix.FkToHere[j], i)
 		}
 	}
+}
+
+func updateOtherFkToHere(mu *metaUpdate, table string, fk *Fkey, iindex int) {
+	ts := mu.getSchema(fk.Table)
+	ts.Indexes = append(ts.Indexes[:0:0], ts.Indexes...) // copy
+	for i := range ts.Indexes {
+		ix := &ts.Indexes[i]
+		for j := range ix.FkToHere {
+			ix.FkToHere = append(ix.FkToHere[:0:0], ix.FkToHere...) // copy
+			fk2 := &ix.FkToHere[j]
+			if fk2.Table == table && strs.Equal(ix.Columns, fk.Columns) {
+				fk2.IIndex = iindex
+			}
+		}
+	}
+	mu.putSchema(ts)
+}
+
+func updateOtherFk(mu *metaUpdate, table string, fk *Fkey, iindex int) {
+	ts := mu.getSchema(fk.Table)
+	ts.Indexes = append(ts.Indexes[:0:0], ts.Indexes...) // copy
+	for i := range ts.Indexes {
+		ix := &ts.Indexes[i]
+		if ix.Fk.Table == table && strs.Equal(ix.Columns, fk.Columns) {
+			ix.Fk.IIndex = iindex
+		}
+	}
+	mu.putSchema(ts)
 }
 
 func (m *Meta) AlterDrop(ad *schema.Schema) *Meta {
@@ -396,6 +466,7 @@ func (m *Meta) AlterDrop(ad *schema.Schema) *Meta {
 	mu.putSchema(ts)
 	mu.putInfo(ti)
 	m.dropFkeys(mu, ad)
+	updateFkeysIIndex(mu, &ts.Schema)
 	return mu.freeze()
 }
 
@@ -404,6 +475,9 @@ loop:
 	for j := range idxs {
 		for i := range ts.Indexes {
 			if strs.Equal(ts.Indexes[i].Columns, idxs[j].Columns) {
+				if 0 != len(ts.Indexes[i].FkToHere) {
+					panic("can't drop index used by foreign keys")
+				}
 				continue loop
 			}
 		}
@@ -441,15 +515,15 @@ func dropColumns(ts *Schema, cols []string) bool {
 	return true
 }
 
-func (m *Meta) dropFkeys(mu *metaUpdate, ad *schema.Schema) {
+func (m *Meta) dropFkeys(mu *metaUpdate, drop *schema.Schema) {
 	// unlike createFkeys
 	// we need to get the actual schema to get the foreign key information
-	schema := &m.GetRoSchema(ad.Table).Schema
-	idxs := ad.Indexes
+	schema := &m.GetRoSchema(drop.Table).Schema
+	idxs := drop.Indexes
 	for i := range idxs {
 		idx := schema.FindIndex(idxs[i].Columns)
 		fk := idx.Fk
-		if fk.Table == "" || fk.Table == ad.Table {
+		if fk.Table == "" || fk.Table == drop.Table {
 			continue
 		}
 		fkCols := fk.Columns
@@ -458,24 +532,23 @@ func (m *Meta) dropFkeys(mu *metaUpdate, ad *schema.Schema) {
 		}
 		target, ok := m.schema.Get(fk.Table)
 		if !ok {
-			log.Println("foreign key: can't find", fk.Table, "(from "+ad.Table+")")
+			log.Println("foreign key: can't find", fk.Table, "(from "+drop.Table+")")
 			continue
 		}
 		target.Indexes = append(target.Indexes[:0:0], target.Indexes...) // copy
 		for j := range target.Indexes {
-			ix := target.Indexes[j] // copy
+			ix := &target.Indexes[j]
 			if strs.Equal(fkCols, ix.Columns) {
 				fk.IIndex = j
 				fkToHere := make([]Fkey, 0, len(ix.FkToHere))
 				for k := range ix.FkToHere {
-					fk := ix.FkToHere[k]
-					if ad.Table != fk.Table ||
-						!strs.Equal(idx.Columns, fk.Columns) {
-						fkToHere = append(fkToHere, fk)
+					fk2 := &ix.FkToHere[k]
+					if drop.Table != fk2.Table ||
+						!strs.Equal(idx.Columns, fk2.Columns) {
+						fkToHere = append(fkToHere, *fk2)
 					}
 				}
 				ix.FkToHere = fkToHere
-				target.Indexes[j] = ix
 			}
 		}
 		mu.putSchema(target)
@@ -642,7 +715,12 @@ func ReadMeta(store *stor.Stor, offSchema, offInfo uint64) *Meta {
 			ti.Indexes[i].SetIxspec(&ts.Indexes[i].Ixspec)
 		}
 	})
-	// link foreign keys to targets
+	linkFkeys(&m)
+	return &m
+}
+
+// linkFkeys links foreign keys to targets (Fk and FkToHere[])
+func linkFkeys(m *Meta) {
 	m.schema.ForEach(func(s *Schema) {
 		if s.isTomb() {
 			return
@@ -672,7 +750,6 @@ func ReadMeta(store *stor.Stor, offSchema, offInfo uint64) *Meta {
 			}
 		}
 	})
-	return &m
 }
 
 const delayMerge = 0b1000000 // = 64 = approx 1 hour at 1 persist per minute

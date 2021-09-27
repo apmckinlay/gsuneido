@@ -328,7 +328,8 @@ func (t *UpdateTran) fkeyOutputBlock(ts *meta.Schema, i int, rec rt.Record) {
 		fkis := ixkey.Spec{Fields: is.Fields[:n]}
 		key := fkis.Key(rec)
 		if key != "" && !t.exists(fk.Table, fk.IIndex, key) {
-			panic("output blocked by foreign key")
+			panic("output blocked by foreign key: " +
+				fk.Table + " " + ix.String())
 		}
 	}
 }
@@ -370,7 +371,8 @@ func (t *UpdateTran) fkeyDeleteBlock(fkToHere []schema.Fkey, key string) {
 	for i := range fkToHere {
 		fk := &fkToHere[i]
 		if fk.Mode == schema.Block && t.exists(fk.Table, fk.IIndex, key) {
-			panic("delete blocked by foreign key")
+			panic("delete blocked by foreign key: " +
+				fk.Table + " " + strs.Join(",", fk.Columns))
 		}
 	}
 }

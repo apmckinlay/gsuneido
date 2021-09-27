@@ -109,3 +109,15 @@ func (sc *Schema) FindIndex(cols []string) *Index {
 	}
 	return nil
 }
+
+// IIndex returns the position of the index with the given columns
+// or else it panics
+func (sc *Schema) IIndex(cols []string) int {
+	for i := range sc.Indexes {
+		idx := &sc.Indexes[i]
+		if strs.Equal(cols, idx.Columns) {
+			return i
+		}
+	}
+	panic("IIndex not found" + sc.Table + strs.Join(",", cols))
+}
