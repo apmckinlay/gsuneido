@@ -62,16 +62,37 @@ loop:
 			if m.isZero() { // channel closed
 				break loop
 			}
-			mt.dispatch(m)
+			for {
+				if m.ret != nil {
+					if m.meta == nil {
+						// sync
+						m.ret <- nil
+					} else {
+						// persist
+						if db.GetState() != prevState {
+							prevState = db.persist(ep, false)
+						}
+						m.ret <- prevState
+					}
+					break
+				}
+				mt.merges.start(m)
+				m = mt.merges.drain(mt.mergeChan)
+				mt.db.Merge(mt.merges.meta, mt.em.merge, mt.merges)
+				// mt.db.Merge(mergeSingle, merges)
+				if m.isZero() {
+					break
+				}
+			}
 		case <-ticker.C:
 			if db.GetState() != prevState {
-				prevState = db.Persist(ep, false)
+				prevState = db.persist(ep, false)
 			}
 		}
 	}
 	close(em.jobChan)
 	if db.GetState() != prevState {
-		db.Persist(ep, false)
+		db.persist(ep, false)
 	}
 	close(allDone)
 }
@@ -79,27 +100,11 @@ loop:
 type todo struct {
 	tables []string
 	meta   *meta.Meta
-	sync   chan struct{}
+	ret    chan *DbState
 }
 
 func (td todo) isZero() bool {
-	return td.tables == nil && td.meta == nil && td.sync == nil
-}
-
-func (mt *mergeT) dispatch(m todo) {
-	for {
-		if m.sync != nil {
-			m.sync <- struct{}{}
-			return
-		}
-		mt.merges.start(m)
-		m = mt.merges.drain(mt.mergeChan)
-		mt.db.Merge(mt.merges.meta, mt.em.merge, mt.merges)
-		// mt.db.Merge(mergeSingle, merges)
-		if m.isZero() {
-			return
-		}
-	}
+	return td.tables == nil && td.meta == nil && td.ret == nil
 }
 
 // mergeSingle is a single threaded merge for tran_test
@@ -214,10 +219,10 @@ func (ml *mergeList) drain(mergeChan chan todo) todo {
 			if m.isZero() { // channel closed
 				return todo{}
 			}
-			if m.sync == nil && ml.meta.SameSchemaAs(m.meta) {
+			if m.ret == nil && ml.meta.SameSchemaAs(m.meta) {
 				ml.add(m.tables)
 			} else {
-				return m // not added to merge
+				return m // not added to merge (sync or persist)
 			}
 		default: // channel empty
 			return todo{}

@@ -53,13 +53,14 @@ func CheckDatabase(dbfile string) (ec error) {
 	return db.Check()
 }
 
+// Check is called by the builtin Database.Check()
 func (db *Database) Check() (ec error) {
 	defer func() {
 		if e := recover(); e != nil {
 			ec = newErrCorrupt(e)
 		}
 	}()
-	runParallel(db.GetState(), checkTable)
+	runParallel(db.Persist(), checkTable)
 	return nil // may be overridden by defer/recover
 }
 

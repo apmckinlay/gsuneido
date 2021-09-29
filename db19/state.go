@@ -43,6 +43,16 @@ func (db *Database) GetState() *DbState {
 	return db.state.get()
 }
 
+// Persist returns a persisted state,
+// which means all entries are in the btree.
+// This is used by dump and checkdb
+func (db *Database) Persist() *DbState {
+	if db.ck == nil { // for tests
+		return db.GetState()
+	}
+	return db.ck.Persist()
+}
+
 // UpdateState applies the given update function to a copy of theState
 // and sets theState to the result.
 // Guarded by stateMutex so only one thread can execute at a time.
@@ -96,11 +106,11 @@ func (db *Database) CommitMerge(ut *UpdateTran) {
 
 type persistfn func(*DbState) []meta.PersistUpdate
 
-// Persist writes index changes (and a new state) to the database file.
+// persist writes index changes (and a new state) to the database file.
 // It is called from concur.go e.g. once per minute.
 // flatten applies to the schema and info chains.
-func (db *Database) Persist(exec execPersist, flatten bool) *DbState {
-	// fmt.Println("Persist", flatten)
+func (db *Database) persist(exec execPersist, flatten bool) *DbState {
+	// fmt.Println("persist", flatten)
 	var newState *DbState
 	db.GetState().Meta.Persist(exec.Submit) // outside UpdateState
 	updates := exec.Results()

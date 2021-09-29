@@ -124,6 +124,13 @@ func (ck *Check) EndExclusive(tables ...string) {
 	}
 }
 
+// Persist is just for tests, it doesn't actually persist
+func (ck *Check) Persist() *DbState {
+	return ck.db.GetState()
+}
+
+//-------------------------------------------------------------------
+
 // Read adds a read action.
 // Will conflict if another transaction has a write within the range.
 func (ck *Check) Read(t *CkTran, table string, index int, from, to string) bool {
@@ -367,7 +374,7 @@ func (ck *Check) tick() {
 }
 
 func (ck *Check) Stop() { // to satisfy Checker interface
-	ck.db.Persist(&execPersistSingle{}, true) // for tests
+	ck.db.persist(&execPersistSingle{}, true) // for tests
 }
 
 func traceln(...interface{}) {

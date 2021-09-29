@@ -7,6 +7,8 @@ import (
 	"log"
 	"runtime/debug"
 	"time"
+
+	"github.com/apmckinlay/gsuneido/db19/meta"
 )
 
 // CheckCo is the concurrent, channel based interface to Check
@@ -50,11 +52,15 @@ type ckAbort struct {
 
 type ckAddExcl struct {
 	tables []string
-	ret   chan bool
+	ret    chan bool
 }
 
 type ckEndExcl struct {
 	tables []string
+}
+
+type ckPersist struct {
+	ret chan *DbState
 }
 
 func (ck *CheckCo) StartTran() *CkTran {
@@ -107,6 +113,12 @@ func (ck *CheckCo) AddExclusive(tables ...string) bool {
 
 func (ck *CheckCo) EndExclusive(tables ...string) {
 	ck.c <- &ckEndExcl{tables: tables}
+}
+
+func (ck *CheckCo) Persist() *DbState {
+	ret := make(chan *DbState, 1)
+	ck.c <- &ckPersist{ret: ret}
+	return <-ret
 }
 
 //-------------------------------------------------------------------
@@ -174,16 +186,24 @@ func (ck *Check) dispatch(msg interface{}, mergeChan chan todo) {
 			msg.ret <- false
 		}
 		// ensure pending merges are all complete
-		sync := make(chan struct{})
-		mergeChan <- todo{sync: sync}
-		<-sync
+		ret := make(chan *DbState)
+		mergeChan <- todo{ret: ret} // sync (meta == nil)
+		<-ret
 		msg.ret <- true
 	case *ckEndExcl:
 		ck.EndExclusive(msg.tables...)
+	case *ckPersist:
+		ret := make(chan *DbState)
+		mergeChan <- todo{meta: persist, ret: ret}
+		state := <- ret
+		msg.ret <- state
 	default:
 		panic("checker unknown message type")
 	}
 }
+
+// persist is used to distinguish sync and persist
+var persist = &meta.Meta{}
 
 // Checker is the interface for Check and CheckCo
 type Checker interface {
@@ -194,6 +214,7 @@ type Checker interface {
 	Commit(t *UpdateTran) bool
 	AddExclusive(tables ...string) bool
 	EndExclusive(tables ...string)
+	Persist() *DbState
 	Stop()
 }
 

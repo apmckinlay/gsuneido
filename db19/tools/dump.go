@@ -44,7 +44,7 @@ func Dump(db *Database, to string) (ntables int, err error) {
 	ics := newIndexCheckers()
 	defer ics.finish()
 
-	state := db.GetState()
+	state := db.Persist()
 	dumpViews(state, w)
 	state.Meta.ForEachSchema(func(sc *meta.Schema) {
 		dumpTable2(db, sc, true, w, ics)
@@ -78,7 +78,7 @@ func DumpDbTable(db *Database, table, to string) (nrecs int, err error) {
 	ics := newIndexCheckers()
 	defer ics.finish()
 
-	state := db.GetState()
+	state := db.Persist()
 	schema := state.Meta.GetRoSchema(table)
 	if schema == nil {
 		return 0, errors.New("dump failed: can't find " + table)
