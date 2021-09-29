@@ -13,18 +13,18 @@ import (
 
 // TestConcur tests that persist doesn't write anything if no activity
 func TestConcur(t *testing.T) {
-	if testing.Short() {
-		return
-	}
 	store := stor.HeapStor(16 * 1024)
 	db, err := CreateDb(store)
 	ck(err)
 	before := store.Size()
-	persistInterval := time.Millisecond
+	persistInterval := 20 * time.Millisecond
 	StartConcur(db, persistInterval)
-	time.Sleep(10 * time.Millisecond)
+	time.Sleep(40 * time.Millisecond)
 	assert.T(t).This(store.Size()).Is(before)
-	db.UpdateState(func(*DbState) {})
-	time.Sleep(2 * time.Millisecond)
+	db.UpdateState(func(state *DbState) {
+		meta := *state.Meta
+		state.Meta = &meta
+	})
+	time.Sleep(40 * time.Millisecond)
 	assert.T(t).That(store.Size() > before)
 }
