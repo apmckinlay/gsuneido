@@ -61,7 +61,8 @@ func (p *adminParser) admin() Admin {
 		return p.alter()
 	case p.MatchIf(tok.View):
 		return p.view()
-	//TODO: Sview
+	case p.MatchIf(tok.Sview):
+		return p.view() //TODO handle multiple sessions
 	case p.MatchIf(tok.Drop):
 		table := p.MatchIdent()
 		return &dropAdmin{table}
