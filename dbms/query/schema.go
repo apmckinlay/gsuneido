@@ -231,17 +231,16 @@ func (cs *Columns) Get(dir Dir) Row {
 	for {
 		if dir == Next {
 			if cs.state == rewound {
-				cs.si, cs.ci = 0, 0
-			} else {
-				cs.ci++
-				if cs.ci >= len(cs.schema[cs.si].Columns)+len(cs.schema[cs.si].Derived) {
-					cs.si++
-					if cs.si >= len(cs.schema) {
-						cs.state = eof
-						return nil
-					}
-					cs.ci = 0
+				cs.si, cs.ci = 0, -1
+			}
+			cs.ci++
+			for cs.ci >= len(cs.schema[cs.si].Columns)+len(cs.schema[cs.si].Derived) {
+				cs.si++
+				if cs.si >= len(cs.schema) {
+					cs.state = eof
+					return nil
 				}
+				cs.ci = 0
 			}
 		} else { // Prev
 			if cs.state == rewound {
@@ -249,7 +248,7 @@ func (cs *Columns) Get(dir Dir) Row {
 				cs.ci = 0
 			}
 			cs.ci--
-			if cs.ci < 0 {
+			for cs.ci < 0 {
 				cs.si--
 				if cs.si < 0 {
 					cs.state = eof

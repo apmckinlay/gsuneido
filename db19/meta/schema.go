@@ -154,7 +154,7 @@ func (m *Meta) newSchemaView(name, def string) *Schema {
 }
 
 func (ts *Schema) isTomb() bool {
-	return ts.Columns == nil
+	return ts.Columns == nil && ts.Indexes == nil
 }
 
 func (ts *Schema) isView() bool {

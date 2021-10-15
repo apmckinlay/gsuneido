@@ -262,3 +262,15 @@ func TestCreateIndexOnExistingTable(*testing.T) {
 	DoAdmin(db, "ensure tmp key(c,d)")
 	assert.This(db.Check()).Is(nil)
 }
+
+func TestNoColumns(*testing.T) {
+	store := stor.HeapStor(8192)
+	db, err := db19.CreateDb(store)
+	ck(err)
+	DoAdmin(db, "create nocols () key()")
+	db.Check()
+	db.Close()
+	db, err = db19.OpenDbStor(store, stor.READ, false)
+	ck(err)
+	db.Check()
+}
