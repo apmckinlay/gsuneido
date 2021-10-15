@@ -258,6 +258,7 @@ func (db *Database) buildIndexes(table string, newIdxs []schema.Index) []*index.
 	if ti.Nrows == 0 {
 		return nil
 	}
+	rt.meta.GetRoSchema(table).Ixspecs(newIdxs)
 	nlayers := ti.Indexes[0].Nlayers()
 	list := sortlist.NewUnsorted()
 	iter := index.NewOverIter(table, 0)
@@ -268,11 +269,21 @@ func (db *Database) buildIndexes(table string, newIdxs []schema.Index) []*index.
 	ov := make([]*index.Overlay, len(newIdxs))
 	for i := range newIdxs {
 		ix := &newIdxs[i]
+		fk := &ix.Fk
 		list.Sort(MakeLess(db.Store, &ix.Ixspec))
 		bldr := btree.Builder(db.Store)
 		iter := list.Iter()
 		for off := iter(); off != 0; off = iter() {
-			bldr.Add(btree.GetLeafKey(db.Store, &ix.Ixspec, off), off)
+			key := btree.GetLeafKey(db.Store, &ix.Ixspec, off)
+			bldr.Add(key, off)
+			// check foreign key
+			if fk.Table != "" {
+				k := ixkey.Truncate(key, len(ix.Columns))
+				if k != "" && !rt.fkeyOutputExists(fk.Table, fk.IIndex, k) {
+					panic("output blocked by foreign key: " +
+						fk.Table + " " + ix.String())
+				}
+			}
 		}
 		bt := bldr.Finish()
 		bt.SetIxspec(&ix.Ixspec)

@@ -6,11 +6,13 @@ package db19
 import (
 	"os"
 	"strconv"
+	"strings"
 	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
 
+	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/db19/meta/schema"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	rt "github.com/apmckinlay/gsuneido/runtime"
@@ -221,4 +223,15 @@ func TestExclusive(*testing.T) {
 	ut = db.NewUpdateTran()
 	assert.That(db.ck.Write(ut.ct, "mytable", []string{""}))
 	ut.Commit()
+}
+
+func TestRangeEnd(t *testing.T) {
+	end := func(n int, flds ...string) string {
+		return rangeEnd(strings.Join(flds, "\x00\x00"), n)
+	}
+	assert := assert.T(t).This
+	assert(end(1)).Is("\x00\x00" + ixkey.Max)
+	assert(end(1, "foo")).Is("foo\x00\x00" + ixkey.Max)
+	assert(end(2, "foo")).Is("foo\x00\x00\x00\x00" + ixkey.Max)
+	assert(end(2, "foo", "bar")).Is("foo\x00\x00bar\x00\x00" + ixkey.Max)
 }

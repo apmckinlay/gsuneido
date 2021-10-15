@@ -16,6 +16,7 @@ import (
 	"strings"
 
 	. "github.com/apmckinlay/gsuneido/runtime"
+	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/hacks"
 )
 
@@ -77,6 +78,7 @@ func (e *Encoder) Dup() *Encoder {
 
 // Key builds a key from a data Record using a Spec.
 func (spec *Spec) Key(rec Record) string {
+	assert.That(spec.Fields != nil)
 	fields := spec.Fields
 	if len(fields) == 0 {
 		return ""
@@ -228,4 +230,32 @@ func DecodeValues(comp string) []Value {
 		}
 	}
 	return result
+}
+
+// HasPrefix is prefix by field.
+// i.e. the prefix must be followed by a field separator (or at the end)
+func HasPrefix(s, prefix string) bool {
+	sn := len(s)
+	pn := len(prefix)
+	return sn >= pn && s[0:pn] == prefix && // byte-wise prefix
+		(sn == pn ||
+			(sn >= pn + 2 && s[pn:pn+2] == Sep))
+}
+
+// Truncate shortens a key to the given number of fields
+func Truncate(key string, n int) string {
+	if n == 0 {
+		return ""
+	}
+	kn := len(key)
+	for i := 1; i < kn; i++ {
+		if key[i-1] == '\x00' && key[i] == '\x00' {
+			n--
+			if n == 0 {
+				return key[:i-1]
+			}
+			i++
+		}
+	}
+	return key
 }

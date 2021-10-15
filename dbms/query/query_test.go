@@ -87,6 +87,7 @@ func TestForeignKeys(*testing.T) {
 		n := DoAction(ut, act)
 		assert.This(n).Is(1)
 	}
+
 	DoAdmin(db, "create hdr (a,b) key(a)")
 	act("insert { a: 1, b: 2 } into hdr")
 	act("insert { a: 3, b: 4 } into hdr")
@@ -131,6 +132,12 @@ func TestForeignKeys(*testing.T) {
 	act("update header set m = 2")
 	assert.This(queryAll(db, "lines")).
 		Is("m=2 d=10 | m=2 d=11 | m=2 d=12")
+
+	DoAdmin(db, "create one (a) key(a)")
+	DoAdmin(db, "create two (b,a) key(b)")
+	act("insert { b: 1, a: 1 } into two")
+	assert.This(func() { DoAdmin(db, "alter two create index(a) in one") }).
+		Panics("blocked by foreign key")
 
 	db.Check()
 }

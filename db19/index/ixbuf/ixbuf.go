@@ -13,6 +13,7 @@ import (
 	"log"
 
 	"github.com/apmckinlay/gsuneido/db19/index/iterator"
+	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/ints"
 )
@@ -381,6 +382,17 @@ func (ib *ixbuf) Lookup(key string) uint64 {
 	}
 	_, c, i := ib.search(key)
 	if i >= len(c) || c[i].key != key {
+		return 0
+	}
+	return c[i].off
+}
+
+func (ib *ixbuf) PrefixLookup(key string) uint64 {
+	if ib.size == 0 {
+		return 0
+	}
+	_, c, i := ib.search(key)
+	if i >= len(c) || !ixkey.HasPrefix(c[i].key, key) {
 		return 0
 	}
 	return c[i].off

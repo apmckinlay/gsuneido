@@ -90,6 +90,15 @@ func (bt *btree) Lookup(key string) uint64 {
 	return off
 }
 
+func (bt *btree) PrefixExists(key string) bool {
+	off := bt.root
+	for i := 0; i <= bt.treeLevels; i++ {
+		nd := bt.getNode(off)
+		off = nd.search(key)
+	}
+	return off != 0 && ixkey.HasPrefix(bt.getLeafKey(off), key)
+}
+
 // putNode stores the node
 func (nd node) putNode(st *stor.Stor) uint64 {
 	n := len(nd)

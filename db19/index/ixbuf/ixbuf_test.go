@@ -285,7 +285,14 @@ func TestLookup(*testing.T) {
 	rand.Seed(12345)
 	r = str.UniqueRandom(4, 8)
 	for i := 1; i < nkeys; i++ {
-		assert.This(ib.Lookup(r())).Is(i)
+		k := r()
+		assert.This(ib.Lookup(k)).Is(i)
+		assert.This(ib.Lookup(k + " ")).Is(0)
+		assert.This(ib.Lookup(k + "~")).Is(0)
+		assert.This(ib.PrefixLookup(k)).Is(i)
+		assert.This(ib.PrefixLookup(k[:2])).Is(0)
+		assert.This(ib.PrefixLookup(k + " ")).Is(0)
+		assert.This(ib.PrefixLookup(k + "~")).Is(0)
 	}
 	for i := 0; i < nkeys; i++ {
 		assert.This(ib.Lookup(r())).Is(0) // nonexistent

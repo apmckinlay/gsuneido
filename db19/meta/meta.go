@@ -379,6 +379,10 @@ func (*Meta) createFkeys(mu *metaUpdate, ts, ac *schema.Schema) {
 		for j := range target.Indexes {
 			ix := &target.Indexes[j]
 			if strs.Equal(fkCols, ix.Columns) {
+				if ix.Mode != 'k' {
+					panic("foreign key must point to key: " +
+						ac.Table + " -> " + fk.Table + strs.Join("(,)", fkCols))
+				}
 				found = true
 				fk.IIndex = j
 				ii := ts.IIndex(idxs[i].Columns)
