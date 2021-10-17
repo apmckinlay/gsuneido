@@ -274,11 +274,12 @@ func (db *Database) buildIndexes(table string, newIdxs []schema.Index) []*index.
 		bldr := btree.Builder(db.Store)
 		iter := list.Iter()
 		for off := iter(); off != 0; off = iter() {
-			key := btree.GetLeafKey(db.Store, &ix.Ixspec, off)
+			rec := OffToRec(db.Store, off)
+			key := ix.Ixspec.Key(rec)
 			bldr.Add(key, off)
 			// check foreign key
 			if fk.Table != "" {
-				k := ixkey.Truncate(key, len(ix.Columns))
+				k := ix.Ixspec.Trunc(len(ix.Columns)).Key(rec)
 				if k != "" && !rt.fkeyOutputExists(fk.Table, fk.IIndex, k) {
 					panic("output blocked by foreign key: " +
 						fk.Table + " " + ix.String())

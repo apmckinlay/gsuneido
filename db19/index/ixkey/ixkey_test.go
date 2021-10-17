@@ -173,18 +173,3 @@ func TestHasPrefix(t *testing.T) {
 	assert.T(t).True(HasPrefix("foo\x00\x00bar", "foo\x00\x00bar"))
 	assert.T(t).False(HasPrefix("foo\x00\x00bar", "foo\x00\x00ba"))
 }
-
-func TestTruncate(t *testing.T) {
-	test := func(key string, n int, expected string) {
-		t.Helper()
-		assert.T(t).This(Truncate(key, 0)).Is("")
-		assert.T(t).This(Truncate(key, n)).Is(expected)
-	}
-	test("", 2, "")
-	test("foo", 1, "foo")
-	test("foo\x00\x00", 1, "foo")
-	test("foo", 2, "foo")
-	test("foo\x00\x00bar", 1, "foo")
-	test("foo\x00\x00bar", 2, "foo\x00\x00bar")
-	test("foo\x00\x00bar", 3, "foo\x00\x00bar")
-}

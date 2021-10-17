@@ -309,7 +309,7 @@ func (t *UpdateTran) Output(table string, rec rt.Record) {
 			panic(fmt.Sprint("duplicate key: ",
 				strs.Join(",", ts.Indexes[i].Columns), " in ", table))
 		}
-		t.fkeyOutputBlock(ts, i, keys[i])
+		t.fkeyOutputBlock(ts, i, rec)
 	}
 	for i := range ts.Indexes {
 		ti.Indexes[i].Insert(keys[i], off)
@@ -320,11 +320,11 @@ func (t *UpdateTran) Output(table string, rec rt.Record) {
 	t.db.CallTrigger(t.thread(), t, table, "", rec)
 }
 
-func (t *UpdateTran) fkeyOutputBlock(ts *meta.Schema, i int, key string) {
+func (t *UpdateTran) fkeyOutputBlock(ts *meta.Schema, i int, rec rt.Record) {
 	ix := &ts.Indexes[i]
 	fk := ix.Fk
 	if fk.Table != "" {
-		key = ixkey.Truncate(key, len(ix.Columns))
+		key := ix.Ixspec.Trunc(len(ix.Columns)).Key(rec)
 		if key != "" && !t.fkeyOutputExists(fk.Table, fk.IIndex, key) {
 			panic("output blocked by foreign key: " +
 				fk.Table + " " + ix.String())
@@ -459,7 +459,7 @@ func (t *UpdateTran) Update(table string, oldoff uint64, newrec rt.Record) uint6
 						strs.Join(",", ts.Indexes[i].Columns), " in ", table))
 				}
 				t.fkeyDeleteBlock(ts.Indexes[i].FkToHere, oldkeys[i])
-				t.fkeyOutputBlock(ts, i, newkeys[i])
+				t.fkeyOutputBlock(ts, i, newrec)
 			}
 		}
 	}

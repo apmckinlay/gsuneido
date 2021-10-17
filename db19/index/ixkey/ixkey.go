@@ -202,6 +202,10 @@ func (spec *Spec) raw() bool {
 		(len(spec.Fields) == 1 && len(spec.Fields2) == 0)
 }
 
+func (spec *Spec) Trunc(n int) *Spec {
+	return &Spec{Fields: spec.Fields[:n]}
+}
+
 // Decode is for tests and debugging
 func Decode(comp string) []string {
 	if comp == "" {
@@ -240,22 +244,4 @@ func HasPrefix(s, prefix string) bool {
 	return sn >= pn && s[0:pn] == prefix && // byte-wise prefix
 		(sn == pn ||
 			(sn >= pn + 2 && s[pn:pn+2] == Sep))
-}
-
-// Truncate shortens a key to the given number of fields
-func Truncate(key string, n int) string {
-	if n == 0 {
-		return ""
-	}
-	kn := len(key)
-	for i := 1; i < kn; i++ {
-		if key[i-1] == '\x00' && key[i] == '\x00' {
-			n--
-			if n == 0 {
-				return key[:i-1]
-			}
-			i++
-		}
-	}
-	return key
 }
