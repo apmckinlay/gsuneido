@@ -23,7 +23,6 @@ import (
 	rt "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/cksum"
-	"github.com/apmckinlay/gsuneido/util/hacks"
 	"github.com/apmckinlay/gsuneido/util/sortlist"
 )
 
@@ -222,7 +221,7 @@ func loadViews(db *Database, in *bufio.Reader, schema string) int {
 		_, err = io.ReadFull(in, buf[:n])
 		ck(err)
 
-		rec := rt.Record(hacks.BStoS(buf[:n]))
+		rec := rt.Record(string(buf[:n]))
 		name := rec.GetStr(0)
 		def := rec.GetStr(1)
 		db.AddView(name, def)
