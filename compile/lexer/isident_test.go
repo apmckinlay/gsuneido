@@ -17,6 +17,7 @@ func Test_isIdentifier(t *testing.T) {
 	assert(IsIdentifier("foo123")).Is(true)
 	assert(IsIdentifier("foo 123")).Is(false)
 	assert(IsIdentifier("_foo")).Is(true)
+	assert(IsIdentifier("foo_bar")).Is(true)
 	assert(IsIdentifier("Bar!")).Is(true)
 	assert(IsIdentifier("Bar?")).Is(true)
 	assert(IsIdentifier("Bar?x")).Is(false)
