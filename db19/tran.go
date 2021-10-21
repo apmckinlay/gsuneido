@@ -380,7 +380,7 @@ func (t *UpdateTran) fkeyDeleteBlock(fkToHere []schema.Fkey, key string) {
 		fk := &fkToHere[i]
 		if fk.Mode == schema.Block && t.fkeyDeleteExists(fk, key) {
 			panic("delete blocked by foreign key: " +
-				fk.Table + " " + strs.Join(",", fk.Columns))
+				fk.Table + " " + strs.Join("(,)", fk.Columns))
 		}
 	}
 }
