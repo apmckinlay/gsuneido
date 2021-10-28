@@ -17,6 +17,9 @@ import (
 type T = btree
 
 // btree is an immutable btree designed to be stored in a file.
+//
+// To update a btree, the changes are added to an ixbuf
+// which is then merged to create a new btree.
 type btree struct {
 	// treeLevels is how many levels of tree nodes there are (initially 0)
 	// Nodes do not store whether they are leaf or tree nodes.
@@ -91,12 +94,10 @@ func (bt *btree) Lookup(key string) uint64 {
 }
 
 func (bt *btree) PrefixExists(key string) bool {
-	off := bt.root
-	for i := 0; i <= bt.treeLevels; i++ {
-		nd := bt.getNode(off)
-		off = nd.search(key)
-	}
-	return off != 0 && ixkey.HasPrefix(bt.getLeafKey(off), key)
+	iter := bt.Iterator()
+	iter.Range(Range{Org: key, End: key + ixkey.Sep + ixkey.Max})
+	iter.Next()
+	return !iter.Eof()
 }
 
 // putNode stores the node

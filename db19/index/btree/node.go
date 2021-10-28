@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/db19/index/ixbuf"
+	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/bytes"
@@ -400,17 +401,23 @@ func (nd node) printTreeNode() {
 	}
 }
 
+// print does fmt.Println
+// after converting []byte to string and empty strings to ''
 func print(args ...interface{}) {
 	for i, x := range args {
 		switch x := x.(type) {
 		case string:
 			if x == "" {
-				args[i] = "'" + x + "'"
+				args[i] = "''"
 			}
 		case []byte:
-			args[i] = string(x)
 			if len(x) == 0 {
 				args[i] = "''"
+			} else {
+				s := string(x)
+				s = strings.ReplaceAll(s, ixkey.Sep, "|")
+				s = strings.ReplaceAll(s, ixkey.Max, "<max>")
+				args[i] = s
 			}
 		}
 	}
