@@ -144,7 +144,7 @@ func TestBtreeFracPos(t *testing.T) {
 	assert.Msg("tree levels").This(bt.treeLevels).Is(0)
 	test(ixkey.Min, 0)
 	for i := 0; i < n; i++ {
-		test(key(i), float32(i) / float32(n))
+		test(key(i), float32(i)/float32(n))
 	}
 	test(ixkey.Max, 1)
 
