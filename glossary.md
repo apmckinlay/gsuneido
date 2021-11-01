@@ -26,3 +26,9 @@ persist
 
 schema
 : slower changing part of metadata
+
+action
+: a "query" that performs an action, insert, update, or delete (QueryDo)
+
+admin
+: a database administration command, e.g. create, alter, drop
