@@ -77,7 +77,7 @@ type IDbms interface {
 	SessionId(id string) string
 
 	// Size returns the current database size
-	Size() int64
+	Size() uint64
 
 	// Timestamp returns a guaranteed unique date/time
 	Timestamp() SuDate

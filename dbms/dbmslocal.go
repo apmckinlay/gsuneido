@@ -207,8 +207,8 @@ func (*DbmsLocal) SessionId(id string) string {
 	return sessionId
 }
 
-func (dbms *DbmsLocal) Size() int64 {
-	return int64(dbms.db.Size())
+func (dbms *DbmsLocal) Size() uint64 {
+	return dbms.db.Size()
 }
 
 func (*DbmsLocal) Timestamp() SuDate {
