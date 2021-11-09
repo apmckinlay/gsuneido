@@ -108,7 +108,7 @@ var threadMethods = Methods{
 		threads.lock.Lock()
 		defer threads.lock.Unlock()
 		for _, t := range threads.list {
-			ob.Put(nil, SuStr(t.Name), True)
+			ob.Set(SuStr(t.Name), True)
 		}
 		return ob
 	}),
