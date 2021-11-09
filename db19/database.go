@@ -408,6 +408,10 @@ func (db *Database) Size() uint64 {
 	return db.Store.Size()
 }
 
+func (db *Database) Transactions() []int {
+	return db.ck.Transactions()
+}
+
 // Close closes the database store, writing the current size to the start.
 // NOTE: The state must already be written.
 func (db *Database) Close() {

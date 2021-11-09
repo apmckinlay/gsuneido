@@ -63,6 +63,10 @@ type ckPersist struct {
 	ret chan *DbState
 }
 
+type ckTrans struct {
+	ret chan []int
+}
+
 func (ck *CheckCo) StartTran() *CkTran {
 	ret := make(chan *CkTran, 1)
 	ck.c <- &ckStart{ret: ret}
@@ -118,6 +122,12 @@ func (ck *CheckCo) EndExclusive(tables ...string) {
 func (ck *CheckCo) Persist() *DbState {
 	ret := make(chan *DbState, 1)
 	ck.c <- &ckPersist{ret: ret}
+	return <-ret
+}
+
+func (ck *CheckCo) Transactions() []int {
+	ret := make(chan []int, 1)
+	ck.c <- &ckTrans{ret: ret}
 	return <-ret
 }
 
@@ -197,6 +207,8 @@ func (ck *Check) dispatch(msg interface{}, mergeChan chan todo) {
 		mergeChan <- todo{meta: persist, ret: ret}
 		state := <- ret
 		msg.ret <- state
+	case *ckTrans:
+		msg.ret <- ck.Transactions()
 	default:
 		panic("checker unknown message type")
 	}
@@ -216,6 +228,7 @@ type Checker interface {
 	EndExclusive(tables ...string)
 	Persist() *DbState
 	Stop()
+	Transactions() []int
 }
 
 var _ Checker = (*Check)(nil)

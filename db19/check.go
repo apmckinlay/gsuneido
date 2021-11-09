@@ -81,6 +81,8 @@ func (ck *Check) Run(fn func() error) error {
 	return fn()
 }
 
+//TODO just return start rather than CkTran
+
 func (ck *Check) StartTran() *CkTran {
 	if len(ck.trans) >= maxTrans {
 		return nil
@@ -379,4 +381,14 @@ func (ck *Check) Stop() { // to satisfy Checker interface
 
 func traceln(...interface{}) {
 	// fmt.Println(args...) // comment out to disable tracing
+}
+
+func (ck *Check) Transactions() []int {
+	trans := make([]int, 0, 4)
+	for _, t := range ck.trans {
+		if t.end == math.MaxInt {
+			trans = append(trans, t.start)
+		}
+	}
+	return trans
 }

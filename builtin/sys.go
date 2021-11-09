@@ -16,10 +16,14 @@ import (
 )
 
 var _ = builtin0("MemoryArena()", func() Value {
+	return Int64Val(int64(HeapSys()))
+})
+
+func HeapSys() uint64 {
 	var ms runtime.MemStats
 	runtime.ReadMemStats(&ms)
-	return Int64Val(int64(ms.HeapSys))
-})
+	return ms.HeapSys
+}
 
 var _ = builtin0("GetCurrentDirectory()",
 	func() Value {
