@@ -139,6 +139,13 @@ func TestForeignKeys(*testing.T) {
 	assert.This(func() { DoAdmin(db, "alter two create index(a) in one") }).
 		Panics("blocked by foreign key")
 
+	DoAdmin(db, "ensure test_table1 (a, b, c) key(a)")
+	DoAdmin(db, "ensure test_table2 (a, d, e) key(e) index(a) in test_table1 cascade")
+	act("insert { a: 'a1', b: 'b1', c: 'c1'  } into test_table1")
+	act("insert { a: 'a1', d: 'd1', e: 'e1' } into test_table2")
+	act("delete test_table1 where a is 'a1'")
+	assert.This(queryAll(db, "test_table2")).Is("")
+
 	db.Check()
 }
 
