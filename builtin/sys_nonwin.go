@@ -29,7 +29,10 @@ func init() {
 func Run() {
 }
 
-var _ = builtin0("OperatingSystem()", func() Value {
+var _ = builtin0("OperatingSystem()", func() Value { // deprecated
+	return SuStr(runtime.GOOS)
+})
+var _ = builtin0("OSName()", func() Value {
 	return SuStr(runtime.GOOS)
 })
 
