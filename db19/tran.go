@@ -358,11 +358,11 @@ func (t *UpdateTran) Delete(table string, off uint64) {
 	for i := range ts.Indexes {
 		is := ts.Indexes[i].Ixspec
 		keys[i] = is.Key(rec)
-		t.fkeyDeleteBlock(ts.Indexes[i].FkToHere, keys[i])
+		t.fkeyDeleteBlock(ts, i, keys[i])
 	}
 	for i := range ts.Indexes {
 		ti.Indexes[i].Delete(keys[i], off)
-		t.fkeyDeleteCascade(ts.Indexes[i].FkToHere, keys[i])
+		t.fkeyDeleteCascade(ts, i, keys[i])
 	}
 	t.ck(t.db.ck.Write(t.ct, table, keys))
 	assert.Msg("Delete Nrows").That(ti.Nrows > 0)
@@ -372,12 +372,18 @@ func (t *UpdateTran) Delete(table string, off uint64) {
 	t.db.CallTrigger(t.thread(), t, table, rec, "")
 }
 
-func (t *UpdateTran) fkeyDeleteBlock(fkToHere []schema.Fkey, key string) {
+func (t *UpdateTran) fkeyDeleteBlock(ts *meta.Schema, i int, key string) {
 	if key == "" {
 		return
 	}
+	encoded := ts.Indexes[i].Ixspec.Encodes()
+	fkToHere := ts.Indexes[i].FkToHere
 	for i := range fkToHere {
 		fk := &fkToHere[i]
+		fkis := t.meta.GetRoSchema(fk.Table).Indexes[fk.IIndex].Ixspec
+		if !encoded && fkis.Encodes() {
+			key = ixkey.Encode(key)
+		}
 		if fk.Mode == schema.Block && t.fkeyDeleteExists(fk, key) {
 			panic("delete blocked by foreign key: " +
 				fk.Table + " " + strs.Join("(,)", fk.Columns))
@@ -391,6 +397,10 @@ func (t *UpdateTran) fkeyDeleteExists(fk *schema.Fkey, key string) bool {
 	return idx.PrefixExists(key)
 }
 
+// rangeEnd returns the end of the range for a key.
+// Naively, you can just append a separator and Max.
+// But that isn't correct if key doesn't have the correct (n) number of fields.
+// WARNING: key must be encoded
 func rangeEnd(key string, n int) string {
 	kn := len(key)
 	var sb strings.Builder
@@ -415,21 +425,32 @@ func rangeEnd(key string, n int) string {
 	return sb.String()
 }
 
-func (t *UpdateTran) fkeyDeleteCascade(fkToHere []schema.Fkey, key string) {
+func (t *UpdateTran) fkeyDeleteCascade(ts *meta.Schema, i int, key string) {
 	if key == "" {
 		return
 	}
+	encoded := ts.Indexes[i].Ixspec.Encodes()
+	fkToHere := ts.Indexes[i].FkToHere
 	for i := range fkToHere {
 		fk := &fkToHere[i]
 		if fk.Mode&schema.CascadeDeletes != 0 {
-			iter := index.NewOverIter(fk.Table, fk.IIndex)
-			iter.Range(index.Range{Org: key, End: key + ixkey.Sep + ixkey.Max})
+			iter := t.cascade(fk, encoded, key)
 			for iter.Next(t); !iter.Eof(); iter.Next(t) {
 				_, off := iter.Cur()
 				t.Delete(fk.Table, off)
 			}
 		}
 	}
+}
+
+func (t *UpdateTran) cascade(fk *schema.Fkey, encoded bool, key string) *index.OverIter {
+	fkis := t.meta.GetRoSchema(fk.Table).Indexes[fk.IIndex].Ixspec
+	if !encoded && fkis.Encodes() {
+		key = ixkey.Encode(key)
+	}
+	iter := index.NewOverIter(fk.Table, fk.IIndex)
+	iter.Range(index.Range{Org: key, End: rangeEnd(key, len(fk.Columns))})
+	return iter
 }
 
 func (t *UpdateTran) Update(table string, oldoff uint64, newrec rt.Record) uint64 {
@@ -458,7 +479,7 @@ func (t *UpdateTran) Update(table string, oldoff uint64, newrec rt.Record) uint6
 					panic(fmt.Sprint("duplicate key: ",
 						strs.Join(",", ts.Indexes[i].Columns), " in ", table))
 				}
-				t.fkeyDeleteBlock(ts.Indexes[i].FkToHere, oldkeys[i])
+				t.fkeyDeleteBlock(ts, i, oldkeys[i])
 				t.fkeyOutputBlock(ts, i, newrec)
 			}
 		}
@@ -471,8 +492,7 @@ func (t *UpdateTran) Update(table string, oldoff uint64, newrec rt.Record) uint6
 			} else {
 				ix.Delete(oldkeys[i], oldoff)
 				ix.Insert(newkeys[i], newoff)
-				t.fkeyUpdate(ts.Indexes[i].FkToHere,
-					newrec, oldkeys[i], ts.Columns, ts.Indexes[i].Columns)
+				t.fkeyUpdateCascade(ts, i, newrec, oldkeys[i])
 			}
 		}
 	}
@@ -487,8 +507,11 @@ func (t *UpdateTran) Update(table string, oldoff uint64, newrec rt.Record) uint6
 	return newoff
 }
 
-func (t *UpdateTran) fkeyUpdate(fkToHere []schema.Fkey,
-	rec rt.Record, key string, cols, ixcols []string) {
+func (t *UpdateTran) fkeyUpdateCascade(ts *meta.Schema, i int,
+	rec rt.Record, key string) {
+	ixcols := ts.Indexes[i].Columns
+	encoded := ts.Indexes[i].Ixspec.Encodes()
+	fkToHere := ts.Indexes[i].FkToHere
 	for i := range fkToHere {
 		fk := &fkToHere[i]
 		if fk.Mode&schema.CascadeUpdates == 0 {
@@ -496,15 +519,14 @@ func (t *UpdateTran) fkeyUpdate(fkToHere []schema.Fkey,
 		}
 		ts := t.GetSchema(fk.Table)
 		ixcols2 := fk.Columns
-		iter := index.NewOverIter(fk.Table, fk.IIndex)
-		iter.Range(index.Range{Org: key, End: key + ixkey.Sep + ixkey.Max})
+		iter := t.cascade(fk, encoded, key)
 		for iter.Next(t); !iter.Eof(); iter.Next(t) {
 			_, off := iter.Cur()
 			oldrec := t.GetRecord(off)
 			rb := rt.RecordBuilder{}
 			for i, col := range ts.Columns {
 				if j := strs.Index(ixcols2, col); j != -1 {
-					k := strs.Index(cols, ixcols[j])
+					k := strs.Index(ts.Columns, ixcols[j])
 					rb.AddRaw(rec.GetRaw(k))
 				} else {
 					rb.AddRaw(oldrec.GetRaw(i))
