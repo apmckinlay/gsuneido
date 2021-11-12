@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/apmckinlay/gsuneido/db19"
+	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	rt "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
@@ -196,4 +197,26 @@ func queryAll(db *db19.Database, query string) string {
 		sep = " | "
 	}
 	return sb.String()
+}
+
+func TestSelKeys(t *testing.T) {
+	sep := ixkey.Sep
+	max := ixkey.Max
+	encode := false
+	dstCols := []string{"one", "two"}
+	srcCols := []string{"two", "one"}
+	vals := []string{"2", "1"}
+	test := func(org, end string) {
+		t.Helper()
+		o, e := selKeys(encode, dstCols, srcCols, vals)
+		assert.Msg("org").This(o).Is(org)
+		assert.Msg("end").This(e).Is(end)
+	}
+	test("1", "1\x00")
+	encode = true
+	test("1"+sep+"2", "1"+sep+"2"+sep+max)
+	dstCols = []string{"a", "b", "c"}
+	srcCols = []string{"a"}
+	vals = []string{"1"}
+	test("1", "1"+sep+sep+sep+max)
 }

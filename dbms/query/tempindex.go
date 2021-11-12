@@ -55,7 +55,7 @@ func (ti *TempIndex) Lookup(cols, vals []string) Row {
 		ti.iter = ti.makeIter()
 	}
 	encode := len(ti.order) > 1
-	key := selEncode(encode, ti.order, cols, vals)
+	key := selOrg(encode, ti.order, cols, vals)
 	row := ti.iter.Seek(key)
 	if row == nil || ti.rowKey(row) != key {
 		return nil
