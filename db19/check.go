@@ -81,8 +81,6 @@ func (ck *Check) Run(fn func() error) error {
 	return fn()
 }
 
-//TODO just return start rather than CkTran
-
 func (ck *Check) StartTran() *CkTran {
 	if len(ck.trans) >= maxTrans {
 		return nil
