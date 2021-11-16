@@ -220,3 +220,20 @@ func TestSelKeys(t *testing.T) {
 	vals = []string{"1"}
 	test("1", "1"+sep+sep+sep+max)
 }
+
+func TestQueryBug(*testing.T) {
+	db, err := db19.CreateDb(stor.HeapStor(8192))
+	ck(err)
+	db19.StartConcur(db, 50*time.Millisecond)
+	defer db.Close()
+	MakeSuTran = func(qt QueryTran) *rt.SuTran { return nil }
+	act := func(act string) {
+		ut := db.NewUpdateTran()
+		defer ut.Commit()
+		n := DoAction(ut, act)
+		assert.This(n).Is(1)
+	}
+	DoAdmin(db, "create tmp (a,b) key(a)")
+	act("insert { a: 1 } into tmp")
+	assert.This(queryAll(db, "tmp where b > 0")).Is("")
+}
