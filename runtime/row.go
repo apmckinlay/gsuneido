@@ -46,7 +46,7 @@ func (row Row) GetVal(hdr *Header, fld string, th *Thread, tran *SuTran) Value {
 	return SuRecordFromRow(row, hdr, "", tran).Get(th, SuStr(fld))
 }
 
-// GetRaw does NOT handle rules
+// GetRaw handles _lower! but does NOT handle rules
 func (row Row) GetRaw(hdr *Header, fld string) (x string) {
 	if strings.HasSuffix(fld, "_lower!") {
 		base := fld[:len(fld)-7]
