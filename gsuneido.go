@@ -284,7 +284,7 @@ func closeDbms() {
 func startHttpStatus() {
 	http.HandleFunc("/", httpStatus)
 	go func() {
-		log.Fatalln(http.ListenAndServe(":3148", nil))
+		Fatal(http.ListenAndServe(":3148", nil))
 	}()
 }
 func httpStatus(w http.ResponseWriter, _ *http.Request) {
