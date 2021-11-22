@@ -185,7 +185,7 @@ func (t *ReadTran) WriteCount() int {
 }
 
 func (t *ReadTran) MakeLess(is *ixkey.Spec) func(x, y uint64) bool {
-	return t.db.MakeLess(is)
+	return MakeLess(t.db.Store, is)
 }
 
 func (t *ReadTran) Complete() string {

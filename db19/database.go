@@ -291,6 +291,8 @@ func (db *Database) buildIndexes(table string, newIdxs []schema.Index) []*index.
 	return ov
 }
 
+// MakeLess handles _lower! but not rules.
+// It is used for indexes (which don't support rules).
 func MakeLess(store *stor.Stor, is *ixkey.Spec) func(x, y uint64) bool {
 	return func(x, y uint64) bool {
 		xr := OffToRec(store, x)
@@ -457,12 +459,4 @@ func OffToRecCk(store *stor.Stor, off uint64) rt.Record {
 	size := rt.RecLen(buf)
 	cksum.MustCheck(buf[:size+cksum.Len])
 	return rt.Record(hacks.BStoS(buf[:size]))
-}
-
-func (db *Database) MakeLess(is *ixkey.Spec) func(x, y uint64) bool {
-	return func(x, y uint64) bool {
-		xr := OffToRec(db.Store, x)
-		yr := OffToRec(db.Store, y)
-		return is.Compare(xr, yr) < 0
-	}
 }
