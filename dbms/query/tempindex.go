@@ -211,7 +211,7 @@ func (it *singleIter) Rewind() {
 
 //-------------------------------------------------------------------
 // multi is when we have multiple records (not ti.source.SingleTable).
-// So we store the record offsets in a separate heap
+// So we store the record offsets and/or the in memory records in a separate heap
 // that the sortlist points to.
 
 type multiIter struct {
@@ -233,16 +233,19 @@ func (ti *TempIndex) multi() rowIter {
 		assert.That(len(row) == it.nrecs)
 		n := it.nrecs * stor.SmallOffsetLen
 		for _, dbrec := range row {
-			if dbrec.Off == 0 { // derived record e.g. from extend
+			if dbrec.Off == 0 { // derived record e.g. from extend or summarize
 				n += len(dbrec.Record)
 			}
 		}
 		off, buf := it.heap.Alloc(n)
 		for _, dbrec := range row {
 			if dbrec.Off > 0 {
+				// database records are stored as their offset
 				stor.WriteSmallOffset(buf, dbrec.Off)
 				buf = buf[stor.SmallOffsetLen:]
-			} else { // derived
+			} else {
+				// derived records are stored as their size|multiMask
+				// followed by their actual contents
 				size := len(dbrec.Record)
 				stor.WriteSmallOffset(buf, multiMask|uint64(size))
 				buf = buf[stor.SmallOffsetLen:]
