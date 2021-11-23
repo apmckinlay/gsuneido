@@ -237,3 +237,18 @@ func TestQueryBug(*testing.T) {
 	act("insert { a: 1 } into tmp")
 	assert.This(queryAll(db, "tmp where b > 0")).Is("")
 }
+
+func TestExtendAllRules(*testing.T) {
+	MakeSuTran = func(qt QueryTran) *rt.SuTran { return nil }
+	db := testDb()
+	defer db.Close()
+	tran := db.NewReadTran()
+	q := ParseQuery("cus extend Foo, n=1, Bar", tran)
+	q, _ = Setup(q, ReadMode, tran)
+	assert.That(!q.SingleTable())
+	assert.This(len(q.Header().Fields)).Is(2)
+	q = ParseQuery("cus extend Foo, Bar", tran)
+	q, _ = Setup(q, ReadMode, tran)
+	assert.That(q.SingleTable())
+	assert.This(len(q.Header().Fields)).Is(1)
+}

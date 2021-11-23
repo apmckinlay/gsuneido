@@ -16,6 +16,7 @@ type Extend struct {
 	exprs    []ast.Expr // modified by Project.transform
 	exprCols []string
 	fixed    []Fixed
+	hasExprs bool
 	hdr      *Header
 	t        QueryTran
 }
@@ -47,9 +48,10 @@ func (e *Extend) init() {
 		panic("extend: column(s) already exist")
 	}
 	var cols []string
-	for _, x := range e.exprs {
-		if x != nil {
-			cols = sset.Union(cols, x.Columns())
+	for _, expr := range e.exprs {
+		if expr != nil {
+			e.hasExprs = true
+			cols = sset.Union(cols, expr.Columns())
 		}
 	}
 	e.exprCols = cols
@@ -99,6 +101,7 @@ func (e *Extend) Transform() Query {
 	return e
 }
 
+// hasRules is used by Project transformExtend
 func (e *Extend) hasRules() bool {
 	for _, e := range e.exprs {
 		if e == nil {
@@ -145,7 +148,10 @@ func (e *Extend) Fixed() []Fixed {
 }
 
 func (e *Extend) SingleTable() bool {
-	return false
+	if e.hasExprs {
+		return false
+	}
+	return e.source.SingleTable()
 }
 
 func (e *Extend) optimize(mode Mode, index []string) (Cost, interface{}) {
@@ -164,19 +170,25 @@ func (e *Extend) setApproach(index []string, _ interface{}, tran QueryTran) {
 func (e *Extend) Header() *Header {
 	hdr := e.source.Header()
 	cols := append(hdr.Columns, e.cols...)
-	physical := make([]string, 0, len(cols))
-	for i, col := range e.cols {
-		if e.exprs[i] != nil {
-			physical = append(physical, col)
+	flds := hdr.Fields
+	if e.hasExprs {
+		physical := make([]string, 0, len(cols))
+		for i, col := range e.cols {
+			if e.exprs[i] != nil {
+				physical = append(physical, col)
+			}
 		}
+		flds = append(hdr.Fields, physical)
 	}
-	flds := append(hdr.Fields, physical)
 	return NewHeader(flds, cols)
 }
 
 func (e *Extend) Get(dir Dir) Row {
 	row := e.source.Get(dir)
-	return e.extendRow(row)
+	if e.hasExprs {
+		row = e.extendRow(row)
+	}
+	return row
 }
 
 func (e *Extend) extendRow(row Row) Row {
@@ -191,6 +203,7 @@ func (e *Extend) extendRow(row Row) Row {
 	var rb RecordBuilder
 	for _, e := range e.exprs {
 		if e != nil {
+			// incrementally build record so extends can see previous ones
 			context.Row = append(row, DbRec{Record: rb.Build()})
 			val := e.Eval(&context)
 			rb.Add(val.(Packable))
