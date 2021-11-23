@@ -305,6 +305,9 @@ const (
 	eof     state = 2
 )
 
+// Iter returns an iterator for the list.
+// Warning: The less function (used by seek)
+// must be consistent with the sort function.
 func (list List) Iter(less func(x uint64, key string) bool) *Iter {
 	return &Iter{blocks: list.blocks, size: list.size, state: rewound, less: less}
 }

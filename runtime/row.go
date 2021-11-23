@@ -29,7 +29,10 @@ func JoinRows(row1, row2 Row) Row {
 	return append(append(result, row1...), row2...)
 }
 
-// GetVal is primarily for query summarize (to minimize creating SuRecord's)
+// GetVal is used by query summarize and expr.
+//	- returns "" for fld not in hdr.Columns
+//	- returns stored value for Fields (rule ignored)
+//	- calls rule for Columns not in Fields
 func (row Row) GetVal(hdr *Header, fld string, th *Thread, tran *SuTran) Value {
 	if !strs.Contains(hdr.Columns, fld) {
 		return EmptyStr
@@ -39,22 +42,40 @@ func (row Row) GetVal(hdr *Header, fld string, th *Thread, tran *SuTran) Value {
 	}
 	if strings.HasSuffix(fld, "_lower!") {
 		base := fld[:len(fld)-7]
-		val := Unpack(row.GetRaw(hdr, base))
+		x, _ := row.getRaw2(hdr, base)
+		val := Unpack(x)
 		return SuStr(str.ToLower(ToStr(val)))
 	}
 	// else construct SuRecord to handle rules
 	return SuRecordFromRow(row, hdr, "", tran).Get(th, SuStr(fld))
 }
 
-// GetRaw handles _lower! but does NOT handle rules
-func (row Row) GetRaw(hdr *Header, fld string) (x string) {
+// GetRaw handles _lower! but does NOT handle rules.
+// It is used by SuRecord Get.
+func (row Row) GetRaw(hdr *Header, fld string) string {
 	if strings.HasSuffix(fld, "_lower!") {
 		base := fld[:len(fld)-7]
-		x, _ = row.getRaw2(hdr, base)
+		x, _ := row.getRaw2(hdr, base)
 		return lowerRaw(x)
 	}
-	x, _ = row.getRaw2(hdr, fld)
+	x, _ := row.getRaw2(hdr, fld)
 	return x
+}
+
+// GetRawVal is like GetVal (i.e. handles rules) but returns a raw/packed value.
+// It is used by TempIndex.
+func (row Row) GetRawVal(hdr *Header, fld string, th *Thread, tran *SuTran) string {
+	if strings.HasSuffix(fld, "_lower!") {
+		base := fld[:len(fld)-7]
+		x, _ := row.getRaw2(hdr, base)
+		return lowerRaw(x)
+	}
+	if raw, ok := row.getRaw2(hdr, fld); ok {
+		return raw
+	}
+	// else construct SuRecord to handle rules
+	v := SuRecordFromRow(row, hdr, "", tran).Get(th, SuStr(fld))
+	return Pack(v.(Packable))
 }
 
 func lowerRaw(x string) string {
@@ -76,7 +97,12 @@ func lowerRaw(x string) string {
 	return hacks.BStoS(buf)
 }
 
+// getRaw2 gets a stored field.
+// It handles a field having multiple possible locations
+// due to union supplying one of two records.
+// It returns false if fld is not in hdr.Fields i.e. derived (non-stored) fields.
 func (row Row) getRaw2(hdr *Header, fld string) (string, bool) {
+	// find will only return the first possible location
 	at, ok := hdr.find(fld)
 	if ok && row[at.Reci].Record != "" { // not empty side of union
 		return row[at.Reci].GetRaw(int(at.Fldi)), true

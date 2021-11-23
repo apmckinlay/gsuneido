@@ -49,9 +49,9 @@ func (sort *Sort) Transform() Query {
 func (sort *Sort) optimize(mode Mode, index []string) (Cost, interface{}) {
 	assert.That(index == nil)
 	src := sort.source
-	cost := Optimize(src, mode, sort.columns)
+	cost := Optimize(src, mode, sort.columns) // adds temp index if needed
 	best := sort.bestOrdered(src.Indexes(), sort.columns, mode)
-	trace("SORT", "cost", cost, "best", best.cost)
+	trace("SORT", "cost", cost, "best", best)
 	if cost < best.cost {
 		return cost, sortApproach{index: sort.columns}
 	}
@@ -79,6 +79,9 @@ func (sort *Sort) setApproach(_ []string, approach interface{}, tran QueryTran) 
 }
 
 // execution --------------------------------------------------------
+
+// Only implements reverse.
+// The actual sorting is done with a TempIndex
 
 func (sort *Sort) Header() *runtime.Header {
 	return sort.source.Header()
