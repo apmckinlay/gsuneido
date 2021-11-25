@@ -58,6 +58,20 @@ func TestAdminEnsure(t *testing.T) {
 		Panics(("Ensure: index exists but is different"))
 }
 
+func TestAdminEnsure2(t *testing.T) {
+	db := createTestDb()
+	defer db.Close()
+
+	act := func(act string) {
+		ut := db.NewUpdateTran()
+		defer ut.Commit()
+		n := DoAction(ut, act)
+		assert.This(n).Is(1)
+	}
+	act("insert { a: 1 } into tmp")
+	DoAdmin(db, "ensure tmp (x, y) index unique(x)")
+}
+
 func TestAdminRename(t *testing.T) {
 	db := createTestDb()
 	defer db.Close()

@@ -156,7 +156,7 @@ func (db *Database) unlockSchema() {
 	atomic.StoreInt64(&db.schemaLock, 0)
 }
 
-func (db *Database) create(state *DbState, schema *schema.Schema)  {
+func (db *Database) create(state *DbState, schema *schema.Schema) {
 	ts := &meta.Schema{Schema: *schema}
 	ts.Ixspecs(ts.Indexes)
 	ov := db.createIndexes(ts.Indexes)
@@ -195,7 +195,7 @@ func (db *Database) Ensure(sch *schema.Schema) {
 				state.Meta = meta
 				handled = true
 			}
-			// else discard meta and just use newIdxs, run Ensure again later
+			// else discard meta and just use newIdxs
 		}
 	})
 	// outside UpdateState
@@ -225,8 +225,16 @@ func (db *Database) ensure(sch *schema.Schema, newIdxs []schema.Index) {
 	db.addExclusive(sch.Table)
 	defer db.ck.EndExclusive(sch.Table)
 
+	sch2 := *sch
+	sch2.Indexes = nil
+	db.UpdateState(func(state *DbState) { // add columns
+		_, meta := state.Meta.Ensure(&sch2, db.Store) // final run
+		state.Meta = meta
+	})
+
 	ov := db.buildIndexes(sch.Table, newIdxs)
 
+	sch.Columns = nil
 	db.UpdateState(func(state *DbState) {
 		_, meta := state.Meta.Ensure(sch, db.Store) // final run
 		// now meta and table info are copies
