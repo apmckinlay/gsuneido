@@ -95,10 +95,13 @@ func TestAdminAlterCreate(t *testing.T) {
 	assert.T(t).This(func() { DoAdmin(db, "alter tmp create (b)") }).
 		Panics("can't create existing column(s): b")
 	assert.T(t).This(func() { DoAdmin(db, "alter tmp create index(x)") }).
-		Panics("can't create index on nonexistent column(s): x")
+		Panics("can't create index on nonexistent column: x")
 	DoAdmin(db, "alter tmp create (x) index(x)")
 	assert.T(t).This(db.Schema("tmp")).
 		Is("tmp (a,b,c,d,x) key(a) index(b,c) index(x)")
+	DoAdmin(db, "ensure tmp key(d_lower!)")
+	assert.T(t).This(db.Schema("tmp")).
+		Is("tmp (a,b,c,d,x) key(a) index(b,c) index(x) key(d_lower!)")
 }
 
 func TestAdminAlterRename(t *testing.T) {

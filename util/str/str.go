@@ -289,3 +289,12 @@ func EqualCI(x, y string) bool {
 	}
 	return true
 }
+
+// RemoveSuffix returns s with suffix removed.
+// It returns s unchanged if it does not have suffix.
+func RemoveSuffix(s, suffix string) string {
+	if strings.HasSuffix(s, suffix) {
+		return s[:len(s)-len(suffix)]
+	}
+	return s
+}
