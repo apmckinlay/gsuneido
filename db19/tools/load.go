@@ -90,10 +90,14 @@ func LoadTable(table, dbfile string) int {
 		db, err = CreateDatabase(dbfile)
 	} else {
 		db, err = OpenDatabase(dbfile)
-		db.Drop(table)
 	}
 	ck(err)
 	defer db.Close()
+	return LoadDbTable(table, db)
+}
+
+func LoadDbTable(table string, db *Database) int {
+	db.Drop(table)
 	f, r := open(table + ".su")
 	defer f.Close()
 	schema := table + " " + readLinePrefixed(r, "====== ")
@@ -196,7 +200,9 @@ func buildIndexes(ts *meta.Schema, list *sortlist.Builder, store *stor.Stor, nre
 			bldr.Add(btree.GetLeafKey(store, &ix.Ixspec, off), off)
 			n++
 		}
-		ov[i] = index.OverlayFor(bldr.Finish())
+		bt := bldr.Finish()
+		bt.SetIxspec(&ix.Ixspec)
+		ov[i] = index.OverlayFor(bt)
 		assert.This(n).Is(nrecs)
 		trace("size", store.Size()-before)
 	}

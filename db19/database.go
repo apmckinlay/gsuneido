@@ -222,8 +222,8 @@ func schemaSubset(schema *schema.Schema, ts *meta.Schema) bool {
 }
 
 func (db *Database) ensure(sch *schema.Schema, newIdxs []schema.Index) {
-	db.addExclusive(sch.Table)
-	defer db.ck.EndExclusive(sch.Table)
+	db.AddExclusive(sch.Table)
+	defer db.EndExclusive(sch.Table)
 
 	sch2 := *sch
 	sch2.Indexes = nil
@@ -248,10 +248,14 @@ func (db *Database) ensure(sch *schema.Schema, newIdxs []schema.Index) {
 	})
 }
 
-func (db *Database) addExclusive(table string) {
+func (db *Database) AddExclusive(table string) {
 	if !db.ck.AddExclusive(table) {
 		panic("index creation: can't get exclusive access to " + table)
 	}
+}
+
+func (db *Database) EndExclusive(table string) {
+	db.ck.EndExclusive(table)
 }
 
 // buildIndexes creates the new btrees & overlays
@@ -355,8 +359,8 @@ func (db *Database) AlterRename(table string, from, to []string) bool {
 func (db *Database) AlterCreate(sch *schema.Schema) {
 	db.lockSchema()
 	defer db.unlockSchema()
-	db.addExclusive(sch.Table)
-	defer db.ck.EndExclusive(sch.Table)
+	db.AddExclusive(sch.Table)
+	defer db.EndExclusive(sch.Table)
 
 	ov := db.buildIndexes(sch.Table, sch.Indexes)
 	db.UpdateState(func(state *DbState) {

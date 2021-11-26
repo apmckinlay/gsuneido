@@ -45,7 +45,7 @@ func (*DbmsLocal) Auth(string) bool {
 
 func (dbms *DbmsLocal) Check() string {
 	if err := dbms.db.Check(); err != nil {
-		return fmt.Sprint(err)
+		return err.Error()
 	}
 	return ""
 }
@@ -79,7 +79,7 @@ func (dbms *DbmsLocal) Dump(table string) string {
 		_, err = tools.DumpDbTable(dbms.db, table, table+".su")
 	}
 	if err != nil {
-		return fmt.Sprint(err)
+		return err.Error()
 	}
 	return ""
 }
@@ -134,8 +134,11 @@ func (*DbmsLocal) Kill(string) int {
 	panic("DbmsLocal Kill not implemented")
 }
 
-func (*DbmsLocal) Load(string) int {
-	panic("DbmsLocal Load not implemented")
+func (dbms *DbmsLocal) Load(table string) int {
+	dbms.db.AddExclusive(table)
+	defer dbms.db.EndExclusive(table)
+	dbms.db.Persist()
+	return tools.LoadDbTable(table, dbms.db)
 }
 
 func (dbms *DbmsLocal) LibGet(name string) (result []string) {

@@ -43,9 +43,9 @@ func (db *Database) GetState() *DbState {
 	return db.state.get()
 }
 
-// Persist returns a persisted state,
+// Persist forces a persist and returns a persisted state,
 // which means all entries are in the btree.
-// This is used by dump and checkdb
+// This is used by dump, load, and checkdb.
 func (db *Database) Persist() *DbState {
 	if db.ck == nil { // for tests
 		return db.GetState()
