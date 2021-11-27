@@ -78,6 +78,16 @@ func (ht InfoHamt) MustGet(key string) *Info {
 	return it
 }
 
+// GetCopy returns a copy of the Info for a table, or nil if not found
+func (ht InfoHamt) GetCopy(table string) *Info {
+	ti, ok := ht.Get(table)
+	if !ok || ti.isTomb() {
+		return nil
+	}
+	cp := *ti
+	return &cp
+}
+
 //-------------------------------------------------------------------
 
 type btOver = *index.Overlay
@@ -89,7 +99,8 @@ type MergeUpdate struct {
 	results []MergeResult // per index
 }
 
-// Merge collects the updates which are then applied by applyMerge.
+// Merge collects the updates which are then applied by ApplyMerge.
+// It is called by db Merge which is called by concur merger.
 // WARNING: must not modify meta.
 func (m *Meta) Merge(metaWas *Meta, table string, nmerge int) MergeUpdate {
 	// fmt.Println("Merge", table, tns)
@@ -129,13 +140,14 @@ func (mu *MergeUpdate) Skip() bool {
 func (m *Meta) ApplyMerge(updates []MergeUpdate) {
 	t2 := m.info.Mutable()
 	for _, up := range updates {
-		// fmt.Println("applyMerge", up.table)
-		ti := *t2.MustGet(up.table)                          // copy
-		ti.Indexes = append(ti.Indexes[:0:0], ti.Indexes...) // copy
-		for i, ov := range ti.Indexes {
-			ti.Indexes[i] = ov.WithMerged(up.results[i], up.nmerged)
+		// fmt.Println("ApplyMerge", up.table)
+		if ti := t2.GetCopy(up.table); ti != nil { // not dropped
+			ti.Indexes = append(ti.Indexes[:0:0], ti.Indexes...) // copy
+			for i, ov := range ti.Indexes {
+				ti.Indexes[i] = ov.WithMerged(up.results[i], up.nmerged)
+			}
+			t2.Put(ti)
 		}
-		t2.Put(&ti)
 	}
 	m.info = t2.Freeze()
 }
