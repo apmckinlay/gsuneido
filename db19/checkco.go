@@ -205,7 +205,7 @@ func (ck *Check) dispatch(msg interface{}, mergeChan chan todo) {
 	case *ckPersist:
 		ret := make(chan *DbState)
 		mergeChan <- todo{meta: persist, ret: ret}
-		state := <- ret
+		state := <-ret
 		msg.ret <- state
 	case *ckTrans:
 		msg.ret <- ck.Transactions()
