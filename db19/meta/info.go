@@ -186,14 +186,15 @@ func (m *Meta) Persist(exec func(func() PersistUpdate)) {
 func (m *Meta) ApplyPersist(updates []PersistUpdate) {
 	t2 := m.info.Mutable()
 	for _, up := range updates {
-		ti := *t2.MustGet(up.table)                          // copy
-		ti.Indexes = append(ti.Indexes[:0:0], ti.Indexes...) // copy
-		for i, ov := range ti.Indexes {
-			if up.results[i] != nil {
-				ti.Indexes[i] = ov.WithSaved(up.results[i])
+		if ti := t2.GetCopy(up.table); ti != nil { // not dropped
+			ti.Indexes = append(ti.Indexes[:0:0], ti.Indexes...) // copy
+			for i, ov := range ti.Indexes {
+				if up.results[i] != nil {
+					ti.Indexes[i] = ov.WithSaved(up.results[i])
+				}
 			}
+			t2.Put(ti)
 		}
-		t2.Put(&ti)
 	}
 	m.info = t2.Freeze()
 }
