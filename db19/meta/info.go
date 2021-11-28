@@ -106,6 +106,7 @@ func (m *Meta) Merge(metaWas *Meta, table string, nmerge int) MergeUpdate {
 	// fmt.Println("Merge", table, tns)
 	cur, ok := m.schema.Get(table)
 	if !ok || cur.isTomb() {
+		// fmt.Println(" Merge skip")
 		return MergeUpdate{} // table dropped
 	}
 	was := metaWas.schema.MustGet(table)
@@ -147,6 +148,8 @@ func (m *Meta) ApplyMerge(updates []MergeUpdate) {
 				ti.Indexes[i] = ov.WithMerged(up.results[i], up.nmerged)
 			}
 			t2.Put(ti)
+		} else {
+			// fmt.Println(" Apply skip")
 		}
 	}
 	m.info = t2.Freeze()

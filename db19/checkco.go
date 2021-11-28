@@ -67,7 +67,11 @@ type ckTrans struct {
 	ret chan []int
 }
 
+// var i = 0
+
 func (ck *CheckCo) StartTran() *CkTran {
+	// fmt.Print("\rStart ", i)
+	// i++
 	ret := make(chan *CkTran, 1)
 	ck.c <- &ckStart{ret: ret}
 	return <-ret

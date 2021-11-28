@@ -79,7 +79,7 @@ loop:
 				mt.merges.start(m)
 				m = mt.merges.drain(mt.mergeChan)
 				mt.db.Merge(mt.merges.meta, mt.em.merge, mt.merges)
-				// mt.db.Merge(mergeSingle, merges)
+				// mt.db.Merge(mt.merges.meta, mergeSingle, merges)
 				if m.isZero() {
 					break
 				}
@@ -147,19 +147,27 @@ func (em *execMulti) merge(metaWas, metaCur *meta.Meta, merges *mergeList) []met
 			return append(merges.results, result)
 		}
 	}
+	nresults := 0
 	for i := 0; i < len(merges.tn); {
 		select {
 		case em.jobChan <- job{metaCur: metaCur, metaWas: metaWas,
 			table: merges.tn[i].table, nmerge: merges.tn[i].nmerge}:
 			i++
 		case result := <-em.resultChan:
-			merges.results = append(merges.results, result)
+			if !result.Skip() {
+				merges.results = append(merges.results, result)
+			}
+			nresults++
 		}
 	}
-	for len(merges.results) < len(merges.tn) {
+	for nresults < len(merges.tn) {
 		result := <-em.resultChan
-		merges.results = append(merges.results, result)
+		if !result.Skip() {
+			merges.results = append(merges.results, result)
+		}
+		nresults++
 	}
+
 	return merges.results
 }
 
@@ -172,10 +180,7 @@ type job struct {
 
 func (em *execMulti) worker() {
 	for j := range em.jobChan {
-		result := j.metaCur.Merge(j.metaWas, j.table, j.nmerge)
-		if !result.Skip() {
-			em.resultChan <- result
-		}
+		em.resultChan <- j.metaCur.Merge(j.metaWas, j.table, j.nmerge)
 	}
 }
 
