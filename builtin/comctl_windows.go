@@ -193,6 +193,21 @@ var _ = builtin3("ImageList_GetImageInfo(himl, imageindex, pImageInfo)",
 		return boolRet(rtn)
 	})
 
+// dll bool Comctl32:ImageList_Draw(pointer himl, long imageindex,
+//		pointer hdc, long x, long y, UINT fStyle)
+var imageList_Draw = comctl32.MustFindProc("ImageList_Draw").Addr()
+var _ = builtin6("ImageList_Draw(himl, imageindex, hdc, x, y, fStyle)",
+	func(a, b, c, d, e, f Value) Value {
+		rtn := goc.Syscall6(imageList_Draw,
+			intArg(a),
+			intArg(b),
+			intArg(c),
+			intArg(d),
+			intArg(e),
+			intArg(f))
+		return boolRet(rtn)
+	})
+
 type IMAGEINFO struct {
 	hbmImage HANDLE
 	hbmMask  HANDLE
