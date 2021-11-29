@@ -54,7 +54,7 @@ func (t *Thread) run() Value {
 	} else if t.spMax > t.sp {
 		// clear the value stack to high water mark
 		// and following non-nil (expression temporaries)
-		for i := t.sp; i < t.spMax || t.stack[i] != nil; i++ {
+		for i := t.sp; i < t.spMax || (i < maxStack && t.stack[i] != nil); i++ {
 			t.stack[i] = nil
 		}
 		t.spMax = t.sp

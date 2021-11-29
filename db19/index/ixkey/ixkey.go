@@ -123,6 +123,21 @@ func (spec *Spec) Key(rec Record) string {
 	return hacks.BStoS(buf)
 }
 
+// Encodes returns whether the Spec requires encoding.
+func (spec *Spec) Encodes() bool {
+	return len(spec.Fields) > 1 || len(spec.Fields2) > 0
+}
+
+func Encode(s string) string {
+	if i := strings.IndexByte(s, 0); i == -1 {
+		return s
+	}
+	buf := make([]byte, 0, len(s) + 4)
+	buf = encode(buf, s)
+	return hacks.BStoS(buf)
+}
+
+// encode appends encoded b to buf and returns resulting buf
 func encode(buf []byte, b string) []byte {
 	for len(b) > 0 {
 		i := strings.IndexByte(b, 0)

@@ -6,6 +6,7 @@ package dbms
 import (
 	"fmt"
 	"log"
+	"strconv"
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/compile"
@@ -207,8 +208,8 @@ func (*DbmsLocal) SessionId(id string) string {
 	return sessionId
 }
 
-func (dbms *DbmsLocal) Size() int64 {
-	return int64(dbms.db.Size())
+func (dbms *DbmsLocal) Size() uint64 {
+	return dbms.db.Size()
 }
 
 func (*DbmsLocal) Timestamp() SuDate {
@@ -229,8 +230,13 @@ func (dbms *DbmsLocal) Transaction(update bool) ITran {
 	return &ReadTranLocal{dbms.db.NewReadTran()}
 }
 
-func (*DbmsLocal) Transactions() *SuObject {
-	return &SuObject{} //TODO
+func (dbms *DbmsLocal) Transactions() *SuObject {
+	var ob SuObject
+	trans := dbms.db.Transactions()
+	for _, t := range trans {
+		ob.Add(SuStr("ut" + strconv.Itoa(t)))
+	}
+	return &ob
 }
 
 func (dbms *DbmsLocal) Unuse(lib string) bool {

@@ -61,7 +61,8 @@ type Query interface {
 	// else ""
 	Updateable() string
 
-	// SingleTable is used by temp indexes
+	// SingleTable is used by TempIndex.
+	// It is true if the query Get returns a single record stored in the database
 	SingleTable() bool
 
 	// Indexes returns all the indexes
@@ -415,7 +416,7 @@ func (q2 *Query2) Updateable() string {
 }
 
 func (q2 *Query2) SingleTable() bool {
-	return false
+	return false // not single
 }
 
 func (*Query2) Output(runtime.Record) {

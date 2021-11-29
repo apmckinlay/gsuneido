@@ -17,10 +17,10 @@ type Join struct {
 	Query2
 	by []string
 	joinType
-	nr     int
-	hdr1   *Header
-	row1   Row
-	row2   Row
+	nr   int
+	hdr1 *Header
+	row1 Row
+	row2 Row
 }
 
 type joinApproach struct {
@@ -61,7 +61,7 @@ func NewJoin(src, src2 Query, by []string) *Join {
 	} else if !sset.Equal(by, b) {
 		panic("join: by does not match common columns")
 	}
-	jn := &Join{Query2: Query2{Query1: Query1{source: src},	source2: src2}, by: by}
+	jn := &Join{Query2: Query2{Query1: Query1{source: src}, source2: src2}, by: by}
 	k1 := containsKey(by, src.Keys())
 	k2 := containsKey(by, src2.Keys())
 	if k1 && k2 {
@@ -258,7 +258,7 @@ func (jn *Join) Select(cols, vals []string) {
 type LeftJoin struct {
 	Join
 	row1out bool
-	empty2 Row
+	empty2  Row
 }
 
 func NewLeftJoin(src, src2 Query, by []string) *LeftJoin {

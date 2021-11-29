@@ -376,7 +376,8 @@ func (su *Summarize) buildMap() []mapPair {
 			}
 		}
 		for i := range sums {
-			sums[i].add(row.GetVal(hdr, su.ons[i], &thread, MakeSuTran(su.t)), nil)
+			x := row.GetVal(hdr, su.ons[i], &thread, MakeSuTran(su.t))
+			sums[i].add(x, nil)
 		}
 	}
 	i := 0
@@ -442,8 +443,8 @@ func (t *sumSeqT) getSeq(su *Summarize, dir Dir) Row {
 	var thread Thread
 	for {
 		for i := range t.sums {
-			t.sums[i].add(t.nextRow.GetVal(su.srcHdr, su.ons[i], &thread, MakeSuTran(su.t)),
-				su.sumRow(t.nextRow))
+			x := t.nextRow.GetVal(su.srcHdr, su.ons[i], &thread, MakeSuTran(su.t))
+			t.sums[i].add(x, su.sumRow(t.nextRow))
 		}
 		t.nextRow = su.source.Get(dir)
 		if t.nextRow == nil || !su.sameBy(t.curRow, t.nextRow) {

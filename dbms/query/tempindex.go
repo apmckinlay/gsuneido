@@ -16,6 +16,8 @@ type TempIndex struct {
 	Query1
 	order   []string
 	tran    QueryTran
+	st      *SuTran
+	th      *Thread
 	hdr     *Header
 	iter    rowIter
 	rewound bool
@@ -55,7 +57,7 @@ func (ti *TempIndex) Lookup(cols, vals []string) Row {
 		ti.iter = ti.makeIter()
 	}
 	encode := len(ti.order) > 1
-	key := selEncode(encode, ti.order, cols, vals)
+	key := selOrg(encode, ti.order, cols, vals)
 	row := ti.iter.Seek(key)
 	if row == nil || ti.rowKey(row) != key {
 		return nil
@@ -99,6 +101,8 @@ func (ti *TempIndex) makeIter() rowIter {
 	if ti.selEnd == "" {
 		ti.selEnd = ixkey.Max
 	}
+	ti.st = MakeSuTran(ti.tran)
+	ti.th = &Thread{}
 	ti.hdr = ti.source.Header()
 	if ti.source.SingleTable() {
 		return ti.single()
@@ -113,16 +117,19 @@ func (ti *TempIndex) selected(row Row) bool {
 
 func (ti *TempIndex) rowKey(row Row) string {
 	if len(ti.order) == 1 {
-		return row.GetRaw(ti.hdr, ti.order[0])
+		return row.GetRawVal(ti.hdr, ti.order[0], ti.th, ti.st)
 	}
 	var enc ixkey.Encoder
 	for _, col := range ti.order {
-		enc.Add(row.GetRaw(ti.hdr, col))
+		enc.Add(row.GetRawVal(ti.hdr, col, ti.th, ti.st))
 	}
 	return enc.String()
 }
 
 //-------------------------------------------------------------------
+// single is for ti.source.SingleTable.
+// Since there is only one table,
+// we can store the record offset directly in the sortlist.
 
 type singleIter struct {
 	tran QueryTran
@@ -130,8 +137,7 @@ type singleIter struct {
 }
 
 func (ti *TempIndex) single() rowIter {
-	spec := ti.ixspec()
-	b := sortlist.NewSorting(ti.tran.MakeLess(spec))
+	b := sortlist.NewSorting(ti.singleLess)
 	for {
 		row := ti.source.Get(Next)
 		if row == nil {
@@ -139,22 +145,35 @@ func (ti *TempIndex) single() rowIter {
 		}
 		b.Add(row[0].Off)
 	}
-	less := func(off uint64, key string) bool {
-		rec := ti.tran.GetRecord(off)
-		return spec.Key(rec) < key
+	// lt must be consistent with singleLess
+	lt := func(off uint64, key string) bool {
+		return ti.rowKey(ti.singleGet(off)) < key
 	}
-	return &singleIter{tran: ti.tran, iter: b.Finish().Iter(less)}
+	return &singleIter{tran: ti.tran, iter: b.Finish().Iter(lt)}
 }
 
-func (ti *TempIndex) ixspec() *ixkey.Spec {
-	fields := ti.hdr.Fields[0]
-	flds := make([]int, len(ti.order))
-	for i, f := range ti.order {
-		fi := strs.Index(fields, f)
-		assert.That(fi >= 0)
-		flds[i] = fi
+func (ti *TempIndex) singleLess(x, y uint64) bool {
+	return ti.less(ti.singleGet(x), ti.singleGet(y))
+}
+
+func (ti *TempIndex) singleGet(off uint64) Row {
+	rec := ti.tran.GetRecord(off)
+	return Row{{Record: rec}}
+}
+
+// less is used by singleLess and multiLess
+func (ti *TempIndex) less(xrow, yrow Row) bool {
+	for _, col := range ti.order {
+		x := xrow.GetRawVal(ti.hdr, col, ti.th, ti.st)
+		y := yrow.GetRawVal(ti.hdr, col, ti.th, ti.st)
+		if x != y {
+			if x < y {
+				return true
+			}
+			return false // >
+		}
 	}
-	return &ixkey.Spec{Fields: flds}
+	return false
 }
 
 func (it *singleIter) Get(dir Dir) Row {
@@ -191,19 +210,19 @@ func (it *singleIter) Rewind() {
 }
 
 //-------------------------------------------------------------------
+// multi is when we have multiple records (not ti.source.SingleTable).
+// So we store the record offsets and/or the in memory records in a separate heap
+// that the sortlist points to.
 
 type multiIter struct {
-	tran  QueryTran
+	ti    *TempIndex
 	nrecs int
 	heap  *stor.Stor
-	hdr   *Header
-	order []string
 	iter  *sortlist.Iter
 }
 
 func (ti *TempIndex) multi() rowIter {
-	it := multiIter{tran: ti.tran, hdr: ti.hdr, order: ti.order,
-		nrecs: len(ti.hdr.Fields), heap: stor.HeapStor(8192)}
+	it := multiIter{ti: ti, nrecs: len(ti.hdr.Fields), heap: stor.HeapStor(8192)}
 	it.heap.Alloc(1) // avoid offset 0
 	b := sortlist.NewSorting(it.multiLess)
 	for {
@@ -214,16 +233,19 @@ func (ti *TempIndex) multi() rowIter {
 		assert.That(len(row) == it.nrecs)
 		n := it.nrecs * stor.SmallOffsetLen
 		for _, dbrec := range row {
-			if dbrec.Off == 0 { // derived record e.g. from extend
+			if dbrec.Off == 0 { // derived record e.g. from extend or summarize
 				n += len(dbrec.Record)
 			}
 		}
 		off, buf := it.heap.Alloc(n)
 		for _, dbrec := range row {
 			if dbrec.Off > 0 {
+				// database records are stored as their offset
 				stor.WriteSmallOffset(buf, dbrec.Off)
 				buf = buf[stor.SmallOffsetLen:]
-			} else { // derived
+			} else {
+				// derived records are stored as their size|multiMask
+				// followed by their actual contents
 				size := len(dbrec.Record)
 				stor.WriteSmallOffset(buf, multiMask|uint64(size))
 				buf = buf[stor.SmallOffsetLen:]
@@ -233,12 +255,24 @@ func (ti *TempIndex) multi() rowIter {
 		}
 		b.Add(off)
 	}
-	less := func(off uint64, key string) bool {
-		row := it.get(off)
-		return ti.rowKey(row) < key
+	// lt must be consistent with multiLess
+	lt := func(off uint64, key string) bool {
+		return ti.rowKey(it.get(off)) < key
 	}
-	it.iter = b.Finish().Iter(less)
+	it.iter = b.Finish().Iter(lt)
 	return &it
+}
+
+func (it *multiIter) multiLess(x, y uint64) bool {
+	xrow := make(Row, it.nrecs)
+	yrow := make(Row, it.nrecs)
+	xbuf := it.heap.Data(x)
+	ybuf := it.heap.Data(y)
+	for i := 0; i < it.nrecs; i++ {
+		xbuf, xrow[i].Record, _ = it.getRec(xbuf)
+		ybuf, yrow[i].Record, _ = it.getRec(ybuf)
+	}
+	return it.ti.less(xrow, yrow)
 }
 
 const multiMask = 0xffff000000
@@ -283,7 +317,7 @@ func (it *multiIter) getRec(buf []byte) ([]byte, Record, uint64) {
 	buf = buf[stor.SmallOffsetLen:]
 	var rec Record
 	if off < multiMask {
-		rec = it.tran.GetRecord(off)
+		rec = it.ti.tran.GetRecord(off)
 	} else { // derived
 		size := off &^ multiMask
 		rec = Record(buf[:size])
@@ -291,26 +325,4 @@ func (it *multiIter) getRec(buf []byte) ([]byte, Record, uint64) {
 		off = 0
 	}
 	return buf, rec, off
-}
-
-func (it *multiIter) multiLess(x, y uint64) bool {
-	xrow := make(Row, it.nrecs)
-	yrow := make(Row, it.nrecs)
-	xbuf := it.heap.Data(x)
-	ybuf := it.heap.Data(y)
-	for i := 0; i < it.nrecs; i++ {
-		xbuf, xrow[i].Record, _ = it.getRec(xbuf)
-		ybuf, yrow[i].Record, _ = it.getRec(ybuf)
-	}
-	for _, col := range it.order {
-		x := xrow.GetRaw(it.hdr, col)
-		y := yrow.GetRaw(it.hdr, col)
-		if x != y {
-			if x < y {
-				return true
-			}
-			return false // >
-		}
-	}
-	return false
 }

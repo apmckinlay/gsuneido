@@ -14,6 +14,10 @@ import (
 	"github.com/apmckinlay/gsuneido/util/strs"
 )
 
+// Note: Stored fields ignore rules.
+// This seems "wrong" but it matches what jSuneido does.
+// Normally this isn't an issue because the stored field has a value.
+
 type Context struct {
 	Th   *Thread
 	Tran *SuTran
@@ -126,23 +130,22 @@ var reverseBinary = map[tok.Token]tok.Token{
 func (b *Binary) Eval(c *Context) Value {
 	// NOTE: only Eval raw if b.evalRaw was set by CanEvalRaw
 	if b.evalRaw {
-		id := b.Lhs.(*Ident)
-		if lhs := c.Row.GetRaw(c.Hdr, id.Name); lhs != "" {
-			rhs := b.Rhs.(*Constant).Packed
-			switch b.Tok {
-			case tok.Is:
-				return SuBool(lhs == rhs)
-			case tok.Isnt:
-				return SuBool(lhs != rhs)
-			case tok.Lt:
-				return SuBool(lhs < rhs)
-			case tok.Lte:
-				return SuBool(lhs <= rhs)
-			case tok.Gt:
-				return SuBool(lhs > rhs)
-			case tok.Gte:
-				return SuBool(lhs >= rhs)
-			}
+		name := b.Lhs.(*Ident).Name
+		lhs := c.Row.GetRaw(c.Hdr, name)
+		rhs := b.Rhs.(*Constant).Packed
+		switch b.Tok {
+		case tok.Is:
+			return SuBool(lhs == rhs)
+		case tok.Isnt:
+			return SuBool(lhs != rhs)
+		case tok.Lt:
+			return SuBool(lhs < rhs)
+		case tok.Lte:
+			return SuBool(lhs <= rhs)
+		case tok.Gt:
+			return SuBool(lhs > rhs)
+		case tok.Gte:
+			return SuBool(lhs >= rhs)
 		}
 	}
 	return b.eval(b.Lhs.Eval(c), b.Rhs.Eval(c))
@@ -320,14 +323,13 @@ func (a *In) CanEvalRaw(cols []string) bool {
 func (a *In) Eval(c *Context) Value {
 	if a.Packed != nil {
 		id := a.E.(*Ident)
-		if e := c.Row.GetRaw(c.Hdr, id.Name); e != "" {
-			for _, p := range a.Packed {
-				if e == p {
-					return True
-				}
+		e := c.Row.GetRaw(c.Hdr, id.Name)
+		for _, p := range a.Packed {
+			if e == p {
+				return True
 			}
-			return False
 		}
+		return False
 	}
 	x := a.E.Eval(c)
 	for _, e := range a.Exprs {

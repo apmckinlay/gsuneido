@@ -194,7 +194,7 @@ func lookupCost(rowSize int) Cost {
 // execution --------------------------------------------------------
 
 func (tbl *Table) Lookup(cols, vals []string) runtime.Row {
-	key := selEncode(tbl.indexEncode, tbl.index, cols, vals)
+	key := selOrg(tbl.indexEncode, tbl.index, cols, vals)
 	return tbl.lookup(key)
 }
 
@@ -246,31 +246,65 @@ func (tbl *Table) Select(cols, vals []string) {
 }
 
 func selKeys(encode bool, dstCols, srcCols, vals []string) (string, string) {
-	org := selEncode(encode, dstCols, srcCols, vals)
-	var end string
 	if !encode {
-		end = org + "\x00"
-	} else {
-		end = org + ixkey.Sep + ixkey.Max
+		org := selGet(dstCols[0], srcCols, vals)
+		end := org + "\x00"
+		return org, end
 	}
+	end := selEnd(dstCols, srcCols, vals)
+	org := trim(end)
 	return org, end
-}
-
-func selEncode(encode bool, dstCols, srcCols, vals []string) string {
-	if !encode {
-		return selGet(dstCols[0], srcCols, vals)
-	}
-	enc := ixkey.Encoder{}
-	for _, col := range dstCols {
-		enc.Add(selGet(col, srcCols, vals))
-	}
-	return enc.String()
 }
 
 func selGet(col string, cols, vals []string) string {
 	i := strs.Index(cols, col)
-	assert.That(i != -1)
+	assert.Msg("selGet", col, "NOT IN", cols).That(i != -1)
 	return vals[i]
+}
+
+func selEnd(dstCols, srcCols, vals []string) string {
+	enc := ixkey.Encoder{}
+	prefix := true
+	for _, col := range dstCols {
+		i := strs.Index(srcCols, col)
+		if i != -1 {
+			assert.Msg("selEncode").That(prefix)
+			enc.Add(vals[i])
+		} else {
+			prefix = false
+			enc.Add("")
+		}
+	}
+	enc.Add(ixkey.Max)
+	return enc.String()
+}
+
+func trim(end string) string {
+	n := len(end)
+	org := end[:n-len(ixkey.Max)]
+	n -= len(ixkey.Max)
+	for n >= 2 && org[n-2:n] == ixkey.Sep {
+		n -= 2
+	}
+	return org[:n]
+}
+
+func selOrg(encode bool, dstCols, srcCols, vals []string) string {
+	if !encode {
+		return selGet(dstCols[0], srcCols, vals)
+	}
+	enc := ixkey.Encoder{}
+	prefix := true
+	for _, col := range dstCols {
+		i := strs.Index(srcCols, col)
+		if i != -1 {
+			assert.Msg("selEncode").That(prefix)
+			enc.Add(vals[i])
+		} else {
+			prefix = false
+		}
+	}
+	return enc.String()
 }
 
 func (tbl *Table) SelectRaw(org, end string) {

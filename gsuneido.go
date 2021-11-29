@@ -8,10 +8,12 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net/http"
 	"os"
 	"os/exec"
 	"runtime"
 	"runtime/debug"
+	"strconv"
 	"strings"
 	"time"
 
@@ -250,6 +252,7 @@ func startServer() {
 var db *db19.Database
 
 func openDbms() {
+	startHttpStatus()
 	var err error
 	db, err = db19.OpenDatabase("suneido.db")
 	if err != nil {
@@ -274,6 +277,65 @@ func closeDbms() {
 	if db != nil {
 		db.Close()
 	}
+}
+
+// HTTP status ------------------------------------------------------
+
+func startHttpStatus() {
+	http.HandleFunc("/", httpStatus)
+	go func() {
+		Fatal(http.ListenAndServe(":3148", nil))
+	}()
+}
+func httpStatus(w http.ResponseWriter, _ *http.Request) {
+	fmt.Fprintln(w,
+		`<html>
+			<head>
+			<title>Suneido Server Monitor</title>
+			<meta http-equiv="refresh" content="5" />
+			</head>
+			<body>
+				<h1>Suneido Server Monitor</h1>
+				<p>Built: `+builtin.Built()+`</p>
+				<p>Heap: `+mb(builtin.HeapSys())+`</p>
+				<p>Database: `+mb(GetDbms().Size())+`
+				`+threads()+`
+				`+trans()+`
+			</body>
+		</html>`)
+}
+
+func mb(n uint64) string {
+	return strconv.FormatUint(((n+512*1024)/(1024*1024)), 10) + "mb"
+}
+
+func threads() string {
+	list := builtin.ThreadList()
+	var sb strings.Builder
+	fmt.Fprintf(&sb, "<p>Threads: (%d) ", len(list))
+	sep := ""
+	for _, s := range list {
+		sb.WriteString(sep)
+		sb.WriteString(s)
+		sep = ", "
+	}
+	sb.WriteString("<p>\n")
+	return sb.String()
+}
+
+func trans() string {
+	list := GetDbms().Transactions()
+	n := list.Size()
+	var sb strings.Builder
+	fmt.Fprintf(&sb, "<p>Transactions: (%d) ", n)
+	sep := ""
+	for i := 0; i < n; i++ {
+		sb.WriteString(sep)
+		sb.WriteString(ToStr(list.ListGet(i)))
+		sep = ", "
+	}
+	sb.WriteString("<p>\n")
+	return sb.String()
 }
 
 // REPL -------------------------------------------------------------
@@ -360,6 +422,8 @@ func eval(src string) {
 		fmt.Println(WithType(result)) // NOTE: doesn't use ToString
 	}
 }
+
+//-------------------------------------------------------------------
 
 // libload loads a name from the dbms
 func libload(t *Thread, gn Gnum, name string) (result Value) {

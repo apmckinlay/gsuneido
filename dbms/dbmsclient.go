@@ -258,9 +258,9 @@ func (dc *dbmsClient) SessionId(id string) string {
 	return dc.sessionId
 }
 
-func (dc *dbmsClient) Size() int64 {
+func (dc *dbmsClient) Size() uint64 {
 	dc.PutCmd(commands.Size).Request()
-	return dc.GetInt64()
+	return uint64(dc.GetInt64())
 }
 
 func (dc *dbmsClient) Timestamp() SuDate {

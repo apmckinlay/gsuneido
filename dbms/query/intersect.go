@@ -28,7 +28,7 @@ func NewIntersect(src, src2 Query) *Intersect {
 }
 
 func (it *Intersect) String() string {
-	return it.String2("INTERSECT")
+	return it.String2("INTERSECT", "")
 }
 
 func (it *Intersect) Columns() []string {

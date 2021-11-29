@@ -53,7 +53,7 @@ func (st *schemaTable) Updateable() string {
 }
 
 func (st *schemaTable) SingleTable() bool {
-	return false
+	return false // not a physical table
 }
 
 func (*schemaTable) rowSize() int {

@@ -108,7 +108,7 @@ var threadMethods = Methods{
 		threads.lock.Lock()
 		defer threads.lock.Unlock()
 		for _, t := range threads.list {
-			ob.Put(nil, SuStr(t.Name), True)
+			ob.Set(SuStr(t.Name), True)
 		}
 		return ob
 	}),
@@ -142,3 +142,14 @@ var _ = builtin("Scheduled(ms, block)",
 		}()
 		return nil
 	})
+
+// ThreadList is used by HttpStatus
+func ThreadList() []string {
+	threads.lock.Lock()
+	defer threads.lock.Unlock()
+	list := make([]string, 0, len(threads.list))
+	for _, t := range threads.list {
+		list = append(list, t.Name)
+	}
+	return list
+}

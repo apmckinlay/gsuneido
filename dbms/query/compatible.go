@@ -46,11 +46,11 @@ func (c *Compatible) init() {
 	}
 }
 
-func (c *Compatible) String2(op string) string {
+func (c *Compatible) String2(op, strategy string) string {
 	if c.disjoint != "" {
 		op += "-DISJOINT(" + c.disjoint + ")"
 	}
-	return c.Query2.String2(op)
+	return c.Query2.String2(op + strategy)
 }
 
 // source2Has returns true if a row from source exists in source2

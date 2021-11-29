@@ -53,16 +53,16 @@ func NewUnion(src, src2 Query) *Union {
 }
 
 func (u *Union) String() string {
-	op := "UNION"
+	strategy := ""
 	switch u.strategy {
 	case unionMerge:
-		op += "-MERGE"
+		strategy += "-MERGE"
 	case unionLookup:
 		if u.disjoint == "" {
-			op += "-LOOKUP"
+			strategy += "-LOOKUP"
 		}
 	}
-	return u.String2(op)
+	return u.String2("UNION", strategy)
 }
 
 func (u *Union) Columns() []string {

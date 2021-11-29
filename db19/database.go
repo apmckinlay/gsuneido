@@ -138,12 +138,11 @@ func (db *Database) loadedTable(ts *meta.Schema, ti *meta.Info) error {
 func (db *Database) Create(schema *schema.Schema) {
 	db.lockSchema()
 	defer db.unlockSchema()
-	ts, ti := db.create(schema)
 	db.UpdateState(func(state *DbState) {
-		if state.Meta.GetRoSchema(ts.Table) != nil {
-			panic("can't create existing table: " + ts.Table)
+		if state.Meta.GetRoSchema(schema.Table) != nil {
+			panic("can't create existing table: " + schema.Table)
 		}
-		state.Meta = state.Meta.PutNew(ts, ti, schema)
+		db.create(state, schema)
 	})
 }
 
@@ -157,12 +156,12 @@ func (db *Database) unlockSchema() {
 	atomic.StoreInt64(&db.schemaLock, 0)
 }
 
-func (db *Database) create(schema *schema.Schema) (*meta.Schema, *meta.Info) {
+func (db *Database) create(state *DbState, schema *schema.Schema)  {
 	ts := &meta.Schema{Schema: *schema}
 	ts.Ixspecs(ts.Indexes)
 	ov := db.createIndexes(ts.Indexes)
 	ti := &meta.Info{Table: schema.Table, Indexes: ov}
-	return ts, ti
+	state.Meta = state.Meta.PutNew(ts, ti, schema)
 }
 
 func (db *Database) createIndexes(idxs []schema.Index) []*index.Overlay {
@@ -184,8 +183,7 @@ func (db *Database) Ensure(sch *schema.Schema) {
 		if ts == nil { // table doesn't exist
 			// TODO check if schema is "full" (see parseadmin.go)
 			// else you could get assertion failures
-			ts, ti := db.create(sch)
-			state.Meta = state.Meta.Put(ts, ti)
+			db.create(state, sch)
 			handled = true
 
 		} else if schemaSubset(sch, ts) {
@@ -293,6 +291,8 @@ func (db *Database) buildIndexes(table string, newIdxs []schema.Index) []*index.
 	return ov
 }
 
+// MakeLess handles _lower! but not rules.
+// It is used for indexes (which don't support rules).
 func MakeLess(store *stor.Stor, is *ixkey.Spec) func(x, y uint64) bool {
 	return func(x, y uint64) bool {
 		xr := OffToRec(store, x)
@@ -408,6 +408,10 @@ func (db *Database) Size() uint64 {
 	return db.Store.Size()
 }
 
+func (db *Database) Transactions() []int {
+	return db.ck.Transactions()
+}
+
 // Close closes the database store, writing the current size to the start.
 // NOTE: The state must already be written.
 func (db *Database) Close() {
@@ -455,12 +459,4 @@ func OffToRecCk(store *stor.Stor, off uint64) rt.Record {
 	size := rt.RecLen(buf)
 	cksum.MustCheck(buf[:size+cksum.Len])
 	return rt.Record(hacks.BStoS(buf[:size]))
-}
-
-func (db *Database) MakeLess(is *ixkey.Spec) func(x, y uint64) bool {
-	return func(x, y uint64) bool {
-		xr := OffToRec(db.Store, x)
-		yr := OffToRec(db.Store, y)
-		return is.Compare(xr, yr) < 0
-	}
 }
