@@ -426,20 +426,25 @@ func eval(src string) {
 //-------------------------------------------------------------------
 
 // libload loads a name from the dbms
-func libload(t *Thread, gn Gnum, name string) (result Value) {
+func libload(t *Thread, name string) (result Value, e interface{}) {
+	var gn int
 	defer func() {
-		if e := recover(); e != nil {
+		if e = recover(); e != nil {
 			// fmt.Println("INFO: error loading", name, e)
 			// debug.PrintStack()
-			Global.Set(gn, nil)
-			panic("error loading " + name + " " + fmt.Sprint(e))
+			result = nil
+			if gn != 0 {
+				Global.Set(gn, nil)
+			}
 		}
 	}()
 	defs := t.Dbms().LibGet(name)
 	if len(defs) == 0 {
 		// fmt.Println("LOAD", name, "MISSING")
-		return nil
+		return nil, nil
 	}
+	// only assign Gnum if found in library
+	gn = Global.Num(name)
 	for i := 0; i < len(defs); i += 2 {
 		lib := defs[i]
 		src := defs[i+1]
@@ -455,5 +460,5 @@ func libload(t *Thread, gn Gnum, name string) (result Value) {
 		Global.Set(gn, result) // required for overload inheritance
 		// fmt.Println("LOAD", name, "SUCCEEDED")
 	}
-	return
+	return result, nil
 }

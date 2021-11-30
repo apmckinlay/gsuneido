@@ -6,8 +6,20 @@ package runtime
 import (
 	"fmt"
 	"log"
+	"math"
 	"sync"
 )
+
+// globals generally follows the usual style that public methods lock
+// and private methods do not.
+// builtins does not require locking
+// since it is populated by init which is single threaded
+// and is immutable after that.
+
+// BUG: Because we do not hold a lock during libload
+// and because libload with overloading sets the global
+// to each overload successively
+// another thread could see a non-final value.
 
 // Gnum is a reference to a global name/value
 // 0 is invalid
@@ -20,14 +32,19 @@ type typeGlobal struct{}
 // This approach doesn't seem to add any overhead.
 var Global typeGlobal
 
+// globals stores the value of global names.
+//	Normal: values[gnum] != nil
+//	Unloaded: values[gnum] == nil
+//	Error: values[gnum] == nil, errors[gnum] == string
+//	Missing: values[gnum] == nil, errors[gnum] == false
 type globals struct {
 	lock     sync.RWMutex
 	name2num map[string]Gnum
 	names    []string
 	values   []Value
-	missing  Value
 	builtins map[Gnum]Value
 	errors   map[Gnum]interface{}
+	noDef    cacheSet // used by FindName
 }
 
 var g = globals{
@@ -35,7 +52,6 @@ var g = globals{
 	// put ""/nil in first slot so we never use gnum of zero
 	names:    []string{""},
 	values:   []Value{nil},
-	missing:  &SuExcept{}, // type doesn't matter, just has to be unique
 	builtins: make(map[Gnum]Value, 100),
 	errors:   make(map[Gnum]interface{}),
 }
@@ -66,24 +82,27 @@ func BuiltinNames() []Value {
 // var _ = globals.Add(...)
 func (typeGlobal) Add(name string, val Value) Gnum {
 	g.lock.Lock()
+	defer g.lock.Unlock()
 	if _, ok := g.name2num[name]; ok {
-		g.lock.Unlock()
 		panic("duplicate global: " + name)
 	}
-	gn := Global.add(name, val)
-	g.lock.Unlock()
-	return gn
+	return Global.add(name, val)
 }
 
+// add requires caller to write Lock
 func (typeGlobal) add(name string, val Value) Gnum {
 	gnum := len(g.names)
+	if gnum > math.MaxUint16 {
+		Fatal("too many globals")
+	}
 	g.name2num[name] = gnum
 	g.names = append(g.names, name)
 	g.values = append(g.values, val)
 	return gnum
 }
 
-// TestDef sets a global for tests
+// TestDef sets a global for tests.
+// WARNING: no locking
 func (typeGlobal) TestDef(name string, val Value) {
 	g.values[Global.Num(name)] = val
 }
@@ -100,25 +119,36 @@ func (typeGlobal) Num(name string) Gnum {
 	}
 	// less common case, doesn't exist, need write lock to add
 	g.lock.Lock()
+	defer g.lock.Unlock()
 	// have to re-check in case another thread beat us to it
-	gn, ok = g.name2num[name]
-	if !ok {
-		gn = Global.add(name, nil)
+	if gn, ok = g.name2num[name]; ok {
+		return gn
 	}
-	g.lock.Unlock()
-	return gn
+	return Global.add(name, nil)
+}
+
+// num returns the global number for a name
+// adding it if it doesn't exist.
+// It is the same as Num but caller must write Lock.
+func (typeGlobal) num(name string) Gnum {
+	gn, ok := g.name2num[name]
+	if ok {
+		return gn
+	}
+	return Global.add(name, nil)
 }
 
 // Name returns the name for a global number
 func (typeGlobal) Name(gnum Gnum) string {
 	g.lock.RLock()
-	name := g.names[gnum]
-	g.lock.RUnlock()
-	return name
+	defer g.lock.RUnlock()
+	return g.names[gnum]
 }
 
 // Exists returns whether the name exists - for tests
 func (typeGlobal) Exists(name string) bool {
+	g.lock.RLock()
+	defer g.lock.RUnlock()
 	_, ok := g.name2num[name]
 	return ok
 }
@@ -130,106 +160,143 @@ func (typeGlobal) GetName(t *Thread, name string) Value {
 
 // Get returns the value for a global number, or panics
 func (typeGlobal) Get(t *Thread, gnum Gnum) (result Value) {
-	x := Global.Find(t, gnum)
-	if x == nil {
-		if err, ok := g.errors[gnum]; ok {
-			panic(err)
+	if x := Global.Find(t, gnum); x != nil {
+		return x // common fast path
+	}
+	g.lock.RLock()
+	defer g.lock.RUnlock()
+	name := g.names[gnum]
+	if e, ok := g.errors[gnum]; ok && e != false {
+		panic("error loading " + name + " " + fmt.Sprint(e))
+	}
+	panic("can't find " + name)
+}
+
+// FindName returns the value for a global name, or nil if not found.
+// Used to check if a trigger or rule exists.
+// Avoids creating a global if no definition is found.
+// Uses noDef to avoid repeatedly looking up nonexistent names.
+func (typeGlobal) FindName(t *Thread, name string) Value {
+	g.lock.RLock()
+	if gn, ok := g.name2num[name]; ok { // name exists
+		x := g.values[gn]
+		if x != nil {
+			g.lock.RUnlock()
+			return x
 		}
-		panic("can't find " + Global.Name(gnum))
+	}
+	if g.noDef.Has(name) {
+		g.lock.RUnlock()
+		return nil
+	}
+	g.lock.RUnlock()
+	// NOTE: can't hold lock during Libload
+	// since compile may need to access Global.
+	x, e := Libload(t, name)
+	if e != nil {
+		g.lock.Lock()
+		defer g.lock.Unlock()
+		gnum := Global.num(name)
+		g.errors[gnum] = e
+		panic("error loading " + name + " " + fmt.Sprint(e))
+	}
+	if x == nil {
+		g.lock.Lock()
+		defer g.lock.Unlock()
+		g.noDef.Add(name)
 	}
 	return x
 }
 
-// FindName returns the value for a global name, or nil if not found.
-// Used by SuRecord to check if a rule exists.
-func (typeGlobal) FindName(t *Thread, name string) (result Value) {
-	return Global.Find(t, Global.Num(name))
-}
-
 // Libload requires dependency injection
-var Libload = func(*Thread, Gnum, string) Value { return nil }
+var Libload = func(*Thread, string) (Value, interface{}) { return nil, nil }
 
 var gnPrint = Global.Num("Print")
 
 // Find returns the value for a global number, or nil if not found.
-// The two branches on the happy path (x==nil/missing) should be predicted.
 func (typeGlobal) Find(t *Thread, gnum Gnum) (result Value) {
 	if x, ok := g.builtins[gnum]; ok {
-		return x
+		return x // common fast path
 	}
 	g.lock.RLock()
 	x := g.values[gnum]
+	if x != nil {
+		g.lock.RUnlock()
+		return x // common fast path
+	}
+	if _, ok := g.errors[gnum]; ok {
+		g.lock.RUnlock()
+		return nil
+	}
 	g.lock.RUnlock()
+	// NOTE: can't hold lock during Libload
+	// since compile may need to access Global.
+	var e interface{}
+	name := Global.Name(gnum)
+	x, e = Libload(t, name)
+	if e != nil {
+		Global.SetErr(gnum, e)
+		panic("error loading " + name + " " + fmt.Sprint(e))
+	}
 	if x == nil {
-		if _, ok := g.errors[gnum]; ok {
-			return nil
-		}
-		// NOTE: can't hold lock during Libload
-		// since compile may need to access Global.
-		// That means two threads could both load
-		// but they should both get the same value.
-		defer func() {
-			if err := recover(); err != nil {
-				g.errors[gnum] = err // remember the error
-				result = nil
-			}
-		}()
-		x = Libload(t, gnum, Global.Name(gnum))
-		// for development we want Print even if we don't have stdlib
-		if x == nil && gnum == gnPrint {
+		if gnum == gnPrint {
+			// for development we want Print even if we don't have stdlib
 			fmt.Println("using built-in Print")
 			return printBuiltin
 		}
-		if x == nil {
-			x = g.missing // avoid further libloads
-		}
-		g.lock.Lock()
-		g.values[gnum] = x
-		g.lock.Unlock()
-	}
-	if x == g.missing {
+		Global.SetErr(gnum, false) // avoid further libloads
 		return nil
 	}
+	Global.Set(gnum, x)
 	return x
 }
 
 // GetIfPresent returns the current value (if there is one)
 // without doing LibLoad.
 // Used by compiler for _Name references
-func (typeGlobal) GetIfPresent(name string) (x Value) {
+func (typeGlobal) GetIfPresent(name string) Value {
 	g.lock.RLock()
+	defer g.lock.RUnlock()
 	if gnum, ok := g.name2num[name]; ok {
-		if x = g.builtins[gnum]; x == nil {
-			x = g.values[gnum]
+		if x := g.builtins[gnum]; x != nil {
+			return x
+		}
+		if x := g.values[gnum]; x != nil {
+			return x
 		}
 	}
-	g.lock.RUnlock()
-	return
+	return nil
 }
 
 func (typeGlobal) Unload(name string) {
-	gnum := Global.Num(name)
 	g.lock.Lock()
+	defer g.lock.Unlock()
+	gnum := Global.num(name)
 	g.values[gnum] = nil
 	delete(g.errors, gnum)
-	g.lock.Unlock()
+	g.noDef.Delete(name)
 }
 
 func (typeGlobal) UnloadAll() {
 	g.lock.Lock()
+	defer g.lock.Unlock()
 	for i := range g.values {
 		g.values[i] = nil
 	}
-	for k := range g.errors {
-		delete(g.errors, k)
-	}
-	g.lock.Unlock()
+	g.errors = make(map[Gnum]interface{})
+	g.noDef = cacheSet{}
 }
 
-// Set is used by LibLoad
+// Set is used by libload
 func (typeGlobal) Set(gn Gnum, val Value) {
 	g.lock.Lock()
 	g.values[gn] = val
+	g.lock.Unlock()
+}
+
+func (typeGlobal) SetErr(gn Gnum, e interface{}) {
+	g.lock.Lock()
+	g.errors[gn] = e
 	g.lock.Unlock()
 }
 
@@ -237,14 +304,53 @@ func (typeGlobal) Set(gn Gnum, val Value) {
 // It copies the value of a slot to a new slot (without a name)
 func (typeGlobal) Copy(name string) Gnum {
 	g.lock.Lock()
+	defer g.lock.Unlock()
 	gn, ok := g.name2num[name]
 	if !ok || g.values[gn] == nil {
-		g.lock.Unlock()
 		panic("can't find " + name)
 	}
 	newgn := len(g.names)
 	g.names = append(g.names, name)
 	g.values = append(g.values, g.values[gn])
-	g.lock.Unlock()
 	return newgn
+}
+
+//-------------------------------------------------------------------
+
+// NOTE: cacheSet is not thread safe, it does not do any locking.
+// Callers are responsible for any necessary locking.
+
+const cacheSetSize = 16
+
+type cacheSet struct {
+	entries [cacheSetSize]string
+	recent  [cacheSetSize]bool
+	clock   int
+}
+
+func (cs *cacheSet) Has(s string) bool {
+	for i := 0; i < cacheSetSize; i++ {
+		if cs.entries[i] == s {
+			cs.recent[i] = true
+			return true
+		}
+	}
+	return false
+}
+
+func (cs *cacheSet) Add(s string) {
+	for ; cs.recent[cs.clock] == true; cs.clock = (cs.clock + 1) % cacheSetSize {
+		cs.recent[cs.clock] = false
+	}
+	cs.entries[cs.clock] = s
+	cs.recent[cs.clock] = true
+}
+
+func (cs *cacheSet) Delete(s string) {
+	for i := 0; i < cacheSetSize; i++ {
+		if cs.entries[i] == s {
+			cs.entries[i] = ""
+			cs.recent[i] = false
+		}
+	}
 }

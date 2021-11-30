@@ -57,7 +57,7 @@ func (ck *Check) Check(f *ast.Function) set {
 // CheckGlobal checks if a global name is defined.
 // It is also called by compile constant to check class base.
 func (ck *Check) CheckGlobal(name string, pos int) {
-	if nil == Global.FindName(ck.t, name) {
+	if nil == Global.Find(ck.t, Global.Num(name)) {
 		ck.CheckResult(pos, "ERROR: can't find: "+name)
 	}
 }
