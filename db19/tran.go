@@ -302,13 +302,9 @@ func (t *UpdateTran) Output(table string, rec rt.Record) {
 	cksum.Update(buf)
 	keys := make([]string, len(ts.Indexes))
 	for i := range ts.Indexes {
-		ix := ti.Indexes[i]
-		is := ts.Indexes[i].Ixspec
-		keys[i] = is.Key(rec)
-		if ix.Lookup(keys[i]) != 0 {
-			panic(fmt.Sprint("duplicate key: ",
-				strs.Join(",", ts.Indexes[i].Columns), " in ", table))
-		}
+		ix := ts.Indexes[i]
+		keys[i] = ix.Ixspec.Key(rec)
+		dupOutputBlock(table, ix, ti.Indexes[i], rec, keys[i])
 		t.fkeyOutputBlock(ts, i, rec)
 	}
 	for i := range ts.Indexes {
@@ -318,6 +314,25 @@ func (t *UpdateTran) Output(table string, rec rt.Record) {
 	ti.Nrows++
 	ti.Size += uint64(n)
 	t.db.CallTrigger(t.thread(), t, table, "", rec)
+}
+
+func dupOutputBlock(table string, ix schema.Index, ov *index.Overlay,
+	rec rt.Record, key string) {
+	if ix.Mode == 'k' || (ix.Mode == 'u' && !uniqueIndexEmpty(rec, ix.Ixspec)) {
+		if ov.Lookup(key) != 0 {
+			panic(fmt.Sprint("duplicate key: ",
+				strs.Join(",", ix.Columns), " in ", table))
+		}
+	}
+}
+
+func uniqueIndexEmpty(rec rt.Record, is ixkey.Spec) bool {
+	for _, f := range is.Fields {
+		if rec.GetRaw(f) != "" {
+			return false
+		}
+	}
+	return true
 }
 
 func (t *UpdateTran) fkeyOutputBlock(ts *meta.Schema, i int, rec rt.Record) {
@@ -469,16 +484,13 @@ func (t *UpdateTran) Update(table string, oldoff uint64, newrec rt.Record) uint6
 	oldkeys := make([]string, len(ts.Indexes))
 	newkeys := make([]string, len(ts.Indexes))
 	for i := range ts.Indexes {
-		is := ts.Indexes[i].Ixspec
+		ix := ts.Indexes[i]
+		is := ix.Ixspec
 		oldkeys[i] = is.Key(oldrec)
 		if newoff != oldoff {
 			newkeys[i] = is.Key(newrec)
 			if oldkeys[i] != newkeys[i] {
-				ix := ti.Indexes[i]
-				if ix.Lookup(newkeys[i]) != 0 {
-					panic(fmt.Sprint("duplicate key: ",
-						strs.Join(",", ts.Indexes[i].Columns), " in ", table))
-				}
+				dupOutputBlock(table, ix, ti.Indexes[i], newrec, newkeys[i])
 				t.fkeyDeleteBlock(ts, i, oldkeys[i])
 				t.fkeyOutputBlock(ts, i, newrec)
 			}

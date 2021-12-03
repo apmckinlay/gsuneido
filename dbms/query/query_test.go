@@ -252,3 +252,27 @@ func TestExtendAllRules(*testing.T) {
 	assert.That(q.SingleTable())
 	assert.This(len(q.Header().Fields)).Is(1)
 }
+
+func TestDuplicateKey(*testing.T) {
+	db, err := db19.CreateDb(stor.HeapStor(8192))
+	ck(err)
+	db19.StartConcur(db, 50*time.Millisecond)
+	defer db.Close()
+	MakeSuTran = func(qt QueryTran) *rt.SuTran { return nil }
+	act := func(act string) {
+		ut := db.NewUpdateTran()
+		defer ut.Commit()
+		n := DoAction(ut, act)
+		assert.This(n).Is(1)
+	}
+	DoAdmin(db, "create tmp (k,u,i) key(k) index unique(u) index(i)")
+	act("insert { k: 1, u: 2, i: 3 } into tmp")
+	act("insert { k: 11, u: 22, i: 3 } into tmp")
+	assert.This(func(){ act("insert { k: 11, u: 0, i: 0 } into tmp") }).
+		Panics("duplicate key")
+	assert.This(func(){ act("insert { k: 0, u: 22, i: 0 } into tmp") }).
+		Panics("duplicate key")
+	act("insert { k: 111, u: 222, i: 3 } into tmp")
+	act("insert { k: 1111, u: '' } into tmp")
+	act("insert { k: 11111, u: '' } into tmp")
+}
