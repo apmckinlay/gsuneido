@@ -53,9 +53,12 @@ func TestAdminEnsure(t *testing.T) {
 	DoAdmin(db, "ensure tmp2 "+tmpschema)
 	assert.T(t).This(db.Schema("tmp2")).Is("tmp2 " + tmpschema)
 
+	assert.T(t).This(func() { DoAdmin(db, "ensure tmp3 (a) index unique(a)") }).
+		Panics("ensure: cannot create table without key: tmp3")
+
 	// existing index but different
 	assert.T(t).This(func() { DoAdmin(db, "ensure tmp index unique(b,c)")}).
-		Panics(("Ensure: index exists but is different"))
+		Panics(("ensure: index exists but is different"))
 }
 
 func TestAdminEnsure2(t *testing.T) {

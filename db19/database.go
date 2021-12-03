@@ -181,8 +181,7 @@ func (db *Database) Ensure(sch *schema.Schema) {
 	db.UpdateState(func(state *DbState) {
 		ts := state.Meta.GetRoSchema(sch.Table)
 		if ts == nil { // table doesn't exist
-			// TODO check if schema is "full" (see parseadmin.go)
-			// else you could get assertion failures
+			checkForKey(sch)
 			db.create(state, sch)
 			handled = true
 
@@ -204,6 +203,19 @@ func (db *Database) Ensure(sch *schema.Schema) {
 	}
 }
 
+func checkForKey(sch *schema.Schema) {
+	hasKey := false
+	for i := range sch.Indexes {
+		ix := sch.Indexes[i]
+		if ix.Mode == 'k' {
+			hasKey = true
+		}
+	}
+	if !hasKey {
+		panic("ensure: cannot create table without key: " + sch.Table)
+	}
+}
+
 // schemaSubset returns whether the table (ts) already has the ensure schema
 func schemaSubset(schema *schema.Schema, ts *meta.Schema) bool {
 	if !sset.Subset(ts.Columns, schema.Columns) {
@@ -215,7 +227,7 @@ func schemaSubset(schema *schema.Schema, ts *meta.Schema) bool {
 			return false
 		}
 		if !ix.Equal(&schema.Indexes[i]) {
-			panic("Ensure: index exists but is different")
+			panic("ensure: index exists but is different")
 		}
 	}
 	return true
