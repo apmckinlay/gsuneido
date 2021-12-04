@@ -165,16 +165,9 @@ func (p *adminParser) indexes(columns, derived []string, full bool) []Index {
 }
 
 func (p *adminParser) index(columns, derived []string, full bool) *Index {
-	if p.Token != tok.Key && p.Token != tok.Index {
+	mode := p.indexMode()
+	if mode == 0 {
 		return nil
-	}
-	mode := int('i')
-	if p.Token == tok.Key {
-		mode = 'k'
-	}
-	p.Next()
-	if mode != 'k' && p.MatchIf(tok.Unique) {
-		mode = 'u'
 	}
 	ixcols := p.indexColumns(columns, derived, full)
 	if mode != 'k' && len(ixcols) == 0 {
@@ -186,6 +179,22 @@ func (p *adminParser) index(columns, derived []string, full bool) *Index {
 		ix.Fk.Columns = ixcols
 	}
 	return ix
+}
+
+func (p *adminParser) indexMode() int {
+	switch {
+	case p.MatchIf(tok.Key):
+		return 'k'
+	case p.MatchIf(tok.Index):
+		if p.MatchIf(tok.Unique) {
+			return 'u'
+		}
+		return 'i'
+	case p.MatchIf(tok.Unique):
+		p.Match(tok.Index)
+		return 'u'
+	}
+	return 0
 }
 
 func (p *adminParser) indexColumns(columns, derived []string, full bool) []string {
