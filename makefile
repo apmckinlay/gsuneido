@@ -27,6 +27,9 @@ portable:
 test:
 	go test -short -count=1 ./...
 
+racetest:
+	go test -race -short -count=1 ./...
+
 zap:
 	go build -ldflags "-s -w" ./cmd/zap
 
