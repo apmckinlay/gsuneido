@@ -156,6 +156,8 @@ func (lxr *Lexer) next() Item {
 	case '!':
 		if lxr.match('~') {
 			return it(tok.MatchNot)
+		} else if lxr.match('=') {
+			return it(tok.Isnt) //TODO remove when not needed by queries
 		}
 	case '<':
 		if lxr.match('<') {
