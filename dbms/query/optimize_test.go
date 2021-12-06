@@ -10,14 +10,13 @@ import (
 )
 
 func TestOptimize(t *testing.T) {
-	var mode Mode
+	var mode = ReadMode
 	test := func(query, expected string) {
 		t.Helper()
 		q := ParseQuery(query, testTran{})
 		q, _ = Setup(q, mode, testTran{})
 		assert.T(t).Msg(query).This(q.String()).Like(expected)
 	}
-	mode = ReadMode
 	test("table",
 		"table^(a)")
 	test("table sort a",
@@ -123,6 +122,19 @@ func TestOptimize(t *testing.T) {
 	test("task join co join cus",
 		"(co^(tnum) JOIN 1:1 by(tnum) task^(tnum)) "+
 			"JOIN n:1 by(cnum) cus^(cnum)")
+	test("trans join inven",
+		"inven^(item) JOIN 1:n by(item) trans^(item)")
+	mode = UpdateMode
+	test("(trans union trans) join (inven union inven)",
+		"(trans^(date,item,id) UNION-MERGE trans^(date,item,id)) " +
+		"JOIN n:n by(item) " +
+		"(inven^(item) UNION-MERGE inven^(item))")
+	mode = ReadMode
+	test("(trans union trans) join (inven union inven)",
+		"(inven^(item) UNION-MERGE inven^(item)) " +
+		"JOIN n:n by(item) " +
+		"((trans^(date,item,id) UNION-MERGE trans^(date,item,id)) TEMPINDEX(item))")
+
 	test("inven leftjoin trans",
 		"inven^(item) LEFTJOIN 1:n by(item) trans^(item)")
 	test("customer leftjoin hist2",

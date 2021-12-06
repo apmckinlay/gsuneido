@@ -34,6 +34,7 @@ const (
 	one_one joinType = iota + 1
 	one_n
 	n_one
+	n_n
 )
 
 func (jt joinType) String() string {
@@ -46,6 +47,8 @@ func (jt joinType) String() string {
 		return "1:n"
 	case n_one:
 		return "n:1"
+	case n_n:
+		return "n:n"
 	default:
 		panic("bad joinType")
 	}
@@ -71,7 +74,7 @@ func NewJoin(src, src2 Query, by []string) *Join {
 	} else if k2 {
 		jn.joinType = n_one
 	} else {
-		panic("join: does not support many to many")
+		jn.joinType = n_n
 	}
 	return jn
 }
@@ -107,6 +110,8 @@ func (jn *Join) Keys() [][]string {
 		return jn.source2.Keys()
 	case n_one:
 		return jn.source.Keys()
+	case n_n:
+		return jn.keypairs()
 	default:
 		panic("unknown join type")
 	}
@@ -194,6 +199,8 @@ func (jn *Join) Nrows() int {
 		nrows = nrows1
 	case one_n:
 		nrows = nrows2
+	case n_n:
+		nrows = nrows1 * nrows2
 	default:
 		panic("shouldn't reach here")
 	}
@@ -275,7 +282,7 @@ func (lj *LeftJoin) Keys() [][]string {
 	switch lj.joinType {
 	case one_one, n_one:
 		return lj.source.Keys()
-	case one_n:
+	case one_n, n_n:
 		return lj.keypairs()
 	default:
 		panic("unknown join type")
