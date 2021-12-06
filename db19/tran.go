@@ -376,8 +376,10 @@ func (t *UpdateTran) Delete(table string, off uint64) {
 		t.fkeyDeleteBlock(ts, i, keys[i])
 	}
 	for i := range ts.Indexes {
-		ti.Indexes[i].Delete(keys[i], off)
 		t.fkeyDeleteCascade(ts, i, keys[i])
+	}
+	for i := range ts.Indexes {
+		ti.Indexes[i].Delete(keys[i], off)
 	}
 	t.ck(t.db.ck.Write(t.ct, table, keys))
 	assert.Msg("Delete Nrows").That(ti.Nrows > 0)
@@ -498,13 +500,17 @@ func (t *UpdateTran) Update(table string, oldoff uint64, newrec rt.Record) uint6
 	}
 	if newoff != oldoff {
 		for i := range ts.Indexes {
+			if oldkeys[i] != newkeys[i] {
+				t.fkeyUpdateCascade(ts, i, newrec, oldkeys[i])
+			}
+		}
+		for i := range ts.Indexes {
 			ix := ti.Indexes[i]
 			if oldkeys[i] == newkeys[i] {
 				ix.Update(oldkeys[i], newoff)
 			} else {
 				ix.Delete(oldkeys[i], oldoff)
 				ix.Insert(newkeys[i], newoff)
-				t.fkeyUpdateCascade(ts, i, newrec, oldkeys[i])
 			}
 		}
 	}
