@@ -471,6 +471,11 @@ func (t *UpdateTran) cascade(fk *schema.Fkey, encoded bool, key string) *index.O
 }
 
 func (t *UpdateTran) Update(table string, oldoff uint64, newrec rt.Record) uint64 {
+	return t.update(table, oldoff, newrec, true)
+}
+
+func (t *UpdateTran) update(table string, oldoff uint64, newrec rt.Record,
+	block bool) uint64 {
 	ts := t.getSchema(table)
 	ti := t.getInfo(table)
 	n := newrec.Len()
@@ -494,10 +499,13 @@ func (t *UpdateTran) Update(table string, oldoff uint64, newrec rt.Record) uint6
 			if oldkeys[i] != newkeys[i] {
 				dupOutputBlock(table, ix, ti.Indexes[i], newrec, newkeys[i])
 				t.fkeyDeleteBlock(ts, i, oldkeys[i])
-				t.fkeyOutputBlock(ts, i, newrec)
+				if block {
+					t.fkeyOutputBlock(ts, i, newrec)
+				}
 			}
 		}
 	}
+	//FIXME panic after this requires abort
 	if newoff != oldoff {
 		for i := range ts.Indexes {
 			if oldkeys[i] != newkeys[i] {
@@ -551,7 +559,7 @@ func (t *UpdateTran) fkeyUpdateCascade(ts *meta.Schema, i int,
 				}
 			}
 			newrec := rb.Trim().Build()
-			t.Update(fk.Table, off, newrec)
+			t.update(fk.Table, off, newrec, false) // no output block
 		}
 	}
 }
