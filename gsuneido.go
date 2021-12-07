@@ -25,6 +25,7 @@ import (
 	"github.com/apmckinlay/gsuneido/options"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/exit"
+	"github.com/apmckinlay/gsuneido/util/regex"
 )
 
 var builtDate = "Dec 29 2020" // set by: go build -ldflags "-X main.builtDate=..."
@@ -454,11 +455,27 @@ func libload(t *Thread, name string) (result Value, e interface{}) {
 		if mode == "gui" && strings.HasSuffix(lib, "webgui") {
 			continue
 		}
-		// want to pass the name from the start (rather than adding after)
-		// so it propagates to nested Named values
-		result = compile.NamedConstant(lib, name, src)
-		Global.Set(gn, result) // required for overload inheritance
+		result = llcompile(lib, name, src)
+		if result != nil {
+			Global.Set(gn, result) // required for overload inheritance
+		}
 		// fmt.Println("LOAD", name, "SUCCEEDED")
 	}
 	return result, nil
+}
+
+var winErr = regex.Compile("gSuneido does not implement (dll|struct|callback)")
+
+func llcompile(lib, name, src string) Value {
+	defer func() {
+		if e := recover(); e != nil {
+			es := fmt.Sprint(e)
+			if !winErr.Matches(es) {
+				panic(e)
+			}
+		}
+	}()
+	// want to pass the name from the start (rather than adding after)
+	// so it propagates to nested Named values
+	return compile.NamedConstant(lib, name, src)
 }
