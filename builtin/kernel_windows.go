@@ -18,19 +18,8 @@ import (
 	reg "golang.org/x/sys/windows/registry"
 )
 
-var kernel32 = MustLoadDLL("kernel32.dll")
-
 // NOTE: We want these functions to be available on secondary threads.
 // Therefore we can't use goc.Syscall or heap.
-
-// zbuf returns a zero terminated byte slice copy of ToStr(v)
-func zbuf(v Value) []byte {
-	s := ToStr(v)
-	buf := make([]byte, len(s)+1)
-	copy(buf, s)
-	buf[len(s)] = 0
-	return buf
-}
 
 // zstr returns an SuStr from up to the first zero byte in buf,
 // or all of buf if there is no zero byte.
@@ -468,48 +457,6 @@ var _ = builtin1("GetVolumeName(vol = 'c:\\\\')",
 		}
 		return zstr(buf)
 	})
-
-type MEMORYSTATUSEX struct {
-	dwLength     uint32
-	dwMemoryLoad uint32
-	ullTotalPhys uint64
-	unused       [6]uint64
-}
-
-const nMEMORYSTATUSEX = unsafe.Sizeof(MEMORYSTATUSEX{})
-
-var globalMemoryStatusEx = kernel32.MustFindProc("GlobalMemoryStatusEx").Addr()
-
-var _ = builtin0("SystemMemory()", func() Value {
-	buf := make([]byte, nMEMORYSTATUSEX)
-	(*MEMORYSTATUSEX)(unsafe.Pointer(&buf[0])).dwLength = uint32(nMEMORYSTATUSEX)
-	rtn, _, _ := syscall.Syscall(globalMemoryStatusEx, 1,
-		uintptr(unsafe.Pointer(&buf[0])),
-		0, 0)
-	if rtn == 0 {
-		return Zero
-	}
-	return Int64Val(int64((*MEMORYSTATUSEX)(unsafe.Pointer(&buf[0])).ullTotalPhys))
-})
-
-// dll bool Kernel32:GetDiskFreeSpaceEx(
-// 	[in] string			directoryName,
-// 	ULARGE_INTEGER*		freeBytesAvailableToCaller,
-// 	ULARGE_INTEGER*		totalNumberOfBytes,
-// 	ULARGE_INTEGER*		totalNumberOfFreeBytes)
-var getDiskFreeSpaceEx = kernel32.MustFindProc("GetDiskFreeSpaceExA").Addr()
-
-var _ = builtin1("GetDiskFreeSpace(dir = '.')", func(arg Value) Value {
-	dir := zbuf(arg)
-	var n int64
-	syscall.Syscall6(getDiskFreeSpaceEx, 4,
-		uintptr(unsafe.Pointer(&dir[0])),
-		uintptr(unsafe.Pointer(&n)),
-		0,
-		0,
-		0, 0)
-	return Int64Val(n)
-})
 
 //-------------------------------------------------------------------
 
