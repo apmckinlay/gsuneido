@@ -105,8 +105,9 @@ func (ob *SuInstance) get(t *Thread, m Value) Value {
 			return x
 		}
 	}
-	ob.Unlock() // can't hold lock because it may call getter
-	defer ob.Lock()
+	if ob.Unlock() { // can't hold lock because it may call getter
+		defer ob.Lock()
+	}
 	x := ob.class.get1(t, ob, m, ob.parents)
 	if m, ok := x.(*SuMethod); ok {
 		m.this = ob // fix 'this' to be instance, not method class
