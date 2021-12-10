@@ -578,6 +578,7 @@ func (cg *cgen) identifier(node *ast.Ident) {
 			cg.emitUint8(op.Load, i)
 		}
 	} else if node.Name[0] == '_' {
+		// reference to _Name (value set by LibLoad)
 		val := Global.GetIfPresent(node.Name[1:])
 		if val == nil {
 			panic("can't find " + node.Name)
