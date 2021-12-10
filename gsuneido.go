@@ -57,7 +57,7 @@ func main() {
 		options.Errlog = builtin.ErrlogDir() + "suneido" + options.Port + ".err"
 	}
 	if options.Mode == "gui" {
-		relaunchWithRedirect()
+		relaunchWithRedirect() // Note: breaks start/w
 	}
 	if options.Action == "" && options.Mode != "gui" {
 		options.Action = "repl"
@@ -78,13 +78,13 @@ func main() {
 		if options.Arg == "" {
 			ntables, err := tools.DumpDatabase("suneido.db", "database.su")
 			ck(err)
-			fmt.Println("dumped", ntables, "tables in",
+			Alert("dumped", ntables, "tables in",
 				time.Since(t).Round(time.Millisecond))
 		} else {
 			table := strings.TrimSuffix(options.Arg, ".su")
 			nrecs, err := tools.DumpTable("suneido.db", table, table+".su")
 			ck(err)
-			fmt.Println("dumped", nrecs, "records from", table,
+			Alert("dumped", nrecs, "records from", table,
 				"in", time.Since(t).Round(time.Millisecond))
 		}
 		os.Exit(0)
@@ -92,12 +92,12 @@ func main() {
 		t := time.Now()
 		if options.Arg == "" {
 			n := tools.LoadDatabase("database.su", "suneido.db")
-			fmt.Println("loaded", n, "tables in",
+			Alert("loaded", n, "tables in",
 				time.Since(t).Round(time.Millisecond))
 		} else {
 			table := strings.TrimSuffix(options.Arg, ".su")
 			n := tools.LoadTable(table, "suneido.db")
-			fmt.Println("loaded", n, "records to", table,
+			Alert("loaded", n, "records to", table,
 				"in", time.Since(t).Round(time.Millisecond))
 		}
 		os.Exit(0)
@@ -105,22 +105,24 @@ func main() {
 		t := time.Now()
 		ntables, err := tools.Compact("suneido.db")
 		ck(err)
-		fmt.Println("compacted", ntables, "tables in",
+		Alert("compacted", ntables, "tables in",
 			time.Since(t).Round(time.Millisecond))
 		os.Exit(0)
 	case "check":
 		t := time.Now()
 		ck(db19.CheckDatabase("suneido.db"))
-		fmt.Println("checked database in", time.Since(t).Round(time.Millisecond))
+		Alert("checked database in", time.Since(t).Round(time.Millisecond))
 		os.Exit(0)
 	case "repair":
 		t := time.Now()
 		err := db19.CheckDatabase("suneido.db")
 		if err == nil {
-			fmt.Println("database ok")
+			Alert("database ok")
 		} else {
-			ck(db19.Repair("suneido.db", err))
-			fmt.Println("repaired database in", time.Since(t).Round(time.Millisecond))
+			msg, err := db19.Repair("suneido.db", err)
+			ck(err)
+			Alert(msg,
+				"\nrepaired database in", time.Since(t).Round(time.Millisecond))
 		}
 		os.Exit(0)
 	case "version":
@@ -188,7 +190,7 @@ func printStack(e interface{}) {
 
 func ck(err error) {
 	if err != nil {
-		log.Fatalln(err)
+		Fatal(err)
 	}
 }
 
@@ -253,18 +255,19 @@ func startServer() {
 var db *db19.Database
 
 func openDbms() {
-	startHttpStatus()
+	// startHttpStatus()
 	var err error
 	db, err = db19.OpenDatabase("suneido.db")
 	if err != nil {
-		log.Println("ERROR:", err)
-		err := db19.Repair("suneido.db", err)
+		Alert("ERROR:", err)
+		msg, err := db19.Repair("suneido.db", err)
 		if err != nil {
-			log.Fatalln(err)
+			Fatal(err)
 		}
+		Alert(msg)
 		db, err = db19.OpenDatabase("suneido.db")
 		if err != nil {
-			log.Fatalln(err)
+			Fatal(err)
 		}
 	}
 	db19.StartTimestamps()

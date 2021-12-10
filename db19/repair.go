@@ -17,12 +17,12 @@ import (
 
 const dtfmt = "20060102.150405"
 
-func Repair(dbfile string, err error) error {
+func Repair(dbfile string, err error) (string, error) {
 	ec, _ := err.(*ErrCorrupt)
 	fmt.Println("repair:", err, ec.Table())
 	store, err := stor.MmapStor(dbfile, stor.READ)
 	if err != nil {
-		return err
+		return "", err
 	}
 	off := store.Size()
 	var state *DbState
@@ -33,15 +33,15 @@ func Repair(dbfile string, err error) error {
 			t0 = t
 		}
 		if off == 0 {
-			return errors.New("repair failed - no valid states found")
+			return "", errors.New("repair failed - no valid states found")
 		}
 		if state == nil {
 			continue
 		}
 		if ec = checkState(state, ec.Table()); ec == nil {
-			fmt.Println("good state", off, t.Format(dtfmt))
-			fmt.Println("truncating", store.Size()-(off+uint64(stateLen)))
-			return truncate(dbfile, store, off)
+			msg := fmt.Sprintln("good state", off, t.Format(dtfmt)) +
+				fmt.Sprintln("truncating", store.Size()-(off+uint64(stateLen)))
+			return msg, truncate(dbfile, store, off)
 		}
 		fmt.Println("bad state", off, t.Format(dtfmt), ec)
 	}

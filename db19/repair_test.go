@@ -12,6 +12,6 @@ func TestRepair(*testing.T) {
 	if testing.Short() {
 		return
 	}
-	err := Repair("../suneido.db", nil)
+	_, err := Repair("../suneido.db", nil)
 	fmt.Println(err)
 }
