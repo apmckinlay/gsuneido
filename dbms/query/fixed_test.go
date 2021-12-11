@@ -23,8 +23,14 @@ func TestFixed(t *testing.T) {
 	test("table extend f=1", "[f=(1)]")
 	test("table extend f=1, g='s'", "[f=(1), g=('s')]")
 	test("table extend f=1 extend g=2", "[g=(2), f=(1)]")
-	test("table extend f=1 where f is 2", "[f=(2)]")
-	test("table extend f=1, g=2 where f is 3", "[f=(3), g=(2)]")
+	test("table extend f=1 where f is 1", "[f=(1)]")
+	assert.T(t).
+		This(func() { test("table extend f=1 where f is 2", "[f=(2)]") }).
+		Panics("conflict")
+	test("table extend f=1, g=2 where f is 1", "[f=(1), g=(2)]")
+	assert.T(t).
+		This(func() { test("table extend f=1, g=2 where f is 3", "[f=(3), g=(2)]") }).
+		Panics("conflict")
 
 	test("table where a is 1", "[a=(1)]")
 	test("table where a is 1 and b is 's' and a is b", "[a=(1), b=('s')]")

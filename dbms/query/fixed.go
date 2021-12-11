@@ -3,10 +3,15 @@
 
 package query
 
-import "github.com/apmckinlay/gsuneido/runtime"
+import (
+	"github.com/apmckinlay/gsuneido/runtime"
+	"github.com/apmckinlay/gsuneido/util/assert"
+	"github.com/apmckinlay/gsuneido/util/sset"
+)
 
 type Fixed struct {
-	col    string
+	col string
+	// values are packed
 	values []string
 }
 
@@ -46,7 +51,9 @@ func combineFixed(fixed1, fixed2 []Fixed) []Fixed {
 	result := make([]Fixed, len(fixed1))
 	copy(result, fixed1)
 	for _, f2 := range fixed2 {
-		if !hasCol(fixed1, f2.col) {
+		if vals1 := getFixed(fixed1, f2.col); vals1 != nil {
+			assert.Msg("combineFixed conflict").That(sset.Equal(vals1, f2.values))
+		} else {
 			result = append(result, f2)
 		}
 	}
