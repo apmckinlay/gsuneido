@@ -81,8 +81,8 @@ func TestQueryGet(t *testing.T) {
 		q, _ = Setup(q, ReadMode, tran)
 		qs := strings.ReplaceAll(q.String(), `"`, "'")
 		assert.T(t).This(qs).Is(strategy)
-		assert.T(t).Msg("forward").This(get(q, rt.Next)).Like(expected)
-		assert.T(t).Msg("reverse").This(get(q, rt.Prev)).Like(expected)
+		assert.T(t).Msg("forward:", query).This(get(q, rt.Next)).Like(expected)
+		assert.T(t).Msg("reverse:", query).This(get(q, rt.Prev)).Like(expected)
 	}
 	test("indexes project table, columns, key",
 		"indexes PROJECT-COPY table,columns,key",
