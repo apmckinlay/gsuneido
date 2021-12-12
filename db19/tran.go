@@ -241,6 +241,7 @@ func (t *UpdateTran) Complete() string {
 		if conflict == nil {
 			return "transaction already ended"
 		}
+		//FIXME might already have conflict from t.ck
 		t.conflict = conflict.(string)
 		return t.conflict
 	}
@@ -307,6 +308,7 @@ func (t *UpdateTran) Output(table string, rec rt.Record) {
 		dupOutputBlock(table, ix, ti.Indexes[i], rec, keys[i])
 		t.fkeyOutputBlock(ts, i, rec)
 	}
+	//FIXME panic after this requires abort
 	for i := range ts.Indexes {
 		ti.Indexes[i].Insert(keys[i], off)
 	}
@@ -375,6 +377,8 @@ func (t *UpdateTran) Delete(table string, off uint64) {
 		keys[i] = is.Key(rec)
 		t.fkeyDeleteBlock(ts, i, keys[i])
 	}
+	//FIXME panic after this requires abort
+
 	for i := range ts.Indexes {
 		t.fkeyDeleteCascade(ts, i, keys[i])
 	}
