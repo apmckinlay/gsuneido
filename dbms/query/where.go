@@ -23,9 +23,10 @@ import (
 
 type Where struct {
 	Query1
-	expr  *ast.Nary // And
-	fixed []Fixed
-	t     QueryTran
+	expr       *ast.Nary // And
+	whereFixed []Fixed
+	fixed      []Fixed
+	t          QueryTran
 	// tbl will be set if the source is a Table, nil otherwise
 	tbl       *Table
 	optInited bool
@@ -91,21 +92,22 @@ func (w *Where) Fixed() []Fixed {
 		return w.fixed
 	}
 	for _, e := range w.expr.Exprs {
-		w.addFixed(e)
+		w.whereFixed = addFixed(w.whereFixed, e)
 	}
-	w.fixed = combineFixed(w.fixed, w.source.Fixed())
+	w.fixed = combineFixed(w.whereFixed, w.source.Fixed())
 	return w.fixed
 }
 
-func (w *Where) addFixed(e ast.Expr) {
+func addFixed(fixed []Fixed, e ast.Expr) []Fixed {
 	// MAYBE: handle IN
 	if b, ok := e.(*ast.Binary); ok && b.Tok == tok.Is {
 		if id, ok := b.Lhs.(*ast.Ident); ok {
 			if c, ok := b.Rhs.(*ast.Constant); ok {
-				w.fixed = append(w.fixed, NewFixed(id.Name, c.Val))
+				fixed = append(fixed, NewFixed(id.Name, c.Val))
 			}
 		}
 	}
+	return fixed
 }
 
 func (w *Where) Nrows() int {
@@ -998,6 +1000,20 @@ func (w *Where) Select(cols, vals []string) {
 	if w.conflict {
 		return
 	}
+
+	w.Rewind()
+	satisfied, conflict := w.selectFixed(cols, vals)
+	if conflict {
+		w.sel = ixkey.Max
+		w.selSet = true
+		return
+	}
+	if satisfied {
+		w.sel = ""
+		w.selSet = false
+		return
+	}
+
 	cols = strs.Cow(cols)
 	vals = strs.Cow(vals)
 	for _, fix := range w.Fixed() {
@@ -1007,13 +1023,42 @@ func (w *Where) Select(cols, vals []string) {
 		}
 	}
 	if w.idxSel == nil {
+		// if this where is not using an index selection
+		// then just pass the Select to the source
 		w.source.Select(cols, vals)
 		return
 	}
 	w.sel = selOrg(w.idxSel.encoded, w.idxSel.index, cols, vals)
-	w.Rewind()
 	w.selSet = true
 }
+
+func (w *Where) selectFixed(cols, vals []string) (satisfied, conflict bool) {
+	// Note: conflict could come from any of expr, not just fixed.
+	// But to evaluate that would require building a Row.
+	// It should be rare.
+	w.Fixed()
+	satisfied = true
+	for i, col := range cols {
+		if fv := getFixed(w.whereFixed, col); len(fv) == 1 {
+			if fv[0] != vals[i] {
+				return false, true // conflict
+			}
+		} else {
+			satisfied = false
+		}
+	}
+	return satisfied, false
+}
+
+// func packedListStr(sel []string) string { // for debugging
+// 	p := ""
+// 	sep := ""
+// 	for _, s := range sel {
+// 		p += sep + runtime.Display(&runtime.Thread{}, runtime.Unpack(s))
+// 		sep = ","
+// 	}
+// 	return p
+// }
 
 func (w *Where) Lookup(cols, vals []string) runtime.Row {
 	if w.conflict {

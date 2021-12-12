@@ -83,7 +83,7 @@ func (tbl *Table) SetTran(t QueryTran) {
 	}
 	tbl.columns = cols
 
-	idxs := make([][]string, 0, len(tbl.schema.Indexes)-1)
+	idxs := make([][]string, 0, len(tbl.schema.Indexes))
 	keys := make([][]string, 0, 1)
 	for _, ix := range tbl.schema.Indexes {
 		idxs = append(idxs, ix.Columns)
@@ -265,16 +265,19 @@ func selGet(col string, cols, vals []string) string {
 func selEnd(dstCols, srcCols, vals []string) string {
 	enc := ixkey.Encoder{}
 	prefix := true
+	data := false
 	for _, col := range dstCols {
 		i := strs.Index(srcCols, col)
 		if i != -1 {
-			assert.Msg("selEncode").That(prefix)
+			assert.Msg("selEnd").That(prefix)
 			enc.Add(vals[i])
+			data = true
 		} else {
 			prefix = false
 			enc.Add("")
 		}
 	}
+	assert.Msg("selEnd no data").That(data)
 	enc.Add(ixkey.Max)
 	return enc.String()
 }
@@ -295,15 +298,18 @@ func selOrg(encode bool, dstCols, srcCols, vals []string) string {
 	}
 	enc := ixkey.Encoder{}
 	prefix := true
+	data := false
 	for _, col := range dstCols {
 		i := strs.Index(srcCols, col)
 		if i != -1 {
-			assert.Msg("selEncode").That(prefix)
+			assert.Msg("selOrg").That(prefix)
 			enc.Add(vals[i])
+			data = true
 		} else {
 			prefix = false
 		}
 	}
+	assert.Msg("selOrg no data").That(data)
 	return enc.String()
 }
 

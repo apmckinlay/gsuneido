@@ -79,6 +79,7 @@ func isFixed(fixed []Fixed, col string) bool {
 	return false
 }
 
+// getFixed returns the values for a column, or nil if not found
 func getFixed(fixed []Fixed, col string) []string {
 	for _, f := range fixed {
 		if col == f.col {

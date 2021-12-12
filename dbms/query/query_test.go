@@ -183,6 +183,10 @@ func queryAll(db *db19.Database, query string) string {
 	tran := sizeTran{db.NewReadTran()}
 	q := ParseQuery(query, tran)
 	q, _ = Setup(q, ReadMode, tran)
+	return queryAll2(q)
+}
+
+func queryAll2(q Query) string {
 	hdr := q.Header()
 	sep := ""
 	var sb strings.Builder
@@ -268,11 +272,47 @@ func TestDuplicateKey(*testing.T) {
 	DoAdmin(db, "create tmp (k,u,i) key(k) index unique(u) index(i)")
 	act("insert { k: 1, u: 2, i: 3 } into tmp")
 	act("insert { k: 11, u: 22, i: 3 } into tmp")
-	assert.This(func(){ act("insert { k: 11, u: 0, i: 0 } into tmp") }).
+	assert.This(func() { act("insert { k: 11, u: 0, i: 0 } into tmp") }).
 		Panics("duplicate key")
-	assert.This(func(){ act("insert { k: 0, u: 22, i: 0 } into tmp") }).
+	assert.This(func() { act("insert { k: 0, u: 22, i: 0 } into tmp") }).
 		Panics("duplicate key")
 	act("insert { k: 111, u: 222, i: 3 } into tmp")
 	act("insert { k: 1111, u: '' } into tmp")
 	act("insert { k: 11111, u: '' } into tmp")
+}
+
+func TestWhereSelectBug(t *testing.T) {
+	db, err := db19.CreateDb(stor.HeapStor(8192))
+	ck(err)
+	db19.StartConcur(db, 50*time.Millisecond)
+	defer db.Close()
+	MakeSuTran = func(qt QueryTran) *rt.SuTran { return nil }
+	act := func(act string) {
+		ut := db.NewUpdateTran()
+		defer ut.Commit()
+		n := DoAction(ut, act)
+		assert.This(n).Is(1)
+	}
+	DoAdmin(db, "create t2 (d) key (d)")
+	DoAdmin(db, "create t1 (a, b, d) key(a) index(b) index(d)")
+	act("insert {d: '1'} into t2")
+	act("insert {d: '1', a: '2', b: '8'} into t1")
+	act("insert {d: '1', a: '3', b: '7'} into t1")
+	act("insert {d: '1', a: '4', b: '8'} into t1")
+	act("insert {d: '1', a: '5', b: '7'} into t1")
+	query := "t1 join t2 where d is '1' and b < 'z'"
+	assert.T(t).This(queryAll(db, query)).
+		Is("d=1 a=3 b=7 | d=1 a=5 b=7 | d=1 a=2 b=8 | d=1 a=4 b=8")
+
+	tran := sizeTran{db.NewReadTran()}
+	q := ParseQuery("t1 where d is '1' and b < 'z'", tran)
+	idx := []string{"d"}
+	q = q.Transform()
+	_, app := q.optimize(ReadMode, idx)
+	q.setApproach(idx, app, tran)
+	assert.T(t).This(q.String()).Is("t1^(b) WHERE d is '1' and b < 'z'")
+	vals := []string{rt.Pack(rt.SuStr("1"))}
+	q.Select(idx, vals)
+	assert.T(t).This(queryAll2(q)).
+		Is("a=3 b=7 d=1 | a=5 b=7 d=1 | a=2 b=8 d=1 | a=4 b=8 d=1")
 }
