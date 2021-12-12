@@ -63,9 +63,7 @@ func NewWhere(src Query, expr ast.Expr, t QueryTran) *Where {
 	if nary, ok := expr.(*ast.Nary); !ok || nary.Tok != tok.And {
 		expr = &ast.Nary{Tok: tok.And, Exprs: []ast.Expr{expr}}
 	}
-	w := &Where{Query1: Query1{source: src}, expr: expr.(*ast.Nary), t: t}
-	w.tbl, _ = src.(*Table)
-	return w
+	return &Where{Query1: Query1{source: src}, expr: expr.(*ast.Nary), t: t}
 }
 
 func (w *Where) SetTran(t QueryTran) {
