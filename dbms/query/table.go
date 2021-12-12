@@ -175,8 +175,12 @@ func (tbl *Table) setApproach(_ []string, approach interface{}, _ QueryTran) {
 }
 
 func (tbl *Table) setIndex(index []string) {
+	if tbl.singleton {
+		index = tbl.keys[0]
+	}
 	tbl.index = index
 	tbl.iIndex = strss.Index(tbl.indexes, tbl.index)
+	assert.Msg("setIndex", tbl.name, index).That(tbl.iIndex >= 0)
 	tbl.indexEncode = len(tbl.index) > 1 || !setset.Contains(tbl.keys, tbl.index)
 }
 
