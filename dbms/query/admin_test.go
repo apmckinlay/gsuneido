@@ -61,7 +61,7 @@ func TestAdminEnsure(t *testing.T) {
 		Panics(("ensure: index exists but is different"))
 }
 
-func TestAdminEnsure2(t *testing.T) {
+func TestAdminEnsure2(*testing.T) {
 	db := createTestDb()
 	defer db.Close()
 
