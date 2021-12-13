@@ -448,7 +448,7 @@ func (w *Where) bestIndex(order []string) (Cost, []string) {
 			if is := w.getIdxSel(idx); is != nil {
 				cost := w.source.lookupCost() * len(is.ptrngs)
 				if is.isRanges() {
-					tblCost, _ := w.tbl.optimize(0, idx)
+					tblCost, _ := w.tbl.optimize(CursorMode, idx)
 					cost += int(is.frac * float64(tblCost))
 				}
 				best.update(idx, cost)

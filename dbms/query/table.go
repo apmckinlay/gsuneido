@@ -72,7 +72,6 @@ func (tbl *Table) SetTran(t QueryTran) {
 	tbl.info = t.GetInfo(tbl.name)
 
 	cols := make([]string, 0, len(tbl.schema.Columns)+len(tbl.schema.Derived))
-	// cols = append(cols, tbl.schema.Columns...)
 	for _, col := range tbl.schema.Columns {
 		if col != "-" {
 			cols = append(cols, col)
