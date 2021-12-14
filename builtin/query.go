@@ -50,6 +50,7 @@ func extractQuery(
 // (except for 'block')
 func queryWhere(as *ArgSpec, args []Value) string {
 	var sb strings.Builder
+	sep := "\nwhere "
 	iter := NewArgsIter(as, args)
 	for k, v := iter(); v != nil; k, v = iter() {
 		if k == nil {
@@ -59,9 +60,10 @@ func queryWhere(as *ArgSpec, args []Value) string {
 		if field == "query" || (field == "block" && !stringable(v)) {
 			continue
 		}
-		sb.WriteString("\nwhere ")
+		sb.WriteString(sep)
+		sep = "\nand "
 		sb.WriteString(field)
-		sb.WriteString(" = ")
+		sb.WriteString(" is ")
 		sb.WriteString(v.String())
 	}
 	return sb.String()
