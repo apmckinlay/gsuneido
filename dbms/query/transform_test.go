@@ -48,8 +48,13 @@ func TestTransform(t *testing.T) {
 	test("customer rename id to x rename name to y",
 		"customer RENAME id to x, name to y")
 	// combine where's
-	test("customer where id is 5 where city is 6",
-		"customer WHERE id is 5 and city is 6")
+	test("customer where id is 5 where city is 6 where name is 7",
+		"customer WHERE id is 5 and city is 6 and name is 7")
+	// leftjoin to join
+	test("cus leftjoin task where cnum is 1 and tnum is 2",
+		"cus where cnum is 1 join 1:n by(cnum) (task where cnum is 1 and tnum is 2)")
+	test("cus leftjoin task where cnum is 1 where tnum is 2",
+		"cus where cnum is 1 join 1:n by(cnum) (task where cnum is 1 and tnum is 2)")
 
 	// remove projects of all fields
 	test("customer project id, city, name", "customer")

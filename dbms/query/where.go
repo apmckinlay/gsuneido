@@ -145,121 +145,123 @@ func (w *Where) Transform() Query {
 		w.source = NewJoin(lj.source, lj.source2, lj.by)
 	}
 	moved := false
-	for {
-		switch q := w.source.(type) {
-		case *Where:
-			// combine where's
+	switch q := w.source.(type) {
+	case *Where:
+		// combine consecutive where's
+		for {
 			n := len(q.expr.Exprs)
 			exprs := append(q.expr.Exprs[:n:n], w.expr.Exprs...) // copy on write
 			w.expr = &ast.Nary{Tok: tok.And, Exprs: exprs}
 			w.source = q.source
-			continue
-		case *Project:
-			// move where before project
-			w.source = q.source
+			if q, _ = w.source.(*Where); q == nil {
+				break
+			}
+		}
+		return w.Transform() // RECURSE
+	case *Project:
+		// move where before project
+		w.source = q.source
+		q.source = w
+		return q.Transform()
+	case *Rename:
+		// move where before rename
+		newExpr := renameExpr(w.expr, q.to, q.from)
+		w.source = q.source
+		if newExpr == w.expr {
 			q.source = w
-			return q.Transform()
-		case *Rename:
-			// move where before rename
-			newExpr := renameExpr(w.expr, q.to, q.from)
-			w.source = q.source
-			if newExpr == w.expr {
-				q.source = w
+		} else {
+			q.source = NewWhere(q.source, newExpr.(*ast.Nary), w.t)
+		}
+		return q.Transform()
+	case *Extend:
+		// move where before extend, unless it depends on rules
+		var src1, rest []ast.Expr
+		for _, e := range w.expr.Exprs {
+			if q.needRule(e.Columns()) {
+				rest = append(rest, e)
 			} else {
-				q.source = NewWhere(q.source, newExpr.(*ast.Nary), w.t)
-
-			}
-			return q.Transform()
-		case *Extend:
-			// move where before extend, unless it depends on rules
-			var src1, rest []ast.Expr
-			for _, e := range w.expr.Exprs {
-				if q.needRule(e.Columns()) {
-					rest = append(rest, e)
-				} else {
-					src1 = append(src1, replaceExpr(e, q.cols, q.exprs))
-				}
-			}
-			if src1 != nil {
-				q.source = NewWhere(q.source,
-					&ast.Nary{Tok: tok.And, Exprs: src1}, w.t)
-			}
-			if rest != nil {
-				w.expr = &ast.Nary{Tok: tok.And, Exprs: rest}
-			} else {
-				moved = true
-			}
-		case *Summarize:
-			// split where before & after summarize
-			cols1 := q.source.Columns()
-			var src1, rest []ast.Expr
-			for _, e := range w.expr.Exprs {
-				if sset.Subset(cols1, e.Columns()) {
-					src1 = append(src1, e)
-				} else {
-					rest = append(rest, e)
-				}
-			}
-			if src1 != nil {
-				q.source = NewWhere(q.source,
-					&ast.Nary{Tok: tok.And, Exprs: src1}, w.t)
-			}
-			if rest != nil {
-				w.expr = &ast.Nary{Tok: tok.And, Exprs: rest}
-			} else {
-				moved = true
-			}
-		case *Intersect:
-			// distribute where over intersect
-			// no project because Intersect Columns are the intersection
-			q.source = NewWhere(q.source, w.expr, w.t)
-			q.source2 = NewWhere(q.source2, w.expr, w.t)
-			moved = true
-		case *Minus:
-			// distribute where over minus
-			// need project because Minus Columns are just the left side's
-			q.source = NewWhere(q.source, w.expr, w.t)
-			q.source2 = NewWhere(q.source2, w.project(q.source2), w.t)
-			moved = true
-		case *Union:
-			// distribute where over union
-			// need project because Union Columns is the union
-			q.source = NewWhere(q.source, w.project(q.source), w.t)
-			q.source2 = NewWhere(q.source2, w.project(q.source2), w.t)
-			moved = true
-		case *Times:
-			// split where over product
-			moved = w.split(&q.Query2)
-		case *Join:
-			// split where over join
-			moved = w.split(&q.Query2)
-		case *LeftJoin:
-			// split where over leftjoin (left side only)
-			cols1 := q.source.Columns()
-			var common, src1 []ast.Expr
-			for _, e := range w.expr.Exprs {
-				if sset.Subset(cols1, e.Columns()) {
-					src1 = append(src1, e)
-				} else {
-					common = append(common, e)
-				}
-			}
-			if src1 != nil {
-				q.source = NewWhere(q.source,
-					&ast.Nary{Tok: tok.And, Exprs: src1}, w.t)
-			}
-			if common != nil {
-				w.expr = &ast.Nary{Tok: tok.And, Exprs: common}
-			} else {
-				moved = true
+				src1 = append(src1, replaceExpr(e, q.cols, q.exprs))
 			}
 		}
-		w.source = w.source.Transform()
-		if moved {
-			return w.source
+		if src1 != nil {
+			q.source = NewWhere(q.source,
+				&ast.Nary{Tok: tok.And, Exprs: src1}, w.t)
 		}
-		return w
+		if rest != nil {
+			w.expr = &ast.Nary{Tok: tok.And, Exprs: rest}
+		} else {
+			moved = true
+		}
+	case *Summarize:
+		// split where before & after summarize
+		cols1 := q.source.Columns()
+		var src1, rest []ast.Expr
+		for _, e := range w.expr.Exprs {
+			if sset.Subset(cols1, e.Columns()) {
+				src1 = append(src1, e)
+			} else {
+				rest = append(rest, e)
+			}
+		}
+		if src1 != nil {
+			q.source = NewWhere(q.source,
+				&ast.Nary{Tok: tok.And, Exprs: src1}, w.t)
+		}
+		if rest != nil {
+			w.expr = &ast.Nary{Tok: tok.And, Exprs: rest}
+		} else {
+			moved = true
+		}
+	case *Intersect:
+		// distribute where over intersect
+		// no project because Intersect Columns are the intersection
+		q.source = NewWhere(q.source, w.expr, w.t)
+		q.source2 = NewWhere(q.source2, w.expr, w.t)
+		moved = true
+	case *Minus:
+		// distribute where over minus
+		// need project because Minus Columns are just the left side's
+		q.source = NewWhere(q.source, w.expr, w.t)
+		q.source2 = NewWhere(q.source2, w.project(q.source2), w.t)
+		moved = true
+	case *Union:
+		// distribute where over union
+		// need project because Union Columns is the union
+		q.source = NewWhere(q.source, w.project(q.source), w.t)
+		q.source2 = NewWhere(q.source2, w.project(q.source2), w.t)
+		moved = true
+	case *Times:
+		// split where over product
+		moved = w.split(&q.Query2)
+	case *Join:
+		// split where over join
+		moved = w.split(&q.Query2)
+	case *LeftJoin:
+		// split where over leftjoin (left side only)
+		cols1 := q.source.Columns()
+		var common, src1 []ast.Expr
+		for _, e := range w.expr.Exprs {
+			if sset.Subset(cols1, e.Columns()) {
+				src1 = append(src1, e)
+			} else {
+				common = append(common, e)
+			}
+		}
+		if src1 != nil {
+			q.source = NewWhere(q.source,
+				&ast.Nary{Tok: tok.And, Exprs: src1}, w.t)
+		}
+		if common != nil {
+			w.expr = &ast.Nary{Tok: tok.And, Exprs: common}
+		} else {
+			moved = true
+		}
 	}
+	w.source = w.source.Transform()
+	if moved {
+		return w.source
+	}
+	return w
 }
 
 func (w *Where) leftJoinToJoin() *LeftJoin {
