@@ -255,7 +255,7 @@ func selKeys(encode bool, dstCols, srcCols, vals []string) (string, string) {
 		return org, end
 	}
 	end := selEnd(dstCols, srcCols, vals)
-	org := trim(end)
+	org := trim(end) // selOrg(true, dstCols, srcCols, vals)
 	return org, end
 }
 
@@ -275,21 +275,22 @@ func selEnd(dstCols, srcCols, vals []string) string {
 			assert.Msg("selEnd").That(prefix)
 			enc.Add(vals[i])
 			data = true
-		} else {
+		} else if prefix {
 			prefix = false
-			enc.Add("")
+			enc.Add(ixkey.Max) // ("")
 		}
 	}
 	assert.Msg("selEnd no data").That(data)
-	enc.Add(ixkey.Max)
+	if prefix {
+		enc.Add(ixkey.Max)
+	}
 	return enc.String()
 }
 
 func trim(end string) string {
-	n := len(end)
-	org := end[:n-len(ixkey.Max)]
-	n -= len(ixkey.Max)
-	for n >= 2 && org[n-2:n] == ixkey.Sep {
+	n := len(end) - len(ixkey.Max)
+	org := end[:n]
+	if n >= 2 && org[n-2:n] == ixkey.Sep {
 		n -= 2
 	}
 	return org[:n]
@@ -326,3 +327,13 @@ func (tbl *Table) ensureIter() {
 		tbl.iter = index.NewOverIter(tbl.name, tbl.iIndex)
 	}
 }
+
+// func packedListStr(sel []string) string { // for debugging
+// 	p := ""
+// 	sep := ""
+// 	for _, s := range sel {
+// 		p += sep + runtime.Display(&runtime.Thread{}, runtime.Unpack(s))
+// 		sep = ","
+// 	}
+// 	return p
+// }

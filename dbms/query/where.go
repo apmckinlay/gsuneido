@@ -1050,16 +1050,6 @@ func (w *Where) selectFixed(cols, vals []string) (satisfied, conflict bool) {
 	return satisfied, false
 }
 
-// func packedListStr(sel []string) string { // for debugging
-// 	p := ""
-// 	sep := ""
-// 	for _, s := range sel {
-// 		p += sep + runtime.Display(&runtime.Thread{}, runtime.Unpack(s))
-// 		sep = ","
-// 	}
-// 	return p
-// }
-
 func (w *Where) Lookup(cols, vals []string) runtime.Row {
 	if w.conflict {
 		return nil

@@ -222,7 +222,7 @@ func TestSelKeys(t *testing.T) {
 	dstCols = []string{"a", "b", "c"}
 	srcCols = []string{"a"}
 	vals = []string{"1"}
-	test("1", "1"+sep+sep+sep+max)
+	test("1", "1"+sep+max)
 }
 
 func TestQueryBug(*testing.T) {
@@ -315,4 +315,23 @@ func TestWhereSelectBug(t *testing.T) {
 	q.Select(idx, vals)
 	assert.T(t).This(queryAll2(q)).
 		Is("a=3 b=7 d=1 | a=5 b=7 d=1 | a=2 b=8 d=1 | a=4 b=8 d=1")
+}
+
+func TestJoinBug(t *testing.T) {
+	db, err := db19.CreateDb(stor.HeapStor(8192))
+	ck(err)
+	db19.StartConcur(db, 50*time.Millisecond)
+	defer db.Close()
+	MakeSuTran = func(qt QueryTran) *rt.SuTran { return nil }
+	act := func(act string) {
+		ut := db.NewUpdateTran()
+		defer ut.Commit()
+		n := DoAction(ut, act)
+		assert.This(n).Is(1)
+	}
+	DoAdmin(db, "create t1 (a) key(a)")
+	DoAdmin(db, "create t2 (a, b) key(a,b)")
+	act("insert {a: '1'} into t1")
+	act("insert {a: '1', b: '2'} into t2")
+	assert.T(t).This(queryAll(db, "t1 join t2")).Is("a=1 b=2")
 }
