@@ -22,7 +22,7 @@ func TestHash(t *testing.T) {
 }
 
 var Sum = uint32(0)
-var S = "now is the time for all good"
+var S = "now is the time"
 
 func BenchmarkHashString(b *testing.B) {
 	for i := 0; i < b.N; i++ {
@@ -31,9 +31,8 @@ func BenchmarkHashString(b *testing.B) {
 }
 
 func BenchmarkMaphash(b *testing.B) {
-	h := maphash.Hash{}
 	for i := 0; i < b.N; i++ {
-		h.Reset()
+		h := maphash.Hash{}
 		h.WriteString(S)
 		Sum += uint32(h.Sum64())
 	}
