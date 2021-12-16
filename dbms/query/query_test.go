@@ -335,3 +335,22 @@ func TestJoinBug(t *testing.T) {
 	act("insert {a: '1', b: '2'} into t2")
 	assert.T(t).This(queryAll(db, "t1 join t2")).Is("a=1 b=2")
 }
+
+func TestSelectOnSingleton(t *testing.T) {
+	db, err := db19.CreateDb(stor.HeapStor(8192))
+	ck(err)
+	db19.StartConcur(db, 50*time.Millisecond)
+	defer db.Close()
+	MakeSuTran = func(qt QueryTran) *rt.SuTran { return nil }
+	act := func(act string) {
+		ut := db.NewUpdateTran()
+		defer ut.Commit()
+		n := DoAction(ut, act)
+		assert.This(n).Is(1)
+	}
+	DoAdmin(db, "create t1 (a) key(a)")
+	DoAdmin(db, "create t2 (a, b) key()")
+	act("insert {a: '1'} into t1")
+	act("insert {a: '1', b: '2'} into t2")
+	assert.T(t).This(queryAll(db, "t1 leftjoin t2")).Is("a=1 b=2")
+}

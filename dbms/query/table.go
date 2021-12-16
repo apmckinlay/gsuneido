@@ -249,6 +249,9 @@ func (tbl *Table) Select(cols, vals []string) {
 }
 
 func selKeys(encode bool, dstCols, srcCols, vals []string) (string, string) {
+	if len(dstCols) == 0 {
+		return ixkey.Min, ixkey.Max
+	}
 	if !encode {
 		org := selGet(dstCols[0], srcCols, vals)
 		end := org + "\x00"
