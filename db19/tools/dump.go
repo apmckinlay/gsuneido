@@ -40,7 +40,7 @@ func Dump(db *Database, to string) (ntables int, err error) {
 	}()
 	f, w := dumpOpen()
 	tmpfile := f.Name()
-	defer func() { db.Close(); f.Close(); os.Remove(tmpfile) }()
+	defer func() { f.Close(); os.Remove(tmpfile) }()
 	ics := newIndexCheckers()
 	defer ics.finish()
 
