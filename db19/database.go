@@ -429,11 +429,19 @@ func (db *Database) Schema(table string) string {
 }
 
 func (db *Database) Size() uint64 {
+	db.ckOpen()
 	return db.Store.Size()
 }
 
 func (db *Database) Transactions() []int {
+	db.ckOpen()
 	return db.ck.Transactions()
+}
+
+func (db *Database) ckOpen() {
+	if db.Store == nil {
+		rt.Fatal("database closed")
+	}
 }
 
 // Close closes the database store, writing the current size to the start.

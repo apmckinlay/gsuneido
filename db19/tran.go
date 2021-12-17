@@ -215,6 +215,7 @@ type UpdateTran struct {
 }
 
 func (db *Database) NewUpdateTran() *UpdateTran {
+	db.ckOpen()
 	ct := db.ck.StartTran()
 	if ct == nil {
 		return nil
