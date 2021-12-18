@@ -95,6 +95,7 @@ type MergeResult = index.MergeResult
 
 type MergeUpdate struct {
 	table   string
+	idTran  int
 	nmerged int
 	results []MergeResult // per index
 }
@@ -103,13 +104,11 @@ type MergeUpdate struct {
 // It is called by db Merge which is called by concur merger.
 // WARNING: must not modify meta.
 func (m *Meta) Merge(metaWas *Meta, table string, nmerge int) MergeUpdate {
-	// fmt.Println("Merge", table, tns)
-	cur, ok := m.schema.Get(table)
-	if !ok || cur.isTomb() {
-		// fmt.Println(" Merge skip")
-		return MergeUpdate{} // table dropped
-	}
 	was := metaWas.schema.MustGet(table)
+	cur, ok := m.schema.Get(table)
+	if !ok || cur.isTomb() || cur.Id != was.Id {
+		return MergeUpdate{} // table dropped or recreated
+	}
 	ti := m.info.MustGet(table)
 	results := make([]MergeResult, len(ti.Indexes))
 	for i, ov := range ti.Indexes {
@@ -117,7 +116,8 @@ func (m *Meta) Merge(metaWas *Meta, table string, nmerge int) MergeUpdate {
 			results[i] = ov.Merge(nmerge)
 		}
 	}
-	return MergeUpdate{table: table, nmerged: nmerge, results: results}
+	return MergeUpdate{table: table, idTran: was.Id,
+		nmerged: nmerge, results: results}
 }
 
 func skipIndex(was, cur *Schema, i int) bool {
@@ -139,20 +139,20 @@ func (mu *MergeUpdate) Skip() bool {
 
 // ApplyMerge applies the updates collected by Merge
 func (m *Meta) ApplyMerge(updates []MergeUpdate) {
-	t2 := m.info.Mutable()
+	info := m.info.Mutable()
 	for _, up := range updates {
-		// fmt.Println("ApplyMerge", up.table)
-		if ti := t2.GetCopy(up.table); ti != nil { // not dropped
+		if ts, ok := m.schema.Get(up.table); ok && !ts.isTomb() && ts.Id != up.idTran {
+			continue // table recreated
+		}
+		if ti := info.GetCopy(up.table); ti != nil { // not dropped
 			ti.Indexes = append(ti.Indexes[:0:0], ti.Indexes...) // copy
 			for i, ov := range ti.Indexes {
 				ti.Indexes[i] = ov.WithMerged(up.results[i], up.nmerged)
 			}
-			t2.Put(ti)
-		} else {
-			// fmt.Println(" Apply skip")
+			info.Put(ti)
 		}
 	}
-	m.info = t2.Freeze()
+	m.info = info.Freeze()
 }
 
 //-------------------------------------------------------------------
@@ -161,6 +161,7 @@ type SaveResult = index.SaveResult
 
 type PersistUpdate struct {
 	table   string
+	idTran  int
 	results []SaveResult // per index
 }
 
@@ -175,7 +176,8 @@ func (m *Meta) Persist(exec func(func() PersistUpdate)) {
 				for i, ov := range ti.Indexes {
 					results[i] = ov.Save()
 				}
-				return PersistUpdate{table: ti.Table, results: results}
+				id := m.schema.MustGet(ti.Table).Id
+				return PersistUpdate{table: ti.Table, idTran: id, results: results}
 			})
 		}
 	})
@@ -184,17 +186,20 @@ func (m *Meta) Persist(exec func(func() PersistUpdate)) {
 // ApplyPersist takes the new btree roots from Persist
 // and updates the state with them.
 func (m *Meta) ApplyPersist(updates []PersistUpdate) {
-	t2 := m.info.Mutable()
+	info := m.info.Mutable()
 	for _, up := range updates {
-		if ti := t2.GetCopy(up.table); ti != nil { // not dropped
+		if ts, ok := m.schema.Get(up.table); ok && !ts.isTomb() && ts.Id != up.idTran {
+			continue // table recreated
+		}
+		if ti := info.GetCopy(up.table); ti != nil { // not dropped
 			ti.Indexes = append(ti.Indexes[:0:0], ti.Indexes...) // copy
 			for i, ov := range ti.Indexes {
 				if up.results[i] != nil {
 					ti.Indexes[i] = ov.WithSaved(up.results[i])
 				}
 			}
-			t2.Put(ti)
+			info.Put(ti)
 		}
 	}
-	m.info = t2.Freeze()
+	m.info = info.Freeze()
 }

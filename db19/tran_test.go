@@ -212,7 +212,7 @@ func TestExclusive(*testing.T) {
 	assert.That(db.ck.AddExclusive("mytable"))
 	ut := db.NewUpdateTran()
 	assert.This(db.ck.Write(ut.ct, "mytable", []string{""})).Is(false)
-	assert.This(ut.ct.conflict.Load()).Is("conflict with index creation (mytable)")
+	assert.This(ut.ct.conflict.Load()).Is("conflict with exclusive (mytable)")
 	db.EndExclusive("mytable")
 
 	ut = db.NewUpdateTran()

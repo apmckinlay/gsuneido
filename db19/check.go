@@ -193,7 +193,7 @@ func (ck *Check) Write(t *CkTran, table string, keys []string) bool {
 	}
 	assert.That(!t.isEnded())
 	if t.start < ck.exclusive[table] {
-		ck.abort(t.start, "conflict with index creation ("+table+")")
+		ck.abort(t.start, "conflict with exclusive ("+table+")")
 		return false
 	}
 	// check against overlapping transactions

@@ -156,9 +156,11 @@ func (db *Database) unlockSchema() {
 	atomic.StoreInt64(&db.schemaLock, 0)
 }
 
+var tableId uint32
+
 func (db *Database) create(state *DbState, schema *schema.Schema) {
 	schema.Check()
-	ts := &meta.Schema{Schema: *schema}
+	ts := &meta.Schema{Schema: *schema, Id: int(atomic.AddUint32(&tableId, 1))}
 	ts.Ixspecs(ts.Indexes)
 	ov := db.createIndexes(ts.Indexes)
 	ti := &meta.Info{Table: schema.Table, Indexes: ov}
@@ -249,7 +251,7 @@ func (db *Database) ensure(sch *schema.Schema, newIdxs []schema.Index) {
 
 func (db *Database) AddExclusive(table string) {
 	if !db.ck.AddExclusive(table) {
-		panic("index creation: can't get exclusive access to " + table)
+		panic("can't get exclusive access to " + table)
 	}
 }
 
@@ -440,7 +442,7 @@ func (db *Database) Close() {
 	if db.ck != nil {
 		db.ck.Stop()
 	} else if db.mode != stor.READ {
-		db.persist(&execPersistSingle{}, true)
+		db.persist(&execPersistSingle{}, true) // for testing
 	}
 	if db.mode != stor.READ {
 		db.writeSize()
