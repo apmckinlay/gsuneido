@@ -42,15 +42,4 @@ func TestParseAdmin(t *testing.T) {
 	test("alter mytable rename one to two, three to four")
 
 	test("view tc = tables join columns")
-
-	xtest := func(cmd, err string) {
-		t.Helper()
-		fn := func() { ParseAdmin(cmd) }
-		assert.T(t).This(fn).Panics(err)
-	}
-	xtest("create mytable () key(foo)", "invalid index column: foo")
-	xtest("create mytable (one,two,three) index(one)", "key required")
-	xtest("create mytable (one,two,three) key(bar)", "invalid index column: bar")
-	xtest("create mytable (one,two,three_lower!) key(one)",
-		"_lower! nonexistent column: three")
 }

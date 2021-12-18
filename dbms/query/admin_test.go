@@ -4,6 +4,7 @@
 package query
 
 import (
+	"strings"
 	"testing"
 	"time"
 
@@ -27,18 +28,31 @@ func TestAdminCreate(t *testing.T) {
 	db := createTestDb()
 	defer db.Close()
 	assert.T(t).This(db.Schema("tmp")).Is("tmp " + tmpschema)
-	assert.T(t).This(func() { DoAdmin(db, "create tables (a) key(a)") }).
-		Panics("can't create system table: tables")
-	assert.T(t).This(func() { DoAdmin(db, "create tmp (a) key(a)") }).
-		Panics("can't create existing table: tmp")
+	xtest := func(cmd, err string) {
+		t.Helper()
+		assert.T(t).This(func() { DoAdmin(db, "create "+cmd) }).Panics(err)
+		if !strings.Contains(err, "create") {
+			assert.T(t).This(func() { DoAdmin(db, "ensure "+cmd) }).Panics(err)
+		}
+	}
+
+	xtest("tables (a) key(a)",
+		"can't modify system table: tables")
+	xtest("tmp (a) key(a)",
+		"can't create existing table: tmp")
+	xtest("xtmp () key(foo)",
+		"invalid index column: foo")
+	xtest("xtmp (one,two,three) index(one)",
+		"key required in xtmp")
+	xtest("xtmp (one,two,three) key(bar)",
+		"invalid index column: bar")
+	xtest("xtmp (one,two,three_lower!) key(one)",
+		"_lower! nonexistent column: three")
 }
 
 func TestAdminEnsure(t *testing.T) {
 	db := createTestDb()
 	defer db.Close()
-
-	assert.T(t).This(func() { DoAdmin(db, "ensure tables (a) key(a)") }).
-		Panics("can't ensure system table: tables")
 
 	// nothing to do
 	DoAdmin(db, "ensure tmp "+tmpschema)
@@ -53,11 +67,10 @@ func TestAdminEnsure(t *testing.T) {
 	DoAdmin(db, "ensure tmp2 "+tmpschema)
 	assert.T(t).This(db.Schema("tmp2")).Is("tmp2 " + tmpschema)
 
-	assert.T(t).This(func() { DoAdmin(db, "ensure tmp3 (a) index unique(a)") }).
-		Panics("ensure: cannot create table without key: tmp3")
+	DoAdmin(db, "ensure tmp3 (a) key(a) index(a_lower!)")
 
 	// existing index but different
-	assert.T(t).This(func() { DoAdmin(db, "ensure tmp index unique(b,c)")}).
+	assert.T(t).This(func() { DoAdmin(db, "ensure tmp index unique(b,c)") }).
 		Panics(("ensure: index exists but is different"))
 }
 
@@ -79,7 +92,7 @@ func TestAdminRename(t *testing.T) {
 	db := createTestDb()
 	defer db.Close()
 	assert.T(t).This(func() { DoAdmin(db, "rename tmp to indexes") }).
-		Panics("can't rename to system table: indexes")
+		Panics("can't modify system table: indexes")
 	assert.T(t).This(func() { DoAdmin(db, "rename nonex to foo") }).
 		Panics("nonexistent table: nonex")
 	assert.T(t).This(func() { DoAdmin(db, "rename tmp to tmp") }).
@@ -92,13 +105,13 @@ func TestAdminAlterCreate(t *testing.T) {
 	db := createTestDb()
 	defer db.Close()
 	assert.T(t).This(func() { DoAdmin(db, "alter tables create (x)") }).
-		Panics("can't alter system table: tables")
+		Panics("can't modify system table: tables")
 	assert.T(t).This(func() { DoAdmin(db, "alter nonex create (x)") }).
 		Panics("nonexistent table: nonex")
 	assert.T(t).This(func() { DoAdmin(db, "alter tmp create (b)") }).
 		Panics("can't create existing column(s): b")
 	assert.T(t).This(func() { DoAdmin(db, "alter tmp create index(x)") }).
-		Panics("can't create index on nonexistent column: x")
+		Panics("invalid index column: x in tmp")
 	DoAdmin(db, "alter tmp create (x) index(x)")
 	assert.T(t).This(db.Schema("tmp")).
 		Is("tmp (a,b,c,d,x) key(a) index(b,c) index(x)")
@@ -111,7 +124,7 @@ func TestAdminAlterRename(t *testing.T) {
 	db := createTestDb()
 	defer db.Close()
 	assert.T(t).This(func() { DoAdmin(db, "alter tables rename table to foo") }).
-		Panics("can't alter system table: tables")
+		Panics("can't modify system table: tables")
 	assert.T(t).This(func() { DoAdmin(db, "alter nonex rename x to y") }).
 		Panics("nonexistent table: nonex")
 	assert.T(t).This(func() { DoAdmin(db, "alter tmp rename x to y") }).
@@ -126,7 +139,7 @@ func TestAdminAlterDrop(t *testing.T) {
 	db := createTestDb()
 	defer db.Close()
 	assert.T(t).This(func() { DoAdmin(db, "alter tables drop (table)") }).
-		Panics("can't alter system table: tables")
+		Panics("can't modify system table: tables")
 	assert.T(t).This(func() { DoAdmin(db, "alter nonex drop (table)") }).
 		Panics("nonexistent table: nonex")
 	assert.T(t).This(func() { DoAdmin(db, "alter tmp drop (x)") }).
@@ -143,7 +156,7 @@ func TestAdminDrop(t *testing.T) {
 	db := createTestDb()
 	defer db.Close()
 	assert.T(t).This(func() { DoAdmin(db, "drop columns") }).
-		Panics("can't drop system table: columns")
+		Panics("can't modify system table: columns")
 	assert.T(t).This(func() { DoAdmin(db, "drop nonex") }).
 		Panics("can't drop nonexistent table: nonex")
 	DoAdmin(db, "drop tmp")
@@ -155,7 +168,7 @@ func TestView(t *testing.T) {
 	defer db.Close()
 	assert.T(t).This(db.GetView("nonexistent")).Is("")
 	assert.T(t).This(func() { DoAdmin(db, "view columns = def") }).
-		Panics("can't create view: system table: columns")
+		Panics("can't modify system table: columns")
 	DoAdmin(db, "view foo = bar baz")
 	assert.T(t).This(db.GetView("foo")).Is("bar baz")
 	assert.T(t).This(func() { DoAdmin(db, "view foo = dup def") }).

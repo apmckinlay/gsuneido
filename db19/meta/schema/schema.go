@@ -129,3 +129,48 @@ func (ix *Index) Equal(iy *Index) bool {
 		ix.Fk.Mode == iy.Fk.Mode &&
 		strs.Equal(ix.Fk.Columns, iy.Fk.Columns)
 }
+
+func (sc *Schema) Check() {
+	sc.checkLower()
+	sc.checkForKey()
+	CheckIndexes(sc.Table, sc.Columns, sc.Indexes)
+}
+
+func (sc *Schema) checkLower() {
+	for _, col := range sc.Derived {
+		if strings.HasSuffix(col, "_lower!") &&
+			!strs.Contains(sc.Columns, strings.TrimSuffix(col, "_lower!")) {
+			panic("_lower! nonexistent column: " +
+				strings.TrimSuffix(col, "_lower!"))
+		}
+	}
+}
+
+func (sc *Schema) checkForKey() {
+	hasKey := false
+	for i := range sc.Indexes {
+		ix := sc.Indexes[i]
+		if ix.Mode == 'k' {
+			hasKey = true
+		}
+	}
+	if !hasKey {
+		panic("key required in " + sc.Table)
+	}
+}
+
+func CheckIndexes(table string, cols []string, idxs []Index) {
+	for i := range idxs {
+		ix := idxs[i]
+		if ix.Mode != 'k' && len(ix.Columns) == 0 {
+			panic("index columns must not be empty")
+		}
+		for _, col := range ix.Columns {
+			if !strs.Contains(cols, col) &&
+				!strs.Contains(cols, str.RemoveSuffix(col, "_lower!")) {
+				panic("invalid index column: " +
+					col + " in " + table)
+			}
+		}
+	}
+}

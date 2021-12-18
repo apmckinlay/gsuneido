@@ -14,7 +14,6 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/sset"
-	"github.com/apmckinlay/gsuneido/util/str"
 	"github.com/apmckinlay/gsuneido/util/strs"
 )
 
@@ -341,14 +340,7 @@ func createIndexes(ts *Schema, ti *Info, idxs []schema.Index, store *stor.Stor) 
 	if len(idxs) == 0 {
 		return
 	}
-	for i := range idxs {
-		for _, col := range idxs[i].Columns {
-			if !sset.Contains(ts.Columns, col) &&
-				!sset.Contains(ts.Columns, str.RemoveSuffix(col, "_lower!")) {
-				panic("can't create index on nonexistent column: " + col)
-			}
-		}
-	}
+	schema.CheckIndexes(ts.Table, ts.Columns, idxs)
 	ts.Ixspecs(idxs)
 	n := len(ts.Indexes)
 	ts.Indexes = append(ts.Indexes[:n:n], idxs...)

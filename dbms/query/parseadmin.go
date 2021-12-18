@@ -12,7 +12,6 @@ import (
 	"github.com/apmckinlay/gsuneido/db19"
 	"github.com/apmckinlay/gsuneido/db19/meta/schema"
 	"github.com/apmckinlay/gsuneido/util/str"
-	"github.com/apmckinlay/gsuneido/util/strs"
 )
 
 type adminParser struct {
@@ -51,9 +50,9 @@ func ParseAdmin(src string) Admin {
 func (p *adminParser) admin() Admin {
 	switch {
 	case p.MatchIf(tok.Create):
-		return &createAdmin{p.schema(true)}
+		return &createAdmin{p.schema()}
 	case p.MatchIf(tok.Ensure):
-		return &ensureAdmin{p.schema(false)}
+		return &ensureAdmin{p.schema()}
 	case p.MatchIf(tok.Rename):
 		from, to := p.rename1()
 		return &renameAdmin{from: from, to: to}
@@ -75,9 +74,9 @@ func (p *adminParser) alter() Admin {
 	table := p.MatchIdent()
 	switch {
 	case p.MatchIf(tok.Create):
-		return &alterCreateAdmin{p.schema2(table, false)}
+		return &alterCreateAdmin{p.schema2(table)}
 	case p.MatchIf(tok.Drop):
-		return &alterDropAdmin{p.schema2(table, false)}
+		return &alterDropAdmin{p.schema2(table)}
 	case p.MatchIf(tok.Rename):
 		return p.alterRename(table)
 	default:
@@ -106,25 +105,24 @@ func (p *adminParser) rename1() (string, string) {
 }
 
 func (p *adminParser) Schema() Schema {
-	return p.schema(true)
+	return p.schema()
 }
 
-func (p *adminParser) schema(full bool) Schema {
+func (p *adminParser) schema() Schema {
 	table := p.MatchIdent()
-	return p.schema2(table, full)
+	return p.schema2(table)
 }
 
-func (p *adminParser) schema2(table string, full bool) Schema {
-	columns, derived := p.columns(full)
-	indexes := p.indexes(columns, derived, full)
+func (p *adminParser) schema2(table string) Schema {
+	columns, derived := p.columns()
+	indexes := p.indexes()
 	return Schema{Table: table, Columns: columns, Derived: derived, Indexes: indexes}
 }
 
-func (p *adminParser) columns(full bool) (columns, derived []string) {
-	if !full && p.Token != tok.LParen {
+func (p *adminParser) columns() (columns, derived []string) {
+	if !p.MatchIf(tok.LParen) {
 		return
 	}
-	p.Match(tok.LParen)
 	columns = make([]string, 0, 8)
 	for p.Token != tok.RParen {
 		if p.MatchIf(tok.Sub) {
@@ -134,11 +132,6 @@ func (p *adminParser) columns(full bool) (columns, derived []string) {
 			if str.Capitalized(col) {
 				derived = append(derived, col)
 			} else if strings.HasSuffix(col, "_lower!") {
-				if full &&
-					!strs.Contains(columns, strings.TrimSuffix(col, "_lower!")) {
-					panic("_lower! nonexistent column: " +
-						strings.TrimSuffix(col, "_lower!"))
-				}
 				derived = append(derived, col)
 			} else {
 				columns = append(columns, col)
@@ -151,28 +144,20 @@ func (p *adminParser) columns(full bool) (columns, derived []string) {
 	return columns, derived
 }
 
-func (p *adminParser) indexes(columns, derived []string, full bool) []Index {
-	hasKey := false
+func (p *adminParser) indexes() []Index {
 	indexes := make([]Index, 0, 4)
-	for ix := p.index(columns, derived, full); ix != nil; ix = p.index(columns, derived, full) {
+	for ix := p.index(); ix != nil; ix = p.index() {
 		indexes = append(indexes, *ix)
-		hasKey = hasKey || ix.Mode == 'k'
-	}
-	if full && !hasKey {
-		panic("key required")
 	}
 	return indexes
 }
 
-func (p *adminParser) index(columns, derived []string, full bool) *Index {
+func (p *adminParser) index() *Index {
 	mode := p.indexMode()
 	if mode == 0 {
 		return nil
 	}
-	ixcols := p.indexColumns(columns, derived, full)
-	if mode != 'k' && len(ixcols) == 0 {
-		p.Error("index columns must not be empty")
-	}
+	ixcols := p.indexColumns()
 	ix := &Index{Columns: ixcols, Mode: mode}
 	ix.Fk.Table, ix.Fk.Columns, ix.Fk.Mode = p.foreignKey()
 	if ix.Fk.Columns == nil {
@@ -197,15 +182,11 @@ func (p *adminParser) indexMode() int {
 	return 0
 }
 
-func (p *adminParser) indexColumns(columns, derived []string, full bool) []string {
+func (p *adminParser) indexColumns() []string {
 	p.Match(tok.LParen)
 	ixcols := make([]string, 0, 8)
 	for p.Token != tok.RParen {
 		col := p.MatchIdent()
-		if full && !strs.Contains(columns, col) &&
-			(!strings.HasSuffix(col, "_lower!") || !strs.Contains(derived, col)) {
-			p.Error("invalid index column: " + col)
-		}
 		ixcols = append(ixcols, col)
 		p.MatchIf(tok.Comma)
 	}

@@ -157,6 +157,7 @@ func (db *Database) unlockSchema() {
 }
 
 func (db *Database) create(state *DbState, schema *schema.Schema) {
+	schema.Check()
 	ts := &meta.Schema{Schema: *schema}
 	ts.Ixspecs(ts.Indexes)
 	ov := db.createIndexes(ts.Indexes)
@@ -181,7 +182,6 @@ func (db *Database) Ensure(sch *schema.Schema) {
 	db.UpdateState(func(state *DbState) {
 		ts := state.Meta.GetRoSchema(sch.Table)
 		if ts == nil { // table doesn't exist
-			checkForKey(sch)
 			db.create(state, sch)
 			handled = true
 
@@ -200,19 +200,6 @@ func (db *Database) Ensure(sch *schema.Schema) {
 	// outside UpdateState
 	if !handled {
 		db.ensure(sch, newIdxs)
-	}
-}
-
-func checkForKey(sch *schema.Schema) {
-	hasKey := false
-	for i := range sch.Indexes {
-		ix := sch.Indexes[i]
-		if ix.Mode == 'k' {
-			hasKey = true
-		}
-	}
-	if !hasKey {
-		panic("ensure: cannot create table without key: " + sch.Table)
 	}
 }
 

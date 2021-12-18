@@ -14,9 +14,9 @@ func DoAdmin(db *db19.Database, cmd string) {
 	admin.execute(db)
 }
 
-func checkForSystemTable(op, table string) {
+func checkForSystemTable(table string) {
 	if isSystemTable(table) {
-		panic("can't " + op + " system table: " + table)
+		panic("can't modify system table: " + table)
 	}
 }
 
@@ -39,7 +39,7 @@ func (a *createAdmin) String() string {
 }
 
 func (a *createAdmin) execute(db *db19.Database) {
-	checkForSystemTable("create", a.Table)
+	checkForSystemTable(a.Table)
 	db.Create(&a.Schema)
 }
 
@@ -54,7 +54,7 @@ func (a *ensureAdmin) String() string {
 }
 
 func (a *ensureAdmin) execute(db *db19.Database) {
-	checkForSystemTable("ensure", a.Table)
+	checkForSystemTable(a.Table)
 	db.Ensure(&a.Schema)
 }
 
@@ -70,8 +70,8 @@ func (a *renameAdmin) String() string {
 }
 
 func (a *renameAdmin) execute(db *db19.Database) {
-	checkForSystemTable("rename", a.from)
-	checkForSystemTable("rename to", a.to)
+	checkForSystemTable(a.from)
+	checkForSystemTable(a.to)
 	if !db.RenameTable(a.from, a.to) {
 		panic("can't " + a.String())
 	}
@@ -88,7 +88,7 @@ func (a *alterCreateAdmin) String() string {
 }
 
 func (a *alterCreateAdmin) execute(db *db19.Database) {
-	checkForSystemTable("alter", a.Table)
+	checkForSystemTable(a.Table)
 	db.AlterCreate(&a.Schema)
 }
 
@@ -111,7 +111,7 @@ func (a *alterRenameAdmin) String() string {
 }
 
 func (a *alterRenameAdmin) execute(db *db19.Database) {
-	checkForSystemTable("alter", a.table)
+	checkForSystemTable(a.table)
 	if !db.AlterRename(a.table, a.from, a.to) {
 		panic("can't " + a.String())
 	}
@@ -128,7 +128,7 @@ func (a *alterDropAdmin) String() string {
 }
 
 func (a *alterDropAdmin) execute(db *db19.Database) {
-	checkForSystemTable("alter", a.Table)
+	checkForSystemTable(a.Table)
 	if !db.AlterDrop(&a.Schema) {
 		panic("can't " + a.String())
 	}
@@ -146,7 +146,7 @@ func (a *viewAdmin) String() string {
 }
 
 func (a *viewAdmin) execute(db *db19.Database) {
-	checkForSystemTable("create view:", a.name)
+	checkForSystemTable(a.name)
 	db.AddView(a.name, a.def)
 }
 
@@ -161,7 +161,7 @@ func (a *dropAdmin) String() string {
 }
 
 func (a *dropAdmin) execute(db *db19.Database) {
-	checkForSystemTable("drop", a.table)
+	checkForSystemTable(a.table)
 	if err := db.Drop(a.table); err != nil {
 		panic(err)
 	}
