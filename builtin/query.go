@@ -101,7 +101,7 @@ func init() {
 		}),
 		"Output": method("(record)",
 			func(th *Thread, this Value, args []Value) Value {
-				trace.Dbms.Println("Query Output", args[0], "INTO", this)
+				trace.Dbms.Println("Query Output", this, args[0])
 				this.(*SuQuery).Output(th, ToContainer(args[0]))
 				return nil
 			}),
