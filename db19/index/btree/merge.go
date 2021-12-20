@@ -113,17 +113,22 @@ func (st *state) ascend() {
 	}
 	bt := st.bt
 
-	// delete empty non-root node
-	if len(m.node) == 0 && len(st.path) > 0 {
-		parent := st.last()
-		parent.getMutableNode()
-		nd,ok := parent.node.delete(m.off)
-		assert.That(ok)
-		parent.node = nd
-		if len(st.path) > 1 {
-			st.ascend() // tail recurse
+	if len(m.node) == 0 {
+		// empty node
+		if len(st.path) == 0 {
+			bt.treeLevels = 0
+		} else {
+			// delete empty non-root node
+			parent := st.last()
+			parent.getMutableNode()
+			nd, ok := parent.node.delete(m.off)
+			assert.That(ok)
+			parent.node = nd
+			if len(st.path) > 1 {
+				st.ascend() // tail recurse
+			}
+			return
 		}
-		return
 	}
 
 	insertOff := uint64(0)

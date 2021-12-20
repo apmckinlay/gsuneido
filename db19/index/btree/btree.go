@@ -182,6 +182,9 @@ func (bt *btree) Check(fn func(uint64)) (count, size, nnodes int) {
 func (bt *btree) check1(depth int, offset uint64, key *string,
 	fn func(uint64)) (count, size, nnodes int) {
 	nd := bt.getNodeCk(offset, true)
+	if len(nd) == 0 && (bt.treeLevels > 0 || depth > 0) {
+		panic("empty node in non-empty btree")
+	}
 	size += len(nd)
 	nnodes++
 	for it := nd.iter(); it.next(); {

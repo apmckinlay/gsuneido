@@ -40,10 +40,13 @@ func TestMergeDeleteAll(*testing.T) {
 
 	out := bt.MergeAndSave(ib.Iter())
 	// out.Print()
+	out.Check(nil)
 
 	iter := out.Iterator()
 	iter.Next()
 	assert.That(iter.Eof())
+
+	assert.Msg("treeLevels").This(out.treeLevels).Is(0)
 }
 
 func TestMergeAndSave(*testing.T) {
