@@ -309,12 +309,19 @@ func (t *UpdateTran) Output(table string, rec rt.Record) {
 		dupOutputBlock(table, ix, ti.Indexes[i], rec, keys[i])
 		t.fkeyOutputBlock(ts, i, rec)
 	}
-	//FIXME panic after this requires abort
-	ti = t.getRwInfo(table)
-	for i := range ts.Indexes {
-		ti.Indexes[i].Insert(keys[i], off)
-	}
 	t.ck(t.db.ck.Write(t.ct, table, keys))
+	func() {
+		defer func() {
+			if e := recover(); e != nil {
+				t.Abort()
+				panic(e)
+			}
+		}()
+		ti = t.getRwInfo(table)
+		for i := range ts.Indexes {
+			ti.Indexes[i].Insert(keys[i], off)
+		}
+	}()
 	ti.Nrows++
 	ti.Size += uint64(n)
 	t.db.CallTrigger(t.thread(), t, table, "", rec)
@@ -378,19 +385,26 @@ func (t *UpdateTran) Delete(table string, off uint64) {
 		keys[i] = is.Key(rec)
 		t.fkeyDeleteBlock(ts, i, keys[i])
 	}
-	//FIXME panic after this requires abort
-	ti := t.getRwInfo(table)
-	for i := range ts.Indexes {
-		t.fkeyDeleteCascade(ts, i, keys[i])
-	}
-	for i := range ts.Indexes {
-		ti.Indexes[i].Delete(keys[i], off)
-	}
 	t.ck(t.db.ck.Write(t.ct, table, keys))
-	assert.Msg("Delete Nrows").That(ti.Nrows > 0)
-	ti.Nrows--
-	assert.Msg("Delete Size").That(ti.Size >= uint64(n))
-	ti.Size -= uint64(n)
+	func() {
+		defer func() {
+			if e := recover(); e != nil {
+				t.Abort()
+				panic(e)
+			}
+		}()
+		ti := t.getRwInfo(table)
+		for i := range ts.Indexes {
+			t.fkeyDeleteCascade(ts, i, keys[i])
+		}
+		for i := range ts.Indexes {
+			ti.Indexes[i].Delete(keys[i], off)
+		}
+		assert.Msg("Delete Nrows").That(ti.Nrows > 0)
+		ti.Nrows--
+		assert.Msg("Delete Size").That(ti.Size >= uint64(n))
+		ti.Size -= uint64(n)
+	}()
 	t.db.CallTrigger(t.thread(), t, table, rec, "")
 }
 
@@ -510,24 +524,6 @@ func (t *UpdateTran) update(table string, oldoff uint64, newrec rt.Record,
 			}
 		}
 	}
-	//FIXME panic after this requires abort
-	ti = t.getRwInfo(table)
-	if newoff != oldoff {
-		for i := range ts.Indexes {
-			if oldkeys[i] != newkeys[i] {
-				t.fkeyUpdateCascade(ts, i, newrec, oldkeys[i])
-			}
-		}
-		for i := range ts.Indexes {
-			ix := ti.Indexes[i]
-			if oldkeys[i] == newkeys[i] {
-				ix.Update(oldkeys[i], newoff)
-			} else {
-				ix.Delete(oldkeys[i], oldoff)
-				ix.Insert(newkeys[i], newoff)
-			}
-		}
-	}
 	t.ck(t.db.ck.Write(t.ct, table, oldkeys))
 	if newoff != oldoff {
 		t.ck(t.db.ck.Write(t.ct, table, newkeys))
@@ -535,6 +531,31 @@ func (t *UpdateTran) update(table string, oldoff uint64, newrec rt.Record,
 		assert.Msg("Update Size").That(int64(ti.Size)+d > 0)
 		ti.Size = uint64(int64(ti.Size) + d)
 	}
+	func() {
+		defer func() {
+			if e := recover(); e != nil {
+				t.Abort()
+				panic(e)
+			}
+		}()
+		ti = t.getRwInfo(table)
+		if newoff != oldoff {
+			for i := range ts.Indexes {
+				if oldkeys[i] != newkeys[i] {
+					t.fkeyUpdateCascade(ts, i, newrec, oldkeys[i])
+				}
+			}
+			for i := range ts.Indexes {
+				ix := ti.Indexes[i]
+				if oldkeys[i] == newkeys[i] {
+					ix.Update(oldkeys[i], newoff)
+				} else {
+					ix.Delete(oldkeys[i], oldoff)
+					ix.Insert(newkeys[i], newoff)
+				}
+			}
+		}
+	}()
 	t.db.CallTrigger(t.thread(), t, table, oldrec, newrec)
 	return newoff
 }
