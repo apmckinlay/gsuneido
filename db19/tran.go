@@ -52,7 +52,7 @@ func (t *tran) getSchema(table string) *meta.Schema {
 	panic("nonexistent table: " + table)
 }
 
-func (t *UpdateTran) getInfo(table string) *meta.Info {
+func (t *UpdateTran) getRwInfo(table string) *meta.Info {
 	if ti := t.meta.GetRwInfo(table); ti != nil {
 		return ti
 	}
@@ -297,7 +297,7 @@ func (t *UpdateTran) Read(table string, iIndex int, from, to string) {
 
 func (t *UpdateTran) Output(table string, rec rt.Record) {
 	ts := t.getSchema(table)
-	ti := t.getInfo(table)
+	ti := t.tran.GetInfo(table) // readonly
 	n := rec.Len()
 	off, buf := t.db.Store.Alloc(n + cksum.Len)
 	copy(buf, rec[:n])
@@ -310,6 +310,7 @@ func (t *UpdateTran) Output(table string, rec rt.Record) {
 		t.fkeyOutputBlock(ts, i, rec)
 	}
 	//FIXME panic after this requires abort
+	ti = t.getRwInfo(table)
 	for i := range ts.Indexes {
 		ti.Indexes[i].Insert(keys[i], off)
 	}
@@ -369,7 +370,6 @@ func (t *UpdateTran) thread() *rt.Thread {
 
 func (t *UpdateTran) Delete(table string, off uint64) {
 	ts := t.getSchema(table)
-	ti := t.getInfo(table)
 	rec := t.GetRecord(off)
 	n := rec.Len()
 	keys := make([]string, len(ts.Indexes))
@@ -379,7 +379,7 @@ func (t *UpdateTran) Delete(table string, off uint64) {
 		t.fkeyDeleteBlock(ts, i, keys[i])
 	}
 	//FIXME panic after this requires abort
-
+	ti := t.getRwInfo(table)
 	for i := range ts.Indexes {
 		t.fkeyDeleteCascade(ts, i, keys[i])
 	}
@@ -482,7 +482,7 @@ func (t *UpdateTran) Update(table string, oldoff uint64, newrec rt.Record) uint6
 func (t *UpdateTran) update(table string, oldoff uint64, newrec rt.Record,
 	block bool) uint64 {
 	ts := t.getSchema(table)
-	ti := t.getInfo(table)
+	ti := t.tran.GetInfo(table) // read-only
 	n := newrec.Len()
 	newrec = newrec[:n]
 	oldrec := t.GetRecord(oldoff)
@@ -511,6 +511,7 @@ func (t *UpdateTran) update(table string, oldoff uint64, newrec rt.Record,
 		}
 	}
 	//FIXME panic after this requires abort
+	ti = t.getRwInfo(table)
 	if newoff != oldoff {
 		for i := range ts.Indexes {
 			if oldkeys[i] != newkeys[i] {

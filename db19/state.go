@@ -46,7 +46,7 @@ func (db *Database) GetState() *DbState {
 }
 
 // Persist forces a persist and returns a persisted state,
-// which means all entries are in the btree.
+// with all ixbuf layer entries merged into the btree.
 // This is used by dump, load, and checkdb.
 func (db *Database) Persist() *DbState {
 	if db.ck == nil { // for tests
@@ -115,6 +115,7 @@ type persistfn func(*DbState) []meta.PersistUpdate
 // persist writes index changes (and a new state) to the database file.
 // It is called from concur.go regularly e.g. once per minute.
 // flatten applies to the schema and info chains (not indexes).
+// NOTE: persist should only be called by the checker.
 func (db *Database) persist(exec execPersist, flatten bool) *DbState {
 	// fmt.Println("persist", flatten)
 	var newState *DbState

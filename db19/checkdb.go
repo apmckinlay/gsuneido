@@ -60,7 +60,8 @@ func (db *Database) Check() (ec error) {
 			ec = newErrCorrupt(e)
 		}
 	}()
-	runParallel(db.Persist(), checkTable)
+	state := db.Persist()
+	runParallel(state, checkTable)
 	return nil // may be overridden by defer/recover
 }
 
@@ -73,15 +74,14 @@ func checkTable(state *DbState, table string) {
 	if count != info.Nrows {
 		panic("count != nrows " + fmt.Sprint(count, info.Nrows))
 	}
-	for i := 1; i < len(info.Indexes); i++ {
-		ix := info.Indexes[i]
+	for _, ix := range info.Indexes[1:] {
 		CheckOtherIndex(ix, count, sum)
 	}
 }
 
 func checkFirstIndex(state *DbState, ix *index.Overlay) (int, uint64) {
 	sum := uint64(0)
-	ix.CheckFlat()
+	ix.CheckMerged()
 	count := ix.Check(func(off uint64) {
 		sum += off // addition so order doesn't matter
 		buf := state.store.Data(off)
@@ -92,6 +92,7 @@ func checkFirstIndex(state *DbState, ix *index.Overlay) (int, uint64) {
 }
 
 func CheckOtherIndex(ix *index.Overlay, countPrev int, sumPrev uint64) {
+	ix.CheckMerged()
 	sum := uint64(0)
 	count := ix.Check(func(off uint64) {
 		sum += off // addition so order doesn't matter

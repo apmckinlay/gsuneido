@@ -754,7 +754,7 @@ func clock(offs []uint64) int {
 func (m *Meta) CheckAllMerged() {
 	m.info.ForEach(func(ti *Info) {
 		for _, ov := range ti.Indexes {
-			ov.CheckFlat()
+			ov.CheckMerged()
 		}
 	})
 }

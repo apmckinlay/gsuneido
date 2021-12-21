@@ -16,7 +16,7 @@ type Info struct {
 	origNrows int
 	origSize  uint64
 	Indexes   []*index.Overlay
-	// lastmod is used for persist chaining/flattening
+	// lastmod is used for persist meta chaining/flattening
 	lastmod int
 }
 

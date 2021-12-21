@@ -232,8 +232,10 @@ func (ov *Overlay) WithSaved(bt SaveResult) *Overlay {
 
 //-------------------------------------------------------------------
 
-func (ov *Overlay) CheckFlat() {
-	assert.Msg("not flat").That(len(ov.layers) == 1)
+func (ov *Overlay) CheckMerged() {
+	if len(ov.layers) != 1 && ov.layers[0].Len() != 0 {
+		panic("index not merged")
+	}
 }
 
 func (ov *Overlay) Print() {
