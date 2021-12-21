@@ -59,9 +59,9 @@ func TestAdminEnsure(t *testing.T) {
 	assert.T(t).This(db.Schema("tmp")).Is("tmp " + tmpschema)
 
 	// modify
-	DoAdmin(db, "ensure tmp (a, c, e, f) index(b,c) index(e,f)")
+	DoAdmin(db, "ensure tmp (a, c, e, f, G) index(b,c) index(e,f)")
 	assert.T(t).This(db.Schema("tmp")).
-		Is("tmp (a,b,c,d,e,f) key(a) index(b,c) index(e,f)")
+		Is("tmp (a,b,c,d,e,f,G) key(a) index(b,c) index(e,f)")
 
 	// create
 	DoAdmin(db, "ensure tmp2 "+tmpschema)
@@ -112,12 +112,12 @@ func TestAdminAlterCreate(t *testing.T) {
 		Panics("can't create existing column(s): b")
 	assert.T(t).This(func() { DoAdmin(db, "alter tmp create index(x)") }).
 		Panics("invalid index column: x in tmp")
-	DoAdmin(db, "alter tmp create (x) index(x)")
+	DoAdmin(db, "alter tmp create (x,Y) index(x)")
 	assert.T(t).This(db.Schema("tmp")).
-		Is("tmp (a,b,c,d,x) key(a) index(b,c) index(x)")
+		Is("tmp (a,b,c,d,x,Y) key(a) index(b,c) index(x)")
 	DoAdmin(db, "ensure tmp key(d_lower!)")
 	assert.T(t).This(db.Schema("tmp")).
-		Is("tmp (a,b,c,d,x) key(a) index(b,c) index(x) key(d_lower!)")
+		Is("tmp (a,b,c,d,x,Y) key(a) index(b,c) index(x) key(d_lower!)")
 }
 
 func TestAdminAlterRename(t *testing.T) {
@@ -143,13 +143,17 @@ func TestAdminAlterDrop(t *testing.T) {
 	assert.T(t).This(func() { DoAdmin(db, "alter nonex drop (table)") }).
 		Panics("nonexistent table: nonex")
 	assert.T(t).This(func() { DoAdmin(db, "alter tmp drop (x)") }).
-		Panics("can't drop nonexistent column(s): x")
+		Panics("can't drop nonexistent column: x")
 	assert.T(t).This(func() { DoAdmin(db, "alter tmp drop index(x)") }).
 		Panics("can't drop nonexistent index: x")
 	DoAdmin(db, "alter tmp drop (d)")
 	assert.T(t).This(db.Schema("tmp")).Is("tmp (a,b,c,-) key(a) index(b,c)")
 	DoAdmin(db, "alter tmp drop (b) index(b,c)")
 	assert.T(t).This(db.Schema("tmp")).Is("tmp (a,-,c,-) key(a)")
+
+	DoAdmin(db, "create tmp2 (a,b,C,D,a_lower!) key(a)")
+	DoAdmin(db, "alter tmp2 drop (C,d,a_lower!)")
+	assert.T(t).This(db.Schema("tmp2")).Is("tmp2 (a,b) key(a)")
 }
 
 func TestAdminDrop(t *testing.T) {

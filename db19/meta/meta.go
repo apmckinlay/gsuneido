@@ -14,6 +14,7 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/sset"
+	"github.com/apmckinlay/gsuneido/util/str"
 	"github.com/apmckinlay/gsuneido/util/strs"
 )
 
@@ -187,22 +188,22 @@ func (mu *metaUpdate) freeze() *Meta {
 
 // admin schema changes ---------------------------------------------
 
-//TODO Derived
-
 func (m *Meta) Ensure(a *schema.Schema, store *stor.Stor) ([]schema.Index, *Meta) {
 	ts, ok := m.schema.Get(a.Table)
 	if !ok || ts.isTomb() {
 		panic("ensure: couldn't find " + a.Table)
 	}
 	ts, ti := m.alterGet(a.Table)
-	newCols := sset.Difference(a.Columns, ts.Columns)
 	newIdxs := []schema.Index{}
 	for i := range a.Indexes {
 		if nil == ts.FindIndex(a.Indexes[i].Columns) {
 			newIdxs = append(newIdxs, a.Indexes[i])
 		}
 	}
+	newCols := sset.Difference(a.Columns, ts.Columns)
 	createColumns(ts, newCols)
+	newDer := sset.Difference(a.Derived, ts.Derived)
+	createDerived(ts, newDer)
 	createIndexes(ts, ti, newIdxs, store)
 	ac := &schema.Schema{Table: a.Table, Indexes: newIdxs}
 	return newIdxs, m.PutNew(ts, ti, ac)
@@ -303,6 +304,7 @@ func (m *Meta) AlterRename(table string, from, to []string) *Meta {
 func (m *Meta) AlterCreate(ac *schema.Schema, store *stor.Stor) *Meta {
 	ts, ti := m.alterGet(ac.Table)
 	createColumns(ts, ac.Columns)
+	createDerived(ts, ac.Derived)
 	createIndexes(ts, ti, ac.Indexes, store)
 	return m.PutNew(ts, ti, ac)
 }
@@ -334,6 +336,14 @@ func createColumns(ts *Schema, cols []string) {
 		panic("can't create existing column(s): " + strs.Join(", ", existing))
 	}
 	ts.Columns = append(strs.Cow(ts.Columns), cols...)
+}
+
+func createDerived(ts *Schema, cols []string) {
+	existing := sset.Intersect(cols, ts.Derived)
+	if len(existing) > 0 {
+		panic("can't create existing column(s): " + strs.Join(", ", existing))
+	}
+	ts.Derived = append(strs.Cow(ts.Derived), cols...)
 }
 
 func createIndexes(ts *Schema, ti *Info, idxs []schema.Index, store *stor.Stor) {
@@ -438,13 +448,9 @@ func (m *Meta) AlterDrop(ad *schema.Schema) *Meta {
 	ts, ti := m.alterGet(ad.Table)
 	// need to drop indexes before columns
 	// in case we drop a column and an index that contains it
-	if len(ad.Indexes) > 0 {
-		dropIndexes(ts, ti, ad.Indexes)
-	}
-	if len(ad.Columns) > 0 {
-		if !dropColumns(ts, ad.Columns) {
-			return nil
-		}
+	dropIndexes(ts, ti, ad.Indexes)
+	if !dropColumns(ts, ad) {
+		return nil
 	}
 	mu := newMetaUpdate(m)
 	mu.putSchema(ts)
@@ -455,6 +461,9 @@ func (m *Meta) AlterDrop(ad *schema.Schema) *Meta {
 }
 
 func dropIndexes(ts *Schema, ti *Info, idxs []schema.Index) {
+	if len(idxs) == 0 {
+		return
+	}
 loop:
 	for j := range idxs {
 		for i := range ts.Indexes {
@@ -483,20 +492,54 @@ outer:
 	ti.Indexes = tiIdxs
 }
 
-func dropColumns(ts *Schema, cols []string) bool {
-	missing := sset.Difference(cols, ts.Columns)
-	if len(missing) > 0 {
-		panic("can't drop nonexistent column(s): " + strs.Join(", ", missing))
-	}
-	for i := range ts.Indexes {
-		if !sset.Disjoint(ts.Indexes[i].Columns, cols) {
-			return false // can't drop if used by index
+func dropColumns(ts *Schema, ad *schema.Schema) bool {
+	for _, col := range ad.Columns {
+		if !dropColumn(ts, col) {
+			return false
 		}
 	}
-	for _, col := range cols {
-		ts.Columns = strs.Replace1(ts.Columns, col, "-")
+	for _, col := range ad.Derived {
+		if !dropDerived(ts, col) {
+			return false
+		}
 	}
 	return true
+}
+
+func dropColumn(ts *Schema, col string) bool {
+	if inIndex(ts, col) {
+		return false // can't drop if used by index
+	}
+	ucol := str.UnCapitalize(col)
+	ccol := str.Capitalize(col)
+	if strs.Contains(ts.Columns, ucol) {
+		ts.Columns = strs.Replace1(ts.Columns, ucol, "-")
+	} else if strs.Contains(ts.Derived, ccol) {
+		ts.Derived = strs.Without(ts.Derived, ccol)
+	} else {
+		panic("can't drop nonexistent column: " + col)
+	}
+	return true
+}
+
+func dropDerived(ts *Schema, col string) bool {
+	if !strs.Contains(ts.Derived, col) {
+		panic("can't drop nonexistent column: " + col)
+	}
+	if inIndex(ts, col) {
+		return false // can't drop if used by index
+	}
+	ts.Derived = strs.Without(ts.Derived, col)
+	return true
+}
+
+func inIndex(ts *Schema, col string) bool {
+	for i := range ts.Indexes {
+		if strs.Contains(ts.Indexes[i].Columns, col) {
+			return true // can't drop if used by index
+		}
+	}
+	return false
 }
 
 func (m *Meta) dropFkeys(mu *metaUpdate, drop *schema.Schema) {
