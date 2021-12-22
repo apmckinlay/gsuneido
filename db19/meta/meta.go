@@ -608,7 +608,7 @@ func (m *Meta) TouchIndexes(table string) *Meta {
 
 //-------------------------------------------------------------------
 
-// LayeredOnto is done by transaction commit.
+// LayeredOnto is called by transaction commit inside UpdateState.
 // It layers the mutable ixbuf's from transactions
 // onto the latest/current state and returns a new state.
 // Also, the nrows and size deltas are applied.
@@ -620,6 +620,7 @@ func (m *Meta) LayeredOnto(latest *Meta) *Meta {
 	info := latest.info.Mutable()
 	m.difInfo.ForEach(func(ti *Info) {
 		lti, ok := info.Get(ti.Table)
+		//FIXME table may have been recreated - check id
 		if !ok || lti.isTomb() {
 			return
 		}

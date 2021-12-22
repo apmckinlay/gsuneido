@@ -137,7 +137,8 @@ func (mu *MergeUpdate) Skip() bool {
 	return mu.table == ""
 }
 
-// ApplyMerge applies the updates collected by Merge
+// ApplyMerge applies the updates collected by Merge.
+// It is called by state.go Database.Merge, inside UpdateState.
 func (m *Meta) ApplyMerge(updates []MergeUpdate) {
 	info := m.info.Mutable()
 	for _, up := range updates {

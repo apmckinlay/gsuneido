@@ -15,6 +15,13 @@ import (
 	"github.com/apmckinlay/gsuneido/util/ranges"
 )
 
+/*
+Reads are tracked as Ranges on specific indexes (ckreads).
+Writes are tracked as Set's of key values for each index (ckwrites).
+Reads can conflict with writes and writes can conflict with other writes.
+Reads do not conflict with each other.
+*/
+
 const maxTrans = 200
 
 // Need to use an ordered set so that reads can check for a range
