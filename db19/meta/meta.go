@@ -626,7 +626,8 @@ func (m *Meta) LayeredOnto(latest *Meta) *Meta {
 		}
 		ti.Nrows = lti.Nrows + (ti.Nrows - ti.origNrows)
 		assert.That(ti.Nrows >= 0)
-		ti.Size = lti.Size + (ti.Size - ti.origSize)
+		d := int64(ti.Size) - int64(ti.origSize)
+		ti.Size = uint64(int64(lti.Size) + d)
 		ti.origNrows = 0
 		ti.origSize = 0
 		for i := range ti.Indexes {

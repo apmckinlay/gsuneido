@@ -525,9 +525,10 @@ func (t *UpdateTran) update(table string, oldoff uint64, newrec rt.Record,
 		}
 	}
 	t.ck(t.db.ck.Write(t.ct, table, oldkeys))
+	ti = t.getRwInfo(table)
 	if newoff != oldoff {
 		t.ck(t.db.ck.Write(t.ct, table, newkeys))
-		d := int64(len(newrec) - len(oldrec))
+		d := int64(len(newrec)) - int64(len(oldrec))
 		assert.Msg("Update Size").That(int64(ti.Size)+d > 0)
 		ti.Size = uint64(int64(ti.Size) + d)
 	}
@@ -538,7 +539,6 @@ func (t *UpdateTran) update(table string, oldoff uint64, newrec rt.Record,
 				panic(e)
 			}
 		}()
-		ti = t.getRwInfo(table)
 		if newoff != oldoff {
 			for i := range ts.Indexes {
 				if oldkeys[i] != newkeys[i] {

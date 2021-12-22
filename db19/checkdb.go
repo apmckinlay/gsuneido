@@ -70,25 +70,30 @@ func checkTable(state *DbState, table string) {
 	if info == nil {
 		panic("info missing for " + table)
 	}
-	count, sum := checkFirstIndex(state, info.Indexes[0])
+	count, size, sum := checkFirstIndex(state, info.Indexes[0])
 	if count != info.Nrows {
-		panic("count != nrows " + fmt.Sprint(count, info.Nrows))
+		panic("info.Nrows wrong " + fmt.Sprint(count, info.Nrows))
+	}
+	if size != info.Size {
+		panic(fmt.Sprint(table, " info.Size ", info.Size, " should be ", size))
 	}
 	for _, ix := range info.Indexes[1:] {
 		CheckOtherIndex(ix, count, sum)
 	}
 }
 
-func checkFirstIndex(state *DbState, ix *index.Overlay) (int, uint64) {
+func checkFirstIndex(state *DbState, ix *index.Overlay) (int, uint64, uint64) {
 	sum := uint64(0)
+	size := uint64(0)
 	ix.CheckMerged()
 	count := ix.Check(func(off uint64) {
 		sum += off // addition so order doesn't matter
 		buf := state.store.Data(off)
-		size := runtime.RecLen(buf)
-		cksum.MustCheck(buf[:size+cksum.Len])
+		n := runtime.RecLen(buf)
+		cksum.MustCheck(buf[:n+cksum.Len])
+		size += uint64(n)
 	})
-	return count, sum
+	return count, size, sum
 }
 
 func CheckOtherIndex(ix *index.Overlay, countPrev int, sumPrev uint64) {
