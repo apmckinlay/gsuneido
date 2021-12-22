@@ -273,10 +273,10 @@ func (t *UpdateTran) Abort() string {
 	case completed:
 		return "already completed"
 	}
+	t.state = aborted
 	if !t.db.ck.Abort(t.ct, "aborted") {
 		return "abort failed"
 	}
-	t.state = aborted
 	return ""
 }
 
