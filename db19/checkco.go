@@ -78,7 +78,7 @@ func (ck *CheckCo) StartTran() *CkTran {
 }
 
 func (ck *CheckCo) Read(t *CkTran, table string, index int, from, to string) bool {
-	if t.Aborted() {
+	if t.Failed() {
 		return false
 	}
 	ck.c <- &ckRead{t: t, table: table, index: index, from: from, to: to}
@@ -86,7 +86,7 @@ func (ck *CheckCo) Read(t *CkTran, table string, index int, from, to string) boo
 }
 
 func (ck *CheckCo) Write(t *CkTran, table string, keys []string) bool {
-	if t.Aborted() {
+	if t.Failed() {
 		return false
 	}
 	ret := make(chan bool, 1)
@@ -95,7 +95,7 @@ func (ck *CheckCo) Write(t *CkTran, table string, keys []string) bool {
 }
 
 func (ck *CheckCo) Commit(ut *UpdateTran) bool {
-	if ut.ct.Aborted() {
+	if ut.ct.Failed() {
 		return false
 	}
 	ret := make(chan bool, 1)
@@ -106,10 +106,6 @@ func (ck *CheckCo) Commit(ut *UpdateTran) bool {
 func (ck *CheckCo) Abort(t *CkTran, reason string) bool {
 	ck.c <- &ckAbort{t: t, reason: reason}
 	return true
-}
-
-func (t *CkTran) Aborted() bool {
-	return t.conflict.Load() != nil
 }
 
 // AddExclusive also does sync (handled in dispatch)

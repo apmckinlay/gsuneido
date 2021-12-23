@@ -59,7 +59,9 @@ type CkTran struct {
 	birth    int
 	tables   map[string]*cktbl
 	state    *DbState
-	conflict atomic.Value // string
+	// failure is written by CkTran.abort and read by UpdateTran.
+	// It is set to either a conflict or a timeout.
+	failure atomic.Value // string
 }
 
 type cktbl struct {
@@ -146,7 +148,7 @@ func (ck *Check) Read(t *CkTran, table string, index int, from, to string) bool 
 	if !ok {
 		return false // it's gone, presumably aborted
 	}
-	assert.That(!t.isEnded())
+	assert.That(!t.ended())
 	// check against overlapping transactions
 	for _, t2 := range ck.trans {
 		if t2 != t && overlap(t, t2) {
@@ -198,7 +200,7 @@ func (ck *Check) Write(t *CkTran, table string, keys []string) bool {
 	if !ok {
 		return false // it's gone, presumably aborted
 	}
-	assert.That(!t.isEnded())
+	assert.That(!t.ended())
 	if t.start < ck.exclusive[table] {
 		ck.abort(t.start, "conflict with exclusive ("+table+")")
 		return false
@@ -270,7 +272,7 @@ var checkerAbortT1 = false
 // It returns true if t1 is aborted, false if t2 is aborted.
 func (ck *Check) abort1of(t1, t2 *CkTran, act1, act2 string) bool {
 	traceln("conflict with", t2)
-	if t2.isEnded() || checkerAbortT1 || rand.Intn(2) == 1 {
+	if t2.ended() || checkerAbortT1 || rand.Intn(2) == 1 {
 		ck.abort(t1.start, act1+" in this transaction conflicted with "+
 			act2+" in another transaction")
 		return true
@@ -280,8 +282,12 @@ func (ck *Check) abort1of(t1, t2 *CkTran, act1, act2 string) bool {
 	return false
 }
 
-func (t *CkTran) isEnded() bool {
+func (t *CkTran) ended() bool {
 	return t.end != math.MaxInt
+}
+
+func (t *CkTran) Failed() bool {
+	return t.failure.Load() != nil
 }
 
 // Abort cancels a transaction.
@@ -296,7 +302,7 @@ func (ck *Check) abort(tn int, reason string) bool {
 	if !ok {
 		return false
 	}
-	t.conflict.Store(reason)
+	t.failure.Store(reason)
 	delete(ck.trans, tn)
 	if tn == ck.oldest {
 		ck.oldest = math.MaxInt // need to find the new oldest

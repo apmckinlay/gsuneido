@@ -23,9 +23,9 @@ func TestCheckCoTimeout(t *testing.T) {
 	MaxAge = 1
 	ck := StartCheckCo(nil, nil, nil)
 	tran := ck.StartTran()
-	assert.T(t).False(tran.Aborted())
+	assert.T(t).False(tran.Failed())
 	time.Sleep(2 * time.Second)
-	assert.T(t).True(tran.Aborted())
+	assert.T(t).True(tran.Failed())
 	close(ck.c)
 }
 

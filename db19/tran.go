@@ -209,9 +209,8 @@ func (t *ReadTran) Abort() string {
 
 type UpdateTran struct {
 	ReadTran
-	ct       *CkTran
-	conflict string
-	th       *rt.Thread // for triggers
+	ct      *CkTran
+	th      *rt.Thread // for triggers
 }
 
 func (db *Database) NewUpdateTran() *UpdateTran {
@@ -236,21 +235,18 @@ func (t *UpdateTran) Complete() string {
 	}
 	if t.db.ck.Commit(t) {
 		t.state = completed
-	} else {
+	} else { // aborted
 		t.state = commitFailed
-		conflict := t.ct.conflict.Load()
-		if conflict == nil {
-			return "transaction already ended"
-		}
-		//FIXME might already have conflict from t.ck
-		t.conflict = conflict.(string)
-		return t.conflict
+		return t.ct.failure.Load().(string)
 	}
 	return ""
 }
 
 func (t *UpdateTran) Conflict() string {
-	return t.conflict
+	if failure := t.ct.failure.Load(); failure != nil {
+		return failure.(string)
+	}
+	return ""
 }
 
 // Commit is used by tests. It panics on error.
@@ -266,6 +262,7 @@ func (t *UpdateTran) commit() int {
 	return t.num()
 }
 
+// Abort returns "" if it succeeds or if the transaction was already aborted.
 func (t *UpdateTran) Abort() string {
 	switch t.state {
 	case aborted, commitFailed:
@@ -588,10 +585,10 @@ func (t *UpdateTran) fkeyUpdateCascade(ts *meta.Schema, i int,
 
 func (t *UpdateTran) ck(result bool) {
 	if !result {
-		conflict := t.ct.conflict.Load()
-		if conflict == nil {
+		failure := t.ct.failure.Load()
+		if failure == nil {
 			panic("transaction already ended")
 		}
-		panic("transaction aborted: " + conflict.(string))
+		panic("transaction aborted: " + failure.(string))
 	}
 }
