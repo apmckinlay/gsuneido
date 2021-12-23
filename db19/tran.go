@@ -495,43 +495,40 @@ func (t *UpdateTran) Update(table string, oldoff uint64, newrec rt.Record) uint6
 
 func (t *UpdateTran) update(table string, oldoff uint64, newrec rt.Record,
 	block bool) uint64 {
-	ts := t.getSchema(table)
-	ti := t.tran.GetInfo(table) // read-only
 	n := newrec.Len()
 	newrec = newrec[:n]
 	oldrec := t.GetRecord(oldoff)
-	newoff := oldoff
-	if newrec != oldrec {
-		off, buf := t.db.Store.Alloc(n + cksum.Len)
-		copy(buf, newrec)
-		cksum.Update(buf)
-		newoff = off
+	if newrec == oldrec {
+		// in order to update we must already have read the record
+		// so we should already have sent a read to the checker
+		return oldoff
 	}
+	newoff, buf := t.db.Store.Alloc(n + cksum.Len)
+	copy(buf, newrec)
+	cksum.Update(buf)
+	ts := t.getSchema(table)
+	ti := t.tran.GetInfo(table) // read-only
 	oldkeys := make([]string, len(ts.Indexes))
 	newkeys := make([]string, len(ts.Indexes))
 	for i := range ts.Indexes {
 		ix := ts.Indexes[i]
 		is := ix.Ixspec
 		oldkeys[i] = is.Key(oldrec)
-		if newoff != oldoff {
-			newkeys[i] = is.Key(newrec)
-			if oldkeys[i] != newkeys[i] {
-				dupOutputBlock(table, ix, ti.Indexes[i], newrec, newkeys[i])
-				t.fkeyDeleteBlock(ts, i, oldkeys[i])
-				if block {
-					t.fkeyOutputBlock(ts, i, newrec)
-				}
+		newkeys[i] = is.Key(newrec)
+		if oldkeys[i] != newkeys[i] {
+			dupOutputBlock(table, ix, ti.Indexes[i], newrec, newkeys[i])
+			t.fkeyDeleteBlock(ts, i, oldkeys[i])
+			if block {
+				t.fkeyOutputBlock(ts, i, newrec)
 			}
 		}
 	}
 	t.ck(t.db.ck.Write(t.ct, table, oldkeys))
+	t.ck(t.db.ck.Write(t.ct, table, newkeys))
 	ti = t.getRwInfo(table)
-	if newoff != oldoff {
-		t.ck(t.db.ck.Write(t.ct, table, newkeys))
-		d := int64(len(newrec)) - int64(len(oldrec))
-		assert.Msg("Update Size").That(int64(ti.Size)+d > 0)
-		ti.Size = uint64(int64(ti.Size) + d)
-	}
+	d := int64(len(newrec)) - int64(len(oldrec))
+	assert.Msg("Update Size").That(int64(ti.Size)+d > 0)
+	ti.Size = uint64(int64(ti.Size) + d)
 	func() {
 		defer func() {
 			if e := recover(); e != nil {
@@ -539,20 +536,18 @@ func (t *UpdateTran) update(table string, oldoff uint64, newrec rt.Record,
 				panic(e)
 			}
 		}()
-		if newoff != oldoff {
-			for i := range ts.Indexes {
-				if oldkeys[i] != newkeys[i] {
-					t.fkeyUpdateCascade(ts, i, newrec, oldkeys[i])
-				}
+		for i := range ts.Indexes {
+			if oldkeys[i] != newkeys[i] {
+				t.fkeyUpdateCascade(ts, i, newrec, oldkeys[i])
 			}
-			for i := range ts.Indexes {
-				ix := ti.Indexes[i]
-				if oldkeys[i] == newkeys[i] {
-					ix.Update(oldkeys[i], newoff)
-				} else {
-					ix.Delete(oldkeys[i], oldoff)
-					ix.Insert(newkeys[i], newoff)
-				}
+		}
+		for i := range ts.Indexes {
+			ix := ti.Indexes[i]
+			if oldkeys[i] == newkeys[i] {
+				ix.Update(oldkeys[i], newoff)
+			} else {
+				ix.Delete(oldkeys[i], oldoff)
+				ix.Insert(newkeys[i], newoff)
 			}
 		}
 	}()
