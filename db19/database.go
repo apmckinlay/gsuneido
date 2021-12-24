@@ -250,9 +250,7 @@ func (db *Database) ensure(sch *schema.Schema, newIdxs []schema.Index) {
 }
 
 func (db *Database) AddExclusive(table string) {
-	if !db.ck.AddExclusive(table) {
-		panic("can't get exclusive access to " + table)
-	}
+	db.ck.AddExclusive(table)
 }
 
 func (db *Database) EndExclusive(table string) {
@@ -331,6 +329,8 @@ func (db *Database) RenameTable(from, to string) bool {
 func (db *Database) Drop(table string) error {
 	db.lockSchema()
 	defer db.unlockSchema()
+	db.AddExclusive(table)
+	defer db.EndExclusive(table)
 	var err error
 	db.UpdateState(func(state *DbState) {
 		if m := state.Meta.Drop(table); m != nil {

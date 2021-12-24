@@ -12,6 +12,7 @@ import (
 
 func TestDatabaseDropTable(t *testing.T) {
 	db := createDb()
+	db.CheckerSync()
 	defer func() { db.Close(); os.Remove("tmp.db") }()
 	assert.T(t).That(db.Drop("nonexistent") != nil)
 	assert.T(t).That(db.Drop("mytable") == nil)

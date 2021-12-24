@@ -620,7 +620,6 @@ func (m *Meta) LayeredOnto(latest *Meta) *Meta {
 	info := latest.info.Mutable()
 	m.difInfo.ForEach(func(ti *Info) {
 		lti, ok := info.Get(ti.Table)
-		//FIXME table may have been recreated - check id
 		if !ok || lti.isTomb() {
 			return
 		}
