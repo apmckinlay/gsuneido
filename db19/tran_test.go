@@ -209,16 +209,15 @@ func TestExclusive(*testing.T) {
 	db.CheckerSync()
 
 	createTbl(db)
-	assert.That(db.ck.AddExclusive("mytable"))
+	ut2 := db.NewUpdateTran()
+	db.ck.AddExclusive("mytable")
 	ut := db.NewUpdateTran()
 	assert.This(db.ck.Write(ut.ct, "mytable", []string{""})).Is(false)
 	assert.This(ut.ct.failure.Load()).Is("conflict with exclusive (mytable)")
 	db.EndExclusive("mytable")
-
-	ut = db.NewUpdateTran()
-	assert.That(db.ck.Write(ut.ct, "mytable", []string{""}))
-	assert.This(db.ck.AddExclusive("mytable")).Is(false)
-	ut.Abort()
+	// still fails because ut2 started before EndExclusive
+	assert.This(db.ck.Write(ut2.ct, "mytable", []string{""})).Is(false)
+	assert.This(ut2.ct.failure.Load()).Is("conflict with exclusive (mytable)")
 
 	ut = db.NewUpdateTran()
 	assert.That(db.ck.Write(ut.ct, "mytable", []string{""}))

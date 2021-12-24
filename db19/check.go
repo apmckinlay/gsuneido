@@ -111,20 +111,20 @@ func (ck *Check) next() int {
 }
 
 // AddExclusive is used for creating indexes on existing tables
-func (ck *Check) AddExclusive(table string) bool {
+func (ck *Check) AddExclusive(table string) {
 	for _, t2 := range ck.trans {
 		if tbl, ok := t2.tables[table]; ok && len(tbl.writes) > 0 {
-			return false
+			ck.abort(t2.start, "preempted by exclusive")
 		}
 	}
 	ck.exclusive[table] = math.MaxInt
-	return true
 }
 
 func (ck *Check) EndExclusive(table string) {
 	end := ck.next()
 	ck.exclusive[table] = end
 	// after ending, we still block transactions that started previously
+	ck.cleanEnded()
 }
 
 // Persist is just for tests, it doesn't actually persist
@@ -358,6 +358,12 @@ func (ck *Check) cleanEnded() {
 		if t.end != math.MaxInt && t.end < ck.oldest {
 			traceln("REMOVE", tn, "->", t.end)
 			delete(ck.trans, tn)
+		}
+	}
+	for table, end := range ck.exclusive {
+		if end < ck.oldest {
+			traceln("REMOVE exclusive", table, end)
+			delete(ck.exclusive, table)
 		}
 	}
 }

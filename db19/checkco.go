@@ -52,7 +52,7 @@ type ckAbort struct {
 
 type ckAddExcl struct {
 	table string
-	ret   chan bool
+	ret   chan struct{}
 }
 
 type ckEndExcl struct {
@@ -109,10 +109,10 @@ func (ck *CheckCo) Abort(t *CkTran, reason string) bool {
 }
 
 // AddExclusive also does sync (handled in dispatch)
-func (ck *CheckCo) AddExclusive(table string) bool {
-	ret := make(chan bool, 1)
+func (ck *CheckCo) AddExclusive(table string) {
+	ret := make(chan struct{}, 1)
 	ck.c <- &ckAddExcl{ret: ret, table: table}
-	return <-ret
+	<-ret
 }
 
 func (ck *CheckCo) EndExclusive(table string) {
@@ -192,14 +192,12 @@ func (ck *Check) dispatch(msg interface{}, mergeChan chan todo) {
 		msg.ret <- true
 		mergeChan <- todo{tables: result, meta: msg.t.meta}
 	case *ckAddExcl:
-		if !ck.AddExclusive(msg.table) {
-			msg.ret <- false
-		}
+		ck.AddExclusive(msg.table)
 		// ensure pending merges are all complete
 		ret := make(chan *DbState)
 		mergeChan <- todo{ret: ret} // sync (meta == nil)
 		<-ret
-		msg.ret <- true
+		msg.ret <- struct{}{}
 	case *ckEndExcl:
 		ck.EndExclusive(msg.table)
 	case *ckPersist:
@@ -224,7 +222,7 @@ type Checker interface {
 	Write(t *CkTran, table string, keys []string) bool
 	Abort(t *CkTran, reason string) bool
 	Commit(t *UpdateTran) bool
-	AddExclusive(table string) bool
+	AddExclusive(table string)
 	EndExclusive(table string)
 	Persist() *DbState
 	Stop()
