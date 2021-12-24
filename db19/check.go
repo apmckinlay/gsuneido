@@ -54,11 +54,11 @@ type Check struct {
 }
 
 type CkTran struct {
-	start    int
-	end      int
-	birth    int
-	tables   map[string]*cktbl
-	state    *DbState
+	start  int
+	end    int
+	birth  int
+	tables map[string]*cktbl
+	state  *DbState
 	// failure is written by CkTran.abort and read by UpdateTran.
 	// It is set to either a conflict or a timeout.
 	failure atomic.Value // string
@@ -111,26 +111,20 @@ func (ck *Check) next() int {
 }
 
 // AddExclusive is used for creating indexes on existing tables
-func (ck *Check) AddExclusive(tables ...string) bool {
-	for _, table := range tables {
-		for _, t2 := range ck.trans {
-			if tbl, ok := t2.tables[table]; ok && len(tbl.writes) > 0 {
-				return false
-			}
+func (ck *Check) AddExclusive(table string) bool {
+	for _, t2 := range ck.trans {
+		if tbl, ok := t2.tables[table]; ok && len(tbl.writes) > 0 {
+			return false
 		}
 	}
-	for _, table := range tables {
-		ck.exclusive[table] = math.MaxInt
-	}
+	ck.exclusive[table] = math.MaxInt
 	return true
 }
 
-func (ck *Check) EndExclusive(tables ...string) {
+func (ck *Check) EndExclusive(table string) {
 	end := ck.next()
-	for _, table := range tables {
-		ck.exclusive[table] = end
-		// after ending, we still block transactions that started previously
-	}
+	ck.exclusive[table] = end
+	// after ending, we still block transactions that started previously
 }
 
 // Persist is just for tests, it doesn't actually persist
