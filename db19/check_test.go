@@ -64,8 +64,20 @@ func TestCheckActions(t *testing.T) {
 	// reads
 	script(t, "1w4 1r68 2r77 2R35")
 	script(t, "1r35 2W4")
+
+	// don't check writes against committed reads
+	script(t, "1r11 1c 2w1 2c")
+	// but still check reads against committed writes
+	script(t, "2w1 2c 1R11")
 }
 
+// script takes a string containing a space separated list of actions.
+// Each action consists of:
+// 	- transaction number 1 or 2
+//	- action type: (r)ead, (w)rite, (c)ommit, (a)bort
+//	- read is followed by two characters specifying a key range
+//	- write is folloed by one character specifying a key
+// If the type is capitalized (R, W, C, A) then the action is expected to fail
 func script(t *testing.T, s string) {
 	t.Helper()
 	ok := func(result bool) {

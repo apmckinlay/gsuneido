@@ -215,7 +215,7 @@ func (ck *Check) write(t *CkTran, table string, keys, oldkeys []string) bool {
 						act2 := ""
 						if tbl.writes.contains(i, key) {
 							act2 = "write"
-						} else if tbl.reads.contains(i, key) {
+						} else if !t2.ended() && tbl.reads.contains(i, key) {
 							act2 = "read"
 						} else {
 							continue
