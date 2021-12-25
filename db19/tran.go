@@ -360,6 +360,7 @@ func (t *UpdateTran) fkeyOutputExists(table string, iIndex int, key string) bool
 	return t.ReadTran.fkeyOutputExists(table, iIndex, key)
 }
 
+// fkeyOutputExists on ReadTran is used by Database buildIndexes
 func (t *ReadTran) fkeyOutputExists(table string, iIndex int, key string) bool {
 	idx := t.meta.GetRoInfo(table).Indexes[iIndex]
 	return idx.Lookup(key) != 0
@@ -520,8 +521,7 @@ func (t *UpdateTran) update(table string, oldoff uint64, newrec rt.Record,
 			}
 		}
 	}
-	t.ck(t.db.ck.Write(t.ct, table, oldkeys))
-	t.ck(t.db.ck.Write(t.ct, table, newkeys))
+	t.ck(t.db.ck.Update(t.ct, table, oldkeys, newkeys))
 	ti = t.getRwInfo(table)
 	d := int64(len(newrec)) - int64(len(oldrec))
 	assert.Msg("Update Size").That(int64(ti.Size)+d > 0)

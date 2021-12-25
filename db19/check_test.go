@@ -88,16 +88,16 @@ func script(t *testing.T, s string) {
 		t := ts[s[0]-'1']
 		switch s[1] {
 		case 'w':
-			ok(ck.Write(t.ct, "mytable", []string{"", s[2:3]}))
+			ok(ck.Write(t.ct, "mytable", []string{s[2:3]}))
 			s = s[1:]
 		case 'W':
-			fail(ck.Write(t.ct, "mytable", []string{"", s[2:3]}))
+			fail(ck.Write(t.ct, "mytable", []string{s[2:3]}))
 			s = s[1:]
 		case 'r':
-			ok(ck.Read(t.ct, "mytable", 1, s[2:3], s[3:4]))
+			ok(ck.Read(t.ct, "mytable", 0, s[2:3], s[3:4]))
 			s = s[2:]
 		case 'R':
-			fail(ck.Read(t.ct, "mytable", 1, s[2:3], s[3:4]))
+			fail(ck.Read(t.ct, "mytable", 0, s[2:3], s[3:4]))
 			s = s[2:]
 		case 'c':
 			ok(ck.Commit(t))

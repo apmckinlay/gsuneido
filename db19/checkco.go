@@ -37,6 +37,14 @@ type ckWrite struct {
 	ret   chan bool
 }
 
+type ckUpdate struct {
+	t       *CkTran
+	table   string
+	oldkeys []string
+	newkeys []string
+	ret     chan bool
+}
+
 type ckCommit struct {
 	t   *UpdateTran
 	ret chan bool
@@ -91,6 +99,15 @@ func (ck *CheckCo) Write(t *CkTran, table string, keys []string) bool {
 	}
 	ret := make(chan bool, 1)
 	ck.c <- &ckWrite{t: t, table: table, keys: keys, ret: ret}
+	return <-ret
+}
+
+func (ck *CheckCo) Update(t *CkTran, table string, oldkeys, newkeys []string) bool {
+	if t.Failed() {
+		return false
+	}
+	ret := make(chan bool, 1)
+	ck.c <- &ckUpdate{t: t, table: table, oldkeys: oldkeys, newkeys: newkeys, ret: ret}
 	return <-ret
 }
 
@@ -180,6 +197,8 @@ func (ck *Check) dispatch(msg interface{}, mergeChan chan todo) {
 		ck.Read(msg.t, msg.table, msg.index, msg.from, msg.to)
 	case *ckWrite:
 		msg.ret <- ck.Write(msg.t, msg.table, msg.keys)
+	case *ckUpdate:
+		msg.ret <- ck.Update(msg.t, msg.table, msg.oldkeys, msg.newkeys)
 	case *ckAbort:
 		ck.Abort(msg.t, msg.reason)
 	case *ckCommit:
@@ -220,6 +239,7 @@ type Checker interface {
 	StartTran() *CkTran
 	Read(t *CkTran, table string, index int, from, to string) bool
 	Write(t *CkTran, table string, keys []string) bool
+	Update(t *CkTran, table string, oldkeys, newkeys []string) bool
 	Abort(t *CkTran, reason string) bool
 	Commit(t *UpdateTran) bool
 	AddExclusive(table string)

@@ -183,12 +183,19 @@ func (cr ckreads) contains(index int, key string) bool {
 	return index < len(cr) && cr[index].Contains(key)
 }
 
+func (ck *Check) Update(t *CkTran, table string, newkeys, oldkeys []string) bool {
+	return ck.write(t, table, oldkeys, nil) &&
+		ck.write(t, table, newkeys, oldkeys)
+}
+
 // Write adds output/update/delete actions.
 // Will conflict with another write to the same index/key or an overlapping read.
 // The keys are parallel with the indexes i.e. keys[i] is for indexes[i].
-// Updates require two calls, one with the old keys, another with the new keys.
-// NOTE: Even if an update doesn't change a key, it still has to register it.
 func (ck *Check) Write(t *CkTran, table string, keys []string) bool {
+	return ck.write(t, table, keys, nil)
+}
+
+func (ck *Check) write(t *CkTran, table string, keys, oldkeys []string) bool {
 	traceln("T", t.start, "write", table, "keys", keys)
 	t, ok := ck.trans[t.start]
 	if !ok {
@@ -204,7 +211,7 @@ func (ck *Check) Write(t *CkTran, table string, keys []string) bool {
 		if t2 != t && overlap(t, t2) {
 			if tbl, ok := t2.tables[table]; ok {
 				for i, key := range keys {
-					if key != "" {
+					if oldkeys == nil || key != oldkeys[i] {
 						act2 := ""
 						if tbl.writes.contains(i, key) {
 							act2 = "write"
