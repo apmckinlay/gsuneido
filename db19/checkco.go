@@ -34,7 +34,6 @@ type ckWrite struct {
 	t     *CkTran
 	table string
 	keys  []string
-	ret   chan bool
 }
 
 type ckUpdate struct {
@@ -42,7 +41,6 @@ type ckUpdate struct {
 	table   string
 	oldkeys []string
 	newkeys []string
-	ret     chan bool
 }
 
 type ckCommit struct {
@@ -75,11 +73,7 @@ type ckTrans struct {
 	ret chan []int
 }
 
-// var i = 0
-
 func (ck *CheckCo) StartTran() *CkTran {
-	// fmt.Print("\rStart ", i)
-	// i++
 	ret := make(chan *CkTran, 1)
 	ck.c <- &ckStart{ret: ret}
 	return <-ret
@@ -97,18 +91,16 @@ func (ck *CheckCo) Write(t *CkTran, table string, keys []string) bool {
 	if t.Failed() {
 		return false
 	}
-	ret := make(chan bool, 1)
-	ck.c <- &ckWrite{t: t, table: table, keys: keys, ret: ret}
-	return <-ret
+	ck.c <- &ckWrite{t: t, table: table, keys: keys}
+	return true
 }
 
 func (ck *CheckCo) Update(t *CkTran, table string, oldkeys, newkeys []string) bool {
 	if t.Failed() {
 		return false
 	}
-	ret := make(chan bool, 1)
-	ck.c <- &ckUpdate{t: t, table: table, oldkeys: oldkeys, newkeys: newkeys, ret: ret}
-	return <-ret
+	ck.c <- &ckUpdate{t: t, table: table, oldkeys: oldkeys, newkeys: newkeys}
+	return true
 }
 
 func (ck *CheckCo) Commit(ut *UpdateTran) bool {
@@ -182,7 +174,6 @@ func checker(ck *Check, c chan interface{}, mergeChan chan todo) {
 			}
 			ck.dispatch(msg, mergeChan)
 		case <-ticker.C:
-			// fmt.Println("checker chan", len(c), "merge chan", len(mergeChan))
 			ck.tick()
 		}
 	}
@@ -196,9 +187,9 @@ func (ck *Check) dispatch(msg interface{}, mergeChan chan todo) {
 	case *ckRead:
 		ck.Read(msg.t, msg.table, msg.index, msg.from, msg.to)
 	case *ckWrite:
-		msg.ret <- ck.Write(msg.t, msg.table, msg.keys)
+		ck.Write(msg.t, msg.table, msg.keys)
 	case *ckUpdate:
-		msg.ret <- ck.Update(msg.t, msg.table, msg.oldkeys, msg.newkeys)
+		ck.Update(msg.t, msg.table, msg.oldkeys, msg.newkeys)
 	case *ckAbort:
 		ck.Abort(msg.t, msg.reason)
 	case *ckCommit:
