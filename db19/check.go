@@ -17,9 +17,19 @@ import (
 
 /*
 Reads are tracked as Ranges on specific indexes (ckreads).
-Writes are tracked as Set's of key values for each index (ckwrites).
-Reads can conflict with writes and writes can conflict with other writes.
-Reads do not conflict with each other.
+Output and Deletes are tracked as Set's of key values for each index (ckwrites).
+Deletes are also tracked by offset which is used when checking delete vs delete.
+
+|        | committed                 ||| outstanding            |||
+|        | read      | output | delete | read   | output | delete |
+| ------ | --------- | ------ | ------ | ------ | ------ | ------ |
+| read   | no (1)(3) | check  | check  | no (1) | check  | check  |
+| output | no (3)    | no (2) | no (2) | check  | no (2) | no (2) |
+| delete | no (3)    | no (2) | check  | check  | no (2) | check  |
+
+1.  reads never conflict with reads
+2.  outputs never conflict with other outputs or deletes
+3.  don't need to check committed reads
 */
 
 const maxTrans = 200
@@ -65,9 +75,10 @@ type CkTran struct {
 }
 
 type cktbl struct {
-	// writes tracks outputs, updates, and deletes
-	writes ckwrites
-	reads  ckreads
+	outputs ckwrites
+	deletes ckwrites
+	deloffs map[uint64]struct{}
+	reads   ckreads
 }
 
 // ckwrites and ckreads have one element per index
@@ -113,8 +124,10 @@ func (ck *Check) next() int {
 // AddExclusive is used for creating indexes on existing tables
 func (ck *Check) AddExclusive(table string) {
 	for _, t2 := range ck.trans {
-		if tbl, ok := t2.tables[table]; ok && len(tbl.writes) > 0 {
-			ck.abort(t2.start, "preempted by exclusive")
+		if tbl, ok := t2.tables[table]; ok {
+			if len(tbl.outputs) > 0 || len(tbl.deletes) > 0 {
+				ck.abort(t2.start, "preempted by exclusive")
+			}
 		}
 	}
 	ck.exclusive[table] = math.MaxInt
@@ -147,7 +160,8 @@ func (ck *Check) Read(t *CkTran, table string, index int, from, to string) bool 
 	for _, t2 := range ck.trans {
 		if t2 != t && overlap(t, t2) {
 			if tbl, ok := t2.tables[table]; ok {
-				if tbl.writes.anyInRange(index, from, to) {
+				if tbl.outputs.anyInRange(index, from, to) ||
+					tbl.deletes.anyInRange(index, from, to) {
 					if ck.abort1of(t, t2, "read", "write") {
 						return false // this transaction got aborted
 					}
@@ -183,20 +197,68 @@ func (cr ckreads) contains(index int, key string) bool {
 	return index < len(cr) && cr[index].Contains(key)
 }
 
-func (ck *Check) Update(t *CkTran, table string, newkeys, oldkeys []string) bool {
-	return ck.write(t, table, oldkeys, nil) &&
-		ck.write(t, table, newkeys, oldkeys)
+// Update adds a delete of oldoff/oldkeys and an output of newkeys.
+func (ck *Check) Update(t *CkTran,
+	table string, oldoff uint64, oldkeys, newkeys []string) bool {
+	return ck.Delete(t, table, oldoff, oldkeys) &&
+		ck.output(t, table, newkeys, oldkeys)
 }
 
-// Write adds output/update/delete actions.
-// Will conflict with another write to the same index/key or an overlapping read.
+// Output adds an output action.
+// Outputs only need to be checked against outstanding reads.
 // The keys are parallel with the indexes i.e. keys[i] is for indexes[i].
-func (ck *Check) Write(t *CkTran, table string, keys []string) bool {
-	return ck.write(t, table, keys, nil)
+func (ck *Check) Output(t *CkTran, table string, keys []string) bool {
+	return ck.output(t, table, keys, nil)
 }
 
-func (ck *Check) write(t *CkTran, table string, keys, oldkeys []string) bool {
-	traceln("T", t.start, "write", table, "keys", keys)
+// output adds an output action.
+// oldkeys is used by Update so we can tell if the key changed.
+func (ck *Check) output(t *CkTran, table string, keys, oldkeys []string) bool {
+	traceln("T", t.start, "output", table, "keys", keys)
+	t, ok := ck.trans[t.start]
+	if !ok {
+		return false // it's gone, presumably aborted
+	}
+	assert.That(!t.ended())
+	if t.start < ck.exclusive[table] {
+		ck.abort(t.start, "conflict with exclusive ("+table+")")
+		return false
+	}
+	// check against overlapping transactions
+	for _, t2 := range ck.trans {
+		if t2 != t && overlap(t, t2) && !t2.ended() {
+			if tbl, ok := t2.tables[table]; ok {
+				for i, key := range keys {
+					if (oldkeys == nil || key != oldkeys[i]) &&
+						tbl.reads.contains(i, key) {
+						if ck.abort1of(t, t2, "output", "read") {
+							return false // this transaction got aborted
+						}
+					}
+				}
+			}
+		}
+	}
+	t.saveOutput(table, keys)
+	return true
+}
+
+func (t *CkTran) saveOutput(table string, keys []string) {
+	tbl, ok := t.tables[table]
+	if !ok {
+		tbl = &cktbl{}
+		t.tables[table] = tbl
+	}
+	for i, key := range keys {
+		tbl.outputs = tbl.outputs.with(i, key)
+	}
+}
+
+// Delete adds a delete action.
+// Outputs only need to be checked against outstanding reads.
+// The keys are parallel with the indexes i.e. keys[i] is for indexes[i].
+func (ck *Check) Delete(t *CkTran, table string, off uint64, keys []string) bool {
+	traceln("T", t.start, "delete", table, "off", off, "keys", keys)
 	t, ok := ck.trans[t.start]
 	if !ok {
 		return false // it's gone, presumably aborted
@@ -210,17 +272,14 @@ func (ck *Check) write(t *CkTran, table string, keys, oldkeys []string) bool {
 	for _, t2 := range ck.trans {
 		if t2 != t && overlap(t, t2) {
 			if tbl, ok := t2.tables[table]; ok {
+				if _, ok := tbl.deloffs[off]; ok {
+					if ck.abort1of(t, t2, "delete", "delete") {
+						return false // this transaction got aborted
+					}
+				}
 				for i, key := range keys {
-					if oldkeys == nil || key != oldkeys[i] {
-						act2 := ""
-						if tbl.writes.contains(i, key) {
-							act2 = "write"
-						} else if !t2.ended() && tbl.reads.contains(i, key) {
-							act2 = "read"
-						} else {
-							continue
-						}
-						if ck.abort1of(t, t2, "write", act2) {
+					if !t2.ended() && tbl.reads.contains(i, key) {
+						if ck.abort1of(t, t2, "delete", "read") {
 							return false // this transaction got aborted
 						}
 					}
@@ -228,18 +287,22 @@ func (ck *Check) write(t *CkTran, table string, keys, oldkeys []string) bool {
 			}
 		}
 	}
-	t.saveWrite(table, keys)
+	t.saveDelete(table, off, keys)
 	return true
 }
 
-func (t *CkTran) saveWrite(table string, keys []string) {
+func (t *CkTran) saveDelete(table string, off uint64, keys []string) {
 	tbl, ok := t.tables[table]
 	if !ok {
-		tbl = &cktbl{}
+		tbl = &cktbl{deloffs: make(map[uint64]struct{})}
 		t.tables[table] = tbl
+	} else if tbl.deloffs == nil {
+		tbl.deloffs = make(map[uint64]struct{})
 	}
+	assert.That(off != 0)
+	tbl.deloffs[off] = struct{}{}
 	for i, key := range keys {
-		tbl.writes = tbl.writes.with(i, key)
+		tbl.deletes = tbl.deletes.with(i, key)
 	}
 }
 
@@ -337,7 +400,7 @@ func (ck *Check) commit(ut *UpdateTran) []string {
 func (t *CkTran) tablesWritten() []string {
 	tw := make([]string, 0, 8)
 	for table, tbl := range t.tables {
-		if tbl.writes != nil && !tbl.writes[0].Empty() {
+		if tbl.outputs != nil || tbl.deletes != nil {
 			tw = append(tw, table)
 		}
 	}
@@ -383,7 +446,7 @@ var MaxAge = 20
 // to abort transactions older than MaxAge.
 func (ck *Check) tick() {
 	ck.clock++
-	traceln("tick", ck.clock)
+	// traceln("tick", ck.clock)
 	for tn, t := range ck.trans {
 		if ck.clock-t.birth >= MaxAge {
 			traceln("abort", tn, "age", ck.clock-t.birth)

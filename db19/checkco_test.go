@@ -4,6 +4,7 @@
 package db19
 
 import (
+	"fmt"
 	"math/rand"
 	"strconv"
 	"sync"
@@ -50,7 +51,9 @@ func TestCheckCoRandom(*testing.T) {
 		}()
 	}
 	wg.Wait()
-	// fmt.Println("commit", nCommit, "conflict", nConflict)
+	fmt.Println("commit", nCommit, "conflict", nConflict,
+		"=", float32(nConflict)/float32(nCommit))
+	assert.That(float32(nConflict)/float32(nCommit) < .1)
 }
 
 func mergeSink() chan todo {
@@ -86,7 +89,7 @@ func randAction(ck Checker, t *CkTran) {
 	nIndexes := 4
 	table := randTable()
 	if rand.Intn(3) == 1 {
-		ck.Write(t, table, randKeys())
+		ck.Update(t, table, uint64(1+rand.Intn(2000)), randKeys(), randKeys())
 	} else {
 		index := rand.Intn(nIndexes)
 		from, to := randRange()

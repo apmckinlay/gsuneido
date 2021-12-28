@@ -212,15 +212,15 @@ func TestExclusive(*testing.T) {
 	ut2 := db.NewUpdateTran()
 	db.ck.AddExclusive("mytable")
 	ut := db.NewUpdateTran()
-	assert.This(db.ck.Write(ut.ct, "mytable", []string{""})).Is(false)
+	assert.This(db.ck.Output(ut.ct, "mytable", []string{""})).Is(false)
 	assert.This(ut.ct.failure.Load()).Is("conflict with exclusive (mytable)")
 	db.EndExclusive("mytable")
 	// still fails because ut2 started before EndExclusive
-	assert.This(db.ck.Write(ut2.ct, "mytable", []string{""})).Is(false)
+	assert.This(db.ck.Output(ut2.ct, "mytable", []string{""})).Is(false)
 	assert.This(ut2.ct.failure.Load()).Is("conflict with exclusive (mytable)")
 
 	ut = db.NewUpdateTran()
-	assert.That(db.ck.Write(ut.ct, "mytable", []string{""}))
+	assert.That(db.ck.Output(ut.ct, "mytable", []string{""}))
 	ut.Commit()
 }
 
@@ -233,4 +233,19 @@ func TestRangeEnd(t *testing.T) {
 	assert(end(1, "foo")).Is("foo\x00\x00" + ixkey.Max)
 	assert(end(2, "foo")).Is("foo\x00\x00\x00\x00" + ixkey.Max)
 	assert(end(2, "foo", "bar")).Is("foo\x00\x00bar\x00\x00" + ixkey.Max)
+}
+
+func TestOutputDupConflict(*testing.T) {
+	checkerAbortT1 = true
+	defer func() { checkerAbortT1 = false }()
+	store := stor.HeapStor(8192)
+	db, err := CreateDb(store)
+	ck(err)
+	db.CheckerSync()
+	createTbl(db)
+	t1 := db.NewUpdateTran()
+	t2 := db.NewUpdateTran()
+	t1.Output("mytable", mkrec("1"))
+	assert.This(func() { t2.Output("mytable", mkrec("1")) }).
+		Panics("conflicted")
 }

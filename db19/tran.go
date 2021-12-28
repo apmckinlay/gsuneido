@@ -209,8 +209,8 @@ func (t *ReadTran) Abort() string {
 
 type UpdateTran struct {
 	ReadTran
-	ct      *CkTran
-	th      *rt.Thread // for triggers
+	ct *CkTran
+	th *rt.Thread // for triggers
 }
 
 func (db *Database) NewUpdateTran() *UpdateTran {
@@ -303,10 +303,10 @@ func (t *UpdateTran) Output(table string, rec rt.Record) {
 	for i := range ts.Indexes {
 		ix := ts.Indexes[i]
 		keys[i] = ix.Ixspec.Key(rec)
-		dupOutputBlock(table, ix, ti.Indexes[i], rec, keys[i])
+		t.dupOutputBlock(table, i, ix, ti.Indexes[i], rec, keys[i])
 		t.fkeyOutputBlock(ts, i, rec)
 	}
-	t.ck(t.db.ck.Write(t.ct, table, keys))
+	t.ck(t.db.ck.Output(t.ct, table, keys))
 	func() {
 		defer func() {
 			if e := recover(); e != nil {
@@ -324,13 +324,13 @@ func (t *UpdateTran) Output(table string, rec rt.Record) {
 	t.db.CallTrigger(t.thread(), t, table, "", rec)
 }
 
-func dupOutputBlock(table string, ix schema.Index, ov *index.Overlay,
-	rec rt.Record, key string) {
+func (t *UpdateTran) dupOutputBlock(table string, iIndex int, ix schema.Index, ov *index.Overlay, rec rt.Record, key string) {
 	if ix.Mode == 'k' || (ix.Mode == 'u' && !uniqueIndexEmpty(rec, ix.Ixspec)) {
 		if ov.Lookup(key) != 0 {
 			panic(fmt.Sprint("duplicate key: ",
 				strs.Join(",", ix.Columns), " in ", table))
 		}
+		t.Read(table, iIndex, key, key)
 	}
 }
 
@@ -383,7 +383,7 @@ func (t *UpdateTran) Delete(table string, off uint64) {
 		keys[i] = is.Key(rec)
 		t.fkeyDeleteBlock(ts, i, keys[i])
 	}
-	t.ck(t.db.ck.Write(t.ct, table, keys))
+	t.ck(t.db.ck.Delete(t.ct, table, off, keys))
 	func() {
 		defer func() {
 			if e := recover(); e != nil {
@@ -514,14 +514,14 @@ func (t *UpdateTran) update(table string, oldoff uint64, newrec rt.Record,
 		oldkeys[i] = is.Key(oldrec)
 		newkeys[i] = is.Key(newrec)
 		if oldkeys[i] != newkeys[i] {
-			dupOutputBlock(table, ix, ti.Indexes[i], newrec, newkeys[i])
+			t.dupOutputBlock(table, i, ix, ti.Indexes[i], newrec, newkeys[i])
 			t.fkeyDeleteBlock(ts, i, oldkeys[i])
 			if block {
 				t.fkeyOutputBlock(ts, i, newrec)
 			}
 		}
 	}
-	t.ck(t.db.ck.Update(t.ct, table, oldkeys, newkeys))
+	t.ck(t.db.ck.Update(t.ct, table, oldoff, oldkeys, newkeys))
 	ti = t.getRwInfo(table)
 	d := int64(len(newrec)) - int64(len(oldrec))
 	assert.Msg("Update Size").That(int64(ti.Size)+d > 0)

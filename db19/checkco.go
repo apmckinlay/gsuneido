@@ -30,15 +30,23 @@ type ckRead struct {
 	from, to string
 }
 
-type ckWrite struct {
+type ckOutput struct {
 	t     *CkTran
 	table string
+	keys  []string
+}
+
+type ckDelete struct {
+	t     *CkTran
+	table string
+	off   uint64
 	keys  []string
 }
 
 type ckUpdate struct {
 	t       *CkTran
 	table   string
+	oldoff  uint64
 	oldkeys []string
 	newkeys []string
 }
@@ -87,19 +95,28 @@ func (ck *CheckCo) Read(t *CkTran, table string, index int, from, to string) boo
 	return true
 }
 
-func (ck *CheckCo) Write(t *CkTran, table string, keys []string) bool {
+func (ck *CheckCo) Output(t *CkTran, table string, keys []string) bool {
 	if t.Failed() {
 		return false
 	}
-	ck.c <- &ckWrite{t: t, table: table, keys: keys}
+	ck.c <- &ckOutput{t: t, table: table, keys: keys}
 	return true
 }
 
-func (ck *CheckCo) Update(t *CkTran, table string, oldkeys, newkeys []string) bool {
+func (ck *CheckCo) Delete(t *CkTran, table string, off uint64, keys []string) bool {
 	if t.Failed() {
 		return false
 	}
-	ck.c <- &ckUpdate{t: t, table: table, oldkeys: oldkeys, newkeys: newkeys}
+	ck.c <- &ckDelete{t: t, table: table, off: off, keys: keys}
+	return true
+}
+
+func (ck *CheckCo) Update(t *CkTran, table string, oldoff uint64, oldkeys, newkeys []string) bool {
+	if t.Failed() {
+		return false
+	}
+	ck.c <- &ckUpdate{t: t, table: table,
+		oldoff: oldoff, oldkeys: oldkeys, newkeys: newkeys}
 	return true
 }
 
@@ -186,21 +203,23 @@ func (ck *Check) dispatch(msg interface{}, mergeChan chan todo) {
 		msg.ret <- ck.StartTran()
 	case *ckRead:
 		ck.Read(msg.t, msg.table, msg.index, msg.from, msg.to)
-	case *ckWrite:
-		ck.Write(msg.t, msg.table, msg.keys)
+	case *ckOutput:
+		ck.Output(msg.t, msg.table, msg.keys)
+	case *ckDelete:
+		ck.Delete(msg.t, msg.table, msg.off, msg.keys)
 	case *ckUpdate:
-		ck.Update(msg.t, msg.table, msg.oldkeys, msg.newkeys)
+		ck.Update(msg.t, msg.table, msg.oldoff, msg.oldkeys, msg.newkeys)
 	case *ckAbort:
 		ck.Abort(msg.t, msg.reason)
 	case *ckCommit:
-		result := ck.commit(msg.t)
-		if result == nil {
+		tablesWritten := ck.commit(msg.t)
+		if tablesWritten == nil {
 			msg.ret <- false
 			return
 		}
 		msg.t.commit()
 		msg.ret <- true
-		mergeChan <- todo{tables: result, meta: msg.t.meta}
+		mergeChan <- todo{tables: tablesWritten, meta: msg.t.meta}
 	case *ckAddExcl:
 		ck.AddExclusive(msg.table)
 		// ensure pending merges are all complete
@@ -229,8 +248,9 @@ var persist = &meta.Meta{}
 type Checker interface {
 	StartTran() *CkTran
 	Read(t *CkTran, table string, index int, from, to string) bool
-	Write(t *CkTran, table string, keys []string) bool
-	Update(t *CkTran, table string, oldkeys, newkeys []string) bool
+	Output(t *CkTran, table string, keys []string) bool
+	Delete(t *CkTran, table string, off uint64, keys []string) bool
+	Update(t *CkTran, table string, oldoff uint64, oldkeys, newkeys []string) bool
 	Abort(t *CkTran, reason string) bool
 	Commit(t *UpdateTran) bool
 	AddExclusive(table string)

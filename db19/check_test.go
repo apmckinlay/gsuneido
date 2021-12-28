@@ -48,27 +48,30 @@ func TestCheckActions(t *testing.T) {
 	checkerAbortT1 = true
 	defer func() { checkerAbortT1 = false }()
 	// writes
-	script(t, "1w1 2w2 1c 2c")
-	script(t, "1w4 1w5 2w6 2w7 1c 2c")
-	script(t, "1w1 2w2 1c 2a")
-	script(t, "1w1 2w2 1a 2c")
-	script(t, "1w1 2w2 1a 2a")
+	script(t, "1o1 2o2 1c 2c")
+	script(t, "1o4 1o5 2o6 2o7 1c 2c")
+	script(t, "1o1 2o2 1c 2a")
+	script(t, "1o1 2o2 1a 2c")
+	script(t, "1o1 2o2 1a 2a")
 	// conflict
-	script(t, "1w1 2W1 1c")
-	script(t, "1w1 1a 2w1 2c")
-	script(t, "1w4 1w5 2w3 2W5")
+	script(t, "1d1 2D1 1c")
+	script(t, "1o1 1a 2o1 2c")
+	script(t, "1d4 1d5 2d3 2D5")
+	script(t, "1r55 1o5 2R55")
+	script(t, "1r55 1o5 1c 2R55")
+	script(t, "1r55 2r55 1O5")
 	// conflict with ended
-	script(t, "1w1 1c 2W1")
-	script(t, "2w1 2c 1W1 1C")
+	script(t, "1d1 1c 2D1")
+	script(t, "2d1 2c 1D1 1C")
 
 	// reads
-	script(t, "1w4 1r68 2r77 2R35")
-	script(t, "1r35 2W4")
+	script(t, "1o4 1r68 2r77 2R35")
+	script(t, "1r35 2O4")
 
 	// don't check writes against committed reads
-	script(t, "1r11 1c 2w1 2c")
+	script(t, "1r11 1c 2o1 2c")
 	// but still check reads against committed writes
-	script(t, "2w1 2c 1R11")
+	script(t, "2o1 2c 1R11")
 }
 
 // script takes a string containing a space separated list of actions.
@@ -99,11 +102,19 @@ func script(t *testing.T, s string) {
 	for len(s) > 0 {
 		t := ts[s[0]-'1']
 		switch s[1] {
-		case 'w':
-			ok(ck.Write(t.ct, "mytable", []string{s[2:3]}))
+		case 'o':
+			ok(ck.Output(t.ct, "mytable", []string{s[2:3]}))
 			s = s[1:]
-		case 'W':
-			fail(ck.Write(t.ct, "mytable", []string{s[2:3]}))
+		case 'O':
+			fail(ck.Output(t.ct, "mytable", []string{s[2:3]}))
+			s = s[1:]
+		case 'd':
+			off := uint64(s[2] - '0')
+			ok(ck.Delete(t.ct, "mytable", off, []string{s[2:3]}))
+			s = s[1:]
+		case 'D':
+			off := uint64(s[2] - '0')
+			fail(ck.Delete(t.ct, "mytable", off, []string{s[2:3]}))
 			s = s[1:]
 		case 'r':
 			ok(ck.Read(t.ct, "mytable", 0, s[2:3], s[3:4]))
