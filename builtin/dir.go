@@ -4,7 +4,9 @@
 package builtin
 
 import (
+	"errors"
 	"io"
+	"io/fs"
 	"log"
 	"os"
 	"path/filepath"
@@ -48,15 +50,11 @@ func forEachDir(dir string, justfiles, details bool, fn func(entry Value)) {
 	if strings.HasSuffix(pat, "*.*") {
 		pat = pat[:len(pat)-2] // switch *.* to *
 	}
-	if dir[len(dir)-1] == '/' && os.PathSeparator != '/' {
-		// os.Open calls file_windows.go openDir which requires backslash
-		dir = dir[:len(dir)-1] + string(os.PathSeparator)
-	}
 	f, err := os.Open(dir)
 	if err != nil {
 		// should panic, but cSuneido doesn't
-		if !strings.Contains(err.Error(), "cannot find the file specified") &&
-			!strings.Contains(err.Error(), "syntax is incorrect") {
+		if !errors.Is(err, fs.ErrNotExist) &&
+			!strings.Contains(err.Error(), "syntax is incorrect") { // Windows
 			log.Println("ERROR: Dir:", err)
 		}
 		return
