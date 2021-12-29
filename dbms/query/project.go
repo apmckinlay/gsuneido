@@ -60,7 +60,6 @@ func NewProject(src Query, cols []string) *Project {
 		p.unique = true
 		p.includeDeps(srcCols)
 	}
-	p.getHeaders()
 	return p
 }
 
@@ -342,21 +341,22 @@ func (p *Project) hashCost(mode Mode, index []string) Cost {
 func (p *Project) setApproach(_ []string, approach interface{}, tran QueryTran) {
 	p.projectApproach = *approach.(*projectApproach)
 	p.source = SetApproach(p.source, p.index, tran)
+	p.projHdr = p.Header() // cache for Get
+	p.srcHdr = p.source.Header()
 }
 
 // execution --------------------------------------------------------
 
 func (p *Project) Header() *runtime.Header {
-	return p.projHdr
-}
-
-func (p *Project) getHeaders() {
-	p.srcHdr = p.source.Header()
-	newflds := make([][]string, len(p.srcHdr.Fields))
-	for i, fs := range p.srcHdr.Fields {
+	if p.projHdr != nil {
+		return p.projHdr
+	}
+	srcFlds := p.source.Header().Fields
+	newflds := make([][]string, len(srcFlds))
+	for i, fs := range srcFlds {
 		newflds[i] = projectFields(fs, p.columns)
 	}
-	p.projHdr = runtime.NewHeader(newflds, p.columns)
+	return runtime.NewHeader(newflds, p.columns)
 }
 
 func projectFields(fs []string, pcols []string) []string {
@@ -377,10 +377,6 @@ func (p *Project) Rewind() {
 }
 
 func (p *Project) Get(dir runtime.Dir) runtime.Row {
-	if p.projHdr == nil {
-		p.srcHdr = p.source.Header()
-		p.projHdr = p.Header()
-	}
 	switch p.strategy {
 	case projCopy:
 		return p.source.Get(dir)

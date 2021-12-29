@@ -163,11 +163,15 @@ func (e *Extend) optimize(mode Mode, index []string) (Cost, interface{}) {
 
 func (e *Extend) setApproach(index []string, _ interface{}, tran QueryTran) {
 	e.source = SetApproach(e.source, index, tran)
+	e.hdr = e.Header() // cache for Get
 }
 
 // execution --------------------------------------------------------
 
 func (e *Extend) Header() *Header {
+	if e.hdr != nil {
+		return e.hdr
+	}
 	hdr := e.source.Header()
 	cols := append(hdr.Columns, e.cols...)
 	flds := hdr.Fields
@@ -194,9 +198,6 @@ func (e *Extend) Get(dir Dir) Row {
 func (e *Extend) extendRow(row Row) Row {
 	if row == nil {
 		return nil // eof
-	}
-	if e.hdr == nil {
-		e.hdr = e.Header()
 	}
 	var th Thread // ???
 	context := ast.Context{Th: &th, Tran: MakeSuTran(e.t), Hdr: e.hdr}

@@ -243,3 +243,18 @@ func (row Row) equalGet(hdr *Header, col string) string {
 	}
 	return row.GetRaw(hdr, col)
 }
+
+// func (hdr *Header) Equal(hdr2 *Header) bool {
+// 	if !strs.Equal(hdr.Columns, hdr2.Columns) {
+// 		return false
+// 	}
+// 	if len(hdr.Fields) != len(hdr2.Fields) {
+// 		return false
+// 	}
+// 	for i := range hdr.Fields {
+// 		if !strs.Equal(hdr.Fields[i], hdr2.Fields[i]) {
+// 			return false
+// 		}
+// 	}
+// 	return true
+// }
