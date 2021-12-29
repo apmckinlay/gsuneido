@@ -899,10 +899,6 @@ func (w *Where) idxFrac(idx []string, ptrngs []pointRange) float64 {
 
 // execution --------------------------------------------------------
 
-func (w *Where) Header() *runtime.Header {
-	return w.source.Header()
-}
-
 // MakeSuTran is injected by dbms to avoid import cycle
 var MakeSuTran func(qt QueryTran) *runtime.SuTran
 
