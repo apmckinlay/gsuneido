@@ -250,11 +250,15 @@ func (db *Database) ensure(sch *schema.Schema, newIdxs []schema.Index) {
 }
 
 func (db *Database) AddExclusive(table string) {
-	db.ck.AddExclusive(table)
+	if db.ck != nil {
+		db.ck.AddExclusive(table)
+	}
 }
 
 func (db *Database) EndExclusive(table string) {
-	db.ck.EndExclusive(table)
+	if db.ck != nil {
+		db.ck.EndExclusive(table)
+	}
 }
 
 // buildIndexes creates the new btrees & overlays

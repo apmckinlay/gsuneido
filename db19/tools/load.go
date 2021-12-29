@@ -86,7 +86,7 @@ func LoadTable(table, dbfile string) int {
 	}()
 	var db *Database
 	var err error
-	if _, err := os.Stat(dbfile); os.IsNotExist(err) {
+	if _, err = os.Stat(dbfile); os.IsNotExist(err) {
 		db, err = CreateDatabase(dbfile)
 	} else {
 		db, err = OpenDatabase(dbfile)
