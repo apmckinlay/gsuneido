@@ -15,8 +15,12 @@ As of November 2019 the Windows interface is mostly functional.
 
 As of July 2020 the client portion is production ready to replace cSuneido.
 
-As of March 2021 we are no longer using cSuneido, all customers are on gSuneido.
+As of March 2021 we are no longer using cSuneido, all customers are on gSuneido.<br/>
+(as client, with jSuneido as the server)
+
+The database portion is feature complete. stdlib tests all pass.
+Still some bugs to find and fix.
 
 ### In Progress
 
-Database and server side of client-server
+Server side of client-server
