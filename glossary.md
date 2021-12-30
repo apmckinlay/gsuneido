@@ -32,3 +32,6 @@ action
 
 admin
 : a database administration command, e.g. create, alter, drop
+
+singleton
+: a query that selects at most one record e.g. where a key equals a value
