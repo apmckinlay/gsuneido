@@ -20,7 +20,7 @@ type Join struct {
 	nr   int
 	hdr1 *Header
 	row1 Row
-	row2 Row
+	row2 Row // nil when we need a new row1
 }
 
 type joinApproach struct {
@@ -185,6 +185,7 @@ func (jn *Join) setApproach(index []string, approach interface{}, tran QueryTran
 	}
 	jn.source = SetApproach(jn.source, index, tran)
 	jn.source2 = SetApproach(jn.source2, ap.index2, tran)
+	jn.hdr1 = jn.source.Header()
 }
 
 func (jn *Join) Nrows() int {
@@ -224,9 +225,6 @@ func (jn *Join) Rewind() {
 }
 
 func (jn *Join) Get(dir Dir) Row {
-	if jn.hdr1 == nil {
-		jn.hdr1 = jn.source.Header()
-	}
 	for {
 		if jn.row2 == nil && !jn.nextRow1(dir) {
 			return nil
@@ -260,6 +258,20 @@ func (jn *Join) Select(cols, vals []string) {
 	jn.row2 = nil
 }
 
+func (jn *Join) Lookup(cols, vals []string) Row {
+	defer jn.Rewind()
+	jn.row1 = jn.source.Lookup(cols, vals)
+	if jn.row1 == nil {
+		return nil
+	}
+	jn.source2.Select(jn.by, jn.projectRow(jn.row1))
+	row2 := jn.source2.Get(Next)
+	if row2 == nil {
+		return nil
+	}
+	return JoinRows(jn.row1, row2)
+}
+
 // LeftJoin ---------------------------------------------------------
 
 type LeftJoin struct {
@@ -274,6 +286,10 @@ func NewLeftJoin(src, src2 Query, by []string) *LeftJoin {
 
 func (lj *LeftJoin) String() string {
 	return lj.string("LEFTJOIN")
+}
+
+func (lj *LeftJoin) Indexes() [][]string {
+	return lj.source.Indexes()
 }
 
 func (lj *LeftJoin) Keys() [][]string {
@@ -305,6 +321,7 @@ func (lj *LeftJoin) setApproach(index []string, approach interface{}, tran Query
 	lj.source = SetApproach(lj.source, index, tran)
 	lj.source2 = SetApproach(lj.source2, ap.index2, tran)
 	lj.empty2 = make(Row, len(lj.source2.Header().Fields))
+	lj.hdr1 = lj.source.Header()
 }
 
 func (lj *LeftJoin) Nrows() int {
@@ -314,9 +331,6 @@ func (lj *LeftJoin) Nrows() int {
 // execution
 
 func (lj *LeftJoin) Get(dir Dir) Row {
-	if lj.hdr1 == nil {
-		lj.hdr1 = lj.source.Header()
-	}
 	for {
 		if lj.row2 == nil && !lj.nextRow1(dir) {
 			return nil
@@ -342,4 +356,22 @@ func (lj *LeftJoin) shouldOutput(row Row) bool {
 		return true
 	}
 	return row != nil
+}
+
+func (lj *LeftJoin) Lookup(cols, vals []string) Row {
+	defer lj.Rewind()
+	lj.row1 = lj.source.Lookup(cols, vals)
+	if lj.row1 == nil {
+		return nil
+	}
+	lj.row1out = false
+	lj.source2.Select(lj.by, lj.projectRow(lj.row1))
+	row2 := lj.source2.Get(Next)
+	if lj.shouldOutput(row2) {
+		if row2 == nil {
+			return JoinRows(lj.row1, lj.empty2)
+		}
+		return JoinRows(lj.row1, row2)
+	}
+	return nil
 }
