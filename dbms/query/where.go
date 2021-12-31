@@ -49,6 +49,9 @@ type Where struct {
 	sel     string
 	selSet  bool
 	context *ast.Context
+
+	selectCols []string
+	selectVals []string
 }
 
 type whereApproach struct {
@@ -482,6 +485,8 @@ func (w *Where) setApproach(index []string, app interface{}, tran QueryTran) {
 	} else {
 		w.source = SetApproach(w.source, index, tran)
 	}
+	w.hdr = w.source.Header()
+	w.context = &ast.Context{Th: &runtime.Thread{}, Hdr: w.hdr}
 }
 
 // cmpExpr is <field> <op> <constant> or <field> in (<constants>)
@@ -928,11 +933,9 @@ func (w *Where) filter(row runtime.Row) bool {
 	if row == nil {
 		return true
 	}
-	if w.hdr == nil {
-		w.hdr = w.source.Header()
-	}
-	if w.context == nil {
-		w.context = &ast.Context{Th: &runtime.Thread{}, Hdr: w.hdr}
+	if w.selectCols != nil &&
+		!w.singletonFilter(row, w.selectCols, w.selectVals) {
+		return false
 	}
 	w.context.Tran = MakeSuTran(w.t)
 	w.context.Row = row
@@ -998,6 +1001,13 @@ func (w *Where) Select(cols, vals []string) {
 	}
 
 	w.Rewind()
+	if cols == nil && vals == nil { // clear select
+		w.sel = ""
+		w.selSet = false
+		w.selectCols = nil
+		w.selectVals = nil
+		return
+	}
 	satisfied, conflict := w.selectFixed(cols, vals)
 	if conflict {
 		w.sel = ixkey.Max
@@ -1007,6 +1017,12 @@ func (w *Where) Select(cols, vals []string) {
 	if satisfied {
 		w.sel = ""
 		w.selSet = false
+		return
+	}
+
+	if w.singleton {
+		w.selectCols = cols
+		w.selectVals = vals
 		return
 	}
 
@@ -1054,10 +1070,8 @@ func (w *Where) Lookup(cols, vals []string) runtime.Row {
 		// can't use source.Lookup because cols may not match source index
 		w.Rewind()
 		row := w.Get(runtime.Next)
-		for i, col := range cols {
-			if row.GetRaw(w.hdr, col) != vals[i] {
-				return nil
-			}
+		if row == nil || !w.singletonFilter(row, cols, vals) {
+			return nil
 		}
 		return row
 	}
@@ -1066,4 +1080,14 @@ func (w *Where) Lookup(cols, vals []string) runtime.Row {
 		row = nil
 	}
 	return row
+}
+
+func (w *Where) singletonFilter(
+	row runtime.Row, cols []string, vals []string) bool {
+	for i, col := range cols {
+		if row.GetRaw(w.hdr, col) != vals[i] {
+			return false
+		}
+	}
+	return true
 }

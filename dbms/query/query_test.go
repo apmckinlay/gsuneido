@@ -191,14 +191,20 @@ func queryAll2(q Query) string {
 	sep := ""
 	var sb strings.Builder
 	for row := q.Get(rt.Next); row != nil; row = q.Get(rt.Next) {
-		sep2 := ""
 		sb.WriteString(sep)
-		for _, col := range hdr.Columns {
-			val := row.GetVal(hdr, col, nil, nil)
-			fmt.Fprint(&sb, sep2, col, "=", rt.AsStr(val))
-			sep2 = " "
-		}
+		sb.WriteString(row2str(hdr, row))
 		sep = " | "
+	}
+	return sb.String()
+}
+
+func row2str(hdr *rt.Header, row rt.Row) string {
+	var sb strings.Builder
+	sep := ""
+	for _, col := range hdr.Columns {
+		val := row.GetVal(hdr, col, nil, nil)
+		fmt.Fprint(&sb, sep, col, "=", rt.AsStr(val))
+		sep = " "
 	}
 	return sb.String()
 }
@@ -353,4 +359,38 @@ func TestSelectOnSingleton(t *testing.T) {
 	act("insert {a: '1'} into t1")
 	act("insert {a: '1', b: '2'} into t2")
 	assert.T(t).This(queryAll(db, "t1 leftjoin t2")).Is("a=1 b=2")
+}
+
+func TestSingleton(t *testing.T) {
+	assert := assert.T(t)
+	db, err := db19.CreateDb(stor.HeapStor(8192))
+	ck(err)
+	db19.StartConcur(db, 50*time.Millisecond)
+	defer db.Close()
+	MakeSuTran = func(qt QueryTran) *rt.SuTran { return nil }
+	act := func(act string) {
+		ut := db.NewUpdateTran()
+		defer ut.Commit()
+		n := DoAction(ut, act)
+		assert.This(n).Is(1)
+	}
+	DoAdmin(db, "create tmp (a,b) key(a) key(b)")
+	act("insert { a: 1, b: 2 } into tmp")
+	act("insert { a: 3, b: 4 } into tmp")
+	tran := sizeTran{db.NewReadTran()}
+	q := ParseQuery("tmp where a = 3", tran)
+	q, _ = Setup(q, ReadMode, tran)
+	assert.This(q.String()).Is("tmp^(a) WHERE*1 a is 3") // singleton
+	// reading by a, but singleton so we can Select/Lookup on b
+	bcols := []string{"b"}
+	bvals := []string{rt.Pack(rt.SuInt(4))}
+	q.Select(bcols, bvals)
+	assert.This(queryAll2(q)).Is("a=3 b=4")
+	hdr := q.Header()
+	assert.This(row2str(hdr, q.Lookup(bcols, bvals))).Is("a=3 b=4")
+
+	bvals = []string{rt.Pack(rt.SuInt(2))}
+	q.Select(bcols, bvals)
+	assert.This(queryAll2(q)).Is("")
+	assert.This(q.Lookup(bcols, bvals)).Is(nil)
 }
