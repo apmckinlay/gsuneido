@@ -13,7 +13,7 @@ import (
 func TestInterp(t *testing.T) {
 	test := func(expected Value, code ...byte) {
 		fn := &SuFunc{Code: string(code)}
-		th := NewThread()
+		th := &Thread{}
 		result := th.Invoke(fn, nil)
 		assert.T(t).This(result).Is(SuInt(8))
 	}
@@ -163,7 +163,7 @@ func BenchmarkLoadStore2(b *testing.B) {
 	for n := 0; n < b.N; n++ {
 		op := []func(x, y Value) Value{
 			OpAdd, OpSub, t.Cat, OpMul, OpDiv, OpMod,
-			OpLeftShift, OpRightShift, OpBitOr, OpBitAnd, OpBitXor}[n % 11]
+			OpLeftShift, OpRightShift, OpBitOr, OpBitAnd, OpBitXor}[n%11]
 		r = op(x, y)
 	}
 }

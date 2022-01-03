@@ -29,8 +29,7 @@ var tokenLock sync.Mutex
 
 type dbmsClient struct {
 	*csio.ReadWrite
-	conn      net.Conn
-	sessionId string
+	conn net.Conn
 }
 
 // helloSize is the size of the initial connection message from the server
@@ -47,7 +46,6 @@ func NewDbmsClient(addr string, port string) *dbmsClient {
 		cantConnect("invalid response from server")
 	}
 	c := &dbmsClient{ReadWrite: csio.NewReadWrite(conn), conn: conn}
-	c.sessionId = c.SessionId("")
 	tokenLock.Lock()
 	defer tokenLock.Unlock()
 	if token != "" {
@@ -250,12 +248,14 @@ func (dc *dbmsClient) Run(code string) Value {
 	return dc.ValueResult()
 }
 
-func (dc *dbmsClient) SessionId(id string) string {
-	if id != "" || dc.sessionId == "" {
-		dc.PutCmd(commands.SessionId).PutStr(id).Request()
-		dc.sessionId = dc.GetStr()
-	} // else use cached value
-	return dc.sessionId
+func (dc *dbmsClient) SessionId(t *Thread, id string) string {
+	if s := t.Session(); s != "" && id == "" {
+		return s // use cached value
+	}
+	dc.PutCmd(commands.SessionId).PutStr(id).Request()
+	s := dc.GetStr()
+	t.SetSession(s)
+	return s
 }
 
 func (dc *dbmsClient) Size() uint64 {

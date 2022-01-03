@@ -30,7 +30,7 @@ func pt_method(args []string, str []bool) bool {
 		fmt.Print("\tmethod not found: ", method)
 		return false
 	}
-	th := NewThread()
+	th := &Thread{}
 	for i := 2; i < len(args)-1; i++ {
 		th.Push(toValue(args, str, i))
 	}

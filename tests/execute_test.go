@@ -19,10 +19,11 @@ import (
 )
 
 func TestNaming(t *testing.T) {
+	th := &Thread{}
 	test := func(src, expected string) {
 		t.Helper()
 		c := compile.Constant("function () {\n" + src + "\n}").(*SuFunc)
-		result := NewThread().Invoke(c, nil)
+		result := th.Invoke(c, nil)
 		assert.T(t).This(result).Is(SuStr(expected))
 	}
 	test(`foo = function(){}; Name(foo)`, "foo")
@@ -52,10 +53,10 @@ func BenchmarkCat(b *testing.B) {
 			for (i = 0; i < 1000; ++i)
 				s $= "abc"
 			}`).(*SuFunc)
-	t := NewThread()
+	th := &Thread{}
 	for i := 0; i < b.N; i++ {
-		t.Reset()
-		t.Invoke(c, nil)
+		th.Reset()
+		th.Invoke(c, nil)
 	}
 }
 
@@ -68,10 +69,10 @@ func BenchmarkJoin(b *testing.B) {
 				ob.Add("abc")
 			ob.Join()
 			}`).(*SuFunc)
-	t := NewThread()
+	th := &Thread{}
 	for i := 0; i < b.N; i++ {
-		t.Reset()
-		t.Invoke(c, nil)
+		th.Reset()
+		th.Invoke(c, nil)
 	}
 }
 
@@ -82,10 +83,10 @@ func BenchmarkBase(b *testing.B) {
 			for (i = 0; i < 1000; ++i)
 				;
 			}`).(*SuFunc)
-	t := NewThread()
+	th := &Thread{}
 	for i := 0; i < b.N; i++ {
-		t.Reset()
-		t.Invoke(c, nil)
+		th.Reset()
+		th.Invoke(c, nil)
 	}
 }
 
@@ -153,7 +154,7 @@ func init() {
 
 func pt_execute(args []string, _ []bool) bool {
 	src := "function () {\n" + args[0] + "\n}"
-	th := NewThread()
+	th := &Thread{}
 	expected := "**notfalse**"
 	if len(args) > 1 {
 		expected = args[1]
@@ -320,7 +321,7 @@ func BenchmarkInterp(b *testing.B) {
 func BenchmarkCall(b *testing.B) {
 	f := Global.GetName(nil, "Type")
 	as := &ArgSpec1
-	th := NewThread()
+	th := &Thread{}
 	th.Push(SuInt(123))
 	for i := 0; i < b.N; i++ {
 		f.Call(th, nil, as)

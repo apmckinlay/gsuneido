@@ -14,7 +14,7 @@ import (
 
 func TestSuFuncCall(t *testing.T) {
 	fn := compile.Constant("function (a, b) { a - b }").(*SuFunc)
-	th := NewThread()
+	th := &Thread{}
 	th.Push(SuInt(100))
 	th.Push(SuInt(1))
 	result := fn.Call(th, nil, &ArgSpec2)
@@ -32,7 +32,7 @@ func TestSuFuncCall(t *testing.T) {
 
 func BenchmarkInt(b *testing.B) {
 	fn := compile.Constant("function (n) { for (i = 0; i < n; ++i){} }").(*SuFunc)
-	th := NewThread()
+	th := &Thread{}
 	m := 1
 	n := b.N
 	for n > math.MaxInt16 {

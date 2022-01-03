@@ -12,7 +12,7 @@ import (
 
 func Test_MethodCall(t *testing.T) {
 	n := NumFromString("12.34")
-	th := NewThread()
+	th := &Thread{}
 	f := n.Lookup(th, "Round")
 	th.Push(IntVal(1))
 	result := f.Call(th, n, &ArgSpec1)

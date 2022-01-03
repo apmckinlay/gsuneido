@@ -74,7 +74,7 @@ type IDbms interface {
 	Run(code string) Value
 
 	// SessionId sets and/or returns the session id for the current connection
-	SessionId(id string) string
+	SessionId(t *Thread, id string) string
 
 	// Size returns the current database size
 	Size() uint64

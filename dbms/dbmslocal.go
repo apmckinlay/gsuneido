@@ -202,13 +202,11 @@ func (*DbmsLocal) Run(s string) Value {
 	return compile.EvalString(&t, s)
 }
 
-var sessionId string
-
-func (*DbmsLocal) SessionId(id string) string {
+func (*DbmsLocal) SessionId(t *Thread, id string) string {
 	if id != "" {
-		sessionId = id
+		t.SetSession(id)
 	}
-	return sessionId
+	return t.Session()
 }
 
 func (dbms *DbmsLocal) Size() uint64 {

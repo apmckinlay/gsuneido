@@ -141,7 +141,8 @@ func main() {
 		os.Exit(1)
 	}
 	Libload = libload // dependency injection
-	mainThread = NewThread()
+	mainThread = &Thread{}
+	mainThread.Name = "main"
 	mainThread.UIThread = true
 	MainThread = mainThread
 	builtin.UIThread = mainThread
@@ -220,7 +221,7 @@ func clientErrorLog() {
 	dbms := mainThread.Dbms()
 
 	log.SetFlags(log.Ldate | log.Ltime | log.Lmsgprefix)
-	log.SetPrefix(dbms.SessionId("") + " ")
+	log.SetPrefix(mainThread.SessionId("") + " ")
 
 	f, err := os.Open(options.Errlog)
 	if err != nil {

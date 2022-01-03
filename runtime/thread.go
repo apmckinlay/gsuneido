@@ -10,6 +10,7 @@ import (
 
 	"github.com/apmckinlay/gsuneido/options"
 	"github.com/apmckinlay/gsuneido/util/regex"
+	"github.com/apmckinlay/gsuneido/util/str"
 	"github.com/apmckinlay/gsuneido/util/tr"
 )
 
@@ -75,16 +76,38 @@ type Thread struct {
 
 	// Profile is used to track heavily executed functions
 	Profile map[*SuFunc]int
+
+	// Session is the name of the database session.
+	// Needs atomic because we access MainThread from other threads.
+	session atomic.Value
 }
 
 var nThread int32
 
-// NewThread creates a new thread
+// NewThread creates a new thread.
+// It is primarily used for user initiated threads.
+// Internal threads can just use a zero Thread.
 func NewThread() *Thread {
 	n := atomic.AddInt32(&nThread, 1)
-	return &Thread{
-		Num:  n,
-		Name: "Thread-" + strconv.Itoa(int(n))}
+	name := "Thread-" + strconv.Itoa(int(n))
+	t := &Thread{Num: n, Name: name}
+	mts := ""
+	if MainThread != nil {
+		mts = MainThread.Session()
+	}
+	t.session.Store(str.Opt(mts, ":") + name)
+	return t
+}
+
+func (t *Thread) Session() string {
+	if v := t.session.Load(); v != nil {
+		return v.(string)
+	}
+	return ""
+}
+
+func (t *Thread) SetSession(s string) {
+	t.session.Store(s)
 }
 
 // Push pushes a value onto the value stack
@@ -204,8 +227,9 @@ var GetDbms func() IDbms
 func (t *Thread) Dbms() IDbms {
 	if t.dbms == nil {
 		t.dbms = GetDbms()
-		if !t.UIThread {
-			t.dbms.SessionId(t.dbms.SessionId("") + ":" + t.Name)
+		if s := t.session.Load(); s != nil {
+			// session id was set before connecting
+			t.dbms.SessionId(t, s.(string))
 		}
 	}
 	return t.dbms
@@ -232,4 +256,15 @@ func (t *Thread) SubThread() *Thread {
 
 func (t *Thread) Cat(x, y Value) Value {
 	return OpCat(t, x, y)
+}
+
+func (t *Thread) SessionId(id string) string {
+	if t.dbms == nil {
+		// don't create a connection just to get/set the session id
+		if id != "" {
+			t.SetSession(id)
+		}
+		return t.Session()
+	}
+	return t.dbms.SessionId(t, id)
 }

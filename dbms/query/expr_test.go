@@ -15,7 +15,7 @@ import (
 )
 
 func TestExprEval(t *testing.T) {
-	th := NewThread()
+	th := &Thread{}
 	row, hdr := mkrow()
 	raw := false
 	test := func(src string, expected string) {
