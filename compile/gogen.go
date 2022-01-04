@@ -27,7 +27,7 @@ func GoGen(src string) string {
 
 // gogen compiles an ast.Function to Go source code placed in SuFunc.Code.
 // Using SuFunc for output is for compatibility with byte code codegen.
-func (*gogenAspects) codegen(_, _ string, f *ast.Function) Value {
+func (*gogenAspects) codegen(_, _ string, f *ast.Function, _ Value) Value {
 	if len(f.Final) > 0 {
 		ast.PropFold(f)
 	}

@@ -25,6 +25,7 @@ import (
 
 // cgen is the context/results for compiling a function or block
 type cgen struct {
+	prevDef        Value
 	outerFn        *ast.Function
 	code           []byte
 	argspecs       []ArgSpec
@@ -52,21 +53,22 @@ const (
 )
 
 // codegen compiles an Ast to an SuFunc
-func codegen(lib, name string, fn *ast.Function) Value {
+func codegen(lib, name string, fn *ast.Function, prevDef Value) Value {
 	if len(fn.Final) > 0 {
 		ast.PropFold(fn)
 	}
 	if fn.HasBlocks {
 		ast.Blocks(fn)
 	}
-	f := codegen2(lib, name, fn, fn)
+	f := codegen2(lib, name, fn, fn, prevDef)
 	return f
 }
 
-func codegen2(lib, name string, fn *ast.Function, outerFn *ast.Function) *SuFunc {
+func codegen2(lib, name string, fn *ast.Function, outerFn *ast.Function,
+	prevDef Value) *SuFunc {
 	cover := atomic.LoadInt64(&options.Coverage) == 1
 	cg := cgen{outerFn: outerFn, base: fn.Base, isNew: fn.IsNewMethod,
-		isBlock: fn != outerFn, cover: cover}
+		isBlock: fn != outerFn, cover: cover, prevDef: prevDef}
 	cg.Lib = lib
 	cg.Name = name
 	return cg.codegen(fn)
@@ -578,12 +580,13 @@ func (cg *cgen) identifier(node *ast.Ident) {
 			cg.emitUint8(op.Load, i)
 		}
 	} else if node.Name[0] == '_' {
-		// reference to _Name (value set by LibLoad)
-		val := Global.GetIfPresent(node.Name[1:])
-		if val == nil {
+		// reference to _Name
+		assert.That(node.Name[1:] == cg.Name)
+		if cg.prevDef == nil {
 			panic("can't find " + node.Name)
 		}
-		cg.emitValue(val)
+		cg.emitValue(cg.prevDef)
+		// for _Name class base see constant.go Parser.ckBase
 	} else {
 		cg.emitUint16(op.Global, Global.Num(node.Name))
 	}
@@ -983,7 +986,7 @@ func (cg *cgen) block(b *ast.Block) {
 	f := &b.Function
 	var fn *SuFunc
 	if b.CompileAsFunction {
-		fn = codegen2(cg.Lib, b.Name, f, cg.outerFn)
+		fn = codegen2(cg.Lib, b.Name, f, cg.outerFn, cg.prevDef)
 		cg.emitValue(fn)
 	} else {
 		// closure

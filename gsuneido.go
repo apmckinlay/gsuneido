@@ -459,10 +459,7 @@ func libload(t *Thread, name string) (result Value, e interface{}) {
 		if mode == "gui" && strings.HasSuffix(lib, "webgui") {
 			continue
 		}
-		result = llcompile(lib, name, src)
-		if result != nil {
-			Global.Set(gn, result) // required for overload inheritance
-		}
+		result = llcompile(lib, name, src, result)
 		// fmt.Println("LOAD", name, "SUCCEEDED")
 	}
 	return result, nil
@@ -470,7 +467,7 @@ func libload(t *Thread, name string) (result Value, e interface{}) {
 
 var winErr = regex.Compile("gSuneido does not implement (dll|struct|callback)")
 
-func llcompile(lib, name, src string) Value {
+func llcompile(lib, name, src string, prevDef Value) Value {
 	defer func() {
 		if e := recover(); e != nil {
 			es := fmt.Sprint(e)
@@ -481,5 +478,5 @@ func llcompile(lib, name, src string) Value {
 	}()
 	// want to pass the name from the start (rather than adding after)
 	// so it propagates to nested Named values
-	return compile.NamedConstant(lib, name, src)
+	return compile.NamedConstant(lib, name, src, prevDef)
 }

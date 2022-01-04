@@ -300,18 +300,14 @@ func (typeGlobal) SetErr(gn Gnum, e interface{}) {
 	g.lock.Unlock()
 }
 
-// Copy is used by compile to handle overload inheritance (_Name)
-// It copies the value of a slot to a new slot (without a name)
-func (typeGlobal) Copy(name string) Gnum {
+// Overload is used by compile to handle overload inheritance (_Name)
+func (typeGlobal) Overload(name string, val Value) Gnum {
 	g.lock.Lock()
 	defer g.lock.Unlock()
-	gn, ok := g.name2num[name]
-	if !ok || g.values[gn] == nil {
-		panic("can't find " + name)
-	}
+	Global.num(name[1:]) // ensure original exists
 	newgn := len(g.names)
 	g.names = append(g.names, name)
-	g.values = append(g.values, g.values[gn])
+	g.values = append(g.values, val)
 	return newgn
 }
 

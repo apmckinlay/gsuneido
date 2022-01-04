@@ -19,7 +19,7 @@ func EvalString(t *Thread, s string) Value {
 		return Global.GetName(t, s)
 	}
 	s = "function () {\n" + s + "\n}"
-	fn := NamedConstant("", "eval", s).(*SuFunc)
+	fn := NamedConstant("", "eval", s, nil).(*SuFunc)
 	return t.Invoke(fn, nil)
 }
 

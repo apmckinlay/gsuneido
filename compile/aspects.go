@@ -17,7 +17,7 @@ type Aspects interface {
 	maker
 
 	privatize(name, className string) string
-	codegen(lib, name string, fn *ast.Function) runtime.Value
+	codegen(lib, name string, fn *ast.Function, prevDef runtime.Value) runtime.Value
 }
 
 type checker interface {
@@ -52,8 +52,8 @@ func (*cgAspectsBase) privatize(name, className string) string {
 	return className + "_" + name
 }
 
-func (*cgAspectsBase) codegen(lib, name string, fn *ast.Function) runtime.Value {
-	return codegen(lib, name, fn)
+func (*cgAspectsBase) codegen(lib, name string, fn *ast.Function, prevDef runtime.Value) runtime.Value {
+	return codegen(lib, name, fn, prevDef)
 }
 
 type cgckAspects struct {
@@ -84,7 +84,7 @@ func (*astAspects) privatize(name, _ string) string {
 	return name
 }
 
-func (*astAspects) codegen(_, _ string, fn *ast.Function) runtime.Value {
+func (*astAspects) codegen(_, _ string, fn *ast.Function, _ runtime.Value) runtime.Value {
 	return fn
 }
 

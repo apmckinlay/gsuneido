@@ -89,6 +89,9 @@ type Parser struct {
 	// itUsed records whether an "it" variable is used
 	// to know whether to add an automatic "it" parameter to blocks
 	itUsed bool
+
+	// prevDef is used by libload for _Name
+	prevDef runtime.Value
 }
 
 type funcInfo struct {

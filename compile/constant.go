@@ -15,15 +15,16 @@ import (
 
 // Constant compiles an anonymous Suneido constant
 func Constant(src string) Value {
-	return NamedConstant("", "", src)
+	return NamedConstant("", "", src, nil)
 }
 
 // NamedConstant compiles a Suneido constant with a name
 // e.g. a library record
-func NamedConstant(lib, name, src string) Value {
+func NamedConstant(lib, name, src string, prevDef Value) Value {
 	p := NewParser(src)
 	p.lib = lib
 	p.name = name
+	p.prevDef = prevDef
 	result := p.constant()
 	if p.Token != tok.Eof {
 		p.Error("did not parse all input")
@@ -105,7 +106,7 @@ func (p *Parser) functionValue() Value {
 	ast := p.Function()
 	p.className = prevClassName
 	p.CheckFunc(ast)
-	return p.codegen(p.lib, p.name, ast)
+	return p.codegen(p.lib, p.name, ast, p.prevDef)
 }
 
 // string handles compile time concatenation
@@ -200,7 +201,7 @@ func (p *Parser) member(ob container, closing tok.Token, base Gnum) {
 			ast.IsNewMethod = true
 		}
 		p.CheckFunc(ast)
-		fn := p.codegen(p.lib, p.name, ast)
+		fn := p.codegen(p.lib, p.name, ast, p.prevDef)
 		p.name = prevName
 		if f, ok := fn.(*SuFunc); ok {
 			f.ClassName = p.className
@@ -296,7 +297,8 @@ func (p *Parser) ckBase(name string) Gnum {
 		if name == "_" || name[1:] != p.name {
 			p.Error("invalid reference to " + name)
 		}
-		return Global.Copy(name[1:])
+		return Global.Overload(name, p.prevDef)
+		// for _Name in expressions see codegen.go cgen.identifier
 	}
 	p.CheckGlobal(name, int(p.Pos))
 	return Global.Num(name)
