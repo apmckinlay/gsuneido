@@ -92,19 +92,20 @@ func tmpdb() (*Database, string) {
 
 func compactTable(state *DbState, src *Database, ts *meta.Schema, dst *Database) {
 	info := state.Meta.GetRoInfo(ts.Table)
-	before := dst.Store.Size()
 	list := sortlist.NewUnsorted()
 	sum := uint64(0)
+	size := uint64(0)
 	count := info.Indexes[0].Check(func(off uint64) {
 		sum += off // addition so order doesn't matter
 		rec := src.Store.Data(off)
-		size := runtime.RecLen(rec)
-		rec = rec[:size+cksum.Len]
+		n := runtime.RecLen(rec)
+		rec = rec[:n+cksum.Len]
 		cksum.MustCheck(rec)
 		off2, buf := dst.Store.Alloc(len(rec))
 		copy(buf, rec)
 		//TODO squeeze records when table has deleted fields
 		list.Add(off2)
+		size += uint64(n)
 	})
 	list.Finish()
 	assert.This(count).Is(info.Nrows)
@@ -118,8 +119,7 @@ func compactTable(state *DbState, src *Database, ts *meta.Schema, dst *Database)
 			CheckOtherIndex(info.Indexes[i], count, sum)
 		}()
 	}
-	dataSize := dst.Store.Size() - before
 	ov := buildIndexes(ts, list, dst.Store, count) // same as load
-	ti := &meta.Info{Table: ts.Table, Nrows: count, Size: dataSize, Indexes: ov}
+	ti := &meta.Info{Table: ts.Table, Nrows: count, Size: size, Indexes: ov}
 	dst.LoadedTable(ts, ti)
 }
