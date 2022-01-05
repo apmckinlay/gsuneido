@@ -91,6 +91,11 @@ func tmpdb() (*Database, string) {
 }
 
 func compactTable(state *DbState, src *Database, ts *meta.Schema, dst *Database) {
+	defer func() {
+		if e := recover(); e != nil {
+			runtime.Fatal(ts.Table + ":", e)
+		}
+	}()
 	info := state.Meta.GetRoInfo(ts.Table)
 	list := sortlist.NewUnsorted()
 	sum := uint64(0)
@@ -110,14 +115,7 @@ func compactTable(state *DbState, src *Database, ts *meta.Schema, dst *Database)
 	list.Finish()
 	assert.This(count).Is(info.Nrows)
 	for i := 1; i < len(info.Indexes); i++ {
-		func() {
-			defer func() {
-				if e := recover(); e != nil {
-					fmt.Println(ts.Table, ts.Indexes[i].Columns, e)
-				}
-			}()
-			CheckOtherIndex(info.Indexes[i], count, sum)
-		}()
+		CheckOtherIndex(info.Indexes[i], count, sum)
 	}
 	ov := buildIndexes(ts, list, dst.Store, count) // same as load
 	ti := &meta.Info{Table: ts.Table, Nrows: count, Size: size, Indexes: ov}
