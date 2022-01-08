@@ -150,6 +150,7 @@ func (m *Meta) ApplyMerge(updates []MergeUpdate) {
 			for i, ov := range ti.Indexes {
 				ti.Indexes[i] = ov.WithMerged(up.results[i], up.nmerged)
 			}
+			ti.lastmod = m.infoClock
 			info.Put(ti)
 		}
 	}
@@ -199,6 +200,7 @@ func (m *Meta) ApplyPersist(updates []PersistUpdate) {
 					ti.Indexes[i] = ov.WithSaved(up.results[i])
 				}
 			}
+			ti.lastmod = m.infoClock
 			info.Put(ti)
 		}
 	}
