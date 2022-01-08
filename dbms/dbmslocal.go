@@ -202,6 +202,10 @@ func (*DbmsLocal) Run(s string) Value {
 	return compile.EvalString(&t, s)
 }
 
+func (dbms *DbmsLocal) Schema(table string) string {
+	return dbms.db.Schema(table)
+}
+
 func (*DbmsLocal) SessionId(t *Thread, id string) string {
 	if id != "" {
 		t.SetSession(id)

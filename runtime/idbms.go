@@ -73,6 +73,8 @@ type IDbms interface {
 	// Run is used by the old style string.ServerEval()
 	Run(code string) Value
 
+	Schema(table string) string
+
 	// SessionId sets and/or returns the session id for the current connection
 	SessionId(t *Thread, id string) string
 

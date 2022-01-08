@@ -248,6 +248,10 @@ func (dc *dbmsClient) Run(code string) Value {
 	return dc.ValueResult()
 }
 
+func (dc *dbmsClient) Schema(table string) string {
+	panic("Schema only available standalone")
+}
+
 func (dc *dbmsClient) SessionId(t *Thread, id string) string {
 	if s := t.Session(); s != "" && id == "" {
 		return s // use cached value
