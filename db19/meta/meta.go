@@ -662,7 +662,7 @@ func (m *Meta) Write(store *stor.Stor, flatten bool) (offSchema, offInfo uint64)
 			m.schemaClock = delayMerge
 		}
 	} else if len(m.schemaOffs) > 0 {
-		offSchema = m.schemaOffs[len(m.schemaOffs)-1]
+		offSchema = m.schemaOffs[0] // most recent
 	}
 
 	// info
@@ -682,7 +682,7 @@ func (m *Meta) Write(store *stor.Stor, flatten bool) (offSchema, offInfo uint64)
 			m.infoClock = delayMerge
 		}
 	} else if len(m.infoOffs) > 0 {
-		offInfo = m.infoOffs[len(m.infoOffs)-1]
+		offInfo = m.infoOffs[0] // most recent
 	}
 
 	return offSchema, offInfo
