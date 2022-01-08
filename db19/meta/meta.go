@@ -734,6 +734,7 @@ func ReadMeta(store *stor.Stor, offSchema, offInfo uint64) *Meta {
 		schema: schema, schemaOffs: schemaOffs, schemaClock: clock(schemaOffs),
 		info: info, infoOffs: infoOffs, infoClock: clock(infoOffs)}
 	// copy Ixspec to Info from Schema (constructed by ReadSchema)
+	// Ok to modify since it's not in use yet.
 	m.info.ForEach(func(ti *Info) {
 		if ti.isTomb() {
 			return

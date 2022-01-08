@@ -125,7 +125,7 @@ func (db *Database) persist(exec execPersist, flatten bool) *DbState {
 		meta := *state.Meta // copy
 		meta.ApplyPersist(updates)
 		state.Meta = &meta
-		state.Write(flatten)
+		state.Write(flatten) //TODO does this need to be inside UpdateState ?
 		newState = state
 	})
 	return newState

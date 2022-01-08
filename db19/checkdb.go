@@ -68,14 +68,14 @@ func (db *Database) Check() (ec error) {
 func checkTable(state *DbState, table string) {
 	info := state.Meta.GetRoInfo(table)
 	if info == nil {
-		panic("info missing for " + table)
+		panic("info missing")
 	}
 	count, size, sum := checkFirstIndex(state, info.Indexes[0])
 	if count != info.Nrows {
-		panic("info.Nrows wrong " + fmt.Sprint(count, info.Nrows))
+		panic(fmt.Sprintln("info.Nrows is ", info.Nrows, " index has ", count))
 	}
 	if size != info.Size {
-		panic(fmt.Sprint(table, " info.Size ", info.Size, " should be ", size))
+		panic(fmt.Sprintln("info.Size is ", info.Size, " data has ", size))
 	}
 	for _, ix := range info.Indexes[1:] {
 		CheckOtherIndex(ix, count, sum)
@@ -96,14 +96,14 @@ func checkFirstIndex(state *DbState, ix *index.Overlay) (int, uint64, uint64) {
 	return count, size, sum
 }
 
-func CheckOtherIndex(ix *index.Overlay, countPrev int, sumPrev uint64) {
+func CheckOtherIndex(ix *index.Overlay, nrows int, sumPrev uint64) {
 	ix.CheckMerged()
 	sum := uint64(0)
 	count := ix.Check(func(off uint64) {
 		sum += off // addition so order doesn't matter
 	})
-	if count != countPrev {
-		panic("count mismatch " + fmt.Sprint(countPrev, count))
+	if count != nrows {
+		panic(fmt.Sprintln("info.Nrows is ", nrows, " index has ", count))
 	}
 	if sum != sumPrev {
 		panic("checksum mismatch")

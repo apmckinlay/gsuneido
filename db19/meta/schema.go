@@ -164,6 +164,7 @@ func (ts *Schema) isView() bool {
 	return !ts.isTomb() && ts.Table[0] == '='
 }
 
+// isTable returns true if not a view and not a tombstone
 func (ts *Schema) isTable() bool {
 	return !ts.isTomb() && !ts.isView()
 }
