@@ -642,17 +642,19 @@ func (m *Meta) LayeredOnto(latest *Meta) *Meta {
 
 //-------------------------------------------------------------------
 
-func (m *Meta) Write(store *stor.Stor, flatten bool) (offSchema, offInfo uint64) {
+func (m *Meta) Write(store *stor.Stor, flatten bool) (uint64, uint64) {
 	assert.That(m.difInfo.IsNil())
+	return m.WriteSchema(store, flatten), m.WriteInfo(store, flatten)
+}
 
-	// schema
+func (m *Meta) WriteSchema(store *stor.Stor, flatten bool) uint64 {
 	npersists, timespan := mergeSize(m.schemaClock, flatten)
 	// fmt.Printf("clock %d = %b npersists %d timespan %d\n", m.schemaClock, m.schemaClock, npersists, timespan)
 	sfilter := func(ts *Schema) bool { return ts.lastmod >= m.schemaClock-timespan }
 	if flatten || npersists >= len(m.schemaOffs) {
 		sfilter = func(ts *Schema) bool { return !ts.isTomb() }
 	}
-	offSchema = m.schema.Write(store, nth(m.schemaOffs, npersists), sfilter)
+	offSchema := m.schema.Write(store, nth(m.schemaOffs, npersists), sfilter)
 	if offSchema != 0 {
 		// fmt.Println("replace", m.schemaOffs, npersists, offSchema)
 		m.schemaOffs = replace(m.schemaOffs, npersists, offSchema)
@@ -664,15 +666,17 @@ func (m *Meta) Write(store *stor.Stor, flatten bool) (offSchema, offInfo uint64)
 	} else if len(m.schemaOffs) > 0 {
 		offSchema = m.schemaOffs[0] // most recent
 	}
+	return offSchema
+}
 
-	// info
-	npersists, timespan = mergeSize(m.infoClock, flatten)
+func (m *Meta) WriteInfo(store *stor.Stor, flatten bool) uint64 {
+	npersists, timespan := mergeSize(m.infoClock, flatten)
 	// fmt.Printf("clock %d = %b npersists %d timespan %d\n", m.infoClock, m.infoClock, npersists, timespan)
 	ifilter := func(ti *Info) bool { return ti.lastmod >= m.infoClock-timespan }
 	if flatten || npersists >= len(m.infoOffs) {
 		ifilter = func(ti *Info) bool { return !ti.isTomb() }
 	}
-	offInfo = m.info.Write(store, nth(m.infoOffs, npersists), ifilter)
+	offInfo := m.info.Write(store, nth(m.infoOffs, npersists), ifilter)
 	if offInfo != 0 {
 		// fmt.Println("replace", m.infoOffs, npersists, offInfo)
 		m.infoOffs = replace(m.infoOffs, npersists, offInfo)
@@ -684,8 +688,7 @@ func (m *Meta) Write(store *stor.Stor, flatten bool) (offSchema, offInfo uint64)
 	} else if len(m.infoOffs) > 0 {
 		offInfo = m.infoOffs[0] // most recent
 	}
-
-	return offSchema, offInfo
+	return offInfo
 }
 
 // mergeSize returns the number of persists to merge.
