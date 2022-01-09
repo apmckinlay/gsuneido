@@ -37,6 +37,10 @@ type btree struct {
 	ixspec *ixkey.Spec
 }
 
+func (bt *btree) Cksum() uint32 {
+	return uint32(bt.treeLevels) + uint32(bt.root)
+}
+
 const maxlevels = 8
 
 // MaxNodeSize is the maximum node size in bytes, split if larger.
@@ -207,6 +211,8 @@ func (bt *btree) check1(depth int, offset uint64, key *string,
 			}
 			itkey := bt.getLeafKey(offset)
 			if !strings.HasPrefix(itkey, string(it.known)) {
+				// fmt.Printf("known %q index %q\nvalues %v\n",
+				// 	string(it.known), itkey, ixkey.DecodeValues(itkey))
 				panic("index key does not match data")
 			}
 			if *key > itkey {

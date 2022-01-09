@@ -298,19 +298,24 @@ func (nd *nodeSchema) forEach(fn func(*Schema)) {
 func (ht SchemaHamt) Write(st *stor.Stor, prevOff uint64,
 	filter func(it *Schema) bool) uint64 {
 	size := 0
+	ck := uint32(0)
 	ht.ForEach(func(it *Schema) {
 		if filter(it) {
 			size += it.storSize()
+		}
+		if !it.isTomb() {
+			ck += it.Cksum()
 		}
 	})
 	if size == 0 {
 		return 0
 	}
-	size += 3 + 5 + cksum.Len
+	size += 3 + 5 + cksum.Len + 4
 	off, buf := st.Alloc(size)
 	w := stor.NewWriter(buf)
 	w.Put3(size)
 	w.Put5(prevOff)
+	w.Put4(int(ck))
 	ht.ForEach(func(it *Schema) {
 		if filter(it) {
 			it.Write(w)
@@ -324,24 +329,43 @@ func (ht SchemaHamt) Write(st *stor.Stor, prevOff uint64,
 func ReadSchemaChain(st *stor.Stor, off uint64) (SchemaHamt, []uint64) {
 	offs := make([]uint64, 0, 8)
 	ht := SchemaHamt{}.Mutable()
+	tomb := make(map[string]struct{}, 16)
+	offs = append(offs, off)
+	var ck uint32
+	off, ck = ht.read(st, off, tomb)
 	for off != 0 {
 		offs = append(offs, off)
-		off = ht.read(st, off)
+		off, _ = ht.read(st, off, tomb)
+	}
+	ck2 := uint32(0)
+	ht.ForEach(func(it *Schema) {
+		ck2 += it.Cksum()
+	})
+	if ck != ck2 {
+		panic("metadata checksum mismatch")
 	}
 	return ht.Freeze(), offs
 }
 
-func (ht SchemaHamt) read(st *stor.Stor, off uint64) uint64 {
+func (ht SchemaHamt) read(st *stor.Stor, off uint64, tomb map[string]struct{}) (uint64, uint32) {
+	initial := ht.IsNil() // optimization
 	buf := st.Data(off)
 	size := stor.NewReader(buf).Get3()
 	cksum.MustCheck(buf[:size])
 	r := stor.NewReader(buf[3 : size-cksum.Len])
 	prevOff := r.Get5()
+	ck := uint32(r.Get4())
 	for r.Remaining() > 0 {
 		it := ReadSchema(st, r)
-		if _, ok := ht.Get(SchemaKey(it)); !ok {
-			ht.Put(it)
+		if initial || ht.get(SchemaKey(it)) == nil {
+			// doesn't exist yet
+			key := SchemaKey(it)
+			if it.isTomb() {
+				tomb[key] = struct{}{}
+			} else if _, ok := tomb[key]; !ok {
+				ht.Put(it)
+			}
 		}
 	}
-	return prevOff
+	return prevOff, ck
 }

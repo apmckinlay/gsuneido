@@ -206,3 +206,11 @@ func (m *Meta) ApplyPersist(updates []PersistUpdate) {
 	}
 	m.info = info.Freeze()
 }
+
+func (ti *Info) Cksum() uint32 {
+	cksum := hash.HashString(ti.Table) + uint32(ti.Nrows) + uint32(ti.Size)
+	for _, ov := range ti.Indexes {
+		cksum += ov.Cksum()
+	}
+	return cksum
+}

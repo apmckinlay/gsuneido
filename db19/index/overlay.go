@@ -26,10 +26,19 @@ type Overlay struct {
 	mut *ixbuf.T
 }
 
+func (ov *Overlay) Cksum() uint32 {
+	return ov.bt.Cksum()
+}
+
 func NewOverlay(store *stor.Stor, is *ixkey.Spec) *Overlay {
 	assert.That(is != nil)
 	return &Overlay{bt: btree.CreateBtree(store, is),
 		layers: []*ixbuf.T{{}}}
+}
+
+// Overlay stub is for tests
+func OverlayStub() *Overlay {
+	return &Overlay{bt: &btree.T{}}
 }
 
 func OverlayFor(bt *btree.T) *Overlay {

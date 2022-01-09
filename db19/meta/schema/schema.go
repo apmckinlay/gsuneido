@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
+	"github.com/apmckinlay/gsuneido/util/hash"
 	"github.com/apmckinlay/gsuneido/util/str"
 	"github.com/apmckinlay/gsuneido/util/strs"
 )
@@ -149,7 +150,7 @@ func (sc *Schema) checkLower() {
 func (sc *Schema) checkForKey() {
 	hasKey := false
 	for i := range sc.Indexes {
-		ix := sc.Indexes[i]
+		ix := &sc.Indexes[i]
 		if ix.Mode == 'k' {
 			hasKey = true
 		}
@@ -161,7 +162,7 @@ func (sc *Schema) checkForKey() {
 
 func CheckIndexes(table string, cols []string, idxs []Index) {
 	for i := range idxs {
-		ix := idxs[i]
+		ix := &idxs[i]
 		if ix.Mode != 'k' && len(ix.Columns) == 0 {
 			panic("index columns must not be empty")
 		}
@@ -173,4 +174,23 @@ func CheckIndexes(table string, cols []string, idxs []Index) {
 			}
 		}
 	}
+}
+
+func (sc *Schema) Cksum() uint32 {
+	cksum := hash.HashString(sc.Table)
+	for _, col := range sc.Columns {
+		cksum += hash.HashString(col)
+	}
+	for i := range sc.Indexes {
+		cksum += sc.Indexes[i].Cksum()
+	}
+	return cksum
+}
+
+func (ix *Index) Cksum() uint32 {
+	cksum := uint32(ix.Mode)
+	for _,col := range ix.Columns {
+		cksum += hash.HashString(col)
+	}
+	return cksum
 }
