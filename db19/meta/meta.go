@@ -236,7 +236,6 @@ func (m *Meta) RenameTable(from, to string) *Meta {
 
 // Drop removes a table or view
 func (m *Meta) Drop(name string) *Meta {
-	//TODO delete without tombstone if not persisted e.g. tests
 	if m.GetView(name) != "" {
 		// view
 		return m.Put(m.newSchemaTomb("="+name), nil)
@@ -251,8 +250,21 @@ func (m *Meta) Drop(name string) *Meta {
 			name + " <- " + strs.Join(",", list))
 	}
 	mu := newMetaUpdate(m)
-	mu.putSchema(m.newSchemaTomb(name))
-	mu.putInfo(m.newInfoTomb(name))
+	if ts.lastmod == mu.meta.schemaClock {
+		// not persisted so no need for tombstone
+		mu.schema = mu.meta.schema.Mutable()
+		mu.schema.Delete(ts.Table)
+	} else {
+		mu.putSchema(m.newSchemaTomb(name))
+	}
+	ti := m.schema.MustGet(ts.Table)
+	if ti.lastmod == mu.meta.infoClock {
+		// not persisted so no need for tombstone
+		mu.info = mu.meta.info.Mutable()
+		mu.info.Delete(ti.Table)
+	} else {
+		mu.putInfo(m.newInfoTomb(name))
+	}
 	m.dropFkeys(mu, &ts.Schema)
 	return mu.freeze()
 }
