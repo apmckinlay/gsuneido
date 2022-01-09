@@ -195,7 +195,7 @@ func (ics *indexCheckers) worker() {
 		ics.wg.Done()
 	}()
 	for ic := range ics.work {
-		CheckOtherIndex(ic.index, ic.count, ic.sum)
+		CheckOtherIndex(ic.index, ic.count, ic.sum, -1)
 	}
 }
 

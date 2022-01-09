@@ -115,7 +115,7 @@ func compactTable(state *DbState, src *Database, ts *meta.Schema, dst *Database)
 	list.Finish()
 	assert.This(count).Is(info.Nrows)
 	for i := 1; i < len(info.Indexes); i++ {
-		CheckOtherIndex(info.Indexes[i], count, sum)
+		CheckOtherIndex(info.Indexes[i], count, sum, i)
 	}
 	ov := buildIndexes(ts, list, dst.Store, count) // same as load
 	ti := &meta.Info{Table: ts.Table, Nrows: count, Size: size, Indexes: ov}

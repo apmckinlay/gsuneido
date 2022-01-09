@@ -77,12 +77,17 @@ func checkTable(state *DbState, table string) {
 	if size != info.Size {
 		panic(fmt.Sprintln("info.Size is ", info.Size, " data has ", size))
 	}
-	for _, ix := range info.Indexes[1:] {
-		CheckOtherIndex(ix, count, sum)
+	for i, ix := range info.Indexes[1:] {
+		CheckOtherIndex(ix, count, sum, i)
 	}
 }
 
 func checkFirstIndex(state *DbState, ix *index.Overlay) (int, uint64, uint64) {
+	defer func() {
+		if e := recover(); e != nil {
+			panic(fmt.Sprintln(0, e))
+		}
+	}()
 	sum := uint64(0)
 	size := uint64(0)
 	ix.CheckMerged()
@@ -96,7 +101,12 @@ func checkFirstIndex(state *DbState, ix *index.Overlay) (int, uint64, uint64) {
 	return count, size, sum
 }
 
-func CheckOtherIndex(ix *index.Overlay, nrows int, sumPrev uint64) {
+func CheckOtherIndex(ix *index.Overlay, nrows int, sumPrev uint64, iIndex int) {
+	defer func() {
+		if e := recover(); e != nil {
+			panic(fmt.Sprintln(iIndex, e))
+		}
+	}()
 	ix.CheckMerged()
 	sum := uint64(0)
 	count := ix.Check(func(off uint64) {
