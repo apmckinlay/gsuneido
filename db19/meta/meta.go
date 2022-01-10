@@ -28,7 +28,7 @@ type Meta struct {
 	schema SchemaHamt
 	info   InfoHamt
 	// difInfo is per transaction updates, overrides info
-	difInfo InfoHamt
+	difInfo map[string]*Info
 	// schemaOffs and infoOffs are offsets in the database file
 	// of the schema and info blocks in the current chain.
 	// These are used for merging blocks to control chain size.
@@ -42,9 +42,9 @@ type Meta struct {
 
 // Mutable returns a mutable copy of a Meta. Used by UpdateTran.
 func (m *Meta) Mutable() *Meta {
-	assert.That(m.difInfo.IsNil())
+	assert.That(m.difInfo == nil)
 	ov2 := *m // copy
-	ov2.difInfo = InfoHamt{}.Mutable()
+	ov2.difInfo = make(map[string]*Info)
 	return &ov2
 }
 
@@ -54,7 +54,7 @@ func (m *Meta) SameSchemaAs(m2 *Meta) bool {
 
 // GetRoInfo returns read-only Info for the table or nil if not found
 func (m *Meta) GetRoInfo(table string) *Info {
-	if ti, ok := m.difInfo.Get(table); ok {
+	if ti, ok := m.difInfo[table]; ok {
 		return ti
 	}
 	if ti, ok := m.info.Get(table); ok && !ti.isTomb() {
@@ -74,7 +74,7 @@ func copyInfo(ti *Info) *Info {
 }
 
 func (m *Meta) GetRwInfo(table string) *Info {
-	if pti, ok := m.difInfo.Get(table); ok {
+	if pti, ok := m.difInfo[table]; ok {
 		return pti // already have mutable
 	}
 	pti, ok := m.info.Get(table)
@@ -91,7 +91,7 @@ func (m *Meta) GetRwInfo(table string) *Info {
 		ti.Indexes[i] = ti.Indexes[i].Mutable()
 	}
 
-	m.difInfo.Put(&ti)
+	m.difInfo[table] = &ti
 	return &ti
 }
 
@@ -638,12 +638,12 @@ func (m *Meta) TouchIndexes(table string) *Meta {
 // Nor does it save the changes to disk, that is done later by persist.
 func (m *Meta) LayeredOnto(latest *Meta) *Meta {
 	// start with a snapshot of the latest hash table because it may have more
-	assert.That(latest.difInfo.IsNil())
+	assert.That(latest.difInfo == nil)
 	info := latest.info.Mutable()
-	m.difInfo.ForEach(func(ti *Info) {
+	for _, ti := range m.difInfo {
 		lti, ok := info.Get(ti.Table)
 		if !ok || lti.isTomb() {
-			return
+			continue
 		}
 		ti.Nrows = lti.Nrows + (ti.Nrows - ti.origNrows)
 		assert.That(ti.Nrows >= 0)
@@ -656,7 +656,7 @@ func (m *Meta) LayeredOnto(latest *Meta) *Meta {
 		}
 		ti.lastMod = m.infoClock
 		info.Put(ti)
-	})
+	}
 	result := *latest // copy
 	result.info = info.Freeze()
 	return &result
@@ -665,7 +665,7 @@ func (m *Meta) LayeredOnto(latest *Meta) *Meta {
 //-------------------------------------------------------------------
 
 func (m *Meta) Write(store *stor.Stor, flatten bool) (uint64, uint64) {
-	assert.That(m.difInfo.IsNil())
+	assert.That(m.difInfo == nil)
 	return m.WriteSchema(store, flatten), m.WriteInfo(store, flatten)
 }
 
