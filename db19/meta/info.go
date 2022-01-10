@@ -143,6 +143,9 @@ func (mu *MergeUpdate) Skip() bool {
 // ApplyMerge applies the updates collected by Merge.
 // It is called by state.go Database.Merge, inside UpdateState.
 func (m *Meta) ApplyMerge(updates []MergeUpdate) {
+	// NOTE: ApplyMerge and ApplyPersist have almost identical code.
+	// Any changes probably apply to both.
+	// TODO use generics to eliminate duplication
 	info := m.info.Mutable()
 	for _, up := range updates {
 		if ts, ok := m.schema.Get(up.table); ok && !ts.isTomb() && ts.Id != up.idTran {
@@ -191,6 +194,9 @@ func (m *Meta) Persist(exec func(func() PersistUpdate)) {
 // ApplyPersist takes the new btree roots from Persist
 // and updates the state with them.
 func (m *Meta) ApplyPersist(updates []PersistUpdate) {
+	// NOTE: ApplyMerge and ApplyPersist have almost identical code.
+	// Any changes probably apply to both.
+	// TODO use generics to eliminate duplication
 	info := m.info.Mutable()
 	for _, up := range updates {
 		if ts, ok := m.schema.Get(up.table); ok && !ts.isTomb() && ts.Id != up.idTran {
