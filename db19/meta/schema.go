@@ -21,8 +21,9 @@ type Schema struct {
 	schema.Schema
 	// Id is set on new tables and used to tell if a table has been recreated
 	Id int
-	// lastmod is used for persist
-	lastmod int
+	// lastMod must be set to Meta.infoClock on new or modified items.
+	// It is used for persist meta chaining/flattening.
+	lastMod int
 }
 
 //go:generate genny -in ../../genny/hamt/hamt.go -out schemahamt.go -pkg meta gen "Item=*Schema KeyType=string"

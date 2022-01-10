@@ -10,14 +10,17 @@ import (
 )
 
 type Info struct {
-	Table     string
-	Nrows     int
-	Size      uint64
+	Table string
+	Nrows int
+	Size  uint64
+	// origNrows and origSize are used to determine the changes (delta)
+	// made by a transaction. They are not used outside transactions.
 	origNrows int
 	origSize  uint64
 	Indexes   []*index.Overlay
-	// lastmod is used for persist meta chaining/flattening
-	lastmod int
+	// lastMod must be set to Meta.infoClock on new or modified items.
+	// It is used for persist meta chaining/flattening.
+	lastMod int
 }
 
 //go:generate genny -in ../../genny/hamt/hamt.go -out infohamt.go -pkg meta gen "Item=*Info KeyType=string"
@@ -150,7 +153,7 @@ func (m *Meta) ApplyMerge(updates []MergeUpdate) {
 			for i, ov := range ti.Indexes {
 				ti.Indexes[i] = ov.WithMerged(up.results[i], up.nmerged)
 			}
-			ti.lastmod = m.infoClock
+			ti.lastMod = m.infoClock
 			info.Put(ti)
 		}
 	}
@@ -200,7 +203,7 @@ func (m *Meta) ApplyPersist(updates []PersistUpdate) {
 					ti.Indexes[i] = ov.WithSaved(up.results[i])
 				}
 			}
-			ti.lastmod = m.infoClock
+			ti.lastMod = m.infoClock
 			info.Put(ti)
 		}
 	}

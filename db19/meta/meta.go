@@ -18,14 +18,24 @@ import (
 	"github.com/apmckinlay/gsuneido/util/strs"
 )
 
-// Meta is the schema and info metadata
-// difInfo is per transaction, overrides info
+// Meta is the schema and info metadata.
+// See also: schema.go - Schema, info.go - Info
 type Meta struct {
-	schema      SchemaHamt
-	info        InfoHamt
-	difInfo     InfoHamt
-	schemaOffs  []uint64
-	infoOffs    []uint64
+	// schema and info are immutable persistent hash tables.
+	// WARNING: do NOT modify the items from the hash tables.
+	// To modify an item, Get it, copy it, modify it, then Put the new version.
+	// Unfortunately, Go does not have any way to enforce this.
+	schema SchemaHamt
+	info   InfoHamt
+	// difInfo is per transaction updates, overrides info
+	difInfo InfoHamt
+	// schemaOffs and infoOffs are offsets in the database file
+	// of the schema and info blocks in the current chain.
+	// These are used for merging blocks to control chain size.
+	schemaOffs []uint64
+	infoOffs   []uint64
+	// schemaClock and infoClock are used to track which persist
+	// each Schema or Info item belongs to (using lastMod)
 	schemaClock int
 	infoClock   int
 }
@@ -128,12 +138,12 @@ func (m *Meta) ForEachInfo(fn func(*Info)) {
 // Put is used by Database.LoadedTable and admin schema changes
 func (m *Meta) Put(ts *Schema, ti *Info) *Meta {
 	cp := *m // copy
-	ts.lastmod = m.schemaClock
+	ts.lastMod = m.schemaClock
 	schema := m.schema.Mutable()
 	schema.Put(ts)
 	cp.schema = schema.Freeze()
 	if ti != nil {
-		ti.lastmod = m.infoClock
+		ti.lastMod = m.infoClock
 		info := m.info.Mutable()
 		info.Put(ti)
 		cp.info = info.Freeze()
@@ -163,7 +173,7 @@ func (mu *metaUpdate) putSchema(ts *Schema) {
 	if mu.schema == (SchemaHamt{}) {
 		mu.schema = mu.meta.schema.Mutable()
 	}
-	ts.lastmod = mu.meta.schemaClock
+	ts.lastMod = mu.meta.schemaClock
 	mu.schema.Put(ts)
 }
 
@@ -171,7 +181,7 @@ func (mu *metaUpdate) putInfo(ti *Info) {
 	if mu.info == (InfoHamt{}) {
 		mu.info = mu.meta.info.Mutable()
 	}
-	ti.lastmod = mu.meta.infoClock
+	ti.lastMod = mu.meta.infoClock
 	mu.info.Put(ti)
 }
 
@@ -250,7 +260,7 @@ func (m *Meta) Drop(name string) *Meta {
 			name + " <- " + strs.Join(",", list))
 	}
 	mu := newMetaUpdate(m)
-	if ts.lastmod == mu.meta.schemaClock {
+	if ts.lastMod == mu.meta.schemaClock {
 		// not persisted so no need for tombstone
 		mu.schema = mu.meta.schema.Mutable()
 		mu.schema.Delete(ts.Table)
@@ -258,7 +268,7 @@ func (m *Meta) Drop(name string) *Meta {
 		mu.putSchema(m.newSchemaTomb(name))
 	}
 	ti := m.schema.MustGet(ts.Table)
-	if ti.lastmod == mu.meta.infoClock {
+	if ti.lastMod == mu.meta.infoClock {
 		// not persisted so no need for tombstone
 		mu.info = mu.meta.info.Mutable()
 		mu.info.Delete(ti.Table)
@@ -644,7 +654,7 @@ func (m *Meta) LayeredOnto(latest *Meta) *Meta {
 		for i := range ti.Indexes {
 			ti.Indexes[i].UpdateWith(lti.Indexes[i])
 		}
-		ti.lastmod = m.infoClock
+		ti.lastMod = m.infoClock
 		info.Put(ti)
 	})
 	result := *latest // copy
@@ -662,7 +672,7 @@ func (m *Meta) Write(store *stor.Stor, flatten bool) (uint64, uint64) {
 func (m *Meta) WriteSchema(store *stor.Stor, flatten bool) uint64 {
 	npersists, timespan := mergeSize(m.schemaClock, flatten)
 	// fmt.Printf("clock %d = %b npersists %d timespan %d\n", m.schemaClock, m.schemaClock, npersists, timespan)
-	sfilter := func(ts *Schema) bool { return ts.lastmod >= m.schemaClock-timespan }
+	sfilter := func(ts *Schema) bool { return ts.lastMod >= m.schemaClock-timespan }
 	if flatten || npersists >= len(m.schemaOffs) {
 		sfilter = func(ts *Schema) bool { return !ts.isTomb() }
 	}
@@ -684,7 +694,7 @@ func (m *Meta) WriteSchema(store *stor.Stor, flatten bool) uint64 {
 func (m *Meta) WriteInfo(store *stor.Stor, flatten bool) uint64 {
 	npersists, timespan := mergeSize(m.infoClock, flatten)
 	// fmt.Printf("clock %d = %b npersists %d timespan %d\n", m.infoClock, m.infoClock, npersists, timespan)
-	ifilter := func(ti *Info) bool { return ti.lastmod >= m.infoClock-timespan }
+	ifilter := func(ti *Info) bool { return ti.lastMod >= m.infoClock-timespan }
 	if flatten || npersists >= len(m.infoOffs) {
 		ifilter = func(ti *Info) bool { return !ti.isTomb() }
 	}
