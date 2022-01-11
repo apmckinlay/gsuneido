@@ -83,6 +83,10 @@ func (sa *suMd5) Equal(other interface{}) bool {
 	return ok && sa == sa2
 }
 
+func (*suMd5) SetConcurrent() {
+	panic("Md5 can not be shared between threads")
+}
+
 func (*suMd5) Lookup(_ *Thread, method string) Callable {
 	return md5Methods[method]
 }

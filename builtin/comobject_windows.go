@@ -121,6 +121,10 @@ func (*suComObject) Type() types.Type {
 	return types.BuiltinClass
 }
 
+func (*suComObject) SetConcurrent() {
+	// ok since immutable (assuming the COM object is thread safe)
+}
+
 func (sco *suComObject) Lookup(_ *Thread, method string) Callable {
 	if f, ok := suComObjectMethods[method]; ok {
 		return f

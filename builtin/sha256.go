@@ -83,6 +83,10 @@ func (sa *suSha256) Equal(other interface{}) bool {
 	return ok && sa == sa2
 }
 
+func (*suSha256) SetConcurrent() {
+	panic("Sha256 can not be shared between threads")
+}
+
 func (*suSha256) Lookup(_ *Thread, method string) Callable {
 	return sha256Methods[method]
 }

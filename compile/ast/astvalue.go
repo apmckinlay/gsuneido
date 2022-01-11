@@ -493,6 +493,10 @@ func (a AstNodeValue) Equal(other interface{}) bool {
 	return ok && a == a2
 }
 
+func (*AstNodeValue) SetConcurrent() {
+	panic("AST values can not be shared between threads")
+}
+
 func (AstNodeValue) Lookup(*Thread, string) Callable {
 	return nil // no methods
 }

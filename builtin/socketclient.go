@@ -99,6 +99,11 @@ func (sc *suSocketClient) Equal(other interface{}) bool {
 	return ok && sc == sc2
 }
 
+func (*suSocketClient) SetConcurrent() {
+	//FIXME concurrency
+	// panic("SocketClient can not be shared between threads")
+}
+
 func (*suSocketClient) Lookup(_ *Thread, method string) Callable {
 	return suSocketClientMethods[method]
 }

@@ -770,6 +770,10 @@ func (SuDate) Call(*Thread, Value, *ArgSpec) Value {
 	panic("can't call Date")
 }
 
+func (SuDate) SetConcurrent() {
+	// immutable so ok
+}
+
 // DateMethods is initialized by the builtin package
 var DateMethods Methods
 

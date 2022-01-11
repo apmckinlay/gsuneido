@@ -159,6 +159,7 @@ func (*smi) Lookup(t *Thread, method string) Callable {
 }
 
 func (*smi) SetConcurrent() {
+	// immutable so ok
 }
 
 // Packable interface -----------------------------------------------

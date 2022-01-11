@@ -11,16 +11,13 @@ import (
 
 // SuQueryCursor is the common base for SuQuery and SuCursor
 type SuQueryCursor struct {
+	owner *Thread
 	CantConvert
 	// which is either "Cursor" or "Query"
 	which string
 	query string
 	iqc   IQueryCursor
 	eof   Dir
-}
-
-func newQueryCursor(which string, query string, iqc IQueryCursor) *SuQueryCursor {
-	return &SuQueryCursor{which: which, query: query, iqc: iqc}
 }
 
 func (qc *SuQueryCursor) Get(*Thread, Value) Value {
@@ -61,6 +58,10 @@ func (qc *SuQueryCursor) Call(*Thread, Value, *ArgSpec) Value {
 
 func (qc *SuQueryCursor) String() string {
 	return qc.which + "('" + qc.query + "')"
+}
+
+func (*SuQueryCursor) SetConcurrent() {
+	// allows multiple threads to reference but only owner can use
 }
 
 //-------------------------------------------------------------------
@@ -127,8 +128,9 @@ type SuQuery struct {
 	tran *SuTran
 }
 
-func NewSuQuery(tran *SuTran, query string, iquery IQuery) *SuQuery {
-	return &SuQuery{*newQueryCursor("Query", query, iquery), tran}
+func NewSuQuery(th *Thread, tran *SuTran, query string, iquery IQuery) *SuQuery {
+	return &SuQuery{tran: tran, SuQueryCursor: SuQueryCursor{
+			owner: th, which: "Query", query: query, iqc: iquery}}
 }
 
 var _ Value = (*SuQuery)(nil)
@@ -145,7 +147,11 @@ func (*SuQuery) Type() types.Type {
 // QueryMethods is initialized by the builtin package
 var QueryMethods Methods
 
-func (*SuQuery) Lookup(_ *Thread, method string) Callable {
+func (q *SuQuery) Lookup(th *Thread, method string) Callable {
+	//FIXME concurrency
+	// if q.owner != th {
+	// 	panic("can't use a query from a different thread")
+	// }
 	return QueryMethods[method]
 }
 
@@ -177,8 +183,9 @@ type SuCursor struct {
 	SuQueryCursor
 }
 
-func NewSuCursor(query string, icursor ICursor) *SuCursor {
-	return &SuCursor{*newQueryCursor("Cursor", query, icursor)}
+func NewSuCursor(th *Thread, query string, icursor ICursor) *SuCursor {
+	return &SuCursor{SuQueryCursor: SuQueryCursor{
+			owner: th, which: "Cursor", query: query, iqc: icursor}}
 }
 
 func (q *SuCursor) Equal(other interface{}) bool {
@@ -193,7 +200,11 @@ func (*SuCursor) Type() types.Type {
 // CursorMethods is initialized by the builtin package
 var CursorMethods Methods
 
-func (*SuCursor) Lookup(_ *Thread, method string) Callable {
+func (q *SuCursor) Lookup(th *Thread, method string) Callable {
+	//FIXME concurrency
+	// if q.owner != th {
+	// 	panic("can't use a query from a different thread")
+	// }
 	if f, ok := CursorMethods[method]; ok {
 		return f
 	}

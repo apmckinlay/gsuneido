@@ -307,9 +307,6 @@ func (CantConvert) Lookup(*Thread, string) Callable {
 	return nil
 }
 
-func (CantConvert) SetConcurrent() {
-}
-
 type ToStringable interface {
 	ToString(*Thread) string
 }

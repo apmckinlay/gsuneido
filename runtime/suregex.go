@@ -63,3 +63,7 @@ func (rx SuRegex) Call(*Thread, Value, *ArgSpec) Value {
 func (rx SuRegex) String() string {
 	return "SuRegex"
 }
+
+func (SuRegex) SetConcurrent() {
+	// immutable so ok
+}

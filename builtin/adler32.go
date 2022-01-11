@@ -83,6 +83,10 @@ func (sa *suAdler32) Equal(other interface{}) bool {
 	return ok && sa == sa2
 }
 
+func (*suAdler32) SetConcurrent() {
+	panic("Adler32 can not be shared between threads")
+}
+
 func (*suAdler32) Lookup(_ *Thread, method string) Callable {
 	return adler32Methods[method]
 }

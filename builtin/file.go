@@ -164,6 +164,10 @@ func (sf *suFile) Equal(other interface{}) bool {
 	return ok && sf == sf2
 }
 
+func (*suFile) SetConcurrent() {
+	panic("File can not be shared between threads")
+}
+
 func (*suFile) Lookup(_ *Thread, method string) Callable {
 	return suFileMethods[method]
 }

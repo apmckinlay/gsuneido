@@ -70,12 +70,16 @@ func (st *SuTran) String() string {
 	return st.itran.String()
 }
 
+func (st *SuTran) SetConcurrent() {
+	//FIXME not thread safe
+}
+
 // TranMethods is initialized by the builtin package
 var TranMethods Methods
 
 var gnTrans = Global.Num("Transactions")
 
-func (*SuTran) Lookup(t *Thread, method string) Callable {
+func (st *SuTran) Lookup(t *Thread, method string) Callable {
 	return Lookup(t, TranMethods, gnTrans, method)
 }
 
@@ -105,10 +109,10 @@ func (st *SuTran) GetRow(query string, dir Dir) (Row, *Header, string) {
 	return st.itran.Get(query, dir)
 }
 
-func (st *SuTran) Query(query string) *SuQuery {
+func (st *SuTran) Query(th *Thread, query string) *SuQuery {
 	st.ckActive()
 	iquery := st.itran.Query(query)
-	return NewSuQuery(st, query, iquery)
+	return NewSuQuery(th, st, query, iquery)
 }
 
 func (st *SuTran) ReadCount() int {

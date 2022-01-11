@@ -273,6 +273,7 @@ func (SuStr) Lookup(t *Thread, method string) Callable {
 }
 
 func (SuStr) SetConcurrent() {
+	// immutable so ok
 }
 
 // Packable interface -----------------------------------------------

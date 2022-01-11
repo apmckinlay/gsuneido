@@ -65,7 +65,7 @@ func init() {
 			func(th *Thread, as *ArgSpec, this Value, args []Value) Value {
 				query, args := extractQuery(th, queryBlockParams, as, args)
 				mustNotBeAction(query)
-				q := this.(*SuTran).Query(query)
+				q := this.(*SuTran).Query(th, query)
 				if args[1] == False {
 					return q
 				}

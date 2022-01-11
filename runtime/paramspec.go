@@ -163,6 +163,10 @@ func (ps *ParamSpec) Compare(other Value) int {
 	return 0 // ???
 }
 
+func (ParamSpec) SetConcurrent() {
+	// immutable so ok
+}
+
 // ParamsMethods is initialized by the builtin package
 var ParamsMethods Methods
 

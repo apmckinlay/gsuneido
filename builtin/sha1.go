@@ -83,6 +83,10 @@ func (sa *suSha1) Equal(other interface{}) bool {
 	return ok && sa == sa2
 }
 
+func (*suSha1) SetConcurrent() {
+	panic("Sha1 can not be shared between threads")
+}
+
 func (*suSha1) Lookup(_ *Thread, method string) Callable {
 	return sha1Methods[method]
 }
