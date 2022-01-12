@@ -342,7 +342,7 @@ func ReadSchemaChain(st *stor.Stor, off uint64) (SchemaHamt, []uint64) {
 		ck2 += it.Cksum()
 	})
 	if ck != ck2 {
-		panic("metadata checksum mismatch")
+		panic("Schema checksum mismatch")
 	}
 	return ht.Freeze(), offs
 }

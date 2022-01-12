@@ -342,7 +342,7 @@ func ReadInfoChain(st *stor.Stor, off uint64) (InfoHamt, []uint64) {
 		ck2 += it.Cksum()
 	})
 	if ck != ck2 {
-		panic("metadata checksum mismatch")
+		panic("Info checksum mismatch")
 	}
 	return ht.Freeze(), offs
 }
