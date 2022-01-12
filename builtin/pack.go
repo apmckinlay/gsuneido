@@ -14,5 +14,10 @@ var _ = builtin1("Pack(value)",
 
 var _ = builtin1("Unpack(string)",
 	func(arg Value) Value {
+		defer func() {
+			if e := recover(); e != nil {
+				panic("Unpack: not a valid packed value")
+			}
+		}()
 		return Unpack(ToStr(arg))
 	})
