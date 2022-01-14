@@ -418,7 +418,7 @@ func (db *Database) Schema(table string) string {
 	if ts == nil {
 		return ""
 	}
-	return ts.Schema.String()
+	return ts.Schema.String2()
 }
 
 func (db *Database) Size() uint64 {

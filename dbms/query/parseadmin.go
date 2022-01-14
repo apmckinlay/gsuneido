@@ -105,7 +105,11 @@ func (p *adminParser) rename1() (string, string) {
 }
 
 func (p *adminParser) Schema() Schema {
-	return p.schema()
+	result := p.schema()
+	if p.Token != tok.Eof {
+		p.Error("did not parse all input")
+	}
+	return result
 }
 
 func (p *adminParser) schema() Schema {

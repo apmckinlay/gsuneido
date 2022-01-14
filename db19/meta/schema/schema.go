@@ -49,6 +49,15 @@ const (
 )
 
 func (sc *Schema) String() string {
+	return sc.string(false)
+}
+
+// String2 includes fkToHere information
+func (sc *Schema) String2() string {
+	return sc.string(true)
+}
+
+func (sc *Schema) string(fktohere bool) string {
 	var sb strings.Builder
 	sb.WriteString(sc.Table)
 	sb.WriteString(" ")
@@ -67,13 +76,17 @@ func (sc *Schema) String() string {
 	sep := ""
 	for i := range sc.Indexes {
 		sb.WriteString(sep)
-		sb.WriteString(sc.Indexes[i].String())
+		sb.WriteString(sc.Indexes[i].string(fktohere))
 		sep = " "
 	}
 	return sb.String()
 }
 
 func (ix *Index) String() string {
+	return ix.string(false)
+}
+
+func (ix *Index) string(fktohere bool) string {
 	s := map[int]string{'k': "key", 'i': "index", 'u': "index unique"}[ix.Mode]
 	s += strs.Join("(,)", ix.Columns)
 	if ix.Fk.Table != "" {
@@ -88,14 +101,15 @@ func (ix *Index) String() string {
 			}
 		}
 	}
-	fkToHere := make([]string, len(ix.FkToHere))
-	for i, fk := range ix.FkToHere {
-		fkToHere[i] = " from " + fk.Table + strs.Join("(,)", fk.Columns)
+	if fktohere {
+		toHere := make([]string, len(ix.FkToHere))
+		for i, fk := range ix.FkToHere {
+			toHere[i] = " from " + fk.Table + strs.Join("(,)", fk.Columns)
+		}
+		// sort for consistency in tests
+		sort.Slice(toHere, func(i, j int) bool { return toHere[i] < toHere[j] })
+		s += strs.Join("", toHere)
 	}
-	// sort for consistency in tests
-	sort.Slice(fkToHere, func(i, j int) bool { return fkToHere[i] < fkToHere[j] })
-	s += strs.Join("", fkToHere)
-
 	return s
 }
 
@@ -189,7 +203,7 @@ func (sc *Schema) Cksum() uint32 {
 
 func (ix *Index) Cksum() uint32 {
 	cksum := uint32(ix.Mode)
-	for _,col := range ix.Columns {
+	for _, col := range ix.Columns {
 		cksum += hash.HashString(col)
 	}
 	return cksum

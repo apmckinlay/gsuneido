@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"math"
 	"os"
+	"sort"
 	"sync"
 	"sync/atomic"
 
@@ -46,15 +47,19 @@ func Dump(db *Database, to string) (ntables int, err error) {
 
 	state := db.Persist()
 	dumpViews(state, w)
+	schemas := make([]string, 0, 512)
 	state.Meta.ForEachSchema(func(sc *meta.Schema) {
-		dumpTable2(db, sc, true, w, ics)
-		ntables++
+		schemas = append(schemas, sc.String())
 	})
+	sort.Strings(schemas)
+	for _, schema := range schemas {
+		dumpTable2(db, schema, true, w, ics)
+	}
 	ck(w.Flush())
 	f.Close()
 	ics.finish()
 	ck(RenameBak(tmpfile, to))
-	return ntables, nil
+	return len(schemas), nil
 }
 
 // DumpTable exports a dumped table to a file.
@@ -83,13 +88,12 @@ func DumpDbTable(db *Database, table, to string) (nrecs int, err error) {
 	if schema == nil {
 		return 0, errors.New("dump failed: can't find " + table)
 	}
-	nrecs = dumpTable2(db, schema, false, w, ics)
+	nrecs = dumpTable2(db, schema.String(), false, w, ics)
 	ck(w.Flush())
 	f.Close()
 	ics.finish()
 	ck(RenameBak(tmpfile, to))
 	return nrecs, nil
-
 }
 
 func dumpOpen() (*os.File, *bufio.Writer) {
@@ -100,16 +104,16 @@ func dumpOpen() (*os.File, *bufio.Writer) {
 	return f, w
 }
 
-func dumpTable2(db *Database, schema *meta.Schema, multi bool, w *bufio.Writer,
+func dumpTable2(db *Database, schema string, multi bool, w *bufio.Writer,
 	ics *indexCheckers) int {
 	state := db.GetState()
 	w.WriteString("====== ")
-	s := schema.String()
+	table := str.BeforeFirst(schema, " ")
 	if !multi {
-		s = str.AfterFirst(s, " ")
+		schema = str.AfterFirst(schema, " ")
 	}
-	w.WriteString(s + "\n")
-	info := state.Meta.GetRoInfo(schema.Table)
+	w.WriteString(schema + "\n")
+	info := state.Meta.GetRoInfo(table)
 	sum := uint64(0)
 	count := info.Indexes[0].Check(func(off uint64) {
 		sum += off                       // addition so order doesn't matter
