@@ -73,7 +73,7 @@ func Compact(dbfile string) (ntables int, err error) {
 	}
 	close(channel)
 	wg.Wait()
-	dst.GetState().Write(true)
+	dst.GetState().Write()
 	dst.Close()
 	src.Close()
 	ck(RenameBak(tmpfile, dbfile))

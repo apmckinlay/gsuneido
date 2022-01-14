@@ -70,7 +70,7 @@ loop:
 					} else {
 						// persist
 						if db.GetState() != prevState {
-							prevState = db.persist(ep, false)
+							prevState = db.persist(ep)
 						}
 						m.ret <- prevState
 					}
@@ -86,13 +86,13 @@ loop:
 			}
 		case <-ticker.C:
 			if db.GetState() != prevState {
-				prevState = db.persist(ep, false)
+				prevState = db.persist(ep)
 			}
 		}
 	}
 	close(em.jobChan)
 	if db.GetState() != prevState {
-		db.persist(ep, false)
+		db.persist(ep)
 	}
 	close(allDone)
 }

@@ -20,6 +20,7 @@ func TestInfo(t *testing.T) {
 		Table:   "one",
 		Nrows:   100,
 		Size:    1000,
+		lastMod: -1,
 		Indexes: []*index.Overlay{index.OverlayStub()},
 	}
 	assert.That(!one.isTomb())
@@ -27,6 +28,7 @@ func TestInfo(t *testing.T) {
 		Table:   "two",
 		Nrows:   200,
 		Size:    2000,
+		lastMod: -1,
 		Indexes: []*index.Overlay{index.OverlayStub()},
 	}
 	tbl := InfoHamt{}.Mutable()
@@ -37,7 +39,9 @@ func TestInfo(t *testing.T) {
 	st.Alloc(1) // avoid offset 0
 	off := tbl.Write(st, 0, allInfo)
 
-	tbl, _ = ReadInfoChain(st, off)
+	ic := ReadInfoChain(st, off)
+	assert.This(ic.ages[0]).Is(ic.MustGet("one").lastMod)
+	tbl = ic.InfoHamt
 	x, _ := tbl.Get("one")
 	x.Indexes = nil
 	one.Indexes = nil
@@ -56,7 +60,7 @@ func TestInfo2(t *testing.T) {
 	st.Alloc(1) // avoid offset 0
 	off := tbl.Write(st, 0, allInfo)
 
-	tbl, _ = ReadInfoChain(st, off)
+	tbl = ReadInfoChain(st, off).InfoHamt
 	for i, s := range data {
 		ti, _ := tbl.Get(s)
 		assert.T(t).Msg("table").This(ti.Table).Is(s)

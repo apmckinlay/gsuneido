@@ -116,8 +116,8 @@ type persistfn func(*DbState) []meta.PersistUpdate
 // It is called from concur.go regularly e.g. once per minute.
 // flatten applies to the schema and info chains (not indexes).
 // NOTE: persist should only be called by the checker.
-func (db *Database) persist(exec execPersist, flatten bool) *DbState {
-	// fmt.Println("persist", flatten)
+func (db *Database) persist(exec execPersist) *DbState {
+	// fmt.Println("persist")
 	var newState *DbState
 	db.GetState().Meta.Persist(exec.Submit) // outside UpdateState
 	updates := exec.Results()
@@ -125,7 +125,9 @@ func (db *Database) persist(exec execPersist, flatten bool) *DbState {
 		meta := *state.Meta // copy
 		meta.ApplyPersist(updates)
 		state.Meta = &meta
-		state.Write(flatten) //TODO does this need to be inside UpdateState ?
+		// Write modifies schema/info offs,ages,clock
+		// so it must be inside UpdateState
+		state.Write()
 		newState = state
 	})
 	return newState
@@ -138,9 +140,9 @@ const stateLen = len(magic1) + dateSize + 2*stor.SmallOffsetLen +
 	len(magic2) + cksum.Len
 const magic2at = stateLen - len(magic2)
 
-func (state *DbState) Write(flatten bool) uint64 {
+func (state *DbState) Write() uint64 {
 	// NOTE: indexes should already have been saved
-	offSchema, offInfo := state.Meta.Write(state.store, flatten)
+	offSchema, offInfo := state.Meta.Write(state.store)
 	return writeState(state.store, offSchema, offInfo)
 }
 

@@ -446,7 +446,7 @@ func (db *Database) Close() {
 	if db.ck != nil {
 		db.ck.Stop()
 	} else if db.mode != stor.READ {
-		db.persist(&execPersistSingle{}, true) // for testing
+		db.persist(&execPersistSingle{}) // for testing
 	}
 	if db.mode != stor.READ {
 		db.writeSize()

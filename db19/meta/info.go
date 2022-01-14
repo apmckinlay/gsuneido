@@ -156,11 +156,11 @@ func (m *Meta) ApplyMerge(updates []MergeUpdate) {
 			for i, ov := range ti.Indexes {
 				ti.Indexes[i] = ov.WithMerged(up.results[i], up.nmerged)
 			}
-			ti.lastMod = m.infoClock
+			ti.lastMod = m.info.clock
 			info.Put(ti)
 		}
 	}
-	m.info = info.Freeze()
+	m.info.InfoHamt = info.Freeze()
 }
 
 //-------------------------------------------------------------------
@@ -209,11 +209,11 @@ func (m *Meta) ApplyPersist(updates []PersistUpdate) {
 					ti.Indexes[i] = ov.WithSaved(up.results[i])
 				}
 			}
-			ti.lastMod = m.infoClock
+			ti.lastMod = m.info.clock
 			info.Put(ti)
 		}
 	}
-	m.info = info.Freeze()
+	m.info.InfoHamt = info.Freeze()
 }
 
 func (ti *Info) Cksum() uint32 {

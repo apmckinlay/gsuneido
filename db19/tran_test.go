@@ -73,23 +73,29 @@ func TestTran(t *testing.T) {
 		db.CommitMerge(ut) // commit synchronously
 		if i%100 == 50 {
 			if i%500 != 250 {
-				db.persist(&execPersistSingle{}, false)
+				db.persist(&execPersistSingle{})
 			} else {
 				db.Close()
 				db, err = OpenDatabase("tmp.db")
 				ck(err)
 				db.CheckerSync()
+				ck(db.Check())
 			}
 		}
 	}
-	db.persist(&execPersistSingle{}, true)
+	db.persist(&execPersistSingle{})
 	ck(db.Check())
+	rt := db.NewReadTran()
+	ti := rt.meta.GetRoInfo("mytable")
+	assert.T(t).Msg("nrows").This(ti.Nrows).Is(nout)
+	assert.T(t).Msg("size").This(ti.Size).Is(nout * 23)
 	db.Close()
 
 	db, err = OpenDatabaseRead("tmp.db")
 	ck(err)
-	rt := db.NewReadTran()
-	ti := rt.meta.GetRoInfo("mytable")
+	ck(db.Check())
+	rt = db.NewReadTran()
+	ti = rt.meta.GetRoInfo("mytable")
 	assert.T(t).Msg("nrows").This(ti.Nrows).Is(nout)
 	assert.T(t).Msg("size").This(ti.Size).Is(nout * 23)
 	db.Close()

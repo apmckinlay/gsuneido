@@ -9,6 +9,7 @@ import (
 
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
+	"github.com/apmckinlay/gsuneido/util/ints"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
@@ -24,7 +25,7 @@ func TestMeta(t *testing.T) {
 		})
 	}
 	tbl = tbl.Freeze()
-	meta := &Meta{info: tbl}
+	meta := &Meta{info: InfoChain{InfoHamt: tbl}}
 
 	for i := 0; i < 4; i++ {
 		m := meta.Mutable()
@@ -38,23 +39,56 @@ func TestMeta(t *testing.T) {
 
 	// persist state
 	st := stor.HeapStor(32 * 1024)
-	meta.Write(st, true)
+	meta.Write(st)
 
 	// test that nothing is written if no changes
 	size := st.Size()
-	meta.Write(st, false)
+	meta.Write(st)
 	assert.T(t).This(st.Size()).Is(size)
 }
 
-func TestMergeSize(t *testing.T) {
-	assert := assert.T(t)
-	test := func (clock, expected_npersists, expected_timespan int) {
-		t.Helper()
-		npersists, timespan := mergeSize(clock, false)
-		assert.Msg("npersists").This(npersists).Is(expected_npersists)
-		assert.Msg("timespan").This(timespan).Is(expected_timespan)
+func TestChunkingSimulation(t *testing.T) {
+	const n = 128
+	const maxChain = 5
+	clock := 0
+	data := make([]int, n)
+	// chunks represents what would be stored in the database
+	chunks := [][]int{}
+	ages := []int{} // parallel with chunks
+	updates := rand.Perm(n)
+	// run simulation
+	for step := 0; step < n; step++ {
+		data[updates[step]] = clock
+		// fmt.Println("--- update", updates[step])
+		// number of previous chunks to merge with
+		merge := ints.Min(len(chunks), trailingOnes(clock))
+		if len(chunks) >= maxChain {
+			// fmt.Println("MAX")
+			merge = maxChain
+		}
+		oldest := clock
+		if merge > 0 {
+			oldest = ages[len(ages)-merge]
+		}
+		// fmt.Println("clock", clock, "merge", merge, "oldest", oldest)
+		chunk := []int{}
+		for i, p := range data {
+			if p >= oldest {
+				chunk = append(chunk, i)
+			}
+		}
+		chunks = chunks[:len(chunks)-merge]
+		ages = ages[:len(ages)-merge]
+		chunks = append(chunks, chunk)
+		ages = append(ages, oldest)
+		// fmt.Println("chunks", chunks)
+		// fmt.Println("ages", ages)
+		assert.That(len(chunks) == len(ages))
+		clock++
 	}
-	test(0, 0, 0)
-	test(1, 1, 1)
-	test(0b100111, 3, 7)
+	assert.T(t).This(len(chunks)).Is(1)
+	assert.T(t).This(ages[0]).Is(0)
+	for i := 0; i < n; i++ {
+		assert.That(chunks[0][i] == i)
+	}
 }

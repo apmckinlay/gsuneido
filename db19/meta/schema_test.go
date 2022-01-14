@@ -41,8 +41,9 @@ func TestSchema(t *testing.T) {
 		assert(ts.Indexes[0].Columns).Msg("indexes").Is([]string{"one"})
 	}
 
-	tbl,_ = ReadSchemaChain(st, off)
+	sc := ReadSchemaChain(st, off)
+	assert.T(t).This(sc.ages[0]).Is(sc.MustGet(data[0]).lastMod)
 	for i, table := range data {
-		test(i, table, tbl.MustGet(table))
+		test(i, table, sc.MustGet(table))
 	}
 }

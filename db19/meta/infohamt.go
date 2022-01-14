@@ -326,16 +326,17 @@ func (ht InfoHamt) Write(st *stor.Stor, prevOff uint64,
 	return off
 }
 
-func ReadInfoChain(st *stor.Stor, off uint64) (InfoHamt, []uint64) {
+func ReadInfoChain(st *stor.Stor, off uint64) InfoChain {
 	offs := make([]uint64, 0, 8)
 	ht := InfoHamt{}.Mutable()
 	tomb := make(map[string]struct{}, 16)
 	offs = append(offs, off)
 	var ck uint32
-	off, ck = ht.read(st, off, tomb)
-	for off != 0 {
+	lastMod := -1
+	off, ck = ht.read(st, off, tomb, lastMod)
+	for lastMod--; off != 0; lastMod-- {
 		offs = append(offs, off)
-		off, _ = ht.read(st, off, tomb)
+		off, _ = ht.read(st, off, tomb, lastMod)
 	}
 	ck2 := uint32(0)
 	ht.ForEach(func(it *Info) {
@@ -344,10 +345,20 @@ func ReadInfoChain(st *stor.Stor, off uint64) (InfoHamt, []uint64) {
 	if ck != ck2 {
 		panic("Info checksum mismatch")
 	}
-	return ht.Freeze(), offs
+	ages := make([]int, len(offs))
+	for i := range ages {
+		lastMod++
+		ages[i] = lastMod
+	}
+	return InfoChain{
+		InfoHamt: ht.Freeze(),
+		offs:     reverse(offs),
+		ages:     ages,
+	}
 }
 
-func (ht InfoHamt) read(st *stor.Stor, off uint64, tomb map[string]struct{}) (uint64, uint32) {
+func (ht InfoHamt) read(st *stor.Stor, off uint64, tomb map[string]struct{},
+	lastMod int) (uint64, uint32) {
 	initial := ht.IsNil() // optimization
 	buf := st.Data(off)
 	size := stor.NewReader(buf).Get3()
@@ -363,9 +374,57 @@ func (ht InfoHamt) read(st *stor.Stor, off uint64, tomb map[string]struct{}) (ui
 			if it.isTomb() {
 				tomb[key] = struct{}{}
 			} else if _, ok := tomb[key]; !ok {
+				it.lastMod = lastMod
 				ht.Put(it)
 			}
 		}
 	}
 	return prevOff, ck
+}
+
+type InfoChain struct {
+	InfoHamt
+	// clock counts persists.
+	// lastMod is set to the current clock to mark an item as modified.
+	clock int
+	// offs are the offsets in the database file
+	// of the item chunks in the current chain, oldest first.
+	// These are used for "merging" chunks to manage chain size.
+	offs []uint64
+	// ages are the oldest/min ages in the chunks.
+	// They are parallel to offs (same len).
+	ages []int
+}
+
+// WriteChain writes a new chunk of items
+// containing at least the newly modified items
+// plus the contents of zero or more older chunks.
+// Conceptually we merge chunks,
+// but actually we write a new chunk containing old and new items
+// and unlink/abandon the old chunk(s).
+func (c *InfoChain) WriteChain(store *stor.Stor) uint64 {
+	no := len(c.offs)
+	merge := nmerge(no, c.clock)
+	oldest := c.clock
+	if merge > 0 {
+		oldest = c.ages[no-merge]
+	}
+	filter := func(ts *Info) bool { return ts.lastMod >= oldest }
+	if merge == no {
+		filter = func(ts *Info) bool { return !ts.isTomb() }
+	}
+	prevOff := uint64(0)
+	if no > 0 && merge < no {
+		prevOff = c.offs[no-merge-1]
+	}
+	off := c.Write(store, prevOff, filter)
+	if off != 0 {
+		c.offs = append(c.offs[:no-merge], off)
+		c.ages = append(c.ages[:no-merge], oldest)
+		assert.That(len(c.offs) == len(c.ages))
+		c.clock++
+	} else if no > 0 {
+		off = c.offs[no-1] // nothing written, return current chain
+	}
+	return off
 }

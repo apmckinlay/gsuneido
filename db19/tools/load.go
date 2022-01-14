@@ -69,7 +69,7 @@ func LoadDatabase(from, dbfile string) int {
 	close(channel)
 	wg.Wait()
 	trace("SIZE", db.Store.Size())
-	db.GetState().Write(true)
+	db.GetState().Write()
 	db.Close()
 	ck(RenameBak(tmpfile, dbfile))
 	return nTables
@@ -102,7 +102,7 @@ func LoadDbTable(table string, db *Database) int {
 	defer f.Close()
 	schema := table + " " + readLinePrefixed(r, "====== ")
 	nrecs := loadTable(db, r, schema, nil)
-	db.GetState().Write(true)
+	db.GetState().Write()
 	return nrecs
 }
 
