@@ -260,21 +260,8 @@ func (m *Meta) Drop(name string) *Meta {
 			name + " <- " + strs.Join(",", list))
 	}
 	mu := newMetaUpdate(m)
-	if ts.lastMod == mu.meta.schemaClock {
-		// not persisted so no need for tombstone
-		mu.schema = mu.meta.schema.Mutable()
-		mu.schema.Delete(ts.Table)
-	} else {
-		mu.putSchema(m.newSchemaTomb(name))
-	}
-	ti := m.schema.MustGet(ts.Table)
-	if ti.lastMod == mu.meta.infoClock {
-		// not persisted so no need for tombstone
-		mu.info = mu.meta.info.Mutable()
-		mu.info.Delete(ti.Table)
-	} else {
-		mu.putInfo(m.newInfoTomb(name))
-	}
+	mu.putSchema(m.newSchemaTomb(name))
+	mu.putInfo(m.newInfoTomb(name))
 	m.dropFkeys(mu, &ts.Schema)
 	return mu.freeze()
 }
