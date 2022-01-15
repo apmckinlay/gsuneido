@@ -400,10 +400,11 @@ type ItemChain struct {
 // WriteChain writes a new chunk of items
 // containing at least the newly modified items
 // plus the contents of zero or more older chunks.
+// It returns a new ItemChain. It does not modify the original.
 // Conceptually we merge chunks,
 // but actually we write a new chunk containing old and new items
 // and unlink/abandon the old chunk(s).
-func (c *ItemChain) WriteChain(store *stor.Stor) uint64 {
+func (c *ItemChain) WriteChain(store *stor.Stor) (uint64, ItemChain) {
 	no := len(c.offs)
 	merge := nmerge(no, c.clock)
 	oldest := c.clock
@@ -419,13 +420,29 @@ func (c *ItemChain) WriteChain(store *stor.Stor) uint64 {
 		prevOff = c.offs[no-merge-1]
 	}
 	off := c.Write(store, prevOff, filter)
-	if off != 0 {
-		c.offs = append(c.offs[:no-merge], off)
-		c.ages = append(c.ages[:no-merge], oldest)
-		assert.That(len(c.offs) == len(c.ages))
-		c.clock++
-	} else if no > 0 {
-		off = c.offs[no-1] // nothing written, return current chain
+	if off == 0 {
+		if no > 0 {
+			off = c.offs[no-1]  // nothing written, return current chain
+		}
+		return off, *c
 	}
-	return off
+	n := no - merge
+	c2 := ItemChain{
+		ItemHamt: c.ItemHamt,
+		clock: c.clock + 1,
+		offs: append(c.offs[:n:n], off), // copy
+		ages: append(c.ages[:n:n], oldest), // copy
+	}
+	return off, c2
+}
+
+func (c *ItemChain) Cksum() uint32 {
+	cksum := uint32(c.clock)
+	for i := range c.offs {
+		cksum += uint32(c.offs[i]) + uint32(c.ages[i])
+	}
+	c.ForEach(func(it Item) {
+		cksum += it.Cksum()
+	})
+	return cksum
 }

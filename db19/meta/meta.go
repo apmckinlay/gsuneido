@@ -644,9 +644,11 @@ func (m *Meta) LayeredOnto(latest *Meta) *Meta {
 
 const maxChain = 7 // ???
 
-func (m *Meta) Write(store *stor.Stor) (uint64, uint64) {
+func (m *Meta) Write(store *stor.Stor) (schemaOff uint64, infoOff uint64) {
 	assert.That(m.difInfo == nil)
-	return m.schema.WriteChain(store), m.info.WriteChain(store)
+	schemaOff, m.schema = m.schema.WriteChain(store)
+	infoOff, m.info = m.info.WriteChain(store)
+	return schemaOff, infoOff
 }
 
 func ReadMeta(store *stor.Stor, offSchema, offInfo uint64) *Meta {
