@@ -557,11 +557,12 @@ func (m *Meta) dropFkeys(mu *metaUpdate, drop *schema.Schema) {
 		if len(fkCols) == 0 {
 			fkCols = idx.Columns
 		}
-		target, ok := m.schema.Get(fk.Table)
+		t, ok := mu.schema.Get(fk.Table)
 		if !ok {
 			log.Println("foreign key: can't find", fk.Table, "(from "+drop.Table+")")
 			continue
 		}
+		target := *t // copy
 		target.Indexes = append(target.Indexes[:0:0], target.Indexes...) // copy
 		for j := range target.Indexes {
 			ix := &target.Indexes[j]
@@ -578,7 +579,7 @@ func (m *Meta) dropFkeys(mu *metaUpdate, drop *schema.Schema) {
 				ix.FkToHere = fkToHere
 			}
 		}
-		mu.putSchema(target)
+		mu.putSchema(&target)
 	}
 }
 
