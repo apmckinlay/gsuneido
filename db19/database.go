@@ -452,7 +452,6 @@ func (db *Database) Close() {
 		db.writeSize()
 	}
 	db.Store.Close()
-	db.Store = nil
 }
 
 func (db *Database) writeSize() {
