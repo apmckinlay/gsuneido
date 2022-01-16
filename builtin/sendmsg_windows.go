@@ -303,10 +303,16 @@ var _ = builtin4("SendMessageSBPART(hwnd, msg, wParam, sbpart)",
 		np := ToInt(c)
 		n := uintptr(np) * int32Size
 		p := heap.Alloc(n)
-		ob := ToContainer(d.Get(nil, SuStr("parts")))
-		for i := 0; i < np && i < ob.ListSize(); i++ {
-			*(*int32)(unsafe.Pointer(uintptr(p) + int32Size*uintptr(i))) =
-				int32(ToInt(ob.ListGet(i)))
+		var ob Container
+		if parts := d.Get(nil, SuStr("parts")); parts != nil {
+			ob = ToContainer(parts)
+			for i := 0; i < np && i < ob.ListSize(); i++ {
+				*(*int32)(unsafe.Pointer(uintptr(p) + int32Size*uintptr(i))) =
+					int32(ToInt(ob.ListGet(i)))
+			}
+		} else {
+			ob = &SuObject{}
+			d.Put(nil, SuStr("parts"), ob)
 		}
 		rtn := goc.Syscall4(sendMessage,
 			intArg(a),
