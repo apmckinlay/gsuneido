@@ -31,6 +31,10 @@ type Meta struct {
 	difInfo map[string]*Info
 }
 
+func (m *Meta) Cksum() uint32 {
+	return m.schema.Cksum() + m.info.Cksum()
+}
+
 // Mutable returns a mutable copy of a Meta. Used by UpdateTran.
 func (m *Meta) Mutable() *Meta {
 	assert.That(m.difInfo == nil)
@@ -736,4 +740,14 @@ func (m *Meta) CheckAllMerged() {
 			ov.CheckMerged()
 		}
 	})
+}
+
+func (m *Meta) Offsets() (schemaOff, infoOff uint64) {
+	if ns := len(m.schema.offs); ns > 0 {
+		schemaOff = m.schema.offs[ns-1]
+	}
+	if ni := len(m.info.offs); ni > 0 {
+		infoOff = m.info.offs[ni-1]
+	}
+	return
 }

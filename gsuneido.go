@@ -276,11 +276,30 @@ func openDbms() {
 	dbmsLocal = dbms.NewDbmsLocal(db)
 	GetDbms = func() IDbms { return dbmsLocal }
 	exit.Add(dbmsLocal.Close)
+	// go checkState()
 }
 
 func closeDbms() {
 	if db != nil {
 		db.Close()
+	}
+}
+
+func checkState() {
+	for {
+		state := db.GetState()
+		cksum := state.Meta.Cksum()
+		// read meta to verify checksums
+		schemaOff, infoOff := state.Meta.Offsets()
+		if schemaOff != 0 {
+			meta.ReadSchemaChain(db.Store, schemaOff)
+		}
+		if schemaOff != 0 {
+			meta.ReadInfoChain(db.Store, infoOff)
+		}
+		time.Sleep(50 * time.Millisecond)
+		// recalculate checksum to verify Meta hasn't been mutated
+		assert.That(state.Meta.Cksum() == cksum)
 	}
 }
 
