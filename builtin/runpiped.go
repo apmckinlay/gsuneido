@@ -146,7 +146,8 @@ func (rp *suRunPiped) Equal(other interface{}) bool {
 }
 
 func (*suRunPiped) SetConcurrent() {
-	panic("RunPiped can not be shared between threads")
+	//FIXME concurrency
+	// panic("RunPiped can not be shared between threads")
 }
 
 func (*suRunPiped) Lookup(_ *Thread, method string) Callable {
