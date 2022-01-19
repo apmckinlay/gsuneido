@@ -33,7 +33,7 @@ func (ov *Overlay) Cksum() uint32 {
 func NewOverlay(store *stor.Stor, is *ixkey.Spec) *Overlay {
 	assert.That(is != nil)
 	return &Overlay{bt: btree.CreateBtree(store, is),
-		layers: []*ixbuf.T{{}}}
+		layers: []*ixbuf.T{{}}} // single base layer
 }
 
 // Overlay stub is for tests
@@ -42,7 +42,7 @@ func OverlayStub() *Overlay {
 }
 
 func OverlayFor(bt *btree.T) *Overlay {
-	return &Overlay{bt: bt, layers: []*ixbuf.T{{}}}
+	return &Overlay{bt: bt, layers: []*ixbuf.T{{}}} // single base layer
 }
 
 func OverlayForN(bt *btree.T, nlayers int) *Overlay {
@@ -60,6 +60,8 @@ func (ov *Overlay) Nlayers() int {
 // Mutable returns a modifiable copy of an Overlay
 func (ov *Overlay) Mutable() *Overlay {
 	assert.That(ov.mut == nil)
+	assert.That(len(ov.layers) > 0)
+	assert.That(ov.layers[0] != nil)
 	layers := make([]*ixbuf.T, len(ov.layers))
 	copy(layers, ov.layers)
 	assert.That(len(layers) >= 1)
@@ -187,14 +189,14 @@ func ReadOverlay(st *stor.Stor, r *stor.Reader) *Overlay {
 //-------------------------------------------------------------------
 
 // UpdateWith combines the overlay result of a transaction
-// with the latest overlay.
+// with the latest overlay. It is called by Meta.LayeredOnto.
 // The immutable part of ov was taken at the start of the transaction
 // so it will be out of date.
 // The checker ensures that the updates are independent.
 func (ov *Overlay) UpdateWith(latest *Overlay) {
 	ov.bt = latest.bt
 	// reuse the new slice and overwrite ov.layers with the latest
-	ov.layers = append(ov.layers[:0], latest.layers...)
+	ov.layers = append(ov.layers[:0], latest.layers...) // copy
 	// add mut updates
 	ov.layers = append(ov.layers, ov.mut)
 	ov.mut = nil
@@ -212,6 +214,7 @@ func (ov *Overlay) Merge(nmerge int) MergeResult {
 	return ixbuf.Merge(ov.layers[:nmerge+1]...)
 }
 
+// WithMerged is called by Meta.ApplyMerge
 func (ov *Overlay) WithMerged(mr MergeResult, nmerged int) *Overlay {
 	layers := make([]*ixbuf.T, len(ov.layers)-nmerged)
 	layers[0] = mr

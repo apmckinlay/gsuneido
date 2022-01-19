@@ -122,7 +122,10 @@ func (ck *Check) next() int {
 }
 
 // AddExclusive is used for creating indexes on existing tables
-func (ck *Check) AddExclusive(table string) {
+func (ck *Check) AddExclusive(table string) bool {
+	if end, ok := ck.exclusive[table]; ok && end == math.MaxInt {
+		return false // already exclusive
+	}
 	for _, t2 := range ck.trans {
 		if tbl, ok := t2.tables[table]; ok {
 			if len(tbl.outputs) > 0 || len(tbl.deletes) > 0 {
@@ -131,9 +134,13 @@ func (ck *Check) AddExclusive(table string) {
 		}
 	}
 	ck.exclusive[table] = math.MaxInt
+	return true
 }
 
 func (ck *Check) EndExclusive(table string) {
+	if ck.exclusive[table] != math.MaxInt {
+		return
+	}
 	end := ck.next()
 	ck.exclusive[table] = end
 	// after ending, we still block transactions that started previously
@@ -143,6 +150,24 @@ func (ck *Check) EndExclusive(table string) {
 // Persist is just for tests, it doesn't actually persist
 func (ck *Check) Persist() *DbState {
 	return ck.db.GetState()
+}
+
+func (ck *Check) RunExclusive(table string, fn func()) interface{} {
+	if !ck.AddExclusive(table) {
+		return "already exclusive: " + table
+	}
+	return ck.RunEndExclusive(table, fn)
+}
+
+func (ck *Check) RunEndExclusive(table string, fn func()) (err interface{}) {
+	defer ck.EndExclusive(table)
+	defer func() {
+		if e := recover(); e != nil {
+			err = e
+		}
+	}()
+	fn()
+	return nil
 }
 
 //-------------------------------------------------------------------

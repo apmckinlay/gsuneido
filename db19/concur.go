@@ -64,9 +64,8 @@ loop:
 			}
 			for {
 				if m.ret != nil {
-					if m.meta == nil {
-						// sync
-						m.ret <- nil
+					if m.fn != nil {
+						m.ret <- m.run()
 					} else {
 						// persist
 						if db.GetState() != prevState {
@@ -100,11 +99,22 @@ loop:
 type todo struct {
 	tables []string
 	meta   *meta.Meta
-	ret    chan *DbState
+	fn     func()
+	ret    chan interface{}
 }
 
-func (td todo) isZero() bool {
+func (td *todo) isZero() bool {
 	return td.tables == nil && td.meta == nil && td.ret == nil
+}
+
+func (td *todo) run() (err interface{}) {
+	defer func() {
+		if e := recover(); e != nil {
+			err = e
+		}
+	}()
+	td.fn()
+	return nil
 }
 
 // mergeSingle is a single threaded merge for tran_test

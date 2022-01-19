@@ -104,7 +104,7 @@ type MergeUpdate struct {
 }
 
 // Merge collects the updates which are then applied by ApplyMerge.
-// It is called by db Merge which is called by concur merger.
+// It is called by concur merger.
 // WARNING: must not modify meta.
 func (m *Meta) Merge(metaWas *Meta, table string, nmerge int) MergeUpdate {
 	was := metaWas.schema.MustGet(table)

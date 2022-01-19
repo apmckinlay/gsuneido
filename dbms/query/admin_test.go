@@ -104,6 +104,7 @@ func TestAdminRename(t *testing.T) {
 func TestAdminAlterCreate(t *testing.T) {
 	db := createTestDb()
 	defer db.Close()
+	act(db, "insert { a: 1, b: 2, c: 3, d: 4 } into tmp")
 	assert.T(t).This(func() { DoAdmin(db, "alter tables create (x)") }).
 		Panics("can't modify system table: tables")
 	assert.T(t).This(func() { DoAdmin(db, "alter nonex create (x)") }).
@@ -284,14 +285,8 @@ func TestFkey(t *testing.T) {
 
 func TestCreateIndexOnExistingTable(*testing.T) {
 	db := createTestDb()
-	act := func(act string) {
-		ut := db.NewUpdateTran()
-		defer ut.Commit()
-		n := DoAction(ut, act)
-		assert.This(n).Is(1)
-	}
-	act("insert { a: 1, b: 2, c: 3, d: 4 } into tmp")
-	act("insert { a: 3, b: 4 } into tmp")
+	act(db, "insert { a: 1, b: 2, c: 3, d: 4 } into tmp")
+	act(db, "insert { a: 3, b: 4 } into tmp")
 	time.Sleep(100 * time.Millisecond) // ensure persisted
 	assert.This(db.Check()).Is(nil)
 	DoAdmin(db, "ensure tmp index(d)")
@@ -310,4 +305,11 @@ func TestNoColumns(*testing.T) {
 	db, err = db19.OpenDbStor(store, stor.READ, false)
 	ck(err)
 	db.Check()
+}
+
+func act(db *db19.Database, act string) {
+	ut := db.NewUpdateTran()
+	defer ut.Commit()
+	n := DoAction(ut, act)
+	assert.This(n).Is(1)
 }

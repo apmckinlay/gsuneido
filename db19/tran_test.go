@@ -216,11 +216,10 @@ func TestExclusive(*testing.T) {
 
 	createTbl(db)
 	ut2 := db.NewUpdateTran()
-	db.ck.AddExclusive("mytable")
 	ut := db.NewUpdateTran()
+	db.RunExclusive("mytable", func(){})
 	assert.This(db.ck.Output(ut.ct, "mytable", []string{""})).Is(false)
 	assert.This(ut.ct.failure.Load()).Is("conflict with exclusive (mytable)")
-	db.EndExclusive("mytable")
 	// still fails because ut2 started before EndExclusive
 	assert.This(db.ck.Output(ut2.ct, "mytable", []string{""})).Is(false)
 	assert.This(ut2.ct.failure.Load()).Is("conflict with exclusive (mytable)")

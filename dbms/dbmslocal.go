@@ -135,9 +135,6 @@ func (*DbmsLocal) Kill(string) int {
 }
 
 func (dbms *DbmsLocal) Load(table string) int {
-	dbms.db.AddExclusive(table)
-	defer dbms.db.EndExclusive(table)
-	dbms.db.Persist()
 	return tools.LoadDbTable(table, dbms.db)
 }
 

@@ -354,7 +354,6 @@ func createIndexes(ts *Schema, ti *Info, idxs []schema.Index, store *stor.Stor) 
 	if len(idxs) == 0 {
 		return
 	}
-	schema.CheckIndexes(ts.Table, ts.Columns, idxs)
 	ts.Ixspecs(idxs)
 	n := len(ts.Indexes)
 	ts.Indexes = append(ts.Indexes[:n:n], idxs...)

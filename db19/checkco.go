@@ -7,8 +7,6 @@ import (
 	"log"
 	"runtime/debug"
 	"time"
-
-	"github.com/apmckinlay/gsuneido/db19/meta"
 )
 
 // CheckCo is the concurrent, channel based interface to Check
@@ -66,11 +64,22 @@ type ckAbort struct {
 
 type ckAddExcl struct {
 	table string
-	ret   chan struct{}
+	ret   chan bool
 }
 
 type ckEndExcl struct {
 	table string
+	ret   chan struct{}
+}
+
+type ckRunEndExcl struct {
+	ckRunExcl
+}
+
+type ckRunExcl struct {
+	table string
+	fn    func()
+	ret   chan interface{}
 }
 
 type ckPersist struct {
@@ -134,15 +143,29 @@ func (ck *CheckCo) Abort(t *CkTran, reason string) bool {
 	return true
 }
 
-// AddExclusive also does sync (handled in dispatch)
-func (ck *CheckCo) AddExclusive(table string) {
-	ret := make(chan struct{}, 1)
-	ck.c <- &ckAddExcl{ret: ret, table: table}
-	<-ret
+// AddExclusive is used by load table and add index
+func (ck *CheckCo) AddExclusive(table string) bool {
+	ret := make(chan bool, 1)
+	ck.c <- &ckAddExcl{table: table, ret: ret}
+	return <-ret
 }
 
 func (ck *CheckCo) EndExclusive(table string) {
-	ck.c <- &ckEndExcl{table: table}
+	ret := make(chan struct{}, 1)
+	ck.c <- &ckEndExcl{table: table, ret: ret}
+	<-ret
+}
+
+func (ck *CheckCo) RunEndExclusive(table string, fn func()) interface{} {
+	ret := make(chan interface{}, 1)
+	ck.c <- &ckRunEndExcl{ckRunExcl{table: table, fn: fn, ret: ret}}
+	return <-ret
+}
+
+func (ck *CheckCo) RunExclusive(table string, fn func()) interface{} {
+	ret := make(chan interface{}, 1)
+	ck.c <- &ckRunExcl{table: table, fn: fn, ret: ret}
+	return <-ret
 }
 
 func (ck *CheckCo) Persist() *DbState {
@@ -221,19 +244,25 @@ func (ck *Check) dispatch(msg interface{}, mergeChan chan todo) {
 		msg.ret <- true
 		mergeChan <- todo{tables: tablesWritten, meta: msg.t.meta}
 	case *ckAddExcl:
-		ck.AddExclusive(msg.table)
-		// ensure pending merges are all complete
-		ret := make(chan *DbState)
-		mergeChan <- todo{ret: ret} // sync (meta == nil)
-		<-ret
-		msg.ret <- struct{}{}
+		msg.ret <- ck.AddExclusive(msg.table)
 	case *ckEndExcl:
 		ck.EndExclusive(msg.table)
+		msg.ret <- struct{}{}
+	case *ckRunEndExcl:
+		defer ck.EndExclusive(msg.table)
+		ck.run(&msg.ckRunExcl, mergeChan)
+	case *ckRunExcl:
+		if !ck.AddExclusive(msg.table) {
+			msg.ret <- "already exclusive: " + msg.table
+			return
+		}
+		defer ck.EndExclusive(msg.table)
+		ck.run(msg, mergeChan)
 	case *ckPersist:
-		ret := make(chan *DbState)
-		mergeChan <- todo{meta: persist, ret: ret}
+		ret := make(chan interface{})
+		mergeChan <- todo{ret: ret}
 		state := <-ret
-		msg.ret <- state
+		msg.ret <- state.(*DbState)
 	case *ckTrans:
 		msg.ret <- ck.Transactions()
 	default:
@@ -241,8 +270,13 @@ func (ck *Check) dispatch(msg interface{}, mergeChan chan todo) {
 	}
 }
 
-// persist is used to distinguish sync and persist
-var persist = &meta.Meta{}
+func (ck *Check) run(msg *ckRunExcl, mergeChan chan todo) {
+	ret := make(chan interface{})
+	td := todo{fn: msg.fn, ret: ret}
+	mergeChan <- td
+	err := <-ret
+	msg.ret <- err
+}
 
 // Checker is the interface for Check and CheckCo
 type Checker interface {
@@ -253,11 +287,13 @@ type Checker interface {
 	Update(t *CkTran, table string, oldoff uint64, oldkeys, newkeys []string) bool
 	Abort(t *CkTran, reason string) bool
 	Commit(t *UpdateTran) bool
-	AddExclusive(table string)
-	EndExclusive(table string)
 	Persist() *DbState
 	Stop()
 	Transactions() []int
+	AddExclusive(table string) bool
+	EndExclusive(table string)
+	RunEndExclusive(table string, fn func()) interface{}
+	RunExclusive(table string, fn func()) interface{}
 }
 
 var _ Checker = (*Check)(nil)

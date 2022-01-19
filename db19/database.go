@@ -36,6 +36,8 @@ type Database struct {
 
 const magic = "gsndo001"
 
+// CreateDatabase creates an empty database in the named file.
+// NOTE: The returned Database does not have a checker.
 func CreateDatabase(filename string) (*Database, error) {
 	store, err := stor.MmapStor(filename, stor.CREATE)
 	if err != nil {
@@ -44,6 +46,8 @@ func CreateDatabase(filename string) (*Database, error) {
 	return CreateDb(store)
 }
 
+// CreateDb creates an empty database in the store.
+// NOTE: The returned Database does not have a checker.
 func CreateDb(store *stor.Stor) (*Database, error) {
 	var db Database
 	db.state.set(&DbState{store: store, Meta: &meta.Meta{}})
@@ -57,14 +61,20 @@ func CreateDb(store *stor.Stor) (*Database, error) {
 	return &db, nil
 }
 
+// OpenDatabase opens the database in the named file for read & write.
+// NOTE: The returned Database does not have a checker.
 func OpenDatabase(filename string) (*Database, error) {
 	return OpenDb(filename, stor.UPDATE, true)
 }
 
+// OpenDatabaseRead opens the database in the named file for read only.
+// NOTE: The returned Database does not have a checker.
 func OpenDatabaseRead(filename string) (*Database, error) {
 	return OpenDb(filename, stor.READ, true)
 }
 
+// OpenDatabase opens the database in the named file.
+// NOTE: The returned Database does not have a checker.
 func OpenDb(filename string, mode stor.Mode, check bool) (db *Database, err error) {
 	store, err := stor.MmapStor(filename, mode)
 	if err != nil {
@@ -73,6 +83,8 @@ func OpenDb(filename string, mode stor.Mode, check bool) (db *Database, err erro
 	return OpenDbStor(store, mode, check)
 }
 
+// OpenDatabase opens the database in the store.
+// NOTE: The returned Database does not have a checker.
 func OpenDbStor(store *stor.Stor, mode stor.Mode, check bool) (db *Database, err error) {
 	defer func() {
 		if err != nil {
@@ -111,7 +123,7 @@ func (db *Database) CheckerSync() {
 	db.ck = NewCheck(db)
 }
 
-// LoadedTable is used to add a loaded table to the state
+// LoadedTable is by compact
 func (db *Database) LoadedTable(ts *meta.Schema, ti *meta.Info) {
 	if err := db.loadedTable(ts, ti); err != nil {
 		panic(err)
@@ -129,6 +141,13 @@ func (db *Database) loadedTable(ts *meta.Schema, ti *meta.Info) error {
 	return err
 }
 
+// OverwriteTable is used by load
+func (db *Database) OverwriteTable(ts *meta.Schema, ti *meta.Info) {
+	db.UpdateState(func(state *DbState) {
+		state.Meta = state.Meta.Put(ts, ti)
+	})
+}
+
 // schema changes ---------------------------------------------------
 
 // Creating new indexes on an existing table (ensure and alter create)
@@ -138,11 +157,13 @@ func (db *Database) loadedTable(ts *meta.Schema, ti *meta.Info) error {
 func (db *Database) Create(schema *schema.Schema) {
 	db.lockSchema()
 	defer db.unlockSchema()
-	db.UpdateState(func(state *DbState) {
-		if state.Meta.GetRoSchema(schema.Table) != nil {
-			panic("can't create existing table: " + schema.Table)
-		}
-		db.create(state, schema)
+	db.RunExclusive(schema.Table, func() {
+		db.UpdateState(func(state *DbState) {
+			if state.Meta.GetRoSchema(schema.Table) != nil {
+				panic("can't create existing table: " + schema.Table)
+			}
+			db.create(state, schema)
+		})
 	})
 }
 
@@ -179,30 +200,47 @@ func (db *Database) createIndexes(idxs []schema.Index) []*index.Overlay {
 func (db *Database) Ensure(sch *schema.Schema) {
 	db.lockSchema()
 	defer db.unlockSchema()
+	state := db.GetState()
+	ts := state.Meta.GetRoSchema(sch.Table)
+	if ts != nil && schemaSubset(sch, ts) {
+		return // nothing to do, common fast case
+	}
 	handled := false
 	var newIdxs []schema.Index
-	db.UpdateState(func(state *DbState) {
-		ts := state.Meta.GetRoSchema(sch.Table)
-		if ts == nil { // table doesn't exist
-			db.create(state, sch)
-			handled = true
-
-		} else if schemaSubset(sch, ts) {
-			handled = true // nothing to do, common fast case
-		} else {
-			var meta *meta.Meta
-			newIdxs, meta = state.Meta.Ensure(sch, db.Store)
-			if len(newIdxs) == 0 {
-				state.Meta = meta
+	db.RunExclusive(sch.Table, func() {
+		db.UpdateState(func(state *DbState) {
+			ts := state.Meta.GetRoSchema(sch.Table)
+			if ts == nil { // table doesn't exist
+				db.create(state, sch)
 				handled = true
+			} else {
+				var meta *meta.Meta
+				newIdxs, meta = state.Meta.Ensure(sch, db.Store)
+				if len(newIdxs) == 0 {
+					state.Meta = meta
+					handled = true
+				}
+				// else discard meta and just use newIdxs
 			}
-			// else discard meta and just use newIdxs
-		}
+		})
 	})
-	// outside UpdateState
-	if !handled {
-		db.ensure(sch, newIdxs)
+	if handled {
+		return
 	}
+	ov := db.buildIndexes(sch.Table, sch.Columns, newIdxs)
+	db.RunExclusive(sch.Table, func() {
+		db.UpdateState(func(state *DbState) {
+			_, meta := state.Meta.Ensure(sch, db.Store) // final run
+			// now meta and table info are copies
+			if ov != nil {
+				// add newly created indexes
+				ti := meta.GetRoInfo(sch.Table) // not actually read-only
+				i := len(ti.Indexes) - len(ov)
+				copy(ti.Indexes[i:], ov)
+			}
+			state.Meta = meta
+		})
+	})
 }
 
 // schemaSubset returns whether the table (ts) already has the ensure schema
@@ -222,36 +260,11 @@ func schemaSubset(schema *schema.Schema, ts *meta.Schema) bool {
 	return true
 }
 
-func (db *Database) ensure(sch *schema.Schema, newIdxs []schema.Index) {
-	db.AddExclusive(sch.Table)
-	defer db.EndExclusive(sch.Table)
-
-	sch2 := *sch
-	sch2.Indexes = nil
-	db.UpdateState(func(state *DbState) { // add columns
-		_, meta := state.Meta.Ensure(&sch2, db.Store) // final run
-		state.Meta = meta
-	})
-
-	ov := db.buildIndexes(sch.Table, newIdxs)
-
-	sch.Columns = nil
-	db.UpdateState(func(state *DbState) {
-		_, meta := state.Meta.Ensure(sch, db.Store) // final run
-		// now meta and table info are copies
-		if ov != nil {
-			// add newly created indexes
-			ti := meta.GetRoInfo(sch.Table) // not actually read-only
-			i := len(ti.Indexes) - len(ov)
-			copy(ti.Indexes[i:], ov)
-		}
-		state.Meta = meta
-	})
-}
-
 func (db *Database) AddExclusive(table string) {
 	if db.ck != nil {
-		db.ck.AddExclusive(table)
+		if !db.ck.AddExclusive(table) {
+			panic("already exclusive: " + table)
+		}
 	}
 }
 
@@ -261,8 +274,29 @@ func (db *Database) EndExclusive(table string) {
 	}
 }
 
+func (db *Database) RunEndExclusive(table string, fn func()) {
+	if db.ck == nil { // for tests
+		fn()
+		return
+	}
+	if e := db.ck.RunEndExclusive(table, fn); e != nil {
+		panic(e)
+	}
+}
+
+func (db *Database) RunExclusive(table string, fn func()) {
+	if db.ck == nil { // for tests
+		fn()
+		return
+	}
+	if e := db.ck.RunExclusive(table, fn); e != nil {
+		panic(e)
+	}
+}
+
 // buildIndexes creates the new btrees & overlays
-func (db *Database) buildIndexes(table string, newIdxs []schema.Index) []*index.Overlay {
+func (db *Database) buildIndexes(table string,
+	newCols []string, newIdxs []schema.Index) []*index.Overlay {
 	if len(newIdxs) == 0 {
 		return nil
 	}
@@ -271,7 +305,11 @@ func (db *Database) buildIndexes(table string, newIdxs []schema.Index) []*index.
 	if ti.Nrows == 0 {
 		return nil
 	}
-	rt.meta.GetRoSchema(table).Ixspecs(newIdxs)
+
+	ts := *rt.meta.GetRoSchema(table) // copy
+	ts.Columns = sset.Union(ts.Columns, newCols)
+	schema.CheckIndexes(ts.Table, ts.Columns, newIdxs)
+	ts.Ixspecs(newIdxs)
 	nlayers := ti.Indexes[0].Nlayers()
 	list := sortlist.NewUnsorted()
 	iter := index.NewOverIter(table, 0)
@@ -320,11 +358,13 @@ func (db *Database) RenameTable(from, to string) bool {
 	db.lockSchema()
 	defer db.unlockSchema()
 	result := false
-	db.UpdateState(func(state *DbState) {
-		if m := state.Meta.RenameTable(from, to); m != nil {
-			state.Meta = m
-			result = true
-		}
+	db.RunExclusive(from, func() {
+		db.UpdateState(func(state *DbState) {
+			if m := state.Meta.RenameTable(from, to); m != nil {
+				state.Meta = m
+				result = true
+			}
+		})
 	})
 	return result
 }
@@ -333,15 +373,15 @@ func (db *Database) RenameTable(from, to string) bool {
 func (db *Database) Drop(table string) error {
 	db.lockSchema()
 	defer db.unlockSchema()
-	db.AddExclusive(table)
-	defer db.EndExclusive(table)
 	var err error
-	db.UpdateState(func(state *DbState) {
-		if m := state.Meta.Drop(table); m != nil {
-			state.Meta = m
-		} else {
-			err = errors.New("can't drop nonexistent table: " + table)
-		}
+	db.RunExclusive(table, func() {
+		db.UpdateState(func(state *DbState) {
+			if m := state.Meta.Drop(table); m != nil {
+				state.Meta = m
+			} else {
+				err = errors.New("can't drop nonexistent table: " + table)
+			}
+		})
 	})
 	return err
 }
@@ -351,11 +391,13 @@ func (db *Database) AlterRename(table string, from, to []string) bool {
 	db.lockSchema()
 	defer db.unlockSchema()
 	result := false
-	db.UpdateState(func(state *DbState) {
-		if m := state.Meta.AlterRename(table, from, to); m != nil {
-			state.Meta = m
-			result = true
-		}
+	db.RunExclusive(table, func() {
+		db.UpdateState(func(state *DbState) {
+			if m := state.Meta.AlterRename(table, from, to); m != nil {
+				state.Meta = m
+				result = true
+			}
+		})
 	})
 	return result
 }
@@ -365,19 +407,25 @@ func (db *Database) AlterCreate(sch *schema.Schema) {
 	db.lockSchema()
 	defer db.unlockSchema()
 	db.AddExclusive(sch.Table)
-	defer db.EndExclusive(sch.Table)
-
-	ov := db.buildIndexes(sch.Table, sch.Indexes)
-	db.UpdateState(func(state *DbState) {
-		meta := state.Meta.AlterCreate(sch, db.Store)
-		// now meta and table info are copies
-		if ov != nil {
-			// add newly created indexes
-			ti := meta.GetRoInfo(sch.Table) // not really read-only
-			i := len(ti.Indexes) - len(ov)
-			copy(ti.Indexes[i:], ov)
+	defer func() {
+		if e := recover(); e != nil {
+			db.EndExclusive(sch.Table)
+			panic(e)
 		}
-		state.Meta = meta
+	}()
+	ov := db.buildIndexes(sch.Table, sch.Columns, sch.Indexes)
+	db.RunEndExclusive(sch.Table, func() {
+		db.UpdateState(func(state *DbState) {
+			meta := state.Meta.AlterCreate(sch, db.Store)
+			// now meta and table info are copies
+			if ov != nil {
+				// add newly created indexes
+				ti := meta.GetRoInfo(sch.Table) // not really read-only
+				i := len(ti.Indexes) - len(ov)
+				copy(ti.Indexes[i:], ov)
+			}
+			state.Meta = meta
+		})
 	})
 }
 
@@ -386,11 +434,13 @@ func (db *Database) AlterDrop(schema *schema.Schema) bool {
 	db.lockSchema()
 	defer db.unlockSchema()
 	result := false
-	db.UpdateState(func(state *DbState) {
-		if m := state.Meta.AlterDrop(schema); m != nil {
-			state.Meta = m
-			result = true
-		}
+	db.RunExclusive(schema.Table, func() {
+		db.UpdateState(func(state *DbState) {
+			if m := state.Meta.AlterDrop(schema); m != nil {
+				state.Meta = m
+				result = true
+			}
+		})
 	})
 	return result
 }

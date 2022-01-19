@@ -53,7 +53,7 @@ func LoadDatabase(from, dbfile string) int {
 		go func() {
 			defer wg.Done()
 			for job := range channel {
-				loadTable2(job.sch, job.list, job.nrecs, job.size, job.db)
+				loadTable2(job.db, job.sch, job.list, job.nrecs, job.size, false)
 			}
 		}()
 	}
@@ -96,13 +96,20 @@ func LoadTable(table, dbfile string) int {
 	return LoadDbTable(table, db)
 }
 
+// LoadDbTable is use by dbms.Load
 func LoadDbTable(table string, db *Database) int {
-	db.Drop(table)
+	db.AddExclusive(table)
+	defer func() {
+		if e := recover(); e != nil {
+			db.EndExclusive(table)
+			panic(e)
+		}
+	}()
 	f, r := open(table + ".su")
 	defer f.Close()
 	schema := table + " " + readLinePrefixed(r, "====== ")
 	nrecs := loadTable(db, r, schema, nil)
-	db.GetState().Write()
+	db.Persist() // for safety, not strictly required
 	return nrecs
 }
 
@@ -128,23 +135,30 @@ func loadTable(db *Database, r *bufio.Reader, schema string, channel chan loadJo
 	trace("nrecs", nrecs, "data size", size)
 	list.Finish()
 	if channel == nil { // not concurrent
-		loadTable2(sch, list, nrecs, size, db)
+		loadTable2(db, sch, list, nrecs, size, true)
 	} else {
 		channel <- loadJob{db: db, sch: sch, list: list, nrecs: nrecs, size: size}
 	}
 	return nrecs
 }
 
-func loadTable2(sch schema.Schema, list *sortlist.Builder, nrecs int, size uint64, db *Database) {
+// loadTable2 is multi-threaded when loading entire database.
+func loadTable2(db *Database, sch schema.Schema, list *sortlist.Builder, nrecs int, size uint64, exclusive bool) {
 	defer func() {
 		if e := recover(); e != nil {
-			fmt.Println("ERROR:", sch.Table, e)
+			fmt.Println("ERROR:", sch.Table, e) //FIXME
 		}
 	}()
 	ts := &meta.Schema{Schema: sch}
 	ovs := buildIndexes(ts, list, db.Store, nrecs)
 	ti := &meta.Info{Table: sch.Table, Nrows: nrecs, Size: size, Indexes: ovs}
-	db.LoadedTable(ts, ti)
+	if exclusive {
+		db.RunEndExclusive(sch.Table, func() {
+			db.OverwriteTable(ts, ti)
+		})
+	} else {
+		db.OverwriteTable(ts, ti)
+	}
 }
 
 func readLinePrefixed(r *bufio.Reader, pre string) string {
