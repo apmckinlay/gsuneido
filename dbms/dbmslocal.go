@@ -74,7 +74,7 @@ func (dbms *DbmsLocal) EnableTrigger(table string) {
 func (dbms *DbmsLocal) Dump(table string) string {
 	var err error
 	if table == "" {
-		_, err = tools.Dump(dbms.db, "database.su")
+		_, _, err = tools.Dump(dbms.db, "database.su")
 	} else {
 		_, err = tools.DumpDbTable(dbms.db, table, table+".su")
 	}

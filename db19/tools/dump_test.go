@@ -29,7 +29,8 @@ func TestDumpDatabase(t *testing.T) {
 	}
 	start := time.Now()
 	defer os.Remove("tmp.su")
-	n, err := DumpDatabase("../../suneido.db", "tmp.su")
+	nTables, nViews, err := DumpDatabase("../../suneido.db", "tmp.su")
 	assert.T(t).This(err).Is(nil)
-	fmt.Println("dumped", n, "tables in", time.Since(start).Round(time.Millisecond))
+	fmt.Println("dumped", nTables, "tables", nViews, "views in",
+		time.Since(start).Round(time.Millisecond))
 }

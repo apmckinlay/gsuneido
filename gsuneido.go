@@ -78,9 +78,9 @@ func main() {
 	case "dump":
 		t := time.Now()
 		if options.Arg == "" {
-			ntables, err := tools.DumpDatabase("suneido.db", "database.su")
+			nTables, nViews, err := tools.DumpDatabase("suneido.db", "database.su")
 			ck(err)
-			Alert("dumped", ntables, "tables in",
+			Alert("dumped", nTables, "tables", nViews, "views in",
 				time.Since(t).Round(time.Millisecond))
 		} else {
 			table := strings.TrimSuffix(options.Arg, ".su")
@@ -93,8 +93,8 @@ func main() {
 	case "load":
 		t := time.Now()
 		if options.Arg == "" {
-			n := tools.LoadDatabase("database.su", "suneido.db")
-			Alert("loaded", n, "tables in",
+			nTables, nViews := tools.LoadDatabase("database.su", "suneido.db")
+			Alert("loaded", nTables, "tables", nViews, "views in",
 				time.Since(t).Round(time.Millisecond))
 		} else {
 			table := strings.TrimSuffix(options.Arg, ".su")
@@ -105,9 +105,9 @@ func main() {
 		os.Exit(0)
 	case "compact":
 		t := time.Now()
-		ntables, err := tools.Compact("suneido.db")
+		nTables, nViews, err := tools.Compact("suneido.db")
 		ck(err)
-		Alert("compacted", ntables, "tables in",
+		Alert("compacted", nTables, "tables", nViews, "views in",
 			time.Since(t).Round(time.Millisecond))
 		os.Exit(0)
 	case "check":

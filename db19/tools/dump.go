@@ -26,14 +26,14 @@ import (
 
 // DumpDatabase exports a dumped database to a file.
 // In the process it concurrently does a full check of the database.
-func DumpDatabase(dbfile, to string) (ntables int, err error) {
+func DumpDatabase(dbfile, to string) (nTables, nViews int, err error) {
 	db, err := OpenDb(dbfile, stor.READ, false)
 	ck(err)
 	defer db.Close()
 	return Dump(db, to)
 }
 
-func Dump(db *Database, to string) (ntables int, err error) {
+func Dump(db *Database, to string) (nTables, nViews int, err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("dump failed: %v", e)
@@ -46,7 +46,7 @@ func Dump(db *Database, to string) (ntables int, err error) {
 	defer ics.finish()
 
 	state := db.Persist()
-	dumpViews(state, w)
+	nViews = dumpViews(state, w)
 	schemas := make([]string, 0, 512)
 	state.Meta.ForEachSchema(func(sc *meta.Schema) {
 		schemas = append(schemas, sc.String())
@@ -59,7 +59,7 @@ func Dump(db *Database, to string) (ntables int, err error) {
 	f.Close()
 	ics.finish()
 	ck(RenameBak(tmpfile, to))
-	return len(schemas), nil
+	return len(schemas), nViews, nil
 }
 
 // DumpTable exports a dumped table to a file.

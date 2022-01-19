@@ -36,7 +36,7 @@ type loadJob struct {
 
 // LoadDatabase imports a dumped database from a file.
 // It returns the number of tables loaded or panics on error.
-func LoadDatabase(from, dbfile string) int {
+func LoadDatabase(from, dbfile string) (nTables, nViews int) {
 	defer func() {
 		if e := recover(); e != nil {
 			panic("load failed: " + fmt.Sprint(e))
@@ -46,6 +46,8 @@ func LoadDatabase(from, dbfile string) int {
 	defer f.Close()
 	db, tmpfile := tmpdb()
 	defer func() { db.Close(); os.Remove(tmpfile) }()
+
+	// start the workers that build the indexes
 	var wg sync.WaitGroup
 	channel := make(chan loadJob)
 	for i := 0; i < options.Nworkers; i++ {
@@ -57,13 +59,19 @@ func LoadDatabase(from, dbfile string) int {
 			}
 		}()
 	}
-	nTables := 0
+
+	// load the tables
+	nTables = 0
 	for ; ; nTables++ {
 		schema := readLinePrefixed(r, "====== ")
 		if schema == "" {
 			break
 		}
-		loadTable(db, r, schema, channel)
+		n := loadTable(db, r, schema, channel)
+		if strings.HasPrefix(schema, "views ") {
+			nViews = n
+			nTables--
+		}
 		trace()
 	}
 	close(channel)
@@ -72,7 +80,7 @@ func LoadDatabase(from, dbfile string) int {
 	db.GetState().Write()
 	db.Close()
 	ck(RenameBak(tmpfile, dbfile))
-	return nTables
+	return nTables, nViews
 }
 
 // LoadTable imports a dumped table from a file.
@@ -125,7 +133,7 @@ func open(filename string) (*os.File, *bufio.Reader) {
 
 func loadTable(db *Database, r *bufio.Reader, schema string, channel chan loadJob) int {
 	trace(schema)
-	if strings.HasPrefix(schema, "views") {
+	if strings.HasPrefix(schema, "views ") {
 		return loadViews(db, r, schema)
 	}
 	sch := query.NewAdminParser(schema).Schema()

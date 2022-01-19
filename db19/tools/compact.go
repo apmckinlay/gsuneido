@@ -23,7 +23,7 @@ import (
 // Compact cleans up old records and index nodes that are no longer in use.
 // It does this by copying live data to a new database file.
 // In the process it concurrently does a full check of the database.
-func Compact(dbfile string) (ntables int, err error) {
+func Compact(dbfile string) (nTables, nViews int, err error) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = fmt.Errorf("compact failed: %v", e)
@@ -40,12 +40,15 @@ func Compact(dbfile string) (ntables int, err error) {
 		sc    *meta.Schema
 		nrows int
 	}
+
+	nViews = copyViews(state, dst)
+
 	schemas := make([]schemaSize, 0, 128)
 	state.Meta.ForEachSchema(func(sc *meta.Schema) {
 		ti := state.Meta.GetRoInfo(sc.Table)
 		ss := schemaSize{sc: sc, nrows: ti.Nrows}
 		schemas = append(schemas, ss)
-		ntables++
+		nTables++
 	})
 	// sort reverse to start largest first
 	sort.Slice(schemas, func(i, j int) bool {
@@ -77,7 +80,7 @@ func Compact(dbfile string) (ntables int, err error) {
 	dst.Close()
 	src.Close()
 	ck(RenameBak(tmpfile, dbfile))
-	return ntables, nil
+	return nTables, nViews, nil
 }
 
 func tmpdb() (*Database, string) {
@@ -90,10 +93,19 @@ func tmpdb() (*Database, string) {
 	return db, tmpfile
 }
 
+func copyViews(state *DbState, dst *Database) int {
+	n := 0
+	state.Meta.ForEachView(func(name, def string) {
+		dst.AddView(name, def)
+		n++
+	})
+	return n
+}
+
 func compactTable(state *DbState, src *Database, ts *meta.Schema, dst *Database) {
 	defer func() {
 		if e := recover(); e != nil {
-			runtime.Fatal(ts.Table + ":", e)
+			runtime.Fatal(ts.Table+":", e)
 		}
 	}()
 	info := state.Meta.GetRoInfo(ts.Table)
