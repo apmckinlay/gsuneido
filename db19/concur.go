@@ -58,28 +58,28 @@ func merger(db *Database, mergeChan chan todo,
 loop:
 	for {
 		select {
-		case m := <-mergeChan: // receive todo's from commit
-			if m.isZero() { // channel closed
+		case td := <-mergeChan: // receive todo's from commit
+			if td.isZero() { // channel closed
 				break loop
 			}
 			for {
-				if m.ret != nil {
-					if m.fn != nil {
-						m.ret <- m.run()
+				if td.ret != nil {
+					if td.fn != nil {
+						td.ret <- td.run()
 					} else {
 						// persist
 						if db.GetState() != prevState {
 							prevState = db.persist(ep)
 						}
-						m.ret <- prevState
+						td.ret <- prevState
 					}
 					break
 				}
-				mt.merges.start(m)
-				m = mt.merges.drain(mt.mergeChan)
+				mt.merges.start(td)
+				td = mt.merges.drain(mt.mergeChan)
 				mt.db.Merge(mt.merges.meta, mt.em.merge, mt.merges)
 				// mt.db.Merge(mt.merges.meta, mergeSingle, merges)
-				if m.isZero() {
+				if td.isZero() {
 					break
 				}
 			}
@@ -230,14 +230,14 @@ outer:
 func (ml *mergeList) drain(mergeChan chan todo) todo {
 	for {
 		select {
-		case m := <-mergeChan:
-			if m.isZero() { // channel closed
+		case td := <-mergeChan:
+			if td.isZero() { // channel closed
 				return todo{}
 			}
-			if m.ret == nil && ml.meta.SameSchemaAs(m.meta) {
-				ml.add(m.tables)
+			if td.ret == nil && ml.meta.SameSchemaAs(td.meta) {
+				ml.add(td.tables)
 			} else {
-				return m // not added to merge (sync or persist)
+				return td // not added to merge (sync or persist)
 			}
 		default: // channel empty
 			return todo{}
