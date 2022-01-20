@@ -52,6 +52,6 @@ func (mb *MemBase) Has(m string) bool {
 	if mb.Lock() {
 		defer mb.lock.Unlock()
 	}
-	_,ok := mb.Data[m]
+	_, ok := mb.Data[m]
 	return ok
 }

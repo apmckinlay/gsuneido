@@ -84,7 +84,7 @@ func TestRandom(t *testing.T) {
 	}
 	rs.check()
 	for n, in := range nums {
-		assert(rs.Contains(strconv.Itoa(n+10000))).Is(in)
+		assert(rs.Contains(strconv.Itoa(n + 10000))).Is(in)
 	}
 
 	if !testing.Short() {
@@ -94,7 +94,7 @@ func TestRandom(t *testing.T) {
 		}
 		rs.check()
 		for n, in := range nums {
-			assert(rs.Contains(strconv.Itoa(n+10000))).Is(in)
+			assert(rs.Contains(strconv.Itoa(n + 10000))).Is(in)
 		}
 	}
 

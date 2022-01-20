@@ -19,7 +19,7 @@ func Grow(buf []byte, n int) []byte {
 		return make([]byte, n, smallBufferSize)
 	}
 	// Not enough space, we need to allocate.
-	buf2 := make([]byte, 2*cap(buf) + n)
+	buf2 := make([]byte, 2*cap(buf)+n)
 	copy(buf2, buf)
 	return buf2[:l+n]
 }

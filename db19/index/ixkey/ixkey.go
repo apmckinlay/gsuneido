@@ -132,7 +132,7 @@ func Encode(s string) string {
 	if i := strings.IndexByte(s, 0); i == -1 {
 		return s
 	}
-	buf := make([]byte, 0, len(s) + 4)
+	buf := make([]byte, 0, len(s)+4)
 	buf = encode(buf, s)
 	return hacks.BStoS(buf)
 }
@@ -258,5 +258,5 @@ func HasPrefix(s, prefix string) bool {
 	pn := len(prefix)
 	return sn >= pn && s[0:pn] == prefix && // byte-wise prefix
 		(sn == pn ||
-			(sn >= pn + 2 && s[pn:pn+2] == Sep))
+			(sn >= pn+2 && s[pn:pn+2] == Sep))
 }

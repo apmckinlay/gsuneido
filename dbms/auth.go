@@ -52,7 +52,7 @@ func AuthUser(s, nonce string) bool {
 	hash := sha1.New()
 	passhash := getPassHash(user)
 	io.WriteString(hash, nonce+passhash)
-	t := user+"\x00"+string(hash.Sum(nil))
+	t := user + "\x00" + string(hash.Sum(nil))
 	return s == t
 }
 

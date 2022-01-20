@@ -43,7 +43,7 @@ func (p *actionParser) action() Action {
 }
 
 func (p *actionParser) insert() Action {
-	if p.Token ==tok.LCurly || p.Token == tok.LBracket {
+	if p.Token == tok.LCurly || p.Token == tok.LBracket {
 		return p.insertRecord()
 	}
 	return p.insertQuery()

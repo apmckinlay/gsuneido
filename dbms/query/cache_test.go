@@ -11,9 +11,9 @@ import (
 
 func TestCache(t *testing.T) {
 	var c cache
-	test := func (idx []string, expected int) {
+	test := func(idx []string, expected int) {
 		t.Helper()
-		cost,_ := c.cacheGet(idx)
+		cost, _ := c.cacheGet(idx)
 		assert.T(t).This(cost).Is(expected)
 	}
 	test(nil, -1)

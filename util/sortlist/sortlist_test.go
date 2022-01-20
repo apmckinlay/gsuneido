@@ -125,7 +125,7 @@ func TestIter(t *testing.T) {
 		if expected == eof {
 			assert.Msg(expected, "should be eof").That(it.Eof())
 		} else {
-			assert.Msg(expected, "should not be eof", ).That(!it.Eof())
+			assert.Msg(expected, "should not be eof").That(!it.Eof())
 			assert.This(it.Cur()).Is(uint64(expected))
 		}
 	}

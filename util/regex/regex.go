@@ -24,7 +24,7 @@ type inst struct {
 	jump int16
 	// alt is used by branch
 	alt int16
-	op byte
+	op  byte
 	// i is used by left, right, and backref
 	i byte
 }

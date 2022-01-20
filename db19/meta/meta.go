@@ -565,7 +565,7 @@ func (m *Meta) dropFkeys(mu *metaUpdate, drop *schema.Schema) {
 			log.Println("foreign key: can't find", fk.Table, "(from "+drop.Table+")")
 			continue
 		}
-		target := *t // copy
+		target := *t                                                     // copy
 		target.Indexes = append(target.Indexes[:0:0], target.Indexes...) // copy
 		for j := range target.Indexes {
 			ix := &target.Indexes[j]

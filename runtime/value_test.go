@@ -51,7 +51,6 @@ func TestCompare(t *testing.T) {
 		assert(vals[i-1].Compare(vals[i])).Msg(vals[i-1], vals[i]).Is(-1)
 		assert(vals[i].Compare(vals[i-1])).Is(+1)
 	}
-	
 }
 
 func TestIfStr(t *testing.T) {

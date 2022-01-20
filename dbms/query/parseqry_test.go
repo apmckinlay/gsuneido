@@ -58,7 +58,7 @@ func TestParseQuery(t *testing.T) {
 		"cus join 1:n by(cnum) task sort tnum")
 	test("(cus join task) project cnum, abbrev, tnum rename cnum to c sort tnum, c",
 		"(cus join 1:n by(cnum) task) project cnum,abbrev,tnum"+
-		" rename cnum to c sort tnum, c")
+			" rename cnum to c sort tnum, c")
 
 	xtest := func(s, err string) {
 		fn := func() { ParseQuery(s, testTran{}) }

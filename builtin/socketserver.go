@@ -98,6 +98,7 @@ func (sm *suServerMaster) String() string {
 }
 
 var sscount = int32(0)
+
 const ssmax = 500 // for all SocketServer's
 
 func (sm *suServerMaster) listen(name string, port int) {

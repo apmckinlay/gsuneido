@@ -384,10 +384,10 @@ func TestOverIterBug(*testing.T) {
 	bt := btree.CreateBtree(stor.HeapStor(8192), nil)
 	layers := []*ixbuf.T{{}, {}, {}, {}}
 	layers[0].Insert("z", 1)
-	layers[1].Insert("z", 1 | ixbuf.Update)
+	layers[1].Insert("z", 1|ixbuf.Update)
 	layers[2].Insert("a", 2)
-	layers[3].Insert("a", 2 | ixbuf.Delete)
-	layers[3].Insert("z", 1 | ixbuf.Delete)
+	layers[3].Insert("a", 2|ixbuf.Delete)
+	layers[3].Insert("z", 1|ixbuf.Delete)
 	ov := &Overlay{bt: bt, layers: layers}
 	tran := &testTran{getIndex: func() *Overlay { return ov }}
 
@@ -397,10 +397,10 @@ func TestOverIterBug(*testing.T) {
 
 	layers = []*ixbuf.T{{}, {}, {}, {}}
 	layers[0].Insert("a", 1)
-	layers[1].Insert("a", 1 | ixbuf.Update)
+	layers[1].Insert("a", 1|ixbuf.Update)
 	layers[2].Insert("z", 2)
-	layers[3].Insert("z", 2 | ixbuf.Delete)
-	layers[3].Insert("a", 1 | ixbuf.Delete)
+	layers[3].Insert("z", 2|ixbuf.Delete)
+	layers[3].Insert("a", 1|ixbuf.Delete)
 	ov = &Overlay{bt: bt, layers: layers}
 	tran = &testTran{getIndex: func() *Overlay { return ov }}
 
@@ -415,8 +415,8 @@ func TestOverIterBug2(*testing.T) {
 	b.Add("2222", 2222)
 	bt := b.Finish()
 	layers := []*ixbuf.T{{}}
-	layers[0].Insert("1111", 1111 | ixbuf.Delete)
-	layers[0].Insert("2222", 2222 | ixbuf.Delete)
+	layers[0].Insert("1111", 1111|ixbuf.Delete)
+	layers[0].Insert("2222", 2222|ixbuf.Delete)
 	ov := &Overlay{bt: bt, layers: layers}
 	btree.GetLeafKey = func(_ *stor.Stor, _ *ixkey.Spec, i uint64) string {
 		return strconv.Itoa(int(i))
@@ -432,13 +432,13 @@ func TestOverIterBug3(*testing.T) {
 	b.Add("1111", 1111)
 	bt := b.Finish()
 	layers := []*ixbuf.T{{}}
-	layers[0].Insert("1111", 1111 | ixbuf.Delete)
+	layers[0].Insert("1111", 1111|ixbuf.Delete)
 	ov := &Overlay{bt: bt, layers: layers}
 	btree.GetLeafKey = func(_ *stor.Stor, _ *ixkey.Spec, i uint64) string {
 		return strconv.Itoa(int(i))
 	}
 	tran := &testTran{getIndex: func() *Overlay { return ov }}
-	
+
 	it := NewOverIter("", 0)
 	it.Range(Range{Org: "5555", End: "55559999"})
 	it.Next(tran)

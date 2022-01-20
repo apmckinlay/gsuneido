@@ -102,7 +102,7 @@ func (p *Parser) pcExpr(minprec int8) ast.Expr {
 			}
 			rhs := p.Expression()
 			if assignToLocal != "" {
-				if _,ok := rhs.(*ast.Constant); ok {
+				if _, ok := rhs.(*ast.Constant); ok {
 					p.assignConst[assignToLocal] = true
 				}
 			}

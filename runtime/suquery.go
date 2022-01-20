@@ -130,7 +130,7 @@ type SuQuery struct {
 
 func NewSuQuery(th *Thread, tran *SuTran, query string, iquery IQuery) *SuQuery {
 	return &SuQuery{tran: tran, SuQueryCursor: SuQueryCursor{
-			owner: th, which: "Query", query: query, iqc: iquery}}
+		owner: th, which: "Query", query: query, iqc: iquery}}
 }
 
 var _ Value = (*SuQuery)(nil)
@@ -185,7 +185,7 @@ type SuCursor struct {
 
 func NewSuCursor(th *Thread, query string, icursor ICursor) *SuCursor {
 	return &SuCursor{SuQueryCursor: SuQueryCursor{
-			owner: th, which: "Cursor", query: query, iqc: icursor}}
+		owner: th, which: "Cursor", query: query, iqc: icursor}}
 }
 
 func (q *SuCursor) Equal(other interface{}) bool {

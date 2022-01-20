@@ -117,7 +117,7 @@ func TestIterator(*testing.T) {
 	it.Seek("~") // after last
 	test(n - 1)
 
-	org := n/4
+	org := n / 4
 	it.Range(Range{Org: data[org], End: ixkey.Max})
 	for i := org; i < n; i++ {
 		it.Next()
@@ -126,7 +126,7 @@ func TestIterator(*testing.T) {
 	it.Next()
 	assert.That(it.Eof())
 
-	end := n/2
+	end := n / 2
 	it.Range(Range{End: data[end]})
 	for i := 0; i < end; i++ {
 		it.Next()
@@ -148,7 +148,7 @@ func TestIterator(*testing.T) {
 	assert.That(it.Eof())
 
 	it.Range(Range{Org: data[org], End: ixkey.Max})
-	for i := n-1; i >= org; i-- {
+	for i := n - 1; i >= org; i-- {
 		it.Prev()
 		test(i)
 	}
@@ -156,7 +156,7 @@ func TestIterator(*testing.T) {
 	assert.That(it.Eof())
 
 	it.Range(Range{End: data[end]})
-	for i := end-1; i >= 0; i-- {
+	for i := end - 1; i >= 0; i-- {
 		it.Prev()
 		test(i)
 	}
@@ -164,7 +164,7 @@ func TestIterator(*testing.T) {
 	assert.That(it.Eof())
 
 	it.Range(Range{Org: data[org], End: data[end]})
-	for i := end-1; i >= org; i-- {
+	for i := end - 1; i >= org; i-- {
 		it.Prev()
 		test(i)
 	}

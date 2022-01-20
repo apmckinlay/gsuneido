@@ -95,7 +95,7 @@ var halfpow10 = [...]uint64{
 	5000000000000000000}
 
 // NOTE: comment out body in production
-func check(/*cond*/ bool) {
+func check( /*cond*/ bool) {
 	// if !cond {
 	// 	panic("check failed")
 	// }
@@ -724,7 +724,7 @@ func (dn Dnum) Format(mask string) string {
 			}
 		}
 	}
-	if before + after == 0 || n.Exp() > before {
+	if before+after == 0 || n.Exp() > before {
 		return "#" // too big to fit in mask
 	}
 	n = n.Round(after, HalfUp)

@@ -148,7 +148,7 @@ func AfterLast(s, sub string) string {
 	if i == -1 {
 		return s
 	}
-	return s[i + len(sub):]
+	return s[i+len(sub):]
 }
 
 // Opt returns "" if any of the strings are ""

@@ -183,7 +183,7 @@ func TestHmap_Iter_modified(t *testing.T) {
 	assert.T(t).This(func() { it() }).Panics("hmap modified during iteration")
 	it = hm.Iter()
 	hm.Del(SuInt(999)) // non-existent
-	it()            // shouldn't panic
+	it()               // shouldn't panic
 }
 
 func BenchmarkHmap_Get(b *testing.B) {

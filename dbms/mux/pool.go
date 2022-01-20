@@ -41,7 +41,7 @@ const timeout = 1 * time.Minute
 
 func (p *pool) worker(c *conn, id int, data []byte) {
 	wb := newWriteBuffer(c) // each worker has its own writeBuffer
-	p.h(wb, id, data) // do the task
+	p.h(wb, id, data)       // do the task
 	timer := time.NewTimer(timeout)
 	for {
 		select {
