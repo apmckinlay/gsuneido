@@ -129,7 +129,7 @@ func (ck *Check) AddExclusive(table string) bool {
 	for _, t2 := range ck.trans {
 		if tbl, ok := t2.tables[table]; ok {
 			if len(tbl.outputs) > 0 || len(tbl.deletes) > 0 {
-				ck.abort(t2.start, "preempted by exclusive")
+				ck.abort(t2.start, "preempted by exclusive ("+table+")")
 			}
 		}
 	}
@@ -187,7 +187,7 @@ func (ck *Check) Read(t *CkTran, table string, index int, from, to string) bool 
 			if tbl, ok := t2.tables[table]; ok {
 				if tbl.outputs.anyInRange(index, from, to) ||
 					tbl.deletes.anyInRange(index, from, to) {
-					if ck.abort1of(t, t2, "read", "write") {
+					if ck.abort1of(t, t2, "read", "write", table) {
 						return false // this transaction got aborted
 					}
 				}
@@ -256,7 +256,7 @@ func (ck *Check) output(t *CkTran, table string, keys, oldkeys []string) bool {
 				for i, key := range keys {
 					if (oldkeys == nil || key != oldkeys[i]) &&
 						tbl.reads.contains(i, key) {
-						if ck.abort1of(t, t2, "output", "read") {
+						if ck.abort1of(t, t2, "output", "read", table) {
 							return false // this transaction got aborted
 						}
 					}
@@ -298,13 +298,13 @@ func (ck *Check) Delete(t *CkTran, table string, off uint64, keys []string) bool
 		if t2 != t && overlap(t, t2) {
 			if tbl, ok := t2.tables[table]; ok {
 				if _, ok := tbl.deloffs[off]; ok {
-					if ck.abort1of(t, t2, "delete", "delete") {
+					if ck.abort1of(t, t2, "delete", "delete", table) {
 						return false // this transaction got aborted
 					}
 				}
 				for i, key := range keys {
 					if !t2.ended() && tbl.reads.contains(i, key) {
-						if ck.abort1of(t, t2, "delete", "read") {
+						if ck.abort1of(t, t2, "delete", "read", table) {
 							return false // this transaction got aborted
 						}
 					}
@@ -359,15 +359,15 @@ var checkerAbortT1 = false
 // abort1of aborts one of t1 and t2.
 // If t2 is committed, abort t1, otherwise choose randomly.
 // It returns true if t1 is aborted, false if t2 is aborted.
-func (ck *Check) abort1of(t1, t2 *CkTran, act1, act2 string) bool {
+func (ck *Check) abort1of(t1, t2 *CkTran, act1, act2, table string) bool {
 	traceln("conflict with", t2)
 	if t2.ended() || checkerAbortT1 || rand.Intn(2) == 1 {
 		ck.abort(t1.start, act1+" in this transaction conflicted with "+
-			act2+" in another transaction")
+			act2+" in another transaction ("+table+")")
 		return true
 	}
 	ck.abort(t2.start, act2+" in this transaction conflicted with "+
-		act1+" in another transaction")
+		act1+" in another transaction ("+table+")")
 	return false
 }
 
