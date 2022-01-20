@@ -119,20 +119,20 @@ func TestForeignKeys(*testing.T) {
 	act("insert { m: 1, d: 11 } into lin2")
 	act("insert { m: 1, d: 12 } into lin2")
 	assert.This(db.GetState().Meta.GetRoInfo("lin2").Nrows).Is(3)
-	act("delete hdr2") // cascade
+	act("delete hdr2") // cascade delete
 	assert.This(db.GetState().Meta.GetRoInfo("lin2").Nrows).Is(0)
 
 	DoAdmin(db, "create hdr3 (m) key(m)")
 	act("insert { m: 1 } into hdr3")
-	DoAdmin(db, "create lin3 (m, d) key(d) index(m) in hdr3 cascade")
+	DoAdmin(db, "create lin3 (d, m) key(d) index(m) in hdr3 cascade")
 	act("insert { m: 1, d: 10 } into lin3")
 	act("insert { m: 1, d: 11 } into lin3")
 	act("insert { m: 1, d: 12 } into lin3")
 	assert.This(queryAll(db, "lin3")).
-		Is("m=1 d=10 | m=1 d=11 | m=1 d=12")
-	act("update hdr3 set m = 2")
+		Is("d=10 m=1 | d=11 m=1 | d=12 m=1")
+	act("update hdr3 set m = 2") // cascade update
 	assert.This(queryAll(db, "lin3")).
-		Is("m=2 d=10 | m=2 d=11 | m=2 d=12")
+		Is("d=10 m=2 | d=11 m=2 | d=12 m=2")
 
 	DoAdmin(db, "create hdr4 (a) key(a)")
 	DoAdmin(db, "create lin4 (b,a) key(b)")

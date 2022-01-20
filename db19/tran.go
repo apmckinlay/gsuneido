@@ -553,7 +553,7 @@ func (t *UpdateTran) update(table string, oldoff uint64, newrec rt.Record,
 }
 
 func (t *UpdateTran) fkeyUpdateCascade(ts *meta.Schema, i int,
-	rec rt.Record, key string) {
+	rec rt.Record, key string) { // rec is old, key is new
 	ixcols := ts.Indexes[i].Columns
 	encoded := ts.Indexes[i].Ixspec.Encodes()
 	fkToHere := ts.Indexes[i].FkToHere
@@ -562,14 +562,14 @@ func (t *UpdateTran) fkeyUpdateCascade(ts *meta.Schema, i int,
 		if fk.Mode&schema.CascadeUpdates == 0 {
 			continue
 		}
-		ts := t.GetSchema(fk.Table)
+		ts2 := t.GetSchema(fk.Table)
 		ixcols2 := fk.Columns
 		iter := t.cascade(fk, encoded, key)
 		for iter.Next(t); !iter.Eof(); iter.Next(t) {
 			_, off := iter.Cur()
 			oldrec := t.GetRecord(off)
 			rb := rt.RecordBuilder{}
-			for i, col := range ts.Columns {
+			for i, col := range ts2.Columns {
 				if j := strs.Index(ixcols2, col); j != -1 {
 					k := strs.Index(ts.Columns, ixcols[j])
 					rb.AddRaw(rec.GetRaw(k))
