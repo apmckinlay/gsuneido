@@ -1,6 +1,7 @@
 // Copyright Suneido Software Corp. All rights reserved.
 // Governed by the MIT license found in the LICENSE file.
 
+//go:build !portable
 // +build !portable
 
 package builtin
@@ -26,7 +27,7 @@ var _ = builtin("UpdateUI(block)",
 		} else {
 			block := args[0]
 			block.SetConcurrent()
-			rogsChan <- func () { runUI(block) }
+			rogsChan <- func() { runUI(block) }
 			notifyCside()
 		}
 		return nil

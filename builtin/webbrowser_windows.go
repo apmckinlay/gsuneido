@@ -1,6 +1,7 @@
 // Copyright Suneido Software Corp. All rights reserved.
 // Governed by the MIT license found in the LICENSE file.
 
+//go:build !portable
 // +build !portable
 
 package builtin
@@ -14,7 +15,7 @@ import (
 type suWebBrowser struct {
 	suComObject
 	iOleObject uintptr
-	ptr uintptr
+	ptr        uintptr
 }
 
 func (*suWebBrowser) String() string {
@@ -33,7 +34,7 @@ var _ = builtin1("WebBrowser(hwnd)",
 		if rtn != 0 {
 			return intRet(rtn)
 		}
-		iOleObject :=*(*uintptr)(iunk)
+		iOleObject := *(*uintptr)(iunk)
 		swb := &suWebBrowser{iOleObject: iOleObject, ptr: *(*uintptr)(pPtr)}
 		idisp := goc.QueryIDispatch(iOleObject)
 		swb.suComObject = suComObject{ptr: idisp, idisp: true}
