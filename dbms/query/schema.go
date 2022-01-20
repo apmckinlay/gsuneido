@@ -162,14 +162,25 @@ func (ts *Tables) ensure() {
 		return
 	}
 	ts.info = ts.tran.GetAllInfo()
-	nidxs := 0
-	for _, info := range ts.info {
-		nidxs += len(info.Indexes)
-	}
+
+	cols := Columns{}
+	cols.SetTran(ts.tran)
+	ncols := cols.Nrows()
+
+	idxs := Indexes{}
+	idxs.SetTran(ts.tran)
+	nidxs := idxs.Nrows()
+
+	views := Views{}
+	views.SetTran(ts.tran)
+	nviews := views.Nrows()
+
 	ts.info = append(ts.info,
-		&meta.Info{Table: "tables", Nrows: len(ts.info) + 3},
-		&meta.Info{Table: "columns"},
+		// +4 for tables, columns, indexes, views
+		&meta.Info{Table: "tables", Nrows: len(ts.info) + 4},
+		&meta.Info{Table: "columns", Nrows: ncols},
 		&meta.Info{Table: "indexes", Nrows: nidxs},
+		&meta.Info{Table: "views", Nrows: nviews},
 	)
 	sort.Slice(ts.info,
 		func(i, j int) bool { return ts.info[i].Table < ts.info[j].Table })
@@ -211,7 +222,12 @@ func (cs *Columns) Nrows() int {
 	cs.ensure()
 	n := 0
 	for _, schema := range cs.schema {
-		n += len(schema.Columns)
+		for _, col := range schema.Columns {
+			if col != "-" {
+				n++
+			}
+		}
+		n += len(schema.Derived)
 	}
 	return n
 }
@@ -289,12 +305,14 @@ func (cs *Columns) ensure() {
 		&meta.Schema{Schema: schema.Schema{Table: "tables", Columns: tablesFields[0]}},
 		&meta.Schema{Schema: schema.Schema{Table: "columns", Columns: columnsFields[0]}},
 		&meta.Schema{Schema: schema.Schema{Table: "indexes", Columns: indexesFields[0]}},
+		&meta.Schema{Schema: schema.Schema{Table: "views", Columns: viewsFields[0]}},
 	)
 	sort.Slice(cs.schema,
 		func(i, j int) bool { return cs.schema[i].Table < cs.schema[j].Table })
 }
 
 //-------------------------------------------------------------------
+// note: indexes does not include tables, columns, indexes, views
 
 type Indexes struct {
 	schemaTable

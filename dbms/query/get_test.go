@@ -148,13 +148,15 @@ func TestQueryGet(t *testing.T) {
         'trans' 'item'  0
         'trans' 'id'    1
         'trans' 'cost'  2
-        'trans' 'date'  3`)
+        'trans' 'date'  3
+        'views' 'view_name'     0
+        'views' 'view_definition'       1`)
 	test("tables",
 		"tables",
 		`table   tablename       nrows   totalsize
         'alias' 'alias' 2       25
         'co'    'co'    4       55
-        'columns'       'columns'       0       0
+        'columns'       'columns'       45       0
         'cus'   'cus'   4       64
         'customer'      'customer'      4       98
         'dates' 'dates' 4       52
@@ -163,9 +165,10 @@ func TestQueryGet(t *testing.T) {
         'indexes'       'indexes'       16      0
         'inven' 'inven' 3       42
         'supplier'      'supplier'      4       128
-        'tables'        'tables'        14      0
+        'tables'        'tables'        15      0
         'task'  'task'  8       95
-        'trans' 'trans' 4       92`)
+        'trans' 'trans' 4       92
+		'views' 'views' 0       0`)
 	test("customer",
 		"customer^(id)",
 		`id	name	city
