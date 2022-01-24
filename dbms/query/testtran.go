@@ -12,6 +12,8 @@ import (
 	"github.com/apmckinlay/gsuneido/runtime"
 )
 
+// testTran has hard coded table schemas for tests
+// See also: sizeTran
 type testTran struct{}
 
 var testSchemas = map[string]*Schema{

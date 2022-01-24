@@ -46,6 +46,13 @@ func (t *Times) Indexes() [][]string {
 func (t *Times) Transform() Query {
 	t.source = t.source.Transform()
 	t.source2 = t.source2.Transform()
+	// propagate Nothing
+	if _, ok := t.source.(*Nothing); ok {
+		return NewNothing(t.Columns())
+	}
+	if _, ok := t.source2.(*Nothing); ok {
+		return NewNothing(t.Columns())
+	}
 	return t
 }
 

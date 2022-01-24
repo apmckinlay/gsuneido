@@ -89,18 +89,27 @@ func (w *Where) String() string {
 }
 
 func (w *Where) Fixed() []Fixed {
-	if w.fixed != nil { // once only
+	if w.fixed != nil {
 		return w.fixed
 	}
-	for _, e := range w.expr.Exprs {
-		w.whereFixed = addFixed(w.whereFixed, e)
+	whereFixed := w.exprsToFixed()
+	fixed, none := combineFixed(w.source.Fixed(), whereFixed)
+	if none {
+		w.conflict = true
 	}
-	w.fixed = combineFixed(w.whereFixed, w.source.Fixed())
-	return w.fixed
+	return fixed
+}
+
+func (w *Where) exprsToFixed() []Fixed {
+	var fixed []Fixed
+	for _, e := range w.expr.Exprs {
+		fixed = addFixed(fixed, e)
+	}
+	return fixed
 }
 
 func addFixed(fixed []Fixed, e ast.Expr) []Fixed {
-	// MAYBE: handle IN
+	// MAYBE: handle IN and OR
 	if b, ok := e.(*ast.Binary); ok && b.Tok == tok.Is {
 		if id, ok := b.Lhs.(*ast.Ident); ok {
 			if c, ok := b.Rhs.(*ast.Constant); ok {
@@ -139,6 +148,9 @@ func (w *Where) Nrows() int {
 }
 
 func (w *Where) Transform() Query {
+	if w.Fixed(); w.conflict || w.exprConflict() {
+		return NewNothing(w.Columns())
+	}
 	if len(w.expr.Exprs) == 0 {
 		// remove empty where
 		return w.source.Transform()
@@ -264,6 +276,10 @@ func (w *Where) Transform() Query {
 	if moved {
 		return w.source
 	}
+	// propagate Nothing
+	if _, ok := w.source.(*Nothing); ok {
+		return w.source
+	}
 	return w
 }
 
@@ -336,12 +352,11 @@ func (w *Where) split(q2 *Query2) bool {
 // optimize ---------------------------------------------------------
 
 func (w *Where) optimize(mode Mode, index []string) (Cost, interface{}) {
-	w.conflictCheck()
-	if w.conflict {
-		return 0, nil
-	}
 	if !w.optInited {
 		w.optInit()
+		if w.conflict {
+			return 0, nil
+		}
 	}
 	// we always have the option of just filtering (no specific index use)
 	filterCost := Optimize(w.source, mode, index)
@@ -356,13 +371,14 @@ func (w *Where) optimize(mode Mode, index []string) (Cost, interface{}) {
 	return cost, whereApproach{index: index}
 }
 
-func (w *Where) conflictCheck() {
+func (w *Where) exprConflict() bool {
+	//TODO also check for always true
 	for _, expr := range w.expr.Exprs {
 		if c, ok := expr.(*ast.Constant); ok && c.Val == runtime.False {
-			w.conflict = true
-			return
+			return true
 		}
 	}
+	return false
 }
 
 func (w *Where) optInit() {
@@ -370,11 +386,9 @@ func (w *Where) optInit() {
 	if w.tbl, _ = w.source.(*Table); w.tbl == nil {
 		return
 	}
-	w.Fixed()
+	w.whereFixed = w.exprsToFixed()
+	w.fixed = w.Fixed() // cache
 	cmps := w.extractCompares()
-	if w.conflict {
-		return
-	}
 	w.exprMore = len(cmps) < len(w.expr.Exprs)
 	colSels := w.comparesToFilters(cmps)
 	if w.conflict {

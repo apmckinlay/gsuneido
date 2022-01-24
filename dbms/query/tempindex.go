@@ -12,6 +12,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/strs"
 )
 
+// TempIndex is inserted by SetApproach as required
 type TempIndex struct {
 	Query1
 	order   []string

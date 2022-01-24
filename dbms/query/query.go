@@ -46,7 +46,7 @@ type Query interface {
 	Columns() []string
 
 	// Transform refactors the query for more efficient execution.
-	// This stage is not cost based, transforms are applied whenever possible.
+	// This stage is not cost based, transforms are applied when possible.
 	Transform() Query
 
 	// SetTran is used for cursors
@@ -99,7 +99,7 @@ type Query interface {
 	cacheAdd(index []string, cost Cost, approach interface{})
 
 	// cacheGet returns the cost and approach associated with an index
-	// or -1 if the index as not been added.
+	// or -1 if the index has not been added.
 	cacheGet(index []string) (Cost, interface{})
 
 	optimize(mode Mode, index []string) (cost Cost, approach interface{})
@@ -150,7 +150,7 @@ type QueryTran interface {
 }
 
 // Setup prepares a parsed query for execution.
-// It calls transform and optimize.
+// It calls Transform, Optimize, and SetApproach.
 // The resulting Query is ready for execution.
 //
 // NOTE: Correct usage is: q, cost = Setup(q, mode, t)
@@ -450,7 +450,7 @@ func (*Query2) tagQuery2() {
 // paren is a helper for Query String methods
 func paren(q Query) string {
 	switch q.(type) {
-	case *Table, *Tables, *Columns, *Indexes:
+	case *Table, *Tables, *Columns, *Indexes, *Nothing:
 		return q.String()
 	}
 	return "(" + q.String() + ")"

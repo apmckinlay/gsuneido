@@ -98,6 +98,10 @@ func (e *Extend) Transform() Query {
 		e.init()
 	}
 	e.source = e.source.Transform()
+	// propagate Nothing
+	if _, ok := e.source.(*Nothing); ok {
+		return NewNothing(e.Columns())
+	}
 	return e
 }
 
@@ -133,18 +137,18 @@ func (e *Extend) needRule2(col string) bool {
 }
 
 func (e *Extend) Fixed() []Fixed {
-	if e.fixed != nil { // once only
+	if e.fixed != nil {
 		return e.fixed
 	}
+	fixed := append([]Fixed{}, e.source.Fixed()...) // copy
 	for i := 0; i < len(e.cols); i++ {
 		if expr := e.exprs[i]; expr != nil {
 			if c, ok := expr.(*ast.Constant); ok {
-				e.fixed = append(e.fixed, NewFixed(e.cols[i], c.Val))
+				fixed = append(fixed, NewFixed(e.cols[i], c.Val))
 			}
 		}
 	}
-	e.fixed = combineFixed(e.fixed, e.source.Fixed())
-	return e.fixed
+	return fixed
 }
 
 func (e *Extend) SingleTable() bool {
@@ -164,6 +168,7 @@ func (e *Extend) optimize(mode Mode, index []string) (Cost, interface{}) {
 func (e *Extend) setApproach(index []string, _ interface{}, tran QueryTran) {
 	e.source = SetApproach(e.source, index, tran)
 	e.hdr = e.Header() // cache for Get
+	e.fixed = e.Fixed() // cache
 }
 
 // execution --------------------------------------------------------

@@ -5,7 +5,6 @@ package query
 
 import (
 	"github.com/apmckinlay/gsuneido/runtime"
-	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/sset"
 )
 
@@ -40,24 +39,55 @@ func (f *Fixed) String() string {
 	return s + ")"
 }
 
-func combineFixed(fixed1, fixed2 []Fixed) []Fixed {
-	// fixed1 has precedence e.g. combine(f=1, f=2) => f=1
+// combineFixed is used by Where and Join
+func combineFixed(fixed1, fixed2 []Fixed) (result []Fixed, none bool) {
 	if len(fixed1) == 0 {
-		return fixed2
+		return fixed2, false
 	}
 	if len(fixed2) == 0 {
-		return fixed1
+		return fixed1, false
 	}
-	result := make([]Fixed, len(fixed1))
-	copy(result, fixed1)
+	result = make([]Fixed, 0, len(fixed1)+len(fixed2))
+	// add fixed1 that are not in fixed2
+	for _, sf := range fixed1 {
+		if getFixed(fixed2, sf.col) == nil {
+			result = append(result, sf)
+		}
+	}
 	for _, f2 := range fixed2 {
-		if vals1 := getFixed(fixed1, f2.col); vals1 != nil {
-			assert.Msg("combineFixed conflict").That(sset.Equal(vals1, f2.values))
+		if srcvals := getFixed(fixed1, f2.col); srcvals != nil {
+			// field is in both
+			vals := sset.Intersect(srcvals, f2.values)
+			if len(vals) == 0 {
+				return nil, true // can't match anything
+			}
+			result = append(result, Fixed{col: f2.col, values: vals})
 		} else {
+			// add fixed2 that are not in fixed1
 			result = append(result, f2)
 		}
 	}
-	return result
+	return result, false
+}
+
+// FixedIntersect is used by Intersect
+func FixedIntersect(fixed1, fixed2 []Fixed) (result []Fixed, none bool) {
+	if len(fixed1) == 0 || len(fixed2) == 0 {
+		return nil, false
+	}
+	result = make([]Fixed, len(fixed1))
+	for i, f1 := range fixed1 {
+		if vals2 := getFixed(fixed2, f1.col); vals2 != nil {
+			vals := sset.Intersect(f1.values, vals2)
+			if len(vals) == 0 {
+				return nil, true // can't match anything
+			}
+			result[i] = Fixed{col: f1.col, values: vals}
+		} else {
+			result[i] = f1
+		}
+	}
+	return result, false
 }
 
 func hasCol(fixed []Fixed, col string) bool {

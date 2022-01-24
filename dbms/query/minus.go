@@ -43,13 +43,20 @@ func (m *Minus) Nrows() int {
 }
 
 func (m *Minus) Transform() Query {
-	if m.disjoint == "" {
-		m.source = m.source.Transform()
-		m.source2 = m.source2.Transform()
-		return m
-	}
 	// remove if disjoint
-	return m.source.Transform()
+	if m.disjoint != "" {
+		return m.source.Transform()
+	}
+	m.source = m.source.Transform()
+	m.source2 = m.source2.Transform()
+	// propagate Nothing
+	if _, ok := m.source.(*Nothing); ok {
+		return NewNothing(m.Columns())
+	}
+	if _, ok := m.source2.(*Nothing); ok {
+		return m.source
+	}
+	return m
 }
 
 func (m *Minus) optimize(mode Mode, index []string) (Cost, interface{}) {

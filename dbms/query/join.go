@@ -17,10 +17,10 @@ type Join struct {
 	Query2
 	by []string
 	joinType
-	nr   int
-	hdr1 *Header
-	row1 Row
-	row2 Row // nil when we need a new row1
+	conflict bool
+	hdr1     *Header
+	row1     Row
+	row2     Row // nil when we need a new row1
 }
 
 type joinApproach struct {
@@ -118,12 +118,26 @@ func (jn *Join) Keys() [][]string {
 }
 
 func (jn *Join) Fixed() []Fixed {
-	return combineFixed(jn.source.Fixed(), jn.source2.Fixed())
+	fixed, none := combineFixed(jn.source.Fixed(), jn.source2.Fixed())
+	if none {
+		jn.conflict = true
+	}
+	return fixed
 }
 
 func (jn *Join) Transform() Query {
+	if jn.Fixed(); jn.conflict {
+		return NewNothing(jn.Columns())
+	}
 	jn.source = jn.source.Transform()
 	jn.source2 = jn.source2.Transform()
+	// propagate Nothing
+	if _, ok := jn.source.(*Nothing); ok {
+		return NewNothing(jn.Columns())
+	}
+	if _, ok := jn.source2.(*Nothing); ok {
+		return NewNothing(jn.Columns())
+	}
 	return jn
 }
 
@@ -305,9 +319,23 @@ func (lj *LeftJoin) Keys() [][]string {
 	}
 }
 
+func (lj *LeftJoin) Fixed() []Fixed {
+	return lj.source.Fixed()
+}
+
 func (lj *LeftJoin) Transform() Query {
+	if lj.Join.Fixed(); lj.conflict {
+		return lj.source.Transform() // remove useless left join
+	}
 	lj.source = lj.source.Transform()
 	lj.source2 = lj.source2.Transform()
+	// propagate Nothing
+	if _, ok := lj.source.(*Nothing); ok {
+		return NewNothing(lj.Columns())
+	}
+	if _, ok := lj.source2.(*Nothing); ok {
+		return lj.source
+	}
 	return lj
 }
 

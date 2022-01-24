@@ -191,6 +191,10 @@ func (p *Project) Transform() Query {
 		if moved {
 			return p.source
 		}
+		// propagate Nothing
+		if _, ok := p.source.(*Nothing); ok {
+			return NewNothing(p.Columns())
+		}
 		return p
 	}
 }

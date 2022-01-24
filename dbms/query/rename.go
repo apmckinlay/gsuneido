@@ -124,6 +124,10 @@ func (r *Rename) Transform() Query {
 		r.source = r2.source
 	}
 	r.source = r.source.Transform()
+	// propagate Nothing
+	if _, ok := r.source.(*Nothing); ok {
+		return NewNothing(r.Columns())
+	}
 	return r
 }
 

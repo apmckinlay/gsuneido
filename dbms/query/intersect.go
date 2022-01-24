@@ -13,6 +13,7 @@ import (
 
 type Intersect struct {
 	Compatible
+	conflict bool
 }
 
 type intersectApproach struct {
@@ -43,6 +44,14 @@ func (it *Intersect) Keys() [][]string {
 	return k
 }
 
+func (it *Intersect) Fixed() []Fixed {
+	fixed, none := FixedIntersect(it.source.Fixed(), it.source2.Fixed())
+	if none {
+		it.conflict = true
+	}
+	return fixed
+}
+
 func (it *Intersect) Indexes() [][]string {
 	return setord.Union(it.source.Indexes(), it.source2.Indexes())
 }
@@ -61,8 +70,18 @@ func (it *Intersect) rowSize() int {
 }
 
 func (it *Intersect) Transform() Query {
+	if it.Fixed(); it.conflict {
+		return NewNothing(it.Columns())
+	}
 	it.source = it.source.Transform()
 	it.source2 = it.source2.Transform()
+	// propagate Nothing
+	if _, ok := it.source.(*Nothing); ok {
+		return NewNothing(it.Columns())
+	}
+	if _, ok := it.source2.(*Nothing); ok {
+		return NewNothing(it.Columns())
+	}
 	return it
 }
 

@@ -112,6 +112,13 @@ func (u *Union) nrowsCalc(n1, n2 int) int {
 func (u *Union) Transform() Query {
 	u.source = u.source.Transform()
 	u.source2 = u.source2.Transform()
+	// propagate Nothing
+	if _, ok := u.source.(*Nothing); ok {
+		return u.source2
+	}
+	if _, ok := u.source2.(*Nothing); ok {
+		return u.source
+	}
 	return u
 }
 
