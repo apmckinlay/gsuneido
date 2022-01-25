@@ -89,6 +89,9 @@ func TestOptimize(t *testing.T) {
 		"trans^(date,item,id) SUMMARIZE-SEQ total_cost = total cost")
 	test("trans summarize item, total cost",
 		"trans^(item) SUMMARIZE-SEQ item, total_cost = total cost")
+	test("trans summarize item, total cost sort total_cost",
+		"trans^(item) SUMMARIZE-SEQ item, total_cost = total cost"+
+			" TEMPINDEX(total_cost)")
 	test("trans summarize id, total cost",
 		"trans^(date,item,id) SUMMARIZE-MAP id, total_cost = total cost")
 	test("supplier summarize max supplier", // key

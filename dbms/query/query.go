@@ -500,7 +500,7 @@ func bestGrouped(source Query, mode Mode, index, cols []string) bestIndex {
 			best.update(idx, cost)
 		}
 	}
-	if best.index == nil {
+	if best.index == nil && index == nil {
 		best.cost = Optimize(source, mode, cols)
 		if best.cost < impossible {
 			best.index = cols

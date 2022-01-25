@@ -665,6 +665,13 @@ func TestQueryGet(t *testing.T) {
 		970101	#('a', 'e')
 		970102	#('c')
 		970103	#('e')`)
+	test("hist summarize date, total cost sort total_cost",
+		"hist^(date) SUMMARIZE-SEQ date, total_cost = total cost "+
+			"TEMPINDEX(total_cost)",
+		`date	total_cost
+        970102	200
+        970101	300
+        970103	300`)
 	test("hist summarize list id",
 		"hist^(date) SUMMARIZE-SEQ list_id = list id",
 		`list_id
