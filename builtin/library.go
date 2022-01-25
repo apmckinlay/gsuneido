@@ -6,7 +6,12 @@ package builtin
 import . "github.com/apmckinlay/gsuneido/runtime"
 
 var _ = builtin("Libraries()", func(t *Thread, args []Value) Value {
-	return t.Dbms().Libraries()
+	list := t.Dbms().Libraries()
+	var ob SuObject
+	for _, s := range list {
+		ob.Add(SuStr(s))
+	}
+	return &ob
 })
 
 var _ = builtin("Use(library)",

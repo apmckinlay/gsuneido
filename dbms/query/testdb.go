@@ -24,7 +24,7 @@ func testDb() *db19.Database {
 		DoAdmin(db, admin)
 	}
 	act := func(act string) {
-		ut := db.NewUpdateTran()
+		ut := db.NewUpdateTran(nil)
 		defer ut.Commit()
 		DoAction(ut, act)
 	}

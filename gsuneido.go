@@ -48,7 +48,7 @@ var help = `options:
 	-v[ersion]`
 
 // dbmsLocal is set if running with a local/standalone database.
-var dbmsLocal IDbms
+var dbmsLocal *dbms.DbmsLocal
 var mainThread *Thread
 
 func main() {
@@ -251,7 +251,8 @@ func clientErrorLog() {
 
 func startServer() {
 	openDbms()
-	//TODO
+	startHttpStatus()
+	dbms.Server(dbmsLocal)
 	closeDbms()
 }
 

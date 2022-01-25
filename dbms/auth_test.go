@@ -35,7 +35,7 @@ func TestAuthUser(*testing.T) {
 		return NewSuTran(nil, true)
 	}
 	qry.DoAdmin(db, "create users (user, passhash) key(user)")
-	ut := db.NewUpdateTran()
+	ut := db.NewUpdateTran(nil)
 	qry.DoAction(ut, "insert { user: 'fred', passhash: '123' } into users")
 	ut.Commit()
 

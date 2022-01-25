@@ -29,7 +29,7 @@ func xTestDeleteBug2(*testing.T) {
 	db19.StartConcur(db, 5*time.Millisecond)
 	act := func(act string) int {
 		// time.Sleep(1 * time.Microsecond)
-		ut := db.NewUpdateTran()
+		ut := db.NewUpdateTran(nil)
 		defer ut.Commit()
 		return DoAction(ut, act)
 	}
@@ -59,7 +59,7 @@ func TestDeleteBug(*testing.T) {
 	ck(err)
 	db19.StartConcur(db, 50*time.Second)
 	act := func(act string) {
-		ut := db.NewUpdateTran()
+		ut := db.NewUpdateTran(nil)
 		defer ut.Commit()
 		n := DoAction(ut, act)
 		assert.This(n).Is(1)
@@ -81,7 +81,7 @@ func TestDeleteSynch(*testing.T) {
 	ck(err)
 	db.CheckerSync()
 	act := func(act string) {
-		ut := db.NewUpdateTran()
+		ut := db.NewUpdateTran(nil)
 		DoAction(ut, act)
 		db.CommitMerge(ut)
 	}

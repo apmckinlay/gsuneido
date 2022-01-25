@@ -83,7 +83,7 @@ func TestForeignKeys(*testing.T) {
 	defer db.Close()
 	MakeSuTran = func(qt QueryTran) *rt.SuTran { return nil }
 	act := func(act string) {
-		ut := db.NewUpdateTran()
+		ut := db.NewUpdateTran(nil)
 		defer ut.Commit()
 		n := DoAction(ut, act)
 		assert.This(n).Is(1)
@@ -238,7 +238,7 @@ func TestQueryBug(*testing.T) {
 	defer db.Close()
 	MakeSuTran = func(qt QueryTran) *rt.SuTran { return nil }
 	act := func(act string) {
-		ut := db.NewUpdateTran()
+		ut := db.NewUpdateTran(nil)
 		defer ut.Commit()
 		n := DoAction(ut, act)
 		assert.This(n).Is(1)
@@ -270,7 +270,7 @@ func TestDuplicateKey(*testing.T) {
 	defer db.Close()
 	MakeSuTran = func(qt QueryTran) *rt.SuTran { return nil }
 	act := func(act string) {
-		ut := db.NewUpdateTran()
+		ut := db.NewUpdateTran(nil)
 		defer ut.Commit()
 		n := DoAction(ut, act)
 		assert.This(n).Is(1)
@@ -294,7 +294,7 @@ func TestWhereSelectBug(t *testing.T) {
 	defer db.Close()
 	MakeSuTran = func(qt QueryTran) *rt.SuTran { return nil }
 	act := func(act string) {
-		ut := db.NewUpdateTran()
+		ut := db.NewUpdateTran(nil)
 		defer ut.Commit()
 		n := DoAction(ut, act)
 		assert.This(n).Is(1)
@@ -330,7 +330,7 @@ func TestJoinBug(t *testing.T) {
 	defer db.Close()
 	MakeSuTran = func(qt QueryTran) *rt.SuTran { return nil }
 	act := func(act string) {
-		ut := db.NewUpdateTran()
+		ut := db.NewUpdateTran(nil)
 		defer ut.Commit()
 		n := DoAction(ut, act)
 		assert.This(n).Is(1)
@@ -349,7 +349,7 @@ func TestSelectOnSingleton(t *testing.T) {
 	defer db.Close()
 	MakeSuTran = func(qt QueryTran) *rt.SuTran { return nil }
 	act := func(act string) {
-		ut := db.NewUpdateTran()
+		ut := db.NewUpdateTran(nil)
 		defer ut.Commit()
 		n := DoAction(ut, act)
 		assert.This(n).Is(1)
@@ -369,7 +369,7 @@ func TestSingleton(t *testing.T) {
 	defer db.Close()
 	MakeSuTran = func(qt QueryTran) *rt.SuTran { return nil }
 	act := func(act string) {
-		ut := db.NewUpdateTran()
+		ut := db.NewUpdateTran(nil)
 		defer ut.Commit()
 		n := DoAction(ut, act)
 		assert.This(n).Is(1)

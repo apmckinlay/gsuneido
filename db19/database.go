@@ -476,6 +476,7 @@ func (db *Database) Size() uint64 {
 	return db.Store.Size()
 }
 
+// Transctions only returns the update transactions
 func (db *Database) Transactions() []int {
 	db.ckOpen()
 	return db.ck.Transactions()

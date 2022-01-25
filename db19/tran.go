@@ -209,18 +209,18 @@ func (t *ReadTran) Abort() string {
 
 type UpdateTran struct {
 	ReadTran
-	ct *CkTran
-	th *rt.Thread // for triggers
+	ct     *CkTran
+	thread *rt.Thread // for triggers
 }
 
-func (db *Database) NewUpdateTran() *UpdateTran {
+func (db *Database) NewUpdateTran(th *rt.Thread) *UpdateTran {
 	db.ckOpen()
 	ct := db.ck.StartTran()
 	if ct == nil {
 		return nil
 	}
 	meta := ct.state.Meta.Mutable()
-	return &UpdateTran{ct: ct,
+	return &UpdateTran{ct: ct, thread: th,
 		ReadTran: ReadTran{tran: tran{db: db, meta: meta}}}
 }
 
@@ -321,7 +321,7 @@ func (t *UpdateTran) Output(table string, rec rt.Record) {
 	}()
 	ti.Nrows++
 	ti.Size += uint64(n)
-	t.db.CallTrigger(t.thread(), t, table, "", rec)
+	t.db.CallTrigger(t.thread, t, table, "", rec)
 }
 
 func (t *UpdateTran) dupOutputBlock(table string, iIndex int, ix schema.Index, ov *index.Overlay, rec rt.Record, key string) {
@@ -366,13 +366,6 @@ func (t *ReadTran) fkeyOutputExists(table string, iIndex int, key string) bool {
 	return idx.Lookup(key) != 0
 }
 
-func (t *UpdateTran) thread() *rt.Thread {
-	if t.th == nil {
-		t.th = &rt.Thread{}
-	}
-	return t.th
-}
-
 func (t *UpdateTran) Delete(table string, off uint64) {
 	ts := t.getSchema(table)
 	rec := t.GetRecord(off)
@@ -403,7 +396,7 @@ func (t *UpdateTran) Delete(table string, off uint64) {
 		assert.Msg("Delete Size").That(ti.Size >= uint64(n))
 		ti.Size -= uint64(n)
 	}()
-	t.db.CallTrigger(t.thread(), t, table, rec, "")
+	t.db.CallTrigger(t.thread, t, table, rec, "")
 }
 
 func (t *UpdateTran) fkeyDeleteBlock(ts *meta.Schema, i int, key string) {
@@ -548,7 +541,7 @@ func (t *UpdateTran) update(table string, oldoff uint64, newrec rt.Record,
 			}
 		}
 	}()
-	t.db.CallTrigger(t.thread(), t, table, oldrec, newrec)
+	t.db.CallTrigger(t.thread, t, table, oldrec, newrec)
 	return newoff
 }
 

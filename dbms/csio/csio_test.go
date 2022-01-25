@@ -12,7 +12,7 @@ import (
 
 func TestInt(t *testing.T) {
 	var buf bytes.Buffer
-	rw := NewReadWrite(&buf)
+	rw := NewReadWrite(&buf, errfn)
 	test := func(n int64) {
 		rw.PutInt64(n)
 		rw.Flush()
@@ -29,7 +29,7 @@ func TestInt(t *testing.T) {
 
 func TestStr(t *testing.T) {
 	var buf bytes.Buffer
-	rw := NewReadWrite(&buf)
+	rw := NewReadWrite(&buf, errfn )
 	test := func(s string) {
 		rw.PutStr(s)
 		rw.Flush()
@@ -39,4 +39,8 @@ func TestStr(t *testing.T) {
 	test("")
 	test("hello world")
 	test("now is the time for all good men to come to the aid of their party")
+}
+
+func errfn(err string) {
+	panic(err)
 }

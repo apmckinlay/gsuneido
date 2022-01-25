@@ -132,7 +132,7 @@ func createData(db *Database, tables []string, i, n int) {
 	rand := rand.New(rand.NewSource(time.Now().UnixNano()))
 	n += i
 	for i < n {
-		ut := db.NewUpdateTran()
+		ut := db.NewUpdateTran(nil)
 		nt := 1 + rand.Intn(tablesPerTran)
 		for j := 0; j < nt && i < n; j++ {
 			table := tables[rand.Intn(ntables)]

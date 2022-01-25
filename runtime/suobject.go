@@ -57,6 +57,15 @@ func SuObjectOf(args ...Value) *SuObject {
 	return &SuObject{list: args}
 }
 
+// SuObjectOfStrs returns an SuObject from a slice of strings
+func SuObjectOfStrs(strs []string) *SuObject {
+	list := make([]Value, len(strs))
+	for i, s := range strs {
+		list[i] = SuStr(s)
+	}
+	return NewSuObject(list)
+}
+
 func (ob *SuObject) Copy() Container {
 	if ob.Lock() {
 		defer ob.Unlock()

@@ -316,7 +316,7 @@ func init() {
 		}),
 		"ServerEval": method("()",
 			func(t *Thread, this Value, args []Value) Value {
-				return t.Dbms().Run(ToStr(this))
+				return t.Dbms().Run(t, ToStr(this))
 			}),
 		"Size": method0(func(this Value) Value {
 			// avoid calling ToStr so we don't have to convert concats

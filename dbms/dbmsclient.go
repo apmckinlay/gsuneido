@@ -19,6 +19,7 @@ import (
 	"github.com/apmckinlay/gsuneido/runtime/trace"
 	"github.com/apmckinlay/gsuneido/util/ascii"
 	"github.com/apmckinlay/gsuneido/util/str"
+	"github.com/apmckinlay/gsuneido/util/strs"
 )
 
 // token is to authorize the next connection
@@ -29,7 +30,9 @@ var tokenLock sync.Mutex
 
 type dbmsClient struct {
 	*csio.ReadWrite
-	conn net.Conn
+	conn      net.Conn
+	sessionId string
+	jserver   bool
 }
 
 // helloSize is the size of the initial connection message from the server
@@ -42,10 +45,15 @@ func NewDbmsClient(addr string, port string) *dbmsClient {
 		checkServerStatus(addr, port)
 		cantConnect(err.Error())
 	}
-	if !checkHello(conn) {
+	ok, jserver := checkHello(conn)
+	if !ok {
 		cantConnect("invalid response from server")
 	}
-	c := &dbmsClient{ReadWrite: csio.NewReadWrite(conn), conn: conn}
+	errfn := func(err string) {
+		Fatal("client:", err)
+	}
+	rw := csio.NewReadWrite(conn, errfn)
+	c := &dbmsClient{ReadWrite: rw, conn: conn, jserver: jserver}
 	tokenLock.Lock()
 	defer tokenLock.Unlock()
 	if token != "" {
@@ -59,18 +67,21 @@ func cantConnect(s string) {
 	Fatal("Can't connect. " + s)
 }
 
-func checkHello(conn net.Conn) bool {
+func checkHello(conn net.Conn) (ok, jserver bool) {
 	var buf [helloSize]byte
 	n, err := io.ReadFull(conn, buf[:])
 	if n != helloSize || err != nil {
-		return false
+		return
 	}
 	s := string(buf[:])
 	if !strings.HasPrefix(s, "Suneido ") {
-		return false
+		return
 	}
 	//TODO built date check
-	return true
+	if strings.Contains(s, "Java") {
+		return true, true
+	}
+	return true, false
 }
 
 func checkServerStatus(addr string, port string) {
@@ -180,14 +191,22 @@ func (dc *dbmsClient) Get(query string, dir Dir) (Row, *Header, string) {
 }
 
 func (dc *dbmsClient) get(tn int, query string, dir Dir) (Row, *Header, string) {
-	dc.PutCmd(commands.Get1).PutByte(byte(dir)).PutInt(tn).PutStr(query).Request()
+	cmd := commands.GetOne2
+	if dc.jserver {
+		cmd = commands.GetOne
+	}
+	dc.PutCmd(cmd).PutByte(byte(dir)).PutInt(tn).PutStr(query).Request()
 	if !dc.GetBool() {
 		return nil, nil, ""
 	}
 	off := dc.GetInt()
 	hdr := dc.getHdr()
+	tbl := "updateable"
+	if !dc.jserver {
+		tbl = dc.GetStr()
+	}
 	row := dc.getRow(off)
-	return row, hdr, "updateable"
+	return row, hdr, tbl
 }
 
 func (dc *dbmsClient) Info() Value {
@@ -224,18 +243,9 @@ func (dc *dbmsClient) LibGet(name string) []string {
 	return v
 }
 
-func (dc *dbmsClient) Libraries() *SuObject {
+func (dc *dbmsClient) Libraries() []string {
 	dc.PutCmd(commands.Libraries).Request()
-	return dc.getStrings()
-}
-
-func (dc *dbmsClient) getStrings() *SuObject {
-	n := dc.GetInt()
-	ob := &SuObject{}
-	for ; n > 0; n-- {
-		ob.Add(SuStr(dc.GetStr()))
-	}
-	return ob
+	return dc.GetStrs()
 }
 
 func (dc *dbmsClient) Nonce() string {
@@ -243,7 +253,7 @@ func (dc *dbmsClient) Nonce() string {
 	return dc.GetStr()
 }
 
-func (dc *dbmsClient) Run(code string) Value {
+func (dc *dbmsClient) Run(_ *Thread, code string) Value {
 	dc.PutCmd(commands.Run).PutStr(code).Request()
 	return dc.ValueResult()
 }
@@ -277,7 +287,7 @@ func (dc *dbmsClient) Token() string {
 	return dc.GetStr()
 }
 
-func (dc *dbmsClient) Transaction(update bool) ITran {
+func (dc *dbmsClient) Transaction(_ *Thread, update bool) ITran {
 	dc.PutCmd(commands.Transaction).PutBool(update).Request()
 	tn := dc.GetInt()
 	return &TranClient{dc: dc, tn: tn}
@@ -298,7 +308,7 @@ func (dc *dbmsClient) Unuse(lib string) bool {
 }
 
 func (dc *dbmsClient) Use(lib string) bool {
-	if False != dc.Libraries().Find(SuStr(lib)) {
+	if strs.Contains(dc.Libraries(), lib) {
 		return false
 	}
 	panic("can't Use('" + lib + "')\n" +
@@ -362,8 +372,13 @@ func (tc *TranClient) Ended() bool {
 	return tc.ended
 }
 
-func (tc *TranClient) Delete(_ string, off uint64) {
-	tc.dc.PutCmd(commands.Delete).PutInt(tc.tn).PutInt(int(off)).Request()
+func (tc *TranClient) Delete(table string, off uint64) {
+	if tc.dc.jserver {
+		tc.dc.PutCmd(commands.Erase).PutInt(tc.tn).PutInt(int(off)).Request()
+	} else {
+		tc.dc.PutCmd(commands.Delete).
+			PutInt(tc.tn).PutStr(table).PutInt(int(off)).Request()
+	}
 }
 
 func (tc *TranClient) Get(query string, dir Dir) (Row, *Header, string) {
@@ -386,9 +401,14 @@ func (tc *TranClient) Action(action string) int {
 	return tc.dc.GetInt()
 }
 
-func (tc *TranClient) Update(_ string, off uint64, rec Record) uint64 {
-	tc.dc.PutCmd(commands.Update).
-		PutInt(tc.tn).PutInt(int(off)).PutRec(rec).Request()
+func (tc *TranClient) Update(table string, off uint64, rec Record) uint64 {
+	if tc.dc.jserver {
+		tc.dc.PutCmd(commands.Update).
+			PutInt(tc.tn).PutInt(int(off)).PutRec(rec).Request()
+	} else {
+		tc.dc.PutCmd(commands.Update).
+			PutInt(tc.tn).PutStr(table).PutInt(int(off)).PutRec(rec).Request()
+	}
 	return uint64(tc.dc.GetInt())
 }
 
@@ -409,7 +429,7 @@ type clientQueryCursor struct {
 	id   int
 	qc   qcType
 	hdr  *Header
-	keys *SuObject // cache
+	keys []string // cache
 }
 
 type qcType byte
@@ -431,26 +451,26 @@ func (qc *clientQueryCursor) Header() *Header {
 	return qc.hdr
 }
 
-func (qc *clientQueryCursor) Keys() *SuObject {
+func (qc *clientQueryCursor) Keys() []string {
 	if qc.keys == nil { // cached
 		qc.dc.PutCmd(commands.Keys).PutInt(qc.id).PutByte(byte(qc.qc)).Request()
-		qc.keys = &SuObject{}
 		nk := qc.dc.GetInt()
-		for ; nk > 0; nk-- {
+		qc.keys = make([]string, nk)
+		for i := range qc.keys {
 			cb := str.CommaBuilder{}
 			n := qc.dc.GetInt()
 			for ; n > 0; n-- {
 				cb.Add(qc.dc.GetStr())
 			}
-			qc.keys.Add(SuStr(cb.String()))
+			qc.keys[i] = cb.String()
 		}
 	}
 	return qc.keys
 }
 
-func (qc *clientQueryCursor) Order() *SuObject {
+func (qc *clientQueryCursor) Order() []string {
 	qc.dc.PutCmd(commands.Order).PutInt(qc.id).PutByte(byte(qc.qc)).Request()
-	return qc.dc.getStrings()
+	return qc.dc.GetStrs()
 }
 
 func (qc *clientQueryCursor) Rewind() {

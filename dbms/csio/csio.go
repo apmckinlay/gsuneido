@@ -19,15 +19,16 @@ import (
 // ReadWrite handles encode/decode for the Suneido client/server protocol.
 // It uses bufio for buffering.
 type ReadWrite struct {
-	r *bufio.Reader
-	w *bufio.Writer
+	r   *bufio.Reader
+	w   *bufio.Writer
+	err func(string)
 }
 
 const maxio = 1024 * 1024 // 1 mb
 
 // NewReadWrite returns a new ReadWrite
-func NewReadWrite(rw io.ReadWriter) *ReadWrite {
-	return &ReadWrite{r: bufio.NewReader(rw), w: bufio.NewWriter(rw)}
+func NewReadWrite(rw io.ReadWriter, err func(string)) *ReadWrite {
+	return &ReadWrite{r: bufio.NewReader(rw), w: bufio.NewWriter(rw), err: err}
 }
 
 // PutCmd writes a command byte
@@ -55,19 +56,37 @@ func (rw *ReadWrite) PutByte(b byte) *ReadWrite {
 
 // PutStr writes a size prefixed string
 func (rw *ReadWrite) PutStr(s string) *ReadWrite {
+	trace.ClientServer.Println(s)
+	return rw.putStr(s)
+}
+
+// putStr writes a size prefixed string without trace
+func (rw *ReadWrite) putStr(s string) *ReadWrite {
 	limit(int64(len(s)))
 	rw.PutInt(len(s))
 	rw.w.WriteString(s)
-	trace.ClientServer.Println(s)
 	return rw
 }
 
-// PutRec writes a record, same as PutStr but no trace
-func (rw *ReadWrite) PutRec(r Record) *ReadWrite {
-	limit(int64(len(r)))
-	rw.PutInt(len(r))
-	rw.w.WriteString(string(r))
+// PutBuf writes a string without a size prefix
+func (rw *ReadWrite) PutBuf(s string) *ReadWrite {
+	limit(int64(len(s)))
+	rw.w.WriteString(s)
 	return rw
+}
+
+// PutStrs writes a list of strings
+func (rw *ReadWrite) PutStrs(strs []string) *ReadWrite {
+	rw.PutInt(len(strs))
+	for _, s := range strs {
+		rw.PutStr(s)
+	}
+	return rw
+}
+
+// PutRec writes a size prefixed Record
+func (rw *ReadWrite) PutRec(r Record) *ReadWrite {
+	return rw.putStr(string(r))
 }
 
 // PutInt writes a zig zag encoded varint
@@ -87,11 +106,29 @@ func (rw *ReadWrite) PutInt64(i int64) *ReadWrite {
 	return rw
 }
 
+// PutInts writes a size prefixed list of ints
+func (rw *ReadWrite) PutInts(ints []int) *ReadWrite {
+	rw.PutInt(len(ints))
+	for _, n := range ints {
+		rw.PutInt(n)
+	}
+	return rw
+}
+
+// PutVal writes a size prefixed Pack'ed value
+func (rw *ReadWrite) PutVal(v Value) *ReadWrite {
+	return rw.putStr(Pack(v.(Packable)))
+}
+
+func (rw *ReadWrite) ResetWrite(w io.Writer) {
+	rw.w.Reset(w)
+}
+
 //-------------------------------------------------------------------
 
 // GetBool reads a boolean
 func (rw *ReadWrite) GetBool() bool {
-	b := rw.getByte()
+	b := rw.GetByte()
 	switch b {
 	case 0:
 		return false
@@ -103,15 +140,15 @@ func (rw *ReadWrite) GetBool() bool {
 	}
 }
 
-func (rw *ReadWrite) getByte() byte {
+func (rw *ReadWrite) GetByte() byte {
 	b, err := rw.r.ReadByte()
-	ck(err)
+	rw.ck(err)
 	return b
 }
 
-func ck(err error) {
+func (rw *ReadWrite) ck(err error) {
 	if err != nil {
-		Fatal("client:", err)
+		rw.err(err.Error())
 	}
 }
 
@@ -127,7 +164,7 @@ func (rw *ReadWrite) GetInt64() int64 {
 	shift := uint(0)
 	n := uint64(0)
 	for {
-		b := rw.getByte()
+		b := rw.GetByte()
 		n |= uint64(b&0x7f) << shift
 		shift += 7
 		if 0 == (b & 0x80) {
@@ -143,7 +180,7 @@ func (rw *ReadWrite) GetInt64() int64 {
 func (rw *ReadWrite) GetN(n int) string {
 	buf := make([]byte, n)
 	_, err := io.ReadFull(rw.r, buf)
-	ck(err)
+	rw.ck(err)
 	return hacks.BStoS(buf) // safe since buf doesn't escape
 }
 
@@ -152,10 +189,24 @@ func (rw *ReadWrite) GetSize() int {
 	return limit(rw.GetInt64())
 }
 
+// GetRec reads a size prefixed string
+func (rw *ReadWrite) GetRec() Record {
+	return Record(rw.GetStr())
+}
+
 // GetStr reads a size prefixed string
 func (rw *ReadWrite) GetStr() string {
 	n := rw.GetSize()
 	return rw.GetN(n)
+}
+
+func (rw *ReadWrite) GetStrs() []string {
+	n := rw.GetInt()
+	list := make([]string, 0, n)
+	for ; n > 0; n-- {
+		list = append(list, rw.GetStr())
+	}
+	return list
 }
 
 // GetVal reads a packed value
@@ -187,7 +238,7 @@ func limit(n int64) int {
 // Request does Flush and GetBool for the result.
 // If the result is false, it does GetStr for the error and panics with it.
 func (rw *ReadWrite) Request() {
-	ck(rw.w.Flush())
+	rw.ck(rw.w.Flush())
 	if !rw.GetBool() {
 		err := rw.GetStr()
 		trace.ClientServer.Println(err)

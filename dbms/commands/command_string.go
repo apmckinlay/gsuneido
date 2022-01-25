@@ -18,12 +18,12 @@ func _() {
 	_ = x[Cursor-7]
 	_ = x[Cursors-8]
 	_ = x[Dump-9]
-	_ = x[Delete-10]
+	_ = x[Erase-10]
 	_ = x[Exec-11]
 	_ = x[Strategy-12]
 	_ = x[Final-13]
 	_ = x[Get-14]
-	_ = x[Get1-15]
+	_ = x[GetOne-15]
 	_ = x[Header-16]
 	_ = x[Info-17]
 	_ = x[Keys-18]
@@ -48,11 +48,15 @@ func _() {
 	_ = x[Transactions-37]
 	_ = x[Update-38]
 	_ = x[WriteCount-39]
+	_ = x[Delete-40]
+	_ = x[Update2-41]
+	_ = x[Get2-42]
+	_ = x[GetOne2-43]
 }
 
-const _Command_name = "AbortAdminAuthCheckCloseCommitConnectionsCursorCursorsDumpDeleteExecStrategyFinalGetGet1HeaderInfoKeysKillLibGetLibrariesLoadLogNonceOrderOutputQueryReadCountActionRewindRunSessionIdSizeTimestampTokenTransactionTransactionsUpdateWriteCount"
+const _Command_name = "AbortAdminAuthCheckCloseCommitConnectionsCursorCursorsDumpEraseExecStrategyFinalGetGetOneHeaderInfoKeysKillLibGetLibrariesLoadLogNonceOrderOutputQueryReadCountActionRewindRunSessionIdSizeTimestampTokenTransactionTransactionsUpdateWriteCountDeleteUpdate2Get2GetOne2"
 
-var _Command_index = [...]uint8{0, 5, 10, 14, 19, 24, 30, 41, 47, 54, 58, 64, 68, 76, 81, 84, 88, 94, 98, 102, 106, 112, 121, 125, 128, 133, 138, 144, 149, 158, 164, 170, 173, 182, 186, 195, 200, 211, 223, 229, 239}
+var _Command_index = [...]uint16{0, 5, 10, 14, 19, 24, 30, 41, 47, 54, 58, 63, 67, 75, 80, 83, 89, 95, 99, 103, 107, 113, 122, 126, 129, 134, 139, 145, 150, 159, 165, 171, 174, 183, 187, 196, 201, 212, 224, 230, 240, 246, 253, 257, 264}
 
 func (i Command) String() string {
 	if i >= Command(len(_Command_index)-1) {

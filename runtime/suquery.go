@@ -95,11 +95,11 @@ func (qc *SuQueryCursor) Columns() Value {
 }
 
 func (qc *SuQueryCursor) Keys() Value {
-	return qc.iqc.Keys()
+	return SuObjectOfStrs(qc.iqc.Keys())
 }
 
 func (qc *SuQueryCursor) Order() Value {
-	return qc.iqc.Order()
+	return SuObjectOfStrs(qc.iqc.Order())
 }
 
 func (qc *SuQueryCursor) Rewind() {

@@ -6,7 +6,6 @@ package dbms
 import (
 	"fmt"
 	"log"
-	"strconv"
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/compile"
@@ -26,7 +25,7 @@ type DbmsLocal struct {
 	libraries []string //TODO concurrency
 }
 
-func NewDbmsLocal(db *db19.Database) IDbms {
+func NewDbmsLocal(db *db19.Database) *DbmsLocal {
 	return &DbmsLocal{db: db, libraries: []string{"stdlib"}}
 }
 
@@ -138,7 +137,7 @@ func (dbms *DbmsLocal) Load(table string) int {
 	return tools.LoadDbTable(table, dbms.db)
 }
 
-func (dbms *DbmsLocal) LibGet(name string) (result []string) {
+func (dbms *DbmsLocal) LibGet(name string) []string {
 	defer func() {
 		if e := recover(); e != nil {
 			// debug.PrintStack()
@@ -181,8 +180,8 @@ func libGet(rt *db19.ReadTran, lib, name string) string {
 	return rec.GetStr(rt.ColToFld(lib, "text"))
 }
 
-func (dbms *DbmsLocal) Libraries() *SuObject {
-	return strsToOb(dbms.libraries)
+func (dbms *DbmsLocal) Libraries() []string {
+	return dbms.libraries
 }
 
 func (*DbmsLocal) Log(s string) {
@@ -193,10 +192,9 @@ func (*DbmsLocal) Nonce() string {
 	panic("nonce only allowed on clients")
 }
 
-func (*DbmsLocal) Run(s string) Value {
+func (*DbmsLocal) Run(th *Thread, s string) Value {
 	trace.Dbms.Println("Run", s)
-	var t Thread //TODO don't alloc every time
-	return compile.EvalString(&t, s)
+	return compile.EvalString(th, s)
 }
 
 func (dbms *DbmsLocal) Schema(table string) string {
@@ -222,21 +220,22 @@ func (*DbmsLocal) Token() string {
 	return "1234567890123456" //TODO
 }
 
-func (dbms *DbmsLocal) Transaction(update bool) ITran {
+func (dbms *DbmsLocal) Transaction(th *Thread, update bool) ITran {
 	if update {
-		if t := dbms.db.NewUpdateTran(); t != nil {
-			return &UpdateTranLocal{t}
+		if t := dbms.db.NewUpdateTran(th); t != nil {
+			return &UpdateTranLocal{UpdateTran: t}
 		}
 		return nil
 	}
-	return &ReadTranLocal{dbms.db.NewReadTran()}
+	return &ReadTranLocal{ReadTran: dbms.db.NewReadTran()}
 }
 
+// Transctions only returns the update transactions
 func (dbms *DbmsLocal) Transactions() *SuObject {
 	var ob SuObject
 	trans := dbms.db.Transactions()
 	for _, t := range trans {
-		ob.Add(SuStr("ut" + strconv.Itoa(t)))
+		ob.Add(IntVal(t<<1 | 1)) // update tran# are odd
 	}
 	return &ob
 }
@@ -274,19 +273,24 @@ func init() {
 		case *UpdateTranLocal:
 			return NewSuTran(t, true)
 		case *db19.ReadTran:
-			return NewSuTran(&ReadTranLocal{t}, false)
+			return NewSuTran(&ReadTranLocal{ReadTran: t}, false)
 		case *db19.UpdateTran:
-			return NewSuTran(&UpdateTranLocal{t}, true)
+			return NewSuTran(&UpdateTranLocal{UpdateTran: t}, true)
 		}
 		panic(fmt.Sprintf("NewSuTran unhandled type %#v", qt))
 	}
 	db19.MakeSuTran = func(ut *db19.UpdateTran) *SuTran {
-		return NewSuTran(&UpdateTranLocal{ut}, true)
+		return NewSuTran(&UpdateTranLocal{UpdateTran: ut}, true)
 	}
+}
+
+type TranLocal interface {
+	Num() int
 }
 
 type ReadTranLocal struct {
 	*db19.ReadTran
+	TranLocal
 }
 
 func (t ReadTranLocal) Get(query string, dir Dir) (Row, *Header, string) {
@@ -307,6 +311,7 @@ func (t ReadTranLocal) Action(string) int {
 
 type UpdateTranLocal struct {
 	*db19.UpdateTran
+	TranLocal
 }
 
 func (t UpdateTranLocal) Get(query string, dir Dir) (Row, *Header, string) {
@@ -331,17 +336,17 @@ type queryLocal struct {
 	qry.Query
 	cost qry.Cost
 	mode qry.Mode
-	keys *SuObject // cache
+	keys []string // cache
 }
 
-func (q queryLocal) Keys() *SuObject {
+func (q queryLocal) Keys() []string {
 	if q.keys == nil {
 		keys := q.Query.Keys()
-		kv := make([]Value, len(keys))
+		list := make([]string, len(keys))
 		for i, k := range keys {
-			kv[i] = SuStr(strs.Join(",", k))
+			list[i] = strs.Join(",", k)
 		}
-		q.keys = NewSuObject(kv)
+		q.keys = list
 	}
 	return q.keys
 }
@@ -351,16 +356,8 @@ func (q queryLocal) Strategy() string {
 		" [nrecs~ ", q.Nrows(), " cost~ ", q.cost, " ", q.mode, "]")
 }
 
-func (q queryLocal) Order() *SuObject {
-	return strsToOb(q.Query.Ordering())
-}
-
-func strsToOb(strs []string) *SuObject {
-	list := make([]Value, len(strs))
-	for i, s := range strs {
-		list[i] = SuStr(s)
-	}
-	return NewSuObject(list)
+func (q queryLocal) Order() []string {
+	return q.Query.Ordering()
 }
 
 func (q queryLocal) Get(dir Dir) (Row, string) {

@@ -58,7 +58,7 @@ type IDbms interface {
 	LibGet(name string) []string
 
 	// Libraries returns a list of the libraries currently in use
-	Libraries() *SuObject
+	Libraries() []string
 
 	// Load loads a table or the entire database like -load
 	// It returns the number of records loaded.
@@ -71,7 +71,7 @@ type IDbms interface {
 	Nonce() string
 
 	// Run is used by the old style string.ServerEval()
-	Run(code string) Value
+	Run(th *Thread, code string) Value
 
 	Schema(table string) string
 
@@ -88,7 +88,7 @@ type IDbms interface {
 	Token() string
 
 	// Transaction starts a transaction
-	Transaction(update bool) ITran
+	Transaction(th *Thread, update bool) ITran
 
 	// Transactions returns a list of the outstanding transactions
 	Transactions() *SuObject
@@ -193,10 +193,10 @@ type IQueryCursor interface {
 	Header() *Header
 
 	// Keys returns the keys for the query (a list of comma separated strings)
-	Keys() *SuObject
+	Keys() []string
 
 	// Order returns the order for the query (a list of columns)
-	Order() *SuObject
+	Order() []string
 
 	// Rewind resets the query to the beginning/end
 	Rewind()

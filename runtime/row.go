@@ -258,3 +258,15 @@ func (row Row) equalGet(hdr *Header, col string) string {
 // 	}
 // 	return true
 // }
+
+// Schema is a list of the fields with the rules capitalized
+func (hdr *Header) Schema() []string {
+	list := make([]string, 0, len(hdr.Columns))
+	for _, col := range hdr.Columns {
+		if !hdr.hasField(col) && !strings.HasSuffix(col, "_lower!") {
+			col = str.Capitalize(col)
+		}
+		list = append(list, col)
+	}
+	return list
+}

@@ -19,7 +19,7 @@ var _ = builtin("Transaction(read=nil, update=nil, block=false)",
 		} else {
 			update = !ToBool(args[0])
 		}
-		itran := th.Dbms().Transaction(update)
+		itran := th.Dbms().Transaction(th, update)
 		if itran == nil {
 			panic("too many active transactions")
 		}

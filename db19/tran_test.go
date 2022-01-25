@@ -122,7 +122,7 @@ var recnum int32
 
 func output1(db *Database) *UpdateTran {
 	n := atomic.AddInt32(&recnum, 1)
-	ut := db.NewUpdateTran()
+	ut := db.NewUpdateTran(nil)
 	data := (strconv.Itoa(int(n)) + "transaction")[:12]
 	ut.Output("mytable", mkrec(data, "data"))
 	return ut
@@ -203,9 +203,9 @@ func TestTooMany(*testing.T) {
 	ck(err)
 	db.CheckerSync()
 	for i := 0; i < maxTrans; i++ {
-		assert.That(nil != db.NewUpdateTran())
+		assert.That(nil != db.NewUpdateTran(nil))
 	}
-	assert.That(nil == db.NewUpdateTran())
+	assert.That(nil == db.NewUpdateTran(nil))
 }
 
 func TestExclusive(*testing.T) {
@@ -215,8 +215,8 @@ func TestExclusive(*testing.T) {
 	db.CheckerSync()
 
 	createTbl(db)
-	ut2 := db.NewUpdateTran()
-	ut := db.NewUpdateTran()
+	ut2 := db.NewUpdateTran(nil)
+	ut := db.NewUpdateTran(nil)
 	db.RunExclusive("mytable", func() {})
 	assert.This(db.ck.Output(ut.ct, "mytable", []string{""})).Is(false)
 	assert.This(ut.ct.failure.Load()).Is("conflict with exclusive (mytable)")
@@ -224,7 +224,7 @@ func TestExclusive(*testing.T) {
 	assert.This(db.ck.Output(ut2.ct, "mytable", []string{""})).Is(false)
 	assert.This(ut2.ct.failure.Load()).Is("conflict with exclusive (mytable)")
 
-	ut = db.NewUpdateTran()
+	ut = db.NewUpdateTran(nil)
 	assert.That(db.ck.Output(ut.ct, "mytable", []string{""}))
 	ut.Commit()
 }
@@ -248,8 +248,8 @@ func TestOutputDupConflict(*testing.T) {
 	ck(err)
 	db.CheckerSync()
 	createTbl(db)
-	t1 := db.NewUpdateTran()
-	t2 := db.NewUpdateTran()
+	t1 := db.NewUpdateTran(nil)
+	t2 := db.NewUpdateTran(nil)
 	t1.Output("mytable", mkrec("1"))
 	assert.This(func() { t2.Output("mytable", mkrec("1")) }).
 		Panics("conflicted")

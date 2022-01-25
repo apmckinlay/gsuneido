@@ -21,12 +21,12 @@ const (
 	Cursor
 	Cursors
 	Dump
-	Delete
+	Erase
 	Exec
 	Strategy
 	Final
 	Get
-	Get1
+	GetOne
 	Header
 	Info
 	Keys
@@ -51,4 +51,8 @@ const (
 	Transactions
 	Update
 	WriteCount
+	Delete
+	Update2
+	Get2
+	GetOne2
 )

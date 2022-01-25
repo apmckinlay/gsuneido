@@ -79,7 +79,7 @@ func TestAdminEnsure2(*testing.T) {
 	defer db.Close()
 
 	act := func(act string) {
-		ut := db.NewUpdateTran()
+		ut := db.NewUpdateTran(nil)
 		defer ut.Commit()
 		n := DoAction(ut, act)
 		assert.This(n).Is(1)
@@ -308,7 +308,7 @@ func TestNoColumns(*testing.T) {
 }
 
 func act(db *db19.Database, act string) {
-	ut := db.NewUpdateTran()
+	ut := db.NewUpdateTran(nil)
 	defer ut.Commit()
 	n := DoAction(ut, act)
 	assert.This(n).Is(1)
