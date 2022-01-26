@@ -971,10 +971,14 @@ func (w *Where) getRange(dir runtime.Dir) runtime.Row {
 }
 
 func (w *Where) getPoint(dir runtime.Dir) runtime.Row {
-	if !w.advance(dir) {
-		return nil
+	for {
+		if !w.advance(dir) {
+			return nil
+		}
+		if row := w.tbl.lookup(w.curPtrng.org); row != nil {
+			return row
+		}
 	}
-	return w.tbl.lookup(w.curPtrng.org)
 }
 
 func (w *Where) advance(dir runtime.Dir) bool {
