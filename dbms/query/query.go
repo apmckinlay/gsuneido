@@ -217,7 +217,7 @@ func optTempIndex(q Query, mode Mode, index []string) (
 	if !sset.Subset(q.Columns(), index) {
 		return impossible, nil
 	}
-	if index == nil || !tempIndexable(q, mode) {
+	if index == nil || !tempIndexable(mode) {
 		return q.optimize(mode, index)
 	}
 	cost1, app1 := q.optimize(mode, index)
@@ -245,7 +245,7 @@ type tempIndex struct {
 	index    []string
 }
 
-func tempIndexable(q Query, mode Mode) bool {
+func tempIndexable(mode Mode) bool {
 	if mode == ReadMode {
 		return true
 	}
