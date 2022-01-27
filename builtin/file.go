@@ -201,20 +201,20 @@ var suFileMethods = Methods{
 		_, err := io.ReadFull(sf.r, buf)
 		sf.tell += int64(n)
 		if err != nil {
-			panic("file.Read " + err.Error())
+			panic("File: Read: " + err.Error())
 		}
 		return SuStr(string(buf))
 	}),
 	"Readline": method0(func(this Value) Value {
 		sf := sfOpenRead(this)
-		val, nr := readline(sf.r, "file.Readline: ")
+		val, nr := readline(sf.r, "File: Readline: ")
 		sf.tell += int64(nr)
 		return val
 	}),
 	"Seek": method2("(offset, origin='set')", func(this, arg1, arg2 Value) Value {
 		sf := sfOpen(this)
 		if sf.mode == "a" {
-			panic("file.Seek: invalid with mode 'a'")
+			panic("File: Seek: invalid with mode 'a'")
 		}
 		sf.reset()
 		offset := ToInt64(arg1)
@@ -226,11 +226,11 @@ var suFileMethods = Methods{
 		case "end":
 			offset += sf.size()
 		default:
-			panic("file.Seek: origin must be 'set', 'end', or 'cur'")
+			panic("File: Seek: origin must be 'set', 'end', or 'cur'")
 		}
 		_, err := sf.f.Seek(offset, io.SeekStart)
 		if err != nil {
-			panic("file.Seek: " + err.Error())
+			panic("File: Seek: " + err.Error())
 		}
 		sf.tell = offset
 		return nil
@@ -238,7 +238,7 @@ var suFileMethods = Methods{
 	"Tell": method0(func(this Value) Value {
 		sf := sfOpen(this)
 		if sf.mode == "a" {
-			panic("file.Tell: invalid with mode 'a'")
+			panic("File: Tell: invalid with mode 'a'")
 		}
 		return Int64Val(sf.tell)
 	}),
