@@ -153,7 +153,7 @@ func (sc *serverConn) tran(tn int) ITran {
 func cmdAction(sc *serverConn) {
 	tran := sc.getTran()
 	action := sc.GetStr()
-	n := tran.Action(action)
+	n := tran.Action(&sc.thread, action)
 	sc.PutBool(true).PutInt(n)
 }
 
@@ -244,7 +244,7 @@ func cmdDelete(sc *serverConn) {
 	tran := sc.getTran()
 	table := sc.GetStr()
 	off := uint64(sc.GetInt64())
-	tran.Delete(table, off)
+	tran.Delete(&sc.thread, table, off)
 	sc.PutBool(true)
 }
 
@@ -460,7 +460,7 @@ func cmdOrder(sc *serverConn) {
 func cmdOutput(sc *serverConn) {
 	q := sc.getQuery()
 	rec := sc.GetRec()
-	q.Output(rec)
+	q.Output(&sc.thread, rec)
 	sc.PutBool(true)
 }
 
@@ -530,7 +530,7 @@ func cmdToken(sc *serverConn) {
 
 func cmdTransaction(sc *serverConn) {
 	update := sc.GetBool()
-	tran := sc.dbms.Transaction(&sc.thread, update)
+	tran := sc.dbms.Transaction(update)
 	tn := sc.nextNum(update)
 	sc.trans[tn] = tran
 	sc.PutBool(true).PutInt(tn)
@@ -562,7 +562,7 @@ func cmdUpdate2(sc *serverConn) {
 	table := sc.GetStr()
 	off := uint64(sc.GetInt64())
 	rec := sc.GetRec()
-	tran.Update(table, off, rec)
+	tran.Update(&sc.thread, table, off, rec)
 	sc.PutBool(true)
 }
 

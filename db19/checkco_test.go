@@ -68,7 +68,7 @@ func mergeSink() chan todo {
 var nCommit, nConflict int64
 
 func randTran(db *Database) {
-	t := db.NewUpdateTran(nil)
+	t := db.NewUpdateTran()
 	nActions := rand.Intn(20)
 	for i := 0; i < nActions; i++ {
 		randAction(db.ck, t.ct)

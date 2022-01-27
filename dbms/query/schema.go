@@ -60,7 +60,7 @@ func (*schemaTable) rowSize() int {
 	return 32 // ???
 }
 
-func (st *schemaTable) Output(Record) {
+func (st *schemaTable) Output(*Thread, Record) {
 	panic("shouldn't reach here")
 }
 

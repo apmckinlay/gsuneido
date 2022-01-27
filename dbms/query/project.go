@@ -488,11 +488,11 @@ func projectKey(row runtime.Row, hdr *runtime.Header, cols []string) string {
 	return enc.String()
 }
 
-func (p *Project) Output(rec runtime.Record) {
+func (p *Project) Output(th *runtime.Thread, rec runtime.Record) {
 	if p.strategy != projCopy {
 		panic("can't output to a project that doesn't include a key")
 	}
-	p.source.Output(rec)
+	p.source.Output(th, rec)
 }
 
 func (p *Project) Select(cols, vals []string) {

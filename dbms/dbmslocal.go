@@ -221,9 +221,9 @@ func (*DbmsLocal) Token() string {
 	return "1234567890123456" //TODO
 }
 
-func (dbms *DbmsLocal) Transaction(th *Thread, update bool) ITran {
+func (dbms *DbmsLocal) Transaction(update bool) ITran {
 	if update {
-		if t := dbms.db.NewUpdateTran(th); t != nil {
+		if t := dbms.db.NewUpdateTran(); t != nil {
 			return &UpdateTranLocal{UpdateTran: t}
 		}
 		return nil
@@ -304,7 +304,7 @@ func (t ReadTranLocal) Query(query string) IQuery {
 	return queryLocal{Query: q, cost: cost, mode: qry.ReadMode}
 }
 
-func (t ReadTranLocal) Action(string) int {
+func (t ReadTranLocal) Action(*Thread, string) int {
 	panic("cannot do action in read-only transaction")
 }
 
@@ -325,9 +325,9 @@ func (t UpdateTranLocal) Query(query string) IQuery {
 	return queryLocal{Query: q, cost: cost, mode: qry.UpdateMode}
 }
 
-func (t UpdateTranLocal) Action(action string) int {
+func (t UpdateTranLocal) Action(th *Thread, action string) int {
 	trace.Dbms.Println("Action", action)
-	return qry.DoAction(t.UpdateTran, action)
+	return qry.DoAction(th, t.UpdateTran, action)
 }
 
 // queryLocal

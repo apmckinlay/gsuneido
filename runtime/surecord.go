@@ -904,27 +904,27 @@ func UnpackRecord(s string) *SuRecord {
 
 // database
 
-func (r *SuRecord) DbDelete() {
+func (r *SuRecord) DbDelete(th *Thread) {
 	if r.Lock() {
 		defer r.Unlock()
 	}
 	r.ckModify("Delete")
-	r.tran.Delete(r.table, r.recoff)
+	r.tran.Delete(th, r.table, r.recoff)
 	r.status = DELETED
 }
 
-func (r *SuRecord) DbUpdate(t *Thread, ob Value) {
+func (r *SuRecord) DbUpdate(th *Thread, ob Value) {
 	var rec Record
 	if ob == False {
-		rec = r.ToRecord(t, r.hdr)
+		rec = r.ToRecord(th, r.hdr)
 	} else {
-		rec = ToContainer(ob).ToRecord(t, r.hdr)
+		rec = ToContainer(ob).ToRecord(th, r.hdr)
 	}
 	if r.Lock() {
 		defer r.Unlock()
 	}
 	r.ckModify("Update")
-	r.recoff = r.tran.Update(r.table, r.recoff, rec) // ??? ok while locked ???
+	r.recoff = r.tran.Update(th, r.table, r.recoff, rec) // ??? ok while locked ???
 }
 
 func (r *SuRecord) ckModify(op string) {

@@ -99,9 +99,9 @@ func (st *SuTran) Ended() bool {
 	return st.itran.Ended()
 }
 
-func (st *SuTran) Delete(table string, off uint64) {
+func (st *SuTran) Delete(th *Thread, table string, off uint64) {
 	st.ckActive()
-	st.itran.Delete(table, off)
+	st.itran.Delete(th, table, off)
 }
 
 func (st *SuTran) GetRow(query string, dir Dir) (Row, *Header, string) {
@@ -119,9 +119,9 @@ func (st *SuTran) ReadCount() int {
 	return st.itran.ReadCount()
 }
 
-func (st *SuTran) Action(action string) int {
+func (st *SuTran) Action(th *Thread, action string) int {
 	st.ckActive()
-	return st.itran.Action(action)
+	return st.itran.Action(th, action)
 }
 
 func (st *SuTran) Rollback() {
@@ -134,9 +134,9 @@ func (st *SuTran) Updatable() bool {
 	return st.updatable
 }
 
-func (st *SuTran) Update(table string, off uint64, rec Record) uint64 {
+func (st *SuTran) Update(th *Thread, table string, off uint64, rec Record) uint64 {
 	st.ckActive()
-	return st.itran.Update(table, off, rec)
+	return st.itran.Update(th, table, off, rec)
 }
 
 func (st *SuTran) WriteCount() int {

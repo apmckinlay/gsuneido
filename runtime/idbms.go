@@ -88,7 +88,7 @@ type IDbms interface {
 	Token() string
 
 	// Transaction starts a transaction
-	Transaction(th *Thread, update bool) ITran
+	Transaction(update bool) ITran
 
 	// Transactions returns a list of the outstanding transactions
 	Transactions() *SuObject
@@ -117,7 +117,7 @@ type ITran interface {
 	Ended() bool
 
 	// Delete deletes a record
-	Delete(table string, off uint64)
+	Delete(th *Thread, table string, off uint64)
 
 	// Get returns a single record, for Query1 (dir = One),
 	// QueryFirst (dir = Next), or QueryLast (dir = Prev)
@@ -128,10 +128,10 @@ type ITran interface {
 
 	// Action executes an insert, update, or delete
 	// and returns the number of records processed
-	Action(action string) int
+	Action(th *Thread, action string) int
 
 	// Update modifies a record
-	Update(table string, off uint64, rec Record) uint64
+	Update(th *Thread, table string, off uint64, rec Record) uint64
 
 	// ReadCount returns the number of reads done by the transaction
 	ReadCount() int
@@ -172,7 +172,7 @@ type IQuery interface {
 	Get(dir Dir) (Row, string)
 
 	// Output outputs a record to a query
-	Output(rec Record)
+	Output(th *Thread, rec Record)
 }
 
 // ICursor is the interface to a database query,

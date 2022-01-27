@@ -214,8 +214,8 @@ func (tbl *Table) Header() *runtime.Header {
 	return runtime.NewHeader(physical, tbl.columns)
 }
 
-func (tbl *Table) Output(rec runtime.Record) {
-	tbl.tran.Output(tbl.name, rec)
+func (tbl *Table) Output(th *runtime.Thread, rec runtime.Record) {
+	tbl.tran.Output(th, tbl.name, rec)
 }
 
 func (tbl *Table) Rewind() {

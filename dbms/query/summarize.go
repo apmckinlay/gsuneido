@@ -179,7 +179,7 @@ func (su *Summarize) SingleTable() bool {
 	return false
 }
 
-func (*Summarize) Output(Record) {
+func (*Summarize) Output(*Thread, Record) {
 	panic("can't output to this query")
 }
 

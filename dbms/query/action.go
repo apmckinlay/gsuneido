@@ -11,9 +11,9 @@ import (
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
-func DoAction(ut *db19.UpdateTran, action string) int {
+func DoAction(th *Thread, ut *db19.UpdateTran, action string) int {
 	a := ParseAction(action, ut)
-	return a.execute(ut)
+	return a.execute(th, ut)
 }
 
 //-------------------------------------------------------------------
@@ -27,11 +27,10 @@ func (a *insertRecordAction) String() string {
 	return "insert " + a.record.Show() + " into " + a.query.String()
 }
 
-func (a *insertRecordAction) execute(ut *db19.UpdateTran) int {
+func (a *insertRecordAction) execute(th *Thread, ut *db19.UpdateTran) int {
 	a.query.SetTran(ut)
-	var th Thread // ???
-	rec := a.record.ToRecord(&th, a.query.Header())
-	a.query.Output(rec)
+	rec := a.record.ToRecord(th, a.query.Header())
+	a.query.Output(th, rec)
 	return 1
 }
 
@@ -48,7 +47,7 @@ func (a *insertQueryAction) String() string {
 	return "insert " + a.query.String() + " into " + a.table
 }
 
-func (a *insertQueryAction) execute(ut *db19.UpdateTran) int {
+func (a *insertQueryAction) execute(th *Thread, ut *db19.UpdateTran) int {
 	qr, _ := Setup(a.query, ReadMode, ut)
 	hdr := qr.Header()
 	fields := ut.GetSchema(a.table).Columns
@@ -69,7 +68,7 @@ func (a *insertQueryAction) execute(ut *db19.UpdateTran) int {
 			}
 		}
 		rec := rb.Trim().Build()
-		ut.Output(a.table, rec)
+		ut.Output(th, a.table, rec)
 		n++
 	}
 	return n
@@ -93,14 +92,13 @@ func (a *updateAction) String() string {
 	return s
 }
 
-func (a *updateAction) execute(ut *db19.UpdateTran) int {
+func (a *updateAction) execute(th *Thread, ut *db19.UpdateTran) int {
 	q := SetupKey(a.query, UpdateMode, ut)
 	table := q.Updateable()
 	if table == "" {
 		panic("update: query not updateable")
 	}
 	hdr := q.Header()
-	th := &Thread{}
 	n := 0
 	prev := uint64(0)
 	for row := q.Get(Next); row != nil; row = q.Get(Next) {
@@ -115,7 +113,7 @@ func (a *updateAction) execute(ut *db19.UpdateTran) int {
 			r.Put(th, SuStr(col), a.exprs[i].Eval(context))
 		}
 		newrec := r.ToRecord(th, hdr)
-		prev = ut.Update(table, row[0].Off, newrec)
+		prev = ut.Update(th, table, row[0].Off, newrec)
 		n++
 	}
 	return n
@@ -131,7 +129,7 @@ func (a *deleteAction) String() string {
 	return "delete " + a.query.String()
 }
 
-func (a *deleteAction) execute(ut *db19.UpdateTran) int {
+func (a *deleteAction) execute(th *Thread, ut *db19.UpdateTran) int {
 	//TODO optimize deleting all records of table (but still check foreign keys)
 	q, _ := Setup(a.query, UpdateMode, ut)
 	table := q.Updateable()
@@ -145,7 +143,7 @@ func (a *deleteAction) execute(ut *db19.UpdateTran) int {
 			continue
 		}
 		prev = row[0].Off
-		ut.Delete(table, row[0].Off)
+		ut.Delete(th, table, row[0].Off)
 		n++
 	}
 	return n

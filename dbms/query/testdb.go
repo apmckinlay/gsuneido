@@ -24,9 +24,9 @@ func testDb() *db19.Database {
 		DoAdmin(db, admin)
 	}
 	act := func(act string) {
-		ut := db.NewUpdateTran(nil)
+		ut := db.NewUpdateTran()
 		defer ut.Commit()
-		DoAction(ut, act)
+		DoAction(nil, ut, act)
 	}
 	adm("create customer (id, name, city) key(id)")
 	act("insert {id: 'a', name: 'axon', city: 'saskatoon'} into customer")

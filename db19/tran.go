@@ -164,15 +164,15 @@ func (t *ReadTran) Read(string, int, string, string) {
 	// See UpdateTran Read.
 }
 
-func (t *ReadTran) Output(string, rt.Record) {
+func (t *ReadTran) Output(*rt.Thread, string, rt.Record) {
 	panic("can't output to read-only transaction")
 }
 
-func (t *ReadTran) Delete(string, uint64) {
+func (t *ReadTran) Delete(*rt.Thread, string, uint64) {
 	panic("can't delete from read-only transaction")
 }
 
-func (t *ReadTran) Update(string, uint64, rt.Record) uint64 {
+func (t *ReadTran) Update(*rt.Thread, string, uint64, rt.Record) uint64 {
 	panic("can't update from read-only transaction")
 }
 
@@ -210,17 +210,16 @@ func (t *ReadTran) Abort() string {
 type UpdateTran struct {
 	ReadTran
 	ct     *CkTran
-	thread *rt.Thread // for triggers
 }
 
-func (db *Database) NewUpdateTran(th *rt.Thread) *UpdateTran {
+func (db *Database) NewUpdateTran() *UpdateTran {
 	db.ckOpen()
 	ct := db.ck.StartTran()
 	if ct == nil {
 		return nil
 	}
 	meta := ct.state.Meta.Mutable()
-	return &UpdateTran{ct: ct, thread: th,
+	return &UpdateTran{ct: ct,
 		ReadTran: ReadTran{tran: tran{db: db, meta: meta}}}
 }
 
@@ -292,7 +291,7 @@ func (t *UpdateTran) Read(table string, iIndex int, from, to string) {
 	t.ck(t.db.ck.Read(t.ct, table, iIndex, from, to))
 }
 
-func (t *UpdateTran) Output(table string, rec rt.Record) {
+func (t *UpdateTran) Output(th *rt.Thread, table string, rec rt.Record) {
 	ts := t.getSchema(table)
 	ti := t.tran.GetInfo(table) // readonly
 	n := rec.Len()
@@ -321,7 +320,7 @@ func (t *UpdateTran) Output(table string, rec rt.Record) {
 	}()
 	ti.Nrows++
 	ti.Size += uint64(n)
-	t.db.CallTrigger(t.thread, t, table, "", rec)
+	t.db.CallTrigger(th, t, table, "", rec)
 }
 
 func (t *UpdateTran) dupOutputBlock(table string, iIndex int, ix schema.Index, ov *index.Overlay, rec rt.Record, key string) {
@@ -366,7 +365,7 @@ func (t *ReadTran) fkeyOutputExists(table string, iIndex int, key string) bool {
 	return idx.Lookup(key) != 0
 }
 
-func (t *UpdateTran) Delete(table string, off uint64) {
+func (t *UpdateTran) Delete(th *rt.Thread, table string, off uint64) {
 	ts := t.getSchema(table)
 	rec := t.GetRecord(off)
 	n := rec.Len()
@@ -386,7 +385,7 @@ func (t *UpdateTran) Delete(table string, off uint64) {
 		}()
 		ti := t.getRwInfo(table)
 		for i := range ts.Indexes {
-			t.fkeyDeleteCascade(ts, i, keys[i])
+			t.fkeyDeleteCascade(th, ts, i, keys[i])
 		}
 		for i := range ts.Indexes {
 			ti.Indexes[i].Delete(keys[i], off)
@@ -396,7 +395,7 @@ func (t *UpdateTran) Delete(table string, off uint64) {
 		assert.Msg("Delete Size").That(ti.Size >= uint64(n))
 		ti.Size -= uint64(n)
 	}()
-	t.db.CallTrigger(t.thread, t, table, rec, "")
+	t.db.CallTrigger(th, t, table, rec, "")
 }
 
 func (t *UpdateTran) fkeyDeleteBlock(ts *meta.Schema, i int, key string) {
@@ -452,7 +451,7 @@ func rangeEnd(key string, n int) string {
 	return sb.String()
 }
 
-func (t *UpdateTran) fkeyDeleteCascade(ts *meta.Schema, i int, key string) {
+func (t *UpdateTran) fkeyDeleteCascade(th *rt.Thread, ts *meta.Schema, i int, key string) {
 	if key == "" {
 		return
 	}
@@ -464,7 +463,7 @@ func (t *UpdateTran) fkeyDeleteCascade(ts *meta.Schema, i int, key string) {
 			iter := t.cascade(fk, encoded, key)
 			for iter.Next(t); !iter.Eof(); iter.Next(t) {
 				_, off := iter.Cur()
-				t.Delete(fk.Table, off)
+				t.Delete(th, fk.Table, off)
 			}
 		}
 	}
@@ -480,11 +479,11 @@ func (t *UpdateTran) cascade(fk *schema.Fkey, encoded bool, key string) *index.O
 	return iter
 }
 
-func (t *UpdateTran) Update(table string, oldoff uint64, newrec rt.Record) uint64 {
-	return t.update(table, oldoff, newrec, true)
+func (t *UpdateTran) Update(th *rt.Thread, table string, oldoff uint64, newrec rt.Record) uint64 {
+	return t.update(th, table, oldoff, newrec, true)
 }
 
-func (t *UpdateTran) update(table string, oldoff uint64, newrec rt.Record,
+func (t *UpdateTran) update(th *rt.Thread, table string, oldoff uint64, newrec rt.Record,
 	block bool) uint64 {
 	n := newrec.Len()
 	newrec = newrec[:n]
@@ -528,7 +527,7 @@ func (t *UpdateTran) update(table string, oldoff uint64, newrec rt.Record,
 		}()
 		for i := range ts.Indexes {
 			if oldkeys[i] != newkeys[i] {
-				t.fkeyUpdateCascade(ts, i, newrec, oldkeys[i])
+				t.fkeyUpdateCascade(th, ts, i, newrec, oldkeys[i])
 			}
 		}
 		for i := range ts.Indexes {
@@ -541,11 +540,11 @@ func (t *UpdateTran) update(table string, oldoff uint64, newrec rt.Record,
 			}
 		}
 	}()
-	t.db.CallTrigger(t.thread, t, table, oldrec, newrec)
+	t.db.CallTrigger(th, t, table, oldrec, newrec)
 	return newoff
 }
 
-func (t *UpdateTran) fkeyUpdateCascade(ts *meta.Schema, i int,
+func (t *UpdateTran) fkeyUpdateCascade(th *rt.Thread, ts *meta.Schema, i int,
 	rec rt.Record, key string) { // rec is old, key is new
 	ixcols := ts.Indexes[i].Columns
 	encoded := ts.Indexes[i].Ixspec.Encodes()
@@ -571,7 +570,7 @@ func (t *UpdateTran) fkeyUpdateCascade(ts *meta.Schema, i int,
 				}
 			}
 			newrec := rb.Trim().Build()
-			t.update(fk.Table, off, newrec, false) // no output block
+			t.update(th, fk.Table, off, newrec, false) // no output block
 		}
 	}
 }

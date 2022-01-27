@@ -83,9 +83,9 @@ func TestForeignKeys(*testing.T) {
 	defer db.Close()
 	MakeSuTran = func(qt QueryTran) *rt.SuTran { return nil }
 	act := func(act string) {
-		ut := db.NewUpdateTran(nil)
+		ut := db.NewUpdateTran()
 		defer ut.Commit()
-		n := DoAction(ut, act)
+		n := DoAction(nil, ut, act)
 		assert.This(n).Is(1)
 	}
 
@@ -238,9 +238,9 @@ func TestQueryBug(*testing.T) {
 	defer db.Close()
 	MakeSuTran = func(qt QueryTran) *rt.SuTran { return nil }
 	act := func(act string) {
-		ut := db.NewUpdateTran(nil)
+		ut := db.NewUpdateTran()
 		defer ut.Commit()
-		n := DoAction(ut, act)
+		n := DoAction(nil, ut, act)
 		assert.This(n).Is(1)
 	}
 	DoAdmin(db, "create tmp (a,b) key(a)")
@@ -270,9 +270,9 @@ func TestDuplicateKey(*testing.T) {
 	defer db.Close()
 	MakeSuTran = func(qt QueryTran) *rt.SuTran { return nil }
 	act := func(act string) {
-		ut := db.NewUpdateTran(nil)
+		ut := db.NewUpdateTran()
 		defer ut.Commit()
-		n := DoAction(ut, act)
+		n := DoAction(nil, ut, act)
 		assert.This(n).Is(1)
 	}
 	DoAdmin(db, "create tmp (k,u,i) key(k) index unique(u) index(i)")
@@ -294,9 +294,9 @@ func TestWhereSelectBug(t *testing.T) {
 	defer db.Close()
 	MakeSuTran = func(qt QueryTran) *rt.SuTran { return nil }
 	act := func(act string) {
-		ut := db.NewUpdateTran(nil)
+		ut := db.NewUpdateTran()
 		defer ut.Commit()
-		n := DoAction(ut, act)
+		n := DoAction(nil, ut, act)
 		assert.This(n).Is(1)
 	}
 	DoAdmin(db, "create t2 (d) key (d)")
@@ -330,9 +330,9 @@ func TestJoinBug(t *testing.T) {
 	defer db.Close()
 	MakeSuTran = func(qt QueryTran) *rt.SuTran { return nil }
 	act := func(act string) {
-		ut := db.NewUpdateTran(nil)
+		ut := db.NewUpdateTran()
 		defer ut.Commit()
-		n := DoAction(ut, act)
+		n := DoAction(nil, ut, act)
 		assert.This(n).Is(1)
 	}
 	DoAdmin(db, "create t1 (a) key(a)")
@@ -349,9 +349,9 @@ func TestSelectOnSingleton(t *testing.T) {
 	defer db.Close()
 	MakeSuTran = func(qt QueryTran) *rt.SuTran { return nil }
 	act := func(act string) {
-		ut := db.NewUpdateTran(nil)
+		ut := db.NewUpdateTran()
 		defer ut.Commit()
-		n := DoAction(ut, act)
+		n := DoAction(nil, ut, act)
 		assert.This(n).Is(1)
 	}
 	DoAdmin(db, "create t1 (a) key(a)")
@@ -369,9 +369,9 @@ func TestSingleton(t *testing.T) {
 	defer db.Close()
 	MakeSuTran = func(qt QueryTran) *rt.SuTran { return nil }
 	act := func(act string) {
-		ut := db.NewUpdateTran(nil)
+		ut := db.NewUpdateTran()
 		defer ut.Commit()
-		n := DoAction(ut, act)
+		n := DoAction(nil, ut, act)
 		assert.This(n).Is(1)
 	}
 	DoAdmin(db, "create tmp (a,b) key(a) key(b)")

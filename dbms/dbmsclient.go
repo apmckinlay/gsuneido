@@ -287,7 +287,7 @@ func (dc *dbmsClient) Token() string {
 	return dc.GetStr()
 }
 
-func (dc *dbmsClient) Transaction(_ *Thread, update bool) ITran {
+func (dc *dbmsClient) Transaction(update bool) ITran {
 	dc.PutCmd(commands.Transaction).PutBool(update).Request()
 	tn := dc.GetInt()
 	return &TranClient{dc: dc, tn: tn}
@@ -372,7 +372,7 @@ func (tc *TranClient) Ended() bool {
 	return tc.ended
 }
 
-func (tc *TranClient) Delete(table string, off uint64) {
+func (tc *TranClient) Delete(_ *Thread, table string, off uint64) {
 	if tc.dc.jserver {
 		tc.dc.PutCmd(commands.Erase).PutInt(tc.tn).PutInt(int(off)).Request()
 	} else {
@@ -396,12 +396,12 @@ func (tc *TranClient) ReadCount() int {
 	return tc.dc.GetInt()
 }
 
-func (tc *TranClient) Action(action string) int {
+func (tc *TranClient) Action(_ *Thread, action string) int {
 	tc.dc.PutCmd(commands.Action).PutInt(tc.tn).PutStr(action).Request()
 	return tc.dc.GetInt()
 }
 
-func (tc *TranClient) Update(table string, off uint64, rec Record) uint64 {
+func (tc *TranClient) Update(_ *Thread, table string, off uint64, rec Record) uint64 {
 	if tc.dc.jserver {
 		tc.dc.PutCmd(commands.Update).
 			PutInt(tc.tn).PutInt(int(off)).PutRec(rec).Request()
@@ -504,7 +504,7 @@ func (q *clientQuery) Get(dir Dir) (Row, string) {
 	return row, "updateable"
 }
 
-func (q *clientQuery) Output(rec Record) {
+func (q *clientQuery) Output(_ *Thread, rec Record) {
 	q.dc.PutCmd(commands.Output).PutInt(q.id).PutRec(rec).Request()
 }
 

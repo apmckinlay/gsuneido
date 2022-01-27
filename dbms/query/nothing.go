@@ -85,7 +85,7 @@ func (no *Nothing) Header() *runtime.Header {
 	return runtime.SimpleHeader(no.columns)
 }
 
-func (no *Nothing) Output(runtime.Record) {
+func (no *Nothing) Output(*runtime.Thread, runtime.Record) {
 	panic("can't Output to nil query")
 }
 

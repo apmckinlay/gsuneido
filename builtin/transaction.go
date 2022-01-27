@@ -19,7 +19,7 @@ var _ = builtin("Transaction(read=nil, update=nil, block=false)",
 		} else {
 			update = !ToBool(args[0])
 		}
-		itran := th.Dbms().Transaction(th, update)
+		itran := th.Dbms().Transaction(update)
 		if itran == nil {
 			panic("too many active transactions")
 		}
@@ -80,7 +80,7 @@ func init() {
 		"QueryDo": methodRaw("(@args)",
 			func(th *Thread, as *ArgSpec, this Value, args []Value) Value {
 				query, _ := extractQuery(th, queryParams, as, args)
-				return IntVal(this.(*SuTran).Action(query))
+				return IntVal(this.(*SuTran).Action(th, query))
 			}),
 		"Query1": methodRaw("(@args)",
 			func(th *Thread, as *ArgSpec, this Value, args []Value) Value {

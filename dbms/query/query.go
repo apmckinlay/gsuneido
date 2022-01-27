@@ -92,7 +92,7 @@ type Query interface {
 	Select(cols, vals []string)
 
 	Header() *runtime.Header
-	Output(rec runtime.Record)
+	Output(th *runtime.Thread, rec runtime.Record)
 
 	String() string
 
@@ -142,7 +142,7 @@ type QueryTran interface {
 	GetView(string) string
 	RangeFrac(table string, iIndex int, org, end string) float64
 	Lookup(table string, iIndex int, key string) *runtime.DbRec
-	Output(table string, rec runtime.Record)
+	Output(th *runtime.Thread, table string, rec runtime.Record)
 	GetIndexI(table string, iIndex int) *index.Overlay
 	GetRecord(off uint64) runtime.Record
 	MakeLess(is *ixkey.Spec) func(x, y uint64) bool
@@ -374,8 +374,8 @@ func (q1 *Query1) Header() *runtime.Header {
 	return q1.source.Header()
 }
 
-func (q1 *Query1) Output(rec runtime.Record) {
-	q1.source.Output(rec)
+func (q1 *Query1) Output(th *runtime.Thread, rec runtime.Record) {
+	q1.source.Output(th, rec)
 }
 
 func (*Query1) Get(runtime.Dir) runtime.Row {
@@ -422,7 +422,7 @@ func (q2 *Query2) SingleTable() bool {
 	return false // not single
 }
 
-func (*Query2) Output(runtime.Record) {
+func (*Query2) Output(*runtime.Thread, runtime.Record) {
 	panic("can't output to this query")
 }
 

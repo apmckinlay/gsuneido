@@ -160,7 +160,7 @@ func (t testTran) Lookup(_ string, _ int, key string) *runtime.DbRec {
 	return &runtime.DbRec{Record: rb.Build()}
 }
 
-func (t testTran) Output(string, runtime.Record) {
+func (t testTran) Output(*runtime.Thread, string, runtime.Record) {
 	panic("should not be called")
 }
 

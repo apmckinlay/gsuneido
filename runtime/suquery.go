@@ -173,7 +173,7 @@ func (q *SuQuery) GetRec(dir Dir) Value {
 
 func (q *SuQuery) Output(th *Thread, ob Container) {
 	rec := ob.ToRecord(th, q.iqc.Header())
-	q.iqc.(IQuery).Output(rec)
+	q.iqc.(IQuery).Output(th, rec)
 }
 
 // ------------------------------------------------------------------

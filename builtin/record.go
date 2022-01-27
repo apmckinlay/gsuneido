@@ -37,7 +37,7 @@ func init() {
 					return obDelete(t, as, this, args)
 				}
 				trace.Dbms.Println("Record Delete", this)
-				this.(*SuRecord).DbDelete()
+				this.(*SuRecord).DbDelete(t)
 				return nil
 			}),
 		"Invalidate": methodRaw("(@args)",

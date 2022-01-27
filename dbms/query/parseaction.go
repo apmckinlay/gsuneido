@@ -11,7 +11,7 @@ import (
 )
 
 type Action interface {
-	execute(ut *db19.UpdateTran) int
+	execute(th *runtime.Thread, ut *db19.UpdateTran) int
 	String() string
 }
 
