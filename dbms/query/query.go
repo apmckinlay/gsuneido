@@ -252,9 +252,12 @@ func tempIndexable(q Query, mode Mode) bool {
 	if mode == CursorMode {
 		return false
 	}
-	// else updateMode, tempIndex only directly on Table
-	_, ok := q.(*Table)
-	return ok
+	// else updateMode
+	return true
+	// BUG this matches jSuneido, but it is not correct.
+	// A temp index allows reading deleted or old versions of records.
+	// But there is a big performance penalty
+	// especially from the key sort added by QueryApply.
 }
 
 func min(cost1 Cost, app1 interface{}, cost2 Cost, app2 interface{}) (

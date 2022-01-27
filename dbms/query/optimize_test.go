@@ -127,12 +127,7 @@ func TestOptimize(t *testing.T) {
 			"JOIN n:1 by(cnum) cus^(cnum)")
 	test("trans join inven",
 		"inven^(item) JOIN 1:n by(item) trans^(item)")
-	mode = UpdateMode
-	test("(trans union trans) join (inven union inven)",
-		"(trans^(date,item,id) UNION-MERGE trans^(date,item,id)) "+
-			"JOIN n:n by(item) "+
-			"(inven^(item) UNION-MERGE inven^(item))")
-	mode = ReadMode
+
 	test("(trans union trans) join (inven union inven)",
 		"(inven^(item) UNION-MERGE inven^(item)) "+
 			"JOIN n:n by(item) "+
@@ -153,11 +148,11 @@ func TestOptimize(t *testing.T) {
 	test("comp where a = 1 sort b",
 		"comp^(a,b,c) WHERE a is 1")
 
-	mode = UpdateMode
-	test("table rename b to bb sort c",
-		"table^(a) TEMPINDEX(c) RENAME b to bb")
-
 	mode = CursorMode
+	test("(trans union trans) join (inven union inven)",
+		"(trans^(date,item,id) UNION-MERGE trans^(date,item,id)) "+
+			"JOIN n:n by(item) "+
+			"(inven^(item) UNION-MERGE inven^(item))")
 	test("(inven join trans) union (inven join trans)",
 		"(inven^(item) JOIN 1:n by(item) trans^(item)) "+
 			"UNION-LOOKUP "+
