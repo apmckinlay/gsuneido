@@ -16,11 +16,6 @@ import (
 // since it is populated by init which is single threaded
 // and is immutable after that.
 
-// BUG: Because we do not hold a lock during libload
-// and because libload with overloading sets the global
-// to each overload successively
-// another thread could see a non-final value.
-
 // Gnum is a reference to a global name/value
 // 0 is invalid
 type Gnum = int
@@ -44,7 +39,7 @@ type globals struct {
 	values   []Value
 	builtins map[Gnum]Value
 	errors   map[Gnum]interface{}
-	noDef    cacheSet // used by FindName
+	noDef    map[string]struct{} // used by FindName
 }
 
 var g = globals{
@@ -54,6 +49,7 @@ var g = globals{
 	values:   []Value{nil},
 	builtins: make(map[Gnum]Value, 100),
 	errors:   make(map[Gnum]interface{}),
+	noDef:    make(map[string]struct{}),
 }
 
 func (typeGlobal) Builtin(name string, value Value) Value {
@@ -185,7 +181,7 @@ func (typeGlobal) FindName(t *Thread, name string) Value {
 			return x
 		}
 	}
-	if g.noDef.Has(name) {
+	if _, ok := g.noDef[name]; ok {
 		g.lock.RUnlock()
 		return nil
 	}
@@ -203,7 +199,7 @@ func (typeGlobal) FindName(t *Thread, name string) Value {
 	if x == nil {
 		g.lock.Lock()
 		defer g.lock.Unlock()
-		g.noDef.Add(name)
+		g.noDef[name] = struct{}{}
 	}
 	return x
 }
@@ -274,7 +270,7 @@ func (typeGlobal) Unload(name string) {
 	gnum := Global.num(name)
 	g.values[gnum] = nil
 	delete(g.errors, gnum)
-	g.noDef.Delete(name)
+	delete(g.noDef, name)
 }
 
 func (typeGlobal) UnloadAll() {
@@ -284,7 +280,7 @@ func (typeGlobal) UnloadAll() {
 		g.values[i] = nil
 	}
 	g.errors = make(map[Gnum]interface{})
-	g.noDef = cacheSet{}
+	g.noDef = make(map[string]struct{})
 }
 
 // Set is used by libload
@@ -309,44 +305,4 @@ func (typeGlobal) Overload(name string, val Value) Gnum {
 	g.names = append(g.names, name)
 	g.values = append(g.values, val)
 	return newgn
-}
-
-//-------------------------------------------------------------------
-
-// NOTE: cacheSet is not thread safe, it does not do any locking.
-// Callers are responsible for any necessary locking.
-
-const cacheSetSize = 16
-
-type cacheSet struct {
-	entries [cacheSetSize]string
-	recent  [cacheSetSize]bool
-	clock   int
-}
-
-func (cs *cacheSet) Has(s string) bool {
-	for i := 0; i < cacheSetSize; i++ {
-		if cs.entries[i] == s {
-			cs.recent[i] = true
-			return true
-		}
-	}
-	return false
-}
-
-func (cs *cacheSet) Add(s string) {
-	for ; cs.recent[cs.clock] == true; cs.clock = (cs.clock + 1) % cacheSetSize {
-		cs.recent[cs.clock] = false
-	}
-	cs.entries[cs.clock] = s
-	cs.recent[cs.clock] = true
-}
-
-func (cs *cacheSet) Delete(s string) {
-	for i := 0; i < cacheSetSize; i++ {
-		if cs.entries[i] == s {
-			cs.entries[i] = ""
-			cs.recent[i] = false
-		}
-	}
 }
