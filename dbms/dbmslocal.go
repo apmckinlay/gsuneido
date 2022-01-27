@@ -99,6 +99,7 @@ func (*DbmsLocal) Final() int {
 	panic("DbmsLocal Final not implemented")
 }
 
+// Get implements QueryFirst, QueryLast, Query1
 func (dbms *DbmsLocal) Get(query string, dir Dir) (Row, *Header, string) {
 	tran := dbms.db.NewReadTran()
 	defer tran.Complete()
