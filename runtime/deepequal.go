@@ -88,8 +88,9 @@ func init() {
 // The locking is to prevent data race errors or corruption.
 func deepEqual(x, y Value) bool {
 	var tx, ty types.Type
-	inProgress := make(inProgressStack, 0, 8) // 8 should handle most cases
-	stack := make([]Value, 0, 32)             // 32 should handle most cases
+	// starting these as nil greatly reduces allocation
+	var inProgress inProgressStack
+	var stack []Value
 	for {
 		if y == nil { // y didn't have a named member that x did
 			return false
