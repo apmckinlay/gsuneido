@@ -260,18 +260,18 @@ func (u *Union) Rewind() {
 	u.rewound = true
 }
 
-func (u *Union) Get(dir Dir) Row {
+func (u *Union) Get(th *Thread, dir Dir) Row {
 	defer func() { u.rewound = false }()
 	switch u.strategy {
 	case unionLookup:
-		return u.getLookup(dir)
+		return u.getLookup(th, dir)
 	case unionMerge:
-		return u.getMerge(dir)
+		return u.getMerge(th, dir)
 	}
 	panic("shouldn't reach here")
 }
 
-func (u *Union) getLookup(dir Dir) Row {
+func (u *Union) getLookup(th *Thread, dir Dir) Row {
 	if u.rewound {
 		u.src1 = (dir == Next)
 	}
@@ -279,11 +279,11 @@ func (u *Union) getLookup(dir Dir) Row {
 	for {
 		if u.src1 {
 			for {
-				row = u.source.Get(dir)
+				row = u.source.Get(th, dir)
 				if row == nil {
 					break
 				}
-				if !u.source2Has(row) {
+				if !u.source2Has(th, row) {
 					return JoinRows(row, u.empty2)
 				}
 			}
@@ -293,7 +293,7 @@ func (u *Union) getLookup(dir Dir) Row {
 			u.src1 = false
 			u.source2.Rewind()
 		} else { // source2
-			row = u.source2.Get(dir)
+			row = u.source2.Get(th, dir)
 			if row != nil {
 				return JoinRows(u.empty1, row)
 			}
@@ -306,7 +306,7 @@ func (u *Union) getLookup(dir Dir) Row {
 	}
 }
 
-func (u *Union) getMerge(dir Dir) Row {
+func (u *Union) getMerge(th *Thread, dir Dir) Row {
 	if u.hdr1 == nil {
 		u.hdr1 = u.source.Header()
 		u.hdr2 = u.source2.Header()
@@ -314,15 +314,15 @@ func (u *Union) getMerge(dir Dir) Row {
 
 	// read from the appropriate source(s)
 	if u.rewound {
-		u.fetch1(dir)
-		u.fetch2(dir)
+		u.fetch1(th, dir)
+		u.fetch2(th, dir)
 	} else {
 		// curkey is required for changing direction
 		if u.src1 || u.before(dir, u.key1, u.curKey, true) {
-			u.fetch1(dir)
+			u.fetch1(th, dir)
 		}
 		if u.src2 || u.before(dir, u.key2, u.curKey, false) {
-			u.fetch2(dir)
+			u.fetch2(th, dir)
 		}
 	}
 
@@ -348,8 +348,8 @@ func (u *Union) getMerge(dir Dir) Row {
 	}
 }
 
-func (u *Union) fetch1(dir Dir) {
-	u.row1 = u.source.Get(dir)
+func (u *Union) fetch1(th *Thread, dir Dir) {
+	u.row1 = u.source.Get(th, dir)
 	if u.row1 == nil {
 		u.key1 = endKey(dir)
 	} else {
@@ -357,8 +357,8 @@ func (u *Union) fetch1(dir Dir) {
 	}
 }
 
-func (u *Union) fetch2(dir Dir) {
-	u.row2 = u.source2.Get(dir)
+func (u *Union) fetch2(th *Thread, dir Dir) {
+	u.row2 = u.source2.Get(th, dir)
 	if u.row2 == nil {
 		u.key2 = endKey(dir)
 	} else {
@@ -392,9 +392,9 @@ func (u *Union) Select(cols, vals []string) {
 	u.rewound = true
 }
 
-func (u *Union) Lookup(cols, vals []string) Row {
+func (u *Union) Lookup(th *Thread, cols, vals []string) Row {
 	u.Select(cols, vals)
-	row := u.Get(Next)
+	row := u.Get(th, Next)
 	u.Select(nil, nil) // clear select
 	return row
 }

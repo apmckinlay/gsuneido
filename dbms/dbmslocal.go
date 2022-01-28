@@ -100,13 +100,13 @@ func (*DbmsLocal) Final() int {
 }
 
 // Get implements QueryFirst, QueryLast, Query1
-func (dbms *DbmsLocal) Get(query string, dir Dir) (Row, *Header, string) {
+func (dbms *DbmsLocal) Get(th *Thread, query string, dir Dir) (Row, *Header, string) {
 	tran := dbms.db.NewReadTran()
 	defer tran.Complete()
-	return get(tran, query, dir)
+	return get(th, tran, query, dir)
 }
 
-func get(tran qry.QueryTran, query string, dir Dir) (Row, *Header, string) {
+func get(th *Thread, tran qry.QueryTran, query string, dir Dir) (Row, *Header, string) {
 	q := qry.ParseQuery(query, tran)
 	q, _ = qry.Setup(q, qry.ReadMode, tran)
 	only := false
@@ -114,11 +114,11 @@ func get(tran qry.QueryTran, query string, dir Dir) (Row, *Header, string) {
 		only = true
 		dir = Next
 	}
-	row := q.Get(dir)
+	row := q.Get(th, dir)
 	if row == nil {
 		return nil, nil, ""
 	}
-	if only && q.Get(dir) != nil {
+	if only && q.Get(th, dir) != nil {
 		panic("Query1 not unique: " + query)
 	}
 	return row, q.Header(), q.Updateable()
@@ -294,8 +294,8 @@ type ReadTranLocal struct {
 	TranLocal
 }
 
-func (t ReadTranLocal) Get(query string, dir Dir) (Row, *Header, string) {
-	return get(t.ReadTran, query, dir)
+func (t ReadTranLocal) Get(th *Thread, query string, dir Dir) (Row, *Header, string) {
+	return get(th, t.ReadTran, query, dir)
 }
 
 func (t ReadTranLocal) Query(query string) IQuery {
@@ -315,8 +315,8 @@ type UpdateTranLocal struct {
 	TranLocal
 }
 
-func (t UpdateTranLocal) Get(query string, dir Dir) (Row, *Header, string) {
-	return get(t.UpdateTran, query, dir)
+func (t UpdateTranLocal) Get(th *Thread, query string, dir Dir) (Row, *Header, string) {
+	return get(th, t.UpdateTran, query, dir)
 }
 
 func (t UpdateTranLocal) Query(query string) IQuery {
@@ -361,8 +361,8 @@ func (q queryLocal) Order() []string {
 	return q.Query.Ordering()
 }
 
-func (q queryLocal) Get(dir Dir) (Row, string) {
-	row := q.Query.Get(dir)
+func (q queryLocal) Get(th *Thread, dir Dir) (Row, string) {
+	row := q.Query.Get(th, dir)
 	if row == nil {
 		// this is required for SuQuery to stick at eof unidirectionally
 		q.Query.Rewind()
@@ -379,7 +379,7 @@ type cursorLocal struct {
 	queryLocal
 }
 
-func (q cursorLocal) Get(t ITran, dir Dir) (Row, string) {
+func (q cursorLocal) Get(th *Thread, t ITran, dir Dir) (Row, string) {
 	q.Query.SetTran(t.(qry.QueryTran))
-	return q.queryLocal.Get(dir)
+	return q.queryLocal.Get(th, dir)
 }

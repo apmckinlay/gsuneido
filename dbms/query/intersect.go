@@ -120,13 +120,13 @@ func (it *Intersect) Header() *runtime.Header {
 	return runtime.NewHeader(hdr.Fields, it.Columns())
 }
 
-func (it *Intersect) Get(dir runtime.Dir) runtime.Row {
+func (it *Intersect) Get(th *runtime.Thread, dir runtime.Dir) runtime.Row {
 	if it.disjoint != "" {
 		return nil
 	}
 	for {
-		row := it.source.Get(dir)
-		if row == nil || it.source2Has(row) {
+		row := it.source.Get(th, dir)
+		if row == nil || it.source2Has(th, row) {
 			return row
 		}
 	}

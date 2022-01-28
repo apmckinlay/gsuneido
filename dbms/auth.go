@@ -44,19 +44,19 @@ func AuthToken(s string) bool {
 	return false
 }
 
-func AuthUser(s, nonce string) bool {
+func AuthUser(th *Thread, s, nonce string) bool {
 	if nonce == "" {
 		return false
 	}
 	user := str.BeforeFirst(s, "\x00")
 	hash := sha1.New()
-	passhash := getPassHash(user)
+	passhash := getPassHash(th, user)
 	io.WriteString(hash, nonce+passhash)
 	t := user + "\x00" + string(hash.Sum(nil))
 	return s == t
 }
 
-func getPassHash(user string) (result string) {
+func getPassHash(th *Thread, user string) (result string) {
 	defer func() {
 		if e := recover(); e != nil {
 			result = ""
@@ -64,7 +64,7 @@ func getPassHash(user string) (result string) {
 	}()
 	dbms := GetDbms()
 	query := "users where user = '" + user + "'"
-	row, hdr, _ := dbms.Get(query, Next)
+	row, hdr, _ := dbms.Get(th, query, Next) //FIXME thread
 	if row == nil {
 		return ""
 	}

@@ -190,7 +190,7 @@ func queryAll2(q Query) string {
 	hdr := q.Header()
 	sep := ""
 	var sb strings.Builder
-	for row := q.Get(rt.Next); row != nil; row = q.Get(rt.Next) {
+	for row := q.Get(nil, rt.Next); row != nil; row = q.Get(nil, rt.Next) {
 		sb.WriteString(sep)
 		sb.WriteString(row2str(hdr, row))
 		sep = " | "
@@ -387,10 +387,10 @@ func TestSingleton(t *testing.T) {
 	q.Select(bcols, bvals)
 	assert.This(queryAll2(q)).Is("a=3 b=4")
 	hdr := q.Header()
-	assert.This(row2str(hdr, q.Lookup(bcols, bvals))).Is("a=3 b=4")
+	assert.This(row2str(hdr, q.Lookup(nil, bcols, bvals))).Is("a=3 b=4")
 
 	bvals = []string{rt.Pack(rt.SuInt(2))}
 	q.Select(bcols, bvals)
 	assert.This(queryAll2(q)).Is("")
-	assert.This(q.Lookup(bcols, bvals)).Is(nil)
+	assert.This(q.Lookup(nil, bcols, bvals)).Is(nil)
 }

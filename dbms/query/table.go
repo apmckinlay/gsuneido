@@ -196,7 +196,7 @@ func lookupCost(rowSize int) Cost {
 
 // execution --------------------------------------------------------
 
-func (tbl *Table) Lookup(cols, vals []string) runtime.Row {
+func (tbl *Table) Lookup(_ *runtime.Thread, cols, vals []string) runtime.Row {
 	key := selOrg(tbl.indexEncode, tbl.index, cols, vals)
 	return tbl.lookup(key)
 }
@@ -224,7 +224,7 @@ func (tbl *Table) Rewind() {
 	}
 }
 
-func (tbl *Table) Get(dir runtime.Dir) runtime.Row {
+func (tbl *Table) Get(_ *runtime.Thread, dir runtime.Dir) runtime.Row {
 	tbl.ensureIter()
 	if dir == runtime.Prev {
 		tbl.iter.Prev(tbl.tran)

@@ -148,14 +148,14 @@ func (r *Rename) Header() *runtime.Header {
 	return runtime.NewHeader(flds, cols)
 }
 
-func (r *Rename) Get(dir runtime.Dir) runtime.Row {
-	return r.source.Get(dir)
+func (r *Rename) Get(th *runtime.Thread, dir runtime.Dir) runtime.Row {
+	return r.source.Get(th, dir)
 }
 
 func (r *Rename) Select(cols, vals []string) {
 	r.source.Select(strs.Replace(cols, r.to, r.from), vals)
 }
 
-func (r *Rename) Lookup(cols, vals []string) runtime.Row {
-	return r.source.Lookup(strs.Replace(cols, r.to, r.from), vals)
+func (r *Rename) Lookup(th *runtime.Thread, cols, vals []string) runtime.Row {
+	return r.source.Lookup(th, strs.Replace(cols, r.to, r.from), vals)
 }

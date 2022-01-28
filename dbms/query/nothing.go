@@ -77,7 +77,7 @@ func (no *Nothing) lookupCost() Cost {
 	return 0
 }
 
-func (*Nothing) Lookup([]string, []string) runtime.Row {
+func (*Nothing) Lookup(*runtime.Thread, []string, []string) runtime.Row {
 	return nil
 }
 
@@ -89,7 +89,7 @@ func (no *Nothing) Output(*runtime.Thread, runtime.Record) {
 	panic("can't Output to nil query")
 }
 
-func (*Nothing) Get(runtime.Dir) runtime.Row {
+func (*Nothing) Get(*runtime.Thread, runtime.Dir) runtime.Row {
 	return nil
 }
 

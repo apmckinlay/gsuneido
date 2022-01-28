@@ -170,7 +170,7 @@ func cmdAuth(sc *serverConn) {
 }
 
 func (sc *serverConn) auth(s string) bool {
-	if AuthUser(s, sc.nonce) {
+	if AuthUser(&sc.thread, s, sc.nonce) {
 		sc.nonce = ""
 		return true
 	}
@@ -285,13 +285,13 @@ func (sc *serverConn) getQorTC() (tbl string, hdr *Header, row Row) {
 	if tn == 0 {
 		q := sc.queries[qn]
 		hdr = q.Header()
-		row, tbl = q.Get(dir)
+		row, tbl = q.Get(&sc.thread, dir)
 
 	} else {
 		t := sc.trans[tn]
 		c := sc.cursors[qn]
 		hdr = c.Header()
-		row, tbl = c.Get(t, dir)
+		row, tbl = c.Get(&sc.thread, t, dir)
 	}
 	return
 }
@@ -357,13 +357,13 @@ func cmdGetOne2(sc *serverConn) {
 	}
 	tran := sc.getTran()
 	query := sc.GetStr()
-	var g func(string, Dir) (Row, *Header, string)
+	var g func(*Thread, string, Dir) (Row, *Header, string)
 	if tran == nil {
 		g = sc.dbms.Get
 	} else {
 		g = tran.Get
 	}
-	row, hdr, tbl := g(query, dir)
+	row, hdr, tbl := g(&sc.thread, query, dir)
 	sc.rowResult(tbl, hdr, true, row)
 }
 

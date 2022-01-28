@@ -83,22 +83,22 @@ func (t *Times) Rewind() {
 	t.source2.Rewind()
 }
 
-func (t *Times) Get(dir runtime.Dir) runtime.Row {
-	row2 := t.source2.Get(dir)
+func (t *Times) Get(th *runtime.Thread, dir runtime.Dir) runtime.Row {
+	row2 := t.source2.Get(th, dir)
 	if t.rewound {
 		t.rewound = false
-		t.row1 = t.source.Get(dir)
+		t.row1 = t.source.Get(th, dir)
 		if t.row1 == nil || row2 == nil {
 			return nil
 		}
 	}
 	if row2 == nil {
-		t.row1 = t.source.Get(dir)
+		t.row1 = t.source.Get(th, dir)
 		if t.row1 == nil {
 			return nil
 		}
 		t.source2.Rewind()
-		row2 = t.source2.Get(dir)
+		row2 = t.source2.Get(th, dir)
 	}
 	return runtime.JoinRows(t.row1, row2)
 }

@@ -53,9 +53,9 @@ func (ti *TempIndex) Select(cols, vals []string) {
 	ti.Rewind()
 }
 
-func (ti *TempIndex) Lookup(cols, vals []string) Row {
+func (ti *TempIndex) Lookup(th *Thread, cols, vals []string) Row {
 	if ti.iter == nil {
-		ti.iter = ti.makeIter()
+		ti.iter = ti.makeIter(th)
 	}
 	encode := len(ti.order) > 1
 	key := selOrg(encode, ti.order, cols, vals)
@@ -66,9 +66,9 @@ func (ti *TempIndex) Lookup(cols, vals []string) Row {
 	return row
 }
 
-func (ti *TempIndex) Get(dir Dir) Row {
+func (ti *TempIndex) Get(th *Thread, dir Dir) Row {
 	if ti.iter == nil {
-		ti.iter = ti.makeIter()
+		ti.iter = ti.makeIter(th)
 		ti.rewound = true
 	}
 	var row Row
@@ -98,7 +98,7 @@ type rowIter interface {
 	Seek(key string) Row
 }
 
-func (ti *TempIndex) makeIter() rowIter {
+func (ti *TempIndex) makeIter(th *Thread, ) rowIter {
 	if ti.selEnd == "" {
 		ti.selEnd = ixkey.Max
 	}
@@ -106,9 +106,9 @@ func (ti *TempIndex) makeIter() rowIter {
 	ti.th = &Thread{}
 	ti.hdr = ti.source.Header()
 	if ti.source.SingleTable() {
-		return ti.single()
+		return ti.single(th)
 	}
-	return ti.multi()
+	return ti.multi(th)
 }
 
 func (ti *TempIndex) selected(row Row) bool {
@@ -137,10 +137,10 @@ type singleIter struct {
 	iter *sortlist.Iter
 }
 
-func (ti *TempIndex) single() rowIter {
+func (ti *TempIndex) single(th *Thread, ) rowIter {
 	b := sortlist.NewSorting(ti.singleLess)
 	for {
-		row := ti.source.Get(Next)
+		row := ti.source.Get(th, Next)
 		if row == nil {
 			break
 		}
@@ -222,12 +222,12 @@ type multiIter struct {
 	iter  *sortlist.Iter
 }
 
-func (ti *TempIndex) multi() rowIter {
+func (ti *TempIndex) multi(th *Thread, ) rowIter {
 	it := multiIter{ti: ti, nrecs: len(ti.hdr.Fields), heap: stor.HeapStor(8192)}
 	it.heap.Alloc(1) // avoid offset 0
 	b := sortlist.NewSorting(it.multiLess)
 	for {
-		row := ti.source.Get(Next)
+		row := ti.source.Get(th, Next)
 		if row == nil {
 			break
 		}

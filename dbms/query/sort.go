@@ -87,11 +87,11 @@ func (sort *Sort) setApproach(_ []string, approach interface{}, tran QueryTran) 
 // Only implements reverse.
 // The actual sorting is done with a TempIndex
 
-func (sort *Sort) Get(dir runtime.Dir) runtime.Row {
+func (sort *Sort) Get(th *runtime.Thread, dir runtime.Dir) runtime.Row {
 	if sort.reverse {
 		dir = dir.Reverse()
 	}
-	return sort.source.Get(dir)
+	return sort.source.Get(th, dir)
 }
 
 func (sort *Sort) Select(cols, vals []string) {

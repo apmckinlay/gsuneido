@@ -27,7 +27,7 @@ func TestTableLookup(t *testing.T) {
 		t.Helper()
 		q := ParseQuery(query, testTran{})
 		q, _ = Setup(q, ReadMode, testTran{})
-		row := q.(*Table).Lookup(cols, vals)
+		row := q.(*Table).Lookup(nil, cols, vals)
 		assert.T(t).This(fmt.Sprint(row)).Is(expected)
 	}
 	test("table", ss("a"), is(123), "[<123>]")
@@ -36,6 +36,7 @@ func TestTableLookup(t *testing.T) {
 
 func TestQueryGet(t *testing.T) {
 	MakeSuTran = func(qt QueryTran) *rt.SuTran { return nil }
+	th := &rt.Thread{}
 	db := testDb()
 	defer db.Close()
 	reverse := func(rows []rt.Row) {
@@ -47,7 +48,7 @@ func TestQueryGet(t *testing.T) {
 		t.Helper()
 		var rows []rt.Row
 		q.Rewind()
-		for row := q.Get(dir); row != nil; row = q.Get(dir) {
+		for row := q.Get(th, dir); row != nil; row = q.Get(th, dir) {
 			rows = append(rows, row)
 		}
 		if dir == rt.Prev {

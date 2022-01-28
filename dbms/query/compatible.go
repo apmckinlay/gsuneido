@@ -54,7 +54,7 @@ func (c *Compatible) String2(op, strategy string) string {
 }
 
 // source2Has returns true if a row from source exists in source2
-func (c *Compatible) source2Has(row Row) bool {
+func (c *Compatible) source2Has(th *Thread, row Row) bool {
 	if c.disjoint != "" {
 		return false
 	}
@@ -66,7 +66,7 @@ func (c *Compatible) source2Has(row Row) bool {
 	for i, col := range c.keyIndex {
 		vals[i] = row.GetRaw(c.hdr1, col)
 	}
-	row2 := c.source2.Lookup(c.keyIndex, vals)
+	row2 := c.source2.Lookup(th, c.keyIndex, vals)
 	return row2 != nil && c.equal(row, row2)
 }
 

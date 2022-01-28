@@ -30,6 +30,7 @@ type Where struct {
 	// tbl will be set if the source is a Table, nil otherwise
 	tbl       *Table
 	optInited bool
+	ctx       ast.Context
 	// exprMore is whether expr has more than the minimum idxSel
 	exprMore bool
 	// singleton is true if we know the result is at most one record
@@ -46,9 +47,8 @@ type Where struct {
 	curPtrng pointRange
 	hdr      *runtime.Header
 	// sel is set by Select
-	sel     string
-	selSet  bool
-	context *ast.Context
+	sel    string
+	selSet bool
 
 	selectCols []string
 	selectVals []string
@@ -72,6 +72,7 @@ func NewWhere(src Query, expr ast.Expr, t QueryTran) *Where {
 func (w *Where) SetTran(t QueryTran) {
 	w.t = t
 	w.source.SetTran(t)
+	w.ctx.Tran = nil
 }
 
 func (w *Where) String() string {
@@ -500,7 +501,7 @@ func (w *Where) setApproach(index []string, app interface{}, tran QueryTran) {
 		w.source = SetApproach(w.source, index, tran)
 	}
 	w.hdr = w.source.Header()
-	w.context = &ast.Context{Th: &runtime.Thread{}, Hdr: w.hdr}
+	w.ctx.Hdr = w.hdr
 }
 
 // cmpExpr is <field> <op> <constant> or <field> in (<constants>)
@@ -921,29 +922,29 @@ func (w *Where) idxFrac(idx []string, ptrngs []pointRange) float64 {
 // MakeSuTran is injected by dbms to avoid import cycle
 var MakeSuTran func(qt QueryTran) *runtime.SuTran
 
-func (w *Where) Get(dir runtime.Dir) runtime.Row {
+func (w *Where) Get(th *runtime.Thread, dir runtime.Dir) runtime.Row {
 	if w.conflict {
 		return nil
 	}
 	for {
-		row := w.get(dir)
-		if w.filter(row) {
+		row := w.get(th, dir)
+		if w.filter(th, row) {
 			return row
 		}
 	}
 }
 
-func (w *Where) get(dir runtime.Dir) runtime.Row {
+func (w *Where) get(th *runtime.Thread, dir runtime.Dir) runtime.Row {
 	if w.idxSel == nil {
-		return w.source.Get(dir)
+		return w.source.Get(th, dir)
 	}
 	if w.idxSel.isRanges() {
-		return w.getRange(dir)
+		return w.getRange(th, dir)
 	}
 	return w.getPoint(dir)
 }
 
-func (w *Where) filter(row runtime.Row) bool {
+func (w *Where) filter(th *runtime.Thread, row runtime.Row) bool {
 	if row == nil {
 		return true
 	}
@@ -951,15 +952,18 @@ func (w *Where) filter(row runtime.Row) bool {
 		!w.singletonFilter(row, w.selectCols, w.selectVals) {
 		return false
 	}
-	w.context.Tran = MakeSuTran(w.t)
-	w.context.Row = row
-	return w.expr.Eval(w.context) == runtime.True
+	if w.ctx.Tran == nil {
+		w.ctx.Tran = MakeSuTran(w.t)
+	}
+	w.ctx.Th = th
+	w.ctx.Row = row
+	return w.expr.Eval(&w.ctx) == runtime.True
 }
 
-func (w *Where) getRange(dir runtime.Dir) runtime.Row {
+func (w *Where) getRange(th *runtime.Thread, dir runtime.Dir) runtime.Row {
 	for {
 		if w.idxSelPos != -1 {
-			if row := w.tbl.Get(dir); row != nil {
+			if row := w.tbl.Get(th, dir); row != nil {
 				return row
 			}
 		}
@@ -1080,21 +1084,21 @@ func (w *Where) selectFixed(cols, vals []string) (satisfied, conflict bool) {
 	return satisfied, false
 }
 
-func (w *Where) Lookup(cols, vals []string) runtime.Row {
+func (w *Where) Lookup(th *runtime.Thread, cols, vals []string) runtime.Row {
 	if w.conflict {
 		return nil
 	}
 	if w.singleton {
 		// can't use source.Lookup because cols may not match source index
 		w.Rewind()
-		row := w.Get(runtime.Next)
+		row := w.Get(th, runtime.Next)
 		if row == nil || !w.singletonFilter(row, cols, vals) {
 			return nil
 		}
 		return row
 	}
-	row := w.source.Lookup(cols, vals)
-	if !w.filter(row) {
+	row := w.source.Lookup(th, cols, vals)
+	if !w.filter(th, row) {
 		row = nil
 	}
 	return row

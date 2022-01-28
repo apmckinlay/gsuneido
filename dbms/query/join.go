@@ -238,20 +238,20 @@ func (jn *Join) Rewind() {
 	jn.row2 = nil
 }
 
-func (jn *Join) Get(dir Dir) Row {
+func (jn *Join) Get(th *Thread, dir Dir) Row {
 	for {
-		if jn.row2 == nil && !jn.nextRow1(dir) {
+		if jn.row2 == nil && !jn.nextRow1(th, dir) {
 			return nil
 		}
-		jn.row2 = jn.source2.Get(dir)
+		jn.row2 = jn.source2.Get(th, dir)
 		if jn.row2 != nil {
 			return JoinRows(jn.row1, jn.row2)
 		}
 	}
 }
 
-func (jn *Join) nextRow1(dir Dir) bool {
-	jn.row1 = jn.source.Get(dir)
+func (jn *Join) nextRow1(th *Thread, dir Dir) bool {
+	jn.row1 = jn.source.Get(th, dir)
 	if jn.row1 == nil {
 		return false
 	}
@@ -272,14 +272,14 @@ func (jn *Join) Select(cols, vals []string) {
 	jn.row2 = nil
 }
 
-func (jn *Join) Lookup(cols, vals []string) Row {
+func (jn *Join) Lookup(th *Thread, cols, vals []string) Row {
 	defer jn.Rewind()
-	jn.row1 = jn.source.Lookup(cols, vals)
+	jn.row1 = jn.source.Lookup(th, cols, vals)
 	if jn.row1 == nil {
 		return nil
 	}
 	jn.source2.Select(jn.by, jn.projectRow(jn.row1))
-	row2 := jn.source2.Get(Next)
+	row2 := jn.source2.Get(th, Next)
 	if row2 == nil {
 		return nil
 	}
@@ -358,12 +358,12 @@ func (lj *LeftJoin) Nrows() int {
 
 // execution
 
-func (lj *LeftJoin) Get(dir Dir) Row {
+func (lj *LeftJoin) Get(th *Thread, dir Dir) Row {
 	for {
-		if lj.row2 == nil && !lj.nextRow1(dir) {
+		if lj.row2 == nil && !lj.nextRow1(th, dir) {
 			return nil
 		}
-		lj.row2 = lj.source2.Get(dir)
+		lj.row2 = lj.source2.Get(th, dir)
 		if lj.shouldOutput(lj.row2) {
 			if lj.row2 == nil {
 				return JoinRows(lj.row1, lj.empty2)
@@ -373,9 +373,9 @@ func (lj *LeftJoin) Get(dir Dir) Row {
 	}
 }
 
-func (lj *LeftJoin) nextRow1(dir Dir) bool {
+func (lj *LeftJoin) nextRow1(th *Thread, dir Dir) bool {
 	lj.row1out = false
-	return lj.Join.nextRow1(dir)
+	return lj.Join.nextRow1(th, dir)
 }
 
 func (lj *LeftJoin) shouldOutput(row Row) bool {
@@ -386,15 +386,15 @@ func (lj *LeftJoin) shouldOutput(row Row) bool {
 	return row != nil
 }
 
-func (lj *LeftJoin) Lookup(cols, vals []string) Row {
+func (lj *LeftJoin) Lookup(th *Thread, cols, vals []string) Row {
 	defer lj.Rewind()
-	lj.row1 = lj.source.Lookup(cols, vals)
+	lj.row1 = lj.source.Lookup(th, cols, vals)
 	if lj.row1 == nil {
 		return nil
 	}
 	lj.row1out = false
 	lj.source2.Select(lj.by, lj.projectRow(lj.row1))
-	row2 := lj.source2.Get(Next)
+	row2 := lj.source2.Get(th, Next)
 	if lj.shouldOutput(row2) {
 		if row2 == nil {
 			return JoinRows(lj.row1, lj.empty2)

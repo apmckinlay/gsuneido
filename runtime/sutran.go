@@ -104,9 +104,9 @@ func (st *SuTran) Delete(th *Thread, table string, off uint64) {
 	st.itran.Delete(th, table, off)
 }
 
-func (st *SuTran) GetRow(query string, dir Dir) (Row, *Header, string) {
+func (st *SuTran) GetRow(th *Thread, query string, dir Dir) (Row, *Header, string) {
 	st.ckActive()
-	return st.itran.Get(query, dir)
+	return st.itran.Get(th, query, dir)
 }
 
 func (st *SuTran) Query(th *Thread, query string) *SuQuery {

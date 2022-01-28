@@ -112,7 +112,7 @@ func init() {
 
 func tranQueryOne(th *Thread, st *SuTran, as *ArgSpec, args []Value, dir Dir) Value {
 	query, _ := extractQuery(th, queryParams, as, args)
-	row, hdr, table := st.GetRow(query, dir)
+	row, hdr, table := st.GetRow(th, query, dir)
 	if row == nil {
 		return False
 	}

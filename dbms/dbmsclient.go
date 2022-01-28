@@ -186,7 +186,7 @@ func (dc *dbmsClient) Final() int {
 	return dc.GetInt()
 }
 
-func (dc *dbmsClient) Get(query string, dir Dir) (Row, *Header, string) {
+func (dc *dbmsClient) Get(_ *Thread, query string, dir Dir) (Row, *Header, string) {
 	return dc.get(0, query, dir)
 }
 
@@ -258,7 +258,7 @@ func (dc *dbmsClient) Run(_ *Thread, code string) Value {
 	return dc.ValueResult()
 }
 
-func (dc *dbmsClient) Schema(table string) string {
+func (dc *dbmsClient) Schema(string) string {
 	panic("Schema only available standalone")
 }
 
@@ -381,7 +381,7 @@ func (tc *TranClient) Delete(_ *Thread, table string, off uint64) {
 	}
 }
 
-func (tc *TranClient) Get(query string, dir Dir) (Row, *Header, string) {
+func (tc *TranClient) Get(_ *Thread, query string, dir Dir) (Row, *Header, string) {
 	return tc.dc.get(tc.tn, query, dir)
 }
 
@@ -493,7 +493,7 @@ func newClientQuery(dc *dbmsClient, qn int) *clientQuery {
 
 var _ IQuery = (*clientQuery)(nil)
 
-func (q *clientQuery) Get(dir Dir) (Row, string) {
+func (q *clientQuery) Get(_ *Thread, dir Dir) (Row, string) {
 	q.dc.PutCmd(commands.Get).
 		PutByte(byte(dir)).PutInt(0).PutInt(q.id).Request()
 	if !q.dc.GetBool() {
@@ -519,7 +519,7 @@ func newClientCursor(dc *dbmsClient, cn int) *clientCursor {
 
 var _ ICursor = (*clientCursor)(nil)
 
-func (q *clientCursor) Get(tran ITran, dir Dir) (Row, string) {
+func (q *clientCursor) Get(_ *Thread, tran ITran, dir Dir) (Row, string) {
 	t := tran.(*TranClient)
 	q.dc.PutCmd(commands.Get).PutByte(byte(dir)).PutInt(t.tn).PutInt(q.id).Request()
 	if !q.dc.GetBool() {

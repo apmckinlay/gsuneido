@@ -147,7 +147,7 @@ func (*SuQuery) Type() types.Type {
 // QueryMethods is initialized by the builtin package
 var QueryMethods Methods
 
-func (q *SuQuery) Lookup(th *Thread, method string) Callable {
+func (q *SuQuery) Lookup(_ *Thread, method string) Callable {
 	//FIXME concurrency
 	// if q.owner != th {
 	// 	panic("can't use a query from a different thread")
@@ -155,14 +155,14 @@ func (q *SuQuery) Lookup(th *Thread, method string) Callable {
 	return QueryMethods[method]
 }
 
-func (q *SuQuery) GetRec(dir Dir) Value {
+func (q *SuQuery) GetRec(th *Thread, dir Dir) Value {
 	if dir == q.eof {
 		return False
 	}
 	if q.tran.Ended() {
 		panic("can't use ended transaction")
 	}
-	row, table := q.iqc.(IQuery).Get(dir)
+	row, table := q.iqc.(IQuery).Get(th, dir)
 	if row == nil {
 		q.eof = dir
 		return False
@@ -211,11 +211,11 @@ func (q *SuCursor) Lookup(th *Thread, method string) Callable {
 	return QueryMethods[method]
 }
 
-func (q *SuCursor) GetRec(tran *SuTran, dir Dir) Value {
+func (q *SuCursor) GetRec(th *Thread, tran *SuTran, dir Dir) Value {
 	if dir == q.eof {
 		return False
 	}
-	row, table := q.iqc.(ICursor).Get(tran.itran, dir)
+	row, table := q.iqc.(ICursor).Get(th, tran.itran, dir)
 	if row == nil {
 		q.eof = dir
 		return False

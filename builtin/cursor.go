@@ -25,14 +25,16 @@ var _ = builtinRaw("Cursor(@args)",
 // see also QueryMethods
 func init() {
 	CursorMethods = Methods{
-		"Next": method1("(transaction)", func(this, arg Value) Value {
-			return this.(*SuCursor).GetRec(arg.(*SuTran), Next)
+		"Next": method("(transaction)",
+			func(th *Thread, this Value, args []Value) Value {
+			return this.(*SuCursor).GetRec(th, args[0].(*SuTran), Next)
 		}),
-		"Prev": method1("(transaction)", func(this, arg Value) Value {
-			return this.(*SuCursor).GetRec(arg.(*SuTran), Prev)
+		"Prev": method("(transaction)",
+			func(th *Thread, this Value, args []Value) Value {
+			return this.(*SuCursor).GetRec(th, args[0].(*SuTran), Prev)
 		}),
 		"Output": method("(transaction, record)",
-			func(_ *Thread, _ Value, _ []Value) Value {
+			func(*Thread, Value, []Value) Value {
 				panic("cursor.Output is not supported")
 			}),
 	}

@@ -52,7 +52,7 @@ func (a *insertQueryAction) execute(th *Thread, ut *db19.UpdateTran) int {
 	hdr := qr.Header()
 	fields := ut.GetSchema(a.table).Columns
 	n := 0
-	for row := qr.Get(Next); row != nil; row = qr.Get(Next) {
+	for row := qr.Get(th, Next); row != nil; row = qr.Get(th, Next) {
 		rb := RecordBuilder{}
 		var tsField string
 		for _, f := range fields {
@@ -99,18 +99,19 @@ func (a *updateAction) execute(th *Thread, ut *db19.UpdateTran) int {
 		panic("update: query not updateable")
 	}
 	hdr := q.Header()
+	tran := MakeSuTran(ut)
+	ctx := ast.Context{Th: th, Tran: tran, Hdr: hdr}
 	n := 0
 	prev := uint64(0)
-	for row := q.Get(Next); row != nil; row = q.Get(Next) {
+	for row := q.Get(th, Next); row != nil; row = q.Get(th, Next) {
 		// avoid getting stuck on the same record
 		if row[0].Off == prev {
 			continue
 		}
-		tran := MakeSuTran(ut)
+		ctx.Row = row
 		r := SuRecordFromRow(row, hdr, table, tran)
-		context := &ast.Context{Th: th, Tran: tran, Row: row, Hdr: hdr}
 		for i, col := range a.cols {
-			r.Put(th, SuStr(col), a.exprs[i].Eval(context))
+			r.Put(th, SuStr(col), a.exprs[i].Eval(&ctx))
 		}
 		newrec := r.ToRecord(th, hdr)
 		prev = ut.Update(th, table, row[0].Off, newrec)
@@ -138,7 +139,7 @@ func (a *deleteAction) execute(th *Thread, ut *db19.UpdateTran) int {
 	}
 	n := 0
 	prev := uint64(0)
-	for row := q.Get(Next); row != nil; row = q.Get(Next) {
+	for row := q.Get(th, Next); row != nil; row = q.Get(th, Next) {
 		if row[0].Off == prev {
 			continue
 		}
@@ -149,7 +150,7 @@ func (a *deleteAction) execute(th *Thread, ut *db19.UpdateTran) int {
 	return n
 
 	// offs := []uint64{}
-	// for row := q.Get(Next); row != nil; row = q.Get(Next) {
+	// for row := q.Get(th, Next); row != nil; row = q.Get(th, Next) {
 	// 	offs = append(offs, row[0].Off)
 	// }
 	// for _, off := range offs {

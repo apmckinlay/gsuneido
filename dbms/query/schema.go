@@ -79,7 +79,7 @@ func (st *schemaTable) lookupCost() Cost {
 	return lookupCost(st.rowSize())
 }
 
-func (st *schemaTable) Lookup([]string, []string) Row {
+func (st *schemaTable) Lookup(*Thread, []string, []string) Row {
 	panic("shouldn't reach here")
 }
 
@@ -127,7 +127,7 @@ func (ts *Tables) Rewind() {
 	ts.state = rewound
 }
 
-func (ts *Tables) Get(dir Dir) Row {
+func (ts *Tables) Get(_ *Thread, dir Dir) Row {
 	ts.ensure()
 	if ts.state == eof {
 		return nil
@@ -237,7 +237,7 @@ func (cs *Columns) Rewind() {
 	cs.state = rewound
 }
 
-func (cs *Columns) Get(dir Dir) Row {
+func (cs *Columns) Get(_ *Thread, dir Dir) Row {
 	cs.ensure()
 	if cs.state == eof {
 		return nil
@@ -359,7 +359,7 @@ func (is *Indexes) Rewind() {
 	is.state = rewound
 }
 
-func (is *Indexes) Get(dir Dir) Row {
+func (is *Indexes) Get(_ *Thread, dir Dir) Row {
 	is.ensure()
 	if is.state == eof {
 		return nil
@@ -469,7 +469,7 @@ func (vs *Views) Rewind() {
 	vs.state = rewound
 }
 
-func (vs *Views) Get(dir Dir) Row {
+func (vs *Views) Get(_ *Thread, dir Dir) Row {
 	vs.ensure()
 	if vs.state == eof {
 		return nil

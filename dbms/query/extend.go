@@ -19,6 +19,7 @@ type Extend struct {
 	hasExprs bool
 	hdr      *Header
 	t        QueryTran
+	ctx      ast.Context
 }
 
 func NewExtend(src Query, cols []string, exprs []ast.Expr) *Extend {
@@ -60,6 +61,7 @@ func (e *Extend) init() {
 func (e *Extend) SetTran(t QueryTran) {
 	e.t = t
 	e.source.SetTran(t)
+	e.ctx.Tran = nil
 }
 
 func (e *Extend) String() string {
@@ -167,7 +169,8 @@ func (e *Extend) optimize(mode Mode, index []string) (Cost, interface{}) {
 
 func (e *Extend) setApproach(index []string, _ interface{}, tran QueryTran) {
 	e.source = SetApproach(e.source, index, tran)
-	e.hdr = e.Header() // cache for Get
+	e.hdr = e.Header()  // cache for Get
+	e.ctx.Hdr = e.hdr
 	e.fixed = e.Fixed() // cache
 }
 
@@ -192,26 +195,28 @@ func (e *Extend) Header() *Header {
 	return NewHeader(flds, cols)
 }
 
-func (e *Extend) Get(dir Dir) Row {
-	row := e.source.Get(dir)
+func (e *Extend) Get(th *Thread, dir Dir) Row {
+	row := e.source.Get(th, dir)
 	if e.hasExprs {
-		row = e.extendRow(row)
+		row = e.extendRow(th, row)
 	}
 	return row
 }
 
-func (e *Extend) extendRow(row Row) Row {
+func (e *Extend) extendRow(th *Thread, row Row) Row {
 	if row == nil {
 		return nil // eof
 	}
-	var th Thread // ???
-	context := ast.Context{Th: &th, Tran: MakeSuTran(e.t), Hdr: e.hdr}
+	e.ctx.Th = th
+	if e.ctx.Tran == nil {
+		e.ctx.Tran = MakeSuTran(e.t)
+	}
 	var rb RecordBuilder
-	for _, e := range e.exprs {
-		if e != nil {
+	for _, expr := range e.exprs {
+		if expr != nil {
 			// incrementally build record so extends can see previous ones
-			context.Row = append(row, DbRec{Record: rb.Build()})
-			val := e.Eval(&context)
+			e.ctx.Row = append(row, DbRec{Record: rb.Build()})
+			val := expr.Eval(&e.ctx)
 			rb.Add(val.(Packable))
 		}
 	}
@@ -222,7 +227,7 @@ func (e *Extend) Select(cols, vals []string) {
 	e.source.Select(cols, vals)
 }
 
-func (e *Extend) Lookup(cols, vals []string) Row {
-	row := e.source.Lookup(cols, vals)
-	return e.extendRow(row)
+func (e *Extend) Lookup(th *Thread, cols, vals []string) Row {
+	row := e.source.Lookup(th, cols, vals)
+	return e.extendRow(th, row)
 }

@@ -43,7 +43,7 @@ type IDbms interface {
 
 	// Get returns a single record, for Query1 (dir = One),
 	// QueryFirst (dir = Next), or QueryLast (dir = Prev)
-	Get(query string, dir Dir) (Row, *Header, string)
+	Get(th *Thread, query string, dir Dir) (Row, *Header, string)
 
 	// Info returns an object containing database information
 	Info() Value
@@ -121,7 +121,7 @@ type ITran interface {
 
 	// Get returns a single record, for Query1 (dir = One),
 	// QueryFirst (dir = Next), or QueryLast (dir = Prev)
-	Get(query string, dir Dir) (Row, *Header, string)
+	Get(th *Thread, query string, dir Dir) (Row, *Header, string)
 
 	// Query starts a query
 	Query(query string) IQuery
@@ -169,7 +169,7 @@ type IQuery interface {
 
 	// Get returns the next or previous row from a query
 	// and its table if the query is updateable
-	Get(dir Dir) (Row, string)
+	Get(th *Thread, dir Dir) (Row, string)
 
 	// Output outputs a record to a query
 	Output(th *Thread, rec Record)
@@ -182,7 +182,7 @@ type ICursor interface {
 
 	// Get returns the next or previous row from a cursor
 	// and its table if the query is updateable
-	Get(tran ITran, dir Dir) (Row, string)
+	Get(th *Thread, tran ITran, dir Dir) (Row, string)
 }
 
 type IQueryCursor interface {

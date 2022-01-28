@@ -380,24 +380,24 @@ func (p *Project) Rewind() {
 	p.source.Rewind()
 }
 
-func (p *Project) Get(dir runtime.Dir) runtime.Row {
+func (p *Project) Get(th *runtime.Thread, dir runtime.Dir) runtime.Row {
 	switch p.strategy {
 	case projCopy:
-		return p.source.Get(dir)
+		return p.source.Get(th, dir)
 	case projSeq:
-		return p.getSeq(dir)
+		return p.getSeq(th, dir)
 	case projHash:
-		return p.getHash(dir)
+		return p.getHash(th, dir)
 	}
 	panic("should not reach here")
 }
 
-func (p *Project) getSeq(dir runtime.Dir) runtime.Row {
+func (p *Project) getSeq(th *runtime.Thread, dir runtime.Dir) runtime.Row {
 	if dir == runtime.Next {
 		// output the first of each group
 		// i.e. skip over rows the same as previous output
 		for {
-			row := p.source.Get(dir)
+			row := p.source.Get(th, dir)
 			if row == nil {
 				return nil
 			}
@@ -413,7 +413,7 @@ func (p *Project) getSeq(dir runtime.Dir) runtime.Row {
 		// i.e. output when next record is different
 		// (to get the same records as NEXT)
 		if p.rewound {
-			p.prevRow = p.source.Get(dir)
+			p.prevRow = p.source.Get(th, dir)
 		}
 		p.rewound = false
 		for {
@@ -421,7 +421,7 @@ func (p *Project) getSeq(dir runtime.Dir) runtime.Row {
 				return nil
 			}
 			row := p.prevRow
-			p.prevRow = p.source.Get(dir)
+			p.prevRow = p.source.Get(th, dir)
 			if p.prevRow == nil || !p.projHdr.EqualRows(row, p.prevRow) {
 				// output the last row of a group
 				p.curRow = row
@@ -431,18 +431,18 @@ func (p *Project) getSeq(dir runtime.Dir) runtime.Row {
 	}
 }
 
-func (p *Project) getHash(dir runtime.Dir) runtime.Row {
+func (p *Project) getHash(th *runtime.Thread, dir runtime.Dir) runtime.Row {
 	if p.rewound {
 		p.rewound = false
 		if p.results == nil {
 			p.results = make(map[string]runtime.Row)
 		}
 		if dir == runtime.Prev && !p.indexed {
-			p.buildHash()
+			p.buildHash(th)
 		}
 	}
 	for {
-		row := p.source.Get(dir)
+		row := p.source.Get(th, dir)
 		if row == nil {
 			break
 		}
@@ -462,9 +462,9 @@ func (p *Project) getHash(dir runtime.Dir) runtime.Row {
 	return nil
 }
 
-func (p *Project) buildHash() {
+func (p *Project) buildHash(th *runtime.Thread, ) {
 	for {
-		row := p.source.Get(runtime.Next)
+		row := p.source.Get(th, runtime.Next)
 		if row == nil {
 			break
 		}
@@ -503,12 +503,12 @@ func (p *Project) Select(cols, vals []string) {
 	p.rewound = true
 }
 
-func (p *Project) Lookup(cols, vals []string) runtime.Row {
+func (p *Project) Lookup(th *runtime.Thread, cols, vals []string) runtime.Row {
 	if p.strategy == projCopy {
-		return p.source.Lookup(cols, vals)
+		return p.source.Lookup(th, cols, vals)
 	}
 	p.Select(cols, vals)
-	row := p.Get(runtime.Next)
+	row := p.Get(th, runtime.Next)
 	p.Select(nil, nil) // clear select
 	return row
 }

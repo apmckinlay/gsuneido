@@ -26,7 +26,7 @@ type Summarize struct {
 	summarizeApproach
 	rewound bool
 	srcHdr  *Header
-	get     func(su *Summarize, dir Dir) Row
+	get     func(th *Thread, su *Summarize, dir Dir) Row
 	t       QueryTran
 }
 
@@ -278,12 +278,12 @@ func (su *Summarize) Rewind() {
 	su.rewound = true
 }
 
-func (su *Summarize) Get(dir Dir) Row {
+func (su *Summarize) Get(th *Thread, dir Dir) Row {
 	defer func() { su.rewound = false }()
-	return su.get(su, dir)
+	return su.get(th, su, dir)
 }
 
-func getTbl(su *Summarize, _ Dir) Row {
+func getTbl(_ *Thread, su *Summarize, _ Dir) Row {
 	if !su.rewound {
 		return nil
 	}
@@ -293,7 +293,7 @@ func getTbl(su *Summarize, _ Dir) Row {
 	return Row{DbRec{Record: rb.Build()}}
 }
 
-func getIdx(su *Summarize, dir Dir) Row {
+func getIdx(th *Thread, su *Summarize, dir Dir) Row {
 	if su.rewound {
 		su.srcHdr = su.source.Header()
 	} else {
@@ -304,7 +304,7 @@ func getIdx(su *Summarize, dir Dir) Row {
 	} else { // max
 		dir = Prev
 	}
-	row := su.source.Get(dir)
+	row := su.source.Get(th, dir)
 	var rb RecordBuilder
 	rb.AddRaw(row.GetRaw(su.srcHdr, su.ons[0]))
 	rec := rb.Build()
@@ -326,10 +326,10 @@ type mapPair struct {
 	ops []sumOp
 }
 
-func (t *sumMapT) getMap(su *Summarize, dir Dir) Row {
+func (t *sumMapT) getMap(th *Thread, su *Summarize, dir Dir) Row {
 	if su.rewound {
 		assert.That(!su.wholeRow)
-		t.mapList = su.buildMap()
+		t.mapList = su.buildMap(th)
 		if dir == Next {
 			t.mapPos = -1
 		} else { // Prev
@@ -357,12 +357,12 @@ func (t *sumMapT) getMap(su *Summarize, dir Dir) Row {
 	return Row{DbRec{Record: rb.Build()}}
 }
 
-func (su *Summarize) buildMap() []mapPair {
+func (su *Summarize) buildMap(th *Thread, ) []mapPair {
 	hdr := su.source.Header()
 	sumMap := make(map[Record][]sumOp)
 	var thread Thread
 	for {
-		row := su.source.Get(Next)
+		row := su.source.Get(th, Next)
 		if row == nil {
 			break
 		}
@@ -410,13 +410,13 @@ type sumSeqT struct {
 	sums    []sumOp
 }
 
-func (t *sumSeqT) getSeq(su *Summarize, dir Dir) Row {
+func (t *sumSeqT) getSeq(th *Thread, su *Summarize, dir Dir) Row {
 	if su.rewound {
 		su.srcHdr = su.source.Header()
 		t.sums = su.newSums()
 		t.curDir = dir
 		t.curRow = nil
-		t.nextRow = su.source.Get(dir)
+		t.nextRow = su.source.Get(th, dir)
 	}
 
 	// if direction changes, have to skip over previous result
@@ -425,7 +425,7 @@ func (t *sumSeqT) getSeq(su *Summarize, dir Dir) Row {
 			su.source.Rewind()
 		}
 		for {
-			t.nextRow = su.source.Get(dir)
+			t.nextRow = su.source.Get(th, dir)
 			if t.nextRow == nil || !su.sameBy(t.curRow, t.nextRow) {
 				break
 			}
@@ -446,7 +446,7 @@ func (t *sumSeqT) getSeq(su *Summarize, dir Dir) Row {
 			x := t.nextRow.GetVal(su.srcHdr, su.ons[i], &thread, MakeSuTran(su.t))
 			t.sums[i].add(x, su.sumRow(t.nextRow))
 		}
-		t.nextRow = su.source.Get(dir)
+		t.nextRow = su.source.Get(th, dir)
 		if t.nextRow == nil || !su.sameBy(t.curRow, t.nextRow) {
 			break
 		}

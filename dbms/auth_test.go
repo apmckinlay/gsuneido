@@ -45,5 +45,5 @@ func TestAuthUser(*testing.T) {
 	hash := sha1.New()
 	io.WriteString(hash, nonce+passhash)
 	s := user + "\x00" + string(hash.Sum(nil))
-	assert.True(AuthUser(s, nonce))
+	assert.True(AuthUser(nil, s, nonce))
 }

@@ -81,11 +81,11 @@ type Query interface {
 
 	// Lookup returns the row matching the given key value, or nil if not found.
 	// It is used by Compatible (Intersect, Minus, Union). See also: Select
-	Lookup(cols, vals []string) runtime.Row
+	Lookup(th *runtime.Thread, cols, vals []string) runtime.Row
 
 	Rewind()
 
-	Get(dir runtime.Dir) runtime.Row
+	Get(th *runtime.Thread, dir runtime.Dir) runtime.Row
 
 	// Select restricts the query to records matching the given packed values.
 	// It is used by Join and LeftJoin. See also: Lookup
@@ -366,7 +366,7 @@ func (q1 *Query1) lookupCost() Cost {
 	return q1.source.lookupCost()
 }
 
-func (*Query1) Lookup([]string, []string) runtime.Row {
+func (*Query1) Lookup(*runtime.Thread, []string, []string) runtime.Row {
 	panic("Lookup not implemented")
 }
 
@@ -378,7 +378,7 @@ func (q1 *Query1) Output(th *runtime.Thread, rec runtime.Record) {
 	q1.source.Output(th, rec)
 }
 
-func (*Query1) Get(runtime.Dir) runtime.Row {
+func (*Query1) Get(*runtime.Thread, runtime.Dir) runtime.Row {
 	panic("Get not implemented")
 }
 

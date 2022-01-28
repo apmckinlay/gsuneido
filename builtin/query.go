@@ -27,9 +27,9 @@ var _ = builtinRaw("QueryLast(@args)",
 
 var queryParams = params("(query)")
 
-func queryOne(t *Thread, as *ArgSpec, args []Value, dir Dir) Value {
-	query, _ := extractQuery(t, queryParams, as, args)
-	row, hdr, table := t.Dbms().Get(query, dir)
+func queryOne(th *Thread, as *ArgSpec, args []Value, dir Dir) Value {
+	query, _ := extractQuery(th, queryParams, as, args)
+	row, hdr, table := th.Dbms().Get(th, query, dir)
 	if hdr == nil {
 		return False
 	}
@@ -89,15 +89,15 @@ func init() {
 		"Keys": method0(func(this Value) Value {
 			return this.(ISuQueryCursor).Keys()
 		}),
-		"Next": method0(func(this Value) Value {
-			return this.(*SuQuery).GetRec(Next)
+		"Next": method("()", func(th *Thread, this Value, _ []Value) Value {
+			return this.(*SuQuery).GetRec(th, Next)
 		}),
 		"NewRecord": method("(@args)", // deprecated
 			func(_ *Thread, _ Value, args []Value) Value {
 				return newRecord(args)
 			}),
-		"Prev": method0(func(this Value) Value {
-			return this.(*SuQuery).GetRec(Prev)
+		"Prev": method("()", func(th *Thread, this Value, _ []Value) Value {
+			return this.(*SuQuery).GetRec(th, Prev)
 		}),
 		"Output": method("(record)",
 			func(th *Thread, this Value, args []Value) Value {

@@ -82,13 +82,13 @@ func (m *Minus) Header() *runtime.Header {
 	return m.source.Header()
 }
 
-func (m *Minus) Get(dir runtime.Dir) runtime.Row {
+func (m *Minus) Get(th *runtime.Thread, dir runtime.Dir) runtime.Row {
 	if m.disjoint != "" {
-		return m.source.Get(dir)
+		return m.source.Get(th, dir)
 	}
 	for {
-		row := m.source.Get(dir)
-		if row == nil || !m.source2Has(row) {
+		row := m.source.Get(th, dir)
+		if row == nil || !m.source2Has(th, row) {
 			return row
 		}
 	}
