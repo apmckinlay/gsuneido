@@ -302,6 +302,16 @@ func (h *Hmap) Del(key Value) Value {
 	return val
 }
 
+// Clear deletes the data but keeps the capacity
+func (h *Hmap) Clear() {
+	h.size = 0
+	h.version = 0
+	h.growing = false
+	for i := range h.blocks {
+		h.blocks[i] = block{}
+	}
+}
+
 // Copy returns a shallow copy of the Hmap
 func (h *Hmap) Copy() *Hmap {
 	hnew := Hmap{size: h.size, capShift: h.capShift}

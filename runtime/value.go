@@ -349,6 +349,15 @@ func (x *MayLock) SetConcurrent() {
 	x.concurrent = true
 }
 
+// SetConc returns true if it sets concurrent
+func (x *MayLock) SetConc() bool {
+	if x.concurrent {
+		return false
+	}
+	x.concurrent = true
+	return true
+}
+
 func (x *MayLock) Lock() bool {
 	if x == nil {
 		log.Fatal("Lock nil")

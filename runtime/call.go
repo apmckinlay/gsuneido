@@ -10,6 +10,10 @@ func (t *Thread) Call(fn Callable, args ...Value) Value {
 	return t.CallThis(fn, nil, args...)
 }
 
+func (t *Thread) CallEach(fn Callable, arg Value) Value {
+	return t.PushCall(fn, nil, &ArgSpecEach0, arg)
+}
+
 func (t *Thread) CallEach1(fn Callable, arg Value) Value {
 	return t.PushCall(fn, nil, &ArgSpecEach1, arg)
 }

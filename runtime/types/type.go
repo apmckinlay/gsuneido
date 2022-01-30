@@ -32,5 +32,6 @@ const (
 	AstNode
 	BuiltinClass
 	BuiltinInstance
+	LruCache
 	N
 )
