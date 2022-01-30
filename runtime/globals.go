@@ -249,7 +249,6 @@ func (typeGlobal) Find(t *Thread, gnum Gnum) (result Value) {
 
 // GetIfPresent returns the current value (if there is one)
 // without doing LibLoad.
-// Used by compiler for _Name references
 func (typeGlobal) GetIfPresent(name string) Value {
 	g.lock.RLock()
 	defer g.lock.RUnlock()
