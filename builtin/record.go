@@ -8,14 +8,10 @@ import (
 	"github.com/apmckinlay/gsuneido/runtime/trace"
 )
 
-var _ = builtin("Record(@args)",
-	func(_ *Thread, args []Value) Value {
-		return newRecord(args)
+var _ = builtin1("Record(@args)",
+	func(arg Value) Value {
+		return SuRecordFromObject(arg.(*SuObject))
 	})
-
-func newRecord(args []Value) *SuRecord {
-	return SuRecordFromObject(args[0].(*SuObject))
-}
 
 func init() {
 	RecordMethods = Methods{

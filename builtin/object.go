@@ -15,9 +15,9 @@ var _ = builtin1("Concurrent?(value)",
 		return IsConcurrent(v)
 	})
 
-var _ = builtin("Object(@args)",
-	func(_ *Thread, args []Value) Value {
-		return args[0]
+var _ = builtin1("Object(@args)",
+	func(arg Value) Value {
+		return arg
 	})
 
 // NOTE: ObjectMethods are shared with SuRecord

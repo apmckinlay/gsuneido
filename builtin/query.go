@@ -92,9 +92,9 @@ func init() {
 		"Next": method("()", func(th *Thread, this Value, _ []Value) Value {
 			return this.(*SuQuery).GetRec(th, Next)
 		}),
-		"NewRecord": method("(@args)", // deprecated
-			func(_ *Thread, _ Value, args []Value) Value {
-				return newRecord(args)
+		"NewRecord": method1("(@args)", // deprecated
+			func(_ Value, arg Value) Value {
+				return SuRecordFromObject(arg.(*SuObject))
 			}),
 		"Prev": method("()", func(th *Thread, this Value, _ []Value) Value {
 			return this.(*SuQuery).GetRec(th, Prev)
