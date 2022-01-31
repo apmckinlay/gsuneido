@@ -177,11 +177,9 @@ func (db *Database) unlockSchema() {
 	atomic.StoreInt64(&db.schemaLock, 0)
 }
 
-var tableId uint32
-
 func (db *Database) create(state *DbState, schema *schema.Schema) {
 	schema.Check()
-	ts := &meta.Schema{Schema: *schema, Id: int(atomic.AddUint32(&tableId, 1))}
+	ts := &meta.Schema{Schema: *schema}
 	ts.Ixspecs(ts.Indexes)
 	ov := db.createIndexes(ts.Indexes)
 	ti := &meta.Info{Table: schema.Table, Indexes: ov}
@@ -214,10 +212,10 @@ func (db *Database) Ensure(sch *schema.Schema) {
 				db.create(state, sch)
 				handled = true
 			} else {
-				var meta *meta.Meta
-				newIdxs, meta = state.Meta.Ensure(sch, db.Store)
+				var m *meta.Meta
+				newIdxs, m = state.Meta.Ensure(sch, db.Store)
 				if len(newIdxs) == 0 {
-					state.Meta = meta
+					state.Meta = m
 					handled = true
 				}
 				// else discard meta and just use newIdxs

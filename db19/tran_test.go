@@ -142,61 +142,6 @@ func ck(err error) {
 		panic(err.Error())
 	}
 }
-
-func TestSchemaChange(*testing.T) {
-	store := stor.HeapStor(8192)
-	db, err := CreateDb(store)
-	ck(err)
-	db.CheckerSync()
-	createTbl(db)
-	db.AlterCreate(&schema.Schema{
-		Table:   "mytable",
-		Indexes: []schema.Index{{Mode: 'i', Columns: []string{"two"}}}})
-
-	state0 := db.GetState()
-	testWith := func(fn func()) {
-		ut := output1(db)
-		// commit synchronously
-		tables := db.ck.(*Check).commit(ut)
-		ut.commit()
-
-		fn()
-
-		merges := &mergeList{}
-		merges.add(tables)
-		db.Merge(ut.meta, mergeSingle, merges)
-
-		// restore state
-		db.UpdateState(func(state *DbState) {
-			*state = *state0
-		})
-	}
-	testWith(func() {
-		// no changes
-	})
-	testWith(func() {
-		// drop table
-		ck(db.Drop("mytable"))
-	})
-	testWith(func() {
-		// modify table
-		db.UpdateState(func(state *DbState) {
-			state.Meta = state.Meta.TouchTable("mytable")
-		})
-	})
-	testWith(func() {
-		// drop index
-		assert.That(db.AlterDrop(&schema.Schema{Table: "mytable",
-			Indexes: []schema.Index{{Columns: []string{"two"}}}}))
-	})
-	testWith(func() {
-		// modify indexes
-		db.UpdateState(func(state *DbState) {
-			state.Meta = state.Meta.TouchIndexes("mytable")
-		})
-	})
-}
-
 func TestTooMany(*testing.T) {
 	store := stor.HeapStor(8192)
 	db, err := CreateDb(store)

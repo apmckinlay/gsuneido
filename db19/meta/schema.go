@@ -19,8 +19,6 @@ import (
 
 type Schema struct {
 	schema.Schema
-	// Id is set on new tables and used to tell if a table has been recreated
-	Id int
 	// lastMod must be set to Meta.infoClock on new or modified items.
 	// It is used for persist meta chaining/flattening.
 	lastMod int

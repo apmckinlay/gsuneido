@@ -98,7 +98,6 @@ type MergeResult = index.MergeResult
 
 type MergeUpdate struct {
 	table   string
-	idTran  int
 	nmerged int
 	results []MergeResult // per index
 }
@@ -106,38 +105,13 @@ type MergeUpdate struct {
 // Merge collects the updates which are then applied by ApplyMerge.
 // It is called by concur merger.
 // WARNING: must not modify meta.
-func (m *Meta) Merge(metaWas *Meta, table string, nmerge int) MergeUpdate {
-	was := metaWas.schema.MustGet(table)
-	cur, ok := m.schema.Get(table)
-	if !ok || cur.isTomb() || cur.Id != was.Id {
-		return MergeUpdate{} // table dropped or recreated
-	}
+func (m *Meta) Merge(table string, nmerge int) MergeUpdate {
 	ti := m.info.MustGet(table)
 	results := make([]MergeResult, len(ti.Indexes))
 	for i, ov := range ti.Indexes {
-		if !skipIndex(was, cur, i) {
-			results[i] = ov.Merge(nmerge)
-		}
+		results[i] = ov.Merge(nmerge)
 	}
-	return MergeUpdate{table: table, idTran: was.Id,
-		nmerged: nmerge, results: results}
-}
-
-func skipIndex(was, cur *Schema, i int) bool {
-	if was == cur {
-		return false
-	}
-	cols := was.Indexes[i].Columns
-	curIdx := cur.FindIndex(cols)
-	if curIdx == nil {
-		return true // index dropped
-	}
-	wasIdx := was.FindIndex(cols)
-	return curIdx != wasIdx // index modified
-}
-
-func (mu *MergeUpdate) Skip() bool {
-	return mu.table == ""
+	return MergeUpdate{table: table, nmerged: nmerge, results: results}
 }
 
 // ApplyMerge applies the updates collected by Merge.
@@ -148,17 +122,13 @@ func (m *Meta) ApplyMerge(updates []MergeUpdate) {
 	// TODO use generics to eliminate duplication
 	info := m.info.Mutable()
 	for _, up := range updates {
-		if ts, ok := m.schema.Get(up.table); ok && !ts.isTomb() && ts.Id != up.idTran {
-			continue // table recreated
+		ti := info.GetCopy(up.table)
+		ti.Indexes = append(ti.Indexes[:0:0], ti.Indexes...) // copy
+		for i, ov := range ti.Indexes {
+			ti.Indexes[i] = ov.WithMerged(up.results[i], up.nmerged)
 		}
-		if ti := info.GetCopy(up.table); ti != nil { // not dropped
-			ti.Indexes = append(ti.Indexes[:0:0], ti.Indexes...) // copy
-			for i, ov := range ti.Indexes {
-				ti.Indexes[i] = ov.WithMerged(up.results[i], up.nmerged)
-			}
-			ti.lastMod = m.info.clock
-			info.Put(ti)
-		}
+		ti.lastMod = m.info.clock
+		info.Put(ti)
 	}
 	m.info.InfoHamt = info.Freeze()
 }
@@ -169,7 +139,6 @@ type SaveResult = index.SaveResult
 
 type PersistUpdate struct {
 	table   string
-	idTran  int
 	results []SaveResult // per index
 }
 
@@ -184,8 +153,7 @@ func (m *Meta) Persist(exec func(func() PersistUpdate)) {
 				for i, ov := range ti.Indexes {
 					results[i] = ov.Save()
 				}
-				id := m.schema.MustGet(ti.Table).Id
-				return PersistUpdate{table: ti.Table, idTran: id, results: results}
+				return PersistUpdate{table: ti.Table, results: results}
 			})
 		}
 	})
@@ -199,19 +167,15 @@ func (m *Meta) ApplyPersist(updates []PersistUpdate) {
 	// TODO use generics to eliminate duplication
 	info := m.info.Mutable()
 	for _, up := range updates {
-		if ts, ok := m.schema.Get(up.table); ok && !ts.isTomb() && ts.Id != up.idTran {
-			continue // table recreated
-		}
-		if ti := info.GetCopy(up.table); ti != nil { // not dropped
-			ti.Indexes = append(ti.Indexes[:0:0], ti.Indexes...) // copy
-			for i, ov := range ti.Indexes {
-				if up.results[i] != nil {
-					ti.Indexes[i] = ov.WithSaved(up.results[i])
-				}
+		ti := info.GetCopy(up.table)
+		ti.Indexes = append(ti.Indexes[:0:0], ti.Indexes...) // copy
+		for i, ov := range ti.Indexes {
+			if up.results[i] != nil {
+				ti.Indexes[i] = ov.WithSaved(up.results[i])
 			}
-			ti.lastMod = m.info.clock
-			info.Put(ti)
 		}
+		ti.lastMod = m.info.clock
+		info.Put(ti)
 	}
 	m.info.InfoHamt = info.Freeze()
 }

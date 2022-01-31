@@ -85,12 +85,12 @@ func (sh *stateHolder) updateState(fn func(*DbState)) {
 
 // WARNING: Merge and Persist must not run concurrently
 
-type mergefn func(metaWas, metaCur *meta.Meta, merges *mergeList) []meta.MergeUpdate
+type mergefn func(*meta.Meta, *mergeList) []meta.MergeUpdate
 
 // Merge updates the base ixbuf's with the ones from transactions
 // It is called by concur.go merger.
-func (db *Database) Merge(metaWas *meta.Meta, fn mergefn, merges *mergeList) {
-	updates := fn(metaWas, db.GetState().Meta, merges) // outside UpdateState
+func (db *Database) Merge(fn mergefn, merges *mergeList) {
+	updates := fn(db.GetState().Meta, merges) // outside UpdateState
 	db.UpdateState(func(state *DbState) {
 		meta := *state.Meta // copy
 		meta.ApplyMerge(updates)
@@ -105,7 +105,7 @@ func (db *Database) CommitMerge(ut *UpdateTran) {
 	ut.commit()
 	merges := &mergeList{}
 	merges.add(tables)
-	db.Merge(ut.meta, mergeSingle, merges)
+	db.Merge(mergeSingle, merges)
 }
 
 //-------------------------------------------------------------------

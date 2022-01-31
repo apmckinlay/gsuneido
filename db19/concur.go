@@ -77,8 +77,8 @@ loop:
 				}
 				mt.merges.start(td)
 				td = mt.merges.drain(mt.mergeChan)
-				mt.db.Merge(mt.merges.meta, mt.em.merge, mt.merges)
-				// mt.db.Merge(mt.merges.meta, mergeSingle, merges)
+				mt.db.Merge(mt.em.merge, mt.merges)
+				// mt.db.Merge(mergeSingle, merges)
 				if td.isZero() {
 					break
 				}
@@ -118,13 +118,11 @@ func (td *todo) run() (err interface{}) {
 }
 
 // mergeSingle is a single threaded merge for tran_test
-func mergeSingle(metaWas, metaCur *meta.Meta, merges *mergeList) []meta.MergeUpdate {
+func mergeSingle(m *meta.Meta, merges *mergeList) []meta.MergeUpdate {
 	var results []meta.MergeUpdate
 	for _, tn := range merges.tn {
-		result := metaCur.Merge(metaWas, tn.table, tn.nmerge)
-		if !result.Skip() {
-			results = append(results, result)
-		}
+		result := m.Merge(tn.table, tn.nmerge)
+		results = append(results, result)
 	}
 	return results
 }
@@ -147,34 +145,28 @@ func startMergeWorkers() *execMulti {
 	return em
 }
 
-func (em *execMulti) merge(metaWas, metaCur *meta.Meta, merges *mergeList) []meta.MergeUpdate {
+func (em *execMulti) merge(met *meta.Meta, merges *mergeList) []meta.MergeUpdate {
 	// if only one table, just merge it in this thread
 	// and avoid overhead of channels and worker
 	if len(merges.tn) == 1 {
-		m := merges.tn[0]
-		result := metaCur.Merge(metaWas, m.table, m.nmerge)
-		if !result.Skip() {
-			return append(merges.results, result)
-		}
+		mrg := merges.tn[0]
+		result := met.Merge(mrg.table, mrg.nmerge)
+		return append(merges.results, result)
 	}
 	nresults := 0
 	for i := 0; i < len(merges.tn); {
 		select {
-		case em.jobChan <- job{metaCur: metaCur, metaWas: metaWas,
+		case em.jobChan <- job{meta: met,
 			table: merges.tn[i].table, nmerge: merges.tn[i].nmerge}:
 			i++
 		case result := <-em.resultChan:
-			if !result.Skip() {
-				merges.results = append(merges.results, result)
-			}
+			merges.results = append(merges.results, result)
 			nresults++
 		}
 	}
 	for nresults < len(merges.tn) {
 		result := <-em.resultChan
-		if !result.Skip() {
-			merges.results = append(merges.results, result)
-		}
+		merges.results = append(merges.results, result)
 		nresults++
 	}
 
@@ -182,15 +174,14 @@ func (em *execMulti) merge(metaWas, metaCur *meta.Meta, merges *mergeList) []met
 }
 
 type job struct {
-	metaWas *meta.Meta
-	metaCur *meta.Meta
-	table   string
-	nmerge  int
+	meta   *meta.Meta
+	table  string
+	nmerge int
 }
 
 func (em *execMulti) worker() {
 	for j := range em.jobChan {
-		em.resultChan <- j.metaCur.Merge(j.metaWas, j.table, j.nmerge)
+		em.resultChan <- j.meta.Merge(j.table, j.nmerge)
 	}
 }
 
