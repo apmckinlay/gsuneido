@@ -22,6 +22,9 @@ type Schema struct {
 	// lastMod must be set to Meta.infoClock on new or modified items.
 	// It is used for persist meta chaining/flattening.
 	lastMod int
+	// created is used to avoid tombstones (and persisting them)
+	// for temporary tables (e.g. from tests)
+	created int
 }
 
 //go:generate genny -in ../../genny/hamt/hamt.go -out schemahamt.go -pkg meta gen "Item=*Schema KeyType=string"

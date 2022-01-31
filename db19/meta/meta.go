@@ -255,8 +255,21 @@ func (m *Meta) Drop(name string) *Meta {
 			name + " <- " + strs.Join(",", list))
 	}
 	mu := newMetaUpdate(m)
-	mu.putSchema(m.newSchemaTomb(name))
-	mu.putInfo(m.newInfoTomb(name))
+	if ts.created != 0 && ts.created == m.schema.clock {
+		// not persisted so no need for tombstone
+		mu.schema = mu.meta.schema.Mutable()
+		mu.schema.Delete(ts.Table)
+	} else {
+		mu.putSchema(m.newSchemaTomb(name))
+	}
+	ti := m.schema.MustGet(ts.Table)
+	if ti.created != 0 && ti.created == m.info.clock {
+		// not persisted so no need for tombstone
+		mu.info = mu.meta.info.Mutable()
+		mu.info.Delete(ti.Table)
+	} else {
+		mu.putInfo(m.newInfoTomb(name))
+	}
 	m.dropFkeys(mu, &ts.Schema)
 	return mu.freeze()
 }
@@ -315,6 +328,8 @@ func (m *Meta) AlterCreate(ac *schema.Schema, store *stor.Stor) *Meta {
 
 // PutNew puts the schema & info and creates Fkeys
 func (m *Meta) PutNew(ts *Schema, ti *Info, ac *schema.Schema) *Meta {
+	ts.created = m.schema.clock
+	ti.created = m.info.clock
 	mu := newMetaUpdate(m)
 	mu.putSchema(ts)
 	mu.putInfo(ti)
