@@ -55,16 +55,44 @@ func (d *suLruCacheGlobal) String() string {
 //TODO merge GetN and GetN1 into Get using methodRaw
 
 var suLruCacheMethods = Methods{
-	"Get": method("(x)", func(t *Thread, this Value, args []Value) Value {
-		slc := this.(*suLruCache)
+	// Get calls the getter with exactly the same arguments it receives.
+	// If called with multiple arguments, the hash key is an @args object.
+	//TODO after jSuneido is gone, we can replace Get,GetN,GetN1 with GetX
+	"Get": methodRaw("(@args)", func(
+		t *Thread, as *ArgSpec, this Value, args []Value) Value {
+		if as.Nargs == 0 {
+			panic("missing argument")
+		}
 		key := args[0]
+		if as.Nargs > 1 {
+			unnamed := int(as.Nargs) - len(as.Spec) // only valid if !atArg
+			ob := &SuObject{}
+			for i := 0; i < unnamed; i++ {
+				ob.Add(args[i])
+			}
+			for i, ni := range as.Spec {
+				ob.Set(as.Names[ni], args[unnamed+i])
+			}
+			key = ob
+		}
+		slc := this.(*suLruCache)
 		val := slc.Fetch(key)
 		if val == nil {
-			val = t.Call(slc.Fn, key)
+			val = slc.Fn.Call(t, nil, as) // call with existing stack args
 			slc.Insert(key, val)
 		}
 		return val
 	}),
+	// "Get": method("(x)", func(t *Thread, this Value, args []Value) Value {
+	// 	slc := this.(*suLruCache)
+	// 	key := args[0]
+	// 	val := slc.Fetch(key)
+	// 	if val == nil {
+	// 		val = t.Call(slc.Fn, key)
+	// 		slc.Insert(key, val)
+	// 	}
+	// 	return val
+	// }),
 	"GetN": method("(@x)", func(t *Thread, this Value, args []Value) Value {
 		slc := this.(*suLruCache)
 		key := args[0]
@@ -230,12 +258,13 @@ type entry struct {
 	val Value
 }
 
-func newLruCache(size int) *lruCache {
+func newLruCache(req int) *lruCache {
 	var sizes = []int{6, 13, 27, 55, 111, 223} // 7/8 of ^2
-	assert.That(size <= 223)
+	size := 223                                // max
 	for _, n := range sizes {
-		if size <= n {
+		if req <= n {
 			size = n
+			break
 		}
 	}
 	return &lruCache{size: size,
