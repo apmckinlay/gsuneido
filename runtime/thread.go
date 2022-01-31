@@ -141,6 +141,8 @@ func (t *Thread) Reset() {
 	t.sp = 0
 }
 
+// GetState and RestoreState are used by callbacks_windows.go
+
 type state struct {
 	fp int
 	sp int
