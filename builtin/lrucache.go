@@ -52,6 +52,8 @@ func (d *suLruCacheGlobal) String() string {
 	return "LruCache /* builtin class */"
 }
 
+//TODO merge GetN and GetN1 into Get using methodRaw
+
 var suLruCacheMethods = Methods{
 	"Get": method("(x)", func(t *Thread, this Value, args []Value) Value {
 		slc := this.(*suLruCache)

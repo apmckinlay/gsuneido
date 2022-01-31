@@ -16,6 +16,8 @@ import (
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
+// See also: call.go
+
 type suThreadGlobal struct {
 	SuBuiltin
 }
