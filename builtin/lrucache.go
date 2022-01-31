@@ -16,10 +16,10 @@ type suLruCacheGlobal struct {
 }
 
 func init() {
-	name, ps := paramSplit("LruCache(getfn, size=10, okForResetAll?=true)")
-	Global.Builtin(name, &suLruCacheGlobal{
+	ps := params("(getfn, size=10, okForResetAll?=true)")
+	Global.Builtin("LruCache", &suLruCacheGlobal{
 		SuBuiltin{Fn: lruCacheCallClass,
-			BuiltinParams: BuiltinParams{ParamSpec: *ps}}})
+			BuiltinParams: BuiltinParams{ParamSpec: ps}}})
 }
 
 var lruCacheCallClass = func(t *Thread, args []Value) Value {

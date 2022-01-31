@@ -21,10 +21,9 @@ type suThreadGlobal struct {
 }
 
 func init() {
-	name, ps := paramSplit("Thread(block)")
-	Global.Builtin(name, &suThreadGlobal{
+	Global.Builtin("Thread", &suThreadGlobal{
 		SuBuiltin{Fn: threadCallClass,
-			BuiltinParams: BuiltinParams{ParamSpec: *ps}}})
+			BuiltinParams: BuiltinParams{ParamSpec: params("(block)")}}})
 }
 
 type threadList struct {

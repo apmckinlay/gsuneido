@@ -278,34 +278,34 @@ var _ = meth2("PCMSetRouteLevel(tripId, onOff)",
 func meth0(s string, f func() Value) bool {
 	name, ps := paramSplit(s)
 	pcmsrv64.Data[name] =
-		&SuBuiltin0{Fn: f, BuiltinParams: BuiltinParams{ParamSpec: *ps}}
+		&SuBuiltin0{Fn: f, BuiltinParams: BuiltinParams{ParamSpec: ps}}
 	return true
 }
 
 func meth1(s string, f func(a1 Value) Value) bool {
 	name, ps := paramSplit(s)
 	pcmsrv64.Data[name] =
-		&SuBuiltin1{Fn: f, BuiltinParams: BuiltinParams{ParamSpec: *ps}}
+		&SuBuiltin1{Fn: f, BuiltinParams: BuiltinParams{ParamSpec: ps}}
 	return true
 }
 
 func meth2(s string, f func(a1, a2 Value) Value) bool {
 	name, ps := paramSplit(s)
 	pcmsrv64.Data[name] =
-		&SuBuiltin2{Fn: f, BuiltinParams: BuiltinParams{ParamSpec: *ps}}
+		&SuBuiltin2{Fn: f, BuiltinParams: BuiltinParams{ParamSpec: ps}}
 	return true
 }
 
 func meth3(s string, f func(a1, a2, a3 Value) Value) bool {
 	name, ps := paramSplit(s)
 	pcmsrv64.Data[name] =
-		&SuBuiltin3{Fn: f, BuiltinParams: BuiltinParams{ParamSpec: *ps}}
+		&SuBuiltin3{Fn: f, BuiltinParams: BuiltinParams{ParamSpec: ps}}
 	return true
 }
 
 func meth4(s string, f func(a1, a2, a3, a4 Value) Value) bool {
 	name, ps := paramSplit(s)
 	pcmsrv64.Data[name] =
-		&SuBuiltin4{Fn: f, BuiltinParams: BuiltinParams{ParamSpec: *ps}}
+		&SuBuiltin4{Fn: f, BuiltinParams: BuiltinParams{ParamSpec: ps}}
 	return true
 }

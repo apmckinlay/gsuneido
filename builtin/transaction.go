@@ -63,7 +63,7 @@ func init() {
 		}),
 		"Query": methodRaw("(@args)",
 			func(th *Thread, as *ArgSpec, this Value, args []Value) Value {
-				query, args := extractQuery(th, queryBlockParams, as, args)
+				query, args := extractQuery(th, &queryBlockParams, as, args)
 				mustNotBeAction(query)
 				q := this.(*SuTran).Query(th, query)
 				if args[1] == False {
@@ -79,7 +79,7 @@ func init() {
 			}),
 		"QueryDo": methodRaw("(@args)",
 			func(th *Thread, as *ArgSpec, this Value, args []Value) Value {
-				query, _ := extractQuery(th, queryParams, as, args)
+				query, _ := extractQuery(th, &queryParams, as, args)
 				return IntVal(this.(*SuTran).Action(th, query))
 			}),
 		"Query1": methodRaw("(@args)",
@@ -111,7 +111,7 @@ func init() {
 }
 
 func tranQueryOne(th *Thread, st *SuTran, as *ArgSpec, args []Value, dir Dir) Value {
-	query, _ := extractQuery(th, queryParams, as, args)
+	query, _ := extractQuery(th, &queryParams, as, args)
 	row, hdr, table := st.GetRow(th, query, dir)
 	if row == nil {
 		return False

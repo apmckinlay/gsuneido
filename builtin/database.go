@@ -12,10 +12,9 @@ type suDatabaseGlobal struct {
 }
 
 func init() {
-	name, ps := paramSplit("Database(string)")
-	Global.Builtin(name, &suDatabaseGlobal{
+	Global.Builtin("Database", &suDatabaseGlobal{
 		SuBuiltin{Fn: databaseCallClass,
-			BuiltinParams: BuiltinParams{ParamSpec: *ps}}})
+			BuiltinParams: BuiltinParams{ParamSpec: params("(string)")}}})
 }
 
 func databaseCallClass(t *Thread, args []Value) Value {

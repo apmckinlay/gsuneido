@@ -17,11 +17,11 @@ type suDateGlobal struct {
 }
 
 func init() {
-	name, ps := paramSplit(`Date(string=false, pattern=false,
+	ps := params(`(string=false, pattern=false,
 		year=nil, month=nil, day=nil,
 		hour=nil, minute=nil, second=nil, millisecond=nil)`)
-	Global.Builtin(name, &suDateGlobal{SuBuiltin{Fn: dateCallClass,
-		BuiltinParams: BuiltinParams{ParamSpec: *ps}}})
+	Global.Builtin("Date", &suDateGlobal{SuBuiltin{Fn: dateCallClass,
+		BuiltinParams: BuiltinParams{ParamSpec: ps}}})
 }
 
 func dateCallClass(_ *Thread, args []Value) Value {
