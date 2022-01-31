@@ -196,13 +196,14 @@ func (db *Database) createIndexes(idxs []schema.Index) []*index.Overlay {
 }
 
 func (db *Database) Ensure(sch *schema.Schema) {
-	db.lockSchema()
-	defer db.unlockSchema()
 	state := db.GetState()
 	ts := state.Meta.GetRoSchema(sch.Table)
 	if ts != nil && schemaSubset(sch, ts) {
 		return // nothing to do, common fast case
 	}
+	db.lockSchema()
+	defer db.unlockSchema()
+	state = db.GetState() // fetch again now that we're locked
 	handled := false
 	var newIdxs []schema.Index
 	db.RunExclusive(sch.Table, func() {
