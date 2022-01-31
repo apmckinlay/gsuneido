@@ -200,7 +200,7 @@ func (*SuCursor) Type() types.Type {
 // CursorMethods is initialized by the builtin package
 var CursorMethods Methods
 
-func (q *SuCursor) Lookup(th *Thread, method string) Callable {
+func (q *SuCursor) Lookup(_ *Thread, method string) Callable {
 	//FIXME concurrency
 	// if q.owner != th {
 	// 	panic("can't use a query from a different thread")
