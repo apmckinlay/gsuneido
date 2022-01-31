@@ -60,7 +60,6 @@ func threadCallClass(_ *Thread, args []Value) Value {
 	fn := args[0]
 	fn.SetConcurrent()
 	t2 := NewThread()
-
 	threads.add(t2.Num, t2)
 	go func() {
 		defer func() {
