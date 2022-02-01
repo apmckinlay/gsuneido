@@ -454,15 +454,11 @@ func eval(src string) {
 
 // libload loads a name from the dbms
 func libload(t *Thread, name string) (result Value, e interface{}) {
-	var gn int
 	defer func() {
 		if e = recover(); e != nil {
 			// fmt.Println("INFO: error loading", name, e)
 			// debug.PrintStack()
 			result = nil
-			if gn != 0 {
-				Global.Set(gn, nil)
-			}
 		}
 	}()
 	defs := t.Dbms().LibGet(name)
@@ -470,8 +466,6 @@ func libload(t *Thread, name string) (result Value, e interface{}) {
 		// fmt.Println("LOAD", name, "MISSING")
 		return nil, nil
 	}
-	// only assign Gnum if found in library
-	gn = Global.Num(name)
 	for i := 0; i < len(defs); i += 2 {
 		lib := defs[i]
 		src := defs[i+1]
