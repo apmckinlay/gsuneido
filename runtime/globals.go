@@ -266,6 +266,11 @@ func (typeGlobal) GetIfPresent(name string) Value {
 }
 
 func (typeGlobal) Unload(name string) {
+	Global.unload(name)
+	delete(LibraryOriginals, name)
+}
+
+func (typeGlobal) unload(name string) {
 	g.lock.Lock()
 	defer g.lock.Unlock()
 	gnum := Global.num(name)
@@ -282,6 +287,7 @@ func (typeGlobal) UnloadAll() {
 	}
 	g.errors = make(map[Gnum]interface{})
 	g.noDef = make(map[string]struct{})
+	LibraryOriginals = make(map[string]Value)
 }
 
 func (typeGlobal) SetName(name string, val Value) {
