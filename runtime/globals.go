@@ -200,6 +200,8 @@ func (typeGlobal) FindName(t *Thread, name string) Value {
 		g.lock.Lock()
 		defer g.lock.Unlock()
 		g.noDef[name] = struct{}{}
+	} else {
+		Global.SetName(name, x)
 	}
 	return x
 }
@@ -282,7 +284,12 @@ func (typeGlobal) UnloadAll() {
 	g.noDef = make(map[string]struct{})
 }
 
-// Set is used by libload
+func (typeGlobal) SetName(name string, val Value) {
+	g.lock.Lock()
+	defer g.lock.Unlock()
+	g.values[Global.num(name)] = val
+}
+
 func (typeGlobal) Set(gn Gnum, val Value) {
 	g.lock.Lock()
 	g.values[gn] = val
