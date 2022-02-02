@@ -116,6 +116,24 @@ var threadMethods = Methods{
 		time.Sleep(time.Duration(ToInt(ms)) * time.Millisecond)
 		return nil
 	}),
+	"StartProfile": method("()", func(t *Thread, _ Value, args []Value) Value {
+		t.StartProfile()
+		return nil
+	}),
+	"StopProfile": method("()", func(t *Thread, _ Value, args []Value) Value {
+		total, self, ops, calls := t.StopProfile()
+		prof := &SuObject{}
+		for name, op := range ops {
+			ob := &SuObject{}
+			ob.Set(SuStr("name"), SuStr(name))
+			ob.Set(SuStr("ops"), IntVal(int(op)))
+			ob.Set(SuStr("calls"), IntVal(int(calls[name])))
+			ob.Set(SuStr("total"), IntVal(int(total[name])))
+			ob.Set(SuStr("self"), IntVal(int(self[name])))
+			prof.Add(ob)
+		}
+		return prof
+	}),
 }
 
 func (d *suThreadGlobal) Lookup(t *Thread, method string) Callable {

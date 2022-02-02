@@ -25,8 +25,16 @@ func (t *Thread) Invoke(fn *SuFunc, this Value) Value {
 	if t.fp >= len(t.frames) {
 		panic("function call overflow")
 	}
+	if t.profile.enabled {
+		t.profile.lock.Lock()
+		t.profile.calls[fn.Name]++
+	}
 	t.frames[t.fp] = Frame{fn: fn, this: this,
 		locals: Locals{v: t.stack[t.sp-int(fn.Nlocals) : t.sp]}}
+	t.fp++
+	if t.profile.enabled {
+		t.profile.lock.Unlock()
+	}
 	return t.run()
 }
 
@@ -38,7 +46,6 @@ func (t *Thread) run() Value {
 	// fmt.Println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
 	// fmt.Println(strings.Repeat("    ", t.fp) + "run:", t.frames[t.fp].fn)
 	sp := t.sp
-	t.fp++
 	fp := t.fp
 	if t.fp > t.fpMax {
 		t.fpMax = t.fp // track high water mark
@@ -123,7 +130,11 @@ func (t *Thread) interp(catchJump, catchSp *int) (ret Value) {
 		}
 	}
 
+	profileOpCount := 0
 	defer func() {
+		if t.profile.enabled && profileOpCount > 0 {
+			t.profile.ops[fr.fn.Name] += int32(profileOpCount)
+		}
 		// this is an optimization to avoid unnecessary recover/repanic
 		if *catchJump == 0 && t.blockReturnFrame == nil {
 			return // this frame isn't catching
@@ -147,23 +158,20 @@ func (t *Thread) interp(catchJump, catchSp *int) (ret Value) {
 
 loop:
 	for fr.ip < len(code) {
+		profileOpCount++
 		// fmt.Println("stack:", t.sp, t.stack[ints.Max(0, t.sp-3):t.sp])
 		// _, da := Disasm1(fr.fn, fr.ip)
 		// fmt.Printf("%d: %d: %s\n", t.fp, fr.ip, da)
-		if t.OpCount == 0 {
-			if t.UIThread {
+		if t.UIThread {
+			if t.OpCount == 0 {
 				RunOnGoSide()
 				if Interrupt() {
 					panic("interrupt")
 				}
 				t.OpCount = 1009 // otherwise it won't trigger again
 			}
-			if t.Profile != nil {
-				t.Profile[fr.fn]++
-				t.OpCount = 1009 // otherwise it won't trigger again
-			}
+			t.OpCount--
 		}
-		t.OpCount--
 		oc = op.Opcode(code[fr.ip])
 		fr.ip++
 		switch oc {

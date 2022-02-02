@@ -74,12 +74,11 @@ type Thread struct {
 	// InHandler is used to detect nested handler calls
 	InHandler bool
 
-	// Profile is used to track heavily executed functions
-	Profile map[*SuFunc]int
-
 	// Session is the name of the database session.
 	// Needs atomic because we access MainThread from other threads.
 	session atomic.Value
+
+	profile profile
 }
 
 var nThread int32

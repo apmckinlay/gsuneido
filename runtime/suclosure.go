@@ -40,15 +40,22 @@ func (b *SuClosure) Call(t *Thread, this Value, as *ArgSpec) Value {
 	if this == nil {
 		this = b.this
 	}
-	fr := Frame{fn: bf, this: this, blockParent: b.parent,
-		locals: Locals{v: b.locals, onHeap: true}}
+	v := b.locals
 	if b.concurrent {
 		// make a mutable copy of the locals for the frame
-		v := make([]Value, len(b.locals))
+		v = make([]Value, len(b.locals))
 		copy(v, b.locals)
-		fr.locals.v = v
 	}
-	t.frames[t.fp] = fr
+	if t.profile.enabled {
+		t.profile.lock.Lock()
+		t.profile.calls[bf.Name]++
+	}
+	t.frames[t.fp] = Frame{fn: bf, this: this, blockParent: b.parent,
+		locals: Locals{v: v, onHeap: true}}
+	t.fp++
+	if t.profile.enabled {
+		t.profile.lock.Unlock()
+	}
 	return t.run()
 }
 

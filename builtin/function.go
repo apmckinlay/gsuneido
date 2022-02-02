@@ -42,20 +42,3 @@ func init() {
 		}),
 	}
 }
-
-var _ = builtin("ProfileEnable(enable)", func(t *Thread, args []Value) Value {
-	if ToBool(args[0]) {
-		t.Profile = make(map[*SuFunc]int)
-	} else {
-		t.Profile = nil
-	}
-	return nil
-})
-
-var _ = builtin("ProfileData()", func(t *Thread, _ []Value) Value {
-	ob := &SuObject{}
-	for f, n := range t.Profile {
-		ob.Put(t, SuStr(f.Name), IntVal(n))
-	}
-	return ob
-})
