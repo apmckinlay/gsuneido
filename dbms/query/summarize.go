@@ -256,6 +256,7 @@ func (su *Summarize) setApproach(_ []string, approach interface{}, tran QueryTra
 		su.get = t.getSeq
 	}
 	su.rewound = true
+	su.srcHdr = su.source.Header()
 }
 
 // execution --------------------------------------------------------
@@ -294,9 +295,7 @@ func getTbl(_ *Thread, su *Summarize, _ Dir) Row {
 }
 
 func getIdx(th *Thread, su *Summarize, dir Dir) Row {
-	if su.rewound {
-		su.srcHdr = su.source.Header()
-	} else {
+	if !su.rewound {
 		return nil
 	}
 	if str.EqualCI(su.ops[0], "min") {
@@ -415,7 +414,6 @@ type sumSeqT struct {
 
 func (t *sumSeqT) getSeq(th *Thread, su *Summarize, dir Dir) Row {
 	if su.rewound {
-		su.srcHdr = su.source.Header()
 		t.sums = su.newSums()
 		t.curDir = dir
 		t.curRow = nil
