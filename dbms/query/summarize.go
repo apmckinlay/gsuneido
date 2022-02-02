@@ -305,6 +305,9 @@ func getIdx(th *Thread, su *Summarize, dir Dir) Row {
 		dir = Prev
 	}
 	row := su.source.Get(th, dir)
+	if row == nil {
+		return nil
+	}
 	var rb RecordBuilder
 	rb.AddRaw(row.GetRaw(su.srcHdr, su.ons[0]))
 	rec := rb.Build()
