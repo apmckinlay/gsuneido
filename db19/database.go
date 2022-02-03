@@ -5,6 +5,7 @@ package db19
 
 import (
 	"errors"
+	"sync"
 	"sync/atomic"
 
 	"github.com/apmckinlay/gsuneido/db19/index"
@@ -32,6 +33,9 @@ type Database struct {
 	triggers
 	// schemaLock is used to prevent concurrent schema modification
 	schemaLock int64
+
+	closed    int64
+	closeLock sync.Mutex
 }
 
 const magic = "gsndo001"
@@ -482,7 +486,7 @@ func (db *Database) Transactions() []int {
 }
 
 func (db *Database) ckOpen() {
-	if db.Store == nil {
+	if atomic.LoadInt64(&db.closed) == 1 {
 		rt.Fatal("database closed")
 	}
 }
@@ -490,7 +494,9 @@ func (db *Database) ckOpen() {
 // Close closes the database store, writing the current size to the start.
 // NOTE: The state must already be written.
 func (db *Database) Close() {
-	if db.Store == nil {
+	db.closeLock.Lock()
+	defer db.closeLock.Unlock()
+	if atomic.LoadInt64(&db.closed) == 1 {
 		return // already closed
 	}
 	if db.ck != nil {
@@ -502,6 +508,7 @@ func (db *Database) Close() {
 		db.writeSize()
 	}
 	db.Store.Close()
+	atomic.StoreInt64(&db.closed, 1)
 }
 
 func (db *Database) writeSize() {
