@@ -22,27 +22,27 @@ func (t *Thread) Invoke(fn *SuFunc, this Value) Value {
 	for expand := fn.Nlocals - fn.Nparams; expand > 0; expand-- {
 		t.Push(nil)
 	}
-	if t.fp >= len(t.frames) {
-		panic("function call overflow")
-	}
-	if t.profile.enabled {
-		t.profile.lock.Lock()
-		t.profile.calls[fn.Name]++
-	}
-	t.frames[t.fp] = Frame{fn: fn, this: this,
-		locals: Locals{v: t.stack[t.sp-int(fn.Nlocals) : t.sp]}}
-	t.fp++
-	if t.profile.enabled {
-		t.profile.lock.Unlock()
-	}
-	return t.run()
+	return t.run(Frame{fn: fn, this: this,
+		locals: Locals{v: t.stack[t.sp-int(fn.Nlocals) : t.sp]}})
 }
 
 // run is needed in addition to interp
 // because we can only recover panic on the way out of a function
 // so if the exception is caught we have to re-enter interp
 // Called by Thread.Invoke and SuClosure.Call
-func (t *Thread) run() Value {
+func (t *Thread) run(frame Frame) Value {
+	if t.fp >= len(t.frames) {
+		panic("function call overflow")
+	}
+	if t.profile.enabled {
+		t.profile.lock.Lock()
+		t.profile.calls[frame.fn.Name]++
+	}
+	t.frames[t.fp] = frame
+	t.fp++
+	if t.profile.enabled {
+		t.profile.lock.Unlock()
+	}
 	// fmt.Println(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>")
 	// fmt.Println(strings.Repeat("    ", t.fp) + "run:", t.frames[t.fp].fn)
 	sp := t.sp
