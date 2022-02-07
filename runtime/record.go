@@ -16,7 +16,7 @@ using the same format as cSuneido and jSuneido.
 
 NOTE: This is the post 2019 format using a two byte header.
 
-It is used for storing data records in the database
+It is used for storing data records in the database and in dumps
 and for transferring data records across the client-server protocol.
 
 An empty Record is a single zero byte.
@@ -133,17 +133,31 @@ func (r Record) mode() byte {
 
 func (r Record) String() string {
 	if r == "" {
-		return "<nil>"
+		return "{}"
 	}
 	var sb strings.Builder
-	sep := "<"
+	sep := "{"
 	for i := 0; i < r.Count(); i++ {
 		sb.WriteString(sep)
 		sep = ", "
 		sb.WriteString(r.GetVal(i).String())
 	}
-	sb.WriteString(">")
+	sb.WriteString("}")
 	return sb.String()
+}
+
+// Truncate shortens records to n fields and removes empty trailing fields.
+// If the record has n or less fields it is returned unchanged.
+func (r Record) Truncate(n int) Record {
+	rn := r.Len()
+	if rn <= n {
+		return r
+	}
+	var rb RecordBuilder
+	for i := 0; i < n; i++ {
+		rb.AddRaw(r.GetRaw(i))
+	}
+	return rb.Trim().Build()
 }
 
 // ------------------------------------------------------------------
@@ -173,6 +187,8 @@ func (b *RecordBuilder) AddRaw(s string) *RecordBuilder {
 
 // Packed is a Packable wrapper for an already packed value
 type Packed string
+
+var _ Packable = (*Packed)(nil)
 
 func (p Packed) Pack(_ int32, buf *pack.Encoder) {
 	buf.PutStr(string(p))
@@ -204,7 +220,7 @@ func (b *RecordBuilder) Trim() *RecordBuilder {
 
 func (b *RecordBuilder) Build() Record {
 	clock := atomic.AddInt32(&packClock, 1)
-	stack := newPackStack()
+	var stack packStack
 	if len(b.vals) > MaxValues {
 		panic("too many values for record")
 	}

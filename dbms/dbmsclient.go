@@ -175,9 +175,13 @@ func (dc *dbmsClient) Dump(table string) string {
 
 func (dc *dbmsClient) Exec(_ *Thread, args Value) Value {
 	packed := PackValue(args) // do this first because it could panic
-	trace.ClientServer.Println(args)
+	if trace.ClientServer.On() {
+		if len(packed) < 100 {
+			trace.ClientServer.Println("    ->", args)
+		}
+	}
 	dc.PutCmd(commands.Exec)
-	dc.PutRec(Record(packed)).Request()
+	dc.PutStr_(packed).Request()
 	return dc.ValueResult()
 }
 
@@ -334,7 +338,7 @@ func (dc *dbmsClient) getHdr() *Header {
 }
 
 func (dc *dbmsClient) getRow(off int) Row {
-	return Row([]DbRec{{Record: Record(dc.GetStr()), Off: uint64(off)}})
+	return Row([]DbRec{{Record: dc.GetRec(), Off: uint64(off)}})
 }
 
 // ------------------------------------------------------------------
@@ -406,7 +410,7 @@ func (tc *TranClient) Update(_ *Thread, table string, off uint64, rec Record) ui
 		tc.dc.PutCmd(commands.Update).
 			PutInt(tc.tn).PutInt(int(off)).PutRec(rec).Request()
 	} else {
-		tc.dc.PutCmd(commands.Update).
+		tc.dc.PutCmd(commands.Update2).
 			PutInt(tc.tn).PutStr(table).PutInt(int(off)).PutRec(rec).Request()
 	}
 	return uint64(tc.dc.GetInt())
@@ -454,15 +458,19 @@ func (qc *clientQueryCursor) Header() *Header {
 func (qc *clientQueryCursor) Keys() []string {
 	if qc.keys == nil { // cached
 		qc.dc.PutCmd(commands.Keys).PutInt(qc.id).PutByte(byte(qc.qc)).Request()
-		nk := qc.dc.GetInt()
-		qc.keys = make([]string, nk)
-		for i := range qc.keys {
-			cb := str.CommaBuilder{}
-			n := qc.dc.GetInt()
-			for ; n > 0; n-- {
-				cb.Add(qc.dc.GetStr())
+		if !qc.dc.jserver {
+			qc.keys = qc.dc.GetStrs()
+		} else {
+			nk := qc.dc.GetInt()
+			qc.keys = make([]string, nk)
+			for i := range qc.keys {
+				cb := str.CommaBuilder{}
+				n := qc.dc.GetInt()
+				for ; n > 0; n-- {
+					cb.Add(qc.dc.GetStr())
+				}
+				qc.keys[i] = cb.String()
 			}
-			qc.keys[i] = cb.String()
 		}
 	}
 	return qc.keys
@@ -494,14 +502,21 @@ func newClientQuery(dc *dbmsClient, qn int) *clientQuery {
 var _ IQuery = (*clientQuery)(nil)
 
 func (q *clientQuery) Get(_ *Thread, dir Dir) (Row, string) {
-	q.dc.PutCmd(commands.Get).
-		PutByte(byte(dir)).PutInt(0).PutInt(q.id).Request()
+	cmd := commands.Get2
+	if q.dc.jserver {
+		cmd = commands.Get
+	}
+	q.dc.PutCmd(cmd).PutByte(byte(dir)).PutInt(0).PutInt(q.id).Request()
 	if !q.dc.GetBool() {
 		return nil, ""
 	}
 	off := q.dc.GetInt()
+	table := "updateable"
+	if !q.dc.jserver {
+		table = q.dc.GetStr()
+	}
 	row := q.dc.getRow(off)
-	return row, "updateable"
+	return row, table
 }
 
 func (q *clientQuery) Output(_ *Thread, rec Record) {
@@ -520,12 +535,20 @@ func newClientCursor(dc *dbmsClient, cn int) *clientCursor {
 var _ ICursor = (*clientCursor)(nil)
 
 func (q *clientCursor) Get(_ *Thread, tran ITran, dir Dir) (Row, string) {
+	cmd := commands.Get2
+	if q.dc.jserver {
+		cmd = commands.Get
+	}
 	t := tran.(*TranClient)
-	q.dc.PutCmd(commands.Get).PutByte(byte(dir)).PutInt(t.tn).PutInt(q.id).Request()
+	q.dc.PutCmd(cmd).PutByte(byte(dir)).PutInt(t.tn).PutInt(q.id).Request()
 	if !q.dc.GetBool() {
 		return nil, ""
 	}
 	off := q.dc.GetInt()
+	table := "updateable"
+	if !q.dc.jserver {
+		table = q.dc.GetStr()
+	}
 	row := q.dc.getRow(off)
-	return row, "updateable"
+	return row, table
 }

@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/util/ascii"
+	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/hacks"
 	"github.com/apmckinlay/gsuneido/util/sset"
 	"github.com/apmckinlay/gsuneido/util/str"
@@ -210,15 +211,19 @@ func (hdr *Header) find(fld string) (rowAt, bool) {
 	return rowAt{}, false
 }
 
+// GetFields returns a list of the fields, including deleted ("-"),
+// without duplicates (e.g. from Join or Union)
 func (hdr *Header) GetFields() []string {
 	if len(hdr.Fields) == 1 {
-		return hdr.Fields[0]
+		return strs.Cow(hdr.Fields[0])
 	}
-	result := make([]string, len(hdr.Fields[0]))
-	copy(result, hdr.Fields[0])
+	result := make([]string, 0, len(hdr.Columns))
+	result = append(result, hdr.Fields[0]...)
 	for _, fields := range hdr.Fields[1:] {
 		for _, fld := range fields {
-			result = sset.AddUnique(result, fld)
+			if fld == "-" || !strs.Contains(result, fld) {
+				result = append(result, fld)
+			}
 		}
 	}
 	return result
@@ -259,14 +264,21 @@ func (row Row) equalGet(hdr *Header, col string) string {
 // 	return true
 // }
 
-// Schema is a list of the fields with the rules capitalized
+// Schema is GetFields() plus the derived columns with the rules capitalized
 func (hdr *Header) Schema() []string {
-	list := make([]string, 0, len(hdr.Columns))
+	fields := hdr.GetFields()
+	return hdr.AppendDerived(fields)
+}
+
+func (hdr *Header) AppendDerived(fields []string) []string {
 	for _, col := range hdr.Columns {
-		if !hdr.hasField(col) && !strings.HasSuffix(col, "_lower!") {
-			col = str.Capitalize(col)
+		if !strs.Contains(fields, col) {
+			if !strings.HasSuffix(col, "_lower!") {
+				col = str.Capitalize(col)
+			}
+			fields = append(fields, col)
 		}
-		list = append(list, col)
 	}
-	return list
+	assert.That(!strs.Contains(fields, ""))
+	return fields
 }

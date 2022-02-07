@@ -281,6 +281,7 @@ func ToSuExcept(t *Thread, e interface{}) *SuExcept {
 		if err, ok := e.(error); ok {
 			if _, ok := e.(runtime.Error); ok {
 				log.Println(e)
+				t.PrintStack()
 				debug.PrintStack()
 			}
 			ss = SuStr(err.Error())

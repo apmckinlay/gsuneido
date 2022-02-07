@@ -23,5 +23,5 @@ var _ = builtin0("ServerPort()", func() Value {
 })
 
 var _ = builtin0("Server?()", func() Value {
-	return False
+	return SuBool(options.Action == "server")
 })

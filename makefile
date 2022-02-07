@@ -9,6 +9,7 @@ ifdef PATHEXT
 	EXE = gsuneido.exe gsuneido.com
 	GUIFLAGS = $(LDFLAGS) -X main.mode=gui -H windowsgui
 	CONSOLE = go build -o gsuneido.com -ldflags "$(LDFLAGS)" -tags com
+	PORTABLE = go build -o portable.exe -ldflags "$(LDFLAGS)" -tags portable
 endif
 
 build:
@@ -16,13 +17,14 @@ build:
 	@go version
 	go build -v -ldflags "$(GUIFLAGS)" $(GUITAG)
 	$(CONSOLE)
+	$(PORTABLE)
 
 race:
 	go build -v -ldflags "$(GUIFLAGS)" $(GUITAG) -race
 
 portable:
 	# a Windows version without the Windows stuff
-	go build -o portable.exe -v -ldflags "$(LDFLAGS)" -tags portable
+	$(PORTABLE)
 
 test:
 	go test -short ./...

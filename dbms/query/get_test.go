@@ -30,8 +30,8 @@ func TestTableLookup(t *testing.T) {
 		row := q.(*Table).Lookup(nil, cols, vals)
 		assert.T(t).This(fmt.Sprint(row)).Is(expected)
 	}
-	test("table", ss("a"), is(123), "[<123>]")
-	test("comp", ss("a", "b", "c"), is(12, 34, 56), "[<12, 34, 56>]")
+	test("table", ss("a"), is(123), "[{123}]")
+	test("comp", ss("a", "b", "c"), is(12, 34, 56), "[{12, 34, 56}]")
 }
 
 func TestQueryGet(t *testing.T) {

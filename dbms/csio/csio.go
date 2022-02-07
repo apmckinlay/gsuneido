@@ -16,6 +16,8 @@ import (
 	"github.com/apmckinlay/gsuneido/dbms/commands"
 )
 
+const traceLimit = 100
+
 // ReadWrite handles encode/decode for the Suneido client/server protocol.
 // It uses bufio for buffering.
 type ReadWrite struct {
@@ -33,13 +35,14 @@ func NewReadWrite(rw io.ReadWriter, err func(string)) *ReadWrite {
 
 // PutCmd writes a command byte
 func (rw *ReadWrite) PutCmd(cmd commands.Command) *ReadWrite {
-	trace.ClientServer.Println(">>>", cmd)
+	trace.ClientServer.Println(">", cmd)
 	rw.w.WriteByte(byte(cmd))
 	return rw
 }
 
 // PutBool writes a boolean
 func (rw *ReadWrite) PutBool(b bool) *ReadWrite {
+	trace.ClientServer.Println("    ->", b)
 	if b {
 		rw.w.WriteByte(1)
 	} else {
@@ -50,20 +53,27 @@ func (rw *ReadWrite) PutBool(b bool) *ReadWrite {
 
 // PutByte writes a byte
 func (rw *ReadWrite) PutByte(b byte) *ReadWrite {
+	trace.ClientServer.Println("    ->", b)
 	rw.w.WriteByte(b)
 	return rw
 }
 
 // PutStr writes a size prefixed string
 func (rw *ReadWrite) PutStr(s string) *ReadWrite {
-	trace.ClientServer.Println(s)
-	return rw.putStr(s)
+	if trace.ClientServer.On() {
+		if len(s) < traceLimit {
+			trace.ClientServer.Println("    ->", s)
+		} else {
+			trace.ClientServer.Println("    -> string", len(s))
+		}
+	}
+	return rw.PutStr_(s)
 }
 
-// putStr writes a size prefixed string without trace
-func (rw *ReadWrite) putStr(s string) *ReadWrite {
+// PutStr_ writes a size prefixed string without trace
+func (rw *ReadWrite) PutStr_(s string) *ReadWrite {
 	limit(int64(len(s)))
-	rw.PutInt(len(s))
+	rw.putInt(len(s))
 	rw.w.WriteString(s)
 	return rw
 }
@@ -86,11 +96,23 @@ func (rw *ReadWrite) PutStrs(strs []string) *ReadWrite {
 
 // PutRec writes a size prefixed Record
 func (rw *ReadWrite) PutRec(r Record) *ReadWrite {
-	return rw.putStr(string(r))
+	if trace.ClientServer.On() {
+		if len(r) < traceLimit {
+			trace.ClientServer.Println("    ->", r)
+		} else {
+			trace.ClientServer.Println("    -> record", len(r))
+		}
+	}
+	return rw.PutStr_(string(r))
 }
 
 // PutInt writes a zig zag encoded varint
 func (rw *ReadWrite) PutInt(i int) *ReadWrite {
+	trace.ClientServer.Println("    ->", i)
+	return rw.PutInt64(int64(i))
+}
+
+func (rw *ReadWrite) putInt(i int) *ReadWrite {
 	return rw.PutInt64(int64(i))
 }
 
@@ -115,9 +137,26 @@ func (rw *ReadWrite) PutInts(ints []int) *ReadWrite {
 	return rw
 }
 
+// PutResult writes (true, true, PutVal) for non-nil or (true, false) for nil.
+func (rw *ReadWrite) PutResult(v Value) *ReadWrite {
+	rw.PutBool(true) // no error
+	if v == nil {
+		return rw.PutBool(false)
+	}
+	return rw.PutBool(true).PutVal(v)
+}
+
 // PutVal writes a size prefixed Pack'ed value
-func (rw *ReadWrite) PutVal(v Value) *ReadWrite {
-	return rw.putStr(Pack(v.(Packable)))
+func (rw *ReadWrite) PutVal(val Value) *ReadWrite {
+	packed := Pack(val.(Packable))
+	if trace.ClientServer.On() {
+		if len(packed) < traceLimit {
+			trace.ClientServer.Println("    ->", val)
+		} else {
+			trace.ClientServer.Println("    ->", val.Type())
+		}
+	}
+	return rw.PutStr_(packed)
 }
 
 func (rw *ReadWrite) ResetWrite(w io.Writer) {
@@ -126,21 +165,29 @@ func (rw *ReadWrite) ResetWrite(w io.Writer) {
 
 //-------------------------------------------------------------------
 
-// GetBool reads a boolean
-func (rw *ReadWrite) GetBool() bool {
-	b := rw.GetByte()
-	switch b {
-	case 0:
-		return false
-	case 1:
-		return true
-	default:
-		Fatal("invalid boolean value from server")
-		panic("unreachable")
-	}
+func (rw *ReadWrite) GetCmd() commands.Command {
+	icmd := commands.Command(rw.GetByte_())
+	trace.ClientServer.Println("<", icmd)
+	return icmd
 }
 
-func (rw *ReadWrite) GetByte() byte {
+// GetBool reads a boolean
+func (rw *ReadWrite) GetBool() bool {
+	b := rw.GetByte_()
+	if b != 0 && b != 1 {
+		Fatal("invalid boolean value from server", b)
+	}
+	trace.ClientServer.Println("    <-", b == 1)
+	return b == 1
+}
+
+func (rw *ReadWrite) GetChar() byte {
+	b := rw.GetByte_()
+	trace.ClientServer.Println("    <-", string(b))
+	return b
+}
+
+func (rw *ReadWrite) GetByte_() byte {
 	b, err := rw.r.ReadByte()
 	rw.ck(err)
 	return b
@@ -156,6 +203,7 @@ func (rw *ReadWrite) ck(err error) {
 func (rw *ReadWrite) GetInt() int {
 	n := rw.GetInt64()
 	assert.That(int64(math.MinInt) <= n && n <= int64(math.MaxInt))
+	trace.ClientServer.Println("    <-", n)
 	return int(n)
 }
 
@@ -164,7 +212,7 @@ func (rw *ReadWrite) GetInt64() int64 {
 	shift := uint(0)
 	n := uint64(0)
 	for {
-		b := rw.GetByte()
+		b := rw.GetByte_()
 		n |= uint64(b&0x7f) << shift
 		shift += 7
 		if 0 == (b & 0x80) {
@@ -191,13 +239,31 @@ func (rw *ReadWrite) GetSize() int {
 
 // GetRec reads a size prefixed string
 func (rw *ReadWrite) GetRec() Record {
-	return Record(rw.GetStr())
+	n := rw.GetSize()
+	r := Record(rw.GetN(n))
+	if trace.ClientServer.On() {
+		if len(r) < traceLimit {
+			trace.ClientServer.Println("    <-", r)
+		} else {
+			trace.ClientServer.Println("    <- record", len(r))
+		}
+	}
+	return r
 }
 
 // GetStr reads a size prefixed string
 func (rw *ReadWrite) GetStr() string {
 	n := rw.GetSize()
-	return rw.GetN(n)
+	s := rw.GetN(n)
+	trace.ClientServer.Println("    <-", s)
+	return s
+}
+
+// GetStr_ reads a size prefixed string without tracing
+func (rw *ReadWrite) GetStr_() string {
+	n := rw.GetSize()
+	s := rw.GetN(n)
+	return s
 }
 
 func (rw *ReadWrite) GetStrs() []string {
@@ -211,7 +277,16 @@ func (rw *ReadWrite) GetStrs() []string {
 
 // GetVal reads a packed value
 func (rw *ReadWrite) GetVal() Value {
-	return Unpack(rw.GetStr())
+	packed := rw.GetStr_()
+	val := Unpack(packed)
+	if trace.ClientServer.On() {
+		if len(packed) < traceLimit {
+			trace.ClientServer.Println("    ->", val)
+		} else {
+			trace.ClientServer.Println("    ->", val.Type())
+		}
+	}
+	return val
 }
 
 // ValueResult reads an optional packed value
@@ -235,7 +310,8 @@ func limit(n int64) int {
 	return int(n)
 }
 
-// Request does Flush and GetBool for the result.
+// Request is used by DbmsClient.
+// It does Flush and GetBool for the result.
 // If the result is false, it does GetStr for the error and panics with it.
 func (rw *ReadWrite) Request() {
 	rw.ck(rw.w.Flush())

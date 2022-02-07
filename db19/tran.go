@@ -209,7 +209,7 @@ func (t *ReadTran) Abort() string {
 
 type UpdateTran struct {
 	ReadTran
-	ct     *CkTran
+	ct *CkTran
 }
 
 func (db *Database) NewUpdateTran() *UpdateTran {
@@ -294,6 +294,7 @@ func (t *UpdateTran) Read(table string, iIndex int, from, to string) {
 func (t *UpdateTran) Output(th *rt.Thread, table string, rec rt.Record) {
 	ts := t.getSchema(table)
 	ti := t.tran.GetInfo(table) // readonly
+	rec = rec.Truncate(len(ts.Columns))
 	n := rec.Len()
 	off, buf := t.db.Store.Alloc(n + cksum.Len)
 	copy(buf, rec[:n])
@@ -485,6 +486,8 @@ func (t *UpdateTran) Update(th *rt.Thread, table string, oldoff uint64, newrec r
 
 func (t *UpdateTran) update(th *rt.Thread, table string, oldoff uint64, newrec rt.Record,
 	block bool) uint64 {
+	ts := t.getSchema(table)
+	newrec = newrec.Truncate(len(ts.Columns))
 	n := newrec.Len()
 	newrec = newrec[:n]
 	oldrec := t.GetRecord(oldoff)
@@ -496,7 +499,6 @@ func (t *UpdateTran) update(th *rt.Thread, table string, oldoff uint64, newrec r
 	newoff, buf := t.db.Store.Alloc(n + cksum.Len)
 	copy(buf, newrec)
 	cksum.Update(buf)
-	ts := t.getSchema(table)
 	ti := t.tran.GetInfo(table) // read-only
 	oldkeys := make([]string, len(ts.Indexes))
 	newkeys := make([]string, len(ts.Indexes))

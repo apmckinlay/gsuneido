@@ -92,6 +92,10 @@ func Print(s string) {
 	}
 }
 
+func (w what) On() bool {
+	return cur&w != 0
+}
+
 var traceLog *os.File
 var traceLogOnce sync.Once
 

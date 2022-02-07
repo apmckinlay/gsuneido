@@ -252,6 +252,10 @@ func clientErrorLog() {
 func startServer() {
 	openDbms()
 	startHttpStatus()
+	Libload = libload // dependency injection
+	mainThread = &Thread{}
+	mainThread.Name = "main"
+	run("Init.Repl()")
 	dbms.Server(dbmsLocal)
 	closeDbms()
 }
@@ -432,7 +436,9 @@ func eval(src string) {
 	defer func() {
 		if e := recover(); e != nil {
 			log.Println("ERROR:", e)
-			printStack(e)
+			if !strings.HasSuffix(fmt.Sprint(e), "(from server)") {
+				printStack(e)
+			}
 		}
 	}()
 	src = "function () {\n" + src + "\n}"

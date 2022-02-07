@@ -7,15 +7,14 @@ import (
 	"fmt"
 	"log"
 	"net"
-	"runtime/debug"
 	"sync"
 
 	"github.com/apmckinlay/gsuneido/builtin"
-	"github.com/apmckinlay/gsuneido/dbms/commands"
 	"github.com/apmckinlay/gsuneido/dbms/csio"
 	"github.com/apmckinlay/gsuneido/options"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/runtime/trace"
+	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
@@ -27,12 +26,12 @@ type serverConn struct {
 	dbms *DbmsLocal
 	conn net.Conn
 	csio.ReadWrite
-	nonce     string
-	trans     map[int]ITran
-	cursors   map[int]ICursor
-	queries   map[int]IQuery
-	lastNum   int
-	thread    Thread
+	nonce   string
+	trans   map[int]ITran
+	cursors map[int]ICursor
+	queries map[int]IQuery
+	lastNum int
+	thread  Thread
 }
 
 var serverConns = make(map[int]*serverConn)
@@ -95,13 +94,14 @@ var hello = func() []byte {
 func (sc *serverConn) request() {
 	defer func() {
 		if e := recover(); e != nil && !sc.ended {
-			debug.PrintStack()
+			// if e != "EOF" {
+			// 	debug.PrintStack()
+			// }
 			sc.ResetWrite(sc.conn)
-			sc.PutBool(false).PutStr(fmt.Sprint(e))
+			sc.PutBool(false).PutStr(fmt.Sprint(e)).Flush()
 		}
 	}()
-	icmd := commands.Command(sc.GetByte())
-	trace.ClientServer.Println("<<<", icmd)
+	icmd := sc.GetCmd()
 	if int(icmd) >= len(cmds) {
 		sc.close()
 		log.Println("dbms server, closing connection: invalid command")
@@ -113,7 +113,9 @@ func (sc *serverConn) request() {
 
 func (sc *serverConn) error(err string) {
 	sc.close()
-	log.Panicln("dbms server, closing connection:", err)
+	if err != "EOF" {
+		log.Panicln("dbms server, closing connection:", err)
+	}
 }
 
 func (sc *serverConn) close() {
@@ -184,21 +186,25 @@ func cmdCheck(sc *serverConn) {
 
 func cmdClose(sc *serverConn) {
 	n := sc.GetInt()
-	if sc.GetByte() == 'q' {
+	switch sc.GetChar() {
+	case 'q':
 		q := sc.queries[n]
 		if q == nil {
 			sc.error("query not found")
 		}
 		delete(sc.queries, n)
 		q.Close()
-	} else {
+	case 'c':
 		c := sc.cursors[n]
 		if c == nil {
 			sc.error("cursor not found")
 		}
 		delete(sc.cursors, n)
 		c.Close()
+	default:
+		sc.error("dbms server expected q or c")
 	}
+	sc.PutBool(true)
 }
 
 func cmdCommit(sc *serverConn) {
@@ -261,7 +267,7 @@ func cmdErase(sc *serverConn) {
 func cmdExec(sc *serverConn) {
 	ob := sc.GetVal()
 	v := sc.dbms.Exec(&sc.thread, ob)
-	sc.PutBool(true).PutVal(v)
+	sc.PutResult(v)
 }
 
 func cmdFinal(sc *serverConn) {
@@ -286,7 +292,6 @@ func (sc *serverConn) getQorTC() (tbl string, hdr *Header, row Row) {
 		q := sc.queries[qn]
 		hdr = q.Header()
 		row, tbl = q.Get(&sc.thread, dir)
-
 	} else {
 		t := sc.trans[tn]
 		c := sc.cursors[qn]
@@ -297,11 +302,9 @@ func (sc *serverConn) getQorTC() (tbl string, hdr *Header, row Row) {
 }
 
 func (sc *serverConn) getDir() Dir {
-	b := sc.GetByte()
-	if b == '-' {
-		return Prev
-	}
-	return Next
+	dir := Dir(sc.GetByte_())
+	trace.ClientServer.Println("    <-", string(dir))
+	return Dir(dir)
 }
 
 const maxRec = 1024 * 1024 // 1 mb
@@ -310,33 +313,31 @@ func (sc *serverConn) rowResult(tbl string, hdr *Header, sendHdr bool, row Row) 
 	if row == nil {
 		sc.PutBool(true).PutBool(false)
 	} else {
-		rec := rowToRecord(row, hdr)
+		rec, flds := rowToRecord(row, hdr)
 		if len(rec) > maxRec {
 			panic("result too large")
 		}
-		off := int64(row[0].Off)
-		sc.PutBool(true).PutBool(true).PutInt64(off)
+		sc.PutBool(true).PutBool(true).PutInt(int(row[0].Off))
 		if sendHdr {
-			sc.PutStrs(hdr.Schema())
+			sc.PutStrs(hdr.AppendDerived(flds))
 		}
-		if tbl != "-" {
-			sc.PutStr(tbl)
-		}
+		sc.PutStr(tbl)
 		sc.PutRec(rec)
 	}
 }
 
-func rowToRecord(row Row, hdr *Header) Record {
+func rowToRecord(row Row, hdr *Header) (rec Record, fields []string) {
 	if len(row) == 1 {
-		return row[0].Record
+		assert.That(len(hdr.Fields) == 1)
+		return row[0].Record, hdr.Fields[0]
 	}
 	var rb RecordBuilder
-	for _, flds := range hdr.Fields {
-		for _, fld := range flds {
-			rb.AddRaw(row.GetRaw(hdr, fld))
-		}
+	// need to include deleted "-" in case it's used for updates
+	fields = hdr.GetFields()
+	for _, fld := range fields {
+		rb.AddRaw(row.GetRaw(hdr, fld))
 	}
-	return rb.Trim().Build()
+	return rb.Trim().Build(), fields
 }
 
 func cmdGetOne(sc *serverConn) {
@@ -345,7 +346,7 @@ func cmdGetOne(sc *serverConn) {
 
 func cmdGetOne2(sc *serverConn) {
 	var dir Dir
-	switch sc.GetByte() {
+	switch sc.GetChar() {
 	case '+':
 		dir = Next
 	case '-':
@@ -374,7 +375,7 @@ func cmdHeader(sc *serverConn) {
 
 func (sc *serverConn) getQorC() (qc IQueryCursor) {
 	n := sc.GetInt()
-	switch sc.GetByte() {
+	switch sc.GetChar() {
 	case 'q':
 		qc = sc.queries[n]
 	case 'c':
@@ -496,7 +497,7 @@ func cmdRewind(sc *serverConn) {
 func cmdRun(sc *serverConn) {
 	s := sc.GetStr()
 	v := sc.dbms.Run(&sc.thread, s)
-	sc.PutBool(true).PutVal(v)
+	sc.PutResult(v)
 }
 
 func cmdSessionId(sc *serverConn) {
@@ -562,8 +563,8 @@ func cmdUpdate2(sc *serverConn) {
 	table := sc.GetStr()
 	off := uint64(sc.GetInt64())
 	rec := sc.GetRec()
-	tran.Update(&sc.thread, table, off, rec)
-	sc.PutBool(true)
+	newoff := tran.Update(&sc.thread, table, off, rec)
+	sc.PutBool(true).PutInt(int(newoff))
 }
 
 func cmdWriteCount(sc *serverConn) {
