@@ -10,7 +10,6 @@ import (
 	"log"
 	"net/http"
 	"os"
-	"os/exec"
 	"runtime"
 	"runtime/debug"
 	"strconv"
@@ -58,9 +57,7 @@ func main() {
 	if options.Action == "client" {
 		options.Errlog = builtin.ErrlogDir() + "suneido" + options.Port + ".err"
 	}
-	if options.Mode == "gui" {
-		relaunchWithRedirect() // Note: breaks start/w
-	}
+	builtin.Startup() // Windows gui relaunch
 	if options.Action == "" && options.Mode != "gui" {
 		options.Action = "repl"
 	}
@@ -195,28 +192,6 @@ func ck(err error) {
 	if err != nil {
 		Fatal(err)
 	}
-}
-
-func relaunchWithRedirect() {
-	// This is the only way I found to redirect stdout/stderr
-	// for built-in output e.g. crashes
-	if options.NoRelaunch || options.Redirected() {
-		return // to avoid infinite loop
-	}
-	f, err := os.OpenFile(options.Errlog,
-		os.O_APPEND|os.O_WRONLY|os.O_CREATE, 0666)
-	if err != nil {
-		Fatal(err.Error())
-	}
-	path, _ := os.Executable()
-	cmd := exec.Command(path, os.Args[1:]...)
-	cmd.Stdout = f
-	cmd.Stderr = f
-	err = cmd.Start()
-	if err != nil {
-		Fatal(err.Error())
-	}
-	os.Exit(0)
 }
 
 func clientErrorLog() {
