@@ -46,6 +46,9 @@ func (b *SuClosure) Call(t *Thread, this Value, as *ArgSpec) Value {
 		v = make([]Value, len(b.locals))
 		copy(v, b.locals)
 	}
+	if t.fp >= len(t.frames) {
+		panic("function call overflow")
+	}
 	if t.profile.enabled {
 		t.profile.lock.Lock()
 		t.profile.calls[bf.Name]++
