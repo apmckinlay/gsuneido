@@ -245,12 +245,12 @@ func openDbms() {
 		Alert("ERROR:", err)
 		msg, err := db19.Repair("suneido.db", err)
 		if err != nil {
-			Fatal(err)
+			Fatal("repair:", err)
 		}
 		Alert(msg)
 		db, err = db19.OpenDatabase("suneido.db")
 		if err != nil {
-			Fatal(err)
+			Fatal("open:", err)
 		}
 	}
 	db19.StartTimestamps()

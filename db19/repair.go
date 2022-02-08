@@ -24,6 +24,7 @@ func Repair(dbfile string, err error) (string, error) {
 	if err != nil {
 		return "", err
 	}
+	defer store.Close()
 	off := store.Size()
 	var state *DbState
 	var t0, t time.Time
@@ -91,36 +92,18 @@ func truncate(dbfile string, store *stor.Stor, off uint64) error {
 	store.Close()
 	size := off + uint64(stateLen)
 	if size == store.Size() {
-		fixHeader(dbfile, size)
-		return nil
+		return fixHeader(dbfile, size)
 	}
-	src, err := os.Open(dbfile)
+	tmpfile, err := truncate2(dbfile, size)
 	if err != nil {
 		return err
 	}
-	dst, err := ioutil.TempFile(".", "gs*.tmp")
-	if err != nil {
-		return err
-	}
-	tmpfile := dst.Name()
-	_, err = io.CopyN(dst, src, int64(size))
-	if err != nil {
-		return err
-	}
-	buf := make([]byte, stor.SmallOffsetLen)
-	stor.WriteSmallOffset(buf, size)
-	_, err = dst.WriteAt(buf, int64(len(magic)))
-	if err != nil {
-		return err
-	}
-	src.Close()
-	dst.Close()
-	err = RenameBak(tmpfile, dbfile)
-	return err
+	return RenameBak(tmpfile, dbfile)
 }
 
 func fixHeader(dbfile string, size uint64) error {
 	f, err := os.OpenFile(dbfile, os.O_WRONLY, 0)
+	defer f.Close()
 	if err != nil {
 		return err
 	}
@@ -131,11 +114,33 @@ func fixHeader(dbfile string, size uint64) error {
 	buf := make([]byte, stor.SmallOffsetLen)
 	stor.WriteSmallOffset(buf, size)
 	_, err = f.WriteAt(buf, int64(len(magic)))
-	if err != nil {
-		return err
-	}
-	return nil
+	return err
 }
+
+func truncate2(dbfile string, size uint64) (string, error) {
+		src, err := os.Open(dbfile)
+		if err != nil {
+			return "", err
+		}
+		defer src.Close()
+		dst, err := ioutil.TempFile(".", "gs*.tmp")
+		if err != nil {
+			return "", err
+		}
+		defer dst.Close()
+		tmpfile := dst.Name()
+		_, err = io.CopyN(dst, src, int64(size))
+		if err != nil {
+			return "", err
+		}
+		buf := make([]byte, stor.SmallOffsetLen)
+		stor.WriteSmallOffset(buf, size)
+		_, err = dst.WriteAt(buf, int64(len(magic)))
+		if err != nil {
+			return "", err
+		}
+		return tmpfile, nil
+	}
 
 func RenameBak(from string, to string) error { //TODO move to util
 	err := os.Remove(to + ".bak")
