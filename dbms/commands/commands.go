@@ -55,4 +55,5 @@ const (
 	Update2
 	Get2
 	GetOne2
+	Eof
 )

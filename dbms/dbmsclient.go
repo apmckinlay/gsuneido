@@ -6,6 +6,7 @@ package dbms
 import (
 	"bytes"
 	"io"
+	"log"
 	"net"
 	"net/http"
 	"strconv"
@@ -140,7 +141,14 @@ func (dc *dbmsClient) Check() string {
 }
 
 func (dc *dbmsClient) Close() {
-	dc.conn.Close()
+	// On Windows, Close() is not sufficient for a graceful close.
+	// If the client exits afterwards, the server gets WSAECONNRESET.
+	// Tried delays, CloseWrite, SetLinger but nothing helps.
+	// Currently, csio GetCmd specifically handles WSAECONNRESET.
+	err := dc.conn.Close()
+	if err != nil {
+		log.Println("ERROR client close:", err)
+	}
 }
 
 func (dc *dbmsClient) Connections() Value {

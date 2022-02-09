@@ -7,6 +7,7 @@ import (
 	"bufio"
 	"io"
 	"math"
+	"strings"
 
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/runtime/trace"
@@ -166,7 +167,16 @@ func (rw *ReadWrite) ResetWrite(w io.Writer) {
 //-------------------------------------------------------------------
 
 func (rw *ReadWrite) GetCmd() commands.Command {
-	icmd := commands.Command(rw.GetByte_())
+	b, err := rw.r.ReadByte()
+	if err != nil {
+		errstr := err.Error()
+		if err == io.EOF || strings.Contains(errstr, "forcibly closed") {
+			trace.ClientServer.Println("EOF")
+			return commands.Eof
+		}
+		rw.err(errstr)
+	}
+	icmd := commands.Command(b)
 	trace.ClientServer.Println("<", icmd)
 	return icmd
 }

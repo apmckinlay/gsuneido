@@ -12,6 +12,7 @@ import (
 
 type what int
 
+// var cur = ClientServer
 var cur = what(0)
 
 func Set(w int) int {

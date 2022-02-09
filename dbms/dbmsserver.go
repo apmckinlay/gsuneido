@@ -8,8 +8,10 @@ import (
 	"log"
 	"net"
 	"sync"
+	"time"
 
 	"github.com/apmckinlay/gsuneido/builtin"
+	"github.com/apmckinlay/gsuneido/dbms/commands"
 	"github.com/apmckinlay/gsuneido/dbms/csio"
 	"github.com/apmckinlay/gsuneido/options"
 	. "github.com/apmckinlay/gsuneido/runtime"
@@ -40,22 +42,38 @@ var serverConnsLock sync.Mutex
 func Server(dbms *DbmsLocal) {
 	l, err := net.Listen("tcp", ":"+options.Port)
 	if err != nil {
-		log.Fatalln(err)
+		Fatal(err)
 	}
 	defer l.Close()
+	var tempDelay time.Duration // how long to sleep on accept failure
 	lastId := 0
 	for {
 		conn, err := l.Accept()
 		if err != nil {
-			log.Fatalln(err)
+			// error handling based on Go net/http
+			if ne, ok := err.(net.Error); ok && ne.Temporary() {
+				if tempDelay == 0 {
+					tempDelay = 5 * time.Millisecond
+				} else {
+					tempDelay *= 2
+				}
+				if max := 1 * time.Second; tempDelay > max {
+					tempDelay = max
+				}
+				log.Println("ERROR server accept:", err)
+				time.Sleep(tempDelay)
+				continue
+			}
+			Fatal(err)
 		}
 		lastId++
+		tempDelay = 0
 		go handler(lastId, dbms, conn)
 	}
 }
 
 func handler(id int, dbms *DbmsLocal, conn net.Conn) {
-	trace.Dbms.Println("connected")
+	trace.ClientServer.Println("connected")
 	sc := &serverConn{id: id, dbms: dbms, conn: conn,
 		trans:   make(map[int]ITran),
 		cursors: make(map[int]ICursor),
@@ -102,6 +120,10 @@ func (sc *serverConn) request() {
 		}
 	}()
 	icmd := sc.GetCmd()
+	if icmd == commands.Eof {
+		sc.close()
+		return
+	}
 	if int(icmd) >= len(cmds) {
 		sc.close()
 		log.Println("dbms server, closing connection: invalid command")
@@ -113,12 +135,11 @@ func (sc *serverConn) request() {
 
 func (sc *serverConn) error(err string) {
 	sc.close()
-	if err != "EOF" {
-		log.Panicln("dbms server, closing connection:", err)
-	}
+	log.Panicln("dbms server, closing connection:", err)
 }
 
 func (sc *serverConn) close() {
+	trace.ClientServer.Println("closing connection")
 	sc.ended = true
 	sc.conn.Close()
 	for _, tran := range sc.trans {

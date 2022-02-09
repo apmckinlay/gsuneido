@@ -145,7 +145,14 @@ func main() {
 	mainThread.UIThread = true
 	MainThread = mainThread
 	builtin.UIThread = mainThread
-	defer mainThread.Close()
+	exit.Add(func() { mainThread.Close() })
+	defer func() {
+		if e := recover(); e != nil {
+			log.Println("ERROR:", e, "(exiting)")
+			exit.Exit(1)
+		}
+		exit.Exit(0)
+	}()
 	// dependency injection of GetDbms
 	if options.Action == "client" {
 		GetDbms = func() IDbms {
@@ -170,7 +177,7 @@ func run(src string) {
 	defer func() {
 		if e := recover(); e != nil {
 			printStack(e)
-			Fatal("ERROR from "+src+" ", e)
+			Fatal("ERROR from", src, e)
 		}
 	}()
 	compile.EvalString(mainThread, src)
@@ -225,6 +232,7 @@ func clientErrorLog() {
 }
 
 func startServer() {
+	log.Println("starting server")
 	openDbms()
 	startHttpStatus()
 	Libload = libload // dependency injection
@@ -290,7 +298,8 @@ func checkState() {
 func startHttpStatus() {
 	http.HandleFunc("/", httpStatus)
 	go func() {
-		Fatal(http.ListenAndServe(":3148", nil))
+		err := http.ListenAndServe(":3148", nil)
+		log.Println("Server Monitor:", err)
 	}()
 }
 func httpStatus(w http.ResponseWriter, _ *http.Request) {
