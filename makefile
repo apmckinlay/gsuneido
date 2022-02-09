@@ -6,21 +6,21 @@ LDFLAGS = -s -w -X 'main.builtDate=${BUILT}'
 GUIFLAGS = $(LDFLAGS)
 ifdef PATHEXT
 	# Windows stuff
-	EXE = gsuneido.exe gsuneido.com
+	EXE = gsuneido.exe gsuneido.com gsport.exe
 	GUIFLAGS = $(LDFLAGS) -X main.mode=gui -H windowsgui
 	CONSOLE = go build -o gsuneido.com -ldflags "$(LDFLAGS)" -tags com
-	PORTABLE = go build -o portable.exe -ldflags "$(LDFLAGS)" -tags portable
+	PORTABLE = export CGO_ENABLED=0 ; go build -o gsport.exe -ldflags "$(LDFLAGS)" -tags portable
 endif
 
 build:
 	@rm -f $(EXE)
 	@go version
-	go build -v -ldflags "$(GUIFLAGS)" $(GUITAG)
+	go build -v -ldflags "$(GUIFLAGS)"
 	$(CONSOLE)
 	$(PORTABLE)
 
 race:
-	go build -v -ldflags "$(GUIFLAGS)" $(GUITAG) -race
+	go build -v -ldflags "$(GUIFLAGS)" -race
 
 portable:
 	# a Windows version without the Windows stuff
