@@ -60,7 +60,7 @@ type IDbms interface {
 	// Libraries returns a list of the libraries currently in use
 	Libraries() []string
 
-	// Load loads a table or the entire database like -load
+	// Load loads a table like -load
 	// It returns the number of records loaded.
 	Load(table string) int
 

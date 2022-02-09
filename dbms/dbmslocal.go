@@ -190,7 +190,7 @@ func (*DbmsLocal) Log(s string) {
 }
 
 func (*DbmsLocal) Nonce() string {
-	panic("nonce only allowed on clients")
+	panic("Nonce only allowed on clients")
 }
 
 func (*DbmsLocal) Run(th *Thread, s string) Value {
@@ -218,7 +218,7 @@ func (*DbmsLocal) Timestamp() SuDate {
 }
 
 func (*DbmsLocal) Token() string {
-	return "1234567890123456" //TODO
+	return Token()
 }
 
 func (dbms *DbmsLocal) Transaction(update bool) ITran {

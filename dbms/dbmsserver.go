@@ -25,7 +25,7 @@ type serverConn struct {
 	ended bool
 	// id is primarily used as a key to store the set of connections in a map
 	id   int
-	dbms *DbmsLocal
+	dbms IDbms
 	conn net.Conn
 	csio.ReadWrite
 	nonce   string
@@ -78,6 +78,9 @@ func handler(id int, dbms *DbmsLocal, conn net.Conn) {
 		trans:   make(map[int]ITran),
 		cursors: make(map[int]ICursor),
 		queries: make(map[int]IQuery)}
+	if haveUsersTable(dbms) {
+		sc.dbms = &DbmsUnauth{dbms: dbms}
+	}
 	sc.ReadWrite = *csio.NewReadWrite(conn, sc.error)
 	serverConnsLock.Lock()
 	serverConns[sc.id] = sc
@@ -189,6 +192,9 @@ func cmdAdmin(sc *serverConn) {
 func cmdAuth(sc *serverConn) {
 	s := sc.GetStr()
 	result := sc.auth(s)
+	if result {
+		sc.dbms = sc.dbms.(*DbmsUnauth).dbms // remove DbmsUnauth
+	}
 	sc.PutBool(true).PutBool(result)
 }
 
