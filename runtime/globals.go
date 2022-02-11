@@ -8,6 +8,8 @@ import (
 	"log"
 	"math"
 	"sync"
+
+	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
 // globals generally follows the usual style that public methods lock
@@ -51,6 +53,16 @@ var g = globals{
 	errors:   make(map[Gnum]interface{}),
 	noDef:    make(map[string]struct{}),
 }
+
+const GnSuneido = 1
+
+var _ = func() int { // needs to be var, init() is run later
+	suneido := new(SuneidoObject)
+	suneido.SetConcurrent()
+	Global.Builtin("Suneido", suneido)
+	assert.This(Global.Num("Suneido")).Is(GnSuneido)
+	return 0
+}()
 
 func (typeGlobal) Builtin(name string, value Value) Value {
 	// only called by single threaded init so no locking required
@@ -214,6 +226,9 @@ var gnPrint = Global.Num("Print")
 // Find returns the value for a global number, or nil if not found.
 func (typeGlobal) Find(t *Thread, gnum Gnum) (result Value) {
 	if x, ok := g.builtins[gnum]; ok {
+		if gnum == GnSuneido && t.Suneido != nil {
+			return t.Suneido
+		}
 		return x // common fast path
 	}
 	g.lock.RLock()
@@ -249,8 +264,8 @@ func (typeGlobal) Find(t *Thread, gnum Gnum) (result Value) {
 	return x
 }
 
-// GetIfPresent returns the current value (if there is one)
-// without doing LibLoad.
+// GetIfPresent is used by LibraryOverride.
+// It returns the current value (if there is one) without doing LibLoad.
 func (typeGlobal) GetIfPresent(name string) Value {
 	g.lock.RLock()
 	defer g.lock.RUnlock()

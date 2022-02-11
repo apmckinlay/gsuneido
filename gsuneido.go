@@ -62,10 +62,6 @@ func main() {
 		options.Action = "repl"
 	}
 
-	suneido := new(SuneidoObject)
-	suneido.SetConcurrent()
-	Global.Builtin("Suneido", suneido)
-
 	switch options.Action {
 	case "":
 		break

@@ -78,6 +78,9 @@ type Thread struct {
 	// Needs atomic because we access MainThread from other threads.
 	session atomic.Value
 
+	// Suneido is a per-thread SuneidoObject that overrides the global one
+	Suneido *SuneidoObject
+
 	profile profile
 }
 
@@ -86,10 +89,14 @@ var nThread int32
 // NewThread creates a new thread.
 // It is primarily used for user initiated threads.
 // Internal threads can just use a zero Thread.
-func NewThread() *Thread {
+func NewThread(parent *Thread) *Thread {
 	n := atomic.AddInt32(&nThread, 1)
 	name := "Thread-" + strconv.Itoa(int(n))
 	t := &Thread{Num: n, Name: name}
+	if parent != nil && parent.Suneido != nil {
+		parent.Suneido.SetConcurrent()
+		t.Suneido = parent.Suneido
+	}
 	mts := ""
 	if MainThread != nil {
 		mts = MainThread.Session()
@@ -250,7 +257,7 @@ func (t *Thread) Close() {
 // WARNING: This should only be used where it is guaranteed
 // that the Threads will NOT be used concurrently.
 func (t *Thread) SubThread() *Thread {
-	t2 := NewThread()
+	t2 := NewThread(t)
 	t2.dbms = t.dbms
 	return t2
 }
@@ -268,4 +275,12 @@ func (t *Thread) SessionId(id string) string {
 		return t.Session()
 	}
 	return t.dbms.SessionId(t, id)
+}
+
+func (t *Thread) RunWithMainSuneido(fn func() Value) Value {
+	defer func(orig *SuneidoObject) {
+		t.Suneido = orig
+	}(t.Suneido)
+	t.Suneido = nil
+	return fn()
 }

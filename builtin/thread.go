@@ -53,13 +53,13 @@ func (ts *threadList) count() int {
 	return len(ts.list)
 }
 
-func threadCallClass(_ *Thread, args []Value) Value {
+func threadCallClass(t *Thread, args []Value) Value {
 	if options.ThreadDisabled {
 		return nil
 	}
 	fn := args[0]
 	fn.SetConcurrent()
-	t2 := NewThread()
+	t2 := NewThread(t)
 	threads.add(t2.Num, t2)
 	go func() {
 		defer func() {
@@ -134,6 +134,10 @@ var threadMethods = Methods{
 		}
 		return prof
 	}),
+	"NewSuneidoGlobal": method("()", func(t *Thread, _ Value, _ []Value) Value {
+		t.Suneido = new(SuneidoObject)
+		return nil
+	}),
 }
 
 func (d *suThreadGlobal) Lookup(t *Thread, method string) Callable {
@@ -148,9 +152,9 @@ func (d *suThreadGlobal) String() string {
 }
 
 var _ = builtin("Scheduled(ms, block)",
-	func(_ *Thread, args []Value) Value {
+	func(t *Thread, args []Value) Value {
 		ms := time.Duration(ToInt(args[0])) * time.Millisecond
-		t2 := NewThread()
+		t2 := NewThread(t)
 		block := args[1]
 		block.SetConcurrent()
 		go func() {

@@ -90,7 +90,6 @@ func BenchmarkBase(b *testing.B) {
 	}
 }
 
-var _ = Global.Add("Suneido", new(SuObject))
 var _ = ptest.Add("execute", pt_execute)
 var _ = ptest.Add("lang_rangeto", pt_lang_rangeto)
 var _ = ptest.Add("lang_rangelen", pt_lang_rangelen)

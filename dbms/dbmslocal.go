@@ -84,15 +84,17 @@ func (dbms *DbmsLocal) Dump(table string) string {
 }
 
 func (*DbmsLocal) Exec(t *Thread, v Value) Value {
-	trace.Dbms.Println("Exec", v)
-	fname := ToStr(ToContainer(v).ListGet(0))
-	if i := strings.IndexByte(fname, '.'); i != -1 {
-		ob := Global.GetName(t, fname[:i])
-		m := fname[i+1:]
-		return t.CallLookupEach1(ob, m, v)
-	}
-	fn := Global.GetName(t, fname)
-	return t.CallEach1(fn, v)
+	return t.RunWithMainSuneido(func() Value {
+		trace.Dbms.Println("Exec", v)
+		fname := ToStr(ToContainer(v).ListGet(0))
+		if i := strings.IndexByte(fname, '.'); i != -1 {
+			ob := Global.GetName(t, fname[:i])
+			m := fname[i+1:]
+			return t.CallLookupEach1(ob, m, v)
+		}
+		fn := Global.GetName(t, fname)
+		return t.CallEach1(fn, v)
+	})
 }
 
 func (*DbmsLocal) Final() int {
@@ -194,8 +196,10 @@ func (*DbmsLocal) Nonce() string {
 }
 
 func (*DbmsLocal) Run(th *Thread, s string) Value {
-	trace.Dbms.Println("Run", s)
-	return compile.EvalString(th, s)
+	return th.RunWithMainSuneido(func() Value {
+		trace.Dbms.Println("Run", s)
+		return compile.EvalString(th, s)
+	})
 }
 
 func (dbms *DbmsLocal) Schema(table string) string {

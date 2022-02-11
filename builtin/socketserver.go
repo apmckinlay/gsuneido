@@ -134,7 +134,7 @@ func (sm *suServerMaster) connect(name string, conn net.Conn) {
 		SuInstance: sm.SuInstance.Copy(),
 		client:     client,
 	}
-	t := NewThread()
+	t := NewThread(nil)
 	t.Name = str.BeforeFirst(t.Name, " ") + " " + name
 	if f := sc.Lookup(t, "Run"); f != nil {
 		defer func() {

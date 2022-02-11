@@ -30,8 +30,8 @@ var lruCacheCallClass = func(t *Thread, args []Value) Value {
 }
 
 var lruCacheClassMethods = Methods{
-	"ResetAll": method0(func(_ Value) Value {
-		iter := ToContainer(Global.GetIfPresent("Suneido")).Iter2(true, true)
+	"ResetAll": method("()", func(th *Thread, this Value, _ []Value) Value {
+		iter := ToContainer(Global.Find(th, GnSuneido)).Iter2(true, true)
 		for _, v := iter(); v != nil; _, v = iter() {
 			if lc, ok := v.(*suLruCache); ok && lc.okForResetAll {
 				lc.Reset()
