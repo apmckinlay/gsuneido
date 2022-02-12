@@ -211,7 +211,3 @@ func (seq *SuSequence) Pack(clock int32, buf *pack.Encoder) {
 func (seq *SuSequence) PackSize2(clock int32, stack packStack) int {
 	return seq.instantiate().PackSize2(clock, stack)
 }
-
-func (seq *SuSequence) PackSize3() int {
-	return seq.instantiate().PackSize3()
-}

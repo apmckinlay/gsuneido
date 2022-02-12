@@ -888,10 +888,6 @@ func (r *SuRecord) PackSize2(clock int32, stack packStack) int {
 	return r.ToObject().PackSize2(clock, stack)
 }
 
-func (r *SuRecord) PackSize3() int {
-	return r.ToObject().PackSize3()
-}
-
 func (r *SuRecord) Pack(clock int32, buf *pack.Encoder) {
 	r.ToObject().pack(clock, buf, PackRecord)
 }

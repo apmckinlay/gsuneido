@@ -175,10 +175,6 @@ func (dn SuDnum) PackSize2(int32, packStack) int {
 	return dn.PackSize(nil)
 }
 
-func (dn SuDnum) PackSize3() int {
-	return dn.PackSize(nil)
-}
-
 func (dn SuDnum) Pack(_ int32, buf *pack.Encoder) {
 	xor := byte(0)
 	if dn.Sign() < 0 {

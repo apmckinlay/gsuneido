@@ -202,10 +202,6 @@ func (p Packed) PackSize2(int32, packStack) int {
 	return len(p)
 }
 
-func (p Packed) PackSize3() int {
-	return len(p)
-}
-
 // Trim removes trailing empty fields
 func (b *RecordBuilder) Trim() *RecordBuilder {
 	n := len(b.vals)

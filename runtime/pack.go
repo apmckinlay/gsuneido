@@ -21,8 +21,6 @@ type Packable interface {
 	PackSize(clock *int32) int
 	// PackSize2 is used by object/record to handle nesting
 	PackSize2(clock int32, stack packStack) int
-	// PackSize3 is used by object/record during Pack
-	PackSize3() int
 	// Pack appends the value to the Encoder
 	Pack(clock int32, buf *pack.Encoder)
 }

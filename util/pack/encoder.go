@@ -74,3 +74,11 @@ func (e *Encoder) PutStr(s string) *Encoder {
 	copy(e.buf[len(e.buf)-len(s):], s)
 	return e
 }
+
+// Move moves the last nbytes over by shift bytes
+func (e *Encoder) Move(nbytes, shift int) {
+	n := len(e.buf)
+	e.buf = e.buf[:n+shift]
+	n -= nbytes
+	copy(e.buf[n+shift:], e.buf[n:])
+}

@@ -26,7 +26,6 @@ func TestPackSuInt(t *testing.T) {
 		t.Helper()
 		v := IntVal(n).(Packable)
 		s := Pack(v)
-		assert.T(t).This(v.PackSize3()).Is(len(s))
 		assert.T(t).This([]byte(s)).Is(expected)
 		num := UnpackNumber(s)
 		x, ok := SuIntToInt(num)

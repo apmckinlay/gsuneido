@@ -291,10 +291,6 @@ func (ss SuStr) PackSize2(int32, packStack) int {
 	return ss.PackSize(nil)
 }
 
-func (ss SuStr) PackSize3() int {
-	return ss.PackSize(nil)
-}
-
 func (ss SuStr) Pack(_ int32, buf *pack.Encoder) {
 	if ss != "" {
 		buf.Put1(PackString).PutStr(string(ss))

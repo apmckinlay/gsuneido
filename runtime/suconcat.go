@@ -179,10 +179,6 @@ func (c SuConcat) PackSize2(int32, packStack) int {
 	return c.PackSize(nil)
 }
 
-func (c SuConcat) PackSize3() int {
-	return c.PackSize(nil)
-}
-
 func (c SuConcat) Pack(_ int32, buf *pack.Encoder) {
 	if c.n > 0 {
 		buf.Put1(PackString).Put(c.buf.bs[:c.n])

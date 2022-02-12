@@ -1035,34 +1035,6 @@ func packSize(x Value, clock int32, stack packStack) int {
 	panic("can't pack " + ErrType(x))
 }
 
-func (ob *SuObject) PackSize3() int {
-	if ob.Lock() {
-		defer ob.Unlock()
-	}
-	if ob.size() == 0 {
-		return 1 // just tag
-	}
-	ps := 1 // tag
-	ps += varint.Len(uint64(len(ob.list)))
-	for _, v := range ob.list {
-		ps += packSize3(v)
-	}
-	ps += varint.Len(uint64(ob.named.Size()))
-	iter := ob.named.Iter()
-	for k, v := iter(); k != nil; k, v = iter() {
-		ps += packSize3(k) + packSize3(v)
-	}
-	return ps
-}
-
-func packSize3(x Value) int {
-	if p, ok := x.(Packable); ok {
-		n := p.PackSize3()
-		return varint.Len(uint64(n)) + n
-	}
-	panic("can't pack " + ErrType(x))
-}
-
 func (ob *SuObject) Pack(clock int32, buf *pack.Encoder) {
 	if ob.Lock() {
 		defer ob.Unlock()
@@ -1091,9 +1063,16 @@ func (ob *SuObject) pack(clock int32, buf *pack.Encoder, tag byte) {
 }
 
 func packValue(x Value, clock int32, buf *pack.Encoder) {
-	n := x.(Packable).PackSize3()
-	buf.VarUint(uint64(n))
+	buf0 := *buf
+	buf.Put1(0) // 99% of the time we only need one byte for the size
 	x.(Packable).Pack(clock, buf)
+	n := len(buf.Buffer()) - len(buf0.Buffer()) - 1
+	varlen := varint.Len(uint64(n))
+	if varlen > 1 {
+		// move what we just packed to make room for larger varint
+		buf.Move(n, varlen-1)
+	}
+	buf0.VarUint(uint64(n))
 }
 
 func UnpackObject(s string) *SuObject {

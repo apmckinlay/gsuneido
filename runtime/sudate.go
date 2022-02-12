@@ -796,10 +796,6 @@ func (SuDate) PackSize2(int32, packStack) int {
 	return 9
 }
 
-func (SuDate) PackSize3() int {
-	return 9
-}
-
 // Pack packs into the supplied byte slice (Packable interface)
 func (d SuDate) Pack(_ int32, buf *pack.Encoder) {
 	buf.Put1(PackDate).Uint32(d.date).Uint32(d.time)
