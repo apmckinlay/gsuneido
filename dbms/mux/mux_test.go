@@ -17,13 +17,13 @@ import (
 
 func TestMux(t *testing.T) {
 	p1, p2 := net.Pipe()
-	client := ClientConn(p1)
+	client := NewClientConn(p1)
 	n := int32(0)
-	p := NewPool(func(w *writeBuffer, id int, data []byte) {
+	p := NewWorkers(func(w *writeBuf, data []byte) {
 		atomic.AddInt32(&n, 1)
-		w.Write(id, bytes.ToUpper(data), true)
+		w.Write(bytes.ToUpper(data)).EndMsg()
 	})
-	server := ServerConn(p2, p.Submit)
+	server := NewServerConn(p2, p.Submit) // use pool to execute requests
 	var nmsgs = 1000
 	var nthreads = 11
 	if testing.Short() || race.Enabled {
@@ -31,23 +31,22 @@ func TestMux(t *testing.T) {
 		nthreads = 5
 	}
 	var wg sync.WaitGroup
-	thread := func() {
-		cw := client.WriteBuffer() // each client thread has its own buffer
-		ch := make(chan []byte, 1) // and its own result channel
+	clientThread := func() {
+		session := client.NewClientSession()
 		for i := 0; i < nmsgs; i++ {
 			a := str.Random(1, 100)
 			b := str.Random(1, 2*bufSize)
-			id := client.NewRequest(ch)
-			cw.WriteString(id, a, false)
-			cw.WriteString(id, b, true)
-			x := <-ch
-			assert.This(string(x)).Is(str.ToUpper(a + b))
+			session.WriteString(a)
+			session.WriteString(b)
+			session.EndMsg()
+			data := session.read()
+			assert.This(string(data)).Is(str.ToUpper(a + b))
 		}
 		wg.Done()
 	}
 	for i := 0; i < nthreads; i++ {
 		wg.Add(1)
-		go thread()
+		go clientThread()
 	}
 	wg.Wait()
 	assert.T(t).This(atomic.LoadInt32(&n)).Is(nmsgs * nthreads)

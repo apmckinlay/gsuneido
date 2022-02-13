@@ -39,6 +39,7 @@ type serverConn struct {
 var serverConns = make(map[int]*serverConn)
 var serverConnsLock sync.Mutex
 
+// Server listens and accepts connections
 func Server(dbms *DbmsLocal) {
 	l, err := net.Listen("tcp", ":"+options.Port)
 	if err != nil {

@@ -12,6 +12,7 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/apmckinlay/gsuneido/runtime/trace"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/bytes"
 )
@@ -25,64 +26,87 @@ type conn struct {
 	err   atomic.Value
 }
 
-type clientConn struct {
-	conn
-	next int32 // the next message id, must be accessed atomically
-	lock sync.Mutex
-	rchs map[int]respch // response channel per id, guarded by lock
-}
-
-type respch chan []byte
-
-// ClientConn creates a new client connection.
-// This should be one to one with the underlying connection.
-func ClientConn(rw io.ReadWriteCloser) *clientConn {
-	m := clientConn{conn: conn{rw: rw}, rchs: make(map[int]respch)}
-	go m.conn.reader(m.client)
-	return &m
-}
-
-// WriteBuffer creates a write buffer for each client thread
-func (cc *clientConn) WriteBuffer() *writeBuffer {
-	return newWriteBuffer(&cc.conn)
-}
-
-type serverConn struct {
-	conn
-}
-
-type handler func(c *conn, id int, r []byte)
-
-// ServerConn creates a new server connection.
-// The supplied handler will be called with each received message.
-func ServerConn(rw io.ReadWriteCloser, h handler) *serverConn {
-	sc := serverConn{conn: conn{rw: rw}}
-	go sc.conn.reader(func(id int, data []byte) {
-		h(&sc.conn, id, data)
-	})
-	return &sc
-}
-
-// NewRequest returns a new message id,
-// registering the supplied channel for the response.
-func (cc *clientConn) NewRequest(rch chan []byte) int {
-	id := int(atomic.AddInt32(&cc.next, 1))
-	cc.lock.Lock()
-	defer cc.lock.Unlock()
-	cc.rchs[id] = rch
-	return id
-}
-
 func (c *conn) Close() {
 	c.rw.Close()
 }
 
+type clientConn struct {
+	conn
+	nextSession uint32 // the next session id, must be accessed atomically
+	lock        sync.Mutex
+	rchs        map[uint32]respch // response channel per id, guarded by lock
+}
+
+type respch chan []byte
+
+// NewClientConn creates a new client connection.
+// This should be one to one with the underlying connection.
+func NewClientConn(rw io.ReadWriteCloser) *clientConn {
+	m := clientConn{conn: conn{rw: rw}, rchs: make(map[uint32]respch)}
+	go m.conn.reader(m.client)
+	return &m
+}
+
+type serverConn struct {
+	conn
+	id uint32
+}
+
+type handler func(c *conn, id uint64, r []byte)
+
+var nextServerConn uint32
+
+// NewServerConn creates a new server connection.
+// The supplied handler will be called with each received message.
+func NewServerConn(rw io.ReadWriteCloser, h handler) *serverConn {
+	sid := atomic.AddUint32(&nextServerConn, 1)
+	sc := serverConn{conn: conn{rw: rw}, id: sid}
+	go sc.conn.reader(func(cid uint32, data []byte) {
+		h(&sc.conn, uint64(sid)<<32|uint64(cid), data)
+	})
+	return &sc
+}
+
+type ClientSession struct {
+	ReadWrite
+	cc  *clientConn
+	rch respch
+}
+
+// NewClientSession returns a new ClientSession
+func (cc *clientConn) NewClientSession() *ClientSession {
+	cid := atomic.AddUint32(&cc.nextSession, 1)
+	rch := make(respch, 1)
+	wb := newWriteBuf(&cc.conn, cid)
+	cc.lock.Lock()
+	defer cc.lock.Unlock()
+	cc.rchs[cid] = rch
+	return &ClientSession{cc: cc, rch: rch,
+		ReadWrite: ReadWrite{writeBuf: *wb}}
+}
+
+func (cs *ClientSession) read() []byte {
+	return <-cs.rch
+}
+
+// Request is used by DbmsClient.
+// It does Flush and GetBool for the result.
+// If the result is false, it does GetStr for the error and panics with it.
+func (cs *ClientSession) Request() {
+	cs.EndMsg()
+	cs.readBuf.buf = cs.read()
+	if !cs.GetBool() {
+		err := cs.GetStr()
+		trace.ClientServer.Println(err)
+		panic(err + " (from server)")
+	}
+}
+
 // write is called by writeBuffer to send part of a message.
-// The id should come from NewRequest.
 // final should be true for the last write of a message.
 // If the sender can leave HeaderSize bytes of space at the start of data,
 // then it can pass hdrSpace = true, and header & data can be written together.
-func (c *conn) write(id int, data []byte, hdrSpace, final bool) {
+func (c *conn) write(id uint32, data []byte, hdrSpace, final bool) {
 	c.wlock.Lock()
 	defer c.wlock.Unlock()
 	var err error
@@ -103,9 +127,9 @@ func (c *conn) write(id int, data []byte, hdrSpace, final bool) {
 	}
 }
 
-func (*conn) putHdr(buf []byte, id, size int, final bool) {
+func (*conn) putHdr(buf []byte, id uint32, size int, final bool) {
 	binary.BigEndian.PutUint32(buf, uint32(size))
-	binary.BigEndian.PutUint32(buf[4:], uint32(id))
+	binary.BigEndian.PutUint32(buf[4:], id)
 	if final {
 		buf[8] = 1
 	} else {
@@ -119,8 +143,8 @@ const maxSize = 1024 * 1024 // 1 mb
 // and calls handler when it has a complete message.
 // client and server have different handlers.
 // Any errors close the connection.
-func (c *conn) reader(handler func(int, []byte)) {
-	partial := make(map[int][]byte)
+func (c *conn) reader(handler func(uint32, []byte)) {
+	partial := make(map[uint32][]byte)
 	hdr := make([]byte, HeaderSize)
 	for {
 		n, err := io.ReadFull(c.rw, hdr)
@@ -130,8 +154,8 @@ func (c *conn) reader(handler func(int, []byte)) {
 		}
 		assert.This(n).Is(HeaderSize)
 		size := int(binary.BigEndian.Uint32(hdr))
-		id := int(binary.BigEndian.Uint32(hdr[4:]))
-		buf := partial[id]
+		id := binary.BigEndian.Uint32(hdr[4:])
+		buf := partial[id] // nil (empty buf) if not found
 		i := len(buf)
 		if i+size > maxSize {
 			c.err.Store(errors.New("message size greater than max"))
@@ -157,11 +181,12 @@ func (c *conn) reader(handler func(int, []byte)) {
 	c.Close()
 }
 
-func (cc *clientConn) client(id int, r []byte) {
-	cc.getrch(id) <- r
+func (cc *clientConn) client(id uint32, data []byte) {
+	// need to send id for client to pipeline messages
+	cc.getrch(id) <- data
 }
 
-func (cc *clientConn) getrch(id int) respch {
+func (cc *clientConn) getrch(id uint32) respch {
 	cc.lock.Lock()
 	defer cc.lock.Unlock()
 	ch, ok := cc.rchs[id]
