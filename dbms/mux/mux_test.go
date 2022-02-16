@@ -10,6 +10,7 @@ import (
 	"sync/atomic"
 	"testing"
 
+	"github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/race"
 	"github.com/apmckinlay/gsuneido/util/str"
@@ -19,11 +20,11 @@ func TestMux(t *testing.T) {
 	p1, p2 := net.Pipe()
 	client := NewClientConn(p1)
 	n := int32(0)
-	p := NewWorkers(func(w *writeBuf, data []byte) {
+	ws := NewWorkers(func(wb *WriteBuf, _ *runtime.Thread, id uint64, data []byte) {
 		atomic.AddInt32(&n, 1)
-		w.Write(bytes.ToUpper(data)).EndMsg()
+		wb.Write(bytes.ToUpper(data)).EndMsg()
 	})
-	server := NewServerConn(p2, p.Submit) // use pool to execute requests
+	NewServerConn(p2, ws.Submit) // use pool to execute requests
 	var nmsgs = 1000
 	var nthreads = 11
 	if testing.Short() || race.Enabled {
@@ -50,6 +51,4 @@ func TestMux(t *testing.T) {
 	}
 	wg.Wait()
 	assert.T(t).This(atomic.LoadInt32(&n)).Is(nmsgs * nthreads)
-	client.Close()
-	server.Close()
 }

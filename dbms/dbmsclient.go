@@ -29,32 +29,23 @@ var token string
 // tokenLock guards token
 var tokenLock sync.Mutex
 
+// dbmsClient is the client for the jSuneido server
 type dbmsClient struct {
 	*csio.ReadWrite
 	conn      net.Conn
 	sessionId string
-	jserver   bool
 }
 
 // helloSize is the size of the initial connection message from the server
 // the size must match cSuneido and jSuneido
 const helloSize = 50
 
-func NewDbmsClient(addr string, port string) *dbmsClient {
-	conn, err := net.Dial("tcp", addr+":"+port)
-	if err != nil {
-		checkServerStatus(addr, port)
-		cantConnect(err.Error())
-	}
-	ok, jserver := checkHello(conn)
-	if !ok {
-		cantConnect("invalid response from server")
-	}
+func NewDbmsClient(conn net.Conn) *dbmsClient {
 	errfn := func(err string) {
 		Fatal("client:", err)
 	}
 	rw := csio.NewReadWrite(conn, errfn)
-	c := &dbmsClient{ReadWrite: rw, conn: conn, jserver: jserver}
+	c := &dbmsClient{ReadWrite: rw, conn: conn}
 	tokenLock.Lock()
 	defer tokenLock.Unlock()
 	if token != "" {
@@ -203,22 +194,14 @@ func (dc *dbmsClient) Get(_ *Thread, query string, dir Dir) (Row, *Header, strin
 }
 
 func (dc *dbmsClient) get(tn int, query string, dir Dir) (Row, *Header, string) {
-	cmd := commands.GetOne2
-	if dc.jserver {
-		cmd = commands.GetOne
-	}
-	dc.PutCmd(cmd).PutByte(byte(dir)).PutInt(tn).PutStr(query).Request()
+	dc.PutCmd(commands.GetOne).PutByte(byte(dir)).PutInt(tn).PutStr(query).Request()
 	if !dc.GetBool() {
 		return nil, nil, ""
 	}
 	off := dc.GetInt()
 	hdr := dc.getHdr()
-	tbl := "updateable"
-	if !dc.jserver {
-		tbl = dc.GetStr()
-	}
 	row := dc.getRow(off)
-	return row, hdr, tbl
+	return row, hdr, "updateable"
 }
 
 func (dc *dbmsClient) Info() Value {
@@ -384,13 +367,8 @@ func (tc *TranClient) Ended() bool {
 	return tc.ended
 }
 
-func (tc *TranClient) Delete(_ *Thread, table string, off uint64) {
-	if tc.dc.jserver {
-		tc.dc.PutCmd(commands.Erase).PutInt(tc.tn).PutInt(int(off)).Request()
-	} else {
-		tc.dc.PutCmd(commands.Delete).
-			PutInt(tc.tn).PutStr(table).PutInt(int(off)).Request()
-	}
+func (tc *TranClient) Delete(_ *Thread, _ string, off uint64) {
+	tc.dc.PutCmd(commands.Erase).PutInt(tc.tn).PutInt(int(off)).Request()
 }
 
 func (tc *TranClient) Get(_ *Thread, query string, dir Dir) (Row, *Header, string) {
@@ -413,14 +391,9 @@ func (tc *TranClient) Action(_ *Thread, action string) int {
 	return tc.dc.GetInt()
 }
 
-func (tc *TranClient) Update(_ *Thread, table string, off uint64, rec Record) uint64 {
-	if tc.dc.jserver {
-		tc.dc.PutCmd(commands.Update).
-			PutInt(tc.tn).PutInt(int(off)).PutRec(rec).Request()
-	} else {
-		tc.dc.PutCmd(commands.Update2).
-			PutInt(tc.tn).PutStr(table).PutInt(int(off)).PutRec(rec).Request()
-	}
+func (tc *TranClient) Update(_ *Thread, _ string, off uint64, rec Record) uint64 {
+	tc.dc.PutCmd(commands.Update).
+		PutInt(tc.tn).PutInt(int(off)).PutRec(rec).Request()
 	return uint64(tc.dc.GetInt())
 }
 
@@ -466,19 +439,15 @@ func (qc *clientQueryCursor) Header() *Header {
 func (qc *clientQueryCursor) Keys() []string {
 	if qc.keys == nil { // cached
 		qc.dc.PutCmd(commands.Keys).PutInt(qc.id).PutByte(byte(qc.qc)).Request()
-		if !qc.dc.jserver {
-			qc.keys = qc.dc.GetStrs()
-		} else {
-			nk := qc.dc.GetInt()
-			qc.keys = make([]string, nk)
-			for i := range qc.keys {
-				cb := str.CommaBuilder{}
-				n := qc.dc.GetInt()
-				for ; n > 0; n-- {
-					cb.Add(qc.dc.GetStr())
-				}
-				qc.keys[i] = cb.String()
+		nk := qc.dc.GetInt()
+		qc.keys = make([]string, nk)
+		for i := range qc.keys {
+			cb := str.CommaBuilder{}
+			n := qc.dc.GetInt()
+			for ; n > 0; n-- {
+				cb.Add(qc.dc.GetStr())
 			}
+			qc.keys[i] = cb.String()
 		}
 	}
 	return qc.keys
@@ -510,21 +479,13 @@ func newClientQuery(dc *dbmsClient, qn int) *clientQuery {
 var _ IQuery = (*clientQuery)(nil)
 
 func (q *clientQuery) Get(_ *Thread, dir Dir) (Row, string) {
-	cmd := commands.Get2
-	if q.dc.jserver {
-		cmd = commands.Get
-	}
-	q.dc.PutCmd(cmd).PutByte(byte(dir)).PutInt(0).PutInt(q.id).Request()
+	q.dc.PutCmd(commands.Get).PutByte(byte(dir)).PutInt(0).PutInt(q.id).Request()
 	if !q.dc.GetBool() {
 		return nil, ""
 	}
 	off := q.dc.GetInt()
-	table := "updateable"
-	if !q.dc.jserver {
-		table = q.dc.GetStr()
-	}
 	row := q.dc.getRow(off)
-	return row, table
+	return row, "updateable"
 }
 
 func (q *clientQuery) Output(_ *Thread, rec Record) {
@@ -543,20 +504,12 @@ func newClientCursor(dc *dbmsClient, cn int) *clientCursor {
 var _ ICursor = (*clientCursor)(nil)
 
 func (q *clientCursor) Get(_ *Thread, tran ITran, dir Dir) (Row, string) {
-	cmd := commands.Get2
-	if q.dc.jserver {
-		cmd = commands.Get
-	}
 	t := tran.(*TranClient)
-	q.dc.PutCmd(cmd).PutByte(byte(dir)).PutInt(t.tn).PutInt(q.id).Request()
+	q.dc.PutCmd(commands.Get).PutByte(byte(dir)).PutInt(t.tn).PutInt(q.id).Request()
 	if !q.dc.GetBool() {
 		return nil, ""
 	}
 	off := q.dc.GetInt()
-	table := "updateable"
-	if !q.dc.jserver {
-		table = q.dc.GetStr()
-	}
 	row := q.dc.getRow(off)
-	return row, table
+	return row, "updateable"
 }

@@ -151,8 +151,18 @@ func main() {
 	}()
 	// dependency injection of GetDbms
 	if options.Action == "client" {
-		GetDbms = func() IDbms {
-			return dbms.NewDbmsClient(options.Arg, options.Port)
+		conn, jserver := dbms.ConnectClient(options.Arg, options.Port)
+		if jserver {
+			mainThread.SetDbms(dbms.NewDbmsClient(conn))
+			GetDbms = func() IDbms {
+				conn, _ := dbms.ConnectClient(options.Arg, options.Port)
+				return dbms.NewDbmsClient(conn)
+			}
+		} else {
+			client := dbms.NewMuxClient(conn)
+			GetDbms = func() IDbms {
+				return client.NewSession()
+			}
 		}
 		clientErrorLog()
 	} else {
@@ -312,6 +322,7 @@ func httpStatus(w http.ResponseWriter, _ *http.Request) {
 				<p>Database: `+mb(GetDbms().Size())+`
 				`+threads()+`
 				`+trans()+`
+				`+dbms.Conns()+`
 			</body>
 		</html>`)
 }

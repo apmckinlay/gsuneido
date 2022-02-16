@@ -7,37 +7,56 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"strings"
 	"sync"
 	"time"
 
 	"github.com/apmckinlay/gsuneido/builtin"
 	"github.com/apmckinlay/gsuneido/dbms/commands"
-	"github.com/apmckinlay/gsuneido/dbms/csio"
+	"github.com/apmckinlay/gsuneido/dbms/mux"
 	"github.com/apmckinlay/gsuneido/options"
+	"github.com/apmckinlay/gsuneido/runtime"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/runtime/trace"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
-// serverConn is one connection to the server
+// This is the multiplexed server.
+// It only works with the gSuneido mulitplexed client.
+
+var workers = mux.NewWorkers(doRequest)
+
+var serverConns = make(map[uint32]*serverConn)
+var serverConnsLock sync.Mutex
+
+// serverConn is one client connection which handles multiple sessions
 type serverConn struct {
-	ended bool
 	// id is primarily used as a key to store the set of connections in a map
-	id   int
-	dbms IDbms
-	conn net.Conn
-	csio.ReadWrite
-	nonce   string
-	trans   map[int]ITran
-	cursors map[int]ICursor
-	queries map[int]IQuery
-	lastNum int
-	thread  Thread
+	id           uint32
+	remoteAddr   string
+	ended        bool
+	dbms         IDbms
+	conn         net.Conn
+	sessionsLock sync.Mutex
+	sessions     map[uint32]*serverSession // the sessions on this connection
 }
 
-var serverConns = make(map[int]*serverConn)
-var serverConnsLock sync.Mutex
+// serverSession is one client session (thread)
+type serverSession struct {
+	sc *serverConn
+	mux.ReadBuf
+	*mux.WriteBuf
+	thread *runtime.Thread
+	// id is primarily used as a key to store the set of sessions in a map
+	id        uint32
+	sessionId string
+	nonce     string
+	trans     map[int]ITran
+	cursors   map[int]ICursor
+	queries   map[int]IQuery
+	lastNum   int
+}
 
 // Server listens and accepts connections
 func Server(dbms *DbmsLocal) {
@@ -47,7 +66,6 @@ func Server(dbms *DbmsLocal) {
 	}
 	defer l.Close()
 	var tempDelay time.Duration // how long to sleep on accept failure
-	lastId := 0
 	for {
 		conn, err := l.Accept()
 		if err != nil {
@@ -67,44 +85,26 @@ func Server(dbms *DbmsLocal) {
 			}
 			Fatal(err)
 		}
-		lastId++
 		tempDelay = 0
-		go handler(lastId, dbms, conn)
+		newServerConn(dbms, conn)
 	}
 }
 
-func handler(id int, dbms *DbmsLocal, conn net.Conn) {
-	trace.ClientServer.Println("connected")
-	sc := &serverConn{id: id, dbms: dbms, conn: conn,
-		trans:   make(map[int]ITran),
-		cursors: make(map[int]ICursor),
-		queries: make(map[int]IQuery)}
-	if haveUsersTable(dbms) {
-		sc.dbms = &DbmsUnauth{dbms: dbms}
-	}
-	sc.ReadWrite = *csio.NewReadWrite(conn, sc.error)
+func newServerConn(dbms *DbmsLocal, conn net.Conn) {
+	trace.ClientServer.Println("server connection")
+	sendHello(conn)
+	addr := str.BeforeFirst(conn.RemoteAddr().String(), ":")
+	// sc.thread.SetSession(str.BeforeLast(addr, ":"))
+	connId := mux.NewServerConn(conn, workers.Submit)
+	sc := &serverConn{dbms: dbms, id: connId, remoteAddr: addr,
+		sessions: make(map[uint32]*serverSession)}
 	serverConnsLock.Lock()
-	serverConns[sc.id] = sc
+	serverConns[connId] = sc
 	serverConnsLock.Unlock()
-	defer func() {
-		serverConnsLock.Lock()
-		delete(serverConns, sc.id)
-		serverConnsLock.Unlock()
-	}()
-	sc.serve()
 }
 
-func (sc *serverConn) serve() {
-	sc.sendHello()
-	addr := sc.conn.RemoteAddr().String()
-	sc.thread.SetSession(str.BeforeLast(addr, ":"))
-	for !sc.ended {
-		sc.request()
-	}
-}
-
-func (sc *serverConn) sendHello() {
-	sc.conn.Write(hello)
+func sendHello(conn net.Conn) {
+	conn.Write(hello)
 }
 
 var hello = func() []byte {
@@ -113,244 +113,309 @@ var hello = func() []byte {
 	return buf
 }()
 
-func (sc *serverConn) request() {
+func doRequest(wb *mux.WriteBuf, th *runtime.Thread, id uint64, req []byte) {
+	connId := uint32(id >> 32)
+	serverConnsLock.Lock()
+	if req == nil { // closing
+		delete(serverConns, connId)
+		serverConnsLock.Unlock()
+		return
+	}
+	sc := serverConns[connId]
+	serverConnsLock.Unlock()
+
+	sessionId := uint32(id)
+	sc.sessionsLock.Lock()
+	ss := sc.sessions[sessionId]
+	if ss == nil { // new session
+		trace.ClientServer.Println("server session", sessionId)
+		ss = &serverSession{
+			id:        sessionId,
+			sc:        sc,
+			sessionId: sc.remoteAddr,
+			trans:     make(map[int]ITran),
+			cursors:   make(map[int]ICursor),
+			queries:   make(map[int]IQuery),
+		}
+		sc.sessions[sessionId] = ss
+	}
+	sc.sessionsLock.Unlock()
+
+	ss.ReadBuf.SetBuf(req)
+	ss.WriteBuf = wb
+	ss.thread = th
+	ss.request()
+}
+
+func (ss *serverSession) request() {
 	defer func() {
-		if e := recover(); e != nil && !sc.ended {
+		if e := recover(); e != nil /*&& !ss.ended*/ {
 			// if e != "EOF" {
 			// 	debug.PrintStack()
 			// }
-			sc.ResetWrite(sc.conn)
-			sc.PutBool(false).PutStr(fmt.Sprint(e)).Flush()
+			ss.ResetWrite()
+			ss.PutBool(false).PutStr(fmt.Sprint(e)).EndMsg()
 		}
 	}()
-	icmd := sc.GetCmd()
+	icmd := ss.GetCmd()
 	if icmd == commands.Eof {
-		sc.close()
+		ss.close()
 		return
 	}
 	if int(icmd) >= len(cmds) {
-		sc.close()
+		ss.close()
 		log.Println("dbms server, closing connection: invalid command")
 	}
 	cmd := cmds[icmd]
-	cmd(sc)
-	sc.Flush()
+	cmd(ss)
+	ss.EndMsg()
 }
 
-func (sc *serverConn) error(err string) {
-	sc.close()
+func (ss *serverSession) error(err string) {
+	ss.close()
 	log.Panicln("dbms server, closing connection:", err)
+}
+
+func (ss *serverSession) close() {
+	for _, tran := range ss.trans {
+		tran.Abort()
+	}
+	ss.sc.sessionsLock.Lock()
+	delete(ss.sc.sessions, ss.id)
+	ss.sc.sessionsLock.Unlock()
 }
 
 func (sc *serverConn) close() {
 	trace.ClientServer.Println("closing connection")
-	sc.ended = true
 	sc.conn.Close()
-	for _, tran := range sc.trans {
-		tran.Abort()
+	for _, ss := range sc.sessions {
+		ss.close()
 	}
+}
+
+func Conns() string {
+	var sb strings.Builder
+	sb.WriteString("<p>Connections:</p>\r\n<ul>\r\n")
+	serverConnsLock.Lock()
+	defer serverConnsLock.Unlock()
+	for _, sc := range serverConns {
+		sb.WriteString("<li>")
+		sb.WriteString(sc.remoteAddr)
+		sb.WriteString("</li>\r\n<ul>\r\n")
+		sc.sessionsLock.Lock()
+		for _, ss := range sc.sessions {
+			sb.WriteString("<li>")
+			sb.WriteString(ss.sessionId)
+			sb.WriteString("</li>\r\n")
+		}
+		sc.sessionsLock.Unlock()
+		sb.WriteString("</ul>\r\n")
+	}
+	sb.WriteString("</ul>\r\n")
+	return sb.String()
 }
 
 //-------------------------------------------------------------------
 
-func cmdAbort(sc *serverConn) {
-	tn := sc.GetInt()
-	tran := sc.tran(tn)
+func cmdAbort(ss *serverSession) {
+	tn := ss.GetInt()
+	tran := ss.tran(tn)
 	tran.Abort()
-	delete(sc.trans, tn)
-	sc.PutBool(true)
+	delete(ss.trans, tn)
+	ss.PutBool(true)
 }
 
-func (sc *serverConn) getTran() ITran {
-	tn := sc.GetInt()
+func (ss *serverSession) getTran() ITran {
+	tn := ss.GetInt()
 	if tn == 0 {
 		return nil
 	}
-	return sc.tran(tn)
+	return ss.tran(tn)
 }
 
-func (sc *serverConn) tran(tn int) ITran {
-	tran, ok := sc.trans[tn]
+func (ss *serverSession) tran(tn int) ITran {
+	tran, ok := ss.trans[tn]
 	if !ok {
-		sc.error("transaction not found")
+		ss.error("transaction not found")
 	}
 	return tran
 }
 
-func cmdAction(sc *serverConn) {
-	tran := sc.getTran()
-	action := sc.GetStr()
-	n := tran.Action(&sc.thread, action)
-	sc.PutBool(true).PutInt(n)
+func cmdAction(ss *serverSession) {
+	tran := ss.getTran()
+	action := ss.GetStr()
+	n := tran.Action(ss.thread, action)
+	ss.PutBool(true).PutInt(n)
 }
 
-func cmdAdmin(sc *serverConn) {
-	s := sc.GetStr()
-	sc.dbms.Admin(s)
-	sc.PutBool(true)
+func cmdAdmin(ss *serverSession) {
+	s := ss.GetStr()
+	ss.sc.dbms.Admin(s)
+	ss.PutBool(true)
 }
 
-func cmdAuth(sc *serverConn) {
-	s := sc.GetStr()
-	result := sc.auth(s)
+func cmdAuth(ss *serverSession) {
+	s := ss.GetStr()
+	result := ss.auth(s)
 	if result {
-		sc.dbms = sc.dbms.(*DbmsUnauth).dbms // remove DbmsUnauth
+		ss.sc.dbms = ss.sc.dbms.(*DbmsUnauth).dbms // remove DbmsUnauth
 	}
-	sc.PutBool(true).PutBool(result)
+	ss.PutBool(true).PutBool(result)
 }
 
-func (sc *serverConn) auth(s string) bool {
-	if AuthUser(&sc.thread, s, sc.nonce) {
-		sc.nonce = ""
+func (ss *serverSession) auth(s string) bool {
+	if AuthUser(ss.thread, s, ss.nonce) {
+		ss.nonce = ""
 		return true
 	}
 	return AuthToken(s)
 }
 
-func cmdCheck(sc *serverConn) {
-	s := sc.dbms.Check()
-	sc.PutBool(true).PutStr(s)
+func cmdCheck(ss *serverSession) {
+	s := ss.sc.dbms.Check()
+	ss.PutBool(true).PutStr(s)
 }
 
-func cmdClose(sc *serverConn) {
-	n := sc.GetInt()
-	switch sc.GetChar() {
+func cmdClose(ss *serverSession) {
+	n := ss.GetInt()
+	switch ss.GetChar() {
 	case 'q':
-		q := sc.queries[n]
+		q := ss.queries[n]
 		if q == nil {
-			sc.error("query not found")
+			ss.error("query not found")
 		}
-		delete(sc.queries, n)
+		delete(ss.queries, n)
 		q.Close()
 	case 'c':
-		c := sc.cursors[n]
+		c := ss.cursors[n]
 		if c == nil {
-			sc.error("cursor not found")
+			ss.error("cursor not found")
 		}
-		delete(sc.cursors, n)
+		delete(ss.cursors, n)
 		c.Close()
 	default:
-		sc.error("dbms server expected q or c")
+		ss.error("dbms server expected q or c")
 	}
-	sc.PutBool(true)
+	ss.PutBool(true)
 }
 
-func cmdCommit(sc *serverConn) {
-	tn := sc.GetInt()
-	tran := sc.tran(tn)
+func cmdCommit(ss *serverSession) {
+	tn := ss.GetInt()
+	tran := ss.tran(tn)
 	result := tran.Complete()
-	delete(sc.trans, tn)
-	sc.PutBool(true)
+	delete(ss.trans, tn)
+	ss.PutBool(true)
 	if result == "" {
-		sc.PutBool(true)
+		ss.PutBool(true)
 	} else {
-		sc.PutBool(false).PutStr(result)
+		ss.PutBool(false).PutStr(result)
 	}
 }
 
-func cmdConnections(sc *serverConn) {
-	sc.PutBool(true).PutVal(connections())
+func cmdConnections(ss *serverSession) {
+	ss.PutBool(true).PutVal(connections())
 }
 
 func connections() *SuObject {
+	list := &SuObject{}
 	serverConnsLock.Lock()
 	defer serverConnsLock.Unlock()
-	list := &SuObject{}
 	for _, sc := range serverConns {
-		list.Add(SuStr(sc.thread.Session()))
+		sc.sessionsLock.Lock()
+		for _, ss := range sc.sessions {
+			list.Add(SuStr(ss.sessionId))
+		}
+		sc.sessionsLock.Unlock()
 	}
 	return list
 }
 
-func cmdCursor(sc *serverConn) {
-	query := sc.GetStr()
-	q := sc.dbms.Cursor(query)
-	sc.lastNum++
-	sc.cursors[sc.lastNum] = q
-	sc.PutBool(true).PutInt(sc.lastNum)
+func cmdCursor(ss *serverSession) {
+	query := ss.GetStr()
+	q := ss.sc.dbms.Cursor(query)
+	ss.lastNum++
+	ss.cursors[ss.lastNum] = q
+	ss.PutBool(true).PutInt(ss.lastNum)
 }
 
-func cmdCursors(sc *serverConn) {
-	sc.PutBool(true).PutInt(len(sc.cursors))
+func cmdCursors(ss *serverSession) {
+	ss.PutBool(true).PutInt(len(ss.cursors))
 }
 
-func cmdDelete(sc *serverConn) {
-	tran := sc.getTran()
-	table := sc.GetStr()
-	off := uint64(sc.GetInt64())
-	tran.Delete(&sc.thread, table, off)
-	sc.PutBool(true)
+func cmdDump(ss *serverSession) {
+	table := ss.GetStr()
+	s := ss.sc.dbms.Dump(table)
+	ss.PutBool(true).PutStr(s)
 }
 
-func cmdDump(sc *serverConn) {
-	table := sc.GetStr()
-	s := sc.dbms.Dump(table)
-	sc.PutBool(true).PutStr(s)
+func cmdEndSession(ss *serverSession) {
+	ss.close()
+	// no response
 }
 
-func cmdErase(sc *serverConn) {
-	sc.error("gSuneido server requires gSuneido client")
+func cmdErase(ss *serverSession) {
+	tran := ss.getTran()
+	table := ss.GetStr()
+	off := uint64(ss.GetInt64())
+	tran.Delete(ss.thread, table, off)
+	ss.PutBool(true)
 }
 
-func cmdExec(sc *serverConn) {
-	ob := sc.GetVal()
-	v := sc.dbms.Exec(&sc.thread, ob)
-	sc.PutResult(v)
+func cmdExec(ss *serverSession) {
+	ob := ss.GetVal()
+	v := ss.sc.dbms.Exec(ss.thread, ob)
+	ss.PutResult(v)
 }
 
-func cmdFinal(sc *serverConn) {
-	final := sc.dbms.Final()
-	sc.PutBool(true).PutInt(final)
+func cmdFinal(ss *serverSession) {
+	final := ss.sc.dbms.Final()
+	ss.PutBool(true).PutInt(final)
 }
 
-func cmdGet(sc *serverConn) {
-	sc.error("gSuneido server requires gSuneido client")
+func cmdGet(ss *serverSession) {
+	tbl, hdr, row := ss.getQorTC()
+	ss.rowResult(tbl, hdr, false, row)
 }
 
-func cmdGet2(sc *serverConn) {
-	tbl, hdr, row := sc.getQorTC()
-	sc.rowResult(tbl, hdr, false, row)
-}
-
-func (sc *serverConn) getQorTC() (tbl string, hdr *Header, row Row) {
-	dir := sc.getDir()
-	tn := sc.GetInt()
-	qn := sc.GetInt()
+func (ss *serverSession) getQorTC() (tbl string, hdr *Header, row Row) {
+	dir := ss.getDir()
+	tn := ss.GetInt()
+	qn := ss.GetInt()
 	if tn == 0 {
-		q := sc.queries[qn]
+		q := ss.queries[qn]
 		hdr = q.Header()
-		row, tbl = q.Get(&sc.thread, dir)
+		row, tbl = q.Get(ss.thread, dir)
 	} else {
-		t := sc.trans[tn]
-		c := sc.cursors[qn]
+		t := ss.trans[tn]
+		c := ss.cursors[qn]
 		hdr = c.Header()
-		row, tbl = c.Get(&sc.thread, t, dir)
+		row, tbl = c.Get(ss.thread, t, dir)
 	}
 	return
 }
 
-func (sc *serverConn) getDir() Dir {
-	dir := Dir(sc.GetByte_())
+func (ss *serverSession) getDir() Dir {
+	dir := Dir(ss.GetByte())
 	trace.ClientServer.Println("    <-", string(dir))
 	return Dir(dir)
 }
 
 const maxRec = 1024 * 1024 // 1 mb
 
-func (sc *serverConn) rowResult(tbl string, hdr *Header, sendHdr bool, row Row) {
+func (ss *serverSession) rowResult(tbl string, hdr *Header, sendHdr bool, row Row) {
 	if row == nil {
-		sc.PutBool(true).PutBool(false)
+		ss.PutBool(true).PutBool(false)
 	} else {
 		rec, flds := rowToRecord(row, hdr)
 		if len(rec) > maxRec {
 			panic("result too large")
 		}
-		sc.PutBool(true).PutBool(true).PutInt(int(row[0].Off))
+		ss.PutBool(true).PutBool(true).PutInt(int(row[0].Off))
 		if sendHdr {
-			sc.PutStrs(hdr.AppendDerived(flds))
+			ss.PutStrs(hdr.AppendDerived(flds))
 		}
-		sc.PutStr(tbl)
-		sc.PutRec(rec)
+		ss.PutStr(tbl)
+		ss.PutRec(rec)
 	}
 }
 
@@ -368,13 +433,9 @@ func rowToRecord(row Row, hdr *Header) (rec Record, fields []string) {
 	return rb.Trim().Build(), fields
 }
 
-func cmdGetOne(sc *serverConn) {
-	sc.error("gSuneido server requires gSuneido client")
-}
-
-func cmdGetOne2(sc *serverConn) {
+func cmdGetOne(ss *serverSession) {
 	var dir Dir
-	switch sc.GetChar() {
+	switch ss.GetChar() {
 	case '+':
 		dir = Next
 	case '-':
@@ -382,63 +443,63 @@ func cmdGetOne2(sc *serverConn) {
 	case '1':
 		dir = Only
 	default:
-		sc.error("dbms server: expected + - 1")
+		ss.error("dbms server: expected + - 1")
 	}
-	tran := sc.getTran()
-	query := sc.GetStr()
+	tran := ss.getTran()
+	query := ss.GetStr()
 	var g func(*Thread, string, Dir) (Row, *Header, string)
 	if tran == nil {
-		g = sc.dbms.Get
+		g = ss.sc.dbms.Get
 	} else {
 		g = tran.Get
 	}
-	row, hdr, tbl := g(&sc.thread, query, dir)
-	sc.rowResult(tbl, hdr, true, row)
+	row, hdr, tbl := g(ss.thread, query, dir)
+	ss.rowResult(tbl, hdr, true, row)
 }
 
-func cmdHeader(sc *serverConn) {
-	hdr := sc.getQorC().Header()
-	sc.PutBool(true).PutStrs(hdr.Schema())
+func cmdHeader(ss *serverSession) {
+	hdr := ss.getQorC().Header()
+	ss.PutBool(true).PutStrs(hdr.Schema())
 }
 
-func (sc *serverConn) getQorC() (qc IQueryCursor) {
-	n := sc.GetInt()
-	switch sc.GetChar() {
+func (ss *serverSession) getQorC() (qc IQueryCursor) {
+	n := ss.GetInt()
+	switch ss.GetChar() {
 	case 'q':
-		qc = sc.queries[n]
+		qc = ss.queries[n]
 	case 'c':
-		qc = sc.cursors[n]
+		qc = ss.cursors[n]
 	default:
-		sc.error("dbms server expected q or c")
+		ss.error("dbms server expected q or c")
 	}
 	if qc == nil {
-		sc.error("dbms server: query/cursor not found")
+		ss.error("dbms server: query/cursor not found")
 	}
 	return qc
 }
 
-func cmdInfo(sc *serverConn) {
-	info := sc.dbms.Info()
-	sc.PutBool(true).PutVal(info)
+func cmdInfo(ss *serverSession) {
+	info := ss.sc.dbms.Info()
+	ss.PutBool(true).PutVal(info)
 }
 
-func cmdKeys(sc *serverConn) {
-	keys := sc.getQorC().Keys()
-	sc.PutBool(true).PutStrs(keys)
+func cmdKeys(ss *serverSession) {
+	keys := ss.getQorC().Keys()
+	ss.PutBool(true).PutStrs(keys)
 }
 
-func cmdKill(sc *serverConn) {
-	sessionId := sc.GetStr()
+func cmdKill(ss *serverSession) {
+	sessionId := ss.GetStr()
 	n := kill(sessionId)
-	sc.PutBool(true).PutInt(n)
+	ss.PutBool(true).PutInt(n)
 }
 
-func kill(sessionId string) int {
+func kill(remoteAddr string) int {
 	serverConnsLock.Lock()
 	defer serverConnsLock.Unlock()
 	nkilled := 0
 	for id, sc := range serverConns {
-		if sc.thread.Session() == sessionId {
+		if sc.remoteAddr == remoteAddr {
 			delete(serverConns, id)
 			sc.conn.Close()
 			nkilled++
@@ -447,160 +508,156 @@ func kill(sessionId string) int {
 	return nkilled
 }
 
-func cmdLibGet(sc *serverConn) {
-	name := sc.GetStr()
-	defs := sc.dbms.LibGet(name)
-	sc.PutBool(true).PutInt(len(defs) / 2)
+func cmdLibGet(ss *serverSession) {
+	name := ss.GetStr()
+	defs := ss.sc.dbms.LibGet(name)
+	ss.PutBool(true).PutInt(len(defs) / 2)
 	for i := 0; i < len(defs); i += 2 {
-		sc.PutStr(defs[i]).PutInt(len(defs[i+1]))
+		ss.PutStr(defs[i]).PutInt(len(defs[i+1]))
 	}
 	for i := 1; i < len(defs); i += 2 {
-		sc.PutBuf(defs[i])
+		ss.PutBuf(defs[i])
 	}
 }
 
-func cmdLibraries(sc *serverConn) {
-	libs := sc.dbms.Libraries()
-	sc.PutBool(true).PutStrs(libs)
+func cmdLibraries(ss *serverSession) {
+	libs := ss.sc.dbms.Libraries()
+	ss.PutBool(true).PutStrs(libs)
 }
 
-func cmdLoad(sc *serverConn) {
-	table := sc.GetStr()
-	n := sc.dbms.Load(table)
-	sc.PutBool(true).PutInt(n)
+func cmdLoad(ss *serverSession) {
+	table := ss.GetStr()
+	n := ss.sc.dbms.Load(table)
+	ss.PutBool(true).PutInt(n)
 }
 
-func cmdLog(sc *serverConn) {
-	s := sc.GetStr()
-	sc.dbms.Log(s)
-	sc.PutBool(true)
+func cmdLog(ss *serverSession) {
+	s := ss.GetStr()
+	ss.sc.dbms.Log(s)
+	ss.PutBool(true)
 }
 
-func cmdNonce(sc *serverConn) {
-	sc.nonce = Nonce()
-	sc.PutBool(true).PutStr(sc.nonce)
+func cmdNonce(ss *serverSession) {
+	ss.nonce = Nonce()
+	ss.PutBool(true).PutStr_(ss.nonce)
 }
 
-func cmdOrder(sc *serverConn) {
-	order := sc.getQorC().Order()
-	sc.PutBool(true).PutStrs(order)
+func cmdOrder(ss *serverSession) {
+	order := ss.getQorC().Order()
+	ss.PutBool(true).PutStrs(order)
 }
 
-func cmdOutput(sc *serverConn) {
-	q := sc.getQuery()
-	rec := sc.GetRec()
-	q.Output(&sc.thread, rec)
-	sc.PutBool(true)
+func cmdOutput(ss *serverSession) {
+	q := ss.getQuery()
+	rec := ss.GetRec()
+	q.Output(ss.thread, rec)
+	ss.PutBool(true)
 }
 
-func (sc *serverConn) getQuery() IQuery {
-	qn := sc.GetInt()
-	q := sc.queries[qn]
+func (ss *serverSession) getQuery() IQuery {
+	qn := ss.GetInt()
+	q := ss.queries[qn]
 	if q == nil {
-		sc.error("dbms server: query not found")
+		ss.error("dbms server: query not found")
 	}
 	return q
 }
 
-func cmdQuery(sc *serverConn) {
-	tran := sc.getTran()
-	query := sc.GetStr()
+func cmdQuery(ss *serverSession) {
+	tran := ss.getTran()
+	query := ss.GetStr()
 	q := tran.Query(query)
-	sc.lastNum++
-	sc.queries[sc.lastNum] = q
-	sc.PutBool(true).PutInt(sc.lastNum)
+	ss.lastNum++
+	ss.queries[ss.lastNum] = q
+	ss.PutBool(true).PutInt(ss.lastNum)
 }
 
-func cmdReadCount(sc *serverConn) {
-	sc.getTran()
-	sc.PutBool(true).PutInt(0) //TODO
+func cmdReadCount(ss *serverSession) {
+	ss.getTran()
+	ss.PutBool(true).PutInt(0) //TODO
 }
 
-func cmdRewind(sc *serverConn) {
-	qc := sc.getQorC()
+func cmdRewind(ss *serverSession) {
+	qc := ss.getQorC()
 	qc.Rewind()
-	sc.PutBool(true)
+	ss.PutBool(true)
 }
 
-func cmdRun(sc *serverConn) {
-	s := sc.GetStr()
-	v := sc.dbms.Run(&sc.thread, s)
-	sc.PutResult(v)
+func cmdRun(ss *serverSession) {
+	s := ss.GetStr()
+	v := ss.sc.dbms.Run(ss.thread, s)
+	ss.PutResult(v)
 }
 
-func cmdSessionId(sc *serverConn) {
-	s := sc.GetStr()
+func cmdSessionId(ss *serverSession) {
+	s := ss.GetStr()
 	if s != "" {
-		sc.thread.SetSession(s)
+		ss.sessionId = s
 	}
-	sc.PutBool(true).PutStr(sc.thread.Session())
+	ss.PutBool(true).PutStr(ss.sessionId)
 }
 
-func cmdSize(sc *serverConn) {
-	n := sc.dbms.Size()
-	sc.PutBool(true).PutInt64(int64(n))
+func cmdSize(ss *serverSession) {
+	n := ss.sc.dbms.Size()
+	ss.PutBool(true).PutInt64(int64(n))
 }
 
-func cmdStrategy(sc *serverConn) {
-	qc := sc.getQorC()
+func cmdStrategy(ss *serverSession) {
+	qc := ss.getQorC()
 	strategy := qc.Strategy()
-	sc.PutBool(true).PutStr(strategy)
+	ss.PutBool(true).PutStr(strategy)
 }
 
-func cmdTimestamp(sc *serverConn) {
-	ts := sc.dbms.Timestamp()
-	sc.PutBool(true).PutVal(ts)
+func cmdTimestamp(ss *serverSession) {
+	ts := ss.sc.dbms.Timestamp()
+	ss.PutBool(true).PutVal(ts)
 }
 
-func cmdToken(sc *serverConn) {
+func cmdToken(ss *serverSession) {
 	tok := Token()
-	sc.PutBool(true).PutStr(tok)
+	ss.PutBool(true).PutStr(tok)
 }
 
-func cmdTransaction(sc *serverConn) {
-	update := sc.GetBool()
-	tran := sc.dbms.Transaction(update)
-	tn := sc.nextNum(update)
-	sc.trans[tn] = tran
-	sc.PutBool(true).PutInt(tn)
+func cmdTransaction(ss *serverSession) {
+	update := ss.GetBool()
+	tran := ss.sc.dbms.Transaction(update)
+	tn := ss.nextNum(update)
+	ss.trans[tn] = tran
+	ss.PutBool(true).PutInt(tn)
 }
 
-func (sc *serverConn) nextNum(update bool) int {
-	sc.lastNum++
+func (ss *serverSession) nextNum(update bool) int {
+	ss.lastNum++
 	// update tran# are odd, read-only are even
-	if ((sc.lastNum % 2) == 1) != update {
-		sc.lastNum++
+	if ((ss.lastNum % 2) == 1) != update {
+		ss.lastNum++
 	}
-	return sc.lastNum
+	return ss.lastNum
 }
 
-func cmdTransactions(sc *serverConn) {
-	list := make([]int, 0, len(sc.trans))
-	for tn := range sc.trans {
+func cmdTransactions(ss *serverSession) {
+	list := make([]int, 0, len(ss.trans))
+	for tn := range ss.trans {
 		list = append(list, tn)
 	}
-	sc.PutBool(true).PutInts(list)
+	ss.PutBool(true).PutInts(list)
 }
 
-func cmdUpdate(sc *serverConn) {
-	sc.error("gSuneido server does not work with jSuneido client")
+func cmdUpdate(ss *serverSession) {
+	tran := ss.getTran()
+	table := ss.GetStr()
+	off := uint64(ss.GetInt64())
+	rec := ss.GetRec()
+	newoff := tran.Update(ss.thread, table, off, rec)
+	ss.PutBool(true).PutInt(int(newoff))
 }
 
-func cmdUpdate2(sc *serverConn) {
-	tran := sc.getTran()
-	table := sc.GetStr()
-	off := uint64(sc.GetInt64())
-	rec := sc.GetRec()
-	newoff := tran.Update(&sc.thread, table, off, rec)
-	sc.PutBool(true).PutInt(int(newoff))
+func cmdWriteCount(ss *serverSession) {
+	ss.getTran()
+	ss.PutBool(true).PutInt(0) //TODO
 }
 
-func cmdWriteCount(sc *serverConn) {
-	sc.getTran()
-	sc.PutBool(true).PutInt(0) //TODO
-}
-
-type command func(sc *serverConn)
+type command func(ss *serverSession)
 
 var cmds = []command{ // order must match commmands.go
 	cmdAbort,
@@ -643,8 +700,5 @@ var cmds = []command{ // order must match commmands.go
 	cmdTransactions,
 	cmdUpdate,
 	cmdWriteCount,
-	cmdDelete,
-	cmdUpdate2,
-	cmdGet2,
-	cmdGetOne2,
+	cmdEndSession,
 }

@@ -74,7 +74,8 @@ type Thread struct {
 	// InHandler is used to detect nested handler calls
 	InHandler bool
 
-	// Session is the name of the database session.
+	// Session is the name of the database session for clients and standalone.
+	// Server tracks client session names separately.
 	// Needs atomic because we access MainThread from other threads.
 	session atomic.Value
 
@@ -227,6 +228,11 @@ func PrintStack(cs *SuObject) {
 		// locals := frame.Get(nil, SuStr("locals"))
 		// log.Println("   " + toStr(locals))
 	}
+}
+
+// SetDbms is used to set up the main thread initially
+func (t *Thread) SetDbms(dbms IDbms) {
+	t.dbms = dbms
 }
 
 // GetDbms requires dependency injection

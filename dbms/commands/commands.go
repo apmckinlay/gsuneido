@@ -51,9 +51,6 @@ const (
 	Transactions
 	Update
 	WriteCount
-	Delete
-	Update2
-	Get2
-	GetOne2
+	EndSession
 	Eof
 )

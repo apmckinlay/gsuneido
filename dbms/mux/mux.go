@@ -7,11 +7,11 @@ package mux
 
 import (
 	"encoding/binary"
-	"errors"
 	"io"
 	"sync"
 	"sync/atomic"
 
+	"github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/runtime/trace"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/bytes"
@@ -30,7 +30,7 @@ func (c *conn) Close() {
 	c.rw.Close()
 }
 
-type clientConn struct {
+type ClientConn struct {
 	conn
 	nextSession uint32 // the next session id, must be accessed atomically
 	lock        sync.Mutex
@@ -41,13 +41,13 @@ type respch chan []byte
 
 // NewClientConn creates a new client connection.
 // This should be one to one with the underlying connection.
-func NewClientConn(rw io.ReadWriteCloser) *clientConn {
-	m := clientConn{conn: conn{rw: rw}, rchs: make(map[uint32]respch)}
+func NewClientConn(rw io.ReadWriteCloser) *ClientConn {
+	m := ClientConn{conn: conn{rw: rw}, rchs: make(map[uint32]respch)}
 	go m.conn.reader(m.client)
 	return &m
 }
 
-type serverConn struct {
+type ServerConn struct {
 	conn
 	id uint32
 }
@@ -58,31 +58,31 @@ var nextServerConn uint32
 
 // NewServerConn creates a new server connection.
 // The supplied handler will be called with each received message.
-func NewServerConn(rw io.ReadWriteCloser, h handler) *serverConn {
-	sid := atomic.AddUint32(&nextServerConn, 1)
-	sc := serverConn{conn: conn{rw: rw}, id: sid}
-	go sc.conn.reader(func(cid uint32, data []byte) {
-		h(&sc.conn, uint64(sid)<<32|uint64(cid), data)
+// The handler will often be Workers.Submit.
+func NewServerConn(rw io.ReadWriteCloser, h handler) uint32 {
+	connId := atomic.AddUint32(&nextServerConn, 1)
+	sc := ServerConn{conn: conn{rw: rw}, id: connId}
+	go sc.conn.reader(func(sessionId uint32, data []byte) {
+		h(&sc.conn, uint64(connId)<<32|uint64(sessionId), data)
 	})
-	return &sc
+	return connId
 }
 
 type ClientSession struct {
 	ReadWrite
-	cc  *clientConn
+	cc  *ClientConn
 	rch respch
 }
 
 // NewClientSession returns a new ClientSession
-func (cc *clientConn) NewClientSession() *ClientSession {
-	cid := atomic.AddUint32(&cc.nextSession, 1)
+func (cc *ClientConn) NewClientSession() *ClientSession {
+	sessionId := atomic.AddUint32(&cc.nextSession, 1)
 	rch := make(respch, 1)
-	wb := newWriteBuf(&cc.conn, cid)
+	wb := newWriteBuf(&cc.conn, sessionId)
 	cc.lock.Lock()
 	defer cc.lock.Unlock()
-	cc.rchs[cid] = rch
-	return &ClientSession{cc: cc, rch: rch,
-		ReadWrite: ReadWrite{writeBuf: *wb}}
+	cc.rchs[sessionId] = rch
+	return &ClientSession{cc: cc, rch: rch, ReadWrite: ReadWrite{WriteBuf: *wb}}
 }
 
 func (cs *ClientSession) read() []byte {
@@ -94,7 +94,7 @@ func (cs *ClientSession) read() []byte {
 // If the result is false, it does GetStr for the error and panics with it.
 func (cs *ClientSession) Request() {
 	cs.EndMsg()
-	cs.readBuf.buf = cs.read()
+	cs.ReadBuf.buf = cs.read()
 	if !cs.GetBool() {
 		err := cs.GetStr()
 		trace.ClientServer.Println(err)
@@ -121,7 +121,7 @@ func (c *conn) write(id uint32, data []byte, hdrSpace, final bool) {
 		}
 	}
 	if err != nil {
-		c.err.Store(err)
+		c.err.Store(err.Error())
 		c.Close()
 		return
 	}
@@ -149,49 +149,53 @@ func (c *conn) reader(handler func(uint32, []byte)) {
 	for {
 		n, err := io.ReadFull(c.rw, hdr)
 		if err != nil {
-			c.err.Store(err)
+			c.err.Store(err.Error())
 			break
 		}
 		assert.This(n).Is(HeaderSize)
 		size := int(binary.BigEndian.Uint32(hdr))
-		id := binary.BigEndian.Uint32(hdr[4:])
-		buf := partial[id] // nil (empty buf) if not found
+		sessionId := binary.BigEndian.Uint32(hdr[4:])
+		buf := partial[sessionId] // nil (empty buf) if not found
 		i := len(buf)
 		if i+size > maxSize {
-			c.err.Store(errors.New("message size greater than max"))
+			c.err.Store("message size greater than max")
 			break
 		}
 		buf = bytes.Grow(buf, size)
 		n, err = io.ReadFull(c.rw, buf[i:])
 		if err != nil {
-			c.err.Store(err)
+			c.err.Store(err.Error())
 			break
 		}
 		assert.This(n).Is(size)
 		if hdr[8] == 0 {
-			partial[id] = buf
+			partial[sessionId] = buf
 		} else if hdr[8] == 1 {
-			delete(partial, id)
-			handler(id, buf) // process message
+			delete(partial, sessionId)
+			handler(sessionId, buf) // process message
 		} else {
-			c.err.Store(errors.New("bad final byte"))
+			c.err.Store("bad final byte")
 			break
 		}
 	}
+	handler(0, nil) // notify handler
 	c.Close()
 }
 
-func (cc *clientConn) client(id uint32, data []byte) {
+func (cc *ClientConn) client(id uint32, data []byte) {
 	// need to send id for client to pipeline messages
+	if data == nil {
+		runtime.Fatal("lost connection")
+	}
 	cc.getrch(id) <- data
 }
 
-func (cc *clientConn) getrch(id uint32) respch {
+func (cc *ClientConn) getrch(id uint32) respch {
 	cc.lock.Lock()
 	defer cc.lock.Unlock()
 	ch, ok := cc.rchs[id]
 	if !ok {
-		cc.err.Store(errors.New("no chan for id"))
+		cc.err.Store("no chan for id")
 		cc.Close()
 	}
 	return ch
