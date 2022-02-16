@@ -2,12 +2,6 @@
 
 112     ICON     "res\\axon.ico"
 
-126     ICON     "res\\folder.ico"
-129     ICON     "res\\openfolder.ico"
-127     ICON     "res\\document.ico"
-183     ICON     "res\\downarrow.ico"
-192	    ICON     "res\\close.ico"
-
 130     CURSOR   "res\\hand.cur"
 138     CURSOR   "res\\push.cur"
 140     CURSOR   "res\\drag1copy.cur"
