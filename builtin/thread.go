@@ -116,11 +116,10 @@ var threadMethods = Methods{
 		time.Sleep(time.Duration(ToInt(ms)) * time.Millisecond)
 		return nil
 	}),
-	"StartProfile": method("()", func(t *Thread, _ Value, args []Value) Value {
+	"Profile": method("(block)", func(t *Thread, _ Value, args []Value) Value {
 		t.StartProfile()
-		return nil
-	}),
-	"StopProfile": method("()", func(t *Thread, _ Value, args []Value) Value {
+		defer t.StopProfile()
+		t.Call(args[0])
 		total, self, ops, calls := t.StopProfile()
 		prof := &SuObject{}
 		for name, op := range ops {

@@ -53,7 +53,7 @@ func (t *Thread) profiler() {
 func (t *Thread) sample() {
 	t.profile.lock.Lock()
 	defer t.profile.lock.Unlock()
-	if t.profile.enabled {
+	if t.profile.enabled && t.fp > 0 {
 		t.profile.self[t.frames[t.fp-1].fn.Name]++
 		for i := t.fp - 1; i >= 0; i-- {
 			fn := t.frames[i].fn
@@ -65,6 +65,9 @@ func (t *Thread) sample() {
 func (t *Thread) StopProfile() (total, self, ops, calls map[string]int32) {
 	t.profile.lock.Lock()
 	defer t.profile.lock.Unlock()
+	if !t.profile.enabled {
+		return
+	}
 	t.profile.enabled = false
 	close(t.profile.stop)
 	t.profile.stop = nil
