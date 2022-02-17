@@ -172,6 +172,7 @@ func (c *conn) reader(handler func(uint32, []byte)) {
 			partial[sessionId] = buf
 		} else if hdr[8] == 1 {
 			delete(partial, sessionId)
+			assert.That(buf != nil)
 			handler(sessionId, buf) // process message
 		} else {
 			c.err.Store("bad final byte")

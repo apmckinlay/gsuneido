@@ -28,6 +28,7 @@ func TestClientServer(*testing.T) {
 
 	ses2 := c.NewSession()
 	ses2.Get(nil, "tables", runtime.Prev)
+	ses2.Close()
 
 	time.Sleep(100 * time.Millisecond)
 }

@@ -237,6 +237,10 @@ type ReadBuf struct {
 	buf []byte
 }
 
+func (rb *ReadBuf) Remaining() int {
+	return len(rb.buf)
+}
+
 func (rb *ReadBuf) SetBuf(buf []byte) {
 	rb.buf = buf
 }

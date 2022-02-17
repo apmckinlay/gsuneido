@@ -168,7 +168,10 @@ func (ss *serverSession) request() {
 	}
 	cmd := cmds[icmd]
 	cmd(ss)
-	ss.EndMsg()
+	assert.That(ss.Remaining() == 0) // should consume entire message
+	if icmd != commands.EndSession {
+		ss.EndMsg()
+	}
 }
 
 func (ss *serverSession) error(err string) {
