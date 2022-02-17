@@ -15,7 +15,7 @@ var _ IDbms = (*DbmsUnauth)(nil)
 
 const notauth = "not authorized"
 
-func (du *DbmsUnauth) Admin(string) {
+func (du *DbmsUnauth) Admin(string, *Sviews) {
 	panic(notauth)
 }
 
@@ -35,7 +35,7 @@ func (du *DbmsUnauth) Connections() Value {
 	panic(notauth)
 }
 
-func (du *DbmsUnauth) Cursor(string) ICursor {
+func (du *DbmsUnauth) Cursor(string, *Sviews) ICursor {
 	panic(notauth)
 }
 
@@ -63,7 +63,7 @@ func (du *DbmsUnauth) Final() int {
 	panic(notauth)
 }
 
-func (du *DbmsUnauth) Get(*Thread, string, Dir) (Row, *Header, string) {
+func (du *DbmsUnauth) Get(*Thread, string, Dir, *Sviews) (Row, *Header, string) {
 	panic(notauth)
 }
 
@@ -88,7 +88,7 @@ func (du *DbmsUnauth) Load(string) int {
 }
 
 func (du *DbmsUnauth) Log(s string) {
-	du.dbms.Log(s);
+	du.dbms.Log(s)
 }
 
 func (du *DbmsUnauth) Nonce() string {

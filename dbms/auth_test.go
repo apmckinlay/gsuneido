@@ -34,9 +34,9 @@ func TestAuthUser(*testing.T) {
 	db19.MakeSuTran = func(ut *db19.UpdateTran) *SuTran {
 		return NewSuTran(nil, true)
 	}
-	qry.DoAdmin(db, "create users (user, passhash) key(user)")
+	qry.DoAdmin(db, "create users (user, passhash) key(user)", nil)
 	ut := db.NewUpdateTran()
-	qry.DoAction(nil, ut, "insert { user: 'fred', passhash: '123' } into users")
+	qry.DoAction(nil, ut, "insert { user: 'fred', passhash: '123' } into users", nil)
 	ut.Commit()
 
 	dbms := NewDbmsLocal(db)

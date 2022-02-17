@@ -19,7 +19,7 @@ func TestTransform(t *testing.T) {
 		if expected == "" {
 			expected = from
 		}
-		q := ParseQuery(from, testTran{})
+		q := ParseQuery(from, testTran{}, nil)
 		q = q.Transform()
 		assert.T(t).This(str.ToLower(q.String())).Is(str.ToLower(expected))
 	}

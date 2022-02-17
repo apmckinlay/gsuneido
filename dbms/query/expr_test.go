@@ -20,7 +20,7 @@ func TestExprEval(t *testing.T) {
 	raw := false
 	test := func(src string, expected string) {
 		t.Helper()
-		p := NewQueryParser(src, nil)
+		p := NewQueryParser(src, nil, nil)
 		expr := p.Expression()
 		assert.T(t).This(p.Token).Is(tok.Eof)
 		// fmt.Println(expr)
@@ -70,7 +70,7 @@ func mkrow() (Row, *Header) {
 
 func BenchmarkEval(b *testing.B) {
 	row, hdr := mkrow()
-	p := NewQueryParser("x is 123.456", nil)
+	p := NewQueryParser("x is 123.456", nil, nil)
 	expr := p.Expression()
 	ctx := &ast.Context{Row: row, Hdr: hdr}
 	for i := 0; i < b.N; i++ {
@@ -80,7 +80,7 @@ func BenchmarkEval(b *testing.B) {
 
 func BenchmarkEval_raw(b *testing.B) {
 	row, hdr := mkrow()
-	p := NewQueryParser("x is 123.456", nil)
+	p := NewQueryParser("x is 123.456", nil, nil)
 	expr := p.Expression()
 	assert.That(expr.CanEvalRaw(hdr.Columns))
 	ctx := &ast.Context{Row: row, Hdr: hdr}
@@ -92,7 +92,7 @@ func BenchmarkEval_raw(b *testing.B) {
 func TestExprColumns(t *testing.T) {
 	test := func(src string, expected string) {
 		t.Helper()
-		p := NewQueryParser(src, nil)
+		p := NewQueryParser(src, nil, nil)
 		expr := p.Expression()
 		assert.T(t).This(p.Token).Is(tok.Eof)
 		result := strings.Join(expr.Columns(), " ")
@@ -117,7 +117,7 @@ func TestExprRename(t *testing.T) {
 	to := []string{"B", "D"}
 	test := func(src string, expected string) {
 		t.Helper()
-		p := NewQueryParser(src, nil)
+		p := NewQueryParser(src, nil, nil)
 		expr := p.Expression()
 		assert.T(t).This(p.Token).Is(tok.Eof)
 		result := renameExpr(expr, from, to)
@@ -144,11 +144,11 @@ func TestExprRename(t *testing.T) {
 
 func TestExprReplace(t *testing.T) {
 	from := []string{"x"}
-	expr := NewQueryParser("5", nil).Expression()
+	expr := NewQueryParser("5", nil, nil).Expression()
 	to := []ast.Expr{expr}
 	test := func(src string, expected string) {
 		t.Helper()
-		p := NewQueryParser(src, nil)
+		p := NewQueryParser(src, nil, nil)
 		expr := p.Expression()
 		assert.T(t).This(p.Token).Is(tok.Eof)
 		result := replaceExpr(expr, from, to)

@@ -102,7 +102,7 @@ func checkServerStatus(addr string, port string) {
 
 var _ IDbms = (*dbmsClient)(nil)
 
-func (dc *dbmsClient) Admin(admin string) {
+func (dc *dbmsClient) Admin(admin string, _ *Sviews) {
 	dc.PutCmd(commands.Admin).PutStr(admin).Request()
 }
 
@@ -149,7 +149,7 @@ func (dc *dbmsClient) Connections() Value {
 	return ob
 }
 
-func (dc *dbmsClient) Cursor(query string) ICursor {
+func (dc *dbmsClient) Cursor(query string, _ *Sviews) ICursor {
 	dc.PutCmd(commands.Cursor).PutStr(query).Request()
 	cn := dc.GetInt()
 	return newClientCursor(dc, cn)
@@ -189,7 +189,8 @@ func (dc *dbmsClient) Final() int {
 	return dc.GetInt()
 }
 
-func (dc *dbmsClient) Get(_ *Thread, query string, dir Dir) (Row, *Header, string) {
+func (dc *dbmsClient) Get(_ *Thread, query string, dir Dir,
+	_ *Sviews) (Row, *Header, string) {
 	return dc.get(0, query, dir)
 }
 
@@ -371,11 +372,12 @@ func (tc *TranClient) Delete(_ *Thread, _ string, off uint64) {
 	tc.dc.PutCmd(commands.Erase).PutInt(tc.tn).PutInt(int(off)).Request()
 }
 
-func (tc *TranClient) Get(_ *Thread, query string, dir Dir) (Row, *Header, string) {
+func (tc *TranClient) Get(_ *Thread, query string, dir Dir,
+	_ *Sviews) (Row, *Header, string) {
 	return tc.dc.get(tc.tn, query, dir)
 }
 
-func (tc *TranClient) Query(query string) IQuery {
+func (tc *TranClient) Query(query string, _ *Sviews) IQuery {
 	tc.dc.PutCmd(commands.Query).PutInt(tc.tn).PutStr(query).Request()
 	qn := tc.dc.GetInt()
 	return newClientQuery(tc.dc, qn)
@@ -386,7 +388,7 @@ func (tc *TranClient) ReadCount() int {
 	return tc.dc.GetInt()
 }
 
-func (tc *TranClient) Action(_ *Thread, action string) int {
+func (tc *TranClient) Action(_ *Thread, action string, _ *Sviews) int {
 	tc.dc.PutCmd(commands.Action).PutInt(tc.tn).PutStr(action).Request()
 	return tc.dc.GetInt()
 }

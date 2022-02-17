@@ -36,6 +36,8 @@ type Database struct {
 
 	closed    int64
 	closeLock sync.Mutex
+
+	rt.Sviews
 }
 
 const magic = "gsndo001"

@@ -24,10 +24,10 @@ func TestClientServer(*testing.T) {
 	assert.That(ok)
 	c := NewMuxClient(p2)
 	ses := c.NewSession()
-	ses.Get(nil, "tables", runtime.Next)
+	ses.Get(nil, "tables", runtime.Next, nil)
 
 	ses2 := c.NewSession()
-	ses2.Get(nil, "tables", runtime.Prev)
+	ses2.Get(nil, "tables", runtime.Prev, nil)
 	ses2.Close()
 
 	time.Sleep(100 * time.Millisecond)

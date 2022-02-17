@@ -25,7 +25,7 @@ func TestTableLookup(t *testing.T) {
 	}
 	test := func(query string, cols, vals []string, expected string) {
 		t.Helper()
-		q := ParseQuery(query, testTran{})
+		q := ParseQuery(query, testTran{}, nil)
 		q, _ = Setup(q, ReadMode, testTran{})
 		row := q.(*Table).Lookup(nil, cols, vals)
 		assert.T(t).This(fmt.Sprint(row)).Is(expected)
@@ -78,7 +78,7 @@ func TestQueryGet(t *testing.T) {
 	test := func(query, strategy, expected string) {
 		t.Helper()
 		tran := sizeTran{db.NewReadTran()}
-		q := ParseQuery(query, tran)
+		q := ParseQuery(query, tran, nil)
 		q, _ = Setup(q, ReadMode, tran)
 		qs := strings.ReplaceAll(q.String(), `"`, "'")
 		assert.T(t).This(qs).Is(strategy)

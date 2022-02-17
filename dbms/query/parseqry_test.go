@@ -18,7 +18,7 @@ func TestParseQuery(t *testing.T) {
 		if len(args) > 1 {
 			expected = args[1]
 		}
-		q := ParseQuery(query, testTran{})
+		q := ParseQuery(query, testTran{}, nil)
 		qs := str.ToLower(q.String())
 		assert.T(t).This(qs).Is(expected)
 	}
@@ -61,7 +61,7 @@ func TestParseQuery(t *testing.T) {
 			" rename cnum to c sort tnum, c")
 
 	xtest := func(s, err string) {
-		fn := func() { ParseQuery(s, testTran{}) }
+		fn := func() { ParseQuery(s, testTran{}, nil) }
 		assert.T(t).This(fn).Panics(err)
 	}
 	xtest("table project", "expecting identifier")
@@ -75,7 +75,7 @@ func TestParseQuery(t *testing.T) {
 func TestParseQuery2(t *testing.T) {
 	test := func(s string) {
 		t.Helper()
-		q := ParseQuery(s, testTran{})
+		q := ParseQuery(s, testTran{}, nil)
 		assert.T(t).This(str.ToLower(q.String())).Is(s)
 	}
 
@@ -88,6 +88,6 @@ func TestParseQuery2(t *testing.T) {
 }
 
 func TestParseQueryView(t *testing.T) {
-	q := ParseQuery("table union myview", testTran{})
+	q := ParseQuery("table union myview", testTran{}, nil)
 	assert.T(t).This(q.String()).Is("table UNION (cus JOIN 1:n by(cnum) task)")
 }

@@ -29,7 +29,7 @@ var queryParams = params("(query)")
 
 func queryOne(th *Thread, as *ArgSpec, args []Value, dir Dir) Value {
 	query, _ := extractQuery(th, &queryParams, as, args)
-	row, hdr, table := th.Dbms().Get(th, query, dir)
+	row, hdr, table := th.Dbms().Get(th, query, dir, nil)
 	if hdr == nil {
 		return False
 	}

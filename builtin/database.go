@@ -18,7 +18,7 @@ func init() {
 }
 
 func databaseCallClass(t *Thread, args []Value) Value {
-	t.Dbms().Admin(ToStr(args[0]))
+	t.Dbms().Admin(ToStr(args[0]), nil)
 	return nil
 }
 

@@ -19,7 +19,7 @@ import (
 func TestKeys(t *testing.T) {
 	test := func(query, expected string) {
 		t.Helper()
-		q := ParseQuery(query, testTran{})
+		q := ParseQuery(query, testTran{}, nil)
 		assert.T(t).This(idxsToS(q.Keys())).Is(expected)
 	}
 	test("tables", "table, tablename")
@@ -85,14 +85,14 @@ func TestForeignKeys(*testing.T) {
 	act := func(act string) {
 		ut := db.NewUpdateTran()
 		defer ut.Commit()
-		n := DoAction(nil, ut, act)
+		n := DoAction(nil, ut, act, nil)
 		assert.This(n).Is(1)
 	}
 
-	DoAdmin(db, "create hdr1 (a,b) key(a)")
+	doAdmin(db, "create hdr1 (a,b) key(a)")
 	act("insert { a: 1, b: 2 } into hdr1")
 	act("insert { a: 3, b: 4 } into hdr1")
-	DoAdmin(db, "create lin1 (a,c) key(c) index(a) in hdr1")
+	doAdmin(db, "create lin1 (a,c) key(c) index(a) in hdr1")
 	act("insert { a: 1, c: 5 } into lin1")
 
 	assert.This(func() { act("delete hdr1 where a = 1") }).
@@ -112,9 +112,9 @@ func TestForeignKeys(*testing.T) {
 		Panics("blocked by foreign key")
 	act("update lin1 where a = 1 set a = ''") // '' allowed
 
-	DoAdmin(db, "create hdr2 (m) key(m)")
+	doAdmin(db, "create hdr2 (m) key(m)")
 	act("insert { m: 1 } into hdr2")
-	DoAdmin(db, "create lin2 (m, d) key(d) index(m) in hdr2 cascade")
+	doAdmin(db, "create lin2 (m, d) key(d) index(m) in hdr2 cascade")
 	act("insert { m: 1, d: 10 } into lin2")
 	act("insert { m: 1, d: 11 } into lin2")
 	act("insert { m: 1, d: 12 } into lin2")
@@ -122,9 +122,9 @@ func TestForeignKeys(*testing.T) {
 	act("delete hdr2") // cascade delete
 	assert.This(db.GetState().Meta.GetRoInfo("lin2").Nrows).Is(0)
 
-	DoAdmin(db, "create hdr3 (m) key(m)")
+	doAdmin(db, "create hdr3 (m) key(m)")
 	act("insert { m: 1 } into hdr3")
-	DoAdmin(db, "create lin3 (d, m) key(d) index(m) in hdr3 cascade")
+	doAdmin(db, "create lin3 (d, m) key(d) index(m) in hdr3 cascade")
 	act("insert { m: 1, d: 10 } into lin3")
 	act("insert { m: 1, d: 11 } into lin3")
 	act("insert { m: 1, d: 12 } into lin3")
@@ -134,22 +134,22 @@ func TestForeignKeys(*testing.T) {
 	assert.This(queryAll(db, "lin3")).
 		Is("d=10 m=2 | d=11 m=2 | d=12 m=2")
 
-	DoAdmin(db, "create hdr4 (a) key(a)")
-	DoAdmin(db, "create lin4 (b,a) key(b)")
+	doAdmin(db, "create hdr4 (a) key(a)")
+	doAdmin(db, "create lin4 (b,a) key(b)")
 	act("insert { b: 1, a: 1 } into lin4")
-	assert.This(func() { DoAdmin(db, "alter lin4 create index(a) in hdr4") }).
+	assert.This(func() { doAdmin(db, "alter lin4 create index(a) in hdr4") }).
 		Panics("blocked by foreign key")
 
-	DoAdmin(db, "ensure hdr5 (a, b, c) key(a)")
-	DoAdmin(db, "ensure lin5 (a, d, e) key(e) index(a) in hdr5 cascade")
+	doAdmin(db, "ensure hdr5 (a, b, c) key(a)")
+	doAdmin(db, "ensure lin5 (a, d, e) key(e) index(a) in hdr5 cascade")
 	act("insert { a: 'a1', b: 'b1', c: 'c1'  } into hdr5")
 	act("insert { a: 'a1', d: 'd1', e: 'e1' } into lin5")
 	act("delete hdr5 where a is 'a1'")
 	assert.This(queryAll(db, "lin5")).Is("")
 
 	// requires encode
-	DoAdmin(db, "create hdr6 (a, b, c) key(a)")
-	DoAdmin(db, "create lin6 (a, d, e) key(e) index(a) in hdr6 cascade")
+	doAdmin(db, "create hdr6 (a, b, c) key(a)")
+	doAdmin(db, "create lin6 (a, d, e) key(e) index(a) in hdr6 cascade")
 	act("insert { a: #20211110.132155918, b: 'b1', c: 'c1'  } into hdr6")
 	act("insert { a: #20211110.132155918, d: 'd1', e: 'e1' } into lin6")
 	act("update hdr6 where a is #20211110.132155918 set a = #20211110.132155919")
@@ -157,8 +157,8 @@ func TestForeignKeys(*testing.T) {
 	assert.This(queryAll(db, "lin6")).Is("")
 
 	// requires rangeEnd in fkeyDeleteCascade
-	DoAdmin(db, "ensure hdr7 (a, b, c) key(a,b)")
-	DoAdmin(db, "ensure lin7 (a, b, d, e) key(e) index(a,b) in hdr7 cascade")
+	doAdmin(db, "ensure hdr7 (a, b, c) key(a,b)")
+	doAdmin(db, "ensure lin7 (a, b, d, e) key(e) index(a,b) in hdr7 cascade")
 	act("insert { a: 'a1', c: 'c1'  } into hdr7")
 	act("insert { a: 'a1', b: 'b2', c: 'c2'  } into hdr7")
 	act("insert { a: 'a1', d: 'd1', e: 'e1' } into lin7")
@@ -167,8 +167,8 @@ func TestForeignKeys(*testing.T) {
 	assert.This(queryAll(db, "lin7")).Is("a=a1 b=b2 d=d2 e=e2")
 
 	// requires rangeEnd in fkeyUpdateCascade
-	DoAdmin(db, "ensure hdr8 (a, b, c) key(a,b)")
-	DoAdmin(db, "ensure lin8 (a, b, d, e) key(e) index(a,b) in hdr8 cascade")
+	doAdmin(db, "ensure hdr8 (a, b, c) key(a,b)")
+	doAdmin(db, "ensure lin8 (a, b, d, e) key(e) index(a,b) in hdr8 cascade")
 	act("insert { a: 'a1', c: 'c1'  } into hdr8")
 	act("insert { a: 'a1', b: 'b2', c: 'c2'  } into hdr8")
 	act("insert { a: 'a1', d: 'd1', e: 'e1' } into lin8")
@@ -181,7 +181,7 @@ func TestForeignKeys(*testing.T) {
 
 func queryAll(db *db19.Database, query string) string {
 	tran := sizeTran{db.NewReadTran()}
-	q := ParseQuery(query, tran)
+	q := ParseQuery(query, tran, nil)
 	q, _ = Setup(q, ReadMode, tran)
 	return queryAll2(q)
 }
@@ -240,10 +240,10 @@ func TestQueryBug(*testing.T) {
 	act := func(act string) {
 		ut := db.NewUpdateTran()
 		defer ut.Commit()
-		n := DoAction(nil, ut, act)
+		n := DoAction(nil, ut, act, nil)
 		assert.This(n).Is(1)
 	}
-	DoAdmin(db, "create tmp (a,b) key(a)")
+	doAdmin(db, "create tmp (a,b) key(a)")
 	act("insert { a: 1 } into tmp")
 	assert.This(queryAll(db, "tmp where b > 0")).Is("")
 }
@@ -253,11 +253,11 @@ func TestExtendAllRules(*testing.T) {
 	db := testDb()
 	defer db.Close()
 	tran := db.NewReadTran()
-	q := ParseQuery("cus extend Foo, n=1, Bar", tran)
+	q := ParseQuery("cus extend Foo, n=1, Bar", tran, nil)
 	q, _ = Setup(q, ReadMode, tran)
 	assert.That(!q.SingleTable())
 	assert.This(len(q.Header().Fields)).Is(2)
-	q = ParseQuery("cus extend Foo, Bar", tran)
+	q = ParseQuery("cus extend Foo, Bar", tran, nil)
 	q, _ = Setup(q, ReadMode, tran)
 	assert.That(q.SingleTable())
 	assert.This(len(q.Header().Fields)).Is(1)
@@ -272,10 +272,10 @@ func TestDuplicateKey(*testing.T) {
 	act := func(act string) {
 		ut := db.NewUpdateTran()
 		defer ut.Commit()
-		n := DoAction(nil, ut, act)
+		n := DoAction(nil, ut, act, nil)
 		assert.This(n).Is(1)
 	}
-	DoAdmin(db, "create tmp (k,u,i) key(k) index unique(u) index(i)")
+	doAdmin(db, "create tmp (k,u,i) key(k) index unique(u) index(i)")
 	act("insert { k: 1, u: 2, i: 3 } into tmp")
 	act("insert { k: 11, u: 22, i: 3 } into tmp")
 	assert.This(func() { act("insert { k: 11, u: 0, i: 0 } into tmp") }).
@@ -296,11 +296,11 @@ func TestWhereSelectBug(t *testing.T) {
 	act := func(act string) {
 		ut := db.NewUpdateTran()
 		defer ut.Commit()
-		n := DoAction(nil, ut, act)
+		n := DoAction(nil, ut, act, nil)
 		assert.This(n).Is(1)
 	}
-	DoAdmin(db, "create t2 (d) key (d)")
-	DoAdmin(db, "create t1 (a, b, d) key(a) index(b) index(d)")
+	doAdmin(db, "create t2 (d) key (d)")
+	doAdmin(db, "create t1 (a, b, d) key(a) index(b) index(d)")
 	act("insert {d: '1'} into t2")
 	act("insert {d: '1', a: '2', b: '8'} into t1")
 	act("insert {d: '1', a: '3', b: '7'} into t1")
@@ -311,7 +311,7 @@ func TestWhereSelectBug(t *testing.T) {
 		Is("d=1 a=3 b=7 | d=1 a=5 b=7 | d=1 a=2 b=8 | d=1 a=4 b=8")
 
 	tran := sizeTran{db.NewReadTran()}
-	q := ParseQuery("t1 where d is '1' and b < 'z'", tran)
+	q := ParseQuery("t1 where d is '1' and b < 'z'", tran, nil)
 	idx := []string{"d"}
 	q = q.Transform()
 	_, app := q.optimize(ReadMode, idx)
@@ -332,11 +332,11 @@ func TestJoinBug(t *testing.T) {
 	act := func(act string) {
 		ut := db.NewUpdateTran()
 		defer ut.Commit()
-		n := DoAction(nil, ut, act)
+		n := DoAction(nil, ut, act, nil)
 		assert.This(n).Is(1)
 	}
-	DoAdmin(db, "create t1 (a) key(a)")
-	DoAdmin(db, "create t2 (a, b) key(a,b)")
+	doAdmin(db, "create t1 (a) key(a)")
+	doAdmin(db, "create t2 (a, b) key(a,b)")
 	act("insert {a: '1'} into t1")
 	act("insert {a: '1', b: '2'} into t2")
 	assert.T(t).This(queryAll(db, "t1 join t2")).Is("a=1 b=2")
@@ -351,11 +351,11 @@ func TestSelectOnSingleton(t *testing.T) {
 	act := func(act string) {
 		ut := db.NewUpdateTran()
 		defer ut.Commit()
-		n := DoAction(nil, ut, act)
+		n := DoAction(nil, ut, act, nil)
 		assert.This(n).Is(1)
 	}
-	DoAdmin(db, "create t1 (a) key(a)")
-	DoAdmin(db, "create t2 (a, b) key()")
+	doAdmin(db, "create t1 (a) key(a)")
+	doAdmin(db, "create t2 (a, b) key()")
 	act("insert {a: '1'} into t1")
 	act("insert {a: '1', b: '2'} into t2")
 	assert.T(t).This(queryAll(db, "t1 leftjoin t2")).Is("a=1 b=2")
@@ -371,14 +371,14 @@ func TestSingleton(t *testing.T) {
 	act := func(act string) {
 		ut := db.NewUpdateTran()
 		defer ut.Commit()
-		n := DoAction(nil, ut, act)
+		n := DoAction(nil, ut, act, nil)
 		assert.This(n).Is(1)
 	}
-	DoAdmin(db, "create tmp (a,b) key(a) key(b)")
+	doAdmin(db, "create tmp (a,b) key(a) key(b)")
 	act("insert { a: 1, b: 2 } into tmp")
 	act("insert { a: 3, b: 4 } into tmp")
 	tran := sizeTran{db.NewReadTran()}
-	q := ParseQuery("tmp where a = 3", tran)
+	q := ParseQuery("tmp where a = 3", tran, nil)
 	q, _ = Setup(q, ReadMode, tran)
 	assert.This(q.String()).Is("tmp^(a) WHERE*1 a is 3") // singleton
 	// reading by a, but singleton so we can Select/Lookup on b

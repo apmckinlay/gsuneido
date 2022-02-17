@@ -16,7 +16,7 @@ func TestFixed(t *testing.T) {
 	defer func() { runtime.DefaultSingleQuotes = false }()
 	test := func(query, expected string) {
 		t.Helper()
-		q := ParseQuery(query, testTran{})
+		q := ParseQuery(query, testTran{}, nil)
 		assert.T(t).This(fixedStr(q.Fixed())).Is(expected)
 	}
 	test("table", "[]")
@@ -44,7 +44,7 @@ func TestFixed(t *testing.T) {
 
 	test2 := func(query string, expected string) {
 		t.Helper()
-		q := ParseQuery(query, testTran{})
+		q := ParseQuery(query, testTran{}, nil)
 		q, _ = Setup(q, ReadMode, testTran{})
 		assert.T(t).This(q.String()).Is(expected)
 	}

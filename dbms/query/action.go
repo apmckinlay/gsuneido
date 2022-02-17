@@ -11,8 +11,8 @@ import (
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
-func DoAction(th *Thread, ut *db19.UpdateTran, action string) int {
-	a := ParseAction(action, ut)
+func DoAction(th *Thread, ut *db19.UpdateTran, action string, sv *Sviews) int {
+	a := ParseAction(action, ut, sv)
 	return a.execute(th, ut)
 }
 

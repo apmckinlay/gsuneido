@@ -7,7 +7,7 @@ package runtime
 // The two implementations, DbmsLocal and DbmsClient, are in the dbms package
 type IDbms interface {
 	// Admin executes a schema change (create, alter, drop)
-	Admin(s string)
+	Admin(string, *Sviews)
 
 	// Auth authorizes the connection with the server
 	Auth(string) bool
@@ -23,7 +23,7 @@ type IDbms interface {
 	Connections() Value
 
 	// Cursor is like a query but independent of any one transaction
-	Cursor(query string) ICursor
+	Cursor(query string, sv *Sviews) ICursor
 
 	// Cursors returns the current number of cursors
 	Cursors() int
@@ -43,7 +43,7 @@ type IDbms interface {
 
 	// Get returns a single record, for Query1 (dir = One),
 	// QueryFirst (dir = Next), or QueryLast (dir = Prev)
-	Get(th *Thread, query string, dir Dir) (Row, *Header, string)
+	Get(th *Thread, query string, dir Dir, sv *Sviews) (Row, *Header, string)
 
 	// Info returns an object containing database information
 	Info() Value
@@ -121,14 +121,14 @@ type ITran interface {
 
 	// Get returns a single record, for Query1 (dir = One),
 	// QueryFirst (dir = Next), or QueryLast (dir = Prev)
-	Get(th *Thread, query string, dir Dir) (Row, *Header, string)
+	Get(th *Thread, query string, dir Dir, sv *Sviews) (Row, *Header, string)
 
 	// Query starts a query
-	Query(query string) IQuery
+	Query(query string, sv *Sviews) IQuery
 
 	// Action executes an insert, update, or delete
 	// and returns the number of records processed
-	Action(th *Thread, action string) int
+	Action(th *Thread, action string, sv *Sviews) int
 
 	// Update modifies a record
 	Update(th *Thread, table string, off uint64, rec Record) uint64

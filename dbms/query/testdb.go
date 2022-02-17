@@ -21,12 +21,12 @@ func testDb() *db19.Database {
 		return runtime.NewSuTran(nil, true)
 	}
 	adm := func(admin string) {
-		DoAdmin(db, admin)
+		DoAdmin(db, admin, nil)
 	}
 	act := func(act string) {
 		ut := db.NewUpdateTran()
 		defer ut.Commit()
-		DoAction(nil, ut, act)
+		DoAction(nil, ut, act, nil)
 	}
 	adm("create customer (id, name, city) key(id)")
 	act("insert {id: 'a', name: 'axon', city: 'saskatoon'} into customer")

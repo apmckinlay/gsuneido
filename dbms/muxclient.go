@@ -52,7 +52,7 @@ func (dc *muxClient) NewSession() *muxSession {
 
 var _ IDbms = (*muxSession)(nil)
 
-func (ms *muxSession) Admin(admin string) {
+func (ms *muxSession) Admin(admin string, _ *Sviews) {
 	ms.PutCmd(commands.Admin).PutStr(admin)
 	ms.Request()
 }
@@ -92,7 +92,7 @@ func (ms *muxSession) Connections() Value {
 	return ob
 }
 
-func (ms *muxSession) Cursor(query string) ICursor {
+func (ms *muxSession) Cursor(query string, _ *Sviews) ICursor {
 	ms.PutCmd(commands.Cursor).PutStr(query)
 	ms.Request()
 	cn := ms.GetInt()
@@ -136,7 +136,8 @@ func (ms *muxSession) Final() int {
 	return ms.GetInt()
 }
 
-func (ms *muxSession) Get(_ *Thread, query string, dir Dir) (Row, *Header, string) {
+func (ms *muxSession) Get(_ *Thread, query string, dir Dir,
+	_ *Sviews) (Row, *Header, string) {
 	return ms.get(0, query, dir)
 }
 
@@ -337,11 +338,12 @@ func (tc *muxTran) Delete(_ *Thread, table string, off uint64) {
 	tc.Request()
 }
 
-func (tc *muxTran) Get(_ *Thread, query string, dir Dir) (Row, *Header, string) {
+func (tc *muxTran) Get(_ *Thread, query string, dir Dir,
+	_ *Sviews) (Row, *Header, string) {
 	return tc.get(tc.tn, query, dir)
 }
 
-func (tc *muxTran) Query(query string) IQuery {
+func (tc *muxTran) Query(query string, _ *Sviews) IQuery {
 	tc.PutCmd(commands.Query).PutInt(tc.tn).PutStr(query)
 	tc.Request()
 	qn := tc.GetInt()
@@ -354,7 +356,7 @@ func (tc *muxTran) ReadCount() int {
 	return tc.GetInt()
 }
 
-func (tc *muxTran) Action(_ *Thread, action string) int {
+func (tc *muxTran) Action(_ *Thread, action string, _ *Sviews) int {
 	tc.PutCmd(commands.Action).PutInt(tc.tn).PutStr(action)
 	tc.Request()
 	return tc.GetInt()

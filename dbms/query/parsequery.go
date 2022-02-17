@@ -7,6 +7,7 @@ import (
 	"github.com/apmckinlay/gsuneido/compile"
 	"github.com/apmckinlay/gsuneido/compile/ast"
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
+	"github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/str"
 	"github.com/apmckinlay/gsuneido/util/strs"
 )
@@ -15,18 +16,19 @@ type queryParser struct {
 	compile.Parser
 	t        QueryTran
 	viewNest []string
+	sviews  *runtime.Sviews
 }
 
-func NewQueryParser(src string, t QueryTran) *queryParser {
-	return &queryParser{Parser: *compile.QueryParser(src), t: t}
+func NewQueryParser(src string, t QueryTran, sv *runtime.Sviews) *queryParser {
+	return &queryParser{Parser: *compile.QueryParser(src), t: t, sviews: sv}
 }
 
-func ParseQuery(src string, t QueryTran) Query {
-	return parseQuery(src, t, nil)
+func ParseQuery(src string, t QueryTran, sv *runtime.Sviews) Query {
+	return parseQuery(src, t, sv, nil)
 }
 
-func parseQuery(src string, t QueryTran, viewNest []string) Query {
-	p := NewQueryParser(src, t)
+func parseQuery(src string, t QueryTran, sv *runtime.Sviews, viewNest []string) Query {
+	p := NewQueryParser(src, t, sv)
 	p.viewNest = viewNest
 	result := p.sort()
 	if p.Token != tok.Eof {
@@ -64,11 +66,22 @@ func (p *queryParser) source() Query {
 func (p *queryParser) table() Query {
 	table := p.MatchIdent()
 	if !strs.Contains(p.viewNest, table) {
-		if def := p.t.GetView(table); def != "" {
-			return parseQuery(def, p.t, append(p.viewNest, table))
+		if def := p.getView(table); def != "" {
+			return parseQuery(def, p.t, p.sviews, append(p.viewNest, table))
 		}
 	}
 	return NewTable(p.t, table)
+}
+
+func (p *queryParser) getView(name string) string {
+	def := ""
+	if p.sviews != nil { // should only be nil from tests
+		def = p.sviews.GetSview(name)
+	}
+	if def == "" {
+		def = p.t.GetView(name)
+	}
+	return def
 }
 
 func (p *queryParser) operation(pq *Query) bool {

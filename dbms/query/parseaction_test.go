@@ -13,7 +13,7 @@ import (
 func TestParseAct(t *testing.T) {
 	test := func(s string) {
 		t.Helper()
-		act := ParseAction(s, testTran{})
+		act := ParseAction(s, testTran{}, nil)
 		assert.T(t).This(str.ToLower(act.String())).Is(s)
 	}
 	test("insert [a: 1, b: 3] into table")
@@ -26,5 +26,5 @@ func TestParseAct(t *testing.T) {
 	test("delete table")
 	test("delete table where a > 1")
 
-	assert.This(func() { ParseAction("foo bar", testTran{}) }).Panics("action must")
+	assert.This(func() { ParseAction("foo bar", testTran{}, nil) }).Panics("action must")
 }

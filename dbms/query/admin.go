@@ -7,11 +7,12 @@ import (
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/db19"
+	rt "github.com/apmckinlay/gsuneido/runtime"
 )
 
-func DoAdmin(db *db19.Database, cmd string) {
+func DoAdmin(db *db19.Database, cmd string, sv *rt.Sviews) {
 	admin := ParseAdmin(cmd)
-	admin.execute(db)
+	admin.execute(db, sv)
 }
 
 func checkForSystemTable(table string) {
@@ -38,7 +39,7 @@ func (a *createAdmin) String() string {
 	return "create " + a.Schema.String()
 }
 
-func (a *createAdmin) execute(db *db19.Database) {
+func (a *createAdmin) execute(db *db19.Database, _ *rt.Sviews) {
 	checkForSystemTable(a.Table)
 	db.Create(&a.Schema)
 }
@@ -53,7 +54,7 @@ func (a *ensureAdmin) String() string {
 	return "ensure " + a.Schema.String()
 }
 
-func (a *ensureAdmin) execute(db *db19.Database) {
+func (a *ensureAdmin) execute(db *db19.Database, _ *rt.Sviews) {
 	checkForSystemTable(a.Table)
 	db.Ensure(&a.Schema)
 }
@@ -69,7 +70,7 @@ func (a *renameAdmin) String() string {
 	return "rename " + a.from + " to " + a.to
 }
 
-func (a *renameAdmin) execute(db *db19.Database) {
+func (a *renameAdmin) execute(db *db19.Database, _ *rt.Sviews) {
 	checkForSystemTable(a.from)
 	checkForSystemTable(a.to)
 	if !db.RenameTable(a.from, a.to) {
@@ -87,7 +88,7 @@ func (a *alterCreateAdmin) String() string {
 	return "alter " + strings.Replace(a.Schema.String(), " ", " create ", 1)
 }
 
-func (a *alterCreateAdmin) execute(db *db19.Database) {
+func (a *alterCreateAdmin) execute(db *db19.Database, _ *rt.Sviews) {
 	checkForSystemTable(a.Table)
 	db.AlterCreate(&a.Schema)
 }
@@ -110,7 +111,7 @@ func (a *alterRenameAdmin) String() string {
 	return s
 }
 
-func (a *alterRenameAdmin) execute(db *db19.Database) {
+func (a *alterRenameAdmin) execute(db *db19.Database, _ *rt.Sviews) {
 	checkForSystemTable(a.table)
 	if !db.AlterRename(a.table, a.from, a.to) {
 		panic("can't " + a.String())
@@ -127,7 +128,7 @@ func (a *alterDropAdmin) String() string {
 	return "alter " + strings.Replace(a.Schema.String(), " ", " drop ", 1)
 }
 
-func (a *alterDropAdmin) execute(db *db19.Database) {
+func (a *alterDropAdmin) execute(db *db19.Database, _ *rt.Sviews) {
 	checkForSystemTable(a.Table)
 	if !db.AlterDrop(&a.Schema) {
 		panic("can't " + a.String())
@@ -145,9 +146,22 @@ func (a *viewAdmin) String() string {
 	return "view " + a.name + " = " + a.def
 }
 
-func (a *viewAdmin) execute(db *db19.Database) {
+func (a *viewAdmin) execute(db *db19.Database, _ *rt.Sviews) {
 	checkForSystemTable(a.name)
 	db.AddView(a.name, a.def)
+}
+
+//-------------------------------------------------------------------
+
+type sviewAdmin viewAdmin
+
+func (a *sviewAdmin) String() string {
+	return "sview " + a.name + " = " + a.def
+}
+
+func (a *sviewAdmin) execute(_ *db19.Database, sv *rt.Sviews) {
+	checkForSystemTable(a.name)
+	sv.AddSview(a.name, a.def)
 }
 
 //-------------------------------------------------------------------
@@ -160,8 +174,11 @@ func (a *dropAdmin) String() string {
 	return "drop " + a.table
 }
 
-func (a *dropAdmin) execute(db *db19.Database) {
+func (a *dropAdmin) execute(db *db19.Database, sv *rt.Sviews) {
 	checkForSystemTable(a.table)
+	if sv != nil && sv.DropSview(a.table) {
+		return
+	}
 	if err := db.Drop(a.table); err != nil {
 		panic(err)
 	}

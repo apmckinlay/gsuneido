@@ -40,6 +40,7 @@ type serverConn struct {
 	conn         net.Conn
 	sessionsLock sync.Mutex
 	sessions     map[uint32]*serverSession // the sessions on this connection
+	Sviews
 }
 
 // serverSession is one client session (thread)
@@ -247,13 +248,13 @@ func (ss *serverSession) tran(tn int) ITran {
 func cmdAction(ss *serverSession) {
 	tran := ss.getTran()
 	action := ss.GetStr()
-	n := tran.Action(ss.thread, action)
+	n := tran.Action(ss.thread, action, &ss.sc.Sviews)
 	ss.PutBool(true).PutInt(n)
 }
 
 func cmdAdmin(ss *serverSession) {
 	s := ss.GetStr()
-	ss.sc.dbms.Admin(s)
+	ss.sc.dbms.Admin(s, &ss.sc.Sviews)
 	ss.PutBool(true)
 }
 
@@ -335,7 +336,7 @@ func connections() *SuObject {
 
 func cmdCursor(ss *serverSession) {
 	query := ss.GetStr()
-	q := ss.sc.dbms.Cursor(query)
+	q := ss.sc.dbms.Cursor(query, &ss.sc.Sviews)
 	ss.lastNum++
 	ss.cursors[ss.lastNum] = q
 	ss.PutBool(true).PutInt(ss.lastNum)
@@ -450,13 +451,13 @@ func cmdGetOne(ss *serverSession) {
 	}
 	tran := ss.getTran()
 	query := ss.GetStr()
-	var g func(*Thread, string, Dir) (Row, *Header, string)
+	var g func(*Thread, string, Dir, *Sviews) (Row, *Header, string)
 	if tran == nil {
 		g = ss.sc.dbms.Get
 	} else {
 		g = tran.Get
 	}
-	row, hdr, tbl := g(ss.thread, query, dir)
+	row, hdr, tbl := g(ss.thread, query, dir, &ss.sc.Sviews)
 	ss.rowResult(tbl, hdr, true, row)
 }
 
@@ -569,7 +570,7 @@ func (ss *serverSession) getQuery() IQuery {
 func cmdQuery(ss *serverSession) {
 	tran := ss.getTran()
 	query := ss.GetStr()
-	q := tran.Query(query)
+	q := tran.Query(query, &ss.sc.Sviews)
 	ss.lastNum++
 	ss.queries[ss.lastNum] = q
 	ss.PutBool(true).PutInt(ss.lastNum)

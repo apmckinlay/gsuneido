@@ -31,7 +31,7 @@ func xTestDeleteBug2(*testing.T) {
 		// time.Sleep(1 * time.Microsecond)
 		ut := db.NewUpdateTran()
 		defer ut.Commit()
-		return DoAction(nil, ut, act)
+		return DoAction(nil, ut, act, nil)
 	}
 	// DoAdmin(db, "ensure tmp(a,b,c) key(a,b) key(c)")
 	// for i := 0; i < 10000; i++ {
@@ -61,10 +61,10 @@ func TestDeleteBug(*testing.T) {
 	act := func(act string) {
 		ut := db.NewUpdateTran()
 		defer ut.Commit()
-		n := DoAction(nil, ut, act)
+		n := DoAction(nil, ut, act, nil)
 		assert.This(n).Is(1)
 	}
-	DoAdmin(db, "create tmp(k) key(k)")
+	DoAdmin(db, "create tmp(k) key(k)", nil)
 	N := 10000
 	if testing.Short() {
 		N = 1000
@@ -82,10 +82,10 @@ func TestDeleteSynch(*testing.T) {
 	db.CheckerSync()
 	act := func(act string) {
 		ut := db.NewUpdateTran()
-		DoAction(nil, ut, act)
+		DoAction(nil, ut, act, nil)
 		db.CommitMerge(ut)
 	}
-	DoAdmin(db, "create tmp(k) key(k)")
+	DoAdmin(db, "create tmp(k) key(k)", nil)
 	N := 10000
 	if testing.Short() {
 		N = 1000
