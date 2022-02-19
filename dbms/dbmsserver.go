@@ -59,7 +59,7 @@ type serverSession struct {
 	lastNum   int
 }
 
-// Server listens and accepts connections
+// Server listens and accepts connections. It never returns.
 func Server(dbms *DbmsLocal) {
 	l, err := net.Listen("tcp", ":"+options.Port)
 	if err != nil {
@@ -97,7 +97,7 @@ func newServerConn(dbms *DbmsLocal, conn net.Conn) {
 	addr := str.BeforeFirst(conn.RemoteAddr().String(), ":")
 	// sc.thread.SetSession(str.BeforeLast(addr, ":"))
 	connId := mux.NewServerConn(conn, workers.Submit)
-	sc := &serverConn{dbms: dbms, id: connId, remoteAddr: addr,
+	sc := &serverConn{dbms: dbms, id: connId, conn: conn, remoteAddr: addr,
 		sessions: make(map[uint32]*serverSession)}
 	serverConnsLock.Lock()
 	serverConns[connId] = sc
@@ -217,6 +217,20 @@ func Conns() string {
 	}
 	sb.WriteString("</ul>\r\n")
 	return sb.String()
+}
+
+func StopServer() {
+	defer func() {
+		if e := recover(); e != nil {
+			log.Println("StopServer", e)
+		}
+	}()
+	serverConnsLock.Lock()
+	defer serverConnsLock.Unlock()
+	for _, sc := range serverConns {
+		sc.conn.Close()
+	}
+	serverConns = nil
 }
 
 //-------------------------------------------------------------------

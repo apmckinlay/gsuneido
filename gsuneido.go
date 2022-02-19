@@ -27,6 +27,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/exit"
 	"github.com/apmckinlay/gsuneido/util/regex"
+	"github.com/apmckinlay/gsuneido/util/system"
 )
 
 var builtDate = "Dec 29 2020" // set by: go build -ldflags "-X main.builtDate=..."
@@ -57,8 +58,13 @@ func main() {
 	if options.Action == "client" {
 		options.Errlog = builtin.ErrlogDir() + "suneido" + options.Port + ".err"
 	}
-	builtin.Startup() // Windows gui relaunch
-	if options.Action == "" && options.Mode != "gui" {
+	if mode == "gui" {
+		redirect()
+	}
+	if err := system.Service("gSuneido", redirect, stopServer); err != nil {
+		Fatal(err)
+	}
+	if options.Action == "" && mode != "gui" {
 		options.Action = "repl"
 	}
 
@@ -172,10 +178,16 @@ func main() {
 		(options.Action == "client" && options.Mode != "gui") {
 		run("Init.Repl()")
 		repl()
-		closeDbms()
+		dbClose()
 	} else {
 		run("Init()")
 		builtin.Run()
+	}
+}
+
+func redirect() {
+	if err := system.Redirect(options.Errlog); err != nil {
+		Fatal("Redirect failed:", err)
 	}
 }
 
@@ -246,7 +258,13 @@ func startServer() {
 	mainThread.Name = "main"
 	run("Init.Repl()")
 	dbms.Server(dbmsLocal)
-	closeDbms()
+}
+
+func stopServer() {
+	httpServer.Close()
+	dbms.StopServer()
+	dbmsLocal.Close()
+	log.Println("server stopped")
 }
 
 var db *db19.Database
@@ -275,7 +293,7 @@ func openDbms() {
 	// go checkState()
 }
 
-func closeDbms() {
+func dbClose() {
 	if db != nil {
 		db.Close()
 	}
@@ -301,11 +319,16 @@ func checkState() {
 
 // HTTP status ------------------------------------------------------
 
+var httpServer *http.Server
+
 func startHttpStatus() {
 	http.HandleFunc("/", httpStatus)
 	go func() {
-		err := http.ListenAndServe(":3148", nil)
-		log.Println("Server Monitor:", err)
+		httpServer = &http.Server{Addr: ":3148"}
+		err := httpServer.ListenAndServe()
+		if err != http.ErrServerClosed {
+			log.Println("Server Monitor:", err)
+		}
 	}()
 }
 func httpStatus(w http.ResponseWriter, _ *http.Request) {
@@ -319,7 +342,7 @@ func httpStatus(w http.ResponseWriter, _ *http.Request) {
 				<h1>Suneido Server Monitor</h1>
 				<p>Built: `+builtin.Built()+`</p>
 				<p>Heap: `+mb(builtin.HeapSys())+`</p>
-				<p>Database: `+mb(GetDbms().Size())+`
+				<p>Database: `+mb(dbmsLocal.Size())+`
 				`+threads()+`
 				`+trans()+`
 				`+dbms.Conns()+`
@@ -346,14 +369,14 @@ func threads() string {
 }
 
 func trans() string {
-	list := GetDbms().Transactions()
+	list := dbmsLocal.Transactions()
 	n := list.Size()
 	var sb strings.Builder
 	fmt.Fprintf(&sb, "<p>Transactions: (%d) ", n)
 	sep := ""
 	for i := 0; i < n; i++ {
 		sb.WriteString(sep)
-		sb.WriteString(ToStr(list.ListGet(i)))
+		sb.WriteString(list.ListGet(i).String())
 		sep = ", "
 	}
 	sb.WriteString("<p>\n")

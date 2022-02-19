@@ -56,8 +56,6 @@ loop:
 			Action = "version"
 		case match(&args, "-ignoreversion"), match(&args, "-iv"):
 			// for compatibility with cSuneido
-		case match(&args, "-norelaunch"), match(&args, "-nr"):
-			NoRelaunch = true
 		case match(&args, "--"):
 			break loop
 		default:

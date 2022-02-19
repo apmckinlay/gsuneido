@@ -1,9 +1,10 @@
 // Copyright Suneido Software Corp. All rights reserved.
 // Governed by the MIT license found in the LICENSE file.
 
-//go:build !windows || portable || com
+//go:build !windows || com
 
-package builtin
+package system
 
-func Startup() {
+func Redirect(string) error {
+	return nil
 }

@@ -21,7 +21,6 @@ var (
 	Arg        string
 	Port       string
 	Unattended bool
-	NoRelaunch bool
 )
 
 // CmdLine is the remaining command line arguments

@@ -513,6 +513,10 @@ func (db *Database) Close() {
 	atomic.StoreInt64(&db.closed, 1)
 }
 
+func (db *Database) Closed() bool {
+	return atomic.LoadInt64(&db.closed) == 1
+}
+
 func (db *Database) writeSize() {
 	// need to use Write because all but last chunk are read-only
 	buf := make([]byte, stor.SmallOffsetLen)
