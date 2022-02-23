@@ -4,6 +4,8 @@
 package compile
 
 import (
+	"strings"
+
 	"github.com/apmckinlay/gsuneido/compile/ast"
 	"github.com/apmckinlay/gsuneido/compile/check"
 	"github.com/apmckinlay/gsuneido/runtime"
@@ -49,6 +51,9 @@ type cgAspectsBase struct {
 }
 
 func (*cgAspectsBase) privatize(name, className string) string {
+	if strings.HasPrefix(name, "getter_") {
+		return "Getter_" + className + "_" + name[7:]
+	}
 	return className + "_" + name
 }
 

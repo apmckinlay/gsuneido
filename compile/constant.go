@@ -239,11 +239,9 @@ func (p *Parser) privatizeDef(m Value) string {
 	if !ascii.IsLower(name[0]) {
 		return name
 	}
-	if strings.HasPrefix(name, "getter_") {
-		if len(name) <= 7 || !ascii.IsLower(name[7]) {
-			p.Error("invalid getter (" + name + ")")
-		}
-		return p.privatize(name[7:], "Getter_"+p.className)
+	if strings.HasPrefix(name, "getter_") &&
+		(len(name) <= 7 || !ascii.IsLower(name[7])) {
+		p.Error("invalid getter (" + name + ")")
 	}
 	return p.privatize(name, p.className)
 }
