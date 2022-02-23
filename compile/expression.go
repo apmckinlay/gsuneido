@@ -152,8 +152,8 @@ func (p *Parser) privatizeRef(name string) string {
 			name = p.privatize(name, p.className)
 		}
 		return name
-	} else if strings.HasPrefix(name, "Getter_") && len(name) > 7 &&
-		!ascii.IsUpper(name[7]) {
+	} else if strings.HasPrefix(name, "Getter_") &&
+		len(name) > 7 && !ascii.IsUpper(name[7]) {
 		p.Error("invalid getter (" + name + ")")
 	}
 	return name
