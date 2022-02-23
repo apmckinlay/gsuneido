@@ -67,7 +67,7 @@ func (sc *suScanner) String() string {
 }
 
 func (*suScanner) Type() types.Type {
-	return types.BuiltinInstance
+	return types.BuiltinClass
 }
 
 func (sc *suScanner) Equal(other interface{}) bool {
