@@ -12,6 +12,7 @@ import (
 )
 
 var BuiltDate string
+var BuiltExtra string
 
 // command line flags
 var (
