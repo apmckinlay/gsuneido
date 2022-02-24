@@ -95,10 +95,12 @@ func newServerConn(dbms *DbmsLocal, conn net.Conn) {
 	trace.ClientServer.Println("server connection")
 	sendHello(conn)
 	addr := str.BeforeFirst(conn.RemoteAddr().String(), ":")
-	// sc.thread.SetSession(str.BeforeLast(addr, ":"))
 	connId := mux.NewServerConn(conn, workers.Submit)
 	sc := &serverConn{dbms: dbms, id: connId, conn: conn, remoteAddr: addr,
 		sessions: make(map[uint32]*serverSession)}
+	if haveUsersTable(dbms) {
+		sc.dbms = &DbmsUnauth{dbms: dbms}
+	}
 	serverConnsLock.Lock()
 	serverConns[connId] = sc
 	serverConnsLock.Unlock()
