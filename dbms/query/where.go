@@ -149,13 +149,17 @@ func (w *Where) Nrows() int {
 }
 
 func (w *Where) Transform() Query {
-	if w.Fixed(); w.conflict || w.exprConflict() {
-		return NewNothing(w.Columns())
-	}
 	if len(w.expr.Exprs) == 0 {
 		// remove empty where
 		return w.source.Transform()
 	}
+	if w.Fixed(); w.conflict || w.exprConflict() {
+		return NewNothing(w.Columns())
+	}
+	if tl := w.tablesLookup(); tl != nil {
+		return tl
+	}
+
 	if lj := w.leftJoinToJoin(); lj != nil {
 		// convert leftjoin to join
 		w.source = NewJoin(lj.source, lj.source2, lj.by)
@@ -282,6 +286,38 @@ func (w *Where) Transform() Query {
 		return w.source
 	}
 	return w
+}
+
+func (w *Where) tablesLookup() Query {
+	// Optimize: tables where table|tablename = <string>
+	// This is to handle the speed issue from heavy use of TableExists?.
+	// It could be more general.
+	tables, ok := w.source.(*Tables)
+	if !ok {
+		return nil
+	}
+	col, val := w.lookup1()
+	if col != "table" && col != "tablename" {
+		return nil
+	}
+	s, ok := val.ToStr()
+	if !ok {
+		return NewNothing(w.Columns())
+	}
+	return NewTablesLookup(tables.tran, s)
+}
+
+func (w *Where) lookup1() (string, runtime.Value) {
+	if len(w.expr.Exprs) == 1 {
+		if b, ok := w.expr.Exprs[0].(*ast.Binary); ok && b.Tok == tok.Is {
+			if id, ok := b.Lhs.(*ast.Ident); ok {
+				if c, ok := b.Rhs.(*ast.Constant); ok {
+					return id.Name, c.Val
+				}
+			}
+		}
+	}
+	return "", nil
 }
 
 func (w *Where) leftJoinToJoin() *LeftJoin {

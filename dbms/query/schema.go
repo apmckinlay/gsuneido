@@ -29,18 +29,18 @@ const (
 	eof
 )
 
-func (st *schemaTable) Init() {
+func (*schemaTable) Init() {
 }
 
 func (st *schemaTable) SetTran(tran QueryTran) {
 	st.tran = tran
 }
 
-func (st *schemaTable) Indexes() [][]string {
+func (*schemaTable) Indexes() [][]string {
 	return nil
 }
 
-func (st *schemaTable) Fixed() []Fixed {
+func (*schemaTable) Fixed() []Fixed {
 	return nil
 }
 
@@ -48,11 +48,11 @@ func (*schemaTable) Ordering() []string {
 	return nil
 }
 
-func (st *schemaTable) Updateable() string {
+func (*schemaTable) Updateable() string {
 	return ""
 }
 
-func (st *schemaTable) SingleTable() bool {
+func (*schemaTable) SingleTable() bool {
 	return false // not a physical table
 }
 
@@ -60,18 +60,18 @@ func (*schemaTable) rowSize() int {
 	return 32 // ???
 }
 
-func (st *schemaTable) Output(*Thread, Record) {
+func (*schemaTable) Output(*Thread, Record) {
 	panic("shouldn't reach here")
 }
 
-func (st *schemaTable) optimize(_ Mode, index []string) (Cost, interface{}) {
+func (*schemaTable) optimize(_ Mode, index []string) (Cost, interface{}) {
 	if index == nil {
 		return 1000, nil
 	}
 	return impossible, nil
 }
 
-func (st *schemaTable) setApproach([]string, interface{}, QueryTran) {
+func (*schemaTable) setApproach([]string, interface{}, QueryTran) {
 }
 
 func (st *schemaTable) lookupCost() Cost {
@@ -79,11 +79,11 @@ func (st *schemaTable) lookupCost() Cost {
 	return lookupCost(st.rowSize())
 }
 
-func (st *schemaTable) Lookup(*Thread, []string, []string) Row {
+func (*schemaTable) Lookup(*Thread, []string, []string) Row {
 	panic("shouldn't reach here")
 }
 
-func (st *schemaTable) Select([]string, []string) {
+func (*schemaTable) Select([]string, []string) {
 	panic("shouldn't reach here")
 }
 
@@ -144,10 +144,14 @@ func (ts *Tables) Get(_ *Thread, dir Dir) Row {
 		ts.i--
 	}
 	if ts.i < 0 || len(ts.info) <= ts.i {
+		ts.state = eof
 		return nil
 	}
 	ts.state = within
-	info := ts.info[ts.i]
+	return ts.row(ts.info[ts.i])
+}
+
+func (*Tables) row(info *meta.Info) Row {
 	var rb RecordBuilder
 	rb.Add(SuStr(info.Table))
 	rb.Add(SuStr(info.Table)) // tablename
@@ -184,6 +188,49 @@ func (ts *Tables) ensure() {
 	)
 	sort.Slice(ts.info,
 		func(i, j int) bool { return ts.info[i].Table < ts.info[j].Table })
+}
+
+//-------------------------------------------------------------------
+
+// TablesLookup is used to optimize lookups on tables.
+// It is inserted by Where Transform.
+type TablesLookup struct {
+	Tables
+	table string
+}
+
+func NewTablesLookup(tran QueryTran, table string) *TablesLookup {
+	tl := TablesLookup{table: table}
+	tl.tran = tran
+	return &tl
+}
+
+func (tl *TablesLookup) String() string {
+	return "tables(" + tl.table + ")"
+}
+
+func (*TablesLookup) Nrows() int {
+	return 1
+}
+
+func (tl *TablesLookup) Get(*Thread, Dir) Row {
+	if tl.state != eof {
+		tl.state = eof
+		switch tl.table {
+		case "tables", "columns", "indexes", "views":
+			var rb RecordBuilder
+			rb.Add(SuStr(tl.table))
+			rb.Add(SuStr(tl.table)) // tablename
+			rec := rb.Build()
+			return Row{DbRec{Record: rec}}
+		default:
+			ti := tl.tran.GetInfo(tl.table)
+			if ti != nil {
+				return tl.row(ti)
+			}
+		}
+	}
+	return nil
 }
 
 //-------------------------------------------------------------------
