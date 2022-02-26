@@ -190,10 +190,12 @@ func gin(args ...interface{}) string {
 	return args[0].(string)
 }
 func trace(args ...interface{}) {
+	_ = args // suppress warning when commented out
 	// fmt.Print(strings.Repeat(" ", 4*indent))
 	// fmt.Println(args...)
 }
 func be(arg string) {
+	_ = arg // suppress warning when commented out
 	// fmt.Println(strings.Repeat(" ", 4*indent)+"end", arg)
 	indent--
 }
