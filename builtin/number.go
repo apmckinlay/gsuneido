@@ -6,10 +6,44 @@ package builtin
 import (
 	"math"
 	"strconv"
+	"strings"
 
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/dnum"
 )
+
+var _ = builtin("Number(value)", func(t *Thread, args []Value) Value {
+	val := args[0]
+	if s, ok := val.ToStr(); ok {
+		s := strings.TrimSpace(s)
+		if s == "" {
+			return Zero
+		}
+		if strings.IndexByte(s, ',') >= 0 {
+			s = strings.ReplaceAll(s, ",", "")
+		}
+		return numFromString(s)
+	}
+	if _, ok := val.(SuDnum); ok {
+		return val
+	}
+	if n, ok := SuIntToInt(val); ok {
+		return IntVal(n)
+	}
+	if val == False {
+		return Zero
+	}
+	panic("can't convert " + ErrType(val) + " to number")
+})
+
+func numFromString(s string) Value {
+	defer func() {
+		if e := recover(); e != nil {
+			panic("can't convert string to number")
+		}
+	}()
+	return NumFromString(s)
+}
 
 var minNarrow = dnum.FromInt(MinSuInt)
 var maxNarrow = dnum.FromInt(MaxSuInt)
