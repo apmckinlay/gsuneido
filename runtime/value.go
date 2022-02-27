@@ -125,6 +125,8 @@ func Order(x Value) Ord {
 
 var NilVal Value
 
+// NumFromString converts a string to an SuInt or SuDnum.
+// It will panic for invalid input.
 func NumFromString(s string) Value {
 	if strings.HasPrefix(s, "0x") {
 		if n, err := strconv.ParseUint(s, 0, 32); err == nil {

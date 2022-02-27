@@ -266,6 +266,7 @@ func getDigits(coef uint64) string {
 }
 
 // FromStr parses a numeric string and returns a Dnum representation.
+// It panics for invalid input.
 func FromStr(s string) Dnum {
 	r := &reader{s, 0}
 	sign := getSign(r)
