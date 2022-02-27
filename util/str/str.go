@@ -298,3 +298,14 @@ func RemoveSuffix(s, suffix string) string {
 	}
 	return s
 }
+
+// Cut slices s around the first instance of sep,
+// returning the text before and after sep.
+// If sep does not appear in s, cut returns s, "".
+// Similar to the Go 1.18 strings.Cut (except it uses a string separator)
+func Cut(s string, sep byte) (before, after string) {
+	if i := strings.IndexByte(s, sep); i >= 0 {
+		return s[:i], s[i+1:]
+	}
+	return s, ""
+}
