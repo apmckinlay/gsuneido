@@ -106,7 +106,7 @@ func (tbl *Table) Indexes() [][]string {
 }
 
 func (tbl *Table) Keys() [][]string {
-	return tbl.keys
+	return withoutDupsOrSupersets(tbl.keys)
 }
 
 func (*Table) Ordering() []string {

@@ -75,20 +75,10 @@ func (u *Union) Keys() [][]string {
 	}
 	keys := u.keypairs()
 	for i := range keys {
+		// keypairs must ensure that appending is valid
 		keys[i] = sset.AddUnique(keys[i], u.disjoint)
 	}
-	// exclude any keys that are super-sets of another key
-	var keys2 [][]string
-outer:
-	for i := 0; i < len(keys); i++ {
-		for j := 0; j < len(keys); j++ {
-			if i != j && sset.Subset(keys[i], keys[j]) {
-				continue outer
-			}
-		}
-		keys2 = append(keys2, keys[i])
-	}
-	return keys2
+	return withoutDupsOrSupersets(keys)
 }
 
 func (u *Union) Indexes() [][]string {

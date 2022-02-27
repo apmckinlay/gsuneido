@@ -570,3 +570,51 @@ func ordered(index []string, order []string, fixed []Fixed) bool {
 	}
 	return o >= on
 }
+
+func withoutDupsOrSupersets(keys [][]string) [][]string {
+	om := newOptMod(keys)
+outer:
+	for _, k1 := range keys {
+		for _, k2 := range keys {
+			if len(k1) > len(k2) && sset.Subset(k1, k2) {
+				continue outer // skip/exclude k1 - superset
+			}
+			if !setset.Contains(om.result(), k1) { // exclude duplicates
+				om.add(k1)
+			}
+		}
+	}
+	return om.result()
+}
+
+// optmod is useful when building a new version
+// which is likely to be the same as the original.
+// It avoids constructing a new version unless there are changes,
+// without having to redundantly check in advance.
+type optmod struct {
+	orig [][]string
+	i    int
+	mod  [][]string
+}
+
+func newOptMod(orig [][]string) *optmod {
+	return &optmod{orig: orig}
+}
+
+func (b *optmod) add(x []string) {
+	if b.mod == nil {
+		if b.i < len(b.orig) && sset.Equal(x, b.orig[b.i]) {
+			b.i++ // same as orig
+			return
+		}
+		b.mod = append(b.mod, b.orig[:b.i]...)
+	}
+	b.mod = append(b.mod, x)
+}
+
+func (b *optmod) result() [][]string {
+	if b.mod == nil {
+		return b.orig[:b.i:b.i]
+	}
+	return b.mod
+}

@@ -394,3 +394,36 @@ func TestSingleton(t *testing.T) {
 	assert.This(queryAll2(q)).Is("")
 	assert.This(q.Lookup(nil, bcols, bvals)).Is(nil)
 }
+
+func TestWithoutDupsOrSupersets(t *testing.T) {
+	test := func(keys, expected [][]string) {
+		result := withoutDupsOrSupersets(keys)
+		assert.T(t).This(result).Is(expected)
+	}
+	test([][]string{}, [][]string{})
+	test([][]string{{"a"}}, [][]string{{"a"}})
+	test([][]string{{"a"}, {"b", "c"}}, [][]string{{"a"}, {"b", "c"}})
+	test([][]string{{"a", "b"}, {"b", "a"}}, [][]string{{"a", "b"}})
+	test([][]string{{"a", "b"}, {"b", "a", "c"}}, [][]string{{"a", "b"}})
+}
+
+func BenchmarkNoOptMod(b *testing.B) {
+	orig := [][]string{{"a"}, {"b"}, {"c"}, {"d"}, {"e"}, {"f"}}
+	for i := 0; i < b.N; i++ {
+		result := make([][]string, len(orig))
+		for _, o := range orig {
+			result = append(result, o)
+		}
+	}
+}
+
+func BenchmarkOptMod(b *testing.B) {
+	orig := [][]string{{"a"}, {"b"}, {"c"}, {"d"}, {"e"}, {"f"}}
+	for i := 0; i < b.N; i++ {
+		om := newOptMod(orig)
+		for _, o := range orig {
+			om.add(o)
+		}
+		om.result()
+	}
+}
