@@ -276,6 +276,9 @@ func cmdAdmin(ss *serverSession) {
 
 func cmdAuth(ss *serverSession) {
 	s := ss.GetStr()
+	if _, ok := ss.sc.dbms.(*DbmsUnauth); !ok {
+		panic("already authorized")
+	}
 	result := ss.auth(s)
 	if result {
 		ss.sc.dbms = ss.sc.dbms.(*DbmsUnauth).dbms // remove DbmsUnauth
