@@ -321,6 +321,15 @@ func PackValue(v Value) string {
 	panic("can't pack " + ErrType(v))
 }
 
+// PackSize returns the pack size of the value if it is Packable, else it panics
+func PackSize(v Value) int {
+	if p, ok := v.(Packable); ok {
+		var clock int32
+		return p.PackSize(&clock)
+	}
+	panic("can't pack " + ErrType(v))
+}
+
 // IntVal returns an SuInt if it fits, else a SuDnum
 func IntVal(n int) Value {
 	if MinSuInt <= n && n <= MaxSuInt {

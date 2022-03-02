@@ -7,6 +7,11 @@ import (
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
+var _ = builtin1("PackSize(value)",
+	func(arg Value) Value {
+		return IntVal(PackSize(arg))
+	})
+
 var _ = builtin1("Pack(value)",
 	func(arg Value) Value {
 		return SuStr(PackValue(arg))
