@@ -9,6 +9,7 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/index"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/db19/meta"
+	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/runtime"
 )
 
@@ -108,6 +109,10 @@ func (t testTran) GetView(table string) string {
 		return "cus join task"
 	}
 	return ""
+}
+
+func (t testTran) GetStore() *stor.Stor {
+	return nil
 }
 
 func (t testTran) RangeFrac(table string, iIndex int, org, end string) float64 {

@@ -85,6 +85,25 @@ func (st *SuTran) Lookup(t *Thread, method string) Callable {
 
 //-------------------------------------------------------------------
 
+func (st *SuTran) Asof(val Value) Value {
+	var asof int64
+	switch val {
+	case False:
+		asof = 0
+	case One:
+		asof = +1
+	case MinusOne:
+		asof = -1
+	default:
+		asof = val.(SuDate).UnixMilli()
+	}
+	asof = st.itran.Asof(asof)
+	if asof == 0 {
+		return False
+	}
+	return SuDateFromUnixMilli(asof)
+}
+
 func (st *SuTran) Complete() {
 	if conflict := st.itran.Complete(); conflict != "" {
 		panic("transaction.Complete failed: " + conflict)

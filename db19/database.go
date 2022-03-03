@@ -113,7 +113,7 @@ func OpenDbStor(store *stor.Stor, mode stor.Mode, check bool) (db *Database, err
 		}
 	}()
 	db = &Database{Store: store, mode: mode}
-	state, _ := ReadState(db.Store, size-uint64(stateLen))
+	state := ReadState(db.Store, size-uint64(stateLen))
 	db.state.set(state)
 	if check {
 		if err := db.QuickCheck(); err != nil {

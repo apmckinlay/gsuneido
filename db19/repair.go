@@ -27,12 +27,8 @@ func Repair(dbfile string, err error) (string, error) {
 	defer store.Close()
 	off := store.Size()
 	var state *DbState
-	var t0, t time.Time
 	for {
-		off, state, t = prevState(store, off)
-		if t0.IsZero() {
-			t0 = t
-		}
+		off, state = prevState(store, off)
 		if off == 0 {
 			return "", errors.New("repair failed - no valid states found")
 		}
@@ -40,15 +36,16 @@ func Repair(dbfile string, err error) (string, error) {
 			continue
 		}
 		if ec = checkState(state, ec.Table()); ec == nil {
-			msg := fmt.Sprintln("good state", off, t.Format(dtfmt)) +
+			msg := fmt.Sprintln("good state", off,
+				time.UnixMilli(state.Asof).Format(dtfmt)) +
 				fmt.Sprintln("truncating", store.Size()-(off+uint64(stateLen)))
 			return msg, truncate(dbfile, store, off)
 		}
-		fmt.Println("bad state", off, t.Format(dtfmt), ec)
+		fmt.Println("bad state", off, time.UnixMilli(state.Asof).Format(dtfmt), ec)
 	}
 }
 
-func prevState(store *stor.Stor, off uint64) (off2 uint64, state *DbState, t time.Time) {
+func prevState(store *stor.Stor, off uint64) (off2 uint64, state *DbState) {
 	off2 = store.LastOffset(off, magic1)
 	if off2 == 0 {
 		return
@@ -58,8 +55,8 @@ func prevState(store *stor.Stor, off uint64) (off2 uint64, state *DbState, t tim
 			state = nil
 		}
 	}()
-	state, t = ReadState(store, off2)
-	return off2, state, t
+	state = ReadState(store, off2)
+	return off2, state
 }
 
 func checkState(state *DbState, table string) (ec *ErrCorrupt) {

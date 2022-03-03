@@ -28,6 +28,8 @@ func NewTable(t QueryTran, name string) Query {
 		tbl = &Indexes{}
 	case "views":
 		tbl = &Views{}
+	case "history":
+		tbl = &History{}
 	default:
 		tbl = &Table{name: name}
 	}

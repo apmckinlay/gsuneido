@@ -35,6 +35,7 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/db19/meta"
 	"github.com/apmckinlay/gsuneido/db19/meta/schema"
+	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/setset"
@@ -140,6 +141,7 @@ type QueryTran interface {
 	GetAllSchema() []*meta.Schema
 	GetAllViews() []string
 	GetView(string) string
+	GetStore() *stor.Stor
 	RangeFrac(table string, iIndex int, org, end string) float64
 	Lookup(table string, iIndex int, key string) *runtime.DbRec
 	Output(th *runtime.Thread, table string, rec runtime.Record)

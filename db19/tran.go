@@ -14,6 +14,7 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/db19/meta"
 	"github.com/apmckinlay/gsuneido/db19/meta/schema"
+	"github.com/apmckinlay/gsuneido/db19/stor"
 	rt "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/cksum"
@@ -25,6 +26,8 @@ type tran struct {
 	db    *Database
 	meta  *meta.Meta
 	state tstate
+	asof  int64
+	off   uint64
 }
 
 type tstate byte
@@ -90,6 +93,10 @@ func (t *tran) GetView(name string) string {
 
 func (t *tran) Ended() bool {
 	return t.state != active
+}
+
+func (t *tran) GetStore() *stor.Stor {
+	return t.db.Store
 }
 
 //-------------------------------------------------------------------
@@ -186,6 +193,27 @@ func (t *ReadTran) ReadCount() int {
 
 func (t *ReadTran) WriteCount() int {
 	return 0
+}
+
+func (t *ReadTran) Asof(asof int64) int64 {
+	var state *DbState
+	switch asof {
+	case 0:
+		return t.asof
+	case -1:
+		state = PrevState(t.db.Store, t.off)
+	case 1:
+		state = NextState(t.db.Store, t.off)
+	default:
+		state = StateAsof(t.db.Store, asof)
+	}
+	if state == nil {
+		return 0
+	}
+	t.meta = state.Meta
+	t.asof = state.Asof
+	t.off = state.Off
+	return t.asof
 }
 
 func (t *ReadTran) MakeLess(is *ixkey.Spec) func(x, y uint64) bool {

@@ -20,6 +20,8 @@ import (
 type DbState struct {
 	store *stor.Stor
 	Meta  *meta.Meta
+	Asof  int64  // unix milli time
+	Off   uint64 // offset of this state
 }
 
 type stateHolder struct {
@@ -150,7 +152,7 @@ func writeState(store *stor.Stor, offSchema, offInfo uint64) uint64 {
 	stateOff, buf := store.Alloc(stateLen)
 	copy(buf, magic1)
 	i := len(magic1)
-	t := time.Now().Unix()
+	t := time.Now().UnixMilli()
 	binary.BigEndian.PutUint64(buf[i:], uint64(t))
 	i += dateSize
 	stor.WriteSmallOffset(buf[i:], offSchema)
@@ -165,26 +167,88 @@ func writeState(store *stor.Stor, offSchema, offInfo uint64) uint64 {
 	return stateOff
 }
 
-func ReadState(st *stor.Stor, off uint64) (*DbState, time.Time) {
+func ReadState(st *stor.Stor, off uint64) *DbState {
 	offSchema, offInfo, t := readState(st, off)
-	return &DbState{store: st, Meta: meta.ReadMeta(st, offSchema, offInfo)}, t
+	if t == 0 {
+		panic("bad state")
+	}
+	return &DbState{store: st, Meta: meta.ReadMeta(st, offSchema, offInfo),
+		Asof: t}
 }
 
-func readState(st *stor.Stor, off uint64) (offSchema, offInfo uint64, t time.Time) {
+func readState(st *stor.Stor, off uint64) (offSchema, offInfo uint64, t int64) {
 	buf := st.Data(off)[:stateLen]
 	i := len(magic1)
 	if string(buf[:i]) != magic1 {
-		panic("ReadState bad magic1")
+		return 0, 0, 0
 	}
 	cksum.MustCheck(buf[:magic2at])
 	if string(buf[magic2at:magic2at+len(magic2)]) != magic2 {
-		panic("ReadState bad magic2")
+		return 0, 0, 0
 	}
-	t = time.Unix(int64(binary.BigEndian.Uint64(buf[i:])), 0)
+	t = int64(binary.BigEndian.Uint64(buf[i:]))
 	i += dateSize
 	offSchema = stor.ReadSmallOffset(buf[i:])
 	i += stor.SmallOffsetLen
 	offInfo = stor.ReadSmallOffset(buf[i:])
 	i += stor.SmallOffsetLen
+	if offSchema >= off || offInfo >= off {
+		return 0, 0, 0
+	}
 	return offSchema, offInfo, t
+}
+
+//-------------------------------------------------------------------
+
+// StateAsof returns the state <= asof, or the initial state.
+func StateAsof(store *stor.Stor, asof int64) *DbState {
+	var offSchema, offInfo uint64
+	var t int64
+	off := store.Size()
+	for {
+		if off = store.LastOffset(off, magic1); off == 0 {
+			break
+		}
+		if offSchema, offInfo, t = readState(store, off); t == 0 {
+			continue // invalid
+		}
+		if t <= asof {
+			break
+		}
+	}
+	if t == 0 {
+		panic("no state found")
+	}
+	return &DbState{store: store, Asof: t, Off: off,
+		Meta: meta.ReadMeta(store, offSchema, offInfo)}
+}
+
+func NextState(store *stor.Stor, off uint64) *DbState {
+	for {
+		// +1 so we don't find the same state
+		off = store.FirstOffset(off+1, magic1)
+		if off == 0 {
+			return nil
+		}
+		if offSchema, offInfo, t := readState(store, off); t != 0 {
+			return &DbState{store: store, Asof: t, Off: off,
+				Meta: meta.ReadMeta(store, offSchema, offInfo)}
+		}
+	}
+}
+
+func PrevState(store *stor.Stor, off uint64) *DbState {
+	if off == 0 {
+		off = store.Size()
+	}
+	for {
+		off = store.LastOffset(off, magic1)
+		if off == 0 {
+			return nil
+		}
+		if offSchema, offInfo, t := readState(store, off); t != 0 {
+			return &DbState{store: store, Asof: t, Off: off,
+				Meta: meta.ReadMeta(store, offSchema, offInfo)}
+		}
+	}
 }

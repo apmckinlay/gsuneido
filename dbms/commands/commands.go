@@ -52,5 +52,6 @@ const (
 	Update
 	WriteCount
 	EndSession
+	Asof
 	Eof
 )

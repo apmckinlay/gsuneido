@@ -12,8 +12,19 @@ import (
 
 func TestStateReadWrite(*testing.T) {
 	store := stor.HeapStor(1024)
-	off := writeState(store, 1234, 5678)
+	store.Alloc(500)
+	off := writeState(store, 123, 456)
 	offSchema, offInfo, _ := readState(store, off)
-	assert.This(offSchema).Is(1234)
-	assert.This(offInfo).Is(5678)
+	assert.This(offSchema).Is(123)
+	assert.This(offInfo).Is(456)
 }
+
+// func TestStateAsof(*testing.T) {
+// 	db, err := OpenDatabase("../suneido.db")
+// 	if err != nil {
+// 		panic(err.Error())
+// 	}
+// 	asof := time.Date(2022, 3, 1, 17, 50, 31, 554000000, time.Local)
+// 	state := db.StateAsof(asof.UnixMilli())
+// 	fmt.Println(asof, "=>", time.UnixMilli(state.asof))
+// }

@@ -350,6 +350,10 @@ func (tc *TranClient) Abort() string {
 	return ""
 }
 
+func (tc *TranClient) Asof(int64) int64 {
+	return 0 // jSuneido doesn't support Asof
+}
+
 func (tc *TranClient) Complete() string {
 	tc.ended = true
 	tc.dc.PutCmd(commands.Commit).PutInt(tc.tn).Request()

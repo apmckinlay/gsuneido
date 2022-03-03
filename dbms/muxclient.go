@@ -314,6 +314,12 @@ func (tc *muxTran) Abort() string {
 	return ""
 }
 
+func (tc *muxTran) Asof(asof int64) int64 {
+	tc.PutCmd(commands.Asof).PutInt(tc.tn).PutInt64(asof)
+	tc.Request()
+	return tc.GetInt64()
+}
+
 func (tc *muxTran) Complete() string {
 	tc.ended = true
 	tc.PutCmd(commands.Commit).PutInt(tc.tn)

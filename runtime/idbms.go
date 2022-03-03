@@ -138,6 +138,11 @@ type ITran interface {
 
 	// WriteCount returns the number of writes done by the transaction
 	WriteCount() int
+
+	// Asof sets the date-time for the transaction if asof is non-zero,
+	// and returns the date-time for the transaction,
+	// with the date-times as unix milli
+	Asof(int64) int64
 }
 
 type Dir byte

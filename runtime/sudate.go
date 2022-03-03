@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
+	"time"
 	gotime "time"
 
 	"github.com/apmckinlay/gsuneido/runtime/types"
@@ -221,7 +222,7 @@ func (d SuDate) MinusMs(other SuDate) int64 {
 	if d.date == other.date {
 		return d.timeAsMs() - other.timeAsMs()
 	}
-	return d.unix() - other.unix()
+	return d.UnixMilli() - other.UnixMilli()
 }
 
 func (d SuDate) timeAsMs() int64 {
@@ -229,9 +230,13 @@ func (d SuDate) timeAsMs() int64 {
 		int64(1000)*int64(d.Second()+60*(d.Minute()+60*d.Hour()))
 }
 
-// Time() returns the time in milliseconds since 1 Jan 1970
-func (d SuDate) unix() int64 {
-	return d.toGoTime().UnixNano() / 1000000
+// UnixMilli() returns the time in milliseconds since 1 Jan 1970
+func (d SuDate) UnixMilli() int64 {
+	return d.toGoTime().UnixMilli()
+}
+
+func SuDateFromUnixMilli(t int64) SuDate {
+	return fromGoTime(time.UnixMilli(t))
 }
 
 func (d SuDate) toGoTime() gotime.Time {

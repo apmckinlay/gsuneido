@@ -6,6 +6,7 @@ package query
 import (
 	"sort"
 
+	"github.com/apmckinlay/gsuneido/db19"
 	"github.com/apmckinlay/gsuneido/db19/meta"
 	"github.com/apmckinlay/gsuneido/db19/meta/schema"
 	. "github.com/apmckinlay/gsuneido/runtime"
@@ -237,7 +238,6 @@ func (tl *TablesLookup) Get(*Thread, Dir) Row {
 
 type Columns struct {
 	schemaTable
-	state
 	schema []*meta.Schema
 	si     int
 	ci     int
@@ -363,7 +363,6 @@ func (cs *Columns) ensure() {
 
 type Indexes struct {
 	schemaTable
-	state
 	schema []*meta.Schema
 	si     int
 	ci     int
@@ -479,7 +478,6 @@ func (is *Indexes) ensure() {
 
 type Views struct {
 	schemaTable
-	state
 	views []string
 	i     int
 }
@@ -533,6 +531,7 @@ func (vs *Views) Get(_ *Thread, dir Dir) Row {
 		vs.i -= 2
 	}
 	if vs.i < 0 || len(vs.views) <= vs.i {
+		vs.state = eof
 		return nil
 	}
 	vs.state = within
@@ -562,4 +561,66 @@ func (vs *Views) Swap(i, j int) {
 	j *= 2
 	vs.views[i], vs.views[j] = vs.views[j], vs.views[i]
 	vs.views[i+1], vs.views[j+1] = vs.views[j+1], vs.views[i+1]
+}
+
+//-------------------------------------------------------------------
+
+type History struct {
+	schemaTable
+	off uint64
+}
+
+func (*History) String() string {
+	return "History"
+}
+
+func (his *History) Transform() Query {
+	return his
+}
+
+func (*History) Keys() [][]string {
+	return [][]string{{"asof"}}
+}
+
+var HistoryFields = [][]string{{"asof"}}
+
+func (*History) Columns() []string {
+	return HistoryFields[0]
+}
+
+func (*History) Header() *Header {
+	return NewHeader(HistoryFields, HistoryFields[0])
+}
+
+func (his *History) Nrows() int {
+	return 1000 // ???
+}
+
+func (his *History) Rewind() {
+	his.state = rewound
+}
+
+func (his *History) Get(_ *Thread, dir Dir) Row {
+	if his.state == eof {
+		return nil
+	}
+	if his.state == rewound {
+		his.off = 0
+	}
+	var state *db19.DbState
+	if dir == Next {
+		state = db19.NextState(his.tran.GetStore(), his.off)
+	} else {
+		state = db19.PrevState(his.tran.GetStore(), his.off)
+	}
+	if state == nil {
+		his.state = eof
+		return nil
+	}
+	his.state = within
+	his.off = state.Off
+	var rb RecordBuilder
+	rb.Add(SuDateFromUnixMilli(state.Asof))
+	rec := rb.Build()
+	return Row{DbRec{Record: rec}}
 }

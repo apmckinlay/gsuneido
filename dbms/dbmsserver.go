@@ -294,6 +294,13 @@ func (ss *serverSession) auth(s string) bool {
 	return AuthToken(s)
 }
 
+func cmdAsof(ss *serverSession) {
+	tn := ss.GetInt()
+	asof := ss.GetInt64()
+	tran := ss.tran(tn)
+	ss.PutBool(true).PutInt64(tran.Asof(asof))
+}
+
 func cmdCheck(ss *serverSession) {
 	s := ss.sc.dbms.Check()
 	ss.PutBool(true).PutStr(s)
@@ -724,4 +731,5 @@ var cmds = []command{ // order must match commmands.go
 	cmdUpdate,
 	cmdWriteCount,
 	cmdEndSession,
+	cmdAsof,
 }

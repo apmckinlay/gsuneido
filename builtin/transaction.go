@@ -107,6 +107,9 @@ func init() {
 		"WriteCount": method0(func(this Value) Value {
 			return IntVal(this.(*SuTran).WriteCount())
 		}),
+		"Asof": method1("(asof = false)", func(this, arg Value) Value {
+			return this.(*SuTran).Asof(arg)
+		}),
 	}
 }
 
