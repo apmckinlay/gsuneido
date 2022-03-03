@@ -15,9 +15,10 @@ var BlockBreak = BuiltinSuExcept("block:break")
 var BlockContinue = BuiltinSuExcept("block:continue")
 var BlockReturn = BuiltinSuExcept("block return")
 
-// Invoke sets up a frame to Run a compiled Suneido function
+// invoke sets up a frame to Run a compiled Suneido function
 // The stack must already be in the form required by the function (massaged)
-func (t *Thread) Invoke(fn *SuFunc, this Value) Value {
+// WARNING: invoke does not pop the stack, the caller is responsible for that
+func (t *Thread) invoke(fn *SuFunc, this Value) Value {
 	// reserve stack space for locals
 	for expand := fn.Nlocals - fn.Nparams; expand > 0; expand-- {
 		t.Push(nil)

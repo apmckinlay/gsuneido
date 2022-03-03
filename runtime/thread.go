@@ -142,10 +142,14 @@ func (t *Thread) Swap() {
 	t.stack[t.sp-1], t.stack[t.sp-2] = t.stack[t.sp-2], t.stack[t.sp-1]
 }
 
-// Reset sets sp and fp to 0, only used by tests
+// Reset sets a Thread back to its initial state
 func (t *Thread) Reset() {
 	t.fp = 0
 	t.sp = 0
+	t.Name = ""
+	t.blockReturnFrame = nil
+	t.InHandler = false
+	t.Suneido = nil
 }
 
 // GetState and RestoreState are used by callbacks_windows.go

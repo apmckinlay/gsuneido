@@ -63,5 +63,6 @@ func (ws *Workers) worker(t task) {
 		case <-timer.C:
 			return // idle timeout, worker terminates
 		}
+		th.Reset()
 	}
 }

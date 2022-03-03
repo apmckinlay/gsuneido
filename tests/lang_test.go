@@ -40,7 +40,6 @@ func BenchmarkInt(b *testing.B) {
 		m *= 2
 	}
 	for i := 0; i < m; i++ {
-		th.Push(SuInt(n))
-		th.Invoke(fn, nil)
+		th.Call(fn, SuInt(n))
 	}
 }

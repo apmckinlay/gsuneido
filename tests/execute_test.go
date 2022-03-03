@@ -19,11 +19,11 @@ import (
 )
 
 func TestNaming(t *testing.T) {
-	th := &Thread{}
+	var th Thread
 	test := func(src, expected string) {
 		t.Helper()
-		c := compile.Constant("function () {\n" + src + "\n}").(*SuFunc)
-		result := th.Invoke(c, nil)
+		f := compile.Constant("function () {\n" + src + "\n}").(*SuFunc)
+		result := th.Call(f)
 		assert.T(t).This(result).Is(SuStr(expected))
 	}
 	test(`foo = function(){}; Name(foo)`, "foo")
@@ -46,22 +46,21 @@ func TestNaming(t *testing.T) {
 }
 
 func BenchmarkCat(b *testing.B) {
-	c := compile.Constant(
+	f := compile.Constant(
 		`function ()
 			{
 			s = ''
 			for (i = 0; i < 1000; ++i)
 				s $= "abc"
 			}`).(*SuFunc)
-	th := &Thread{}
+	var th Thread
 	for i := 0; i < b.N; i++ {
-		th.Reset()
-		th.Invoke(c, nil)
+		th.Call(f)
 	}
 }
 
 func BenchmarkJoin(b *testing.B) {
-	c := compile.Constant(
+	f := compile.Constant(
 		`function ()
 			{
 			ob = Object()
@@ -69,24 +68,22 @@ func BenchmarkJoin(b *testing.B) {
 				ob.Add("abc")
 			ob.Join()
 			}`).(*SuFunc)
-	th := &Thread{}
+	var th Thread
 	for i := 0; i < b.N; i++ {
-		th.Reset()
-		th.Invoke(c, nil)
+		th.Call(f)
 	}
 }
 
 func BenchmarkBase(b *testing.B) {
-	c := compile.Constant(
+	f := compile.Constant(
 		`function ()
 			{
 			for (i = 0; i < 1000; ++i)
 				;
 			}`).(*SuFunc)
-	th := &Thread{}
+	var th Thread
 	for i := 0; i < b.N; i++ {
-		th.Reset()
-		th.Invoke(c, nil)
+		th.Call(f)
 	}
 }
 
@@ -153,7 +150,7 @@ func init() {
 
 func pt_execute(args []string, _ []bool) bool {
 	src := "function () {\n" + args[0] + "\n}"
-	th := &Thread{}
+	var th Thread
 	expected := "**notfalse**"
 	if len(args) > 1 {
 		expected = args[1]
@@ -164,7 +161,7 @@ func pt_execute(args []string, _ []bool) bool {
 		expected = "throws " + args[2]
 		e := assert.Catch(func() {
 			fn := compile.Constant(src).(*SuFunc)
-			actual = th.Invoke(fn, nil)
+			actual = th.Call(fn)
 		})
 		if e == nil {
 			success = false
@@ -183,7 +180,7 @@ func pt_execute(args []string, _ []bool) bool {
 		}
 	} else {
 		fn := compile.Constant(src).(*SuFunc)
-		actual = th.Invoke(fn, nil)
+		actual = th.Call(fn)
 		if actual == nil {
 			success = expected == "nil"
 		} else if expected == "**notfalse**" {
@@ -307,10 +304,9 @@ func BenchmarkInterp(b *testing.B) {
 		return sum
 	}`
 	fn := compile.Constant(src).(*SuFunc)
-	th := &Thread{}
+	var th Thread
 	for n := 0; n < b.N; n++ {
-		th.Reset()
-		result := th.Invoke(fn, nil)
+		result := th.Call(fn)
 		if !result.Equal(SuInt(4950)) {
 			panic("wrong result " + result.String())
 		}
@@ -337,8 +333,8 @@ func TestCoverage(t *testing.T) {
 		return x
 		}`).(*SuFunc)
 	fn.StartCoverage(true)
-	th := &Thread{}
-	th.Invoke(fn, nil)
+	var th Thread
+	th.Call(fn)
 	cover := fn.StopCoverage()
 	assert.T(t).This(cover).
 		Is(compile.Constant("#(17: 1, 25: 1, 53: 10, 62: 1)").(*SuObject))
