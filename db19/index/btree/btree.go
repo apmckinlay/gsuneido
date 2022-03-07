@@ -375,7 +375,7 @@ func (bt *btree) fracPos(key string) float32 {
 
 const t = false // set to true to enable tracing
 
-func trace(args ...interface{}) bool {
+func trace(args ...any) bool {
 	fmt.Println(args...)
 	return true
 }

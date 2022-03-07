@@ -146,7 +146,7 @@ func (tbl *Table) SingleTable() bool {
 	return true
 }
 
-func (tbl *Table) optimize(_ Mode, index []string) (Cost, interface{}) {
+func (tbl *Table) optimize(_ Mode, index []string) (Cost, any) {
 	if index == nil {
 		index = tbl.schema.Indexes[0].Columns
 	} else if !tbl.singleton {
@@ -171,7 +171,7 @@ func (tbl *Table) indexFor(order []string) int {
 	return -1 // not found
 }
 
-func (tbl *Table) setApproach(_ []string, approach interface{}, _ QueryTran) {
+func (tbl *Table) setApproach(_ []string, approach any, _ QueryTran) {
 	tbl.setIndex(approach.(tableApproach).index)
 }
 

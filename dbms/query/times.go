@@ -56,7 +56,7 @@ func (t *Times) Transform() Query {
 	return t
 }
 
-func (t *Times) optimize(mode Mode, index []string) (Cost, interface{}) {
+func (t *Times) optimize(mode Mode, index []string) (Cost, any) {
 	cost := Optimize(t.source, mode, index) +
 		t.source.Nrows()*Optimize(t.source2, mode, nil)
 	costRev := Optimize(t.source2, mode, index) +
@@ -67,7 +67,7 @@ func (t *Times) optimize(mode Mode, index []string) (Cost, interface{}) {
 	return costRev, true
 }
 
-func (t *Times) setApproach(index []string, approach interface{}, tran QueryTran) {
+func (t *Times) setApproach(index []string, approach any, tran QueryTran) {
 	if approach.(bool) {
 		t.source, t.source2 = t.source2, t.source
 	}

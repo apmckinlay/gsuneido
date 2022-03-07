@@ -152,14 +152,14 @@ func (ck *Check) Persist() *DbState {
 	return ck.db.GetState()
 }
 
-func (ck *Check) RunExclusive(table string, fn func()) interface{} {
+func (ck *Check) RunExclusive(table string, fn func()) any {
 	if !ck.AddExclusive(table) {
 		return "already exclusive: " + table
 	}
 	return ck.RunEndExclusive(table, fn)
 }
 
-func (ck *Check) RunEndExclusive(table string, fn func()) (err interface{}) {
+func (ck *Check) RunEndExclusive(table string, fn func()) (err any) {
 	defer ck.EndExclusive(table)
 	defer func() {
 		if e := recover(); e != nil {
@@ -485,7 +485,7 @@ func (ck *Check) Stop() { // to satisfy Checker interface
 	ck.db.persist(&execPersistSingle{}) // for tests
 }
 
-func traceln(...interface{}) {
+func traceln(...any) {
 	// fmt.Println(args...) // comment out to disable tracing
 }
 

@@ -84,7 +84,7 @@ func (it *Intersect) Transform() Query {
 	return it
 }
 
-func (it *Intersect) optimize(mode Mode, index []string) (Cost, interface{}) {
+func (it *Intersect) optimize(mode Mode, index []string) (Cost, any) {
 	cost1, key1 := it.cost(it.source, it.source2, mode, index)
 	cost2, key2 := it.cost(it.source2, it.source, mode, index) // reversed
 	cost2 += outOfOrder
@@ -103,7 +103,7 @@ func (*Intersect) cost(source, source2 Query, mode Mode, index []string) (
 	return cost, key
 }
 
-func (it *Intersect) setApproach(index []string, approach interface{},
+func (it *Intersect) setApproach(index []string, approach any,
 	tran QueryTran) {
 	ap := approach.(*intersectApproach)
 	it.keyIndex = ap.keyIndex

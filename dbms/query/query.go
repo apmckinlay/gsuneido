@@ -98,14 +98,14 @@ type Query interface {
 
 	String() string
 
-	cacheAdd(index []string, cost Cost, approach interface{})
+	cacheAdd(index []string, cost Cost, approach any)
 
 	// cacheGet returns the cost and approach associated with an index
 	// or -1 if the index has not been added.
-	cacheGet(index []string) (Cost, interface{})
+	cacheGet(index []string) (Cost, any)
 
-	optimize(mode Mode, index []string) (cost Cost, approach interface{})
-	setApproach(index []string, approach interface{}, tran QueryTran)
+	optimize(mode Mode, index []string) (cost Cost, approach any)
+	setApproach(index []string, approach any, tran QueryTran)
 
 	lookupCost() Cost
 }
@@ -187,12 +187,12 @@ const outOfOrder = 10 // minimal penalty for executing out of order
 const impossible = Cost(math.MaxInt / 64) // allow for adding IMPOSSIBLE's
 
 // gin is used with be e.g. defer be(gin(...))
-func gin(args ...interface{}) string {
+func gin(args ...any) string {
 	trace(args...)
 	indent++
 	return args[0].(string)
 }
-func trace(args ...interface{}) {
+func trace(args ...any) {
 	_ = args // suppress warning when commented out
 	// fmt.Print(strings.Repeat(" ", 4*indent))
 	// fmt.Println(args...)
@@ -216,7 +216,7 @@ func Optimize(q Query, mode Mode, index []string) (cost Cost) {
 }
 
 func optTempIndex(q Query, mode Mode, index []string) (
-	cost Cost, approach interface{}) {
+	cost Cost, approach any) {
 	defer be(gin("Optimize", q, mode, index))
 	defer func() { trace("=>", cost) }()
 	if !set.Subset(q.Columns(), index) {
@@ -246,7 +246,7 @@ func optTempIndex(q Query, mode Mode, index []string) (
 }
 
 type tempIndex struct {
-	approach interface{}
+	approach any
 	index    []string
 }
 
@@ -265,16 +265,16 @@ func tempIndexable(mode Mode) bool {
 	// especially from the key sort added by QueryApply.
 }
 
-func min(cost1 Cost, app1 interface{}, cost2 Cost, app2 interface{}) (
-	Cost, interface{}) {
+func min(cost1 Cost, app1 any, cost2 Cost, app2 any) (
+	Cost, any) {
 	if cost1 <= cost2 {
 		return cost1, app1
 	}
 	return cost2, app2
 }
 
-func min3(cost1 Cost, app1 interface{}, cost2 Cost, app2 interface{},
-	cost3 Cost, app3 interface{}) (Cost, interface{}) {
+func min3(cost1 Cost, app1 any, cost2 Cost, app2 any,
+	cost3 Cost, app3 any) (Cost, any) {
 	cost, app := cost1, app1
 	if cost2 < cost {
 		cost, app = cost2, app2
@@ -359,11 +359,11 @@ func (q1 *Query1) SetTran(t QueryTran) {
 	q1.source.SetTran(t)
 }
 
-func (q1 *Query1) optimize(mode Mode, index []string) (Cost, interface{}) {
+func (q1 *Query1) optimize(mode Mode, index []string) (Cost, any) {
 	return Optimize(q1.source, mode, index), nil
 }
 
-func (q1 *Query1) setApproach(_ []string, _ interface{}, _ QueryTran) {
+func (q1 *Query1) setApproach(_ []string, _ any, _ QueryTran) {
 	panic("shouldn't reach here")
 }
 

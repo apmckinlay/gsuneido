@@ -403,7 +403,7 @@ func (nd node) printTreeNode() {
 
 // print does fmt.Println
 // after converting []byte to string and empty strings to ''
-func print(args ...interface{}) {
+func print(args ...any) {
 	for i, x := range args {
 		switch x := x.(type) {
 		case string:

@@ -187,7 +187,7 @@ func (su *Summarize) Transform() Query {
 	return su
 }
 
-func (su *Summarize) optimize(mode Mode, index []string) (Cost, interface{}) {
+func (su *Summarize) optimize(mode Mode, index []string) (Cost, any) {
 	if _, ok := su.source.(*Table); ok &&
 		len(su.by) == 0 && len(su.ops) == 1 && su.ops[0] == "count" {
 		Optimize(su.source, mode, nil)
@@ -199,7 +199,7 @@ func (su *Summarize) optimize(mode Mode, index []string) (Cost, interface{}) {
 	return min3(seqCost, seqApp, idxCost, idxApp, mapCost, mapApp)
 }
 
-func (su *Summarize) seqCost(mode Mode, index []string) (Cost, interface{}) {
+func (su *Summarize) seqCost(mode Mode, index []string) (Cost, any) {
 	approach := &summarizeApproach{strategy: sumSeq}
 	if len(su.by) == 0 || containsKey(su.by, su.source.Keys()) {
 		if len(su.by) != 0 {
@@ -216,7 +216,7 @@ func (su *Summarize) seqCost(mode Mode, index []string) (Cost, interface{}) {
 	return best.cost, approach
 }
 
-func (su *Summarize) idxCost(Mode) (Cost, interface{}) {
+func (su *Summarize) idxCost(Mode) (Cost, any) {
 	if len(su.by) > 0 || !su.minmax1() {
 		return impossible, nil
 	}
@@ -229,7 +229,7 @@ func (su *Summarize) idxCost(Mode) (Cost, interface{}) {
 	return cost, approach
 }
 
-func (su *Summarize) mapCost(mode Mode, index []string) (Cost, interface{}) {
+func (su *Summarize) mapCost(mode Mode, index []string) (Cost, any) {
 	if index != nil {
 		return impossible, nil
 	}
@@ -239,7 +239,7 @@ func (su *Summarize) mapCost(mode Mode, index []string) (Cost, interface{}) {
 	return cost, approach
 }
 
-func (su *Summarize) setApproach(_ []string, approach interface{}, tran QueryTran) {
+func (su *Summarize) setApproach(_ []string, approach any, tran QueryTran) {
 	su.summarizeApproach = *approach.(*summarizeApproach)
 	su.source = SetApproach(su.source, su.index, tran)
 	switch su.strategy {

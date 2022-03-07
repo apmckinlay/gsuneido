@@ -89,7 +89,7 @@ func NewSuQuery(th *Thread, tran *SuTran, query string, iquery IQuery) *SuQuery 
 
 var _ Value = (*SuQuery)(nil)
 
-func (q *SuQuery) Equal(other interface{}) bool {
+func (q *SuQuery) Equal(other any) bool {
 	return q == other
 }
 
@@ -150,7 +150,7 @@ func NewSuCursor(th *Thread, query string, icursor ICursor) *SuCursor {
 		owner: th, query: query, iqc: icursor}}
 }
 
-func (q *SuCursor) Equal(other interface{}) bool {
+func (q *SuCursor) Equal(other any) bool {
 	return q == other
 }
 

@@ -141,7 +141,7 @@ func (c *SuClass) get2(t *Thread, m string, parents []*SuClass) Value {
 	return nil
 }
 
-func (c *SuClass) Equal(other interface{}) bool {
+func (c *SuClass) Equal(other any) bool {
 	return c == other
 }
 

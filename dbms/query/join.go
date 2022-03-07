@@ -139,7 +139,7 @@ func (jn *Join) Transform() Query {
 	return jn
 }
 
-func (jn *Join) optimize(mode Mode, index []string) (Cost, interface{}) {
+func (jn *Join) optimize(mode Mode, index []string) (Cost, any) {
 	defer be(gin("Join", jn, index))
 	fwd := jn.opt(jn.source, jn.source2, jn.joinType, mode, index)
 	rev := jn.opt(jn.source2, jn.source, jn.joinType.reverse(), mode, index)
@@ -189,7 +189,7 @@ func (jn *Join) opt(src1, src2 Query, joinType joinType,
 	return best
 }
 
-func (jn *Join) setApproach(index []string, approach interface{}, tran QueryTran) {
+func (jn *Join) setApproach(index []string, approach any, tran QueryTran) {
 	ap := approach.(*joinApproach)
 	if ap.reverse {
 		jn.source, jn.source2 = jn.source2, jn.source
@@ -337,12 +337,12 @@ func (lj *LeftJoin) Transform() Query {
 	return lj
 }
 
-func (lj *LeftJoin) optimize(mode Mode, index []string) (Cost, interface{}) {
+func (lj *LeftJoin) optimize(mode Mode, index []string) (Cost, any) {
 	best := lj.opt(lj.source, lj.source2, lj.joinType, mode, index)
 	return best.cost, &joinApproach{index2: best.index}
 }
 
-func (lj *LeftJoin) setApproach(index []string, approach interface{}, tran QueryTran) {
+func (lj *LeftJoin) setApproach(index []string, approach any, tran QueryTran) {
 	ap := approach.(*joinApproach)
 	lj.source = SetApproach(lj.source, index, tran)
 	lj.source2 = SetApproach(lj.source2, ap.index2, tran)

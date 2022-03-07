@@ -129,7 +129,7 @@ func (seq *SuSequence) RangeLen(i int, n int) Value {
 	return seq.instantiate().RangeLen(i, n)
 }
 
-func (seq *SuSequence) Equal(other interface{}) bool {
+func (seq *SuSequence) Equal(other any) bool {
 	x := seq.instantiate()
 	if y, ok := other.(*SuSequence); ok {
 		other = y.instantiate()

@@ -40,7 +40,7 @@ type globals struct {
 	names    []string
 	values   []Value
 	builtins map[Gnum]Value
-	errors   map[Gnum]interface{}
+	errors   map[Gnum]any
 	noDef    map[string]struct{} // used by FindName
 }
 
@@ -50,7 +50,7 @@ var g = globals{
 	names:    []string{""},
 	values:   []Value{nil},
 	builtins: make(map[Gnum]Value, 100),
-	errors:   make(map[Gnum]interface{}),
+	errors:   make(map[Gnum]any),
 	noDef:    make(map[string]struct{}),
 }
 
@@ -219,7 +219,7 @@ func (typeGlobal) FindName(t *Thread, name string) Value {
 }
 
 // Libload requires dependency injection
-var Libload = func(*Thread, string) (Value, interface{}) { return nil, nil }
+var Libload = func(*Thread, string) (Value, any) { return nil, nil }
 
 var gnPrint = Global.Num("Print")
 
@@ -244,7 +244,7 @@ func (typeGlobal) Find(t *Thread, gnum Gnum) (result Value) {
 	g.lock.RUnlock()
 	// NOTE: can't hold lock during Libload
 	// since compile may need to access Global.
-	var e interface{}
+	var e any
 	name := Global.Name(gnum)
 	x, e = Libload(t, name)
 	if e != nil {
@@ -300,7 +300,7 @@ func (typeGlobal) UnloadAll() {
 	for i := range g.values {
 		g.values[i] = nil
 	}
-	g.errors = make(map[Gnum]interface{})
+	g.errors = make(map[Gnum]any)
 	g.noDef = make(map[string]struct{})
 	LibraryOriginals = make(map[string]Value)
 }
@@ -317,7 +317,7 @@ func (typeGlobal) Set(gn Gnum, val Value) {
 	g.lock.Unlock()
 }
 
-func (typeGlobal) SetErr(gn Gnum, e interface{}) {
+func (typeGlobal) SetErr(gn Gnum, e any) {
 	g.lock.Lock()
 	g.errors[gn] = e
 	g.lock.Unlock()

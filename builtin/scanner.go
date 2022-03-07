@@ -25,7 +25,7 @@ var _ = builtin1("Scanner(string)",
 
 var _ Value = (*suScanner)(nil)
 
-func (sc *suScanner) Equal(other interface{}) bool {
+func (sc *suScanner) Equal(other any) bool {
 	return sc == other
 }
 

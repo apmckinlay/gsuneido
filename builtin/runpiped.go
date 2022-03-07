@@ -99,7 +99,7 @@ func (rp *suRunPiped) String() string {
 	return "RunPiped(" + rp.command + ")"
 }
 
-func (rp *suRunPiped) Equal(other interface{}) bool {
+func (rp *suRunPiped) Equal(other any) bool {
 	return rp == other
 }
 

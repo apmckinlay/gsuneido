@@ -8,10 +8,10 @@ package runtime
 
 import "github.com/apmckinlay/gsuneido/builtin/goc"
 
-func Alert(args ...interface{}) {
+func Alert(args ...any) {
 	goc.Alert(args...)
 }
 
-func Fatal(args ...interface{}) {
+func Fatal(args ...any) {
 	goc.Fatal(args...)
 }

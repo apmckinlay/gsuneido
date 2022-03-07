@@ -37,7 +37,7 @@ var _ = builtinRaw("Md5(@args)",
 
 var _ Value = suMd5{}
 
-func (h suMd5) Equal(other interface{}) bool {
+func (h suMd5) Equal(other any) bool {
 	return h == other
 }
 

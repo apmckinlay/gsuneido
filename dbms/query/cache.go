@@ -18,13 +18,13 @@ type cache struct {
 type cacheEntry struct {
 	index    []string
 	cost     Cost
-	approach interface{}
+	approach any
 }
 
 // cacheAdd adds an entry to the cache.
 // It does *not* check if the item already exists
 // because it assumes you previously tried cacheGet.
-func (c *cache) cacheAdd(index []string, cost Cost, approach interface{}) {
+func (c *cache) cacheAdd(index []string, cost Cost, approach any) {
 	assert.Msg("cache cost < 0").That(cost >= 0)
 	c.entries = append(c.entries,
 		cacheEntry{index: index, cost: cost, approach: approach})
@@ -32,7 +32,7 @@ func (c *cache) cacheAdd(index []string, cost Cost, approach interface{}) {
 
 // cacheGet returns the cost and approach associated with an index
 // or -1 if the index as not been added.
-func (c *cache) cacheGet(index []string) (Cost, interface{}) {
+func (c *cache) cacheGet(index []string) (Cost, any) {
 	for i := range c.entries {
 		if slices.Equal(index, c.entries[i].index) {
 			return c.entries[i].cost, c.entries[i].approach

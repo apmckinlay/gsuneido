@@ -49,7 +49,7 @@ var _ = builtin("SocketClient(ipaddress, port, timeout=60, timeoutConnect=0, blo
 		return t.Call(args[4], sc)
 	})
 
-func (sc *suSocketClient) Equal(other interface{}) bool {
+func (sc *suSocketClient) Equal(other any) bool {
 	return sc == other
 }
 

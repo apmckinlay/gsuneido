@@ -202,7 +202,7 @@ func run(src string) {
 	compile.EvalString(mainThread, src)
 }
 
-func printStack(e interface{}) {
+func printStack(e any) {
 	if builtin.InternalError(e) {
 		debug.PrintStack()
 		fmt.Println("---")
@@ -474,7 +474,7 @@ func eval(src string) {
 //-------------------------------------------------------------------
 
 // libload loads a name from the dbms
-func libload(t *Thread, name string) (result Value, e interface{}) {
+func libload(t *Thread, name string) (result Value, e any) {
 	defer func() {
 		if e = recover(); e != nil {
 			// fmt.Println("INFO: error loading", name, e)

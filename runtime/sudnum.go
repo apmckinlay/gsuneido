@@ -51,7 +51,7 @@ func (dn SuDnum) Hash2() uint32 {
 	return dn.Hash()
 }
 
-func (dn SuDnum) Equal(other interface{}) bool {
+func (dn SuDnum) Equal(other any) bool {
 	if d2, ok := other.(SuDnum); ok {
 		return dnum.Equal(dn.Dnum, d2.Dnum)
 	} else if i, ok := SuIntToInt(other); ok {

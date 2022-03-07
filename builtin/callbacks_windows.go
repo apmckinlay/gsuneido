@@ -127,7 +127,7 @@ func call(fn Value, args ...Value) uintptr {
 	return uintptr(ToInt(x))
 }
 
-func handler(e interface{}, state interface{}) {
+func handler(e any, state any) {
 	if UIThread.InHandler {
 		UIThread.PrintStack()
 		if InternalError(e) {

@@ -161,14 +161,14 @@ func (e *Extend) SingleTable() bool {
 	return e.source.SingleTable()
 }
 
-func (e *Extend) optimize(mode Mode, index []string) (Cost, interface{}) {
+func (e *Extend) optimize(mode Mode, index []string) (Cost, any) {
 	if !set.Disjoint(index, e.cols) {
 		return impossible, nil
 	}
 	return Optimize(e.source, mode, index), nil
 }
 
-func (e *Extend) setApproach(index []string, _ interface{}, tran QueryTran) {
+func (e *Extend) setApproach(index []string, _ any, tran QueryTran) {
 	e.source = SetApproach(e.source, index, tran)
 	e.hdr = e.Header() // cache for Get
 	e.ctx.Hdr = e.hdr

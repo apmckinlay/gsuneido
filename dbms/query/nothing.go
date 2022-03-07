@@ -66,11 +66,11 @@ func (no *Nothing) SingleTable() bool {
 func (no *Nothing) SetTran(QueryTran) {
 }
 
-func (no *Nothing) optimize(Mode, []string) (Cost, interface{}) {
+func (no *Nothing) optimize(Mode, []string) (Cost, any) {
 	return 0, nil
 }
 
-func (no *Nothing) setApproach(_ []string, _ interface{}, _ QueryTran) {
+func (no *Nothing) setApproach(_ []string, _ any, _ QueryTran) {
 }
 
 func (no *Nothing) lookupCost() Cost {

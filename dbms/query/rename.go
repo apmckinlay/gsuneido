@@ -133,11 +133,11 @@ func (r *Rename) Transform() Query {
 	return r
 }
 
-func (r *Rename) optimize(mode Mode, index []string) (Cost, interface{}) {
+func (r *Rename) optimize(mode Mode, index []string) (Cost, any) {
 	return Optimize(r.source, mode, slc.Replace(index, r.to, r.from)), nil
 }
 
-func (r *Rename) setApproach(index []string, _ interface{}, tran QueryTran) {
+func (r *Rename) setApproach(index []string, _ any, tran QueryTran) {
 	r.source = SetApproach(r.source, slc.Replace(index, r.to, r.from), tran)
 }
 

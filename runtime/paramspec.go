@@ -117,7 +117,7 @@ func flagsToName(p string, flags Flag) string {
 	return p
 }
 
-func (ps *ParamSpec) Equal(other interface{}) bool {
+func (ps *ParamSpec) Equal(other any) bool {
 	// interface check and double dispatch
 	// to work with anything that embeds ParamSpec
 	ep, ok := other.(eqps)

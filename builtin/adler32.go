@@ -37,7 +37,7 @@ var _ = builtinRaw("Adler32(@args)",
 
 var _ Value = suAdler32{}
 
-func (h suAdler32) Equal(other interface{}) bool {
+func (h suAdler32) Equal(other any) bool {
 	return h == other
 }
 

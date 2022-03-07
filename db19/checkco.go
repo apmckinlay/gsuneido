@@ -11,7 +11,7 @@ import (
 
 // CheckCo is the concurrent, channel based interface to Check
 type CheckCo struct {
-	c       chan interface{}
+	c       chan any
 	allDone chan void
 }
 
@@ -79,7 +79,7 @@ type ckRunEndExcl struct {
 type ckRunExcl struct {
 	table string
 	fn    func()
-	ret   chan interface{}
+	ret   chan any
 }
 
 type ckPersist struct {
@@ -156,14 +156,14 @@ func (ck *CheckCo) EndExclusive(table string) {
 	<-ret
 }
 
-func (ck *CheckCo) RunEndExclusive(table string, fn func()) interface{} {
-	ret := make(chan interface{}, 1)
+func (ck *CheckCo) RunEndExclusive(table string, fn func()) any {
+	ret := make(chan any, 1)
 	ck.c <- &ckRunEndExcl{ckRunExcl{table: table, fn: fn, ret: ret}}
 	return <-ret
 }
 
-func (ck *CheckCo) RunExclusive(table string, fn func()) interface{} {
-	ret := make(chan interface{}, 1)
+func (ck *CheckCo) RunExclusive(table string, fn func()) any {
+	ret := make(chan any, 1)
 	ck.c <- &ckRunExcl{table: table, fn: fn, ret: ret}
 	return <-ret
 }
@@ -184,7 +184,7 @@ func (ck *CheckCo) Transactions() []int {
 
 func StartCheckCo(db *Database, mergeChan chan todo, allDone chan void) *CheckCo {
 	ck := NewCheck(db)
-	c := make(chan interface{}, 4)
+	c := make(chan any, 4)
 	go checker(ck, c, mergeChan)
 	return &CheckCo{c: c, allDone: allDone}
 }
@@ -194,7 +194,7 @@ func (ck *CheckCo) Stop() {
 	<-ck.allDone // wait
 }
 
-func checker(ck *Check, c chan interface{}, mergeChan chan todo) {
+func checker(ck *Check, c chan any, mergeChan chan todo) {
 	defer func() {
 		if e := recover(); e != nil {
 			debug.PrintStack()
@@ -220,7 +220,7 @@ func checker(ck *Check, c chan interface{}, mergeChan chan todo) {
 }
 
 // dispatch runs in the checker goroutine
-func (ck *Check) dispatch(msg interface{}, mergeChan chan todo) {
+func (ck *Check) dispatch(msg any, mergeChan chan todo) {
 	switch msg := msg.(type) {
 	case *ckStart:
 		msg.ret <- ck.StartTran()
@@ -259,7 +259,7 @@ func (ck *Check) dispatch(msg interface{}, mergeChan chan todo) {
 		defer ck.EndExclusive(msg.table)
 		ck.run(msg, mergeChan)
 	case *ckPersist:
-		ret := make(chan interface{})
+		ret := make(chan any)
 		mergeChan <- todo{ret: ret}
 		state := <-ret
 		msg.ret <- state.(*DbState)
@@ -271,7 +271,7 @@ func (ck *Check) dispatch(msg interface{}, mergeChan chan todo) {
 }
 
 func (ck *Check) run(msg *ckRunExcl, mergeChan chan todo) {
-	ret := make(chan interface{})
+	ret := make(chan any)
 	td := todo{fn: msg.fn, ret: ret}
 	mergeChan <- td
 	err := <-ret
@@ -292,8 +292,8 @@ type Checker interface {
 	Transactions() []int
 	AddExclusive(table string) bool
 	EndExclusive(table string)
-	RunEndExclusive(table string, fn func()) interface{}
-	RunExclusive(table string, fn func()) interface{}
+	RunEndExclusive(table string, fn func()) any
+	RunExclusive(table string, fn func()) any
 }
 
 var _ Checker = (*Check)(nil)

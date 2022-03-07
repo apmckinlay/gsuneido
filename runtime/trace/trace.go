@@ -72,14 +72,14 @@ func (w what) String() string {
 	}[w]
 }
 
-func (w what) Println(first interface{}, rest ...interface{}) {
+func (w what) Println(first any, rest ...any) {
 	// kept short in hopes it will be inlined
 	if cur&w != 0 {
 		w.println(first, rest)
 	}
 }
 
-func (w what) println(first interface{}, rest []interface{}) {
+func (w what) println(first any, rest []any) {
 	s := w.String() + fmt.Sprint(first) + " " + fmt.Sprintln(rest...)
 	Print(s)
 }

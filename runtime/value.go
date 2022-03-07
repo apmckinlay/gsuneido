@@ -68,7 +68,7 @@ type Value interface {
 	RangeTo(i int, j int) Value
 	RangeLen(i int, n int) Value
 
-	Equal(other interface{}) bool
+	Equal(other any) bool
 
 	Hash() uint32
 
@@ -361,7 +361,7 @@ func (x *MayLock) IsConcurrent() Value {
 	return SuBool(x.concurrent)
 }
 
-func IsConcurrent(x interface{}) Value {
+func IsConcurrent(x any) Value {
 	if ic, ok := x.(interface{ IsConcurrent() Value }); ok {
 		return ic.IsConcurrent()
 	}

@@ -123,7 +123,7 @@ func CheckOtherIndex(ix *index.Overlay, nrows int, sumPrev uint64, iIndex int) {
 //-------------------------------------------------------------------
 
 type ErrCorrupt struct {
-	err   interface{}
+	err   any
 	table string
 }
 
@@ -145,7 +145,7 @@ func (ec *ErrCorrupt) Table() string {
 	return ec.table
 }
 
-func newErrCorrupt(e interface{}) *ErrCorrupt {
+func newErrCorrupt(e any) *ErrCorrupt {
 	if e == nil {
 		return nil
 	}

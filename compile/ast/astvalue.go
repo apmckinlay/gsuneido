@@ -452,7 +452,7 @@ func (SuAstNode) Type() types.Type {
 	return types.AstNode
 }
 
-func (a SuAstNode) Equal(other interface{}) bool {
+func (a SuAstNode) Equal(other any) bool {
 	return a == other
 }
 

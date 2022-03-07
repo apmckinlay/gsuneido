@@ -82,7 +82,7 @@ func (sco *suCOMObject) GetPut(t *Thread, m Value, v Value,
 	return v
 }
 
-func (sco *suCOMObject) Equal(other interface{}) bool {
+func (sco *suCOMObject) Equal(other any) bool {
 	return sco == other
 }
 

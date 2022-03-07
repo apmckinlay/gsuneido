@@ -64,14 +64,14 @@ func (*schemaTable) Output(*Thread, Record) {
 	panic("shouldn't reach here")
 }
 
-func (*schemaTable) optimize(_ Mode, index []string) (Cost, interface{}) {
+func (*schemaTable) optimize(_ Mode, index []string) (Cost, any) {
 	if index == nil {
 		return 1000, nil
 	}
 	return impossible, nil
 }
 
-func (*schemaTable) setApproach([]string, interface{}, QueryTran) {
+func (*schemaTable) setApproach([]string, any, QueryTran) {
 }
 
 func (st *schemaTable) lookupCost() Cost {

@@ -123,7 +123,7 @@ func (*suFile) Type() types.Type {
 	return types.File
 }
 
-func (sf *suFile) Equal(other interface{}) bool {
+func (sf *suFile) Equal(other any) bool {
 	return sf == other
 }
 

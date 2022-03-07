@@ -253,10 +253,10 @@ func checkIterator(data []string, ov *Overlay) int {
 }
 
 func TestOverIterRandom(*testing.T) {
-	trace := func(args ...interface{}) {
+	trace := func(args ...any) {
 		// fmt.Print(args...)
 	}
-	traceln := func(args ...interface{}) {
+	traceln := func(args ...any) {
 		// fmt.Println(args...)
 	}
 	type val struct {

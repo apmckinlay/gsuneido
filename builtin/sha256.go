@@ -37,7 +37,7 @@ var _ = builtinRaw("Sha256(@args)",
 
 var _ Value = suSha256{}
 
-func (h suSha256) Equal(other interface{}) bool {
+func (h suSha256) Equal(other any) bool {
 	return h == other
 }
 

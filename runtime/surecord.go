@@ -10,9 +10,9 @@ import (
 	"github.com/apmckinlay/gsuneido/runtime/trace"
 	"github.com/apmckinlay/gsuneido/runtime/types"
 	"github.com/apmckinlay/gsuneido/util/assert"
+	"github.com/apmckinlay/gsuneido/util/generic/list"
 	"github.com/apmckinlay/gsuneido/util/pack"
 	"github.com/apmckinlay/gsuneido/util/str"
-	"github.com/apmckinlay/gsuneido/util/generic/list"
 	"golang.org/x/exp/slices"
 )
 
@@ -171,7 +171,7 @@ func (r *SuRecord) Compare(other Value) int {
 	return r.ToObject().Compare(other)
 }
 
-func (r *SuRecord) Equal(other interface{}) bool {
+func (r *SuRecord) Equal(other any) bool {
 	return r.ToObject().Equal(other) //FIXME not symmetrical with SuObject.Equal
 }
 
@@ -697,7 +697,7 @@ func (r *SuRecord) catchRule(t *Thread, rule Value, key string) Value {
 	return t.CallThis(rule, r)
 }
 
-func WrapPanic(e interface{}, suffix string) {
+func WrapPanic(e any, suffix string) {
 	switch e := e.(type) {
 	case *SuExcept:
 		s := string(e.SuStr) + " (" + suffix + ")"
@@ -930,7 +930,7 @@ func (r *SuRecord) ckModify(op string) {
 	}
 }
 
-func (r *SuRecord) trace(args ...interface{}) {
+func (r *SuRecord) trace(args ...any) {
 	// %p is the address of the record
 	trace.Records.Println(fmt.Sprintf("%p ", r), args...)
 }

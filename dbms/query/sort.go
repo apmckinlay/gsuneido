@@ -50,7 +50,7 @@ func (sort *Sort) Transform() Query {
 	return sort
 }
 
-func (sort *Sort) optimize(mode Mode, index []string) (Cost, interface{}) {
+func (sort *Sort) optimize(mode Mode, index []string) (Cost, any) {
 	assert.That(index == nil)
 	src := sort.source
 	cost := Optimize(src, mode, sort.columns) // adds temp index if needed
@@ -77,7 +77,7 @@ func (q1 *Query1) bestOrdered(indexes [][]string, order []string,
 	return best
 }
 
-func (sort *Sort) setApproach(_ []string, approach interface{}, tran QueryTran) {
+func (sort *Sort) setApproach(_ []string, approach any, tran QueryTran) {
 	sort.sortApproach = approach.(sortApproach)
 	sort.source = SetApproach(sort.source, sort.index, tran)
 }

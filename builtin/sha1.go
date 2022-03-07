@@ -37,7 +37,7 @@ var _ = builtinRaw("Sha1(@args)",
 
 var _ Value = suSha1{}
 
-func (h suSha1) Equal(other interface{}) bool {
+func (h suSha1) Equal(other any) bool {
 	return h == other
 }
 

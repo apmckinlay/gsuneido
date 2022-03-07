@@ -100,7 +100,7 @@ func GetCallback(nargs, i int) uintptr {
 	return 0 // unreachable
 }
 
-func Alert(args ...interface{}) {
+func Alert(args ...any) {
 	s := fmt.Sprintln(args...)
 	log.Print("Alert: ", s)
 	if !options.Unattended {
@@ -110,7 +110,7 @@ func Alert(args ...interface{}) {
 
 var fatalOnce sync.Once
 
-func Fatal(args ...interface{}) {
+func Fatal(args ...any) {
 	fatalOnce.Do(func() {
 		s := fmt.Sprintln(args...)
 		log.Print("FATAL: ", s)

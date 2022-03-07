@@ -471,7 +471,7 @@ func TestPtest(t *testing.T) {
 
 /*
 func closeTo(x Dnum) Tester {
-	return func(actual interface{}) string {
+	return func(actual any) string {
 		y := actual.(Dnum)
 		if x.sign == y.sign && x.exp == y.exp &&
 			(x.coef/10) == (y.coef/10) {

@@ -80,7 +80,7 @@ func threadCallClass(t *Thread, args []Value) Value {
 	return nil
 }
 
-func InternalError(e interface{}) bool {
+func InternalError(e any) bool {
 	if _, ok := e.(runtime.Error); ok {
 		return true
 	}

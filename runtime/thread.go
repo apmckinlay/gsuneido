@@ -163,7 +163,7 @@ func (t *Thread) GetState() state {
 	return state{fp: t.fp, sp: t.sp}
 }
 
-func (t *Thread) RestoreState(st interface{}) {
+func (t *Thread) RestoreState(st any) {
 	s := st.(state)
 	t.fp = s.fp
 	t.sp = s.sp

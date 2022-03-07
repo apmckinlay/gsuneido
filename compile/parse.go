@@ -158,12 +158,12 @@ func (p *ParserBase) Next() {
 // Error panics with "syntax Error at " + position
 // It claims to return string so it can be called inside panic
 // (so compiler knows we don't return)
-func (p *ParserBase) Error(args ...interface{}) string {
+func (p *ParserBase) Error(args ...any) string {
 	p.ErrorAt(p.Item.Pos, args...)
 	return ""
 }
 
-func (p *ParserBase) ErrorAt(pos int32, args ...interface{}) string {
+func (p *ParserBase) ErrorAt(pos int32, args ...any) string {
 	panic("syntax error @" + strconv.Itoa(int(pos)) + " " + fmt.Sprint(args...))
 }
 

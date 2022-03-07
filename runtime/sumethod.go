@@ -52,7 +52,7 @@ func (m *SuMethod) String() string {
 }
 
 // Equal returns true if two methods have the same fn and this
-func (m *SuMethod) Equal(other interface{}) bool {
+func (m *SuMethod) Equal(other any) bool {
 	m2, ok := other.(*SuMethod)
 	return ok && *m == *m2
 }

@@ -59,7 +59,7 @@ func (m *Minus) Transform() Query {
 	return m
 }
 
-func (m *Minus) optimize(mode Mode, index []string) (Cost, interface{}) {
+func (m *Minus) optimize(mode Mode, index []string) (Cost, any) {
 	// iterate source and lookups on source2
 	cost := Optimize(m.source, mode, index) +
 		(m.source.Nrows() * m.source2.lookupCost())
@@ -71,7 +71,7 @@ func (m *Minus) optimize(mode Mode, index []string) (Cost, interface{}) {
 	return cost, approach
 }
 
-func (m *Minus) setApproach(index []string, approach interface{}, tran QueryTran) {
+func (m *Minus) setApproach(index []string, approach any, tran QueryTran) {
 	ap := approach.(*minusApproach)
 	m.keyIndex = ap.keyIndex
 	m.source = SetApproach(m.source, index, tran)

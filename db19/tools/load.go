@@ -265,6 +265,6 @@ func ck(err error) {
 	}
 }
 
-func trace(...interface{}) {
+func trace(...any) {
 	// fmt.Println(args...) // comment out to disable tracing
 }

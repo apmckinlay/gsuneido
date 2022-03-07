@@ -44,7 +44,7 @@ func SuInt(n int) *smi {
 }
 
 // SuIntToInt converts to int if its argument is *smi
-func SuIntToInt(x interface{}) (int, bool) {
+func SuIntToInt(x any) (int, bool) {
 	if si, ok := x.(*smi); ok {
 		return si.toInt(), true
 	}
@@ -117,7 +117,7 @@ func (si *smi) Hash2() uint32 {
 	return si.Hash()
 }
 
-func (si *smi) Equal(other interface{}) bool {
+func (si *smi) Equal(other any) bool {
 	if i2, ok := other.(*smi); ok {
 		return si == i2
 	} else if dn, ok := other.(SuDnum); ok {

@@ -23,7 +23,7 @@ func NewSuTran(itran ITran, updatable bool) *SuTran {
 
 var _ Value = (*SuTran)(nil)
 
-func (st *SuTran) Equal(other interface{}) bool {
+func (st *SuTran) Equal(other any) bool {
 	return st == other
 }
 

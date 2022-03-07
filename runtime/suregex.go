@@ -17,7 +17,7 @@ type SuRegex struct {
 
 var _ Value = SuRegex{}
 
-func (rx SuRegex) Equal(other interface{}) bool {
+func (rx SuRegex) Equal(other any) bool {
 	rx2, ok := other.(*SuRegex)
 	return ok && slices.Equal(rx.Pat, rx2.Pat)
 }

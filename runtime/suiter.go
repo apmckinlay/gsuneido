@@ -28,7 +28,7 @@ func (SuIter) Type() types.Type {
 	return types.Iterator
 }
 
-func (it SuIter) Equal(other interface{}) bool {
+func (it SuIter) Equal(other any) bool {
 	return it == other
 }
 

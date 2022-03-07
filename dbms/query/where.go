@@ -389,7 +389,7 @@ func (w *Where) split(q2 *Query2) bool {
 
 // optimize ---------------------------------------------------------
 
-func (w *Where) optimize(mode Mode, index []string) (Cost, interface{}) {
+func (w *Where) optimize(mode Mode, index []string) (Cost, any) {
 	if !w.optInited {
 		w.optInit()
 		if w.conflict {
@@ -525,7 +525,7 @@ func (w *Where) getIdxSel(index []string) *idxSel {
 	return nil
 }
 
-func (w *Where) setApproach(index []string, app interface{}, tran QueryTran) {
+func (w *Where) setApproach(index []string, app any, tran QueryTran) {
 	if w.conflict {
 		return
 	}

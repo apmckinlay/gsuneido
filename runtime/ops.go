@@ -265,7 +265,7 @@ func OpIter(x Value) SuIter {
 	return SuIter{Iter: iterable.Iter()}
 }
 
-func OpCatch(t *Thread, e interface{}, catchPat string) *SuExcept {
+func OpCatch(t *Thread, e any, catchPat string) *SuExcept {
 	se := ToSuExcept(t, e)
 	if catchMatch(string(se.SuStr), catchPat) {
 		return se
@@ -273,7 +273,7 @@ func OpCatch(t *Thread, e interface{}, catchPat string) *SuExcept {
 	panic(se) // propagate panic if not caught
 }
 
-func ToSuExcept(t *Thread, e interface{}) *SuExcept {
+func ToSuExcept(t *Thread, e any) *SuExcept {
 	se, ok := e.(*SuExcept)
 	if !ok {
 		// first catch creates SuExcept with callstack

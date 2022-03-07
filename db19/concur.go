@@ -100,14 +100,14 @@ type todo struct {
 	tables []string
 	meta   *meta.Meta
 	fn     func()
-	ret    chan interface{}
+	ret    chan any
 }
 
 func (td *todo) isZero() bool {
 	return td.tables == nil && td.meta == nil && td.ret == nil
 }
 
-func (td *todo) run() (err interface{}) {
+func (td *todo) run() (err any) {
 	defer func() {
 		if e := recover(); e != nil {
 			err = e

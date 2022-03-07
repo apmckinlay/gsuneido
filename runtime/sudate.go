@@ -714,7 +714,7 @@ func (d SuDate) String() string {
 	return s
 }
 
-func (d SuDate) Equal(other interface{}) bool {
+func (d SuDate) Equal(other any) bool {
 	return d == other
 }
 

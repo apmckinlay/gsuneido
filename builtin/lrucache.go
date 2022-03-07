@@ -184,7 +184,7 @@ func (*suLruCache) Type() types.Type {
 	return types.LruCache
 }
 
-func (slc *suLruCache) Equal(other interface{}) bool {
+func (slc *suLruCache) Equal(other any) bool {
 	return slc == other
 }
 

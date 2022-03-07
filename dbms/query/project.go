@@ -319,7 +319,7 @@ func (p *Project) Updateable() string {
 
 // optimize ---------------------------------------------------------
 
-func (p *Project) optimize(mode Mode, index []string) (Cost, interface{}) {
+func (p *Project) optimize(mode Mode, index []string) (Cost, any) {
 	if p.unique {
 		approach := &projectApproach{strategy: projCopy, index: index}
 		return Optimize(p.source, mode, index), approach
@@ -343,7 +343,7 @@ func (p *Project) hashCost(mode Mode, index []string) Cost {
 	return cost + hashCost
 }
 
-func (p *Project) setApproach(_ []string, approach interface{}, tran QueryTran) {
+func (p *Project) setApproach(_ []string, approach any, tran QueryTran) {
 	p.projectApproach = *approach.(*projectApproach)
 	p.source = SetApproach(p.source, p.index, tran)
 	p.projHdr = p.Header() // cache for Get

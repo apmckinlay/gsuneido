@@ -612,7 +612,7 @@ func (ob *SuObject) hash2() uint32 {
 	return hash
 }
 
-func (ob *SuObject) Equal(other interface{}) bool {
+func (ob *SuObject) Equal(other any) bool {
 	val, ok := other.(Value)
 	return ok && deepEqual(ob, val)
 }

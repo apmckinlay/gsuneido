@@ -144,7 +144,7 @@ func (u *Union) Fixed() []Fixed {
 	return u.fixed
 }
 
-func (u *Union) optimize(mode Mode, index []string) (Cost, interface{}) {
+func (u *Union) optimize(mode Mode, index []string) (Cost, any) {
 	// if there is a required index, use Merge
 	if index != nil {
 		// if not disjoint then index must also be a key
@@ -176,7 +176,7 @@ func (u *Union) optimize(mode Mode, index []string) (Cost, interface{}) {
 	return cost, approach
 }
 
-func (*Union) optMerge(source, source2 Query, mode Mode) (Cost, interface{}) {
+func (*Union) optMerge(source, source2 Query, mode Mode) (Cost, any) {
 	// need key (unique) index to eliminate duplicates
 	keys := set.IntersectFn(source.Keys(), source2.Keys(), set.Equal[string])
 	var bestKey, bestIdx1, bestIdx2 []string
@@ -206,7 +206,7 @@ func (*Union) optMerge(source, source2 Query, mode Mode) (Cost, interface{}) {
 	return bestCost, approach
 }
 
-func (u *Union) optLookup(source, source2 Query, mode Mode) (Cost, interface{}) {
+func (u *Union) optLookup(source, source2 Query, mode Mode) (Cost, any) {
 	var bestKey []string
 	bestCost := impossible
 	for _, key := range source2.Keys() {
@@ -226,7 +226,7 @@ func (u *Union) optLookup(source, source2 Query, mode Mode) (Cost, interface{}) 
 	return bestCost, approach
 }
 
-func (u *Union) setApproach(_ []string, approach interface{}, tran QueryTran) {
+func (u *Union) setApproach(_ []string, approach any, tran QueryTran) {
 	app := approach.(*unionApproach)
 	u.strategy = app.strategy
 	u.keyIndex = app.keyIndex

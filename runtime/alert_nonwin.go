@@ -8,15 +8,16 @@ package runtime
 
 import (
 	"fmt"
-	"github.com/apmckinlay/gsuneido/util/exit"
 	"log"
+
+	"github.com/apmckinlay/gsuneido/util/exit"
 )
 
-func Alert(args ...interface{}) {
+func Alert(args ...any) {
 	fmt.Println(args...)
 }
 
-func Fatal(args ...interface{}) {
+func Fatal(args ...any) {
 	s := fmt.Sprintln(args...)
 	log.Print("FATAL: ", s)
 	exit.Exit(1)

@@ -123,7 +123,7 @@ func (c SuConcat) Hash2() uint32 {
 	return c.Hash()
 }
 
-func (c SuConcat) Equal(other interface{}) bool {
+func (c SuConcat) Equal(other any) bool {
 	// check string first assuming more common than concat
 	if s2, ok := other.(SuStr); ok {
 		// according to benchmark, this doesn't allocate

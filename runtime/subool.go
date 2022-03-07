@@ -13,7 +13,7 @@ import (
 // SuBool is a boolean Value
 type SuBool bool
 
-// NOTE: converting bool/SuBool to interface{} doesn't seem to allocate
+// NOTE: converting bool/SuBool to any doesn't seem to allocate
 // e.g. v Value = SuBool(b)
 
 // Value interface --------------------------------------------------
@@ -82,7 +82,7 @@ func (b SuBool) Hash2() uint32 {
 	return b.Hash()
 }
 
-func (b SuBool) Equal(other interface{}) bool {
+func (b SuBool) Equal(other any) bool {
 	return b == other
 }
 

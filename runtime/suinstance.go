@@ -146,7 +146,7 @@ func (ob *SuInstance) GetPut(t *Thread, m Value, v Value,
 
 // Equal uses deepEqual if both instances have UseDeepEquals,
 // otherwise it uses reference/pointer equality like Same?
-func (ob *SuInstance) Equal(other interface{}) bool {
+func (ob *SuInstance) Equal(other any) bool {
 	ob2, ok := other.(*SuInstance)
 	if !ok || ob.class != ob2.class {
 		return false

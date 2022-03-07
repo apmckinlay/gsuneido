@@ -32,7 +32,7 @@ import (
 
 type assert struct {
 	t   *testing.T
-	msg []interface{}
+	msg []any
 }
 
 // T specifies a *testing.T to use for reporting errors
@@ -42,20 +42,20 @@ func T(t *testing.T) assert {
 
 // Msg adds additional information to print with the error.
 // It can be useful with That/True/False where the error is not very helpful.
-func Msg(args ...interface{}) assert {
+func Msg(args ...any) assert {
 	return assert{msg: args}
 }
 
 // Msg adds additional information to print with the error.
 // It can be useful with That/True/False where the error is not very helpful.
-func (a assert) Msg(args ...interface{}) assert {
+func (a assert) Msg(args ...any) assert {
 	a.msg = args
 	return a
 }
 
 // Msg adds additional information to print with the error.
 // It can be useful with That/True/False where the error is not very helpful.
-func (v value) Msg(args ...interface{}) value {
+func (v value) Msg(args ...any) value {
 	v.assert.msg = args
 	return v
 }
@@ -63,14 +63,14 @@ func (v value) Msg(args ...interface{}) value {
 // Nil gives an error if the value is not nil.
 // It handles nil func/pointer/slice/map/channel using reflect.IsNil
 // For performance critical code, consider using That(value == nil)
-func Nil(v interface{}) {
+func Nil(v any) {
 	assert{}.This(v).Is(nil)
 }
 
 // Nil gives an error if the value is not nil.
 // It handles nil func/pointer/slice/map/channel using reflect.IsNil
 // For performance critical code, consider using That(value == nil)
-func (a assert) Nil(v interface{}) {
+func (a assert) Nil(v any) {
 	if a.t != nil {
 		a.t.Helper()
 	}
@@ -127,19 +127,19 @@ func (a assert) That(cond bool) {
 }
 
 // This sets a value to be compared e.g. with Is or Like
-func This(v interface{}) value {
+func This(v any) value {
 	return value{value: v}
 }
 
 // This sets a value to be compared e.g. with Is or Like.
 // It is usually the actual value and Is gives the expected.
-func (a assert) This(v interface{}) value {
+func (a assert) This(v any) value {
 	return value{assert: a, value: v}
 }
 
 type value struct {
 	assert assert
-	value  interface{}
+	value  any
 }
 
 // Is gives an error if the given expected value is not the same
@@ -148,7 +148,7 @@ type value struct {
 // Compares floats via string forms.
 // Uses an Equal method if available on the expected value.
 // Finally, uses reflect.DeepEqual.
-func (v value) Is(expected interface{}) {
+func (v value) Is(expected any) {
 	if !Is(v.value, expected) {
 		if v.assert.t != nil {
 			v.assert.t.Helper()
@@ -160,7 +160,7 @@ func (v value) Is(expected interface{}) {
 
 // Isnt gives an error if the given expected value is the same
 // as the actual value supplied to This.
-func (v value) Isnt(expected interface{}) {
+func (v value) Isnt(expected any) {
 	if Is(v.value, expected) {
 		if v.assert.t != nil {
 			v.assert.t.Helper()
@@ -169,7 +169,7 @@ func (v value) Isnt(expected interface{}) {
 	}
 }
 
-func Is(actual, expected interface{}) bool {
+func Is(actual, expected any) bool {
 	if isNil(expected) && isNil(actual) {
 		return true
 	}
@@ -185,7 +185,7 @@ func Is(actual, expected interface{}) bool {
 		return true
 	}
 	type equal interface {
-		Equal(interface{}) bool
+		Equal(any) bool
 	}
 	if e, ok := expected.(equal); ok {
 		if e.Equal(actual) {
@@ -197,7 +197,7 @@ func Is(actual, expected interface{}) bool {
 	return false
 }
 
-func isNil(x interface{}) bool {
+func isNil(x any) bool {
 	if x == nil {
 		return true
 	}
@@ -209,7 +209,7 @@ func isNil(x interface{}) bool {
 	return false
 }
 
-func intEqual(x interface{}, y interface{}) bool {
+func intEqual(x any, y any) bool {
 	var x64 int64
 	switch x := x.(type) {
 	case int:
@@ -261,7 +261,7 @@ func intEqual(x interface{}, y interface{}) bool {
 	}
 }
 
-func show(x interface{}) string {
+func show(x any) string {
 	if _, ok := x.(string); ok {
 		return fmt.Sprintf("%#v", x)
 	}
@@ -279,7 +279,7 @@ func show(x interface{}) string {
 // Like compares strings with whitespace standardized.
 // Leading and trailing whitespace is removed,
 // runs of whitespace are converted to a single space.
-func (v value) Like(expected interface{}) {
+func (v value) Like(expected any) {
 	exp := expected.(string)
 	val := v.value.(string)
 	if !like(exp, val) {
@@ -334,7 +334,7 @@ func (v value) Panics(expected string) {
 }
 
 // Catch calls the given function, catching and returning panics
-func Catch(f func()) (result interface{}) {
+func Catch(f func()) (result any) {
 	defer func() {
 		if e := recover(); e != nil {
 			//debug.PrintStack()
@@ -347,7 +347,7 @@ func Catch(f func()) (result interface{}) {
 
 //-------------------------------------------------------------------
 
-func (a assert) fail(args ...interface{}) {
+func (a assert) fail(args ...any) {
 	// fmt.Println("==============================")
 	// debug.PrintStack()
 	if a.t != nil {
