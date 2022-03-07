@@ -10,11 +10,10 @@ import (
 	"strings"
 
 	. "github.com/apmckinlay/gsuneido/runtime"
-	"github.com/apmckinlay/gsuneido/runtime/types"
 )
 
 type suRunPiped struct {
-	CantConvert
+	ValueBase[*suRunPiped]
 	command string
 	cmd     *exec.Cmd
 	w       io.WriteCloser
@@ -96,48 +95,8 @@ func (rp *suRunPiped) close() {
 
 var _ Value = (*suRunPiped)(nil)
 
-func (*suRunPiped) Get(*Thread, Value) Value {
-	panic("RunPiped does not support get")
-}
-
-func (*suRunPiped) Put(*Thread, Value, Value) {
-	panic("RunPiped does not support put")
-}
-
-func (*suRunPiped) GetPut(*Thread, Value, Value, func(x, y Value) Value, bool) Value {
-	panic("RunPiped does not support update")
-}
-
-func (*suRunPiped) RangeTo(int, int) Value {
-	panic("RunPiped does not support range")
-}
-
-func (*suRunPiped) RangeLen(int, int) Value {
-	panic("RunPiped does not support range")
-}
-
-func (*suRunPiped) Hash() uint32 {
-	panic("RunPiped hash not implemented")
-}
-
-func (*suRunPiped) Hash2() uint32 {
-	panic("RunPiped hash not implemented")
-}
-
-func (*suRunPiped) Compare(Value) int {
-	panic("RunPiped compare not implemented")
-}
-
-func (*suRunPiped) Call(*Thread, Value, *ArgSpec) Value {
-	panic("can't call RunPiped")
-}
-
 func (rp *suRunPiped) String() string {
 	return "RunPiped(" + rp.command + ")"
-}
-
-func (*suRunPiped) Type() types.Type {
-	return types.BuiltinClass
 }
 
 func (rp *suRunPiped) Equal(other interface{}) bool {

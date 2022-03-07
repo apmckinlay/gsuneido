@@ -11,10 +11,11 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/meta"
 	"github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util/setset"
+	"github.com/apmckinlay/gsuneido/util/generic/set"
+	"github.com/apmckinlay/gsuneido/util/generic/slc"
 	"github.com/apmckinlay/gsuneido/util/str"
 	"github.com/apmckinlay/gsuneido/util/strs"
-	"github.com/apmckinlay/gsuneido/util/strss"
+	"golang.org/x/exp/slices"
 )
 
 func NewTable(t QueryTran, name string) Query {
@@ -164,7 +165,7 @@ func (tbl *Table) optimize(_ Mode, index []string) (Cost, interface{}) {
 // find an index that satisfies the required order
 func (tbl *Table) indexFor(order []string) int {
 	for i, ix := range tbl.indexes {
-		if strs.HasPrefix(ix, order) {
+		if slc.HasPrefix(ix, order) {
 			return i
 		}
 	}
@@ -180,9 +181,10 @@ func (tbl *Table) setIndex(index []string) {
 		index = tbl.keys[0]
 	}
 	tbl.index = index
-	tbl.iIndex = strss.Index(tbl.indexes, tbl.index)
+	tbl.iIndex = slc.IndexFn(tbl.indexes, tbl.index, slices.Equal[string])
 	assert.Msg("setIndex", tbl.name, index).That(tbl.iIndex >= 0)
-	tbl.indexEncode = len(tbl.index) > 1 || !setset.Contains(tbl.keys, tbl.index)
+	tbl.indexEncode = len(tbl.index) > 1 ||
+		!slc.ContainsFn(tbl.keys, tbl.index, set.Equal[string])
 }
 
 // lookupCost returns the cost of one lookup
@@ -265,7 +267,7 @@ func selKeys(encode bool, dstCols, srcCols, vals []string) (string, string) {
 }
 
 func selGet(col string, cols, vals []string) string {
-	i := strs.Index(cols, col)
+	i := slices.Index(cols, col)
 	assert.Msg("selGet", col, "NOT IN", cols).That(i != -1)
 	return vals[i]
 }
@@ -275,7 +277,7 @@ func selEnd(dstCols, srcCols, vals []string) string {
 	prefix := true
 	data := false
 	for _, col := range dstCols {
-		i := strs.Index(srcCols, col)
+		i := slices.Index(srcCols, col)
 		if i != -1 {
 			assert.Msg("selEnd").That(prefix)
 			enc.Add(vals[i])
@@ -309,7 +311,7 @@ func selOrg(encode bool, dstCols, srcCols, vals []string) string {
 	prefix := true
 	data := false
 	for _, col := range dstCols {
-		i := strs.Index(srcCols, col)
+		i := slices.Index(srcCols, col)
 		if i != -1 {
 			assert.Msg("selOrg").That(prefix)
 			enc.Add(vals[i])

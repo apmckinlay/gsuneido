@@ -10,11 +10,10 @@ import (
 	"crypto/md5"
 
 	. "github.com/apmckinlay/gsuneido/runtime"
-	"github.com/apmckinlay/gsuneido/runtime/types"
 )
 
 type suMd5 struct {
-	CantConvert
+	ValueBase[*suMd5]
 	hash hash.Hash
 }
 
@@ -34,57 +33,9 @@ var _ = builtinRaw("Md5(@args)",
 
 var _ Value = (*suMd5)(nil)
 
-func (*suMd5) Get(*Thread, Value) Value {
-	panic("Md5 does not support get")
-}
-
-func (*suMd5) Put(*Thread, Value, Value) {
-	panic("Md5 does not support put")
-}
-
-func (*suMd5) GetPut(*Thread, Value, Value, func(x, y Value) Value, bool) Value {
-	panic("Md5 does not support update")
-}
-
-func (*suMd5) RangeTo(int, int) Value {
-	panic("Md5 does not support range")
-}
-
-func (*suMd5) RangeLen(int, int) Value {
-	panic("Md5 does not support range")
-}
-
-func (*suMd5) Hash() uint32 {
-	panic("Md5 hash not implemented")
-}
-
-func (*suMd5) Hash2() uint32 {
-	panic("Md5 hash not implemented")
-}
-
-func (*suMd5) Compare(Value) int {
-	panic("Md5 compare not implemented")
-}
-
-func (*suMd5) Call(*Thread, Value, *ArgSpec) Value {
-	panic("can't call Md5")
-}
-
-func (*suMd5) String() string {
-	return "aMd5"
-}
-
-func (*suMd5) Type() types.Type {
-	return types.BuiltinClass
-}
-
 func (sa *suMd5) Equal(other interface{}) bool {
 	sa2, ok := other.(*suMd5)
 	return ok && sa == sa2
-}
-
-func (*suMd5) SetConcurrent() {
-	panic("Md5 can not be shared between threads")
 }
 
 func (*suMd5) Lookup(_ *Thread, method string) Callable {

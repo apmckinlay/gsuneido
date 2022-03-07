@@ -16,16 +16,15 @@ import (
 	"github.com/apmckinlay/gsuneido/builtin/goc"
 	"github.com/apmckinlay/gsuneido/builtin/heap"
 	. "github.com/apmckinlay/gsuneido/runtime"
-	"github.com/apmckinlay/gsuneido/runtime/types"
 )
 
-type suComObject struct {
-	CantConvert
+type suCOMObject struct {
+	ValueBase[*suCOMObject]
 	ptr   uintptr
 	idisp bool // true if IDispatch
 }
 
-var _ Value = (*suComObject)(nil)
+var _ Value = (*suCOMObject)(nil)
 
 var _ = builtin1("COMobject(progid)",
 	func(arg Value) Value {
@@ -33,9 +32,9 @@ var _ = builtin1("COMobject(progid)",
 			ptr := uintptr(n)
 			if idisp := goc.QueryIDispatch(ptr); idisp != 0 {
 				goc.Release(ptr)
-				return &suComObject{ptr: idisp, idisp: true}
+				return &suCOMObject{ptr: idisp, idisp: true}
 			}
-			return &suComObject{ptr: ptr}
+			return &suCOMObject{ptr: ptr}
 		}
 		if s, ok := arg.ToStr(); ok {
 			defer heap.FreeTo(heap.CurSize())
@@ -43,30 +42,28 @@ var _ = builtin1("COMobject(progid)",
 			if idisp == 0 {
 				return False
 			}
-			return &suComObject{ptr: idisp, idisp: true}
+			return &suCOMObject{ptr: idisp, idisp: true}
 		}
 		panic("COMobject requires integer or string")
 	})
 
 var suComObjectMethods = Methods{
 	"Dispatch?": method0(func(this Value) Value {
-		return SuBool(this.(*suComObject).idisp)
+		return SuBool(this.(*suCOMObject).idisp)
 	}),
 	"Release": method0(func(this Value) Value {
-		return IntVal(goc.Release(this.(*suComObject).ptr))
+		return IntVal(goc.Release(this.(*suCOMObject).ptr))
 	}),
 }
 
-var _ Value = (*suComObject)(nil)
-
-func (sco *suComObject) Get(_ *Thread, mem Value) Value {
+func (sco *suCOMObject) Get(_ *Thread, mem Value) Value {
 	if !sco.idisp {
 		panic("COMobject can't get property of IUnknown")
 	}
 	return GetProperty(sco.ptr, ToStr(mem))
 }
 
-func (sco *suComObject) Put(_ *Thread, mem Value, val Value) {
+func (sco *suCOMObject) Put(_ *Thread, mem Value, val Value) {
 	if !sco.idisp {
 		panic("COMobject can't put property of IUnknown")
 	}
@@ -74,7 +71,7 @@ func (sco *suComObject) Put(_ *Thread, mem Value, val Value) {
 
 }
 
-func (sco *suComObject) GetPut(t *Thread, m Value, v Value,
+func (sco *suCOMObject) GetPut(t *Thread, m Value, v Value,
 	op func(x, y Value) Value, retOrig bool) Value {
 	orig := sco.Get(t, m)
 	v = op(orig, v)
@@ -85,48 +82,16 @@ func (sco *suComObject) GetPut(t *Thread, m Value, v Value,
 	return v
 }
 
-func (*suComObject) RangeTo(int, int) Value {
-	panic("COMobject does not support range")
-}
-
-func (*suComObject) RangeLen(int, int) Value {
-	panic("COMobject does not support range")
-}
-
-func (*suComObject) Hash() uint32 {
-	panic("COMobject hash not implemented")
-}
-
-func (*suComObject) Hash2() uint32 {
-	panic("COMobject hash not implemented")
-}
-
-func (sco *suComObject) Equal(other interface{}) bool {
-	sco2, ok := other.(*suComObject)
+func (sco *suCOMObject) Equal(other interface{}) bool {
+	sco2, ok := other.(*suCOMObject)
 	return ok && sco == sco2
 }
 
-func (*suComObject) Compare(Value) int {
-	panic("COMobject compare not implemented")
-}
-
-func (*suComObject) Call(*Thread, Value, *ArgSpec) Value {
-	panic("can't call a COMobject instance")
-}
-
-func (*suComObject) String() string {
-	return "COMobject"
-}
-
-func (*suComObject) Type() types.Type {
-	return types.BuiltinClass
-}
-
-func (*suComObject) SetConcurrent() {
+func (*suCOMObject) SetConcurrent() {
 	// ok since immutable (assuming the COM object is thread safe)
 }
 
-func (sco *suComObject) Lookup(_ *Thread, method string) Callable {
+func (sco *suCOMObject) Lookup(_ *Thread, method string) Callable {
 	if f, ok := suComObjectMethods[method]; ok {
 		return f
 	}
@@ -136,7 +101,7 @@ func (sco *suComObject) Lookup(_ *Thread, method string) Callable {
 		}}
 }
 
-func (sco *suComObject) call(method string, as *ArgSpec, args []Value) Value {
+func (sco *suCOMObject) call(method string, as *ArgSpec, args []Value) Value {
 	if !sco.idisp {
 		panic("COMobject can't call method of IUnknown")
 	}
@@ -234,7 +199,7 @@ func suToVariant(x Value, v *VARIANT) {
 	} else if _, ok := x.ToStr(); ok {
 		v.vt = VT_BSTR
 		v.val = int64(uintptr(stringArg(x))) // C side converts
-	} else if sco, ok := x.(*suComObject); ok {
+	} else if sco, ok := x.(*suCOMObject); ok {
 		if sco.idisp {
 			v.vt = VT_DISPATCH
 		} else {
@@ -293,14 +258,14 @@ func variantToSu(v *VARIANT) Value {
 		result = SuStr(bstrToString(v))
 		VariantClear(v)
 	case VT_DISPATCH:
-		result = &suComObject{ptr: uintptr(v.val), idisp: true}
+		result = &suCOMObject{ptr: uintptr(v.val), idisp: true}
 	case VT_UNKNOWN:
 		iunk := uintptr(v.val)
 		if idisp := goc.QueryIDispatch(iunk); idisp != 0 {
 			goc.Release(iunk)
-			result = &suComObject{ptr: idisp, idisp: true}
+			result = &suCOMObject{ptr: idisp, idisp: true}
 		} else {
-			result = &suComObject{ptr: iunk}
+			result = &suCOMObject{ptr: iunk}
 		}
 	default:
 		panic("COMobject: can't convert to Suneido value")

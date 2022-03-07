@@ -6,8 +6,9 @@ package query
 import (
 	"github.com/apmckinlay/gsuneido/compile/ast"
 	. "github.com/apmckinlay/gsuneido/runtime"
-	"github.com/apmckinlay/gsuneido/util/sset"
+	"github.com/apmckinlay/gsuneido/util/generic/set"
 	"github.com/apmckinlay/gsuneido/util/strs"
+	"golang.org/x/exp/slices"
 )
 
 type Extend struct {
@@ -30,13 +31,13 @@ func NewExtend(src Query, cols []string, exprs []ast.Expr) *Extend {
 }
 
 func (e *Extend) checkDependencies() {
-	avail := sset.Copy(e.source.Columns())
+	avail := slices.Clone(e.source.Columns())
 	for i := range e.cols {
 		if e.exprs[i] != nil {
 			ecols := e.exprs[i].Columns()
-			if !sset.Subset(avail, ecols) {
+			if !set.Subset(avail, ecols) {
 				panic("extend: invalid column(s) in expressions: " +
-					strs.Join(", ", sset.Difference(ecols, avail)))
+					strs.Join(", ", set.Difference(ecols, avail)))
 			}
 		}
 		avail = append(avail, e.cols[i])
@@ -45,14 +46,14 @@ func (e *Extend) checkDependencies() {
 
 func (e *Extend) init() {
 	srcCols := e.source.Columns()
-	if !sset.Disjoint(e.cols, srcCols) {
+	if !set.Disjoint(e.cols, srcCols) {
 		panic("extend: column(s) already exist")
 	}
 	var cols []string
 	for _, expr := range e.exprs {
 		if expr != nil {
 			e.hasExprs = true
-			cols = sset.Union(cols, expr.Columns())
+			cols = set.Union(cols, expr.Columns())
 		}
 	}
 	e.exprCols = cols
@@ -78,7 +79,7 @@ func (e *Extend) String() string {
 }
 
 func (e *Extend) Columns() []string {
-	return sset.Union(e.source.Columns(), e.cols)
+	return set.Union(e.source.Columns(), e.cols)
 }
 
 func (e *Extend) rowSize() int {
@@ -127,7 +128,7 @@ func (e *Extend) needRule(cols []string) bool {
 }
 
 func (e *Extend) needRule2(col string) bool {
-	i := strs.Index(e.cols, col)
+	i := slices.Index(e.cols, col)
 	if i == -1 {
 		return false // fld is not a result of extend
 	}
@@ -161,7 +162,7 @@ func (e *Extend) SingleTable() bool {
 }
 
 func (e *Extend) optimize(mode Mode, index []string) (Cost, interface{}) {
-	if !sset.Disjoint(index, e.cols) {
+	if !set.Disjoint(index, e.cols) {
 		return impossible, nil
 	}
 	return Optimize(e.source, mode, index), nil
@@ -169,7 +170,7 @@ func (e *Extend) optimize(mode Mode, index []string) (Cost, interface{}) {
 
 func (e *Extend) setApproach(index []string, _ interface{}, tran QueryTran) {
 	e.source = SetApproach(e.source, index, tran)
-	e.hdr = e.Header()  // cache for Get
+	e.hdr = e.Header() // cache for Get
 	e.ctx.Hdr = e.hdr
 	e.fixed = e.Fixed() // cache
 }

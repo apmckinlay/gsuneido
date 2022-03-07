@@ -12,7 +12,7 @@ import (
 // the Iter is either built-in e.g. Seq or object.Members,
 // or user defined via Sequence
 type SuSequence struct {
-	CantConvert
+	ValueBase[SuSequence]
 	MayLock
 	// iter is the iterator we're wrapping
 	iter Iter
@@ -151,10 +151,6 @@ func (*SuSequence) Type() types.Type {
 
 func (seq *SuSequence) Compare(other Value) int {
 	return seq.instantiate().Compare(other)
-}
-
-func (*SuSequence) Call(*Thread, Value, *ArgSpec) Value {
-	panic("can't call Object")
 }
 
 // SequenceMethods is initialized by the builtin package

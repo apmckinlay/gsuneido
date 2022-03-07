@@ -13,7 +13,7 @@ Only the first 64 bytes are included if longer.
 */
 package hash
 
-import "github.com/apmckinlay/gsuneido/util/ints"
+import "github.com/apmckinlay/gsuneido/util/generic/ord"
 
 const (
 	offset32 = 2166136261
@@ -22,7 +22,7 @@ const (
 )
 
 func HashString(s string) uint32 {
-	n := ints.Min(len(s), maxlen)
+	n := ord.Min(len(s), maxlen)
 	hash := uint32(offset32)
 	for i := 0; i < n; i++ {
 		hash ^= uint32(s[i])
@@ -32,7 +32,7 @@ func HashString(s string) uint32 {
 }
 
 func HashBytes(bytes []byte) uint32 {
-	n := ints.Min(len(bytes), maxlen)
+	n := ord.Min(len(bytes), maxlen)
 	hash := uint32(offset32)
 	for i := 0; i < n; i++ {
 		hash ^= uint32(bytes[i])

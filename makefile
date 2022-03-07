@@ -1,7 +1,7 @@
 # requires sh on path (e.g. from MinGW)
 BUILT=$(shell date "+%b %e %Y %X")
 
-GO = go
+GO = go1.18rc1
 EXE = gsuneido
 LDFLAGS = -s -w -X 'main.builtDate=${BUILT}'
 GUIFLAGS = $(LDFLAGS)

@@ -9,7 +9,7 @@ import (
 	"strconv"
 
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util/ints"
+	"github.com/apmckinlay/gsuneido/util/generic/ord"
 )
 
 func (t *Thread) Args(ps *ParamSpec, as *ArgSpec) []Value {
@@ -97,7 +97,7 @@ func (t *Thread) massage(ps *ParamSpec, as *ArgSpec, args []Value) {
 		if ob.ListSize()-each > int(ps.Nparams) {
 			panic("too many arguments")
 		}
-		for i := 0; i < ints.Min(int(ps.Nparams), ob.ListSize()-each); i++ {
+		for i := 0; i < ord.Min(int(ps.Nparams), ob.ListSize()-each); i++ {
 			args[i] = ob.ListGet(i + each)
 		}
 		// named members may overwrite unnamed (same as when passed individually)

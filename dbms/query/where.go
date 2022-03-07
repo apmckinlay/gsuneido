@@ -15,10 +15,11 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util/ints"
-	"github.com/apmckinlay/gsuneido/util/sset"
+	"github.com/apmckinlay/gsuneido/util/generic/ord"
+	"github.com/apmckinlay/gsuneido/util/generic/set"
+	"github.com/apmckinlay/gsuneido/util/generic/slc"
 	"github.com/apmckinlay/gsuneido/util/strs"
-	"github.com/apmckinlay/gsuneido/util/strss"
+	"golang.org/x/exp/slices"
 )
 
 type Where struct {
@@ -59,9 +60,9 @@ type whereApproach struct {
 }
 
 func NewWhere(src Query, expr ast.Expr, t QueryTran) *Where {
-	if !sset.Subset(src.Columns(), expr.Columns()) {
+	if !set.Subset(src.Columns(), expr.Columns()) {
 		panic("where: nonexistent columns: " + strs.Join(", ",
-			sset.Difference(expr.Columns(), src.Columns())))
+			set.Difference(expr.Columns(), src.Columns())))
 	}
 	if nary, ok := expr.(*ast.Nary); !ok || nary.Tok != tok.And {
 		expr = &ast.Nary{Tok: tok.And, Exprs: []ast.Expr{expr}}
@@ -217,7 +218,7 @@ func (w *Where) Transform() Query {
 		cols1 := q.source.Columns()
 		var src1, rest []ast.Expr
 		for _, e := range w.expr.Exprs {
-			if sset.Subset(cols1, e.Columns()) {
+			if set.Subset(cols1, e.Columns()) {
 				src1 = append(src1, e)
 			} else {
 				rest = append(rest, e)
@@ -261,7 +262,7 @@ func (w *Where) Transform() Query {
 		cols1 := q.source.Columns()
 		var common, src1 []ast.Expr
 		for _, e := range w.expr.Exprs {
-			if sset.Subset(cols1, e.Columns()) {
+			if set.Subset(cols1, e.Columns()) {
 				src1 = append(src1, e)
 			} else {
 				common = append(common, e)
@@ -323,9 +324,9 @@ func (w *Where) lookup1() (string, runtime.Value) {
 func (w *Where) leftJoinToJoin() *LeftJoin {
 	if lj, ok := w.source.(*LeftJoin); ok {
 		cols := lj.source2.Header().GetFields()
-		cols = sset.Difference(cols, lj.by)
+		cols = set.Difference(cols, lj.by)
 		for _, e := range w.expr.Exprs {
-			if sset.Subset(cols, e.Columns()) && ast.CantBeEmpty(e, cols) {
+			if set.Subset(cols, e.Columns()) && ast.CantBeEmpty(e, cols) {
 				return lj
 			}
 		}
@@ -336,7 +337,7 @@ func (w *Where) leftJoinToJoin() *LeftJoin {
 func (w *Where) project(q Query) *ast.Nary {
 	srcCols := q.Columns()
 	exprCols := w.expr.Columns()
-	missing := sset.Difference(exprCols, srcCols)
+	missing := set.Difference(exprCols, srcCols)
 	expr := replaceExpr(w.expr, missing, nEmpty(len(missing)))
 	if nary, ok := expr.(*ast.Nary); !ok || nary.Tok != tok.And {
 		expr = &ast.Nary{Tok: tok.And, Exprs: []ast.Expr{expr}}
@@ -360,11 +361,11 @@ func (w *Where) split(q2 *Query2) bool {
 	var common, src1, src2 []ast.Expr
 	for _, e := range w.expr.Exprs {
 		used := false
-		if sset.Subset(cols1, e.Columns()) {
+		if set.Subset(cols1, e.Columns()) {
 			src1 = append(src1, e)
 			used = true
 		}
-		if sset.Subset(cols2, (e.Columns())) {
+		if set.Subset(cols2, (e.Columns())) {
 			src2 = append(src2, e)
 			used = true
 		}
@@ -517,7 +518,7 @@ func (w *Where) bestIndex(order []string) (Cost, []string) {
 func (w *Where) getIdxSel(index []string) *idxSel {
 	for i := range w.idxSels {
 		is := &w.idxSels[i]
-		if strs.Equal(index, is.index) {
+		if slices.Equal(index, is.index) {
 			return is
 		}
 	}
@@ -646,7 +647,7 @@ func (f *filter) andWith(f2 filter) {
 			f.end = f2.end
 		}
 	} else if !f.isRange() && !f2.isRange() {
-		f.vals = sset.Intersect(f.vals, f2.vals)
+		f.vals = set.Intersect(f.vals, f2.vals)
 		f.org, f.end = limit{}, limit{}
 	} else { // set & range => set
 		if f.isRange() {
@@ -676,7 +677,7 @@ var limitMax = limit{val: ixkey.Max}
 func cmp(x, y limit) int {
 	cmp := strings.Compare(x.val, y.val)
 	if cmp == 0 {
-		cmp = ints.Compare(x.inc, y.inc)
+		cmp = ord.Compare(x.inc, y.inc)
 	}
 	return cmp
 }
@@ -937,7 +938,7 @@ outer:
 }
 
 func (w *Where) idxFrac(idx []string, ptrngs []pointRange) float64 {
-	iIndex := strss.Index(w.tbl.indexes, idx)
+	iIndex := slc.IndexFn(w.tbl.indexes, idx, slices.Equal[string])
 	if iIndex < 0 {
 		panic("index not found")
 	}
@@ -1084,8 +1085,8 @@ func (w *Where) Select(cols, vals []string) {
 		return
 	}
 
-	cols = strs.Cow(cols)
-	vals = strs.Cow(vals)
+	cols = slices.Clip(cols)
+	vals = slices.Clip(vals)
 	for _, fix := range w.Fixed() {
 		if len(fix.values) == 1 {
 			cols = append(cols, fix.col)

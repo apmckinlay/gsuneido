@@ -5,9 +5,9 @@ package query
 
 import (
 	"github.com/apmckinlay/gsuneido/runtime"
-	"github.com/apmckinlay/gsuneido/util/setord"
-	"github.com/apmckinlay/gsuneido/util/sset"
+	"github.com/apmckinlay/gsuneido/util/generic/set"
 	"github.com/apmckinlay/gsuneido/util/strs"
+	"golang.org/x/exp/slices"
 )
 
 type Times struct {
@@ -17,9 +17,9 @@ type Times struct {
 }
 
 func NewTimes(src, src2 Query) *Times {
-	if !sset.Disjoint(src.Columns(), src2.Columns()) {
+	if !set.Disjoint(src.Columns(), src2.Columns()) {
 		panic("times: common columns not allowed: " + strs.Join(", ",
-			sset.Intersect(src.Columns(), src2.Columns())))
+			set.Intersect(src.Columns(), src2.Columns())))
 	}
 	return &Times{Query2: Query2{Query1: Query1{source: src}, source2: src2},
 		rewound: true}
@@ -30,7 +30,7 @@ func (t *Times) String() string {
 }
 
 func (t *Times) Columns() []string {
-	return sset.Union(t.source.Columns(), t.source2.Columns())
+	return set.Union(t.source.Columns(), t.source2.Columns())
 }
 
 func (t *Times) Keys() [][]string {
@@ -40,7 +40,7 @@ func (t *Times) Keys() [][]string {
 }
 
 func (t *Times) Indexes() [][]string {
-	return setord.Union(t.source.Indexes(), t.source2.Indexes())
+	return set.UnionFn(t.source.Indexes(), t.source2.Indexes(), slices.Equal[string])
 }
 
 func (t *Times) Transform() Query {

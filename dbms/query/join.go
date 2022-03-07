@@ -5,12 +5,11 @@ package query
 
 import (
 	. "github.com/apmckinlay/gsuneido/runtime"
-	"github.com/apmckinlay/gsuneido/util/ints"
-	"github.com/apmckinlay/gsuneido/util/setord"
-	"github.com/apmckinlay/gsuneido/util/setset"
-	"github.com/apmckinlay/gsuneido/util/sset"
+	"github.com/apmckinlay/gsuneido/util/generic/ord"
+	"github.com/apmckinlay/gsuneido/util/generic/set"
 	"github.com/apmckinlay/gsuneido/util/str"
 	"github.com/apmckinlay/gsuneido/util/strs"
+	"golang.org/x/exp/slices"
 )
 
 type Join struct {
@@ -55,13 +54,13 @@ func (jt joinType) String() string {
 }
 
 func NewJoin(src, src2 Query, by []string) *Join {
-	b := sset.Intersect(src.Columns(), src2.Columns())
+	b := set.Intersect(src.Columns(), src2.Columns())
 	if len(b) == 0 {
 		panic("join: common columns required")
 	}
 	if by == nil {
 		by = b
-	} else if !sset.Equal(by, b) {
+	} else if !set.Equal(by, b) {
 		panic("join: by does not match common columns")
 	}
 	jn := &Join{Query2: Query2{Query1: Query1{source: src}, source2: src2}, by: by}
@@ -93,19 +92,19 @@ func (jn *Join) string(op string) string {
 }
 
 func (jn *Join) Columns() []string {
-	return sset.Union(jn.source.Columns(), jn.source2.Columns())
+	return set.Union(jn.source.Columns(), jn.source2.Columns())
 }
 
 func (jn *Join) Indexes() [][]string {
 	// can really only provide source.indexes() but optimize may swap.
 	// optimize will return impossible for source2 indexes.
-	return setord.Union(jn.source.Indexes(), jn.source2.Indexes())
+	return set.UnionFn(jn.source.Indexes(), jn.source2.Indexes(), slices.Equal[string])
 }
 
 func (jn *Join) Keys() [][]string {
 	switch jn.joinType {
 	case one_one:
-		return setset.Union(jn.source.Keys(), jn.source2.Keys())
+		return set.UnionFn(jn.source.Keys(), jn.source2.Keys(), set.Equal[string])
 	case one_n:
 		return jn.source2.Keys()
 	case n_one:
@@ -209,7 +208,7 @@ func (jn *Join) Nrows() int {
 	var nrows int
 	switch jn.joinType {
 	case one_one:
-		nrows = ints.Min(nrows1, nrows2)
+		nrows = ord.Min(nrows1, nrows2)
 	case n_one:
 		nrows = nrows1
 	case one_n:

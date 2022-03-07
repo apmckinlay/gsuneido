@@ -9,13 +9,16 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/meta/schema"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
+	"github.com/apmckinlay/gsuneido/util/generic/hamt"
+	"github.com/apmckinlay/gsuneido/util/generic/set"
 	"github.com/apmckinlay/gsuneido/util/hash"
-	"github.com/apmckinlay/gsuneido/util/sset"
-	"github.com/apmckinlay/gsuneido/util/strs"
+	"golang.org/x/exp/slices"
 )
 
 // Note: views are stored with the name in Schema.Table prefixed by '='
 // and the definition in Schema.Columns[0]
+
+type SchemaHamt = hamt.Hamt[string, *Schema]
 
 type Schema struct {
 	schema.Schema
@@ -27,25 +30,23 @@ type Schema struct {
 	created int
 }
 
-//go:generate genny -in ../../genny/hamt/hamt.go -out schemahamt.go -pkg meta gen "Item=*Schema KeyType=string"
-
-func SchemaKey(ti *Schema) string {
-	return ti.Table
+func (ts *Schema) Key() string {
+	return ts.Table
 }
 
-func SchemaHash(key string) uint32 {
+func (*Schema) Hash(key string) uint32 {
 	return hash.HashString(key)
 }
 
-func (ht SchemaHamt) MustGet(key string) *Schema {
-	it, ok := ht.Get(key)
-	if !ok || it.isTomb() {
-		panic("schema MustGet failed for " + key)
-	}
-	return it
+func (ts *Schema) LastMod() int {
+	return ts.lastMod
 }
 
-func (ts *Schema) storSize() int {
+func (ts *Schema) SetLastMod(mod int) {
+	ts.lastMod = mod
+}
+
+func (ts *Schema) StorSize() int {
 	size := stor.LenStr(ts.Table) +
 		stor.LenStrs(ts.Columns) + stor.LenStrs(ts.Derived) + 1
 	for i := range ts.Indexes {
@@ -96,13 +97,13 @@ func (ts *Schema) Ixspecs(idxs []schema.Index) {
 		ix := &idxs[i]
 		switch ix.Mode {
 		case 'u':
-			cols := sset.Difference(key, ix.Columns)
+			cols := set.Difference(key, ix.Columns)
 			ix.Ixspec.Fields2 = ts.colsToFlds(cols)
 			fallthrough
 		case 'k':
 			ix.Ixspec.Fields = ts.colsToFlds(ix.Columns)
 		case 'i':
-			cols := sset.Union(ix.Columns, key)
+			cols := set.Union(ix.Columns, key)
 			ix.Ixspec.Fields = ts.colsToFlds(cols)
 		default:
 			panic("Ixspecs invalid mode")
@@ -125,9 +126,9 @@ func (ts *Schema) firstShortestKey() []string {
 func (ts *Schema) colsToFlds(cols []string) []int {
 	flds := make([]int, len(cols))
 	for i, col := range cols {
-		c := strs.Index(ts.Columns, col)
+		c := slices.Index(ts.Columns, col)
 		if strings.HasSuffix(col, "_lower!") {
-			if c = strs.Index(ts.Columns, col[:len(col)-7]); c != -1 {
+			if c = slices.Index(ts.Columns, col[:len(col)-7]); c != -1 {
 				c = -c - 2
 			}
 		}
@@ -158,15 +159,15 @@ func (m *Meta) newSchemaView(name, def string) *Schema {
 	return &Schema{Schema: schema.Schema{Table: "=" + name, Columns: []string{def}}}
 }
 
-func (ts *Schema) isTomb() bool {
+func (ts *Schema) IsTomb() bool {
 	return ts.Columns == nil && ts.Indexes == nil
 }
 
 func (ts *Schema) isView() bool {
-	return !ts.isTomb() && ts.Table[0] == '='
+	return !ts.IsTomb() && ts.Table[0] == '='
 }
 
 // isTable returns true if not a view and not a tombstone
 func (ts *Schema) isTable() bool {
-	return !ts.isTomb() && !ts.isView()
+	return !ts.IsTomb() && !ts.isView()
 }

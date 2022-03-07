@@ -213,13 +213,12 @@ func ErrlogDir() string {
 	const CSIDL_APPDATA = 0x001a
 	const CSIDL_FLAG_CREATE = 0x8000
 	var buf [MAX_PATH]byte
-	rtn, _, _ := syscall.Syscall6(shGetFolderPath, 5,
+	rtn, _, _ := syscall.SyscallN(shGetFolderPath,
 		0,
 		CSIDL_APPDATA|CSIDL_FLAG_CREATE,
 		0,
 		0,
-		uintptr(unsafe.Pointer(&buf[0])),
-		0)
+		uintptr(unsafe.Pointer(&buf[0])))
 	if rtn < 0 {
 		return "" // failed
 	}

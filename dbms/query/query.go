@@ -38,8 +38,9 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util/setset"
-	"github.com/apmckinlay/gsuneido/util/sset"
+	"github.com/apmckinlay/gsuneido/util/generic/set"
+	"github.com/apmckinlay/gsuneido/util/generic/slc"
+	"golang.org/x/exp/slices"
 )
 
 type Query interface {
@@ -218,7 +219,7 @@ func optTempIndex(q Query, mode Mode, index []string) (
 	cost Cost, approach interface{}) {
 	defer be(gin("Optimize", q, mode, index))
 	defer func() { trace("=>", cost) }()
-	if !sset.Subset(q.Columns(), index) {
+	if !set.Subset(q.Columns(), index) {
 		return impossible, nil
 	}
 	if index == nil || !tempIndexable(mode) {
@@ -438,7 +439,7 @@ func (q2 *Query2) keypairs() [][]string {
 	var keys [][]string
 	for _, k1 := range q2.source.Keys() {
 		for _, k2 := range q2.source2.Keys() {
-			keys = setset.AddUnique(keys, sset.Union(k1, k2))
+			keys = set.AddUniqueFn(keys, set.Union(k1, k2), set.Equal[string])
 		}
 	}
 	assert.That(len(keys) != 0)
@@ -537,7 +538,7 @@ func grouped(index []string, cols []string, nColsUnfixed int, fixed []Fixed) boo
 		if isFixed(fixed, col) {
 			continue
 		}
-		if !sset.Contains(cols, col) {
+		if !slices.Contains(cols, col) {
 			return false
 		}
 		n++
@@ -578,10 +579,10 @@ func withoutDupsOrSupersets(keys [][]string) [][]string {
 outer:
 	for _, k1 := range keys {
 		for _, k2 := range keys {
-			if len(k1) > len(k2) && sset.Subset(k1, k2) {
+			if len(k1) > len(k2) && set.Subset(k1, k2) {
 				continue outer // skip/exclude k1 - superset
 			}
-			if !setset.Contains(om.result(), k1) { // exclude duplicates
+			if !slc.ContainsFn(om.result(), k1, set.Equal[string]) { // exclude duplicates
 				om.add(k1)
 			}
 		}
@@ -605,7 +606,7 @@ func newOptMod(orig [][]string) *optmod {
 
 func (b *optmod) add(x []string) {
 	if b.mod == nil {
-		if b.i < len(b.orig) && sset.Equal(x, b.orig[b.i]) {
+		if b.i < len(b.orig) && set.Equal(x, b.orig[b.i]) {
 			b.i++ // same as orig
 			return
 		}

@@ -16,9 +16,9 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	rt "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/cksum"
+	"github.com/apmckinlay/gsuneido/util/generic/set"
 	"github.com/apmckinlay/gsuneido/util/hacks"
 	"github.com/apmckinlay/gsuneido/util/sortlist"
-	"github.com/apmckinlay/gsuneido/util/sset"
 )
 
 type Database struct {
@@ -250,7 +250,7 @@ func (db *Database) Ensure(sch *schema.Schema) {
 
 // schemaSubset returns whether the table (ts) already has the ensure schema
 func schemaSubset(schema *schema.Schema, ts *meta.Schema) bool {
-	if !sset.Subset(ts.Columns, schema.Columns) {
+	if !set.Subset(ts.Columns, schema.Columns) {
 		return false
 	}
 	for i := range schema.Indexes {
@@ -312,7 +312,7 @@ func (db *Database) buildIndexes(table string,
 	}
 
 	ts := *rt.meta.GetRoSchema(table) // copy
-	ts.Columns = sset.Union(ts.Columns, newCols)
+	ts.Columns = set.Union(ts.Columns, newCols)
 	schema.CheckIndexes(ts.Table, ts.Columns, newIdxs)
 	ts.Ixspecs(newIdxs)
 	nlayers := ti.Indexes[0].Nlayers()

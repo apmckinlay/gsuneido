@@ -76,12 +76,11 @@ var _ = builtin2("GetLocaleInfo(a,b)",
 	func(a, b Value) Value {
 		const bufsize = 255
 		buf := make([]byte, bufsize+1)
-		rtn, _, _ := syscall.Syscall6(getLocaleInfo, 4,
+		rtn, _, _ := syscall.SyscallN(getLocaleInfo,
 			intArg(a),
 			intArg(b),
 			uintptr(unsafe.Pointer(&buf[0])),
-			uintptr(bufsize),
-			0, 0)
+			uintptr(bufsize))
 		return SuStr(string(buf[:rtn-1]))
 	})
 
@@ -381,15 +380,14 @@ var _ = builtin7("CreateFile(lpFileName, dwDesiredAccess, dwShareMode,"+
 	"hTemplateFile)",
 	func(a, b, c, d, e, f, g Value) Value {
 		name := zbuf(a)
-		rtn, _, _ := syscall.Syscall9(createFile, 7,
+		rtn, _, _ := syscall.SyscallN(createFile,
 			uintptr(unsafe.Pointer(&name[0])),
 			intArg(b),
 			intArg(c),
 			intArg(d),
 			intArg(e),
 			intArg(f),
-			intArg(g),
-			0, 0)
+			intArg(g))
 		return intRet(rtn)
 	})
 
@@ -422,12 +420,11 @@ func WriteFile(f Value, buf unsafe.Pointer, size Value, written Value) Value {
 		return False
 	}
 	var w int32
-	rtn, _, _ := syscall.Syscall6(writeFile, 5,
+	rtn, _, _ := syscall.SyscallN(writeFile,
 		intArg(f),
 		uintptr(buf),
 		uintptr(n),
 		uintptr(unsafe.Pointer(&w)),
-		0,
 		0)
 	written.Put(nil, SuStr("x"), IntVal(int(w)))
 	return boolRet(rtn)
@@ -443,11 +440,10 @@ var _ = builtin1("GetVolumeName(vol = 'c:\\\\')",
 		vol := zbuf(a)
 		const bufsize = 255
 		buf := make([]byte, bufsize+1)
-		rtn, _, _ := syscall.Syscall9(getVolumeInformation, 8,
+		rtn, _, _ := syscall.SyscallN(getVolumeInformation,
 			uintptr(unsafe.Pointer(&vol[0])),
 			uintptr(unsafe.Pointer(&buf[0])),
 			uintptr(bufsize),
-			0,
 			0,
 			0,
 			0,
@@ -500,23 +496,21 @@ var _ = builtin0("OSVersion()", func() Value {
 		return False
 	}
 	buf := make([]byte, size)
-	rtn, _, _ := syscall.Syscall6(getFileVersionInfo, 4,
+	rtn, _, _ := syscall.SyscallN(getFileVersionInfo,
 		uintptr(unsafe.Pointer(&verFile[0])),
 		0,
 		size,
-		uintptr(unsafe.Pointer(&buf[0])),
-		0, 0)
+		uintptr(unsafe.Pointer(&buf[0])))
 	if rtn == 0 {
 		return False
 	}
 	var pffi *VS_FIXEDFILEINFO
 	var len int32
-	rtn, _, _ = syscall.Syscall6(verQueryValue, 4,
+	rtn, _, _ = syscall.SyscallN(verQueryValue,
 		uintptr(unsafe.Pointer(&buf[0])),
 		uintptr(unsafe.Pointer(&verFileW[0])),
 		uintptr(unsafe.Pointer(&pffi)),
-		uintptr(unsafe.Pointer(&len)),
-		0, 0)
+		uintptr(unsafe.Pointer(&len)))
 	if rtn == 0 {
 		return False
 	}

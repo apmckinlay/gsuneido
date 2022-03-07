@@ -8,7 +8,7 @@ import "github.com/apmckinlay/gsuneido/runtime/types"
 // SuMethod is a bound method originating from an SuClass or SuInstance
 // when called, it sets 'this' to the origin
 type SuMethod struct {
-	CantConvert
+	ValueBase[SuMethod]
 	fn   Value
 	this Value
 }
@@ -55,38 +55,6 @@ func (m *SuMethod) String() string {
 func (m *SuMethod) Equal(other interface{}) bool {
 	m2, ok := other.(*SuMethod)
 	return ok && *m == *m2
-}
-
-func (*SuMethod) Get(*Thread, Value) Value {
-	panic("method does not support get")
-}
-
-func (*SuMethod) Put(*Thread, Value, Value) {
-	panic("method does not support put")
-}
-
-func (*SuMethod) GetPut(*Thread, Value, Value, func(x, y Value) Value, bool) Value {
-	panic("method does not support update")
-}
-
-func (*SuMethod) RangeTo(int, int) Value {
-	panic("method does not support range")
-}
-
-func (*SuMethod) RangeLen(int, int) Value {
-	panic("method does not support range")
-}
-
-func (*SuMethod) Hash() uint32 {
-	panic("method hash not implemented")
-}
-
-func (*SuMethod) Hash2() uint32 {
-	panic("method hash not implemented")
-}
-
-func (*SuMethod) Compare(Value) int {
-	panic("method compare not implemented")
 }
 
 func (m *SuMethod) SetConcurrent() {

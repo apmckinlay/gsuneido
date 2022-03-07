@@ -5,10 +5,9 @@ package query
 
 import (
 	"github.com/apmckinlay/gsuneido/runtime"
-	"github.com/apmckinlay/gsuneido/util/ints"
-	"github.com/apmckinlay/gsuneido/util/setord"
-	"github.com/apmckinlay/gsuneido/util/setset"
-	"github.com/apmckinlay/gsuneido/util/sset"
+	"github.com/apmckinlay/gsuneido/util/generic/ord"
+	"github.com/apmckinlay/gsuneido/util/generic/set"
+	"golang.org/x/exp/slices"
 )
 
 type Intersect struct {
@@ -33,11 +32,11 @@ func (it *Intersect) String() string {
 }
 
 func (it *Intersect) Columns() []string {
-	return sset.Intersect(it.source.Columns(), it.source2.Columns())
+	return set.Intersect(it.source.Columns(), it.source2.Columns())
 }
 
 func (it *Intersect) Keys() [][]string {
-	k := setset.Intersect(it.source.Keys(), it.source2.Keys())
+	k := set.IntersectFn(it.source.Keys(), it.source2.Keys(), set.Equal[string])
 	if len(k) == 0 {
 		k = [][]string{it.Columns()}
 	}
@@ -53,7 +52,7 @@ func (it *Intersect) Fixed() []Fixed {
 }
 
 func (it *Intersect) Indexes() [][]string {
-	return setord.Union(it.source.Indexes(), it.source2.Indexes())
+	return set.UnionFn(it.source.Indexes(), it.source2.Indexes(), slices.Equal[string])
 }
 
 func (it *Intersect) Nrows() int {
@@ -61,7 +60,7 @@ func (it *Intersect) Nrows() int {
 		return 0
 	}
 	min := 0
-	max := ints.Min(it.source.Nrows(), it.source2.Nrows())
+	max := ord.Min(it.source.Nrows(), it.source2.Nrows())
 	return (min + max) / 2 // estimate half way between
 }
 

@@ -10,6 +10,7 @@ import (
 
 // SuInstance is an instance of an SuClass
 type SuInstance struct {
+	ValueBase[*SuInstance]
 	MemBase
 	parents       []*SuClass
 	class         *SuClass
@@ -143,22 +144,6 @@ func (ob *SuInstance) GetPut(t *Thread, m Value, v Value,
 	return v
 }
 
-func (*SuInstance) RangeTo(int, int) Value {
-	panic("instance does not support range")
-}
-
-func (*SuInstance) RangeLen(int, int) Value {
-	panic("instance does not support range")
-}
-
-func (*SuInstance) Hash() uint32 {
-	panic("instance hash not implemented")
-}
-
-func (*SuInstance) Hash2() uint32 {
-	panic("instance hash not implemented")
-}
-
 // Equal uses deepEqual if both instances have UseDeepEquals,
 // otherwise it uses reference/pointer equality like Same?
 func (ob *SuInstance) Equal(other interface{}) bool {
@@ -170,10 +155,6 @@ func (ob *SuInstance) Equal(other interface{}) bool {
 		return deepEqual(ob, ob2)
 	}
 	return ob == ob2
-}
-
-func (*SuInstance) Compare(Value) int {
-	panic("instance compare not implemented")
 }
 
 func (ob *SuInstance) SetConcurrent() {

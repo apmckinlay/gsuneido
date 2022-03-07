@@ -9,14 +9,14 @@ import (
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
 	"github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/str"
-	"github.com/apmckinlay/gsuneido/util/strs"
+	"golang.org/x/exp/slices"
 )
 
 type queryParser struct {
 	compile.Parser
 	t        QueryTran
 	viewNest []string
-	sviews  *runtime.Sviews
+	sviews   *runtime.Sviews
 }
 
 func NewQueryParser(src string, t QueryTran, sv *runtime.Sviews) *queryParser {
@@ -65,7 +65,7 @@ func (p *queryParser) source() Query {
 
 func (p *queryParser) table() Query {
 	table := p.MatchIdent()
-	if !strs.Contains(p.viewNest, table) {
+	if !slices.Contains(p.viewNest, table) {
 		if def := p.getView(table); def != "" {
 			return parseQuery(def, p.t, p.sviews, append(p.viewNest, table))
 		}

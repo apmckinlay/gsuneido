@@ -6,8 +6,11 @@ package meta
 import (
 	"github.com/apmckinlay/gsuneido/db19/index"
 	"github.com/apmckinlay/gsuneido/db19/stor"
+	"github.com/apmckinlay/gsuneido/util/generic/hamt"
 	"github.com/apmckinlay/gsuneido/util/hash"
 )
+
+type InfoHamt = hamt.Hamt[string, *Info]
 
 type Info struct {
 	Table string
@@ -26,17 +29,23 @@ type Info struct {
 	created int
 }
 
-//go:generate genny -in ../../genny/hamt/hamt.go -out infohamt.go -pkg meta gen "Item=*Info KeyType=string"
-
-func InfoKey(ti *Info) string {
+func (ti *Info) Key() string {
 	return ti.Table
 }
 
-func InfoHash(key string) uint32 {
+func (*Info) Hash(key string) uint32 {
 	return hash.HashString(key)
 }
 
-func (ti *Info) storSize() int {
+func (ti *Info) LastMod() int {
+	return ti.lastMod
+}
+
+func (ti *Info) SetLastMod(mod int) {
+	ti.lastMod = mod
+}
+
+func (ti *Info) StorSize() int {
 	size := 2 + len(ti.Table) + 4 + 5 + 1
 	for i := range ti.Indexes {
 		size += ti.Indexes[i].StorSize()
@@ -72,26 +81,8 @@ func (m *Meta) newInfoTomb(table string) *Info {
 	return &Info{Table: table}
 }
 
-func (ti *Info) isTomb() bool {
+func (ti *Info) IsTomb() bool {
 	return ti.Indexes == nil
-}
-
-func (ht InfoHamt) MustGet(key string) *Info {
-	it, ok := ht.Get(key)
-	if !ok || it.isTomb() {
-		panic("info MustGet failed for " + key)
-	}
-	return it
-}
-
-// GetCopy returns a copy of the Info for a table, or nil if not found
-func (ht InfoHamt) GetCopy(table string) *Info {
-	ti, ok := ht.Get(table)
-	if !ok || ti.isTomb() {
-		return nil
-	}
-	cp := *ti
-	return &cp
 }
 
 //-------------------------------------------------------------------
@@ -125,15 +116,15 @@ func (m *Meta) ApplyMerge(updates []MergeUpdate) {
 	// TODO use generics to eliminate duplication
 	info := m.info.Mutable()
 	for _, up := range updates {
-		ti := info.GetCopy(up.table)
+		ti := *info.MustGet(up.table) // copy
 		ti.Indexes = append(ti.Indexes[:0:0], ti.Indexes...) // copy
 		for i, ov := range ti.Indexes {
 			ti.Indexes[i] = ov.WithMerged(up.results[i], up.nmerged)
 		}
-		ti.lastMod = m.info.clock
-		info.Put(ti)
+		ti.lastMod = m.info.Clock
+		info.Put(&ti)
 	}
-	m.info.InfoHamt = info.Freeze()
+	m.info.Hamt = info.Freeze()
 }
 
 //-------------------------------------------------------------------
@@ -170,17 +161,17 @@ func (m *Meta) ApplyPersist(updates []PersistUpdate) {
 	// TODO use generics to eliminate duplication
 	info := m.info.Mutable()
 	for _, up := range updates {
-		ti := info.GetCopy(up.table)
+		ti := *info.MustGet(up.table) // copy
 		ti.Indexes = append(ti.Indexes[:0:0], ti.Indexes...) // copy
 		for i, ov := range ti.Indexes {
 			if up.results[i] != nil {
 				ti.Indexes[i] = ov.WithSaved(up.results[i])
 			}
 		}
-		ti.lastMod = m.info.clock
-		info.Put(ti)
+		ti.lastMod = m.info.Clock
+		info.Put(&ti)
 	}
-	m.info.InfoHamt = info.Freeze()
+	m.info.Hamt = info.Freeze()
 }
 
 func (ti *Info) Cksum() uint32 {

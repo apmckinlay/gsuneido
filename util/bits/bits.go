@@ -10,3 +10,8 @@ import "math/bits"
 func NextPow2(n uint) int {
 	return 1 << (bits.UintSize - bits.LeadingZeros(n-1))
 }
+
+// TrailingOnes returns the number of trailing one bits in x
+func TrailingOnes(x int) int {
+	return bits.TrailingZeros(^uint(x))
+}

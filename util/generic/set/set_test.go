@@ -1,7 +1,7 @@
 // Copyright Suneido Software Corp. All rights reserved.
 // Governed by the MIT license found in the LICENSE file.
 
-package sset
+package set
 
 import (
 	"strings"
@@ -9,21 +9,8 @@ import (
 
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/str"
+	"golang.org/x/exp/slices"
 )
-
-func TestContains(*testing.T) {
-	test := func(x, y string, expected bool) {
-		assert.Msg(x + " : " + y).
-			That(expected == Contains(strings.Fields(x), y))
-	}
-	test("", "", false)
-	test("", "x", false)
-	test("a b c", "", false)
-	test("a b c", "x", false)
-	test("a b c", "a", true)
-	test("a b c", "b", true)
-	test("a b c", "c", true)
-}
 
 func TestEqual(*testing.T) {
 	test := func(x, y string, expected bool) {
@@ -40,7 +27,7 @@ func TestEqual(*testing.T) {
 	test("a b c", "a b a", false) // duplicates on right side
 	x := randList(100)
 	assert.That(Equal(x, x))
-	y := Copy(x)
+	y := slices.Clone(x)
 	assert.That(Equal(x, y))
 	y[99] = "~"
 	assert.That(!Equal(x, y))
@@ -108,7 +95,7 @@ func TestUnion(*testing.T) {
 
 	x := randList(100)
 	assert.This(Union(x, x)).Is(x)
-	y := Copy(x)
+	y := slices.Clone(x)
 	assert.This(Union(x, y)).Is(x)
 	y = y[2:98]
 	assert.This(Union(x, y)).Is(x)
@@ -130,7 +117,7 @@ func TestIntersect(*testing.T) {
 
 	x := randList(100)
 	assert.This(Intersect(x, x)).Is(x)
-	y := Copy(x)
+	y := slices.Clone(x)
 	assert.This(Intersect(x, y)).Is(y)
 	y = y[2:98]
 	assert.This(Intersect(x, y)).Is(y)
@@ -153,7 +140,7 @@ func TestDifference(*testing.T) {
 	assert.This(Difference(x, []string{})).Is(x)
 	assert.This(Difference(x, x)).Is([]string{})
 	assert.This(Difference([]string{}, x)).Is([]string{})
-	y := Copy(x)
+	y := slices.Clone(x)
 	assert.This(Difference(x, y)).Is([]string{})
 	assert.This(Difference(x, y[:50])).Is(x[50:])
 	assert.This(Difference(x, y[50:])).Is(x[:50])
@@ -191,8 +178,8 @@ type list []string
 
 func (input list) is(expected ...string) {
 	if len(expected) == 0 {
-		assert.This(Unique(input)).Is([]string(input))
+		assert.This(Unique(input)).Is(input)
 	} else {
-		assert.This(Unique(input)).Is(expected)
+		assert.This(Unique(input)).Is(list(expected))
 	}
 }

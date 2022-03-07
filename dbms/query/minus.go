@@ -5,7 +5,7 @@ package query
 
 import (
 	"github.com/apmckinlay/gsuneido/runtime"
-	"github.com/apmckinlay/gsuneido/util/ints"
+	"github.com/apmckinlay/gsuneido/util/generic/ord"
 )
 
 type Minus struct {
@@ -37,7 +37,7 @@ func (m *Minus) Indexes() [][]string {
 
 func (m *Minus) Nrows() int {
 	n1 := m.source.Nrows()
-	min := ints.Max(0, n1-m.source2.Nrows())
+	min := ord.Max(0, n1-m.source2.Nrows())
 	max := n1
 	return (min + max) / 2
 }

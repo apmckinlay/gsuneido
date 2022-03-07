@@ -19,7 +19,7 @@ type iFile interface {
 }
 
 type suFile struct {
-	CantConvert
+	ValueBase[*suFile]
 	name string
 	mode string
 	f    iFile
@@ -115,42 +115,6 @@ func (sf *suFile) close() {
 
 var _ Value = (*suFile)(nil)
 
-func (*suFile) Get(*Thread, Value) Value {
-	panic("File does not support get")
-}
-
-func (*suFile) Put(*Thread, Value, Value) {
-	panic("File does not support put")
-}
-
-func (*suFile) GetPut(*Thread, Value, Value, func(x, y Value) Value, bool) Value {
-	panic("File does not support update")
-}
-
-func (*suFile) RangeTo(int, int) Value {
-	panic("File does not support range")
-}
-
-func (*suFile) RangeLen(int, int) Value {
-	panic("File does not support range")
-}
-
-func (*suFile) Hash() uint32 {
-	panic("File hash not implemented")
-}
-
-func (*suFile) Hash2() uint32 {
-	panic("File hash not implemented")
-}
-
-func (*suFile) Compare(Value) int {
-	panic("File compare not implemented")
-}
-
-func (*suFile) Call(*Thread, Value, *ArgSpec) Value {
-	panic("can't call File")
-}
-
 func (sf *suFile) String() string {
 	return "File(" + sf.name + ", " + sf.mode + ")"
 }
@@ -162,10 +126,6 @@ func (*suFile) Type() types.Type {
 func (sf *suFile) Equal(other interface{}) bool {
 	sf2, ok := other.(*suFile)
 	return ok && sf == sf2
-}
-
-func (*suFile) SetConcurrent() {
-	panic("File can not be shared between threads")
 }
 
 func (*suFile) Lookup(_ *Thread, method string) Callable {

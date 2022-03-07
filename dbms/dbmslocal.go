@@ -15,7 +15,9 @@ import (
 	qry "github.com/apmckinlay/gsuneido/dbms/query"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/runtime/trace"
+	"github.com/apmckinlay/gsuneido/util/generic/slc"
 	"github.com/apmckinlay/gsuneido/util/strs"
+	"golang.org/x/exp/slices"
 )
 
 // DbmsLocal implements the Dbms interface using a local database
@@ -257,15 +259,15 @@ func (dbms *DbmsLocal) Transactions() *SuObject {
 }
 
 func (dbms *DbmsLocal) Unuse(lib string) bool {
-	if lib == "stdlib" || !strs.Contains(dbms.libraries, lib) {
+	if lib == "stdlib" || !slices.Contains(dbms.libraries, lib) {
 		return false
 	}
-	dbms.libraries = strs.Without(dbms.libraries, lib)
+	dbms.libraries = slc.Without(dbms.libraries, lib)
 	return true
 }
 
 func (dbms *DbmsLocal) Use(lib string) bool {
-	if strs.Contains(dbms.libraries, lib) {
+	if slices.Contains(dbms.libraries, lib) {
 		return false
 	}
 	dbms.libraries = append(dbms.libraries, lib)

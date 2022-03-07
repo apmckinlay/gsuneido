@@ -39,7 +39,7 @@ type Node interface {
 }
 
 type astNodeT struct {
-	AstNodeValue
+	SuAstNode
 }
 
 func (*astNodeT) astNode() {}

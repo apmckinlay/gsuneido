@@ -10,7 +10,7 @@ import (
 
 	"github.com/apmckinlay/gsuneido/util/ascii"
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util/ints"
+	"github.com/apmckinlay/gsuneido/util/generic/ord"
 )
 
 // Pattern is a compiled regular expression
@@ -139,7 +139,7 @@ func (pat Pattern) ForEachMatch(s string, action func(*Result) bool) {
 		if i == -1 || !action(&result) {
 			break
 		}
-		pos = ints.Max(result[0].end, i+1)
+		pos = ord.Max(result[0].end, i+1)
 	}
 }
 

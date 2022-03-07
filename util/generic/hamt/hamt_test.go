@@ -1,7 +1,7 @@
 // Copyright Suneido Software Corp. All rights reserved.
 // Governed by the MIT license found in the LICENSE file.
 
-package hamttest
+package hamt
 
 import (
 	"fmt"
@@ -11,9 +11,52 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/strs"
 )
+
+type Foo struct {
+	key  int
+	data string
+}
+
+func (f *Foo) Key() int {
+	return f.key
+}
+
+func (*Foo) Hash(key int) uint32 {
+	return uint32(key) & 0xffff // reduce bits to force overflows
+
+}
+
+func (f *Foo) StorSize() int {
+	return 0
+}
+
+func (f *Foo) Cksum() uint32 {
+	return 0
+}
+
+func (f *Foo) IsTomb() bool {
+	return false
+}
+
+func (f *Foo) LastMod() int {
+	return 0
+}
+
+func (f *Foo) SetLastMod(int) {
+}
+
+func (f *Foo) Write(*stor.Writer) {
+}
+
+func (f *Foo) Read(*stor.Stor, *stor.Reader) {
+}
+
+type FooHamt = Hamt[int, *Foo]
+type FooNode = node[int, *Foo]
 
 func TestRandom(t *testing.T) {
 	assert := assert.T(t)
@@ -65,24 +108,24 @@ func TestRandom(t *testing.T) {
 func TestPersistent(t *testing.T) {
 	assert := assert.T(t).This
 	var ht FooHamt
-	assert(ht.string()).Is("{}")
+	assert(str(ht)).Is("{}")
 	h2 := ht.Mutable()
 	h2.Put(&Foo{12, "12"})
 	h2.Put(&Foo{34, "34"})
 	h2 = h2.Freeze()
-	assert(ht.string()).Is("{}")
-	assert(h2.string()).Is("{12,34}")
+	assert(str(ht)).Is("{}")
+	assert(str(h2)).Is("{12,34}")
 	h3 := h2.Mutable()
-	assert(h3.string()).Is("{12,34}")
+	assert(str(h3)).Is("{12,34}")
 	h3.Put(&Foo{56, "56"})
 	h3.Put(&Foo{78, "78"})
 	h3 = h3.Freeze()
-	assert(ht.string()).Is("{}")
-	assert(h2.string()).Is("{12,34}")
-	assert(h3.string()).Is("{12,34,56,78}")
+	assert(str(ht)).Is("{}")
+	assert(str(h2)).Is("{12,34}")
+	assert(str(h3)).Is("{12,34,56,78}")
 }
 
-func (ht FooHamt) string() string {
+func str(ht FooHamt) string {
 	var list []string
 	ht.ForEach(func(f *Foo) {
 		list = append(list, f.data)
@@ -133,19 +176,19 @@ func TestDeleteInsertBug(*testing.T) {
 	ht.Put(&Foo{key: 0x20000}) // same hash, collision goes in child
 	ht.Put(&Foo{key: 0x30000}) // same hash, collision goes in child
 	ht.Put(&Foo{key: 0x40000}) // same hash, collision goes in child
-	// ht.print()
+	// print(ht)
 	ht.Delete(0x10000) // will pull up 0x40000
-	// ht.print()
+	// print(ht)
 	ht.Put(&Foo{key: 0x20000})
-	// ht.print()
-	ht.check()
+	// print(ht)
+	check(ht)
 }
 
-func (ht FooHamt) print() {
-	ht.root.print1(0)
+func print(ht FooHamt) {
+	print1(0, ht.root)
 }
 
-func (nd *nodeFoo) print1(depth int) {
+func print1(depth int, nd *FooNode) {
 	indent := strings.Repeat("    ", depth)
 
 	if depth > 6 {
@@ -167,12 +210,12 @@ func (nd *nodeFoo) print1(depth int) {
 	if nd.bmPtr != 0 {
 		fmt.Printf(indent+"ptrs %032b\n", nd.bmPtr)
 		for _, p := range nd.ptrs {
-			p.print1(depth + 1)
+			print1(depth+1, p)
 		}
 	}
 }
 
-func (ht FooHamt) check() {
+func check(ht FooHamt) {
 	keys := make(map[int]bool)
 	ht.ForEach(func(foo *Foo) {
 		if _, ok := keys[foo.key]; ok {

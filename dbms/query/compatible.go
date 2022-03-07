@@ -5,7 +5,8 @@ package query
 
 import (
 	. "github.com/apmckinlay/gsuneido/runtime"
-	"github.com/apmckinlay/gsuneido/util/sset"
+	"github.com/apmckinlay/gsuneido/util/generic/set"
+	"golang.org/x/exp/slices"
 )
 
 // Compatible is shared by Intersect, Minus, and Union
@@ -19,12 +20,12 @@ type Compatible struct {
 }
 
 func (c *Compatible) init() {
-	c.allCols = sset.Union(c.source.Columns(), c.source2.Columns())
+	c.allCols = set.Union(c.source.Columns(), c.source2.Columns())
 	fixed1 := c.source.Fixed()
 	fixed2 := c.source2.Fixed()
 	for _, f1 := range fixed1 {
 		for _, f2 := range fixed2 {
-			if f1.col == f2.col && sset.Disjoint(f1.values, f2.values) {
+			if f1.col == f2.col && set.Disjoint(f1.values, f2.values) {
 				c.disjoint = f1.col
 				return
 			}
@@ -32,14 +33,14 @@ func (c *Compatible) init() {
 	}
 	cols2 := c.source2.Columns()
 	for _, f1 := range fixed1 {
-		if !sset.Contains(cols2, f1.col) && !sset.Contains(f1.values, "") {
+		if !slices.Contains(cols2, f1.col) && !slices.Contains(f1.values, "") {
 			c.disjoint = f1.col
 			return
 		}
 	}
 	cols1 := c.source.Columns()
 	for _, f2 := range fixed2 {
-		if !sset.Contains(cols1, f2.col) && !sset.Contains(f2.values, "") {
+		if !slices.Contains(cols1, f2.col) && !slices.Contains(f2.values, "") {
 			c.disjoint = f2.col
 			return
 		}

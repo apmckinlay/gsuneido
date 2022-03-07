@@ -26,6 +26,7 @@ import (
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/exit"
+	"github.com/apmckinlay/gsuneido/util/generic/hamt"
 	"github.com/apmckinlay/gsuneido/util/regex"
 	"github.com/apmckinlay/gsuneido/util/system"
 )
@@ -256,7 +257,7 @@ func startServer() {
 	Libload = libload // dependency injection
 	mainThread = &Thread{}
 	mainThread.Name = "main"
-	run("Init.Repl()")
+	run("Init()")
 	dbms.Server(dbmsLocal)
 }
 
@@ -306,10 +307,10 @@ func checkState() {
 		// read meta to verify checksums
 		schemaOff, infoOff := state.Meta.Offsets()
 		if schemaOff != 0 {
-			meta.ReadSchemaChain(db.Store, schemaOff)
+			hamt.ReadChain[string](db.Store, schemaOff, meta.ReadSchema)
 		}
 		if schemaOff != 0 {
-			meta.ReadInfoChain(db.Store, infoOff)
+			hamt.ReadChain[string](db.Store, infoOff, meta.ReadInfo)
 		}
 		time.Sleep(50 * time.Millisecond)
 		// recalculate checksum to verify Meta hasn't been mutated

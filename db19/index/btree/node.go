@@ -13,7 +13,7 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/bytes"
-	"github.com/apmckinlay/gsuneido/util/ints"
+	"github.com/apmckinlay/gsuneido/util/generic/ord"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
@@ -72,7 +72,7 @@ func addone(key, prev, known string, embedLen int) (npre int, diff string, known
 	} else {
 		// prefix is longer than what's known
 		// so we have to embed the missing info + embedLen
-		diff = key[len(known):ints.Min(npre+embedLen, len(key))]
+		diff = key[len(known):ord.Min(npre+embedLen, len(key))]
 	}
 	assert.That(len(diff) > 0)
 	knownNew = str.Subn(key, 0, npre+embedLen)

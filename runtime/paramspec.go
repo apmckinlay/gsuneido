@@ -7,15 +7,17 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/apmckinlay/gsuneido/util/ints"
+	"github.com/apmckinlay/gsuneido/util/generic/ord"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
+
+type sufunction struct{}
 
 // ParamSpec describes the parameters of a function
 // See also ArgSpec which describes the arguments of a function call
 // It also serves as the basis for callables like SuFunc
 type ParamSpec struct {
-	CantConvert
+	ValueBase[sufunction]
 
 	// Values contains any literals in the function
 	// starting with parameter defaults
@@ -115,34 +117,6 @@ func flagsToName(p string, flags Flag) string {
 	return p
 }
 
-func (*ParamSpec) Get(*Thread, Value) Value {
-	panic("function does not support get")
-}
-
-func (*ParamSpec) Put(*Thread, Value, Value) {
-	panic("function does not support put")
-}
-
-func (*ParamSpec) GetPut(*Thread, Value, Value, func(x, y Value) Value, bool) Value {
-	panic("function does not support update")
-}
-
-func (*ParamSpec) RangeTo(int, int) Value {
-	panic("function does not support range")
-}
-
-func (*ParamSpec) RangeLen(int, int) Value {
-	panic("function does not support range")
-}
-
-func (*ParamSpec) Hash() uint32 {
-	panic("function hash not implemented")
-}
-
-func (*ParamSpec) Hash2() uint32 {
-	panic("function hash not implemented")
-}
-
 func (ps *ParamSpec) Equal(other interface{}) bool {
 	// interface check and double dispatch
 	// to work with anything that embeds ParamSpec
@@ -157,7 +131,7 @@ func (ps *ParamSpec) equalParamSpec(ps2 *ParamSpec) bool {
 type eqps interface{ equalParamSpec(*ParamSpec) bool }
 
 func (ps *ParamSpec) Compare(other Value) int {
-	if cmp := ints.Compare(OrdOther, Order(other)); cmp != 0 {
+	if cmp := ord.Compare(OrdOther, Order(other)); cmp != 0 {
 		return cmp
 	}
 	return 0 // ???

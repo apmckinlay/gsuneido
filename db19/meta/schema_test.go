@@ -9,6 +9,7 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/meta/schema"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
+	"github.com/apmckinlay/gsuneido/util/generic/hamt"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
@@ -41,8 +42,8 @@ func TestSchema(t *testing.T) {
 		assert(ts.Indexes[0].Columns).Msg("indexes").Is([]string{"one"})
 	}
 
-	sc := ReadSchemaChain(st, off)
-	assert.T(t).This(sc.ages[0]).Is(sc.MustGet(data[0]).lastMod)
+	sc := hamt.ReadChain[string](st, off, ReadSchema)
+	assert.T(t).This(sc.Ages[0]).Is(sc.MustGet(data[0]).lastMod)
 	for i, table := range data {
 		test(i, table, sc.MustGet(table))
 	}

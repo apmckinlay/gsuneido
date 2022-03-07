@@ -95,7 +95,7 @@ func (astMaker) mkConcat(strs []string) Value {
 }
 
 type astContainer struct {
-	ast.AstNodeValue
+	ast.SuAstNode
 	which string
 	base  string
 	kv    []keyVal

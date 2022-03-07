@@ -17,8 +17,8 @@ import (
 	. "github.com/apmckinlay/gsuneido/runtime"
 	op "github.com/apmckinlay/gsuneido/runtime/opcodes"
 	"github.com/apmckinlay/gsuneido/util/assert"
+	"github.com/apmckinlay/gsuneido/util/generic/ord"
 	"github.com/apmckinlay/gsuneido/util/hacks"
-	"github.com/apmckinlay/gsuneido/util/ints"
 	"github.com/apmckinlay/gsuneido/util/regex"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
@@ -264,8 +264,8 @@ func (cg *cgen) savePos(sp int) {
 		ds := sp - cg.srcPrev
 		dc := len(cg.code) - cg.codePrev
 		for ds > 0 || dc > 0 {
-			ns := ints.Min(math.MaxUint8, ds)
-			nc := ints.Min(math.MaxUint8, dc)
+			ns := ord.Min(math.MaxUint8, ds)
+			nc := ord.Min(math.MaxUint8, dc)
 			cg.srcPos = append(cg.srcPos, byte(ns), byte(nc))
 			ds -= ns
 			dc -= nc

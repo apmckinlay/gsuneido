@@ -5,6 +5,7 @@ package builtin
 
 import (
 	"runtime"
+	"runtime/debug"
 
 	"github.com/apmckinlay/gsuneido/options"
 	. "github.com/apmckinlay/gsuneido/runtime"
@@ -18,3 +19,11 @@ func Built() string {
 	return options.BuiltDate +
 		" (" + runtime.Version() + " " + runtime.GOARCH + options.BuiltExtra + ")"
 }
+
+var _ = builtin0("BuildInfo()", func() Value {
+	bi, ok := debug.ReadBuildInfo()
+	if !ok {
+		return EmptyStr
+	}
+	return SuStr(bi.String())
+})

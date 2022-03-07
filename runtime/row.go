@@ -8,10 +8,10 @@ import (
 
 	"github.com/apmckinlay/gsuneido/util/ascii"
 	"github.com/apmckinlay/gsuneido/util/assert"
+	"github.com/apmckinlay/gsuneido/util/generic/set"
 	"github.com/apmckinlay/gsuneido/util/hacks"
-	"github.com/apmckinlay/gsuneido/util/sset"
 	"github.com/apmckinlay/gsuneido/util/str"
-	"github.com/apmckinlay/gsuneido/util/strs"
+	"golang.org/x/exp/slices"
 )
 
 // Row is the result of database queries.
@@ -35,7 +35,7 @@ func JoinRows(row1, row2 Row) Row {
 //	- returns stored value for Fields (rule ignored)
 //	- calls rule for Columns not in Fields
 func (row Row) GetVal(hdr *Header, fld string, th *Thread, tran *SuTran) Value {
-	if !strs.Contains(hdr.Columns, fld) {
+	if !slices.Contains(hdr.Columns, fld) {
 		return EmptyStr
 	}
 	if raw, ok := row.getRaw2(hdr, fld); ok {
@@ -110,7 +110,7 @@ func (row Row) getRaw2(hdr *Header, fld string) (string, bool) {
 	}
 	// handle nil records from Union
 	for reci := int(at.Reci + 1); reci < len(hdr.Fields); reci++ {
-		if fldi := strs.Index(hdr.Fields[reci], fld); fldi >= 0 {
+		if fldi := slices.Index(hdr.Fields[reci], fld); fldi >= 0 {
 			if row[reci].Record != "" {
 				return row[reci].GetRaw(int(fldi)), true
 			}
@@ -171,7 +171,7 @@ func SimpleHeader(fields []string) *Header {
 func JoinHeaders(x, y *Header) *Header {
 	fields := make([][]string, 0, len(x.Fields)+len(y.Fields))
 	fields = append(append(fields, x.Fields...), y.Fields...)
-	columns := sset.Union(x.Columns, y.Columns)
+	columns := set.Union(x.Columns, y.Columns)
 	return NewHeader(fields, columns)
 }
 
@@ -188,7 +188,7 @@ func (hdr *Header) Rules() []string {
 
 func (hdr *Header) hasField(col string) bool {
 	for _, fields := range hdr.Fields {
-		if sset.Contains(fields, col) {
+		if slices.Contains(fields, col) {
 			return true
 		}
 	}
@@ -202,7 +202,7 @@ func (hdr *Header) find(fld string) (rowAt, bool) {
 		return at, true
 	}
 	for reci, fields := range hdr.Fields {
-		if fldi := strs.Index(fields, fld); fldi >= 0 {
+		if fldi := slices.Index(fields, fld); fldi >= 0 {
 			at := rowAt{Reci: int16(reci), Fldi: int16(fldi)}
 			hdr.cache[fld] = at // cache
 			return at, true
@@ -215,13 +215,13 @@ func (hdr *Header) find(fld string) (rowAt, bool) {
 // without duplicates (e.g. from Join or Union)
 func (hdr *Header) GetFields() []string {
 	if len(hdr.Fields) == 1 {
-		return strs.Cow(hdr.Fields[0])
+		return slices.Clip(hdr.Fields[0])
 	}
 	result := make([]string, 0, len(hdr.Columns))
 	result = append(result, hdr.Fields[0]...)
 	for _, fields := range hdr.Fields[1:] {
 		for _, fld := range fields {
-			if fld == "-" || !strs.Contains(result, fld) {
+			if fld == "-" || !slices.Contains(result, fld) {
 				result = append(result, fld)
 			}
 		}
@@ -250,14 +250,14 @@ func (row Row) equalGet(hdr *Header, col string) string {
 }
 
 // func (hdr *Header) Equal(hdr2 *Header) bool {
-// 	if !strs.Equal(hdr.Columns, hdr2.Columns) {
+// 	if !slices.Equal(hdr.Columns, hdr2.Columns) {
 // 		return false
 // 	}
 // 	if len(hdr.Fields) != len(hdr2.Fields) {
 // 		return false
 // 	}
 // 	for i := range hdr.Fields {
-// 		if !strs.Equal(hdr.Fields[i], hdr2.Fields[i]) {
+// 		if !slices.Equal(hdr.Fields[i], hdr2.Fields[i]) {
 // 			return false
 // 		}
 // 	}
@@ -272,13 +272,13 @@ func (hdr *Header) Schema() []string {
 
 func (hdr *Header) AppendDerived(fields []string) []string {
 	for _, col := range hdr.Columns {
-		if !strs.Contains(fields, col) {
+		if !slices.Contains(fields, col) {
 			if !strings.HasSuffix(col, "_lower!") {
 				col = str.Capitalize(col)
 			}
 			fields = append(fields, col)
 		}
 	}
-	assert.That(!strs.Contains(fields, ""))
+	assert.That(!slices.Contains(fields, ""))
 	return fields
 }

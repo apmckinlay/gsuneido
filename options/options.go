@@ -8,7 +8,7 @@ package options
 import (
 	"runtime"
 
-	"github.com/apmckinlay/gsuneido/util/ints"
+	"github.com/apmckinlay/gsuneido/util/generic/ord"
 )
 
 var BuiltDate string
@@ -44,5 +44,5 @@ const (
 var Coverage int64
 
 var Nworkers = func() int {
-	return ints.Min(8, ints.Max(1, runtime.NumCPU()-1)) // ???
+	return ord.Min(8, ord.Max(1, runtime.NumCPU()-1)) // ???
 }()

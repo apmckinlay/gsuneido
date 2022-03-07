@@ -6,13 +6,13 @@ package runtime
 import (
 	"github.com/apmckinlay/gsuneido/runtime/types"
 	"github.com/apmckinlay/gsuneido/util/dnum"
-	"github.com/apmckinlay/gsuneido/util/ints"
+	"github.com/apmckinlay/gsuneido/util/generic/ord"
 	"github.com/apmckinlay/gsuneido/util/pack"
 )
 
 // SuDnum wraps a Dnum and implements Value and Packable
 type SuDnum struct {
-	CantConvert
+	ValueBase[SuDnum]
 	dnum.Dnum
 }
 
@@ -40,26 +40,6 @@ func (dn SuDnum) String() string {
 	return dn.Dnum.String()
 }
 
-func (SuDnum) Get(*Thread, Value) Value {
-	panic("number does not support get")
-}
-
-func (SuDnum) Put(*Thread, Value, Value) {
-	panic("number does not support put")
-}
-
-func (SuDnum) GetPut(*Thread, Value, Value, func(x, y Value) Value, bool) Value {
-	panic("number does not support update")
-}
-
-func (SuDnum) RangeTo(int, int) Value {
-	panic("number does not support range")
-}
-
-func (SuDnum) RangeLen(int, int) Value {
-	panic("number does not support range")
-}
-
 func (dn SuDnum) Hash() uint32 {
 	if n, ok := dn.ToInt64(); ok && MinSuInt <= n && n <= MaxSuInt {
 		return uint32(n) // for compatibility with SuInt
@@ -85,15 +65,11 @@ func (SuDnum) Type() types.Type {
 }
 
 func (dn SuDnum) Compare(other Value) int {
-	if cmp := ints.Compare(ordNum, Order(other)); cmp != 0 {
+	if cmp := ord.Compare(ordNum, Order(other)); cmp != 0 {
 		return cmp
 	}
 	// now know other is a number and ToDnum won't panic
 	return dnum.Compare(dn.Dnum, ToDnum(other))
-}
-
-func (SuDnum) Call(*Thread, Value, *ArgSpec) Value {
-	panic("can't call Number")
 }
 
 func (SuDnum) SetConcurrent() {

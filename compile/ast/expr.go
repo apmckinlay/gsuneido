@@ -9,9 +9,9 @@ import (
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util/sset"
+	"github.com/apmckinlay/gsuneido/util/generic/set"
 	"github.com/apmckinlay/gsuneido/util/str"
-	"github.com/apmckinlay/gsuneido/util/strs"
+	"golang.org/x/exp/slices"
 )
 
 // Note: Stored fields ignore rules.
@@ -107,7 +107,7 @@ func (b *Binary) rawOp() bool {
 }
 
 func IsColumn(e Expr, cols []string) bool {
-	if id, ok := e.(*Ident); ok && strs.Contains(cols, id.Name) {
+	if id, ok := e.(*Ident); ok && slices.Contains(cols, id.Name) {
 		return true
 	}
 	return false
@@ -181,7 +181,7 @@ func (b *Binary) eval(lhs, rhs Value) Value {
 }
 
 func (b *Binary) Columns() []string {
-	return sset.Union(b.Lhs.Columns(), b.Rhs.Columns())
+	return set.Union(b.Lhs.Columns(), b.Rhs.Columns())
 }
 
 func (tri *Trinary) Eval(c *Context) Value {
@@ -193,8 +193,8 @@ func (tri *Trinary) Eval(c *Context) Value {
 }
 
 func (tri *Trinary) Columns() []string {
-	return sset.Union(tri.Cond.Columns(),
-		sset.Union(tri.T.Columns(), tri.F.Columns()))
+	return set.Union(tri.Cond.Columns(),
+		set.Union(tri.T.Columns(), tri.F.Columns()))
 }
 
 // Nary -------------------------------------------------------------
@@ -262,7 +262,7 @@ func muldiv(exprs []Expr, c *Context) Value {
 func (a *Nary) Columns() []string {
 	cols := a.Exprs[0].Columns()
 	for _, e := range a.Exprs[1:] {
-		cols = sset.Union(cols, e.Columns())
+		cols = set.Union(cols, e.Columns())
 	}
 	return cols
 }
@@ -277,8 +277,8 @@ func (a *RangeTo) Eval(c *Context) Value {
 }
 
 func (a *RangeTo) Columns() []string {
-	return sset.Union(a.E.Columns(),
-		sset.Union(a.From.Columns(), a.To.Columns()))
+	return set.Union(a.E.Columns(),
+		set.Union(a.From.Columns(), a.To.Columns()))
 }
 
 func (a *RangeLen) Eval(c *Context) Value {
@@ -289,8 +289,8 @@ func (a *RangeLen) Eval(c *Context) Value {
 }
 
 func (a *RangeLen) Columns() []string {
-	return sset.Union(a.E.Columns(),
-		sset.Union(a.From.Columns(), a.Len.Columns()))
+	return set.Union(a.E.Columns(),
+		set.Union(a.From.Columns(), a.Len.Columns()))
 }
 
 func evalOr(e Expr, c *Context, v Value) Value {
@@ -314,7 +314,7 @@ func (a *In) CanEvalRaw(cols []string) bool {
 		if !ok {
 			return false
 		}
-		packed = sset.AddUnique(packed, Pack(c.Val.(Packable)))
+		packed = set.AddUnique(packed, Pack(c.Val.(Packable)))
 	}
 	a.Packed = packed
 	return true
@@ -344,7 +344,7 @@ func (a *In) Eval(c *Context) Value {
 func (a *In) Columns() []string {
 	cols := a.E.Columns()
 	for _, e := range a.Exprs {
-		cols = sset.Union(cols, e.Columns())
+		cols = set.Union(cols, e.Columns())
 	}
 	return cols
 }
@@ -362,7 +362,7 @@ func (a *Mem) Eval(c *Context) Value {
 }
 
 func (a *Mem) Columns() []string {
-	return sset.Union(a.E.Columns(), a.M.Columns())
+	return set.Union(a.E.Columns(), a.M.Columns())
 }
 
 func (a *Call) Eval(c *Context) Value {
@@ -418,7 +418,7 @@ func argspec(args []Arg) *ArgSpec {
 func (a *Call) Columns() []string {
 	cols := a.Fn.Columns()
 	for _, e := range a.Args {
-		cols = sset.Union(cols, e.E.Columns())
+		cols = set.Union(cols, e.E.Columns())
 	}
 	return cols
 }

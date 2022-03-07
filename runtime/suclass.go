@@ -16,6 +16,7 @@ import (
 
 // SuClass is a user defined (Suneido language) class
 type SuClass struct {
+	ValueBase[*SuClass]
 	MemBase
 	Lib          string
 	Name         string
@@ -140,37 +141,9 @@ func (c *SuClass) get2(t *Thread, m string, parents []*SuClass) Value {
 	return nil
 }
 
-func (*SuClass) Put(*Thread, Value, Value) {
-	panic("class does not support put")
-}
-
-func (*SuClass) GetPut(*Thread, Value, Value, func(x, y Value) Value, bool) Value {
-	panic("class does not support update")
-}
-
-func (*SuClass) RangeTo(int, int) Value {
-	panic("class does not support range")
-}
-
-func (*SuClass) RangeLen(int, int) Value {
-	panic("class does not support range")
-}
-
-func (*SuClass) Hash() uint32 {
-	panic("class hash not implemented") //TODO
-}
-
-func (*SuClass) Hash2() uint32 {
-	panic("class hash not implemented")
-}
-
 func (c *SuClass) Equal(other interface{}) bool {
 	c2, ok := other.(*SuClass)
 	return ok && c == c2
-}
-
-func (*SuClass) Compare(Value) int {
-	panic("class compare not implemented")
 }
 
 func (*SuClass) SetConcurrent() {

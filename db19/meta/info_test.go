@@ -9,6 +9,7 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/index"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
+	"github.com/apmckinlay/gsuneido/util/generic/hamt"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
@@ -23,7 +24,7 @@ func TestInfo(t *testing.T) {
 		lastMod: -1,
 		Indexes: []*index.Overlay{index.OverlayStub()},
 	}
-	assert.That(!one.isTomb())
+	assert.That(!one.IsTomb())
 	two := &Info{
 		Table:   "two",
 		Nrows:   200,
@@ -39,9 +40,9 @@ func TestInfo(t *testing.T) {
 	st.Alloc(1) // avoid offset 0
 	off := tbl.Write(st, 0, allInfo)
 
-	ic := ReadInfoChain(st, off)
-	assert.This(ic.ages[0]).Is(ic.MustGet("one").lastMod)
-	tbl = ic.InfoHamt
+	ic := hamt.ReadChain[string](st, off, ReadInfo)
+	assert.This(ic.Ages[0]).Is(ic.MustGet("one").lastMod)
+	tbl = ic.Hamt
 	x, _ := tbl.Get("one")
 	x.Indexes = nil
 	one.Indexes = nil
@@ -60,7 +61,7 @@ func TestInfo2(t *testing.T) {
 	st.Alloc(1) // avoid offset 0
 	off := tbl.Write(st, 0, allInfo)
 
-	tbl = ReadInfoChain(st, off).InfoHamt
+	tbl = hamt.ReadChain[string](st, off, ReadInfo).Hamt
 	for i, s := range data {
 		ti, _ := tbl.Get(s)
 		assert.T(t).Msg("table").This(ti.Table).Is(s)

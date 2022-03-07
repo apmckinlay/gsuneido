@@ -9,8 +9,9 @@ import (
 	"github.com/apmckinlay/gsuneido/compile/ast"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/runtime"
-	"github.com/apmckinlay/gsuneido/util/sset"
+	"github.com/apmckinlay/gsuneido/util/generic/set"
 	"github.com/apmckinlay/gsuneido/util/strs"
+	"golang.org/x/exp/slices"
 )
 
 type Project struct {
@@ -44,11 +45,11 @@ const (
 )
 
 func NewProject(src Query, cols []string) *Project {
-	cols = sset.Unique(cols)
+	cols = set.Unique(cols)
 	srcCols := src.Columns()
-	if !sset.Subset(srcCols, cols) {
+	if !set.Subset(srcCols, cols) {
 		panic("project: nonexistent column(s): " +
-			strs.Join(", ", sset.Difference(cols, srcCols)))
+			strs.Join(", ", set.Difference(cols, srcCols)))
 	}
 	for _, col := range cols {
 		if strings.HasSuffix(col, "_lower!") {
@@ -64,7 +65,7 @@ func NewProject(src Query, cols []string) *Project {
 }
 
 func NewRemove(src Query, cols []string) *Project {
-	cols = sset.Difference(src.Columns(), cols)
+	cols = set.Difference(src.Columns(), cols)
 	if len(cols) == 0 {
 		panic("remove: can't remove all columns")
 	}
@@ -77,7 +78,7 @@ func hasKey(keys [][]string, cols []string, fixed []Fixed) bool {
 outer:
 	for _, key := range keys {
 		for _, k := range key {
-			if !isFixed(fixed, k) && !sset.Contains(cols, k) {
+			if !isFixed(fixed, k) && !slices.Contains(cols, k) {
 				continue outer
 			}
 		}
@@ -89,8 +90,8 @@ outer:
 func (p *Project) includeDeps(cols []string) {
 	for _, f := range p.columns {
 		deps := f + "_deps"
-		if sset.Contains(cols, deps) {
-			p.columns = sset.AddUnique(p.columns, deps)
+		if slices.Contains(cols, deps) {
+			p.columns = set.AddUnique(p.columns, deps)
 		}
 	}
 }
@@ -131,7 +132,7 @@ func (p *Project) Indexes() [][]string {
 func projectIndexes(idxs [][]string, cols []string) [][]string {
 	var idxs2 [][]string
 	for _, k := range idxs {
-		if sset.Subset(cols, k) {
+		if set.Subset(cols, k) {
 			idxs2 = append(idxs2, k)
 		}
 	}
@@ -149,14 +150,14 @@ func (p *Project) Nrows() int {
 func (p *Project) Transform() Query {
 	moved := false
 	for {
-		if sset.Equal(p.columns, p.source.Columns()) {
+		if set.Equal(p.columns, p.source.Columns()) {
 			// remove projects of all columns
 			return p.source.Transform()
 		}
 		switch q := p.source.(type) {
 		case *Project:
 			// combine projects
-			p.columns = sset.Intersect(p.columns, q.columns)
+			p.columns = set.Intersect(p.columns, q.columns)
 			p.source = q.source
 			continue
 		case *Rename:
@@ -169,12 +170,12 @@ func (p *Project) Transform() Query {
 			p.splitOver(&q.Query2)
 			moved = true
 		case *Join:
-			if sset.Subset(p.columns, q.by) {
+			if set.Subset(p.columns, q.by) {
 				p.splitOver(&q.Query2)
 				moved = true
 			}
 		case *LeftJoin:
-			if sset.Subset(p.columns, q.by) {
+			if set.Subset(p.columns, q.by) {
 				p.splitOver(&q.Query2)
 				moved = true
 			}
@@ -201,24 +202,24 @@ func (p *Project) Transform() Query {
 
 func (p *Project) splitOver(q2 *Query2) {
 	q2.source = NewProject(q2.source,
-		sset.Intersect(p.columns, q2.source.Columns()))
+		set.Intersect(p.columns, q2.source.Columns()))
 	q2.source2 = NewProject(q2.source2,
-		sset.Intersect(p.columns, q2.source2.Columns()))
+		set.Intersect(p.columns, q2.source2.Columns()))
 }
 
 func (p *Project) splitOver2(c *Compatible) bool {
-	if c.disjoint != "" && !sset.Contains(p.columns, c.disjoint) {
-		cols := append(sset.Copy(p.columns), c.disjoint)
+	if c.disjoint != "" && !slices.Contains(p.columns, c.disjoint) {
+		cols := append(slices.Clone(p.columns), c.disjoint)
 		c.source = NewProject(c.source,
-			sset.Intersect(cols, c.source.Columns()))
+			set.Intersect(cols, c.source.Columns()))
 		c.source2 = NewProject(c.source2,
-			sset.Intersect(cols, c.source2.Columns()))
+			set.Intersect(cols, c.source2.Columns()))
 		return false
 	}
 	c.source = NewProject(c.source,
-		sset.Intersect(p.columns, c.source.Columns()))
+		set.Intersect(p.columns, c.source.Columns()))
 	c.source2 = NewProject(c.source2,
-		sset.Intersect(p.columns, c.source2.Columns()))
+		set.Intersect(p.columns, c.source2.Columns()))
 	return true
 }
 
@@ -229,7 +230,7 @@ func (p *Project) transformRename(r *Rename) Query {
 	from := r.from
 	to := r.to
 	for i := range to {
-		if sset.Contains(p.columns, to[i]) {
+		if slices.Contains(p.columns, to[i]) {
 			newFrom = append(newFrom, from[i])
 			newTo = append(newTo, to[i])
 		}
@@ -240,7 +241,7 @@ func (p *Project) transformRename(r *Rename) Query {
 	// rename fields
 	var newCols []string
 	for _, col := range p.columns {
-		if i := strs.Index(to, col); i != -1 {
+		if i := slices.Index(to, col); i != -1 {
 			newCols = append(newCols, from[i])
 		} else {
 			newCols = append(newCols, col)
@@ -259,7 +260,7 @@ func (p *Project) transformExtend(e *Extend) Query {
 	var newCols []string
 	var newExprs []ast.Expr
 	for i, col := range e.cols {
-		if sset.Contains(p.columns, col) {
+		if slices.Contains(p.columns, col) {
 			newCols = append(newCols, col)
 			newExprs = append(newExprs, e.exprs[i])
 		}
@@ -275,13 +276,13 @@ func (p *Project) transformExtend(e *Extend) Query {
 	if !e.hasRules() {
 		var exprCols []string
 		for _, x := range e.exprs {
-			exprCols = sset.Union(exprCols, x.Columns())
+			exprCols = set.Union(exprCols, x.Columns())
 		}
-		if sset.Subset(p.columns, exprCols) {
+		if set.Subset(p.columns, exprCols) {
 			// remove extend fields from project
 			var newCols []string
 			for _, col := range p.columns {
-				if !sset.Contains(e.cols, col) {
+				if !slices.Contains(e.cols, col) {
 					newCols = append(newCols, col)
 				}
 			}
@@ -302,7 +303,7 @@ func (p *Project) Fixed() []Fixed {
 	//TODO cache like extend and union ???
 	var fixed []Fixed
 	for _, f := range p.source.Fixed() {
-		if sset.Contains(p.columns, f.col) {
+		if slices.Contains(p.columns, f.col) {
 			fixed = append(fixed, f)
 		}
 	}
@@ -366,7 +367,7 @@ func (p *Project) Header() *runtime.Header {
 func projectFields(fs []string, pcols []string) []string {
 	flds := make([]string, len(fs))
 	for i, f := range fs {
-		if sset.Contains(pcols, f) {
+		if slices.Contains(pcols, f) {
 			flds[i] = f
 		} else {
 			flds[i] = "-"
@@ -462,7 +463,7 @@ func (p *Project) getHash(th *runtime.Thread, dir runtime.Dir) runtime.Row {
 	return nil
 }
 
-func (p *Project) buildHash(th *runtime.Thread, ) {
+func (p *Project) buildHash(th *runtime.Thread) {
 	for {
 		row := p.source.Get(th, runtime.Next)
 		if row == nil {

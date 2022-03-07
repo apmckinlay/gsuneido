@@ -11,15 +11,15 @@ import (
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
-type set map[string]struct{}
+type strset map[string]struct{}
 
 var yes = struct{}{}
 
 type blok struct {
 	block  *Block
 	parent *blok
-	params set
-	vars   set
+	params strset
+	vars   strset
 	hasRet bool
 }
 
@@ -39,7 +39,7 @@ func Blocks(f *Function) {
 	// first traverse the ast and collect outer variables
 	// and a list of blocks, their params & variables, and their parent if nested.
 	var b bloks
-	vars := make(set)
+	vars := make(strset)
 	b.params(f.Params, vars)
 	for _, stmt := range f.Body {
 		b.statement(stmt, vars)
@@ -65,7 +65,7 @@ func Blocks(f *Function) {
 	}
 }
 
-func shares(v1, v2 set) bool {
+func shares(v1, v2 strset) bool {
 	for v := range v1 {
 		if _, ok := v2[v]; ok {
 			return true
@@ -81,7 +81,7 @@ func closure(x *blok) {
 	}
 }
 
-func (b *bloks) params(params []Param, vars set) {
+func (b *bloks) params(params []Param, vars strset) {
 	for _, p := range params {
 		name := p.Name.Name
 		if name[0] == '.' {
@@ -94,7 +94,7 @@ func (b *bloks) params(params []Param, vars set) {
 }
 
 // statement processes one statement (and its children)
-func (b *bloks) statement(stmt Statement, vars set) {
+func (b *bloks) statement(stmt Statement, vars strset) {
 	if stmt == nil {
 		return
 	}
@@ -163,7 +163,7 @@ func (b *bloks) statement(stmt Statement, vars set) {
 	}
 }
 
-func (b *bloks) expr(expr Expr, vars set) {
+func (b *bloks) expr(expr Expr, vars strset) {
 	if expr == nil {
 		return
 	}
@@ -211,10 +211,10 @@ func (b *bloks) expr(expr Expr, vars set) {
 
 func (b *bloks) block(block *Block) {
 	parent := b.cur
-	params := make(set)
+	params := make(strset)
 	b.params(block.Params, params)
 	b.cur = &blok{block: block, parent: parent, params: params}
-	blockVars := make(set)
+	blockVars := make(strset)
 	for _, stmt := range block.Body {
 		b.statement(stmt, blockVars)
 	}

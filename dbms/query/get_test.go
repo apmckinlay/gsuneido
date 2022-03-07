@@ -10,6 +10,7 @@ import (
 
 	rt "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
+	"github.com/apmckinlay/gsuneido/util/generic/slc"
 )
 
 func TestTableLookup(t *testing.T) {
@@ -39,11 +40,6 @@ func TestQueryGet(t *testing.T) {
 	th := &rt.Thread{}
 	db := testDb()
 	defer db.Close()
-	reverse := func(rows []rt.Row) {
-		for i, j := 0, len(rows)-1; i < j; i, j = i+1, j-1 {
-			rows[i], rows[j] = rows[j], rows[i]
-		}
-	}
 	get := func(q Query, dir rt.Dir) string {
 		t.Helper()
 		var rows []rt.Row
@@ -52,7 +48,7 @@ func TestQueryGet(t *testing.T) {
 			rows = append(rows, row)
 		}
 		if dir == rt.Prev {
-			reverse(rows)
+			slc.Reverse(rows)
 		}
 		hdr := q.Header()
 		var sb strings.Builder

@@ -21,13 +21,12 @@ var _ = builtin5("RegOpenKeyEx(hKey, lpSubKey, ulOptions, samDesired, phkResult)
 	func(a, b, c, d, e Value) Value {
 		defer heap.FreeTo(heap.CurSize())
 		p := heap.Alloc(uintptrSize)
-		rtn, _, _ := syscall.Syscall6(regOpenKeyEx, 5,
+		rtn, _, _ := syscall.SyscallN(regOpenKeyEx,
 			intArg(a),
 			uintptr(stringArg(b)),
 			intArg(c),
 			intArg(d),
-			uintptr(p),
-			0)
+			uintptr(p))
 		e.Put(nil, SuStr("x"), IntVal(int(*(*uintptr)(p)))) // phkResult
 		return intRet(rtn)
 	})
@@ -49,7 +48,7 @@ var _ = builtin("RegCreateKeyEx(hKey, lpSubKey, reserved/*unused*/, lpClass, "+
 	func(_ *Thread, a []Value) Value {
 		defer heap.FreeTo(heap.CurSize())
 		p := heap.Alloc(uintptrSize)
-		rtn, _, _ := syscall.Syscall9(regCreateKeyEx, 9,
+		rtn, _, _ := syscall.SyscallN(regCreateKeyEx,
 			intArg(a[0]),
 			uintptr(stringArg(a[1])),
 			0, // Reserved - must be 0
@@ -72,7 +71,7 @@ var _ = builtin6("RegQueryValueEx(hKey, lpValueName, lpReserved/*unused*/, "+
 		pe := heap.Alloc(int32Size)
 		pf := heap.Alloc(int32Size)
 		*(*int32)(pf) = int32(int32Size) // to match int32 data
-		rtn, _, _ := syscall.Syscall6(regQueryValueEx, 6,
+		rtn, _, _ := syscall.SyscallN(regQueryValueEx,
 			intArg(a),
 			uintptr(stringArg(b)),
 			0,           // lpReserved - must be 0
@@ -93,7 +92,7 @@ var _ = builtin6("RegSetValueEx(hKey, lpValueName, reserved/*unused*/, "+
 		defer heap.FreeTo(heap.CurSize())
 		pe := heap.Alloc(int32Size)
 		*(*int32)(pe) = getInt32(e, "x")
-		rtn, _, _ := syscall.Syscall6(regSetValueEx, 6,
+		rtn, _, _ := syscall.SyscallN(regSetValueEx,
 			intArg(a),
 			uintptr(stringArg(b)),
 			0,           // reserved - must be 0

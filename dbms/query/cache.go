@@ -5,7 +5,7 @@ package query
 
 import (
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util/strs"
+	"golang.org/x/exp/slices"
 )
 
 // cache is a very simple cache for query costs
@@ -34,7 +34,7 @@ func (c *cache) cacheAdd(index []string, cost Cost, approach interface{}) {
 // or -1 if the index as not been added.
 func (c *cache) cacheGet(index []string) (Cost, interface{}) {
 	for i := range c.entries {
-		if strs.Equal(index, c.entries[i].index) {
+		if slices.Equal(index, c.entries[i].index) {
 			return c.entries[i].cost, c.entries[i].approach
 		}
 	}

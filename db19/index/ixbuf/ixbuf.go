@@ -15,7 +15,7 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/index/iterator"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util/ints"
+	"github.com/apmckinlay/gsuneido/util/generic/ord"
 )
 
 type T = ixbuf
@@ -147,7 +147,7 @@ func (ib *ixbuf) searchChunks(key string) int {
 			j = h
 		}
 	}
-	return ints.Min(i, len(ib.chunks)-1)
+	return ord.Min(i, len(ib.chunks)-1)
 }
 
 // search does a binary search of one chunk for a key.

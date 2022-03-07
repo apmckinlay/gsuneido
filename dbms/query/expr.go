@@ -5,7 +5,7 @@ package query
 
 import (
 	. "github.com/apmckinlay/gsuneido/compile/ast"
-	"github.com/apmckinlay/gsuneido/util/strs"
+	"golang.org/x/exp/slices"
 )
 
 // renameExpr renames identifiers in an expression.
@@ -18,7 +18,7 @@ func renameExpr(expr Expr, from, to []string) Expr {
 	case *Ident:
 		// this is the actual rename
 		// the other cases are just traversal and path copying
-		if i := strs.Index(from, e.Name); i != -1 {
+		if i := slices.Index(from, e.Name); i != -1 {
 			return &Ident{Name: to[i]}
 		}
 		return expr
@@ -140,7 +140,7 @@ func replaceExpr(expr Expr, from []string, to []Expr) Expr {
 	case *Ident:
 		// this is the actual replace
 		// the other cases are just traversal and path copying
-		if i := strs.Index(from, e.Name); i != -1 {
+		if i := slices.Index(from, e.Name); i != -1 {
 			return to[i]
 		}
 		return expr

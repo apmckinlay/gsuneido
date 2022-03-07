@@ -11,11 +11,10 @@ import (
 	"time"
 
 	. "github.com/apmckinlay/gsuneido/runtime"
-	"github.com/apmckinlay/gsuneido/runtime/types"
 )
 
 type suSocketClient struct {
-	CantConvert
+	ValueBase[*suSocketClient]
 	conn    *net.TCPConn
 	rdr     *bufio.Reader
 	timeout time.Duration
@@ -49,50 +48,6 @@ var _ = builtin("SocketClient(ipaddress, port, timeout=60, timeoutConnect=0, blo
 		defer sc.close()
 		return t.Call(args[4], sc)
 	})
-
-func (*suSocketClient) Get(*Thread, Value) Value {
-	panic("SocketClient does not support get")
-}
-
-func (*suSocketClient) Put(*Thread, Value, Value) {
-	panic("SocketClient does not support put")
-}
-
-func (*suSocketClient) GetPut(*Thread, Value, Value, func(x, y Value) Value, bool) Value {
-	panic("SocketClient does not support update")
-}
-
-func (*suSocketClient) RangeTo(int, int) Value {
-	panic("SocketClient does not support range")
-}
-
-func (*suSocketClient) RangeLen(int, int) Value {
-	panic("SocketClient does not support range")
-}
-
-func (*suSocketClient) Hash() uint32 {
-	panic("SocketClient hash not implemented")
-}
-
-func (*suSocketClient) Hash2() uint32 {
-	panic("SocketClient hash not implemented")
-}
-
-func (*suSocketClient) Compare(Value) int {
-	panic("SocketClient compare not implemented")
-}
-
-func (*suSocketClient) Call(*Thread, Value, *ArgSpec) Value {
-	panic("can't call a SocketClient instance")
-}
-
-func (*suSocketClient) String() string {
-	return "SocketClient"
-}
-
-func (*suSocketClient) Type() types.Type {
-	return types.BuiltinClass
-}
 
 func (sc *suSocketClient) Equal(other interface{}) bool {
 	sc2, ok := other.(*suSocketClient)

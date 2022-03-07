@@ -12,6 +12,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/hash"
 	"github.com/apmckinlay/gsuneido/util/str"
 	"github.com/apmckinlay/gsuneido/util/strs"
+	"golang.org/x/exp/slices"
 )
 
 type Schema struct {
@@ -91,7 +92,7 @@ func (ix *Index) string(fktohere bool) string {
 	s += strs.Join("(,)", ix.Columns)
 	if ix.Fk.Table != "" {
 		s += " in " + ix.Fk.Table
-		if !strs.Equal(ix.Fk.Columns, ix.Columns) {
+		if !slices.Equal(ix.Fk.Columns, ix.Columns) {
 			s += strs.Join("(,)", ix.Fk.Columns)
 		}
 		if ix.Fk.Mode&Cascade != 0 {
@@ -118,7 +119,7 @@ func (ix *Index) string(fktohere bool) string {
 func (sc *Schema) FindIndex(cols []string) *Index {
 	for i := range sc.Indexes {
 		idx := &sc.Indexes[i]
-		if strs.Equal(cols, idx.Columns) {
+		if slices.Equal(cols, idx.Columns) {
 			return idx
 		}
 	}
@@ -130,7 +131,7 @@ func (sc *Schema) FindIndex(cols []string) *Index {
 func (sc *Schema) IIndex(cols []string) int {
 	for i := range sc.Indexes {
 		idx := &sc.Indexes[i]
-		if strs.Equal(cols, idx.Columns) {
+		if slices.Equal(cols, idx.Columns) {
 			return i
 		}
 	}
@@ -138,11 +139,11 @@ func (sc *Schema) IIndex(cols []string) int {
 }
 
 func (ix *Index) Equal(iy *Index) bool {
-	return strs.Equal(ix.Columns, iy.Columns) &&
+	return slices.Equal(ix.Columns, iy.Columns) &&
 		ix.Mode == iy.Mode &&
 		ix.Fk.Table == iy.Fk.Table &&
 		ix.Fk.Mode == iy.Fk.Mode &&
-		strs.Equal(ix.Fk.Columns, iy.Fk.Columns)
+		slices.Equal(ix.Fk.Columns, iy.Fk.Columns)
 }
 
 func (sc *Schema) Check() {
@@ -154,7 +155,7 @@ func (sc *Schema) Check() {
 func (sc *Schema) checkLower() {
 	for _, col := range sc.Derived {
 		if strings.HasSuffix(col, "_lower!") &&
-			!strs.Contains(sc.Columns, strings.TrimSuffix(col, "_lower!")) {
+			!slices.Contains(sc.Columns, strings.TrimSuffix(col, "_lower!")) {
 			panic("_lower! nonexistent column: " +
 				strings.TrimSuffix(col, "_lower!"))
 		}
@@ -181,8 +182,8 @@ func CheckIndexes(table string, cols []string, idxs []Index) {
 			panic("index columns must not be empty")
 		}
 		for _, col := range ix.Columns {
-			if !strs.Contains(cols, col) &&
-				!strs.Contains(cols, str.RemoveSuffix(col, "_lower!")) {
+			if !slices.Contains(cols, col) &&
+				!slices.Contains(cols, str.RemoveSuffix(col, "_lower!")) {
 				panic("invalid index column: " +
 					col + " in " + table)
 			}

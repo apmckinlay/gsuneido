@@ -444,59 +444,19 @@ func get(node Node, m Value) Value {
 
 // Value interface
 
-type AstNodeValue struct {
-	CantConvert
+type SuAstNode struct {
+	ValueBase[SuAstNode]
 }
 
-func (AstNodeValue) Put(*Thread, Value, Value) {
-	panic("AstNode does not support put")
-}
-
-func (AstNodeValue) GetPut(*Thread, Value, Value, func(x, y Value) Value, bool) Value {
-	panic("AstNode does not support update")
-}
-
-func (AstNodeValue) RangeTo(int, int) Value {
-	panic("AstNode does not support range")
-}
-
-func (AstNodeValue) RangeLen(int, int) Value {
-	panic("AstNode does not support range")
-}
-
-func (AstNodeValue) Hash() uint32 {
-	panic("AstNode hash not implemented")
-}
-
-func (AstNodeValue) Hash2() uint32 {
-	panic("AstNode hash not implemented")
-}
-
-func (AstNodeValue) Compare(Value) int {
-	panic("AstNode compare not implemented")
-}
-
-func (AstNodeValue) Call(*Thread, Value, *ArgSpec) Value {
-	panic("can't call AstNode")
-}
-
-func (AstNodeValue) String() string {
-	return "astNode"
-}
-
-func (AstNodeValue) Type() types.Type {
+func (SuAstNode) Type() types.Type {
 	return types.AstNode
 }
 
-func (a AstNodeValue) Equal(other interface{}) bool {
-	a2, ok := other.(AstNodeValue)
+func (a SuAstNode) Equal(other interface{}) bool {
+	a2, ok := other.(SuAstNode)
 	return ok && a == a2
 }
 
-func (*AstNodeValue) SetConcurrent() {
+func (SuAstNode) SetConcurrent() {
 	// read-only so nothing to do
-}
-
-func (AstNodeValue) Lookup(*Thread, string) Callable {
-	return nil // no methods
 }

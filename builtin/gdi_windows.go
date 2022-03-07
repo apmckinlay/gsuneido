@@ -13,7 +13,7 @@ import (
 	"github.com/apmckinlay/gsuneido/builtin/heap"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util/ints"
+	"github.com/apmckinlay/gsuneido/util/generic/ord"
 )
 
 var gdi32 = MustLoadDLL("gdi32.dll")
@@ -534,7 +534,7 @@ var _ = builtin3("Polygon(hdc, points, npoints = false)",
 			n = ToInt(c)
 		}
 		p := heap.Alloc(uintptr(n) * nPOINT)
-		for i := 0; i < ints.Min(n, ob.ListSize()); i++ {
+		for i := 0; i < ord.Min(n, ob.ListSize()); i++ {
 			*(*POINT)(unsafe.Pointer(uintptr(p) + uintptr(i)*nPOINT)) =
 				obToPoint(ob.ListGet(i))
 		}

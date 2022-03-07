@@ -7,11 +7,10 @@ import (
 	"github.com/apmckinlay/gsuneido/compile/lexer"
 	"github.com/apmckinlay/gsuneido/compile/tokens"
 	. "github.com/apmckinlay/gsuneido/runtime"
-	"github.com/apmckinlay/gsuneido/runtime/types"
 )
 
 type suScanner struct {
-	CantConvert
+	ValueBase[*suScanner]
 	MayLock
 	lxr  lexer.Lexer
 	item lexer.Item
@@ -25,50 +24,6 @@ var _ = builtin1("Scanner(string)",
 	})
 
 var _ Value = (*suScanner)(nil)
-
-func (sc *suScanner) Get(*Thread, Value) Value {
-	panic(sc.name + " does not support get")
-}
-
-func (sc *suScanner) Put(*Thread, Value, Value) {
-	panic(sc.name + " does not support put")
-}
-
-func (sc *suScanner) GetPut(*Thread, Value, Value, func(x, y Value) Value, bool) Value {
-	panic(sc.name + " does not support update")
-}
-
-func (sc *suScanner) RangeTo(int, int) Value {
-	panic(sc.name + " does not support range")
-}
-
-func (sc *suScanner) RangeLen(int, int) Value {
-	panic(sc.name + " does not support range")
-}
-
-func (sc *suScanner) Hash() uint32 {
-	panic(sc.name + " hash not implemented")
-}
-
-func (sc *suScanner) Hash2() uint32 {
-	panic(sc.name + " hash not implemented")
-}
-
-func (sc *suScanner) Compare(Value) int {
-	panic(sc.name + " compare not implemented")
-}
-
-func (sc *suScanner) Call(*Thread, Value, *ArgSpec) Value {
-	panic("can't call " + sc.name)
-}
-
-func (sc *suScanner) String() string {
-	return "a" + sc.name
-}
-
-func (*suScanner) Type() types.Type {
-	return types.BuiltinClass
-}
 
 func (sc *suScanner) Equal(other interface{}) bool {
 	sc2, ok := other.(*suScanner)

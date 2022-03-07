@@ -14,7 +14,7 @@ import (
 	"github.com/apmckinlay/gsuneido/runtime/trace"
 	"github.com/apmckinlay/gsuneido/util/ascii"
 	"github.com/apmckinlay/gsuneido/util/str"
-	"github.com/apmckinlay/gsuneido/util/strs"
+	"golang.org/x/exp/slices"
 )
 
 type muxClient struct {
@@ -267,7 +267,7 @@ func (ms *muxSession) Unuse(lib string) bool {
 }
 
 func (ms *muxSession) Use(lib string) bool {
-	if strs.Contains(ms.Libraries(), lib) {
+	if slices.Contains(ms.Libraries(), lib) {
 		return false
 	}
 	panic("can't Use('" + lib + "')\n" +

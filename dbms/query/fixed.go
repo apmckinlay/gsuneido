@@ -5,7 +5,7 @@ package query
 
 import (
 	"github.com/apmckinlay/gsuneido/runtime"
-	"github.com/apmckinlay/gsuneido/util/sset"
+	"github.com/apmckinlay/gsuneido/util/generic/set"
 )
 
 type Fixed struct {
@@ -57,7 +57,7 @@ func combineFixed(fixed1, fixed2 []Fixed) (result []Fixed, none bool) {
 	for _, f2 := range fixed2 {
 		if srcvals := getFixed(fixed1, f2.col); srcvals != nil {
 			// field is in both
-			vals := sset.Intersect(srcvals, f2.values)
+			vals := set.Intersect(srcvals, f2.values)
 			if len(vals) == 0 {
 				return nil, true // can't match anything
 			}
@@ -78,7 +78,7 @@ func FixedIntersect(fixed1, fixed2 []Fixed) (result []Fixed, none bool) {
 	result = make([]Fixed, len(fixed1))
 	for i, f1 := range fixed1 {
 		if vals2 := getFixed(fixed2, f1.col); vals2 != nil {
-			vals := sset.Intersect(f1.values, vals2)
+			vals := set.Intersect(f1.values, vals2)
 			if len(vals) == 0 {
 				return nil, true // can't match anything
 			}

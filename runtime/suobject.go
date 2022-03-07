@@ -13,7 +13,7 @@ import (
 	"github.com/apmckinlay/gsuneido/compile/lexer"
 	"github.com/apmckinlay/gsuneido/runtime/types"
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util/ints"
+	"github.com/apmckinlay/gsuneido/util/generic/ord"
 	"github.com/apmckinlay/gsuneido/util/pack"
 	"github.com/apmckinlay/gsuneido/util/varint"
 )
@@ -32,7 +32,7 @@ var EmptyObject = &SuObject{readonly: true}
 // i.e. a container with both list and named members.
 // Zero value is a valid empty object.
 type SuObject struct {
-	CantConvert
+	ValueBase[SuObject]
 	named  Hmap
 	list   []Value
 	defval Value
@@ -623,7 +623,7 @@ func (*SuObject) Type() types.Type {
 
 // Compare compares only list values (not named)
 func (ob *SuObject) Compare(other Value) int {
-	if cmp := ints.Compare(ordObject, Order(other)); cmp != 0 {
+	if cmp := ord.Compare(ordObject, Order(other)); cmp != 0 {
 		return cmp
 	}
 	// now know other is an object so ToContainer won't panic
@@ -647,7 +647,7 @@ func cmp2(x Value, y Value) int {
 		tx = order[x.Type()]
 		ty = order[y.Type()]
 		if tx != ty {
-			return ints.Compare(int(tx), int(ty))
+			return ord.Compare(tx, ty)
 		}
 		switch tx {
 		case types.Object:

@@ -23,12 +23,11 @@ var getDiskFreeSpaceEx = kernel32.MustFindProc("GetDiskFreeSpaceExA").Addr()
 var _ = builtin1("GetDiskFreeSpace(dir = '.')", func(arg Value) Value {
 	dir := zbuf(arg)
 	var n int64
-	syscall.Syscall6(getDiskFreeSpaceEx, 4,
+	syscall.SyscallN(getDiskFreeSpaceEx,
 		uintptr(unsafe.Pointer(&dir[0])),
 		uintptr(unsafe.Pointer(&n)),
 		0,
-		0,
-		0, 0)
+		0)
 	return Int64Val(n)
 })
 

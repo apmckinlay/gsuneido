@@ -160,7 +160,7 @@ func (t *Thread) interp(catchJump, catchSp *int) (ret Value) {
 loop:
 	for fr.ip < len(code) {
 		profileOpCount++
-		// fmt.Println("stack:", t.sp, t.stack[ints.Max(0, t.sp-3):t.sp])
+		// fmt.Println("stack:", t.sp, t.stack[ord.Max(0, t.sp-3):t.sp])
 		// _, da := Disasm1(fr.fn, fr.ip)
 		// fmt.Printf("%d: %d: %s\n", t.fp, fr.ip, da)
 		if t.UIThread {

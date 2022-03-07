@@ -7,9 +7,11 @@ import (
 	"github.com/apmckinlay/gsuneido/runtime/types"
 )
 
+type suTransaction struct{}
+
 // SuTran is a database transaction
 type SuTran struct {
-	CantConvert
+	ValueBase[*suTransaction]
 	itran     ITran
 	data      *SuObject
 	updatable bool
@@ -21,45 +23,9 @@ func NewSuTran(itran ITran, updatable bool) *SuTran {
 
 var _ Value = (*SuTran)(nil)
 
-func (*SuTran) Get(*Thread, Value) Value {
-	panic("transaction does not support get")
-}
-
-func (*SuTran) Put(*Thread, Value, Value) {
-	panic("transaction does not support put")
-}
-
-func (*SuTran) GetPut(*Thread, Value, Value, func(x, y Value) Value, bool) Value {
-	panic("transaction does not support update")
-}
-
-func (*SuTran) RangeTo(int, int) Value {
-	panic("transaction does not support range")
-}
-
-func (*SuTran) RangeLen(int, int) Value {
-	panic("transaction does not support range")
-}
-
-func (*SuTran) Hash() uint32 {
-	panic("transaction hash not implemented")
-}
-
-func (*SuTran) Hash2() uint32 {
-	panic("transaction hash not implemented")
-}
-
 func (st *SuTran) Equal(other interface{}) bool {
 	st2, ok := other.(*SuTran)
 	return ok && st == st2
-}
-
-func (*SuTran) Compare(Value) int {
-	panic("transaction compare not implemented")
-}
-
-func (*SuTran) Call(*Thread, Value, *ArgSpec) Value {
-	panic("can't call transaction")
 }
 
 func (*SuTran) Type() types.Type {

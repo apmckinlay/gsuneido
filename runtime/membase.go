@@ -6,7 +6,6 @@ package runtime
 // MemBase is the shared base for SuClass and SuInstance
 type MemBase struct {
 	Data map[string]Value
-	CantConvert
 	MayLock
 }
 

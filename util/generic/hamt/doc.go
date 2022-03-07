@@ -25,18 +25,8 @@
 // Put and Delete can only be used when mutable.
 // When mutable it is NOT thread safe, it should be thread contained.
 //
-// Using code must supply:
-// 		func ItemKey(item Item) KeyType
-// 		func ItemHash(key KeyType) uint32
-// These are functions rather than methods so they can be defined
-// for things like string or int that don't allow methods.
-//
-// The KeyType must be comparable with ==
-//
-// If items are large, the Item type should probably be a pointer.
+// If items are large, the element (E) type should probably be a pointer.
 // However, to maintain immutability, items should not be modified via pointer.
-// The code is not written to use *Item
+// The code is not written to use *E
 // because that's not what you want for e.g. string or int
-//
-// Tests are in util/hamttest
 package hamt

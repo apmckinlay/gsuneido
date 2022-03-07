@@ -12,56 +12,9 @@ import (
 // SuQueryCursor is the common base for SuQuery and SuCursor
 type SuQueryCursor struct {
 	owner *Thread
-	CantConvert
-	// which is either "Cursor" or "Query"
-	which string
 	query string
 	iqc   IQueryCursor
 	eof   Dir
-}
-
-func (qc *SuQueryCursor) Get(*Thread, Value) Value {
-	panic(qc.which + " does not support get")
-}
-
-func (qc *SuQueryCursor) Put(*Thread, Value, Value) {
-	panic(qc.which + " does not support put")
-}
-
-func (qc *SuQueryCursor) GetPut(*Thread, Value, Value, func(x, y Value) Value, bool) Value {
-	panic(qc.which + " does not support update")
-}
-
-func (qc *SuQueryCursor) RangeTo(int, int) Value {
-	panic(qc.which + " does not support range")
-}
-
-func (qc *SuQueryCursor) RangeLen(int, int) Value {
-	panic(qc.which + " does not support range")
-}
-
-func (qc *SuQueryCursor) Hash() uint32 {
-	panic(qc.which + " hash not implemented")
-}
-
-func (qc *SuQueryCursor) Hash2() uint32 {
-	panic(qc.which + " hash not implemented")
-}
-
-func (qc *SuQueryCursor) Compare(Value) int {
-	panic(qc.which + " compare not implemented")
-}
-
-func (qc *SuQueryCursor) Call(*Thread, Value, *ArgSpec) Value {
-	panic("can't call " + qc.which)
-}
-
-func (qc *SuQueryCursor) String() string {
-	return qc.which + "('" + qc.query + "')"
-}
-
-func (*SuQueryCursor) SetConcurrent() {
-	// allows multiple threads to reference but only owner can use
 }
 
 //-------------------------------------------------------------------
@@ -124,13 +77,14 @@ func (qc *SuQueryCursor) Strategy() Value {
 
 // SuQuery is a database query
 type SuQuery struct {
+	ValueBase[SuQuery]
 	SuQueryCursor
 	tran *SuTran
 }
 
 func NewSuQuery(th *Thread, tran *SuTran, query string, iquery IQuery) *SuQuery {
 	return &SuQuery{tran: tran, SuQueryCursor: SuQueryCursor{
-		owner: th, which: "Query", query: query, iqc: iquery}}
+		owner: th, query: query, iqc: iquery}}
 }
 
 var _ Value = (*SuQuery)(nil)
@@ -142,6 +96,14 @@ func (q *SuQuery) Equal(other interface{}) bool {
 
 func (*SuQuery) Type() types.Type {
 	return types.Query
+}
+
+func (q *SuQuery) String() string {
+	return "Query('" + q.query + "')"
+}
+
+func (*SuQuery) SetConcurrent() {
+	// FIXME
 }
 
 // QueryMethods is initialized by the builtin package
@@ -180,12 +142,13 @@ func (q *SuQuery) Output(th *Thread, ob Container) {
 
 // SuCursor is a database cursor
 type SuCursor struct {
+	ValueBase[SuCursor]
 	SuQueryCursor
 }
 
 func NewSuCursor(th *Thread, query string, icursor ICursor) *SuCursor {
 	return &SuCursor{SuQueryCursor: SuQueryCursor{
-		owner: th, which: "Cursor", query: query, iqc: icursor}}
+		owner: th, query: query, iqc: icursor}}
 }
 
 func (q *SuCursor) Equal(other interface{}) bool {
@@ -195,6 +158,14 @@ func (q *SuCursor) Equal(other interface{}) bool {
 
 func (*SuCursor) Type() types.Type {
 	return types.Cursor
+}
+
+func (q *SuCursor) String() string {
+	return "Cursor('" + q.query + "')"
+}
+
+func (*SuCursor) SetConcurrent() {
+	// FIXME
 }
 
 // CursorMethods is initialized by the builtin package

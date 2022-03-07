@@ -9,7 +9,9 @@ import (
 
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util/ints"
+	"github.com/apmckinlay/gsuneido/util/bits"
+	"github.com/apmckinlay/gsuneido/util/generic/hamt"
+	"github.com/apmckinlay/gsuneido/util/generic/ord"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
@@ -25,7 +27,7 @@ func TestMeta(t *testing.T) {
 		})
 	}
 	tbl = tbl.Freeze()
-	meta := &Meta{info: InfoChain{InfoHamt: tbl}}
+	meta := &Meta{info: hamt.Chain[string, *Info]{Hamt: tbl}}
 
 	for i := 0; i < 4; i++ {
 		m := meta.Mutable()
@@ -61,7 +63,7 @@ func TestChunkingSimulation(t *testing.T) {
 		data[updates[step]] = clock
 		// fmt.Println("--- update", updates[step])
 		// number of previous chunks to merge with
-		merge := ints.Min(len(chunks), trailingOnes(clock))
+		merge := ord.Min(len(chunks), bits.TrailingOnes(clock))
 		if len(chunks) >= maxChain {
 			// fmt.Println("MAX")
 			merge = maxChain

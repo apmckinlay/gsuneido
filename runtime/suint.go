@@ -16,7 +16,7 @@ import (
 
 	"github.com/apmckinlay/gsuneido/runtime/types"
 	"github.com/apmckinlay/gsuneido/util/dnum"
-	"github.com/apmckinlay/gsuneido/util/ints"
+	"github.com/apmckinlay/gsuneido/util/generic/ord"
 	"github.com/apmckinlay/gsuneido/util/pack"
 )
 
@@ -132,11 +132,11 @@ func (*smi) Type() types.Type {
 }
 
 func (si *smi) Compare(other Value) int {
-	if cmp := ints.Compare(ordNum, Order(other)); cmp != 0 {
+	if cmp := ord.Compare(ordNum, Order(other)); cmp != 0 {
 		return cmp
 	}
 	if y, ok := other.(*smi); ok {
-		return ints.Compare(si.toInt(), y.toInt())
+		return ord.Compare(si.toInt(), y.toInt())
 	}
 	dn, _ := si.ToDnum()
 	return dnum.Compare(dn, ToDnum(other))

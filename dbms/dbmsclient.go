@@ -20,7 +20,7 @@ import (
 	"github.com/apmckinlay/gsuneido/runtime/trace"
 	"github.com/apmckinlay/gsuneido/util/ascii"
 	"github.com/apmckinlay/gsuneido/util/str"
-	"github.com/apmckinlay/gsuneido/util/strs"
+	"golang.org/x/exp/slices"
 )
 
 // token is to authorize the next connection
@@ -304,7 +304,7 @@ func (dc *dbmsClient) Unuse(lib string) bool {
 }
 
 func (dc *dbmsClient) Use(lib string) bool {
-	if strs.Contains(dc.Libraries(), lib) {
+	if slices.Contains(dc.Libraries(), lib) {
 		return false
 	}
 	panic("can't Use('" + lib + "')\n" +

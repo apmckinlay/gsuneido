@@ -7,8 +7,10 @@ import (
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/runtime"
-	"github.com/apmckinlay/gsuneido/util/sset"
+	"github.com/apmckinlay/gsuneido/util/generic/set"
+	"github.com/apmckinlay/gsuneido/util/generic/slc"
 	"github.com/apmckinlay/gsuneido/util/strs"
+	"golang.org/x/exp/slices"
 )
 
 type Rename struct {
@@ -19,13 +21,13 @@ type Rename struct {
 
 func NewRename(src Query, from, to []string) *Rename {
 	srcCols := src.Columns()
-	if !sset.Subset(srcCols, from) {
+	if !set.Subset(srcCols, from) {
 		panic("rename: nonexistent column(s): " +
-			strs.Join(", ", sset.Difference(from, srcCols)))
+			strs.Join(", ", set.Difference(from, srcCols)))
 	}
-	if !sset.Disjoint(srcCols, to) {
+	if !set.Disjoint(srcCols, to) {
 		panic("rename: column(s) already exist: " +
-			strs.Join(", ", sset.Intersect(srcCols, to)))
+			strs.Join(", ", set.Intersect(srcCols, to)))
 	}
 	r := &Rename{Query1: Query1{source: src}, from: from, to: to}
 	r.renameDependencies(srcCols)
@@ -36,10 +38,10 @@ func (r *Rename) renameDependencies(src []string) {
 	copy := false
 	for i := 0; i < len(r.from); i++ {
 		deps := r.from[i] + "_deps"
-		if sset.Contains(src, deps) {
+		if slices.Contains(src, deps) {
 			if !copy {
-				r.from = sset.Copy(r.from)
-				r.to = sset.Copy(r.to)
+				r.from = slices.Clone(r.from)
+				r.to = slices.Clone(r.to)
 				copy = true
 			}
 			r.from = append(r.from, deps)
@@ -62,7 +64,7 @@ func (r *Rename) String() string {
 }
 
 func (r *Rename) Columns() []string {
-	return strs.Replace(r.source.Columns(), r.from, r.to)
+	return slc.Replace(r.source.Columns(), r.from, r.to)
 }
 
 func (r *Rename) Keys() [][]string {
@@ -76,7 +78,7 @@ func (r *Rename) Indexes() [][]string {
 func renameIndexes(idxs [][]string, from, to []string) [][]string {
 	idxs2 := make([][]string, len(idxs))
 	for i, ix := range idxs {
-		idxs2[i] = strs.Replace(ix, from, to)
+		idxs2[i] = slc.Replace(ix, from, to)
 	}
 	return idxs2
 }
@@ -85,7 +87,7 @@ func (r *Rename) Fixed() []Fixed {
 	fixed := r.source.Fixed()
 	result := make([]Fixed, len(fixed))
 	for i, fxd := range fixed {
-		j := strs.Index(r.from, fxd.col)
+		j := slices.Index(r.from, fxd.col)
 		if j == -1 {
 			result[i] = fxd
 		} else {
@@ -132,18 +134,18 @@ func (r *Rename) Transform() Query {
 }
 
 func (r *Rename) optimize(mode Mode, index []string) (Cost, interface{}) {
-	return Optimize(r.source, mode, strs.Replace(index, r.to, r.from)), nil
+	return Optimize(r.source, mode, slc.Replace(index, r.to, r.from)), nil
 }
 
 func (r *Rename) setApproach(index []string, _ interface{}, tran QueryTran) {
-	r.source = SetApproach(r.source, strs.Replace(index, r.to, r.from), tran)
+	r.source = SetApproach(r.source, slc.Replace(index, r.to, r.from), tran)
 }
 
 // execution --------------------------------------------------------
 
 func (r *Rename) Header() *runtime.Header {
 	hdr := r.source.Header()
-	cols := strs.Replace(hdr.Columns, r.from, r.to)
+	cols := slc.Replace(hdr.Columns, r.from, r.to)
 	flds := renameIndexes(hdr.Fields, r.from, r.to)
 	return runtime.NewHeader(flds, cols)
 }
@@ -153,9 +155,9 @@ func (r *Rename) Get(th *runtime.Thread, dir runtime.Dir) runtime.Row {
 }
 
 func (r *Rename) Select(cols, vals []string) {
-	r.source.Select(strs.Replace(cols, r.to, r.from), vals)
+	r.source.Select(slc.Replace(cols, r.to, r.from), vals)
 }
 
 func (r *Rename) Lookup(th *runtime.Thread, cols, vals []string) runtime.Row {
-	return r.source.Lookup(th, strs.Replace(cols, r.to, r.from), vals)
+	return r.source.Lookup(th, slc.Replace(cols, r.to, r.from), vals)
 }

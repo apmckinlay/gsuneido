@@ -223,7 +223,7 @@ func ToDnum(x Value) dnum.Dnum {
 	panic("can't convert " + ErrType(x) + " to number")
 }
 
-// ErrType tweaks the TypeName to match cSuneido
+// ErrType tweaks the Type to match cSuneido
 func ErrType(x Value) string {
 	if x == nil {
 		return "nil"
@@ -275,37 +275,6 @@ func UserDef(t *Thread, gnUserDef int, method string) Callable {
 			return c.get2(t, method, nil)
 		}
 	}
-	return nil
-}
-
-// CantConvert is embedded in Value types to supply default conversion methods
-type CantConvert struct{}
-
-func (CantConvert) ToInt() (int, bool) {
-	return 0, false
-}
-
-func (CantConvert) IfInt() (int, bool) {
-	return 0, false
-}
-
-func (CantConvert) ToDnum() (dnum.Dnum, bool) {
-	return dnum.Zero, false
-}
-
-func (CantConvert) ToContainer() (Container, bool) {
-	return nil, false
-}
-
-func (CantConvert) AsStr() (string, bool) {
-	return "", false
-}
-
-func (CantConvert) ToStr() (string, bool) {
-	return "", false
-}
-
-func (CantConvert) Lookup(*Thread, string) Callable {
 	return nil
 }
 

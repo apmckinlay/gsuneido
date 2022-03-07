@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/util/ascii"
-	"github.com/apmckinlay/gsuneido/util/ints"
+	"github.com/apmckinlay/gsuneido/util/generic/ord"
 )
 
 // Capitalized returns true is the string starts with A-Z, otherwise false
@@ -213,20 +213,6 @@ func Subn(s string, i, n int) string {
 	return s[i : i+n]
 }
 
-func Min(s1, s2 string) string {
-	if s1 <= s2 {
-		return s1
-	}
-	return s2
-}
-
-func Max(s1, s2 string) string {
-	if s1 >= s2 {
-		return s1
-	}
-	return s2
-}
-
 // CmpLower compares the ascii.ToLower of each character
 // returning -1, 0, or +1 similar to strings.Compare
 func CmpLower(s1, s2 string) int {
@@ -242,7 +228,7 @@ func CmpLower(s1, s2 string) int {
 			return +1
 		}
 	}
-	return ints.Compare(n1, n2)
+	return ord.Compare(n1, n2)
 }
 
 // ToLower is an ascii version of strings.ToLower

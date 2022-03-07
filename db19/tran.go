@@ -20,6 +20,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/cksum"
 	"github.com/apmckinlay/gsuneido/util/hacks"
 	"github.com/apmckinlay/gsuneido/util/strs"
+	"golang.org/x/exp/slices"
 )
 
 type tran struct {
@@ -124,7 +125,7 @@ func (t *ReadTran) GetIndex(table string, cols []string) *index.Overlay {
 		return nil
 	}
 	for i, ix := range ts.Indexes {
-		if strs.Equal(cols, ix.Columns) {
+		if slices.Equal(cols, ix.Columns) {
 			return t.GetIndexI(table, i)
 		}
 	}
@@ -147,7 +148,7 @@ func (t *ReadTran) GetRecord(off uint64) rt.Record {
 
 func (t *ReadTran) ColToFld(table, col string) int {
 	ts := t.meta.GetRoSchema(table)
-	return strs.Index(ts.Columns, col)
+	return slices.Index(ts.Columns, col)
 }
 
 func (t *ReadTran) RangeFrac(table string, iIndex int, org, end string) float64 {
@@ -596,8 +597,8 @@ func (t *UpdateTran) fkeyUpdateCascade(th *rt.Thread, ts *meta.Schema, i int,
 			oldrec := t.GetRecord(off)
 			rb := rt.RecordBuilder{}
 			for i, col := range ts2.Columns {
-				if j := strs.Index(ixcols2, col); j != -1 {
-					k := strs.Index(ts.Columns, ixcols[j])
+				if j := slices.Index(ixcols2, col); j != -1 {
+					k := slices.Index(ts.Columns, ixcols[j])
 					rb.AddRaw(rec.GetRaw(k))
 				} else {
 					rb.AddRaw(oldrec.GetRaw(i))

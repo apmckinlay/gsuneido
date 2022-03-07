@@ -5,17 +5,18 @@ package meta
 
 import (
 	"log"
-	"math/bits"
 
 	"github.com/apmckinlay/gsuneido/db19/index"
 	"github.com/apmckinlay/gsuneido/db19/index/btree"
 	"github.com/apmckinlay/gsuneido/db19/meta/schema"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util/ints"
-	"github.com/apmckinlay/gsuneido/util/sset"
+	"github.com/apmckinlay/gsuneido/util/generic/hamt"
+	"github.com/apmckinlay/gsuneido/util/generic/set"
+	"github.com/apmckinlay/gsuneido/util/generic/slc"
 	"github.com/apmckinlay/gsuneido/util/str"
 	"github.com/apmckinlay/gsuneido/util/strs"
+	"golang.org/x/exp/slices"
 )
 
 // Meta is the schema and info metadata.
@@ -25,8 +26,8 @@ type Meta struct {
 	// WARNING: do NOT modify the items from the hash tables.
 	// To modify an item, Get it, copy it, modify it, then Put the new version.
 	// Unfortunately, Go does not have any way to enforce this.
-	schema SchemaChain
-	info   InfoChain
+	schema hamt.Chain[string, *Schema]
+	info   hamt.Chain[string, *Info]
 	// difInfo is per transaction updates, overrides info
 	difInfo map[string]*Info
 }
@@ -44,7 +45,7 @@ func (m *Meta) Mutable() *Meta {
 }
 
 func (m *Meta) SameSchemaAs(m2 *Meta) bool {
-	return m.schema.root == m2.schema.root
+	return m.schema.Hamt.SameAs(m2.schema.Hamt)
 }
 
 // GetRoInfo returns read-only Info for the table or nil if not found
@@ -52,7 +53,7 @@ func (m *Meta) GetRoInfo(table string) *Info {
 	if ti, ok := m.difInfo[table]; ok {
 		return ti
 	}
-	if ti, ok := m.info.Get(table); ok && !ti.isTomb() {
+	if ti, ok := m.info.Get(table); ok && !ti.IsTomb() {
 		return ti
 	}
 	return nil
@@ -73,7 +74,7 @@ func (m *Meta) GetRwInfo(table string) *Info {
 		return pti // already have mutable
 	}
 	pti, ok := m.info.Get(table)
-	if !ok || pti.isTomb() {
+	if !ok || pti.IsTomb() {
 		return nil
 	}
 	ti := *pti // copy
@@ -124,7 +125,7 @@ func (m *Meta) ForEachView(fn func(name, def string)) {
 
 func (m *Meta) ForEachInfo(fn func(*Info)) {
 	m.info.ForEach(func(info *Info) {
-		if !info.isTomb() {
+		if !info.IsTomb() {
 			fn(info)
 		}
 	})
@@ -133,15 +134,15 @@ func (m *Meta) ForEachInfo(fn func(*Info)) {
 // Put is used by Database.LoadedTable and admin schema changes
 func (m *Meta) Put(ts *Schema, ti *Info) *Meta {
 	cp := *m // copy
-	ts.lastMod = m.schema.clock
+	ts.lastMod = m.schema.Clock
 	schema := m.schema.Mutable()
 	schema.Put(ts)
-	cp.schema.SchemaHamt = schema.Freeze()
+	cp.schema.Hamt = schema.Freeze()
 	if ti != nil {
-		ti.lastMod = m.info.clock
+		ti.lastMod = m.info.Clock
 		info := m.info.Mutable()
 		info.Put(ti)
-		cp.info.InfoHamt = info.Freeze()
+		cp.info.Hamt = info.Freeze()
 	}
 	return &cp
 }
@@ -168,7 +169,7 @@ func (mu *metaUpdate) putSchema(ts *Schema) {
 	if mu.schema == (SchemaHamt{}) {
 		mu.schema = mu.meta.schema.Mutable()
 	}
-	ts.lastMod = mu.meta.schema.clock
+	ts.lastMod = mu.meta.schema.Clock
 	mu.schema.Put(ts)
 }
 
@@ -176,17 +177,17 @@ func (mu *metaUpdate) putInfo(ti *Info) {
 	if mu.info == (InfoHamt{}) {
 		mu.info = mu.meta.info.Mutable()
 	}
-	ti.lastMod = mu.meta.info.clock
+	ti.lastMod = mu.meta.info.Clock
 	mu.info.Put(ti)
 }
 
 func (mu *metaUpdate) freeze() *Meta {
 	cp := *mu.meta
 	if mu.schema != (SchemaHamt{}) {
-		cp.schema.SchemaHamt = mu.schema.Freeze()
+		cp.schema.Hamt = mu.schema.Freeze()
 	}
 	if mu.info != (InfoHamt{}) {
-		cp.info.InfoHamt = mu.info.Freeze()
+		cp.info.Hamt = mu.info.Freeze()
 	}
 	return &cp
 }
@@ -195,7 +196,7 @@ func (mu *metaUpdate) freeze() *Meta {
 
 func (m *Meta) Ensure(a *schema.Schema, store *stor.Stor) ([]schema.Index, *Meta) {
 	ts, ok := m.schema.Get(a.Table)
-	if !ok || ts.isTomb() {
+	if !ok || ts.IsTomb() {
 		panic("ensure: couldn't find " + a.Table)
 	}
 	ts, ti := m.alterGet(a.Table)
@@ -205,9 +206,9 @@ func (m *Meta) Ensure(a *schema.Schema, store *stor.Stor) ([]schema.Index, *Meta
 			newIdxs = append(newIdxs, a.Indexes[i])
 		}
 	}
-	newCols := sset.Difference(a.Columns, ts.Columns)
+	newCols := set.Difference(a.Columns, ts.Columns)
 	createColumns(ts, newCols)
-	newDer := sset.Difference(a.Derived, ts.Derived)
+	newDer := set.Difference(a.Derived, ts.Derived)
 	createDerived(ts, newDer)
 	createIndexes(ts, ti, newIdxs, store)
 	ac := &schema.Schema{Table: a.Table, Indexes: newIdxs}
@@ -216,12 +217,12 @@ func (m *Meta) Ensure(a *schema.Schema, store *stor.Stor) ([]schema.Index, *Meta
 
 func (m *Meta) RenameTable(from, to string) *Meta {
 	ts, ok := m.schema.Get(from)
-	if !ok || ts.isTomb() {
+	if !ok || ts.IsTomb() {
 		panic("can't rename nonexistent table: " + from)
 	}
 	tsNew := *ts // copy
 	tsNew.Table = to
-	if tmp, ok := m.schema.Get(to); ok && !tmp.isTomb() {
+	if tmp, ok := m.schema.Get(to); ok && !tmp.IsTomb() {
 		panic("can't rename to existing table: " + to)
 	}
 	ti, ok := m.info.Get(from)
@@ -247,7 +248,7 @@ func (m *Meta) Drop(name string) *Meta {
 	}
 	// table
 	ts, ok := m.schema.Get(name)
-	if !ok || ts.isTomb() {
+	if !ok || ts.IsTomb() {
 		return nil // nonexistent
 	}
 	if list := fkToHere(&ts.Schema); list != nil {
@@ -255,7 +256,7 @@ func (m *Meta) Drop(name string) *Meta {
 			name + " <- " + strs.Join(",", list))
 	}
 	mu := newMetaUpdate(m)
-	if ts.created != 0 && ts.created == m.schema.clock {
+	if ts.created != 0 && ts.created == m.schema.Clock {
 		// not persisted so no need for tombstone
 		mu.schema = mu.meta.schema.Mutable()
 		mu.schema.Delete(ts.Table)
@@ -263,7 +264,7 @@ func (m *Meta) Drop(name string) *Meta {
 		mu.putSchema(m.newSchemaTomb(name))
 	}
 	ti := m.schema.MustGet(ts.Table)
-	if ti.created != 0 && ti.created == m.info.clock {
+	if ti.created != 0 && ti.created == m.info.Clock {
 		// not persisted so no need for tombstone
 		mu.info = mu.meta.info.Mutable()
 		mu.info.Delete(ti.Table)
@@ -290,25 +291,25 @@ func fkToHere(ts *schema.Schema) []string {
 
 func (m *Meta) AlterRename(table string, from, to []string) *Meta {
 	ts, ok := m.schema.Get(table)
-	if !ok || ts.isTomb() {
+	if !ok || ts.IsTomb() {
 		panic("can't alter nonexistent table: " + table)
 	}
-	missing := sset.Difference(from, ts.Columns)
+	missing := set.Difference(from, ts.Columns)
 	if len(missing) > 0 {
 		panic("can't rename nonexistent column(s): " + strs.Join(", ", missing))
 	}
-	existing := sset.Intersect(to, ts.Columns)
+	existing := set.Intersect(to, ts.Columns)
 	if len(existing) > 0 {
 		panic("can't rename to existing column(s): " + strs.Join(", ", existing))
 	}
 	tsNew := *ts // copy
-	tsNew.Columns = strs.Replace(ts.Columns, from, to)
-	tsNew.Derived = strs.Replace(ts.Derived, from, to)
+	tsNew.Columns = slc.Replace(ts.Columns, from, to)
+	tsNew.Derived = slc.Replace(ts.Derived, from, to)
 	tsNew.Indexes = make([]schema.Index, len(ts.Indexes))
 	copy(tsNew.Indexes, ts.Indexes)
 	for i := range tsNew.Indexes {
 		ix := &tsNew.Indexes[i]
-		ix.Columns = strs.Replace(ix.Columns, from, to)
+		ix.Columns = slc.Replace(ix.Columns, from, to)
 	}
 	// ixspecs are ok since they are field indexes, not names
 	mu := newMetaUpdate(m)
@@ -328,8 +329,8 @@ func (m *Meta) AlterCreate(ac *schema.Schema, store *stor.Stor) *Meta {
 
 // PutNew puts the schema & info and creates Fkeys
 func (m *Meta) PutNew(ts *Schema, ti *Info, ac *schema.Schema) *Meta {
-	ts.created = m.schema.clock
-	ti.created = m.info.clock
+	ts.created = m.schema.Clock
+	ti.created = m.info.Clock
 	mu := newMetaUpdate(m)
 	mu.putSchema(ts)
 	mu.putInfo(ti)
@@ -339,7 +340,7 @@ func (m *Meta) PutNew(ts *Schema, ti *Info, ac *schema.Schema) *Meta {
 
 func (m *Meta) alterGet(table string) (*Schema, *Info) {
 	ts, ok := m.schema.Get(table)
-	if !ok || ts.isTomb() {
+	if !ok || ts.IsTomb() {
 		panic("can't alter nonexistent table: " + table)
 	}
 	tsNew := *ts // copy
@@ -350,19 +351,19 @@ func (m *Meta) alterGet(table string) (*Schema, *Info) {
 }
 
 func createColumns(ts *Schema, cols []string) {
-	existing := sset.Intersect(cols, ts.Columns)
+	existing := set.Intersect(cols, ts.Columns)
 	if len(existing) > 0 {
 		panic("can't create existing column(s): " + strs.Join(", ", existing))
 	}
-	ts.Columns = append(strs.Cow(ts.Columns), cols...)
+	ts.Columns = append(slices.Clip(ts.Columns), cols...)
 }
 
 func createDerived(ts *Schema, cols []string) {
-	existing := sset.Intersect(cols, ts.Derived)
+	existing := set.Intersect(cols, ts.Derived)
 	if len(existing) > 0 {
 		panic("can't create existing column(s): " + strs.Join(", ", existing))
 	}
-	ts.Derived = append(strs.Cow(ts.Derived), cols...)
+	ts.Derived = append(slices.Clip(ts.Derived), cols...)
 }
 
 func createIndexes(ts *Schema, ti *Info, idxs []schema.Index, store *stor.Stor) {
@@ -400,7 +401,7 @@ func (*Meta) createFkeys(mu *metaUpdate, ts, ac *schema.Schema) {
 		target.Indexes = append(target.Indexes[:0:0], target.Indexes...) // copy
 		for j := range target.Indexes {
 			ix := &target.Indexes[j]
-			if strs.Equal(fkCols, ix.Columns) {
+			if slices.Equal(fkCols, ix.Columns) {
 				if ix.Mode != 'k' {
 					panic("foreign key must point to key: " +
 						ac.Table + " -> " + fk.Table + strs.Join("(,)", fkCols))
@@ -442,7 +443,7 @@ func updateOtherFkToHere(mu *metaUpdate, table string, fk *Fkey, iindex int) {
 		for j := range ix.FkToHere {
 			ix.FkToHere = append(ix.FkToHere[:0:0], ix.FkToHere...) // copy
 			fk2 := &ix.FkToHere[j]
-			if fk2.Table == table && strs.Equal(ix.Columns, fk.Columns) {
+			if fk2.Table == table && slices.Equal(ix.Columns, fk.Columns) {
 				fk2.IIndex = iindex
 			}
 		}
@@ -455,7 +456,7 @@ func updateOtherFk(mu *metaUpdate, table string, fk *Fkey, iindex int) {
 	ts.Indexes = append(ts.Indexes[:0:0], ts.Indexes...) // copy
 	for i := range ts.Indexes {
 		ix := &ts.Indexes[i]
-		if ix.Fk.Table == table && strs.Equal(ix.Columns, fk.Columns) {
+		if ix.Fk.Table == table && slices.Equal(ix.Columns, fk.Columns) {
 			ix.Fk.IIndex = iindex
 		}
 	}
@@ -485,7 +486,7 @@ func dropIndexes(ts *Schema, ti *Info, idxs []schema.Index) {
 loop:
 	for j := range idxs {
 		for i := range ts.Indexes {
-			if strs.Equal(ts.Indexes[i].Columns, idxs[j].Columns) {
+			if slices.Equal(ts.Indexes[i].Columns, idxs[j].Columns) {
 				if 0 != len(ts.Indexes[i].FkToHere) {
 					panic("can't drop index used by foreign keys")
 				}
@@ -499,7 +500,7 @@ loop:
 outer:
 	for i := range ts.Indexes {
 		for j := range idxs {
-			if strs.Equal(ts.Indexes[i].Columns, idxs[j].Columns) {
+			if slices.Equal(ts.Indexes[i].Columns, idxs[j].Columns) {
 				continue outer // i.e. don't copy deletion
 			}
 		}
@@ -530,10 +531,10 @@ func dropColumn(ts *Schema, col string) bool {
 	}
 	ucol := str.UnCapitalize(col)
 	ccol := str.Capitalize(col)
-	if strs.Contains(ts.Columns, ucol) {
-		ts.Columns = strs.Replace1(ts.Columns, ucol, "-")
-	} else if strs.Contains(ts.Derived, ccol) {
-		ts.Derived = strs.Without(ts.Derived, ccol)
+	if slices.Contains(ts.Columns, ucol) {
+		ts.Columns = slc.Replace1(ts.Columns, ucol, "-")
+	} else if slices.Contains(ts.Derived, ccol) {
+		ts.Derived = slc.Without(ts.Derived, ccol)
 	} else {
 		panic("can't drop nonexistent column: " + col)
 	}
@@ -541,19 +542,19 @@ func dropColumn(ts *Schema, col string) bool {
 }
 
 func dropDerived(ts *Schema, col string) bool {
-	if !strs.Contains(ts.Derived, col) {
+	if !slices.Contains(ts.Derived, col) {
 		panic("can't drop nonexistent column: " + col)
 	}
 	if inIndex(ts, col) {
 		return false // can't drop if used by index
 	}
-	ts.Derived = strs.Without(ts.Derived, col)
+	ts.Derived = slc.Without(ts.Derived, col)
 	return true
 }
 
 func inIndex(ts *Schema, col string) bool {
 	for i := range ts.Indexes {
-		if strs.Contains(ts.Indexes[i].Columns, col) {
+		if slices.Contains(ts.Indexes[i].Columns, col) {
 			return true // can't drop if used by index
 		}
 	}
@@ -584,13 +585,13 @@ func (m *Meta) dropFkeys(mu *metaUpdate, drop *schema.Schema) {
 		target.Indexes = append(target.Indexes[:0:0], target.Indexes...) // copy
 		for j := range target.Indexes {
 			ix := &target.Indexes[j]
-			if strs.Equal(fkCols, ix.Columns) {
+			if slices.Equal(fkCols, ix.Columns) {
 				fk.IIndex = j
 				fkToHere := make([]Fkey, 0, len(ix.FkToHere))
 				for k := range ix.FkToHere {
 					fk2 := &ix.FkToHere[k]
 					if drop.Table != fk2.Table ||
-						!strs.Equal(idx.Columns, fk2.Columns) {
+						!slices.Equal(idx.Columns, fk2.Columns) {
 						fkToHere = append(fkToHere, *fk2)
 					}
 				}
@@ -639,7 +640,7 @@ func (m *Meta) LayeredOnto(latest *Meta) *Meta {
 	info := latest.info.Mutable()
 	for _, ti := range m.difInfo {
 		lti, ok := info.Get(ti.Table)
-		if !ok || lti.isTomb() {
+		if !ok || lti.IsTomb() {
 			continue
 		}
 		ti.Nrows = lti.Nrows + (ti.Nrows - ti.origNrows)
@@ -651,17 +652,15 @@ func (m *Meta) LayeredOnto(latest *Meta) *Meta {
 		for i := range ti.Indexes {
 			ti.Indexes[i].UpdateWith(lti.Indexes[i])
 		}
-		ti.lastMod = m.info.clock
+		ti.lastMod = m.info.Clock
 		info.Put(ti)
 	}
 	result := *latest // copy
-	result.info.InfoHamt = info.Freeze()
+	result.info.Hamt = info.Freeze()
 	return &result
 }
 
 //-------------------------------------------------------------------
-
-const maxChain = 7 // ???
 
 func (m *Meta) Write(store *stor.Stor) (schemaOff uint64, infoOff uint64) {
 	assert.That(m.difInfo == nil)
@@ -672,12 +671,12 @@ func (m *Meta) Write(store *stor.Stor) (schemaOff uint64, infoOff uint64) {
 
 func ReadMeta(store *stor.Stor, offSchema, offInfo uint64) *Meta {
 	m := Meta{
-		schema: ReadSchemaChain(store, offSchema),
-		info:   ReadInfoChain(store, offInfo)}
+		schema: hamt.ReadChain[string](store, offSchema, ReadSchema),
+		info:   hamt.ReadChain[string](store, offInfo, ReadInfo)}
 	// copy Ixspec to Info from Schema (constructed by ReadSchema)
 	// Ok to modify since it's not in use yet.
 	m.info.ForEach(func(ti *Info) {
-		if ti.isTomb() {
+		if ti.IsTomb() {
 			return
 		}
 		ts := m.schema.MustGet(ti.Table)
@@ -694,7 +693,7 @@ type Fkey = schema.Fkey
 // linkFkeys links foreign keys to targets (Fk and FkToHere[])
 func linkFkeys(m *Meta) {
 	m.schema.ForEach(func(s *Schema) {
-		if s.isTomb() {
+		if s.IsTomb() {
 			return
 		}
 		for i := range s.Indexes {
@@ -712,7 +711,7 @@ func linkFkeys(m *Meta) {
 				}
 				for j := range target.Indexes {
 					ix := &target.Indexes[j]
-					if strs.Equal(fkCols, ix.Columns) {
+					if slices.Equal(fkCols, ix.Columns) {
 						fk.IIndex = j
 						ix.FkToHere = append(ix.FkToHere,
 							Fkey{Table: s.Table, Mode: fk.Mode,
@@ -722,28 +721,6 @@ func linkFkeys(m *Meta) {
 			}
 		}
 	})
-}
-
-func reverse(x []uint64) []uint64 {
-	for lo, hi := 0, len(x)-1; lo < hi; {
-		tmp := x[lo]
-		x[lo] = x[hi]
-		x[hi] = tmp
-		lo++
-		hi--
-	}
-	return x
-}
-
-func nmerge(no, clock int) int {
-	if no >= maxChain {
-		return no
-	}
-	return ints.Min(no, trailingOnes(clock))
-}
-
-func trailingOnes(n int) int {
-	return bits.TrailingZeros(^uint(n))
 }
 
 //-------------------------------------------------------------------
@@ -757,11 +734,11 @@ func (m *Meta) CheckAllMerged() {
 }
 
 func (m *Meta) Offsets() (schemaOff, infoOff uint64) {
-	if ns := len(m.schema.offs); ns > 0 {
-		schemaOff = m.schema.offs[ns-1]
+	if ns := len(m.schema.Offs); ns > 0 {
+		schemaOff = m.schema.Offs[ns-1]
 	}
-	if ni := len(m.info.offs); ni > 0 {
-		infoOff = m.info.offs[ni-1]
+	if ni := len(m.info.Offs); ni > 0 {
+		infoOff = m.info.Offs[ni-1]
 	}
 	return
 }

@@ -12,14 +12,15 @@ import (
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/pack"
 	"github.com/apmckinlay/gsuneido/util/str"
-	"github.com/apmckinlay/gsuneido/util/strs"
+	"github.com/apmckinlay/gsuneido/util/generic/list"
+	"golang.org/x/exp/slices"
 )
 
 // SuRecord is an SuObject with observers and rules and a default value of "".
 // Uses the lock from SuObject.
 type SuRecord struct {
+	ValueBase[SuRecord]
 	ob SuObject
-	CantConvert
 	// observers is from record.Observer(fn)
 	observers ValueList
 	// invalidated accumulates keys needing observers called
@@ -57,8 +58,8 @@ const (
 	DELETED
 )
 
-//go:generate genny -in ../genny/list/list.go -out alist.go -pkg runtime gen "V=activeObserver"
-//go:generate genny -in ../genny/list/list.go -out vlist.go -pkg runtime gen "V=Value"
+type ValueList = list.List[Value]
+type ActiveObserverList = list.List[activeObserver]
 
 func NewSuRecord() *SuRecord {
 	return &SuRecord{ob: SuObject{defval: EmptyStr}}
@@ -96,7 +97,7 @@ func deps(row Row, hdr *Header) map[string][]string {
 				deps := str.Split(ToStr(val), ",")
 				f = f[:len(f)-5]
 				for _, d := range deps {
-					if !strs.Contains(dependents[d], f) {
+					if !slices.Contains(dependents[d], f) {
 						dependents[d] = append(dependents[d], f)
 					}
 				}
@@ -164,10 +165,6 @@ var _ recursable = (*SuRecord)(nil)
 
 func (r *SuRecord) Show() string {
 	return r.ToObject().show("[", "]", nil)
-}
-
-func (*SuRecord) Call(*Thread, Value, *ArgSpec) Value {
-	panic("can't call Record")
 }
 
 func (r *SuRecord) Compare(other Value) int {
@@ -503,7 +500,7 @@ func (r *SuRecord) callObservers(t *Thread, key string) {
 }
 
 func (r *SuRecord) callObservers2(t *Thread, key string) {
-	for _, x := range r.observers.list {
+	for _, x := range r.observers.List {
 		ofn := x.(Value)
 		if !r.activeObservers.Has(activeObserver{ofn, key}) {
 			func(ofn Value, key string) {
@@ -528,8 +525,9 @@ type activeObserver struct {
 	key string
 }
 
-func (a activeObserver) Equal(other activeObserver) bool {
-	return a.key == other.key && a.obs.Equal(other.obs)
+func (a activeObserver) Equal(other any) bool {
+	b, ok := other.(activeObserver)
+	return ok && a.key == b.key && a.obs.Equal(b.obs)
 }
 
 // ------------------------------------------------------------------
@@ -651,7 +649,7 @@ func (r *SuRecord) addDependent(from, to string) {
 	if r.dependents == nil {
 		r.dependents = make(map[string][]string)
 	}
-	if !strs.Contains(r.dependents[to], from) {
+	if !slices.Contains(r.dependents[to], from) {
 		r.trace("add dependency for", from, "uses", to)
 		r.dependents[to] = append(r.dependents[to], from)
 	}
@@ -831,7 +829,7 @@ func (r *SuRecord) ToRecord(t *Thread, hdr *Header) Record {
 	for k, v := range r.dependents {
 		for _, d := range v {
 			d_deps := d + "_deps"
-			if strs.Contains(fields, d_deps) {
+			if slices.Contains(fields, d_deps) {
 				deps[d_deps] = append(deps[d_deps], k)
 			}
 		}

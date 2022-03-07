@@ -9,9 +9,9 @@ import (
 
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util/ints"
-	"github.com/apmckinlay/gsuneido/util/setset"
-	"github.com/apmckinlay/gsuneido/util/sset"
+	"github.com/apmckinlay/gsuneido/util/generic/ord"
+	"github.com/apmckinlay/gsuneido/util/generic/set"
+	"github.com/apmckinlay/gsuneido/util/generic/slc"
 	"github.com/apmckinlay/gsuneido/util/str"
 	"github.com/apmckinlay/gsuneido/util/strs"
 )
@@ -50,9 +50,9 @@ const (
 )
 
 func NewSummarize(src Query, by, cols, ops, ons []string) *Summarize {
-	if !sset.Subset(src.Columns(), by) {
+	if !set.Subset(src.Columns(), by) {
 		panic("summarize: nonexistent columns: " +
-			strs.Join(", ", sset.Difference(by, src.Columns())))
+			strs.Join(", ", set.Difference(by, src.Columns())))
 	}
 	check(by)
 	check(ons)
@@ -68,7 +68,7 @@ func NewSummarize(src Query, by, cols, ops, ons []string) *Summarize {
 	su := &Summarize{Query1: Query1{source: src},
 		by: by, cols: cols, ops: ops, ons: ons}
 	// if single min or max, and on is a key, then we can give the whole row
-	su.wholeRow = su.minmax1() && setset.Contains(src.Keys(), ons)
+	su.wholeRow = su.minmax1() && slc.ContainsFn(src.Keys(), ons, set.Equal[string])
 	return su
 }
 
@@ -125,9 +125,9 @@ func (su *Summarize) String() string {
 
 func (su *Summarize) Columns() []string {
 	if su.wholeRow {
-		return sset.Union(su.source.Columns(), su.cols)
+		return set.Union(su.source.Columns(), su.cols)
 	}
-	return sset.Union(su.by, su.cols)
+	return set.Union(su.by, su.cols)
 }
 
 func (su *Summarize) Keys() [][]string {
@@ -140,7 +140,7 @@ func (su *Summarize) Indexes() [][]string {
 	}
 	var idxs [][]string
 	for _, src := range su.source.Indexes() {
-		if sset.StartsWithSet(src, su.by) {
+		if set.StartsWithSet(src, su.by) {
 			idxs = append(idxs, src)
 		}
 	}
@@ -150,7 +150,7 @@ func (su *Summarize) Indexes() [][]string {
 // containsKey returns true if a set of columns contain one of the keys
 func containsKey(cols []string, keys [][]string) bool {
 	for _, key := range keys {
-		if sset.Subset(cols, key) {
+		if set.Subset(cols, key) {
 			return true
 		}
 	}
@@ -223,7 +223,7 @@ func (su *Summarize) idxCost(Mode) (Cost, interface{}) {
 	}
 	// dividing by nrows since we're only reading one row
 	// NOTE: this is not correct if there is any fixed cost
-	nr := ints.Max(1, su.source.Nrows())
+	nr := ord.Max(1, su.source.Nrows())
 	// cursorMode to bypass temp index
 	cost := Optimize(su.source, CursorMode, su.ons) / nr
 	approach := &summarizeApproach{strategy: sumIdx, index: su.ons}
@@ -359,7 +359,7 @@ func (t *sumMapT) getMap(th *Thread, su *Summarize, dir Dir) Row {
 	return Row{DbRec{Record: rb.Build()}}
 }
 
-func (su *Summarize) buildMap(th *Thread, ) []mapPair {
+func (su *Summarize) buildMap(th *Thread) []mapPair {
 	hdr := su.source.Header()
 	sumMap := make(map[Record][]sumOp)
 	var thread Thread

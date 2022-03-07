@@ -137,8 +137,8 @@ var suLruCacheMethods = Methods{
 //-------------------------------------------------------------------
 
 type suLruCache struct {
+	ValueBase[*suLruCache]
 	MayLock
-	CantConvert
 	Lc            lruCache
 	Fn            Value
 	okForResetAll bool
@@ -179,46 +179,6 @@ func (slc *suLruCache) Reset1(key Value) bool {
 // Value implementation
 
 var _ Value = (*suLruCache)(nil)
-
-func (*suLruCache) Get(*Thread, Value) Value {
-	panic("LruCache does not support get")
-}
-
-func (*suLruCache) Put(*Thread, Value, Value) {
-	panic("LruCache does not support put")
-}
-
-func (*suLruCache) GetPut(*Thread, Value, Value, func(x, y Value) Value, bool) Value {
-	panic("LruCache does not support update")
-}
-
-func (*suLruCache) RangeTo(int, int) Value {
-	panic("LruCache does not support range")
-}
-
-func (*suLruCache) RangeLen(int, int) Value {
-	panic("LruCache does not support range")
-}
-
-func (*suLruCache) Hash() uint32 {
-	panic("LruCache hash not implemented")
-}
-
-func (*suLruCache) Hash2() uint32 {
-	panic("LruCache hash not implemented")
-}
-
-func (*suLruCache) Compare(Value) int {
-	panic("LruCache compare not implemented")
-}
-
-func (*suLruCache) Call(*Thread, Value, *ArgSpec) Value {
-	panic("can't call LruCache")
-}
-
-func (slc *suLruCache) String() string {
-	return "anLruCache"
-}
 
 func (*suLruCache) Type() types.Type {
 	return types.LruCache

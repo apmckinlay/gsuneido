@@ -9,16 +9,16 @@ import (
 
 	"github.com/apmckinlay/gsuneido/runtime/types"
 	"github.com/apmckinlay/gsuneido/util/dnum"
+	"github.com/apmckinlay/gsuneido/util/generic/ord"
 	"github.com/apmckinlay/gsuneido/util/hacks"
 	"github.com/apmckinlay/gsuneido/util/hash"
-	"github.com/apmckinlay/gsuneido/util/ints"
 	"github.com/apmckinlay/gsuneido/util/pack"
 )
 
 // SuConcat is a Value used to optimize string concatenation
 // WARNING: zero value is not valid, use NewSuConcat
 type SuConcat struct {
-	CantConvert
+	ValueBase[SuConcat]
 	buf *scbuf
 	n   int
 }
@@ -103,14 +103,6 @@ func (c SuConcat) Get(_ *Thread, key Value) Value {
 	return strGet(c.toStr(), key)
 }
 
-func (SuConcat) Put(*Thread, Value, Value) {
-	panic("string does not support put")
-}
-
-func (SuConcat) GetPut(*Thread, Value, Value, func(x, y Value) Value, bool) Value {
-	panic("string does not support update")
-}
-
 func (c SuConcat) RangeTo(from int, to int) Value {
 	from = prepFrom(from, c.n)
 	to = prepTo(from, to, c.n)
@@ -148,7 +140,7 @@ func (SuConcat) Type() types.Type {
 }
 
 func (c SuConcat) Compare(other Value) int {
-	if cmp := ints.Compare(ordStr, Order(other)); cmp != 0 {
+	if cmp := ord.Compare(ordStr, Order(other)); cmp != 0 {
 		return cmp
 	}
 	// now know other is a string so AsStr won't panic

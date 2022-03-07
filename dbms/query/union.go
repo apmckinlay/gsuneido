@@ -6,11 +6,10 @@ package query
 import (
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	. "github.com/apmckinlay/gsuneido/runtime"
-	"github.com/apmckinlay/gsuneido/util/ints"
-	"github.com/apmckinlay/gsuneido/util/setord"
-	"github.com/apmckinlay/gsuneido/util/setset"
-	"github.com/apmckinlay/gsuneido/util/sset"
-	"github.com/apmckinlay/gsuneido/util/strs"
+	"github.com/apmckinlay/gsuneido/util/generic/ord"
+	"github.com/apmckinlay/gsuneido/util/generic/set"
+	"github.com/apmckinlay/gsuneido/util/generic/slc"
+	"golang.org/x/exp/slices"
 )
 
 type Union struct {
@@ -76,14 +75,14 @@ func (u *Union) Keys() [][]string {
 	keys := u.keypairs()
 	for i := range keys {
 		// keypairs must ensure that appending is valid
-		keys[i] = sset.AddUnique(keys[i], u.disjoint)
+		keys[i] = set.AddUnique(keys[i], u.disjoint)
 	}
 	return withoutDupsOrSupersets(keys)
 }
 
 func (u *Union) Indexes() [][]string {
 	// lookup can read via any index
-	return setord.Union(u.source.Indexes(), u.source2.Indexes())
+	return set.UnionFn(u.source.Indexes(), u.source2.Indexes(), slices.Equal[string])
 }
 
 func (u *Union) Nrows() int {
@@ -94,9 +93,9 @@ func (u *Union) nrowsCalc(n1, n2 int) int {
 	if u.disjoint != "" {
 		return n1 + n2
 	}
-	min := ints.Max(n1, n2) // smaller could be all duplicates
-	max := n1 + n2          // could be no duplicates
-	return (min + max) / 2  // estimate half way between
+	min := ord.Max(n1, n2) // smaller could be all duplicates
+	max := n1 + n2         // could be no duplicates
+	return (min + max) / 2 // estimate half way between
 }
 
 func (u *Union) Transform() Query {
@@ -122,7 +121,7 @@ func (u *Union) Fixed() []Fixed {
 		for _, f2 := range fixed2 {
 			if f1.col == f2.col {
 				u.fixed = append(u.fixed,
-					Fixed{f1.col, sset.Union(f1.values, f2.values)})
+					Fixed{f1.col, set.Union(f1.values, f2.values)})
 				break
 			}
 		}
@@ -130,16 +129,16 @@ func (u *Union) Fixed() []Fixed {
 	cols2 := u.source2.Columns()
 	emptyStr := []string{""}
 	for _, f1 := range fixed1 {
-		if !sset.Contains(cols2, f1.col) {
+		if !slices.Contains(cols2, f1.col) {
 			u.fixed = append(u.fixed,
-				Fixed{f1.col, sset.Union(f1.values, emptyStr)})
+				Fixed{f1.col, set.Union(f1.values, emptyStr)})
 		}
 	}
 	cols1 := u.source.Columns()
 	for _, f2 := range fixed2 {
-		if !sset.Contains(cols1, f2.col) {
+		if !slices.Contains(cols1, f2.col) {
 			u.fixed = append(u.fixed,
-				Fixed{f2.col, sset.Union(f2.values, emptyStr)})
+				Fixed{f2.col, set.Union(f2.values, emptyStr)})
 		}
 	}
 	return u.fixed
@@ -149,8 +148,9 @@ func (u *Union) optimize(mode Mode, index []string) (Cost, interface{}) {
 	// if there is a required index, use Merge
 	if index != nil {
 		// if not disjoint then index must also be a key
-		if u.disjoint == "" && (!setset.Contains(u.source.Keys(), index) ||
-			!setset.Contains(u.source2.Keys(), index)) {
+		if u.disjoint == "" &&
+			(!slc.ContainsFn(u.source.Keys(), index, set.Equal[string]) ||
+				!slc.ContainsFn(u.source2.Keys(), index, set.Equal[string])) {
 			return impossible, nil
 		}
 		cost := Optimize(u.source, mode, index) + Optimize(u.source2, mode, index)
@@ -178,18 +178,18 @@ func (u *Union) optimize(mode Mode, index []string) (Cost, interface{}) {
 
 func (*Union) optMerge(source, source2 Query, mode Mode) (Cost, interface{}) {
 	// need key (unique) index to eliminate duplicates
-	keys := setset.Intersect(source.Keys(), source2.Keys())
+	keys := set.IntersectFn(source.Keys(), source2.Keys(), set.Equal[string])
 	var bestKey, bestIdx1, bestIdx2 []string
 	bestCost := impossible
 	for _, key := range keys {
 		for _, idx1 := range source.Indexes() {
-			if !sset.Subset(idx1, key) {
+			if !set.Subset(idx1, key) {
 				continue
 			}
-			ik1 := sset.Intersect(idx1, key)
+			ik1 := set.Intersect(idx1, key)
 			for _, idx2 := range source2.Indexes() {
-				ik2 := sset.Intersect(idx2, key)
-				if strs.Equal(ik1, ik2) {
+				ik2 := set.Intersect(idx2, key)
+				if slices.Equal(ik1, ik2) {
 					cost := Optimize(source, mode, idx1) +
 						Optimize(source2, mode, idx2)
 					if cost < bestCost {

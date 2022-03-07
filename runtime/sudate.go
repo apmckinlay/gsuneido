@@ -13,7 +13,7 @@ import (
 	"github.com/apmckinlay/gsuneido/runtime/types"
 	"github.com/apmckinlay/gsuneido/util/ascii"
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util/ints"
+	"github.com/apmckinlay/gsuneido/util/generic/ord"
 	"github.com/apmckinlay/gsuneido/util/pack"
 )
 
@@ -28,7 +28,7 @@ and to convert to human readable formats.
 (Calculations are less common.)
 */
 type SuDate struct {
-	CantConvert
+	ValueBase[SuDate]
 	// 21 bits for year, 4 bits for month (1-12), 5 bits for day (1-31)
 	date uint32
 	// 10 bits for hour, 6 bits for minute, 6 bits for second, 10 bits for ms
@@ -575,8 +575,8 @@ func ParseDate(s string, order string) SuDate {
 	}
 
 	if year == NOTSET {
-		if month >= ints.Max(now.Month()-5, 1) &&
-			month <= ints.Min(now.Month()+6, 12) {
+		if month >= ord.Max(now.Month()-5, 1) &&
+			month <= ord.Min(now.Month()+6, 12) {
 			year = now.Year()
 		} else if now.Month() < 6 {
 			year = now.Year() - 1
@@ -730,32 +730,12 @@ func (d SuDate) Hash2() uint32 {
 	return d.Hash()
 }
 
-func (SuDate) Get(*Thread, Value) Value {
-	panic("date does not support get")
-}
-
-func (SuDate) Put(*Thread, Value, Value) {
-	panic("date does not support put")
-}
-
-func (SuDate) GetPut(*Thread, Value, Value, func(x, y Value) Value, bool) Value {
-	panic("date does not support update")
-}
-
-func (SuDate) RangeTo(int, int) Value {
-	panic("date does not support range")
-}
-
-func (SuDate) RangeLen(int, int) Value {
-	panic("date does not support range")
-}
-
 func (SuDate) Type() types.Type {
 	return types.Date
 }
 
 func (d SuDate) Compare(other Value) int {
-	if cmp := ints.Compare(ordDate, Order(other)); cmp != 0 {
+	if cmp := ord.Compare(ordDate, Order(other)); cmp != 0 {
 		return cmp
 	}
 	d2 := other.(SuDate)
@@ -769,10 +749,6 @@ func (d SuDate) Compare(other Value) int {
 		return +1
 	}
 	return 0
-}
-
-func (SuDate) Call(*Thread, Value, *ArgSpec) Value {
-	panic("can't call Date")
 }
 
 func (SuDate) SetConcurrent() {

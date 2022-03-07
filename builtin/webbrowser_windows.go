@@ -13,7 +13,7 @@ import (
 )
 
 type suWebBrowser struct {
-	suComObject
+	suCOMObject
 	iOleObject uintptr
 	ptr        uintptr
 }
@@ -37,14 +37,14 @@ var _ = builtin1("WebBrowser(hwnd)",
 		iOleObject := *(*uintptr)(iunk)
 		swb := &suWebBrowser{iOleObject: iOleObject, ptr: *(*uintptr)(pPtr)}
 		idisp := goc.QueryIDispatch(iOleObject)
-		swb.suComObject = suComObject{ptr: idisp, idisp: true}
+		swb.suCOMObject = suCOMObject{ptr: idisp, idisp: true}
 		return swb
 	})
 
 var suWebBrowserMethods = Methods{
 	"Release": method0(func(this Value) Value {
 		wb := this.(*suWebBrowser)
-		goc.Release(wb.suComObject.ptr)
+		goc.Release(wb.suCOMObject.ptr)
 		goc.UnEmbedBrowserObject(wb.iOleObject, wb.ptr)
 		return nil
 	}),
@@ -57,5 +57,5 @@ func (swb *suWebBrowser) Lookup(t *Thread, method string) Callable {
 	if f, ok := suWebBrowserMethods[method]; ok {
 		return f
 	}
-	return swb.suComObject.Lookup(t, method)
+	return swb.suCOMObject.Lookup(t, method)
 }

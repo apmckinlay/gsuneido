@@ -6,7 +6,7 @@ package query
 import (
 	"github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util/sset"
+	"github.com/apmckinlay/gsuneido/util/generic/set"
 	"github.com/apmckinlay/gsuneido/util/strs"
 )
 
@@ -22,9 +22,9 @@ type sortApproach struct {
 }
 
 func NewSort(src Query, reverse bool, cols []string) *Sort {
-	if !sset.Subset(src.Columns(), cols) {
+	if !set.Subset(src.Columns(), cols) {
 		panic("sort: nonexistent columns: " +
-			strs.Join(", ", sset.Difference(cols, src.Columns())))
+			strs.Join(", ", set.Difference(cols, src.Columns())))
 	}
 	return &Sort{Query1: Query1{source: src}, reverse: reverse, columns: cols}
 }

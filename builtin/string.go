@@ -7,7 +7,7 @@ import (
 	"math"
 	"strings"
 
-	"github.com/apmckinlay/gsuneido/util/ints"
+	"github.com/apmckinlay/gsuneido/util/generic/ord"
 	"github.com/apmckinlay/gsuneido/util/regex"
 	"github.com/apmckinlay/gsuneido/util/str"
 	"github.com/apmckinlay/gsuneido/util/tabs"
@@ -213,7 +213,7 @@ func init() {
 				block := args[1]
 				var buf strings.Builder
 				for i := 0; i < len(s); i += n {
-					end := ints.Min(i+n, len(s))
+					end := ord.Min(i+n, len(s))
 					val := t.Call(block, SuStr(s[i:end]))
 					if val != nil {
 						buf.WriteString(AsStr(val))
@@ -293,7 +293,7 @@ func init() {
 			return SuBool(strings.HasPrefix(s[pos:], pre))
 		}),
 		"Repeat": method1("(count)", func(this, arg Value) Value {
-			return SuStr(strings.Repeat(ToStr(this), ints.Max(0, ToInt(arg))))
+			return SuStr(strings.Repeat(ToStr(this), ord.Max(0, ToInt(arg))))
 		}),
 		"Replace": method("(pattern, block = '', count = false)",
 			func(t *Thread, this Value, args []Value) Value {
