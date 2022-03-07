@@ -26,8 +26,7 @@ var _ = builtin1("Scanner(string)",
 var _ Value = (*suScanner)(nil)
 
 func (sc *suScanner) Equal(other interface{}) bool {
-	sc2, ok := other.(*suScanner)
-	return ok && sc == sc2
+	return sc == other
 }
 
 func (*suScanner) Lookup(_ *Thread, method string) Callable {

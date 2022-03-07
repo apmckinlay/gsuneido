@@ -453,8 +453,7 @@ func (SuAstNode) Type() types.Type {
 }
 
 func (a SuAstNode) Equal(other interface{}) bool {
-	a2, ok := other.(SuAstNode)
-	return ok && a == a2
+	return a == other
 }
 
 func (SuAstNode) SetConcurrent() {

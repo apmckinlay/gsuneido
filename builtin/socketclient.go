@@ -50,8 +50,7 @@ var _ = builtin("SocketClient(ipaddress, port, timeout=60, timeoutConnect=0, blo
 	})
 
 func (sc *suSocketClient) Equal(other interface{}) bool {
-	sc2, ok := other.(*suSocketClient)
-	return ok && sc == sc2
+	return sc == other
 }
 
 func (*suSocketClient) SetConcurrent() {

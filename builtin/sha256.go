@@ -38,8 +38,7 @@ var _ = builtinRaw("Sha256(@args)",
 var _ Value = suSha256{}
 
 func (h suSha256) Equal(other interface{}) bool {
-	h2, ok := other.(suSha256)
-	return ok && h == h2
+	return h == other
 }
 
 func (suSha256) Lookup(_ *Thread, method string) Callable {

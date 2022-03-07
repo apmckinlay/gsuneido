@@ -38,8 +38,7 @@ var _ = builtinRaw("Sha1(@args)",
 var _ Value = suSha1{}
 
 func (h suSha1) Equal(other interface{}) bool {
-	h2, ok := other.(suSha1)
-	return ok && h == h2
+	return h == other
 }
 
 func (suSha1) Lookup(_ *Thread, method string) Callable {

@@ -38,8 +38,7 @@ var _ = builtinRaw("Md5(@args)",
 var _ Value = suMd5{}
 
 func (h suMd5) Equal(other interface{}) bool {
-	h2, ok := other.(suMd5)
-	return ok && h == h2
+	return h == other
 }
 
 func (suMd5) Lookup(_ *Thread, method string) Callable {

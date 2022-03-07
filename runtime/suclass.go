@@ -142,8 +142,7 @@ func (c *SuClass) get2(t *Thread, m string, parents []*SuClass) Value {
 }
 
 func (c *SuClass) Equal(other interface{}) bool {
-	c2, ok := other.(*SuClass)
-	return ok && c == c2
+	return c == other
 }
 
 func (*SuClass) SetConcurrent() {

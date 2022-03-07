@@ -185,8 +185,7 @@ func (*suLruCache) Type() types.Type {
 }
 
 func (slc *suLruCache) Equal(other interface{}) bool {
-	slc2, ok := other.(*suLruCache)
-	return ok && slc == slc2
+	return slc == other
 }
 
 func (slc *suLruCache) SetConcurrent() {

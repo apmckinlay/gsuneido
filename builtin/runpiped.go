@@ -100,8 +100,7 @@ func (rp *suRunPiped) String() string {
 }
 
 func (rp *suRunPiped) Equal(other interface{}) bool {
-	rp2, ok := other.(*suRunPiped)
-	return ok && rp == rp2
+	return rp == other
 }
 
 func (*suRunPiped) SetConcurrent() {

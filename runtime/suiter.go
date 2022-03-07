@@ -29,8 +29,7 @@ func (SuIter) Type() types.Type {
 }
 
 func (it SuIter) Equal(other interface{}) bool {
-	it2, ok := other.(SuIter)
-	return ok && it2.Iter == it.Iter
+	return it == other
 }
 
 func (it SuIter) SetConcurrent() {

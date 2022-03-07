@@ -38,8 +38,7 @@ var _ = builtinRaw("Adler32(@args)",
 var _ Value = suAdler32{}
 
 func (h suAdler32) Equal(other interface{}) bool {
-	sa2, ok := other.(suAdler32)
-	return ok && h == sa2
+	return h == other
 }
 
 func (suAdler32) Lookup(_ *Thread, method string) Callable {

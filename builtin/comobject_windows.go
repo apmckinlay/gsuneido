@@ -83,8 +83,7 @@ func (sco *suCOMObject) GetPut(t *Thread, m Value, v Value,
 }
 
 func (sco *suCOMObject) Equal(other interface{}) bool {
-	sco2, ok := other.(*suCOMObject)
-	return ok && sco == sco2
+	return sco == other
 }
 
 func (*suCOMObject) SetConcurrent() {
