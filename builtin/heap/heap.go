@@ -1,7 +1,7 @@
 // Copyright Suneido Software Corp. All rights reserved.
 // Governed by the MIT license found in the LICENSE file.
 
-// +build windows
+//go:build windows
 
 // Package heap provides a heap for win32 dll arguments
 // that are allocated and freed stack-wise.

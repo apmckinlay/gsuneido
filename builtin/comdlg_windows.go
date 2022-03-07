@@ -2,7 +2,6 @@
 // Governed by the MIT license found in the LICENSE file.
 
 //go:build !portable
-// +build !portable
 
 package builtin
 
