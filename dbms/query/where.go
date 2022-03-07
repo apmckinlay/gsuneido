@@ -18,7 +18,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/generic/ord"
 	"github.com/apmckinlay/gsuneido/util/generic/set"
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
-	"github.com/apmckinlay/gsuneido/util/strs"
+	"github.com/apmckinlay/gsuneido/util/str"
 	"golang.org/x/exp/slices"
 )
 
@@ -61,7 +61,7 @@ type whereApproach struct {
 
 func NewWhere(src Query, expr ast.Expr, t QueryTran) *Where {
 	if !set.Subset(src.Columns(), expr.Columns()) {
-		panic("where: nonexistent columns: " + strs.Join(", ",
+		panic("where: nonexistent columns: " + str.Join(", ",
 			set.Difference(expr.Columns(), src.Columns())))
 	}
 	if nary, ok := expr.(*ast.Nary); !ok || nary.Tok != tok.And {
@@ -718,7 +718,7 @@ type idxSel struct {
 }
 
 func (is idxSel) String() string {
-	s := strs.Join(",", is.index)
+	s := str.Join(",", is.index)
 	sep := ": "
 	for _, pr := range is.ptrngs {
 		s += sep + showKey(is.encoded, pr.org)

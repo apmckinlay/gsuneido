@@ -10,7 +10,7 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/generic/set"
-	"github.com/apmckinlay/gsuneido/util/strs"
+	"github.com/apmckinlay/gsuneido/util/str"
 	"golang.org/x/exp/slices"
 )
 
@@ -49,7 +49,7 @@ func NewProject(src Query, cols []string) *Project {
 	srcCols := src.Columns()
 	if !set.Subset(srcCols, cols) {
 		panic("project: nonexistent column(s): " +
-			strs.Join(", ", set.Difference(cols, srcCols)))
+			str.Join(", ", set.Difference(cols, srcCols)))
 	}
 	for _, col := range cols {
 		if strings.HasSuffix(col, "_lower!") {
@@ -106,7 +106,7 @@ func (p *Project) String() string {
 	case projHash:
 		s += "-HASH"
 	}
-	return s + " " + strs.Join(",", p.columns)
+	return s + " " + str.Join(",", p.columns)
 }
 
 func (p *Project) Columns() []string {

@@ -13,7 +13,6 @@ import (
 	"github.com/apmckinlay/gsuneido/util/generic/set"
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
 	"github.com/apmckinlay/gsuneido/util/str"
-	"github.com/apmckinlay/gsuneido/util/strs"
 )
 
 type Summarize struct {
@@ -52,7 +51,7 @@ const (
 func NewSummarize(src Query, by, cols, ops, ons []string) *Summarize {
 	if !set.Subset(src.Columns(), by) {
 		panic("summarize: nonexistent columns: " +
-			strs.Join(", ", set.Difference(by, src.Columns())))
+			str.Join(", ", set.Difference(by, src.Columns())))
 	}
 	check(by)
 	check(ons)
@@ -106,7 +105,7 @@ func (su *Summarize) String() string {
 		s += "*"
 	}
 	if len(su.by) > 0 {
-		s += " " + strs.Join(", ", su.by) + ","
+		s += " " + str.Join(", ", su.by) + ","
 	}
 	sep := " "
 	for i := range su.cols {

@@ -8,7 +8,6 @@ import (
 	"github.com/apmckinlay/gsuneido/util/generic/ord"
 	"github.com/apmckinlay/gsuneido/util/generic/set"
 	"github.com/apmckinlay/gsuneido/util/str"
-	"github.com/apmckinlay/gsuneido/util/strs"
 	"golang.org/x/exp/slices"
 )
 
@@ -85,7 +84,7 @@ func (jn *Join) String() string {
 func (jn *Join) string(op string) string {
 	by := ""
 	if len(jn.by) > 0 {
-		by = "by" + strs.Join("(,)", jn.by) + " "
+		by = "by" + str.Join("(,)", jn.by) + " "
 	}
 	return parenQ2(jn.source) + " " + op + " " +
 		str.Opt(jn.joinType.String(), " ") + by + paren(jn.source2)

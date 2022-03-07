@@ -6,7 +6,7 @@ package query
 import (
 	"github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/generic/set"
-	"github.com/apmckinlay/gsuneido/util/strs"
+	"github.com/apmckinlay/gsuneido/util/str"
 	"golang.org/x/exp/slices"
 )
 
@@ -18,7 +18,7 @@ type Times struct {
 
 func NewTimes(src, src2 Query) *Times {
 	if !set.Disjoint(src.Columns(), src2.Columns()) {
-		panic("times: common columns not allowed: " + strs.Join(", ",
+		panic("times: common columns not allowed: " + str.Join(", ",
 			set.Intersect(src.Columns(), src2.Columns())))
 	}
 	return &Times{Query2: Query2{Query1: Query1{source: src}, source2: src2},

@@ -11,7 +11,6 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/meta/schema"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/str"
-	"github.com/apmckinlay/gsuneido/util/strs"
 )
 
 // schema implements virtual tables for tables, columns, indexes, and views
@@ -445,7 +444,7 @@ func (is *Indexes) Get(_ *Thread, dir Dir) Row {
 	var rb RecordBuilder
 	rb.Add(SuStr(schema.Table))
 	idx := schema.Indexes[is.ci]
-	rb.Add(SuStr(strs.Join(",", idx.Columns)))
+	rb.Add(SuStr(str.Join(",", idx.Columns)))
 	switch idx.Mode {
 	case 'k':
 		rb.Add(True.(Packable))
@@ -458,7 +457,7 @@ func (is *Indexes) Get(_ *Thread, dir Dir) Row {
 	}
 	if idx.Fk.Table != "" {
 		rb.Add(SuStr(idx.Fk.Table))
-		rb.Add(SuStr(strs.Join(",", idx.Fk.Columns)))
+		rb.Add(SuStr(str.Join(",", idx.Fk.Columns)))
 		rb.Add(SuInt(idx.Fk.Mode))
 	}
 	rec := rb.Build()

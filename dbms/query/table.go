@@ -14,7 +14,6 @@ import (
 	"github.com/apmckinlay/gsuneido/util/generic/set"
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
 	"github.com/apmckinlay/gsuneido/util/str"
-	"github.com/apmckinlay/gsuneido/util/strs"
 	"golang.org/x/exp/slices"
 )
 
@@ -63,7 +62,7 @@ func (tbl *Table) String() string {
 	if tbl.index == nil {
 		return tbl.name
 	}
-	return tbl.name + "^" + strs.Join("(,)", tbl.index)
+	return tbl.name + "^" + str.Join("(,)", tbl.index)
 }
 
 func (tbl *Table) SetTran(t QueryTran) {

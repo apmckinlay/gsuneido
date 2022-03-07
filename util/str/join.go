@@ -2,7 +2,7 @@
 // Governed by the MIT license found in the LICENSE file.
 
 // Package strs has miscellaneous functions for slices of strings
-package strs
+package str
 
 import "strings"
 

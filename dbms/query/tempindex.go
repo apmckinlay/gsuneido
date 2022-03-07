@@ -9,7 +9,7 @@ import (
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/sortlist"
-	"github.com/apmckinlay/gsuneido/util/strs"
+	"github.com/apmckinlay/gsuneido/util/str"
 )
 
 // TempIndex is inserted by SetApproach as required
@@ -27,7 +27,7 @@ type TempIndex struct {
 }
 
 func (ti *TempIndex) String() string {
-	return parenQ2(ti.source) + " TEMPINDEX" + strs.Join("(,)", ti.order)
+	return parenQ2(ti.source) + " TEMPINDEX" + str.Join("(,)", ti.order)
 }
 
 func (ti *TempIndex) Transform() Query {
@@ -98,7 +98,7 @@ type rowIter interface {
 	Seek(key string) Row
 }
 
-func (ti *TempIndex) makeIter(th *Thread, ) rowIter {
+func (ti *TempIndex) makeIter(th *Thread) rowIter {
 	if ti.selEnd == "" {
 		ti.selEnd = ixkey.Max
 	}
@@ -137,7 +137,7 @@ type singleIter struct {
 	iter *sortlist.Iter
 }
 
-func (ti *TempIndex) single(th *Thread, ) rowIter {
+func (ti *TempIndex) single(th *Thread) rowIter {
 	b := sortlist.NewSorting(ti.singleLess)
 	for {
 		row := ti.source.Get(th, Next)
@@ -222,7 +222,7 @@ type multiIter struct {
 	iter  *sortlist.Iter
 }
 
-func (ti *TempIndex) multi(th *Thread, ) rowIter {
+func (ti *TempIndex) multi(th *Thread) rowIter {
 	it := multiIter{ti: ti, nrecs: len(ti.hdr.Fields), heap: stor.HeapStor(8192)}
 	it.heap.Alloc(1) // avoid offset 0
 	b := sortlist.NewSorting(it.multiLess)

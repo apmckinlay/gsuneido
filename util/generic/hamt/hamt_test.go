@@ -13,7 +13,7 @@ import (
 
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util/strs"
+	"github.com/apmckinlay/gsuneido/util/str"
 )
 
 type Foo struct {
@@ -108,30 +108,30 @@ func TestRandom(t *testing.T) {
 func TestPersistent(t *testing.T) {
 	assert := assert.T(t).This
 	var ht FooHamt
-	assert(str(ht)).Is("{}")
+	assert(tostr(ht)).Is("{}")
 	h2 := ht.Mutable()
 	h2.Put(&Foo{12, "12"})
 	h2.Put(&Foo{34, "34"})
 	h2 = h2.Freeze()
-	assert(str(ht)).Is("{}")
-	assert(str(h2)).Is("{12,34}")
+	assert(tostr(ht)).Is("{}")
+	assert(tostr(h2)).Is("{12,34}")
 	h3 := h2.Mutable()
-	assert(str(h3)).Is("{12,34}")
+	assert(tostr(h3)).Is("{12,34}")
 	h3.Put(&Foo{56, "56"})
 	h3.Put(&Foo{78, "78"})
 	h3 = h3.Freeze()
-	assert(str(ht)).Is("{}")
-	assert(str(h2)).Is("{12,34}")
-	assert(str(h3)).Is("{12,34,56,78}")
+	assert(tostr(ht)).Is("{}")
+	assert(tostr(h2)).Is("{12,34}")
+	assert(tostr(h3)).Is("{12,34,56,78}")
 }
 
-func str(ht FooHamt) string {
+func tostr(ht FooHamt) string {
 	var list []string
 	ht.ForEach(func(f *Foo) {
 		list = append(list, f.data)
 	})
 	sort.Strings(list)
-	return strs.Join("{,}", list)
+	return str.Join("{,}", list)
 }
 
 func TestDelete(*testing.T) {

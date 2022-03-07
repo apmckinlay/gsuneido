@@ -10,7 +10,7 @@ import (
 	"github.com/apmckinlay/gsuneido/compile/ast"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util/strs"
+	"github.com/apmckinlay/gsuneido/util/str"
 )
 
 func TestCodegen(t *testing.T) {
@@ -170,7 +170,7 @@ func disasm(fn *SuFunc) string {
 		nestPrev = nest
 		ops = append(ops, s)
 	})
-	return strs.Join(", ", ops)
+	return str.Join(", ", ops)
 }
 
 func TestControl(t *testing.T) {

@@ -7,7 +7,7 @@ import (
 	"github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/generic/set"
-	"github.com/apmckinlay/gsuneido/util/strs"
+	"github.com/apmckinlay/gsuneido/util/str"
 )
 
 type Sort struct {
@@ -24,7 +24,7 @@ type sortApproach struct {
 func NewSort(src Query, reverse bool, cols []string) *Sort {
 	if !set.Subset(src.Columns(), cols) {
 		panic("sort: nonexistent columns: " +
-			strs.Join(", ", set.Difference(cols, src.Columns())))
+			str.Join(", ", set.Difference(cols, src.Columns())))
 	}
 	return &Sort{Query1: Query1{source: src}, reverse: reverse, columns: cols}
 }
@@ -38,7 +38,7 @@ func (sort *Sort) String() string {
 	if sort.index != nil {
 		return s + r
 	}
-	return s + " SORT" + r + " " + strs.Join(", ", sort.columns)
+	return s + " SORT" + r + " " + str.Join(", ", sort.columns)
 }
 
 func (sort *Sort) Transform() Query {

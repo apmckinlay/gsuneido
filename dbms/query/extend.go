@@ -7,7 +7,7 @@ import (
 	"github.com/apmckinlay/gsuneido/compile/ast"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/generic/set"
-	"github.com/apmckinlay/gsuneido/util/strs"
+	"github.com/apmckinlay/gsuneido/util/str"
 	"golang.org/x/exp/slices"
 )
 
@@ -37,7 +37,7 @@ func (e *Extend) checkDependencies() {
 			ecols := e.exprs[i].Columns()
 			if !set.Subset(avail, ecols) {
 				panic("extend: invalid column(s) in expressions: " +
-					strs.Join(", ", set.Difference(ecols, avail)))
+					str.Join(", ", set.Difference(ecols, avail)))
 			}
 		}
 		avail = append(avail, e.cols[i])

@@ -15,7 +15,6 @@ import (
 	"github.com/apmckinlay/gsuneido/util/generic/set"
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
 	"github.com/apmckinlay/gsuneido/util/str"
-	"github.com/apmckinlay/gsuneido/util/strs"
 	"golang.org/x/exp/slices"
 )
 
@@ -253,7 +252,7 @@ func (m *Meta) Drop(name string) *Meta {
 	}
 	if list := fkToHere(&ts.Schema); list != nil {
 		panic("can't drop table used by foreign keys: " +
-			name + " <- " + strs.Join(",", list))
+			name + " <- " + str.Join(",", list))
 	}
 	mu := newMetaUpdate(m)
 	if ts.created != 0 && ts.created == m.schema.Clock {
@@ -296,11 +295,11 @@ func (m *Meta) AlterRename(table string, from, to []string) *Meta {
 	}
 	missing := set.Difference(from, ts.Columns)
 	if len(missing) > 0 {
-		panic("can't rename nonexistent column(s): " + strs.Join(", ", missing))
+		panic("can't rename nonexistent column(s): " + str.Join(", ", missing))
 	}
 	existing := set.Intersect(to, ts.Columns)
 	if len(existing) > 0 {
-		panic("can't rename to existing column(s): " + strs.Join(", ", existing))
+		panic("can't rename to existing column(s): " + str.Join(", ", existing))
 	}
 	tsNew := *ts // copy
 	tsNew.Columns = slc.Replace(ts.Columns, from, to)
@@ -353,7 +352,7 @@ func (m *Meta) alterGet(table string) (*Schema, *Info) {
 func createColumns(ts *Schema, cols []string) {
 	existing := set.Intersect(cols, ts.Columns)
 	if len(existing) > 0 {
-		panic("can't create existing column(s): " + strs.Join(", ", existing))
+		panic("can't create existing column(s): " + str.Join(", ", existing))
 	}
 	ts.Columns = append(slices.Clip(ts.Columns), cols...)
 }
@@ -361,7 +360,7 @@ func createColumns(ts *Schema, cols []string) {
 func createDerived(ts *Schema, cols []string) {
 	existing := set.Intersect(cols, ts.Derived)
 	if len(existing) > 0 {
-		panic("can't create existing column(s): " + strs.Join(", ", existing))
+		panic("can't create existing column(s): " + str.Join(", ", existing))
 	}
 	ts.Derived = append(slices.Clip(ts.Derived), cols...)
 }
@@ -404,7 +403,7 @@ func (*Meta) createFkeys(mu *metaUpdate, ts, ac *schema.Schema) {
 			if slices.Equal(fkCols, ix.Columns) {
 				if ix.Mode != 'k' {
 					panic("foreign key must point to key: " +
-						ac.Table + " -> " + fk.Table + strs.Join("(,)", fkCols))
+						ac.Table + " -> " + fk.Table + str.Join("(,)", fkCols))
 				}
 				found = true
 				fk.IIndex = j
@@ -417,7 +416,7 @@ func (*Meta) createFkeys(mu *metaUpdate, ts, ac *schema.Schema) {
 		}
 		if !found {
 			panic("can't create foreign key to nonexistent index: " +
-				ac.Table + " -> " + fk.Table + strs.Join("(,)", fkCols))
+				ac.Table + " -> " + fk.Table + str.Join("(,)", fkCols))
 		}
 		mu.putSchema(target)
 	}
@@ -493,7 +492,7 @@ loop:
 				continue loop
 			}
 		}
-		panic("can't drop nonexistent index: " + strs.Join(",", idxs[j].Columns))
+		panic("can't drop nonexistent index: " + str.Join(",", idxs[j].Columns))
 	}
 	tsIdxs := make([]schema.Index, 0, len(ts.Indexes))
 	tiIdxs := make([]*index.Overlay, 0, len(ti.Indexes))

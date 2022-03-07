@@ -16,7 +16,7 @@ import (
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/runtime/trace"
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
-	"github.com/apmckinlay/gsuneido/util/strs"
+	"github.com/apmckinlay/gsuneido/util/str"
 	"golang.org/x/exp/slices"
 )
 
@@ -379,7 +379,7 @@ func (q queryLocal) Keys() []string {
 		keys := q.Query.Keys()
 		list := make([]string, len(keys))
 		for i, k := range keys {
-			list[i] = strs.Join(",", k)
+			list[i] = str.Join(",", k)
 		}
 		q.keys = list
 	}

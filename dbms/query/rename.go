@@ -9,7 +9,7 @@ import (
 	"github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/generic/set"
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
-	"github.com/apmckinlay/gsuneido/util/strs"
+	"github.com/apmckinlay/gsuneido/util/str"
 	"golang.org/x/exp/slices"
 )
 
@@ -23,11 +23,11 @@ func NewRename(src Query, from, to []string) *Rename {
 	srcCols := src.Columns()
 	if !set.Subset(srcCols, from) {
 		panic("rename: nonexistent column(s): " +
-			strs.Join(", ", set.Difference(from, srcCols)))
+			str.Join(", ", set.Difference(from, srcCols)))
 	}
 	if !set.Disjoint(srcCols, to) {
 		panic("rename: column(s) already exist: " +
-			strs.Join(", ", set.Intersect(srcCols, to)))
+			str.Join(", ", set.Intersect(srcCols, to)))
 	}
 	r := &Rename{Query1: Query1{source: src}, from: from, to: to}
 	r.renameDependencies(srcCols)

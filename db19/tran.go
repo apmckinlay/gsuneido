@@ -19,7 +19,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/cksum"
 	"github.com/apmckinlay/gsuneido/util/hacks"
-	"github.com/apmckinlay/gsuneido/util/strs"
+	"github.com/apmckinlay/gsuneido/util/str"
 	"golang.org/x/exp/slices"
 )
 
@@ -361,7 +361,7 @@ func (t *UpdateTran) dupOutputBlock(table string, iIndex int, ix schema.Index, o
 	if ix.Mode == 'k' || (ix.Mode == 'u' && !uniqueIndexEmpty(rec, ix.Ixspec)) {
 		if ov.Lookup(key) != 0 {
 			panic(fmt.Sprint("duplicate key: ",
-				strs.Join(",", ix.Columns), " in ", table))
+				str.Join(",", ix.Columns), " in ", table))
 		}
 		t.Read(table, iIndex, key, key)
 	}
@@ -446,7 +446,7 @@ func (t *UpdateTran) fkeyDeleteBlock(ts *meta.Schema, i int, key string) {
 		}
 		if fk.Mode == schema.Block && t.fkeyDeleteExists(fk, key) {
 			panic("delete blocked by foreign key: " +
-				fk.Table + " " + strs.Join("(,)", fk.Columns))
+				fk.Table + " " + str.Join("(,)", fk.Columns))
 		}
 	}
 }

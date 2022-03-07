@@ -11,7 +11,6 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/util/hash"
 	"github.com/apmckinlay/gsuneido/util/str"
-	"github.com/apmckinlay/gsuneido/util/strs"
 	"golang.org/x/exp/slices"
 )
 
@@ -89,11 +88,11 @@ func (ix *Index) String() string {
 
 func (ix *Index) string(fktohere bool) string {
 	s := map[int]string{'k': "key", 'i': "index", 'u': "index unique"}[ix.Mode]
-	s += strs.Join("(,)", ix.Columns)
+	s += str.Join("(,)", ix.Columns)
 	if ix.Fk.Table != "" {
 		s += " in " + ix.Fk.Table
 		if !slices.Equal(ix.Fk.Columns, ix.Columns) {
-			s += strs.Join("(,)", ix.Fk.Columns)
+			s += str.Join("(,)", ix.Fk.Columns)
 		}
 		if ix.Fk.Mode&Cascade != 0 {
 			s += " cascade"
@@ -105,11 +104,11 @@ func (ix *Index) string(fktohere bool) string {
 	if fktohere {
 		toHere := make([]string, len(ix.FkToHere))
 		for i, fk := range ix.FkToHere {
-			toHere[i] = " from " + fk.Table + strs.Join("(,)", fk.Columns)
+			toHere[i] = " from " + fk.Table + str.Join("(,)", fk.Columns)
 		}
 		// sort for consistency in tests
 		sort.Slice(toHere, func(i, j int) bool { return toHere[i] < toHere[j] })
-		s += strs.Join("", toHere)
+		s += str.Join("", toHere)
 	}
 	return s
 }
@@ -135,7 +134,7 @@ func (sc *Schema) IIndex(cols []string) int {
 			return i
 		}
 	}
-	panic("IIndex not found" + sc.Table + strs.Join(",", cols))
+	panic("IIndex not found" + sc.Table + str.Join(",", cols))
 }
 
 func (ix *Index) Equal(iy *Index) bool {
