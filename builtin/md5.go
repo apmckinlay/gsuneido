@@ -12,47 +12,51 @@ import (
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
+// The built-in hashes are Adler32, Md5, Sha1, Sha256.
+// The implementations are very similar.
+// Modifications to any of them should probably be done to the others.
+
 type suMd5 struct {
-	ValueBase[*suMd5]
+	ValueBase[suMd5]
 	hash hash.Hash
 }
 
 var _ = builtinRaw("Md5(@args)",
 	func(th *Thread, as *ArgSpec, args []Value) Value {
-		sa := &suMd5{hash: md5.New()}
+		h := suMd5{hash: md5.New()}
 		iter := NewArgsIter(as, args)
 		k, v := iter()
 		if v == nil {
-			return sa
+			return h
 		}
 		for ; k == nil && v != nil; k, v = iter() {
-			io.WriteString(sa.hash, ToStr(v))
+			io.WriteString(h.hash, ToStr(v))
 		}
-		return sa.value()
+		return h.value()
 	})
 
-var _ Value = (*suMd5)(nil)
+var _ Value = suMd5{}
 
-func (sa *suMd5) Equal(other interface{}) bool {
-	sa2, ok := other.(*suMd5)
-	return ok && sa == sa2
+func (h suMd5) Equal(other interface{}) bool {
+	h2, ok := other.(suMd5)
+	return ok && h == h2
 }
 
-func (*suMd5) Lookup(_ *Thread, method string) Callable {
+func (suMd5) Lookup(_ *Thread, method string) Callable {
 	return md5Methods[method]
 }
 
 var md5Methods = Methods{
 	"Update": method1("(string)", func(this, arg Value) Value {
-		io.WriteString(this.(*suMd5).hash, ToStr(arg))
+		io.WriteString(this.(suMd5).hash, ToStr(arg))
 		return this
 	}),
 	"Value": method0(func(this Value) Value {
-		return this.(*suMd5).value()
+		return this.(suMd5).value()
 	}),
 }
 
-func (sa *suMd5) value() Value {
+func (h suMd5) value() Value {
 	var buf [md5.Size]byte
-	return SuStr(string(sa.hash.Sum(buf[0:0])))
+	return SuStr(string(h.hash.Sum(buf[0:0])))
 }

@@ -13,46 +13,50 @@ import (
 )
 
 type suSha1 struct {
-	ValueBase[*suSha1]
+	ValueBase[suSha1]
 	hash hash.Hash
 }
 
+// The built-in hashes are Adler32, Md5, Sha1, Sha256.
+// The implementations are very similar.
+// Modifications to any of them should probably be done to the others.
+
 var _ = builtinRaw("Sha1(@args)",
 	func(th *Thread, as *ArgSpec, args []Value) Value {
-		sa := &suSha1{hash: sha1.New()}
+		h := suSha1{hash: sha1.New()}
 		iter := NewArgsIter(as, args)
 		k, v := iter()
 		if v == nil {
-			return sa
+			return h
 		}
 		for ; k == nil && v != nil; k, v = iter() {
-			io.WriteString(sa.hash, ToStr(v))
+			io.WriteString(h.hash, ToStr(v))
 		}
-		return sa.value()
+		return h.value()
 	})
 
-var _ Value = (*suSha1)(nil)
+var _ Value = suSha1{}
 
-func (sa *suSha1) Equal(other interface{}) bool {
-	sa2, ok := other.(*suSha1)
-	return ok && sa == sa2
+func (h suSha1) Equal(other interface{}) bool {
+	h2, ok := other.(suSha1)
+	return ok && h == h2
 }
 
-func (*suSha1) Lookup(_ *Thread, method string) Callable {
+func (suSha1) Lookup(_ *Thread, method string) Callable {
 	return sha1Methods[method]
 }
 
 var sha1Methods = Methods{
 	"Update": method1("(string)", func(this, arg Value) Value {
-		io.WriteString(this.(*suSha1).hash, ToStr(arg))
+		io.WriteString(this.(suSha1).hash, ToStr(arg))
 		return this
 	}),
 	"Value": method0(func(this Value) Value {
-		return this.(*suSha1).value()
+		return this.(suSha1).value()
 	}),
 }
 
-func (sa *suSha1) value() Value {
+func (h suSha1) value() Value {
 	var buf [sha1.Size]byte
-	return SuStr(string(sa.hash.Sum(buf[0:0])))
+	return SuStr(string(h.hash.Sum(buf[0:0])))
 }

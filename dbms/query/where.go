@@ -635,15 +635,15 @@ func (f *filter) all() bool {
 }
 
 func (f *filter) none() bool {
-	return len(f.vals) == 0 && cmp(f.org, f.end) >= 0
+	return len(f.vals) == 0 && compare(f.org, f.end) >= 0
 }
 
 func (f *filter) andWith(f2 filter) {
 	if f.isRange() && f2.isRange() {
-		if cmp(f2.org, f.org) > 0 {
+		if compare(f2.org, f.org) > 0 {
 			f.org = f2.org
 		}
-		if cmp(f2.end, f.end) < 0 {
+		if compare(f2.end, f.end) < 0 {
 			f.end = f2.end
 		}
 	} else if !f.isRange() && !f2.isRange() {
@@ -657,7 +657,7 @@ func (f *filter) andWith(f2 filter) {
 		vals := make([]string, 0, len(f.vals)/2)
 		for _, v := range f.vals {
 			lim := limit{val: v}
-			if cmp(f2.org, lim) <= 0 && cmp(lim, f2.end) < 0 {
+			if compare(f2.org, lim) <= 0 && compare(lim, f2.end) < 0 {
 				vals = append(vals, v)
 			}
 		}
@@ -674,7 +674,7 @@ type limit struct {
 var limitMin = limit{}
 var limitMax = limit{val: ixkey.Max}
 
-func cmp(x, y limit) int {
+func compare(x, y limit) int {
 	cmp := strings.Compare(x.val, y.val)
 	if cmp == 0 {
 		cmp = ord.Compare(x.inc, y.inc)
