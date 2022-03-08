@@ -36,6 +36,6 @@ var kernel32 = windows.MustLoadDLL("kernel32.dll")
 var allocConsoleAddr = kernel32.MustFindProc("AllocConsole").Addr()
 
 func allocConsole() bool {
-	rtn, _, _ := syscall.Syscall(allocConsoleAddr, 0, 0, 0, 0)
+	rtn, _, _ := syscall.SyscallN(allocConsoleAddr)
 	return rtn != 0
 }

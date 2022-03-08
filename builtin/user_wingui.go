@@ -2183,13 +2183,11 @@ const GR_USEROBJECTS = 1
 
 func GetGuiResources() (int, int) {
 	hProcess, _ := syscall.GetCurrentProcess()
-	gdi, _, _ := syscall.Syscall(getGuiResources, 2,
+	gdi, _, _ := syscall.SyscallN(getGuiResources,
 		uintptr(hProcess),
-		uintptr(GR_GDIOBJECTS),
-		0)
-	user, _, _ := syscall.Syscall(getGuiResources, 2,
+		uintptr(GR_GDIOBJECTS))
+	user, _, _ := syscall.SyscallN(getGuiResources,
 		uintptr(hProcess),
-		uintptr(GR_USEROBJECTS),
-		0)
+		uintptr(GR_USEROBJECTS))
 	return int(gdi), int(user)
 }

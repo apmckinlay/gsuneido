@@ -54,9 +54,8 @@ var globalMemoryStatusEx = kernel32.MustFindProc("GlobalMemoryStatusEx").Addr()
 var _ = builtin0("SystemMemory()", func() Value {
 	buf := make([]byte, nMEMORYSTATUSEX)
 	(*MEMORYSTATUSEX)(unsafe.Pointer(&buf[0])).dwLength = uint32(nMEMORYSTATUSEX)
-	rtn, _, _ := syscall.Syscall(globalMemoryStatusEx, 1,
-		uintptr(unsafe.Pointer(&buf[0])),
-		0, 0)
+	rtn, _, _ := syscall.SyscallN(globalMemoryStatusEx,
+		uintptr(unsafe.Pointer(&buf[0])))
 	if rtn == 0 {
 		return Zero
 	}

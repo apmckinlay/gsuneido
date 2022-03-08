@@ -288,12 +288,12 @@ func bstrToString(v *VARIANT) string {
 var variantClear = oleaut32.MustFindProc("VariantClear").Addr()
 
 func VariantClear(v *VARIANT) {
-	syscall.Syscall(variantClear, 1, uintptr(unsafe.Pointer(v)), 0, 0)
+	syscall.SyscallN(variantClear, uintptr(unsafe.Pointer(v)))
 }
 
 var sysStringLen = oleaut32.MustFindProc("SysStringLen").Addr()
 
 func SysStringLen(s uintptr) int {
-	rtn, _, _ := syscall.Syscall(sysStringLen, 1, s, 0, 0)
+	rtn, _, _ := syscall.SyscallN(sysStringLen, s)
 	return int(rtn)
 }

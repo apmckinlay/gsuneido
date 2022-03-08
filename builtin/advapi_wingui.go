@@ -34,9 +34,8 @@ var _ = builtin5("RegOpenKeyEx(hKey, lpSubKey, ulOptions, samDesired, phkResult)
 var regCloseKey = advapi32.MustFindProc("RegCloseKey").Addr()
 var _ = builtin1("RegCloseKey(hKey)",
 	func(a Value) Value {
-		rtn, _, _ := syscall.Syscall(regCloseKey, 1,
-			intArg(a),
-			0, 0)
+		rtn, _, _ := syscall.SyscallN(regCloseKey,
+			intArg(a))
 		return intRet(rtn)
 	})
 
