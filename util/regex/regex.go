@@ -143,6 +143,7 @@ func (pat Pattern) ForEachMatch(s string, action func(*Result) bool) {
 }
 
 const maxAlt = 100
+const loopLimit = 1000
 
 var repeat = inst{op: branch, jump: -1, alt: 1}
 
@@ -153,10 +154,9 @@ var repeat = inst{op: branch, jump: -1, alt: 1}
 func (pat Pattern) match(s string, pos, incdec int, result *Result) int {
 	var alts [maxAlt]alternate
 	var tmp [maxResult]int
-	const loopLimit = 1000
-	loops := 0
 outer:
 	for ; 0 <= pos && pos <= len(s); pos += incdec {
+		loops := 0
 		ai := 0
 		si := pos
 		first := 0 // used to identify first non-left pattern element
