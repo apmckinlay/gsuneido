@@ -6,6 +6,8 @@ package stor
 import (
 	"syscall"
 	"unsafe"
+
+	"github.com/apmckinlay/gsuneido/db19/filelock"
 )
 
 func (ms *mmapStor) Get(chunk int) []byte {
@@ -58,5 +60,6 @@ func (ms mmapStor) Close(size int64) {
 		syscall.UnmapViewOfFile(ptr)
 	}
 	ms.file.Truncate(size)
+	filelock.Unlock(ms.file)
 	ms.file.Close()
 }

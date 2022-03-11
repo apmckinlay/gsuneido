@@ -7,6 +7,8 @@ package stor
 
 import (
 	"syscall"
+
+	"github.com/apmckinlay/gsuneido/db19/filelock"
 )
 
 // NOTE: no provision for unmapping (same as Java)
@@ -30,5 +32,6 @@ func (ms *mmapStor) Get(chunk int) []byte {
 
 func (ms *mmapStor) Close(size int64) {
 	ms.file.Truncate(size)
+	filelock.Unlock(ms.file)
 	ms.file.Close()
 }

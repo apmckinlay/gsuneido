@@ -3,7 +3,12 @@
 
 package stor
 
-import "os"
+import (
+	"os"
+
+	"github.com/apmckinlay/gsuneido/db19/filelock"
+	"github.com/apmckinlay/gsuneido/runtime"
+)
 
 type Mode int
 
@@ -34,6 +39,14 @@ func MmapStor(filename string, mode Mode) (*Stor, error) {
 	file, err := os.OpenFile(filename, flags, perm)
 	if err != nil {
 		return nil, err
+	}
+	if mode == READ {
+		err = filelock.RLock(file)
+	} else {
+		err = filelock.Lock(file)
+	}
+	if err != nil {
+		runtime.Fatal(err)
 	}
 	fi, err := file.Stat()
 	if err != nil {
