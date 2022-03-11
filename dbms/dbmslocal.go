@@ -13,6 +13,7 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/db19/tools"
 	qry "github.com/apmckinlay/gsuneido/dbms/query"
+	"github.com/apmckinlay/gsuneido/options"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/runtime/trace"
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
@@ -55,6 +56,9 @@ func (dbms *DbmsLocal) Check() string {
 }
 
 func (*DbmsLocal) Connections() Value {
+	if options.Action == "server" {
+		return connections()
+	}
 	return EmptyObject
 }
 
