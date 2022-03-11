@@ -103,6 +103,9 @@ func (f Folder) Nary(token tok.Token, exprs []Expr) Expr {
 
 func (f Folder) foldNary(n *Nary) Expr {
 	exprs := n.Exprs
+	if len(exprs) == 1 {
+		return exprs[0]
+	}
 	switch n.Tok {
 	case tok.Add: // includes Sub
 		exprs = commutative(exprs, OpAdd, nil, Zero)
