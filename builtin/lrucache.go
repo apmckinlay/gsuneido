@@ -57,7 +57,7 @@ func (d *suLruCacheGlobal) String() string {
 var suLruCacheMethods = Methods{
 	// Get calls the getter with exactly the same arguments it receives.
 	// If called with multiple arguments, the hash key is an @args object.
-	//TODO after jSuneido is gone, we can replace Get,GetN,GetN1 with GetX
+	//TODO after jSuneido is gone, we can replace GetN and GetN1 with Get
 	"Get": methodRaw("(@args)", func(
 		t *Thread, as *ArgSpec, this Value, args []Value) Value {
 		if as.Nargs == 0 {
