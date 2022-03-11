@@ -68,10 +68,12 @@ const (
 	Mod
 	LShift
 	RShift
+	IncDecStart
 	Inc
 	PostInc
 	Dec
 	PostDec
+	IncDecEnd
 	AssignStart // must be consecutive
 	Eq
 	AddEq
@@ -195,4 +197,12 @@ func (token Token) IsIdent() bool {
 
 func (token Token) IsOperator() bool {
 	return OpsStart < token && token < AssignStart
+}
+
+func (token Token) IsAssign() bool {
+	return AssignStart < token && token < AssignEnd
+}
+
+func (token Token) IsIncDec() bool {
+	return IncDecStart < token && token < IncDecEnd
 }

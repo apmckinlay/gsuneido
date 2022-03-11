@@ -33,13 +33,33 @@ func GogenParser(src string) *Parser {
 }
 
 func QueryParser(src string) *Parser {
-	return newParser(NewQueryLexer(src), &cgAspects{})
+	return newParser(NewQueryLexer(src), &actionAspects{})
 }
 
 func newParser(lxr *Lexer, a Aspects) *Parser {
 	p := &Parser{ParserBase: ParserBase{Lxr: lxr, Aspects: a}}
 	p.Next()
 	return p
+}
+
+type actionAspects struct {
+	cgAspects
+}
+
+type Expr = ast.Expr
+
+func (aa *actionAspects) Binary(lhs Expr, token tok.Token, rhs Expr) Expr {
+	if token.IsAssign() {
+		panic("assignment operators are not allowed")
+	}
+	return aa.cgAspects.Binary(lhs, token, rhs)
+}
+
+func (aa *actionAspects) Unary(token tok.Token, expr Expr) Expr {
+	if token.IsIncDec() {
+		panic("increment/decrement operators are not allowed")
+	}
+	return aa.cgAspects.Unary(token, expr)
 }
 
 func (p *Parser) InitFuncInfo() {

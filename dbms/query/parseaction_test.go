@@ -26,5 +26,16 @@ func TestParseAct(t *testing.T) {
 	test("delete table")
 	test("delete table where a > 1")
 
-	assert.This(func() { ParseAction("foo bar", testTran{}, nil) }).Panics("action must")
+	assert.This(func() {
+		ParseAction("foo bar", testTran{}, nil)
+	}).Panics("action must")
+	assert.This(func() {
+		ParseAction("update table set a = b = 2", testTran{}, nil)
+	}).Panics("assignment operators are not allowed")
+	assert.This(func() {
+		ParseAction("update table set a = b *= 2", testTran{}, nil)
+	}).Panics("assignment operators are not allowed")
+	assert.This(func() {
+		ParseAction("update table set a = ++b", testTran{}, nil)
+	}).Panics("increment/decrement operators are not allowed")
 }

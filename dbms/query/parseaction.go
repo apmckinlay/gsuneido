@@ -22,6 +22,7 @@ type actionParser struct {
 // ParseAction parses insert, update, and delete actions
 func ParseAction(src string, t QueryTran, sv *runtime.Sviews) Action {
 	p := actionParser{*NewQueryParser(src, t, sv)}
+	p.InitFuncInfo()
 	result := p.action()
 	if p.Token != tok.Eof {
 		p.Error("did not parse all input")
