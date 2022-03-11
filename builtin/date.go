@@ -100,12 +100,20 @@ func named(args []Value) Value {
 	return d
 }
 
-func (d *suDateGlobal) Lookup(t *Thread, method string) Callable {
-	if method == "Begin" {
-		return method0(func(Value) Value { return DateFromLiteral("#17000101") })
+func (d *suDateGlobal) Get(t *Thread, key Value) Value {
+	m := ToStr(key)
+	if fn, ok := dateStaticMethods[m]; ok {
+		return fn.(Value)
 	}
-	if method == "End" {
-		return method0(func(Value) Value { return DateFromLiteral("#30000101") })
+	if fn, ok := ParamsMethods[m]; ok {
+		return NewSuMethod(d, fn.(Value))
+	}
+	return nil
+}
+
+func (d *suDateGlobal) Lookup(t *Thread, method string) Callable {
+	if fn, ok := dateStaticMethods[method]; ok {
+		return fn
 	}
 	return d.SuBuiltin.Lookup(t, method) // for Params
 }
@@ -115,6 +123,15 @@ func (d *suDateGlobal) String() string {
 }
 
 var msFactor = dnum.FromStr(".001")
+
+var dateStaticMethods = Methods{
+	"Begin": method0(func(Value) Value {
+		return DateFromLiteral("#17000101")
+	}),
+	"End": method0(func(Value) Value {
+		return DateFromLiteral("#30000101")
+	}),
+}
 
 func init() {
 	DateMethods = Methods{

@@ -73,6 +73,17 @@ var databaseMethods = Methods{
 	}),
 }
 
+func (d *suDatabaseGlobal) Get(t *Thread, key Value) Value {
+	m := ToStr(key)
+	if fn, ok := databaseMethods[m]; ok {
+		return fn.(Value)
+	}
+	if fn, ok := ParamsMethods[m]; ok {
+		return NewSuMethod(d, fn.(Value))
+	}
+	return nil
+}
+
 func (d *suDatabaseGlobal) Lookup(t *Thread, method string) Callable {
 	if f, ok := databaseMethods[method]; ok {
 		return f

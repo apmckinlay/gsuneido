@@ -139,6 +139,17 @@ var threadMethods = Methods{
 	}),
 }
 
+func (d *suThreadGlobal) Get(t *Thread, key Value) Value {
+	m := ToStr(key)
+	if fn, ok := threadMethods[m]; ok {
+		return fn.(Value)
+	}
+	if fn, ok := ParamsMethods[m]; ok {
+		return NewSuMethod(d, fn.(Value))
+	}
+	return nil
+}
+
 func (d *suThreadGlobal) Lookup(t *Thread, method string) Callable {
 	if f, ok := threadMethods[method]; ok {
 		return f

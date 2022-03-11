@@ -13,6 +13,10 @@ type SuMethod struct {
 	this Value
 }
 
+func NewSuMethod(this Value, fn Value) *SuMethod {
+	return &SuMethod{fn: fn, this: this}
+}
+
 func (m *SuMethod) GetFn() Value {
 	return m.fn
 }
