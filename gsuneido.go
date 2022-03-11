@@ -324,8 +324,10 @@ var httpServer *http.Server
 
 func startHttpStatus() {
 	http.HandleFunc("/", httpStatus)
+	port, _ := strconv.Atoi(options.Port)
+	addr := ":" + strconv.Itoa(port+1)
 	go func() {
-		httpServer = &http.Server{Addr: ":3148"}
+		httpServer = &http.Server{Addr: addr}
 		err := httpServer.ListenAndServe()
 		if err != http.ErrServerClosed {
 			log.Println("Server Monitor:", err)
