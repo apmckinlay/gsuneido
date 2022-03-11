@@ -19,11 +19,10 @@ func (p *Parser) Expression() ast.Expr {
 	return p.pcExpr(1)
 }
 
-// ------------------------------------------------------------------
-// pcExpr implements precedence climbing
-// each call processes at least one atom
-// a given call processes everything >= minprec
-// it recurses to process the right hand side of each operator
+// pcExpr implements precedence climbing.
+// Each call processes at least one atom.
+// A given call processes everything >= minprec.
+// It recurses to process the right hand side of each operator.
 func (p *Parser) pcExpr(minprec int8) ast.Expr {
 	e := p.atom()
 	// fmt.Println("pcExpr minprec", minprec, "atom", e)
@@ -208,6 +207,7 @@ func (p *Parser) same(listtype tok.Token, next tok.Token) bool {
 }
 
 // ------------------------------------------------------------------
+
 // atom handles atoms and prefix operators
 func (p *Parser) atom() ast.Expr {
 	switch token := p.Token; token {
