@@ -5,12 +5,204 @@ package regex
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/ptest"
 )
+
+func FuzzRegex(f *testing.F) {
+	f.Fuzz(func(t *testing.T, s string) {
+		defer func() {
+			if e := recover(); e != nil {
+				if err, ok := e.(string); ok &&
+					strings.HasPrefix(err, "regex: ") {
+					return
+				}
+				t.Error("pattern:", s, "=>", e)
+			}
+		}()
+		pat := Compile(s)
+		pat.Matches("Hello World")
+		pat.Matches("")
+	})
+}
+
+func FuzzRegex2(f *testing.F) {
+	f.Fuzz(func(t *testing.T, r, s string) {
+		defer func() {
+			if e := recover(); e != nil {
+				if err, ok := e.(string); ok &&
+					strings.HasPrefix(err, "regex: ") {
+					return
+				}
+				t.Error("pattern:", s, "=>", e)
+			}
+		}()
+		pat := Compile(r)
+		pat.Matches(s)
+	})
+}
+
+func FuzzRegexCmp(f *testing.F) {
+	sRep := strings.NewReplacer(
+		"\r", "r",
+		"\n", "n",
+	)
+	test := func(t *testing.T, r, s string) {
+		p1 := Compile(r)
+		var result Result
+		p1.FirstMatch(s, 0, &result)
+		i1, j1 := result[0].Range()
+
+		p2, err := regexp.Compile(r)
+		if err != nil {
+			return
+		}
+		i2, j2 := -1, -1
+		if m2 := p2.FindStringSubmatchIndex(s); m2 != nil {
+			i2, j2 = m2[0], m2[1]
+		}
+
+		if i1 != i2 || (i1 != -1 && j1 != j2) {
+			t.Errorf("r: %q s: %q Suneido: %d,%d Go: %d,%d", r, s, i1, j1, i2, j2)
+		}
+	}
+	f.Fuzz(func(t *testing.T, r, s string) {
+		defer func() {
+			if e := recover(); e != nil {
+				if err, ok := e.(string); ok &&
+					strings.HasPrefix(err, "regex: ") {
+					return
+				}
+				t.Error("pattern:", r, "=>", e)
+			}
+		}()
+		r = fixRegex(r)
+		s = sRep.Replace(toAscii(s))
+		test(t, r, s)
+		test(t, "(?i)"+r, s)
+	})
+}
+
+func FuzzRegexVsGo(f *testing.F) {
+	test := func(t *testing.T, r, s string) {
+		p1 := Compile(r)
+		var result Result
+		p1.FirstMatch(s, 0, &result)
+		i1, j1 := result[0].Range()
+
+		p2, err := regexp.Compile(r)
+		if err != nil {
+			return
+		}
+		i2, j2 := -1, -1
+		if m2 := p2.FindStringSubmatchIndex(s); m2 != nil {
+			i2, j2 = m2[0], m2[1]
+		}
+		
+		if i1 != i2 || (i1 != -1 && j1 != j2) {
+			t.Errorf("r: %q s: %q Suneido: %d,%d Go: %d,%d", r, s, i1, j1, i2, j2)
+		}
+	}
+	f.Fuzz(func(t *testing.T, r string) {
+		defer func() {
+			if e := recover(); e != nil {
+				if err, ok := e.(string); ok &&
+					strings.HasPrefix(err, "regex: ") {
+					return
+				}
+				t.Error("pattern:", r, "=>", e)
+			}
+		}()
+		r = fixRegex(r)
+		test(t, r, "")
+		test(t, r, "x")
+		test(t, r, "Hello World")
+		test(t, "(?i)"+r, "x")
+		test(t, "(?i)"+r, "Hello World")
+	})
+}
+
+var rRep = strings.NewReplacer(
+	"{", "(",
+	"}", ")",
+	"(?", "(",
+	"$*", ",",
+	"^*", ";",
+	"$+", ",",
+	"^+", ";",
+	"$?", ",",
+	"^?", ";",
+	`\(`, "(",
+	`\`, "",
+	"[[:ascii:]]", "a",
+	"[[:word]]", "w",
+	`\Q`, "Q",
+	`\E`, "E",
+	`\b`, "b",
+	`\B`, "B",
+	`\<`, "<",
+	`\>`, ">",
+	`\p`, "p",
+	`\P`, "P",
+	`\z`, "z",
+	`\Z`, "Z",
+	`\a`, "a",
+	`\x`, "x",
+	`\0`, "0",
+	`\1`, "1",
+	`\2`, "2",
+	`\3`, "3",
+	`\4`, "4",
+	`\5`, "5",
+	`\6`, "6",
+	`\7`, "7",
+	`\8`, "8",
+	`\9`, "9",
+)
+
+func fixRegex(s string) string {
+	s = toAscii(s)
+	for {
+		s2 := rRep.Replace(s)
+		if s2 == s {
+			return s
+		}
+		s = s2
+	}
+}
+
+func toAscii(s string) string {
+	var sb strings.Builder
+	for _, b := range []byte(s) {
+		sb.WriteByte(b & 0x7f)
+	}
+	return sb.String()
+}
+
+func TestRegexBug(t *testing.T) {
+	pat := ".*0|1"
+	str := "xxx0"
+
+	p1 := Compile(pat)
+	p1.print()
+	var result Result
+	p1.FirstMatch(str, 0, &result)
+	i1, j1 := result[0].Range()
+	fmt.Println("SU", i1, j1)
+
+	p2 := regexp.MustCompile(pat)
+	i2, j2 := -1, -1
+	if m2 := p2.FindStringSubmatchIndex(str); m2 != nil {
+		i2, j2 = m2[0], m2[1]
+	}
+	fmt.Println("GO", i2, j2)
+
+	assert.That(i1 == i2 && j1 == j2)
+}
 
 func BenchmarkRegex(b *testing.B) {
 	pat := Compile(".+foo")
@@ -146,3 +338,15 @@ func pt_replace(args []string, _ []bool) bool {
 }
 
 var _ = ptest.Add("regex_replace", pt_replace)
+
+// ptest support ---------------------------------------------------------------
+
+func (pat Pattern) print() {
+	for i, in := range pat {
+		if in.op == branch || in.op == jump {
+			in.jump += int16(i)
+			in.alt += int16(i)
+		}
+		fmt.Printf("%d: %s\n", i, in.String())
+	}
+}

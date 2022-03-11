@@ -49,14 +49,17 @@ func (b *builder) addRange(from, to byte) *builder {
 		return b
 	}
 	if !b.isSet && len(b.data)+int(to-from) <= maxList {
-		for c := from; c <= to; c++ {
+		for c := from; ; c++ {
 			b.data = append(b.data, c)
+			if c >= to { // before increment to avoid overflow
+				break
+			}
 		}
 	} else {
 		b.toSet()
 		for c := from; ; c++ {
 			b.data[c>>3] |= (1 << (c & 7))
-			if c == to {
+			if c >= to {
 				break
 			}
 		}

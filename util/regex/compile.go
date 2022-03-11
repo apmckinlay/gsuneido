@@ -91,24 +91,12 @@ var (
 
 func (co *compiler) compile() Pattern {
 	co.emit(left0)
-	if co.sn >= 2 && co.startsWithAnything() { //BUG has to be inside grouping
-		co.emit(inst{op: startOfLine})
-	}
 	co.regex()
 	co.emit(right0)
 	if co.si < co.sn {
 		panic("regex: closing ) without opening (")
 	}
 	return Pattern(co.pat)
-}
-
-func (co *compiler) startsWithAnything() bool {
-	i := 0
-	for co.src[i] == '(' {
-		i++
-	}
-	s := co.src[i:]
-	return strings.HasPrefix(s, ".*") || strings.HasPrefix(s, ".+")
 }
 
 func (co *compiler) regex() {
@@ -160,6 +148,9 @@ func (co *compiler) element() {
 	} else if co.match("(?-q)") {
 		// handled by quoted
 	} else {
+		if co.leadingAnything() { // optimization
+			co.emit(inst{op: startOfLine})
+		}
 		start := len(co.pat)
 		co.simple()
 		pn := len(co.pat) - start
@@ -192,6 +183,20 @@ func (co *compiler) quoted() {
 	co.emitChars(co.src[start:co.si])
 }
 
+func (co *compiler) leadingAnything() bool {
+	for i := 0; i < co.si; i++ {
+		if co.src[i] != '(' {
+			return false
+		}
+	}
+	if co.si+2 > co.sn ||
+		co.src[co.si] != '.' ||
+		(co.src[co.si+1] != '*' && co.src[co.si+1] != '+') {
+		return false
+	}
+	return true
+}
+
 func (co *compiler) simple() {
 	if co.match(".") {
 		co.emit(inst{op: dot})
@@ -216,7 +221,6 @@ func (co *compiler) simple() {
 		}
 	} else if co.match("[") {
 		co.charClass()
-		co.mustMatch("]")
 	} else if co.match("(") {
 		co.leftCount++
 		i := co.leftCount
@@ -224,6 +228,9 @@ func (co *compiler) simple() {
 			panic("regex: too many parenthesized groups")
 		}
 		co.emit(inst{op: left, i: byte(i)})
+		if co.match(")") {
+			panic("regex: empty parenthesis not allowed")
+		}
 		co.regex() // recurse
 		co.emit(inst{op: right, i: byte(i)})
 		co.mustMatch(")")
@@ -259,11 +266,8 @@ func (co *compiler) next1of(set string) bool {
 func (co *compiler) charClass() {
 	negate := co.match("^")
 	chars := ""
-	if co.match("]") {
-		chars += "]"
-	}
 	var cc = builder{}
-	for co.si < co.sn && co.src[co.si] != ']' {
+	for co.si < co.sn {
 		if co.matchRange() {
 			cc.addRange(co.src[co.si-3], co.src[co.si-1])
 		} else if co.match("\\d") {
@@ -287,20 +291,24 @@ func (co *compiler) charClass() {
 			chars += co.src[co.si : co.si+1]
 			co.si++
 		}
+		if co.si >= co.sn || co.src[co.si] == ']' {
+			break
+		}
 	}
+	co.mustMatch("]")
 	if len(chars) > 0 {
 		cc.addChars(chars)
 	}
-	if negate {
-		cc.negate()
-	}
-	// optimization - treat single character class as just character
-	if len(cc.data) == 1 {
+	if !negate && len(cc.data) == 1 {
+		// optimization - treat single character class as just character
 		co.emitChars(string(cc.data[0:1]))
 		return
 	}
 	if co.ignoringCase {
 		cc.ignore()
+	}
+	if negate {
+		cc.negate()
 	}
 	co.emit(cc.build())
 }
@@ -339,7 +347,7 @@ func (co *compiler) posixClass() inst {
 	} else if co.match("xdigit:]") {
 		return xdigit
 	} else {
-		panic("bad posix class")
+		panic("regex: bad posix class")
 	}
 }
 

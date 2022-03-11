@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/util/ascii"
-	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/generic/ord"
 )
 
@@ -154,6 +153,8 @@ var repeat = inst{op: branch, jump: -1, alt: 1}
 func (pat Pattern) match(s string, pos, incdec int, result *Result) int {
 	var alts [maxAlt]alternate
 	var tmp [maxResult]int
+	const loopLimit = 1000
+	loops := 0
 outer:
 	for ; 0 <= pos && pos <= len(s); pos += incdec {
 		ai := 0
@@ -162,13 +163,21 @@ outer:
 		for pi := 0; pi < len(pat); pi++ {
 			m := true
 			in := &pat[pi]
+			trace("si", si, "pi", pi, in)
 			switch in.op {
 			case dot:
-				if pi+1 < len(pat) && pat[pi+1] == repeat {
+				if pi+1 < len(pat) && pat[pi+1] == repeat && si < len(s)-1 {
 					// for .* or .+ shortcut looping to end of line
+					if ai >= len(alts) {
+						panic("regex: too many branches")
+					}
+					trace("shortcut to end")
 					alts[ai].pi = pi + 2
 					alts[ai].si = si + 1
-					j := strings.IndexAny(s[si:], "\r\n")
+					j := -1
+					if si < len(s) {
+						j = strings.IndexAny(s[si:], "\r\n")
+					}
 					if j == -1 {
 						si = len(s)
 					} else {
@@ -189,7 +198,6 @@ outer:
 					}
 					if j > 0 {
 						// skip ahead and restart match where chars are
-						assert.That(pos == si)
 						pos += j
 						si = pos
 						pi = -1 // -1 because loop increments
@@ -217,6 +225,9 @@ outer:
 				if ai > 0 && alts[ai-1].pi == pi+int(in.alt) && si == alts[ai-1].si2+1 {
 					alts[ai-1].si2++ // expand existing entry, avoid stack growth
 				} else {
+					if ai >= len(alts) {
+						panic("regex: too many branches")
+					}
 					alts[ai].pi = pi + int(in.alt)
 					alts[ai].si = si
 					alts[ai].si2 = si
@@ -242,7 +253,7 @@ outer:
 			case backrefIgnore:
 				m, si = backrefMatch(s, si, result[in.i], hasPrefixIgnore)
 			case startOfLine:
-				m = si == 0 || s[si-1] == '\n'
+				m = si == 0 || (si <= len(s) && s[si-1] == '\n')
 				if !m && pi == first && incdec == +1 && ai == 0 {
 					j := strings.IndexByte(s[si:], '\n')
 					if j == -1 {
@@ -261,7 +272,7 @@ outer:
 			case endOfString:
 				m = si >= len(s)
 			case startOfWord:
-				m = si == 0 || !matchSet(word.data, s[si-1])
+				m = si == 0 || (si <= len(s) && !matchSet(word.data, s[si-1]))
 			case endOfWord:
 				m = si >= len(s) || !matchSet(word.data, s[si])
 			default:
@@ -272,11 +283,16 @@ outer:
 					// backtrack
 					pi = alts[ai-1].pi - 1 // -1 because loop increments
 					if alts[ai-1].si2 > alts[ai-1].si {
+						trace("backtrack shorten")
 						si = alts[ai-1].si2
 						alts[ai-1].si2--
 					} else {
 						ai--
+						trace("backtrack pop", "si", si, "alt", alts[ai])
 						si = alts[ai].si
+					}
+					if loops++; loops > loopLimit {
+						panic("regex: too many loops")
 					}
 				} else if incdec != 0 {
 					continue outer
@@ -288,6 +304,10 @@ outer:
 		return pos // matched to end of pattern
 	}
 	return -1 // didn't match at any position
+}
+
+func trace(args ...any) {
+	// fmt.Println(args...)
 }
 
 // hasPrefixIgnore returns whether s has pre as a prefix
@@ -302,10 +322,15 @@ func hasPrefixIgnore(s, pre string) bool {
 }
 
 func backrefMatch(s string, si int, p part, fn func(s, p string) bool) (bool, int) {
-	if p.end == -1 {
+	if p.pos1 == 0 || p.end == -1 || p.end < p.pos1-1 {
 		return false, si
 	}
-	b := s[p.pos1-1 : p.end]
+	pos := p.pos1 - 1
+	end := ord.Min(p.end, len(s))
+	b := ""
+	if pos < end && pos >= 0 && end <= len(s) {
+		b = s[pos:end]
+	}
 	return si+len(b) <= len(s) && fn(s[si:], b), si + len(b)
 }
 

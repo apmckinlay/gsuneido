@@ -33,6 +33,8 @@ func TestCompile(t *testing.T) {
 	test("abc?de", "'ab' Branch(1, 2) 'c' 'de'")
 	test(".*", "^ Branch(1, 3) . Branch(-1, 1)")
 	test(".+", "^ . Branch(-1, 1)")
+	// test(".*x|y", "Branch(1, 4) ^ . Branch(-1, 1)")
+	// test(".+x|y", "^ . Branch(-1, 1)")
 	test("abc+de", "'ab' 'c' Branch(-1, 1) 'de'")
 	test("abc*de", "'ab' Branch(1, 3) 'c' Branch(-1, 1) 'de'")
 	test("ab\\.?cd", "'ab' Branch(1, 2) '.' 'cd'")
