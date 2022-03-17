@@ -118,10 +118,6 @@ var suLruCacheMethods = Methods{
 		slc.Reset()
 		return nil
 	}),
-	"ResetOne": method1("(x)", func(this, arg Value) Value {
-		slc := this.(*suLruCache)
-		return SuBool(slc.Reset1(arg))
-	}),
 	"OkForResetAll?": method0(func(this Value) Value {
 		slc := this.(*suLruCache)
 		return SuBool(slc.okForResetAll)
@@ -167,13 +163,6 @@ func (slc *suLruCache) Reset() {
 		defer slc.Unlock()
 	}
 	slc.Lc.Reset()
-}
-
-func (slc *suLruCache) Reset1(key Value) bool {
-	if slc.Lock() {
-		defer slc.Unlock()
-	}
-	return slc.Lc.Reset1(key)
 }
 
 // Value implementation
@@ -282,23 +271,6 @@ func (lc *lruCache) Reset() {
 	lc.entries = lc.entries[:0]
 	lc.hits = 0
 	lc.misses = 0
-}
-
-func (lc *lruCache) Reset1(key Value) bool {
-	v := lc.hm.Get(key)
-	if v == nil {
-		return false
-	}
-	lc.hm.Del(key)
-	// delete from entries
-	ei, _ := v.ToInt()
-	copy(lc.entries[ei:], lc.entries[ei+1:])
-	lc.entries = lc.entries[:len(lc.entries)-1]
-	// delete from lru
-	li := bytes.IndexByte(lc.lru, uint8(ei))
-	copy(lc.lru[li:], lc.lru[li+1:])
-	lc.lru = lc.lru[:len(lc.lru)-1]
-	return true
 }
 
 // check is used by the test
