@@ -110,7 +110,7 @@ func (*DbmsLocal) Exec(t *Thread, v Value) Value {
 }
 
 func (*DbmsLocal) Final() int {
-	panic("DbmsLocal Final not implemented")
+	return 0 //TODO
 }
 
 // Get implements QueryFirst, QueryLast, Query1
@@ -149,8 +149,11 @@ func (dbms *DbmsLocal) Info() Value {
 	return ob
 }
 
-func (*DbmsLocal) Kill(string) int {
-	panic("DbmsLocal Kill not implemented")
+func (*DbmsLocal) Kill(addr string) int {
+	if options.Action == "server" {
+		return kill(addr)
+	}
+	return 0
 }
 
 func (dbms *DbmsLocal) Load(table string) int {
