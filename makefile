@@ -1,7 +1,7 @@
 # requires sh on path (e.g. from MinGW)
-BUILT=$(shell date "+%b %e %Y %X")
+BUILT=$(shell date "+%b %-d %Y %R")
 
-GO = go1.18rc1
+GO = go
 EXE = gsuneido
 LDFLAGS = -s -w -X 'main.builtDate=${BUILT}'
 GUIFLAGS = $(LDFLAGS)
@@ -19,6 +19,9 @@ build:
 	$(GO) build -v -ldflags "$(GUIFLAGS)"
 	$(CONSOLE)
 	$(PORTABLE)
+
+gsuneido:
+	$(GO) build -v -ldflags "$(GUIFLAGS)"
 
 race:
 	$(GO) build -v -ldflags "$(GUIFLAGS)" -race
@@ -49,6 +52,6 @@ clean:
 gsuneido_windows.syso : res/suneido.rc res/suneido.manifest
 	windres -F pe-x86-64 -o gsuneido_windows.syso res/suneido.rc
 
-.PHONY : build portable test generate clean zap race
+.PHONY : build gsuneido portable test generate clean zap race racetest
 
 # -trimpath (but breaks vscode goto)
