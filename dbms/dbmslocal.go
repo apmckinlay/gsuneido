@@ -157,7 +157,11 @@ func (*DbmsLocal) Kill(addr string) int {
 }
 
 func (dbms *DbmsLocal) Load(table string) int {
-	return tools.LoadDbTable(table, dbms.db)
+	n, err := tools.LoadDbTable(table, dbms.db)
+	if err != nil {
+		panic(err.Error())
+	}
+	return n
 }
 
 func (dbms *DbmsLocal) LibGet(name string) []string {

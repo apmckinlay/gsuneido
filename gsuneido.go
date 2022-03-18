@@ -98,7 +98,8 @@ func main() {
 				time.Since(t).Round(time.Millisecond))
 		} else {
 			table := strings.TrimSuffix(options.Arg, ".su")
-			n := tools.LoadTable(table, "suneido.db")
+			n, err := tools.LoadTable(table, "suneido.db")
+			ck(err)
 			Alert("loaded", n, "records to", table,
 				"in", time.Since(t).Round(time.Millisecond))
 		}

@@ -20,6 +20,7 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/dbms/query"
 	"github.com/apmckinlay/gsuneido/options"
+	"github.com/apmckinlay/gsuneido/runtime"
 	rt "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/cksum"
@@ -34,12 +35,12 @@ type loadJob struct {
 	db    *Database
 }
 
-// LoadDatabase imports a dumped database from a file.
-// It returns the number of tables loaded or panics on error.
+// LoadDatabase imports a dumped database from a file using a worker pool.
+// It returns the number of tables loaded. Errors are fatal.
 func LoadDatabase(from, dbfile string) (nTables, nViews int) {
 	defer func() {
 		if e := recover(); e != nil {
-			panic("load failed: " + fmt.Sprint(e))
+			runtime.Fatal("error loading:", e)
 		}
 	}()
 	f, r := open(from)
@@ -54,6 +55,11 @@ func LoadDatabase(from, dbfile string) (nTables, nViews int) {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
+			defer func() {
+				if e := recover(); e != nil {
+					runtime.Fatal("error loading:", e)
+				}
+			}()
 			for job := range channel {
 				loadTable2(job.db, job.sch, job.list, job.nrecs, job.size, false)
 			}
@@ -83,15 +89,8 @@ func LoadDatabase(from, dbfile string) (nTables, nViews int) {
 	return nTables, nViews
 }
 
-// LoadTable imports a dumped table from a file.
-// It will replace an already existing table.
-// It returns the number of records loaded or panics on error.
-func LoadTable(table, dbfile string) int {
-	defer func() {
-		if e := recover(); e != nil {
-			panic("load failed: " + table + " " + fmt.Sprint(e))
-		}
-	}()
+// LoadTable is used by -load <table>.
+func LoadTable(table, dbfile string) (int, error) {
 	var db *Database
 	var err error
 	if _, err = os.Stat(dbfile); os.IsNotExist(err) {
@@ -99,18 +98,22 @@ func LoadTable(table, dbfile string) int {
 	} else {
 		db, err = OpenDatabase(dbfile)
 	}
-	ck(err)
+	if err != nil {
+		return 0, fmt.Errorf("error loading %s: %w", table, err)
+	}
 	defer db.Close()
 	return LoadDbTable(table, db)
 }
 
-// LoadDbTable is use by dbms.Load
-func LoadDbTable(table string, db *Database) int {
+// LoadDbTable is use by dbms.Load.
+// It will replace an already existing table.
+// It returns the number of records loaded.
+func LoadDbTable(table string, db *Database) (n int, err error) {
 	db.AddExclusive(table)
 	defer func() {
+		db.EndExclusive(table)
 		if e := recover(); e != nil {
-			db.EndExclusive(table)
-			panic(e)
+			err = fmt.Errorf("error loading %s: %v", table, e)
 		}
 	}()
 	f, r := open(table + ".su")
@@ -118,7 +121,7 @@ func LoadDbTable(table string, db *Database) int {
 	schema := table + " " + readLinePrefixed(r, "====== ")
 	nrecs := loadTable(db, r, schema, nil)
 	db.Persist() // for safety, not strictly required
-	return nrecs
+	return nrecs, nil
 }
 
 func open(filename string) (*os.File, *bufio.Reader) {
@@ -150,13 +153,8 @@ func loadTable(db *Database, r *bufio.Reader, schema string, channel chan loadJo
 	return nrecs
 }
 
-// loadTable2 is multi-threaded when loading entire database.
+// loadTable2 is multi-threaded when loading an entire database.
 func loadTable2(db *Database, sch schema.Schema, list *sortlist.Builder, nrecs int, size uint64, exclusive bool) {
-	defer func() {
-		if e := recover(); e != nil {
-			fmt.Println("ERROR:", sch.Table, e) //FIXME
-		}
-	}()
 	ts := &meta.Schema{Schema: sch}
 	ovs := buildIndexes(ts, list, db.Store, nrecs)
 	ti := &meta.Info{Table: sch.Table, Nrows: nrecs, Size: size, Indexes: ovs}

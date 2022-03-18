@@ -10,6 +10,7 @@ import (
 	"time"
 
 	. "github.com/apmckinlay/gsuneido/db19"
+	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
 func TestLoadTable(*testing.T) {
@@ -19,7 +20,8 @@ func TestLoadTable(*testing.T) {
 	t := time.Now()
 	defer os.Remove("tmp.db")
 	os.Remove("tmp.db")
-	n := LoadTable("stdlib", "tmp.db")
+	n, err := LoadTable("stdlib", "tmp.db")
+	assert.That(err == nil)
 	fmt.Println("loaded", n, "records in", time.Since(t).Round(time.Millisecond))
 	ck(CheckDatabase("tmp.db"))
 }
