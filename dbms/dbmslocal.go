@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"strings"
+	"sync/atomic"
 
 	"github.com/apmckinlay/gsuneido/compile"
 	"github.com/apmckinlay/gsuneido/db19"
@@ -25,11 +26,14 @@ import (
 // i.e. standalone
 type DbmsLocal struct {
 	db        *db19.Database
-	libraries []string //TODO concurrency
+	libraries atomic.Value // []string
+	badlibs   int32        // limits logging
 }
 
 func NewDbmsLocal(db *db19.Database) *DbmsLocal {
-	return &DbmsLocal{db: db, libraries: []string{"stdlib"}}
+	dbms := DbmsLocal{db: db}
+	dbms.libraries.Store([]string{"stdlib"})
+	return &dbms
 }
 
 // Dbms interface
@@ -174,8 +178,9 @@ func (dbms *DbmsLocal) LibGet(name string) []string {
 
 	results := make([]string, 0, 2)
 	rt := dbms.db.NewReadTran()
-	for _, lib := range dbms.libraries {
-		s := libGet(rt, lib, name)
+	libs := dbms.libraries.Load().([]string)
+	for _, lib := range libs {
+		s := dbms.libGet(rt, lib, name)
 		if s != "" {
 			results = append(results, lib, string(s))
 		}
@@ -183,9 +188,9 @@ func (dbms *DbmsLocal) LibGet(name string) []string {
 	return results
 }
 
-var libKey = []string{"name", "group"}
+var libKey = []string{"name", "group"} // const
 
-func libGet(rt *db19.ReadTran, lib, name string) string {
+func (dbms *DbmsLocal) libGet(rt *db19.ReadTran, lib, name string) string {
 	defer func() {
 		if e := recover(); e != nil {
 			log.Println("libGet", lib, name, e)
@@ -193,7 +198,13 @@ func libGet(rt *db19.ReadTran, lib, name string) string {
 	}()
 	ix := rt.GetIndex(lib, libKey)
 	if ix == nil {
-		panic("not a valid library")
+		dbms.liblog(lib)
+		return ""
+	}
+	fld := rt.ColToFld(lib, "text")
+	if fld == -1 {
+		dbms.liblog(lib)
+		return ""
 	}
 	var rb ixkey.Encoder
 	rb.Add(Pack(SuStr(name)))
@@ -201,14 +212,20 @@ func libGet(rt *db19.ReadTran, lib, name string) string {
 	key := rb.String()
 	off := ix.Lookup(key)
 	if off == 0 {
-		return ""
+		return "" // not found
 	}
-	rec := rt.GetRecord(off)
-	return rec.GetStr(rt.ColToFld(lib, "text"))
+	return rt.GetRecord(off).GetStr(fld)
+}
+
+func (dbms *DbmsLocal) liblog(lib string) {
+	if atomic.AddInt32(&dbms.badlibs, 1) <= 1 {
+		log.Println("ERROR: invalid library: " + lib)
+	}
 }
 
 func (dbms *DbmsLocal) Libraries() []string {
-	return dbms.libraries
+	// library list is not mutated so it's thread safe to return
+	return dbms.libraries.Load().([]string)
 }
 
 func (*DbmsLocal) Log(s string) {
@@ -270,19 +287,39 @@ func (dbms *DbmsLocal) Transactions() *SuObject {
 }
 
 func (dbms *DbmsLocal) Unuse(lib string) bool {
-	if lib == "stdlib" || !slices.Contains(dbms.libraries, lib) {
-		return false
-	}
-	dbms.libraries = slc.Without(dbms.libraries, lib)
-	return true
+	return dbms.updateLibraries(func(libs []string) []string {
+		if lib == "stdlib" || !slices.Contains(libs, lib) {
+			return nil
+		}
+		return slc.Without(libs, lib) // copy on write
+	})
 }
 
 func (dbms *DbmsLocal) Use(lib string) bool {
-	if slices.Contains(dbms.libraries, lib) {
+	return dbms.updateLibraries(func(libs []string) []string {
+		if slices.Contains(libs, lib) {
+			return nil
+		}
+		dbms.checkLibrary(lib)
+		return append(libs, lib)
+	})
+}
+
+func (dbms *DbmsLocal) checkLibrary(lib string) {
+	rt := dbms.db.NewReadTran()
+	if rt.GetIndex(lib, libKey) == nil || rt.ColToFld(lib, "text") == -1 {
+		panic("Use: invalid library: " + lib)
+	}
+}
+
+func (dbms *DbmsLocal) updateLibraries(fn func(libs []string) []string) bool {
+	oldlibs := dbms.libraries.Load().([]string)
+	newlibs := fn(oldlibs)
+	if newlibs == nil {
 		return false
 	}
-	dbms.libraries = append(dbms.libraries, lib)
-	return true
+	atomic.StoreInt32(&dbms.badlibs, 0) // reset logging
+	return slices.Equal(oldlibs, dbms.libraries.Swap(newlibs).([]string))
 }
 
 func (dbms *DbmsLocal) Close() {
