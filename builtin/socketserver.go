@@ -7,6 +7,8 @@ import (
 	"bufio"
 	"log"
 	"net"
+	"os"
+	"runtime"
 	"strconv"
 	"sync/atomic"
 	"time"
@@ -137,10 +139,19 @@ func (sm *suServerMaster) connect(name string, conn net.Conn) {
 	t := NewThread(nil)
 	t.Name = str.BeforeFirst(t.Name, " ") + " " + name
 	if f := sc.Lookup(t, "Run"); f != nil {
+		threads.add(t)
 		defer func() {
 			if e := recover(); e != nil {
-				log.Println("ERROR in SocketServer Run:", e)
+				log.Println("ERROR in SocketServer thread:", e)
+				t.PrintStack()
+				if InternalError(e) {
+					buf := make([]byte, 512)
+					n := runtime.Stack(buf, false)
+					os.Stderr.Write(buf[:n])
+				}
 			}
+			threads.remove(t.Num)
+			t.Close()
 		}()
 		f.Call(t, sc, &ArgSpec0)
 	}

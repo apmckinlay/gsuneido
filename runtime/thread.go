@@ -253,6 +253,7 @@ func (t *Thread) Dbms() IDbms {
 	return t.dbms
 }
 
+// Close closes the thread's dbms connection (if it has one)
 func (t *Thread) Close() {
 	if t.dbms != nil && options.Action == "client" {
 		t.dbms.Close()

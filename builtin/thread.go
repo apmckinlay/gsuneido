@@ -35,10 +35,10 @@ type threadList struct {
 
 var threads = threadList{list: map[int32]*Thread{}}
 
-func (ts *threadList) add(num int32, t *Thread) {
+func (ts *threadList) add(t *Thread) {
 	ts.lock.Lock()
 	defer ts.lock.Unlock()
-	ts.list[num] = t
+	ts.list[t.Num] = t
 }
 
 func (ts *threadList) remove(num int32) {
@@ -60,7 +60,7 @@ func threadCallClass(t *Thread, args []Value) Value {
 	fn := args[0]
 	fn.SetConcurrent()
 	t2 := NewThread(t)
-	threads.add(t2.Num, t2)
+	threads.add(t2)
 	go func() {
 		defer func() {
 			if e := recover(); e != nil {
@@ -168,7 +168,18 @@ var _ = builtin("Scheduled(ms, block)",
 		block := args[1]
 		block.SetConcurrent()
 		go func() {
-			defer t2.Close()
+		defer func() {
+			if e := recover(); e != nil {
+				log.Println("ERROR in Scheduled thread:", e)
+				t2.PrintStack()
+				if InternalError(e) {
+					buf := make([]byte, 512)
+					n := runtime.Stack(buf, false)
+					os.Stderr.Write(buf[:n])
+				}
+			}
+			t2.Close()
+		}()
 			time.Sleep(ms)
 			t2.Call(block)
 		}()
