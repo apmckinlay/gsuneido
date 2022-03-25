@@ -504,7 +504,7 @@ var _ = builtin1("SCNotificationText(address)",
 		}
 		scn := (*SCNotification)(unsafe.Pointer(uintptr(adr)))
 		ob := scnToOb(scn)
-		ob.Put(nil, SuStr("text"), bufStrN(unsafe.Pointer(scn.text), 1024))
+		ob.Put(nil, SuStr("text"), bufStrZ(unsafe.Pointer(scn.text), 1024))
 		return ob
 	})
 
