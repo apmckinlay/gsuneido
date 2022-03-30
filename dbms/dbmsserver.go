@@ -147,6 +147,7 @@ func doRequest(wb *mux.WriteBuf, th *runtime.Thread, id uint64, req []byte) {
 
 	ss.ReadBuf.SetBuf(req)
 	ss.WriteBuf = wb
+	th.SetSession(ss.sessionId)
 	ss.thread = th
 	ss.request()
 }

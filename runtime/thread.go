@@ -150,6 +150,7 @@ func (t *Thread) Reset() {
 	t.blockReturnFrame = nil
 	t.InHandler = false
 	t.Suneido = nil
+	t.session.Store("")
 }
 
 // GetState and RestoreState are used by callbacks_windows.go
