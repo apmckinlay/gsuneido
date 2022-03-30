@@ -12,6 +12,7 @@ import (
 	"os"
 	"runtime"
 	"runtime/debug"
+	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -360,6 +361,7 @@ func mb(n uint64) string {
 
 func threads() string {
 	list := builtin.ThreadList()
+	sort.Strings(list)
 	var sb strings.Builder
 	fmt.Fprintf(&sb, "<p>Threads: (%d) ", len(list))
 	sep := ""

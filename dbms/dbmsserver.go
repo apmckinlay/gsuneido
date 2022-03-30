@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log"
 	"net"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -204,14 +205,25 @@ func Conns() string {
 	sb.WriteString("<p>Connections:</p>\r\n<ul>\r\n")
 	serverConnsLock.Lock()
 	defer serverConnsLock.Unlock()
+	var conns []*serverConn
 	for _, sc := range serverConns {
+		conns = append(conns, sc)
+	}
+	sort.Slice(conns,
+		func(i, j int) bool { return conns[i].remoteAddr < conns[j].remoteAddr })
+	for _, sc := range conns {
 		sb.WriteString("<li>")
 		sb.WriteString(sc.remoteAddr)
 		sb.WriteString("</li>\r\n<ul>\r\n")
 		sc.sessionsLock.Lock()
+		var sessions []string
 		for _, ss := range sc.sessions {
+			sessions = append(sessions, ss.sessionId)
+		}
+		sort.Strings(sessions)
+		for _, sid := range sessions {
 			sb.WriteString("<li>")
-			sb.WriteString(ss.sessionId)
+			sb.WriteString(sid)
 			sb.WriteString("</li>\r\n")
 		}
 		sc.sessionsLock.Unlock()
