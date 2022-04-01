@@ -233,8 +233,8 @@ func optTempIndex(q Query, mode Mode, index []string) (
 	tempIndexCost := tempIndexWriteCost + tempIndexReadCost + dataReadCost
 	cost2 := noIndexCost + tempIndexCost
 	assert.That(cost2 >= 0) // ???
-	trace("cost1", cost1, "noIndexCost",
-		noIndexCost, "tempIndexCost", tempIndexCost, "cost2", cost2)
+	trace("cost1", cost1, "| noIndexCost",
+		noIndexCost, "+ tempIndexCost", tempIndexCost, "= cost2", cost2)
 	cost, approach = min(cost1, app1, cost2, app2)
 	if cost >= impossible {
 		return impossible, nil

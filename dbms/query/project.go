@@ -328,7 +328,7 @@ func (p *Project) optimize(mode Mode, index []string) (Cost, any) {
 	hash := p.hashCost(mode, index)
 	trace("PROJECT, seq", seq.cost, "hash", hash)
 	if hash < seq.cost {
-		return hash, &projectApproach{strategy: projHash}
+		return hash, &projectApproach{strategy: projHash, index: index}
 	}
 	return seq.cost, &projectApproach{strategy: projSeq, index: seq.index}
 }

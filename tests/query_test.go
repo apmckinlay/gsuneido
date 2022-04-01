@@ -9,7 +9,14 @@ package language
 // 		panic(err.Error())
 // 	}
 // 	tran := db.NewReadTran()
-// 	s := `eta_ace_crewmembers where bizemp_terminate_date is "" or bizemp_terminate_date >= #20220310`
+// 	s := `(eta_equip_stmt_history
+// 				project etaequipstmt_num, etaequip_num)
+// 		leftjoin by(etaequipstmt_num)
+// 			(eta_equip_orders
+// 				rename etaequip_num to etaeo_equip_num
+// 				project etaequipstmt_num, etaeo_equip_num)`
 // 	q := query.ParseQuery(s, tran, nil)
 // 	q, _ = query.Setup(q, query.ReadMode, tran)
+// 	fmt.Println(q)
+// 	q.Get(nil, runtime.Next)
 // }
