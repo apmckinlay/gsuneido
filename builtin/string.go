@@ -17,6 +17,7 @@ import (
 
 	"github.com/apmckinlay/gsuneido/compile"
 	. "github.com/apmckinlay/gsuneido/runtime"
+	"golang.org/x/text/encoding"
 	"golang.org/x/text/encoding/charmap"
 )
 
@@ -179,6 +180,7 @@ func init() {
 		"FromUtf8": method0(func(this Value) Value {
 			utf8 := ToStr(this)
 			encoder := charmap.Windows1252.NewEncoder()
+			encoder = encoding.ReplaceUnsupported(encoder)
 			s, err := encoder.String(utf8)
 			if err != nil {
 				panic("string.FromUtf8 " + err.Error())
