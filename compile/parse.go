@@ -76,6 +76,7 @@ type ParserBase struct {
 	// newline is true if the current token was preceeded by a newline
 	newline bool
 
+	// EqToIs treats Eq as Is for queries
 	EqToIs bool
 
 	Aspects
@@ -179,7 +180,7 @@ func (p *ParserBase) Next() {
 // It claims to return string so it can be called inside panic
 // (so compiler knows we don't return)
 func (p *ParserBase) Error(args ...any) string {
-	p.ErrorAt(p.Item.Pos, args...)
+	p.ErrorAt(p.Pos, args...)
 	return ""
 }
 

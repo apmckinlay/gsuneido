@@ -5,6 +5,7 @@ package builtin
 
 import (
 	"github.com/apmckinlay/gsuneido/compile"
+	"github.com/apmckinlay/gsuneido/compile/tokens"
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
@@ -27,7 +28,11 @@ func init() {
 			func(t *Thread, _ Value, args []Value) Value {
 				src := ToStr(args[0])
 				p := compile.AstParser(src)
-				return p.Const()
+				ast := p.Const()
+				if p.Token != tokens.Eof {
+					p.Error("did not parse all input")
+				}
+				return ast
 			}),
 	}
 }
