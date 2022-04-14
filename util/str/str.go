@@ -44,13 +44,6 @@ func IndexFunc(s string, f func(byte) bool) int {
 	return -1
 }
 
-// Dup is intended to make a copy of a string
-// so we don't hold a reference to a large source and prevent garbage collection
-func Dup(s string) string {
-	s = " " + s
-	return s[1:]
-}
-
 // IndexNotAny returns the index of the first byte not in chars, else -1
 func IndexNotAny(s, chars string) int {
 	nc := len(chars)

@@ -10,7 +10,6 @@ import (
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
 	. "github.com/apmckinlay/gsuneido/util/ascii"
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util/str"
 )
 
 // Lexer implements the lexical scanner for Suneido
@@ -37,6 +36,7 @@ func (lxr *Lexer) Source() string {
 	return lxr.src
 }
 
+// Position will be out of sync if using Ahead
 func (lxr *Lexer) Position() int {
 	return lxr.si
 }
@@ -316,12 +316,12 @@ func (lxr *Lexer) quotedString(start int, quote byte) Item {
 	for i := 0; ; i++ {
 		if i >= len(src) {
 			lxr.si += len(src)
-			return it(tok.String, start, str.Dup(src)) // no closing quote
+			return it(tok.String, start, strings.Clone(src)) // no closing quote
 		} else if src[i] == '\\' {
 			break
 		} else if src[i] == byte(quote) {
 			lxr.si += i + 1
-			return it(tok.String, start, str.Dup(src[:i])) // no escapes
+			return it(tok.String, start, strings.Clone(src[:i])) // no escapes
 		}
 	}
 	// have escapes so need to build new string
@@ -424,7 +424,7 @@ func keyword(s string) (tok.Token, string) {
 			}
 		}
 	}
-	return tok.Identifier, str.Dup(s)
+	return tok.Identifier, strings.Clone(s)
 }
 
 // keywords doesn't use a map because we want to reuse the keyword string literals
