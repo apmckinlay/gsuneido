@@ -63,6 +63,9 @@ func getPassHash(th *Thread, user string) (result string) {
 		}
 	}()
 	dbms := th.Dbms()
+	if u, ok := dbms.(*DbmsUnauth); ok {
+		dbms = u.dbms
+	}
 	query := "users where user = '" + user + "'"
 	row, hdr, _ := dbms.Get(th, query, Next, nil)
 	if row == nil {
@@ -70,11 +73,4 @@ func getPassHash(th *Thread, user string) (result string) {
 	}
 	hash := Unpack(row.GetRaw(hdr, "passhash"))
 	return string(hash.(SuStr))
-}
-
-func haveUsersTable(dbms *DbmsLocal) bool {
-	db := dbms.db
-	rt := db.NewReadTran()
-	ti := rt.GetInfo("users")
-	return ti != nil && ti.Nrows > 0
 }

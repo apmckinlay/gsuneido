@@ -48,8 +48,25 @@ func (dbms *DbmsLocal) Admin(admin string, sv *Sviews) {
 	qry.DoAdmin(dbms.db, admin, sv)
 }
 
-func (*DbmsLocal) Auth(string) bool {
-	panic("Auth only allowed on clients")
+func (*DbmsLocal) Auth(th *Thread, s string) bool {
+	if DbmsAuth {
+		panic("already authorized")
+	}
+	if !auth(th, s) {
+		return false
+	}
+	DbmsAuth = true
+	th.SetDbms(nil) // so it will call GetDbms again
+	return true
+}
+
+func auth(th *Thread, s string) bool {
+	if AuthUser(th, s, th.Nonce) {
+		th.Nonce = ""
+		return true
+	}
+	return AuthToken(s)
+
 }
 
 func (dbms *DbmsLocal) Check() string {
@@ -232,8 +249,9 @@ func (*DbmsLocal) Log(s string) {
 	log.Println(s)
 }
 
-func (*DbmsLocal) Nonce() string {
-	panic("Nonce only allowed on clients")
+func (*DbmsLocal) Nonce(th *Thread) string {
+	th.Nonce = Nonce()
+	return th.Nonce
 }
 
 func (*DbmsLocal) Run(th *Thread, s string) Value {

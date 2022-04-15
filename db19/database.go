@@ -524,6 +524,12 @@ func (db *Database) writeSize() {
 	db.Store.Write(uint64(len(magic)), buf)
 }
 
+func (db *Database) HaveUsers() bool {
+	rt := db.NewReadTran()
+	ti := rt.GetInfo("users")
+	return ti != nil && ti.Nrows > 0
+}
+
 //-------------------------------------------------------------------
 
 func init() {

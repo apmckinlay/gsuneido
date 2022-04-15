@@ -10,7 +10,7 @@ type IDbms interface {
 	Admin(string, *Sviews)
 
 	// Auth authorizes the connection with the server
-	Auth(string) bool
+	Auth(*Thread, string) bool
 
 	// Check checks the database like -check
 	// It returns "" or an error message.
@@ -68,7 +68,7 @@ type IDbms interface {
 	Log(string)
 
 	// Nonce returns a random string from the server
-	Nonce() string
+	Nonce(*Thread) string
 
 	// Run is used by the old style string.ServerEval()
 	Run(th *Thread, code string) Value

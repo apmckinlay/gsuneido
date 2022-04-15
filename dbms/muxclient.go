@@ -57,7 +57,7 @@ func (ms *muxSession) Admin(admin string, _ *Sviews) {
 	ms.Request()
 }
 
-func (ms *muxSession) Auth(s string) bool {
+func (ms *muxSession) Auth(_ *Thread, s string) bool {
 	if !ms.auth(s) {
 		return false
 	}
@@ -199,7 +199,7 @@ func (ms *muxSession) Libraries() []string {
 	return ms.GetStrs()
 }
 
-func (ms *muxSession) Nonce() string {
+func (ms *muxSession) Nonce(*Thread) string {
 	ms.PutCmd(commands.Nonce)
 	ms.Request()
 	return ms.GetStr_()

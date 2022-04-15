@@ -24,7 +24,7 @@ func databaseCallClass(t *Thread, args []Value) Value {
 
 var databaseMethods = Methods{
 	"Auth": method("(data)", func(t *Thread, this Value, args []Value) Value {
-		return SuBool(t.Dbms().Auth(ToStr(args[0])))
+		return SuBool(t.Dbms().Auth(t, ToStr(args[0])))
 	}),
 	"Check": method("()", func(t *Thread, this Value, args []Value) Value {
 		return SuStr(t.Dbms().Check())
@@ -54,7 +54,7 @@ var databaseMethods = Methods{
 		return IntVal(t.Dbms().Load(ToStr(args[0])))
 	}),
 	"Nonce": method("()", func(t *Thread, this Value, args []Value) Value {
-		return SuStr(t.Dbms().Nonce())
+		return SuStr(t.Dbms().Nonce(t))
 	}),
 	"Schema": method("(table)", func(t *Thread, this Value, args []Value) Value {
 		return SuStr(t.Dbms().Schema(ToStr(args[0])))

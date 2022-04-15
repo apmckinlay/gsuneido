@@ -99,7 +99,7 @@ func newServerConn(dbms *DbmsLocal, conn net.Conn) {
 	connId := mux.NewServerConn(conn, workers.Submit)
 	sc := &serverConn{dbms: dbms, id: connId, conn: conn, remoteAddr: addr,
 		sessions: make(map[uint32]*serverSession)}
-	if haveUsersTable(dbms) {
+	if dbms.db.HaveUsers() {
 		sc.dbms = &DbmsUnauth{dbms: dbms}
 	}
 	serverConnsLock.Lock()
@@ -295,6 +295,7 @@ func cmdAuth(ss *serverSession) {
 	result := ss.auth(s)
 	if result {
 		ss.sc.dbms = ss.sc.dbms.(*DbmsUnauth).dbms // remove DbmsUnauth
+		DbmsAuth = true
 	}
 	ss.PutBool(true).PutBool(result)
 }

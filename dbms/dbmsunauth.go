@@ -5,6 +5,10 @@ package dbms
 
 import . "github.com/apmckinlay/gsuneido/runtime"
 
+func Unauth(dbms *DbmsLocal) IDbms {
+	return &DbmsUnauth{dbms: dbms}
+}
+
 // DbmsUnauth is a wrapper for DbmsLocal for unauthorized client connections.
 // Only allows Auth, LibGet, Libraries, Nonce, SessionId, and Use
 type DbmsUnauth struct {
@@ -19,8 +23,8 @@ func (du *DbmsUnauth) Admin(string, *Sviews) {
 	panic(notauth)
 }
 
-func (du *DbmsUnauth) Auth(data string) bool {
-	return du.dbms.Auth(data)
+func (du *DbmsUnauth) Auth(th *Thread, data string) bool {
+	return du.dbms.Auth(th, data)
 }
 
 func (du *DbmsUnauth) Check() string {
@@ -91,8 +95,8 @@ func (du *DbmsUnauth) Log(s string) {
 	du.dbms.Log(s)
 }
 
-func (du *DbmsUnauth) Nonce() string {
-	return du.dbms.Nonce()
+func (du *DbmsUnauth) Nonce(th *Thread) string {
+	return du.dbms.Nonce(th)
 }
 
 func (du *DbmsUnauth) Run(*Thread, string) Value {

@@ -106,7 +106,7 @@ func (dc *dbmsClient) Admin(admin string, _ *Sviews) {
 	dc.PutCmd(commands.Admin).PutStr(admin).Request()
 }
 
-func (dc *dbmsClient) Auth(s string) bool {
+func (dc *dbmsClient) Auth(_ *Thread, s string) bool {
 	if !dc.auth(s) {
 		return false
 	}
@@ -244,7 +244,7 @@ func (dc *dbmsClient) Libraries() []string {
 	return dc.GetStrs()
 }
 
-func (dc *dbmsClient) Nonce() string {
+func (dc *dbmsClient) Nonce(*Thread) string {
 	dc.PutCmd(commands.Nonce).Request()
 	return dc.GetStr()
 }

@@ -55,6 +55,8 @@ type Thread struct {
 	// dbms is the database (client or local) for this Thread
 	dbms IDbms
 
+	Nonce string
+
 	// Num is a unique number assigned to the thread
 	Num int32
 
@@ -242,6 +244,8 @@ func (t *Thread) SetDbms(dbms IDbms) {
 
 // GetDbms requires dependency injection
 var GetDbms func() IDbms
+
+var DbmsAuth = false
 
 func (t *Thread) Dbms() IDbms {
 	if t.dbms == nil {
