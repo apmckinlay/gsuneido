@@ -76,6 +76,9 @@ type ParserBase struct {
 	// newline is true if the current token was preceeded by a newline
 	newline bool
 
+	// endPos is the end of the previous token
+	endPos int32
+
 	// EqToIs treats Eq as Is for queries
 	EqToIs bool
 
@@ -161,8 +164,9 @@ func (p *ParserBase) MustMatch(token tok.Token) {
 // Next advances to the Next token, setting p.Item
 func (p *ParserBase) Next() {
 	p.newline = false
+	p.Item = p.Lxr.Next()
+	p.endPos = int32(p.Item.Pos)
 	for {
-		p.Item = p.Lxr.Next()
 		if p.Token == tok.Newline {
 			if p.Lxr.AheadSkip(0).Token != tok.QMark {
 				p.newline = true
@@ -170,6 +174,7 @@ func (p *ParserBase) Next() {
 		} else if p.Token != tok.Comment && p.Token != tok.Whitespace {
 			break
 		}
+		p.Item = p.Lxr.Next()
 	}
 	if p.EqToIs && p.Token == tok.Eq {
 		p.Token = tok.Is
@@ -188,6 +193,16 @@ func (p *ParserBase) ErrorAt(pos int32, args ...any) string {
 	panic("syntax error @" + strconv.Itoa(int(pos)) + " " + fmt.Sprint(args...))
 }
 
-func (p *Parser) Ident(name string) *ast.Ident {
-	return &ast.Ident{Name: name, Pos: p.Pos}
+func (*Parser) Constant(val runtime.Value) Expr {
+	return &ast.Constant{Val: val}
+}
+
+func SetPos(result iSetPos, org, end int32) {
+	if result != nil {
+		result.SetPos(org, end)
+	}
+}
+
+type iSetPos interface {
+	SetPos(org, end int32)
 }

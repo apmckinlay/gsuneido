@@ -42,7 +42,12 @@ func Checked(t *Thread, src string) (Value, []string) {
 	return v, p.CheckResults()
 }
 
-func (p *Parser) Const() Value {
+func (p *Parser) Const() (result Value) {
+	defer func(org int32) {
+		if r, ok := result.(iSetPos); ok {
+			SetPos(r, org, p.endPos)
+		}
+	}(p.Pos)
 	return p.constant()
 }
 
@@ -178,18 +183,23 @@ type protectable interface {
 
 func (p *Parser) memberList(ob container, closing tok.Token, base Gnum) {
 	for p.Token != closing {
-		p.member(ob, closing, base)
+		pos := p.Item.Pos
+		k, v := p.member(closing, base)
 		if p.Token == tok.Comma || p.Token == tok.Semicolon {
 			p.Next()
+		}
+		if k == nil {
+			p.set(ob, nil, v, pos, p.endPos)
+		} else {
+			p.putMem(ob, k, v, pos)
 		}
 	}
 	p.Next()
 }
 
-func (p *Parser) member(ob container, closing tok.Token, base Gnum) {
+func (p *Parser) member(closing tok.Token, base Gnum) (k Value, v Value) {
 	start := p.Token
-	pos := p.Item.Pos
-	m := p.constant()
+	m := p.constant() // might be key or value
 	inClass := base != noBase
 	if inClass && start.IsIdent() && p.Token == tok.LParen { // method
 		name := p.privatizeDef(m)
@@ -206,24 +216,24 @@ func (p *Parser) member(ob container, closing tok.Token, base Gnum) {
 		if f, ok := fn.(*SuFunc); ok {
 			f.ClassName = p.className
 		}
-		p.putMem(ob, SuStr(name), fn, pos)
-	} else if p.MatchIf(tok.Colon) {
+		return SuStr(name), fn
+	}
+	if p.MatchIf(tok.Colon) { // named
 		if inClass {
 			m = SuStr(p.privatizeDef(m))
 		}
 		if p.Token == tok.Comma || p.Token == tok.Semicolon || p.Token == closing {
-			p.putMem(ob, m, True, pos)
-		} else {
-			prevName := p.name
-			if s, ok := m.ToStr(); ok {
-				p.name += "." + s
-			}
-			p.putMem(ob, m, p.constant(), pos)
-			p.name = prevName
+			return m, True
 		}
-	} else {
-		ob.Add(m)
+		prevName := p.name
+		if s, ok := m.ToStr(); ok {
+			p.name += "." + s
+		}
+		c := p.constant()
+		p.name = prevName
+		return m, c
 	}
+	return nil, m
 }
 
 func (p *Parser) privatizeDef(m Value) string {
@@ -246,11 +256,12 @@ func (p *Parser) privatizeDef(m Value) string {
 	return p.privatize(name, p.className)
 }
 
+// putMem checks for duplicate member and then calls p.set with endpos
 func (p *Parser) putMem(ob container, m Value, v Value, pos int32) {
 	if ob.HasKey(m) {
 		p.ErrorAt(pos, "duplicate member name ("+m.String()+")")
 	} else {
-		ob.Set(m, v)
+		p.set(ob, m, v, pos, p.endPos)
 	}
 }
 
@@ -260,7 +271,7 @@ var classNum int32
 
 // class parses a class definition
 // like object, it builds a value rather than an ast
-func (p *Parser) class() Value {
+func (p *Parser) class() (result Value) {
 	if p.Token == tok.Class {
 		p.Match(tok.Class)
 		if p.Token == tok.Colon {
@@ -274,11 +285,14 @@ func (p *Parser) class() Value {
 		base = p.ckBase(baseName)
 		p.MatchIdent()
 	}
+	pos1 := p.endPos
 	p.Match(tok.LCurly)
+	pos2 := p.endPos
 	prevClassName := p.className
 	p.className = p.getClassName()
 	mems := p.mkClass(baseName)
 	p.memberList(mems, tok.RCurly, base)
+	p.setPos(mems, pos1, pos2)
 	p.className = prevClassName
 	if cc, ok := mems.(classBuilder); ok {
 		return &SuClass{Base: base, Lib: p.lib, Name: p.name,

@@ -4,8 +4,6 @@
 package ast
 
 import (
-	"strings"
-
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/runtime/types"
 )
@@ -21,6 +19,17 @@ func (a *Ident) Get(_ *Thread, m Value) Value {
 		return SuStr("Ident")
 	case SuStr("name"):
 		return SuStr(a.Name)
+	case SuStr("pos"):
+		return IntVal(a.GetPos())
+	case SuStr("end"):
+		return IntVal(a.GetEnd())
+	}
+	return noChildren(m)
+}
+
+func noChildren(m Value) Value {
+	if m == SuStr("children") {
+		return children{}
 	}
 	return nil
 }
@@ -40,6 +49,24 @@ func (a *Constant) Get(_ *Thread, m Value) Value {
 		return False
 	case SuStr("value"):
 		return a.Val
+	case SuStr("pos"):
+		return IntVal(a.GetPos())
+	case SuStr("end"):
+		return IntVal(a.GetEnd())
+	case SuStr("children"):
+		return children{list: []Value{a.Val}}
+	}
+	return nil
+}
+
+func falsePos(a Node, m Value) Value {
+	switch m {
+	case SuStr("pos"):
+		return False
+	case SuStr("end"):
+		return False
+	case SuStr("children"):
+		return newChildren(a)
 	}
 	return nil
 }
@@ -52,8 +79,10 @@ func (a *Unary) Get(_ *Thread, m Value) Value {
 		return SuStr(a.Tok.String())
 	case SuStr("expr"):
 		return a.E.(Value)
+	case SuStr("children"):
+		return newChildren(a)
 	}
-	return nil
+	return falsePos(a, m)
 }
 
 func (a *Binary) Get(_ *Thread, m Value) Value {
@@ -67,7 +96,7 @@ func (a *Binary) Get(_ *Thread, m Value) Value {
 	case SuStr("rhs"):
 		return a.Rhs.(Value)
 	}
-	return nil
+	return falsePos(a, m)
 }
 
 func (a *Trinary) Get(_ *Thread, m Value) Value {
@@ -81,7 +110,7 @@ func (a *Trinary) Get(_ *Thread, m Value) Value {
 	case SuStr("f"):
 		return a.F.(Value)
 	}
-	return nil
+	return falsePos(a, m)
 }
 
 func (a *Nary) Get(_ *Thread, m Value) Value {
@@ -94,7 +123,7 @@ func (a *Nary) Get(_ *Thread, m Value) Value {
 	case SuStr("op"):
 		return SuStr(a.Tok.String())
 	}
-	return nil
+	return falsePos(a, m)
 }
 
 func (a *RangeTo) Get(_ *Thread, m Value) Value {
@@ -108,7 +137,7 @@ func (a *RangeTo) Get(_ *Thread, m Value) Value {
 	case SuStr("to"):
 		return nilToFalse(a.To)
 	}
-	return nil
+	return falsePos(a, m)
 }
 
 func (a *RangeLen) Get(_ *Thread, m Value) Value {
@@ -122,7 +151,7 @@ func (a *RangeLen) Get(_ *Thread, m Value) Value {
 	case SuStr("len"):
 		return nilToFalse(a.Len)
 	}
-	return nil
+	return falsePos(a, m)
 }
 
 func nilToFalse(node Node) Value {
@@ -141,7 +170,7 @@ func (a *Mem) Get(_ *Thread, m Value) Value {
 	case SuStr("mem"):
 		return a.M.(Value)
 	}
-	return nil
+	return falsePos(a, m)
 }
 
 func (a *In) Get(_ *Thread, m Value) Value {
@@ -159,7 +188,7 @@ func (a *In) Get(_ *Thread, m Value) Value {
 		}
 		return a.Exprs[i].(Value)
 	}
-	return nil
+	return falsePos(a, m)
 }
 
 func (a *Call) Get(_ *Thread, m Value) Value {
@@ -175,57 +204,135 @@ func (a *Call) Get(_ *Thread, m Value) Value {
 		if i < 0 || len(a.Args) <= i {
 			return False
 		}
-		arg := a.Args[i]
-		if arg.Name == nil {
-			return NewSuObject([]Value{arg.E.(Value)})
+		return &a.Args[i]
+	}
+	return falsePos(a, m)
+}
+
+func (a *Arg) Get(_ *Thread, m Value) Value {
+	switch m {
+	case SuStr("type"):
+		return SuStr("Argument")
+	case SuStr("name"):
+		if a.Name == nil {
+			return False
 		}
-		return NewSuObject([]Value{arg.E.(Value), arg.Name})
+		return a.Name
+	case SuStr("expr"):
+		return a.E.(Value)
+	case SuStr("pos"):
+		if pos := a.GetPos(); pos != 0 {
+			return IntVal(a.GetPos())
+		}
+		return False
+	case SuStr("end"):
+		if end := a.GetPos(); end != 0 {
+			return IntVal(a.GetEnd())
+		}
+		return False
 	}
 	return nil
 }
 
 func (a *Block) Get(t *Thread, m Value) Value {
-	if m == SuStr("type") {
+	switch m {
+	case SuStr("type"):
 		return SuStr("Block")
 	}
 	return a.Function.Get(t, m)
 }
 
 func (a *Function) Get(_ *Thread, m Value) Value {
-	if r := get(a, m); r != nil {
-		return r
-	}
 	switch m {
 	case SuStr("type"):
 		return SuStr("Function")
 	case SuStr("params"):
-		ob := &SuObject{}
-		for _, p := range a.Params {
-			name := p.Name.Name
-			if p.Unused && strings.TrimLeft(name, "@") != "unused" {
-				name += "/*unused*/"
-			}
-			if p.DefVal == nil {
-				ob.Add(NewSuObject([]Value{SuStr(name)}))
-			} else {
-				ob.Add(NewSuObject([]Value{SuStr(name), p.DefVal}))
+		return Params{params: a.Params}
+	case SuStr("pos"):
+		return IntVal(a.GetPos())
+	case SuStr("pos1"):
+		return IntVal(int(a.Pos1))
+	case SuStr("pos2"):
+		return IntVal(int(a.Pos2))
+	case SuStr("end"):
+		return IntVal(a.GetEnd())
+	case SuStr("children"):
+		c := newChildren(a)
+		for i := range a.Params {
+			if a.Params[i].DefVal != nil {
+				c.list = append(c.list, a.Params[i].DefVal)
 			}
 		}
-		return ob
+		return c
+	}
+	return get(a, m)
+}
+
+type Params struct {
+	SuAstNode
+	params []Param
+}
+
+func (a Params) Get(_ *Thread, m Value) Value {
+	switch m {
+	case SuStr("type"):
+		return SuStr("Params")
+	case SuStr("size"):
+		return IntVal(len(a.params))
+	case SuStr("pos"):
+		return False
+	case SuStr("end"):
+		return False
+	}
+	if i, ok := m.ToInt(); ok {
+		if i < 0 || len(a.params) <= i {
+			return False
+		}
+		return &a.params[i]
+	}
+	return nil
+}
+
+func (a *Param) Get(_ *Thread, m Value) Value {
+	switch m {
+	case SuStr("type"):
+		return SuStr("Param")
+	case SuStr("pos"):
+		return IntVal(a.GetPos())
+	case SuStr("end"):
+		return IntVal(a.GetEnd())
+	case SuStr("name"):
+		return SuStr(a.Name.Name)
+	case SuStr("unused"):
+		return SuBool(a.Unused)
+	case SuStr("hasdef"):
+		return SuBool(a.DefVal != nil)
+	case SuStr("defval"):
+		return a.DefVal
 	}
 	return nil
 }
 
 // statements -------------------------------------------------------
 
+func stmtGet(a Statement, m Value) Value {
+	switch m {
+	case SuStr("pos"):
+		return IntVal(a.GetPos())
+	case SuStr("end"):
+		return IntVal(a.GetEnd())
+	}
+	return get(a.(nodeVal), m)
+}
+
 func (a *ExprStmt) Get(_ *Thread, m Value) Value {
 	switch m {
 	case SuStr("type"):
-		return SuStr("Expr")
+		return SuStr("ExprStmt")
 	case SuStr("expr"):
 		return a.E.(Value)
 	}
-	return nil
+	return stmtGet(a, m)
 }
 
 func (a *Compound) Get(_ *Thread, m Value) Value {
@@ -236,7 +343,7 @@ func (a *Compound) Get(_ *Thread, m Value) Value {
 	case SuStr("type"):
 		return SuStr("Compound")
 	}
-	return nil
+	return stmtGet(a, m)
 }
 
 func (a *If) Get(_ *Thread, m Value) Value {
@@ -253,7 +360,7 @@ func (a *If) Get(_ *Thread, m Value) Value {
 		}
 		return a.Else.(Value)
 	}
-	return nil
+	return stmtGet(a, m)
 }
 
 func (a *Switch) Get(_ *Thread, m Value) Value {
@@ -264,22 +371,47 @@ func (a *Switch) Get(_ *Thread, m Value) Value {
 		return a.E.(Value)
 	case SuStr("size"):
 		return IntVal(len(a.Cases))
+	case SuStr("pos1"):
+		return IntVal(int(a.Pos1))
+	case SuStr("pos2"):
+		return IntVal(int(a.Pos2))
+	case SuStr("posdef"):
+		return IntVal(int(a.PosDef))
 	case SuStr("def"):
 		if a.Default == nil {
 			return False
 		}
 		return &Compound{Body: a.Default}
+	case SuStr("children"):
+		return newChildren(a)
 	}
 	if i, ok := m.ToInt(); ok {
 		if i < 0 || len(a.Cases) <= i {
 			return False
 		}
-		ob := &SuObject{}
-		for _, e := range a.Cases[i].Exprs {
-			ob.Add(e.(Value))
+		return &a.Cases[i]
+	}
+	return stmtGet(a, m)
+}
+
+func (a *Case) Get(_ *Thread, m Value) Value {
+	switch m {
+	case SuStr("type"):
+		return SuStr("Case")
+	case SuStr("size"):
+		return IntVal(len(a.Exprs))
+	case SuStr("body"):
+		return &Compound{Body: a.Body}
+	case SuStr("pos"):
+		return IntVal(a.GetPos())
+	case SuStr("end"):
+		return IntVal(a.GetEnd())
+	}
+	if i, ok := m.ToInt(); ok {
+		if i < 0 || len(a.Exprs) <= i {
+			return False
 		}
-		ob.Add(&Compound{Body: a.Cases[i].Body})
-		return ob
+		return a.Exprs[i].(Value)
 	}
 	return nil
 }
@@ -291,7 +423,7 @@ func (a *Return) Get(_ *Thread, m Value) Value {
 	case SuStr("expr"):
 		return nilToFalse(a.E)
 	}
-	return nil
+	return stmtGet(a, m)
 }
 
 func (a *Throw) Get(_ *Thread, m Value) Value {
@@ -301,7 +433,7 @@ func (a *Throw) Get(_ *Thread, m Value) Value {
 	case SuStr("expr"):
 		return a.E.(Value)
 	}
-	return nil
+	return stmtGet(a, m)
 }
 
 func (a *TryCatch) Get(_ *Thread, m Value) Value {
@@ -310,6 +442,8 @@ func (a *TryCatch) Get(_ *Thread, m Value) Value {
 		return SuStr("TryCatch")
 	case SuStr("try"):
 		return a.Try.(Value)
+	case SuStr("catchend"):
+		return IntVal(int(a.CatchEnd))
 	case SuStr("catch"):
 		if a.Catch == nil {
 			return False
@@ -328,7 +462,7 @@ func (a *TryCatch) Get(_ *Thread, m Value) Value {
 		}
 		return ob
 	}
-	return nil
+	return stmtGet(a, m)
 }
 
 func (a *Forever) Get(_ *Thread, m Value) Value {
@@ -338,7 +472,7 @@ func (a *Forever) Get(_ *Thread, m Value) Value {
 	case SuStr("body"):
 		return a.Body.(Value)
 	}
-	return nil
+	return stmtGet(a, m)
 }
 
 func (a *ForIn) Get(_ *Thread, m Value) Value {
@@ -352,7 +486,7 @@ func (a *ForIn) Get(_ *Thread, m Value) Value {
 	case SuStr("body"):
 		return a.Body.(Value)
 	}
-	return nil
+	return stmtGet(a, m)
 }
 
 func (a *For) Get(_ *Thread, m Value) Value {
@@ -376,7 +510,7 @@ func (a *For) Get(_ *Thread, m Value) Value {
 	case SuStr("body"):
 		return a.Body.(Value)
 	}
-	return nil
+	return stmtGet(a, m)
 }
 
 func (a *While) Get(_ *Thread, m Value) Value {
@@ -388,7 +522,7 @@ func (a *While) Get(_ *Thread, m Value) Value {
 	case SuStr("body"):
 		return a.Body.(Value)
 	}
-	return nil
+	return stmtGet(a, m)
 }
 
 func (a *DoWhile) Get(_ *Thread, m Value) Value {
@@ -400,7 +534,7 @@ func (a *DoWhile) Get(_ *Thread, m Value) Value {
 	case SuStr("body"):
 		return a.Body.(Value)
 	}
-	return nil
+	return stmtGet(a, m)
 }
 
 func (a *Break) Get(_ *Thread, m Value) Value {
@@ -408,7 +542,7 @@ func (a *Break) Get(_ *Thread, m Value) Value {
 	case SuStr("type"):
 		return SuStr("Break")
 	}
-	return nil
+	return stmtGet(a, m)
 }
 
 func (a *Continue) Get(_ *Thread, m Value) Value {
@@ -416,10 +550,15 @@ func (a *Continue) Get(_ *Thread, m Value) Value {
 	case SuStr("type"):
 		return SuStr("Continue")
 	}
-	return nil
+	return stmtGet(a, m)
 }
 
-func get(node Node, m Value) Value {
+type nodeVal interface {
+	Node
+	Value
+}
+
+func get[T nodeVal](node T, m Value) Value {
 	if m == SuStr("size") {
 		n := 0
 		node.Children(func(nd Node) Node {
@@ -427,6 +566,8 @@ func get(node Node, m Value) Value {
 			return nd
 		})
 		return IntVal(n)
+	} else if m == SuStr("children") {
+		return node
 	}
 	if i, ok := m.ToInt(); ok {
 		child := False
@@ -452,10 +593,35 @@ func (SuAstNode) Type() types.Type {
 	return types.AstNode
 }
 
-func (a SuAstNode) Equal(other any) bool {
-	return a == other
+func (a SuAstNode) Equal(any) bool {
+	return false
 }
 
 func (SuAstNode) SetConcurrent() {
 	// read-only so nothing to do
+}
+
+// children
+type children struct {
+	SuAstNode
+	list []Value
+}
+
+func newChildren(node Node) children {
+	var list []Value
+	node.Children(func(child Node) Node {
+		list = append(list, child.(Value))
+		return child
+	})
+	return children{list: list}
+}
+
+func (a children) Get(_ *Thread, m Value) Value {
+	if i, ok := m.ToInt(); ok {
+		if i >= len(a.list) {
+			return False
+		}
+		return a.list[i]
+	}
+	return nil
 }

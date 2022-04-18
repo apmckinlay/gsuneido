@@ -17,15 +17,18 @@ func (p *Parser) Function() *ast.Function {
 }
 
 // function parses a function or method (without the "function" keyword)
-func (p *Parser) function(inClass bool) *ast.Function {
+func (p *Parser) function(inClass bool) (result *ast.Function) {
 	funcInfoSave := p.funcInfo
 	p.InitFuncInfo()
-	pos := p.Pos
 	params := p.params(inClass)
-	body := p.compound()
+	pos1 := p.endPos
+	p.Match(tok.LCurly)
+	pos2 := p.endPos
+	body := p.statements()
+	p.Match(tok.RCurly)
 	p.processFinal()
-	fn := &ast.Function{Pos: pos, Params: params, Body: body, Final: p.final,
-		HasBlocks: p.hasBlocks}
+	fn := &ast.Function{Params: params, Body: body, Final: p.final,
+		HasBlocks: p.hasBlocks, Pos1: pos1, Pos2: pos2}
 	p.funcInfo = funcInfoSave
 	return fn
 }
@@ -52,11 +55,20 @@ func (p *Parser) processFinal() {
 func (p *Parser) params(inClass bool) []ast.Param {
 	p.Match(tok.LParen)
 	var params []ast.Param
-	if p.MatchIf(tok.At) {
-		params = append(params,
-			mkParam("@"+p.Text, p.Pos, p.unusedAhead(), nil))
-		p.final[p.Text] = disqualified
+	addParam := func(name string, pos int32, unused bool, def Value) {
+		if name == "unused" || name == "@unused" {
+			unused = true
+		}
+		param := mkParam(name, pos, p.endPos, unused, def)
+		params = append(params, param)
+	}
+	if p.Token == tok.At {
+		pos := p.Pos
+		p.Match(tok.At)
+		name := p.Text
 		p.MatchIdent()
+		addParam("@"+name, pos, p.unusedAhead(), nil)
+		p.final[name] = disqualified
 	} else {
 		defs := false
 		for p.Token != tok.RParen {
@@ -80,26 +92,27 @@ func (p *Parser) params(inClass bool) []ast.Param {
 				if _, ok := def.(SuStr); ok && !was_string {
 					p.Error("parameter defaults must be constants")
 				}
-				params = append(params, mkParam(name, pos, unused, def))
+				addParam(name, pos, unused, def)
+				p.MatchIf(tok.Comma)
 			} else {
 				if defs {
 					p.Error("default parameters must come last")
 				}
-				params = append(params, mkParam(name, pos, unused, nil))
+				addParam(name, pos, unused, nil)
+				p.MatchIf(tok.Comma)
 			}
-			p.MatchIf(tok.Comma)
 		}
 	}
 	p.Match(tok.RParen)
 	return params
 }
 
-func mkParam(name string, pos int32, unused bool, def Value) ast.Param {
+func mkParam(name string, pos, end int32, unused bool, def Value) ast.Param {
 	if name == "unused" || name == "@unused" {
 		unused = true
 	}
 	return ast.Param{Name: ast.Ident{Name: name, Pos: pos},
-		DefVal: def, Unused: unused}
+		DefVal: def, Unused: unused, End: end}
 }
 
 // unDyn removes the leading underscore from dynamic parameters
@@ -144,14 +157,10 @@ func (p *Parser) statements() []ast.Statement {
 
 var code = Item{Token: tok.LCurly, Text: "STMTS"}
 
-func (p *Parser) statement() ast.Statement {
-	pos := p.Pos
-	stmt := p.statement2()
-	stmt.SetPos(int(pos))
-	return stmt
-}
-
-func (p *Parser) statement2() ast.Statement {
+func (p *Parser) statement() (result ast.Statement) {
+	defer func(org int32) {
+		SetPos(result, org, p.endPos)
+	}(p.Pos)
 	token := p.Token
 	switch token {
 	case tok.Semicolon:
@@ -234,27 +243,35 @@ func (p *Parser) ifStmt() *ast.If {
 	return stmt
 }
 
-func (p *Parser) switchStmt() *ast.Switch {
+func (p *Parser) switchStmt() (result *ast.Switch) {
 	var expr ast.Expr
 	if p.Token == tok.LCurly {
 		expr = p.Constant(True)
 	} else {
 		expr = p.exprExpecting(true)
 	}
+	pos1 := p.endPos
 	p.Match(tok.LCurly)
+	pos2 := p.endPos
 	var cases []ast.Case
-	for p.MatchIf(tok.Case) {
+	for p.Token == tok.Case {
 		cases = append(cases, p.switchCase())
 	}
 	var def []ast.Statement
+	var posdef int32
 	if p.MatchIf(tok.Default) {
+		p.Match(tok.Colon)
+		posdef = p.endPos
 		def = p.switchBody()
 	}
 	p.Match(tok.RCurly)
-	return &ast.Switch{E: expr, Cases: cases, Default: def}
+	return &ast.Switch{E: expr, Cases: cases, Default: def,
+		Pos1: pos1, Pos2: pos2, PosDef: posdef}
 }
 
 func (p *Parser) switchCase() ast.Case {
+	pos := p.Pos
+	p.Match(tok.Case)
 	var exprs []ast.Expr
 	for {
 		exprs = append(exprs, p.Expression())
@@ -262,12 +279,15 @@ func (p *Parser) switchCase() ast.Case {
 			break
 		}
 	}
+	p.Match(tok.Colon)
+	end := p.endPos
 	body := p.switchBody()
-	return ast.Case{Exprs: exprs, Body: body}
+	c := ast.Case{Exprs: exprs, Body: body}
+	c.SetPos(pos, end)
+	return c
 }
 
 func (p *Parser) switchBody() []ast.Statement {
-	p.Match(tok.Colon)
 	stmts := []ast.Statement{}
 	for p.Token != tok.RCurly && p.Token != tok.Case && p.Token != tok.Default {
 		stmts = append(stmts, p.statement())
@@ -396,8 +416,9 @@ func (p *Parser) tryStmt() *ast.TryCatch {
 	var varPos int32
 	var catchFilter string
 	var catch ast.Statement
+	var catchEnd int32
 	var unused bool
-	catchPos := int(p.Pos)
+	catchPos := p.Pos
 	if p.MatchIf(tok.Catch) {
 		if p.MatchIf(tok.LParen) {
 			catchVar = p.Text
@@ -411,10 +432,12 @@ func (p *Parser) tryStmt() *ast.TryCatch {
 			}
 			p.Match(tok.RParen)
 		}
+		catchEnd = p.endPos
 		catch = p.statement()
 	}
 	return &ast.TryCatch{Try: try, Catch: catch,
 		CatchPos:       catchPos,
+		CatchEnd:       catchEnd,
 		CatchVar:       ast.Ident{Name: catchVar, Pos: varPos},
 		CatchVarUnused: unused,
 		CatchFilter:    catchFilter}

@@ -39,9 +39,10 @@ func (p *Parser) pcExpr(minprec int8) ast.Expr {
 		p.Next()
 		switch {
 		case token == tok.Dot:
+			pos := p.Pos
 			id := p.MatchIdent()
 			if e == nil {
-				e = p.Ident("this")
+				e = &ast.Ident{Name: "this", Pos: pos, Implicit: true}
 				id = p.privatizeRef(id)
 			}
 			e = &ast.Mem{E: e, M: p.Constant(SuStr(id))}
@@ -209,7 +210,10 @@ func (p *Parser) same(listtype tok.Token, next tok.Token) bool {
 // ------------------------------------------------------------------
 
 // atom handles atoms and prefix operators
-func (p *Parser) atom() ast.Expr {
+func (p *Parser) atom() (result ast.Expr) {
+	defer func(pos int32) {
+		SetPos(result, pos, p.endPos)
+	}(p.Pos)
 	switch token := p.Token; token {
 	case tok.String:
 		// don't call p.constant() because it allows concatenation
@@ -283,7 +287,7 @@ func (p *Parser) atom() ast.Expr {
 			if p.Text == "dll" || p.Text == "callback" || p.Text == "struct" {
 				p.Error("gSuneido does not implement " + p.Text)
 			}
-			e := p.Ident(p.Text)
+			e := &ast.Ident{Name: p.Text}
 			p.Next()
 			return e
 		}
@@ -388,44 +392,50 @@ func (p *Parser) argumentList(closing tok.Token) []ast.Arg {
 		}
 		args = append(args, ast.Arg{E: val})
 	}
-	named := func(name Value, val ast.Expr) {
+	named := func(name Value, val ast.Expr, pos, end int32) {
 		for _, a := range args {
 			if name.Equal(a.Name) {
 				p.Error("duplicate argument name: " + ToStrOrString(name))
 			}
 		}
-		args = append(args, ast.Arg{Name: name, E: val})
+		arg := ast.Arg{Name: name, E: val}
+		arg.SetPos(pos, end)
+		args = append(args, arg)
 		haveNamed = true
 	}
 	var pending Value
-	handlePending := func(val ast.Expr) {
+	var pos, pendingPos int32
+	handlePending := func(val ast.Expr, end int32) {
 		if pending != nil {
-			named(pending, val)
+			named(pending, val, pendingPos, end)
 			pending = nil
 		}
 	}
 	for p.Token != closing {
-		var expr ast.Expr
-		if p.MatchIf(tok.Colon) {
+		pos = p.Pos
+		endPos := p.endPos
+		if p.MatchIf(tok.Colon) { // :name shortcut
 			if !p.Token.IsIdent() || !IsLower(p.Text[0]) {
 				p.Error("expecting local variable name")
 			}
-			handlePending(p.Constant(True))
-			named(SuStr(p.Text), p.Ident(p.Text))
-			p.MatchIdent()
+			handlePending(p.Constant(True), endPos)
+			name := p.MatchIdent()
+			named(SuStr(name), &ast.Ident{Name: name}, pos, p.endPos)
 		} else {
-			expr = p.Expression() // could be name or value
+			expr := p.Expression() // could be name or value
 			if name := p.argname(expr); name != nil && p.MatchIf(tok.Colon) {
-				handlePending(p.Constant(True))
+				handlePending(p.Constant(True), endPos)
 				pending = name // it's a name but don't know value yet
+				pendingPos = pos
 			} else if pending != nil {
-				handlePending(expr)
+				handlePending(expr, p.endPos)
 			} else {
 				unnamed(expr)
 			}
 		}
-		if p.MatchIf(tok.Comma) {
-			handlePending(p.Constant(True))
+		if p.Token == tok.Comma {
+			handlePending(p.Constant(True), p.endPos)
+			p.Next()
 		} else if p.newline && pending == nil {
 			switch p.Token {
 			case tok.LParen, tok.LBracket, tok.LCurly, tok.Dot, tok.Add, tok.Sub:
@@ -433,8 +443,8 @@ func (p *Parser) argumentList(closing tok.Token) []ast.Arg {
 			}
 		}
 	}
+	handlePending(p.Constant(True), p.endPos)
 	p.Match(closing)
-	handlePending(p.Constant(True))
 	return args
 }
 
@@ -449,14 +459,15 @@ func (p *Parser) argname(expr ast.Expr) Value {
 }
 
 func (p *Parser) record() ast.Expr {
+	pos := p.Pos
 	p.Match(tok.LBracket)
 	args := p.argumentList(tok.RBracket)
 	fn := "Record"
 	if hasUnnamed(args) {
 		fn = "Object"
 	}
-	// note: ident will have wrong pos
-	return &ast.Call{Fn: p.Ident(fn), Args: args}
+	id := &ast.Ident{Name: fn, Pos: pos, Implicit: true}
+	return &ast.Call{Fn: id, Args: args}
 }
 
 func hasUnnamed(args []ast.Arg) bool {
@@ -473,26 +484,27 @@ func (p *Parser) block() *ast.Block {
 	body := p.statements()
 	p.Match(tok.RCurly)
 	if p.itUsed && len(params) == 0 {
-		params = append(params, mkParam("it", pos, false, nil))
+		params = append(params, mkParam("it", pos, pos, false, nil))
 		p.final["it"] = disqualified
 	}
 	p.itUsed = itUsedPrev
 	return &ast.Block{Name: p.name,
-		Function: ast.Function{Pos: pos, Params: params, Body: body}}
+		Function: ast.Function{Params: params, Body: body}}
 }
 
 func (p *Parser) blockParams() []ast.Param {
 	var params []ast.Param
 	if p.MatchIf(tok.BitOr) {
+		pos := p.Pos
 		if p.MatchIf(tok.At) {
-			params = append(params,
-				mkParam("@"+p.Text, p.Pos, p.unusedAhead(), nil))
+			params = append(params, mkParam("@"+p.Text,
+				pos, p.Pos + int32(len(p.Text)),	p.unusedAhead(), nil))
 			p.final[p.Text] = disqualified
 			p.MatchIdent()
 		} else {
 			for p.Token.IsIdent() {
-				params = append(params,
-					mkParam(p.Text, p.Pos, p.unusedAhead(), nil))
+				params = append(params, mkParam(p.Text,
+					p.Pos, p.Pos + int32(len(p.Text)), p.unusedAhead(), nil))
 				p.final[unDyn(p.Text)] = disqualified
 				p.MatchIdent()
 				p.MatchIf(tok.Comma)

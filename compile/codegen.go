@@ -207,7 +207,7 @@ func (cg *cgen) chainNew(fn *ast.Function) {
 	if !fn.IsNewMethod || hasSuperCall(fn.Body) || cg.base <= 0 {
 		return
 	}
-	cg.savePos(int(fn.Pos))
+	cg.savePos(int(fn.Position()))
 	cg.emit(op.This)
 	cg.emitValue(SuStr("New"))
 	cg.emitUint16(op.Super, cg.base)
@@ -484,7 +484,7 @@ func (cg *cgen) tryCatchStmt(node *ast.TryCatch, labels *Labels) {
 	after := cg.emitJump(op.Catch, -1)
 	cg.placeLabel(catch)
 	if node.Catch != nil {
-		cg.savePos(node.CatchPos)
+		cg.savePos(int(node.CatchPos))
 	}
 	if node.CatchVar.Name != "" {
 		cg.emit(op.Store, byte(cg.name(node.CatchVar.Name)))

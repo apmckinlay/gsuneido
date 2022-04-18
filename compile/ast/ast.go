@@ -34,6 +34,8 @@ type Node interface {
 	String() string
 	// Children calls the given function for each child node
 	Children(func(Node) Node)
+	// SetPos is called by the parser
+	SetPos(org, end int32)
 	// Get is for the Value interface for Suneido.Parse
 	Get(*Thread, Value) Value
 }
@@ -45,6 +47,30 @@ type astNodeT struct {
 func (*astNodeT) astNode() {}
 
 func (*astNodeT) Children(func(Node) Node) {
+}
+
+type noPos struct {
+}
+
+func (noPos) SetPos(org, end int32) {
+}
+
+type TwoPos struct {
+	org int32
+	end int32
+}
+
+func (a *TwoPos) SetPos(org, end int32) {
+	a.org = org
+	a.end = end
+}
+
+func (op *TwoPos) GetPos() int {
+	return int(op.org)
+}
+
+func (op *TwoPos) GetEnd() int {
+	return int(op.end)
 }
 
 // Expr is implemented by expression nodes
@@ -73,8 +99,9 @@ func (en *exprNodeT) Echo() string {
 
 type Ident struct {
 	exprNodeT
-	Name string
-	Pos  int32
+	Name     string
+	Pos      int32
+	Implicit bool // for implicit Record, Object, this
 }
 
 func (a *Ident) String() string {
@@ -95,8 +122,24 @@ func (a *Ident) ParamName() string {
 	return name
 }
 
+func (a *Ident) SetPos(org, end int32) {
+	a.Pos = org
+}
+
+func (a *Ident) GetPos() int {
+	return int(a.Pos)
+}
+
+func (a *Ident) GetEnd() int {
+	if a.Implicit {
+		return int(a.Pos)
+	}
+	return int(a.Pos) + len(a.Name)
+}
+
 type Constant struct {
 	exprNodeT
+	TwoPos
 	Val Value
 	// Packed is used for queries
 	Packed string
@@ -110,12 +153,24 @@ func (a *Constant) Echo() string {
 	return a.Val.String()
 }
 
+func (a *Constant) SetPos(org, end int32) {
+	a.TwoPos.SetPos(org, end)
+	if x, ok := a.Val.(SetPosAble); ok {
+		x.SetPos(org, end)
+	}
+}
+
+type SetPosAble interface {
+	SetPos(org, end int32)
+}
+
 type Symbol struct {
 	Constant
 }
 
 type Unary struct {
 	exprNodeT
+	noPos
 	Tok tok.Token
 	E   Expr
 }
@@ -142,6 +197,7 @@ func (a *Unary) Children(fn func(Node) Node) {
 
 type Binary struct {
 	exprNodeT
+	noPos
 	Lhs     Expr
 	Rhs     Expr
 	Tok     tok.Token
@@ -188,6 +244,7 @@ func (a *Binary) Children(fn func(Node) Node) {
 
 type Trinary struct {
 	exprNodeT
+	noPos
 	Cond Expr
 	T    Expr
 	F    Expr
@@ -210,6 +267,7 @@ func (a *Trinary) Children(fn func(Node) Node) {
 // Nary is used for associative binary operators e.g. add, multiply, and, or
 type Nary struct {
 	exprNodeT
+	noPos
 	Tok   tok.Token
 	Exprs []Expr
 }
@@ -241,6 +299,7 @@ func (a *Nary) Children(fn func(Node) Node) {
 
 type RangeTo struct {
 	exprNodeT
+	noPos
 	E    Expr
 	From Expr
 	To   Expr
@@ -263,6 +322,7 @@ func (a *RangeTo) Children(fn func(Node) Node) {
 
 type RangeLen struct {
 	exprNodeT
+	noPos
 	E    Expr
 	From Expr
 	Len  Expr
@@ -285,6 +345,7 @@ func (a *RangeLen) Children(fn func(Node) Node) {
 
 type Mem struct {
 	exprNodeT
+	noPos
 	E Expr
 	M Expr
 }
@@ -310,6 +371,7 @@ func (a *Mem) Children(fn func(Node) Node) {
 
 type In struct {
 	exprNodeT
+	noPos
 	E     Expr
 	Exprs []Expr
 	// Packed is set by CanEvalRaw
@@ -345,6 +407,7 @@ func (a *In) Children(fn func(Node) Node) {
 
 type Call struct {
 	exprNodeT
+	noPos
 	Fn   Expr
 	Args []Arg
 }
@@ -375,6 +438,8 @@ func (a *Call) Children(fn func(Node) Node) {
 }
 
 type Arg struct {
+	SuAstNode
+	TwoPos
 	Name Value // nil if not named
 	E    Expr
 }
@@ -405,11 +470,13 @@ func (a *Arg) Echo() string {
 
 type Function struct {
 	exprNodeT
+	TwoPos
 	Params      []Param
 	Body        []Statement
 	Final       map[string]uint8
 	Base        Gnum
-	Pos         int32
+	Pos1        int32
+	Pos2        int32
 	HasBlocks   bool
 	IsNewMethod bool
 }
@@ -456,9 +523,15 @@ func (a *Function) Children(fn func(Node) Node) {
 	}
 }
 
+func (a *Function) Position() int {
+	return int(a.org)
+}
+
 type Param struct {
+	SuAstNode
 	Name   Ident // including prefix @ . _
 	DefVal Value // may be nil
+	End    int32
 	// Unused is set if the parameter was followed by /*unused*/
 	Unused bool
 }
@@ -469,6 +542,14 @@ func (p *Param) String() string {
 		s += "=" + p.DefVal.String()
 	}
 	return s
+}
+
+func (p *Param) GetPos() int {
+	return int(p.Name.Pos)
+}
+
+func (p *Param) GetEnd() int {
+	return int(p.End)
 }
 
 type Block struct {
@@ -490,24 +571,21 @@ func (a *Block) Children(fn func(Node) Node) {
 	a.Function = *fn(&a.Function).(*Function)
 }
 
-// Statement nodes implement the Stmt interface.
 type Statement interface {
 	Node
 	Position() int
-	SetPos(pos int)
+	GetPos() int
+	GetEnd() int
 	stmtNode()
 }
 type stmtNodeT struct {
 	astNodeT
-	Pos int
+	TwoPos
 }
 
 func (*stmtNodeT) stmtNode() {}
 func (stmt *stmtNodeT) Position() int {
-	return stmt.Pos
-}
-func (stmt *stmtNodeT) SetPos(pos int) {
-	stmt.Pos = pos
+	return int(stmt.org)
 }
 
 type Compound struct {
@@ -596,11 +674,12 @@ func (x *Throw) Children(fn func(Node) Node) {
 type TryCatch struct {
 	stmtNodeT
 	Try            Statement
-	CatchPos       int
 	CatchVar       Ident
-	CatchVarUnused bool
+	CatchPos       int32
+	CatchEnd       int32
 	CatchFilter    string
 	Catch          Statement
+	CatchVarUnused bool
 }
 
 func (x *TryCatch) String() string {
@@ -756,11 +835,16 @@ type Switch struct {
 	E       Expr
 	Cases   []Case
 	Default []Statement // may be nil
+	Pos1    int32
+	Pos2    int32
+	PosDef  int32
 }
 
 type Case struct {
+	SuAstNode
 	Exprs []Expr
 	Body  []Statement
+	TwoPos
 }
 
 func (x *Switch) String() string {

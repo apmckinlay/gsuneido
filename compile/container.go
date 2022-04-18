@@ -43,6 +43,18 @@ func (cgMaker) mkConcat(strs []string) Value {
 	return SuStr(strings.Join(strs, ""))
 }
 
+func (cgMaker) set(c container, key, val Value, pos, end int32) {
+	if key == nil {
+		c.Add(val)
+	} else {
+		c.Set(key, val)
+	}
+}
+
+func (cgMaker) setPos(container, int32, int32) {
+	// ignore
+}
+
 type classBuilder map[string]Value
 
 func (c classBuilder) Add(Value) {
@@ -94,24 +106,40 @@ func (astMaker) mkConcat(strs []string) Value {
 	return &ast.Nary{Tok: tokens.Cat, Exprs: exprs}
 }
 
+func (astMaker) set(c container, key, val Value, pos, end int32) {
+	ac := c.(*astContainer)
+	ac.kv = append(ac.kv, keyVal{key: key, val: val, pos: pos, end: end})
+}
+
+func (astMaker) setPos(c container, pos1, pos2 int32) {
+	c.(*astContainer).pos1 = pos1
+	c.(*astContainer).pos2 = pos2
+}
+
 type astContainer struct {
 	ast.SuAstNode
+	ast.TwoPos
+	pos1  int32
+	pos2 int32
 	which string
 	base  string
 	kv    []keyVal
 }
 
 type keyVal struct {
+	ast.SuAstNode
 	key Value
 	val Value
+	pos int32
+	end int32
 }
 
 func (c *astContainer) Add(val Value) {
-	c.kv = append(c.kv, keyVal{val: val})
+	panic("should not reach here")
 }
 
 func (c *astContainer) Set(key Value, val Value) {
-	c.kv = append(c.kv, keyVal{key: key, val: val})
+	panic("should not reach here")
 }
 
 func (c *astContainer) HasKey(key Value) bool {
@@ -135,7 +163,8 @@ func (c *astContainer) String() string {
 		style = []string{c.base + " {\n", "\n", "\n}"}
 	}
 	var sb strings.Builder
-	sep := style[0]
+	sb.WriteString(style[0])
+	sep := ""
 	for _, kv := range c.kv {
 		sb.WriteString(sep)
 		sep = style[1]
@@ -161,18 +190,42 @@ func (c *astContainer) Get(_ *Thread, m Value) Value {
 		return SuStr(c.base)
 	case SuStr("size"):
 		return IntVal(len(c.kv))
+	case SuStr("pos"):
+		return IntVal(c.GetPos())
+	case SuStr("pos1"):
+		return IntVal(int(c.pos1))
+	case SuStr("pos2"):
+		return IntVal(int(c.pos2))
+	case SuStr("end"):
+		return IntVal(c.GetEnd())
 	}
 	if i, ok := m.ToInt(); ok {
 		if i < 0 || len(c.kv) <= i {
 			return False
 		}
-		kv := c.kv[i]
-		ob := &SuObject{}
-		ob.Add(kv.val)
-		if kv.key != nil {
-			ob.Add(kv.key)
-		}
-		return ob
+		return &c.kv[i]
+	}
+	return nil
+}
+
+func (a *keyVal) String() string {
+	return a.key.String() + ": " + a.val.String()
+}
+
+func (a *keyVal) Get(_ *Thread, m Value) Value {
+	switch m {
+	case SuStr("type"):
+		return SuStr("Member")
+	case SuStr("named"):
+		return SuBool(a.key != nil)
+	case SuStr("key"):
+		return a.key
+	case SuStr("value"):
+		return a.val
+	case SuStr("pos"):
+		return IntVal(int(a.pos))
+	case SuStr("end"):
+		return IntVal(int(a.end))
 	}
 	return nil
 }

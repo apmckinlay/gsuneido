@@ -124,7 +124,7 @@ func (ck *Check) statement(
 	case *ast.ExprStmt:
 		init, effects = ck.expr(stmt.E, init)
 		if !last && !effects {
-			ck.CheckResult(stmt.Pos, "ERROR: useless expression")
+			ck.CheckResult(stmt.Position(), "ERROR: useless expression")
 		}
 	case *ast.Return:
 		init, _ = ck.expr(stmt.E, init)
@@ -208,7 +208,7 @@ func (ck *Check) statement(
 		}
 		initTrue, initFalse := ck.cond(stmt.Cond, init)
 		afterBody, _ := ck.statement(stmt.Body, initTrue, false)
-		ck.pos = stmt.Pos // restore after statement has modified
+		ck.pos = stmt.Position() // restore after statement has modified
 		for _, expr := range stmt.Inc {
 			ck.expr(expr, afterBody)
 		}

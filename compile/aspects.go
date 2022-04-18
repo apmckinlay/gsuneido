@@ -37,6 +37,8 @@ type maker interface {
 	mkRecOrOb(container) container
 	mkClass(base string) container
 	mkConcat([]string) runtime.Value
+	set(c container, key, val runtime.Value, pos, end int32)
+	setPos(container, int32, int32)
 }
 
 // cgAspects is used to compile code --------------------------------

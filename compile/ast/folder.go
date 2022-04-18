@@ -18,7 +18,7 @@ type Folder struct{}
 
 var _ Builder = (*Folder)(nil)
 
-func (f Folder) Constant(val Value) Expr {
+func (f Folder) constant(val Value) Expr {
 	return &Constant{Val: val}
 }
 
@@ -32,7 +32,7 @@ func (f Folder) Unary(token tok.Token, expr Expr) Expr {
 
 func (f Folder) foldUnary(u *Unary) Expr {
 	if c, ok := u.E.(*Constant); ok && u.Tok != tok.Div {
-		return f.Constant(u.eval(c.Val))
+		return f.constant(u.eval(c.Val))
 	}
 	return u
 }
@@ -50,7 +50,7 @@ func (f Folder) foldBinary(b *Binary) Expr {
 	if !ok {
 		return b
 	}
-	return f.Constant(b.eval(lhs.Val, rhs.Val))
+	return f.constant(b.eval(lhs.Val, rhs.Val))
 }
 
 func (f Folder) Trinary(cond Expr, e1 Expr, e2 Expr) Expr {
@@ -77,7 +77,7 @@ func (f Folder) In(e Expr, exprs []Expr) Expr {
 
 func (f Folder) foldIn(in *In) Expr {
 	if len(in.Exprs) == 0 {
-		return f.Constant(False)
+		return f.constant(False)
 	}
 	c, ok := in.E.(*Constant)
 	if !ok {
@@ -89,10 +89,10 @@ func (f Folder) foldIn(in *In) Expr {
 			return in
 		}
 		if c.Val.Equal(c2.Val) {
-			return f.Constant(True)
+			return f.constant(True)
 		}
 	}
-	return f.Constant(False)
+	return f.constant(False)
 }
 
 var allones Value = SuDnum{Dnum: dnum.FromInt(0xffffffff)}
@@ -246,14 +246,14 @@ func (f Folder) foldMul(exprs []Expr) []Expr {
 	}
 	if div.Equal(One) {
 		if !mul.Equal(One) || len(exprs) == 0 {
-			exprs = append(exprs, f.Constant(mul))
+			exprs = append(exprs, f.constant(mul))
 		}
 	} else {
-		exprs = append(exprs, f.Unary(tok.Div, f.Constant(div)))
+		exprs = append(exprs, f.Unary(tok.Div, f.constant(div)))
 	}
 	if len(exprs) == 1 && !unaryDivOrConstant(exprs[0]) {
 		// force an operation to preserve conversion
-		exprs = append(exprs, f.Constant(One))
+		exprs = append(exprs, f.constant(One))
 	}
 	return exprs
 }
