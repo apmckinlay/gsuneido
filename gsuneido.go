@@ -291,7 +291,7 @@ func openDbms() {
 	db19.StartTimestamps()
 	db19.StartConcur(db, 10*time.Second) //1*time.Minute) //FIXME
 	dbmsLocal = dbms.NewDbmsLocal(db)
-	DbmsAuth = options.Action == "server" || !db.HaveUsers()
+	DbmsAuth = options.Action == "server" || mode != "gui" || !db.HaveUsers()
 	GetDbms = getDbms
 	exit.Add(dbmsLocal.Close)
 	// go checkState()
