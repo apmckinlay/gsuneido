@@ -410,6 +410,7 @@ type Call struct {
 	noPos
 	Fn   Expr
 	Args []Arg
+	End  int32
 }
 
 func (a *Call) String() string {

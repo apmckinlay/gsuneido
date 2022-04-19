@@ -199,6 +199,8 @@ func (a *Call) Get(_ *Thread, m Value) Value {
 		return a.Fn.(Value)
 	case SuStr("size"):
 		return IntVal(len(a.Args))
+	case SuStr("end"):
+		return zeroToFalse(int(a.End))
 	}
 	if i, ok := m.ToInt(); ok {
 		if i < 0 || len(a.Args) <= i {
@@ -221,17 +223,18 @@ func (a *Arg) Get(_ *Thread, m Value) Value {
 	case SuStr("expr"):
 		return a.E.(Value)
 	case SuStr("pos"):
-		if pos := a.GetPos(); pos != 0 {
-			return IntVal(a.GetPos())
-		}
-		return False
+		return zeroToFalse(a.GetPos())
 	case SuStr("end"):
-		if end := a.GetPos(); end != 0 {
-			return IntVal(a.GetEnd())
-		}
-		return False
+		return zeroToFalse(a.GetEnd())
 	}
 	return nil
+}
+
+func zeroToFalse(n int) Value {
+	if n == 0 {
+		return False
+	}
+	return IntVal(n)
 }
 
 func (a *Block) Get(t *Thread, m Value) Value {

@@ -114,7 +114,7 @@ func (p *Parser) pcExpr(minprec int8) ast.Expr {
 			f := p.Expression()
 			e = p.Trinary(e, t, f)
 		case token == tok.LParen: // function call
-			e = &ast.Call{Fn: e, Args: p.arguments(token)}
+			e = &ast.Call{Fn: e, Args: p.arguments(token), End: p.endPos}
 		case tok.AssocStart < token && token < tok.AssocEnd:
 			// for associative operators, collect a list of contiguous
 			es := []ast.Expr{e}
@@ -434,8 +434,8 @@ func (p *Parser) argumentList(closing tok.Token) []ast.Arg {
 			}
 		}
 		if p.Token == tok.Comma {
-			handlePending(p.Constant(True), p.endPos)
 			p.Next()
+			handlePending(p.Constant(True), p.endPos)
 		} else if p.newline && pending == nil {
 			switch p.Token {
 			case tok.LParen, tok.LBracket, tok.LCurly, tok.Dot, tok.Add, tok.Sub:

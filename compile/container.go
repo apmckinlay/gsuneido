@@ -120,7 +120,7 @@ type astContainer struct {
 	ast.SuAstNode
 	ast.TwoPos
 	pos1  int32
-	pos2 int32
+	pos2  int32
 	which string
 	base  string
 	kv    []keyVal
@@ -168,15 +168,7 @@ func (c *astContainer) String() string {
 	for _, kv := range c.kv {
 		sb.WriteString(sep)
 		sep = style[1]
-		if kv.key != nil {
-			if ks := Unquoted(kv.key); ks != "" {
-				sb.WriteString(ks)
-			} else {
-				sb.WriteString(Display(nil, kv.key))
-			}
-			sb.WriteString(": ")
-		}
-		sb.WriteString(Display(nil, kv.val))
+		sb.WriteString(kv.String())
 	}
 	sb.WriteString(style[2])
 	return sb.String()
@@ -208,8 +200,18 @@ func (c *astContainer) Get(_ *Thread, m Value) Value {
 	return nil
 }
 
-func (a *keyVal) String() string {
-	return a.key.String() + ": " + a.val.String()
+func (kv *keyVal) String() string {
+	var sb strings.Builder
+	if kv.key != nil {
+		if ks := Unquoted(kv.key); ks != "" {
+			sb.WriteString(ks)
+		} else {
+			sb.WriteString(Display(nil, kv.key))
+		}
+		sb.WriteString(": ")
+	}
+	sb.WriteString(Display(nil, kv.val))
+	return sb.String()
 }
 
 func (a *keyVal) Get(_ *Thread, m Value) Value {
