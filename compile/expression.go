@@ -433,8 +433,7 @@ func (p *Parser) argumentList(closing tok.Token) []ast.Arg {
 				unnamed(expr)
 			}
 		}
-		if p.Token == tok.Comma {
-			p.Next()
+		if p.MatchIf(tok.Comma) {
 			handlePending(p.Constant(True), p.endPos)
 		} else if p.newline && pending == nil {
 			switch p.Token {

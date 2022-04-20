@@ -448,22 +448,17 @@ func (a *TryCatch) Get(_ *Thread, m Value) Value {
 	case SuStr("catchend"):
 		return IntVal(int(a.CatchEnd))
 	case SuStr("catch"):
-		if a.Catch == nil {
+		return nilToFalse(a.Catch)
+	case SuStr("catchvar"):
+		if a.Catch == nil || a.CatchVar.Name == "" {
 			return False
 		}
-		ob := &SuObject{}
-		ob.Add(a.Catch.(Value))
-		if a.CatchVar.Name != "" {
-			s := a.CatchVar.Name
-			if a.CatchVarUnused && a.CatchVar.Name != "unused" {
-				s += "/*unused*/"
-			}
-			ob.Add(SuStr(s))
-			if a.CatchFilter != "" {
-				ob.Add(SuStr(a.CatchFilter))
-			}
+		return &a.CatchVar
+	case SuStr("catchpat"):
+		if a.Catch == nil || a.CatchFilter == "" {
+			return False
 		}
-		return ob
+		return SuStr(a.CatchFilter)
 	}
 	return stmtGet(a, m)
 }
