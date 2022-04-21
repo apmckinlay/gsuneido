@@ -17,6 +17,15 @@ import (
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
+func TestVarint(t *testing.T) {
+	for _, num := range []int{0, 1, 127, 128, 129, 255, 256, 999, 12345} {
+		var nd node
+		nd = addVarint(nd, num)
+		_, n := getVarint(nd)
+		assert.This(n).Is(num)
+	}
+}
+
 func TestNodeAppendRead(t *testing.T) {
 	type ent struct {
 		offset uint64
@@ -29,14 +38,14 @@ func TestNodeAppendRead(t *testing.T) {
 		nd = nd.append(offset, npre, diff)
 		data = append(data, ent{offset, npre, diff})
 	}
-	add(123, 2, "bar")
-	add(456, 1, "foo")
+	add(123, 999, "bar")
+	add(456, 11, "foo")
 	for _, e := range data {
 		var npre int
 		var diff []byte
 		var off uint64
 		npre, diff, off = nd.read()
-		nd = nd[fLen(diff):]
+		nd = nd[fLen(npre, diff):]
 		assert.T(t).This(npre).Is(e.npre)
 		assert.T(t).This(string(diff)).Is(e.diff)
 		assert.T(t).This(off).Is(e.offset)

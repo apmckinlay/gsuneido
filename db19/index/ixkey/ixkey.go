@@ -120,8 +120,13 @@ func (spec *Spec) Key(rec Record) string {
 		}
 		buf = encode(buf, getRaw(rec, f))
 	}
+	if len(buf) > maxKey {
+		panic(fmt.Sprint("key too large, size ", len(buf), " limit ", maxKey))
+	}
 	return hacks.BStoS(buf)
 }
+
+const maxKey = 1024
 
 // Encodes returns whether the Spec requires encoding.
 func (spec *Spec) Encodes() bool {

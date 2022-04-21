@@ -24,34 +24,74 @@ import (
 //
 // Entry is:
 //		- 5 byte smalloffset
-//		- one byte prefix length (npre)
-//		- one byte key part length (len diff)
-//		- key part bytes (variable length) (diff)
+//		- varint prefix length (npre)
+//		- varint diff length
+//		- diff part bytes (variable length)
 type node []byte
 
-const embedAll = 255
+const maxVarint = 32767
+const embedAll = maxVarint
 
 func (nd node) append(offset uint64, npre int, diff string) node {
+	// see also node.updateCopy
 	nd = stor.AppendSmallOffset(nd, offset)
-	nd = append(nd, byte(npre), byte(len(diff)))
+	nd = addVarint(nd, npre)
+	nd = addVarint(nd, len(diff))
 	nd = append(nd, diff...)
+	return nd
+}
+
+func addVarint(nd node, n int) node {
+	assert.That(n <= maxVarint)
+	if n > 127 {
+		nd = append(nd, byte(n&0x7f|0x80))
+		n >>= 7
+	}
+	nd = append(nd, byte(n&0x7f))
 	return nd
 }
 
 func (nd node) read() (npre int, diff []byte, offset uint64) {
 	offset = stor.ReadSmallOffset(nd)
-	npre = int(nd[5])
-	dn := int(nd[6])
-	diff = nd[7 : 7+dn]
+	nd = nd[5:]
+	nd, npre = getVarint(nd)
+	nd, dn := getVarint(nd)
+	diff = nd[:dn]
 	return
 }
 
-func fLen(diff []byte) int {
-	return 5 + 1 + 1 + len(diff)
+func getVarint(nd node) (node, int) {
+	n := int(nd[0])
+	if n < 0x80 {
+		return nd[1:], n
+	}
+	assert.That(nd[1] < 0x80)
+	n = (n & 0x7f) | (int(nd[1]) << 7)
+	return nd[2:], n
+}
+
+func fLen(npre int, diff []byte) int {
+	n := 5 + 1 + 1 + len(diff)
+	if npre > 127 {
+		n++
+	}
+	if len(diff) > 127 {
+		n++
+	}
+	return n
 }
 
 func (nd node) next(i int) int {
-	return i + 7 + int(nd[i+6])
+	n := 6
+	if nd[i+5] > 127 {
+		n++
+	}
+	_, dn := getVarint(nd[i+n:])
+	n++
+	if dn > 127 {
+		n++
+	}
+	return i + n + dn
 }
 
 // addone calculates the encoding for a new entry.
@@ -63,7 +103,7 @@ func addone(key, prev, known string, embedLen int) (npre int, diff string, known
 	}
 	assert.That(key > prev)
 	npre = commonPrefixLen(prev, key)
-	if npre > 255 {
+	if npre > maxVarint {
 		panic("key common prefix too long")
 	}
 	if npre <= len(known) {
@@ -189,7 +229,7 @@ func (nd node) update(keyNew string, offNew uint64, get func(uint64) string) nod
 			// 	"=>", "npre", npre, "diff", diff)
 			// adjust following entry
 			ins = ins.append(it.offset, npre2, diff2)
-			j += fLen(it.diff)
+			j += it.fLen()
 		}
 	}
 	return nd.replace(i, j, ins)
@@ -271,8 +311,10 @@ func (nd node) delete(offset uint64) (node, bool) {
 }
 
 func (nd node) updateCopy(src node, i int, npre int, diff string) node {
+	// see also node.append
 	nd = append(nd, src[i:i+5]...) // copy offset
-	nd = append(nd, byte(npre), byte(len(diff)))
+	nd = addVarint(nd, npre)
+	nd = addVarint(nd, len(diff))
 	nd = append(nd, diff...)
 	return nd
 }
@@ -297,7 +339,7 @@ func (nd node) iter() *nodeIter {
 }
 
 func (it *nodeIter) next() bool {
-	it.pos += fLen(it.diff)
+	it.pos += it.fLen()
 	if it.pos >= len(it.node) {
 		it.known = it.known[:0] // ""
 		return false
@@ -328,7 +370,7 @@ func (it *nodeIter) next() bool {
 }
 
 func (it *nodeIter) eof() bool {
-	return it.pos+fLen(it.diff) >= len(it.node)
+	return it.pos+it.fLen() >= len(it.node)
 }
 
 func (it *nodeIter) copyFrom(src *nodeIter) {
@@ -337,6 +379,10 @@ func (it *nodeIter) copyFrom(src *nodeIter) {
 	it.offset = src.offset
 	it.diff = src.diff
 	it.known = append(it.known[:0], src.known...) // copy over
+}
+
+func (it *nodeIter) fLen() int {
+	return fLen(it.npre, it.diff)
 }
 
 //-------------------------------------------------------------------

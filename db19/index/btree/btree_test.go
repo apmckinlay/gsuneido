@@ -27,9 +27,13 @@ func TestBtreeIO(t *testing.T) {
 }
 
 func TestBtreeBuilder(t *testing.T) {
+	prefix := strings.Repeat("helloworld", 30)
+	keyfn := func(i int) string {
+		return prefix + strconv.Itoa(i)
+	}
 	assert := assert.T(t)
 	GetLeafKey = func(_ *stor.Stor, _ *ixkey.Spec, i uint64) string {
-		return strconv.Itoa(int(i))
+		return keyfn(int(i))
 	}
 	bldr := Builder(stor.HeapStor(8192))
 	start := 100000
@@ -39,7 +43,7 @@ func TestBtreeBuilder(t *testing.T) {
 		limit = 99999
 	}
 	for i := start; i <= limit; i++ {
-		key := strconv.Itoa(i)
+		key := keyfn(i)
 		bldr.Add(key, uint64(i))
 	}
 	bt := bldr.Finish()
@@ -48,7 +52,7 @@ func TestBtreeBuilder(t *testing.T) {
 	// iterate
 	iter := bt.Iterator()
 	for i := start; i <= limit; i++ {
-		key := strconv.Itoa(i)
+		key := keyfn(i)
 		iter.Next()
 		k, o := iter.Cur()
 		assert.True(strings.HasPrefix(key, k))
@@ -59,7 +63,7 @@ func TestBtreeBuilder(t *testing.T) {
 
 	// Lookup
 	for i := start; i <= limit; i++ {
-		key := strconv.Itoa(i)
+		key := keyfn(i)
 		assert.This(bt.Lookup(key)).Is(i)
 		assert.This(bt.Lookup(key + "0")).Is(0) // nonexistent
 	}
@@ -67,8 +71,8 @@ func TestBtreeBuilder(t *testing.T) {
 	// PrefixExists
 	assert.False(bt.PrefixExists("1"))
 	assert.False(bt.PrefixExists("a"))
-	assert.True(bt.PrefixExists(strconv.Itoa(start)))
-	assert.True(bt.PrefixExists(strconv.Itoa(limit)))
+	assert.True(bt.PrefixExists(keyfn(start)))
+	assert.True(bt.PrefixExists(keyfn(limit)))
 	assert.False(bt.PrefixExists("def"))
 	assert.False(bt.PrefixExists("123456789"))
 }
