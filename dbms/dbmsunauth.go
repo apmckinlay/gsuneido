@@ -131,8 +131,8 @@ func (du *DbmsUnauth) Transactions() *SuObject {
 	panic(notauth)
 }
 
-func (du *DbmsUnauth) Unuse(string) bool {
-	panic(notauth)
+func (du *DbmsUnauth) Unuse(lib string) bool {
+	return du.dbms.Unuse(lib)
 }
 
 func (du *DbmsUnauth) Use(lib string) bool {
