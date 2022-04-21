@@ -21,7 +21,7 @@ func TestLoadTable(*testing.T) {
 	defer os.Remove("tmp.db")
 	os.Remove("tmp.db")
 	n, err := LoadTable("stdlib", "tmp.db")
-	assert.That(err == nil)
+	assert.This(err).Is(nil)
 	fmt.Println("loaded", n, "records in", time.Since(t).Round(time.Millisecond))
 	ck(CheckDatabase("tmp.db"))
 }
@@ -32,7 +32,8 @@ func TestLoadDatabase(*testing.T) {
 	}
 	t := time.Now()
 	defer os.Remove("tmp.db")
-	nTables, nViews := LoadDatabase("../../database.su", "tmp.db")
+	nTables, nViews, e := LoadDatabase("../../database.su", "tmp.db")
+	assert.This(e).Is(nil)
 	fmt.Println("loaded", nTables, "tables", nViews, "views in",
 		time.Since(t).Round(time.Millisecond))
 	ck(CheckDatabase("tmp.db"))

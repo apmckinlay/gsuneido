@@ -94,7 +94,8 @@ func main() {
 	case "load":
 		t := time.Now()
 		if options.Arg == "" {
-			nTables, nViews := tools.LoadDatabase("database.su", "suneido.db")
+			nTables, nViews, err := tools.LoadDatabase("database.su", "suneido.db")
+			ck(err)
 			Alert("loaded", nTables, "tables", nViews, "views in",
 				time.Since(t).Round(time.Millisecond))
 		} else {

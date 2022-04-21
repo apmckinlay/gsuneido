@@ -11,36 +11,38 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"sync/atomic"
 
 	. "github.com/apmckinlay/gsuneido/db19"
 	"github.com/apmckinlay/gsuneido/db19/index"
 	"github.com/apmckinlay/gsuneido/db19/index/btree"
 	"github.com/apmckinlay/gsuneido/db19/meta"
-	"github.com/apmckinlay/gsuneido/db19/meta/schema"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/dbms/query"
 	"github.com/apmckinlay/gsuneido/options"
-	"github.com/apmckinlay/gsuneido/runtime"
 	rt "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/cksum"
+	"github.com/apmckinlay/gsuneido/util/errs"
 	"github.com/apmckinlay/gsuneido/util/sortlist"
+	"github.com/apmckinlay/gsuneido/util/str"
 )
 
 type loadJob struct {
-	sch   schema.Schema
-	list  *sortlist.Builder
-	nrecs int
-	size  uint64
-	db    *Database
+	db     *Database
+	schema string
+	nrecs  int
+	size   uint64
+	list   *sortlist.Builder
 }
 
 // LoadDatabase imports a dumped database from a file using a worker pool.
 // It returns the number of tables loaded. Errors are fatal.
-func LoadDatabase(from, dbfile string) (nTables, nViews int) {
+func LoadDatabase(from, dbfile string) (nTables, nViews int, err error) {
+	var errVal atomic.Value
 	defer func() {
 		if e := recover(); e != nil {
-			runtime.Fatal("error loading:", e)
+			err = errs.From(e)
 		}
 	}()
 	f, r := open(from)
@@ -50,43 +52,50 @@ func LoadDatabase(from, dbfile string) (nTables, nViews int) {
 
 	// start the workers that build the indexes
 	var wg sync.WaitGroup
-	channel := make(chan loadJob)
+	channel := make(chan *loadJob)
 	for i := 0; i < options.Nworkers; i++ {
 		wg.Add(1)
 		go func() {
 			defer wg.Done()
+			var job *loadJob
 			defer func() {
 				if e := recover(); e != nil {
-					runtime.Fatal("error loading:", e)
+					table := str.BeforeFirst(job.schema, " ")
+					errVal.Store(fmt.Errorf("error loading %s %v", table, e))
 				}
 			}()
-			for job := range channel {
-				loadTable2(job.db, job.sch, job.list, job.nrecs, job.size, false)
+			for job = range channel {
+				loadTable2(job.db, job.schema, job.nrecs, job.size, job.list)
 			}
 		}()
 	}
 
 	// load the tables
 	nTables = 0
-	for ; ; nTables++ {
+	for ; errVal.Load() == nil; nTables++ {
 		schema := readLinePrefixed(r, "====== ")
 		if schema == "" {
 			break
 		}
-		n := loadTable(db, r, schema, channel)
+		nrecs, size, list := loadTable1(db, r, schema)
 		if strings.HasPrefix(schema, "views ") {
-			nViews = n
+			nViews = nrecs
 			nTables--
+		} else {
+			channel <- &loadJob{db: db, schema: schema,
+				nrecs: nrecs, size: size, list: list}
 		}
-		trace()
 	}
 	close(channel)
 	wg.Wait()
+	if errVal.Load() != nil {
+		return 0, 0, errVal.Load().(error)
+	}
 	trace("SIZE", db.Store.Size())
 	db.GetState().Write()
 	db.Close()
 	ck(RenameBak(tmpfile, dbfile))
-	return nTables, nViews
+	return nTables, nViews, nil
 }
 
 // LoadTable is used by -load <table>.
@@ -99,7 +108,7 @@ func LoadTable(table, dbfile string) (int, error) {
 		db, err = OpenDatabase(dbfile)
 	}
 	if err != nil {
-		return 0, fmt.Errorf("error loading %s: %w", table, err)
+		return 0, fmt.Errorf("error loading %s %w", table, err)
 	}
 	defer db.Close()
 	return LoadDbTable(table, db)
@@ -113,13 +122,14 @@ func LoadDbTable(table string, db *Database) (n int, err error) {
 	defer func() {
 		db.EndExclusive(table)
 		if e := recover(); e != nil {
-			err = fmt.Errorf("error loading %s: %v", table, e)
+			err = fmt.Errorf("error loading %s %v", table, e)
 		}
 	}()
 	f, r := open(table + ".su")
 	defer f.Close()
-	schema := table + " " + readLinePrefixed(r, "====== ")
-	nrecs := loadTable(db, r, schema, nil)
+	schem := table + " " + readLinePrefixed(r, "====== ")
+	nrecs, size, list := loadTable1(db, r, schem)
+	loadTable2(db, schem, nrecs, size, list)
 	db.Persist() // for safety, not strictly required
 	return nrecs, nil
 }
@@ -134,37 +144,30 @@ func open(filename string) (*os.File, *bufio.Reader) {
 	return f, r
 }
 
-func loadTable(db *Database, r *bufio.Reader, schema string, channel chan loadJob) int {
+// loadTable1 reads the data
+func loadTable1(db *Database, r *bufio.Reader, schema string) (
+	nrecs int, size uint64, list *sortlist.Builder) {
 	trace(schema)
 	if strings.HasPrefix(schema, "views ") {
-		return loadViews(db, r, schema)
+		return loadViews(db, r, schema), 0, nil
 	}
-	sch := query.NewAdminParser(schema).Schema()
 	store := db.Store
-	list := sortlist.NewUnsorted()
-	nrecs, size := readRecords(r, store, list)
+	list = sortlist.NewUnsorted()
+	nrecs, size = readRecords(r, store, list)
 	trace("nrecs", nrecs, "data size", size)
 	list.Finish()
-	if channel == nil { // not concurrent
-		loadTable2(db, sch, list, nrecs, size, true)
-	} else {
-		channel <- loadJob{db: db, sch: sch, list: list, nrecs: nrecs, size: size}
-	}
-	return nrecs
+	return nrecs, size, list
 }
 
-// loadTable2 is multi-threaded when loading an entire database.
-func loadTable2(db *Database, sch schema.Schema, list *sortlist.Builder, nrecs int, size uint64, exclusive bool) {
+// loadTable2 builds the indexes.
+// It is multi-threaded when loading an entire database
+func loadTable2(db *Database, schema string,
+	nrecs int, size uint64, list *sortlist.Builder) {
+	sch := query.NewAdminParser(schema).Schema()
 	ts := &meta.Schema{Schema: sch}
 	ovs := buildIndexes(ts, list, db.Store, nrecs)
 	ti := &meta.Info{Table: sch.Table, Nrows: nrecs, Size: size, Indexes: ovs}
-	if exclusive {
-		db.RunEndExclusive(sch.Table, func() {
-			db.OverwriteTable(ts, ti)
-		})
-	} else {
-		db.OverwriteTable(ts, ti)
-	}
+	db.OverwriteTable(ts, ti)
 }
 
 func readLinePrefixed(r *bufio.Reader, pre string) string {
@@ -203,10 +206,26 @@ func readRecords(in *bufio.Reader, store *stor.Stor, list *sortlist.Builder) (
 	return nrecs, size
 }
 
-func buildIndexes(ts *meta.Schema, list *sortlist.Builder, store *stor.Stor, nrecs int) []*index.Overlay {
+type idxErr struct {
+	idx string
+	err any
+}
+
+func buildIndexes(ts *meta.Schema, list *sortlist.Builder, store *stor.Stor,
+	nrecs int) []*index.Overlay {
+	i := -1
+	defer func() {
+		if e := recover(); e != nil {
+			index := ""
+			if i != -1 {
+				index = ts.Indexes[i].String() + " "
+			}
+			panic(fmt.Sprintf("%s%v", index, e))
+		}
+	}()
 	ts.Ixspecs(ts.Indexes)
 	ov := make([]*index.Overlay, len(ts.Indexes))
-	for i := range ts.Indexes {
+	for i = range ts.Indexes {
 		ix := ts.Indexes[i]
 		trace(ix)
 		if i > 0 || ix.Mode != 'k' {
