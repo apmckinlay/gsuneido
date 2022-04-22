@@ -98,6 +98,9 @@ type IDbms interface {
 
 	// Use adds a library to those in use
 	Use(lib string) bool
+
+	// Unwrap removes DbmsUnauth if DbmsAuth
+	Unwrap() IDbms
 }
 
 // ITran is the interface to a dbms transaction,

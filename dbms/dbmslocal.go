@@ -48,7 +48,7 @@ func (dbms *DbmsLocal) Admin(admin string, sv *Sviews) {
 	qry.DoAdmin(dbms.db, admin, sv)
 }
 
-func (*DbmsLocal) Auth(th *Thread, s string) bool {
+func (dbms *DbmsLocal) Auth(th *Thread, s string) bool {
 	if DbmsAuth {
 		panic("already authorized")
 	}
@@ -56,7 +56,7 @@ func (*DbmsLocal) Auth(th *Thread, s string) bool {
 		return false
 	}
 	DbmsAuth = true
-	th.SetDbms(nil) // so it will call GetDbms again
+	th.SetDbms(dbms) // not strictly necessary, removes unauth wrap
 	return true
 }
 
@@ -338,6 +338,10 @@ func (dbms *DbmsLocal) updateLibraries(fn func(libs []string) []string) bool {
 	}
 	atomic.StoreInt32(&dbms.badlibs, 0) // reset logging
 	return slices.Equal(oldlibs, dbms.libraries.Swap(newlibs).([]string))
+}
+
+func (dbms *DbmsLocal) Unwrap() IDbms {
+	return dbms
 }
 
 func (dbms *DbmsLocal) Close() {

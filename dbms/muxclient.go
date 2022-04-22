@@ -274,6 +274,10 @@ func (ms *muxSession) Use(lib string) bool {
 		"When client-server, only the server can Use")
 }
 
+func (ms *muxSession) Unwrap() IDbms {
+	return ms
+}
+
 func (ms *muxSession) getHdr() *Header {
 	n := ms.GetInt()
 	fields := make([]string, 0, n)

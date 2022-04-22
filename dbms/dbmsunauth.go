@@ -138,3 +138,10 @@ func (du *DbmsUnauth) Unuse(lib string) bool {
 func (du *DbmsUnauth) Use(lib string) bool {
 	return du.dbms.Use(lib)
 }
+
+func (du *DbmsUnauth) Unwrap() IDbms {
+	if DbmsAuth { // for standalone
+		return du.dbms
+	}
+	return du
+}

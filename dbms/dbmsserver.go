@@ -295,7 +295,6 @@ func cmdAuth(ss *serverSession) {
 	result := ss.auth(s)
 	if result {
 		ss.sc.dbms = ss.sc.dbms.(*DbmsUnauth).dbms // remove DbmsUnauth
-		DbmsAuth = true
 	}
 	ss.PutBool(true).PutBool(result)
 }

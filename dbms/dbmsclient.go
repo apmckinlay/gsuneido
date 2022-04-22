@@ -311,6 +311,10 @@ func (dc *dbmsClient) Use(lib string) bool {
 		"When client-server, only the server can Use")
 }
 
+func (dc *dbmsClient) Unwrap() IDbms {
+	return dc
+}
+
 func (dc *dbmsClient) getHdr() *Header {
 	n := dc.GetInt()
 	fields := make([]string, 0, n)

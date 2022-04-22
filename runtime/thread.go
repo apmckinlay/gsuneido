@@ -255,7 +255,7 @@ func (t *Thread) Dbms() IDbms {
 			t.dbms.SessionId(t, s.(string))
 		}
 	}
-	return t.dbms
+	return t.dbms.Unwrap()
 }
 
 // Close closes the thread's dbms connection (if it has one)
