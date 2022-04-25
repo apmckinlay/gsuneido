@@ -170,7 +170,7 @@ type Symbol struct {
 
 type Unary struct {
 	exprNodeT
-	noPos
+	TwoPos
 	Tok tok.Token
 	E   Expr
 }
@@ -346,8 +346,9 @@ func (a *RangeLen) Children(fn func(Node) Node) {
 type Mem struct {
 	exprNodeT
 	noPos
-	E Expr
-	M Expr
+	E      Expr
+	M      Expr
+	DotPos int32
 }
 
 func (a *Mem) String() string {

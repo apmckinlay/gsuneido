@@ -81,8 +81,12 @@ func (a *Unary) Get(_ *Thread, m Value) Value {
 		return a.E.(Value)
 	case SuStr("children"):
 		return newChildren(a)
+	case SuStr("pos"):
+		return IntVal(a.GetPos())
+	case SuStr("end"):
+		return IntVal(a.GetEnd())
 	}
-	return falsePos(a, m)
+	return nil
 }
 
 func (a *Binary) Get(_ *Thread, m Value) Value {
@@ -169,6 +173,8 @@ func (a *Mem) Get(_ *Thread, m Value) Value {
 		return a.E.(Value)
 	case SuStr("mem"):
 		return a.M.(Value)
+	case SuStr("dotpos"):
+		return IntVal(int(a.DotPos))
 	}
 	return falsePos(a, m)
 }
@@ -551,6 +557,8 @@ func (a *Continue) Get(_ *Thread, m Value) Value {
 	return stmtGet(a, m)
 }
 
+//-------------------------------------------------------------------
+
 type nodeVal interface {
 	Node
 	Value
@@ -622,4 +630,8 @@ func (a children) Get(_ *Thread, m Value) Value {
 		return a.list[i]
 	}
 	return nil
+}
+
+func NewChildren(list []Value) children {
+	return children{list: list}
 }

@@ -45,7 +45,7 @@ func (p *Parser) pcExpr(minprec int8) ast.Expr {
 				e = &ast.Ident{Name: "this", Pos: pos, Implicit: true}
 				id = p.privatizeRef(id)
 			}
-			e = &ast.Mem{E: e, M: p.Constant(SuStr(id))}
+			e = &ast.Mem{E: e, M: p.Constant(SuStr(id)), DotPos: pos}
 			if p.Token == tok.LCurly && !p.expectingCompound { // a.F { }
 				e = &ast.Call{Fn: e, Args: p.arguments(p.Token)}
 			}

@@ -190,6 +190,12 @@ func (c *astContainer) Get(_ *Thread, m Value) Value {
 		return IntVal(int(c.pos2))
 	case SuStr("end"):
 		return IntVal(c.GetEnd())
+	case SuStr("children"):
+		list := make([]Value, len(c.kv))
+		for i := range c.kv {
+			list[i] = &c.kv[i]
+		}
+		return ast.NewChildren(list)
 	}
 	if i, ok := m.ToInt(); ok {
 		if i < 0 || len(c.kv) <= i {
@@ -228,6 +234,12 @@ func (a *keyVal) Get(_ *Thread, m Value) Value {
 		return IntVal(int(a.pos))
 	case SuStr("end"):
 		return IntVal(int(a.end))
+	case SuStr("children"):
+		if a.key == nil {
+			return ast.NewChildren([]Value{a.val})
+		} else {
+			return ast.NewChildren([]Value{a.key, a.val})
+		}
 	}
 	return nil
 }
