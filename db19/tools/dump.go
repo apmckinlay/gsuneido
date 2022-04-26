@@ -5,7 +5,6 @@ package tools
 
 import (
 	"bufio"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"math"
@@ -47,19 +46,19 @@ func Dump(db *Database, to string) (nTables, nViews int, err error) {
 
 	state := db.Persist()
 	nViews = dumpViews(state, w)
-	schemas := make([]string, 0, 512)
+	tables := make([]string, 0, 512)
 	state.Meta.ForEachSchema(func(sc *meta.Schema) {
-		schemas = append(schemas, sc.String())
+		tables = append(tables, sc.Table)
 	})
-	sort.Strings(schemas)
-	for _, schema := range schemas {
-		dumpTable2(db, schema, true, w, ics)
+	sort.Strings(tables)
+	for _, table := range tables {
+		dumpTable2(db, state, table, true, w, ics)
 	}
 	ck(w.Flush())
 	f.Close()
 	ics.finish()
 	ck(RenameBak(tmpfile, to))
-	return len(schemas), nViews, nil
+	return len(tables), nViews, nil
 }
 
 // DumpTable exports a dumped table to a file.
@@ -84,11 +83,7 @@ func DumpDbTable(db *Database, table, to string) (nrecs int, err error) {
 	defer ics.finish()
 
 	state := db.Persist()
-	schema := state.Meta.GetRoSchema(table)
-	if schema == nil {
-		return 0, errors.New("dump failed: can't find " + table)
-	}
-	nrecs = dumpTable2(db, schema.String(), false, w, ics)
+	nrecs = dumpTable2(db, state, table, false, w, ics)
 	ck(w.Flush())
 	f.Close()
 	ics.finish()
@@ -104,11 +99,15 @@ func dumpOpen() (*os.File, *bufio.Writer) {
 	return f, w
 }
 
-func dumpTable2(db *Database, schema string, multi bool, w *bufio.Writer,
-	ics *indexCheckers) int {
-	state := db.GetState()
+func dumpTable2(db *Database, state *DbState, table string, multi bool,
+	w *bufio.Writer, ics *indexCheckers) int {
 	w.WriteString("====== ")
-	table := str.BeforeFirst(schema, " ")
+	sc := state.Meta.GetRoSchema(table)
+	if sc == nil {
+		panic("can't find " + table)
+	}
+	hasdel := sc.HasDeleted()
+	schema := sc.DumpString()
 	if !multi {
 		schema = str.AfterFirst(schema, " ")
 	}
@@ -118,6 +117,9 @@ func dumpTable2(db *Database, schema string, multi bool, w *bufio.Writer,
 	count := info.Indexes[0].Check(func(off uint64) {
 		sum += off                       // addition so order doesn't matter
 		rec := OffToRecCk(db.Store, off) // verify data checksums
+		if hasdel {
+			rec = squeeze(rec, sc.Columns)
+		}
 		writeInt(w, len(rec))
 		w.WriteString(string(rec))
 	})
@@ -125,6 +127,16 @@ func dumpTable2(db *Database, schema string, multi bool, w *bufio.Writer,
 	assert.This(count).Is(info.Nrows)
 	ics.checkOtherIndexes(info, count, sum) // concurrent
 	return count
+}
+
+func squeeze(rec rt.Record, cols []string) rt.Record {
+	var rb rt.RecordBuilder
+	for i, col := range cols {
+		if col != "-" {
+			rb.AddRaw(rec.GetRaw(i))
+		}
+	}
+	return rb.Build()
 }
 
 func writeInt(w *bufio.Writer, n int) {

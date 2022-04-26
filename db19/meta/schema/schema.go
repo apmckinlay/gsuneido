@@ -49,22 +49,29 @@ const (
 )
 
 func (sc *Schema) String() string {
-	return sc.string(false)
+	return sc.string(false, true)
 }
 
 // String2 includes fkToHere information
 func (sc *Schema) String2() string {
-	return sc.string(true)
+	return sc.string(true, true)
 }
 
-func (sc *Schema) string(fktohere bool) string {
+// DumpString does not include fkToHere or deleted columns
+func (sc *Schema) DumpString() string {
+	return sc.string(false, false)
+}
+
+func (sc *Schema) string(fktohere bool, delcols bool) string {
 	var sb strings.Builder
 	sb.WriteString(sc.Table)
 	sb.WriteString(" ")
 	if sc.Columns != nil || sc.Derived != nil {
 		var cb str.CommaBuilder
 		for _, col := range sc.Columns {
-			cb.Add(col)
+			if delcols || col != "-" {
+				cb.Add(col)
+			}
 		}
 		for _, col := range sc.Derived {
 			cb.Add(col)
@@ -207,4 +214,13 @@ func (ix *Index) Cksum() uint32 {
 		cksum += hash.HashString(col)
 	}
 	return cksum
+}
+
+func (sc *Schema) HasDeleted() bool {
+	for _, col := range sc.Columns {
+		if col == "-" {
+			return true
+		}
+	}
+	return false
 }

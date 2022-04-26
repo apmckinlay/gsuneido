@@ -108,19 +108,31 @@ func compactTable(state *DbState, src *Database, ts *meta.Schema, dst *Database)
 			runtime.Fatal(ts.Table+":", e)
 		}
 	}()
+	hasdel := ts.HasDeleted()
 	info := state.Meta.GetRoInfo(ts.Table)
-	list := sortlist.NewUnsorted()
 	sum := uint64(0)
 	size := uint64(0)
+	list := sortlist.NewUnsorted()
+	var off2 uint64
+	var buf []byte
+	var n int
 	count := info.Indexes[0].Check(func(off uint64) {
 		sum += off // addition so order doesn't matter
-		rec := src.Store.Data(off)
-		n := runtime.RecLen(rec)
-		rec = rec[:n+cksum.Len]
-		cksum.MustCheck(rec)
-		off2, buf := dst.Store.Alloc(len(rec))
-		copy(buf, rec)
-		//TODO squeeze records when table has deleted fields
+		if hasdel {
+			rec := OffToRecCk(src.Store, off) // verify data checksums
+			rec = squeeze(rec, ts.Columns)
+			n = len(rec)
+			off2, buf = dst.Store.Alloc(n + cksum.Len)
+			copy(buf, rec)
+			cksum.Update(buf)
+		} else {
+			rec := src.Store.Data(off)
+			n = runtime.RecLen(rec)
+			rec = rec[:n+cksum.Len]
+			cksum.MustCheck(rec)
+			off2, buf = dst.Store.Alloc(len(rec))
+			copy(buf, rec)
+		}
 		list.Add(off2)
 		size += uint64(n)
 	})
