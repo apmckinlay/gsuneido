@@ -27,6 +27,7 @@ type Summarize struct {
 	srcHdr  *Header
 	get     func(th *Thread, su *Summarize, dir Dir) Row
 	t       QueryTran
+	st      *SuTran
 }
 
 type summarizeApproach struct {
@@ -86,6 +87,7 @@ func (su *Summarize) minmax1() bool {
 
 func (su *Summarize) SetTran(t QueryTran) {
 	su.t = t
+	su.st = MakeSuTran(su.t)
 	su.source.SetTran(t)
 }
 
@@ -307,7 +309,7 @@ func getIdx(th *Thread, su *Summarize, dir Dir) Row {
 		return nil
 	}
 	var rb RecordBuilder
-	rb.AddRaw(row.GetRaw(su.srcHdr, su.ons[0]))
+	rb.AddRaw(row.GetRawVal(su.srcHdr, su.ons[0], th, su.st))
 	rec := rb.Build()
 	if su.wholeRow {
 		return append(row, DbRec{Record: rec})
@@ -361,13 +363,12 @@ func (t *sumMapT) getMap(th *Thread, su *Summarize, dir Dir) Row {
 func (su *Summarize) buildMap(th *Thread) []mapPair {
 	hdr := su.source.Header()
 	sumMap := make(map[Record][]sumOp)
-	var thread Thread
 	for {
 		row := su.source.Get(th, Next)
 		if row == nil {
 			break
 		}
-		key := keyRec(row, hdr, su.by)
+		key := keyRec(th, su.st, row, hdr, su.by)
 		sums, ok := sumMap[key]
 		if !ok {
 			sums = su.newSums()
@@ -377,7 +378,7 @@ func (su *Summarize) buildMap(th *Thread) []mapPair {
 			}
 		}
 		for i := range sums {
-			x := row.GetVal(hdr, su.ons[i], &thread, MakeSuTran(su.t))
+			x := row.GetVal(hdr, su.ons[i], th, su.st)
 			sums[i].add(x, nil)
 		}
 	}
@@ -394,10 +395,10 @@ func (su *Summarize) buildMap(th *Thread) []mapPair {
 	return list
 }
 
-func keyRec(row Row, hdr *Header, cols []string) Record {
+func keyRec(th *Thread, st *SuTran, row Row, hdr *Header, cols []string) Record {
 	var rb RecordBuilder
 	for _, fld := range cols {
-		rb.AddRaw(row.GetRaw(hdr, fld))
+		rb.AddRaw(row.GetRawVal(hdr, fld, th, st))
 	}
 	return rb.Build()
 }
@@ -426,7 +427,7 @@ func (t *sumSeqT) getSeq(th *Thread, su *Summarize, dir Dir) Row {
 		}
 		for {
 			t.nextRow = su.source.Get(th, dir)
-			if t.nextRow == nil || !su.sameBy(t.curRow, t.nextRow) {
+			if t.nextRow == nil || !su.sameBy(th, su.st, t.curRow, t.nextRow) {
 				break
 			}
 		}
@@ -440,19 +441,18 @@ func (t *sumSeqT) getSeq(th *Thread, su *Summarize, dir Dir) Row {
 	for i := range t.sums {
 		t.sums[i].reset()
 	}
-	var thread Thread
 	for {
 		for i := range t.sums {
-			x := t.nextRow.GetVal(su.srcHdr, su.ons[i], &thread, MakeSuTran(su.t))
+			x := t.nextRow.GetVal(su.srcHdr, su.ons[i], th, MakeSuTran(su.t))
 			t.sums[i].add(x, su.sumRow(t.nextRow))
 		}
 		t.nextRow = su.source.Get(th, dir)
-		if t.nextRow == nil || !su.sameBy(t.curRow, t.nextRow) {
+		if t.nextRow == nil || !su.sameBy(th, su.st, t.curRow, t.nextRow) {
 			break
 		}
 	}
 	// output after each group
-	return su.seqRow(t.curRow, t.sums)
+	return su.seqRow(th, t.curRow, t.sums)
 }
 
 func (su *Summarize) sumRow(row Row) Row {
@@ -462,20 +462,21 @@ func (su *Summarize) sumRow(row Row) Row {
 	return nil
 }
 
-func (su *Summarize) sameBy(row1, row2 Row) bool {
+func (su *Summarize) sameBy(th *Thread, st *SuTran, row1, row2 Row) bool {
 	for _, f := range su.by {
-		if row1.GetRaw(su.srcHdr, f) != row2.GetRaw(su.srcHdr, f) {
+		if row1.GetRawVal(su.srcHdr, f, th, st) !=
+			row2.GetRawVal(su.srcHdr, f, th, st) {
 			return false
 		}
 	}
 	return true
 }
 
-func (su *Summarize) seqRow(curRow Row, sums []sumOp) Row {
+func (su *Summarize) seqRow(th *Thread, curRow Row, sums []sumOp) Row {
 	var rb RecordBuilder
 	if !su.wholeRow {
 		for _, fld := range su.by {
-			rb.AddRaw(curRow.GetRaw(su.srcHdr, fld))
+			rb.AddRaw(curRow.GetRawVal(su.srcHdr, fld, th, su.st))
 		}
 	}
 	for _, sum := range sums {
