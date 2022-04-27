@@ -409,8 +409,8 @@ func (a *In) Children(fn func(Node) Node) {
 type Call struct {
 	exprNodeT
 	noPos
-	Fn   Expr
 	Args []Arg
+	Fn   Expr
 	End  int32
 }
 
@@ -488,24 +488,26 @@ func (a *Function) String() string {
 }
 
 func (a *Function) str(which string) string {
-	s := which + "("
-	if len(a.Params) > 0 {
-		sep := ""
-		for _, p := range a.Params {
-			if sep == "" && p.String() == "this" {
-				continue
-			}
-			s += sep + p.String()
-			sep = ","
-		}
-	}
-	s += ""
+	s := which + "(" + params(a.Params)
 	for _, stmt := range a.Body {
 		if stmt != nil {
 			s += "\n\t" + stmt.String()
 		}
 	}
 	return s + ")"
+}
+
+func params(ps []Param) string {
+	s := ""
+	sep := ""
+	for _, p := range ps {
+		if sep == "" && p.String() == "this" {
+			continue
+		}
+		s += sep + p.String()
+		sep = ","
+	}
+	return s
 }
 
 func childStmt(fn func(Node) Node, pstmt *Statement) {
@@ -527,6 +529,15 @@ func (a *Function) Children(fn func(Node) Node) {
 
 func (a *Function) Position() int {
 	return int(a.org)
+}
+
+type Params struct {
+	SuAstNode
+	Params []Param
+}
+
+func (a Params) String() string {
+	return params(a.Params)
 }
 
 type Param struct {
@@ -852,18 +863,7 @@ type Case struct {
 func (x *Switch) String() string {
 	s := "Switch(" + x.E.String()
 	for _, c := range x.Cases {
-		s += "\nCase("
-		sep := ""
-		for _, e := range c.Exprs {
-			s += sep + e.String()
-			sep = ","
-		}
-		for _, stmt := range c.Body {
-			if stmt != nil {
-				s += "\n" + stmt.String()
-			}
-		}
-		s += ")"
+		s += "\n" + c.String()
 	}
 	if x.Default != nil {
 		if len(x.Default) == 0 {
@@ -876,6 +876,22 @@ func (x *Switch) String() string {
 		}
 	}
 	return s + ")"
+}
+
+func (c *Case) String() string {
+	s := "Case("
+	sep := ""
+	for _, e := range c.Exprs {
+		s += sep + e.String()
+		sep = ","
+	}
+	for _, stmt := range c.Body {
+		if stmt != nil {
+			s += "\n" + stmt.String()
+		}
+	}
+	s += ")"
+	return s
 }
 
 func (x *Switch) Children(fn func(Node) Node) {

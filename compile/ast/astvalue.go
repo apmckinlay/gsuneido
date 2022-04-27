@@ -256,7 +256,7 @@ func (a *Function) Get(_ *Thread, m Value) Value {
 	case SuStr("type"):
 		return SuStr("Function")
 	case SuStr("params"):
-		return Params{params: a.Params}
+		return Params{Params: a.Params}
 	case SuStr("pos"):
 		return IntVal(a.GetPos())
 	case SuStr("pos1"):
@@ -277,27 +277,22 @@ func (a *Function) Get(_ *Thread, m Value) Value {
 	return get(a, m)
 }
 
-type Params struct {
-	SuAstNode
-	params []Param
-}
-
 func (a Params) Get(_ *Thread, m Value) Value {
 	switch m {
 	case SuStr("type"):
 		return SuStr("Params")
 	case SuStr("size"):
-		return IntVal(len(a.params))
+		return IntVal(len(a.Params))
 	case SuStr("pos"):
 		return False
 	case SuStr("end"):
 		return False
 	}
 	if i, ok := m.ToInt(); ok {
-		if i < 0 || len(a.params) <= i {
+		if i < 0 || len(a.Params) <= i {
 			return False
 		}
-		return &a.params[i]
+		return &a.Params[i]
 	}
 	return nil
 }
