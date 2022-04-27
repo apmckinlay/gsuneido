@@ -59,10 +59,18 @@ func TestCheckResults(t *testing.T) {
 
 	test("function (a) { }",
 		"WARNING: initialized but not used: a @10")
+	test("function (_a) { }",
+		"WARNING: initialized but not used: a @10")
+	test("function (@a) { }",
+		"WARNING: initialized but not used: a @10")
 	test("function (unused) { }")
 	test("function (a/*unused*/) { }")
+	test("function (_a/*unused*/) { }")
+	test("function (@a/*unused*/) { }")
 	test("function (a/*unused*/) { a }",
 		"ERROR: used but not initialized: a @25")
+	test("function (@a/*unused*/) { a }",
+		"ERROR: used but not initialized: a @26")
 	test("function () { a=1 }",
 		"WARNING: initialized but not used: a @14")
 	test("function () { a=b; a }",

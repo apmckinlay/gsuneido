@@ -444,7 +444,9 @@ func (ck *Check) process(params []ast.Param, init set) {
 }
 func paramPos(params []ast.Param, id string) int {
 	for _, p := range params {
-		if p.Name.Name == id {
+		name := p.Name.Name
+		if name == id ||
+			((name[0] == '_' || name[0] == '@') && name[1:] == id) {
 			return int(p.Name.Pos)
 		}
 	}

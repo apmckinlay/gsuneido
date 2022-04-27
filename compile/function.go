@@ -66,8 +66,9 @@ func (p *Parser) params(inClass bool) []ast.Param {
 		pos := p.Pos
 		p.Match(tok.At)
 		name := p.Text
+		unused := p.unusedAhead()
 		p.MatchIdent()
-		addParam("@"+name, pos, p.unusedAhead(), nil)
+		addParam("@"+name, pos, unused, nil)
 		p.final[name] = disqualified
 	} else {
 		defs := false
