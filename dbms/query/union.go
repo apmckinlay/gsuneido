@@ -321,7 +321,7 @@ func (u *Union) getMerge(th *Thread, dir Dir) Row {
 		u.curKey = u.key1
 		u.src1 = true
 		return nil
-	} else if u.row1 != nil && u.row2 != nil && u.equal(u.row1, u.row2) {
+	} else if u.row1 != nil && u.row2 != nil && u.equal(u.row1, u.row2, th) {
 		// rows same so return either one
 		u.curKey = u.key1
 		u.src1, u.src2 = true, true
@@ -343,7 +343,7 @@ func (u *Union) fetch1(th *Thread, dir Dir) {
 	if u.row1 == nil {
 		u.key1 = endKey(dir)
 	} else {
-		u.key1 = projectKey(u.row1, u.hdr1, u.keyIndex)
+		u.key1 = projectKey(u.row1, u.hdr1, u.keyIndex, th, u.st)
 	}
 }
 
@@ -352,7 +352,7 @@ func (u *Union) fetch2(th *Thread, dir Dir) {
 	if u.row2 == nil {
 		u.key2 = endKey(dir)
 	} else {
-		u.key2 = projectKey(u.row2, u.hdr2, u.keyIndex)
+		u.key2 = projectKey(u.row2, u.hdr2, u.keyIndex, th, u.st)
 	}
 }
 

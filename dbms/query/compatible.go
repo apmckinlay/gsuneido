@@ -17,6 +17,7 @@ type Compatible struct {
 	keyIndex []string
 	hdr1     *Header
 	hdr2     *Header
+	st       *SuTran
 }
 
 func (c *Compatible) init() {
@@ -54,6 +55,10 @@ func (c *Compatible) String2(op, strategy string) string {
 	return c.Query2.String2(op + strategy)
 }
 
+func (c *Compatible) SetTran(t QueryTran) {
+	c.st = MakeSuTran(t)
+}
+
 // source2Has returns true if a row from source exists in source2
 func (c *Compatible) source2Has(th *Thread, row Row) bool {
 	if c.disjoint != "" {
@@ -65,17 +70,17 @@ func (c *Compatible) source2Has(th *Thread, row Row) bool {
 	}
 	vals := make([]string, len(c.keyIndex))
 	for i, col := range c.keyIndex {
-		vals[i] = row.GetRaw(c.hdr1, col)
+		vals[i] = row.GetRawVal(c.hdr1, col, th, c.st)
 	}
 	row2 := c.source2.Lookup(th, c.keyIndex, vals)
-	return row2 != nil && c.equal(row, row2)
+	return row2 != nil && c.equal(row, row2, th)
 }
 
-func (c *Compatible) equal(row1, row2 Row) bool {
+func (c *Compatible) equal(row1, row2 Row, th *Thread) bool {
 	if c.disjoint != "" {
 		return false
 	}
-	return EqualRows(c.hdr1, row1, c.hdr2, row2, c.allCols)
+	return EqualRows(c.hdr1, row1, c.hdr2, row2, c.allCols, th, c.st)
 }
 
 func bestKey(q Query, mode Mode) []string {

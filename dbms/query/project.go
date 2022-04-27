@@ -8,7 +8,7 @@ import (
 
 	"github.com/apmckinlay/gsuneido/compile/ast"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
-	"github.com/apmckinlay/gsuneido/runtime"
+	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/generic/set"
 	"github.com/apmckinlay/gsuneido/util/str"
 	"golang.org/x/exp/slices"
@@ -20,12 +20,13 @@ type Project struct {
 	unique  bool
 	projectApproach
 	rewound bool
-	prevRow runtime.Row
-	curRow  runtime.Row
-	srcHdr  *runtime.Header
-	projHdr *runtime.Header
+	prevRow Row
+	curRow  Row
+	srcHdr  *Header
+	projHdr *Header
 	indexed bool
-	results map[string]runtime.Row
+	results map[string]Row
+	st      *SuTran
 }
 
 type projectApproach struct {
@@ -107,6 +108,10 @@ func (p *Project) String() string {
 		s += "-HASH"
 	}
 	return s + " " + str.Join(",", p.columns)
+}
+
+func (p *Project) SetTran(t QueryTran) {
+	p.st = MakeSuTran(t)
 }
 
 func (p *Project) Columns() []string {
@@ -352,7 +357,7 @@ func (p *Project) setApproach(_ []string, approach any, tran QueryTran) {
 
 // execution --------------------------------------------------------
 
-func (p *Project) Header() *runtime.Header {
+func (p *Project) Header() *Header {
 	if p.projHdr != nil {
 		return p.projHdr
 	}
@@ -361,7 +366,7 @@ func (p *Project) Header() *runtime.Header {
 	for i, fs := range srcFlds {
 		newflds[i] = projectFields(fs, p.columns)
 	}
-	return runtime.NewHeader(newflds, p.columns)
+	return NewHeader(newflds, p.columns)
 }
 
 func projectFields(fs []string, pcols []string) []string {
@@ -381,7 +386,7 @@ func (p *Project) Rewind() {
 	p.source.Rewind()
 }
 
-func (p *Project) Get(th *runtime.Thread, dir runtime.Dir) runtime.Row {
+func (p *Project) Get(th *Thread, dir Dir) Row {
 	switch p.strategy {
 	case projCopy:
 		return p.source.Get(th, dir)
@@ -393,8 +398,8 @@ func (p *Project) Get(th *runtime.Thread, dir runtime.Dir) runtime.Row {
 	panic("should not reach here")
 }
 
-func (p *Project) getSeq(th *runtime.Thread, dir runtime.Dir) runtime.Row {
-	if dir == runtime.Next {
+func (p *Project) getSeq(th *Thread, dir Dir) Row {
+	if dir == Next {
 		// output the first of each group
 		// i.e. skip over rows the same as previous output
 		for {
@@ -402,7 +407,7 @@ func (p *Project) getSeq(th *runtime.Thread, dir runtime.Dir) runtime.Row {
 			if row == nil {
 				return nil
 			}
-			if p.rewound || !p.projHdr.EqualRows(row, p.curRow) {
+			if p.rewound || !p.projHdr.EqualRows(row, p.curRow, th, p.st) {
 				p.rewound = false
 				p.prevRow = p.curRow
 				p.curRow = row
@@ -423,7 +428,8 @@ func (p *Project) getSeq(th *runtime.Thread, dir runtime.Dir) runtime.Row {
 			}
 			row := p.prevRow
 			p.prevRow = p.source.Get(th, dir)
-			if p.prevRow == nil || !p.projHdr.EqualRows(row, p.prevRow) {
+			if p.prevRow == nil ||
+				!p.projHdr.EqualRows(row, p.prevRow, th, p.st) {
 				// output the last row of a group
 				p.curRow = row
 				return row
@@ -432,13 +438,13 @@ func (p *Project) getSeq(th *runtime.Thread, dir runtime.Dir) runtime.Row {
 	}
 }
 
-func (p *Project) getHash(th *runtime.Thread, dir runtime.Dir) runtime.Row {
+func (p *Project) getHash(th *Thread, dir Dir) Row {
 	if p.rewound {
 		p.rewound = false
 		if p.results == nil {
-			p.results = make(map[string]runtime.Row)
+			p.results = make(map[string]Row)
 		}
-		if dir == runtime.Prev && !p.indexed {
+		if dir == Prev && !p.indexed {
 			p.buildHash(th)
 		}
 	}
@@ -447,7 +453,7 @@ func (p *Project) getHash(th *runtime.Thread, dir runtime.Dir) runtime.Row {
 		if row == nil {
 			break
 		}
-		key := projectKey(row, p.srcHdr, p.columns)
+		key := projectKey(row, p.srcHdr, p.columns, th, p.st)
 		result, ok := p.results[key]
 		if !ok {
 			p.results[key] = row
@@ -457,19 +463,19 @@ func (p *Project) getHash(th *runtime.Thread, dir runtime.Dir) runtime.Row {
 			return row
 		}
 	}
-	if dir == runtime.Next {
+	if dir == Next {
 		p.indexed = true
 	}
 	return nil
 }
 
-func (p *Project) buildHash(th *runtime.Thread) {
+func (p *Project) buildHash(th *Thread) {
 	for {
-		row := p.source.Get(th, runtime.Next)
+		row := p.source.Get(th, Next)
 		if row == nil {
 			break
 		}
-		key := projectKey(row, p.srcHdr, p.columns)
+		key := projectKey(row, p.srcHdr, p.columns, th, p.st)
 		if _, ok := p.results[key]; !ok {
 			p.results[key] = row
 		}
@@ -478,18 +484,19 @@ func (p *Project) buildHash(th *runtime.Thread) {
 	p.indexed = true
 }
 
-func projectKey(row runtime.Row, hdr *runtime.Header, cols []string) string {
+func projectKey(row Row, hdr *Header, cols []string,
+	th *Thread, st *SuTran) string {
 	if len(cols) == 1 { // WARNING: only correct for keys
-		return row.GetRaw(hdr, cols[0])
+		return row.GetRawVal(hdr, cols[0], th, st)
 	}
 	enc := ixkey.Encoder{}
 	for _, col := range cols {
-		enc.Add(row.GetRaw(hdr, col))
+		enc.Add(row.GetRawVal(hdr, col, th, st))
 	}
 	return enc.String()
 }
 
-func (p *Project) Output(th *runtime.Thread, rec runtime.Record) {
+func (p *Project) Output(th *Thread, rec Record) {
 	if p.strategy != projCopy {
 		panic("can't output to a project that doesn't include a key")
 	}
@@ -504,12 +511,12 @@ func (p *Project) Select(cols, vals []string) {
 	p.rewound = true
 }
 
-func (p *Project) Lookup(th *runtime.Thread, cols, vals []string) runtime.Row {
+func (p *Project) Lookup(th *Thread, cols, vals []string) Row {
 	if p.strategy == projCopy {
 		return p.source.Lookup(th, cols, vals)
 	}
 	p.Select(cols, vals)
-	row := p.Get(th, runtime.Next)
+	row := p.Get(th, Next)
 	p.Select(nil, nil) // clear select
 	return row
 }

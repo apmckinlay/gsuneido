@@ -229,24 +229,20 @@ func (hdr *Header) GetFields() []string {
 	return result
 }
 
-func (hdr *Header) EqualRows(r1, r2 Row) bool {
-	return EqualRows(hdr, r1, hdr, r2, hdr.Columns)
+// EqualRows is used by Project
+func (hdr *Header) EqualRows(r1, r2 Row, th *Thread, st *SuTran) bool {
+	return EqualRows(hdr, r1, hdr, r2, hdr.Columns, th, st)
 }
 
-func EqualRows(hdr1 *Header, r1 Row, hdr2 *Header, r2 Row, cols []string) bool {
+// EqualRows is used by Compatible
+func EqualRows(hdr1 *Header, r1 Row, hdr2 *Header, r2 Row, cols []string,
+	th *Thread, st *SuTran) bool {
 	for _, col := range cols {
-		if r1.equalGet(hdr1, col) != r2.equalGet(hdr2, col) {
+		if r1.GetRawVal(hdr1, col, th, st) != r2.GetRawVal(hdr2, col, th, st) {
 			return false
 		}
 	}
 	return true
-}
-
-func (row Row) equalGet(hdr *Header, col string) string {
-	if strings.HasSuffix(col, "_lower!") {
-		col = col[:len(col)-7]
-	}
-	return row.GetRaw(hdr, col)
 }
 
 // func (hdr *Header) Equal(hdr2 *Header) bool {
