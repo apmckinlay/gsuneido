@@ -19,6 +19,7 @@ type Join struct {
 	hdr1     *Header
 	row1     Row
 	row2     Row // nil when we need a new row1
+	st       *SuTran
 }
 
 type joinApproach struct {
@@ -88,6 +89,10 @@ func (jn *Join) string(op string) string {
 	}
 	return parenQ2(jn.source) + " " + op + " " +
 		str.Opt(jn.joinType.String(), " ") + by + paren(jn.source2)
+}
+
+func (jn *Join) SetTran(t QueryTran) {
+	jn.st = MakeSuTran(t)
 }
 
 func (jn *Join) Columns() []string {
@@ -253,14 +258,14 @@ func (jn *Join) nextRow1(th *Thread, dir Dir) bool {
 	if jn.row1 == nil {
 		return false
 	}
-	jn.source2.Select(jn.by, jn.projectRow(jn.row1))
+	jn.source2.Select(jn.by, jn.projectRow(th, jn.row1))
 	return true
 }
 
-func (jn *Join) projectRow(row Row) []string {
+func (jn *Join) projectRow(th *Thread, row Row) []string {
 	key := make([]string, len(jn.by))
 	for i, col := range jn.by {
-		key[i] = row.GetRaw(jn.hdr1, col)
+		key[i] = row.GetRawVal(jn.hdr1, col, th, jn.st)
 	}
 	return key
 }
@@ -276,7 +281,7 @@ func (jn *Join) Lookup(th *Thread, cols, vals []string) Row {
 	if jn.row1 == nil {
 		return nil
 	}
-	jn.source2.Select(jn.by, jn.projectRow(jn.row1))
+	jn.source2.Select(jn.by, jn.projectRow(th, jn.row1))
 	row2 := jn.source2.Get(th, Next)
 	if row2 == nil {
 		return nil
@@ -391,7 +396,7 @@ func (lj *LeftJoin) Lookup(th *Thread, cols, vals []string) Row {
 		return nil
 	}
 	lj.row1out = false
-	lj.source2.Select(lj.by, lj.projectRow(lj.row1))
+	lj.source2.Select(lj.by, lj.projectRow(th, lj.row1))
 	row2 := lj.source2.Get(th, Next)
 	if lj.shouldOutput(row2) {
 		if row2 == nil {
