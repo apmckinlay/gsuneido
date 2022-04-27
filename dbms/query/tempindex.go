@@ -103,12 +103,12 @@ func (ti *TempIndex) makeIter(th *Thread) rowIter {
 		ti.selEnd = ixkey.Max
 	}
 	ti.st = MakeSuTran(ti.tran)
-	ti.th = &Thread{}
+	ti.th = th
 	ti.hdr = ti.source.Header()
 	if ti.source.SingleTable() {
-		return ti.single(th)
+		return ti.single()
 	}
-	return ti.multi(th)
+	return ti.multi()
 }
 
 func (ti *TempIndex) selected(row Row) bool {
@@ -137,10 +137,10 @@ type singleIter struct {
 	iter *sortlist.Iter
 }
 
-func (ti *TempIndex) single(th *Thread) rowIter {
+func (ti *TempIndex) single() rowIter {
 	b := sortlist.NewSorting(ti.singleLess)
 	for {
-		row := ti.source.Get(th, Next)
+		row := ti.source.Get(ti.th, Next)
 		if row == nil {
 			break
 		}
@@ -222,12 +222,12 @@ type multiIter struct {
 	iter  *sortlist.Iter
 }
 
-func (ti *TempIndex) multi(th *Thread) rowIter {
+func (ti *TempIndex) multi() rowIter {
 	it := multiIter{ti: ti, nrecs: len(ti.hdr.Fields), heap: stor.HeapStor(8192)}
 	it.heap.Alloc(1) // avoid offset 0
 	b := sortlist.NewSorting(it.multiLess)
 	for {
-		row := ti.source.Get(th, Next)
+		row := ti.source.Get(ti.th, Next)
 		if row == nil {
 			break
 		}
