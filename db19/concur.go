@@ -90,7 +90,8 @@ loop:
 		}
 	}
 	close(em.jobChan)
-	if db.GetState() != prevState {
+	if db.GetState() != prevState ||
+		prevState.Off != db.Store.Size()-uint64(stateLen) {
 		db.persist(ep)
 	}
 	close(allDone)

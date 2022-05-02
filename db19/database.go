@@ -494,7 +494,6 @@ func (db *Database) ckOpen() {
 }
 
 // Close closes the database store, writing the current size to the start.
-// NOTE: The state must already be written.
 func (db *Database) Close() {
 	db.closeLock.Lock()
 	defer db.closeLock.Unlock()
@@ -502,7 +501,7 @@ func (db *Database) Close() {
 		return // already closed
 	}
 	if db.ck != nil {
-		db.ck.Stop()
+		db.ck.Stop() // writes final state
 	} else if db.mode != stor.READ {
 		db.persist(&execPersistSingle{}) // for testing
 	}

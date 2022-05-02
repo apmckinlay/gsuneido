@@ -129,7 +129,7 @@ func (db *Database) persist(exec execPersist) *DbState {
 		state.Meta = &meta
 		// Write modifies schema/info offs,ages,clock
 		// so it must be inside UpdateState
-		state.Write()
+		state.Off = state.Write()
 		newState = state
 	})
 	return newState
@@ -173,7 +173,7 @@ func ReadState(st *stor.Stor, off uint64) *DbState {
 		panic("bad state")
 	}
 	return &DbState{store: st, Meta: meta.ReadMeta(st, offSchema, offInfo),
-		Asof: t}
+		Asof: t, Off: off}
 }
 
 func readState(st *stor.Stor, off uint64) (offSchema, offInfo uint64, t int64) {
