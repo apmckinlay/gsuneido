@@ -93,7 +93,7 @@ func (e *Extend) Transform() Query {
 	if len(e.cols) == 0 {
 		return e.source.Transform()
 	}
-	// combine Renames
+	// combine Extends
 	for e2, ok := e.source.(*Extend); ok; e2, ok = e.source.(*Extend) {
 		e.cols = append(e2.cols, e.cols...)
 		e.exprs = append(e2.exprs, e.exprs...)
