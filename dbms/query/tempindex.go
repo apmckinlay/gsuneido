@@ -138,6 +138,14 @@ type singleIter struct {
 }
 
 func (ti *TempIndex) single() rowIter {
+	// sortlist uses a goroutine
+	// so UIThread must be false
+	// so interp doesn't call Interrupt
+	// leading to "illegal UI call from background thread"
+	defer func(prev bool) {
+		ti.th.UIThread = prev
+	}(ti.th.UIThread)
+	ti.th.UIThread = false
 	b := sortlist.NewSorting(ti.singleLess)
 	for {
 		row := ti.source.Get(ti.th, Next)
@@ -223,6 +231,14 @@ type multiIter struct {
 }
 
 func (ti *TempIndex) multi() rowIter {
+	// sortlist uses a goroutine
+	// so UIThread must be false
+	// so interp doesn't call Interrupt
+	// leading to "illegal UI call from background thread"
+	defer func(prev bool) {
+		ti.th.UIThread = prev
+	}(ti.th.UIThread)
+	ti.th.UIThread = false //
 	it := multiIter{ti: ti, nrecs: len(ti.hdr.Fields), heap: stor.HeapStor(8192)}
 	it.heap.Alloc(1) // avoid offset 0
 	b := sortlist.NewSorting(it.multiLess)
