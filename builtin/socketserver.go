@@ -106,10 +106,10 @@ const ssmax = 500 // for all SocketServer's
 func (sm *suServerMaster) listen(name string, port int) {
 	addr := ":" + strconv.Itoa(port)
 	ln, err := net.Listen("tcp", addr)
-	defer ln.Close()
 	if err != nil {
 		panic(err)
 	}
+	defer ln.Close()
 	for {
 		conn, err := ln.Accept()
 		if err != nil {
