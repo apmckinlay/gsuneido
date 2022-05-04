@@ -633,6 +633,7 @@ type If struct {
 	Cond Expr
 	Then Statement
 	Else Statement // may be nil
+	ElseEnd int32
 }
 
 func (x *If) String() string {

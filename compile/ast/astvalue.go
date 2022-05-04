@@ -363,6 +363,8 @@ func (a *If) Get(_ *Thread, m Value) Value {
 			return False
 		}
 		return a.Else.(Value)
+	case SuStr("elseend"):
+		return IntVal(int(a.ElseEnd))
 	}
 	return stmtGet(a, m)
 }

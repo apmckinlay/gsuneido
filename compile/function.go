@@ -239,6 +239,7 @@ func (p *Parser) ifStmt() *ast.If {
 	t := p.statement()
 	stmt := &ast.If{Cond: expr, Then: t}
 	if p.MatchIf(tok.Else) {
+		stmt.ElseEnd = p.endPos
 		stmt.Else = p.statement()
 	}
 	return stmt
