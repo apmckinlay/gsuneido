@@ -8,12 +8,11 @@ import (
 	"sort"
 	"strings"
 
-	"sync/atomic"
-
 	"github.com/apmckinlay/gsuneido/compile/lexer"
 	"github.com/apmckinlay/gsuneido/runtime/types"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/generic/ord"
+	"github.com/apmckinlay/gsuneido/util/hacks"
 	"github.com/apmckinlay/gsuneido/util/pack"
 	"github.com/apmckinlay/gsuneido/util/varint"
 )
@@ -43,7 +42,7 @@ type SuObject struct {
 	version int32
 	// clock is incremented by any modification, including in-place updates.
 	// It is used to detect modification during packing.
-	clock    int32
+	clock    uint32
 	readonly bool
 }
 
@@ -999,73 +998,70 @@ var _ Packable = (*SuObject)(nil)
 
 const packNestLimit = 20
 
-func (ob *SuObject) PackSize(clock *int32) int {
-	*clock = atomic.AddInt32(&packClock, 1)
-	return ob.PackSize2(*clock, newPackStack())
+func (ob *SuObject) PackSize(hash *uint32) int {
+	return ob.PackSize2(hash, newPackStack())
 }
 
-func (ob *SuObject) PackSize2(clock int32, stack packStack) int {
+func (ob *SuObject) PackSize2(hash *uint32, stack packStack) int {
 	// must check stack before locking to avoid recursive deadlock
 	stack.push(ob)
 	if ob.Lock() {
 		defer ob.Unlock()
 	}
-	ob.clock = clock
+	*hash = hacks.CrcUint32(*hash, ob.clock)
 	if ob.size() == 0 {
 		return 1 // just tag
 	}
 	ps := 1 // tag
 	ps += varint.Len(uint64(len(ob.list)))
 	for _, v := range ob.list {
-		ps += packSize(v, clock, stack)
+		ps += packSize(v, hash, stack)
 	}
 	ps += varint.Len(uint64(ob.named.Size()))
 	iter := ob.named.Iter()
 	for k, v := iter(); k != nil; k, v = iter() {
-		ps += packSize(k, clock, stack) + packSize(v, clock, stack)
+		ps += packSize(k, hash, stack) + packSize(v, hash, stack)
 	}
 	return ps
 }
 
-func packSize(x Value, clock int32, stack packStack) int {
+func packSize(x Value, hash *uint32, stack packStack) int {
 	if p, ok := x.(Packable); ok {
-		n := p.PackSize2(clock, stack)
+		n := p.PackSize2(hash, stack)
 		return varint.Len(uint64(n)) + n
 	}
 	panic("can't pack " + ErrType(x))
 }
 
-func (ob *SuObject) Pack(clock int32, buf *pack.Encoder) {
+func (ob *SuObject) Pack(hash *uint32, buf *pack.Encoder) {
 	if ob.Lock() {
 		defer ob.Unlock()
 	}
-	ob.pack(clock, buf, PackObject)
+	ob.pack(hash, buf, PackObject)
 }
 
-func (ob *SuObject) pack(clock int32, buf *pack.Encoder, tag byte) {
-	if ob.clock != clock {
-		panic("object modified during packing")
-	}
+func (ob *SuObject) pack(hash *uint32, buf *pack.Encoder, tag byte) {
+	*hash = hacks.CrcUint32(*hash, ob.clock)
 	buf.Put1(tag)
 	if ob.size() == 0 {
 		return
 	}
 	buf.VarUint(uint64(len(ob.list)))
 	for _, v := range ob.list {
-		packValue(v, clock, buf)
+		packValue(v, hash, buf)
 	}
 	buf.VarUint(uint64(ob.named.Size()))
 	iter := ob.named.Iter()
 	for k, v := iter(); k != nil; k, v = iter() {
-		packValue(k, clock, buf)
-		packValue(v, clock, buf)
+		packValue(k, hash, buf)
+		packValue(v, hash, buf)
 	}
 }
 
-func packValue(x Value, clock int32, buf *pack.Encoder) {
+func packValue(x Value, hash *uint32, buf *pack.Encoder) {
 	buf0 := *buf
 	buf.Put1(0) // 99% of the time we only need one byte for the size
-	x.(Packable).Pack(clock, buf)
+	x.(Packable).Pack(hash, buf)
 	n := len(buf.Buffer()) - len(buf0.Buffer()) - 1
 	varlen := varint.Len(uint64(n))
 	if varlen > 1 {

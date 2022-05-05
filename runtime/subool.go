@@ -122,15 +122,15 @@ func (SuBool) SetConcurrent() {
 
 var _ Packable = SuBool(true)
 
-func (SuBool) PackSize(*int32) int {
+func (SuBool) PackSize(*uint32) int {
 	return 1
 }
 
-func (SuBool) PackSize2(int32, packStack) int {
+func (SuBool) PackSize2(*uint32, packStack) int {
 	return 1
 }
 
-func (b SuBool) Pack(_ int32, buf *pack.Encoder) {
+func (b SuBool) Pack(_ *uint32, buf *pack.Encoder) {
 	if b == true {
 		buf.Put1(PackTrue)
 	} else {

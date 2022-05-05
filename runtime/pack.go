@@ -17,12 +17,12 @@ import (
 // and because PackSize does nesting limit check
 type Packable interface {
 	// PackSize returns the size (in bytes) of the packed value.
-	// object/record set clock to detect nested changes.
-	PackSize(clock *int32) int
+	// object/record set hash to detect nested changes.
+	PackSize(hash *uint32) int
 	// PackSize2 is used by object/record to handle nesting
-	PackSize2(clock int32, stack packStack) int
+	PackSize2(hash *uint32, stack packStack) int
 	// Pack appends the value to the Encoder
-	Pack(clock int32, buf *pack.Encoder)
+	Pack(hash *uint32, buf *pack.Encoder)
 }
 
 // Packed values start with one of the following type tags,
@@ -39,8 +39,6 @@ const (
 	PackObject
 	PackRecord
 )
-
-var packClock = int32(0)
 
 type packStack []Value
 
@@ -66,7 +64,10 @@ var boolTrue = True.(SuBool)
 var boolFalse = False.(SuBool)
 var zeroNum = Zero.(*smi)
 
-// Pack is a convenience function that packs a single Packable
+// Pack is a convenience function that packs a single Packable.
+//
+// WARNING: It's possible to get a buffer overflow if a mutable value
+// (e.g. object) is modified between/during PackSize and Pack.
 func Pack(x Packable) string {
 	switch x {
 	case emptyStr:
@@ -78,10 +79,18 @@ func Pack(x Packable) string {
 	case zeroNum:
 		return "\x03"
 	}
-	var clock int32
-	buf := pack.NewEncoder(x.PackSize(&clock))
-	x.Pack(clock, buf)
-	return buf.String()
+	return Pack2(x).String()
+}
+
+func Pack2(x Packable) *pack.Encoder {
+	var hash1, hash2 uint32
+	size := x.PackSize(&hash1)
+	buf := pack.NewEncoder(size)
+	x.Pack(&hash2, buf)
+	if hash1 != hash2 || len(buf.Buffer()) != size {
+		panic("object modified during packing")
+	}
+	return buf
 }
 
 // Unpack returns the decoded value

@@ -26,9 +26,11 @@ func NewMmapEncoder(buf []byte) *Encoder {
 	return &Encoder{buf}
 }
 
-// String returns the accumulated data as a string
+// String returns the accumulated data as a string.
 func (e *Encoder) String() string {
-	return hacks.BStoS(e.buf)
+	s := hacks.BStoS(e.buf)
+	e.buf = nil // ownership transferred to string
+	return s
 }
 
 // Buffer returns the accumulated data as a byte slice

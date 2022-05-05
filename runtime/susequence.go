@@ -196,14 +196,14 @@ func (seq *SuSequence) SetConcurrent() {
 
 var _ Packable = (*SuSequence)(nil)
 
-func (seq *SuSequence) PackSize(clock *int32) int {
-	return seq.instantiate().PackSize(clock)
+func (seq *SuSequence) PackSize(hash *uint32) int {
+	return seq.instantiate().PackSize(hash)
 }
 
-func (seq *SuSequence) Pack(clock int32, buf *pack.Encoder) {
-	seq.instantiate().Pack(clock, buf)
+func (seq *SuSequence) Pack(hash *uint32, buf *pack.Encoder) {
+	seq.instantiate().Pack(hash, buf)
 }
 
-func (seq *SuSequence) PackSize2(clock int32, stack packStack) int {
-	return seq.instantiate().PackSize2(clock, stack)
+func (seq *SuSequence) PackSize2(hash *uint32, stack packStack) int {
+	return seq.instantiate().PackSize2(hash, stack)
 }

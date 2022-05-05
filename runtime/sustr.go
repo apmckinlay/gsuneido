@@ -280,18 +280,18 @@ func (SuStr) SetConcurrent() {
 
 var _ Packable = SuStr("")
 
-func (ss SuStr) PackSize(*int32) int {
+func (ss SuStr) PackSize(*uint32) int {
 	if ss == "" {
 		return 0
 	}
 	return 1 + len(ss)
 }
 
-func (ss SuStr) PackSize2(int32, packStack) int {
+func (ss SuStr) PackSize2(*uint32, packStack) int {
 	return ss.PackSize(nil)
 }
 
-func (ss SuStr) Pack(_ int32, buf *pack.Encoder) {
+func (ss SuStr) Pack(_ *uint32, buf *pack.Encoder) {
 	if ss != "" {
 		buf.Put1(PackString).PutStr(string(ss))
 	}

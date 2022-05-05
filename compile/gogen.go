@@ -12,7 +12,6 @@ import (
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/ascii"
-	"github.com/apmckinlay/gsuneido/util/pack"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
@@ -323,11 +322,7 @@ func (g *ggen) value(val Value) {
 func (g *ggen) pack64(v Value) string {
 	name := fmt.Sprintf("_c%d_", g.next)
 	g.next++
-	x := v.(Packable)
-	var clock int32
-	enc := pack.NewEncoder(x.PackSize(&clock))
-	x.Pack(clock, enc)
-	data := enc.Buffer()
+	data := Pack2(v.(Packable)).Buffer()
 	buf := make([]byte, base64.StdEncoding.EncodedLen(len(data)))
 	base64.StdEncoding.Encode(buf, data)
 	g.init.WriteString("var " + name + " = Unpack64(`")

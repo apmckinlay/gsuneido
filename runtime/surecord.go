@@ -878,16 +878,16 @@ func (*SuRecord) Lookup(t *Thread, method string) Callable {
 
 var _ Packable = (*SuRecord)(nil)
 
-func (r *SuRecord) PackSize(clock *int32) int {
-	return r.ToObject().PackSize(clock)
+func (r *SuRecord) PackSize(hash *uint32) int {
+	return r.ToObject().PackSize(hash)
 }
 
-func (r *SuRecord) PackSize2(clock int32, stack packStack) int {
-	return r.ToObject().PackSize2(clock, stack)
+func (r *SuRecord) PackSize2(hash *uint32, stack packStack) int {
+	return r.ToObject().PackSize2(hash, stack)
 }
 
-func (r *SuRecord) Pack(clock int32, buf *pack.Encoder) {
-	r.ToObject().pack(clock, buf, PackRecord)
+func (r *SuRecord) Pack(hash *uint32, buf *pack.Encoder) {
+	r.ToObject().pack(hash, buf, PackRecord)
 }
 
 func UnpackRecord(s string) *SuRecord {

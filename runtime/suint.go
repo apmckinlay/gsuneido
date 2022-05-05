@@ -168,14 +168,14 @@ func (*smi) SetConcurrent() {
 
 var _ Packable = SuInt(0)
 
-func (si *smi) PackSize(*int32) int {
+func (si *smi) PackSize(*uint32) int {
 	return SuDnum{Dnum: dnum.FromInt(int64(si.toInt()))}.PackSize(nil)
 }
 
-func (si *smi) PackSize2(int32, packStack) int {
+func (si *smi) PackSize2(*uint32, packStack) int {
 	return si.PackSize(nil)
 }
 
-func (si *smi) Pack(_ int32, buf *pack.Encoder) {
-	SuDnum{Dnum: dnum.FromInt(int64(si.toInt()))}.Pack(0, buf)
+func (si *smi) Pack(hash *uint32, buf *pack.Encoder) {
+	SuDnum{Dnum: dnum.FromInt(int64(si.toInt()))}.Pack(hash, buf)
 }
