@@ -72,6 +72,7 @@ var _ = builtinRaw("Spawn(@args)",
 			argstr[i] = ToStr(v)
 		}
 		cmd := exec.Command(exe, argstr...)
+		cmdSetup(cmd, "")
 		if options.Mode != "gui" {
 			cmd.Stdout = os.Stdout
 			cmd.Stderr = os.Stderr
