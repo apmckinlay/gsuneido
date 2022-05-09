@@ -4,10 +4,6 @@
 package builtin
 
 import (
-	"log"
-	"os"
-	"runtime"
-	"strings"
 	"sync"
 	"time"
 
@@ -64,13 +60,8 @@ func threadCallClass(t *Thread, args []Value) Value {
 	go func() {
 		defer func() {
 			if e := recover(); e != nil {
-				log.Println("ERROR in thread:", e)
+				LogInternalError("in Thread:", e)
 				t2.PrintStack()
-				if InternalError(e) {
-					buf := make([]byte, 512)
-					n := runtime.Stack(buf, false)
-					os.Stderr.Write(buf[:n])
-				}
 			}
 			t2.Close()
 			threads.remove(t2.Num)
@@ -78,19 +69,6 @@ func threadCallClass(t *Thread, args []Value) Value {
 		t2.Call(fn)
 	}()
 	return nil
-}
-
-func InternalError(e any) bool {
-	if _, ok := e.(runtime.Error); ok {
-		return true
-	}
-	if s, ok := e.(string); ok {
-		return strings.HasPrefix(s, "assert failed")
-	}
-	if se, ok := e.(*SuExcept); ok {
-		return strings.HasPrefix(string(se.SuStr), "assert failed")
-	}
-	return false
 }
 
 var threadMethods = Methods{
@@ -168,18 +146,13 @@ var _ = builtin("Scheduled(ms, block)",
 		block := args[1]
 		block.SetConcurrent()
 		go func() {
-		defer func() {
-			if e := recover(); e != nil {
-				log.Println("ERROR in Scheduled thread:", e)
-				t2.PrintStack()
-				if InternalError(e) {
-					buf := make([]byte, 512)
-					n := runtime.Stack(buf, false)
-					os.Stderr.Write(buf[:n])
+			defer func() {
+				if e := recover(); e != nil {
+					LogInternalError("in Scheduled:", e)
+					t2.PrintStack()
 				}
-			}
-			t2.Close()
-		}()
+				t2.Close()
+			}()
 			time.Sleep(ms)
 			t2.Call(block)
 		}()

@@ -122,6 +122,8 @@ func (t *Thread) SetSession(s string) {
 // Push pushes a value onto the value stack
 func (t *Thread) Push(x Value) {
 	if t.sp >= maxStack {
+		log.Println("FATAL: value stack overflow")
+		t.PrintStack()
 		Fatal("value stack overflow")
 	}
 	t.stack[t.sp] = x
@@ -185,6 +187,9 @@ func (t *Thread) Callstack() *SuObject {
 		call.Set(SuStr("srcpos"), IntVal(fr.fn.CodeToSrcPos(fr.ip-1)))
 		call.Set(SuStr("locals"), t.locals(i))
 		cs.Add(call)
+		if cs.Size() > 100 {
+			break
+		}
 	}
 	return cs
 }

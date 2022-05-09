@@ -7,8 +7,6 @@ import (
 	"bufio"
 	"log"
 	"net"
-	"os"
-	"runtime"
 	"strconv"
 	"sync/atomic"
 	"time"
@@ -142,13 +140,8 @@ func (sm *suServerMaster) connect(name string, conn net.Conn) {
 		threads.add(t)
 		defer func() {
 			if e := recover(); e != nil {
-				log.Println("ERROR in SocketServer thread:", e)
+				LogInternalError("in SocketServer thread:", e)
 				t.PrintStack()
-				if InternalError(e) {
-					buf := make([]byte, 512)
-					n := runtime.Stack(buf, false)
-					os.Stderr.Write(buf[:n])
-				}
 			}
 			threads.remove(t.Num)
 			t.Close()

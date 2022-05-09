@@ -11,7 +11,6 @@ import (
 	"net/http"
 	"os"
 	"runtime"
-	"runtime/debug"
 	"sort"
 	"strconv"
 	"strings"
@@ -26,6 +25,7 @@ import (
 	"github.com/apmckinlay/gsuneido/options"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
+	"github.com/apmckinlay/gsuneido/util/dbg"
 	"github.com/apmckinlay/gsuneido/util/exit"
 	"github.com/apmckinlay/gsuneido/util/generic/hamt"
 	"github.com/apmckinlay/gsuneido/util/regex"
@@ -206,9 +206,8 @@ func run(src string) {
 }
 
 func printStack(e any) {
-	if builtin.InternalError(e) {
-		debug.PrintStack()
-		fmt.Println("---")
+	if InternalError(e) {
+		dbg.PrintStack()
 		PrintStack(mainThread.Callstack())
 	} else if se, ok := e.(*SuExcept); ok {
 		PrintStack(se.Callstack)

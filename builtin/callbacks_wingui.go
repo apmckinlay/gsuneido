@@ -7,8 +7,6 @@ package builtin
 
 import (
 	"log"
-	"os"
-	"runtime"
 	"sync"
 	"time"
 
@@ -128,13 +126,8 @@ func call(fn Value, args ...Value) uintptr {
 
 func handler(e any, state any) {
 	if UIThread.InHandler {
+		LogInternalError("in Handler:", e)
 		UIThread.PrintStack()
-		if InternalError(e) {
-			buf := make([]byte, 2048)
-			n := runtime.Stack(buf, false)
-			os.Stderr.Write(buf[:n])
-			os.Stderr.Write([]byte{'\n'})
-		}
 		Alert("Error in Handler:", e)
 		return
 	}
@@ -143,13 +136,8 @@ func handler(e any, state any) {
 		UIThread.InHandler = false
 		UIThread.RestoreState(state)
 		if e := recover(); e != nil {
+			LogInternalError("in Handler:", e)
 			UIThread.PrintStack()
-			if InternalError(e) {
-				buf := make([]byte, 2048)
-				n := runtime.Stack(buf, false)
-				os.Stderr.Write(buf[:n])
-				os.Stderr.Write([]byte{'\n'})
-			}
 			Alert("Error in Handler:", e)
 		}
 	}()

@@ -8,9 +8,9 @@ import (
 	"log"
 	"math"
 	"runtime"
-	"runtime/debug"
 	"strings"
 
+	"github.com/apmckinlay/gsuneido/util/dbg"
 	"github.com/apmckinlay/gsuneido/util/dnum"
 	"github.com/apmckinlay/gsuneido/util/hacks"
 	"github.com/apmckinlay/gsuneido/util/regex"
@@ -279,10 +279,8 @@ func ToSuExcept(t *Thread, e any) *SuExcept {
 		// first catch creates SuExcept with callstack
 		var ss SuStr
 		if err, ok := e.(error); ok {
-			if _, ok := e.(runtime.Error); ok {
-				log.Println(e)
+			if LogInternalError("", e) {
 				t.PrintStack()
-				debug.PrintStack()
 			}
 			ss = SuStr(err.Error())
 		} else if s, ok := e.(string); ok {
@@ -293,6 +291,30 @@ func ToSuExcept(t *Thread, e any) *SuExcept {
 		se = NewSuExcept(t, ss)
 	}
 	return se
+}
+
+// LogInternalError logs the error and the Go call stack, if an InternalError.
+// It returns true if it was an InternalError.
+func LogInternalError(from string, e any) bool {
+	if InternalError(e) {
+		log.Println("ERROR", from, e)
+		dbg.PrintStack()
+		return true
+	}
+	return false
+}
+
+// InternalError returns true for runtime.Error and "assert failed"
+func InternalError(e any) bool {
+	switch e := e.(type) {
+	case runtime.Error:
+		return true
+	case string:
+		return strings.HasPrefix(e, "assert failed")
+	case *SuExcept:
+		return strings.HasPrefix(string(e.SuStr), "assert failed")
+	}
+	return false
 }
 
 // catchMatch matches an exception string with a catch pattern
