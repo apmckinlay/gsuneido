@@ -186,6 +186,39 @@ func TestHmap_Iter_modified(t *testing.T) {
 	it()               // shouldn't panic
 }
 
+type testVal struct {
+	ValueBase[testVal]
+	n int
+}
+
+func (sh *testVal) Equal(other interface{}) bool {
+	return sh == other
+}
+
+func (sh *testVal) Hash() uint32 {
+	return uint32(sh.n)
+}
+
+func TestHmapSameHash(t *testing.T) {
+	const N = 100000
+	hm := Hmap{}
+	for i := 0; i < N; i++ {
+		hm.Put(&testVal{n: i}, IntVal(i))
+	}
+}
+
+func FuzzHmap(f *testing.F) {
+	f.Fuzz(func(t *testing.T, b []byte) {
+		hm := Hmap{}
+		for _, n := range b {
+			hm.Put(&testVal{n: int(n)}, False)
+		}
+	})
+}
+// to run: go test -fuzz=FuzzHmap -run=FuzzHmap
+
+//-------------------------------------------------------------------
+
 func BenchmarkHmap_Get(b *testing.B) {
 	hm := &Hmap{}
 	for i := 0; i < 100; i++ {

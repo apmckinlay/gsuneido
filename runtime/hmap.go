@@ -3,11 +3,14 @@
 
 package runtime
 
-import "github.com/apmckinlay/gsuneido/util/assert"
+import (
+	"github.com/apmckinlay/gsuneido/util/assert"
+)
 
 // Hmap implements a hash map for SuObject
 // based on: https://github.com/skarupke/flat_hash_map bytell_hash_map
 // Its zero value is a valid empty table.
+// NOTE: Hmap is not thread safe.
 type Hmap struct {
 	blocks   []block
 	size     int32
@@ -171,9 +174,7 @@ func (h *Hmap) grow() {
 		h.capShift = 32 - 3
 		return
 	}
-	if h.growing {
-		panic("grow while growing")
-	}
+	assert.Msg("grow while growing").That(!h.growing)
 	h.growing = true
 	oldblocks := h.blocks
 	h.blocks = make([]block, 2*len(oldblocks))
