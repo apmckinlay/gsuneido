@@ -146,7 +146,10 @@ func (ti *TempIndex) single() rowIter {
 		ti.th.UIThread = prev
 	}(ti.th.UIThread)
 	ti.th.UIThread = false
-	b := sortlist.NewSorting(ti.singleLess)
+	var th2 Thread // separate thread because sortlist runs in the background
+	b := sortlist.NewSorting(func(x, y uint64) bool {
+		return ti.less(&th2, ti.singleGet(x), ti.singleGet(y))
+	})
 	for {
 		row := ti.source.Get(ti.th, Next)
 		if row == nil {
@@ -161,20 +164,16 @@ func (ti *TempIndex) single() rowIter {
 	return &singleIter{tran: ti.tran, iter: b.Finish().Iter(lt)}
 }
 
-func (ti *TempIndex) singleLess(x, y uint64) bool {
-	return ti.less(ti.singleGet(x), ti.singleGet(y))
-}
-
 func (ti *TempIndex) singleGet(off uint64) Row {
 	rec := ti.tran.GetRecord(off)
 	return Row{{Record: rec}}
 }
 
 // less is used by singleLess and multiLess
-func (ti *TempIndex) less(xrow, yrow Row) bool {
+func (ti *TempIndex) less(th *Thread, xrow, yrow Row) bool {
 	for _, col := range ti.order {
-		x := xrow.GetRawVal(ti.hdr, col, ti.th, ti.st)
-		y := yrow.GetRawVal(ti.hdr, col, ti.th, ti.st)
+		x := xrow.GetRawVal(ti.hdr, col, th, ti.st)
+		y := yrow.GetRawVal(ti.hdr, col, th, ti.st)
 		if x != y {
 			if x < y {
 				return true
@@ -241,7 +240,18 @@ func (ti *TempIndex) multi() rowIter {
 	ti.th.UIThread = false //
 	it := multiIter{ti: ti, nrecs: len(ti.hdr.Fields), heap: stor.HeapStor(8192)}
 	it.heap.Alloc(1) // avoid offset 0
-	b := sortlist.NewSorting(it.multiLess)
+	var th2 Thread // separate thread because sortlist runs in the background
+	b := sortlist.NewSorting(func(x, y uint64) bool {
+		xrow := make(Row, it.nrecs)
+		yrow := make(Row, it.nrecs)
+		xbuf := it.heap.Data(x)
+		ybuf := it.heap.Data(y)
+		for i := 0; i < it.nrecs; i++ {
+			xbuf, xrow[i].Record, _ = it.getRec(xbuf)
+			ybuf, yrow[i].Record, _ = it.getRec(ybuf)
+		}
+		return it.ti.less(&th2, xrow, yrow)
+	})
 	for {
 		row := ti.source.Get(ti.th, Next)
 		if row == nil {
@@ -278,18 +288,6 @@ func (ti *TempIndex) multi() rowIter {
 	}
 	it.iter = b.Finish().Iter(lt)
 	return &it
-}
-
-func (it *multiIter) multiLess(x, y uint64) bool {
-	xrow := make(Row, it.nrecs)
-	yrow := make(Row, it.nrecs)
-	xbuf := it.heap.Data(x)
-	ybuf := it.heap.Data(y)
-	for i := 0; i < it.nrecs; i++ {
-		xbuf, xrow[i].Record, _ = it.getRec(xbuf)
-		ybuf, yrow[i].Record, _ = it.getRec(ybuf)
-	}
-	return it.ti.less(xrow, yrow)
 }
 
 const multiMask = 0xffff000000
