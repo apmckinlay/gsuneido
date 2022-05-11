@@ -38,14 +38,14 @@ type Builder struct {
 	i      int    // index in current block
 	blocks []*block
 	free   []*block
-	work   chan void
-	done   chan void
+	work   chan void // send to tell worker there is something to do
+	done   chan any // worker sends nil or error when finished
 }
 
 // NewSorting returns a new list Builder with incremental sorting.
 func NewSorting(less func(x, y uint64) bool) *Builder {
 	li := &Builder{less: less, blocks: make([]*block, 0, 4),
-		work: make(chan void), done: make(chan void)}
+		work: make(chan void), done: make(chan any)}
 	go li.worker()
 	return li
 }
@@ -67,7 +67,10 @@ func (b *Builder) Add(x uint64) {
 	b.i++
 	if b.i >= blockSize { // block full
 		if b.done != nil {
-			<-b.done // wait till processing of previous block is finished
+			// wait for worker to finish previous work
+			if err := <-b.done; err != nil {
+				panic(err)
+			}
 		}
 		b.blocks = append(b.blocks, b.block)
 		b.block = nil
@@ -88,10 +91,12 @@ func (b *Builder) Finish() List {
 			b.block = nil
 		}
 		return List{blocks: b.blocks, size: size}
-	}
-	if b.done != nil {
-		<-b.done
-		close(b.work) // end worker goroutine
+	} else {
+		// wait for worker to finish previous work
+		if err := <-b.done; err != nil {
+			panic(err)
+		}
+		close(b.work) // end worker
 	}
 	if b.block != nil { // partial last block
 		if b.less != nil {
@@ -137,12 +142,17 @@ func (b *Builder) finishMerges() {
 }
 
 func (b *Builder) worker() {
-	b.done <- void{}
+	defer func() {
+		if e := recover(); e != nil {
+			b.done <- e
+		}
+	}()
+	b.done <- nil
 	for range b.work {
 		nb := len(b.blocks)
 		sort.Sort(ablock{block: b.blocks[nb-1], n: blockSize, less: b.less})
 		b.merges(nb)
-		b.done <- void{}
+		b.done <- nil
 	}
 }
 
