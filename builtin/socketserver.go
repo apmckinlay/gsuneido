@@ -9,7 +9,6 @@ import (
 	"net"
 	"strconv"
 	"sync/atomic"
-	"time"
 
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/str"
@@ -128,7 +127,7 @@ func (sm *suServerMaster) connect(name string, conn net.Conn) {
 	defer atomic.AddInt32(&sscount, -1)
 	client := suSocketClient{
 		conn: conn.(*net.TCPConn), rdr: bufio.NewReader(conn),
-		timeout: 60 * time.Second,
+		// no timeout to match jSuneido
 	}
 	sc := &suServerConnect{
 		SuInstance: sm.SuInstance.Copy(),

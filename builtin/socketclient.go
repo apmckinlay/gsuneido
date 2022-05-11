@@ -75,8 +75,10 @@ var suSocketClientMethods = Methods{
 		sc := scOpen(this)
 		n := ToInt(arg)
 		buf := make([]byte, n)
-		sc.conn.SetDeadline(time.Now().Add(sc.timeout))
-		defer sc.conn.SetDeadline(noDeadline)
+		if sc.timeout > 0 {
+			sc.conn.SetDeadline(time.Now().Add(sc.timeout))
+			defer sc.conn.SetDeadline(noDeadline)
+		}
 		n, e := io.ReadFull(sc.rdr, buf)
 		if e != nil && e != io.ErrUnexpectedEOF {
 			panic("socketClient.Read: " + e.Error())
@@ -85,8 +87,10 @@ var suSocketClientMethods = Methods{
 	}),
 	"Readline": method0(func(this Value) Value {
 		sc := scOpen(this)
-		sc.conn.SetDeadline(time.Now().Add(sc.timeout))
-		defer sc.conn.SetDeadline(noDeadline)
+		if sc.timeout > 0 {
+			sc.conn.SetDeadline(time.Now().Add(sc.timeout))
+			defer sc.conn.SetDeadline(noDeadline)
+		}
 		line := Readline(sc.rdr, "socket.Readline: ")
 		if line == False {
 			panic("socket Readline lost connection or timeout")
@@ -95,8 +99,10 @@ var suSocketClientMethods = Methods{
 	}),
 	"Write": method1("(string)", func(this, arg Value) Value {
 		sc := scOpen(this)
-		sc.conn.SetDeadline(time.Now().Add(sc.timeout))
-		defer sc.conn.SetDeadline(noDeadline)
+		if sc.timeout > 0 {
+			sc.conn.SetDeadline(time.Now().Add(sc.timeout))
+			defer sc.conn.SetDeadline(noDeadline)
+		}
 		s := AsStr(arg)
 		_, e := io.WriteString(sc.conn, s)
 		if e != nil {
@@ -106,8 +112,10 @@ var suSocketClientMethods = Methods{
 	}),
 	"Writeline": method1("(string)", func(this, arg Value) Value {
 		sc := scOpen(this)
-		sc.conn.SetDeadline(time.Now().Add(sc.timeout))
-		defer sc.conn.SetDeadline(noDeadline)
+		if sc.timeout > 0 {
+			sc.conn.SetDeadline(time.Now().Add(sc.timeout))
+			defer sc.conn.SetDeadline(noDeadline)
+		}
 		s := AsStr(arg)
 		_, e := io.WriteString(sc.conn, s)
 		if e != nil {
