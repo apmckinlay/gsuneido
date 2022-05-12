@@ -49,24 +49,25 @@ const (
 )
 
 func (sc *Schema) String() string {
-	return sc.string(false, true)
+	return sc.string(false, true, false)
 }
 
-// String2 includes fkToHere information
+// String2 includes fkToHere information.
+// It is used by Database.Schema(table)
 func (sc *Schema) String2() string {
-	return sc.string(true, true)
+	return sc.string(true, true, true)
 }
 
 // DumpString does not include fkToHere or deleted columns
 func (sc *Schema) DumpString() string {
-	return sc.string(false, false)
+	return sc.string(false, false, true)
 }
 
-func (sc *Schema) string(fktohere bool, delcols bool) string {
+func (sc *Schema) string(fktohere, delcols, emptycols bool) string {
 	var sb strings.Builder
 	sb.WriteString(sc.Table)
 	sb.WriteString(" ")
-	if sc.Columns != nil || sc.Derived != nil {
+	if emptycols || sc.Columns != nil || sc.Derived != nil {
 		var cb str.CommaBuilder
 		for _, col := range sc.Columns {
 			if delcols || col != "-" {
