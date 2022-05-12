@@ -240,7 +240,7 @@ func (ti *TempIndex) multi() rowIter {
 	ti.th.UIThread = false //
 	it := multiIter{ti: ti, nrecs: len(ti.hdr.Fields), heap: stor.HeapStor(8192)}
 	it.heap.Alloc(1) // avoid offset 0
-	var th2 Thread // separate thread because sortlist runs in the background
+	var th2 Thread   // separate thread because sortlist runs in the background
 	b := sortlist.NewSorting(func(x, y uint64) bool {
 		xrow := make(Row, it.nrecs)
 		yrow := make(Row, it.nrecs)

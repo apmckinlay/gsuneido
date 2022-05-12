@@ -296,7 +296,7 @@ func selEnd(dstCols, srcCols, vals []string) string {
 func trim(end string) string {
 	n := len(end) - len(ixkey.Max)
 	org := end[:n]
-	if n >= 2 && org[n-2:n] == ixkey.Sep {
+	for n >= 2 && org[n-2:n] == ixkey.Sep {
 		n -= 2
 	}
 	return org[:n]

@@ -3,20 +3,35 @@
 
 package language
 
-// func TestQuery(*testing.T) {
+// import (
+// 	"testing"
+
+// 	"github.com/apmckinlay/gsuneido/db19"
+// 	"github.com/apmckinlay/gsuneido/dbms/query"
+// 	"github.com/apmckinlay/gsuneido/runtime"
+// )
+
+// func TestQuery(t *testing.T) {
 // 	db, err := db19.OpenDatabaseRead("../suneido.db")
 // 	if err != nil {
 // 		panic(err.Error())
 // 	}
+// 	query.MakeSuTran = func(qt query.QueryTran) *runtime.SuTran {
+// 		return nil
+// 	}
 // 	tran := db.NewReadTran()
-// 	s := `(eta_equip_stmt_history
-// 				project etaequipstmt_num, etaequip_num)
-// 		leftjoin by(etaequipstmt_num)
-// 			(eta_equip_orders
-// 				rename etaequip_num to etaeo_equip_num
-// 				project etaequipstmt_num, etaeo_equip_num)`
+// 	s :=
+// 		`(gl_accounts
+//             where glacct_num = "#20220511.141319385_inventory"
+//             extend gldept_id = "")
+// 	join by(glacct_num, gldept_id)
+// 		(gl_transactions
+//             where gltran_reference = "Physical Count"
+//             where gltran_desc = "02-2737"
+//             where gltran_date >= #20220501 and gltran_date <= #20220511)`
 // 	q := query.ParseQuery(s, tran, nil)
 // 	q, _ = query.Setup(q, query.ReadMode, tran)
-// 	fmt.Println(q)
-// 	q.Get(nil, runtime.Next)
+// 	if row := q.Get(&runtime.Thread{}, runtime.Next); row == nil {
+// 		t.Fail()
+// 	}
 // }
