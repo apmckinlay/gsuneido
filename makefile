@@ -5,12 +5,14 @@ GO = go
 EXE = gsuneido
 LDFLAGS = -s -w -X 'main.builtDate=${BUILT}'
 GUIFLAGS = $(LDFLAGS)
+RACEEXE = gsrace
 ifdef PATHEXT
 	# Windows stuff
 	EXE = gsuneido.exe gsuneido.com gsport.exe
 	GUIFLAGS = $(LDFLAGS) -X main.mode=gui -H windowsgui
 	CONSOLE = $(GO) build -o gsuneido.com -ldflags "$(LDFLAGS)" -tags com
 	PORTABLE = export CGO_ENABLED=0 ; $(GO) build -o gsport.exe -ldflags "$(LDFLAGS)" -tags portable
+	RACEEXE = gsrace.exe
 endif
 
 build:
@@ -24,7 +26,7 @@ gsuneido:
 	$(GO) build -v -ldflags "$(GUIFLAGS)"
 
 race:
-	$(GO) build -v -ldflags "$(GUIFLAGS)" -race
+	$(GO) build -v -o $(RACEEXE) -ldflags "$(GUIFLAGS)" -race
 
 portable:
 	# a Windows version without the Windows stuff

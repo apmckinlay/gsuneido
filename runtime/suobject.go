@@ -202,6 +202,7 @@ func (ob *SuObject) Set(key, val Value) {
 // set implements Set without locking
 func (ob *SuObject) set(key, val Value) {
 	if ob.concurrent {
+		key.SetConcurrent()
 		val.SetConcurrent()
 	}
 	defer ob.endMutate(ob.startMutate())
@@ -888,11 +889,14 @@ func (ob *SuObject) Unique() {
 }
 
 func (ob *SuObject) SetConcurrent() {
-	if ob.concurrent ||
-		ob.readonly { // don't need concurrent if readonly
-		return
+	ob.SetConc()
+}
+
+func (ob *SuObject) SetConc() bool {
+	if ob.readonly || // don't need concurrent if readonly
+		!ob.MayLock.SetConc() {
+		return false
 	}
-	ob.concurrent = true
 	// recursive, deep
 	for i := 0; i < len(ob.list); i++ {
 		ob.list[i].SetConcurrent()
@@ -905,6 +909,7 @@ func (ob *SuObject) SetConcurrent() {
 	if ob.defval != nil {
 		ob.defval.SetConcurrent()
 	}
+	return true
 }
 
 func (ob *SuObject) IsConcurrent() Value {
@@ -1079,6 +1084,7 @@ func unpackObject(s string, ob *SuObject) *SuObject {
 	if len(s) <= 1 {
 		return ob
 	}
+	//TODO bypass add/set overhead
 	buf := pack.NewDecoder(s[1:])
 	var v Value
 	n := int(buf.VarUint())

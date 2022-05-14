@@ -14,7 +14,8 @@ import (
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
-// SuClass is a user defined (Suneido language) class
+// SuClass is a user defined (Suneido language) class.
+// Classes are read-only so there is no locking.
 type SuClass struct {
 	ValueBase[*SuClass]
 	MemBase

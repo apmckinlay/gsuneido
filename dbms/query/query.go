@@ -189,7 +189,7 @@ const impossible = Cost(math.MaxInt / 64) // allow for adding IMPOSSIBLE's
 // gin is used with be e.g. defer be(gin(...))
 func gin(args ...any) string {
 	trace(args...)
-	indent++
+	// indent++
 	return args[0].(string)
 }
 func trace(args ...any) {
@@ -200,10 +200,10 @@ func trace(args ...any) {
 func be(arg string) {
 	_ = arg // suppress warning when commented out
 	// fmt.Println(strings.Repeat(" ", 4*indent)+"end", arg)
-	indent--
+	// indent--
 }
 
-var indent = 0
+// var indent = 0
 
 // Optimize determines the best (lowest estimated cost) query execution approach
 func Optimize(q Query, mode Mode, index []string) (cost Cost) {

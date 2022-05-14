@@ -282,7 +282,7 @@ func (typeGlobal) GetIfPresent(name string) Value {
 
 func (typeGlobal) Unload(name string) {
 	Global.unload(name)
-	delete(LibraryOriginals, name)
+	LibraryOverrides.Unload(name)
 }
 
 func (typeGlobal) unload(name string) {
@@ -302,7 +302,7 @@ func (typeGlobal) UnloadAll() {
 	}
 	g.errors = make(map[Gnum]any)
 	g.noDef = make(map[string]struct{})
-	LibraryOriginals = make(map[string]Value)
+	LibraryOverrides.ClearOriginals()
 }
 
 func (typeGlobal) SetName(name string, val Value) {

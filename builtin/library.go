@@ -42,12 +42,12 @@ var _ = builtin1("Unload(name = false)",
 var _ = builtin3("LibraryOverride(lib, name, text='')",
 	func(lib, nameval, text Value) Value {
 		name := ToStr(nameval)
-		LibraryOverride(ToStr(lib), name, ToStr(text))
+		LibraryOverrides.Put(ToStr(lib), name, ToStr(text))
 		return nil
 	})
 
 var _ = builtin0("LibraryOverrideClear()",
 	func() Value {
-		LibraryOverrideClear()
+		LibraryOverrides.Clear()
 		return nil
 	})

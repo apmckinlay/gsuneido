@@ -196,7 +196,14 @@ func (r *SuRecord) ToContainer() (Container, bool) {
 }
 
 func (r *SuRecord) SetConcurrent() {
-	r.ob.SetConcurrent()
+	if r.ob.SetConc() {
+		for _, rule := range r.attachedRules {
+			rule.SetConcurrent()
+		}
+		for _, ob := range r.observers.List {
+			ob.SetConcurrent()
+		}
+	}
 }
 func (r *SuRecord) Lock() bool {
 	return r.ob.Lock()
@@ -479,6 +486,7 @@ func (r *SuRecord) PreSet(key, val Value) {
 func (r *SuRecord) Observer(ofn Value) {
 	if r.Lock() {
 		defer r.Unlock()
+		ofn.SetConcurrent()
 	}
 	r.observers.Push(ofn)
 }
@@ -756,6 +764,7 @@ func (r *SuRecord) getRule(t *Thread, key string) Value {
 func (r *SuRecord) AttachRule(key, callable Value) {
 	if r.Lock() {
 		defer r.Unlock()
+		callable.SetConcurrent()
 	}
 	if r.attachedRules == nil {
 		r.attachedRules = make(map[string]Value)

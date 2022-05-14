@@ -503,7 +503,7 @@ func libload(t *Thread, name string) (result Value, e any) {
 	for i := 0; i < len(defs); i += 2 {
 		lib := defs[i]
 		src := defs[i+1]
-		if s, ok := LibraryOverrides[lib+":"+name]; ok {
+		if s, ok := LibraryOverrides.Get(lib, name); ok {
 			src = s
 		}
 		if mode == "gui" && strings.HasSuffix(lib, "webgui") {

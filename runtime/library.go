@@ -3,39 +3,71 @@
 
 package runtime
 
-var LibraryOverrides = make(map[string]string) // by key (lib:name)
-var LibraryOriginals = make(map[string]Value)  // by name
+import "sync"
 
-func LibraryOverride(lib, name, text string) {
+var LibraryOverrides = &libraryOverrides{
+	overrides: make(map[string]string),
+	originals: make(map[string]Value)}
+
+type libraryOverrides struct {
+	lock      sync.Mutex
+	overrides map[string]string // by key (lib:name)
+	originals map[string]Value  // by name
+}
+
+func (lo *libraryOverrides) Put(lib, name, text string) {
+	lo.lock.Lock()
+	defer lo.lock.Unlock()
 	key := lib + ":" + name
 	if text != "" {
-		if text != LibraryOverrides[key] {
-			if _, ok := LibraryOverrides[key]; !ok {
+		if text != lo.overrides[key] {
+			if _, ok := lo.overrides[key]; !ok {
 				if val := Global.GetIfPresent(name); val != nil {
-					LibraryOriginals[name] = val
+					lo.originals[name] = val
 				}
 			}
-			LibraryOverrides[key] = text
+			lo.overrides[key] = text
 			Global.unload(name) // not Unload because it clears original
 		}
-	} else if _, ok := LibraryOverrides[key]; ok {
-		delete(LibraryOverrides, key)
-		overrideRestore(name)
+	} else if _, ok := lo.overrides[key]; ok {
+		delete(lo.overrides, key)
+		lo.restore(name)
 	}
 }
 
-func LibraryOverrideClear() {
-	for name := range LibraryOverrides {
-		overrideRestore(name)
-	}
-	LibraryOverrides = make(map[string]string)
-	LibraryOriginals = make(map[string]Value)
+func (lo *libraryOverrides) Get(lib, name string) (string, bool) {
+	lo.lock.Lock()
+	defer lo.lock.Unlock()
+	s, ok := lo.overrides[lib+":"+name]
+	return s, ok
 }
 
-func overrideRestore(name string) {
-	if val, ok := LibraryOriginals[name]; ok {
-		Global.SetName(name, val)
+func (lo *libraryOverrides) Unload(name string) {
+	lo.lock.Lock()
+	defer lo.lock.Unlock()
+	delete(lo.originals, name)
+}
+
+func (lo *libraryOverrides) ClearOriginals() {
+	lo.lock.Lock()
+	defer lo.lock.Unlock()
+	lo.originals = make(map[string]Value)
+}
+
+func (lo *libraryOverrides) Clear() {
+	lo.lock.Lock()
+	defer lo.lock.Unlock()
+	for name := range lo.overrides {
+		lo.restore(name)
+	}
+	lo.overrides = make(map[string]string)
+	lo.originals = make(map[string]Value)
+}
+
+func (lo *libraryOverrides) restore(name string) {
+	if orig, ok := lo.originals[name]; ok {
+		Global.SetName(name, orig)
 	} else {
-		Global.Unload(name)
+		Global.unload(name)
 	}
 }

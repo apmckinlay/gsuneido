@@ -181,14 +181,12 @@ func (seq *SuSequence) asSeq(method string) bool {
 }
 
 func (seq *SuSequence) SetConcurrent() {
-	if seq.concurrent {
-		return
-	}
-	seq.concurrent = true
-	if seq.ob != nil {
-		seq.ob.SetConcurrent()
-	} else {
-		seq.iter.SetConcurrent()
+	if seq.SetConc() {
+		if seq.ob != nil {
+			seq.ob.SetConcurrent()
+		} else {
+			seq.iter.SetConcurrent()
+		}
 	}
 }
 

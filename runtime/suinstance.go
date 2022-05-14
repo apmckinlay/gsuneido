@@ -111,7 +111,7 @@ func (ob *SuInstance) get(t *Thread, m Value) Value {
 	}
 	x := ob.class.get1(t, ob, m, ob.parents)
 	if m, ok := x.(*SuMethod); ok {
-		m.this = ob // fix 'this' to be instance, not method class
+		m.this = ob // adjust 'this' to be instance, not method class
 	}
 	return x
 }
@@ -158,12 +158,10 @@ func (ob *SuInstance) Equal(other any) bool {
 }
 
 func (ob *SuInstance) SetConcurrent() {
-	if ob.concurrent {
-		return
-	}
-	ob.concurrent = true
-	for _, v := range ob.Data {
-		v.SetConcurrent() // recursive, deep
+	if ob.SetConc() {
+		for _, v := range ob.Data {
+			v.SetConcurrent() // recursive, deep
+		}
 	}
 }
 

@@ -10,9 +10,9 @@ import (
 )
 
 // PrintStack prints the Go call stack to stderr, similar to debug.PrintStack,
-// except it limits the size to 1024 bytes.
+// except it limits the size.
 func PrintStack() {
-	buf := make([]byte, 1024)
+	buf := make([]byte, 2048)
 	n := runtime.Stack(buf, false)
 	if i := bytes.LastIndexByte(buf[:n], '\n'); i != -1 {
 		n = i + 1
