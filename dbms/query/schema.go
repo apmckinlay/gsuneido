@@ -400,7 +400,6 @@ func (is *Indexes) Nrows() int {
 }
 
 func (is *Indexes) Rewind() {
-	is.si = -1
 	is.state = rewound
 }
 
