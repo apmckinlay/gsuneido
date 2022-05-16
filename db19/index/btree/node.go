@@ -12,8 +12,8 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util/bytes"
 	"github.com/apmckinlay/gsuneido/util/generic/ord"
+	"github.com/apmckinlay/gsuneido/util/generic/slc"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
@@ -240,7 +240,7 @@ func (nd node) update(keyNew string, offNew uint64, get func(uint64) string) nod
 func (nd node) replace(i, j int, rep node) node {
 	nr := len(rep)
 	d := nr - (j - i)
-	nd = bytes.Grow(nd, d)
+	nd = slc.Grow(nd, d)
 	copy(nd[i+nr:], nd[j:])
 	copy(nd[i:], rep)
 	if d < 0 {

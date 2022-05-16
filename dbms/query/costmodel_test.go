@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/apmckinlay/gsuneido/db19/stor"
-	"github.com/apmckinlay/gsuneido/util/bytes"
+	"github.com/apmckinlay/gsuneido/util/generic/slc"
 )
 
 func TestCostModel(*testing.T) {
@@ -30,7 +30,7 @@ func TestCostModel(*testing.T) {
 	defer db.Close()
 	for db.Size() < dbsize {
 		_, buf := db.Alloc(4 * 1024)
-		bytes.Fill(buf, 0x55)
+		slc.Fill(buf, 0x55)
 	}
 	// random reads
 	sum := byte(0)

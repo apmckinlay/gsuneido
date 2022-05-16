@@ -4,7 +4,7 @@
 package str
 
 import (
-	"github.com/apmckinlay/gsuneido/util/bytes"
+	"github.com/apmckinlay/gsuneido/util/generic/slc"
 	"github.com/apmckinlay/gsuneido/util/hacks"
 )
 
@@ -40,7 +40,7 @@ func (b *Builder) Adds(ss ...string) {
 }
 
 func (b *Builder) Insert(at int, s string) {
-	b.buf = bytes.Grow(b.buf, len(s))
+	b.buf = slc.Grow(b.buf, len(s))
 	copy(b.buf[at+len(s):], b.buf[at:])
 	copy(b.buf[at:], s)
 }

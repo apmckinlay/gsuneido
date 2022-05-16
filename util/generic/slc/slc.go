@@ -92,3 +92,20 @@ func Reverse[S ~[]E, E any](x S) S {
 	}
 	return x
 }
+
+// Fill sets all the elements of data to value
+func Fill[E any](data []E, value E) {
+	for i := 0; i < len(data); i++ {
+		data[i] = value
+	}
+}
+
+// Grow grows the buffer to guarantee space for n more bytes.
+// NOTE: Unlike x/exp/slices.Grow it extends the length.
+// Using append and make like x/exp/slices.Grow assuming that is optimized.
+func Grow[S ~[]E, E any](s S, n int) S {
+	if n <= 0 {
+		return s
+	}
+	return append(s, make(S, n)...)
+}

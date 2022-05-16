@@ -14,7 +14,7 @@ import (
 	"github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/runtime/trace"
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util/bytes"
+	"github.com/apmckinlay/gsuneido/util/generic/slc"
 )
 
 const HeaderSize = 4 + 4 + 1 /* size + id + final */
@@ -161,7 +161,7 @@ func (c *conn) reader(handler func(uint32, []byte)) {
 			c.err.Store("message size greater than max")
 			break
 		}
-		buf = bytes.Grow(buf, size)
+		buf = slc.Grow(buf, size)
 		n, err = io.ReadFull(c.rw, buf[i:])
 		if err != nil {
 			c.err.Store(err.Error())
