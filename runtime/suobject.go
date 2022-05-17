@@ -1084,20 +1084,17 @@ func unpackObject(s string, ob *SuObject) *SuObject {
 	if len(s) <= 1 {
 		return ob
 	}
-	//TODO bypass add/set overhead
 	buf := pack.NewDecoder(s[1:])
-	var v Value
 	n := int(buf.VarUint())
+	ob.list = make([]Value, n)
 	for i := 0; i < n; i++ {
-		v = unpackValue(buf)
-		ob.add(v)
+		ob.list[i] = unpackValue(buf)
 	}
-	var k Value
 	n = int(buf.VarUint())
 	for i := 0; i < n; i++ {
-		k = unpackValue(buf)
-		v = unpackValue(buf)
-		ob.set(k, v)
+		k := unpackValue(buf)
+		v := unpackValue(buf)
+		ob.named.Put(k, v)
 	}
 	return ob
 }
