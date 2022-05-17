@@ -32,10 +32,6 @@ const (
 func (*schemaTable) Init() {
 }
 
-func (st *schemaTable) SetTran(tran QueryTran) {
-	st.tran = tran
-}
-
 func (*schemaTable) Indexes() [][]string {
 	return nil
 }
@@ -120,6 +116,11 @@ func (*Tables) Header() *Header {
 func (ts *Tables) Nrows() int {
 	ts.ensure()
 	return len(ts.info)
+}
+
+func (ts *Tables) SetTran(tran QueryTran) {
+	ts.tran = tran
+	ts.info = nil
 }
 
 func (ts *Tables) Rewind() {
@@ -278,6 +279,11 @@ func (cs *Columns) Nrows() int {
 	return n
 }
 
+func (cs *Columns) SetTran(tran QueryTran) {
+	cs.tran = tran
+	cs.schema = nil
+}
+
 func (cs *Columns) Rewind() {
 	cs.si = -1
 	cs.state = rewound
@@ -399,6 +405,11 @@ func (is *Indexes) Nrows() int {
 	return n
 }
 
+func (is *Indexes) SetTran(tran QueryTran) {
+	is.tran = tran
+	is.schema = nil
+}
+
 func (is *Indexes) Rewind() {
 	is.state = rewound
 }
@@ -507,6 +518,11 @@ func (vs *Views) Nrows() int {
 	return len(vs.views) / 2
 }
 
+func (vs *Views) SetTran(tran QueryTran) {
+	vs.tran = tran
+	vs.views = nil
+}
+
 func (vs *Views) Rewind() {
 	vs.i = -2
 	vs.state = rewound
@@ -592,6 +608,10 @@ func (*History) Header() *Header {
 
 func (his *History) Nrows() int {
 	return 1000 // ???
+}
+
+func (his *History) SetTran(tran QueryTran) {
+	his.tran = tran
 }
 
 func (his *History) Rewind() {
