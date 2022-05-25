@@ -127,6 +127,11 @@ var suSocketClientMethods = Methods{
 		}
 		return nil
 	}),
+	"SetTimeout": method1("(seconds)", func(this, arg Value) Value {
+		sc := scOpen(this)
+		sc.timeout = time.Duration(ToInt(arg)) * time.Second;
+		return nil
+	}),
 }
 
 func (sc *suSocketClient) close() {
