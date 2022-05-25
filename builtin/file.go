@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"strings"
+	"sync/atomic"
 
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/runtime/types"
@@ -32,14 +33,14 @@ type suFile struct {
 	tell int64
 }
 
-var nFile = 0
+var nFile = int32(0)
 
 var _ = builtin("File(filename, mode='r', block=false)",
 	func(t *Thread, args []Value) Value {
 		name := ToStr(args[0])
 		mode := ToStr(args[1])
 		sf := newSuFile(name, mode)
-		nFile++
+		atomic.AddInt32(&nFile, 1)
 		if args[2] == False {
 			return sf
 		}
@@ -99,7 +100,7 @@ func (sf *suFile) size() int64 {
 }
 
 func (sf *suFile) close() {
-	nFile--
+	atomic.AddInt32(&nFile, -1)
 	if sf.mode != "r" {
 		err := sf.w.Flush()
 		if err != nil {

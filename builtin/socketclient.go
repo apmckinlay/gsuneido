@@ -8,6 +8,7 @@ import (
 	"io"
 	"net"
 	"strconv"
+	"sync/atomic"
 	"time"
 
 	. "github.com/apmckinlay/gsuneido/runtime"
@@ -20,7 +21,7 @@ type suSocketClient struct {
 	timeout time.Duration
 }
 
-var nSocketClient = 0
+var nSocketClient = int32(0)
 
 var _ = builtin("SocketClient(ipaddress, port, timeout=60, timeoutConnect=0, block=false)",
 	func(t *Thread, args []Value) Value {
@@ -29,7 +30,7 @@ var _ = builtin("SocketClient(ipaddress, port, timeout=60, timeoutConnect=0, blo
 		ipaddr += ":" + strconv.Itoa(port)
 		var c net.Conn
 		var e error
-		toc := time.Duration(ToInt(OpMul(args[3], SuInt(1000)))) * 1000 * 1000
+		toc := time.Duration(ToInt(OpMul(args[3], SuInt(1000)))) * time.Millisecond
 		if toc <= 0 {
 			c, e = net.Dial("tcp", ipaddr)
 		} else {
@@ -40,7 +41,7 @@ var _ = builtin("SocketClient(ipaddress, port, timeout=60, timeoutConnect=0, blo
 		}
 		sc := &suSocketClient{conn: c.(*net.TCPConn), rdr: bufio.NewReader(c),
 			timeout: time.Duration(ToInt(args[2])) * time.Second}
-		nSocketClient++
+		atomic.AddInt32(&nSocketClient, 1)
 		if args[4] == False {
 			return sc
 		}
@@ -138,7 +139,7 @@ func (sc *suSocketClient) close() {
 	if sc.conn == nil {
 		return
 	}
-	nSocketClient--
+	atomic.AddInt32(&nSocketClient, -1)
 	sc.conn.Close()
 	sc.conn = nil
 }

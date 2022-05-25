@@ -8,6 +8,7 @@ import (
 	"os/exec"
 	"runtime"
 	"strings"
+	"sync/atomic"
 
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
@@ -20,7 +21,7 @@ type suRunPiped struct {
 	r       io.ReadCloser
 }
 
-var nRunPiped = 0
+var nRunPiped = int32(0)
 
 var _ = builtin("RunPiped(command, block=false)",
 	func(t *Thread, args []Value) Value {
@@ -47,7 +48,7 @@ var _ = builtin("RunPiped(command, block=false)",
 			panic("Runpiped: failed to start: " + err.Error())
 		}
 		rp := &suRunPiped{command: command, cmd: cmd, w: w, r: r}
-		nRunPiped++
+		atomic.AddInt32(&nRunPiped, 1)
 		if args[1] == False {
 			return rp
 		}
@@ -81,7 +82,7 @@ func (rp *suRunPiped) close() {
 	if rp.r == nil {
 		return
 	}
-	nRunPiped--
+	atomic.AddInt32(&nRunPiped, -1)
 	rp.r.Close()
 	rp.r = nil
 	if rp.w != nil {
