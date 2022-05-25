@@ -141,10 +141,9 @@ func handler(e any, state any) {
 			Alert("Error in Handler:", e)
 		}
 	}()
-	// debug.PrintStack()
-	// UIThread.PrintStack()
-	// log.Println("panic in callback:", e, "<<<<<<<<<<<<<<<<")
-
+	if LogInternalError("in callback:", e) {
+		UIThread.PrintStack()
+	}
 	se := ToSuExcept(UIThread, e)
 	handler := Global.GetName(UIThread, "Handler")
 	UIThread.Call(handler, se, Zero, se.Callstack)
