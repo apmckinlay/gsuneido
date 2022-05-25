@@ -12,10 +12,12 @@ import (
 // PrintStack prints the Go call stack to stderr, similar to debug.PrintStack,
 // except it limits the size.
 func PrintStack() {
-	buf := make([]byte, 2048)
+	buf := make([]byte, 4096)
 	n := runtime.Stack(buf, false)
 	if i := bytes.LastIndexByte(buf[:n], '\n'); i != -1 {
 		n = i + 1
 	}
-	os.Stderr.Write(buf[:n])
+	buf = buf[:n]
+	buf = bytes.ReplaceAll(buf, []byte("github.com/apmckinlay/"), nil)
+	os.Stderr.Write(buf)
 }
