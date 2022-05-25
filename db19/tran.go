@@ -76,7 +76,10 @@ func (t *tran) GetAllInfo() []*meta.Info {
 func (t *tran) GetAllSchema() []*meta.Schema {
 	schemas := make([]*meta.Schema, 0, 32)
 	t.meta.ForEachSchema(
-		func(schema *meta.Schema) { schemas = append(schemas, schema) })
+		func(schema *meta.Schema) {
+			assert.That(len(schema.Indexes) > 0)
+			schemas = append(schemas, schema)
+		})
 	return schemas
 }
 

@@ -165,6 +165,7 @@ func (mu *metaUpdate) getSchema(table string) *Schema {
 }
 
 func (mu *metaUpdate) putSchema(ts *Schema) {
+	assert.That(len(ts.Indexes) > 0 || ts.IsTomb())
 	if mu.schema == (SchemaHamt{}) {
 		mu.schema = mu.meta.schema.Mutable()
 	}
@@ -487,12 +488,14 @@ loop:
 		for i := range ts.Indexes {
 			if slices.Equal(ts.Indexes[i].Columns, idxs[j].Columns) {
 				if 0 != len(ts.Indexes[i].FkToHere) {
-					panic("can't drop index used by foreign keys")
+					panic("can't drop index used by foreign keys: " +
+						ts.Table + " " + str.Join("(,)", idxs[j].Columns))
 				}
 				continue loop
 			}
 		}
-		panic("can't drop nonexistent index: " + str.Join(",", idxs[j].Columns))
+		panic("can't drop nonexistent index: " +
+			ts.Table + " " + str.Join("(,)", idxs[j].Columns))
 	}
 	tsIdxs := make([]schema.Index, 0, len(ts.Indexes))
 	tiIdxs := make([]*index.Overlay, 0, len(ti.Indexes))
@@ -506,8 +509,18 @@ outer:
 		tsIdxs = append(tsIdxs, ts.Indexes[i])
 		tiIdxs = append(tiIdxs, ti.Indexes[i])
 	}
+	mustHaveKey(tsIdxs, ts)
 	ts.Indexes = tsIdxs
 	ti.Indexes = tiIdxs
+}
+
+func mustHaveKey(tsIdxs []schema.Index, ts *Schema) {
+	for i := range tsIdxs {
+		if tsIdxs[i].Mode == 'k' {
+			return
+		}
+	}
+	panic("can't drop all keys: " + ts.Table)
 }
 
 func dropColumns(ts *Schema, ad *schema.Schema) bool {
