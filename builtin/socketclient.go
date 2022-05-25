@@ -46,7 +46,7 @@ var _ = builtin("SocketClient(ipaddress, port, timeout=60, timeoutConnect=0, blo
 			return sc
 		}
 		// block form
-		defer sc.close()
+		defer sc.Close()
 		return t.Call(args[4], sc)
 	})
 
@@ -69,7 +69,14 @@ var noDeadline time.Time
 
 var suSocketClientMethods = Methods{
 	"Close": method0(func(this Value) Value {
-		scOpen(this).close()
+		c := this.(interface{ Close() })
+		c.Close()
+		return nil
+	}),
+	"ManualClose": method0(func(this Value) Value {
+		if ssc, ok := this.(*suServerConnect); ok {
+			ssc.manualClose = true
+		}
 		return nil
 	}),
 	"Read": method1("(n)", func(this, arg Value) Value {
@@ -130,12 +137,12 @@ var suSocketClientMethods = Methods{
 	}),
 	"SetTimeout": method1("(seconds)", func(this, arg Value) Value {
 		sc := scOpen(this)
-		sc.timeout = time.Duration(ToInt(arg)) * time.Second;
+		sc.timeout = time.Duration(ToInt(arg)) * time.Second
 		return nil
 	}),
 }
 
-func (sc *suSocketClient) close() {
+func (sc *suSocketClient) Close() {
 	if sc.conn == nil {
 		return
 	}

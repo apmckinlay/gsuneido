@@ -122,9 +122,7 @@ func (sm *suServerMaster) listen(name string, port int) {
 }
 
 func (sm *suServerMaster) connect(name string, conn net.Conn) {
-	defer conn.Close()
 	atomic.AddInt32(&nSocketServerClient, 1)
-	defer atomic.AddInt32(&nSocketServerClient, -1)
 	client := suSocketClient{
 		conn: conn.(*net.TCPConn), rdr: bufio.NewReader(conn),
 		// no timeout to match jSuneido
@@ -133,6 +131,7 @@ func (sm *suServerMaster) connect(name string, conn net.Conn) {
 		SuInstance: sm.SuInstance.Copy(),
 		client:     client,
 	}
+	defer sc.close()
 	t := NewThread(nil)
 	t.Name = str.BeforeFirst(t.Name, " ") + " " + name
 	if f := sc.Lookup(t, "Run"); f != nil {
@@ -151,7 +150,8 @@ func (sm *suServerMaster) connect(name string, conn net.Conn) {
 
 type suServerConnect struct {
 	*SuInstance
-	client suSocketClient
+	client      suSocketClient
+	manualClose bool
 }
 
 func (sc *suServerConnect) Lookup(t *Thread, method string) Callable {
@@ -162,6 +162,18 @@ func (sc *suServerConnect) Lookup(t *Thread, method string) Callable {
 		return f
 	}
 	return sc.client.Lookup(t, method)
+}
+
+func (sc *suServerConnect) close() {
+	if !sc.manualClose {
+		sc.Close()
+	}
+}
+
+func (sc *suServerConnect) Close() {
+	sc.client.conn.Close()
+	sc.client.conn = nil
+	atomic.AddInt32(&nSocketServerClient, -1)
 }
 
 var remoteUser = method0(func(this Value) Value {
