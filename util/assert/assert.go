@@ -22,12 +22,15 @@ package assert
 
 import (
 	"fmt"
+	"log"
 	"reflect"
 	"regexp"
 	"runtime"
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/apmckinlay/gsuneido/util/dbg"
 )
 
 type assert struct {
@@ -348,8 +351,8 @@ func Catch(f func()) (result any) {
 //-------------------------------------------------------------------
 
 func (a assert) fail(args ...any) {
-	// fmt.Println("==============================")
-	// debug.PrintStack()
+	log.Println("ASSERT FAILED:", fmt.Sprintln(args...))
+	dbg.PrintStack()
 	if a.t != nil {
 		a.t.Helper()
 	}
