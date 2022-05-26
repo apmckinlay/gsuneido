@@ -6,6 +6,7 @@ package query
 import (
 	"testing"
 
+	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
@@ -28,4 +29,16 @@ func TestExtendInit(t *testing.T) {
 		"extend: invalid column(s) in expressions: cost")
 	xtest("columns extend c = a + b, a = 1, b = 2",
 		"extend: invalid column(s) in expressions: a, b")
+}
+
+func TestExtendSelect(t *testing.T) {
+	db := testDb()
+	MakeSuTran = func(qt QueryTran) *SuTran {
+		return nil
+	}
+	rt := db.NewReadTran()
+	q := ParseQuery("cus extend ex=1", rt, nil)
+	zero := Pack(Zero.(Packable))
+	q.Select([]string{"ex"}, []string{zero})
+	assert.T(t).This(q.Get(nil, Next)).Is(nil)
 }

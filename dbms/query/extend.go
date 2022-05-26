@@ -21,6 +21,7 @@ type Extend struct {
 	hdr      *Header
 	t        QueryTran
 	ctx      ast.Context
+	conflict bool
 }
 
 func NewExtend(src Query, cols []string, exprs []ast.Expr) *Extend {
@@ -197,16 +198,16 @@ func (e *Extend) Header() *Header {
 }
 
 func (e *Extend) Get(th *Thread, dir Dir) Row {
-	row := e.source.Get(th, dir)
-	if e.hasExprs {
-		row = e.extendRow(th, row)
+	if e.conflict {
+		return nil
 	}
-	return row
+	row := e.source.Get(th, dir)
+	return e.extendRow(th, row)
 }
 
 func (e *Extend) extendRow(th *Thread, row Row) Row {
-	if row == nil {
-		return nil // eof
+	if row == nil || !e.hasExprs {
+		return row // eof
 	}
 	e.ctx.Th = th
 	if e.ctx.Tran == nil {
@@ -225,7 +226,26 @@ func (e *Extend) extendRow(th *Thread, row Row) Row {
 }
 
 func (e *Extend) Select(cols, vals []string) {
-	e.source.Select(cols, vals)
+	fixed := e.Fixed()
+	satisfied := true
+	e.conflict = false
+	for i, col := range cols {
+		if fv := getFixed(fixed, col); len(fv) == 1 {
+			if fv[0] != vals[i] {
+				e.conflict = true
+				break
+			}
+		} else {
+			satisfied = false
+		}
+	}
+	if e.conflict {
+		return
+	} else if satisfied {
+		e.source.Select(nil, nil) // clear select
+	} else {
+		e.source.Select(cols, vals)
+	}
 }
 
 func (e *Extend) Lookup(th *Thread, cols, vals []string) Row {
