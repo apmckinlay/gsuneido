@@ -26,6 +26,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/errs"
 	"github.com/apmckinlay/gsuneido/util/sortlist"
 	"github.com/apmckinlay/gsuneido/util/str"
+	"github.com/apmckinlay/gsuneido/util/system"
 )
 
 type loadJob struct {
@@ -94,7 +95,7 @@ func LoadDatabase(from, dbfile string) (nTables, nViews int, err error) {
 	trace("SIZE", db.Store.Size())
 	db.GetState().Write()
 	db.Close()
-	ck(RenameBak(tmpfile, dbfile))
+	ck(system.RenameBak(tmpfile, dbfile))
 	return nTables, nViews, nil
 }
 

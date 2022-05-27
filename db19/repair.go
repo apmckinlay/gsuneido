@@ -13,6 +13,7 @@ import (
 
 	"github.com/apmckinlay/gsuneido/db19/meta"
 	"github.com/apmckinlay/gsuneido/db19/stor"
+	"github.com/apmckinlay/gsuneido/util/system"
 )
 
 const dtfmt = "20060102.150405"
@@ -94,7 +95,7 @@ func truncate(dbfile string, store *stor.Stor, off uint64) error {
 	if err != nil {
 		return err
 	}
-	return RenameBak(tmpfile, dbfile)
+	return system.RenameBak(tmpfile, dbfile)
 }
 
 func fixHeader(dbfile string, size uint64) error {
@@ -114,42 +115,26 @@ func fixHeader(dbfile string, size uint64) error {
 }
 
 func truncate2(dbfile string, size uint64) (string, error) {
-		src, err := os.Open(dbfile)
-		if err != nil {
-			return "", err
-		}
-		defer src.Close()
-		dst, err := ioutil.TempFile(".", "gs*.tmp")
-		if err != nil {
-			return "", err
-		}
-		defer dst.Close()
-		tmpfile := dst.Name()
-		_, err = io.CopyN(dst, src, int64(size))
-		if err != nil {
-			return "", err
-		}
-		buf := make([]byte, stor.SmallOffsetLen)
-		stor.WriteSmallOffset(buf, size)
-		_, err = dst.WriteAt(buf, int64(len(magic)))
-		if err != nil {
-			return "", err
-		}
-		return tmpfile, nil
-	}
-
-func RenameBak(from string, to string) error { //TODO move to util
-	err := os.Remove(to + ".bak")
-	if err != nil && !os.IsNotExist(err) {
-		return err
-	}
-	err = os.Rename(to, to+".bak")
-	if err != nil && !os.IsNotExist(err) {
-		return err
-	}
-	err = os.Rename(from, to)
+	src, err := os.Open(dbfile)
 	if err != nil {
-		return err
+		return "", err
 	}
-	return nil
+	defer src.Close()
+	dst, err := ioutil.TempFile(".", "gs*.tmp")
+	if err != nil {
+		return "", err
+	}
+	defer dst.Close()
+	tmpfile := dst.Name()
+	_, err = io.CopyN(dst, src, int64(size))
+	if err != nil {
+		return "", err
+	}
+	buf := make([]byte, stor.SmallOffsetLen)
+	stor.WriteSmallOffset(buf, size)
+	_, err = dst.WriteAt(buf, int64(len(magic)))
+	if err != nil {
+		return "", err
+	}
+	return tmpfile, nil
 }

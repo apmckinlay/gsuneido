@@ -21,6 +21,7 @@ import (
 	rt "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/str"
+	"github.com/apmckinlay/gsuneido/util/system"
 )
 
 // DumpDatabase exports a dumped database to a file.
@@ -57,7 +58,7 @@ func Dump(db *Database, to string) (nTables, nViews int, err error) {
 	ck(w.Flush())
 	f.Close()
 	ics.finish()
-	ck(RenameBak(tmpfile, to))
+	ck(system.RenameBak(tmpfile, to))
 	return len(tables), nViews, nil
 }
 
@@ -87,7 +88,7 @@ func DumpDbTable(db *Database, table, to string) (nrecs int, err error) {
 	ck(w.Flush())
 	f.Close()
 	ics.finish()
-	ck(RenameBak(tmpfile, to))
+	ck(system.RenameBak(tmpfile, to))
 	return nrecs, nil
 }
 

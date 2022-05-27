@@ -18,6 +18,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/cksum"
 	"github.com/apmckinlay/gsuneido/util/sortlist"
+	"github.com/apmckinlay/gsuneido/util/system"
 )
 
 // Compact cleans up old records and index nodes that are no longer in use.
@@ -79,7 +80,7 @@ func Compact(dbfile string) (nTables, nViews int, err error) {
 	dst.GetState().Write()
 	dst.Close()
 	src.Close()
-	ck(RenameBak(tmpfile, dbfile))
+	ck(system.RenameBak(tmpfile, dbfile))
 	return nTables, nViews, nil
 }
 
