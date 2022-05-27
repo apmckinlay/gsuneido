@@ -277,7 +277,9 @@ func openDbms() {
 	var err error
 	db, err = db19.OpenDatabase("suneido.db")
 	if err != nil {
-		Alert("ERROR:", err)
+		if !AlertCancel("ERROR:", err, "\nwill try to repair") {
+			Fatal("database corrupt, not repaired")
+		}
 		msg, err := db19.Repair("suneido.db", err)
 		if err != nil {
 			Fatal("repair:", err)

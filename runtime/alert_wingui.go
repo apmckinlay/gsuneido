@@ -11,6 +11,10 @@ func Alert(args ...any) {
 	goc.Alert(args...)
 }
 
+func AlertCancel(args ...any) bool {
+	return goc.AlertCancel(args...)
+}
+
 func Fatal(args ...any) {
 	goc.Fatal(args...)
 }

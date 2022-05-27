@@ -124,31 +124,36 @@ static DWORD main_threadid = 0;
 typedef struct {
 	char* text;
 	char* caption;
+	int type;
+	int result;
 } Mbargs;
 
 DWORD WINAPI message_thread(void* p) {
-	MessageBox(0, ((Mbargs*) p)->text, ((Mbargs*) p)->caption,
-		MB_OK | MB_TASKMODAL | MB_TOPMOST | MB_SETFOREGROUND);
+	Mbargs *mb = (Mbargs*) p;
+	mb->result = MessageBox(0, mb->text, mb->caption,
+		mb->type | MB_TASKMODAL | MB_TOPMOST | MB_SETFOREGROUND);
 	return 0;
 }
 
-void msgbox(char* text, char* caption) {
-	Mbargs args;
-	args.text = text;
-	args.caption = caption;
+int msgbox(char* text, char* caption, int type) {
+	Mbargs mb;
+	mb.text = text;
+	mb.caption = caption;
+	mb.type = type;
 	HANDLE thread =
-		CreateThread(NULL, 0, message_thread, (void*) &args, 0, NULL);
+		CreateThread(NULL, 0, message_thread, (void*) &mb, 0, NULL);
 	if (thread)
 		WaitForSingleObject(thread, INFINITE);
 	free(text);
+	return mb.result;
 }
 
-void alert(char* msg) {
-	msgbox(msg, "Alert");
+int alert(char* msg, int type) {
+	return msgbox(msg, "Alert", type);
 }
 
 void fatal(char* msg) {
-	msgbox(msg, "FATAL");
+	msgbox(msg, "FATAL", 0);
 }
 
 const int CTRL_BREAK_ID = 1; // arbitrary value passed to RegisterHotKey

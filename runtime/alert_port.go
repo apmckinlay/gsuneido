@@ -16,6 +16,11 @@ func Alert(args ...any) {
 	fmt.Println(args...)
 }
 
+func AlertCancel(args ...any) bool {
+	Alert(args...)
+	return true
+}
+
 func Fatal(args ...any) {
 	s := fmt.Sprintln(args...)
 	log.Print("FATAL: ", s)

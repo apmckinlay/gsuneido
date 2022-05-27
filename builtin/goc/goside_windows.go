@@ -104,8 +104,19 @@ func Alert(args ...any) {
 	s := fmt.Sprintln(args...)
 	log.Print("Alert: ", s)
 	if !options.Unattended {
-		C.alert(C.CString(s))
+		C.alert(C.CString(s), 0)
 	}
+}
+
+func AlertCancel(args ...any) bool {
+	s := fmt.Sprintln(args...)
+	log.Print("Alert: ", s)
+	if !options.Unattended {
+		if 2 == C.alert(C.CString(s), 1) {
+			return false // cancel
+		}
+	}
+	return true // ok
 }
 
 var fatalOnce sync.Once

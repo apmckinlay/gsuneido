@@ -21,7 +21,7 @@ extern uintptr cb4s[ncb4s];
 
 void start();
 void signalAndWait();
-void alert(char* msg);
+int alert(char* msg, int type);
 void fatal(char* msg);
 
 enum {

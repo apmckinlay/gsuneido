@@ -19,7 +19,6 @@ const dtfmt = "20060102.150405"
 
 func Repair(dbfile string, err error) (string, error) {
 	ec, _ := err.(*ErrCorrupt)
-	fmt.Println("repair:", err, ec.Table())
 	store, err := stor.MmapStor(dbfile, stor.READ)
 	if err != nil {
 		return "", err
