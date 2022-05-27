@@ -99,6 +99,11 @@ var suSocketClientMethods = Methods{
 		}
 		return line
 	}),
+	"SetTimeout": method1("(seconds)", func(this, arg Value) Value {
+		sc := scOpen(this)
+		sc.timeout = time.Duration(ToInt(arg)) * time.Second
+		return nil
+	}),
 	"Write": method1("(string)", func(this, arg Value) Value {
 		sc := scOpen(this)
 		if sc.timeout > 0 {
@@ -127,11 +132,6 @@ var suSocketClientMethods = Methods{
 		if e != nil {
 			panic("socketClient.Writeline: " + e.Error())
 		}
-		return nil
-	}),
-	"SetTimeout": method1("(seconds)", func(this, arg Value) Value {
-		sc := scOpen(this)
-		sc.timeout = time.Duration(ToInt(arg)) * time.Second
 		return nil
 	}),
 }
