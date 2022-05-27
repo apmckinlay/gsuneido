@@ -73,12 +73,6 @@ var suSocketClientMethods = Methods{
 		c.Close()
 		return nil
 	}),
-	"ManualClose": method0(func(this Value) Value {
-		if ssc, ok := this.(*suServerConnect); ok {
-			ssc.manualClose = true
-		}
-		return nil
-	}),
 	"Read": method1("(n)", func(this, arg Value) Value {
 		sc := scOpen(this)
 		n := ToInt(arg)

@@ -155,13 +155,16 @@ type suServerConnect struct {
 }
 
 func (sc *suServerConnect) Lookup(t *Thread, method string) Callable {
-	if method == "RemoteUser" {
+	switch method {
+	case "RemoteUser":
 		return remoteUser
+	case "ManualClose":
+		return manualClose
 	}
-	if f := sc.SuInstance.Lookup(t, method); f != nil {
+	if f := sc.client.Lookup(t, method); f != nil {
 		return f
 	}
-	return sc.client.Lookup(t, method)
+	return sc.SuInstance.Lookup(t, method)
 }
 
 func (sc *suServerConnect) close() {
@@ -180,4 +183,9 @@ var remoteUser = method0(func(this Value) Value {
 	sc := this.(*suServerConnect)
 	addr := sc.client.conn.RemoteAddr().String()
 	return SuStr(str.BeforeLast(addr, ":"))
+})
+
+var manualClose = method0(func(this Value) Value {
+	this.(*suServerConnect).manualClose = true
+	return nil
 })
