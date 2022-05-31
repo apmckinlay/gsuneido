@@ -5,6 +5,7 @@ package runtime
 
 import (
 	"encoding/base64"
+	"errors"
 	"log"
 	"math"
 	"runtime"
@@ -313,6 +314,9 @@ func InternalError(e any) bool {
 		return strings.HasPrefix(e, "assert failed")
 	case *SuExcept:
 		return strings.HasPrefix(string(e.SuStr), "assert failed")
+	case error:
+		var perr runtime.Error
+		return errors.As(e, &perr)
 	}
 	return false
 }
