@@ -20,3 +20,8 @@ var _ = builtin0("AssertFail()",
 		assert.That(false)
 		return nil
 	})
+
+var _ = builtin0("BoundsFail()",
+	func() runtime.Value {
+		return []runtime.Value{}[1]
+	})
