@@ -42,6 +42,7 @@ type serverConn struct {
 	sessionsLock sync.Mutex
 	sessions     map[uint32]*serverSession // the sessions on this connection
 	Sviews
+	idleCount int // guarded by sessionsLock
 }
 
 // serverSession is one client session (thread)
@@ -67,6 +68,7 @@ func Server(dbms *DbmsLocal) {
 		Fatal(err)
 	}
 	defer l.Close()
+	go idleTimeout()
 	var tempDelay time.Duration // how long to sleep on accept failure
 	for {
 		conn, err := l.Accept()
@@ -89,6 +91,29 @@ func Server(dbms *DbmsLocal) {
 		}
 		tempDelay = 0
 		newServerConn(dbms, conn)
+	}
+}
+
+func idleTimeout() {
+	for {
+		time.Sleep(idleCheckInterval)
+		idleCheck()
+	}
+}
+
+const idleCheckInterval = time.Minute
+const maxIdleCount = 2 * 60 // 2 hours if interval is one minute
+
+func idleCheck() {
+	serverConnsLock.Lock()
+	defer serverConnsLock.Unlock()
+	for _, sc := range serverConns {
+		sc.idleCount++
+		if sc.idleCount > maxIdleCount {
+			log.Println("closing idle connection", sc.remoteAddr)
+			sc.close()
+			delete(serverConns, sc.id)
+		}
 	}
 }
 
@@ -126,6 +151,7 @@ func doRequest(wb *mux.WriteBuf, th *runtime.Thread, id uint64, req []byte) {
 		return
 	}
 	sc := serverConns[connId]
+	sc.idleCount = 0
 	serverConnsLock.Unlock()
 
 	sessionId := uint32(id)
@@ -183,19 +209,23 @@ func (ss *serverSession) error(err string) {
 }
 
 func (ss *serverSession) close() {
-	for _, tran := range ss.trans {
-		tran.Abort()
-	}
+	ss.abort()
 	ss.sc.sessionsLock.Lock()
 	delete(ss.sc.sessions, ss.id)
 	ss.sc.sessionsLock.Unlock()
+}
+
+func (ss *serverSession) abort() {
+	for _, tran := range ss.trans {
+		tran.Abort()
+	}
 }
 
 func (sc *serverConn) close() {
 	trace.ClientServer.Println("closing connection")
 	sc.conn.Close()
 	for _, ss := range sc.sessions {
-		ss.close()
+		ss.abort()
 	}
 }
 
