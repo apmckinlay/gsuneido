@@ -26,7 +26,7 @@ import (
 // This is the multiplexed server.
 // It only works with the gSuneido mulitplexed client.
 
-var workers = mux.NewWorkers(doRequest)
+var workers *mux.Workers
 
 var serverConns = make(map[uint32]*serverConn)
 var serverConnsLock sync.Mutex
@@ -69,6 +69,7 @@ func Server(dbms *DbmsLocal) {
 	}
 	defer l.Close()
 	go idleTimeout()
+	workers = mux.NewWorkers(doRequest)
 	var tempDelay time.Duration // how long to sleep on accept failure
 	for {
 		conn, err := l.Accept()
