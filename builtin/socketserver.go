@@ -11,6 +11,7 @@ import (
 	"sync/atomic"
 
 	. "github.com/apmckinlay/gsuneido/runtime"
+	"github.com/apmckinlay/gsuneido/util/dbg"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
@@ -135,12 +136,15 @@ func (sm *suServerMaster) connect(name string, conn net.Conn) {
 	if f := sc.Lookup(t, "Run"); f != nil {
 		threads.add(t)
 		defer func() {
-			if e := recover(); e != nil {
-				LogInternalError("in SocketServer thread:", e)
-				t.PrintStack()
-			}
-			threads.remove(t.Num)
 			t.Close()
+			threads.remove(t.Num)
+			if e := recover(); e != nil {
+				log.Println("ERROR:", t.Name, "uncaught:", e)
+				if InternalError(e) {
+					dbg.PrintStack()
+					t.PrintStack()
+				}
+			}
 		}()
 		f.Call(t, sc, &ArgSpec0)
 	}
