@@ -22,15 +22,13 @@ func init() {
 }
 
 func ssCallClass(t *Thread, as *ArgSpec, this Value, args []Value) Value {
+	if OnUiThread() {
+		panic("SocketServer not allowed on UI thread")
+	}
 	name, port, as2 := ssArgs(t, as, this, args)
 	class := this.(*SuClass)
 	sm := suServerMaster{SuInstance: class.New(t, as2)}
-	if OnUiThread() {
-		// don't block UI thread
-		go sm.listen(ToStr(name), ToInt(port))
-	} else {
-		sm.listen(ToStr(name), ToInt(port))
-	}
+	sm.listen(ToStr(name), ToInt(port))
 	return nil
 }
 
