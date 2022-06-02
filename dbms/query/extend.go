@@ -210,6 +210,7 @@ func (e *Extend) extendRow(th *Thread, row Row) Row {
 		return row // eof
 	}
 	e.ctx.Th = th
+	defer func() { e.ctx.Th = nil }()
 	if e.ctx.Tran == nil {
 		e.ctx.Tran = MakeSuTran(e.t)
 	}

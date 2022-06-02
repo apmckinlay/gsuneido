@@ -11,7 +11,6 @@ import (
 
 // SuQueryCursor is the common base for SuQuery and SuCursor
 type SuQueryCursor struct {
-	owner *Thread
 	query string
 	iqc   IQueryCursor
 	eof   Dir
@@ -83,8 +82,8 @@ type SuQuery struct {
 }
 
 func NewSuQuery(th *Thread, tran *SuTran, query string, iquery IQuery) *SuQuery {
-	return &SuQuery{tran: tran, SuQueryCursor: SuQueryCursor{
-		owner: th, query: query, iqc: iquery}}
+	return &SuQuery{tran: tran,
+		SuQueryCursor: SuQueryCursor{query: query, iqc: iquery}}
 }
 
 var _ Value = (*SuQuery)(nil)
@@ -146,8 +145,7 @@ type SuCursor struct {
 }
 
 func NewSuCursor(th *Thread, query string, icursor ICursor) *SuCursor {
-	return &SuCursor{SuQueryCursor: SuQueryCursor{
-		owner: th, query: query, iqc: icursor}}
+	return &SuCursor{SuQueryCursor: SuQueryCursor{query: query, iqc: icursor}}
 }
 
 func (q *SuCursor) Equal(other any) bool {
@@ -170,10 +168,6 @@ func (*SuCursor) SetConcurrent() {
 var CursorMethods Methods
 
 func (q *SuCursor) Lookup(_ *Thread, method string) Callable {
-	//FIXME concurrency
-	// if q.owner != th {
-	// 	panic("can't use a query from a different thread")
-	// }
 	if f, ok := CursorMethods[method]; ok {
 		return f
 	}

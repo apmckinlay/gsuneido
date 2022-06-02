@@ -54,8 +54,10 @@ func (ti *TempIndex) Select(cols, vals []string) {
 }
 
 func (ti *TempIndex) Lookup(th *Thread, cols, vals []string) Row {
+	ti.th = th
+	defer func() { ti.th = nil }()
 	if ti.iter == nil {
-		ti.iter = ti.makeIter(th)
+		ti.iter = ti.makeIter()
 	}
 	encode := len(ti.order) > 1
 	key := selOrg(encode, ti.order, cols, vals)
@@ -67,8 +69,10 @@ func (ti *TempIndex) Lookup(th *Thread, cols, vals []string) Row {
 }
 
 func (ti *TempIndex) Get(th *Thread, dir Dir) Row {
+	ti.th = th
+	defer func() { ti.th = nil }()
 	if ti.iter == nil {
-		ti.iter = ti.makeIter(th)
+		ti.iter = ti.makeIter()
 		ti.rewound = true
 	}
 	var row Row
@@ -98,12 +102,11 @@ type rowIter interface {
 	Seek(key string) Row
 }
 
-func (ti *TempIndex) makeIter(th *Thread) rowIter {
+func (ti *TempIndex) makeIter() rowIter {
 	if ti.selEnd == "" {
 		ti.selEnd = ixkey.Max
 	}
 	ti.st = MakeSuTran(ti.tran)
-	ti.th = th
 	ti.hdr = ti.source.Header()
 	if ti.source.SingleTable() {
 		return ti.single()
@@ -112,11 +115,15 @@ func (ti *TempIndex) makeIter(th *Thread) rowIter {
 }
 
 func (ti *TempIndex) selected(row Row) bool {
+	if ti.selOrg == ixkey.Min && ti.selEnd == ixkey.Max {
+		return true
+	}
 	key := ti.rowKey(row)
 	return ti.selOrg <= key && key < ti.selEnd
 }
 
 func (ti *TempIndex) rowKey(row Row) string {
+	assert.That(ti.th != nil)
 	if len(ti.order) == 1 {
 		return row.GetRawVal(ti.hdr, ti.order[0], ti.th, ti.st)
 	}

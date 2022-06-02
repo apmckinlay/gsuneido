@@ -143,6 +143,7 @@ var hello = func() []byte {
 	return buf
 }()
 
+// doRequest is called by workers
 func doRequest(wb *mux.WriteBuf, th *runtime.Thread, id uint64, req []byte) {
 	connId := uint32(id >> 32)
 	serverConnsLock.Lock()
@@ -181,6 +182,7 @@ func doRequest(wb *mux.WriteBuf, th *runtime.Thread, id uint64, req []byte) {
 
 func (ss *serverSession) request() {
 	defer func() {
+		ss.thread = nil
 		if e := recover(); e != nil /*&& !ss.ended*/ {
 			ss.ResetWrite()
 			ss.PutBool(false).PutStr(fmt.Sprint(e)).EndMsg()

@@ -994,6 +994,7 @@ func (w *Where) filter(th *runtime.Thread, row runtime.Row) bool {
 	}
 	w.ctx.Th = th
 	w.ctx.Row = row
+	defer func() { w.ctx.Th, w.ctx.Row = nil, nil }()
 	return w.expr.Eval(&w.ctx) == runtime.True
 }
 
