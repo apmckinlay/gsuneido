@@ -69,7 +69,6 @@ func Server(dbms *DbmsLocal) {
 	}
 	defer l.Close()
 	go idleTimeout()
-	workers = mux.NewWorkers(doRequest)
 	var tempDelay time.Duration // how long to sleep on accept failure
 	for {
 		conn, err := l.Accept()
@@ -120,6 +119,7 @@ func idleCheck() {
 
 func newServerConn(dbms *DbmsLocal, conn net.Conn) {
 	trace.ClientServer.Println("server connection")
+	workers = mux.NewWorkers(doRequest)
 	sendHello(conn)
 	addr := str.BeforeFirst(conn.RemoteAddr().String(), ":")
 	connId := mux.NewServerConn(conn, workers.Submit)
