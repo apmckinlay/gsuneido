@@ -13,7 +13,7 @@ import (
 )
 
 type suZlib struct {
-	SuBuiltin
+	ValueBase[suZlib]
 }
 
 func init() {
