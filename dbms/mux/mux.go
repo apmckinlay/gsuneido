@@ -58,7 +58,7 @@ var nextServerConn uint32
 
 // NewServerConn creates a new server connection.
 // The supplied handler will be called with each received message.
-// The handler will often be Workers.Submit.
+// For dbms server the handler is Workers.Submit
 func NewServerConn(rw io.ReadWriteCloser, h handler) uint32 {
 	connId := atomic.AddUint32(&nextServerConn, 1)
 	sc := ServerConn{conn: conn{rw: rw}, id: connId}

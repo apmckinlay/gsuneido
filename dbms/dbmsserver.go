@@ -29,7 +29,7 @@ import (
 var workers *mux.Workers
 
 var serverConns = make(map[uint32]*serverConn)
-var serverConnsLock sync.Mutex
+var serverConnsLock sync.Mutex // guards serverConns and idleCount
 
 // serverConn is one client connection which handles multiple sessions
 type serverConn struct {
@@ -39,10 +39,10 @@ type serverConn struct {
 	ended        bool
 	dbms         IDbms
 	conn         net.Conn
-	sessionsLock sync.Mutex
+	sessionsLock sync.Mutex                // guards sessions
 	sessions     map[uint32]*serverSession // the sessions on this connection
 	Sviews
-	idleCount int // guarded by sessionsLock
+	idleCount int // guarded by serverConnsLock
 }
 
 // serverSession is one client session (thread)
@@ -58,7 +58,7 @@ type serverSession struct {
 	trans     map[int]ITran
 	cursors   map[int]ICursor
 	queries   map[int]IQuery
-	lastNum   int
+	lastNum   int // used for queries, cursors, and transactions
 }
 
 // Server listens and accepts connections. It never returns.
@@ -156,20 +156,20 @@ func doRequest(wb *mux.WriteBuf, th *runtime.Thread, id uint64, req []byte) {
 	sc.idleCount = 0
 	serverConnsLock.Unlock()
 
-	sessionId := uint32(id)
+	sid := uint32(id)
 	sc.sessionsLock.Lock()
-	ss := sc.sessions[sessionId]
+	ss := sc.sessions[sid]
 	if ss == nil { // new session
-		trace.ClientServer.Println("server session", sessionId)
+		trace.ClientServer.Println("server session", sid)
 		ss = &serverSession{
-			id:        sessionId,
+			id:        sid,
 			sc:        sc,
 			sessionId: sc.remoteAddr,
 			trans:     make(map[int]ITran),
 			cursors:   make(map[int]ICursor),
 			queries:   make(map[int]IQuery),
 		}
-		sc.sessions[sessionId] = ss
+		sc.sessions[sid] = ss
 	}
 	sc.sessionsLock.Unlock()
 
@@ -182,7 +182,6 @@ func doRequest(wb *mux.WriteBuf, th *runtime.Thread, id uint64, req []byte) {
 
 func (ss *serverSession) request() {
 	defer func() {
-		ss.thread = nil
 		if e := recover(); e != nil /*&& !ss.ended*/ {
 			ss.ResetWrite()
 			ss.PutBool(false).PutStr(fmt.Sprint(e)).EndMsg()
@@ -280,6 +279,10 @@ func StopServer() {
 }
 
 //-------------------------------------------------------------------
+
+// NOTE: as soon as we send the response we may get a new request
+// which will take over the serverSession (ss)
+// so we can't use the serverSession after sending the response
 
 func cmdAbort(ss *serverSession) {
 	tn := ss.GetInt()
