@@ -25,7 +25,6 @@ import (
 	"github.com/apmckinlay/gsuneido/options"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util/dbg"
 	"github.com/apmckinlay/gsuneido/util/exit"
 	"github.com/apmckinlay/gsuneido/util/generic/hamt"
 	"github.com/apmckinlay/gsuneido/util/regex"
@@ -198,22 +197,11 @@ func redirect() {
 func run(src string) {
 	defer func() {
 		if e := recover(); e != nil {
-			printStack(e)
+			LogUncaught(mainThread, src, e)
 			Fatal("ERROR from", src, e)
 		}
 	}()
 	compile.EvalString(mainThread, src)
-}
-
-func printStack(e any) {
-	if InternalError(e) {
-		dbg.PrintStack()
-		PrintStack(mainThread.Callstack())
-	} else if se, ok := e.(*SuExcept); ok {
-		PrintStack(se.Callstack)
-	} else {
-		PrintStack(mainThread.Callstack())
-	}
 }
 
 func ck(err error) {
@@ -465,10 +453,7 @@ func showOptions() {
 func eval(src string) {
 	defer func() {
 		if e := recover(); e != nil {
-			log.Println("ERROR:", e)
-			if !strings.HasSuffix(fmt.Sprint(e), "(from server)") {
-				printStack(e)
-			}
+			LogUncaught(mainThread, "repl", e)
 		}
 	}()
 	src = "function () {\n" + src + "\n}"

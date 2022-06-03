@@ -10,6 +10,7 @@ type SuExcept struct {
 	Callstack *SuObject
 }
 
+// BuiltinSuExcept is for special values for block break, continue, return
 func BuiltinSuExcept(s string) *SuExcept {
 	return &SuExcept{SuStr: SuStr(s), Callstack: EmptyObject}
 }

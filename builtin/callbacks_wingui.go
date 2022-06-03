@@ -126,8 +126,7 @@ func call(fn Value, args ...Value) uintptr {
 
 func handler(e any, state any) {
 	if UIThread.InHandler {
-		LogInternalError("in Handler:", e)
-		UIThread.PrintStack()
+		LogUncaught(UIThread, "Handler", e)
 		Alert("Error in Handler:", e)
 		return
 	}
@@ -136,14 +135,10 @@ func handler(e any, state any) {
 		UIThread.InHandler = false
 		UIThread.RestoreState(state)
 		if e := recover(); e != nil {
-			LogInternalError("in Handler:", e)
-			UIThread.PrintStack()
+			LogUncaught(UIThread, "Handler", e)
 			Alert("Error in Handler:", e)
 		}
 	}()
-	if LogInternalError("in callback:", e) {
-		UIThread.PrintStack()
-	}
 	se := ToSuExcept(UIThread, e)
 	handler := Global.GetName(UIThread, "Handler")
 	UIThread.Call(handler, se, Zero, se.Callstack)

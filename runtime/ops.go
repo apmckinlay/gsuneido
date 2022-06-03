@@ -274,19 +274,28 @@ func OpCatch(t *Thread, e any, catchPat string) *SuExcept {
 	panic(se) // propagate panic if not caught
 }
 
+// ToSuExcept converts to SuExcept, and also logs runtime and assert errors
 func ToSuExcept(t *Thread, e any) *SuExcept {
 	se, ok := e.(*SuExcept)
 	if !ok {
 		// first catch creates SuExcept with callstack
 		var ss SuStr
-		if err, ok := e.(error); ok {
-			if LogInternalError("", e) {
-				t.PrintStack()
+		switch e := e.(type) {
+		case error:
+			var perr runtime.Error
+			if errors.As(e, &perr) {
+				log.Println("ERROR", e)
+				dbg.PrintStack()
+				printSuStack(t, e)
 			}
-			ss = SuStr(err.Error())
-		} else if s, ok := e.(string); ok {
-			ss = SuStr(s)
-		} else {
+			ss = SuStr(e.Error())
+		case string:
+			if isLocalAssertFail(e) {
+				// assert has already logged error and Go call stack
+				printSuStack(t, e)
+			}
+			ss = SuStr(e)
+		default:
 			ss = SuStr(ToStr(e.(Value)))
 		}
 		se = NewSuExcept(t, ss)
@@ -294,26 +303,31 @@ func ToSuExcept(t *Thread, e any) *SuExcept {
 	return se
 }
 
-// LogInternalError logs the error and the Go call stack, if an InternalError.
-// It returns true if it was an InternalError.
-func LogInternalError(from string, e any) bool {
-	if InternalError(e) {
-		log.Println("ERROR", from, e)
-		dbg.PrintStack()
-		return true
-	}
-	return false
+func isLocalAssertFail(s string) bool {
+	return strings.HasPrefix(s, "assert failed") &&
+		!strings.HasSuffix(s, "(from server)")
 }
 
-// InternalError returns true for runtime.Error and "assert failed"
-func InternalError(e any) bool {
+func printSuStack(th *Thread, e any) {
+	if se, ok := e.(*SuExcept); ok {
+		PrintStack(se.Callstack)
+	} else {
+		PrintStack(th.Callstack())
+	}
+}
+
+func LogUncaught(th *Thread, where string, e any) {
+	log.Println("ERROR", th.Name, "uncaught in", where+":", e)
+	if isRuntimeError(e) {
+		dbg.PrintStack()
+	}
+	printSuStack(th, e)
+}
+
+func isRuntimeError(e any) bool {
 	switch e := e.(type) {
 	case runtime.Error:
 		return true
-	case string:
-		return strings.HasPrefix(e, "assert failed")
-	case *SuExcept:
-		return strings.HasPrefix(string(e.SuStr), "assert failed")
 	case error:
 		var perr runtime.Error
 		return errors.As(e, &perr)

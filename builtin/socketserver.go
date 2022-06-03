@@ -11,7 +11,6 @@ import (
 	"sync/atomic"
 
 	. "github.com/apmckinlay/gsuneido/runtime"
-	"github.com/apmckinlay/gsuneido/util/dbg"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
@@ -139,11 +138,7 @@ func (sm *suServerMaster) connect(name string, conn net.Conn) {
 			t.Close()
 			threads.remove(t.Num)
 			if e := recover(); e != nil {
-				log.Println("ERROR:", t.Name, "uncaught:", e)
-				if InternalError(e) {
-					dbg.PrintStack()
-					t.PrintStack()
-				}
+				LogUncaught(t, "SocketServer", e)
 			}
 		}()
 		f.Call(t, sc, &ArgSpec0)

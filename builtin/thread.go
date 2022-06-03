@@ -4,13 +4,11 @@
 package builtin
 
 import (
-	"log"
 	"sync"
 	"time"
 
 	"github.com/apmckinlay/gsuneido/options"
 	. "github.com/apmckinlay/gsuneido/runtime"
-	"github.com/apmckinlay/gsuneido/util/dbg"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
@@ -64,11 +62,7 @@ func threadCallClass(t *Thread, args []Value) Value {
 			t2.Close()
 			threads.remove(t2.Num)
 			if e := recover(); e != nil {
-				log.Println("ERROR:", t.Name, "uncaught:", e)
-				if InternalError(e) {
-					dbg.PrintStack()
-					t.PrintStack()
-				}
+				LogUncaught(t, "Thread", e)
 			}
 		}()
 		t2.Call(fn)
@@ -153,8 +147,7 @@ var _ = builtin("Scheduled(ms, block)",
 		go func() {
 			defer func() {
 				if e := recover(); e != nil {
-					LogInternalError("in Scheduled:", e)
-					t2.PrintStack()
+					LogUncaught(t2, "Scheduled", e)
 				}
 				t2.Close()
 			}()
