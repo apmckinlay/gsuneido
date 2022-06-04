@@ -5,7 +5,6 @@ package runtime
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"strconv"
 	"sync/atomic"
@@ -124,9 +123,7 @@ func (t *Thread) SetSession(s string) {
 // Push pushes a value onto the value stack
 func (t *Thread) Push(x Value) {
 	if t.sp >= maxStack {
-		log.Println("FATAL: value stack overflow")
-		t.PrintStack()
-		Fatal("value stack overflow")
+		panic("value stack overflow")
 	}
 	t.stack[t.sp] = x
 	t.sp++

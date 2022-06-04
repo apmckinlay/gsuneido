@@ -15,6 +15,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/dnum"
 	"github.com/apmckinlay/gsuneido/util/hacks"
 	"github.com/apmckinlay/gsuneido/util/regex"
+	"github.com/apmckinlay/gsuneido/util/str"
 )
 
 var (
@@ -317,7 +318,7 @@ func printSuStack(th *Thread, e any) {
 }
 
 func LogUncaught(th *Thread, where string, e any) {
-	log.Println("ERROR", th.Name, "uncaught in", where+":", e)
+	log.Println("ERROR"+str.Opt(" ", th.Name), "uncaught in", where+":", e)
 	if isRuntimeError(e) {
 		dbg.PrintStack()
 	}
