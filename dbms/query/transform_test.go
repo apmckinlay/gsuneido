@@ -114,8 +114,8 @@ func TestTransform(t *testing.T) {
 	test("(customer leftjoin trans) where id > 5",
 		"customer WHERE id > 5 LEFTJOIN 1:n by(id) trans")
 	// distribute where over leftjoin
-	test("(customer leftjoin trans) where id > 5 and item > 3",
-		"(customer WHERE id > 5 LEFTJOIN 1:n by(id) trans) WHERE item > 3")
+	test("(customer leftjoin trans) where id > 5 and item =~ 'x'",
+		"(customer WHERE id > 5 LEFTJOIN 1:n by(id) trans) WHERE item =~ 'x'")
 	// distribute where over join
 	test("(customer join trans) where cost > 10 and city isnt 'toon'",
 		"customer WHERE city isnt 'toon' JOIN 1:n by(id) (trans WHERE cost > 10)")

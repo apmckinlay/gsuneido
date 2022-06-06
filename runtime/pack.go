@@ -64,6 +64,10 @@ var boolTrue = True.(SuBool)
 var boolFalse = False.(SuBool)
 var zeroNum = Zero.(*smi)
 
+var packedTrue = string([]byte{PackTrue})
+var packedFalse = string([]byte{PackFalse})
+var packedZero = string([]byte{PackPlus})
+
 // Pack is a convenience function that packs a single Packable.
 //
 // WARNING: It's possible to get a buffer overflow if a mutable value
@@ -73,11 +77,11 @@ func Pack(x Packable) string {
 	case emptyStr:
 		return ""
 	case boolTrue:
-		return "\x01" // PackTrue
+		return packedTrue
 	case boolFalse:
-		return "\x00" // PackFalse
+		return packedFalse
 	case zeroNum:
-		return "\x03"
+		return packedZero
 	}
 	return Pack2(x).String()
 }

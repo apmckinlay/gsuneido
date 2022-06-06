@@ -44,15 +44,20 @@ func TestSuObjectString(t *testing.T) {
 	assert.T(t).This(ob.String()).Is("#(0)")
 	ob.Add(One)
 	assert.T(t).This(ob.String()).Is("#(0, 1)")
+
 	ob = SuObject{}
 	ob.Set(SuInt(123), Zero)
 	assert.T(t).This(ob.String()).Is("#(123: 0)")
+	ob.Set(SuInt(456), SuStr("abc"))
+	assert.T(t).This(ob.Show()).Is("#(123: 0, 456: 'abc')")
+
+	ob = SuObject{}
 	ob.Set(EmptyStr, False)
-	assert.T(t).This(ob.Show()).Is("#(123: 0, '': false)")
+	assert.T(t).This(ob.String()).Is("#('': false)")
 	ob.Set(SuStr("a"), True)
-	assert.T(t).This(ob.Show()).Is("#(123: 0, '': false, a:)")
+	assert.T(t).This(ob.Show()).Is("#('': false, a:)")
 	ob.Add(True)
-	assert.T(t).This(ob.Show()).Is("#(true, 123: 0, '': false, a:)")
+	assert.T(t).This(ob.Show()).Is("#(true, '': false, a:)")
 
 	test := func(k string, expected string) {
 		t.Helper()
@@ -132,15 +137,15 @@ func TestSuObjectErase(t *testing.T) {
 	for i := 0; i < 5; i++ {
 		ob.Add(SuInt(i))
 	}
-	ob.Set(SuStr("foo"), SuInt(8))
-	ob.Set(SuStr("bar"), SuInt(9))
-	assert(ob.Show()).Is("#(0, 1, 2, 3, 4, bar: 9, foo: 8)")
-	ob.Erase(nil, SuStr("foo"))
-	assert(ob.Show()).Is("#(0, 1, 2, 3, 4, bar: 9)")
+	ob.Set(SuInt(88), SuInt(8))
+	ob.Set(SuInt(99), SuInt(9))
+	assert(ob.Show()).Is("#(0, 1, 2, 3, 4, 88: 8, 99: 9)")
+	ob.Erase(nil, SuInt(88))
+	assert(ob.Show()).Is("#(0, 1, 2, 3, 4, 99: 9)")
 	ob.Erase(nil, SuInt(2))
-	assert(ob.Show()).Is("#(0, 1, 3: 3, 4: 4, bar: 9)")
+	assert(ob.Show()).Is("#(0, 1, 3: 3, 4: 4, 99: 9)")
 	ob.Erase(nil, One)
-	assert(ob.Show()).Is("#(0, 3: 3, 4: 4, bar: 9)")
+	assert(ob.Show()).Is("#(0, 3: 3, 4: 4, 99: 9)")
 }
 
 func TestSuObjectEquals(t *testing.T) {
@@ -234,7 +239,8 @@ func TestSuObjectPack2(t *testing.T) {
 	ob.Add(One)
 	ob.Set(SuStr("a"), SuInt(2))
 	buf := Pack(ob)
-	expected := []byte{6, 1, 3, 3, 129, 10, 1, 2, 4, 97, 3, 3, 129, 20}
+	expected := []byte{6, 1, 3, PackPlus, 129, 10, 1, 2, PackString, 97, 3,
+		PackPlus, 129, 20}
 	assert.T(t).This([]byte(buf)).Is(expected)
 }
 
