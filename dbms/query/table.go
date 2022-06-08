@@ -247,6 +247,8 @@ func (tbl *Table) Select(cols, vals []string) {
 		tbl.iter.Range(iterator.All)
 		return
 	}
+	// fmt.Println("Table select", tbl.name, cols, packedListStr(vals))
+	// fmt.Println("dstcols", tbl.index)
 	org, end := selKeys(tbl.indexEncode, tbl.index, cols, vals)
 	tbl.SelectRaw(org, end)
 }
@@ -273,23 +275,17 @@ func selGet(col string, cols, vals []string) string {
 
 func selEnd(dstCols, srcCols, vals []string) string {
 	enc := ixkey.Encoder{}
-	prefix := true
 	data := false
 	for _, col := range dstCols {
 		i := slices.Index(srcCols, col)
-		if i != -1 {
-			assert.Msg("selEnd").That(prefix)
-			enc.Add(vals[i])
-			data = true
-		} else if prefix {
-			prefix = false
-			enc.Add(ixkey.Max) // ("")
+		if i == -1 {
+			break
 		}
+		enc.Add(vals[i])
+		data = true
 	}
 	assert.Msg("selEnd no data").That(data)
-	if prefix {
-		enc.Add(ixkey.Max)
-	}
+	enc.Add(ixkey.Max)
 	return enc.String()
 }
 
@@ -307,17 +303,14 @@ func selOrg(encode bool, dstCols, srcCols, vals []string) string {
 		return selGet(dstCols[0], srcCols, vals)
 	}
 	enc := ixkey.Encoder{}
-	prefix := true
 	data := false
 	for _, col := range dstCols {
 		i := slices.Index(srcCols, col)
-		if i != -1 {
-			assert.Msg("selOrg").That(prefix)
-			enc.Add(vals[i])
-			data = true
-		} else {
-			prefix = false
+		if i == -1 {
+			break
 		}
+		enc.Add(vals[i])
+		data = true
 	}
 	assert.Msg("selOrg no data").That(data)
 	return enc.String()
