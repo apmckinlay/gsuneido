@@ -215,7 +215,10 @@ func UnpackNumber(s string) Value {
 	if len(s) <= 1 {
 		return Zero
 	}
-	sign := int8(s[0]-PackMinus)*2 - 1 // -1 or +1
+	var sign = int8(+1)
+	if s[0] == PackMinus || s[0] == NewPackMinus {
+		sign = -1
+	}
 	xor := byte(0)
 	if sign < 0 {
 		xor = 0xff
