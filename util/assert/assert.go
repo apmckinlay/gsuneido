@@ -351,20 +351,20 @@ func Catch(f func()) (result any) {
 //-------------------------------------------------------------------
 
 func (a assert) fail(args ...any) {
-	log.Println("ASSERT FAILED:", fmt.Sprintln(args...))
-	dbg.PrintStack()
 	if a.t != nil {
 		a.t.Helper()
 	}
 	if len(a.msg) > 0 {
-		args = append(append(args, "\nmsg: "), a.msg...)
+		args = append(append(args, "msg: "), a.msg...)
 	}
 	s := fmt.Sprintln(args...)
 	s = strings.TrimRight(s, "\r\n")
+	log.Println("ASSERT FAILED:", s)
+	dbg.PrintStack()
 	if a.t != nil {
 		a.t.Error("\n" + s)
 	} else {
-		panic("assert failed: " + getLocation() + "\n" + s)
+		panic("assert failed: " + s)
 	}
 }
 
