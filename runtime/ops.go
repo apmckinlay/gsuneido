@@ -317,6 +317,18 @@ func printSuStack(th *Thread, e any) {
 	}
 }
 
+// LogInternalError logs the error and the Go call stack, if an InternalError.
+func LogInternalError(th *Thread, from string, e any) {
+	if isRuntimeError(e) {
+		log.Println("ERROR", from, e)
+		dbg.PrintStack()
+		printSuStack(th, e)
+	} else if s, ok := e.(string); ok && isLocalAssertFail(s) {
+		// assert has already logged error and Go call stack
+		printSuStack(th, e)
+	}
+}
+
 func LogUncaught(th *Thread, where string, e any) {
 	log.Println("ERROR"+str.Opt(" ", th.Name), "uncaught in", where+":", e)
 	if isRuntimeError(e) {

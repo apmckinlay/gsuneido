@@ -182,8 +182,8 @@ func doRequest(wb *mux.WriteBuf, th *runtime.Thread, id uint64, req []byte) {
 
 func (ss *serverSession) request() {
 	defer func() {
-		if e := recover(); e != nil /*&& !ss.ended*/ {
-			LogUncaught(ss.thread, "server", e)
+		if e := recover(); e != nil {
+			LogInternalError(ss.thread, ss.sessionId, e)
 			ss.ResetWrite()
 			ss.PutBool(false).PutStr(fmt.Sprint(e)).EndMsg()
 		}
