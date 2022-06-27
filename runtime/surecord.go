@@ -488,6 +488,7 @@ func (r *SuRecord) Observer(ofn Value) {
 		defer r.Unlock()
 		ofn.SetConcurrent()
 	}
+	r.observers.List = slices.Clone(r.observers.List) // copy on write
 	r.observers.Push(ofn)
 }
 
@@ -495,6 +496,7 @@ func (r *SuRecord) RemoveObserver(ofn Value) bool {
 	if r.Lock() {
 		defer r.Unlock()
 	}
+	r.observers.List = slices.Clone(r.observers.List) // copy on write
 	return r.observers.Remove(ofn)
 }
 
