@@ -549,6 +549,7 @@ type sumTotal struct {
 }
 
 func (sum *sumTotal) add(val Value, _ Row) {
+	defer func() { recover() }()
 	sum.total = OpAdd(sum.total, val)
 }
 func (sum *sumTotal) result() (Value, Row) {
@@ -565,6 +566,7 @@ type sumAverage struct {
 
 func (sum *sumAverage) add(val Value, _ Row) {
 	sum.count++
+	defer func() { recover() }()
 	sum.total = OpAdd(sum.total, val)
 }
 func (sum *sumAverage) result() (Value, Row) {
