@@ -154,6 +154,8 @@ func (slc *suLruCache) Fetch(key Value) Value {
 func (slc *suLruCache) Insert(key, val Value) {
 	if slc.Lock() {
 		defer slc.Unlock()
+		key.SetConcurrent()
+		val.SetConcurrent()
 	}
 	slc.Lc.Put(key, val)
 }

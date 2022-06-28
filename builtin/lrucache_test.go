@@ -45,3 +45,16 @@ func TestLruCache(t *testing.T) {
 	r := (100 * lc.hits) / 10000
 	assert.T(t).That(r > 75) // theoretically 20/25 = 80%
 }
+
+func TestLruCache_concurrent(t *testing.T) {
+	const size = 20
+	lc := newSuLruCache(size, nil, false)
+	a := &SuObject{}
+	lc.Insert(Zero, a)
+	assert.T(t).This(a.IsConcurrent()).Is(False)
+	lc.SetConcurrent()
+	assert.T(t).This(a.IsConcurrent()).Is(True)
+	b := &SuObject{}
+	lc.Insert(One, b)
+	assert.T(t).This(b.IsConcurrent()).Is(True)
+}
