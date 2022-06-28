@@ -122,11 +122,13 @@ func (ob *SuInstance) get1(t *Thread, m Value) Value {
 func (ob *SuInstance) Put(_ *Thread, m Value, v Value) {
 	if ob.Lock() {
 		defer ob.Unlock()
-		v.SetConcurrent()
 	}
 	ob.put(m, v)
 }
 func (ob *SuInstance) put(m Value, v Value) {
+	if ob.concurrent {
+		v.SetConcurrent()
+	}
 	ob.Data[AsStr(m)] = v
 }
 
