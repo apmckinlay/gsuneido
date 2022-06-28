@@ -10,6 +10,7 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/generic/set"
+	"github.com/apmckinlay/gsuneido/util/generic/slc"
 	"github.com/apmckinlay/gsuneido/util/str"
 	"golang.org/x/exp/slices"
 )
@@ -70,6 +71,8 @@ func NewRemove(src Query, cols []string) *Project {
 	if len(cols) == 0 {
 		panic("remove: can't remove all columns")
 	}
+	cols = slc.WithoutFn(cols,
+		func(s string) bool { return strings.HasSuffix(s, "_lower!") })
 	return NewProject(src, cols)
 }
 
