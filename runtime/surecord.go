@@ -517,9 +517,8 @@ func (r *SuRecord) callObservers2(t *Thread, key string) {
 				r.activeObservers.Push(activeObserver{ofn, key})
 				defer r.activeObservers.Pop()
 				func() {
-					if r.Unlock() { // can't hold lock while calling observer
-						defer r.Lock()
-					}
+					r.Unlock() // can't hold lock while calling observer
+					defer r.Lock()
 					t.PushCall(ofn, r, argSpecMember, SuStr(key))
 				}()
 			}(ofn, key)
@@ -701,9 +700,8 @@ func (r *SuRecord) catchRule(t *Thread, rule Value, key string) Value {
 			WrapPanic(e, "rule for "+key)
 		}
 	}()
-	if r.Unlock() { // can't hold lock while calling observers
-		defer r.Lock()
-	}
+	r.Unlock() // can't hold lock while calling observer
+	defer r.Lock()
 	return t.CallThis(rule, r)
 }
 
