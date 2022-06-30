@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"log"
 
+	"github.com/apmckinlay/gsuneido/util/dbg"
 	"github.com/apmckinlay/gsuneido/util/exit"
 )
 
@@ -24,5 +25,6 @@ func AlertCancel(args ...any) bool {
 func Fatal(args ...any) {
 	s := fmt.Sprintln(args...)
 	log.Print("FATAL: ", s)
+	dbg.PrintStack()
 	exit.Exit(1)
 }

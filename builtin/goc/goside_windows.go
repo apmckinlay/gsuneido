@@ -18,6 +18,7 @@ import (
 	"unsafe"
 
 	"github.com/apmckinlay/gsuneido/options"
+	"github.com/apmckinlay/gsuneido/util/dbg"
 	"github.com/apmckinlay/gsuneido/util/exit"
 	"golang.org/x/sys/windows"
 )
@@ -125,6 +126,7 @@ func Fatal(args ...any) {
 	fatalOnce.Do(func() {
 		s := fmt.Sprintln(args...)
 		log.Print("FATAL: ", s)
+		dbg.PrintStack()
 		go func() {
 			time.Sleep(10 * time.Second)
 			exit.Exit(1)
