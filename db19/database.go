@@ -5,7 +5,6 @@ package db19
 
 import (
 	"errors"
-	"sync"
 	"sync/atomic"
 
 	"github.com/apmckinlay/gsuneido/db19/index"
@@ -16,6 +15,7 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	rt "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/cksum"
+	"github.com/apmckinlay/gsuneido/util/exit"
 	"github.com/apmckinlay/gsuneido/util/generic/set"
 	"github.com/apmckinlay/gsuneido/util/hacks"
 	"github.com/apmckinlay/gsuneido/util/sortlist"
@@ -34,8 +34,7 @@ type Database struct {
 	// schemaLock is used to prevent concurrent schema modification
 	schemaLock int64
 
-	closed    int64
-	closeLock sync.Mutex
+	closed int64 // should be accessed atomically
 
 	rt.Sviews
 }
@@ -489,16 +488,16 @@ func (db *Database) Transactions() []int {
 
 func (db *Database) ckOpen() {
 	if atomic.LoadInt64(&db.closed) == 1 {
-		rt.Fatal("database closed")
+		exit.Wait()
 	}
 }
 
+const dbClosed = 1
+
 // Close closes the database store, writing the current size to the start.
 func (db *Database) Close() {
-	db.closeLock.Lock()
-	defer db.closeLock.Unlock()
-	if atomic.LoadInt64(&db.closed) == 1 {
-		return // already closed
+	if atomic.SwapInt64(&db.closed, dbClosed) == dbClosed {
+		return
 	}
 	if db.ck != nil {
 		db.ck.Stop() // writes final state
@@ -509,11 +508,10 @@ func (db *Database) Close() {
 		db.writeSize()
 	}
 	db.Store.Close()
-	atomic.StoreInt64(&db.closed, 1)
 }
 
 func (db *Database) Closed() bool {
-	return atomic.LoadInt64(&db.closed) == 1
+	return atomic.LoadInt64(&db.closed) == dbClosed
 }
 
 func (db *Database) writeSize() {

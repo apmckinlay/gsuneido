@@ -190,7 +190,9 @@ func StartCheckCo(db *Database, mergeChan chan todo, allDone chan void) *CheckCo
 }
 
 func (ck *CheckCo) Stop() {
-	close(ck.c)
+	// send nil rather than closing
+	// so other threads don't get "send on closed channel"
+	ck.c <- nil
 	<-ck.allDone // wait
 }
 
@@ -206,7 +208,7 @@ func checker(ck *Check, c chan any, mergeChan chan todo) {
 	for {
 		select {
 		case msg := <-c:
-			if msg == nil { // channel closed
+			if msg == nil { // Stop
 				if mergeChan != nil { // no channel when testing
 					close(mergeChan)
 				}

@@ -86,9 +86,10 @@ func checkState(state *DbState, table string) (ec *ErrCorrupt) {
 }
 
 func truncate(dbfile string, store *stor.Stor, off uint64) error {
+	storeSize := store.Size()
 	store.Close()
 	size := off + uint64(stateLen)
-	if size == store.Size() {
+	if size == storeSize {
 		return fixHeader(dbfile, size)
 	}
 	tmpfile, err := truncate2(dbfile, size)

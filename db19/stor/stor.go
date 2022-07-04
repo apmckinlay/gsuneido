@@ -11,11 +11,15 @@ package stor
 
 import (
 	"bytes"
+	"log"
+	"math"
 	"math/bits"
 	"sync"
 	"sync/atomic"
 
 	"github.com/apmckinlay/gsuneido/util/assert"
+	"github.com/apmckinlay/gsuneido/util/dbg"
+	"github.com/apmckinlay/gsuneido/util/exit"
 )
 
 // Offset is an offset within storage
@@ -49,6 +53,8 @@ type Stor struct {
 	lock   sync.Mutex
 }
 
+const closedSize = math.MaxUint64
+
 func NewStor(impl storage, chunksize uint64, size uint64) *Stor {
 	shift := bits.TrailingZeros(uint(chunksize))
 	assert.That(1<<shift == chunksize) // chunksize must be power of 2
@@ -66,6 +72,10 @@ func (s *Stor) Alloc(n int) (Offset, []byte) {
 	assert.That(0 < n && n <= int(s.chunksize))
 	for {
 		oldsize := atomic.LoadUint64(&s.size)
+		if oldsize == closedSize {
+			log.Println("Stor: Alloc after Close")
+			exit.Wait()
+		}
 		offset := oldsize
 		newsize := offset + uint64(n)
 		chunk := s.offsetToChunk(newsize)
@@ -125,7 +135,13 @@ func (s *Stor) chunkToOffset(chunk int) Offset {
 // Size returns the current (allocated) size of the data.
 // The actual file size will be rounded up to the next chunk size.
 func (s *Stor) Size() uint64 {
-	return atomic.LoadUint64(&s.size)
+	size := atomic.LoadUint64(&s.size)
+	if size == closedSize {
+		log.Println("Stor: Size after Close")
+		dbg.PrintStack()
+		exit.Wait()
+	}
+	return size
 }
 
 // FirstOffset searches forewards from a given offset for a given byte slice
@@ -146,7 +162,8 @@ func (s *Stor) FirstOffset(off uint64, str string) uint64 {
 }
 
 // LastOffset searches backwards from a given offset for a given byte slice
-// and returns the offset, or 0 if not found
+// and returns the offset, or 0 if not found.
+// It is used by repair and by asof/history.
 func (s *Stor) LastOffset(off uint64, str string) uint64 {
 	b := []byte(str)
 	chunks := s.chunks.Load().([][]byte)
@@ -175,5 +192,8 @@ func (s *Stor) Write(off uint64, data []byte) {
 }
 
 func (s *Stor) Close() {
-	s.impl.Close(int64(s.size))
+	size := atomic.SwapUint64(&s.size, closedSize)
+	if size != closedSize {
+		s.impl.Close(int64(size))
+	}
 }

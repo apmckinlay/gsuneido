@@ -43,7 +43,6 @@ func (sh *stateHolder) set(newState *DbState) {
 //
 // GetState is atomic, it is not blocked by UpdateState.
 func (db *Database) GetState() *DbState {
-	db.ckOpen()
 	return db.state.get()
 }
 
@@ -65,7 +64,6 @@ func (db *Database) Persist() *DbState {
 //
 // UpdateState is guarded by a mutex
 func (db *Database) UpdateState(fn func(*DbState)) {
-	db.ckOpen()
 	db.state.updateState(fn)
 }
 

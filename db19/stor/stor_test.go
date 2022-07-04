@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/apmckinlay/gsuneido/util/assert"
+	"github.com/apmckinlay/gsuneido/util/generic/slc"
 )
 
 func TestAlloc(t *testing.T) {
@@ -120,4 +121,19 @@ func TestStress(*testing.T) {
 		}()
 	}
 	wg.Wait()
+}
+
+func TestAcessAfterClose(t *testing.T) {
+	s, err := MmapStor("stor.tmp", CREATE)
+	if err != nil {
+		panic(err.Error())
+	}
+	defer os.Remove("stor.tmp")
+	off, buf1 := s.Alloc(100)
+	slc.Fill(buf1, 'a')
+	_, buf2 := s.Alloc(100)
+	s.Close()
+	buf1 = s.Data(off)
+	assert.T(t).This(buf1[0]).Is('a')
+	slc.Fill(buf2, 'b')
 }
