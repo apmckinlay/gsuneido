@@ -18,7 +18,6 @@ import (
 	"unsafe"
 
 	"github.com/apmckinlay/gsuneido/options"
-	"github.com/apmckinlay/gsuneido/util/dbg"
 	"github.com/apmckinlay/gsuneido/util/exit"
 	"golang.org/x/sys/windows"
 )
@@ -122,20 +121,16 @@ func AlertCancel(args ...any) bool {
 
 var fatalOnce sync.Once
 
-func Fatal(args ...any) {
-	fatalOnce.Do(func() {
-		s := fmt.Sprintln(args...)
-		log.Print("FATAL: ", s)
-		dbg.PrintStack()
-		go func() {
-			time.Sleep(10 * time.Second)
-			exit.Exit(1)
-		}()
-		if !options.Unattended {
-			C.fatal(C.CString(s[:len(s)-1]))
-		}
+func Fatal(s string) {
+	go func() {
+		time.Sleep(10 * time.Second)
 		exit.Exit(1)
-	})
+	}()
+	if !options.Unattended {
+		fatalOnce.Do(func() {
+			C.fatal(C.CString(s[:len(s)-1]))
+		})
+	}
 }
 
 // must be injected
