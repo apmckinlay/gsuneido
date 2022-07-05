@@ -317,9 +317,8 @@ func (r *SuRecord) Erase(t *Thread, key Value) bool {
 }
 
 func (r *SuRecord) delete(t *Thread, key Value, fn func(Value) bool) bool {
-	if r.ob.Lock() {
-		defer r.ob.Unlock()
-	}
+	r.Lock()
+	defer r.Unlock()
 	r.ensureDeps()
 	r.ob.mustBeMutable()
 	// have to unpack
@@ -400,9 +399,8 @@ func (r *SuRecord) Iter() Iter {
 // ------------------------------------------------------------------
 
 func (r *SuRecord) Put(t *Thread, keyval, val Value) {
-	if r.Lock() {
-		defer r.Unlock()
-	}
+	r.Lock()
+	defer r.Unlock()
 	r.put(t, keyval, val)
 }
 func (r *SuRecord) put(t *Thread, keyval, val Value) {
@@ -442,9 +440,8 @@ func (r *SuRecord) invalidateDependents(key string) {
 
 func (r *SuRecord) GetPut(t *Thread, m, v Value,
 	op func(x, y Value) Value, retOrig bool) Value {
-	if r.Lock() {
-		defer r.Unlock()
-	}
+	r.Lock()
+	defer r.Unlock()
 	orig := r.get(t, m)
 	if orig == nil {
 		panic("uninitialized member: " + m.String())
@@ -458,9 +455,8 @@ func (r *SuRecord) GetPut(t *Thread, m, v Value,
 }
 
 func (r *SuRecord) Invalidate(t *Thread, key string) {
-	if r.Lock() {
-		defer r.Unlock()
-	}
+	r.Lock()
+	defer r.Unlock()
 	r.ensureDeps()
 	r.invalidate(key)
 	r.callObservers(t, key)
@@ -543,9 +539,8 @@ func (a activeObserver) Equal(other any) bool {
 
 // Get returns the value associated with a key, or defval if not found
 func (r *SuRecord) Get(t *Thread, key Value) Value {
-	if r.Lock() {
-		defer r.Unlock()
-	}
+	r.Lock()
+	defer r.Unlock()
 	return r.get(t, key)
 }
 func (r *SuRecord) get(t *Thread, key Value) Value {
@@ -559,9 +554,8 @@ func (r *SuRecord) get(t *Thread, key Value) Value {
 // GetIfPresent is the same as Get
 // except it returns nil instead of defval for missing members
 func (r *SuRecord) GetIfPresent(t *Thread, keyval Value) Value {
-	if r.Lock() {
-		defer r.Unlock()
-	}
+	r.Lock()
+	defer r.Unlock()
 	return r.getIfPresent(t, keyval)
 }
 func (r *SuRecord) getIfPresent(t *Thread, keyval Value) Value {
@@ -820,9 +814,8 @@ func (r *SuRecord) Transaction() *SuTran {
 
 // ToRecord converts this SuRecord to a Record to be stored in the database
 func (r *SuRecord) ToRecord(t *Thread, hdr *Header) Record {
-	if r.Lock() {
-		defer r.Unlock()
-	}
+	r.Lock()
+	defer r.Unlock()
 	r.ensureDeps()
 	fields := hdr.Fields[0]
 
