@@ -192,6 +192,9 @@ func (s *Stor) Write(off uint64, data []byte) {
 }
 
 func (s *Stor) Close() {
+	if _, ok := s.impl.(*heapStor); ok { // for tests
+		return
+	}
 	size := atomic.SwapUint64(&s.size, closedSize)
 	if size != closedSize {
 		s.impl.Close(int64(size))
