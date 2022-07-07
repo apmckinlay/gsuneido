@@ -171,8 +171,10 @@ func (sc *suServerConnect) close() {
 }
 
 func (sc *suServerConnect) Close() {
-	sc.client.conn.Close()
-	sc.client.conn = nil
+	if sc.client.conn != nil {
+		sc.client.conn.Close()
+		sc.client.conn = nil
+	}
 	atomic.AddInt32(&nSocketServerClient, -1)
 }
 
