@@ -56,9 +56,9 @@ func (ms mmapStor) Close(size int64) {
 	// MSDN: Although an application may close the file handle used to create
 	// a file mapping object, the system holds the corresponding file open
 	// until the last view of the file is unmapped.
-	for _, ptr := range ms.ptrs {
-		syscall.UnmapViewOfFile(ptr)
-	}
+	// for _, ptr := range ms.ptrs {
+	// 	syscall.UnmapViewOfFile(ptr)
+	// }
 	ms.file.Truncate(size)
 	filelock.Unlock(ms.file)
 	ms.file.Close()
