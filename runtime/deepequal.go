@@ -136,8 +136,8 @@ func deepEqual(x, y Value) bool {
 }
 
 func xdeObject(x *SuObject, stack *[]Value) (todo []Value, listSize, namedSize int) {
-	if x.Lock() {
-		defer x.Unlock()
+	if x.RLock() {
+		defer x.RUnlock()
 	} else if x.named.Size() == 0 {
 		// not concurrent, just list, don't need to copy
 		return x.list, len(x.list), 0
@@ -173,9 +173,9 @@ func expand(stack *[]Value, extra int) {
 }
 
 func ydeObject(y *SuObject, stack *[]Value, listSize, namedSize int) (todo []Value, sizesEqual bool) {
-	concurrent := y.Lock()
+	concurrent := y.RLock()
 	if concurrent {
-		defer y.Unlock()
+		defer y.RUnlock()
 	}
 	if len(y.list) != listSize || y.named.Size() != namedSize {
 		return nil, false

@@ -15,11 +15,13 @@ import (
 	"github.com/apmckinlay/gsuneido/util/hacks"
 	"github.com/apmckinlay/gsuneido/util/pack"
 	"github.com/apmckinlay/gsuneido/util/varint"
+	"golang.org/x/exp/slices"
 )
 
 /*
-WARNING: sync.Mutex lock is NOT reentrant
-Methods that lock must not call other methods that lock.
+WARNING: Lock is NOT reentrant
+Methods that call Lock must not call other methods that call Lock.
+RLock is reentrant, but must not call anything that might Lock.
 The convention is that public methods should lock (if concurrent)
 and private methods should not lock
 */
@@ -35,7 +37,7 @@ type SuObject struct {
 	named  Hmap
 	list   []Value
 	defval Value
-	MayLock
+	RWMayLock
 	// version is incrmented by operations that change one of the sizes.
 	// i.e. not by just updating a value in-place.
 	// It is used to detect modification during iteration.
@@ -66,8 +68,8 @@ func SuObjectOfStrs(strs []string) *SuObject {
 }
 
 func (ob *SuObject) Copy() Container {
-	if ob.Lock() {
-		defer ob.Unlock()
+	if ob.RLock() {
+		defer ob.RUnlock()
 	}
 	return ob.slice(0)
 }
@@ -89,6 +91,7 @@ func (ob *SuObject) ToObject() *SuObject {
 
 // Get returns the value associated with a key, or defval if not found
 func (ob *SuObject) Get(_ *Thread, key Value) Value {
+	// not read-only because of container default values
 	if ob.Lock() {
 		defer ob.Unlock()
 	}
@@ -123,8 +126,8 @@ func (ob *SuObject) defaultValue(key Value) Value {
 }
 
 func (ob *SuObject) GetIfPresent(_ *Thread, key Value) Value {
-	if ob.Lock() {
-		defer ob.Unlock()
+	if ob.RLock() {
+		defer ob.RUnlock()
 	}
 	return ob.getIfPresent(key)
 }
@@ -137,8 +140,8 @@ func (ob *SuObject) getIfPresent(key Value) Value {
 
 // Has returns true if the object contains the given key (not value)
 func (ob *SuObject) HasKey(key Value) bool {
-	if ob.Lock() {
-		defer ob.Unlock()
+	if ob.RLock() {
+		defer ob.RUnlock()
 	}
 	return ob.hasKey(key)
 }
@@ -149,19 +152,15 @@ func (ob *SuObject) hasKey(key Value) bool {
 
 // ListGet returns a value from the list, panics if index out of range
 func (ob *SuObject) ListGet(i int) Value {
-	if ob.Lock() {
-		defer ob.Unlock()
+	if ob.RLock() {
+		defer ob.RUnlock()
 	}
 	return ob.list[i]
 }
 
 // namedGet returns a named member or nil if it doesn't exist.
 func (ob *SuObject) namedGet(key Value) Value {
-	val := ob.named.Get(key)
-	if val == nil {
-		return nil
-	}
-	return val
+	return ob.named.Get(key)
 }
 
 // Put adds or updates the given key and value
@@ -289,7 +288,8 @@ func (ob *SuObject) PopLast() Value {
 }
 
 // startMutate ensures the object is mutable (not readonly)
-// and saves the list and named sizes (packed into an int)
+// and saves the list and named sizes (packed into an int).
+// It also increments clock, assuming changes will be made.
 func (ob *SuObject) startMutate() int {
 	ob.mustBeMutable()
 	ob.clock++
@@ -321,8 +321,8 @@ func (ob *SuObject) deleteAll() {
 }
 
 func (ob *SuObject) RangeTo(from int, to int) Value {
-	if ob.Lock() {
-		defer ob.Unlock()
+	if ob.RLock() {
+		defer ob.RUnlock()
 	}
 	size := len(ob.list)
 	from = prepFrom(from, size)
@@ -331,8 +331,8 @@ func (ob *SuObject) RangeTo(from int, to int) Value {
 }
 
 func (ob *SuObject) RangeLen(from int, n int) Value {
-	if ob.Lock() {
-		defer ob.Unlock()
+	if ob.RLock() {
+		defer ob.RUnlock()
 	}
 	size := len(ob.list)
 	from = prepFrom(from, size)
@@ -351,23 +351,23 @@ func (ob *SuObject) ToContainer() (Container, bool) {
 }
 
 func (ob *SuObject) ListSize() int {
-	if ob.Lock() {
-		defer ob.Unlock()
+	if ob.RLock() {
+		defer ob.RUnlock()
 	}
 	return len(ob.list)
 }
 
 func (ob *SuObject) NamedSize() int {
-	if ob.Lock() {
-		defer ob.Unlock()
+	if ob.RLock() {
+		defer ob.RUnlock()
 	}
 	return ob.named.Size()
 }
 
 // Size returns the number of values in the object
 func (ob *SuObject) Size() int {
-	if ob.Lock() {
-		defer ob.Unlock()
+	if ob.RLock() {
+		defer ob.RUnlock()
 	}
 	return ob.size()
 }
@@ -448,6 +448,7 @@ func (ob *SuObject) String() string {
 }
 
 func (ob *SuObject) Display(t *Thread) string {
+	// locking is handled by ArgsIter
 	buf := limitBuf{}
 	ob.rstring(t, &buf, nil)
 	return buf.String()
@@ -476,16 +477,6 @@ func (ob *SuObject) rstring2(t *Thread, buf *limitBuf, before, after string,
 		}
 	}
 	buf.WriteString(after)
-}
-
-func (ob *SuObject) vecstr(t *Thread, buf *limitBuf, inProgress vstack) string {
-	sep := ""
-	for _, v := range ob.list {
-		buf.WriteString(sep)
-		sep = ", "
-		valstr(t, buf, v, inProgress)
-	}
-	return sep
 }
 
 func entstr(t *Thread, buf *limitBuf, k Value, v Value, inProgress vstack) {
@@ -529,6 +520,7 @@ func Unquoted(k Value) string {
 // Show is like Display except that it sorts named members.
 // It is used for tests.
 func (ob *SuObject) Show() string {
+	// locking is handled by ArgsIter
 	return ob.show("#(", ")", nil)
 }
 func (ob *SuObject) show(before, after string, inProgress vstack) string {
@@ -576,13 +568,16 @@ func (buf *limitBuf) String() string {
 }
 
 func (ob *SuObject) Hash() uint32 {
-	if ob.Lock() {
-		defer ob.Unlock()
+	if ob.RLock() {
+		defer ob.RUnlock()
 	}
 	hash := ob.hash2()
 	if len(ob.list) > 0 {
-		hash = 31*hash + ob.list[0].Hash()
-	}
+		hash = 31*hash + ob.list[0].Hash2()
+		if len(ob.list) > 1 {
+			hash = 31*hash + ob.list[1].Hash2()
+		}
+		}
 	if 0 < ob.named.Size() && ob.named.Size() <= 4 {
 		iter := ob.named.Iter()
 		for {
@@ -597,10 +592,10 @@ func (ob *SuObject) Hash() uint32 {
 	return hash
 }
 
-// Hash2 is shallow so prevents infinite recursion
+// Hash2 is shallow to prevents infinite recursion and deadlock
 func (ob *SuObject) Hash2() uint32 {
-	if ob.Lock() {
-		defer ob.Unlock()
+	if ob.RLock() {
+		defer ob.RUnlock()
 	}
 	return ob.hash2()
 }
@@ -613,6 +608,7 @@ func (ob *SuObject) hash2() uint32 {
 }
 
 func (ob *SuObject) Equal(other any) bool {
+	// locking is handled by deepEqual
 	val, ok := other.(Value)
 	return ok && deepEqual(ob, val)
 }
@@ -627,6 +623,7 @@ func (ob *SuObject) Compare(other Value) int {
 		return cmp
 	}
 	// now know other is an object so ToContainer won't panic
+	// locking is handled by children (from cmp2)
 	return cmp2(ob, ToContainer(other).ToObject())
 }
 
@@ -669,11 +666,11 @@ func cmp2(x Value, y Value) int {
 }
 
 func children(ob *SuObject, stack *[]Value) []Value {
-	if !ob.Lock() {
+	if !ob.RLock() {
 		// not concurrent, don't need to copy
 		return ob.list
 	}
-	defer ob.Unlock()
+	defer ob.RUnlock()
 	start := len(*stack)
 	expand(stack, len(ob.list))
 	copy((*stack)[start:], ob.list)
@@ -695,8 +692,8 @@ func (*SuObject) Lookup(t *Thread, method string) Callable {
 
 // Slice returns a copy of the object, omitting the first n list values
 func (ob *SuObject) Slice(n int) Container {
-	if ob.Lock() {
-		defer ob.Unlock()
+	if ob.RLock() {
+		defer ob.RUnlock()
 	}
 	return ob.slice(n)
 }
@@ -704,8 +701,8 @@ func (ob *SuObject) Slice(n int) Container {
 // Find returns the key of the first occurence of the value else False.
 // Lock to avoid object-modified-during-iteration.
 func (ob *SuObject) Find(val Value) Value {
-	if ob.Lock() {
-		defer ob.Unlock()
+	if ob.RLock() {
+		defer ob.RUnlock()
 	}
 	for i, v := range ob.list {
 		if v.Equal(val) {
@@ -723,17 +720,17 @@ func (ob *SuObject) Find(val Value) Value {
 
 // ArgsIter is similar to Iter2 but it returns a nil key for list elements
 func (ob *SuObject) ArgsIter() func() (Value, Value) {
-	if ob.Lock() {
-		defer ob.Unlock()
+	if ob.RLock() {
+		defer ob.RUnlock()
 	}
 	version := ob.version
 	next := 0
 	named := ob.named.Iter()
 	return func() (Value, Value) {
-		if ob.Lock() {
-			defer ob.Unlock()
+		if ob.RLock() {
+			defer ob.RUnlock()
 		}
-		ob.modificationCheck(version)
+		ob.versionCheck(version)
 		i := next
 		next++
 		if i < len(ob.list) {
@@ -750,8 +747,8 @@ func (ob *SuObject) ArgsIter() func() (Value, Value) {
 // Iter2 iterates through list and named elements.
 // List elements are returned with their numeric key index.
 func (ob *SuObject) Iter2(list, named bool) func() (Value, Value) {
-	if ob.Lock() {
-		defer ob.Unlock()
+	if ob.RLock() {
+		defer ob.RUnlock()
 	}
 	return ob.iter2(list, named)
 }
@@ -760,10 +757,10 @@ func (ob *SuObject) iter2(list, named bool) func() (Value, Value) {
 	next := 0
 	if list && !named {
 		return func() (Value, Value) {
-			if ob.Lock() {
-				defer ob.Unlock()
+			if ob.RLock() {
+				defer ob.RUnlock()
 			}
-			ob.modificationCheck(version)
+			ob.versionCheck(version)
 			i := next
 			if i < len(ob.list) {
 				next++
@@ -775,10 +772,10 @@ func (ob *SuObject) iter2(list, named bool) func() (Value, Value) {
 	namedIter := ob.named.Iter()
 	if named && !list {
 		return func() (Value, Value) {
-			if ob.Lock() {
-				defer ob.Unlock()
+			if ob.RLock() {
+				defer ob.RUnlock()
 			}
-			ob.modificationCheck(version)
+			ob.versionCheck(version)
 			key, val := namedIter()
 			if key == nil {
 				return nil, nil
@@ -788,10 +785,10 @@ func (ob *SuObject) iter2(list, named bool) func() (Value, Value) {
 	}
 	// else named && list
 	return func() (Value, Value) {
-		if ob.Lock() {
-			defer ob.Unlock()
+		if ob.RLock() {
+			defer ob.RUnlock()
 		}
-		ob.modificationCheck(version)
+		ob.versionCheck(version)
 		i := next
 		if i < len(ob.list) {
 			next++
@@ -805,9 +802,15 @@ func (ob *SuObject) iter2(list, named bool) func() (Value, Value) {
 	}
 }
 
-func (ob *SuObject) modificationCheck(version int32) {
+func (ob *SuObject) versionCheck(version int32) {
 	if ob.version != version {
 		panic("object modified during iteration")
+	}
+}
+
+func (ob *SuObject) clockCheck(clock uint32, op string) {
+	if ob.clock != clock {
+		panic("object modified during " + op)
 	}
 }
 
@@ -817,8 +820,8 @@ func (ob *SuObject) Iter() Iter {
 }
 
 func (ob *SuObject) ToRecord(t *Thread, hdr *Header) Record {
-	if ob.Lock() {
-		defer ob.Unlock()
+	if ob.RLock() {
+		defer ob.RUnlock()
 	}
 	assert.That(len(hdr.Fields) == 1)
 	fields := hdr.Fields[0]
@@ -846,9 +849,8 @@ func (ob *SuObject) ToRecord(t *Thread, hdr *Header) Record {
 }
 
 func (ob *SuObject) Sort(t *Thread, lt Value) {
-	if ob.Lock() {
-		defer ob.Unlock()
-	}
+	ob.Lock()
+	defer ob.Unlock()
 	ob.mustBeMutable()
 	ob.clock++
 	ob.version++
@@ -857,35 +859,63 @@ func (ob *SuObject) Sort(t *Thread, lt Value) {
 			return ob.list[i].Compare(ob.list[j]) < 0
 		})
 	} else {
-		sort.SliceStable(ob.list, func(i, j int) bool {
-			return True == t.Call(lt, ob.list[i], ob.list[j])
-		})
+		// tradeoff - use memory to copy the list
+		// to avoid unlock/relock for every lt call
+		clock := ob.clock
+		list := slices.Clone(ob.list)
+		func() {
+			ob.Unlock() // can't hold lock while calling arbitrary code
+			defer ob.Lock()
+			sort.SliceStable(list, func(i, j int) bool {
+				return True == t.Call(lt, list[i], list[j])
+			})
+			// note: could become concurrent during lt
+		}()
+		ob.clockCheck(clock, "Sort")
+		ob.list = list
 	}
 }
 
 func (ob *SuObject) Unique() {
-	if ob.Lock() {
-		defer ob.Unlock()
-	}
+	conc := ob.Lock()
+	defer ob.Unlock()
 	defer ob.endMutate(ob.startMutate())
-	n := len(ob.list)
+	if !conc {
+		ob.list = unique(ob.list)
+	} else { // concurrent
+		clock := ob.clock
+		// tradeoff - use memory to copy list
+		// to avoid unlock/lock for every Equal call
+		list := slices.Clone(ob.list)
+		func() {
+			ob.Unlock() // can't call Equal with write lock
+			defer ob.Lock()
+			list = unique(list)
+		}()
+		ob.clockCheck(clock, "Unique")
+		ob.list = list
+	}
+}
+
+func unique(list []Value) []Value {
+	n := len(list)
 	if n < 2 {
-		return
+		return list
 	}
 	dst := 1
 	for src := 1; src < n; src++ {
-		if ob.list[src].Equal(ob.list[src-1]) {
+		if list[src].Equal(list[src-1]) {
 			continue
 		}
 		if dst < src {
-			ob.list[dst] = ob.list[src]
+			list[dst] = list[src]
 		}
 		dst++
 	}
 	for i := dst; i < n; i++ {
-		ob.list[i] = nil // for gc
+		list[i] = nil // for gc
 	}
-	ob.list = ob.list[:dst]
+	return list[:dst]
 }
 
 func (ob *SuObject) SetConcurrent() {
@@ -894,7 +924,7 @@ func (ob *SuObject) SetConcurrent() {
 
 func (ob *SuObject) SetConc() bool {
 	if ob.readonly || // don't need concurrent if readonly
-		!ob.MayLock.SetConc() {
+		!ob.RWMayLock.SetConc() {
 		return false
 	}
 	// recursive, deep
@@ -982,8 +1012,8 @@ func (ob *SuObject) Reverse() {
 
 // BinarySearch does a binary search with default comparisons
 func (ob *SuObject) BinarySearch(value Value) int {
-	if ob.Lock() {
-		defer ob.Unlock()
+	if ob.RLock() {
+		defer ob.RUnlock()
 	}
 	return sort.Search(len(ob.list), func(i int) bool {
 		return ob.list[i].Compare(value) >= 0
@@ -992,8 +1022,15 @@ func (ob *SuObject) BinarySearch(value Value) int {
 
 // BinarySearch2 does a binary search with a user specified less than function
 func (ob *SuObject) BinarySearch2(t *Thread, value, lt Value) int {
-	return sort.Search(ob.ListSize(), func(i int) bool {
-		return True != t.Call(lt, ob.ListGet(i), value)
+	ob.RLock()
+	defer ob.Unlock()
+	defer ob.clockCheck(ob.clock, "BinarySearch")
+	list := ob.list
+	return sort.Search(len(list), func(i int) bool {
+		ob.RUnlock() // can't hold lock while calling arbitrary code
+		defer ob.RLock()
+		return True != t.Call(lt, list[i], value)
+		// note: could become concurrent during lt
 	})
 }
 
@@ -1010,8 +1047,8 @@ func (ob *SuObject) PackSize(hash *uint32) int {
 func (ob *SuObject) PackSize2(hash *uint32, stack packStack) int {
 	// must check stack before locking to avoid recursive deadlock
 	stack.push(ob)
-	if ob.Lock() {
-		defer ob.Unlock()
+	if ob.RLock() {
+		defer ob.RUnlock()
 	}
 	*hash = hacks.CrcUint32(*hash, ob.clock)
 	if ob.size() == 0 {
@@ -1039,8 +1076,8 @@ func packSize(x Value, hash *uint32, stack packStack) int {
 }
 
 func (ob *SuObject) Pack(hash *uint32, buf *pack.Encoder) {
-	if ob.Lock() {
-		defer ob.Unlock()
+	if ob.RLock() {
+		defer ob.RUnlock()
 	}
 	ob.pack(hash, buf, PackObject)
 }

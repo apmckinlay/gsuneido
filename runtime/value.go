@@ -361,6 +361,68 @@ func (x *MayLock) IsConcurrent() Value {
 	return SuBool(x.concurrent)
 }
 
+// RWMayLock is similar to MayLock except that it has a read-write lock.
+// It is used by SuObject.
+type RWMayLock struct {
+	lock       sync.RWMutex
+	concurrent bool
+}
+
+func (x *RWMayLock) SetConcurrent() {
+	x.concurrent = true
+}
+
+// SetConc returns true if it sets concurrent
+func (x *RWMayLock) SetConc() bool {
+	if x.concurrent {
+		return false
+	}
+	x.concurrent = true
+	return true
+}
+
+func (x *RWMayLock) RLock() bool {
+	if x == nil {
+		log.Fatal("Lock nil")
+	}
+	if x.concurrent {
+		x.lock.RLock()
+		return true
+	}
+	return false
+}
+
+func (x *RWMayLock) RUnlock() bool {
+	if x.concurrent {
+		x.lock.RUnlock()
+		return true
+	}
+	return false
+}
+
+func (x *RWMayLock) Lock() bool {
+	if x == nil {
+		log.Fatal("Lock nil")
+	}
+	if x.concurrent {
+		x.lock.Lock()
+		return true
+	}
+	return false
+}
+
+func (x *RWMayLock) Unlock() bool {
+	if x.concurrent {
+		x.lock.Unlock()
+		return true
+	}
+	return false
+}
+
+func (x *RWMayLock) IsConcurrent() Value {
+	return SuBool(x.concurrent)
+}
+
 func IsConcurrent(x any) Value {
 	if ic, ok := x.(interface{ IsConcurrent() Value }); ok {
 		return ic.IsConcurrent()
