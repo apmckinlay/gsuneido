@@ -184,6 +184,7 @@ uintptr interact() {
 		switch (args[0]) {
 		case msg_syscall:
 			args[1] = syscall();
+			// args[2] = GetLastError();
 			args[0] = msg_result;
 			break;
 		case msg_msgloop:

@@ -142,6 +142,8 @@ var RunOnGoSide func()
 var SunAPP func(string) string
 var Shutdown func(exitcode int)
 
+// var LastError uintptr
+
 func interact(args ...uintptr) uintptr {
 	if windows.GetCurrentThreadId() != uiThreadId {
 		log.Println("ERROR: illegal UI call from background thread")
@@ -181,6 +183,7 @@ func interact(args ...uintptr) uintptr {
 		case C.msg_shutdown:
 			Shutdown(int(C.args[1]))
 		case C.msg_result:
+			// LastError = uintptr(C.args[2]) // for syscall
 			return uintptr(C.args[1])
 		}
 		C.signalAndWait()

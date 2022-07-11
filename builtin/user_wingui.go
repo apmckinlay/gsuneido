@@ -324,6 +324,9 @@ var _ = builtin("CreateWindowEx(exStyle, classname, name, style, x, y, w, h,"+
 			intArg(a[9]),
 			intArg(a[10]),
 			intArg(a[11]))
+		// if rtn == 0 {
+		// 	log.Println("CreateWindowEx failed, GetLastError", goc.LastError)
+		// }
 		return intRet(rtn)
 	})
 
