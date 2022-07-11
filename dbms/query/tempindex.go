@@ -60,7 +60,7 @@ func (ti *TempIndex) Lookup(th *Thread, cols, vals []string) Row {
 		ti.iter = ti.makeIter()
 	}
 	encode := len(ti.order) > 1
-	key := selOrg(encode, ti.order, cols, vals)
+	key := selOrg(encode, ti.order, cols, vals, true)
 	row := ti.iter.Seek(key)
 	if row == nil || ti.rowKey(row) != key {
 		return nil

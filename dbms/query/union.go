@@ -59,6 +59,9 @@ func (u *Union) String() string {
 	case unionLookup:
 		if u.disjoint == "" {
 			strategy += "-LOOKUP"
+			// if u.keyIndex != nil {
+			// 	strategy += "^" + str.Join("(,)", u.keyIndex)
+			// }
 		}
 	}
 	return u.String2("UNION", strategy)

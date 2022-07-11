@@ -200,7 +200,7 @@ func lookupCost(rowSize int) Cost {
 // execution --------------------------------------------------------
 
 func (tbl *Table) Lookup(_ *runtime.Thread, cols, vals []string) runtime.Row {
-	key := selOrg(tbl.indexEncode, tbl.index, cols, vals)
+	key := selOrg(tbl.indexEncode, tbl.index, cols, vals, true)
 	return tbl.lookup(key)
 }
 
@@ -258,6 +258,7 @@ func selKeys(encode bool, dstCols, srcCols, vals []string) (string, string) {
 		return ixkey.Min, ixkey.Max
 	}
 	if !encode {
+		assert.That(len(dstCols) == 1)
 		org := selGet(dstCols[0], srcCols, vals)
 		end := org + "\x00"
 		return org, end
@@ -298,8 +299,9 @@ func trim(end string) string {
 	return org[:n]
 }
 
-func selOrg(encode bool, dstCols, srcCols, vals []string) string {
+func selOrg(encode bool, dstCols, srcCols, vals []string, full bool) string {
 	if !encode {
+		assert.That(len(dstCols) == 1)
 		return selGet(dstCols[0], srcCols, vals)
 	}
 	enc := ixkey.Encoder{}
@@ -307,6 +309,9 @@ func selOrg(encode bool, dstCols, srcCols, vals []string) string {
 	for _, col := range dstCols {
 		i := slices.Index(srcCols, col)
 		if i == -1 {
+			if full {
+				panic("selOrg not full")
+			}
 			break
 		}
 		enc.Add(vals[i])

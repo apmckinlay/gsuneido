@@ -213,7 +213,7 @@ func TestSelKeys(t *testing.T) {
 	sep := ixkey.Sep
 	max := ixkey.Max
 	encode := false
-	dstCols := []string{"one", "two"}
+	dstCols := []string{"one"}
 	srcCols := []string{"two", "one"}
 	vals := []string{"2", "1"}
 	test := func(org, end string) {
@@ -224,6 +224,7 @@ func TestSelKeys(t *testing.T) {
 	}
 	test("1", "1\x00")
 	encode = true
+	dstCols = []string{"one", "two"}
 	test("1"+sep+"2", "1"+sep+"2"+sep+max)
 	dstCols = []string{"a", "b", "c"}
 	srcCols = []string{"a"}

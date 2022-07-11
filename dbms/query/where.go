@@ -1100,7 +1100,7 @@ func (w *Where) Select(cols, vals []string) {
 		w.source.Select(cols, vals)
 		return
 	}
-	w.sel = selOrg(w.idxSel.encoded, w.idxSel.index, cols, vals)
+	w.sel = selOrg(w.idxSel.encoded, w.idxSel.index, cols, vals, false)
 	w.selSet = true
 }
 

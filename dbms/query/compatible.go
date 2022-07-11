@@ -68,11 +68,19 @@ func (c *Compatible) source2Has(th *Thread, row Row) bool {
 		c.hdr1 = c.source.Header()
 		c.hdr2 = c.source2.Header()
 	}
-	vals := make([]string, len(c.keyIndex))
-	for i, col := range c.keyIndex {
-		vals[i] = row.GetRawVal(c.hdr1, col, th, c.st)
+	fixed := c.Fixed()
+	cols := slices.Clip(c.keyIndex)
+	vals := make([]string, 0, len(c.keyIndex)+len(fixed))
+	for _, col := range c.keyIndex {
+		vals = append(vals, row.GetRawVal(c.hdr1, col, th, c.st))
 	}
-	row2 := c.source2.Lookup(th, c.keyIndex, vals)
+	for _, fix := range fixed {
+		if len(fix.values) == 1 {
+			cols = append(cols, fix.col)
+			vals = append(vals, fix.values[0])
+		}
+	}
+	row2 := c.source2.Lookup(th, cols, vals)
 	return row2 != nil && c.equal(row, row2, th)
 }
 
