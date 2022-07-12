@@ -218,10 +218,5 @@ func (ix *Index) Cksum() uint32 {
 }
 
 func (sc *Schema) HasDeleted() bool {
-	for _, col := range sc.Columns {
-		if col == "-" {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(sc.Columns, "-")
 }
