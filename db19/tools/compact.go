@@ -17,6 +17,7 @@ import (
 	"github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/cksum"
+	"github.com/apmckinlay/gsuneido/util/generic/slc"
 	"github.com/apmckinlay/gsuneido/util/sortlist"
 	"github.com/apmckinlay/gsuneido/util/system"
 )
@@ -141,6 +142,9 @@ func compactTable(state *DbState, src *Database, ts *meta.Schema, dst *Database)
 	assert.This(count).Is(info.Nrows)
 	for i := 1; i < len(info.Indexes); i++ {
 		CheckOtherIndex(info.Indexes[i], count, sum, i)
+	}
+	if hasdel {
+		ts.Columns = slc.Without(ts.Columns, "-")
 	}
 	ov := buildIndexes(ts, list, dst.Store, count) // same as load
 	ti := &meta.Info{Table: ts.Table, Nrows: count, Size: size, Indexes: ov}
