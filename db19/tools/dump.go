@@ -42,9 +42,15 @@ func Dump(db *Database, to string) (nTables, nViews int, err error) {
 	f, w := dumpOpen()
 	tmpfile := f.Name()
 	defer func() { f.Close(); os.Remove(tmpfile) }()
+	nTables, nViews = dump(db, w)
+	f.Close()
+	ck(system.RenameBak(tmpfile, to))
+	return nTables, nViews, nil
+}
+
+func dump(db *Database, w *bufio.Writer) (nTables, nViews int) {
 	ics := newIndexCheckers()
 	defer ics.finish()
-
 	state := db.Persist()
 	nViews = dumpViews(state, w)
 	tables := make([]string, 0, 512)
@@ -56,10 +62,7 @@ func Dump(db *Database, to string) (nTables, nViews int, err error) {
 		dumpTable2(db, state, table, true, w, ics)
 	}
 	ck(w.Flush())
-	f.Close()
-	ics.finish()
-	ck(system.RenameBak(tmpfile, to))
-	return len(tables), nViews, nil
+	return len(tables), nViews
 }
 
 // DumpTable exports a dumped table to a file.
