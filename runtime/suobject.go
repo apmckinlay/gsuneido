@@ -1023,7 +1023,7 @@ func (ob *SuObject) BinarySearch(value Value) int {
 // BinarySearch2 does a binary search with a user specified less than function
 func (ob *SuObject) BinarySearch2(t *Thread, value, lt Value) int {
 	ob.RLock()
-	defer ob.Unlock()
+	defer ob.RUnlock()
 	defer ob.clockCheck(ob.clock, "BinarySearch")
 	list := ob.list
 	return sort.Search(len(list), func(i int) bool {
