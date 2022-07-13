@@ -27,7 +27,7 @@ func TestCostModel(*testing.T) {
 		panic(err)
 	}
 	defer os.Remove(file)
-	defer db.Close()
+	defer db.Close(true)
 	for db.Size() < dbsize {
 		_, buf := db.Alloc(4 * 1024)
 		slc.Fill(buf, 0x55)

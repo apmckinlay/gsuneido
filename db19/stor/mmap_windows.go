@@ -52,13 +52,18 @@ func (ms *mmapStor) Get(chunk int) []byte {
 	return (*[MMAP_CHUNKSIZE]byte)(unsafe.Pointer(ptr))[:]
 }
 
-func (ms mmapStor) Close(size int64) {
+func (ms mmapStor) Close(size int64, unmap bool) {
+	// Things like -load need to unmap in order to close the file
+	// in order to rename it. But for the server we do NOT want to unmap
+	// because then threads get access violations during shutdown.
 	// MSDN: Although an application may close the file handle used to create
 	// a file mapping object, the system holds the corresponding file open
 	// until the last view of the file is unmapped.
-	// for _, ptr := range ms.ptrs {
-	// 	syscall.UnmapViewOfFile(ptr)
-	// }
+	if unmap {
+		for _, ptr := range ms.ptrs {
+			syscall.UnmapViewOfFile(ptr)
+		}
+	}
 	ms.file.Truncate(size)
 	filelock.Unlock(ms.file)
 	ms.file.Close()

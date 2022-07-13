@@ -25,5 +25,5 @@ func (hs heapStor) Get(int) []byte {
 	return make([]byte, hs.chunksize)
 }
 
-func (hs heapStor) Close(int64) {
+func (hs heapStor) Close(int64, bool) {
 }

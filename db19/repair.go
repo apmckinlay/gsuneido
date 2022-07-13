@@ -24,7 +24,7 @@ func Repair(dbfile string, err error) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	defer store.Close()
+	defer store.Close(true)
 	off := store.Size()
 	var state *DbState
 	for {
@@ -87,7 +87,7 @@ func checkState(state *DbState, table string) (ec *ErrCorrupt) {
 
 func truncate(dbfile string, store *stor.Stor, off uint64) error {
 	storeSize := store.Size()
-	store.Close()
+	store.Close(true)
 	size := off + uint64(stateLen)
 	if size == storeSize {
 		return fixHeader(dbfile, size)

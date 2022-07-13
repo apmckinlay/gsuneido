@@ -32,7 +32,7 @@ type storage interface {
 	// Get returns the i'th chunk of storage
 	Get(chunk int) []byte
 	// Close closes the storage (if necessary)
-	Close(size int64)
+	Close(size int64, unmap bool)
 }
 
 // Stor is the externally visible storage
@@ -191,12 +191,12 @@ func (s *Stor) Write(off uint64, data []byte) {
 	}
 }
 
-func (s *Stor) Close() {
+func (s *Stor) Close(unmap bool) {
 	if _, ok := s.impl.(*heapStor); ok { // for tests
 		return
 	}
 	size := atomic.SwapUint64(&s.size, closedSize)
 	if size != closedSize {
-		s.impl.Close(int64(size))
+		s.impl.Close(int64(size), unmap)
 	}
 }

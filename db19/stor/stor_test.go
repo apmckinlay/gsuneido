@@ -42,7 +42,7 @@ func TestMmapRead(t *testing.T) {
 	ms, _ := MmapStor("stor_test.go", READ) // use code as test file
 	buf := ms.Data(0)
 	assert.T(t).This(string(buf[:12])).Is("// Copyright")
-	ms.Close()
+	ms.Close(true)
 }
 
 func TestMmapWrite(t *testing.T) {
@@ -52,21 +52,21 @@ func TestMmapWrite(t *testing.T) {
 	for i := 0; i < N; i++ {
 		buf[i] = byte(i)
 	}
-	ms.Close()
+	ms.Close(true)
 
 	ms, _ = MmapStor("stor_test.tmp", UPDATE)
 	data := ms.Data(0)
 	for i := 0; i < N; i++ {
 		assert.T(t).This(data[i]).Is(byte(i))
 	}
-	ms.Close()
+	ms.Close(true)
 
 	ms, _ = MmapStor("stor_test.tmp", READ)
 	data = ms.Data(0)
 	for i := 0; i < N; i++ {
 		assert.T(t).This(data[i]).Is(byte(i))
 	}
-	ms.Close()
+	ms.Close(true)
 
 	os.Remove("stor_test.tmp")
 }
@@ -75,7 +75,7 @@ func TestLastOffset(t *testing.T) {
 	assert := assert.T(t).This
 	ms, _ := MmapStor("stor_test.tmp", CREATE)
 	defer os.Remove("stor_test.tmp")
-	defer ms.Close()
+	defer ms.Close(true)
 
 	const N = 10
 	const magic = "helloworld"
@@ -105,7 +105,7 @@ func TestStress(*testing.T) {
 	var wg sync.WaitGroup
 	s, err := MmapStor("stor.tmp", CREATE)
 	defer os.Remove("stor.tmp")
-	defer s.Close()
+	defer s.Close(true)
 	if err != nil {
 		panic(err.Error())
 	}
@@ -132,7 +132,7 @@ func TestAcessAfterClose(t *testing.T) {
 	off, buf1 := s.Alloc(100)
 	slc.Fill(buf1, 'a')
 	_, buf2 := s.Alloc(100)
-	s.Close()
+	s.Close(true)
 	buf1 = s.Data(off)
 	assert.T(t).This(buf1[0]).Is('a')
 	slc.Fill(buf2, 'b')

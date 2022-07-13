@@ -93,7 +93,7 @@ func OpenDb(filename string, mode stor.Mode, check bool) (db *Database, err erro
 func OpenDbStor(store *stor.Stor, mode stor.Mode, check bool) (db *Database, err error) {
 	defer func() {
 		if err != nil {
-			store.Close()
+			store.Close(true)
 		}
 	}()
 	buf := store.Data(0)
@@ -496,6 +496,12 @@ const dbClosed = 1
 
 // Close closes the database store, writing the current size to the start.
 func (db *Database) Close() {
+	db.close(true)
+}
+func (db *Database) CloseKeepMapped() {
+	db.close(false)
+}
+func (db *Database) close(unmap bool) {
 	if atomic.SwapInt64(&db.closed, dbClosed) == dbClosed {
 		return
 	}
@@ -507,7 +513,7 @@ func (db *Database) Close() {
 	if db.mode != stor.READ {
 		db.writeSize()
 	}
-	db.Store.Close()
+	db.Store.Close(unmap)
 }
 
 func (db *Database) Closed() bool {

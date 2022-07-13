@@ -30,7 +30,8 @@ func (ms *mmapStor) Get(chunk int) []byte {
 	return mmap
 }
 
-func (ms *mmapStor) Close(size int64) {
+func (ms *mmapStor) Close(size int64, _ bool) {
+	// could Munmap but doesn't seem necessary, at least on Mac
 	ms.file.Truncate(size)
 	filelock.Unlock(ms.file)
 	ms.file.Close()

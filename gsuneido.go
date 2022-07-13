@@ -283,7 +283,7 @@ func openDbms() {
 	dbmsLocal = dbms.NewDbmsLocal(db)
 	DbmsAuth = options.Action == "server" || mode != "gui" || !db.HaveUsers()
 	GetDbms = getDbms
-	exit.Add(dbmsLocal.Close)
+	exit.Add(db.CloseKeepMapped)
 	// go checkState()
 }
 
