@@ -8,6 +8,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+	"log"
 	"os"
 	"strings"
 	"sync"
@@ -241,6 +242,9 @@ func buildIndexes(ts *meta.Schema, list *sortlist.Builder, store *stor.Stor,
 			n++
 		}
 		bt := bldr.Finish()
+		if bt.TreeLevels() > 6 {
+			log.Println("ERROR: btree levels > 6 in", ts.Table, "nrecs", nrecs, "treeLevels", bt.TreeLevels(), "index", ts.Indexes[i].Columns)
+		}
 		bt.SetIxspec(&ix.Ixspec)
 		ov[i] = index.OverlayFor(bt)
 		assert.This(n).Is(nrecs)

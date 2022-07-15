@@ -132,7 +132,7 @@ func TestAcessAfterClose(t *testing.T) {
 	off, buf1 := s.Alloc(100)
 	slc.Fill(buf1, 'a')
 	_, buf2 := s.Alloc(100)
-	s.Close(true)
+	s.Close(false)
 	buf1 = s.Data(off)
 	assert.T(t).This(buf1[0]).Is('a')
 	slc.Fill(buf2, 'b')

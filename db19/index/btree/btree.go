@@ -5,6 +5,7 @@ package btree
 
 import (
 	"fmt"
+	"log"
 	"strconv"
 	"strings"
 
@@ -45,9 +46,9 @@ const maxlevels = 8
 
 // MaxNodeSize is the maximum node size in bytes, split if larger.
 // var rather than const because it is overridden by tests.
-// WARNING: if this is too small (e.g. 256)
-// then Builder can't handle large keys and the index may end up corrupt.
-var MaxNodeSize = 1024 //TODO tune
+var MaxNodeSize = 1024
+
+var MinSplitSize = 6 // for builder that will be split 4 and 2
 
 // EntrySize is the estimated average entry size
 const EntrySize = 11
@@ -80,6 +81,10 @@ func (bt *btree) SetIxspec(is *ixkey.Spec) {
 	bt.ixspec = is
 }
 
+func (bt *btree) TreeLevels() int {
+	return bt.treeLevels
+}
+
 func (bt *btree) getLeafKey(off uint64) string {
 	return GetLeafKey(bt.stor, bt.ixspec, off)
 }
@@ -107,6 +112,9 @@ func (bt *btree) PrefixExists(key string) bool {
 // putNode stores the node
 func (nd node) putNode(st *stor.Stor) uint64 {
 	n := len(nd)
+	if n > 8192 {
+		log.Println("ERROR: btree node too large")
+	}
 	off, buf := st.Alloc(2 + n + cksum.Len)
 	stor.NewWriter(buf).Put2(n)
 	buf = buf[2:]

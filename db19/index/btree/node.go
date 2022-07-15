@@ -81,6 +81,7 @@ func fLen(npre int, diff []byte) int {
 	return n
 }
 
+// next returns the index of the entry following the entry at i
 func (nd node) next(i int) int {
 	n := 6
 	if nd[i+5] > 127 {
@@ -321,6 +322,14 @@ func (nd node) updateCopy(src node, i int, npre int, diff string) node {
 
 func (nd node) setOffset(pos int, off uint64) {
 	stor.WriteSmallOffset(nd[pos:], off)
+}
+
+func (nd node) Size() int {
+	n := 0
+	for i := 0; i < len(nd); i = nd.next(i) {
+		n++
+	}
+	return n
 }
 
 // iter -------------------------------------------------------------

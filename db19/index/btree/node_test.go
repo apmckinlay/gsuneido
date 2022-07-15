@@ -52,6 +52,15 @@ func TestNodeAppendRead(t *testing.T) {
 	}
 }
 
+func TestNodeSize(t *testing.T) {
+	var nd node
+	assert.T(t).This(nd.Size()).Is(0)
+	nd = nd.append(123456, 123, "foo")
+	assert.T(t).This(nd.Size()).Is(1)
+	nd = nd.append(123, 456, "barbaz")
+	assert.T(t).This(nd.Size()).Is(2)
+}
+
 func TestNodeInsert(*testing.T) {
 	datas := []string{
 		"a b c d",

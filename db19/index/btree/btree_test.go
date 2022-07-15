@@ -116,7 +116,7 @@ func TestBtreeMergeAndSave(t *testing.T) {
 
 func TestBtreeFracPos(t *testing.T) {
 	defer func(mns int) { MaxNodeSize = mns }(MaxNodeSize)
-	MaxNodeSize = 256
+	MaxNodeSize = 192
 	var bt *btree
 	key := func(i int) string {
 		return fmt.Sprintf("%05d", i)

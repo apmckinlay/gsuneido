@@ -44,7 +44,7 @@ func (b *builder) add(li int, key string, off uint64) {
 		b.levels = append(b.levels, &level{})
 	}
 	lev := b.levels[li]
-	if len(lev.nb.node) > (MaxNodeSize * 3 / 4) {
+	if len(lev.nb.node) > MaxNodeSize && lev.nb.count >= MinSplitSize {
 		// split full node to stor
 		offNode, splitKey := lev.nb.Split(b.stor)
 		b.add(li+1, lev.splitKey, offNode) // RECURSE
@@ -84,6 +84,7 @@ type nodeBuilder struct {
 	pos2     int
 	known2   string
 	offset2  uint64
+	count    int
 }
 
 func (b *nodeBuilder) Add(key string, offset uint64, embedLen int) {
@@ -108,6 +109,7 @@ func (b *nodeBuilder) Add(key string, offset uint64, embedLen int) {
 		b.offset = offset
 	}
 	b.prev = key
+	b.count++
 }
 
 // Split saves all but the last two entries as the left node
@@ -121,6 +123,7 @@ func (b *nodeBuilder) Split(st *stor.Stor) (leftOff uint64, splitKey string) {
 	// second entry becomes 0, known
 	right = right.append(b.offset, 0, b.known) // offset,known of last entry
 	b.node = right
+	b.count = 2
 	return
 }
 
