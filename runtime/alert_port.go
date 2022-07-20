@@ -5,10 +5,10 @@
 
 package runtime
 
-import "fmt"
+import "log"
 
 func Alert(args ...any) {
-	fmt.Println(args...)
+	log.Println(args...)
 }
 
 func AlertCancel(args ...any) bool {
