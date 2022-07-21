@@ -339,7 +339,14 @@ func (t *UpdateTran) Output(th *rt.Thread, table string, rec rt.Record) {
 	for i := range ts.Indexes {
 		ix := ts.Indexes[i]
 		keys[i] = ix.Ixspec.Key(rec)
-		t.dupOutputBlock(table, i, ix, ti.Indexes[i], rec, keys[i])
+		if ix.Mode == 'k' && len(ix.Columns) == 0 {
+			if ti.Nrows > 0 {
+				panic(fmt.Sprint("empty key only allows one record in ", table))
+			}
+			t.Read(table, i, "", "")
+		} else {
+			t.dupOutputBlock(table, i, ix, ti.Indexes[i], rec, keys[i])
+		}
 		t.fkeyOutputBlock(ts, i, rec)
 	}
 	t.ck(t.db.ck.Output(t.ct, table, keys))
@@ -360,7 +367,8 @@ func (t *UpdateTran) Output(th *rt.Thread, table string, rec rt.Record) {
 	t.db.CallTrigger(th, t, table, "", rec)
 }
 
-func (t *UpdateTran) dupOutputBlock(table string, iIndex int, ix schema.Index, ov *index.Overlay, rec rt.Record, key string) {
+func (t *UpdateTran) dupOutputBlock(table string, iIndex int, ix schema.Index,
+	ov *index.Overlay, rec rt.Record, key string) {
 	if ix.Mode == 'k' || (ix.Mode == 'u' && !uniqueIndexEmpty(rec, ix.Ixspec)) {
 		if ov.Lookup(key) != 0 {
 			panic(fmt.Sprint("duplicate key: ",
