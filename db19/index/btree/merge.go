@@ -133,7 +133,7 @@ func (st *state) ascend() {
 
 	insertOff := uint64(0)
 	insertKey := ""
-	if len(m.node) > MaxNodeSize && m.node.Size() >= MinSplitSize {
+	if shouldSplit(m.node, m.node.Size()) {
 		_ = t && trace("split", m)
 		left, right, splitKey := m.split()
 		m.node = left
@@ -153,7 +153,7 @@ func (st *state) ascend() {
 			}
 			assert.That(parent.contains(insertKey))
 			parent.updateNode(insertKey, insertOff, get)
-			if len(parent.node) >= MaxNodeSize && m.node.Size() >= MinSplitSize {
+			if shouldSplit(parent.node, parent.node.Size()) {
 				// if it gets too big, leave the node so it will be split
 				_ = t && trace("split - ascend")
 				st.ascend() // tail recurse
@@ -206,7 +206,7 @@ func (st *state) updateLeaf(key string, off uint64) {
 		assert.Msg("key > limit").That(key < m.limit)
 	}
 	m.updateNode(key, off, st.bt.getLeafKey)
-	if len(m.node) >= MaxNodeSize && m.node.Size() >= MinSplitSize {
+	if shouldSplit(m.node, m.node.Size()) {
 		// if it gets too big, leave the node so it will be split
 		_ = t && trace("overflow - ascend")
 		st.ascend()

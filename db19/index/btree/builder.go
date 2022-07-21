@@ -3,7 +3,11 @@
 
 package btree
 
-import "github.com/apmckinlay/gsuneido/db19/stor"
+import (
+	"log"
+
+	"github.com/apmckinlay/gsuneido/db19/stor"
+)
 
 // builder is used to bulk load an btree.
 // Keys must be added in order.
@@ -44,7 +48,7 @@ func (b *builder) add(li int, key string, off uint64) {
 		b.levels = append(b.levels, &level{})
 	}
 	lev := b.levels[li]
-	if len(lev.nb.node) > MaxNodeSize && lev.nb.count >= MinSplitSize {
+	if shouldSplit(lev.nb.node, lev.nb.count) {
 		// split full node to stor
 		offNode, splitKey := lev.nb.Split(b.stor)
 		b.add(li+1, lev.splitKey, offNode) // RECURSE
@@ -55,6 +59,16 @@ func (b *builder) add(li int, key string, off uint64) {
 		embedLen = embedAll
 	}
 	lev.nb.Add(key, off, embedLen)
+}
+
+func shouldSplit(nd node, nodeCount int) bool {
+	if len(nd) > MaxNodeSize && nodeCount >= MinSplitSize {
+		return true
+	}
+	if len(nd) > 8 * MaxNodeSize {
+		log.Println("WARNING: btree node too large", len(nd), "count", nodeCount)
+	}
+	return false
 }
 
 func (b *builder) Finish() *btree {

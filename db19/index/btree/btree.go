@@ -6,6 +6,7 @@ package btree
 import (
 	"fmt"
 	"log"
+	"math/bits"
 	"strconv"
 	"strings"
 
@@ -51,13 +52,13 @@ var MaxNodeSize = 1024
 var MinSplitSize = 6 // for builder that will be split 4 and 2
 
 // EntrySize is the estimated average entry size
-const EntrySize = 11
+const EntrySize = 10
 
-// TreeHeight is the estimated average tree height
-const TreeHeight = 4
+// TreeHeight is the estimated average tree height.
+// It is used by Table.lookupCost
+const TreeHeight = 3
 
-var AvgNodeSize = MaxNodeSize // mostly full due to compact
-var Fanout = AvgNodeSize / EntrySize
+var Fanout = MaxNodeSize / EntrySize // estimate
 
 // GetLeafKey is used to get the key for a data offset.
 // It is a dependency that must be injected
@@ -230,6 +231,61 @@ func (bt *btree) check1(depth int, offset uint64, key *string,
 		}
 	}
 	return
+}
+
+type Stats struct {
+	Levels  int
+	Count   int
+	Size    int
+	Nnodes  int
+	RootN   int
+	Fan     int
+	NodeFan [8]int
+}
+
+func (bt *btree) Stats() (stats Stats) {
+	stats.Levels = bt.treeLevels + 1
+	bt.stats(0, bt.root, &stats)
+	stats.Fan /= stats.Nnodes
+	return
+}
+
+func (bt *btree) stats(depth int, offset uint64, stats *Stats) {
+	nd := bt.getNode(offset)
+	stats.Nnodes++
+	stats.Size += len(nd)
+	n := uint16(0)
+	for it := nd.iter(); it.next(); n++ {
+		if depth == 0 {
+			stats.RootN++
+		} else {
+			stats.Fan++
+		}
+		offset := it.offset
+		if depth < bt.treeLevels { // tree
+			bt.stats(depth+1, offset, stats) // RECURSE
+		} else { // leaf
+			stats.Count++
+		}
+	}
+	stats.NodeFan[16 - bits.LeadingZeros16(n)]++
+	return
+}
+
+func (stats Stats) String() string {
+	s := fmt.Sprintln(
+		"lv", stats.Levels,
+		" n ", stats.Count,
+		" sz ", stats.Size,
+		" nn ", stats.Nnodes,
+		" rn ", stats.RootN,
+		" f ", stats.Fan) + "    >= "
+	for i, n := range stats.NodeFan {
+		if n > 0 {
+			s += fmt.Sprintf("%d: %d ", (1 << i)/2, n)
+		}
+	}
+	return s
 }
 
 // print ------------------------------------------------------------

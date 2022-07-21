@@ -163,6 +163,10 @@ func (ov *Overlay) QuickCheck() {
 	ov.bt.QuickCheck()
 }
 
+func (ov *Overlay) Stats() btree.Stats {
+	return ov.bt.Stats()
+}
+
 // Modified is used by info.Persist.
 // It only looks at the base ixbuf (layer[0])
 // which accumulates changes between persists
