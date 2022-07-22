@@ -28,6 +28,7 @@ type Index struct {
 	Ixspec  ixkey.Spec
 	// Mode is 'k' for key, 'i' for index, 'u' for unique index
 	Mode int
+	Primary bool
 	Fk   Fkey
 	// FkToHere is other foreign keys that reference this index
 	FkToHere []Fkey // filled in by meta

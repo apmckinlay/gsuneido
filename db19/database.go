@@ -316,7 +316,7 @@ func (db *Database) buildIndexes(table string,
 	ts := *rt.meta.GetRoSchema(table) // copy
 	ts.Columns = set.Union(ts.Columns, newCols)
 	schema.CheckIndexes(ts.Table, ts.Columns, newIdxs)
-	ts.Ixspecs(newIdxs)
+	ts.Ixspecs(newIdxs) // required for ensure with existing data
 	nlayers := ti.Indexes[0].Nlayers()
 	list := sortlist.NewUnsorted()
 	iter := index.NewOverIter(table, 0)

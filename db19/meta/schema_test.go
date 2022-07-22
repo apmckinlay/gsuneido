@@ -4,6 +4,7 @@
 package meta
 
 import (
+	"strconv"
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/db19/meta/schema"
@@ -47,4 +48,33 @@ func TestSchema(t *testing.T) {
 	for i, table := range data {
 		test(i, table, sc.MustGet(table))
 	}
+}
+
+func TestFindPrimaryKeys(t *testing.T) {
+	assert := assert.T(t)
+	ts := &Schema{Schema: schema.Schema{}}
+	key := func(cols string) schema.Index {
+		return schema.Index{Mode: 'k', Columns: str.Split(cols, ",")}
+	}
+	// index := func(cols string, mode int) schema.Index {
+	// 	return schema.Index{Mode: mode, Columns: str.Split(cols, ",")}
+	// }
+	primary := func() string {
+		ts.findPrimaryKeys()
+		s := ""
+		for i, ix := range ts.Indexes {
+			if ix.Primary {
+				s += "," + strconv.Itoa(i)
+			}
+		}
+		return s[1:]
+	}
+	ts.Indexes = []schema.Index{key("")}
+	assert.This(primary()).Is("0")
+
+	ts.Indexes = []schema.Index{key(""), key("a")}
+	assert.This(primary()).Is("0")
+
+	ts.Indexes = []schema.Index{key("a,b"), key("b,a"), key("b,c,a")}
+	assert.This(primary()).Is("0")
 }

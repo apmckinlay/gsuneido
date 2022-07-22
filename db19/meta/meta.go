@@ -212,6 +212,9 @@ func (m *Meta) Ensure(a *schema.Schema, store *stor.Stor) ([]schema.Index, *Meta
 	createDerived(ts, newDer)
 	createIndexes(ts, ti, newIdxs, store)
 	ac := &schema.Schema{Table: a.Table, Indexes: newIdxs}
+	if ti.Nrows == 0 {
+		newIdxs = nil
+	}
 	return newIdxs, m.PutNew(ts, ti, ac)
 }
 
@@ -366,15 +369,16 @@ func createDerived(ts *Schema, cols []string) {
 	ts.Derived = append(slices.Clip(ts.Derived), cols...)
 }
 
+// createIndexes appends the new indexes to ts.Indexes
+// and appends empty overlays for them to ti.Indexes
 func createIndexes(ts *Schema, ti *Info, idxs []schema.Index, store *stor.Stor) {
 	if len(idxs) == 0 {
 		return
 	}
-	ts.Ixspecs(idxs)
-	n := len(ts.Indexes)
-	ts.Indexes = append(ts.Indexes[:n:n], idxs...)
-	n = len(ti.Indexes)
-	ti.Indexes = ti.Indexes[:n:n] // copy on write
+	ts.Indexes = append(slices.Clip(ts.Indexes), idxs...)
+	ts.Ixspecs(ts.Indexes)
+	n := len(ti.Indexes)
+	ti.Indexes = slices.Clip(ti.Indexes) // copy on write
 	for i := range idxs {
 		bt := btree.CreateBtree(store, &ts.Indexes[n+i].Ixspec)
 		ti.Indexes = append(ti.Indexes, index.OverlayFor(bt))

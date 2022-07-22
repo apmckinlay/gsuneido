@@ -4,6 +4,7 @@
 package meta
 
 import (
+	"sort"
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/db19/meta/schema"
@@ -91,7 +92,9 @@ func ReadSchema(_ *stor.Stor, r *stor.Reader) *Schema {
 }
 
 // Ixspecs sets up the ixspecs for a table's indexes.
+// In most cases idxs will be ts.Indexes.
 func (ts *Schema) Ixspecs(idxs []schema.Index) {
+	ts.findPrimaryKeys()
 	key := ts.firstShortestKey()
 	for i := range idxs {
 		ix := &idxs[i]
@@ -108,6 +111,33 @@ func (ts *Schema) Ixspecs(idxs []schema.Index) {
 		default:
 			panic("Ixspecs invalid mode")
 		}
+	}
+}
+
+func (ts *Schema) findPrimaryKeys() {
+	keys := make([]*schema.Index, 0, 4)
+	for i := range ts.Indexes {
+		ix := &ts.Indexes[i]
+		if ix.Mode == 'k' {
+			ix.Primary = false
+			keys = append(keys, ix)
+		}
+	}
+	sort.SliceStable(keys, func(i, j int) bool {
+		return len(keys[i].Columns) < len(keys[j].Columns)
+	})
+	keys[0].Primary = true
+	if len(keys[0].Columns) == 0 {
+		return
+	}
+outer:
+	for i := 1; i < len(keys); i++ {
+		for j := 0; j < i; j++ {
+			if keys[j].Primary && set.Subset(keys[i].Columns, keys[j].Columns) {
+				continue outer
+			}
+		}
+		keys[i].Primary = true
 	}
 }
 
