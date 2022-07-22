@@ -231,16 +231,18 @@ func (db *Database) Ensure(sch *schema.Schema) {
 	if handled {
 		return
 	}
-	ov := db.buildIndexes(sch.Table, sch.Columns, newIdxs)
+	// buildIndexes is potentially slow (if there's a lot of data)
+	// so we don't want to do it inside RunExclusive/UpdateState
+	ovs := db.buildIndexes(sch.Table, sch.Columns, newIdxs)
 	db.RunExclusive(sch.Table, func() {
 		db.UpdateState(func(state *DbState) {
 			_, meta := state.Meta.Ensure(sch, db.Store) // final run
 			// now meta and table info are copies
-			if ov != nil {
+			if ovs != nil {
 				// add newly created indexes
 				ti := meta.GetRoInfo(sch.Table) // not actually read-only
-				i := len(ti.Indexes) - len(ov)
-				copy(ti.Indexes[i:], ov)
+				i := len(ti.Indexes) - len(ovs)
+				copy(ti.Indexes[i:], ovs)
 			}
 			state.Meta = meta
 		})
@@ -298,7 +300,8 @@ func (db *Database) RunExclusive(table string, fn func()) {
 	}
 }
 
-// buildIndexes creates the new btrees & overlays
+// buildIndexes creates the new btrees & overlays when there is existing data.
+// It is used by Ensure and AlterCreate.
 func (db *Database) buildIndexes(table string,
 	newCols []string, newIdxs []schema.Index) []*index.Overlay {
 	if len(newIdxs) == 0 {
@@ -321,7 +324,7 @@ func (db *Database) buildIndexes(table string,
 		_, off := iter.Cur()
 		list.Add(off)
 	}
-	ov := make([]*index.Overlay, len(newIdxs))
+	ovs := make([]*index.Overlay, len(newIdxs))
 	for i := range newIdxs {
 		ix := &newIdxs[i]
 		fk := &ix.Fk
@@ -343,9 +346,9 @@ func (db *Database) buildIndexes(table string,
 		}
 		bt := bldr.Finish()
 		bt.SetIxspec(&ix.Ixspec)
-		ov[i] = index.OverlayForN(bt, nlayers)
+		ovs[i] = index.OverlayForN(bt, nlayers)
 	}
-	return ov
+	return ovs
 }
 
 // MakeLess handles _lower! but not rules.
@@ -417,16 +420,18 @@ func (db *Database) AlterCreate(sch *schema.Schema) {
 			panic(e)
 		}
 	}()
-	ov := db.buildIndexes(sch.Table, sch.Columns, sch.Indexes)
+	// buildIndexes is potentially slow (if there's a lot of data)
+	// so we don't want to do it inside RunExclusive/UpdateState
+	ovs := db.buildIndexes(sch.Table, sch.Columns, sch.Indexes)
 	db.RunEndExclusive(sch.Table, func() {
 		db.UpdateState(func(state *DbState) {
 			meta := state.Meta.AlterCreate(sch, db.Store)
 			// now meta and table info are copies
-			if ov != nil {
+			if ovs != nil {
 				// add newly created indexes
 				ti := meta.GetRoInfo(sch.Table) // not really read-only
-				i := len(ti.Indexes) - len(ov)
-				copy(ti.Indexes[i:], ov)
+				i := len(ti.Indexes) - len(ovs)
+				copy(ti.Indexes[i:], ovs)
 			}
 			state.Meta = meta
 		})

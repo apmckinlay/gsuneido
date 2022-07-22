@@ -146,7 +146,7 @@ func compactTable(state *DbState, src *Database, ts *meta.Schema, dst *Database)
 	if hasdel {
 		ts.Columns = slc.Without(ts.Columns, "-")
 	}
-	ov := buildIndexes(ts, list, dst.Store, count) // same as load
-	ti := &meta.Info{Table: ts.Table, Nrows: count, Size: size, Indexes: ov}
+	ovs := buildIndexes(ts, list, dst.Store, count) // same as load
+	ti := &meta.Info{Table: ts.Table, Nrows: count, Size: size, Indexes: ovs}
 	dst.LoadedTable(ts, ti)
 }

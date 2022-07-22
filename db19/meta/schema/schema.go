@@ -170,16 +170,12 @@ func (sc *Schema) checkLower() {
 }
 
 func (sc *Schema) checkForKey() {
-	hasKey := false
 	for i := range sc.Indexes {
-		ix := &sc.Indexes[i]
-		if ix.Mode == 'k' {
-			hasKey = true
+		if sc.Indexes[i].Mode == 'k' {
+			return
 		}
 	}
-	if !hasKey {
-		panic("key required in " + sc.Table)
-	}
+	panic("key required in " + sc.Table)
 }
 
 func CheckIndexes(table string, cols []string, idxs []Index) {
