@@ -225,6 +225,7 @@ func buildIndexes(ts *meta.Schema, list *sortlist.Builder, store *stor.Stor,
 			panic(fmt.Sprintf("%s%v", index, e))
 		}
 	}()
+	ts.OptimizeIndexes()
 	ts.Ixspecs(ts.Indexes)
 	ov := make([]*index.Overlay, len(ts.Indexes))
 	for i = range ts.Indexes {

@@ -458,9 +458,9 @@ func (is *Indexes) Get(_ *Thread, dir Dir) Row {
 	switch idx.Mode {
 	case 'k':
 		rb.Add(True.(Packable))
-	case 'i':
+	case 'i', 'I':
 		rb.Add(False.(Packable))
-	case 'u':
+	case 'u', 'U':
 		rb.Add(SuStr("u"))
 	default:
 		panic("shouldn't reach here")
@@ -468,7 +468,7 @@ func (is *Indexes) Get(_ *Thread, dir Dir) Row {
 	if idx.Fk.Table != "" {
 		rb.Add(SuStr(idx.Fk.Table))
 		rb.Add(SuStr(str.Join(",", idx.Fk.Columns)))
-		rb.Add(SuInt(idx.Fk.Mode))
+		rb.Add(SuInt(int(idx.Fk.Mode)))
 	}
 	rec := rb.Build()
 	return Row{DbRec{Record: rec}}

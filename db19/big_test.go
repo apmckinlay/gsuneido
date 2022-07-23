@@ -98,7 +98,7 @@ func createTables() []string {
 		idxInfo := make([]*index.Overlay, nidxs)
 		for j := 0; j < nidxs; j++ {
 			var idxcols []string
-			var mode int
+			var mode byte
 			if j == 0 {
 				idxcols = []string{cols[0]}
 				mode = 'k'

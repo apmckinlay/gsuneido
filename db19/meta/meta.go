@@ -384,6 +384,9 @@ func createIndexes(ts *Schema, ti *Info, idxs []schema.Index, store *stor.Stor) 
 		}
 		ts.Indexes = append(ts.Indexes, *ix)
 	}
+	if ti.Nrows == 0 {
+		ts.OptimizeIndexes()
+	}
 	ts.Ixspecs(ts.Indexes)
 	n := len(ti.Indexes)
 	ti.Indexes = slices.Clip(ti.Indexes) // copy on write

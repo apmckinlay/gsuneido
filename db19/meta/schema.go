@@ -9,6 +9,7 @@ import (
 
 	"github.com/apmckinlay/gsuneido/db19/meta/schema"
 	"github.com/apmckinlay/gsuneido/db19/stor"
+	"github.com/apmckinlay/gsuneido/util/ascii"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/generic/hamt"
 	"github.com/apmckinlay/gsuneido/util/generic/set"
@@ -64,8 +65,8 @@ func (ts *Schema) Write(w *stor.Writer) {
 	w.PutStrs(ts.Derived)
 	w.Put1(len(ts.Indexes))
 	for _, ix := range ts.Indexes {
-		w.Put1(ix.Mode).PutStrs(ix.Columns)
-		w.PutStr(ix.Fk.Table).Put1(ix.Fk.Mode).PutStrs(ix.Fk.Columns)
+		w.Put1(int(ix.Mode)).PutStrs(ix.Columns)
+		w.PutStr(ix.Fk.Table).Put1(int(ix.Fk.Mode)).PutStrs(ix.Fk.Columns)
 	}
 }
 
@@ -78,11 +79,11 @@ func ReadSchema(_ *stor.Stor, r *stor.Reader) *Schema {
 		ts.Indexes = make([]schema.Index, n)
 		for i := 0; i < n; i++ {
 			ts.Indexes[i] = schema.Index{
-				Mode:    r.Get1(),
+				Mode:    byte(r.Get1()),
 				Columns: r.GetStrs(),
 				Fk: schema.Fkey{
 					Table:   r.GetStr(),
-					Mode:    r.Get1(),
+					Mode:    byte(r.Get1()),
 					Columns: r.GetStrs()},
 			}
 		}
@@ -103,7 +104,7 @@ func (ts *Schema) Ixspecs(idxs []schema.Index) {
 			cols := set.Difference(key, ix.Columns)
 			ix.Ixspec.Fields2 = ts.colsToFlds(cols)
 			fallthrough
-		case 'k':
+		case 'k', 'I', 'U':
 			ix.Ixspec.Fields = ts.colsToFlds(ix.Columns)
 		case 'i':
 			cols := set.Union(ix.Columns, key)
@@ -179,6 +180,28 @@ func hasSpecial(cols []string) bool {
 		}
 	}
 	return false
+}
+
+// OptimizeIndexes uppercases the Mode of indexes containing keys.
+// This will avoid adding Fields2 to make them unique
+// and will avoid duplicate checking on unique indexes.
+// This should be done before IxSpecs.
+// WARNING: this affects the index entries
+// so it should only be called when there is no data.
+func (ts *Schema) OptimizeIndexes() {
+	for i := range ts.Indexes {
+		ix := &ts.Indexes[i]
+		if ix.Mode == 'i' || ix.Mode == 'u' {
+			for j := range ts.Indexes {
+				key := &ts.Indexes[j]
+				// Primary would be better but this is done earlier
+				if key.Mode == 'k' && set.Subset(ix.Columns, key.Columns) {
+					ix.Mode = ascii.ToUpper(ix.Mode)
+					break
+				}
+			}
+		}
+	}
 }
 
 func (m *Meta) newSchemaTomb(table string) *Schema {

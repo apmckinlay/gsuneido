@@ -171,7 +171,7 @@ func (p *adminParser) index() *Index {
 	return ix
 }
 
-func (p *adminParser) indexMode() int {
+func (p *adminParser) indexMode() byte {
 	switch {
 	case p.MatchIf(tok.Key):
 		return 'k'
@@ -199,7 +199,7 @@ func (p *adminParser) indexColumns() []string {
 	return ixcols
 }
 
-func (p *adminParser) foreignKey() (table string, columns []string, mode int) {
+func (p *adminParser) foreignKey() (table string, columns []string, mode byte) {
 	if !p.MatchIf(tok.In) {
 		return
 	}

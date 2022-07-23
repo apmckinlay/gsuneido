@@ -185,6 +185,7 @@ func (db *Database) unlockSchema() {
 func (db *Database) create(state *DbState, schema *schema.Schema) {
 	schema.Check()
 	ts := &meta.Schema{Schema: *schema}
+	ts.OptimizeIndexes()
 	ts.Ixspecs(ts.Indexes)
 	ov := db.createIndexes(ts.Indexes)
 	ti := &meta.Info{Table: schema.Table, Indexes: ov}

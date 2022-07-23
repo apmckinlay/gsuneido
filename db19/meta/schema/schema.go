@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
+	"github.com/apmckinlay/gsuneido/util/ascii"
 	"github.com/apmckinlay/gsuneido/util/hash"
 	"github.com/apmckinlay/gsuneido/util/str"
 	"golang.org/x/exp/slices"
@@ -27,9 +28,9 @@ type Index struct {
 	Columns []string
 	Ixspec  ixkey.Spec
 	// Mode is 'k' for key, 'i' for index, 'u' for unique index
-	Mode int
+	Mode    byte
 	Primary bool
-	Fk   Fkey
+	Fk      Fkey
 	// FkToHere is other foreign keys that reference this index
 	FkToHere []Fkey // filled in by meta
 }
@@ -38,7 +39,7 @@ type Fkey struct {
 	Table   string
 	Columns []string
 	IIndex  int
-	Mode    int
+	Mode    byte
 }
 
 // Fkey mode bits
@@ -96,7 +97,8 @@ func (ix *Index) String() string {
 }
 
 func (ix *Index) string(fktohere bool) string {
-	s := map[int]string{'k': "key", 'i': "index", 'u': "index unique"}[ix.Mode]
+	s := map[byte]string{
+		'k': "key", 'i': "index", 'u': "index unique"}[ascii.ToLower(ix.Mode)]
 	s += str.Join("(,)", ix.Columns)
 	if ix.Fk.Table != "" {
 		s += " in " + ix.Fk.Table
@@ -148,7 +150,7 @@ func (sc *Schema) IIndex(cols []string) int {
 
 func (ix *Index) Equal(iy *Index) bool {
 	return slices.Equal(ix.Columns, iy.Columns) &&
-		ix.Mode == iy.Mode &&
+		ascii.ToLower(ix.Mode) == ascii.ToLower(iy.Mode) &&
 		ix.Fk.Table == iy.Fk.Table &&
 		ix.Fk.Mode == iy.Fk.Mode &&
 		slices.Equal(ix.Fk.Columns, iy.Fk.Columns)
