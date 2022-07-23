@@ -192,6 +192,12 @@ func CheckIndexes(table string, cols []string, idxs []Index) {
 					col + " in " + table)
 			}
 		}
+		for j := 0; j < i; j++ {
+			if slices.Equal(ix.Columns, idxs[j].Columns) {
+				panic("duplicate index: " +
+					str.Join("(,)", ix.Columns) + " in " + table)
+			}
+		}
 	}
 }
 

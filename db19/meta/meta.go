@@ -375,7 +375,15 @@ func createIndexes(ts *Schema, ti *Info, idxs []schema.Index, store *stor.Stor) 
 	if len(idxs) == 0 {
 		return
 	}
-	ts.Indexes = append(slices.Clip(ts.Indexes), idxs...)
+	ts.Indexes = slices.Clip(ts.Indexes)
+	for i := range idxs {
+		ix := &idxs[i]
+		if ts.FindIndex(ix.Columns) != nil {
+			panic("duplicate index: " +
+				str.Join("(,)", ix.Columns) + " in " + ts.Table)
+		}
+		ts.Indexes = append(ts.Indexes, *ix)
+	}
 	ts.Ixspecs(ts.Indexes)
 	n := len(ti.Indexes)
 	ti.Indexes = slices.Clip(ti.Indexes) // copy on write
