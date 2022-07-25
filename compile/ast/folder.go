@@ -147,7 +147,7 @@ type bopfn func(Value, Value) Value
 // commutative folds constants in a list of expressions
 // zero is a short circuit value e.g. false for and
 func commutative(exprs []Expr, bop bopfn, zero, identity Value) []Expr {
-	var first *Constant
+	first := -1
 	dst := 0
 	for _, e := range exprs {
 		if c, ok := e.(*Constant); !ok {
@@ -161,20 +161,22 @@ func commutative(exprs []Expr, bop bopfn, zero, identity Value) []Expr {
 			if c.Val.Equal(identity) {
 				continue
 			}
-			if first == nil {
-				first = c
+			if first == -1 {
+				first = dst
 				exprs[dst] = e
 				dst++
 			} else {
-				first.Val = bop(first.Val, c.Val)
-			}
+				copy := *exprs[first].(*Constant)
+				copy.Val = bop(copy.Val, c.Val)
+				exprs[first] = &copy
+				}
 		}
 	}
-	if dst == 1 && first != nil {
+	if dst == 1 && first != -1 {
 		// compile-time type check
-		bop(identity, first.Val)
+		bop(identity, exprs[first].(*Constant).Val)
 	}
-	if dst <= 1 && first == nil {
+	if dst <= 1 && first == -1 {
 		// keep operation as run-time type check
 		exprs[dst] = &Constant{Val: identity}
 		dst++
@@ -279,19 +281,21 @@ func unaryDivOrConstant(e Expr) bool {
 // foldCat folds contiguous constants in a list of expressions
 // cat is not commutative, so only combine contiguous constants
 func foldCat(exprs []Expr) []Expr {
-	var first *Constant
+	first := -1
 	dst := 0
 	for _, e := range exprs {
 		if c, ok := e.(*Constant); !ok {
 			exprs[dst] = e
 			dst++
-			first = nil
-		} else if first == nil {
-			first = c
+			first = -1
+		} else if first == -1 {
+			first = dst
 			exprs[dst] = e
 			dst++
 		} else {
-			first.Val = SuStr(AsStr(first.Val) + AsStr(c.Val))
+			copy := *exprs[first].(*Constant)
+			copy.Val = SuStr(AsStr(copy.Val) + AsStr(c.Val))
+			exprs[first] = &copy
 		}
 	}
 	return exprs[:dst]

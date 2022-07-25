@@ -222,6 +222,8 @@ func replaceExpr(expr Expr, from []string, to []Expr) Expr {
 	}
 }
 
+// replaceExprs returns nil if nothing was replaced,
+// otherwise it returns a modified copy of the expression list
 func replaceExprs(exprs []Expr, from []string, to []Expr) []Expr {
 	var newExprs []Expr
 	for i, e := range exprs {
