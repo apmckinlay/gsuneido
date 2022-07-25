@@ -536,7 +536,7 @@ func ParseDate(s string, order string) SuDate {
 			} else if p[t] == 'd' {
 				part = mmDay
 			} else {
-				panic("shouldn't reach here")
+				assert.ShouldNotReachHere()
 			}
 			if (typ[t] != mmUnknown && typ[t] != part) ||
 				tokens[t] < part.min || tokens[t] > part.max {
@@ -563,7 +563,7 @@ func ParseDate(s string, order string) SuDate {
 			} else if p[t] == 'd' {
 				day = tokens[t]
 			} else {
-				panic("shouldn't reach here")
+				assert.ShouldNotReachHere()
 			}
 		}
 	} else if gotTime && ntokens == 0 {

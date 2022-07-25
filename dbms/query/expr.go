@@ -5,6 +5,7 @@ package query
 
 import (
 	. "github.com/apmckinlay/gsuneido/compile/ast"
+	"github.com/apmckinlay/gsuneido/util/assert"
 	"golang.org/x/exp/slices"
 )
 
@@ -93,7 +94,8 @@ func renameExpr(expr Expr, from, to []string) Expr {
 		}
 		return &In{E: e2, Exprs: exprs}
 	default:
-		panic("shouldn't reach here")
+		assert.ShouldNotReachHere()
+		return nil
 	}
 }
 
@@ -215,7 +217,8 @@ func replaceExpr(expr Expr, from []string, to []Expr) Expr {
 		}
 		return aFolder.In(e2, exprs)
 	default:
-		panic("shouldn't reach here")
+		assert.ShouldNotReachHere()
+		return nil
 	}
 }
 

@@ -10,6 +10,7 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/meta"
 	"github.com/apmckinlay/gsuneido/db19/meta/schema"
 	. "github.com/apmckinlay/gsuneido/runtime"
+	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
@@ -56,8 +57,8 @@ func (*schemaTable) rowSize() int {
 	return 32 // ???
 }
 
-func (*schemaTable) Output(*Thread, Record) {
-	panic("shouldn't reach here")
+func (*schemaTable) Output(th *Thread, _ Record) {
+	panic("can't output to schema table")
 }
 
 func (*schemaTable) optimize(_ Mode, index []string) (Cost, any) {
@@ -76,11 +77,12 @@ func (st *schemaTable) lookupCost() Cost {
 }
 
 func (*schemaTable) Lookup(*Thread, []string, []string) Row {
-	panic("shouldn't reach here")
+	assert.ShouldNotReachHere()
+	return nil
 }
 
 func (*schemaTable) Select([]string, []string) {
-	panic("shouldn't reach here")
+	assert.ShouldNotReachHere()
 }
 
 //-------------------------------------------------------------------
@@ -463,7 +465,7 @@ func (is *Indexes) Get(_ *Thread, dir Dir) Row {
 	case 'u', 'U':
 		rb.Add(SuStr("u"))
 	default:
-		panic("shouldn't reach here")
+		assert.ShouldNotReachHere()
 	}
 	if idx.Fk.Table != "" {
 		rb.Add(SuStr(idx.Fk.Table))

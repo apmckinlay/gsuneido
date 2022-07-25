@@ -6,7 +6,9 @@ package builtin
 import (
 	"github.com/apmckinlay/gsuneido/compile"
 	"github.com/apmckinlay/gsuneido/compile/tokens"
+	"github.com/apmckinlay/gsuneido/runtime"
 	. "github.com/apmckinlay/gsuneido/runtime"
+	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
 func init() {
@@ -33,6 +35,27 @@ func init() {
 					p.Error("did not parse all input")
 				}
 				return ast
+			}),
+		// simulate various kinds of errors for testing
+		"Crash!": method0(
+			func(Value) Value {
+				// force a crash, mostly to test output capture
+				go func() { panic("Crash!") }()
+				return nil
+			}),
+		"BoundsFail": method0(
+			func(Value) Value {
+				return []runtime.Value{}[1]
+			}),
+		"AssertFail": method0(
+			func(Value) Value {
+				assert.That(false)
+				return nil
+			}),
+		"ShouldNotReachHere": method0(
+			func(Value) Value {
+				assert.ShouldNotReachHere()
+				return nil
 			}),
 	}
 }

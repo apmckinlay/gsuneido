@@ -186,7 +186,7 @@ func (t *Thread) Callstack() *SuObject {
 		call.Set(SuStr("srcpos"), IntVal(fr.fn.CodeToSrcPos(fr.ip-1)))
 		call.Set(SuStr("locals"), t.locals(i))
 		cs.Add(call)
-		if cs.Size() > 100 {
+		if cs.Size() > 50 {
 			break
 		}
 	}

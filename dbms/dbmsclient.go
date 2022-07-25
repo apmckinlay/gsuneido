@@ -19,6 +19,7 @@ import (
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/runtime/trace"
 	"github.com/apmckinlay/gsuneido/util/ascii"
+	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/str"
 	"golang.org/x/exp/slices"
 )
@@ -164,7 +165,7 @@ func (dc *dbmsClient) DisableTrigger(string) {
 	panic("DoWithoutTriggers can't be used by a client")
 }
 func (dc *dbmsClient) EnableTrigger(string) {
-	panic("shouldn't reach here")
+	assert.ShouldNotReachHere()
 }
 
 func (dc *dbmsClient) Dump(table string) string {

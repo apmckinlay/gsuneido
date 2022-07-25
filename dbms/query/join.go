@@ -5,6 +5,7 @@ package query
 
 import (
 	. "github.com/apmckinlay/gsuneido/runtime"
+	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/generic/ord"
 	"github.com/apmckinlay/gsuneido/util/generic/set"
 	"github.com/apmckinlay/gsuneido/util/str"
@@ -220,7 +221,7 @@ func (jn *Join) Nrows() int {
 	case n_n:
 		nrows = nrows1 * nrows2
 	default:
-		panic("shouldn't reach here")
+		assert.ShouldNotReachHere()
 	}
 	return nrows / 2 // actual will be between 0 and nrows so estimate halfway
 }

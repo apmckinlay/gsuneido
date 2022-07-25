@@ -388,3 +388,10 @@ func getLocation() string {
 	}
 	return file + ":" + strconv.Itoa(line)
 }
+
+func ShouldNotReachHere() {
+	e := "ASSERT FAILED: should not reach here"
+	log.Println(e)
+	dbg.PrintStack()
+	panic(e)
+}

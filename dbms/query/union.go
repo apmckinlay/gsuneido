@@ -6,6 +6,7 @@ package query
 import (
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	. "github.com/apmckinlay/gsuneido/runtime"
+	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/generic/ord"
 	"github.com/apmckinlay/gsuneido/util/generic/set"
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
@@ -261,7 +262,8 @@ func (u *Union) Get(th *Thread, dir Dir) Row {
 	case unionMerge:
 		return u.getMerge(th, dir)
 	}
-	panic("shouldn't reach here")
+	assert.ShouldNotReachHere()
+	return nil
 }
 
 func (u *Union) getLookup(th *Thread, dir Dir) Row {

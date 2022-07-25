@@ -249,7 +249,8 @@ func (ni *nodeIter) off() uint64 {
 }
 
 func (ni *nodeIter) prev() bool {
-	panic("shouldn't reach here")
+	assert.ShouldNotReachHere()
+	return false
 }
 
 // toChunk converts a nodeIter to a chunkIter to allow prev

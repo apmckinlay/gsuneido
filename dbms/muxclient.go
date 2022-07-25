@@ -13,6 +13,7 @@ import (
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/runtime/trace"
 	"github.com/apmckinlay/gsuneido/util/ascii"
+	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/str"
 	"golang.org/x/exp/slices"
 )
@@ -109,7 +110,7 @@ func (ms *muxSession) DisableTrigger(string) {
 	panic("DoWithoutTriggers can't be used by a client")
 }
 func (ms *muxSession) EnableTrigger(string) {
-	panic("shouldn't reach here")
+	assert.ShouldNotReachHere()
 }
 
 func (ms *muxSession) Dump(table string) string {

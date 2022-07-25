@@ -582,7 +582,8 @@ func (cmp *cmpExpr) toFilter() filter {
 	case tokens.Gte:
 		return filter{org: limit{val: cmp.val}, end: limitMax}
 	default:
-		panic("shouldn't reach here")
+		assert.ShouldNotReachHere()
+		return filter{}
 	}
 }
 

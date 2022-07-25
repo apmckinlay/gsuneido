@@ -291,10 +291,7 @@ func ToSuExcept(t *Thread, e any) *SuExcept {
 			}
 			ss = SuStr(e.Error())
 		case string:
-			if isLocalAssertFail(e) {
-				// assert has already logged error and Go call stack
-				printSuStack(t, e)
-			}
+			logStringError(t, "", e)
 			ss = SuStr(e)
 		default:
 			ss = SuStr(ToStr(e.(Value)))
@@ -302,11 +299,6 @@ func ToSuExcept(t *Thread, e any) *SuExcept {
 		se = NewSuExcept(t, ss)
 	}
 	return se
-}
-
-func isLocalAssertFail(s string) bool {
-	return strings.HasPrefix(s, "assert failed") &&
-		!strings.HasSuffix(s, "(from server)")
 }
 
 func printSuStack(th *Thread, e any) {
@@ -317,13 +309,20 @@ func printSuStack(th *Thread, e any) {
 	}
 }
 
-// LogInternalError logs the error and the Go call stack, if an InternalError.
+// LogInternalError logs the error and the call stacks, if an InternalError.
 func LogInternalError(th *Thread, from string, e any) {
 	if isRuntimeError(e) {
 		log.Println("ERROR", from, e)
 		dbg.PrintStack()
 		printSuStack(th, e)
-	} else if s, ok := e.(string); ok && isLocalAssertFail(s) {
+	} else if s, ok := e.(string); ok {
+		logStringError(th, from, s)
+	}
+}
+
+func logStringError(th *Thread, from string, e string) {
+	if strings.HasPrefix(e, "ASSERT FAILED") &&
+		!strings.HasSuffix(e, "(from server)") {
 		// assert has already logged error and Go call stack
 		printSuStack(th, e)
 	}

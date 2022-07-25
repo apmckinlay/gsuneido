@@ -364,7 +364,7 @@ func (q1 *Query1) optimize(mode Mode, index []string) (Cost, any) {
 }
 
 func (q1 *Query1) setApproach(_ []string, _ any, _ QueryTran) {
-	panic("shouldn't reach here")
+	assert.ShouldNotReachHere()
 }
 
 func (q1 *Query1) lookupCost() Cost {
