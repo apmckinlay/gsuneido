@@ -297,22 +297,17 @@ func (m *Meta) AlterRename(table string, from, to []string) *Meta {
 	if !ok || ts.IsTomb() {
 		panic("can't alter nonexistent table: " + table)
 	}
-	missing := set.Difference(from, ts.Columns)
-	if len(missing) > 0 {
-		panic("can't rename nonexistent column(s): " + str.Join(", ", missing))
-	}
-	existing := set.Intersect(to, ts.Columns)
-	if len(existing) > 0 {
-		panic("can't rename to existing column(s): " + str.Join(", ", existing))
-	}
 	tsNew := *ts // copy
-	tsNew.Columns = slc.Replace(ts.Columns, from, to)
-	tsNew.Derived = slc.Replace(ts.Derived, from, to)
-	tsNew.Indexes = make([]schema.Index, len(ts.Indexes))
-	copy(tsNew.Indexes, ts.Indexes)
+	tsNew.Columns = replaceUnique(ts.Columns, from, to)
+	tsNew.Derived = replace(ts.Derived, from, to)
+	tsNew.Indexes = slices.Clone(ts.Indexes)
 	for i := range tsNew.Indexes {
 		ix := &tsNew.Indexes[i]
-		ix.Columns = slc.Replace(ix.Columns, from, to)
+		cols := replace(ix.Columns, from, to)
+		if !slc.Same(cols, ix.Columns) && tsNew.FindIndex(cols) != nil {
+			panic("rename causes duplicate index: " + str.Join("(,)", cols))
+		}
+		ix.Columns = cols
 	}
 	// ixspecs are ok since they are field indexes, not names
 	mu := newMetaUpdate(m)
@@ -320,6 +315,44 @@ func (m *Meta) AlterRename(table string, from, to []string) *Meta {
 	m.dropFkeys(mu, &ts.Schema)
 	m.createFkeys(mu, &tsNew.Schema, &tsNew.Schema)
 	return mu.freeze()
+}
+
+// replaceUnique replaces occurences of from with to.
+// Assumes list values are unique (no duplicates).
+// from values must exist.
+// Replacements must preserve uniqueness.
+// Replacements are done in from/to order.
+func replaceUnique(list, from, to []string) []string {
+	list = slices.Clone(list)
+	for i, f := range from {
+		j := slices.Index(list, f)
+		if j == -1 {
+			panic("can't rename nonexistent column: " + f)
+		}
+		if slices.Contains(list, to[i]) {
+			panic("can't rename to existing column: " + to[i])
+		}
+		list[j] = to[i]
+	}
+	return list
+}
+
+// replace replaces occurences of from with to.
+// Replacements are done in from/to order.
+func replace(list, from, to []string) []string {
+	cloned := false
+	for i, f := range from {
+		for j := range list {
+			if list[j] == f {
+				if !cloned {
+					list = slices.Clone(list)
+					cloned = true
+				}
+				list[j] = to[i]
+			}
+		}
+	}
+	return list
 }
 
 func (m *Meta) AlterCreate(ac *schema.Schema, store *stor.Stor) *Meta {

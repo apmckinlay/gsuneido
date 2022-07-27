@@ -13,6 +13,7 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/meta/schema"
 	"github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/str"
+	"golang.org/x/exp/slices"
 )
 
 type adminParser struct {
@@ -135,11 +136,11 @@ func (p *adminParser) columns() (columns, derived []string) {
 		} else {
 			col := p.MatchIdent()
 			if str.Capitalized(col) {
-				derived = append(derived, col)
+				derived = p.appendUnique(derived, col)
 			} else if strings.HasSuffix(col, "_lower!") {
-				derived = append(derived, col)
+				derived = p.appendUnique(derived, col)
 			} else {
-				columns = append(columns, col)
+				columns = p.appendUnique(columns, col)
 			}
 
 		}
@@ -147,6 +148,13 @@ func (p *adminParser) columns() (columns, derived []string) {
 	}
 	p.Match(tok.RParen)
 	return columns, derived
+}
+
+func (p *adminParser) appendUnique(columns []string, col string) []string {
+	if slices.Contains(columns, col) {
+		p.Error("duplicate column:", col)
+	}
+	return append(columns, col)
 }
 
 func (p *adminParser) indexes() []Index {

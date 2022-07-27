@@ -73,9 +73,22 @@ func TestAdminEnsure(t *testing.T) {
 
 	doAdmin(db, "ensure tmp3 (a) key(a) index(a_lower!)")
 
+	assert.T(t).This(func() { doAdmin(db, "ensure tmp (z, z)") }).
+		Panics("duplicate column")
+
+	assert.T(t).This(func() { doAdmin(db, "ensure tmp key(x) key(x)") }).
+		Panics("duplicate index")
+
+	assert.T(t).This(func() { doAdmin(db, "ensure tmp key(x) index(x)") }).
+		Panics("duplicate index")
+
 	// existing index but different
 	assert.T(t).This(func() { doAdmin(db, "ensure tmp index unique(b,c)") }).
 		Panics(("ensure: index exists but is different"))
+
+	doAdmin(db, "ensure tmp key(d_lower!)")
+	assert.T(t).This(db.Schema("tmp")).
+		Is("tmp (a,b,c,d,e,f,G) key(a) index(b,c) index(e,f) key(d_lower!)")
 }
 
 func TestAdminEnsure2(*testing.T) {
@@ -95,6 +108,7 @@ func TestAdminEnsure2(*testing.T) {
 func TestAdminRename(t *testing.T) {
 	db := createTestDb()
 	defer db.Close()
+
 	assert.T(t).This(func() { doAdmin(db, "rename tmp to indexes") }).
 		Panics("can't modify system table: indexes")
 	assert.T(t).This(func() { doAdmin(db, "rename nonex to foo") }).
@@ -109,6 +123,7 @@ func TestAdminAlterCreate(t *testing.T) {
 	db := createTestDb()
 	defer db.Close()
 	act(db, "insert { a: 1, b: 2, c: 3, d: 4 } into tmp")
+
 	assert.T(t).This(func() { doAdmin(db, "alter tables create (x)") }).
 		Panics("can't modify system table: tables")
 	assert.T(t).This(func() { doAdmin(db, "alter nonex create (x)") }).
@@ -117,27 +132,41 @@ func TestAdminAlterCreate(t *testing.T) {
 		Panics("can't create existing column(s): b")
 	assert.T(t).This(func() { doAdmin(db, "alter tmp create index(x)") }).
 		Panics("invalid index column: x in tmp")
+
 	doAdmin(db, "alter tmp create (x,Y) index(x)")
 	assert.T(t).This(db.Schema("tmp")).
 		Is("tmp (a,b,c,d,x,Y) key(a) index(b,c) index(x)")
-	doAdmin(db, "ensure tmp key(d_lower!)")
-	assert.T(t).This(db.Schema("tmp")).
-		Is("tmp (a,b,c,d,x,Y) key(a) index(b,c) index(x) key(d_lower!)")
+
+	assert.T(t).This(func() { doAdmin(db, "alter tmp create (z, z)") }).
+		Panics("duplicate column")
+	assert.T(t).This(func() { doAdmin(db, "alter tmp create index(c) index(c)") }).
+		Panics("duplicate index")
+	assert.T(t).This(func() { doAdmin(db, "alter tmp create index(x)") }).
+		Panics("duplicate index")
+	assert.T(t).This(func() { doAdmin(db, "alter tmp create key(x)") }).
+		Panics("duplicate index")
 }
 
 func TestAdminAlterRename(t *testing.T) {
 	db := createTestDb()
 	defer db.Close()
+
 	assert.T(t).This(func() { doAdmin(db, "alter tables rename table to foo") }).
 		Panics("can't modify system table: tables")
 	assert.T(t).This(func() { doAdmin(db, "alter nonex rename x to y") }).
 		Panics("nonexistent table: nonex")
 	assert.T(t).This(func() { doAdmin(db, "alter tmp rename x to y") }).
-		Panics("can't rename nonexistent column(s): x")
+		Panics("can't rename nonexistent column: x")
 	assert.T(t).This(func() { doAdmin(db, "alter nonex rename b to a") }).
 		Panics("can't alter nonexistent table: nonex")
 	doAdmin(db, "alter tmp rename b to x")
 	assert.T(t).This(db.Schema("tmp")).Is("tmp (a,x,c,d) key(a) index(x,c)")
+	assert.T(t).This(func() { doAdmin(db, "alter tmp rename c to d") }).
+		Panics("existing column")
+	assert.T(t).This(func() { doAdmin(db, "alter tmp rename c to z, d to z") }).
+		Panics("can't rename to existing column: z")
+	doAdmin(db, "alter tmp rename a to b, b to z, x to b")
+	assert.T(t).This(db.Schema("tmp")).Is("tmp (z,b,c,d) key(z) index(b,c)")
 }
 
 func TestAdminAlterDrop(t *testing.T) {
@@ -149,9 +178,9 @@ func TestAdminAlterDrop(t *testing.T) {
 		Panics("nonexistent table: nonex")
 	assert.T(t).This(func() { doAdmin(db, "alter tmp drop (x)") }).
 		Panics("can't drop nonexistent column: x")
-		assert.T(t).This(func() { doAdmin(db, "alter tmp drop index(x)") }).
+	assert.T(t).This(func() { doAdmin(db, "alter tmp drop index(x)") }).
 		Panics("can't drop nonexistent index: tmp (x)")
-		assert.T(t).This(func() { doAdmin(db, "alter tmp drop index(a)") }).
+	assert.T(t).This(func() { doAdmin(db, "alter tmp drop index(a)") }).
 		Panics("can't drop all keys: tmp")
 	doAdmin(db, "alter tmp drop (d)")
 	assert.T(t).This(db.Schema("tmp")).Is("tmp (a,b,c,-) key(a) index(b,c)")
