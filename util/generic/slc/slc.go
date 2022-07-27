@@ -17,7 +17,7 @@ func IndexFn[E any](list []E, e E, eq func(E, E) bool) int {
 
 func ContainsFn[E any, S ~[]E](s S, e E, eq func(E, E) bool) bool {
 	for _, x := range s {
-		if eq(x,e) {
+		if eq(x, e) {
 			return true
 		}
 	}
@@ -77,17 +77,20 @@ func Replace1[S ~[]E, E comparable](list S, from, to E) S {
 }
 
 // Replace returns a new list with occurrences of from
-// replaced by the corresponding value from to
+// replaced by the corresponding value in to.
+// If no replacements are done, it returns the original list.
 func Replace[S ~[]E, E comparable](list, from, to S) S {
-	list2 := make(S, len(list))
+	cloned := false
 	for i := range list {
 		if j := slices.Index(from, list[i]); j != -1 {
-			list2[i] = to[j]
-		} else {
-			list2[i] = list[i]
+			if !cloned {
+				list = slices.Clone(list)
+				cloned = true
+			}
+			list[i] = to[j]
 		}
 	}
-	return list2
+	return list
 }
 
 // Same returns true if x and y are the same slice

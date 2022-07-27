@@ -37,10 +37,14 @@ func TestWithout(t *testing.T) {
 }
 
 func TestReplace(t *testing.T) {
-	assert := assert.T(t).This
 	list := []string{"one", "two", "three", "two", "four"}
-	assert(Replace(list, nil, nil)).Is(list)
+	list2 := Replace(list, nil, nil)
+	assert.T(t).That(Same(list, list2))
 	from := []string{"two", "five", "one"}
 	to := []string{"2", "5", "1"}
-	assert(Replace(list, from, to)).Is([]string{"1", "2", "three", "2", "four"})
+	list1 := []string{"a", "b", "c"}
+	list2 = Replace(list1, from, to)
+	assert.T(t).That(Same(list1, list2))
+	assert.T(t).This(Replace(list, from, to)).
+		Is([]string{"1", "2", "three", "2", "four"})
 }
