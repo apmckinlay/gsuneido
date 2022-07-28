@@ -366,6 +366,9 @@ func (w *Where) split(q2 *Query2) bool {
 			used = true
 		}
 		if set.Subset(cols2, (e.Columns())) {
+			if used {
+				e = replaceExpr(e, nil, nil) // copy Binary/In CouldEvalRaw
+			}
 			src2 = append(src2, e)
 			used = true
 		}

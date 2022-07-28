@@ -127,6 +127,18 @@ var reverseBinary = map[tok.Token]tok.Token{
 	tok.Gte:  tok.Lte,
 }
 
+// CouldEvalRaw is used by replaceExpr to know when to copy
+func (b *Binary) CouldEvalRaw() bool {
+	return b.rawOp() &&
+		((isIdent(b.Lhs) && isConstant(b.Rhs)) ||
+			(isConstant(b.Lhs) && isIdent(b.Rhs)))
+}
+
+func isIdent(e Expr) bool {
+	_, ok := e.(*Ident)
+	return ok
+}
+
 func (b *Binary) Eval(c *Context) Value {
 	// NOTE: only Eval raw if b.evalRaw was set by CanEvalRaw
 	if b.evalRaw {
@@ -317,6 +329,19 @@ func (a *In) CanEvalRaw(cols []string) bool {
 		packed = set.AddUnique(packed, Pack(c.Val.(Packable)))
 	}
 	a.Packed = packed
+	return true
+}
+
+// CouldEvalRaw is used by replaceExpr to know when to copy
+func (a *In) CouldEvalRaw() bool {
+	if !isIdent(a.E) {
+		return false
+	}
+	for _, e := range a.Exprs {
+		if !isConstant(e) {
+			return false
+		}
+	}
 	return true
 }
 

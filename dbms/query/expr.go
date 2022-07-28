@@ -155,9 +155,10 @@ func replaceExpr(expr Expr, from []string, to []Expr) Expr {
 	case *Binary:
 		lhs := replaceExpr(e.Lhs, from, to)
 		rhs := replaceExpr(e.Rhs, from, to)
-		if lhs == e.Lhs && rhs == e.Rhs {
+		if lhs == e.Lhs && rhs == e.Rhs && !e.CouldEvalRaw() {
 			return expr
 		}
+		// if it could be evaluated raw then we need to make a copy
 		return aFolder.Binary(lhs, e.Tok, rhs)
 	case *Mem:
 		e2 := replaceExpr(e.E, from, to)
@@ -209,9 +210,10 @@ func replaceExpr(expr Expr, from []string, to []Expr) Expr {
 	case *In:
 		e2 := replaceExpr(e.E, from, to)
 		exprs := replaceExprs(e.Exprs, from, to)
-		if e2 == e.E && exprs == nil {
+		if e2 == e.E && exprs == nil && !e.CouldEvalRaw() {
 			return expr
 		}
+		// if it could be evaluated raw then we need to make a copy
 		if exprs == nil {
 			exprs = e.Exprs
 		}

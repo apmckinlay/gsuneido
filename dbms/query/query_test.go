@@ -9,6 +9,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/apmckinlay/gsuneido/compile"
 	"github.com/apmckinlay/gsuneido/db19"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/db19/stor"
@@ -174,7 +175,7 @@ func TestForeignKeys(*testing.T) {
 	act("insert { a: 'a1', d: 'd1', e: 'e1' } into lin8")
 	act("insert { a: 'a1', b: 'b2', d: 'd2', e: 'e2' } into lin8")
 	act("update hdr8 where a is 'a1' and b is '' set a = 'a0'")
-	assert.This(queryAll(db, "lin8")).Is("a=a0 b= d=d1 e=e1 | a=a1 b=b2 d=d2 e=e2")
+	assert.This(queryAll(db, "lin8")).Is("a=a0 d=d1 e=e1 | a=a1 b=b2 d=d2 e=e2")
 
 	db.Check()
 }
@@ -190,7 +191,8 @@ func queryAll2(q Query) string {
 	hdr := q.Header()
 	sep := ""
 	var sb strings.Builder
-	for row := q.Get(nil, rt.Next); row != nil; row = q.Get(nil, rt.Next) {
+	th := &rt.Thread{}
+	for row := q.Get(th, rt.Next); row != nil; row = q.Get(th, rt.Next) {
 		sb.WriteString(sep)
 		sb.WriteString(row2str(hdr, row))
 		sep = " | "
@@ -203,8 +205,10 @@ func row2str(hdr *rt.Header, row rt.Row) string {
 	sep := ""
 	for _, col := range hdr.Columns {
 		val := row.GetVal(hdr, col, nil, nil)
-		fmt.Fprint(&sb, sep, col, "=", rt.AsStr(val))
-		sep = " "
+		if val != rt.EmptyStr {
+			fmt.Fprint(&sb, sep, col, "=", rt.AsStr(val))
+			sep = " "
+		}
 	}
 	return sb.String()
 }
@@ -406,6 +410,30 @@ func TestWithoutDupsOrSupersets(t *testing.T) {
 	test([][]string{{"a"}, {"b", "c"}}, [][]string{{"a"}, {"b", "c"}})
 	test([][]string{{"a", "b"}, {"b", "a"}}, [][]string{{"a", "b"}})
 	test([][]string{{"a", "b"}, {"b", "a", "c"}}, [][]string{{"a", "b"}})
+}
+
+func TestWhereSplitBug(t *testing.T) {
+	rt.Global.TestDef("Rule_hx",
+		compile.Constant("function() { return .b }"))
+	db, err := db19.CreateDb(stor.HeapStor(8192))
+	ck(err)
+	db19.StartConcur(db, 50*time.Millisecond)
+	defer db.Close()
+	MakeSuTran = func(qt QueryTran) *rt.SuTran { return nil }
+	doAdmin(db, "create tmp1 (a, b, hx) key (a)")
+	doAdmin(db, "create tmp2 (a, b) key (a)")
+
+	act(db, "insert { a: 1, b: 2 } into tmp2")
+	assert.T(t).This(queryAll(db, "tmp1 union (tmp2 extend hx)")).
+		Is("a=1 b=2")
+	assert.T(t).This(queryAll(db, "(tmp1 union (tmp2 extend hx)) where hx = 2")).
+		Is("a=1 b=2")
+
+	act(db, "insert { a: 1, b: 2, hx: 2 } into tmp1")
+	assert.T(t).This(queryAll(db, "tmp1 join (tmp2 extend hx)")).
+		Is("a=1 b=2 hx=2")
+	assert.T(t).This(queryAll(db, "(tmp1 join (tmp2 extend hx)) where hx = 2")).
+		Is("a=1 b=2 hx=2")
 }
 
 func BenchmarkNoOptMod(b *testing.B) {

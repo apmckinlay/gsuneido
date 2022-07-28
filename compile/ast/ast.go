@@ -141,7 +141,7 @@ type Constant struct {
 	exprNodeT
 	TwoPos
 	Val Value
-	// Packed is used for queries
+	// Packed is used for queries. It is set by Binary.CanEvalRaw
 	Packed string
 }
 
