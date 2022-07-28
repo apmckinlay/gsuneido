@@ -4,10 +4,12 @@
 package ranges
 
 import (
+	"fmt"
 	"math/rand"
 	"sort"
 	"strconv"
 	"testing"
+	"time"
 
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/str"
@@ -151,6 +153,28 @@ func (rs *Ranges) check() int {
 		n++
 	})
 	return n
+}
+
+func TestOverflow(t *testing.T) {
+	if testing.Short() {
+		t.SkipNow()
+	}
+	const n = 20000 * 2
+	data := make([]string, n)
+	rand.Seed(time.Now().UnixNano())
+	randKey := str.UniqueRandom(4, 10)
+	for i := 0; i < n; i++ {
+		data[i] = randKey()
+	}
+	sort.Strings(data)
+	order := rand.Perm(n / 2)
+	rs := &Ranges{}
+	for i, o := range order {
+		if !rs.Insert(data[o*2], data[o*2+1]) {
+			fmt.Println(i)
+			break
+		}
+	}
 }
 
 //-------------------------------------------------------------------

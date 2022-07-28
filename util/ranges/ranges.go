@@ -48,9 +48,12 @@ type treeSlot struct {
 	leaf *leafNode
 }
 
+const existing = -1
+const overflow = -2
+
 //-------------------------------------------------------------------
 
-func (rs *Ranges) Insert(from, to string) {
+func (rs *Ranges) Insert(from, to string) bool {
 	var ti int
 	leaf := &rs.leaf
 	if rs.tree != nil {
@@ -58,14 +61,18 @@ func (rs *Ranges) Insert(from, to string) {
 		leaf = rs.tree.slots[ti].leaf
 	}
 	if leaf.size >= nodeSize {
-		rs.split(leaf, from)
+		if !rs.split(leaf, from) {
+			return false
+		}
 		ti = rs.tree.searchBinary(from) - 1
 		leaf = rs.tree.slots[ti].leaf
 	}
 
 	li := leaf.insert(from, to)
-	if li == -1 {
-		return // from,to is already contained in an existing range
+	if li == existing {
+		return true // from,to is already contained in an existing range
+	} else if li == overflow {
+		return false
 	}
 
 	// coalesce / merge
@@ -83,6 +90,7 @@ func (rs *Ranges) Insert(from, to string) {
 		}
 		it.remove()
 	}
+	return true
 }
 
 type iter struct {
@@ -181,7 +189,10 @@ func (leaf *leafNode) insert(from, to string) int {
 	i := leaf.searchBinary(from)
 	if leaf.slots[i].contains(from, to) ||
 		(i > 0 && leaf.slots[i-1].contains(from, to)) {
-		return -1
+		return existing
+	}
+	if leaf.size >= nodeSize {
+		return overflow
 	}
 	copy(leaf.slots[i+1:], leaf.slots[i:])
 	leaf.slots[i] = leafSlot{from: from, to: to}
@@ -189,10 +200,12 @@ func (leaf *leafNode) insert(from, to string) int {
 	return i
 }
 
-func (rs *Ranges) split(leaf *leafNode, val string) {
+func (rs *Ranges) split(leaf *leafNode, val string) bool {
 	if rs.tree == nil {
 		rs.tree = &treeNode{size: 1}
 		rs.tree.slots[0].leaf = &rs.leaf
+	} else if rs.tree.size >= nodeSize {
+		return false
 	}
 	var left int
 	if val > leaf.slots[nodeSize-1].from {
@@ -207,6 +220,7 @@ func (rs *Ranges) split(leaf *leafNode, val string) {
 	copy(leaf2.slots[:], leaf.slots[left:])
 	leaf.size = left
 	rs.tree.insert(leaf2.slots[0].from, leaf2)
+	return true
 }
 
 func (tree *treeNode) insert(val string, leaf *leafNode) {

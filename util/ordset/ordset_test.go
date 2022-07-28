@@ -4,9 +4,11 @@
 package ordset
 
 import (
+	"fmt"
 	"math/rand"
 	"sort"
 	"testing"
+	"time"
 
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/str"
@@ -86,6 +88,21 @@ func TestAnyInRange(t *testing.T) {
 		d = rand.Intn(n - 10)
 		e := d + rand.Intn(10)
 		assert.True(x.AnyInRange(smaller(data[d]), bigger(data[e])))
+	}
+}
+
+func TestOverflow(t *testing.T) {
+	if testing.Short() {
+		t.SkipNow()
+	}
+	var x Set
+	rand.Seed(time.Now().UnixNano())
+	randKey := str.UniqueRandom(3, 10)
+	for i := 0; i < 20000; i++ {
+		if !x.Insert(randKey()) {
+			fmt.Println(i)
+			break
+		}
 	}
 }
 

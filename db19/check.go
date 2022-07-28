@@ -194,17 +194,24 @@ func (ck *Check) Read(t *CkTran, table string, index int, from, to string) bool 
 			}
 		}
 	}
-	t.saveRead(table, index, from, to)
+	if !t.saveRead(table, index, from, to) {
+		ck.abort(t.start, "too many reads")
+	}
 	return true
 }
 
-func (t *CkTran) saveRead(table string, index int, from, to string) {
+func (t *CkTran) saveRead(table string, index int, from, to string) bool {
 	tbl, ok := t.tables[table]
 	if !ok {
 		tbl = &cktbl{}
 		t.tables[table] = tbl
 	}
-	tbl.reads = tbl.reads.with(index, from, to)
+	reads := tbl.reads.with(index, from, to)
+	if reads == nil {
+		return false
+	}
+	tbl.reads = reads
+	return true
 }
 
 func (cr ckreads) with(index int, from, to string) ckreads {
@@ -214,7 +221,9 @@ func (cr ckreads) with(index int, from, to string) ckreads {
 	if cr[index] == nil {
 		cr[index] = &Ranges{}
 	}
-	cr[index].Insert(from, to)
+	if !cr[index].Insert(from, to) {
+		return nil
+	}
 	return cr
 }
 
@@ -264,19 +273,26 @@ func (ck *Check) output(t *CkTran, table string, keys, oldkeys []string) bool {
 			}
 		}
 	}
-	t.saveOutput(table, keys)
+	if !t.saveOutput(table, keys) {
+		ck.abort(t.start, "too many writes (output, update, or delete)")
+	}
 	return true
 }
 
-func (t *CkTran) saveOutput(table string, keys []string) {
+func (t *CkTran) saveOutput(table string, keys []string) bool {
 	tbl, ok := t.tables[table]
 	if !ok {
 		tbl = &cktbl{}
 		t.tables[table] = tbl
 	}
 	for i, key := range keys {
-		tbl.outputs = tbl.outputs.with(i, key)
+		outs := tbl.outputs.with(i, key)
+		if outs == nil {
+			return false
+		}
+		tbl.outputs = outs
 	}
+	return true
 }
 
 // Delete adds a delete action.
@@ -312,11 +328,13 @@ func (ck *Check) Delete(t *CkTran, table string, off uint64, keys []string) bool
 			}
 		}
 	}
-	t.saveDelete(table, off, keys)
+	if !t.saveDelete(table, off, keys) {
+		ck.abort(t.start, "too many writes (output, update, or delete)")
+	}
 	return true
 }
 
-func (t *CkTran) saveDelete(table string, off uint64, keys []string) {
+func (t *CkTran) saveDelete(table string, off uint64, keys []string) bool {
 	tbl, ok := t.tables[table]
 	if !ok {
 		tbl = &cktbl{deloffs: make(map[uint64]struct{})}
@@ -327,8 +345,13 @@ func (t *CkTran) saveDelete(table string, off uint64, keys []string) {
 	assert.That(off != 0)
 	tbl.deloffs[off] = struct{}{}
 	for i, key := range keys {
-		tbl.deletes = tbl.deletes.with(i, key)
+		dels := tbl.deletes.with(i, key)
+		if dels == nil {
+			return false
+		}
+		tbl.deletes = dels
 	}
+	return true
 }
 
 func (cw ckwrites) contains(index int, key string) bool {
@@ -349,7 +372,9 @@ func (cw ckwrites) with(index int, key string) ckwrites {
 	if cw[index] == nil {
 		cw[index] = &Set{}
 	}
-	cw[index].Insert(key)
+	if !cw[index].Insert(key) {
+		return nil
+	}
 	return cw
 }
 

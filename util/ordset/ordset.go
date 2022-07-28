@@ -38,7 +38,7 @@ type treeSlot struct {
 
 //-------------------------------------------------------------------
 
-func (set *Set) Insert(key string) {
+func (set *Set) Insert(key string) bool {
 	//TODO ignore duplicates
 	leaf := &set.leaf
 	if set.tree != nil {
@@ -46,24 +46,32 @@ func (set *Set) Insert(key string) {
 		leaf = set.tree.slots[i-1].leaf
 	}
 	if leaf.size >= nodeSize {
-		set.split(leaf, key)
+		if !set.split(leaf, key) {
+			return false
+		}
 		i := set.tree.searchBinary(key)
 		leaf = set.tree.slots[i-1].leaf
 	}
-	leaf.insert(key)
+	return leaf.insert(key)
 }
 
-func (leaf *leafNode) insert(key string) {
+func (leaf *leafNode) insert(key string) bool {
+	if leaf.size >= nodeSize {
+		return false
+	}
 	i := leaf.searchBinary(key)
 	copy(leaf.slots[i+1:], leaf.slots[i:])
 	leaf.slots[i] = key
 	leaf.size++
+	return true
 }
 
-func (set *Set) split(leaf *leafNode, key string) {
+func (set *Set) split(leaf *leafNode, key string) bool {
 	if set.tree == nil && set.leaf.size == nodeSize {
 		set.tree = &treeNode{size: 1}
 		set.tree.slots[0].leaf = &set.leaf
+	} else if set.tree.size >= nodeSize {
+		return false
 	}
 	var left int
 	if key > leaf.slots[nodeSize-1] {
@@ -78,6 +86,7 @@ func (set *Set) split(leaf *leafNode, key string) {
 	copy(leaf2.slots[:], leaf.slots[left:])
 	leaf.size = left
 	set.tree.insert(leaf2.slots[0], leaf2)
+	return true
 }
 
 func (tree *treeNode) insert(key string, leaf *leafNode) {
