@@ -59,7 +59,12 @@ func newPackStack() packStack {
 	return make([]Value, 0, initialSize)
 }
 
+const nestingLimit = 16
+
 func (ps *packStack) push(x Value) {
+	if len(*ps) >= nestingLimit {
+		panic("object nesting overflow")
+	}
 	for _, v := range *ps {
 		if x == v { // NOTE: == not Equals
 			panic("can't pack object/record containing itself")
