@@ -56,7 +56,7 @@ func NewDbmsClient(conn net.Conn) *dbmsClient {
 }
 
 func cantConnect(s string) {
-	Fatal("Can't connect. " + s)
+	Fatal("Can't connect.", s)
 }
 
 func checkHello(conn net.Conn) (ok, jserver bool) {

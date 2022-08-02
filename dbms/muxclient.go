@@ -25,7 +25,7 @@ type muxClient struct {
 func ConnectClient(addr string, port string) (conn net.Conn, jserver bool) {
 	conn, err := net.Dial("tcp", addr+":"+port)
 	if err != nil {
-		// checkServerStatus(addr, port)
+		checkServerStatus(addr, port)
 		cantConnect(err.Error())
 	}
 	ok, jserver := checkHello(conn)
