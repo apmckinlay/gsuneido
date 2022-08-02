@@ -149,10 +149,10 @@ func xdeObject(x *SuObject, stack *[]Value) (todo []Value, listSize, namedSize i
 	i := start
 	iter := x.named.Iter()
 	for k, v := iter(); k != nil; k, v = iter() {
-		(*stack)[i] = v.(Value)
+		(*stack)[i] = v
 		// temporarily store the member
 		// where ydeObject will replace it with its value
-		(*stack)[i+xSize] = k.(Value)
+		(*stack)[i+xSize] = k
 		i++
 	}
 	copy((*stack)[start+namedSize:], x.list)
@@ -203,7 +203,7 @@ func xdeInstance(x *SuInstance, stack *[]Value) (todo []Value, size int) {
 	expand(stack, 2*size)
 	i := start
 	for k, v := range x.Data {
-		(*stack)[i] = v.(Value)
+		(*stack)[i] = v
 		// temporarily store the member
 		// where ydeInstance will replace it with its value
 		(*stack)[i+size] = SuStr(k)

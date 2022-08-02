@@ -21,6 +21,7 @@ type SuBool bool
 var _ Value = (*SuBool)(nil)
 
 func (b SuBool) ToInt() (int, bool) {
+	//lint:ignore S1002 incorrect
 	return 0, b == false
 }
 
@@ -29,6 +30,7 @@ func (b SuBool) IfInt() (int, bool) {
 }
 
 func (b SuBool) ToDnum() (dnum.Dnum, bool) {
+	//lint:ignore S1002 incorrect
 	return dnum.Zero, b == false
 }
 
@@ -45,7 +47,7 @@ func (b SuBool) ToStr() (string, bool) {
 }
 
 func (b SuBool) String() string {
-	if b == true {
+	if b {
 		return "true"
 	}
 	return "false"
@@ -72,7 +74,7 @@ func (SuBool) RangeLen(int, int) Value {
 }
 
 func (b SuBool) Hash() uint32 {
-	if b == false {
+	if !b {
 		return 0x11111111
 	}
 	return 0x22222222
@@ -131,7 +133,7 @@ func (SuBool) PackSize2(*uint32, packStack) int {
 }
 
 func (b SuBool) Pack(_ *uint32, buf *pack.Encoder) {
-	if b == true {
+	if b {
 		buf.Put1(PackTrue)
 	} else {
 		buf.Put1(PackFalse)

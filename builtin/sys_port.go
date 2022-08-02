@@ -96,6 +96,6 @@ func ErrlogDir() string {
 	return os.TempDir()
 }
 
-func OnUiThread() bool {
+func OnUIThread() bool {
 	return false
 }

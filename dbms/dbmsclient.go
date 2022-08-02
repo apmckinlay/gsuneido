@@ -33,8 +33,7 @@ var tokenLock sync.Mutex
 // dbmsClient is the client for the jSuneido server
 type dbmsClient struct {
 	*csio.ReadWrite
-	conn      net.Conn
-	sessionId string
+	conn net.Conn
 }
 
 // helloSize is the size of the initial connection message from the server
@@ -77,7 +76,7 @@ func checkHello(conn net.Conn) (ok, jserver bool) {
 	return true, false
 }
 
-func checkServerStatus(addr string, port string) {
+func checkServerStatus(addr string, port string) { //FIXME not used ???
 	p, err := strconv.Atoi(port)
 	if err != nil {
 		return

@@ -5,7 +5,7 @@ package runtime
 
 type ArgsIter func() (Value, Value)
 
-// ArgsIter returns an iterator function
+// NewArgsIter returns an iterator function
 // that can be called to return successive name,value pairs
 // with name = nil for unnamed values
 // It returns nil,nil when there are no more values

@@ -17,12 +17,12 @@ import (
 // It panics on error.
 func (ms *mmapStor) Get(chunk int) []byte {
 	prot := syscall.PROT_READ
-	if ms.mode != READ {
+	if ms.mode != Read {
 		prot |= syscall.PROT_WRITE
-		ms.file.Truncate(int64(chunk+1) * MMAP_CHUNKSIZE) // extend file
+		ms.file.Truncate(int64(chunk+1) * mmapChunkSize) // extend file
 	}
 	mmap, err := syscall.Mmap(int(ms.file.Fd()),
-		int64(chunk)*MMAP_CHUNKSIZE, MMAP_CHUNKSIZE,
+		int64(chunk)*mmapChunkSize, mmapChunkSize,
 		prot, syscall.MAP_SHARED)
 	if err != nil {
 		panic(err)

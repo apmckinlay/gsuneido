@@ -22,7 +22,7 @@ func TestCostModel(*testing.T) {
 	const dbsize = 2 * 1024 * 1024 * 1024 // 2 gb
 	// create file
 	file := filepath.Join(os.TempDir(), "testcostmodel")
-	db, err := stor.MmapStor(file, stor.CREATE)
+	db, err := stor.MmapStor(file, stor.Create)
 	if err != nil {
 		panic(err)
 	}

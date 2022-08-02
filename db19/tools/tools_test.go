@@ -47,14 +47,14 @@ func TestTools(t *testing.T) {
 	tools.Compact(dbName)
 	defer os.Remove(dbName + ".bak")
 	ck(db19.CheckDatabase(dbName))
-	compareDb(dbName, "loaded_" + dbName)
+	compareDb(dbName, "loaded_"+dbName)
 	tools.DumpDatabase(dbName, "dump3_"+dbName)
 	defer os.Remove("dump3_" + dbName)
 	compare("dump_"+dbName, "dump3_"+dbName)
 }
 
 func createDb() {
-	store, err := stor.MmapStor(dbName, stor.CREATE)
+	store, err := stor.MmapStor(dbName, stor.Create)
 	ck(err)
 	defer store.Close(true)
 	db, err := db19.CreateDb(store)

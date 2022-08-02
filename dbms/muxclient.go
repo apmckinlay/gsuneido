@@ -59,10 +59,7 @@ func (ms *muxSession) Admin(admin string, _ *Sviews) {
 }
 
 func (ms *muxSession) Auth(_ *Thread, s string) bool {
-	if !ms.auth(s) {
-		return false
-	}
-	return true
+	return ms.auth(s)
 }
 
 func (ms *muxSession) auth(s string) bool {

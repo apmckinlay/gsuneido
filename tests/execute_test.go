@@ -87,11 +87,11 @@ func BenchmarkBase(b *testing.B) {
 	}
 }
 
-var _ = ptest.Add("execute", pt_execute)
-var _ = ptest.Add("lang_rangeto", pt_lang_rangeto)
-var _ = ptest.Add("lang_rangelen", pt_lang_rangelen)
-var _ = ptest.Add("compare", pt_compare)
-var _ = ptest.Add("compare_packed", pt_compare_packed)
+var _ = ptest.Add("execute", ptExecute)
+var _ = ptest.Add("lang_rangeto", ptLangRangeto)
+var _ = ptest.Add("lang_rangelen", ptLangRangelen)
+var _ = ptest.Add("compare", ptCompare)
+var _ = ptest.Add("compare_packed", ptComparePacked)
 
 func TestBuiltinString(t *testing.T) {
 	f := Global.GetName(nil, "Type")
@@ -148,7 +148,7 @@ func init() {
 	builtin.Def()
 }
 
-func pt_execute(args []string, _ []bool) bool {
+func ptExecute(args []string, _ []bool) bool {
 	src := "function () {\n" + args[0] + "\n}"
 	var th Thread
 	expected := "**notfalse**"
@@ -197,7 +197,7 @@ func pt_execute(args []string, _ []bool) bool {
 	return success
 }
 
-func pt_lang_rangeto(args []string, _ []bool) bool {
+func ptLangRangeto(args []string, _ []bool) bool {
 	s := args[0]
 	from, _ := strconv.Atoi(args[1])
 	to, _ := strconv.Atoi(args[2])
@@ -210,7 +210,7 @@ func pt_lang_rangeto(args []string, _ []bool) bool {
 	return true
 }
 
-func pt_lang_rangelen(args []string, _ []bool) bool {
+func ptLangRangelen(args []string, _ []bool) bool {
 	s := args[0]
 	from, _ := strconv.Atoi(args[1])
 	n := 9999
@@ -243,7 +243,7 @@ func strToList(s string) *SuObject {
 	return &ob
 }
 
-func pt_compare(args []string, _ []bool) bool {
+func ptCompare(args []string, _ []bool) bool {
 	n := len(args)
 	for i := 0; i < n; i++ {
 		x := constant(args[i])
@@ -261,7 +261,7 @@ func pt_compare(args []string, _ []bool) bool {
 	return true
 }
 
-func pt_compare_packed(args []string, _ []bool) bool {
+func ptComparePacked(args []string, _ []bool) bool {
 	n := len(args)
 	for i := 0; i < n; i++ {
 		x := constant(args[i])

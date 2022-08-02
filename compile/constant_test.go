@@ -39,7 +39,7 @@ func TestConstant(t *testing.T) {
 
 // ptest ------------------------------------------------------------
 
-var _ = ptest.Add("compile", pt_compile)
+var _ = ptest.Add("compile", ptCompile)
 
 func TestPtestConstant(t *testing.T) {
 	if !ptest.RunFile("constant.test") {
@@ -47,7 +47,7 @@ func TestPtestConstant(t *testing.T) {
 	}
 }
 
-func pt_compile(args []string, _ []bool) bool {
+func ptCompile(args []string, _ []bool) bool {
 	expectedType := args[1]
 	expected := args[2]
 	var actual Value

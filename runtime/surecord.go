@@ -507,8 +507,7 @@ func (r *SuRecord) callObservers(t *Thread, key string) {
 }
 
 func (r *SuRecord) callObservers2(t *Thread, key string) {
-	for _, x := range r.observers.List {
-		ofn := x.(Value)
+	for _, ofn := range r.observers.List {
 		if !r.activeObservers.Has(activeObserver{ofn, key}) {
 			func(ofn Value, key string) {
 				r.activeObservers.Push(activeObserver{ofn, key})
@@ -831,9 +830,9 @@ func (r *SuRecord) ToRecord(t *Thread, hdr *Header) Record {
 	deps := map[string][]string{}
 	for k, v := range r.dependents {
 		for _, d := range v {
-			d_deps := d + "_deps"
-			if slices.Contains(fields, d_deps) {
-				deps[d_deps] = append(deps[d_deps], k)
+			dDeps := d + "_deps"
+			if slices.Contains(fields, dDeps) {
+				deps[dDeps] = append(deps[dDeps], k)
 			}
 		}
 	}

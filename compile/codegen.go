@@ -123,7 +123,7 @@ func (cg *cgen) finishParamSpec() {
 		return
 	}
 	cg.Flags = zeroFlags[:len(cg.Flags)]
-	if 0 <= cg.Nparams && cg.Nparams <= 4 {
+	if cg.Nparams <= 4 {
 		cg.Signature = ^(1 + cg.Nparams)
 	}
 }
@@ -855,18 +855,6 @@ func (cg *cgen) lvalue(node ast.Expr) int {
 		return memRef
 	}
 	panic("invalid lvalue: " + fmt.Sprint(node))
-}
-
-func (cg *cgen) load(ref int) {
-	if ref == memRef {
-		cg.emit(op.Get)
-	} else {
-		if cg.Names[ref][0] == '_' {
-			cg.emitUint8(op.Dyload, ref)
-		} else {
-			cg.emitUint8(op.Load, ref)
-		}
-	}
 }
 
 func (cg *cgen) store(ref int) {

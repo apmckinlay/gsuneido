@@ -20,7 +20,7 @@ const dtfmt = "20060102.150405"
 
 func Repair(dbfile string, err error) (string, error) {
 	ec, _ := err.(*ErrCorrupt)
-	store, err := stor.MmapStor(dbfile, stor.READ)
+	store, err := stor.MmapStor(dbfile, stor.Read)
 	if err != nil {
 		return "", err
 	}
@@ -101,10 +101,10 @@ func truncate(dbfile string, store *stor.Stor, off uint64) error {
 
 func fixHeader(dbfile string, size uint64) error {
 	f, err := os.OpenFile(dbfile, os.O_WRONLY, 0)
-	defer f.Close()
 	if err != nil {
 		return err
 	}
+	defer f.Close()
 	_, err = f.WriteAt([]byte(magic), 0)
 	if err != nil {
 		return err

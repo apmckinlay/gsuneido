@@ -65,12 +65,12 @@ func (a *TwoPos) SetPos(org, end int32) {
 	a.end = end
 }
 
-func (op *TwoPos) GetPos() int {
-	return int(op.org)
+func (a *TwoPos) GetPos() int {
+	return int(a.org)
 }
 
-func (op *TwoPos) GetEnd() int {
-	return int(op.end)
+func (a *TwoPos) GetEnd() int {
+	return int(a.end)
 }
 
 // Expr is implemented by expression nodes
@@ -549,20 +549,20 @@ type Param struct {
 	Unused bool
 }
 
-func (p *Param) String() string {
-	s := p.Name.Name
-	if p.DefVal != nil {
-		s += "=" + p.DefVal.String()
+func (a *Param) String() string {
+	s := a.Name.Name
+	if a.DefVal != nil {
+		s += "=" + a.DefVal.String()
 	}
 	return s
 }
 
-func (p *Param) GetPos() int {
-	return int(p.Name.Pos)
+func (a *Param) GetPos() int {
+	return int(a.Name.Pos)
 }
 
-func (p *Param) GetEnd() int {
-	return int(p.End)
+func (a *Param) GetEnd() int {
+	return int(a.End)
 }
 
 type Block struct {
@@ -606,15 +606,15 @@ type Compound struct {
 	Body []Statement
 }
 
-func (x *Compound) String() string {
-	if len(x.Body) == 0 {
+func (a *Compound) String() string {
+	if len(a.Body) == 0 {
 		return "{}"
 	}
-	if len(x.Body) == 1 {
-		return x.Body[0].String()
+	if len(a.Body) == 1 {
+		return a.Body[0].String()
 	}
 	s := "{\n"
-	for _, stmt := range x.Body {
+	for _, stmt := range a.Body {
 		if stmt != nil {
 			s += stmt.String() + "\n"
 		}
@@ -622,9 +622,9 @@ func (x *Compound) String() string {
 	return s + "}"
 }
 
-func (x *Compound) Children(fn func(Node) Node) {
-	for i := range x.Body {
-		childStmt(fn, &x.Body[i])
+func (a *Compound) Children(fn func(Node) Node) {
+	for i := range a.Body {
+		childStmt(fn, &a.Body[i])
 	}
 }
 
@@ -636,23 +636,23 @@ type If struct {
 	ElseEnd int32
 }
 
-func (x *If) String() string {
-	s := "If(" + x.Cond.String() + " "
+func (a *If) String() string {
+	s := "If(" + a.Cond.String() + " "
 	// if x.Then == nil {
 	// 	s += "nil"
 	// } else {
-	s += x.Then.String()
+	s += a.Then.String()
 	// }
-	if x.Else != nil {
-		s += "\nelse " + x.Else.String()
+	if a.Else != nil {
+		s += "\nelse " + a.Else.String()
 	}
 	return s + ")"
 }
 
-func (x *If) Children(fn func(Node) Node) {
-	childExpr(fn, &x.Cond)
-	childStmt(fn, &x.Then)
-	childStmt(fn, &x.Else)
+func (a *If) Children(fn func(Node) Node) {
+	childExpr(fn, &a.Cond)
+	childStmt(fn, &a.Then)
+	childStmt(fn, &a.Else)
 }
 
 type Return struct {
@@ -660,16 +660,16 @@ type Return struct {
 	E Expr
 }
 
-func (x *Return) String() string {
+func (a *Return) String() string {
 	s := "Return("
-	if x.E != nil {
-		s += x.E.String()
+	if a.E != nil {
+		s += a.E.String()
 	}
 	return s + ")"
 }
 
-func (x *Return) Children(fn func(Node) Node) {
-	childExpr(fn, &x.E)
+func (a *Return) Children(fn func(Node) Node) {
+	childExpr(fn, &a.E)
 }
 
 type Throw struct {
@@ -677,12 +677,12 @@ type Throw struct {
 	E Expr
 }
 
-func (x *Throw) String() string {
-	return "Throw(" + x.E.String() + ")"
+func (a *Throw) String() string {
+	return "Throw(" + a.E.String() + ")"
 }
 
-func (x *Throw) Children(fn func(Node) Node) {
-	childExpr(fn, &x.E)
+func (a *Throw) Children(fn func(Node) Node) {
+	childExpr(fn, &a.E)
 }
 
 type TryCatch struct {
@@ -696,25 +696,25 @@ type TryCatch struct {
 	CatchVarUnused bool
 }
 
-func (x *TryCatch) String() string {
-	s := "Try(" + x.Try.String()
-	if x.Catch != nil {
+func (a *TryCatch) String() string {
+	s := "Try(" + a.Try.String()
+	if a.Catch != nil {
 		s += "\ncatch"
-		if x.CatchVar.Name != "" {
-			s += " (" + x.CatchVar.Name
-			if x.CatchFilter != "" {
-				s += ",'" + x.CatchFilter + "'"
+		if a.CatchVar.Name != "" {
+			s += " (" + a.CatchVar.Name
+			if a.CatchFilter != "" {
+				s += ",'" + a.CatchFilter + "'"
 			}
 			s += ")"
 		}
-		s += " " + x.Catch.String()
+		s += " " + a.Catch.String()
 	}
 	return s + ")"
 }
 
-func (x *TryCatch) Children(fn func(Node) Node) {
-	childStmt(fn, &x.Try)
-	childStmt(fn, &x.Catch)
+func (a *TryCatch) Children(fn func(Node) Node) {
+	childStmt(fn, &a.Try)
+	childStmt(fn, &a.Catch)
 }
 
 type Forever struct {
@@ -722,12 +722,12 @@ type Forever struct {
 	Body Statement
 }
 
-func (x *Forever) String() string {
-	return "Forever(" + x.Body.String() + ")"
+func (a *Forever) String() string {
+	return "Forever(" + a.Body.String() + ")"
 }
 
-func (x *Forever) Children(fn func(Node) Node) {
-	childStmt(fn, &x.Body)
+func (a *Forever) Children(fn func(Node) Node) {
+	childStmt(fn, &a.Body)
 }
 
 type ForIn struct {
@@ -737,13 +737,13 @@ type ForIn struct {
 	Body Statement
 }
 
-func (x *ForIn) String() string {
-	return "ForIn(" + x.Var.Name + " " + x.E.String() + "\n" + x.Body.String() + ")"
+func (a *ForIn) String() string {
+	return "ForIn(" + a.Var.Name + " " + a.E.String() + "\n" + a.Body.String() + ")"
 }
 
-func (x *ForIn) Children(fn func(Node) Node) {
-	childExpr(fn, &x.E)
-	childStmt(fn, &x.Body)
+func (a *ForIn) Children(fn func(Node) Node) {
+	childExpr(fn, &a.E)
+	childStmt(fn, &a.Body)
 }
 
 type For struct {
@@ -754,34 +754,34 @@ type For struct {
 	Body Statement
 }
 
-func (x *For) String() string {
+func (a *For) String() string {
 	s := "For("
 	sep := ""
-	for _, e := range x.Init {
+	for _, e := range a.Init {
 		s += sep + e.String()
 		sep = ","
 	}
 	s += "; "
-	if x.Cond != nil {
-		s += x.Cond.String()
+	if a.Cond != nil {
+		s += a.Cond.String()
 	}
 	s += "; "
 	sep = ""
-	for _, e := range x.Inc {
+	for _, e := range a.Inc {
 		s += sep + e.String()
 		sep = ","
 	}
-	return s + "\n" + x.Body.String() + ")"
+	return s + "\n" + a.Body.String() + ")"
 }
 
-func (x *For) Children(fn func(Node) Node) {
-	for i := range x.Init {
-		childExpr(fn, &x.Init[i])
+func (a *For) Children(fn func(Node) Node) {
+	for i := range a.Init {
+		childExpr(fn, &a.Init[i])
 	}
-	childExpr(fn, &x.Cond)
-	childStmt(fn, &x.Body)
-	for i := range x.Inc {
-		childExpr(fn, &x.Inc[i])
+	childExpr(fn, &a.Cond)
+	childStmt(fn, &a.Body)
+	for i := range a.Inc {
+		childExpr(fn, &a.Inc[i])
 	}
 }
 
@@ -791,13 +791,13 @@ type While struct {
 	Body Statement
 }
 
-func (x *While) String() string {
-	return "While(" + x.Cond.String() + " " + x.Body.String() + ")"
+func (a *While) String() string {
+	return "While(" + a.Cond.String() + " " + a.Body.String() + ")"
 }
 
-func (x *While) Children(fn func(Node) Node) {
-	childExpr(fn, &x.Cond)
-	childStmt(fn, &x.Body)
+func (a *While) Children(fn func(Node) Node) {
+	childExpr(fn, &a.Cond)
+	childStmt(fn, &a.Body)
 }
 
 type DoWhile struct {
@@ -806,13 +806,13 @@ type DoWhile struct {
 	Cond Expr
 }
 
-func (x *DoWhile) String() string {
-	return "DoWhile(" + x.Body.String() + " " + x.Cond.String() + ")"
+func (a *DoWhile) String() string {
+	return "DoWhile(" + a.Body.String() + " " + a.Cond.String() + ")"
 }
 
-func (x *DoWhile) Children(fn func(Node) Node) {
-	childStmt(fn, &x.Body)
-	childExpr(fn, &x.Cond)
+func (a *DoWhile) Children(fn func(Node) Node) {
+	childStmt(fn, &a.Body)
+	childExpr(fn, &a.Cond)
 }
 
 type Break struct {
@@ -836,12 +836,12 @@ type ExprStmt struct {
 	E Expr
 }
 
-func (x *ExprStmt) String() string {
-	return x.E.String() // NOTE: doesn't say "ExprStmt"
+func (a *ExprStmt) String() string {
+	return a.E.String() // NOTE: doesn't say "ExprStmt"
 }
 
-func (x *ExprStmt) Children(fn func(Node) Node) {
-	childExpr(fn, &x.E)
+func (a *ExprStmt) Children(fn func(Node) Node) {
+	childExpr(fn, &a.E)
 }
 
 type Switch struct {
@@ -861,16 +861,16 @@ type Case struct {
 	TwoPos
 }
 
-func (x *Switch) String() string {
-	s := "Switch(" + x.E.String()
-	for _, c := range x.Cases {
+func (a *Switch) String() string {
+	s := "Switch(" + a.E.String()
+	for _, c := range a.Cases {
 		s += "\n" + c.String()
 	}
-	if x.Default != nil {
-		if len(x.Default) == 0 {
+	if a.Default != nil {
+		if len(a.Default) == 0 {
 			s += "\n()"
 		}
-		for _, stmt := range x.Default {
+		for _, stmt := range a.Default {
 			if stmt != nil {
 				s += "\n" + stmt.String()
 			}
@@ -879,14 +879,14 @@ func (x *Switch) String() string {
 	return s + ")"
 }
 
-func (c *Case) String() string {
+func (a *Case) String() string {
 	s := "Case("
 	sep := ""
-	for _, e := range c.Exprs {
+	for _, e := range a.Exprs {
 		s += sep + e.String()
 		sep = ","
 	}
-	for _, stmt := range c.Body {
+	for _, stmt := range a.Body {
 		if stmt != nil {
 			s += "\n" + stmt.String()
 		}
@@ -895,10 +895,10 @@ func (c *Case) String() string {
 	return s
 }
 
-func (x *Switch) Children(fn func(Node) Node) {
-	childExpr(fn, &x.E)
-	for i := range x.Cases {
-		c := &x.Cases[i]
+func (a *Switch) Children(fn func(Node) Node) {
+	childExpr(fn, &a.E)
+	for i := range a.Cases {
+		c := &a.Cases[i]
 		for j := range c.Exprs {
 			childExpr(fn, &c.Exprs[j])
 		}
@@ -906,7 +906,7 @@ func (x *Switch) Children(fn func(Node) Node) {
 			childStmt(fn, &c.Body[j])
 		}
 	}
-	for i := range x.Default {
-		childStmt(fn, &x.Default[i])
+	for i := range a.Default {
+		childStmt(fn, &a.Default[i])
 	}
 }

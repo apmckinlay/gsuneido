@@ -13,9 +13,9 @@ import (
 type Mode int
 
 const (
-	READ Mode = iota
-	CREATE
-	UPDATE
+	Read Mode = iota
+	Create
+	Update
 )
 
 type mmapStor struct {
@@ -24,15 +24,15 @@ type mmapStor struct {
 	ptrs []uintptr // needed on windows
 }
 
-const MMAP_CHUNKSIZE = 64 * 1024 * 1024 // 64 mb
+const mmapChunkSize = 64 * 1024 * 1024 // 64 mb
 
 // MmapStor returns a memory mapped file stor.
 func MmapStor(filename string, mode Mode) (*Stor, error) {
 	var perm os.FileMode
 	flags := os.O_RDONLY
-	if mode == UPDATE {
+	if mode == Update {
 		flags = os.O_RDWR
-	} else if mode == CREATE {
+	} else if mode == Create {
 		perm = 0666
 		flags = os.O_CREATE | os.O_TRUNC | os.O_RDWR
 	}
@@ -40,7 +40,7 @@ func MmapStor(filename string, mode Mode) (*Stor, error) {
 	if err != nil {
 		return nil, err
 	}
-	if mode == READ {
+	if mode == Read {
 		err = filelock.RLock(file)
 	} else {
 		err = filelock.Lock(file)
@@ -53,21 +53,21 @@ func MmapStor(filename string, mode Mode) (*Stor, error) {
 		return nil, err
 	}
 	size := fi.Size()
-	nchunks := int(((size + MMAP_CHUNKSIZE - 1) / MMAP_CHUNKSIZE))
+	nchunks := int(((size + mmapChunkSize - 1) / mmapChunkSize))
 	impl := &mmapStor{file, mode, nil}
 	chunks := make([][]byte, nchunks)
 
 	for i := 0; i < nchunks; i++ {
 		if i < nchunks-1 {
-			impl.mode = READ // map full chunks as READ
+			impl.mode = Read // map full chunks as READ
 		} else {
 			impl.mode = mode // map last chunk with actual mode
 		}
 		chunks[i] = impl.Get(i)
 	}
 	last := nchunks - 1
-	if mode == READ {
-		remainder := size % MMAP_CHUNKSIZE
+	if mode == Read {
+		remainder := size % mmapChunkSize
 		if remainder > 0 {
 			chunks[last] = chunks[last][:remainder] // last chunk not full
 		}
@@ -75,14 +75,14 @@ func MmapStor(filename string, mode Mode) (*Stor, error) {
 	// trim trailing zero bytes (from memory mapping)
 	if size > 0 {
 		buf := chunks[last]
-		r := (size - 1) % MMAP_CHUNKSIZE
+		r := (size - 1) % mmapChunkSize
 		b := r
 		for ; b >= 0 && buf[b] == 0; b-- {
 		}
 		size -= int64(r - b)
 	}
 
-	ms := NewStor(impl, MMAP_CHUNKSIZE, uint64(size))
+	ms := NewStor(impl, mmapChunkSize, uint64(size))
 	ms.chunks.Store(chunks)
 	return ms, nil
 }

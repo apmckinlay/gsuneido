@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/compile/ast"
-	"github.com/apmckinlay/gsuneido/compile/tokens"
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/runtime"
@@ -454,7 +453,7 @@ func (w *Where) extractCompares() []cmpExpr {
 	cmps := make([]cmpExpr, 0, 4)
 	for _, expr := range w.expr.Exprs {
 		if expr.CanEvalRaw(cols) {
-			if bin, ok := expr.(*ast.Binary); ok && bin.Tok != tokens.Isnt {
+			if bin, ok := expr.(*ast.Binary); ok && bin.Tok != tok.Isnt {
 				cmp := cmpExpr{
 					col: bin.Lhs.(*ast.Ident).Name,
 					op:  bin.Tok,
@@ -464,7 +463,7 @@ func (w *Where) extractCompares() []cmpExpr {
 			} else if in, ok := expr.(*ast.In); ok {
 				cmp := cmpExpr{
 					col:  in.E.(*ast.Ident).Name,
-					op:   tokens.In,
+					op:   tok.In,
 					vals: in.Packed,
 				}
 				cmps = append(cmps, cmp)
@@ -548,7 +547,7 @@ func (w *Where) setApproach(index []string, app any, tran QueryTran) {
 // which can be evaluated packed
 type cmpExpr struct {
 	col  string
-	op   tokens.Token
+	op   tok.Token
 	val  string   // packed (binary)
 	vals []string // packed (in)
 }
@@ -569,20 +568,20 @@ func (cmp cmpExpr) String() string {
 }
 
 func (cmp *cmpExpr) toFilter() filter {
-	if cmp.op == tokens.In {
+	if cmp.op == tok.In {
 		return filter{vals: cmp.vals}
 	}
 	// else binary
 	switch cmp.op {
-	case tokens.Is:
+	case tok.Is:
 		return filter{vals: []string{cmp.val}}
-	case tokens.Lt:
+	case tok.Lt:
 		return filter{end: limit{val: cmp.val}}
-	case tokens.Lte:
+	case tok.Lte:
 		return filter{end: limit{val: cmp.val, inc: 1}}
-	case tokens.Gt:
+	case tok.Gt:
 		return filter{org: limit{val: cmp.val, inc: 1}, end: limitMax}
-	case tokens.Gte:
+	case tok.Gte:
 		return filter{org: limit{val: cmp.val}, end: limitMax}
 	default:
 		assert.ShouldNotReachHere()

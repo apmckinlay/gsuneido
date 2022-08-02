@@ -184,10 +184,12 @@ func TestDeleteInsertBug(*testing.T) {
 	check(ht)
 }
 
+//lint:ignore U1000 for debugging
 func print(ht FooHamt) {
 	print1(0, ht.root)
 }
 
+//lint:ignore U1000 for debugging
 func print1(depth int, nd *FooNode) {
 	indent := strings.Repeat("    ", depth)
 

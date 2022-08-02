@@ -15,7 +15,7 @@ func IsUpper(c byte) bool {
 	return 'A' <= c && c <= 'Z'
 }
 
-// IsLower converts an ASCII character to lower case
+// ToLower converts an ASCII character to lower case
 func ToLower(c byte) byte {
 	if 'A' <= c && c <= 'Z' {
 		c += 'a' - 'A'
@@ -23,7 +23,7 @@ func ToLower(c byte) byte {
 	return c
 }
 
-// IsUpper converts an ASCII character to upper case
+// ToUpper converts an ASCII character to upper case
 func ToUpper(c byte) byte {
 	if 'a' <= c && c <= 'z' {
 		c -= 'a' - 'A'

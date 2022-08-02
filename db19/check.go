@@ -34,7 +34,7 @@ Deletes are also tracked by offset which is used when checking delete vs delete.
 
 const maxTrans = 200
 
-// Need to use an ordered set so that reads can check for a range
+// Set needs to be an ordered set so that reads can check for a range
 type Set = ordset.Set
 
 type Ranges = ranges.Ranges
@@ -352,10 +352,6 @@ func (t *CkTran) saveDelete(table string, off uint64, keys []string) bool {
 		tbl.deletes = dels
 	}
 	return true
-}
-
-func (cw ckwrites) contains(index int, key string) bool {
-	return index < len(cw) && cw[index].Contains(key)
 }
 
 func (cw ckwrites) anyInRange(index int, from, to string) bool {

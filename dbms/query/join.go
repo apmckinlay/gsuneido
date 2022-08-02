@@ -31,10 +31,10 @@ type joinApproach struct {
 type joinType int
 
 const (
-	one_one joinType = iota + 1
-	one_n
-	n_one
-	n_n
+	one_one joinType = iota + 1 //lint:ignore ST1003 for clarity
+	one_n                       //lint:ignore ST1003 for clarity
+	n_one                       //lint:ignore ST1003 for clarity
+	n_n                         //lint:ignore ST1003 for clarity
 )
 
 func (jt joinType) String() string {

@@ -220,25 +220,25 @@ func (kv *keyVal) String() string {
 	return sb.String()
 }
 
-func (a *keyVal) Get(_ *Thread, m Value) Value {
+func (kv *keyVal) Get(_ *Thread, m Value) Value {
 	switch m {
 	case SuStr("type"):
 		return SuStr("Member")
 	case SuStr("named"):
-		return SuBool(a.key != nil)
+		return SuBool(kv.key != nil)
 	case SuStr("key"):
-		return a.key
+		return kv.key
 	case SuStr("value"):
-		return a.val
+		return kv.val
 	case SuStr("pos"):
-		return IntVal(int(a.pos))
+		return IntVal(int(kv.pos))
 	case SuStr("end"):
-		return IntVal(int(a.end))
+		return IntVal(int(kv.end))
 	case SuStr("children"):
-		if a.key == nil {
-			return ast.NewChildren([]Value{a.val})
+		if kv.key == nil {
+			return ast.NewChildren([]Value{kv.val})
 		} else {
-			return ast.NewChildren([]Value{a.key, a.val})
+			return ast.NewChildren([]Value{kv.key, kv.val})
 		}
 	}
 	return nil

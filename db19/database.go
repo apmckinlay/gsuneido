@@ -44,7 +44,7 @@ const magic = "gsndo001"
 // CreateDatabase creates an empty database in the named file.
 // NOTE: The returned Database does not have a checker.
 func CreateDatabase(filename string) (*Database, error) {
-	store, err := stor.MmapStor(filename, stor.CREATE)
+	store, err := stor.MmapStor(filename, stor.Create)
 	if err != nil {
 		return nil, err
 	}
@@ -62,23 +62,23 @@ func CreateDb(store *stor.Stor) (*Database, error) {
 	copy(buf, magic)
 	stor.WriteSmallOffset(buf[len(magic):], uint64(n))
 	db.Store = store
-	db.mode = stor.CREATE
+	db.mode = stor.Create
 	return &db, nil
 }
 
 // OpenDatabase opens the database in the named file for read & write.
 // NOTE: The returned Database does not have a checker.
 func OpenDatabase(filename string) (*Database, error) {
-	return OpenDb(filename, stor.UPDATE, true)
+	return OpenDb(filename, stor.Update, true)
 }
 
 // OpenDatabaseRead opens the database in the named file for read only.
 // NOTE: The returned Database does not have a checker.
 func OpenDatabaseRead(filename string) (*Database, error) {
-	return OpenDb(filename, stor.READ, true)
+	return OpenDb(filename, stor.Read, true)
 }
 
-// OpenDatabase opens the database in the named file.
+// OpenDb opens the database in the named file.
 // NOTE: The returned Database does not have a checker.
 func OpenDb(filename string, mode stor.Mode, check bool) (db *Database, err error) {
 	store, err := stor.MmapStor(filename, mode)
@@ -88,7 +88,7 @@ func OpenDb(filename string, mode stor.Mode, check bool) (db *Database, err erro
 	return OpenDbStor(store, mode, check)
 }
 
-// OpenDatabase opens the database in the store.
+// OpenDbStor opens the database in the store.
 // NOTE: The returned Database does not have a checker.
 func OpenDbStor(store *stor.Stor, mode stor.Mode, check bool) (db *Database, err error) {
 	defer func() {
@@ -209,7 +209,6 @@ func (db *Database) Ensure(sch *schema.Schema) {
 	}
 	db.lockSchema()
 	defer db.unlockSchema()
-	state = db.GetState() // fetch again now that we're locked
 	handled := false
 	var newIdxs []schema.Index
 	db.RunExclusive(sch.Table, func() {
@@ -439,7 +438,7 @@ func (db *Database) AlterCreate(sch *schema.Schema) {
 	})
 }
 
-// AlterCreate removes columns or indexes
+// AlterDrop removes columns or indexes
 func (db *Database) AlterDrop(schema *schema.Schema) bool {
 	db.lockSchema()
 	defer db.unlockSchema()
@@ -486,7 +485,7 @@ func (db *Database) Size() uint64 {
 	return db.Store.Size()
 }
 
-// Transctions only returns the update transactions
+// Transactions only returns the update transactions
 func (db *Database) Transactions() []int {
 	db.ckOpen()
 	return db.ck.Transactions()
@@ -513,10 +512,10 @@ func (db *Database) close(unmap bool) {
 	}
 	if db.ck != nil {
 		db.ck.Stop() // writes final state
-	} else if db.mode != stor.READ {
+	} else if db.mode != stor.Read {
 		db.persist(&execPersistSingle{}) // for testing
 	}
-	if db.mode != stor.READ {
+	if db.mode != stor.Read {
 		db.writeSize()
 	}
 	db.Store.Close(unmap)

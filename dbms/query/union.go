@@ -394,7 +394,7 @@ func (u *Union) Lookup(th *Thread, cols, vals []string) Row {
 	return row
 }
 
-// unpack is for debugging output
+//lint:ignore U1000 for debugging
 func unpack(packed []string) []Value {
 	vals := make([]Value, len(packed))
 	for i, p := range packed {

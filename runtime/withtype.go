@@ -24,9 +24,7 @@ func WithType(x Value) string {
 	if x.Type() != types.Boolean {
 		if _, ok := x.(SuStr); !ok {
 			t := fmt.Sprintf("%T", x)
-			if strings.HasPrefix(t, "runtime.") {
-				t = t[8:]
-			}
+			t = strings.TrimPrefix(t, "runtime.")
 			if strings.HasPrefix(t, "*runtime.") {
 				t = "*" + t[9:]
 			}

@@ -431,6 +431,7 @@ func (*Query2) Output(*runtime.Thread, runtime.Record) {
 	panic("can't output to this query")
 }
 
+//lint:ignore U1000 to catch if a definition is missing
 func (q2 *Query2) optimize(Mode, []string) Cost {
 	panic("should be overridden")
 }

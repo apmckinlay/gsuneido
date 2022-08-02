@@ -29,10 +29,10 @@ func main() {
 	fmt.Println(file, bytes)
 
 	f, err := os.OpenFile(file, os.O_WRONLY, 0666)
-	defer f.Close()
 	if err != nil {
 		log.Fatalln(err)
 	}
+	defer f.Close()
 	stat, _ := f.Stat()
 	size := stat.Size()
 	fmt.Println("size", size)

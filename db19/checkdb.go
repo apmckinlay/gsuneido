@@ -17,8 +17,6 @@ import (
 	"github.com/apmckinlay/gsuneido/util/cksum"
 )
 
-type dbcheck DbState
-
 // quick check ------------------------------------------------------
 
 // QuickCheck is the default partial checking done at start up.
@@ -45,7 +43,7 @@ func quickCheckTable(state *DbState, table string) {
 
 // CheckDatabase checks the integrity of the database.
 func CheckDatabase(dbfile string) (ec error) {
-	db, err := OpenDb(dbfile, stor.READ, false)
+	db, err := OpenDb(dbfile, stor.Read, false)
 	if err != nil {
 		return newErrCorrupt(err)
 	}

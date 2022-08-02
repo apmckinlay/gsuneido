@@ -313,7 +313,7 @@ func TestFkey(t *testing.T) {
 
 	db.Check()
 	db.Close()
-	db, err = db19.OpenDbStor(store, stor.READ, false)
+	db, err = db19.OpenDbStor(store, stor.Read, false)
 	ck(err)
 	check()
 }
@@ -337,7 +337,7 @@ func TestNoColumns(*testing.T) {
 	doAdmin(db, "create nocols () key()")
 	db.Check()
 	db.Close()
-	db, err = db19.OpenDbStor(store, stor.READ, false)
+	db, err = db19.OpenDbStor(store, stor.Read, false)
 	ck(err)
 	db.Check()
 }

@@ -90,15 +90,6 @@ func FixedIntersect(fixed1, fixed2 []Fixed) (result []Fixed, none bool) {
 	return result, false
 }
 
-func hasCol(fixed []Fixed, col string) bool {
-	for _, f := range fixed {
-		if col == f.col {
-			return true
-		}
-	}
-	return false
-}
-
 // isFixed returns true if col is fixed with a single value
 func isFixed(fixed []Fixed, col string) bool {
 	for _, f := range fixed {

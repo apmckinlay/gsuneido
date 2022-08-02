@@ -40,8 +40,6 @@ var _ = builtin("Dir(path='*', files=false, details=false, block=false)",
 		return nil
 	})
 
-var name = SuStr("name")
-
 func forEachDir(dir string, justfiles, details bool, fn func(entry Value)) {
 	dir, pat := filepath.Split(dir)
 	if dir == "" {

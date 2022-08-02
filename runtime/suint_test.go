@@ -24,7 +24,7 @@ func TestSuInt(t *testing.T) {
 	test(math.MaxInt16)
 
 	xtest := func(n int) {
-		assert.This(func() { SuInt(n) }).Panics("index out of range")
+		assert.This(func() { _ = SuInt(n) }).Panics("index out of range")
 	}
 	xtest(123456)
 	xtest(-123456)

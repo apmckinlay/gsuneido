@@ -189,7 +189,7 @@ func CheckIndexes(table string, cols []string, idxs []Index) {
 		}
 		for _, col := range ix.Columns {
 			if !slices.Contains(cols, col) &&
-				!slices.Contains(cols, str.RemoveSuffix(col, "_lower!")) {
+				!slices.Contains(cols, strings.TrimSuffix(col, "_lower!")) {
 				panic("invalid index column: " +
 					col + " in " + table)
 			}

@@ -21,7 +21,6 @@ type OverIter struct {
 	table    string
 	iIndex   int
 	iters    []iterT
-	modCount int
 	// We need to keep our own curKey/Off independent of the source iterators
 	// because new source iterators may be returned by the callback.
 	curKey string

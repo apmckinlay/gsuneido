@@ -8,7 +8,6 @@ import (
 	"strconv"
 	"strings"
 	"time"
-	gotime "time"
 
 	"github.com/apmckinlay/gsuneido/runtime/types"
 	"github.com/apmckinlay/gsuneido/util/ascii"
@@ -58,10 +57,10 @@ func NewDate(yr int, mon int, day int, hr int, min int, sec int, ms int) SuDate 
 
 /* Now returns a SuDate for the current local date & time */
 func Now() SuDate {
-	return FromTime(gotime.Now())
+	return FromTime(time.Now())
 }
 
-// FromLiteral returns a SuDate from the Suneido literal format
+// DateFromLiteral returns a SuDate from the Suneido literal format
 // i.e. yyyymmdd[.hhmm[ss[mmm]]]
 func DateFromLiteral(s string) SuDate {
 	if s[0] == '#' {
@@ -102,7 +101,7 @@ func nsub(s string, from int, to int) int {
 	return i
 }
 
-func FromTime(t gotime.Time) SuDate {
+func FromTime(t time.Time) SuDate {
 	return NewDate(t.Year(), int(t.Month()), t.Day(),
 		t.Hour(), t.Minute(), t.Second(), t.Nanosecond()/1000000)
 }
@@ -123,7 +122,7 @@ func valid(yr int, mon int, day int, hr int, min int, sec int, ms int) bool {
 
 // OffsetUTC returns the offset from local to UTC in minutes
 func OffsetUTC() int {
-	t := gotime.Now()
+	t := time.Now()
 	_, offset := t.Zone()
 	return -offset / 60
 }
@@ -230,7 +229,7 @@ func (d SuDate) timeAsMs() int64 {
 		int64(1000)*int64(d.Second()+60*(d.Minute()+60*d.Hour()))
 }
 
-// UnixMilli() returns the time in milliseconds since 1 Jan 1970
+// UnixMilli returns the time in milliseconds since 1 Jan 1970
 func (d SuDate) UnixMilli() int64 {
 	return d.toGoTime().UnixMilli()
 }
@@ -239,16 +238,16 @@ func SuDateFromUnixMilli(t int64) SuDate {
 	return fromGoTime(time.UnixMilli(t))
 }
 
-func (d SuDate) toGoTime() gotime.Time {
+func (d SuDate) toGoTime() time.Time {
 	return goTime(d.Year(), d.Month(), d.Day(),
 		d.Hour(), d.Minute(), d.Second(), d.Millisecond())
 }
 
-func goTime(yr int, mon int, day int, hr int, min int, sec int, ms int) gotime.Time {
-	return gotime.Date(yr, gotime.Month(mon), day, hr, min, sec, ms*1000000, gotime.Local)
+func goTime(yr int, mon int, day int, hr int, min int, sec int, ms int) time.Time {
+	return time.Date(yr, time.Month(mon), day, hr, min, sec, ms*1000000, time.Local)
 }
 
-func fromGoTime(t gotime.Time) SuDate {
+func fromGoTime(t time.Time) SuDate {
 	return NewDate(t.Year(), int(t.Month()), t.Day(),
 		t.Hour(), t.Minute(), t.Second(), t.Nanosecond()/1000000)
 }
@@ -369,7 +368,7 @@ var days = []string{
 	"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday",
 	"Saturday"}
 
-// Parse converts a human readable date to a SuDate.
+// ParseDate converts a human readable date to a SuDate.
 //
 // Returns NilDate if it fails.
 func ParseDate(s string, order string) SuDate {

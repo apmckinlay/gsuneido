@@ -50,7 +50,7 @@ func Without[S ~[]E, E comparable](list S, str E) S {
 	return dest
 }
 
-// Without returns a new slice
+// WithoutFn returns a new slice
 // omitting any values where fn returns true,
 // maintaining the existing order.
 func WithoutFn[S ~[]E, E comparable](list S, fn func(E) bool) S {

@@ -182,10 +182,7 @@ func (ti *TempIndex) less(th *Thread, xrow, yrow Row) bool {
 		x := xrow.GetRawVal(ti.hdr, col, th, ti.st)
 		y := yrow.GetRawVal(ti.hdr, col, th, ti.st)
 		if x != y {
-			if x < y {
-				return true
-			}
-			return false // >
+			return x < y
 		}
 	}
 	return false

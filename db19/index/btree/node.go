@@ -396,6 +396,7 @@ func (it *nodeIter) fLen() int {
 
 //-------------------------------------------------------------------
 
+//lint:ignore U1000 for debugging
 func (nd node) stats() {
 	n := nd.check(nil)
 	avg := float32(len(nd)-7*n) / float32(n)
@@ -447,6 +448,7 @@ func (nd node) printLeafNode(get func(uint64) string) {
 	}
 }
 
+//lint:ignore U1000 for debugging
 func (nd node) printTreeNode() {
 	it := nd.iter()
 	for it.next() {

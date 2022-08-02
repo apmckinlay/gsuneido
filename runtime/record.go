@@ -99,7 +99,7 @@ func (r Record) GetStr(i int) string {
 	return s[1:]
 }
 
-// Get returns one of the (usually packed) values
+// GetRaw returns one of the (usually packed) values
 func (r Record) GetRaw(i int) string {
 	if i < 0 || r.Count() <= i {
 		return ""

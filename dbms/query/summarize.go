@@ -295,14 +295,13 @@ func getTbl(_ *Thread, su *Summarize, _ Dir) Row {
 	return Row{DbRec{Record: rb.Build()}}
 }
 
-func getIdx(th *Thread, su *Summarize, dir Dir) Row {
+func getIdx(th *Thread, su *Summarize, _ Dir) Row {
 	if !su.rewound {
 		return nil
 	}
+	dir := Prev // max
 	if str.EqualCI(su.ops[0], "min") {
 		dir = Next
-	} else { // max
-		dir = Prev
 	}
 	row := su.source.Get(th, dir)
 	if row == nil {

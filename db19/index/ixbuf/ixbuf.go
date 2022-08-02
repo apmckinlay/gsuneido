@@ -276,11 +276,11 @@ func OffString(off uint64) string {
 }
 
 const (
-	add_update    = 0b_00_01
-	add_delete    = 0b_00_10
-	update_update = 0b_01_01
-	update_delete = 0b_01_10
-	delete_add    = 0b_10_00
+	add_update    = 0b_00_01 //lint:ignore ST1003 for clarity
+	add_delete    = 0b_00_10 //lint:ignore ST1003 for clarity
+	update_update = 0b_01_01 //lint:ignore ST1003 for clarity
+	update_delete = 0b_01_10 //lint:ignore ST1003 for clarity
+	delete_add    = 0b_10_00 //lint:ignore ST1003 for clarity
 )
 
 func Combine(off1, off2 uint64) uint64 {

@@ -54,9 +54,6 @@ type ckCommit struct {
 	ret chan bool
 }
 
-type ckResult struct {
-}
-
 type ckAbort struct {
 	t      *CkTran
 	reason string

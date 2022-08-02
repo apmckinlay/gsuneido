@@ -509,11 +509,6 @@ func (lxr *Lexer) matchOneOf(valid string) bool {
 	return false
 }
 
-func (lxr *Lexer) matchRunOf(valid string) {
-	for ; -1 != strings.IndexByte(valid, lxr.peek()); lxr.si++ {
-	}
-}
-
 func (lxr *Lexer) matchWhile(f func(c byte) bool) {
 	for ; f(lxr.peek()); lxr.si++ {
 	}

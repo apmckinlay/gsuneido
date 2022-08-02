@@ -15,15 +15,13 @@ var _ = builtin2("WideCharToMultiByte(string, cp = 1252)",
 	func(s, c Value) Value {
 		// UTF-16 to 1252 or UTF-8
 		utf16 := ToStr(s)
-		if strings.HasSuffix(utf16, "\x00\x00") {
-			utf16 = utf16[:len(utf16)-2]
-		}
+		utf16 = strings.TrimSuffix(utf16, "\x00\x00")
 		utf16decode := unicode.UTF16(unicode.LittleEndian, unicode.IgnoreBOM).NewDecoder()
 		utf8, err := utf16decode.String(utf16)
 		if err != nil {
 			panic("WideCharToMultiByte " + err.Error())
 		}
-		if codePage(c) == cp_utf8 {
+		if codePage(c) == cpUtf8 {
 			return SuStr(utf8)
 		}
 		encoder := charmap.Windows1252.NewEncoder()
@@ -56,17 +54,17 @@ var _ = builtin2("MultiByteToWideChar(string, cp = 1252)",
 	})
 
 const (
-	acp        = 0
-	thread_acp = 3
-	cp_utf8    = 65001
+	acp       = 0
+	acpThread = 3
+	cpUtf8    = 65001
 )
 
 func codePage(cp Value) int {
 	switch ToInt(cp) {
-	case acp, thread_acp, 1252:
+	case acp, acpThread, 1252:
 		return 1252
-	case cp_utf8:
-		return cp_utf8
+	case cpUtf8:
+		return cpUtf8
 	default:
 		panic("invalid code page")
 	}

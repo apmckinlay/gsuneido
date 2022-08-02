@@ -39,14 +39,14 @@ func TestData(t *testing.T) {
 }
 
 func TestMmapRead(t *testing.T) {
-	ms, _ := MmapStor("stor_test.go", READ) // use code as test file
+	ms, _ := MmapStor("stor_test.go", Read) // use code as test file
 	buf := ms.Data(0)
 	assert.T(t).This(string(buf[:12])).Is("// Copyright")
 	ms.Close(true)
 }
 
 func TestMmapWrite(t *testing.T) {
-	ms, _ := MmapStor("stor_test.tmp", CREATE)
+	ms, _ := MmapStor("stor_test.tmp", Create)
 	const N = 100
 	_, buf := ms.Alloc(N)
 	for i := 0; i < N; i++ {
@@ -54,14 +54,14 @@ func TestMmapWrite(t *testing.T) {
 	}
 	ms.Close(true)
 
-	ms, _ = MmapStor("stor_test.tmp", UPDATE)
+	ms, _ = MmapStor("stor_test.tmp", Update)
 	data := ms.Data(0)
 	for i := 0; i < N; i++ {
 		assert.T(t).This(data[i]).Is(byte(i))
 	}
 	ms.Close(true)
 
-	ms, _ = MmapStor("stor_test.tmp", READ)
+	ms, _ = MmapStor("stor_test.tmp", Read)
 	data = ms.Data(0)
 	for i := 0; i < N; i++ {
 		assert.T(t).This(data[i]).Is(byte(i))
@@ -73,7 +73,7 @@ func TestMmapWrite(t *testing.T) {
 
 func TestLastOffset(t *testing.T) {
 	assert := assert.T(t).This
-	ms, _ := MmapStor("stor_test.tmp", CREATE)
+	ms, _ := MmapStor("stor_test.tmp", Create)
 	defer os.Remove("stor_test.tmp")
 	defer ms.Close(true)
 
@@ -103,7 +103,7 @@ func TestStress(*testing.T) {
 		nIterations = 10000
 	}
 	var wg sync.WaitGroup
-	s, err := MmapStor("stor.tmp", CREATE)
+	s, err := MmapStor("stor.tmp", Create)
 	defer os.Remove("stor.tmp")
 	defer s.Close(true)
 	if err != nil {
@@ -124,7 +124,7 @@ func TestStress(*testing.T) {
 }
 
 func TestAcessAfterClose(t *testing.T) {
-	s, err := MmapStor("stor.tmp", CREATE)
+	s, err := MmapStor("stor.tmp", Create)
 	if err != nil {
 		panic(err.Error())
 	}

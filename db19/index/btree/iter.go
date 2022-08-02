@@ -244,32 +244,32 @@ type iNodeIter interface {
 	eof() bool
 }
 
-func (ni *nodeIter) off() uint64 {
-	return ni.offset
+func (it *nodeIter) off() uint64 {
+	return it.offset
 }
 
-func (ni *nodeIter) prev() bool {
+func (it *nodeIter) prev() bool {
 	assert.ShouldNotReachHere()
 	return false
 }
 
 // toChunk converts a nodeIter to a chunkIter to allow prev
-func (ni *nodeIter) toChunk(bt *btree, leaf bool) iNodeIter {
-	nd := ni.node
+func (it *nodeIter) toChunk(bt *btree, leaf bool) iNodeIter {
+	nd := it.node
 	var c chunk
 	i := -1
 	var key string
-	ni2 := nd.iter()
-	for ni2.next() {
-		if ni2.pos == ni.pos {
+	it2 := nd.iter()
+	for it2.next() {
+		if it2.pos == it.pos {
 			i = len(c)
 		}
 		if leaf {
-			key = bt.getLeafKey(ni2.offset)
+			key = bt.getLeafKey(it2.offset)
 		} else {
-			key = string(ni2.known)
+			key = string(it2.known)
 		}
-		c = append(c, slot{key: key, off: ni2.offset})
+		c = append(c, slot{key: key, off: it2.offset})
 	}
 	return &chunkIter{c: c, i: i}
 }

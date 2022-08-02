@@ -294,7 +294,7 @@ func (dbms *DbmsLocal) Transaction(update bool) ITran {
 	return &ReadTranLocal{ReadTran: dbms.db.NewReadTran()}
 }
 
-// Transctions only returns the update transactions
+// Transactions only returns the update transactions
 func (dbms *DbmsLocal) Transactions() *SuObject {
 	var ob SuObject
 	trans := dbms.db.Transactions()

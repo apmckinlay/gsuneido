@@ -32,8 +32,8 @@ func NamedConstant(lib, name, src string, prevDef Value) Value {
 	return result
 }
 
-// can't do AST check after compile because that would miss nested functions
 func Checked(t *Thread, src string) (Value, []string) {
+	// can't do AST check after compile because that would miss nested functions
 	p := CheckParser(src, t)
 	v := p.constant()
 	if p.Token != tok.Eof {

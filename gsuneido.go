@@ -19,14 +19,11 @@ import (
 	"github.com/apmckinlay/gsuneido/builtin"
 	"github.com/apmckinlay/gsuneido/compile"
 	"github.com/apmckinlay/gsuneido/db19"
-	"github.com/apmckinlay/gsuneido/db19/meta"
 	"github.com/apmckinlay/gsuneido/db19/tools"
 	"github.com/apmckinlay/gsuneido/dbms"
 	"github.com/apmckinlay/gsuneido/options"
 	. "github.com/apmckinlay/gsuneido/runtime"
-	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/exit"
-	"github.com/apmckinlay/gsuneido/util/generic/hamt"
 	"github.com/apmckinlay/gsuneido/util/regex"
 	"github.com/apmckinlay/gsuneido/util/system"
 )
@@ -300,23 +297,23 @@ func dbClose() {
 	}
 }
 
-func checkState() {
-	for {
-		state := db.GetState()
-		cksum := state.Meta.Cksum()
-		// read meta to verify checksums
-		schemaOff, infoOff := state.Meta.Offsets()
-		if schemaOff != 0 {
-			hamt.ReadChain[string](db.Store, schemaOff, meta.ReadSchema)
-		}
-		if schemaOff != 0 {
-			hamt.ReadChain[string](db.Store, infoOff, meta.ReadInfo)
-		}
-		time.Sleep(50 * time.Millisecond)
-		// recalculate checksum to verify Meta hasn't been mutated
-		assert.That(state.Meta.Cksum() == cksum)
-	}
-}
+// func checkState() {
+// 	for {
+// 		state := db.GetState()
+// 		cksum := state.Meta.Cksum()
+// 		// read meta to verify checksums
+// 		schemaOff, infoOff := state.Meta.Offsets()
+// 		if schemaOff != 0 {
+// 			hamt.ReadChain[string](db.Store, schemaOff, meta.ReadSchema)
+// 		}
+// 		if schemaOff != 0 {
+// 			hamt.ReadChain[string](db.Store, infoOff, meta.ReadInfo)
+// 		}
+// 		time.Sleep(50 * time.Millisecond)
+// 		// recalculate checksum to verify Meta hasn't been mutated
+// 		assert.That(state.Meta.Cksum() == cksum)
+// 	}
+// }
 
 // HTTP status ------------------------------------------------------
 

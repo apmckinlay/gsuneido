@@ -39,13 +39,13 @@ func New(t *Thread) *Check {
 	return &Check{t: t}
 }
 
-// Check is the main entry point.
+// CheckFunc is the main entry point.
 // It can be called more than once (for nested functions).
 func (ck *Check) CheckFunc(f *ast.Function) {
-	ck.Check(f)
+	ck.CheckFunc2(f)
 }
 
-func (ck *Check) Check(f *ast.Function) set {
+func (ck *Check) CheckFunc2(f *ast.Function) set {
 	ck.AllInit = make(map[string]int)
 	ck.AllUsed = make(map[string]struct{})
 	var init set = make([]string, 0, 8)
@@ -62,7 +62,7 @@ func (ck *Check) CheckGlobal(name string, pos int) {
 	}
 }
 
-// Results returns the results sorted by code position
+// CheckResults returns the results sorted by code position
 func (ck *Check) CheckResults() []string {
 	sort.Sort(resultsByPos{ck})
 	return ck.results

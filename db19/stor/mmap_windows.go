@@ -13,11 +13,11 @@ import (
 func (ms *mmapStor) Get(chunk int) []byte {
 	handle := syscall.Handle(ms.file.Fd())
 	prot := uint32(syscall.PAGE_READWRITE)
-	if ms.mode == READ {
+	if ms.mode == Read {
 		prot = syscall.PAGE_READONLY
 	}
-	end := int64((chunk + 1) * MMAP_CHUNKSIZE)
-	if ms.mode == READ {
+	end := int64((chunk + 1) * mmapChunkSize)
+	if ms.mode == Read {
 		fi, err := ms.file.Stat()
 		if err != nil {
 			panic(err)
@@ -34,12 +34,12 @@ func (ms *mmapStor) Get(chunk int) []byte {
 	}
 
 	access := uint32(syscall.FILE_MAP_WRITE)
-	if ms.mode == READ {
+	if ms.mode == Read {
 		access = syscall.FILE_MAP_READ
 	}
-	offset := int64(chunk) * MMAP_CHUNKSIZE
-	size := uintptr(MMAP_CHUNKSIZE)
-	if ms.mode == READ {
+	offset := int64(chunk) * mmapChunkSize
+	size := uintptr(mmapChunkSize)
+	if ms.mode == Read {
 		size = 0 // to end of file
 	}
 	ptr, err := syscall.MapViewOfFile(fm, access,
@@ -49,7 +49,7 @@ func (ms *mmapStor) Get(chunk int) []byte {
 	}
 	syscall.CloseHandle(fm)
 	ms.ptrs = append(ms.ptrs, ptr)
-	return (*[MMAP_CHUNKSIZE]byte)(unsafe.Pointer(ptr))[:]
+	return (*[mmapChunkSize]byte)(unsafe.Pointer(ptr))[:]
 }
 
 func (ms mmapStor) Close(size int64, unmap bool) {

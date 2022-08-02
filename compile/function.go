@@ -10,7 +10,7 @@ import (
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
-// function parse a function (starting with the "function" keyword)
+// Function parses a function (starting with the "function" keyword)
 func (p *Parser) Function() *ast.Function {
 	p.Match(tok.Function)
 	return p.function(false)
@@ -87,10 +87,10 @@ func (p *Parser) params(inClass bool) []ast.Param {
 			p.MatchIdent()
 			p.checkForDupParam(params, name)
 			if p.MatchIf(tok.Eq) {
-				was_string := p.Token == tok.String || p.Token == tok.Symbol
+				wasString := p.Token == tok.String || p.Token == tok.Symbol
 				defs = true
 				def := p.constant()
-				if _, ok := def.(SuStr); ok && !was_string {
+				if _, ok := def.(SuStr); ok && !wasString {
 					p.Error("parameter defaults must be constants")
 				}
 				addParam(name, pos, unused, def)
@@ -406,10 +406,6 @@ func (p *Parser) returnStmt() *ast.Return {
 		return &ast.Return{}
 	}
 	return &ast.Return{E: p.trailingExpr()}
-}
-
-func (p *Parser) throwStmt() *ast.Throw {
-	return &ast.Throw{E: p.Expression()}
 }
 
 func (p *Parser) tryStmt() *ast.TryCatch {

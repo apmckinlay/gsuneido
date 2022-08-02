@@ -110,8 +110,6 @@ func (db *Database) CommitMerge(ut *UpdateTran) {
 
 //-------------------------------------------------------------------
 
-type persistfn func(*DbState) []meta.PersistUpdate
-
 // persist writes index changes (and a new state) to the database file.
 // It is called from concur.go regularly e.g. once per minute.
 // flatten applies to the schema and info chains (not indexes).

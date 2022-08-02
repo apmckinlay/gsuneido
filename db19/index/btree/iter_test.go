@@ -208,12 +208,14 @@ func TestToChunk(t *testing.T) {
 
 //-------------------------------------------------------------------
 
+//lint:ignore U1000 for debugging
 func (it *Iterator) printStack() {
 	for i := 0; i <= it.bt.treeLevels; i++ {
 		it.printLevel(i)
 	}
 }
 
+//lint:ignore U1000 for debugging
 func (it *Iterator) printLevel(i int) {
 	if ni, ok := it.stack[i].(*nodeIter); ok {
 		fmt.Print(i, " | ")

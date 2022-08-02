@@ -22,7 +22,7 @@ func init() {
 }
 
 func ssCallClass(t *Thread, as *ArgSpec, this Value, args []Value) Value {
-	if OnUiThread() {
+	if OnUIThread() {
 		panic("SocketServer not allowed on UI thread")
 	}
 	name, port, as2 := ssArgs(t, as, this, args)

@@ -53,6 +53,7 @@ func builtin3(s string, f func(a, b, c Value) Value) bool {
 	return true
 }
 
+//lint:ignore U1000 used on Windows
 func builtin4(s string, f func(a, b, c, d Value) Value) bool {
 	name, ps := paramSplit(s)
 	Global.Builtin(name,
@@ -60,6 +61,7 @@ func builtin4(s string, f func(a, b, c, d Value) Value) bool {
 	return true
 }
 
+//lint:ignore U1000 used on Windows
 func builtin5(s string, f func(a, b, c, d, e Value) Value) bool {
 	name, ps := paramSplit(s)
 	Global.Builtin(name,
@@ -67,6 +69,7 @@ func builtin5(s string, f func(a, b, c, d, e Value) Value) bool {
 	return true
 }
 
+//lint:ignore U1000 used on Windows
 func builtin6(s string, f func(a, b, c, d, e, f Value) Value) bool {
 	name, ps := paramSplit(s)
 	Global.Builtin(name,
@@ -74,6 +77,7 @@ func builtin6(s string, f func(a, b, c, d, e, f Value) Value) bool {
 	return true
 }
 
+//lint:ignore U1000 used on Windows
 func builtin7(s string, f func(a, b, c, d, e, f, g Value) Value) bool {
 	name, ps := paramSplit(s)
 	Global.Builtin(name,

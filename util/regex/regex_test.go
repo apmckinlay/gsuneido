@@ -102,7 +102,7 @@ func FuzzRegexVsGo(f *testing.F) {
 		if m2 := p2.FindStringSubmatchIndex(s); m2 != nil {
 			i2, j2 = m2[0], m2[1]
 		}
-		
+
 		if i1 != i2 || (i1 != -1 && j1 != j2) {
 			t.Errorf("r: %q s: %q Suneido: %d,%d Go: %d,%d", r, s, i1, j1, i2, j2)
 		}
@@ -294,7 +294,7 @@ func TestPtest(t *testing.T) {
 // simple usage is two arguments, string and pattern
 // an optional third argument can be "false" for matches that should fail
 // or additional arguments can specify expected \0, \1, ...
-func pt_match(args []string, _ []bool) bool {
+func ptMatch(args []string, _ []bool) bool {
 	pat := Compile(args[1])
 	var res Result
 	result := pat.FirstMatch(args[0], 0, &res) != -1
@@ -314,10 +314,10 @@ func pt_match(args []string, _ []bool) bool {
 	return result
 }
 
-var _ = ptest.Add("regex_match", pt_match)
+var _ = ptest.Add("regex_match", ptMatch)
 
 // pt_replace is a ptest for regex replace
-func pt_replace(args []string, _ []bool) bool {
+func ptReplace(args []string, _ []bool) bool {
 	s := args[0]
 	pat := Compile(args[1])
 	rep := args[2]
@@ -337,7 +337,7 @@ func pt_replace(args []string, _ []bool) bool {
 	return true
 }
 
-var _ = ptest.Add("regex_replace", pt_replace)
+var _ = ptest.Add("regex_replace", ptReplace)
 
 // ptest support ---------------------------------------------------------------
 

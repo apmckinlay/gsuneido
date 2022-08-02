@@ -151,10 +151,6 @@ func (b *builder) hasLetter() bool {
 	return false
 }
 
-func (b *builder) empty() bool {
-	return len(b.data) == 0
-}
-
 func (b *builder) build() inst {
 	if b.isSet {
 		return inst{op: bitSet, data: string(b.data)}

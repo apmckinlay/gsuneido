@@ -75,7 +75,6 @@ func divide128(dividendHi, dividendLo, divisor uint64) uint64 {
 		q1 = tmp1
 		rtmp1 = 0
 	} else {
-		check(tmp1 >= 0)
 		q1 = tmp1 / v1    // DIVIDE top 64 / top 32
 		rtmp1 = tmp1 % v1 // remainder
 	}
@@ -90,7 +89,6 @@ func divide128(dividendHi, dividendLo, divisor uint64) uint64 {
 			break
 		}
 	}
-	check(q1 >= 0)
 	u2 := tmp1 & longMask // low half
 
 	// u2,u1 is the MIDDLE 64 bits of the dividend

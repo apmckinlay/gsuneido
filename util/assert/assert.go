@@ -25,7 +25,6 @@ import (
 	"log"
 	"reflect"
 	"regexp"
-	"runtime"
 	"strconv"
 	"strings"
 	"testing"
@@ -366,27 +365,6 @@ func (a assert) fail(args ...any) {
 	} else {
 		panic("assert failed: " + s)
 	}
-}
-
-func getLocation() string {
-	i := 1
-	for ; i < 9; i++ {
-		_, file, _, ok := runtime.Caller(i)
-		if !ok || strings.Contains(file, "testing/testing.go") {
-			break
-		}
-	}
-	_, file, line, ok := runtime.Caller(i - 1)
-	if !ok || i <= 1 || i >= 9 {
-		return ""
-	}
-	// Truncate file name at last separator.
-	if index := strings.LastIndex(file, "/"); index >= 0 {
-		file = file[index+1:]
-	} else if index = strings.LastIndex(file, "\\"); index >= 0 {
-		file = file[index+1:]
-	}
-	return file + ":" + strconv.Itoa(line)
 }
 
 func ShouldNotReachHere() {

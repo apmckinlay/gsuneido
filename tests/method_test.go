@@ -13,7 +13,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/ptest"
 )
 
-var _ = ptest.Add("method", pt_method)
+var _ = ptest.Add("method", ptMethod)
 
 func TestMethodPtest(t *testing.T) {
 	if !ptest.RunFile("number.test") {
@@ -21,7 +21,7 @@ func TestMethodPtest(t *testing.T) {
 	}
 }
 
-func pt_method(args []string, str []bool) bool {
+func ptMethod(args []string, str []bool) bool {
 	ob := toValue(args, str, 0)
 	method := args[1]
 	expected := toValue(args, str, len(args)-1)

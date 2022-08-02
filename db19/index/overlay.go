@@ -36,7 +36,7 @@ func NewOverlay(store *stor.Stor, is *ixkey.Spec) *Overlay {
 		layers: []*ixbuf.T{{}}} // single base layer
 }
 
-// Overlay stub is for tests
+// OverlayStub is for tests
 func OverlayStub() *Overlay {
 	return &Overlay{bt: &btree.T{}}
 }
@@ -133,18 +133,12 @@ func (ov *Overlay) Lookup(key string) uint64 {
 func (ov *Overlay) PrefixExists(key string) bool {
 	if ov.mut != nil {
 		if off := ov.mut.PrefixLookup(key); off != 0 {
-			if off&ixbuf.Delete != 0 {
-				return false // deleted
-			}
-			return true
+			return off&ixbuf.Delete == 0
 		}
 	}
 	for i := len(ov.layers) - 1; i >= 0; i-- {
 		if off := ov.layers[i].PrefixLookup(key); off != 0 {
-			if off&ixbuf.Delete != 0 {
-				return false // deleted
-			}
-			return true
+			return off&ixbuf.Delete == 0
 		}
 	}
 	return ov.bt.PrefixExists(key)

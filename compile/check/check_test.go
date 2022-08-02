@@ -21,7 +21,7 @@ func TestCheckVars(t *testing.T) {
 		p := compile.NewParser(src)
 		ast := p.Function()
 		ck := check.Check{}
-		init := ck.Check(ast)
+		init := ck.CheckFunc2(ast)
 		sort.Strings(init)
 		assert.T(t).This(fmt.Sprint(init)).Is("[" + initExp + "]")
 

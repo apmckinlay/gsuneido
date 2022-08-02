@@ -96,7 +96,7 @@ func testDb() *db19.Database {
 
 	// close and reopen to force persist
 	db.Close()
-	db, err = db19.OpenDbStor(store, stor.READ, true)
+	db, err = db19.OpenDbStor(store, stor.Read, true)
 	ck(err)
 	db19.StartConcur(db, 50*time.Millisecond)
 	return db

@@ -138,7 +138,7 @@ func (ob *SuObject) getIfPresent(key Value) Value {
 	return ob.namedGet(key)
 }
 
-// Has returns true if the object contains the given key (not value)
+// HasKey returns true if the object contains the given key (not value)
 func (ob *SuObject) HasKey(key Value) bool {
 	if ob.RLock() {
 		defer ob.RUnlock()
@@ -1037,8 +1037,6 @@ func (ob *SuObject) BinarySearch2(t *Thread, value, lt Value) int {
 // Packable ---------------------------------------------------------
 
 var _ Packable = (*SuObject)(nil)
-
-const packNestLimit = 20
 
 func (ob *SuObject) PackSize(hash *uint32) int {
 	return ob.PackSize2(hash, newPackStack())

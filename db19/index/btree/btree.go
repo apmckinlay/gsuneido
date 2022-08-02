@@ -269,7 +269,6 @@ func (bt *btree) stats(depth int, offset uint64, stats *Stats) {
 		}
 	}
 	stats.NodeFan[16 - bits.LeadingZeros16(n)]++
-	return
 }
 
 func (stats Stats) String() string {
@@ -343,7 +342,6 @@ func (bt *btree) Write(w *stor.Writer) {
 	w.Put5(bt.root).Put1(bt.treeLevels)
 }
 
-// ReadOverlay reads an Overlay from storage BUT without ixspec
 func Read(st *stor.Stor, r *stor.Reader) *btree {
 	root := r.Get5()
 	treeLevels := r.Get1()
@@ -424,7 +422,6 @@ func (bt *btree) fracPos(key string) float32 {
 	for it := node.iter(); it.next(); n++ {
 		if key >= string(it.known) {
 			i = n
-			off = it.offset
 		}
 	}
 	if n == 0 {

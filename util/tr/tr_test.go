@@ -34,8 +34,8 @@ func TestPtest(t *testing.T) {
 
 // pt_tr is a ptest for matching
 // usage: "string", "from", "to", "result"
-func pt_tr(args []string, _ []bool) bool {
+func ptTr(args []string, _ []bool) bool {
 	return Replace(args[0], Set(args[1]), Set(args[2])) == args[3]
 }
 
-var _ = ptest.Add("tr", pt_tr)
+var _ = ptest.Add("tr", ptTr)

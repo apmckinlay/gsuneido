@@ -122,6 +122,7 @@ func TestBtreePrefixExists(*testing.T) {
 
 //-------------------------------------------------------------------
 
+//lint:ignore U1000 for debugging
 func (st *state) print() {
 	fmt.Println("state:", st.bt.treeLevels)
 	for _, m := range st.path {

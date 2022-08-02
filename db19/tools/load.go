@@ -208,11 +208,6 @@ func readRecords(in *bufio.Reader, store *stor.Stor, list *sortlist.Builder) (
 	return nrecs, size
 }
 
-type idxErr struct {
-	idx string
-	err any
-}
-
 func buildIndexes(ts *meta.Schema, list *sortlist.Builder, store *stor.Stor,
 	nrecs int) []*index.Overlay {
 	i := -1

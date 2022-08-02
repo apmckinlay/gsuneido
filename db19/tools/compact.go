@@ -31,7 +31,7 @@ func Compact(dbfile string) (nTables, nViews int, err error) {
 			err = fmt.Errorf("compact failed: %v", e)
 		}
 	}()
-	src, err := OpenDb(dbfile, stor.READ, false)
+	src, err := OpenDb(dbfile, stor.Read, false)
 	ck(err)
 	defer src.Close()
 	dst, tmpfile := tmpdb()

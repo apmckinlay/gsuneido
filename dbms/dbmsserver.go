@@ -16,7 +16,6 @@ import (
 	"github.com/apmckinlay/gsuneido/dbms/commands"
 	"github.com/apmckinlay/gsuneido/dbms/mux"
 	"github.com/apmckinlay/gsuneido/options"
-	"github.com/apmckinlay/gsuneido/runtime"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/runtime/trace"
 	"github.com/apmckinlay/gsuneido/util/assert"
@@ -36,7 +35,6 @@ type serverConn struct {
 	// id is primarily used as a key to store the set of connections in a map
 	id           uint32
 	remoteAddr   string
-	ended        bool
 	dbms         IDbms
 	conn         net.Conn
 	sessionsLock sync.Mutex                // guards sessions
@@ -50,7 +48,7 @@ type serverSession struct {
 	sc *serverConn
 	mux.ReadBuf
 	*mux.WriteBuf
-	thread *runtime.Thread
+	thread *Thread
 	// id is primarily used as a key to store the set of sessions in a map
 	id        uint32
 	sessionId string
@@ -74,6 +72,7 @@ func Server(dbms *DbmsLocal) {
 		conn, err := l.Accept()
 		if err != nil {
 			// error handling based on Go net/http
+			//lint:ignore SA1019 used by Go net/http
 			if ne, ok := err.(net.Error); ok && ne.Temporary() {
 				if tempDelay == 0 {
 					tempDelay = 5 * time.Millisecond
@@ -144,7 +143,7 @@ var hello = func() []byte {
 }()
 
 // doRequest is called by workers
-func doRequest(wb *mux.WriteBuf, th *runtime.Thread, id uint64, req []byte) {
+func doRequest(wb *mux.WriteBuf, th *Thread, id uint64, req []byte) {
 	connId := uint32(id >> 32)
 	serverConnsLock.Lock()
 	if req == nil { // closing

@@ -11,7 +11,6 @@ import (
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/ascii"
-	. "github.com/apmckinlay/gsuneido/util/ascii"
 )
 
 // Expression parses a Suneido expression and builds an AST
@@ -415,7 +414,7 @@ func (p *Parser) argumentList(closing tok.Token) []ast.Arg {
 		pos = p.Pos
 		endPos := p.endPos
 		if p.MatchIf(tok.Colon) { // :name shortcut
-			if !p.Token.IsIdent() || !IsLower(p.Text[0]) {
+			if !p.Token.IsIdent() || !ascii.IsLower(p.Text[0]) {
 				p.Error("expecting local variable name")
 			}
 			handlePending(p.Constant(True), endPos)
@@ -497,13 +496,13 @@ func (p *Parser) blockParams() []ast.Param {
 		pos := p.Pos
 		if p.MatchIf(tok.At) {
 			params = append(params, mkParam("@"+p.Text,
-				pos, p.Pos + int32(len(p.Text)),	p.unusedAhead(), nil))
+				pos, p.Pos+int32(len(p.Text)), p.unusedAhead(), nil))
 			p.final[p.Text] = disqualified
 			p.MatchIdent()
 		} else {
 			for p.Token.IsIdent() {
 				params = append(params, mkParam(p.Text,
-					p.Pos, p.Pos + int32(len(p.Text)), p.unusedAhead(), nil))
+					p.Pos, p.Pos+int32(len(p.Text)), p.unusedAhead(), nil))
 				p.final[unDyn(p.Text)] = disqualified
 				p.MatchIdent()
 				p.MatchIf(tok.Comma)

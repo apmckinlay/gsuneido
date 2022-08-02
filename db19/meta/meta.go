@@ -58,7 +58,7 @@ func (m *Meta) GetRoInfo(table string) *Info {
 	return nil
 }
 
-// copyInfo is for debugging
+//lint:ignore U1000 for debugging
 func copyInfo(ti *Info) *Info {
 	cp := *ti
 	cp.Indexes = append(cp.Indexes[:0:0], cp.Indexes...) // copy

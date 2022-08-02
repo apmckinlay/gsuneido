@@ -124,7 +124,7 @@ func AfterFirst(s, sub string) string {
 	return s[i+len(sub):]
 }
 
-// BeforerLast returns s before the last occurrence of sub
+// BeforeLast returns s before the last occurrence of sub
 // or all of s if sub is not found.
 func BeforeLast(s, sub string) string {
 	i := strings.LastIndex(s, sub)
@@ -267,15 +267,6 @@ func EqualCI(x, y string) bool {
 		}
 	}
 	return true
-}
-
-// RemoveSuffix returns s with suffix removed.
-// It returns s unchanged if it does not have suffix.
-func RemoveSuffix(s, suffix string) string {
-	if strings.HasSuffix(s, suffix) {
-		return s[:len(s)-len(suffix)]
-	}
-	return s
 }
 
 // Cut slices s around the first instance of sep,

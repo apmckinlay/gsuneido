@@ -436,10 +436,13 @@ func TestWhereSplitBug(t *testing.T) {
 		Is("a=1 b=2 hx=2")
 }
 
+var result [][]string
+
 func BenchmarkNoOptMod(b *testing.B) {
 	orig := [][]string{{"a"}, {"b"}, {"c"}, {"d"}, {"e"}, {"f"}}
 	for i := 0; i < b.N; i++ {
-		result := make([][]string, len(orig))
+		result = make([][]string, len(orig))
+		//lint:ignore S1011 testing
 		for _, o := range orig {
 			result = append(result, o)
 		}

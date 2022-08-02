@@ -6,7 +6,6 @@ package builtin
 import (
 	"github.com/apmckinlay/gsuneido/compile"
 	"github.com/apmckinlay/gsuneido/compile/tokens"
-	"github.com/apmckinlay/gsuneido/runtime"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
@@ -45,7 +44,7 @@ func init() {
 			}),
 		"BoundsFail": method0(
 			func(Value) Value {
-				return []runtime.Value{}[1]
+				return []Value{}[1]
 			}),
 		"AssertFail": method0(
 			func(Value) Value {

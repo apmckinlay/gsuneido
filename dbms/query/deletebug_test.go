@@ -19,39 +19,39 @@ func init() {
 	}
 }
 
-func xTestDeleteBug2(*testing.T) {
-	// store := stor.HeapStor(8192)
-	// db, err := db19.CreateDb(store)
-	db, err := db19.OpenDatabase("../../suneido.db")
-	ck(err)
-	defer db.Close()
-	// db.CheckerSync()
-	db19.StartConcur(db, 5*time.Millisecond)
-	act := func(act string) int {
-		// time.Sleep(1 * time.Microsecond)
-		ut := db.NewUpdateTran()
-		defer ut.Commit()
-		return DoAction(nil, ut, act, nil)
-	}
-	// DoAdmin(db, "ensure tmp(a,b,c) key(a,b) key(c)")
-	// for i := 0; i < 10000; i++ {
-	// 	act("delete tmp")
-	// 	act("insert { a: 1, b: 1, c: 1 } into tmp")
-	// 	act("insert { a: 2, b: 2, c: 2 } into tmp")
-	// 	n := act("delete tmp")
-	// 	assert.This(n).Is(2)
-	// }
-	for i := 0; i < 10000; i++ {
-		// fmt.Println(i)
-		act("delete Test_lib")
-		act("insert { name: 'One', group: -1, num: 99999 } into Test_lib")
-		// db.NewReadTran().GetInfo("tmp").Indexes[0].Print()
-		// time.Sleep(time.Microsecond)
-		act("insert { name: 'Two', group: -1, num: 99998 } into Test_lib")
-		n := act("delete Test_lib")
-		assert.This(n).Is(2)
-	}
-}
+// func TestDeleteBug2(*testing.T) {
+// 	// store := stor.HeapStor(8192)
+// 	// db, err := db19.CreateDb(store)
+// 	db, err := db19.OpenDatabase("../../suneido.db")
+// 	ck(err)
+// 	defer db.Close()
+// 	// db.CheckerSync()
+// 	db19.StartConcur(db, 5*time.Millisecond)
+// 	act := func(act string) int {
+// 		// time.Sleep(1 * time.Microsecond)
+// 		ut := db.NewUpdateTran()
+// 		defer ut.Commit()
+// 		return DoAction(nil, ut, act, nil)
+// 	}
+// 	// DoAdmin(db, "ensure tmp(a,b,c) key(a,b) key(c)")
+// 	// for i := 0; i < 10000; i++ {
+// 	// 	act("delete tmp")
+// 	// 	act("insert { a: 1, b: 1, c: 1 } into tmp")
+// 	// 	act("insert { a: 2, b: 2, c: 2 } into tmp")
+// 	// 	n := act("delete tmp")
+// 	// 	assert.This(n).Is(2)
+// 	// }
+// 	for i := 0; i < 10000; i++ {
+// 		// fmt.Println(i)
+// 		act("delete Test_lib")
+// 		act("insert { name: 'One', group: -1, num: 99999 } into Test_lib")
+// 		// db.NewReadTran().GetInfo("tmp").Indexes[0].Print()
+// 		// time.Sleep(time.Microsecond)
+// 		act("insert { name: 'Two', group: -1, num: 99998 } into Test_lib")
+// 		n := act("delete Test_lib")
+// 		assert.This(n).Is(2)
+// 	}
+// }
 
 func TestDeleteBug(*testing.T) {
 	store := stor.HeapStor(8192)

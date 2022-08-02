@@ -27,7 +27,7 @@ import (
 // DumpDatabase exports a dumped database to a file.
 // In the process it concurrently does a full check of the database.
 func DumpDatabase(dbfile, to string) (nTables, nViews int, err error) {
-	db, err := OpenDb(dbfile, stor.READ, false)
+	db, err := OpenDb(dbfile, stor.Read, false)
 	ck(err)
 	defer db.Close()
 	return Dump(db, to)
@@ -68,7 +68,7 @@ func dump(db *Database, w *bufio.Writer) (nTables, nViews int) {
 // DumpTable exports a dumped table to a file.
 // It returns the number of records dumped or panics on error.
 func DumpTable(dbfile, table, to string) (nrecs int, err error) {
-	db, err := OpenDb(dbfile, stor.READ, false)
+	db, err := OpenDb(dbfile, stor.Read, false)
 	ck(err)
 	defer db.Close()
 	return DumpDbTable(db, table, to)

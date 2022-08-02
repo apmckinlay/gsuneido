@@ -25,31 +25,31 @@ type Context struct {
 	Row  Row
 }
 
-func (c *Constant) Eval(*Context) Value {
-	return c.Val
+func (a *Constant) Eval(*Context) Value {
+	return a.Val
 }
 
-func (c *Constant) Columns() []string {
+func (a *Constant) Columns() []string {
 	return []string{}
 }
 
-func (id *Ident) Eval(c *Context) Value {
-	return c.Row.GetVal(c.Hdr, id.Name, c.Th, c.Tran)
+func (a *Ident) Eval(c *Context) Value {
+	return c.Row.GetVal(c.Hdr, a.Name, c.Th, c.Tran)
 }
 
-func (id *Ident) Columns() []string {
-	if str.Capitalized(id.Name) {
+func (a *Ident) Columns() []string {
+	if str.Capitalized(a.Name) {
 		return nil
 	}
-	return []string{id.Name}
+	return []string{a.Name}
 }
 
-func (u *Unary) Eval(c *Context) Value {
-	return u.eval(u.E.Eval(c))
+func (a *Unary) Eval(c *Context) Value {
+	return a.eval(a.E.Eval(c))
 }
 
-func (u *Unary) eval(val Value) Value {
-	switch u.Tok {
+func (a *Unary) eval(val Value) Value {
+	switch a.Tok {
 	case tok.Add:
 		return OpUnaryPlus(val)
 	case tok.Sub:
@@ -61,45 +61,45 @@ func (u *Unary) eval(val Value) Value {
 	case tok.LParen:
 		return val
 	default:
-		panic("unexpected unary operator " + u.Tok.String())
+		panic("unexpected unary operator " + a.Tok.String())
 	}
 }
 
-func (u *Unary) Columns() []string {
-	return u.E.Columns()
+func (a *Unary) Columns() []string {
+	return a.E.Columns()
 }
 
 // Binary -----------------------------------------------------------
 
 // CanEvalRaw returns true if Eval doesn't need to unpack the values.
 // It sets b.evalRaw which is later used by Eval.
-func (b *Binary) CanEvalRaw(cols []string) bool {
-	if b.canEvalRaw2(cols) {
-		b.evalRaw = true
-		c := b.Rhs.(*Constant)
+func (a *Binary) CanEvalRaw(cols []string) bool {
+	if a.canEvalRaw2(cols) {
+		a.evalRaw = true
+		c := a.Rhs.(*Constant)
 		c.Packed = Pack(c.Val.(Packable))
 		return true
 	}
 	return false
 }
 
-func (b *Binary) canEvalRaw2(cols []string) bool {
-	if !b.rawOp() {
+func (a *Binary) canEvalRaw2(cols []string) bool {
+	if !a.rawOp() {
 		return false
 	}
-	if IsColumn(b.Lhs, cols) && isConstant(b.Rhs) {
+	if IsColumn(a.Lhs, cols) && isConstant(a.Rhs) {
 		return true
 	}
-	if isConstant(b.Lhs) && IsColumn(b.Rhs, cols) {
-		b.Lhs, b.Rhs = b.Rhs, b.Lhs // swap
-		b.Tok = reverseBinary[b.Tok]
+	if isConstant(a.Lhs) && IsColumn(a.Rhs, cols) {
+		a.Lhs, a.Rhs = a.Rhs, a.Lhs // swap
+		a.Tok = reverseBinary[a.Tok]
 		return true
 	}
 	return false
 }
 
-func (b *Binary) rawOp() bool {
-	switch b.Tok {
+func (a *Binary) rawOp() bool {
+	switch a.Tok {
 	case tok.Is, tok.Isnt, tok.Lt, tok.Lte, tok.Gt, tok.Gte:
 		return true
 	}
@@ -128,10 +128,10 @@ var reverseBinary = map[tok.Token]tok.Token{
 }
 
 // CouldEvalRaw is used by replaceExpr to know when to copy
-func (b *Binary) CouldEvalRaw() bool {
-	return b.rawOp() &&
-		((isIdent(b.Lhs) && isConstant(b.Rhs)) ||
-			(isConstant(b.Lhs) && isIdent(b.Rhs)))
+func (a *Binary) CouldEvalRaw() bool {
+	return a.rawOp() &&
+		((isIdent(a.Lhs) && isConstant(a.Rhs)) ||
+			(isConstant(a.Lhs) && isIdent(a.Rhs)))
 }
 
 func isIdent(e Expr) bool {
@@ -139,13 +139,13 @@ func isIdent(e Expr) bool {
 	return ok
 }
 
-func (b *Binary) Eval(c *Context) Value {
+func (a *Binary) Eval(c *Context) Value {
 	// NOTE: only Eval raw if b.evalRaw was set by CanEvalRaw
-	if b.evalRaw {
-		name := b.Lhs.(*Ident).Name
+	if a.evalRaw {
+		name := a.Lhs.(*Ident).Name
 		lhs := c.Row.GetRaw(c.Hdr, name)
-		rhs := b.Rhs.(*Constant).Packed
-		switch b.Tok {
+		rhs := a.Rhs.(*Constant).Packed
+		switch a.Tok {
 		case tok.Is:
 			return SuBool(lhs == rhs)
 		case tok.Isnt:
@@ -160,11 +160,11 @@ func (b *Binary) Eval(c *Context) Value {
 			return SuBool(lhs >= rhs)
 		}
 	}
-	return b.eval(b.Lhs.Eval(c), b.Rhs.Eval(c))
+	return a.eval(a.Lhs.Eval(c), a.Rhs.Eval(c))
 }
 
-func (b *Binary) eval(lhs, rhs Value) Value {
-	switch b.Tok {
+func (a *Binary) eval(lhs, rhs Value) Value {
+	switch a.Tok {
 	case tok.Is:
 		return OpIs(lhs, rhs)
 	case tok.Isnt:
@@ -188,25 +188,25 @@ func (b *Binary) eval(lhs, rhs Value) Value {
 	case tok.RShift:
 		return OpRightShift(lhs, rhs)
 	default:
-		panic("unexpected binary operator " + b.Tok.String())
+		panic("unexpected binary operator " + a.Tok.String())
 	}
 }
 
-func (b *Binary) Columns() []string {
-	return set.Union(b.Lhs.Columns(), b.Rhs.Columns())
+func (a *Binary) Columns() []string {
+	return set.Union(a.Lhs.Columns(), a.Rhs.Columns())
 }
 
-func (tri *Trinary) Eval(c *Context) Value {
-	cond := tri.Cond.Eval(c)
+func (a *Trinary) Eval(c *Context) Value {
+	cond := a.Cond.Eval(c)
 	if cond == True {
-		return tri.T.Eval(c)
+		return a.T.Eval(c)
 	}
-	return tri.F.Eval(c)
+	return a.F.Eval(c)
 }
 
-func (tri *Trinary) Columns() []string {
-	return set.Union(tri.Cond.Columns(),
-		set.Union(tri.T.Columns(), tri.F.Columns()))
+func (a *Trinary) Columns() []string {
+	return set.Union(a.Cond.Columns(),
+		set.Union(a.T.Columns(), a.F.Columns()))
 }
 
 // Nary -------------------------------------------------------------

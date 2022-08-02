@@ -62,7 +62,7 @@ func (w *Writer) Put4(n int) *Writer {
 
 // Put5 writes an unsigned five byte value
 func (w *Writer) Put5(n uint64) *Writer {
-	if n < 0 || 1<<40 <= n {
+	if n >= 1<<40 {
 		panic("stor.Writer.Put5 value outside range")
 	}
 	w.buf = append(w.buf,
@@ -115,11 +115,10 @@ type Reader struct {
 	buf []byte
 }
 
-func (stor *Stor) Reader(off uint64) *Reader {
-	return NewReader(stor.Data(off))
+func (s *Stor) Reader(off uint64) *Reader {
+	return NewReader(s.Data(off))
 }
 
-// Reader returns a Reader based on the offset returned by Writer.Close
 func NewReader(buf []byte) *Reader {
 	return &Reader{buf}
 }

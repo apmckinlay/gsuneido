@@ -259,10 +259,6 @@ func TestOverIterRandom(*testing.T) {
 	traceln := func(args ...any) {
 		// fmt.Println(args...)
 	}
-	type val struct {
-		layer int
-		key   string
-	}
 	gen := make(dat)
 	data := new(dummy)
 	it := &dumIter{d: data}
@@ -508,6 +504,7 @@ func (d *dummy) Delete(key string) {
 	panic("key not found")
 }
 
+//lint:ignore U1000 for debugging
 func (d *dummy) print() {
 	fmt.Println("+ + +")
 	for _, k := range d.keys {

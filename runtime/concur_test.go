@@ -25,6 +25,7 @@ func TestConcurrentMutex(t *testing.T) {
 	go func() {
 		time.Sleep(40 * time.Millisecond)
 		mu.Lock()
+		//lint:ignore SA2001 testing
 		mu.Unlock()
 		assert.That(concurrent == true)
 	}()

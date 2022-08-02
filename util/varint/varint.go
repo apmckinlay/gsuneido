@@ -48,7 +48,7 @@ func DecodeInt32(buf []byte, start int) (n int32, i int) {
 	return
 }
 
-// DecodeInt32 decodes a uint32 from buf[start:]
+// DecodeUint32 decodes a uint32 from buf[start:]
 // and returns the number and the end position.
 func DecodeUint32(buf []byte, start int) (n uint32, i int) {
 	i = start

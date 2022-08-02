@@ -70,7 +70,7 @@ func (c *SuClass) Show() string {
 	for k := range c.Data {
 		mems = append(mems, k)
 	}
-	sort.Sort(sort.StringSlice(mems))
+	sort.Strings(mems)
 	for _, k := range mems {
 		s += sep + k
 		v := c.Data[k]
