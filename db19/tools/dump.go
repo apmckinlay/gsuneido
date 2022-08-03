@@ -6,7 +6,6 @@ package tools
 import (
 	"bufio"
 	"fmt"
-	"io/ioutil"
 	"math"
 	"os"
 	"sort"
@@ -96,7 +95,7 @@ func DumpDbTable(db *Database, table, to string) (nrecs int, err error) {
 }
 
 func dumpOpen() (*os.File, *bufio.Writer) {
-	f, err := ioutil.TempFile(".", "gs*.tmp")
+	f, err := os.CreateTemp(".", "gs*.tmp")
 	ck(err)
 	w := bufio.NewWriter(f)
 	w.WriteString("Suneido dump 2\n")

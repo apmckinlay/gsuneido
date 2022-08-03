@@ -5,7 +5,6 @@ package builtin
 
 import (
 	"errors"
-	"io/ioutil"
 	"log"
 	"net"
 	"os"
@@ -38,7 +37,7 @@ var _ = builtin0("GetCurrentDirectory()",
 // (same as cSuneido, but different from jSuneido)
 var _ = builtin2("GetTempFileName(path, prefix)",
 	func(path, prefix Value) Value {
-		f, err := ioutil.TempFile(ToStr(path), ToStr(prefix)+"*.tmp")
+		f, err := os.CreateTemp(ToStr(path), ToStr(prefix)+"*.tmp")
 		if err != nil {
 			panic("GetTempFileName: " + err.Error())
 		}

@@ -4,7 +4,6 @@
 package tools_test
 
 import (
-	"io/ioutil"
 	"os"
 	"testing"
 	"time"
@@ -92,9 +91,9 @@ func ck(err error) {
 }
 
 func compare(file1, file2 string) {
-	b1, err := ioutil.ReadFile(file1)
+	b1, err := os.ReadFile(file1)
 	ck(err)
-	b2, err := ioutil.ReadFile(file2)
+	b2, err := os.ReadFile(file2)
 	ck(err)
 	if !slices.Equal(b1, b2) {
 		panic(file1 + " is NOT the same as " + file2)

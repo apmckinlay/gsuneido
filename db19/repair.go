@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"os"
 	"time"
 
@@ -121,7 +120,7 @@ func truncate2(dbfile string, size uint64) (string, error) {
 		return "", err
 	}
 	defer src.Close()
-	dst, err := ioutil.TempFile(".", "gs*.tmp")
+	dst, err := os.CreateTemp(".", "gs*.tmp")
 	if err != nil {
 		return "", err
 	}

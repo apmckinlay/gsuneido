@@ -5,7 +5,6 @@ package tools
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"sort"
 	"sync"
@@ -86,7 +85,7 @@ func Compact(dbfile string) (nTables, nViews int, err error) {
 }
 
 func tmpdb() (*Database, string) {
-	dst, err := ioutil.TempFile(".", "gs*.tmp")
+	dst, err := os.CreateTemp(".", "gs*.tmp")
 	ck(err)
 	tmpfile := dst.Name()
 	dst.Close()
