@@ -169,7 +169,7 @@ func commutative(exprs []Expr, bop bopfn, zero, identity Value) []Expr {
 				copy := *exprs[first].(*Constant)
 				copy.Val = bop(copy.Val, c.Val)
 				exprs[first] = &copy
-				}
+			}
 		}
 	}
 	if dst == 1 && first != -1 {

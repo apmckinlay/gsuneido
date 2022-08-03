@@ -29,7 +29,7 @@ func TestInt(t *testing.T) {
 
 func TestStr(t *testing.T) {
 	var buf bytes.Buffer
-	rw := NewReadWrite(&buf, errfn )
+	rw := NewReadWrite(&buf, errfn)
 	test := func(s string) {
 		rw.PutStr(s)
 		rw.Flush()

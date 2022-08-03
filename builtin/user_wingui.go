@@ -205,6 +205,7 @@ const nTVSORTCB = unsafe.Sizeof(TVSORTCB{})
 //-------------------------------------------------------------------
 
 // dll User32:GetDesktopWindow() hwnd
+
 var getDesktopWindow = user32.MustFindProc("GetDesktopWindow").Addr()
 var _ = builtin0("GetDesktopWindow()",
 	func() Value {
@@ -213,6 +214,7 @@ var _ = builtin0("GetDesktopWindow()",
 	})
 
 // dll User32:GetSysColor(long nIndex) long
+
 var getSysColor = user32.MustFindProc("GetSysColor").Addr()
 var _ = builtin1("GetSysColor(index)",
 	func(a Value) Value {
@@ -222,6 +224,7 @@ var _ = builtin1("GetSysColor(index)",
 	})
 
 // dll User32:GetWindowRect(pointer hwnd, RECT* rect) bool
+
 var getWindowRect = user32.MustFindProc("GetWindowRect").Addr()
 var _ = builtin2("GetWindowRectApi(hwnd, rect)",
 	func(a Value, b Value) Value {
@@ -236,6 +239,7 @@ var _ = builtin2("GetWindowRectApi(hwnd, rect)",
 
 // dll long User32:MessageBox(pointer window, [in] string text,
 //		[in] string caption, long flags)
+
 var messageBox = user32.MustFindProc("MessageBoxA").Addr()
 var _ = builtin4("MessageBox(hwnd, text, caption, flags)",
 	func(a, b, c, d Value) Value {
@@ -250,6 +254,7 @@ var _ = builtin4("MessageBox(hwnd, text, caption, flags)",
 
 // dll User32:AdjustWindowRectEx(RECT* rect, long style, bool menu,
 // 		long exStyle) bool
+
 var adjustWindowRectEx = user32.MustFindProc("AdjustWindowRectEx").Addr()
 var _ = builtin4("AdjustWindowRectEx(lpRect, dwStyle, bMenu, dwExStyle)",
 	func(a, b, c, d Value) Value {
@@ -265,6 +270,7 @@ var _ = builtin4("AdjustWindowRectEx(lpRect, dwStyle, bMenu, dwExStyle)",
 	})
 
 // dll User32:CreateMenu() pointer
+
 var createMenu = user32.MustFindProc("CreateMenu").Addr()
 var _ = builtin0("CreateMenu()",
 	func() Value {
@@ -273,6 +279,7 @@ var _ = builtin0("CreateMenu()",
 	})
 
 // dll User32:CreatePopupMenu() pointer
+
 var createPopupMenu = user32.MustFindProc("CreatePopupMenu").Addr()
 var _ = builtin0("CreatePopupMenu()",
 	func() Value {
@@ -282,6 +289,7 @@ var _ = builtin0("CreatePopupMenu()",
 
 // dll User32:AppendMenu(pointer hmenu, long flags, pointer item,
 //		[in] string name) bool
+
 var appendMenu = user32.MustFindProc("AppendMenuA").Addr()
 var _ = builtin4("AppendMenu(hmenu, flags, item, name)",
 	func(a, b, c, d Value) Value {
@@ -295,6 +303,7 @@ var _ = builtin4("AppendMenu(hmenu, flags, item, name)",
 	})
 
 // dll User32:DestroyMenu(pointer hmenu) bool
+
 var destroyMenu = user32.MustFindProc("DestroyMenu").Addr()
 var _ = builtin1("DestroyMenu(hmenu)",
 	func(a Value) Value {
@@ -306,6 +315,7 @@ var _ = builtin1("DestroyMenu(hmenu)",
 // dll User32:CreateWindowEx(long exStyle, resource classname, [in] string name,
 //		long style, long x, long y, long w, long h, pointer parent, pointer menu,
 //		pointer instance, pointer param) pointer
+
 var createWindowEx = user32.MustFindProc("CreateWindowExA").Addr()
 var _ = builtin("CreateWindowEx(exStyle, classname, name, style, x, y, w, h,"+
 	" parent, menu, instance, param)",
@@ -331,6 +341,7 @@ var _ = builtin("CreateWindowEx(exStyle, classname, name, style, x, y, w, h,"+
 	})
 
 // dll User32:GetSystemMenu(pointer hWnd, bool bRevert) pointer
+
 var getSystemMenu = user32.MustFindProc("GetSystemMenu").Addr()
 var _ = builtin2("GetSystemMenu(hwnd, bRevert)",
 	func(a, b Value) Value {
@@ -341,6 +352,7 @@ var _ = builtin2("GetSystemMenu(hwnd, bRevert)",
 	})
 
 // dll User32:SetMenu(pointer hwnd, pointer hmenu) bool
+
 var setMenu = user32.MustFindProc("SetMenu").Addr()
 var _ = builtin2("SetMenu(hwnd, hmenu)",
 	func(a, b Value) Value {
@@ -351,6 +363,7 @@ var _ = builtin2("SetMenu(hwnd, hmenu)",
 	})
 
 // dll User32:BeginPaint(pointer hwnd, PAINTSTRUCT* ps) pointer
+
 var beginPaint = user32.MustFindProc("BeginPaint").Addr()
 var _ = builtin2("BeginPaint(hwnd, ps)",
 	func(a, b Value) Value {
@@ -370,6 +383,7 @@ var _ = builtin2("BeginPaint(hwnd, ps)",
 	})
 
 // dll User32:EndPaint(pointer hwnd, PAINTSTRUCT* ps) bool
+
 var endPaint = user32.MustFindProc("EndPaint").Addr()
 var _ = builtin2("EndPaint(hwnd, ps)",
 	func(a, b Value) Value {
@@ -393,6 +407,7 @@ func psArg(ob Value, p unsafe.Pointer) unsafe.Pointer {
 
 // dll User32:CallWindowProc(pointer wndprcPrev, pointer hwnd, long msg,
 //		pointer wParam, pointer lParam) pointer
+
 var callWindowProc = user32.MustFindProc("CallWindowProcA").Addr()
 var _ = builtin5("CallWindowProc(wndprcPrev, hwnd, msg, wParam, lParam)",
 	func(a, b, c, d, e Value) Value {
@@ -410,6 +425,7 @@ var _ = builtin5("CallWindowProc(wndprcPrev, hwnd, msg, wParam, lParam)",
 	})
 
 // dll User32:CreateAcceleratorTable([in] string lpaccel, long cEntries) pointer
+
 var createAcceleratorTable = user32.MustFindProc("CreateAcceleratorTableA").Addr()
 var _ = builtin2("CreateAcceleratorTable(lpaccel, cEntries)",
 	func(a, b Value) Value {
@@ -421,6 +437,7 @@ var _ = builtin2("CreateAcceleratorTable(lpaccel, cEntries)",
 	})
 
 // dll User32:DestroyAcceleratorTable(pointer hAccel) bool
+
 var destroyAcceleratorTable = user32.MustFindProc("DestroyAcceleratorTable").Addr()
 var _ = builtin1("DestroyAcceleratorTable(hAccel)",
 	func(a Value) Value {
@@ -430,6 +447,7 @@ var _ = builtin1("DestroyAcceleratorTable(hAccel)",
 	})
 
 // dll User32:DestroyWindow(pointer hwnd) bool
+
 var destroyWindow = user32.MustFindProc("DestroyWindow").Addr()
 var _ = builtin1("DestroyWindow(hwnd)",
 	func(a Value) Value {
@@ -440,6 +458,7 @@ var _ = builtin1("DestroyWindow(hwnd)",
 
 // dll User32:DrawFrameControl(pointer hdc, RECT* lprc, long uType,
 //		long uState) bool
+
 var drawFrameControl = user32.MustFindProc("DrawFrameControl").Addr()
 var _ = builtin4("DrawFrameControl(hdc, lprc, uType, uState)",
 	func(a, b, c, d Value) Value {
@@ -455,6 +474,7 @@ var _ = builtin4("DrawFrameControl(hdc, lprc, uType, uState)",
 
 // dll User32:DrawText(pointer hdc, [in] string lpsz, long cb, RECT* lprc,
 //		long uFormat) long
+
 var drawText = user32.MustFindProc("DrawTextA").Addr()
 var _ = builtin5("DrawText(hdc, lpsz, cb, lprc, uFormat)",
 	func(a, b, c, d, e Value) Value {
@@ -471,6 +491,7 @@ var _ = builtin5("DrawText(hdc, lpsz, cb, lprc, uFormat)",
 	})
 
 // dll User32:FillRect(pointer hdc, RECT* lpRect, pointer hBrush) long
+
 var fillRect = user32.MustFindProc("FillRect").Addr()
 var _ = builtin3("FillRect(hdc, lpRect, hBrush)",
 	func(a, b, c Value) Value {
@@ -485,6 +506,7 @@ var _ = builtin3("FillRect(hdc, lpRect, hBrush)",
 	})
 
 // dll User32:GetActiveWindow() pointer
+
 var getActiveWindow = user32.MustFindProc("GetActiveWindow").Addr()
 var _ = builtin0("GetActiveWindow()",
 	func() Value {
@@ -493,6 +515,7 @@ var _ = builtin0("GetActiveWindow()",
 	})
 
 // dll User32:GetFocus() pointer
+
 var getFocus = user32.MustFindProc("GetFocus").Addr()
 var _ = builtin0("GetFocus()",
 	func() Value {
@@ -501,6 +524,7 @@ var _ = builtin0("GetFocus()",
 	})
 
 // dll User32:GetClientRect(pointer hwnd, RECT* rect) bool
+
 var getClientRect = user32.MustFindProc("GetClientRect").Addr()
 var _ = builtin2("GetClientRect(hwnd, rect)",
 	func(a, b Value) Value {
@@ -514,6 +538,7 @@ var _ = builtin2("GetClientRect(hwnd, rect)",
 	})
 
 // dll User32:GetDC(pointer hwnd) pointer
+
 var getDC = user32.MustFindProc("GetDC").Addr()
 var _ = builtin1("GetDC(hwnd)",
 	func(a Value) Value {
@@ -523,6 +548,7 @@ var _ = builtin1("GetDC(hwnd)",
 	})
 
 // dll User32:GetMonitorInfo(pointer hMonitor, MONITORINFO* lpmi) bool
+
 var getMonitorInfo = user32.MustFindProc("GetMonitorInfoA").Addr()
 var _ = builtin2("GetMonitorInfoApi(hwnd, mInfo)",
 	func(a, b Value) Value {
@@ -540,6 +566,7 @@ var _ = builtin2("GetMonitorInfoApi(hwnd, mInfo)",
 	})
 
 // dll User32:GetScrollInfo(pointer hwnd, long fnBar, SCROLLINFO* lpsi) bool
+
 var getScrollInfo = user32.MustFindProc("GetScrollInfo").Addr()
 var _ = builtin3("GetScrollInfo(hwnd, fnBar, lpsi)",
 	func(a, b, c Value) Value {
@@ -568,6 +595,7 @@ var _ = builtin3("GetScrollInfo(hwnd, fnBar, lpsi)",
 	})
 
 // dll User32:GetScrollPos(pointer hwnd, int nBar) int
+
 var getScrollPos = user32.MustFindProc("GetScrollPos").Addr()
 var _ = builtin2("GetScrollPos(hwnd, nBar)",
 	func(a, b Value) Value {
@@ -578,6 +606,7 @@ var _ = builtin2("GetScrollPos(hwnd, nBar)",
 	})
 
 // dll User32:GetSysColorBrush(long nIndex) pointer
+
 var getSysColorBrush = user32.MustFindProc("GetSysColorBrush").Addr()
 var _ = builtin1("GetSysColorBrush(nIndex)",
 	func(a Value) Value {
@@ -587,6 +616,7 @@ var _ = builtin1("GetSysColorBrush(nIndex)",
 	})
 
 // dll User32:GetSystemMetrics(long nIndex) long
+
 var getSystemMetrics = user32.MustFindProc("GetSystemMetrics").Addr()
 var _ = builtin1("GetSystemMetrics(nIndex)",
 	func(a Value) Value {
@@ -596,6 +626,7 @@ var _ = builtin1("GetSystemMetrics(nIndex)",
 	})
 
 // dll User32:GetWindowLong(pointer hwnd, long offset) long
+
 var getWindowLong = user32.MustFindProc("GetWindowLongA").Addr()
 var _ = builtin2("GetWindowLong(hwnd, offset)",
 	func(a, b Value) Value {
@@ -606,6 +637,7 @@ var _ = builtin2("GetWindowLong(hwnd, offset)",
 	})
 
 // dll User32:GetWindowLong(pointer hwnd, long offset) long
+
 var getWindowLongPtr = user32.MustFindProc("GetWindowLongPtrA").Addr()
 var _ = builtin2("GetWindowLongPtr(hwnd, offset)",
 	func(a, b Value) Value {
@@ -616,6 +648,7 @@ var _ = builtin2("GetWindowLongPtr(hwnd, offset)",
 	})
 
 // dll User32:GetWindowPlacement(pointer hwnd, WINDOWPLACEMENT* lpwndpl) bool
+
 var getWindowPlacement = user32.MustFindProc("GetWindowPlacement").Addr()
 var _ = builtin2("GetWindowPlacement(hwnd, ps)",
 	func(a, b Value) Value {
@@ -636,6 +669,7 @@ var _ = builtin2("GetWindowPlacement(hwnd, ps)",
 	})
 
 // dll User32:GetWindowText(pointer hwnd, string buf, long len) long
+
 var getWindowText = user32.MustFindProc("GetWindowTextA").Addr()
 var getWindowTextLength = user32.MustFindProc("GetWindowTextLengthA").Addr()
 var _ = builtin1("GetWindowText(hwnd)",
@@ -652,6 +686,7 @@ var _ = builtin1("GetWindowText(hwnd)",
 	})
 
 // dll bool User32:HideCaret(pointer hWnd)
+
 var hideCaret = user32.MustFindProc("HideCaret").Addr()
 var _ = builtin1("HideCaret(hwnd)",
 	func(hwnd Value) Value {
@@ -661,6 +696,7 @@ var _ = builtin1("HideCaret(hwnd)",
 	})
 
 // dll User32:InflateRect(RECT* rect, long dx, long dy) bool
+
 var inflateRect = user32.MustFindProc("InflateRect").Addr()
 var _ = builtin3("InflateRect(rect, dx, dy)",
 	func(a, b, c Value) Value {
@@ -676,6 +712,7 @@ var _ = builtin3("InflateRect(rect, dx, dy)",
 
 // dll User32:InsertMenuItem(pointer hMenu, long uItem, bool fByPosition,
 //		MENUITEMINFO* lpmii) bool
+
 var insertMenuItem = user32.MustFindProc("InsertMenuItemA").Addr()
 var _ = builtin4("InsertMenuItem(hMenu, uItem, fByPosition, lpmii)",
 	func(a, b, c, d Value) Value {
@@ -704,6 +741,7 @@ var _ = builtin4("InsertMenuItem(hMenu, uItem, fByPosition, lpmii)",
 	})
 
 // dll long User32:GetMenuItemCount(pointer hMenu)
+
 var getMenuItemCount = user32.MustFindProc("GetMenuItemCount").Addr()
 var _ = builtin1("GetMenuItemCount(hMenu)",
 	func(a Value) Value {
@@ -713,6 +751,7 @@ var _ = builtin1("GetMenuItemCount(hMenu)",
 	})
 
 // dll long User32:GetMenuItemID(pointer hMenu, long nPos)
+
 var getMenuItemID = user32.MustFindProc("GetMenuItemID").Addr()
 var _ = builtin2("GetMenuItemID(hMenu, nPos)",
 	func(a, b Value) Value {
@@ -724,6 +763,7 @@ var _ = builtin2("GetMenuItemID(hMenu, nPos)",
 
 // dll User32:GetMenuItemInfo(pointer hMenu, long uItem, bool fByPosition,
 //		MENUITEMINFO* lpmii) bool
+
 var getMenuItemInfo = user32.MustFindProc("GetMenuItemInfoA").Addr()
 var _ = builtin2("GetMenuItemInfoText(hMenu, uItem)",
 	func(a, b Value) Value {
@@ -761,6 +801,7 @@ var _ = builtin2("GetMenuItemInfoText(hMenu, uItem)",
 
 // dll User32:SetMenuItemInfo(pointer hMenu, long uItem, long fByPosition,
 //		MENUITEMINFO* lpmii) bool
+
 var setMenuItemInfo = user32.MustFindProc("SetMenuItemInfoA").Addr()
 var _ = builtin4("SetMenuItemInfo(hMenu, uItem, fByPosition, lpmii)",
 	func(a, b, c, d Value) Value {
@@ -789,6 +830,7 @@ var _ = builtin4("SetMenuItemInfo(hMenu, uItem, fByPosition, lpmii)",
 	})
 
 // dll User32:InvalidateRect(pointer hwnd, RECT* rect, bool erase) bool
+
 var invalidateRect = user32.MustFindProc("InvalidateRect").Addr()
 var _ = builtin3("InvalidateRect(hwnd, rect, erase)",
 	func(a, b, c Value) Value {
@@ -802,6 +844,7 @@ var _ = builtin3("InvalidateRect(hwnd, rect, erase)",
 	})
 
 // dll User32:IsWindowEnabled(pointer hwnd) bool
+
 var isWindowEnabled = user32.MustFindProc("IsWindowEnabled").Addr()
 var _ = builtin1("IsWindowEnabled(hwnd)",
 	func(a Value) Value {
@@ -811,6 +854,7 @@ var _ = builtin1("IsWindowEnabled(hwnd)",
 	})
 
 // dll User32:LoadCursor(pointer hinst, resource pszCursor) pointer
+
 var loadCursor = user32.MustFindProc("LoadCursorA").Addr()
 var _ = builtin2("LoadCursor(hinst, pszCursor)",
 	func(a, b Value) Value {
@@ -821,6 +865,7 @@ var _ = builtin2("LoadCursor(hinst, pszCursor)",
 	})
 
 // dll User32:LoadIcon(pointer hInstance, resource lpIconName) pointer
+
 var loadIcon = user32.MustFindProc("LoadIconA").Addr()
 var _ = builtin2("LoadIcon(hinst, lpIconName)",
 	func(a, b Value) Value {
@@ -831,6 +876,7 @@ var _ = builtin2("LoadIcon(hinst, lpIconName)",
 	})
 
 // dll User32:MonitorFromRect(RECT* lprc, long dwFlags) pointer
+
 var monitorFromRect = user32.MustFindProc("MonitorFromRect").Addr()
 var _ = builtin2("MonitorFromRect(lprc, dwFlags)",
 	func(a, b Value) Value {
@@ -844,6 +890,7 @@ var _ = builtin2("MonitorFromRect(lprc, dwFlags)",
 
 // dll User32:MoveWindow(pointer hwnd, long left, long top, long width,
 //		long height, bool repaint) bool
+
 var moveWindow = user32.MustFindProc("MoveWindow").Addr()
 var _ = builtin6("MoveWindow(hwnd, left, top, width, height, repaint)",
 	func(a, b, c, d, e, f Value) Value {
@@ -858,6 +905,7 @@ var _ = builtin6("MoveWindow(hwnd, left, top, width, height, repaint)",
 	})
 
 // dll User32:RegisterClass(WNDCLASS* wc) short
+
 var registerClass = user32.MustFindProc("RegisterClassA").Addr()
 var _ = builtin1("RegisterClass(wc)",
 	func(a Value) Value {
@@ -881,6 +929,7 @@ var _ = builtin1("RegisterClass(wc)",
 	})
 
 // dll User32:RegisterClipboardFormat([in] string lpszFormat) long
+
 var registerClipboardFormat = user32.MustFindProc("RegisterClipboardFormatA").Addr()
 var _ = builtin1("RegisterClipboardFormat(lpszFormat)",
 	func(a Value) Value {
@@ -891,6 +940,7 @@ var _ = builtin1("RegisterClipboardFormat(lpszFormat)",
 	})
 
 // dll User32:ReleaseDC(pointer hWnd, pointer hDC) long
+
 var releaseDC = user32.MustFindProc("ReleaseDC").Addr()
 var _ = builtin2("ReleaseDC(hwnd, hDC)",
 	func(a, b Value) Value {
@@ -901,6 +951,7 @@ var _ = builtin2("ReleaseDC(hwnd, hDC)",
 	})
 
 // dll User32:SetFocus(pointer hwnd) pointer
+
 var setFocus = user32.MustFindProc("SetFocus").Addr()
 var _ = builtin1("SetFocus(hwnd)",
 	func(a Value) Value {
@@ -912,6 +963,7 @@ var _ = builtin1("SetFocus(hwnd)",
 const WM_USER = 0x400
 
 // dll User32:SetTimer(pointer hwnd, long id, long ms, TIMERPROC f) long
+
 var setTimer = user32.MustFindProc("SetTimer").Addr()
 var _ = builtin4("SetTimer(hwnd, id, ms, f)",
 	func(a, b, c, d Value) Value {
@@ -954,6 +1006,7 @@ func gocSetTimer(hwnd, id, ms, cb Value) Value {
 }
 
 // dll User32:KillTimer(pointer hwnd, long id) bool
+
 var killTimer = user32.MustFindProc("KillTimer").Addr()
 var _ = builtin2("KillTimer(hwnd, id)",
 	func(a, b Value) Value {
@@ -992,6 +1045,7 @@ func gocKillTimer(hwnd, id Value) Value {
 }
 
 // dll User32:SetWindowLong(pointer hwnd, int offset, long value) long
+
 var setWindowLong = user32.MustFindProc("SetWindowLongA").Addr()
 var _ = builtin3("SetWindowLong(hwnd, offset, value)",
 	func(a, b, c Value) Value {
@@ -1003,6 +1057,7 @@ var _ = builtin3("SetWindowLong(hwnd, offset, value)",
 	})
 
 // dll User32:SetWindowLong(pointer hwnd, long offset, long value) long
+
 var setWindowLongPtr = user32.MustFindProc("SetWindowLongPtrA").Addr()
 var _ = builtin3("SetWindowLongPtr(hwnd, offset, value)",
 	func(a, b, c Value) Value {
@@ -1014,6 +1069,7 @@ var _ = builtin3("SetWindowLongPtr(hwnd, offset, value)",
 	})
 
 // dll User32:SetWindowProc(pointer hwnd, long offset, WNDPROC proc) pointer
+
 var _ = builtin3("SetWindowProc(hwnd, offset, proc)",
 	func(a, b, c Value) Value {
 		hwnd := intArg(a)
@@ -1036,6 +1092,7 @@ var _ = builtin3("SetWindowProc(hwnd, offset, proc)",
 	})
 
 // dll User32:SetWindowPlacement(pointer hwnd, WINDOWPLACEMENT* lpwndpl) bool
+
 var setWindowPlacement = user32.MustFindProc("SetWindowPlacement").Addr()
 var _ = builtin2("SetWindowPlacement(hwnd, lpwndpl)",
 	func(a, b Value) Value {
@@ -1057,6 +1114,7 @@ var _ = builtin2("SetWindowPlacement(hwnd, lpwndpl)",
 
 // dll User32:SetWindowPos(pointer hWnd, pointer hWndInsertAfter,
 //		long X, long Y, long cx, long cy, long uFlags) bool
+
 var setWindowPos = user32.MustFindProc("SetWindowPos").Addr()
 var _ = builtin7("SetWindowPos(hWnd, hWndInsertAfter, X, Y, cx, cy, uFlags)",
 	func(a, b, c, d, e, f, g Value) Value {
@@ -1072,6 +1130,7 @@ var _ = builtin7("SetWindowPos(hWnd, hWndInsertAfter, X, Y, cx, cy, uFlags)",
 	})
 
 // dll User32:SetWindowText(pointer hwnd, [in] string text) bool
+
 var setWindowText = user32.MustFindProc("SetWindowTextA").Addr()
 var _ = builtin2("SetWindowText(hwnd, lpwndpl)",
 	func(a, b Value) Value {
@@ -1083,6 +1142,7 @@ var _ = builtin2("SetWindowText(hwnd, lpwndpl)",
 	})
 
 // dll User32:ShowWindow(pointer hwnd, long ncmd) bool
+
 var showWindow = user32.MustFindProc("ShowWindow").Addr()
 var _ = builtin2("ShowWindow(hwnd, ncmd)",
 	func(a, b Value) Value {
@@ -1094,6 +1154,7 @@ var _ = builtin2("ShowWindow(hwnd, ncmd)",
 
 // dll User32:SystemParametersInfo(long uiAction, long uiParam, ? pvParam,
 //		long fWinIni) bool
+
 var systemParametersInfo = user32.MustFindProc("SystemParametersInfoA").Addr()
 
 var _ = builtin0("SPI_GetFocusBorderHeight()",
@@ -1136,6 +1197,7 @@ var _ = builtin0("SPI_GetWorkArea()",
 	})
 
 // dll User32:PostQuitMessage(long exitcode) void
+
 var postQuitMessage = user32.MustFindProc("PostQuitMessage").Addr()
 
 func PostQuitMessage(arg uintptr) {
@@ -1149,6 +1211,7 @@ var _ = builtin1("PostQuitMessage(exitcode)",
 	})
 
 // dll User32:GetNextDlgTabItem(pointer hDlg, pointer hCtl, bool prev) pointer
+
 var getNextDlgTabItem = user32.MustFindProc("GetNextDlgTabItem").Addr()
 var _ = builtin3("GetNextDlgTabItem(hDlg, hCtl, prev)",
 	func(a, b, c Value) Value {
@@ -1160,6 +1223,7 @@ var _ = builtin3("GetNextDlgTabItem(hDlg, hCtl, prev)",
 	})
 
 // dll User32:UpdateWindow(pointer hwnd) bool
+
 var updateWindow = user32.MustFindProc("UpdateWindow").Addr()
 var _ = builtin1("UpdateWindow(hwnd)",
 	func(a Value) Value {
@@ -1170,6 +1234,7 @@ var _ = builtin1("UpdateWindow(hwnd)",
 
 // dll User32:DefWindowProc(pointer hwnd, long msg, pointer wParam,
 //		pointer lParam) pointer
+
 var defWindowProc = user32.MustFindProc("DefWindowProcA").Addr()
 var _ = builtin4("DefWindowProc(hwnd, msg, wParam, lParam)",
 	func(a, b, c, d Value) Value {
@@ -1187,6 +1252,7 @@ var _ = builtin0("GetDefWindowProc()",
 	})
 
 // dll User32:GetKeyState(long key) short
+
 var getKeyState = user32.MustFindProc("GetKeyState").Addr()
 var _ = builtin1("GetKeyState(nVirtKey)",
 	func(a Value) Value {
@@ -1204,6 +1270,7 @@ const nTPMPARAMS = unsafe.Sizeof(TPMPARAMS{})
 
 // dll long User32:TrackPopupMenuEx(pointer hmenu, long fuFlags, long x, long y,
 //		pointer hwnd, TPMPARAMS* lptpm)
+
 var trackPopupMenuEx = user32.MustFindProc("TrackPopupMenuEx").Addr()
 var _ = builtin6("TrackPopupMenuEx(hmenu, fuFlags, x, y, hwnd, lptpm)",
 	func(a, b, c, d, e, f Value) Value {
@@ -1227,6 +1294,7 @@ var _ = builtin6("TrackPopupMenuEx(hmenu, fuFlags, x, y, hwnd, lptpm)",
 	})
 
 // dll bool User32:OpenClipboard(pointer hwnd)
+
 var openClipboard = user32.MustFindProc("OpenClipboard").Addr()
 var _ = builtin1("OpenClipboard(hwnd)",
 	func(a Value) Value {
@@ -1236,6 +1304,7 @@ var _ = builtin1("OpenClipboard(hwnd)",
 	})
 
 // dll bool User32:EmptyClipboard()
+
 var emptyClipboard = user32.MustFindProc("EmptyClipboard").Addr()
 var _ = builtin0("EmptyClipboard()",
 	func() Value {
@@ -1244,6 +1313,7 @@ var _ = builtin0("EmptyClipboard()",
 	})
 
 // dll pointer User32:GetClipboardData(long format)
+
 var getClipboardData = user32.MustFindProc("GetClipboardData").Addr()
 var _ = builtin1("GetClipboardData(format)",
 	func(a Value) Value {
@@ -1253,6 +1323,7 @@ var _ = builtin1("GetClipboardData(format)",
 	})
 
 // dll pointer User32:SetClipboardData(long uFormat, pointer hMem)
+
 var setClipboardData = user32.MustFindProc("SetClipboardData").Addr()
 var _ = builtin2("SetClipboardData(uFormat, hMem)",
 	func(a Value, b Value) Value {
@@ -1263,6 +1334,7 @@ var _ = builtin2("SetClipboardData(uFormat, hMem)",
 	})
 
 // dll bool User32:CloseClipboard()
+
 var closeClipboard = user32.MustFindProc("CloseClipboard").Addr()
 var _ = builtin0("CloseClipboard()",
 	func() Value {
@@ -1273,6 +1345,7 @@ var _ = builtin0("CloseClipboard()",
 // dll pointer User32:BeginDeferWindowPos(
 // 	long nNumWindows		// initial number of windows to allocate space for
 // 	)
+
 var beginDeferWindowPos = user32.MustFindProc("BeginDeferWindowPos").Addr()
 var _ = builtin1("BeginDeferWindowPos(nNumWindows)",
 	func(a Value) Value {
@@ -1282,11 +1355,11 @@ var _ = builtin1("BeginDeferWindowPos(nNumWindows)",
 	})
 
 // dll pointer User32:CallNextHookEx(		// returns an LRESULT
-// 	pointer	hhk,	// handle to current hook [HHOOK]
-// 	long	nCode,	// hook code passed to hook procedure [int]
-// 	pointer	wParam,	// value passed to hook procedure [WPARAM]
-// 	pointer	lParam	// value passed to hook procedure [LPARAM]
-// )
+//		pointer	hhk,	// handle to current hook [HHOOK]
+//		long	nCode,	// hook code passed to hook procedure [int]
+//		pointer	wParam,	// value passed to hook procedure [WPARAM]
+//		pointer	lParam)	// value passed to hook procedure [LPARAM]
+
 var callNextHookEx = user32.MustFindProc("CallNextHookEx").Addr()
 var _ = builtin4("CallNextHookEx(hhk, nCode, wParam, lParam)",
 	func(a, b, c, d Value) Value {
@@ -1299,10 +1372,10 @@ var _ = builtin4("CallNextHookEx(hhk, nCode, wParam, lParam)",
 	})
 
 // dll long User32:CheckMenuItem(
-// 	pointer hmenu, 		// handle to menu
-// 	long uIDCheckItem, 	// menu item to check or uncheck
-// 	long uCheck 		// menu item options
-// 	)
+//		pointer hmenu, 		// handle to menu
+//		long uIDCheckItem, 	// menu item to check or uncheck
+//		long uCheck)		// menu item options
+
 var checkMenuItem = user32.MustFindProc("CheckMenuItem").Addr()
 var _ = builtin3("CheckMenuItem(hmenu, uIDCheckItem, uCheck)",
 	func(a, b, c Value) Value {
@@ -1314,6 +1387,7 @@ var _ = builtin3("CheckMenuItem(hmenu, uIDCheckItem, uCheck)",
 	})
 
 // dll bool user32:DeleteMenu(pointer hMenu, long uPosition, long uFlags)
+
 var deleteMenu = user32.MustFindProc("DeleteMenu").Addr()
 var _ = builtin3("DeleteMenu(hMenu, uPosition, uFlags)",
 	func(a, b, c Value) Value {
@@ -1325,10 +1399,10 @@ var _ = builtin3("DeleteMenu(hMenu, uPosition, uFlags)",
 	})
 
 // dll long User32:EnableMenuItem(
-// 	pointer hMenu,
-// 	long uIDEnableItem,
-// 	long uEnable
-// 	)
+//		pointer hMenu,
+//		long uIDEnableItem,
+//		long uEnable)
+
 var enableMenuItem = user32.MustFindProc("EnableMenuItem").Addr()
 var _ = builtin3("EnableMenuItem(hMenu, uIDEnableItem, uEnable)",
 	func(a, b, c Value) Value {
@@ -1340,6 +1414,7 @@ var _ = builtin3("EnableMenuItem(hMenu, uIDEnableItem, uEnable)",
 	})
 
 // dll bool User32:EnableWindow(pointer hWnd, bool bEnable)
+
 var enableWindow = user32.MustFindProc("EnableWindow").Addr()
 var _ = builtin2("EnableWindow(hWnd, bEnable)",
 	func(a, b Value) Value {
@@ -1349,9 +1424,8 @@ var _ = builtin2("EnableWindow(hWnd, bEnable)",
 		return boolRet(rtn)
 	})
 
-// dll bool User32:EndDeferWindowPos(
-// 	pointer hWinPosInfo		// handle to internal structure
-// 	)
+// dll bool User32:EndDeferWindowPos(pointer hWinPosInfo)
+
 var endDeferWindowPos = user32.MustFindProc("EndDeferWindowPos").Addr()
 var _ = builtin1("EndDeferWindowPos(hWinPosInfo)",
 	func(a Value) Value {
@@ -1361,6 +1435,7 @@ var _ = builtin1("EndDeferWindowPos(hWinPosInfo)",
 	})
 
 // dll bool User32:EndDialog(pointer hwndDlg, long nResult)
+
 var endDialog = user32.MustFindProc("EndDialog").Addr()
 var _ = builtin2("EndDialog(hwndDlg, nResult)",
 	func(a, b Value) Value {
@@ -1371,6 +1446,7 @@ var _ = builtin2("EndDialog(hwndDlg, nResult)",
 	})
 
 // dll long User32:EnumClipboardFormats(long format)
+
 var enumClipboardFormats = user32.MustFindProc("EnumClipboardFormats").Addr()
 var _ = builtin1("EnumClipboardFormats(format)",
 	func(a Value) Value {
@@ -1380,6 +1456,7 @@ var _ = builtin1("EnumClipboardFormats(format)",
 	})
 
 // dll pointer User32:FindWindow([in] string c, [in] string n)
+
 var findWindow = user32.MustFindProc("FindWindowA").Addr()
 var _ = builtin2("FindWindow(c, n)",
 	func(a, b Value) Value {
@@ -1391,6 +1468,7 @@ var _ = builtin2("FindWindow(c, n)",
 	})
 
 // dll pointer User32:GetAncestor(pointer hwnd, long gaFlags)
+
 var getAncestor = user32.MustFindProc("GetAncestor").Addr()
 var _ = builtin2("GetAncestor(hwnd, gaFlags)",
 	func(a, b Value) Value {
@@ -1401,10 +1479,10 @@ var _ = builtin2("GetAncestor(hwnd, gaFlags)",
 	})
 
 // dll long User32:GetClipboardFormatName(
-// 	long		format,				// clipboard format to retrieve
-// 	string		lpszFormatName,		// buffer to receive format name
-// 	long		cchMaxCount			// maximum length of string to copy into buffer
-// 	)
+//		long		format,			// clipboard format to retrieve
+//		string		lpszFormatName,	// buffer to receive format name
+//		long		cchMaxCount)	// maximum length of string to copy into buffer
+
 var getClipboardFormatName = user32.MustFindProc("GetClipboardFormatNameA").Addr()
 var _ = builtin3("GetClipboardFormatName(format, lpszFormatName, cchMaxCount)",
 	func(a, b, c Value) Value {
@@ -1417,6 +1495,7 @@ var _ = builtin3("GetClipboardFormatName(format, lpszFormatName, cchMaxCount)",
 	})
 
 // dll pointer User32:GetCursor()
+
 var getCursor = user32.MustFindProc("GetCursor").Addr()
 var _ = builtin0("GetCursor()",
 	func() Value {
@@ -1425,6 +1504,7 @@ var _ = builtin0("GetCursor()",
 	})
 
 // dll long User32:GetDoubleClickTime()
+
 var getDoubleClickTime = user32.MustFindProc("GetDoubleClickTime").Addr()
 var _ = builtin0("GetDoubleClickTime()",
 	func() Value {
@@ -1433,10 +1513,10 @@ var _ = builtin0("GetDoubleClickTime()",
 	})
 
 // dll long User32:GetMenuState(
-// 	pointer hMenu, 	// handle to menu
-// 	long uId, 		// menu item to query
-// 	long uFlags		// options
-// 	)
+//		pointer hMenu, 	// handle to menu
+//		long uId, 		// menu item to query
+//		long uFlags)	// options
+
 var getMenuState = user32.MustFindProc("GetMenuState").Addr()
 var _ = builtin3("GetMenuState(hMenu, uId, uFlags)",
 	func(a, b, c Value) Value {
@@ -1448,6 +1528,7 @@ var _ = builtin3("GetMenuState(hMenu, uId, uFlags)",
 	})
 
 // dll long User32:GetMessagePos()
+
 var getMessagePos = user32.MustFindProc("GetMessagePos").Addr()
 var _ = builtin0("GetMessagePos()",
 	func() Value {
@@ -1456,6 +1537,7 @@ var _ = builtin0("GetMessagePos()",
 	})
 
 // dll pointer User32:GetNextDlgGroupItem(pointer hDlg, pointer hCtl, bool prev)
+
 var getNextDlgGroupItem = user32.MustFindProc("GetNextDlgGroupItem").Addr()
 var _ = builtin3("GetNextDlgGroupItem(hDlg, hCtl, prev)",
 	func(a, b, c Value) Value {
@@ -1467,6 +1549,7 @@ var _ = builtin3("GetNextDlgGroupItem(hDlg, hCtl, prev)",
 	})
 
 // dll pointer User32:GetParent(pointer hwnd)
+
 var getParent = user32.MustFindProc("GetParent").Addr()
 var _ = builtin1("GetParent(hwnd)",
 	func(a Value) Value {
@@ -1476,9 +1559,9 @@ var _ = builtin1("GetParent(hwnd)",
 	})
 
 // dll pointer User32:GetSubMenu(
-// 	pointer hmenu,	//menu handle
-// 	long position	//position
-// 	)
+//		pointer hmenu,	//menu handle
+//		long position)	//position
+
 var getSubMenu = user32.MustFindProc("GetSubMenu").Addr()
 var _ = builtin2("GetSubMenu(hmenu, position)",
 	func(a, b Value) Value {
@@ -1489,6 +1572,7 @@ var _ = builtin2("GetSubMenu(hmenu, position)",
 	})
 
 // dll pointer User32:GetTopWindow(pointer hWnd)
+
 var getTopWindow = user32.MustFindProc("GetTopWindow").Addr()
 var _ = builtin1("GetTopWindow(hWnd)",
 	func(a Value) Value {
@@ -1498,6 +1582,7 @@ var _ = builtin1("GetTopWindow(hWnd)",
 	})
 
 // dll long User32:GetUpdateRgn(pointer hwnd, pointer hRgn, bool bErase)
+
 var getUpdateRgn = user32.MustFindProc("GetUpdateRgn").Addr()
 var _ = builtin3("GetUpdateRgn(hwnd, hRgn, bErase)",
 	func(a, b, c Value) Value {
@@ -1509,6 +1594,7 @@ var _ = builtin3("GetUpdateRgn(hwnd, hRgn, bErase)",
 	})
 
 // dll pointer User32:GetWindow(pointer hWnd, long uCmd)
+
 var getWindow = user32.MustFindProc("GetWindow").Addr()
 var _ = builtin2("GetWindow(hWnd, uCmd)",
 	func(a, b Value) Value {
@@ -1519,6 +1605,7 @@ var _ = builtin2("GetWindow(hWnd, uCmd)",
 	})
 
 // dll pointer User32:GetWindowDC(pointer hwnd)
+
 var getWindowDC = user32.MustFindProc("GetWindowDC").Addr()
 var _ = builtin1("GetWindowDC(hwnd)",
 	func(a Value) Value {
@@ -1528,6 +1615,7 @@ var _ = builtin1("GetWindowDC(hwnd)",
 	})
 
 // dll bool User32:IsClipboardFormatAvailable(long format)
+
 var isClipboardFormatAvailable = user32.MustFindProc("IsClipboardFormatAvailable").Addr()
 var _ = builtin1("IsClipboardFormatAvailable(format)",
 	func(a Value) Value {
@@ -1537,6 +1625,7 @@ var _ = builtin1("IsClipboardFormatAvailable(format)",
 	})
 
 // dll bool User32:IsWindow(pointer hwnd)
+
 var isWindow = user32.MustFindProc("IsWindow").Addr()
 var _ = builtin1("IsWindow(hwnd)",
 	func(a Value) Value {
@@ -1546,6 +1635,7 @@ var _ = builtin1("IsWindow(hwnd)",
 	})
 
 // dll bool User32:IsChild(pointer hwndParent, pointer hwnd)
+
 var isChild = user32.MustFindProc("IsChild").Addr()
 var _ = builtin2("IsChild(hwndParent, hwnd)",
 	func(a, b Value) Value {
@@ -1556,6 +1646,7 @@ var _ = builtin2("IsChild(hwndParent, hwnd)",
 	})
 
 // dll bool User32:IsWindowVisible(pointer hwnd)
+
 var isWindowVisible = user32.MustFindProc("IsWindowVisible").Addr()
 var _ = builtin1("IsWindowVisible(hwnd)",
 	func(a Value) Value {
@@ -1565,6 +1656,7 @@ var _ = builtin1("IsWindowVisible(hwnd)",
 	})
 
 // dll bool User32:MessageBeep(long type)
+
 var messageBeep = user32.MustFindProc("MessageBeep").Addr()
 var _ = builtin1("MessageBeep(type)",
 	func(a Value) Value {
@@ -1574,12 +1666,12 @@ var _ = builtin1("MessageBeep(type)",
 	})
 
 // dll void User32:mouse_event(
-// 	long	dwFlags,		// motion and click options
-// 	long	dx,			// horizontal position or change
-// 	long	dy,			// vertical position or change
-// 	long	dwData,		// wheel movement
-// 	pointer	dwExtraInfo	// (ULONG_PTR) application-defined information
-// )
+//		long	dwFlags,		// motion and click options
+//		long	dx,				// horizontal position or change
+//		long	dy,				// vertical position or change
+//		long	dwData,			// wheel movement
+//		pointer	dwExtraInfo)	// (ULONG_PTR) application-defined information
+
 var mouse_event = user32.MustFindProc("mouse_event").Addr()
 var _ = builtin5("Mouse_event(dwFlags, dx, dy, dwData, dwExtraInfo)",
 	func(a, b, c, d, e Value) Value {
@@ -1593,6 +1685,7 @@ var _ = builtin5("Mouse_event(dwFlags, dx, dy, dwData, dwExtraInfo)",
 	})
 
 // dll bool User32:PostMessage(pointer hwnd, long msg, pointer wParam, pointer lParam)
+
 var postMessage = user32.MustFindProc("PostMessageA").Addr()
 var _ = builtin4("PostMessage(hwnd, msg, wParam, lParam)",
 	func(a, b, c, d Value) Value {
@@ -1605,11 +1698,11 @@ var _ = builtin4("PostMessage(hwnd, msg, wParam, lParam)",
 	})
 
 // dll bool User32:RegisterHotKey(
-// 	pointer hWnd /*optional*/,
-// 	long id,
-// 	long fsModifiers,
-// 	long vk
-// )
+//		pointer hWnd /*optional*/,
+//		long id,
+//		long fsModifiers,
+//		long vk)
+
 var registerHotKey = user32.MustFindProc("RegisterHotKey").Addr()
 var _ = builtin4("RegisterHotKey(hWnd, id, fsModifiers, vk)",
 	func(a, b, c, d Value) Value {
@@ -1622,6 +1715,7 @@ var _ = builtin4("RegisterHotKey(hWnd, id, fsModifiers, vk)",
 	})
 
 // dll bool User32:ReleaseCapture()
+
 var releaseCapture = user32.MustFindProc("ReleaseCapture").Addr()
 var _ = builtin0("ReleaseCapture()",
 	func() Value {
@@ -1630,6 +1724,7 @@ var _ = builtin0("ReleaseCapture()",
 	})
 
 // dll pointer User32:SetActiveWindow(pointer hWnd)
+
 var setActiveWindow = user32.MustFindProc("SetActiveWindow").Addr()
 var _ = builtin1("SetActiveWindow(hWnd)",
 	func(a Value) Value {
@@ -1639,6 +1734,7 @@ var _ = builtin1("SetActiveWindow(hWnd)",
 	})
 
 // dll pointer User32:SetCapture(pointer hwnd)
+
 var setCapture = user32.MustFindProc("SetCapture").Addr()
 var _ = builtin1("SetCapture(hwnd)",
 	func(a Value) Value {
@@ -1648,6 +1744,7 @@ var _ = builtin1("SetCapture(hwnd)",
 	})
 
 // dll pointer User32:SetCursor(pointer hcursor)
+
 var setCursor = user32.MustFindProc("SetCursor").Addr()
 var _ = builtin1("SetCursor(hcursor)",
 	func(a Value) Value {
@@ -1657,7 +1754,7 @@ var _ = builtin1("SetCursor(hcursor)",
 	})
 
 // dll bool User32:SetForegroundWindow(pointer hwnd)
-// // puts creator thread into foreground and activates window
+
 var setForegroundWindow = user32.MustFindProc("SetForegroundWindow").Addr()
 var _ = builtin1("SetForegroundWindow(hwnd)",
 	func(a Value) Value {
@@ -1667,10 +1764,10 @@ var _ = builtin1("SetForegroundWindow(hwnd)",
 	})
 
 // dll bool User32:SetMenuDefaultItem(
-// 	pointer hMenu,
-// 	long uItem,
-// 	long fByPosition
-// 	)
+//		pointer hMenu,
+//		long uItem,
+//		long fByPosition)
+
 var setMenuDefaultItem = user32.MustFindProc("SetMenuDefaultItem").Addr()
 var _ = builtin3("SetMenuDefaultItem(hMenu, uItem, fByPosition)",
 	func(a, b, c Value) Value {
@@ -1682,6 +1779,7 @@ var _ = builtin3("SetMenuDefaultItem(hMenu, uItem, fByPosition)",
 	})
 
 // dll pointer User32:SetParent(pointer hwndNewChild, pointer hwndNewParent)
+
 var setParent = user32.MustFindProc("SetParent").Addr()
 var _ = builtin2("SetParent(hwndNewChild, hwndNewParent)",
 	func(a, b Value) Value {
@@ -1692,6 +1790,7 @@ var _ = builtin2("SetParent(hwndNewChild, hwndNewParent)",
 	})
 
 // dll bool User32:SetProp(pointer hwnd, [in] string name, pointer value)
+
 var setProp = user32.MustFindProc("SetPropA").Addr()
 var _ = builtin3("SetProp(hwnd, name, value)",
 	func(a, b, c Value) Value {
@@ -1703,9 +1802,8 @@ var _ = builtin3("SetProp(hwnd, name, value)",
 		return boolRet(rtn)
 	})
 
-// dll bool User32:UnhookWindowsHookEx(
-// 	pointer hhk	// handle to hook procedure [HHOOK]
-// )
+// dll bool User32:UnhookWindowsHookEx(pointer hhk)
+
 var unhookWindowsHookEx = user32.MustFindProc("UnhookWindowsHookEx").Addr()
 var _ = builtin1("UnhookWindowsHookEx(hhk)",
 	func(a Value) Value {
@@ -1715,6 +1813,7 @@ var _ = builtin1("UnhookWindowsHookEx(hhk)",
 	})
 
 // dll bool User32:UnregisterHotKey(pointer hWnd /*optional*/, long id)
+
 var unregisterHotKey = user32.MustFindProc("UnregisterHotKey").Addr()
 var _ = builtin2("UnregisterHotKey(hWnd, id)",
 	func(a, b Value) Value {
@@ -1725,6 +1824,7 @@ var _ = builtin2("UnregisterHotKey(hWnd, id)",
 	})
 
 // dll bool User32:ClientToScreen(pointer hwnd, POINT* point)
+
 var clientToScreen = user32.MustFindProc("ClientToScreen").Addr()
 var _ = builtin2("ClientToScreen(hWnd, point)",
 	func(a, b Value) Value {
@@ -1740,6 +1840,7 @@ var _ = builtin2("ClientToScreen(hWnd, point)",
 	})
 
 // dll bool User32:ClipCursor(RECT* rect)
+
 var clipCursor = user32.MustFindProc("ClipCursor").Addr()
 var _ = builtin1("ClipCursor(rect)",
 	func(a Value) Value {
@@ -1752,6 +1853,7 @@ var _ = builtin1("ClipCursor(rect)",
 
 // dll pointer User32:DeferWindowPos(pointer hWinPosInfo, pointer hWnd,
 //		pointer hWndInsertAfter, long x, long y, long cx, long cy, long flags)
+
 var deferWindowPos = user32.MustFindProc("DeferWindowPos").Addr()
 var _ = builtin("DeferWindowPos(hWinPosInfo, hWnd, hWndInsertAfter, "+
 	"x, y, cx, cy, flags)",
@@ -1769,6 +1871,7 @@ var _ = builtin("DeferWindowPos(hWinPosInfo, hWnd, hWndInsertAfter, "+
 	})
 
 // dll bool User32:DrawFocusRect(pointer hdc, RECT* lprc)
+
 var drawFocusRect = user32.MustFindProc("DrawFocusRect").Addr()
 var _ = builtin2("DrawFocusRect(hwnd, rect)",
 	func(a, b Value) Value {
@@ -1781,7 +1884,8 @@ var _ = builtin2("DrawFocusRect(hwnd, rect)",
 	})
 
 // dll long User32:DrawTextEx(pointer hdc, [in] string lpsz, long cb,
-// RECT* lprc, long uFormat, DRAWTEXTPARAMS* params)
+//		RECT* lprc, long uFormat, DRAWTEXTPARAMS* params)
+
 var drawTextEx = user32.MustFindProc("DrawTextExA").Addr()
 
 var _ = builtin6("DrawTextEx(hdc, lpsz, cb, lprc, uFormat, params)",
@@ -1846,6 +1950,7 @@ type DRAWTEXTPARAMS struct {
 const nDRAWTEXTPARAMS = unsafe.Sizeof(DRAWTEXTPARAMS{})
 
 // dll bool User32:TrackMouseEvent(TRACKMOUSEEVENT* lpEventTrack)
+
 var trackMouseEvent = user32.MustFindProc("TrackMouseEvent").Addr()
 var _ = builtin1("TrackMouseEvent(lpEventTrack)",
 	func(a Value) Value {
@@ -1873,6 +1978,7 @@ type TRACKMOUSEEVENT struct {
 const nTRACKMOUSEEVENT = unsafe.Sizeof(TRACKMOUSEEVENT{})
 
 // dll bool User32:FlashWindowEx(FLASHWINFO* fi)
+
 var flashWindowEx = user32.MustFindProc("FlashWindowEx").Addr()
 var _ = builtin1("FlashWindowEx(fi)",
 	func(a Value) Value {
@@ -1902,6 +2008,7 @@ type FLASHWINFO struct {
 const nFLASHWINFO = unsafe.Sizeof(FLASHWINFO{})
 
 // dll long User32:FrameRect(pointer hdc, RECT* rect, pointer brush)
+
 var frameRect = user32.MustFindProc("FrameRect").Addr()
 var _ = builtin3("FrameRect(hdc, rect, brush)",
 	func(a, b, c Value) Value {
@@ -1915,6 +2022,7 @@ var _ = builtin3("FrameRect(hdc, rect, brush)",
 	})
 
 // dll bool User32:GetClipCursor(RECT* rect)
+
 var getClipCursor = user32.MustFindProc("GetClipCursor").Addr()
 var _ = builtin1("GetClipCursor(rect)",
 	func(a Value) Value {
@@ -1927,6 +2035,7 @@ var _ = builtin1("GetClipCursor(rect)",
 	})
 
 // dll bool User32:GetCursorPos(POINT* p)
+
 var getCursorPos = user32.MustFindProc("GetCursorPos").Addr()
 var _ = builtin1("GetCursorPos(rect)",
 	func(a Value) Value {
@@ -1940,6 +2049,7 @@ var _ = builtin1("GetCursorPos(rect)",
 
 // dll bool User32:EnumThreadWindows(long dwThreadId, WNDENUMPROC lpfn,
 //		pointer lParam)
+
 var enumThreadWindows = user32.MustFindProc("EnumThreadWindows").Addr()
 var _ = builtin3("EnumThreadWindows(dwThreadId, lpfn, lParam)",
 	func(a, b, c Value) Value {
@@ -1952,6 +2062,7 @@ var _ = builtin3("EnumThreadWindows(dwThreadId, lpfn, lParam)",
 
 // dll bool User32:EnumChildWindows(pointer hwnd, WNDENUMPROC lpEnumProc,
 //		pointer lParam)
+
 var enumChildWindows = user32.MustFindProc("EnumChildWindows").Addr()
 var _ = builtin3("EnumChildWindowsApi(hwnd, lpEnumProc, lParam)",
 	func(a, b, c Value) Value {
@@ -1963,6 +2074,7 @@ var _ = builtin3("EnumChildWindowsApi(hwnd, lpEnumProc, lParam)",
 	})
 
 // dll pointer User32:WindowFromPoint(POINT pt)
+
 var windowFromPoint = user32.MustFindProc("WindowFromPoint").Addr()
 var _ = builtin1("WindowFromPoint(pt)",
 	func(a Value) Value {
@@ -1974,6 +2086,7 @@ var _ = builtin1("WindowFromPoint(pt)",
 	})
 
 // dll long User32:GetWindowThreadProcessId(pointer hwnd, LONG* lpdwProcessId)
+
 var getWindowThreadProcessId = user32.MustFindProc("GetWindowThreadProcessId").Addr()
 var _ = builtin2("GetWindowThreadProcessId(hwnd, lpdwProcessId)",
 	func(a, b Value) Value {
@@ -1988,6 +2101,7 @@ var _ = builtin2("GetWindowThreadProcessId(hwnd, lpdwProcessId)",
 
 // dll long User32:TrackPopupMenu(pointer hMenu, long uFlags, long x, long y,
 //		long nReserved, pointer hWnd, RECT* prcRect)
+
 var trackPopupMenu = user32.MustFindProc("TrackPopupMenu").Addr()
 var _ = builtin7("TrackPopupMenu(hMenu, uFlags, x, y, nReserved, hWnd, prcRect)",
 	func(a, b, c, d, e, f, g Value) Value {
@@ -2006,6 +2120,7 @@ var _ = builtin7("TrackPopupMenu(hMenu, uFlags, x, y, nReserved, hWnd, prcRect)"
 
 // dll pointer User32:SetWindowsHookEx(long idHook, HOOKPROC lpfn, pointer hMod,
 //		long dwThreadId)
+
 var setWindowsHookEx = user32.MustFindProc("SetWindowsHookExA").Addr()
 var _ = builtin4("SetWindowsHookEx(idHook, lpfn, hMod, dwThreadId)",
 	func(a, b, c, d Value) Value {
@@ -2019,6 +2134,7 @@ var _ = builtin4("SetWindowsHookEx(idHook, lpfn, hMod, dwThreadId)",
 
 // dll long User32:SetScrollInfo(pointer hwnd, long bar, SCROLLINFO* si,
 //		bool redraw)
+
 var setScrollInfo = user32.MustFindProc("SetScrollInfo").Addr()
 var _ = builtin4("SetScrollInfo(hwnd, bar, si, redraw)",
 	func(a, b, c, d Value) Value {
@@ -2043,6 +2159,7 @@ var _ = builtin4("SetScrollInfo(hwnd, bar, si, redraw)",
 
 // dll long User32:ScrollWindowEx(pointer hwnd, long dx, long dy, RECT* scroll,
 //		RECT* clip, pointer rgnUpdate, RECT* rcUpdate, long flags)
+
 var scrollWindowEx = user32.MustFindProc("ScrollWindowEx").Addr()
 var _ = builtin("ScrollWindowEx(hwnd, dx, dy, scroll, clip, rgnUpdate,"+
 	"rcUpdate, flags)",
@@ -2065,6 +2182,7 @@ var _ = builtin("ScrollWindowEx(hwnd, dx, dy, scroll, clip, rgnUpdate,"+
 	})
 
 // dll bool User32:ScreenToClient(pointer hwnd, POINT* p)
+
 var screenToClient = user32.MustFindProc("ScreenToClient").Addr()
 var _ = builtin2("ScreenToClient(hWnd, p)",
 	func(a, b Value) Value {
@@ -2079,6 +2197,7 @@ var _ = builtin2("ScreenToClient(hWnd, p)",
 
 // dll pointer User32:LoadImage(pointer hInstance, resource lpszName,
 //		long uType, long cxDesired, long cyDesired, long fuLoad)
+
 var loadImage = user32.MustFindProc("LoadImageA").Addr()
 var _ = builtin6("LoadImage(hInstance, lpszName, uType, cxDesired, cyDesired,"+
 	" fuLoad)",
@@ -2096,6 +2215,7 @@ var _ = builtin6("LoadImage(hInstance, lpszName, uType, cxDesired, cyDesired,"+
 
 // dll long User32:GetMessage(
 //		MSG* msg, pointer hwnd, long minfilter, long maxfilter)
+
 var getMessage = user32.MustFindProc("GetMessageA").Addr()
 var _ = builtin4("GetMessage(msg, hwnd, minfilter, maxfilter)",
 	func(a, b, c, d Value) Value {
@@ -2117,6 +2237,7 @@ var _ = builtin4("GetMessage(msg, hwnd, minfilter, maxfilter)",
 	})
 
 // dll bool User32:IsDialogMessage(pointer hDlg, MSG* lpMsg)
+
 var isDialogMessage = user32.MustFindProc("IsDialogMessageA").Addr()
 var _ = builtin2("IsDialogMessage(hDlg, lpMsg)",
 	func(a, b Value) Value {
@@ -2129,6 +2250,7 @@ var _ = builtin2("IsDialogMessage(hDlg, lpMsg)",
 	})
 
 // dll bool User32:TranslateMessage(MSG* msg)
+
 var translateMessage = user32.MustFindProc("TranslateMessage").Addr()
 var _ = builtin1("TranslateMessage(msg)",
 	func(a Value) Value {
@@ -2140,6 +2262,7 @@ var _ = builtin1("TranslateMessage(msg)",
 	})
 
 // dll long User32:DispatchMessage(MSG* msg)
+
 var dispatchMessage = user32.MustFindProc("DispatchMessageA").Addr()
 var _ = builtin1("DispatchMessage(msg)",
 	func(a Value) Value {
@@ -2165,6 +2288,7 @@ func obToMSG(ob Value) unsafe.Pointer {
 }
 
 // dll long User32:MapWindowPoints(pointer hwndfrom, pointer hwndto, RECT* p, long n)
+
 var mapWindowPoints = user32.MustFindProc("MapWindowPoints").Addr()
 var _ = builtin3("MapWindowRect(hwndfrom, hwndto, r)",
 	func(a, b, c Value) Value {

@@ -22,7 +22,7 @@ var _ = Global.Builtin("Pcmsrv64", pcmsrv64)
 
 var pcmsrv = windows.NewLazyDLL("pcmsrv64.dll")
 
-// 	dll long pcmsrv32:PCMSAbout(string which, buffer buf, long bufsize)
+// dll long pcmsrv32:PCMSAbout(string which, buffer buf, long bufsize)
 var pcmsAbout = pcmsrv.NewProc("PCMSAbout")
 
 var _ = meth0("Version()",
@@ -41,7 +41,7 @@ var _ = meth0("Version()",
 		return SuStr(str.BeforeFirst(s, "."))
 	})
 
-// 	dll long pcmsrv32:PCMSAddStop(long tripId, [in] string stop)
+// dll long pcmsrv32:PCMSAddStop(long tripId, [in] string stop)
 var pcmsAddStop = pcmsrv.NewProc("PCMSAddStop")
 
 var _ = meth2("PCMAddStop(tripId, stop)",
@@ -53,7 +53,7 @@ var _ = meth2("PCMAddStop(tripId, stop)",
 		return int32Ret(rtn)
 	})
 
-// 	dll long pcmsrv32:PCMSCalculate(long tripId)
+// dll long pcmsrv32:PCMSCalculate(long tripId)
 var pcmsCalculate = pcmsrv.NewProc("PCMSCalculate")
 
 var _ = meth1("PCMCalculate(tripId)",
@@ -63,7 +63,7 @@ var _ = meth1("PCMCalculate(tripId)",
 		return int32Ret(rtn)
 	})
 
-// 	dll long pcmsrv32:PCMSCalcTrip(long tripId, [in] string orig, [in] string dest)
+// dll long pcmsrv32:PCMSCalcTrip(long tripId, [in] string orig, [in] string dest)
 var pcmsCalcTrip = pcmsrv.NewProc("PCMSCalcTrip")
 
 var _ = meth3("PCMCalcTrip(tripId, orig, dest)",
@@ -76,7 +76,7 @@ var _ = meth3("PCMCalcTrip(tripId, orig, dest)",
 		return int32Ret(rtn)
 	})
 
-// 	dll long pcmsrv32:PCMSCloseServer(long server)
+// dll long pcmsrv32:PCMSCloseServer(long server)
 var pcmsCloseServer = pcmsrv.NewProc("PCMSCloseServer")
 
 var _ = meth1("PCMCloseServer(server)",
@@ -86,7 +86,7 @@ var _ = meth1("PCMCloseServer(server)",
 		return int32Ret(rtn)
 	})
 
-// 	dll long pcmsrv32:PCMSDeleteTrip(long tripId)
+// dll long pcmsrv32:PCMSDeleteTrip(long tripId)
 var pcmsDeleteTrip = pcmsrv.NewProc("PCMSDeleteTrip")
 
 var _ = meth1("PCMDeleteTrip(tripId)",
@@ -96,8 +96,9 @@ var _ = meth1("PCMDeleteTrip(tripId)",
 		return int32Ret(rtn)
 	})
 
-// 	dll long pcmsrv32:PCMSGetMatch(long tripId,
-// 		long index, string buffer, long bufLen)
+// dll long pcmsrv32:PCMSGetMatch(long tripId,
+//
+//	long index, string buffer, long bufLen)
 var pcmsGetMatch = pcmsrv.NewProc("PCMSGetMatch")
 
 var _ = meth2("GetMatch(tripId, i)",
@@ -113,10 +114,10 @@ var _ = meth2("GetMatch(tripId, i)",
 		return SuStr(heap.GetStrZ(buf, int(buflen)))
 	})
 
-// 	dll long pcmsrv32:PCMSGetRpt(long tripId, long rpt, string buffer, long bufLen)
+// dll long pcmsrv32:PCMSGetRpt(long tripId, long rpt, string buffer, long bufLen)
 var pcmsGetRpt = pcmsrv.NewProc("PCMSGetRpt")
 
-// 	dll long pcmsrv32:PCMSNumRptBytes(long tripId, long rpt)
+// dll long pcmsrv32:PCMSNumRptBytes(long tripId, long rpt)
 var pcmsNumRptBytes = pcmsrv.NewProc("PCMSNumRptBytes")
 
 const PCM_RPT_STATE = 1
@@ -139,7 +140,7 @@ var _ = meth2("GetRpt(tripId, rpt)",
 		return SuStr(heap.GetStrZ(buf, int(size)))
 	})
 
-// 	dll long pcmsrv32:PCMSNewTrip(long serverId)
+// dll long pcmsrv32:PCMSNewTrip(long serverId)
 var pcmsNewTrip = pcmsrv.NewProc("PCMSNewTrip")
 
 var _ = meth1("PCMNewTrip(tripId)",
@@ -149,7 +150,7 @@ var _ = meth1("PCMNewTrip(tripId)",
 		return int32Ret(rtn)
 	})
 
-// 	dll long pcmsrv32:PCMSNumMatches(long tripId)
+// dll long pcmsrv32:PCMSNumMatches(long tripId)
 var pcmsNumMatches = pcmsrv.NewProc("PCMSNumMatches")
 
 var _ = meth1("PCMNumMatches(tripId)",
@@ -159,7 +160,7 @@ var _ = meth1("PCMNumMatches(tripId)",
 		return int32Ret(rtn)
 	})
 
-// 	dll long pcmsrv32:PCMSOpenServer(long hInstance, long hwnd)
+// dll long pcmsrv32:PCMSOpenServer(long hInstance, long hwnd)
 var pcmsOpenServer = pcmsrv.NewProc("PCMSOpenServer")
 
 var _ = meth2("PCMOpenServer(tripId, hwnd)",
@@ -170,7 +171,7 @@ var _ = meth2("PCMOpenServer(tripId, hwnd)",
 		return int32Ret(rtn)
 	})
 
-// 	dll long pcmsrv32:PCMSIsValid(long serverId)
+// dll long pcmsrv32:PCMSIsValid(long serverId)
 var pcmsIsValid = pcmsrv.NewProc("PCMSIsValid")
 
 var _ = meth1("PCMIsValid(serverId)",
@@ -180,7 +181,7 @@ var _ = meth1("PCMIsValid(serverId)",
 		return int32Ret(rtn)
 	})
 
-// 	dll void pcmsrv32:PCMSSetBordersOpen(long tripId, bool open)
+// dll void pcmsrv32:PCMSSetBordersOpen(long tripId, bool open)
 var pcmsSetBordersOpen = pcmsrv.NewProc("PCMSSetBordersOpen")
 
 var _ = meth2("PCMSetBordersOpen(tripId, open)",
@@ -191,7 +192,7 @@ var _ = meth2("PCMSetBordersOpen(tripId, open)",
 		return nil
 	})
 
-// 	dll void pcmsrv32:PCMSSetCalcType(long tripId, long routeType)
+// dll void pcmsrv32:PCMSSetCalcType(long tripId, long routeType)
 var pcmsSetCalcType = pcmsrv.NewProc("PCMSSetCalcType")
 
 var _ = meth2("PCMSetCalcType(tripId, routeType)",
@@ -202,7 +203,7 @@ var _ = meth2("PCMSetCalcType(tripId, routeType)",
 		return nil
 	})
 
-// 	dll long pcmsrv32:PCMSLookup(long tripId, [in] string placeName, long easyMatch)
+// dll long pcmsrv32:PCMSLookup(long tripId, [in] string placeName, long easyMatch)
 var pcmsLookup = pcmsrv.NewProc("PCMSLookup")
 
 var _ = meth3("PCMLookup(tripId, placeName, easyMatch)",
@@ -215,7 +216,7 @@ var _ = meth3("PCMLookup(tripId, placeName, easyMatch)",
 		return int32Ret(rtn)
 	})
 
-// 	dll void pcmsrv32:PCMSSetMiles(long tripId)
+// dll void pcmsrv32:PCMSSetMiles(long tripId)
 var pcmsSetMiles = pcmsrv.NewProc("PCMSSetMiles")
 
 var _ = meth1("PCMSetMiles(tripId)",
@@ -225,7 +226,7 @@ var _ = meth1("PCMSetMiles(tripId)",
 		return int32Ret(rtn)
 	})
 
-// 	dll void pcmsrv32:PCMSSetCustomMode(long tripId, bool onOff)
+// dll void pcmsrv32:PCMSSetCustomMode(long tripId, bool onOff)
 var pcmsSetCustomMode = pcmsrv.NewProc("PCMSSetCustomMode")
 
 var _ = meth2("PCMSetCustomMode(tripId, onOff)",
@@ -236,8 +237,9 @@ var _ = meth2("PCMSetCustomMode(tripId, onOff)",
 		return nil
 	})
 
-// 	dll void pcmsrv32:PCMSSetCalcTypeEx(long tripId, long routeType,
-// 		long optFlags, long vehType)
+// dll void pcmsrv32:PCMSSetCalcTypeEx(long tripId, long routeType,
+//
+//	long optFlags, long vehType)
 var pcmsSetCalcTypeEx = pcmsrv.NewProc("PCMSSetCalcTypeEx")
 
 var _ = meth4("PCMSetCalcTypeEx(tripId, routeType, optFlags, vehType)",

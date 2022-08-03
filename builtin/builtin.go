@@ -12,11 +12,14 @@ import (
 
 var UIThread *Thread // set by main
 
-/* builtin defines a built in function in globals
+/*
+builtin defines a built in function in globals
+
 for example:
-var _ = builtin("Foo(a,b)", func(t *Thread, args []Value) Value {
-		...
-	}))
+
+	var _ = builtin("Foo(a,b)", func(t *Thread, args []Value) Value {
+			...
+		}))
 */
 func builtin(s string, f func(t *Thread, args []Value) Value) bool {
 	name, ps := paramSplit(s)

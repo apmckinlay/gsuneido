@@ -76,10 +76,11 @@ func TestCheckActions(t *testing.T) {
 
 // script takes a string containing a space separated list of actions.
 // Each action consists of:
-// 	- transaction number 1 or 2
-//	- action type: (r)ead, (w)rite, (c)ommit, (a)bort
-//	- read is followed by two characters specifying a key range
-//	- write is folloed by one character specifying a key
+//   - transaction number 1 or 2
+//   - action type: (r)ead, (w)rite, (c)ommit, (a)bort
+//   - read is followed by two characters specifying a key range
+//   - write is folloed by one character specifying a key
+//
 // If the type is capitalized (R, W, C, A) then the action is expected to fail
 func script(t *testing.T, s string) {
 	t.Helper()

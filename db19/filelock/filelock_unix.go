@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style
 // license that can be found in the LICENSE file.
 
-// +build darwin dragonfly freebsd linux netbsd openbsd
+//go:build unix
 
 package filelock
 
@@ -20,7 +20,7 @@ const (
 
 func lock(f File, lt lockType) (err error) {
 	for {
-		err = syscall.Flock(int(f.Fd()), int(lt) | syscall.LOCK_NB)
+		err = syscall.Flock(int(f.Fd()), int(lt)|syscall.LOCK_NB)
 		if err != syscall.EINTR {
 			break
 		}

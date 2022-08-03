@@ -215,6 +215,7 @@ func FuzzHmap(f *testing.F) {
 		}
 	})
 }
+
 // to run: go test -fuzz=FuzzHmap -run=FuzzHmap
 
 //-------------------------------------------------------------------

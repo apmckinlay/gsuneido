@@ -16,6 +16,7 @@ import (
 var wtsapi32 = MustLoadDLL("wtsapi32.dll")
 
 // dll void WTSAPI32:WTSFreeMemory(pointer adr)
+
 var wtsFreeMemory = wtsapi32.MustFindProc("WTSFreeMemory").Addr()
 
 func WTSFreeMemory(adr uintptr) {
@@ -25,6 +26,7 @@ func WTSFreeMemory(adr uintptr) {
 
 // dll bool WTSAPI32:WTSQuerySessionInformation(pointer hServer, long SessionId,
 //		long WTSInfoClass, POINTER* ppBuffer, LONG* pBytesReturned)
+
 var wtsQuerySessionInformation = wtsapi32.MustFindProc("WTSQuerySessionInformationA").Addr()
 
 const WTS_CURRENT_SERVER_HANDLE = 0

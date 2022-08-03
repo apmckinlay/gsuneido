@@ -16,9 +16,10 @@ import (
 var ole32 = MustLoadDLL("ole32.dll")
 
 // dll long Ole32:CreateStreamOnHGlobal(
-// 	pointer hGlobal,
-// 	bool fDeleteOnRelease,
-// 	POINTER* ppstm)
+//		pointer hGlobal,
+//		bool fDeleteOnRelease,
+//		POINTER* ppstm)
+
 var createStreamOnHGlobal = ole32.MustFindProc("CreateStreamOnHGlobal").Addr()
 var _ = builtin3("CreateStreamOnHGlobal(hGlobal, fDeleteOnRelease, ppstm)",
 	func(a, b, c Value) Value {
@@ -40,6 +41,7 @@ var oleaut32 = MustLoadDLL("oleaut32.dll")
 //		bool fRunmode,
 //		GUID* riid,
 //		POINTER* lplpvObj)
+
 var oleLoadPicture = oleaut32.MustFindProc("OleLoadPicture").Addr()
 var _ = builtin5("OleLoadPicture(lpstream, lSize, fRunmode, riid, lplpvobj)",
 	func(a, b, c, d, e Value) Value {

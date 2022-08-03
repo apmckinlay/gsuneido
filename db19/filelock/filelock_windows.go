@@ -34,7 +34,7 @@ func lock(f File, lt lockType) error {
 	ol := new(windows.Overlapped)
 
 	err := windows.LockFileEx(windows.Handle(f.Fd()),
-		uint32(lt) | windows.LOCKFILE_FAIL_IMMEDIATELY,
+		uint32(lt)|windows.LOCKFILE_FAIL_IMMEDIATELY,
 		reserved, allBytes, allBytes, ol)
 	if err != nil {
 		return &os.PathError{

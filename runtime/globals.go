@@ -30,6 +30,7 @@ type typeGlobal struct{}
 var Global typeGlobal
 
 // globals stores the value of global names.
+//
 //	Normal: values[gnum] != nil
 //	Unloaded: values[gnum] == nil
 //	Error: values[gnum] == nil, errors[gnum] == string

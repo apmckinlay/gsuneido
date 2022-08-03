@@ -31,9 +31,9 @@ func JoinRows(row1, row2 Row) Row {
 }
 
 // GetVal is used by query summarize and expr.
-//	- returns "" for fld not in hdr.Columns
-//	- returns stored value for Fields (rule ignored)
-//	- calls rule for Columns not in Fields
+//   - returns "" for fld not in hdr.Columns
+//   - returns stored value for Fields (rule ignored)
+//   - calls rule for Columns not in Fields
 func (row Row) GetVal(hdr *Header, fld string, th *Thread, tran *SuTran) Value {
 	if !slices.Contains(hdr.Columns, fld) {
 		return EmptyStr

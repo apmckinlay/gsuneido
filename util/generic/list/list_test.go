@@ -4,8 +4,8 @@
 package list
 
 import (
-	"testing"
 	"github.com/apmckinlay/gsuneido/util/assert"
+	"testing"
 )
 
 type Num int

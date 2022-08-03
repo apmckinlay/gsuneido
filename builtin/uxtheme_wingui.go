@@ -14,7 +14,8 @@ import (
 var uxtheme = MustLoadDLL("uxtheme.dll")
 
 // dll uxtheme:DrawThemeBackground(pointer hTheme, pointer hdc, long iPartId,
-//		long iStateId, RECT* pRect, RECT* pClipRect) long
+//
+//	long iStateId, RECT* pRect, RECT* pClipRect) long
 var drawThemeBackground = uxtheme.MustFindProc("DrawThemeBackground").Addr()
 var _ = builtin6("DrawThemeBackground(hTheme, hdc, iPartId, iStateId, pRect,"+
 	" pClipRect)",
@@ -33,8 +34,9 @@ var _ = builtin6("DrawThemeBackground(hTheme, hdc, iPartId, iStateId, pRect,"+
 	})
 
 // dll uxtheme:DrawThemeText(pointer hTheme, pointer hdc, long iPartId,
-//		long iStateId, string pszText, long iCharCount, long dwTextFlags,
-//		long dwTextFlags2, RECT* pRect) long
+//
+//	long iStateId, string pszText, long iCharCount, long dwTextFlags,
+//	long dwTextFlags2, RECT* pRect) long
 var drawThemeText = uxtheme.MustFindProc("DrawThemeText").Addr()
 var _ = builtin("DrawThemeText(hTheme, hdc, iPartId, iStateId, pszText,"+
 	" iCharCount, dwTextFlags, dwTextFlags2, pRect)",
@@ -93,9 +95,10 @@ var _ = builtin1("CloseThemeData(hTheme)",
 	})
 
 // dll bool UxTheme:IsThemeBackgroundPartiallyTransparent(
-//		pointer hTheme,
-//		long iPartId,
-//		long iStateId)
+//
+//	pointer hTheme,
+//	long iPartId,
+//	long iStateId)
 var isThemeBackgroundPartiallyTransparent = uxtheme.MustFindProc("IsThemeBackgroundPartiallyTransparent").Addr()
 var _ = builtin3("IsThemeBackgroundPartiallyTransparent(hTheme, iPartId, iStateId)",
 	func(a, b, c Value) Value {
@@ -118,7 +121,8 @@ var _ = builtin2("OpenThemeData(hwnd, pszClassList)",
 	})
 
 // dll long UxTheme:DrawThemeParentBackground(pointer hwnd, pointer hdc,
-//		RECT* prc)
+//
+//	RECT* prc)
 var drawThemeParentBackground = uxtheme.MustFindProc("DrawThemeParentBackground").Addr()
 var _ = builtin3("DrawThemeParentBackground(hwnd, hdc, prc)",
 	func(a, b, c Value) Value {

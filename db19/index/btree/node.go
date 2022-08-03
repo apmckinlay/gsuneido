@@ -23,10 +23,10 @@ import (
 // So we can only iterate from the beginning, no random access or binary search.
 //
 // Entry is:
-//		- 5 byte smalloffset
-//		- varint prefix length (npre)
-//		- varint diff length
-//		- diff part bytes (variable length)
+//   - 5 byte smalloffset
+//   - varint prefix length (npre)
+//   - varint diff length
+//   - diff part bytes (variable length)
 type node []byte
 
 const maxVarint = 32767
@@ -459,7 +459,7 @@ func (nd node) printTreeNode() {
 }
 
 // print does fmt.Println
-// after converting []byte to string and empty strings to ''
+// after converting []byte to string and empty strings to single quoted
 func print(args ...any) {
 	for i, x := range args {
 		switch x := x.(type) {

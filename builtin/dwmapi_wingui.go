@@ -15,6 +15,7 @@ var dwmapi = MustLoadDLL("dwmapi.dll")
 
 // dll pointer Dwmapi:DwmGetWindowAttribute(pointer hwnd, long dwAttribute,
 //		RECT* pvAttribute, long cbAttribute)
+
 var dwmGetWindowAttribute = dwmapi.MustFindProc("DwmGetWindowAttribute").Addr()
 var _ = builtin4("DwmGetWindowAttributeRect(hwnd, dwAttribute, pvAttribute,"+
 	" cbAttribute)",

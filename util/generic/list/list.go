@@ -6,6 +6,7 @@ package list
 type Equalable interface {
 	Equal(x any) bool
 }
+
 // Equalable could be generic and typed
 // but Value has Equal(any)
 

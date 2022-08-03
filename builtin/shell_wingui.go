@@ -18,6 +18,7 @@ import (
 var shell32 = MustLoadDLL("shell32.dll")
 
 // dll void Shell32:DragAcceptFiles(pointer hWnd, bool fAccept)
+
 var dragAcceptFiles = shell32.MustFindProc("DragAcceptFiles").Addr()
 var _ = builtin2("DragAcceptFiles(hWnd, fAccept)",
 	func(a, b Value) Value {
@@ -28,6 +29,7 @@ var _ = builtin2("DragAcceptFiles(hWnd, fAccept)",
 	})
 
 // dll bool Shell32:SHGetPathFromIDList(pointer pidl, string path)
+
 var shGetPathFromIDList = shell32.MustFindProc("SHGetPathFromIDListA").Addr()
 var _ = builtin1("SHGetPathFromIDList(pidl)",
 	func(a Value) Value {
@@ -44,6 +46,7 @@ var _ = builtin1("SHGetPathFromIDList(pidl)",
 
 // dll long Shell32:DragQueryFile(
 //		pointer hDrop, long iFile, string lpszFile, long cch)
+
 var dragQueryFile = shell32.MustFindProc("DragQueryFile").Addr()
 
 var _ = builtin2("DragQueryFile(hDrop, iFile)",
@@ -74,6 +77,7 @@ var _ = builtin1("DragQueryFileCount(hDrop)",
 	})
 
 // dll bool Shell32:Shell_NotifyIcon(long dwMessage, NOTIFYICONDATA* lpdata)
+
 var shell_NotifyIcon = shell32.MustFindProc("Shell_NotifyIconA").Addr()
 var _ = builtin2("Shell_NotifyIcon(dwMessage, lpdata)",
 	func(a, b Value) Value {
@@ -122,6 +126,7 @@ type NOTIFYICONDATA struct {
 const nNOTIFYICONDATA = unsafe.Sizeof(NOTIFYICONDATA{})
 
 // dll bool Shell32:ShellExecuteEx(SHELLEXECUTEINFO* lpExecInfo)
+
 var shellExecuteEx = shell32.MustFindProc("ShellExecuteExA").Addr()
 var _ = builtin1("ShellExecuteEx(lpExecInfo)",
 	func(a Value) Value {
@@ -172,6 +177,7 @@ const nSHELLEXECUTEINFO = unsafe.Sizeof(SHELLEXECUTEINFO{})
 const MAX_PATH = 260
 
 // dll pointer Shell32:SHBrowseForFolder(BROWSEINFO* lpbi)
+
 var sHBrowseForFolder = shell32.MustFindProc("SHBrowseForFolderA").Addr()
 var _ = builtin1("SHBrowseForFolder(lpbi)",
 	func(a Value) Value {

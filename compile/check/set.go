@@ -43,7 +43,9 @@ func (ls set) union(ls2 set) set {
 
 // intersect returns ls with elements of ls2 removed.
 // Should be used like:
-//		x = x.intersect(y)
+//
+//	x = x.intersect(y)
+//
 // WARNING: don't use this on a shared set (use copy, cow is not sufficient)
 func (ls set) intersect(ls2 set) set {
 	dst := 0

@@ -4,9 +4,9 @@
 // Package ast defines the node types
 // used by the compiler to build syntax trees
 //
-// 	Expr
+//	Expr
 //		Ident
-// 		Constant, Symbol, Function, Block
+//		Constant, Symbol, Function, Block
 //		Unary, Binary, Trinary, Nary, In
 //		Mem, RangeTo, RangeLen
 //		Call
@@ -630,9 +630,9 @@ func (a *Compound) Children(fn func(Node) Node) {
 
 type If struct {
 	stmtNodeT
-	Cond Expr
-	Then Statement
-	Else Statement // may be nil
+	Cond    Expr
+	Then    Statement
+	Else    Statement // may be nil
 	ElseEnd int32
 }
 

@@ -9,15 +9,17 @@
 // If .T(t) is not specified, panic is called with the error string.
 //
 // For example:
-//		assert.That(a || b)
-//		assert.This(x).Is(y)
-//		assert.T(t).This(x).Like(y)
-//		assert.Msg("first time").That(a || b)
-//		assert.T(t).Msg("second").This(fn).Panics("illegal")
+//
+//	assert.That(a || b)
+//	assert.This(x).Is(y)
+//	assert.T(t).This(x).Like(y)
+//	assert.Msg("first time").That(a || b)
+//	assert.T(t).Msg("second").This(fn).Panics("illegal")
 //
 // Use a variable to avoid specifying .T(t) repeatedly:
-//		assert := assert.T(t)
-//		assert.This(x).Is(y)
+//
+//	assert := assert.T(t)
+//	assert.This(x).Is(y)
 package assert
 
 import (

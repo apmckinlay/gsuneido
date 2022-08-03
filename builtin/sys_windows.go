@@ -14,10 +14,11 @@ import (
 var kernel32 = windows.MustLoadDLL("kernel32.dll")
 
 // dll bool Kernel32:GetDiskFreeSpaceEx(
-// 	[in] string			directoryName,
-// 	ULARGE_INTEGER*		freeBytesAvailableToCaller,
-// 	ULARGE_INTEGER*		totalNumberOfBytes,
-// 	ULARGE_INTEGER*		totalNumberOfFreeBytes)
+//		[in] string			directoryName,
+//		ULARGE_INTEGER*		freeBytesAvailableToCaller,
+//		ULARGE_INTEGER*		totalNumberOfBytes,
+//		ULARGE_INTEGER*		totalNumberOfFreeBytes)
+
 var getDiskFreeSpaceEx = kernel32.MustFindProc("GetDiskFreeSpaceExA").Addr()
 
 var _ = builtin1("GetDiskFreeSpace(dir = '.')", func(arg Value) Value {

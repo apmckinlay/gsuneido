@@ -116,7 +116,7 @@ func (m *Meta) ApplyMerge(updates []MergeUpdate) {
 	// TODO use generics to eliminate duplication
 	info := m.info.Mutable()
 	for _, up := range updates {
-		ti := *info.MustGet(up.table) // copy
+		ti := *info.MustGet(up.table)                        // copy
 		ti.Indexes = append(ti.Indexes[:0:0], ti.Indexes...) // copy
 		for i, ov := range ti.Indexes {
 			ti.Indexes[i] = ov.WithMerged(up.results[i], up.nmerged)
@@ -161,7 +161,7 @@ func (m *Meta) ApplyPersist(updates []PersistUpdate) {
 	// TODO use generics to eliminate duplication
 	info := m.info.Mutable()
 	for _, up := range updates {
-		ti := *info.MustGet(up.table) // copy
+		ti := *info.MustGet(up.table)                        // copy
 		ti.Indexes = append(ti.Indexes[:0:0], ti.Indexes...) // copy
 		for i, ov := range ti.Indexes {
 			if up.results[i] != nil {

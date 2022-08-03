@@ -268,7 +268,7 @@ func (bt *btree) stats(depth int, offset uint64, stats *Stats) {
 			stats.Count++
 		}
 	}
-	stats.NodeFan[16 - bits.LeadingZeros16(n)]++
+	stats.NodeFan[16-bits.LeadingZeros16(n)]++
 }
 
 func (stats Stats) String() string {
@@ -281,7 +281,7 @@ func (stats Stats) String() string {
 		" f ", stats.Fan) + "    >= "
 	for i, n := range stats.NodeFan {
 		if n > 0 {
-			s += fmt.Sprintf("%d: %d ", (1 << i)/2, n)
+			s += fmt.Sprintf("%d: %d ", (1<<i)/2, n)
 		}
 	}
 	return s

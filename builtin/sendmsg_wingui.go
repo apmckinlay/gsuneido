@@ -15,6 +15,7 @@ import (
 
 // dll User32:SendMessage(pointer hwnd, long msg, pointer wParam,
 //		pointer lParam) pointer
+
 var sendMessage = user32.MustFindProc("SendMessageA").Addr()
 var _ = builtin4("SendMessage(hwnd, msg, wParam, lParam)",
 	func(a, b, c, d Value) Value {
@@ -28,6 +29,7 @@ var _ = builtin4("SendMessage(hwnd, msg, wParam, lParam)",
 
 // dll User32:SendMessage(pointer hwnd, long msg, pointer wParam,
 //		string text) pointer
+
 var _ = builtin4("SendMessageText(hwnd, msg, wParam, text)",
 	sendMessageText)
 
@@ -43,6 +45,7 @@ func sendMessageText(a, b, c, d Value) Value {
 
 // dll User32:SendMessage(pointer hwnd, long msg, pointer wParam,
 //		[in] string text) pointer
+
 var _ = builtin4("SendMessageTextIn(hwnd, msg, wParam, text)",
 	// can't pass direct pointer so same as SendMessageText (i.e. still copies)
 	sendMessageText)

@@ -24,7 +24,7 @@ func AddUnique[E comparable, S ~[]E](s S, e E) S {
 	return append(s, e)
 }
 
-func AddUniqueFn[E any, S ~[]E](s S, e E, eq func(E,E) bool) S {
+func AddUniqueFn[E any, S ~[]E](s S, e E, eq func(E, E) bool) S {
 	if slc.ContainsFn(s, e, eq) {
 		return s
 	}
@@ -78,7 +78,7 @@ outer:
 	return z
 }
 
-func UnionFn[E any, S ~[]E](x, y S, eq func(E,E) bool) S {
+func UnionFn[E any, S ~[]E](x, y S, eq func(E, E) bool) S {
 	if len(x) == 0 {
 		return slices.Clip(y) // so append won't share
 	}
@@ -153,7 +153,7 @@ outer:
 	return z
 }
 
-func IntersectFn[E any, S ~[]E](x, y S, eq func(E,E) bool) S {
+func IntersectFn[E any, S ~[]E](x, y S, eq func(E, E) bool) S {
 	if len(x) == 0 || len(y) == 0 {
 		return S{}
 	}

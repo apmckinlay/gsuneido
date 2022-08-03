@@ -10,10 +10,11 @@
 //
 // It does NOT include support for install or remove.
 // Instead, use the Windows sc command:
-//		sc create <service_name> binpath= "<path_to_exe> <exe_args>" <options>
-//		sc start <service_name>
-//		sc stop <service_name>
-//		sc delete <service_name>
+//
+//	sc create <service_name> binpath= "<path_to_exe> <exe_args>" <options>
+//	sc start <service_name>
+//	sc stop <service_name>
+//	sc delete <service_name>
 package system
 
 import (

@@ -27,12 +27,12 @@ func init() {
 	CursorMethods = Methods{
 		"Next": method("(transaction)",
 			func(th *Thread, this Value, args []Value) Value {
-			return this.(*SuCursor).GetRec(th, args[0].(*SuTran), Next)
-		}),
+				return this.(*SuCursor).GetRec(th, args[0].(*SuTran), Next)
+			}),
 		"Prev": method("(transaction)",
 			func(th *Thread, this Value, args []Value) Value {
-			return this.(*SuCursor).GetRec(th, args[0].(*SuTran), Prev)
-		}),
+				return this.(*SuCursor).GetRec(th, args[0].(*SuTran), Prev)
+			}),
 		"Output": method("(transaction, record)",
 			func(*Thread, Value, []Value) Value {
 				panic("cursor.Output is not supported")

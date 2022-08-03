@@ -2,7 +2,9 @@
 // Governed by the MIT license found in the LICENSE file.
 
 // Package hamt implements a hash array mapped trie.
-// 		http://lampwww.epfl.ch/papers/idealhashtrees.pdf
+//
+// http://lampwww.epfl.ch/papers/idealhashtrees.pdf
+//
 // It is persistent in the functional sense.
 //
 // Because Go doesn't have unions, and interfaces are twice as big as pointers,
@@ -17,10 +19,8 @@
 //
 // It has two modes, mutable and immutable.
 // This allows "batching" updates to share path copying.
-//
-// - Mutable returns an updateable copy.
-//
-// - Freeze returns an immutable copy.
+//   - Mutable returns an updateable copy.
+//   - Freeze returns an immutable copy.
 //
 // Put and Delete can only be used when mutable.
 // When mutable it is NOT thread safe, it should be thread contained.

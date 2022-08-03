@@ -577,7 +577,7 @@ func (ob *SuObject) Hash() uint32 {
 		if len(ob.list) > 1 {
 			hash = 31*hash + ob.list[1].Hash2()
 		}
-		}
+	}
 	if 0 < ob.named.Size() && ob.named.Size() <= 4 {
 		iter := ob.named.Iter()
 		for {

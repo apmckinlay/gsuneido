@@ -39,7 +39,7 @@ type Builder struct {
 	blocks []*block
 	free   []*block
 	work   chan void // send to tell worker there is something to do
-	done   chan any // worker sends nil or error when finished
+	done   chan any  // worker sends nil or error when finished
 }
 
 // NewSorting returns a new list Builder with incremental sorting.

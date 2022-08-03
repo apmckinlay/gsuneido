@@ -18,9 +18,9 @@ type Range = iterator.Range
 //
 // OverIter also tracks read ranges for transaction conflict checking.
 type OverIter struct {
-	table    string
-	iIndex   int
-	iters    []iterT
+	table  string
+	iIndex int
+	iters  []iterT
 	// We need to keep our own curKey/Off independent of the source iterators
 	// because new source iterators may be returned by the callback.
 	curKey string

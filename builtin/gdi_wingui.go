@@ -65,6 +65,7 @@ type TEXTMETRIC struct {
 const nTEXTMETRIC = unsafe.Sizeof(TEXTMETRIC{})
 
 // dll Gdi32:CreateFontIndirect(LOGFONT* lf) gdiobj
+
 var createFontIndirect = gdi32.MustFindProc("CreateFontIndirectA").Addr()
 var _ = builtin1("CreateFontIndirect(logfont)",
 	func(a Value) Value {
@@ -94,6 +95,7 @@ var _ = builtin1("CreateFontIndirect(logfont)",
 
 // dll pointer Gdi32:AddFontMemResourceEx([in] string pFileView, long cjSize,
 //		pointer pvResrved, LONG* pNumFonts)
+
 var addFontMemResourceEx = gdi32.MustFindProc("AddFontMemResourceEx").Addr()
 var _ = builtin4("AddFontMemResourceEx(pFileView, cjSize, pvResrved, pNumFonts)",
 	func(a, b, c, d Value) Value {
@@ -111,6 +113,7 @@ var _ = builtin4("AddFontMemResourceEx(pFileView, cjSize, pvResrved, pNumFonts)"
 	})
 
 // dll bool Gdi32:GetTextMetrics(pointer hdc, TEXTMETRIC* tm)
+
 var getTextMetrics = gdi32.MustFindProc("GetTextMetricsA").Addr()
 var _ = builtin2("GetTextMetrics(hdc, tm)",
 	func(a, b Value) Value {
@@ -162,6 +165,7 @@ var _ = builtin2("GetDeviceCaps(hdc, nIndex)",
 // dll Gdi32:BitBlt(pointer hdcDest,
 //		long nXDest, long nYDest, long nWidth, long nHeight,
 //		pointer hdcSrc, long nXSrc, long nYSrc, long dwRop) bool
+
 var bitBlt = gdi32.MustFindProc("BitBlt").Addr()
 var _ = builtin("BitBlt(hdc, x, y, cx, cy, hdcSrc, x1, y1, rop)",
 	func(_ *Thread, a []Value) Value {
@@ -179,6 +183,7 @@ var _ = builtin("BitBlt(hdc, x, y, cx, cy, hdcSrc, x1, y1, rop)",
 	})
 
 // dll Gdi32:CreateCompatibleBitmap(pointer hdc, long nWidth, long nHeight) gdiobj
+
 var createCompatibleBitmap = gdi32.MustFindProc("CreateCompatibleBitmap").Addr()
 var _ = builtin3("CreateCompatibleBitmap(hdc, cx, cy)",
 	func(a, b, c Value) Value {
@@ -190,6 +195,7 @@ var _ = builtin3("CreateCompatibleBitmap(hdc, cx, cy)",
 	})
 
 // dll Gdi32:CreateCompatibleDC(pointer hdc) pointer
+
 var createCompatibleDC = gdi32.MustFindProc("CreateCompatibleDC").Addr()
 var _ = builtin1("CreateCompatibleDC(hdc)",
 	func(a Value) Value {
@@ -199,6 +205,7 @@ var _ = builtin1("CreateCompatibleDC(hdc)",
 	})
 
 // dll Gdi32:CreateSolidBrush(long rgb) gdiobj
+
 var createSolidBrush = gdi32.MustFindProc("CreateSolidBrush").Addr()
 var _ = builtin1("CreateSolidBrush(i)",
 	func(a Value) Value {
@@ -208,6 +215,7 @@ var _ = builtin1("CreateSolidBrush(i)",
 	})
 
 // dll pointer Gdi32:SelectObject(pointer hdc, pointer obj)
+
 var selectObject = gdi32.MustFindProc("SelectObject").Addr()
 var _ = builtin2("SelectObject(hdc, obj)",
 	func(a, b Value) Value {
@@ -218,6 +226,7 @@ var _ = builtin2("SelectObject(hdc, obj)",
 	})
 
 // dll bool Gdi32:GetTextExtentPoint32(pointer hdc, [in] string text, long len, POINT* p)
+
 var getTextExtentPoint32 = gdi32.MustFindProc("GetTextExtentPoint32A").Addr()
 var _ = builtin4("GetTextExtentPoint32(hdc, text, len, p)",
 	func(a, b, c, d Value) Value {
@@ -246,6 +255,7 @@ var _ = builtin1("GetTextFace(hdc)",
 	})
 
 // dll long Gdi32:SetBkMode(pointer hdc, long mode)
+
 var setBkMode = gdi32.MustFindProc("SetBkMode").Addr()
 var _ = builtin2("SetBkMode(hdc, color)",
 	func(a, b Value) Value {
@@ -256,6 +266,7 @@ var _ = builtin2("SetBkMode(hdc, color)",
 	})
 
 // dll long Gdi32:SetBkColor(pointer hdc, long color)
+
 var setBkColor = gdi32.MustFindProc("SetBkColor").Addr()
 var _ = builtin2("SetBkColor(hdc, color)",
 	func(a, b Value) Value {
@@ -266,6 +277,7 @@ var _ = builtin2("SetBkColor(hdc, color)",
 	})
 
 // dll Gdi32:DeleteDC(pointer hdc) bool
+
 var deleteDC = gdi32.MustFindProc("DeleteDC").Addr()
 var _ = builtin1("DeleteDC(hdc)",
 	func(a Value) Value {
@@ -275,6 +287,7 @@ var _ = builtin1("DeleteDC(hdc)",
 	})
 
 // dll Gdi32:DeleteObject(pointer hgdiobj) bool
+
 var deleteObject = gdi32.MustFindProc("DeleteObject").Addr()
 var _ = builtin1("DeleteObject(hgdiobj)",
 	func(a Value) Value {
@@ -284,6 +297,7 @@ var _ = builtin1("DeleteObject(hgdiobj)",
 	})
 
 // dll Gdi32:GetClipBox(pointer hdc, RECT* rect) long
+
 var getClipBox = gdi32.MustFindProc("GetClipBox").Addr()
 var _ = builtin2("GetClipBox(hdc, rect)",
 	func(a, b Value) Value {
@@ -298,6 +312,7 @@ var _ = builtin2("GetClipBox(hdc, rect)",
 	})
 
 // dll Gdi32:GetPixel(pointer hdc, long nXPos, long nYPos) long
+
 var getPixel = gdi32.MustFindProc("GetPixel").Addr()
 var _ = builtin3("GetPixel(hdc, nXPos, nYPos)",
 	func(a, b, c Value) Value {
@@ -309,6 +324,7 @@ var _ = builtin3("GetPixel(hdc, nXPos, nYPos)",
 	})
 
 // dll Gdi32:PtVisible(pointer hdc, long nXPos, long nYPos) bool
+
 var ptVisible = gdi32.MustFindProc("PtVisible").Addr()
 var _ = builtin3("PtVisible(hdc, nXPos, nYPos)",
 	func(a, b, c Value) Value {
@@ -323,6 +339,7 @@ var _ = builtin3("PtVisible(hdc, nXPos, nYPos)",
 	})
 
 // dll Gdi32:Rectangle(pointer hdc, long left, long top, long right, long bottom) bool
+
 var rectangle = gdi32.MustFindProc("Rectangle").Addr()
 var _ = builtin5("Rectangle(hdc, left, top, right, bottom)",
 	func(a, b, c, d, e Value) Value {
@@ -336,6 +353,7 @@ var _ = builtin5("Rectangle(hdc, left, top, right, bottom)",
 	})
 
 // dll Gdi32:SetStretchBltMode(pointer hdc, long iStretchMode) long
+
 var setStretchBltMode = gdi32.MustFindProc("SetStretchBltMode").Addr()
 var _ = builtin2("SetStretchBltMode(hdc, iStretchMode)",
 	func(a, b Value) Value {
@@ -346,6 +364,7 @@ var _ = builtin2("SetStretchBltMode(hdc, iStretchMode)",
 	})
 
 // dll Gdi32:SetTextColor(pointer hdc, long color) long
+
 var setTextColor = gdi32.MustFindProc("SetTextColor").Addr()
 var _ = builtin2("SetTextColor(hdc, color)",
 	func(a, b Value) Value {
@@ -355,8 +374,10 @@ var _ = builtin2("SetTextColor(hdc, color)",
 		return intRet(rtn)
 	})
 
-// dll Gdi32:StretchBlt(pointer hdcDest, long nXOriginDest, long nYOriginDest, long nWidthDest, long nHeightDest, pointer hdcSrc,
-//	long nXOriginSrc, long nYOriginSrc, long nWidthSrc, long nHeightSrc, long dwRop) bool
+// dll Gdi32:StretchBlt(pointer hdcDest, long nXOriginDest, long nYOriginDest,
+//		long nWidthDest, long nHeightDest, pointer hdcSrc, long nXOriginSrc,
+//		long nYOriginSrc, long nWidthSrc, long nHeightSrc, long dwRop) bool
+
 var stretchBlt = gdi32.MustFindProc("StretchBlt").Addr()
 var _ = builtin("StretchBlt(hdcDest, nXOriginDest, nYOriginDest, nWidthDest, nHeightDest, hdcSrc, nXOriginSrc, nYOriginSrc, nWidthSrc, nHeightSrc, dwRop)",
 	func(_ *Thread, a []Value) Value {
@@ -376,6 +397,7 @@ var _ = builtin("StretchBlt(hdcDest, nXOriginDest, nYOriginDest, nWidthDest, nHe
 	})
 
 // dll pointer Gdi32:CloseEnhMetaFile(pointer dc)
+
 var closeEnhMetaFile = gdi32.MustFindProc("CloseEnhMetaFile").Addr()
 var _ = builtin1("CloseEnhMetaFile(dc)",
 	func(a Value) Value {
@@ -385,6 +407,7 @@ var _ = builtin1("CloseEnhMetaFile(dc)",
 	})
 
 // dll pointer Gdi32:DeleteEnhMetaFile(pointer emf)
+
 var deleteEnhMetaFile = gdi32.MustFindProc("DeleteEnhMetaFile").Addr()
 var _ = builtin1("DeleteEnhMetaFile(dc)",
 	func(a Value) Value {
@@ -394,10 +417,11 @@ var _ = builtin1("DeleteEnhMetaFile(dc)",
 	})
 
 // dll pointer Gdi32:CreateDC(
-// 	[in] string driver,
-// 	[in] string device,
-// 	[in] string output,
-// 	pointer devmode)
+//		[in] string driver,
+//		[in] string device,
+//		[in] string output,
+//		pointer devmode)
+
 var createDC = gdi32.MustFindProc("CreateDCA").Addr()
 var _ = builtin4("CreateDC(driver, device, output, devmode)",
 	func(a, b, c, d Value) Value {
@@ -411,6 +435,7 @@ var _ = builtin4("CreateDC(driver, device, output, devmode)",
 	})
 
 // dll bool Gdi32:Ellipse(pointer hdc, long left, long top, long right, long bottom)
+
 var ellipse = gdi32.MustFindProc("Ellipse").Addr()
 var _ = builtin5("Ellipse(hdc, left, top, right, bottom)",
 	func(a, b, c, d, e Value) Value {
@@ -424,6 +449,7 @@ var _ = builtin5("Ellipse(hdc, left, top, right, bottom)",
 	})
 
 // dll long Gdi32:EndDoc(pointer hdc)
+
 var endDoc = gdi32.MustFindProc("EndDoc").Addr()
 var _ = builtin1("EndDoc(hdc)",
 	func(a Value) Value {
@@ -433,6 +459,7 @@ var _ = builtin1("EndDoc(hdc)",
 	})
 
 // dll long Gdi32:EndPage(pointer hdc)
+
 var endPage = gdi32.MustFindProc("EndPage").Addr()
 var _ = builtin1("EndPage(hdc)",
 	func(a Value) Value {
@@ -442,6 +469,7 @@ var _ = builtin1("EndPage(hdc)",
 	})
 
 // dll long Gdi32:ExcludeClipRect(pointer hdc, long l, long t, long r, long b)
+
 var excludeClipRect = gdi32.MustFindProc("ExcludeClipRect").Addr()
 var _ = builtin5("ExcludeClipRect(hdc, l, t, r, b)",
 	func(a, b, c, d, e Value) Value {
@@ -455,6 +483,7 @@ var _ = builtin5("ExcludeClipRect(hdc, l, t, r, b)",
 	})
 
 // dll long Gdi32:GetClipRgn(pointer hdc, pointer hrgn)
+
 var getClipRgn = gdi32.MustFindProc("GetClipRgn").Addr()
 var _ = builtin2("GetClipRgn(hdc, hrgn)",
 	func(a, b Value) Value {
@@ -465,6 +494,7 @@ var _ = builtin2("GetClipRgn(hdc, hrgn)",
 	})
 
 // dll pointer Gdi32:GetCurrentObject(pointer hdc, long uObjectType)
+
 var getCurrentObject = gdi32.MustFindProc("GetCurrentObject").Addr()
 var _ = builtin2("GetCurrentObject(hdc, uObjectType)",
 	func(a, b Value) Value {
@@ -475,6 +505,7 @@ var _ = builtin2("GetCurrentObject(hdc, uObjectType)",
 	})
 
 // dll pointer Gdi32:GetEnhMetaFile(string filename)
+
 var getEnhMetaFile = gdi32.MustFindProc("GetEnhMetaFileA").Addr()
 var _ = builtin1("GetEnhMetaFile(filename)",
 	func(a Value) Value {
@@ -485,6 +516,7 @@ var _ = builtin1("GetEnhMetaFile(filename)",
 	})
 
 // dll bool Gdi32:LineTo(pointer hdc, long x, long y)
+
 var lineTo = gdi32.MustFindProc("LineTo").Addr()
 var _ = builtin3("LineTo(hdc, x, y)",
 	func(a, b, c Value) Value {
@@ -496,13 +528,13 @@ var _ = builtin3("LineTo(hdc, x, y)",
 	})
 
 // dll bool Gdi32:PatBlt(
-// 	pointer	hdc,        // Destination device context
-// 	long	nXLeft,     // x-coordinate of upper left corner of destination rectangle
-// 	long	nYLeft,     // y-coordinate of upper left corner of destination rectangle
-// 	long	nWidth,     // width of destination rectangle
-// 	long	nHeight,    // height of destination rectangle
-// 	long	dwRop       // Raster operation
-// 	)
+//		pointer	hdc,     // Destination device context
+//		long	nXLeft,  // x-coordinate of upper left corner of destination rectangle
+//		long	nYLeft,  // y-coordinate of upper left corner of destination rectangle
+//		long	nWidth,  // width of destination rectangle
+//		long	nHeight, // height of destination rectangle
+//		long	dwRop)   // Raster operation
+
 var patBlt = gdi32.MustFindProc("PatBlt").Addr()
 var _ = builtin6("PatBlt(hdc, nXLeft, nYLeft, nWidth, nHeight, dwRop)",
 	func(a, b, c, d, e, f Value) Value {
@@ -517,10 +549,10 @@ var _ = builtin6("PatBlt(hdc, nXLeft, nYLeft, nWidth, nHeight, dwRop)",
 	})
 
 // dll bool Gdi32:PolygonApi(
-// 	pointer hdc,		// handle to device context
-// 	[in] string lppt,	// array of points
-// 	long cCount			// count of points
-// 	)
+//		pointer hdc,		// handle to device context
+//		[in] string lppt,	// array of points
+//		long cCount)		// count of points
+
 var polygon = gdi32.MustFindProc("Polygon").Addr()
 var _ = builtin3("Polygon(hdc, points, npoints = false)",
 	func(a, b, c Value) Value {
@@ -545,9 +577,9 @@ var _ = builtin3("Polygon(hdc, points, npoints = false)",
 	})
 
 // dll bool Gdi32:RestoreDC(
-// 	pointer	hdc,        // handle to DC
-// 	long	nSavedDC    // restore state returned by SaveDC
-// )
+//		pointer	hdc,        // handle to DC
+//		long	nSavedDC)   // restore state returned by SaveDC
+
 var restoreDC = gdi32.MustFindProc("RestoreDC").Addr()
 var _ = builtin2("RestoreDC(hdc, nSavedDC)",
 	func(a, b Value) Value {
@@ -557,8 +589,10 @@ var _ = builtin2("RestoreDC(hdc, nSavedDC)",
 		return boolRet(rtn)
 	})
 
-// dll bool Gdi32:RoundRect(pointer hdc, long left, long top, long right, long bottom,
-// 	long ellipse_width, long ellipse_height)
+// dll bool Gdi32:RoundRect(pointer hdc, long left,
+//		long top, long right, long bottom,
+//		long ellipse_width, long ellipse_height)
+
 var roundRect = gdi32.MustFindProc("RoundRect").Addr()
 var _ = builtin7("RoundRect(hdc, left, top, right, bottom, ellipse_width, ellipse_height)",
 	func(a, b, c, d, e, f, g Value) Value {
@@ -574,6 +608,7 @@ var _ = builtin7("RoundRect(hdc, left, top, right, bottom, ellipse_width, ellips
 	})
 
 // dll long Gdi32:SaveDC(pointer hdc)
+
 var saveDC = gdi32.MustFindProc("SaveDC").Addr()
 var _ = builtin1("SaveDC(hdc)",
 	func(a Value) Value {
@@ -583,6 +618,7 @@ var _ = builtin1("SaveDC(hdc)",
 	})
 
 // dll long Gdi32:SelectClipRgn(pointer hdc, pointer hrgn)
+
 var selectClipRgn = gdi32.MustFindProc("SelectClipRgn").Addr()
 var _ = builtin2("SelectClipRgn(hdc, hrgn)",
 	func(a, b Value) Value {
@@ -593,6 +629,7 @@ var _ = builtin2("SelectClipRgn(hdc, hrgn)",
 	})
 
 // dll pointer Gdi32:SetEnhMetaFileBits(long cbBuffer, [in] string lpData)
+
 var setEnhMetaFileBits = gdi32.MustFindProc("SetEnhMetaFileBits").Addr()
 var _ = builtin2("SetEnhMetaFileBits(cbBuffer, lpData)",
 	func(a, b Value) Value {
@@ -604,6 +641,7 @@ var _ = builtin2("SetEnhMetaFileBits(cbBuffer, lpData)",
 	})
 
 // dll long Gdi32:SetMapMode(pointer hdc, long mode)
+
 var setMapMode = gdi32.MustFindProc("SetMapMode").Addr()
 var _ = builtin2("SetMapMode(hdc, mode)",
 	func(a, b Value) Value {
@@ -614,6 +652,7 @@ var _ = builtin2("SetMapMode(hdc, mode)",
 	})
 
 // dll long Gdi32:SetROP2(pointer hdc, long fnDrawMode)
+
 var setROP2 = gdi32.MustFindProc("SetROP2").Addr()
 var _ = builtin2("SetROP2(hdc, fnDrawMode)",
 	func(a, b Value) Value {
@@ -624,6 +663,7 @@ var _ = builtin2("SetROP2(hdc, fnDrawMode)",
 	})
 
 // dll long Gdi32:SetTextAlign(pointer hdc, long mode)
+
 var setTextAlign = gdi32.MustFindProc("SetTextAlign").Addr()
 var _ = builtin2("SetTextAlign(hdc, mode)",
 	func(a, b Value) Value {
@@ -634,6 +674,7 @@ var _ = builtin2("SetTextAlign(hdc, mode)",
 	})
 
 // dll long Gdi32:StartPage(pointer hdc)
+
 var startPage = gdi32.MustFindProc("StartPage").Addr()
 var _ = builtin1("StartPage(hdc)",
 	func(a Value) Value {
@@ -643,6 +684,7 @@ var _ = builtin1("StartPage(hdc)",
 	})
 
 // dll bool Gdi32:TextOut(pointer hdc, long x, long y, [in] string text, long n)
+
 var textOut = gdi32.MustFindProc("TextOutA").Addr()
 var _ = builtin5("TextOut(hdc, x, y, text, n)",
 	func(a, b, c, d, e Value) Value {
@@ -659,6 +701,7 @@ var _ = builtin5("TextOut(hdc, x, y, text, n)",
 // dll bool Gdi32:Arc(pointer hdc, long nLeftRect, long nTopRect,
 //		long nRightRect, long nBottomRect, long nXStartArc, long nYStartArc,
 //		long nXEndArc, long nYEndArc)
+
 var arc = gdi32.MustFindProc("Arc").Addr()
 var _ = builtin("Arc(hdc, nLeftRect, nTopRect, nRightRect, nBottomRect,"+
 	"nXStartArc, nYStartArc, nXEndArc, nYEndArc)",
@@ -678,6 +721,7 @@ var _ = builtin("Arc(hdc, nLeftRect, nTopRect, nRightRect, nBottomRect,"+
 
 // dll pointer Gdi32:CreateEnhMetaFile(pointer hdcRef, [in] string filename,
 //		RECT* rect, [in] string desc)
+
 var createEnhMetaFile = gdi32.MustFindProc("CreateEnhMetaFileA").Addr()
 var _ = builtin4("CreateEnhMetaFile(hdcRef, filename, rect, desc)",
 	func(a, b, c, d Value) Value {
@@ -696,6 +740,7 @@ var _ = builtin4("CreateEnhMetaFile(hdcRef, filename, rect, desc)",
 //		long fdwStrikeOut, long fdwCharSet, long fdwOutputPrecision,
 //		long fdwClipPrecision, long fdwQuality, long fdwPitchAndFamily,
 //		[in] string lpszFace)
+
 var createFont = gdi32.MustFindProc("CreateFontA").Addr()
 var _ = builtin("CreateFont(hdc, x, y, cx, cy, hdcSrc, x1, y1, rop)",
 	func(_ *Thread, a []Value) Value {
@@ -720,6 +765,7 @@ var _ = builtin("CreateFont(hdc, x, y, cx, cy, hdcSrc, x1, y1, rop)",
 
 // dll bool Gdi32:ExtTextOut(pointer hdc, long X, long Y, long fuOptions,
 //		RECT* lprc, [in] string lpString, long cbCount, LONG* lpDx)
+
 var extTextOut = gdi32.MustFindProc("ExtTextOutA").Addr()
 var _ = builtin("ExtTextOut(hdc, x, y, fuOptions, lprc, lpString, cbCount,"+
 	" lpDx/*unused*/)",
@@ -740,6 +786,7 @@ var _ = builtin("ExtTextOut(hdc, x, y, fuOptions, lprc, lpString, cbCount,"+
 	})
 
 // dll gdiobj Gdi32:CreatePen(long fnPenStyle, long nWidth, long clrref)
+
 var createPen = gdi32.MustFindProc("CreatePen").Addr()
 var _ = builtin3("CreatePen(fnPenStyle, nWidth, clrref)",
 	func(a, b, c Value) Value {
@@ -752,6 +799,7 @@ var _ = builtin3("CreatePen(fnPenStyle, nWidth, clrref)",
 
 // dll gdiobj Gdi32:ExtCreatePen(long dwPenStyle, long dwWidth, LOGBRUSH* brush,
 //		long dwStyleCount, pointer lpStyle)
+
 var extCreatePen = gdi32.MustFindProc("ExtCreatePen").Addr()
 var _ = builtin5("ExtCreatePen(dwPenStyle, dwWidth, brush, "+
 	"dwStyleCount/*unused*/, lpStyle/*unused*/)",
@@ -782,6 +830,7 @@ const nLOGBRUSH = unsafe.Sizeof(LOGBRUSH{})
 
 // dll long Gdi32:GetGlyphOutline(pointer hdc, long uChar, long uFormat,
 //		GLYPHMETRICS*  lpgm, long cbBuffer, pointer lpvBuffer, MAT2* lpmat2)
+
 var getGlyphOutline = gdi32.MustFindProc("GetGlyphOutlineA").Addr()
 var _ = builtin7("GetGlyphOutline(hdc, uChar, uFormat, lpgm, "+
 	"cbBuffer/*unused*/, lpvBuffer/*unused*/, lpmat2)",
@@ -846,6 +895,7 @@ type MAT2 struct {
 const nMAT2 = unsafe.Sizeof(MAT2{})
 
 // dll long Gdi32:StartDoc(pointer hdc, DOCINFO* di)
+
 var startDoc = gdi32.MustFindProc("StartDocA").Addr()
 var _ = builtin2("StartDoc(hdc, di)",
 	func(a, b Value) Value {
@@ -876,6 +926,7 @@ type DOCINFO struct {
 const nDOCINFO = unsafe.Sizeof(DOCINFO{})
 
 // dll bool Gdi32:SetWindowExtEx(pointer hdc, long x, long y, POINT* p)
+
 var setWindowExtEx = gdi32.MustFindProc("SetWindowExtEx").Addr()
 var _ = builtin4("SetWindowExtEx(hdc, x, y, p)",
 	func(a, b, c, d Value) Value {
@@ -893,6 +944,7 @@ var _ = builtin4("SetWindowExtEx(hdc, x, y, p)",
 	})
 
 // dll bool Gdi32:SetViewportOrgEx(pointer hdc, long x, long y, POINT* p)
+
 var setViewportOrgEx = gdi32.MustFindProc("SetViewportOrgEx").Addr()
 var _ = builtin4("SetViewportOrgEx(hdc, x, y, p)",
 	func(a, b, c, d Value) Value {
@@ -910,6 +962,7 @@ var _ = builtin4("SetViewportOrgEx(hdc, x, y, p)",
 	})
 
 // dll bool Gdi32:SetViewportExtEx(pointer hdc, long x, long y, POINT* p)
+
 var setViewportExtEx = gdi32.MustFindProc("SetViewportExtEx").Addr()
 var _ = builtin4("SetViewportExtEx(hdc, x, y, p)",
 	func(a, b, c, d Value) Value {
@@ -927,6 +980,7 @@ var _ = builtin4("SetViewportExtEx(hdc, x, y, p)",
 	})
 
 // dll bool Gdi32:PlayEnhMetaFile(pointer hdc, pointer hemf, RECT* rect)
+
 var playEnhMetaFile = gdi32.MustFindProc("PlayEnhMetaFile").Addr()
 var _ = builtin3("PlayEnhMetaFile(hdc, hemf, rect)",
 	func(a, b, c Value) Value {
@@ -940,6 +994,7 @@ var _ = builtin3("PlayEnhMetaFile(hdc, hemf, rect)",
 	})
 
 // dll bool Gdi32:MoveToEx(pointer hdc, long x, long y, POINT* p)
+
 var moveToEx = gdi32.MustFindProc("MoveToEx").Addr()
 var _ = builtin4("MoveToEx(hdc, x, y, p)",
 	func(a, b, c, d Value) Value {
@@ -960,6 +1015,7 @@ var _ = builtin4("MoveToEx(hdc, x, y, p)",
 	})
 
 // dll long Gdi32:GetObject(pointer hgdiobj, long bufsize, buffer buf)
+
 var getObject = gdi32.MustFindProc("GetObjectA").Addr()
 
 var _ = builtin1("GetObjectBrush(h)",
@@ -1017,6 +1073,7 @@ type BITMAP struct {
 const nBITMAP = unsafe.Sizeof(BITMAP{})
 
 // dll gdiobj Gdi32:CreateRectRgn(long x1, long y1, long x2, long y2)
+
 var createRectRegion = gdi32.MustFindProc("CreateRectRgn").Addr()
 var _ = builtin4("CreateRectRgn(x1, y1, x2, y2)",
 	func(a, b, c, d Value) Value {
@@ -1030,6 +1087,7 @@ var _ = builtin4("CreateRectRgn(x1, y1, x2, y2)",
 
 // dll long Gdi32:GetDIBits(pointer hdc, pointer hbmp, long uStartScan,
 //		long cScanLines, pointer lpvBits, BITMAPINFO* lpbi, long uUsage)
+
 var getDIBits = gdi32.MustFindProc("GetDIBits").Addr()
 var _ = builtin7("GetDIBits(hdc, hbmp, uStartScan, cScanLines, lpvBits,"+
 	" lpbi, uUsage)",

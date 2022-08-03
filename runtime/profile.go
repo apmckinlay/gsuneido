@@ -16,14 +16,14 @@ import (
 type profile struct {
 	enabled bool
 	stop    chan struct{}
-	// profileLock is used to guard access to the frame stack
-	lock  sync.Mutex
+	// lock is used to guard access to the frame stack
+	lock sync.Mutex
 	// total is the samples in functions and all the functions they call
 	total map[string]int32
 	// self is the samples in functions themselves
-	self  map[string]int32
+	self map[string]int32
 	// ops is the number of operations/instructions executed in the interpreter
-	ops   map[string]int32
+	ops map[string]int32
 	// calls is the number of times the function is called
 	calls map[string]int32
 }
