@@ -8,9 +8,9 @@ import (
 	"math"
 	"math/rand"
 	"strconv"
-	"sync/atomic"
 
 	"github.com/apmckinlay/gsuneido/util/assert"
+	"github.com/apmckinlay/gsuneido/util/generic/atomic"
 	"github.com/apmckinlay/gsuneido/util/ordset"
 	"github.com/apmckinlay/gsuneido/util/ranges"
 )
@@ -71,7 +71,7 @@ type CkTran struct {
 	state  *DbState
 	// failure is written by CkTran.abort and read by UpdateTran.
 	// It is set to either a conflict or a timeout.
-	failure atomic.Value // string
+	failure atomic.String
 }
 
 type cktbl struct {
@@ -397,7 +397,7 @@ func (t *CkTran) ended() bool {
 }
 
 func (t *CkTran) Failed() bool {
-	return t.failure.Load() != nil
+	return t.failure.Load() != ""
 }
 
 // Abort cancels a transaction.
@@ -411,6 +411,9 @@ func (ck *Check) abort(tn int, reason string) bool {
 	t, ok := ck.trans[tn]
 	if !ok {
 		return false
+	}
+	if reason == "" {
+		reason = "abort"
 	}
 	t.failure.Store(reason)
 	delete(ck.trans, tn)

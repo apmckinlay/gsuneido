@@ -182,7 +182,7 @@ func newIndexCheckers() *indexCheckers {
 type void struct{}
 
 type indexCheckers struct {
-	err    atomic.Value
+	err    atomic.Value // any
 	work   chan indexCheck
 	stop   chan void
 	wg     sync.WaitGroup

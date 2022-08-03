@@ -272,16 +272,13 @@ func (t *UpdateTran) Complete() string {
 		t.state = completed
 	} else { // aborted
 		t.state = commitFailed
-		return t.ct.failure.Load().(string)
+		return t.ct.failure.Load()
 	}
 	return ""
 }
 
 func (t *UpdateTran) Conflict() string {
-	if failure := t.ct.failure.Load(); failure != nil {
-		return failure.(string)
-	}
-	return ""
+	return t.ct.failure.Load()
 }
 
 // Commit is used by tests. It panics on error.
@@ -625,9 +622,9 @@ func (t *UpdateTran) fkeyUpdateCascade(th *rt.Thread, ts *meta.Schema, i int,
 func (t *UpdateTran) ck(result bool) {
 	if !result {
 		failure := t.ct.failure.Load()
-		if failure == nil {
+		if failure == "" {
 			panic("transaction already ended")
 		}
-		panic("transaction aborted: " + failure.(string))
+		panic("transaction aborted: " + failure)
 	}
 }

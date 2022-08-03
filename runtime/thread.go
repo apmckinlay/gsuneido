@@ -9,6 +9,7 @@ import (
 	"strconv"
 	"sync/atomic"
 
+	myatomic "github.com/apmckinlay/gsuneido/util/generic/atomic"
 	"github.com/apmckinlay/gsuneido/options"
 	"github.com/apmckinlay/gsuneido/util/regex"
 	"github.com/apmckinlay/gsuneido/util/str"
@@ -80,7 +81,7 @@ type Thread struct {
 	// Session is the name of the database session for clients and standalone.
 	// Server tracks client session names separately.
 	// Needs atomic because we access MainThread from other threads.
-	session atomic.Value
+	session myatomic.String
 
 	// Suneido is a per-thread SuneidoObject that overrides the global one
 	Suneido *SuneidoObject
@@ -110,10 +111,7 @@ func NewThread(parent *Thread) *Thread {
 }
 
 func (t *Thread) Session() string {
-	if v := t.session.Load(); v != nil {
-		return v.(string)
-	}
-	return ""
+	return t.session.Load()
 }
 
 func (t *Thread) SetSession(s string) {
@@ -254,9 +252,9 @@ var DbmsAuth = false
 func (t *Thread) Dbms() IDbms {
 	if t.dbms == nil {
 		t.dbms = GetDbms()
-		if s := t.session.Load(); s != nil {
+		if s := t.session.Load(); s != "" {
 			// session id was set before connecting
-			t.dbms.SessionId(t, s.(string))
+			t.dbms.SessionId(t, s)
 		}
 	}
 	return t.dbms.Unwrap()

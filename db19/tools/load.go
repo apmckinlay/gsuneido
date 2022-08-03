@@ -41,7 +41,7 @@ type loadJob struct {
 // LoadDatabase imports a dumped database from a file using a worker pool.
 // It returns the number of tables loaded. Errors are fatal.
 func LoadDatabase(from, dbfile string) (nTables, nViews int, err error) {
-	var errVal atomic.Value
+	var errVal atomic.Value // error
 	defer func() {
 		if e := recover(); e != nil {
 			err = errs.From(e)

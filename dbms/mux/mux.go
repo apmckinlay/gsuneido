@@ -14,6 +14,7 @@ import (
 	"github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/runtime/trace"
 	"github.com/apmckinlay/gsuneido/util/assert"
+	myatomic "github.com/apmckinlay/gsuneido/util/generic/atomic"
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
 )
 
@@ -23,7 +24,7 @@ type conn struct {
 	rw    io.ReadWriteCloser // the underlying connection
 	wlock sync.Mutex         // used by write to keep header and data together
 	hdr   [HeaderSize]byte   // used by write, guarded by wlock
-	err   atomic.Value
+	err   myatomic.String
 }
 
 func (c *conn) Close() {
