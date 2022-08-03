@@ -341,7 +341,7 @@ func (t *UpdateTran) Output(th *rt.Thread, table string, rec rt.Record) {
 		keys[i] = ix.Ixspec.Key(rec)
 		if ix.Mode == 'k' && len(ix.Columns) == 0 {
 			if ti.Nrows > 0 {
-				panic(fmt.Sprint("empty key only allows one record in ", table))
+				panic(fmt.Sprint("duplicate key: () in ", table))
 			}
 			t.Read(table, i, "", "")
 		} else {
