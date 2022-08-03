@@ -22,19 +22,6 @@ type muxClient struct {
 	cc *mux.ClientConn
 }
 
-func ConnectClient(addr string, port string) (conn net.Conn, jserver bool) {
-	conn, err := net.Dial("tcp", addr+":"+port)
-	if err != nil {
-		checkServerStatus(addr, port)
-		cantConnect(err.Error())
-	}
-	ok, jserver := checkHello(conn)
-	if !ok {
-		cantConnect("invalid response from server")
-	}
-	return conn, jserver
-}
-
 func NewMuxClient(conn net.Conn) *muxClient {
 	cc := mux.NewClientConn(conn)
 	return &muxClient{cc: cc}

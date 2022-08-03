@@ -8,11 +8,8 @@ import (
 	"fmt"
 	"io"
 	"log"
-	"net/http"
 	"os"
 	"runtime"
-	"sort"
-	"strconv"
 	"strings"
 	"time"
 
@@ -239,12 +236,13 @@ func clientErrorLog() {
 
 func startServer() {
 	log.Println("starting server")
-	openDbms()
 	startHttpStatus()
+	openDbms()
 	Libload = libload // dependency injection
 	mainThread = &Thread{}
 	mainThread.Name = "main"
 	run("Init()")
+	options.DbStatus = ""
 	dbms.Server(dbmsLocal)
 }
 
@@ -258,13 +256,13 @@ func stopServer() {
 var db *db19.Database
 
 func openDbms() {
-	// startHttpStatus()
 	var err error
 	db, err = db19.OpenDatabase("suneido.db")
 	if err != nil {
 		if !AlertCancel("ERROR:", err, "\nwill try to repair") {
 			Fatal("database corrupt, not repaired")
 		}
+		options.DbStatus = "repairing"
 		msg, err := db19.Repair("suneido.db", err)
 		if err != nil {
 			Fatal("repair:", err)
@@ -274,6 +272,7 @@ func openDbms() {
 		if err != nil {
 			Fatal("open:", err)
 		}
+		options.DbStatus = "starting"
 	}
 	db19.StartTimestamps()
 	db19.StartConcur(db, 10*time.Second) //1*time.Minute) //FIXME
@@ -314,75 +313,6 @@ func dbClose() {
 // 		assert.That(state.Meta.Cksum() == cksum)
 // 	}
 // }
-
-// HTTP status ------------------------------------------------------
-
-var httpServer *http.Server
-
-func startHttpStatus() {
-	http.HandleFunc("/", httpStatus)
-	port, _ := strconv.Atoi(options.Port)
-	addr := ":" + strconv.Itoa(port+1)
-	go func() {
-		httpServer = &http.Server{Addr: addr}
-		err := httpServer.ListenAndServe()
-		if err != http.ErrServerClosed {
-			log.Println("Server Monitor:", err)
-		}
-	}()
-}
-func httpStatus(w http.ResponseWriter, _ *http.Request) {
-	fmt.Fprintln(w,
-		`<html>
-			<head>
-			<title>Suneido Server Monitor</title>
-			<meta http-equiv="refresh" content="5" />
-			</head>
-			<body>
-				<h1>Suneido Server Monitor</h1>
-				<p>Built: `+builtin.Built()+`</p>
-				<p>Heap: `+mb(builtin.HeapSys())+`</p>
-				<p>Database: `+mb(dbmsLocal.Size())+`
-				`+threads()+`
-				`+trans()+`
-				`+dbms.Conns()+`
-			</body>
-		</html>`)
-}
-
-func mb(n uint64) string {
-	return strconv.FormatUint(((n+512*1024)/(1024*1024)), 10) + "mb"
-}
-
-func threads() string {
-	list := builtin.ThreadList()
-	sort.Strings(list)
-	var sb strings.Builder
-	fmt.Fprintf(&sb, "<p>Threads: (%d) ", len(list))
-	sep := ""
-	for _, s := range list {
-		sb.WriteString(sep)
-		sb.WriteString(s)
-		sep = ", "
-	}
-	sb.WriteString("<p>\n")
-	return sb.String()
-}
-
-func trans() string {
-	list := dbmsLocal.Transactions()
-	n := list.Size()
-	var sb strings.Builder
-	fmt.Fprintf(&sb, "<p>Transactions: (%d) ", n)
-	sep := ""
-	for i := 0; i < n; i++ {
-		sb.WriteString(sep)
-		sb.WriteString(list.ListGet(i).String())
-		sep = ", "
-	}
-	sb.WriteString("<p>\n")
-	return sb.String()
-}
 
 // REPL -------------------------------------------------------------
 

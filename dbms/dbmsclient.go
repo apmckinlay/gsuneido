@@ -4,15 +4,11 @@
 package dbms
 
 import (
-	"bytes"
-	"io"
 	"log"
 	"net"
-	"net/http"
 	"strconv"
 	"strings"
 	"sync"
-	"time"
 
 	"github.com/apmckinlay/gsuneido/dbms/commands"
 	"github.com/apmckinlay/gsuneido/dbms/csio"
@@ -36,10 +32,6 @@ type dbmsClient struct {
 	conn net.Conn
 }
 
-// helloSize is the size of the initial connection message from the server
-// the size must match cSuneido and jSuneido
-const helloSize = 50
-
 func NewDbmsClient(conn net.Conn) *dbmsClient {
 	errfn := func(err string) {
 		Fatal("client:", err)
@@ -53,49 +45,6 @@ func NewDbmsClient(conn net.Conn) *dbmsClient {
 		token = c.Token()
 	}
 	return c
-}
-
-func cantConnect(s string) {
-	Fatal("Can't connect.", s)
-}
-
-func checkHello(conn net.Conn) (ok, jserver bool) {
-	var buf [helloSize]byte
-	n, err := io.ReadFull(conn, buf[:])
-	if n != helloSize || err != nil {
-		return
-	}
-	s := string(buf[:])
-	if !strings.HasPrefix(s, "Suneido ") {
-		return
-	}
-	//TODO built date check
-	if strings.Contains(s, "Java") {
-		return true, true
-	}
-	return true, false
-}
-
-func checkServerStatus(addr string, port string) { //FIXME not used ???
-	p, err := strconv.Atoi(port)
-	if err != nil {
-		return
-	}
-	url := "http://" + addr + ":" + strconv.Itoa(p+1) + "/"
-	client := http.Client{Timeout: time.Second}
-	resp, err := client.Get(url)
-	if err != nil {
-		return
-	}
-	defer resp.Body.Close()
-	buf := make([]byte, 1024)
-	io.ReadFull(resp.Body, buf)
-	if bytes.Contains(buf, []byte("Checking database ...")) {
-		cantConnect("Database is being checked, please try again later")
-	}
-	if bytes.Contains(buf, []byte("Rebuilding database ...")) {
-		cantConnect("Database is being repaired, please try again later")
-	}
 }
 
 // Dbms interface

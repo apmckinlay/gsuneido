@@ -46,3 +46,10 @@ var Coverage int64
 var Nworkers = func() int {
 	return ord.Min(8, ord.Max(1, runtime.NumCPU()-1)) // ???
 }()
+
+// DbStatus should be set to one of:
+// - "" (running normally)
+// - starting
+// - repairing
+// - corrupted
+var DbStatus string = "starting"
