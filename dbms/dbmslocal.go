@@ -27,7 +27,7 @@ import (
 type DbmsLocal struct {
 	db        *db19.Database
 	libraries atomic.Value // []string
-	badlibs   int32        // limits logging
+	badlibs   atomic.Int32 // limits logging
 }
 
 func NewDbmsLocal(db *db19.Database) *DbmsLocal {
@@ -235,7 +235,7 @@ func (dbms *DbmsLocal) libGet(rt *db19.ReadTran, lib, name string) string {
 }
 
 func (dbms *DbmsLocal) liblog(lib string) {
-	if atomic.AddInt32(&dbms.badlibs, 1) <= 1 {
+	if dbms.badlibs.Add(1) <= 1 {
 		log.Println("ERROR: invalid library: " + lib)
 	}
 }
@@ -336,7 +336,7 @@ func (dbms *DbmsLocal) updateLibraries(fn func(libs []string) []string) bool {
 	if newlibs == nil {
 		return false
 	}
-	atomic.StoreInt32(&dbms.badlibs, 0) // reset logging
+	dbms.badlibs.Store(0) // reset logging
 	return slices.Equal(oldlibs, dbms.libraries.Swap(newlibs).([]string))
 }
 

@@ -4,8 +4,6 @@
 package builtin
 
 import (
-	"sync/atomic"
-
 	"github.com/apmckinlay/gsuneido/options"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/runtime/types"
@@ -54,7 +52,7 @@ func init() {
 			return True
 		}),
 		"StartCoverage": method1("(count = false)", func(this, a Value) Value {
-			if atomic.LoadInt64(&options.Coverage) == 0 {
+			if !options.Coverage.Load() {
 				panic("coverage not enabled")
 			}
 			c := this.(*SuClass)

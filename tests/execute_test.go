@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"strconv"
 	"strings"
-	"sync/atomic"
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/builtin"
@@ -324,7 +323,7 @@ func BenchmarkCall(b *testing.B) {
 }
 
 func TestCoverage(t *testing.T) {
-	atomic.StoreInt64(&options.Coverage, 1)
+	options.Coverage.Store(true)
 	fn := compile.Constant(`function()
 		{
 		x = 0

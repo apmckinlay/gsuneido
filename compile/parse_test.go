@@ -17,7 +17,7 @@ func TestClassName(t *testing.T) {
 	p := NewParser("")
 	test := func(in, expected string) {
 		t.Helper()
-		classNum = 0
+		classNum.Store(0)
 		p.name = in
 		assert.T(t).This(p.getClassName()).Is(expected)
 	}

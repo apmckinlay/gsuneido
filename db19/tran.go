@@ -110,12 +110,12 @@ type ReadTran struct {
 	num int
 }
 
-var nextReadTran int32
+var nextReadTran atomic.Int32
 
 func (db *Database) NewReadTran() *ReadTran {
 	state := db.GetState()
 	return &ReadTran{tran: tran{db: db, meta: state.Meta},
-		num: int(atomic.AddInt32(&nextReadTran, 1))}
+		num: int(nextReadTran.Add(1))}
 }
 
 func (t *ReadTran) String() string {

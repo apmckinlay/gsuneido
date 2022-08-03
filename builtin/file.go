@@ -33,14 +33,14 @@ type suFile struct {
 	tell int64
 }
 
-var nFile = int32(0)
+var nFile atomic.Int32
 
 var _ = builtin("File(filename, mode='r', block=false)",
 	func(t *Thread, args []Value) Value {
 		name := ToStr(args[0])
 		mode := ToStr(args[1])
 		sf := newSuFile(name, mode)
-		atomic.AddInt32(&nFile, 1)
+		nFile.Add(1)
 		if args[2] == False {
 			return sf
 		}
@@ -100,7 +100,7 @@ func (sf *suFile) size() int64 {
 }
 
 func (sf *suFile) close() {
-	atomic.AddInt32(&nFile, -1)
+	nFile.Add(-1)
 	if sf.mode != "r" {
 		err := sf.w.Flush()
 		if err != nil {

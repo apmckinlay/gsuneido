@@ -118,10 +118,10 @@ func createTbl(db *Database) {
 	})
 }
 
-var recnum int32
+var recnum atomic.Int32
 
 func output1(db *Database) *UpdateTran {
-	n := atomic.AddInt32(&recnum, 1)
+	n := recnum.Add(1)
 	ut := db.NewUpdateTran()
 	data := (strconv.Itoa(int(n)) + "transaction")[:12]
 	ut.Output(nil, "mytable", mkrec(data, "data"))

@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"math"
 	"strconv"
-	"sync/atomic"
 
 	"github.com/apmckinlay/gsuneido/compile/ast"
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
@@ -66,7 +65,7 @@ func codegen(lib, name string, fn *ast.Function, prevDef Value) Value {
 
 func codegen2(lib, name string, fn *ast.Function, outerFn *ast.Function,
 	prevDef Value) *SuFunc {
-	cover := atomic.LoadInt64(&options.Coverage) == 1
+	cover := options.Coverage.Load()
 	cg := cgen{outerFn: outerFn, base: fn.Base, isNew: fn.IsNewMethod,
 		isBlock: fn != outerFn, cover: cover, prevDef: prevDef}
 	cg.Lib = lib

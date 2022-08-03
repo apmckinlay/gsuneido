@@ -59,7 +59,7 @@ func TestBig(*testing.T) {
 		start += count
 	}
 	wg.Wait()
-	fmt.Println("finished", ntrans, "transactions", db.Store.Size(), "bytes")
+	fmt.Println("finished", ntrans.Load(), "transactions", db.Store.Size(), "bytes")
 
 	db.ck.Stop()
 	db.ck = nil
@@ -124,7 +124,7 @@ func createTables() []string {
 	return tables
 }
 
-var ntrans int32
+var ntrans atomic.Int32
 
 var data = rt.SuStr(str.Random(1024, 1024))
 
@@ -148,7 +148,7 @@ func createData(db *Database, tables []string, i, n int) {
 		}
 		// time.Sleep(1 * time.Millisecond) // inside tran
 		ut.Commit()
-		atomic.AddInt32(&ntrans, 1)
+		ntrans.Add(1)
 		// time.Sleep(1 * time.Millisecond) // between tran
 	}
 }

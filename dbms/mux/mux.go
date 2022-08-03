@@ -32,7 +32,7 @@ func (c *conn) Close() {
 
 type ClientConn struct {
 	conn
-	nextSession uint32 // the next session id, must be accessed atomically
+	nextSession atomic.Uint32 // the next session id
 	lock        sync.Mutex
 	rchs        map[uint32]respch // response channel per id, guarded by lock
 }
@@ -54,13 +54,13 @@ type ServerConn struct {
 
 type handler func(c *conn, id uint64, r []byte)
 
-var nextServerConn uint32
+var nextServerConn atomic.Uint32
 
 // NewServerConn creates a new server connection.
 // The supplied handler will be called with each received message.
 // For dbms server the handler is Workers.Submit
 func NewServerConn(rw io.ReadWriteCloser, h handler) uint32 {
-	connId := atomic.AddUint32(&nextServerConn, 1)
+	connId := nextServerConn.Add(1)
 	sc := ServerConn{conn: conn{rw: rw}, id: connId}
 	go sc.conn.reader(func(sessionId uint32, data []byte) {
 		h(&sc.conn, uint64(connId)<<32|uint64(sessionId), data)
@@ -76,7 +76,7 @@ type ClientSession struct {
 
 // NewClientSession returns a new ClientSession
 func (cc *ClientConn) NewClientSession() *ClientSession {
-	sessionId := atomic.AddUint32(&cc.nextSession, 1)
+	sessionId := uint32(cc.nextSession.Add(1))
 	rch := make(respch, 1)
 	wb := newWriteBuf(&cc.conn, sessionId)
 	cc.lock.Lock()

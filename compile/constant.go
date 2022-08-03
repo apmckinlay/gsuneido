@@ -266,8 +266,7 @@ func (p *Parser) putMem(ob container, m Value, v Value, pos int32) {
 }
 
 // classNum is used to generate names for anonymous classes
-// should be referenced atomically
-var classNum int32
+var classNum atomic.Int32
 
 // class parses a class definition
 // like object, it builds a value rather than an ast
@@ -328,7 +327,7 @@ func (p *Parser) getClassName() string {
 		last = last[i+1:]
 	}
 	if last == "" || last == "?" {
-		cn := atomic.AddInt32(&classNum, 1)
+		cn := classNum.Add(1)
 		className := "Class" + strconv.Itoa(int(cn))
 		return className
 	}

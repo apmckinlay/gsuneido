@@ -18,7 +18,7 @@ func TestCodegen(t *testing.T) {
 	defer func() { DefaultSingleQuotes = false }()
 	test := func(src, expected string) {
 		t.Helper()
-		classNum = 0
+		classNum.Store(0)
 		ast := parseFunction("function () {\n" + src + "\n}")
 		fn := codegen("", "", ast, nil).(*SuFunc)
 		actual := disasm(fn)

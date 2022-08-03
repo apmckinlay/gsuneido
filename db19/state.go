@@ -8,7 +8,6 @@ import (
 	"sync"
 	"sync/atomic"
 	"time"
-	"unsafe"
 
 	"github.com/apmckinlay/gsuneido/db19/meta"
 	"github.com/apmckinlay/gsuneido/db19/stor"
@@ -25,16 +24,16 @@ type DbState struct {
 }
 
 type stateHolder struct {
-	state unsafe.Pointer // *DbState
+	state atomic.Pointer[DbState]
 	mutex sync.Mutex
 }
 
 func (sh *stateHolder) get() *DbState {
-	return (*DbState)(atomic.LoadPointer(&sh.state))
+	return sh.state.Load()
 }
 
 func (sh *stateHolder) set(newState *DbState) {
-	atomic.StorePointer(&sh.state, unsafe.Pointer(newState))
+	sh.state.Store(newState)
 }
 
 // GetState returns a snapshot of the state as of a point in time.

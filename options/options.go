@@ -7,6 +7,7 @@ package options
 
 import (
 	"runtime"
+	"sync/atomic"
 
 	"github.com/apmckinlay/gsuneido/util/generic/ord"
 )
@@ -40,8 +41,7 @@ const (
 )
 
 // Coverage controls whether Cover op codes are added by codegen.
-// Should be accessed atomically. Zero means disabled.
-var Coverage int64
+var Coverage atomic.Bool
 
 var Nworkers = func() int {
 	return ord.Min(8, ord.Max(1, runtime.NumCPU()-1)) // ???

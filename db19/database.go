@@ -26,15 +26,15 @@ type Database struct {
 	Store *stor.Stor
 
 	// state is the central immutable state of the database.
-	// It must be accessed atomically and only updated via UpdateState.
+	// It must only updated via UpdateState.
 	state stateHolder
 
 	ck Checker
 	triggers
 	// schemaLock is used to prevent concurrent schema modification
-	schemaLock int64
+	schemaLock atomic.Bool
 
-	closed int64 // should be accessed atomically
+	closed atomic.Bool
 
 	rt.Sviews
 }
@@ -173,13 +173,13 @@ func (db *Database) Create(schema *schema.Schema) {
 }
 
 func (db *Database) lockSchema() {
-	if !atomic.CompareAndSwapInt64(&db.schemaLock, 0, 1) {
+	if !db.schemaLock.CompareAndSwap(false, true) {
 		panic("concurrent schema modifications are not allowed")
 	}
 }
 
 func (db *Database) unlockSchema() {
-	atomic.StoreInt64(&db.schemaLock, 0)
+	db.schemaLock.Store(false)
 }
 
 func (db *Database) create(state *DbState, schema *schema.Schema) {
@@ -492,12 +492,10 @@ func (db *Database) Transactions() []int {
 }
 
 func (db *Database) ckOpen() {
-	if atomic.LoadInt64(&db.closed) == 1 {
+	if db.closed.Load() {
 		exit.Wait()
 	}
 }
-
-const dbClosed = 1
 
 // Close closes the database store, writing the current size to the start.
 func (db *Database) Close() {
@@ -507,7 +505,7 @@ func (db *Database) CloseKeepMapped() {
 	db.close(false)
 }
 func (db *Database) close(unmap bool) {
-	if atomic.SwapInt64(&db.closed, dbClosed) == dbClosed {
+	if db.closed.Swap(true) {
 		return
 	}
 	if db.ck != nil {
@@ -522,7 +520,7 @@ func (db *Database) close(unmap bool) {
 }
 
 func (db *Database) Closed() bool {
-	return atomic.LoadInt64(&db.closed) == dbClosed
+	return db.closed.Load()
 }
 
 func (db *Database) writeSize() {

@@ -186,7 +186,7 @@ func newTableCheckers(state *DbState, fn func(*DbState, string)) *tableCheckers 
 }
 
 type tableCheckers struct {
-	err    atomic.Value
+	err    atomic.Pointer[ErrCorrupt]
 	fn     func(*DbState, string)
 	state  *DbState
 	work   chan string

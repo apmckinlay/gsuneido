@@ -42,15 +42,15 @@ func TestConcurrentAtomic(t *testing.T) {
 	}
 	// This demonstrates that atomic is also sufficient
 	var x int
-	var m int64
+	var m atomic.Int64
 	go func() {
 		time.Sleep(40 * time.Millisecond)
-		assert.That(atomic.LoadInt64(&m) == 1)
+		assert.That(m.Load() == 1)
 		assert.That(x == 123)
 	}()
 	time.Sleep(20 * time.Millisecond)
 	x = 123
-	atomic.StoreInt64(&m, 1)
+	m.Store(1)
 	time.Sleep(20 * time.Millisecond)
 }
 

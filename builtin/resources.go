@@ -11,10 +11,10 @@ import (
 
 var _ = builtin0("ResourceCounts()", func() Value {
 	ob := &SuObject{}
-	add(ob, "File", int(nFile))
-	add(ob, "RunPiped", int(nRunPiped))
-	add(ob, "SocketClient", int(nSocketClient))
-	add(ob, "SocketServerClient", int(nSocketServerClient))
+	add(ob, "File", int(nFile.Load()))
+	add(ob, "RunPiped", int(nRunPiped.Load()))
+	add(ob, "SocketClient", int(nSocketClient.Load()))
+	add(ob, "SocketServerClient", int(nSocketServerClient.Load()))
 	add(ob, "Callbacks", CallbacksCount())
 	add(ob, "WndProcs", WndProcCount())
 	gdi, user := GetGuiResources()

@@ -19,9 +19,9 @@ import (
 func TestMux(t *testing.T) {
 	p1, p2 := net.Pipe()
 	client := NewClientConn(p1)
-	n := int32(0)
+	var n atomic.Int32
 	ws := NewWorkers(func(wb *WriteBuf, _ *runtime.Thread, id uint64, data []byte) {
-		atomic.AddInt32(&n, 1)
+		n.Add(1)
 		wb.Write(bytes.ToUpper(data)).EndMsg()
 	})
 	NewServerConn(p2, ws.Submit) // use pool to execute requests
@@ -50,5 +50,5 @@ func TestMux(t *testing.T) {
 		go clientThread()
 	}
 	wg.Wait()
-	assert.T(t).This(atomic.LoadInt32(&n)).Is(nmsgs * nthreads)
+	assert.T(t).This(n.Load()).Is(nmsgs * nthreads)
 }

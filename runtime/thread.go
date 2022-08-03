@@ -88,13 +88,13 @@ type Thread struct {
 	profile profile
 }
 
-var nThread int32
+var nThread atomic.Int32
 
 // NewThread creates a new thread.
 // It is primarily used for user initiated threads.
 // Internal threads can just use a zero Thread.
 func NewThread(parent *Thread) *Thread {
-	n := atomic.AddInt32(&nThread, 1)
+	n := nThread.Add(1)
 	name := "Thread-" + strconv.Itoa(int(n))
 	t := &Thread{Num: n, Name: name}
 	if parent != nil && parent.Suneido != nil {

@@ -4,18 +4,12 @@
 package builtin
 
 import (
-	"sync/atomic"
-
 	"github.com/apmckinlay/gsuneido/options"
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
 var _ = builtin1("CoverageEnable(enable)", func(a Value) Value {
-	if ToBool(a) {
-		atomic.StoreInt64(&options.Coverage, 1)
-	} else {
-		atomic.StoreInt64(&options.Coverage, 0)
-	}
+	options.Coverage.Store(ToBool(a))
 	return nil
 })
 
@@ -29,7 +23,7 @@ func init() {
 			return SuStr(DisasmMixed(fn, ToStr(a)))
 		}),
 		"StartCoverage": method1("(count = false)", func(this, a Value) Value {
-			if atomic.LoadInt64(&options.Coverage) == 0 {
+			if !options.Coverage.Load() {
 				panic("coverage not enabled")
 			}
 			fn := this.(*SuFunc)

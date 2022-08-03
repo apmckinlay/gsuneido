@@ -21,7 +21,7 @@ type suRunPiped struct {
 	r       io.ReadCloser
 }
 
-var nRunPiped = int32(0)
+var nRunPiped atomic.Int32
 
 var _ = builtin("RunPiped(command, block=false)",
 	func(t *Thread, args []Value) Value {
@@ -48,7 +48,7 @@ var _ = builtin("RunPiped(command, block=false)",
 			panic("Runpiped: failed to start: " + err.Error())
 		}
 		rp := &suRunPiped{command: command, cmd: cmd, w: w, r: r}
-		atomic.AddInt32(&nRunPiped, 1)
+		nRunPiped.Add(1)
 		if args[1] == False {
 			return rp
 		}
@@ -82,7 +82,7 @@ func (rp *suRunPiped) close() {
 	if rp.r == nil {
 		return
 	}
-	atomic.AddInt32(&nRunPiped, -1)
+	nRunPiped.Add(-1)
 	rp.r.Close()
 	rp.r = nil
 	if rp.w != nil {

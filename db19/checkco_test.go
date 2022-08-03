@@ -52,8 +52,8 @@ func TestCheckCoRandom(*testing.T) {
 	}
 	wg.Wait()
 	fmt.Println("commit", nCommit, "conflict", nConflict,
-		"=", float32(nConflict)/float32(nCommit))
-	assert.That(float32(nConflict)/float32(nCommit) < .1)
+		"=", float32(nConflict.Load())/float32(nCommit.Load()))
+	assert.That(float32(nConflict.Load())/float32(nCommit.Load()) < .1)
 }
 
 func mergeSink() chan todo {
@@ -65,7 +65,7 @@ func mergeSink() chan todo {
 	return c
 }
 
-var nCommit, nConflict int64
+var nCommit, nConflict atomic.Int32
 
 func randTran(db *Database) {
 	t := db.NewUpdateTran()
@@ -77,9 +77,9 @@ func randTran(db *Database) {
 		db.ck.Abort(t.ct, "")
 	} else {
 		if db.ck.Commit(t) {
-			atomic.AddInt64(&nCommit, 1)
+			nCommit.Add(1)
 		} else {
-			atomic.AddInt64(&nConflict, 1)
+			nConflict.Add(1)
 		}
 	}
 
