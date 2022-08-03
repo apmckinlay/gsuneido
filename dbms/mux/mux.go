@@ -8,6 +8,7 @@ package mux
 import (
 	"encoding/binary"
 	"io"
+	"log"
 	"sync"
 	"sync/atomic"
 
@@ -28,6 +29,9 @@ type conn struct {
 }
 
 func (c *conn) Close() {
+	if err := c.err.Load(); err != "" {
+		log.Println("mux:", err)
+	}
 	c.rw.Close()
 }
 
