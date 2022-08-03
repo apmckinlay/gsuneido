@@ -216,7 +216,7 @@ func (ss SuStr) RangeLen(from int, n int) Value {
 }
 
 func (ss SuStr) Hash() uint32 {
-	return hash.HashString(string(ss))
+	return hash.String(string(ss))
 }
 
 func (ss SuStr) Hash2() uint32 {

@@ -34,7 +34,7 @@ func (ti *Info) Key() string {
 }
 
 func (*Info) Hash(key string) uint32 {
-	return hash.HashString(key)
+	return hash.String(key)
 }
 
 func (ti *Info) LastMod() int {

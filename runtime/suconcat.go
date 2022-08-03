@@ -116,7 +116,7 @@ func (c SuConcat) RangeLen(from int, n int) Value {
 }
 
 func (c SuConcat) Hash() uint32 {
-	return hash.HashBytes(c.buf.bs[:c.n])
+	return hash.Bytes(c.buf.bs[:c.n])
 }
 
 func (c SuConcat) Hash2() uint32 {

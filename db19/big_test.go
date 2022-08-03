@@ -154,5 +154,5 @@ func createData(db *Database, tables []string, i, n int) {
 }
 
 func fromHash(table string, max int) int {
-	return int(1 + hash.HashString(table)%uint32(max))
+	return int(1 + hash.String(table)%uint32(max))
 }

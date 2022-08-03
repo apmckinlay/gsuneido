@@ -12,17 +12,19 @@ import (
 )
 
 func TestHash(t *testing.T) {
-	test := func(s string, expected uint32) {
-		t.Helper()
-		assert.T(t).This(HashString(s)).Is(expected)
-		assert.T(t).This(HashBytes([]byte(s))).Is(expected)
-	}
-	test("", 0x811c9dc5)
-	test("foobar", 0xbf9cf968)
+	s := "hello world"
+	b := []byte("hello world")
+	assert.T(t).That(String(s) == Bytes(b))
 }
 
 var Sum = uint32(0)
 var S = "now is the time"
+
+func BenchmarkString(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		Sum += String(S)
+	}
+}
 
 func BenchmarkHashString(b *testing.B) {
 	for i := 0; i < b.N; i++ {

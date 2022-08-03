@@ -37,7 +37,7 @@ func (ts *Schema) Key() string {
 }
 
 func (*Schema) Hash(key string) uint32 {
-	return hash.HashString(key)
+	return hash.String(key)
 }
 
 func (ts *Schema) LastMod() int {
