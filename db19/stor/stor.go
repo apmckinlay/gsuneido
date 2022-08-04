@@ -45,8 +45,7 @@ type Stor struct {
 	// shift must be initialized to match chunksize
 	shift int
 	// size is the currently used amount.
-	// It must be accessed in a thread safe way.
-	size uint64
+	size atomic.Uint64
 	// chunks must be initialized up to size,
 	// with at least one chunk if size is 0
 	chunks atomic.Value // [][]byte
@@ -59,8 +58,10 @@ func NewStor(impl storage, chunksize uint64, size uint64) *Stor {
 	shift := bits.TrailingZeros(uint(chunksize))
 	assert.That(1<<shift == chunksize) // chunksize must be power of 2
 	threshold := chunksize * 3 / 4     // ???
-	return &Stor{impl: impl, chunksize: chunksize, threshold: threshold,
-		shift: shift, size: size}
+	stor := &Stor{impl: impl, chunksize: chunksize, threshold: threshold,
+		shift: shift}
+	stor.size.Store(size)
+	return stor
 }
 
 // Alloc allocates n bytes of storage and returns its Offset and byte slice
@@ -71,7 +72,7 @@ func NewStor(impl storage, chunksize uint64, size uint64) *Stor {
 func (s *Stor) Alloc(n int) (Offset, []byte) {
 	assert.That(0 < n && n <= int(s.chunksize))
 	for {
-		oldsize := atomic.LoadUint64(&s.size)
+		oldsize := s.size.Load()
 		if oldsize == closedSize {
 			log.Println("Stor: Alloc after Close")
 			exit.Wait()
@@ -89,7 +90,7 @@ func (s *Stor) Alloc(n int) (Offset, []byte) {
 			newsize = offset + uint64(n)
 		}
 		// attempt to confirm our allocation
-		if atomic.CompareAndSwapUint64(&s.size, oldsize, newsize) {
+		if s.size.CompareAndSwap(oldsize, newsize) {
 			// proactively get next chunk if we passed the threshold
 			i := offset & (s.chunksize - 1) // index within chunk
 			if i <= s.threshold && i+uint64(n) > s.threshold {
@@ -135,7 +136,7 @@ func (s *Stor) chunkToOffset(chunk int) Offset {
 // Size returns the current (allocated) size of the data.
 // The actual file size will be rounded up to the next chunk size.
 func (s *Stor) Size() uint64 {
-	size := atomic.LoadUint64(&s.size)
+	size := s.size.Load()
 	if size == closedSize {
 		log.Println("Stor: Size after Close")
 		dbg.PrintStack()
@@ -195,7 +196,7 @@ func (s *Stor) Close(unmap bool) {
 	if _, ok := s.impl.(*heapStor); ok { // for tests
 		return
 	}
-	size := atomic.SwapUint64(&s.size, closedSize)
+	size := s.size.Swap(closedSize)
 	if size != closedSize {
 		s.impl.Close(int64(size), unmap)
 	}
