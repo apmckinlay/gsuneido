@@ -188,16 +188,21 @@ func (s *Stor) Write(off uint64, data []byte) {
 	if w, ok := s.impl.(writable); ok {
 		w.Write(off, data)
 	} else {
-		copy(s.Data(off), data)
+		copy(s.Data(off), data) // for testing with heap stor
 	}
 }
 
-func (s *Stor) Close(unmap bool) {
-	if _, ok := s.impl.(*heapStor); ok { // for tests
-		return
+func (s *Stor) Close(unmap bool, callback ...func(uint64)) {
+	var size uint64
+	if _, ok := s.impl.(*heapStor); ok {
+		size = s.size.Load() // for tests
+	} else {
+		size = s.size.Swap(closedSize)
 	}
-	size := s.size.Swap(closedSize)
 	if size != closedSize {
+		for _, f := range callback {
+			f(size)
+		}
 		s.impl.Close(int64(size), unmap)
 	}
 }

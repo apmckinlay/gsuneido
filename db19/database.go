@@ -513,20 +513,20 @@ func (db *Database) close(unmap bool) {
 	} else if db.mode != stor.Read {
 		db.persist(&execPersistSingle{}) // for testing
 	}
-	if db.mode != stor.Read {
-		db.writeSize()
-	}
-	db.Store.Close(unmap)
+	db.Store.Close(unmap, db.writeSize)
 }
 
 func (db *Database) Closed() bool {
 	return db.closed.Load()
 }
 
-func (db *Database) writeSize() {
+func (db *Database) writeSize(size uint64) {
+	if db.mode == stor.Read {
+		return
+	}
 	// need to use Write because all but last chunk are read-only
 	buf := make([]byte, stor.SmallOffsetLen)
-	stor.WriteSmallOffset(buf, db.Store.Size())
+	stor.WriteSmallOffset(buf, size)
 	db.Store.Write(uint64(len(magic)), buf)
 }
 
