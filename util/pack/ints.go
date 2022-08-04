@@ -6,7 +6,7 @@ package pack
 import (
 	"encoding/binary"
 
-	"github.com/apmckinlay/gsuneido/util/varint"
+	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
 // Big endian (most significant byte first)
@@ -45,14 +45,13 @@ func (d *Decoder) Uint32() uint32 {
 func (e *Encoder) VarUint(n uint64) *Encoder {
 	prevlen := len(e.buf)
 	bytes := binary.PutUvarint(e.buf[prevlen:cap(e.buf)], n)
-	// assert.That(bytes == varint.Len(n))
 	e.buf = e.buf[:prevlen+bytes]
 	return e
 }
 
 func (d *Decoder) VarUint() uint64 {
-	n, bytes := varint.DecodeUint64(d.s)
-	// assert.That(bytes == varint.Len(n))
+	n, bytes := binary.Uvarint([]byte(d.s))
+	assert.That(bytes > 0)
 	d.s = d.s[bytes:]
 	return n
 }
