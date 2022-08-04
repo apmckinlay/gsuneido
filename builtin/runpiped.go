@@ -4,6 +4,7 @@
 package builtin
 
 import (
+	"errors"
 	"io"
 	"os/exec"
 	"runtime"
@@ -28,6 +29,9 @@ var _ = builtin("RunPiped(command, block=false)",
 		command := ToStr(args[0])
 		cmdargs := splitCommand(command)
 		cmd := exec.Command(cmdargs[0])
+		if errors.Is(cmd.Err, exec.ErrDot) {
+			cmd.Err = nil
+		}
 		if runtime.GOOS == "windows" {
 			cmdSetup(cmd, command)
 		} else {

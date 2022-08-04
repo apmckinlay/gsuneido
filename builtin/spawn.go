@@ -4,6 +4,7 @@
 package builtin
 
 import (
+	"errors"
 	"log"
 	"os"
 	"os/exec"
@@ -18,6 +19,9 @@ var _ = builtin1("System(command)",
 		shell, flag := getShell()
 		command := ToStr(arg)
 		cmd := exec.Command(shell)
+		if errors.Is(cmd.Err, exec.ErrDot) {
+			cmd.Err = nil
+		}
 		if runtime.GOOS == "windows" {
 			cmdSetup(cmd, shell+" "+flag+" "+command)
 		} else {
@@ -72,6 +76,9 @@ var _ = builtinRaw("Spawn(@args)",
 			argstr[i] = ToStr(v)
 		}
 		cmd := exec.Command(exe, argstr...)
+		if errors.Is(cmd.Err, exec.ErrDot) {
+			cmd.Err = nil
+		}
 		cmdSetup(cmd, "")
 		if options.Mode != "gui" {
 			cmd.Stdout = os.Stdout
