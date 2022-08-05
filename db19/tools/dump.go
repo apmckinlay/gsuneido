@@ -170,7 +170,8 @@ func dumpViews(state *DbState, w *bufio.Writer) int {
 // Concurrent checking of additional indexes. Also used by compact.
 
 func newIndexCheckers() *indexCheckers {
-	ics := indexCheckers{work: make(chan indexCheck, 32)} // ???
+	ics := indexCheckers{work: make(chan indexCheck, 32), // ???
+		stop: make(chan void)}
 	nw := options.Nworkers
 	ics.wg.Add(nw)
 	for i := 0; i < nw; i++ {
@@ -185,6 +186,7 @@ type indexCheckers struct {
 	err    atomic.Value // any
 	work   chan indexCheck
 	stop   chan void
+	once   sync.Once
 	wg     sync.WaitGroup
 	closed bool
 }
@@ -209,7 +211,7 @@ func (ics *indexCheckers) worker() {
 	defer func() {
 		if e := recover(); e != nil {
 			ics.err.Store(e)
-			close(ics.stop) // notify main thread
+			ics.once.Do(func() { close(ics.stop) }) // notify main thread
 		}
 		ics.wg.Done()
 	}()
