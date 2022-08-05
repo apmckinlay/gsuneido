@@ -29,7 +29,7 @@ type conn struct {
 }
 
 func (c *conn) Close() {
-	if err := c.err.Load(); err != "" {
+	if err := c.err.Load(); err != "" && err != "EOF" {
 		log.Println("mux:", err)
 	}
 	c.rw.Close()
