@@ -33,13 +33,6 @@ func StartConcur(db *Database, persistInterval time.Duration) {
 	db.ck = StartCheckCo(db, mergeChan, allDone)
 }
 
-type mergeT struct {
-	db        *Database
-	mergeChan chan todo
-	merges    *mergeList
-	em        *execMulti
-}
-
 func merger(db *Database, mergeChan chan todo,
 	persistInterval time.Duration, allDone chan void) {
 	defer func() {
@@ -52,13 +45,12 @@ func merger(db *Database, mergeChan chan todo,
 	ep := startExecPersistMulti()
 	// ep := &execPersistSingle{}
 	merges := &mergeList{}
-	mt := mergeT{db: db, mergeChan: mergeChan, merges: merges, em: em}
 	ticker := time.NewTicker(persistInterval)
 	prevState := db.GetState()
 loop:
 	for {
 		select {
-		case td := <-mergeChan: // receive todo's from commit
+		case td := <-mergeChan: // receive todo's from checkco
 			if td.isZero() { // channel closed
 				break loop
 			}
@@ -75,10 +67,10 @@ loop:
 					}
 					break
 				}
-				mt.merges.start(td)
-				td = mt.merges.drain(mt.mergeChan)
-				mt.db.Merge(mt.em.merge, mt.merges)
-				// mt.db.Merge(mergeSingle, merges)
+				merges.start(td)
+				td = merges.drain(mergeChan)
+				db.Merge(em.merge, merges)
+				// db.Merge(mergeSingle, merges)
 				if td.isZero() {
 					break
 				}
