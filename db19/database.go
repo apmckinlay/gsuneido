@@ -5,6 +5,7 @@ package db19
 
 import (
 	"errors"
+	"os"
 	"sync/atomic"
 
 	"github.com/apmckinlay/gsuneido/db19/index"
@@ -13,6 +14,7 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/meta"
 	"github.com/apmckinlay/gsuneido/db19/meta/schema"
 	"github.com/apmckinlay/gsuneido/db19/stor"
+	"github.com/apmckinlay/gsuneido/options"
 	rt "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/cksum"
 	"github.com/apmckinlay/gsuneido/util/exit"
@@ -34,7 +36,8 @@ type Database struct {
 	// schemaLock is used to prevent concurrent schema modification
 	schemaLock atomic.Bool
 
-	closed atomic.Bool
+	closed    atomic.Bool
+	corrupted atomic.Bool
 
 	rt.Sviews
 }
@@ -485,15 +488,37 @@ func (db *Database) Size() uint64 {
 	return db.Store.Size()
 }
 
-// Transactions only returns the update transactions
+// Transactions only returns the update transactions.
+// It returns nil if corrupted.
 func (db *Database) Transactions() []int {
 	db.ckOpen()
+	if db.corrupted.Load() {
+		return nil
+	}
 	return db.ck.Transactions()
 }
 
 func (db *Database) ckOpen() {
 	if db.closed.Load() {
 		exit.Wait()
+	}
+}
+
+func (db *Database) Corrupt() {
+	if db.corrupted.Swap(true) {
+		return
+	}
+	options.DbStatus.Store("corrupted")
+	buf := make([]byte, stor.SmallOffsetLen)
+	if db.mode != stor.Read {
+		db.Store.Write(uint64(len(magic)), buf)
+	} else {
+		f, err := os.OpenFile("suneido.db", os.O_RDWR, 0)
+		if err == nil {
+			defer f.Close()
+			f.Seek(int64(len(magic)), 0)
+			f.Write(buf)
+		}
 	}
 }
 
@@ -521,7 +546,7 @@ func (db *Database) Closed() bool {
 }
 
 func (db *Database) writeSize(size uint64) {
-	if db.mode == stor.Read {
+	if db.mode == stor.Read || db.corrupted.Load() {
 		return
 	}
 	// need to use Write because all but last chunk are read-only

@@ -296,8 +296,11 @@ func (dbms *DbmsLocal) Transaction(update bool) ITran {
 
 // Transactions only returns the update transactions
 func (dbms *DbmsLocal) Transactions() *SuObject {
-	var ob SuObject
 	trans := dbms.db.Transactions()
+	if trans == nil {
+		return SuObjectOf(Zero) // corrupt
+	}
+	var ob SuObject
 	for _, t := range trans {
 		ob.Add(IntVal(t<<1 | 1)) // update tran# are odd
 	}

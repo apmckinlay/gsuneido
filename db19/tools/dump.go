@@ -35,13 +35,20 @@ func DumpDatabase(dbfile, to string) (nTables, nViews int, err error) {
 func Dump(db *Database, to string) (nTables, nViews int, err error) {
 	defer func() {
 		if e := recover(); e != nil {
+			db.Corrupt()
 			err = fmt.Errorf("dump failed: %v", e)
 		}
 	}()
-	f, w := dumpOpen()
+	f, w, err := dumpOpen()
+	if err != nil {
+		return 0, 0, err
+	}
 	tmpfile := f.Name()
 	defer func() { f.Close(); os.Remove(tmpfile) }()
 	nTables, nViews = dump(db, w)
+	if err := w.Flush(); err != nil {
+		return 0, 0, err
+	}
 	f.Close()
 	ck(system.RenameBak(tmpfile, to))
 	return nTables, nViews, nil
@@ -60,7 +67,6 @@ func dump(db *Database, w *bufio.Writer) (nTables, nViews int) {
 	for _, table := range tables {
 		dumpTable2(db, state, table, true, w, ics)
 	}
-	ck(w.Flush())
 	return len(tables), nViews
 }
 
@@ -76,30 +82,40 @@ func DumpTable(dbfile, table, to string) (nrecs int, err error) {
 func DumpDbTable(db *Database, table, to string) (nrecs int, err error) {
 	defer func() {
 		if e := recover(); e != nil {
+			db.Corrupt()
 			err = fmt.Errorf("dump failed: %v", e)
 		}
 	}()
-	f, w := dumpOpen()
+	f, w, err := dumpOpen()
+	if err != nil {
+		return 0, err
+	}
 	tmpfile := f.Name()
 	defer func() { f.Close(); os.Remove(tmpfile) }()
-	ics := newIndexCheckers()
-	defer ics.finish()
-
-	state := db.Persist()
-	nrecs = dumpTable2(db, state, table, false, w, ics)
-	ck(w.Flush())
+	nrecs = dumpDbTable(db, nrecs, table, w, f)
+	if err := w.Flush(); err != nil {
+		return 0, err
+	}
 	f.Close()
-	ics.finish()
 	ck(system.RenameBak(tmpfile, to))
 	return nrecs, nil
 }
 
-func dumpOpen() (*os.File, *bufio.Writer) {
+func dumpDbTable(db *Database, nrecs int, table string, w *bufio.Writer, f *os.File) int {
+	ics := newIndexCheckers()
+	defer ics.finish()
+	state := db.Persist()
+	return dumpTable2(db, state, table, false, w, ics)
+}
+
+func dumpOpen() (*os.File, *bufio.Writer, error) {
 	f, err := os.CreateTemp(".", "gs*.tmp")
-	ck(err)
+	if err != nil {
+		return nil, nil, err
+	}
 	w := bufio.NewWriter(f)
 	w.WriteString("Suneido dump 2\n")
-	return f, w
+	return f, w, nil
 }
 
 func dumpTable2(db *Database, state *DbState, table string, multi bool,

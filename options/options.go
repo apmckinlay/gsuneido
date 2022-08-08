@@ -9,6 +9,7 @@ import (
 	"runtime"
 	"sync/atomic"
 
+	myatomic "github.com/apmckinlay/gsuneido/util/generic/atomic"
 	"github.com/apmckinlay/gsuneido/util/generic/ord"
 )
 
@@ -52,4 +53,8 @@ var Nworkers = func() int {
 // - starting
 // - repairing
 // - corrupted
-var DbStatus string = "starting"
+var DbStatus myatomic.String
+
+func init() {
+	DbStatus.Store("starting")
+}

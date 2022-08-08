@@ -217,7 +217,10 @@ func (ss *serverSession) close() {
 }
 
 func (ss *serverSession) abort() {
+	assert.That(ss != nil) //FIXME
+	assert.That(ss.trans != nil) //FIXME
 	for _, tran := range ss.trans {
+		assert.That(tran != nil) //FIXME
 		tran.Abort()
 	}
 }
@@ -698,6 +701,7 @@ func cmdTransaction(ss *serverSession) {
 	update := ss.GetBool()
 	tran := ss.sc.dbms.Transaction(update)
 	tn := ss.nextNum(update)
+	assert.That(tran != nil) //FIXME
 	ss.trans[tn] = tran
 	ss.PutBool(true).PutInt(tn)
 }

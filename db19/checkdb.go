@@ -55,6 +55,7 @@ func CheckDatabase(dbfile string) (ec error) {
 func (db *Database) Check() (ec error) {
 	defer func() {
 		if e := recover(); e != nil {
+			db.Corrupt()
 			ec = newErrCorrupt(e)
 		}
 	}()

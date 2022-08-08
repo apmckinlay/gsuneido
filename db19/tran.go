@@ -325,6 +325,9 @@ func (t *UpdateTran) Read(table string, iIndex int, from, to string) {
 }
 
 func (t *UpdateTran) Output(th *rt.Thread, table string, rec rt.Record) {
+	if t.db.corrupted.Load() {
+		return
+	}
 	ts := t.getSchema(table)
 	ti := t.tran.GetInfo(table) // readonly
 	rec = rec.Truncate(len(ts.Columns))
@@ -528,6 +531,9 @@ func (t *UpdateTran) Update(th *rt.Thread, table string, oldoff uint64, newrec r
 
 func (t *UpdateTran) update(th *rt.Thread, table string, oldoff uint64, newrec rt.Record,
 	block bool) uint64 {
+	if t.db.corrupted.Load() {
+		return oldoff
+	}
 	ts := t.getSchema(table)
 	newrec = newrec.Truncate(len(ts.Columns))
 	n := newrec.Len()

@@ -114,6 +114,9 @@ func (db *Database) CommitMerge(ut *UpdateTran) {
 // flatten applies to the schema and info chains (not indexes).
 // NOTE: persist should only be called by the checker.
 func (db *Database) persist(exec execPersist) *DbState {
+	if db.corrupted.Load() {
+		return db.GetState()
+	}
 	// fmt.Println("persist")
 	var newState *DbState
 	db.GetState().Meta.Persist(exec.Submit) // outside UpdateState

@@ -47,7 +47,7 @@ func httpStatus(w http.ResponseWriter, _ *http.Request) {
 
 func body() string {
 	extra := ""
-	switch options.DbStatus {
+	switch options.DbStatus.Load() {
 	case "starting":
 		extra = "<h2 style=\"color: blue;\">Starting ...</h2>"
 	case "corrupted":

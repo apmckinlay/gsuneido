@@ -242,7 +242,7 @@ func startServer() {
 	mainThread = &Thread{}
 	mainThread.Name = "main"
 	run("Init()")
-	options.DbStatus = ""
+	options.DbStatus.Store("")
 	dbms.Server(dbmsLocal)
 }
 
@@ -262,7 +262,7 @@ func openDbms() {
 		if !AlertCancel("ERROR:", err, "\nwill try to repair") {
 			Fatal("database corrupt, not repaired")
 		}
-		options.DbStatus = "repairing"
+		options.DbStatus.Store("repairing")
 		msg, err := db19.Repair("suneido.db", err)
 		if err != nil {
 			Fatal("repair:", err)
@@ -272,7 +272,7 @@ func openDbms() {
 		if err != nil {
 			Fatal("open:", err)
 		}
-		options.DbStatus = "starting"
+		options.DbStatus.Store("starting")
 	}
 	db19.StartTimestamps()
 	db19.StartConcur(db, 10*time.Second) //1*time.Minute) //FIXME
