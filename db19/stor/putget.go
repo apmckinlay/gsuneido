@@ -167,7 +167,7 @@ func (r *Reader) GetStr() string {
 	return s
 }
 
-// GetStrs reads a slice of strings
+// GetStrs reads a slice of strings (nil if empty)
 func (r *Reader) GetStrs() []string {
 	n := r.Get2()
 	if n == 0 {

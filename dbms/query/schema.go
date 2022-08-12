@@ -460,9 +460,9 @@ func (is *Indexes) Get(_ *Thread, dir Dir) Row {
 	switch idx.Mode {
 	case 'k':
 		rb.Add(True.(Packable))
-	case 'i', 'I':
+	case 'i', 'I': //TODO remove I
 		rb.Add(False.(Packable))
-	case 'u', 'U':
+	case 'u', 'U': //TODO remove U
 		rb.Add(SuStr("u"))
 	default:
 		assert.ShouldNotReachHere()

@@ -28,8 +28,19 @@ type Index struct {
 	Columns []string
 	Ixspec  ixkey.Spec
 	// Mode is 'k' for key, 'i' for index, 'u' for unique index
-	Mode    byte
+	Mode byte
+	// Primary is true for keys ('k') that do not contain another key.
+	// Only primary keys need duplicate checking.
 	Primary bool
+	// ContainsKey is true for indexes ('i' and 'u') that contain a key.
+	// Unique indexes ('u') that contain a key do not need duplicate checking.
+	ContainsKey bool
+	// BestKey is the key used to make indexes ('i' and 'u') unique.
+	// It is set by OptimizeIndexes or it defaults to the first shortest key.
+	// A key used as BestKey must not be dropped.
+	// BestKey must be persisted (unlike Primary and ConstainsKey)
+	// because it affects the btrees and modifying the schema could change it.
+	BestKey []string
 	Fk      Fkey
 	// FkToHere is other foreign keys that reference this index
 	FkToHere []Fkey // filled in by meta
@@ -97,7 +108,7 @@ func (ix *Index) String() string {
 }
 
 func (ix *Index) string(fktohere bool) string {
-	s := map[byte]string{
+	s := map[byte]string{ //TODO remove ToLower
 		'k': "key", 'i': "index", 'u': "index unique"}[ascii.ToLower(ix.Mode)]
 	s += str.Join("(,)", ix.Columns)
 	if ix.Fk.Table != "" {
@@ -150,7 +161,7 @@ func (sc *Schema) IIndex(cols []string) int {
 
 func (ix *Index) Equal(iy *Index) bool {
 	return slices.Equal(ix.Columns, iy.Columns) &&
-		ascii.ToLower(ix.Mode) == ascii.ToLower(iy.Mode) &&
+		ascii.ToLower(ix.Mode) == ascii.ToLower(iy.Mode) && //TODO remove ToLower
 		ix.Fk.Table == iy.Fk.Table &&
 		ix.Fk.Mode == iy.Fk.Mode &&
 		slices.Equal(ix.Fk.Columns, iy.Fk.Columns)

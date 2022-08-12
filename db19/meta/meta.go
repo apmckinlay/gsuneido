@@ -418,7 +418,7 @@ func createIndexes(ts *Schema, ti *Info, idxs []schema.Index, store *stor.Stor) 
 		ts.Indexes = append(ts.Indexes, *ix)
 	}
 	if ti.Nrows == 0 {
-		ts.OptimizeIndexes()
+		ts.SetBestKey()
 	}
 	ts.Ixspecs(ts.Indexes)
 	n := len(ti.Indexes)
@@ -531,19 +531,24 @@ func dropIndexes(ts *Schema, ti *Info, idxs []schema.Index) {
 	if len(idxs) == 0 {
 		return
 	}
-loop:
 	for j := range idxs {
+		exists := false
 		for i := range ts.Indexes {
 			if slices.Equal(ts.Indexes[i].Columns, idxs[j].Columns) {
 				if 0 != len(ts.Indexes[i].FkToHere) {
 					panic("can't drop index used by foreign keys: " +
 						ts.Table + " " + str.Join("(,)", idxs[j].Columns))
 				}
-				continue loop
+				exists = true
+			} else if slices.Equal(ts.Indexes[i].BestKey, idxs[j].Columns) {
+				panic("can't drop key used to make index unique: " +
+					ts.Table + " " + str.Join("(,)", idxs[j].Columns))
 			}
 		}
-		panic("can't drop nonexistent index: " +
-			ts.Table + " " + str.Join("(,)", idxs[j].Columns))
+		if !exists {
+			panic("can't drop nonexistent index: " +
+				ts.Table + " " + str.Join("(,)", idxs[j].Columns))
+		}
 	}
 	tsIdxs := make([]schema.Index, 0, len(ts.Indexes))
 	tiIdxs := make([]*index.Overlay, 0, len(ti.Indexes))

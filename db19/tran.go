@@ -369,14 +369,23 @@ func (t *UpdateTran) Output(th *rt.Thread, table string, rec rt.Record) {
 
 func (t *UpdateTran) dupOutputBlock(table string, iIndex int, ix schema.Index,
 	ov *index.Overlay, rec rt.Record, key string) {
-	if ix.Primary ||
-		(ix.Mode == 'u' && !uniqueIndexEmpty(rec, ix.Ixspec)) {
+	if needsDupCheck(ix, rec) {
 		if ov.Lookup(key) != 0 {
 			panic(fmt.Sprint("duplicate key: ",
 				str.Join(",", ix.Columns), " in ", table))
 		}
 		t.Read(table, iIndex, key, key)
 	}
+}
+
+func needsDupCheck(ix schema.Index, rec rt.Record) bool {
+	if ix.Primary {
+		return true
+	}
+	if ix.Mode == 'u' && !ix.ContainsKey && !uniqueIndexEmpty(rec, ix.Ixspec) {
+		return true
+	}
+	return false
 }
 
 func uniqueIndexEmpty(rec rt.Record, is ixkey.Spec) bool {

@@ -14,6 +14,7 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/options"
 	"github.com/apmckinlay/gsuneido/runtime"
+	"github.com/apmckinlay/gsuneido/util/ascii"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/cksum"
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
@@ -147,5 +148,10 @@ func compactTable(state *DbState, src *Database, ts *meta.Schema, dst *Database)
 	}
 	ovs := buildIndexes(ts, list, dst.Store, count) // same as load
 	ti := &meta.Info{Table: ts.Table, Nrows: count, Size: size, Indexes: ovs}
+	//TODO remove this cleanup code
+	for i := range ts.Indexes {
+		ix := &ts.Indexes[i]
+		ix.Mode = ascii.ToLower(ix.Mode)
+	}
 	dst.LoadedTable(ts, ti)
 }

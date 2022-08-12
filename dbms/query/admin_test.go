@@ -180,8 +180,6 @@ func TestAdminAlterDrop(t *testing.T) {
 		Panics("can't drop nonexistent column: x")
 	assert.T(t).This(func() { doAdmin(db, "alter tmp drop index(x)") }).
 		Panics("can't drop nonexistent index: tmp (x)")
-	assert.T(t).This(func() { doAdmin(db, "alter tmp drop index(a)") }).
-		Panics("can't drop all keys: tmp")
 	doAdmin(db, "alter tmp drop (d)")
 	assert.T(t).This(db.Schema("tmp")).Is("tmp (a,b,c,-) key(a) index(b,c)")
 	doAdmin(db, "alter tmp drop (b) index(b,c)")
@@ -190,6 +188,14 @@ func TestAdminAlterDrop(t *testing.T) {
 	doAdmin(db, "create tmp2 (a,b,C,D,a_lower!) key(a)")
 	doAdmin(db, "alter tmp2 drop (C,d,a_lower!)")
 	assert.T(t).This(db.Schema("tmp2")).Is("tmp2 (a,b) key(a)")
+
+	doAdmin(db, "create tmp3 (a,b,c) key(a)")
+	assert.T(t).This(func() { doAdmin(db, "alter tmp3 drop key(a)") }).
+		Panics("can't drop all keys: tmp")
+
+	doAdmin(db, "create tmp4 (a,b,c) key(a) key(b,c) index(c)")
+	assert.T(t).This(func() { doAdmin(db, "alter tmp4 drop key(a)") }).
+		Panics("can't drop key used to make index unique: tmp4 (a)")
 }
 
 func TestAdminDrop(t *testing.T) {
