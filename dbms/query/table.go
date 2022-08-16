@@ -43,6 +43,7 @@ type Table struct {
 	columns   []string
 	indexes   [][]string
 	keys      [][]string
+	primary   [][]string
 	singleton bool
 	tran      QueryTran
 	schema    *Schema
@@ -108,7 +109,10 @@ func (tbl *Table) Indexes() [][]string {
 }
 
 func (tbl *Table) Keys() [][]string {
-	return withoutDupsOrSupersets(tbl.keys)
+	if tbl.primary == nil {
+		tbl.primary = withoutDupsOrSupersets(tbl.keys)
+	}
+	return tbl.primary
 }
 
 func (*Table) Ordering() []string {

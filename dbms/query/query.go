@@ -620,5 +620,5 @@ func (b *optmod) result() [][]string {
 	if b.mod == nil {
 		return b.orig[:b.i:b.i]
 	}
-	return b.mod
+	return slices.Clip(b.mod)
 }
