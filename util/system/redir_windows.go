@@ -6,13 +6,14 @@ package system
 import (
 	"log"
 	"os"
+	"syscall"
 
 	"golang.org/x/sys/windows"
 )
 
 // Redirect redirects stderr and stdout to a file
 // (unless already redirected).
-// This is to capture Go errors when running as a GUI program or service.
+// This is to capture Go errors when running as a service or GUI program.
 func Redirect(filename string) error {
 	if redirected() {
 		return nil
@@ -21,18 +22,21 @@ func Redirect(filename string) error {
 	if err != nil {
 		return err
 	}
-	log.SetOutput(f) // redundant, but just to make sure
-	err = windows.SetStdHandle(windows.STD_ERROR_HANDLE, windows.Handle(f.Fd()))
+	wh := windows.Handle(f.Fd())
+	err = windows.SetStdHandle(windows.STD_ERROR_HANDLE, wh)
 	if err != nil {
 		return err
 	}
-	err = windows.SetStdHandle(windows.STD_OUTPUT_HANDLE, windows.Handle(f.Fd()))
+	err = windows.SetStdHandle(windows.STD_OUTPUT_HANDLE, wh)
 	if err != nil {
 		return err
 	}
-	// need these because SetStdHandle does not affect prior references
-	os.Stderr = f
+	// redo initialization
 	os.Stdout = f
+	os.Stderr = f
+	log.SetOutput(f)
+	syscall.Stdout = syscall.Handle(wh)
+	syscall.Stderr = syscall.Handle(wh)
 	return nil
 }
 

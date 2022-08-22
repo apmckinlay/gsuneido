@@ -10,7 +10,6 @@ import (
 	"os/exec"
 	"runtime"
 
-	"github.com/apmckinlay/gsuneido/options"
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
@@ -27,10 +26,8 @@ var _ = builtin1("System(command)",
 		} else {
 			cmd.Args = []string{shell, flag, command}
 		}
-		if options.Mode != "gui" {
-			cmd.Stdout = os.Stdout
-			cmd.Stderr = os.Stderr
-		}
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
 		err := cmd.Run()
 		if err != nil {
 			if _, ok := err.(*exec.ExitError); !ok {
@@ -80,10 +77,8 @@ var _ = builtinRaw("Spawn(@args)",
 			cmd.Err = nil
 		}
 		cmdSetup(cmd, "")
-		if options.Mode != "gui" {
-			cmd.Stdout = os.Stdout
-			cmd.Stderr = os.Stderr
-		}
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
 		err := cmd.Start()
 		if err != nil {
 			log.Println("ERROR: Spawn:", err)
