@@ -56,7 +56,7 @@ func main() {
 	if mode == "gui" {
 		redirect()
 	}
-	if err := system.Service("gSuneido", redirect, stopServer); err != nil {
+	if err := system.Service("gSuneido", redirect, exitOk); err != nil {
 		Fatal(err)
 	}
 	if options.Action == "" && mode != "gui" {
@@ -175,11 +175,14 @@ func main() {
 		(options.Action == "client" && options.Mode != "gui") {
 		run("Init.Repl()")
 		repl()
-		dbClose()
 	} else {
 		run("Init()")
 		builtin.Run()
 	}
+}
+
+func exitOk() {
+	exit.Exit(0)
 }
 
 func redirect() {
@@ -243,13 +246,13 @@ func startServer() {
 	mainThread.Name = "main"
 	run("Init()")
 	options.DbStatus.Store("")
+	exit.Add(stopServer)
 	dbms.Server(dbmsLocal)
 }
 
 func stopServer() {
 	httpServer.Close()
 	dbms.StopServer()
-	dbmsLocal.Close()
 	log.Println("server stopped")
 }
 
@@ -279,7 +282,7 @@ func openDbms() {
 	dbmsLocal = dbms.NewDbmsLocal(db)
 	DbmsAuth = options.Action == "server" || mode != "gui" || !db.HaveUsers()
 	GetDbms = getDbms
-	exit.Add(db.CloseKeepMapped)
+	exit.Add(db.CloseKeepMapped) // keep mapped to avoid errors during shutdown
 	// go checkState()
 }
 
@@ -288,12 +291,6 @@ func getDbms() IDbms {
 		return dbmsLocal
 	}
 	return dbms.Unauth(dbmsLocal)
-}
-
-func dbClose() {
-	if db != nil {
-		db.Close()
-	}
 }
 
 // func checkState() {
@@ -305,10 +302,10 @@ func dbClose() {
 // 		if schemaOff != 0 {
 // 			hamt.ReadChain[string](db.Store, schemaOff, meta.ReadSchema)
 // 		}
-// 		if schemaOff != 0 {
+// 		if infoOff != 0 {
 // 			hamt.ReadChain[string](db.Store, infoOff, meta.ReadInfo)
 // 		}
-// 		time.Sleep(50 * time.Millisecond)
+// 		time.Sleep(50 * time.Millisecond) // adjust for overhead
 // 		// recalculate checksum to verify Meta hasn't been mutated
 // 		assert.That(state.Meta.Cksum() == cksum)
 // 	}

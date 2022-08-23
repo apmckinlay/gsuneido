@@ -25,16 +25,16 @@ func Exit(code int) {
 	// failsafe in case this goroutine doesn't get to exit
 	go func() {
 		time.Sleep(5 * time.Second)
-		os.Exit(2)
+		log.Fatalln("exit failsafe")
 	}()
-	for _, fn := range exitfns {
+	for i := len(exitfns) - 1; i >= 0; i-- {
 		func() {
 			defer func() {
 				if e := recover(); e != nil {
 					log.Println("ERROR during Exit:", e)
 				}
 			}()
-			fn()
+			exitfns[i]()
 		}()
 	}
 	os.Exit(code)
