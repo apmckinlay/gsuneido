@@ -10,6 +10,8 @@ package tr
 
 import (
 	"strings"
+
+	"github.com/apmckinlay/gsuneido/util/generic/cache"
 )
 
 type trset string
@@ -127,4 +129,15 @@ func xindex(from trset, c byte, allbut bool, lastto int) int {
 		return -1
 	}
 	return i
+}
+
+type Cache struct {
+	*cache.Cache[string, trset]
+}
+
+func (c *Cache) Get(s string) trset {
+	if c.Cache == nil {
+		c.Cache = cache.New(Set)
+	}
+	return c.Cache.Get(s)
 }

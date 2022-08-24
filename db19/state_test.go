@@ -24,7 +24,7 @@ func TestStateReadWrite(*testing.T) {
 // 	if err != nil {
 // 		panic(err.Error())
 // 	}
-// 	asof := time.Date(2022, 3, 1, 17, 50, 31, 554000000, time.Local)
-// 	state := db.StateAsof(asof.UnixMilli())
-// 	fmt.Println(asof, "=>", time.UnixMilli(state.asof))
+// 	asof := time.Date(2022, 8, 22, 17, 50, 31, 0, time.Local)
+// 	state := StateAsof(db.Store, asof.UnixMilli())
+// 	fmt.Println(asof, "=>", time.UnixMilli(state.Asof))
 // }

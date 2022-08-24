@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/util/ascii"
+	"github.com/apmckinlay/gsuneido/util/generic/cache"
 	"github.com/apmckinlay/gsuneido/util/generic/ord"
 )
 
@@ -369,4 +370,15 @@ func (r *Result) String() string {
 		s += "(" + strconv.Itoa(p.pos1-1) + ", " + strconv.Itoa(p.end) + ") "
 	}
 	return s
+}
+
+type Cache struct {
+	*cache.Cache[string, Pattern]
+}
+
+func (c *Cache) Get(s string) Pattern {
+	if c.Cache == nil {
+		c.Cache = cache.New(Compile)
+	}
+	return c.Cache.Get(s)
 }

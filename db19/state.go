@@ -14,6 +14,7 @@ import (
 	"github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/cksum"
+	"github.com/apmckinlay/gsuneido/util/generic/cache"
 )
 
 type DbState struct {
@@ -198,8 +199,20 @@ func readState(st *stor.Stor, off uint64) (offSchema, offInfo uint64, t int64) {
 
 //-------------------------------------------------------------------
 
+var stateCache = cache.NewConc(stateAsof)
+
 // StateAsof returns the state <= asof, or the initial state.
 func StateAsof(store *stor.Stor, asof int64) *DbState {
+	return stateCache.Get(asofArgs{store: store, asof: asof})
+}
+
+type asofArgs struct {
+	store *stor.Stor
+	asof  int64
+}
+
+func stateAsof(args asofArgs) *DbState {
+	store := args.store
 	var offSchema, offInfo uint64
 	var t int64
 	off := store.Size()
@@ -210,7 +223,7 @@ func StateAsof(store *stor.Stor, asof int64) *DbState {
 		if offSchema, offInfo, t = readState(store, off); t == 0 {
 			continue // invalid
 		}
-		if t <= asof {
+		if t <= args.asof {
 			break
 		}
 	}
