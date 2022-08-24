@@ -459,13 +459,18 @@ func (t *UpdateTran) fkeyDeleteBlock(ts *meta.Schema, i int, key string) {
 	}
 	encoded := ts.Indexes[i].Ixspec.Encodes()
 	fkToHere := ts.Indexes[i].FkToHere
-	for i := range fkToHere {
-		fk := &fkToHere[i]
+	encKey := ""
+	for j := range fkToHere {
+		fk := &fkToHere[j]
 		fkis := t.meta.GetRoSchema(fk.Table).Indexes[fk.IIndex].Ixspec
+		fkey := key
 		if !encoded && fkis.Encodes() {
-			key = ixkey.Encode(key)
+			if encKey == "" {
+				encKey = ixkey.Encode(key)
+			}
+			fkey = encKey
 		}
-		if fk.Mode == schema.Block && t.fkeyDeleteExists(fk, key) {
+		if fk.Mode == schema.Block && t.fkeyDeleteExists(fk, fkey) {
 			panic("delete blocked by foreign key: " +
 				fk.Table + " " + str.Join("(,)", fk.Columns))
 		}
@@ -512,8 +517,8 @@ func (t *UpdateTran) fkeyDeleteCascade(th *rt.Thread, ts *meta.Schema, i int, ke
 	}
 	encoded := ts.Indexes[i].Ixspec.Encodes()
 	fkToHere := ts.Indexes[i].FkToHere
-	for i := range fkToHere {
-		fk := &fkToHere[i]
+	for j := range fkToHere {
+		fk := &fkToHere[j]
 		if fk.Mode&schema.CascadeDeletes != 0 {
 			iter := t.cascade(fk, encoded, key)
 			for iter.Next(t); !iter.Eof(); iter.Next(t) {
