@@ -61,6 +61,7 @@ type serverSession struct {
 
 // Server listens and accepts connections. It never returns.
 func Server(dbms *DbmsLocal) {
+	workers = mux.NewWorkers(doRequest)
 	l, err := net.Listen("tcp", ":"+options.Port)
 	if err != nil {
 		Fatal(err)
@@ -118,7 +119,6 @@ func idleCheck() {
 
 func newServerConn(dbms *DbmsLocal, conn net.Conn) {
 	trace.ClientServer.Println("server connection")
-	workers = mux.NewWorkers(doRequest)
 	sendHello(conn)
 	addr := str.BeforeFirst(conn.RemoteAddr().String(), ":")
 	connId := mux.NewServerConn(conn, workers.Submit)

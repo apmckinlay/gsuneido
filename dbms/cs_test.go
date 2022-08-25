@@ -10,6 +10,7 @@ import (
 
 	"github.com/apmckinlay/gsuneido/db19"
 	"github.com/apmckinlay/gsuneido/db19/stor"
+	"github.com/apmckinlay/gsuneido/dbms/mux"
 	"github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
@@ -19,6 +20,7 @@ func TestClientServer(*testing.T) {
 	db, _ := db19.CreateDb(stor.HeapStor(8192))
 	dbmsLocal := NewDbmsLocal(db)
 	p1, p2 := net.Pipe()
+	workers = mux.NewWorkers(doRequest)
 	go newServerConn(dbmsLocal, p1)
 	ok, _ := checkHello(p2)
 	assert.That(ok)
