@@ -12,7 +12,9 @@ import (
 	"strings"
 	"time"
 
+	"github.com/apmckinlay/gsuneido/options"
 	. "github.com/apmckinlay/gsuneido/runtime"
+	"github.com/apmckinlay/gsuneido/util/str"
 )
 
 func ConnectClient(addr string, port string) (conn net.Conn, jserver bool) {
@@ -32,25 +34,32 @@ func cantConnect(s string) {
 	Fatal("Can't connect.", s)
 }
 
-// helloSize is the size of the initial connection message from the server
-// the size must match cSuneido and jSuneido
-const helloSize = 50
-
 func checkHello(conn net.Conn) (ok, jserver bool) {
 	var buf [helloSize]byte
+	conn.SetReadDeadline(time.Now().Add(100 * time.Millisecond))
 	n, err := io.ReadFull(conn, buf[:])
+	var never time.Time
+	conn.SetReadDeadline(never)
 	if n != helloSize || err != nil {
-		return
+		return false, false
 	}
 	s := string(buf[:])
 	if !strings.HasPrefix(s, "Suneido ") {
-		return
+		return false, false
 	}
-	//TODO built date check
-	if strings.Contains(s, "Java") {
+	if strings.Contains(s, " (Java)") {
 		return true, true
 	}
+	s = strings.TrimPrefix(s, "Suneido ")
+	if noTime(s) != noTime(options.BuiltDate) {
+		return false, false
+	}
 	return true, false
+}
+
+func noTime(s string) string {
+	s = str.BeforeFirst(s, ":")
+	return str.BeforeLast(s, " ")
 }
 
 func checkServerStatus(addr string, port string) {

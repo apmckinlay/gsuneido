@@ -25,7 +25,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/system"
 )
 
-var builtDate = "Dec 29 2020" // set by: go build -ldflags "-X main.builtDate=..."
+var builtDate = "Dec 29 2020 12:34" // set by: go build -ldflags "-X main.builtDate=..."
 var mode = ""                 // set by: go build -ldflags "-X main.mode=gui"
 
 var help = `options:

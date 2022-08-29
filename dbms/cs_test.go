@@ -11,12 +11,14 @@ import (
 	"github.com/apmckinlay/gsuneido/db19"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/dbms/mux"
+	"github.com/apmckinlay/gsuneido/options"
 	"github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
 func TestClientServer(*testing.T) {
 	// trace.Set(int(trace.ClientServer))
+	options.BuiltDate = "Dec 29 2020 12:34"
 	db, _ := db19.CreateDb(stor.HeapStor(8192))
 	dbmsLocal := NewDbmsLocal(db)
 	p1, p2 := net.Pipe()

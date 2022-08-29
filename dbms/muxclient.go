@@ -23,6 +23,7 @@ type muxClient struct {
 }
 
 func NewMuxClient(conn net.Conn) *muxClient {
+	conn.Write(hello())
 	cc := mux.NewClientConn(conn)
 	return &muxClient{cc: cc}
 }

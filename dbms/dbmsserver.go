@@ -4,6 +4,7 @@
 package dbms
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net"
@@ -20,6 +21,7 @@ import (
 	"github.com/apmckinlay/gsuneido/runtime/trace"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/str"
+	"golang.org/x/time/rate"
 )
 
 // This is the multiplexed server.
@@ -69,7 +71,10 @@ func Server(dbms *DbmsLocal) {
 	defer l.Close()
 	go idleTimeout()
 	var tempDelay time.Duration // how long to sleep on accept failure
+	limiter := rate.NewLimiter(rate.Limit(100), 10)
+	context := context.Background()
 	for {
+		limiter.Wait(context)
 		conn, err := l.Accept()
 		if err != nil {
 			// error handling based on Go net/http
@@ -90,7 +95,8 @@ func Server(dbms *DbmsLocal) {
 			Fatal(err)
 		}
 		tempDelay = 0
-		newServerConn(dbms, conn)
+		// start a new goroutine to avoid blocking
+		go newServerConn(dbms, conn)
 	}
 }
 
@@ -119,28 +125,37 @@ func idleCheck() {
 
 func newServerConn(dbms *DbmsLocal, conn net.Conn) {
 	trace.ClientServer.Println("server connection")
-	sendHello(conn)
+	conn.Write(hello())
+	if ok, _ := checkHello(conn); !ok {
+		conn.Close()
+		return
+	}
 	addr := str.BeforeFirst(conn.RemoteAddr().String(), ":")
-	connId := mux.NewServerConn(conn, workers.Submit)
-	sc := &serverConn{dbms: dbms, id: connId, conn: conn, remoteAddr: addr,
+	msc := mux.NewServerConn(conn)
+	sc := &serverConn{dbms: dbms, id: msc.Id(), conn: conn, remoteAddr: addr,
 		sessions: make(map[uint32]*serverSession)}
 	if dbms.db.HaveUsers() {
 		sc.dbms = &DbmsUnauth{dbms: dbms}
 	}
 	serverConnsLock.Lock()
-	serverConns[connId] = sc
+	serverConns[sc.id] = sc
 	serverConnsLock.Unlock()
+	msc.Run(workers.Submit)
 }
 
-func sendHello(conn net.Conn) {
-	conn.Write(hello)
-}
+// helloSize is the size of the initial connection message from the server
+// the size must match cSuneido and jSuneido
+const helloSize = 50
 
-var hello = func() []byte {
-	buf := make([]byte, helloSize)
-	copy(buf, "Suneido "+builtin.Built()+"\r\n")
-	return buf
-}()
+var helloBuf [helloSize]byte
+var helloOnce sync.Once
+
+func hello() []byte {
+	helloOnce.Do(func() {
+		copy(helloBuf[:], "Suneido "+builtin.Built()+"\r\n")
+	})
+	return helloBuf[:]
+}
 
 // doRequest is called by workers
 func doRequest(wb *mux.WriteBuf, th *Thread, id uint64, req []byte) {
@@ -217,7 +232,7 @@ func (ss *serverSession) close() {
 }
 
 func (ss *serverSession) abort() {
-	assert.That(ss != nil) //FIXME
+	assert.That(ss != nil)       //FIXME
 	assert.That(ss.trans != nil) //FIXME
 	for _, tran := range ss.trans {
 		assert.That(tran != nil) //FIXME

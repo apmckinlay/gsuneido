@@ -63,13 +63,19 @@ var nextServerConn atomic.Uint32
 // NewServerConn creates a new server connection.
 // The supplied handler will be called with each received message.
 // For dbms server the handler is Workers.Submit
-func NewServerConn(rw io.ReadWriteCloser, h handler) uint32 {
+func NewServerConn(rw io.ReadWriteCloser) *ServerConn {
 	connId := nextServerConn.Add(1)
-	sc := ServerConn{conn: conn{rw: rw}, id: connId}
-	go sc.conn.reader(func(sessionId uint32, data []byte) {
-		h(&sc.conn, uint64(connId)<<32|uint64(sessionId), data)
+	return &ServerConn{conn: conn{rw: rw}, id: connId}
+}
+
+func (sc *ServerConn) Id() uint32 {
+	return sc.id
+}
+
+func (sc *ServerConn) Run(h handler) {
+	sc.conn.reader(func(sessionId uint32, data []byte) {
+		h(&sc.conn, uint64(sc.id)<<32|uint64(sessionId), data)
 	})
-	return connId
 }
 
 type ClientSession struct {

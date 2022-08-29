@@ -20,13 +20,14 @@ func TestMux(t *testing.T) {
 	p1, p2 := net.Pipe()
 	client := NewClientConn(p1)
 	var n atomic.Int32
-	ws := NewWorkers(func(wb *WriteBuf, _ *runtime.Thread, id uint64, data []byte) {
+	workers := NewWorkers(func(wb *WriteBuf, _ *runtime.Thread, id uint64, data []byte) {
 		n.Add(1)
 		wb.Write(bytes.ToUpper(data)).EndMsg()
 	})
-	NewServerConn(p2, ws.Submit) // use pool to execute requests
-	var nmsgs = 1000
-	var nthreads = 11
+	msc := NewServerConn(p2)
+	go msc.Run(workers.Submit)
+	nmsgs := 1000
+	nthreads := 11
 	if testing.Short() || race.Enabled {
 		nmsgs = 100
 		nthreads = 5
