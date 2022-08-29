@@ -16,7 +16,6 @@ package ptest
 
 import (
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -38,7 +37,7 @@ func testdir() string {
 		// first time, read and cache
 		dir := ""
 		for i := 0; ; i++ {
-			src, err := ioutil.ReadFile(dir + "ptestdir.txt")
+			src, err := os.ReadFile(dir + "ptestdir.txt")
 			if err == nil {
 				tdir = strings.TrimSpace(string(src))
 				break
@@ -59,7 +58,7 @@ func testdir() string {
 }
 
 func RunFile(filename string) bool {
-	src, err := ioutil.ReadFile(testdir() + filename)
+	src, err := os.ReadFile(testdir() + filename)
 	if err != nil {
 		panic("can't read " + testdir() + filename)
 	}
