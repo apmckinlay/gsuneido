@@ -83,9 +83,6 @@ func init() {
 		"Columns": method0(func(this Value) Value {
 			return this.(ISuQueryCursor).Columns()
 		}),
-		"Explain": method0(func(this Value) Value { // deprecated
-			return this.(ISuQueryCursor).Strategy()
-		}),
 		"Keys": method0(func(this Value) Value {
 			return this.(ISuQueryCursor).Keys()
 		}),
