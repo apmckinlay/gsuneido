@@ -420,8 +420,8 @@ func (qc *muxQueryCursor) Rewind() {
 	qc.Request()
 }
 
-func (qc *muxQueryCursor) Strategy() string {
-	qc.PutCmd(commands.Strategy).PutInt(qc.id).PutByte(byte(qc.qc))
+func (qc *muxQueryCursor) Strategy(formatted bool) string {
+	qc.PutCmd(commands.Strategy).PutInt(qc.id).PutByte(byte(qc.qc)).PutBool(formatted)
 	qc.Request()
 	return qc.GetStr()
 }

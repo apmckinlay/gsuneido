@@ -51,8 +51,13 @@ func (r *Rename) renameDependencies(src []string) {
 }
 
 func (r *Rename) String() string {
+	return parenQ2(r.source) + " " + r.stringOp()
+}
+
+func (r *Rename) stringOp() string {
 	sep := ""
 	var sb strings.Builder
+	sb.WriteString("RENAME ")
 	for i, from := range r.from {
 		sb.WriteString(sep)
 		sb.WriteString(from)
@@ -60,7 +65,7 @@ func (r *Rename) String() string {
 		sb.WriteString(r.to[i])
 		sep = ", "
 	}
-	return parenQ2(r.source) + " RENAME " + sb.String()
+	return sb.String()
 }
 
 func (r *Rename) Columns() []string {

@@ -76,7 +76,11 @@ func (w *Where) SetTran(t QueryTran) {
 }
 
 func (w *Where) String() string {
-	s := parenQ2(w.source) + " WHERE"
+	return parenQ2(w.source) + " " + w.stringOp()
+}
+
+func (w *Where) stringOp() string {
+	s := "WHERE"
 	if w.conflict {
 		return s + " nothing"
 	}

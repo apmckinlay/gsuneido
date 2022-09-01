@@ -80,16 +80,18 @@ func NewJoin(src, src2 Query, by []string) *Join {
 }
 
 func (jn *Join) String() string {
-	return jn.string("JOIN")
+	return parenQ2(jn.source) + " " + jn.stringOp() + " " + paren(jn.source2)
 }
 
-func (jn *Join) string(op string) string {
-	by := ""
-	if len(jn.by) > 0 {
-		by = "by" + str.Join("(,)", jn.by) + " "
+func (jn *Join) stringOp() string {
+	return "JOIN" + jn.bystr()
+}
+
+func (jn *Join) bystr() string {
+	if len(jn.by) == 0 {
+		return ""
 	}
-	return parenQ2(jn.source) + " " + op + " " +
-		str.Opt(jn.joinType.String(), " ") + by + paren(jn.source2)
+	return " " + str.Opt(jn.joinType.String(), " ") + "by" + str.Join("(,)", jn.by)
 }
 
 func (jn *Join) SetTran(t QueryTran) {
@@ -302,8 +304,12 @@ func NewLeftJoin(src, src2 Query, by []string) *LeftJoin {
 	return &LeftJoin{Join: *NewJoin(src, src2, by)}
 }
 
-func (lj *LeftJoin) String() string {
-	return lj.string("LEFTJOIN")
+func (jn *LeftJoin) String() string {
+	return parenQ2(jn.source) + " " + jn.stringOp() + " " + paren(jn.source2)
+}
+
+func (jn *LeftJoin) stringOp() string {
+	return "LEFTJOIN" + jn.bystr()
 }
 
 func (lj *LeftJoin) Indexes() [][]string {

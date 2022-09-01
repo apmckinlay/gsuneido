@@ -27,7 +27,11 @@ type TempIndex struct {
 }
 
 func (ti *TempIndex) String() string {
-	return parenQ2(ti.source) + " TEMPINDEX" + str.Join("(,)", ti.order)
+	return parenQ2(ti.source) + " " + ti.stringOp()
+}
+
+func (ti *TempIndex) stringOp() string {
+	return "TEMPINDEX" + str.Join("(,)", ti.order)
 }
 
 func (ti *TempIndex) Transform() Query {

@@ -30,15 +30,18 @@ func NewSort(src Query, reverse bool, cols []string) *Sort {
 }
 
 func (sort *Sort) String() string {
-	s := sort.source.String()
+	return sort.source.String() + str.Opt(" ", sort.stringOp())
+}
+
+func (sort *Sort) stringOp() string {
 	r := ""
 	if sort.reverse {
-		r = " reverse"
+		r = "reverse"
 	}
 	if sort.index != nil {
-		return s + r
+		return r
 	}
-	return s + " SORT" + r + " " + str.Join(", ", sort.columns)
+	return "SORT " + str.Opt(r, " ") + str.Join(", ", sort.columns)
 }
 
 func (sort *Sort) Transform() Query {

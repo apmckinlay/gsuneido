@@ -210,5 +210,5 @@ type IQueryCursor interface {
 	Rewind()
 
 	// Strategy returns a description of the optimized query
-	Strategy() string
+	Strategy(formatted bool) string
 }

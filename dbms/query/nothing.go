@@ -19,7 +19,7 @@ func NewNothing(columns []string) *Nothing {
 
 var _ Query = (*Nothing)(nil)
 
-func (no *Nothing) String() string {
+func (*Nothing) String() string {
 	return "NOTHING"
 }
 
@@ -27,23 +27,23 @@ func (no *Nothing) Transform() Query {
 	return no
 }
 
-func (no *Nothing) Columns() []string {
+func (*Nothing) Columns() []string {
 	return nil
 }
 
-func (no *Nothing) Keys() [][]string {
+func (*Nothing) Keys() [][]string {
 	return [][]string{{}}
 }
 
-func (no *Nothing) Indexes() [][]string {
+func (*Nothing) Indexes() [][]string {
 	return [][]string{{}}
 }
 
-func (no *Nothing) Nrows() int {
+func (*Nothing) Nrows() int {
 	return 0
 }
 
-func (no *Nothing) rowSize() int {
+func (*Nothing) rowSize() int {
 	return 0
 }
 
@@ -51,29 +51,29 @@ func (*Nothing) Ordering() []string {
 	return nil
 }
 
-func (no *Nothing) Fixed() []Fixed {
+func (*Nothing) Fixed() []Fixed {
 	return nil
 }
 
-func (no *Nothing) Updateable() string {
+func (*Nothing) Updateable() string {
 	return "nothing"
 }
 
-func (no *Nothing) SingleTable() bool {
+func (*Nothing) SingleTable() bool {
 	return true
 }
 
-func (no *Nothing) SetTran(QueryTran) {
+func (*Nothing) SetTran(QueryTran) {
 }
 
-func (no *Nothing) optimize(Mode, []string) (Cost, any) {
+func (*Nothing) optimize(Mode, []string) (Cost, any) {
 	return 0, nil
 }
 
-func (no *Nothing) setApproach(_ []string, _ any, _ QueryTran) {
+func (*Nothing) setApproach(_ []string, _ any, _ QueryTran) {
 }
 
-func (no *Nothing) lookupCost() Cost {
+func (*Nothing) lookupCost() Cost {
 	return 0
 }
 
@@ -85,7 +85,7 @@ func (no *Nothing) Header() *runtime.Header {
 	return runtime.SimpleHeader(no.columns)
 }
 
-func (no *Nothing) Output(*runtime.Thread, runtime.Record) {
+func (*Nothing) Output(*runtime.Thread, runtime.Record) {
 	panic("can't Output to nil query")
 }
 
@@ -93,8 +93,8 @@ func (*Nothing) Get(*runtime.Thread, runtime.Dir) runtime.Row {
 	return nil
 }
 
-func (no *Nothing) Rewind() {
+func (*Nothing) Rewind() {
 }
 
-func (no *Nothing) Select([]string, []string) {
+func (*Nothing) Select([]string, []string) {
 }

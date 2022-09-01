@@ -421,7 +421,7 @@ func (qc *clientQueryCursor) Rewind() {
 	qc.dc.PutCmd(commands.Rewind).PutInt(qc.id).PutByte(byte(qc.qc)).Request()
 }
 
-func (qc *clientQueryCursor) Strategy() string {
+func (qc *clientQueryCursor) Strategy(_ bool) string {
 	qc.dc.PutCmd(commands.Strategy).PutInt(qc.id).PutByte(byte(qc.qc)).Request()
 	return qc.dc.GetStr()
 }

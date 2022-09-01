@@ -59,6 +59,7 @@ var queryKeywords = map[string]tok.Token{
 	"sort":      tok.Sort,
 	"summarize": tok.Summarize,
 	"sview":     tok.Sview,
+	"tempindex": tok.TempIndex,
 	"times":     tok.Times,
 	"to":        tok.To,
 	"total":     tok.Total,

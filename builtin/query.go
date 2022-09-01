@@ -112,8 +112,10 @@ func init() {
 		"RuleColumns": method0(func(this Value) Value {
 			return this.(ISuQueryCursor).RuleColumns()
 		}),
-		"Strategy": method0(func(this Value) Value {
-			return this.(ISuQueryCursor).Strategy()
-		}),
+		"Strategy": method("(formatted = false)",
+			func(_ *Thread, this Value, args []Value) Value {
+				formatted := ToBool(args[0])
+				return this.(ISuQueryCursor).Strategy(formatted)
+			}),
 	}
 }

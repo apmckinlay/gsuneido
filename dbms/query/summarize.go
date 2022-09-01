@@ -92,7 +92,11 @@ func (su *Summarize) SetTran(t QueryTran) {
 }
 
 func (su *Summarize) String() string {
-	s := parenQ2(su.source) + " SUMMARIZE"
+	return parenQ2(su.source) + " " + su.stringOp()
+}
+
+func (su *Summarize) stringOp() string {
+	s := "SUMMARIZE"
 	switch su.strategy {
 	case sumSeq:
 		s += "-SEQ"

@@ -53,6 +53,10 @@ func NewUnion(src, src2 Query) *Union {
 }
 
 func (u *Union) String() string {
+	return u.String2(u.stringOp())
+}
+
+func (u *Union) stringOp() string {
 	strategy := ""
 	switch u.strategy {
 	case unionMerge:
@@ -65,7 +69,7 @@ func (u *Union) String() string {
 			// }
 		}
 	}
-	return u.String2("UNION", strategy)
+	return u.Compatible.stringOp("UNION", strategy)
 }
 
 func (u *Union) Columns() []string {

@@ -24,7 +24,11 @@ func NewMinus(src, src2 Query) *Minus {
 }
 
 func (m *Minus) String() string {
-	return m.String2("MINUS", "")
+	return m.String2(m.stringOp())
+}
+
+func (m *Minus) stringOp() string {
+	return m.Compatible.stringOp("MINUS", "")
 }
 
 func (m *Minus) Keys() [][]string {

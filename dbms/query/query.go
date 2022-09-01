@@ -29,6 +29,8 @@ package query
 import (
 	"fmt"
 	"math"
+	"regexp"
+	"strings"
 
 	"github.com/apmckinlay/gsuneido/db19/index"
 	"github.com/apmckinlay/gsuneido/db19/index/btree"
@@ -391,6 +393,15 @@ func (q1 *Query1) Rewind() {
 	q1.source.Rewind()
 }
 
+type q1i interface {
+	Source() Query
+	stringOp() string
+}
+
+func (q1 *Query1) Source() Query {
+	return q1.source
+}
+
 // Query2 -----------------------------------------------------------
 
 type Query2 struct {
@@ -448,10 +459,12 @@ func (q2 *Query2) keypairs() [][]string {
 }
 
 type q2i interface {
-	tagQuery2()
+	q1i
+	Source2() Query
 }
 
-func (*Query2) tagQuery2() {
+func (q2 *Query2) Source2() Query {
+	return q2.source2
 }
 
 //-------------------------------------------------------------------
@@ -621,4 +634,60 @@ func (b *optmod) result() [][]string {
 		return b.orig[:b.i:b.i]
 	}
 	return slices.Clip(b.mod)
+}
+
+// ------------------------------------------------------------------
+
+func Format(q Query) string {
+	return format(q, 0)
+}
+
+const indent1 = "    "
+
+func format(q Query, indent int) string { // recursive
+	in := strings.Repeat(indent1, indent)
+	switch q := q.(type) {
+	case q2i:
+		return format(q.Source(), indent+1) + "\n" +
+			in + q.stringOp() + "\n" +
+			format(q.Source2(), indent+1)
+	case q1i:
+		return format(q.Source(), indent) + "\n" +
+			wrap(in, q.stringOp())
+	default:
+		return in + q.String()
+	}
+}
+
+var sepRx = regexp.MustCompile(", ?")
+
+func wrap(in string, s string) string {
+	const maxLine = 70
+	s = in + s
+	if len(s) < maxLine {
+		return s
+	}
+	in += indent1
+	pieces := sepRx.Split(s, -1)
+	if strings.HasPrefix(strings.TrimSpace(s), "PROJECT") {
+		lines := ""
+		curLineLen := 0
+		for i, p := range pieces {
+			if curLineLen+len(p) + 1 > maxLine {
+				lines += "\n" + in
+				curLineLen = 0
+			}
+			lines += p
+			curLineLen += len(p) + 2
+			if i < len(pieces)-1 {
+				lines += ", "
+			}
+		}
+		return lines
+	} else { // extend and rename
+		for i := 1; i < len(pieces); i++ {
+			pieces[i] = strings.TrimSpace(pieces[i])
+		}
+		return strings.Join(pieces, ",\n"+in)
+	}
 }

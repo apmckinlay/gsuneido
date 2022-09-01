@@ -147,6 +147,7 @@ const (
 	Sort
 	Summarize
 	Sview
+	TempIndex
 	Times
 	To
 	Union

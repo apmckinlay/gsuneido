@@ -698,7 +698,8 @@ func cmdSize(ss *serverSession) {
 
 func cmdStrategy(ss *serverSession) {
 	qc := ss.getQorC()
-	strategy := qc.Strategy()
+	formatted := ss.GetBool()
+	strategy := qc.Strategy(formatted)
 	ss.PutBool(true).PutStr(strategy)
 }
 

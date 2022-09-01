@@ -459,9 +459,15 @@ func (q queryLocal) Keys() []string {
 	return q.keys
 }
 
-func (q queryLocal) Strategy() string {
-	return fmt.Sprint(q.String(),
-		" [nrecs~ ", q.Nrows(), " cost~ ", q.cost, " ", q.mode, "]")
+func (q queryLocal) Strategy(formatted bool) string {
+	var strategy string
+	if formatted {
+		strategy = qry.Format(q.Query) + "\n"
+	} else {
+		strategy = q.String() + " "
+	}
+	return fmt.Sprint(strategy,
+		"[nrecs~ ", q.Nrows(), " cost~ ", q.cost, " ", q.mode, "]")
 }
 
 func (q queryLocal) Order() []string {

@@ -139,19 +139,20 @@ func _() {
 	_ = x[Sort-128]
 	_ = x[Summarize-129]
 	_ = x[Sview-130]
-	_ = x[Times-131]
-	_ = x[To-132]
-	_ = x[Union-133]
-	_ = x[Unique-134]
-	_ = x[Update-135]
-	_ = x[View-136]
-	_ = x[Where-137]
-	_ = x[Ntokens-138]
+	_ = x[TempIndex-131]
+	_ = x[Times-132]
+	_ = x[To-133]
+	_ = x[Union-134]
+	_ = x[Unique-135]
+	_ = x[Update-136]
+	_ = x[View-137]
+	_ = x[Where-138]
+	_ = x[Ntokens-139]
 }
 
-const _Token_name = "NilEofErrorIdentifierNumberStringSymbolWhitespaceCommentNewlineHashCommaSemicolonAtLParenRParenLBracketRBracketLCurlyRCurlyRangeToRangeLenOpsStartNotBitNotNewDotCompareStartIsIsntMatchMatchNotLtLteGtGteCompareEndQMarkColonAssocStartAndOrBitOrBitAndBitXorAddSubCatMulDivAssocEndModLShiftRShiftIncDecStartIncPostIncDecPostDecIncDecEndAssignStartEqAddEqSubEqCatEqMulEqDivEqModEqLShiftEqRShiftEqBitOrEqBitAndEqBitXorEqAssignEndInBreakCaseCatchClassContinueDefaultDoElseFalseForForeverFunctionIfReturnSwitchSuperThisThrowTrueTryWhileQueryStartSummarizeStartAverageCountListMaxMinTotalSummarizeEndAlterByCascadeCreateDeleteDropEnsureExtendHistoryIndexInsertIntersectIntoJoinKeyLeftjoinLowerMinusProjectRemoveRenameReverseSetSortSummarizeSviewTimesToUnionUniqueUpdateViewWhereNtokens"
+const _Token_name = "NilEofErrorIdentifierNumberStringSymbolWhitespaceCommentNewlineHashCommaSemicolonAtLParenRParenLBracketRBracketLCurlyRCurlyRangeToRangeLenOpsStartNotBitNotNewDotCompareStartIsIsntMatchMatchNotLtLteGtGteCompareEndQMarkColonAssocStartAndOrBitOrBitAndBitXorAddSubCatMulDivAssocEndModLShiftRShiftIncDecStartIncPostIncDecPostDecIncDecEndAssignStartEqAddEqSubEqCatEqMulEqDivEqModEqLShiftEqRShiftEqBitOrEqBitAndEqBitXorEqAssignEndInBreakCaseCatchClassContinueDefaultDoElseFalseForForeverFunctionIfReturnSwitchSuperThisThrowTrueTryWhileQueryStartSummarizeStartAverageCountListMaxMinTotalSummarizeEndAlterByCascadeCreateDeleteDropEnsureExtendHistoryIndexInsertIntersectIntoJoinKeyLeftjoinLowerMinusProjectRemoveRenameReverseSetSortSummarizeSviewTempIndexTimesToUnionUniqueUpdateViewWhereNtokens"
 
-var _Token_index = [...]uint16{0, 3, 6, 11, 21, 27, 33, 39, 49, 56, 63, 67, 72, 81, 83, 89, 95, 103, 111, 117, 123, 130, 138, 146, 149, 155, 158, 161, 173, 175, 179, 184, 192, 194, 197, 199, 202, 212, 217, 222, 232, 235, 237, 242, 248, 254, 257, 260, 263, 266, 269, 277, 280, 286, 292, 303, 306, 313, 316, 323, 332, 343, 345, 350, 355, 360, 365, 370, 375, 383, 391, 398, 406, 414, 423, 425, 430, 434, 439, 444, 452, 459, 461, 465, 470, 473, 480, 488, 490, 496, 502, 507, 511, 516, 520, 523, 528, 538, 552, 559, 564, 568, 571, 574, 579, 591, 596, 598, 605, 611, 617, 621, 627, 633, 640, 645, 651, 660, 664, 668, 671, 679, 684, 689, 696, 702, 708, 715, 718, 722, 731, 736, 741, 743, 748, 754, 760, 764, 769, 776}
+var _Token_index = [...]uint16{0, 3, 6, 11, 21, 27, 33, 39, 49, 56, 63, 67, 72, 81, 83, 89, 95, 103, 111, 117, 123, 130, 138, 146, 149, 155, 158, 161, 173, 175, 179, 184, 192, 194, 197, 199, 202, 212, 217, 222, 232, 235, 237, 242, 248, 254, 257, 260, 263, 266, 269, 277, 280, 286, 292, 303, 306, 313, 316, 323, 332, 343, 345, 350, 355, 360, 365, 370, 375, 383, 391, 398, 406, 414, 423, 425, 430, 434, 439, 444, 452, 459, 461, 465, 470, 473, 480, 488, 490, 496, 502, 507, 511, 516, 520, 523, 528, 538, 552, 559, 564, 568, 571, 574, 579, 591, 596, 598, 605, 611, 617, 621, 627, 633, 640, 645, 651, 660, 664, 668, 671, 679, 684, 689, 696, 702, 708, 715, 718, 722, 731, 736, 745, 750, 752, 757, 763, 769, 773, 778, 785}
 
 func (i Token) String() string {
 	if i >= Token(len(_Token_index)-1) {

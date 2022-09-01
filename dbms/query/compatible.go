@@ -48,11 +48,15 @@ func (c *Compatible) init() {
 	}
 }
 
-func (c *Compatible) String2(op, strategy string) string {
+func (c *Compatible) String2(op string) string {
+	return c.Query2.String2(op)
+}
+
+func (c *Compatible) stringOp(op, strategy string) string {
 	if c.disjoint != "" {
 		op += "-DISJOINT(" + c.disjoint + ")"
 	}
-	return c.Query2.String2(op + strategy)
+	return op + strategy
 }
 
 func (c *Compatible) SetTran(t QueryTran) {

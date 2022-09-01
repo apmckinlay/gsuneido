@@ -26,7 +26,7 @@ type ISuQueryCursor interface {
 	Order() Value
 	Rewind()
 	RuleColumns() Value
-	Strategy() Value
+	Strategy(formatted bool) Value
 }
 
 var _ ISuQueryCursor = (*SuQueryCursor)(nil)
@@ -68,8 +68,8 @@ func (qc *SuQueryCursor) RuleColumns() Value {
 	return ob
 }
 
-func (qc *SuQueryCursor) Strategy() Value {
-	return SuStr(qc.iqc.Strategy())
+func (qc *SuQueryCursor) Strategy(formatted bool) Value {
+	return SuStr(qc.iqc.Strategy(formatted))
 }
 
 // ------------------------------------------------------------------

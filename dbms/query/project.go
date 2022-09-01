@@ -101,7 +101,11 @@ func (p *Project) includeDeps(cols []string) {
 }
 
 func (p *Project) String() string {
-	s := parenQ2(p.source) + " PROJECT"
+	return parenQ2(p.source) + " " + p.stringOp()
+}
+
+func (p *Project) stringOp() string {
+	s := "PROJECT"
 	switch p.strategy {
 	case projSeq:
 		s += "-SEQ"

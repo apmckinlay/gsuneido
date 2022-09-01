@@ -29,6 +29,10 @@ func (t *Times) String() string {
 	return t.Query2.String2("TIMES")
 }
 
+func (t *Times) stringOp() string {
+	return "TIMES"
+}
+
 func (t *Times) Columns() []string {
 	return set.Union(t.source.Columns(), t.source2.Columns())
 }
