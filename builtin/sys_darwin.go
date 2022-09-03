@@ -22,10 +22,3 @@ var _ = builtin0("SystemMemory()", func() Value {
 	m := binary.LittleEndian.Uint64(buf[:])
 	return Int64Val(int64(m))
 })
-
-var _ = builtin1("GetDiskFreeSpace(dir = '.')", func(arg Value) Value {
-	var stat syscall.Statfs_t
-	syscall.Statfs(ToStr(arg), &stat)
-	freeBytes := stat.Bavail * uint64(stat.Bsize)
-	return Int64Val(int64(freeBytes))
-})
