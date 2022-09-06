@@ -16,8 +16,7 @@ type heapStor struct {
 // HeapStor returns an empty in-memory stor for testing.
 func HeapStor(chunksize int) *Stor {
 	assert.That(bits.OnesCount(uint(chunksize)) == 1)
-	hs := NewStor(&heapStor{chunksize}, uint64(chunksize), 0)
-	hs.chunks.Store([][]byte{make([]byte, chunksize)})
+	hs := NewStor(&heapStor{chunksize}, uint64(chunksize), 0, nil)
 	return hs
 }
 

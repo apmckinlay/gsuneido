@@ -57,33 +57,32 @@ func MmapStor(filename string, mode Mode) (*Stor, error) {
 	impl := &mmapStor{file, mode, nil}
 	chunks := make([][]byte, nchunks)
 
+	last := nchunks - 1
 	for i := 0; i < nchunks; i++ {
-		if i < nchunks-1 {
+		if i < last {
 			impl.mode = Read // map full chunks as READ
 		} else {
 			impl.mode = mode // map last chunk with actual mode
 		}
 		chunks[i] = impl.Get(i)
 	}
-	last := nchunks - 1
 	if mode == Read {
 		remainder := size % mmapChunkSize
 		if remainder > 0 {
 			chunks[last] = chunks[last][:remainder] // last chunk not full
 		}
 	}
-	// trim trailing zero bytes (from memory mapping)
+	// ignore trailing zero bytes (from memory mapping, if truncate failed)
 	if size > 0 {
 		buf := chunks[last]
 		r := (size - 1) % mmapChunkSize
 		b := r
 		for ; b >= 0 && buf[b] == 0; b-- {
 		}
-		size -= int64(r - b)
+		size -= r - b
 	}
 
-	ms := NewStor(impl, mmapChunkSize, uint64(size))
-	ms.chunks.Store(chunks)
+	ms := NewStor(impl, mmapChunkSize, uint64(size), chunks)
 	return ms, nil
 }
 

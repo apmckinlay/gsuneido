@@ -137,3 +137,25 @@ func TestAcessAfterClose(t *testing.T) {
 	assert.T(t).This(buf1[0]).Is('a')
 	slc.Fill(buf2, 'b')
 }
+
+func TestSize(*testing.T) {
+	s, err := MmapStor("stor.tmp", Create)
+	if err != nil {
+		panic(err.Error())
+	}
+	defer func() {
+		s.Close(true)
+		os.Remove("stor.tmp")
+	}()
+	allocSize := 48 * 1024 * 1024 // more than half a chunk
+	for i := 0; i < int(s.chunksize); i += allocSize {
+		assert.This(s.Size()).Is(i)
+		_, buf := s.Alloc(allocSize)
+		slc.Fill(buf, 123)
+		s.Close(false)
+		s, err = MmapStor("stor.tmp", Update)
+		if err != nil {
+			panic(err.Error())
+		}
+	}
+}

@@ -64,7 +64,7 @@ func (ms mmapStor) Close(size int64, unmap bool) {
 			syscall.UnmapViewOfFile(ptr)
 		}
 	}
-	ms.file.Truncate(size)
+	ms.file.Truncate(size) // may not work if not unmap
 	filelock.Unlock(ms.file)
 	ms.file.Close()
 }

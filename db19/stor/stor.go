@@ -40,27 +40,29 @@ type Stor struct {
 	impl storage
 	// chunksize must be a power of two and must be initialized
 	chunksize uint64
-	// threshold is the offset in a chunk where we proactively get next chunk
-	threshold uint64
 	// shift must be initialized to match chunksize
 	shift int
 	// size is the currently used amount.
 	size atomic.Uint64
+	// allocChunk is the chunk we're currently allocating in
+	allocChunk atomic.Int64
 	// chunks must be initialized up to size,
 	// with at least one chunk if size is 0
 	chunks atomic.Value // [][]byte
-	lock   sync.Mutex
+	lock   sync.Mutex   // guards extending the storage
 }
 
-const closedSize = math.MaxUint64
+// closedSize needs to allow room to be incremented.
+// NOTE: check for >= closedSize, not equals.
+const closedSize = math.MaxUint64 / 2
 
-func NewStor(impl storage, chunksize uint64, size uint64) *Stor {
+func NewStor(impl storage, chunksize uint64, size uint64, chunks [][]byte) *Stor {
 	shift := bits.TrailingZeros(uint(chunksize))
 	assert.That(1<<shift == chunksize) // chunksize must be power of 2
-	threshold := chunksize * 3 / 4     // ???
-	stor := &Stor{impl: impl, chunksize: chunksize, threshold: threshold,
-		shift: shift}
+	stor := &Stor{impl: impl, chunksize: chunksize, shift: shift}
 	stor.size.Store(size)
+	stor.chunks.Store(chunks)
+	stor.allocChunk.Store(int64(len(chunks) - 1))
 	return stor
 }
 
@@ -68,49 +70,54 @@ func NewStor(impl storage, chunksize uint64, size uint64) *Stor {
 // Returning data here allows slicing to the correct length and capacity
 // to prevent erroneously writing too far.
 // If insufficient room in the current chunk, advance to next
-// (allocations may not straddle chunks)
+// (allocations may not straddle chunks).
+// Usual case is just an atomic increment,
+// and an atomic load to check if hit the end of the chunk.
+// Locking is only used to extend the storage.
 func (s *Stor) Alloc(n int) (Offset, []byte) {
 	assert.That(0 < n && n <= int(s.chunksize))
-	for {
-		oldsize := s.size.Load()
-		if oldsize == closedSize {
+	const maxRetries = 3
+	for i := 0; i < maxRetries; i++ {
+		allocChunk := s.allocChunk.Load()
+		newsize := s.size.Add(uint64(n)) // serializable
+		if newsize >= closedSize {
 			log.Println("Stor: Alloc after Close")
 			exit.Wait()
 		}
-		offset := oldsize
-		newsize := offset + uint64(n)
-		chunk := s.offsetToChunk(newsize)
-		nchunks := s.offsetToChunk(oldsize + s.chunksize - 1)
-		if chunk >= nchunks { // straddle
-			chunks := s.chunks.Load().([][]byte)
-			if chunk >= len(chunks) {
-				s.getChunk(chunk)
-			}
-			offset = s.chunkToOffset(chunk)
-			newsize = offset + uint64(n)
+		endChunk := s.offsetToChunk(newsize - 1)
+		offset := newsize - uint64(n)
+		if endChunk == int(allocChunk) {
+			return offset, s.Data(offset)[:n:n]
 		}
-		// attempt to confirm our allocation
-		if s.size.CompareAndSwap(oldsize, newsize) {
-			// proactively get next chunk if we passed the threshold
-			i := offset & (s.chunksize - 1) // index within chunk
-			if i <= s.threshold && i+uint64(n) > s.threshold {
-				s.getChunk(s.offsetToChunk(offset) + 1)
-			}
-			return offset, s.Data(offset)[:n:n] // fast path
-		}
-		// another thread beat us, loop and try again
+		// once one thread goes into the next chunk
+		// following threads will also get here
+		// (until extend increments allocChunk)
+		s.extend(allocChunk)
+		// loop to realloc
 	}
+	panic("Stor.Alloc too many retries")
 }
 
-func (s *Stor) getChunk(chunk int) {
+// extend adds another chunk to the storage.
+// Multiple concurrent threads may call extend
+// but only one (the first) does the actual extending.
+// The others wait on the lock.
+func (s *Stor) extend(allocChunk int64) {
 	s.lock.Lock() // note: lock does not prevent concurrent allocations
+	defer s.lock.Unlock()
 	chunks := s.chunks.Load().([][]byte)
-	if chunk >= len(chunks) {
-		// no one else beat us to it
-		chunks = append(chunks, s.impl.Get(chunk))
-		s.chunks.Store(chunks)
+	if int(allocChunk)+1 < len(chunks) {
+		return // another thread beat us to it
 	}
-	s.lock.Unlock()
+	chunks = append(chunks, s.impl.Get(int(allocChunk+1))) // potentially slow
+	s.chunks.Store(chunks)
+	// set size to start of chunk, to handle straddle
+	s.size.Store(uint64(allocChunk+1) << s.shift)
+	// NOTE: if another thread calls Alloc at this point
+	// it will loop and realloc, wasting the first increment
+	// but this should be rare and relatively harmless
+	s.allocChunk.Add(1)
+	// after incrementing allocChunk, Alloc will no
 }
 
 // Data returns a byte slice starting at the given offset
@@ -137,7 +144,7 @@ func (s *Stor) chunkToOffset(chunk int) Offset {
 // The actual file size will be rounded up to the next chunk size.
 func (s *Stor) Size() uint64 {
 	size := s.size.Load()
-	if size == closedSize {
+	if size >= closedSize {
 		log.Println("Stor: Size after Close")
 		dbg.PrintStack()
 		exit.Wait()
@@ -199,7 +206,7 @@ func (s *Stor) Close(unmap bool, callback ...func(uint64)) {
 	} else {
 		size = s.size.Swap(closedSize)
 	}
-	if size != closedSize {
+	if size < closedSize {
 		for _, f := range callback {
 			f(size)
 		}

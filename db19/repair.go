@@ -35,9 +35,9 @@ func Repair(dbfile string, err error) (string, error) {
 			continue
 		}
 		if ec = checkState(state, ec.Table()); ec == nil {
-			msg := fmt.Sprintln("good state", off,
-				time.UnixMilli(state.Asof).Format(dtfmt)) +
-				fmt.Sprintln("truncating", store.Size()-(off+uint64(stateLen)))
+			msg := fmt.Sprint("good state ", off + uint64(stateLen), " ",
+				time.UnixMilli(state.Asof).Format(dtfmt),
+				" truncating ", store.Size()-(off+uint64(stateLen)))
 			return msg, truncate(dbfile, store, off)
 		}
 		// fmt.Println("bad state", off, time.UnixMilli(state.Asof).Format(dtfmt), ec)
