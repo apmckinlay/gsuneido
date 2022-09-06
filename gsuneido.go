@@ -5,8 +5,10 @@ package main
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
 	"io"
+	"io/fs"
 	"log"
 	"os"
 	"runtime"
@@ -26,7 +28,7 @@ import (
 )
 
 var builtDate = "Dec 29 2020 12:34" // set by: go build -ldflags "-X main.builtDate=..."
-var mode = ""                 // set by: go build -ldflags "-X main.mode=gui"
+var mode = ""                       // set by: go build -ldflags "-X main.mode=gui"
 
 var help = `options:
 	-check
@@ -261,6 +263,9 @@ var db *db19.Database
 func openDbms() {
 	var err error
 	db, err = db19.OpenDatabase("suneido.db")
+	if errors.Is(err, fs.ErrNotExist) || errors.Is(err, fs.ErrPermission) {
+		Fatal(err)
+	}
 	if err != nil {
 		if !AlertCancel("ERROR:", err, "\nwill try to repair") {
 			Fatal("database corrupt, not repaired")
