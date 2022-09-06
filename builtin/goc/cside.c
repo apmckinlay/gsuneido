@@ -288,6 +288,11 @@ static int message_loop(uintptr hdlg) {
 			msg.lParam == END_MSG_LOOP)
 			return 0;
 		HWND window = GetAncestor(msg.hwnd, GA_ROOT);
+		if (msg.hwnd != window && msg.message == WM_KEYDOWN) {
+			uintptr ptr = (uintptr) GetWindowLongPtrA(msg.hwnd, GWLP_USERDATA);
+			if (ptr && S_OK == traccel(ptr, (uintptr)&msg))
+				continue;
+		}
 		if (window != 0) {
 			HACCEL haccel = (HACCEL) GetWindowLongPtrA(window, GWLP_USERDATA);
 			if (haccel != 0 && TranslateAcceleratorA(window, haccel, &msg))
