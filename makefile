@@ -56,6 +56,16 @@ clean:
 gsuneido_windows.syso : res/suneido.rc res/suneido.manifest
 	windres -F pe-x86-64 -o gsuneido_windows.syso res/suneido.rc
 
-.PHONY : build gsuneido portable test generate clean zap race racetest
+release:
+	./gsuneido -dump stdlib
+	./gsuneido -dump suneidoc
+	./gsuneido -dump imagebook
+	-mkdir release
+	cp stdlib.su suneidoc.su imagebook.su release
+	cd release && \
+	  rm suneido.db ; \
+	  ../gsuneido -load stdlib && \
+	  ../gsuneido -load suneidoc && \
+	  ../gsuneido -load imagebook
 
-# -trimpath (but breaks vscode goto)
+.PHONY : build gsuneido portable test generate clean zap race racetest release
