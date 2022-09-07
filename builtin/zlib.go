@@ -24,7 +24,7 @@ func (*suZlib) String() string {
 	return "Zlib /* builtin class */"
 }
 
-func (z *suZlib) Lookup(_ *Thread, method string) Callable {
+func (*suZlib) Lookup(_ *Thread, method string) Callable {
 	return zlibMethods[method]
 }
 
