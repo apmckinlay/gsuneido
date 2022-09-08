@@ -516,13 +516,42 @@ func (ss *serverSession) rowResult(tbl string, hdr *Header, sendHdr bool, row Ro
 func rowToRecord(row Row, hdr *Header) (rec Record, fields []string) {
 	if len(row) == 1 {
 		assert.That(len(hdr.Fields) == 1)
-		return row[0].Record, hdr.Fields[0]
+		return maybeSqueeze(row[0].Record, hdr)
 	}
 	var rb RecordBuilder
-	// need to include deleted "-" in case it's used for updates
 	fields = hdr.GetFields()
 	for _, fld := range fields {
-		rb.AddRaw(row.GetRaw(hdr, fld))
+		if fld == "-" {
+			rb.AddRaw("")
+		} else {
+			rb.AddRaw(row.GetRaw(hdr, fld))
+		}
+	}
+	return rb.Trim().Build(), fields
+}
+
+func maybeSqueeze(rec Record, hdr *Header) (Record, []string) {
+	fields := hdr.Fields[0]
+	const small = 16 * 1024 // ???
+	if len(rec) < small || !hdr.HasDeleted() {
+		return rec, fields
+	}
+	savings := 0
+	for i, fld := range fields {
+		if fld == "-" {
+			savings += len(rec.GetRaw(i))
+		}
+	}
+	if savings < len(rec)/3 { // ???
+		return rec, fields
+	}
+	var rb RecordBuilder
+	for i, fld := range fields {
+		if fld == "-" {
+			rb.AddRaw("")
+		} else {
+			rb.AddRaw(rec.GetRaw(i))
+		}
 	}
 	return rb.Trim().Build(), fields
 }

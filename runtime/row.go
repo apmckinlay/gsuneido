@@ -4,6 +4,7 @@
 package runtime
 
 import (
+	"math"
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/util/ascii"
@@ -199,16 +200,24 @@ func (hdr *Header) hasField(col string) bool {
 // and caches the result. (Multiple occurrences come from union.)
 func (hdr *Header) find(fld string) (rowAt, bool) {
 	if at, ok := hdr.cache[fld]; ok {
-		return at, true
+		return at, at != missing
 	}
 	for reci, fields := range hdr.Fields {
 		if fldi := slices.Index(fields, fld); fldi >= 0 {
 			at := rowAt{Reci: int16(reci), Fldi: int16(fldi)}
-			hdr.cache[fld] = at // cache
+			hdr.cache[fld] = at
 			return at, true
 		}
 	}
-	return rowAt{}, false
+	hdr.cache[fld] = missing
+	return missing, false
+}
+
+var missing = rowAt{Reci: 0, Fldi: math.MaxInt16}
+
+func (hdr *Header) HasDeleted() bool {
+	_, ok := hdr.find("-") // will cache if found
+	return ok
 }
 
 // GetFields returns a list of the fields, including deleted ("-"),
