@@ -109,7 +109,7 @@ func TestArgs(t *testing.T) {
 	setStack(11, 22, 44, 33)
 	th.Args(f, as)
 	assert(th.sp).Is(1)
-	assert(th.stack[0].String()).Is(makeOb().String())
+	assert(th.stack[0]).Is(makeOb())
 
 	// @mixed => params
 	f = &ParamSpec{Nparams: 4, Flags: []Flag{0, 0, 0, 0},
