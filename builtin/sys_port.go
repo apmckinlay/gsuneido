@@ -9,6 +9,7 @@ import (
 	"io"
 	"os"
 	"runtime"
+	"time"
 
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
@@ -54,6 +55,7 @@ var _ = builtin3("CopyFile(from, to, failIfExists)",
 		from := ToStr(a)
 		to := ToStr(b)
 		failIfExists := ToBool(c)
+
 		flags := os.O_WRONLY | os.O_CREATE
 		if failIfExists {
 			flags |= os.O_EXCL
@@ -67,7 +69,12 @@ var _ = builtin3("CopyFile(from, to, failIfExists)",
 		}
 		defer srcFile.Close()
 
-		destFile, err := os.OpenFile(to, flags, 0666)
+		fi, err := srcFile.Stat()
+		if err != nil {
+			return False
+		}
+
+		destFile, err := os.OpenFile(to, flags, fi.Mode())
 		if err != nil {
 			return False
 		}
@@ -77,6 +84,10 @@ var _ = builtin3("CopyFile(from, to, failIfExists)",
 		if err != nil {
 			return False
 		}
+
+		destFile.Close()
+		os.Chtimes(to, time.Now(), fi.ModTime())
+
 		return True
 	})
 
