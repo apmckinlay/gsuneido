@@ -262,20 +262,6 @@ var _ = builtin1("CloseHandle(handle)",
 		return boolRet(rtn)
 	})
 
-// dll bool Kernel32:CopyFile(string from, string to, bool failIfExists)
-
-var copyFile = kernel32.MustFindProc("CopyFileA").Addr()
-var _ = builtin3("CopyFile(from, to, failIfExists)",
-	func(a, b, c Value) Value {
-		from := zbuf(a)
-		to := zbuf(b)
-		rtn, _, _ := syscall.SyscallN(copyFile,
-			uintptr(unsafe.Pointer(&from[0])),
-			uintptr(unsafe.Pointer(&to[0])),
-			boolArg(c))
-		return boolRet(rtn)
-	})
-
 // dll pointer Kernel32:GetCurrentProcess()
 
 var getCurrentProcess = kernel32.MustFindProc("GetCurrentProcess").Addr()

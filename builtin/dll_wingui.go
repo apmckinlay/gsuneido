@@ -57,20 +57,6 @@ func truncToInt(x Value) int {
 	return ToInt(x)
 }
 
-func boolArg(arg Value) uintptr {
-	if ToBool(arg) {
-		return 1
-	}
-	return 0
-}
-
-func boolRet(rtn uintptr) Value {
-	if rtn == 0 {
-		return False
-	}
-	return True
-}
-
 func intArg(arg Value) uintptr {
 	if arg.Equal(True) {
 		return 1

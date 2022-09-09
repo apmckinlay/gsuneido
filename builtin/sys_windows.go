@@ -62,3 +62,29 @@ var _ = builtin0("SystemMemory()", func() Value {
 	}
 	return Int64Val(int64((*MEMORYSTATUSEX)(unsafe.Pointer(&buf[0])).ullTotalPhys))
 })
+
+var copyFile = kernel32.MustFindProc("CopyFileA").Addr()
+var _ = builtin3("CopyFile(from, to, failIfExists)",
+	func(a, b, c Value) Value {
+		from := zbuf(a)
+		to := zbuf(b)
+		rtn, _, _ := syscall.SyscallN(copyFile,
+			uintptr(unsafe.Pointer(&from[0])),
+			uintptr(unsafe.Pointer(&to[0])),
+			boolArg(c))
+		return boolRet(rtn)
+	})
+
+func boolArg(arg Value) uintptr {
+	if ToBool(arg) {
+		return 1
+	}
+	return 0
+}
+
+func boolRet(rtn uintptr) Value {
+	if rtn == 0 {
+		return False
+	}
+	return True
+}

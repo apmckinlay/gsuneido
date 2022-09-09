@@ -6,10 +6,8 @@
 package builtin
 
 import (
-	"io"
 	"os"
 	"runtime"
-	"time"
 
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
@@ -48,47 +46,6 @@ var _ = builtin0("GetComputerName()", func() Value {
 var _ = builtin0("GetTempPath()",
 	func() Value {
 		return SuStr(os.TempDir())
-	})
-
-var _ = builtin3("CopyFile(from, to, failIfExists)",
-	func(a, b, c Value) Value {
-		from := ToStr(a)
-		to := ToStr(b)
-		failIfExists := ToBool(c)
-
-		flags := os.O_WRONLY | os.O_CREATE
-		if failIfExists {
-			flags |= os.O_EXCL
-		} else {
-			flags |= os.O_TRUNC
-		}
-
-		srcFile, err := os.Open(from)
-		if err != nil {
-			return False
-		}
-		defer srcFile.Close()
-
-		fi, err := srcFile.Stat()
-		if err != nil {
-			return False
-		}
-
-		destFile, err := os.OpenFile(to, flags, fi.Mode())
-		if err != nil {
-			return False
-		}
-		defer destFile.Close()
-
-		_, err = io.Copy(destFile, srcFile)
-		if err != nil {
-			return False
-		}
-
-		destFile.Close()
-		os.Chtimes(to, time.Now(), fi.ModTime())
-
-		return True
 	})
 
 func CallbacksCount() int {
