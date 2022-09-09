@@ -282,6 +282,40 @@ func TestMatchBug(t *testing.T) {
 	assert.T(t).This(result[0].end).Is(39)
 }
 
+func TestLiteral(t *testing.T) {
+	test := func(pat string, expected any) {
+		p := Compile(pat)
+		x, ok := p.Literal()
+		if !ok {
+			assert.Msg(pat).That(expected == false)
+		} else {
+			assert.Msg(pat).This(x).Is(expected)
+		}
+	}
+	test("", "")
+	test("x", "x")
+	test("hello world", "hello world")
+	test("[x]", "x")
+	test(".*", false)
+}
+
+func TestLiteralRep(t *testing.T) {
+	test := func(rep string, expected any) {
+		x, ok := LiteralRep(rep)
+		if !ok {
+			assert.Msg(rep).That(expected == false)
+		} else {
+			assert.Msg(rep).This(x).Is(expected)
+		}
+	}
+	test("", "")
+	test("x", "x")
+	test("hello world", "hello world")
+	test(`\=hello world`, "hello world")
+	test("x&y", false)
+	test(`\2 \1`, false)
+}
+
 // ptest support ---------------------------------------------------------------
 
 func TestPtest(t *testing.T) {
@@ -327,7 +361,7 @@ func ptReplace(args []string, _ []bool) bool {
 	if result == -1 {
 		return false
 	}
-	r := Replace(s, rep, &res)
+	r := Replacement(s, rep, &res)
 	pos, end := res[0].Range()
 	t := s[:pos] + r + s[end:]
 	if t != expected {

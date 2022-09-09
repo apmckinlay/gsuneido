@@ -395,15 +395,22 @@ func replace(t *Thread, s string, patarg string, reparg Value, count int) Value 
 	if !isFunc(reparg) {
 		rep = AsStr(reparg)
 		reparg = nil
+		// use Go strings.Replace if literal
+		if p, ok := pat.Literal(); ok {
+			if r, ok := regex.LiteralRep(rep); ok {
+				return SuStr(strings.Replace(s, p, r, count))
+			}
+		}
 	}
+
 	from := 0
-	nsubs := 0
+	nreps := 0
 	var buf strings.Builder
 	pat.ForEachMatch(s, func(result *regex.Result) bool {
 		pos, end := result[0].Range()
 		buf.WriteString(s[from:pos])
 		if reparg == nil {
-			t := regex.Replace(s, rep, result)
+			t := regex.Replacement(s, rep, result)
 			buf.WriteString(t)
 		} else {
 			r := result[0].Part(s)
@@ -414,9 +421,13 @@ func replace(t *Thread, s string, patarg string, reparg Value, count int) Value 
 			buf.WriteString(r)
 		}
 		from = end
-		nsubs++
-		return nsubs < count
+		nreps++
+		return nreps < count
 	})
+	if nreps == 0 {
+		// avoid copy if no replacements
+		return SuStr(s)
+	}
 	buf.WriteString(s[from:])
 	return SuStr(buf.String())
 }

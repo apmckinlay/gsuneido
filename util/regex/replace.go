@@ -9,12 +9,22 @@ import (
 	"github.com/apmckinlay/gsuneido/util/ascii"
 )
 
-func Replace(s, rep string, res *Result) string {
+// LiteralRep returns the string,true if rep is literal,
+// otherwise it returns"",false
+func LiteralRep(rep string) (string, bool) {
 	if strings.HasPrefix(rep, "\\=") {
-		return rep[2:]
+		return rep[2:], true
 	}
 	if -1 == strings.IndexAny(rep, "&\\") {
-		return rep
+		return rep, true
+	}
+	return "", false
+}
+
+// Replacement makes a single replacement, handling case conversion, &, and \#
+func Replacement(s, rep string, res *Result) string {
+	if r, ok := LiteralRep(rep); ok {
+		return r
 	}
 	nr := len(rep)
 	tr := byte('E')

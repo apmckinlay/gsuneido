@@ -335,6 +335,18 @@ func backrefMatch(s string, si int, p part, fn func(s, p string) bool) (bool, in
 	return si+len(b) <= len(s) && fn(s[si:], b), si + len(b)
 }
 
+// Literal returns the string,true if the pattern is just a literal string,
+// otherwise it returns "",false
+func (pat Pattern) Literal() (string, bool) {
+	if len(pat) == 2 && pat[0] == left0 && pat[1] == right0 {
+		return "", true
+	}
+	if len(pat) == 3 && pat[0] == left0 && pat[1].op == chars && pat[2] == right0 {
+		return pat[1].data, true
+	}
+	return "", false
+}
+
 // Result ----------------------------------------------------------------------
 
 // maxResult is the maximum number of elements in Result
@@ -371,6 +383,8 @@ func (r *Result) String() string {
 	}
 	return s
 }
+
+// Cache ----------------------------------------------------------------------
 
 type Cache struct {
 	*cache.Cache[string, Pattern]
