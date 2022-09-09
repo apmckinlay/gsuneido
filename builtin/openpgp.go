@@ -11,6 +11,8 @@ import (
 
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/system"
+
+	//lint:ignore SA1019 best option
 	"golang.org/x/crypto/openpgp"
 )
 
