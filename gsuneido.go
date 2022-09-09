@@ -69,6 +69,9 @@ func main() {
 	case "":
 		break
 	case "server":
+		if mode == "gui" {
+			Fatal("Please use gsport for server mode")
+		}
 		startServer()
 		os.Exit(0)
 	case "dump":
@@ -132,10 +135,10 @@ func main() {
 	case "help":
 		Alert(help)
 		os.Exit(0)
-	case "error":
-		Fatal(options.Error)
 	case "repl", "client":
 		// handled below
+	case "error":
+		Fatal(options.Error)
 	default:
 		Alert("invalid action:", options.Action)
 		os.Exit(1)
