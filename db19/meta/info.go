@@ -96,7 +96,7 @@ type MergeUpdate struct {
 	results []MergeResult // per index
 }
 
-// Merge collects the updates which are then applied by ApplyMerge.
+// Merge collects the updates which are then applied by Apply.
 // It is called by concur merger.
 // WARNING: must not modify meta.
 func (m *Meta) Merge(table string, nmerge int) MergeUpdate {
@@ -108,23 +108,12 @@ func (m *Meta) Merge(table string, nmerge int) MergeUpdate {
 	return MergeUpdate{table: table, nmerged: nmerge, results: results}
 }
 
-// ApplyMerge applies the updates collected by Merge.
-// It is called by state.go Database.Merge, inside UpdateState.
-func (m *Meta) ApplyMerge(updates []MergeUpdate) {
-	// NOTE: ApplyMerge and ApplyPersist have almost identical code.
-	// Any changes probably apply to both.
-	// TODO use generics to eliminate duplication
-	info := m.info.Mutable()
-	for _, up := range updates {
-		ti := *info.MustGet(up.table)                        // copy
-		ti.Indexes = append(ti.Indexes[:0:0], ti.Indexes...) // copy
-		for i, ov := range ti.Indexes {
-			ti.Indexes[i] = ov.WithMerged(up.results[i], up.nmerged)
-		}
-		ti.lastMod = m.info.Clock
-		info.Put(&ti)
-	}
-	m.info.Hamt = info.Freeze()
+func (mu MergeUpdate) Table() string {
+	return mu.table
+}
+
+func (mu MergeUpdate) Apply(ov *index.Overlay, i int) *index.Overlay {
+	return ov.WithMerged(mu.results[i], mu.nmerged)
 }
 
 //-------------------------------------------------------------------
@@ -137,7 +126,7 @@ type PersistUpdate struct {
 }
 
 // Persist is called by state.Persist to write the state to the database.
-// It collects the new btree roots which are then applied by ApplyPersist.
+// It collects the new btree roots which are then applied by Apply.
 // WARNING: must not modify meta.
 func (m *Meta) Persist(exec func(func() PersistUpdate)) {
 	m.info.ForEach(func(ti *Info) {
@@ -153,25 +142,12 @@ func (m *Meta) Persist(exec func(func() PersistUpdate)) {
 	})
 }
 
-// ApplyPersist takes the new btree roots from Persist
-// and updates the state with them.
-func (m *Meta) ApplyPersist(updates []PersistUpdate) {
-	// NOTE: ApplyMerge and ApplyPersist have almost identical code.
-	// Any changes probably apply to both.
-	// TODO use generics to eliminate duplication
-	info := m.info.Mutable()
-	for _, up := range updates {
-		ti := *info.MustGet(up.table)                        // copy
-		ti.Indexes = append(ti.Indexes[:0:0], ti.Indexes...) // copy
-		for i, ov := range ti.Indexes {
-			if up.results[i] != nil {
-				ti.Indexes[i] = ov.WithSaved(up.results[i])
-			}
-		}
-		ti.lastMod = m.info.Clock
-		info.Put(&ti)
-	}
-	m.info.Hamt = info.Freeze()
+func (pu PersistUpdate) Table() string {
+	return pu.table
+}
+
+func (pu PersistUpdate) Apply(ov *index.Overlay, i int) *index.Overlay {
+	return ov.WithSaved(pu.results[i])
 }
 
 func (ti *Info) Cksum() uint32 {
@@ -180,4 +156,27 @@ func (ti *Info) Cksum() uint32 {
 		cksum += ov.Cksum()
 	}
 	return cksum
+}
+
+//-------------------------------------------------------------------
+
+type applyable interface {
+	Table() string
+	Apply(*index.Overlay, int) *index.Overlay
+}
+
+// Apply applies the updates collected by Merge or Persist
+// It is called by state.go Database.Merge/Persist, inside UpdateState.
+func Apply[U applyable](m *Meta, updates []U) {
+	info := m.info.Mutable()
+	for _, up := range updates {
+		ti := *info.MustGet(up.Table())                      // copy
+		ti.Indexes = append(ti.Indexes[:0:0], ti.Indexes...) // copy
+		for i, ov := range ti.Indexes {
+			ti.Indexes[i] = up.Apply(ov, i)
+		}
+		ti.lastMod = m.info.Clock
+		info.Put(&ti)
+	}
+	m.info.Hamt = info.Freeze()
 }

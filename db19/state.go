@@ -92,9 +92,9 @@ type mergefn func(*meta.Meta, *mergeList) []meta.MergeUpdate
 func (db *Database) Merge(fn mergefn, merges *mergeList) {
 	updates := fn(db.GetState().Meta, merges) // outside UpdateState
 	db.UpdateState(func(state *DbState) {
-		meta := *state.Meta // copy
-		meta.ApplyMerge(updates)
-		state.Meta = &meta
+		m := *state.Meta // copy
+		meta.Apply(&m, updates)
+		state.Meta = &m
 	})
 }
 
@@ -123,9 +123,9 @@ func (db *Database) persist(exec execPersist) *DbState {
 	db.GetState().Meta.Persist(exec.Submit) // outside UpdateState
 	updates := exec.Results()
 	db.UpdateState(func(state *DbState) {
-		meta := *state.Meta // copy
-		meta.ApplyPersist(updates)
-		state.Meta = &meta
+		m := *state.Meta // copy
+		meta.Apply(&m, updates)
+		state.Meta = &m
 		// Write modifies schema/info offs,ages,clock
 		// so it must be inside UpdateState
 		state.Off = state.Write()
