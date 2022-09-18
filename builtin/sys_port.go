@@ -28,25 +28,27 @@ func init() {
 func Run() {
 }
 
-var _ = builtin0("OperatingSystem()", func() Value { // deprecated
-	return SuStr(runtime.GOOS)
-})
-var _ = builtin0("OSName()", func() Value {
-	return SuStr(runtime.GOOS)
-})
+var _ = builtin(OSName, "()")
 
-var _ = builtin0("GetComputerName()", func() Value {
+func OSName() Value {
+	return SuStr(runtime.GOOS)
+}
+
+var _ = builtin(GetComputerName, "()")
+
+func GetComputerName() Value {
 	name, err := os.Hostname()
 	if err != nil {
 		panic("GetComputerName " + err.Error())
 	}
 	return SuStr(name)
-})
+}
 
-var _ = builtin0("GetTempPath()",
-	func() Value {
-		return SuStr(os.TempDir())
-	})
+var _ = builtin(GetTempPath, "()")
+
+func GetTempPath() Value {
+	return SuStr(os.TempDir())
+}
 
 func CallbacksCount() int {
 	return 0

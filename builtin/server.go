@@ -10,18 +10,24 @@ import (
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
-var _ = builtin0("ServerIP()", func() Value {
+var _ = builtin(ServerIP, "()")
+
+func ServerIP() Value {
 	if options.Action == "client" {
 		return SuStr(options.Arg)
 	}
 	return EmptyStr
-})
+}
 
-var _ = builtin0("ServerPort()", func() Value {
+var _ = builtin(ServerPort, "()")
+
+func ServerPort() Value {
 	n, _ := strconv.Atoi(options.Port)
 	return IntVal(n)
-})
+}
 
-var _ = builtin0("Server?()", func() Value {
+var _ = builtin(ServerQ, "()")
+
+func ServerQ() Value {
 	return SuBool(options.Action == "server")
-})
+}

@@ -12,11 +12,13 @@ import (
 var builtinNamesOnce sync.Once
 var builtinNames *SuObject
 
-var _ = builtin0("BuiltinNames()", func() Value {
+var _ = builtin(BuiltinNames, "()")
+
+func BuiltinNames() Value {
 	builtinNamesOnce.Do(func() {
-		builtinNames = NewSuObject(BuiltinNames())
+		builtinNames = NewSuObject(GetBuiltinNames())
 		builtinNames.Sort(nil, False)
 		builtinNames.SetReadOnly()
 	})
 	return builtinNames
-})
+}

@@ -14,19 +14,19 @@ import (
 var dwmapi = MustLoadDLL("dwmapi.dll")
 
 // dll pointer Dwmapi:DwmGetWindowAttribute(pointer hwnd, long dwAttribute,
-//		RECT* pvAttribute, long cbAttribute)
-
+// RECT* pvAttribute, long cbAttribute)
 var dwmGetWindowAttribute = dwmapi.MustFindProc("DwmGetWindowAttribute").Addr()
-var _ = builtin4("DwmGetWindowAttributeRect(hwnd, dwAttribute, pvAttribute,"+
-	" cbAttribute)",
-	func(a, b, c, d Value) Value {
-		defer heap.FreeTo(heap.CurSize())
-		r := heap.Alloc(nRECT)
-		rtn := goc.Syscall4(dwmGetWindowAttribute,
-			intArg(a),
-			intArg(b),
-			uintptr(rectArg(c, r)),
-			intArg(d))
-		urectToOb(r, c)
-		return intRet(rtn)
-	})
+var _ = builtin(DwmGetWindowAttributeRect,
+	"(hwnd, dwAttribute, pvAttribute, cbAttribute)")
+
+func DwmGetWindowAttributeRect(a, b, c, d Value) Value {
+	defer heap.FreeTo(heap.CurSize())
+	r := heap.Alloc(nRect)
+	rtn := goc.Syscall4(dwmGetWindowAttribute,
+		intArg(a),
+		intArg(b),
+		uintptr(rectArg(c, r)),
+		intArg(d))
+	urectToOb(r, c)
+	return intRet(rtn)
+}

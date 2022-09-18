@@ -197,7 +197,7 @@ func cbeq(x, y Value) bool {
 	return false
 }
 
-func ClearCallback(fn Value) bool {
+func clearCallback(fn Value) bool {
 	cblock.Lock()
 	defer cblock.Unlock()
 	foundInactive := false
@@ -235,7 +235,9 @@ func ClearCallback(fn Value) bool {
 	return false // not found
 }
 
-var _ = builtin0("Callbacks()", func() Value {
+var _ = builtin(Callbacks, "()")
+
+func Callbacks() Value {
 	ob := &SuObject{}
 	for _, c := range cbs {
 		for _, cb := range c {
@@ -248,7 +250,7 @@ var _ = builtin0("Callbacks()", func() Value {
 		}
 	}
 	return ob
-})
+}
 
 func CallbacksCount() int {
 	n := 0
@@ -265,9 +267,11 @@ func CallbacksCount() int {
 	return n
 }
 
-var _ = builtin1("ClearCallback(fn)", func(fn Value) Value {
-	return SuBool(ClearCallback(fn))
-})
+var _ = builtin(ClearCallback, "(fn)")
+
+func ClearCallback(fn Value) Value {
+	return SuBool(clearCallback(fn))
+}
 
 func WndProcCount() int {
 	return len(hwndToCb)

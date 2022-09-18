@@ -21,19 +21,20 @@ type suMd5 struct {
 	hash hash.Hash
 }
 
-var _ = builtinRaw("Md5(@args)",
-	func(th *Thread, as *ArgSpec, args []Value) Value {
-		h := suMd5{hash: md5.New()}
-		iter := NewArgsIter(as, args)
-		k, v := iter()
-		if v == nil {
-			return h
-		}
-		for ; k == nil && v != nil; k, v = iter() {
-			io.WriteString(h.hash, ToStr(v))
-		}
-		return h.value()
-	})
+var _ = builtin(Md5, "(@args)")
+
+func Md5(th *Thread, as *ArgSpec, args []Value) Value {
+	h := suMd5{hash: md5.New()}
+	iter := NewArgsIter(as, args)
+	k, v := iter()
+	if v == nil {
+		return h
+	}
+	for ; k == nil && v != nil; k, v = iter() {
+		io.WriteString(h.hash, ToStr(v))
+	}
+	return h.value()
+}
 
 var _ Value = suMd5{}
 
@@ -45,14 +46,19 @@ func (suMd5) Lookup(_ *Thread, method string) Callable {
 	return md5Methods[method]
 }
 
-var md5Methods = Methods{
-	"Update": method1("(string)", func(this, arg Value) Value {
-		io.WriteString(this.(suMd5).hash, ToStr(arg))
-		return this
-	}),
-	"Value": method0(func(this Value) Value {
-		return this.(suMd5).value()
-	}),
+var md5Methods = methods()
+
+var _ = method(md5_Update, "(string)")
+
+func md5_Update(this, arg Value) Value {
+	io.WriteString(this.(suMd5).hash, ToStr(arg))
+	return this
+}
+
+var _ = method(md5_Value, "()")
+
+func md5_Value(this Value) Value {
+	return this.(suMd5).value()
 }
 
 func (h suMd5) value() Value {

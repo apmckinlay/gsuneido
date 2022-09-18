@@ -7,23 +7,29 @@ import (
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
-func init() {
-	IterMethods = Methods{
-		"Dup": method0(func(this Value) Value {
-			it := this.(SuIter)
-			return SuIter{Iter: it.Dup()}
-		}),
-		"Infinite?": method0(func(this Value) Value {
-			it := this.(SuIter)
-			return SuBool(it.Infinite())
-		}),
-		"Next": method0(func(this Value) Value {
-			it := this.(SuIter)
-			next := it.Next()
-			if next == nil {
-				return this
-			}
-			return next
-		}),
+var _ = exportMethods(&IterMethods)
+
+var _ = method(iter_Dup, "()")
+
+func iter_Dup(this Value) Value {
+	it := this.(SuIter)
+	return SuIter{Iter: it.Dup()}
+}
+
+var _ = method(iter_InfiniteQ, "()")
+
+func iter_InfiniteQ(this Value) Value {
+	it := this.(SuIter)
+	return SuBool(it.Infinite())
+}
+
+var _ = method(iter_Next, "()")
+
+func iter_Next(this Value) Value {
+	it := this.(SuIter)
+	next := it.Next()
+	if next == nil {
+		return this
 	}
+	return next
 }

@@ -14,10 +14,12 @@ import (
 	"golang.org/x/sys/windows"
 )
 
-var _ = builtin("MessageLoop(hwnd = 0)", func(t *Thread, args []Value) Value {
+var _ = builtin(MessageLoop, "(hwnd = 0)")
+
+func MessageLoop(t *Thread, args []Value) Value {
 	goc.MessageLoop(uintptr(ToInt(args[0])))
 	return nil
-})
+}
 
 var uiThreadId uint32
 

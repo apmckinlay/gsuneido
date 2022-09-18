@@ -11,19 +11,23 @@ import (
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
-var _ = builtin0("Built()", func() Value {
-	return SuStr(Built())
-})
+var _ = builtin(Built, "()")
 
-func Built() string {
+func Built() Value {
+	return SuStr(BuiltStr())
+}
+
+func BuiltStr() string {
 	return options.BuiltDate +
 		" (" + runtime.Version() + " " + runtime.GOARCH + options.BuiltExtra + ")"
 }
 
-var _ = builtin0("BuildInfo()", func() Value {
+var _ = builtin(BuildInfo, "()")
+
+func BuildInfo() Value {
 	bi, ok := debug.ReadBuildInfo()
 	if !ok {
 		return EmptyStr
 	}
 	return SuStr(bi.String())
-})
+}

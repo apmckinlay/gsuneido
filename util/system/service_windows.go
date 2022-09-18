@@ -38,7 +38,7 @@ var (
 	stopFunc            func()
 )
 
-// Run handles if started as a service.
+// Service handles if started as a service.
 // If not started as a service, it does nothing.
 // If running as a service it changes the working directory to the exe directory.
 // The start function is called if running as a service.

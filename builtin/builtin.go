@@ -4,136 +4,153 @@
 package builtin
 
 import (
+	"reflect"
+	"runtime"
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/compile"
 	. "github.com/apmckinlay/gsuneido/runtime"
+	"github.com/apmckinlay/gsuneido/util/assert"
+	"github.com/apmckinlay/gsuneido/util/str"
 )
 
 var UIThread *Thread // set by main
 
-/*
-builtin defines a built in function in globals
-
-for example:
-
-	var _ = builtin("Foo(a,b)", func(t *Thread, args []Value) Value {
-			...
-		}))
-*/
-func builtin(s string, f func(t *Thread, args []Value) Value) bool {
-	name, ps := paramSplit(s)
-	Global.Builtin(name,
-		&SuBuiltin{Fn: f, BuiltinParams: BuiltinParams{ParamSpec: ps}})
-	return true
+// builtin function names can end in Q or X for ? or !
+func builtin(f any, p string) any {
+	name := funcName(f)
+	name = str.Capitalize(name)
+	Global.Builtin(name, builtinVal(name, f, p))
+	return nil
 }
 
-func builtin0(s string, f func() Value) bool {
-	name, ps := paramSplit(s)
-	Global.Builtin(name,
-		&SuBuiltin0{Fn: f, BuiltinParams: BuiltinParams{ParamSpec: ps}})
-	return true
-}
-
-func builtin1(s string, f func(a Value) Value) bool {
-	name, ps := paramSplit(s)
-	Global.Builtin(name,
-		&SuBuiltin1{Fn: f, BuiltinParams: BuiltinParams{ParamSpec: ps}})
-	return true
-}
-
-func builtin2(s string, f func(a, b Value) Value) bool {
-	name, ps := paramSplit(s)
-	Global.Builtin(name,
-		&SuBuiltin2{Fn: f, BuiltinParams: BuiltinParams{ParamSpec: ps}})
-	return true
-}
-
-func builtin3(s string, f func(a, b, c Value) Value) bool {
-	name, ps := paramSplit(s)
-	Global.Builtin(name,
-		&SuBuiltin3{Fn: f, BuiltinParams: BuiltinParams{ParamSpec: ps}})
-	return true
-}
-
-//lint:ignore U1000 used on Windows
-func builtin4(s string, f func(a, b, c, d Value) Value) bool {
-	name, ps := paramSplit(s)
-	Global.Builtin(name,
-		&SuBuiltin4{Fn: f, BuiltinParams: BuiltinParams{ParamSpec: ps}})
-	return true
-}
-
-//lint:ignore U1000 used on Windows
-func builtin5(s string, f func(a, b, c, d, e Value) Value) bool {
-	name, ps := paramSplit(s)
-	Global.Builtin(name,
-		&SuBuiltin5{Fn: f, BuiltinParams: BuiltinParams{ParamSpec: ps}})
-	return true
-}
-
-//lint:ignore U1000 used on Windows
-func builtin6(s string, f func(a, b, c, d, e, f Value) Value) bool {
-	name, ps := paramSplit(s)
-	Global.Builtin(name,
-		&SuBuiltin6{Fn: f, BuiltinParams: BuiltinParams{ParamSpec: ps}})
-	return true
-}
-
-//lint:ignore U1000 used on Windows
-func builtin7(s string, f func(a, b, c, d, e, f, g Value) Value) bool {
-	name, ps := paramSplit(s)
-	Global.Builtin(name,
-		&SuBuiltin7{Fn: f, BuiltinParams: BuiltinParams{ParamSpec: ps}})
-	return true
-}
-
-func builtinRaw(s string, f func(t *Thread, as *ArgSpec, args []Value) Value) bool {
-	name, ps := paramSplit(s)
-	// params are just for documentation, SuBuiltinRaw doesn't use them
-	Global.Builtin(name,
-		&SuBuiltinRaw{Fn: f, BuiltinParams: BuiltinParams{ParamSpec: ps}})
-	return true
-}
-
-// paramSplit takes Foo(x, y) and returns name and ParamSpec
-func paramSplit(s string) (string, ParamSpec) {
-	i := strings.IndexByte(s, byte('('))
-	name := s[:i]
-	ps := params(s[i:])
+func builtinVal(name string, f any, p string) Value {
+	ps := params(p)
 	ps.Name = name
-	return name, ps
+	switch f := f.(type) {
+	case func() Value:
+		assert.That(ps.Nparams == 0)
+		return &SuBuiltin0{Fn: f, BuiltinParams: BuiltinParams{ParamSpec: ps}}
+	case func(Value) Value:
+		assert.That(ps.Nparams == 1)
+		return &SuBuiltin1{Fn: f, BuiltinParams: BuiltinParams{ParamSpec: ps}}
+	case func(Value, Value) Value:
+		assert.That(ps.Nparams == 2)
+		return &SuBuiltin2{Fn: f, BuiltinParams: BuiltinParams{ParamSpec: ps}}
+	case func(Value, Value, Value) Value:
+		assert.That(ps.Nparams == 3)
+		return &SuBuiltin3{Fn: f, BuiltinParams: BuiltinParams{ParamSpec: ps}}
+	case func(Value, Value, Value, Value) Value:
+		assert.That(ps.Nparams == 4)
+		return &SuBuiltin4{Fn: f, BuiltinParams: BuiltinParams{ParamSpec: ps}}
+	case func(Value, Value, Value, Value, Value) Value:
+		assert.That(ps.Nparams == 5)
+		return &SuBuiltin5{Fn: f, BuiltinParams: BuiltinParams{ParamSpec: ps}}
+	case func(Value, Value, Value, Value, Value, Value) Value:
+		assert.That(ps.Nparams == 6)
+		return &SuBuiltin6{Fn: f, BuiltinParams: BuiltinParams{ParamSpec: ps}}
+	case func(Value, Value, Value, Value, Value, Value, Value) Value:
+		assert.That(ps.Nparams == 7)
+		return &SuBuiltin7{Fn: f, BuiltinParams: BuiltinParams{ParamSpec: ps}}
+	case func(th *Thread, args []Value) Value:
+		return &SuBuiltin{Fn: f, BuiltinParams: BuiltinParams{ParamSpec: ps}}
+	case func(th *Thread, as *ArgSpec, args []Value) Value:
+		// params are just for documentation
+		return &SuBuiltinRaw{Fn: f, BuiltinParams: BuiltinParams{ParamSpec: ps}}
+	default:
+		panic("invalid builtin function: " + name)
+	}
 }
 
-func method(p string, f func(t *Thread, this Value, args []Value) Value) Callable {
-	return &SuBuiltinMethod{Fn: f,
-		BuiltinParams: BuiltinParams{ParamSpec: params(p)}}
+// curMethods and curPrefix are only used during initialization
+// which is single threaded, so no locking is required
+var (
+	curMethods Methods
+	curPrefix  string
+)
+
+func methods() Methods {
+	curMethods = Methods{}
+	curPrefix = ""
+	return curMethods
 }
 
-func method0(f func(this Value) Value) Callable {
-	return &SuBuiltinMethod0{SuBuiltin1: SuBuiltin1{Fn: f,
-		BuiltinParams: BuiltinParams{}}}
+func exportMethods(m *Methods) any {
+	*m = methods()
+	return nil
 }
 
-func method1(p string, f func(this, a1 Value) Value) Callable {
-	return &SuBuiltinMethod1{SuBuiltin2: SuBuiltin2{Fn: f,
-		BuiltinParams: BuiltinParams{ParamSpec: params(p)}}}
+// staticMethod adds to curMethods, like method,
+// but creates a standalone function like builtin
+func staticMethod(f any, p string) any {
+	name := methodName(f)
+	fn := builtinVal(name, f, p)
+	curMethods[name] = fn
+	return nil
 }
 
-func method2(p string, f func(this, a1, a2 Value) Value) Callable {
-	return &SuBuiltinMethod2{SuBuiltin3: SuBuiltin3{Fn: f,
-		BuiltinParams: BuiltinParams{ParamSpec: params(p)}}}
+// method adds to curMethods, which is set by methods.
+// method function names must start with a prefix e.g. xyz_
+func method(f any, p string) any {
+	name := methodName(f)
+	ps := params(p)
+	ps.Name = name
+	switch f := f.(type) {
+	case func(this Value) Value:
+		assert.That(ps.Nparams == 0)
+		curMethods[name] = &SuBuiltinMethod0{SuBuiltin1: SuBuiltin1{Fn: f,
+			BuiltinParams: BuiltinParams{ParamSpec: ps}}}
+	case func(this, a Value) Value:
+		assert.That(ps.Nparams == 1)
+		curMethods[name] = &SuBuiltinMethod1{SuBuiltin2: SuBuiltin2{Fn: f,
+			BuiltinParams: BuiltinParams{ParamSpec: ps}}}
+	case func(this, a, b Value) Value:
+		assert.That(ps.Nparams == 2)
+		curMethods[name] = &SuBuiltinMethod2{SuBuiltin3: SuBuiltin3{Fn: f,
+			BuiltinParams: BuiltinParams{ParamSpec: ps}}}
+	case func(this, a, b, c Value) Value:
+		assert.That(ps.Nparams == 3)
+		curMethods[name] = &SuBuiltinMethod3{SuBuiltin4: SuBuiltin4{Fn: f,
+			BuiltinParams: BuiltinParams{ParamSpec: ps}}}
+	case func(t *Thread, this Value, args []Value) Value:
+		curMethods[name] = &SuBuiltinMethod{Fn: f,
+			BuiltinParams: BuiltinParams{ParamSpec: ps}}
+	case func(t *Thread, as *ArgSpec, this Value, args []Value) Value:
+		// params are just for documentation
+		curMethods[name] = &SuBuiltinMethodRaw{Fn: f, ParamSpec: params(p)}
+	default:
+		Fatal("invalid builtin function", name)
+	}
+	return nil
 }
 
-func method3(p string, f func(this, a1, a2, a3 Value) Value) Callable {
-	return &SuBuiltinMethod3{SuBuiltin4: SuBuiltin4{Fn: f,
-		BuiltinParams: BuiltinParams{ParamSpec: params(p)}}}
+func methodName(f any) string {
+	fname := funcName(f)
+	prefix, name, _ := strings.Cut(fname, "_")
+	if name == "" {
+		Fatal("method missing prefix:", fname)
+	}
+	if curPrefix == "" {
+		curPrefix = prefix
+	} else if prefix != curPrefix {
+		Fatal("inconsistent prefix:", fname)
+	}
+	if _, ok := curMethods[name]; ok {
+		Fatal("duplicate method:", fname)
+	}
+	return name
 }
 
-func methodRaw(p string,
-	f func(t *Thread, as *ArgSpec, this Value, args []Value) Value) *SuBuiltinMethodRaw {
-	// params are just for documentation, SuBuiltinMethodRaw doesn't use them
-	return &SuBuiltinMethodRaw{Fn: f, ParamSpec: params(p)}
+func funcName(f any) string {
+	s := runtime.FuncForPC(reflect.ValueOf(f).Pointer()).Name()
+	s = str.AfterFirst(s, "builtin.")
+	switch s[len(s)-1] {
+	case 'Q':
+		s = s[:len(s)-1] + "?"
+	case 'X':
+		s = s[:len(s)-1] + "!"
+	}
+	return s
 }
 
 // params builds a ParamSpec from a string like (a, b) or (@args)

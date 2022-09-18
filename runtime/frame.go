@@ -14,7 +14,7 @@ type Frame struct {
 	// locals are the local variables (including arguments)
 	// Normally they are on the thread stack
 	// but for closure blocks they are moved to the heap.
-	locals Locals
+	locals locals
 
 	// this is the instance if we're running a method
 	this Value
@@ -23,13 +23,13 @@ type Frame struct {
 	blockParent *Frame
 }
 
-type Locals struct {
+type locals struct {
 	v []Value
 	// onHeap is true when locals have been moved from the stack to the heap
 	onHeap bool
 }
 
-func (ls *Locals) moveToHeap() {
+func (ls *locals) moveToHeap() {
 	if ls.onHeap {
 		return
 	}

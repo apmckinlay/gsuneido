@@ -8,6 +8,8 @@ import (
 	"github.com/google/uuid"
 )
 
-var _ = builtin0("UuidString()", func() Value {
+var _ = builtin(UuidString, "()")
+
+func UuidString() Value {
 	return SuStr(uuid.New().String())
-})
+}

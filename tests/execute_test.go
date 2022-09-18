@@ -144,7 +144,7 @@ func TestPtestClass(t *testing.T) {
 }
 
 func init() {
-	builtin.Def()
+	builtin.DefDef()
 }
 
 func ptExecute(args []string, _ []bool) bool {

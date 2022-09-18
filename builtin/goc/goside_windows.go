@@ -134,13 +134,15 @@ func Fatal(s string) {
 }
 
 // must be injected
-var TimerId func(a uintptr)
-var Callback2 func(i, a, b uintptr) uintptr
-var Callback3 func(i, a, b, c uintptr) uintptr
-var Callback4 func(i, a, b, c, d uintptr) uintptr
-var RunOnGoSide func()
-var SunAPP func(string) string
-var Shutdown func(exitcode int)
+var (
+	TimerId     func(a uintptr)
+	Callback2   func(i, a, b uintptr) uintptr
+	Callback3   func(i, a, b, c uintptr) uintptr
+	Callback4   func(i, a, b, c, d uintptr) uintptr
+	RunOnGoSide func()
+	SunAPP      func(string) string
+	Shutdown    func(exitcode int)
+)
 
 // var LastError uintptr
 

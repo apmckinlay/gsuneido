@@ -9,13 +9,16 @@ import (
 
 // These methods are specific for int values
 
-func init() {
-	IntMethods = Methods{
-		"Int": method0(func(this Value) Value {
-			return this
-		}),
-		"Frac": method0(func(Value) Value {
-			return Zero
-		}),
-	}
+var _ = exportMethods(&IntMethods)
+
+var _ = method(int_Int, "()")
+
+func int_Int(this Value) Value {
+	return this
+}
+
+var _ = method(int_Frac, "()")
+
+func int_Frac(Value) Value {
+	return Zero
 }

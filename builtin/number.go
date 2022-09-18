@@ -12,7 +12,9 @@ import (
 	"github.com/apmckinlay/gsuneido/util/dnum"
 )
 
-var _ = builtin("Number(value)", func(t *Thread, args []Value) Value {
+var _ = builtin(Number, "(value)")
+
+func Number(t *Thread, args []Value) Value {
 	val := args[0]
 	if s, ok := val.ToStr(); ok {
 		s := strings.TrimSpace(s)
@@ -34,7 +36,7 @@ var _ = builtin("Number(value)", func(t *Thread, args []Value) Value {
 		return Zero
 	}
 	panic("can't convert " + ErrType(val) + " to number")
-})
+}
 
 func numFromString(s string) Value {
 	defer func() {
@@ -48,113 +50,163 @@ func numFromString(s string) Value {
 var minNarrow = dnum.FromInt(MinSuInt)
 var maxNarrow = dnum.FromInt(MaxSuInt)
 
-func init() {
-	NumMethods = Methods{
-		"Chr": method0(func(this Value) Value {
-			n := byte(ToInt(this))
-			return SuStr(string([]byte{n}))
-		}),
-		"Int": method0(func(this Value) Value {
-			dn := ToDnum(this).Trunc()
-			if dnum.Compare(dn, minNarrow) >= 0 && dnum.Compare(dn, maxNarrow) <= 0 {
-				n, _ := dn.ToInt()
-				return SuInt(n)
-			}
-			return SuDnum{Dnum: dn}
-		}),
-		"Format": method1("(mask)", func(this, arg Value) Value {
-			x := ToDnum(this)
-			mask := ToStr(arg)
-			return SuStr(x.Format(mask))
-		}),
-		"Frac": method0(func(this Value) Value {
-			dn := ToDnum(this).Frac()
-			if dn.IsZero() {
-				return Zero
-			}
-			return SuDnum{Dnum: dn}
-		}),
-		"Hex": method0(func(this Value) Value {
-			n := ToInt(this)
-			return SuStr(strconv.FormatUint(uint64(uint32(n)), 16))
-		}),
+var _ = exportMethods(&NumMethods)
 
-		"Round": method1("(number)", func(this, arg Value) Value {
-			x := ToDnum(this)
-			r := ToInt(arg)
-			return SuDnum{Dnum: x.Round(r, dnum.HalfUp)}
-		}),
-		"RoundUp": method1("(number)", func(this, arg Value) Value {
-			x := ToDnum(this)
-			r := ToInt(arg)
-			return SuDnum{Dnum: x.Round(r, dnum.Up)}
-		}),
-		"RoundDown": method1("(number)", func(this, arg Value) Value {
-			x := ToDnum(this)
-			r := ToInt(arg)
-			return SuDnum{Dnum: x.Round(r, dnum.Down)}
-		}),
+var _ = method(num_Chr, "()")
 
-		// float methods
+func num_Chr(this Value) Value {
+	n := byte(ToInt(this))
+	return SuStr(string([]byte{n}))
+}
 
-		"Cos": method0(func(this Value) Value {
-			f := toFloat(this)
-			return fromFloat(math.Cos(f))
-		}),
-		"Sin": method0(func(this Value) Value {
-			f := toFloat(this)
-			return fromFloat(math.Sin(f))
-		}),
-		"Tan": method0(func(this Value) Value {
-			f := toFloat(this)
-			return fromFloat(math.Tan(f))
-		}),
+var _ = method(num_Int, "()")
 
-		"ACos": method0(func(this Value) Value {
-			f := toFloat(this)
-			return fromFloat(math.Acos(f))
-		}),
-		"ASin": method0(func(this Value) Value {
-			f := toFloat(this)
-			return fromFloat(math.Asin(f))
-		}),
-		"ATan": method0(func(this Value) Value {
-			f := toFloat(this)
-			return fromFloat(math.Atan(f))
-		}),
-
-		"Exp": method0(func(this Value) Value {
-			f := toFloat(this)
-			return fromFloat(math.Exp(f))
-		}),
-		"Log": method0(func(this Value) Value {
-			f := toFloat(this)
-			return fromFloat(math.Log(f))
-		}),
-		"Log10": method0(func(this Value) Value {
-			f := toFloat(this)
-			return fromFloat(math.Log10(f))
-		}),
-		"Pow": method1("(number)", func(this, arg Value) Value {
-			if p, ok := arg.ToInt(); ok && 0 <= p && p <= 10 {
-				if p == 0 {
-					return One
-				}
-				x := this
-				for ; p > 1; p-- {
-					x = OpMul(x, this)
-				}
-				return x
-			}
-			x := toFloat(this)
-			y := toFloat(arg)
-			return fromFloat(math.Pow(x, y))
-		}),
-		"Sqrt": method0(func(this Value) Value {
-			f := toFloat(this)
-			return fromFloat(math.Sqrt(f))
-		}),
+func num_Int(this Value) Value {
+	dn := ToDnum(this).Trunc()
+	if dnum.Compare(dn, minNarrow) >= 0 && dnum.Compare(dn, maxNarrow) <= 0 {
+		n, _ := dn.ToInt()
+		return SuInt(n)
 	}
+	return SuDnum{Dnum: dn}
+}
+
+var _ = method(num_Format, "(mask)")
+
+func num_Format(this, arg Value) Value {
+	x := ToDnum(this)
+	mask := ToStr(arg)
+	return SuStr(x.Format(mask))
+}
+
+var _ = method(num_Frac, "()")
+
+func num_Frac(this Value) Value {
+	dn := ToDnum(this).Frac()
+	if dn.IsZero() {
+		return Zero
+	}
+	return SuDnum{Dnum: dn}
+}
+
+var _ = method(num_Hex, "()")
+
+func num_Hex(this Value) Value {
+	n := ToInt(this)
+	return SuStr(strconv.FormatUint(uint64(uint32(n)), 16))
+}
+
+var _ = method(num_Round, "(number)")
+
+func num_Round(this, arg Value) Value {
+	x := ToDnum(this)
+	r := ToInt(arg)
+	return SuDnum{Dnum: x.Round(r, dnum.HalfUp)}
+}
+
+var _ = method(num_RoundUp, "(number)")
+
+func num_RoundUp(this, arg Value) Value {
+	x := ToDnum(this)
+	r := ToInt(arg)
+	return SuDnum{Dnum: x.Round(r, dnum.Up)}
+}
+
+var _ = method(num_RoundDown, "(number)")
+
+func num_RoundDown(this, arg Value) Value {
+	x := ToDnum(this)
+	r := ToInt(arg)
+	return SuDnum{Dnum: x.Round(r, dnum.Down)}
+}
+
+// float methods
+
+var _ = method(num_Cos, "()")
+
+func num_Cos(this Value) Value {
+	f := toFloat(this)
+	return fromFloat(math.Cos(f))
+}
+
+var _ = method(num_Sin, "()")
+
+func num_Sin(this Value) Value {
+	f := toFloat(this)
+	return fromFloat(math.Sin(f))
+}
+
+var _ = method(num_Tan, "()")
+
+func num_Tan(this Value) Value {
+	f := toFloat(this)
+	return fromFloat(math.Tan(f))
+}
+
+var _ = method(num_ACos, "()")
+
+func num_ACos(this Value) Value {
+	f := toFloat(this)
+	return fromFloat(math.Acos(f))
+}
+
+var _ = method(num_ASin, "()")
+
+func num_ASin(this Value) Value {
+	f := toFloat(this)
+	return fromFloat(math.Asin(f))
+}
+
+var _ = method(num_ATan, "()")
+
+func num_ATan(this Value) Value {
+	f := toFloat(this)
+	return fromFloat(math.Atan(f))
+}
+
+var _ = method(num_Exp, "()")
+
+func num_Exp(this Value) Value {
+	f := toFloat(this)
+	return fromFloat(math.Exp(f))
+}
+
+var _ = method(num_Log, "()")
+
+func num_Log(this Value) Value {
+	f := toFloat(this)
+	return fromFloat(math.Log(f))
+}
+
+var _ = method(num_Log10, "()")
+
+func num_Log10(this Value) Value {
+	f := toFloat(this)
+	return fromFloat(math.Log10(f))
+}
+
+var _ = method(num_Pow, "(number)")
+
+func num_Pow(this, arg Value) Value {
+	if p, ok := arg.ToInt(); ok && 0 <= p && p <= 10 {
+		if p == 0 {
+			return One
+		}
+		x := this
+		for ; p > 1; p-- {
+			x = OpMul(x, this)
+		}
+		return x
+	}
+	x := toFloat(this)
+	y := toFloat(arg)
+	return fromFloat(math.Pow(x, y))
+}
+
+var _ = method(num_Sqrt, "()")
+
+func num_Sqrt(this Value) Value {
+	f := toFloat(this)
+	return fromFloat(math.Sqrt(f))
 }
 
 func toFloat(v Value) float64 {
@@ -178,70 +230,72 @@ func fromFloat(f float64) Value {
 // Max and Min aren't specific to numbers,
 // but that's normally what they're used for
 
-var _ = builtinRaw("Max(@args)",
-	func(_ *Thread, as *ArgSpec, args []Value) Value {
-		if as.Nargs == 0 {
-			panic("Max requires at least one value")
-		}
-		if as.Each == 0 {
-			max := args[0]
-			for i := 1; i < int(as.Nargs); i++ {
-				if args[i].Compare(max) > 0 {
-					max = args[i]
-				}
-			}
-			return max
-		}
-		iterable, ok := args[0].(interface{ Iter() Iter })
-		if !ok {
-			panic("can't iterate " + args[0].Type().String())
-		}
-		it := iterable.Iter()
-		max := it.Next()
-		if as.Each == EACH1 && max != nil {
-			max = it.Next()
-		}
-		if max == nil {
-			panic("Max requires at least one value")
-		}
-		for v := it.Next(); v != nil; v = it.Next() {
-			if v.Compare(max) > 0 {
-				max = v
+var _ = builtin(Max, "(@args)")
+
+func Max(_ *Thread, as *ArgSpec, args []Value) Value {
+	if as.Nargs == 0 {
+		panic("Max requires at least one value")
+	}
+	if as.Each == 0 {
+		max := args[0]
+		for i := 1; i < int(as.Nargs); i++ {
+			if args[i].Compare(max) > 0 {
+				max = args[i]
 			}
 		}
 		return max
-	})
+	}
+	iterable, ok := args[0].(interface{ Iter() Iter })
+	if !ok {
+		panic("can't iterate " + args[0].Type().String())
+	}
+	it := iterable.Iter()
+	max := it.Next()
+	if as.Each == EACH1 && max != nil {
+		max = it.Next()
+	}
+	if max == nil {
+		panic("Max requires at least one value")
+	}
+	for v := it.Next(); v != nil; v = it.Next() {
+		if v.Compare(max) > 0 {
+			max = v
+		}
+	}
+	return max
+}
 
-var _ = builtinRaw("Min(@args)",
-	func(_ *Thread, as *ArgSpec, args []Value) Value {
-		if as.Nargs == 0 {
-			panic("Min requires at least one value")
-		}
-		if as.Each == 0 {
-			min := args[0]
-			for i := 1; i < int(as.Nargs); i++ {
-				if args[i].Compare(min) < 0 {
-					min = args[i]
-				}
-			}
-			return min
-		}
-		iterable, ok := args[0].(interface{ Iter() Iter })
-		if !ok {
-			panic("can't iterate " + args[0].Type().String())
-		}
-		it := iterable.Iter()
-		min := it.Next()
-		if as.Each == EACH1 && min != nil {
-			min = it.Next()
-		}
-		if min == nil {
-			panic("Min requires at least one value")
-		}
-		for v := it.Next(); v != nil; v = it.Next() {
-			if v.Compare(min) < 0 {
-				min = v
+var _ = builtin(Min, "(@args)")
+
+func Min(_ *Thread, as *ArgSpec, args []Value) Value {
+	if as.Nargs == 0 {
+		panic("Min requires at least one value")
+	}
+	if as.Each == 0 {
+		min := args[0]
+		for i := 1; i < int(as.Nargs); i++ {
+			if args[i].Compare(min) < 0 {
+				min = args[i]
 			}
 		}
 		return min
-	})
+	}
+	iterable, ok := args[0].(interface{ Iter() Iter })
+	if !ok {
+		panic("can't iterate " + args[0].Type().String())
+	}
+	it := iterable.Iter()
+	min := it.Next()
+	if as.Each == EACH1 && min != nil {
+		min = it.Next()
+	}
+	if min == nil {
+		panic("Min requires at least one value")
+	}
+	for v := it.Next(); v != nil; v = it.Next() {
+		if v.Compare(min) < 0 {
+			min = v
+		}
+	}
+	return min
+}

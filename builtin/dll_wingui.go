@@ -217,12 +217,12 @@ func rectArg(ob Value, r unsafe.Pointer) unsafe.Pointer {
 	if ob.Equal(Zero) {
 		return nil
 	}
-	*(*RECT)(r) = obToRect(ob)
+	*(*stRect)(r) = obToRect(ob)
 	return r
 }
 
-func obToRect(ob Value) RECT {
-	return RECT{
+func obToRect(ob Value) stRect {
+	return stRect{
 		left:   getInt32(ob, "left"),
 		top:    getInt32(ob, "top"),
 		right:  getInt32(ob, "right"),
@@ -230,22 +230,22 @@ func obToRect(ob Value) RECT {
 	}
 }
 
-func getRect(ob Value, mem string) RECT {
+func getRect(ob Value, mem string) stRect {
 	if ob == nil {
-		return RECT{}
+		return stRect{}
 	}
 	x := ob.Get(nil, SuStr(mem))
 	if x == nil {
-		return RECT{}
+		return stRect{}
 	}
 	return obToRect(x)
 }
 
 func urectToOb(p unsafe.Pointer, ob Value) Value {
-	return rectToOb((*RECT)(p), ob)
+	return rectToOb((*stRect)(p), ob)
 }
 
-func rectToOb(r *RECT, ob Value) Value {
+func rectToOb(r *stRect, ob Value) Value {
 	if ob == nil {
 		ob = &SuObject{}
 	} else if ob.Equal(Zero) {
@@ -260,21 +260,21 @@ func rectToOb(r *RECT, ob Value) Value {
 
 // point ------------------------------------------------------------
 
-func obToPoint(ob Value) POINT {
+func obToPoint(ob Value) stPoint {
 	if ob.Equal(Zero) {
-		return POINT{}
+		return stPoint{}
 	}
-	return POINT{
+	return stPoint{
 		x: getInt32(ob, "x"),
 		y: getInt32(ob, "y"),
 	}
 }
 
 func upointToOb(p unsafe.Pointer, ob Value) Value {
-	return pointToOb((*POINT)(p), ob)
+	return pointToOb((*stPoint)(p), ob)
 }
 
-func pointToOb(pt *POINT, ob Value) Value {
+func pointToOb(pt *stPoint, ob Value) Value {
 	if ob == nil {
 		ob = &SuObject{}
 	}
@@ -283,19 +283,19 @@ func pointToOb(pt *POINT, ob Value) Value {
 	return ob
 }
 
-func getPoint(ob Value, mem string) POINT {
+func getPoint(ob Value, mem string) stPoint {
 	if ob == nil {
-		return POINT{}
+		return stPoint{}
 	}
 	x := ob.Get(nil, SuStr(mem))
 	if x == nil {
-		return POINT{}
+		return stPoint{}
 	}
 	return obToPoint(x)
 }
 
 func pointArg(ob Value, p unsafe.Pointer) unsafe.Pointer {
-	pt := (*POINT)(p)
+	pt := (*stPoint)(p)
 	pt.x = getInt32(ob, "x")
 	pt.y = getInt32(ob, "y")
 	return p

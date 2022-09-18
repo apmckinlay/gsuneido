@@ -8,60 +8,70 @@ import (
 	"github.com/apmckinlay/gsuneido/runtime/types"
 )
 
-var _ = builtin1("Type(value)",
-	func(arg Value) Value {
-		return SuStr(arg.Type().String())
-	})
+var _ = builtin(Type, "(value)")
 
-var _ = builtin1("Boolean?(value)",
-	func(arg Value) Value {
-		return SuBool(arg.Type() == types.Boolean)
-	})
+func Type(arg Value) Value {
+	return SuStr(arg.Type().String())
+}
 
-var _ = builtin1("Number?(value)",
-	func(arg Value) Value {
-		return SuBool(arg.Type() == types.Number)
-	})
+var _ = builtin(BooleanQ, "(value)")
 
-var _ = builtin1("String?(value)",
-	func(arg Value) Value {
-		t := arg.Type()
-		return SuBool(t == types.String || t == types.Except)
-	})
+func BooleanQ(arg Value) Value {
+	return SuBool(arg.Type() == types.Boolean)
+}
 
-var _ = builtin1("Date?(value)",
-	func(arg Value) Value {
-		return SuBool(arg.Type() == types.Date)
-	})
+var _ = builtin(NumberQ, "(value)")
 
-var _ = builtin1("Object?(value)",
-	func(arg Value) Value {
-		switch arg.Type() {
-		case types.Object, types.Record:
-			return True
-		}
-		return False
-	})
+func NumberQ(arg Value) Value {
+	return SuBool(arg.Type() == types.Number)
+}
 
-var _ = builtin1("Record?(value)",
-	func(arg Value) Value {
-		return SuBool(arg.Type() == types.Record)
-	})
+var _ = builtin(StringQ, "(value)")
 
-var _ = builtin1("Class?(value)",
-	func(arg Value) Value {
-		return SuBool(arg.Type() == types.Class)
-	})
+func StringQ(arg Value) Value {
+	t := arg.Type()
+	return SuBool(t == types.String || t == types.Except)
+}
 
-var _ = builtin1("Instance?(value)",
-	func(arg Value) Value {
-		return SuBool(arg.Type() == types.Instance)
-	})
+var _ = builtin(DateQ, "(value)")
 
-var _ = builtin1("Function?(value)",
-	func(arg Value) Value {
-		return SuBool(isFunc(arg))
-	})
+func DateQ(arg Value) Value {
+	return SuBool(arg.Type() == types.Date)
+}
+
+var _ = builtin(ObjectQ, "(value)")
+
+func ObjectQ(arg Value) Value {
+	switch arg.Type() {
+	case types.Object, types.Record:
+		return True
+	}
+	return False
+}
+
+var _ = builtin(RecordQ, "(value)")
+
+func RecordQ(arg Value) Value {
+	return SuBool(arg.Type() == types.Record)
+}
+
+var _ = builtin(ClassQ, "(value)")
+
+func ClassQ(arg Value) Value {
+	return SuBool(arg.Type() == types.Class)
+}
+
+var _ = builtin(InstanceQ, "(value)")
+
+func InstanceQ(arg Value) Value {
+	return SuBool(arg.Type() == types.Instance)
+}
+
+var _ = builtin(FunctionQ, "(value)")
+
+func FunctionQ(arg Value) Value {
+	return SuBool(isFunc(arg))
+}
 
 func isFunc(v Value) bool {
 	switch v.Type() {

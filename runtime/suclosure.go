@@ -47,7 +47,7 @@ func (b *SuClosure) Call(t *Thread, this Value, as *ArgSpec) Value {
 		copy(v, b.locals)
 	}
 	return t.run(Frame{fn: bf, this: this, blockParent: b.parent,
-		locals: Locals{v: v, onHeap: true}})
+		locals: locals{v: v, onHeap: true}})
 }
 
 func (*SuClosure) Type() types.Type {

@@ -19,18 +19,19 @@ import (
 var rogsChan = make(chan func(), 1)
 
 // UpdateUI runs the block on the main UI thread
-var _ = builtin("UpdateUI(block)",
-	func(t *Thread, args []Value) Value {
-		if windows.GetCurrentThreadId() == uiThreadId {
-			synchronized(t, args)
-		} else {
-			block := args[0]
-			block.SetConcurrent()
-			rogsChan <- func() { runUI(block) }
-			notifyCside()
-		}
-		return nil
-	})
+var _ = builtin(UpdateUI, "(block)")
+
+func UpdateUI(t *Thread, args []Value) Value {
+	if windows.GetCurrentThreadId() == uiThreadId {
+		Synchronized(t, args)
+	} else {
+		block := args[0]
+		block.SetConcurrent()
+		rogsChan <- func() { runUI(block) }
+		notifyCside()
+	}
+	return nil
+}
 
 const notifyWparam = 0xffffffff
 

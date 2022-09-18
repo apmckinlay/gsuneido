@@ -10,62 +10,77 @@ import (
 
 // methods common to SuClass and SuInstance
 
-func init() {
-	BaseMethods = Methods{
-		"Base": method("()", func(t *Thread, this Value, args []Value) Value {
-			return base(t, this, func(v Value, _ *MemBase) Value { return v })
-		}),
-		"Eval": methodRaw("(@args)",
-			func(t *Thread, as *ArgSpec, this Value, args []Value) Value {
-				return EvalAsMethod(t, as, this, args)
-			}),
-		"Eval2": methodRaw("(@args)",
-			func(t *Thread, as *ArgSpec, this Value, args []Value) Value {
-				ob := &SuObject{}
-				if result := EvalAsMethod(t, as, this, args); result != nil {
-					ob.Add(result)
-				}
-				return ob
-			}),
-		"GetDefault": method("(member, block)",
-			func(t *Thread, this Value, args []Value) Value {
-				if x := this.Get(t, args[0]); x != nil {
-					return x
-				}
-				if args[1].Type() == types.Block {
-					return t.Call(args[1])
-				}
-				return args[1]
-			}),
-		"Member?": method("(string)", func(t *Thread, this Value, arg []Value) Value {
-			m := ToStr(arg[0])
-			result := this.(Findable).Finder(t, func(v Value, mb *MemBase) Value {
-				if mb.Has(m) {
-					return True
-				}
-				return nil
-			})
-			return nilToFalse(result)
-		}),
-		"Members": method("(all = false)", func(t *Thread, this Value, args []Value) Value {
-			if args[0] == True {
-				args[0] = nil
-			}
-			list := &SuObject{}
-			this.(Findable).Finder(t, func(v Value, mb *MemBase) Value {
-				mb.AddMembersTo(list)
-				return args[0]
-			})
-			list.Sort(nil, False)
-			list.Unique()
-			return list
-		}),
-		"Size": method("()", func(t *Thread, this Value, args []Value) Value {
-			return this.(Findable).Finder(t, func(_ Value, mb *MemBase) Value {
-				return IntVal(mb.Size())
-			})
-		}),
+var _ = exportMethods(&BaseMethods)
+
+var _ = method(base_Base, "()")
+
+func base_Base(t *Thread, this Value, args []Value) Value {
+	return base(t, this, func(v Value, _ *MemBase) Value { return v })
+}
+
+var _ = method(base_Eval, "(@args)")
+
+func base_Eval(t *Thread, as *ArgSpec, this Value, args []Value) Value {
+	return EvalAsMethod(t, as, this, args)
+}
+
+var _ = method(base_Eval2, "(@args)")
+
+func base_Eval2(t *Thread, as *ArgSpec, this Value, args []Value) Value {
+	ob := &SuObject{}
+	if result := EvalAsMethod(t, as, this, args); result != nil {
+		ob.Add(result)
 	}
+	return ob
+}
+
+var _ = method(base_GetDefault, "(member, block)")
+
+func base_GetDefault(t *Thread, this Value, args []Value) Value {
+	if x := this.Get(t, args[0]); x != nil {
+		return x
+	}
+	if args[1].Type() == types.Block {
+		return t.Call(args[1])
+	}
+	return args[1]
+}
+
+var _ = method(base_MemberQ, "(string)")
+
+func base_MemberQ(t *Thread, this Value, arg []Value) Value {
+	m := ToStr(arg[0])
+	result := this.(Findable).Finder(t, func(v Value, mb *MemBase) Value {
+		if mb.Has(m) {
+			return True
+		}
+		return nil
+	})
+	return nilToFalse(result)
+}
+
+var _ = method(base_Members, "(all = false)")
+
+func base_Members(t *Thread, this Value, args []Value) Value {
+	if args[0] == True {
+		args[0] = nil
+	}
+	list := &SuObject{}
+	this.(Findable).Finder(t, func(v Value, mb *MemBase) Value {
+		mb.AddMembersTo(list)
+		return args[0]
+	})
+	list.Sort(nil, False)
+	list.Unique()
+	return list
+}
+
+var _ = method(base_Size, "()")
+
+func base_Size(t *Thread, this Value, args []Value) Value {
+	return this.(Findable).Finder(t, func(_ Value, mb *MemBase) Value {
+		return IntVal(mb.Size())
+	})
 }
 
 // base skips the first

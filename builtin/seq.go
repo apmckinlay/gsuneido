@@ -10,24 +10,27 @@ import (
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
-var _ = builtin1("Seq?(value)", func(val Value) Value {
+var _ = builtin(SeqQ, "(value)")
+
+func SeqQ(val Value) Value {
 	_, ok := val.(*SuSequence)
 	return SuBool(ok)
-})
+}
 
-var _ = builtin3("Seq(from=false, to=false, by=1)",
-	func(from, to, by Value) Value {
-		if from == False {
-			from = Zero
-			to = MaxInt
-		} else if to == False {
-			to = from
-			from = Zero
-		}
-		f := ToInt(from)
-		return NewSuSequence(
-			&seqIter{from: f, to: ToInt(to), by: ToInt(by), i: f})
-	})
+var _ = builtin(Seq, "(from=false, to=false, by=1)")
+
+func Seq(from, to, by Value) Value {
+	if from == False {
+		from = Zero
+		to = MaxInt
+	} else if to == False {
+		to = from
+		from = Zero
+	}
+	f := ToInt(from)
+	return NewSuSequence(
+		&seqIter{from: f, to: ToInt(to), by: ToInt(by), i: f})
+}
 
 type seqIter struct {
 	MayLock

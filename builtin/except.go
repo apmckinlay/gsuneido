@@ -7,10 +7,10 @@ import (
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
-func init() {
-	SuExceptMethods = Methods{
-		"Callstack": method0(func(this Value) Value {
-			return this.(*SuExcept).Callstack
-		}),
-	}
+var _ = exportMethods(&SuExceptMethods)
+
+var _ = method(except_Callstack, "()")
+
+func except_Callstack(this Value) Value {
+	return this.(*SuExcept).Callstack
 }

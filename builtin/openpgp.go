@@ -14,6 +14,7 @@ import (
 
 	//lint:ignore SA1019 best option
 	"golang.org/x/crypto/openpgp"
+	"golang.org/x/exp/maps"
 )
 
 type suOpenPGP struct {
@@ -32,21 +33,32 @@ func (*suOpenPGP) Lookup(_ *Thread, method string) Callable {
 	return openpgpMethods[method]
 }
 
-var openpgpMethods = Methods{
-	"SymmetricEncrypt": method3("(passphrase, source, toFile = false)",
-		func(_, passphrase, source, toFile Value) Value {
-			if toFile == False {
-				return symStr(passphrase, source, symEncrypt)
-			}
-			return symFile(passphrase, source, toFile, symEncrypt)
-		}),
-	"SymmetricDecrypt": method3("(passphrase, source, toFile = false)",
-		func(_, passphrase, source, toFile Value) Value {
-			if toFile == False {
-				return symStr(passphrase, source, symDecrypt)
-			}
-			return symFile(passphrase, source, toFile, symDecrypt)
-		}),
+var openpgpMethods = methods()
+
+var _ = staticMethod(opgp_Members, "()")
+
+func opgp_Members() Value {
+	return SuObjectOfStrs(maps.Keys(openpgpMethods))
+}
+
+var _ = staticMethod(opgp_SymmetricEncrypt,
+	"(passphrase, source, toFile = false)")
+
+func opgp_SymmetricEncrypt(passphrase, source, toFile Value) Value {
+	if toFile == False {
+		return symStr(passphrase, source, symEncrypt)
+	}
+	return symFile(passphrase, source, toFile, symEncrypt)
+}
+
+var _ = staticMethod(opgp_SymmetricDecrypt,
+	"(passphrase, source, toFile = false)")
+
+func opgp_SymmetricDecrypt(passphrase, source, toFile Value) Value {
+	if toFile == False {
+		return symStr(passphrase, source, symDecrypt)
+	}
+	return symFile(passphrase, source, toFile, symDecrypt)
 }
 
 type encdec func(passphrase string, src io.Reader, dst io.Writer)

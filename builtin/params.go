@@ -11,11 +11,11 @@ type paramsable interface {
 	Params() string
 }
 
-func init() {
-	ParamsMethods = Methods{
-		"Params": method0(func(this Value) Value {
-			fn := this.(paramsable)
-			return SuStr(fn.Params())
-		}),
-	}
+var _ = exportMethods(&ParamsMethods)
+
+var _ = method(fn_Params, "()")
+
+func fn_Params(this Value) Value {
+	fn := this.(paramsable)
+	return SuStr(fn.Params())
 }

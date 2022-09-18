@@ -21,35 +21,41 @@ func (*suWebBrowser) String() string {
 	return "WebBrowser"
 }
 
-var _ = builtin1("WebBrowser(hwnd)",
-	func(a Value) Value {
-		defer heap.FreeTo(heap.CurSize())
-		iunk := heap.Alloc(int64Size)
-		pPtr := heap.Alloc(int64Size)
-		rtn := goc.EmbedBrowserObject(
-			intArg(a),
-			uintptr(iunk),
-			uintptr(pPtr))
-		if rtn != 0 {
-			return intRet(rtn)
-		}
-		iOleObject := *(*uintptr)(iunk)
-		swb := &suWebBrowser{iOleObject: iOleObject, ptr: *(*uintptr)(pPtr)}
-		idisp := goc.QueryIDispatch(iOleObject)
-		swb.suCOMObject = suCOMObject{ptr: idisp, idisp: true}
-		return swb
-	})
+var _ = builtin(WebBrowser, "(hwnd)")
 
-var suWebBrowserMethods = Methods{
-	"Release": method0(func(this Value) Value {
-		wb := this.(*suWebBrowser)
-		goc.Release(wb.suCOMObject.ptr)
-		goc.UnEmbedBrowserObject(wb.iOleObject, wb.ptr)
-		return nil
-	}),
-	"GetIOleObject": method0(func(this Value) Value {
-		return IntVal((int)(this.(*suWebBrowser).iOleObject))
-	}),
+func WebBrowser(a Value) Value {
+	defer heap.FreeTo(heap.CurSize())
+	iunk := heap.Alloc(int64Size)
+	pPtr := heap.Alloc(int64Size)
+	rtn := goc.EmbedBrowserObject(
+		intArg(a),
+		uintptr(iunk),
+		uintptr(pPtr))
+	if rtn != 0 {
+		return intRet(rtn)
+	}
+	iOleObject := *(*uintptr)(iunk)
+	swb := &suWebBrowser{iOleObject: iOleObject, ptr: *(*uintptr)(pPtr)}
+	idisp := goc.QueryIDispatch(iOleObject)
+	swb.suCOMObject = suCOMObject{ptr: idisp, idisp: true}
+	return swb
+}
+
+var suWebBrowserMethods = methods()
+
+var _ = method(web_Release, "()")
+
+func web_Release(this Value) Value {
+	wb := this.(*suWebBrowser)
+	goc.Release(wb.suCOMObject.ptr)
+	goc.UnEmbedBrowserObject(wb.iOleObject, wb.ptr)
+	return nil
+}
+
+var _ = method(web_GetIOleObject, "()")
+
+func web_GetIOleObject(this Value) Value {
+	return IntVal((int)(this.(*suWebBrowser).iOleObject))
 }
 
 func (swb *suWebBrowser) Lookup(t *Thread, method string) Callable {

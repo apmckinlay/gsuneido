@@ -14,26 +14,24 @@ import (
 )
 
 // dll User32:SendMessage(pointer hwnd, long msg, pointer wParam,
-//		pointer lParam) pointer
-
+// pointer lParam) pointer
 var sendMessage = user32.MustFindProc("SendMessageA").Addr()
-var _ = builtin4("SendMessage(hwnd, msg, wParam, lParam)",
-	func(a, b, c, d Value) Value {
-		rtn := goc.Syscall4(sendMessage,
-			intArg(a),
-			intArg(b),
-			intArg(c),
-			intArg(d))
-		return intRet(rtn)
-	})
+var _ = builtin(SendMessage, "(hwnd, msg, wParam, lParam)")
+
+func SendMessage(a, b, c, d Value) Value {
+	rtn := goc.Syscall4(sendMessage,
+		intArg(a),
+		intArg(b),
+		intArg(c),
+		intArg(d))
+	return intRet(rtn)
+}
 
 // dll User32:SendMessage(pointer hwnd, long msg, pointer wParam,
-//		string text) pointer
+// string text) pointer
+var _ = builtin(SendMessageText, "(hwnd, msg, wParam, text)")
 
-var _ = builtin4("SendMessageText(hwnd, msg, wParam, text)",
-	sendMessageText)
-
-func sendMessageText(a, b, c, d Value) Value {
+func SendMessageText(a, b, c, d Value) Value {
 	defer heap.FreeTo(heap.CurSize())
 	rtn := goc.Syscall4(sendMessage,
 		intArg(a),
@@ -44,86 +42,92 @@ func sendMessageText(a, b, c, d Value) Value {
 }
 
 // dll User32:SendMessage(pointer hwnd, long msg, pointer wParam,
-//		[in] string text) pointer
+// [in] string text) pointer
+var _ = builtin(SendMessageTextIn, "(hwnd, msg, wParam, text)")
 
-var _ = builtin4("SendMessageTextIn(hwnd, msg, wParam, text)",
+func SendMessageTextIn(a, b, c, d Value) Value {
 	// can't pass direct pointer so same as SendMessageText (i.e. still copies)
-	sendMessageText)
+	return SendMessageText(a, b, c, d)
+}
 
-var _ = builtin4("SendMessageTextOut(hwnd, msg, wParam = 0, bufsize = 1024)",
-	func(a, b, c, d Value) Value {
-		defer heap.FreeTo(heap.CurSize())
-		n := uintptr(ToInt(d) + 1)
-		buf := heap.Alloc(n)
-		rtn := goc.Syscall4(sendMessage,
-			intArg(a),
-			intArg(b),
-			intArg(c),
-			uintptr(buf))
-		ob := &SuObject{}
-		ob.Put(nil, SuStr("text"), SuStr(heap.GetStrZ(buf, int(n))))
-		ob.Put(nil, SuStr("result"), intRet(rtn))
-		return ob
-	})
+var _ = builtin(SendMessageTextOut, "(hwnd, msg, wParam = 0, bufsize = 1024)")
 
-var _ = builtin4("SendMessagePoint(hwnd, msg, wParam, point)",
-	func(a, b, c, d Value) Value {
-		defer heap.FreeTo(heap.CurSize())
-		pt := heap.Alloc(nPOINT)
-		rtn := goc.Syscall4(sendMessage,
-			intArg(a),
-			intArg(b),
-			intArg(c),
-			uintptr(pointArg(d, pt)))
-		upointToOb(pt, d)
-		return intRet(rtn)
-	})
+func SendMessageTextOut(a, b, c, d Value) Value {
+	defer heap.FreeTo(heap.CurSize())
+	n := uintptr(ToInt(d) + 1)
+	buf := heap.Alloc(n)
+	rtn := goc.Syscall4(sendMessage,
+		intArg(a),
+		intArg(b),
+		intArg(c),
+		uintptr(buf))
+	ob := &SuObject{}
+	ob.Put(nil, SuStr("text"), SuStr(heap.GetStrZ(buf, int(n))))
+	ob.Put(nil, SuStr("result"), intRet(rtn))
+	return ob
+}
 
-var _ = builtin4("SendMessageRect(hwnd, msg, wParam, rect)",
-	func(a, b, c, d Value) Value {
-		defer heap.FreeTo(heap.CurSize())
-		r := heap.Alloc(nRECT)
-		rtn := goc.Syscall4(sendMessage,
-			intArg(a),
-			intArg(b),
-			intArg(c),
-			uintptr(rectArg(d, r)))
-		urectToOb(r, d)
-		return intRet(rtn)
-	})
+var _ = builtin(SendMessagePoint, "(hwnd, msg, wParam, point)")
 
-var _ = builtin4("SendMessageTcitem(hwnd, msg, wParam, tcitem)",
-	func(a, b, c, d Value) Value {
-		defer heap.FreeTo(heap.CurSize())
-		t := getStr(d, "pszText")
-		n := getInt32(d, "cchTextMax")
-		if n > 0 {
-			t = (*byte)(heap.Alloc(uintptr(n)))
-		}
-		p := heap.Alloc(nTCITEM)
-		*(*TCITEM)(p) = TCITEM{
-			mask:        getUint32(d, "mask"),
-			dwState:     getUint32(d, "dwState"),
-			dwStateMask: getUint32(d, "dwStateMask"),
-			pszText:     t,
-			cchTextMax:  n,
-			iImage:      getInt32(d, "iImage"),
-			lParam:      getInt32(d, "lParam"),
-		}
-		rtn := goc.Syscall4(sendMessage,
-			intArg(a),
-			intArg(b),
-			intArg(c),
-			uintptr(p))
-		if n > 0 {
-			d.Put(nil, SuStr("pszText"),
-				SuStr(heap.GetStrZ(unsafe.Pointer(t), int(n))))
-		}
-		d.Put(nil, SuStr("iImage"), IntVal(int((*TCITEM)(p).iImage)))
-		return intRet(rtn)
-	})
+func SendMessagePoint(a, b, c, d Value) Value {
+	defer heap.FreeTo(heap.CurSize())
+	pt := heap.Alloc(nPoint)
+	rtn := goc.Syscall4(sendMessage,
+		intArg(a),
+		intArg(b),
+		intArg(c),
+		uintptr(pointArg(d, pt)))
+	upointToOb(pt, d)
+	return intRet(rtn)
+}
 
-type TCITEM struct {
+var _ = builtin(SendMessageRect, "(hwnd, msg, wParam, rect)")
+
+func SendMessageRect(a, b, c, d Value) Value {
+	defer heap.FreeTo(heap.CurSize())
+	r := heap.Alloc(nRect)
+	rtn := goc.Syscall4(sendMessage,
+		intArg(a),
+		intArg(b),
+		intArg(c),
+		uintptr(rectArg(d, r)))
+	urectToOb(r, d)
+	return intRet(rtn)
+}
+
+var _ = builtin(SendMessageTcitem, "(hwnd, msg, wParam, tcitem)")
+
+func SendMessageTcitem(a, b, c, d Value) Value {
+	defer heap.FreeTo(heap.CurSize())
+	t := getStr(d, "pszText")
+	n := getInt32(d, "cchTextMax")
+	if n > 0 {
+		t = (*byte)(heap.Alloc(uintptr(n)))
+	}
+	p := heap.Alloc(nTCItem)
+	*(*stTCItem)(p) = stTCItem{
+		mask:        getUint32(d, "mask"),
+		dwState:     getUint32(d, "dwState"),
+		dwStateMask: getUint32(d, "dwStateMask"),
+		pszText:     t,
+		cchTextMax:  n,
+		iImage:      getInt32(d, "iImage"),
+		lParam:      getInt32(d, "lParam"),
+	}
+	rtn := goc.Syscall4(sendMessage,
+		intArg(a),
+		intArg(b),
+		intArg(c),
+		uintptr(p))
+	if n > 0 {
+		d.Put(nil, SuStr("pszText"),
+			SuStr(heap.GetStrZ(unsafe.Pointer(t), int(n))))
+	}
+	d.Put(nil, SuStr("iImage"), IntVal(int((*stTCItem)(p).iImage)))
+	return intRet(rtn)
+}
+
+type stTCItem struct {
 	mask        uint32
 	dwState     uint32
 	dwStateMask uint32
@@ -134,254 +138,263 @@ type TCITEM struct {
 	_           [4]byte // padding
 }
 
-const nTCITEM = unsafe.Sizeof(TCITEM{})
+const nTCItem = unsafe.Sizeof(stTCItem{})
 
-var _ = builtin5("SendMessageTextRange(hwnd, msg, cpMin, cpMax, each = 1)",
-	func(a, b, c, d, e Value) Value {
-		defer heap.FreeTo(heap.CurSize())
-		cpMin := ToInt(c)
-		cpMax := ToInt(d)
-		if cpMax <= cpMin {
-			return EmptyStr
-		}
-		each := ToInt(e)
-		n := (cpMax - cpMin) * each
-		buf := heap.Alloc(uintptr(n + each))
-		p := heap.Alloc(nTEXTRANGE)
-		*(*TEXTRANGE)(p) = TEXTRANGE{
-			chrg:      CHARRANGE{cpMin: int32(cpMin), cpMax: int32(cpMax)},
-			lpstrText: (*byte)(buf),
-		}
-		goc.Syscall4(sendMessage,
-			intArg(a),
-			intArg(b),
-			0,
-			uintptr(p))
-		return SuStr(heap.GetStrN(buf, n))
-	})
+var _ = builtin(SendMessageTextRange, "(hwnd, msg, cpMin, cpMax, each = 1)")
 
-var _ = builtin4("SendMessageTOOLINFO(hwnd, msg, wParam, lParam)",
-	func(a, b, c, d Value) Value {
-		defer heap.FreeTo(heap.CurSize())
-		p := heap.Alloc(nTOOLINFO)
-		*(*TOOLINFO)(p) = TOOLINFO{
-			cbSize:   uint32(nTOOLINFO),
-			uFlags:   getUint32(d, "uFlags"),
-			hwnd:     getUintptr(d, "hwnd"),
-			uId:      getUintptr(d, "uId"),
-			hinst:    getUintptr(d, "hinst"),
-			lpszText: getStr(d, "lpszText"),
-			lParam:   getUintptr(d, "lParam"),
-			rect:     getRect(d, "rect"),
-		}
-		rtn := goc.Syscall4(sendMessage,
-			intArg(a),
-			intArg(b),
-			intArg(c),
-			uintptr(p))
-		return intRet(rtn)
-	})
+func SendMessageTextRange(a, b, c, d, e Value) Value {
+	defer heap.FreeTo(heap.CurSize())
+	cpMin := ToInt(c)
+	cpMax := ToInt(d)
+	if cpMax <= cpMin {
+		return EmptyStr
+	}
+	each := ToInt(e)
+	n := (cpMax - cpMin) * each
+	buf := heap.Alloc(uintptr(n + each))
+	p := heap.Alloc(nTextRange)
+	*(*stTextRange)(p) = stTextRange{
+		chrg:      stCharRange{cpMin: int32(cpMin), cpMax: int32(cpMax)},
+		lpstrText: (*byte)(buf),
+	}
+	goc.Syscall4(sendMessage,
+		intArg(a),
+		intArg(b),
+		0,
+		uintptr(p))
+	return SuStr(heap.GetStrN(buf, n))
+}
 
-var _ = builtin4("SendMessageTOOLINFO2(hwnd, msg, wParam, lParam)",
-	func(a, b, c, d Value) Value {
-		defer heap.FreeTo(heap.CurSize())
-		p := heap.Alloc(nTOOLINFO)
-		*(*TOOLINFO2)(p) = TOOLINFO2{
-			cbSize:   uint32(nTOOLINFO),
-			uFlags:   getUint32(d, "uFlags"),
-			hwnd:     getUintptr(d, "hwnd"),
-			uId:      getUintptr(d, "uId"),
-			hinst:    getUintptr(d, "hinst"),
-			lpszText: getUintptr(d, "lpszText"), // for LPSTR_TEXTCALLBACK
-			lParam:   getUintptr(d, "lParam"),
-			rect:     getRect(d, "rect"),
-		}
-		rtn := goc.Syscall4(sendMessage,
-			intArg(a),
-			intArg(b),
-			intArg(c),
-			uintptr(p))
-		return intRet(rtn)
-	})
+var _ = builtin(SendMessageTOOLINFO, "(hwnd, msg, wParam, lParam)")
 
-var _ = builtin4("SendMessageTreeItem(hwnd, msg, wParam, tvitem)",
-	func(a, b, c, d Value) Value {
-		defer heap.FreeTo(heap.CurSize())
-		n := uintptr(getInt32(d, "cchTextMax"))
-		var pszText *byte
-		var buf unsafe.Pointer
-		if n == 0 {
-			pszText = getStr(d, "pszText")
-		} else {
-			buf = heap.Alloc(n)
-			pszText = (*byte)(buf)
-		}
-		p := heap.Alloc(nTVITEMEX)
-		tvi := (*TVITEMEX)(p)
-		*tvi = TVITEMEX{
-			TVITEM: TVITEM{
-				mask:           getUint32(d, "mask"),
-				hItem:          getUintptr(d, "hItem"),
-				state:          getUint32(d, "state"),
-				stateMask:      getUint32(d, "stateMask"),
-				pszText:        pszText,
-				cchTextMax:     int32(n),
-				iImage:         getInt32(d, "iImage"),
-				iSelectedImage: getInt32(d, "iSelectedImage"),
-				cChildren:      getInt32(d, "cChildren"),
-				lParam:         getUintptr(d, "lParam"),
-			}}
-		rtn := goc.Syscall4(sendMessage,
-			intArg(a),
-			intArg(b),
-			intArg(c),
-			uintptr(p))
-		d.Put(nil, SuStr("mask"), IntVal(int(tvi.mask)))
-		d.Put(nil, SuStr("hItem"), IntVal(int(tvi.hItem)))
-		d.Put(nil, SuStr("state"), IntVal(int(tvi.state)))
-		d.Put(nil, SuStr("stateMask"), IntVal(int(tvi.stateMask)))
-		if n != 0 {
-			d.Put(nil, SuStr("pszText"), SuStr(heap.GetStrZ(buf, int(n))))
-		}
-		d.Put(nil, SuStr("cchTextMax"), IntVal(int(tvi.cchTextMax)))
-		d.Put(nil, SuStr("iImage"), IntVal(int(tvi.iImage)))
-		d.Put(nil, SuStr("iSelectedImage"), IntVal(int(tvi.iSelectedImage)))
-		d.Put(nil, SuStr("cChildren"), IntVal(int(tvi.cChildren)))
-		d.Put(nil, SuStr("lParam"), IntVal(int(tvi.lParam)))
-		return intRet(rtn)
-	})
+func SendMessageTOOLINFO(a, b, c, d Value) Value {
+	defer heap.FreeTo(heap.CurSize())
+	p := heap.Alloc(nToolInfo)
+	*(*stToolInfo)(p) = stToolInfo{
+		cbSize:   uint32(nToolInfo),
+		uFlags:   getUint32(d, "uFlags"),
+		hwnd:     getUintptr(d, "hwnd"),
+		uId:      getUintptr(d, "uId"),
+		hinst:    getUintptr(d, "hinst"),
+		lpszText: getStr(d, "lpszText"),
+		lParam:   getUintptr(d, "lParam"),
+		rect:     getRect(d, "rect"),
+	}
+	rtn := goc.Syscall4(sendMessage,
+		intArg(a),
+		intArg(b),
+		intArg(c),
+		uintptr(p))
+	return intRet(rtn)
+}
 
-var _ = builtin4("SendMessageTreeSort(hwnd, msg, wParam, tvitem)",
-	func(a, b, c, d Value) Value {
-		defer heap.FreeTo(heap.CurSize())
-		p := heap.Alloc(nTVSORTCB)
-		*(*TVSORTCB)(p) = TVSORTCB{
-			hParent:     getUintptr(d, "hParent"),
-			lpfnCompare: getCallback(d, "lpfnCompare", 3),
-			lParam:      getUintptr(d, "lParam"),
-		}
-		rtn := goc.Syscall4(sendMessage,
-			intArg(a),
-			intArg(b),
-			intArg(c),
-			uintptr(p))
-		return boolRet(rtn)
-	})
+var _ = builtin(SendMessageTOOLINFO2, "(hwnd, msg, wParam, lParam)")
 
-var _ = builtin4("SendMessageTreeInsert(hwnd, msg, wParam, tvins)",
-	func(a, b, c, d Value) Value {
-		defer heap.FreeTo(heap.CurSize())
-		p := heap.Alloc(nTVINSERTSTRUCT)
-		tvins := (*TVINSERTSTRUCT)(p)
-		*tvins = TVINSERTSTRUCT{
-			hParent:      getUintptr(d, "hParent"),
-			hInsertAfter: getUintptr(d, "hInsertAfter"),
-		}
-		item := d.Get(nil, SuStr("item"))
-		tvi := &tvins.item
-		*tvi = TVITEMEX{
-			TVITEM: TVITEM{
-				mask:           getUint32(item, "mask"),
-				hItem:          getUintptr(item, "hItem"),
-				state:          getUint32(item, "state"),
-				stateMask:      getUint32(item, "stateMask"),
-				pszText:        getStr(item, "pszText"),
-				cchTextMax:     getInt32(item, "cchTextMax"),
-				iImage:         getInt32(item, "iImage"),
-				iSelectedImage: getInt32(item, "iSelectedImage"),
-				cChildren:      getInt32(item, "cChildren"),
-				lParam:         getUintptr(item, "lParam"),
-			}}
-		rtn := goc.Syscall4(sendMessage,
-			intArg(a),
-			intArg(b),
-			intArg(c),
-			uintptr(p))
-		return intRet(rtn)
-	})
+func SendMessageTOOLINFO2(a, b, c, d Value) Value {
+	defer heap.FreeTo(heap.CurSize())
+	p := heap.Alloc(nToolInfo)
+	*(*stToolInfo2)(p) = stToolInfo2{
+		cbSize:   uint32(nToolInfo),
+		uFlags:   getUint32(d, "uFlags"),
+		hwnd:     getUintptr(d, "hwnd"),
+		uId:      getUintptr(d, "uId"),
+		hinst:    getUintptr(d, "hinst"),
+		lpszText: getUintptr(d, "lpszText"), // for LPSTR_TEXTCALLBACK
+		lParam:   getUintptr(d, "lParam"),
+		rect:     getRect(d, "rect"),
+	}
+	rtn := goc.Syscall4(sendMessage,
+		intArg(a),
+		intArg(b),
+		intArg(c),
+		uintptr(p))
+	return intRet(rtn)
+}
 
-var _ = builtin4("SendMessageSBPART(hwnd, msg, wParam, sbpart)",
-	func(a, b, c, d Value) Value {
-		defer heap.FreeTo(heap.CurSize())
-		np := ToInt(c)
-		n := uintptr(np) * int32Size
-		p := heap.Alloc(n)
-		var ob Container
-		if parts := d.Get(nil, SuStr("parts")); parts != nil {
-			ob = ToContainer(parts)
-			for i := 0; i < np && i < ob.ListSize(); i++ {
-				*(*int32)(unsafe.Pointer(uintptr(p) + int32Size*uintptr(i))) =
-					int32(ToInt(ob.ListGet(i)))
-			}
-		} else {
-			ob = &SuObject{}
-			d.Put(nil, SuStr("parts"), ob)
-		}
-		rtn := goc.Syscall4(sendMessage,
-			intArg(a),
-			intArg(b),
-			intArg(c),
-			uintptr(p))
-		for i := 0; i < np; i++ {
-			x := *(*int32)(unsafe.Pointer(uintptr(p) + int32Size*uintptr(i)))
-			ob.Put(nil, SuInt(i), IntVal(int(x)))
-		}
-		return intRet(rtn)
-	})
+var _ = builtin(SendMessageTreeItem, "(hwnd, msg, wParam, tvitem)")
 
-var _ = builtin4("SendMessageMSG(hwnd, msg, wParam, lParam)",
-	func(a, b, c, d Value) Value {
-		defer heap.FreeTo(heap.CurSize())
-		p := heap.Alloc(nMSG)
-		*(*MSG)(p) = MSG{
-			hwnd:    getUintptr(d, "hwnd"),
-			message: getUint32(d, "message"),
-			wParam:  getUintptr(d, "wParam"),
-			lParam:  getUintptr(d, "lParam"),
-			time:    getUint32(d, "time"),
-			pt:      getPoint(d, "pt"),
-		}
-		rtn := goc.Syscall4(sendMessage,
-			intArg(a),
-			intArg(b),
-			intArg(c),
-			uintptr(p))
-		return intRet(rtn)
-	})
-
-var _ = builtin4("SendMessageHditem(hwnd, msg, wParam, lParam)",
-	func(a, b, c, d Value) Value {
-		defer heap.FreeTo(heap.CurSize())
-		n := getInt32(d, "cchTextMax")
-		var pszText *byte
-		var buf unsafe.Pointer
+func SendMessageTreeItem(a, b, c, d Value) Value {
+	defer heap.FreeTo(heap.CurSize())
+	n := uintptr(getInt32(d, "cchTextMax"))
+	var pszText *byte
+	var buf unsafe.Pointer
+	if n == 0 {
 		pszText = getStr(d, "pszText")
-		if pszText != nil {
-			s := ToStr(d.Get(nil, SuStr("pszText")))
-			n = int32(len(s))
-		} else if n > 0 {
-			buf = heap.Alloc(uintptr(n))
-			pszText = (*byte)(buf)
-		}
-		p := heap.Alloc(nHDITEM)
-		hdi := (*HDITEM)(p)
-		obToHDITEM(d, hdi)
-		hdi.pszText = pszText
-		hdi.cchTextMax = n
-		rtn := goc.Syscall4(sendMessage,
-			intArg(a),
-			intArg(b),
-			intArg(c),
-			uintptr(p))
-		hditemToOb(hdi, d)
-		if buf != nil {
-			d.Put(nil, SuStr("pszText"), SuStr(heap.GetStrZ(buf, int(n))))
-		}
-		return intRet(rtn)
-	})
+	} else {
+		buf = heap.Alloc(n)
+		pszText = (*byte)(buf)
+	}
+	p := heap.Alloc(nTVItemEx)
+	tvi := (*stTVItemEx)(p)
+	*tvi = stTVItemEx{
+		stTVItem: stTVItem{
+			mask:           getUint32(d, "mask"),
+			hItem:          getUintptr(d, "hItem"),
+			state:          getUint32(d, "state"),
+			stateMask:      getUint32(d, "stateMask"),
+			pszText:        pszText,
+			cchTextMax:     int32(n),
+			iImage:         getInt32(d, "iImage"),
+			iSelectedImage: getInt32(d, "iSelectedImage"),
+			cChildren:      getInt32(d, "cChildren"),
+			lParam:         getUintptr(d, "lParam"),
+		}}
+	rtn := goc.Syscall4(sendMessage,
+		intArg(a),
+		intArg(b),
+		intArg(c),
+		uintptr(p))
+	d.Put(nil, SuStr("mask"), IntVal(int(tvi.mask)))
+	d.Put(nil, SuStr("hItem"), IntVal(int(tvi.hItem)))
+	d.Put(nil, SuStr("state"), IntVal(int(tvi.state)))
+	d.Put(nil, SuStr("stateMask"), IntVal(int(tvi.stateMask)))
+	if n != 0 {
+		d.Put(nil, SuStr("pszText"), SuStr(heap.GetStrZ(buf, int(n))))
+	}
+	d.Put(nil, SuStr("cchTextMax"), IntVal(int(tvi.cchTextMax)))
+	d.Put(nil, SuStr("iImage"), IntVal(int(tvi.iImage)))
+	d.Put(nil, SuStr("iSelectedImage"), IntVal(int(tvi.iSelectedImage)))
+	d.Put(nil, SuStr("cChildren"), IntVal(int(tvi.cChildren)))
+	d.Put(nil, SuStr("lParam"), IntVal(int(tvi.lParam)))
+	return intRet(rtn)
+}
 
-func obToHDITEM(ob Value, hdi *HDITEM) {
-	*hdi = HDITEM{
+var _ = builtin(SendMessageTreeSort, "(hwnd, msg, wParam, tvitem)")
+
+func SendMessageTreeSort(a, b, c, d Value) Value {
+	defer heap.FreeTo(heap.CurSize())
+	p := heap.Alloc(nTVSortCB)
+	*(*stTVSortCB)(p) = stTVSortCB{
+		hParent:     getUintptr(d, "hParent"),
+		lpfnCompare: getCallback(d, "lpfnCompare", 3),
+		lParam:      getUintptr(d, "lParam"),
+	}
+	rtn := goc.Syscall4(sendMessage,
+		intArg(a),
+		intArg(b),
+		intArg(c),
+		uintptr(p))
+	return boolRet(rtn)
+}
+
+var _ = builtin(SendMessageTreeInsert, "(hwnd, msg, wParam, tvins)")
+
+func SendMessageTreeInsert(a, b, c, d Value) Value {
+	defer heap.FreeTo(heap.CurSize())
+	p := heap.Alloc(nTVInsertStruct)
+	tvins := (*stTVInsertStruct)(p)
+	*tvins = stTVInsertStruct{
+		hParent:      getUintptr(d, "hParent"),
+		hInsertAfter: getUintptr(d, "hInsertAfter"),
+	}
+	item := d.Get(nil, SuStr("item"))
+	tvi := &tvins.item
+	*tvi = stTVItemEx{
+		stTVItem: stTVItem{
+			mask:           getUint32(item, "mask"),
+			hItem:          getUintptr(item, "hItem"),
+			state:          getUint32(item, "state"),
+			stateMask:      getUint32(item, "stateMask"),
+			pszText:        getStr(item, "pszText"),
+			cchTextMax:     getInt32(item, "cchTextMax"),
+			iImage:         getInt32(item, "iImage"),
+			iSelectedImage: getInt32(item, "iSelectedImage"),
+			cChildren:      getInt32(item, "cChildren"),
+			lParam:         getUintptr(item, "lParam"),
+		}}
+	rtn := goc.Syscall4(sendMessage,
+		intArg(a),
+		intArg(b),
+		intArg(c),
+		uintptr(p))
+	return intRet(rtn)
+}
+
+var _ = builtin(SendMessageSBPART, "(hwnd, msg, wParam, sbpart)")
+
+func SendMessageSBPART(a, b, c, d Value) Value {
+	defer heap.FreeTo(heap.CurSize())
+	np := ToInt(c)
+	n := uintptr(np) * int32Size
+	p := heap.Alloc(n)
+	var ob Container
+	if parts := d.Get(nil, SuStr("parts")); parts != nil {
+		ob = ToContainer(parts)
+		for i := 0; i < np && i < ob.ListSize(); i++ {
+			*(*int32)(unsafe.Pointer(uintptr(p) + int32Size*uintptr(i))) =
+				int32(ToInt(ob.ListGet(i)))
+		}
+	} else {
+		ob = &SuObject{}
+		d.Put(nil, SuStr("parts"), ob)
+	}
+	rtn := goc.Syscall4(sendMessage,
+		intArg(a),
+		intArg(b),
+		intArg(c),
+		uintptr(p))
+	for i := 0; i < np; i++ {
+		x := *(*int32)(unsafe.Pointer(uintptr(p) + int32Size*uintptr(i)))
+		ob.Put(nil, SuInt(i), IntVal(int(x)))
+	}
+	return intRet(rtn)
+}
+
+var _ = builtin(SendMessageMSG, "(hwnd, msg, wParam, lParam)")
+
+func SendMessageMSG(a, b, c, d Value) Value {
+	defer heap.FreeTo(heap.CurSize())
+	p := heap.Alloc(nMsg)
+	*(*stMsg)(p) = stMsg{
+		hwnd:    getUintptr(d, "hwnd"),
+		message: getUint32(d, "message"),
+		wParam:  getUintptr(d, "wParam"),
+		lParam:  getUintptr(d, "lParam"),
+		time:    getUint32(d, "time"),
+		pt:      getPoint(d, "pt"),
+	}
+	rtn := goc.Syscall4(sendMessage,
+		intArg(a),
+		intArg(b),
+		intArg(c),
+		uintptr(p))
+	return intRet(rtn)
+}
+
+var _ = builtin(SendMessageHditem, "(hwnd, msg, wParam, lParam)")
+
+func SendMessageHditem(a, b, c, d Value) Value {
+	defer heap.FreeTo(heap.CurSize())
+	n := getInt32(d, "cchTextMax")
+	var pszText *byte
+	var buf unsafe.Pointer
+	pszText = getStr(d, "pszText")
+	if pszText != nil {
+		s := ToStr(d.Get(nil, SuStr("pszText")))
+		n = int32(len(s))
+	} else if n > 0 {
+		buf = heap.Alloc(uintptr(n))
+		pszText = (*byte)(buf)
+	}
+	p := heap.Alloc(nHdItem)
+	hdi := (*stHdItem)(p)
+	obToHDITEM(d, hdi)
+	hdi.pszText = pszText
+	hdi.cchTextMax = n
+	rtn := goc.Syscall4(sendMessage,
+		intArg(a),
+		intArg(b),
+		intArg(c),
+		uintptr(p))
+	hditemToOb(hdi, d)
+	if buf != nil {
+		d.Put(nil, SuStr("pszText"), SuStr(heap.GetStrZ(buf, int(n))))
+	}
+	return intRet(rtn)
+}
+
+func obToHDITEM(ob Value, hdi *stHdItem) {
+	*hdi = stHdItem{
 		mask:       getInt32(ob, "mask"),
 		cxy:        getInt32(ob, "cxy"),
 		pszText:    hdi.pszText, // not handled
@@ -397,7 +410,7 @@ func obToHDITEM(ob Value, hdi *HDITEM) {
 	}
 }
 
-func hditemToOb(hdi *HDITEM, ob Value) Value {
+func hditemToOb(hdi *stHdItem, ob Value) Value {
 	ob.Put(nil, SuStr("mask"), IntVal(int(hdi.mask)))
 	ob.Put(nil, SuStr("cxy"), IntVal(int(hdi.cxy)))
 	// pszText must be handled by caller
@@ -413,7 +426,7 @@ func hditemToOb(hdi *HDITEM, ob Value) Value {
 	return ob
 }
 
-type HDITEM struct {
+type stHdItem struct {
 	mask       int32
 	cxy        int32
 	pszText    *byte
@@ -429,118 +442,122 @@ type HDITEM struct {
 	_          [4]byte // padding
 }
 
-const nHDITEM = unsafe.Sizeof(HDITEM{})
+const nHdItem = unsafe.Sizeof(stHdItem{})
 
-var _ = builtin4("SendMessageHDHITTESTINFO(hwnd, msg, wParam, lParam)",
-	func(a, b, c, d Value) Value {
-		defer heap.FreeTo(heap.CurSize())
-		p := heap.Alloc(nHDHITTESTINFO)
-		ht := (*HDHITTESTINFO)(p)
-		*ht = HDHITTESTINFO{
-			pt:    getPoint(d, "pt"),
-			flags: getInt32(d, "flags"),
-			iItem: getInt32(d, "iItem"),
-		}
-		rtn := goc.Syscall4(sendMessage,
-			intArg(a),
-			intArg(b),
-			intArg(c),
-			uintptr(p))
-		d.Put(nil, SuStr("pt"), pointToOb(&ht.pt, nil))
-		d.Put(nil, SuStr("flags"), IntVal(int(ht.flags)))
-		d.Put(nil, SuStr("iItem"), IntVal(int(ht.iItem)))
-		return intRet(rtn)
-	})
+var _ = builtin(SendMessageHDHITTESTINFO, "(hwnd, msg, wParam, lParam)")
 
-type HDHITTESTINFO struct {
-	pt    POINT
+func SendMessageHDHITTESTINFO(a, b, c, d Value) Value {
+	defer heap.FreeTo(heap.CurSize())
+	p := heap.Alloc(nHdHitTestInfo)
+	ht := (*stHdHitTestInfo)(p)
+	*ht = stHdHitTestInfo{
+		pt:    getPoint(d, "pt"),
+		flags: getInt32(d, "flags"),
+		iItem: getInt32(d, "iItem"),
+	}
+	rtn := goc.Syscall4(sendMessage,
+		intArg(a),
+		intArg(b),
+		intArg(c),
+		uintptr(p))
+	d.Put(nil, SuStr("pt"), pointToOb(&ht.pt, nil))
+	d.Put(nil, SuStr("flags"), IntVal(int(ht.flags)))
+	d.Put(nil, SuStr("iItem"), IntVal(int(ht.iItem)))
+	return intRet(rtn)
+}
+
+type stHdHitTestInfo struct {
+	pt    stPoint
 	flags int32
 	iItem int32
 }
 
-const nHDHITTESTINFO = unsafe.Sizeof(HDHITTESTINFO{})
+const nHdHitTestInfo = unsafe.Sizeof(stHdHitTestInfo{})
 
-var _ = builtin4("SendMessageTreeHitTest(hwnd, msg, wParam, lParam)",
-	func(a, b, c, d Value) Value {
-		defer heap.FreeTo(heap.CurSize())
-		p := heap.Alloc(nTVHITTESTINFO)
-		ht := (*TVHITTESTINFO)(p)
-		*ht = TVHITTESTINFO{
-			pt:    getPoint(d, "pt"),
-			flags: getInt32(d, "flags"),
-			iItem: getUintptr(d, "iItem"),
-		}
-		rtn := goc.Syscall4(sendMessage,
-			intArg(a),
-			intArg(b),
-			intArg(c),
-			uintptr(p))
-		d.Put(nil, SuStr("pt"), pointToOb(&ht.pt, nil))
-		d.Put(nil, SuStr("flags"), IntVal(int(ht.flags)))
-		d.Put(nil, SuStr("iItem"), IntVal(int(ht.iItem)))
-		return intRet(rtn)
-	})
+var _ = builtin(SendMessageTreeHitTest, "(hwnd, msg, wParam, lParam)")
 
-type TVHITTESTINFO struct {
-	pt    POINT
+func SendMessageTreeHitTest(a, b, c, d Value) Value {
+	defer heap.FreeTo(heap.CurSize())
+	p := heap.Alloc(nTVHitTestInfo)
+	ht := (*stTVHitTestInfo)(p)
+	*ht = stTVHitTestInfo{
+		pt:    getPoint(d, "pt"),
+		flags: getInt32(d, "flags"),
+		iItem: getUintptr(d, "iItem"),
+	}
+	rtn := goc.Syscall4(sendMessage,
+		intArg(a),
+		intArg(b),
+		intArg(c),
+		uintptr(p))
+	d.Put(nil, SuStr("pt"), pointToOb(&ht.pt, nil))
+	d.Put(nil, SuStr("flags"), IntVal(int(ht.flags)))
+	d.Put(nil, SuStr("iItem"), IntVal(int(ht.iItem)))
+	return intRet(rtn)
+}
+
+type stTVHitTestInfo struct {
+	pt    stPoint
 	flags int32
 	iItem HANDLE
 }
 
-const nTVHITTESTINFO = unsafe.Sizeof(TVHITTESTINFO{})
+const nTVHitTestInfo = unsafe.Sizeof(stTVHitTestInfo{})
 
-var _ = builtin4("SendMessageTabHitTest(hwnd, msg, wParam, lParam)",
-	func(a, b, c, d Value) Value {
-		defer heap.FreeTo(heap.CurSize())
-		p := heap.Alloc(nTCHITTESTINFO)
-		ht := (*TCHITTESTINFO)(p)
-		*ht = TCHITTESTINFO{
-			pt:    getPoint(d, "pt"),
-			flags: getInt32(d, "flags"),
-		}
-		rtn := goc.Syscall4(sendMessage,
-			intArg(a),
-			intArg(b),
-			intArg(c),
-			uintptr(p))
-		d.Put(nil, SuStr("pt"), pointToOb(&ht.pt, nil))
-		d.Put(nil, SuStr("flags"), IntVal(int(ht.flags)))
-		return intRet(rtn)
-	})
+var _ = builtin(SendMessageTabHitTest, "(hwnd, msg, wParam, lParam)")
 
-type TCHITTESTINFO struct {
-	pt    POINT
+func SendMessageTabHitTest(a, b, c, d Value) Value {
+	defer heap.FreeTo(heap.CurSize())
+	p := heap.Alloc(nTCHitTestInfo)
+	ht := (*stTCHitTestInfo)(p)
+	*ht = stTCHitTestInfo{
+		pt:    getPoint(d, "pt"),
+		flags: getInt32(d, "flags"),
+	}
+	rtn := goc.Syscall4(sendMessage,
+		intArg(a),
+		intArg(b),
+		intArg(c),
+		uintptr(p))
+	d.Put(nil, SuStr("pt"), pointToOb(&ht.pt, nil))
+	d.Put(nil, SuStr("flags"), IntVal(int(ht.flags)))
+	return intRet(rtn)
+}
+
+type stTCHitTestInfo struct {
+	pt    stPoint
 	flags int32
 }
 
-const nTCHITTESTINFO = unsafe.Sizeof(TCHITTESTINFO{})
+const nTCHitTestInfo = unsafe.Sizeof(stTCHitTestInfo{})
 
-var _ = builtin4("SendMessageListColumn(hwnd, msg, wParam, lParam)",
-	func(a, b, c, d Value) Value {
-		defer heap.FreeTo(heap.CurSize())
-		var p unsafe.Pointer
-		if !d.Equal(Zero) {
-			p = heap.Alloc(nLVCOLUMN)
-			*(*LVCOLUMN)(p) = LVCOLUMN{
-				mask:       getInt32(d, "mask"),
-				fmt:        getInt32(d, "fmt"),
-				cx:         getInt32(d, "cx"),
-				pszText:    getStr(d, "pszText"),
-				cchTextMax: getInt32(d, "cchTextMax"),
-				iSubItem:   getInt32(d, "iSubItem"),
-				iImage:     getInt32(d, "iImage"),
-				iOrder:     getInt32(d, "iOrder"),
-			}
+var _ = builtin(SendMessageListColumn, "(hwnd, msg, wParam, lParam)")
+
+func SendMessageListColumn(a, b, c, d Value) Value {
+	defer heap.FreeTo(heap.CurSize())
+	var p unsafe.Pointer
+	if !d.Equal(Zero) {
+		p = heap.Alloc(nLVColumn)
+		*(*stLVColumn)(p) = stLVColumn{
+			mask:       getInt32(d, "mask"),
+			fmt:        getInt32(d, "fmt"),
+			cx:         getInt32(d, "cx"),
+			pszText:    getStr(d, "pszText"),
+			cchTextMax: getInt32(d, "cchTextMax"),
+			iSubItem:   getInt32(d, "iSubItem"),
+			iImage:     getInt32(d, "iImage"),
+			iOrder:     getInt32(d, "iOrder"),
 		}
-		rtn := goc.Syscall4(sendMessage,
-			intArg(a),
-			intArg(b),
-			intArg(c),
-			uintptr(p))
-		return intRet(rtn)
-	})
+	}
+	rtn := goc.Syscall4(sendMessage,
+		intArg(a),
+		intArg(b),
+		intArg(c),
+		uintptr(p))
+	return intRet(rtn)
+}
 
-type LVCOLUMN struct {
+type stLVColumn struct {
 	mask       int32
 	fmt        int32
 	cx         int32
@@ -555,28 +572,29 @@ type LVCOLUMN struct {
 	_          [4]byte // padding
 }
 
-const nLVCOLUMN = unsafe.Sizeof(LVCOLUMN{})
+const nLVColumn = unsafe.Sizeof(stLVColumn{})
 
-var _ = builtin4("SendMessageListItem(hwnd, msg, wParam, lParam)",
-	func(a, b, c, d Value) Value {
-		defer heap.FreeTo(heap.CurSize())
-		p, li := obToLVITEM(d)
-		rtn := goc.Syscall4(sendMessage,
-			intArg(a),
-			intArg(b),
-			intArg(c),
-			uintptr(p))
-		d.Put(nil, SuStr("lParam"), IntVal(int(li.lParam)))
-		return intRet(rtn)
-	})
+var _ = builtin(SendMessageListItem, "(hwnd, msg, wParam, lParam)")
 
-func obToLVITEM(ob Value) (unsafe.Pointer, *LVITEM) {
+func SendMessageListItem(a, b, c, d Value) Value {
+	defer heap.FreeTo(heap.CurSize())
+	p, li := obToLVITEM(d)
+	rtn := goc.Syscall4(sendMessage,
+		intArg(a),
+		intArg(b),
+		intArg(c),
+		uintptr(p))
+	d.Put(nil, SuStr("lParam"), IntVal(int(li.lParam)))
+	return intRet(rtn)
+}
+
+func obToLVITEM(ob Value) (unsafe.Pointer, *stLVItem) {
 	var p unsafe.Pointer
-	var li *LVITEM
+	var li *stLVItem
 	if !ob.Equal(Zero) {
-		p = heap.Alloc(nLVITEM)
-		li = (*LVITEM)(p)
-		*li = LVITEM{
+		p = heap.Alloc(nLVItem)
+		li = (*stLVItem)(p)
+		*li = stLVItem{
 			mask:       getInt32(ob, "mask"),
 			iItem:      getInt32(ob, "iItem"),
 			iSubItem:   getInt32(ob, "iSubItem"),
@@ -595,29 +613,30 @@ func obToLVITEM(ob Value) (unsafe.Pointer, *LVITEM) {
 const LVIF_TEXT = 1
 const LVM_ITEM = 4101
 
-var _ = builtin3("SendMessageListItemOut(hwnd, iItem, iSubItem)",
-	func(a, b, c Value) Value {
-		defer heap.FreeTo(heap.CurSize())
-		p := heap.Alloc(nLVITEM)
-		const bufsize = 256
-		buf := heap.Alloc(bufsize)
-		li := (*LVITEM)(p)
-		*li = LVITEM{
-			mask:       LVIF_TEXT,
-			iItem:      int32(ToInt(b)),
-			iSubItem:   int32(ToInt(c)),
-			pszText:    (*byte)(buf),
-			cchTextMax: bufsize,
-		}
-		goc.Syscall4(sendMessage,
-			intArg(a),
-			uintptr(LVM_ITEM),
-			0,
-			uintptr(p))
-		return SuStr(heap.GetStrZ(buf, bufsize))
-	})
+var _ = builtin(SendMessageListItemOut, "(hwnd, iItem, iSubItem)")
 
-type LVITEM struct {
+func SendMessageListItemOut(a, b, c Value) Value {
+	defer heap.FreeTo(heap.CurSize())
+	p := heap.Alloc(nLVItem)
+	const bufsize = 256
+	buf := heap.Alloc(bufsize)
+	li := (*stLVItem)(p)
+	*li = stLVItem{
+		mask:       LVIF_TEXT,
+		iItem:      int32(ToInt(b)),
+		iSubItem:   int32(ToInt(c)),
+		pszText:    (*byte)(buf),
+		cchTextMax: bufsize,
+	}
+	goc.Syscall4(sendMessage,
+		intArg(a),
+		uintptr(LVM_ITEM),
+		0,
+		uintptr(p))
+	return SuStr(heap.GetStrZ(buf, bufsize))
+}
+
+type stLVItem struct {
 	mask       int32
 	iItem      int32
 	iSubItem   int32
@@ -636,85 +655,88 @@ type LVITEM struct {
 	_          [4]byte // padding
 }
 
-const nLVITEM = unsafe.Sizeof(LVITEM{})
+const nLVItem = unsafe.Sizeof(stLVItem{})
 
-var _ = builtin4("SendMessageListColumnOrder(hwnd, msg, wParam, lParam)",
-	func(a, b, c, d Value) Value {
-		defer heap.FreeTo(heap.CurSize())
-		n := ToInt(c)
-		p := heap.Alloc(uintptr(n) * int32Size)
-		colsob := d.Get(nil, SuStr("order"))
-		if colsob == nil {
-			colsob = &SuObject{}
-			d.Put(nil, SuStr("order"), colsob)
-		}
-		for i := 0; i < n; i++ {
-			if x := colsob.Get(nil, IntVal(i)); x != nil {
-				*(*int32)(unsafe.Pointer(uintptr(p) + uintptr(i)*int32Size)) =
-					int32(ToInt(x))
-			}
-		}
-		rtn := goc.Syscall4(sendMessage,
-			intArg(a),
-			intArg(b),
-			intArg(c),
-			uintptr(p))
-		for i := 0; i < n; i++ {
-			colsob.Put(nil, IntVal(i), IntVal(int(*(*int32)(
-				unsafe.Pointer(uintptr(p) + uintptr(i)*int32Size)))))
-		}
-		return intRet(rtn)
-	})
+var _ = builtin(SendMessageListColumnOrder, "(hwnd, msg, wParam, lParam)")
 
-var _ = builtin4("SendMessageLVHITTESTINFO(hwnd, msg, wParam, lParam)",
-	func(a, b, c, d Value) Value {
-		defer heap.FreeTo(heap.CurSize())
-		p := heap.Alloc(nLVHITTESTINFO)
-		ht := (*LVHITTESTINFO)(p)
-		*ht = LVHITTESTINFO{
-			pt:       getPoint(d, "pt"),
-			flags:    getInt32(d, "flags"),
-			iItem:    getInt32(d, "iItem"),
-			iSubItem: getInt32(d, "iSubItem"),
-			iGroup:   getInt32(d, "iGroup"),
+func SendMessageListColumnOrder(a, b, c, d Value) Value {
+	defer heap.FreeTo(heap.CurSize())
+	n := ToInt(c)
+	p := heap.Alloc(uintptr(n) * int32Size)
+	colsob := d.Get(nil, SuStr("order"))
+	if colsob == nil {
+		colsob = &SuObject{}
+		d.Put(nil, SuStr("order"), colsob)
+	}
+	for i := 0; i < n; i++ {
+		if x := colsob.Get(nil, IntVal(i)); x != nil {
+			*(*int32)(unsafe.Pointer(uintptr(p) + uintptr(i)*int32Size)) =
+				int32(ToInt(x))
 		}
-		rtn := goc.Syscall4(sendMessage,
-			intArg(a),
-			intArg(b),
-			intArg(c),
-			uintptr(p))
-		d.Put(nil, SuStr("iItem"), IntVal(int(ht.iItem)))
-		d.Put(nil, SuStr("iSubItem"), IntVal(int(ht.iSubItem)))
-		return intRet(rtn)
-	})
+	}
+	rtn := goc.Syscall4(sendMessage,
+		intArg(a),
+		intArg(b),
+		intArg(c),
+		uintptr(p))
+	for i := 0; i < n; i++ {
+		colsob.Put(nil, IntVal(i), IntVal(int(*(*int32)(
+			unsafe.Pointer(uintptr(p) + uintptr(i)*int32Size)))))
+	}
+	return intRet(rtn)
+}
 
-type LVHITTESTINFO struct {
-	pt       POINT
+var _ = builtin(SendMessageLVHITTESTINFO, "(hwnd, msg, wParam, lParam)")
+
+func SendMessageLVHITTESTINFO(a, b, c, d Value) Value {
+	defer heap.FreeTo(heap.CurSize())
+	p := heap.Alloc(nLVHitTestInfo)
+	ht := (*stLVHitTestInfo)(p)
+	*ht = stLVHitTestInfo{
+		pt:       getPoint(d, "pt"),
+		flags:    getInt32(d, "flags"),
+		iItem:    getInt32(d, "iItem"),
+		iSubItem: getInt32(d, "iSubItem"),
+		iGroup:   getInt32(d, "iGroup"),
+	}
+	rtn := goc.Syscall4(sendMessage,
+		intArg(a),
+		intArg(b),
+		intArg(c),
+		uintptr(p))
+	d.Put(nil, SuStr("iItem"), IntVal(int(ht.iItem)))
+	d.Put(nil, SuStr("iSubItem"), IntVal(int(ht.iSubItem)))
+	return intRet(rtn)
+}
+
+type stLVHitTestInfo struct {
+	pt       stPoint
 	flags    int32
 	iItem    int32
 	iSubItem int32
 	iGroup   int32
 }
 
-const nLVHITTESTINFO = unsafe.Sizeof(LVHITTESTINFO{})
+const nLVHitTestInfo = unsafe.Sizeof(stLVHitTestInfo{})
 
-var _ = builtin4("SendMessageSystemTime(hwnd, msg, wParam, lParam)",
-	func(a, b, c, d Value) Value {
-		defer heap.FreeTo(heap.CurSize())
-		p := heap.Alloc(nSYSTEMTIME)
-		st := (*SYSTEMTIME)(p)
-		*st = obToSYSTEMTIME(d)
-		rtn := goc.Syscall4(sendMessage,
-			intArg(a),
-			intArg(b),
-			intArg(c),
-			uintptr(p))
-		SYSTEMTIMEtoOb(st, d)
-		return intRet(rtn)
-	})
+var _ = builtin(SendMessageSystemTime, "(hwnd, msg, wParam, lParam)")
 
-func obToSYSTEMTIME(ob Value) SYSTEMTIME {
-	return SYSTEMTIME{
+func SendMessageSystemTime(a, b, c, d Value) Value {
+	defer heap.FreeTo(heap.CurSize())
+	p := heap.Alloc(nSystemTime)
+	st := (*stSystemTime)(p)
+	*st = obToSYSTEMTIME(d)
+	rtn := goc.Syscall4(sendMessage,
+		intArg(a),
+		intArg(b),
+		intArg(c),
+		uintptr(p))
+	SYSTEMTIMEtoOb(st, d)
+	return intRet(rtn)
+}
+
+func obToSYSTEMTIME(ob Value) stSystemTime {
+	return stSystemTime{
 		wYear:         getInt16(ob, "wYear"),
 		wMonth:        getInt16(ob, "wMonth"),
 		wDayOfWeek:    getInt16(ob, "wDayOfWeek"),
@@ -726,7 +748,7 @@ func obToSYSTEMTIME(ob Value) SYSTEMTIME {
 	}
 }
 
-func SYSTEMTIMEtoOb(st *SYSTEMTIME, ob Value) Value {
+func SYSTEMTIMEtoOb(st *stSystemTime, ob Value) Value {
 	ob.Put(nil, SuStr("wYear"), IntVal(int(st.wYear)))
 	ob.Put(nil, SuStr("wMonth"), IntVal(int(st.wMonth)))
 	ob.Put(nil, SuStr("wDayOfWeek"), IntVal(int(st.wDayOfWeek)))
@@ -738,7 +760,7 @@ func SYSTEMTIMEtoOb(st *SYSTEMTIME, ob Value) Value {
 	return ob
 }
 
-type SYSTEMTIME struct {
+type stSystemTime struct {
 	wYear         int16
 	wMonth        int16
 	wDayOfWeek    int16
@@ -749,50 +771,52 @@ type SYSTEMTIME struct {
 	wMilliseconds int16
 }
 
-const nSYSTEMTIME = unsafe.Sizeof(SYSTEMTIME{})
+const nSystemTime = unsafe.Sizeof(stSystemTime{})
 
-var _ = builtin4("SendMessageSTRange(hwnd, msg, wParam, lParam)",
-	func(a, b, c, d Value) Value {
-		defer heap.FreeTo(heap.CurSize())
-		p := heap.Alloc(nSystemTimeRange)
-		*(*SystemTimeRange)(p) = SystemTimeRange{
-			min: obToSYSTEMTIME(d.Get(nil, SuStr("min"))),
-			max: obToSYSTEMTIME(d.Get(nil, SuStr("max"))),
-		}
-		rtn := goc.Syscall4(sendMessage,
-			intArg(a),
-			intArg(b),
-			intArg(c),
-			uintptr(p))
-		return intRet(rtn)
-	})
+var _ = builtin(SendMessageSTRange, "(hwnd, msg, wParam, lParam)")
+
+func SendMessageSTRange(a, b, c, d Value) Value {
+	defer heap.FreeTo(heap.CurSize())
+	p := heap.Alloc(nSystemTimeRange)
+	*(*SystemTimeRange)(p) = SystemTimeRange{
+		min: obToSYSTEMTIME(d.Get(nil, SuStr("min"))),
+		max: obToSYSTEMTIME(d.Get(nil, SuStr("max"))),
+	}
+	rtn := goc.Syscall4(sendMessage,
+		intArg(a),
+		intArg(b),
+		intArg(c),
+		uintptr(p))
+	return intRet(rtn)
+}
 
 type SystemTimeRange struct {
-	min SYSTEMTIME
-	max SYSTEMTIME
+	min stSystemTime
+	max stSystemTime
 }
 
 const nSystemTimeRange = unsafe.Sizeof(SystemTimeRange{})
 
-var _ = builtin4("SendMessageEDITBALLOONTIP(hwnd, msg, wParam, lParam)",
-	func(a, b, c, d Value) Value {
-		defer heap.FreeTo(heap.CurSize())
-		p := heap.Alloc(nEDITBALLOONTIP)
-		*(*EDITBALLOONTIP)(p) = EDITBALLOONTIP{
-			cbStruct: int32(nEDITBALLOONTIP),
-			pszTitle: getStr(d, "pszTitle"),
-			pszText:  getStr(d, "pszText"),
-			ttiIcon:  getInt32(d, "ttiIcon"),
-		}
-		rtn := goc.Syscall4(sendMessage,
-			intArg(a),
-			intArg(b),
-			intArg(c),
-			uintptr(p))
-		return intRet(rtn)
-	})
+var _ = builtin(SendMessageEDITBALLOONTIP, "(hwnd, msg, wParam, lParam)")
 
-type EDITBALLOONTIP struct {
+func SendMessageEDITBALLOONTIP(a, b, c, d Value) Value {
+	defer heap.FreeTo(heap.CurSize())
+	p := heap.Alloc(nEditBalloonTip)
+	*(*stEditBalloonTip)(p) = stEditBalloonTip{
+		cbStruct: int32(nEditBalloonTip),
+		pszTitle: getStr(d, "pszTitle"),
+		pszText:  getStr(d, "pszText"),
+		ttiIcon:  getInt32(d, "ttiIcon"),
+	}
+	rtn := goc.Syscall4(sendMessage,
+		intArg(a),
+		intArg(b),
+		intArg(c),
+		uintptr(p))
+	return intRet(rtn)
+}
+
+type stEditBalloonTip struct {
 	cbStruct int32
 	pszTitle *byte
 	pszText  *byte
@@ -800,4 +824,4 @@ type EDITBALLOONTIP struct {
 	_        [4]byte // padding
 }
 
-const nEDITBALLOONTIP = unsafe.Sizeof(EDITBALLOONTIP{})
+const nEditBalloonTip = unsafe.Sizeof(stEditBalloonTip{})

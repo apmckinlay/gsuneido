@@ -7,7 +7,8 @@ import (
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
-var _ = builtin2("Same?(x, y)",
-	func(x, y Value) Value {
-		return SuBool(x == y)
-	})
+var _ = builtin(SameQ, "(x, y)")
+
+func SameQ(x, y Value) Value {
+	return SuBool(x == y)
+}

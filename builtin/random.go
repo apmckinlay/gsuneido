@@ -14,7 +14,9 @@ func init() {
 	rand.Seed(time.Now().UnixNano())
 }
 
-var _ = builtin1("Random(limit)", func(arg Value) Value {
+var _ = builtin(Random, "(limit)")
+
+func Random(arg Value) Value {
 	limit := IfInt(arg)
 	return IntVal(rand.Intn(limit))
-})
+}

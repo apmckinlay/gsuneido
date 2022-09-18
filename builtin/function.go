@@ -8,31 +8,39 @@ import (
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
-var _ = builtin1("CoverageEnable(enable)", func(a Value) Value {
+var _ = builtin(CoverageEnable, "(enable)")
+
+func CoverageEnable(a Value) Value {
 	options.Coverage.Store(ToBool(a))
 	return nil
-})
+}
 
-func init() {
-	SuFuncMethods = Methods{
-		"Disasm": method1("(source = false)", func(this, a Value) Value {
-			fn := this.(*SuFunc)
-			if a == False {
-				return SuStr(DisasmOps(fn))
-			}
-			return SuStr(DisasmMixed(fn, ToStr(a)))
-		}),
-		"StartCoverage": method1("(count = false)", func(this, a Value) Value {
-			if !options.Coverage.Load() {
-				panic("coverage not enabled")
-			}
-			fn := this.(*SuFunc)
-			fn.StartCoverage(ToBool(a))
-			return nil
-		}),
-		"StopCoverage": method0(func(this Value) Value {
-			fn := this.(*SuFunc)
-			return fn.StopCoverage()
-		}),
+var _ = exportMethods(&SuFuncMethods)
+
+var _ = method(func_Disasm, "(source = false)")
+
+func func_Disasm(this, a Value) Value {
+	fn := this.(*SuFunc)
+	if a == False {
+		return SuStr(DisasmOps(fn))
 	}
+	return SuStr(DisasmMixed(fn, ToStr(a)))
+}
+
+var _ = method(func_StartCoverage, "(count = false)")
+
+func func_StartCoverage(this, a Value) Value {
+	if !options.Coverage.Load() {
+		panic("coverage not enabled")
+	}
+	fn := this.(*SuFunc)
+	fn.StartCoverage(ToBool(a))
+	return nil
+}
+
+var _ = method(func_StopCoverage, "()")
+
+func func_StopCoverage(this Value) Value {
+	fn := this.(*SuFunc)
+	return fn.StopCoverage()
 }

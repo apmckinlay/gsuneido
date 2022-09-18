@@ -12,7 +12,9 @@ import (
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
-var _ = builtin0("SystemMemory()", func() Value {
+var _ = builtin(SystemMemory, "()")
+
+func SystemMemory() Value {
 	s, err := syscall.Sysctl("hw.memsize")
 	if err != nil {
 		panic(err)
@@ -21,4 +23,4 @@ var _ = builtin0("SystemMemory()", func() Value {
 	copy(buf[:], s)
 	m := binary.LittleEndian.Uint64(buf[:])
 	return Int64Val(int64(m))
-})
+}

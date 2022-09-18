@@ -35,19 +35,20 @@ type suFile struct {
 
 var nFile atomic.Int32
 
-var _ = builtin("File(filename, mode='r', block=false)",
-	func(t *Thread, args []Value) Value {
-		name := ToStr(args[0])
-		mode := ToStr(args[1])
-		sf := newSuFile(name, mode)
-		nFile.Add(1)
-		if args[2] == False {
-			return sf
-		}
-		// block form
-		defer sf.close()
-		return t.Call(args[2], sf)
-	})
+var _ = builtin(File, "(filename, mode='r', block=false)")
+
+func File(t *Thread, args []Value) Value {
+	name := ToStr(args[0])
+	mode := ToStr(args[1])
+	sf := newSuFile(name, mode)
+	nFile.Add(1)
+	if args[2] == False {
+		return sf
+	}
+	// block form
+	defer sf.close()
+	return t.Call(args[2], sf)
+}
 
 func newSuFile(name, mode string) *suFile {
 	var flag int
@@ -134,95 +135,118 @@ func (*suFile) Lookup(_ *Thread, method string) Callable {
 
 const MaxLine = 4000
 
-var suFileMethods = Methods{
-	"Close": method0(func(this Value) Value {
-		sfOpen(this).close()
-		return nil
-	}),
-	"Flush": method0(func(this Value) Value {
-		err := sfOpenWrite(this).w.Flush()
-		if err != nil {
-			panic("File: " + err.Error())
+var suFileMethods = methods()
+
+var _ = method(file_Close, "()")
+
+func file_Close(this Value) Value {
+	sfOpen(this).close()
+	return nil
+}
+
+var _ = method(file_Flush, "()")
+
+func file_Flush(this Value) Value {
+	err := sfOpenWrite(this).w.Flush()
+	if err != nil {
+		panic("File: " + err.Error())
+	}
+	return nil
+}
+
+var _ = method(file_Read, "(nbytes=false)")
+
+func file_Read(this, arg Value) Value {
+	sf := sfOpenRead(this)
+	n := int(sf.size() - sf.tell) // remaining
+	if n == 0 {                   // at end
+		return False
+	}
+	if arg != False {
+		if m := ToInt(arg); m < n {
+			n = m
 		}
-		return nil
-	}),
-	"Read": method1("(nbytes=false)", func(this, arg Value) Value {
-		sf := sfOpenRead(this)
-		n := int(sf.size() - sf.tell) // remaining
-		if n == 0 {                   // at end
-			return False
-		}
-		if arg != False {
-			if m := ToInt(arg); m < n {
-				n = m
-			}
-		}
-		buf := make([]byte, n)
-		_, err := io.ReadFull(sf.r, buf)
-		sf.tell += int64(n)
-		if err != nil {
-			panic("File: Read: " + err.Error())
-		}
-		return SuStr(string(buf))
-	}),
-	"Readline": method0(func(this Value) Value {
-		sf := sfOpenRead(this)
-		val, nr := readline(sf.r, "File: Readline: ")
-		sf.tell += int64(nr)
-		return val
-	}),
-	"Seek": method2("(offset, origin='set')", func(this, arg1, arg2 Value) Value {
-		sf := sfOpen(this)
-		if sf.mode == "a" {
-			panic("File: Seek: invalid with mode 'a'")
-		}
-		sf.reset()
-		offset := ToInt64(arg1)
-		switch ToStr(arg2) {
-		case "set":
-			//
-		case "cur":
-			offset += sf.tell
-		case "end":
-			offset += sf.size()
-		default:
-			panic("File: Seek: origin must be 'set', 'end', or 'cur'")
-		}
-		_, err := sf.f.Seek(offset, io.SeekStart)
-		if err != nil {
-			panic("File: Seek: " + err.Error())
-		}
-		sf.tell = offset
-		return nil
-	}),
-	"Tell": method0(func(this Value) Value {
-		sf := sfOpen(this)
-		if sf.mode == "a" {
-			panic("File: Tell: invalid with mode 'a'")
-		}
-		return Int64Val(sf.tell)
-	}),
-	"Write": method1("(string)", func(this, arg Value) Value {
-		s := AsStr(arg)
-		sf := sfOpenWrite(this)
-		_, err := sf.w.WriteString(s)
-		if err != nil {
-			panic("File: Write: " + err.Error())
-		}
-		sf.tell += int64(len(s))
-		return arg
-	}),
-	"Writeline": method1("(string)", func(this, arg Value) Value {
-		s := AsStr(arg)
-		sf := sfOpen(this)
-		sf.w.WriteString(s)
-		_, err := sf.w.WriteString("\r\n")
-		if err != nil {
-			panic("File: Writeline: " + err.Error())
-		}
-		sf.tell += int64(len(s) + 2)
-		return arg
-	}),
+	}
+	buf := make([]byte, n)
+	_, err := io.ReadFull(sf.r, buf)
+	sf.tell += int64(n)
+	if err != nil {
+		panic("File: Read: " + err.Error())
+	}
+	return SuStr(string(buf))
+}
+
+var _ = method(file_Readline, "()")
+
+func file_Readline(this Value) Value {
+	sf := sfOpenRead(this)
+	val, nr := readline(sf.r, "File: Readline: ")
+	sf.tell += int64(nr)
+	return val
+}
+
+var _ = method(file_Seek, "(offset, origin='set')")
+
+func file_Seek(this, arg1, arg2 Value) Value {
+	sf := sfOpen(this)
+	if sf.mode == "a" {
+		panic("File: Seek: invalid with mode 'a'")
+	}
+	sf.reset()
+	offset := ToInt64(arg1)
+	switch ToStr(arg2) {
+	case "set":
+		//
+	case "cur":
+		offset += sf.tell
+	case "end":
+		offset += sf.size()
+	default:
+		panic("File: Seek: origin must be 'set', 'end', or 'cur'")
+	}
+	_, err := sf.f.Seek(offset, io.SeekStart)
+	if err != nil {
+		panic("File: Seek: " + err.Error())
+	}
+	sf.tell = offset
+	return nil
+}
+
+var _ = method(file_Tell, "()")
+
+func file_Tell(this Value) Value {
+	sf := sfOpen(this)
+	if sf.mode == "a" {
+		panic("File: Tell: invalid with mode 'a'")
+	}
+	return Int64Val(sf.tell)
+}
+
+var _ = method(file_Write, "(string)")
+
+func file_Write(this, arg Value) Value {
+	s := AsStr(arg)
+	sf := sfOpenWrite(this)
+	_, err := sf.w.WriteString(s)
+	if err != nil {
+		panic("File: Write: " + err.Error())
+	}
+	sf.tell += int64(len(s))
+	return arg
+}
+
+var _ = method(file_Writeline, "(string)")
+
+func file_Writeline(this, arg Value) Value {
+	s := AsStr(arg)
+	sf := sfOpen(this)
+	sf.w.WriteString(s)
+	_, err := sf.w.WriteString("\r\n")
+	if err != nil {
+		panic("File: Writeline: " + err.Error())
+	}
+	sf.tell += int64(len(s) + 2)
+	return arg
 }
 
 func sfOpen(this Value) *suFile {

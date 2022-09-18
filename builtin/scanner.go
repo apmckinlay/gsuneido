@@ -18,10 +18,11 @@ type suScanner struct {
 	name string
 }
 
-var _ = builtin1("Scanner(string)",
-	func(arg Value) Value {
-		return &suScanner{lxr: *lexer.NewLexer(ToStr(arg)), name: "Scanner"}
-	})
+var _ = builtin(Scanner, "(string)")
+
+func Scanner(arg Value) Value {
+	return &suScanner{lxr: *lexer.NewLexer(ToStr(arg)), name: "Scanner"}
+}
 
 var _ Value = (*suScanner)(nil)
 
@@ -33,57 +34,80 @@ func (*suScanner) Lookup(_ *Thread, method string) Callable {
 	return scannerMethods[method]
 }
 
-var scannerMethods = Methods{
-	"Keyword?": method0(func(this Value) Value {
-		return SuBool(this.(*suScanner).isKeyword())
-	}),
-	"Length": method0(func(this Value) Value {
-		sc := this.(*suScanner)
-		if sc.Lock() {
-			defer sc.Unlock()
-		}
-		from := sc.item.Pos
-		to := sc.lxr.Position()
-		return IntVal(to - int(from))
-	}),
-	"Next": method0(func(this Value) Value {
-		return this.(*suScanner).next()
-	}),
-	"Next2": method0(func(this Value) Value {
-		sc := this.(*suScanner)
-		if sc.Lock() {
-			defer sc.Unlock()
-		}
-		sc.item = sc.lxr.Next()
-		if sc.item.Token == tokens.Eof {
-			return sc
-		}
-		return SuStr(sc.type2())
-	}),
-	"Position": method0(func(this Value) Value {
-		sc := this.(*suScanner)
-		if sc.Lock() {
-			defer sc.Unlock()
-		}
-		return IntVal(sc.lxr.Position())
-	}),
-	"Text": method0(func(this Value) Value {
-		return this.(*suScanner).text()
-	}),
-	"Type": method0(func(this Value) Value {
-		sc := this.(*suScanner)
-		if sc.Lock() {
-			defer sc.Unlock()
-		}
-		return SuStr(sc.type2())
-	}),
-	"Value": method0(func(this Value) Value {
-		sc := this.(*suScanner)
-		if sc.Lock() {
-			defer sc.Unlock()
-		}
-		return SuStr(sc.item.Text)
-	}),
+var scannerMethods = methods()
+
+var _ = method(scan_KeywordQ, "()")
+
+func scan_KeywordQ(this Value) Value {
+	return SuBool(this.(*suScanner).isKeyword())
+}
+
+var _ = method(scan_Length, "()")
+
+func scan_Length(this Value) Value {
+	sc := this.(*suScanner)
+	if sc.Lock() {
+		defer sc.Unlock()
+	}
+	from := sc.item.Pos
+	to := sc.lxr.Position()
+	return IntVal(to - int(from))
+}
+
+var _ = method(scan_Next, "()")
+
+func scan_Next(this Value) Value {
+	return this.(*suScanner).next()
+}
+
+var _ = method(scan_Next2, "()")
+
+func scan_Next2(this Value) Value {
+	sc := this.(*suScanner)
+	if sc.Lock() {
+		defer sc.Unlock()
+	}
+	sc.item = sc.lxr.Next()
+	if sc.item.Token == tokens.Eof {
+		return sc
+	}
+	return SuStr(sc.type2())
+}
+
+var _ = method(scan_Position, "()")
+
+func scan_Position(this Value) Value {
+	sc := this.(*suScanner)
+	if sc.Lock() {
+		defer sc.Unlock()
+	}
+	return IntVal(sc.lxr.Position())
+}
+
+var _ = method(scan_Text, "()")
+
+func scan_Text(this Value) Value {
+	return this.(*suScanner).text()
+}
+
+var _ = method(scan_Type, "()")
+
+func scan_Type(this Value) Value {
+	sc := this.(*suScanner)
+	if sc.Lock() {
+		defer sc.Unlock()
+	}
+	return SuStr(sc.type2())
+}
+
+var _ = method(scan_Value, "()")
+
+func scan_Value(this Value) Value {
+	sc := this.(*suScanner)
+	if sc.Lock() {
+		defer sc.Unlock()
+	}
+	return SuStr(sc.item.Text)
 }
 
 func (sc *suScanner) next() Value {

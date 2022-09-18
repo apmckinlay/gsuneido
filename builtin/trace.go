@@ -8,21 +8,22 @@ import (
 	"github.com/apmckinlay/gsuneido/runtime/trace"
 )
 
-var _ = builtin("Trace(value, block = false)",
-	func(t *Thread, args []Value) Value {
-		if s, ok := args[0].ToStr(); ok {
-			if args[1] != False {
-				panic("usage: Trace(string) or Trace(flags, block)")
-			}
-			trace.Print(s + "\n")
-		} else {
-			prev := trace.Set(ToInt(args[0]))
-			if args[1] != False {
-				defer func() {
-					trace.Set(prev)
-				}()
-				return t.Call(args[1])
-			}
+var _ = builtin(Trace, "(value, block = false)")
+
+func Trace(t *Thread, args []Value) Value {
+	if s, ok := args[0].ToStr(); ok {
+		if args[1] != False {
+			panic("usage: Trace(string) or Trace(flags, block)")
 		}
-		return nil
-	})
+		trace.Print(s + "\n")
+	} else {
+		prev := trace.Set(ToInt(args[0]))
+		if args[1] != False {
+			defer func() {
+				trace.Set(prev)
+			}()
+			return t.Call(args[1])
+		}
+	}
+	return nil
+}

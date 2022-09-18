@@ -7,6 +7,8 @@ import (
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
-var _ = builtin("Timestamp()", func(t *Thread, args []Value) Value {
+var _ = builtin(Timestamp, "()")
+
+func Timestamp(t *Thread, args []Value) Value {
 	return t.Dbms().Timestamp()
-})
+}

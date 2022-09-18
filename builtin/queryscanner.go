@@ -8,8 +8,9 @@ import (
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
-var _ = builtin1("QueryScanner(string)",
-	func(arg Value) Value {
-		return &suScanner{name: "QueryScanner",
-			lxr: *lexer.NewQueryLexer(ToStr(arg))}
-	})
+var _ = builtin(QueryScanner, "(string)")
+
+func QueryScanner(arg Value) Value {
+	return &suScanner{name: "QueryScanner",
+		lxr: *lexer.NewQueryLexer(ToStr(arg))}
+}

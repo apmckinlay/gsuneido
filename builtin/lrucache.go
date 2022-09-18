@@ -29,16 +29,18 @@ var lruCacheCallClass = func(t *Thread, args []Value) Value {
 	return newSuLruCache(size, fn, okForResetAll)
 }
 
-var lruCacheClassMethods = Methods{
-	"ResetAll": method("()", func(th *Thread, this Value, _ []Value) Value {
-		iter := ToContainer(Global.Find(th, GnSuneido)).Iter2(true, true)
-		for _, v := iter(); v != nil; _, v = iter() {
-			if lc, ok := v.(*suLruCache); ok && lc.okForResetAll {
-				lc.Reset()
-			}
+var lruCacheClassMethods = methods()
+
+var _ = staticMethod(lru_ResetAll, "()")
+
+func lru_ResetAll(th *Thread, _ []Value) Value {
+	iter := ToContainer(Global.Find(th, GnSuneido)).Iter2(true, true)
+	for _, v := iter(); v != nil; _, v = iter() {
+		if lc, ok := v.(*suLruCache); ok && lc.okForResetAll {
+			lc.Reset()
 		}
-		return nil
-	}),
+	}
+	return nil
 }
 
 func (d *suLruCacheGlobal) Lookup(t *Thread, method string) Callable {
@@ -54,80 +56,87 @@ func (d *suLruCacheGlobal) String() string {
 
 //TODO merge GetN and GetN1 into Get using methodRaw
 
-var suLruCacheMethods = Methods{
-	// Get calls the getter with exactly the same arguments it receives.
-	// If called with multiple arguments, the hash key is an @args object.
-	//TODO after jSuneido is gone, we can replace GetN and GetN1 with Get
-	"Get": methodRaw("(@args)", func(
-		t *Thread, as *ArgSpec, this Value, args []Value) Value {
-		if as.Nargs == 0 {
-			panic("missing argument")
+var suLruCacheMethods = methods()
+
+// Get calls the getter with exactly the same arguments it receives.
+// If called with multiple arguments, the hash key is an @args object.
+// TODO after jSuneido is gone, we can replace GetN and GetN1 with Get
+var _ = method(lru_Get, "(@args)")
+
+func lru_Get(
+	t *Thread, as *ArgSpec, this Value, args []Value) Value {
+	if as.Nargs == 0 {
+		panic("missing argument")
+	}
+	key := args[0]
+	if as.Nargs > 1 {
+		unnamed := int(as.Nargs) - len(as.Spec) // only valid if !atArg
+		ob := &SuObject{}
+		for i := 0; i < unnamed; i++ {
+			ob.Add(args[i])
 		}
-		key := args[0]
-		if as.Nargs > 1 {
-			unnamed := int(as.Nargs) - len(as.Spec) // only valid if !atArg
-			ob := &SuObject{}
-			for i := 0; i < unnamed; i++ {
-				ob.Add(args[i])
-			}
-			for i, ni := range as.Spec {
-				ob.Set(as.Names[ni], args[unnamed+i])
-			}
-			key = ob
+		for i, ni := range as.Spec {
+			ob.Set(as.Names[ni], args[unnamed+i])
 		}
-		slc := this.(*suLruCache)
-		val := slc.Fetch(key)
-		if val == nil {
-			val = slc.Fn.Call(t, nil, as) // call with existing stack args
-			slc.Insert(key, val)
-		}
-		return val
-	}),
-	// "Get": method("(x)", func(t *Thread, this Value, args []Value) Value {
-	// 	slc := this.(*suLruCache)
-	// 	key := args[0]
-	// 	val := slc.Fetch(key)
-	// 	if val == nil {
-	// 		val = t.Call(slc.Fn, key)
-	// 		slc.Insert(key, val)
-	// 	}
-	// 	return val
-	// }),
-	"GetN": method("(@x)", func(t *Thread, this Value, args []Value) Value {
-		slc := this.(*suLruCache)
-		key := args[0]
-		val := slc.Fetch(key)
-		if val == nil {
-			val = t.CallEach(slc.Fn, key)
-			slc.Insert(key, val)
-		}
-		return val
-	}),
-	"GetN1": method("(x)", func(t *Thread, this Value, args []Value) Value {
-		slc := this.(*suLruCache)
-		key := args[0]
-		val := slc.Fetch(key)
-		if val == nil {
-			val = t.CallEach(slc.Fn, key)
-			slc.Insert(key, val)
-		}
-		return val
-	}),
-	"Reset": method0(func(this Value) Value {
-		slc := this.(*suLruCache)
-		slc.Reset()
-		return nil
-	}),
-	"OkForResetAll?": method0(func(this Value) Value {
-		slc := this.(*suLruCache)
-		return SuBool(slc.okForResetAll)
-	}),
-	"GetMissRate": method0(func(this Value) Value {
-		slc := this.(*suLruCache)
-		misses := IntVal(slc.Lc.misses)
-		gets := IntVal(slc.Lc.hits + slc.Lc.misses)
-		return OpDiv(misses, gets)
-	}),
+		key = ob
+	}
+	slc := this.(*suLruCache)
+	val := slc.Fetch(key)
+	if val == nil {
+		val = slc.Fn.Call(t, nil, as) // call with existing stack args
+		slc.Insert(key, val)
+	}
+	return val
+}
+
+var _ = method(lru_GetN, "(@x)")
+
+func lru_GetN(t *Thread, this Value, args []Value) Value {
+	slc := this.(*suLruCache)
+	key := args[0]
+	val := slc.Fetch(key)
+	if val == nil {
+		val = t.CallEach(slc.Fn, key)
+		slc.Insert(key, val)
+	}
+	return val
+}
+
+var _ = method(lru_GetN1, "(x)")
+
+func lru_GetN1(t *Thread, this Value, args []Value) Value {
+	slc := this.(*suLruCache)
+	key := args[0]
+	val := slc.Fetch(key)
+	if val == nil {
+		val = t.CallEach(slc.Fn, key)
+		slc.Insert(key, val)
+	}
+	return val
+}
+
+var _ = method(lru_Reset, "()")
+
+func lru_Reset(this Value) Value {
+	slc := this.(*suLruCache)
+	slc.Reset()
+	return nil
+}
+
+var _ = method(lru_OkForResetAllQ, "()")
+
+func lru_OkForResetAllQ(this Value) Value {
+	slc := this.(*suLruCache)
+	return SuBool(slc.okForResetAll)
+}
+
+var _ = method(lru_GetMissRate, "()")
+
+func lru_GetMissRate(this Value) Value {
+	slc := this.(*suLruCache)
+	misses := IntVal(slc.Lc.misses)
+	gets := IntVal(slc.Lc.hits + slc.Lc.misses)
+	return OpDiv(misses, gets)
 }
 
 //-------------------------------------------------------------------

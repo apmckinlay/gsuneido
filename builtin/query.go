@@ -10,20 +10,23 @@ import (
 	"github.com/apmckinlay/gsuneido/runtime/trace"
 )
 
-var _ = builtinRaw("Query1(@args)",
-	func(t *Thread, as *ArgSpec, args []Value) Value {
-		return queryOne(t, as, args, Only)
-	})
+var _ = builtin(Query1, "(@args)")
 
-var _ = builtinRaw("QueryFirst(@args)",
-	func(t *Thread, as *ArgSpec, args []Value) Value {
-		return queryOne(t, as, args, Next)
-	})
+func Query1(t *Thread, as *ArgSpec, args []Value) Value {
+	return queryOne(t, as, args, Only)
+}
 
-var _ = builtinRaw("QueryLast(@args)",
-	func(t *Thread, as *ArgSpec, args []Value) Value {
-		return queryOne(t, as, args, Prev)
-	})
+var _ = builtin(QueryFirst, "(@args)")
+
+func QueryFirst(t *Thread, as *ArgSpec, args []Value) Value {
+	return queryOne(t, as, args, Next)
+}
+
+var _ = builtin(QueryLast, "(@args)")
+
+func QueryLast(t *Thread, as *ArgSpec, args []Value) Value {
+	return queryOne(t, as, args, Prev)
+}
 
 var queryParams = params("(query)")
 
@@ -74,48 +77,74 @@ func stringable(v Value) bool {
 	return ok
 }
 
-func init() {
-	QueryMethods = Methods{
-		"Close": method0(func(this Value) Value {
-			this.(ISuQueryCursor).Close()
-			return nil
-		}),
-		"Columns": method0(func(this Value) Value {
-			return this.(ISuQueryCursor).Columns()
-		}),
-		"Keys": method0(func(this Value) Value {
-			return this.(ISuQueryCursor).Keys()
-		}),
-		"Next": method("()", func(th *Thread, this Value, _ []Value) Value {
-			return this.(*SuQuery).GetRec(th, Next)
-		}),
-		"NewRecord": method1("(@args)", // deprecated
-			func(_ Value, arg Value) Value {
-				return SuRecordFromObject(arg.(*SuObject))
-			}),
-		"Prev": method("()", func(th *Thread, this Value, _ []Value) Value {
-			return this.(*SuQuery).GetRec(th, Prev)
-		}),
-		"Output": method("(record)",
-			func(th *Thread, this Value, args []Value) Value {
-				trace.Dbms.Println("Query Output", this, args[0])
-				this.(*SuQuery).Output(th, ToContainer(args[0]))
-				return nil
-			}),
-		"Order": method0(func(this Value) Value {
-			return this.(ISuQueryCursor).Order()
-		}),
-		"Rewind": method0(func(this Value) Value {
-			this.(ISuQueryCursor).Rewind()
-			return nil
-		}),
-		"RuleColumns": method0(func(this Value) Value {
-			return this.(ISuQueryCursor).RuleColumns()
-		}),
-		"Strategy": method("(formatted = false)",
-			func(_ *Thread, this Value, args []Value) Value {
-				formatted := ToBool(args[0])
-				return this.(ISuQueryCursor).Strategy(formatted)
-			}),
-	}
+var _ = exportMethods(&QueryMethods)
+
+var _ = method(query_Close, "()")
+
+func query_Close(this Value) Value {
+	this.(ISuQueryCursor).Close()
+	return nil
+}
+
+var _ = method(query_Columns, "()")
+
+func query_Columns(this Value) Value {
+	return this.(ISuQueryCursor).Columns()
+}
+
+var _ = method(query_Keys, "()")
+
+func query_Keys(this Value) Value {
+	return this.(ISuQueryCursor).Keys()
+}
+
+var _ = method(query_Next, "()")
+
+func query_Next(th *Thread, this Value, _ []Value) Value {
+	return this.(*SuQuery).GetRec(th, Next)
+}
+
+var _ = method(query_NewRecord, "(@args)") // deprecated
+func query_NewRecord(_ Value, arg Value) Value {
+	return SuRecordFromObject(arg.(*SuObject))
+}
+
+var _ = method(query_Prev, "()")
+
+func query_Prev(th *Thread, this Value, _ []Value) Value {
+	return this.(*SuQuery).GetRec(th, Prev)
+}
+
+var _ = method(query_Output, "(record)")
+
+func query_Output(th *Thread, this Value, args []Value) Value {
+	trace.Dbms.Println("Query Output", this, args[0])
+	this.(*SuQuery).Output(th, ToContainer(args[0]))
+	return nil
+}
+
+var _ = method(query_Order, "()")
+
+func query_Order(this Value) Value {
+	return this.(ISuQueryCursor).Order()
+}
+
+var _ = method(query_Rewind, "()")
+
+func query_Rewind(this Value) Value {
+	this.(ISuQueryCursor).Rewind()
+	return nil
+}
+
+var _ = method(query_RuleColumns, "()")
+
+func query_RuleColumns(this Value) Value {
+	return this.(ISuQueryCursor).RuleColumns()
+}
+
+var _ = method(query_Strategy, "(formatted = false)")
+
+func query_Strategy(_ *Thread, this Value, args []Value) Value {
+	formatted := ToBool(args[0])
+	return this.(ISuQueryCursor).Strategy(formatted)
 }

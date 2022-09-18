@@ -304,12 +304,12 @@ func NewLeftJoin(src, src2 Query, by []string) *LeftJoin {
 	return &LeftJoin{Join: *NewJoin(src, src2, by)}
 }
 
-func (jn *LeftJoin) String() string {
-	return parenQ2(jn.source) + " " + jn.stringOp() + " " + paren(jn.source2)
+func (lj *LeftJoin) String() string {
+	return parenQ2(lj.source) + " " + lj.stringOp() + " " + paren(lj.source2)
 }
 
-func (jn *LeftJoin) stringOp() string {
-	return "LEFTJOIN" + jn.bystr()
+func (lj *LeftJoin) stringOp() string {
+	return "LEFTJOIN" + lj.bystr()
 }
 
 func (lj *LeftJoin) Indexes() [][]string {

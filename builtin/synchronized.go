@@ -22,10 +22,9 @@ type synchInfo struct {
 
 var sy synchInfo
 
-var _ = builtin("Synchronized(block)",
-	synchronized)
+var _ = builtin(Synchronized, "(block)")
 
-func synchronized(t *Thread, args []Value) Value {
+func Synchronized(t *Thread, args []Value) Value {
 	sy.threadLock.Lock()
 	reentry := sy.lockThread == t
 	sy.threadLock.Unlock()

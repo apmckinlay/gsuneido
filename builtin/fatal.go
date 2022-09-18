@@ -7,7 +7,9 @@ import (
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
-var _ = builtin1("Fatal(msg)", func(a Value) Value {
+var _ = builtin(fatal, "(msg)")
+
+func fatal(a Value) Value {
 	Fatal(ToStrOrString(a))
 	return nil
-})
+}

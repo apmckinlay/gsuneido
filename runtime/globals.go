@@ -75,7 +75,7 @@ func (typeGlobal) Builtin(name string, value Value) Value {
 	return value // return value to allow: var _ = Global.Builtin(...)
 }
 
-func BuiltinNames() []Value {
+func GetBuiltinNames() []Value {
 	names := make([]Value, len(g.builtins))
 	i := 0
 	for gn := range g.builtins {

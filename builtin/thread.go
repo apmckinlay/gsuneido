@@ -70,50 +70,67 @@ func threadCallClass(t *Thread, args []Value) Value {
 	return nil
 }
 
-var threadMethods = Methods{
-	"Name": method("(name=false)", func(t *Thread, _ Value, args []Value) Value {
-		if args[0] != False {
-			t.Name = str.BeforeFirst(t.Name, " ") + " " + ToStr(args[0])
-		}
-		return SuStr(t.Name)
-	}),
-	"Count": method0(func(this Value) Value {
-		return IntVal(threads.count())
-	}),
-	"List": method0(func(this Value) Value {
+var threadMethods = methods()
+
+var _ = method(thread_Name, "(name=false)")
+
+func thread_Name(t *Thread, _ Value, args []Value) Value {
+	if args[0] != False {
+		t.Name = str.BeforeFirst(t.Name, " ") + " " + ToStr(args[0])
+	}
+	return SuStr(t.Name)
+}
+
+var _ = method(thread_Count, "()")
+
+func thread_Count(this Value) Value {
+	return IntVal(threads.count())
+}
+
+var _ = method(thread_List, "()")
+
+func thread_List(this Value) Value {
+	ob := &SuObject{}
+	threads.lock.Lock()
+	defer threads.lock.Unlock()
+	for _, t := range threads.list {
+		ob.Set(SuStr(t.Name), True)
+	}
+	return ob
+}
+
+var _ = method(thread_Sleep, "(ms)")
+
+func thread_Sleep(this, ms Value) Value {
+	time.Sleep(time.Duration(ToInt(ms)) * time.Millisecond)
+	return nil
+}
+
+var _ = method(thread_Profile, "(block)")
+
+func thread_Profile(t *Thread, _ Value, args []Value) Value {
+	t.StartProfile()
+	defer t.StopProfile()
+	t.Call(args[0])
+	total, self, ops, calls := t.StopProfile()
+	prof := &SuObject{}
+	for name, op := range ops {
 		ob := &SuObject{}
-		threads.lock.Lock()
-		defer threads.lock.Unlock()
-		for _, t := range threads.list {
-			ob.Set(SuStr(t.Name), True)
-		}
-		return ob
-	}),
-	"Sleep": method1("(ms)", func(this, ms Value) Value {
-		time.Sleep(time.Duration(ToInt(ms)) * time.Millisecond)
-		return nil
-	}),
-	"Profile": method("(block)", func(t *Thread, _ Value, args []Value) Value {
-		t.StartProfile()
-		defer t.StopProfile()
-		t.Call(args[0])
-		total, self, ops, calls := t.StopProfile()
-		prof := &SuObject{}
-		for name, op := range ops {
-			ob := &SuObject{}
-			ob.Set(SuStr("name"), SuStr(name))
-			ob.Set(SuStr("ops"), IntVal(int(op)))
-			ob.Set(SuStr("calls"), IntVal(int(calls[name])))
-			ob.Set(SuStr("total"), IntVal(int(total[name])))
-			ob.Set(SuStr("self"), IntVal(int(self[name])))
-			prof.Add(ob)
-		}
-		return prof
-	}),
-	"NewSuneidoGlobal": method("()", func(t *Thread, _ Value, _ []Value) Value {
-		t.Suneido = new(SuneidoObject)
-		return nil
-	}),
+		ob.Set(SuStr("name"), SuStr(name))
+		ob.Set(SuStr("ops"), IntVal(int(op)))
+		ob.Set(SuStr("calls"), IntVal(int(calls[name])))
+		ob.Set(SuStr("total"), IntVal(int(total[name])))
+		ob.Set(SuStr("self"), IntVal(int(self[name])))
+		prof.Add(ob)
+	}
+	return prof
+}
+
+var _ = method(thread_NewSuneidoGlobal, "()")
+
+func thread_NewSuneidoGlobal(t *Thread, _ Value, _ []Value) Value {
+	t.Suneido = new(SuneidoObject)
+	return nil
 }
 
 func (d *suThreadGlobal) Get(t *Thread, key Value) Value {
@@ -138,24 +155,25 @@ func (d *suThreadGlobal) String() string {
 	return "Thread /* builtin class */"
 }
 
-var _ = builtin("Scheduled(ms, block)",
-	func(t *Thread, args []Value) Value {
-		ms := time.Duration(ToInt(args[0])) * time.Millisecond
-		t2 := NewThread(t)
-		block := args[1]
-		block.SetConcurrent()
-		go func() {
-			defer func() {
-				if e := recover(); e != nil {
-					LogUncaught(t2, "Scheduled", e)
-				}
-				t2.Close()
-			}()
-			time.Sleep(ms)
-			t2.Call(block)
+var _ = builtin(Scheduled, "(ms, block)")
+
+func Scheduled(t *Thread, args []Value) Value {
+	ms := time.Duration(ToInt(args[0])) * time.Millisecond
+	t2 := NewThread(t)
+	block := args[1]
+	block.SetConcurrent()
+	go func() {
+		defer func() {
+			if e := recover(); e != nil {
+				LogUncaught(t2, "Scheduled", e)
+			}
+			t2.Close()
 		}()
-		return nil
-	})
+		time.Sleep(ms)
+		t2.Call(block)
+	}()
+	return nil
+}
 
 // ThreadList is used by HttpStatus
 func ThreadList() []string {

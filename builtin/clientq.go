@@ -8,7 +8,8 @@ import (
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
-var _ = builtin0("Client?()",
-	func() Value {
-		return SuBool(options.Action == "client")
-	})
+var _ = builtin(ClientQ, "()")
+
+func ClientQ() Value {
+	return SuBool(options.Action == "client")
+}

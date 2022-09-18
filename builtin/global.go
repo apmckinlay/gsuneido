@@ -8,7 +8,9 @@ import (
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
-var _ = builtin("Global(name)", func(t *Thread, args []Value) Value {
+var _ = builtin(global, "(name)")
+
+func global(t *Thread, args []Value) Value {
 	s := ToStr(args[0])
 	global, s := str.Cut(s, '.')
 	val := Global.GetName(t, global)
@@ -20,4 +22,4 @@ var _ = builtin("Global(name)", func(t *Thread, args []Value) Value {
 		}
 	}
 	return val
-})
+}

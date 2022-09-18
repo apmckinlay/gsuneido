@@ -10,211 +10,65 @@ import (
 	"github.com/apmckinlay/gsuneido/runtime/types"
 )
 
-var _ = builtin1("Concurrent?(value)",
-	func(v Value) Value {
-		return IsConcurrent(v)
-	})
+var _ = builtin(ConcurrentQ, "(value)")
 
-var _ = builtin1("Object(@args)",
-	func(arg Value) Value {
-		return arg
-	})
+func ConcurrentQ(v Value) Value {
+	return IsConcurrent(v)
+}
+
+var _ = builtin(Object, "(@args)")
+
+func Object(arg Value) Value {
+	return arg
+}
 
 // NOTE: ObjectMethods are shared with SuRecord
 
-func init() {
-	ObjectMethods = Methods{
-		"Add": methodRaw("(@args)",
-			func(t *Thread, as *ArgSpec, this Value, args []Value) Value {
-				ob := ToContainer(this)
-				iter := NewArgsIter(as, args)
-				if at := getNamed(as, args, SuStr("at")); at != nil {
-					if i, ok := at.IfInt(); ok {
-						addAt(ob, i, iter)
-					} else {
-						putAt(t, ob, at, iter)
-					}
-				} else {
-					addAt(ob, ob.ListSize(), iter)
-				}
-				return this
-			}),
-		"Assocs": methodRaw("(list = true, named = true)",
-			func(_ *Thread, as *ArgSpec, this Value, args []Value) Value {
-				list, named := iterWhich(as, args)
-				return NewSuSequence(IterAssocs(ToContainer(this), list, named))
-			}),
-		"BinarySearch": method("(value, block = false)",
-			func(t *Thread, this Value, args []Value) Value {
-				ob := ToContainer(this).ToObject()
-				if args[1] == False {
-					return IntVal(ob.BinarySearch(args[0]))
-				}
-				return IntVal(ob.BinarySearch2(t, args[0], args[1]))
-			}),
-		"Copy": method0(func(this Value) Value {
-			return ToContainer(this).Copy()
-		}),
-		"Delete": methodRaw("(@args)",
-			obDelete),
-		"Erase": methodRaw("(@args)",
-			func(t *Thread, as *ArgSpec, this Value, args []Value) Value {
-				ob := ToContainer(this)
-				iter := NewArgsIter(as, args)
-				for {
-					k, v := iter()
-					if k != nil || v == nil {
-						break
-					}
-					ob.Erase(t, v)
-				}
-				return this
-			}),
-		"Eval": methodRaw("(@args)",
-			func(t *Thread, as *ArgSpec, this Value, args []Value) Value {
-				return EvalAsMethod(t, as, this, args)
-			}),
-		"Eval2": methodRaw("(@args)",
-			func(t *Thread, as *ArgSpec, this Value, args []Value) Value {
-				ob := &SuObject{}
-				if result := EvalAsMethod(t, as, this, args); result != nil {
-					ob.Add(result)
-				}
-				return ob
-			}),
-		"Find": method1("(value)", func(this Value, val Value) Value {
-			return ToContainer(this).ToObject().Find(val)
-		}),
-		"GetDefault": method("(member, block)",
-			func(t *Thread, this Value, args []Value) Value {
-				ob := ToContainer(this)
-				if x := ob.GetIfPresent(t, args[0]); x != nil {
-					return x
-				}
-				if args[1].Type() == types.Block {
-					return t.Call(args[1])
-				}
-				return args[1]
-			}),
-		"Has?": method1("(value)", func(this Value, val Value) Value {
-			return SuBool(ToContainer(this).ToObject().Find(val) != False)
-		}),
-		"Iter": method0(func(this Value) Value {
-			return SuIter{Iter: IterValues(ToContainer(this), true, true)}
-		}),
-		"Join": method1("(separator='')", func(this Value, arg Value) Value {
-			ob := ToContainer(this)
-			separator := AsStr(arg)
-			sb := strings.Builder{}
-			sep := ""
-			iter := ob.ArgsIter()
-			for {
-				k, v := iter()
-				if k != nil || v == nil {
-					break
-				}
-				sb.WriteString(sep)
-				sep = separator
-				sb.WriteString(ToStrOrString(v))
-			}
-			return SuStr(sb.String())
-		}),
-		"Max": method0(func(this Value) Value {
-			iter := ToContainer(this).Iter2(true, true)
-			_, max := iter()
-			if max == nil {
-				panic("cannot use Max on empty object")
-			}
-			for _, v := iter(); v != nil; _, v = iter() {
-				if v.Compare(max) > 0 {
-					max = v
-				}
-			}
-			return max
-		}),
-		"Members": methodRaw("(list = true, named = true)",
-			func(_ *Thread, as *ArgSpec, this Value, args []Value) Value {
-				list, named := iterWhich(as, args)
-				return NewSuSequence(IterMembers(ToContainer(this), list, named))
-			}),
-		"Member?": method1("(member)", func(this Value, val Value) Value {
-			return SuBool(ToContainer(this).HasKey(val))
-		}),
-		"Min": method0(func(this Value) Value {
-			iter := ToContainer(this).Iter2(true, true)
-			_, min := iter()
-			if min == nil {
-				panic("cannot use Min on empty object")
-			}
-			for _, v := iter(); v != nil; _, v = iter() {
-				if v.Compare(min) < 0 {
-					min = v
-				}
-			}
-			return min
-		}),
-		"PopFirst": method0(func(this Value) Value {
-			x := ToContainer(this).ToObject().PopFirst()
-			if x == nil {
-				return this
-			}
-			return x
-		}),
-		"PopLast": method0(func(this Value) Value {
-			x := ToContainer(this).ToObject().PopLast()
-			if x == nil {
-				return this
-			}
-			return x
-		}),
-		"Readonly?": method0(func(this Value) Value {
-			return SuBool(ToContainer(this).IsReadOnly())
-		}),
-		"Reverse!": method0(func(this Value) Value {
-			ToContainer(this).ToObject().Reverse()
-			return this
-		}),
-		"Set_default": method1("(value=nil)", func(this Value, val Value) Value {
-			ToContainer(this).ToObject().SetDefault(val)
-			return this
-		}),
-		"Set_readonly": method0(func(this Value) Value {
-			ToContainer(this).SetReadOnly()
-			return this
-		}),
-		"Size": method2("(list=false,named=false)",
-			func(this, arg1, arg2 Value) Value {
-				list := ToBool(arg1)
-				named := ToBool(arg2)
-				ob := ToContainer(this)
-				var n int
-				if list == named {
-					n = ob.ListSize() + ob.NamedSize()
-				} else if list {
-					n = ob.ListSize()
-				} else {
-					n = ob.NamedSize()
-				}
-				return IntVal(n)
-			}),
-		"Sort!": method("(block = false)",
-			func(t *Thread, this Value, args []Value) Value {
-				ToContainer(this).ToObject().Sort(t, args[0])
-				return this
-			}),
-		"Unique!": method0(func(this Value) Value {
-			ToContainer(this).ToObject().Unique()
-			return this
-		}),
-		"Values": methodRaw("(list = true, named = true)",
-			func(_ *Thread, as *ArgSpec, this Value, args []Value) Value {
-				list, named := iterWhich(as, args)
-				return NewSuSequence(IterValues(ToContainer(this), list, named))
-			}),
+var _ = exportMethods(&ObjectMethods)
+
+var _ = method(ob_Add, "(@args)")
+
+func ob_Add(t *Thread, as *ArgSpec, this Value, args []Value) Value {
+	ob := ToContainer(this)
+	iter := NewArgsIter(as, args)
+	if at := getNamed(as, args, SuStr("at")); at != nil {
+		if i, ok := at.IfInt(); ok {
+			addAt(ob, i, iter)
+		} else {
+			putAt(t, ob, at, iter)
+		}
+	} else {
+		addAt(ob, ob.ListSize(), iter)
 	}
+	return this
 }
 
-func obDelete(t *Thread, as *ArgSpec, this Value, args []Value) Value {
+var _ = method(ob_Assocs, "(list = true, named = true)")
+
+func ob_Assocs(_ *Thread, as *ArgSpec, this Value, args []Value) Value {
+	list, named := iterWhich(as, args)
+	return NewSuSequence(IterAssocs(ToContainer(this), list, named))
+}
+
+var _ = method(ob_BinarySearch, "(value, block = false)")
+
+func ob_BinarySearch(t *Thread, this Value, args []Value) Value {
+	ob := ToContainer(this).ToObject()
+	if args[1] == False {
+		return IntVal(ob.BinarySearch(args[0]))
+	}
+	return IntVal(ob.BinarySearch2(t, args[0], args[1]))
+}
+
+var _ = method(ob_Copy, "()")
+
+func ob_Copy(this Value) Value {
+	return ToContainer(this).Copy()
+}
+
+var _ = method(ob_Delete, "(@args)")
+
+func ob_Delete(t *Thread, as *ArgSpec, this Value, args []Value) Value {
 	ob := ToContainer(this)
 	if all := getNamed(as, args, SuStr("all")); all == True {
 		ob.DeleteAll()
@@ -229,6 +83,218 @@ func obDelete(t *Thread, as *ArgSpec, this Value, args []Value) Value {
 		}
 	}
 	return this
+}
+
+var _ = method(ob_Erase, "(@args)")
+
+func ob_Erase(t *Thread, as *ArgSpec, this Value, args []Value) Value {
+	ob := ToContainer(this)
+	iter := NewArgsIter(as, args)
+	for {
+		k, v := iter()
+		if k != nil || v == nil {
+			break
+		}
+		ob.Erase(t, v)
+	}
+	return this
+}
+
+var _ = method(ob_Eval, "(@args)")
+
+func ob_Eval(t *Thread, as *ArgSpec, this Value, args []Value) Value {
+	return EvalAsMethod(t, as, this, args)
+}
+
+var _ = method(ob_Eval2, "(@args)")
+
+func ob_Eval2(t *Thread, as *ArgSpec, this Value, args []Value) Value {
+	ob := &SuObject{}
+	if result := EvalAsMethod(t, as, this, args); result != nil {
+		ob.Add(result)
+	}
+	return ob
+}
+
+var _ = method(ob_Find, "(value)")
+
+func ob_Find(this Value, val Value) Value {
+	return ToContainer(this).ToObject().Find(val)
+}
+
+var _ = method(ob_GetDefault, "(member, block)")
+
+func ob_GetDefault(t *Thread, this Value, args []Value) Value {
+	ob := ToContainer(this)
+	if x := ob.GetIfPresent(t, args[0]); x != nil {
+		return x
+	}
+	if args[1].Type() == types.Block {
+		return t.Call(args[1])
+	}
+	return args[1]
+}
+
+var _ = method(ob_HasQ, "(value)")
+
+func ob_HasQ(this Value, val Value) Value {
+	return SuBool(ToContainer(this).ToObject().Find(val) != False)
+}
+
+var _ = method(ob_Iter, "()")
+
+func ob_Iter(this Value) Value {
+	return SuIter{Iter: IterValues(ToContainer(this), true, true)}
+}
+
+var _ = method(ob_Join, "(separator='')")
+
+func ob_Join(this Value, arg Value) Value {
+	ob := ToContainer(this)
+	separator := AsStr(arg)
+	sb := strings.Builder{}
+	sep := ""
+	iter := ob.ArgsIter()
+	for {
+		k, v := iter()
+		if k != nil || v == nil {
+			break
+		}
+		sb.WriteString(sep)
+		sep = separator
+		sb.WriteString(ToStrOrString(v))
+	}
+	return SuStr(sb.String())
+}
+
+var _ = method(ob_Max, "()")
+
+func ob_Max(this Value) Value {
+	iter := ToContainer(this).Iter2(true, true)
+	_, max := iter()
+	if max == nil {
+		panic("cannot use Max on empty object")
+	}
+	for _, v := iter(); v != nil; _, v = iter() {
+		if v.Compare(max) > 0 {
+			max = v
+		}
+	}
+	return max
+}
+
+var _ = method(ob_Members, "(list = true, named = true)")
+
+func ob_Members(_ *Thread, as *ArgSpec, this Value, args []Value) Value {
+	list, named := iterWhich(as, args)
+	return NewSuSequence(IterMembers(ToContainer(this), list, named))
+}
+
+var _ = method(ob_MemberQ, "(member)")
+
+func ob_MemberQ(this Value, val Value) Value {
+	return SuBool(ToContainer(this).HasKey(val))
+}
+
+var _ = method(ob_Min, "()")
+
+func ob_Min(this Value) Value {
+	iter := ToContainer(this).Iter2(true, true)
+	_, min := iter()
+	if min == nil {
+		panic("cannot use Min on empty object")
+	}
+	for _, v := iter(); v != nil; _, v = iter() {
+		if v.Compare(min) < 0 {
+			min = v
+		}
+	}
+	return min
+}
+
+var _ = method(ob_PopFirst, "()")
+
+func ob_PopFirst(this Value) Value {
+	x := ToContainer(this).ToObject().PopFirst()
+	if x == nil {
+		return this
+	}
+	return x
+}
+
+var _ = method(ob_PopLast, "()")
+
+func ob_PopLast(this Value) Value {
+	x := ToContainer(this).ToObject().PopLast()
+	if x == nil {
+		return this
+	}
+	return x
+}
+
+var _ = method(ob_ReadonlyQ, "()")
+
+func ob_ReadonlyQ(this Value) Value {
+	return SuBool(ToContainer(this).IsReadOnly())
+}
+
+var _ = method(ob_ReverseX, "()")
+
+func ob_ReverseX(this Value) Value {
+	ToContainer(this).ToObject().Reverse()
+	return this
+}
+
+var _ = method(ob_Set_default, "(value=nil)")
+
+func ob_Set_default(this Value, val Value) Value {
+	ToContainer(this).ToObject().SetDefault(val)
+	return this
+}
+
+var _ = method(ob_Set_readonly, "()")
+
+func ob_Set_readonly(this Value) Value {
+	ToContainer(this).SetReadOnly()
+	return this
+}
+
+var _ = method(ob_Size, "(list=false,named=false)")
+
+func ob_Size(this, arg1, arg2 Value) Value {
+	list := ToBool(arg1)
+	named := ToBool(arg2)
+	ob := ToContainer(this)
+	var n int
+	if list == named {
+		n = ob.ListSize() + ob.NamedSize()
+	} else if list {
+		n = ob.ListSize()
+	} else {
+		n = ob.NamedSize()
+	}
+	return IntVal(n)
+}
+
+var _ = method(ob_SortX, "(block = false)")
+
+func ob_SortX(t *Thread, this Value, args []Value) Value {
+	ToContainer(this).ToObject().Sort(t, args[0])
+	return this
+}
+
+var _ = method(ob_UniqueX, "()")
+
+func ob_UniqueX(this Value) Value {
+	ToContainer(this).ToObject().Unique()
+	return this
+}
+
+var _ = method(ob_Values, "(list = true, named = true)")
+
+func ob_Values(_ *Thread, as *ArgSpec, this Value, args []Value) Value {
+	list, named := iterWhich(as, args)
+	return NewSuSequence(IterValues(ToContainer(this), list, named))
 }
 
 func getNamed(as *ArgSpec, args []Value, name Value) Value {

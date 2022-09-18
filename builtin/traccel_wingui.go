@@ -12,13 +12,9 @@ import (
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
-// var _ = builtin3("Traccel(pointer, message, wParam)",
-// 	func(a, b, c Value) Value {
-// 		return IntVal(goc.Traccel(ToInt(a), ToInt(b), ToInt(c)))
-// 	})
+var _ = builtin(Traccel, "(ob, msg)")
 
-var _ = builtin2("Traccel(ob, msg)",
-	func(a, b Value) Value {
-		defer heap.FreeTo(heap.CurSize())
-		return IntVal(goc.Traccel(ToInt(a), obToMSG(b)))
-	})
+func Traccel(a, b Value) Value {
+	defer heap.FreeTo(heap.CurSize())
+	return IntVal(goc.Traccel(ToInt(a), obToMSG(b)))
+}

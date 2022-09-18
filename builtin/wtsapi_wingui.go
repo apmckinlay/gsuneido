@@ -25,8 +25,7 @@ func WTSFreeMemory(adr uintptr) {
 }
 
 // dll bool WTSAPI32:WTSQuerySessionInformation(pointer hServer, long SessionId,
-//		long WTSInfoClass, POINTER* ppBuffer, LONG* pBytesReturned)
-
+// long WTSInfoClass, POINTER* ppBuffer, LONG* pBytesReturned)
 var wtsQuerySessionInformation = wtsapi32.MustFindProc("WTSQuerySessionInformationA").Addr()
 
 const WTS_CURRENT_SERVER_HANDLE = 0
@@ -54,26 +53,27 @@ func WTS_GetClientProtocolType() int {
 	return int(data)
 }
 
-var _ = builtin0("WTS_GetSessionId()",
-	func() Value {
-		if WTS_GetClientProtocolType() == 0 {
-			return Zero
-		}
-		defer heap.FreeTo(heap.CurSize())
-		pbuf := heap.Alloc(uintptrSize)
-		psize := heap.Alloc(int32Size)
-		rtn := goc.Syscall5(wtsQuerySessionInformation,
-			WTS_CURRENT_SERVER_HANDLE,
-			WTS_CURRENT_SESSION,
-			WTS_SessionId,
-			uintptr(pbuf),
-			uintptr(psize))
-		buf := *(*uintptr)(pbuf)
-		size := *(*int32)(psize)
-		if rtn == 0 || size != 4 || buf == 0 {
-			return Zero
-		}
-		data := *(*int32)(unsafe.Pointer(buf))
-		WTSFreeMemory(buf)
-		return IntVal(int(data))
-	})
+var _ = builtin(WTS_GetSessionId, "()")
+
+func WTS_GetSessionId() Value {
+	if WTS_GetClientProtocolType() == 0 {
+		return Zero
+	}
+	defer heap.FreeTo(heap.CurSize())
+	pbuf := heap.Alloc(uintptrSize)
+	psize := heap.Alloc(int32Size)
+	rtn := goc.Syscall5(wtsQuerySessionInformation,
+		WTS_CURRENT_SERVER_HANDLE,
+		WTS_CURRENT_SESSION,
+		WTS_SessionId,
+		uintptr(pbuf),
+		uintptr(psize))
+	buf := *(*uintptr)(pbuf)
+	size := *(*int32)(psize)
+	if rtn == 0 || size != 4 || buf == 0 {
+		return Zero
+	}
+	data := *(*int32)(unsafe.Pointer(buf))
+	WTSFreeMemory(buf)
+	return IntVal(int(data))
+}

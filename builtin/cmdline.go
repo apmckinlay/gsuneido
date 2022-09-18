@@ -8,6 +8,8 @@ import (
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
-var _ = builtin0("Cmdline()", func() Value {
+var _ = builtin(Cmdline, "()")
+
+func Cmdline() Value {
 	return SuStr(options.CmdLine)
-})
+}

@@ -21,19 +21,20 @@ type suAdler32 struct {
 	hash hash.Hash32
 }
 
-var _ = builtinRaw("Adler32(@args)",
-	func(th *Thread, as *ArgSpec, args []Value) Value {
-		h := suAdler32{hash: adler32.New()}
-		iter := NewArgsIter(as, args)
-		k, v := iter()
-		if v == nil {
-			return h
-		}
-		for ; k == nil && v != nil; k, v = iter() {
-			io.WriteString(h.hash, ToStr(v))
-		}
-		return h.value()
-	})
+var _ = builtin(Adler32, "(@args)")
+
+func Adler32(th *Thread, as *ArgSpec, args []Value) Value {
+	h := suAdler32{hash: adler32.New()}
+	iter := NewArgsIter(as, args)
+	k, v := iter()
+	if v == nil {
+		return h
+	}
+	for ; k == nil && v != nil; k, v = iter() {
+		io.WriteString(h.hash, ToStr(v))
+	}
+	return h.value()
+}
 
 var _ Value = suAdler32{}
 
@@ -45,14 +46,19 @@ func (suAdler32) Lookup(_ *Thread, method string) Callable {
 	return adler32Methods[method]
 }
 
-var adler32Methods = Methods{
-	"Update": method1("(string)", func(this, arg Value) Value {
-		io.WriteString(this.(suAdler32).hash, ToStr(arg))
-		return this
-	}),
-	"Value": method0(func(this Value) Value {
-		return this.(suAdler32).value()
-	}),
+var adler32Methods = methods()
+
+var _ = method(adler32_Update, "(string)")
+
+func adler32_Update(this, arg Value) Value {
+	io.WriteString(this.(suAdler32).hash, ToStr(arg))
+	return this
+}
+
+var _ = method(adler32_Value, "()")
+
+func adler32_Value(this Value) Value {
+	return this.(suAdler32).value()
 }
 
 func (h suAdler32) value() Value {

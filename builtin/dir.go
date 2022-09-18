@@ -17,28 +17,29 @@ import (
 
 const maxDir = 10000
 
-var _ = builtin("Dir(path='*', files=false, details=false, block=false)",
-	func(t *Thread, args []Value) Value {
-		path := ToStr(args[0])
-		justfiles := ToBool(args[1])
-		details := ToBool(args[2])
-		block := args[3]
-		if block == False {
-			ob := &SuObject{}
-			forEachDir(path, justfiles, details, func(entry Value) {
-				if ob.Size() >= maxDir {
-					panic("Dir: too many files")
-				}
-				ob.Add(entry)
-			})
-			return ob
-		}
-		// block form
+var _ = builtin(dir, "(path='*', files=false, details=false, block=false)")
+
+func dir(t *Thread, args []Value) Value {
+	path := ToStr(args[0])
+	justfiles := ToBool(args[1])
+	details := ToBool(args[2])
+	block := args[3]
+	if block == False {
+		ob := &SuObject{}
 		forEachDir(path, justfiles, details, func(entry Value) {
-			t.Call(block, entry)
+			if ob.Size() >= maxDir {
+				panic("Dir: too many files")
+			}
+			ob.Add(entry)
 		})
-		return nil
+		return ob
+	}
+	// block form
+	forEachDir(path, justfiles, details, func(entry Value) {
+		t.Call(block, entry)
 	})
+	return nil
+}
 
 func forEachDir(dir string, justfiles, details bool, fn func(entry Value)) {
 	dir, pat := filepath.Split(dir)

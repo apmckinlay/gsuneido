@@ -52,6 +52,7 @@ func main() {
 	options.BuiltDate = builtDate
 	options.Mode = mode
 	options.Parse(os.Args[1:])
+	fmt.Println("ErrlogDir", builtin.ErrlogDir())
 	if options.Action == "client" {
 		options.Errlog = builtin.ErrlogDir() + "suneido" + options.Port + ".err"
 	}
@@ -331,10 +332,10 @@ func repl() {
 		prompt = func(string) {}
 	}
 
-	builtin.Def()
-	builtin.Concat()
+	builtin.DefDef()
+	builtin.DefConcat()
 
-	built := builtin.Built()
+	built := builtin.BuiltStr()
 	if options.Action == "client" {
 		built += " - client"
 	}

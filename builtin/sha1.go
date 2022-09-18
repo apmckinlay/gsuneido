@@ -21,19 +21,20 @@ type suSha1 struct {
 // The implementations are very similar.
 // Modifications to any of them should probably be done to the others.
 
-var _ = builtinRaw("Sha1(@args)",
-	func(th *Thread, as *ArgSpec, args []Value) Value {
-		h := suSha1{hash: sha1.New()}
-		iter := NewArgsIter(as, args)
-		k, v := iter()
-		if v == nil {
-			return h
-		}
-		for ; k == nil && v != nil; k, v = iter() {
-			io.WriteString(h.hash, ToStr(v))
-		}
-		return h.value()
-	})
+var _ = builtin(Sha1, "(@args)")
+
+func Sha1(th *Thread, as *ArgSpec, args []Value) Value {
+	h := suSha1{hash: sha1.New()}
+	iter := NewArgsIter(as, args)
+	k, v := iter()
+	if v == nil {
+		return h
+	}
+	for ; k == nil && v != nil; k, v = iter() {
+		io.WriteString(h.hash, ToStr(v))
+	}
+	return h.value()
+}
 
 var _ Value = suSha1{}
 
@@ -45,14 +46,19 @@ func (suSha1) Lookup(_ *Thread, method string) Callable {
 	return sha1Methods[method]
 }
 
-var sha1Methods = Methods{
-	"Update": method1("(string)", func(this, arg Value) Value {
-		io.WriteString(this.(suSha1).hash, ToStr(arg))
-		return this
-	}),
-	"Value": method0(func(this Value) Value {
-		return this.(suSha1).value()
-	}),
+var sha1Methods = methods()
+
+var _ = method(Sha1_Update, "(string)")
+
+func Sha1_Update(this, arg Value) Value {
+	io.WriteString(this.(suSha1).hash, ToStr(arg))
+	return this
+}
+
+var _ = method(Sha1_Value, "()")
+
+func Sha1_Value(this Value) Value {
+	return this.(suSha1).value()
 }
 
 func (h suSha1) value() Value {

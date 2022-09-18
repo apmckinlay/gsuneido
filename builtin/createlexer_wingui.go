@@ -11,9 +11,10 @@ import (
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
-var _ = builtin1("CreateLexer(name)",
-	func(a Value) Value {
-		defer heap.FreeTo(heap.CurSize())
-		rtn := goc.CreateLexer(uintptr(heap.CopyStr(ToStr(a))))
-		return intRet(rtn)
-	})
+var _ = builtin(CreateLexer, "(name)")
+
+func CreateLexer(a Value) Value {
+	defer heap.FreeTo(heap.CurSize())
+	rtn := goc.CreateLexer(uintptr(heap.CopyStr(ToStr(a))))
+	return intRet(rtn)
+}

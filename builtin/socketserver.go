@@ -16,8 +16,8 @@ import (
 
 func init() {
 	ss := &SuClass{Lib: "builtin", Name: "SocketServer", MemBase: NewMemBase()}
-	ss.Data["CallClass"] =
-		methodRaw("(name = nil, port = nil, exit = false)", ssCallClass)
+	ss.Data["CallClass"] = &SuBuiltinMethodRaw{Fn: ssCallClass,
+		ParamSpec: params("(name = nil, port = nil, exit = false)")}
 	Global.Builtin("SocketServer", ss)
 }
 
@@ -152,11 +152,8 @@ type suServerConnect struct {
 }
 
 func (sc *suServerConnect) Lookup(t *Thread, method string) Callable {
-	switch method {
-	case "RemoteUser":
-		return remoteUser
-	case "ManualClose":
-		return manualClose
+	if f, ok := socketServerMethods[method]; ok {
+		return f
 	}
 	if f := sc.client.Lookup(t, method); f != nil {
 		return f
@@ -178,13 +175,19 @@ func (sc *suServerConnect) Close() {
 	nSocketServerClient.Add(-1)
 }
 
-var remoteUser = method0(func(this Value) Value {
+var socketServerMethods = methods()
+
+var _ = method(sock_RemoteUser, "()")
+
+func sock_RemoteUser(this Value) Value {
 	sc := this.(*suServerConnect)
 	addr := sc.client.conn.RemoteAddr().String()
 	return SuStr(str.BeforeLast(addr, ":"))
-})
+}
 
-var manualClose = method0(func(this Value) Value {
+var _ = method(sock_ManualClose, "()")
+
+func sock_ManualClose(this Value) Value {
 	this.(*suServerConnect).manualClose = true
 	return nil
-})
+}

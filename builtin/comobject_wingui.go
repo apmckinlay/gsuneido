@@ -25,34 +25,40 @@ type suCOMObject struct {
 
 var _ Value = (*suCOMObject)(nil)
 
-var _ = builtin1("COMobject(progid)",
-	func(arg Value) Value {
-		if n, ok := arg.ToInt(); ok {
-			ptr := uintptr(n)
-			if idisp := goc.QueryIDispatch(ptr); idisp != 0 {
-				goc.Release(ptr)
-				return &suCOMObject{ptr: idisp, idisp: true}
-			}
-			return &suCOMObject{ptr: ptr}
-		}
-		if s, ok := arg.ToStr(); ok {
-			defer heap.FreeTo(heap.CurSize())
-			idisp := goc.CreateInstance(uintptr(heap.CopyStr(s)))
-			if idisp == 0 {
-				return False
-			}
+var _ = builtin(COMobject, "(progid)")
+
+func COMobject(arg Value) Value {
+	if n, ok := arg.ToInt(); ok {
+		ptr := uintptr(n)
+		if idisp := goc.QueryIDispatch(ptr); idisp != 0 {
+			goc.Release(ptr)
 			return &suCOMObject{ptr: idisp, idisp: true}
 		}
-		panic("COMobject requires integer or string")
-	})
+		return &suCOMObject{ptr: ptr}
+	}
+	if s, ok := arg.ToStr(); ok {
+		defer heap.FreeTo(heap.CurSize())
+		idisp := goc.CreateInstance(uintptr(heap.CopyStr(s)))
+		if idisp == 0 {
+			return False
+		}
+		return &suCOMObject{ptr: idisp, idisp: true}
+	}
+	panic("COMobject requires integer or string")
+}
 
-var suComObjectMethods = Methods{
-	"Dispatch?": method0(func(this Value) Value {
-		return SuBool(this.(*suCOMObject).idisp)
-	}),
-	"Release": method0(func(this Value) Value {
-		return IntVal(goc.Release(this.(*suCOMObject).ptr))
-	}),
+var suComObjectMethods = methods()
+
+var _ = method(com_DispatchQ, "()")
+
+func com_DispatchQ(this Value) Value {
+	return SuBool(this.(*suCOMObject).idisp)
+}
+
+var _ = method(com_Release, "()")
+
+func com_Release(this Value) Value {
+	return IntVal(goc.Release(this.(*suCOMObject).ptr))
 }
 
 func (sco *suCOMObject) Get(_ *Thread, mem Value) Value {
@@ -119,7 +125,7 @@ const (
 
 var flagnames = []string{1: "call", 2: "get", 4: "put"}
 
-type VARIANT struct {
+type stVariant struct {
 	vt  uint16
 	_   uint16
 	_   uint16
@@ -128,7 +134,7 @@ type VARIANT struct {
 	_   [8]byte
 }
 
-const nVARIANT = unsafe.Sizeof(VARIANT{})
+const nVariant = unsafe.Sizeof(stVariant{})
 
 func GetProperty(idisp uintptr, name string) Value {
 	return invoke(idisp, name, DISPATCH_PROPERTYGET)
@@ -145,8 +151,8 @@ func CallMethod(idisp uintptr, name string, args []Value) Value {
 func invoke(idisp uintptr, name string, flags uintptr, args ...Value) Value {
 	defer heap.FreeTo(heap.CurSize())
 	pargs := convertArgs(args)
-	params := heap.Alloc(nDISPPARAMS)
-	dp := (*DISPPARAMS)(params)
+	params := heap.Alloc(nDispParams)
+	dp := (*stDispParams)(params)
 	dp.cArgs = uint32(len(args))
 	dp.rgvarg = uintptr(pargs)
 	var result unsafe.Pointer
@@ -154,7 +160,7 @@ func invoke(idisp uintptr, name string, flags uintptr, args ...Value) Value {
 		dp.cNamedArgs = 1
 		dp.rgdispidNamedArgs = uintptr(unsafe.Pointer(&DISPID_PROPERTYPUT))
 	} else {
-		result = heap.Alloc(nVARIANT)
+		result = heap.Alloc(nVariant)
 	}
 	hr := goc.Invoke(idisp, uintptr(heap.CopyStr(name)), flags, uintptr(params),
 		uintptr(result))
@@ -165,22 +171,22 @@ func invoke(idisp uintptr, name string, flags uintptr, args ...Value) Value {
 	if flags == DISPATCH_PROPERTYPUT {
 		return nil
 	}
-	return variantToSu((*VARIANT)(result))
+	return variantToSu((*stVariant)(result))
 }
 
 func convertArgs(args []Value) unsafe.Pointer {
-	pargs := heap.Alloc(nVARIANT * uintptr(len(args)))
+	pargs := heap.Alloc(nVariant * uintptr(len(args)))
 	p := pargs
 	for i := len(args) - 1; i >= 0; i-- {
-		suToVariant(args[i], (*VARIANT)(p))
-		p = unsafe.Pointer(uintptr(p) + nVARIANT)
+		suToVariant(args[i], (*stVariant)(p))
+		p = unsafe.Pointer(uintptr(p) + nVariant)
 	}
 	return pargs
 }
 
 var DISPID_PROPERTYPUT int32 = -3
 
-func suToVariant(x Value, v *VARIANT) {
+func suToVariant(x Value, v *stVariant) {
 	if x == True {
 		v.vt = VT_BOOL
 		v.val = -1
@@ -209,14 +215,14 @@ func suToVariant(x Value, v *VARIANT) {
 	}
 }
 
-type DISPPARAMS struct {
+type stDispParams struct {
 	rgvarg            uintptr
 	rgdispidNamedArgs uintptr
 	cArgs             uint32
 	cNamedArgs        uint32
 }
 
-const nDISPPARAMS = unsafe.Sizeof(DISPPARAMS{})
+const nDispParams = unsafe.Sizeof(stDispParams{})
 
 const (
 	VT_EMPTY    = 0
@@ -233,7 +239,7 @@ const (
 	VT_UI8      = 21
 )
 
-func variantToSu(v *VARIANT) Value {
+func variantToSu(v *stVariant) Value {
 	var result Value
 	switch v.vt {
 	case VT_NULL, VT_EMPTY:
@@ -271,7 +277,7 @@ func variantToSu(v *VARIANT) Value {
 	return result
 }
 
-func bstrToString(v *VARIANT) string {
+func bstrToString(v *stVariant) string {
 	if v.val == 0 {
 		return ""
 	}
@@ -287,7 +293,7 @@ func bstrToString(v *VARIANT) string {
 
 var variantClear = oleaut32.MustFindProc("VariantClear").Addr()
 
-func VariantClear(v *VARIANT) {
+func VariantClear(v *stVariant) {
 	syscall.SyscallN(variantClear, uintptr(unsafe.Pointer(v)))
 }
 

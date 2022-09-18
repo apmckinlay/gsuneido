@@ -18,94 +18,95 @@ import (
 var shell32 = MustLoadDLL("shell32.dll")
 
 // dll void Shell32:DragAcceptFiles(pointer hWnd, bool fAccept)
-
 var dragAcceptFiles = shell32.MustFindProc("DragAcceptFiles").Addr()
-var _ = builtin2("DragAcceptFiles(hWnd, fAccept)",
-	func(a, b Value) Value {
-		goc.Syscall2(dragAcceptFiles,
-			intArg(a),
-			boolArg(b))
-		return nil
-	})
+var _ = builtin(DragAcceptFiles, "(hWnd, fAccept)")
+
+func DragAcceptFiles(a, b Value) Value {
+	goc.Syscall2(dragAcceptFiles,
+		intArg(a),
+		boolArg(b))
+	return nil
+}
 
 // dll bool Shell32:SHGetPathFromIDList(pointer pidl, string path)
-
 var shGetPathFromIDList = shell32.MustFindProc("SHGetPathFromIDListA").Addr()
-var _ = builtin1("SHGetPathFromIDList(pidl)",
-	func(a Value) Value {
-		defer heap.FreeTo(heap.CurSize())
-		buf := heap.Alloc(MAX_PATH)
-		rtn := goc.Syscall2(shGetPathFromIDList,
-			intArg(a),
-			uintptr(buf))
-		if rtn == 0 {
-			return EmptyStr
-		}
-		return SuStr(heap.GetStrZ(buf, MAX_PATH))
-	})
+var _ = builtin(SHGetPathFromIDList, "(pidl)")
+
+func SHGetPathFromIDList(a Value) Value {
+	defer heap.FreeTo(heap.CurSize())
+	buf := heap.Alloc(MAX_PATH)
+	rtn := goc.Syscall2(shGetPathFromIDList,
+		intArg(a),
+		uintptr(buf))
+	if rtn == 0 {
+		return EmptyStr
+	}
+	return SuStr(heap.GetStrZ(buf, MAX_PATH))
+}
 
 // dll long Shell32:DragQueryFile(
-//		pointer hDrop, long iFile, string lpszFile, long cch)
-
+// pointer hDrop, long iFile, string lpszFile, long cch)
 var dragQueryFile = shell32.MustFindProc("DragQueryFile").Addr()
 
-var _ = builtin2("DragQueryFile(hDrop, iFile)",
-	func(a, b Value) Value {
-		n := goc.Syscall4(dragQueryFile,
-			intArg(a),
-			intArg(b),
-			0,
-			0)
-		defer heap.FreeTo(heap.CurSize())
-		buf := heap.Alloc(n + 1)
-		goc.Syscall4(dragQueryFile,
-			intArg(a),
-			intArg(b),
-			uintptr(buf),
-			n+1)
-		return SuStr(heap.GetStrN(buf, int(n)))
-	})
+var _ = builtin(DragQueryFile, "(hDrop, iFile)")
 
-var _ = builtin1("DragQueryFileCount(hDrop)",
-	func(a Value) Value {
-		rtn := goc.Syscall4(dragQueryFile,
-			intArg(a),
-			0xffffffff,
-			0,
-			0)
-		return intRet(rtn)
-	})
+func DragQueryFile(a, b Value) Value {
+	n := goc.Syscall4(dragQueryFile,
+		intArg(a),
+		intArg(b),
+		0,
+		0)
+	defer heap.FreeTo(heap.CurSize())
+	buf := heap.Alloc(n + 1)
+	goc.Syscall4(dragQueryFile,
+		intArg(a),
+		intArg(b),
+		uintptr(buf),
+		n+1)
+	return SuStr(heap.GetStrN(buf, int(n)))
+}
+
+var _ = builtin(DragQueryFileCount, "(hDrop)")
+
+func DragQueryFileCount(a Value) Value {
+	rtn := goc.Syscall4(dragQueryFile,
+		intArg(a),
+		0xffffffff,
+		0,
+		0)
+	return intRet(rtn)
+}
 
 // dll bool Shell32:Shell_NotifyIcon(long dwMessage, NOTIFYICONDATA* lpdata)
-
 var shell_NotifyIcon = shell32.MustFindProc("Shell_NotifyIconA").Addr()
-var _ = builtin2("Shell_NotifyIcon(dwMessage, lpdata)",
-	func(a, b Value) Value {
-		defer heap.FreeTo(heap.CurSize())
-		p := heap.Alloc(nNOTIFYICONDATA)
-		nid := (*NOTIFYICONDATA)(p)
-		*nid = NOTIFYICONDATA{
-			cbSize:               uint32(nNOTIFYICONDATA),
-			hWnd:                 getUintptr(b, "hWnd"),
-			uID:                  getInt32(b, "uID"),
-			uFlags:               getInt32(b, "uFlags"),
-			uCallbackMessage:     getInt32(b, "uCallbackMessage"),
-			hIcon:                getUintptr(b, "hIcon"),
-			dwState:              getInt32(b, "dwState"),
-			dwStateMask:          getInt32(b, "dwStateMask"),
-			uTimeoutVersionUnion: getUint32(b, "uTimeoutVersionUnion"),
-			dwInfoFlags:          getInt32(b, "dwInfoFlags"),
-		}
-		getStrZbs(b, "szTip", nid.szTip[:])
-		getStrZbs(b, "szInfo", nid.szInfo[:])
-		getStrZbs(b, "szInfoTitle", nid.szInfoTitle[:])
-		rtn := goc.Syscall2(shell_NotifyIcon,
-			intArg(a),
-			uintptr(p))
-		return boolRet(rtn)
-	})
+var _ = builtin(Shell_NotifyIcon, "(dwMessage, lpdata)")
 
-type NOTIFYICONDATA struct {
+func Shell_NotifyIcon(a, b Value) Value {
+	defer heap.FreeTo(heap.CurSize())
+	p := heap.Alloc(nNotifyIconData)
+	nid := (*stNotifyIconData)(p)
+	*nid = stNotifyIconData{
+		cbSize:               uint32(nNotifyIconData),
+		hWnd:                 getUintptr(b, "hWnd"),
+		uID:                  getInt32(b, "uID"),
+		uFlags:               getInt32(b, "uFlags"),
+		uCallbackMessage:     getInt32(b, "uCallbackMessage"),
+		hIcon:                getUintptr(b, "hIcon"),
+		dwState:              getInt32(b, "dwState"),
+		dwStateMask:          getInt32(b, "dwStateMask"),
+		uTimeoutVersionUnion: getUint32(b, "uTimeoutVersionUnion"),
+		dwInfoFlags:          getInt32(b, "dwInfoFlags"),
+	}
+	getStrZbs(b, "szTip", nid.szTip[:])
+	getStrZbs(b, "szInfo", nid.szInfo[:])
+	getStrZbs(b, "szInfoTitle", nid.szInfoTitle[:])
+	rtn := goc.Syscall2(shell_NotifyIcon,
+		intArg(a),
+		uintptr(p))
+	return boolRet(rtn)
+}
+
+type stNotifyIconData struct {
 	cbSize               uint32
 	hWnd                 HANDLE
 	uID                  int32
@@ -123,38 +124,38 @@ type NOTIFYICONDATA struct {
 	hBalloonIcon         HANDLE
 }
 
-const nNOTIFYICONDATA = unsafe.Sizeof(NOTIFYICONDATA{})
+const nNotifyIconData = unsafe.Sizeof(stNotifyIconData{})
 
 // dll bool Shell32:ShellExecuteEx(SHELLEXECUTEINFO* lpExecInfo)
-
 var shellExecuteEx = shell32.MustFindProc("ShellExecuteExA").Addr()
-var _ = builtin1("ShellExecuteEx(lpExecInfo)",
-	func(a Value) Value {
-		defer heap.FreeTo(heap.CurSize())
-		p := heap.Alloc(nSHELLEXECUTEINFO)
-		*(*SHELLEXECUTEINFO)(p) = SHELLEXECUTEINFO{
-			cbSize:       int32(nSHELLEXECUTEINFO),
-			fMask:        getInt32(a, "fMask"),
-			hwnd:         getUintptr(a, "hwnd"),
-			lpVerb:       getStr(a, "lpVerb"),
-			lpFile:       getStr(a, "lpFile"),
-			lpDirectory:  getStr(a, "lpDirectory"),
-			lpParameters: getStr(a, "lpParameters"),
-			nShow:        getInt32(a, "nShow"),
-			hInstApp:     getUintptr(a, "hInstApp"),
-			lpIDList:     getUintptr(a, "lpIDList"),
-			lpClass:      getStr(a, "lpClass"),
-			hkeyClass:    getUintptr(a, "hkeyClass"),
-			dwHotKey:     getInt32(a, "dwHotKey"),
-			hIcon:        getUintptr(a, "hIcon"),
-			hProcess:     getUintptr(a, "hProcess"),
-		}
-		rtn := goc.Syscall1(shellExecuteEx,
-			uintptr(p))
-		return boolRet(rtn)
-	})
+var _ = builtin(ShellExecuteEx, "(lpExecInfo)")
 
-type SHELLEXECUTEINFO struct {
+func ShellExecuteEx(a Value) Value {
+	defer heap.FreeTo(heap.CurSize())
+	p := heap.Alloc(nShellExecuteInfo)
+	*(*stShellExecuteInfo)(p) = stShellExecuteInfo{
+		cbSize:       int32(nShellExecuteInfo),
+		fMask:        getInt32(a, "fMask"),
+		hwnd:         getUintptr(a, "hwnd"),
+		lpVerb:       getStr(a, "lpVerb"),
+		lpFile:       getStr(a, "lpFile"),
+		lpDirectory:  getStr(a, "lpDirectory"),
+		lpParameters: getStr(a, "lpParameters"),
+		nShow:        getInt32(a, "nShow"),
+		hInstApp:     getUintptr(a, "hInstApp"),
+		lpIDList:     getUintptr(a, "lpIDList"),
+		lpClass:      getStr(a, "lpClass"),
+		hkeyClass:    getUintptr(a, "hkeyClass"),
+		dwHotKey:     getInt32(a, "dwHotKey"),
+		hIcon:        getUintptr(a, "hIcon"),
+		hProcess:     getUintptr(a, "hProcess"),
+	}
+	rtn := goc.Syscall1(shellExecuteEx,
+		uintptr(p))
+	return boolRet(rtn)
+}
+
+type stShellExecuteInfo struct {
 	cbSize       int32
 	fMask        int32
 	hwnd         HANDLE
@@ -172,33 +173,33 @@ type SHELLEXECUTEINFO struct {
 	hProcess     HANDLE
 }
 
-const nSHELLEXECUTEINFO = unsafe.Sizeof(SHELLEXECUTEINFO{})
+const nShellExecuteInfo = unsafe.Sizeof(stShellExecuteInfo{})
 
 const MAX_PATH = 260
 
 // dll pointer Shell32:SHBrowseForFolder(BROWSEINFO* lpbi)
-
 var sHBrowseForFolder = shell32.MustFindProc("SHBrowseForFolderA").Addr()
-var _ = builtin1("SHBrowseForFolder(lpbi)",
-	func(a Value) Value {
-		defer heap.FreeTo(heap.CurSize())
-		p := heap.Alloc(nBROWSEINFO)
-		*(*BROWSEINFO)(p) = BROWSEINFO{
-			hwndOwner:      getUintptr(a, "hwndOwner"),
-			pidlRoot:       getUintptr(a, "pidlRoot"),
-			pszDisplayName: nil,
-			lpszTitle:      getStr(a, "lpszTitle"),
-			ulFlags:        getInt32(a, "ulFlags"),
-			lpfn:           getCallback(a, "lpfn", 4),
-			lParam:         getUintptr(a, "lParam"),
-			iImage:         getInt32(a, "iImage"),
-		}
-		rtn := goc.Syscall1(sHBrowseForFolder,
-			uintptr(p))
-		return intRet(rtn)
-	})
+var _ = builtin(SHBrowseForFolder, "(lpbi)")
 
-type BROWSEINFO struct {
+func SHBrowseForFolder(a Value) Value {
+	defer heap.FreeTo(heap.CurSize())
+	p := heap.Alloc(nBrowseInfo)
+	*(*stBrowseInfo)(p) = stBrowseInfo{
+		hwndOwner:      getUintptr(a, "hwndOwner"),
+		pidlRoot:       getUintptr(a, "pidlRoot"),
+		pszDisplayName: nil,
+		lpszTitle:      getStr(a, "lpszTitle"),
+		ulFlags:        getInt32(a, "ulFlags"),
+		lpfn:           getCallback(a, "lpfn", 4),
+		lParam:         getUintptr(a, "lParam"),
+		iImage:         getInt32(a, "iImage"),
+	}
+	rtn := goc.Syscall1(sHBrowseForFolder,
+		uintptr(p))
+	return intRet(rtn)
+}
+
+type stBrowseInfo struct {
 	hwndOwner      HANDLE
 	pidlRoot       HANDLE
 	pszDisplayName *byte
@@ -210,7 +211,7 @@ type BROWSEINFO struct {
 	_              [4]byte // padding
 }
 
-const nBROWSEINFO = unsafe.Sizeof(BROWSEINFO{})
+const nBrowseInfo = unsafe.Sizeof(stBrowseInfo{})
 
 var shGetFolderPath = shell32.MustFindProc("SHGetFolderPathA").Addr()
 
@@ -224,7 +225,7 @@ func ErrlogDir() string {
 		0,
 		0,
 		uintptr(unsafe.Pointer(&buf[0])))
-	if rtn < 0 {
+	if rtn != 0 {
 		return "" // failed
 	}
 	return string(buf[:bytes.IndexByte(buf[:], 0)]) + `\`

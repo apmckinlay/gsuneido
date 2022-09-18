@@ -24,7 +24,7 @@ func (t *Thread) invoke(fn *SuFunc, this Value) Value {
 		t.Push(nil)
 	}
 	return t.run(Frame{fn: fn, this: this,
-		locals: Locals{v: t.stack[t.sp-int(fn.Nlocals) : t.sp]}})
+		locals: locals{v: t.stack[t.sp-int(fn.Nlocals) : t.sp]}})
 }
 
 // run is needed in addition to interp

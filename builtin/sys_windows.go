@@ -13,15 +13,16 @@ import (
 
 var kernel32 = windows.MustLoadDLL("kernel32.dll")
 
-// dll bool Kernel32:GetDiskFreeSpaceEx(
-//		[in] string			directoryName,
-//		ULARGE_INTEGER*		freeBytesAvailableToCaller,
-//		ULARGE_INTEGER*		totalNumberOfBytes,
-//		ULARGE_INTEGER*		totalNumberOfFreeBytes)
-
+// dll bool Kernel32:GetDiskFreeSpaceEx()
+// [in] string			directoryName,
+// ULARGE_INTEGER*		freeBytesAvailableToCaller,
+// ULARGE_INTEGER*		totalNumberOfBytes,
+// ULARGE_INTEGER*		totalNumberOfFreeBytes)
 var getDiskFreeSpaceEx = kernel32.MustFindProc("GetDiskFreeSpaceExA").Addr()
 
-var _ = builtin1("GetDiskFreeSpace(dir = '.')", func(arg Value) Value {
+var _ = builtin(GetDiskFreeSpace, "(dir = '.')")
+
+func GetDiskFreeSpace(arg Value) Value {
 	dir := zbuf(arg)
 	var n int64
 	syscall.SyscallN(getDiskFreeSpaceEx,
@@ -30,7 +31,7 @@ var _ = builtin1("GetDiskFreeSpace(dir = '.')", func(arg Value) Value {
 		0,
 		0)
 	return Int64Val(n)
-})
+}
 
 // zbuf returns a zero terminated byte slice copy of ToStr(v)
 func zbuf(v Value) []byte {
@@ -41,39 +42,42 @@ func zbuf(v Value) []byte {
 	return buf
 }
 
-type MEMORYSTATUSEX struct {
+type stMemoryStatusEx struct {
 	dwLength     uint32
 	dwMemoryLoad uint32
 	ullTotalPhys uint64
 	unused       [6]uint64
 }
 
-const nMEMORYSTATUSEX = unsafe.Sizeof(MEMORYSTATUSEX{})
+const nMemoryStatusEx = unsafe.Sizeof(stMemoryStatusEx{})
 
 var globalMemoryStatusEx = kernel32.MustFindProc("GlobalMemoryStatusEx").Addr()
 
-var _ = builtin0("SystemMemory()", func() Value {
-	buf := make([]byte, nMEMORYSTATUSEX)
-	(*MEMORYSTATUSEX)(unsafe.Pointer(&buf[0])).dwLength = uint32(nMEMORYSTATUSEX)
+var _ = builtin(SystemMemory, "()")
+
+func SystemMemory() Value {
+	buf := make([]byte, nMemoryStatusEx)
+	(*stMemoryStatusEx)(unsafe.Pointer(&buf[0])).dwLength = uint32(nMemoryStatusEx)
 	rtn, _, _ := syscall.SyscallN(globalMemoryStatusEx,
 		uintptr(unsafe.Pointer(&buf[0])))
 	if rtn == 0 {
 		return Zero
 	}
-	return Int64Val(int64((*MEMORYSTATUSEX)(unsafe.Pointer(&buf[0])).ullTotalPhys))
-})
+	return Int64Val(int64((*stMemoryStatusEx)(unsafe.Pointer(&buf[0])).ullTotalPhys))
+}
 
 var copyFile = kernel32.MustFindProc("CopyFileA").Addr()
-var _ = builtin3("CopyFile(from, to, failIfExists)",
-	func(a, b, c Value) Value {
-		from := zbuf(a)
-		to := zbuf(b)
-		rtn, _, _ := syscall.SyscallN(copyFile,
-			uintptr(unsafe.Pointer(&from[0])),
-			uintptr(unsafe.Pointer(&to[0])),
-			boolArg(c))
-		return boolRet(rtn)
-	})
+var _ = builtin(CopyFile, "(from, to, failIfExists)")
+
+func CopyFile(a, b, c Value) Value {
+	from := zbuf(a)
+	to := zbuf(b)
+	rtn, _, _ := syscall.SyscallN(copyFile,
+		uintptr(unsafe.Pointer(&from[0])),
+		uintptr(unsafe.Pointer(&to[0])),
+		boolArg(c))
+	return boolRet(rtn)
+}
 
 func boolArg(arg Value) uintptr {
 	if ToBool(arg) {

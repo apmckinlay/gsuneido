@@ -10,11 +10,12 @@ import (
 	"github.com/apmckinlay/gsuneido/util/exit"
 )
 
-var _ = builtin1("Exit(code = 0)",
-	func(arg Value) Value {
-		if arg == True {
-			exit.Exit(0) // immediate exit
-		}
-		PostQuitMessage(uintptr(IfInt(arg)))
-		return nil
-	})
+var _ = builtin(Exit, "(code = 0)")
+
+func Exit(arg Value) Value {
+	if arg == True {
+		exit.Exit(0) // immediate exit
+	}
+	postQuit(uintptr(IfInt(arg)))
+	return nil
+}

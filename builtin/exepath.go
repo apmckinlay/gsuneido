@@ -10,11 +10,13 @@ import (
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
-var _ = builtin0("ExePath()", func() Value {
+var _ = builtin(ExePath, "()")
+
+func ExePath() Value {
 	path, err := os.Executable()
 	if err != nil {
 		panic("ExePath " + err.Error())
 	}
 	path = strings.ReplaceAll(path, "\\", "/")
 	return SuStr(path)
-})
+}

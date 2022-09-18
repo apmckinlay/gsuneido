@@ -21,45 +21,45 @@ type suStructGlobal struct {
 
 func init() {
 	Global.Builtin("INITCOMMONCONTROLSEX",
-		&suStructGlobal{size: int(unsafe.Sizeof(INITCOMMONCONTROLSEX{}))})
+		&suStructGlobal{size: int(unsafe.Sizeof(stInitCommonControlsEx{}))})
 	Global.Builtin("MENUITEMINFO",
-		&suStructGlobal{size: int(unsafe.Sizeof(MENUITEMINFO{}))})
+		&suStructGlobal{size: int(unsafe.Sizeof(stMenuItemInfo{}))})
 	Global.Builtin("MONITORINFO",
-		&suStructGlobal{size: int(unsafe.Sizeof(MONITORINFO{}))})
+		&suStructGlobal{size: int(unsafe.Sizeof(stMonitorInfo{}))})
 	Global.Builtin("SCROLLINFO",
-		&suStructGlobal{size: int(unsafe.Sizeof(SCROLLINFO{}))})
+		&suStructGlobal{size: int(unsafe.Sizeof(stScrollInfo{}))})
 	Global.Builtin("TRACKMOUSEEVENT",
-		&suStructGlobal{size: int(unsafe.Sizeof(TRACKMOUSEEVENT{}))})
+		&suStructGlobal{size: int(unsafe.Sizeof(stTrackMouseEvent{}))})
 	Global.Builtin("SHELLEXECUTEINFO",
-		&suStructGlobal{size: int(unsafe.Sizeof(SHELLEXECUTEINFO{}))})
+		&suStructGlobal{size: int(unsafe.Sizeof(stShellExecuteInfo{}))})
 	Global.Builtin("TOOLINFO",
-		&suStructGlobal{size: int(unsafe.Sizeof(TOOLINFO{}))})
+		&suStructGlobal{size: int(unsafe.Sizeof(stToolInfo{}))})
 	Global.Builtin("WINDOWPLACEMENT",
-		&suStructGlobal{size: int(unsafe.Sizeof(WINDOWPLACEMENT{}))})
+		&suStructGlobal{size: int(unsafe.Sizeof(stWindowPlacement{}))})
 	Global.Builtin("OPENFILENAME",
-		&suStructGlobal{size: int(nOPENFILENAME)})
+		&suStructGlobal{size: int(nOpenFileName)})
 	Global.Builtin("TPMPARAMS",
-		&suStructGlobal{size: int(nTPMPARAMS)})
+		&suStructGlobal{size: int(nTPMParams)})
 	Global.Builtin("DRAWTEXTPARAMS",
-		&suStructGlobal{size: int(nDRAWTEXTPARAMS)})
+		&suStructGlobal{size: int(nDrawTextParams)})
 	Global.Builtin("SYSTEMTIME",
-		&suStructGlobal{size: int(nSYSTEMTIME)})
+		&suStructGlobal{size: int(nSystemTime)})
 	Global.Builtin("PRINTDLG",
-		&suStructGlobal{size: int(nPRINTDLG)})
+		&suStructGlobal{size: int(nPrintDlg)})
 	Global.Builtin("PAGESETUPDLG",
-		&suStructGlobal{size: int(nPAGESETUPDLG)})
+		&suStructGlobal{size: int(nPageSetupDlg)})
 	Global.Builtin("DOCINFO",
-		&suStructGlobal{size: int(nDOCINFO)})
+		&suStructGlobal{size: int(nDocInfo)})
 	Global.Builtin("PRINTDLGEX",
-		&suStructGlobal{size: int(nPRINTDLGEX)})
+		&suStructGlobal{size: int(nPrintDlgEx)})
 	Global.Builtin("CHOOSEFONT",
-		&suStructGlobal{size: int(nCHOOSEFONT)})
+		&suStructGlobal{size: int(nChooseFont)})
 	Global.Builtin("CHOOSECOLOR",
-		&suStructGlobal{size: int(nCHOOSECOLOR)})
+		&suStructGlobal{size: int(nChooseColor)})
 	Global.Builtin("FLASHWINFO",
-		&suStructGlobal{size: int(nFLASHWINFO)})
+		&suStructGlobal{size: int(nFlashWInfo)})
 	Global.Builtin("EDITBALLOONTIP",
-		&suStructGlobal{size: int(nEDITBALLOONTIP)})
+		&suStructGlobal{size: int(nEditBalloonTip)})
 }
 
 func (*suStructGlobal) Call(*Thread, Value, *ArgSpec) Value {
@@ -72,15 +72,16 @@ func (sg *suStructGlobal) Size() int {
 
 type sizeable interface{ Size() int }
 
-var structSize = method0(func(this Value) Value {
+var structMethods = methods()
+
+var _ = method(st_Size, "()")
+
+func st_Size(this Value) Value {
 	return IntVal(this.(sizeable).Size())
-})
+}
 
 func (*suStructGlobal) Lookup(_ *Thread, method string) Callable {
-	if method == "Size" {
-		return structSize
-	}
-	return nil
+	return structMethods[method]
 }
 
 func (*suStructGlobal) String() string {
@@ -104,26 +105,27 @@ type Struct interface {
 
 // StructModify allows modifying a struct at a given address
 // WARNING: address must be valid for type
-var _ = builtin("StructModify(type, address, block)",
-	func(t *Thread, args []Value) Value {
-		typ, ok := args[0].(Struct)
-		if !ok {
-			panic("StructModify invalid type " + ErrType(args[0]))
-		}
-		p := unsafe.Pointer(uintptr(ToInt(args[1])))
-		if p == nil {
-			panic("StructModify: address can't be zero")
-		}
-		ob := typ.structToOb(p)
-		t.Call(args[2], ob) // call the block, which modifies ob
-		typ.updateStruct(ob, p)
-		return nil
-	})
+var _ = builtin(StructModify, "(type, address, block)")
+
+func StructModify(t *Thread, args []Value) Value {
+	typ, ok := args[0].(Struct)
+	if !ok {
+		panic("StructModify invalid type " + ErrType(args[0]))
+	}
+	p := unsafe.Pointer(uintptr(ToInt(args[1])))
+	if p == nil {
+		panic("StructModify: address can't be zero")
+	}
+	ob := typ.structToOb(p)
+	t.Call(args[2], ob) // call the block, which modifies ob
+	typ.updateStruct(ob, p)
+	return nil
+}
 
 //-------------------------------------------------------------------
 
 var _ = Global.Builtin("RECT",
-	&suRect{callableStruct{suStructGlobal{size: int(unsafe.Sizeof(RECT{})),
+	&suRect{callableStruct{suStructGlobal{size: int(unsafe.Sizeof(stRect{})),
 		SuBuiltin: SuBuiltin{
 			BuiltinParams: BuiltinParams{ParamSpec: ParamSpec1},
 			Fn:            rect}}}})
@@ -137,33 +139,33 @@ func (*suRect) structToOb(p unsafe.Pointer) Value {
 }
 
 func (*suRect) updateStruct(ob Value, p unsafe.Pointer) {
-	*(*RECT)(p) = obToRect(ob)
+	*(*stRect)(p) = obToRect(ob)
 }
 
 func rect(_ *Thread, args []Value) Value {
 	r := obToRect(args[0])
-	return bufStrN(unsafe.Pointer(&r), nRECT)
+	return bufStrN(unsafe.Pointer(&r), nRect)
 }
 
 //-------------------------------------------------------------------
 
 var _ = Global.Builtin("MINMAXINFO",
-	&suMinMaxInfo{suStructGlobal{size: int(unsafe.Sizeof(MINMAXINFO{}))}})
+	&suMinMaxInfo{suStructGlobal{size: int(unsafe.Sizeof(stMinMaxInfo{}))}})
 
 type suMinMaxInfo struct {
 	suStructGlobal
 }
 
-type MINMAXINFO struct {
-	ptReserved   POINT
-	maxSize      POINT
-	maxPosition  POINT
-	minTrackSize POINT
-	maxTrackSize POINT
+type stMinMaxInfo struct {
+	ptReserved   stPoint
+	maxSize      stPoint
+	maxPosition  stPoint
+	minTrackSize stPoint
+	maxTrackSize stPoint
 }
 
 func (typ *suMinMaxInfo) structToOb(p unsafe.Pointer) Value {
-	mmi := (*MINMAXINFO)(p)
+	mmi := (*stMinMaxInfo)(p)
 	ob := &SuObject{}
 	ob.Put(nil, SuStr("maxSize"), pointToOb(&mmi.maxSize, nil))
 	ob.Put(nil, SuStr("maxPosition"), pointToOb(&mmi.maxPosition, nil))
@@ -173,7 +175,7 @@ func (typ *suMinMaxInfo) structToOb(p unsafe.Pointer) Value {
 }
 
 func (typ *suMinMaxInfo) updateStruct(ob Value, p unsafe.Pointer) {
-	mmi := (*MINMAXINFO)(p)
+	mmi := (*stMinMaxInfo)(p)
 	mmi.maxSize = getPoint(ob, "maxSize")
 	mmi.maxPosition = getPoint(ob, "maxPosition")
 	mmi.minTrackSize = getPoint(ob, "minTrackSize")
@@ -182,24 +184,25 @@ func (typ *suMinMaxInfo) updateStruct(ob Value, p unsafe.Pointer) {
 
 //-------------------------------------------------------------------
 
-type NMHDR struct {
+type stNMHdr struct {
 	hwndFrom uintptr
 	idFrom   uintptr
 	code     int32
 	_        [4]byte // padding
 }
 
-var _ = builtin1("NMHDR(address)",
-	func(a Value) Value {
-		adr := ToInt(a)
-		if adr == 0 {
-			return False
-		}
-		nmh := (*NMHDR)(unsafe.Pointer(uintptr(adr)))
-		return nmhdrToOb(nmh)
-	})
+var _ = builtin(NMHDR, "(address)")
 
-func nmhdrToOb(nmh *NMHDR) *SuObject {
+func NMHDR(a Value) Value {
+	adr := ToInt(a)
+	if adr == 0 {
+		return False
+	}
+	nmh := (*stNMHdr)(unsafe.Pointer(uintptr(adr)))
+	return nmhdrToOb(nmh)
+}
+
+func nmhdrToOb(nmh *stNMHdr) *SuObject {
 	ob := &SuObject{}
 	ob.Put(nil, SuStr("hwndFrom"), IntVal(int(nmh.hwndFrom)))
 	ob.Put(nil, SuStr("idFrom"), IntVal(int(nmh.idFrom)))
@@ -209,28 +212,29 @@ func nmhdrToOb(nmh *NMHDR) *SuObject {
 
 //-------------------------------------------------------------------
 
-type NMTVDISPINFO struct {
-	nmhdr NMHDR
-	item  TVITEM
+type stNMTVDispInfo struct {
+	nmhdr stNMHdr
+	item  stTVItem
 }
 
-var _ = builtin1("NMTVDISPINFO(address)",
-	func(a Value) Value {
-		adr := ToInt(a)
-		if adr == 0 {
-			return False
-		}
-		di := (*NMTVDISPINFO)(unsafe.Pointer(uintptr(adr)))
-		ob := nmhdrToOb(&di.nmhdr)
-		ob.Put(nil, SuStr("nmhdr"), nmhdrToOb(&di.nmhdr))
-		tvi := tvitemToOb(&di.item)
-		tvi.Put(nil, SuStr("pszText"),
-			bufStrZ(unsafe.Pointer(di.item.pszText), 1024))
-		ob.Put(nil, SuStr("item"), tvi)
-		return ob
-	})
+var _ = builtin(NMTVDISPINFO, "(address)")
 
-func tvitemToOb(tvi *TVITEM) *SuObject {
+func NMTVDISPINFO(a Value) Value {
+	adr := ToInt(a)
+	if adr == 0 {
+		return False
+	}
+	di := (*stNMTVDispInfo)(unsafe.Pointer(uintptr(adr)))
+	ob := nmhdrToOb(&di.nmhdr)
+	ob.Put(nil, SuStr("nmhdr"), nmhdrToOb(&di.nmhdr))
+	tvi := tvitemToOb(&di.item)
+	tvi.Put(nil, SuStr("pszText"),
+		bufStrZ(unsafe.Pointer(di.item.pszText), 1024))
+	ob.Put(nil, SuStr("item"), tvi)
+	return ob
+}
+
+func tvitemToOb(tvi *stTVItem) *SuObject {
 	ob := &SuObject{}
 	ob.Put(nil, SuStr("mask"), IntVal(int(tvi.mask)))
 	ob.Put(nil, SuStr("hItem"), IntVal(int(tvi.hItem)))
@@ -248,17 +252,18 @@ func tvitemToOb(tvi *TVITEM) *SuObject {
 //-------------------------------------------------------------------
 
 var _ = Global.Builtin("NMTVDISPINFO2",
-	&suNMTVDISPINFO{callableStruct{suStructGlobal{size: int(unsafe.Sizeof(NMTVDISPINFO{})),
-		SuBuiltin: SuBuiltin{
-			BuiltinParams: BuiltinParams{ParamSpec: ParamSpec1},
-			Fn:            nmtvdispinfo}}}})
+	&suNMTVDISPINFO{callableStruct{
+		suStructGlobal{size: int(unsafe.Sizeof(stNMTVDispInfo{})),
+			SuBuiltin: SuBuiltin{
+				BuiltinParams: BuiltinParams{ParamSpec: ParamSpec1},
+				Fn:            nmtvdispinfoToOb}}}})
 
 type suNMTVDISPINFO struct {
 	callableStruct
 }
 
 func (*suNMTVDISPINFO) structToOb(p unsafe.Pointer) Value {
-	x := (*NMTVDISPINFO)(p)
+	x := (*stNMTVDispInfo)(p)
 	ob := &SuObject{}
 	ob.Put(nil, SuStr("hdr"), nmhdrToOb(&x.nmhdr))
 	ob.Put(nil, SuStr("item"), tvitemToOb(&x.item))
@@ -267,7 +272,7 @@ func (*suNMTVDISPINFO) structToOb(p unsafe.Pointer) Value {
 
 func (*suNMTVDISPINFO) updateStruct(ob Value, p unsafe.Pointer) {
 	tvi := ob.Get(nil, SuStr("item"))
-	x := (*NMTVDISPINFO)(p)
+	x := (*stNMTVDispInfo)(p)
 	x.item.mask = getUint32(tvi, "mask")
 	x.item.hItem = getUintptr(tvi, "hItem")
 	x.item.state = getUint32(tvi, "state")
@@ -279,7 +284,7 @@ func (*suNMTVDISPINFO) updateStruct(ob Value, p unsafe.Pointer) {
 	x.item.lParam = getUintptr(tvi, "lParam")
 }
 
-func nmtvdispinfo(_ *Thread, args []Value) Value {
+func nmtvdispinfoToOb(_ *Thread, args []Value) Value {
 	adr := ToInt(args[0])
 	if adr == 0 {
 		return False
@@ -291,14 +296,14 @@ func nmtvdispinfo(_ *Thread, args []Value) Value {
 //-------------------------------------------------------------------
 
 var _ = Global.Builtin("NMTTDISPINFO2",
-	&suNMTTDISPINFO{suStructGlobal{size: int(unsafe.Sizeof(NMTTDISPINFO{}))}})
+	&suNMTTDISPINFO{suStructGlobal{size: int(unsafe.Sizeof(stNMTTDispInfo{}))}})
 
 type suNMTTDISPINFO struct {
 	suStructGlobal
 }
 
 func (*suNMTTDISPINFO) structToOb(p unsafe.Pointer) Value {
-	x := (*NMTTDISPINFO)(p)
+	x := (*stNMTTDispInfo)(p)
 	ob := &SuObject{}
 	ob.Put(nil, SuStr("hdr"), nmhdrToOb(&x.hdr))
 	ob.Put(nil, SuStr("szText"), bsStrZ(x.szText[:]))
@@ -310,7 +315,7 @@ func (*suNMTTDISPINFO) structToOb(p unsafe.Pointer) Value {
 }
 
 func (*suNMTTDISPINFO) updateStruct(ob Value, p unsafe.Pointer) {
-	x := (*NMTTDISPINFO)(p)
+	x := (*stNMTTDispInfo)(p)
 	x.lpszText = getUintptr(ob, "lpszText")
 	getStrZbs(ob, "szText", x.szText[:])
 	x.hinst = getUintptr(ob, "hinst")
@@ -318,8 +323,8 @@ func (*suNMTTDISPINFO) updateStruct(ob Value, p unsafe.Pointer) {
 	x.lParam = getUintptr(ob, "lParam")
 }
 
-type NMTTDISPINFO struct {
-	hdr      NMHDR
+type stNMTTDispInfo struct {
+	hdr      stNMHdr
 	lpszText uintptr
 	szText   [80]byte
 	hinst    uintptr
@@ -329,80 +334,83 @@ type NMTTDISPINFO struct {
 
 //-------------------------------------------------------------------
 
-type NMHEADER struct {
-	hdr     NMHDR
+type stNMHeader struct {
+	hdr     stNMHdr
 	iItem   int32
 	iButton int32
-	pitem   *HDITEM
+	pitem   *stHdItem
 }
 
-var _ = builtin1("NMHEADER(address)",
-	func(a Value) Value {
-		adr := ToInt(a)
-		if adr == 0 {
-			return False
-		}
-		x := (*NMHEADER)(unsafe.Pointer(uintptr(adr)))
-		ob := &SuObject{}
-		ob.Put(nil, SuStr("hdr"), nmhdrToOb(&x.hdr))
-		ob.Put(nil, SuStr("iItem"), IntVal(int(x.iItem)))
-		ob.Put(nil, SuStr("iButton"), IntVal(int(x.iButton)))
-		if x.pitem != nil {
-			hdi := hditemToOb(x.pitem, &SuObject{})
-			hdi.Put(nil, SuStr("pszText"),
-				IntVal(int(uintptr(unsafe.Pointer(x.pitem.pszText)))))
-			ob.Put(nil, SuStr("pitem"), hdi)
-		}
-		return ob
-	})
+var _ = builtin(NMHEADER, "(address)")
+
+func NMHEADER(a Value) Value {
+	adr := ToInt(a)
+	if adr == 0 {
+		return False
+	}
+	x := (*stNMHeader)(unsafe.Pointer(uintptr(adr)))
+	ob := &SuObject{}
+	ob.Put(nil, SuStr("hdr"), nmhdrToOb(&x.hdr))
+	ob.Put(nil, SuStr("iItem"), IntVal(int(x.iItem)))
+	ob.Put(nil, SuStr("iButton"), IntVal(int(x.iButton)))
+	if x.pitem != nil {
+		hdi := hditemToOb(x.pitem, &SuObject{})
+		hdi.Put(nil, SuStr("pszText"),
+			IntVal(int(uintptr(unsafe.Pointer(x.pitem.pszText)))))
+		ob.Put(nil, SuStr("pitem"), hdi)
+	}
+	return ob
+}
 
 //-------------------------------------------------------------------
 
-type NMTREEVIEW struct {
-	hdr     NMHDR
+type stNMTreeView struct {
+	hdr     stNMHdr
 	action  int32
-	itemOld TVITEM
-	itemNew TVITEM
-	ptDrag  POINT
+	itemOld stTVItem
+	itemNew stTVItem
+	ptDrag  stPoint
 }
 
-var _ = builtin1("NMTREEVIEW(address)",
-	func(a Value) Value {
-		adr := ToInt(a)
-		if adr == 0 {
-			return False
-		}
-		x := (*NMTREEVIEW)(unsafe.Pointer(uintptr(adr)))
-		ob := &SuObject{}
-		ob.Put(nil, SuStr("hdr"), nmhdrToOb(&x.hdr))
-		ob.Put(nil, SuStr("action"), IntVal(int(x.action)))
-		ob.Put(nil, SuStr("itemOld"), tvitemToOb(&x.itemOld))
-		ob.Put(nil, SuStr("itemNew"), tvitemToOb(&x.itemNew))
-		ob.Put(nil, SuStr("ptDrag"), pointToOb(&x.ptDrag, nil))
-		return ob
-	})
+var _ = builtin(NMTREEVIEW, "(address)")
+
+func NMTREEVIEW(a Value) Value {
+	adr := ToInt(a)
+	if adr == 0 {
+		return False
+	}
+	x := (*stNMTreeView)(unsafe.Pointer(uintptr(adr)))
+	ob := &SuObject{}
+	ob.Put(nil, SuStr("hdr"), nmhdrToOb(&x.hdr))
+	ob.Put(nil, SuStr("action"), IntVal(int(x.action)))
+	ob.Put(nil, SuStr("itemOld"), tvitemToOb(&x.itemOld))
+	ob.Put(nil, SuStr("itemNew"), tvitemToOb(&x.itemNew))
+	ob.Put(nil, SuStr("ptDrag"), pointToOb(&x.ptDrag, nil))
+	return ob
+}
 
 //-------------------------------------------------------------------
 
-type NMTVKEYDOWN struct {
-	hdr   NMHDR
+type stNMTVKeyDown struct {
+	hdr   stNMHdr
 	wVKey int16
 	flags int32
 }
 
-var _ = builtin1("NMTVKEYDOWN(address)",
-	func(a Value) Value {
-		adr := ToInt(a)
-		if adr == 0 {
-			return False
-		}
-		x := (*NMTVKEYDOWN)(unsafe.Pointer(uintptr(adr)))
-		ob := &SuObject{}
-		ob.Put(nil, SuStr("hdr"), nmhdrToOb(&x.hdr))
-		ob.Put(nil, SuStr("wVKey"), IntVal(int(x.wVKey)))
-		ob.Put(nil, SuStr("flags"), IntVal(int(x.flags)))
-		return ob
-	})
+var _ = builtin(NMTVKEYDOWN, "(address)")
+
+func NMTVKEYDOWN(a Value) Value {
+	adr := ToInt(a)
+	if adr == 0 {
+		return False
+	}
+	x := (*stNMTVKeyDown)(unsafe.Pointer(uintptr(adr)))
+	ob := &SuObject{}
+	ob.Put(nil, SuStr("hdr"), nmhdrToOb(&x.hdr))
+	ob.Put(nil, SuStr("wVKey"), IntVal(int(x.wVKey)))
+	ob.Put(nil, SuStr("flags"), IntVal(int(x.flags)))
+	return ob
+}
 
 //-------------------------------------------------------------------
 
@@ -422,12 +430,12 @@ func long(_ *Thread, args []Value) Value {
 //-------------------------------------------------------------------
 
 var _ = Global.Builtin("ACCEL",
-	&callableStruct{suStructGlobal{size: int(unsafe.Sizeof(ACCEL{})),
+	&callableStruct{suStructGlobal{size: int(unsafe.Sizeof(stAccel{})),
 		SuBuiltin: SuBuiltin{
 			BuiltinParams: BuiltinParams{ParamSpec: ParamSpec1},
 			Fn:            accel}}})
 
-type ACCEL struct {
+type stAccel struct {
 	fVirt byte
 	pad   byte
 	key   int16
@@ -441,7 +449,7 @@ func accel(_ *Thread, args []Value) Value {
 		if a == 0 {
 			return False
 		}
-		ac := (*ACCEL)(unsafe.Pointer(uintptr(a)))
+		ac := (*stAccel)(unsafe.Pointer(uintptr(a)))
 		ob := &SuObject{}
 		ob.Put(nil, SuStr("fVirt"), IntVal(int(ac.fVirt)))
 		ob.Put(nil, SuStr("pad"), IntVal(int(ac.pad)))
@@ -450,7 +458,7 @@ func accel(_ *Thread, args []Value) Value {
 		return ob
 	}
 	// else ob => string
-	ac := ACCEL{
+	ac := stAccel{
 		fVirt: byte(getInt(arg, "fVirt")),
 		pad:   byte(getInt(arg, "pad")),
 		key:   int16(getInt(arg, "key")),
@@ -461,8 +469,8 @@ func accel(_ *Thread, args []Value) Value {
 
 //-------------------------------------------------------------------
 
-type SCNotification struct {
-	nmhdr                NMHDR
+type stSCNotification struct {
+	nmhdr                stNMHdr
 	position             int
 	ch                   int32
 	modifiers            int32
@@ -486,29 +494,31 @@ type SCNotification struct {
 	listCompletionMethod int32
 }
 
-var _ = builtin1("SCNotification(address)",
-	func(a Value) Value {
-		adr := ToInt(a)
-		if adr == 0 {
-			return False
-		}
-		scn := (*SCNotification)(unsafe.Pointer(uintptr(adr)))
-		return scnToOb(scn)
-	})
+var _ = builtin(SCNotification, "(address)")
 
-var _ = builtin1("SCNotificationText(address)",
-	func(a Value) Value {
-		adr := ToInt(a)
-		if adr == 0 {
-			return False
-		}
-		scn := (*SCNotification)(unsafe.Pointer(uintptr(adr)))
-		ob := scnToOb(scn)
-		ob.Put(nil, SuStr("text"), bufStrZ(unsafe.Pointer(scn.text), 1024))
-		return ob
-	})
+func SCNotification(a Value) Value {
+	adr := ToInt(a)
+	if adr == 0 {
+		return False
+	}
+	scn := (*stSCNotification)(unsafe.Pointer(uintptr(adr)))
+	return scnToOb(scn)
+}
 
-func scnToOb(scn *SCNotification) *SuObject {
+var _ = builtin(SCNotificationText, "(address)")
+
+func SCNotificationText(a Value) Value {
+	adr := ToInt(a)
+	if adr == 0 {
+		return False
+	}
+	scn := (*stSCNotification)(unsafe.Pointer(uintptr(adr)))
+	ob := scnToOb(scn)
+	ob.Put(nil, SuStr("text"), bufStrZ(unsafe.Pointer(scn.text), 1024))
+	return ob
+}
+
+func scnToOb(scn *stSCNotification) *SuObject {
 	ob := nmhdrToOb(&scn.nmhdr)
 	ob.Put(nil, SuStr("position"), IntVal(int(scn.position)))
 	ob.Put(nil, SuStr("ch"), IntVal(int(scn.ch)))
@@ -534,7 +544,7 @@ func scnToOb(scn *SCNotification) *SuObject {
 
 //-------------------------------------------------------------------
 
-type DRAWITEMSTRUCT struct {
+type stDrawItemStruct struct {
 	CtlType    int32
 	CtlID      int32
 	itemID     int32
@@ -542,68 +552,71 @@ type DRAWITEMSTRUCT struct {
 	itemState  int32
 	hwndItem   uintptr
 	hDC        uintptr
-	rcItem     RECT
+	rcItem     stRect
 	itemData   uintptr
 }
 
-var _ = builtin1("DRAWITEMSTRUCT(address)",
-	func(a Value) Value {
-		adr := ToInt(a)
-		if adr == 0 {
-			return False
-		}
-		dis := (*DRAWITEMSTRUCT)(unsafe.Pointer(uintptr(adr)))
-		ob := &SuObject{}
-		ob.Put(nil, SuStr("CtlType"), IntVal(int(dis.CtlType)))
-		ob.Put(nil, SuStr("CtlID"), IntVal(int(dis.CtlID)))
-		ob.Put(nil, SuStr("itemID"), IntVal(int(dis.itemID)))
-		ob.Put(nil, SuStr("itemAction"), IntVal(int(dis.itemAction)))
-		ob.Put(nil, SuStr("itemState"), IntVal(int(dis.itemState)))
-		ob.Put(nil, SuStr("hwndItem"), IntVal(int(dis.hwndItem)))
-		ob.Put(nil, SuStr("hDC"), IntVal(int(dis.hDC)))
-		ob.Put(nil, SuStr("rcItem"), rectToOb(&dis.rcItem, nil))
-		ob.Put(nil, SuStr("itemData"), IntVal(int(dis.itemData)))
-		return ob
-	})
+var _ = builtin(DRAWITEMSTRUCT, "(address)")
+
+func DRAWITEMSTRUCT(a Value) Value {
+	adr := ToInt(a)
+	if adr == 0 {
+		return False
+	}
+	dis := (*stDrawItemStruct)(unsafe.Pointer(uintptr(adr)))
+	ob := &SuObject{}
+	ob.Put(nil, SuStr("CtlType"), IntVal(int(dis.CtlType)))
+	ob.Put(nil, SuStr("CtlID"), IntVal(int(dis.CtlID)))
+	ob.Put(nil, SuStr("itemID"), IntVal(int(dis.itemID)))
+	ob.Put(nil, SuStr("itemAction"), IntVal(int(dis.itemAction)))
+	ob.Put(nil, SuStr("itemState"), IntVal(int(dis.itemState)))
+	ob.Put(nil, SuStr("hwndItem"), IntVal(int(dis.hwndItem)))
+	ob.Put(nil, SuStr("hDC"), IntVal(int(dis.hDC)))
+	ob.Put(nil, SuStr("rcItem"), rectToOb(&dis.rcItem, nil))
+	ob.Put(nil, SuStr("itemData"), IntVal(int(dis.itemData)))
+	return ob
+}
 
 //-------------------------------------------------------------------
 
-var _ = builtin1("MSG(address)",
-	func(a Value) Value {
-		adr := ToInt(a)
-		if adr == 0 {
-			return False
-		}
-		msg := (*MSG)(unsafe.Pointer(uintptr(adr)))
-		ob := &SuObject{}
-		ob.Put(nil, SuStr("hwnd"), IntVal(int(msg.hwnd)))
-		ob.Put(nil, SuStr("message"), IntVal(int(msg.message)))
-		ob.Put(nil, SuStr("wParam"), IntVal(int(msg.wParam)))
-		ob.Put(nil, SuStr("lParam"), IntVal(int(msg.lParam)))
-		ob.Put(nil, SuStr("time"), IntVal(int(msg.time)))
-		ob.Put(nil, SuStr("pt"), pointToOb(&msg.pt, nil))
-		return ob
-	})
+var _ = builtin(MSG, "(address)")
+
+func MSG(a Value) Value {
+	adr := ToInt(a)
+	if adr == 0 {
+		return False
+	}
+	msg := (*stMsg)(unsafe.Pointer(uintptr(adr)))
+	ob := &SuObject{}
+	ob.Put(nil, SuStr("hwnd"), IntVal(int(msg.hwnd)))
+	ob.Put(nil, SuStr("message"), IntVal(int(msg.message)))
+	ob.Put(nil, SuStr("wParam"), IntVal(int(msg.wParam)))
+	ob.Put(nil, SuStr("lParam"), IntVal(int(msg.lParam)))
+	ob.Put(nil, SuStr("time"), IntVal(int(msg.time)))
+	ob.Put(nil, SuStr("pt"), pointToOb(&msg.pt, nil))
+	return ob
+}
 
 //-------------------------------------------------------------------
 
-var _ = builtin1("CWPRETSTRUCT(address)",
-	func(a Value) Value {
-		adr := ToInt(a)
-		if adr == 0 {
-			return False
-		}
-		x := (*CWPRETSTRUCT)(unsafe.Pointer(uintptr(adr)))
-		ob := &SuObject{}
-		ob.Put(nil, SuStr("lResult"), IntVal(int(x.lResult)))
-		ob.Put(nil, SuStr("lParam"), IntVal(int(x.lParam)))
-		ob.Put(nil, SuStr("wParam"), IntVal(int(x.wParam)))
-		ob.Put(nil, SuStr("message"), IntVal(int(x.message)))
-		ob.Put(nil, SuStr("hwnd"), IntVal(int(x.hwnd)))
-		return ob
-	})
+var _ = builtin(CWPRETSTRUCT, "(address)")
 
-type CWPRETSTRUCT struct {
+func CWPRETSTRUCT(a Value) Value {
+	adr := ToInt(a)
+	if adr == 0 {
+		return False
+	}
+	x := (*stCWPRetStruct)(unsafe.Pointer(uintptr(adr)))
+	ob := &SuObject{}
+	ob.Put(nil, SuStr("lResult"), IntVal(int(x.lResult)))
+	ob.Put(nil, SuStr("lParam"), IntVal(int(x.lParam)))
+	ob.Put(nil, SuStr("wParam"), IntVal(int(x.wParam)))
+	ob.Put(nil, SuStr("message"), IntVal(int(x.message)))
+	ob.Put(nil, SuStr("hwnd"), IntVal(int(x.hwnd)))
+	return ob
+}
+
+type stCWPRetStruct struct {
 	lResult uintptr
 	lParam  uintptr
 	wParam  uintptr
@@ -613,79 +626,81 @@ type CWPRETSTRUCT struct {
 
 //-------------------------------------------------------------------
 
-var _ = builtin1("NMLVDISPINFO(address)",
-	func(a Value) Value {
-		adr := ToInt(a)
-		if adr == 0 {
-			return False
-		}
-		x := (*NMLVDISPINFO)(unsafe.Pointer(uintptr(adr)))
-		ob := &SuObject{}
-		ob.Put(nil, SuStr("hdr"), nmhdrToOb(&x.hdr))
-		item := &SuObject{}
-		item.Put(nil, SuStr("mask"), IntVal(int(x.item.mask)))
-		item.Put(nil, SuStr("iItem"), IntVal(int(x.item.iItem)))
-		item.Put(nil, SuStr("iSubItem"), IntVal(int(x.item.iSubItem)))
-		item.Put(nil, SuStr("state"), IntVal(int(x.item.state)))
-		item.Put(nil, SuStr("stateMask"), IntVal(int(x.item.stateMask)))
-		item.Put(nil, SuStr("pszText"),
-			IntVal(int(uintptr(unsafe.Pointer(x.item.pszText)))))
-		item.Put(nil, SuStr("cchTextMax"), IntVal(int(x.item.cchTextMax)))
-		item.Put(nil, SuStr("iImage"), IntVal(int(x.item.iImage)))
-		item.Put(nil, SuStr("lParam"), IntVal(int(x.item.lParam)))
-		item.Put(nil, SuStr("iIndent"), IntVal(int(x.item.iIndent)))
-		ob.Put(nil, SuStr("item"), item)
-		return ob
-	})
+var _ = builtin(NMLVDISPINFO, "(address)")
 
-type NMLVDISPINFO struct {
-	hdr  NMHDR
-	item LVITEM
+func NMLVDISPINFO(a Value) Value {
+	adr := ToInt(a)
+	if adr == 0 {
+		return False
+	}
+	x := (*stNMLVDispInfo)(unsafe.Pointer(uintptr(adr)))
+	ob := &SuObject{}
+	ob.Put(nil, SuStr("hdr"), nmhdrToOb(&x.hdr))
+	item := &SuObject{}
+	item.Put(nil, SuStr("mask"), IntVal(int(x.item.mask)))
+	item.Put(nil, SuStr("iItem"), IntVal(int(x.item.iItem)))
+	item.Put(nil, SuStr("iSubItem"), IntVal(int(x.item.iSubItem)))
+	item.Put(nil, SuStr("state"), IntVal(int(x.item.state)))
+	item.Put(nil, SuStr("stateMask"), IntVal(int(x.item.stateMask)))
+	item.Put(nil, SuStr("pszText"),
+		IntVal(int(uintptr(unsafe.Pointer(x.item.pszText)))))
+	item.Put(nil, SuStr("cchTextMax"), IntVal(int(x.item.cchTextMax)))
+	item.Put(nil, SuStr("iImage"), IntVal(int(x.item.iImage)))
+	item.Put(nil, SuStr("lParam"), IntVal(int(x.item.lParam)))
+	item.Put(nil, SuStr("iIndent"), IntVal(int(x.item.iIndent)))
+	ob.Put(nil, SuStr("item"), item)
+	return ob
+}
+
+type stNMLVDispInfo struct {
+	hdr  stNMHdr
+	item stLVItem
 }
 
 //-------------------------------------------------------------------
 
-var _ = builtin1("NMLISTVIEW(address)",
-	func(a Value) Value {
-		adr := ToInt(a)
-		if adr == 0 {
-			return False
-		}
-		x := (*NMLISTVIEW)(unsafe.Pointer(uintptr(adr)))
-		ob := &SuObject{}
-		ob.Put(nil, SuStr("hdr"), nmhdrToOb(&x.hdr))
-		ob.Put(nil, SuStr("iItem"), IntVal(int(x.iItem)))
-		ob.Put(nil, SuStr("iSubItem"), IntVal(int(x.iSubItem)))
-		ob.Put(nil, SuStr("uNewState"), IntVal(int(x.uNewState)))
-		ob.Put(nil, SuStr("uOldState"), IntVal(int(x.uOldState)))
-		ob.Put(nil, SuStr("uChanged"), IntVal(int(x.uChanged)))
-		ob.Put(nil, SuStr("ptAction"), pointToOb(&x.ptAction, nil))
-		ob.Put(nil, SuStr("lParam"), IntVal(int(x.lParam)))
-		return ob
-	})
+var _ = builtin(NMLISTVIEW, "(address)")
 
-type NMLISTVIEW struct {
-	hdr       NMHDR
+func NMLISTVIEW(a Value) Value {
+	adr := ToInt(a)
+	if adr == 0 {
+		return False
+	}
+	x := (*stNMListView)(unsafe.Pointer(uintptr(adr)))
+	ob := &SuObject{}
+	ob.Put(nil, SuStr("hdr"), nmhdrToOb(&x.hdr))
+	ob.Put(nil, SuStr("iItem"), IntVal(int(x.iItem)))
+	ob.Put(nil, SuStr("iSubItem"), IntVal(int(x.iSubItem)))
+	ob.Put(nil, SuStr("uNewState"), IntVal(int(x.uNewState)))
+	ob.Put(nil, SuStr("uOldState"), IntVal(int(x.uOldState)))
+	ob.Put(nil, SuStr("uChanged"), IntVal(int(x.uChanged)))
+	ob.Put(nil, SuStr("ptAction"), pointToOb(&x.ptAction, nil))
+	ob.Put(nil, SuStr("lParam"), IntVal(int(x.lParam)))
+	return ob
+}
+
+type stNMListView struct {
+	hdr       stNMHdr
 	iItem     int32
 	iSubItem  int32
 	uNewState int32
 	uOldState int32
 	uChanged  int32
-	ptAction  POINT
+	ptAction  stPoint
 	lParam    uintptr
 }
 
 //-------------------------------------------------------------------
 
 var _ = Global.Builtin("NMDAYSTATE",
-	&suNMDAYSTATE{suStructGlobal{size: int(unsafe.Sizeof(NMDAYSTATE{}))}})
+	&suNMDAYSTATE{suStructGlobal{size: int(unsafe.Sizeof(stNMDayState{}))}})
 
 type suNMDAYSTATE struct {
 	suStructGlobal
 }
 
 func (*suNMDAYSTATE) structToOb(p unsafe.Pointer) Value {
-	x := (*NMDAYSTATE)(p)
+	x := (*stNMDayState)(p)
 	ob := &SuObject{}
 	ob.Put(nil, SuStr("stStart"), SYSTEMTIMEtoOb(&x.stStart, &SuObject{}))
 	ob.Put(nil, SuStr("cDayState"), IntVal(int(x.cDayState)))
@@ -693,14 +708,14 @@ func (*suNMDAYSTATE) structToOb(p unsafe.Pointer) Value {
 }
 
 func (*suNMDAYSTATE) updateStruct(ob Value, p unsafe.Pointer) {
-	x := (*NMDAYSTATE)(p)
+	x := (*stNMDayState)(p)
 	x.stStart = obToSYSTEMTIME(ob.Get(nil, SuStr("stStart")))
 	x.cDayState = getInt32(ob, "cDayState")
 }
 
-type NMDAYSTATE struct {
-	nmhdr       NMHDR
-	stStart     SYSTEMTIME
+type stNMDayState struct {
+	nmhdr       stNMHdr
+	stStart     stSystemTime
 	cDayState   int32
 	prgDayState uintptr
 }
@@ -708,7 +723,7 @@ type NMDAYSTATE struct {
 //-------------------------------------------------------------------
 
 var _ = Global.Builtin("BITMAPFILEHEADER",
-	&callableStruct{suStructGlobal{size: int(nBITMAPFILEHEADER),
+	&callableStruct{suStructGlobal{size: int(nBitMapFileHeader),
 		SuBuiltin: SuBuiltin{
 			BuiltinParams: BuiltinParams{ParamSpec: ParamSpec1},
 			Fn:            bmfh}}})
@@ -719,7 +734,7 @@ func bmfh(_ *Thread, args []Value) Value {
 	binary.Write(&buf, binary.LittleEndian, getInt32(args[0], "bfSize"))
 	binary.Write(&buf, binary.LittleEndian, int32(0)) // reserved
 	binary.Write(&buf, binary.LittleEndian, getInt32(args[0], "bfOffBits"))
-	assert.That(buf.Len() == nBITMAPFILEHEADER)
+	assert.That(buf.Len() == nBitMapFileHeader)
 	return SuStr(buf.String())
 }
 
@@ -732,24 +747,24 @@ func bmfh(_ *Thread, args []Value) Value {
 // 	bfOffBits   int32
 // }
 
-const nBITMAPFILEHEADER = 14
+const nBitMapFileHeader = 14
 
 //-------------------------------------------------------------------
 
 var _ = Global.Builtin("BITMAPINFOHEADER",
-	&callableStruct{suStructGlobal{size: int(nBITMAPINFOHEADER),
+	&callableStruct{suStructGlobal{size: int(nBitMapInfoHeader),
 		SuBuiltin: SuBuiltin{
 			BuiltinParams: BuiltinParams{ParamSpec: ParamSpec1},
 			Fn:            bmih}}})
 
 func bmih(_ *Thread, args []Value) Value {
 	bmih := obToBMIH(args[0])
-	return bufStrN(unsafe.Pointer(&bmih), nBITMAPINFOHEADER)
+	return bufStrN(unsafe.Pointer(&bmih), nBitMapInfoHeader)
 }
 
-func obToBMIH(hdr Value) BITMAPINFOHEADER {
-	return BITMAPINFOHEADER{
-		biSize:          int32(nBITMAPINFOHEADER),
+func obToBMIH(hdr Value) stBitMapInfoHeader {
+	return stBitMapInfoHeader{
+		biSize:          int32(nBitMapInfoHeader),
 		biWidth:         getInt32(hdr, "biWidth"),
 		biHeight:        getInt32(hdr, "biHeight"),
 		biPlanes:        getInt16(hdr, "biPlanes"),
@@ -768,59 +783,59 @@ func obToBMIH(hdr Value) BITMAPINFOHEADER {
 func _() {
 	var x [1]struct{}
 	// generated by Visual C++ x64 (ascii A versions, not wide W versions)
-	_ = x[unsafe.Sizeof(ACCEL{})-6]
-	_ = x[unsafe.Sizeof(BITMAP{})-32]
-	_ = x[unsafe.Sizeof(BITMAPINFOHEADER{})-40]
-	_ = x[unsafe.Sizeof(BROWSEINFO{})-64]
-	_ = x[unsafe.Sizeof(CHARRANGE{})-8]
-	_ = x[unsafe.Sizeof(CHOOSECOLOR{})-72]
-	_ = x[unsafe.Sizeof(CHOOSEFONT{})-104]
-	_ = x[unsafe.Sizeof(CWPRETSTRUCT{})-40]
-	_ = x[unsafe.Sizeof(DOCINFO{})-40]
-	_ = x[unsafe.Sizeof(DRAWITEMSTRUCT{})-64]
-	_ = x[unsafe.Sizeof(DRAWTEXTPARAMS{})-20]
-	_ = x[unsafe.Sizeof(EDITBALLOONTIP{})-32]
-	_ = x[unsafe.Sizeof(FIXED{})-4]
-	_ = x[unsafe.Sizeof(FLASHWINFO{})-32]
-	_ = x[unsafe.Sizeof(GLYPHMETRICS{})-20]
+	_ = x[unsafe.Sizeof(stAccel{})-6]
+	_ = x[unsafe.Sizeof(stBitMap{})-32]
+	_ = x[unsafe.Sizeof(stBitMapInfoHeader{})-40]
+	_ = x[unsafe.Sizeof(stBrowseInfo{})-64]
+	_ = x[unsafe.Sizeof(stCharRange{})-8]
+	_ = x[unsafe.Sizeof(stChooseColor{})-72]
+	_ = x[unsafe.Sizeof(stChooseFont{})-104]
+	_ = x[unsafe.Sizeof(stCWPRetStruct{})-40]
+	_ = x[unsafe.Sizeof(stDocInfo{})-40]
+	_ = x[unsafe.Sizeof(stDrawItemStruct{})-64]
+	_ = x[unsafe.Sizeof(stDrawTextParams{})-20]
+	_ = x[unsafe.Sizeof(stEditBalloonTip{})-32]
+	_ = x[unsafe.Sizeof(stFixed{})-4]
+	_ = x[unsafe.Sizeof(stFlashWInfo{})-32]
+	_ = x[unsafe.Sizeof(stGlyphMetrics{})-20]
 	_ = x[unsafe.Sizeof(GUID{})-16]
-	_ = x[unsafe.Sizeof(HDHITTESTINFO{})-16]
-	_ = x[unsafe.Sizeof(HDITEM{})-72]
-	_ = x[unsafe.Sizeof(IMAGEINFO{})-40]
-	_ = x[unsafe.Sizeof(INITCOMMONCONTROLSEX{})-8]
-	_ = x[unsafe.Sizeof(LOGBRUSH{})-16]
-	_ = x[unsafe.Sizeof(LOGFONT{})-60]
-	_ = x[unsafe.Sizeof(LVCOLUMN{})-56]
-	_ = x[unsafe.Sizeof(LVHITTESTINFO{})-24]
-	_ = x[unsafe.Sizeof(LVITEM{})-88]
-	_ = x[unsafe.Sizeof(MENUITEMINFO{})-80]
-	_ = x[unsafe.Sizeof(MINMAXINFO{})-40]
-	_ = x[unsafe.Sizeof(MSG{})-48]
-	_ = x[unsafe.Sizeof(NMDAYSTATE{})-56]
-	_ = x[unsafe.Sizeof(NMHDR{})-24]
-	_ = x[unsafe.Sizeof(NMLISTVIEW{})-64]
-	_ = x[unsafe.Sizeof(NMLVDISPINFO{})-112]
-	_ = x[unsafe.Sizeof(NMTTDISPINFO{})-136]
-	_ = x[unsafe.Sizeof(NMTVDISPINFO{})-80]
-	_ = x[unsafe.Sizeof(NOTIFYICONDATA{})-528]
-	_ = x[unsafe.Sizeof(OPENFILENAME{})-152]
-	_ = x[unsafe.Sizeof(PAGESETUPDLG{})-128]
-	_ = x[unsafe.Sizeof(PAINTSTRUCT{})-72]
-	_ = x[unsafe.Sizeof(POINT{})-8]
-	_ = x[unsafe.Sizeof(PRINTDLG{})-120]
-	_ = x[unsafe.Sizeof(RECT{})-16]
-	_ = x[unsafe.Sizeof(SCNotification{})-152]
-	_ = x[unsafe.Sizeof(SCROLLINFO{})-28]
-	_ = x[unsafe.Sizeof(SHELLEXECUTEINFO{})-112]
-	_ = x[unsafe.Sizeof(SYSTEMTIME{})-16]
-	_ = x[unsafe.Sizeof(TCITEM{})-40]
-	_ = x[unsafe.Sizeof(TEXTMETRIC{})-56]
-	_ = x[unsafe.Sizeof(TEXTRANGE{})-16]
-	_ = x[unsafe.Sizeof(TOOLINFO{})-72]
-	_ = x[unsafe.Sizeof(TPMPARAMS{})-20]
-	_ = x[unsafe.Sizeof(TRACKMOUSEEVENT{})-24]
-	_ = x[unsafe.Sizeof(TVINSERTSTRUCT{})-96]
-	_ = x[unsafe.Sizeof(TVITEM{})-56]
-	_ = x[unsafe.Sizeof(WINDOWPLACEMENT{})-44]
-	_ = x[unsafe.Sizeof(WNDCLASS{})-72]
+	_ = x[unsafe.Sizeof(stHdHitTestInfo{})-16]
+	_ = x[unsafe.Sizeof(stHdItem{})-72]
+	_ = x[unsafe.Sizeof(stImageInfo{})-40]
+	_ = x[unsafe.Sizeof(stInitCommonControlsEx{})-8]
+	_ = x[unsafe.Sizeof(stLogBrush{})-16]
+	_ = x[unsafe.Sizeof(stLogFont{})-60]
+	_ = x[unsafe.Sizeof(stLVColumn{})-56]
+	_ = x[unsafe.Sizeof(stLVHitTestInfo{})-24]
+	_ = x[unsafe.Sizeof(stLVItem{})-88]
+	_ = x[unsafe.Sizeof(stMenuItemInfo{})-80]
+	_ = x[unsafe.Sizeof(stMinMaxInfo{})-40]
+	_ = x[unsafe.Sizeof(stMsg{})-48]
+	_ = x[unsafe.Sizeof(stNMDayState{})-56]
+	_ = x[unsafe.Sizeof(stNMHdr{})-24]
+	_ = x[unsafe.Sizeof(stNMListView{})-64]
+	_ = x[unsafe.Sizeof(stNMLVDispInfo{})-112]
+	_ = x[unsafe.Sizeof(stNMTTDispInfo{})-136]
+	_ = x[unsafe.Sizeof(stNMTVDispInfo{})-80]
+	_ = x[unsafe.Sizeof(stNotifyIconData{})-528]
+	_ = x[unsafe.Sizeof(stOpenFileName{})-152]
+	_ = x[unsafe.Sizeof(stPageSetupDlg{})-128]
+	_ = x[unsafe.Sizeof(stPaintStruct{})-72]
+	_ = x[unsafe.Sizeof(stPoint{})-8]
+	_ = x[unsafe.Sizeof(stPrintDlg{})-120]
+	_ = x[unsafe.Sizeof(stRect{})-16]
+	_ = x[unsafe.Sizeof(stSCNotification{})-152]
+	_ = x[unsafe.Sizeof(stScrollInfo{})-28]
+	_ = x[unsafe.Sizeof(stShellExecuteInfo{})-112]
+	_ = x[unsafe.Sizeof(stSystemTime{})-16]
+	_ = x[unsafe.Sizeof(stTCItem{})-40]
+	_ = x[unsafe.Sizeof(stTextMetric{})-56]
+	_ = x[unsafe.Sizeof(stTextRange{})-16]
+	_ = x[unsafe.Sizeof(stToolInfo{})-72]
+	_ = x[unsafe.Sizeof(stTPMParams{})-20]
+	_ = x[unsafe.Sizeof(stTrackMouseEvent{})-24]
+	_ = x[unsafe.Sizeof(stTVInsertStruct{})-96]
+	_ = x[unsafe.Sizeof(stTVItem{})-56]
+	_ = x[unsafe.Sizeof(stWindowPlacement{})-44]
+	_ = x[unsafe.Sizeof(stWndClass{})-72]
 }

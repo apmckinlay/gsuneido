@@ -9,7 +9,9 @@ import (
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
-var _ = builtin0("ResourceCounts()", func() Value {
+var _ = builtin(ResourceCounts, "()")
+
+func ResourceCounts() Value {
 	ob := &SuObject{}
 	add(ob, "File", int(nFile.Load()))
 	add(ob, "RunPiped", int(nRunPiped.Load()))
@@ -22,7 +24,7 @@ var _ = builtin0("ResourceCounts()", func() Value {
 	add(ob, "userobj", user)
 	add(ob, "goroutines", runtime.NumGoroutine())
 	return ob
-})
+}
 
 func add(ob *SuObject, name string, n int) {
 	if n != 0 {

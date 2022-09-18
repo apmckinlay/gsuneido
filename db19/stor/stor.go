@@ -136,10 +136,6 @@ func (s *Stor) offsetToChunk(offset Offset) int {
 	return int(offset >> s.shift)
 }
 
-func (s *Stor) chunkToOffset(chunk int) Offset {
-	return uint64(chunk) << s.shift
-}
-
 // Size returns the current (allocated) size of the data.
 // The actual file size will be rounded up to the next chunk size.
 func (s *Stor) Size() uint64 {

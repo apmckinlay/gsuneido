@@ -9,10 +9,11 @@ import (
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
-var _ = builtin("Sequence(iter)",
-	func(t *Thread, args []Value) Value {
-		return NewSuSequence(&wrapIter{it: args[0], t: t})
-	})
+var _ = builtin(Sequence, "(iter)")
+
+func Sequence(t *Thread, args []Value) Value {
+	return NewSuSequence(&wrapIter{it: args[0], t: t})
+}
 
 // wrapIter adapts a Suneido iterator (a class with Next,Dup,Infinite)
 // to the runtime.Iter interface. For the reverse see SuIter.
@@ -68,43 +69,55 @@ var _ Iter = (*wrapIter)(nil)
 
 // for SuSequence
 
-func init() {
-	SequenceMethods = Methods{
-		"Copy": method0(func(this Value) Value {
-			return this.(*SuSequence).Copy()
-		}),
-		"Infinite?": method0(func(this Value) Value {
-			return SuBool(this.(*SuSequence).Infinite())
-		}),
-		"Instantiated?": method0(func(this Value) Value {
-			return SuBool(this.(*SuSequence).Instantiated())
-		}),
-		"Iter": method0(func(this Value) Value {
-			iter := this.(*SuSequence).Iter()
-			if wi, ok := iter.(*wrapIter); ok {
-				return wi.it
-			}
-			return SuIter{Iter: iter}
-		}),
-		"Join": method1("(separator='')", func(this, arg Value) Value {
-			iter := this.(*SuSequence).Iter()
-			separator := ToStr(arg)
-			sep := ""
-			var buf strings.Builder
-			for {
-				val := iter.Next()
-				if val == nil {
-					break
-				}
-				buf.WriteString(sep)
-				sep = separator
-				if s, ok := val.ToStr(); ok {
-					buf.WriteString(s)
-				} else {
-					buf.WriteString(val.String())
-				}
-			}
-			return SuStr(buf.String())
-		}),
+var _ = exportMethods(&SequenceMethods)
+
+var _ = method(seq_Copy, "()")
+
+func seq_Copy(this Value) Value {
+	return this.(*SuSequence).Copy()
+}
+
+var _ = method(seq_InfiniteQ, "()")
+
+func seq_InfiniteQ(this Value) Value {
+	return SuBool(this.(*SuSequence).Infinite())
+}
+
+var _ = method(seq_InstantiatedQ, "()")
+
+func seq_InstantiatedQ(this Value) Value {
+	return SuBool(this.(*SuSequence).Instantiated())
+}
+
+var _ = method(seq_Iter, "()")
+
+func seq_Iter(this Value) Value {
+	iter := this.(*SuSequence).Iter()
+	if wi, ok := iter.(*wrapIter); ok {
+		return wi.it
 	}
+	return SuIter{Iter: iter}
+}
+
+var _ = method(seq_Join, "(separator='')")
+
+func seq_Join(this, arg Value) Value {
+	iter := this.(*SuSequence).Iter()
+	separator := ToStr(arg)
+	sep := ""
+	var buf strings.Builder
+	for {
+		val := iter.Next()
+		if val == nil {
+			break
+		}
+		buf.WriteString(sep)
+		sep = separator
+		if s, ok := val.ToStr(); ok {
+			buf.WriteString(s)
+		} else {
+			buf.WriteString(val.String())
+		}
+	}
+	return SuStr(buf.String())
 }

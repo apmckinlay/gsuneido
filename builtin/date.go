@@ -20,11 +20,11 @@ func init() {
 	ps := params(`(string=false, pattern=false,
 		year=nil, month=nil, day=nil,
 		hour=nil, minute=nil, second=nil, millisecond=nil)`)
-	Global.Builtin("Date", &suDateGlobal{SuBuiltin{Fn: dateCallClass,
+	Global.Builtin("Date", &suDateGlobal{SuBuiltin{Fn: Date,
 		BuiltinParams: BuiltinParams{ParamSpec: ps}}})
 }
 
-func dateCallClass(_ *Thread, args []Value) Value {
+func Date(_ *Thread, args []Value) Value {
 	if args[0] != False && hasFields(args) {
 		panic("usage: Date() or Date(string [, pattern]) or " +
 			"Date(year:, month:, day:, hour:, minute:, second:)")
@@ -124,76 +124,115 @@ func (d *suDateGlobal) String() string {
 
 var msFactor = dnum.FromStr(".001")
 
-var dateStaticMethods = Methods{
-	"Begin": method0(func(Value) Value {
-		return DateFromLiteral("#17000101")
-	}),
-	"End": method0(func(Value) Value {
-		return DateFromLiteral("#30000101")
-	}),
+var dateStaticMethods = methods()
+
+var _ = method(date_Begin, "()")
+
+func date_Begin(Value) Value {
+	return DateFromLiteral("#17000101")
 }
 
-func init() {
-	DateMethods = Methods{
-		"MinusDays": method1("(date)", func(this Value, val Value) Value {
-			t1 := this.(SuDate)
-			if t2, ok := val.(SuDate); ok {
-				return IntVal(t1.MinusDays(t2))
-			}
-			panic("date.MinusDays requires date")
-		}),
-		"MinusSeconds": method1("(date)", func(this Value, val Value) Value {
-			t1 := this.(SuDate)
-			if t2, ok := val.(SuDate); ok {
-				if t1.Year()-t2.Year() >= 50 {
-					panic("date.MinusSeconds interval too large")
-				}
-				ms := t1.MinusMs(t2)
-				return SuDnum{Dnum: dnum.Mul(dnum.FromInt(ms), msFactor)}
-			}
-			panic("date.MinusSeconds requires date")
-		}),
-		"FormatEn": method1("(format)", func(this, arg Value) Value {
-			return SuStr(this.(SuDate).Format(ToStr(arg)))
-		}),
-		"GetLocalGMTBias": method0(func(this Value) Value { // should be static
-			_, offset := time.Now().Zone()
-			return IntVal(-offset / 60)
-		}),
-		"Plus": method("(years=0, months=0, days=0, "+
-			"hours=0, minutes=0, seconds=0, milliseconds=0)",
-			func(t *Thread, this Value, args []Value) Value {
-				return this.(SuDate).Plus(ToInt(args[0]), ToInt(args[1]),
-					ToInt(args[2]), ToInt(args[3]), ToInt(args[4]),
-					ToInt(args[5]), ToInt(args[6]))
-			}),
-		"WeekDay": method1("(firstDay='Sun')", func(this, arg Value) Value {
-			i := dayOfWeek(arg)
-			return IntVal(((this.(SuDate).WeekDay() - i) + 7) % 7)
-		}),
+var _ = method(date_End, "()")
 
-		"Year": method0(func(this Value) Value {
-			return IntVal(this.(SuDate).Year())
-		}),
-		"Month": method0(func(this Value) Value {
-			return IntVal(this.(SuDate).Month())
-		}),
-		"Day": method0(func(this Value) Value {
-			return IntVal(this.(SuDate).Day())
-		}),
-		"Hour": method0(func(this Value) Value {
-			return IntVal(this.(SuDate).Hour())
-		}),
-		"Minute": method0(func(this Value) Value {
-			return IntVal(this.(SuDate).Minute())
-		}),
-		"Second": method0(func(this Value) Value {
-			return IntVal(this.(SuDate).Second())
-		}),
-		"Millisecond": method0(func(this Value) Value {
-			return IntVal(this.(SuDate).Millisecond())
-		}),
+func date_End(Value) Value {
+	return DateFromLiteral("#30000101")
+}
+
+var _ = exportMethods(&DateMethods)
+
+var _ = method(date_MinusDays, "(date)")
+
+func date_MinusDays(this Value, val Value) Value {
+	t1 := this.(SuDate)
+	if t2, ok := val.(SuDate); ok {
+		return IntVal(t1.MinusDays(t2))
 	}
+	panic("date.MinusDays requires date")
+}
+
+var _ = method(date_MinusSeconds, "(date)")
+
+func date_MinusSeconds(this Value, val Value) Value {
+	t1 := this.(SuDate)
+	if t2, ok := val.(SuDate); ok {
+		if t1.Year()-t2.Year() >= 50 {
+			panic("date.MinusSeconds interval too large")
+		}
+		ms := t1.MinusMs(t2)
+		return SuDnum{Dnum: dnum.Mul(dnum.FromInt(ms), msFactor)}
+	}
+	panic("date.MinusSeconds requires date")
+}
+
+var _ = method(date_FormatEn, "(format)")
+
+func date_FormatEn(this, arg Value) Value {
+	return SuStr(this.(SuDate).Format(ToStr(arg)))
+}
+
+var _ = method(date_GetLocalGMTBias, "()")
+
+func date_GetLocalGMTBias(this Value) Value { // should be static
+	_, offset := time.Now().Zone()
+	return IntVal(-offset / 60)
+}
+
+var _ = method(date_Plus, "(years=0, months=0, days=0, "+
+	"hours=0, minutes=0, seconds=0, milliseconds=0)")
+
+func date_Plus(t *Thread, this Value, args []Value) Value {
+	return this.(SuDate).Plus(ToInt(args[0]), ToInt(args[1]),
+		ToInt(args[2]), ToInt(args[3]), ToInt(args[4]),
+		ToInt(args[5]), ToInt(args[6]))
+}
+
+var _ = method(date_WeekDay, "(firstDay='Sun')")
+
+func date_WeekDay(this, arg Value) Value {
+	i := dayOfWeek(arg)
+	return IntVal(((this.(SuDate).WeekDay() - i) + 7) % 7)
+}
+
+var _ = method(date_Year, "()")
+
+func date_Year(this Value) Value {
+	return IntVal(this.(SuDate).Year())
+}
+
+var _ = method(date_Month, "()")
+
+func date_Month(this Value) Value {
+	return IntVal(this.(SuDate).Month())
+}
+
+var _ = method(date_Day, "()")
+
+func date_Day(this Value) Value {
+	return IntVal(this.(SuDate).Day())
+}
+
+var _ = method(date_Hour, "()")
+
+func date_Hour(this Value) Value {
+	return IntVal(this.(SuDate).Hour())
+}
+
+var _ = method(date_Minute, "()")
+
+func date_Minute(this Value) Value {
+	return IntVal(this.(SuDate).Minute())
+}
+
+var _ = method(date_Second, "()")
+
+func date_Second(this Value) Value {
+	return IntVal(this.(SuDate).Second())
+}
+
+var _ = method(date_Millisecond, "()")
+
+func date_Millisecond(this Value) Value {
+	return IntVal(this.(SuDate).Millisecond())
 }
 
 func dayOfWeek(x Value) int {
@@ -211,7 +250,8 @@ func dayOfWeek(x Value) int {
 	panic("usage: date.WeekDay(day name or number)")
 }
 
-var _ = builtin0("UnixTime()",
-	func() Value {
-		return IntVal(int(time.Now().Unix()))
-	})
+var _ = builtin(UnixTime, "()")
+
+func UnixTime() Value {
+	return IntVal(int(time.Now().Unix()))
+}

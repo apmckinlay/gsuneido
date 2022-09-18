@@ -152,7 +152,7 @@ var helloOnce sync.Once
 
 func hello() []byte {
 	helloOnce.Do(func() {
-		copy(helloBuf[:], "Suneido "+builtin.Built()+"\r\n")
+		copy(helloBuf[:], "Suneido "+builtin.BuiltStr()+"\r\n")
 	})
 	return helloBuf[:]
 }

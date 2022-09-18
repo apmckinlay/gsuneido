@@ -9,8 +9,9 @@ import (
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
-var _ = builtin1("ErrorLog(string)",
-	func(arg Value) Value {
-		log.Println(ToStrOrString(arg))
-		return nil
-	})
+var _ = builtin(ErrorLog, "(string)")
+
+func ErrorLog(arg Value) Value {
+	log.Println(ToStrOrString(arg))
+	return nil
+}
