@@ -7,6 +7,7 @@ import (
 	"bytes"
 	"io"
 	"os"
+	"path/filepath"
 	"strings"
 
 	. "github.com/apmckinlay/gsuneido/runtime"
@@ -74,13 +75,14 @@ func symFile(passphrase Value, fromFile, toFile Value, f encdec) Value {
 	src, err := os.Open(ToStr(fromFile))
 	ck(err)
 	defer src.Close()
-	dst, err := os.CreateTemp(".", "su")
+	to := ToStr(toFile)
+	dst, err := os.CreateTemp(filepath.Dir(to), "su")
 	ck(err)
 	defer os.Remove(dst.Name())
 	defer dst.Close()
 	f(ToStr(passphrase), src, dst)
 	dst.Close()
-	system.RenameBak(dst.Name(), ToStr(toFile))
+	system.RenameBak(dst.Name(), to)
 	return nil
 }
 
