@@ -52,7 +52,6 @@ func main() {
 	options.BuiltDate = builtDate
 	options.Mode = mode
 	options.Parse(os.Args[1:])
-	fmt.Println("ErrlogDir", builtin.ErrlogDir())
 	if options.Action == "client" {
 		options.Errlog = builtin.ErrlogDir() + "suneido" + options.Port + ".err"
 	}
