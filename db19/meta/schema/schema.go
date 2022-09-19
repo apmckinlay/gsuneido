@@ -156,7 +156,7 @@ func (sc *Schema) IIndex(cols []string) int {
 			return i
 		}
 	}
-	panic("IIndex not found" + sc.Table + str.Join(",", cols))
+	panic("IIndex: not found: " + sc.Table + str.Join("(,)", cols))
 }
 
 func (ix *Index) Equal(iy *Index) bool {
