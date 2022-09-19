@@ -317,6 +317,15 @@ func TestFkey(t *testing.T) {
 	delete(schemas, "recur")
 	check()
 
+	doAdmin(db, "create head (a,b) key(a) key(b)")
+	schemas["head"] = "head (a,b) key(a) key(b)"
+	check()
+	doAdmin(db, "create line (c,d) key(c)")
+	doAdmin(db, "alter line create index(d) in head(b)")
+	schemas["line"] = "line (c,d) key(c) index(d) in head(b)"
+	schemas["head"] = "head (a,b) key(a) key(b) from line(d)"
+	check()
+
 	db.Check()
 	db.Close()
 	db, err = db19.OpenDbStor(store, stor.Read, false)

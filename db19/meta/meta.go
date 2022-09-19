@@ -436,6 +436,8 @@ func (*Meta) createFkeys(mu *metaUpdate, ts, ac *schema.Schema) {
 		if fk.Table == "" {
 			continue
 		}
+		tsi := ts.IIndex(idxs[i].Columns)
+		fk = &ts.Indexes[tsi].Fk
 		fkCols := fk.Columns
 		if len(fkCols) == 0 {
 			fkCols = idxs[i].Columns
@@ -456,11 +458,10 @@ func (*Meta) createFkeys(mu *metaUpdate, ts, ac *schema.Schema) {
 				}
 				found = true
 				fk.IIndex = j
-				ii := ts.IIndex(idxs[i].Columns)
 				n := len(ix.FkToHere)
 				ix.FkToHere = append(ix.FkToHere[:n:n], // copy on write
 					Fkey{Table: ac.Table,
-						Columns: idxs[i].Columns, IIndex: ii, Mode: fk.Mode})
+						Columns: idxs[i].Columns, IIndex: tsi, Mode: fk.Mode})
 			}
 		}
 		if !found {
