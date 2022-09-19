@@ -125,3 +125,11 @@ func Grow[S ~[]E, E any](s S, n int) S {
 	}
 	return append(s, make(S, n)...)
 }
+
+// With returns a copy of the list with the values appended
+func With[S ~[]E, E any](s1 S, s2 ...E) S {
+	var result = make(S, len(s1) + len(s2))
+	copy(result, s1)
+	copy(result[len(s1):], s2)
+	return result
+}

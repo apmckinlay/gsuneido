@@ -48,3 +48,20 @@ func TestReplace(t *testing.T) {
 	assert.T(t).This(Replace(list, from, to)).
 		Is([]string{"1", "2", "three", "2", "four"})
 }
+
+func TestWith(t *testing.T) {
+	var nilList []int
+	var emptyList = []int{}
+	var list1 = []int{1, 2, 3}
+	var list2 = []int{4, 5}
+
+	assert.T(t).This(With(nilList)).Is(emptyList)
+	assert.T(t).This(With(nilList, nilList...)).Is(emptyList)
+	assert.T(t).This(With(emptyList)).Is(emptyList)
+	assert.T(t).This(With(emptyList, emptyList...)).Is(emptyList)
+	assert.T(t).This(With(emptyList, list1...)).Is(list1)
+	assert.T(t).This(With(list1)).Is(list1)
+	assert.T(t).This(With(list1, 4)).Is([]int{1, 2, 3, 4})
+	assert.T(t).This(With(list1, 4, 5)).Is([]int{1, 2, 3, 4, 5})
+	assert.T(t).This(With(list1, list2...)).Is([]int{1, 2, 3, 4, 5})
+}
