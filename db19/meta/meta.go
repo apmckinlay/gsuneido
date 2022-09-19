@@ -61,7 +61,7 @@ func (m *Meta) GetRoInfo(table string) *Info {
 //lint:ignore U1000 for debugging
 func copyInfo(ti *Info) *Info {
 	cp := *ti
-	cp.Indexes = append(cp.Indexes[:0:0], cp.Indexes...) // copy
+	cp.Indexes = slices.Clone(cp.Indexes)
 	for i, ov := range cp.Indexes {
 		cp.Indexes[i] = ov.Copy()
 	}
@@ -81,7 +81,7 @@ func (m *Meta) GetRwInfo(table string) *Info {
 	ti.origSize = ti.Size
 
 	// set up index overlays
-	ti.Indexes = append(ti.Indexes[:0:0], ti.Indexes...) // copy
+	ti.Indexes = slices.Clone(ti.Indexes)
 	for i := range ti.Indexes {
 		ti.Indexes[i] = ti.Indexes[i].Mutable()
 	}
@@ -391,7 +391,7 @@ func createColumns(ts *Schema, cols []string) {
 	if len(existing) > 0 {
 		panic("can't create existing column(s): " + str.Join(", ", existing))
 	}
-	ts.Columns = append(slices.Clip(ts.Columns), cols...)
+	ts.Columns = slc.With(ts.Columns, cols...)
 }
 
 func createDerived(ts *Schema, cols []string) {
@@ -399,7 +399,7 @@ func createDerived(ts *Schema, cols []string) {
 	if len(existing) > 0 {
 		panic("can't create existing column(s): " + str.Join(", ", existing))
 	}
-	ts.Derived = append(slices.Clip(ts.Derived), cols...)
+	ts.Derived = slc.With(ts.Derived, cols...)
 }
 
 // createIndexes appends the new indexes to ts.Indexes
@@ -408,7 +408,7 @@ func createIndexes(ts *Schema, ti *Info, idxs []schema.Index, store *stor.Stor) 
 	if len(idxs) == 0 {
 		return
 	}
-	ts.Indexes = slices.Clip(ts.Indexes)
+	ts.Indexes = slices.Clip(ts.Indexes) // copy on write
 	for i := range idxs {
 		ix := &idxs[i]
 		if ts.FindIndex(ix.Columns) != nil {
@@ -448,7 +448,7 @@ func (*Meta) createFkeys(mu *metaUpdate, ts, ac *schema.Schema) {
 				ac.Table + " -> " + fk.Table)
 		}
 		found := false
-		target.Indexes = append(target.Indexes[:0:0], target.Indexes...) // copy
+		target.Indexes = slices.Clone(target.Indexes)
 		for j := range target.Indexes {
 			ix := &target.Indexes[j]
 			if slices.Equal(fkCols, ix.Columns) {
@@ -458,8 +458,7 @@ func (*Meta) createFkeys(mu *metaUpdate, ts, ac *schema.Schema) {
 				}
 				found = true
 				fk.IIndex = j
-				n := len(ix.FkToHere)
-				ix.FkToHere = append(ix.FkToHere[:n:n], // copy on write
+				ix.FkToHere = slc.With(ix.FkToHere,
 					Fkey{Table: ac.Table,
 						Columns: idxs[i].Columns, IIndex: tsi, Mode: fk.Mode})
 			}
@@ -486,11 +485,11 @@ func updateFkeysIIndex(mu *metaUpdate, sch *schema.Schema) {
 
 func updateOtherFkToHere(mu *metaUpdate, table string, fk *Fkey, iindex int) {
 	ts := mu.getSchema(fk.Table)
-	ts.Indexes = append(ts.Indexes[:0:0], ts.Indexes...) // copy
+	ts.Indexes = slices.Clone(ts.Indexes)
 	for i := range ts.Indexes {
 		ix := &ts.Indexes[i]
 		for j := range ix.FkToHere {
-			ix.FkToHere = append(ix.FkToHere[:0:0], ix.FkToHere...) // copy
+			ix.FkToHere = slices.Clone(ix.FkToHere)
 			fk2 := &ix.FkToHere[j]
 			if fk2.Table == table && slices.Equal(ix.Columns, fk.Columns) {
 				fk2.IIndex = iindex
@@ -502,7 +501,7 @@ func updateOtherFkToHere(mu *metaUpdate, table string, fk *Fkey, iindex int) {
 
 func updateOtherFk(mu *metaUpdate, table string, fk *Fkey, iindex int) {
 	ts := mu.getSchema(fk.Table)
-	ts.Indexes = append(ts.Indexes[:0:0], ts.Indexes...) // copy
+	ts.Indexes = slices.Clone(ts.Indexes)
 	for i := range ts.Indexes {
 		ix := &ts.Indexes[i]
 		if ix.Fk.Table == table && slices.Equal(ix.Columns, fk.Columns) {
@@ -648,7 +647,7 @@ func (m *Meta) dropFkeys(mu *metaUpdate, drop *schema.Schema) {
 			continue
 		}
 		target := *t                                                     // copy
-		target.Indexes = append(target.Indexes[:0:0], target.Indexes...) // copy
+		target.Indexes = slices.Clone(target.Indexes)
 		for j := range target.Indexes {
 			ix := &target.Indexes[j]
 			if slices.Equal(fkCols, ix.Columns) {
@@ -686,7 +685,7 @@ func (m *Meta) TouchTable(table string) *Meta {
 // TouchIndexes is for tests
 func (m *Meta) TouchIndexes(table string) *Meta {
 	schema := *m.GetRoSchema(table)                                  // copy
-	schema.Indexes = append(schema.Indexes[:0:0], schema.Indexes...) // copy
+	schema.Indexes = slices.Clone(schema.Indexes)
 	mu := newMetaUpdate(m)
 	mu.putSchema(&schema)
 	return mu.freeze()

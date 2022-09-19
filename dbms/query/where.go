@@ -173,8 +173,7 @@ func (w *Where) Transform() Query {
 	case *Where:
 		// combine consecutive where's
 		for {
-			n := len(q.expr.Exprs)
-			exprs := append(q.expr.Exprs[:n:n], w.expr.Exprs...) // copy on write
+			exprs := slc.With(q.expr.Exprs, w.expr.Exprs...)
 			w.expr = &ast.Nary{Tok: tok.And, Exprs: exprs}
 			w.source = q.source
 			if q, _ = w.source.(*Where); q == nil {

@@ -131,7 +131,7 @@ func (r *SuRecord) copyDeps() map[string][]string {
 	r.ensureDeps()
 	copy := make(map[string][]string, len(r.dependents))
 	for k, v := range r.dependents {
-		copy[k] = append(v[:0:0], v...) // copy slice
+		copy[k] = slices.Clone(v)
 	}
 	return copy
 }

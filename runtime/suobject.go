@@ -78,7 +78,7 @@ func (ob *SuObject) Copy() Container {
 func (ob *SuObject) slice(n int) *SuObject {
 	var list []Value
 	if n < len(ob.list) {
-		list = append(ob.list[:0:0], ob.list[n:]...) // copy
+		list = slices.Clone(ob.list[n:])
 	}
 	return &SuObject{defval: ob.defval, named: *ob.named.Copy(), list: list}
 }

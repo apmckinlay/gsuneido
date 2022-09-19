@@ -271,8 +271,7 @@ const sumMaxSize = 10_000
 func (su *Summarize) Header() *Header {
 	if su.wholeRow {
 		flds := su.source.Header().Fields
-		n := len(flds)
-		flds = append(flds[:n:n], su.cols)
+		flds = slc.With(flds, su.cols)
 		return NewHeader(flds, su.Columns())
 	}
 	flds := append(su.by, su.cols...)

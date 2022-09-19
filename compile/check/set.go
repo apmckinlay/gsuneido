@@ -3,6 +3,8 @@
 
 package check
 
+import "golang.org/x/exp/slices"
+
 // set is a specialized set of strings in a slice.
 // By only ever appending, we make it an immutable data structure.
 // It is designed to be used "stack-wise", added to by called functions.
@@ -80,5 +82,5 @@ func (ls set) cow() set {
 }
 
 func (ls set) copy() set {
-	return append(ls[:0:0], ls...)
+	return slices.Clone(ls)
 }

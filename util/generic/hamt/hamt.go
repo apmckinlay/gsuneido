@@ -454,8 +454,8 @@ func (c *Chain[K, E]) WriteChain(store *stor.Stor) (uint64, Chain[K, E]) {
 	c2 := Chain[K, E]{
 		Hamt:  c.Hamt,
 		Clock: c.Clock + 1,
-		Offs:  append(c.Offs[:n:n], off),    // copy
-		Ages:  append(c.Ages[:n:n], oldest), // copy
+		Offs:  slc.With(c.Offs[:n:n], off),
+		Ages:  slc.With(c.Ages[:n:n], oldest),
 	}
 	return off, c2
 }

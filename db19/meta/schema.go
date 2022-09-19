@@ -12,6 +12,7 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/generic/hamt"
+	"github.com/apmckinlay/gsuneido/util/generic/slc"
 	"github.com/apmckinlay/gsuneido/util/hash"
 	"golang.org/x/exp/slices"
 )
@@ -126,8 +127,7 @@ func (ts *Schema) Ixspecs(idxs []schema.Index) {
 		case 'k':
 			ix.Ixspec.Fields = ts.colsToFlds(ix.Columns)
 		case 'i', 'I': //TODO remove I
-			cols := slices.Clip(ix.Columns)
-			cols = append(cols, difference(key, ix.Columns)...)
+			cols := slc.With(ix.Columns, difference(key, ix.Columns)...)
 			ix.Ixspec.Fields = ts.colsToFlds(cols)
 		default:
 			panic("Ixspecs invalid mode")
