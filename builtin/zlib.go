@@ -14,7 +14,7 @@ import (
 )
 
 type suZlib struct {
-	ValueBase[suZlib]
+	staticClass[suZlib]
 }
 
 func init() {

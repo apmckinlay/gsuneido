@@ -164,3 +164,11 @@ func params(s string) ParamSpec {
 	}
 	return fn.ParamSpec
 }
+
+type staticClass[E any] struct {
+	ValueBase[E]
+}
+
+func (*staticClass[E]) SetConcurrent() {
+	// read-only so ok
+}

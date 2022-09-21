@@ -17,7 +17,7 @@ import (
 // Interface to PC*Miler DLL
 
 type suPcmsrv64 struct {
-	ValueBase[suPcmsrv64]
+	staticClass[suPcmsrv64]
 }
 
 var _ = Global.Builtin("Pcmsrv64", &suPcmsrv64{})

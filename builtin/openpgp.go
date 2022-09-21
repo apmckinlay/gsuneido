@@ -19,7 +19,7 @@ import (
 )
 
 type suOpenPGP struct {
-	ValueBase[suOpenPGP]
+	staticClass[suOpenPGP]
 }
 
 func init() {
