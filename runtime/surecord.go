@@ -120,11 +120,18 @@ func (r *SuRecord) slice(n int) *SuRecord {
 	return &SuRecord{
 		ob:         *r.ob.slice(n),
 		row:        r.row,
-		hdr:        r.hdr,
+		hdr:        r.safeHdr(),
 		userow:     r.userow,
 		status:     r.status,
 		dependents: r.copyDeps(),
 		invalid:    r.copyInvalid()}
+}
+
+func (r *SuRecord) safeHdr() *Header {
+	if r.ob.RWMayLock.concurrent {
+		return r.hdr.Dup() // Header cache not thread safe
+	}
+	return r.hdr
 }
 
 func (r *SuRecord) copyDeps() map[string][]string {
@@ -204,6 +211,7 @@ func (r *SuRecord) SetConcurrent() {
 		for _, ob := range r.observers.List {
 			ob.SetConcurrent()
 		}
+		r.hdr = r.hdr.Dup()
 	}
 }
 func (r *SuRecord) Lock() bool {

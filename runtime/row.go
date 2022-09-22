@@ -169,6 +169,13 @@ func SimpleHeader(fields []string) *Header {
 	return NewHeader([][]string{fields}, fields)
 }
 
+func (hdr *Header) Dup() *Header {
+	if hdr == nil {
+		return nil
+	}
+	return NewHeader(hdr.Fields, hdr.Columns)
+}
+
 func JoinHeaders(x, y *Header) *Header {
 	fields := make([][]string, 0, len(x.Fields)+len(y.Fields))
 	fields = append(append(fields, x.Fields...), y.Fields...)
