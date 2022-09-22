@@ -83,22 +83,24 @@ func SuRecordFromRow(row Row, hdr *Header, table string, tran *SuTran) *SuRecord
 }
 
 func (r *SuRecord) ensureDeps() {
-	if r.dependents == nil && r.row != nil {
+	if r.dependents == nil {
 		r.dependents = deps(r.row, r.hdr)
 	}
 }
 
 func deps(row Row, hdr *Header) map[string][]string {
 	dependents := map[string][]string{}
-	for _, flds := range hdr.Fields {
-		for _, f := range flds {
-			if strings.HasSuffix(f, "_deps") {
-				val := Unpack(row.GetRaw(hdr, f))
-				deps := str.Split(ToStr(val), ",")
-				f = f[:len(f)-5]
-				for _, d := range deps {
-					if !slices.Contains(dependents[d], f) {
-						dependents[d] = append(dependents[d], f)
+	if row != nil {
+		for _, flds := range hdr.Fields {
+			for _, f := range flds {
+				if strings.HasSuffix(f, "_deps") {
+					val := Unpack(row.GetRaw(hdr, f))
+					deps := str.Split(ToStr(val), ",")
+					f = f[:len(f)-5]
+					for _, d := range deps {
+						if !slices.Contains(dependents[d], f) {
+							dependents[d] = append(dependents[d], f)
+						}
 					}
 				}
 			}
@@ -657,9 +659,7 @@ func (r *SuRecord) addDependent(from, to string) {
 	if from == to {
 		return
 	}
-	if r.dependents == nil {
-		r.dependents = make(map[string][]string)
-	}
+	r.ensureDeps()
 	if !slices.Contains(r.dependents[to], from) {
 		r.trace("add dependency for", from, "uses", to)
 		r.dependents[to] = append(r.dependents[to], from)
