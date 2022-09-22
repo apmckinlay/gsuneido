@@ -3,7 +3,7 @@
 
 //go:build interactive
 
-package language
+package tests
 
 // compiles a directory tree of files
 // e.g. as exported by LibToFiles
