@@ -324,6 +324,7 @@ func getDbms() IDbms {
 var prompt = func(s string) { fmt.Fprintln(os.Stderr, s) }
 
 func repl() {
+	builtin.InheritHandles = true
 	log.SetFlags(log.Ltime)
 	log.SetPrefix("")
 

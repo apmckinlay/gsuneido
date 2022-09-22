@@ -12,6 +12,8 @@ import (
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
+var InheritHandles = false
+
 var _ = builtin(Spawn, "(@args)")
 
 func Spawn(t *Thread, as *ArgSpec, rawargs []Value) Value {
@@ -39,8 +41,10 @@ func Spawn(t *Thread, as *ArgSpec, rawargs []Value) Value {
 		cmd.Err = nil
 	}
 	cmdSetup(cmd, "")
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	if InheritHandles {
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+	}
 	err := cmd.Start()
 	if err != nil {
 		log.Println("ERROR: Spawn:", err)

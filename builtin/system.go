@@ -26,8 +26,10 @@ func System(arg Value) Value {
 	} else {
 		cmd.Args = []string{shell, flag, command}
 	}
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	if InheritHandles {
+		cmd.Stdout = os.Stdout
+		cmd.Stderr = os.Stderr
+	}
 	err := cmd.Run()
 	if err != nil {
 		if _, ok := err.(*exec.ExitError); !ok {
