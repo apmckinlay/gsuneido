@@ -46,10 +46,10 @@ type globals struct {
 }
 
 var g = globals{
-	name2num: make(map[string]Gnum),
+	name2num: map[string]Gnum{"Suneido": 1},
 	// put ""/nil in first slot so we never use gnum of zero
-	names:    []string{""},
-	values:   []Value{nil},
+	names:    []string{"", "Suneido"},
+	values:   []Value{nil, nil},
 	builtins: make(map[Gnum]Value, 100),
 	errors:   make(map[Gnum]any),
 	noDef:    make(map[string]struct{}),
@@ -58,10 +58,11 @@ var g = globals{
 const GnSuneido = 1
 
 var _ = func() int { // needs to be var, init() is run later
+	assert.This(Global.Num("Suneido")).Is(GnSuneido)
 	suneido := new(SuneidoObject)
 	suneido.SetConcurrent()
-	Global.Builtin("Suneido", suneido)
-	assert.This(Global.Num("Suneido")).Is(GnSuneido)
+	Global.Set(GnSuneido, suneido)
+	g.builtins[GnSuneido] = suneido
 	return 0
 }()
 
