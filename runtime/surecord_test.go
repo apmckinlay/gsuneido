@@ -4,6 +4,8 @@
 package runtime
 
 import (
+	"math/rand"
+	"sync"
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/runtime/types"
@@ -32,4 +34,100 @@ func TestSuRecord_ReadonlyUnpack(t *testing.T) {
 	assert.T(t).This(surec.Get(nil, SuStr("str"))).Is(SuStr("foobar"))
 	surec.SetReadOnly()
 	assert.T(t).This(surec.Get(nil, SuStr("num"))).Is(SuInt(123))
+}
+
+func TestSuRecord_Concurrency(t *testing.T) {
+	var nThreads = 8
+	var nActions = 400000
+	if testing.Short() {
+		nThreads = 4
+		nActions = 4000
+	}
+	cols := []string{"a", "b", "c", "d"}
+	randCol := func() SuStr {
+		return SuStr(cols[rand.Intn(len(cols))])
+	}
+	rb := RecordBuilder{}
+	rb.Add(randCol())
+	rb.Add(randCol())
+	row := Row{DbRec{Record: rb.Build()}}
+	getrec, setrec := func() (func() *SuRecord, func(*SuRecord)) {
+		rec := NewSuRecord()
+		rec.SetConcurrent()
+		var lock sync.Mutex
+		return func() *SuRecord {
+				lock.Lock()
+				defer lock.Unlock()
+				return rec
+			}, func(r *SuRecord) {
+				lock.Lock()
+				defer lock.Unlock()
+				rec = r
+			}
+	}()
+
+	rule := &SuBuiltinMethod{
+		Fn: func(th *Thread, this Value, _ []Value) Value {
+			switch rand.Intn(2) {
+			case 0:
+				return this.Get(th, randCol())
+			case 1:
+				this.Put(th, randCol(), SuStr(randCol()))
+			}
+			return nil
+		},
+		BuiltinParams: BuiltinParams{ParamSpec: ParamSpec0}}
+
+	var wg sync.WaitGroup
+	run := func() {
+		th := &Thread{}
+		defer wg.Done()
+		for i := 0; i < nActions; i++ {
+			switch rand.Intn(12) {
+			case 0:
+				getrec().Get(th, randCol())
+			case 1:
+				getrec().Put(th, randCol(), SuStr(randCol()))
+			case 2:
+				r := NewSuRecord()
+				r.SetConcurrent()
+				r.AttachRule(SuStr("c"), rule)
+				r.AttachRule(SuStr("d"), rule)
+				setrec(r)
+			case 3:
+				r := SuRecordFromRow(row, SimpleHeader(cols), "", nil)
+				r.SetConcurrent()
+				r.AttachRule(SuStr("c"), rule)
+				r.AttachRule(SuStr("d"), rule)
+				setrec(r)
+			case 4:
+				r := getrec().Copy().(*SuRecord)
+				r.SetConcurrent()
+				setrec(r)
+			case 5:
+				getrec().ToObject()
+			case 6:
+				getrec().Delete(th, randCol())
+			case 7:
+				getrec().Invalidate(th, string(randCol()))
+			case 8:
+				getrec().ToRecord(th, SimpleHeader(cols))
+			case 9:
+				getrec().GetDeps(string(randCol()))
+			case 10:
+				getrec().SetDeps(string(randCol()), "a,c")
+			case 11:
+				func() {
+					// ignore object-modified-during-iteration
+					defer func() { recover() }()
+					getrec().Display(th)
+				}()
+			}
+		}
+	}
+	for i := 0; i < nThreads; i++ {
+		wg.Add(1)
+		go run()
+	}
+	wg.Wait()
 }
