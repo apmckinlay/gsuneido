@@ -940,7 +940,12 @@ func (r *SuRecord) ckModify(op string) {
 	}
 }
 
+type forAddress SuRecord
+
+func (r *forAddress) String() string {
+	return fmt.Sprintf("%p", r)
+}
+
 func (r *SuRecord) trace(args ...any) {
-	// %p is the address of the record
-	trace.Records.Println(fmt.Sprintf("%p ", r), args...)
+	trace.Records.Println((*forAddress)(r), args...)
 }
