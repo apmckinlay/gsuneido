@@ -11,7 +11,7 @@ import (
 // SuClosure is an instance of a closure block
 type SuClosure struct {
 	SuFunc
-	locals     []Value
+	locals     []Value // if concurrent, then read-only
 	this       Value
 	concurrent bool
 	// parent is the Frame of the outer function that created this closure.
@@ -30,21 +30,22 @@ func (b *SuClosure) String() string {
 func (b *SuClosure) Call(t *Thread, this Value, as *ArgSpec) Value {
 	bf := &b.SuFunc
 
+	v := b.locals
+	if b.concurrent {
+		// make a mutable copy of the locals for the frame
+		v = slices.Clone(b.locals)
+	}
+
 	// normally done by SuFunc Call
 	args := t.Args(&b.ParamSpec, as)
 
 	// copy args
 	for i := 0; i < int(b.Nparams); i++ {
-		b.locals[int(bf.Offset)+i] = args[i]
+		v[int(bf.Offset)+i] = args[i]
 	}
 
 	if this == nil {
 		this = b.this
-	}
-	v := b.locals
-	if b.concurrent {
-		// make a mutable copy of the locals for the frame
-		v = slices.Clone(b.locals)
 	}
 	return t.run(Frame{fn: bf, this: this, blockParent: b.parent,
 		locals: locals{v: v, onHeap: true}})
