@@ -5,6 +5,7 @@ package runtime
 
 import (
 	"github.com/apmckinlay/gsuneido/util/assert"
+	"golang.org/x/exp/slices"
 )
 
 // Hmap implements a hash map for SuObject
@@ -316,8 +317,7 @@ func (h *Hmap) Clear() {
 // Copy returns a shallow copy of the Hmap
 func (h *Hmap) Copy() *Hmap {
 	hnew := Hmap{size: h.size, capShift: h.capShift}
-	hnew.blocks = make([]block, len(h.blocks))
-	copy(hnew.blocks, h.blocks)
+	hnew.blocks = slices.Clone(h.blocks)
 	return &hnew
 }
 

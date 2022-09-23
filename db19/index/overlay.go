@@ -11,6 +11,7 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
+	"golang.org/x/exp/slices"
 )
 
 type iter = func() (string, uint64, bool)
@@ -62,8 +63,7 @@ func (ov *Overlay) Mutable() *Overlay {
 	assert.That(ov.mut == nil)
 	assert.That(len(ov.layers) > 0)
 	assert.That(ov.layers[0] != nil)
-	layers := make([]*ixbuf.T, len(ov.layers))
-	copy(layers, ov.layers)
+	layers := slices.Clone(ov.layers)
 	assert.That(len(layers) >= 1)
 	return &Overlay{bt: ov.bt, layers: layers, mut: &ixbuf.T{}}
 }
@@ -71,8 +71,7 @@ func (ov *Overlay) Mutable() *Overlay {
 // Copy is for debugging
 func (ov *Overlay) Copy() *Overlay {
 	assert.That(ov.mut == nil)
-	layers := make([]*ixbuf.T, len(ov.layers))
-	copy(layers, ov.layers)
+	layers := slices.Clone(ov.layers)
 	assert.That(len(layers) >= 1)
 	return &Overlay{bt: ov.bt, layers: layers}
 }

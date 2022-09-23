@@ -8,6 +8,7 @@ import (
 
 	"github.com/apmckinlay/gsuneido/db19/index/ixbuf"
 	"github.com/apmckinlay/gsuneido/util/assert"
+	"golang.org/x/exp/slices"
 )
 
 // merge is one node on the current path.
@@ -221,9 +222,7 @@ func (m *merge) updateNode(key string, off uint64, get func(uint64) string) {
 
 func (m *merge) getMutableNode() node {
 	if !m.modified {
-		nd := make(node, len(m.node))
-		copy(nd, m.node)
-		m.node = nd
+		m.node = slices.Clone(m.node)
 		m.modified = true
 	}
 	return m.node

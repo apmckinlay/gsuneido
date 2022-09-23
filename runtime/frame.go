@@ -3,6 +3,8 @@
 
 package runtime
 
+import "golang.org/x/exp/slices"
+
 // Frame is the context for a function/method/block invocation.
 type Frame struct {
 	// fn is the Function being executed
@@ -35,7 +37,6 @@ func (ls *locals) moveToHeap() {
 	}
 	// not concurrent at this point
 	oldlocals := ls.v
-	ls.v = make([]Value, len(oldlocals))
-	copy(ls.v, oldlocals)
+	ls.v = slices.Clone(oldlocals)
 	ls.onHeap = true
 }

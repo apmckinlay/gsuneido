@@ -5,6 +5,7 @@ package runtime
 
 import (
 	"github.com/apmckinlay/gsuneido/runtime/types"
+	"golang.org/x/exp/slices"
 )
 
 // SuClosure is an instance of a closure block
@@ -43,8 +44,7 @@ func (b *SuClosure) Call(t *Thread, this Value, as *ArgSpec) Value {
 	v := b.locals
 	if b.concurrent {
 		// make a mutable copy of the locals for the frame
-		v = make([]Value, len(b.locals))
-		copy(v, b.locals)
+		v = slices.Clone(b.locals)
 	}
 	return t.run(Frame{fn: bf, this: this, blockParent: b.parent,
 		locals: locals{v: v, onHeap: true}})
@@ -60,8 +60,7 @@ func (b *SuClosure) SetConcurrent() {
 	}
 	b.concurrent = true
 	// make a copy of the locals - read-only since it will be shared
-	v := make([]Value, len(b.locals))
-	copy(v, b.locals)
+	v := slices.Clone(b.locals)
 	// make them concurrent
 	for _, x := range v {
 		if x != nil {

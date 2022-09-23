@@ -16,6 +16,7 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/generic/ord"
+	"golang.org/x/exp/slices"
 )
 
 type T = ixbuf
@@ -352,9 +353,7 @@ func (m *merge) flushbuf() {
 	if len(m.buf) == 0 {
 		return
 	}
-	c := make([]slot, len(m.buf))
-	copy(c, m.buf)
-	m.out = append(m.out, c)
+	m.out = append(m.out, slices.Clone(m.buf))
 	m.size += len(m.buf)
 	m.buf = m.buf[:0] // reuse buf
 }
