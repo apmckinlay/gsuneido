@@ -34,3 +34,7 @@ func (*SuExcept) Lookup(t *Thread, method string) Callable {
 	}
 	return Lookup(t, StringMethods, gnStrings, method)
 }
+
+func (e *SuExcept) SetConcurrent() {
+	e.Callstack.SetConcurrent()
+}
