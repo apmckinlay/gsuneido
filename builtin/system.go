@@ -22,7 +22,7 @@ func System(arg Value) Value {
 		cmd.Err = nil
 	}
 	if runtime.GOOS == "windows" {
-		cmdSetup(cmd, shell+" "+flag+" "+command)
+		cmdSetup(cmd, shell+" "+flag+" "+command, InheritHandles)
 	} else {
 		cmd.Args = []string{shell, flag, command}
 	}

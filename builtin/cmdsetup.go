@@ -9,5 +9,5 @@ import (
 	"os/exec"
 )
 
-func cmdSetup(*exec.Cmd, string) {
+func cmdSetup(*exec.Cmd, string, bool) {
 }

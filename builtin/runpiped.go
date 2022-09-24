@@ -34,7 +34,7 @@ func RunPiped(t *Thread, args []Value) Value {
 		cmd.Err = nil
 	}
 	if runtime.GOOS == "windows" {
-		cmdSetup(cmd, command)
+		cmdSetup(cmd, command, true)
 	} else {
 		cmd.Args = cmdargs
 	}

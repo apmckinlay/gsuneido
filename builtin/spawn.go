@@ -40,7 +40,7 @@ func Spawn(t *Thread, as *ArgSpec, rawargs []Value) Value {
 	if errors.Is(cmd.Err, exec.ErrDot) {
 		cmd.Err = nil
 	}
-	cmdSetup(cmd, "")
+	cmdSetup(cmd, "", InheritHandles)
 	if InheritHandles {
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
