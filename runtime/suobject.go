@@ -7,6 +7,7 @@ import (
 	"log"
 	"sort"
 	"strings"
+	"sync"
 
 	"github.com/apmckinlay/gsuneido/compile/lexer"
 	"github.com/apmckinlay/gsuneido/runtime/types"
@@ -37,7 +38,7 @@ type SuObject struct {
 	named  Hmap
 	list   []Value
 	defval Value
-	RWMayLock
+	rwMayLock
 	// version is incrmented by operations that change one of the sizes.
 	// i.e. not by just updating a value in-place.
 	// It is used to detect modification during iteration.
@@ -918,15 +919,20 @@ func unique(list []Value) []Value {
 	return list[:dst]
 }
 
+// SetConcurrent when readonly does not need to set shouldLock.
+// But it still needs to set its children to concurrent
+// because they may be SuRecords that require locking when readonly.
 func (ob *SuObject) SetConcurrent() {
-	ob.SetConc()
+	if !ob.concurrent {
+		ob.concurrent = true
+		if !ob.readonly {
+			ob.shouldLock = true
+		}
+		ob.SetChildConc()
+	}
 }
 
-func (ob *SuObject) SetConc() bool {
-	if ob.readonly || // don't need concurrent if readonly
-		!ob.RWMayLock.SetConc() {
-		return false
-	}
+func (ob *SuObject) SetChildConc() {
 	// recursive, deep
 	for i := 0; i < len(ob.list); i++ {
 		ob.list[i].SetConcurrent()
@@ -939,15 +945,14 @@ func (ob *SuObject) SetConc() bool {
 	if ob.defval != nil {
 		ob.defval.SetConcurrent()
 	}
-	return true
 }
 
 func (ob *SuObject) IsConcurrent() Value {
 	if ob.concurrent {
+		if !ob.shouldLock {
+			return EmptyStr
+		}
 		return True
-	}
-	if ob.readonly {
-		return EmptyStr
 	}
 	return False
 }
@@ -1137,4 +1142,55 @@ func unpackObject(s string, ob *SuObject) *SuObject {
 func unpackValue(buf *pack.Decoder) Value {
 	size := int(buf.VarUint())
 	return Unpack(buf.Get(size))
+}
+
+//-------------------------------------------------------------------
+
+// rwMayLock is similar to MayLock except that it has a read-write lock.
+type rwMayLock struct {
+	lock       sync.RWMutex
+	// concurrent is whether it's accessible to multiple goroutines
+	concurrent bool
+	// shouldLock is whether we need to lock or not.
+	// This is usually true, except for SuObjects
+	// that are already readonly when SetConcurrent is called
+	shouldLock bool
+}
+
+func (x *rwMayLock) RLock() bool {
+	if x == nil {
+		log.Fatal("Lock nil")
+	}
+	if x.shouldLock {
+		x.lock.RLock()
+		return true
+	}
+	return false
+}
+
+func (x *rwMayLock) RUnlock() bool {
+	if x.shouldLock {
+		x.lock.RUnlock()
+		return true
+	}
+	return false
+}
+
+func (x *rwMayLock) Lock() bool {
+	if x == nil {
+		log.Fatal("Lock nil")
+	}
+	if x.shouldLock {
+		x.lock.Lock()
+		return true
+	}
+	return false
+}
+
+func (x *rwMayLock) Unlock() bool {
+	if x.shouldLock {
+		x.lock.Unlock()
+		return true
+	}
+	return false
 }

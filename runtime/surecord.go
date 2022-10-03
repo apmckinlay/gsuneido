@@ -110,8 +110,8 @@ func deps(row Row, hdr *Header) map[string][]string {
 }
 
 func (r *SuRecord) Copy() Container {
-	if r.ob.Lock() {
-		defer r.ob.Unlock()
+	if r.Lock() {
+		defer r.Unlock()
 	}
 	return r.slice(0)
 }
@@ -130,7 +130,7 @@ func (r *SuRecord) slice(n int) *SuRecord {
 }
 
 func (r *SuRecord) safeHdr() *Header {
-	if r.ob.RWMayLock.concurrent {
+	if r.ob.concurrent {
 		return r.hdr.Dup() // Header cache not thread safe
 	}
 	return r.hdr
@@ -205,23 +205,38 @@ func (r *SuRecord) ToContainer() (Container, bool) {
 	return r, true
 }
 
+// SetConcurrent for SuRecord differs from SuObject.
+// Unlike SuObjct, SuRecord needs to lock when readonly
+// because it modifies dependents and hdr's cache etc.
 func (r *SuRecord) SetConcurrent() {
-	if r.ob.SetConc() {
+	if !r.ob.concurrent {
+		r.ob.concurrent = true
+		r.ob.shouldLock = true
+		// need to dup hdr because it may be shared by multiple SuRecords
+		// and because of its cache it is not readonly/threadsafe
+		r.hdr = r.hdr.Dup()
 		for _, rule := range r.attachedRules {
 			rule.SetConcurrent()
 		}
 		for _, ob := range r.observers.List {
 			ob.SetConcurrent()
 		}
-		r.hdr = r.hdr.Dup()
+		// in case an observer removes itself while active
+		for _, ao := range r.activeObservers.List {
+			ao.obs.SetConcurrent()
+		}
+		r.ob.SetChildConc()
 	}
 }
+
 func (r *SuRecord) Lock() bool {
 	return r.ob.Lock()
 }
+
 func (r *SuRecord) Unlock() bool {
 	return r.ob.Unlock()
 }
+
 func (r *SuRecord) IsConcurrent() Value {
 	return r.ob.IsConcurrent()
 }
@@ -231,8 +246,8 @@ func (r *SuRecord) IsConcurrent() Value {
 var _ Container = (*SuRecord)(nil) // includes Value and Lockable
 
 func (r *SuRecord) ToObject() *SuObject {
-	if r.ob.Lock() {
-		defer r.ob.Unlock()
+	if r.Lock() {
+		defer r.Unlock()
 	}
 	return r.toObject()
 }
@@ -265,8 +280,8 @@ func (r *SuRecord) Insert(at int, val Value) {
 }
 
 func (r *SuRecord) HasKey(key Value) bool {
-	if r.ob.Lock() {
-		defer r.ob.Unlock()
+	if r.Lock() {
+		defer r.Unlock()
 	}
 	if r.ob.hasKey(key) {
 		return true
@@ -284,16 +299,16 @@ func (r *SuRecord) Set(key, val Value) {
 }
 
 func (r *SuRecord) Clear() {
-	if r.ob.Lock() {
-		defer r.ob.Unlock()
+	if r.Lock() {
+		defer r.Unlock()
 	}
 	r.ob.mustBeMutable()
 	*r = *NewSuRecord()
 }
 
 func (r *SuRecord) DeleteAll() {
-	if r.ob.Lock() {
-		defer r.ob.Unlock()
+	if r.Lock() {
+		defer r.Unlock()
 	}
 	r.ob.deleteAll()
 	r.row = nil
@@ -357,8 +372,8 @@ func (r *SuRecord) ListGet(i int) Value {
 }
 
 func (r *SuRecord) NamedSize() int {
-	if r.ob.Lock() {
-		defer r.ob.Unlock()
+	if r.Lock() {
+		defer r.Unlock()
 	}
 	if r.userow {
 		return r.rowSize()
@@ -392,15 +407,15 @@ func (r *SuRecord) Iter2(list bool, named bool) func() (Value, Value) {
 }
 
 func (r *SuRecord) Slice(n int) Container {
-	if r.ob.Lock() {
-		defer r.ob.Unlock()
+	if r.Lock() {
+		defer r.Unlock()
 	}
 	return r.slice(n)
 }
 
 func (r *SuRecord) Iter() Iter {
-	if r.ob.Lock() {
-		defer r.ob.Unlock()
+	if r.Lock() {
+		defer r.Unlock()
 	}
 	r.toObject()
 	return &obIter{ob: &r.ob, iter: r.ob.iter2(true, true),
