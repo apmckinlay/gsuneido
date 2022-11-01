@@ -253,3 +253,11 @@ func TestIncrement(t *testing.T) {
 	assert.T(t).This(d2.time).Is(0)
 	assert.T(t).This(d2.date).Is(d.date + 1)
 }
+
+func FuzzParseDate(f *testing.F) {
+	f.Fuzz(func(t *testing.T, s string) {
+		ParseDate(s, "yMd")
+	})
+}
+
+// to run: go test -fuzz=FuzzParseDate -run=FuzzParseDate

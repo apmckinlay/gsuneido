@@ -394,15 +394,18 @@ func ParseDate(s string, order string) SuDate {
 
 	// scan
 	const MAXTOKENS = 20
-	var typ [MAXTOKENS]minmax
 	var tokens [MAXTOKENS]int
+	var typ [MAXTOKENS + 1]minmax
 	ntokens := 0
+	tok := func(t int) {
+		if ntokens < MAXTOKENS {
+			tokens[ntokens] = t
+			ntokens++
+		}
+	}
 	gotTime := false
 	var prev byte
 	for si := 0; si < len(s); {
-		if ntokens >= MAXTOKENS {
-			return NilDate
-		}
 		c := s[si]
 		next := nextWord(s, si)
 		if next != "" {
@@ -415,8 +418,7 @@ func ParseDate(s string, order string) SuDate {
 			}
 			if i < 12 {
 				typ[ntokens] = mmMonth
-				tokens[ntokens] = i + 1
-				ntokens++
+				tok(i + 1)
 			} else if next == "Am" || next == "Pm" {
 				if next[0] == 'P' {
 					if hour < 12 {
@@ -450,21 +452,17 @@ func ParseDate(s string, order string) SuDate {
 				dig := digits{next, 0}
 				if size == 6 {
 					// date with no separators with yy
-					tokens[ntokens] = dig.get(2)
-					ntokens++
-					tokens[ntokens] = dig.get(2)
-					ntokens++
-					tokens[ntokens] = dig.get(2)
-					ntokens++
+					tok(dig.get(2))
+					tok(dig.get(2))
+					tok(dig.get(2))
 				} else if size == 8 {
 					// date with no separators with yyyy
 					for i := 0; i < 3; i++ {
 						if syspat[i] == 'y' {
-							tokens[ntokens] = dig.get(4)
+							tok(dig.get(4))
 						} else {
-							tokens[ntokens] = dig.get(2)
+							tok(dig.get(2))
 						}
-						ntokens++
 					}
 				}
 				if c == '.' { // time
@@ -498,15 +496,17 @@ func ParseDate(s string, order string) SuDate {
 				}
 			} else {
 				// date
-				tokens[ntokens] = n
+				tok(n)
 				if prev == '\'' {
-					typ[ntokens] = mmYear
+					typ[ntokens-1] = mmYear
 				}
-				ntokens++
 			}
 		} else {
 			prev = c // ignore
 			si++
+		}
+		if ntokens >= MAXTOKENS {
+			return NilDate
 		}
 	}
 	if hour == NOTSET {
