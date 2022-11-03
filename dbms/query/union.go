@@ -352,7 +352,7 @@ func (u *Union) fetch1(th *Thread, dir Dir) {
 	if u.row1 == nil {
 		u.key1 = endKey(dir)
 	} else {
-		u.key1 = projectKey(u.row1, u.hdr1, u.keyIndex, th, u.st)
+		u.key1 = ixkey.Make(u.row1, u.hdr1, u.keyIndex, th, u.st)
 	}
 }
 
@@ -361,7 +361,7 @@ func (u *Union) fetch2(th *Thread, dir Dir) {
 	if u.row2 == nil {
 		u.key2 = endKey(dir)
 	} else {
-		u.key2 = projectKey(u.row2, u.hdr2, u.keyIndex, th, u.st)
+		u.key2 = ixkey.Make(u.row2, u.hdr2, u.keyIndex, th, u.st)
 	}
 }
 

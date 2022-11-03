@@ -50,6 +50,7 @@ type Encoder struct {
 
 // Add appends a field value
 func (e *Encoder) Add(fld string) {
+	cklen(len(e.buf) + len(fld))
 	if e.buf == nil {
 		e.buf = make([]byte, 0, 2*(len(fld)+2))
 	} else {
@@ -84,7 +85,9 @@ func (spec *Spec) Key(rec Record) string {
 		return ""
 	}
 	if len(fields) == 1 && len(spec.Fields2) == 0 {
-		return getRaw(rec, fields[0]) // don't need to encode single field keys
+		s := getRaw(rec, fields[0]) // don't need to encode single field keys
+		cklen(len(s))
+		return s
 	}
 	n := 0
 	lastNonEmpty := -1
@@ -107,6 +110,7 @@ func (spec *Spec) Key(rec Record) string {
 	}
 	n += 2 * len(fields) // for separators (2 bytes extra)
 	n += n / 16          // allow for some escapes
+	cklen(n)
 	buf := make([]byte, 0, n)
 	if lastNonEmpty == -1 {
 		for range fields {
@@ -120,13 +124,16 @@ func (spec *Spec) Key(rec Record) string {
 		}
 		buf = encode(buf, getRaw(rec, f))
 	}
-	if len(buf) > maxKey {
-		panic(fmt.Sprint("key too large, size ", len(buf), " limit ", maxKey))
-	}
 	return hacks.BStoS(buf)
 }
 
-const maxKey = 1024
+func cklen(n int) {
+	if n > maxKey {
+		panic(fmt.Sprint("key too large, size ", n, " exceeds ", maxKey))
+	}
+}
+
+const maxKey = 4096 // ???
 
 // Encodes returns whether the Spec requires encoding.
 func (spec *Spec) Encodes() bool {
@@ -264,4 +271,17 @@ func HasPrefix(s, prefix string) bool {
 	return sn >= pn && s[0:pn] == prefix && // byte-wise prefix
 		(sn == pn ||
 			(sn >= pn+2 && s[pn:pn+2] == Sep))
+}
+
+func Make(row Row, hdr *Header, cols []string, th *Thread, st *SuTran) string {
+	if len(cols) == 1 { // WARNING: only correct for keys
+		s := row.GetRawVal(hdr, cols[0], th, st)
+		cklen(len(s))
+		return s
+	}
+	enc := Encoder{}
+	for _, col := range cols {
+		enc.Add(row.GetRawVal(hdr, col, th, st))
+	}
+	return enc.String()
 }

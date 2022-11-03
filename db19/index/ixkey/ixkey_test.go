@@ -173,3 +173,32 @@ func TestHasPrefix(t *testing.T) {
 	assert.T(t).True(HasPrefix("foo\x00\x00bar", "foo\x00\x00bar"))
 	assert.T(t).False(HasPrefix("foo\x00\x00bar", "foo\x00\x00ba"))
 }
+
+func TestMaxKey(t *testing.T) {
+	s := strings.Repeat("x", maxKey + 1)
+	rec := mkrec(s)
+	assert.T(t).This(func() {
+		key(rec, []int{0, 1}, nil)
+	}).Panics("key too large")
+	assert.T(t).This(func() {
+		key(rec, []int{0}, nil)
+	}).Panics("key too large")
+	assert.T(t).This(func() {
+		var enc Encoder
+		enc.Add(s)
+	}).Panics("key too large")
+	assert.T(t).This(func() {
+		row := Row{DbRec{Record: rec}}
+		cols := []string{"x"}
+		hdr := SimpleHeader(cols)
+		Make(row, hdr, cols, nil, nil)
+	}).Panics("key too large")
+	assert.T(t).This(func() {
+		s := strings.Repeat("x", maxKey-1)
+		rec := mkrec(s, s)
+		row := Row{DbRec{Record: rec}}
+		cols := []string{"x", "y"}
+		hdr := SimpleHeader(cols)
+		Make(row, hdr, cols, nil, nil)
+	}).Panics("key too large")
+}

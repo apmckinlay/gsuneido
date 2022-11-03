@@ -4,6 +4,8 @@
 package query
 
 import (
+	"fmt"
+
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	. "github.com/apmckinlay/gsuneido/runtime"
@@ -128,14 +130,7 @@ func (ti *TempIndex) selected(row Row) bool {
 
 func (ti *TempIndex) rowKey(row Row) string {
 	assert.That(ti.th != nil)
-	if len(ti.order) == 1 {
-		return row.GetRawVal(ti.hdr, ti.order[0], ti.th, ti.st)
-	}
-	var enc ixkey.Encoder
-	for _, col := range ti.order {
-		enc.Add(row.GetRawVal(ti.hdr, col, ti.th, ti.st))
-	}
-	return enc.String()
+	return ixkey.Make(row, ti.hdr, ti.order, ti.th, ti.st)
 }
 
 //-------------------------------------------------------------------
@@ -237,6 +232,9 @@ type multiIter struct {
 	iter  *sortlist.Iter
 }
 
+const heapChunkSize = 16 * 1024
+const derivedMaxSize = 8 * 1024
+
 func (ti *TempIndex) multi() rowIter {
 	// sortlist uses a goroutine
 	// so UIThread must be false
@@ -246,7 +244,8 @@ func (ti *TempIndex) multi() rowIter {
 		ti.th.UIThread = prev
 	}(ti.th.UIThread)
 	ti.th.UIThread = false //
-	it := multiIter{ti: ti, nrecs: len(ti.hdr.Fields), heap: stor.HeapStor(8192)}
+	it := multiIter{ti: ti, nrecs: len(ti.hdr.Fields),
+		heap: stor.HeapStor(heapChunkSize)}
 	it.heap.Alloc(1) // avoid offset 0
 	var th2 Thread   // separate thread because sortlist runs in the background
 	b := sortlist.NewSorting(func(x, y uint64) bool {
@@ -271,6 +270,10 @@ func (ti *TempIndex) multi() rowIter {
 			if dbrec.Off == 0 { // derived record e.g. from extend or summarize
 				n += len(dbrec.Record)
 			}
+		}
+		if n > derivedMaxSize {
+			panic(fmt.Sprint("temp index: derived too large, size ", n,
+				" exceeds ", derivedMaxSize))
 		}
 		off, buf := it.heap.Alloc(n)
 		for _, dbrec := range row {

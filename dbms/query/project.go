@@ -460,7 +460,7 @@ func (p *Project) getHash(th *Thread, dir Dir) Row {
 		if row == nil {
 			break
 		}
-		key := projectKey(row, p.srcHdr, p.columns, th, p.st)
+		key := ixkey.Make(row, p.srcHdr, p.columns, th, p.st)
 		result, ok := p.results[key]
 		if !ok {
 			p.results[key] = row
@@ -482,25 +482,13 @@ func (p *Project) buildHash(th *Thread) {
 		if row == nil {
 			break
 		}
-		key := projectKey(row, p.srcHdr, p.columns, th, p.st)
+		key := ixkey.Make(row, p.srcHdr, p.columns, th, p.st)
 		if _, ok := p.results[key]; !ok {
 			p.results[key] = row
 		}
 	}
 	p.source.Rewind()
 	p.indexed = true
-}
-
-func projectKey(row Row, hdr *Header, cols []string,
-	th *Thread, st *SuTran) string {
-	if len(cols) == 1 { // WARNING: only correct for keys
-		return row.GetRawVal(hdr, cols[0], th, st)
-	}
-	enc := ixkey.Encoder{}
-	for _, col := range cols {
-		enc.Add(row.GetRawVal(hdr, col, th, st))
-	}
-	return enc.String()
 }
 
 func (p *Project) Output(th *Thread, rec Record) {
