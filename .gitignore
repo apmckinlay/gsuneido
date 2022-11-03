@@ -37,4 +37,5 @@ sign.bat
 /zapend
 gsrace
 gsport
-gslinux
+gs_darwin_amd64
+gs_linux_amd64

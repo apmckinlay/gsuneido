@@ -2,7 +2,9 @@
 BUILT=$(shell date "+%b %-d %Y %R")
 
 GO = go
-BUILD = build -buildvcs=true
+GOOS = $(shell go env GOOS)
+GOARCH = $(shell go env GOARCH)
+BUILD = build -buildvcs=true -o gs_${GOOS}_${GOARCH}
 EXE = gsuneido
 LDFLAGS = -s -w -X 'main.builtDate=${BUILT}'
 GUIFLAGS = $(LDFLAGS)
