@@ -4,6 +4,7 @@
 package runtime
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/util/pack"
@@ -213,6 +214,8 @@ func (b *RecordBuilder) Trim() *RecordBuilder {
 
 // Build
 
+const maxRecordLen = 1_000_000
+
 func (b *RecordBuilder) Build() Record {
 	var hash uint32
 	var stack packStack
@@ -227,6 +230,9 @@ func (b *RecordBuilder) Build() Record {
 		sizes[i] = v.PackSize2(&hash, stack)
 	}
 	length := b.recSize(sizes)
+	if length > maxRecordLen {
+		panic(fmt.Sprintf("record too large (%d > %d)", length, maxRecordLen))
+	}
 	buf := pack.NewEncoder(length)
 	b.build(&hash, buf, length, sizes)
 	//assert.That(len(buf.String()) == length)
