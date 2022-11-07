@@ -286,12 +286,20 @@ func openDbms() {
 		options.DbStatus.Store("starting")
 	}
 	db19.StartTimestamps()
-	db19.StartConcur(db, 10*time.Second) //1*time.Minute) //FIXME
+	db19.StartConcur(db, persistInterval())
 	dbmsLocal = dbms.NewDbmsLocal(db)
 	DbmsAuth = options.Action == "server" || mode != "gui" || !db.HaveUsers()
 	GetDbms = getDbms
 	exit.Add(db.CloseKeepMapped) // keep mapped to avoid errors during shutdown
 	// go checkState()
+}
+
+func persistInterval() time.Duration {
+	if options.Action == "server" {
+		return 20 * time.Second // FIXME should probably be bigger
+	}
+	// else standalone
+	return 10 * time.Second
 }
 
 func getDbms() IDbms {
