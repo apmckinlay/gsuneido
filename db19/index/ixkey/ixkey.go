@@ -129,7 +129,7 @@ func (spec *Spec) Key(rec Record) string {
 
 func cklen(n int) {
 	if n > maxKey {
-		panic(fmt.Sprint("key too large, size ", n, " exceeds ", maxKey))
+		panic(fmt.Sprintf("key too large (%d > %d)", n, maxKey))
 	}
 }
 

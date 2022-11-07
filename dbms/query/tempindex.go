@@ -272,8 +272,8 @@ func (ti *TempIndex) multi() rowIter {
 			}
 		}
 		if n > derivedMaxSize {
-			panic(fmt.Sprint("temp index: derived too large, size ", n,
-				" exceeds ", derivedMaxSize))
+			panic(fmt.Sprintf("temp index: derived too large (%d > %d)", n,
+				derivedMaxSize))
 		}
 		off, buf := it.heap.Alloc(n)
 		for _, dbrec := range row {
