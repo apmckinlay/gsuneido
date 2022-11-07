@@ -4,9 +4,11 @@
 package mux
 
 import (
+	"fmt"
 	"math"
 
 	"github.com/apmckinlay/gsuneido/dbms/commands"
+	"github.com/apmckinlay/gsuneido/options"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/runtime/trace"
 	"github.com/apmckinlay/gsuneido/util/assert"
@@ -94,6 +96,7 @@ const traceLimit = 100
 // PutCmd writes a command byte
 func (wb *WriteBuf) PutCmd(cmd commands.Command) *WriteBuf {
 	trace.ClientServer.Println(">", cmd)
+	wb.ResetWrite()
 	wb.Write1(byte(cmd))
 	return wb
 }
@@ -225,8 +228,13 @@ const maxio = 1024 * 1024 // 1 mb
 
 // limit checks if the size is negative or greater than maxio
 func limit(n int64) int {
-	if n < 0 || maxio < n {
-		Fatal("bad io size:", n)
+	assert.That(n >= 0)
+	if n > maxio {
+		err := fmt.Sprintf("client server io too large (%d > %d)", n, maxio)
+		if options.Action == "server" {
+			panic(err)
+		}
+		Fatal(err)
 	}
 	return int(n)
 }

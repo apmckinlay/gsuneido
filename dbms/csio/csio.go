@@ -19,7 +19,8 @@ import (
 
 const traceLimit = 100
 
-// ReadWrite handles encode/decode for the Suneido client/server protocol.
+// ReadWrite handles encode/decode for dbmsClient
+// for the old jSuneido client/server protocol.
 // It uses bufio for buffering.
 type ReadWrite struct {
 	r   *bufio.Reader
