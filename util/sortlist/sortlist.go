@@ -61,11 +61,11 @@ func (b *Builder) Add(x uint64) {
 	assert.That(x != 0)
 	if b.block == nil {
 		b.block = new(block)
-		b.i = 0
 	}
 	b.block[b.i] = x
 	b.i++
 	if b.i >= blockSize { // block full
+		b.i = 0
 		if b.done != nil {
 			// wait for worker to finish previous work
 			if err := <-b.done; err != nil {

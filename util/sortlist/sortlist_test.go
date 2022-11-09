@@ -29,6 +29,7 @@ func test(nitems int) {
 		bldr.Add(randint())
 	}
 	list := bldr.Finish()
+	assert.This(list.size).Is(nitems)
 	list.ckblocks(nitems)
 	bldr.ckblocks(nitems)
 
@@ -37,8 +38,17 @@ func test(nitems int) {
 		bldr.Add(uint64(j))
 	}
 	list = bldr.Finish()
+	assert.This(list.size).Is(nitems)
 	list.ckblocks(nitems)
 	bldr.ckblocks(nitems)
+
+	less := func(x uint64, k string) bool {
+		y, _ := strconv.Atoi(k)
+		return x < uint64(y)
+	}
+	it := list.Iter(less)
+	it.Seek("0")
+	it.Seek("9999999999")
 
 	bldr.Sort(func(x, y uint64) bool { return y < x }) // reverse
 }
@@ -106,6 +116,24 @@ func TestIterEmpty(t *testing.T) {
 	it.Rewind()
 	it.Prev()
 	assert.T(t).That(it.Eof())
+
+	it.Seek("")
+}
+
+func TestIterOne(t *testing.T) {
+	b := NewUnsorted()
+	for i := 0; i < blockSize; i++ {
+		b.Add(uint64(i+1))
+	}
+	list := b.Finish() // empty
+	less := func(x uint64, k string) bool {
+		y, _ := strconv.Atoi(k)
+		return x < uint64(y)
+	}
+	it := list.Iter(less)
+	it.Seek("0")
+	it.Seek("2222")
+	it.Seek("999999")
 }
 
 func TestIter(t *testing.T) {
