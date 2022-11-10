@@ -160,79 +160,59 @@ func (p *Project) Nrows() int {
 }
 
 func (p *Project) Transform() Query {
-	moved := false
-	for {
-		if set.Equal(p.columns, p.source.Columns()) {
-			// remove projects of all columns
-			return p.source.Transform()
-		}
-		switch q := p.source.(type) {
-		case *Project:
-			// combine projects
-			p.columns = set.Intersect(p.columns, q.columns)
-			p.source = q.source
-			continue
-		case *Rename:
-			return p.transformRename(q)
-		case *Extend:
-			if e := p.transformExtend(q); e != nil {
-				return e
-			}
-		case *Times:
-			p.splitOver(&q.Query2)
-			moved = true
-		case *Join:
-			if set.Subset(p.columns, q.by) {
-				p.splitOver(&q.Query2)
-				moved = true
-			}
-		case *LeftJoin:
-			if set.Subset(p.columns, q.by) {
-				p.splitOver(&q.Query2)
-				moved = true
-			}
-		case *Union:
-			if p.splitOver2(&q.Compatible) {
-				return p.source.Transform()
-			}
-		case *Intersect:
-			if p.splitOver2(&q.Compatible) {
-				return p.source.Transform()
-			}
-		}
-		p.source = p.source.Transform()
-		if moved {
-			return p.source
-		}
-		// propagate Nothing
-		if _, ok := p.source.(*Nothing); ok {
-			return NewNothing(p.Columns())
-		}
-		return p
+	p.source = p.source.Transform()
+	if set.Equal(p.columns, p.source.Columns()) {
+		// remove projects of all columns
+		return p.source
 	}
+	switch q := p.source.(type) {
+	case *Project:
+		// combine projects
+		p.columns = set.Intersect(p.columns, q.columns)
+		p.source = q.source
+	case *Rename:
+		return p.transformRename(q)
+	case *Extend:
+		return p.transformExtend(q)
+	case *Times:
+		return p.splitOver(&q.Query2)
+	case *Join:
+		if set.Subset(p.columns, q.by) {
+			return p.splitOver(&q.Query2)
+		}
+	case *LeftJoin:
+		if set.Subset(p.columns, q.by) {
+			return p.splitOver(&q.Query2)
+		}
+	case *Union:
+		return p.splitOver2(&q.Compatible)
+	case *Intersect:
+		return p.splitOver2(&q.Compatible)
+	case *Nothing:
+		// propagate Nothing
+		return NewNothing(p.Columns())
+	}
+	return p
 }
 
-func (p *Project) splitOver(q2 *Query2) {
+func (p *Project) splitOver(q2 *Query2) Query {
 	q2.source = NewProject(q2.source,
 		set.Intersect(p.columns, q2.source.Columns()))
 	q2.source2 = NewProject(q2.source2,
 		set.Intersect(p.columns, q2.source2.Columns()))
+	return p.source
 }
 
-func (p *Project) splitOver2(c *Compatible) bool {
+func (p *Project) splitOver2(c *Compatible) Query {
 	if c.disjoint != "" && !slices.Contains(p.columns, c.disjoint) {
-		cols := append(slices.Clone(p.columns), c.disjoint)
-		c.source = NewProject(c.source,
-			set.Intersect(cols, c.source.Columns()))
-		c.source2 = NewProject(c.source2,
-			set.Intersect(cols, c.source2.Columns()))
-		return false
+		// don't split if project doesn't include disjoint
+		return p
 	}
 	c.source = NewProject(c.source,
 		set.Intersect(p.columns, c.source.Columns()))
 	c.source2 = NewProject(c.source2,
 		set.Intersect(p.columns, c.source2.Columns()))
-	return true
+	return p.source.Transform()
 }
 
 // transformRename moves projects before renames
@@ -242,7 +222,11 @@ func (p *Project) transformRename(r *Rename) Query {
 	from := r.from
 	to := r.to
 	for i := range to {
-		if slices.Contains(p.columns, to[i]) {
+		ck := to[i]
+		if p.unique {
+			ck = strings.TrimSuffix(to[i], "_deps")
+		}
+		if slices.Contains(p.columns, ck) {
 			newFrom = append(newFrom, from[i])
 			newTo = append(newTo, to[i])
 		}
@@ -266,49 +250,69 @@ func (p *Project) transformRename(r *Rename) Query {
 	return r.Transform()
 }
 
-// transformExtend moves projects before extends
+// transformExtend tries to move projects before extends.
+// If it doesn't return nil, it must call transform on the source.
 func (p *Project) transformExtend(e *Extend) Query {
-	// remove portions of extend not included in project
-	var newCols []string
-	var newExprs []ast.Expr
+	if e.hasRules() {
+		// rules make it too hard to determine what fields they use
+		return p
+	}
+	// orig := Format(p)
+	extendDeps := exprsCols(e.exprs)
+	// split the extend into what can go after the project,
+	// and what has to stay before the project
+	var beforeCols, afterCols []string
+	var beforeExprs, afterExprs []ast.Expr
+	newProjCols := p.columns
 	for i, col := range e.cols {
-		if slices.Contains(p.columns, col) {
-			newCols = append(newCols, col)
-			newExprs = append(newExprs, e.exprs[i])
-		}
-	}
-	origCols := e.cols
-	e.cols = newCols
-	origExprs := e.exprs
-	e.exprs = newExprs
-
-	// project must include all fields required by extend
-	// there must be no rules left
-	// since we don't know what fields are required by rules
-	if !e.hasRules() {
-		var exprCols []string
-		for _, x := range e.exprs {
-			exprCols = set.Union(exprCols, x.Columns())
-		}
-		if set.Subset(p.columns, exprCols) {
-			// remove extend fields from project
-			var newCols []string
-			for _, col := range p.columns {
-				if !slices.Contains(e.cols, col) {
-					newCols = append(newCols, col)
+		// if col is a dependency then we can't move it
+		if !slices.Contains(extendDeps, col) {
+			if slices.Contains(p.columns, col) {
+				if isConstant(e.exprs[i]) {
+					newProjCols = slc.Without(newProjCols, col)
+					afterCols = append(afterCols, col)
+					afterExprs = append(afterExprs, e.exprs[i])
+					continue
 				}
+			} else {
+				// not in the project so remove it
+				continue
 			}
-			p.columns = newCols
-
-			p.source = e.source
-			e.source = p
-			e.init()
-			return e.Transform()
 		}
+		// else keep in before
+		beforeCols = append(beforeCols, col)
+		beforeExprs = append(beforeExprs, e.exprs[i])
 	}
-	e.cols = origCols
-	e.exprs = origExprs
-	return nil
+	if len(newProjCols) == 0 {
+		// the before extend is irrelevant with ProjectNone
+		return NewExtend(&ProjectNone{}, afterCols, afterExprs)
+	}
+	p.columns = newProjCols
+	var result Query
+	if len(beforeCols) > 0 {
+		p.source = NewExtend(e.source, beforeCols, beforeExprs)
+		result = p
+	} else {
+		p.source = e.source // drop original extend since no columns left
+		result = p.Transform()
+	}
+	if len(afterCols) > 0 {
+		result = NewExtend(result, afterCols, afterExprs)
+	}
+	return result
+}
+
+func exprsCols(exprs []ast.Expr) []string {
+	var cols []string
+	for _, x := range exprs {
+		cols = set.Union(cols, x.Columns())
+	}
+	return cols
+}
+
+func isConstant(e ast.Expr) bool {
+	_, ok := e.(*ast.Constant)
+	return ok
 }
 
 func (p *Project) Fixed() []Fixed {

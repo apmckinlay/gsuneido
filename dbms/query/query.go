@@ -673,7 +673,7 @@ func wrap(in string, s string) string {
 		lines := ""
 		curLineLen := 0
 		for i, p := range pieces {
-			if curLineLen+len(p) + 1 > maxLine {
+			if curLineLen+len(p)+1 > maxLine {
 				lines += "\n" + in
 				curLineLen = 0
 			}

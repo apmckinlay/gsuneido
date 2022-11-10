@@ -79,10 +79,29 @@ func TestTransform(t *testing.T) {
 		"customer PROJECT id,name EXTEND a = 5")
 	// ... but not if extend uses fields not in project
 	test("customer extend a = city, b = 6 project id, a, name",
-		"customer EXTEND a = city, b = 6 PROJECT id,a,name")
+		"customer EXTEND a = city PROJECT id,a,name")
 	// move project before extend & remove empty extend
 	test("customer extend a = 5, b = 6 project id, name",
 		"customer PROJECT id,name")
+		test("table extend x = 123 project x",
+		"project-none extend x = 123")
+	test("table extend x = 123, y = Random() project x, y",
+		"table extend y = random() project y extend x = 123") // split
+	test("table extend x = 123 project a, x",
+		"table project a extend x = 123")
+	test("table extend x = Random() project a, x",
+		"table extend x = random() project a,x")
+	// remove unused constant extends
+	test("table extend x = 123 project a, b",
+		"table project a,b")
+	test("table project a,b extend x = 123 project a, x",
+		"table project a extend x = 123")
+	test("withdeps rename b to bb, c to cc project bb, cc",
+		"withdeps project b,c rename b to bb, c to cc") // not unique so no deps
+	test("withdeps rename b to bb project a, bb",
+		"withdeps project a,b,b_deps rename b to bb, b_deps to bb_deps")
+	test("table rename a to aa extend x = 1 project aa, x",
+		"table project a rename a to aa extend x = 1")
 
 	// move where before project
 	test("trans project id,cost where id is 5",

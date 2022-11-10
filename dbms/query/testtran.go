@@ -56,6 +56,8 @@ var testSchemas = map[string]*Schema{
 		Indexes: []Index{{Mode: 'k', Columns: []string{"id"}}}},
 	"comp": {Columns: []string{"a", "b", "c"},
 		Indexes: []Index{{Mode: 'k', Columns: []string{"a", "b", "c"}}}},
+	"withdeps": {Columns: []string{"a", "b", "b_deps", "c", "c_deps"},
+		Indexes: []Index{{Mode: 'k', Columns: []string{"a"}}}},
 }
 
 func (testTran) GetSchema(table string) *Schema {
