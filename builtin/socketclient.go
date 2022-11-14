@@ -58,7 +58,7 @@ func (sc *suSocketClient) Equal(other any) bool {
 
 func (*suSocketClient) SetConcurrent() {
 	//FIXME concurrency
-	// panic("SocketClient can not be shared between threads")
+	// panic("SocketClient cannot be set to concurent")
 }
 
 func (*suSocketClient) Lookup(_ *Thread, method string) Callable {

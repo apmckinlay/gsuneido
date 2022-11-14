@@ -106,7 +106,7 @@ func (ValueBase[E]) Call(*Thread, Value, *ArgSpec) Value {
 }
 
 func (ValueBase[E]) SetConcurrent() {
-	panic(typeName[E]() + " can not be shared between threads")
+	panic(typeName[E]() + " cannot be set to concurent")
 }
 
 func (ValueBase[E]) Equal(other any) bool {
