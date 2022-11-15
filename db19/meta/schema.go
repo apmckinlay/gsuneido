@@ -120,13 +120,13 @@ func (ts *Schema) Ixspecs(idxs []schema.Index) {
 			key = short
 		}
 		switch ix.Mode {
-		case 'u', 'U': //TODO remove U
+		case 'u':
 			cols := difference(key, ix.Columns)
 			ix.Ixspec.Fields2 = ts.colsToFlds(cols)
 			fallthrough
 		case 'k':
 			ix.Ixspec.Fields = ts.colsToFlds(ix.Columns)
-		case 'i', 'I': //TODO remove I
+		case 'i':
 			cols := slc.With(ix.Columns, difference(key, ix.Columns)...)
 			ix.Ixspec.Fields = ts.colsToFlds(cols)
 		default:

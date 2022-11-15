@@ -108,8 +108,8 @@ func (ix *Index) String() string {
 }
 
 func (ix *Index) string(fktohere bool) string {
-	s := map[byte]string{ //TODO remove ToLower
-		'k': "key", 'i': "index", 'u': "index unique"}[ascii.ToLower(ix.Mode)]
+	s := map[byte]string{
+		'k': "key", 'i': "index", 'u': "index unique"}[ix.Mode]
 	s += str.Join("(,)", ix.Columns)
 	if ix.Fk.Table != "" {
 		s += " in " + ix.Fk.Table
