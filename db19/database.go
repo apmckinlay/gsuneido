@@ -188,8 +188,7 @@ func (db *Database) unlockSchema() {
 func (db *Database) create(state *DbState, schema *schema.Schema) {
 	schema.Check()
 	ts := &meta.Schema{Schema: *schema}
-	ts.SetBestKey()
-	ts.Ixspecs(ts.Indexes)
+	ts.SetupIndexes()
 	ov := db.createIndexes(ts.Indexes)
 	ti := &meta.Info{Table: schema.Table, Indexes: ov}
 	state.Meta = state.Meta.PutNew(ts, ti, schema)
@@ -205,9 +204,7 @@ func (db *Database) createIndexes(idxs []schema.Index) []*index.Overlay {
 }
 
 func (db *Database) Ensure(sch *schema.Schema) {
-	state := db.GetState()
-	ts := state.Meta.GetRoSchema(sch.Table)
-	if ts != nil && schemaSubset(sch, ts) {
+	if db.schemaSubset(sch) {
 		return // nothing to do, common fast case
 	}
 	db.lockSchema()
@@ -223,7 +220,7 @@ func (db *Database) Ensure(sch *schema.Schema) {
 			} else {
 				var m *meta.Meta
 				newIdxs, m = state.Meta.Ensure(sch, db.Store)
-				if len(newIdxs) == 0 {
+				if len(newIdxs) == 0 { // no new indexes OR no data yet
 					state.Meta = m
 					handled = true
 				}
@@ -253,7 +250,12 @@ func (db *Database) Ensure(sch *schema.Schema) {
 }
 
 // schemaSubset returns whether the table (ts) already has the ensure schema
-func schemaSubset(schema *schema.Schema, ts *meta.Schema) bool {
+func (db *Database) schemaSubset(schema *schema.Schema) bool {
+	state := db.GetState()
+	ts := state.Meta.GetRoSchema(schema.Table)
+	if ts == nil {
+		return false
+	}
 	if !set.Subset(ts.Columns, schema.Columns) {
 		return false
 	}
@@ -319,10 +321,12 @@ func (db *Database) buildIndexes(table string,
 	ts := *rt.meta.GetRoSchema(table) // copy
 	ts.Columns = set.Union(ts.Columns, newCols)
 	schema.CheckIndexes(ts.Table, ts.Columns, newIdxs)
-	ts.Ixspecs(newIdxs) // required for ensure with existing data
+	nold := len(ts.Indexes)
+	ts.Indexes = append(ts.Indexes, newIdxs...)
+	newIdxs = ts.SetupNewIndexes(nold)
 	nlayers := ti.Indexes[0].Nlayers()
 	list := sortlist.NewUnsorted()
-	iter := index.NewOverIter(table, 0)
+	iter := index.NewOverIter(table, 0) // read first index (preexisting)
 	for iter.Next(rt); !iter.Eof(); iter.Next(rt) {
 		_, off := iter.Cur()
 		list.Add(off)

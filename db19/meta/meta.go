@@ -194,13 +194,15 @@ func (mu *metaUpdate) freeze() *Meta {
 
 // admin schema changes ---------------------------------------------
 
+// Ensure returns nil newIdxs if there is nothing more to be done
+// i.e. if there are no new indexes or if there is no data yet.
 func (m *Meta) Ensure(a *schema.Schema, store *stor.Stor) ([]schema.Index, *Meta) {
 	ts, ok := m.schema.Get(a.Table)
 	if !ok || ts.IsTomb() {
 		panic("ensure: couldn't find " + a.Table)
 	}
 	ts, ti := m.alterGet(a.Table)
-	newIdxs := []schema.Index{}
+	var newIdxs []schema.Index
 	for i := range a.Indexes {
 		if nil == ts.FindIndex(a.Indexes[i].Columns) {
 			newIdxs = append(newIdxs, a.Indexes[i])
@@ -404,11 +406,13 @@ func createDerived(ts *Schema, cols []string) {
 
 // createIndexes appends the new indexes to ts.Indexes
 // and appends empty overlays for them to ti.Indexes
+// It does not build the btrees, that's done by buildIndexes.
 func createIndexes(ts *Schema, ti *Info, idxs []schema.Index, store *stor.Stor) {
 	if len(idxs) == 0 {
 		return
 	}
 	ts.Indexes = slices.Clip(ts.Indexes) // copy on write
+	nold := len(ts.Indexes)
 	for i := range idxs {
 		ix := &idxs[i]
 		if ts.FindIndex(ix.Columns) != nil {
@@ -417,10 +421,7 @@ func createIndexes(ts *Schema, ti *Info, idxs []schema.Index, store *stor.Stor) 
 		}
 		ts.Indexes = append(ts.Indexes, *ix)
 	}
-	if ti.Nrows == 0 {
-		ts.SetBestKey()
-	}
-	ts.Ixspecs(ts.Indexes)
+	idxs = ts.SetupNewIndexes(nold)
 	n := len(ti.Indexes)
 	ti.Indexes = slices.Clip(ti.Indexes) // copy on write
 	for i := range idxs {
@@ -646,7 +647,7 @@ func (m *Meta) dropFkeys(mu *metaUpdate, drop *schema.Schema) {
 			log.Println("foreign key: can't find", fk.Table, "(from "+drop.Table+")")
 			continue
 		}
-		target := *t                                                     // copy
+		target := *t // copy
 		target.Indexes = slices.Clone(target.Indexes)
 		for j := range target.Indexes {
 			ix := &target.Indexes[j]
@@ -684,7 +685,7 @@ func (m *Meta) TouchTable(table string) *Meta {
 
 // TouchIndexes is for tests
 func (m *Meta) TouchIndexes(table string) *Meta {
-	schema := *m.GetRoSchema(table)                                  // copy
+	schema := *m.GetRoSchema(table) // copy
 	schema.Indexes = slices.Clone(schema.Indexes)
 	mu := newMetaUpdate(m)
 	mu.putSchema(&schema)

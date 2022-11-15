@@ -4,6 +4,7 @@
 package meta
 
 import (
+	"fmt"
 	"math"
 	"sort"
 	"strings"
@@ -68,10 +69,12 @@ func (ts *Schema) Write(w *stor.Writer) {
 	w.PutStrs(ts.Derived)
 	w.Put1(len(ts.Indexes))
 	for _, ix := range ts.Indexes {
-		if ix.BestKey == nil {
+		if ix.Mode == 'k' {
 			w.Put1(int(ix.Mode)).PutStrs(ix.Columns)
 		} else {
+			assert.That(ix.BestKey != nil)
 			w.Put1(int(ix.Mode) + 1).PutStrs(ix.Columns).PutStrs(ix.BestKey)
+			//TODO clean up +1
 		}
 		w.PutStr(ix.Fk.Table).Put1(int(ix.Fk.Mode)).PutStrs(ix.Fk.Columns)
 	}
@@ -88,7 +91,10 @@ func ReadSchema(_ *stor.Stor, r *stor.Reader) *Schema {
 			mode := byte(r.Get1())
 			columns := r.GetStrs()
 			var bestKey []string
-			if mode == 'i'+1 || mode == 'u'+1 {
+			if mode == 'i' || mode == 'u' {
+				fmt.Println("ERROR: please optimize the database")
+			}
+			if mode == 'i'+1 || mode == 'u'+1 { //TODO clean up +1
 				mode--
 				bestKey = r.GetStrs()
 			}
@@ -102,32 +108,29 @@ func ReadSchema(_ *stor.Stor, r *stor.Reader) *Schema {
 					Columns: r.GetStrs()},
 			}
 		}
-		ts.Ixspecs(ts.Indexes)
+		ts.patchBestKey() //TODO remove
+		ts.Ixspecs(0)
 	}
 	return &ts
 }
 
 // Ixspecs sets up the ixspecs for a table's indexes.
-// In most cases idxs will be ts.Indexes.
-func (ts *Schema) Ixspecs(idxs []schema.Index) {
+// In most cases newIdxs will be ts.Indexes.
+func (ts *Schema) Ixspecs(nold int) {
 	ts.setPrimary()
 	ts.setContainsKey()
-	short := ts.firstShortestKey() //TODO remove when everything has BestKey
-	for i := range idxs {
-		ix := &idxs[i]
-		key := ix.BestKey
-		if key == nil {
-			key = short
-		}
+	for i := nold; i < len(ts.Indexes); i++ {
+		ix := &ts.Indexes[i]
+		assert.That(ix.Mode == 'k' || ix.BestKey != nil)
 		switch ix.Mode {
 		case 'u':
-			cols := difference(key, ix.Columns)
+			cols := difference(ix.BestKey, ix.Columns)
 			ix.Ixspec.Fields2 = ts.colsToFlds(cols)
 			fallthrough
 		case 'k':
 			ix.Ixspec.Fields = ts.colsToFlds(ix.Columns)
 		case 'i':
-			cols := slc.With(ix.Columns, difference(key, ix.Columns)...)
+			cols := slc.With(ix.Columns, difference(ix.BestKey, ix.Columns)...)
 			ix.Ixspec.Fields = ts.colsToFlds(cols)
 		default:
 			panic("Ixspecs invalid mode")
@@ -189,9 +192,23 @@ func (ts *Schema) setContainsKey() {
 	}
 }
 
+func (ts *Schema) patchBestKey() { //TODO remove
+	var fsk []string
+	for i := range ts.Indexes {
+		ix := &ts.Indexes[i]
+		if ix.Mode != 'k' && ix.BestKey == nil {
+			if fsk == nil {
+				fsk = ts.firstShortestKey()
+				assert.That(fsk != nil)
+			}
+			ix.BestKey = fsk
+		}
+	}
+}
+
 // firstShortestKey is the old way, needed during the transition.
 // Going forward it is replaced by BestKey
-func (ts *Schema) firstShortestKey() []string {
+func (ts *Schema) firstShortestKey() []string { //TODO remove
 	hasSpecial := func(cols []string) bool {
 		for _, col := range cols {
 			if strings.HasSuffix(col, "_lower!") {
@@ -201,14 +218,18 @@ func (ts *Schema) firstShortestKey() []string {
 		return false
 	}
 	usableKey := func(ix *schema.Index) bool {
-		return ix.Mode == 'k' && len(ix.Columns) > 0 && !hasSpecial(ix.Columns)
+		return ix.Mode == 'k' && !hasSpecial(ix.Columns)
 	}
 	var key []string
 	for i := range ts.Indexes {
 		ix := &ts.Indexes[i]
 		if usableKey(ix) &&
 			(key == nil || len(ix.Columns) < len(key)) {
-			key = ix.Columns
+			if ix.Columns == nil {
+				key = []string{}
+			} else {
+				key = ix.Columns
+			}
 		}
 	}
 	return key
@@ -229,28 +250,40 @@ func (ts *Schema) colsToFlds(cols []string) []int {
 	return flds
 }
 
-// SetBestKey determines the BestKey for each index
+func (ts *Schema) SetupIndexes() {
+	ts.SetupNewIndexes(0)
+}
+
+// SetupNewIndexes sets BestKey and creates Ixspecs.
+func (ts *Schema) SetupNewIndexes(nold int) []schema.Index {
+	ts.SetBestKeys(nold)
+	ts.Ixspecs(nold)
+	return ts.Indexes[nold:]
+}
+
+// SetBestKeys determines the BestKey for each index
 // that requires the fewest additional columns.
 // This should be done before IxSpecs.
-// WARNING: this affects the index entries
-// so it should only be called when there is no data.
-func (ts *Schema) SetBestKey() {
-	for i := range ts.Indexes {
+// WARNING: this affects the stored index entries
+// so it should only be used for empty indexes.
+func (ts *Schema) SetBestKeys(nold int) {
+	for i := nold; i < len(ts.Indexes); i++ {
 		ix := &ts.Indexes[i]
 		if (ix.Mode == 'i' || ix.Mode == 'u') && ix.BestKey == nil {
-			best := -1
+			var best *schema.Index
 			bestLen := math.MaxInt
 			for j := range ts.Indexes {
 				key := &ts.Indexes[j]
 				if key.Mode == 'k' {
 					n := len(difference(key.Columns, ix.Columns))
 					if n < bestLen {
-						best = j
+						best = key
 						bestLen = n
 					}
 				}
 			}
-			ix.BestKey = ts.Indexes[best].Columns
+			assert.That(ix.BestKey == nil) // should never overwrite
+			ix.BestKey = best.Columns
 		}
 	}
 }
@@ -297,7 +330,7 @@ func (m *Meta) newSchemaView(name, def string) *Schema {
 }
 
 func (ts *Schema) IsTomb() bool {
-	return ts.Columns == nil && ts.Indexes == nil
+	return len(ts.Columns) == 0 && len(ts.Indexes) == 0
 }
 
 func (ts *Schema) isView() bool {

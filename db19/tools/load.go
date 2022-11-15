@@ -220,8 +220,7 @@ func buildIndexes(ts *meta.Schema, list *sortlist.Builder, store *stor.Stor,
 			panic(fmt.Sprintf("%s%v", index, e))
 		}
 	}()
-	ts.SetBestKey()
-	ts.Ixspecs(ts.Indexes)
+	ts.SetupIndexes()
 	ov := make([]*index.Overlay, len(ts.Indexes))
 	for i = range ts.Indexes {
 		ix := ts.Indexes[i]

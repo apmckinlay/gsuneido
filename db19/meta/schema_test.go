@@ -111,13 +111,13 @@ func TestOptimizeIndexes(t *testing.T) {
 	ts.Indexes = []schema.Index{idx('k', "a"), idx('k', "z,x"),
 		idx('i', "b"), idx('u', "c"), idx('i', "b,a"), idx('u', "c,a"),
 		idx('i', "x,y,z")}
-	ts.SetBestKey()
+	ts.SetBestKeys(0)
 	ts.setPrimary()
 	ts.setContainsKey()
 	assert.This(str(ts)).Is("K(a) K(z,x) i(b+a) u(c+a) i(b,a) U(c,a) i(x,y,z)")
 
 	ts.Indexes = []schema.Index{idx('k', "a_lower!"), idx('i', "b")}
-	ts.SetBestKey()
+	ts.SetBestKeys(0)
 	assert.This(str(ts)).Is("k(a_lower!) i(b+a)")
 
 	ts.Indexes = []schema.Index{idx('k', "a"), idx('k', "a_lower!")}

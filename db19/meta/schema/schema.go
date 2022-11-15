@@ -36,7 +36,6 @@ type Index struct {
 	// Unique indexes ('u') that contain a key do not need duplicate checking.
 	ContainsKey bool
 	// BestKey is the key used to make indexes ('i' and 'u') unique.
-	// It is set by OptimizeIndexes or it defaults to the first shortest key.
 	// A key used as BestKey must not be dropped.
 	// BestKey must be persisted (unlike Primary and ConstainsKey)
 	// because it affects the btrees and modifying the schema could change it.
@@ -80,7 +79,7 @@ func (sc *Schema) string(fktohere, delcols, emptycols bool) string {
 	var sb strings.Builder
 	sb.WriteString(sc.Table)
 	sb.WriteString(" ")
-	if emptycols || sc.Columns != nil || sc.Derived != nil {
+	if emptycols || len(sc.Columns) > 0 || len(sc.Derived) > 0 {
 		var cb str.CommaBuilder
 		for _, col := range sc.Columns {
 			if delcols || col != "-" {
