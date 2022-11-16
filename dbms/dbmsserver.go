@@ -126,7 +126,7 @@ func idleCheck() {
 func newServerConn(dbms *DbmsLocal, conn net.Conn) {
 	trace.ClientServer.Println("server connection")
 	conn.Write(hello())
-	if ok, _ := checkHello(conn); !ok {
+	if _, errmsg := checkHello(conn); errmsg != "" {
 		conn.Close()
 		return
 	}

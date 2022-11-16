@@ -23,9 +23,9 @@ func ConnectClient(addr string, port string) (conn net.Conn, jserver bool) {
 		checkServerStatus(addr, port)
 		cantConnect(err.Error())
 	}
-	ok, jserver := checkHello(conn)
-	if !ok {
-		cantConnect("invalid response from server")
+	jserver, errmsg := checkHello(conn)
+	if errmsg != "" {
+		cantConnect(errmsg)
 	}
 	return conn, jserver
 }
@@ -34,27 +34,32 @@ func cantConnect(s string) {
 	Fatal("Can't connect.", s)
 }
 
-func checkHello(conn net.Conn) (ok, jserver bool) {
+const helloTimeout = 100 * time.Millisecond
+
+func checkHello(conn net.Conn) (jserver bool, errmsg string) {
 	var buf [helloSize]byte
-	conn.SetReadDeadline(time.Now().Add(100 * time.Millisecond))
+	conn.SetReadDeadline(time.Now().Add(helloTimeout))
 	n, err := io.ReadFull(conn, buf[:])
 	var never time.Time
 	conn.SetReadDeadline(never)
+	if n == 0 {
+		return false, "timeout reading hello from server"
+	}
 	if n != helloSize || err != nil {
-		return false, false
+		return false, "invalid response from server"
 	}
 	s := string(buf[:])
 	if !strings.HasPrefix(s, "Suneido ") {
-		return false, false
+		return false, "invalid response from server"
 	}
 	if strings.Contains(s, " (Java)") {
-		return true, true
+		return true, ""
 	}
 	s = strings.TrimPrefix(s, "Suneido ")
 	if noTime(s) != noTime(options.BuiltDate) {
-		return false, false
+		return false, "version mismatch"
 	}
-	return true, false
+	return false, ""
 }
 
 func noTime(s string) string {

@@ -24,8 +24,9 @@ func TestClientServer(*testing.T) {
 	p1, p2 := net.Pipe()
 	workers = mux.NewWorkers(doRequest)
 	go newServerConn(dbmsLocal, p1)
-	ok, _ := checkHello(p2)
-	assert.That(ok)
+	jserver, errmsg := checkHello(p2)
+	assert.False(jserver)
+	assert.This(errmsg).Is("")
 	c := NewMuxClient(p2)
 	ses := c.NewSession()
 	ses.Get(nil, "tables", runtime.Next, nil)
@@ -34,5 +35,5 @@ func TestClientServer(*testing.T) {
 	ses2.Get(nil, "tables", runtime.Prev, nil)
 	ses2.Close()
 
-	time.Sleep(100 * time.Millisecond)
+	time.Sleep(25 * time.Millisecond)
 }
