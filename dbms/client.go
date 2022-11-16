@@ -34,7 +34,7 @@ func cantConnect(s string) {
 	Fatal("Can't connect.", s)
 }
 
-const helloTimeout = 100 * time.Millisecond
+const helloTimeout = 250 * time.Millisecond
 
 func checkHello(conn net.Conn) (jserver bool, errmsg string) {
 	var buf [helloSize]byte
