@@ -13,6 +13,40 @@ import (
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
+func FuzzSort(f *testing.F) {
+	f.Fuzz(func(t *testing.T, nb uint8, n2 uint16) {
+		testSorting(t, nb, n2)
+		testUnsorted(t, nb, n2)
+	})
+}
+
+func testSorting(t *testing.T, nb uint8, n2 uint16) {
+	n := int(nb)*blockSize + int(n2)
+	if n > 100_000 {
+		return
+	}
+	bldr := NewSorting(func(x, y uint64) bool { return x < y })
+	for j := 0; j < n; j++ {
+		bldr.Add(1 + uint64(rand.Int31())) // +1 so no zeros
+	}
+	bldr.Finish()
+	bldr.ckinorder(n)
+}
+
+func testUnsorted(t *testing.T, nb uint8, n2 uint16) {
+	n := int(nb)*blockSize + int(n2)
+	if n > 100_000 {
+		return
+	}
+	bldr := NewUnsorted()
+	for j := 0; j < n; j++ {
+		bldr.Add(1 + uint64(rand.Int31())) // +1 so no zeros
+	}
+	bldr.Finish()
+	bldr.Sort(func(x, y uint64) bool { return x < y })
+	bldr.ckinorder(n)
+}
+
 func TestBuilder(*testing.T) {
 	test(0)
 	test(1)
@@ -30,8 +64,8 @@ func test(nitems int) {
 	}
 	list := bldr.Finish()
 	assert.This(list.size).Is(nitems)
-	list.ckblocks(nitems)
-	bldr.ckblocks(nitems)
+	list.ckinorder(nitems)
+	bldr.ckinorder(nitems)
 
 	bldr = NewUnsorted()
 	for j := 1; j <= nitems; j++ {
@@ -39,8 +73,8 @@ func test(nitems int) {
 	}
 	list = bldr.Finish()
 	assert.This(list.size).Is(nitems)
-	list.ckblocks(nitems)
-	bldr.ckblocks(nitems)
+	list.ckinorder(nitems)
+	bldr.ckinorder(nitems)
 
 	less := func(x uint64, k string) bool {
 		y, _ := strconv.Atoi(k)
@@ -63,16 +97,14 @@ func randint() uint64 {
 	return 1 + uint64(rand.Int31()) // +1 so no zeros
 }
 
-func (li *List) ckblocks(nitems int) {
+func (li *List) ckinorder(nitems int) {
 	n := 0
 	prev := uint64(0)
-	for bi, b := range li.blocks {
-		for i, x := range b {
+outer:
+	for _, b := range li.blocks {
+		for _, x := range b {
 			if x == 0 {
-				break
-			}
-			if x < prev {
-				fmt.Println("ck", bi, i, "prev", prev, "cur", x)
+				break outer
 			}
 			assert.That(prev <= x)
 			prev = x
@@ -82,14 +114,11 @@ func (li *List) ckblocks(nitems int) {
 	assert.This(n).Is(nitems)
 }
 
-func (b *Builder) ckblocks(nitems int) {
+func (b *Builder) ckinorder(nitems int) {
 	n := 0
 	prev := uint64(0)
 	iter := b.Iter()
 	for x := iter(); x != 0; x = iter() {
-		if x < prev {
-			fmt.Println("ck", n, "prev", prev, "cur", x)
-		}
 		assert.That(prev <= x)
 		prev = x
 		n++
@@ -123,7 +152,7 @@ func TestIterEmpty(t *testing.T) {
 func TestIterOne(t *testing.T) {
 	b := NewUnsorted()
 	for i := 0; i < blockSize; i++ {
-		b.Add(uint64(i+1))
+		b.Add(uint64(i + 1))
 	}
 	list := b.Finish() // empty
 	less := func(x uint64, k string) bool {

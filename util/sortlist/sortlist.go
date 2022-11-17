@@ -17,6 +17,7 @@ import (
 
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/bits"
+	"golang.org/x/exp/slices"
 )
 
 const blockSize = 4096
@@ -75,7 +76,7 @@ func (b *Builder) Add(x uint64) {
 		b.blocks = append(b.blocks, b.block)
 		b.block = nil
 		if b.done != nil {
-			b.work <- void{} // single worker to process this block
+			b.work <- void{} // signal worker to process this block
 		}
 	}
 }
@@ -120,13 +121,15 @@ func (b *Builder) Sort(less func(x, y uint64) bool) {
 		b.blocks = append(b.blocks, b.block)
 		b.block = nil
 	}
-	for i, block := range b.blocks {
+	for bi, block := range b.blocks {
 		n := blockSize
-		if i == len(b.blocks)-1 {
-			n = b.i
+		if bi == len(b.blocks)-1 {
+			if i := slices.Index(block[:], 0); i >= 0 {
+				n = i
+			}
 		}
 		sort.Sort(ablock{block: block, n: n, less: less})
-		b.merges(i + 1) // merge as we sort for better cache use
+		b.merges(bi + 1) // merge as we sort for better cache use
 	}
 	b.finishMerges()
 }
@@ -206,6 +209,7 @@ func (b *Builder) iter(startBlock, nBlocks int) func() (uint64, bool) {
 		if i+1 < blockSize {
 			i++
 		} else {
+			assert.That(blocks[bi] != &zeroBlock)
 			b.free = append(b.free, blocks[bi]) // recycle block
 			if bi+1 < len(blocks) {
 				bi++
@@ -274,6 +278,7 @@ func (ab ablock) Less(i, j int) bool {
 	return ab.less(b[i], b[j])
 }
 
+// Iter from Builder returns a function that returns 0 when finished
 func (b *Builder) Iter() func() uint64 {
 	blocks := b.blocks
 	if len(blocks) == 0 {
