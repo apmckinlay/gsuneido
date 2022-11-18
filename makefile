@@ -4,14 +4,17 @@ BUILT=$(shell date "+%b %-d %Y %R")
 GO = go
 GOOS = $(shell go env GOOS)
 GOARCH = $(shell go env GOARCH)
-BUILD = build -buildvcs=true -o gs_${GOOS}_${GOARCH}
+ifneq ($(GOOS),darwin)
+TRIMPATH = -trimpath
+endif
+BUILD = build -buildvcs=true ${TRIMPATH} -o gs_${GOOS}_${GOARCH}
 EXE = gsuneido
 LDFLAGS = -s -w -X 'main.builtDate=${BUILT}'
 GUIFLAGS = $(LDFLAGS)
 RACEEXE = gsrace
 ifdef PATHEXT
 	# Windows stuff
-	BUILD = build -buildvcs=true -trimpath
+	BUILD = build -buildvcs=true
 	EXE = gsuneido.exe gsuneido.com gsport.exe
 	GUIFLAGS = $(LDFLAGS) -X main.mode=gui -H windowsgui
 	CONSOLE = $(GO) $(BUILD) -o gsuneido.com -ldflags "$(LDFLAGS)" -tags com
