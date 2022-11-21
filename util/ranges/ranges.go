@@ -51,9 +51,15 @@ type treeSlot struct {
 const existing = -1
 const overflow = -2
 
+const (
+	Added = +1
+	Existed = 0
+	Full = -1
+)
+
 //-------------------------------------------------------------------
 
-func (rs *Ranges) Insert(from, to string) bool {
+func (rs *Ranges) Insert(from, to string) int {
 	var ti int
 	leaf := &rs.leaf
 	if rs.tree != nil {
@@ -62,7 +68,7 @@ func (rs *Ranges) Insert(from, to string) bool {
 	}
 	if leaf.size >= nodeSize {
 		if !rs.split(leaf, from) {
-			return false
+			return Full
 		}
 		ti = rs.tree.searchBinary(from) - 1
 		leaf = rs.tree.slots[ti].leaf
@@ -70,9 +76,9 @@ func (rs *Ranges) Insert(from, to string) bool {
 
 	li := leaf.insert(from, to)
 	if li == existing {
-		return true // from,to is already contained in an existing range
+		return Existed // from,to is already contained in an existing range
 	} else if li == overflow {
-		return false
+		return Full
 	}
 
 	// coalesce / merge
@@ -90,7 +96,7 @@ func (rs *Ranges) Insert(from, to string) bool {
 		}
 		it.remove()
 	}
-	return true
+	return Added
 }
 
 type iter struct {

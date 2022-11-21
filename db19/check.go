@@ -64,15 +64,19 @@ type Check struct {
 }
 
 type CkTran struct {
-	start  int
-	end    int
-	birth  int
-	tables map[string]*cktbl
-	state  *DbState
+	start     int
+	end       int
+	birth     int
+	tables    map[string]*cktbl
+	readCount int
+	state     *DbState
 	// failure is written by CkTran.abort and read by UpdateTran.
 	// It is set to either a conflict or a timeout.
 	failure atomic.String
 }
+
+// readMax is higher than jSuneido to account for duplicate checks
+const readMax = 20000
 
 type cktbl struct {
 	outputs ckwrites
@@ -195,7 +199,7 @@ func (ck *Check) Read(t *CkTran, table string, index int, from, to string) bool 
 		}
 	}
 	if !t.saveRead(table, index, from, to) {
-		ck.abort(t.start, "too many reads")
+		ck.abort(t.start, "too many reads in one update transaction")
 	}
 	return true
 }
@@ -206,25 +210,29 @@ func (t *CkTran) saveRead(table string, index int, from, to string) bool {
 		tbl = &cktbl{}
 		t.tables[table] = tbl
 	}
-	reads := tbl.reads.with(index, from, to)
+	reads, inc := tbl.reads.with(index, from, to)
 	if reads == nil {
+		return false
+	}
+	if t.readCount += inc; t.readCount >= readMax {
 		return false
 	}
 	tbl.reads = reads
 	return true
 }
 
-func (cr ckreads) with(index int, from, to string) ckreads {
+func (cr ckreads) with(index int, from, to string) (ckreads, int) {
 	for len(cr) <= index {
 		cr = append(cr, nil)
 	}
 	if cr[index] == nil {
 		cr[index] = &Ranges{}
 	}
-	if !cr[index].Insert(from, to) {
-		return nil
+	inc := cr[index].Insert(from, to)
+	if inc == ranges.Full {
+		return nil, 0
 	}
-	return cr
+	return cr, inc
 }
 
 func (cr ckreads) contains(index int, key string) bool {
@@ -274,7 +282,8 @@ func (ck *Check) output(t *CkTran, table string, keys, oldkeys []string) bool {
 		}
 	}
 	if !t.saveOutput(table, keys) {
-		ck.abort(t.start, "too many writes (output, update, or delete)")
+		ck.abort(t.start,
+			"too many writes (output, update, or delete) in one transaction")
 	}
 	return true
 }
@@ -329,7 +338,8 @@ func (ck *Check) Delete(t *CkTran, table string, off uint64, keys []string) bool
 		}
 	}
 	if !t.saveDelete(table, off, keys) {
-		ck.abort(t.start, "too many writes (output, update, or delete)")
+		ck.abort(t.start,
+			"too many writes (output, update, or delete) in one transaction")
 	}
 	return true
 }
@@ -372,6 +382,14 @@ func (cw ckwrites) with(index int, key string) ckwrites {
 		return nil
 	}
 	return cw
+}
+
+func (ck *Check) ReadCount(t *CkTran) int {
+	t, ok := ck.trans[t.start]
+	if !ok {
+		return -1 // it's gone, presumably aborted
+	}
+	return t.readCount
 }
 
 // checkerAbortT1 is used by tests to avoid randomness

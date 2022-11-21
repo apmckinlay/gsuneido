@@ -49,6 +49,11 @@ type ckUpdate struct {
 	newkeys []string
 }
 
+type ckCounts struct {
+	t   *CkTran
+	ret chan int
+}
+
 type ckCommit struct {
 	t   *UpdateTran
 	ret chan bool
@@ -124,6 +129,15 @@ func (ck *CheckCo) Update(t *CkTran, table string, oldoff uint64, oldkeys, newke
 	ck.c <- &ckUpdate{t: t, table: table,
 		oldoff: oldoff, oldkeys: oldkeys, newkeys: newkeys}
 	return true
+}
+
+func (ck *CheckCo) ReadCount(t *CkTran) int {
+	if t.Failed() {
+		return -1
+	}
+	ret := make(chan int)
+	ck.c <- &ckCounts{t: t, ret: ret}
+	return <-ret
 }
 
 func (ck *CheckCo) Commit(ut *UpdateTran) bool {
@@ -231,6 +245,9 @@ func (ck *Check) dispatch(msg any, mergeChan chan todo) {
 		ck.Delete(msg.t, msg.table, msg.off, msg.keys)
 	case *ckUpdate:
 		ck.Update(msg.t, msg.table, msg.oldoff, msg.oldkeys, msg.newkeys)
+	case *ckCounts:
+		rc := ck.ReadCount(msg.t)
+		msg.ret <- rc
 	case *ckAbort:
 		ck.Abort(msg.t, msg.reason)
 	case *ckCommit:
@@ -284,6 +301,7 @@ type Checker interface {
 	Output(t *CkTran, table string, keys []string) bool
 	Delete(t *CkTran, table string, off uint64, keys []string) bool
 	Update(t *CkTran, table string, oldoff uint64, oldkeys, newkeys []string) bool
+	ReadCount(t *CkTran) int
 	Abort(t *CkTran, reason string) bool
 	Commit(t *UpdateTran) bool
 	Persist() *DbState

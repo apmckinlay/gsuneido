@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/util/assert"
+	"github.com/apmckinlay/gsuneido/util/str"
 )
 
 func TestCheckStartStop(t *testing.T) {
@@ -137,6 +138,16 @@ func script(t *testing.T, s string) {
 			s = s[1:]
 		}
 	}
+}
+
+func TestCheckMax(t *testing.T) {
+	ck := NewCheck(nil)
+	ct := ck.StartTran()
+	randTable := str.UniqueRandom(3, 10)
+	for i := 0; i < readMax; i++ {
+		assert.True(ck.Read(ct, randTable(), 0, "bar", "foo"))
+	}
+	assert.False(ck.Read(ct, randTable(), 0, "bar", "foo"))
 }
 
 // func (t *CkTran) String() string {

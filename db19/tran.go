@@ -245,7 +245,8 @@ func (t *ReadTran) Abort() string {
 
 type UpdateTran struct {
 	ReadTran
-	ct *CkTran
+	ct         *CkTran
+	writeCount int
 }
 
 func (db *Database) NewUpdateTran() *UpdateTran {
@@ -261,6 +262,16 @@ func (db *Database) NewUpdateTran() *UpdateTran {
 
 func (t *UpdateTran) String() string {
 	return t.ct.String()
+}
+
+func (t *UpdateTran) ReadCount() int {
+	// read count is tracked by checker
+	// so it knows about range consolidation
+	return t.db.ck.ReadCount(t.ct)
+}
+
+func (t *UpdateTran) WriteCount() int {
+	return t.writeCount
 }
 
 // Complete returns "" on success, otherwise an error
@@ -324,10 +335,20 @@ func (t *UpdateTran) Read(table string, iIndex int, from, to string) {
 	t.ck(t.db.ck.Read(t.ct, table, iIndex, from, to))
 }
 
+const writeMax = 10000
+
+func (t *UpdateTran) write() {
+	if t.writeCount++; t.writeCount >= writeMax {
+		t.Abort()
+		panic("too many writes (output, update, or delete) in one transaction")
+	}
+}
+
 func (t *UpdateTran) Output(th *rt.Thread, table string, rec rt.Record) {
 	if t.db.corrupted.Load() {
 		return
 	}
+	t.write()
 	ts := t.getSchema(table)
 	ti := t.tran.GetInfo(table) // readonly
 	rec = rec.Truncate(len(ts.Columns))
@@ -421,6 +442,7 @@ func (t *ReadTran) fkeyOutputExists(table string, iIndex int, key string) bool {
 }
 
 func (t *UpdateTran) Delete(th *rt.Thread, table string, off uint64) {
+	t.write()
 	ts := t.getSchema(table)
 	rec := t.GetRecord(off)
 	n := rec.Len()
@@ -540,6 +562,7 @@ func (t *UpdateTran) cascade(fk *schema.Fkey, encoded bool, key string) *index.O
 }
 
 func (t *UpdateTran) Update(th *rt.Thread, table string, oldoff uint64, newrec rt.Record) uint64 {
+	t.write()
 	return t.update(th, table, oldoff, newrec, true)
 }
 

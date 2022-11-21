@@ -156,10 +156,7 @@ func (rs *Ranges) check() int {
 }
 
 func TestOverflow(t *testing.T) {
-	if testing.Short() {
-		t.SkipNow()
-	}
-	const n = 20000 * 2
+	const n = 12000 * 2
 	data := make([]string, n)
 	rand.Seed(time.Now().UnixNano())
 	randKey := str.UniqueRandom(4, 10)
@@ -170,11 +167,12 @@ func TestOverflow(t *testing.T) {
 	order := rand.Perm(n / 2)
 	rs := &Ranges{}
 	for i, o := range order {
-		if !rs.Insert(data[o*2], data[o*2+1]) {
+		if rs.Insert(data[o*2], data[o*2+1]) == Full {
 			fmt.Println(i)
-			break
+			return
 		}
 	}
+	t.Fatal("should have overflowed")
 }
 
 //-------------------------------------------------------------------
