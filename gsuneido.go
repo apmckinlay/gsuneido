@@ -296,7 +296,7 @@ func openDbms() {
 
 func persistInterval() time.Duration {
 	if options.Action == "server" {
-		return 20 * time.Second // FIXME should probably be bigger
+		return 30 * time.Second // FIXME should probably be bigger
 	}
 	// else standalone
 	return 10 * time.Second
