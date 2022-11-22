@@ -106,6 +106,36 @@ func TestOverflow(t *testing.T) {
 	}
 }
 
+func TestDups(t *testing.T) {
+	for _, n := range []int{50, 5000} {
+		var x Set
+		seed := time.Now().UnixNano()
+		rand.Seed(seed)
+		randKey := str.UniqueRandom(3, 10)
+		for i := 0; i < n; i++ {
+			assert.That(x.Insert(randKey()))
+		}
+		assert.This(x.count()).Is(n)
+		rand.Seed(seed)
+		randKey = str.UniqueRandom(3, 10)
+		for i := 0; i < n; i++ {
+			assert.That(x.Insert(randKey()))
+		}
+		assert.This(x.count()).Is(n)
+	}
+}
+
+func (set *Set) count() int {
+	if set.tree == nil {
+		return set.leaf.size
+	}
+	n := 0
+	for i := 0; i < set.tree.size; i++ {
+		n += set.tree.slots[i].leaf.size
+	}
+	return n
+}
+
 //-------------------------------------------------------------------
 
 func (set *Set) checkData(t *testing.T, data []string) {

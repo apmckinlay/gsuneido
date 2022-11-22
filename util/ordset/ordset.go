@@ -3,7 +3,9 @@
 
 package ordset
 
-import "github.com/apmckinlay/gsuneido/util/str"
+import (
+	"github.com/apmckinlay/gsuneido/util/str"
+)
 
 // Set is an ordered set of strings.
 // It uses a specialized in-memory btree with a max size and number of levels.
@@ -39,7 +41,6 @@ type treeSlot struct {
 //-------------------------------------------------------------------
 
 func (set *Set) Insert(key string) bool {
-	//TODO ignore duplicates
 	leaf := &set.leaf
 	if set.tree != nil {
 		i := set.tree.searchBinary(key)
@@ -60,6 +61,9 @@ func (leaf *leafNode) insert(key string) bool {
 		return false
 	}
 	i := leaf.searchBinary(key)
+	if leaf.slots[i] == key {
+		return true // already exists
+	}
 	copy(leaf.slots[i+1:], leaf.slots[i:])
 	leaf.slots[i] = key
 	leaf.size++
