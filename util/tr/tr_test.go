@@ -24,6 +24,22 @@ func Test_makset(t *testing.T) {
 	test("-0-9-", "-0123456789-")
 }
 
+func Fuzz_makset(f *testing.F) {
+	f.Fuzz(func(t *testing.T, s string) {
+		Set(s)
+	})
+}
+
+// to run: go test -fuzz=Fuzz_makset -run=Fuzz_makset
+
+func FuzzReplace(f *testing.F) {
+	f.Fuzz(func(t *testing.T, s1, s2, s3 string) {
+		Replace(s1, Set(s2), Set(s3))
+	})
+}
+
+// to run: go test -fuzz=FuzzReplace -run=FuzzReplace
+
 // ptest support ---------------------------------------------------------------
 
 func TestPtest(t *testing.T) {
