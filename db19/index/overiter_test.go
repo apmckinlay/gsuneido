@@ -132,7 +132,7 @@ func TestOverIterDeletePrevBug(*testing.T) {
 	}
 	bldr := btree.Builder(stor.HeapStor(8192))
 	for i := 1; i <= 9; i++ {
-		bldr.Add(strconv.Itoa(i), uint64(i))
+		assert.That(bldr.Add(strconv.Itoa(i), uint64(i)))
 	}
 	bt := bldr.Finish()
 	ib := &ixbuf.T{}
@@ -407,8 +407,8 @@ func TestOverIterBug(*testing.T) {
 
 func TestOverIterBug2(*testing.T) {
 	b := btree.Builder(stor.HeapStor(8192))
-	b.Add("1111", 1111)
-	b.Add("2222", 2222)
+	assert.That(b.Add("1111", 1111))
+	assert.That(b.Add("2222", 2222))
 	bt := b.Finish()
 	layers := []*ixbuf.T{{}}
 	layers[0].Insert("1111", 1111|ixbuf.Delete)
@@ -425,7 +425,7 @@ func TestOverIterBug2(*testing.T) {
 
 func TestOverIterBug3(*testing.T) {
 	b := btree.Builder(stor.HeapStor(8192))
-	b.Add("1111", 1111)
+	assert.That(b.Add("1111", 1111))
 	bt := b.Finish()
 	layers := []*ixbuf.T{{}}
 	layers[0].Insert("1111", 1111|ixbuf.Delete)

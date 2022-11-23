@@ -140,6 +140,9 @@ func TestForeignKeys(*testing.T) {
 	act("insert { b: 1, a: 1 } into lin4")
 	assert.This(func() { doAdmin(db, "alter lin4 create index(a) in hdr4") }).
 		Panics("blocked by foreign key")
+	act("insert { b: 2, a: 1 } into lin4")
+	assert.This(func() { doAdmin(db, "alter lin4 create key(a)") }).
+		Panics("duplicate")
 
 	doAdmin(db, "ensure hdr5 (a, b, c) key(a)")
 	doAdmin(db, "ensure lin5 (a, d, e) key(e) index(a) in hdr5 cascade")

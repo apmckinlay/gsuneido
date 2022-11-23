@@ -37,7 +37,7 @@ func TestIterRange(*testing.T) {
 	bldr := btree.Builder(store)
 	for i := start; i <= limit; i++ {
 		key := itoa(i)
-		bldr.Add(key, uint64(i))
+		assert.That(bldr.Add(key, uint64(i)))
 	}
 	bt := bldr.Finish()
 	btree.GetLeafKey = func(_ *stor.Stor, _ *ixkey.Spec, i uint64) string {

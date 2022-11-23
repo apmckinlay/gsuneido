@@ -27,7 +27,7 @@ func TestMergeDeleteAll(*testing.T) {
 	bldr := Builder(stor.HeapStor(8192))
 	for i := org; i < end; i++ {
 		key := strconv.Itoa(i)
-		bldr.Add(key, uint64(i))
+		assert.That(bldr.Add(key, uint64(i)))
 	}
 	bt := bldr.Finish()
 	// bt.Print()
@@ -104,7 +104,7 @@ func TestBtreePrefixExists(*testing.T) {
 	}
 	b := Builder(stor.HeapStor(8192))
 	for i := 0; i < 22; i++ {
-		b.Add(key(i), uint64(i))
+		assert.That(b.Add(key(i), uint64(i)))
 	}
 	bt := b.Finish()
 

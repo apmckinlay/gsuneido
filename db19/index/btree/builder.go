@@ -29,18 +29,20 @@ func Builder(st *stor.Stor) *builder {
 	return &builder{stor: st, levels: []*level{{}}}
 }
 
-func (b *builder) Add(key string, off uint64) {
+// Add returns false for duplicate keys and panics for out of order
+func (b *builder) Add(key string, off uint64) bool {
 	if b.count > 0 {
 		if key == b.prev {
-			panic("btreeBuilder keys must not have duplicates")
+			return false
 		}
 		if key < b.prev {
-			panic("btreeBuilder keys must be inserted in order")
+			panic("btree builder keys must be inserted in order")
 		}
 	}
 	b.add(0, key, off)
 	b.prev = key
 	b.count++
+	return true
 }
 
 func (b *builder) add(li int, key string, off uint64) {

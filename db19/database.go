@@ -341,12 +341,15 @@ func (db *Database) buildIndexes(table string,
 		for off := iter(); off != 0; off = iter() {
 			rec := OffToRec(db.Store, off)
 			key := ix.Ixspec.Key(rec)
-			bldr.Add(key, off)
+			if !bldr.Add(key, off) {
+				panic("cannot build index: duplicate value: " +
+					table + " " + ix.String())
+			}
 			// check foreign key
 			if fk.Table != "" {
 				k := ix.Ixspec.Trunc(len(ix.Columns)).Key(rec)
 				if k != "" && !rt.fkeyOutputExists(fk.Table, fk.IIndex, k) {
-					panic("output blocked by foreign key: " +
+					panic("cannot build index: blocked by foreign key: " +
 						fk.Table + " " + ix.String())
 				}
 			}

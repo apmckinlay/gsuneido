@@ -48,7 +48,7 @@ func TestIterator(*testing.T) {
 	sort.Strings(data[:])
 	bldr := Builder(stor.HeapStor(8192))
 	for i, k := range data {
-		bldr.Add(k, uint64(i+1)) // +1 to avoid zero
+		assert.That(bldr.Add(k, uint64(i+1))) // +1 to avoid zero
 	}
 	bt := bldr.Finish()
 

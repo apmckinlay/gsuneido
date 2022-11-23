@@ -44,7 +44,7 @@ func TestBtreeBuilder(t *testing.T) {
 	}
 	for i := start; i <= limit; i++ {
 		key := keyfn(i)
-		bldr.Add(key, uint64(i))
+		assert.That(bldr.Add(key, uint64(i)))
 	}
 	bt := bldr.Finish()
 	bt.Check(nil)
@@ -82,10 +82,10 @@ func TestBuilder(t *testing.T) {
 		return strconv.Itoa(int(i))
 	}
 	bldr := Builder(stor.HeapStor(8192))
-	bldr.Add("1000xxxx", 1000)
-	bldr.Add("1001xxxx", 1001)
-	bldr.Add("1002xxxx", 1002)
-	bldr.Add("1003xxxx", 1003)
+	assert.That(bldr.Add("1000xxxx", 1000))
+	assert.That(bldr.Add("1001xxxx", 1001))
+	assert.That(bldr.Add("1002xxxx", 1002))
+	assert.That(bldr.Add("1003xxxx", 1003))
 	bt := bldr.Finish()
 	nd := bt.getNode(bt.root)
 	assert.T(t).This(nodeKnowns(nd)).Is([]string{"", "1001", "1002", "1003"})
@@ -126,7 +126,7 @@ func TestBtreeFracPos(t *testing.T) {
 		// since Builder splits unevenly due to building in order
 		b := Builder(stor.HeapStor(8192))
 		for i := 0; i < n; i++ {
-			b.Add(key(i), 1)
+			assert.That(b.Add(key(i), 1))
 		}
 		assert.That(len(b.levels[len(b.levels)-1].nb.node) > 190)
 		bt = b.Finish()

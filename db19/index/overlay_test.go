@@ -186,7 +186,7 @@ func TestOverlayLookup(*testing.T) {
 		sort.Strings(dat.Keys)
 		b := btree.Builder(store)
 		for _, k := range dat.Keys {
-			b.Add(k, dat.K2o[k])
+			assert.That(b.Add(k, dat.K2o[k]))
 		}
 		return b.Finish()
 	}

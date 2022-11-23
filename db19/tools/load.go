@@ -233,7 +233,10 @@ func buildIndexes(ts *meta.Schema, list *sortlist.Builder, store *stor.Stor,
 		iter := list.Iter()
 		n := 0
 		for off := iter(); off != 0; off = iter() {
-			bldr.Add(btree.GetLeafKey(store, &ix.Ixspec, off), off)
+			if !bldr.Add(btree.GetLeafKey(store, &ix.Ixspec, off), off) {
+				panic("cannot build index: duplicate value: " +
+					ts.Table + " " + ix.String())
+			}
 			n++
 		}
 		bt := bldr.Finish()
