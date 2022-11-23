@@ -94,14 +94,7 @@ func TestAdminEnsure(t *testing.T) {
 func TestAdminEnsure2(*testing.T) {
 	db := createTestDb()
 	defer db.Close()
-
-	act := func(act string) {
-		ut := db.NewUpdateTran()
-		defer ut.Commit()
-		n := DoAction(nil, ut, act, nil)
-		assert.This(n).Is(1)
-	}
-	act("insert { a: 1 } into tmp")
+	act(db, "insert { a: 1 } into tmp")
 	doAdmin(db, "ensure tmp (x, y) index unique(x)")
 }
 
@@ -196,6 +189,12 @@ func TestAdminAlterDrop(t *testing.T) {
 	doAdmin(db, "create tmp4 (a,b,c) key(a) key(b,c) index(c)")
 	assert.T(t).This(func() { doAdmin(db, "alter tmp4 drop key(a)") }).
 		Panics("can't drop key used to make index unique: tmp4 (a)")
+
+	doAdmin(db, "create tmp5 (a,b) key(a) key(a,b)") // key(a) will be primary
+	doAdmin(db, "alter tmp5 drop key(a)")            // key(a,b) now primary
+	act(db, "insert { a: 1 } into tmp5")
+	assert.T(t).This(func() { act(db, "insert { a: 1 } into tmp5") }).
+		Panics("duplicate")
 }
 
 func TestAdminDrop(t *testing.T) {
