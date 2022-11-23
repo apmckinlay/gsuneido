@@ -131,17 +131,19 @@ func (db *Database) CheckerSync() {
 	db.ck = NewCheck(db)
 }
 
-// AddNewTable is used by compact. It panics if the table already exists.
+// AddNewTable is used by compact and loading entire database.
+// It panics if the table already exists.
 func (db *Database) AddNewTable(ts *meta.Schema, ti *meta.Info) {
 	db.UpdateState(func(state *DbState) {
 		if state.Meta.GetRoSchema(ts.Table) != nil {
-			panic("can't create existing table: " + ts.Table)
+			panic("duplicate table")
 		}
 		state.Meta = state.Meta.Put(ts, ti)
 	})
 }
 
-// OverwriteTable is used by load. If the table already exists it is replaced.
+// OverwriteTable is used by loading a single table.
+// If the table already exists it is replaced.
 func (db *Database) OverwriteTable(ts *meta.Schema, ti *meta.Info) {
 	db.UpdateState(func(state *DbState) {
 		state.Meta = state.Meta.Put(ts, ti)

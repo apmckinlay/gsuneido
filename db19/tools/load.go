@@ -63,11 +63,11 @@ func LoadDatabase(from, dbfile string) (nTables, nViews int, err error) {
 			defer func() {
 				if e := recover(); e != nil {
 					table := str.BeforeFirst(job.schema, " ")
-					errVal.Store(fmt.Errorf("error loading %s %v", table, e))
+					errVal.Store(fmt.Errorf("error loading %s: %v", table, e))
 				}
 			}()
 			for job = range channel {
-				loadTable2(job.db, job.schema, job.nrecs, job.size, job.list)
+				loadTable2(job.db, job.schema, job.nrecs, job.size, job.list, false)
 			}
 		}()
 	}
@@ -110,13 +110,13 @@ func LoadTable(table, dbfile string) (int, error) {
 		db, err = OpenDatabase(dbfile)
 	}
 	if err != nil {
-		return 0, fmt.Errorf("error loading %s %w", table, err)
+		return 0, fmt.Errorf("error loading %s: %w", table, err)
 	}
 	defer db.Close()
 	return LoadDbTable(table, db)
 }
 
-// LoadDbTable is use by dbms.Load.
+// LoadDbTable loads a single table. It is use by dbms.Load.
 // It will replace an already existing table.
 // It returns the number of records loaded.
 func LoadDbTable(table string, db *Database) (n int, err error) {
@@ -124,14 +124,14 @@ func LoadDbTable(table string, db *Database) (n int, err error) {
 	defer func() {
 		db.EndExclusive(table)
 		if e := recover(); e != nil {
-			err = fmt.Errorf("error loading %s %v", table, e)
+			err = fmt.Errorf("error loading %s: %v", table, e)
 		}
 	}()
 	f, r := open(table + ".su")
 	defer f.Close()
 	schem := table + " " + readLinePrefixed(r, "====== ")
 	nrecs, size, list := loadTable1(db, r, schem)
-	loadTable2(db, schem, nrecs, size, list)
+	loadTable2(db, schem, nrecs, size, list, true)
 	db.Persist() // for safety, not strictly required
 	return nrecs, nil
 }
@@ -164,12 +164,16 @@ func loadTable1(db *Database, r *bufio.Reader, schema string) (
 // loadTable2 builds the indexes.
 // It is multi-threaded when loading an entire database
 func loadTable2(db *Database, schema string,
-	nrecs int, size uint64, list *sortlist.Builder) {
+	nrecs int, size uint64, list *sortlist.Builder, overwrite bool) {
 	sch := query.NewAdminParser(schema).Schema()
 	ts := &meta.Schema{Schema: sch}
 	ovs := buildIndexes(ts, list, db.Store, nrecs)
 	ti := &meta.Info{Table: sch.Table, Nrows: nrecs, Size: size, Indexes: ovs}
-	db.OverwriteTable(ts, ti)
+	if overwrite {
+		db.OverwriteTable(ts, ti)
+	} else {
+		db.AddNewTable(ts, ti)
+	}
 }
 
 func readLinePrefixed(r *bufio.Reader, pre string) string {
