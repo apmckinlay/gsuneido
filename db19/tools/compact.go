@@ -147,5 +147,5 @@ func compactTable(state *DbState, src *Database, ts *meta.Schema, dst *Database)
 	}
 	ovs := buildIndexes(ts, list, dst.Store, count) // same as load
 	ti := &meta.Info{Table: ts.Table, Nrows: count, Size: size, Indexes: ovs}
-	dst.LoadedTable(ts, ti)
+	dst.AddNewTable(ts, ti)
 }

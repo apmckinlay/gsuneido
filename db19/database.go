@@ -131,25 +131,17 @@ func (db *Database) CheckerSync() {
 	db.ck = NewCheck(db)
 }
 
-// LoadedTable is by compact
-func (db *Database) LoadedTable(ts *meta.Schema, ti *meta.Info) {
-	if err := db.loadedTable(ts, ti); err != nil {
-		panic(err)
-	}
-}
-
-func (db *Database) loadedTable(ts *meta.Schema, ti *meta.Info) error {
-	var err error
+// AddNewTable is used by compact. It panics if the table already exists.
+func (db *Database) AddNewTable(ts *meta.Schema, ti *meta.Info) {
 	db.UpdateState(func(state *DbState) {
 		if state.Meta.GetRoSchema(ts.Table) != nil {
-			err = errors.New("can't create existing table: " + ts.Table)
+			panic("can't create existing table: " + ts.Table)
 		}
 		state.Meta = state.Meta.Put(ts, ti)
 	})
-	return err
 }
 
-// OverwriteTable is used by load
+// OverwriteTable is used by load. If the table already exists it is replaced.
 func (db *Database) OverwriteTable(ts *meta.Schema, ti *meta.Info) {
 	db.UpdateState(func(state *DbState) {
 		state.Meta = state.Meta.Put(ts, ti)

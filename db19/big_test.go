@@ -118,7 +118,7 @@ func createTables() []string {
 		schema := schema.Schema{Table: table, Columns: cols, Indexes: idxSchema}
 		ts := &meta.Schema{Schema: schema}
 		ti := &meta.Info{Table: table, Indexes: idxInfo}
-		db.LoadedTable(ts, ti)
+		db.AddNewTable(ts, ti)
 	}
 	db.Close()
 	return tables
