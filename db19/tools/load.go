@@ -94,6 +94,7 @@ func LoadDatabase(from, dbfile string) (nTables, nViews int, err error) {
 		return 0, 0, errVal.Load().(error)
 	}
 	trace("SIZE", db.Store.Size())
+	db.CheckAllFkeys()
 	db.GetState().Write()
 	db.Close()
 	ck(system.RenameBak(tmpfile, dbfile))

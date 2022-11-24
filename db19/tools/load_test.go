@@ -6,10 +6,13 @@ package tools
 import (
 	"fmt"
 	"os"
+	"strings"
 	"testing"
 	"time"
 
 	. "github.com/apmckinlay/gsuneido/db19"
+	"github.com/apmckinlay/gsuneido/db19/stor"
+	"github.com/apmckinlay/gsuneido/dbms/query"
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
@@ -37,4 +40,23 @@ func TestLoadDatabase(*testing.T) {
 	fmt.Println("loaded", nTables, "tables", nViews, "views in",
 		time.Since(t).Round(time.Millisecond))
 	ck(CheckDatabase("tmp.db"))
+}
+
+func TestLoadFkey(*testing.T) {
+	store := stor.HeapStor(8192)
+	db, err := CreateDb(store)
+	ck(err)
+	doAdmin := func(cmd string) {
+		query.DoAdmin(db, cmd, nil)
+	}
+	doAdmin("create tmp (a) key(a)")
+	doAdmin("create tmp2 (k, a) key(k) index(a) in tmp")
+	_, err = DumpDbTable(db, "tmp2", "tmp2.su")
+	ck(err)
+	doAdmin("drop tmp2")
+	doAdmin("drop tmp")
+	_, err = LoadDbTable("tmp2", db)
+	os.Remove("tmp2.su")
+	assert.That(strings.Contains(err.Error(),
+		"can't create foreign key to nonexistent index"))
 }

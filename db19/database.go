@@ -142,11 +142,20 @@ func (db *Database) AddNewTable(ts *meta.Schema, ti *meta.Info) {
 	})
 }
 
-// OverwriteTable is used by loading a single table.
+// OverwriteTable is used when loading a single table.
 // If the table already exists it is replaced.
 func (db *Database) OverwriteTable(ts *meta.Schema, ti *meta.Info) {
 	db.UpdateState(func(state *DbState) {
+		state.Meta.CheckFkeys(&ts.Schema)
 		state.Meta = state.Meta.Put(ts, ti)
+	})
+}
+
+// CheckAllFkeys is used after loading an entire database.
+func (db *Database) CheckAllFkeys() {
+	state := db.GetState()
+	state.Meta.ForEachSchema(func(ts *meta.Schema) {
+		state.Meta.CheckFkeys(&ts.Schema)
 	})
 }
 

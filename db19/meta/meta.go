@@ -472,6 +472,45 @@ func (*Meta) createFkeys(mu *metaUpdate, ts, ac *schema.Schema) {
 	}
 }
 
+// CheckFkeys checks the targets of the foreign keys of a table.
+// It panics on error.
+// It is basically a read-only version of createFkeys.
+func (m *Meta) CheckFkeys(ts *schema.Schema) {
+	idxs := ts.Indexes
+	for i := range idxs {
+		fk := &idxs[i].Fk
+		if fk.Table == "" {
+			continue
+		}
+		tsi := ts.IIndex(idxs[i].Columns)
+		fk = &ts.Indexes[tsi].Fk
+		fkCols := fk.Columns
+		if len(fkCols) == 0 {
+			fkCols = idxs[i].Columns
+		}
+		target, ok := m.schema.Get(fk.Table)
+		if !ok {
+			panic("can't create foreign key to nonexistent table: " +
+				ts.Table + " -> " + fk.Table)
+		}
+		found := false
+		for j := range target.Indexes {
+			ix := &target.Indexes[j]
+			if slices.Equal(fkCols, ix.Columns) {
+				if ix.Mode != 'k' {
+					panic("foreign key must point to key: " +
+						ts.Table + " -> " + fk.Table + str.Join("(,)", fkCols))
+				}
+				found = true
+			}
+		}
+		if !found {
+			panic("can't create foreign key to nonexistent index: " +
+				ts.Table + " -> " + fk.Table + str.Join("(,)", fkCols))
+		}
+	}
+}
+
 func updateFkeysIIndex(mu *metaUpdate, sch *schema.Schema) {
 	for i := range sch.Indexes {
 		ix := &sch.Indexes[i]
