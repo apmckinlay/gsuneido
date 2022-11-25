@@ -5,6 +5,7 @@ package runtime
 
 import (
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/runtime/trace"
@@ -696,6 +697,9 @@ func (r *SuRecord) getSpecial(key string) Value {
 }
 
 func (r *SuRecord) callRule(t *Thread, key string) Value {
+	if !validIdent(key) {
+		return nil
+	}
 	r.ensureDeps()
 	delete(r.invalid, key)
 	if rule := r.getRule(t, key); rule != nil && !t.rules.has(r, key) {
@@ -708,6 +712,14 @@ func (r *SuRecord) callRule(t *Thread, key string) Value {
 	}
 	return nil
 }
+
+func validIdent(s string) bool {
+	return len(s) < maxIdent && identRx.MatchString(s)
+}
+
+const maxIdent = 256
+
+var identRx = regexp.MustCompile("^[_a-zA-Z0-9?!]+$")
 
 func (r *SuRecord) catchRule(t *Thread, rule Value, key string) Value {
 	t.rules.push(r, key)
