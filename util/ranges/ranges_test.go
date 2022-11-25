@@ -79,12 +79,14 @@ func TestRandom(t *testing.T) {
 		}
 		return strconv.Itoa(from), strconv.Itoa(to)
 	}
+	incs := 0
 	rs := &Ranges{}
 	for rs.tree == nil || rs.tree.size < 100 {
 		from, to := random(7)
-		rs.Insert(from, to)
+		incs += rs.Insert(from, to)
 	}
-	rs.check()
+	count := rs.check()
+	assert(incs).Is(count)
 	for n, in := range nums {
 		assert(rs.Contains(strconv.Itoa(n + 10000))).Is(in)
 	}
@@ -92,16 +94,18 @@ func TestRandom(t *testing.T) {
 	if !testing.Short() {
 		for rs.tree.size > 50 {
 			from, to := random(61)
-			rs.Insert(from, to)
+			incs += rs.Insert(from, to)
 		}
-		rs.check()
+		count := rs.check()
+		assert(incs).Is(count)
 		for n, in := range nums {
 			assert(rs.Contains(strconv.Itoa(n + 10000))).Is(in)
 		}
 	}
 
-	rs.Insert("10000", "99999")
+	incs += rs.Insert("10000", "99999")
 	assert(rs.check()).Is(1)
+	assert(incs).Is(1)
 }
 
 func TestRandomNonOverlapping(t *testing.T) {
@@ -173,6 +177,15 @@ func TestOverflow(t *testing.T) {
 		}
 	}
 	t.Fatal("should have overflowed")
+}
+
+func TestAddReturn(t *testing.T) {
+	rs := &Ranges{}
+	n := 0
+	n += rs.Insert(" ", "a")
+	n += rs.Insert(" ", "b")
+	n += rs.Insert(" ", "c")
+	assert.This(n).Is(rs.check())
 }
 
 //-------------------------------------------------------------------

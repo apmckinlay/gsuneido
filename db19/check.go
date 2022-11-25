@@ -211,9 +211,6 @@ func (t *CkTran) saveRead(table string, index int, from, to string) bool {
 		t.tables[table] = tbl
 	}
 	reads, inc := tbl.reads.with(index, from, to)
-	if reads == nil {
-		return false
-	}
 	if t.readCount += inc; t.readCount >= readMax {
 		return false
 	}
@@ -229,9 +226,6 @@ func (cr ckreads) with(index int, from, to string) (ckreads, int) {
 		cr[index] = &Ranges{}
 	}
 	inc := cr[index].Insert(from, to)
-	if inc == ranges.Full {
-		return nil, 0
-	}
 	return cr, inc
 }
 
@@ -456,6 +450,15 @@ func (ck *Check) commit(ut *UpdateTran) []string {
 	if !ok {
 		return nil // it's gone, presumably aborted
 	}
+
+	// reads := 0
+	// for _, tbl := range t.tables {
+	// 	for _, tr := range tbl.reads {
+	// 		reads += tr.Count()
+	// 	}
+	// }
+	// assert.This(t.readCount).Is(reads)
+
 	t.end = ck.next()
 	if t.start == ck.oldest {
 		ck.oldest = math.MaxInt // need to find the new oldest

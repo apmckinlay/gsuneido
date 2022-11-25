@@ -4,6 +4,7 @@
 package ranges
 
 import (
+	"math"
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/util/assert"
@@ -52,9 +53,9 @@ const existing = -1
 const overflow = -2
 
 const (
-	Added = +1
+	Added   = +1
 	Existed = 0
-	Full = -1
+	Full    = math.MaxInt / 2 // half so increment won't overflow
 )
 
 //-------------------------------------------------------------------
@@ -75,6 +76,7 @@ func (rs *Ranges) Insert(from, to string) int {
 	}
 
 	li := leaf.insert(from, to)
+	inc := 1
 	if li == existing {
 		return Existed // from,to is already contained in an existing range
 	} else if li == overflow {
@@ -95,8 +97,9 @@ func (rs *Ranges) Insert(from, to string) int {
 			break
 		}
 		it.remove()
+		inc--
 	}
-	return Added
+	return inc
 }
 
 type iter struct {
@@ -323,3 +326,17 @@ func (leaf *leafNode) String() string {
 func (ls *leafSlot) String() string {
 	return ls.from + "->" + ls.to
 }
+
+// func (rs *Ranges) Count() int {
+// 	if rs == nil {
+//         return 0
+//     }
+// 	if rs.tree == nil {
+// 		return rs.leaf.size
+// 	}
+// 	n := 0
+// 	for i := 0; i < rs.tree.size; i++ {
+// 		n += rs.tree.slots[i].leaf.size
+// 	}
+// 	return n
+// }
