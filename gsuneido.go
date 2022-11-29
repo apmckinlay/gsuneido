@@ -212,6 +212,9 @@ func ck(err error) {
 	}
 }
 
+// clientErrorLog sends the client's error log to the server.
+// This is to record errors that occurred on the client
+// when the server was not connected.
 func clientErrorLog() {
 	dbms := mainThread.Dbms()
 
