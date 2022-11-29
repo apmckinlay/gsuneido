@@ -130,7 +130,7 @@ func newServerConn(dbms *DbmsLocal, conn net.Conn) {
 		conn.Close()
 		return
 	}
-	addr := str.BeforeFirst(conn.RemoteAddr().String(), ":")
+	addr := str.BeforeLast(conn.RemoteAddr().String(), ":") // strip port
 	msc := mux.NewServerConn(conn)
 	sc := &serverConn{dbms: dbms, id: msc.Id(), conn: conn, remoteAddr: addr,
 		sessions: make(map[uint32]*serverSession)}
