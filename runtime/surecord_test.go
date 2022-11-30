@@ -5,6 +5,7 @@ package runtime
 
 import (
 	"math/rand"
+	"strings"
 	"sync"
 	"testing"
 
@@ -130,4 +131,19 @@ func TestSuRecord_Concurrency(t *testing.T) {
 		go run()
 	}
 	wg.Wait()
+}
+
+func TestSuRecord_validRule(t *testing.T) {
+	test := func(s string, expected bool) {
+		assert.This(validRule(s)).Is(expected)
+	}
+	test("foo", true)
+	test("foo_bar", true)
+	test("foo?_bar", true)
+	test("123", true)
+
+	test("foo\n", false)
+	test("\nfoo", false)
+	test("foo bar", false)
+	test(strings.Repeat("x", maxRule+1), false)
 }

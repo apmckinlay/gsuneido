@@ -5,7 +5,6 @@ package runtime
 
 import (
 	"fmt"
-	"regexp"
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/runtime/trace"
@@ -13,6 +12,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/generic/list"
 	"github.com/apmckinlay/gsuneido/util/pack"
+	"github.com/apmckinlay/gsuneido/util/regex"
 	"github.com/apmckinlay/gsuneido/util/str"
 	"golang.org/x/exp/slices"
 )
@@ -697,7 +697,7 @@ func (r *SuRecord) getSpecial(key string) Value {
 }
 
 func (r *SuRecord) callRule(t *Thread, key string) Value {
-	if !validIdent(key) {
+	if !validRule(key) {
 		return nil
 	}
 	r.ensureDeps()
@@ -713,13 +713,13 @@ func (r *SuRecord) callRule(t *Thread, key string) Value {
 	return nil
 }
 
-func validIdent(s string) bool {
-	return len(s) < maxIdent && identRx.MatchString(s)
+func validRule(s string) bool {
+	return len(s) < maxRule && ruleRx.Matches(s)
 }
 
-const maxIdent = 256
+const maxRule = 256
 
-var identRx = regexp.MustCompile("^[_a-zA-Z0-9?!]+$")
+var ruleRx = regex.Compile(`\A[_a-zA-Z0-9?!]+\Z`)
 
 func (r *SuRecord) catchRule(t *Thread, rule Value, key string) Value {
 	t.rules.push(r, key)
