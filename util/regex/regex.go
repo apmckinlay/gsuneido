@@ -5,6 +5,7 @@
 package regex
 
 import (
+	"fmt"
 	"strconv"
 	"strings"
 
@@ -61,6 +62,18 @@ func (pat Pattern) String() string {
 		sb.WriteString(sep)
 		sep = " "
 		sb.WriteString(in.String())
+	}
+	return sb.String()
+}
+
+func (pat Pattern) Display() string {
+	var sb strings.Builder
+	for i, in := range pat {
+		if in.op == branch || in.op == jump {
+			in.jump += int16(i)
+			in.alt += int16(i)
+		}
+		fmt.Fprintf(&sb, "%d: %s\n", i, in.String())
 	}
 	return sb.String()
 }

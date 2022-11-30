@@ -188,7 +188,7 @@ func TestRegexBug(t *testing.T) {
 	str := "xxx0"
 
 	p1 := Compile(pat)
-	p1.print()
+	fmt.Print(p1.Display())
 	var result Result
 	p1.FirstMatch(str, 0, &result)
 	i1, j1 := result[0].Range()
@@ -372,15 +372,3 @@ func ptReplace(args []string, _ []bool) bool {
 }
 
 var _ = ptest.Add("regex_replace", ptReplace)
-
-// ptest support ---------------------------------------------------------------
-
-func (pat Pattern) print() {
-	for i, in := range pat {
-		if in.op == branch || in.op == jump {
-			in.jump += int16(i)
-			in.alt += int16(i)
-		}
-		fmt.Printf("%d: %s\n", i, in.String())
-	}
-}
