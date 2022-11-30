@@ -282,6 +282,7 @@ outer:
 			if !m {
 				if ai > 0 {
 					// backtrack
+					prev := pi
 					pi = alts[ai-1].pi - 1 // -1 because loop increments
 					if alts[ai-1].si2 > alts[ai-1].si {
 						trace("backtrack shorten")
@@ -292,8 +293,10 @@ outer:
 						trace("backtrack pop", "si", si, "alt", alts[ai])
 						si = alts[ai].si
 					}
-					if loops++; loops > loopLimit {
-						panic("regex: too many loops")
+					if pi < prev {
+						if loops++; loops > loopLimit {
+							panic("regex: too many loops")
+						}
 					}
 				} else if incdec != 0 {
 					continue outer
