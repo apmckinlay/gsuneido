@@ -241,6 +241,7 @@ func clientErrorLog() {
 	}
 }
 
+// startServer does not return
 func startServer() {
 	log.Println("starting server")
 	startHttpStatus()

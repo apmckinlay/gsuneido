@@ -5,6 +5,7 @@ package dbms
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"log"
 	"net"
@@ -20,6 +21,7 @@ import (
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/runtime/trace"
 	"github.com/apmckinlay/gsuneido/util/assert"
+	"github.com/apmckinlay/gsuneido/util/exit"
 	"github.com/apmckinlay/gsuneido/util/str"
 	"golang.org/x/time/rate"
 )
@@ -68,7 +70,7 @@ func Server(dbms *DbmsLocal) {
 	if err != nil {
 		Fatal(err)
 	}
-	defer l.Close()
+	exit.Add(func() { l.Close() })
 	go idleTimeout()
 	var tempDelay time.Duration // how long to sleep on accept failure
 	limiter := rate.NewLimiter(rate.Limit(100), 10)
@@ -78,8 +80,7 @@ func Server(dbms *DbmsLocal) {
 		conn, err := l.Accept()
 		if err != nil {
 			// error handling based on Go net/http
-			//lint:ignore SA1019 used by Go net/http
-			if ne, ok := err.(net.Error); ok && ne.Temporary() {
+			if ne, ok := err.(*net.OpError); ok && ne.Temporary() {
 				if tempDelay == 0 {
 					tempDelay = 5 * time.Millisecond
 				} else {
@@ -91,6 +92,9 @@ func Server(dbms *DbmsLocal) {
 				log.Println("ERROR server accept:", err)
 				time.Sleep(tempDelay)
 				continue
+			}
+			if errors.Is(err, net.ErrClosed) {
+				exit.Wait()
 			}
 			Fatal(err)
 		}
