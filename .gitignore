@@ -17,7 +17,6 @@ $RECYCLE.BIN/
 *.test
 *.out
 *.su
-*.tmp
 *.com
 *.com~
 *.exe
@@ -27,11 +26,9 @@ gsuneido
 *.bak
 *.dll
 *.log
-install.bat
 en_US.*
 *.diff
 *.db
-sign.bat
 /zap
 *.prof
 /zapend
