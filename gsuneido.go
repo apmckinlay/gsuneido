@@ -58,7 +58,7 @@ func main() {
 	if mode == "gui" {
 		redirect()
 	}
-	if err := system.Service("gSuneido", redirect, exitOk); err != nil {
+	if err := system.Service("gSuneido", redirect, exit.RunFuncs); err != nil {
 		Fatal(err)
 	}
 	if options.Action == "" && mode != "gui" {
@@ -184,10 +184,6 @@ func main() {
 		run("Init()")
 		builtin.Run()
 	}
-}
-
-func exitOk() {
-	exit.Exit(0)
 }
 
 func redirect() {

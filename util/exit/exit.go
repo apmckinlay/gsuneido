@@ -14,19 +14,29 @@ var exitfns []func()
 
 var hanger sync.Mutex
 
+// Add registers a function to be called on exit.
 func Add(fn func()) {
 	exitfns = append(exitfns, fn)
 }
 
+// Exit calls RunFuncs and then os.Exit
+// It also starts a failsafe timer which will exit in 10 seconds regardless.
 func Exit(code int) {
-	// First call gets in, any later ones just block here until exit
+	// failsafe in case exit funcs don't return
+	go func() {
+		time.Sleep(10 * time.Second)
+		log.Fatalln("exit timeout")
+	}()
+	RunFuncs()
+	os.Exit(code)
+}
+
+// RunFuncs runs the Add'ed exit functions.
+// Only the first caller will run them, any other callers will block.
+// The functions are run in the reverse order that they were Add'ed.
+func RunFuncs() {
 	hanger.Lock() // never unlocked
 
-	// failsafe in case this goroutine doesn't get to exit
-	go func() {
-		time.Sleep(5 * time.Second)
-		log.Fatalln("exit failsafe")
-	}()
 	for i := len(exitfns) - 1; i >= 0; i-- {
 		func() {
 			defer func() {
@@ -37,10 +47,10 @@ func Exit(code int) {
 			exitfns[i]()
 		}()
 	}
-	os.Exit(code)
 }
 
+// Wait should only be called after Exit or RunFuncs. It blocks until exit.
 func Wait() {
-	hanger.Lock()
+	hanger.Lock() // should be locked
 	log.Fatalln("exit.Wait: shouldn't reach here")
 }
