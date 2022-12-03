@@ -5,10 +5,10 @@ package db19
 
 import (
 	"log"
-	"runtime/debug"
 	"time"
 
 	"github.com/apmckinlay/gsuneido/db19/meta"
+	"github.com/apmckinlay/gsuneido/util/dbg"
 )
 
 type void = struct{}
@@ -37,7 +37,7 @@ func merger(db *Database, mergeChan chan todo,
 	persistInterval time.Duration, allDone chan void) {
 	defer func() {
 		if e := recover(); e != nil {
-			debug.PrintStack()
+			dbg.PrintStack()
 			log.Fatalln("FATAL ERROR in merger:", e)
 		}
 	}()

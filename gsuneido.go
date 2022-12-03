@@ -419,7 +419,7 @@ func libload(t *Thread, name string) (result Value, e any) {
 	defer func() {
 		if e = recover(); e != nil {
 			// fmt.Println("INFO: error loading", name, e)
-			// debug.PrintStack()
+			// dbg.PrintStack()
 			result = nil
 		}
 	}()

@@ -341,7 +341,7 @@ func (v value) Panics(expected string) {
 func Catch(f func()) (result any) {
 	defer func() {
 		if e := recover(); e != nil {
-			//debug.PrintStack()
+			//dbg.PrintStack()
 			result = e
 		}
 	}()

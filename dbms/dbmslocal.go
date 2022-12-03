@@ -188,7 +188,7 @@ func (dbms *DbmsLocal) Load(table string) int {
 func (dbms *DbmsLocal) LibGet(name string) []string {
 	defer func() {
 		if e := recover(); e != nil {
-			// debug.PrintStack()
+			// dbg.PrintStack()
 			panic("error loading " + name + " " + fmt.Sprint(e))
 		}
 	}()

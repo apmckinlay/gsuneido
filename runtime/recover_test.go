@@ -21,7 +21,7 @@ func a() {
 	defer func() {
 		if e := recover(); e != nil {
 			assert.That(unwound)
-			// debug.PrintStack()
+			// dbg.PrintStack()
 		}
 	}()
 	b()

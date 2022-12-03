@@ -5,8 +5,9 @@ package db19
 
 import (
 	"log"
-	"runtime/debug"
 	"time"
+
+	"github.com/apmckinlay/gsuneido/util/dbg"
 )
 
 // CheckCo is the concurrent, channel based interface to Check
@@ -210,7 +211,7 @@ func (ck *CheckCo) Stop() {
 func checker(ck *Check, c chan any, mergeChan chan todo) {
 	defer func() {
 		if e := recover(); e != nil {
-			debug.PrintStack()
+			dbg.PrintStack()
 			log.Fatalln("FATAL ERROR in checker:", e)
 		}
 	}()

@@ -127,7 +127,7 @@ func runCase(test testfn, row []string, str []bool) (ok bool) {
 		if err := recover(); err != nil {
 			fmt.Println("\tFAILED: ", Fmt(row, str))
 			fmt.Println("\tthrew: ", err)
-			//debug.PrintStack()
+			//dbg.PrintStack()
 			ok = false
 		}
 	}()
