@@ -4,10 +4,13 @@
 package builtin
 
 import (
+	"runtime/metrics"
+
 	"github.com/apmckinlay/gsuneido/compile"
 	"github.com/apmckinlay/gsuneido/compile/tokens"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
+	"github.com/apmckinlay/gsuneido/util/dnum"
 )
 
 var _ = exportMethods(&SuneidoObjectMethods)
@@ -74,4 +77,20 @@ func suneido_RuntimeError() Value {
 	// cause a Go runtime error (for testing)
 	var x []Value
 	return x[123]
+}
+
+var _ = staticMethod(suneido_GoMetric, "(name)")
+
+func suneido_GoMetric(t *Thread, args []Value) Value {
+	sample := make([]metrics.Sample, 1)
+	sample[0].Name = ToStr(args[0])
+	metrics.Read(sample)
+	switch sample[0].Value.Kind() {
+	case metrics.KindUint64:
+		return Int64Val(int64(sample[0].Value.Uint64()))
+	case metrics.KindFloat64:
+		return SuDnum{Dnum: dnum.FromFloat(float64(sample[0].Value.Float64()))}
+	default:
+		return False
+	}
 }
