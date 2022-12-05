@@ -33,18 +33,6 @@ func HeapSys() uint64 {
 	return ms.HeapSys
 }
 
-var _ = builtin(MemoryAlloc, "()")
-
-func MemoryAlloc() Value {
-	sample := make([]metrics.Sample, 1)
-	sample[0].Name = "/gc/heap/allocs:bytes"
-	metrics.Read(sample)
-	if sample[0].Value.Kind() == metrics.KindBad {
-		return MinusOne
-	}
-	return Int64Val(int64(sample[0].Value.Uint64()))
-}
-
 var _ = builtin(GetCurrentDirectory, "()")
 
 func GetCurrentDirectory() Value {
