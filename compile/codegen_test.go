@@ -500,3 +500,9 @@ func parseFunction(src string) *ast.Function {
 	p := NewParser(src)
 	return p.Function()
 }
+
+func TestBug(t *testing.T) {
+    assert.T(t).
+		This(func() { parseFunction("function (x) { a = function() { _ } }") }).
+		Panics("syntax error @32 invalid identifier: '_'")
+}

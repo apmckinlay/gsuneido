@@ -270,6 +270,9 @@ func (p *Parser) atom() (result ast.Expr) {
 		return &ast.Call{Fn: expr, Args: args}
 	default:
 		if p.Token.IsIdent() {
+			if p.Text == "_" {
+				p.Error("invalid identifier: '_'")
+			}
 			if p.Text[0] == '_' && len(p.Text) > 1 && ascii.IsUpper(p.Text[1]) &&
 				p.Text[1:] != p.name && p.Lxr.AheadSkip(0).Token != tok.Colon {
 				p.Error("invalid reference to " + p.Text)
