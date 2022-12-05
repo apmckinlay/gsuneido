@@ -99,6 +99,7 @@ func serviceMain(uint32, **uint16) uintptr {
 	}
 
 	updateStatus(windows.SERVICE_STOPPED, 0)
+	os.Exit(0)
 	return windows.NO_ERROR
 }
 

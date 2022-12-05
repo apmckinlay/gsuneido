@@ -70,7 +70,6 @@ func Server(dbms *DbmsLocal) {
 	if err != nil {
 		Fatal(err)
 	}
-	exit.Add(func() { l.Close() })
 	go idleTimeout()
 	var tempDelay time.Duration // how long to sleep on accept failure
 	limiter := rate.NewLimiter(rate.Limit(100), 10)
