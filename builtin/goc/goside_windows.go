@@ -18,7 +18,6 @@ import (
 	"unsafe"
 
 	"github.com/apmckinlay/gsuneido/options"
-	"github.com/apmckinlay/gsuneido/util/dbg"
 	"github.com/apmckinlay/gsuneido/util/exit"
 	"golang.org/x/sys/windows"
 )
@@ -149,9 +148,7 @@ var (
 
 func interact(args ...uintptr) uintptr {
 	if windows.GetCurrentThreadId() != uiThreadId {
-		log.Println("ERROR: illegal UI call from background thread")
-		dbg.PrintStack()
-		runtime.Goexit()
+		panic("illegal UI call from background thread")
 	}
 	for i, a := range args {
 		C.args[i] = C.uintptr(a)
