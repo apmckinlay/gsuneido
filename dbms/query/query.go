@@ -233,6 +233,9 @@ func optTempIndex(q Query, mode Mode, index []string) (
 	tempIndexWriteCost := tempIndexReadCost * 2 // ??? surcharge (for memory)
 	dataReadCost := q.Nrows() * q.rowSize()
 	tempIndexCost := tempIndexWriteCost + tempIndexReadCost + dataReadCost
+	if !q.SingleTable() {
+		tempIndexCost += tempIndexCost / 2 // ???
+	}
 	cost2 := noIndexCost + tempIndexCost
 	assert.That(cost2 >= 0) // ???
 	trace("cost1", cost1, "| noIndexCost",
