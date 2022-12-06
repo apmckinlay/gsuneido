@@ -8,6 +8,7 @@ import (
 	"math"
 	"sort"
 	"strings"
+	"sync"
 
 	"github.com/apmckinlay/gsuneido/db19/meta/schema"
 	"github.com/apmckinlay/gsuneido/db19/stor"
@@ -73,12 +74,13 @@ func (ts *Schema) Write(w *stor.Writer) {
 			w.Put1(int(ix.Mode)).PutStrs(ix.Columns)
 		} else {
 			assert.That(ix.BestKey != nil)
-			w.Put1(int(ix.Mode) + 1).PutStrs(ix.Columns).PutStrs(ix.BestKey)
-			//TODO clean up +1
+			w.Put1(int(ix.Mode)).PutStrs(ix.Columns).PutStrs(ix.BestKey)
 		}
 		w.PutStr(ix.Fk.Table).Put1(int(ix.Fk.Mode)).PutStrs(ix.Fk.Columns)
 	}
 }
+
+var once sync.Once
 
 func ReadSchema(_ *stor.Stor, r *stor.Reader) *Schema {
 	ts := Schema{}
@@ -91,11 +93,13 @@ func ReadSchema(_ *stor.Stor, r *stor.Reader) *Schema {
 			mode := byte(r.Get1())
 			columns := r.GetStrs()
 			var bestKey []string
-			if mode == 'i' || mode == 'u' {
-				fmt.Println("ERROR: please optimize the database")
-			}
-			if mode == 'i'+1 || mode == 'u'+1 { //TODO clean up +1
+			if mode == 'i'+1 || mode == 'u'+1 { //TODO remove
 				mode--
+				once.Do(func() {
+					fmt.Println("ERROR: please compact the database")
+				})
+			}
+			if mode != 'k' {
 				bestKey = r.GetStrs()
 			}
 			ts.Indexes[i] = schema.Index{
@@ -108,7 +112,6 @@ func ReadSchema(_ *stor.Stor, r *stor.Reader) *Schema {
 					Columns: r.GetStrs()},
 			}
 		}
-		ts.patchBestKey() //TODO remove
 		ts.Ixspecs(0)
 	}
 	return &ts
@@ -190,49 +193,6 @@ func (ts *Schema) setContainsKey() {
 			}
 		}
 	}
-}
-
-func (ts *Schema) patchBestKey() { //TODO remove
-	var fsk []string
-	for i := range ts.Indexes {
-		ix := &ts.Indexes[i]
-		if ix.Mode != 'k' && ix.BestKey == nil {
-			if fsk == nil {
-				fsk = ts.firstShortestKey()
-				assert.That(fsk != nil)
-			}
-			ix.BestKey = fsk
-		}
-	}
-}
-
-// firstShortestKey is the old way, needed during the transition.
-// Going forward it is replaced by BestKey
-func (ts *Schema) firstShortestKey() []string { //TODO remove
-	hasSpecial := func(cols []string) bool {
-		for _, col := range cols {
-			if strings.HasSuffix(col, "_lower!") {
-				return true
-			}
-		}
-		return false
-	}
-	usableKey := func(ix *schema.Index) bool {
-		return ix.Mode == 'k' && !hasSpecial(ix.Columns)
-	}
-	var key []string
-	for i := range ts.Indexes {
-		ix := &ts.Indexes[i]
-		if usableKey(ix) &&
-			(key == nil || len(ix.Columns) < len(key)) {
-			if ix.Columns == nil {
-				key = []string{}
-			} else {
-				key = ix.Columns
-			}
-		}
-	}
-	return key
 }
 
 func (ts *Schema) colsToFlds(cols []string) []int {

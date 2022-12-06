@@ -9,7 +9,6 @@ import (
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
-	"github.com/apmckinlay/gsuneido/util/ascii"
 	"github.com/apmckinlay/gsuneido/util/hash"
 	"github.com/apmckinlay/gsuneido/util/str"
 	"golang.org/x/exp/slices"
@@ -160,7 +159,7 @@ func (sc *Schema) IIndex(cols []string) int {
 
 func (ix *Index) Equal(iy *Index) bool {
 	return slices.Equal(ix.Columns, iy.Columns) &&
-		ascii.ToLower(ix.Mode) == ascii.ToLower(iy.Mode) && //TODO remove ToLower
+		ix.Mode == iy.Mode &&
 		ix.Fk.Table == iy.Fk.Table &&
 		ix.Fk.Mode == iy.Fk.Mode &&
 		slices.Equal(ix.Fk.Columns, iy.Fk.Columns)
