@@ -62,7 +62,7 @@ func threadCallClass(t *Thread, args []Value) Value {
 			t2.Close()
 			threads.remove(t2.Num)
 			if e := recover(); e != nil {
-				LogUncaught(t, "Thread", e)
+				LogUncaught(t2, "Thread", e)
 			}
 		}()
 		t2.Call(fn)

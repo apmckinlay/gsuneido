@@ -6,8 +6,10 @@ package runtime
 import (
 	"encoding/base64"
 	"errors"
+	"fmt"
 	"log"
 	"math"
+	"os"
 	"runtime"
 	"strings"
 
@@ -15,7 +17,6 @@ import (
 	"github.com/apmckinlay/gsuneido/util/dnum"
 	"github.com/apmckinlay/gsuneido/util/hacks"
 	"github.com/apmckinlay/gsuneido/util/regex"
-	"github.com/apmckinlay/gsuneido/util/str"
 )
 
 var (
@@ -302,6 +303,9 @@ func ToSuExcept(t *Thread, e any) *SuExcept {
 }
 
 func printSuStack(th *Thread, e any) {
+	if th.Name != "" {
+		fmt.Fprintln(os.Stderr, th.Name)
+	}
 	if se, ok := e.(*SuExcept); ok {
 		PrintStack(se.Callstack)
 	} else {
@@ -329,7 +333,7 @@ func logStringError(th *Thread, from string, e string) {
 }
 
 func LogUncaught(th *Thread, where string, e any) {
-	log.Println("ERROR"+str.Opt(" ", th.Name), "uncaught in", where+":", e)
+	log.Println("ERROR", "uncaught in", where+":", e)
 	if isRuntimeError(e) {
 		dbg.PrintStack()
 	}
