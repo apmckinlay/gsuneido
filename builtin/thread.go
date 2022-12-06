@@ -155,26 +155,6 @@ func (d *suThreadGlobal) String() string {
 	return "Thread /* builtin class */"
 }
 
-var _ = builtin(Scheduled, "(ms, block)")
-
-func Scheduled(t *Thread, args []Value) Value {
-	ms := time.Duration(ToInt(args[0])) * time.Millisecond
-	t2 := NewThread(t)
-	block := args[1]
-	block.SetConcurrent()
-	go func() {
-		defer func() {
-			if e := recover(); e != nil {
-				LogUncaught(t2, "Scheduled", e)
-			}
-			t2.Close()
-		}()
-		time.Sleep(ms)
-		t2.Call(block)
-	}()
-	return nil
-}
-
 // ThreadList is used by HttpStatus
 func ThreadList() []string {
 	threads.lock.Lock()
