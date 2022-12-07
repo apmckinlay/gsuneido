@@ -13,6 +13,7 @@ import (
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/runtime"
+	"github.com/apmckinlay/gsuneido/runtime/trace"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/generic/ord"
 	"github.com/apmckinlay/gsuneido/util/generic/set"
@@ -52,6 +53,9 @@ type Where struct {
 
 	selectCols []string
 	selectVals []string
+
+	nIn  int
+	nOut int
 }
 
 type whereApproach struct {
@@ -972,6 +976,10 @@ func (w *Where) Get(th *runtime.Thread, dir runtime.Dir) runtime.Row {
 	for {
 		row := w.get(th, dir)
 		if w.filter(th, row) {
+			w.nOut++
+			if row == nil {
+				w.slowQueries()
+			}
 			return row
 		}
 	}
@@ -979,6 +987,7 @@ func (w *Where) Get(th *runtime.Thread, dir runtime.Dir) runtime.Row {
 
 func (w *Where) get(th *runtime.Thread, dir runtime.Dir) runtime.Row {
 	if w.idxSel == nil {
+		w.nIn++
 		return w.source.Get(th, dir)
 	}
 	if w.idxSel.isRanges() {
@@ -1024,6 +1033,7 @@ func (w *Where) getPoint(dir runtime.Dir) runtime.Row {
 			return nil
 		}
 		if row := w.tbl.lookup(w.curPtrng.org); row != nil {
+			w.nIn++
 			return row
 		}
 	}
@@ -1156,4 +1166,13 @@ func (w *Where) singletonFilter(
 		}
 	}
 	return true
+}
+
+func (w *Where) slowQueries() {
+	if w.nIn > 100 && w.nIn > w.nOut*100 && trace.SlowQuery.On() {
+		trace.SlowQuery.Println(w.nIn, "->", w.nOut)
+		trace.Println(format(w, 1))
+		w.nIn = 0
+		w.nOut = 0
+	}
 }

@@ -84,6 +84,10 @@ func (w what) println(first any, rest []any) {
 	Print(s)
 }
 
+func Println(args ...any) {
+	Print(fmt.Sprintln(args...))
+}
+
 func Print(s string) {
 	if cur&LogFile != 0 || cur&(LogFile|Console) == 0 {
 		logPrintln(s)
