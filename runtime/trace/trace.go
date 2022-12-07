@@ -8,6 +8,9 @@ import (
 	"log"
 	"os"
 	"sync"
+
+	"golang.org/x/text/language"
+	"golang.org/x/text/message"
 )
 
 type what int
@@ -75,13 +78,13 @@ func (w what) String() string {
 func (w what) Println(first any, rest ...any) {
 	// kept short in hopes it will be inlined
 	if cur&w != 0 {
-		w.println(first, rest)
+		format(&first)
+		for i := range rest {
+			format(&rest[i])
+		}
+		s := w.String() + fmt.Sprint(first) + " " + fmt.Sprintln(rest...)
+		Print(s)
 	}
-}
-
-func (w what) println(first any, rest []any) {
-	s := w.String() + fmt.Sprint(first) + " " + fmt.Sprintln(rest...)
-	Print(s)
 }
 
 func Println(args ...any) {
@@ -94,6 +97,14 @@ func Print(s string) {
 	}
 	if cur&Console != 0 || cur&(LogFile|Console) == 0 {
 		consolePrintln(s)
+	}
+}
+
+func format(p *any) {
+	switch (*p).(type) {
+	case int, uint, int32, uint32, int64, uint64:
+		// add commas to make big numbers more readable
+		*p = message.NewPrinter(language.English).Sprintf("%d", *p)
 	}
 }
 
