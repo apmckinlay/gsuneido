@@ -170,8 +170,7 @@ func (dir Dir) String() string {
 	return map[Dir]string{Only: "Only", Next: "Next", Prev: "Prev"}[dir]
 }
 
-// IQuery is the interface to a database query,
-// either local (not implemented yet) or QueryClient.
+// IQuery is the interface to a database query, either local or client
 type IQuery interface {
 	IQueryCursor
 
@@ -183,8 +182,7 @@ type IQuery interface {
 	Output(th *Thread, rec Record)
 }
 
-// ICursor is the interface to a database query,
-// either local (not implemented yet) or QueryClient.
+// ICursor is the interface to a database query, either local or client
 type ICursor interface {
 	IQueryCursor
 
