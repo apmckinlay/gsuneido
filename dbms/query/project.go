@@ -342,7 +342,7 @@ func (p *Project) optimize(mode Mode, index []string) (Cost, any) {
 	}
 	seq := bestGrouped(p.source, mode, index, p.columns)
 	hash := p.hashCost(mode, index)
-	trace("PROJECT, seq", seq.cost, "hash", hash)
+	traceln("PROJECT, seq", seq.cost, "hash", hash)
 	if hash < seq.cost {
 		return hash, &projectApproach{strategy: projHash, index: index}
 	}

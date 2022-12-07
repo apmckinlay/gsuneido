@@ -190,11 +190,11 @@ const impossible = Cost(math.MaxInt / 64) // allow for adding IMPOSSIBLE's
 
 // gin is used with be e.g. defer be(gin(...))
 func gin(args ...any) string {
-	trace(args...)
+	traceln(args...)
 	// indent++
 	return args[0].(string)
 }
-func trace(args ...any) {
+func traceln(args ...any) {
 	_ = args // suppress warning when commented out
 	// fmt.Print(strings.Repeat(" ", 4*indent))
 	// fmt.Println(args...)
@@ -220,7 +220,7 @@ func Optimize(q Query, mode Mode, index []string) (cost Cost) {
 func optTempIndex(q Query, mode Mode, index []string) (
 	cost Cost, approach any) {
 	defer be(gin("Optimize", q, mode, index))
-	defer func() { trace("=>", cost) }()
+	defer func() { traceln("=>", cost) }()
 	if !set.Subset(q.Columns(), index) {
 		return impossible, nil
 	}
@@ -238,7 +238,7 @@ func optTempIndex(q Query, mode Mode, index []string) (
 	}
 	cost2 := noIndexCost + tempIndexCost
 	assert.That(cost2 >= 0) // ???
-	trace("cost1", cost1, "| noIndexCost",
+	traceln("cost1", cost1, "| noIndexCost",
 		noIndexCost, "+ tempIndexCost", tempIndexCost, "= cost2", cost2)
 	cost, approach = min(cost1, app1, cost2, app2)
 	if cost >= impossible {

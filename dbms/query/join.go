@@ -152,7 +152,7 @@ func (jn *Join) optimize(mode Mode, index []string) (Cost, any) {
 	fwd := jn.opt(jn.source, jn.source2, jn.joinType, mode, index)
 	rev := jn.opt(jn.source2, jn.source, jn.joinType.reverse(), mode, index)
 	rev.cost += outOfOrder
-	trace("forward", fwd, "reverse", rev)
+	traceln("forward", fwd, "reverse", rev)
 	approach := &joinApproach{}
 	if rev.cost < fwd.cost {
 		fwd = rev
@@ -177,7 +177,7 @@ func (jt joinType) reverse() joinType {
 
 func (jn *Join) opt(src1, src2 Query, joinType joinType,
 	mode Mode, index []string) bestIndex {
-	trace("OPT", paren(src1), "JOIN", joinType, paren(src2))
+	traceln("OPT", paren(src1), "JOIN", joinType, paren(src2))
 	// always have to read all of source 1
 	cost1 := Optimize(src1, mode, index)
 	if cost1 >= impossible {
@@ -191,7 +191,7 @@ func (jn *Join) opt(src1, src2 Query, joinType joinType,
 	// should only be taking a portion of the variable cost2,
 	// not the fixed temp index cost2 (so 2/3 instead of 1/2)
 	cost := cost1 + (nrows1 * src2.lookupCost()) + (best.cost * 2 / 3)
-	trace("join opt", cost1, "+ (", nrows1, "*", src2.lookupCost(), ") + (",
+	traceln("join opt", cost1, "+ (", nrows1, "*", src2.lookupCost(), ") + (",
 		best.cost, "* 2/3 ) =", cost)
 	best.cost = cost
 	return best
