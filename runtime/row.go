@@ -65,7 +65,6 @@ func (row Row) GetRaw(hdr *Header, fld string) string {
 }
 
 // GetRawVal is like GetVal (i.e. handles rules) but returns a raw/packed value.
-// It is used by TempIndex.
 func (row Row) GetRawVal(hdr *Header, fld string, th *Thread, tran *SuTran) string {
 	if strings.HasSuffix(fld, "_lower!") {
 		base := fld[:len(fld)-7]

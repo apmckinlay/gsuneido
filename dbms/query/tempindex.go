@@ -113,7 +113,8 @@ func (ti *TempIndex) makeIter() rowIter {
 		ti.selEnd = ixkey.Max
 	}
 	ti.st = MakeSuTran(ti.tran)
-	ti.hdr = ti.source.Header()
+	// need to copy header to avoid data race from concurrent sortlist
+	ti.hdr = ti.source.Header().Dup()
 	if ti.source.SingleTable() {
 		return ti.single()
 	}
