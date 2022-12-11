@@ -58,7 +58,6 @@ func (sort *Sort) optimize(mode Mode, index []string) (Cost, any) {
 	src := sort.source
 	cost := Optimize(src, mode, sort.columns) // adds temp index if needed
 	best := sort.bestOrdered(src.Indexes(), sort.columns, mode)
-	traceln("SORT", "cost", cost, "best", best)
 	if cost < best.cost {
 		return cost, sortApproach{index: sort.columns}
 	}

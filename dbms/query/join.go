@@ -4,7 +4,10 @@
 package query
 
 import (
+	"fmt"
+
 	. "github.com/apmckinlay/gsuneido/runtime"
+	"github.com/apmckinlay/gsuneido/runtime/trace"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/generic/ord"
 	"github.com/apmckinlay/gsuneido/util/generic/set"
@@ -148,11 +151,15 @@ func (jn *Join) Transform() Query {
 }
 
 func (jn *Join) optimize(mode Mode, index []string) (Cost, any) {
-	defer be(gin("Join", jn, index))
-	fwd := jn.opt(jn.source, jn.source2, jn.joinType, mode, index)
-	rev := jn.opt(jn.source2, jn.source, jn.joinType.reverse(), mode, index)
+	fwd, f1 := jn.opt(jn.source, jn.source2, jn.joinType, mode, index)
+	rev, r1 := jn.opt(jn.source2, jn.source, jn.joinType.reverse(), mode, index)
 	rev.cost += outOfOrder
-	traceln("forward", fwd, "reverse", rev)
+	if trace.JoinOpt.On() {
+		trace.JoinOpt.Println(mode, index)
+		trace.Println("    fwd", show(fwd, f1))
+		trace.Println("    rev", show(rev, r1))
+		trace.Println(format(jn, 1))
+	}
 	approach := &joinApproach{}
 	if rev.cost < fwd.cost {
 		fwd = rev
@@ -163,6 +170,15 @@ func (jn *Join) optimize(mode Mode, index []string) (Cost, any) {
 	}
 	approach.index2 = fwd.index
 	return fwd.cost, approach
+}
+
+func show(bi bestIndex, cost1 int) string {
+	if bi.cost >= impossible {
+		return "impossible"
+	}
+	cost2 := bi.cost - cost1
+	return fmt.Sprint(bi.index, " ", trace.Number(cost1), " + ", trace.Number(cost2),
+		" = ", trace.Number(bi.cost))
 }
 
 func (jt joinType) reverse() joinType {
@@ -176,25 +192,22 @@ func (jt joinType) reverse() joinType {
 }
 
 func (jn *Join) opt(src1, src2 Query, joinType joinType,
-	mode Mode, index []string) bestIndex {
-	traceln("OPT", paren(src1), "JOIN", joinType, paren(src2))
+	mode Mode, index []string) (bestIndex, int) {
 	// always have to read all of source 1
 	cost1 := Optimize(src1, mode, index)
 	if cost1 >= impossible {
-		return newBestIndex()
+		return newBestIndex(), impossible
 	}
 	best := bestGrouped(src2, mode, nil, jn.by)
 	if best.index == nil {
-		return best
+		return best, impossible
 	}
 	nrows1 := src1.Nrows()
 	// should only be taking a portion of the variable cost2,
 	// not the fixed temp index cost2 (so 2/3 instead of 1/2)
-	cost := cost1 + (nrows1 * src2.lookupCost()) + (best.cost * 2 / 3)
-	traceln("join opt", cost1, "+ (", nrows1, "*", src2.lookupCost(), ") + (",
-		best.cost, "* 2/3 ) =", cost)
-	best.cost = cost
-	return best
+	// NOTE: lookupCost is not really correct because we use Select
+	best.cost = cost1 + (nrows1 * src2.lookupCost()) + (best.cost * 2 / 3)
+	return best, cost1
 }
 
 func (jn *Join) setApproach(index []string, approach any, tran QueryTran) {
@@ -350,7 +363,7 @@ func (lj *LeftJoin) Transform() Query {
 }
 
 func (lj *LeftJoin) optimize(mode Mode, index []string) (Cost, any) {
-	best := lj.opt(lj.source, lj.source2, lj.joinType, mode, index)
+	best, _ := lj.opt(lj.source, lj.source2, lj.joinType, mode, index)
 	return best.cost, &joinApproach{index2: best.index}
 }
 

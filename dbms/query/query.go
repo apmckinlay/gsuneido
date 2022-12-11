@@ -39,6 +39,7 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/meta/schema"
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/runtime"
+	"github.com/apmckinlay/gsuneido/runtime/trace"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/generic/set"
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
@@ -109,6 +110,7 @@ type Query interface {
 	optimize(mode Mode, index []string) (cost Cost, approach any)
 	setApproach(index []string, approach any, tran QueryTran)
 
+	// lookupCost returns the cost of one Lookup
 	lookupCost() Cost
 }
 
@@ -188,25 +190,6 @@ const outOfOrder = 10 // minimal penalty for executing out of order
 
 const impossible = Cost(math.MaxInt / 64) // allow for adding IMPOSSIBLE's
 
-// gin is used with be e.g. defer be(gin(...))
-func gin(args ...any) string {
-	traceln(args...)
-	// indent++
-	return args[0].(string)
-}
-func traceln(args ...any) {
-	_ = args // suppress warning when commented out
-	// fmt.Print(strings.Repeat(" ", 4*indent))
-	// fmt.Println(args...)
-}
-func be(arg string) {
-	_ = arg // suppress warning when commented out
-	// fmt.Println(strings.Repeat(" ", 4*indent)+"end", arg)
-	// indent--
-}
-
-// var indent = 0
-
 // Optimize determines the best (lowest estimated cost) query execution approach
 func Optimize(q Query, mode Mode, index []string) (cost Cost) {
 	if cost, _ = q.cacheGet(index); cost >= 0 {
@@ -217,18 +200,31 @@ func Optimize(q Query, mode Mode, index []string) (cost Cost) {
 	return cost
 }
 
-func optTempIndex(q Query, mode Mode, index []string) (
-	cost Cost, approach any) {
-	defer be(gin("Optimize", q, mode, index))
-	defer func() { traceln("=>", cost) }()
+func optTempIndex(q Query, mode Mode, index []string) (cost Cost, approach any) {
 	if !set.Subset(q.Columns(), index) {
+		if trace.QueryOpt.On() {
+			trace.QueryOpt.Println(mode, index, "= impossible")
+			trace.Println(format(q, 1))
+		}
 		return impossible, nil
 	}
 	if index == nil || !tempIndexable(mode) {
-		return q.optimize(mode, index)
+		cost, approach = q.optimize(mode, index)
+		if trace.QueryOpt.On() {
+			trace.QueryOpt.Println(mode, index, "=", cost)
+			trace.Println(format(q, 1))
+		}
+		return cost, approach
 	}
 	cost1, app1 := q.optimize(mode, index)
 	noIndexCost, app2 := q.optimize(mode, nil)
+	if noIndexCost >= cost1 {
+		if trace.QueryOpt.On() {
+			trace.QueryOpt.Println(mode, index, "=", cost1)
+			trace.Println(format(q, 1))
+		}
+		return cost1, app1
+	}
 	tempIndexReadCost := q.Nrows() * btree.EntrySize
 	tempIndexWriteCost := tempIndexReadCost * 2 // ??? surcharge (for memory)
 	dataReadCost := q.Nrows() * q.rowSize()
@@ -238,14 +234,25 @@ func optTempIndex(q Query, mode Mode, index []string) (
 	}
 	cost2 := noIndexCost + tempIndexCost
 	assert.That(cost2 >= 0) // ???
-	traceln("cost1", cost1, "| noIndexCost",
-		noIndexCost, "+ tempIndexCost", tempIndexCost, "= cost2", cost2)
 	cost, approach = min(cost1, app1, cost2, app2)
 	if cost >= impossible {
+		if trace.QueryOpt.On() {
+			trace.QueryOpt.Println(mode, index, "= impossible")
+			trace.Println(format(q, 1))
+		}
 		return impossible, nil
 	}
 	if cost2 < cost1 {
 		approach = &tempIndex{approach: approach, index: index}
+	}
+	if trace.QueryOpt.On() {
+		cmp := "<"
+		if cost1 > cost2 {
+			cmp = ">"
+		}
+		trace.QueryOpt.Println(mode, index, "=", cost1, cmp,
+			noIndexCost, "+", tempIndexCost, "=", cost2)
+		trace.Println(format(q, 1))
 	}
 	return cost, approach
 }
@@ -665,7 +672,7 @@ func format(q Query, indent int) string { // recursive
 var sepRx = regexp.MustCompile(", ?")
 
 func wrap(in string, s string) string {
-	const maxLine = 70
+	const maxLine = 80
 	s = in + s
 	if len(s) < maxLine {
 		return s
@@ -676,9 +683,9 @@ func wrap(in string, s string) string {
 		lines := ""
 		curLineLen := 0
 		for i, p := range pieces {
-			if curLineLen+len(p)+1 > maxLine {
+			if curLineLen+len(p)+2 >= maxLine {
 				lines += "\n" + in
-				curLineLen = 0
+				curLineLen = len(in)
 			}
 			lines += p
 			curLineLen += len(p) + 2

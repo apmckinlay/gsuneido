@@ -57,14 +57,14 @@ func (w what) String() string {
 		Opcodes:      "OP ",
 		Records:      "REC ",
 		Libraries:    "LIB ",
-		SlowQuery:    "SLOWQUERY ",
+		SlowQuery:    "SLOWQ ",
 		Query:        "QUERY ",
 		Symbol:       "SYM ",
-		AllIndex:     "ALLINDEX ",
+		AllIndex:     "ALLIDX ",
 		Table:        "TABLE ",
 		Select:       "SELECT ",
-		TempIndex:    "TEMPINDEX ",
-		QueryOpt:     "QUERYOPT ",
+		TempIndex:    "TMPIDX ",
+		QueryOpt:     "QOPT ",
 		Console:      "CONSOLE ",
 		LogFile:      "LOGFILE ",
 		ClientServer: "CS ",
@@ -100,12 +100,18 @@ func Print(s string) {
 	}
 }
 
+var printer = message.NewPrinter(language.English)
+
 func format(p *any) {
 	switch (*p).(type) {
 	case int, uint, int32, uint32, int64, uint64:
 		// add commas to make big numbers more readable
-		*p = message.NewPrinter(language.English).Sprintf("%d", *p)
+		*p = printer.Sprintf("%d", *p)
 	}
+}
+
+func Number(n any) string {
+	return printer.Sprintf("%d", n)
 }
 
 func (w what) On() bool {

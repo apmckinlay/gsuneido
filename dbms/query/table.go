@@ -190,7 +190,6 @@ func (tbl *Table) setIndex(index []string) {
 		!slc.ContainsFn(tbl.keys, tbl.index, set.Equal[string])
 }
 
-// lookupCost returns the cost of one lookup
 func (tbl *Table) lookupCost() Cost {
 	return lookupCost(tbl.rowSize())
 }
