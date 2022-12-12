@@ -294,7 +294,7 @@ func getTbl(_ *Thread, su *Summarize, _ Dir) Row {
 	}
 	tbl := su.source.(*Table)
 	var rb RecordBuilder
-	rb.Add(IntVal(tbl.Nrows()).(Packable))
+	rb.Add(IntVal(tbl.Nrows()))
 	return Row{DbRec{Record: rb.Build()}}
 }
 

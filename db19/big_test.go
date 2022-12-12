@@ -139,7 +139,7 @@ func createData(db *Database, tables []string, i, n int) {
 			nr := 1 + rand.Intn(rowsPerTable)
 			for k := 0; k <= nr && i < n; k++ {
 				var b rt.RecordBuilder
-				b.Add(rt.IntVal(i ^ 0x5555).(rt.Packable))
+				b.Add(rt.IntVal(i ^ 0x5555))
 				b.Add(data)
 				rec := b.Build()
 				ut.Output(nil, table, rec)

@@ -20,7 +20,7 @@ func TestTableLookup(t *testing.T) {
 	is := func(args ...int) []string {
 		ss := make([]string, len(args))
 		for i, n := range args {
-			ss[i] = rt.Pack(rt.IntVal(n).(rt.Packable))
+			ss[i] = rt.Pack(rt.IntVal(n))
 		}
 		return ss
 	}

@@ -158,8 +158,8 @@ func (*Tables) row(info *meta.Info) Row {
 	var rb RecordBuilder
 	rb.Add(SuStr(info.Table))
 	rb.Add(SuStr(info.Table)) // tablename
-	rb.Add(IntVal(info.Nrows).(Packable))
-	rb.Add(Int64Val(int64(info.Size)).(Packable))
+	rb.Add(IntVal(info.Nrows))
+	rb.Add(Int64Val(int64(info.Size)))
 	rec := rb.Build()
 	return Row{DbRec{Record: rec}}
 }
@@ -337,7 +337,7 @@ func (cs *Columns) Get(_ *Thread, dir Dir) Row {
 	var rb RecordBuilder
 	rb.Add(SuStr(schema.Table))
 	rb.Add(SuStr(col))
-	rb.Add(IntVal(fld).(Packable))
+	rb.Add(IntVal(fld))
 	rec := rb.Build()
 	return Row{DbRec{Record: rec}}
 }

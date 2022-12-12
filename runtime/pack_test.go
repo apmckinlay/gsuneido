@@ -24,7 +24,7 @@ func TestPack(t *testing.T) {
 func TestPackSuInt(t *testing.T) {
 	test := func(n int, expected ...byte) {
 		t.Helper()
-		v := IntVal(n).(Packable)
+		v := IntVal(n)
 		s := Pack(v)
 		assert.T(t).This([]byte(s)).Is(expected)
 		num := UnpackNumber(s)

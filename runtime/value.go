@@ -299,8 +299,13 @@ func PackSize(v Value) int {
 	panic("can't pack " + ErrType(v))
 }
 
+type PackableValue interface {
+	Value
+	Packable
+}
+
 // IntVal returns an SuInt if it fits, else a SuDnum
-func IntVal(n int) Value {
+func IntVal(n int) PackableValue {
 	if MinSuInt <= n && n <= MaxSuInt {
 		return SuInt(n)
 	}
@@ -308,7 +313,7 @@ func IntVal(n int) Value {
 }
 
 // Int64Val returns an SuInt if it fits, else a SuDnum
-func Int64Val(n int64) Value {
+func Int64Val(n int64) PackableValue {
 	if MinSuInt < n && n < MaxSuInt {
 		return SuInt(int(n))
 	}
