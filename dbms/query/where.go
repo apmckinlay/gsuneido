@@ -129,16 +129,21 @@ func addFixed(fixed []Fixed, e ast.Expr) []Fixed {
 	return fixed
 }
 
-func (w *Where) Nrows() int {
+func (w *Where) Nrows() (int, int) {
+	assert.That(w.optInited)
+	srcNrows, srcPop := w.source.Nrows()
 	if w.conflict {
-		return 0
+		return 0, srcPop
+	}
+	if w.singleton {
+		return 1, srcPop
 	}
 	if len(w.idxSels) == 0 {
-		return w.source.Nrows() / 2
+		return srcNrows / 2, srcPop
 	}
 	var n int
 	nmin := math.MaxInt
-	nsrc := float64(w.source.Nrows())
+	nsrc := float64(srcNrows)
 	for i := range w.idxSels {
 		ix := &w.idxSels[i]
 		if ix.isRanges() {
@@ -153,7 +158,7 @@ func (w *Where) Nrows() int {
 	if w.exprMore {
 		nmin /= 2 // ??? adjust for additional restrictions
 	}
-	return nmin
+	return nmin, srcPop
 }
 
 func (w *Where) Transform() Query {
@@ -410,7 +415,7 @@ func (w *Where) optimize(mode Mode, index []string) (Cost, any) {
 	if w.tbl == nil || w.tbl.singleton {
 		return filterCost, nil
 	}
-	cost, index := w.bestIndex(index)
+	cost, index := w.bestIndex(index) // handles w.singleton
 	if cost >= impossible {
 		// only use the filter if there are no possible idxSel
 		return filterCost, nil
@@ -953,10 +958,10 @@ func (w *Where) idxFrac(idx []string, ptrngs []pointRange) float64 {
 		panic("index not found")
 	}
 	var frac float64
-	nrows := float64(w.tbl.Nrows())
+	nrows1, _ := w.tbl.Nrows()
 	for _, pr := range ptrngs {
 		if pr.end == "" { // lookup
-			frac += 1 / nrows
+			frac += 1 / float64(nrows1)
 		} else { // range
 			frac += float64(w.t.RangeFrac(w.tbl.name, iIndex, pr.org, pr.end))
 		}

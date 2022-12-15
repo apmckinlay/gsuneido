@@ -20,6 +20,7 @@ type Compatible struct {
 	st       *SuTran
 }
 
+// init sets disjoint
 func (c *Compatible) init() {
 	c.allCols = set.Union(c.source.Columns(), c.source2.Columns())
 	fixed1 := c.source.Fixed()

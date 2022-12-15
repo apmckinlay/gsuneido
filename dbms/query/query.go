@@ -78,8 +78,11 @@ type Query interface {
 	// this is logical, there may not necessarily be an index.
 	Keys() [][]string
 
-	// Nrows returns the number of rows in the query, estimated for operations
-	Nrows() int
+	// Nrows returns n the number of expected result rows from the query,
+	// and p the "population" it was drawn from.
+	// For example, a Where on a key selects a single row (n = 1),
+	// from the entire table with p rows
+	Nrows() (n, p int)
 
 	// rowSize returns the average number of bytes per row
 	rowSize() int
@@ -228,9 +231,10 @@ func optTempIndex(q Query, mode Mode, index []string) (cost Cost, approach any) 
 		}
 		return cost1, app1
 	}
-	tempIndexReadCost := q.Nrows() * btree.EntrySize
+	nrows, _ := q.Nrows()
+	tempIndexReadCost := nrows * btree.EntrySize
 	tempIndexWriteCost := tempIndexReadCost * 2 // ??? surcharge (for memory)
-	dataReadCost := q.Nrows() * q.rowSize()
+	dataReadCost := nrows * q.rowSize()
 	tempIndexCost := tempIndexWriteCost + tempIndexReadCost + dataReadCost
 	if !q.SingleTable() {
 		tempIndexCost += tempIndexCost / 2 // ???
@@ -246,7 +250,7 @@ func optTempIndex(q Query, mode Mode, index []string) (cost Cost, approach any) 
 		return impossible, nil
 	}
 	if cost2 < cost1 {
-		approach = &tempIndex{approach: approach, index: index}
+		approach = &tempIndex{approach: approach, index: index, cost: cost2}
 	}
 	if trace.QueryOpt.On() {
 		cmp := "<"
@@ -349,7 +353,7 @@ func (q1 *Query1) Indexes() [][]string {
 	return q1.source.Indexes()
 }
 
-func (q1 *Query1) Nrows() int {
+func (q1 *Query1) Nrows() (int, int) {
 	return q1.source.Nrows()
 }
 
@@ -425,12 +429,13 @@ type Query2 struct {
 	source2 Query
 }
 
-func (q2 *Query2) Keys() [][]string {
-	panic("should be overridden")
+func (q2 *Query2) Keys() { // dummy to block inheritance
 }
 
-func (q2 *Query2) Indexes() [][]string {
-	panic("should be overridden")
+func (q2 *Query2) Indexes() { // dummy to block inheritance
+}
+
+func (*Query2) Nrows() { // dummy to block inheritance
 }
 
 func (q2 *Query2) String2(op string) string {
@@ -458,9 +463,8 @@ func (*Query2) Output(*runtime.Thread, runtime.Record) {
 	panic("can't output to this query")
 }
 
-//lint:ignore U1000 to catch if a definition is missing
-func (q2 *Query2) optimize(Mode, []string) Cost {
-	panic("should be overridden")
+//lint:ignore U1000 dummy to block inheritance
+func (q2 *Query2) optimize() {
 }
 
 func (q2 *Query2) keypairs() [][]string {
@@ -662,16 +666,19 @@ const indent1 = "    "
 
 func format(q Query, indent int) string { // recursive
 	in := strings.Repeat(indent1, indent)
+	nrows, pop := q.Nrows()
+	cost := "{" + trace.Number(nrows) + "/" + trace.Number(pop) + " " +
+		trace.Number(q.cacheCost()) + "} "
 	switch q := q.(type) {
 	case q2i:
 		return format(q.Source(), indent+1) + "\n" +
-			in + q.stringOp() + "\n" +
+			in + cost + q.stringOp() + "\n" +
 			format(q.Source2(), indent+1)
 	case q1i:
 		return format(q.Source(), indent) + "\n" +
-			wrap(in, q.stringOp())
+			wrap(in, cost+q.stringOp())
 	default:
-		return in + q.String()
+		return in + cost + q.String()
 	}
 }
 

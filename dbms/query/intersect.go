@@ -59,13 +59,15 @@ func (it *Intersect) Indexes() [][]string {
 	return set.UnionFn(it.source.Indexes(), it.source2.Indexes(), slices.Equal[string])
 }
 
-func (it *Intersect) Nrows() int {
+func (it *Intersect) Nrows() (int, int) {
 	if it.disjoint != "" {
-		return 0
+		return 0, 0
 	}
-	min := 0
-	max := ord.Min(it.source.Nrows(), it.source2.Nrows())
-	return (min + max) / 2 // estimate half way between
+	nrows1, pop1 := it.source.Nrows()
+	nrows2, pop2 := it.source2.Nrows()
+	maxNrows := ord.Min(nrows1, nrows2)
+	maxPop := ord.Min(pop1, pop2)
+	return maxNrows / 2, maxPop / 2 // estimate half
 }
 
 func (it *Intersect) rowSize() int {
@@ -102,8 +104,9 @@ func (*Intersect) cost(source, source2 Query, mode Mode, index []string) (
 	cost Cost, key []string) {
 	key = bestKey(source2, mode)
 	// iterate source and lookups on source2
-	cost = Optimize(source, mode, index) +
-		LookupCost(source2, mode, key, source.Nrows())
+	cost = Optimize(source, mode, index)
+	nrows1, _ := source.Nrows()
+	cost += LookupCost(source2, mode, key, nrows1)
 	return cost, key
 }
 

@@ -202,7 +202,7 @@ func (jn *Join) opt(src1, src2 Query, joinType joinType,
 	if best.index == nil {
 		return best, impossible
 	}
-	nrows1 := src1.Nrows()
+	nrows1, _ := src1.Nrows()
 	// should only be taking a portion of the variable cost2,
 	// not the fixed temp index cost2 (so 2/3 instead of 1/2)
 	// NOTE: lookupCost is not really correct because we use Select
@@ -221,24 +221,27 @@ func (jn *Join) setApproach(mode Mode, index []string, approach any, tran QueryT
 	jn.hdr1 = jn.source.Header()
 }
 
-func (jn *Join) Nrows() int {
-	// n_one and one_n assume records will have matching counterparts
-	nrows1 := jn.source.Nrows()
-	nrows2 := jn.source2.Nrows()
-	var nrows int
+func (jn *Join) Nrows() (int, int) {
+	nrows1, pop1 := jn.source.Nrows()
+	nrows2, pop2 := jn.source2.Nrows()
+	return jn.nrows(nrows1, nrows2), jn.nrows(pop1, pop2)
+}
+
+func (jn *Join) nrows(n1, n2 int) int {
+	var max int
 	switch jn.joinType {
 	case one_one:
-		nrows = ord.Min(nrows1, nrows2)
+		max = ord.Min(n1, n2)
 	case n_one:
-		nrows = nrows1
+		max = n1
 	case one_n:
-		nrows = nrows2
+		max = n2
 	case n_n:
-		nrows = nrows1 * nrows2
+		max = n1 * n2
 	default:
 		assert.ShouldNotReachHere()
 	}
-	return nrows / 2 // actual will be between 0 and nrows so estimate halfway
+	return max / 2 // actual will be between 0 and nrows so estimate half
 }
 
 func (jn *Join) rowSize() int {
@@ -375,8 +378,27 @@ func (lj *LeftJoin) setApproach(mode Mode, index []string, approach any, tran Qu
 	lj.hdr1 = lj.source.Header()
 }
 
-func (lj *LeftJoin) Nrows() int {
-	return lj.source.Nrows()
+func (lj *LeftJoin) Nrows() (int, int) {
+	nrows1, pop1 := lj.source.Nrows()
+	nrows2, pop2 := lj.source2.Nrows()
+	return lj.nrows(nrows1, nrows2), lj.nrows(pop1, pop2)
+}
+
+func (lj *LeftJoin) nrows(n1, n2 int) int {
+	var max int
+	switch lj.joinType {
+	case one_one:
+		return n1
+	case n_one:
+		return n1
+	case one_n:
+		max = n2
+	case n_n:
+		max = n1 * n2
+	default:
+		assert.ShouldNotReachHere()
+	}
+	return max / 2 // estimate half
 }
 
 // execution

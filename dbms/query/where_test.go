@@ -147,7 +147,9 @@ func TestWhereNrows(t *testing.T) {
 		w := ParseQuery(query, testTran{}, nil).(*Where)
 		w.optInit()
 		assert.That(w.tbl != nil)
-		assert.T(t).This(w.Nrows()).Is(nrows)
+		n, p := w.Nrows()
+		assert.T(t).This(n).Is(nrows)
+		assert.T(t).This(p).Is(100)
 	}
 	test("table where F()", 50)
 	test("inven where item >= 5", 50)

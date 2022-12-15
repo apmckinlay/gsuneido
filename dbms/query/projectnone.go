@@ -35,8 +35,8 @@ func (*ProjectNone) Indexes() [][]string {
 	return [][]string{{}}
 }
 
-func (*ProjectNone) Nrows() int {
-	return 1
+func (*ProjectNone) Nrows() (int, int) {
+	return 1, 1
 }
 
 func (*ProjectNone) rowSize() int {

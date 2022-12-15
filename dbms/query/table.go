@@ -119,8 +119,8 @@ func (*Table) Ordering() []string {
 	return nil
 }
 
-func (tbl *Table) Nrows() int {
-	return tbl.info.Nrows
+func (tbl *Table) Nrows() (int, int) {
+	return tbl.info.Nrows, tbl.info.Nrows
 }
 
 func (tbl *Table) rowSize() int {

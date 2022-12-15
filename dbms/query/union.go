@@ -93,8 +93,10 @@ func (u *Union) Indexes() [][]string {
 	return set.UnionFn(u.source.Indexes(), u.source2.Indexes(), slices.Equal[string])
 }
 
-func (u *Union) Nrows() int {
-	return u.nrowsCalc(u.source.Nrows(), u.source2.Nrows())
+func (u *Union) Nrows() (int, int) {
+	n1, p1 := u.source.Nrows()
+	n2, p2 := u.source2.Nrows()
+	return u.nrowsCalc(n1, n2), u.nrowsCalc(p1, p2)
 }
 
 func (u *Union) nrowsCalc(n1, n2 int) int {
@@ -217,9 +219,10 @@ func (*Union) optMerge(source, source2 Query, mode Mode) (Cost, any) {
 func (u *Union) optLookup(source, source2 Query, mode Mode) (Cost, any) {
 	var bestKey []string
 	bestCost := impossible
+	cost1 := Optimize(source, mode, nil)
+	nrows1, _ := source.Nrows()
 	for _, key := range source2.Keys() {
-		cost := Optimize(source, mode, nil) +
-			LookupCost(source2, mode, key, source.Nrows())
+		cost := cost1 + LookupCost(source2, mode, key, nrows1)
 		if cost < bestCost {
 			bestKey = key
 			bestCost = cost

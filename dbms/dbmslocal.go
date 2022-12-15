@@ -473,8 +473,9 @@ func (q queryLocal) Strategy(formatted bool) string {
 	} else {
 		strategy = q.String() + " "
 	}
+	n, _ := q.Nrows()
 	return fmt.Sprint(strategy,
-		"[nrecs~ ", q.Nrows(), " cost~ ", q.cost, " ", q.mode, "]")
+		"[nrecs~ ", n, " cost~ ", q.cost, " ", q.mode, "]")
 }
 
 func (q queryLocal) Order() []string {

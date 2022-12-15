@@ -151,12 +151,12 @@ func projectIndexes(idxs [][]string, cols []string) [][]string {
 	return idxs2
 }
 
-func (p *Project) Nrows() int {
-	nr := p.source.Nrows()
-	if p.strategy != projCopy {
+func (p *Project) Nrows() (int, int) {
+	nr, pop := p.source.Nrows()
+	if !p.unique {
 		nr /= 2 // ???
 	}
-	return nr
+	return nr, pop
 }
 
 func (p *Project) Transform() Query {

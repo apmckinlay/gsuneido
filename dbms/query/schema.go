@@ -115,9 +115,10 @@ func (*Tables) Header() *Header {
 	return NewHeader(tablesFields, tablesFields[0])
 }
 
-func (ts *Tables) Nrows() int {
+func (ts *Tables) Nrows() (int, int) {
 	ts.ensure()
-	return len(ts.info)
+	n := len(ts.info)
+	return n, n
 }
 
 func (ts *Tables) SetTran(tran QueryTran) {
@@ -172,15 +173,15 @@ func (ts *Tables) ensure() {
 
 	cols := Columns{}
 	cols.SetTran(ts.tran)
-	ncols := cols.Nrows()
+	ncols, _ := cols.Nrows()
 
 	idxs := Indexes{}
 	idxs.SetTran(ts.tran)
-	nidxs := idxs.Nrows()
+	nidxs, _ := idxs.Nrows()
 
 	views := Views{}
 	views.SetTran(ts.tran)
-	nviews := views.Nrows()
+	nviews, _ := views.Nrows()
 
 	ts.info = append(ts.info,
 		// +4 for tables, columns, indexes, views
@@ -212,8 +213,8 @@ func (tl *TablesLookup) String() string {
 	return "tables(" + tl.table + ")"
 }
 
-func (*TablesLookup) Nrows() int {
-	return 1
+func (*TablesLookup) Nrows() (int, int) {
+	return 1, 1
 }
 
 func (tl *TablesLookup) Get(*Thread, Dir) Row {
@@ -267,7 +268,7 @@ func (*Columns) Header() *Header {
 	return NewHeader(columnsFields, columnsFields[0])
 }
 
-func (cs *Columns) Nrows() int {
+func (cs *Columns) Nrows() (int, int) {
 	cs.ensure()
 	n := 0
 	for _, schema := range cs.schema {
@@ -278,7 +279,7 @@ func (cs *Columns) Nrows() int {
 		}
 		n += len(schema.Derived)
 	}
-	return n
+	return n, n
 }
 
 func (cs *Columns) SetTran(tran QueryTran) {
@@ -398,13 +399,13 @@ func (*Indexes) Header() *Header {
 	return NewHeader(indexesFields, indexesFields[0])
 }
 
-func (is *Indexes) Nrows() int {
+func (is *Indexes) Nrows() (int, int) {
 	is.ensure()
 	n := 0
 	for _, schema := range is.schema {
 		n += len(schema.Indexes)
 	}
-	return n
+	return n, n
 }
 
 func (is *Indexes) SetTran(tran QueryTran) {
@@ -515,9 +516,10 @@ func (*Views) Header() *Header {
 	return NewHeader(viewsFields, viewsFields[0])
 }
 
-func (vs *Views) Nrows() int {
+func (vs *Views) Nrows() (int, int) {
 	vs.ensure()
-	return len(vs.views) / 2
+	n := len(vs.views) / 2
+	return n, n
 }
 
 func (vs *Views) SetTran(tran QueryTran) {
@@ -608,8 +610,8 @@ func (*History) Header() *Header {
 	return NewHeader(HistoryFields, HistoryFields[0])
 }
 
-func (his *History) Nrows() int {
-	return 1000 // ???
+func (his *History) Nrows() (int, int) {
+	return 1000, 1000 // ???
 }
 
 func (his *History) SetTran(tran QueryTran) {

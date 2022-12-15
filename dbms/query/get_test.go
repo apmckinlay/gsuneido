@@ -443,7 +443,7 @@ func TestQueryGet(t *testing.T) {
         970201	'eraser' 'c'	150   1`)
 	test("(co where tnum = 100 remove signed) union "+
 		"(co where tnum = 100 remove signed)",
-		"co^(tnum) WHERE*1 tnum is 100 PROJECT-COPY tnum UNION-LOOKUP "+
+		"co^(tnum) WHERE*1 tnum is 100 PROJECT-COPY tnum UNION-MERGE "+
 			"(co^(tnum) WHERE*1 tnum is 100 PROJECT-COPY tnum)",
 		`tnum
         100`)
@@ -473,7 +473,7 @@ func TestQueryGet(t *testing.T) {
 	test(`((co where tnum = 104 remove tnum) union (co where tnum = 106 remove tnum))
 		union
 		((co where tnum = 104 remove tnum) union (co where tnum = 106 remove tnum))`,
-		"(co^(tnum) WHERE*1 tnum is 104 PROJECT-COPY signed UNION-LOOKUP (co^(tnum) WHERE*1 tnum is 106 PROJECT-COPY signed)) UNION-LOOKUP ((co^(tnum) WHERE*1 tnum is 104 PROJECT-COPY signed UNION-LOOKUP (co^(tnum) WHERE*1 tnum is 106 PROJECT-COPY signed)) TEMPINDEX(signed))",
+		"(co^(tnum) WHERE*1 tnum is 104 PROJECT-COPY signed UNION-LOOKUP (co^(tnum) WHERE*1 tnum is 106 PROJECT-COPY signed)) UNION-LOOKUP (co^(tnum) WHERE*1 tnum is 104 PROJECT-COPY signed UNION-MERGE (co^(tnum) WHERE*1 tnum is 106 PROJECT-COPY signed))",
 		`signed
         990103
         990104`)

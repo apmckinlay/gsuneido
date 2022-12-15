@@ -162,14 +162,14 @@ func containsKey(cols []string, keys [][]string) bool {
 	return false
 }
 
-func (su *Summarize) Nrows() int {
-	nr := su.source.Nrows()
+func (su *Summarize) Nrows() (int, int) {
+	nr, pop := su.source.Nrows()
 	if len(su.by) == 0 {
 		nr = 1
 	} else if !containsKey(su.by, su.source.Keys()) {
 		nr /= 2 // ???
 	}
-	return nr
+	return nr, pop
 }
 
 func (su *Summarize) rowSize() int {
@@ -228,7 +228,8 @@ func (su *Summarize) idxCost(Mode) (Cost, any) {
 	}
 	// dividing by nrows since we're only reading one row
 	// NOTE: this is not correct if there is any fixed cost
-	nr := ord.Max(1, su.source.Nrows())
+	nr, _ := su.source.Nrows()
+	nr = ord.Max(1, nr)
 	// cursorMode to bypass temp index
 	cost := Optimize(su.source, CursorMode, su.ons) / nr
 	approach := &summarizeApproach{strategy: sumIdx, index: su.ons}
@@ -295,7 +296,8 @@ func getTbl(_ *Thread, su *Summarize, _ Dir) Row {
 	}
 	tbl := su.source.(*Table)
 	var rb RecordBuilder
-	rb.Add(IntVal(tbl.Nrows()))
+	nr, _ := tbl.Nrows()
+	rb.Add(IntVal(nr))
 	return Row{DbRec{Record: rb.Build()}}
 }
 

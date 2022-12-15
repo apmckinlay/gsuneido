@@ -88,6 +88,9 @@ func (w what) Println(first any, rest ...any) {
 }
 
 func Println(args ...any) {
+	for i := range args {
+		format(&args[i])
+	}
 	Print(fmt.Sprintln(args...))
 }
 
@@ -106,7 +109,7 @@ func format(p *any) {
 	switch (*p).(type) {
 	case int, uint, int32, uint32, int64, uint64:
 		// add commas to make big numbers more readable
-		*p = printer.Sprintf("%d", *p)
+		*p = Number(*p)
 	}
 }
 
