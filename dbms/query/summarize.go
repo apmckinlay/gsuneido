@@ -245,14 +245,14 @@ func (su *Summarize) mapCost(mode Mode, index []string) (Cost, any) {
 	return cost, approach
 }
 
-func (su *Summarize) setApproach(_ []string, approach any, tran QueryTran) {
+func (su *Summarize) setApproach(mode Mode, _ []string, approach any, tran QueryTran) {
 	su.summarizeApproach = *approach.(*summarizeApproach)
-	su.source = SetApproach(su.source, su.index, tran)
 	switch su.strategy {
 	case sumTbl:
 		su.get = getTbl
 	case sumIdx:
 		su.get = getIdx
+		mode = CursorMode
 	case sumMap:
 		t := sumMapT{}
 		su.get = t.getMap
@@ -260,6 +260,7 @@ func (su *Summarize) setApproach(_ []string, approach any, tran QueryTran) {
 		t := sumSeqT{}
 		su.get = t.getSeq
 	}
+	su.source = SetApproach(su.source, mode, su.index, tran)
 	su.rewound = true
 	su.srcHdr = su.source.Header()
 }

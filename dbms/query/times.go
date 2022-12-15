@@ -71,12 +71,12 @@ func (t *Times) optimize(mode Mode, index []string) (Cost, any) {
 	return costRev, true
 }
 
-func (t *Times) setApproach(index []string, approach any, tran QueryTran) {
+func (t *Times) setApproach(mode Mode, index []string, approach any, tran QueryTran) {
 	if approach.(bool) {
 		t.source, t.source2 = t.source2, t.source
 	}
-	t.source = SetApproach(t.source, index, tran)
-	t.source2 = SetApproach(t.source2, nil, tran)
+	t.source = SetApproach(t.source, mode, index, tran)
+	t.source2 = SetApproach(t.source2, mode, nil, tran)
 }
 
 // execution --------------------------------------------------------

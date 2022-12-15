@@ -101,14 +101,17 @@ type Query interface {
 
 	String() string
 
-	cacheAdd(index []string, cost Cost, approach any)
+	cacheAdd(mode Mode, index []string, cost Cost, approach any)
 
 	// cacheGet returns the cost and approach associated with an index
 	// or -1 if the index has not been added.
-	cacheGet(index []string) (Cost, any)
+	cacheGet(mode Mode, index []string) (Mode, Cost, any)
+
+	cacheSetCost(int)
+	cacheCost() int
 
 	optimize(mode Mode, index []string) (cost Cost, approach any)
-	setApproach(index []string, approach any, tran QueryTran)
+	setApproach(mode Mode, index []string, approach any, tran QueryTran)
 
 	// lookupCost returns the cost of one Lookup
 	lookupCost() Cost
@@ -167,7 +170,7 @@ func Setup(q Query, mode Mode, t QueryTran) (Query, Cost) {
 	if cost >= impossible {
 		panic("invalid query: " + q.String())
 	}
-	q = SetApproach(q, nil, t)
+	q = SetApproach(q, mode, nil, t)
 	return q, cost
 }
 
@@ -182,7 +185,7 @@ func SetupKey(q Query, mode Mode, t QueryTran) Query {
 	if best.cost >= impossible {
 		panic("invalid query: " + q.String())
 	}
-	q = SetApproach(q, best.index, t)
+	q = SetApproach(q, mode, best.index, t)
 	return q
 }
 
@@ -192,11 +195,11 @@ const impossible = Cost(math.MaxInt / 64) // allow for adding IMPOSSIBLE's
 
 // Optimize determines the best (lowest estimated cost) query execution approach
 func Optimize(q Query, mode Mode, index []string) (cost Cost) {
-	if cost, _ = q.cacheGet(index); cost >= 0 {
+	if _, cost, _ := q.cacheGet(mode, index); cost >= 0 {
 		return cost
 	}
 	cost, app := optTempIndex(q, mode, index)
-	q.cacheAdd(index, cost, app)
+	q.cacheAdd(mode, index, cost, app)
 	return cost
 }
 
@@ -260,6 +263,7 @@ func optTempIndex(q Query, mode Mode, index []string) (cost Cost, approach any) 
 type tempIndex struct {
 	approach any
 	index    []string
+	cost     int
 }
 
 func tempIndexable(mode Mode) bool {
@@ -306,17 +310,19 @@ func LookupCost(q Query, mode Mode, index []string, nrows int) Cost {
 
 // SetApproach locks in the best approach.
 // It also adds temp indexes where required.
-func SetApproach(q Query, index []string, tran QueryTran) Query {
-	cost, approach := q.cacheGet(index)
+func SetApproach(q Query, mode Mode, index []string, tran QueryTran) Query {
+	_, cost, approach := q.cacheGet(mode, index)
 	if cost < 0 {
-		panic(fmt.Sprintln("NOT IN CACHE:", q, index))
+		panic(fmt.Sprintln("NOT IN CACHE:", q, mode, index))
 	}
 	assert.That(cost >= 0)
+	q.cacheSetCost(cost)
 	if app, ok := approach.(*tempIndex); ok {
-		q.setApproach(nil, app.approach, tran)
-		return &TempIndex{Query1: Query1{source: q}, order: app.index, tran: tran}
+		q.setApproach(mode, nil, app.approach, tran)
+		return &TempIndex{Query1: Query1{source: q, cache: cache{cost: app.cost}},
+			order: app.index, tran: tran}
 	}
-	q.setApproach(index, approach, tran)
+	q.setApproach(mode, index, approach, tran)
 	return q
 }
 
@@ -375,7 +381,7 @@ func (q1 *Query1) optimize(mode Mode, index []string) (Cost, any) {
 	return Optimize(q1.source, mode, index), nil
 }
 
-func (q1 *Query1) setApproach(_ []string, _ any, _ QueryTran) {
+func (q1 *Query1) setApproach(Mode, []string, any, QueryTran) {
 	assert.ShouldNotReachHere()
 }
 

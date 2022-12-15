@@ -173,8 +173,8 @@ func (e *Extend) optimize(mode Mode, index []string) (Cost, any) {
 	return Optimize(e.source, mode, index), nil
 }
 
-func (e *Extend) setApproach(index []string, _ any, tran QueryTran) {
-	e.source = SetApproach(e.source, index, tran)
+func (e *Extend) setApproach(mode Mode, index []string, _ any, tran QueryTran) {
+	e.source = SetApproach(e.source, mode, index, tran)
 	e.hdr = e.Header() // cache for Get
 	e.ctx.Hdr = e.hdr
 	e.fixed = e.Fixed() // cache

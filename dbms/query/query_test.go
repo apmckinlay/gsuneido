@@ -323,7 +323,7 @@ func TestWhereSelectBug(t *testing.T) {
 	idx := []string{"d"}
 	q = q.Transform()
 	_, app := q.optimize(ReadMode, idx)
-	q.setApproach(idx, app, tran)
+	q.setApproach(ReadMode, idx, app, tran)
 	assert.T(t).This(q.String()).Is("t1^(b) WHERE d is '1' and b < 'z'")
 	vals := []string{rt.Pack(rt.SuStr("1"))}
 	q.Select(idx, vals)

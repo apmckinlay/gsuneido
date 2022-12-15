@@ -210,14 +210,14 @@ func (jn *Join) opt(src1, src2 Query, joinType joinType,
 	return best, cost1
 }
 
-func (jn *Join) setApproach(index []string, approach any, tran QueryTran) {
+func (jn *Join) setApproach(mode Mode, index []string, approach any, tran QueryTran) {
 	ap := approach.(*joinApproach)
 	if ap.reverse {
 		jn.source, jn.source2 = jn.source2, jn.source
 		jn.joinType = jn.joinType.reverse()
 	}
-	jn.source = SetApproach(jn.source, index, tran)
-	jn.source2 = SetApproach(jn.source2, ap.index2, tran)
+	jn.source = SetApproach(jn.source, mode, index, tran)
+	jn.source2 = SetApproach(jn.source2, mode, ap.index2, tran)
 	jn.hdr1 = jn.source.Header()
 }
 
@@ -367,10 +367,10 @@ func (lj *LeftJoin) optimize(mode Mode, index []string) (Cost, any) {
 	return best.cost, &joinApproach{index2: best.index}
 }
 
-func (lj *LeftJoin) setApproach(index []string, approach any, tran QueryTran) {
+func (lj *LeftJoin) setApproach(mode Mode, index []string, approach any, tran QueryTran) {
 	ap := approach.(*joinApproach)
-	lj.source = SetApproach(lj.source, index, tran)
-	lj.source2 = SetApproach(lj.source2, ap.index2, tran)
+	lj.source = SetApproach(lj.source, mode, index, tran)
+	lj.source2 = SetApproach(lj.source2, mode, ap.index2, tran)
 	lj.empty2 = make(Row, len(lj.source2.Header().Fields))
 	lj.hdr1 = lj.source.Header()
 }

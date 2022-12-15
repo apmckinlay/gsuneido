@@ -75,11 +75,11 @@ func (m *Minus) optimize(mode Mode, index []string) (Cost, any) {
 	return cost, approach
 }
 
-func (m *Minus) setApproach(index []string, approach any, tran QueryTran) {
+func (m *Minus) setApproach(mode Mode, index []string, approach any, tran QueryTran) {
 	ap := approach.(*minusApproach)
 	m.keyIndex = ap.keyIndex
-	m.source = SetApproach(m.source, index, tran)
-	m.source2 = SetApproach(m.source2, m.keyIndex, tran)
+	m.source = SetApproach(m.source, mode, index, tran)
+	m.source2 = SetApproach(m.source2, mode, m.keyIndex, tran)
 }
 
 func (m *Minus) Header() *runtime.Header {

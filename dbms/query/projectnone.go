@@ -66,7 +66,7 @@ func (*ProjectNone) optimize(Mode, []string) (Cost, any) {
 	return 0, nil
 }
 
-func (*ProjectNone) setApproach(_ []string, _ any, _ QueryTran) {
+func (*ProjectNone) setApproach(Mode, []string, any, QueryTran) {
 }
 
 func (*ProjectNone) lookupCost() Cost {
@@ -90,7 +90,7 @@ func (pn *ProjectNone) Get(*runtime.Thread, runtime.Dir) runtime.Row {
 		return nil
 	}
 	pn.done = true
-    return runtime.Row{runtime.DbRec{Record: runtime.Record("")}}
+	return runtime.Row{runtime.DbRec{Record: runtime.Record("")}}
 }
 
 func (*ProjectNone) Rewind() {

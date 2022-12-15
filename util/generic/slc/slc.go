@@ -133,3 +133,7 @@ func With[S ~[]E, E any](s1 S, s2 ...E) S {
 	copy(result[len(s1):], s2)
 	return result
 }
+
+func Swap[E any](data []E, i, j int) {
+	data[i], data[j] = data[j], data[i]
+}

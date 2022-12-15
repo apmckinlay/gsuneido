@@ -68,7 +68,7 @@ func (*schemaTable) optimize(_ Mode, index []string) (Cost, any) {
 	return impossible, nil
 }
 
-func (*schemaTable) setApproach([]string, any, QueryTran) {
+func (*schemaTable) setApproach(Mode, []string, any, QueryTran) {
 }
 
 func (st *schemaTable) lookupCost() Cost {

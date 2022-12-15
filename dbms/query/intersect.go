@@ -107,15 +107,15 @@ func (*Intersect) cost(source, source2 Query, mode Mode, index []string) (
 	return cost, key
 }
 
-func (it *Intersect) setApproach(index []string, approach any,
+func (it *Intersect) setApproach(mode Mode, index []string, approach any,
 	tran QueryTran) {
 	ap := approach.(*intersectApproach)
 	it.keyIndex = ap.keyIndex
 	if ap.reverse {
 		it.source, it.source2 = it.source2, it.source
 	}
-	it.source = SetApproach(it.source, index, tran)
-	it.source2 = SetApproach(it.source2, it.keyIndex, tran)
+	it.source = SetApproach(it.source, mode, index, tran)
+	it.source2 = SetApproach(it.source2, mode, it.keyIndex, tran)
 }
 
 func (it *Intersect) Header() *runtime.Header {

@@ -70,7 +70,7 @@ func (*Nothing) optimize(Mode, []string) (Cost, any) {
 	return 0, nil
 }
 
-func (*Nothing) setApproach(_ []string, _ any, _ QueryTran) {
+func (*Nothing) setApproach(_ Mode, _ []string, _ any, _ QueryTran) {
 }
 
 func (*Nothing) lookupCost() Cost {

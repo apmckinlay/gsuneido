@@ -79,9 +79,9 @@ func (q1 *Query1) bestOrdered(indexes [][]string, order []string,
 	return best
 }
 
-func (sort *Sort) setApproach(_ []string, approach any, tran QueryTran) {
+func (sort *Sort) setApproach(mode Mode, _ []string, approach any, tran QueryTran) {
 	sort.sortApproach = approach.(sortApproach)
-	sort.source = SetApproach(sort.source, sort.index, tran)
+	sort.source = SetApproach(sort.source, mode, sort.index, tran)
 }
 
 // execution --------------------------------------------------------

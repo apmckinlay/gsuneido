@@ -234,15 +234,15 @@ func (u *Union) optLookup(source, source2 Query, mode Mode) (Cost, any) {
 	return bestCost, approach
 }
 
-func (u *Union) setApproach(_ []string, approach any, tran QueryTran) {
+func (u *Union) setApproach(mode Mode, _ []string, approach any, tran QueryTran) {
 	app := approach.(*unionApproach)
 	u.strategy = app.strategy
 	u.keyIndex = app.keyIndex
 	if app.reverse {
 		u.source, u.source2 = u.source2, u.source
 	}
-	u.source = SetApproach(u.source, app.idx1, tran)
-	u.source2 = SetApproach(u.source2, app.idx2, tran)
+	u.source = SetApproach(u.source, mode, app.idx1, tran)
+	u.source2 = SetApproach(u.source2, mode, app.idx2, tran)
 
 	u.empty1 = make(Row, len(u.source.Header().Fields))
 	u.empty2 = make(Row, len(u.source2.Header().Fields))

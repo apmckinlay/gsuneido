@@ -358,9 +358,9 @@ func (p *Project) hashCost(mode Mode, index []string) Cost {
 	return cost + hashCost
 }
 
-func (p *Project) setApproach(_ []string, approach any, tran QueryTran) {
+func (p *Project) setApproach(mode Mode, _ []string, approach any, tran QueryTran) {
 	p.projectApproach = *approach.(*projectApproach)
-	p.source = SetApproach(p.source, p.index, tran)
+	p.source = SetApproach(p.source, mode, p.index, tran)
 	p.projHdr = p.Header() // cache for Get
 	p.srcHdr = p.source.Header()
 }

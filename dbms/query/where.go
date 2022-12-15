@@ -534,7 +534,7 @@ func (w *Where) getIdxSel(index []string) *idxSel {
 	return nil
 }
 
-func (w *Where) setApproach(index []string, app any, tran QueryTran) {
+func (w *Where) setApproach(mode Mode, index []string, app any, tran QueryTran) {
 	if w.conflict {
 		return
 	}
@@ -544,7 +544,7 @@ func (w *Where) setApproach(index []string, app any, tran QueryTran) {
 		w.idxSel = w.getIdxSel(idx)
 		w.idxSelPos = -1
 	} else {
-		w.source = SetApproach(w.source, index, tran)
+		w.source = SetApproach(w.source, mode, index, tran)
 	}
 	w.hdr = w.source.Header()
 	w.ctx.Hdr = w.hdr

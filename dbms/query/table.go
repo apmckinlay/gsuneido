@@ -175,7 +175,7 @@ func (tbl *Table) indexFor(order []string) int {
 	return -1 // not found
 }
 
-func (tbl *Table) setApproach(_ []string, approach any, _ QueryTran) {
+func (tbl *Table) setApproach(_ Mode, _ []string, approach any, _ QueryTran) {
 	tbl.setIndex(approach.(tableApproach).index)
 }
 
