@@ -129,6 +129,26 @@ func addFixed(fixed []Fixed, e ast.Expr) []Fixed {
 	return fixed
 }
 
+func (w *Where) Keys() [][]string {
+	if !w.optInited {
+		w.optInit()
+	}
+	if w.singleton {
+		return [][]string{{}} // intentionally {} not nil
+	}
+	return w.source.Keys()
+}
+
+func (w *Where) Indexes() [][]string {
+	if !w.optInited {
+		w.optInit()
+	}
+	if w.singleton {
+		return [][]string{{}} // intentionally {} not nil
+	}
+	return w.source.Indexes()
+}
+
 func (w *Where) Nrows() (int, int) {
 	assert.That(w.optInited)
 	srcNrows, srcPop := w.source.Nrows()
@@ -410,12 +430,13 @@ func (w *Where) optimize(mode Mode, index []string) (Cost, any) {
 			return 0, nil
 		}
 	}
+	assert.That(!w.singleton || len(index) == 0)
 	// we always have the option of just filtering (no specific index use)
 	filterCost := Optimize(w.source, mode, index)
 	if w.tbl == nil || w.tbl.singleton {
 		return filterCost, nil
 	}
-	cost, index := w.bestIndex(index) // handles w.singleton
+	cost, index := w.bestIndex(index)
 	if cost >= impossible {
 		// only use the filter if there are no possible idxSel
 		return filterCost, nil
@@ -510,9 +531,6 @@ func (w *Where) comparesToFilters(cmps []cmpExpr) map[string]filter {
 // bestIndex returns the best (lowest cost) index with an idxSel
 // that satisfies the required order (or impossible)
 func (w *Where) bestIndex(order []string) (Cost, []string) {
-	if w.singleton {
-		order = nil
-	}
 	best := newBestIndex()
 	for _, idx := range w.source.Indexes() {
 		if ordered(idx, order, w.fixed) {

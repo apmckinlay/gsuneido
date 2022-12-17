@@ -27,7 +27,6 @@ The cost model is based on the number of bytes read.
 package query
 
 import (
-	"fmt"
 	"math"
 	"regexp"
 	"strings"
@@ -194,16 +193,25 @@ func SetupKey(q Query, mode Mode, t QueryTran) Query {
 
 const outOfOrder = 10 // minimal penalty for executing out of order
 
-const impossible = Cost(math.MaxInt / 64) // allow for adding IMPOSSIBLE's
+const impossible = Cost(math.MaxInt / 64) // allow for adding impossible's
 
 // Optimize determines the best (lowest estimated cost) query execution approach
 func Optimize(q Query, mode Mode, index []string) (cost Cost) {
+	if isSingleton(q) {
+		index = nil
+	}
 	if _, cost, _ := q.cacheGet(mode, index); cost >= 0 {
 		return cost
 	}
 	cost, app := optTempIndex(q, mode, index)
+	assert.That(cost >= 0)
 	q.cacheAdd(mode, index, cost, app)
 	return cost
+}
+
+func isSingleton(q Query) bool {
+	keys := q.Keys()
+	return len(keys) == 1 && len(keys[0]) == 0
 }
 
 func optTempIndex(q Query, mode Mode, index []string) (cost Cost, approach any) {
@@ -214,7 +222,7 @@ func optTempIndex(q Query, mode Mode, index []string) (cost Cost, approach any) 
 		}
 		return impossible, nil
 	}
-	if index == nil || !tempIndexable(mode) {
+	if len(index) == 0 || !tempIndexable(mode) {
 		cost, approach = q.optimize(mode, index)
 		if trace.QueryOpt.On() {
 			trace.QueryOpt.Println(mode, index, "=", cost)
@@ -306,6 +314,9 @@ func min3(cost1 Cost, app1 any, cost2 Cost, app2 any,
 }
 
 func LookupCost(q Query, mode Mode, index []string, nrows int) Cost {
+	if isSingleton(q) {
+		index = nil
+	}
 	if Optimize(q, mode, index) >= impossible {
 		return impossible
 	}
@@ -315,10 +326,10 @@ func LookupCost(q Query, mode Mode, index []string, nrows int) Cost {
 // SetApproach locks in the best approach.
 // It also adds temp indexes where required.
 func SetApproach(q Query, mode Mode, index []string, tran QueryTran) Query {
-	_, cost, approach := q.cacheGet(mode, index)
-	if cost < 0 {
-		panic(fmt.Sprintln("NOT IN CACHE:", q, mode, index))
+	if isSingleton(q) {
+		index = nil
 	}
+	_, cost, approach := q.cacheGet(mode, index)
 	assert.That(cost >= 0)
 	q.cacheSetCost(cost)
 	if app, ok := approach.(*tempIndex); ok {

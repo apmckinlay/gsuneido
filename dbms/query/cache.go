@@ -14,7 +14,7 @@ import (
 // It does not limit the size of the cache. (no eviction)
 type cache struct {
 	entries []cacheEntry
-	cost int
+	cost    int
 }
 
 type cacheEntry struct {

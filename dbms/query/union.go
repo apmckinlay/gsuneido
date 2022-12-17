@@ -159,8 +159,8 @@ func (u *Union) optimize(mode Mode, index []string) (Cost, any) {
 	if index != nil {
 		// if not disjoint then index must also be a key
 		if u.disjoint == "" &&
-			(!slc.ContainsFn(u.source.Keys(), index, set.Equal[string]) ||
-				!slc.ContainsFn(u.source2.Keys(), index, set.Equal[string])) {
+			(!handlesIndex(u.source.Keys(), index) ||
+				!handlesIndex(u.source2.Keys(), index)) {
 			return impossible, nil
 		}
 		cost := Optimize(u.source, mode, index) + Optimize(u.source2, mode, index)
@@ -186,12 +186,25 @@ func (u *Union) optimize(mode Mode, index []string) (Cost, any) {
 	return cost, approach
 }
 
+func handlesIndex(keys [][]string, index []string) bool {
+	if len(keys) == 1 && len(keys[0]) == 0 {
+		return true // singleton
+	}
+	return slc.ContainsFn(keys, index, set.Equal[string])
+}
+
 func (*Union) optMerge(source, source2 Query, mode Mode) (Cost, any) {
 	// need key (unique) index to eliminate duplicates
 	keys := set.IntersectFn(source.Keys(), source2.Keys(), set.Equal[string])
 	var bestKey, bestIdx1, bestIdx2 []string
 	bestCost := impossible
 	for _, key := range keys {
+		cost := Optimize(source, mode, key) + Optimize(source2, mode, key)
+		if cost < bestCost {
+			bestKey = key
+			bestCost = cost
+			bestIdx1, bestIdx2 = key, key
+		}
 		for _, idx1 := range source.Indexes() {
 			if !set.Subset(idx1, key) {
 				continue
