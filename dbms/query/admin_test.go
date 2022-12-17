@@ -89,6 +89,10 @@ func TestAdminEnsure(t *testing.T) {
 	doAdmin(db, "ensure tmp key(d_lower!)")
 	assert.T(t).This(db.Schema("tmp")).
 		Is("tmp (a,b,c,d,e,f,G) key(a) index(b,c) index(e,f) key(d_lower!)")
+
+	doAdmin(db, "create tmp4 "+tmpschema)
+	doAdmin(db, "ensure tmp4 (X)")
+	assert.T(t).This(db.Schema("tmp4")).Is("tmp4 (a,b,c,d,X) key(a) index(b,c)")
 }
 
 func TestAdminEnsure2(*testing.T) {
