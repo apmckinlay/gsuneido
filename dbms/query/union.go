@@ -282,8 +282,7 @@ func (u *Union) Get(th *Thread, dir Dir) Row {
 	case unionMerge:
 		return u.getMerge(th, dir)
 	}
-	assert.ShouldNotReachHere()
-	return nil
+	panic(assert.ShouldNotReachHere())
 }
 
 func (u *Union) getLookup(th *Thread, dir Dir) Row {

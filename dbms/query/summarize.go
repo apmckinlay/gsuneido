@@ -526,8 +526,7 @@ func newSumOp(op string) sumOp {
 	case "list":
 		return &sumList{set: &SuObject{}}
 	}
-	assert.ShouldNotReachHere()
-	return nil
+	panic(assert.ShouldNotReachHere())
 }
 
 type sumOp interface {

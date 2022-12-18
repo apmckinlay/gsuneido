@@ -94,8 +94,7 @@ func renameExpr(expr Expr, from, to []string) Expr {
 		}
 		return &In{E: e2, Exprs: exprs}
 	default:
-		assert.ShouldNotReachHere()
-		return nil
+		panic(assert.ShouldNotReachHere())
 	}
 }
 
@@ -219,8 +218,7 @@ func replaceExpr(expr Expr, from []string, to []Expr) Expr {
 		}
 		return aFolder.In(e2, exprs)
 	default:
-		assert.ShouldNotReachHere()
-		return nil
+		panic(assert.ShouldNotReachHere())
 	}
 }
 

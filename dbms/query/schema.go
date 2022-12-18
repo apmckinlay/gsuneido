@@ -77,8 +77,7 @@ func (st *schemaTable) lookupCost() Cost {
 }
 
 func (*schemaTable) Lookup(*Thread, []string, []string) Row {
-	assert.ShouldNotReachHere()
-	return nil
+	panic(assert.ShouldNotReachHere())
 }
 
 func (*schemaTable) Select([]string, []string) {

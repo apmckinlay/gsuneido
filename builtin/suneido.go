@@ -67,8 +67,7 @@ func suneido_AssertFail() Value {
 var _ = staticMethod(suneido_ShouldNotReachHere, "()")
 
 func suneido_ShouldNotReachHere() Value {
-	assert.ShouldNotReachHere()
-	return nil
+	panic(assert.ShouldNotReachHere())
 }
 
 var _ = staticMethod(suneido_RuntimeError, "()")

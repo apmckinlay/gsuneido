@@ -369,7 +369,9 @@ func (a assert) fail(args ...any) {
 	}
 }
 
-func ShouldNotReachHere() {
+func ShouldNotReachHere() int {
+	// return type is so it can be called like panic(ShouldNotReachHere())
+	// so the compiler knows it doesn't continue
 	e := "ASSERT FAILED: should not reach here"
 	log.Println(e)
 	dbg.PrintStack()

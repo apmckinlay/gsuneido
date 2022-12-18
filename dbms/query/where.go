@@ -614,8 +614,7 @@ func (cmp *cmpExpr) toFilter() filter {
 	case tok.Gte:
 		return filter{org: limit{val: cmp.val}, end: limitMax}
 	default:
-		assert.ShouldNotReachHere()
-		return filter{}
+		panic(assert.ShouldNotReachHere())
 	}
 }
 
