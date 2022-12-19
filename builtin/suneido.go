@@ -42,42 +42,6 @@ func suneido_Parse(t *Thread, args []Value) Value {
 	return ast
 }
 
-// simulate various kinds of errors for testing
-var _ = staticMethod(suneido_CrashX, "()")
-
-func suneido_CrashX() Value {
-	// force a crash, mostly to test output capture
-	go func() { panic("Crash!") }()
-	return nil
-}
-
-var _ = staticMethod(suneido_BoundsFail, "()")
-
-func suneido_BoundsFail() Value {
-	return []Value{}[1]
-}
-
-var _ = staticMethod(suneido_AssertFail, "()")
-
-func suneido_AssertFail() Value {
-	assert.That(false)
-	return nil
-}
-
-var _ = staticMethod(suneido_ShouldNotReachHere, "()")
-
-func suneido_ShouldNotReachHere() Value {
-	panic(assert.ShouldNotReachHere())
-}
-
-var _ = staticMethod(suneido_RuntimeError, "()")
-
-func suneido_RuntimeError() Value {
-	// cause a Go runtime error (for testing)
-	var x []Value
-	return x[123]
-}
-
 var _ = staticMethod(suneido_GoMetric, "(name)")
 
 func suneido_GoMetric(t *Thread, args []Value) Value {
@@ -92,4 +56,33 @@ func suneido_GoMetric(t *Thread, args []Value) Value {
 	default:
 		return False
 	}
+}
+
+// force various kinds of errors for testing
+
+var _ = staticMethod(suneido_CrashX, "()")
+
+func suneido_CrashX() Value {
+	go func() { panic("Crash!") }()
+	return nil
+}
+
+var _ = staticMethod(suneido_AssertFail, "()")
+
+func suneido_AssertFail() Value {
+	assert.Msg("Suneido.AssertFail").That(false)
+	return nil
+}
+
+var _ = staticMethod(suneido_ShouldNotReachHere, "()")
+
+func suneido_ShouldNotReachHere() Value {
+	panic(assert.ShouldNotReachHere())
+}
+
+var _ = staticMethod(suneido_RuntimeError, "()")
+
+func suneido_RuntimeError() Value {
+	var x []Value
+	return x[123]
 }
