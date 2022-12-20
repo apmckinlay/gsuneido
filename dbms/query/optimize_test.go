@@ -129,9 +129,9 @@ func TestOptimize(t *testing.T) {
 		"inven^(item) JOIN 1:n by(item) trans^(item)")
 
 	test("(trans union trans) join (inven union inven)",
-		"(inven^(item) UNION-MERGE inven^(item)) "+
+		"(trans^(date,item,id) UNION-MERGE trans^(date,item,id)) "+
 			"JOIN n:n by(item) "+
-			"((trans^(date,item,id) UNION-MERGE trans^(date,item,id)) TEMPINDEX(item))")
+			"(inven^(item) UNION-MERGE inven^(item))")
 
 	test("inven leftjoin trans",
 		"inven^(item) LEFTJOIN 1:n by(item) trans^(item)")

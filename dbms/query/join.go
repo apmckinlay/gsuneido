@@ -151,8 +151,10 @@ func (jn *Join) Transform() Query {
 }
 
 func (jn *Join) optimize(mode Mode, index []string) (Cost, any) {
-	fwd, f1 := jn.opt(jn.source, jn.source2, jn.joinType, mode, index)
-	rev, r1 := jn.opt(jn.source2, jn.source, jn.joinType.reverse(), mode, index)
+	fwd, f1 := joinopt(jn.source, jn.source2, jn.joinType, jn.Nrows,
+		mode, index, jn.by)
+	rev, r1 := joinopt(jn.source2, jn.source, jn.joinType.reverse(), jn.Nrows,
+		mode, index, jn.by)
 	rev.cost += outOfOrder
 	if trace.JoinOpt.On() {
 		trace.JoinOpt.Println(mode, index)
@@ -191,22 +193,25 @@ func (jt joinType) reverse() joinType {
 	return jt
 }
 
-func (jn *Join) opt(src1, src2 Query, joinType joinType,
-	mode Mode, index []string) (bestIndex, int) {
+func joinopt(src1, src2 Query, joinType joinType, nrows func() (int, int),
+	mode Mode, index, by []string) (bestIndex, int) {
 	// always have to read all of source 1
 	cost1 := Optimize(src1, mode, index)
 	if cost1 >= impossible {
 		return newBestIndex(), impossible
 	}
-	best := bestGrouped(src2, mode, nil, jn.by)
+	best := bestGrouped(src2, mode, nil, by)
 	if best.index == nil {
 		return best, impossible
 	}
 	nrows1, _ := src1.Nrows()
-	// should only be taking a portion of the variable cost2,
-	// not the fixed temp index cost2 (so 2/3 instead of 1/2)
+	nrows2, _ := src2.Nrows()
+	nrows2 = ord.Max(1, nrows2) // avoid division by zero
+	nr, _ := nrows()
+	// TODO: should only be taking a portion of the variable cost2,
+	// not the fixed temp index cost2
 	// NOTE: lookupCost is not really correct because we use Select
-	best.cost = cost1 + (nrows1 * src2.lookupCost()) + (best.cost * 2 / 3)
+	best.cost = cost1 + (nrows1 * src2.lookupCost()) + (best.cost * nr / nrows2)
 	return best, cost1
 }
 
@@ -222,26 +227,45 @@ func (jn *Join) setApproach(mode Mode, index []string, approach any, tran QueryT
 }
 
 func (jn *Join) Nrows() (int, int) {
-	nrows1, pop1 := jn.source.Nrows()
-	nrows2, pop2 := jn.source2.Nrows()
-	return jn.nrows(nrows1, nrows2), jn.nrows(pop1, pop2)
+	n1, p1 := jn.source.Nrows()
+	n2, p2 := jn.source2.Nrows()
+	return jn.nrows(n1, p1, n2, p2), jn.pop(p1, p2)
 }
 
-func (jn *Join) nrows(n1, n2 int) int {
-	var max int
+func (jn *Join) nrows(n1, p1, n2, p2 int) int {
 	switch jn.joinType {
 	case one_one:
-		max = ord.Min(n1, n2)
+		return ord.Min(n1, n2)
 	case n_one:
-		max = n1
+		n1, p1, n2, p2 = n2, p2, n1, p1
+		fallthrough
 	case one_n:
-		max = n2
+		p1 = ord.Max(1, p1) // avoid division by zero
+		p2 = ord.Max(1, p2)
+		if n1 <= p1 * n2 / p2 { // rearranged n1/p1 <= n2/p2 (for integer math)
+			return n1 * p2 / p1
+		}
+		return n2
 	case n_n:
-		max = n1 * n2
+		return (n1 * n2) / 2 // estimate half
 	default:
-		assert.ShouldNotReachHere()
+		panic(assert.ShouldNotReachHere())
 	}
-	return max / 2 // actual will be between 0 and nrows so estimate half
+}
+
+func (jn *Join) pop(p1, p2 int) int {
+	switch jn.joinType {
+	case one_one:
+		return ord.Min(p1, p2)
+	case n_one:
+		return p1
+	case one_n:
+		return p2
+	case n_n:
+		return (p1 * p2) / 2 // estimate half
+	default:
+		panic(assert.ShouldNotReachHere())
+	}
 }
 
 func (jn *Join) rowSize() int {
@@ -366,7 +390,8 @@ func (lj *LeftJoin) Transform() Query {
 }
 
 func (lj *LeftJoin) optimize(mode Mode, index []string) (Cost, any) {
-	best, _ := lj.opt(lj.source, lj.source2, lj.joinType, mode, index)
+	best, _ := joinopt(lj.source, lj.source2, lj.joinType, lj.Nrows,
+		mode, index, lj.by)
 	return best.cost, &joinApproach{index2: best.index}
 }
 
@@ -379,26 +404,40 @@ func (lj *LeftJoin) setApproach(mode Mode, index []string, approach any, tran Qu
 }
 
 func (lj *LeftJoin) Nrows() (int, int) {
-	nrows1, pop1 := lj.source.Nrows()
-	nrows2, pop2 := lj.source2.Nrows()
-	return lj.nrows(nrows1, nrows2), lj.nrows(pop1, pop2)
+	n1, p1 := lj.source.Nrows()
+	n2, p2 := lj.source2.Nrows()
+	return lj.nrows(n1, p1, n2, p2), lj.pop(p1, p2)
 }
 
-func (lj *LeftJoin) nrows(n1, n2 int) int {
-	var max int
+func (lj *LeftJoin) nrows(n1, p1, n2, p2 int) int {
 	switch lj.joinType {
-	case one_one:
-		return n1
-	case n_one:
+	case one_one, n_one:
 		return n1
 	case one_n:
-		max = n2
+		p1 = ord.Max(1, p1) // avoid division by zero
+		p2 = ord.Max(1, p2)
+		if n1 <= p1 * n2 / p2 { // rearranged n1/p1 <= n2/p2 (for integer math)
+			return n1 * p2 / p1
+		}
+		return n2
 	case n_n:
-		max = n1 * n2
+		return ord.Max(n1, (n1 * n2) / 2) // estimate half
 	default:
-		assert.ShouldNotReachHere()
+		panic(assert.ShouldNotReachHere())
 	}
-	return max / 2 // estimate half
+}
+
+func (lj *LeftJoin) pop(n1, n2 int) int {
+	switch lj.joinType {
+	case one_one, n_one:
+		return n1
+	case one_n:
+		return n2
+	case n_n:
+		return ord.Max(n1, (n1 * n2) / 2) // estimate half
+	default:
+		panic(assert.ShouldNotReachHere())
+	}
 }
 
 // execution
