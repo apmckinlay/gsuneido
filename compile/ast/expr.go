@@ -456,14 +456,6 @@ func (a *Block) Columns() []string {
 	panic("queries do not support blocks")
 }
 
-func (a *Function) Eval(*Context) Value {
-	panic("queries do not support functions")
-}
-
-func (a *Function) Columns() []string {
-	panic("queries do not support functions")
-}
-
 func CantBeEmpty(e Expr, cols []string) bool {
 	if !e.CanEvalRaw(cols) {
 		return false

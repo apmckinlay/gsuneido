@@ -59,6 +59,12 @@ func TestParseQuery(t *testing.T) {
 	test("(cus join task) project cnum, abbrev, tnum rename cnum to c sort tnum, c",
 		"(cus join 1:n by(cnum) task) project cnum,abbrev,tnum"+
 			" rename cnum to c sort tnum, c")
+	test("cus extend x = function(){123}",
+		"cus extend x = /* function */")
+	test("cus extend x = function(){123}()",
+		"cus extend x = /* function */()")
+	test("cus extend x = cnum.Map(function(){123})",
+		"cus extend x = cnum.map(/* function */)") // (test does lower)
 
 	xtest := func(s, err string) {
 		fn := func() { ParseQuery(s, testTran{}, nil) }
@@ -70,6 +76,11 @@ func TestParseQuery(t *testing.T) {
 	xtest("cus join by() task", "invalid empty join by")
 	xtest("table summarize a, b", "expecting Comma")
 	xtest("table summarize total", "expecting identifier")
+
+	xtest("cus extend x = y = 1",
+		"assignment operators are not allowed")
+	xtest("cus extend x = cnum.Map({ it.Size() })",
+		"queries do not support blocks")
 }
 
 func TestParseQuery2(t *testing.T) {

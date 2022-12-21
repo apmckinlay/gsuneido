@@ -271,3 +271,8 @@ func (p *queryParser) commaList() []string {
 	}
 	return list
 }
+
+func (p *queryParser) Expression() ast.Expr {
+	p.InitFuncInfo()
+	return p.Parser.Expression()
+}
