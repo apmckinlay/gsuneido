@@ -90,24 +90,24 @@ func (it *Intersect) Transform() Query {
 	return it
 }
 
-func (it *Intersect) optimize(mode Mode, index []string) (Cost, any) {
-	cost1, key1 := it.cost(it.source, it.source2, mode, index)
-	cost2, key2 := it.cost(it.source2, it.source, mode, index) // reversed
-	cost2 += outOfOrder
-	if cost1 < cost2 {
-		return cost1, &intersectApproach{keyIndex: key1}
+func (it *Intersect) optimize(mode Mode, index []string) (Cost, Cost, any) {
+	fixcost1, varcost1, key1 := it.cost(it.source, it.source2, mode, index)
+	fixcost2, varcost2, key2 := it.cost(it.source2, it.source, mode, index) // reversed
+	fixcost2 += outOfOrder
+	if fixcost1 + varcost1 < fixcost2 + varcost2 {
+		return fixcost1, varcost1, &intersectApproach{keyIndex: key1}
 	}
-	return cost2, &intersectApproach{keyIndex: key2, reverse: true}
+	return fixcost2, varcost2, &intersectApproach{keyIndex: key2, reverse: true}
 }
 
 func (*Intersect) cost(source, source2 Query, mode Mode, index []string) (
-	cost Cost, key []string) {
+	fixcost, varcost Cost, key []string) {
 	key = bestKey(source2, mode)
 	// iterate source and lookups on source2
-	cost = Optimize(source, mode, index)
+	fixcost1, varcost1 := Optimize(source, mode, index)
 	nrows1, _ := source.Nrows()
-	cost += LookupCost(source2, mode, key, nrows1)
-	return cost, key
+	fixcost2, varcost2 := LookupCost(source2, mode, key, nrows1)
+	return fixcost1 + fixcost2, varcost1 + varcost2, key
 }
 
 func (it *Intersect) setApproach(mode Mode, index []string, approach any,

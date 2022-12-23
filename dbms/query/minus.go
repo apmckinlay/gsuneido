@@ -67,17 +67,17 @@ func (m *Minus) Transform() Query {
 	return m
 }
 
-func (m *Minus) optimize(mode Mode, index []string) (Cost, any) {
-	// iterate source and lookups on source2
-	cost := Optimize(m.source, mode, index)
-	nrows1, _ := m.source.Nrows()
-	cost += nrows1 * m.source2.lookupCost()
+func (m *Minus) optimize(mode Mode, index []string) (Cost, Cost, any) {
+	// iterate source and lookup on source2
 	keyIndex := bestKey(m.source2, mode)
 	if keyIndex == nil {
-		return impossible, nil
+		return impossible, impossible, nil
 	}
+	fixcost, varcost := Optimize(m.source, mode, index)
+	nrows1, _ := m.source.Nrows()
+	varcost += nrows1 * m.source2.lookupCost()
 	approach := &minusApproach{keyIndex: keyIndex}
-	return cost, approach
+	return fixcost, varcost, approach
 }
 
 func (m *Minus) setApproach(mode Mode, index []string, approach any, tran QueryTran) {

@@ -154,36 +154,47 @@ func (u *Union) Fixed() []Fixed {
 	return u.fixed
 }
 
-func (u *Union) optimize(mode Mode, index []string) (Cost, any) {
+func (u *Union) optimize(mode Mode, index []string) (Cost, Cost, any) {
 	// if there is a required index, use Merge
 	if index != nil {
 		// if not disjoint then index must also be a key
 		if u.disjoint == "" &&
 			(!handlesIndex(u.source.Keys(), index) ||
 				!handlesIndex(u.source2.Keys(), index)) {
-			return impossible, nil
+			return impossible, impossible, nil
 		}
-		cost := Optimize(u.source, mode, index) + Optimize(u.source2, mode, index)
+		fixcost1, varcost1 := Optimize(u.source, mode, index)
+		fixcost2, varcost2 := Optimize(u.source2, mode, index)
 		approach := &unionApproach{keyIndex: index, strategy: unionMerge,
 			idx1: index, idx2: index}
-		return cost, approach
+		return fixcost1 + fixcost2, varcost1 + varcost2, approach
 	}
 	// else no required index
 	if u.disjoint != "" {
-		cost := Optimize(u.source, mode, nil) + Optimize(u.source2, mode, nil)
+		fixcost1, varcost1 := Optimize(u.source, mode, nil)
+		fixcost2, varcost2 := Optimize(u.source2, mode, nil)
 		approach := &unionApproach{strategy: unionLookup}
-		return cost, approach
+		return fixcost1 + fixcost2, varcost1 + varcost2, approach
 	}
 	// else not disjoint
-	mergeCost, mergeApp := u.optMerge(u.source, u.source2, mode)
-	lookupCost, lookupApp := u.optLookup(u.source, u.source2, mode)
-	lookupCostRev, lookupAppRev := u.optLookup(u.source2, u.source, mode)
-	cost, approach := min3(mergeCost, mergeApp,
-		lookupCost, lookupApp, lookupCostRev, lookupAppRev)
-	if cost >= impossible {
-		return impossible, nil
+	mergeFixCost, mergeVarCost, mergeApp :=
+		u.optMerge(u.source, u.source2, mode)
+	lookupFixCost, lookupVarCost, lookupApp :=
+		u.optLookup(u.source, u.source2, mode)
+	lookupRevFixCost, lookupRevVarCost, lookupRevApp :=
+		u.optLookup(u.source2, u.source, mode)
+	fixcost, varcost, approach := min3(
+		mergeFixCost, mergeVarCost, mergeApp,
+		lookupFixCost, lookupVarCost, lookupApp,
+		lookupRevFixCost, lookupRevVarCost, lookupRevApp)
+	// trace.Println("UNION merge", mergeFixCost, mergeVarCost,
+	// 	"lookup", lookupFixCost, lookupVarCost,
+	// 	"lookupRev", lookupRevFixCost, lookupRevVarCost,
+	// 	"=>", fixcost, varcost)
+	if fixcost >= impossible {
+		return impossible, impossible, nil
 	}
-	return cost, approach
+	return fixcost, varcost, approach
 }
 
 func handlesIndex(keys [][]string, index []string) bool {
@@ -193,16 +204,19 @@ func handlesIndex(keys [][]string, index []string) bool {
 	return slc.ContainsFn(keys, index, set.Equal[string])
 }
 
-func (*Union) optMerge(source, source2 Query, mode Mode) (Cost, any) {
+func (*Union) optMerge(source, source2 Query, mode Mode) (Cost, Cost, any) {
 	// need key (unique) index to eliminate duplicates
 	keys := set.IntersectFn(source.Keys(), source2.Keys(), set.Equal[string])
 	var bestKey, bestIdx1, bestIdx2 []string
-	bestCost := impossible
+	bestFixCost := impossible
+	bestVarCost := impossible
 	for _, key := range keys {
-		cost := Optimize(source, mode, key) + Optimize(source2, mode, key)
-		if cost < bestCost {
+		fixcost1, varcost1 := Optimize(source, mode, key)
+		fixcost2, varcost2 := Optimize(source2, mode, key)
+		if fixcost1+varcost1+fixcost2+varcost2 < bestFixCost+bestVarCost {
 			bestKey = key
-			bestCost = cost
+			bestFixCost = fixcost1 + fixcost2
+			bestVarCost = varcost1 + varcost2
 			bestIdx1, bestIdx2 = key, key
 		}
 		for _, idx1 := range source.Indexes() {
@@ -213,11 +227,12 @@ func (*Union) optMerge(source, source2 Query, mode Mode) (Cost, any) {
 			for _, idx2 := range source2.Indexes() {
 				ik2 := set.Intersect(idx2, key)
 				if slices.Equal(ik1, ik2) {
-					cost := Optimize(source, mode, idx1) +
-						Optimize(source2, mode, idx2)
-					if cost < bestCost {
+					fixcost1, varcost1 := Optimize(source, mode, idx1)
+					fixcost2, varcost2 := Optimize(source2, mode, idx2)
+					if fixcost1+varcost1+fixcost2+varcost2 < bestFixCost+bestVarCost {
 						bestKey = key
-						bestCost = cost
+						bestFixCost = fixcost1 + fixcost2
+						bestVarCost = varcost1 + varcost2
 						bestIdx1, bestIdx2 = idx1, idx2
 					}
 				}
@@ -226,28 +241,30 @@ func (*Union) optMerge(source, source2 Query, mode Mode) (Cost, any) {
 	}
 	approach := &unionApproach{keyIndex: bestKey, strategy: unionMerge,
 		idx1: bestIdx1, idx2: bestIdx2}
-	return bestCost, approach
+	return bestFixCost, bestVarCost, approach
 }
 
-func (u *Union) optLookup(source, source2 Query, mode Mode) (Cost, any) {
+func (u *Union) optLookup(source, source2 Query, mode Mode) (Cost, Cost, any) {
 	var bestKey []string
-	bestCost := impossible
-	cost1 := Optimize(source, mode, nil)
+	bestFixCost := impossible
+	bestVarCost := impossible
+	fixcost1, varcost1 := Optimize(source, mode, nil)
 	nrows1, _ := source.Nrows()
 	for _, key := range source2.Keys() {
-		cost := cost1 + LookupCost(source2, mode, key, nrows1)
-		if cost < bestCost {
+		fixcost2, varcost2 := LookupCost(source2, mode, key, nrows1)
+		if fixcost1+varcost1+fixcost2+varcost2 < bestFixCost+bestVarCost {
 			bestKey = key
-			bestCost = cost
+			bestFixCost = fixcost1 + fixcost2
+			bestVarCost = varcost1 + varcost2
 		}
 	}
 	approach := &unionApproach{keyIndex: bestKey, strategy: unionLookup,
 		idx1: nil, idx2: bestKey}
 	if source == u.source2 {
 		approach.reverse = true
-		bestCost += outOfOrder
+		bestFixCost += outOfOrder
 	}
-	return bestCost, approach
+	return bestFixCost, bestVarCost, approach
 }
 
 func (u *Union) setApproach(mode Mode, _ []string, approach any, tran QueryTran) {

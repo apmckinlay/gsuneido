@@ -45,7 +45,7 @@ func TestFixed(t *testing.T) {
 	test2 := func(query string, expected string) {
 		t.Helper()
 		q := ParseQuery(query, testTran{}, nil)
-		q, _ = Setup(q, ReadMode, testTran{})
+		q, _, _ = Setup(q, ReadMode, testTran{})
 		assert.T(t).This(q.String()).Is(expected)
 	}
 	test2("table extend f=1 where f is 2",

@@ -97,14 +97,10 @@ func (c *Compatible) equal(row1, row2 Row, th *Thread) bool {
 }
 
 func bestKey(q Query, mode Mode) []string {
-	var best []string
-	bestCost := impossible
+	best := newBestIndex()
 	for _, key := range q.Keys() {
-		cost := Optimize(q, mode, key)
-		cost += (len(key) - 1) * cost / 20 // ??? prefer shorter keys
-		if cost < bestCost {
-			best = key
-		}
+		fixcost, varcost := Optimize(q, mode, key)
+		best.update(key, fixcost, varcost)
 	}
-	return best
+	return best.index
 }

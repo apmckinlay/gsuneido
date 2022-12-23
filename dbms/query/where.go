@@ -423,25 +423,26 @@ func (w *Where) split(q2 *Query2) bool {
 
 // optimize ---------------------------------------------------------
 
-func (w *Where) optimize(mode Mode, index []string) (Cost, any) {
+func (w *Where) optimize(mode Mode, index []string) (Cost, Cost, any) {
 	if !w.optInited {
 		w.optInit()
 		if w.conflict {
-			return 0, nil
+			return 0, 0, nil
 		}
 	}
 	assert.That(!w.singleton || len(index) == 0)
 	// we always have the option of just filtering (no specific index use)
-	filterCost := Optimize(w.source, mode, index)
+	filterFixCost, filterVarCost := Optimize(w.source, mode, index)
 	if w.tbl == nil || w.tbl.singleton {
-		return filterCost, nil
+		return filterFixCost, filterVarCost, nil
 	}
+	// where on table
 	cost, index := w.bestIndex(index)
 	if cost >= impossible {
 		// only use the filter if there are no possible idxSel
-		return filterCost, nil
+		return filterFixCost, filterVarCost, nil
 	}
-	return cost, whereApproach{index: index}
+	return 0, cost, whereApproach{index: index}
 }
 
 func (w *Where) exprConflict() bool {
@@ -535,16 +536,17 @@ func (w *Where) bestIndex(order []string) (Cost, []string) {
 	for _, idx := range w.source.Indexes() {
 		if ordered(idx, order, w.fixed) {
 			if is := w.getIdxSel(idx); is != nil {
-				cost := w.source.lookupCost() * len(is.ptrngs)
+				varcost := w.source.lookupCost() * len(is.ptrngs)
 				if is.isRanges() {
-					tblCost, _ := w.tbl.optimize(CursorMode, idx)
-					cost += int(is.frac * float64(tblCost))
+					tblFixCost, tblVarCost, _ := w.tbl.optimize(CursorMode, idx)
+					assert.That(tblFixCost == 0)
+					varcost += int(is.frac * float64(tblVarCost))
 				}
-				best.update(idx, cost)
+				best.update(idx, 0, varcost)
 			}
 		}
 	}
-	return best.cost, best.index
+	return best.varcost, best.index
 }
 
 func (w *Where) getIdxSel(index []string) *idxSel {
@@ -1023,7 +1025,7 @@ func (w *Where) filter(th *runtime.Thread, row runtime.Row) bool {
 		return true
 	}
 	if w.selectCols != nil &&
-		!w.singletonFilter(row, w.selectCols, w.selectVals) {
+		!singletonFilter(w.hdr, row, w.selectCols, w.selectVals) {
 		return false
 	}
 	if w.ctx.Tran == nil {
@@ -1168,7 +1170,7 @@ func (w *Where) Lookup(th *runtime.Thread, cols, vals []string) runtime.Row {
 		// can't use source.Lookup because cols may not match source index
 		w.Rewind()
 		row := w.Get(th, runtime.Next)
-		if row == nil || !w.singletonFilter(row, cols, vals) {
+		if row == nil || !singletonFilter(w.hdr, row, cols, vals) {
 			return nil
 		}
 		return row
@@ -1180,10 +1182,10 @@ func (w *Where) Lookup(th *runtime.Thread, cols, vals []string) runtime.Row {
 	return row
 }
 
-func (w *Where) singletonFilter(
-	row runtime.Row, cols []string, vals []string) bool {
+func singletonFilter(
+	hdr *runtime.Header, row runtime.Row, cols []string, vals []string) bool {
 	for i, col := range cols {
-		if row.GetRaw(w.hdr, col) != vals[i] {
+		if row.GetRaw(hdr, col) != vals[i] {
 			return false
 		}
 	}

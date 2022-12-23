@@ -27,7 +27,7 @@ func TestTableLookup(t *testing.T) {
 	test := func(query string, cols, vals []string, expected string) {
 		t.Helper()
 		q := ParseQuery(query, testTran{}, nil)
-		q, _ = Setup(q, ReadMode, testTran{})
+		q, _, _ = Setup(q, ReadMode, testTran{})
 		row := q.(*Table).Lookup(nil, cols, vals)
 		assert.T(t).This(fmt.Sprint(row)).Is(expected)
 	}
@@ -75,7 +75,7 @@ func TestQueryGet(t *testing.T) {
 		t.Helper()
 		tran := sizeTran{db.NewReadTran()}
 		q := ParseQuery(query, tran, nil)
-		q, _ = Setup(q, ReadMode, tran)
+		q, _, _ = Setup(q, ReadMode, tran)
 		qs := strings.ReplaceAll(q.String(), `"`, "'")
 		assert.T(t).This(qs).Is(strategy)
 		assert.T(t).Msg("forward:", query).This(get(q, rt.Next)).Like(expected)
@@ -356,7 +356,7 @@ func TestQueryGet(t *testing.T) {
 		'eraser'	'c'	150		970201`)
 	test("(trans minus trans) where item = 0",
 		"trans^(item) WHERE item is 0 MINUS "+
-			"(trans^(item) WHERE item is 0 TEMPINDEX(date,item,id))",
+			"(trans^(date,item,id) WHERE item is 0)",
 		`item		id	cost	date`)
 	test("inven minus (inven where item = 'mouse')",
 		"inven^(item) MINUS (inven^(item) WHERE*1 item is 'mouse')",
@@ -469,7 +469,7 @@ func TestQueryGet(t *testing.T) {
 	test("(((co where tnum = 100) union (co where tnum = 102)) remove tnum)"+
 		" union "+
 		"(((co where tnum = 104) union (co where tnum = 106)) remove tnum)",
-		"(co^(tnum) WHERE*1 tnum is 100 UNION-DISJOINT(tnum)-MERGE (co^(tnum) WHERE*1 tnum is 102)) PROJECT-SEQ signed UNION-LOOKUP ((co^(tnum) WHERE*1 tnum is 104 UNION-DISJOINT(tnum)-MERGE (co^(tnum) WHERE*1 tnum is 106)) PROJECT-SEQ signed)",
+		"(co^(tnum) WHERE*1 tnum is 100 UNION-DISJOINT(tnum)-MERGE (co^(tnum) WHERE*1 tnum is 102)) PROJECT-SEQ signed UNION-MERGE ((co^(tnum) WHERE*1 tnum is 104 UNION-DISJOINT(tnum)-MERGE (co^(tnum) WHERE*1 tnum is 106)) PROJECT-SEQ signed)",
 		`signed
         990101
         990102
@@ -478,7 +478,7 @@ func TestQueryGet(t *testing.T) {
 	test(`((co where tnum = 104 remove tnum) union (co where tnum = 106 remove tnum))
 		union
 		((co where tnum = 104 remove tnum) union (co where tnum = 106 remove tnum))`,
-		"(co^(tnum) WHERE*1 tnum is 104 PROJECT-COPY signed UNION-MERGE (co^(tnum) WHERE*1 tnum is 106 PROJECT-COPY signed)) UNION-LOOKUP (co^(tnum) WHERE*1 tnum is 104 PROJECT-COPY signed UNION-MERGE (co^(tnum) WHERE*1 tnum is 106 PROJECT-COPY signed))",
+		"(co^(tnum) WHERE*1 tnum is 104 PROJECT-COPY signed UNION-MERGE (co^(tnum) WHERE*1 tnum is 106 PROJECT-COPY signed)) UNION-MERGE (co^(tnum) WHERE*1 tnum is 104 PROJECT-COPY signed UNION-MERGE (co^(tnum) WHERE*1 tnum is 106 PROJECT-COPY signed))",
 		`signed
         990103
         990104`)
@@ -518,12 +518,12 @@ func TestQueryGet(t *testing.T) {
 		'e'	'emerald'	'vancouver'	970103	'pencil'	300
 		'i'	'intercon'	'saskatoon'	''	''	''`)
 	test("hist join customer",
-		"customer^(id) JOIN 1:n by(id) (hist^(date) TEMPINDEX(id))",
-		`id name	  city			date	item	 cost
-		'a'	'axon'	  'saskatoon'	970101	'disk'	 100
-		'c'	'calac'	  'calgary'		970102	'mouse'	 200
-		'e'	'emerald' 'vancouver'	970101	'disk'	 200
-		'e'	'emerald' 'vancouver'	970103	'pencil' 300`)
+		"hist^(date) JOIN n:1 by(id) customer^(id)",
+		`date	item	id	cost	name	city
+		970101	'disk'	'a'	100	'axon'	'saskatoon'
+		970101	'disk'	'e'	200	'emerald'	'vancouver'
+		970102	'mouse'	'c'	200	'calac'	'calgary'
+		970103	'pencil'	'e'	300	'emerald'	'vancouver'`)
 	test("customer leftjoin (alias where name2 is 'abc')",
 		"customer^(id) LEFTJOIN 1:1 by(id) (alias^(id) WHERE name2 is 'abc')",
 		`id	name	city	name2
@@ -701,9 +701,9 @@ func TestQueryGet(t *testing.T) {
 
 	// tempindex
 	test("tables intersect columns",
-		"tables INTERSECT (columns TEMPINDEX(table,column))",
+		"columns INTERSECT (tables TEMPINDEX(table))",
 		`table`)
 	test("tables minus tables",
-		"tables MINUS (tables TEMPINDEX(tablename))",
+		"tables MINUS (tables TEMPINDEX(table))",
 		`table	tablename	nrows	totalsize`)
 }

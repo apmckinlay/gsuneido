@@ -11,19 +11,20 @@ import (
 
 func TestCache(t *testing.T) {
 	var c cache
-	test := func(idx []string, expected int) {
+	test := func(idx []string, fixcost, varcost int) {
 		t.Helper()
-		_, cost, _ := c.cacheGet(0, idx)
-		assert.T(t).This(cost).Is(expected)
+		fc, vc, _ := c.cacheGet(0, idx)
+		assert.T(t).This(fc).Is(fixcost)
+		assert.T(t).This(vc).Is(varcost)
 	}
-	test(nil, -1)
+	test(nil, -1, -1)
 	ix1 := []string{"one"}
-	test(ix1, -1)
-	c.cacheAdd(0, ix1, 123, nil)
-	test(ix1, 123)
+	test(ix1, -1, -1)
+	c.cacheAdd(0, ix1, 12, 34, nil)
+	test(ix1, 12, 34)
 	ix2 := []string{"one", "two"}
-	test(ix2, -1)
-	c.cacheAdd(0, ix2, 456, nil)
-	test(ix1, 123)
-	test(ix2, 456)
+	test(ix2, -1, -1)
+	c.cacheAdd(0, ix2, 45, 67, nil)
+	test(ix1, 12, 34)
+	test(ix2, 45, 67)
 }

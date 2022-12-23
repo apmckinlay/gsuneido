@@ -53,15 +53,15 @@ func (sort *Sort) Transform() Query {
 	return sort
 }
 
-func (sort *Sort) optimize(mode Mode, index []string) (Cost, any) {
+func (sort *Sort) optimize(mode Mode, index []string) (Cost, Cost, any) {
 	assert.That(index == nil)
 	src := sort.source
-	cost := Optimize(src, mode, sort.columns) // adds temp index if needed
+	fixcost, varcost := Optimize(src, mode, sort.columns) // adds temp index if needed
 	best := sort.bestOrdered(src.Indexes(), sort.columns, mode)
-	if cost < best.cost {
-		return cost, sortApproach{index: sort.columns}
+	if fixcost+varcost < best.fixcost+best.varcost {
+		return fixcost, varcost, sortApproach{index: sort.columns}
 	}
-	return best.cost, sortApproach{index: best.index}
+	return best.fixcost, best.varcost, sortApproach{index: best.index}
 }
 
 // bestOrdered returns the best index that supplies the required order
@@ -72,8 +72,8 @@ func (q1 *Query1) bestOrdered(indexes [][]string, order []string,
 	fixed := q1.source.Fixed()
 	for _, ix := range indexes {
 		if ordered(ix, order, fixed) {
-			cost := Optimize(q1.source, mode, ix)
-			best.update(ix, cost)
+			fixcost, varcost := Optimize(q1.source, mode, ix)
+			best.update(ix, fixcost, varcost)
 		}
 	}
 	return best

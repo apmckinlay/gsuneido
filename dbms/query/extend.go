@@ -166,11 +166,12 @@ func (e *Extend) SingleTable() bool {
 	return e.source.SingleTable()
 }
 
-func (e *Extend) optimize(mode Mode, index []string) (Cost, any) {
+func (e *Extend) optimize(mode Mode, index []string) (Cost, Cost, any) {
 	if !set.Disjoint(index, e.cols) {
-		return impossible, nil
+		return impossible, impossible, nil
 	}
-	return Optimize(e.source, mode, index), nil
+	fixcost, varcost := Optimize(e.source, mode, index)
+	return fixcost, varcost, nil
 }
 
 func (e *Extend) setApproach(mode Mode, index []string, _ any, tran QueryTran) {

@@ -186,7 +186,7 @@ func TestForeignKeys(*testing.T) {
 func queryAll(db *db19.Database, query string) string {
 	tran := sizeTran{db.NewReadTran()}
 	q := ParseQuery(query, tran, nil)
-	q, _ = Setup(q, ReadMode, tran)
+	q, _, _ = Setup(q, ReadMode, tran)
 	return queryAll2(q)
 }
 
@@ -262,11 +262,11 @@ func TestExtendAllRules(*testing.T) {
 	defer db.Close()
 	tran := db.NewReadTran()
 	q := ParseQuery("cus extend Foo, n=1, Bar", tran, nil)
-	q, _ = Setup(q, ReadMode, tran)
+	q, _, _ = Setup(q, ReadMode, tran)
 	assert.That(!q.SingleTable())
 	assert.This(len(q.Header().Fields)).Is(2)
 	q = ParseQuery("cus extend Foo, Bar", tran, nil)
-	q, _ = Setup(q, ReadMode, tran)
+	q, _, _ = Setup(q, ReadMode, tran)
 	assert.That(q.SingleTable())
 	assert.This(len(q.Header().Fields)).Is(1)
 }
@@ -322,7 +322,7 @@ func TestWhereSelectBug(t *testing.T) {
 	q := ParseQuery("t1 where d is '1' and b < 'z'", tran, nil)
 	idx := []string{"d"}
 	q = q.Transform()
-	_, app := q.optimize(ReadMode, idx)
+	_, _, app := q.optimize(ReadMode, idx)
 	q.setApproach(ReadMode, idx, app, tran)
 	assert.T(t).This(q.String()).Is("t1^(b) WHERE d is '1' and b < 'z'")
 	vals := []string{rt.Pack(rt.SuStr("1"))}
@@ -387,7 +387,7 @@ func TestSingleton(t *testing.T) {
 	act("insert { a: 3, b: 4 } into tmp")
 	tran := sizeTran{db.NewReadTran()}
 	q := ParseQuery("tmp where a = 3", tran, nil)
-	q, _ = Setup(q, ReadMode, tran)
+	q, _, _ = Setup(q, ReadMode, tran)
 	assert.This(q.String()).Is("tmp^(a) WHERE*1 a is 3") // singleton
 	// reading by a, but singleton so we can Select/Lookup on b
 	bcols := []string{"b"}

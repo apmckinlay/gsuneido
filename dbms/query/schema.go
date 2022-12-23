@@ -61,11 +61,11 @@ func (*schemaTable) Output(th *Thread, _ Record) {
 	panic("can't output to schema table")
 }
 
-func (*schemaTable) optimize(_ Mode, index []string) (Cost, any) {
+func (*schemaTable) optimize(_ Mode, index []string) (Cost, Cost, any) {
 	if index == nil {
-		return 1000, nil
+		return 0, 1000, nil
 	}
-	return impossible, nil
+	return impossible, impossible, nil
 }
 
 func (*schemaTable) setApproach(Mode, []string, any, QueryTran) {

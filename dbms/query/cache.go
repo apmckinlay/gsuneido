@@ -14,42 +14,48 @@ import (
 // It does not limit the size of the cache. (no eviction)
 type cache struct {
 	entries []cacheEntry
-	cost    int
+	fixcost Cost
+	varcost Cost
 }
 
 type cacheEntry struct {
 	mode     Mode
 	index    []string
-	cost     Cost
+	fixcost  Cost
+	varcost  Cost
 	approach any
 }
 
 // cacheAdd adds an entry to the cache.
 // It does *not* check if the item already exists
 // because it assumes you previously tried cacheGet.
-func (c *cache) cacheAdd(mode Mode, index []string, cost Cost, approach any) {
-	assert.Msg("cache cost < 0").That(cost >= 0)
+func (c *cache) cacheAdd(mode Mode, index []string,
+	fixcost Cost, varcost Cost, approach any) {
+	assert.Msg("cache fixcost < 0").That(fixcost >= 0)
+	assert.Msg("cache varcost < 0").That(varcost >= 0)
 	c.entries = append(c.entries,
-		cacheEntry{mode: mode, index: index, cost: cost, approach: approach})
+		cacheEntry{mode: mode, index: index,
+			fixcost: fixcost, varcost: varcost, approach: approach})
 }
 
 // cacheGet returns the cost and approach associated with an index
 // or -1 if the index as not been added.
-func (c *cache) cacheGet(mode Mode, index []string) (Mode, Cost, any) {
+func (c *cache) cacheGet(mode Mode, index []string) (
+	fixcost, varcost Cost, approach any) {
 	for i := range c.entries {
 		if mode == c.entries[i].mode &&
 			slices.Equal(index, c.entries[i].index) {
 			slc.Swap(c.entries, 0, i) // so chosen approach is first
-			return c.entries[0].mode, c.entries[0].cost, c.entries[0].approach
+			return c.entries[0].fixcost, c.entries[0].varcost, c.entries[0].approach
 		}
 	}
 	return -1, -1, nil
 }
 
-func (c *cache) cacheSetCost(cost int) {
-	c.cost = cost
+func (c *cache) cacheSetCost(fixcost, varcost Cost) {
+	c.fixcost, c.varcost = fixcost, varcost
 }
 
-func (c *cache) cacheCost() int {
-	return c.cost
+func (c *cache) cacheCost() (Cost, Cost) {
+	return c.fixcost, c.varcost
 }

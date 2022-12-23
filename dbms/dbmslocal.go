@@ -88,9 +88,10 @@ func (dbms *DbmsLocal) Cursor(query string, sv *Sviews) ICursor {
 		sv = &dbms.db.Sviews
 	}
 	q := qry.ParseQuery(query, dbms.db.NewReadTran(), sv)
-	q, cost := qry.Setup(q, qry.CursorMode, dbms.db.NewReadTran())
-	trace.Query.Println("cursor", cost, "-", query)
-	return cursorLocal{queryLocal{Query: q, cost: cost, mode: qry.CursorMode}}
+	q, fixcost, varcost := qry.Setup(q, qry.CursorMode, dbms.db.NewReadTran())
+	trace.Query.Println("cursor", fixcost+varcost, "-", query)
+	return cursorLocal{queryLocal{
+		Query: q, cost: fixcost + varcost, mode: qry.CursorMode}}
 }
 
 func (*DbmsLocal) Cursors() int {
@@ -149,10 +150,10 @@ func (dbms *DbmsLocal) Get(
 func get(th *Thread, tran qry.QueryTran, query string, dir Dir,
 	sv *Sviews) (Row, *Header, string) {
 	q := qry.ParseQuery(query, tran, sv)
-	q, cost := qry.Setup(q, qry.ReadMode, tran)
+	q, fixcost, varcost := qry.Setup(q, qry.ReadMode, tran)
 	if trace.Query.On() {
 		d := map[Dir]string{Only: "one", Next: "first", Prev: "last"}[dir]
-		trace.Query.Println(d, cost, "-", query)
+		trace.Query.Println(d, fixcost+varcost, "-", query)
 	}
 	only := false
 	if dir == Only {
@@ -402,9 +403,9 @@ func (t ReadTranLocal) Query(query string, sv *Sviews) IQuery {
 		sv = t.GetSviews()
 	}
 	q := qry.ParseQuery(query, t.ReadTran, sv)
-	q, cost := qry.Setup(q, qry.ReadMode, t.ReadTran)
-	trace.Query.Println(cost, "-", query)
-	return queryLocal{Query: q, cost: cost, mode: qry.ReadMode}
+	q, fixcost, varcost := qry.Setup(q, qry.ReadMode, t.ReadTran)
+	trace.Query.Println(fixcost+varcost, "-", query)
+	return queryLocal{Query: q, cost: fixcost + varcost, mode: qry.ReadMode}
 }
 
 func (t ReadTranLocal) Action(*Thread, string, *Sviews) int {
@@ -431,9 +432,9 @@ func (t UpdateTranLocal) Query(query string, sv *Sviews) IQuery {
 		sv = t.GetSviews()
 	}
 	q := qry.ParseQuery(query, t.UpdateTran, sv)
-	q, cost := qry.Setup(q, qry.UpdateMode, t.UpdateTran)
-	trace.Query.Println("update", cost, "-", query)
-	return queryLocal{Query: q, cost: cost, mode: qry.UpdateMode}
+	q, fixcost, varcost := qry.Setup(q, qry.UpdateMode, t.UpdateTran)
+	trace.Query.Println("update", fixcost+varcost, "-", query)
+	return queryLocal{Query: q, cost: fixcost + varcost, mode: qry.UpdateMode}
 }
 
 func (t UpdateTranLocal) Action(th *Thread, action string, sv *Sviews) int {

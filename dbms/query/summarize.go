@@ -193,57 +193,57 @@ func (su *Summarize) Transform() Query {
 	return su
 }
 
-func (su *Summarize) optimize(mode Mode, index []string) (Cost, any) {
+func (su *Summarize) optimize(mode Mode, index []string) (Cost, Cost, any) {
 	if _, ok := su.source.(*Table); ok &&
 		len(su.by) == 0 && len(su.ops) == 1 && su.ops[0] == "count" {
 		Optimize(su.source, mode, nil)
-		return 1, &summarizeApproach{strategy: sumTbl}
+		return 0, 1, &summarizeApproach{strategy: sumTbl}
 	}
-	seqCost, seqApp := su.seqCost(mode, index)
-	idxCost, idxApp := su.idxCost(mode)
-	mapCost, mapApp := su.mapCost(mode, index)
-	return min3(seqCost, seqApp, idxCost, idxApp, mapCost, mapApp)
+	seqFixCost, seqVarCost, seqApp := su.seqCost(mode, index)
+	idxFixCost, idxVarCost, idxApp := su.idxCost(mode)
+	mapFixCost, mapVarCost, mapApp := su.mapCost(mode, index)
+	return min3(seqFixCost, seqVarCost, seqApp, idxFixCost, idxVarCost, idxApp,
+		mapFixCost, mapVarCost, mapApp)
 }
 
-func (su *Summarize) seqCost(mode Mode, index []string) (Cost, any) {
+func (su *Summarize) seqCost(mode Mode, index []string) (Cost, Cost, any) {
 	approach := &summarizeApproach{strategy: sumSeq}
 	if len(su.by) == 0 || containsKey(su.by, su.source.Keys()) {
 		if len(su.by) != 0 {
 			approach.index = index
 		}
-		cost := Optimize(su.source, mode, approach.index)
-		return cost, approach
+		fixcost, varcost := Optimize(su.source, mode, approach.index)
+		return fixcost, varcost, approach
 	}
 	best := bestGrouped(su.source, mode, index, su.by)
 	if best.index == nil {
-		return impossible, nil
+		return impossible, impossible, nil
 	}
 	approach.index = best.index
-	return best.cost, approach
+	return best.fixcost, best.varcost, approach
 }
 
-func (su *Summarize) idxCost(Mode) (Cost, any) {
+func (su *Summarize) idxCost(Mode) (Cost, Cost, any) {
 	if len(su.by) > 0 || !su.minmax1() {
-		return impossible, nil
+		return impossible, impossible, nil
 	}
-	// dividing by nrows since we're only reading one row
-	// NOTE: this is not correct if there is any fixed cost
-	nr, _ := su.source.Nrows()
-	nr = ord.Max(1, nr)
-	// cursorMode to bypass temp index
-	cost := Optimize(su.source, CursorMode, su.ons) / nr
+	nrows, _ := su.source.Nrows()
+	nrows = ord.Max(1, nrows) // avoid divide by zero
+	// cursorMode to prevent temp index
+	fixcost, varcost := Optimize(su.source, CursorMode, su.ons)
+	varcost /= nrows // divide by nrows since we're only reading one row
 	approach := &summarizeApproach{strategy: sumIdx, index: su.ons}
-	return cost, approach
+	return fixcost, varcost, approach
 }
 
-func (su *Summarize) mapCost(mode Mode, index []string) (Cost, any) {
-	if index != nil {
-		return impossible, nil
+func (su *Summarize) mapCost(mode Mode, index []string) (Cost, Cost, any) {
+	nrows, _ := su.Nrows()
+	if index != nil || nrows > sumMaxSize {
+		return impossible, impossible, nil
 	}
-	cost := Optimize(su.source, mode, nil)
-	cost += cost / 2 // add 50% for map overhead
-	approach := &summarizeApproach{strategy: sumMap}
-	return cost, approach
+	fixcost, varcost := Optimize(su.source, mode, nil)
+	fixcost += nrows * 20 // ???
+	return fixcost, varcost, &summarizeApproach{strategy: sumMap}
 }
 
 func (su *Summarize) setApproach(mode Mode, _ []string, approach any, tran QueryTran) {

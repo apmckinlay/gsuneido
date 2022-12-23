@@ -60,17 +60,20 @@ func (t *Times) Transform() Query {
 	return t
 }
 
-func (t *Times) optimize(mode Mode, index []string) (Cost, any) {
-	nrows1, _ := t.source.Nrows()
-	cost := Optimize(t.source, mode, index) +
-		nrows1*Optimize(t.source2, mode, nil)
-	nrows2, _ := t.source2.Nrows()
-	costRev := Optimize(t.source2, mode, index) +
-		nrows2*Optimize(t.source, mode, nil) + outOfOrder
-	if cost < costRev {
-		return cost, false
+func (t *Times) optimize(mode Mode, index []string) (Cost, Cost, any) {
+	opt := func(src1, src2 Query) (Cost, Cost) {
+		nrows, _ := src1.Nrows()
+		fixcost1, varcost1 := Optimize(src1, mode, index)
+		fixcost2, varcost2 := Optimize(src2, mode, nil)
+		return fixcost1 + fixcost2, varcost1 + nrows * varcost2
 	}
-	return costRev, true
+	fixFwd, varFwd := opt(t.source, t.source2)
+	fixRev, varRev := opt(t.source2, t.source)
+	fixRev += outOfOrder
+	if fixFwd + varFwd < fixRev + varRev {
+		return fixFwd, varFwd, false
+	}
+	return fixRev, varRev, true
 }
 
 func (t *Times) setApproach(mode Mode, index []string, approach any, tran QueryTran) {

@@ -62,8 +62,8 @@ func (*ProjectNone) SingleTable() bool {
 func (*ProjectNone) SetTran(QueryTran) {
 }
 
-func (*ProjectNone) optimize(Mode, []string) (Cost, any) {
-	return 0, nil
+func (*ProjectNone) optimize(Mode, []string) (Cost, Cost, any) {
+	return 0, 0, nil
 }
 
 func (*ProjectNone) setApproach(Mode, []string, any, QueryTran) {

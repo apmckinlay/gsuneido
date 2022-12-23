@@ -48,7 +48,7 @@ func (a *insertQueryAction) String() string {
 }
 
 func (a *insertQueryAction) execute(th *Thread, ut *db19.UpdateTran) int {
-	qr, _ := Setup(a.query, ReadMode, ut)
+	qr, _, _ := Setup(a.query, ReadMode, ut)
 	hdr := qr.Header()
 	fields := ut.GetSchema(a.table).Columns
 	n := 0
@@ -135,7 +135,7 @@ func (a *deleteAction) String() string {
 
 func (a *deleteAction) execute(th *Thread, ut *db19.UpdateTran) int {
 	//TODO optimize deleting all records of table (but still check foreign keys)
-	q, _ := Setup(a.query, UpdateMode, ut)
+	q, _, _ := Setup(a.query, UpdateMode, ut)
 	table := q.Updateable()
 	if table == "" {
 		panic("delete: query not updateable")

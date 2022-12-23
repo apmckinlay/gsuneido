@@ -40,7 +40,7 @@ func NewTable(t QueryTran, name string) Query {
 type Table struct {
 	cache
 	name      string
-	columns   []string
+	hdr       *runtime.Header
 	indexes   [][]string
 	keys      [][]string
 	primary   [][]string
@@ -53,6 +53,8 @@ type Table struct {
 	iIndex      int
 	indexEncode bool
 	iter        *index.OverIter
+	selcols     []string
+	selvals     []string
 }
 
 type tableApproach struct {
@@ -83,7 +85,7 @@ func (tbl *Table) SetTran(t QueryTran) {
 	for _, col := range tbl.schema.Derived {
 		cols = append(cols, str.UnCapitalize(col))
 	}
-	tbl.columns = cols
+	tbl.hdr = runtime.NewHeader([][]string{tbl.schema.Columns}, cols)
 
 	idxs := make([][]string, 0, len(tbl.schema.Indexes))
 	keys := make([][]string, 0, 1)
@@ -101,7 +103,7 @@ func (tbl *Table) SetTran(t QueryTran) {
 }
 
 func (tbl *Table) Columns() []string {
-	return tbl.columns
+	return tbl.hdr.Columns
 }
 
 func (tbl *Table) Indexes() [][]string {
@@ -150,19 +152,19 @@ func (tbl *Table) SingleTable() bool {
 	return true
 }
 
-func (tbl *Table) optimize(_ Mode, index []string) (Cost, any) {
+func (tbl *Table) optimize(_ Mode, index []string) (Cost, Cost, any) {
 	if index == nil {
 		index = tbl.schema.Indexes[0].Columns
 	} else if !tbl.singleton {
 		i := tbl.indexFor(index)
 		if i < 0 {
-			return impossible, nil
+			return impossible, impossible, nil
 		}
 		index = tbl.indexes[i]
 	}
 	indexReadCost := tbl.info.Nrows * btree.EntrySize
 	dataReadCost := int(tbl.info.Size)
-	return indexReadCost + dataReadCost, tableApproach{index: index}
+	return 0, indexReadCost + dataReadCost, tableApproach{index: index}
 }
 
 // find an index that satisfies the required order
@@ -216,8 +218,7 @@ func (tbl *Table) lookup(key string) runtime.Row {
 }
 
 func (tbl *Table) Header() *runtime.Header {
-	physical := [][]string{tbl.schema.Columns}
-	return runtime.NewHeader(physical, tbl.columns)
+	return tbl.hdr
 }
 
 func (tbl *Table) Output(th *runtime.Thread, rec runtime.Record) {
@@ -242,16 +243,23 @@ func (tbl *Table) Get(_ *runtime.Thread, dir runtime.Dir) runtime.Row {
 	}
 	_, off := tbl.iter.Cur()
 	rec := tbl.tran.GetRecord(off)
-	return runtime.Row{runtime.DbRec{Record: rec, Off: off}}
+	row := runtime.Row{runtime.DbRec{Record: rec, Off: off}}
+	if tbl.singleton && !singletonFilter(tbl.hdr, row, tbl.selcols, tbl.selvals) {
+		return nil
+	}
+	return row
 }
 
 func (tbl *Table) Select(cols, vals []string) {
+	if tbl.singleton {
+		tbl.selcols, tbl.selvals = cols, vals
+		tbl.ensureIter().Range(iterator.All)
+		return
+	}
 	if cols == nil && vals == nil { // clear select
 		tbl.iter.Range(iterator.All)
 		return
 	}
-	// fmt.Println("Table select", tbl.name, cols, packedListStr(vals))
-	// fmt.Println("dstcols", tbl.index)
 	org, end := selKeys(tbl.indexEncode, tbl.index, cols, vals)
 	tbl.SelectRaw(org, end)
 }
@@ -325,14 +333,14 @@ func selOrg(encode bool, dstCols, srcCols, vals []string, full bool) string {
 }
 
 func (tbl *Table) SelectRaw(org, end string) {
-	tbl.ensureIter()
-	tbl.iter.Range(index.Range{Org: org, End: end})
+	tbl.ensureIter().Range(index.Range{Org: org, End: end})
 }
 
-func (tbl *Table) ensureIter() {
+func (tbl *Table) ensureIter() *index.OverIter {
 	if tbl.iter == nil {
 		tbl.iter = index.NewOverIter(tbl.name, tbl.iIndex)
 	}
+	return tbl.iter
 }
 
 // func packedListStr(sel []string) string { // for debugging
