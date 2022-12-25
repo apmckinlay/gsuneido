@@ -65,7 +65,7 @@ func NewJoin(src, src2 Query, by []string) *Join {
 	} else if !set.Equal(by, b) {
 		panic("join: by does not match common columns")
 	}
-	jn := &Join{Query2: Query2{Query1: Query1{source: src}, source2: src2}, by: by}
+	jn := &Join{Query2: Query2{source: src, source2: src2}, by: by}
 	k1 := containsKey(by, src.Keys())
 	k2 := containsKey(by, src2.Keys())
 	if k1 && k2 {

@@ -15,7 +15,6 @@ import (
 
 type Union struct {
 	Compatible
-	fixed    []Fixed // lazy, calculated by Fixed()
 	strategy unionStrategy
 	rewound  bool
 	empty1   Row
@@ -47,8 +46,8 @@ const (
 
 func NewUnion(src, src2 Query) *Union {
 	u := &Union{Compatible: Compatible{
-		Query2: Query2{Query1: Query1{source: src}, source2: src2}}}
-	u.init()
+		Query2: Query2{source: src, source2: src2}}}
+	u.init(u.calcFixed)
 	return u
 }
 
@@ -108,6 +107,10 @@ func (u *Union) nrowsCalc(n1, n2 int) int {
 	return (min + max) / 2 // estimate half way between
 }
 
+func (u *Union) rowSize() int {
+	return (u.source.rowSize() + u.source2.rowSize()) / 2
+}
+
 func (u *Union) Transform() Query {
 	u.source = u.source.Transform()
 	u.source2 = u.source2.Transform()
@@ -121,16 +124,12 @@ func (u *Union) Transform() Query {
 	return u
 }
 
-func (u *Union) Fixed() []Fixed {
-	if u.fixed != nil { // once only
-		return u.fixed
-	}
-	fixed1 := u.source.Fixed()
-	fixed2 := u.source2.Fixed()
+func (u *Union) calcFixed(fixed1, fixed2 []Fixed) []Fixed {
+	fixed := make([]Fixed, 0, len(fixed1)+len(fixed2))
 	for _, f1 := range fixed1 {
 		for _, f2 := range fixed2 {
 			if f1.col == f2.col {
-				u.fixed = append(u.fixed,
+				fixed = append(fixed,
 					Fixed{f1.col, set.Union(f1.values, f2.values)})
 				break
 			}
@@ -140,18 +139,18 @@ func (u *Union) Fixed() []Fixed {
 	emptyStr := []string{""}
 	for _, f1 := range fixed1 {
 		if !slices.Contains(cols2, f1.col) {
-			u.fixed = append(u.fixed,
+			fixed = append(fixed,
 				Fixed{f1.col, set.Union(f1.values, emptyStr)})
 		}
 	}
 	cols1 := u.source.Columns()
 	for _, f2 := range fixed2 {
 		if !slices.Contains(cols1, f2.col) {
-			u.fixed = append(u.fixed,
+			fixed = append(fixed,
 				Fixed{f2.col, set.Union(f2.values, emptyStr)})
 		}
 	}
-	return u.fixed
+	return fixed
 }
 
 func (u *Union) optimize(mode Mode, index []string) (Cost, Cost, any) {
@@ -431,14 +430,14 @@ func (u *Union) Lookup(th *Thread, cols, vals []string) Row {
 }
 
 //lint:ignore U1000 for debugging
-func unpack(packed []string) []Value {
-	vals := make([]Value, len(packed))
-	for i, p := range packed {
-		if p == ixkey.Max {
-			vals[i] = SuStr("<max>")
-		} else {
-			vals[i] = Unpack(p)
-		}
-	}
-	return vals
-}
+// func unpack(packed []string) []Value {
+// 	vals := make([]Value, len(packed))
+// 	for i, p := range packed {
+// 		if p == ixkey.Max {
+// 			vals[i] = SuStr("<max>")
+// 		} else {
+// 			vals[i] = Unpack(p)
+// 		}
+// 	}
+// 	return vals
+// }

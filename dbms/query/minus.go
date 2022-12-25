@@ -4,12 +4,12 @@
 package query
 
 import (
-	"github.com/apmckinlay/gsuneido/runtime"
+	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/generic/ord"
 )
 
 type Minus struct {
-	Compatible
+	Compatible1
 }
 
 type minusApproach struct {
@@ -17,10 +17,10 @@ type minusApproach struct {
 }
 
 func NewMinus(src, src2 Query) *Minus {
-	m := &Minus{Compatible: Compatible{
-		Query2: Query2{Query1: Query1{source: src}, source2: src2}}}
-	m.init()
-	return m
+	var m Minus
+	m.source, m.source2 = src, src2
+	m.init(m.calcFixed)
+	return &m
 }
 
 func (m *Minus) String() string {
@@ -31,12 +31,20 @@ func (m *Minus) stringOp() string {
 	return m.Compatible.stringOp("MINUS", "")
 }
 
+func (m *Minus) Columns() []string {
+	return m.source.Columns()
+}
+
 func (m *Minus) Keys() [][]string {
 	return m.source.Keys()
 }
 
 func (m *Minus) Indexes() [][]string {
 	return m.source.Indexes()
+}
+
+func (m *Minus) calcFixed(fixed1, fixed2 []Fixed) []Fixed {
+	return fixed1
 }
 
 func (m *Minus) Nrows() (int, int) {
@@ -87,11 +95,11 @@ func (m *Minus) setApproach(mode Mode, index []string, approach any, tran QueryT
 	m.source2 = SetApproach(m.source2, mode, m.keyIndex, tran)
 }
 
-func (m *Minus) Header() *runtime.Header {
+func (m *Minus) Header() *Header {
 	return m.source.Header()
 }
 
-func (m *Minus) Get(th *runtime.Thread, dir runtime.Dir) runtime.Row {
+func (m *Minus) Get(th *Thread, dir Dir) Row {
 	if m.disjoint != "" {
 		return m.source.Get(th, dir)
 	}
@@ -103,8 +111,12 @@ func (m *Minus) Get(th *runtime.Thread, dir runtime.Dir) runtime.Row {
 	}
 }
 
-func (m *Minus) Select(cols, vals []string) {
-	m.source.Select(cols, vals)
+func (m *Minus) Lookup(th *Thread, cols, vals []string) Row {
+	row := m.source.Lookup(th, cols, vals)
+	if row == nil || !m.source2Has(th, row) {
+		return row
+	}
+	return nil
 }
 
 // COULD have a "merge" strategy (like Union)

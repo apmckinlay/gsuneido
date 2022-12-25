@@ -70,7 +70,9 @@ func combineFixed(fixed1, fixed2 []Fixed) (result []Fixed, none bool) {
 	return result, false
 }
 
-// FixedIntersect is used by Intersect
+// FixedIntersect is used by Intersect.
+// It returns none = true if there are both fixed1 and fixed2,
+// but nothing in common.
 func FixedIntersect(fixed1, fixed2 []Fixed) (result []Fixed, none bool) {
 	if len(fixed1) == 0 || len(fixed2) == 0 {
 		return nil, false

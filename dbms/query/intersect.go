@@ -4,14 +4,14 @@
 package query
 
 import (
-	"github.com/apmckinlay/gsuneido/runtime"
+	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/generic/ord"
 	"github.com/apmckinlay/gsuneido/util/generic/set"
 	"golang.org/x/exp/slices"
 )
 
 type Intersect struct {
-	Compatible
+	Compatible1
 	conflict bool
 }
 
@@ -21,10 +21,10 @@ type intersectApproach struct {
 }
 
 func NewIntersect(src, src2 Query) *Intersect {
-	it := &Intersect{Compatible: Compatible{
-		Query2: Query2{Query1: Query1{source: src}, source2: src2}}}
-	it.init()
-	return it
+	var it Intersect
+	it.source, it.source2 = src, src2
+	it.init(it.calcFixed)
+	return &it
 }
 
 func (it *Intersect) String() string {
@@ -47,7 +47,7 @@ func (it *Intersect) Keys() [][]string {
 	return k
 }
 
-func (it *Intersect) Fixed() []Fixed {
+func (it *Intersect) calcFixed(fixed1, fixed2 []Fixed) []Fixed {
 	fixed, none := FixedIntersect(it.source.Fixed(), it.source2.Fixed())
 	if none {
 		it.conflict = true
@@ -70,10 +70,6 @@ func (it *Intersect) Nrows() (int, int) {
 	return maxNrows / 2, maxPop / 2 // estimate half
 }
 
-func (it *Intersect) rowSize() int {
-	return (it.source.rowSize() + it.source2.rowSize()) / 2
-}
-
 func (it *Intersect) Transform() Query {
 	if it.Fixed(); it.conflict {
 		return NewNothing(it.Columns())
@@ -94,7 +90,7 @@ func (it *Intersect) optimize(mode Mode, index []string) (Cost, Cost, any) {
 	fixcost1, varcost1, key1 := it.cost(it.source, it.source2, mode, index)
 	fixcost2, varcost2, key2 := it.cost(it.source2, it.source, mode, index) // reversed
 	fixcost2 += outOfOrder
-	if fixcost1 + varcost1 < fixcost2 + varcost2 {
+	if fixcost1+varcost1 < fixcost2+varcost2 {
 		return fixcost1, varcost1, &intersectApproach{keyIndex: key1}
 	}
 	return fixcost2, varcost2, &intersectApproach{keyIndex: key2, reverse: true}
@@ -121,12 +117,12 @@ func (it *Intersect) setApproach(mode Mode, index []string, approach any,
 	it.source2 = SetApproach(it.source2, mode, it.keyIndex, tran)
 }
 
-func (it *Intersect) Header() *runtime.Header {
+func (it *Intersect) Header() *Header {
 	hdr := it.source.Header()
-	return runtime.NewHeader(hdr.Fields, it.Columns())
+	return NewHeader(hdr.Fields, it.Columns())
 }
 
-func (it *Intersect) Get(th *runtime.Thread, dir runtime.Dir) runtime.Row {
+func (it *Intersect) Get(th *Thread, dir Dir) Row {
 	if it.disjoint != "" {
 		return nil
 	}
@@ -138,8 +134,12 @@ func (it *Intersect) Get(th *runtime.Thread, dir runtime.Dir) runtime.Row {
 	}
 }
 
-func (it *Intersect) Select(cols, vals []string) {
-	it.source.Select(cols, vals)
+func (it *Intersect) Lookup(th *Thread, cols, vals []string) Row {
+	row := it.source.Lookup(th, cols, vals)
+	if row == nil || it.source2Has(th, row) {
+		return row
+	}
+	return nil
 }
 
 // COULD have a "merge" strategy (like Union)

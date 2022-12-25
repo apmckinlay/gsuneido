@@ -401,6 +401,7 @@ func (q1 *Query1) lookupCost() Cost {
 	return q1.source.lookupCost()
 }
 
+// Lookup default applies to Summarize and Sort
 func (*Query1) Lookup(*runtime.Thread, []string, []string) runtime.Row {
 	panic("Lookup not implemented")
 }
@@ -411,10 +412,6 @@ func (q1 *Query1) Header() *runtime.Header {
 
 func (q1 *Query1) Output(th *runtime.Thread, rec runtime.Record) {
 	q1.source.Output(th, rec)
-}
-
-func (*Query1) Get(*runtime.Thread, runtime.Dir) runtime.Row {
-	panic("Get not implemented")
 }
 
 func (q1 *Query1) Rewind() {
@@ -433,17 +430,9 @@ func (q1 *Query1) Source() Query {
 // Query2 -----------------------------------------------------------
 
 type Query2 struct {
-	Query1
+	cache
+	source  Query
 	source2 Query
-}
-
-func (q2 *Query2) Keys() { // dummy to block inheritance
-}
-
-func (q2 *Query2) Indexes() { // dummy to block inheritance
-}
-
-func (*Query2) Nrows() { // dummy to block inheritance
 }
 
 func (q2 *Query2) String2(op string) string {
@@ -467,12 +456,12 @@ func (q2 *Query2) SingleTable() bool {
 	return false // not single
 }
 
-func (*Query2) Output(*runtime.Thread, runtime.Record) {
-	panic("can't output to this query")
+func (*Query2) Ordering() []string {
+	return nil
 }
 
-//lint:ignore U1000 dummy to block inheritance
-func (q2 *Query2) optimize() {
+func (*Query2) Output(*runtime.Thread, runtime.Record) {
+	panic("can't output to this query")
 }
 
 func (q2 *Query2) keypairs() [][]string {
@@ -489,6 +478,10 @@ func (q2 *Query2) keypairs() [][]string {
 type q2i interface {
 	q1i
 	Source2() Query
+}
+
+func (q2 *Query2) Source() Query {
+	return q2.source
 }
 
 func (q2 *Query2) Source2() Query {

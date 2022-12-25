@@ -4,16 +4,16 @@
 package query
 
 import (
-	"github.com/apmckinlay/gsuneido/runtime"
+	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/generic/set"
+	"github.com/apmckinlay/gsuneido/util/generic/slc"
 	"github.com/apmckinlay/gsuneido/util/str"
-	"golang.org/x/exp/slices"
 )
 
 type Times struct {
 	Query2
 	rewound bool
-	row1    runtime.Row
+	row1    Row
 }
 
 func NewTimes(src, src2 Query) *Times {
@@ -21,8 +21,7 @@ func NewTimes(src, src2 Query) *Times {
 		panic("times: common columns not allowed: " + str.Join(", ",
 			set.Intersect(src.Columns(), src2.Columns())))
 	}
-	return &Times{Query2: Query2{Query1: Query1{source: src}, source2: src2},
-		rewound: true}
+	return &Times{Query2: Query2{source: src, source2: src2}, rewound: true}
 }
 
 func (t *Times) String() string {
@@ -38,13 +37,23 @@ func (t *Times) Columns() []string {
 }
 
 func (t *Times) Keys() [][]string {
-	// there are no columns in common so no keys in common
+	// no columns in common so no keys in common
 	// so there won't be any duplicates in the result
 	return t.keypairs()
 }
 
 func (t *Times) Indexes() [][]string {
-	return set.UnionFn(t.source.Indexes(), t.source2.Indexes(), slices.Equal[string])
+	// no columns in common so no indexes in common
+	return slc.With(t.source.Indexes(), t.source2.Indexes()...)
+}
+
+func (t *Times) Fixed() []Fixed {
+	fixed, _ := combineFixed(t.source.Fixed(), t.source2.Fixed())
+	return fixed
+}
+
+func (t *Times) rowSize() int {
+	return t.source.rowSize() + t.source2.rowSize()
 }
 
 func (t *Times) Transform() Query {
@@ -65,12 +74,12 @@ func (t *Times) optimize(mode Mode, index []string) (Cost, Cost, any) {
 		nrows, _ := src1.Nrows()
 		fixcost1, varcost1 := Optimize(src1, mode, index)
 		fixcost2, varcost2 := Optimize(src2, mode, nil)
-		return fixcost1 + fixcost2, varcost1 + nrows * varcost2
+		return fixcost1 + fixcost2, varcost1 + nrows*varcost2
 	}
 	fixFwd, varFwd := opt(t.source, t.source2)
 	fixRev, varRev := opt(t.source2, t.source)
 	fixRev += outOfOrder
-	if fixFwd + varFwd < fixRev + varRev {
+	if fixFwd+varFwd < fixRev+varRev {
 		return fixFwd, varFwd, false
 	}
 	return fixRev, varRev, true
@@ -98,7 +107,7 @@ func (t *Times) Rewind() {
 	t.source2.Rewind()
 }
 
-func (t *Times) Get(th *runtime.Thread, dir runtime.Dir) runtime.Row {
+func (t *Times) Get(th *Thread, dir Dir) Row {
 	row2 := t.source2.Get(th, dir)
 	if t.rewound {
 		t.rewound = false
@@ -115,11 +124,22 @@ func (t *Times) Get(th *runtime.Thread, dir runtime.Dir) runtime.Row {
 		t.source2.Rewind()
 		row2 = t.source2.Get(th, dir)
 	}
-	return runtime.JoinRows(t.row1, row2)
+	return JoinRows(t.row1, row2)
 }
 
 func (t *Times) Select(cols, vals []string) {
 	t.source.Select(cols, vals)
 	t.source2.Rewind()
 	t.rewound = true
+}
+
+func (t *Times) Lookup(th *Thread, cols, vals []string) Row {
+	t.Select(cols, vals)
+	row := t.Get(th, Next)
+	t.Select(nil, nil) // clear select
+	return row
+}
+
+func (t *Times) lookupCost() int {
+	return t.source.lookupCost() * 2 // ???
 }

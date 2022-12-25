@@ -12,6 +12,7 @@ import (
 // Compatible is shared by Intersect, Minus, and Union
 type Compatible struct {
 	Query2
+	fixed    []Fixed // set by operations
 	allCols  []string
 	disjoint string
 	keyIndex []string
@@ -21,10 +22,11 @@ type Compatible struct {
 }
 
 // init sets disjoint
-func (c *Compatible) init() {
+func (c *Compatible) init(calcFixed func(fixed1, fixed2 []Fixed) []Fixed) {
 	c.allCols = set.Union(c.source.Columns(), c.source2.Columns())
 	fixed1 := c.source.Fixed()
 	fixed2 := c.source2.Fixed()
+	c.fixed = calcFixed(fixed1, fixed2)
 	for _, f1 := range fixed1 {
 		for _, f2 := range fixed2 {
 			if f1.col == f2.col && set.Disjoint(f1.values, f2.values) {
@@ -64,22 +66,25 @@ func (c *Compatible) SetTran(t QueryTran) {
 	c.st = MakeSuTran(t)
 }
 
+func (c *Compatible) Fixed() []Fixed {
+	return c.fixed // set by init
+}
+
 // source2Has returns true if a row from source exists in source2
 func (c *Compatible) source2Has(th *Thread, row Row) bool {
 	if c.disjoint != "" {
 		return false
 	}
-	if c.hdr1 == nil {
+	if c.hdr1 == nil { // once only
 		c.hdr1 = c.source.Header()
 		c.hdr2 = c.source2.Header()
 	}
-	fixed := c.Fixed()
 	cols := slices.Clip(c.keyIndex)
-	vals := make([]string, 0, len(c.keyIndex)+len(fixed))
+	vals := make([]string, 0, len(c.keyIndex)+len(c.fixed))
 	for _, col := range c.keyIndex {
 		vals = append(vals, row.GetRawVal(c.hdr1, col, th, c.st))
 	}
-	for _, fix := range fixed {
+	for _, fix := range c.fixed {
 		if len(fix.values) == 1 {
 			cols = append(cols, fix.col)
 			vals = append(vals, fix.values[0])
@@ -103,4 +108,32 @@ func bestKey(q Query, mode Mode) []string {
 		best.update(key, fixcost, varcost)
 	}
 	return best.index
+}
+
+func (c *Compatible) lookupCost() int {
+	cost := c.source.lookupCost()
+	if c.disjoint == "" {
+		cost += c.source2.lookupCost()
+	}
+	return cost
+}
+
+//-------------------------------------------------------------------
+
+// Compatible1 is embedded by Intersect and Minus
+// (that return a subset of source1 records)
+type Compatible1 struct {
+	Compatible
+}
+
+func (c1 *Compatible1) Rewind() {
+	c1.source.Rewind()
+}
+
+func (c1 *Compatible1) Select(cols, vals []string) {
+	c1.source.Select(cols, vals)
+}
+
+func (c1 *Compatible1) rowSize() int {
+	return c1.source.rowSize()
 }
