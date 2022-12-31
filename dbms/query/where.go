@@ -47,8 +47,9 @@ type Where struct {
 	// curPtrng is idxSel.ptrngs[idxSelPos] adjusted by Select (selOrg, selEnd)
 	curPtrng pointRange
 	hdr      *runtime.Header
-	// sel is set by Select
-	sel    string
+	// selOrg and selEnd are set by Select
+	selOrg string
+	selEnd string
 	selSet bool
 
 	selectCols []string
@@ -883,20 +884,14 @@ func (pr pointRange) String() string {
 	return s
 }
 
-func (pr pointRange) intersect(sel string, encode bool) pointRange {
+func (pr pointRange) intersect(selOrg, selEnd string) pointRange {
 	if pr.isPoint() {
-		if pr.org == sel {
+		if pr.org == selOrg {
 			return pr
 		}
 	} else { // range
-		if pr.org <= sel && sel < pr.end {
-			pr.org = sel
-			if !encode {
-				pr.end = sel + "\x00"
-			} else {
-				pr.end = sel + ixkey.Sep + ixkey.Max
-			}
-			return pr
+		if pr.org <= selOrg && selOrg < pr.end {
+			return pointRange{org: selOrg, end: selEnd}
 		}
 	}
 	return pointRange{org: "z", end: "a"} // conflict
@@ -1080,7 +1075,7 @@ func (w *Where) advance(dir runtime.Dir) bool {
 		}
 		pr := w.idxSel.ptrngs[w.idxSelPos]
 		if w.selSet {
-			pr = pr.intersect(w.sel, w.idxSel.encoded)
+			pr = pr.intersect(w.selOrg, w.selEnd)
 			if pr.conflict() {
 				continue
 			}
@@ -1102,7 +1097,7 @@ func (w *Where) Select(cols, vals []string) {
 
 	w.Rewind()
 	if cols == nil && vals == nil { // clear select
-		w.sel = ""
+		w.selOrg, w.selEnd = "", ""
 		w.selSet = false
 		w.selectCols = nil
 		w.selectVals = nil
@@ -1110,12 +1105,12 @@ func (w *Where) Select(cols, vals []string) {
 	}
 	satisfied, conflict := w.selectFixed(cols, vals)
 	if conflict {
-		w.sel = ixkey.Max
+		w.selOrg, w.selEnd = ixkey.Max, ""
 		w.selSet = true
 		return
 	}
 	if satisfied {
-		w.sel = ""
+		w.selOrg, w.selEnd = "", ""
 		w.selSet = false
 		return
 	}
@@ -1140,7 +1135,7 @@ func (w *Where) Select(cols, vals []string) {
 		w.source.Select(cols, vals)
 		return
 	}
-	w.sel = selOrg(w.idxSel.encoded, w.idxSel.index, cols, vals, false)
+	w.selOrg, w.selEnd = selKeys(w.idxSel.encoded, w.idxSel.index, cols, vals)
 	w.selSet = true
 }
 
