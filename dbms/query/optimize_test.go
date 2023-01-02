@@ -15,8 +15,15 @@ func TestOptimize(t *testing.T) {
 		t.Helper()
 		q := ParseQuery(query, testTran{}, nil)
 		q, _, _ = Setup(q, mode, testTran{})
+		// fmt.Println("-----------------------------")
+		// fmt.Println(Format(q))
 		assert.T(t).Msg(query).This(q.String()).Like(expected)
 	}
+	// trace.Set(int(trace.QueryOpt))
+	// test("table sort c",
+	// 	"")
+	// t.SkipNow()
+
 	test("table",
 		"table^(a)")
 	test("table sort a",
@@ -55,6 +62,10 @@ func TestOptimize(t *testing.T) {
 	test("(table where a is 1) union (table where a is 2)",
 		"table^(a) WHERE*1 a is 1 "+
 			"UNION-DISJOINT(a) (table^(a) WHERE*1 a is 2)")
+	test("supplier where supplier > 1 sort city",
+		"supplier^(city) WHERE supplier > 1")
+	test("supplier where supplier > 9 sort city",
+		"supplier^(supplier) WHERE supplier > 9 TEMPINDEX(city)")
 
 	test("table project a",
 		"table^(a) PROJECT-COPY a")
@@ -113,15 +124,15 @@ func TestOptimize(t *testing.T) {
 	test("trans join inven",
 		"inven^(item) JOIN 1:n by(item) trans^(item)")
 	test("task join co",
-		"co^(tnum) JOIN 1:1 by(tnum) task^(tnum)")
+		"task^(tnum) JOIN 1:1 by(tnum) co^(tnum)")
 	test("customer join alias",
 		"alias^(id) JOIN 1:1 by(id) customer^(id)")
 	test("(inven join trans) union (inven join trans)",
-		"(trans^(date,item,id) JOIN n:1 by(item) inven^(item)) "+
-			"UNION-MERGE "+
+		"(inven^(item) JOIN 1:n by(item) trans^(item)) "+
+			"UNION-LOOKUP "+
 			"(trans^(date,item,id) JOIN n:1 by(item) inven^(item))")
 	test("task join co join cus",
-		"(co^(tnum) JOIN 1:1 by(tnum) task^(tnum)) "+
+		"(task^(tnum) JOIN 1:1 by(tnum) co^(tnum)) "+
 			"JOIN n:1 by(cnum) cus^(cnum)")
 	test("trans join inven",
 		"inven^(item) JOIN 1:n by(item) trans^(item)")
@@ -129,7 +140,8 @@ func TestOptimize(t *testing.T) {
 	test("(trans union trans) join (inven union inven)",
 		"(trans^(date,item,id) UNION-MERGE trans^(date,item,id)) "+
 			"JOIN n:n by(item) "+
-			"(inven^(item) UNION-MERGE inven^(item))")
+			"(inven^(item) TEMPINDEX(item) "+
+			"UNION-MERGE (inven^(item) TEMPINDEX(item)))")
 
 	test("inven leftjoin trans",
 		"inven^(item) LEFTJOIN 1:n by(item) trans^(item)")
@@ -152,8 +164,8 @@ func TestOptimize(t *testing.T) {
 			"JOIN n:n by(item) "+
 			"(inven^(item) UNION-MERGE inven^(item))")
 	test("(inven join trans) union (inven join trans)",
-		"(trans^(date,item,id) JOIN n:1 by(item) inven^(item)) "+
-			"UNION-MERGE "+
+		"(inven^(item) JOIN 1:n by(item) trans^(item)) "+
+			"UNION-LOOKUP "+
 			"(trans^(date,item,id) JOIN n:1 by(item) inven^(item))")
 	test("trans join customer",
 		"trans^(date,item,id) JOIN n:1 by(id) customer^(id)")

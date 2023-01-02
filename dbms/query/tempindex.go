@@ -28,6 +28,11 @@ type TempIndex struct {
 	selEnd  string
 }
 
+func NewTempIndex(src Query, order []string, tran QueryTran) *TempIndex {
+	order = withoutFixed(order, src.Fixed())
+	return &TempIndex{Query1: Query1{source: src}, order: order, tran: tran}
+}
+
 func (ti *TempIndex) String() string {
 	return parenQ2(ti.source) + " " + ti.stringOp()
 }
@@ -38,6 +43,14 @@ func (ti *TempIndex) stringOp() string {
 
 func (ti *TempIndex) Transform() Query {
 	return ti
+}
+
+func (ti *TempIndex) lookupCost() Cost {
+	panic(assert.ShouldNotReachHere())
+}
+
+func (q1 *Query1) setApproach([]string, float64, any, QueryTran) {
+	assert.ShouldNotReachHere()
 }
 
 // execution --------------------------------------------------------

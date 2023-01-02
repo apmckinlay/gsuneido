@@ -53,11 +53,11 @@ func (sort *Sort) Transform() Query {
 	return sort
 }
 
-func (sort *Sort) optimize(mode Mode, index []string) (Cost, Cost, any) {
+func (sort *Sort) optimize(mode Mode, index []string, frac float64) (Cost, Cost, any) {
 	assert.That(index == nil)
 	src := sort.source
-	fixcost, varcost := Optimize(src, mode, sort.columns) // adds temp index if needed
-	best := sort.bestOrdered(src.Indexes(), sort.columns, mode)
+	fixcost, varcost := Optimize(src, mode, sort.columns, frac) // adds temp index if needed
+	best := sort.bestOrdered(src.Indexes(), sort.columns, mode, frac)
 	if fixcost+varcost < best.fixcost+best.varcost {
 		return fixcost, varcost, sortApproach{index: sort.columns}
 	}
@@ -67,21 +67,21 @@ func (sort *Sort) optimize(mode Mode, index []string) (Cost, Cost, any) {
 // bestOrdered returns the best index that supplies the required order
 // taking fixed into consideration.
 func (q1 *Query1) bestOrdered(indexes [][]string, order []string,
-	mode Mode) bestIndex {
+	mode Mode, frac float64) bestIndex {
 	best := newBestIndex()
 	fixed := q1.source.Fixed()
 	for _, ix := range indexes {
 		if ordered(ix, order, fixed) {
-			fixcost, varcost := Optimize(q1.source, mode, ix)
+			fixcost, varcost := Optimize(q1.source, mode, ix, frac)
 			best.update(ix, fixcost, varcost)
 		}
 	}
 	return best
 }
 
-func (sort *Sort) setApproach(mode Mode, _ []string, approach any, tran QueryTran) {
+func (sort *Sort) setApproach(_ []string, frac float64, approach any, tran QueryTran) {
 	sort.sortApproach = approach.(sortApproach)
-	sort.source = SetApproach(sort.source, mode, sort.index, tran)
+	sort.source = SetApproach(sort.source, sort.index, frac, tran)
 }
 
 // execution --------------------------------------------------------

@@ -335,14 +335,14 @@ func (p *Project) Updateable() string {
 
 // optimize ---------------------------------------------------------
 
-func (p *Project) optimize(mode Mode, index []string) (Cost, Cost, any) {
+func (p *Project) optimize(mode Mode, index []string, frac float64) (Cost, Cost, any) {
 	if p.unique {
 		approach := &projectApproach{strategy: projCopy, index: index}
-		fixcost, varcost := Optimize(p.source, mode, index)
+		fixcost, varcost := Optimize(p.source, mode, index, frac)
 		return fixcost, varcost, approach
 	}
-	seq := bestGrouped(p.source, mode, index, p.columns)
-	fixcostHash, varcostHash := p.hashCost(mode, index)
+	seq := bestGrouped(p.source, mode, index, frac, p.columns)
+	fixcostHash, varcostHash := p.hashCost(mode, index, frac)
 	if fixcostHash+varcostHash < seq.cost() {
 		return fixcostHash, varcostHash,
 			&projectApproach{strategy: projHash, index: index}
@@ -353,20 +353,20 @@ func (p *Project) optimize(mode Mode, index []string) (Cost, Cost, any) {
 
 const hashLimit = 10000
 
-func (p *Project) hashCost(mode Mode, index []string) (Cost, Cost) {
+func (p *Project) hashCost(mode Mode, index []string, frac float64) (Cost, Cost) {
 	nrows, _ := p.Nrows()
 	if mode != ReadMode || nrows > hashLimit {
 		return impossible, impossible
 	}
 	// assume we're reading Next (normal)
-	fixcost, varcost := Optimize(p.source, mode, index)
+	fixcost, varcost := Optimize(p.source, mode, index, frac)
 	hashCost := nrows * 20 // ???
 	return fixcost, varcost + hashCost
 }
 
-func (p *Project) setApproach(mode Mode, _ []string, approach any, tran QueryTran) {
+func (p *Project) setApproach(_ []string, frac float64, approach any, tran QueryTran) {
 	p.projectApproach = *approach.(*projectApproach)
-	p.source = SetApproach(p.source, mode, p.index, tran)
+	p.source = SetApproach(p.source, p.index, frac, tran)
 	p.projHdr = p.Header() // cache for Get
 	p.srcHdr = p.source.Header()
 }

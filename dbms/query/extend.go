@@ -166,16 +166,17 @@ func (e *Extend) SingleTable() bool {
 	return e.source.SingleTable()
 }
 
-func (e *Extend) optimize(mode Mode, index []string) (Cost, Cost, any) {
+func (e *Extend) optimize(mode Mode, index []string, frac float64) (
+	Cost, Cost, any) {
 	if !set.Disjoint(index, e.cols) {
 		return impossible, impossible, nil
 	}
-	fixcost, varcost := Optimize(e.source, mode, index)
+	fixcost, varcost := Optimize(e.source, mode, index, frac)
 	return fixcost, varcost, nil
 }
 
-func (e *Extend) setApproach(mode Mode, index []string, _ any, tran QueryTran) {
-	e.source = SetApproach(e.source, mode, index, tran)
+func (e *Extend) setApproach(index []string, frac float64, _ any, tran QueryTran) {
+	e.source = SetApproach(e.source, index, frac, tran)
 	e.hdr = e.Header() // cache for Get
 	e.ctx.Hdr = e.hdr
 	e.fixed = e.Fixed() // cache

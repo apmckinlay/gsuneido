@@ -61,19 +61,19 @@ func (*schemaTable) Output(th *Thread, _ Record) {
 	panic("can't output to schema table")
 }
 
-func (*schemaTable) optimize(_ Mode, index []string) (Cost, Cost, any) {
+func (*schemaTable) optimize(_ Mode, index []string, _ float64) (Cost, Cost, any) {
 	if index == nil {
 		return 0, 1000, nil
 	}
 	return impossible, impossible, nil
 }
 
-func (*schemaTable) setApproach(Mode, []string, any, QueryTran) {
+func (*schemaTable) setApproach([]string, float64, any, QueryTran) {
 }
 
 func (st *schemaTable) lookupCost() Cost {
 	// no indexes, so lookups only from TempIndex
-	return lookupCost(st.rowSize())
+	return 1000
 }
 
 func (*schemaTable) Lookup(*Thread, []string, []string) Row {

@@ -58,6 +58,10 @@ func (ov *Overlay) Nlayers() int {
 	return len(ov.layers)
 }
 
+func (ov *Overlay) BtreeLevels() int {
+	return ov.bt.TreeLevels() + 1
+}
+
 // Mutable returns a modifiable copy of an Overlay
 func (ov *Overlay) Mutable() *Overlay {
 	assert.That(ov.mut == nil)

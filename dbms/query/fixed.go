@@ -6,6 +6,7 @@ package query
 import (
 	"github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/generic/set"
+	"github.com/apmckinlay/gsuneido/util/generic/slc"
 )
 
 type Fixed struct {
@@ -110,4 +111,9 @@ func getFixed(fixed []Fixed, col string) []string {
 		}
 	}
 	return nil
+}
+
+func withoutFixed(cols []string, fixed []Fixed) []string {
+	return slc.WithoutFn(cols,
+		func(col string) bool { return isFixed(fixed, col) })
 }

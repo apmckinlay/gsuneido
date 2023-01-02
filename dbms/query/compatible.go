@@ -101,13 +101,13 @@ func (c *Compatible) equal(row1, row2 Row, th *Thread) bool {
 	return EqualRows(c.hdr1, row1, c.hdr2, row2, c.allCols, th, c.st)
 }
 
-func bestKey(q Query, mode Mode) []string {
+func bestKey2(src2 Query, mode Mode, nrows int) bestIndex {
 	best := newBestIndex()
-	for _, key := range q.Keys() {
-		fixcost, varcost := Optimize(q, mode, key)
+	for _, key := range src2.Keys() {
+		fixcost, varcost := LookupCost(src2, mode, key, nrows)
 		best.update(key, fixcost, varcost)
 	}
-	return best.index
+	return best
 }
 
 func (c *Compatible) lookupCost() int {

@@ -33,6 +33,7 @@ type Summarize struct {
 type summarizeApproach struct {
 	strategy sumStrategy
 	index    []string
+	frac     float64
 }
 
 type sumStrategy int
@@ -136,6 +137,10 @@ func (su *Summarize) Columns() []string {
 }
 
 func (su *Summarize) Keys() [][]string {
+	if len(su.by) == 0 {
+		// singleton
+		return [][]string{{}} // intentionally {} not nil
+	}
 	return projectKeys(su.source.Keys(), su.by)
 }
 
@@ -193,29 +198,35 @@ func (su *Summarize) Transform() Query {
 	return su
 }
 
-func (su *Summarize) optimize(mode Mode, index []string) (Cost, Cost, any) {
+func (su *Summarize) optimize(mode Mode, index []string, frac float64) (Cost, Cost, any) {
 	if _, ok := su.source.(*Table); ok &&
 		len(su.by) == 0 && len(su.ops) == 1 && su.ops[0] == "count" {
-		Optimize(su.source, mode, nil)
+		Optimize(su.source, mode, nil, 0)
 		return 0, 1, &summarizeApproach{strategy: sumTbl}
 	}
-	seqFixCost, seqVarCost, seqApp := su.seqCost(mode, index)
+	seqFixCost, seqVarCost, seqApp := su.seqCost(mode, index, frac)
 	idxFixCost, idxVarCost, idxApp := su.idxCost(mode)
-	mapFixCost, mapVarCost, mapApp := su.mapCost(mode, index)
+	mapFixCost, mapVarCost, mapApp := su.mapCost(mode, index, frac)
+	// trace.Println("summarize seq", seqFixCost, "+", seqVarCost, "=", seqFixCost+seqVarCost)
+	// trace.Println("summarize idx", idxFixCost, "+", idxVarCost, "=", idxFixCost+idxVarCost)
+	// trace.Println("summarize map", mapFixCost, "+", mapVarCost, "=", mapFixCost+mapVarCost)
 	return min3(seqFixCost, seqVarCost, seqApp, idxFixCost, idxVarCost, idxApp,
 		mapFixCost, mapVarCost, mapApp)
 }
 
-func (su *Summarize) seqCost(mode Mode, index []string) (Cost, Cost, any) {
-	approach := &summarizeApproach{strategy: sumSeq}
+func (su *Summarize) seqCost(mode Mode, index []string, frac float64) (Cost, Cost, any) {
+	if len(su.by) == 0 {
+		frac = ord.Min(1, frac)
+	}
+	approach := &summarizeApproach{strategy: sumSeq, frac: frac}
 	if len(su.by) == 0 || containsKey(su.by, su.source.Keys()) {
 		if len(su.by) != 0 {
 			approach.index = index
 		}
-		fixcost, varcost := Optimize(su.source, mode, approach.index)
+		fixcost, varcost := Optimize(su.source, mode, approach.index, frac)
 		return fixcost, varcost, approach
 	}
-	best := bestGrouped(su.source, mode, index, su.by)
+	best := bestGrouped(su.source, mode, index, frac, su.by)
 	if best.index == nil {
 		return impossible, impossible, nil
 	}
@@ -223,37 +234,37 @@ func (su *Summarize) seqCost(mode Mode, index []string) (Cost, Cost, any) {
 	return best.fixcost, best.varcost, approach
 }
 
-func (su *Summarize) idxCost(Mode) (Cost, Cost, any) {
-	if len(su.by) > 0 || !su.minmax1() {
+func (su *Summarize) idxCost(mode Mode) (Cost, Cost, any) {
+	if !su.minmax1() {
 		return impossible, impossible, nil
 	}
 	nrows, _ := su.source.Nrows()
-	nrows = ord.Max(1, nrows) // avoid divide by zero
-	// cursorMode to prevent temp index
-	fixcost, varcost := Optimize(su.source, CursorMode, su.ons)
-	varcost /= nrows // divide by nrows since we're only reading one row
-	approach := &summarizeApproach{strategy: sumIdx, index: su.ons}
-	return fixcost, varcost, approach
+	frac := 1.
+	if nrows > 0 {
+		frac = 1 / float64(nrows)
+	}
+	fixcost, varcost := Optimize(su.source, mode, su.ons, frac)
+	return fixcost, varcost,
+		&summarizeApproach{strategy: sumIdx, index: su.ons, frac: frac}
 }
 
-func (su *Summarize) mapCost(mode Mode, index []string) (Cost, Cost, any) {
+func (su *Summarize) mapCost(mode Mode, index []string, _ float64) (Cost, Cost, any) {
 	nrows, _ := su.Nrows()
 	if index != nil || nrows > sumMaxSize {
 		return impossible, impossible, nil
 	}
-	fixcost, varcost := Optimize(su.source, mode, nil)
+	fixcost, varcost := Optimize(su.source, mode, nil, 1)
 	fixcost += nrows * 20 // ???
-	return fixcost, varcost, &summarizeApproach{strategy: sumMap}
+	return fixcost + varcost, 0, &summarizeApproach{strategy: sumMap, frac: 1}
 }
 
-func (su *Summarize) setApproach(mode Mode, _ []string, approach any, tran QueryTran) {
+func (su *Summarize) setApproach(_ []string, frac float64, approach any, tran QueryTran) {
 	su.summarizeApproach = *approach.(*summarizeApproach)
 	switch su.strategy {
 	case sumTbl:
 		su.get = getTbl
 	case sumIdx:
 		su.get = getIdx
-		mode = CursorMode
 	case sumMap:
 		t := sumMapT{}
 		su.get = t.getMap
@@ -261,7 +272,7 @@ func (su *Summarize) setApproach(mode Mode, _ []string, approach any, tran Query
 		t := sumSeqT{}
 		su.get = t.getSeq
 	}
-	su.source = SetApproach(su.source, mode, su.index, tran)
+	su.source = SetApproach(su.source, su.index, su.frac, tran)
 	su.rewound = true
 	su.srcHdr = su.source.Header()
 }

@@ -62,11 +62,11 @@ func (*ProjectNone) SingleTable() bool {
 func (*ProjectNone) SetTran(QueryTran) {
 }
 
-func (*ProjectNone) optimize(Mode, []string) (Cost, Cost, any) {
+func (*ProjectNone) optimize(Mode, []string, float64) (Cost, Cost, any) {
 	return 0, 0, nil
 }
 
-func (*ProjectNone) setApproach(Mode, []string, any, QueryTran) {
+func (*ProjectNone) setApproach([]string, float64, any, QueryTran) {
 }
 
 func (*ProjectNone) lookupCost() Cost {

@@ -371,6 +371,7 @@ func (it *Iter) Cur() uint64 {
 	return it.blocks[it.i/blockSize][it.i%blockSize]
 }
 
+// Seek does a binary search
 func (it *Iter) Seek(key string) {
 	first := 0
 	n := it.size

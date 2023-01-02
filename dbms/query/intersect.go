@@ -5,6 +5,7 @@ package query
 
 import (
 	. "github.com/apmckinlay/gsuneido/runtime"
+	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/generic/ord"
 	"github.com/apmckinlay/gsuneido/util/generic/set"
 	"golang.org/x/exp/slices"
@@ -71,6 +72,9 @@ func (it *Intersect) Nrows() (int, int) {
 }
 
 func (it *Intersect) Transform() Query {
+	if it.disjoint != "" {
+		return NewNothing(it.Columns())
+	}
 	if it.Fixed(); it.conflict {
 		return NewNothing(it.Columns())
 	}
@@ -86,9 +90,10 @@ func (it *Intersect) Transform() Query {
 	return it
 }
 
-func (it *Intersect) optimize(mode Mode, index []string) (Cost, Cost, any) {
-	fixcost1, varcost1, key1 := it.cost(it.source, it.source2, mode, index)
-	fixcost2, varcost2, key2 := it.cost(it.source2, it.source, mode, index) // reversed
+func (it *Intersect) optimize(mode Mode, index []string, frac float64) (Cost, Cost, any) {
+	assert.That(it.disjoint == "") // eliminated by Transform
+	fixcost1, varcost1, key1 := it.cost(it.source, it.source2, mode, index, frac)
+	fixcost2, varcost2, key2 := it.cost(it.source2, it.source, mode, index, frac)
 	fixcost2 += outOfOrder
 	if fixcost1+varcost1 < fixcost2+varcost2 {
 		return fixcost1, varcost1, &intersectApproach{keyIndex: key1}
@@ -96,25 +101,24 @@ func (it *Intersect) optimize(mode Mode, index []string) (Cost, Cost, any) {
 	return fixcost2, varcost2, &intersectApproach{keyIndex: key2, reverse: true}
 }
 
-func (*Intersect) cost(source, source2 Query, mode Mode, index []string) (
-	fixcost, varcost Cost, key []string) {
-	key = bestKey(source2, mode)
-	// iterate source and lookups on source2
-	fixcost1, varcost1 := Optimize(source, mode, index)
+func (*Intersect) cost(source, source2 Query, mode Mode, index []string, frac float64) (
+	Cost, Cost, []string) {
+	// iterate source and lookup on source2
+	fixcost1, varcost1 := Optimize(source, mode, index, frac)
 	nrows1, _ := source.Nrows()
-	fixcost2, varcost2 := LookupCost(source2, mode, key, nrows1)
-	return fixcost1 + fixcost2, varcost1 + varcost2, key
+	best2 := bestKey2(source2, mode, int(float64(nrows1)*frac))
+	return fixcost1 + best2.fixcost, varcost1 + best2.varcost, best2.index
 }
 
-func (it *Intersect) setApproach(mode Mode, index []string, approach any,
+func (it *Intersect) setApproach(index []string, frac float64, approach any,
 	tran QueryTran) {
 	ap := approach.(*intersectApproach)
 	it.keyIndex = ap.keyIndex
 	if ap.reverse {
 		it.source, it.source2 = it.source2, it.source
 	}
-	it.source = SetApproach(it.source, mode, index, tran)
-	it.source2 = SetApproach(it.source2, mode, it.keyIndex, tran)
+	it.source = SetApproach(it.source, index, frac, tran)
+	it.source2 = SetApproach(it.source2, it.keyIndex, 0, tran)
 }
 
 func (it *Intersect) Header() *Header {
@@ -123,9 +127,6 @@ func (it *Intersect) Header() *Header {
 }
 
 func (it *Intersect) Get(th *Thread, dir Dir) Row {
-	if it.disjoint != "" {
-		return nil
-	}
 	for {
 		row := it.source.Get(th, dir)
 		if row == nil || it.source2Has(th, row) {

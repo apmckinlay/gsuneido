@@ -5,6 +5,13 @@
 /*
 	Query
 		Table
+		Nothing
+		ProjectNone
+		schemaTable
+			Tables
+			TablesLookup
+			Columns
+			Indexes
 		Query1
 			Extend
 			Project / Remove
@@ -13,14 +20,15 @@
 			Summarize
 			TempIndex
 			Where
-			Query2
-				Compatible
+		Query2
+			Compatible
+				Union
+				Compatible1
 					Intersect
 					Minus
-					Union
-				Join
-					LeftJoin
-				Times
+			Join
+				LeftJoin
+			Times
 */
 package query
 
@@ -37,6 +45,7 @@ import (
 	"github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/runtime/trace"
 	"github.com/apmckinlay/gsuneido/util/assert"
+	"github.com/apmckinlay/gsuneido/util/generic/ord"
 	"github.com/apmckinlay/gsuneido/util/generic/set"
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
 	"golang.org/x/exp/slices"
@@ -77,7 +86,13 @@ type Query interface {
 	// Nrows returns n the number of expected result rows from the query,
 	// and p the "population" it was drawn from.
 	// For example, a Where on a key selects a single row (n = 1),
-	// from the entire table with p rows
+	// from the entire table with p rows.
+	//
+	// Nrows should be the same regardless of the strategy.
+	// For symmetrical operations e.g. join or union
+	// it should give the same result both ways.
+	//
+	// Nrows does *not* incorporate frac
 	Nrows() (n, p int)
 
 	// rowSize returns the average number of bytes per row
@@ -100,17 +115,27 @@ type Query interface {
 
 	String() string
 
-	cacheAdd(mode Mode, index []string, fixcost, varcost Cost, approach any)
+	cacheAdd(index []string, frac float64, fixcost, varcost Cost, approach any)
 
 	// cacheGet returns the cost and approach associated with an index
 	// or -1 if the index has not been added.
-	cacheGet(mode Mode, index []string) (fixcost, varcost Cost, approach any)
+	cacheGet(index []string, frac float64) (fixcost, varcost Cost, approach any)
 
-	cacheSetCost(fixcost, varcost Cost)
-	cacheCost() (fixcost, varcost Cost)
+	cacheSetCost(frac float64, fixcost, varcost Cost)
+	cacheCost() (frac float64, fixcost, varcost Cost)
 
-	optimize(mode Mode, index []string) (fixcost, varcost Cost, approach any)
-	setApproach(mode Mode, index []string, approach any, tran QueryTran)
+	// optimize determines the minimum cost strategy based on estimates.
+	//
+	// index is what is required for order or lookup
+	//
+	// frac is the estimated fraction of the rows that will be read.
+	// It affects the variable cost.
+	// frac = 0 means only Lookup, else frac < 1 means Select
+	//
+	// varcost should already incorporate frac
+	optimize(mode Mode, index []string, frac float64) (
+		fixcost, varcost Cost, approach any)
+	setApproach(index []string, frac float64, approach any, tran QueryTran)
 
 	// lookupCost returns the cost of one Lookup
 	lookupCost() Cost
@@ -161,15 +186,27 @@ type QueryTran interface {
 // Setup prepares a parsed query for execution.
 // It calls Transform, Optimize, and SetApproach.
 // The resulting Query is ready for execution.
-//
-// NOTE: Correct usage is: q, cost = Setup(q, mode, t)
 func Setup(q Query, mode Mode, t QueryTran) (Query, Cost, Cost) {
 	q = q.Transform()
-	fixcost, varcost := Optimize(q, mode, nil)
+	return setup(q, mode, 1, t)
+}
+
+// Setup1 is the same as Setup except it passes a frac of 1/nrows
+// which will minimize fixed cost e.g. by avoiding temp indexes.
+// It is used by DbmsLocal for Query1, QueryFirst, QueryLast
+func Setup1(q Query, mode Mode, t QueryTran) (Query, Cost, Cost) {
+	q = q.Transform()
+	nrows, _ := q.Nrows()
+	nrows = ord.Max(1, nrows) // avoid divide by zero
+	return setup(q, mode, 1/float64(nrows), t)
+}
+
+func setup(q Query, mode Mode, frac float64, t QueryTran) (Query, Cost, Cost) {
+	fixcost, varcost := Optimize(q, mode, nil, frac)
 	if fixcost+varcost >= impossible {
 		panic("invalid query: " + q.String())
 	}
-	q = SetApproach(q, mode, nil, t)
+	q = SetApproach(q, nil, frac, t)
 	return q, fixcost, varcost
 }
 
@@ -178,13 +215,13 @@ func SetupKey(q Query, mode Mode, t QueryTran) Query {
 	q = q.Transform()
 	best := newBestIndex()
 	for _, key := range q.Keys() {
-		b := bestGrouped(q, mode, nil, key)
+		b := bestGrouped(q, mode, nil, 1, key)
 		best.update(b.index, b.fixcost, b.varcost)
 	}
 	if best.fixcost+best.varcost >= impossible {
 		panic("invalid query: " + q.String())
 	}
-	q = SetApproach(q, mode, best.index, t)
+	q = SetApproach(q, best.index, 1, t)
 	return q
 }
 
@@ -193,17 +230,19 @@ const outOfOrder = 10 // minimal penalty for executing out of order
 const impossible = Cost(math.MaxInt / 64) // allow for adding impossible's
 
 // Optimize determines the best (lowest estimated cost) query execution approach
-func Optimize(q Query, mode Mode, index []string) (fixcost, varcost Cost) {
+func Optimize(q Query, mode Mode, index []string, frac float64) (
+	fixcost, varcost Cost) {
+	assert.That(!math.IsNaN(frac) && !math.IsInf(frac, 0))
 	if isSingleton(q) {
 		index = nil
 	}
-	if fixcost, varcost, _ := q.cacheGet(mode, index); varcost >= 0 {
+	if fixcost, varcost, _ := q.cacheGet(index, frac); varcost >= 0 {
 		return fixcost, varcost
 	}
-	fixcost, varcost, app := optTempIndex(q, mode, index)
+	fixcost, varcost, app := optTempIndex(q, mode, index, frac)
 	assert.That(fixcost >= 0)
 	assert.That(varcost >= 0)
-	q.cacheAdd(mode, index, fixcost, varcost, app)
+	q.cacheAdd(index, frac, fixcost, varcost, app)
 	return fixcost, varcost
 }
 
@@ -212,11 +251,11 @@ func isSingleton(q Query) bool {
 	return len(keys) == 1 && len(keys[0]) == 0
 }
 
-func optTempIndex(q Query, mode Mode, index []string) (
+func optTempIndex(q Query, mode Mode, index []string, frac float64) (
 	fixcost, varcost Cost, approach any) {
 	traceQO := func(more ...any) {
 		if trace.QueryOpt.On() {
-			args := append([]any{index, "="}, more...)
+			args := append([]any{index, frac, "="}, more...)
 			trace.QueryOpt.Println(mode, args...)
 			trace.Println(format(q, 1))
 		}
@@ -226,13 +265,17 @@ func optTempIndex(q Query, mode Mode, index []string) (
 		return impossible, impossible, nil
 	}
 	if len(index) == 0 || !tempIndexable(mode) {
-		fixcost, varcost, approach = q.optimize(mode, index)
+		fixcost, varcost, approach = q.optimize(mode, index, frac)
+		if fixcost < 0 || varcost < 0 {
+			trace.Println(mode, index, frac, "=", fixcost, varcost)
+			trace.Println(format(q, 1))
+		}
 		traceQO(fixcost + varcost)
 		assert.That(fixcost >= 0)
 		assert.That(varcost >= 0)
 		return fixcost, varcost, approach
 	}
-	noIndexFixCost, noIndexVarCost, noIndexApp := q.optimize(mode, nil)
+	noIndexFixCost, noIndexVarCost, noIndexApp := q.optimize(mode, nil, 1)
 	assert.That(noIndexFixCost >= 0)
 	assert.That(noIndexVarCost >= 0)
 	noIndexCost := noIndexFixCost + noIndexVarCost
@@ -241,20 +284,19 @@ func optTempIndex(q Query, mode Mode, index []string) (
 		return impossible, impossible, nil
 	}
 
-	indexedFixCost, indexedVarCost, indexedApp := q.optimize(mode, index)
+	indexedFixCost, indexedVarCost, indexedApp := q.optimize(mode, index, frac)
 	assert.That(indexedFixCost >= 0)
 	assert.That(indexedVarCost >= 0)
 	indexedCost := indexedFixCost + indexedVarCost
 
 	nrows, _ := q.Nrows()
 	assert.That(nrows >= 0)
-	tempindexFixCost := 0
+	tempindexFixCost := noIndexCost + 1000 // ???
 	if nrows > 0 {
-		fn := float64(nrows)
-		tempindexFixCost = noIndexCost + int(265*fn*math.Log(fn)) // empirical
-		assert.Msg(fn, math.Log(fn)).That(tempindexFixCost >= 0)
+		fnrows := float64(nrows)
+		tempindexFixCost += Cost(265 * fnrows * math.Log(fnrows)) // empirical
 	}
-	tempindexVarCost := 250 * nrows
+	tempindexVarCost := Cost(frac * float64(nrows*100)) // ???
 	if !q.SingleTable() {
 		tempindexVarCost *= 2 // ???
 	}
@@ -265,16 +307,18 @@ func optTempIndex(q Query, mode Mode, index []string) (
 		return indexedFixCost, indexedVarCost, indexedApp
 	}
 	traceQO("tempindex", tempindexCost, "<", indexedCost)
+	// trace.Println("    noIndex", noIndexFixCost, noIndexVarCost,
+	// 	"indexed", indexedFixCost, indexedVarCost)
 	return tempindexFixCost, tempindexVarCost,
 		&tempIndex{approach: noIndexApp, index: index,
-			fixcost: tempindexFixCost, varcost: tempindexVarCost}
+			srcfixcost: noIndexFixCost, srcvarcost: noIndexVarCost}
 }
 
 type tempIndex struct {
-	approach any
-	index    []string
-	fixcost  Cost
-	varcost  Cost
+	approach   any
+	index      []string
+	srcfixcost Cost
+	srcvarcost Cost
 }
 
 func tempIndexable(mode Mode) bool {
@@ -304,36 +348,49 @@ func min3(fixcost1, varcost1 Cost, app1 any, fixcost2, varcost2 Cost, app2 any,
 	return fixcost, varcost, app
 }
 
-func LookupCost(q Query, mode Mode, index []string, nrows int) (Cost, Cost) {
+func LookupCost(q Query, mode Mode, index []string, nrows int) (
+	Cost, Cost) {
 	if isSingleton(q) {
 		index = nil
 	}
-	fixcost, varcost := Optimize(q, mode, index)
+	fixcost, varcost := Optimize(q, mode, index, 0)
 	if fixcost+varcost >= impossible {
 		return impossible, impossible
 	}
-	lookupCost := q.lookupCost() * nrows
-	// trace.Println("LookupCost", fixcost, "+", varcost, "+", lookupCost)
-	return fixcost, varcost + lookupCost
+	var lookupCost Cost
+	_, _, approach := q.cacheGet(index, 0)
+	if _, ok := approach.(*tempIndex); ok {
+		if q.SingleTable() {
+			lookupCost = 200 // ???
+		} else {
+			lookupCost = 400 // ???
+		}
+	} else {
+		lookupCost = q.lookupCost()
+	}
+	lookupCost *= nrows
+	// trace.Println("LookupCost", fixcost, "+", lookupCost, "=", fixcost+lookupCost)
+	return fixcost, lookupCost
 }
 
-// SetApproach locks in the best approach.
+// SetApproach finalizes the chosen approach.
 // It also adds temp indexes where required.
-func SetApproach(q Query, mode Mode, index []string, tran QueryTran) Query {
+func SetApproach(q Query, index []string, frac float64, tran QueryTran) Query {
 	if isSingleton(q) {
 		index = nil
 	}
-	fixcost, varcost, approach := q.cacheGet(mode, index)
+	fixcost, varcost, approach := q.cacheGet(index, frac)
 	assert.That(fixcost >= 0)
 	assert.That(varcost >= 0)
-	q.cacheSetCost(fixcost, varcost)
 	if app, ok := approach.(*tempIndex); ok {
-		q.setApproach(mode, nil, app.approach, tran)
-		return &TempIndex{Query1: Query1{source: q,
-			cache: cache{fixcost: app.fixcost, varcost: app.varcost}},
-			order: app.index, tran: tran}
+		q.cacheSetCost(1, app.srcfixcost, app.srcvarcost)
+		q.setApproach(nil, 1, app.approach, tran)
+		ti := NewTempIndex(q, app.index, tran)
+		ti.cacheSetCost(frac, fixcost, varcost)
+		return ti
 	}
-	q.setApproach(mode, index, approach, tran)
+	q.cacheSetCost(frac, fixcost, varcost)
+	q.setApproach(index, frac, approach, tran)
 	return q
 }
 
@@ -342,10 +399,6 @@ func SetApproach(q Query, mode Mode, index []string, tran QueryTran) Query {
 type Query1 struct {
 	cache
 	source Query
-}
-
-func (q1 *Query1) String() string {
-	panic("should be overridden")
 }
 
 func (q1 *Query1) Columns() []string {
@@ -388,13 +441,10 @@ func (q1 *Query1) SetTran(t QueryTran) {
 	q1.source.SetTran(t)
 }
 
-func (q1 *Query1) optimize(mode Mode, index []string) (Cost, Cost, any) {
-	fixcost, varcost := Optimize(q1.source, mode, index)
+func (q1 *Query1) optimize(mode Mode, index []string, frac float64) (
+	Cost, Cost, any) {
+	fixcost, varcost := Optimize(q1.source, mode, index, frac)
 	return fixcost, varcost, nil
-}
-
-func (q1 *Query1) setApproach(Mode, []string, any, QueryTran) {
-	assert.ShouldNotReachHere()
 }
 
 func (q1 *Query1) lookupCost() Cost {
@@ -540,7 +590,7 @@ func (bi *bestIndex) String() string {
 // bestGrouped finds the best index with cols (in any order) as a prefix
 // taking fixed into consideration.
 // It is used by Project, Summarize, and Join.
-func bestGrouped(source Query, mode Mode, index, cols []string) bestIndex {
+func bestGrouped(source Query, mode Mode, index []string, frac float64, cols []string) bestIndex {
 	var indexes [][]string
 	if index == nil {
 		indexes = source.Indexes()
@@ -552,12 +602,12 @@ func bestGrouped(source Query, mode Mode, index, cols []string) bestIndex {
 	best := newBestIndex()
 	for _, idx := range indexes {
 		if grouped(idx, cols, nColsUnfixed, fixed) {
-			fixcost, varcost := Optimize(source, mode, idx)
+			fixcost, varcost := Optimize(source, mode, idx, frac)
 			best.update(idx, fixcost, varcost)
 		}
 	}
 	if best.index == nil && index == nil {
-		best.fixcost, best.varcost = Optimize(source, mode, cols)
+		best.fixcost, best.varcost = Optimize(source, mode, cols, frac)
 		if best.fixcost+best.varcost < impossible {
 			best.index = cols
 		}
@@ -681,12 +731,19 @@ const indent1 = "    "
 func format(q Query, indent int) string { // recursive
 	in := strings.Repeat(indent1, indent)
 	nrows, pop := q.Nrows()
-	fixcost, varcost := q.cacheCost()
-	cost := "{" + trace.Number(nrows)
+	frac, fixcost, varcost := q.cacheCost()
+	cost := "{"
+	if frac != 1 {
+		cost += fmt.Sprintf("%.2fx ", frac)
+	}
+	cost += trace.Number(nrows)
 	if nrows != pop {
 		cost += "/" + trace.Number(pop)
 	}
-	cost += " " + trace.Number(fixcost) + "+" + trace.Number(varcost) + "} "
+	if fixcost+varcost > 0 {
+		cost += " " + trace.Number(fixcost) + "+" + trace.Number(varcost)
+	}
+	cost += "} "
 	switch q := q.(type) {
 	case q2i:
 		return format(q.Source(), indent+1) + "\n" +

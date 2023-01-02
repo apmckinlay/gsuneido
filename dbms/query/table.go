@@ -5,11 +5,11 @@ package query
 
 import (
 	"github.com/apmckinlay/gsuneido/db19/index"
-	"github.com/apmckinlay/gsuneido/db19/index/btree"
 	"github.com/apmckinlay/gsuneido/db19/index/iterator"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/db19/meta"
 	"github.com/apmckinlay/gsuneido/runtime"
+	"github.com/apmckinlay/gsuneido/runtime/trace"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/generic/set"
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
@@ -152,7 +152,7 @@ func (tbl *Table) SingleTable() bool {
 	return true
 }
 
-func (tbl *Table) optimize(_ Mode, index []string) (Cost, Cost, any) {
+func (tbl *Table) optimize(_ Mode, index []string, frac float64) (Cost, Cost, any) {
 	if index == nil {
 		index = tbl.schema.Indexes[0].Columns
 	} else if !tbl.singleton {
@@ -162,9 +162,9 @@ func (tbl *Table) optimize(_ Mode, index []string) (Cost, Cost, any) {
 		}
 		index = tbl.indexes[i]
 	}
-	indexReadCost := tbl.info.Nrows * btree.EntrySize
-	dataReadCost := int(tbl.info.Size)
-	return 0, indexReadCost + dataReadCost, tableApproach{index: index}
+	varcost := tbl.info.Nrows * 250 // empirical
+	trace.QueryOpt.Println("optimize", tbl.name, index, frac, "=", Cost(frac*float64(varcost)))
+	return 0, Cost(frac * float64(varcost)), tableApproach{index: index}
 }
 
 // find an index that satisfies the required order
@@ -177,7 +177,7 @@ func (tbl *Table) indexFor(order []string) int {
 	return -1 // not found
 }
 
-func (tbl *Table) setApproach(_ Mode, _ []string, approach any, _ QueryTran) {
+func (tbl *Table) setApproach(_ []string, _ float64, approach any, _ QueryTran) {
 	tbl.setIndex(approach.(tableApproach).index)
 }
 
@@ -193,13 +193,16 @@ func (tbl *Table) setIndex(index []string) {
 }
 
 func (tbl *Table) lookupCost() Cost {
-	return lookupCost(tbl.rowSize())
-}
-
-func lookupCost(rowSize int) Cost {
-	// average node size is 2/3 of max, on average we read half = 1/3
-	nodeScan := btree.MaxNodeSize / 3
-	return (nodeScan * btree.TreeHeight) + rowSize
+	var levels int
+	if tbl.info.Indexes == nil { // tests
+		levels = 1
+		if tbl.info.Nrows > 100 {
+			levels = 2
+		}
+	} else {
+		levels = tbl.info.Indexes[tbl.iIndex].BtreeLevels()
+	}
+	return levels*800 - 300
 }
 
 // execution --------------------------------------------------------

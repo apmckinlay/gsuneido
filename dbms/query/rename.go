@@ -138,13 +138,14 @@ func (r *Rename) Transform() Query {
 	return r
 }
 
-func (r *Rename) optimize(mode Mode, index []string) (Cost, Cost, any) {
-	fixcost, varcost := Optimize(r.source, mode, slc.Replace(index, r.to, r.from))
+func (r *Rename) optimize(mode Mode, index []string, frac float64) (Cost, Cost, any) {
+	fixcost, varcost := Optimize(r.source, mode,
+		slc.Replace(index, r.to, r.from), frac)
 	return fixcost, varcost, nil
 }
 
-func (r *Rename) setApproach(mode Mode, index []string, _ any, tran QueryTran) {
-	r.source = SetApproach(r.source, mode, slc.Replace(index, r.to, r.from), tran)
+func (r *Rename) setApproach(index []string, frac float64, _ any, tran QueryTran) {
+	r.source = SetApproach(r.source, slc.Replace(index, r.to, r.from), frac, tran)
 }
 
 // execution --------------------------------------------------------

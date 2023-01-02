@@ -37,7 +37,11 @@ type Where struct {
 	// singleton is true if we know the result is at most one record
 	// because there is a single point select on a key
 	singleton bool
-	idxSels   []idxSel
+	// nrows is the estimated number of result rows
+	nrows int
+	// srcpop is the source Nrows pop
+	srcpop  int
+	idxSels []idxSel
 	// conflict is true if the expression conflicts and selects nothing
 	conflict bool
 	// idxSel is for the chosen index
@@ -151,9 +155,16 @@ func (w *Where) Indexes() [][]string {
 }
 
 func (w *Where) Nrows() (int, int) {
+	if !w.optInited {
+		w.optInit()
+	}
+	return w.nrows, w.srcpop
+}
+
+func (w *Where) calcNrows() (int, int) {
 	assert.That(w.optInited)
 	srcNrows, srcPop := w.source.Nrows()
-	if w.conflict {
+	if w.conflict || srcPop == 0 {
 		return 0, srcPop
 	}
 	if w.singleton {
@@ -162,24 +173,26 @@ func (w *Where) Nrows() (int, int) {
 	if len(w.idxSels) == 0 {
 		return srcNrows / 2, srcPop
 	}
-	var n int
-	nmin := math.MaxInt
+	est := math.MaxInt
 	nsrc := float64(srcNrows)
 	for i := range w.idxSels {
 		ix := &w.idxSels[i]
+		var n int
 		if ix.isRanges() {
 			n = int(ix.frac * nsrc)
 		} else { // points
 			n = len(ix.ptrngs)
 		}
-		if n < nmin {
-			nmin = n
+		// TODO: if indexes are independant and the data is random
+		// then we should be multiplying fractions, not taking the minimum.
+		if n < est {
+			est = n
 		}
 	}
 	if w.exprMore {
-		nmin /= 2 // ??? adjust for additional restrictions
+		est /= 2 // ??? adjust for additional restrictions
 	}
-	return nmin, srcPop
+	return est, srcPop
 }
 
 func (w *Where) Transform() Query {
@@ -424,7 +437,7 @@ func (w *Where) split(q2 *Query2) bool {
 
 // optimize ---------------------------------------------------------
 
-func (w *Where) optimize(mode Mode, index []string) (Cost, Cost, any) {
+func (w *Where) optimize(mode Mode, index []string, frac float64) (Cost, Cost, any) {
 	if !w.optInited {
 		w.optInit()
 		if w.conflict {
@@ -433,12 +446,12 @@ func (w *Where) optimize(mode Mode, index []string) (Cost, Cost, any) {
 	}
 	assert.That(!w.singleton || len(index) == 0)
 	// we always have the option of just filtering (no specific index use)
-	filterFixCost, filterVarCost := Optimize(w.source, mode, index)
+	filterFixCost, filterVarCost := Optimize(w.source, mode, index, frac)
 	if w.tbl == nil || w.tbl.singleton {
 		return filterFixCost, filterVarCost, nil
 	}
 	// where on table
-	cost, index := w.bestIndex(index)
+	cost, index := w.bestIndex(index, frac)
 	if cost >= impossible {
 		// only use the filter if there are no possible idxSel
 		return filterFixCost, filterVarCost, nil
@@ -466,20 +479,20 @@ func (w *Where) optInit() {
 	cmps := w.extractCompares()
 	w.exprMore = len(cmps) < len(w.expr.Exprs)
 	colSels := w.comparesToFilters(cmps)
-	if w.conflict {
-		return
-	}
-	w.idxSels = w.colSelsToIdxSels(colSels)
-	w.exprMore = w.exprMore || len(w.idxSels) > 1
-	if !w.exprMore {
-		// check if any colSels were not used by idxSels
-		for _, idxSel := range w.idxSels {
-			for _, col := range idxSel.index {
-				delete(colSels, col)
+	if !w.conflict {
+		w.idxSels = w.colSelsToIdxSels(colSels)
+		w.exprMore = w.exprMore || len(w.idxSels) > 1
+		if !w.exprMore {
+			// check if any colSels were not used by idxSels
+			for _, idxSel := range w.idxSels {
+				for _, col := range idxSel.index {
+					delete(colSels, col)
+				}
 			}
+			w.exprMore = w.exprMore || len(colSels) > 0
 		}
-		w.exprMore = w.exprMore || len(colSels) > 0
 	}
+	w.nrows, w.srcpop = w.calcNrows()
 }
 
 // extractCompares finds sub-expressions like <field> <op> <constant>
@@ -532,14 +545,15 @@ func (w *Where) comparesToFilters(cmps []cmpExpr) map[string]filter {
 
 // bestIndex returns the best (lowest cost) index with an idxSel
 // that satisfies the required order (or impossible)
-func (w *Where) bestIndex(order []string) (Cost, []string) {
+func (w *Where) bestIndex(order []string, frac float64) (Cost, []string) {
 	best := newBestIndex()
 	for _, idx := range w.source.Indexes() {
 		if ordered(idx, order, w.fixed) {
 			if is := w.getIdxSel(idx); is != nil {
 				varcost := w.source.lookupCost() * len(is.ptrngs)
 				if is.isRanges() {
-					tblFixCost, tblVarCost, _ := w.tbl.optimize(CursorMode, idx)
+					tblFixCost, tblVarCost, _ :=
+						w.tbl.optimize(CursorMode, idx, frac*is.frac)
 					assert.That(tblFixCost == 0)
 					varcost += int(is.frac * float64(tblVarCost))
 				}
@@ -560,7 +574,7 @@ func (w *Where) getIdxSel(index []string) *idxSel {
 	return nil
 }
 
-func (w *Where) setApproach(mode Mode, index []string, app any, tran QueryTran) {
+func (w *Where) setApproach(index []string, frac float64, app any, tran QueryTran) {
 	if w.conflict {
 		return
 	}
@@ -569,8 +583,8 @@ func (w *Where) setApproach(mode Mode, index []string, app any, tran QueryTran) 
 		w.tbl.setIndex(idx)
 		w.idxSel = w.getIdxSel(idx)
 		w.idxSelPos = -1
-	} else {
-		w.source = SetApproach(w.source, mode, index, tran)
+	} else { // filter
+		w.source = SetApproach(w.source, index, frac, tran)
 	}
 	w.hdr = w.source.Header()
 	w.ctx.Hdr = w.hdr
@@ -975,11 +989,14 @@ func (w *Where) idxFrac(idx []string, ptrngs []pointRange) float64 {
 	nrows1, _ := w.tbl.Nrows()
 	for _, pr := range ptrngs {
 		if pr.end == "" { // lookup
-			frac += 1 / float64(nrows1)
+			if nrows1 > 0 {
+				frac += 1 / float64(nrows1)
+			}
 		} else { // range
 			frac += float64(w.t.RangeFrac(w.tbl.name, iIndex, pr.org, pr.end))
 		}
 	}
+	assert.That(!math.IsNaN(frac) && !math.IsInf(frac, 0))
 	return frac
 }
 

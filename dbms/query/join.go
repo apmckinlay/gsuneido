@@ -27,6 +27,7 @@ type Join struct {
 type joinApproach struct {
 	reverse bool
 	index2  []string
+	frac2   float64
 }
 
 type joinType int
@@ -148,16 +149,16 @@ func (jn *Join) Transform() Query {
 	return jn
 }
 
-func (jn *Join) optimize(mode Mode, index []string) (Cost, Cost, any) {
+func (jn *Join) optimize(mode Mode, index []string, frac float64) (Cost, Cost, any) {
 	fwd := joinopt(jn.source, jn.source2, jn.joinType, jn.Nrows,
-		mode, index, jn.by)
+		mode, index, frac, jn.by)
 	rev := joinopt(jn.source2, jn.source, jn.joinType.reverse(), jn.Nrows,
-		mode, index, jn.by)
+		mode, index, frac, jn.by)
 	rev.fixcost += outOfOrder
 	if trace.JoinOpt.On() {
-		trace.JoinOpt.Println(mode, index)
-		trace.Println("    fwd", fwd)
-		trace.Println("    rev", rev)
+		trace.JoinOpt.Println(mode, index, frac)
+		trace.Println("    fwd", fwd.index, "=", fwd.fixcost, fwd.varcost)
+		trace.Println("    rev", rev.index, "=", rev.fixcost, rev.varcost)
 		trace.Println(format(jn, 1))
 	}
 	approach := &joinApproach{}
@@ -169,6 +170,7 @@ func (jn *Join) optimize(mode Mode, index []string) (Cost, Cost, any) {
 		return impossible, impossible, nil
 	}
 	approach.index2 = fwd.index
+	approach.frac2 = fwd.frac2
 	return fwd.fixcost, fwd.varcost, approach
 }
 
@@ -182,38 +184,46 @@ func (jt joinType) reverse() joinType {
 	return jt
 }
 
+type bestJoin struct {
+	bestIndex
+	frac2 float64
+}
+
 func joinopt(src1, src2 Query, joinType joinType, nrows func() (int, int),
-	mode Mode, index, by []string) bestIndex {
+	mode Mode, index []string, frac float64, by []string) bestJoin {
 	// always have to read all of source 1
-	fixcost1, varcost1 := Optimize(src1, mode, index)
+	fixcost1, varcost1 := Optimize(src1, mode, index, frac)
 	if fixcost1+varcost1 >= impossible {
-		return newBestIndex() // impossible
-	}
-	best2 := bestGrouped(src2, mode, nil, by)
-	if best2.index == nil {
-		return newBestIndex() // impossible
+		return bestJoin{bestIndex: newBestIndex()} // impossible
 	}
 	nrows1, _ := src1.Nrows()
 	nrows2, _ := src2.Nrows()
-	nrows2 = ord.Max(1, nrows2) // avoid division by zero
-	nr, _ := nrows()
-	// NOTE: lookupCost is not really correct because we use Select
-	return bestIndex{
+	read2, _ := nrows()
+	frac2 := float64(read2) * frac / float64(ord.Max(1, nrows2))
+	best2 := bestGrouped(src2, mode, nil, frac2, by)
+	if best2.index == nil {
+		return bestJoin{bestIndex: newBestIndex()} // impossible
+	}
+	varcost2 := Cost(frac * float64(nrows1 * src2.lookupCost()))
+	// trace.Println("joinopt", joinType, "frac", frac)
+	// trace.Println("   ", nrows1, joinType, nrows2, "=> read2", read2, "=> frac2", frac2)
+	// trace.Println("    best2", best2.index, "=", best2.fixcost, best2.varcost)
+	// trace.Println("    nrows1", nrows1, "lookups", nrows1 * src2.lookupCost())
+	return bestJoin{frac2: frac2, bestIndex: bestIndex{
 		index:   best2.index,
 		fixcost: fixcost1 + best2.fixcost,
-		varcost: varcost1 + (nrows1 * src2.lookupCost()) +
-			(best2.varcost * nr / nrows2),
-	}
+		varcost: varcost1 + varcost2 + best2.varcost,
+	}}
 }
 
-func (jn *Join) setApproach(mode Mode, index []string, approach any, tran QueryTran) {
+func (jn *Join) setApproach(index []string, frac float64, approach any, tran QueryTran) {
 	ap := approach.(*joinApproach)
 	if ap.reverse {
 		jn.source, jn.source2 = jn.source2, jn.source
 		jn.joinType = jn.joinType.reverse()
 	}
-	jn.source = SetApproach(jn.source, mode, index, tran)
-	jn.source2 = SetApproach(jn.source2, mode, ap.index2, tran)
+	jn.source = SetApproach(jn.source, index, frac, tran)
+	jn.source2 = SetApproach(jn.source2, ap.index2, ap.frac2, tran)
 	jn.hdr1 = jn.source.Header()
 }
 
@@ -231,7 +241,7 @@ func (jn *Join) nrows(n1, p1, n2, p2 int) int {
 		n1, p1, n2, p2 = n2, p2, n1, p1
 		fallthrough
 	case one_n:
-		p1 = ord.Max(1, p1) // avoid division by zero
+		p1 = ord.Max(1, p1) // avoid divide by zero
 		p2 = ord.Max(1, p2)
 		if n1 <= p1*n2/p2 { // rearranged n1/p1 <= n2/p2 (for integer math)
 			return n1 * p2 / p1
@@ -380,16 +390,17 @@ func (lj *LeftJoin) Transform() Query {
 	return lj
 }
 
-func (lj *LeftJoin) optimize(mode Mode, index []string) (Cost, Cost, any) {
+func (lj *LeftJoin) optimize(mode Mode, index []string, frac float64) (Cost, Cost, any) {
 	best := joinopt(lj.source, lj.source2, lj.joinType, lj.Nrows,
-		mode, index, lj.by)
-	return best.fixcost, best.varcost, &joinApproach{index2: best.index}
+		mode, index, frac, lj.by)
+	return best.fixcost, best.varcost,
+		&joinApproach{index2: best.index, frac2: best.frac2}
 }
 
-func (lj *LeftJoin) setApproach(mode Mode, index []string, approach any, tran QueryTran) {
+func (lj *LeftJoin) setApproach(index []string, frac float64, approach any, tran QueryTran) {
 	ap := approach.(*joinApproach)
-	lj.source = SetApproach(lj.source, mode, index, tran)
-	lj.source2 = SetApproach(lj.source2, mode, ap.index2, tran)
+	lj.source = SetApproach(lj.source, index, frac, tran)
+	lj.source2 = SetApproach(lj.source2, ap.index2, ap.frac2, tran)
 	lj.empty2 = make(Row, len(lj.source2.Header().Fields))
 	lj.hdr1 = lj.source.Header()
 }
@@ -405,7 +416,7 @@ func (lj *LeftJoin) nrows(n1, p1, n2, p2 int) int {
 	case one_one, n_one:
 		return n1
 	case one_n:
-		p1 = ord.Max(1, p1) // avoid division by zero
+		p1 = ord.Max(1, p1) // avoid divide by zero
 		p2 = ord.Max(1, p2)
 		if n1 <= p1*n2/p2 { // rearranged n1/p1 <= n2/p2 (for integer math)
 			return n1 * p2 / p1

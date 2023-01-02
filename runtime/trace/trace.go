@@ -6,7 +6,9 @@ package trace
 import (
 	"fmt"
 	"log"
+	"math"
 	"os"
+	"strings"
 	"sync"
 
 	"golang.org/x/text/language"
@@ -110,11 +112,18 @@ func format(p *any) {
 	case int, uint, int32, uint32, int64, uint64:
 		// add commas to make big numbers more readable
 		*p = Number(*p)
+	case float32, float64:
+        *p = fmt.Sprintf("%.4g", *p)
 	}
 }
 
+const impossible = math.MaxInt / 64 // must match query
+
 func Number(n any) string {
-	return printer.Sprintf("%d", n)
+	if n, ok := n.(int); ok && n >= impossible {
+		return "impossible"
+	}
+	return strings.Replace(printer.Sprintf("%d", n), ",", "_", -1)
 }
 
 func (w what) On() bool {
