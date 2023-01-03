@@ -1148,7 +1148,7 @@ func unpackValue(buf *pack.Decoder) Value {
 
 // rwMayLock is similar to MayLock except that it has a read-write lock.
 type rwMayLock struct {
-	lock       sync.RWMutex
+	lock sync.RWMutex
 	// concurrent is whether it's accessible to multiple goroutines
 	concurrent bool
 	// shouldLock is whether we need to lock or not.

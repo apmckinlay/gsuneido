@@ -204,7 +204,7 @@ func joinopt(src1, src2 Query, joinType joinType, nrows func() (int, int),
 	if best2.index == nil {
 		return bestJoin{bestIndex: newBestIndex()} // impossible
 	}
-	varcost2 := Cost(frac * float64(nrows1 * src2.lookupCost()))
+	varcost2 := Cost(frac * float64(nrows1*src2.lookupCost()))
 	// trace.Println("joinopt", joinType, "frac", frac)
 	// trace.Println("   ", nrows1, joinType, nrows2, "=> read2", read2, "=> frac2", frac2)
 	// trace.Println("    best2", best2.index, "=", best2.fixcost, best2.varcost)

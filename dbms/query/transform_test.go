@@ -83,7 +83,7 @@ func TestTransform(t *testing.T) {
 	// move project before extend & remove empty extend
 	test("customer extend a = 5, b = 6 project id, name",
 		"customer PROJECT id,name")
-		test("table extend x = 123 project x",
+	test("table extend x = 123 project x",
 		"project-none extend x = 123")
 	test("table extend x = 123, y = Random() project x, y",
 		"table extend y = random() project y extend x = 123") // split

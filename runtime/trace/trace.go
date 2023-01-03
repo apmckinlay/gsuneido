@@ -113,7 +113,7 @@ func format(p *any) {
 		// add commas to make big numbers more readable
 		*p = Number(*p)
 	case float32, float64:
-        *p = fmt.Sprintf("%.4g", *p)
+		*p = fmt.Sprintf("%.4g", *p)
 	}
 }
 

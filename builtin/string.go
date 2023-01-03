@@ -348,8 +348,8 @@ func string_NumberQ(this Value) Value {
 	return SuBool(numberPat.Matches(ToStr(this)))
 }
 
-var numberPat = regex.Compile(`\A[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d\d?)?\Z`)
 // benchmark shows Suneido regex is faster than Go regexp for this
+var numberPat = regex.Compile(`\A[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d\d?)?\Z`)
 
 var _ = method(string_NumericQ, "()")
 

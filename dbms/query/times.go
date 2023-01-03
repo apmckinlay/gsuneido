@@ -73,7 +73,7 @@ func (t *Times) optimize(mode Mode, index []string, frac float64) (Cost, Cost, a
 	opt := func(src1, src2 Query) (Cost, Cost) {
 		nrows1, _ := src1.Nrows()
 		fixcost1, varcost1 := Optimize(src1, mode, index, frac)
-		fixcost2, varcost2 := Optimize(src2, mode, nil, frac * float64(nrows1))
+		fixcost2, varcost2 := Optimize(src2, mode, nil, frac*float64(nrows1))
 		return fixcost1 + fixcost2, varcost1 + varcost2
 	}
 	fixFwd, varFwd := opt(t.source, t.source2)
@@ -91,7 +91,7 @@ func (t *Times) setApproach(index []string, frac float64, approach any, tran Que
 	}
 	t.source = SetApproach(t.source, index, frac, tran)
 	nrows1, _ := t.source.Nrows()
-	t.source2 = SetApproach(t.source2, nil, frac * float64(nrows1), tran)
+	t.source2 = SetApproach(t.source2, nil, frac*float64(nrows1), tran)
 }
 
 func (t *Times) Nrows() (int, int) {

@@ -175,7 +175,7 @@ func TestHasPrefix(t *testing.T) {
 }
 
 func TestMaxKey(t *testing.T) {
-	s := strings.Repeat("x", maxKey + 1)
+	s := strings.Repeat("x", maxKey+1)
 	rec := mkrec(s)
 	assert.T(t).This(func() {
 		key(rec, []int{0, 1}, nil)

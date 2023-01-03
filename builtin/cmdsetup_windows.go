@@ -10,8 +10,8 @@ import (
 
 func cmdSetup(cmd *exec.Cmd, command string, inherit bool) {
 	cmd.SysProcAttr = &syscall.SysProcAttr{
-		CmdLine:       command,
-		CreationFlags: 0x08000000, // CREATE_NO_WINDOW
+		CmdLine:          command,
+		CreationFlags:    0x08000000, // CREATE_NO_WINDOW
 		NoInheritHandles: !inherit,
 	}
 }

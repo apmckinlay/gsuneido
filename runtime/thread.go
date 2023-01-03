@@ -9,8 +9,8 @@ import (
 	"strconv"
 	"sync/atomic"
 
-	myatomic "github.com/apmckinlay/gsuneido/util/generic/atomic"
 	"github.com/apmckinlay/gsuneido/options"
+	myatomic "github.com/apmckinlay/gsuneido/util/generic/atomic"
 	"github.com/apmckinlay/gsuneido/util/regex"
 	"github.com/apmckinlay/gsuneido/util/str"
 	"github.com/apmckinlay/gsuneido/util/tr"
