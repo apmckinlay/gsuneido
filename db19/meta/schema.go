@@ -4,11 +4,9 @@
 package meta
 
 import (
-	"fmt"
 	"math"
 	"sort"
 	"strings"
-	"sync"
 
 	"github.com/apmckinlay/gsuneido/db19/meta/schema"
 	"github.com/apmckinlay/gsuneido/db19/stor"
@@ -80,8 +78,6 @@ func (ts *Schema) Write(w *stor.Writer) {
 	}
 }
 
-var once sync.Once
-
 func ReadSchema(_ *stor.Stor, r *stor.Reader) *Schema {
 	ts := Schema{}
 	ts.Table = r.GetStr()
@@ -93,12 +89,6 @@ func ReadSchema(_ *stor.Stor, r *stor.Reader) *Schema {
 			mode := byte(r.Get1())
 			columns := r.GetStrs()
 			var bestKey []string
-			if mode == 'i'+1 || mode == 'u'+1 { //TODO remove
-				mode--
-				once.Do(func() {
-					fmt.Println("ERROR: please compact the database")
-				})
-			}
 			if mode != 'k' {
 				bestKey = r.GetStrs()
 			}
