@@ -144,3 +144,7 @@ func (t *Times) Lookup(th *Thread, cols, vals []string) Row {
 func (t *Times) lookupCost() int {
 	return t.source.lookupCost() * 2 // ???
 }
+
+func (t *Times) fastSingle() bool {
+	return t.source.fastSingle() && t.source2.fastSingle()
+}

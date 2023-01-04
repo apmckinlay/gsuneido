@@ -117,6 +117,11 @@ func (tbl *Table) Keys() [][]string {
 	return tbl.primary
 }
 
+func (tbl *Table) fastSingle() bool {
+	keys := tbl.Keys()
+	return len(keys) == 1 && len(keys[0]) == 0
+}
+
 func (*Table) Ordering() []string {
 	return nil
 }

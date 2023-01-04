@@ -87,6 +87,10 @@ func (u *Union) Keys() [][]string {
 	return withoutDupsOrSupersets(keys)
 }
 
+func (*Union) fastSingle() bool {
+	return false
+}
+
 func (u *Union) Indexes() [][]string {
 	// lookup can read via any index
 	return set.UnionFn(u.source.Indexes(), u.source2.Indexes(), slices.Equal[string])
@@ -417,6 +421,7 @@ func endKey(dir Dir) string {
 }
 
 func (u *Union) Select(cols, vals []string) {
+	//BUG should use disjoint
 	u.source.Select(cols, vals)
 	u.source2.Select(cols, vals)
 	u.rewound = true

@@ -40,6 +40,10 @@ func (m *Minus) Keys() [][]string {
 	return m.source.Keys()
 }
 
+func (m *Minus) fastSingle() bool {
+	return m.source.fastSingle()
+}
+
 func (m *Minus) Indexes() [][]string {
 	return m.source.Indexes()
 }

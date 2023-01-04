@@ -144,6 +144,16 @@ func (w *Where) Keys() [][]string {
 	return w.source.Keys()
 }
 
+func (w *Where) fastSingle() bool {
+	if w.source.fastSingle() {
+		return true
+	}
+	if !w.optInited {
+		w.optInit()
+	}
+	return w.singleton
+}
+
 func (w *Where) Indexes() [][]string {
 	if !w.optInited {
 		w.optInit()

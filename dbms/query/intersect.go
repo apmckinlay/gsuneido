@@ -90,6 +90,10 @@ func (it *Intersect) Transform() Query {
 	return it
 }
 
+func (*Intersect) fastSingle() bool {
+	return false
+}
+
 func (it *Intersect) optimize(mode Mode, index []string, frac float64) (Cost, Cost, any) {
 	assert.That(it.disjoint == "") // eliminated by Transform
 	fixcost1, varcost1, key1 := it.cost(it.source, it.source2, mode, index, frac)

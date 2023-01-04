@@ -84,6 +84,10 @@ func (*schemaTable) Select([]string, []string) {
 	assert.ShouldNotReachHere()
 }
 
+func (*schemaTable) fastSingle() bool {
+	return false
+}
+
 //-------------------------------------------------------------------
 
 type Tables struct {

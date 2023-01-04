@@ -47,6 +47,10 @@ func (*Nothing) rowSize() int {
 	return 0
 }
 
+func (*Nothing) fastSingle() bool {
+	return true
+}
+
 func (*Nothing) Ordering() []string {
 	return nil
 }

@@ -31,6 +31,10 @@ func (*ProjectNone) Keys() [][]string {
 	return [][]string{{}}
 }
 
+func (*ProjectNone) fastSingle() bool {
+	return true
+}
+
 func (*ProjectNone) Indexes() [][]string {
 	return [][]string{{}}
 }

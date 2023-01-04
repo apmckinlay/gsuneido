@@ -125,6 +125,10 @@ func (jn *Join) Keys() [][]string {
 	}
 }
 
+func (*Join) fastSingle() bool {
+	return false
+}
+
 func (jn *Join) Fixed() []Fixed {
 	fixed, none := combineFixed(jn.source.Fixed(), jn.source2.Fixed())
 	if none {
