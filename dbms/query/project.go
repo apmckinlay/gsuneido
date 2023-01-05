@@ -42,8 +42,8 @@ const (
 	projCopy projectStrategy = iota + 1
 	// projSeq orders by the columns so duplicates are consecutive
 	projSeq
-	// projHash builds a temp hash index to identify duplicates
-	projHash
+	// projMap builds a temp hash index to identify duplicates
+	projMap
 )
 
 func NewProject(src Query, cols []string) *Project {
@@ -111,8 +111,8 @@ func (p *Project) stringOp() string {
 		s += "-SEQ"
 	case projCopy:
 		s += "-COPY"
-	case projHash:
-		s += "-HASH"
+	case projMap:
+		s += "-MAP"
 	}
 	return s + " " + str.Join(",", p.columns)
 }
@@ -345,7 +345,7 @@ func (p *Project) optimize(mode Mode, index []string, frac float64) (Cost, Cost,
 	fixcostHash, varcostHash := p.hashCost(mode, index, frac)
 	if fixcostHash+varcostHash < seq.cost() {
 		return fixcostHash, varcostHash,
-			&projectApproach{strategy: projHash, index: index}
+			&projectApproach{strategy: projMap, index: index}
 	}
 	return seq.fixcost, seq.varcost,
 		&projectApproach{strategy: projSeq, index: seq.index}
@@ -408,7 +408,7 @@ func (p *Project) Get(th *Thread, dir Dir) Row {
 		return p.source.Get(th, dir)
 	case projSeq:
 		return p.getSeq(th, dir)
-	case projHash:
+	case projMap:
 		return p.getHash(th, dir)
 	}
 	panic("should not reach here")
@@ -510,7 +510,7 @@ func (p *Project) Output(th *Thread, rec Record) {
 
 func (p *Project) Select(cols, vals []string) {
 	p.source.Select(cols, vals)
-	if p.strategy == projHash {
+	if p.strategy == projMap {
 		p.indexed = false
 	}
 	p.rewound = true
