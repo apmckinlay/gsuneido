@@ -294,7 +294,7 @@ func TestQueryGet(t *testing.T) {
 		'eraser'
 		'mouse'`)
 	test("customer project city",
-		"customer^(id) PROJECT-HASH city",
+		"customer^(id) PROJECT-MAP city",
 		`city
 		'saskatoon'
 		'calgary'
