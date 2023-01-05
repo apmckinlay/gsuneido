@@ -76,7 +76,7 @@ func (ti *TempIndex) Lookup(th *Thread, cols, vals []string) Row {
 	ti.th = th
 	defer func() { ti.th = nil }()
 	if ti.iter == nil {
-		ti.iter = ti.makeIter()
+		ti.iter = ti.makeIndex()
 	}
 	encode := len(ti.order) > 1
 	key := selOrg(encode, ti.order, cols, vals, true)
@@ -91,7 +91,7 @@ func (ti *TempIndex) Get(th *Thread, dir Dir) Row {
 	ti.th = th
 	defer func() { ti.th = nil }()
 	if ti.iter == nil {
-		ti.iter = ti.makeIter()
+		ti.iter = ti.makeIndex()
 		ti.rewound = true
 	}
 	var row Row
@@ -121,7 +121,7 @@ type rowIter interface {
 	Seek(key string) Row
 }
 
-func (ti *TempIndex) makeIter() rowIter {
+func (ti *TempIndex) makeIndex() rowIter {
 	if ti.selEnd == "" {
 		ti.selEnd = ixkey.Max
 	}
