@@ -238,7 +238,7 @@ const impossible = Cost(math.MaxInt / 64) // allow for adding impossible's
 func Optimize(q Query, mode Mode, index []string, frac float64) (
 	fixcost, varcost Cost) {
 	assert.That(!math.IsNaN(frac) && !math.IsInf(frac, 0))
-	if q.fastSingle() {
+	if fastSingle(q, index) {
 		index = nil
 	}
 	if fixcost, varcost, _ := q.cacheGet(index, frac); varcost >= 0 {
@@ -249,6 +249,10 @@ func Optimize(q Query, mode Mode, index []string, frac float64) (
 	assert.That(varcost >= 0)
 	q.cacheAdd(index, frac, fixcost, varcost, app)
 	return fixcost, varcost
+}
+
+func fastSingle(q Query, index []string) bool {
+	return q.fastSingle() && set.Subset(q.Columns(), index)
 }
 
 func optTempIndex(q Query, mode Mode, index []string, frac float64) (
@@ -350,7 +354,7 @@ func min3(fixcost1, varcost1 Cost, app1 any, fixcost2, varcost2 Cost, app2 any,
 
 func LookupCost(q Query, mode Mode, index []string, nrows int) (
 	Cost, Cost) {
-	if q.fastSingle() {
+	if fastSingle(q, index) {
 		index = nil
 	}
 	fixcost, varcost := Optimize(q, mode, index, 0)
@@ -376,7 +380,7 @@ func LookupCost(q Query, mode Mode, index []string, nrows int) (
 // SetApproach finalizes the chosen approach.
 // It also adds temp indexes where required.
 func SetApproach(q Query, index []string, frac float64, tran QueryTran) Query {
-	if q.fastSingle() {
+	if fastSingle(q, index) {
 		index = nil
 	}
 	fixcost, varcost, approach := q.cacheGet(index, frac)
