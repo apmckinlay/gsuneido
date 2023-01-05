@@ -534,12 +534,24 @@ func traceln(...any) {
 	// fmt.Println(args...) // comment out to disable tracing
 }
 
+// Transactions returns a list of the active update transactions
 func (ck *Check) Transactions() []int {
 	trans := make([]int, 0, 4)
 	for _, t := range ck.trans {
-		if t.end == math.MaxInt {
+		if !t.ended() {
 			trans = append(trans, t.start)
 		}
 	}
 	return trans
+}
+
+// Final returns the count of ended transactions overlapping with outstanding
+func (ck *Check) Final() int {
+	n := 0
+	for _, t := range ck.trans {
+		if t.ended() {
+			n++
+		}
+	}
+	return n
 }

@@ -507,6 +507,14 @@ func (db *Database) Transactions() []int {
 	return db.ck.Transactions()
 }
 
+func (db *Database) Final() int {
+	db.ckOpen()
+	if db.corrupted.Load() {
+		return 0
+	}
+	return db.ck.Final()
+}
+
 func (db *Database) ckOpen() {
 	if db.closed.Load() {
 		exit.Wait()

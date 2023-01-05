@@ -132,8 +132,8 @@ func (*DbmsLocal) Exec(t *Thread, v Value) Value {
 	})
 }
 
-func (*DbmsLocal) Final() int {
-	return 0 //TODO
+func (dbms *DbmsLocal) Final() int {
+	return dbms.db.Final()
 }
 
 // Get implements QueryFirst, QueryLast, Query1

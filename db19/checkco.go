@@ -93,6 +93,10 @@ type ckTrans struct {
 	ret chan []int
 }
 
+type ckFinal struct {
+	ret chan int
+}
+
 func (ck *CheckCo) StartTran() *CkTran {
 	ret := make(chan *CkTran, 1)
 	ck.c <- &ckStart{ret: ret}
@@ -192,6 +196,12 @@ func (ck *CheckCo) Transactions() []int {
 	return <-ret
 }
 
+func (ck *CheckCo) Final() int {
+	ret := make(chan int, 1)
+	ck.c <- &ckFinal{ret: ret}
+	return <-ret
+}
+
 //-------------------------------------------------------------------
 
 func StartCheckCo(db *Database, mergeChan chan todo, allDone chan void) *CheckCo {
@@ -282,6 +292,8 @@ func (ck *Check) dispatch(msg any, mergeChan chan todo) {
 		msg.ret <- state.(*DbState)
 	case *ckTrans:
 		msg.ret <- ck.Transactions()
+	case *ckFinal:
+		msg.ret <- ck.Final()
 	default:
 		panic("checker unknown message type")
 	}
@@ -308,6 +320,7 @@ type Checker interface {
 	Persist() *DbState
 	Stop()
 	Transactions() []int
+	Final() int
 	AddExclusive(table string) bool
 	EndExclusive(table string)
 	RunEndExclusive(table string, fn func()) any
