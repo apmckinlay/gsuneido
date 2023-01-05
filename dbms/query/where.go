@@ -219,7 +219,7 @@ func (w *Where) Transform() Query {
 
 	if lj := w.leftJoinToJoin(); lj != nil {
 		// convert leftjoin to join
-		w.source = NewJoin(lj.source, lj.source2, lj.by)
+		w.source = NewJoin(lj.source1, lj.source2, lj.by)
 	}
 	moved := false
 	switch q := w.source.(type) {
@@ -291,19 +291,19 @@ func (w *Where) Transform() Query {
 	case *Intersect:
 		// distribute where over intersect
 		// no project because Intersect Columns are the intersection
-		q.source = NewWhere(q.source, w.expr, w.t)
+		q.source1 = NewWhere(q.source1, w.expr, w.t)
 		q.source2 = NewWhere(q.source2, w.expr, w.t)
 		moved = true
 	case *Minus:
 		// distribute where over minus
 		// need project because Minus Columns are just the left side's
-		q.source = NewWhere(q.source, w.expr, w.t)
+		q.source1 = NewWhere(q.source1, w.expr, w.t)
 		q.source2 = NewWhere(q.source2, w.project(q.source2), w.t)
 		moved = true
 	case *Union:
 		// distribute where over union
 		// need project because Union Columns is the union
-		q.source = NewWhere(q.source, w.project(q.source), w.t)
+		q.source1 = NewWhere(q.source1, w.project(q.source1), w.t)
 		q.source2 = NewWhere(q.source2, w.project(q.source2), w.t)
 		moved = true
 	case *Times:
@@ -314,7 +314,7 @@ func (w *Where) Transform() Query {
 		moved = w.split(&q.Query2)
 	case *LeftJoin:
 		// split where over leftjoin (left side only)
-		cols1 := q.source.Columns()
+		cols1 := q.source1.Columns()
 		var common, src1 []ast.Expr
 		for _, e := range w.expr.Exprs {
 			if set.Subset(cols1, e.Columns()) {
@@ -324,7 +324,7 @@ func (w *Where) Transform() Query {
 			}
 		}
 		if src1 != nil {
-			q.source = NewWhere(q.source,
+			q.source1 = NewWhere(q.source1,
 				&ast.Nary{Tok: tok.And, Exprs: src1}, w.t)
 		}
 		if common != nil {
@@ -411,7 +411,7 @@ func nEmpty(n int) []ast.Expr {
 }
 
 func (w *Where) split(q2 *Query2) bool {
-	cols1 := q2.source.Columns()
+	cols1 := q2.source1.Columns()
 	cols2 := q2.source2.Columns()
 	var common, src1, src2 []ast.Expr
 	for _, e := range w.expr.Exprs {
@@ -432,7 +432,7 @@ func (w *Where) split(q2 *Query2) bool {
 		}
 	}
 	if src1 != nil {
-		q2.source = NewWhere(q2.source, &ast.Nary{Tok: tok.And, Exprs: src1}, w.t)
+		q2.source1 = NewWhere(q2.source1, &ast.Nary{Tok: tok.And, Exprs: src1}, w.t)
 	}
 	if src2 != nil {
 		q2.source2 = NewWhere(q2.source2, &ast.Nary{Tok: tok.And, Exprs: src2}, w.t)

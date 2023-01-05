@@ -56,8 +56,8 @@ func (jt joinType) String() string {
 	}
 }
 
-func NewJoin(src, src2 Query, by []string) *Join {
-	b := set.Intersect(src.Columns(), src2.Columns())
+func NewJoin(src1, src2 Query, by []string) *Join {
+	b := set.Intersect(src1.Columns(), src2.Columns())
 	if len(b) == 0 {
 		panic("join: common columns required")
 	}
@@ -66,8 +66,8 @@ func NewJoin(src, src2 Query, by []string) *Join {
 	} else if !set.Equal(by, b) {
 		panic("join: by does not match common columns")
 	}
-	jn := &Join{Query2: Query2{source: src, source2: src2}, by: by}
-	k1 := containsKey(by, src.Keys())
+	jn := &Join{Query2: Query2{source1: src1, source2: src2}, by: by}
+	k1 := containsKey(by, src1.Keys())
 	k2 := containsKey(by, src2.Keys())
 	if k1 && k2 {
 		jn.joinType = one_one
@@ -82,7 +82,7 @@ func NewJoin(src, src2 Query, by []string) *Join {
 }
 
 func (jn *Join) String() string {
-	return parenQ2(jn.source) + " " + jn.stringOp() + " " + paren(jn.source2)
+	return parenQ2(jn.source1) + " " + jn.stringOp() + " " + paren(jn.source2)
 }
 
 func (jn *Join) stringOp() string {
@@ -101,23 +101,23 @@ func (jn *Join) SetTran(t QueryTran) {
 }
 
 func (jn *Join) Columns() []string {
-	return set.Union(jn.source.Columns(), jn.source2.Columns())
+	return set.Union(jn.source1.Columns(), jn.source2.Columns())
 }
 
 func (jn *Join) Indexes() [][]string {
 	// can really only provide source.indexes() but optimize may swap.
 	// optimize will return impossible for source2 indexes.
-	return set.UnionFn(jn.source.Indexes(), jn.source2.Indexes(), slices.Equal[string])
+	return set.UnionFn(jn.source1.Indexes(), jn.source2.Indexes(), slices.Equal[string])
 }
 
 func (jn *Join) Keys() [][]string {
 	switch jn.joinType {
 	case one_one:
-		return set.UnionFn(jn.source.Keys(), jn.source2.Keys(), set.Equal[string])
+		return set.UnionFn(jn.source1.Keys(), jn.source2.Keys(), set.Equal[string])
 	case one_n:
 		return jn.source2.Keys()
 	case n_one:
-		return jn.source.Keys()
+		return jn.source1.Keys()
 	case n_n:
 		return jn.keypairs()
 	default:
@@ -130,7 +130,7 @@ func (*Join) fastSingle() bool {
 }
 
 func (jn *Join) Fixed() []Fixed {
-	fixed, none := combineFixed(jn.source.Fixed(), jn.source2.Fixed())
+	fixed, none := combineFixed(jn.source1.Fixed(), jn.source2.Fixed())
 	if none {
 		jn.conflict = true
 	}
@@ -141,10 +141,10 @@ func (jn *Join) Transform() Query {
 	if jn.Fixed(); jn.conflict {
 		return NewNothing(jn.Columns())
 	}
-	jn.source = jn.source.Transform()
+	jn.source1 = jn.source1.Transform()
 	jn.source2 = jn.source2.Transform()
 	// propagate Nothing
-	if _, ok := jn.source.(*Nothing); ok {
+	if _, ok := jn.source1.(*Nothing); ok {
 		return NewNothing(jn.Columns())
 	}
 	if _, ok := jn.source2.(*Nothing); ok {
@@ -154,9 +154,9 @@ func (jn *Join) Transform() Query {
 }
 
 func (jn *Join) optimize(mode Mode, index []string, frac float64) (Cost, Cost, any) {
-	fwd := joinopt(jn.source, jn.source2, jn.joinType, jn.Nrows,
+	fwd := joinopt(jn.source1, jn.source2, jn.joinType, jn.Nrows,
 		mode, index, frac, jn.by)
-	rev := joinopt(jn.source2, jn.source, jn.joinType.reverse(), jn.Nrows,
+	rev := joinopt(jn.source2, jn.source1, jn.joinType.reverse(), jn.Nrows,
 		mode, index, frac, jn.by)
 	rev.fixcost += outOfOrder
 	if trace.JoinOpt.On() {
@@ -223,16 +223,16 @@ func joinopt(src1, src2 Query, joinType joinType, nrows func() (int, int),
 func (jn *Join) setApproach(index []string, frac float64, approach any, tran QueryTran) {
 	ap := approach.(*joinApproach)
 	if ap.reverse {
-		jn.source, jn.source2 = jn.source2, jn.source
+		jn.source1, jn.source2 = jn.source2, jn.source1
 		jn.joinType = jn.joinType.reverse()
 	}
-	jn.source = SetApproach(jn.source, index, frac, tran)
+	jn.source1 = SetApproach(jn.source1, index, frac, tran)
 	jn.source2 = SetApproach(jn.source2, ap.index2, ap.frac2, tran)
-	jn.hdr1 = jn.source.Header()
+	jn.hdr1 = jn.source1.Header()
 }
 
 func (jn *Join) Nrows() (int, int) {
-	n1, p1 := jn.source.Nrows()
+	n1, p1 := jn.source1.Nrows()
 	n2, p2 := jn.source2.Nrows()
 	return jn.nrows(n1, p1, n2, p2), jn.pop(p1, p2)
 }
@@ -274,17 +274,17 @@ func (jn *Join) pop(p1, p2 int) int {
 }
 
 func (jn *Join) rowSize() int {
-	return jn.source.rowSize() + jn.source2.rowSize()
+	return jn.source1.rowSize() + jn.source2.rowSize()
 }
 
 func (jn *Join) lookupCost() int {
-	return jn.source.lookupCost() * 2 // ???
+	return jn.source1.lookupCost() * 2 // ???
 }
 
 // execution
 
 func (jn *Join) Rewind() {
-	jn.source.Rewind()
+	jn.source1.Rewind()
 	jn.row1 = nil
 	jn.row2 = nil
 }
@@ -302,7 +302,7 @@ func (jn *Join) Get(th *Thread, dir Dir) Row {
 }
 
 func (jn *Join) nextRow1(th *Thread, dir Dir) bool {
-	jn.row1 = jn.source.Get(th, dir)
+	jn.row1 = jn.source1.Get(th, dir)
 	if jn.row1 == nil {
 		return false
 	}
@@ -319,13 +319,13 @@ func (jn *Join) projectRow(th *Thread, row Row) []string {
 }
 
 func (jn *Join) Select(cols, vals []string) {
-	jn.source.Select(cols, vals)
+	jn.source1.Select(cols, vals)
 	jn.row2 = nil
 }
 
 func (jn *Join) Lookup(th *Thread, cols, vals []string) Row {
 	defer jn.Rewind()
-	jn.row1 = jn.source.Lookup(th, cols, vals)
+	jn.row1 = jn.source1.Lookup(th, cols, vals)
 	if jn.row1 == nil {
 		return nil
 	}
@@ -345,12 +345,12 @@ type LeftJoin struct {
 	empty2  Row
 }
 
-func NewLeftJoin(src, src2 Query, by []string) *LeftJoin {
-	return &LeftJoin{Join: *NewJoin(src, src2, by)}
+func NewLeftJoin(src1, src2 Query, by []string) *LeftJoin {
+	return &LeftJoin{Join: *NewJoin(src1, src2, by)}
 }
 
 func (lj *LeftJoin) String() string {
-	return parenQ2(lj.source) + " " + lj.stringOp() + " " + paren(lj.source2)
+	return parenQ2(lj.source1) + " " + lj.stringOp() + " " + paren(lj.source2)
 }
 
 func (lj *LeftJoin) stringOp() string {
@@ -358,7 +358,7 @@ func (lj *LeftJoin) stringOp() string {
 }
 
 func (lj *LeftJoin) Indexes() [][]string {
-	return lj.source.Indexes()
+	return lj.source1.Indexes()
 }
 
 func (lj *LeftJoin) Keys() [][]string {
@@ -366,7 +366,7 @@ func (lj *LeftJoin) Keys() [][]string {
 	// because multiple right sides can be missing/blank
 	switch lj.joinType {
 	case one_one, n_one:
-		return lj.source.Keys()
+		return lj.source1.Keys()
 	case one_n, n_n:
 		return lj.keypairs()
 	default:
@@ -375,27 +375,27 @@ func (lj *LeftJoin) Keys() [][]string {
 }
 
 func (lj *LeftJoin) Fixed() []Fixed {
-	return lj.source.Fixed()
+	return lj.source1.Fixed()
 }
 
 func (lj *LeftJoin) Transform() Query {
 	if lj.Join.Fixed(); lj.conflict {
-		return lj.source.Transform() // remove useless left join
+		return lj.source1.Transform() // remove useless left join
 	}
-	lj.source = lj.source.Transform()
+	lj.source1 = lj.source1.Transform()
 	lj.source2 = lj.source2.Transform()
 	// propagate Nothing
-	if _, ok := lj.source.(*Nothing); ok {
+	if _, ok := lj.source1.(*Nothing); ok {
 		return NewNothing(lj.Columns())
 	}
 	if _, ok := lj.source2.(*Nothing); ok {
-		return lj.source
+		return lj.source1
 	}
 	return lj
 }
 
 func (lj *LeftJoin) optimize(mode Mode, index []string, frac float64) (Cost, Cost, any) {
-	best := joinopt(lj.source, lj.source2, lj.joinType, lj.Nrows,
+	best := joinopt(lj.source1, lj.source2, lj.joinType, lj.Nrows,
 		mode, index, frac, lj.by)
 	return best.fixcost, best.varcost,
 		&joinApproach{index2: best.index, frac2: best.frac2}
@@ -403,14 +403,14 @@ func (lj *LeftJoin) optimize(mode Mode, index []string, frac float64) (Cost, Cos
 
 func (lj *LeftJoin) setApproach(index []string, frac float64, approach any, tran QueryTran) {
 	ap := approach.(*joinApproach)
-	lj.source = SetApproach(lj.source, index, frac, tran)
+	lj.source1 = SetApproach(lj.source1, index, frac, tran)
 	lj.source2 = SetApproach(lj.source2, ap.index2, ap.frac2, tran)
 	lj.empty2 = make(Row, len(lj.source2.Header().Fields))
-	lj.hdr1 = lj.source.Header()
+	lj.hdr1 = lj.source1.Header()
 }
 
 func (lj *LeftJoin) Nrows() (int, int) {
-	n1, p1 := lj.source.Nrows()
+	n1, p1 := lj.source1.Nrows()
 	n2, p2 := lj.source2.Nrows()
 	return lj.nrows(n1, p1, n2, p2), lj.pop(p1, p2)
 }
@@ -478,7 +478,7 @@ func (lj *LeftJoin) shouldOutput(row Row) bool {
 
 func (lj *LeftJoin) Lookup(th *Thread, cols, vals []string) Row {
 	defer lj.Rewind()
-	lj.row1 = lj.source.Lookup(th, cols, vals)
+	lj.row1 = lj.source1.Lookup(th, cols, vals)
 	if lj.row1 == nil {
 		return nil
 	}

@@ -21,9 +21,9 @@ type intersectApproach struct {
 	reverse  bool
 }
 
-func NewIntersect(src, src2 Query) *Intersect {
+func NewIntersect(src1, src2 Query) *Intersect {
 	var it Intersect
-	it.source, it.source2 = src, src2
+	it.source1, it.source2 = src1, src2
 	it.init(it.calcFixed)
 	return &it
 }
@@ -37,11 +37,11 @@ func (it *Intersect) stringOp() string {
 }
 
 func (it *Intersect) Columns() []string {
-	return set.Intersect(it.source.Columns(), it.source2.Columns())
+	return set.Intersect(it.source1.Columns(), it.source2.Columns())
 }
 
 func (it *Intersect) Keys() [][]string {
-	k := set.IntersectFn(it.source.Keys(), it.source2.Keys(), set.Equal[string])
+	k := set.IntersectFn(it.source1.Keys(), it.source2.Keys(), set.Equal[string])
 	if len(k) == 0 {
 		k = [][]string{it.Columns()}
 	}
@@ -49,7 +49,7 @@ func (it *Intersect) Keys() [][]string {
 }
 
 func (it *Intersect) calcFixed(fixed1, fixed2 []Fixed) []Fixed {
-	fixed, none := FixedIntersect(it.source.Fixed(), it.source2.Fixed())
+	fixed, none := FixedIntersect(fixed1, fixed2)
 	if none {
 		it.conflict = true
 	}
@@ -57,14 +57,14 @@ func (it *Intersect) calcFixed(fixed1, fixed2 []Fixed) []Fixed {
 }
 
 func (it *Intersect) Indexes() [][]string {
-	return set.UnionFn(it.source.Indexes(), it.source2.Indexes(), slices.Equal[string])
+	return set.UnionFn(it.source1.Indexes(), it.source2.Indexes(), slices.Equal[string])
 }
 
 func (it *Intersect) Nrows() (int, int) {
 	if it.disjoint != "" {
 		return 0, 0
 	}
-	nrows1, pop1 := it.source.Nrows()
+	nrows1, pop1 := it.source1.Nrows()
 	nrows2, pop2 := it.source2.Nrows()
 	maxNrows := ord.Min(nrows1, nrows2)
 	maxPop := ord.Min(pop1, pop2)
@@ -78,10 +78,10 @@ func (it *Intersect) Transform() Query {
 	if it.Fixed(); it.conflict {
 		return NewNothing(it.Columns())
 	}
-	it.source = it.source.Transform()
+	it.source1 = it.source1.Transform()
 	it.source2 = it.source2.Transform()
 	// propagate Nothing
-	if _, ok := it.source.(*Nothing); ok {
+	if _, ok := it.source1.(*Nothing); ok {
 		return NewNothing(it.Columns())
 	}
 	if _, ok := it.source2.(*Nothing); ok {
@@ -96,8 +96,8 @@ func (*Intersect) fastSingle() bool {
 
 func (it *Intersect) optimize(mode Mode, index []string, frac float64) (Cost, Cost, any) {
 	assert.That(it.disjoint == "") // eliminated by Transform
-	fixcost1, varcost1, key1 := it.cost(it.source, it.source2, mode, index, frac)
-	fixcost2, varcost2, key2 := it.cost(it.source2, it.source, mode, index, frac)
+	fixcost1, varcost1, key1 := it.cost(it.source1, it.source2, mode, index, frac)
+	fixcost2, varcost2, key2 := it.cost(it.source2, it.source1, mode, index, frac)
 	fixcost2 += outOfOrder
 	if fixcost1+varcost1 < fixcost2+varcost2 {
 		return fixcost1, varcost1, &intersectApproach{keyIndex: key1}
@@ -105,12 +105,12 @@ func (it *Intersect) optimize(mode Mode, index []string, frac float64) (Cost, Co
 	return fixcost2, varcost2, &intersectApproach{keyIndex: key2, reverse: true}
 }
 
-func (*Intersect) cost(source, source2 Query, mode Mode, index []string, frac float64) (
+func (*Intersect) cost(src1, src2 Query, mode Mode, index []string, frac float64) (
 	Cost, Cost, []string) {
 	// iterate source and lookup on source2
-	fixcost1, varcost1 := Optimize(source, mode, index, frac)
-	nrows1, _ := source.Nrows()
-	best2 := bestKey2(source2, mode, int(float64(nrows1)*frac))
+	fixcost1, varcost1 := Optimize(src1, mode, index, frac)
+	nrows1, _ := src1.Nrows()
+	best2 := bestKey2(src2, mode, int(float64(nrows1)*frac))
 	return fixcost1 + best2.fixcost, varcost1 + best2.varcost, best2.index
 }
 
@@ -119,20 +119,20 @@ func (it *Intersect) setApproach(index []string, frac float64, approach any,
 	ap := approach.(*intersectApproach)
 	it.keyIndex = ap.keyIndex
 	if ap.reverse {
-		it.source, it.source2 = it.source2, it.source
+		it.source1, it.source2 = it.source2, it.source1
 	}
-	it.source = SetApproach(it.source, index, frac, tran)
+	it.source1 = SetApproach(it.source1, index, frac, tran)
 	it.source2 = SetApproach(it.source2, it.keyIndex, 0, tran)
 }
 
 func (it *Intersect) Header() *Header {
-	hdr := it.source.Header()
+	hdr := it.source1.Header()
 	return NewHeader(hdr.Fields, it.Columns())
 }
 
 func (it *Intersect) Get(th *Thread, dir Dir) Row {
 	for {
-		row := it.source.Get(th, dir)
+		row := it.source1.Get(th, dir)
 		if row == nil || it.source2Has(th, row) {
 			return row
 		}
@@ -140,7 +140,7 @@ func (it *Intersect) Get(th *Thread, dir Dir) Row {
 }
 
 func (it *Intersect) Lookup(th *Thread, cols, vals []string) Row {
-	row := it.source.Lookup(th, cols, vals)
+	row := it.source1.Lookup(th, cols, vals)
 	if row == nil || it.source2Has(th, row) {
 		return row
 	}

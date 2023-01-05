@@ -44,9 +44,9 @@ const (
 	unionLookup
 )
 
-func NewUnion(src, src2 Query) *Union {
+func NewUnion(src1, src2 Query) *Union {
 	u := &Union{Compatible: Compatible{
-		Query2: Query2{source: src, source2: src2}}}
+		Query2: Query2{source1: src1, source2: src2}}}
 	u.init(u.calcFixed)
 	return u
 }
@@ -93,11 +93,12 @@ func (*Union) fastSingle() bool {
 
 func (u *Union) Indexes() [][]string {
 	// lookup can read via any index
-	return set.UnionFn(u.source.Indexes(), u.source2.Indexes(), slices.Equal[string])
+	return set.UnionFn(u.source1.Indexes(), u.source2.Indexes(),
+		slices.Equal[string])
 }
 
 func (u *Union) Nrows() (int, int) {
-	n1, p1 := u.source.Nrows()
+	n1, p1 := u.source1.Nrows()
 	n2, p2 := u.source2.Nrows()
 	return u.nrowsCalc(n1, n2), u.nrowsCalc(p1, p2)
 }
@@ -112,18 +113,18 @@ func (u *Union) nrowsCalc(n1, n2 int) int {
 }
 
 func (u *Union) rowSize() int {
-	return (u.source.rowSize() + u.source2.rowSize()) / 2
+	return (u.source1.rowSize() + u.source2.rowSize()) / 2
 }
 
 func (u *Union) Transform() Query {
-	u.source = u.source.Transform()
+	u.source1 = u.source1.Transform()
 	u.source2 = u.source2.Transform()
 	// propagate Nothing
-	if _, ok := u.source.(*Nothing); ok {
+	if _, ok := u.source1.(*Nothing); ok {
 		return u.source2
 	}
 	if _, ok := u.source2.(*Nothing); ok {
-		return u.source
+		return u.source1
 	}
 	return u
 }
@@ -147,7 +148,7 @@ func (u *Union) calcFixed(fixed1, fixed2 []Fixed) []Fixed {
 				Fixed{f1.col, set.Union(f1.values, emptyStr)})
 		}
 	}
-	cols1 := u.source.Columns()
+	cols1 := u.source1.Columns()
 	for _, f2 := range fixed2 {
 		if !slices.Contains(cols1, f2.col) {
 			fixed = append(fixed,
@@ -162,11 +163,11 @@ func (u *Union) optimize(mode Mode, index []string, frac float64) (Cost, Cost, a
 	if index != nil {
 		// if not disjoint then index must also be a key
 		if u.disjoint == "" &&
-			(!handlesIndex(u.source.Keys(), index) ||
+			(!handlesIndex(u.source1.Keys(), index) ||
 				!handlesIndex(u.source2.Keys(), index)) {
 			return impossible, impossible, nil
 		}
-		fixcost1, varcost1 := Optimize(u.source, mode, index, frac)
+		fixcost1, varcost1 := Optimize(u.source1, mode, index, frac)
 		fixcost2, varcost2 := Optimize(u.source2, mode, index, frac)
 		approach := &unionApproach{keyIndex: index, strategy: unionMerge,
 			idx1: index, idx2: index}
@@ -174,18 +175,18 @@ func (u *Union) optimize(mode Mode, index []string, frac float64) (Cost, Cost, a
 	}
 	// else no required index
 	if u.disjoint != "" {
-		fixcost1, varcost1 := Optimize(u.source, mode, nil, frac)
+		fixcost1, varcost1 := Optimize(u.source1, mode, nil, frac)
 		fixcost2, varcost2 := Optimize(u.source2, mode, nil, frac)
 		approach := &unionApproach{}
 		return fixcost1 + fixcost2, varcost1 + varcost2, approach
 	}
 	// else not disjoint
 	mergeFixCost, mergeVarCost, mergeApp :=
-		u.optMerge(u.source, u.source2, mode, frac)
+		u.optMerge(u.source1, u.source2, mode, frac)
 	lookupFixCost, lookupVarCost, lookupApp :=
-		u.optLookup(u.source, u.source2, mode, frac)
+		u.optLookup(u.source1, u.source2, mode, frac)
 	lookupRevFixCost, lookupRevVarCost, lookupRevApp :=
-		u.optLookup(u.source2, u.source, mode, frac)
+		u.optLookup(u.source2, u.source1, mode, frac)
 	fixcost, varcost, approach := min3(
 		mergeFixCost, mergeVarCost, mergeApp,
 		lookupFixCost, lookupVarCost, lookupApp,
@@ -210,15 +211,15 @@ func handlesIndex(keys [][]string, index []string) bool {
 	return slc.ContainsFn(keys, index, set.Equal[string])
 }
 
-func (*Union) optMerge(source, source2 Query, mode Mode, frac float64) (Cost, Cost, any) {
+func (*Union) optMerge(src1, src2 Query, mode Mode, frac float64) (Cost, Cost, any) {
 	// need key (unique) index to eliminate duplicates
-	keys := set.IntersectFn(source.Keys(), source2.Keys(), set.Equal[string])
+	keys := set.IntersectFn(src1.Keys(), src2.Keys(), set.Equal[string])
 	var bestKey, bestIdx1, bestIdx2 []string
 	bestFixCost := impossible
 	bestVarCost := impossible
 	opt := func(key, idx1, idx2 []string) {
-		fixcost1, varcost1 := Optimize(source, mode, idx1, frac)
-		fixcost2, varcost2 := Optimize(source2, mode, idx2, frac)
+		fixcost1, varcost1 := Optimize(src1, mode, idx1, frac)
+		fixcost2, varcost2 := Optimize(src2, mode, idx2, frac)
 		if fixcost1+varcost1+fixcost2+varcost2 < bestFixCost+bestVarCost {
 			bestKey = key
 			bestFixCost = fixcost1 + fixcost2
@@ -228,12 +229,12 @@ func (*Union) optMerge(source, source2 Query, mode Mode, frac float64) (Cost, Co
 	}
 	for _, key := range keys {
 		opt(key, key, key)
-		for _, idx1 := range source.Indexes() {
+		for _, idx1 := range src1.Indexes() {
 			if !set.Subset(idx1, key) {
 				continue
 			}
 			ik1 := set.Intersect(idx1, key)
-			for _, idx2 := range source2.Indexes() {
+			for _, idx2 := range src2.Indexes() {
 				ik2 := set.Intersect(idx2, key)
 				if slices.Equal(ik1, ik2) {
 					opt(key, idx1, idx2)
@@ -246,18 +247,18 @@ func (*Union) optMerge(source, source2 Query, mode Mode, frac float64) (Cost, Co
 	return bestFixCost, bestVarCost, approach
 }
 
-func (u *Union) optLookup(source, source2 Query, mode Mode, frac float64) (Cost, Cost, any) {
+func (u *Union) optLookup(src1, src2 Query, mode Mode, frac float64) (Cost, Cost, any) {
 	best := newBestIndex()
-	fixcost1, varcost1 := Optimize(source, mode, nil, frac)
-	nrows1, _ := source.Nrows()
-	for _, key := range source2.Keys() {
+	fixcost1, varcost1 := Optimize(src1, mode, nil, frac)
+	nrows1, _ := src1.Nrows()
+	for _, key := range src2.Keys() {
 		fixcost2, varcost2 :=
-			LookupCost(source2, mode, key, int(float64(nrows1)*frac))
+			LookupCost(src2, mode, key, int(float64(nrows1)*frac))
 		best.update(key, fixcost2, varcost2)
 	}
 	approach := &unionApproach{keyIndex: best.index, strategy: unionLookup,
 		idx1: nil, idx2: best.index}
-	if source == u.source2 {
+	if src1 == u.source2 {
 		approach.reverse = true
 		best.fixcost += outOfOrder
 	}
@@ -272,15 +273,15 @@ func (u *Union) setApproach(_ []string, frac float64, approach any, tran QueryTr
 	}
 	u.keyIndex = app.keyIndex
 	if app.reverse {
-		u.source, u.source2 = u.source2, u.source
+		u.source1, u.source2 = u.source2, u.source1
 	}
-	u.source = SetApproach(u.source, app.idx1, frac, tran)
+	u.source1 = SetApproach(u.source1, app.idx1, frac, tran)
 	if app.strategy == unionLookup {
 		frac = 0
 	}
 	u.source2 = SetApproach(u.source2, app.idx2, frac, tran)
 
-	u.empty1 = make(Row, len(u.source.Header().Fields))
+	u.empty1 = make(Row, len(u.source1.Header().Fields))
 	u.empty2 = make(Row, len(u.source2.Header().Fields))
 
 	u.rewound = true
@@ -289,7 +290,7 @@ func (u *Union) setApproach(_ []string, frac float64, approach any, tran QueryTr
 // execution --------------------------------------------------------
 
 func (u *Union) Rewind() {
-	u.source.Rewind()
+	u.source1.Rewind()
 	u.source2.Rewind()
 	u.rewound = true
 }
@@ -313,7 +314,7 @@ func (u *Union) getLookup(th *Thread, dir Dir) Row {
 	for {
 		if u.src1 {
 			for {
-				row = u.source.Get(th, dir)
+				row = u.source1.Get(th, dir)
 				if row == nil {
 					break
 				}
@@ -342,7 +343,7 @@ func (u *Union) getLookup(th *Thread, dir Dir) Row {
 
 func (u *Union) getMerge(th *Thread, dir Dir) Row {
 	if u.hdr1 == nil {
-		u.hdr1 = u.source.Header()
+		u.hdr1 = u.source1.Header()
 		u.hdr2 = u.source2.Header()
 	}
 
@@ -383,7 +384,7 @@ func (u *Union) getMerge(th *Thread, dir Dir) Row {
 }
 
 func (u *Union) fetch1(th *Thread, dir Dir) {
-	u.row1 = u.source.Get(th, dir)
+	u.row1 = u.source1.Get(th, dir)
 	if u.row1 == nil {
 		u.key1 = endKey(dir)
 	} else {
@@ -421,8 +422,7 @@ func endKey(dir Dir) string {
 }
 
 func (u *Union) Select(cols, vals []string) {
-	//BUG should use disjoint
-	u.source.Select(cols, vals)
+	u.source1.Select(cols, vals)
 	u.source2.Select(cols, vals)
 	u.rewound = true
 }

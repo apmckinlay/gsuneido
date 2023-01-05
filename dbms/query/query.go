@@ -485,21 +485,21 @@ func (q1 *Query1) Source() Query {
 
 type Query2 struct {
 	cache
-	source  Query
+	source1 Query
 	source2 Query
 }
 
 func (q2 *Query2) String2(op string) string {
-	return parenQ2(q2.source) + " " + op + " " + paren(q2.source2)
+	return parenQ2(q2.source1) + " " + op + " " + paren(q2.source2)
 }
 
 func (q2 *Query2) SetTran(t QueryTran) {
-	q2.source.SetTran(t)
+	q2.source1.SetTran(t)
 	q2.source2.SetTran(t)
 }
 
 func (q2 *Query2) Header() *runtime.Header {
-	return runtime.JoinHeaders(q2.source.Header(), q2.source2.Header())
+	return runtime.JoinHeaders(q2.source1.Header(), q2.source2.Header())
 }
 
 func (q2 *Query2) Updateable() string {
@@ -520,7 +520,7 @@ func (*Query2) Output(*runtime.Thread, runtime.Record) {
 
 func (q2 *Query2) keypairs() [][]string {
 	var keys [][]string
-	for _, k1 := range q2.source.Keys() {
+	for _, k1 := range q2.source1.Keys() {
 		for _, k2 := range q2.source2.Keys() {
 			keys = set.AddUniqueFn(keys, set.Union(k1, k2), set.Equal[string])
 		}
@@ -535,7 +535,7 @@ type q2i interface {
 }
 
 func (q2 *Query2) Source() Query {
-	return q2.source
+	return q2.source1
 }
 
 func (q2 *Query2) Source2() Query {

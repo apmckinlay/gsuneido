@@ -196,8 +196,8 @@ func (p *Project) Transform() Query {
 }
 
 func (p *Project) splitOver(q2 *Query2) Query {
-	q2.source = NewProject(q2.source,
-		set.Intersect(p.columns, q2.source.Columns()))
+	q2.source1 = NewProject(q2.source1,
+		set.Intersect(p.columns, q2.source1.Columns()))
 	q2.source2 = NewProject(q2.source2,
 		set.Intersect(p.columns, q2.source2.Columns()))
 	return p.source
@@ -208,8 +208,8 @@ func (p *Project) splitOver2(c *Compatible) Query {
 		// don't split if project doesn't include disjoint
 		return p
 	}
-	c.source = NewProject(c.source,
-		set.Intersect(p.columns, c.source.Columns()))
+	c.source1 = NewProject(c.source1,
+		set.Intersect(p.columns, c.source1.Columns()))
 	c.source2 = NewProject(c.source2,
 		set.Intersect(p.columns, c.source2.Columns()))
 	return p.source.Transform()

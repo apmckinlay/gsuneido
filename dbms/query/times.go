@@ -16,12 +16,12 @@ type Times struct {
 	row1    Row
 }
 
-func NewTimes(src, src2 Query) *Times {
-	if !set.Disjoint(src.Columns(), src2.Columns()) {
+func NewTimes(src1, src2 Query) *Times {
+	if !set.Disjoint(src1.Columns(), src2.Columns()) {
 		panic("times: common columns not allowed: " + str.Join(", ",
-			set.Intersect(src.Columns(), src2.Columns())))
+			set.Intersect(src1.Columns(), src2.Columns())))
 	}
-	return &Times{Query2: Query2{source: src, source2: src2}, rewound: true}
+	return &Times{Query2: Query2{source1: src1, source2: src2}, rewound: true}
 }
 
 func (t *Times) String() string {
@@ -33,7 +33,7 @@ func (t *Times) stringOp() string {
 }
 
 func (t *Times) Columns() []string {
-	return set.Union(t.source.Columns(), t.source2.Columns())
+	return set.Union(t.source1.Columns(), t.source2.Columns())
 }
 
 func (t *Times) Keys() [][]string {
@@ -44,23 +44,23 @@ func (t *Times) Keys() [][]string {
 
 func (t *Times) Indexes() [][]string {
 	// no columns in common so no indexes in common
-	return slc.With(t.source.Indexes(), t.source2.Indexes()...)
+	return slc.With(t.source1.Indexes(), t.source2.Indexes()...)
 }
 
 func (t *Times) Fixed() []Fixed {
-	fixed, _ := combineFixed(t.source.Fixed(), t.source2.Fixed())
+	fixed, _ := combineFixed(t.source1.Fixed(), t.source2.Fixed())
 	return fixed
 }
 
 func (t *Times) rowSize() int {
-	return t.source.rowSize() + t.source2.rowSize()
+	return t.source1.rowSize() + t.source2.rowSize()
 }
 
 func (t *Times) Transform() Query {
-	t.source = t.source.Transform()
+	t.source1 = t.source1.Transform()
 	t.source2 = t.source2.Transform()
 	// propagate Nothing
-	if _, ok := t.source.(*Nothing); ok {
+	if _, ok := t.source1.(*Nothing); ok {
 		return NewNothing(t.Columns())
 	}
 	if _, ok := t.source2.(*Nothing); ok {
@@ -76,8 +76,8 @@ func (t *Times) optimize(mode Mode, index []string, frac float64) (Cost, Cost, a
 		fixcost2, varcost2 := Optimize(src2, mode, nil, frac*float64(nrows1))
 		return fixcost1 + fixcost2, varcost1 + varcost2
 	}
-	fixFwd, varFwd := opt(t.source, t.source2)
-	fixRev, varRev := opt(t.source2, t.source)
+	fixFwd, varFwd := opt(t.source1, t.source2)
+	fixRev, varRev := opt(t.source2, t.source1)
 	fixRev += outOfOrder
 	if fixFwd+varFwd < fixRev+varRev {
 		return fixFwd, varFwd, false
@@ -87,15 +87,15 @@ func (t *Times) optimize(mode Mode, index []string, frac float64) (Cost, Cost, a
 
 func (t *Times) setApproach(index []string, frac float64, approach any, tran QueryTran) {
 	if approach.(bool) {
-		t.source, t.source2 = t.source2, t.source
+		t.source1, t.source2 = t.source2, t.source1
 	}
-	t.source = SetApproach(t.source, index, frac, tran)
-	nrows1, _ := t.source.Nrows()
+	t.source1 = SetApproach(t.source1, index, frac, tran)
+	nrows1, _ := t.source1.Nrows()
 	t.source2 = SetApproach(t.source2, nil, frac*float64(nrows1), tran)
 }
 
 func (t *Times) Nrows() (int, int) {
-	n1, p1 := t.source.Nrows()
+	n1, p1 := t.source1.Nrows()
 	n2, p2 := t.source2.Nrows()
 	return n1 * n2, p1 * p2
 }
@@ -104,7 +104,7 @@ func (t *Times) Nrows() (int, int) {
 
 func (t *Times) Rewind() {
 	t.rewound = true
-	t.source.Rewind()
+	t.source1.Rewind()
 	t.source2.Rewind()
 }
 
@@ -112,13 +112,13 @@ func (t *Times) Get(th *Thread, dir Dir) Row {
 	row2 := t.source2.Get(th, dir)
 	if t.rewound {
 		t.rewound = false
-		t.row1 = t.source.Get(th, dir)
+		t.row1 = t.source1.Get(th, dir)
 		if t.row1 == nil || row2 == nil {
 			return nil
 		}
 	}
 	if row2 == nil {
-		t.row1 = t.source.Get(th, dir)
+		t.row1 = t.source1.Get(th, dir)
 		if t.row1 == nil {
 			return nil
 		}
@@ -129,7 +129,7 @@ func (t *Times) Get(th *Thread, dir Dir) Row {
 }
 
 func (t *Times) Select(cols, vals []string) {
-	t.source.Select(cols, vals)
+	t.source1.Select(cols, vals)
 	t.source2.Rewind()
 	t.rewound = true
 }
@@ -142,9 +142,9 @@ func (t *Times) Lookup(th *Thread, cols, vals []string) Row {
 }
 
 func (t *Times) lookupCost() int {
-	return t.source.lookupCost() * 2 // ???
+	return t.source1.lookupCost() * 2 // ???
 }
 
 func (t *Times) fastSingle() bool {
-	return t.source.fastSingle() && t.source2.fastSingle()
+	return t.source1.fastSingle() && t.source2.fastSingle()
 }

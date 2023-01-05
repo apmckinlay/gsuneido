@@ -23,8 +23,8 @@ type Compatible struct {
 
 // init sets disjoint
 func (c *Compatible) init(calcFixed func(fixed1, fixed2 []Fixed) []Fixed) {
-	c.allCols = set.Union(c.source.Columns(), c.source2.Columns())
-	fixed1 := c.source.Fixed()
+	c.allCols = set.Union(c.source1.Columns(), c.source2.Columns())
+	fixed1 := c.source1.Fixed()
 	fixed2 := c.source2.Fixed()
 	c.fixed = calcFixed(fixed1, fixed2)
 	for _, f1 := range fixed1 {
@@ -42,7 +42,7 @@ func (c *Compatible) init(calcFixed func(fixed1, fixed2 []Fixed) []Fixed) {
 			return
 		}
 	}
-	cols1 := c.source.Columns()
+	cols1 := c.source1.Columns()
 	for _, f2 := range fixed2 {
 		if !slices.Contains(cols1, f2.col) && !slices.Contains(f2.values, "") {
 			c.disjoint = f2.col
@@ -76,7 +76,7 @@ func (c *Compatible) source2Has(th *Thread, row Row) bool {
 		return false
 	}
 	if c.hdr1 == nil { // once only
-		c.hdr1 = c.source.Header()
+		c.hdr1 = c.source1.Header()
 		c.hdr2 = c.source2.Header()
 	}
 	cols := slices.Clip(c.keyIndex)
@@ -111,7 +111,7 @@ func bestKey2(src2 Query, mode Mode, nrows int) bestIndex {
 }
 
 func (c *Compatible) lookupCost() int {
-	cost := c.source.lookupCost()
+	cost := c.source1.lookupCost()
 	if c.disjoint == "" {
 		cost += c.source2.lookupCost()
 	}
@@ -127,13 +127,13 @@ type Compatible1 struct {
 }
 
 func (c1 *Compatible1) Rewind() {
-	c1.source.Rewind()
+	c1.source1.Rewind()
 }
 
 func (c1 *Compatible1) Select(cols, vals []string) {
-	c1.source.Select(cols, vals)
+	c1.source1.Select(cols, vals)
 }
 
 func (c1 *Compatible1) rowSize() int {
-	return c1.source.rowSize()
+	return c1.source1.rowSize()
 }
