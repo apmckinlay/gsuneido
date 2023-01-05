@@ -26,15 +26,15 @@ import (
 type tran struct {
 	db    *Database
 	meta  *meta.Meta
-	state tstate
+	status tranStatus
 	asof  int64
 	off   uint64
 }
 
-type tstate byte
+type tranStatus byte
 
 const (
-	active tstate = iota
+	active tranStatus = iota
 	completed
 	commitFailed
 	aborted
@@ -96,7 +96,7 @@ func (t *tran) GetView(name string) string {
 }
 
 func (t *tran) Ended() bool {
-	return t.state != active
+	return t.status != active
 }
 
 func (t *tran) GetStore() *stor.Stor {
@@ -225,10 +225,10 @@ func (t *ReadTran) MakeLess(is *ixkey.Spec) func(x, y uint64) bool {
 }
 
 func (t *ReadTran) Complete() string {
-	if t.state == aborted {
+	if t.status == aborted {
 		return "can't Complete a transaction after failure or Abort"
 	}
-	t.state = completed
+	t.status = completed
 	return ""
 }
 
@@ -237,7 +237,7 @@ func (t *ReadTran) Conflict() string {
 }
 
 func (t *ReadTran) Abort() string {
-	t.state = aborted
+	t.status = aborted
 	return ""
 }
 
@@ -276,13 +276,13 @@ func (t *UpdateTran) WriteCount() int {
 
 // Complete returns "" on success, otherwise an error
 func (t *UpdateTran) Complete() string {
-	if t.state == aborted || t.state == commitFailed {
+	if t.status == aborted || t.status == commitFailed {
 		return "can't Complete a transaction after failure or Abort"
 	}
 	if t.db.ck.Commit(t) {
-		t.state = completed
+		t.status = completed
 	} else { // aborted
-		t.state = commitFailed
+		t.status = commitFailed
 		return t.ct.failure.Load()
 	}
 	return ""
@@ -307,13 +307,13 @@ func (t *UpdateTran) commit() int {
 
 // Abort returns "" if it succeeds or if the transaction was already aborted.
 func (t *UpdateTran) Abort() string {
-	switch t.state {
+	switch t.status {
 	case aborted, commitFailed:
 		return ""
 	case completed:
 		return "already completed"
 	}
-	t.state = aborted
+	t.status = aborted
 	if !t.db.ck.Abort(t.ct, "aborted") {
 		return "abort failed"
 	}
