@@ -9,6 +9,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/generic/ord"
 	"github.com/apmckinlay/gsuneido/util/generic/set"
+	"github.com/apmckinlay/gsuneido/util/generic/slc"
 	"github.com/apmckinlay/gsuneido/util/str"
 	"golang.org/x/exp/slices"
 )
@@ -195,6 +196,9 @@ type bestJoin struct {
 
 func joinopt(src1, src2 Query, joinType joinType, nrows func() (int, int),
 	mode Mode, index []string, frac float64, by []string) bestJoin {
+	if slc.Empty(index) && !src1.fastSingle() {
+		return bestJoin{bestIndex: newBestIndex()} // impossible
+	}
 	// always have to read all of source 1
 	fixcost1, varcost1 := Optimize(src1, mode, index, frac)
 	if fixcost1+varcost1 >= impossible {

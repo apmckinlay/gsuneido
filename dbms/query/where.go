@@ -454,7 +454,7 @@ func (w *Where) optimize(mode Mode, index []string, frac float64) (Cost, Cost, a
 			return 0, 0, nil
 		}
 	}
-	assert.That(!w.singleton || len(index) == 0)
+	assert.That(!w.singleton || index == nil)
 	// we always have the option of just filtering (no specific index use)
 	filterFixCost, filterVarCost := Optimize(w.source, mode, index, frac)
 	if w.tbl == nil || w.tbl.singleton {
@@ -1154,7 +1154,7 @@ func (w *Where) Select(cols, vals []string) {
 		w.source.Select(cols, vals)
 		return
 	}
-	
+
 	cols = slices.Clip(cols)
 	vals = slices.Clip(vals)
 	for _, fix := range w.Fixed() {

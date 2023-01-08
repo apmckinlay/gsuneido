@@ -137,3 +137,8 @@ func With[S ~[]E, E any](s1 S, s2 ...E) S {
 func Swap[E any](data []E, i, j int) {
 	data[i], data[j] = data[j], data[i]
 }
+
+// Empty returns true if the list is empty but not nil
+func Empty[E any](s []E) bool {
+	return s != nil && len(s) == 0
+}

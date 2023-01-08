@@ -77,6 +77,10 @@ func (w what) String() string {
 	}[w]
 }
 
+func (w what) Set() {
+	cur |= w
+}
+
 func (w what) Println(first any, rest ...any) {
 	// kept short in hopes it will be inlined
 	if cur&w != 0 {
@@ -108,7 +112,11 @@ func Print(s string) {
 var printer = message.NewPrinter(language.English)
 
 func format(p *any) {
-	switch (*p).(type) {
+	switch x := (*p).(type) {
+	case []string:
+		if x == nil {
+			*p = "nil"
+		}
 	case int, uint, int32, uint32, int64, uint64:
 		// add commas to make big numbers more readable
 		*p = Number(*p)

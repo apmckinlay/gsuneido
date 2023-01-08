@@ -268,7 +268,7 @@ func optTempIndex(q Query, mode Mode, index []string, frac float64) (
 		traceQO("impossible index not a subset of columns")
 		return impossible, impossible, nil
 	}
-	if len(index) == 0 || !tempIndexable(mode) {
+	if index == nil || !tempIndexable(mode) {
 		fixcost, varcost, approach = q.optimize(mode, index, frac)
 		if fixcost < 0 || varcost < 0 {
 			trace.Println(mode, index, frac, "=", fixcost, varcost)
