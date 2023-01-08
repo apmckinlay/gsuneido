@@ -1148,6 +1148,13 @@ func (w *Where) Select(cols, vals []string) {
 		return
 	}
 
+	if w.idxSel == nil {
+		// if this where is not using an index selection
+		// then just pass the Select to the source
+		w.source.Select(cols, vals)
+		return
+	}
+	
 	cols = slices.Clip(cols)
 	vals = slices.Clip(vals)
 	for _, fix := range w.Fixed() {
@@ -1155,12 +1162,6 @@ func (w *Where) Select(cols, vals []string) {
 			cols = append(cols, fix.col)
 			vals = append(vals, fix.values[0])
 		}
-	}
-	if w.idxSel == nil {
-		// if this where is not using an index selection
-		// then just pass the Select to the source
-		w.source.Select(cols, vals)
-		return
 	}
 	w.selOrg, w.selEnd = selKeys(w.idxSel.encoded, w.idxSel.index, cols, vals)
 	w.selSet = true
