@@ -72,7 +72,7 @@ func (a *Unary) Columns() []string {
 // Binary -----------------------------------------------------------
 
 // CanEvalRaw returns true if Eval doesn't need to unpack the values.
-// It sets b.evalRaw which is later used by Eval.
+// It sets evalRaw and Packed which are used later by Eval.
 func (a *Binary) CanEvalRaw(cols []string) bool {
 	if a.canEvalRaw2(cols) {
 		a.evalRaw = true

@@ -144,9 +144,9 @@ func TestFracPos(t *testing.T) {
 func TestWhereNrows(t *testing.T) {
 	test := func(query string, nrows int) {
 		t.Helper()
-		w := ParseQuery(query, testTran{}, nil).(*Where)
-		w.optInit()
-		assert.That(w.tbl != nil)
+		var tran testTran
+		w := ParseQuery(query, tran, nil)
+		Setup(w, ReadMode, tran)
 		n, p := w.Nrows()
 		assert.T(t).This(n).Is(nrows)
 		assert.T(t).This(p).Is(100)
@@ -158,4 +158,6 @@ func TestWhereNrows(t *testing.T) {
 	test("inven where item in (1,2,3)", 3)
 	test("inven where item > 2 and item < 4", 20)
 	test("inven where item > 2 and item < 4 and qty", 10)
+	test("hist where date is 3", 5) // half of 1/10 (not 1 since not key)
+	test("inven extend x where x > 5", 50) // not on table
 }

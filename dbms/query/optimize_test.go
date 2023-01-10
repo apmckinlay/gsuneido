@@ -32,6 +32,8 @@ func TestOptimize(t *testing.T) {
 		"trans^(date,item,id)")
 	test("table sort c",
 		"table^(a) TEMPINDEX(c)")
+	test("hist where date is 5",
+		"hist^(date) WHERE date is 5") // not WHERE*1
 
 	test("table rename b to bb sort c",
 		"table^(a) TEMPINDEX(c) RENAME b to bb")

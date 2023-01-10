@@ -59,7 +59,7 @@ func TestFixed(t *testing.T) {
 	test2("tables extend x=1 leftjoin (columns extend x=2)",
 		"tables EXTEND x = 1")
 	test2("table where a = 1 and a = 2",
-		"table WHERE nothing") //TODO should be just: table
+		"NOTHING")
 	test2("(table union table2) where a = 1",
 		"table^(a) WHERE*1 a is 1")
 	test2("(table minus table2) where a = 1",

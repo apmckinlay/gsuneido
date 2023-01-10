@@ -293,3 +293,19 @@ func (hdr *Header) AppendDerived(fields []string) []string {
 	assert.That(!slices.Contains(fields, ""))
 	return fields
 }
+
+// Physical is the fields without deleted ("-")
+func (hdr *Header) Physical() []string {
+	if len(hdr.Fields) == 1 && !slices.Contains(hdr.Fields[0], "-") {
+		return hdr.Fields[0]
+	}
+	result := make([]string, 0, len(hdr.Columns))
+	for _, flds := range hdr.Fields {
+		for _, fld := range flds {
+			if fld != "-" {
+				result = append(result, fld)
+			}
+		}
+	}
+	return result
+}

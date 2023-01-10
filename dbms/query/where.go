@@ -22,6 +22,9 @@ import (
 	"golang.org/x/exp/slices"
 )
 
+// NOTE: Where source and expr should NOT be modified,
+// instead, construct a new one with NewWhere
+
 type Where struct {
 	Query1
 	expr       *ast.Nary // And
@@ -34,6 +37,7 @@ type Where struct {
 	ctx       ast.Context
 	// exprMore is whether expr has more than the minimum idxSel
 	exprMore bool
+	colSels  map[string]filter
 	// singleton is true if we know the result is at most one record
 	// because there is a single point select on a key
 	singleton bool
@@ -75,7 +79,13 @@ func NewWhere(src Query, expr ast.Expr, t QueryTran) *Where {
 	if nary, ok := expr.(*ast.Nary); !ok || nary.Tok != tok.And {
 		expr = &ast.Nary{Tok: tok.And, Exprs: []ast.Expr{expr}}
 	}
-	return &Where{Query1: Query1{source: src}, expr: expr.(*ast.Nary), t: t}
+	w := &Where{Query1: Query1{source: src}, expr: expr.(*ast.Nary), t: t}
+	w.calcFixed()
+	cmps := w.extractCompares()
+	w.exprMore = len(cmps) < len(w.expr.Exprs)
+	w.colSels = w.comparesToFilters(cmps)
+	w.conflict = w.conflict || w.exprFalse()
+	return w
 }
 
 func (w *Where) SetTran(t QueryTran) {
@@ -103,15 +113,17 @@ func (w *Where) stringOp() string {
 }
 
 func (w *Where) Fixed() []Fixed {
-	if w.fixed != nil {
-		return w.fixed
-	}
-	whereFixed := w.exprsToFixed()
-	fixed, none := combineFixed(w.source.Fixed(), whereFixed)
+	return w.fixed
+}
+
+// calcFixed sets w.whereFixed and w.fixed and may set w.conflict
+func (w *Where) calcFixed() {
+	w.whereFixed = w.exprsToFixed()
+	fixed, none := combineFixed(w.source.Fixed(), w.whereFixed)
 	if none {
 		w.conflict = true
 	}
-	return fixed
+	w.fixed = fixed
 }
 
 func (w *Where) exprsToFixed() []Fixed {
@@ -138,7 +150,7 @@ func (w *Where) Keys() [][]string {
 	if !w.optInited {
 		w.optInit()
 	}
-	if w.singleton {
+	if w.singleton || w.conflict {
 		return [][]string{{}} // intentionally {} not nil
 	}
 	return w.source.Keys()
@@ -151,7 +163,7 @@ func (w *Where) fastSingle() bool {
 	if !w.optInited {
 		w.optInit()
 	}
-	return w.singleton
+	return w.singleton || w.conflict
 }
 
 func (w *Where) Indexes() [][]string {
@@ -189,12 +201,10 @@ func (w *Where) calcNrows() (int, int) {
 		ix := &w.idxSels[i]
 		var n int
 		if ix.isRanges() {
-			n = int(ix.frac * nsrc)
+			n = int(math.Round(ix.frac * nsrc))
 		} else { // points
 			n = len(ix.ptrngs)
 		}
-		// TODO: if indexes are independant and the data is random
-		// then we should be multiplying fractions, not taking the minimum.
 		if n < est {
 			est = n
 		}
@@ -210,7 +220,7 @@ func (w *Where) Transform() Query {
 		// remove empty where
 		return w.source.Transform()
 	}
-	if w.Fixed(); w.conflict || w.exprConflict() {
+	if w.conflict {
 		return NewNothing(w.Columns())
 	}
 	if tl := w.tablesLookup(); tl != nil {
@@ -225,29 +235,25 @@ func (w *Where) Transform() Query {
 	switch q := w.source.(type) {
 	case *Where:
 		// combine consecutive where's
+		exprs := w.expr.Exprs
 		for {
-			exprs := slc.With(q.expr.Exprs, w.expr.Exprs...)
-			w.expr = &ast.Nary{Tok: tok.And, Exprs: exprs}
-			w.source = q.source
-			if q, _ = w.source.(*Where); q == nil {
+			exprs = slc.With(q.expr.Exprs, exprs...)
+			if src, ok := q.source.(*Where); ok {
+				q = src
+			} else {
 				break
 			}
 		}
-		return w.Transform() // RECURSE
+		e := &ast.Nary{Tok: tok.And, Exprs: exprs}
+		return NewWhere(q.source, e, w.t).Transform() // RECURSE
 	case *Project:
 		// move where before project
-		w.source = q.source
-		q.source = w
+		q.source = NewWhere(q.source, w.expr, w.t)
 		return q.Transform()
 	case *Rename:
 		// move where before rename
 		newExpr := renameExpr(w.expr, q.to, q.from)
-		w.source = q.source
-		if newExpr == w.expr {
-			q.source = w
-		} else {
-			q.source = NewWhere(q.source, newExpr.(*ast.Nary), w.t)
-		}
+		q.source = NewWhere(q.source, newExpr, w.t)
 		return q.Transform()
 	case *Extend:
 		// move where before extend, unless it depends on rules
@@ -264,7 +270,8 @@ func (w *Where) Transform() Query {
 				&ast.Nary{Tok: tok.And, Exprs: src1}, w.t)
 		}
 		if rest != nil {
-			w.expr = &ast.Nary{Tok: tok.And, Exprs: rest}
+			e := &ast.Nary{Tok: tok.And, Exprs: rest}
+			w = NewWhere(q, e, w.t)
 		} else {
 			moved = true
 		}
@@ -284,7 +291,8 @@ func (w *Where) Transform() Query {
 				&ast.Nary{Tok: tok.And, Exprs: src1}, w.t)
 		}
 		if rest != nil {
-			w.expr = &ast.Nary{Tok: tok.And, Exprs: rest}
+			e := &ast.Nary{Tok: tok.And, Exprs: rest}
+			w = NewWhere(q, e, w.t)
 		} else {
 			moved = true
 		}
@@ -308,10 +316,10 @@ func (w *Where) Transform() Query {
 		moved = true
 	case *Times:
 		// split where over product
-		moved = w.split(&q.Query2)
+		moved, w = w.split(&q.Query2)
 	case *Join:
 		// split where over join
-		moved = w.split(&q.Query2)
+		moved, w = w.split(&q.Query2)
 	case *LeftJoin:
 		// split where over leftjoin (left side only)
 		cols1 := q.source1.Columns()
@@ -328,7 +336,8 @@ func (w *Where) Transform() Query {
 				&ast.Nary{Tok: tok.And, Exprs: src1}, w.t)
 		}
 		if common != nil {
-			w.expr = &ast.Nary{Tok: tok.And, Exprs: common}
+			e := &ast.Nary{Tok: tok.And, Exprs: common}
+			w = NewWhere(q, e, w.t)
 		} else {
 			moved = true
 		}
@@ -410,7 +419,7 @@ func nEmpty(n int) []ast.Expr {
 	return list
 }
 
-func (w *Where) split(q2 *Query2) bool {
+func (w *Where) split(q2 *Query2) (bool, *Where) {
 	cols1 := q2.source1.Columns()
 	cols2 := q2.source2.Columns()
 	var common, src1, src2 []ast.Expr
@@ -438,11 +447,10 @@ func (w *Where) split(q2 *Query2) bool {
 		q2.source2 = NewWhere(q2.source2, &ast.Nary{Tok: tok.And, Exprs: src2}, w.t)
 	}
 	if common != nil {
-		w.expr = &ast.Nary{Tok: tok.And, Exprs: common}
-	} else {
-		return true
+		e := &ast.Nary{Tok: tok.And, Exprs: common}
+		return false, NewWhere(w.source, e, w.t)
 	}
-	return false
+	return true, w
 }
 
 // optimize ---------------------------------------------------------
@@ -450,9 +458,9 @@ func (w *Where) split(q2 *Query2) bool {
 func (w *Where) optimize(mode Mode, index []string, frac float64) (Cost, Cost, any) {
 	if !w.optInited {
 		w.optInit()
-		if w.conflict {
-			return 0, 0, nil
-		}
+	}
+	if w.conflict {
+		return 0, 0, nil
 	}
 	assert.That(!w.singleton || index == nil)
 	// we always have the option of just filtering (no specific index use)
@@ -469,7 +477,8 @@ func (w *Where) optimize(mode Mode, index []string, frac float64) (Cost, Cost, a
 	return 0, cost, whereApproach{index: index}
 }
 
-func (w *Where) exprConflict() bool {
+// exprFalse checks if any expressions folded to false
+func (w *Where) exprFalse() bool {
 	//TODO also check for always true
 	for _, expr := range w.expr.Exprs {
 		if c, ok := expr.(*ast.Constant); ok && c.Val == runtime.False {
@@ -481,25 +490,18 @@ func (w *Where) exprConflict() bool {
 
 func (w *Where) optInit() {
 	w.optInited = true
-	if w.tbl, _ = w.source.(*Table); w.tbl == nil {
-		return
-	}
-	w.whereFixed = w.exprsToFixed()
-	w.fixed = w.Fixed() // cache
-	cmps := w.extractCompares()
-	w.exprMore = len(cmps) < len(w.expr.Exprs)
-	colSels := w.comparesToFilters(cmps)
-	if !w.conflict {
-		w.idxSels = w.colSelsToIdxSels(colSels)
+	w.tbl, _ = w.source.(*Table)
+	if !w.conflict && w.tbl != nil {
+		w.idxSels = w.colSelsToIdxSels(w.colSels)
 		w.exprMore = w.exprMore || len(w.idxSels) > 1
 		if !w.exprMore {
 			// check if any colSels were not used by idxSels
 			for _, idxSel := range w.idxSels {
 				for _, col := range idxSel.index {
-					delete(colSels, col)
+					delete(w.colSels, col)
 				}
 			}
-			w.exprMore = w.exprMore || len(colSels) > 0
+			w.exprMore = w.exprMore || len(w.colSels) > 0
 		}
 	}
 	w.nrows, w.srcpop = w.calcNrows()
@@ -507,7 +509,7 @@ func (w *Where) optInit() {
 
 // extractCompares finds sub-expressions like <field> <op> <constant>
 func (w *Where) extractCompares() []cmpExpr {
-	cols := w.tbl.schema.Columns
+	cols := w.source.Header().Physical()
 	cmps := make([]cmpExpr, 0, 4)
 	for _, expr := range w.expr.Exprs {
 		if expr.CanEvalRaw(cols) {
@@ -531,6 +533,8 @@ func (w *Where) extractCompares() []cmpExpr {
 	return cmps
 }
 
+// comparesToFilters combines multiple compares for each field.
+// It also sets w.conflict if any filter cannot match anything.
 func (w *Where) comparesToFilters(cmps []cmpExpr) map[string]filter {
 	// sort to group columns
 	sort.Slice(cmps, func(i, j int) bool { return cmps[i].col < cmps[j].col })
@@ -820,6 +824,7 @@ func (is idxSel) singleton() bool {
 // We can use an index if leading columns have vals
 // and optionally a final column has a range.
 // This does not need to be all the index columns, it can be a prefix of them.
+// It also sets w.singleton
 func (w *Where) colSelsToIdxSels(colSels map[string]filter) []idxSel {
 	indexes := w.tbl.Indexes()
 	idxSels := make([]idxSel, 0, len(indexes)/2)
@@ -1016,9 +1021,6 @@ func (w *Where) idxFrac(idx []string, ptrngs []pointRange) float64 {
 var MakeSuTran func(qt QueryTran) *runtime.SuTran
 
 func (w *Where) Get(th *runtime.Thread, dir runtime.Dir) runtime.Row {
-	if w.conflict {
-		return nil
-	}
 	for {
 		row := w.get(th, dir)
 		if w.filter(th, row) {
@@ -1118,10 +1120,6 @@ func (w *Where) Rewind() {
 }
 
 func (w *Where) Select(cols, vals []string) {
-	if w.conflict {
-		return
-	}
-
 	w.Rewind()
 	if cols == nil && vals == nil { // clear select
 		w.selOrg, w.selEnd = "", ""
@@ -1157,7 +1155,7 @@ func (w *Where) Select(cols, vals []string) {
 
 	cols = slices.Clip(cols)
 	vals = slices.Clip(vals)
-	for _, fix := range w.Fixed() {
+	for _, fix := range w.fixed {
 		if len(fix.values) == 1 {
 			cols = append(cols, fix.col)
 			vals = append(vals, fix.values[0])
@@ -1171,7 +1169,6 @@ func (w *Where) selectFixed(cols, vals []string) (satisfied, conflict bool) {
 	// Note: conflict could come from any of expr, not just fixed.
 	// But to evaluate that would require building a Row.
 	// It should be rare.
-	w.Fixed()
 	satisfied = true
 	for i, col := range cols {
 		if fv := getFixed(w.whereFixed, col); len(fv) == 1 {
@@ -1186,9 +1183,6 @@ func (w *Where) selectFixed(cols, vals []string) (satisfied, conflict bool) {
 }
 
 func (w *Where) Lookup(th *runtime.Thread, cols, vals []string) runtime.Row {
-	if w.conflict {
-		return nil
-	}
 	if w.singleton {
 		// can't use source.Lookup because cols may not match source index
 		w.Rewind()

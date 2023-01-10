@@ -80,7 +80,9 @@ type Expr interface {
 	Echo() string
 	// Eval, CanEvalRaw, and Columns are used by queries
 	Eval(*Context) Value
-	CanEvalRaw(cols []string) bool
+	// CanEvalRaw returns true if Eval doesn't need to unpack the values.
+	// It sets Packed which is later used by Eval.
+	CanEvalRaw(flds []string) bool
 	Columns() []string
 }
 type exprNodeT struct {

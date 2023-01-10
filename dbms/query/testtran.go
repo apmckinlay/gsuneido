@@ -119,7 +119,8 @@ func (t testTran) GetStore() *stor.Stor {
 
 func (t testTran) RangeFrac(table string, iIndex int, org, end string) float64 {
 	schema := t.GetSchema(table)
-	decode := len(schema.Indexes[iIndex].Columns) > 1
+	ix := schema.Indexes[iIndex]
+	decode := len(ix.Columns) > 1 || ix.Mode != 'k'
 	orgPos := t.fracPos(org, decode)
 	endPos := t.fracPos(end, decode)
 	return endPos - orgPos
