@@ -35,15 +35,11 @@ func NewRename(src Query, from, to []string) *Rename {
 }
 
 func (r *Rename) renameDependencies(src []string) {
-	copy := false
-	for i := 0; i < len(r.from); i++ {
+	r.from = slices.Clip(r.from)
+	r.to = slices.Clip(r.to)
+	for i,n := 0, len(r.from); i < n; i++ {
 		deps := r.from[i] + "_deps"
-		if slices.Contains(src, deps) {
-			if !copy {
-				r.from = slices.Clone(r.from)
-				r.to = slices.Clone(r.to)
-				copy = true
-			}
+		if slices.Contains(src, deps) && !slices.Contains(r.from, deps) {
 			r.from = append(r.from, deps)
 			r.to = append(r.to, r.to[i]+"_deps")
 		}
@@ -108,9 +104,12 @@ func (r *Rename) Transform() Query {
 		return r.source.Transform()
 	}
 	// combine Renames
-	for r2, ok := r.source.(*Rename); ok; r2, ok = r.source.(*Rename) {
-		from := append(r2.from, r.from...)
-		to := append(r2.to, r.to...)
+	src := r.source
+	from := r.from
+	to := r.to
+	for r2, ok := src.(*Rename); ok; r2, ok = src.(*Rename) {
+		from = slc.With(r2.from, from...)
+		to = slc.With(r2.to, to...)
 		dst := 0
 	outer:
 		for i := 0; i < len(from); i++ {
@@ -126,16 +125,15 @@ func (r *Rename) Transform() Query {
 			}
 			dst++
 		}
-		r.from = from[:dst]
-		r.to = to[:dst]
-		r.source = r2.source
+		from = from[:dst]
+		to = to[:dst]
+		src = r2.source
 	}
-	r.source = r.source.Transform()
-	// propagate Nothing
-	if _, ok := r.source.(*Nothing); ok {
-		return NewNothing(r.Columns())
+	src = src.Transform()
+	if _, ok := src.(*Nothing); ok {
+		return NewNothing(slc.Replace(src.Columns(), from, to))
 	}
-	return r
+	return NewRename(src, from, to)
 }
 
 func (r *Rename) optimize(mode Mode, index []string, frac float64) (Cost, Cost, any) {

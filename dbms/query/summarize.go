@@ -194,7 +194,13 @@ func (*Summarize) Output(*Thread, Record) {
 }
 
 func (su *Summarize) Transform() Query {
-	su.source = su.source.Transform()
+	src := su.source.Transform()
+	if _, ok := src.(*Nothing); ok {
+		return NewNothing(su.Columns())
+	}
+	if src != su.source {
+		return NewSummarize(src, su.by, su.cols, su.ops, su.ons)
+	}
 	return su
 }
 

@@ -4,6 +4,7 @@
 package query
 
 import (
+	"github.com/apmckinlay/gsuneido/compile/ast"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
@@ -63,11 +64,11 @@ func (u *Union) stringOp() string {
 	case unionLookup:
 		if u.disjoint == "" {
 			strategy += "-LOOKUP"
-			// if u.keyIndex != nil {
-			// 	strategy += "^" + str.Join("(,)", u.keyIndex)
-			// }
 		}
 	}
+	// if u.keyIndex != nil {
+	// 	strategy += str.Join("(,)", u.keyIndex)
+	// }
 	return u.Compatible.stringOp("UNION", strategy)
 }
 
@@ -117,14 +118,28 @@ func (u *Union) rowSize() int {
 }
 
 func (u *Union) Transform() Query {
-	u.source1 = u.source1.Transform()
-	u.source2 = u.source2.Transform()
-	// propagate Nothing
-	if _, ok := u.source1.(*Nothing); ok {
-		return u.source2
+	src1 := u.source1.Transform()
+	src2 := u.source2.Transform()
+	if _, ok := src1.(*Nothing); ok {
+		cols := set.Difference(u.source1.Columns(), u.source2.Columns())
+		if len(cols) == 0 {
+			return src2
+		}
+		var empty ast.Expr = &ast.Constant{Val: EmptyStr}
+		exprs := slc.Repeat(empty, len(cols))
+		return NewExtend(src2, cols, exprs)
 	}
-	if _, ok := u.source2.(*Nothing); ok {
-		return u.source1
+	if _, ok := src2.(*Nothing); ok {
+		cols := set.Difference(src2.Columns(), src1.Columns())
+		if len(cols) == 0 {
+			return src1
+		}
+		var empty ast.Expr = &ast.Constant{Val: EmptyStr}
+		exprs := slc.Repeat(empty, len(cols))
+		return NewExtend(src1, cols, exprs)
+	}
+	if src1 != u.source1 || src2 != u.source2 {
+		return NewUnion(src1, src2)
 	}
 	return u
 }

@@ -69,6 +69,7 @@ type Where struct {
 
 type whereApproach struct {
 	index []string
+	cost  Cost
 }
 
 func NewWhere(src Query, expr ast.Expr, t QueryTran) *Where {
@@ -226,12 +227,11 @@ func (w *Where) Transform() Query {
 	if tl := w.tablesLookup(); tl != nil {
 		return tl
 	}
-
 	if lj := w.leftJoinToJoin(); lj != nil {
 		// convert leftjoin to join
-		w.source = NewJoin(lj.source1, lj.source2, lj.by)
+		src := NewJoin(lj.source1, lj.source2, lj.by)
+		return NewWhere(src, w.expr, w.t).Transform()
 	}
-	moved := false
 	switch q := w.source.(type) {
 	case *Where:
 		// combine consecutive where's
@@ -245,110 +245,121 @@ func (w *Where) Transform() Query {
 			}
 		}
 		e := &ast.Nary{Tok: tok.And, Exprs: exprs}
-		return NewWhere(q.source, e, w.t).Transform() // RECURSE
+		return NewWhere(q.source, e, w.t).Transform()
 	case *Project:
 		// move where before project
-		q.source = NewWhere(q.source, w.expr, w.t)
+		q = NewProject(NewWhere(q.source, w.expr, w.t), q.columns)
 		return q.Transform()
 	case *Rename:
 		// move where before rename
 		newExpr := renameExpr(w.expr, q.to, q.from)
-		q.source = NewWhere(q.source, newExpr, w.t)
-		return q.Transform()
+		src := NewWhere(q.source, newExpr, w.t)
+		return NewRename(src, q.from, q.to).Transform()
 	case *Extend:
 		// move where before extend, unless it depends on rules
-		var src1, rest []ast.Expr
+		var before, after []ast.Expr
 		for _, e := range w.expr.Exprs {
 			if q.needRule(e.Columns()) {
-				rest = append(rest, e)
+				after = append(after, e)
 			} else {
-				src1 = append(src1, replaceExpr(e, q.cols, q.exprs))
+				before = append(before, replaceExpr(e, q.cols, q.exprs))
 			}
 		}
-		if src1 != nil {
-			q.source = NewWhere(q.source,
-				&ast.Nary{Tok: tok.And, Exprs: src1}, w.t)
+		if before == nil { // no split
+			return w.transform()
 		}
-		if rest != nil {
-			e := &ast.Nary{Tok: tok.And, Exprs: rest}
-			w = NewWhere(q, e, w.t)
-		} else {
-			moved = true
+		src := NewWhere(q.source,
+			&ast.Nary{Tok: tok.And, Exprs: before}, w.t)
+		q = NewExtend(src, q.cols, q.exprs)
+		if after == nil {
+			return q.Transform()
 		}
+		e := &ast.Nary{Tok: tok.And, Exprs: after}
+		return NewWhere(q, e, w.t).Transform()
 	case *Summarize:
 		// split where before & after summarize
 		cols1 := q.source.Columns()
-		var src1, rest []ast.Expr
+		var before, after []ast.Expr
 		for _, e := range w.expr.Exprs {
 			if set.Subset(cols1, e.Columns()) {
-				src1 = append(src1, e)
+				before = append(before, e)
 			} else {
-				rest = append(rest, e)
+				after = append(after, e)
 			}
 		}
-		if src1 != nil {
-			q.source = NewWhere(q.source,
-				&ast.Nary{Tok: tok.And, Exprs: src1}, w.t)
+		if before == nil { // no split
+			return w.transform()
 		}
-		if rest != nil {
-			e := &ast.Nary{Tok: tok.And, Exprs: rest}
-			w = NewWhere(q, e, w.t)
-		} else {
-			moved = true
+		src := NewWhere(q.source,
+			&ast.Nary{Tok: tok.And, Exprs: before}, w.t)
+		q = NewSummarize(src, q.by, q.cols, q.ops, q.ons)
+		if after == nil {
+			return q
 		}
+		e := &ast.Nary{Tok: tok.And, Exprs: after}
+		return NewWhere(q, e, w.t).Transform()
 	case *Intersect:
 		// distribute where over intersect
 		// no project because Intersect Columns are the intersection
-		q.source1 = NewWhere(q.source1, w.expr, w.t)
-		q.source2 = NewWhere(q.source2, w.expr, w.t)
-		moved = true
+		src1 := NewWhere(q.source1, w.expr, w.t)
+		src2 := NewWhere(q.source2, w.expr, w.t)
+		return NewIntersect(src1, src2).Transform()
 	case *Minus:
 		// distribute where over minus
 		// need project because Minus Columns are just the left side's
-		q.source1 = NewWhere(q.source1, w.expr, w.t)
-		q.source2 = NewWhere(q.source2, w.project(q.source2), w.t)
-		moved = true
+		src1 := NewWhere(q.source1, w.expr, w.t)
+		src2 := NewWhere(q.source2, w.project(q.source2), w.t)
+		return NewMinus(src1, src2).Transform()
 	case *Union:
 		// distribute where over union
 		// need project because Union Columns is the union
-		q.source1 = NewWhere(q.source1, w.project(q.source1), w.t)
-		q.source2 = NewWhere(q.source2, w.project(q.source2), w.t)
-		moved = true
+		src1 := NewWhere(q.source1, w.project(q.source1), w.t)
+		src2 := NewWhere(q.source2, w.project(q.source2), w.t)
+		return NewUnion(src1, src2).Transform()
 	case *Times:
 		// split where over product
-		moved, w = w.split(&q.Query2)
+		return w.split(q, func(src1, src2 Query) Query {
+			return NewTimes(src1, src2)
+		})
 	case *Join:
 		// split where over join
-		moved, w = w.split(&q.Query2)
+		return w.split(q, func(src1, src2 Query) Query {
+			return NewJoin(src1, src2, q.by)
+		})
 	case *LeftJoin:
 		// split where over leftjoin (left side only)
 		cols1 := q.source1.Columns()
-		var common, src1 []ast.Expr
+		var common, exprs1 []ast.Expr
 		for _, e := range w.expr.Exprs {
 			if set.Subset(cols1, e.Columns()) {
-				src1 = append(src1, e)
+				exprs1 = append(exprs1, e)
 			} else {
 				common = append(common, e)
 			}
 		}
-		if src1 != nil {
-			q.source1 = NewWhere(q.source1,
-				&ast.Nary{Tok: tok.And, Exprs: src1}, w.t)
+		if exprs1 == nil { // no split
+			return w.transform()
 		}
-		if common != nil {
-			e := &ast.Nary{Tok: tok.And, Exprs: common}
-			w = NewWhere(q, e, w.t)
-		} else {
-			moved = true
+		src1 := NewWhere(q.source1,
+			&ast.Nary{Tok: tok.And, Exprs: exprs1}, w.t)
+		q2 := NewLeftJoin(src1, q.source2, q.by).Transform()
+		if common == nil {
+			return q2
 		}
+		e := &ast.Nary{Tok: tok.And, Exprs: common}
+		return NewWhere(q2, e, w.t)
+	default:
+		return w.transform()
 	}
-	w.source = w.source.Transform()
-	if moved {
-		return w.source
+}
+
+func (w *Where) transform() Query {
+	src := w.source.Transform()
+	if _,ok := src.(*Nothing); ok {
+		return NewNothing(w.Columns())
 	}
-	// propagate Nothing
-	if _, ok := w.source.(*Nothing); ok {
-		return w.source
+	if src != w.source {
+		return NewWhere(src, w.expr, w.t)
 	}
 	return w
 }
@@ -419,62 +430,72 @@ func nEmpty(n int) []ast.Expr {
 	return list
 }
 
-func (w *Where) split(q2 *Query2) (bool, *Where) {
-	cols1 := q2.source1.Columns()
-	cols2 := q2.source2.Columns()
-	var common, src1, src2 []ast.Expr
+func (w *Where) split(q2 Query, newQ2 func(Query, Query) Query) Query {
+	src2 := q2.(q2i).Source2()
+	src1 := q2.(q2i).Source()
+	cols1 := src1.Columns()
+	cols2 := src2.Columns()
+	var common, exprs1, exprs2 []ast.Expr
 	for _, e := range w.expr.Exprs {
 		used := false
 		if set.Subset(cols1, e.Columns()) {
-			src1 = append(src1, e)
+			exprs1 = append(exprs1, e)
 			used = true
 		}
 		if set.Subset(cols2, (e.Columns())) {
 			if used {
 				e = replaceExpr(e, nil, nil) // copy Binary/In CouldEvalRaw
 			}
-			src2 = append(src2, e)
+			exprs2 = append(exprs2, e)
 			used = true
 		}
 		if !used {
 			common = append(common, e)
 		}
 	}
-	if src1 != nil {
-		q2.source1 = NewWhere(q2.source1, &ast.Nary{Tok: tok.And, Exprs: src1}, w.t)
+	if exprs1 != nil {
+		src1 = NewWhere(src1, &ast.Nary{Tok: tok.And, Exprs: exprs1}, w.t)
 	}
-	if src2 != nil {
-		q2.source2 = NewWhere(q2.source2, &ast.Nary{Tok: tok.And, Exprs: src2}, w.t)
+	if exprs2 != nil {
+		src2 = NewWhere(src2, &ast.Nary{Tok: tok.And, Exprs: exprs2}, w.t)
+	}
+	if exprs1 != nil || exprs2 != nil {
+		q2 = newQ2(src1, src2).Transform()
 	}
 	if common != nil {
 		e := &ast.Nary{Tok: tok.And, Exprs: common}
-		return false, NewWhere(w.source, e, w.t)
+		return NewWhere(q2, e, w.t)
 	}
-	return true, w
+	return q2
 }
 
 // optimize ---------------------------------------------------------
 
-func (w *Where) optimize(mode Mode, index []string, frac float64) (Cost, Cost, any) {
+func (w *Where) optimize(mode Mode, index []string, frac float64) (f Cost, v Cost, a any) {
+	// defer fmt.Println("Where opt", index, frac, "=", f, v, a)
 	if !w.optInited {
 		w.optInit()
 	}
 	if w.conflict {
+		// fmt.Println("Where opt CONFLICT")
 		return 0, 0, nil
 	}
 	assert.That(!w.singleton || index == nil)
 	// we always have the option of just filtering (no specific index use)
 	filterFixCost, filterVarCost := Optimize(w.source, mode, index, frac)
 	if w.tbl == nil || w.tbl.singleton {
+		// fmt.Println("Where opt", index, frac, "= filter", filterFixCost, filterVarCost)
 		return filterFixCost, filterVarCost, nil
 	}
 	// where on table
-	cost, index := w.bestIndex(index, frac)
+	cost, idx := w.bestIndex(index, frac)
 	if cost >= impossible {
 		// only use the filter if there are no possible idxSel
+		// fmt.Println("Where opt", index, frac, "= filter", filterFixCost, filterVarCost)
 		return filterFixCost, filterVarCost, nil
 	}
-	return 0, cost, whereApproach{index: index}
+	// fmt.Println("Where opt", index, frac, "= ", idx, cost)
+	return 0, cost, whereApproach{index: idx, cost: cost}
 }
 
 // exprFalse checks if any expressions folded to false
@@ -569,7 +590,7 @@ func (w *Where) bestIndex(order []string, frac float64) (Cost, []string) {
 					tblFixCost, tblVarCost, _ :=
 						w.tbl.optimize(CursorMode, idx, frac*is.frac)
 					assert.That(tblFixCost == 0)
-					varcost += int(is.frac * float64(tblVarCost))
+					varcost += tblVarCost
 				}
 				best.update(idx, 0, varcost)
 			}
@@ -593,9 +614,11 @@ func (w *Where) setApproach(index []string, frac float64, app any, tran QueryTra
 		return
 	}
 	if app != nil {
-		idx := app.(whereApproach).index
+		wapp := app.(whereApproach)
+		idx := wapp.index
 		w.tbl.setIndex(idx)
 		w.idxSel = w.getIdxSel(idx)
+		w.tbl.cacheSetCost(frac*w.idxSel.frac, 0, wapp.cost)
 		w.idxSelPos = -1
 	} else { // filter
 		w.source = SetApproach(w.source, index, frac, tran)
@@ -1128,7 +1151,7 @@ func (w *Where) Select(cols, vals []string) {
 		w.selectVals = nil
 		return
 	}
-	satisfied, conflict := w.selectFixed(cols, vals)
+	satisfied, conflict := selectFixed(cols, vals, w.whereFixed)
 	if conflict {
 		w.selOrg, w.selEnd = ixkey.Max, ""
 		w.selSet = true
@@ -1156,7 +1179,7 @@ func (w *Where) Select(cols, vals []string) {
 	cols = slices.Clip(cols)
 	vals = slices.Clip(vals)
 	for _, fix := range w.fixed {
-		if len(fix.values) == 1 {
+		if len(fix.values) == 1 && !slices.Contains(cols, fix.col) {
 			cols = append(cols, fix.col)
 			vals = append(vals, fix.values[0])
 		}
@@ -1165,13 +1188,13 @@ func (w *Where) Select(cols, vals []string) {
 	w.selSet = true
 }
 
-func (w *Where) selectFixed(cols, vals []string) (satisfied, conflict bool) {
+func selectFixed(cols, vals []string, fixed []Fixed) (satisfied, conflict bool) {
 	// Note: conflict could come from any of expr, not just fixed.
 	// But to evaluate that would require building a Row.
 	// It should be rare.
 	satisfied = true
 	for i, col := range cols {
-		if fv := getFixed(w.whereFixed, col); len(fv) == 1 {
+		if fv := getFixed(fixed, col); len(fv) == 1 {
 			if fv[0] != vals[i] {
 				return false, true // conflict
 			}

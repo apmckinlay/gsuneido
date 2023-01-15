@@ -72,21 +72,24 @@ func (it *Intersect) Nrows() (int, int) {
 }
 
 func (it *Intersect) Transform() Query {
+	cols := it.Columns()
 	if it.disjoint != "" {
-		return NewNothing(it.Columns())
+		return NewNothing(cols)
 	}
 	if it.Fixed(); it.conflict {
-		return NewNothing(it.Columns())
+		return NewNothing(cols)
 	}
-	it.source1 = it.source1.Transform()
-	it.source2 = it.source2.Transform()
-	// propagate Nothing
-	if _, ok := it.source1.(*Nothing); ok {
-		return NewNothing(it.Columns())
+	src1 := it.source1.Transform()
+	if _, ok := src1.(*Nothing); ok {
+		return NewNothing(cols)
 	}
-	if _, ok := it.source2.(*Nothing); ok {
-		return NewNothing(it.Columns())
+	src2 := it.source2.Transform()
+	if _, ok := src2.(*Nothing); ok {
+		return NewNothing(cols)
 	}
+	if src1 != it.source1 || src2 != it.source2 {
+		return NewIntersect(src1, src2)
+    }
 	return it
 }
 

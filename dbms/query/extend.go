@@ -13,8 +13,8 @@ import (
 
 type Extend struct {
 	Query1
-	cols     []string   // modified by Project.transform
-	exprs    []ast.Expr // modified by Project.transform
+	cols     []string
+	exprs    []ast.Expr
 	exprCols []string
 	fixed    []Fixed
 	hasExprs bool
@@ -27,7 +27,18 @@ type Extend struct {
 func NewExtend(src Query, cols []string, exprs []ast.Expr) *Extend {
 	e := &Extend{Query1: Query1{source: src}, cols: cols, exprs: exprs}
 	e.checkDependencies()
-	e.init()
+	srcCols := e.source.Columns()
+	if !set.Disjoint(e.cols, srcCols) {
+		panic("extend: column(s) already exist")
+	}
+	var exprCols []string
+	for _, expr := range e.exprs {
+		if expr != nil {
+			e.hasExprs = true
+			exprCols = set.Union(exprCols, expr.Columns())
+		}
+	}
+	e.exprCols = exprCols
 	return e
 }
 
@@ -43,21 +54,6 @@ func (e *Extend) checkDependencies() {
 		}
 		avail = append(avail, e.cols[i])
 	}
-}
-
-func (e *Extend) init() {
-	srcCols := e.source.Columns()
-	if !set.Disjoint(e.cols, srcCols) {
-		panic("extend: column(s) already exist")
-	}
-	var cols []string
-	for _, expr := range e.exprs {
-		if expr != nil {
-			e.hasExprs = true
-			cols = set.Union(cols, expr.Columns())
-		}
-	}
-	e.exprCols = cols
 }
 
 func (e *Extend) SetTran(t QueryTran) {
@@ -98,17 +94,21 @@ func (e *Extend) Transform() Query {
 	if len(e.cols) == 0 {
 		return e.source.Transform()
 	}
+	src := e.source
+	cols := e.cols
+	exprs := e.exprs
 	// combine Extends
-	for e2, ok := e.source.(*Extend); ok; e2, ok = e.source.(*Extend) {
-		e.cols = append(e2.cols, e.cols...)
-		e.exprs = append(e2.exprs, e.exprs...)
-		e.source = e2.source
-		e.init()
+	for e2, ok := src.(*Extend); ok; e2, ok = src.(*Extend) {
+		src = e2.source
+		cols = append(e2.cols, cols...)
+		exprs = append(e2.exprs, exprs...)
 	}
-	e.source = e.source.Transform()
-	// propagate Nothing
-	if _, ok := e.source.(*Nothing); ok {
+	src = src.Transform()
+	if _, ok := src.(*Nothing); ok {
 		return NewNothing(e.Columns())
+	}
+	if src != e.source {
+		return NewExtend(src, cols, exprs)
 	}
 	return e
 }

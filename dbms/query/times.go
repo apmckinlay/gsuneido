@@ -57,15 +57,17 @@ func (t *Times) rowSize() int {
 }
 
 func (t *Times) Transform() Query {
-	t.source1 = t.source1.Transform()
-	t.source2 = t.source2.Transform()
-	// propagate Nothing
-	if _, ok := t.source1.(*Nothing); ok {
+	src1 := t.source1.Transform()
+	if _, ok := src1.(*Nothing); ok {
 		return NewNothing(t.Columns())
 	}
-	if _, ok := t.source2.(*Nothing); ok {
+	src2 := t.source2.Transform()
+	if _, ok := src2.(*Nothing); ok {
 		return NewNothing(t.Columns())
 	}
+	if src1 != t.source1 || src2 != t.source2 {
+		return NewTimes(src1, src2)
+    }
 	return t
 }
 

@@ -128,7 +128,7 @@ func Grow[S ~[]E, E any](s S, n int) S {
 
 // With returns a copy of the list with the values appended
 func With[S ~[]E, E any](s1 S, s2 ...E) S {
-	var result = make(S, len(s1)+len(s2))
+	result := make(S, len(s1)+len(s2))
 	copy(result, s1)
 	copy(result[len(s1):], s2)
 	return result
@@ -141,4 +141,10 @@ func Swap[E any](data []E, i, j int) {
 // Empty returns true if the list is empty but not nil
 func Empty[E any](s []E) bool {
 	return s != nil && len(s) == 0
+}
+
+func Repeat[E any](x E, n int) []E {
+	result := make([]E, n)
+	Fill(result, x)
+	return result
 }

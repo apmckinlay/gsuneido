@@ -7,6 +7,8 @@ import (
 	"strings"
 	"testing"
 
+	. "github.com/apmckinlay/gsuneido/runtime"
+
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
@@ -30,4 +32,10 @@ func TestGrouped(t *testing.T) {
 	test("a f1", "f2 a")
 	test("a f1 b f2", "a f1")
 	test("a f1 b f2", "f1 b f2 a")
+}
+
+func TestRemove(t *testing.T) {
+	tbl := &Table{hdr: SimpleHeader([]string{"a", "a_deps", "b", "b_deps", "c", "c_deps", "d", "d_deps", "x_lower!"})}
+	proj := NewRemove(tbl, []string{"a", "c"})
+	assert.T(t).This(proj.columns).Is([]string{"b", "b_deps", "d", "d_deps"})
 }

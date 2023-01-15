@@ -12,6 +12,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/sortlist"
 	"github.com/apmckinlay/gsuneido/util/str"
+	"golang.org/x/exp/slices"
 )
 
 // TempIndex is inserted by SetApproach as required
@@ -63,13 +64,32 @@ func (ti *TempIndex) Rewind() {
 }
 
 func (ti *TempIndex) Select(cols, vals []string) {
+	// similar to Where Select
+	ti.Rewind()
 	if cols == nil && vals == nil { // clear select
 		ti.selOrg, ti.selEnd = ixkey.Min, ixkey.Max
 		return
 	}
+	fixed := ti.source.Fixed()
+	satisfied, conflict := selectFixed(cols, vals, fixed)
+	if conflict {
+		ti.selOrg, ti.selEnd = ixkey.Max, ""
+		return
+	}
+	if satisfied {
+		ti.selOrg, ti.selEnd = ixkey.Min, ixkey.Max
+		return
+	}
+	cols = slices.Clip(cols)
+	vals = slices.Clip(vals)
+	for _, fix := range fixed {
+		if len(fix.values) == 1 && !slices.Contains(cols, fix.col) {
+			cols = append(cols, fix.col)
+			vals = append(vals, fix.values[0])
+		}
+	}
 	encode := len(ti.order) > 1
 	ti.selOrg, ti.selEnd = selKeys(encode, ti.order, cols, vals)
-	ti.Rewind()
 }
 
 func (ti *TempIndex) Lookup(th *Thread, cols, vals []string) Row {

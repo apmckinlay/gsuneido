@@ -45,10 +45,12 @@ func (sort *Sort) stringOp() string {
 }
 
 func (sort *Sort) Transform() Query {
-	sort.source = sort.source.Transform()
-	// propagate Nothing
-	if _, ok := sort.source.(*Nothing); ok {
-		return NewNothing(sort.Columns())
+	src := sort.source.Transform()
+	if _, ok := src.(*Nothing); ok {
+		return src
+	}
+	if src != sort.source {
+		return NewSort(src, sort.reverse, sort.columns)
 	}
 	return sort
 }

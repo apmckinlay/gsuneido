@@ -64,19 +64,20 @@ func (m *Minus) Nrows() (int, int) {
 }
 
 func (m *Minus) Transform() Query {
-	m.source1 = m.source1.Transform()
-	// remove if disjoint
 	if m.disjoint != "" {
 		return m.source1
 	}
-	m.source2 = m.source2.Transform()
-	// propagate Nothing
-	if _, ok := m.source1.(*Nothing); ok {
+	src1 := m.source1.Transform()
+	if _, ok := src1.(*Nothing); ok {
 		return NewNothing(m.Columns())
 	}
-	if _, ok := m.source2.(*Nothing); ok {
-		return m.source1
+	src2 := m.source2.Transform()
+	if _, ok := src2.(*Nothing); ok {
+		return src1
 	}
+	if src1 != m.source1 || src2 != m.source2 {
+		return NewMinus(src1, src2)
+    }
 	return m
 }
 

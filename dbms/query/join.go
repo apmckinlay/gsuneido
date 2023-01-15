@@ -4,6 +4,7 @@
 package query
 
 import (
+	"github.com/apmckinlay/gsuneido/compile/ast"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/runtime/trace"
 	"github.com/apmckinlay/gsuneido/util/assert"
@@ -139,17 +140,20 @@ func (jn *Join) Fixed() []Fixed {
 }
 
 func (jn *Join) Transform() Query {
+	cols := jn.Columns()
 	if jn.Fixed(); jn.conflict {
-		return NewNothing(jn.Columns())
+		return NewNothing(cols)
 	}
-	jn.source1 = jn.source1.Transform()
-	jn.source2 = jn.source2.Transform()
-	// propagate Nothing
-	if _, ok := jn.source1.(*Nothing); ok {
-		return NewNothing(jn.Columns())
+	src1 := jn.source1.Transform()
+	if _, ok := src1.(*Nothing); ok {
+		return NewNothing(cols)
 	}
-	if _, ok := jn.source2.(*Nothing); ok {
-		return NewNothing(jn.Columns())
+	src2 := jn.source2.Transform()
+	if _, ok := src2.(*Nothing); ok {
+		return NewNothing(cols)
+	}
+	if src1 != jn.source1 || src2 != jn.source2 {
+		return NewJoin(src1, src2, jn.by)
 	}
 	return jn
 }
@@ -383,17 +387,25 @@ func (lj *LeftJoin) Fixed() []Fixed {
 }
 
 func (lj *LeftJoin) Transform() Query {
-	if lj.Join.Fixed(); lj.conflict {
-		return lj.source1.Transform() // remove useless left join
-	}
-	lj.source1 = lj.source1.Transform()
-	lj.source2 = lj.source2.Transform()
-	// propagate Nothing
-	if _, ok := lj.source1.(*Nothing); ok {
+	src1 := lj.source1.Transform()
+	if _, ok := src1.(*Nothing); ok {
 		return NewNothing(lj.Columns())
 	}
-	if _, ok := lj.source2.(*Nothing); ok {
-		return lj.source1
+	src2 := lj.source2.Transform()
+	lj.Join.Fixed()
+	_, src2Nothing := src2.(*Nothing)
+	if lj.conflict || src2Nothing {
+		// remove useless left join
+		cols := set.Difference(lj.source2.Columns(), src1.Columns())
+		if len(cols) == 0 {
+			return src1
+		}
+		var empty ast.Expr = &ast.Constant{Val: EmptyStr}
+		exprs := slc.Repeat(empty, len(cols))
+		return NewExtend(src1, cols, exprs).Transform()
+	}
+	if src1 != lj.source1 || src2 != lj.source2 {
+		return NewLeftJoin(src1, src2, lj.by)
 	}
 	return lj
 }

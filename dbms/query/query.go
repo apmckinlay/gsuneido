@@ -57,6 +57,8 @@ type Query interface {
 
 	// Transform refactors the query for more efficient execution.
 	// This stage is not cost based, transforms are applied when possible.
+	//
+	// Transform methods MUST ensure they call Transform on their children.
 	Transform() Query
 
 	// SetTran is used for cursors
@@ -742,7 +744,7 @@ func format(q Query, indent int) string { // recursive
 	frac, fixcost, varcost := q.cacheCost()
 	cost := "{"
 	if frac != 1 {
-		cost += fmt.Sprintf("%.2fx ", frac)
+		cost += fmt.Sprintf("%.3fx ", frac)
 	}
 	cost += trace.Number(nrows)
 	if nrows != pop {

@@ -9,6 +9,7 @@ import (
 	"github.com/apmckinlay/gsuneido/compile/ast"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	. "github.com/apmckinlay/gsuneido/runtime"
+	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/generic/set"
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
 	"github.com/apmckinlay/gsuneido/util/str"
@@ -47,6 +48,16 @@ const (
 )
 
 func NewProject(src Query, cols []string) *Project {
+	assert.That(len(cols) > 0)
+	p := newProject(src, cols)
+	if p.unique {
+		p.includeDeps(src.Columns())
+	}
+	return p
+}
+
+// newProject does everything except adding _deps
+func newProject(src Query, cols []string) *Project {
 	cols = set.Unique(cols)
 	srcCols := src.Columns()
 	if !set.Subset(srcCols, cols) {
@@ -59,21 +70,23 @@ func NewProject(src Query, cols []string) *Project {
 		}
 	}
 	p := &Project{Query1: Query1{source: src}, columns: cols, rewound: true}
-	if hasKey(p.source.Keys(), cols, p.source.Fixed()) {
+	if hasKey(src.Keys(), cols, src.Fixed()) {
 		p.unique = true
-		p.includeDeps(srcCols)
 	}
 	return p
 }
 
 func NewRemove(src Query, cols []string) *Project {
-	cols = set.Difference(src.Columns(), cols)
-	if len(cols) == 0 {
+	proj := slc.WithoutFn(src.Columns(), func(col string) bool {
+		return slices.Contains(cols, col) ||
+			strings.HasSuffix(col, "_lower!") ||
+			(strings.HasSuffix(col, "_deps") &&
+				slices.Contains(cols, strings.TrimSuffix(col, "_deps")))
+	})
+	if len(proj) == 0 {
 		panic("remove: can't remove all columns")
 	}
-	cols = slc.WithoutFn(cols,
-		func(s string) bool { return strings.HasSuffix(s, "_lower!") })
-	return NewProject(src, cols)
+	return NewProject(src, proj)
 }
 
 // hasKey returns whether cols contains a key
@@ -160,59 +173,54 @@ func (p *Project) Nrows() (int, int) {
 }
 
 func (p *Project) Transform() Query {
-	p.source = p.source.Transform()
 	if set.Equal(p.columns, p.source.Columns()) {
 		// remove projects of all columns
-		return p.source
+		return p.source.Transform()
 	}
 	switch q := p.source.(type) {
 	case *Project:
 		// combine projects
-		p.columns = set.Intersect(p.columns, q.columns)
-		p.source = q.source
+		cols := set.Intersect(p.columns, q.columns)
+		return NewProject(q.source, cols).Transform()
 	case *Rename:
 		return p.transformRename(q)
 	case *Extend:
 		return p.transformExtend(q)
 	case *Times:
-		return p.splitOver(&q.Query2)
+		return NewTimes(p.splitOver(&q.Query2)).Transform()
 	case *Join:
 		if set.Subset(p.columns, q.by) {
-			return p.splitOver(&q.Query2)
+			src1, src2 := p.splitOver(&q.Query2)
+			return NewJoin(src1, src2, q.by).Transform()
 		}
 	case *LeftJoin:
 		if set.Subset(p.columns, q.by) {
-			return p.splitOver(&q.Query2)
+			src1, src2 := p.splitOver(&q.Query2)
+			return NewLeftJoin(src1, src2, q.by).Transform()
 		}
 	case *Union:
-		return p.splitOver2(&q.Compatible)
+		if p.splitable(&q.Compatible) {
+			return NewUnion(p.splitOver(&q.Query2)).Transform()
+		}
 	case *Intersect:
-		return p.splitOver2(&q.Compatible)
-	case *Nothing:
-		// propagate Nothing
-		return NewNothing(p.Columns())
+		if p.splitable(&q.Compatible) {
+			return NewIntersect(p.splitOver(&q.Query2)).Transform()
+		}
 	}
-	return p
+	return p.transform()
 }
 
-func (p *Project) splitOver(q2 *Query2) Query {
-	q2.source1 = NewProject(q2.source1,
+func (p *Project) splitOver(q2 *Query2) (Query, Query) {
+	src1 := newProject(q2.source1,
 		set.Intersect(p.columns, q2.source1.Columns()))
-	q2.source2 = NewProject(q2.source2,
+	src2 := newProject(q2.source2,
 		set.Intersect(p.columns, q2.source2.Columns()))
-	return p.source
+	return src1, src2
 }
 
-func (p *Project) splitOver2(c *Compatible) Query {
-	if c.disjoint != "" && !slices.Contains(p.columns, c.disjoint) {
-		// don't split if project doesn't include disjoint
-		return p
-	}
-	c.source1 = NewProject(c.source1,
-		set.Intersect(p.columns, c.source1.Columns()))
-	c.source2 = NewProject(c.source2,
-		set.Intersect(p.columns, c.source2.Columns()))
-	return p.source.Transform()
+func (p *Project) splitable(c *Compatible) bool {
+	// don't split if project doesn't include disjoint
+	return c.disjoint == "" || slices.Contains(p.columns, c.disjoint)
 }
 
 // transformRename moves projects before renames
@@ -231,22 +239,9 @@ func (p *Project) transformRename(r *Rename) Query {
 			newTo = append(newTo, to[i])
 		}
 	}
-	r.from = newFrom
-	r.to = newTo
-
-	// rename fields
-	var newCols []string
-	for _, col := range p.columns {
-		if i := slices.Index(to, col); i != -1 {
-			newCols = append(newCols, from[i])
-		} else {
-			newCols = append(newCols, col)
-		}
-	}
-	p.columns = newCols
-
-	p.source = r.source
-	r.source = p
+	newCols := slc.Replace(p.columns, to, from)
+	p = NewProject(r.source, newCols)
+	r = NewRename(p, newFrom, newTo)
 	return r.Transform()
 }
 
@@ -255,7 +250,7 @@ func (p *Project) transformRename(r *Rename) Query {
 func (p *Project) transformExtend(e *Extend) Query {
 	if e.hasRules() {
 		// rules make it too hard to determine what fields they use
-		return p
+		return p.transform()
 	}
 	// orig := Format(p)
 	extendDeps := exprsCols(e.exprs)
@@ -287,19 +282,29 @@ func (p *Project) transformExtend(e *Extend) Query {
 		// the before extend is irrelevant with ProjectNone
 		return NewExtend(&ProjectNone{}, afterCols, afterExprs)
 	}
-	p.columns = newProjCols
 	var result Query
 	if len(beforeCols) > 0 {
-		p.source = NewExtend(e.source, beforeCols, beforeExprs)
-		result = p
+		q := NewExtend(e.source, beforeCols, beforeExprs).Transform()
+		result = NewProject(q, newProjCols)
 	} else {
-		p.source = e.source // drop original extend since no columns left
-		result = p.Transform()
+		// drop original extend since no columns left
+		result = NewProject(e.source, newProjCols).Transform()
 	}
 	if len(afterCols) > 0 {
 		result = NewExtend(result, afterCols, afterExprs)
 	}
 	return result
+}
+
+func (p *Project) transform() Query {
+	src := p.source.Transform()
+	if _,ok := src.(*Nothing); ok {
+		return NewNothing(p.columns)
+	}
+	if src != p.source {
+		return newProject(src, p.columns)
+	}
+	return p
 }
 
 func exprsCols(exprs []ast.Expr) []string {

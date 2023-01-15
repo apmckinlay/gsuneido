@@ -4,26 +4,21 @@
 package tests
 
 // import (
+// 	"fmt"
 // 	"testing"
 
-// 	"github.com/apmckinlay/gsuneido/compile"
 // 	"github.com/apmckinlay/gsuneido/db19"
 // 	"github.com/apmckinlay/gsuneido/dbms/query"
 // 	. "github.com/apmckinlay/gsuneido/runtime"
+// 	"github.com/apmckinlay/gsuneido/runtime/trace"
 // )
 
 // func TestQuery(t *testing.T) {
-// 	Libload = func(t *Thread, name string) (result Value, e any) {
-// 		if name != "Rule_rule" {
-// 			return nil, nil
-// 		}
-// 		src := `function ()
-// 			{
-// 			this['foo' $ Random(10000)]
-// 			return .num
-// 			}`
-// 		return compile.NamedConstant("stdlib", name, src, nil), nil
+// 	if testing.Short() {
+// 		t.Skip("skipping test in short mode")
 // 	}
+// 	// Global.TestDef("Rule_c",
+// 	// 	compile.Constant("function() { return .b }"))
 // 	db, err := db19.OpenDatabaseRead("../suneido.db")
 // 	if err != nil {
 // 		panic(err.Error())
@@ -32,20 +27,14 @@ package tests
 // 		return nil
 // 	}
 // 	tran := db.NewReadTran()
-// 	s :=
-// 		`etalib
-// 		extend rule
-// 		where rule isnt 123
-// 		sort rule`
-// 	for i := 0; i < 16; i++ {
-// 		q := query.ParseQuery(s, tran, nil)
-// 		q, _ = query.Setup(q, query.ReadMode, tran)
-// 		th := &Thread{}
-// 		for {
-// 			row := q.Get(th, Next)
-// 			if row == nil {
-// 				break
-// 			}
-// 		}
-// 	}
+// 	s := `(cus join ((((ivc join aln) union (ivc join bln)) union ((ivc join bln) union (ivc join bln))) union ((ivc join aln) extend x8763182)))`
+// 	// s := `bln where ik = 86 and b2 is 45`
+// 	q := query.ParseQuery(s, tran, nil)
+// 	trace.QueryOpt.Set()
+// 	trace.JoinOpt.Set()
+// 	q, _, _ = query.Setup(q, query.ReadMode, tran)
+// 	fmt.Println("----------------")
+// 	fmt.Println(query.Format(q))
+// 	th := &Thread{}
+// 	q.Get(th, Next)
 // }

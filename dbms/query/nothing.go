@@ -27,8 +27,8 @@ func (no *Nothing) Transform() Query {
 	return no
 }
 
-func (*Nothing) Columns() []string {
-	return nil
+func (no *Nothing) Columns() []string {
+	return no.columns
 }
 
 func (*Nothing) Keys() [][]string {
