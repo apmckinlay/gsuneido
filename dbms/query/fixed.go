@@ -7,6 +7,7 @@ import (
 	"github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/generic/set"
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
+	"golang.org/x/exp/slices"
 )
 
 type Fixed struct {
@@ -55,6 +56,7 @@ func combineFixed(fixed1, fixed2 []Fixed) (result []Fixed, none bool) {
 			result = append(result, sf)
 		}
 	}
+	// process fixed2
 	for _, f2 := range fixed2 {
 		if srcvals := getFixed(fixed1, f2.col); srcvals != nil {
 			// field is in both
@@ -116,4 +118,9 @@ func getFixed(fixed []Fixed, col string) []string {
 func withoutFixed(cols []string, fixed []Fixed) []string {
 	return slc.WithoutFn(cols,
 		func(col string) bool { return isFixed(fixed, col) })
+}
+
+func fixedWith(fixed Fixed, val string) Fixed {
+	return Fixed{col: fixed.col,
+		values: append(slices.Clip(fixed.values), val)}
 }

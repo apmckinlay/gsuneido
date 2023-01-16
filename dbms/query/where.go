@@ -248,7 +248,7 @@ func (w *Where) Transform() Query {
 		return NewWhere(q.source, e, w.t).Transform()
 	case *Project:
 		// move where before project
-		q = NewProject(NewWhere(q.source, w.expr, w.t), q.columns)
+		q = newProject(NewWhere(q.source, w.expr, w.t), q.columns)
 		return q.Transform()
 	case *Rename:
 		// move where before rename

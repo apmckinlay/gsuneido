@@ -42,6 +42,12 @@ func TestFixed(t *testing.T) {
 
 	test("table extend f=1, g=2 rename g to h", "[f=(1), h=(2)]")
 
+	test("table extend x=1, y=2 leftjoin (table extend z=3)",
+		"[x=(1), y=(2), z=(3,'')]")
+
+	test("table extend x=1, y=2 leftjoin (table extend z=3, zz=4)",
+		"[x=(1), y=(2)]")
+
 	test2 := func(query string, expected string) {
 		t.Helper()
 		q := ParseQuery(query, testTran{}, nil)

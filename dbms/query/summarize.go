@@ -17,7 +17,8 @@ import (
 
 type Summarize struct {
 	Query1
-	by       []string
+	by []string
+	// cols, ops, and ons are parallel
 	cols     []string
 	ops      []string
 	ons      []string
@@ -194,6 +195,10 @@ func (*Summarize) Output(*Thread, Record) {
 }
 
 func (su *Summarize) Transform() Query {
+	if p, ok := su.source.(*Project); ok && p.unique {
+		// remove project-copy
+		su = NewSummarize(p.source, su.by, su.cols, su.ops, su.ons)
+	}
 	src := su.source.Transform()
 	if _, ok := src.(*Nothing); ok {
 		return NewNothing(su.Columns())

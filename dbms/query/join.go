@@ -383,7 +383,11 @@ func (lj *LeftJoin) Keys() [][]string {
 }
 
 func (lj *LeftJoin) Fixed() []Fixed {
-	return lj.source1.Fixed()
+	fixed := slices.Clip(lj.source1.Fixed())
+	if fixed2 := lj.source2.Fixed(); len(fixed2) == 1 {
+		fixed = append(fixed, fixedWith(fixed2[0], ""))
+	}
+	return fixed
 }
 
 func (lj *LeftJoin) Transform() Query {
@@ -392,9 +396,9 @@ func (lj *LeftJoin) Transform() Query {
 		return NewNothing(lj.Columns())
 	}
 	src2 := lj.source2.Transform()
-	lj.Join.Fixed()
 	_, src2Nothing := src2.(*Nothing)
-	if lj.conflict || src2Nothing {
+	_, none := combineFixed(src1.Fixed(), src2.Fixed())
+	if none || src2Nothing {
 		// remove useless left join
 		cols := set.Difference(lj.source2.Columns(), src1.Columns())
 		if len(cols) == 0 {

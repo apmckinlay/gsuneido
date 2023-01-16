@@ -37,6 +37,12 @@ func TestTransform(t *testing.T) {
 		"table")
 	test("table project a, b project b",
 		"table project b")
+	test("withdeps remove b",
+		"withdeps project a,c,c_deps")
+	test("withdeps remove b_deps, c_deps",
+		"withdeps project a,b,c")
+	test("withdeps rename b to bb, c to cc project a, bb",
+		"withdeps project a,b,b_deps rename b to bb, b_deps to bb_deps")
 
 	// combine extend's
 	test("customer extend a = 5 extend b = 6",
@@ -161,4 +167,16 @@ func TestTransform(t *testing.T) {
 	// ... but only if project includes join fields
 	test("(trans join by(id) customer) project city, item",
 		"(trans JOIN n:1 by(id) customer) PROJECT city,item")
+	// combine ... summarize ... project ...
+	test("table summarize a, total b project a",
+		"table project a")
+	test("table summarize a, min b, max b project a, min_b",
+		"table summarize a, min_b = min b")
+	test("table summarize a, total b project total_b",
+		"table summarize a, total_b = total b project total_b")
+	// combine ... project ... summarize ...
+	test("table project a, b summarize a, total b", // project-copy
+		"table summarize a, total_b = total b")
+	test("table project b, c summarize b, total c",
+		"table project b,c summarize b, total_c = total c")
 }

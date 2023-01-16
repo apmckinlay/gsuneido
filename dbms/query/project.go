@@ -86,7 +86,7 @@ func NewRemove(src Query, cols []string) *Project {
 	if len(proj) == 0 {
 		panic("remove: can't remove all columns")
 	}
-	return NewProject(src, proj)
+	return newProject(src, proj)
 }
 
 // hasKey returns whether cols contains a key
@@ -179,9 +179,29 @@ func (p *Project) Transform() Query {
 	}
 	switch q := p.source.(type) {
 	case *Project:
-		// combine projects
-		cols := set.Intersect(p.columns, q.columns)
-		return NewProject(q.source, cols).Transform()
+		// combine projects by removing all but the first
+		var src Query
+		for ok := true; ok; q, ok = q.source.(*Project) {
+			src = q.source
+		}
+		return newProject(src, p.columns).Transform()
+	case *Summarize:
+		cols := make([]string, 0, len(q.cols))
+		ops := make([]string, 0, len(q.ops))
+		ons := make([]string, 0, len(q.ons))
+		for i, col := range q.cols {
+			if slices.Contains(p.columns, col) {
+				cols = append(cols, col)
+				ops = append(ops, q.ops[i])
+				ons = append(ons, q.ons[i])
+			}
+		}
+		if len(cols) == 0 { // no summaries left
+			return newProject(q.source, p.columns).Transform()
+		}
+		if set.Subset(p.columns, q.by) {
+			return NewSummarize(q.source, q.by, cols, ops, ons).Transform()
+		}
 	case *Rename:
 		return p.transformRename(q)
 	case *Extend:
@@ -240,20 +260,19 @@ func (p *Project) transformRename(r *Rename) Query {
 		}
 	}
 	newCols := slc.Replace(p.columns, to, from)
-	p = NewProject(r.source, newCols)
+	p = newProject(r.source, newCols)
 	r = NewRename(p, newFrom, newTo)
 	return r.Transform()
 }
 
 // transformExtend tries to move projects before extends.
-// If it doesn't return nil, it must call transform on the source.
 func (p *Project) transformExtend(e *Extend) Query {
 	if e.hasRules() {
 		// rules make it too hard to determine what fields they use
 		return p.transform()
 	}
 	// orig := Format(p)
-	extendDeps := exprsCols(e.exprs)
+	extendUses := exprsCols(e.exprs)
 	// split the extend into what can go after the project,
 	// and what has to stay before the project
 	var beforeCols, afterCols []string
@@ -261,7 +280,7 @@ func (p *Project) transformExtend(e *Extend) Query {
 	newProjCols := p.columns
 	for i, col := range e.cols {
 		// if col is a dependency then we can't move it
-		if !slices.Contains(extendDeps, col) {
+		if !slices.Contains(extendUses, col) {
 			if slices.Contains(p.columns, col) {
 				if isConstant(e.exprs[i]) {
 					newProjCols = slc.Without(newProjCols, col)
@@ -285,10 +304,10 @@ func (p *Project) transformExtend(e *Extend) Query {
 	var result Query
 	if len(beforeCols) > 0 {
 		q := NewExtend(e.source, beforeCols, beforeExprs).Transform()
-		result = NewProject(q, newProjCols)
+		result = newProject(q, newProjCols)
 	} else {
 		// drop original extend since no columns left
-		result = NewProject(e.source, newProjCols).Transform()
+		result = newProject(e.source, newProjCols).Transform()
 	}
 	if len(afterCols) > 0 {
 		result = NewExtend(result, afterCols, afterExprs)
@@ -298,7 +317,7 @@ func (p *Project) transformExtend(e *Extend) Query {
 
 func (p *Project) transform() Query {
 	src := p.source.Transform()
-	if _,ok := src.(*Nothing); ok {
+	if _, ok := src.(*Nothing); ok {
 		return NewNothing(p.columns)
 	}
 	if src != p.source {
