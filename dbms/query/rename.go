@@ -37,7 +37,7 @@ func NewRename(src Query, from, to []string) *Rename {
 func (r *Rename) renameDependencies(src []string) {
 	r.from = slices.Clip(r.from)
 	r.to = slices.Clip(r.to)
-	for i,n := 0, len(r.from); i < n; i++ {
+	for i, n := 0, len(r.from); i < n; i++ {
 		deps := r.from[i] + "_deps"
 		if slices.Contains(src, deps) && !slices.Contains(r.from, deps) {
 			r.from = append(r.from, deps)
@@ -108,32 +108,39 @@ func (r *Rename) Transform() Query {
 	from := r.from
 	to := r.to
 	for r2, ok := src.(*Rename); ok; r2, ok = src.(*Rename) {
-		from = slc.With(r2.from, from...)
-		to = slc.With(r2.to, to...)
-		dst := 0
-	outer:
-		for i := 0; i < len(from); i++ {
-			for j := 0; j < i; j++ {
-				if to[j] == from[i] {
-					to[j] = to[i]
-					continue outer
-				}
-			}
-			if i > dst {
-				from[dst] = from[i]
-				to[dst] = to[i]
-			}
-			dst++
-		}
-		from = from[:dst]
-		to = to[:dst]
+		from, to = mergeRename(r2.from, r2.to, from, to)
 		src = r2.source
 	}
 	src = src.Transform()
 	if _, ok := src.(*Nothing); ok {
 		return NewNothing(slc.Replace(src.Columns(), from, to))
 	}
+	if len(from) == 0 {
+		return src
+	}
 	return NewRename(src, from, to)
+}
+
+func mergeRename(from1, to1, from2, to2 []string) (from, to []string) {
+	from = slices.Clone(from1)
+	to = slices.Clone(to1)
+	for i, f := range from2 {
+		t := to2[i]
+		if j := slices.Index(to, f); j >= 0 {
+			if t == from[j] {
+				// rename back to original, so remove
+				from = slices.Delete(from, j, j+1)
+				to = slices.Delete(to, j, j+1)
+			} else {
+				// rename again, so update first
+				to[j] = t
+			}
+		} else {
+			from = append(from, f)
+			to = append(to, t)
+		}
+	}
+	return from, to
 }
 
 func (r *Rename) optimize(mode Mode, index []string, frac float64) (Cost, Cost, any) {

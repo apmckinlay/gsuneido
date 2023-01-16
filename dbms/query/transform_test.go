@@ -29,6 +29,9 @@ func TestTransform(t *testing.T) {
 		"table rename a to x, b to y, c to z")
 	test("table rename a to x rename x to y rename y to z",
 		"table rename a to z")
+	test("table rename a to aa, b to bb rename bb to b, aa to a",
+		"table")
+
 	test("table remove c, d, e",
 		"table project a,b")
 	test("table remove x, y, z",
