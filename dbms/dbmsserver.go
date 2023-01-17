@@ -14,7 +14,6 @@ import (
 	"sync"
 	"time"
 
-	"github.com/apmckinlay/gsuneido/builtin"
 	"github.com/apmckinlay/gsuneido/dbms/commands"
 	"github.com/apmckinlay/gsuneido/dbms/mux"
 	"github.com/apmckinlay/gsuneido/options"
@@ -155,7 +154,7 @@ var helloOnce sync.Once
 
 func hello() []byte {
 	helloOnce.Do(func() {
-		copy(helloBuf[:], "Suneido "+builtin.BuiltStr()+"\r\n")
+		copy(helloBuf[:], "Suneido "+options.BuiltStr()+"\r\n")
 	})
 	return helloBuf[:]
 }
@@ -235,10 +234,7 @@ func (ss *serverSession) close() {
 }
 
 func (ss *serverSession) abort() {
-	assert.That(ss != nil)       //FIXME
-	assert.That(ss.trans != nil) //FIXME
 	for _, tran := range ss.trans {
-		assert.That(tran != nil) //FIXME
 		tran.Abort()
 	}
 }
@@ -749,7 +745,6 @@ func cmdTransaction(ss *serverSession) {
 	update := ss.GetBool()
 	tran := ss.sc.dbms.Transaction(update)
 	tn := ss.nextNum(update)
-	assert.That(tran != nil) //FIXME
 	ss.trans[tn] = tran
 	ss.PutBool(true).PutInt(tn)
 }

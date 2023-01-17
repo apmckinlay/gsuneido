@@ -59,7 +59,7 @@ func body() string {
 		return `<h2 style="color: red;">Repairing database ...<h2>`
 	}
 	return extra + `
-		<p>Built: ` + builtin.BuiltStr() + `</p>
+		<p>Built: ` + options.BuiltStr() + `</p>
 		<p>Heap: ` + mb(builtin.HeapSys()) + `</p>
 		<p>Database: ` + mb(dbmsLocal.Size()) + `
 		` + threads() + `

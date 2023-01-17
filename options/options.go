@@ -58,3 +58,8 @@ var DbStatus myatomic.String
 func init() {
 	DbStatus.Store("starting")
 }
+
+func BuiltStr() string {
+	return BuiltDate +
+		" (" + runtime.Version() + " " + runtime.GOARCH + BuiltExtra + ")"
+}

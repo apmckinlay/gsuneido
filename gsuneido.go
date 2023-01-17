@@ -343,7 +343,7 @@ func repl() {
 	builtin.DefDef()
 	builtin.DefConcat()
 
-	built := builtin.BuiltStr()
+	built := options.BuiltStr()
 	if options.Action == "client" {
 		built += " - client"
 	}
