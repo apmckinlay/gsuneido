@@ -218,6 +218,9 @@ loop:
 			i := fetchUint8()
 			op := fetchUint8()
 			x := fr.locals.v[i]
+			if x == nil {
+				panic("uninitialized variable: " + fr.fn.Names[i])
+			}
 			y := t.stack[t.sp-1]
 			var result Value
 			switch op >> 1 {
