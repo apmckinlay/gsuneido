@@ -121,27 +121,33 @@ func (u *Union) Transform() Query {
 	src1 := u.source1.Transform()
 	src2 := u.source2.Transform()
 	if _, ok := src1.(*Nothing); ok {
-		cols := set.Difference(u.source1.Columns(), u.source2.Columns())
-		if len(cols) == 0 {
-			return src2
-		}
-		var empty ast.Expr = &ast.Constant{Val: EmptyStr}
-		exprs := slc.Repeat(empty, len(cols))
-		return NewExtend(src2, cols, exprs)
+		// remove unnecessary Union
+		return keepCols(src2, src1, u.Header())
 	}
 	if _, ok := src2.(*Nothing); ok {
-		cols := set.Difference(src2.Columns(), src1.Columns())
-		if len(cols) == 0 {
-			return src1
-		}
-		var empty ast.Expr = &ast.Constant{Val: EmptyStr}
-		exprs := slc.Repeat(empty, len(cols))
-		return NewExtend(src1, cols, exprs)
+		// remove unnecessary Union
+		return keepCols(src1, src2, u.Header())
 	}
 	if src1 != u.source1 || src2 != u.source2 {
 		return NewUnion(src1, src2)
 	}
 	return u
+}
+
+func keepCols(src, nothing Query, hdr *Header) Query {
+	cols := set.Difference(nothing.Columns(), src.Columns())
+	if len(cols) == 0 {
+		return src
+	}
+	var empty ast.Expr = &ast.Constant{Val: EmptyStr}
+	exprs := slc.Repeat(empty, len(cols))
+	for i, col := range cols {
+		if !hdr.HasField(col) {
+			exprs[i] = nil
+		}
+	}
+	// need to transform in case e.g. src is another extend
+	return NewExtend(src, cols, exprs).Transform()
 }
 
 func (u *Union) calcFixed(fixed1, fixed2 []Fixed) []Fixed {

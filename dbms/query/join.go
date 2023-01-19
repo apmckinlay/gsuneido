@@ -4,7 +4,6 @@
 package query
 
 import (
-	"github.com/apmckinlay/gsuneido/compile/ast"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/runtime/trace"
 	"github.com/apmckinlay/gsuneido/util/assert"
@@ -400,13 +399,7 @@ func (lj *LeftJoin) Transform() Query {
 	_, none := combineFixed(src1.Fixed(), src2.Fixed())
 	if none || src2Nothing {
 		// remove useless left join
-		cols := set.Difference(lj.source2.Columns(), src1.Columns())
-		if len(cols) == 0 {
-			return src1
-		}
-		var empty ast.Expr = &ast.Constant{Val: EmptyStr}
-		exprs := slc.Repeat(empty, len(cols))
-		return NewExtend(src1, cols, exprs).Transform()
+		return keepCols(src1, src2, lj.Header())
 	}
 	if src1 != lj.source1 || src2 != lj.source2 {
 		return NewLeftJoin(src1, src2, lj.by)

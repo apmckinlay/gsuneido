@@ -176,6 +176,7 @@ func (hdr *Header) Dup() *Header {
 }
 
 func JoinHeaders(x, y *Header) *Header {
+	//TODO what if rule on one and field on the other ???
 	fields := make([][]string, 0, len(x.Fields)+len(y.Fields))
 	fields = append(append(fields, x.Fields...), y.Fields...)
 	columns := set.Union(x.Columns, y.Columns)
@@ -186,14 +187,14 @@ func JoinHeaders(x, y *Header) *Header {
 func (hdr *Header) Rules() []string {
 	rules := []string{}
 	for _, col := range hdr.Columns {
-		if !hdr.hasField(col) {
+		if !hdr.HasField(col) {
 			rules = append(rules, col)
 		}
 	}
 	return rules
 }
 
-func (hdr *Header) hasField(col string) bool {
+func (hdr *Header) HasField(col string) bool {
 	for _, fields := range hdr.Fields {
 		if slices.Contains(fields, col) {
 			return true
