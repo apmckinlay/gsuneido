@@ -7,6 +7,7 @@ package builtin
 
 import (
 	"io"
+	"log"
 	"os"
 	"syscall"
 	"time"
@@ -53,14 +54,21 @@ func CopyFile(a, b, c Value) Value {
 		return False
 	}
 	defer destFile.Close()
+	// needed when the destination is on a Samba network drive
+	if err := destFile.Chmod(fi.Mode()); err != nil {
+		log.Println("WARN CopyFile Chmod", err)
+	}
 
 	_, err = io.Copy(destFile, srcFile)
 	if err != nil {
+		log.Println("WARN CopyFile Copy", err)
 		return False
 	}
 
 	destFile.Close()
-	os.Chtimes(to, time.Now(), fi.ModTime())
+	if err := os.Chtimes(to, time.Now(), fi.ModTime()); err != nil {
+		log.Println("WARN CopyFile Chtimes", err)
+	}
 
 	return True
 }
