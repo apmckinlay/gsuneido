@@ -7,11 +7,8 @@ import (
 	"fmt"
 	"math"
 	"testing"
-	"time"
 
-	"github.com/apmckinlay/gsuneido/db19"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
-	"github.com/apmckinlay/gsuneido/db19/stor"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
@@ -166,27 +163,16 @@ func TestWhere_Nrows(t *testing.T) {
 }
 
 func TestWhere_Select(t *testing.T) {
-	store := stor.HeapStor(8192)
-	db, err := db19.CreateDb(store)
-	ck(err)
-	db19.StartConcur(db, 50*time.Millisecond)
+	db := heapDb()
 	defer db.Close()
-	MakeSuTran = func(qt QueryTran) *SuTran { return nil }
-	act := func(act string) {
-		ut := db.NewUpdateTran()
-		defer ut.Commit()
-		n := DoAction(nil, ut, act, nil)
-		assert.This(n).Is(1)
-	}
-	doAdmin(db, "create lin(a,b,c) key(a,b)")
-	act("insert { a: 1, b: 2, c: 3 } into lin")
-	act("insert { a: 4, b: 5, c: 6 } into lin")
-	act("insert { a: 7, b: 5, c: 8 } into lin")
-	act("insert { a: 9, b: 0, c: 3 } into lin")
-	
-	query := "lin where b = 5"
-	tran := sizeTran{db.NewReadTran()}
+	db.adm("create lin(a,b,c) key(a,b)")
+	db.act("insert { a: 1, b: 2, c: 3 } into lin")
+	db.act("insert { a: 4, b: 5, c: 6 } into lin")
+	db.act("insert { a: 7, b: 5, c: 8 } into lin")
+	db.act("insert { a: 9, b: 0, c: 3 } into lin")
 
+	query := "lin where b = 5"
+	tran := db.NewReadTran()
 	q := ParseQuery(query, tran, nil)
 	q, _, _ = Setup(q, CursorMode, tran)
 	cols := []string{"a", "b"}
@@ -203,4 +189,32 @@ func TestWhere_Select(t *testing.T) {
 	assert.This(queryAll2(q)).Is("")
 	q.Select(nil, nil)
 	assert.This(queryAll2(q)).Is("a=4 b=5 c=6 | a=7 b=5 c=8")
+}
+
+func TestWhere_Fixed(t *testing.T) {
+	db := heapDb()
+	defer db.Close()
+	db.adm("create lin(a,b,c) key(a,b)")
+	db.act("insert { a: 1, b: 2, c: 3 } into lin")
+	db.act("insert { a: 4, b: 5, c: 6 } into lin")
+	db.act("insert { a: 7, b: 5, c: 8 } into lin")
+	db.act("insert { a: 9, b: 0, c: 3 } into lin")
+	tran := db.NewReadTran()
+	th := &Thread{}
+
+	query := "lin where a=7"
+	q := ParseQuery(query, tran, nil)
+	q, _, _ = Setup(q, CursorMode, tran)
+	cols := []string{"b"}
+	vals := []string{Pack(IntVal(5))}
+	row := q.Lookup(th, cols, vals)
+	assert.This(row2str(q.Header(), row)).Is("a=7 b=5 c=8")
+
+	query = "lin where a=7"
+	q = ParseQuery(query, tran, nil)
+	q, _, _ = Setup(q, CursorMode, tran)
+	cols = []string{"b"}
+	vals = []string{Pack(IntVal(2))}
+	row = q.Lookup(th, cols, vals)
+	assert.This(row).Is(nil)
 }

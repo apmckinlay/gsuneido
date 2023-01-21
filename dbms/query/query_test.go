@@ -204,6 +204,9 @@ func queryAll2(q Query) string {
 }
 
 func row2str(hdr *rt.Header, row rt.Row) string {
+	if row == nil {
+		return "nil"
+	}
 	var sb strings.Builder
 	sep := ""
 	for _, col := range hdr.Columns {

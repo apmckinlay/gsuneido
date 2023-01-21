@@ -1182,14 +1182,7 @@ func (w *Where) Select(cols, vals []string) {
 		return
 	}
 
-	cols = slices.Clip(cols)
-	vals = slices.Clip(vals)
-	for _, fix := range w.fixed {
-		if len(fix.values) == 1 && !slices.Contains(cols, fix.col) {
-			cols = append(cols, fix.col)
-			vals = append(vals, fix.values[0])
-		}
-	}
+	cols, vals = w.addFixed(cols, vals)
 	w.selOrg, w.selEnd = selKeys(w.idxSel.encoded, w.idxSel.index, cols, vals)
 	w.selSet = true
 }
@@ -1211,6 +1204,18 @@ func selectFixed(cols, vals []string, fixed []Fixed) (satisfied, conflict bool) 
 	return satisfied, false
 }
 
+func (w *Where) addFixed(cols []string, vals []string) ([]string, []string) {
+	cols = slices.Clip(cols)
+	vals = slices.Clip(vals)
+	for _, fix := range w.fixed {
+		if len(fix.values) == 1 && !slices.Contains(cols, fix.col) {
+			cols = append(cols, fix.col)
+			vals = append(vals, fix.values[0])
+		}
+	}
+	return cols, vals
+}
+
 func (w *Where) Lookup(th *runtime.Thread, cols, vals []string) runtime.Row {
 	if w.singleton {
 		// can't use source.Lookup because cols may not match source index
@@ -1221,6 +1226,7 @@ func (w *Where) Lookup(th *runtime.Thread, cols, vals []string) runtime.Row {
 		}
 		return row
 	}
+	cols, vals = w.addFixed(cols, vals)
 	row := w.source.Lookup(th, cols, vals)
 	if !w.filter(th, row) {
 		row = nil
