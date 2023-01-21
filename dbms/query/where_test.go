@@ -7,9 +7,12 @@ import (
 	"fmt"
 	"math"
 	"testing"
+	"time"
 
+	"github.com/apmckinlay/gsuneido/db19"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
-	"github.com/apmckinlay/gsuneido/runtime"
+	"github.com/apmckinlay/gsuneido/db19/stor"
+	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
@@ -130,7 +133,7 @@ func TestFracPos(t *testing.T) {
 		t.Helper()
 		var enc ixkey.Encoder
 		for _, d := range digits {
-			enc.Add(runtime.Pack(runtime.SuInt(d)))
+			enc.Add(Pack(SuInt(d)))
 		}
 		key := enc.String()
 		f := tt.fracPos(key, true)
@@ -141,7 +144,7 @@ func TestFracPos(t *testing.T) {
 	test(.234, 2, 3, 4)
 }
 
-func TestWhereNrows(t *testing.T) {
+func TestWhere_Nrows(t *testing.T) {
 	test := func(query string, nrows int) {
 		t.Helper()
 		var tran testTran
@@ -158,6 +161,46 @@ func TestWhereNrows(t *testing.T) {
 	test("inven where item in (1,2,3)", 3)
 	test("inven where item > 2 and item < 4", 20)
 	test("inven where item > 2 and item < 4 and qty", 10)
-	test("hist where date is 3", 5) // half of 1/10 (not 1 since not key)
+	test("hist where date is 3", 5)        // half of 1/10 (not 1 since not key)
 	test("inven extend x where x > 5", 50) // not on table
+}
+
+func TestWhere_Select(t *testing.T) {
+	store := stor.HeapStor(8192)
+	db, err := db19.CreateDb(store)
+	ck(err)
+	db19.StartConcur(db, 50*time.Millisecond)
+	defer db.Close()
+	MakeSuTran = func(qt QueryTran) *SuTran { return nil }
+	act := func(act string) {
+		ut := db.NewUpdateTran()
+		defer ut.Commit()
+		n := DoAction(nil, ut, act, nil)
+		assert.This(n).Is(1)
+	}
+	doAdmin(db, "create lin(a,b,c) key(a,b)")
+	act("insert { a: 1, b: 2, c: 3 } into lin")
+	act("insert { a: 4, b: 5, c: 6 } into lin")
+	act("insert { a: 7, b: 5, c: 8 } into lin")
+	act("insert { a: 9, b: 0, c: 3 } into lin")
+	
+	query := "lin where b = 5"
+	tran := sizeTran{db.NewReadTran()}
+
+	q := ParseQuery(query, tran, nil)
+	q, _, _ = Setup(q, CursorMode, tran)
+	cols := []string{"a", "b"}
+	vals := []string{Pack(IntVal(4)), Pack(IntVal(5)), Pack(IntVal(6))}
+	q.Select(cols, vals)
+	assert.This(queryAll2(q)).Is("a=4 b=5 c=6")
+	q.Select(nil, nil)
+	assert.This(queryAll2(q)).Is("a=4 b=5 c=6 | a=7 b=5 c=8")
+
+	q = ParseQuery(query, tran, nil)
+	q, _, _ = Setup(q, CursorMode, tran)
+	vals = []string{Pack(IntVal(1)), Pack(IntVal(2))} // conflict
+	q.Select(cols, vals)
+	assert.This(queryAll2(q)).Is("")
+	q.Select(nil, nil)
+	assert.This(queryAll2(q)).Is("a=4 b=5 c=6 | a=7 b=5 c=8")
 }

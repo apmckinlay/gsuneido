@@ -265,7 +265,7 @@ func (tbl *Table) Select(cols, vals []string) {
 		return
 	}
 	if cols == nil && vals == nil { // clear select
-		tbl.iter.Range(iterator.All)
+		tbl.ensureIter().Range(iterator.All)
 		return
 	}
 	org, end := selKeys(tbl.indexEncode, tbl.index, cols, vals)

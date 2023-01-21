@@ -355,7 +355,7 @@ func (w *Where) Transform() Query {
 
 func (w *Where) transform() Query {
 	src := w.source.Transform()
-	if _,ok := src.(*Nothing); ok {
+	if _, ok := src.(*Nothing); ok {
 		return NewNothing(w.Columns())
 	}
 	if src != w.source {
@@ -1044,6 +1044,9 @@ func (w *Where) idxFrac(idx []string, ptrngs []pointRange) float64 {
 var MakeSuTran func(qt QueryTran) *runtime.SuTran
 
 func (w *Where) Get(th *runtime.Thread, dir runtime.Dir) runtime.Row {
+	if w.selSet && w.selOrg == ixkey.Max && w.selEnd == "" {
+		return nil // conflict from Select
+	}
 	for {
 		row := w.get(th, dir)
 		if w.filter(th, row) {
@@ -1149,6 +1152,9 @@ func (w *Where) Select(cols, vals []string) {
 		w.selSet = false
 		w.selectCols = nil
 		w.selectVals = nil
+		if w.idxSel == nil {
+			w.source.Select(nil, nil)
+		}
 		return
 	}
 	satisfied, conflict := selectFixed(cols, vals, w.whereFixed)
