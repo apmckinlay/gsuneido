@@ -54,13 +54,13 @@ func TestOptimize(t *testing.T) {
 		"hist^(date) INTERSECT hist2^(date)")
 
 	test("hist union hist2",
-		"hist^(date) UNION-LOOKUP hist2^(date)")
+		"hist^(date) UNION-LOOKUP(date) hist2^(date)")
 	test("hist2 union hist",
-		"hist^(date) UNION-LOOKUP hist2^(date)")
+		"hist^(date) UNION-LOOKUP(date) hist2^(date)")
 	test("hist union hist sort date",
-		"hist^(date,item,id) UNION-MERGE hist^(date,item,id)")
+		"hist^(date,item,id) UNION-MERGE(date,item,id) hist^(date,item,id)")
 	test("table union table",
-		"table^(a) UNION-MERGE table^(a)")
+		"table^(a) UNION-MERGE(a) table^(a)")
 	test("(table where a is 1) union (table where a is 2)",
 		"table^(a) WHERE*1 a is 1 "+
 			"UNION-DISJOINT(a) (table^(a) WHERE*1 a is 2)")
@@ -131,7 +131,7 @@ func TestOptimize(t *testing.T) {
 		"alias^(id) JOIN 1:1 by(id) customer^(id)")
 	test("(inven join trans) union (inven join trans)",
 		"(inven^(item) JOIN 1:n by(item) trans^(item)) "+
-			"UNION-LOOKUP "+
+			"UNION-LOOKUP(date,item,id) "+
 			"(trans^(date,item,id) JOIN n:1 by(item) inven^(item))")
 	test("task join co join cus",
 		"(task^(tnum) JOIN 1:1 by(tnum) co^(tnum)) "+
@@ -140,10 +140,10 @@ func TestOptimize(t *testing.T) {
 		"inven^(item) JOIN 1:n by(item) trans^(item)")
 
 	test("(trans union trans) join (inven union inven)",
-		"(trans^(date,item,id) UNION-MERGE trans^(date,item,id)) "+
+		"(trans^(date,item,id) UNION-MERGE(date,item,id) trans^(date,item,id)) "+
 			"JOIN n:n by(item) "+
 			"(inven^(item) TEMPINDEX(item) "+
-			"UNION-MERGE (inven^(item) TEMPINDEX(item)))")
+			"UNION-MERGE(item) (inven^(item) TEMPINDEX(item)))")
 
 	test("inven leftjoin trans",
 		"inven^(item) LEFTJOIN 1:n by(item) trans^(item)")
@@ -162,12 +162,12 @@ func TestOptimize(t *testing.T) {
 
 	mode = CursorMode
 	test("(trans union trans) join (inven union inven)",
-		"(trans^(date,item,id) UNION-MERGE trans^(date,item,id)) "+
+		"(trans^(date,item,id) UNION-MERGE(date,item,id) trans^(date,item,id)) "+
 			"JOIN n:n by(item) "+
-			"(inven^(item) UNION-MERGE inven^(item))")
+			"(inven^(item) UNION-MERGE(item) inven^(item))")
 	test("(inven join trans) union (inven join trans)",
 		"(inven^(item) JOIN 1:n by(item) trans^(item)) "+
-			"UNION-LOOKUP "+
+			"UNION-LOOKUP(date,item,id) "+
 			"(trans^(date,item,id) JOIN n:1 by(item) inven^(item))")
 	test("trans join customer",
 		"trans^(date,item,id) JOIN n:1 by(id) customer^(id)")

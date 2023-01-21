@@ -388,7 +388,7 @@ func TestQueryGet(t *testing.T) {
 
 	// union
 	test("hist2 union hist",
-		"hist2^(date) UNION-LOOKUP hist^(date,item,id)",
+		"hist2^(date) UNION-LOOKUP(date,item,id) hist^(date,item,id)",
 		`date	item	 id		cost
 		970102	'disk'	 'e'	200
 		970101	'disk'	 'a'	100
@@ -396,7 +396,7 @@ func TestQueryGet(t *testing.T) {
 		970102	'mouse'	 'c'	200
 		970103	'pencil' 'e'	300`)
 	test("hist2 union trans",
-		"hist2^(date) UNION-LOOKUP trans^(date,item,id)",
+		"hist2^(date) UNION-LOOKUP(date,item,id) trans^(date,item,id)",
 		`date	item	 id		cost
         970102	'disk'	 'e'	200
         970103	'pencil' 'e'	300
@@ -405,12 +405,12 @@ func TestQueryGet(t *testing.T) {
         970101	'mouse'	 'c'	200
         970201	'eraser' 'c'	150`)
 	test("alias union alias",
-		"alias^(id) UNION-MERGE alias^(id)",
+		"alias^(id) UNION-MERGE(id) alias^(id)",
 		`id name2
         'a'	'abc'
 		'c'	'trical'`)
 	test("trans union hist",
-		"trans^(date,item,id) UNION-MERGE hist^(date,item,id)",
+		"trans^(date,item,id) UNION-MERGE(date,item,id) hist^(date,item,id)",
 		`item	id	cost	date
 		'mouse'	'e'	200	960204
 		'disk'	'a'	100	970101
@@ -420,14 +420,15 @@ func TestQueryGet(t *testing.T) {
 		'pencil'	'e'	300	970103
 		'eraser'	'c'	150	970201`)
 	test("trans union trans sort id",
-		"(trans^(date,item,id) UNION-MERGE trans^(date,item,id)) TEMPINDEX(id)",
+		"(trans^(date,item,id) UNION-MERGE(date,item,id) "+
+			"trans^(date,item,id)) TEMPINDEX(id)",
 		`item		id	cost	date
 		'disk'		'a'	100	970101
 		'mouse'		'c'	200	970101
 		'eraser'	'c'	150	970201
 		'mouse'		'e'	200	960204`)
 	test("(hist2 rename cost to amt) union (trans rename cost to amt)",
-		"hist2^(date) RENAME cost to amt UNION-LOOKUP "+
+		"hist2^(date) RENAME cost to amt UNION-LOOKUP(date,item,id) "+
 			"(trans^(date,item,id) RENAME cost to amt)",
 		`date	item	 id		amt
         970102	'disk'	 'e'	200
@@ -437,7 +438,7 @@ func TestQueryGet(t *testing.T) {
         970101	'mouse'	 'c'	200
         970201	'eraser' 'c'	150`)
 	test("(hist2 extend x = 1) union (trans extend x = 1)",
-		"hist2^(date) EXTEND x = 1 UNION-LOOKUP "+
+		"hist2^(date) EXTEND x = 1 UNION-LOOKUP(date,item,id) "+
 			"(trans^(date,item,id) EXTEND x = 1)",
 		`date	item	 id		cost  x
         970102	'disk'	 'e'	200   1
@@ -448,20 +449,20 @@ func TestQueryGet(t *testing.T) {
         970201	'eraser' 'c'	150   1`)
 	test("(co where tnum = 100 remove signed) union "+
 		"(co where tnum = 100 remove signed)",
-		"co^(tnum) WHERE*1 tnum is 100 PROJECT-COPY tnum UNION-MERGE "+
+		"co^(tnum) WHERE*1 tnum is 100 PROJECT-COPY tnum UNION-MERGE() "+
 			"(co^(tnum) WHERE*1 tnum is 100 PROJECT-COPY tnum)",
 		`tnum
         100`)
 	test("(co where tnum = 100 remove tnum) union "+
 		"(co where tnum = 100 remove tnum)",
-		"co^(tnum) WHERE*1 tnum is 100 PROJECT-COPY signed UNION-MERGE "+
+		"co^(tnum) WHERE*1 tnum is 100 PROJECT-COPY signed UNION-MERGE() "+
 			"(co^(tnum) WHERE*1 tnum is 100 PROJECT-COPY signed)",
 		`signed
         990101`)
 	test("((co where tnum = 100) union (co where tnum = 102)) union "+
 		"(co where tnum = 100)",
-		"co^(tnum) WHERE*1 tnum is 100 UNION-LOOKUP "+
-			"(co^(tnum) WHERE*1 tnum is 100 UNION-DISJOINT(tnum)-MERGE "+
+		"co^(tnum) WHERE*1 tnum is 100 UNION-LOOKUP(tnum) "+
+			"(co^(tnum) WHERE*1 tnum is 100 UNION-DISJOINT(tnum)-MERGE(tnum) "+
 			"(co^(tnum) WHERE*1 tnum is 102))",
 		`tnum	signed
         100		990101
@@ -469,7 +470,7 @@ func TestQueryGet(t *testing.T) {
 	test("(((co where tnum = 100) union (co where tnum = 102)) remove tnum)"+
 		" union "+
 		"(((co where tnum = 104) union (co where tnum = 106)) remove tnum)",
-		"(co^(tnum) WHERE*1 tnum is 100 UNION-DISJOINT(tnum)-MERGE (co^(tnum) WHERE*1 tnum is 102)) PROJECT-SEQ signed UNION-LOOKUP ((co^(tnum) WHERE*1 tnum is 104 UNION-DISJOINT(tnum)-MERGE (co^(tnum) WHERE*1 tnum is 106)) PROJECT-SEQ signed)",
+		"(co^(tnum) WHERE*1 tnum is 100 UNION-DISJOINT(tnum)-MERGE(signed) (co^(tnum) WHERE*1 tnum is 102)) PROJECT-SEQ signed UNION-LOOKUP(signed) ((co^(tnum) WHERE*1 tnum is 104 UNION-DISJOINT(tnum)-MERGE(signed) (co^(tnum) WHERE*1 tnum is 106)) PROJECT-SEQ signed)",
 		`signed
         990101
         990102
@@ -478,7 +479,7 @@ func TestQueryGet(t *testing.T) {
 	test(`((co where tnum = 104 remove tnum) union (co where tnum = 106 remove tnum))
 		union
 		((co where tnum = 104 remove tnum) union (co where tnum = 106 remove tnum))`,
-		"(co^(tnum) WHERE*1 tnum is 104 PROJECT-COPY signed UNION-MERGE (co^(tnum) WHERE*1 tnum is 106 PROJECT-COPY signed)) UNION-MERGE (co^(tnum) WHERE*1 tnum is 104 PROJECT-COPY signed UNION-MERGE (co^(tnum) WHERE*1 tnum is 106 PROJECT-COPY signed))",
+		"(co^(tnum) WHERE*1 tnum is 104 PROJECT-COPY signed UNION-MERGE(signed) (co^(tnum) WHERE*1 tnum is 106 PROJECT-COPY signed)) UNION-MERGE(signed) (co^(tnum) WHERE*1 tnum is 104 PROJECT-COPY signed UNION-MERGE(signed) (co^(tnum) WHERE*1 tnum is 106 PROJECT-COPY signed))",
 		`signed
         990103
         990104`)

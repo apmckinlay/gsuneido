@@ -11,6 +11,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/generic/ord"
 	"github.com/apmckinlay/gsuneido/util/generic/set"
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
+	"github.com/apmckinlay/gsuneido/util/str"
 	"golang.org/x/exp/slices"
 )
 
@@ -66,9 +67,9 @@ func (u *Union) stringOp() string {
 			strategy += "-LOOKUP"
 		}
 	}
-	// if u.keyIndex != nil {
-	// 	strategy += str.Join("(,)", u.keyIndex)
-	// }
+	if u.keyIndex != nil {
+		strategy += str.Join("(,)", u.keyIndex)
+	}
 	return u.Compatible.stringOp("UNION", strategy)
 }
 
