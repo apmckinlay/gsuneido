@@ -147,3 +147,12 @@ func TestSuRecord_validRule(t *testing.T) {
 	test("foo bar", false)
 	test(strings.Repeat("x", maxRule+1), false)
 }
+
+func BenchmarkSuRecord(b *testing.B) {
+	th := &Thread{}
+	var rec SuRecord
+	for i := 0; i < b.N; i++ {
+		rec = SuRecord{}
+		rec.Get(th, SuStr("foo"))
+	}
+}

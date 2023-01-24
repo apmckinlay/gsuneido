@@ -700,17 +700,18 @@ func (r *SuRecord) callRule(t *Thread, key string) Value {
 	if !validRule(key) {
 		return nil
 	}
+	rule := r.getRule(t, key)
+	if rule == nil || t.rules.has(r, key) {
+		return nil
+	}
 	r.ensureDeps()
 	delete(r.invalid, key)
-	if rule := r.getRule(t, key); rule != nil && !t.rules.has(r, key) {
-		r.trace("call rule", key)
-		val := r.catchRule(t, rule, key)
-		if val != nil && !r.ob.readonly {
-			r.ob.set(SuStr(key), val)
-		}
-		return val
+	r.trace("call rule", key)
+	val := r.catchRule(t, rule, key)
+	if val != nil && !r.ob.readonly {
+		r.ob.set(SuStr(key), val)
 	}
-	return nil
+	return val
 }
 
 func validRule(s string) bool {
