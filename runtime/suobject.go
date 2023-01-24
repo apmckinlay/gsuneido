@@ -39,7 +39,7 @@ type SuObject struct {
 	list   []Value
 	defval Value
 	rwMayLock
-	// version is incrmented by operations that change one of the sizes.
+	// version is incremented by operations that change one of the sizes.
 	// i.e. not by just updating a value in-place.
 	// It is used to detect modification during iteration.
 	version int32

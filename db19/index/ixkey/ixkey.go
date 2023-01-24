@@ -42,7 +42,7 @@ func (spec *Spec) String() string {
 	return fmt.Sprint("ixspec ", spec.Fields, ",", spec.Fields2)
 }
 
-// Encoder builds keys incrementally.
+// Encoder builds keys incrementally. Zero value is ready to use.
 // Note: Do not use this for single field keys - they should not be encoded.
 type Encoder struct {
 	buf []byte
@@ -173,6 +173,7 @@ func fieldLen(rec Record, field int) int {
 	return len(rec.GetRaw(field))
 }
 
+// getRaw does Record.GetRaw and handles _lower! fields
 func getRaw(rec Record, field int) string {
 	if field >= 0 {
 		return rec.GetRaw(field)

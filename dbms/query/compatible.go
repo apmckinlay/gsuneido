@@ -80,7 +80,6 @@ func (c *Compatible) source2Has(th *Thread, row Row) bool {
 		c.hdr2 = c.source2.Header()
 	}
 	vals := make([]string, len(c.keyIndex))
-	
 	for i, col := range c.keyIndex {
 		vals[i] = row.GetRawVal(c.hdr1, col, th, c.st)
 	}
