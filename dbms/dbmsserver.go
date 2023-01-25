@@ -110,14 +110,13 @@ func idleTimeout() {
 }
 
 const idleCheckInterval = time.Minute
-const maxIdleCount = 2 * 60 // 2 hours if interval is one minute
 
 func idleCheck() {
 	serverConnsLock.Lock()
 	defer serverConnsLock.Unlock()
 	for _, sc := range serverConns {
 		sc.idleCount++
-		if sc.idleCount > maxIdleCount {
+		if sc.idleCount > options.TimeoutMinutes {
 			log.Println("closing idle connection", sc.remoteAddr)
 			sc.close()
 			delete(serverConns, sc.id)

@@ -4,6 +4,7 @@
 package options
 
 import (
+	"strconv"
 	"strings"
 )
 
@@ -55,7 +56,18 @@ loop:
 		case match(&args, "-version"), match(&args, "-v"):
 			Action = "version"
 		case match(&args, "-ignoreversion"), match(&args, "-iv"):
-			// for compatibility with cSuneido
+			IgnoreVersion = true
+		case match(&args, "-timeout"), match(&args, "-to"):
+			if len(args) > 0 {
+				to, err := strconv.Atoi(args[0])
+				if err != nil {
+					error("invalid timeout: " + err.Error())
+				}
+				TimeoutMinutes = to
+				args = args[1:]
+			} else {
+				error("timeout value required")
+			}
 		case match(&args, "--"):
 			break loop
 		default:

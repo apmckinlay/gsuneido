@@ -18,12 +18,14 @@ var BuiltExtra string
 
 // command line flags
 var (
-	Mode       string
-	Action     string
-	Error      string
-	Arg        string
-	Port       string
-	Unattended bool
+	Mode           string
+	Action         string
+	Error          string
+	Arg            string
+	Port           string
+	Unattended     bool
+	IgnoreVersion  bool
+	TimeoutMinutes = 2 * 60 // 2 hours
 )
 
 // CmdLine is the remaining command line arguments

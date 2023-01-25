@@ -56,7 +56,7 @@ func checkHello(conn net.Conn) (jserver bool, errmsg string) {
 		return true, ""
 	}
 	s = strings.TrimPrefix(s, "Suneido ")
-	if noTime(s) != noTime(options.BuiltDate) {
+	if noTime(s) != noTime(options.BuiltDate) && !options.IgnoreVersion {
 		return false, "version mismatch"
 	}
 	return false, ""
