@@ -82,10 +82,12 @@ func NewWhere(src Query, expr ast.Expr, t QueryTran) *Where {
 	}
 	w := &Where{Query1: Query1{source: src}, expr: expr.(*ast.Nary), t: t}
 	w.calcFixed()
-	cmps := w.extractCompares()
-	w.exprMore = len(cmps) < len(w.expr.Exprs)
-	w.colSels = w.comparesToFilters(cmps)
-	w.conflict = w.conflict || w.exprFalse()
+	if !w.conflict {
+		cmps := w.extractCompares()
+		w.exprMore = len(cmps) < len(w.expr.Exprs)
+		w.colSels = w.comparesToFilters(cmps)
+		w.conflict = w.conflict || w.exprFalse()
+	}
 	return w
 }
 
