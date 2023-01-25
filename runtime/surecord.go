@@ -697,9 +697,6 @@ func (r *SuRecord) getSpecial(key string) Value {
 }
 
 func (r *SuRecord) callRule(t *Thread, key string) Value {
-	if !validRule(key) {
-		return nil
-	}
 	rule := r.getRule(t, key)
 	if rule == nil || t.rules.has(r, key) {
 		return nil
@@ -780,15 +777,17 @@ func (ar *activeRules) has(r *SuRecord, key string) bool {
 }
 
 func (r *SuRecord) getRule(t *Thread, key string) Value {
+	if t == nil || !validRule(key) {
+		return nil
+	}
 	if rule, ok := r.attachedRules[key]; ok {
 		assert.That(rule != nil)
 		return rule
 	}
-	//TODO key should be identifier but we have foobar?__protect
-	if r.ob.defval != nil && t != nil && key != "" {
-		return Global.FindName(t, "Rule_"+key)
+	if r.ob.defval == nil {
+		return nil
 	}
-	return nil
+	return Global.FindName(t, "Rule_"+key)
 }
 
 func (r *SuRecord) AttachRule(key, callable Value) {

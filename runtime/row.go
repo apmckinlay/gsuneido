@@ -48,6 +48,9 @@ func (row Row) GetVal(hdr *Header, fld string, th *Thread, tran *SuTran) Value {
 		val := Unpack(x)
 		return SuStr(str.ToLower(ToStr(val)))
 	}
+	if nil == getRule(th, fld) {
+		return EmptyStr
+	}
 	// else construct SuRecord to handle rules
 	return SuRecordFromRow(row, hdr, "", tran).Get(th, SuStr(fld))
 }
@@ -74,6 +77,9 @@ func (row Row) GetRawVal(hdr *Header, fld string, th *Thread, tran *SuTran) stri
 	if raw, ok := row.getRaw2(hdr, fld); ok {
 		return raw
 	}
+	if nil == getRule(th, fld) {
+		return ""
+	}
 	// else construct SuRecord to handle rules
 	v := SuRecordFromRow(row, hdr, "", tran).Get(th, SuStr(fld))
 	return Pack(v.(Packable))
@@ -96,6 +102,13 @@ func lowerRaw(x string) string {
 		buf[i] = ascii.ToLower(x[i])
 	}
 	return hacks.BStoS(buf)
+}
+
+func getRule(t *Thread, key string) Value {
+	if t == nil || !validRule(key) {
+		return nil
+	}
+	return Global.FindName(t, "Rule_"+key)
 }
 
 // getRaw2 gets a stored field.

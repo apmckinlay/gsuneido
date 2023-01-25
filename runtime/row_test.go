@@ -20,3 +20,11 @@ func TestGetRaw(*testing.T) {
 	assert.This(row.GetRaw(hdr, "two")).Is(Pack(SuStr("Hello World")))
 	assert.This(row.GetRaw(hdr, "two_lower!")).Is(Pack(SuStr("hello world")))
 }
+
+func BenchmarkRow_GetRawVal(b *testing.B) {
+	var row Row
+	hdr := SimpleHeader([]string{"foo", "bar"})
+	for i := 0; i < b.N; i++ {
+		row.GetRawVal(hdr, "baz", nil, nil)
+	}
+}
