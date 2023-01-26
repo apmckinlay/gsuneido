@@ -173,6 +173,7 @@ func get(th *Thread, tran qry.QueryTran, query string, dir Dir,
 func (dbms *DbmsLocal) Info() Value {
 	ob := &SuObject{}
 	ob.Set(SuStr("currentSize"), Int64Val(int64(dbms.db.Size())))
+	ob.Set(SuStr("timeoutMin"), IntVal(int(options.TimeoutMinutes)))
 	return ob
 }
 
