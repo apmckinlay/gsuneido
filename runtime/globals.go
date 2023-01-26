@@ -325,13 +325,16 @@ func (typeGlobal) SetErr(gn Gnum, e any) {
 	g.lock.Unlock()
 }
 
-// Overload is used by compile to handle overload inheritance (_Name)
-func (typeGlobal) Overload(name string, val Value) Gnum {
+// Overload is used by compile to handle overload inheritance (_Name).
+// It creates a new slot to contain the previous value.
+// The original slot will be set to the final visible value.
+// name2num points to the original slot.
+func (typeGlobal) Overload(name string, prevVal Value) Gnum {
 	g.lock.Lock()
 	defer g.lock.Unlock()
 	Global.num(name[1:]) // ensure original exists
 	newgn := len(g.names)
 	g.names = append(g.names, name)
-	g.values = append(g.values, val)
+	g.values = append(g.values, prevVal)
 	return newgn
 }
