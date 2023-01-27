@@ -500,12 +500,27 @@ loop:
 			base := t.sp - int(argSpec.Nargs) - 1
 			this := t.stack[base]
 			if methstr, ok := method.ToStr(); ok {
+				var f Callable
 				ob := this
 				if super > 0 {
+					if instance, ok := this.(*SuInstance); ok {
+						for i, p := range instance.parents {
+							if p.Base == super {
+								c := instance.parents[i+1]
+								f = c.lookup(t, string(methstr),
+									instance.parents[i+1:])
+								super = 0
+								goto done
+							}
+						}
+					}
+					// else
 					ob = Global.Get(t, super)
 					super = 0
 				}
-				if f := ob.Lookup(t, string(methstr)); f != nil {
+				f = ob.Lookup(t, string(methstr))
+			done:
+				if f != nil {
 					// fmt.Println(strings.Repeat("   ", t.fp+1), f)
 					result := f.Call(t, this, argSpec)
 					t.sp = base

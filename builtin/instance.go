@@ -13,15 +13,20 @@ var _ = method(instance_BaseQ, "(class)")
 
 func instance_BaseQ(t *Thread, this Value, args []Value) Value {
 	instance := this.(*SuInstance)
-	class := instance.Base()
-	if class == args[0] {
+	if instance.Base() == args[0] { // handle anonymous base class
 		return True
 	}
-	return nilToFalse(class.Finder(t,
+	// else search by name to handle unload
+	c, ok := args[0].(*SuClass)
+	if !ok {
+		return False
+	}
+	name := c.Name
+	return nilToFalse(instance.Finder(t,
 		func(v Value, _ *MemBase) Value {
-			if v == args[0] {
+			if c, ok := v.(*SuClass); ok && name == c.Name {
 				return True
-			}
+            }
 			return nil
 		}))
 }
