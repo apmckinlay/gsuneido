@@ -5,6 +5,7 @@ package builtin
 
 import (
 	"errors"
+	"io/fs"
 	"log"
 	"net"
 	"os"
@@ -76,7 +77,7 @@ var _ = builtin(FileExistsQ, "(filename)")
 func FileExistsQ(arg Value) Value {
 	filename := ToStr(arg)
 	_, err := os.Stat(filename)
-	if err != nil && !errors.Is(err, os.ErrNotExist) {
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
 		log.Println("INFO: FileExists?", filename, err)
 	}
 	return SuBool(err == nil)
@@ -85,14 +86,15 @@ func FileExistsQ(arg Value) Value {
 var _ = builtin(DirExistsQ, "(filename)")
 
 func DirExistsQ(arg Value) Value {
-	info, err := os.Stat(ToStr(arg))
+	filename := ToStr(arg)
+	info, err := os.Stat(filename)
 	if err == nil {
 		return SuBool(info.Mode().IsDir())
 	}
-	if os.IsNotExist(err) {
-		return False
+	if !errors.Is(err, fs.ErrNotExist) {
+		log.Println("INFO: DirExists?", filename, err)
 	}
-	panic("DirExists?: " + err.Error())
+	return False
 }
 
 var _ = builtin(MoveFile, "(from, to)")
