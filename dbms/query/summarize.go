@@ -260,6 +260,7 @@ func (su *Summarize) idxCost(mode Mode) (Cost, Cost, any) {
 }
 
 func (su *Summarize) mapCost(mode Mode, index []string, _ float64) (Cost, Cost, any) {
+	//FIXME technically, map should only be allowed in ReadMode
 	nrows, _ := su.Nrows()
 	if index != nil || nrows > sumMaxSize {
 		return impossible, impossible, nil

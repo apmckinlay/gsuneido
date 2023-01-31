@@ -474,7 +474,7 @@ func (w *Where) split(q2 Query, newQ2 func(Query, Query) Query) Query {
 // optimize ---------------------------------------------------------
 
 func (w *Where) optimize(mode Mode, index []string, frac float64) (f Cost, v Cost, a any) {
-	// defer fmt.Println("Where opt", index, frac, "=", f, v, a)
+	// defer func() { fmt.Println("Where opt", index, frac, "=", f, v, a) }()
 	if !w.optInited {
 		w.optInit()
 	}

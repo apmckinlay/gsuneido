@@ -43,7 +43,7 @@ const (
 	projCopy projectStrategy = iota + 1
 	// projSeq orders by the columns so duplicates are consecutive
 	projSeq
-	// projMap builds a temp hash index to identify duplicates
+	// projMap builds a map to identify duplicates
 	projMap
 )
 
@@ -366,26 +366,27 @@ func (p *Project) optimize(mode Mode, index []string, frac float64) (Cost, Cost,
 		return fixcost, varcost, approach
 	}
 	seq := bestGrouped(p.source, mode, index, frac, p.columns)
-	fixcostHash, varcostHash := p.hashCost(mode, index, frac)
-	if fixcostHash+varcostHash < seq.cost() {
-		return fixcostHash, varcostHash,
+	//FIXME technically project-map should only be allowed in ReadMode
+	fixcostMap, varcostMap := p.mapCost(mode, index, frac)
+	if fixcostMap+varcostMap < seq.cost() {
+		return fixcostMap, varcostMap,
 			&projectApproach{strategy: projMap, index: index}
 	}
 	return seq.fixcost, seq.varcost,
 		&projectApproach{strategy: projSeq, index: seq.index}
 }
 
-const hashLimit = 10000
+const mapLimit = 10000 // number of rows
 
-func (p *Project) hashCost(mode Mode, index []string, frac float64) (Cost, Cost) {
+func (p *Project) mapCost(mode Mode, index []string, frac float64) (Cost, Cost) {
 	nrows, _ := p.Nrows()
-	if mode != ReadMode || nrows > hashLimit {
+	if mode != ReadMode || nrows > mapLimit {
 		return impossible, impossible
 	}
 	// assume we're reading Next (normal)
 	fixcost, varcost := Optimize(p.source, mode, index, frac)
-	hashCost := nrows * 20 // ???
-	return fixcost, varcost + hashCost
+	mapCost := nrows * 20 // ???
+	return fixcost, varcost + mapCost
 }
 
 func (p *Project) setApproach(_ []string, frac float64, approach any, tran QueryTran) {
@@ -433,7 +434,7 @@ func (p *Project) Get(th *Thread, dir Dir) Row {
 	case projSeq:
 		return p.getSeq(th, dir)
 	case projMap:
-		return p.getHash(th, dir)
+		return p.getMap(th, dir)
 	}
 	panic("should not reach here")
 }
@@ -478,15 +479,14 @@ func (p *Project) getSeq(th *Thread, dir Dir) Row {
 	}
 }
 
-func (p *Project) getHash(th *Thread, dir Dir) Row {
-	//TODO limit size of results
+func (p *Project) getMap(th *Thread, dir Dir) Row {
 	if p.rewound {
 		p.rewound = false
 		if p.results == nil {
 			p.results = make(map[string]Row)
 		}
 		if dir == Prev && !p.indexed {
-			p.buildHash(th)
+			p.buildMap(th)
 		}
 	}
 	for {
@@ -510,7 +510,7 @@ func (p *Project) getHash(th *Thread, dir Dir) Row {
 	return nil
 }
 
-func (p *Project) buildHash(th *Thread) {
+func (p *Project) buildMap(th *Thread) {
 	for {
 		row := p.source.Get(th, Next)
 		if row == nil {

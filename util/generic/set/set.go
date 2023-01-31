@@ -55,6 +55,7 @@ outer:
 
 // Union returns a combined list.
 // If either input contains duplicates, so will the output.
+// The order of x and y are preserved.
 //
 // WARNING: If either x or y is empty, it returns the *original* of the other.
 func Union[E comparable, S ~[]E](x, y S) S {

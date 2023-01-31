@@ -84,10 +84,10 @@ func (c *Compatible) source2Has(th *Thread, row Row) bool {
 		vals[i] = row.GetRawVal(c.hdr1, col, th, c.st)
 	}
 	row2 := c.source2.Lookup(th, c.keyIndex, vals)
-	return row2 != nil && c.equal(row, row2, th)
+	return row2 != nil && c.equal(th, row, row2)
 }
 
-func (c *Compatible) equal(row1, row2 Row, th *Thread) bool {
+func (c *Compatible) equal(th *Thread, row1, row2 Row) bool {
 	if c.disjoint != "" {
 		return false
 	}
