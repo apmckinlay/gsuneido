@@ -262,7 +262,7 @@ func (su *Summarize) idxCost(mode Mode) (Cost, Cost, any) {
 func (su *Summarize) mapCost(mode Mode, index []string, _ float64) (Cost, Cost, any) {
 	//FIXME technically, map should only be allowed in ReadMode
 	nrows, _ := su.Nrows()
-	if index != nil || nrows > sumMaxSize {
+	if index != nil || nrows > mapLimit {
 		return impossible, impossible, nil
 	}
 	fixcost, varcost := Optimize(su.source, mode, nil, 1)
@@ -290,8 +290,6 @@ func (su *Summarize) setApproach(_ []string, frac float64, approach any, tran Qu
 }
 
 // execution --------------------------------------------------------
-
-const sumMaxSize = 10_000
 
 func (su *Summarize) Header() *Header {
 	if su.wholeRow {
@@ -401,7 +399,7 @@ func (su *Summarize) buildMap(th *Thread) []mapPair {
 		if !ok {
 			sums = su.newSums()
 			sumMap[key] = sums
-			if len(sumMap) > sumMaxSize {
+			if len(sumMap) > mapLimit+mapLimit/2 {
 				panic("summarize too large")
 			}
 		}
@@ -647,7 +645,7 @@ type sumList struct {
 
 func (sum *sumList) add(val Value, _ Row) {
 	sum.set.Set(val, True)
-	if sum.set.Size() > sumMaxSize {
+	if sum.set.Size() > mapLimit {
 		panic("summarize list too large")
 	}
 }

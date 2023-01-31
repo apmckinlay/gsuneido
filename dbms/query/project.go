@@ -498,6 +498,9 @@ func (p *Project) getMap(th *Thread, dir Dir) Row {
 		result, ok := p.results[key]
 		if !ok {
 			p.results[key] = row
+			if len(p.results) > mapLimit + mapLimit/2 {
+				panic("project-map too large")
+			}
 			return row
 		}
 		if row.SameAs(result) {
