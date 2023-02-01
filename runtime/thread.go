@@ -87,6 +87,8 @@ type Thread struct {
 	Suneido *SuneidoObject
 
 	profile profile
+
+	subThreadOf *Thread
 }
 
 var nThread atomic.Int32
@@ -111,10 +113,16 @@ func NewThread(parent *Thread) *Thread {
 }
 
 func (t *Thread) Session() string {
+	if t.subThreadOf != nil {
+		t = t.subThreadOf
+	}
 	return t.session.Load()
 }
 
 func (t *Thread) SetSession(s string) {
+	if t.subThreadOf != nil {
+		t = t.subThreadOf
+	}
 	t.session.Store(s)
 }
 
@@ -277,6 +285,7 @@ func (t *Thread) Close() {
 func (t *Thread) SubThread() *Thread {
 	t2 := NewThread(t)
 	t2.dbms = t.dbms
+	t2.subThreadOf = t
 	return t2
 }
 
