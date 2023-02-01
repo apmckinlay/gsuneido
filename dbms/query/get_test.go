@@ -45,6 +45,7 @@ func TestQueryGet(t *testing.T) {
 		var rows []rt.Row
 		q.Rewind()
 		for row := q.Get(th, dir); row != nil; row = q.Get(th, dir) {
+			assert.Msg("too many").That(len(rows) < 100)
 			rows = append(rows, row)
 		}
 		if dir == rt.Prev {

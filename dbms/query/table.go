@@ -321,7 +321,7 @@ func trim(end string) string {
 func selOrg(encode bool, dstCols, srcCols, vals []string, full bool) string {
 	if !encode {
 		assert.That(len(dstCols) == 1)
-		return selGet(dstCols[0], srcCols, vals)
+		return ixkey.Trunc(selGet(dstCols[0], srcCols, vals))
 	}
 	enc := ixkey.Encoder{}
 	data := false
@@ -350,13 +350,3 @@ func (tbl *Table) ensureIter() *index.OverIter {
 	}
 	return tbl.iter
 }
-
-// func packedListStr(sel []string) string { // for debugging
-// 	p := ""
-// 	sep := ""
-// 	for _, s := range sel {
-// 		p += sep + runtime.Display(&runtime.Thread{}, runtime.Unpack(s))
-// 		sep = ","
-// 	}
-// 	return p
-// }

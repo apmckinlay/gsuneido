@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/generic/ord"
@@ -423,8 +424,12 @@ func (su *Summarize) buildMap(th *Thread) []mapPair {
 
 func keyRec(th *Thread, st *SuTran, row Row, hdr *Header, cols []string) Record {
 	var rb RecordBuilder
+	size := 0
 	for _, fld := range cols {
-		rb.AddRaw(row.GetRawVal(hdr, fld, th, st))
+		x := ixkey.Trunc(row.GetRawVal(hdr, fld, th, st))
+		size += len(x)
+		ixkey.Cklen(size)
+		rb.AddRaw(x)
 	}
 	return rb.Build()
 }

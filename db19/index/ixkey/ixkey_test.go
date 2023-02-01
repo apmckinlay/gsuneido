@@ -174,31 +174,44 @@ func TestHasPrefix(t *testing.T) {
 	assert.T(t).False(HasPrefix("foo\x00\x00bar", "foo\x00\x00ba"))
 }
 
-func TestMaxKey(t *testing.T) {
-	s := strings.Repeat("x", maxKey+1)
-	rec := mkrec(s)
-	assert.T(t).This(func() {
-		key(rec, []int{0, 1}, nil)
-	}).Panics("key too large")
-	assert.T(t).This(func() {
-		key(rec, []int{0}, nil)
-	}).Panics("key too large")
-	assert.T(t).This(func() {
-		var enc Encoder
+func TestMaxes(t *testing.T) {
+	s := string(byte(PackString)) + strings.Repeat("x", maxField-1)
+	var enc Encoder
+	assert.This(func() {
+		for i := 0; i < maxEntry/maxField+1; i++ {
+			enc.Add(s)
+		}
+	}).Panics("index entry too large")
+
+	s = string(byte(PackString)) + strings.Repeat("x", maxEntry+1)
+	enc = Encoder{}
+	for i := 0; i < maxEntry/maxField-1; i++ {
 		enc.Add(s)
-	}).Panics("key too large")
-	assert.T(t).This(func() {
-		row := Row{DbRec{Record: rec}}
-		cols := []string{"x"}
-		hdr := SimpleHeader(cols)
-		Make(row, hdr, cols, nil, nil)
-	}).Panics("key too large")
-	assert.T(t).This(func() {
-		s := strings.Repeat("x", maxKey-1)
-		rec := mkrec(s, s)
-		row := Row{DbRec{Record: rec}}
-		cols := []string{"x", "y"}
-		hdr := SimpleHeader(cols)
-		Make(row, hdr, cols, nil, nil)
-	}).Panics("key too large")
+	}
+
+	var fields []int
+	var rb RecordBuilder
+	for i := 0; i < maxEntry/maxField-2; i++ {
+		fields = append(fields, i)
+		rb.AddRaw(s)
+	}
+	rec := rb.Build()
+	assert.That(len(rec) > maxEntry)
+	spec := Spec{Fields: fields}
+	spec.Key(rec)
+
+	row := Row{DbRec{Record: rec}}
+	cols := []string{"x", "y"}
+	hdr := SimpleHeader(cols)
+	Make(row, hdr, cols, nil, nil)
+
+	fields = append(fields, 0)
+	spec.Fields = fields
+	assert.This(func() { spec.Key(rec) }).Panics("index entry too large")
+
+	ob := SuObjectOf(SuStr(s[1:]))
+	s = Pack(ob)
+	assert.That(len(s) > maxField)
+	enc = Encoder{}
+	assert.This(func(){ enc.Add(s) }).Panics("index field too large")
 }

@@ -247,8 +247,7 @@ func Optimize(q Query, mode Mode, index []string, frac float64) (
 		return fixcost, varcost
 	}
 	fixcost, varcost, app := optTempIndex(q, mode, index, frac)
-	assert.That(fixcost >= 0)
-	assert.That(varcost >= 0)
+	assert.That(fixcost >= 0 && varcost >= 0)
 	q.cacheAdd(index, frac, fixcost, varcost, app)
 	return fixcost, varcost
 }
@@ -272,13 +271,7 @@ func optTempIndex(q Query, mode Mode, index []string, frac float64) (
 	}
 	if len(index) == 0 || !tempIndexable(mode) {
 		fixcost, varcost, approach = q.optimize(mode, index, frac)
-		if fixcost < 0 || varcost < 0 {
-			trace.Println(mode, index, frac, "=", fixcost, varcost)
-			trace.Println(format(q, 1))
-		}
 		traceQO(fixcost + varcost)
-		assert.That(fixcost >= 0)
-		assert.That(varcost >= 0)
 		return fixcost, varcost, approach
 	}
 	noIndexFixCost, noIndexVarCost, noIndexApp := q.optimize(mode, nil, 1)
@@ -298,6 +291,7 @@ func optTempIndex(q Query, mode Mode, index []string, frac float64) (
 	nrows, _ := q.Nrows()
 	assert.That(nrows >= 0)
 	tempindexFixCost := noIndexCost + 1000 // ???
+	tempindexFixCost += 100 * len(index)   // prefer fewer fields
 	if nrows > 0 {
 		fnrows := float64(nrows)
 		tempindexFixCost += Cost(265 * fnrows * math.Log(fnrows)) // empirical
@@ -616,11 +610,9 @@ func bestGrouped(source Query, mode Mode, index []string, frac float64, cols []s
 			best.update(idx, fixcost, varcost)
 		}
 	}
-	if best.index == nil && index == nil {
-		best.fixcost, best.varcost = Optimize(source, mode, cols, frac)
-		if best.fixcost+best.varcost < impossible {
-			best.index = cols
-		}
+	if index == nil {
+		fixcost, varcost := Optimize(source, mode, cols, frac)
+		best.update(cols, fixcost, varcost)
 	}
 	return best
 }
@@ -765,4 +757,17 @@ func format(q Query, indent int) string { // recursive
 	default:
 		return in + cost + q.String()
 	}
+}
+
+//lint:ignore U1000 for debugging
+func unpack(packed []string) []runtime.Value {
+	vals := make([]runtime.Value, len(packed))
+	for i, p := range packed {
+		if p == ixkey.Max {
+			vals[i] = runtime.SuStr("<max>")
+		} else {
+			vals[i] = runtime.Unpack(p)
+		}
+	}
+	return vals
 }
