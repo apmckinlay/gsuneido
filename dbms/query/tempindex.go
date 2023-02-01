@@ -15,7 +15,11 @@ import (
 	"golang.org/x/exp/slices"
 )
 
-// TempIndex is inserted by SetApproach as required
+// TempIndex is inserted by SetApproach as required.
+// It builds a sortlist of record addresses.
+// (More complex for multiple sources and derived.)
+// Keys are not constructed for the index or Lookup/Select
+// so there are no size limits.
 type TempIndex struct {
 	Query1
 	order   []string
@@ -25,13 +29,17 @@ type TempIndex struct {
 	hdr     *Header
 	iter    rowIter
 	rewound bool
-	selOrg  string
-	selEnd  string
+	selOrg  []string
+	selEnd  []string
 }
+
+var selMin = []string{ixkey.Min}
+var selMax = []string{ixkey.Max}
 
 func NewTempIndex(src Query, order []string, tran QueryTran) *TempIndex {
 	order = withoutFixed(order, src.Fixed())
-	return &TempIndex{Query1: Query1{source: src}, order: order, tran: tran}
+	return &TempIndex{Query1: Query1{source: src}, order: order, tran: tran,
+		selOrg: selMin, selEnd: selMax}
 }
 
 func (ti *TempIndex) String() string {
@@ -67,29 +75,21 @@ func (ti *TempIndex) Select(cols, vals []string) {
 	// similar to Where Select
 	ti.Rewind()
 	if cols == nil && vals == nil { // clear select
-		ti.selOrg, ti.selEnd = ixkey.Min, ixkey.Max
+		ti.selOrg, ti.selEnd = selMin, selMax
 		return
 	}
 	fixed := ti.source.Fixed()
 	satisfied, conflict := selectFixed(cols, vals, fixed)
 	if conflict {
-		ti.selOrg, ti.selEnd = ixkey.Max, ""
+		ti.selOrg, ti.selEnd = selMax, selMin
 		return
 	}
 	if satisfied {
-		ti.selOrg, ti.selEnd = ixkey.Min, ixkey.Max
+		ti.selOrg, ti.selEnd = selMin, selMax
 		return
 	}
-	cols = slices.Clip(cols)
-	vals = slices.Clip(vals)
-	for _, fix := range fixed {
-		if len(fix.values) == 1 && !slices.Contains(cols, fix.col) {
-			cols = append(cols, fix.col)
-			vals = append(vals, fix.values[0])
-		}
-	}
-	encode := len(ti.order) > 1
-	ti.selOrg, ti.selEnd = selKeys(encode, ti.order, cols, vals)
+	ti.selOrg = ti.makeKey(cols, vals, false)
+	ti.selEnd = append(ti.selOrg, ixkey.Max)
 }
 
 func (ti *TempIndex) Lookup(th *Thread, cols, vals []string) Row {
@@ -98,13 +98,40 @@ func (ti *TempIndex) Lookup(th *Thread, cols, vals []string) Row {
 	if ti.iter == nil {
 		ti.iter = ti.makeIndex()
 	}
-	encode := len(ti.order) > 1
-	key := selOrg(encode, ti.order, cols, vals, true)
+	key := ti.makeKey(cols, vals, true)
 	row := ti.iter.Seek(key)
-	if row == nil || ti.rowKey(row) != key {
+	if row == nil || !ti.matches(row, key) {
 		return nil
 	}
 	return row
+}
+
+func (ti *TempIndex) makeKey(cols, vals []string, full bool) []string {
+	key := make([]string, 0, len(ti.order))
+	for _, col := range ti.order {
+		j := slices.Index(cols, col)
+		if j == -1 {
+			if full {
+				fmt.Println("TempIndex makeKey order:", ti.order, "cols:", cols)
+				// fmt.Println(Format(ti))
+				panic("TempIndex makeKey not full")
+			}
+			break
+		}
+		key = append(key, vals[j])
+	}
+	return key
+}
+
+func (ti *TempIndex) matches(row Row, key []string) bool {
+	for i, col := range ti.order {
+		x := row.GetRawVal(ti.hdr, col, nil, ti.st)
+		y := key[i]
+		if x != y {
+			return false
+		}
+	}
+	return true
 }
 
 func (ti *TempIndex) Get(th *Thread, dir Dir) Row {
@@ -113,6 +140,9 @@ func (ti *TempIndex) Get(th *Thread, dir Dir) Row {
 	if ti.iter == nil {
 		ti.iter = ti.makeIndex()
 		ti.rewound = true
+	}
+	if ti.conflict() {
+		return nil
 	}
 	var row Row
 	if ti.rewound {
@@ -138,13 +168,10 @@ func (ti *TempIndex) Get(th *Thread, dir Dir) Row {
 type rowIter interface {
 	Get(Dir) Row
 	Rewind()
-	Seek(key string) Row
+	Seek(key []string) Row
 }
 
 func (ti *TempIndex) makeIndex() rowIter {
-	if ti.selEnd == "" {
-		ti.selEnd = ixkey.Max
-	}
 	ti.st = MakeSuTran(ti.tran)
 	// need to copy header to avoid data race from concurrent sortlist
 	ti.hdr = ti.source.Header().Dup()
@@ -155,16 +182,27 @@ func (ti *TempIndex) makeIndex() rowIter {
 }
 
 func (ti *TempIndex) selected(row Row) bool {
-	if ti.selOrg == ixkey.Min && ti.selEnd == ixkey.Max {
+	if ti.satisfied() {
 		return true
 	}
-	key := ti.rowKey(row)
-	return ti.selOrg <= key && key < ti.selEnd
+	for i, sel := range ti.selOrg {
+		col := ti.order[i]
+		x := row.GetRawVal(ti.hdr, col, ti.th, ti.st)
+		if x != sel {
+			return false
+		}
+	}
+	return true
 }
 
-func (ti *TempIndex) rowKey(row Row) string {
-	assert.That(ti.th != nil)
-	return ixkey.Make(row, ti.hdr, ti.order, ti.th, ti.st)
+func (ti *TempIndex) satisfied() bool {
+	return len(ti.selOrg) == 1 && ti.selOrg[0] == ixkey.Min &&
+		len(ti.selEnd) == 1 && ti.selEnd[0] == ixkey.Max
+}
+
+func (ti *TempIndex) conflict() bool {
+	return len(ti.selOrg) == 1 && ti.selOrg[0] == ixkey.Max &&
+		len(ti.selEnd) == 1 && ti.selEnd[0] == ixkey.Min
 }
 
 //-------------------------------------------------------------------
@@ -198,8 +236,8 @@ func (ti *TempIndex) single() rowIter {
 		b.Add(row[0].Off)
 	}
 	// lt must be consistent with singleLess
-	lt := func(off uint64, key string) bool {
-		return ti.rowKey(ti.singleGet(off)) < key
+	lt := func(off uint64, key []string) bool {
+		return ti.less2(ti.th, ti.singleGet(off), key)
 	}
 	return &singleIter{tran: ti.tran, iter: b.Finish().Iter(lt)}
 }
@@ -214,6 +252,20 @@ func (ti *TempIndex) less(th *Thread, xrow, yrow Row) bool {
 	for _, col := range ti.order {
 		x := xrow.GetRawVal(ti.hdr, col, th, ti.st)
 		y := yrow.GetRawVal(ti.hdr, col, th, ti.st)
+		if x != y {
+			return x < y
+		}
+	}
+	return false
+}
+
+func (ti *TempIndex) less2(th *Thread, row Row, key []string) bool {
+	for i, col := range ti.order {
+		if i >= len(key) {
+			return false
+		}
+		x := row.GetRawVal(ti.hdr, col, th, ti.st)
+		y := key[i]
 		if x != y {
 			return x < y
 		}
@@ -242,7 +294,7 @@ func (it *singleIter) get() Row {
 	return Row{dbrec}
 }
 
-func (it *singleIter) Seek(key string) Row {
+func (it *singleIter) Seek(key []string) Row {
 	it.iter.Seek(key)
 	if it.iter.Eof() {
 		return nil
@@ -277,7 +329,7 @@ func (ti *TempIndex) multi() rowIter {
 	defer func(prev bool) {
 		ti.th.UIThread = prev
 	}(ti.th.UIThread)
-	ti.th.UIThread = false //
+	ti.th.UIThread = false
 	it := multiIter{ti: ti, nrecs: len(ti.hdr.Fields),
 		heap: stor.HeapStor(heapChunkSize)}
 	it.heap.Alloc(1) // avoid offset 0
@@ -328,8 +380,8 @@ func (ti *TempIndex) multi() rowIter {
 		b.Add(off)
 	}
 	// lt must be consistent with multiLess
-	lt := func(off uint64, key string) bool {
-		return ti.rowKey(it.get(off)) < key
+	lt := func(off uint64, key []string) bool {
+		return ti.less2(ti.th, it.get(off), key)
 	}
 	it.iter = b.Finish().Iter(lt)
 	return &it
@@ -337,7 +389,7 @@ func (ti *TempIndex) multi() rowIter {
 
 const multiMask = 0xffff000000
 
-func (it *multiIter) Seek(key string) Row {
+func (it *multiIter) Seek(key []string) Row {
 	it.iter.Seek(key)
 	if it.iter.Eof() {
 		return nil

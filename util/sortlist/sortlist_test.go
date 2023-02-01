@@ -76,13 +76,13 @@ func test(nitems int) {
 	list.ckinorder(nitems)
 	bldr.ckinorder(nitems)
 
-	less := func(x uint64, k string) bool {
-		y, _ := strconv.Atoi(k)
+	less := func(x uint64, key []string) bool {
+		y, _ := strconv.Atoi(key[0])
 		return x < uint64(y)
 	}
 	it := list.Iter(less)
-	it.Seek("0")
-	it.Seek("9999999999")
+	it.Seek([]string{"0"})
+	it.Seek([]string{"9999999999"})
 
 	bldr.Sort(func(x, y uint64) bool { return y < x }) // reverse
 }
@@ -146,7 +146,7 @@ func TestIterEmpty(t *testing.T) {
 	it.Prev()
 	assert.T(t).That(it.Eof())
 
-	it.Seek("")
+	it.Seek(nil)
 }
 
 func TestIterOne(t *testing.T) {
@@ -155,14 +155,14 @@ func TestIterOne(t *testing.T) {
 		b.Add(uint64(i + 1))
 	}
 	list := b.Finish() // empty
-	less := func(x uint64, k string) bool {
-		y, _ := strconv.Atoi(k)
+	less := func(x uint64, key []string) bool {
+		y, _ := strconv.Atoi(key[0])
 		return x < uint64(y)
 	}
 	it := list.Iter(less)
-	it.Seek("0")
-	it.Seek("2222")
-	it.Seek("999999")
+	it.Seek([]string{"0"})
+	it.Seek([]string{"2222"})
+	it.Seek([]string{"999999"})
 }
 
 func TestIter(t *testing.T) {
@@ -171,8 +171,8 @@ func TestIter(t *testing.T) {
 		b.Add(uint64(j))
 	}
 	list := b.Finish()
-	less := func(x uint64, k string) bool {
-		y, _ := strconv.Atoi(k)
+	less := func(x uint64, key []string) bool {
+		y, _ := strconv.Atoi(key[0])
 		return x < uint64(y)
 	}
 	const eof = -1
@@ -215,7 +215,7 @@ func TestIter(t *testing.T) {
 	testPrev(9)
 
 	for i := 1; i <= 10; i++ {
-		it.Seek(strconv.Itoa(i))
+		it.Seek([]string{strconv.Itoa(i)})
 		test(i)
 	}
 }

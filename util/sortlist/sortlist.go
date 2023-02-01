@@ -308,10 +308,12 @@ func (b *Builder) Iter() func() uint64 {
 type Iter struct {
 	blocks []*block
 	size   int
-	less   func(x uint64, key string) bool
+	less   iterLess
 	i      int
 	state
 }
+
+type iterLess func(x uint64, key []string) bool
 
 type state int
 
@@ -323,7 +325,7 @@ const (
 // Iter returns an iterator for the list.
 // Warning: The less function (used by seek)
 // must be consistent with the sort function.
-func (li List) Iter(less func(x uint64, key string) bool) *Iter {
+func (li List) Iter(less iterLess) *Iter {
 	return &Iter{blocks: li.blocks, size: li.size, state: rewound, less: less}
 }
 
@@ -372,7 +374,7 @@ func (it *Iter) Cur() uint64 {
 }
 
 // Seek does a binary search
-func (it *Iter) Seek(key string) {
+func (it *Iter) Seek(key []string) {
 	first := 0
 	n := it.size
 	for n > 0 {
