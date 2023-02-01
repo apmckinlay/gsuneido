@@ -156,6 +156,7 @@ func (w *Where) Keys() [][]string {
 	if w.singleton || w.conflict {
 		return [][]string{{}} // intentionally {} not nil
 	}
+	//TODO treat unique indexes with a where != "" as keys
 	return w.source.Keys()
 }
 
