@@ -65,3 +65,12 @@ func TestWith(t *testing.T) {
 	assert.T(t).This(With(list1, 4, 5)).Is([]int{1, 2, 3, 4, 5})
 	assert.T(t).This(With(list1, list2...)).Is([]int{1, 2, 3, 4, 5})
 }
+
+func TestMap(t *testing.T) {
+	assert := assert.T(t).This
+	var nill []int
+	fn := func (n int) int { return n * 10 }
+	assert(MapFn(nill, fn)).Is(nil)
+	assert(MapFn([]int{1}, fn)).Is([]int{10})
+	assert(MapFn([]int{1,2,3}, fn)).Is([]int{10,20,30})
+}

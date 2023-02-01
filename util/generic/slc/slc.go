@@ -53,7 +53,7 @@ func Without[S ~[]E, E comparable](list S, str E) S {
 // WithoutFn returns a new slice
 // omitting any values where fn returns true,
 // maintaining the existing order.
-func WithoutFn[S ~[]E, E comparable](list S, fn func(E) bool) S {
+func WithoutFn[S ~[]E, E any](list S, fn func(E) bool) S {
 	dest := make(S, 0, len(list))
 	for _, s := range list {
 		if !fn(s) {
@@ -147,4 +147,17 @@ func Repeat[E any](x E, n int) []E {
 	result := make([]E, n)
 	Fill(result, x)
 	return result
+}
+
+// MapFn returns a new slice
+// with each element the result of calling fn on the original element.
+func MapFn[S ~[]E, E any](list S, fn func(E) E) S {
+	if list == nil {
+		return nil
+	}
+	dest := make(S, len(list))
+	for i, s := range list {
+		dest[i] = fn(s)
+	}
+	return dest
 }
