@@ -4,8 +4,9 @@
 package query
 
 import (
+	"strings"
+
 	"github.com/apmckinlay/gsuneido/compile/ast"
-	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/generic/ord"
@@ -17,17 +18,16 @@ import (
 
 type Union struct {
 	Compatible
-	strategy unionStrategy
-	rewound  bool
-	empty1   Row
-	empty2   Row
-	src1     bool
-	src2     bool
-	key1     string
-	key2     string
-	row1     Row
-	row2     Row
-	curKey   string
+	strategy  unionStrategy
+	rewound   bool
+	empty1    Row
+	empty2    Row
+	src1      bool
+	src2      bool
+	row1      Row
+	row2      Row
+	prevDir   Dir
+	mergeCols []string
 }
 
 type unionApproach struct {
@@ -199,7 +199,7 @@ func (u *Union) optimize(mode Mode, index []string, frac float64) (Cost, Cost, a
 	if u.disjoint != "" {
 		fixcost1, varcost1 := Optimize(u.source1, mode, nil, frac)
 		fixcost2, varcost2 := Optimize(u.source2, mode, nil, frac)
-		approach := &unionApproach{}
+		approach := &unionApproach{} // will use getLookup, but no lookups
 		return fixcost1 + fixcost2, varcost1 + varcost2, approach
 	}
 	// else not disjoint
@@ -234,8 +234,8 @@ func handlesIndex(keys [][]string, index []string) bool {
 }
 
 func (*Union) optMerge(src1, src2 Query, mode Mode, frac float64) (Cost, Cost, any) {
-	// need key (unique) index to eliminate duplicates
-	keys := set.IntersectFn(src1.Keys(), src2.Keys(), set.Equal[string])
+	// if we get here, there is no required index, and it's not disjoint
+	// we need a key (unique) index to eliminate duplicates
 	var bestKey, bestIdx1, bestIdx2 []string
 	bestFixCost := impossible
 	bestVarCost := impossible
@@ -249,6 +249,8 @@ func (*Union) optMerge(src1, src2 Query, mode Mode, frac float64) (Cost, Cost, a
 			bestIdx1, bestIdx2 = idx1, idx2
 		}
 	}
+	//TODO take into account fixed and columns not in one source
+	keys := set.IntersectFn(src1.Keys(), src2.Keys(), set.Equal[string])
 	for _, key := range keys {
 		opt(key, key, key)
 		for _, idx1 := range src1.Indexes() {
@@ -363,84 +365,83 @@ func (u *Union) getLookup(th *Thread, dir Dir) Row {
 	}
 }
 
-func (u *Union) getMerge(th *Thread, dir Dir) Row {
+func (u *Union) getMerge(th *Thread, dir Dir) (r Row) {
 	if u.hdr1 == nil {
 		u.hdr1 = u.source1.Header()
 		u.hdr2 = u.source2.Header()
 	}
-
-	// read from the appropriate source(s)
-	if u.rewound {
-		u.fetch1(th, dir)
-		u.fetch2(th, dir)
-	} else {
-		// curkey is required for changing direction
-		if u.src1 || u.before(dir, u.key1, u.curKey, true) {
-			u.fetch1(th, dir)
+	if u.mergeCols == nil {
+		// compare keyIndex fields first
+		u.mergeCols = set.Union(u.keyIndex, u.allCols)
+	}
+	get1 := func() {
+		if dir != u.prevDir && u.row1 == nil {
+			u.source1.Rewind()
 		}
-		if u.src2 || u.before(dir, u.key2, u.curKey, false) {
-			u.fetch2(th, dir)
+		u.row1 = u.source1.Get(th, dir)
+	}
+	get2 := func() {
+		if dir != u.prevDir && u.row2 == nil {
+			u.source2.Rewind()
+		}
+		u.row2 = u.source2.Get(th, dir)
+	}
+
+	// refill row1 and row2
+	if u.rewound || (u.src1 && u.src2) {
+		get1()
+		get2()
+	} else if u.src1 {
+		get1()
+		if dir != u.prevDir {
+			get2()
+		}
+	} else if u.src2 {
+		get2()
+		if dir != u.prevDir {
+			get1()
 		}
 	}
 
+	u.prevDir = dir
 	u.src1, u.src2 = false, false
 	if u.row1 == nil && u.row2 == nil {
-		u.curKey = u.key1
-		u.src1 = true
+		u.src1, u.src2 = true, true
 		return nil
-	} else if u.row1 != nil && u.row2 != nil && u.equal(u.row1, u.row2, th) {
-		// rows same so return either one
-		u.curKey = u.key1
+	} else if u.row2 == nil {
+		u.src1 = true
+		return JoinRows(u.row1, u.empty2)
+	} else if u.row1 == nil {
+		u.src2 = true
+		return JoinRows(u.empty1, u.row2)
+	}
+	cmp := u.compare(th, u.row1, u.row2, u.hdr1, u.hdr2)
+	if cmp == 0 {
+		// rows identical, arbitrarily return row1
 		u.src1, u.src2 = true, true
 		return JoinRows(u.row1, u.empty2)
-	} else if u.row1 != nil &&
-		(u.row2 == nil || u.before(dir, u.key1, u.key2, true)) {
-		u.curKey = u.key1
+	}
+	if dir == Prev {
+		cmp *= -1
+	}
+	if cmp < 0 {
 		u.src1 = true
 		return JoinRows(u.row1, u.empty2)
 	} else {
-		u.curKey = u.key2
 		u.src2 = true
 		return JoinRows(u.empty1, u.row2)
 	}
 }
 
-func (u *Union) fetch1(th *Thread, dir Dir) {
-	u.row1 = u.source1.Get(th, dir)
-	if u.row1 == nil {
-		u.key1 = endKey(dir)
-	} else {
-		u.key1 = ixkey.Make(u.row1, u.hdr1, u.keyIndex, th, u.st)
-	}
-}
-
-func (u *Union) fetch2(th *Thread, dir Dir) {
-	u.row2 = u.source2.Get(th, dir)
-	if u.row2 == nil {
-		u.key2 = endKey(dir)
-	} else {
-		u.key2 = ixkey.Make(u.row2, u.hdr2, u.keyIndex, th, u.st)
-	}
-}
-
-func (*Union) before(dir Dir, key1, key2 string, x bool) bool {
-	if key1 == key2 {
-		if dir == Next {
-			return x
+func (u *Union) compare(th *Thread, row1, row2 Row, hdr1, hdr2 *Header) int {
+	for _, col := range u.mergeCols {
+		x1 := row1.GetRawVal(hdr1, col, th, u.st)
+		x2 := row2.GetRawVal(hdr2, col, th, u.st)
+		if c := strings.Compare(x1, x2); c != 0 {
+			return c
 		}
-		return !x
 	}
-	if dir == Next {
-		return key1 < key2
-	}
-	return key1 > key2
-}
-
-func endKey(dir Dir) string {
-	if dir == Next {
-		return ixkey.Max
-	} // else Prev
-	return ixkey.Min
+	return 0
 }
 
 func (u *Union) Select(cols, vals []string) {
@@ -455,16 +456,3 @@ func (u *Union) Lookup(th *Thread, cols, vals []string) Row {
 	u.Select(nil, nil) // clear select
 	return row
 }
-
-//lint:ignore U1000 for debugging
-// func unpack(packed []string) []Value {
-// 	vals := make([]Value, len(packed))
-// 	for i, p := range packed {
-// 		if p == ixkey.Max {
-// 			vals[i] = SuStr("<max>")
-// 		} else {
-// 			vals[i] = Unpack(p)
-// 		}
-// 	}
-// 	return vals
-// }
