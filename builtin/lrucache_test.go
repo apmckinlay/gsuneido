@@ -13,7 +13,6 @@ import (
 
 func TestLruCache(t *testing.T) {
 	const size = 20
-	rand.Seed(12345678)
 	get := func(key Value) Value { return key }
 	lc := newLruCache(size)
 	for i := 0; i < size; i++ {

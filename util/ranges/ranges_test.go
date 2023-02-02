@@ -9,7 +9,6 @@ import (
 	"sort"
 	"strconv"
 	"testing"
-	"time"
 
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/str"
@@ -162,7 +161,6 @@ func (rs *Ranges) check() int {
 func TestOverflow(t *testing.T) {
 	const n = 12000 * 2
 	data := make([]string, n)
-	rand.Seed(time.Now().UnixNano())
 	randKey := str.UniqueRandom(4, 10)
 	for i := 0; i < n; i++ {
 		data[i] = randKey()

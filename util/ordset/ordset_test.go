@@ -96,7 +96,6 @@ func TestOverflow(t *testing.T) {
 		t.SkipNow()
 	}
 	var x Set
-	rand.Seed(time.Now().UnixNano())
 	randKey := str.UniqueRandom(3, 10)
 	for i := 0; i < 20000; i++ {
 		if !x.Insert(randKey()) {

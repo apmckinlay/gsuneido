@@ -9,11 +9,9 @@ import (
 	"math/rand"
 	"os"
 	"strconv"
-	"time"
 )
 
 func main() {
-	rand.Seed(time.Now().UnixNano())
 	file := "suneido.db"
 	bytesPerSpot := 1
 	nspots := 1

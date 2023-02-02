@@ -7,6 +7,7 @@ import (
 	"math/rand"
 	"sort"
 	"testing"
+	"time"
 	"unsafe"
 
 	"github.com/apmckinlay/gsuneido/util/assert"
@@ -98,24 +99,26 @@ func TestHmap_full(*testing.T) {
 }
 
 func TestHmap_random(t *testing.T) {
-	assert := assert.T(t).This
+	assert := assert.This
+	seed := time.Now().UnixNano()
+	r := rand.New(rand.NewSource(seed))
 	const N = 10000
 	hm := Hmap{}
 	assert(hm.Size()).Is(0)
 	nums := map[int]int{}
 	for i := 0; i < N; i++ {
-		n := rand.Intn(N)
+		n := r.Intn(N)
 		hm.Put(SuInt(n), SuInt(i))
 		nums[n] = i
 	}
-	rand.Seed(1)
+	r.Seed(seed)
 	for i := 0; i < N; i++ {
-		n := rand.Intn(N)
+		n := r.Intn(N)
 		assert(hm.Get(SuInt(n))).Is(SuInt(nums[n]))
 	}
-	rand.Seed(1)
+	r.Seed(seed)
 	for i := 0; i < N; i++ {
-		n := rand.Intn(N)
+		n := r.Intn(N)
 		v := hm.Del(SuInt(n))
 		if nums[n] == -1 {
 			assert(v).Is(nil)

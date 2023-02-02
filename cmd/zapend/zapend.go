@@ -9,11 +9,9 @@ import (
 	"math/rand"
 	"os"
 	"strconv"
-	"time"
 )
 
 func main() {
-	rand.Seed(time.Now().UnixNano())
 	file := "suneido.db"
 	bytes := 1
 	if len(os.Args) > 1 {

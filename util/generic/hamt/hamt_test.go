@@ -10,6 +10,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/apmckinlay/gsuneido/db19/stor"
 	"github.com/apmckinlay/gsuneido/util/assert"
@@ -67,26 +68,27 @@ func TestRandom(t *testing.T) {
 	if testing.Short() {
 		n = 1000
 	}
-	rand.Seed(123456)
+	seed := time.Now().UnixNano()
+	r := rand.New(rand.NewSource(seed))
 	for i := 0; i < n; i++ {
-		f := int(rand.Int31())
+		f := int(r.Int31())
 		ht.Put(&Foo{f, strconv.Itoa(f)})
 		// ht.check()
 		if i%100 == 0 {
 			ht = ht.Freeze().Mutable()
 		}
 	}
-	rand.Seed(123456)
+	r.Seed(seed)
 	for i := 0; i < n; i++ {
-		f := int(rand.Int31())
+		f := int(r.Int31())
 		ht.Put(&Foo{f, strconv.Itoa(f)})
 		// ht.check()
 	}
 	nums := map[int]bool{}
 	ht = ht.Freeze()
-	rand.Seed(123456)
+	r.Seed(seed)
 	for i := 0; i < n; i++ {
-		f := int(rand.Int31())
+		f := int(r.Int31())
 		foo, ok := ht.Get(f)
 		assert.True(ok)
 		assert.This(foo.key).Is(f)
