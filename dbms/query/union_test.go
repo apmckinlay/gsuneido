@@ -13,6 +13,28 @@ import (
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
+type r struct {
+	key []string
+	i1, i2 int
+}
+type s []string
+
+func TestUnion_MergeIndexes(t *testing.T) {
+	var list []r
+	callback := func(key []string, i1, i2 int) {
+		list = append(list, r{key, i1, i2})
+	}
+	mergeIndexes(
+		[][]string{{"a", "b"}},
+		[][]string{{"b", "a", "x"}, {"a", "b"}},
+		[][]string{{"b", "a", "y"}, {"b", "z", "a"}, {"b", "a", "z"}},
+		callback)
+	assert.This(list).Is([]r{
+		{s{"a", "b"}, -1, -1},
+		{s{"a", "b"}, 0, 0},
+		{s{"a", "b"}, 0, 2}})
+}
+
 func TestUnion_MergeSwitchDir(t *testing.T) {
 	db := heapDb()
 	db.adm("create one (a) key(a)")

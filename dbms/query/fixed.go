@@ -120,6 +120,11 @@ func withoutFixed(cols []string, fixed []Fixed) []string {
 		func(col string) bool { return isFixed(fixed, col) })
 }
 
+func withoutFixed2(cols [][]string, fixed []Fixed) [][]string {
+	return slc.MapFn(cols,
+		func(cols []string) []string { return withoutFixed(cols, fixed) })
+}
+
 func fixedWith(fixed Fixed, val string) Fixed {
 	return Fixed{col: fixed.col,
 		values: append(slices.Clip(fixed.values), val)}

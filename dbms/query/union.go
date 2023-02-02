@@ -235,40 +235,69 @@ func handlesIndex(keys [][]string, index []string) bool {
 
 func (*Union) optMerge(src1, src2 Query, mode Mode, frac float64) (Cost, Cost, any) {
 	// if we get here, there is no required index, and it's not disjoint
-	// we need a key (unique) index to eliminate duplicates
+	// we need a common key (unique) index to eliminate duplicates
+	fixed1 := src1.Fixed()
+	indexes1 := src1.Indexes()
+	idxs1 := withoutFixed2(indexes1, fixed1)
+	fixed2 := src2.Fixed()
+	indexes2 := src2.Indexes()
+	idxs2 := withoutFixed2(indexes2, fixed2)
+
 	var bestKey, bestIdx1, bestIdx2 []string
 	bestFixCost := impossible
 	bestVarCost := impossible
-	opt := func(key, idx1, idx2 []string) {
-		fixcost1, varcost1 := Optimize(src1, mode, idx1, frac)
-		fixcost2, varcost2 := Optimize(src2, mode, idx2, frac)
+	opt := func(key []string, i1, i2 int) {
+		var index1, index2 []string
+		if i1 == -1 {
+			index1 = key
+			index2 = key
+		} else {
+			index1 = indexes1[i1]
+			index2 = indexes2[i2]
+		}
+		fixcost1, varcost1 := Optimize(src1, mode, index1, frac)
+		fixcost2, varcost2 := Optimize(src2, mode, index2, frac)
 		if fixcost1+varcost1+fixcost2+varcost2 < bestFixCost+bestVarCost {
 			bestKey = key
 			bestFixCost = fixcost1 + fixcost2
 			bestVarCost = varcost1 + varcost2
-			bestIdx1, bestIdx2 = idx1, idx2
+			bestIdx1, bestIdx2 = index1, index2
 		}
 	}
-	//TODO take into account fixed and columns not in one source
-	keys := set.IntersectFn(src1.Keys(), src2.Keys(), set.Equal[string])
+	keys1 := withoutFixed2(src1.Keys(), fixed1)
+	keys2 := withoutFixed2(src2.Keys(), fixed2)
+	// interesect using set.Equal to ignore order
+	keys := set.IntersectFn(keys1, keys2, set.Equal[string])
+	mergeIndexes(keys, idxs1, idxs2, opt)
+	approach := &unionApproach{keyIndex: bestKey, strategy: unionMerge,
+		idx1: bestIdx1, idx2: bestIdx2}
+	return bestFixCost, bestVarCost, approach
+}
+
+func mergeIndexes(keys, indexes1, indexes2 [][]string,
+	callback func(key []string, i1, i2 int)) {
 	for _, key := range keys {
-		opt(key, key, key)
-		for _, idx1 := range src1.Indexes() {
-			if !set.Subset(idx1, key) {
-				continue
-			}
-			ik1 := set.Intersect(idx1, key)
-			for _, idx2 := range src2.Indexes() {
-				ik2 := set.Intersect(idx2, key)
-				if slices.Equal(ik1, ik2) {
-					opt(key, idx1, idx2)
+		callback(key, -1, -1) // -1 means key
+		for i1, idx1 := range indexes1 {
+			if keyperm := keyPerm(idx1, key); keyperm != nil {
+				for i2, idx2 := range indexes2 {
+					if slc.HasPrefix(idx2, keyperm) {
+						callback(key, i1, i2)
+					}
 				}
 			}
 		}
 	}
-	approach := &unionApproach{keyIndex: bestKey, strategy: unionMerge,
-		idx1: bestIdx1, idx2: bestIdx2}
-	return bestFixCost, bestVarCost, approach
+}
+
+func keyPerm(index, key []string) []string {
+	if len(index) >= len(key) {
+		index = index[:len(key)]
+		if set.Equal(index, key) {
+			return index
+		}
+	}
+	return nil
 }
 
 func (u *Union) optLookup(src1, src2 Query, mode Mode, frac float64) (Cost, Cost, any) {
