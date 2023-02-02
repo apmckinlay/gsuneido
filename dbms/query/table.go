@@ -321,7 +321,7 @@ func trim(end string) string {
 func selOrg(encode bool, dstCols, srcCols, vals []string, full bool) string {
 	if !encode {
 		assert.That(len(dstCols) == 1)
-		return ixkey.Trunc(selGet(dstCols[0], srcCols, vals))
+		return selGet(dstCols[0], srcCols, vals)
 	}
 	enc := ixkey.Encoder{}
 	data := false

@@ -426,9 +426,9 @@ func keyRec(th *Thread, st *SuTran, row Row, hdr *Header, cols []string) Record 
 	var rb RecordBuilder
 	size := 0
 	for _, fld := range cols {
-		x := ixkey.Trunc(row.GetRawVal(hdr, fld, th, st))
+		x := row.GetRawVal(hdr, fld, th, st)
 		size += len(x)
-		ixkey.Cklen(size)
+		ixkey.Cksize(size)
 		rb.AddRaw(x)
 	}
 	return rb.Build()

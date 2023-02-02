@@ -992,11 +992,9 @@ outer:
 			assert.That(len(fs) == 1)
 			f := fs[0]
 			if f.isPoint() {
-				result[i] = pointRange{org: ixkey.Trunc(f.vals[0])}
+				result[i] = pointRange{org: f.vals[0]}
 			} else { // range
-				result[i] = pointRange{
-					org: ixkey.Trunc(f.org.valRaw()),
-					end: ixkey.Trunc(f.end.valRaw())}
+				result[i] = pointRange{org: f.org.valRaw(), end: f.end.valRaw()}
 			}
 		} else {
 			var enc ixkey.Encoder

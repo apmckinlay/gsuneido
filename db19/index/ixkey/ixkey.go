@@ -9,7 +9,6 @@
 // Zero bytes are encoded as 0,1.
 // Normally the values will be packed,
 // but this is not required as long as they compare directly.
-// Field values starting with PackString will be truncated to maxField.
 // If a resulting entry is longer than maxEntry it will panic.
 package ixkey
 
@@ -31,7 +30,6 @@ const Sep = "\x00\x00"
 // Packed values start with a type byte from 0 to 7 so 0xff will be larger.
 // And 0xff will be larger than any ascii strings.
 
-const maxField = 256  // ???
 const maxEntry = 4096 // ???
 
 // Spec specifies the field(s) in an index key
@@ -55,8 +53,7 @@ type Encoder struct {
 
 // Add appends a field value
 func (e *Encoder) Add(fld string) {
-	fld = Trunc(fld)
-	Cklen(len(e.buf) + len(fld))
+	Cksize(len(e.buf) + len(fld))
 	if e.buf == nil {
 		e.buf = make([]byte, 0, 2*(len(fld)+2))
 	} else {
@@ -88,7 +85,7 @@ func (spec *Spec) Key(rec Record) string {
 		return ""
 	}
 	if !spec.Encodes() {
-		return getRaw(rec, fields[0]) // don't need to encode single field keys
+		return Cklen(getRaw(rec, fields[0])) // don't need to encode single field keys
 	}
 	n := 0
 	lastNonEmpty := -1
@@ -111,7 +108,7 @@ func (spec *Spec) Key(rec Record) string {
 	}
 	n += 2 * len(fields) // for separators (2 bytes extra)
 	n += n / 16          // allow for some escapes
-	Cklen(n)
+	Cksize(n)
 	buf := make([]byte, 0, n)
 	if lastNonEmpty == -1 {
 		for range fields {
@@ -128,7 +125,12 @@ func (spec *Spec) Key(rec Record) string {
 	return hacks.BStoS(buf)
 }
 
-func Cklen(n int) {
+func Cklen(s string) string {
+	Cksize(len(s))
+	return s
+}
+
+func Cksize(n int) {
 	if n > maxEntry {
 		panic(fmt.Sprintf("index entry too large (%d > %d)", n, maxEntry))
 	}
@@ -169,20 +171,16 @@ func fieldLen(rec Record, field int) int {
 	if field < 0 {
 		field = -field - 2 // _lower!
 	}
-	x := rec.GetRaw(field)
-	if len(x) > maxField && x[0] == PackString {
-		return maxField
-	}
-	return len(x)
+	return len(rec.GetRaw(field))
 }
 
 // getRaw does Record.GetRaw and truncates and handles _lower! fields
 func getRaw(rec Record, field int) string {
 	if field >= 0 {
-		return Trunc(rec.GetRaw(field))
+		return rec.GetRaw(field)
 	}
 	field = -field - 2 // _lower!
-	return PackedToLower(Trunc(rec.GetRaw(field)))
+	return PackedToLower(rec.GetRaw(field))
 }
 
 // Compare compares the specified fields of the two records
@@ -269,24 +267,11 @@ func HasPrefix(s, prefix string) bool {
 // Make builds a key for cols from a Row and Header
 func Make(row Row, hdr *Header, cols []string, th *Thread, st *SuTran) string {
 	if len(cols) == 1 { // WARNING: only correct for keys
-		return Trunc(row.GetRawVal(hdr, cols[0], th, st))
+		return Cklen(row.GetRawVal(hdr, cols[0], th, st))
 	}
 	enc := Encoder{}
 	for _, col := range cols {
 		enc.Add(row.GetRawVal(hdr, col, th, st))
 	}
 	return enc.String()
-}
-
-// Trunc truncates packed string values to maxField.
-// It throws if a non-string value is larger than maxEntry.
-// Otherwise, it returns the original value.
-func Trunc(p string) string {
-	if len(p) > maxField && p[0] == PackString {
-		return p[:maxField]
-	}
-	if len(p) > maxEntry {
-		panic(fmt.Sprintf("index field too large (%d > %d)", len(p), maxField))
-	}
-	return p
 }
