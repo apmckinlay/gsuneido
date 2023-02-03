@@ -383,7 +383,8 @@ func (lj *LeftJoin) Keys() [][]string {
 
 func (lj *LeftJoin) Fixed() []Fixed {
 	fixed := slices.Clip(lj.source1.Fixed())
-	if fixed2 := lj.source2.Fixed(); len(fixed2) == 1 {
+	if fixed2 := lj.source2.Fixed(); len(fixed2) == 1 &&
+		!slices.Contains(lj.by, fixed2[0].col) {
 		fixed = append(fixed, fixedWith(fixed2[0], ""))
 	}
 	return fixed
