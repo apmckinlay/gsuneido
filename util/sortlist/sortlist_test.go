@@ -11,7 +11,41 @@ import (
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/util/assert"
+	"golang.org/x/exp/constraints"
+	"golang.org/x/exp/slices"
 )
+
+var z = func(x int) bool { return x == 0 }
+var lt = func(x, y int) bool { return x < y }
+
+func sz[T any](s []T) bool { return s == nil }
+func slt[T constraints.Ordered](x, y []T) bool {
+	return slices.Compare(x, y) < 0
+}
+
+func TestSortList_Unsorted(t *testing.T) {
+	bldr := NewUnsorted(z)
+	bldr.Add(2)
+	bldr.Add(1)
+	bldr.Sort(lt)
+	bldrInorder(bldr, 2)
+}
+
+func TestSortList_Sorted(t *testing.T) {
+	bldr := NewSorting(z, lt)
+	bldr.Add(2)
+	bldr.Add(1)
+	list := bldr.Finish()
+	listInorder(list, 2, z, lt)
+}
+
+func TestSortList_SortedSlice(t *testing.T) {
+	bldr := NewSorting(sz[int], slt[int])
+	bldr.Add([]int{2})
+	bldr.Add([]int{1})
+	list := bldr.Finish()
+	listInorder(list, 2, sz[int], slt[int])
+}
 
 func FuzzSort(f *testing.F) {
 	f.Fuzz(func(t *testing.T, nb uint8, n2 uint16) {
@@ -25,12 +59,12 @@ func testSorting(t *testing.T, nb uint8, n2 uint16) {
 	if n > 100_000 {
 		return
 	}
-	bldr := NewSorting(func(x, y uint64) bool { return x < y })
+	bldr := NewSorting(z, lt)
 	for j := 0; j < n; j++ {
-		bldr.Add(1 + uint64(rand.Int31())) // +1 so no zeros
+		bldr.Add(1 + int(rand.Int31())) // +1 so no zeros
 	}
 	bldr.Finish()
-	bldr.ckinorder(n)
+	bldrInorder(bldr, n)
 }
 
 func testUnsorted(t *testing.T, nb uint8, n2 uint16) {
@@ -38,13 +72,13 @@ func testUnsorted(t *testing.T, nb uint8, n2 uint16) {
 	if n > 100_000 {
 		return
 	}
-	bldr := NewUnsorted()
+	bldr := NewUnsorted(z)
 	for j := 0; j < n; j++ {
-		bldr.Add(1 + uint64(rand.Int31())) // +1 so no zeros
+		bldr.Add(1 + int(rand.Int31())) // +1 so no zeros
 	}
 	bldr.Finish()
-	bldr.Sort(func(x, y uint64) bool { return x < y })
-	bldr.ckinorder(n)
+	bldr.Sort(func(x, y int) bool { return x < y })
+	bldrInorder(bldr, n)
 }
 
 func TestBuilder(*testing.T) {
@@ -58,55 +92,55 @@ func TestBuilder(*testing.T) {
 }
 
 func test(nitems int) {
-	bldr := NewSorting(func(x, y uint64) bool { return x < y })
+	bldr := NewSorting(z, lt)
 	for j := 0; j < nitems; j++ {
 		bldr.Add(randint())
 	}
 	list := bldr.Finish()
 	assert.This(list.size).Is(nitems)
-	list.ckinorder(nitems)
-	bldr.ckinorder(nitems)
+	listInorder(list, nitems, z, lt)
+	bldrInorder(bldr, nitems)
 
-	bldr = NewUnsorted()
+	bldr = NewUnsorted(z)
 	for j := 1; j <= nitems; j++ {
-		bldr.Add(uint64(j))
+		bldr.Add(int(j))
 	}
 	list = bldr.Finish()
 	assert.This(list.size).Is(nitems)
-	list.ckinorder(nitems)
-	bldr.ckinorder(nitems)
+	listInorder(list, nitems, z, lt)
+	bldrInorder(bldr, nitems)
 
-	less := func(x uint64, key []string) bool {
+	less := func(x int, key []string) bool {
 		y, _ := strconv.Atoi(key[0])
-		return x < uint64(y)
+		return x < int(y)
 	}
 	it := list.Iter(less)
 	it.Seek([]string{"0"})
 	it.Seek([]string{"9999999999"})
 
-	bldr.Sort(func(x, y uint64) bool { return y < x }) // reverse
+	bldr.Sort(func(x, y int) bool { return y < x }) // reverse
 }
 
 var N int
 
-func randint() uint64 {
+func randint() int {
 	// small delay to simulate work
 	for i := 0; i < 200; i++ {
 		N++
 	}
-	return 1 + uint64(rand.Int31()) // +1 so no zeros
+	return 1 + int(rand.Int31()) // +1 so no zeros
 }
 
-func (li *List) ckinorder(nitems int) {
+func listInorder[T any](li List[T], nitems int, z func(x T) bool, lt func(x, y T) bool) {
 	n := 0
-	prev := uint64(0)
+	var prev T
 outer:
 	for _, b := range li.blocks {
 		for _, x := range b {
-			if x == 0 {
+			if z(x) {
 				break outer
 			}
-			assert.That(prev <= x)
+			assert.That(n == 0 || !lt(x, prev)) // prev <= x
 			prev = x
 			n++
 		}
@@ -114,9 +148,9 @@ outer:
 	assert.This(n).Is(nitems)
 }
 
-func (b *Builder) ckinorder(nitems int) {
+func bldrInorder(b *Builder[int], nitems int) {
 	n := 0
-	prev := uint64(0)
+	prev := int(0)
 	iter := b.Iter()
 	for x := iter(); x != 0; x = iter() {
 		assert.That(prev <= x)
@@ -129,7 +163,7 @@ func (b *Builder) ckinorder(nitems int) {
 //-------------------------------------------------------------------
 
 func TestIterEmpty(t *testing.T) {
-	b := NewSorting(nil)
+	b := NewSorting[int](nil, nil)
 	list := b.Finish() // empty
 
 	it := list.Iter(nil)
@@ -150,14 +184,14 @@ func TestIterEmpty(t *testing.T) {
 }
 
 func TestIterOne(t *testing.T) {
-	b := NewUnsorted()
+	b := NewUnsorted(z)
 	for i := 0; i < blockSize; i++ {
-		b.Add(uint64(i + 1))
+		b.Add(int(i + 1))
 	}
 	list := b.Finish() // empty
-	less := func(x uint64, key []string) bool {
+	less := func(x int, key []string) bool {
 		y, _ := strconv.Atoi(key[0])
-		return x < uint64(y)
+		return x < int(y)
 	}
 	it := list.Iter(less)
 	it.Seek([]string{"0"})
@@ -166,14 +200,14 @@ func TestIterOne(t *testing.T) {
 }
 
 func TestIter(t *testing.T) {
-	b := NewSorting(func(x, y uint64) bool { return x < y })
+	b := NewSorting(z, lt)
 	for j := 1; j <= 10; j++ {
-		b.Add(uint64(j))
+		b.Add(int(j))
 	}
 	list := b.Finish()
-	less := func(x uint64, key []string) bool {
+	less := func(x int, key []string) bool {
 		y, _ := strconv.Atoi(key[0])
-		return x < uint64(y)
+		return x < int(y)
 	}
 	const eof = -1
 	it := list.Iter(less)
@@ -183,7 +217,7 @@ func TestIter(t *testing.T) {
 			assert.Msg(expected, "should be eof").That(it.Eof())
 		} else {
 			assert.Msg(expected, "should not be eof").That(!it.Eof())
-			assert.This(it.Cur()).Is(uint64(expected))
+			assert.This(it.Cur()).Is(int(expected))
 		}
 	}
 	testNext := func(expected int) { it.Next(); t.Helper(); test(expected) }
@@ -224,7 +258,7 @@ func TestIter(t *testing.T) {
 
 const nitems = 4 * blockSize // number of blocks must be power of 2 for merging
 
-var G uint64
+var G int
 
 func BenchmarkSimple(b *testing.B) {
 	for i := 0; i < b.N; i++ {
@@ -240,8 +274,8 @@ func TestSimple(*testing.T) {
 	}
 }
 
-func mksimple() []uint64 {
-	slice := []uint64{}
+func mksimple() []int {
+	slice := []int{}
 	for j := 0; j < nitems; j++ {
 		slice = append(slice, randint())
 	}
@@ -249,7 +283,7 @@ func mksimple() []uint64 {
 	return slice
 }
 
-type uint64Slice []uint64
+type uint64Slice []int
 
 func (p uint64Slice) Len() int { return len(p) }
 
@@ -280,8 +314,8 @@ func mkchunked() *chunked {
 	return list
 }
 
-func ckblocks(blocks []*block) {
-	prev := uint64(0)
+func ckblocks(blocks []*block[int]) {
+	prev := int(0)
 	for bi, b := range blocks {
 		for i, x := range b {
 			if x == 0 {
@@ -344,17 +378,17 @@ func mkconc() *conc {
 //-------------------------------------------------------------------
 
 type chunked struct {
-	blocks []*block
+	blocks []*block[int]
 	i      int // index in current/last block
 }
 
 func newchunked() *chunked {
-	return &chunked{blocks: make([]*block, 0, 4), i: blockSize}
+	return &chunked{blocks: make([]*block[int], 0, 4), i: blockSize}
 }
 
-func (li *chunked) Add(x uint64) {
+func (li *chunked) Add(x int) {
 	if li.i >= blockSize {
-		li.blocks = append(li.blocks, new(block))
+		li.blocks = append(li.blocks, new(block[int]))
 		li.i = 0
 	}
 	li.blocks[len(li.blocks)-1][li.i] = x
@@ -380,17 +414,17 @@ func (li *chunked) Less(i, j int) bool {
 //-------------------------------------------------------------------
 
 type merged struct {
-	blocks []*block
+	blocks []*block[int]
 	i      int // index in current/last block
-	free   []*block
+	free   []*block[int]
 }
 
 func newmerged() *merged {
-	return &merged{blocks: make([]*block, 0, 4), i: blockSize,
-		free: make([]*block, 0, 4)}
+	return &merged{blocks: make([]*block[int], 0, 4), i: blockSize,
+		free: make([]*block[int], 0, 4)}
 }
 
-func (li *merged) Add(x uint64) {
+func (li *merged) Add(x int) {
 	if li.i >= blockSize {
 		li.blocks = append(li.blocks, li.alloc())
 		li.i = 0
@@ -446,11 +480,11 @@ func (li *merged) merge(size int) {
 	}
 }
 
-func (li *merged) iter(startBlock, nBlocks int) func() (uint64, bool) {
+func (li *merged) iter(startBlock, nBlocks int) func() (int, bool) {
 	blocks := li.blocks[startBlock : startBlock+nBlocks]
 	bi := 0
 	i := -1
-	return func() (uint64, bool) {
+	return func() (int, bool) {
 		if i+1 < blockSize {
 			i++
 		} else {
@@ -467,18 +501,18 @@ func (li *merged) iter(startBlock, nBlocks int) func() (uint64, bool) {
 }
 
 type chunked2 struct {
-	blocks []*block
+	blocks []*block[int]
 	i      int // index in current/last block
 	parent *merged
-	// prev   uint64
+	// prev   int
 }
 
 func newchunked2(parent *merged) *chunked2 {
-	return &chunked2{blocks: make([]*block, 0, 4), i: blockSize,
+	return &chunked2{blocks: make([]*block[int], 0, 4), i: blockSize,
 		parent: parent}
 }
 
-func (li *chunked2) Add(x uint64) {
+func (li *chunked2) Add(x int) {
 	// assert.That(li.prev <= x)
 	// li.prev = x
 	if li.i >= blockSize {
@@ -489,7 +523,7 @@ func (li *chunked2) Add(x uint64) {
 	li.i++
 }
 
-func (li *merged) alloc() *block {
+func (li *merged) alloc() *block[int] {
 	nf := len(li.free)
 	if nf > 0 {
 		// fmt.Println("using free")
@@ -498,12 +532,12 @@ func (li *merged) alloc() *block {
 		return b
 	}
 	// fmt.Println("alloc block")
-	return new(block)
+	return new(block[int])
 }
 
 // ablock handles sorting a possibly partial block
 type ablock2 struct {
-	*block
+	*block[int]
 	n int
 }
 
@@ -524,23 +558,23 @@ func (ab ablock2) Less(i, j int) bool {
 //-------------------------------------------------------------------
 
 type conc struct {
-	blocks []*block
+	blocks []*block[int]
 	i      int // index in current/last block
-	free   []*block
+	free   []*block[int]
 	work   chan int
 	done   chan void
 }
 
 func newconc() *conc {
-	li := &conc{blocks: make([]*block, 1, 4), i: blockSize,
+	li := &conc{blocks: make([]*block[int], 1, 4), i: blockSize,
 		work: make(chan int), done: make(chan void)}
 	go li.worker()
 	return li
 }
 
-func (li *conc) Add(x uint64) {
+func (li *conc) Add(x int) {
 	if li.i >= blockSize {
-		li.blocks[len(li.blocks)-1] = new(block)
+		li.blocks[len(li.blocks)-1] = new(block[int])
 		li.i = 0
 	}
 	li.blocks[len(li.blocks)-1][li.i] = x
@@ -610,11 +644,11 @@ func (li *conc) merge(nb, size int) {
 	}
 }
 
-func (li *conc) iter(startBlock, nBlocks int) func() (uint64, bool) {
+func (li *conc) iter(startBlock, nBlocks int) func() (int, bool) {
 	blocks := li.blocks[startBlock : startBlock+nBlocks]
 	bi := 0
 	i := -1
-	return func() (uint64, bool) {
+	return func() (int, bool) {
 		if i+1 < blockSize {
 			i++
 		} else {
@@ -631,18 +665,18 @@ func (li *conc) iter(startBlock, nBlocks int) func() (uint64, bool) {
 }
 
 type chunked3 struct {
-	blocks []*block
+	blocks []*block[int]
 	i      int // index in current/last block
 	parent *conc
-	// prev   uint64
+	// prev   int
 }
 
 func newchunked3(parent *conc) *chunked3 {
-	return &chunked3{blocks: make([]*block, 0, 4), i: blockSize,
+	return &chunked3{blocks: make([]*block[int], 0, 4), i: blockSize,
 		parent: parent}
 }
 
-func (li *chunked3) Add(x uint64) {
+func (li *chunked3) Add(x int) {
 	// assert.That(li.prev <= x)
 	// li.prev = x
 	if li.i >= blockSize {
@@ -653,7 +687,7 @@ func (li *chunked3) Add(x uint64) {
 	li.i++
 }
 
-func (li *conc) alloc() *block {
+func (li *conc) alloc() *block[int] {
 	nf := len(li.free)
 	if nf > 0 {
 		// fmt.Println("using free")
@@ -662,5 +696,5 @@ func (li *conc) alloc() *block {
 		return b
 	}
 	// fmt.Println("alloc block")
-	return new(block)
+	return new(block[int])
 }

@@ -113,7 +113,7 @@ func compactTable(state *DbState, src *Database, ts *meta.Schema, dst *Database)
 	info := state.Meta.GetRoInfo(ts.Table)
 	sum := uint64(0)
 	size := uint64(0)
-	list := sortlist.NewUnsorted()
+	list := sortlist.NewUnsorted(func(x uint64) bool { return x == 0 })
 	var off2 uint64
 	var buf []byte
 	var n int

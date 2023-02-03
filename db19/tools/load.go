@@ -30,12 +30,14 @@ import (
 	"github.com/apmckinlay/gsuneido/util/system"
 )
 
+type slBuilder = sortlist.Builder[uint64]
+
 type loadJob struct {
 	db     *Database
 	schema string
 	nrecs  int
 	size   uint64
-	list   *sortlist.Builder
+	list   *slBuilder
 }
 
 // LoadDatabase imports a dumped database from a file using a worker pool.
@@ -149,13 +151,13 @@ func open(filename string) (*os.File, *bufio.Reader) {
 
 // loadTable1 reads the data
 func loadTable1(db *Database, r *bufio.Reader, schema string) (
-	nrecs int, size uint64, list *sortlist.Builder) {
+	nrecs int, size uint64, list *sortlist.Builder[uint64]) {
 	trace(schema)
 	if strings.HasPrefix(schema, "views ") {
 		return loadViews(db, r, schema), 0, nil
 	}
 	store := db.Store
-	list = sortlist.NewUnsorted()
+	list = sortlist.NewUnsorted(func(x uint64) bool { return x == 0 })
 	nrecs, size = readRecords(r, store, list)
 	trace("nrecs", nrecs, "data size", size)
 	list.Finish()
@@ -165,7 +167,7 @@ func loadTable1(db *Database, r *bufio.Reader, schema string) (
 // loadTable2 builds the indexes.
 // It is multi-threaded when loading an entire database
 func loadTable2(db *Database, schema string,
-	nrecs int, size uint64, list *sortlist.Builder, overwrite bool) {
+	nrecs int, size uint64, list *slBuilder, overwrite bool) {
 	sch := query.NewAdminParser(schema).Schema()
 	ts := &meta.Schema{Schema: sch}
 	ovs := buildIndexes(ts, list, db.Store, nrecs)
@@ -189,7 +191,7 @@ func readLinePrefixed(r *bufio.Reader, pre string) string {
 	return s[len(pre):]
 }
 
-func readRecords(in *bufio.Reader, store *stor.Stor, list *sortlist.Builder) (
+func readRecords(in *bufio.Reader, store *stor.Stor, list *slBuilder) (
 	nrecs int, size uint64) {
 	intbuf := make([]byte, 4)
 	for { // each record
@@ -213,7 +215,7 @@ func readRecords(in *bufio.Reader, store *stor.Stor, list *sortlist.Builder) (
 	return nrecs, size
 }
 
-func buildIndexes(ts *meta.Schema, list *sortlist.Builder, store *stor.Stor,
+func buildIndexes(ts *meta.Schema, list *slBuilder, store *stor.Stor,
 	nrecs int) []*index.Overlay {
 	i := -1
 	defer func() {

@@ -327,7 +327,7 @@ func (db *Database) buildIndexes(table string,
 	ts.Indexes = append(ts.Indexes, newIdxs...)
 	newIdxs = ts.SetupNewIndexes(nold)
 	nlayers := ti.Indexes[0].Nlayers()
-	list := sortlist.NewUnsorted()
+	list := sortlist.NewUnsorted(func(x uint64) bool { return x == 0 })
 	iter := index.NewOverIter(table, 0) // read first index (preexisting)
 	for iter.Next(rt); !iter.Eof(); iter.Next(rt) {
 		_, off := iter.Cur()
