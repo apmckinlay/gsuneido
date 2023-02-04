@@ -22,6 +22,8 @@ type Extend struct {
 	t        QueryTran
 	ctx      ast.Context
 	conflict bool
+	selCols  []string
+	selVals  []string
 }
 
 func NewExtend(src Query, cols []string, exprs []ast.Expr) *Extend {
@@ -229,13 +231,27 @@ func (e *Extend) extendRow(th *Thread, row Row) Row {
 			rb.Add(val.(Packable))
 		}
 	}
-	return append(row, DbRec{Record: rb.Build()})
+	// filter for select/lookup
+	rec := rb.Build()
+	for i, col := range e.selCols {
+		j := slices.Index(e.cols, col)
+		x := rec.GetRaw(j)
+		if x != e.selVals[i] {
+			return nil
+		}
+	}
+	return append(row, DbRec{Record: rec})
 }
 
 func (e *Extend) Select(cols, vals []string) {
+	e.conflict = false
+	e.selCols, e.selVals = nil, nil
+	if cols == nil && vals == nil {
+		e.source.Select(nil, nil) // clear select
+		return
+	}
 	fixed := e.Fixed()
 	satisfied := true
-	e.conflict = false
 	for i, col := range cols {
 		if fv := getFixed(fixed, col); len(fv) == 1 {
 			if fv[0] != vals[i] {
@@ -251,11 +267,30 @@ func (e *Extend) Select(cols, vals []string) {
 	} else if satisfied {
 		e.source.Select(nil, nil) // clear select
 	} else {
-		e.source.Select(cols, vals)
+		e.source.Select(e.splitSelect(cols, vals))
 	}
 }
 
 func (e *Extend) Lookup(th *Thread, cols, vals []string) Row {
-	row := e.source.Lookup(th, cols, vals)
+	defer func() {
+		e.selCols, e.selVals = nil, nil
+	}()
+	srccols, srcvals := e.splitSelect(cols, vals)
+	row := e.source.Lookup(th, srccols, srcvals)
 	return e.extendRow(th, row)
+}
+
+func (e *Extend) splitSelect(cols, vals []string) ([]string, []string) {
+	var ecols, evals, srccols, srcvals []string
+	for i, col := range cols {
+		if slices.Contains(e.cols, col) {
+			ecols = append(ecols, col)
+			evals = append(evals, vals[i])
+		} else {
+			srccols = append(srccols, col)
+			srcvals = append(srcvals, vals[i])
+		}
+	}
+	e.selCols, e.selVals = ecols, evals
+	return srccols, srcvals
 }

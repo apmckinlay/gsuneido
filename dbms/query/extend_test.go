@@ -37,8 +37,24 @@ func TestExtendSelect(t *testing.T) {
 		return nil
 	}
 	rt := db.NewReadTran()
-	q := ParseQuery("cus extend ex=1", rt, nil)
-	zero := Pack(Zero.(Packable))
-	q.Select([]string{"ex"}, []string{zero})
+	ex := []string{"ex"}
+
+	q := ParseQuery("cus extend ex=1", rt, nil) // constant
+	zero := []string{Pack(Zero.(Packable))}
+	q.Select(ex, zero)
 	assert.T(t).This(q.Get(nil, Next)).Is(nil)
+	one := []string{Pack(One.(Packable))}
+	q.Select(ex, one)
+	assert.T(t).That(q.Get(nil, Next) != nil)
+
+	// where singleton
+	q = ParseQuery("cus where cnum=1 extend ex=cnum+1", rt, nil) // expression
+	q, _, _ = Setup(q, ReadMode, rt)
+	q.Select(ex, zero)
+	assert.T(t).This(q.Get(nil, Next)).Is(nil)
+	two := []string{Pack(IntVal(2))}
+	q.Select(ex, two)
+	assert.T(t).That(q.Get(nil, Next) != nil)
+
+	assert.T(t).That(q.Lookup(nil, ex, two) != nil)
 }
