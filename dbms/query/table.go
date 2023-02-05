@@ -213,6 +213,7 @@ func (tbl *Table) lookupCost() Cost {
 // execution --------------------------------------------------------
 
 func (tbl *Table) Lookup(_ *runtime.Thread, cols, vals []string) runtime.Row {
+	assert.That(!selConflict(tbl.hdr.Columns, cols, vals))
 	key := selOrg(tbl.indexEncode, tbl.index, cols, vals, true)
 	return tbl.lookup(key)
 }
@@ -268,6 +269,7 @@ func (tbl *Table) Select(cols, vals []string) {
 		tbl.ensureIter().Range(iterator.All)
 		return
 	}
+	assert.That(!selConflict(tbl.hdr.Columns, cols, vals))
 	org, end := selKeys(tbl.indexEncode, tbl.index, cols, vals)
 	tbl.SelectRaw(org, end)
 }

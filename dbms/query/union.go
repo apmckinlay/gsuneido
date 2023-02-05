@@ -28,6 +28,8 @@ type Union struct {
 	row2      Row
 	prevDir   Dir
 	mergeCols []string
+	src1get   func(*Thread, Dir) Row
+	src2get   func(*Thread, Dir) Row
 }
 
 type unionApproach struct {
@@ -338,6 +340,8 @@ func (u *Union) setApproach(_ []string, frac float64, approach any, tran QueryTr
 	u.empty2 = make(Row, len(u.source2.Header().Fields))
 
 	u.rewound = true
+	u.src1get = u.source1.Get
+	u.src2get = u.source2.Get
 }
 
 // execution --------------------------------------------------------
@@ -367,7 +371,7 @@ func (u *Union) getLookup(th *Thread, dir Dir) Row {
 	for {
 		if u.src1 {
 			for {
-				row = u.source1.Get(th, dir)
+				row = u.src1get(th, dir)
 				if row == nil {
 					break
 				}
@@ -381,7 +385,7 @@ func (u *Union) getLookup(th *Thread, dir Dir) Row {
 			u.src1 = false
 			u.source2.Rewind()
 		} else { // source2
-			row = u.source2.Get(th, dir)
+			row = u.src2get(th, dir)
 			if row != nil {
 				return JoinRows(u.empty1, row)
 			}
@@ -407,13 +411,13 @@ func (u *Union) getMerge(th *Thread, dir Dir) (r Row) {
 		if dir != u.prevDir && u.row1 == nil {
 			u.source1.Rewind()
 		}
-		u.row1 = u.source1.Get(th, dir)
+		u.row1 = u.src1get(th, dir)
 	}
 	get2 := func() {
 		if dir != u.prevDir && u.row2 == nil {
 			u.source2.Rewind()
 		}
-		u.row2 = u.source2.Get(th, dir)
+		u.row2 = u.src2get(th, dir)
 	}
 
 	// refill row1 and row2
@@ -431,6 +435,8 @@ func (u *Union) getMerge(th *Thread, dir Dir) (r Row) {
 			get1()
 		}
 	}
+	// fmt.Println("row1:", u.row1)
+	// fmt.Println("row2:", u.row2)
 
 	u.prevDir = dir
 	u.src1, u.src2 = false, false
@@ -473,15 +479,45 @@ func (u *Union) compare(th *Thread, row1, row2 Row, hdr1, hdr2 *Header) int {
 	return 0
 }
 
+func nothing(*Thread, Dir) Row { return nil }
+
 func (u *Union) Select(cols, vals []string) {
-	u.source1.Select(cols, vals)
-	u.source2.Select(cols, vals)
+	// fmt.Println("Union Select", cols, unpack(vals))
 	u.rewound = true
+	if cols == nil { // clear
+		u.src1get = u.source1.Get
+		u.src2get = u.source2.Get
+		u.source1.Select(nil, nil)
+		u.source2.Select(nil, nil)
+		return
+	}
+	if u.hdr1 == nil {
+		u.hdr1 = u.source1.Header()
+		u.hdr2 = u.source2.Header()
+	}
+	if selConflict(u.hdr1.Columns, cols, vals) {
+		u.src1get = nothing
+	} else {
+		u.source1.Select(cols, vals)
+	}
+	if selConflict(u.hdr2.Columns, cols, vals) {
+		u.src2get = nothing
+	} else {
+		u.source2.Select(cols, vals)
+	}
+}
+
+func selConflict(srcCols, cols, vals []string) bool {
+	for i, col := range cols {
+		if vals[i] != "" && !slices.Contains(srcCols, col) {
+			return true
+		}
+	}
+	return false
 }
 
 func (u *Union) Lookup(th *Thread, cols, vals []string) Row {
 	u.Select(cols, vals)
-	row := u.Get(th, Next)
-	u.Select(nil, nil) // clear select
-	return row
+	defer u.Select(nil, nil) // clear select
+	return u.Get(th, Next)
 }
