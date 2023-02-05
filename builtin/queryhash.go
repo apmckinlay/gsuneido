@@ -10,6 +10,7 @@ import (
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
 	"github.com/apmckinlay/gsuneido/util/hacks"
+	"github.com/apmckinlay/gsuneido/util/str"
 	"golang.org/x/exp/slices"
 )
 
@@ -21,15 +22,13 @@ func QueryHash(th *Thread, args []Value) Value {
 	tran := th.Dbms().Transaction(false)
 	defer tran.Complete()
 	q := tran.Query(query, nil)
-	if details {
-		fmt.Println(q.Strategy(true))
-	}
 	hdr := q.Header()
 	// fmt.Println(hdr)
 	fields := slc.Without(hdr.GetFields(), "-")
 	slices.Sort(fields)
 	// fmt.Println("Fields", fields)
-	hash := hashCols(hdr, details)
+	colhash := hashCols(hdr)
+	hash := colhash
 	// type fmtable interface{ Format() string }
 	// fmt.Println(q.(fmtable).Format())
 	n := 0
@@ -43,20 +42,18 @@ func QueryHash(th *Thread, args []Value) Value {
 		// }
 	}
 	if details {
-		fmt.Println("nrows", n)
+		return SuStr(fmt.Sprintln("nrows", n, "hash", hash) +
+			fmt.Sprintln(colhash, str.Join(", ", hdr.Columns)))
 	}
 	return IntVal(int(hash))
 }
 
-func hashCols(hdr *Header, details bool) uint32 {
+func hashCols(hdr *Header) uint32 {
 	cols := slices.Clone(hdr.Columns)
 	slices.Sort(cols)
 	hash := uint32(31)
 	for _, col := range cols {
 		hash = hash*31 + adler32.Checksum(hacks.Stobs(col))
-	}
-	if details {
-		fmt.Println("cols", hash, cols)
 	}
 	return hash
 }
