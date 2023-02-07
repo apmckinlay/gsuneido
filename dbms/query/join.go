@@ -297,6 +297,9 @@ func (jn *Join) Rewind() {
 }
 
 func (jn *Join) Get(th *Thread, dir Dir) Row {
+	if jn.conflict {
+		return nil
+	}
 	for {
 		if jn.row2 == nil && !jn.nextRow1(th, dir) {
 			return nil
@@ -326,13 +329,26 @@ func (jn *Join) projectRow(th *Thread, row Row) []string {
 }
 
 func (jn *Join) Select(cols, vals []string) {
-	jn.source1.Select(cols, vals)
+	if cols == nil { // clear
+		jn.conflict = false
+		jn.source1.Select(nil, nil)
+		return
+	}
+	sel1cols, sel1vals := jn.splitSelect(cols, vals)
+	if jn.conflict {
+		return
+	}
+	jn.source1.Select(sel1cols, sel1vals)
 	jn.row2 = nil
 }
 
 func (jn *Join) Lookup(th *Thread, cols, vals []string) Row {
 	defer jn.Rewind()
-	jn.row1 = jn.source1.Lookup(th, cols, vals)
+	sel1cols, sel1vals := jn.splitSelect(cols, vals)
+	if jn.conflict {
+		return nil
+	}
+	jn.row1 = jn.source1.Lookup(th, sel1cols, sel1vals)
 	if jn.row1 == nil {
 		return nil
 	}
@@ -342,6 +358,24 @@ func (jn *Join) Lookup(th *Thread, cols, vals []string) Row {
 		return nil
 	}
 	return JoinRows(jn.row1, row2)
+}
+
+func (jn *Join) splitSelect(cols, vals []string) (sel1cols, sel1vals []string) {
+	jn.conflict = false
+	fixed2 := jn.source2.Fixed()
+	for i, col := range cols {
+		if slices.Contains(jn.hdr1.Columns, col) {
+			sel1cols = append(sel1cols, col)
+			sel1vals = append(sel1vals, vals[i])
+			continue
+		}
+		fixVals := getFixed(fixed2, col)
+		assert.That(len(fixVals) == 1)
+		if fixVals[0] != vals[i] {
+			jn.conflict = true
+		}
+	}
+	return
 }
 
 // LeftJoin ---------------------------------------------------------
@@ -467,6 +501,9 @@ func (lj *LeftJoin) Get(th *Thread, dir Dir) Row {
 		if lj.row2 == nil && !lj.nextRow1(th, dir) {
 			return nil
 		}
+		if lj.conflict {
+			return JoinRows(lj.row1, lj.empty2)
+		}
 		lj.row2 = lj.source2.Get(th, dir)
 		if lj.shouldOutput(lj.row2) {
 			if lj.row2 == nil {
@@ -492,9 +529,13 @@ func (lj *LeftJoin) shouldOutput(row Row) bool {
 
 func (lj *LeftJoin) Lookup(th *Thread, cols, vals []string) Row {
 	defer lj.Rewind()
-	lj.row1 = lj.source1.Lookup(th, cols, vals)
+	sel1cols, sel1vals := lj.splitSelect(cols, vals)
+	lj.row1 = lj.source1.Lookup(th, sel1cols, sel1vals)
 	if lj.row1 == nil {
 		return nil
+	}
+	if lj.conflict {
+		return JoinRows(lj.row1, lj.empty2)
 	}
 	lj.row1out = false
 	lj.source2.Select(lj.by, lj.projectRow(th, lj.row1))
