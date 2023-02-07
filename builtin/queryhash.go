@@ -62,7 +62,7 @@ func hashRow(hdr *Header, fields []string, row Row) uint32 {
 	hash := uint32(0)
 	// fmt.Print(">>> ")
 	for _, fld := range fields {
-		hash += adler32.Checksum(hacks.Stobs(row.GetRaw(hdr, fld)))
+		hash = hash*31 + adler32.Checksum(hacks.Stobs(row.GetRaw(hdr, fld)))
 		// fmt.Print(fld, ": ", Unpack(row.GetRaw(hdr, fld)), " ")
 	}
 	// fmt.Println()
