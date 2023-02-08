@@ -339,6 +339,7 @@ func (jn *Join) Select(cols, vals []string) {
 		return
 	}
 	jn.source1.Select(sel1cols, sel1vals)
+	jn.row1 = nil
 	jn.row2 = nil
 }
 
@@ -537,14 +538,10 @@ func (lj *LeftJoin) Lookup(th *Thread, cols, vals []string) Row {
 	if lj.conflict {
 		return JoinRows(lj.row1, lj.empty2)
 	}
-	lj.row1out = false
 	lj.source2.Select(lj.by, lj.projectRow(th, lj.row1))
 	row2 := lj.source2.Get(th, Next)
-	if lj.shouldOutput(row2) {
-		if row2 == nil {
-			return JoinRows(lj.row1, lj.empty2)
-		}
-		return JoinRows(lj.row1, row2)
+	if row2 == nil {
+		return JoinRows(lj.row1, lj.empty2)
 	}
-	return nil
+	return JoinRows(lj.row1, row2)
 }
