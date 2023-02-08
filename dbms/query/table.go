@@ -213,9 +213,19 @@ func (tbl *Table) lookupCost() Cost {
 // execution --------------------------------------------------------
 
 func (tbl *Table) Lookup(_ *runtime.Thread, cols, vals []string) runtime.Row {
+	assert.That(tbl.hasKey(cols))
 	assert.That(!selConflict(tbl.hdr.Columns, cols, vals))
 	key := selOrg(tbl.indexEncode, tbl.index, cols, vals, true)
 	return tbl.lookup(key)
+}
+
+func (tbl *Table) hasKey(cols []string) bool {
+	for _, key := range tbl.primary {
+		if set.Subset(cols, key) {
+			return true
+		}
+	}
+	return false
 }
 
 func (tbl *Table) lookup(key string) runtime.Row {

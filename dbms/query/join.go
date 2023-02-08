@@ -4,6 +4,8 @@
 package query
 
 import (
+	"log"
+
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/runtime/trace"
 	"github.com/apmckinlay/gsuneido/util/assert"
@@ -23,6 +25,13 @@ type Join struct {
 	row1     Row
 	row2     Row // nil when we need a new row1
 	st       *SuTran
+	lookup   *lookupInfo
+}
+
+type lookupInfo struct {
+	keys1    [][]string
+	fixed1   []Fixed
+	fallback bool
 }
 
 type joinApproach struct {
@@ -349,6 +358,11 @@ func (jn *Join) Lookup(th *Thread, cols, vals []string) Row {
 	if jn.conflict {
 		return nil
 	}
+	if jn.lookupFallback(sel1cols) {
+		jn.Select(cols, vals)
+		defer jn.Select(nil, nil) // clear select
+		return jn.Get(th, Next)
+	}
 	jn.row1 = jn.source1.Lookup(th, sel1cols, sel1vals)
 	if jn.row1 == nil {
 		return nil
@@ -377,6 +391,26 @@ func (jn *Join) splitSelect(cols, vals []string) (sel1cols, sel1vals []string) {
 		}
 	}
 	return
+}
+
+func (jn *Join) lookupFallback(sel1cols []string) bool {
+	if jn.lookup == nil {
+		jn.lookup = &lookupInfo{
+			keys1:  jn.source1.Keys(),
+			fixed1: jn.source1.Fixed(),
+		}
+	}
+	if !hasKey(jn.lookup.keys1, sel1cols, jn.lookup.fixed1) {
+		// can't do lookup on source1
+		// this can happen (rarely) because there's no way to tell Optimize
+		// that we want to do lookups with the index
+		if !jn.lookup.fallback {
+			jn.lookup.fallback = true
+			log.Println("INFO query join lookup fallback to slower select")
+		}
+		return true
+	}
+	return false
 }
 
 // LeftJoin ---------------------------------------------------------
@@ -531,6 +565,11 @@ func (lj *LeftJoin) shouldOutput(row Row) bool {
 func (lj *LeftJoin) Lookup(th *Thread, cols, vals []string) Row {
 	defer lj.Rewind()
 	sel1cols, sel1vals := lj.splitSelect(cols, vals)
+	if lj.lookupFallback(sel1cols) {
+		lj.Select(cols, vals)
+		defer lj.Select(nil, nil) // clear select
+		return lj.Get(th, Next)
+	}
 	lj.row1 = lj.source1.Lookup(th, sel1cols, sel1vals)
 	if lj.row1 == nil {
 		return nil
