@@ -484,9 +484,9 @@ func nothing(*Thread, Dir) Row { return nil }
 func (u *Union) Select(cols, vals []string) {
 	// fmt.Println("Union Select", cols, unpack(vals))
 	u.rewound = true
+	u.src1get = u.source1.Get
+	u.src2get = u.source2.Get
 	if cols == nil { // clear
-		u.src1get = u.source1.Get
-		u.src2get = u.source2.Get
 		u.source1.Select(nil, nil)
 		u.source2.Select(nil, nil)
 		return
