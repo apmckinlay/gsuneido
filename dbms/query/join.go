@@ -301,6 +301,8 @@ func (jn *Join) lookupCost() int {
 
 func (jn *Join) Rewind() {
 	jn.source1.Rewind()
+	jn.source2.Rewind()
+	jn.conflict = false
 	jn.row1 = nil
 	jn.row2 = nil
 }
@@ -368,6 +370,7 @@ func (jn *Join) Lookup(th *Thread, cols, vals []string) Row {
 		return nil
 	}
 	jn.source2.Select(jn.by, jn.projectRow(th, jn.row1))
+	defer jn.source2.Select(nil, nil) // clear select
 	row2 := jn.source2.Get(th, Next)
 	if row2 == nil {
 		return nil
@@ -570,17 +573,18 @@ func (lj *LeftJoin) Lookup(th *Thread, cols, vals []string) Row {
 		defer lj.Select(nil, nil) // clear select
 		return lj.Get(th, Next)
 	}
-	lj.row1 = lj.source1.Lookup(th, sel1cols, sel1vals)
-	if lj.row1 == nil {
+	row1 := lj.source1.Lookup(th, sel1cols, sel1vals)
+	if row1 == nil {
 		return nil
 	}
 	if lj.conflict {
-		return JoinRows(lj.row1, lj.empty2)
+		return JoinRows(row1, lj.empty2)
 	}
-	lj.source2.Select(lj.by, lj.projectRow(th, lj.row1))
+	lj.source2.Select(lj.by, lj.projectRow(th, row1))
+	defer lj.source2.Select(nil, nil) // clear select
 	row2 := lj.source2.Get(th, Next)
 	if row2 == nil {
-		return JoinRows(lj.row1, lj.empty2)
+		return JoinRows(row1, lj.empty2)
 	}
-	return JoinRows(lj.row1, row2)
+	return JoinRows(row1, row2)
 }
