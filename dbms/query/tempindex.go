@@ -298,7 +298,7 @@ type multiIter struct {
 	iter *sortlist.Iter[Row]
 }
 
-const derivedMaxSize = 2 * 1024 * 1024 // ???
+const derivedMax = 8 * 1024 * 1024 // ???
 
 func (ti *TempIndex) multi() rowIter {
 	// sortlist uses a goroutine
@@ -315,22 +315,26 @@ func (ti *TempIndex) multi() rowIter {
 		func(xrow, yrow Row) bool {
 			return ti.less(&th2, xrow, yrow)
 		})
-	nd := 0
+	nrows := 0
+	derived := 0
 	for {
 		row := ti.source.Get(ti.th, Next)
 		if row == nil {
 			break
 		}
+		nrows++;
 		for _, dbrec := range row {
 			if dbrec.Off == 0 { // derived record e.g. from extend or summarize
-				nd += len(dbrec.Record)
+				derived += len(dbrec.Record)
 			}
 		}
-		if nd > derivedMaxSize {
-			panic(fmt.Sprintf("temp index: derived too large (%d > %d)",
-				nd, derivedMaxSize))
-		}
-		b.Add(row)
+			if derived <= derivedMax {
+				b.Add(row)
+			}
+	}
+	if derived > derivedMax {
+		panic(fmt.Sprintf("temp index: derived too large (%d > %d) nrows %d average %d",
+			derived, derivedMax, nrows, derived/nrows))
 	}
 	lt := func(row Row, key []string) bool {
 		return ti.less2(ti.th, row, key)
