@@ -302,7 +302,6 @@ func (jn *Join) lookupCost() int {
 func (jn *Join) Rewind() {
 	jn.source1.Rewind()
 	jn.source2.Rewind()
-	jn.conflict = false
 	jn.row1 = nil
 	jn.row2 = nil
 }
