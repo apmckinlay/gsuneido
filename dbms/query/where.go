@@ -1150,11 +1150,11 @@ func (w *Where) Rewind() {
 
 func (w *Where) Select(cols, vals []string) {
 	w.Rewind()
+	w.selOrg, w.selEnd = "", ""
+	w.selSet = false
+	w.selectCols = nil
+	w.selectVals = nil
 	if cols == nil && vals == nil { // clear select
-		w.selOrg, w.selEnd = "", ""
-		w.selSet = false
-		w.selectCols = nil
-		w.selectVals = nil
 		if w.idxSel == nil {
 			w.source.Select(nil, nil)
 		}
