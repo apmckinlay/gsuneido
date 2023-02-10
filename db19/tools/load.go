@@ -42,6 +42,8 @@ type loadJob struct {
 
 // LoadDatabase imports a dumped database from a file using a worker pool.
 // It returns the number of tables loaded. Errors are fatal.
+// It does NOT check foreign key data
+// because it assumes the dump was from a valid database.
 func LoadDatabase(from, dbfile string) (nTables, nViews int, err error) {
 	var errVal atomic.Value // error
 	defer func() {
@@ -119,7 +121,7 @@ func LoadTable(table, dbfile string) (int, error) {
 	return LoadDbTable(table, db)
 }
 
-// LoadDbTable loads a single table. It is use by dbms.Load.
+// LoadDbTable loads a single table. It is use by dbms.Load / Database.Load
 // It will replace an already existing table.
 // It returns the number of records loaded.
 func LoadDbTable(table string, db *Database) (n int, err error) {
@@ -173,6 +175,9 @@ func loadTable2(db *Database, schema string,
 	ovs := buildIndexes(ts, list, db.Store, nrecs)
 	ti := &meta.Info{Table: sch.Table, Nrows: nrecs, Size: size, Indexes: ovs}
 	if overwrite {
+		if ts.HasFkey() {
+			panic("can't load single table with foreign keys")
+		}
 		db.OverwriteTable(ts, ti)
 	} else {
 		db.AddNewTable(ts, ti)

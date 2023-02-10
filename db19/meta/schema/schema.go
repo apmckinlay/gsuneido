@@ -234,3 +234,21 @@ func (ix *Index) Cksum() uint32 {
 func (sc *Schema) HasDeleted() bool {
 	return slices.Contains(sc.Columns, "-")
 }
+
+func (sc *Schema) HasFkey() bool {
+	for _, ix := range sc.Indexes {
+		if ix.Fk.Table != "" {
+			return true
+		}
+	}
+	return false
+}
+
+func (sc *Schema) HasFkeyToHere() bool {
+	for _, ix := range sc.Indexes {
+		if len(ix.FkToHere) > 0 {
+			return true
+		}
+	}
+	return false
+}

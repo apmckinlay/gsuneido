@@ -43,6 +43,9 @@ func TestLoadDatabase(*testing.T) {
 }
 
 func TestLoadFkey(*testing.T) {
+	if testing.Short() {
+		return
+	}
 	store := stor.HeapStor(8192)
 	db, err := CreateDb(store)
 	ck(err)
@@ -51,12 +54,25 @@ func TestLoadFkey(*testing.T) {
 	}
 	doAdmin("create tmp (a) key(a)")
 	doAdmin("create tmp2 (k, a) key(k) index(a) in tmp")
+	doAdmin("create tmp3 (k, a) key(k) index(a)")
+	_, err = DumpDbTable(db, "tmp", "tmp.su")
+	ck(err)
+	defer os.Remove("tmp.su")
 	_, err = DumpDbTable(db, "tmp2", "tmp2.su")
 	ck(err)
-	doAdmin("drop tmp2")
-	doAdmin("drop tmp")
-	_, err = LoadDbTable("tmp2", db)
-	os.Remove("tmp2.su")
+	defer os.Remove("tmp2.su")
+	_, err = DumpDbTable(db, "tmp3", "tmp3.su")
+	ck(err)
+	defer os.Remove("tmp3.su")
+	_, err = LoadDbTable("tmp", db)
 	assert.That(strings.Contains(err.Error(),
-		"can't create foreign key to nonexistent index"))
+		"can't overwrite table that foreign keys point to"))
+	_, err = LoadDbTable("tmp2", db)
+	assert.That(strings.Contains(err.Error(),
+		"can't load single table with foreign keys"))
+	_, err = LoadDbTable("tmp3", db)
+	ck(err)
+	doAdmin("drop tmp3")
+	_, err = LoadDbTable("tmp3", db)
+	ck(err)
 }
