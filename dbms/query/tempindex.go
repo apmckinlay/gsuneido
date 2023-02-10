@@ -5,6 +5,7 @@ package query
 
 import (
 	"fmt"
+	"log"
 
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	. "github.com/apmckinlay/gsuneido/runtime"
@@ -322,19 +323,22 @@ func (ti *TempIndex) multi() rowIter {
 		if row == nil {
 			break
 		}
-		nrows++;
+		nrows++
 		for _, dbrec := range row {
 			if dbrec.Off == 0 { // derived record e.g. from extend or summarize
 				derived += len(dbrec.Record)
 			}
 		}
-			if derived <= derivedMax {
-				b.Add(row)
-			}
+		if derived <= derivedMax {
+			b.Add(row)
+		}
 	}
 	if derived > derivedMax {
 		panic(fmt.Sprintf("temp index: derived too large (%d > %d) nrows %d average %d",
 			derived, derivedMax, nrows, derived/nrows))
+	} else if derived > 2_000_000 {
+		log.Printf("INFO temp index: derived large %d nrows %d average %d",
+			derived, nrows, derived/nrows)
 	}
 	lt := func(row Row, key []string) bool {
 		return ti.less2(ti.th, row, key)
