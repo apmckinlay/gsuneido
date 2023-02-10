@@ -10,6 +10,7 @@ import (
 	"github.com/apmckinlay/gsuneido/db19"
 	. "github.com/apmckinlay/gsuneido/dbms/query"
 	. "github.com/apmckinlay/gsuneido/runtime"
+	"github.com/apmckinlay/gsuneido/util/exit"
 )
 
 func TestQuery(t *testing.T) {
@@ -26,7 +27,7 @@ func TestQuery(t *testing.T) {
 		return nil
 	}
 	tran := db.NewReadTran()
-	s := `(((((cus extend r0) join ivc) union (cus leftjoin ivc)) join (bln where ik is "67")) union ((cus join (ivc rename i1 to r2)) join aln)) sort c4,b4,b3`
+	s := `(cus join ((ivc join (((aln union (aln extend c3 = a1)) union bln) where bk is "16")) union (ivc join aln)))`
 	q := ParseQuery(s, tran, nil)
 	// trace.QueryOpt.Set()
 	// trace.JoinOpt.Set()
@@ -35,7 +36,12 @@ func TestQuery(t *testing.T) {
 	fmt.Println("----------------")
 	fmt.Println(Format(q))
 	th := &Thread{}
-	fmt.Println(q.Get(th, Next))
+	n := 0
+	for q.Get(th, Next) != nil {
+		n++
+	}
+	fmt.Println(n, "rows")
+	exit.RunFuncs()
 }
 
 func TestQuery2(t *testing.T) {
