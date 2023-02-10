@@ -7,9 +7,10 @@ GOARCH = $(shell go env GOARCH)
 ifneq ($(GOOS),darwin)
 TRIMPATH = -trimpath
 endif
-BUILD = build -buildvcs=true ${TRIMPATH} -o gs_${GOOS}_${GOARCH}
+OUTPUT = gs_$(GOOS)_$(GOARCH)
+BUILD = build -buildvcs=true $(TRIMPATH) -o $(OUTPUT)
 EXE = gsuneido
-LDFLAGS = -s -w -X 'main.builtDate=${BUILT}'
+LDFLAGS = -s -w -X 'main.builtDate=$(BUILT)'
 GUIFLAGS = $(LDFLAGS)
 RACEEXE = gsrace
 ifdef PATHEXT
@@ -18,8 +19,7 @@ ifdef PATHEXT
 	EXE = gsuneido.exe gsuneido.com gsport.exe
 	GUIFLAGS = $(LDFLAGS) -X main.mode=gui -H windowsgui
 	CONSOLE = $(GO) $(BUILD) -o gsuneido.com -ldflags "$(LDFLAGS)" -tags com
-	PORTABLE = export CGO_ENABLED=0 ; $(GO) $(BUILD) -o gsport.exe -ldflags "$(LDFLAGS)" -tags portable
-	RACEEXE = gsrace.exe
+	PORTABLE = $(GO) $(BUILD) -o gsport.exe -ldflags "$(LDFLAGS)" -tags portable
 endif
 
 build:
@@ -27,13 +27,18 @@ build:
 	@$(GO) version
 	$(GO) $(BUILD) -v -ldflags "$(GUIFLAGS)"
 	$(CONSOLE)
-	$(PORTABLE)
+	export CGO_ENABLED=0 ; $(PORTABLE)
 
 gsuneido:
 	$(GO) $(BUILD) -v -ldflags "$(GUIFLAGS)"
 
 race:
-	$(GO) $(BUILD) -v -o $(RACEEXE) -ldflags "$(GUIFLAGS)" -race
+ifdef PATHEXT
+	$(GO) $(BUILD) -v -ldflags "$(GUIFLAGS)" -race -o race/
+	$(PORTABLE) -race -o race/gsport.exe
+else
+	$(GO) $(BUILD) -v -ldflags "$(GUIFLAGS)" -race -o race/$(OUTPUT)
+endif
 
 portable:
 	# a Windows version without the Windows stuff
