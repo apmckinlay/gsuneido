@@ -31,9 +31,7 @@ func AddUniqueFn[E any, S ~[]E](s S, e E, eq func(E, E) bool) S {
 	return append(s, e)
 }
 
-// Equal returns true if x and y contain the same set of strings.
-//
-// WARNING: requires that x does not contain duplicates
+// Equal returns true if x and y contain the same set of values.
 func Equal[E comparable](x, y []E) bool {
 	if len(x) != len(y) {
 		return false
@@ -41,12 +39,15 @@ func Equal[E comparable](x, y []E) bool {
 	if slc.Same(x, y) {
 		return true
 	}
+	// used is needed to handle duplicates
+	used := make([]bool, len(y)) // hopefully on the stack (no alloc)
 outer:
 	for _, xe := range x {
-		for _, ye := range y {
-			if xe == ye {
-				continue outer
-			}
+		for i, ye := range y {
+			if xe == ye && !used[i] {
+				used[i] = true
+                continue outer
+            }
 		}
 		return false // xs wasn't found in y
 	}
@@ -128,7 +129,7 @@ outer:
 	return z
 }
 
-// Intersect returns a list of the strings common to the inputs,
+// Intersect returns a list of the values common to the inputs,
 // the result is in the same order as the first argument (x).
 //
 // WARNING: If x and y are the same list, it returns the *original*.

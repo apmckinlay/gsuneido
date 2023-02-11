@@ -19,7 +19,8 @@ func TestEqual(*testing.T) {
 	}
 	test("", "", true)
 	test("a b c", "c b a", true)
-	test("a b a", "a b c", true) // failure from duplicates
+	test("a b a", "a b c", false)
+	test("a b c b", "c b a b", true)
 
 	test("", "a b c", false)
 	test("a b c", "", false)
