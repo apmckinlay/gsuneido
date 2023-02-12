@@ -205,7 +205,7 @@ func (*suLruCache) Lookup(_ *Thread, method string) Callable {
 
 type lruCache struct {
 	size    int
-	hm      Hmap
+	hm      HmapValue
 	lru     []uint8 // uint8 means max size of 256
 	entries []entry
 	hits    int

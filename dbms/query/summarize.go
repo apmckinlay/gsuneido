@@ -4,12 +4,14 @@
 package query
 
 import (
+	"fmt"
+	"log"
 	"sort"
 	"strings"
 
-	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
+	"github.com/apmckinlay/gsuneido/util/generic/hmap"
 	"github.com/apmckinlay/gsuneido/util/generic/ord"
 	"github.com/apmckinlay/gsuneido/util/generic/set"
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
@@ -263,7 +265,7 @@ func (su *Summarize) idxCost(mode Mode) (Cost, Cost, any) {
 func (su *Summarize) mapCost(mode Mode, index []string, _ float64) (Cost, Cost, any) {
 	//FIXME technically, map should only be allowed in ReadMode
 	nrows, _ := su.Nrows()
-	if index != nil || nrows > mapLimit {
+	if index != nil || nrows > mapLimit-mapLimit/3 {
 		return impossible, impossible, nil
 	}
 	fixcost, varcost := Optimize(su.source, mode, nil, 1)
@@ -352,7 +354,7 @@ type sumMapT struct {
 }
 
 type mapPair struct {
-	key Record
+	row Row
 	ops []sumOp
 }
 
@@ -374,10 +376,10 @@ func (t *sumMapT) getMap(th *Thread, su *Summarize, dir Dir) Row {
 	if t.mapPos < 0 || len(t.mapList) <= t.mapPos {
 		return nil
 	}
-	key := t.mapList[t.mapPos].key
+	row := t.mapList[t.mapPos].row
 	var rb RecordBuilder
-	for i := 0; i < len(su.by); i++ {
-		rb.AddRaw(key.GetRaw(i))
+	for _, col := range su.by {
+		rb.AddRaw(row.GetRawVal(su.srcHdr, col, th, su.st))
 	}
 	ops := t.mapList[t.mapPos].ops
 	for i := range ops {
@@ -389,19 +391,24 @@ func (t *sumMapT) getMap(th *Thread, su *Summarize, dir Dir) Row {
 
 func (su *Summarize) buildMap(th *Thread) []mapPair {
 	hdr := su.source.Header()
-	sumMap := make(map[Record][]sumOp)
+	hfn := func(k rowHash) uint32 { return k.hash }
+	eqfn := func(x, y rowHash) bool {
+		return x.hash == y.hash &&
+			equalCols(x.row, y.row, hdr, su.by, th, su.st)
+	}
+	sumMap := hmap.NewHmapFuncs[rowHash, []sumOp](hfn, eqfn)
 	for {
 		row := su.source.Get(th, Next)
 		if row == nil {
 			break
 		}
-		key := keyRec(th, su.st, row, hdr, su.by)
-		sums, ok := sumMap[key]
-		if !ok {
+		rh := rowHash{hash: hashCols(row, hdr, su.by, th, su.st), row: row}
+		sums := sumMap.Get(rh)
+		if sums == nil {
 			sums = su.newSums()
-			sumMap[key] = sums
-			if len(sumMap) > mapLimit+mapLimit/2 {
-				panic("summarize too large")
+			sumMap.Put(rh, sums)
+			if sumMap.Size() > mapLimit {
+				log.Panicf("summarize-map too large (> %d)", mapLimit)
 			}
 		}
 		for i := range sums {
@@ -410,28 +417,13 @@ func (su *Summarize) buildMap(th *Thread) []mapPair {
 		}
 	}
 	i := 0
-	list := make([]mapPair, len(sumMap))
-	for key, ops := range sumMap {
-		list[i] = mapPair{key: key, ops: ops}
+	list := make([]mapPair, sumMap.Size())
+	iter := sumMap.Iter()
+	for rh, ops := iter(); rh.row != nil; rh, ops = iter() {
+		list[i] = mapPair{row: rh.row, ops: ops}
 		i++
 	}
-	if len(list) <= 3 { // for tests
-		sort.Slice(list,
-			func(i, j int) bool { return list[i].key < list[j].key })
-	}
 	return list
-}
-
-func keyRec(th *Thread, st *SuTran, row Row, hdr *Header, cols []string) Record {
-	var rb RecordBuilder
-	size := 0
-	for _, fld := range cols {
-		x := row.GetRawVal(hdr, fld, th, st)
-		size += len(x)
-		ixkey.Cksize(size)
-		rb.AddRaw(x)
-	}
-	return rb.Build()
 }
 
 //-------------------------------------------------------------------
@@ -648,10 +640,12 @@ type sumList struct {
 	set *SuObject
 }
 
+const sumListLimit = 16384 // ???
+
 func (sum *sumList) add(val Value, _ Row) {
 	sum.set.Set(val, True)
-	if sum.set.Size() > mapLimit {
-		panic("summarize list too large")
+	if sum.set.Size() > sumListLimit {
+		panic(fmt.Sprintf("summarize list too large (> %d)", sumListLimit))
 	}
 }
 func (sum *sumList) result() (Value, Row) {

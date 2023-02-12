@@ -4,14 +4,16 @@
 package query
 
 import (
+	"log"
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/compile/ast"
-	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
+	"github.com/apmckinlay/gsuneido/util/generic/hmap"
 	"github.com/apmckinlay/gsuneido/util/generic/set"
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
+	"github.com/apmckinlay/gsuneido/util/hash"
 	"github.com/apmckinlay/gsuneido/util/str"
 	"golang.org/x/exp/slices"
 )
@@ -27,9 +29,11 @@ type Project struct {
 	srcHdr  *Header
 	projHdr *Header
 	indexed bool
-	results map[string]Row
+	results *mapType
 	st      *SuTran
 }
+
+type mapType = hmap.Hmap[rowHash, struct{}, hmap.Funcs[rowHash]]
 
 type projectApproach struct {
 	strategy projectStrategy
@@ -376,11 +380,11 @@ func (p *Project) optimize(mode Mode, index []string, frac float64) (Cost, Cost,
 		&projectApproach{strategy: projSeq, index: seq.index}
 }
 
-const mapLimit = 10000 // number of rows
+const mapLimit = 16384 // ???
 
 func (p *Project) mapCost(mode Mode, index []string, frac float64) (Cost, Cost) {
 	nrows, _ := p.Nrows()
-	if mode != ReadMode || nrows > mapLimit {
+	if mode != ReadMode || nrows > mapLimit-mapLimit/3 {
 		return impossible, impossible
 	}
 	// assume we're reading Next (normal)
@@ -479,11 +483,21 @@ func (p *Project) getSeq(th *Thread, dir Dir) Row {
 	}
 }
 
+type rowHash struct {
+	row  Row
+	hash uint32
+}
+
 func (p *Project) getMap(th *Thread, dir Dir) Row {
 	if p.rewound {
 		p.rewound = false
 		if p.results == nil {
-			p.results = make(map[string]Row)
+			hfn := func(k rowHash) uint32 { return k.hash }
+			eqfn := func(x, y rowHash) bool {
+				return x.hash == y.hash &&
+					equalCols(x.row, y.row, p.srcHdr, p.columns, th, p.st)
+			}
+			p.results = hmap.NewHmapFuncs[rowHash, struct{}](hfn, eqfn)
 		}
 		if dir == Prev && !p.indexed {
 			p.buildMap(th)
@@ -494,16 +508,15 @@ func (p *Project) getMap(th *Thread, dir Dir) Row {
 		if row == nil {
 			break
 		}
-		key := ixkey.Make(row, p.srcHdr, p.columns, th, p.st)
-		result, ok := p.results[key]
+		rh := rowHash{row: row, hash: hashCols(row, p.srcHdr, p.columns, th, p.st)}
+		k, _, ok := p.results.GetPut(rh, struct{}{})
 		if !ok {
-			p.results[key] = row
-			if len(p.results) > mapLimit + mapLimit/2 {
-				panic("project-map too large")
+			if p.results.Size() > mapLimit {
+				log.Panicf("project-map too large (> %d)", mapLimit)
 			}
 			return row
 		}
-		if row.SameAs(result) {
+		if row.SameAs(k.row) {
 			return row
 		}
 	}
@@ -513,15 +526,32 @@ func (p *Project) getMap(th *Thread, dir Dir) Row {
 	return nil
 }
 
+func hashCols(row Row, hdr *Header, cols []string, th *Thread, st *SuTran) uint32 {
+	h := uint32(31)
+	for _, col := range cols {
+		x := row.GetRawVal(hdr, col, th, st)
+		h = 31*h + hash.String(x)
+	}
+	return h
+}
+func equalCols(x, y Row, hdr *Header, cols []string, th *Thread, st *SuTran) bool {
+	for _, col := range cols {
+		if x.GetRawVal(hdr, col, th, st) != y.GetRawVal(hdr, col, th, st) {
+			return false
+		}
+	}
+	return true
+}
+
 func (p *Project) buildMap(th *Thread) {
 	for {
 		row := p.source.Get(th, Next)
 		if row == nil {
 			break
 		}
-		key := ixkey.Make(row, p.srcHdr, p.columns, th, p.st)
-		if _, ok := p.results[key]; !ok {
-			p.results[key] = row
+		rh := rowHash{row: row, hash: hashCols(row, p.srcHdr, p.columns, th, p.st)}
+		if !p.results.Has(rh) {
+			p.results.Put(rh, struct{}{})
 		}
 	}
 	p.source.Rewind()

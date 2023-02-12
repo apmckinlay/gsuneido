@@ -1,7 +1,7 @@
 // Copyright Suneido Software Corp. All rights reserved.
 // Governed by the MIT license found in the LICENSE file.
 
-package runtime
+package hmap
 
 import (
 	"github.com/apmckinlay/gsuneido/util/assert"
@@ -12,12 +12,58 @@ import (
 // based on: https://github.com/skarupke/flat_hash_map bytell_hash_map
 // Its zero value is a valid empty table.
 // NOTE: Hmap is not thread safe.
-type Hmap struct {
-	blocks   []block
+type Hmap[K any, V any, H Helper[K]] struct {
+	blocks   []block[K, V]
+	help     H
 	size     int32
 	version  uint16
 	capShift uint8
 	growing  bool
+}
+
+type Helper[K any] interface {
+	Hash(k K) uint32
+	Equal(x, y K) bool
+}
+
+// Meth is a helper that calls Hash and Equal methods on the key
+type Meth[K Key] struct{}
+
+type Key interface {
+	Hash() uint32
+	Equal(any) bool
+}
+
+func (m Meth[K]) Hash(k K) uint32 {
+	return k.Hash()
+}
+func (m Meth[K]) Equal(x, y K) bool {
+	return x.Equal(y)
+}
+
+// Funcs is a helper that is configured with hash and equals functions.
+// This allows using closures which allows context.
+type Funcs[K any] struct {
+	hfn  func(k K) uint32
+	eqfn func(x, y K) bool
+}
+
+func (m Funcs[K]) Hash(k K) uint32 {
+	return m.hfn(k)
+}
+func (m Funcs[K]) Equal(x, y K) bool {
+	return m.eqfn(x, y)
+}
+
+func NewHmapFuncs[K any, V any](
+	hfn func(k K) uint32,
+	eqfn func(x, y K) bool) *Hmap[K, V, Funcs[K]] {
+	return &Hmap[K, V, Funcs[K]]{help: Funcs[K]{hfn: hfn, eqfn: eqfn}}
+}
+
+func zero[T any]() T {
+	var z T
+	return z
 }
 
 // metaData is a single byte of information about each slot
@@ -67,24 +113,24 @@ const (
 
 // The table is organized into blocks with separate arrays for meta,key,val
 // This is to eliminate padding while still maintaining locality
-type block struct {
+type block[K any, V any] struct {
 	meta [blockSize]metaData
-	key  [blockSize]Value
-	val  [blockSize]Value
+	key  [blockSize]K
+	val  [blockSize]V
 }
 
 // cap returns the raw capacity
-func (h *Hmap) cap() int {
+func (h *Hmap[K, V, H]) cap() int {
 	return len(h.blocks) * blockSize
 }
 
 // Size returns the current number of elements in the table
-func (h *Hmap) Size() int {
+func (h *Hmap[K, V, H]) Size() int {
 	return int(h.size)
 }
 
 // isFull returns true if adding an element would exceed 7/8 full
-func (h *Hmap) isFull() bool {
+func (h *Hmap[K, V, H]) isFull() bool {
 	return int(h.size)+1 > 7*h.cap()/8 // .875
 }
 
@@ -99,48 +145,70 @@ func indexInBlock(i int) int {
 }
 
 // hashToIndex uses Fibonaci
-func (h *Hmap) hashToIndex(hash uint32) int {
+func (h *Hmap[K, V, H]) hashToIndex(hash uint32) int {
 	const phi32 = 2654435769
 	return int((hash * phi32) >> h.capShift)
 	//return int(hash % h.cap()) // simpler for debugging
 }
 
 // keepInRange is used after advancing an index to make it wrap around
-func (h *Hmap) keepInRange(index int) int {
+func (h *Hmap[K, V, H]) keepInRange(index int) int {
 	return index & (h.cap() - 1)
 }
 
-// Get returns the value for the Value or nil if not found
-func (h *Hmap) Get(key Value) Value {
+// Get returns the value for the Val or nil if not found
+func (h *Hmap[K, V, H]) Get(key K) V {
+	_, x, _ := h.Get2(key)
+	return x
+}
+
+// Get returns the value for the Val or nil if not found
+func (h *Hmap[K, V, H]) Has(key K) bool {
+	_, _, ok := h.Get2(key)
+	return ok
+}
+
+func (h *Hmap[K, V, H]) Get2(key K) (k K, v V, ok bool) {
 	if h.size == 0 {
-		return nil
+		return
 	}
 	// for performance, don't use an iterator for the first probe
-	index := h.hashToIndex(key.Hash())
+	index := h.hashToIndex(h.help.Hash(key))
 	b := &h.blocks[whichBlock(index)]
 	ib := indexInBlock(index)
 	if (b.meta[ib] & metaDirect) != metaDirect {
-		return nil
+		return
 	}
-	if key.Equal(b.key[ib]) {
-		return b.val[ib]
+	if h.help.Equal(key, b.key[ib]) {
+		return b.key[ib], b.val[ib], true
 	}
-	iter := chainIter{h, b, index, ib}
+	iter := chainIter[K, V, H]{h, b, index, ib}
 	for iter.next() {
-		if key.Equal(iter.key()) {
-			return iter.val()
+		if h.help.Equal(key, iter.key()) {
+			return iter.key(), iter.val(), true
 		}
 	}
-	return nil
+	return
 }
 
 // Put adds or updates an entry
-func (h *Hmap) Put(key Value, val Value) {
+func (h *Hmap[K, V, H]) Put(key K, val V) {
+	h.getPut(key, val, true)
+}
+
+// GetPut adds an entry if it doesn't exist, returns true if it was inserted.
+// Useful to avoid separate check and add.
+func (h *Hmap[K, V, H]) GetPut(key K, val V) (K, V, bool) {
+	return h.getPut(key, val, false)
+}
+
+// put returns whether it already existed
+func (h *Hmap[K, V, H]) getPut(key K, val V, update bool) (k K, v V, ok bool) {
 	h.version++
 	if h.cap() == 0 {
 		h.grow()
 	}
-	index := h.hashToIndex(key.Hash())
+	index := h.hashToIndex(h.help.Hash(key))
 	b := &h.blocks[whichBlock(index)]
 	ib := indexInBlock(index)
 	if b.meta[ib] == metaEmpty {
@@ -150,16 +218,18 @@ func (h *Hmap) Put(key Value, val Value) {
 		h.size++
 		return
 	}
-	iter := chainIter{h, b, index, ib}
+	iter := chainIter[K, V, H]{h, b, index, ib}
 	if iter.meta()&metaDirect != metaDirect {
 		h.putDirect(&iter, key, val)
 		return
 	}
 	for {
-		if key.Equal(iter.key()) {
-			iter.valSet(val) // update value for existing key
-			h.version--      // version doesn't need to change
-			return
+		if h.help.Equal(key, iter.key()) {
+			if update {
+				iter.valSet(val) // update value for existing key
+			}
+			h.version-- // version doesn't need to change
+			return iter.key(), iter.val(), true
 		}
 		if !iter.next() {
 			h.putChain(&iter, key, val)
@@ -169,16 +239,16 @@ func (h *Hmap) Put(key Value, val Value) {
 }
 
 // grow initially makes the capacity one block, and then doubles after that
-func (h *Hmap) grow() {
+func (h *Hmap[K, V, H]) grow() {
 	if h.cap() == 0 {
-		h.blocks = make([]block, 1)
+		h.blocks = make([]block[K, V], 1)
 		h.capShift = 32 - 3
 		return
 	}
 	assert.Msg("grow while growing").That(!h.growing)
 	h.growing = true
 	oldblocks := h.blocks
-	h.blocks = make([]block, 2*len(oldblocks))
+	h.blocks = make([]block[K, V], 2*len(oldblocks))
 	h.capShift--
 	h.size = 0
 	for _, b := range oldblocks {
@@ -193,7 +263,7 @@ func (h *Hmap) grow() {
 
 // putDirect starts a new chain
 // i.e. it handles when this is the first entry with a certain hash index
-func (h *Hmap) putDirect(slot *chainIter, key Value, val Value) {
+func (h *Hmap[K, V, H]) putDirect(slot *chainIter[K, V, H], key K, val V) {
 	if h.isFull() {
 		h.grow()
 		h.Put(key, val) // recursive restart
@@ -214,7 +284,7 @@ func (h *Hmap) putDirect(slot *chainIter, key Value, val Value) {
 			free.set(noJump, oldchain.key(), oldchain.val())
 			jump := oldchain.jump()
 			if oldchain.index != slot.index { // keep direct slot from being used
-				oldchain.set(metaEmpty, nil, nil)
+				oldchain.set(metaEmpty, zero[K](), zero[V]())
 			}
 			if !oldchain.nextWithJump(jump) {
 				break
@@ -229,7 +299,7 @@ func (h *Hmap) putDirect(slot *chainIter, key Value, val Value) {
 // findPrev finds the previous element in a chain
 // because chains are single linked, we search from the beginning of the chain
 // panics if unsuccessful
-func (h *Hmap) findPrev(slot *chainIter) chainIter {
+func (h *Hmap[K, V, H]) findPrev(slot *chainIter[K, V, H]) chainIter[K, V, H] {
 	iter := h.iterFromKey(slot.key())
 	for iter.nextIndex() != slot.index {
 		assert.That(iter.next())
@@ -238,20 +308,20 @@ func (h *Hmap) findPrev(slot *chainIter) chainIter {
 }
 
 // findEmpty finds a jump from a given index to an empty slot
-func (h *Hmap) findEmpty(index int) (int, chainIter) {
+func (h *Hmap[K, V, H]) findEmpty(index int) (int, chainIter[K, V, H]) {
 	for ji := range jumpSize {
 		free := h.keepInRange(index + jumpSize[ji])
 		b := &h.blocks[whichBlock(free)]
 		ib := indexInBlock(free)
 		if b.meta[ib] == metaEmpty {
-			return ji, chainIter{h, b, free, ib}
+			return ji, chainIter[K, V, H]{h, b, free, ib}
 		}
 	}
-	return -1, chainIter{}
+	return -1, chainIter[K, V, H]{}
 }
 
 // putChain adds to the end of a chain
-func (h *Hmap) putChain(iter *chainIter, key Value, val Value) {
+func (h *Hmap[K, V, H]) putChain(iter *chainIter[K, V, H], key K, val V) {
 	if h.isFull() {
 		h.grow()
 		h.Put(key, val) // recursive restart
@@ -269,19 +339,19 @@ func (h *Hmap) putChain(iter *chainIter, key Value, val Value) {
 }
 
 // Del deletes a key and returns its old value, or nil if it didn't exist
-func (h *Hmap) Del(key Value) Value {
+func (h *Hmap[K, V, H]) Del(key K) V {
 	if h.size == 0 {
-		return nil
+		return zero[V]()
 	}
 	iter := h.iterFromKey(key)
 	if (iter.meta() & metaDirect) != metaDirect {
-		return nil // hash index does not exist in the table
+		return zero[V]() // hash index does not exist in the table
 	}
-	var prev chainIter
-	for !key.Equal(iter.key()) {
+	var prev chainIter[K, V, H]
+	for !h.help.Equal(key, iter.key()) {
 		prev = iter
 		if !iter.next() {
-			return nil // end of chain
+			return zero[V]() // end of chain
 		}
 	}
 	h.version++
@@ -296,7 +366,7 @@ func (h *Hmap) Del(key Value) Value {
 		slot.keySet(iter.key())
 		slot.valSet(iter.val())
 	}
-	iter.set(metaEmpty, nil, nil)
+	iter.set(metaEmpty, zero[K](), zero[V]())
 	if prev.b != nil {
 		prev.jumpSet(noJump)
 	}
@@ -305,28 +375,28 @@ func (h *Hmap) Del(key Value) Value {
 }
 
 // Clear deletes the data but keeps the capacity
-func (h *Hmap) Clear() {
+func (h *Hmap[K, V, H]) Clear() {
 	h.size = 0
 	h.version = 0
 	h.growing = false
 	for i := range h.blocks {
-		h.blocks[i] = block{}
+		h.blocks[i] = block[K, V]{}
 	}
 }
 
 // Copy returns a shallow copy of the Hmap
-func (h *Hmap) Copy() *Hmap {
-	hnew := Hmap{size: h.size, capShift: h.capShift}
+func (h *Hmap[K, V, H]) Copy() *Hmap[K, V, H] {
+	hnew := Hmap[K, V, H]{size: h.size, capShift: h.capShift}
 	hnew.blocks = slices.Clone(h.blocks)
 	return &hnew
 }
 
 // Iter returns a function (closure) that is called to get the next item.
 // It returns nil,nil at the end.
-func (h *Hmap) Iter() func() (Value, Value) {
+func (h *Hmap[K, V, H]) Iter() func() (K, V) {
 	i := len(h.blocks) * blockSize
 	ver := h.version
-	return func() (Value, Value) {
+	return func() (K, V) {
 		if ver != h.version {
 			panic("hmap modified during iteration")
 		}
@@ -338,37 +408,37 @@ func (h *Hmap) Iter() func() (Value, Value) {
 				return b.key[ib], b.val[ib]
 			}
 		}
-		return nil, nil // end
+		return zero[K](), zero[V]() // end
 	}
 }
 
 //-------------------------------------------------------------------
 
 // chainIter points to a slot in the table
-type chainIter struct {
-	h     *Hmap
-	b     *block
+type chainIter[K any, V any, H Helper[K]] struct {
+	h     *Hmap[K, V, H]
+	b     *block[K, V]
 	index int
 	ib    int
 }
 
 // iterFromKey creates an iterator from a key
-func (h *Hmap) iterFromKey(key Value) chainIter {
-	index := h.hashToIndex(key.Hash())
+func (h *Hmap[K, V, H]) iterFromKey(key K) chainIter[K, V, H] {
+	index := h.hashToIndex(h.help.Hash(key))
 	b := &h.blocks[whichBlock(index)]
 	ib := indexInBlock(index)
-	return chainIter{h, b, index, ib}
+	return chainIter[K, V, H]{h, b, index, ib}
 }
 
 // next advances to the next slot in the chain
 // it returns true if it was able to advance, false if at the end of the chain
-func (it *chainIter) next() bool {
+func (it *chainIter[K, V, H]) next() bool {
 	return it.nextWithJump(it.jump())
 }
 
 // nextWithJump advances by a given jump
 // it returns false if the jump == noJump, otherwise true
-func (it *chainIter) nextWithJump(jump int) bool {
+func (it *chainIter[K, V, H]) nextWithJump(jump int) bool {
 	if jump == noJump {
 		return false // end of chain
 	}
@@ -379,49 +449,49 @@ func (it *chainIter) nextWithJump(jump int) bool {
 }
 
 // meta returns the metaData for an iterator's slot
-func (it *chainIter) meta() metaData {
+func (it *chainIter[K, V, H]) meta() metaData {
 	return it.b.meta[it.ib]
 }
 
 // key returns the key for an iterator's slot
-func (it *chainIter) key() Value {
+func (it *chainIter[K, V, H]) key() K {
 	return it.b.key[it.ib]
 }
 
 // keySet sets the key for an iterator's slot
-func (it *chainIter) keySet(key Value) {
+func (it *chainIter[K, V, H]) keySet(key K) {
 	it.b.key[it.ib] = key
 }
 
 // val returns the value for an iterator's slot
-func (it *chainIter) val() Value {
+func (it *chainIter[K, V, H]) val() V {
 	return it.b.val[it.ib]
 }
 
 // valSet sets the value for an iterator's slot
-func (it *chainIter) valSet(val Value) {
+func (it *chainIter[K, V, H]) valSet(val V) {
 	it.b.val[it.ib] = val
 }
 
 // jump returns the jump part of the metaData for an iterator's slot
-func (it *chainIter) jump() int {
+func (it *chainIter[K, V, H]) jump() int {
 	return it.b.meta[it.ib].jump()
 }
 
 // jumpSet sets the jump part of the metaData for an iterator's slot
-func (it *chainIter) jumpSet(jump int) {
+func (it *chainIter[K, V, H]) jumpSet(jump int) {
 	meta := &it.b.meta[it.ib]
 	*meta = meta.withJump(jump)
 }
 
 // set updates the contents of a slot
-func (it *chainIter) set(meta metaData, key Value, val Value) {
+func (it *chainIter[K, V, H]) set(meta metaData, key K, val V) {
 	it.b.meta[it.ib] = meta
 	it.b.key[it.ib] = key
 	it.b.val[it.ib] = val
 }
 
 // nextIndex returns the index of the slot after this one in the chain
-func (it *chainIter) nextIndex() int {
+func (it *chainIter[K, V, H]) nextIndex() int {
 	return it.h.keepInRange(it.index + jumpSize[it.jump()])
 }

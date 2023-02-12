@@ -624,15 +624,15 @@ func TestQueryGet(t *testing.T) {
 		"customer^(id) SUMMARIZE-IDX* max_id = max id",
 		`id	name		city		max_id
 		'i'	'intercon'	'saskatoon' 'i'`)
-	test("hist summarize item, total cost",
-		"hist^(date) SUMMARIZE-MAP item, total_cost = total cost",
+	test("hist summarize item, total cost sort item",
+		"hist^(date) SUMMARIZE-MAP item, total_cost = total cost TEMPINDEX(item)",
 		`item		total_cost
 		'disk'		300
 		'mouse'		200
 		'pencil'	300`)
-	test("hist summarize item, total cost, max id, average cost",
+	test("hist summarize item, total cost, max id, average cost sort item",
 		"hist^(date) SUMMARIZE-MAP item, total_cost = total cost, "+
-			"max_id = max id, average_cost = average cost",
+			"max_id = max id, average_cost = average cost TEMPINDEX(item)",
 		`item		total_cost	max_id	average_cost
         'disk'		300			'e'		150
         'mouse'		200			'c'		200
@@ -653,8 +653,9 @@ func TestQueryGet(t *testing.T) {
 			"average_cost = average cost, max_cost = max cost, sum = total cost",
 		`min_cost	average_cost	max_cost	sum
 		100			200				300			800`)
-	test("hist summarize item, total cost, count",
-		"hist^(date) SUMMARIZE-MAP item, total_cost = total cost, count = count",
+	test("hist summarize item, total cost, count sort item",
+		"hist^(date) SUMMARIZE-MAP item, total_cost = total cost, count = count" +
+			" TEMPINDEX(item)",
 		`item		total_cost	count
 		'disk'		300			2
 		'mouse'		200			1

@@ -12,6 +12,7 @@ import (
 	"github.com/apmckinlay/gsuneido/compile/lexer"
 	"github.com/apmckinlay/gsuneido/runtime/types"
 	"github.com/apmckinlay/gsuneido/util/assert"
+	"github.com/apmckinlay/gsuneido/util/generic/hmap"
 	"github.com/apmckinlay/gsuneido/util/generic/ord"
 	"github.com/apmckinlay/gsuneido/util/hacks"
 	"github.com/apmckinlay/gsuneido/util/pack"
@@ -27,6 +28,8 @@ The convention is that public methods should lock (if concurrent)
 and private methods should not lock
 */
 
+type HmapValue = hmap.Hmap[Value, Value, hmap.Meth[Value]]
+
 // EmptyObject is a readonly empty SuObject
 var EmptyObject = &SuObject{readonly: true}
 
@@ -35,7 +38,7 @@ var EmptyObject = &SuObject{readonly: true}
 // Zero value is a valid empty object.
 type SuObject struct {
 	ValueBase[SuObject]
-	named  Hmap
+	named  HmapValue
 	list   []Value
 	defval Value
 	rwMayLock
@@ -318,7 +321,7 @@ func (ob *SuObject) DeleteAll() {
 func (ob *SuObject) deleteAll() {
 	defer ob.endMutate(ob.startMutate())
 	ob.list = []Value{}
-	ob.named = Hmap{}
+	ob.named = HmapValue{}
 }
 
 func (ob *SuObject) RangeTo(from int, to int) Value {
