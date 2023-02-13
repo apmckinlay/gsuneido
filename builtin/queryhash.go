@@ -8,6 +8,7 @@ import (
 	"hash/adler32"
 
 	. "github.com/apmckinlay/gsuneido/runtime"
+	"github.com/apmckinlay/gsuneido/util/generic/hmap"
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
 	"github.com/apmckinlay/gsuneido/util/hacks"
 	"github.com/apmckinlay/gsuneido/util/str"
@@ -15,6 +16,11 @@ import (
 )
 
 var _ = builtin(QueryHash, "(query, details=false)")
+
+type rowHash struct {
+	row  Row
+	hash uint32
+}
 
 func QueryHash(th *Thread, args []Value) Value {
 	query := ToStr(args[0])
@@ -31,9 +37,21 @@ func QueryHash(th *Thread, args []Value) Value {
 	hash := colhash
 	// type fmtable interface{ Format() string }
 	// fmt.Println(q.(fmtable).Format())
+
+	hfn := func(row rowHash) uint32 { return row.hash }
+	eqfn := func(x, y rowHash) bool {
+		return x.hash == y.hash && equalRow(x.row, y.row, hdr, fields)
+	}
+	rows := hmap.NewHmapFuncs[rowHash, struct{}](hfn, eqfn)
+
 	n := 0
 	for row, _ := q.Get(th, Next); row != nil; row, _ = q.Get(th, Next) {
-		hash += hashRow(hdr, fields, row)
+		rh := rowHash{row, hashRow(hdr, fields, row)}
+		_, _, ok := rows.GetPut(rh, struct{}{})
+		if ok {
+			panic("QueryHash: duplicate row")
+		}
+		hash += rh.hash
 		// fmt.Println("row", row)
 		n++
 		// fmt.Println(n, hash)
@@ -67,4 +85,13 @@ func hashRow(hdr *Header, fields []string, row Row) uint32 {
 	}
 	// fmt.Println()
 	return hash
+}
+
+func equalRow(x, y Row, hdr *Header, cols []string) bool {
+	for _, col := range cols {
+		if x.GetRaw(hdr, col) != y.GetRaw(hdr, col) {
+			return false
+		}
+	}
+	return true
 }
