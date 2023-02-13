@@ -314,6 +314,7 @@ func printSuStack(th *Thread, e any) {
 }
 
 // LogInternalError logs the error and the call stacks, if an InternalError.
+// It is used by dbmsserver
 func LogInternalError(th *Thread, from string, e any) {
 	if isRuntimeError(e) {
 		log.Println("ERROR", from, e)

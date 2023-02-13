@@ -31,11 +31,12 @@ func ConnectClient(addr string, port string) (conn net.Conn, jserver bool) {
 }
 
 func cantConnect(s string) {
-	Fatal("Can't connect.", s)
+	Fatal("client: connect failed:", s)
 }
 
 const helloTimeout = 250 * time.Millisecond
 
+// checkHello is used by both the client and the server
 func checkHello(conn net.Conn) (jserver bool, errmsg string) {
 	var buf [helloSize]byte
 	conn.SetReadDeadline(time.Now().Add(helloTimeout))
@@ -43,21 +44,21 @@ func checkHello(conn net.Conn) (jserver bool, errmsg string) {
 	var never time.Time
 	conn.SetReadDeadline(never)
 	if n == 0 {
-		return false, "timeout reading hello from server"
+		return false, "hello: timeout"
 	}
 	if n != helloSize || err != nil {
-		return false, "invalid response from server"
+		return false, "hello: invalid response"
 	}
 	s := string(buf[:])
 	if !strings.HasPrefix(s, "Suneido ") {
-		return false, "invalid response from server"
+		return false, "hello: invalid response"
 	}
 	if strings.Contains(s, " (Java)") {
 		return true, ""
 	}
 	s = strings.TrimPrefix(s, "Suneido ")
 	if noTime(s) != noTime(options.BuiltDate) && !options.IgnoreVersion {
-		return false, "version mismatch"
+		return false, "hello: version mismatch"
 	}
 	return false, ""
 }

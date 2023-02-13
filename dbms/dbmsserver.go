@@ -87,7 +87,7 @@ func Server(dbms *DbmsLocal) {
 				if max := 1 * time.Second; tempDelay > max {
 					tempDelay = max
 				}
-				log.Println("ERROR server accept:", err)
+				log.Println("ERROR dbms server accept:", err)
 				time.Sleep(tempDelay)
 				continue
 			}
@@ -117,17 +117,23 @@ func idleCheck() {
 	for _, sc := range serverConns {
 		sc.idleCount++
 		if sc.idleCount > options.TimeoutMinutes {
-			log.Println("closing idle connection", sc.remoteAddr)
+			sc.serverLog("closing idle connection")
 			sc.close()
 			delete(serverConns, sc.id)
 		}
 	}
 }
 
+func (sc *serverConn) serverLog(args ...any) {
+	args = append([]any{"dbms server:", sc.remoteAddr + ":"}, args...)
+	log.Println(args...)
+}
+
 func newServerConn(dbms *DbmsLocal, conn net.Conn) {
 	trace.ClientServer.Println("server connection")
 	conn.Write(hello())
 	if _, errmsg := checkHello(conn); errmsg != "" {
+		log.Println("dbms server: connect failed:", errmsg)
 		conn.Close()
 		return
 	}
@@ -163,6 +169,7 @@ func doRequest(wb *mux.WriteBuf, th *Thread, id uint64, req []byte) {
 	connId := uint32(id >> 32)
 	serverConnsLock.Lock()
 	if req == nil { // closing
+		log.Println("dbms server: nil request (closing)")
 		delete(serverConns, connId)
 		serverConnsLock.Unlock()
 		return
@@ -196,21 +203,28 @@ func doRequest(wb *mux.WriteBuf, th *Thread, id uint64, req []byte) {
 }
 
 func (ss *serverSession) request() {
+	var icmd commands.Command = 255
 	defer func() {
 		if e := recover(); e != nil {
+			// pre := ""
+			// if icmd != 255 {
+			// 	pre = icmd.String() + ":"
+			// }
+			// ss.sc.serverLog(pre, e) //TEMP
 			LogInternalError(ss.thread, ss.sessionId, e)
 			ss.ResetWrite()
 			ss.PutBool(false).PutStr(fmt.Sprint(e)).EndMsg()
 		}
 	}()
-	icmd := ss.GetCmd()
+	icmd = ss.GetCmd()
 	if icmd == commands.Eof {
+		// ss.sc.serverLog("closing connection: Eof") //TEMP
 		ss.close()
 		return
 	}
 	if int(icmd) >= len(cmds) {
 		ss.close()
-		log.Println("dbms server, closing connection: invalid command")
+		ss.sc.serverLog("closing connection: invalid command")
 	}
 	cmd := cmds[icmd]
 	cmd(ss)
@@ -441,6 +455,7 @@ func cmdDump(ss *serverSession) {
 }
 
 func cmdEndSession(ss *serverSession) {
+	// ss.sc.serverLog("closing connection: received EndSession") //TEMP
 	ss.close()
 	// no response
 }
@@ -621,6 +636,7 @@ func kill(remoteAddr string) int {
 	nkilled := 0
 	for id, sc := range serverConns {
 		if sc.remoteAddr == remoteAddr {
+			sc.serverLog("dbms server: kill:", remoteAddr)
 			delete(serverConns, id)
 			sc.conn.Close()
 			nkilled++

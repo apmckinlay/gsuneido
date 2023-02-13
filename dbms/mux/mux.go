@@ -196,7 +196,7 @@ func (c *conn) reader(handler func(uint32, []byte)) {
 func (cc *ClientConn) client(id uint32, data []byte) {
 	// need to send id for client to pipeline messages
 	if data == nil {
-		runtime.Fatal("lost connection")
+		runtime.Fatal("lost connection:", cc.err.Load())
 	}
 	cc.getrch(id) <- data
 }

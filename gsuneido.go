@@ -149,7 +149,7 @@ func main() {
 	mainThread.UIThread = true
 	MainThread = mainThread
 	builtin.UIThread = mainThread
-	exit.Add(func() { mainThread.Close() })
+	// exit.Add(func() { mainThread.Close() }) // causes race if run by thread
 	defer func() {
 		if e := recover(); e != nil {
 			log.Println("ERROR:", e, "(exiting)")
