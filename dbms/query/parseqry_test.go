@@ -47,8 +47,8 @@ func TestParseQuery(t *testing.T) {
 	test("table summarize total a",
 		"table summarize total_a = total a")
 	test("table summarize t1 = total a")
-	test("table summarize total a, count, max b",
-		"table summarize total_a = total a, count = count, max_b = max b")
+	test("table summarize count, total a, max b",
+		"table summarize count = count, total_a = total a, max_b = max b")
 	test("table summarize a, b, count",
 		"table summarize a, b, count = count")
 

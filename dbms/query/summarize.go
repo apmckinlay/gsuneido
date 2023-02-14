@@ -72,9 +72,23 @@ func NewSummarize(src Query, by, cols, ops, ons []string) *Summarize {
 	}
 	su := &Summarize{Query1: Query1{source: src},
 		by: by, cols: cols, ops: ops, ons: ons}
+	sort.Stable(su)
 	// if single min or max, and on is a key, then we can give the whole row
 	su.wholeRow = su.minmax1() && slc.ContainsFn(src.Keys(), ons, set.Equal[string])
 	return su
+}
+
+// Len, Less, Swap implement sort.Interface
+func (su *Summarize) Len() int {
+	return len(su.cols)
+}
+func (su *Summarize) Less(i, j int) bool {
+	return su.ons[i] < su.ons[j]
+}
+func (su *Summarize) Swap(i, j int) {
+	su.ons[i], su.ons[j] = su.ons[j], su.ons[i]
+	su.cols[i], su.cols[j] = su.cols[j], su.cols[i]
+	su.ops[i], su.ops[j] = su.ops[j], su.ops[i]
 }
 
 func check(cols []string) {
@@ -411,10 +425,7 @@ func (su *Summarize) buildMap(th *Thread) []mapPair {
 				log.Panicf("summarize-map too large (> %d)", mapLimit)
 			}
 		}
-		for i := range sums {
-			x := row.GetVal(hdr, su.ons[i], th, su.st)
-			sums[i].add(x, nil)
-		}
+		su.addToSums(sums, row, th, su.st)
 	}
 	i := 0
 	list := make([]mapPair, sumMap.Size())
@@ -465,10 +476,7 @@ func (t *sumSeqT) getSeq(th *Thread, su *Summarize, dir Dir) Row {
 		t.sums[i].reset()
 	}
 	for {
-		for i := range t.sums {
-			x := t.nextRow.GetVal(su.srcHdr, su.ons[i], th, MakeSuTran(su.t))
-			t.sums[i].add(x, su.sumRow(t.nextRow))
-		}
+		su.addToSums(t.sums, t.nextRow, th, su.st)
 		t.nextRow = su.source.Get(th, dir)
 		if t.nextRow == nil || !su.sameBy(th, su.st, t.curRow, t.nextRow) {
 			break
@@ -476,6 +484,29 @@ func (t *sumSeqT) getSeq(th *Thread, su *Summarize, dir Dir) Row {
 	}
 	// output after each group
 	return su.seqRow(th, t.curRow, t.sums)
+}
+
+func (su *Summarize) addToSums(sums []sumOp, row Row, th *Thread, st *SuTran) {
+	for i := 0; i < len(su.ons); {
+		raw := "*uninit*"
+		var val Value
+		for col := su.ons[i]; i < len(su.ons) && su.ons[i] == col; i++ {
+			switch su.ops[i] {
+			case "count":
+				sums[i].add("", nil, row)
+			case "list", "min", "max":
+				if raw == "*uninit*" {
+					raw = row.GetRawVal(su.srcHdr, col, th, st)
+				}
+				sums[i].add(raw, nil, row)
+			default: // total, average
+				if val == nil {
+					val = row.GetVal(su.srcHdr, col, th, st)
+				}
+				sums[i].add("", val, row)
+			}
+		}
+	}
 }
 
 func (su *Summarize) sumRow(row Row) Row {
@@ -542,13 +573,13 @@ func newSumOp(op string) sumOp {
 	case "max":
 		return &sumMax{}
 	case "list":
-		return &sumList{set: &SuObject{}}
+		return sumList(make(map[string]struct{}))
 	}
 	panic(assert.ShouldNotReachHere())
 }
 
 type sumOp interface {
-	add(val Value, row Row)
+	add(raw string, val Value, row Row)
 	result() (Value, Row)
 	reset()
 }
@@ -557,7 +588,7 @@ type sumCount struct {
 	count int
 }
 
-func (sum *sumCount) add(_ Value, _ Row) {
+func (sum *sumCount) add(_ string, _ Value, _ Row) {
 	sum.count++
 }
 func (sum *sumCount) result() (Value, Row) {
@@ -571,8 +602,8 @@ type sumTotal struct {
 	total Value
 }
 
-func (sum *sumTotal) add(val Value, _ Row) {
-	defer func() { recover() }()
+func (sum *sumTotal) add(_ string, val Value, _ Row) {
+	defer func() { recover() }() // ignore panics
 	sum.total = OpAdd(sum.total, val)
 }
 func (sum *sumTotal) result() (Value, Row) {
@@ -587,7 +618,7 @@ type sumAverage struct {
 	total Value
 }
 
-func (sum *sumAverage) add(val Value, _ Row) {
+func (sum *sumAverage) add(_ string, val Value, _ Row) {
 	sum.count++
 	defer func() { recover() }()
 	sum.total = OpAdd(sum.total, val)
@@ -601,59 +632,57 @@ func (sum *sumAverage) reset() {
 }
 
 type sumMin struct {
-	val Value
+	raw string
 	row Row
 }
 
-func (sum *sumMin) add(val Value, row Row) {
-	if sum.val == nil || val.Compare(sum.val) < 0 {
-		sum.val, sum.row = val, row
+func (sum *sumMin) add(raw string, _ Value, row Row) {
+	if sum.row == nil || raw < sum.raw {
+		sum.raw, sum.row = raw, row
 	}
 }
 func (sum *sumMin) result() (Value, Row) {
-	return sum.val, sum.row
+	return Unpack(sum.raw), sum.row
 }
 func (sum *sumMin) reset() {
-	sum.val = nil
+	sum.raw = ""
 	sum.row = nil
 }
 
 type sumMax struct {
-	val Value
+	raw string
 	row Row
 }
 
-func (sum *sumMax) add(val Value, row Row) {
-	if sum.val == nil || val.Compare(sum.val) > 0 {
-		sum.val, sum.row = val, row
+func (sum *sumMax) add(raw string, _ Value, row Row) {
+	if sum.row == nil || raw > sum.raw {
+		sum.raw, sum.row = raw, row
 	}
 }
 func (sum *sumMax) result() (Value, Row) {
-	return sum.val, sum.row
+	return Unpack(sum.raw), sum.row
 }
 func (sum *sumMax) reset() {
-	sum.val = nil
+	sum.raw = ""
 	sum.row = nil
 }
 
-type sumList struct {
-	set *SuObject
-}
+type sumList map[string]struct{}
 
 const sumListLimit = 16384 // ???
 
-func (sum *sumList) add(val Value, _ Row) {
-	sum.set.Set(val, True)
-	if sum.set.Size() > sumListLimit {
+func (sum sumList) add(raw string, _ Value, _ Row) {
+	sum[raw] = struct{}{}
+	if len(sum) > sumListLimit {
 		panic(fmt.Sprintf("summarize list too large (> %d)", sumListLimit))
 	}
 }
-func (sum *sumList) result() (Value, Row) {
-	list := make([]Value, sum.set.Size())
-	iter := sum.set.Iter2(true, true)
-	for i := range list {
-		x, _ := iter()
-		list[i] = x
+func (sum sumList) result() (Value, Row) {
+	list := make([]Value, len(sum))
+	i := 0
+	for raw := range sum {
+		list[i] = Unpack(raw)
+		i++
 	}
 	if len(list) <= 3 { // for tests
 		sort.Slice(list,
@@ -661,6 +690,8 @@ func (sum *sumList) result() (Value, Row) {
 	}
 	return NewSuObject(list), nil
 }
-func (sum *sumList) reset() {
-	sum.set = &SuObject{}
+func (sum sumList) reset() {
+	for k := range sum {
+		delete(sum, k)
+	}
 }
