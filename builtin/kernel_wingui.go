@@ -7,7 +7,6 @@ package builtin
 
 import (
 	"bytes"
-	"strings"
 	"syscall"
 	"unsafe"
 
@@ -46,19 +45,6 @@ func GetComputerName() Value {
 		return EmptyStr
 	}
 	return SuStr(string(buf[:n]))
-}
-
-// dll Kernel32:GetTempPath(DWORD nBufferLength, buffer lpBuffer) bool
-var getTempPath = kernel32.MustFindProc("GetTempPathA").Addr()
-var _ = builtin(GetTempPath, "()")
-
-func GetTempPath() Value {
-	buf := make([]byte, MAX_PATH+1)
-	rtn, _, _ := syscall.SyscallN(getTempPath,
-		MAX_PATH,
-		uintptr(unsafe.Pointer(&buf[0])))
-	s := string(buf[:rtn])
-	return SuStr(strings.ReplaceAll(s, "\\", "/"))
 }
 
 // dll Kernel32:GetModuleHandle(instring name) pointer

@@ -44,12 +44,6 @@ func GetComputerName() Value {
 	return SuStr(name)
 }
 
-var _ = builtin(GetTempPath, "()")
-
-func GetTempPath() Value {
-	return SuStr(os.TempDir())
-}
-
 func CallbacksCount() int {
 	return 0
 }

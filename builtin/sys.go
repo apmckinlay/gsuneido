@@ -141,3 +141,14 @@ func GetMacAddresses() Value {
 	}
 	return ob
 }
+
+var _ = builtin(GetTempPath, "()")
+
+func GetTempPath() Value {
+	s := os.TempDir()
+	s = strings.ReplaceAll(s, `\`, `/`)
+	if !strings.HasSuffix(s, "/") {
+		s += "/"
+	}
+	return SuStr(s)
+}
