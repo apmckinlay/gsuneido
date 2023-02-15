@@ -11,7 +11,7 @@ import (
 )
 
 type Times struct {
-	Query2
+	joinLike
 	rewound bool
 	row1    Row
 }
@@ -21,7 +21,9 @@ func NewTimes(src1, src2 Query) *Times {
 		panic("times: common columns not allowed: " + str.Join(", ",
 			set.Intersect(src1.Columns(), src2.Columns())))
 	}
-	return &Times{Query2: Query2{source1: src1, source2: src2}, rewound: true}
+	t := Times{rewound: true}
+	t.source1, t.source2 = src1, src2
+	return &t
 }
 
 func (t *Times) String() string {
@@ -67,7 +69,7 @@ func (t *Times) Transform() Query {
 	}
 	if src1 != t.source1 || src2 != t.source2 {
 		return NewTimes(src1, src2)
-    }
+	}
 	return t
 }
 
@@ -111,6 +113,9 @@ func (t *Times) Rewind() {
 }
 
 func (t *Times) Get(th *Thread, dir Dir) Row {
+	if t.conflict {
+		return nil
+	}
 	row2 := t.source2.Get(th, dir)
 	if t.rewound {
 		t.rewound = false
@@ -131,13 +136,25 @@ func (t *Times) Get(th *Thread, dir Dir) Row {
 }
 
 func (t *Times) Select(cols, vals []string) {
-	t.source1.Select(cols, vals)
-	t.source2.Rewind()
-	t.rewound = true
+	t.Rewind()
+	if cols == nil { // clear
+		t.conflict = false
+		t.source1.Select(nil, nil)
+		return
+	}
+	sel1cols, sel1vals := t.splitSelect(cols, vals)
+	if t.conflict {
+		return
+	}
+	t.source1.Select(sel1cols, sel1vals)
 }
 
 func (t *Times) Lookup(th *Thread, cols, vals []string) Row {
-	t.Select(cols, vals)
+	sel1cols, sel1vals := t.splitSelect(cols, vals)
+	if t.conflict {
+		return nil
+	}
+	t.source1.Select(sel1cols, sel1vals)
 	row := t.Get(th, Next)
 	t.Select(nil, nil) // clear select
 	return row

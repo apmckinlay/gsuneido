@@ -26,9 +26,10 @@
 				Compatible1
 					Intersect
 					Minus
-			Join
-				LeftJoin
-			Times
+			joinLike
+				Join
+					LeftJoin
+				Times
 */
 package query
 
@@ -100,16 +101,22 @@ type Query interface {
 	// rowSize returns the average number of bytes per row
 	rowSize() int
 
-	// Lookup returns the row matching the given key value, or nil if not found.
-	// It is used by Compatible (Intersect, Minus, Union). See also: Select
-	Lookup(th *runtime.Thread, cols, vals []string) runtime.Row
-
 	Rewind()
 
 	Get(th *runtime.Thread, dir runtime.Dir) runtime.Row
 
+	// Lookup returns the row matching the given key value, or nil if not found.
+	// It is used by Compatible (Intersect, Minus, Union). See also: Select
+	// It is valid (although not necessarily the most efficient)
+	// to implement Lookup with Select and Get
+	// in which case it should leave the select cleared.
+	// Lookup should rewind.
+	Lookup(th *runtime.Thread, cols, vals []string) runtime.Row
+
 	// Select restricts the query to records matching the given packed values.
 	// It is used by Join and LeftJoin. See also: Lookup
+	// To clear the select, use Select(nil, nil)
+	// Select should rewind.
 	Select(cols, vals []string)
 
 	Header() *runtime.Header

@@ -16,16 +16,20 @@ import (
 	"golang.org/x/exp/slices"
 )
 
-type Join struct {
+type joinLike struct {
 	Query2
+	hdr1     *Header
+	conflict bool
+}
+
+type Join struct {
+	joinLike
 	by []string
 	joinType
-	conflict bool
-	hdr1     *Header
-	row1     Row
-	row2     Row // nil when we need a new row1
-	st       *SuTran
-	lookup   *lookupInfo
+	row1   Row
+	row2   Row // nil when we need a new row1
+	st     *SuTran
+	lookup *lookupInfo
 }
 
 type lookupInfo struct {
@@ -76,7 +80,8 @@ func NewJoin(src1, src2 Query, by []string) *Join {
 	} else if !set.Equal(by, b) {
 		panic("join: by does not match common columns")
 	}
-	jn := &Join{Query2: Query2{source1: src1, source2: src2}, by: by}
+	jn := &Join{by: by}
+	jn.source1, jn.source2 = src1, src2
 	k1 := containsKey(by, src1.Keys())
 	k2 := containsKey(by, src2.Keys())
 	if k1 && k2 {
@@ -339,6 +344,7 @@ func (jn *Join) projectRow(th *Thread, row Row) []string {
 }
 
 func (jn *Join) Select(cols, vals []string) {
+	jn.Rewind()
 	if cols == nil { // clear
 		jn.conflict = false
 		jn.source1.Select(nil, nil)
@@ -349,19 +355,16 @@ func (jn *Join) Select(cols, vals []string) {
 		return
 	}
 	jn.source1.Select(sel1cols, sel1vals)
-	jn.row1 = nil
-	jn.row2 = nil
 }
 
 func (jn *Join) Lookup(th *Thread, cols, vals []string) Row {
-	defer jn.Rewind()
+	defer jn.Select(nil, nil) // clear select
 	sel1cols, sel1vals := jn.splitSelect(cols, vals)
 	if jn.conflict {
 		return nil
 	}
 	if jn.lookupFallback(sel1cols) {
 		jn.Select(cols, vals)
-		defer jn.Select(nil, nil) // clear select
 		return jn.Get(th, Next)
 	}
 	jn.row1 = jn.source1.Lookup(th, sel1cols, sel1vals)
@@ -369,7 +372,6 @@ func (jn *Join) Lookup(th *Thread, cols, vals []string) Row {
 		return nil
 	}
 	jn.source2.Select(jn.by, jn.projectRow(th, jn.row1))
-	defer jn.source2.Select(nil, nil) // clear select
 	row2 := jn.source2.Get(th, Next)
 	if row2 == nil {
 		return nil
@@ -377,7 +379,10 @@ func (jn *Join) Lookup(th *Thread, cols, vals []string) Row {
 	return JoinRows(jn.row1, row2)
 }
 
-func (jn *Join) splitSelect(cols, vals []string) (sel1cols, sel1vals []string) {
+func (jn *joinLike) splitSelect(cols, vals []string) (sel1cols, sel1vals []string) {
+	if jn.hdr1 == nil {
+		jn.hdr1 = jn.source1.Header()
+	}
 	jn.conflict = false
 	fixed2 := jn.source2.Fixed()
 	for i, col := range cols {
