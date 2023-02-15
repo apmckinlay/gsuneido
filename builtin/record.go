@@ -39,11 +39,18 @@ func record_GetDeps(this, arg Value) Value {
 var _ = method(record_Delete, "()")
 
 func record_Delete(t *Thread, as *ArgSpec, this Value, args []Value) Value {
-	k, v := NewArgsIter(as, args)()
-	if k != nil || v != nil {
+	if as.Nargs != 0 {
 		return ob_Delete(t, as, this, args)
 	}
-	trace.Dbms.Println("Record Delete", this)
+	trace.Dbms.Println("Record Drop", this)
+	this.(*SuRecord).DbDelete(t)
+	return nil
+}
+
+var _ = method(record_Drop, "()")
+
+func record_Drop(t *Thread, as *ArgSpec, this Value, args []Value) Value {
+	trace.Dbms.Println("Record Drop", this)
 	this.(*SuRecord).DbDelete(t)
 	return nil
 }
