@@ -169,7 +169,7 @@ func doRequest(wb *mux.WriteBuf, th *Thread, id uint64, req []byte) {
 	connId := uint32(id >> 32)
 	serverConnsLock.Lock()
 	if req == nil { // closing
-		log.Println("dbms server: nil request (closing)")
+		// log.Println("dbms server: nil request (closing)")
 		delete(serverConns, connId)
 		serverConnsLock.Unlock()
 		return
