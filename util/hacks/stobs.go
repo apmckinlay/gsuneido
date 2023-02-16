@@ -4,7 +4,6 @@
 package hacks
 
 import (
-	"reflect"
 	"unsafe"
 )
 
@@ -14,10 +13,5 @@ import (
 // which is illegal since strings are immutable.
 // This is an optimization (to avoid allocation) that should not be overused.
 func Stobs(s string) []byte {
-	return *(*[]byte)(unsafe.Pointer(
-		&reflect.SliceHeader{
-			Data: (*reflect.StringHeader)(unsafe.Pointer(&s)).Data,
-			Len:  len(s),
-			Cap:  len(s),
-		}))
+	return unsafe.Slice(unsafe.StringData(s), len(s))
 }
