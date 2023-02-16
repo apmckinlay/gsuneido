@@ -159,7 +159,7 @@ func (rs *Ranges) check() int {
 }
 
 func TestOverflow(t *testing.T) {
-	const n = 12000 * 2
+	const n = 12000 * 3
 	data := make([]string, n)
 	randKey := str.UniqueRandom(4, 10)
 	for i := 0; i < n; i++ {
