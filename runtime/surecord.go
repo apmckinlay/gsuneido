@@ -19,6 +19,7 @@ import (
 
 // SuRecord is an SuObject with observers and rules and a default value of "".
 // Uses the lock from SuObject.
+// Use NewSuRecord since zero value doesn't set default.
 type SuRecord struct {
 	ValueBase[SuRecord]
 	ob SuObject
