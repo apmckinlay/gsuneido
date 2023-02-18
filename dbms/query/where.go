@@ -537,13 +537,19 @@ func (w *Where) extractCompares() []cmpExpr {
 	cmps := make([]cmpExpr, 0, 4)
 	for _, expr := range w.expr.Exprs {
 		if expr.CanEvalRaw(cols) {
-			if bin, ok := expr.(*ast.Binary); ok && bin.Tok != tok.Isnt {
-				cmp := cmpExpr{
-					col: bin.Lhs.(*ast.Ident).Name,
-					op:  bin.Tok,
-					val: bin.Rhs.(*ast.Constant).Packed,
+			if bin, ok := expr.(*ast.Binary); ok {
+				op := bin.Tok
+				if op == tok.Isnt && bin.Rhs.(*ast.Constant).Packed == "" {
+					// treat != "" as > "" for index usage
+					op = tok.Gt
 				}
-				cmps = append(cmps, cmp)
+				if op != tok.Isnt {
+					cmps = append(cmps, cmpExpr{
+						col: bin.Lhs.(*ast.Ident).Name,
+						op:  op,
+						val: bin.Rhs.(*ast.Constant).Packed,
+					})
+				}
 			} else if in, ok := expr.(*ast.In); ok {
 				cmp := cmpExpr{
 					col:  in.E.(*ast.Ident).Name,
