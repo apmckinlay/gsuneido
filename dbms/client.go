@@ -34,7 +34,7 @@ func cantConnect(s string) {
 	Fatal("client: connect failed:", s)
 }
 
-const helloTimeout = 250 * time.Millisecond
+const helloTimeout = 500 * time.Millisecond
 
 // checkHello is used by both the client and the server
 func checkHello(conn net.Conn) (jserver bool, errmsg string) {
