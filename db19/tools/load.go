@@ -14,6 +14,7 @@ import (
 	"sync"
 	"sync/atomic"
 
+	"github.com/apmckinlay/gsuneido/db19"
 	. "github.com/apmckinlay/gsuneido/db19"
 	"github.com/apmckinlay/gsuneido/db19/index"
 	"github.com/apmckinlay/gsuneido/db19/index/btree"
@@ -51,7 +52,7 @@ func LoadDatabase(from, dbfile string) (nTables, nViews int, err error) {
 			err = errs.From(e)
 		}
 	}()
-	f, r := open(from)
+	f, r, convert := open(from)
 	defer f.Close()
 	db, tmpfile := tmpdb()
 	defer func() { db.Close(); os.Remove(tmpfile) }()
@@ -83,7 +84,7 @@ func LoadDatabase(from, dbfile string) (nTables, nViews int, err error) {
 		if schema == "" {
 			break
 		}
-		nrecs, size, list := loadTable1(db, r, schema)
+		nrecs, size, list := loadTable1(db, r, schema, convert)
 		if strings.HasPrefix(schema, "views ") {
 			nViews = nrecs
 			nTables--
@@ -132,27 +133,35 @@ func LoadDbTable(table string, db *Database) (n int, err error) {
 			err = fmt.Errorf("error loading %s: %v", table, e)
 		}
 	}()
-	f, r := open(table + ".su")
+	f, r, convert := open(table + ".su")
 	defer f.Close()
 	schem := table + " " + readLinePrefixed(r, "====== ")
-	nrecs, size, list := loadTable1(db, r, schem)
+	nrecs, size, list := loadTable1(db, r, schem, convert)
 	loadTable2(db, schem, nrecs, size, list, true)
 	db.Persist() // for safety, not strictly required
 	return nrecs, nil
 }
 
-func open(filename string) (*os.File, *bufio.Reader) {
+func open(filename string) (*os.File, *bufio.Reader, bool) {
 	f, err := os.Open(filename)
 	if err != nil {
 		panic(err)
 	}
 	r := bufio.NewReader(f)
-	readLinePrefixed(r, "Suneido dump 2")
-	return f, r
+	s, err := r.ReadString('\n') // file header
+	ck(err)
+	convert := false
+	if strings.HasPrefix(s, db19.DumpIdOther) {
+		fmt.Println("CONVERTING")
+		convert = true
+	} else if !strings.HasPrefix(s, db19.DumpId) {
+		panic("not a valid dump file")
+	}
+	return f, r, convert
 }
 
 // loadTable1 reads the data
-func loadTable1(db *Database, r *bufio.Reader, schema string) (
+func loadTable1(db *Database, r *bufio.Reader, schema string, convert bool) (
 	nrecs int, size uint64, list *sortlist.Builder[uint64]) {
 	trace(schema)
 	if strings.HasPrefix(schema, "views ") {
@@ -160,7 +169,7 @@ func loadTable1(db *Database, r *bufio.Reader, schema string) (
 	}
 	store := db.Store
 	list = sortlist.NewUnsorted(func(x uint64) bool { return x == 0 })
-	nrecs, size = readRecords(r, store, list)
+	nrecs, size = readRecords(r, store, list, convert)
 	trace("nrecs", nrecs, "data size", size)
 	list.Finish()
 	return nrecs, size, list
@@ -196,8 +205,8 @@ func readLinePrefixed(r *bufio.Reader, pre string) string {
 	return s[len(pre):]
 }
 
-func readRecords(in *bufio.Reader, store *stor.Stor, list *slBuilder) (
-	nrecs int, size uint64) {
+func readRecords(in *bufio.Reader, store *stor.Stor, list *slBuilder,
+	convert bool) (nrecs int, size uint64) {
 	intbuf := make([]byte, 4)
 	for { // each record
 		_, err := io.ReadFull(in, intbuf)
@@ -212,6 +221,9 @@ func readRecords(in *bufio.Reader, store *stor.Stor, list *slBuilder) (
 		off, buf := store.Alloc(n + cksum.Len)
 		_, err = io.ReadFull(in, buf[:n])
 		ck(err)
+		if convert {
+			rt.ConvertRecord(buf)
+		}
 		cksum.Update(buf)
 		list.Add(off)
 		nrecs++

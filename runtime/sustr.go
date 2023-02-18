@@ -242,7 +242,7 @@ func (SuStr) Type() types.Type {
 
 func (ss SuStr) Compare(other Value) int {
 	if cmp := ord.Compare(ordStr, Order(other)); cmp != 0 {
-		return cmp
+		return cmp * 2
 	}
 	return strings.Compare(string(ss), ToStr(other))
 }

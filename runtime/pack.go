@@ -25,32 +25,6 @@ type Packable interface {
 	Pack(hash *uint32, buf *pack.Encoder)
 }
 
-// Packed values start with one of the following type tags,
-// except for the special case of a zero length string
-// which is encoded as a zero length buffer.
-// NOTE: this order is significant, it determines sorting
-const (
-	PackFalse = iota
-	PackTrue
-	PackMinus
-	PackPlus
-	PackString
-	PackDate
-	PackObject
-	PackRecord
-)
-
-const (
-	NewPackString = iota + 10
-	NewPackFalse
-	NewPackTrue
-	NewPackMinus
-	NewPackPlus
-	NewPackDate
-	NewPackObject
-	NewPackRecord
-)
-
 type packStack []Value
 
 func newPackStack() packStack {
@@ -119,19 +93,19 @@ func Unpack(s string) Value {
 		return EmptyStr
 	}
 	switch s[0] {
-	case PackFalse, NewPackFalse:
+	case PackFalse, PackFalseOther:
 		return False
-	case PackTrue, NewPackTrue:
+	case PackTrue, PackTrueOther:
 		return True
-	case PackString, NewPackString:
+	case PackString, PackStringOther:
 		return SuStr(s[1:])
-	case PackDate, NewPackDate:
+	case PackDate, PackDateOther:
 		return UnpackDate(s)
-	case PackPlus, PackMinus, NewPackPlus, NewPackMinus:
+	case PackPlus, PackMinus, PackPlusOther, PackMinusOther:
 		return UnpackNumber(s)
-	case PackObject, NewPackObject:
+	case PackObject, PackObjectOther:
 		return UnpackObject(s)
-	case PackRecord, NewPackRecord:
+	case PackRecord, PackRecordOther:
 		return UnpackRecord(s)
 	default:
 		panic("invalid pack tag " + strconv.Itoa(int(s[0])))

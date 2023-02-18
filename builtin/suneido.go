@@ -8,6 +8,7 @@ import (
 
 	"github.com/apmckinlay/gsuneido/compile"
 	"github.com/apmckinlay/gsuneido/compile/tokens"
+	"github.com/apmckinlay/gsuneido/options"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/dnum"
@@ -85,4 +86,11 @@ var _ = staticMethod(suneido_RuntimeError, "()")
 func suneido_RuntimeError() Value {
 	var x []Value
 	return x[123]
+}
+
+var _ = staticMethod(suneido_StrictCompare, "()")
+
+func suneido_StrictCompare(x Value) Value {
+	options.StrictCompare = ToBool(x)
+	return nil
 }

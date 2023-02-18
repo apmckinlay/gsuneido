@@ -44,6 +44,9 @@ func quickCheckTable(state *DbState, table string) {
 // CheckDatabase checks the integrity of the database.
 func CheckDatabase(dbfile string) (ec error) {
 	db, err := OpenDb(dbfile, stor.Read, false)
+	if err == nil {
+		err = db.CheckMagic()
+	}
 	if err != nil {
 		return newErrCorrupt(err)
 	}

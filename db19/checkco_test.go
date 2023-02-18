@@ -51,7 +51,7 @@ func TestCheckCoRandom(*testing.T) {
 		}()
 	}
 	wg.Wait()
-	fmt.Println("commit", nCommit, "conflict", nConflict,
+	fmt.Println("commit", nCommit.Load(), "conflict", nConflict.Load(),
 		"=", float32(nConflict.Load())/float32(nCommit.Load()))
 	assert.That(float32(nConflict.Load())/float32(nCommit.Load()) < .1)
 }

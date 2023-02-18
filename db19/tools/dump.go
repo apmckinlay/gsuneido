@@ -29,6 +29,7 @@ func DumpDatabase(dbfile, to string) (nTables, nViews int, err error) {
 	db, err := OpenDb(dbfile, stor.Read, false)
 	ck(err)
 	defer db.Close()
+	db.CheckMagic()
 	return Dump(db, to)
 }
 
@@ -76,6 +77,7 @@ func DumpTable(dbfile, table, to string) (nrecs int, err error) {
 	db, err := OpenDb(dbfile, stor.Read, false)
 	ck(err)
 	defer db.Close()
+	db.CheckMagic()
 	return DumpDbTable(db, table, to)
 }
 
@@ -114,7 +116,8 @@ func dumpOpen() (*os.File, *bufio.Writer, error) {
 		return nil, nil, err
 	}
 	w := bufio.NewWriter(f)
-	w.WriteString("Suneido dump 2\n")
+	w.WriteString(DumpId)
+	w.WriteByte('\n')
 	return f, w, nil
 }
 

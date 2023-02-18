@@ -94,7 +94,7 @@ func (SuBool) Type() types.Type {
 
 func (b SuBool) Compare(other Value) int {
 	if cmp := ord.Compare(ordBool, Order(other)); cmp != 0 {
-		return cmp
+		return cmp * 2
 	}
 	if b == other {
 		return 0

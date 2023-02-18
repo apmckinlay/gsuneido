@@ -104,13 +104,13 @@ func fixHeader(dbfile string, size uint64) error {
 		return err
 	}
 	defer f.Close()
-	_, err = f.WriteAt([]byte(magic), 0)
+	_, err = f.WriteAt([]byte(Magic), 0)
 	if err != nil {
 		return err
 	}
 	buf := make([]byte, stor.SmallOffsetLen)
 	stor.WriteSmallOffset(buf, size)
-	_, err = f.WriteAt(buf, int64(len(magic)))
+	_, err = f.WriteAt(buf, int64(len(Magic)))
 	return err
 }
 
@@ -132,7 +132,7 @@ func truncate2(dbfile string, size uint64) (string, error) {
 	}
 	buf := make([]byte, stor.SmallOffsetLen)
 	stor.WriteSmallOffset(buf, size)
-	_, err = dst.WriteAt(buf, int64(len(magic)))
+	_, err = dst.WriteAt(buf, int64(len(Magic)))
 	if err != nil {
 		return "", err
 	}

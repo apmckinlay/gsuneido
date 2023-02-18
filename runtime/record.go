@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/pack"
 )
 
@@ -94,7 +95,7 @@ func (r Record) GetVal(i int) Value {
 // GetStr is a more direct method to get a packed string
 func (r Record) GetStr(i int) string {
 	s := r.GetRaw(i)
-	if s[0] != PackString {
+	if s[0] != PackString && s[0] != PackStringOther {
 		panic("Record GetStr not string")
 	}
 	return s[1:]
@@ -125,6 +126,32 @@ func (r Record) GetRaw(i int) string {
 		panic("invalid record type")
 	}
 	return string(r)[pos:end]
+}
+
+// GetRange returns the location of field i.
+// This is used by database convert.
+func (r Record) GetRange(i int) (int, int) {
+	assert.That(0 <= i && i < r.Count())
+	var pos, end int
+	switch r.mode() {
+	case type8:
+		j := hdrlen + i
+		end = int(r[j])
+		pos = int(r[j+1])
+	case type16:
+		j := hdrlen + 2*i
+		end = (int(r[j]) << 8) | int(r[j+1])
+		pos = (int(r[j+2]) << 8) | int(r[j+3])
+	case type32:
+		j := hdrlen + 4*i
+		end = (int(r[j]) << 24) | (int(r[j+1]) << 16) |
+			(int(r[j+2]) << 8) | int(r[j+3])
+		pos = (int(r[j+4]) << 24) | (int(r[j+5]) << 16) |
+			(int(r[j+6]) << 8) | int(r[j+7])
+	default:
+		panic("invalid record type")
+	}
+	return pos, end
 }
 
 func (r Record) mode() byte {

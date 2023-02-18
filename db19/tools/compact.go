@@ -33,6 +33,16 @@ func Compact(dbfile string) (nTables, nViews int, err error) {
 	src, err := OpenDb(dbfile, stor.Read, false)
 	ck(err)
 	defer src.Close()
+	convert := false
+	switch src.Magic() {
+	case Magic:
+		// ok
+	case MagicOther:
+		fmt.Println("CONVERTING")
+		convert = true
+	default:
+		panic("bad magic")
+	}
 	dst, tmpfile := tmpdb()
 	defer func() { dst.Close(); os.Remove(tmpfile) }()
 
@@ -56,10 +66,11 @@ func Compact(dbfile string) (nTables, nViews int, err error) {
 		return schemas[i].nrows > schemas[j].nrows
 	})
 	type compactJob struct {
-		state *DbState
-		src   *Database
-		ts    *meta.Schema
-		dst   *Database
+		state   *DbState
+		src     *Database
+		ts      *meta.Schema
+		dst     *Database
+		convert bool
 	}
 	var wg sync.WaitGroup
 	channel := make(chan compactJob)
@@ -67,13 +78,14 @@ func Compact(dbfile string) (nTables, nViews int, err error) {
 		wg.Add(1)
 		go func() {
 			for job := range channel {
-				compactTable(job.state, job.src, job.ts, job.dst)
+				compactTable(job.state, job.src, job.ts, job.dst, job.convert)
 			}
 			wg.Done()
 		}()
 	}
 	for _, sc := range schemas {
-		channel <- compactJob{state: state, src: src, ts: sc.sc, dst: dst}
+		channel <- compactJob{state: state, src: src, ts: sc.sc, dst: dst,
+			convert: convert}
 	}
 	close(channel)
 	wg.Wait()
@@ -103,7 +115,8 @@ func copyViews(state *DbState, dst *Database) int {
 	return n
 }
 
-func compactTable(state *DbState, src *Database, ts *meta.Schema, dst *Database) {
+func compactTable(state *DbState, src *Database, ts *meta.Schema, dst *Database,
+	convert bool) {
 	defer func() {
 		if e := recover(); e != nil {
 			runtime.Fatal(ts.Table+":", e)
@@ -125,6 +138,9 @@ func compactTable(state *DbState, src *Database, ts *meta.Schema, dst *Database)
 			n = len(rec)
 			off2, buf = dst.Store.Alloc(n + cksum.Len)
 			copy(buf, rec)
+			if convert {
+				runtime.ConvertRecord(buf)
+			}
 			cksum.Update(buf)
 		} else {
 			rec := src.Store.Data(off)
@@ -133,6 +149,10 @@ func compactTable(state *DbState, src *Database, ts *meta.Schema, dst *Database)
 			cksum.MustCheck(rec)
 			off2, buf = dst.Store.Alloc(len(rec))
 			copy(buf, rec)
+			if convert {
+				runtime.ConvertRecord(buf)
+				cksum.Update(buf)
+			}
 		}
 		list.Add(off2)
 		size += uint64(n)

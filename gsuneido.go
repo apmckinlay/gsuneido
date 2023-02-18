@@ -266,7 +266,8 @@ var db *db19.Database
 func openDbms() {
 	var err error
 	db, err = db19.OpenDatabase("suneido.db")
-	if errors.Is(err, fs.ErrNotExist) || errors.Is(err, fs.ErrPermission) {
+	if errors.Is(err, fs.ErrNotExist) || errors.Is(err, fs.ErrPermission) ||
+		(err != nil && strings.HasPrefix(err.Error(), "version mismatch")) {
 		Fatal(err)
 	}
 	if err != nil {

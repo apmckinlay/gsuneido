@@ -28,6 +28,10 @@ var (
 	TimeoutMinutes = 2 * 60 // 2 hours
 )
 
+// StrictCompare determines whether comparisons between different types
+// are allowed (old behavior) or throw an exception (new behavior)
+var StrictCompare = false
+
 // CmdLine is the remaining command line arguments
 var CmdLine string
 

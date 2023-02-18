@@ -4,10 +4,13 @@
 package ast
 
 import (
+	"fmt"
 	"math"
 
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
+	"github.com/apmckinlay/gsuneido/options"
 	. "github.com/apmckinlay/gsuneido/runtime"
+	"github.com/apmckinlay/gsuneido/runtime/trace"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/generic/set"
 	"github.com/apmckinlay/gsuneido/util/str"
@@ -151,12 +154,36 @@ func (a *Binary) Eval(c *Context) Value {
 		case tok.Isnt:
 			return SuBool(lhs != rhs)
 		case tok.Lt:
+			if options.StrictCompare && PackedOrd(lhs) != PackedOrd(rhs) {
+				trace.Println("StrictCompare packed: ",
+					Unpack(lhs), " <=> ", Unpack(rhs))
+				panic(fmt.Sprint("StrictCompare packed: ",
+					Unpack(lhs), " <=> ", Unpack(rhs)))
+			}
 			return SuBool(lhs < rhs)
 		case tok.Lte:
+			if options.StrictCompare && PackedOrd(lhs) != PackedOrd(rhs) {
+				trace.Println("StrictCompare packed: ",
+					Unpack(lhs), " <=> ", Unpack(rhs))
+				panic(fmt.Sprint("StrictCompare packed: ",
+					Unpack(lhs), " <=> ", Unpack(rhs)))
+			}
 			return SuBool(lhs <= rhs)
 		case tok.Gt:
+			if options.StrictCompare && PackedOrd(lhs) != PackedOrd(rhs) {
+				trace.Println("StrictCompare packed: ",
+					Unpack(lhs), " <=> ", Unpack(rhs))
+				panic(fmt.Sprint("StrictCompare packed: ",
+					Unpack(lhs), " <=> ", Unpack(rhs)))
+			}
 			return SuBool(lhs > rhs)
 		case tok.Gte:
+			if options.StrictCompare && PackedOrd(lhs) != PackedOrd(rhs) {
+				trace.Println("StrictCompare packed: ",
+					Unpack(lhs), " <=> ", Unpack(rhs))
+				panic(fmt.Sprint("StrictCompare packed: ",
+					Unpack(lhs), " <=> ", Unpack(rhs)))
+			}
 			return SuBool(lhs >= rhs)
 		}
 	}

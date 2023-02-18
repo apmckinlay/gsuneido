@@ -624,7 +624,7 @@ func (*SuObject) Type() types.Type {
 // Compare compares only list values (not named)
 func (ob *SuObject) Compare(other Value) int {
 	if cmp := ord.Compare(ordObject, Order(other)); cmp != 0 {
-		return cmp
+		return cmp * 2
 	}
 	// now know other is an object so ToContainer won't panic
 	// locking is handled by children (from cmp2)

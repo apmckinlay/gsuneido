@@ -42,8 +42,6 @@ type Database struct {
 	rt.Sviews
 }
 
-const magic = "gsndo001"
-
 // CreateDatabase creates an empty database in the named file.
 // NOTE: The returned Database does not have a checker.
 func CreateDatabase(filename string) (*Database, error) {
@@ -60,10 +58,10 @@ func CreateDb(store *stor.Stor) (*Database, error) {
 	var db Database
 	db.state.set(&DbState{store: store, Meta: &meta.Meta{}})
 
-	n := len(magic) + stor.SmallOffsetLen
+	n := len(Magic) + stor.SmallOffsetLen
 	_, buf := store.Alloc(n)
-	copy(buf, magic)
-	stor.WriteSmallOffset(buf[len(magic):], uint64(n))
+	copy(buf, Magic)
+	stor.WriteSmallOffset(buf[len(Magic):], uint64(n))
 	db.Store = store
 	db.mode = stor.Create
 	return &db, nil
@@ -100,10 +98,14 @@ func OpenDbStor(store *stor.Stor, mode stor.Mode, check bool) (db *Database, err
 		}
 	}()
 	buf := store.Data(0)
-	if magic != string(buf[:len(magic)]) {
+	m := string(buf[:len(Magic)])
+	if check && m != Magic {
+		if m == MagicOther {
+			return nil, errors.New("version mismatch, use compact to convert")
+		}
 		return nil, errors.New("bad magic")
 	}
-	size := stor.ReadSmallOffset(buf[len(magic):])
+	size := stor.ReadSmallOffset(buf[len(Magic):])
 	if size != store.Size() {
 		return nil, errors.New("bad size, not shut down properly?")
 	}
@@ -123,6 +125,22 @@ func OpenDbStor(store *stor.Stor, mode stor.Mode, check bool) (db *Database, err
 		}
 	}
 	return db, nil
+}
+
+func (db *Database) Magic() string {
+	buf := db.Store.Data(0)
+	return string(buf[:len(Magic)])
+}
+
+func (db *Database) CheckMagic() error {
+	m := db.Magic()
+	if m == Magic {
+		return nil
+	}
+	if m == MagicOther {
+		rt.Fatal("version mismatch, use compact to convert")
+	}
+	return errors.New("bad magic")
 }
 
 // CheckerSync is for tests.
@@ -531,12 +549,12 @@ func (db *Database) Corrupt() {
 	options.DbStatus.Store("corrupted")
 	buf := make([]byte, stor.SmallOffsetLen)
 	if db.mode != stor.Read {
-		db.Store.Write(uint64(len(magic)), buf)
+		db.Store.Write(uint64(len(Magic)), buf)
 	} else {
 		f, err := os.OpenFile("suneido.db", os.O_RDWR, 0)
 		if err == nil {
 			defer f.Close()
-			f.Seek(int64(len(magic)), 0)
+			f.Seek(int64(len(Magic)), 0)
 			f.Write(buf)
 		}
 	}
@@ -572,7 +590,7 @@ func (db *Database) writeSize(size uint64) {
 	// need to use Write because all but last chunk are read-only
 	buf := make([]byte, stor.SmallOffsetLen)
 	stor.WriteSmallOffset(buf, size)
-	db.Store.Write(uint64(len(magic)), buf)
+	db.Store.Write(uint64(len(Magic)), buf)
 }
 
 func (db *Database) HaveUsers() bool {

@@ -4,13 +4,13 @@
 package runtime
 
 import (
-	"fmt"
-	"os"
 	"strconv"
 	"sync/atomic"
 
 	"github.com/apmckinlay/gsuneido/options"
+	"github.com/apmckinlay/gsuneido/runtime/trace"
 	myatomic "github.com/apmckinlay/gsuneido/util/generic/atomic"
+	"github.com/apmckinlay/gsuneido/util/generic/ord"
 	"github.com/apmckinlay/gsuneido/util/regex"
 	"github.com/apmckinlay/gsuneido/util/str"
 	"github.com/apmckinlay/gsuneido/util/tr"
@@ -222,6 +222,12 @@ func (t *Thread) PrintStack() {
 	PrintStack(t.Callstack())
 }
 
+func (t *Thread) PrintCaller() {
+	if i := t.fp - 1; i >= 0 {
+		trace.Println(t.frames[i].fn)
+	}
+}
+
 func PrintStack(cs *SuObject) {
 	if cs == nil {
 		return
@@ -238,10 +244,11 @@ func PrintStack(cs *SuObject) {
 	// 	}
 	// 	return s
 	// }
-	for i := 0; i < cs.ListSize(); i++ {
+	for i := 0; i < ord.Min(6, cs.ListSize()); i++ {
 		frame := cs.ListGet(i)
 		fn := frame.Get(nil, SuStr("fn"))
-		fmt.Fprintln(os.Stderr, fn)
+		// fmt.Fprintln(os.Stderr, fn)
+		trace.Println(fn)
 		// locals := frame.Get(nil, SuStr("locals"))
 		// fmt.Println("   " + toStr(locals))
 	}
