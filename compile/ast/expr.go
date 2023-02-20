@@ -4,9 +4,12 @@
 package ast
 
 import (
+	"fmt"
 	"math"
+	"strings"
 
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
+	"github.com/apmckinlay/gsuneido/options"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/generic/set"
@@ -151,16 +154,24 @@ func (a *Binary) Eval(c *Context) Value {
 		case tok.Isnt:
 			return SuBool(lhs != rhs)
 		case tok.Lt:
-			return SuBool(lhs < rhs)
+			return SuBool(packedCmp(lhs, rhs) < 0)
 		case tok.Lte:
-			return SuBool(lhs <= rhs)
+			return SuBool(packedCmp(lhs, rhs) <= 0)
 		case tok.Gt:
-			return SuBool(lhs > rhs)
+			return SuBool(packedCmp(lhs, rhs) > 0)
 		case tok.Gte:
-			return SuBool(lhs >= rhs)
+			return SuBool(packedCmp(lhs, rhs) >= 0)
 		}
 	}
 	return a.eval(a.Lhs.Eval(c), a.Rhs.Eval(c))
+}
+
+func packedCmp(x, y string) int {
+	cmp := strings.Compare(x, y)
+	if cmp != 0 && options.StrictCompareDb && PackedOrd(x) != PackedOrd(y) {
+		panic(fmt.Sprint("StrictCompareDb: ", Unpack(x), " <=> ", Unpack(y)))
+	}
+	return cmp
 }
 
 func (a *Binary) eval(lhs, rhs Value) Value {

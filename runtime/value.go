@@ -99,7 +99,7 @@ type Callable interface {
 	Call(t *Thread, this Value, as *ArgSpec) Value
 }
 
-type Ord = int
+type Ord int
 
 // must match types
 const (
@@ -121,6 +121,10 @@ func Order(x Value) Ord {
 		return ordObject
 	}
 	return OrdOther
+}
+
+func (o Ord) String() string {
+	return []string{"boolean", "number", "string", "date", "object", "other"}[o]
 }
 
 var NilVal Value

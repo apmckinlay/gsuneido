@@ -66,7 +66,7 @@ func (SuDnum) Type() types.Type {
 
 func (dn SuDnum) Compare(other Value) int {
 	if cmp := ord.Compare(ordNum, Order(other)); cmp != 0 {
-		return cmp
+		return cmp * 2
 	}
 	// now know other is a number and ToDnum won't panic
 	return dnum.Compare(dn.Dnum, ToDnum(other))

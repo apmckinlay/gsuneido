@@ -144,3 +144,28 @@ func PackedCmpLower(s1, s2 string) int {
 	}
 	return str.CmpLower(s1, s2)
 }
+
+func PackedOrd(s string) Ord {
+	if s == "" {
+		return ordStr
+	}
+	switch s[0] {
+	case PackFalse:
+		return ordBool
+	case PackTrue:
+		return ordBool
+	case PackMinus:
+		return ordNum
+	case PackPlus:
+		return ordNum
+	case PackString:
+		return ordStr
+	case PackDate:
+		return ordDate
+	case PackObject:
+		return ordObject
+	case PackRecord:
+		return ordObject
+	}
+	panic("unknown")
+}

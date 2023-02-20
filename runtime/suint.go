@@ -133,7 +133,7 @@ func (*smi) Type() types.Type {
 
 func (si *smi) Compare(other Value) int {
 	if cmp := ord.Compare(ordNum, Order(other)); cmp != 0 {
-		return cmp
+		return cmp * 2
 	}
 	if y, ok := other.(*smi); ok {
 		return ord.Compare(si.toInt(), y.toInt())

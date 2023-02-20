@@ -37,7 +37,7 @@ func TestPanics(t *testing.T) {
 }
 
 func TestCompare(t *testing.T) {
-	assert := assert.T(t).This
+	assert := assert.T(t)
 	vals := []Value{False, True,
 		SuDnum{Dnum: dnum.NegInf},
 		SuInt(-1), SuInt(0), SuInt(+1), SuDnum{Dnum: dnum.PosInf},
@@ -47,9 +47,9 @@ func TestCompare(t *testing.T) {
 		SuStr("world"),
 		&SuExcept{SuStr: "zoo"}}
 	for i := 1; i < len(vals); i++ {
-		assert(vals[i].Compare(vals[i])).Is(0)
-		assert(vals[i-1].Compare(vals[i])).Msg(vals[i-1], vals[i]).Is(-1)
-		assert(vals[i].Compare(vals[i-1])).Is(+1)
+		assert.This(vals[i].Compare(vals[i])).Is(0)
+		assert.That(vals[i-1].Compare(vals[i]) < 0)
+		assert.That(vals[i].Compare(vals[i-1]) > 0)
 	}
 }
 

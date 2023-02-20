@@ -13,6 +13,7 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/apmckinlay/gsuneido/options"
 	"github.com/apmckinlay/gsuneido/util/dbg"
 	"github.com/apmckinlay/gsuneido/util/dnum"
 	"github.com/apmckinlay/gsuneido/util/hacks"
@@ -40,19 +41,27 @@ func OpIsnt(x Value, y Value) Value {
 }
 
 func OpLt(x Value, y Value) Value {
-	return SuBool(x.Compare(y) < 0)
+	return SuBool(strictCompare(x, y) < 0)
 }
 
 func OpLte(x Value, y Value) Value {
-	return SuBool(x.Compare(y) <= 0)
+	return SuBool(strictCompare(x, y) <= 0)
 }
 
 func OpGt(x Value, y Value) Value {
-	return SuBool(x.Compare(y) > 0)
+	return SuBool(strictCompare(x, y) > 0)
 }
 
 func OpGte(x Value, y Value) Value {
-	return SuBool(x.Compare(y) >= 0)
+	return SuBool(strictCompare(x, y) >= 0)
+}
+
+func strictCompare(x Value, y Value) int {
+	cmp := x.Compare(y)
+	if (cmp&3) == 2 && options.StrictCompare && x != False && y != False {
+		panic(fmt.Sprint("StrictCompare: ", x, " <=> ", y))
+	}
+	return cmp
 }
 
 func OpAdd(x Value, y Value) Value {

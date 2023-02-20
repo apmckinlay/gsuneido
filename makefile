@@ -9,27 +9,29 @@ TRIMPATH = -trimpath
 endif
 OUTPUT = gs_$(GOOS)_$(GOARCH)
 BUILD = build -buildvcs=true $(TRIMPATH) -o $(OUTPUT)
-EXE = gsuneido
 LDFLAGS = -s -w -X 'main.builtDate=$(BUILT)'
-GUIFLAGS = $(LDFLAGS)
-RACEEXE = gsrace
 ifdef PATHEXT
 	# Windows stuff
-	BUILD = build -buildvcs=true
-	EXE = gsuneido.exe gsuneido.com gsport.exe
+	BUILD = build -buildvcs=true -trimpath
+	OUTPUT = gsuneido.exe gsuneido.com gsport.exe
 	GUIFLAGS = $(LDFLAGS) -X main.mode=gui -H windowsgui
 	CONSOLE = $(GO) $(BUILD) -o gsuneido.com -ldflags "$(LDFLAGS)" -tags com
-	PORTABLE = $(GO) $(BUILD) -o gsport.exe -ldflags "$(LDFLAGS)" -tags portable
+	PORTABLE = export CGO_ENABLED=0 ; $(GO) $(BUILD) -o gsport.exe -ldflags "$(LDFLAGS)" -tags portable
 endif
 
 build:
-	@rm -f $(EXE)
 	@$(GO) version
+	@rm -f $(OUTPUT)
+ifdef PATHEXT
 	$(GO) $(BUILD) -v -ldflags "$(GUIFLAGS)"
 	$(CONSOLE)
-	export CGO_ENABLED=0 ; $(PORTABLE)
+	$(PORTABLE)
+else
+	export CGO_ENABLED=0 ; $(GO) $(BUILD) -v -ldflags "$(LDFLAGS)"
+endif
 
 gsuneido:
+	@rm -f gsuneido.exe
 	$(GO) $(BUILD) -v -ldflags "$(GUIFLAGS)"
 
 race:
@@ -57,7 +59,7 @@ generate:
 	$(GO) generate -x ./...
 
 clean:
-	rm -f $(EXE)
+	rm -f $(OUTPUT)
 	$(GO) clean -cache -testcache
 
 # need 64 bit windres e.g. from mingw64

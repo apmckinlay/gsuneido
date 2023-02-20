@@ -734,7 +734,7 @@ func (SuDate) Type() types.Type {
 
 func (d SuDate) Compare(other Value) int {
 	if cmp := ord.Compare(ordDate, Order(other)); cmp != 0 {
-		return cmp
+		return cmp * 2
 	}
 	d2 := other.(SuDate)
 	if d.date < d2.date {
