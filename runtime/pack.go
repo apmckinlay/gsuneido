@@ -40,17 +40,6 @@ const (
 	PackRecord
 )
 
-const (
-	NewPackString = iota + 10
-	NewPackFalse
-	NewPackTrue
-	NewPackMinus
-	NewPackPlus
-	NewPackDate
-	NewPackObject
-	NewPackRecord
-)
-
 type packStack []Value
 
 func newPackStack() packStack {
@@ -119,19 +108,19 @@ func Unpack(s string) Value {
 		return EmptyStr
 	}
 	switch s[0] {
-	case PackFalse, NewPackFalse:
+	case PackFalse:
 		return False
-	case PackTrue, NewPackTrue:
+	case PackTrue:
 		return True
-	case PackString, NewPackString:
+	case PackString:
 		return SuStr(s[1:])
-	case PackDate, NewPackDate:
+	case PackDate:
 		return UnpackDate(s)
-	case PackPlus, PackMinus, NewPackPlus, NewPackMinus:
+	case PackPlus, PackMinus:
 		return UnpackNumber(s)
-	case PackObject, NewPackObject:
+	case PackObject:
 		return UnpackObject(s)
-	case PackRecord, NewPackRecord:
+	case PackRecord:
 		return UnpackRecord(s)
 	default:
 		panic("invalid pack tag " + strconv.Itoa(int(s[0])))
