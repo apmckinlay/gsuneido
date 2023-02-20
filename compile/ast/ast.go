@@ -408,6 +408,33 @@ func (a *In) Children(fn func(Node) Node) {
 	}
 }
 
+type InRange struct {
+	exprNodeT
+	noPos
+	E   Expr
+	Org Expr // inclusive >=
+	End Expr // exclusive <
+	// PackedOrg and PackedEnd are set by CanEvalRaw
+	PackedOrg string
+	PackedEnd string
+	evalRaw   bool
+}
+
+func (a *InRange) String() string {
+	return "InRange(" + a.E.String() +
+		" [" + fmt.Sprint(a.Org) + " .. " + fmt.Sprint(a.End) + "])"
+}
+
+func (a *InRange) Echo() string {
+	return a.E.Echo() + " in (" + a.Org.Echo() + " .. " + a.End.Echo() + ")"
+}
+
+func (a *InRange) Children(fn func(Node) Node) {
+	childExpr(fn, &a.E)
+	childExpr(fn, &a.Org)
+	childExpr(fn, &a.End)
+}
+
 type Call struct {
 	exprNodeT
 	noPos

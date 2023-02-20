@@ -83,6 +83,12 @@ func TestCodegen(t *testing.T) {
 	test("a[::3]", "Load a, Zero, Int 3, RangeLen")
 	test("a[2::]", "Load a, Int 2, MaxInt, RangeLen")
 	test("a[2::3]", "Load a, Int 2, Int 3, RangeLen")
+	test("5 in (0..10)", "True")
+	test("99 in (0..10)", "False")
+	test("a in (0..10)", "Load a, Zero, Int 10, InRange")
+	test("a in (0..)", "Load a, Zero, Value <nil>, InRange")
+	test("a in (..10)", "Load a, Value <nil>, Int 10, InRange")
+
 
 	test("return", "")
 	test("return 123", "Int 123")

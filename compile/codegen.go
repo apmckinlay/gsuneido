@@ -551,6 +551,8 @@ func (cg *cgen) expr2(node ast.Expr, ct calltype) {
 		cg.emit(op.RangeLen)
 	case *ast.In:
 		cg.inExpr(node)
+	case *ast.InRange:
+		cg.inRange(node)
 	case *ast.Call:
 		cg.call(node, ct)
 	case *ast.Block:
@@ -800,6 +802,21 @@ func (cg *cgen) inExpr(node *ast.In) {
 		}
 	}
 	cg.placeLabel(end)
+}
+
+func (cg *cgen) inRange(node *ast.InRange) {
+	cg.expr(node.E)
+	if node.Org == nil {
+		cg.emitUint8(op.Value, cg.value(nil))
+	} else {
+		cg.expr(node.Org)
+	}
+	if node.End == nil {
+		cg.emitUint8(op.Value, cg.value(nil))
+	} else {
+		cg.expr(node.End)
+	}
+	cg.emit(op.InRange)
 }
 
 func (cg *cgen) emitValue(val Value) {

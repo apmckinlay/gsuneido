@@ -63,6 +63,7 @@ func TestParseExpression(t *testing.T) {
 	xtest("f(a:, b:, 'a':)", "duplicate argument name")
 	xtest("f(a:, b:, :b)", "duplicate argument name")
 	xtest("f(1, 2, a:, b: 3, 4", "un-named arguments must come before named arguments")
+	xtest("x in (..)", "syntax error")
 
 	test := func(src string, expected string) {
 		t.Helper()
@@ -140,6 +141,10 @@ func TestParseExpression(t *testing.T) {
 	test("a in (1,2,3)", "In(a [1 2 3])")
 	test("a not in (1,2,3)", "Unary(Not In(a [1 2 3]))")
 	test("a in (1,2,3) in (true, false)", "In(In(a [1 2 3]) [true false])")
+
+	test("a in (0..9)", "InRange(a [0 .. 9])")
+	test("a in (..9)", "InRange(a [<nil> .. 9])")
+	test("a in (0..)", "InRange(a [0 .. <nil>])")
 
 	test("a.b", "Mem(a 'b')")
 	test(".a.b", "Mem(Mem(this 'a') 'b')") // not privatized

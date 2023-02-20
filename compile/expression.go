@@ -159,13 +159,30 @@ func (p *Parser) privatizeRef(name string) string {
 }
 
 func (p *Parser) in(e ast.Expr) ast.Expr {
-	list := []ast.Expr{}
 	p.Match(tok.LParen)
+	if p.MatchIf(tok.RParen) {
+		return p.Constant(False)
+	}
+	if p.MatchIf(tok.RangeTo) {
+		end := p.Expression()
+		p.Match(tok.RParen)
+		return p.InRange(e, nil, end)
+	}
+	x := p.Expression()
+	if p.MatchIf(tok.RangeTo) {
+		if p.MatchIf(tok.RParen) {
+			return p.InRange(e, x, nil)
+		}
+		end := p.Expression()
+		p.Match(tok.RParen)
+		return p.InRange(e, x, end)
+	}
+	list := []ast.Expr{x}
 	for p.Token != tok.RParen {
-		list = append(list, p.Expression())
 		if p.Token == tok.Comma {
 			p.Next()
 		}
+		list = append(list, p.Expression())
 	}
 	p.Match(tok.RParen)
 	return p.In(e, list)

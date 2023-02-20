@@ -338,6 +338,9 @@ loop:
 		case op.Mod:
 			t.sp--
 			t.stack[t.sp-1] = OpMod(t.stack[t.sp-1], t.stack[t.sp])
+		case op.InRange:
+			t.stack[t.sp-3] = OpInRange(t.stack[t.sp-3], t.stack[t.sp-2], t.stack[t.sp-1])
+			t.sp -= 2
 		case op.LeftShift:
 			t.sp--
 			t.stack[t.sp-1] = OpLeftShift(t.stack[t.sp-1], t.stack[t.sp])

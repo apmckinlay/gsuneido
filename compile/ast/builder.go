@@ -17,6 +17,7 @@ type Builder interface {
 	Trinary(cond Expr, t Expr, f Expr) Expr
 	Nary(tok Token, exprs []Expr) Expr
 	In(e Expr, exprs []Expr) Expr
+	InRange(e, org, end Expr) Expr
 }
 
 // Factory is a simple pass through Builder
@@ -44,4 +45,7 @@ func (Factory) Nary(tok Token, exprs []Expr) Expr {
 }
 func (Factory) In(e Expr, exprs []Expr) Expr {
 	return &In{E: e, Exprs: exprs}
+}
+func (Factory) InRange(e, org, end Expr) Expr {
+	return &InRange{E: e, Org: org, End: end}
 }

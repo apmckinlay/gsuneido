@@ -95,6 +95,29 @@ func (f Folder) foldIn(in *In) Expr {
 	return f.constant(False)
 }
 
+func (f Folder) InRange(e, org, end Expr) Expr {
+	return f.foldInRange(&InRange{E: e, Org: org, End: end})
+}
+
+func (f Folder) foldInRange(e *InRange) Expr {
+	var ok bool
+	var x, org, end *Constant
+	if x, ok = e.E.(*Constant);!ok {
+		return e
+	}
+	if org, ok = e.Org.(*Constant); !ok {
+		return e
+	}
+	if end, ok = e.End.(*Constant);!ok {
+		return e
+    }
+	if org.Type() != end.Type() {
+		panic("in range requires same type")
+	}
+	xv := x.Val
+	return f.constant(SuBool(xv.Compare(org.Val) >= 0 && xv.Compare(end.Val) < 0))
+}
+
 var allones Value = SuDnum{Dnum: dnum.FromInt(0xffffffff)}
 
 func (f Folder) Nary(token tok.Token, exprs []Expr) Expr {

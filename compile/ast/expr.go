@@ -374,6 +374,59 @@ func (a *In) Columns() []string {
 	return cols
 }
 
+// InRange ---------------------------------------------------------------
+
+// CanEvalRaw returns true if Eval doesn't need to unpack the values.
+// It sets Packed which is later used by Eval.
+func (a *InRange) CanEvalRaw(cols []string) bool {
+	if !IsColumn(a.E, cols) {
+		return false
+	}
+	var ok bool
+	var org, end *Constant
+	if a.Org == nil {
+		a.PackedEnd = Pack(end.Val.(Packable))
+		a.PackedOrg = a.PackedEnd[:1]
+	} else if org, ok = a.Org.(*Constant); !ok {
+		return false
+	}
+	if a.End == nil {
+		a.PackedOrg = Pack(org.Val.(Packable))
+		a.PackedEnd = string(a.PackedOrg[0] + 1)
+	} else if end, ok = a.End.(*Constant); !ok {
+		return false
+	}
+	if Order(org.Val) != Order(end.Val) {
+		panic("in range requires same type")
+	}
+	a.evalRaw = true
+	return true
+}
+
+// CouldEvalRaw is used by replaceExpr to know when to copy
+func (a *InRange) CouldEvalRaw() bool {
+	return isIdent(a.E) && isConstant(a.Org) && isConstant(a.End)
+}
+
+func (a *InRange) Eval(c *Context) Value {
+	if a.evalRaw {
+		id := a.E.(*Ident)
+		e := c.Row.GetRaw(c.Hdr, id.Name)
+		return SuBool(a.PackedOrg <= e && e < a.PackedEnd)
+	}
+	x := a.E.Eval(c)
+	org := a.Org.Eval(c)
+	end := a.End.Eval(c)
+	return OpInRange(x, org, end)
+}
+
+func (a *InRange) Columns() []string {
+	cols := a.E.Columns()
+	cols = set.Union(cols, a.Org.Columns())
+	cols = set.Union(cols, a.End.Columns())
+	return cols
+}
+
 // ------------------------------------------------------------------
 
 func (a *Mem) Eval(c *Context) Value {

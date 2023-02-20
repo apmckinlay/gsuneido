@@ -97,6 +97,21 @@ func OpMod(x Value, y Value) Value {
 	return IntVal(ToInt(x) % ToInt(y))
 }
 
+func OpInRange(x, org, end Value) Value {
+	if org == nil {
+		if Order(x) == Order(end) {
+			return SuBool(x.Compare(end) < 0)
+		}
+	} else if end == nil {
+		if Order(x) == Order(org) {
+			return SuBool(x.Compare(org) >= 0)
+		}
+	} else if Order(org) == Order(end) {
+		return SuBool(x.Compare(org) >= 0 && x.Compare(end) < 0)
+	}
+	panic("in range requires same type")
+}
+
 func OpLeftShift(x Value, y Value) Value {
 	result := int32(ToInt(x)) << ToInt(y)
 	return IntVal(int(result))

@@ -174,6 +174,8 @@ func (f *fold) fold(node Node) Node { // NOT recursive
 		return f.foldTrinary(node)
 	case *In:
 		return f.foldIn(node)
+	case *InRange:
+		return f.foldInRange(node)
 	case *Nary:
 		return f.foldNary(node)
 	case *If:

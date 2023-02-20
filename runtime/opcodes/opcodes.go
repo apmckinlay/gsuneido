@@ -121,6 +121,8 @@ const (
 	UnaryPlus
 	// UnaryMinus replaces the top value with -x
 	UnaryMinus
+	// InRange replaces the top value with true or false
+	InRange
 
 	// control flow -------------------------------------------------
 
