@@ -536,27 +536,74 @@ func (w *Where) extractCompares() []cmpExpr {
 	cols := w.source.Header().Physical()
 	cmps := make([]cmpExpr, 0, 4)
 	for _, expr := range w.expr.Exprs {
-		if expr.CanEvalRaw(cols) {
-			if bin, ok := expr.(*ast.Binary); ok {
-				op := bin.Tok
-				if op == tok.Isnt && bin.Rhs.(*ast.Constant).Packed == "" {
-					// treat != "" as > "" for index usage
-					op = tok.Gt
+		cmps = w.binaryCompare(expr, cols, cmps)
+		cmps = w.typeToRange(expr, cols, cmps)
+	}
+	return cmps
+}
+
+func (*Where) binaryCompare(expr ast.Expr, cols []string, cmps []cmpExpr) []cmpExpr {
+	if expr.CanEvalRaw(cols) {
+		if bin, ok := expr.(*ast.Binary); ok {
+			op := bin.Tok
+			if op == tok.Isnt && bin.Rhs.(*ast.Constant).Packed == "" {
+				// treat != "" as > "" for index usage
+				op = tok.Gt
+			}
+			if op != tok.Isnt {
+				return append(cmps, cmpExpr{
+					col: bin.Lhs.(*ast.Ident).Name,
+					op:  op,
+					val: bin.Rhs.(*ast.Constant).Packed,
+				})
+			}
+		} else if in, ok := expr.(*ast.In); ok {
+			return append(cmps, cmpExpr{
+				col:  in.E.(*ast.Ident).Name,
+				op:   tok.In,
+				vals: in.Packed,
+			})
+		}
+	}
+	return cmps
+}
+
+func (*Where) typeToRange(expr ast.Expr, cols []string, cmps []cmpExpr) []cmpExpr {
+	if call, ok := expr.(*ast.Call); ok {
+		if fn, ok := call.Fn.(*ast.Ident); ok {
+			if len(call.Args) == 1 {
+				if id, ok := call.Args[0].E.(*ast.Ident); ok {
+					var from, to string
+					stringQ := false
+					switch fn.Name {
+					case "Number?":
+						from = string(rune(runtime.PackMinus))
+						to = string(rune(runtime.PackPlus + 1))
+					case "String?":
+						// from should be PackString but that wouldn't include ""
+						// TODO allow multiple ranges to handle this
+						from = ""
+						to = string(rune(runtime.PackString + 1))
+						stringQ = true
+					case "Date?":
+						from = string(rune(runtime.PackDate))
+						to = string(rune(runtime.PackDate + 1))
+					default:
+						return nil
+					}
+					return append(cmps,
+						cmpExpr{
+							col:     id.Name,
+							op:      tok.Gte,
+							val:     from,
+							stringQ: stringQ,
+						},
+						cmpExpr{
+							col: id.Name,
+							op:  tok.Lt,
+							val: to,
+						})
 				}
-				if op != tok.Isnt {
-					cmps = append(cmps, cmpExpr{
-						col: bin.Lhs.(*ast.Ident).Name,
-						op:  op,
-						val: bin.Rhs.(*ast.Constant).Packed,
-					})
-				}
-			} else if in, ok := expr.(*ast.In); ok {
-				cmp := cmpExpr{
-					col:  in.E.(*ast.Ident).Name,
-					op:   tok.In,
-					vals: in.Packed,
-				}
-				cmps = append(cmps, cmp)
 			}
 		}
 	}
@@ -639,10 +686,11 @@ func (w *Where) setApproach(index []string, frac float64, app any, tran QueryTra
 // cmpExpr is <field> <op> <constant> or <field> in (<constants>)
 // which can be evaluated packed
 type cmpExpr struct {
-	col  string
-	op   tok.Token
-	val  string   // packed (binary)
-	vals []string // packed (in)
+	col     string
+	val     string   // packed (binary)
+	vals    []string // packed (in)
+	op      tok.Token
+	stringQ bool // used by typeToRange
 }
 
 func (cmp cmpExpr) String() string {
@@ -675,7 +723,8 @@ func (cmp *cmpExpr) toFilter() filter {
 	case tok.Gt:
 		return filter{org: limit{val: cmp.val, inc: 1}, end: limitMax}
 	case tok.Gte:
-		return filter{org: limit{val: cmp.val}, end: limitMax}
+		return filter{org: limit{val: cmp.val, stringQ: cmp.stringQ},
+			end: limitMax}
 	default:
 		panic(assert.ShouldNotReachHere())
 	}
@@ -735,8 +784,15 @@ func (f *filter) none() bool {
 
 func (f *filter) andWith(f2 filter) {
 	if f.isRange() && f2.isRange() {
+		if (f.org.stringQ && f2.org.val == "" && f2.org.inc == 1) ||
+			(f2.org.stringQ && f.org.val == "" && f.org.inc == 1) {
+			// shrink String? range if "" not allowed
+			f.org = limit{val: string(rune(runtime.PackString)), inc: 0}
+		}
 		if compare(f2.org, f.org) > 0 {
 			f.org = f2.org
+		} else {
+			f.org.stringQ = f.org.stringQ || f2.org.stringQ
 		}
 		if compare(f2.end, f.end) < 0 {
 			f.end = f2.end
@@ -762,8 +818,9 @@ func (f *filter) andWith(f2 filter) {
 }
 
 type limit struct {
-	val string
-	inc int
+	val     string
+	inc     uint8
+	stringQ bool
 }
 
 var limitMin = limit{}
