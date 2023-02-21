@@ -205,7 +205,7 @@ func replaceExpr(expr Expr, from []string, to []Expr) Expr {
 		if args == nil {
 			args = e.Args
 		}
-		return &Call{Fn: fn, Args: args}
+		return aFolder.Call(fn, args, 0)
 	case *In:
 		e2 := replaceExpr(e.E, from, to)
 		exprs := replaceExprs(e.Exprs, from, to)

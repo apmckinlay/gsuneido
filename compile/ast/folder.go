@@ -300,3 +300,24 @@ func foldCat(exprs []Expr) []Expr {
 	}
 	return exprs[:dst]
 }
+
+var dateBegin = Constant{Val: DateBegin}
+var dateEnd = Constant{Val: DateEnd}
+
+func (Folder) Call(fn Expr, args []Arg, end int32) Expr {
+	if m, ok := fn.(*Mem); ok {
+		if e, ok := m.E.(*Ident); ok {
+			if e.Name == "Date" {
+				if c, ok := m.M.(*Constant); ok {
+					if c.Val == SuStr("Begin") {
+						return &dateBegin
+					}
+					if c.Val == SuStr("End") {
+						return &dateEnd
+					}
+				}
+			}
+		}
+	}
+	return &Call{Fn: fn, Args: args, End: end}
+}

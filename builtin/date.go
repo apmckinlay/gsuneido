@@ -129,13 +129,13 @@ var dateStaticMethods = methods()
 var _ = method(date_Begin, "()")
 
 func date_Begin(Value) Value {
-	return DateFromLiteral("#17000101")
+	return DateBegin
 }
 
 var _ = method(date_End, "()")
 
 func date_End(Value) Value {
-	return DateFromLiteral("#30000101")
+	return DateEnd
 }
 
 var _ = exportMethods(&DateMethods)

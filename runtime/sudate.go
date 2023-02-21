@@ -35,6 +35,8 @@ type SuDate struct {
 }
 
 var NilDate SuDate
+var DateBegin = NewDate(1700, 1, 1, 0, 0, 0, 0)
+var DateEnd = NewDate(3000, 1, 1, 0, 0, 0, 0)
 
 func DateTime(date uint32, time uint32) SuDate {
 	d := SuDate{date: date, time: time}

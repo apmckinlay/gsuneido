@@ -46,7 +46,7 @@ func (p *Parser) pcExpr(minprec int8) ast.Expr {
 			}
 			e = &ast.Mem{E: e, M: p.Constant(SuStr(id)), DotPos: pos}
 			if p.Token == tok.LCurly && !p.expectingCompound { // a.F { }
-				e = &ast.Call{Fn: e, Args: p.arguments(p.Token)}
+				e = p.Call(e, p.arguments(p.Token), 0)
 			}
 		case token == tok.Inc || token == tok.Dec: // postfix
 			p.ckLvalue(e)
@@ -113,7 +113,7 @@ func (p *Parser) pcExpr(minprec int8) ast.Expr {
 			f := p.Expression()
 			e = p.Trinary(e, t, f)
 		case token == tok.LParen: // function call
-			e = &ast.Call{Fn: e, Args: p.arguments(token), End: p.endPos}
+			e = p.Call(e, p.arguments(token), p.endPos)
 		case tok.AssocStart < token && token < tok.AssocEnd:
 			// for associative operators, collect a list of contiguous
 			es := []ast.Expr{e}
@@ -267,7 +267,7 @@ func (p *Parser) atom() (result ast.Expr) {
 			args = []ast.Arg{}
 		}
 		expr = &ast.Mem{E: expr, M: p.Constant(SuStr("*new*"))}
-		return &ast.Call{Fn: expr, Args: args}
+		return p.Call(expr, args, 0)
 	default:
 		if p.Token.IsIdent() {
 			if p.Text == "_" {
@@ -468,7 +468,7 @@ func (p *Parser) record() ast.Expr {
 		fn = "Object"
 	}
 	id := &ast.Ident{Name: fn, Pos: pos, Implicit: true}
-	return &ast.Call{Fn: id, Args: args}
+	return p.Call(id, args, 0)
 }
 
 func hasUnnamed(args []ast.Arg) bool {
