@@ -18,11 +18,11 @@ type Folder struct{}
 
 var _ Builder = (*Folder)(nil)
 
-func (f Folder) constant(val Value) Expr {
+func (Folder) constant(val Value) Expr {
 	return &Constant{Val: val}
 }
 
-func (f Folder) Symbol(s SuStr) Expr {
+func (Folder) Symbol(s SuStr) Expr {
 	return &Constant{Val: s}
 }
 
@@ -57,7 +57,7 @@ func (f Folder) Trinary(cond Expr, e1 Expr, e2 Expr) Expr {
 	return f.foldTrinary(&Trinary{Cond: cond, T: e1, F: e2})
 }
 
-func (f Folder) foldTrinary(t *Trinary) Expr {
+func (Folder) foldTrinary(t *Trinary) Expr {
 	c, ok := t.Cond.(*Constant)
 	if !ok {
 		return t
