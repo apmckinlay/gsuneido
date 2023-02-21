@@ -17,7 +17,7 @@ import (
 var traceConOnce sync.Once
 var traceCon *os.File
 
-func consolePrintln(s string) {
+func consolePrint(s string) {
 	traceConOnce.Do(func() {
 		traceCon = os.Stdout
 		if options.Mode == "gui" {

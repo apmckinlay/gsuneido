@@ -7,6 +7,6 @@ package trace
 
 import "os"
 
-func consolePrintln(s string) {
+func consolePrint(s string) {
 	os.Stdout.WriteString(s)
 }

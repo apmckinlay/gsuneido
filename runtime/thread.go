@@ -5,12 +5,15 @@ package runtime
 
 import (
 	"fmt"
+	"io"
 	"os"
 	"strconv"
 	"sync/atomic"
 
 	"github.com/apmckinlay/gsuneido/options"
+	"github.com/apmckinlay/gsuneido/runtime/trace"
 	myatomic "github.com/apmckinlay/gsuneido/util/generic/atomic"
+	"github.com/apmckinlay/gsuneido/util/generic/ord"
 	"github.com/apmckinlay/gsuneido/util/regex"
 	"github.com/apmckinlay/gsuneido/util/str"
 	"github.com/apmckinlay/gsuneido/util/tr"
@@ -217,33 +220,38 @@ func (t *Thread) locals(i int) *SuObject {
 	return locals
 }
 
-// PrintStack prints the thread's call stack
+// PrintStack outputs the thread's call stack to stderr
 func (t *Thread) PrintStack() {
-	PrintStack(t.Callstack())
+	t.printStack(os.Stderr, 20)
+}
+
+// TraceStack outputs the thread's call stack to trace
+func (t *Thread) TraceStack() {
+	t.printStack(trace.Writer, 6)
+}
+
+func (t *Thread) printStack(w io.Writer, max int) {
+	limit := ord.Max(t.fp-max, 0)
+	for i := t.fp - 1; i >= limit; i-- {
+		frame := t.frames[i]
+		fmt.Fprintln(w, frame.fn)
+	}
 }
 
 func PrintStack(cs *SuObject) {
 	if cs == nil {
 		return
 	}
-	// toStr := func(x Value) (s string) {
-	// 	defer func() {
-	// 		if e := recover(); e != nil {
-	// 			s = fmt.Sprint(e)
-	// 		}
-	// 	}()
-	// 	s = x.String()
-	// 	if len(s) > 230 {
-	// 		s = s[:230] + "..."
-	// 	}
-	// 	return s
-	// }
 	for i := 0; i < cs.ListSize(); i++ {
 		frame := cs.ListGet(i)
 		fn := frame.Get(nil, SuStr("fn"))
 		fmt.Fprintln(os.Stderr, fn)
-		// locals := frame.Get(nil, SuStr("locals"))
-		// fmt.Println("   " + toStr(locals))
+	}
+}
+
+func (t *Thread) TraceCaller() {
+	if i := t.fp - 1; i >= 0 {
+		trace.Println(t.frames[i].fn)
 	}
 }
 

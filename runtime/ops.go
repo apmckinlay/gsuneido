@@ -318,7 +318,7 @@ func printSuStack(th *Thread, e any) {
 	if se, ok := e.(*SuExcept); ok {
 		PrintStack(se.Callstack)
 	} else {
-		PrintStack(th.Callstack())
+		th.PrintStack()
 	}
 }
 

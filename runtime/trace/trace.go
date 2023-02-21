@@ -102,12 +102,26 @@ func Println(args ...any) {
 
 func Print(s string) {
 	if cur&LogFile != 0 || cur&(LogFile|Console) == 0 {
-		logPrintln(s)
+		logPrint(s)
 	}
 	if cur&Console != 0 || cur&(LogFile|Console) == 0 {
-		consolePrintln(s)
+		consolePrint(s)
 	}
 }
+
+type writer struct{}
+
+func (w writer) Write(p []byte) (n int, err error) {
+    Print(string(p))
+    return len(p), nil
+}
+
+func (w writer) WriteString(s string) (n int, err error) {
+    Print(s)
+    return len(s), nil
+}
+
+var Writer writer
 
 var printer = message.NewPrinter(language.English)
 
@@ -141,7 +155,7 @@ func (w what) On() bool {
 var traceLog *os.File
 var traceLogOnce sync.Once
 
-func logPrintln(s string) {
+func logPrint(s string) {
 	traceLogOnce.Do(func() {
 		var err error
 		traceLog, err = os.OpenFile("trace.log",
