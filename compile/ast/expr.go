@@ -122,8 +122,8 @@ func isConstant(e Expr) bool {
 }
 
 var reverseBinary = map[tok.Token]tok.Token{
-	tok.Is:   tok.Isnt,
-	tok.Isnt: tok.Is,
+	tok.Is:   tok.Is,
+	tok.Isnt: tok.Isnt,
 	tok.Lt:   tok.Gt,
 	tok.Lte:  tok.Gte,
 	tok.Gt:   tok.Lt,

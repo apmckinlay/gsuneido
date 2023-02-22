@@ -52,6 +52,7 @@ func TestExprEval(t *testing.T) {
 	test("x < 9", "true")
 	test("9 > x", "true")
 	test("s is 'foo'", "true")
+	test("123 is x", "false")
 }
 
 func mkrow() (Row, *Header) {
