@@ -10,11 +10,18 @@ import (
 	_ "github.com/apmckinlay/gsuneido/builtin"
 	"github.com/apmckinlay/gsuneido/compile/ast"
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
+	"github.com/apmckinlay/gsuneido/options"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
 func TestExprEval(t *testing.T) {
+	options.StrictCompare = true
+	options.StrictCompareDb = true
+	defer func() {
+		options.StrictCompare = false
+		options.StrictCompareDb = false
+	}()
 	th := &Thread{}
 	row, hdr := mkrow()
 	raw := false
@@ -24,10 +31,22 @@ func TestExprEval(t *testing.T) {
 		expr := p.Expression()
 		assert.T(t).This(p.Token).Is(tok.Eof)
 		// fmt.Println(expr)
-		assert.That(expr.CanEvalRaw(hdr.Columns) == raw)
+		assert.This(expr.CanEvalRaw(hdr.Columns)).Is(raw)
 		result := expr.Eval(&ast.Context{Th: th, Row: row, Hdr: hdr})
 		assert.T(t).Msg(src).This(result.String()).Is(expected)
 	}
+	xtest := func(src string, expected string) {
+		t.Helper()
+		p := NewQueryParser(src, nil, nil)
+		expr := p.Expression()
+		assert.T(t).This(p.Token).Is(tok.Eof)
+		// fmt.Println(expr)
+		assert.This(expr.CanEvalRaw(hdr.Columns)).Is(raw)
+		assert.This(func() {
+			expr.Eval(&ast.Context{Th: th, Row: row, Hdr: hdr})
+		}).Panics(expected)
+	}
+	// not raw
 	test("123", "123")
 	test("x + 2", "6")
 	test("1 + y", "6")
@@ -46,6 +65,10 @@ func TestExprEval(t *testing.T) {
 	test("[a: 123].a", "123")
 	test("Object(s, x, :t)", `#("foo", 4, t: "bar")`)
 	test("t[1::1]", "'a'")
+	test("z > 0 and z < 10", "false")
+	test("z >= '' and z < 'z'", "true")
+	xtest("x + y < 'foo'", "StrictCompare")
+
 	raw = true
 	test("x in (3, 4, 5)", "true")
 	test("t in (3, 4, 5)", "false")
@@ -53,6 +76,11 @@ func TestExprEval(t *testing.T) {
 	test("9 > x", "true")
 	test("s is 'foo'", "true")
 	test("123 is x", "false")
+	// range
+	test("x > 0 and 9 > x", "true")
+	test("100 < x and x < 200", "false")
+	test("0 < s and s < 10", "false") // wrong type
+	xtest("s > 10", "StrictCompare")
 }
 
 func mkrow() (Row, *Header) {
@@ -157,7 +185,7 @@ func TestExprReplace(t *testing.T) {
 		result = replaceExpr(expr, from, to)
 		assert.T(t).Msg(src).This(result.Echo()).Is(expected)
 	}
-	test("x is a", "5 is a")
+	test("x is a", "a is 5")
 	test("x is 6", "false") // folded
 	test("'=' $ x", `"=5"`)
 	test("1 + x", `6`)

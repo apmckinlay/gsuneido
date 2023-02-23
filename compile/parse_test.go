@@ -186,7 +186,7 @@ func TestParseExpression(t *testing.T) {
 	className = "Foo"
 	test(".m()", "Call(Mem(this 'Foo_m'))")
 	className = ""
-	test("false isnt x = F()", "Binary(Isnt false Binary(Eq x Call(F)))")
+	test("false isnt x = F()", "Binary(Isnt Binary(Eq x Call(F)) false)")
 	test("0xB2.Chr()", "Call(Mem(178 'Chr'))")
 
 	test("F { }", "/* class : F */")

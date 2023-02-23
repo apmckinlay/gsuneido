@@ -17,6 +17,21 @@ import (
 	"github.com/apmckinlay/gsuneido/util/ptest"
 )
 
+func TestInRange(t *testing.T) {
+	options.StrictCompare = true
+	defer func() {
+		options.StrictCompare = false
+	}()
+	f := compile.Constant(`function (x) { 0 < x and x <= 9 }`)
+	var th Thread
+	assert.That(th.Call(f, IntVal(0)) == False)
+	assert.That(th.Call(f, IntVal(1)) == True)
+	assert.That(th.Call(f, IntVal(9)) == True)
+	assert.That(th.Call(f, IntVal(10)) == False)
+	assert.That(th.Call(f, True) == False)
+	assert.That(th.Call(f, EmptyStr) == False)
+}
+
 func TestNaming(t *testing.T) {
 	var th Thread
 	test := func(src, expected string) {

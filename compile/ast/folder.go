@@ -6,6 +6,7 @@ package ast
 import (
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
 	. "github.com/apmckinlay/gsuneido/runtime"
+	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/dnum"
 )
 
@@ -42,15 +43,25 @@ func (f Folder) Binary(lhs Expr, token tok.Token, rhs Expr) Expr {
 }
 
 func (f Folder) foldBinary(b *Binary) Expr {
-	rhs, ok := b.Rhs.(*Constant)
-	if !ok {
-		return b
+	lhs, lconst := b.Lhs.(*Constant)
+	rhs, rconst := b.Rhs.(*Constant)
+	if lconst && !rconst && b.rawOp() {
+		// canonicalize to simplify foldRange and Binary CanEvalRaw
+		b.Lhs, b.Rhs = b.Rhs, b.Lhs
+		b.Tok = reverseBinary[b.Tok]
+	} else if lconst && rconst {
+		return f.constant(b.eval(lhs.Val, rhs.Val))
 	}
-	lhs, ok := b.Lhs.(*Constant)
-	if !ok {
-		return b
-	}
-	return f.constant(b.eval(lhs.Val, rhs.Val))
+	return b
+}
+
+var reverseBinary = map[tok.Token]tok.Token{
+	tok.Is:   tok.Is,
+	tok.Isnt: tok.Isnt,
+	tok.Lt:   tok.Gt,
+	tok.Lte:  tok.Gte,
+	tok.Gt:   tok.Lt,
+	tok.Gte:  tok.Lte,
 }
 
 func (f Folder) Trinary(cond Expr, e1 Expr, e2 Expr) Expr {
@@ -122,10 +133,11 @@ func (f Folder) foldNary(n *Nary) Expr {
 		exprs = foldOrToIn(exprs)
 	case tok.And:
 		exprs = commutative(exprs, and, False, True)
+		exprs = foldRanges(exprs)
 	case tok.Cat:
 		exprs = foldCat(exprs)
 	default:
-		panic("fold unexpected n-ary operator " + n.Tok.String())
+		panic(assert.ShouldNotReachHere())
 	}
 	if len(exprs) == 1 {
 		return exprs[0]
@@ -183,6 +195,80 @@ func commutative(exprs []Expr, bop bopfn, zero, identity Value) []Expr {
 	}
 	return exprs[:dst]
 }
+
+// InRange ----------------------------------------------------------
+
+func foldRanges(exprs []Expr) []Expr {
+	dst := 0
+	left, leftVal := halfRange(exprs[0])
+	i := 0
+	for ; i < len(exprs)-1; i++ {
+		right, rightVal := halfRange(exprs[i+1])
+		if left != nil && (left.Tok == tok.Gt || left.Tok == tok.Gte) &&
+			right != nil && (right.Tok == tok.Lt || right.Tok == tok.Lte) &&
+			Order(leftVal) == Order(rightVal) &&
+			sameRangeExpr(left.Lhs, right.Lhs) {
+			exprs[dst] = &InRange{E: left.Lhs, // same as right.Lhs
+				Org: left.Rhs, OrgTok: left.Tok, End: right.Rhs, EndTok: right.Tok}
+			dst++
+			i++
+			if i < len(exprs)-1 {
+				left, leftVal = halfRange(exprs[i+1])
+			}
+		} else {
+			exprs[dst] = exprs[i]
+			dst++
+			left, leftVal = right, rightVal
+		}
+	}
+	if i < len(exprs) {
+		exprs[dst] = exprs[i]
+		dst++
+	}
+	return exprs[:dst]
+}
+
+func halfRange(e Expr) (*Binary, Value) {
+	if b, ok := e.(*Binary); ok {
+		if tok.Lt <= b.Tok && b.Tok <= tok.Gte {
+			if c, ok := b.Rhs.(*Constant); ok {
+				if rangeExpr(b.Lhs) {
+					return b, c.Val
+				}
+			}
+		}
+	}
+	return nil, nil
+}
+
+func rangeExpr(e Expr) bool {
+	if isIdent(e) {
+		return true
+	}
+	if m, ok := e.(*Mem); ok && isIdent(m.E) && isConstant(m.M) {
+		return true
+	}
+	return false
+}
+
+func sameRangeExpr(a, b Expr) bool {
+	if ai, ok := a.(*Ident); ok {
+		if bi, ok := b.(*Ident); ok {
+			return ai.Name == bi.Name
+		}
+		return false
+	}
+	if isIdent(b) {
+		return false
+	}
+	// else Mem
+	am := a.(*Mem)
+	bm := b.(*Mem)
+	return am.E.(*Ident).Name == bm.E.(*Ident).Name &&
+		am.M.(*Constant).Val.Equal(bm.M.(*Constant).Val)
+}
+
+//-------------------------------------------------------------------
 
 func foldOrToIn(exprs []Expr) []Expr {
 	var idPrev *Ident

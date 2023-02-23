@@ -63,9 +63,8 @@ func (a *Unary) eval(val Value) Value {
 		return OpBitNot(val)
 	case tok.LParen:
 		return val
-	default:
-		panic("unexpected unary operator " + a.Tok.String())
 	}
+	panic(assert.ShouldNotReachHere())
 }
 
 func (a *Unary) Columns() []string {
@@ -74,28 +73,20 @@ func (a *Unary) Columns() []string {
 
 // Binary -----------------------------------------------------------
 
+// CouldEvalRaw is used by replaceExpr to know when to copy
+func (a *Binary) CouldEvalRaw() bool {
+	// depends on folder putting constant on the right
+	return a.rawOp() && isIdent(a.Lhs) && isConstant(a.Rhs)
+}
+
 // CanEvalRaw returns true if Eval doesn't need to unpack the values.
 // It sets evalRaw and Packed which are used later by Eval.
 func (a *Binary) CanEvalRaw(cols []string) bool {
-	if a.canEvalRaw2(cols) {
+	// depends on folder putting constant on the right
+	if a.rawOp() && IsColumn(a.Lhs, cols) && isConstant(a.Rhs) {
 		a.evalRaw = true
 		c := a.Rhs.(*Constant)
 		c.Packed = Pack(c.Val.(Packable))
-		return true
-	}
-	return false
-}
-
-func (a *Binary) canEvalRaw2(cols []string) bool {
-	if !a.rawOp() {
-		return false
-	}
-	if IsColumn(a.Lhs, cols) && isConstant(a.Rhs) {
-		return true
-	}
-	if isConstant(a.Lhs) && IsColumn(a.Rhs, cols) {
-		a.Lhs, a.Rhs = a.Rhs, a.Lhs // swap
-		a.Tok = reverseBinary[a.Tok]
 		return true
 	}
 	return false
@@ -121,49 +112,37 @@ func isConstant(e Expr) bool {
 	return ok
 }
 
-var reverseBinary = map[tok.Token]tok.Token{
-	tok.Is:   tok.Is,
-	tok.Isnt: tok.Isnt,
-	tok.Lt:   tok.Gt,
-	tok.Lte:  tok.Gte,
-	tok.Gt:   tok.Lt,
-	tok.Gte:  tok.Lte,
-}
-
-// CouldEvalRaw is used by replaceExpr to know when to copy
-func (a *Binary) CouldEvalRaw() bool {
-	return a.rawOp() &&
-		((isIdent(a.Lhs) && isConstant(a.Rhs)) ||
-			(isConstant(a.Lhs) && isIdent(a.Rhs)))
-}
-
 func isIdent(e Expr) bool {
 	_, ok := e.(*Ident)
 	return ok
 }
 
 func (a *Binary) Eval(c *Context) Value {
-	// NOTE: only Eval raw if b.evalRaw was set by CanEvalRaw
 	if a.evalRaw {
-		name := a.Lhs.(*Ident).Name
-		lhs := c.Row.GetRaw(c.Hdr, name)
-		rhs := a.Rhs.(*Constant).Packed
-		switch a.Tok {
-		case tok.Is:
-			return SuBool(lhs == rhs)
-		case tok.Isnt:
-			return SuBool(lhs != rhs)
-		case tok.Lt:
-			return SuBool(packedCmp(lhs, rhs) < 0)
-		case tok.Lte:
-			return SuBool(packedCmp(lhs, rhs) <= 0)
-		case tok.Gt:
-			return SuBool(packedCmp(lhs, rhs) > 0)
-		case tok.Gte:
-			return SuBool(packedCmp(lhs, rhs) >= 0)
-		}
+		return a.rawEval(c)
 	}
 	return a.eval(a.Lhs.Eval(c), a.Rhs.Eval(c))
+}
+
+func (a *Binary) rawEval(c *Context) Value {
+	name := a.Lhs.(*Ident).Name
+	lhs := c.Row.GetRaw(c.Hdr, name)
+	rhs := a.Rhs.(*Constant).Packed
+	switch a.Tok {
+	case tok.Is:
+		return SuBool(lhs == rhs)
+	case tok.Isnt:
+		return SuBool(lhs != rhs)
+	case tok.Lt:
+		return SuBool(packedCmp(lhs, rhs) < 0)
+	case tok.Lte:
+		return SuBool(packedCmp(lhs, rhs) <= 0)
+	case tok.Gt:
+		return SuBool(packedCmp(lhs, rhs) > 0)
+	case tok.Gte:
+		return SuBool(packedCmp(lhs, rhs) >= 0)
+	}
+	panic(assert.ShouldNotReachHere())
 }
 
 func packedCmp(x, y string) int {
@@ -198,9 +177,8 @@ func (a *Binary) eval(lhs, rhs Value) Value {
 		return OpLeftShift(lhs, rhs)
 	case tok.RShift:
 		return OpRightShift(lhs, rhs)
-	default:
-		panic("unexpected binary operator " + a.Tok.String())
 	}
+	panic(assert.ShouldNotReachHere())
 }
 
 func (a *Binary) Columns() []string {
@@ -241,9 +219,8 @@ func (a *Nary) Eval(c *Context) Value {
 		return nary(exprs, c, and, False)
 	case tok.Cat:
 		return nary(exprs, c, opCat, nil)
-	default:
-		panic("unexpected n-ary operator " + a.Tok.String())
 	}
+	panic(assert.ShouldNotReachHere())
 }
 
 func opCat(x, y Value) Value {
@@ -382,6 +359,52 @@ func (a *In) Columns() []string {
 	for _, e := range a.Exprs {
 		cols = set.Union(cols, e.Columns())
 	}
+	return cols
+}
+
+// InRange ---------------------------------------------------------------
+
+// CouldEvalRaw is used by replaceExpr to know when to copy
+func (a *InRange) CouldEvalRaw() bool {
+	return isIdent(a.E)
+}
+
+// CanEvalRaw returns true if Eval doesn't need to unpack the values.
+// It sets Packed which is later used by Eval.
+func (a *InRange) CanEvalRaw(cols []string) bool {
+	// InRange already ensures valid operators and constants
+	if !IsColumn(a.E, cols) {
+		return false
+	}
+	a.evalRaw = true
+	c := a.Org.(*Constant)
+	c.Packed = Pack(c.Val.(Packable))
+	c = a.End.(*Constant)
+	c.Packed = Pack(c.Val.(Packable))
+	return true
+}
+
+func (a *InRange) Eval(c *Context) Value {
+	if a.evalRaw {
+		id := a.E.(*Ident)
+		x := c.Row.GetRaw(c.Hdr, id.Name)
+		org := a.Org.(*Constant).Packed
+		if (a.OrgTok == tok.Gt && !(x > org)) || !(x >= org) {
+			return False
+		}
+		end := a.End.(*Constant).Packed
+		if (a.EndTok == tok.Lt && !(x < end)) || !(x <= end) {
+			return False
+		}
+		return True
+	}
+	return OpInRange(a.E.Eval(c), a.OrgTok, a.Org.Eval(c), a.EndTok, a.End.Eval(c))
+}
+
+func (a *InRange) Columns() []string {
+	cols := a.E.Columns()
+	cols = set.Union(cols, a.Org.Columns())
+	cols = set.Union(cols, a.End.Columns())
 	return cols
 }
 

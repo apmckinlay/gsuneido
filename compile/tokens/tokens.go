@@ -46,7 +46,7 @@ const (
 	Isnt
 	Match
 	MatchNot
-	Lt
+	Lt // must be consecutive
 	Lte
 	Gt
 	Gte

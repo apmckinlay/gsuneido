@@ -4,6 +4,7 @@
 package runtime
 
 import (
+	tok "github.com/apmckinlay/gsuneido/compile/tokens"
 	op "github.com/apmckinlay/gsuneido/runtime/opcodes"
 )
 
@@ -338,6 +339,12 @@ loop:
 		case op.Mod:
 			t.sp--
 			t.stack[t.sp-1] = OpMod(t.stack[t.sp-1], t.stack[t.sp])
+		case op.InRange:
+			orgTok := tok.Token(fetchUint8())
+			org := fr.fn.Values[fetchUint8()]
+			endTok := tok.Token(fetchUint8())
+			end := fr.fn.Values[fetchUint8()]
+			t.stack[t.sp-1] = OpInRange(t.stack[t.sp-1], orgTok, org, endTok, end)
 		case op.LeftShift:
 			t.sp--
 			t.stack[t.sp-1] = OpLeftShift(t.stack[t.sp-1], t.stack[t.sp])

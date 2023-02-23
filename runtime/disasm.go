@@ -180,6 +180,12 @@ func (d *dasm) next() {
 		} else {
 			s += d.fn.ArgSpecs[ai-len(StdArgSpecs)].String()[7:]
 		}
+	case op.InRange:
+		orgTok := tokens.Token(fetchUint8())
+		org := d.fn.Values[fetchUint8()]
+		endTok := tokens.Token(fetchUint8())
+		end := d.fn.Values[fetchUint8()]
+		s += fmt.Sprint(" ", orgTok, " ", org, " ", endTok, " ", end)
 	}
 	srcLim := math.MaxInt
 	if nestedfn != nil && nestedfn.SrcBase > 0 {

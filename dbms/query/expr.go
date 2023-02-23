@@ -5,6 +5,7 @@ package query
 
 import (
 	. "github.com/apmckinlay/gsuneido/compile/ast"
+	tok "github.com/apmckinlay/gsuneido/compile/tokens"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"golang.org/x/exp/slices"
 )
@@ -12,6 +13,7 @@ import (
 // renameExpr renames identifiers in an expression.
 // It does not modify the expression.
 // If any renames are done, it returns a new expression.
+// It is used by Where Transform
 func renameExpr(expr Expr, from, to []string) Expr {
 	switch e := expr.(type) {
 	case *Constant:
@@ -93,6 +95,13 @@ func renameExpr(expr Expr, from, to []string) Expr {
 			exprs = e.Exprs
 		}
 		return &In{E: e2, Exprs: exprs}
+	case *InRange:
+		e2 := renameExpr(e.E, from, to)
+		if e2 == e.E {
+			return expr
+		}
+		return &InRange{E: e2, OrgTok: e.OrgTok, Org: e.Org,
+			EndTok: e.EndTok, End: e.End}
 	default:
 		panic(assert.ShouldNotReachHere())
 	}
@@ -134,6 +143,7 @@ func renameArgs(args []Arg, from, to []string) []Arg {
 
 var aFolder Folder
 
+// replaceExpr is used by Where Transform
 func replaceExpr(expr Expr, from []string, to []Expr) Expr {
 	switch e := expr.(type) {
 	case *Constant:
@@ -212,11 +222,19 @@ func replaceExpr(expr Expr, from []string, to []Expr) Expr {
 		if e2 == e.E && exprs == nil && !e.CouldEvalRaw() {
 			return expr
 		}
-		// if it could be evaluated raw then we need to make a copy
 		if exprs == nil {
 			exprs = e.Exprs
 		}
+		// if it could be evaluated raw then we need to make a copy
 		return aFolder.In(e2, exprs)
+	case *InRange:
+		e2 := replaceExpr(e.E, from, to)
+		if e2 == e.E && !e.CouldEvalRaw() {
+			return expr
+		}
+		return aFolder.Nary(tok.And, []Expr{
+			aFolder.Binary(e2, e.OrgTok, e.Org),
+			aFolder.Binary(e2, e.EndTok, e.End)})
 	default:
 		panic(assert.ShouldNotReachHere())
 	}

@@ -83,7 +83,7 @@ func TestPropFold(t *testing.T) {
 	utest("throw u = 5; u")
 
 	utest("for (; ; u=5) { u }")
-	// t.SkipNow()
+
 	test("f(a = 5) and g(b = 6) and h(a + b)",
 		"Nary(And Call(f 5) Call(g 6) Call(h 11))")
 	utest("a and (u = 5); u")
@@ -154,6 +154,16 @@ func TestPropFold(t *testing.T) {
 	// trinary
 	test("true ? b : c", "b")  // fold
 	test("false ? b : c", "c") // fold
+
+	// range
+	test(".x >= 0 and .x < 10",
+		"InRange(Mem(this 'x') Gte 0 Lt 10)")
+	test("f() and 5 < x and x <= 10 and g()",
+		"Nary(And Call(f) InRange(x Gt 5 Lte 10) Call(g))")
+	test("x > 0 and .x < 10",
+		"Nary(And Binary(Gt x 0) Binary(Lt Mem(this 'x') 10))")
+	test(".x > 0 and x < 10",
+		"Nary(And Binary(Gt Mem(this 'x') 0) Binary(Lt x 10))")
 
 	// if
 	test("if (true) T() else F()",

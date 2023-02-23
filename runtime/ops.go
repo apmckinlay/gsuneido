@@ -13,6 +13,7 @@ import (
 	"runtime"
 	"strings"
 
+	tok "github.com/apmckinlay/gsuneido/compile/tokens"
 	"github.com/apmckinlay/gsuneido/options"
 	"github.com/apmckinlay/gsuneido/util/dbg"
 	"github.com/apmckinlay/gsuneido/util/dnum"
@@ -62,6 +63,16 @@ func strictCompare(x Value, y Value) int {
 		panic(fmt.Sprint("StrictCompare: ", x, " <=> ", y))
 	}
 	return cmp
+}
+
+func OpInRange(x Value, orgOp tok.Token, org Value, endOp tok.Token, end Value) Value {
+	if (orgOp == tok.Gt && !(x.Compare(org) > 0)) || !(x.Compare(org) >= 0) {
+		return False
+	}
+	if (endOp == tok.Lt && !(x.Compare(end) < 0)) || !(x.Compare(end) <= 0) {
+		return False
+	}
+	return True
 }
 
 func OpAdd(x Value, y Value) Value {

@@ -408,6 +408,35 @@ func (a *In) Children(fn func(Node) Node) {
 	}
 }
 
+// InRange is added by Folder to bypass strict compare for same type ranges
+type InRange struct {
+	exprNodeT
+	noPos
+	E       Expr
+	Org     Expr // *Constant
+	OrgTok  tok.Token
+	End     Expr // *Constant
+	EndTok  tok.Token
+	evalRaw bool
+}
+
+func (a *InRange) String() string {
+	return "InRange(" + a.E.String() +
+		" " + a.OrgTok.String() + " " + a.Org.String() +
+		" " + a.EndTok.String() + " " + a.End.String() + ")"
+}
+
+func (a *InRange) Echo() string {
+	return a.E.Echo() + tokEcho[a.OrgTok] + a.Org.Echo() +
+		" and " + a.E.Echo() + tokEcho[a.EndTok] + a.End.Echo()
+}
+
+func (a *InRange) Children(fn func(Node) Node) {
+	childExpr(fn, &a.E)
+	childExpr(fn, &a.Org)
+	childExpr(fn, &a.End)
+}
+
 type Call struct {
 	exprNodeT
 	noPos

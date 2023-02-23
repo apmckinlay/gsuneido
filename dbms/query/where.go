@@ -84,7 +84,6 @@ func NewWhere(src Query, expr ast.Expr, t QueryTran) *Where {
 	w.calcFixed()
 	if !w.conflict {
 		cmps := w.extractCompares()
-		w.exprMore = len(cmps) < len(w.expr.Exprs)
 		w.colSels = w.comparesToFilters(cmps)
 		w.conflict = w.conflict || w.exprFalse()
 	}
@@ -536,8 +535,23 @@ func (w *Where) extractCompares() []cmpExpr {
 	cols := w.source.Header().Physical()
 	cmps := make([]cmpExpr, 0, 4)
 	for _, expr := range w.expr.Exprs {
+		n := len(cmps)
 		cmps = w.binaryCompare(expr, cols, cmps)
+		cmps = w.inRange(expr, cols, cmps)
 		cmps = w.typeToRange(expr, cols, cmps)
+		if len(cmps) == n {
+			w.exprMore = true // expr not used by cmps
+		}
+	}
+	return cmps
+}
+
+func (*Where) inRange(expr ast.Expr, cols []string, cmps []cmpExpr) []cmpExpr {
+	if r, ok := expr.(*ast.InRange); ok && r.CanEvalRaw(cols) {
+		name := r.E.(*ast.Ident).Name
+		return append(cmps,
+			cmpExpr{col: name, op: r.OrgTok, val: r.Org.(*ast.Constant).Packed},
+			cmpExpr{col: name, op: r.EndTok, val: r.End.(*ast.Constant).Packed})
 	}
 	return cmps
 }
