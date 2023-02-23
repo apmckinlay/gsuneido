@@ -654,7 +654,7 @@ func TestQueryGet(t *testing.T) {
 		`min_cost	average_cost	max_cost	sum
 		100			200				300			800`)
 	test("hist summarize item, total cost, count sort item",
-		"hist^(date) SUMMARIZE-MAP item, count = count, total_cost = total cost" +
+		"hist^(date) SUMMARIZE-MAP item, count = count, total_cost = total cost"+
 			" TEMPINDEX(item)",
 		`item		count	total_cost
 		'disk'		2		300

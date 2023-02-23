@@ -89,7 +89,7 @@ func (it *Intersect) Transform() Query {
 	}
 	if src1 != it.source1 || src2 != it.source2 {
 		return NewIntersect(src1, src2)
-    }
+	}
 	return it
 }
 

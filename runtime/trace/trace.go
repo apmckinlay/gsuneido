@@ -112,13 +112,13 @@ func Print(s string) {
 type writer struct{}
 
 func (w writer) Write(p []byte) (n int, err error) {
-    Print(string(p))
-    return len(p), nil
+	Print(string(p))
+	return len(p), nil
 }
 
 func (w writer) WriteString(s string) (n int, err error) {
-    Print(s)
-    return len(s), nil
+	Print(s)
+	return len(s), nil
 }
 
 var Writer writer

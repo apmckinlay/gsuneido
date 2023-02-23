@@ -77,7 +77,7 @@ func (m *Minus) Transform() Query {
 	}
 	if src1 != m.source1 || src2 != m.source2 {
 		return NewMinus(src1, src2)
-    }
+	}
 	return m
 }
 

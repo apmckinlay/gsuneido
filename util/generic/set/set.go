@@ -46,8 +46,8 @@ outer:
 		for i, ye := range y {
 			if xe == ye && !used[i] {
 				used[i] = true
-                continue outer
-            }
+				continue outer
+			}
 		}
 		return false // xs wasn't found in y
 	}

@@ -24,11 +24,11 @@ import (
 )
 
 type tran struct {
-	db    *Database
-	meta  *meta.Meta
+	db     *Database
+	meta   *meta.Meta
 	status tranStatus
-	asof  int64
-	off   uint64
+	asof   int64
+	off    uint64
 }
 
 type tranStatus byte

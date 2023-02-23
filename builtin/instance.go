@@ -26,7 +26,7 @@ func instance_BaseQ(t *Thread, this Value, args []Value) Value {
 		func(v Value, _ *MemBase) Value {
 			if c, ok := v.(*SuClass); ok && name == c.Name {
 				return True
-            }
+			}
 			return nil
 		}))
 }

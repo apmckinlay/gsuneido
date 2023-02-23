@@ -14,7 +14,7 @@ import (
 )
 
 type r struct {
-	key []string
+	key    []string
 	i1, i2 int
 }
 type s []string
