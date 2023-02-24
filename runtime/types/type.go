@@ -5,8 +5,6 @@ package types
 
 //go:generate stringer -type=Type
 
-// to make stringer: go generate
-
 type Type int
 
 // must match Ord up to Object

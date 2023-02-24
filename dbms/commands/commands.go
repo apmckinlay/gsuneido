@@ -5,8 +5,6 @@ package commands
 
 //go:generate stringer -type=Command
 
-// to make stringer: go generate
-
 type Command byte
 
 // command values must match jSuneido

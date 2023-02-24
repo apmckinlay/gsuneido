@@ -6,8 +6,6 @@ package tokens
 
 //go:generate stringer -type=Token
 
-// to make stringer: go generate
-
 // Token is returned by Lexer to identify the type of token
 type Token uint8
 
