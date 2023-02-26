@@ -155,6 +155,7 @@ func keepCols(src, nothing Query, hdr *Header) Query {
 
 func (u *Union) calcFixed(fixed1, fixed2 []Fixed) []Fixed {
 	fixed := make([]Fixed, 0, len(fixed1)+len(fixed2))
+	// add ones that are in both
 	for _, f1 := range fixed1 {
 		for _, f2 := range fixed2 {
 			if f1.col == f2.col {
@@ -164,6 +165,8 @@ func (u *Union) calcFixed(fixed1, fixed2 []Fixed) []Fixed {
 			}
 		}
 	}
+	// fixed on columns that are only on one source
+	// can treat the other source as fixed = ""
 	cols2 := u.source2.Columns()
 	emptyStr := []string{""}
 	for _, f1 := range fixed1 {

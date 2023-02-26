@@ -16,10 +16,13 @@ import (
 	"golang.org/x/exp/slices"
 )
 
+// joinLike is common stuff for Join, LeftJoin, and Times
 type joinLike struct {
 	Query2
-	hdr1     *Header
-	conflict bool
+	hdr1      *Header
+	saIndex   []string
+	conflict1 bool
+	conflict2 bool
 }
 
 type Join struct {
@@ -147,14 +150,14 @@ func (*Join) fastSingle() bool {
 func (jn *Join) Fixed() []Fixed {
 	fixed, none := combineFixed(jn.source1.Fixed(), jn.source2.Fixed())
 	if none {
-		jn.conflict = true
+		jn.conflict1 = true
 	}
 	return fixed
 }
 
 func (jn *Join) Transform() Query {
 	cols := jn.Columns()
-	if jn.Fixed(); jn.conflict {
+	if jn.Fixed(); jn.conflict1 {
 		return NewNothing(cols)
 	}
 	src1 := jn.source1.Transform()
@@ -250,6 +253,7 @@ func (jn *Join) setApproach(index []string, frac float64, approach any, tran Que
 	jn.source1 = SetApproach(jn.source1, index, frac, tran)
 	jn.source2 = SetApproach(jn.source2, ap.index2, ap.frac2, tran)
 	jn.hdr1 = jn.source1.Header()
+	jn.saIndex = index
 }
 
 func (jn *Join) Nrows() (int, int) {
@@ -312,7 +316,7 @@ func (jn *Join) Rewind() {
 }
 
 func (jn *Join) Get(th *Thread, dir Dir) Row {
-	if jn.conflict {
+	if jn.conflict1 || jn.conflict2 {
 		return nil
 	}
 	for {
@@ -343,15 +347,17 @@ func (jn *Join) projectRow(th *Thread, row Row) []string {
 	return key
 }
 
+// Join Select is also used by LeftJoin
+
 func (jn *Join) Select(cols, vals []string) {
 	jn.Rewind()
 	if cols == nil { // clear
-		jn.conflict = false
+		jn.conflict1, jn.conflict2 = false, false
 		jn.source1.Select(nil, nil)
 		return
 	}
 	sel1cols, sel1vals := jn.splitSelect(cols, vals)
-	if jn.conflict {
+	if jn.conflict1 { // not conflict2 because of LeftJoin
 		return
 	}
 	jn.source1.Select(sel1cols, sel1vals)
@@ -360,7 +366,7 @@ func (jn *Join) Select(cols, vals []string) {
 func (jn *Join) Lookup(th *Thread, cols, vals []string) Row {
 	defer jn.Select(nil, nil) // clear select
 	sel1cols, sel1vals := jn.splitSelect(cols, vals)
-	if jn.conflict {
+	if jn.conflict1 || jn.conflict2 {
 		return nil
 	}
 	if jn.lookupFallback(sel1cols) {
@@ -380,22 +386,25 @@ func (jn *Join) Lookup(th *Thread, cols, vals []string) Row {
 }
 
 func (jn *joinLike) splitSelect(cols, vals []string) (sel1cols, sel1vals []string) {
-	if jn.hdr1 == nil {
-		jn.hdr1 = jn.source1.Header()
-	}
-	jn.conflict = false
+	jn.conflict1, jn.conflict2 = false, false
+	fixed1 := jn.source1.Fixed()
 	fixed2 := jn.source2.Fixed()
 	for i, col := range cols {
-		if slices.Contains(jn.hdr1.Columns, col) {
+		if slices.Contains(jn.saIndex, col) {
 			sel1cols = append(sel1cols, col)
 			sel1vals = append(sel1vals, vals[i])
 			continue
 		}
-		fixVals := getFixed(fixed2, col)
-		assert.That(len(fixVals) == 1)
-		if fixVals[0] != vals[i] {
-			jn.conflict = true
+		fixVals1 := getFixed(fixed1, col)
+		if len(fixVals1) == 1 && fixVals1[0] != vals[i] {
+			jn.conflict1 = true
 		}
+		fixVals2 := getFixed(fixed2, col)
+		if len(fixVals2) == 1 && fixVals2[0] != vals[i] {
+			jn.conflict2 = true
+		}
+		// extra Select cols should be fixed
+		assert.That(len(fixVals1) == 1 || len(fixVals2) == 1)
 	}
 	return
 }
@@ -458,12 +467,22 @@ func (lj *LeftJoin) Keys() [][]string {
 }
 
 func (lj *LeftJoin) Fixed() []Fixed {
-	fixed := slices.Clip(lj.source1.Fixed())
-	if fixed2 := lj.source2.Fixed(); len(fixed2) == 1 &&
-		!slices.Contains(lj.by, fixed2[0].col) {
-		fixed = append(fixed, fixedWith(fixed2[0], ""))
+	fixed1 := lj.source1.Fixed()
+	fixed2 := lj.source2.Fixed()
+	if len(fixed2) == 0 {
+		return fixed1
 	}
-	return fixed
+	result := make([]Fixed, 0, len(fixed1)+len(fixed2))
+	// all of fixed1
+	result = append(result, fixed1...)
+	// fixed2 that are not common with source1
+	for _, f2 := range fixed2 {
+		if !slices.Contains(lj.by, f2.col) {
+			// add "" because source2 row can be empty
+			result = append(result, fixedWith(f2, ""))
+		}
+	}
+	return result
 }
 
 func (lj *LeftJoin) Transform() Query {
@@ -497,6 +516,7 @@ func (lj *LeftJoin) setApproach(index []string, frac float64, approach any, tran
 	lj.source2 = SetApproach(lj.source2, ap.index2, ap.frac2, tran)
 	lj.empty2 = make(Row, len(lj.source2.Header().Fields))
 	lj.hdr1 = lj.source1.Header()
+	lj.saIndex = index
 }
 
 func (lj *LeftJoin) Nrows() (int, int) {
@@ -539,11 +559,14 @@ func (lj *LeftJoin) pop(n1, n2 int) int {
 // execution
 
 func (lj *LeftJoin) Get(th *Thread, dir Dir) Row {
+	if lj.conflict1 {
+		return nil
+	}
 	for {
 		if lj.row2 == nil && !lj.nextRow1(th, dir) {
 			return nil
 		}
-		if lj.conflict {
+		if lj.conflict2 {
 			return JoinRows(lj.row1, lj.empty2)
 		}
 		lj.row2 = lj.source2.Get(th, dir)
@@ -569,9 +592,14 @@ func (lj *LeftJoin) shouldOutput(row Row) bool {
 	return row != nil
 }
 
+// Select comes from Join
+
 func (lj *LeftJoin) Lookup(th *Thread, cols, vals []string) Row {
 	defer lj.Rewind()
 	sel1cols, sel1vals := lj.splitSelect(cols, vals)
+	if lj.conflict1 {
+		return nil
+	}
 	if lj.lookupFallback(sel1cols) {
 		lj.Select(cols, vals)
 		defer lj.Select(nil, nil) // clear select
@@ -581,7 +609,7 @@ func (lj *LeftJoin) Lookup(th *Thread, cols, vals []string) Row {
 	if row1 == nil {
 		return nil
 	}
-	if lj.conflict {
+	if lj.conflict2 {
 		return JoinRows(row1, lj.empty2)
 	}
 	lj.source2.Select(lj.by, lj.projectRow(th, row1))

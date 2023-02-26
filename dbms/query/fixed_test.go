@@ -46,7 +46,7 @@ func TestFixed(t *testing.T) {
 		"[x=(1), y=(2), z=(3,'')]")
 
 	test("table extend x=1, y=2 leftjoin (table extend z=3, zz=4)",
-		"[x=(1), y=(2)]")
+		"[x=(1), y=(2), z=(3,''), zz=(4,'')]")
 
 	test2 := func(query string, expected string) {
 		t.Helper()

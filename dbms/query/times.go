@@ -5,6 +5,7 @@ package query
 
 import (
 	. "github.com/apmckinlay/gsuneido/runtime"
+	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/generic/set"
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
 	"github.com/apmckinlay/gsuneido/util/str"
@@ -50,7 +51,8 @@ func (t *Times) Indexes() [][]string {
 }
 
 func (t *Times) Fixed() []Fixed {
-	fixed, _ := combineFixed(t.source1.Fixed(), t.source2.Fixed())
+	fixed, conflict := combineFixed(t.source1.Fixed(), t.source2.Fixed())
+	assert.That(!conflict) // because no common columns
 	return fixed
 }
 
@@ -94,6 +96,7 @@ func (t *Times) setApproach(index []string, frac float64, approach any, tran Que
 		t.source1, t.source2 = t.source2, t.source1
 	}
 	t.source1 = SetApproach(t.source1, index, frac, tran)
+	t.saIndex = index
 	nrows1, _ := t.source1.Nrows()
 	t.source2 = SetApproach(t.source2, nil, frac*float64(nrows1), tran)
 }
@@ -113,7 +116,7 @@ func (t *Times) Rewind() {
 }
 
 func (t *Times) Get(th *Thread, dir Dir) Row {
-	if t.conflict {
+	if t.conflict1 || t.conflict2 {
 		return nil
 	}
 	row2 := t.source2.Get(th, dir)
@@ -138,12 +141,12 @@ func (t *Times) Get(th *Thread, dir Dir) Row {
 func (t *Times) Select(cols, vals []string) {
 	t.Rewind()
 	if cols == nil { // clear
-		t.conflict = false
+		t.conflict1, t.conflict2 = false, false
 		t.source1.Select(nil, nil)
 		return
 	}
 	sel1cols, sel1vals := t.splitSelect(cols, vals)
-	if t.conflict {
+	if t.conflict1 || t.conflict2 {
 		return
 	}
 	t.source1.Select(sel1cols, sel1vals)
@@ -151,7 +154,7 @@ func (t *Times) Select(cols, vals []string) {
 
 func (t *Times) Lookup(th *Thread, cols, vals []string) Row {
 	sel1cols, sel1vals := t.splitSelect(cols, vals)
-	if t.conflict {
+	if t.conflict1 || t.conflict2 {
 		return nil
 	}
 	t.source1.Select(sel1cols, sel1vals)
