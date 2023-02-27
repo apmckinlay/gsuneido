@@ -51,7 +51,8 @@ func (t *Times) Indexes() [][]string {
 }
 
 func (t *Times) Fixed() []Fixed {
-	fixed, conflict := combineFixed(t.source1.Fixed(), t.source2.Fixed())
+	t.ensureFixed()
+	fixed, conflict := combineFixed(t.fixed1, t.fixed2)
 	assert.That(!conflict) // because no common columns
 	return fixed
 }

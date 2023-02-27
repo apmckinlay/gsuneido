@@ -21,6 +21,9 @@ type joinLike struct {
 	Query2
 	hdr1      *Header
 	saIndex   []string
+	haveFixed bool
+	fixed1    []Fixed
+	fixed2    []Fixed
 	conflict1 bool
 	conflict2 bool
 }
@@ -148,7 +151,8 @@ func (*Join) fastSingle() bool {
 }
 
 func (jn *Join) Fixed() []Fixed {
-	fixed, none := combineFixed(jn.source1.Fixed(), jn.source2.Fixed())
+	jn.ensureFixed()
+	fixed, none := combineFixed(jn.fixed1, jn.fixed2)
 	if none {
 		jn.conflict1 = true
 	}
@@ -386,20 +390,19 @@ func (jn *Join) Lookup(th *Thread, cols, vals []string) Row {
 }
 
 func (jn *joinLike) splitSelect(cols, vals []string) (sel1cols, sel1vals []string) {
+	jn.ensureFixed()
 	jn.conflict1, jn.conflict2 = false, false
-	fixed1 := jn.source1.Fixed()
-	fixed2 := jn.source2.Fixed()
 	for i, col := range cols {
 		if slices.Contains(jn.saIndex, col) {
 			sel1cols = append(sel1cols, col)
 			sel1vals = append(sel1vals, vals[i])
 			continue
 		}
-		fixVals1 := getFixed(fixed1, col)
+		fixVals1 := getFixed(jn.fixed1, col)
 		if len(fixVals1) == 1 && fixVals1[0] != vals[i] {
 			jn.conflict1 = true
 		}
-		fixVals2 := getFixed(fixed2, col)
+		fixVals2 := getFixed(jn.fixed2, col)
 		if len(fixVals2) == 1 && fixVals2[0] != vals[i] {
 			jn.conflict2 = true
 		}
@@ -409,11 +412,18 @@ func (jn *joinLike) splitSelect(cols, vals []string) (sel1cols, sel1vals []strin
 	return
 }
 
+func (jn *joinLike) ensureFixed() {
+	if !jn.haveFixed {
+		jn.fixed1 = jn.source1.Fixed()
+		jn.fixed2 = jn.source2.Fixed()
+	}
+}
+
 func (jn *Join) lookupFallback(sel1cols []string) bool {
 	if jn.lookup == nil {
 		jn.lookup = &lookupInfo{
 			keys1:  jn.source1.Keys(),
-			fixed1: jn.source1.Fixed(),
+			fixed1: jn.fixed1,
 		}
 	}
 	if !hasKey(jn.lookup.keys1, sel1cols, jn.lookup.fixed1) {
@@ -467,16 +477,15 @@ func (lj *LeftJoin) Keys() [][]string {
 }
 
 func (lj *LeftJoin) Fixed() []Fixed {
-	fixed1 := lj.source1.Fixed()
-	fixed2 := lj.source2.Fixed()
-	if len(fixed2) == 0 {
-		return fixed1
+	lj.ensureFixed()
+	if len(lj.fixed2) == 0 {
+		return lj.fixed1
 	}
-	result := make([]Fixed, 0, len(fixed1)+len(fixed2))
+	result := make([]Fixed, 0, len(lj.fixed1)+len(lj.fixed2))
 	// all of fixed1
-	result = append(result, fixed1...)
+	result = append(result, lj.fixed1...)
 	// fixed2 that are not common with source1
-	for _, f2 := range fixed2 {
+	for _, f2 := range lj.fixed2 {
 		if !slices.Contains(lj.by, f2.col) {
 			// add "" because source2 row can be empty
 			result = append(result, fixedWith(f2, ""))
