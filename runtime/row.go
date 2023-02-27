@@ -159,7 +159,9 @@ func (row Row) SameAs(row2 Row) bool {
 
 // Header specifies the fields (physical) and columns (logical) for a query
 type Header struct {
+	// Fields is the physical fields, including deleted ("-")
 	Fields  [][]string
+	// Columns is the logical fields
 	Columns []string
 	// cache the location of fields.
 	// WARNING: assumed to not be concurrent (no locking)
