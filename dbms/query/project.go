@@ -53,15 +53,6 @@ const (
 
 func NewProject(src Query, cols []string) *Project {
 	assert.That(len(cols) > 0)
-	p := newProject(src, cols)
-	if p.unique {
-		p.includeDeps(src.Columns())
-	}
-	return p
-}
-
-// newProject does everything except adding _deps
-func newProject(src Query, cols []string) *Project {
 	cols = set.Unique(cols)
 	srcCols := src.Columns()
 	if !set.Subset(srcCols, cols) {
@@ -73,11 +64,20 @@ func newProject(src Query, cols []string) *Project {
 			panic("can't project _lower! fields")
 		}
 	}
-	p := &Project{Query1: Query1{source: src}, columns: cols, rewound: true}
-	if hasKey(src.Keys(), cols, src.Fixed()) {
-		p.unique = true
+	p := newProject(src, cols)
+	if p.unique {
+		p.includeDeps(srcCols)
 	}
 	return p
+}
+
+func (p *Project) includeDeps(cols []string) {
+	for _, f := range p.columns {
+		deps := f + "_deps"
+		if slices.Contains(cols, deps) {
+			p.columns = set.AddUnique(p.columns, deps)
+		}
+	}
 }
 
 func NewRemove(src Query, cols []string) *Project {
@@ -93,6 +93,15 @@ func NewRemove(src Query, cols []string) *Project {
 	return newProject(src, proj)
 }
 
+// newProject is common to NewProject and NewRemove
+func newProject(src Query, cols []string) *Project {
+	p := &Project{Query1: Query1{source: src}, columns: cols, rewound: true}
+	if hasKey(src.Keys(), cols, src.Fixed()) {
+		p.unique = true
+	}
+	return p
+}
+
 // hasKey returns whether cols contains a key
 // taking fixed into consideration
 func hasKey(keys [][]string, cols []string, fixed []Fixed) bool {
@@ -106,15 +115,6 @@ outer:
 		return true
 	}
 	return false
-}
-
-func (p *Project) includeDeps(cols []string) {
-	for _, f := range p.columns {
-		deps := f + "_deps"
-		if slices.Contains(cols, deps) {
-			p.columns = set.AddUnique(p.columns, deps)
-		}
-	}
 }
 
 func (p *Project) String() string {
