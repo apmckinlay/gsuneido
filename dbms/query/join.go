@@ -178,12 +178,14 @@ func (jn *Join) Transform() Query {
 	return jn
 }
 
+var joinRev = 0 // tests can set to impossible to prevent reverse
+
 func (jn *Join) optimize(mode Mode, index []string, frac float64) (Cost, Cost, any) {
 	fwd := joinopt(jn.source1, jn.source2, jn.joinType, jn.Nrows,
 		mode, index, frac, jn.by)
 	rev := joinopt(jn.source2, jn.source1, jn.joinType.reverse(), jn.Nrows,
 		mode, index, frac, jn.by)
-	rev.fixcost += outOfOrder
+	rev.fixcost += outOfOrder + joinRev
 	if trace.JoinOpt.On() {
 		trace.JoinOpt.Println(mode, index, frac)
 		trace.Println("    fwd", fwd.index, "=", fwd.fixcost, fwd.varcost)

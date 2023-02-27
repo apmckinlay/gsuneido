@@ -465,3 +465,70 @@ func BenchmarkOptMod(b *testing.B) {
 		om.result()
 	}
 }
+
+func TestJoin_splitSelect(t *testing.T) {
+	joinRev = impossible
+	defer func() { joinRev = 0 }()
+	q1 := &TestQop{
+		columns: []string{"a", "b", "c"},
+		indexes: [][]string{{"a"}},
+		keys:    [][]string{{"a"}},
+	}
+	q2 := &TestQop{
+		columns: []string{"c", "d", "e"},
+		indexes: [][]string{{"c"}},
+		keys:    [][]string{{"c"}},
+		fixed:   []Fixed{
+			{col: "c", values: []string{"1"}},
+			{col: "e", values: []string{"2", ""}},
+		},
+	}
+	jn := NewJoin(q1, q2, nil)
+	assert.This(jn.by).Is([]string{"c"})
+	jn.saIndex = []string{"a"}
+
+	cols := []string{"a", "c"}
+	vals := []string{"9", "1"}
+	jn.Select(cols, vals)
+	assert.This(q1.sel).
+		Is(sel{cols: []string{"a"}, vals: []string{"9"}})
+	assert.That(!jn.conflict1 && !jn.conflict2)
+}
+
+type TestQop struct {
+	Query      // satisfy Query interface
+	columns    []string
+	fixed      []Fixed
+	indexes    [][]string
+	keys       [][]string
+	fastsingle bool
+	sel
+}
+
+type sel struct {
+	cols []string
+	vals []string
+}
+
+func (q *TestQop) Columns() []string {
+	return q.columns
+}
+
+func (q *TestQop) Fixed() []Fixed {
+	return q.fixed
+}
+
+func (q *TestQop) Indexes() [][]string {
+	return q.indexes
+}
+
+func (q *TestQop) Keys() [][]string {
+	return q.keys
+}
+
+func (q *TestQop) Rewind() {
+}
+
+func (q *TestQop) Select(cols, vals []string) {
+	q.sel = sel{cols: cols, vals: vals}
+}
