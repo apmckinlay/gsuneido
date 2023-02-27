@@ -11,7 +11,6 @@ import (
 	"github.com/apmckinlay/gsuneido/util/generic/hmap"
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
 	"github.com/apmckinlay/gsuneido/util/hacks"
-	"github.com/apmckinlay/gsuneido/util/str"
 	"golang.org/x/exp/slices"
 )
 
@@ -60,8 +59,8 @@ func QueryHash(th *Thread, args []Value) Value {
 		// }
 	}
 	if details {
-		return SuStr(fmt.Sprintln("nrows", n, "hash", hash) +
-			fmt.Sprintln(colhash, str.Join(", ", hdr.Columns)))
+		return SuStr(fmt.Sprintln("nrows", n, "hash", hash,
+			"ncols", len(hdr.Columns), "hash", colhash))
 	}
 	return IntVal(int(hash))
 }
@@ -71,6 +70,7 @@ func hashCols(hdr *Header) uint32 {
 	slices.Sort(cols)
 	hash := uint32(31)
 	for _, col := range cols {
+		// fmt.Println(col)
 		hash = hash*31 + adler32.Checksum(hacks.Stobs(col))
 	}
 	return hash
