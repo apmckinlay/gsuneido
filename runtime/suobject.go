@@ -50,6 +50,7 @@ type SuObject struct {
 	// It is used to detect modification during packing.
 	clock    uint32
 	readonly bool
+	sorting  bool
 }
 
 // NewSuObject creates an SuObject from a slice of Value's
@@ -420,6 +421,9 @@ func (ob *SuObject) Insert(at int, val Value) {
 func (ob *SuObject) mustBeMutable() {
 	if ob.readonly {
 		panic("can't modify readonly objects")
+	}
+	if ob.sorting {
+		panic("can't modify object during sort")
 	}
 }
 
@@ -859,24 +863,20 @@ func (ob *SuObject) Sort(t *Thread, lt Value) {
 	ob.clock++
 	ob.version++
 	if lt == False {
-		sort.SliceStable(ob.list, func(i, j int) bool {
-			return ob.list[i].Compare(ob.list[j]) < 0
+		slices.SortStableFunc(ob.list, func(x, y Value) bool {
+			return x.Compare(y) < 0
 		})
 	} else {
-		// tradeoff - use memory to copy the list
-		// to avoid unlock/relock for every lt call
-		clock := ob.clock
-		list := slices.Clone(ob.list)
 		func() {
+			ob.sorting = true
+			defer func() { ob.sorting = false }()
 			ob.Unlock() // can't hold lock while calling arbitrary code
 			defer ob.Lock()
-			sort.SliceStable(list, func(i, j int) bool {
-				return True == t.Call(lt, list[i], list[j])
+			slices.SortStableFunc(ob.list, func(x, y Value) bool {
+				return True == t.Call(lt, x, y)
 			})
-			// note: could become concurrent during lt
+			// note: could become concurrent while unlocked
 		}()
-		ob.clockCheck(clock, "Sort")
-		ob.list = list
 	}
 }
 
@@ -887,17 +887,14 @@ func (ob *SuObject) Unique() {
 	if !conc {
 		ob.list = unique(ob.list)
 	} else { // concurrent
-		clock := ob.clock
-		// tradeoff - use memory to copy list
-		// to avoid unlock/lock for every Equal call
-		list := slices.Clone(ob.list)
 		func() {
-			ob.Unlock() // can't call Equal with write lock
+			ob.sorting = true
+			defer func() { ob.sorting = false }()
+			ob.Unlock() // can't hold lock while calling Equal
 			defer ob.Lock()
-			list = unique(list)
+			ob.list = unique(ob.list)
+			// note: could become concurrent while unlocked
 		}()
-		ob.clockCheck(clock, "Unique")
-		ob.list = list
 	}
 }
 
