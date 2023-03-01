@@ -7,8 +7,8 @@ import . "github.com/apmckinlay/gsuneido/runtime"
 
 var _ = builtin(Libraries, "()")
 
-func Libraries(t *Thread, args []Value) Value {
-	list := t.Dbms().Libraries()
+func Libraries(th *Thread, args []Value) Value {
+	list := th.Dbms().Libraries()
 	var ob SuObject
 	for _, s := range list {
 		ob.Add(SuStr(s))
@@ -18,8 +18,8 @@ func Libraries(t *Thread, args []Value) Value {
 
 var _ = builtin(Use, "(library)")
 
-func Use(t *Thread, args []Value) Value {
-	if !t.Dbms().Use(ToStr(args[0])) {
+func Use(th *Thread, args []Value) Value {
+	if !th.Dbms().Use(ToStr(args[0])) {
 		return False
 	}
 	Global.UnloadAll()
@@ -28,9 +28,9 @@ func Use(t *Thread, args []Value) Value {
 
 var _ = builtin(Unuse, "(library)")
 
-func Unuse(t *Thread, args []Value) Value {
+func Unuse(th *Thread, args []Value) Value {
 	Global.UnloadAll()
-	return SuBool(t.Dbms().Unuse(ToStr(args[0])))
+	return SuBool(th.Dbms().Unuse(ToStr(args[0])))
 }
 
 var _ = builtin(Unload, "(name = false)")

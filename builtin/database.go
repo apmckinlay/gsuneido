@@ -17,8 +17,8 @@ func init() {
 			BuiltinParams: BuiltinParams{ParamSpec: params("(string)")}}})
 }
 
-func Database(t *Thread, args []Value) Value {
-	t.Dbms().Admin(ToStr(args[0]), nil)
+func Database(th *Thread, args []Value) Value {
+	th.Dbms().Admin(ToStr(args[0]), nil)
 	return nil
 }
 
@@ -26,80 +26,80 @@ var databaseMethods = methods()
 
 var _ = method(db_Auth, "(data)")
 
-func db_Auth(t *Thread, this Value, args []Value) Value {
-	return SuBool(t.Dbms().Auth(t, ToStr(args[0])))
+func db_Auth(th *Thread, this Value, args []Value) Value {
+	return SuBool(th.Dbms().Auth(th, ToStr(args[0])))
 }
 
 var _ = method(db_Check, "()")
 
-func db_Check(t *Thread, this Value, args []Value) Value {
-	return SuStr(t.Dbms().Check())
+func db_Check(th *Thread, this Value, args []Value) Value {
+	return SuStr(th.Dbms().Check())
 }
 
 var _ = method(db_Connections, "()")
 
-func db_Connections(t *Thread, this Value, args []Value) Value {
-	return t.Dbms().Connections()
+func db_Connections(th *Thread, this Value, args []Value) Value {
+	return th.Dbms().Connections()
 }
 
 var _ = method(db_CurrentSize, "()")
 
-func db_CurrentSize(t *Thread, this Value, args []Value) Value {
-	return IntVal(int(t.Dbms().Size()))
+func db_CurrentSize(th *Thread, this Value, args []Value) Value {
+	return IntVal(int(th.Dbms().Size()))
 }
 
 var _ = method(db_Cursors, "()")
 
-func db_Cursors(t *Thread, this Value, args []Value) Value {
-	return IntVal(t.Dbms().Cursors())
+func db_Cursors(th *Thread, this Value, args []Value) Value {
+	return IntVal(th.Dbms().Cursors())
 }
 
 var _ = method(db_Dump, "(table = '')")
 
-func db_Dump(t *Thread, this Value, args []Value) Value {
-	return SuStr(t.Dbms().Dump(ToStr(args[0])))
+func db_Dump(th *Thread, this Value, args []Value) Value {
+	return SuStr(th.Dbms().Dump(ToStr(args[0])))
 }
 
 var _ = method(db_Final, "()")
 
-func db_Final(t *Thread, this Value, args []Value) Value {
-	return IntVal(t.Dbms().Final())
+func db_Final(th *Thread, this Value, args []Value) Value {
+	return IntVal(th.Dbms().Final())
 }
 
 var _ = method(db_Info, "()")
 
-func db_Info(t *Thread, this Value, args []Value) Value {
-	return t.Dbms().Info()
+func db_Info(th *Thread, this Value, args []Value) Value {
+	return th.Dbms().Info()
 }
 
 var _ = method(db_Kill, "(sessionId)")
 
-func db_Kill(t *Thread, this Value, args []Value) Value {
-	return IntVal(t.Dbms().Kill(ToStr(args[0])))
+func db_Kill(th *Thread, this Value, args []Value) Value {
+	return IntVal(th.Dbms().Kill(ToStr(args[0])))
 }
 
 var _ = method(db_Load, "(table)")
 
-func db_Load(t *Thread, this Value, args []Value) Value {
-	return IntVal(t.Dbms().Load(ToStr(args[0])))
+func db_Load(th *Thread, this Value, args []Value) Value {
+	return IntVal(th.Dbms().Load(ToStr(args[0])))
 }
 
 var _ = method(db_Nonce, "()")
 
-func db_Nonce(t *Thread, this Value, args []Value) Value {
-	return SuStr(t.Dbms().Nonce(t))
+func db_Nonce(th *Thread, this Value, args []Value) Value {
+	return SuStr(th.Dbms().Nonce(th))
 }
 
 var _ = method(db_Schema, "(table)")
 
-func db_Schema(t *Thread, this Value, args []Value) Value {
-	return SuStr(t.Dbms().Schema(ToStr(args[0])))
+func db_Schema(th *Thread, this Value, args []Value) Value {
+	return SuStr(th.Dbms().Schema(ToStr(args[0])))
 }
 
 var _ = method(db_SessionId, "(id = '')")
 
-func db_SessionId(t *Thread, this Value, args []Value) Value {
-	return SuStr(t.SessionId(ToStr(args[0])))
+func db_SessionId(th *Thread, this Value, args []Value) Value {
+	return SuStr(th.SessionId(ToStr(args[0])))
 }
 
 var _ = method(db_TempDest, "()")
@@ -110,17 +110,17 @@ func db_TempDest(Value) Value {
 
 var _ = method(db_Token, "()")
 
-func db_Token(t *Thread, this Value, args []Value) Value {
-	return SuStr(t.Dbms().Token())
+func db_Token(th *Thread, this Value, args []Value) Value {
+	return SuStr(th.Dbms().Token())
 }
 
 var _ = method(db_Transactions, "()")
 
-func db_Transactions(t *Thread, this Value, args []Value) Value {
-	return t.Dbms().Transactions()
+func db_Transactions(th *Thread, this Value, args []Value) Value {
+	return th.Dbms().Transactions()
 }
 
-func (d *suDatabaseGlobal) Get(t *Thread, key Value) Value {
+func (d *suDatabaseGlobal) Get(th *Thread, key Value) Value {
 	m := ToStr(key)
 	if fn, ok := databaseMethods[m]; ok {
 		return fn.(Value)
@@ -131,11 +131,11 @@ func (d *suDatabaseGlobal) Get(t *Thread, key Value) Value {
 	return nil
 }
 
-func (d *suDatabaseGlobal) Lookup(t *Thread, method string) Callable {
+func (d *suDatabaseGlobal) Lookup(th *Thread, method string) Callable {
 	if f, ok := databaseMethods[method]; ok {
 		return f
 	}
-	return d.SuBuiltin.Lookup(t, method) // for Params
+	return d.SuBuiltin.Lookup(th, method) // for Params
 }
 
 func (d *suDatabaseGlobal) String() string {
@@ -144,13 +144,13 @@ func (d *suDatabaseGlobal) String() string {
 
 var _ = builtin(DoWithoutTriggers, "(tables, block)")
 
-func DoWithoutTriggers(t *Thread, args []Value) Value {
-	dbms := t.Dbms()
+func DoWithoutTriggers(th *Thread, args []Value) Value {
+	dbms := th.Dbms()
 	ob := ToContainer(args[0])
 	for i := ob.ListSize() - 1; i >= 0; i-- {
 		table := ToStr(ob.ListGet(i))
 		dbms.DisableTrigger(table)
 		defer dbms.EnableTrigger(table)
 	}
-	return t.Call(args[1])
+	return th.Call(args[1])
 }

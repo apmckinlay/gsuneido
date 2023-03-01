@@ -9,6 +9,6 @@ import (
 
 var _ = builtin(Timestamp, "()")
 
-func Timestamp(t *Thread, args []Value) Value {
-	return t.Dbms().Timestamp()
+func Timestamp(th *Thread, args []Value) Value {
+	return th.Dbms().Timestamp()
 }

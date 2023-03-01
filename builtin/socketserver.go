@@ -21,21 +21,21 @@ func init() {
 	Global.Builtin("SocketServer", ss)
 }
 
-func ssCallClass(t *Thread, as *ArgSpec, this Value, args []Value) Value {
+func ssCallClass(th *Thread, as *ArgSpec, this Value, args []Value) Value {
 	if OnUIThread() {
 		panic("SocketServer not allowed on UI thread")
 	}
-	name, port, as2 := ssArgs(t, as, this, args)
+	name, port, as2 := ssArgs(th, as, this, args)
 	class := this.(*SuClass)
-	sm := suServerMaster{SuInstance: class.New(t, as2)}
+	sm := suServerMaster{SuInstance: class.New(th, as2)}
 	sm.listen(ToStr(name), ToInt(port))
 	return nil
 }
 
-func ssArgs(t *Thread, as *ArgSpec, this Value, args []Value) (
+func ssArgs(th *Thread, as *ArgSpec, this Value, args []Value) (
 	name, port Value, as2 *ArgSpec) {
-	name = this.Get(t, SuStr("Name"))
-	port = this.Get(t, SuStr("Port"))
+	name = this.Get(th, SuStr("Name"))
+	port = this.Get(th, SuStr("Port"))
 	ai := NewArgsIter(as, args)
 	k, v := ai()
 	if v != nil && k == nil {
@@ -57,7 +57,7 @@ func ssArgs(t *Thread, as *ArgSpec, this Value, args []Value) (
 			port = v
 		} else {
 			nargs++
-			t.Push(v)
+			th.Push(v)
 			if k != nil {
 				spec = append(spec, byte(len(names)))
 				names = append(names, k)
@@ -66,13 +66,13 @@ func ssArgs(t *Thread, as *ArgSpec, this Value, args []Value) (
 	}
 	if name != nil {
 		nargs++
-		t.Push(name)
+		th.Push(name)
 		spec = append(spec, byte(len(names)))
 		names = append(names, SuStr("Name"))
 	}
 	if port != nil {
 		nargs++
-		t.Push(port)
+		th.Push(port)
 		spec = append(spec, byte(len(names)))
 		names = append(names, SuStr("Port"))
 	}
@@ -151,14 +151,14 @@ type suServerConnect struct {
 	manualClose bool
 }
 
-func (sc *suServerConnect) Lookup(t *Thread, method string) Callable {
+func (sc *suServerConnect) Lookup(th *Thread, method string) Callable {
 	if f, ok := socketServerMethods[method]; ok {
 		return f
 	}
-	if f := sc.client.Lookup(t, method); f != nil {
+	if f := sc.client.Lookup(th, method); f != nil {
 		return f
 	}
-	return sc.SuInstance.Lookup(t, method)
+	return sc.SuInstance.Lookup(th, method)
 }
 
 func (sc *suServerConnect) close() {

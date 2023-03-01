@@ -100,7 +100,7 @@ func named(args []Value) Value {
 	return d
 }
 
-func (d *suDateGlobal) Get(t *Thread, key Value) Value {
+func (d *suDateGlobal) Get(th *Thread, key Value) Value {
 	m := ToStr(key)
 	if fn, ok := dateStaticMethods[m]; ok {
 		return fn.(Value)
@@ -111,11 +111,11 @@ func (d *suDateGlobal) Get(t *Thread, key Value) Value {
 	return nil
 }
 
-func (d *suDateGlobal) Lookup(t *Thread, method string) Callable {
+func (d *suDateGlobal) Lookup(th *Thread, method string) Callable {
 	if fn, ok := dateStaticMethods[method]; ok {
 		return fn
 	}
-	return d.SuBuiltin.Lookup(t, method) // for Params
+	return d.SuBuiltin.Lookup(th, method) // for Params
 }
 
 func (d *suDateGlobal) String() string {
@@ -180,7 +180,7 @@ func date_GetLocalGMTBias(this Value) Value { // should be static
 var _ = method(date_Plus, "(years=0, months=0, days=0, "+
 	"hours=0, minutes=0, seconds=0, milliseconds=0)")
 
-func date_Plus(t *Thread, this Value, args []Value) Value {
+func date_Plus(th *Thread, this Value, args []Value) Value {
 	return this.(SuDate).Plus(ToInt(args[0]), ToInt(args[1]),
 		ToInt(args[2]), ToInt(args[3]), ToInt(args[4]),
 		ToInt(args[5]), ToInt(args[6]))

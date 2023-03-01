@@ -7,8 +7,8 @@ import . "github.com/apmckinlay/gsuneido/runtime"
 
 var _ = builtin(display, "(value, quotes=0)")
 
-func display(t *Thread, args []Value) Value {
-	defer func(q int) { t.Quote = q }(t.Quote)
-	t.Quote = ToInt(args[1])
-	return SuStr(Display(t, args[0]))
+func display(th *Thread, args []Value) Value {
+	defer func(q int) { th.Quote = q }(th.Quote)
+	th.Quote = ToInt(args[1])
+	return SuStr(Display(th, args[0]))
 }

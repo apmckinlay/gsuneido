@@ -760,8 +760,8 @@ var DateMethods Methods
 
 var gnDates = Global.Num("Dates")
 
-func (SuDate) Lookup(t *Thread, method string) Callable {
-	return Lookup(t, DateMethods, gnDates, method)
+func (SuDate) Lookup(th *Thread, method string) Callable {
+	return Lookup(th, DateMethods, gnDates, method)
 }
 
 // Packable interface -----------------------------------------------

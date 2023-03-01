@@ -37,7 +37,7 @@ var nFile atomic.Int32
 
 var _ = builtin(File, "(filename, mode='r', block=false)")
 
-func File(t *Thread, args []Value) Value {
+func File(th *Thread, args []Value) Value {
 	name := ToStr(args[0])
 	mode := ToStr(args[1])
 	sf := newSuFile(name, mode)
@@ -47,7 +47,7 @@ func File(t *Thread, args []Value) Value {
 	}
 	// block form
 	defer sf.close()
-	return t.Call(args[2], sf)
+	return th.Call(args[2], sf)
 }
 
 func newSuFile(name, mode string) *suFile {

@@ -112,10 +112,10 @@ func method(f any, p string) any {
 		assert.That(ps.Nparams == 3)
 		curMethods[name] = &SuBuiltinMethod3{SuBuiltin4: SuBuiltin4{Fn: f,
 			BuiltinParams: BuiltinParams{ParamSpec: ps}}}
-	case func(t *Thread, this Value, args []Value) Value:
+	case func(th *Thread, this Value, args []Value) Value:
 		curMethods[name] = &SuBuiltinMethod{Fn: f,
 			BuiltinParams: BuiltinParams{ParamSpec: ps}}
-	case func(t *Thread, as *ArgSpec, this Value, args []Value) Value:
+	case func(th *Thread, as *ArgSpec, this Value, args []Value) Value:
 		// params are just for documentation
 		curMethods[name] = &SuBuiltinMethodRaw{Fn: f, ParamSpec: params(p)}
 	default:

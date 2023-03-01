@@ -12,36 +12,36 @@ import (
 	"github.com/apmckinlay/gsuneido/util/generic/ord"
 )
 
-func (t *Thread) Args(ps *ParamSpec, as *ArgSpec) []Value {
+func (th *Thread) Args(ps *ParamSpec, as *ArgSpec) []Value {
 	if ps.Signature^as.Signature == 0xff {
 		// fast path if signatures match, hopefully inlined
-		return t.stack[t.sp-int(as.Nargs):]
+		return th.stack[th.sp-int(as.Nargs):]
 	}
-	return t.args(ps, as)
+	return th.args(ps, as)
 }
 
 // args adjusts sp to shrink or grow the stack
 // so the correct amount is reserved for the function
 // and then calls massage
 // It returns a slice of the stack containing the locals
-func (t *Thread) args(ps *ParamSpec, as *ArgSpec) []Value {
+func (th *Thread) args(ps *ParamSpec, as *ArgSpec) []Value {
 	nargs := int(as.Nargs)
-	base := t.sp - nargs
+	base := th.sp - nargs
 
 	// reserve stack space for params
 	for expand := int(ps.Nparams) - nargs; expand > 0; expand-- {
-		t.Push(nil)
+		th.Push(nil)
 	}
-	locals := t.stack[base:]
+	locals := th.stack[base:]
 	for i := 0; i < nargs; i++ {
 		if locals[i] == nil {
 			panic("missing argument " + strconv.Itoa(i) + " in " + as.String())
 		}
 	}
-	t.massage(ps, as, locals)
+	th.massage(ps, as, locals)
 
 	// shrink stack if excess args
-	t.sp = base + int(ps.Nparams)
+	th.sp = base + int(ps.Nparams)
 
 	return locals
 }
@@ -52,7 +52,7 @@ const MaxArgs = 200
 // massage adjust the arguments on the stack (described by ArgSpec)
 // to match what is expected by the function (described by ParamSpec)
 // The stack must already have been expanded (e.g. by args)
-func (t *Thread) massage(ps *ParamSpec, as *ArgSpec, args []Value) {
+func (th *Thread) massage(ps *ParamSpec, as *ArgSpec, args []Value) {
 	unnamed := int(as.Nargs) - len(as.Spec) // only valid if !atArg
 	atParam := ps.Nparams == 1 && ps.Flags[0] == AtParam
 	atArg := as.Each >= EACH0
@@ -102,7 +102,7 @@ func (t *Thread) massage(ps *ParamSpec, as *ArgSpec, args []Value) {
 		}
 		// named members may overwrite unnamed (same as when passed individually)
 		for i := 0; i < int(ps.Nparams); i++ {
-			if x := ob.GetIfPresent(t, SuStr(ps.ParamName(i))); x != nil {
+			if x := ob.GetIfPresent(th, SuStr(ps.ParamName(i))); x != nil {
 				args[i] = x
 			}
 		}
@@ -130,7 +130,7 @@ func (t *Thread) massage(ps *ParamSpec, as *ArgSpec, args []Value) {
 	// fill in dynamic
 	for i := 0; i < int(ps.Nparams); i++ {
 		if args[i] == nil && ps.Flags[i]&DynParam != 0 {
-			if x := t.dyn("_" + ps.ParamName(i)); x != nil {
+			if x := th.dyn("_" + ps.ParamName(i)); x != nil {
 				args[i] = x
 			}
 		}
@@ -152,9 +152,9 @@ func (t *Thread) massage(ps *ParamSpec, as *ArgSpec, args []Value) {
 	}
 }
 
-func (t *Thread) dyn(name string) Value {
-	for i := t.fp - 1; i >= 0; i-- {
-		fr := t.frames[i]
+func (th *Thread) dyn(name string) Value {
+	for i := th.fp - 1; i >= 0; i-- {
+		fr := th.frames[i]
 		for j, s := range fr.fn.Names {
 			if s == name {
 				if x := fr.locals.v[j]; x != nil {

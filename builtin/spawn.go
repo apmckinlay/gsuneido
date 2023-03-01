@@ -16,7 +16,7 @@ var InheritHandles = false
 
 var _ = builtin(Spawn, "(@args)")
 
-func Spawn(t *Thread, as *ArgSpec, rawargs []Value) Value {
+func Spawn(th *Thread, as *ArgSpec, rawargs []Value) Value {
 	const wait = 0
 	const nowait = 1
 	iter := NewArgsIter(as, rawargs)

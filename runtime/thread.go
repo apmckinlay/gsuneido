@@ -102,67 +102,67 @@ var nThread atomic.Int32
 func NewThread(parent *Thread) *Thread {
 	n := nThread.Add(1)
 	name := "Thread-" + strconv.Itoa(int(n))
-	t := &Thread{Num: n, Name: name}
+	th := &Thread{Num: n, Name: name}
 	if parent != nil && parent.Suneido != nil {
 		parent.Suneido.SetConcurrent()
-		t.Suneido = parent.Suneido
+		th.Suneido = parent.Suneido
 	}
 	mts := ""
 	if MainThread != nil {
 		mts = MainThread.Session()
 	}
-	t.session.Store(str.Opt(mts, ":") + name)
-	return t
+	th.session.Store(str.Opt(mts, ":") + name)
+	return th
 }
 
-func (t *Thread) Session() string {
-	if t.subThreadOf != nil {
-		t = t.subThreadOf
+func (th *Thread) Session() string {
+	if th.subThreadOf != nil {
+		th = th.subThreadOf
 	}
-	return t.session.Load()
+	return th.session.Load()
 }
 
-func (t *Thread) SetSession(s string) {
-	if t.subThreadOf != nil {
-		t = t.subThreadOf
+func (th *Thread) SetSession(s string) {
+	if th.subThreadOf != nil {
+		th = th.subThreadOf
 	}
-	t.session.Store(s)
+	th.session.Store(s)
 }
 
 // Push pushes a value onto the value stack
-func (t *Thread) Push(x Value) {
-	if t.sp >= maxStack {
+func (th *Thread) Push(x Value) {
+	if th.sp >= maxStack {
 		panic("value stack overflow")
 	}
-	t.stack[t.sp] = x
-	t.sp++
+	th.stack[th.sp] = x
+	th.sp++
 }
 
 // Pop pops a value off the value stack
-func (t *Thread) Pop() Value {
-	t.sp--
-	return t.stack[t.sp]
+func (th *Thread) Pop() Value {
+	th.sp--
+	return th.stack[th.sp]
 }
 
 // Top returns the top of the value stack (without modifying the stack)
-func (t *Thread) Top() Value {
-	return t.stack[t.sp-1]
+func (th *Thread) Top() Value {
+	return th.stack[th.sp-1]
 }
 
 // Swap exchanges the top two values on the stack
-func (t *Thread) Swap() {
-	t.stack[t.sp-1], t.stack[t.sp-2] = t.stack[t.sp-2], t.stack[t.sp-1]
+func (th *Thread) Swap() {
+	th.stack[th.sp-1], th.stack[th.sp-2] = th.stack[th.sp-2], th.stack[th.sp-1]
 }
 
 // Reset sets a Thread back to its initial state
-func (t *Thread) Reset() {
-	t.fp = 0
-	t.sp = 0
-	t.Name = ""
-	t.blockReturnFrame = nil
-	t.InHandler = false
-	t.Suneido = nil
-	t.session.Store("")
+func (th *Thread) Reset() {
+	th.fp = 0
+	th.sp = 0
+	th.Name = ""
+	th.blockReturnFrame = nil
+	th.InHandler = false
+	th.Suneido = nil
+	th.session.Store("")
 }
 
 // GetState and RestoreState are used by callbacks_windows.go
@@ -172,28 +172,28 @@ type state struct {
 	sp int
 }
 
-func (t *Thread) GetState() state {
-	return state{fp: t.fp, sp: t.sp}
+func (th *Thread) GetState() state {
+	return state{fp: th.fp, sp: th.sp}
 }
 
-func (t *Thread) RestoreState(st any) {
+func (th *Thread) RestoreState(st any) {
 	s := st.(state)
-	t.fp = s.fp
-	t.sp = s.sp
+	th.fp = s.fp
+	th.sp = s.sp
 }
 
 // Callstack captures the call stack
-func (t *Thread) Callstack() *SuObject {
+func (th *Thread) Callstack() *SuObject {
 	// NOTE: it might be more efficient
 	// to capture the call stack in an internal format
 	// and only build the SuObject if required
 	cs := &SuObject{}
-	for i := t.fp - 1; i >= 0; i-- {
-		fr := t.frames[i]
+	for i := th.fp - 1; i >= 0; i-- {
+		fr := th.frames[i]
 		call := &SuObject{}
 		call.Set(SuStr("fn"), fr.fn)
 		call.Set(SuStr("srcpos"), IntVal(fr.fn.CodeToSrcPos(fr.ip-1)))
-		call.Set(SuStr("locals"), t.locals(i))
+		call.Set(SuStr("locals"), th.locals(i))
 		cs.Add(call)
 		if cs.Size() > 50 {
 			break
@@ -202,12 +202,12 @@ func (t *Thread) Callstack() *SuObject {
 	return cs
 }
 
-func (t *Thread) Locals(i int) *SuObject {
-	return t.locals(t.fp - 1 - i)
+func (th *Thread) Locals(i int) *SuObject {
+	return th.locals(th.fp - 1 - i)
 }
 
-func (t *Thread) locals(i int) *SuObject {
-	fr := t.frames[i]
+func (th *Thread) locals(i int) *SuObject {
+	fr := th.frames[i]
 	locals := &SuObject{}
 	if fr.this != nil {
 		locals.Set(SuStr("this"), fr.this)
@@ -221,19 +221,19 @@ func (t *Thread) locals(i int) *SuObject {
 }
 
 // PrintStack outputs the thread's call stack to stderr
-func (t *Thread) PrintStack() {
-	t.printStack(os.Stderr, 20)
+func (th *Thread) PrintStack() {
+	th.printStack(os.Stderr, 20)
 }
 
 // TraceStack outputs the thread's call stack to trace
-func (t *Thread) TraceStack() {
-	t.printStack(trace.Writer, 6)
+func (th *Thread) TraceStack() {
+	th.printStack(trace.Writer, 6)
 }
 
-func (t *Thread) printStack(w io.Writer, max int) {
-	limit := ord.Max(t.fp-max, 0)
-	for i := t.fp - 1; i >= limit; i-- {
-		frame := t.frames[i]
+func (th *Thread) printStack(w io.Writer, max int) {
+	limit := ord.Max(th.fp-max, 0)
+	for i := th.fp - 1; i >= limit; i-- {
+		frame := th.frames[i]
 		fmt.Fprintln(w, frame.fn)
 	}
 }
@@ -249,15 +249,15 @@ func PrintStack(cs *SuObject) {
 	}
 }
 
-func (t *Thread) TraceCaller() {
-	if i := t.fp - 1; i >= 0 {
-		trace.Println(t.frames[i].fn)
+func (th *Thread) TraceCaller() {
+	if i := th.fp - 1; i >= 0 {
+		trace.Println(th.frames[i].fn)
 	}
 }
 
 // SetDbms is used to set up the main thread initially
-func (t *Thread) SetDbms(dbms IDbms) {
-	t.dbms = dbms
+func (th *Thread) SetDbms(dbms IDbms) {
+	th.dbms = dbms
 }
 
 // GetDbms requires dependency injection
@@ -265,22 +265,22 @@ var GetDbms func() IDbms
 
 var DbmsAuth = false
 
-func (t *Thread) Dbms() IDbms {
-	if t.dbms == nil {
-		t.dbms = GetDbms()
-		if s := t.session.Load(); s != "" {
+func (th *Thread) Dbms() IDbms {
+	if th.dbms == nil {
+		th.dbms = GetDbms()
+		if s := th.session.Load(); s != "" {
 			// session id was set before connecting
-			t.dbms.SessionId(t, s)
+			th.dbms.SessionId(th, s)
 		}
 	}
-	return t.dbms.Unwrap()
+	return th.dbms.Unwrap()
 }
 
 // Close closes the thread's dbms connection (if it has one)
-func (t *Thread) Close() {
-	if t.dbms != nil && options.Action == "client" {
-		t.dbms.Close()
-		t.dbms = nil
+func (th *Thread) Close() {
+	if th.dbms != nil && options.Action == "client" {
+		th.dbms.Close()
+		th.dbms = nil
 	}
 }
 
@@ -290,32 +290,32 @@ func (t *Thread) Close() {
 // but we don't need the overhead of another dbms connection.
 // WARNING: This should only be used where it is guaranteed
 // that the Threads will NOT be used concurrently.
-func (t *Thread) SubThread() *Thread {
-	t2 := NewThread(t)
-	t2.dbms = t.dbms
-	t2.subThreadOf = t
+func (th *Thread) SubThread() *Thread {
+	t2 := NewThread(th)
+	t2.dbms = th.dbms
+	t2.subThreadOf = th
 	return t2
 }
 
-func (t *Thread) Cat(x, y Value) Value {
-	return OpCat(t, x, y)
+func (th *Thread) Cat(x, y Value) Value {
+	return OpCat(th, x, y)
 }
 
-func (t *Thread) SessionId(id string) string {
-	if t.dbms == nil {
+func (th *Thread) SessionId(id string) string {
+	if th.dbms == nil {
 		// don't create a connection just to get/set the session id
 		if id != "" {
-			t.SetSession(id)
+			th.SetSession(id)
 		}
-		return t.Session()
+		return th.Session()
 	}
-	return t.dbms.SessionId(t, id)
+	return th.dbms.SessionId(th, id)
 }
 
-func (t *Thread) RunWithMainSuneido(fn func() Value) Value {
+func (th *Thread) RunWithMainSuneido(fn func() Value) Value {
 	defer func(orig *SuneidoObject) {
-		t.Suneido = orig
-	}(t.Suneido)
-	t.Suneido = nil
+		th.Suneido = orig
+	}(th.Suneido)
+	th.Suneido = nil
 	return fn()
 }

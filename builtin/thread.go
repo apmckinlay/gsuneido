@@ -31,10 +31,10 @@ type threadList struct {
 
 var threads = threadList{list: map[int32]*Thread{}}
 
-func (ts *threadList) add(t *Thread) {
+func (ts *threadList) add(th *Thread) {
 	ts.lock.Lock()
 	defer ts.lock.Unlock()
-	ts.list[t.Num] = t
+	ts.list[th.Num] = th
 }
 
 func (ts *threadList) remove(num int32) {
@@ -49,13 +49,13 @@ func (ts *threadList) count() int {
 	return len(ts.list)
 }
 
-func threadCallClass(t *Thread, args []Value) Value {
+func threadCallClass(th *Thread, args []Value) Value {
 	if options.ThreadDisabled {
 		return nil
 	}
 	fn := args[0]
 	fn.SetConcurrent()
-	t2 := NewThread(t)
+	t2 := NewThread(th)
 	threads.add(t2)
 	go func() {
 		defer func() {
@@ -74,11 +74,11 @@ var threadMethods = methods()
 
 var _ = method(thread_Name, "(name=false)")
 
-func thread_Name(t *Thread, _ Value, args []Value) Value {
+func thread_Name(th *Thread, _ Value, args []Value) Value {
 	if args[0] != False {
-		t.Name = str.BeforeFirst(t.Name, " ") + " " + ToStr(args[0])
+		th.Name = str.BeforeFirst(th.Name, " ") + " " + ToStr(args[0])
 	}
-	return SuStr(t.Name)
+	return SuStr(th.Name)
 }
 
 var _ = method(thread_Count, "()")
@@ -108,11 +108,11 @@ func thread_Sleep(this, ms Value) Value {
 
 var _ = method(thread_Profile, "(block)")
 
-func thread_Profile(t *Thread, _ Value, args []Value) Value {
-	t.StartProfile()
-	defer t.StopProfile()
-	t.Call(args[0])
-	total, self, ops, calls := t.StopProfile()
+func thread_Profile(th *Thread, _ Value, args []Value) Value {
+	th.StartProfile()
+	defer th.StopProfile()
+	th.Call(args[0])
+	total, self, ops, calls := th.StopProfile()
 	prof := &SuObject{}
 	for name, op := range ops {
 		ob := &SuObject{}
@@ -128,12 +128,12 @@ func thread_Profile(t *Thread, _ Value, args []Value) Value {
 
 var _ = method(thread_NewSuneidoGlobal, "()")
 
-func thread_NewSuneidoGlobal(t *Thread, _ Value, _ []Value) Value {
-	t.Suneido = new(SuneidoObject)
+func thread_NewSuneidoGlobal(th *Thread, _ Value, _ []Value) Value {
+	th.Suneido = new(SuneidoObject)
 	return nil
 }
 
-func (d *suThreadGlobal) Get(t *Thread, key Value) Value {
+func (d *suThreadGlobal) Get(th *Thread, key Value) Value {
 	m := ToStr(key)
 	if fn, ok := threadMethods[m]; ok {
 		return fn.(Value)
@@ -144,11 +144,11 @@ func (d *suThreadGlobal) Get(t *Thread, key Value) Value {
 	return nil
 }
 
-func (d *suThreadGlobal) Lookup(t *Thread, method string) Callable {
+func (d *suThreadGlobal) Lookup(th *Thread, method string) Callable {
 	if f, ok := threadMethods[method]; ok {
 		return f
 	}
-	return d.SuBuiltin.Lookup(t, method) // for Params
+	return d.SuBuiltin.Lookup(th, method) // for Params
 }
 
 func (d *suThreadGlobal) String() string {

@@ -22,7 +22,7 @@ func init() {
 			BuiltinParams: BuiltinParams{ParamSpec: ps}}})
 }
 
-var lruCacheCallClass = func(t *Thread, args []Value) Value {
+var lruCacheCallClass = func(th *Thread, args []Value) Value {
 	fn := args[0]
 	size := ToInt(args[1])
 	okForResetAll := ToBool(args[2])
@@ -43,11 +43,11 @@ func lru_ResetAll(th *Thread, _ []Value) Value {
 	return nil
 }
 
-func (d *suLruCacheGlobal) Lookup(t *Thread, method string) Callable {
+func (d *suLruCacheGlobal) Lookup(th *Thread, method string) Callable {
 	if f, ok := lruCacheClassMethods[method]; ok {
 		return f
 	}
-	return d.SuBuiltin.Lookup(t, method) // for Params
+	return d.SuBuiltin.Lookup(th, method) // for Params
 }
 
 func (d *suLruCacheGlobal) String() string {
@@ -64,7 +64,7 @@ var suLruCacheMethods = methods()
 var _ = method(lru_Get, "(@args)")
 
 func lru_Get(
-	t *Thread, as *ArgSpec, this Value, args []Value) Value {
+	th *Thread, as *ArgSpec, this Value, args []Value) Value {
 	if as.Nargs == 0 {
 		panic("missing argument")
 	}
@@ -83,7 +83,7 @@ func lru_Get(
 	slc := this.(*suLruCache)
 	val := slc.Fetch(key)
 	if val == nil {
-		val = slc.Fn.Call(t, nil, as) // call with existing stack args
+		val = slc.Fn.Call(th, nil, as) // call with existing stack args
 		slc.Insert(key, val)
 	}
 	return val
@@ -91,12 +91,12 @@ func lru_Get(
 
 var _ = method(lru_GetN, "(@x)")
 
-func lru_GetN(t *Thread, this Value, args []Value) Value {
+func lru_GetN(th *Thread, this Value, args []Value) Value {
 	slc := this.(*suLruCache)
 	key := args[0]
 	val := slc.Fetch(key)
 	if val == nil {
-		val = t.CallEach(slc.Fn, key)
+		val = th.CallEach(slc.Fn, key)
 		slc.Insert(key, val)
 	}
 	return val
@@ -104,12 +104,12 @@ func lru_GetN(t *Thread, this Value, args []Value) Value {
 
 var _ = method(lru_GetN1, "(x)")
 
-func lru_GetN1(t *Thread, this Value, args []Value) Value {
+func lru_GetN1(th *Thread, this Value, args []Value) Value {
 	slc := this.(*suLruCache)
 	key := args[0]
 	val := slc.Fetch(key)
 	if val == nil {
-		val = t.CallEach(slc.Fn, key)
+		val = th.CallEach(slc.Fn, key)
 		slc.Insert(key, val)
 	}
 	return val

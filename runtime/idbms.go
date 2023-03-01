@@ -36,7 +36,7 @@ type IDbms interface {
 	Dump(table string) string
 
 	// Exec is used by the new style ServerEval(...)
-	Exec(t *Thread, args Value) Value
+	Exec(th *Thread, args Value) Value
 
 	// Final returns the current number of final transactions
 	Final() int
@@ -76,7 +76,7 @@ type IDbms interface {
 	Schema(table string) string
 
 	// SessionId sets and/or returns the session id for the current connection
-	SessionId(t *Thread, id string) string
+	SessionId(th *Thread, id string) string
 
 	// Size returns the current database size
 	Size() uint64

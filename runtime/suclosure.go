@@ -27,7 +27,7 @@ func (b *SuClosure) String() string {
 	return "/* block */"
 }
 
-func (b *SuClosure) Call(t *Thread, this Value, as *ArgSpec) Value {
+func (b *SuClosure) Call(th *Thread, this Value, as *ArgSpec) Value {
 	bf := &b.SuFunc
 
 	v := b.locals
@@ -37,7 +37,7 @@ func (b *SuClosure) Call(t *Thread, this Value, as *ArgSpec) Value {
 	}
 
 	// normally done by SuFunc Call
-	args := t.Args(&b.ParamSpec, as)
+	args := th.Args(&b.ParamSpec, as)
 
 	// copy args
 	for i := 0; i < int(b.Nparams); i++ {
@@ -47,7 +47,7 @@ func (b *SuClosure) Call(t *Thread, this Value, as *ArgSpec) Value {
 	if this == nil {
 		this = b.this
 	}
-	return t.run(Frame{fn: bf, this: this, blockParent: b.parent,
+	return th.run(Frame{fn: bf, this: this, blockParent: b.parent,
 		locals: locals{v: v, onHeap: true}})
 }
 

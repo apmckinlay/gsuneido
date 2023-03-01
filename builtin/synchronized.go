@@ -24,16 +24,16 @@ var sy synchInfo
 
 var _ = builtin(Synchronized, "(block)")
 
-func Synchronized(t *Thread, args []Value) Value {
+func Synchronized(th *Thread, args []Value) Value {
 	sy.threadLock.Lock()
-	reentry := sy.lockThread == t
+	reentry := sy.lockThread == th
 	sy.threadLock.Unlock()
 	if reentry {
-		return t.Call(args[0])
+		return th.Call(args[0])
 	}
 	sy.lock.Lock()
 	sy.threadLock.Lock()
-	sy.lockThread = t
+	sy.lockThread = th
 	sy.threadLock.Unlock()
 	defer func() {
 		sy.threadLock.Lock()
@@ -41,5 +41,5 @@ func Synchronized(t *Thread, args []Value) Value {
 		sy.threadLock.Unlock()
 		sy.lock.Unlock()
 	}()
-	return t.Call(args[0])
+	return th.Call(args[0])
 }

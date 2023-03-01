@@ -163,14 +163,14 @@ func (r *SuRecord) String() string {
 	return r.Display(nil)
 }
 
-func (r *SuRecord) Display(t *Thread) string {
+func (r *SuRecord) Display(th *Thread) string {
 	buf := limitBuf{}
-	r.rstring(t, &buf, nil)
+	r.rstring(th, &buf, nil)
 	return buf.String()
 }
 
-func (r *SuRecord) rstring(t *Thread, buf *limitBuf, inProgress vstack) {
-	r.ToObject().rstring2(t, buf, "[", "]", inProgress)
+func (r *SuRecord) rstring(th *Thread, buf *limitBuf, inProgress vstack) {
+	r.ToObject().rstring2(th, buf, "[", "]", inProgress)
 }
 
 var _ recursable = (*SuRecord)(nil)
@@ -336,15 +336,15 @@ func (r *SuRecord) IsNew() bool {
 	return r.status == NEW
 }
 
-func (r *SuRecord) Delete(t *Thread, key Value) bool {
-	return r.delete(t, key, r.ob.delete)
+func (r *SuRecord) Delete(th *Thread, key Value) bool {
+	return r.delete(th, key, r.ob.delete)
 }
 
-func (r *SuRecord) Erase(t *Thread, key Value) bool {
-	return r.delete(t, key, r.ob.erase)
+func (r *SuRecord) Erase(th *Thread, key Value) bool {
+	return r.delete(th, key, r.ob.erase)
 }
 
-func (r *SuRecord) delete(t *Thread, key Value, fn func(Value) bool) bool {
+func (r *SuRecord) delete(th *Thread, key Value, fn func(Value) bool) bool {
 	r.Lock()
 	defer r.Unlock()
 	r.ensureDeps()
@@ -358,7 +358,7 @@ func (r *SuRecord) delete(t *Thread, key Value, fn func(Value) bool) bool {
 	if fn(key) {
 		if keystr, ok := key.ToStr(); ok {
 			r.invalidateDependents(keystr)
-			r.callObservers(t, keystr)
+			r.callObservers(th, keystr)
 		}
 		return true
 	}
@@ -426,12 +426,12 @@ func (r *SuRecord) Iter() Iter {
 
 // ------------------------------------------------------------------
 
-func (r *SuRecord) Put(t *Thread, keyval, val Value) {
+func (r *SuRecord) Put(th *Thread, keyval, val Value) {
 	r.Lock()
 	defer r.Unlock()
-	r.put(t, keyval, val)
+	r.put(th, keyval, val)
 }
-func (r *SuRecord) put(t *Thread, keyval, val Value) {
+func (r *SuRecord) put(th *Thread, keyval, val Value) {
 	r.trace("Put", keyval, "=", val)
 	r.ensureDeps()
 	if key, ok := keyval.ToStr(); ok {
@@ -445,7 +445,7 @@ func (r *SuRecord) put(t *Thread, keyval, val Value) {
 			return
 		}
 		r.invalidateDependents(key)
-		r.callObservers(t, key)
+		r.callObservers(th, key)
 	} else { // key not a string
 		r.ob.set(keyval, val)
 	}
@@ -466,28 +466,28 @@ func (r *SuRecord) invalidateDependents(key string) {
 	}
 }
 
-func (r *SuRecord) GetPut(t *Thread, m, v Value,
+func (r *SuRecord) GetPut(th *Thread, m, v Value,
 	op func(x, y Value) Value, retOrig bool) Value {
 	r.Lock()
 	defer r.Unlock()
-	orig := r.get(t, m)
+	orig := r.get(th, m)
 	if orig == nil {
 		panic("uninitialized member: " + m.String())
 	}
 	v = op(orig, v)
-	r.put(t, m, v)
+	r.put(th, m, v)
 	if retOrig {
 		return orig
 	}
 	return v
 }
 
-func (r *SuRecord) Invalidate(t *Thread, key string) {
+func (r *SuRecord) Invalidate(th *Thread, key string) {
 	r.Lock()
 	defer r.Unlock()
 	r.ensureDeps()
 	r.invalidate(key)
-	r.callObservers(t, key)
+	r.callObservers(th, key)
 }
 
 func (r *SuRecord) invalidate(key string) {
@@ -524,16 +524,16 @@ func (r *SuRecord) RemoveObserver(ofn Value) bool {
 	return r.observers.Remove(ofn)
 }
 
-func (r *SuRecord) callObservers(t *Thread, key string) {
-	r.callObservers2(t, key)
+func (r *SuRecord) callObservers(th *Thread, key string) {
+	r.callObservers2(th, key)
 	for !r.invalidated.Empty() {
 		if k := r.invalidated.Take(); k != key {
-			r.callObservers2(t, k)
+			r.callObservers2(th, k)
 		}
 	}
 }
 
-func (r *SuRecord) callObservers2(t *Thread, key string) {
+func (r *SuRecord) callObservers2(th *Thread, key string) {
 	for _, ofn := range r.observers.List {
 		if !r.activeObservers.Has(activeObserver{ofn, key}) {
 			func(ofn Value, key string) {
@@ -542,7 +542,7 @@ func (r *SuRecord) callObservers2(t *Thread, key string) {
 				func() {
 					r.Unlock() // can't hold lock while calling observer
 					defer r.Lock()
-					t.PushCall(ofn, r, argSpecMember, SuStr(key))
+					th.PushCall(ofn, r, argSpecMember, SuStr(key))
 				}()
 			}(ofn, key)
 		}
@@ -565,14 +565,14 @@ func (a activeObserver) Equal(other any) bool {
 // ------------------------------------------------------------------
 
 // Get returns the value associated with a key, or defval if not found
-func (r *SuRecord) Get(t *Thread, key Value) Value {
+func (r *SuRecord) Get(th *Thread, key Value) Value {
 	r.Lock()
 	defer r.Unlock()
-	return r.get(t, key)
+	return r.get(th, key)
 }
-func (r *SuRecord) get(t *Thread, key Value) Value {
+func (r *SuRecord) get(th *Thread, key Value) Value {
 	r.trace("Get", key)
-	if val := r.getIfPresent(t, key); val != nil {
+	if val := r.getIfPresent(th, key); val != nil {
 		return val
 	}
 	return r.ob.defaultValue(key)
@@ -580,17 +580,17 @@ func (r *SuRecord) get(t *Thread, key Value) Value {
 
 // GetIfPresent is the same as Get
 // except it returns nil instead of defval for missing members
-func (r *SuRecord) GetIfPresent(t *Thread, keyval Value) Value {
+func (r *SuRecord) GetIfPresent(th *Thread, keyval Value) Value {
 	r.Lock()
 	defer r.Unlock()
-	return r.getIfPresent(t, keyval)
+	return r.getIfPresent(th, keyval)
 }
-func (r *SuRecord) getIfPresent(t *Thread, keyval Value) Value {
+func (r *SuRecord) getIfPresent(th *Thread, keyval Value) Value {
 	result := r.ob.getIfPresent(keyval)
 	if key, ok := keyval.ToStr(); ok {
 		// only do record stuff when key is a string
-		if t != nil {
-			if ar := t.rules.top(); ar.rec == r { // identity (not Equal)
+		if th != nil {
+			if ar := th.rules.top(); ar.rec == r { // identity (not Equal)
 				r.addDependent(ar.key, key)
 			}
 		}
@@ -602,7 +602,7 @@ func (r *SuRecord) getIfPresent(t *Thread, keyval Value) Value {
 		if result == nil || r.invalid[key] {
 			if x := r.getSpecial(key); x != nil {
 				result = x
-			} else if x = r.callRule(t, key); x != nil {
+			} else if x = r.callRule(th, key); x != nil {
 				result = x
 			}
 		}
@@ -623,10 +623,10 @@ func (r *SuRecord) getFromRow(key string) Value {
 
 // deps is used by ToRecord to create the dependencies for a field
 // but without unpacking if it's in the row
-func (r *SuRecord) deps(t *Thread, key string) {
+func (r *SuRecord) deps(th *Thread, key string) {
 	result := r.ob.getIfPresent(SuStr(key))
-	if t != nil {
-		if ar := t.rules.top(); ar.rec == r { // identity (not Equal)
+	if th != nil {
+		if ar := th.rules.top(); ar.rec == r { // identity (not Equal)
 			r.addDependent(ar.key, key)
 		}
 	}
@@ -637,7 +637,7 @@ func (r *SuRecord) deps(t *Thread, key string) {
 	}
 	if result == nil || r.invalid[key] {
 		if x := r.getSpecial(key); x == nil {
-			r.callRule(t, key)
+			r.callRule(th, key)
 		}
 	}
 }
@@ -646,7 +646,7 @@ func (r *SuRecord) deps(t *Thread, key string) {
 // It is like Get except it returns the value packed,
 // using the already packed value from the row when possible.
 // It does not add dependencies or handle special fields (e.g. _lower!)
-func (r *SuRecord) getPacked(t *Thread, key string) string {
+func (r *SuRecord) getPacked(th *Thread, key string) string {
 	result := r.ob.getIfPresent(SuStr(key)) // NOTE: ob.getIfPresent
 	packed := ""
 	if result == nil && r.row != nil { // even if !r.userow
@@ -656,7 +656,7 @@ func (r *SuRecord) getPacked(t *Thread, key string) string {
 		}
 	}
 	if result == nil || r.invalid[key] {
-		if x := r.callRule(t, key); x != nil {
+		if x := r.callRule(th, key); x != nil {
 			result = x
 		}
 	}
@@ -697,15 +697,15 @@ func (r *SuRecord) getSpecial(key string) Value {
 	return nil
 }
 
-func (r *SuRecord) callRule(t *Thread, key string) Value {
-	rule := r.getRule(t, key)
-	if rule == nil || t.rules.has(r, key) {
+func (r *SuRecord) callRule(th *Thread, key string) Value {
+	rule := r.getRule(th, key)
+	if rule == nil || th.rules.has(r, key) {
 		return nil
 	}
 	r.ensureDeps()
 	delete(r.invalid, key)
 	r.trace("call rule", key)
-	val := r.catchRule(t, rule, key)
+	val := r.catchRule(th, rule, key)
 	if val != nil && !r.ob.readonly {
 		r.ob.set(SuStr(key), val)
 	}
@@ -720,17 +720,17 @@ const maxRule = 256
 
 var ruleRx = regex.Compile(`\A[_a-zA-Z0-9?!]+\Z`)
 
-func (r *SuRecord) catchRule(t *Thread, rule Value, key string) Value {
-	t.rules.push(r, key)
+func (r *SuRecord) catchRule(th *Thread, rule Value, key string) Value {
+	th.rules.push(r, key)
 	defer func() {
-		t.rules.pop()
+		th.rules.pop()
 		if e := recover(); e != nil {
 			WrapPanic(e, "rule for "+key)
 		}
 	}()
 	r.Unlock() // can't hold lock while calling observer
 	defer r.Lock()
-	return t.CallThis(rule, r)
+	return th.CallThis(rule, r)
 }
 
 func WrapPanic(e any, suffix string) {
@@ -777,8 +777,8 @@ func (ar *activeRules) has(r *SuRecord, key string) bool {
 	return false
 }
 
-func (r *SuRecord) getRule(t *Thread, key string) Value {
-	if t == nil || !validRule(key) {
+func (r *SuRecord) getRule(th *Thread, key string) Value {
+	if th == nil || !validRule(key) {
 		return nil
 	}
 	if rule, ok := r.attachedRules[key]; ok {
@@ -788,7 +788,7 @@ func (r *SuRecord) getRule(t *Thread, key string) Value {
 	if r.ob.defval == nil {
 		return nil
 	}
-	return Global.FindName(t, "Rule_"+key)
+	return Global.FindName(th, "Rule_"+key)
 }
 
 func (r *SuRecord) AttachRule(key, callable Value) {
@@ -849,7 +849,7 @@ func (r *SuRecord) Transaction() *SuTran {
 }
 
 // ToRecord converts this SuRecord to a Record to be stored in the database
-func (r *SuRecord) ToRecord(t *Thread, hdr *Header) Record {
+func (r *SuRecord) ToRecord(th *Thread, hdr *Header) Record {
 	r.Lock()
 	defer r.Unlock()
 	r.ensureDeps()
@@ -858,7 +858,7 @@ func (r *SuRecord) ToRecord(t *Thread, hdr *Header) Record {
 	// ensure dependencies are created
 	for _, f := range fields {
 		if f != "-" {
-			r.deps(t, f)
+			r.deps(th, f)
 		}
 	}
 
@@ -884,12 +884,12 @@ func (r *SuRecord) ToRecord(t *Thread, hdr *Header) Record {
 				panic("multiple _TS fields not supported")
 			}
 			tsField = f
-			ts = t.Dbms().Timestamp()
+			ts = th.Dbms().Timestamp()
 			rb.Add(ts)
 		} else if d, ok := deps[f]; ok {
 			rb.Add(SuStr(strings.Join(d, ",")))
 		} else {
-			rb.AddRaw(r.getPacked(t, f))
+			rb.AddRaw(r.getPacked(th, f))
 		}
 	}
 	if tsField != "" && !r.isReadOnly() {
@@ -903,11 +903,11 @@ var RecordMethods Methods
 
 var gnRecords = Global.Num("Records")
 
-func (*SuRecord) Lookup(t *Thread, method string) Callable {
-	if m := Lookup(t, RecordMethods, gnRecords, method); m != nil {
+func (*SuRecord) Lookup(th *Thread, method string) Callable {
+	if m := Lookup(th, RecordMethods, gnRecords, method); m != nil {
 		return m
 	}
-	return (*SuObject)(nil).Lookup(t, method)
+	return (*SuObject)(nil).Lookup(th, method)
 }
 
 // Packable ---------------------------------------------------------

@@ -65,12 +65,12 @@ func string_Asc(this Value) Value {
 
 var _ = method(string_Compile, "(errob = false)")
 
-func string_Compile(t *Thread, this Value, args []Value) Value {
+func string_Compile(th *Thread, this Value, args []Value) Value {
 	if args[0] == False {
 		return compile.Constant(ToStr(this))
 	}
 	ob := ToContainer(args[0])
-	val, checks := compile.Checked(t, ToStr(this))
+	val, checks := compile.Checked(th, ToStr(this))
 	for _, w := range checks {
 		ob.Add(SuStr(w))
 	}
@@ -97,8 +97,8 @@ func string_Entab(this Value) Value {
 
 var _ = method(string_Eval, "()")
 
-func string_Eval(t *Thread, this Value, args []Value) Value {
-	result := compile.EvalString(t, ToStr(this))
+func string_Eval(th *Thread, this Value, args []Value) Value {
+	result := compile.EvalString(th, ToStr(this))
 	if result == nil {
 		return EmptyStr
 	}
@@ -107,9 +107,9 @@ func string_Eval(t *Thread, this Value, args []Value) Value {
 
 var _ = method(string_Eval2, "()")
 
-func string_Eval2(t *Thread, this Value, args []Value) Value {
+func string_Eval2(th *Thread, this Value, args []Value) Value {
 	ob := &SuObject{}
-	if result := compile.EvalString(t, ToStr(this)); result != nil {
+	if result := compile.EvalString(th, ToStr(this)); result != nil {
 		ob.Add(result)
 	}
 	return ob
@@ -272,14 +272,14 @@ func string_LowerQ(this Value) Value {
 
 var _ = method(string_MapN, "(n, block)")
 
-func string_MapN(t *Thread, this Value, args []Value) Value {
+func string_MapN(th *Thread, this Value, args []Value) Value {
 	s := ToStr(this)
 	n := IfInt(args[0])
 	block := args[1]
 	var buf strings.Builder
 	for i := 0; i < len(s); i += n {
 		end := ord.Min(i+n, len(s))
-		val := t.Call(block, SuStr(s[i:end]))
+		val := th.Call(block, SuStr(s[i:end]))
 		if val != nil {
 			buf.WriteString(AsStr(val))
 		}
@@ -383,12 +383,12 @@ func string_Repeat(this, arg Value) Value {
 
 var _ = method(string_Replace, "(pattern, block = '', count = false)")
 
-func string_Replace(t *Thread, this Value, args []Value) Value {
+func string_Replace(th *Thread, this Value, args []Value) Value {
 	count := math.MaxInt
 	if args[2] != False {
 		count = ToInt(args[2])
 	}
-	return replace(t, ToStr(this), ToStr(args[0]), args[1], count)
+	return replace(th, ToStr(this), ToStr(args[0]), args[1], count)
 }
 
 var _ = method(string_Reverse, "()")
@@ -407,8 +407,8 @@ func string_Reverse(this Value) Value {
 
 var _ = method(string_ServerEval, "()")
 
-func string_ServerEval(t *Thread, this Value, args []Value) Value {
-	return t.Dbms().Run(t, ToStr(this))
+func string_ServerEval(th *Thread, this Value, args []Value) Value {
+	return th.Dbms().Run(th, ToStr(this))
 }
 
 var _ = method(string_Size, "()")
@@ -457,9 +457,9 @@ func string_ToUtf8(this Value) Value {
 
 var _ = method(string_Tr, "(from, to='')")
 
-func string_Tr(t *Thread, this Value, args []Value) Value {
-	from := t.TrCache.Get(ToStr(args[0]))
-	to := t.TrCache.Get(ToStr(args[1]))
+func string_Tr(th *Thread, this Value, args []Value) Value {
+	from := th.TrCache.Get(ToStr(args[0]))
+	to := th.TrCache.Get(ToStr(args[1]))
 	return SuStr(tr.Replace(ToStr(this), from, to))
 }
 
@@ -497,11 +497,11 @@ func string_UpperQ(this Value) Value {
 	return SuBool(result)
 }
 
-func replace(t *Thread, s string, patarg string, reparg Value, count int) Value {
+func replace(th *Thread, s string, patarg string, reparg Value, count int) Value {
 	if count <= 0 || (patarg == "" && reparg == EmptyStr) {
 		return SuStr(s)
 	}
-	pat := t.RxCache.Get(patarg)
+	pat := th.RxCache.Get(patarg)
 	rep := ""
 	if !isFunc(reparg) {
 		rep = AsStr(reparg)
@@ -525,7 +525,7 @@ func replace(t *Thread, s string, patarg string, reparg Value, count int) Value 
 			buf.WriteString(t)
 		} else {
 			r := result[0].Part(s)
-			v := t.Call(reparg, SuStr(r))
+			v := th.Call(reparg, SuStr(r))
 			if v != nil {
 				r = AsStr(v)
 			}

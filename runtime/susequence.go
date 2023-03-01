@@ -108,17 +108,17 @@ func (seq *SuSequence) ToContainer() (Container, bool) {
 	return seq.instantiate(), true
 }
 
-func (seq *SuSequence) Get(t *Thread, key Value) Value {
-	return seq.instantiate().Get(t, key)
+func (seq *SuSequence) Get(th *Thread, key Value) Value {
+	return seq.instantiate().Get(th, key)
 }
 
-func (seq *SuSequence) Put(t *Thread, key Value, val Value) {
-	seq.instantiate().Put(t, key, val)
+func (seq *SuSequence) Put(th *Thread, key Value, val Value) {
+	seq.instantiate().Put(th, key, val)
 }
 
-func (seq *SuSequence) GetPut(t *Thread, key Value, val Value,
+func (seq *SuSequence) GetPut(th *Thread, key Value, val Value,
 	op func(x, y Value) Value, retOrig bool) Value {
-	return seq.instantiate().GetPut(t, key, val, op, retOrig)
+	return seq.instantiate().GetPut(th, key, val, op, retOrig)
 }
 
 func (seq *SuSequence) RangeTo(i int, j int) Value {
@@ -158,13 +158,13 @@ var SequenceMethods Methods
 
 var gnSequences = Global.Num("Sequences")
 
-func (seq *SuSequence) Lookup(t *Thread, method string) Callable {
+func (seq *SuSequence) Lookup(th *Thread, method string) Callable {
 	if seq.asSeq(method) {
-		if m := Lookup(t, SequenceMethods, gnSequences, method); m != nil {
+		if m := Lookup(th, SequenceMethods, gnSequences, method); m != nil {
 			return m
 		}
 	}
-	return seq.instantiate().Lookup(t, method)
+	return seq.instantiate().Lookup(th, method)
 }
 
 func (seq *SuSequence) asSeq(method string) bool {

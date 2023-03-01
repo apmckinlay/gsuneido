@@ -89,13 +89,13 @@ func (*SuClass) Type() types.Type {
 	return types.Class
 }
 
-func (c *SuClass) Get(t *Thread, m Value) Value {
-	return c.get1(t, c, m, nil)
+func (c *SuClass) Get(th *Thread, m Value) Value {
+	return c.get1(th, c, m, nil)
 }
 
-func (c *SuClass) get1(t *Thread, this Value, m Value, parents []*SuClass) Value {
+func (c *SuClass) get1(th *Thread, this Value, m Value, parents []*SuClass) Value {
 	ms := AsStr(m) //TODO not quite right - allows class { "4": }[4]
-	val := c.get2(t, ms, parents)
+	val := c.get2(th, ms, parents)
 	if val != nil {
 		if _, ok := val.(*SuFunc); ok {
 			return &SuMethod{fn: val, this: c}
@@ -103,27 +103,27 @@ func (c *SuClass) get1(t *Thread, this Value, m Value, parents []*SuClass) Value
 		return val
 	}
 	if !c.noGetter {
-		if getter := c.get2(t, "Getter_", parents); getter != nil {
-			return t.CallThis(getter, this, m)
+		if getter := c.get2(th, "Getter_", parents); getter != nil {
+			return th.CallThis(getter, this, m)
 		}
 		c.noGetter = true
 	}
 	getterName := "Getter_" + ms
-	if getter := c.get2(t, getterName, parents); getter != nil {
-		return t.CallThis(getter, this)
+	if getter := c.get2(th, getterName, parents); getter != nil {
+		return th.CallThis(getter, this)
 	}
 	return nil
 }
 
 // get2 looks for m in the current Data and then the parent's
-func (c *SuClass) get2(t *Thread, m string, parents []*SuClass) Value {
+func (c *SuClass) get2(th *Thread, m string, parents []*SuClass) Value {
 	if parents == nil {
 		for n := 0; ; n++ {
 			if x, ok := c.Data[m]; ok {
 				assert.That(x != nil)
 				return x
 			}
-			if c = c.Parent(t); c == nil {
+			if c = c.Parent(th); c == nil {
 				break
 			}
 			if n > inheritanceLimit {
@@ -154,11 +154,11 @@ func (*SuClass) IsConcurrent() Value {
 	return EmptyStr
 }
 
-func (c *SuClass) Parent(t *Thread) *SuClass {
+func (c *SuClass) Parent(th *Thread) *SuClass {
 	if c.Base <= 0 {
 		return nil
 	}
-	base := Global.Get(t, c.Base)
+	base := Global.Get(th, c.Base)
 	if baseClass, ok := base.(*SuClass); ok {
 		return baseClass
 	}
@@ -174,28 +174,28 @@ var ClassMethods Methods
 var DefaultNewMethod = &SuBuiltin0{func() Value { return nil },
 	BuiltinParams{ParamSpec: ParamSpec0}}
 
-func (c *SuClass) Lookup(t *Thread, method string) Callable {
-	return c.lookup(t, method, nil)
+func (c *SuClass) Lookup(th *Thread, method string) Callable {
+	return c.lookup(th, method, nil)
 }
 
-func (c *SuClass) lookup(t *Thread, method string, parents []*SuClass) Callable {
+func (c *SuClass) lookup(th *Thread, method string, parents []*SuClass) Callable {
 	if f, ok := ClassMethods[method]; ok {
 		return f
 	}
 	if f, ok := BaseMethods[method]; ok {
 		return f
 	}
-	if x := c.get2(t, method, parents); x != nil {
+	if x := c.get2(th, method, parents); x != nil {
 		return x
 	}
 	if method == "New" {
 		return DefaultNewMethod
 	}
-	if x := UserDef(t, gnObjects, method); x != nil {
+	if x := UserDef(th, gnObjects, method); x != nil {
 		return x
 	}
 	//TODO explicit CallClass doesn't go to Default in cSuneido or jSuneido
-	if x := c.get2(t, "Default", parents); x != nil {
+	if x := c.get2(th, "Default", parents); x != nil {
 		return &defaultAdapter{x, method}
 	}
 	return nil
@@ -207,43 +207,43 @@ type defaultAdapter struct {
 	method string
 }
 
-func (d *defaultAdapter) Call(t *Thread, this Value, as *ArgSpec) Value {
+func (d *defaultAdapter) Call(th *Thread, this Value, as *ArgSpec) Value {
 	method := SuStr(d.method)
 	if as.Each >= EACH0 {
-		args := ToContainer(t.Pop()).Slice(int(as.Each) - 1)
+		args := ToContainer(th.Pop()).Slice(int(as.Each) - 1)
 		args.Insert(0, method)
-		t.Push(args)
+		th.Push(args)
 		as = &ArgSpecEach0
 	} else if as.Nargs == 0 {
-		t.Push(method)
+		th.Push(method)
 		as = &ArgSpec1
 	} else {
-		t.Push(nil) // allow for another value
-		base := t.sp - 1 - int(as.Nargs)
-		copy(t.stack[base+1:], t.stack[base:]) // shift over
-		t.stack[base] = method
+		th.Push(nil) // allow for another value
+		base := th.sp - 1 - int(as.Nargs)
+		copy(th.stack[base+1:], th.stack[base:]) // shift over
+		th.stack[base] = method
 		as2 := *as
 		as2.Nargs++
 		as = &as2
 	}
-	return d.fn.Call(t, this, as)
+	return d.fn.Call(th, this, as)
 }
 
-func (c *SuClass) Call(t *Thread, this Value, as *ArgSpec) Value {
+func (c *SuClass) Call(th *Thread, this Value, as *ArgSpec) Value {
 	if this == nil {
 		this = c
 	}
-	if f := c.get2(t, "CallClass", nil); f != nil {
-		return f.Call(t, this, as)
+	if f := c.get2(th, "CallClass", nil); f != nil {
+		return f.Call(th, this, as)
 	}
 	// default for calling a class is to create an instance
-	return c.New(t, as)
+	return c.New(th, as)
 }
 
-func (c *SuClass) New(t *Thread, as *ArgSpec) *SuInstance {
-	ob := NewInstance(t, c)
-	nu := c.Lookup(t, "New")
-	nu.Call(t, ob, as)
+func (c *SuClass) New(th *Thread, as *ArgSpec) *SuInstance {
+	ob := NewInstance(th, c)
+	nu := c.Lookup(th, "New")
+	nu.Call(th, ob, as)
 	return ob
 }
 
@@ -254,12 +254,12 @@ func (c *SuClass) GetName() string {
 }
 
 // Finder implements Findable
-func (c *SuClass) Finder(t *Thread, fn func(v Value, mb *MemBase) Value) Value {
+func (c *SuClass) Finder(th *Thread, fn func(v Value, mb *MemBase) Value) Value {
 	for i := 0; i < inheritanceLimit; i++ {
 		if x := fn(c, &c.MemBase); x != nil {
 			return x
 		}
-		c = c.Parent(t)
+		c = c.Parent(th)
 		if c == nil {
 			return nil
 		}

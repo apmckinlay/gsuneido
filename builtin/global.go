@@ -10,14 +10,14 @@ import (
 
 var _ = builtin(global, "(name)")
 
-func global(t *Thread, args []Value) Value {
+func global(th *Thread, args []Value) Value {
 	s := ToStr(args[0])
 	global, s := str.Cut(s, '.')
-	val := Global.GetName(t, global)
+	val := Global.GetName(th, global)
 	for s != "" {
 		var mem string
 		mem, s = str.Cut(s, '.')
-		if val = val.Get(t, SuStr(mem)); val == nil {
+		if val = val.Get(th, SuStr(mem)); val == nil {
 			panic("Global: " + mem + " not found")
 		}
 	}

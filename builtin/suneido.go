@@ -18,13 +18,13 @@ var _ = exportMethods(&SuneidoObjectMethods)
 
 var _ = staticMethod(suneido_Compile, "(source, errob = false)")
 
-func suneido_Compile(t *Thread, args []Value) Value {
+func suneido_Compile(th *Thread, args []Value) Value {
 	src := ToStr(args[0])
 	if args[1] == False {
 		return compile.Constant(src)
 	}
 	ob := ToContainer(args[1])
-	val, checks := compile.Checked(t, src)
+	val, checks := compile.Checked(th, src)
 	for _, w := range checks {
 		ob.Add(SuStr(w))
 	}
@@ -33,7 +33,7 @@ func suneido_Compile(t *Thread, args []Value) Value {
 
 var _ = staticMethod(suneido_Parse, "(source)")
 
-func suneido_Parse(t *Thread, args []Value) Value {
+func suneido_Parse(th *Thread, args []Value) Value {
 	src := ToStr(args[0])
 	p := compile.AstParser(src)
 	ast := p.Const()
@@ -45,7 +45,7 @@ func suneido_Parse(t *Thread, args []Value) Value {
 
 var _ = staticMethod(suneido_GoMetric, "(name)")
 
-func suneido_GoMetric(t *Thread, args []Value) Value {
+func suneido_GoMetric(th *Thread, args []Value) Value {
 	sample := make([]metrics.Sample, 1)
 	sample[0].Name = ToStr(args[0])
 	metrics.Read(sample)

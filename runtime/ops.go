@@ -177,13 +177,13 @@ func OpUnaryMinus(x Value) Value {
 	return SuDnum{Dnum: ToDnum(x).Neg()}
 }
 
-func OpCat(t *Thread, x, y Value) Value {
+func OpCat(th *Thread, x, y Value) Value {
 	if ssx, ok := x.(SuStr); ok {
 		if ssy, ok := y.(SuStr); ok {
 			return cat2(string(ssx), string(ssy))
 		}
 	}
-	return cat3(t, x, y)
+	return cat3(th, x, y)
 }
 
 func cat2(xs, ys string) Value {
@@ -201,12 +201,12 @@ func cat2(xs, ys string) Value {
 	return NewSuConcat().Add(xs).Add(ys)
 }
 
-func cat3(t *Thread, x, y Value) Value {
+func cat3(th *Thread, x, y Value) Value {
 	var result Value
 	if xc, ok := x.(SuConcat); ok {
-		result = xc.Add(catToStr(t, y))
+		result = xc.Add(catToStr(th, y))
 	} else {
-		result = cat2(catToStr(t, x), catToStr(t, y))
+		result = cat2(catToStr(th, x), catToStr(th, y))
 	}
 	if xe, ok := x.(*SuExcept); ok {
 		return &SuExcept{SuStr: SuStr(AsStr(result)), Callstack: xe.Callstack}
@@ -217,19 +217,19 @@ func cat3(t *Thread, x, y Value) Value {
 	return result
 }
 
-func catToStr(t *Thread, v Value) string {
+func catToStr(th *Thread, v Value) string {
 	if d, ok := v.(ToStringable); ok {
-		return d.ToString(t)
+		return d.ToString(th)
 	}
 	return AsStr(v)
 }
 
-func OpMatch(t *Thread, x Value, y Value) SuBool {
+func OpMatch(th *Thread, x Value, y Value) SuBool {
 	var pat regex.Pattern
 	if r, ok := y.(SuRegex); ok {
 		pat = r.Pat
-	} else if t != nil {
-		pat = t.RxCache.Get(ToStr(y))
+	} else if th != nil {
+		pat = th.RxCache.Get(ToStr(y))
 	} else {
 		pat = regex.Compile(ToStr(y))
 	}
@@ -288,8 +288,8 @@ func OpIter(x Value) SuIter {
 	return SuIter{Iter: iterable.Iter()}
 }
 
-func OpCatch(t *Thread, e any, catchPat string) *SuExcept {
-	se := ToSuExcept(t, e)
+func OpCatch(th *Thread, e any, catchPat string) *SuExcept {
+	se := ToSuExcept(th, e)
 	if catchMatch(string(se.SuStr), catchPat) {
 		return se
 	}
@@ -297,7 +297,7 @@ func OpCatch(t *Thread, e any, catchPat string) *SuExcept {
 }
 
 // ToSuExcept converts to SuExcept, and also logs runtime and assert errors
-func ToSuExcept(t *Thread, e any) *SuExcept {
+func ToSuExcept(th *Thread, e any) *SuExcept {
 	se, ok := e.(*SuExcept)
 	if !ok {
 		// first catch creates SuExcept with callstack
@@ -308,16 +308,16 @@ func ToSuExcept(t *Thread, e any) *SuExcept {
 			if errors.As(e, &perr) {
 				log.Println("ERROR", e)
 				dbg.PrintStack()
-				printSuStack(t, e)
+				printSuStack(th, e)
 			}
 			ss = SuStr(e.Error())
 		case string:
-			logStringError(t, "", e)
+			logStringError(th, "", e)
 			ss = SuStr(e)
 		default:
 			ss = SuStr(ToStr(e.(Value)))
 		}
-		se = NewSuExcept(t, ss)
+		se = NewSuExcept(th, ss)
 	}
 	return se
 }

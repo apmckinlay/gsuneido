@@ -17,7 +17,7 @@ type Findable interface {
 	// Finder applies fn to a MemBase and all its parents
 	// stopping if fn returns something other than nil, and returning that value.
 	// Implemented by SuClass and SuInstance
-	Finder(t *Thread, fn func(v Value, mb *MemBase) Value) Value
+	Finder(th *Thread, fn func(v Value, mb *MemBase) Value) Value
 }
 
 func (mb *MemBase) AddMembersTo(ob *SuObject) {

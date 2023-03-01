@@ -9,7 +9,7 @@ import (
 
 var _ = builtin(Finally, "(main, final)")
 
-func Finally(t *Thread, args []Value) Value {
+func Finally(th *Thread, args []Value) Value {
 	defer func() {
 		e := recover()
 		func() {
@@ -18,11 +18,11 @@ func Finally(t *Thread, args []Value) Value {
 					recover() // if main block panics, ignore finally panic
 				}
 			}()
-			t.Call(args[1])
+			th.Call(args[1])
 		}()
 		if e != nil {
 			panic(e)
 		}
 	}()
-	return t.Call(args[0])
+	return th.Call(args[0])
 }

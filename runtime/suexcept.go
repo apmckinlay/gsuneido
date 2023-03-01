@@ -15,8 +15,8 @@ func BuiltinSuExcept(s string) *SuExcept {
 	return &SuExcept{SuStr: SuStr(s), Callstack: EmptyObject}
 }
 
-func NewSuExcept(t *Thread, s SuStr) *SuExcept {
-	return &SuExcept{SuStr: s, Callstack: t.Callstack()}
+func NewSuExcept(th *Thread, s SuStr) *SuExcept {
+	return &SuExcept{SuStr: s, Callstack: th.Callstack()}
 }
 
 // SuValue interface ------------------------------------------------
@@ -28,11 +28,11 @@ func (*SuExcept) Type() types.Type {
 // SuExceptMethods is initialized by the builtin package
 var SuExceptMethods Methods
 
-func (*SuExcept) Lookup(t *Thread, method string) Callable {
+func (*SuExcept) Lookup(th *Thread, method string) Callable {
 	if m := SuExceptMethods[method]; m != nil {
 		return m
 	}
-	return Lookup(t, StringMethods, gnStrings, method)
+	return Lookup(th, StringMethods, gnStrings, method)
 }
 
 func (e *SuExcept) SetConcurrent() {

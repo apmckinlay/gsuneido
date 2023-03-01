@@ -76,11 +76,11 @@ func (sco *suCOMObject) Put(_ *Thread, mem Value, val Value) {
 
 }
 
-func (sco *suCOMObject) GetPut(t *Thread, m Value, v Value,
+func (sco *suCOMObject) GetPut(th *Thread, m Value, v Value,
 	op func(x, y Value) Value, retOrig bool) Value {
-	orig := sco.Get(t, m)
+	orig := sco.Get(th, m)
 	v = op(orig, v)
-	sco.Put(t, m, v)
+	sco.Put(th, m, v)
 	if retOrig {
 		return orig
 	}
@@ -100,7 +100,7 @@ func (sco *suCOMObject) Lookup(_ *Thread, method string) Callable {
 		return f
 	}
 	return &SuBuiltinMethodRaw{
-		Fn: func(t *Thread, as *ArgSpec, this Value, args []Value) Value {
+		Fn: func(th *Thread, as *ArgSpec, this Value, args []Value) Value {
 			return sco.call(method, as, args)
 		}}
 }

@@ -45,8 +45,8 @@ var TranMethods Methods
 
 var gnTrans = Global.Num("Transactions")
 
-func (st *SuTran) Lookup(t *Thread, method string) Callable {
-	return Lookup(t, TranMethods, gnTrans, method)
+func (st *SuTran) Lookup(th *Thread, method string) Callable {
+	return Lookup(th, TranMethods, gnTrans, method)
 }
 
 //-------------------------------------------------------------------

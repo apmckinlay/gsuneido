@@ -14,16 +14,16 @@ type Container interface {
 	Slice(n int) Container
 	DeleteAll()
 	Insert(at int, val Value)
-	Erase(t *Thread, key Value) bool
-	Delete(t *Thread, key Value) bool
-	GetIfPresent(t *Thread, key Value) Value
+	Erase(th *Thread, key Value) bool
+	Delete(th *Thread, key Value) bool
+	GetIfPresent(th *Thread, key Value) Value
 	IsReadOnly() bool
 	SetReadOnly()
 	ArgsIter() func() (Value, Value)
 	Iter2(list bool, named bool) func() (Value, Value)
 	HasKey(key Value) bool
 	ToObject() *SuObject
-	ToRecord(t *Thread, hdr *Header) Record
+	ToRecord(th *Thread, hdr *Header) Record
 	IsConcurrent() Value
 }
 

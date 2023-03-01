@@ -159,10 +159,10 @@ func BenchmarkLoadStore(b *testing.B) {
 func BenchmarkLoadStore2(b *testing.B) {
 	x := One
 	y := One
-	var t *Thread
+	var th *Thread
 	for n := 0; n < b.N; n++ {
 		op := []func(x, y Value) Value{
-			OpAdd, OpSub, t.Cat, OpMul, OpDiv, OpMod,
+			OpAdd, OpSub, th.Cat, OpMul, OpDiv, OpMod,
 			OpLeftShift, OpRightShift, OpBitOr, OpBitAnd, OpBitXor}[n%11]
 		r = op(x, y)
 	}

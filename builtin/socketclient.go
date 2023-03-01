@@ -26,7 +26,7 @@ var nSocketClient atomic.Int32
 var _ = builtin(SocketClient,
 	"(ipaddress, port, timeout=60, timeoutConnect=0, block=false)")
 
-func SocketClient(t *Thread, args []Value) Value {
+func SocketClient(th *Thread, args []Value) Value {
 	ipaddr := ToStr(args[0])
 	port := ToInt(args[1])
 	ipaddr += ":" + strconv.Itoa(port)
@@ -49,7 +49,7 @@ func SocketClient(t *Thread, args []Value) Value {
 	}
 	// block form
 	defer sc.Close()
-	return t.Call(args[4], sc)
+	return th.Call(args[4], sc)
 }
 
 func (sc *suSocketClient) Equal(other any) bool {

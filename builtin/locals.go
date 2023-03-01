@@ -7,6 +7,6 @@ import . "github.com/apmckinlay/gsuneido/runtime"
 
 var _ = builtin(Locals, "(i)")
 
-func Locals(t *Thread, args []Value) Value {
-	return t.Locals(ToInt(args[0]))
+func Locals(th *Thread, args []Value) Value {
+	return th.Locals(ToInt(args[0]))
 }

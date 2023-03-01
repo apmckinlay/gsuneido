@@ -28,54 +28,54 @@ type profile struct {
 	calls map[string]int32
 }
 
-func (t *Thread) StartProfile() {
-	t.profile.stop = make(chan struct{})
-	t.profile.total = make(map[string]int32)
-	t.profile.self = make(map[string]int32)
-	t.profile.ops = make(map[string]int32)
-	t.profile.calls = make(map[string]int32)
-	t.profile.enabled = true
-	go t.profiler()
+func (th *Thread) StartProfile() {
+	th.profile.stop = make(chan struct{})
+	th.profile.total = make(map[string]int32)
+	th.profile.self = make(map[string]int32)
+	th.profile.ops = make(map[string]int32)
+	th.profile.calls = make(map[string]int32)
+	th.profile.enabled = true
+	go th.profiler()
 }
 
-func (t *Thread) profiler() {
+func (th *Thread) profiler() {
 	for {
 		time.Sleep(1 * time.Millisecond)
 		select {
-		case <-t.profile.stop:
+		case <-th.profile.stop:
 			return
 		default:
 		}
-		t.sample()
+		th.sample()
 	}
 }
 
-func (t *Thread) sample() {
-	t.profile.lock.Lock()
-	defer t.profile.lock.Unlock()
-	if t.profile.enabled && t.fp > 0 {
-		t.profile.self[t.frames[t.fp-1].fn.Name]++
-		for i := t.fp - 1; i >= 0; i-- {
-			fn := t.frames[i].fn
-			t.profile.total[fn.Name]++
+func (th *Thread) sample() {
+	th.profile.lock.Lock()
+	defer th.profile.lock.Unlock()
+	if th.profile.enabled && th.fp > 0 {
+		th.profile.self[th.frames[th.fp-1].fn.Name]++
+		for i := th.fp - 1; i >= 0; i-- {
+			fn := th.frames[i].fn
+			th.profile.total[fn.Name]++
 		}
 	}
 }
 
-func (t *Thread) StopProfile() (total, self, ops, calls map[string]int32) {
-	t.profile.lock.Lock()
-	defer t.profile.lock.Unlock()
-	if !t.profile.enabled {
+func (th *Thread) StopProfile() (total, self, ops, calls map[string]int32) {
+	th.profile.lock.Lock()
+	defer th.profile.lock.Unlock()
+	if !th.profile.enabled {
 		return
 	}
-	t.profile.enabled = false
-	close(t.profile.stop)
-	t.profile.stop = nil
-	total = t.profile.total
-	self = t.profile.self
-	ops = t.profile.ops
-	calls = t.profile.calls
-	t.profile.total, t.profile.self, t.profile.ops, t.profile.calls =
+	th.profile.enabled = false
+	close(th.profile.stop)
+	th.profile.stop = nil
+	total = th.profile.total
+	self = th.profile.self
+	ops = th.profile.ops
+	calls = th.profile.calls
+	th.profile.total, th.profile.self, th.profile.ops, th.profile.calls =
 		nil, nil, nil, nil
 	return total, self, ops, calls
 }

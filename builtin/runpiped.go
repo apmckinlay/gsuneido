@@ -26,7 +26,7 @@ var nRunPiped atomic.Int32
 
 var _ = builtin(RunPiped, "(command, block=false)")
 
-func RunPiped(t *Thread, args []Value) Value {
+func RunPiped(th *Thread, args []Value) Value {
 	command := ToStr(args[0])
 	cmdargs := splitCommand(command)
 	cmd := exec.Command(cmdargs[0])
@@ -59,7 +59,7 @@ func RunPiped(t *Thread, args []Value) Value {
 	}
 	// block form
 	defer rp.close()
-	return t.Call(args[1], rp)
+	return th.Call(args[1], rp)
 }
 
 func splitCommand(s string) []string {

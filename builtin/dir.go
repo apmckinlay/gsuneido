@@ -19,7 +19,7 @@ const maxDir = 10000
 
 var _ = builtin(dir, "(path='*', files=false, details=false, block=false)")
 
-func dir(t *Thread, args []Value) Value {
+func dir(th *Thread, args []Value) Value {
 	path := ToStr(args[0])
 	justfiles := ToBool(args[1])
 	details := ToBool(args[2])
@@ -36,7 +36,7 @@ func dir(t *Thread, args []Value) Value {
 	}
 	// block form
 	forEachDir(path, justfiles, details, func(entry Value) {
-		t.Call(block, entry)
+		th.Call(block, entry)
 	})
 	return nil
 }

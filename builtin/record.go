@@ -38,26 +38,26 @@ func record_GetDeps(this, arg Value) Value {
 
 var _ = method(record_Delete, "()")
 
-func record_Delete(t *Thread, as *ArgSpec, this Value, args []Value) Value {
+func record_Delete(th *Thread, as *ArgSpec, this Value, args []Value) Value {
 	if as.Nargs != 0 {
-		return ob_Delete(t, as, this, args)
+		return ob_Delete(th, as, this, args)
 	}
 	trace.Dbms.Println("Record Drop", this)
-	this.(*SuRecord).DbDelete(t)
+	this.(*SuRecord).DbDelete(th)
 	return nil
 }
 
 var _ = method(record_Drop, "()")
 
-func record_Drop(t *Thread, as *ArgSpec, this Value, args []Value) Value {
+func record_Drop(th *Thread, as *ArgSpec, this Value, args []Value) Value {
 	trace.Dbms.Println("Record Drop", this)
-	this.(*SuRecord).DbDelete(t)
+	this.(*SuRecord).DbDelete(th)
 	return nil
 }
 
 var _ = method(record_Invalidate, "(@args)")
 
-func record_Invalidate(t *Thread, as *ArgSpec, this Value, args []Value) Value {
+func record_Invalidate(th *Thread, as *ArgSpec, this Value, args []Value) Value {
 	r := this.(*SuRecord)
 	iter := NewArgsIter(as, args)
 	for {
@@ -65,7 +65,7 @@ func record_Invalidate(t *Thread, as *ArgSpec, this Value, args []Value) Value {
 		if k != nil || v == nil {
 			break
 		}
-		r.Invalidate(t, AsStr(v))
+		r.Invalidate(th, AsStr(v))
 	}
 	return nil
 }
@@ -115,8 +115,8 @@ func record_Transaction(this Value) Value {
 
 var _ = method(record_Update, "(record = false)")
 
-func record_Update(t *Thread, this Value, args []Value) Value {
+func record_Update(th *Thread, this Value, args []Value) Value {
 	trace.Dbms.Println("Record Update", this)
-	this.(*SuRecord).DbUpdate(t, args[0])
+	this.(*SuRecord).DbUpdate(th, args[0])
 	return nil
 }

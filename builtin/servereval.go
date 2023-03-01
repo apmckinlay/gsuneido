@@ -9,6 +9,6 @@ import (
 
 var _ = builtin(ServerEval, "(@args)")
 
-func ServerEval(t *Thread, args []Value) Value {
-	return t.Dbms().Exec(t, args[0])
+func ServerEval(th *Thread, args []Value) Value {
+	return th.Dbms().Exec(th, args[0])
 }

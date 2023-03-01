@@ -14,7 +14,7 @@ import (
 
 var _ = builtin(Number, "(value)")
 
-func Number(t *Thread, args []Value) Value {
+func Number(th *Thread, args []Value) Value {
 	val := args[0]
 	if s, ok := val.ToStr(); ok {
 		s := strings.TrimSpace(s)

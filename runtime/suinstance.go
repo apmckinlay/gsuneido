@@ -17,18 +17,18 @@ type SuInstance struct {
 	useDeepEquals bool
 }
 
-func NewInstance(t *Thread, class *SuClass) *SuInstance {
-	parents := getParents(t, class)
+func NewInstance(th *Thread, class *SuClass) *SuInstance {
+	parents := getParents(th, class)
 	return &SuInstance{MemBase: NewMemBase(),
 		class: class, parents: parents,
-		useDeepEquals: class.get2(t, "UseDeepEquals", parents) == True}
+		useDeepEquals: class.get2(th, "UseDeepEquals", parents) == True}
 }
 
 // getParents captures the inheritance chain (and caches it on the class).
 // Otherwise, the chain via SuClass Base is indirect by global number,
 // and if a parent is modified incompatibly or with an error
 // then existing (running) instances can fail.
-func getParents(t *Thread, class *SuClass) []*SuClass {
+func getParents(th *Thread, class *SuClass) []*SuClass {
 	if class == nil {
 		return nil
 	}
@@ -41,14 +41,14 @@ func getParents(t *Thread, class *SuClass) []*SuClass {
 			parents = nil // cached is invalid
 			break
 		}
-		c = c.Parent(t)
+		c = c.Parent(th)
 	}
 	if parents != nil {
 		return parents // cached is valid
 	}
 
 	parents = make([]*SuClass, 0, 4)
-	for c := class; c != nil; c = c.Parent(t) {
+	for c := class; c != nil; c = c.Parent(th) {
 		parents = append(parents, c)
 	}
 	class.SetParents(parents) // cache on class
@@ -61,9 +61,9 @@ func (ob *SuInstance) Base() *SuClass {
 
 // ToString is used by Cat, Display, and Print
 // to handle user defined ToString
-func (ob *SuInstance) ToString(t *Thread) string {
-	if f := ob.class.get2(t, "ToString", ob.parents); f != nil && t != nil {
-		x := t.CallThis(f, ob)
+func (ob *SuInstance) ToString(th *Thread) string {
+	if f := ob.class.get2(th, "ToString", ob.parents); f != nil && th != nil {
+		x := th.CallThis(f, ob)
 		if x != nil {
 			if s, ok := x.ToStr(); ok {
 				return s
@@ -94,28 +94,28 @@ func (*SuInstance) Type() types.Type {
 	return types.Instance
 }
 
-func (ob *SuInstance) Get(t *Thread, m Value) Value {
+func (ob *SuInstance) Get(th *Thread, m Value) Value {
 	ob.Lock()
 	defer ob.Unlock()
-	return ob.get(t, m)
+	return ob.get(th, m)
 }
-func (ob *SuInstance) get(t *Thread, m Value) Value {
+func (ob *SuInstance) get(th *Thread, m Value) Value {
 	if ms, ok := m.ToStr(); ok {
 		if x, ok := ob.Data[ms]; ok {
 			return x
 		}
 	}
-	x := ob.get1(t, m)
+	x := ob.get1(th, m)
 	if m, ok := x.(*SuMethod); ok {
 		m.this = ob // adjust 'this' to be instance, not method class
 	}
 	return x
 }
 
-func (ob *SuInstance) get1(t *Thread, m Value) Value {
+func (ob *SuInstance) get1(th *Thread, m Value) Value {
 	ob.Unlock() // can't hold lock because it may call getter
 	defer ob.Lock()
-	return ob.class.get1(t, ob, m, ob.parents)
+	return ob.class.get1(th, ob, m, ob.parents)
 }
 
 func (ob *SuInstance) Put(_ *Thread, m Value, v Value) {
@@ -131,11 +131,11 @@ func (ob *SuInstance) put(m Value, v Value) {
 	ob.Data[AsStr(m)] = v
 }
 
-func (ob *SuInstance) GetPut(t *Thread, m Value, v Value,
+func (ob *SuInstance) GetPut(th *Thread, m Value, v Value,
 	op func(x, y Value) Value, retOrig bool) Value {
 	ob.Lock()
 	defer ob.Unlock()
-	orig := ob.get(t, m)
+	orig := ob.get(th, m)
 	if orig == nil {
 		panic("uninitialized member: " + m.String())
 	}
@@ -171,23 +171,23 @@ func (ob *SuInstance) SetConcurrent() {
 // InstanceMethods is initialized by the builtin package
 var InstanceMethods Methods
 
-func (ob *SuInstance) Lookup(t *Thread, method string) Callable {
+func (ob *SuInstance) Lookup(th *Thread, method string) Callable {
 	if method == "*new*" {
 		panic("can't create instance of instance")
 	}
 	if f, ok := InstanceMethods[method]; ok {
 		return f
 	}
-	return ob.class.lookup(t, method, ob.parents)
+	return ob.class.lookup(th, method, ob.parents)
 }
 
-func (ob *SuInstance) Call(t *Thread, _ Value, as *ArgSpec) Value {
-	if f := ob.class.get2(t, "Call", ob.parents); f != nil {
-		return f.Call(t, ob, as)
+func (ob *SuInstance) Call(th *Thread, _ Value, as *ArgSpec) Value {
+	if f := ob.class.get2(th, "Call", ob.parents); f != nil {
+		return f.Call(th, ob, as)
 	}
-	if f := ob.class.get2(t, "Default", ob.parents); f != nil {
+	if f := ob.class.get2(th, "Default", ob.parents); f != nil {
 		da := &defaultAdapter{f, "Call"}
-		return da.Call(t, ob, as)
+		return da.Call(th, ob, as)
 	}
 	panic("method not found: Call")
 }

@@ -34,11 +34,11 @@ func noChildren(m Value) Value {
 	return nil
 }
 
-func (a *Symbol) Get(t *Thread, m Value) Value {
+func (a *Symbol) Get(th *Thread, m Value) Value {
 	if m == SuStr("symbol") {
 		return True
 	}
-	return a.Constant.Get(t, m)
+	return a.Constant.Get(th, m)
 }
 
 func (a *Constant) Get(_ *Thread, m Value) Value {
@@ -243,12 +243,12 @@ func zeroToFalse(n int) Value {
 	return IntVal(n)
 }
 
-func (a *Block) Get(t *Thread, m Value) Value {
+func (a *Block) Get(th *Thread, m Value) Value {
 	switch m {
 	case SuStr("type"):
 		return SuStr("Block")
 	}
-	return a.Function.Get(t, m)
+	return a.Function.Get(th, m)
 }
 
 func (a *Function) Get(_ *Thread, m Value) Value {

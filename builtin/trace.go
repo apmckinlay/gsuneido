@@ -10,7 +10,7 @@ import (
 
 var _ = builtin(Trace, "(value, block = false)")
 
-func Trace(t *Thread, args []Value) Value {
+func Trace(th *Thread, args []Value) Value {
 	if s, ok := args[0].ToStr(); ok {
 		if args[1] != False {
 			panic("usage: Trace(string) or Trace(flags, block)")
@@ -22,7 +22,7 @@ func Trace(t *Thread, args []Value) Value {
 			defer func() {
 				trace.Set(prev)
 			}()
-			return t.Call(args[1])
+			return th.Call(args[1])
 		}
 	}
 	return nil

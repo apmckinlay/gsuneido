@@ -54,15 +54,15 @@ type Value interface {
 	// Get returns a member of an object/instance/class or a character of a string
 	// returns nil if the member does not exist
 	// The thread is necessary to call getters
-	Get(t *Thread, key Value) Value
+	Get(th *Thread, key Value) Value
 
 	// Put sets its key member to val.
 	// Implemented by SuObject, SuRecord, and SuInstance.
 	// t is required by SuRecord to call observers.
-	Put(t *Thread, key Value, val Value)
+	Put(th *Thread, key Value, val Value)
 
 	// GetPut is used for update operations like += and ++ atomically
-	GetPut(t *Thread, key Value, val Value,
+	GetPut(th *Thread, key Value, val Value,
 		op func(x, y Value) Value, retOrig bool) Value
 
 	RangeTo(i int, j int) Value
@@ -84,7 +84,7 @@ type Value interface {
 	Callable
 
 	// Lookup returns a Callable or nil if the method isn't found
-	Lookup(t *Thread, method string) Callable
+	Lookup(th *Thread, method string) Callable
 
 	// SetConcurrent is called when a Value is
 	// about to become reachable by multiple threads.
@@ -96,7 +96,7 @@ type Value interface {
 
 // Callable is returned by Lookup
 type Callable interface {
-	Call(t *Thread, this Value, as *ArgSpec) Value
+	Call(th *Thread, this Value, as *ArgSpec) Value
 }
 
 type Ord int
@@ -266,17 +266,17 @@ func ToBool(x Value) bool {
 // Lookup looks for a method first in a methods map,
 // and then in a global user defined class
 // returning nil if not found in either place
-func Lookup(t *Thread, methods Methods, gnUserDef int, method string) Callable {
+func Lookup(th *Thread, methods Methods, gnUserDef int, method string) Callable {
 	if m := methods[method]; m != nil {
 		return m
 	}
-	return UserDef(t, gnUserDef, method)
+	return UserDef(th, gnUserDef, method)
 }
 
-func UserDef(t *Thread, gnUserDef int, method string) Callable {
-	if userdef := Global.Find(t, gnUserDef); userdef != nil {
+func UserDef(th *Thread, gnUserDef int, method string) Callable {
+	if userdef := Global.Find(th, gnUserDef); userdef != nil {
 		if c, ok := userdef.(*SuClass); ok {
-			return c.get2(t, method, nil)
+			return c.get2(th, method, nil)
 		}
 	}
 	return nil

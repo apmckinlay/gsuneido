@@ -151,11 +151,11 @@ var IntMethods Methods
 
 var anSuDnum = SuDnum{}
 
-func (*smi) Lookup(t *Thread, method string) Callable {
+func (*smi) Lookup(th *Thread, method string) Callable {
 	if m := IntMethods[method]; m != nil {
 		return m
 	}
-	return anSuDnum.Lookup(t, method)
+	return anSuDnum.Lookup(th, method)
 }
 
 func (*smi) SetConcurrent() {

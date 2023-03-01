@@ -207,13 +207,13 @@ func (dc *dbmsClient) Schema(string) string {
 	panic("Schema only available standalone")
 }
 
-func (dc *dbmsClient) SessionId(t *Thread, id string) string {
-	if s := t.Session(); s != "" && id == "" {
+func (dc *dbmsClient) SessionId(th *Thread, id string) string {
+	if s := th.Session(); s != "" && id == "" {
 		return s // use cached value
 	}
 	dc.PutCmd(commands.SessionId).PutStr(id).Request()
 	s := dc.GetStr()
-	t.SetSession(s)
+	th.SetSession(s)
 	return s
 }
 

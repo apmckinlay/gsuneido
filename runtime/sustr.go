@@ -57,10 +57,10 @@ func (ss SuStr) String() string {
 	return escapeStr(string(ss), 0)
 }
 
-func (ss SuStr) Display(t *Thread) string {
+func (ss SuStr) Display(th *Thread) string {
 	q := 0
-	if t != nil {
-		q = t.Quote
+	if th != nil {
+		q = th.Quote
 	}
 	return escapeStr(string(ss), q)
 }
@@ -248,19 +248,19 @@ func (ss SuStr) Compare(other Value) int {
 }
 
 // Call implements s(ob, ...) being treated as ob[s](...)
-func (ss SuStr) Call(t *Thread, _ Value, as *ArgSpec) Value {
-	base := t.sp - int(as.Nargs)
-	args := t.stack[base : base+int(as.Nargs)]
+func (ss SuStr) Call(th *Thread, _ Value, as *ArgSpec) Value {
+	base := th.sp - int(as.Nargs)
+	args := th.stack[base : base+int(as.Nargs)]
 	k, v := NewArgsIter(as, args)()
 	if v == nil || k != nil {
 		panic("string call requires 'this' argument")
 	}
 	method := string(ss)
-	fn := v.Lookup(t, method)
+	fn := v.Lookup(th, method)
 	if fn == nil {
 		panic("method not found: " + ErrType(v) + "." + method)
 	}
-	return fn.Call(t, v, as.DropFirst())
+	return fn.Call(th, v, as.DropFirst())
 }
 
 // StringMethods is initialized by the builtin package
@@ -268,8 +268,8 @@ var StringMethods Methods
 
 var gnStrings = Global.Num("Strings")
 
-func (SuStr) Lookup(t *Thread, method string) Callable {
-	return Lookup(t, StringMethods, gnStrings, method)
+func (SuStr) Lookup(th *Thread, method string) Callable {
+	return Lookup(th, StringMethods, gnStrings, method)
 }
 
 func (SuStr) SetConcurrent() {

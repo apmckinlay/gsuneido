@@ -26,15 +26,15 @@ func (*BuiltinParams) Type() types.Type {
 
 // SuBuiltin is a Value for a built in function
 type SuBuiltin struct {
-	Fn func(t *Thread, args []Value) Value
+	Fn func(th *Thread, args []Value) Value
 	BuiltinParams
 }
 
 var _ Value = (*SuBuiltin)(nil)
 
-func (b *SuBuiltin) Call(t *Thread, _ Value, as *ArgSpec) Value {
-	args := t.Args(&b.ParamSpec, as)
-	return b.Fn(t, args)
+func (b *SuBuiltin) Call(th *Thread, _ Value, as *ArgSpec) Value {
+	args := th.Args(&b.ParamSpec, as)
+	return b.Fn(th, args)
 }
 
 // SuBuiltin0 is a Value for a builtin function with no arguments
@@ -45,8 +45,8 @@ type SuBuiltin0 struct {
 
 var _ Value = (*SuBuiltin0)(nil)
 
-func (b *SuBuiltin0) Call(t *Thread, _ Value, as *ArgSpec) Value {
-	t.Args(&b.ParamSpec, as)
+func (b *SuBuiltin0) Call(th *Thread, _ Value, as *ArgSpec) Value {
+	th.Args(&b.ParamSpec, as)
 	return b.Fn()
 }
 
@@ -58,8 +58,8 @@ type SuBuiltin1 struct {
 
 var _ Value = (*SuBuiltin1)(nil)
 
-func (b *SuBuiltin1) Call(t *Thread, _ Value, as *ArgSpec) Value {
-	args := t.Args(&b.ParamSpec, as)
+func (b *SuBuiltin1) Call(th *Thread, _ Value, as *ArgSpec) Value {
+	args := th.Args(&b.ParamSpec, as)
 	return b.Fn(args[0])
 }
 
@@ -71,8 +71,8 @@ type SuBuiltin2 struct {
 
 var _ Value = (*SuBuiltin2)(nil)
 
-func (b *SuBuiltin2) Call(t *Thread, _ Value, as *ArgSpec) Value {
-	args := t.Args(&b.ParamSpec, as)
+func (b *SuBuiltin2) Call(th *Thread, _ Value, as *ArgSpec) Value {
+	args := th.Args(&b.ParamSpec, as)
 	return b.Fn(args[0], args[1])
 }
 
@@ -84,8 +84,8 @@ type SuBuiltin3 struct {
 
 var _ Value = (*SuBuiltin3)(nil)
 
-func (b *SuBuiltin3) Call(t *Thread, _ Value, as *ArgSpec) Value {
-	args := t.Args(&b.ParamSpec, as)
+func (b *SuBuiltin3) Call(th *Thread, _ Value, as *ArgSpec) Value {
+	args := th.Args(&b.ParamSpec, as)
 	return b.Fn(args[0], args[1], args[2])
 }
 
@@ -97,8 +97,8 @@ type SuBuiltin4 struct {
 
 var _ Value = (*SuBuiltin4)(nil)
 
-func (b *SuBuiltin4) Call(t *Thread, _ Value, as *ArgSpec) Value {
-	args := t.Args(&b.ParamSpec, as)
+func (b *SuBuiltin4) Call(th *Thread, _ Value, as *ArgSpec) Value {
+	args := th.Args(&b.ParamSpec, as)
 	return b.Fn(args[0], args[1], args[2], args[3])
 }
 
@@ -110,8 +110,8 @@ type SuBuiltin5 struct {
 
 var _ Value = (*SuBuiltin5)(nil)
 
-func (b *SuBuiltin5) Call(t *Thread, _ Value, as *ArgSpec) Value {
-	args := t.Args(&b.ParamSpec, as)
+func (b *SuBuiltin5) Call(th *Thread, _ Value, as *ArgSpec) Value {
+	args := th.Args(&b.ParamSpec, as)
 	return b.Fn(args[0], args[1], args[2], args[3], args[4])
 }
 
@@ -123,8 +123,8 @@ type SuBuiltin6 struct {
 
 var _ Value = (*SuBuiltin6)(nil)
 
-func (b *SuBuiltin6) Call(t *Thread, _ Value, as *ArgSpec) Value {
-	args := t.Args(&b.ParamSpec, as)
+func (b *SuBuiltin6) Call(th *Thread, _ Value, as *ArgSpec) Value {
+	args := th.Args(&b.ParamSpec, as)
 	return b.Fn(args[0], args[1], args[2], args[3], args[4], args[5])
 }
 
@@ -136,36 +136,36 @@ type SuBuiltin7 struct {
 	BuiltinParams
 }
 
-func (b *SuBuiltin7) Call(t *Thread, _ Value, as *ArgSpec) Value {
-	args := t.Args(&b.ParamSpec, as)
+func (b *SuBuiltin7) Call(th *Thread, _ Value, as *ArgSpec) Value {
+	args := th.Args(&b.ParamSpec, as)
 	return b.Fn(args[0], args[1], args[2], args[3], args[4], args[5], args[6])
 }
 
 // SuBuiltinRaw is a Value for a builtin function with no massage
 type SuBuiltinRaw struct {
-	Fn func(t *Thread, as *ArgSpec, args []Value) Value
+	Fn func(th *Thread, as *ArgSpec, args []Value) Value
 	BuiltinParams
 }
 
 var _ Value = (*SuBuiltinRaw)(nil)
 
-func (b *SuBuiltinRaw) Call(t *Thread, _ Value, as *ArgSpec) Value {
-	base := t.sp - int(as.Nargs)
-	args := t.stack[base : base+int(as.Nargs)]
-	return b.Fn(t, as, args)
+func (b *SuBuiltinRaw) Call(th *Thread, _ Value, as *ArgSpec) Value {
+	base := th.sp - int(as.Nargs)
+	args := th.stack[base : base+int(as.Nargs)]
+	return b.Fn(th, as, args)
 }
 
 // ------------------------------------------------------------------
 
 // SuBuiltinMethod is a Callable for a builtin method
 type SuBuiltinMethod struct {
-	Fn func(t *Thread, this Value, args []Value) Value
+	Fn func(th *Thread, this Value, args []Value) Value
 	BuiltinParams
 }
 
-func (b *SuBuiltinMethod) Call(t *Thread, this Value, as *ArgSpec) Value {
-	args := t.Args(&b.ParamSpec, as)
-	return b.Fn(t, this, args)
+func (b *SuBuiltinMethod) Call(th *Thread, this Value, as *ArgSpec) Value {
+	args := th.Args(&b.ParamSpec, as)
+	return b.Fn(th, this, args)
 }
 
 // SuBuiltinMethod0 is a Callable for a builtin method with no arguments
@@ -173,8 +173,8 @@ type SuBuiltinMethod0 struct {
 	SuBuiltin1
 }
 
-func (b *SuBuiltinMethod0) Call(t *Thread, this Value, as *ArgSpec) Value {
-	t.Args(&b.ParamSpec, as)
+func (b *SuBuiltinMethod0) Call(th *Thread, this Value, as *ArgSpec) Value {
+	th.Args(&b.ParamSpec, as)
 	return b.Fn(this)
 }
 
@@ -183,8 +183,8 @@ type SuBuiltinMethod1 struct {
 	SuBuiltin2
 }
 
-func (b *SuBuiltinMethod1) Call(t *Thread, this Value, as *ArgSpec) Value {
-	args := t.Args(&b.ParamSpec, as)
+func (b *SuBuiltinMethod1) Call(th *Thread, this Value, as *ArgSpec) Value {
+	args := th.Args(&b.ParamSpec, as)
 	return b.Fn(this, args[0])
 }
 
@@ -193,8 +193,8 @@ type SuBuiltinMethod2 struct {
 	SuBuiltin3
 }
 
-func (b *SuBuiltinMethod2) Call(t *Thread, this Value, as *ArgSpec) Value {
-	args := t.Args(&b.ParamSpec, as)
+func (b *SuBuiltinMethod2) Call(th *Thread, this Value, as *ArgSpec) Value {
+	args := th.Args(&b.ParamSpec, as)
 	return b.Fn(this, args[0], args[1])
 }
 
@@ -203,23 +203,23 @@ type SuBuiltinMethod3 struct {
 	SuBuiltin4
 }
 
-func (b *SuBuiltinMethod3) Call(t *Thread, this Value, as *ArgSpec) Value {
-	args := t.Args(&b.ParamSpec, as)
+func (b *SuBuiltinMethod3) Call(th *Thread, this Value, as *ArgSpec) Value {
+	args := th.Args(&b.ParamSpec, as)
 	return b.Fn(this, args[0], args[1], args[2])
 }
 
 // SuBuiltinMethodRaw is a Callable for a builtin function with no massage
 type SuBuiltinMethodRaw struct {
-	Fn func(t *Thread, as *ArgSpec, this Value, args []Value) Value
+	Fn func(th *Thread, as *ArgSpec, this Value, args []Value) Value
 	ParamSpec
 }
 
 var _ Callable = (*SuBuiltinMethodRaw)(nil)
 
-func (b *SuBuiltinMethodRaw) Call(t *Thread, this Value, as *ArgSpec) Value {
-	base := t.sp - int(as.Nargs)
-	args := t.stack[base : base+int(as.Nargs)]
-	return b.Fn(t, as, this, args)
+func (b *SuBuiltinMethodRaw) Call(th *Thread, this Value, as *ArgSpec) Value {
+	base := th.sp - int(as.Nargs)
+	args := th.stack[base : base+int(as.Nargs)]
+	return b.Fn(th, as, this, args)
 }
 
 func (b *SuBuiltinMethodRaw) Type() types.Type {

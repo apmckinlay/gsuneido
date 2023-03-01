@@ -11,8 +11,8 @@ import (
 
 var _ = builtin(Sequence, "(iter)")
 
-func Sequence(t *Thread, args []Value) Value {
-	return NewSuSequence(&wrapIter{it: args[0], t: t})
+func Sequence(th *Thread, args []Value) Value {
+	return NewSuSequence(&wrapIter{it: args[0], th: th})
 }
 
 // wrapIter adapts a Suneido iterator (a class with Next,Dup,Infinite)
@@ -20,9 +20,9 @@ func Sequence(t *Thread, args []Value) Value {
 // No locking since not mutable.
 type wrapIter struct {
 	it Value
-	// t is nil when concurrent.
+	// th is nil when concurrent.
 	// When not concurrent we use the creating thread.
-	t *Thread
+	th *Thread
 }
 
 func (wi *wrapIter) Next() Value {
@@ -39,20 +39,20 @@ func (wi *wrapIter) Infinite() (result bool) {
 
 func (wi *wrapIter) Dup() Iter {
 	it := wi.call("Dup")
-	return &wrapIter{it: it, t: wi.t}
+	return &wrapIter{it: it, th: wi.th}
 }
 
 func (wi *wrapIter) SetConcurrent() {
-	wi.t = nil
+	wi.th = nil
 	wi.it.SetConcurrent()
 }
 
 func (wi *wrapIter) IsConcurrent() Value {
-	return SuBool(wi.t == nil)
+	return SuBool(wi.th == nil)
 }
 
 func (wi *wrapIter) call(method string) Value {
-	t := wi.t
+	t := wi.th
 	if t == nil {
 		t = &Thread{}
 		t.Name = "*internal*"

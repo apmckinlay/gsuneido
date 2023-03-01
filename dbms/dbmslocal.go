@@ -118,17 +118,17 @@ func (dbms *DbmsLocal) Dump(table string) string {
 	return ""
 }
 
-func (*DbmsLocal) Exec(t *Thread, v Value) Value {
-	return t.RunWithMainSuneido(func() Value {
+func (*DbmsLocal) Exec(th *Thread, v Value) Value {
+	return th.RunWithMainSuneido(func() Value {
 		trace.Dbms.Println("Exec", v)
 		fname := ToStr(ToContainer(v).ListGet(0))
 		if i := strings.IndexByte(fname, '.'); i != -1 {
-			ob := Global.GetName(t, fname[:i])
+			ob := Global.GetName(th, fname[:i])
 			m := fname[i+1:]
-			return t.CallLookupEach1(ob, m, v)
+			return th.CallLookupEach1(ob, m, v)
 		}
-		fn := Global.GetName(t, fname)
-		return t.CallEach1(fn, v)
+		fn := Global.GetName(th, fname)
+		return th.CallEach1(fn, v)
 	})
 }
 
@@ -272,11 +272,11 @@ func (dbms *DbmsLocal) Schema(table string) string {
 	return dbms.db.Schema(table)
 }
 
-func (*DbmsLocal) SessionId(t *Thread, id string) string {
+func (*DbmsLocal) SessionId(th *Thread, id string) string {
 	if id != "" {
-		t.SetSession(id)
+		th.SetSession(id)
 	}
-	return t.Session()
+	return th.Session()
 }
 
 func (dbms *DbmsLocal) Size() uint64 {

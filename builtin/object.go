@@ -28,14 +28,14 @@ var _ = exportMethods(&ObjectMethods)
 
 var _ = method(ob_Add, "(@args)")
 
-func ob_Add(t *Thread, as *ArgSpec, this Value, args []Value) Value {
+func ob_Add(th *Thread, as *ArgSpec, this Value, args []Value) Value {
 	ob := ToContainer(this)
 	iter := NewArgsIter(as, args)
 	if at := getNamed(as, args, SuStr("at")); at != nil {
 		if i, ok := at.IfInt(); ok {
 			addAt(ob, i, iter)
 		} else {
-			putAt(t, ob, at, iter)
+			putAt(th, ob, at, iter)
 		}
 	} else {
 		addAt(ob, ob.ListSize(), iter)
@@ -52,12 +52,12 @@ func ob_Assocs(_ *Thread, as *ArgSpec, this Value, args []Value) Value {
 
 var _ = method(ob_BinarySearch, "(value, block = false)")
 
-func ob_BinarySearch(t *Thread, this Value, args []Value) Value {
+func ob_BinarySearch(th *Thread, this Value, args []Value) Value {
 	ob := ToContainer(this).ToObject()
 	if args[1] == False {
 		return IntVal(ob.BinarySearch(args[0]))
 	}
-	return IntVal(ob.BinarySearch2(t, args[0], args[1]))
+	return IntVal(ob.BinarySearch2(th, args[0], args[1]))
 }
 
 var _ = method(ob_Copy, "()")
@@ -68,7 +68,7 @@ func ob_Copy(this Value) Value {
 
 var _ = method(ob_Delete, "(@args)")
 
-func ob_Delete(t *Thread, as *ArgSpec, this Value, args []Value) Value {
+func ob_Delete(th *Thread, as *ArgSpec, this Value, args []Value) Value {
 	ob := ToContainer(this)
 	if all := getNamed(as, args, SuStr("all")); all == True {
 		ob.DeleteAll()
@@ -79,7 +79,7 @@ func ob_Delete(t *Thread, as *ArgSpec, this Value, args []Value) Value {
 			if k != nil || v == nil {
 				break
 			}
-			ob.Delete(t, v)
+			ob.Delete(th, v)
 		}
 	}
 	return this
@@ -87,7 +87,7 @@ func ob_Delete(t *Thread, as *ArgSpec, this Value, args []Value) Value {
 
 var _ = method(ob_Erase, "(@args)")
 
-func ob_Erase(t *Thread, as *ArgSpec, this Value, args []Value) Value {
+func ob_Erase(th *Thread, as *ArgSpec, this Value, args []Value) Value {
 	ob := ToContainer(this)
 	iter := NewArgsIter(as, args)
 	for {
@@ -95,22 +95,22 @@ func ob_Erase(t *Thread, as *ArgSpec, this Value, args []Value) Value {
 		if k != nil || v == nil {
 			break
 		}
-		ob.Erase(t, v)
+		ob.Erase(th, v)
 	}
 	return this
 }
 
 var _ = method(ob_Eval, "(@args)")
 
-func ob_Eval(t *Thread, as *ArgSpec, this Value, args []Value) Value {
-	return EvalAsMethod(t, as, this, args)
+func ob_Eval(th *Thread, as *ArgSpec, this Value, args []Value) Value {
+	return EvalAsMethod(th, as, this, args)
 }
 
 var _ = method(ob_Eval2, "(@args)")
 
-func ob_Eval2(t *Thread, as *ArgSpec, this Value, args []Value) Value {
+func ob_Eval2(th *Thread, as *ArgSpec, this Value, args []Value) Value {
 	ob := &SuObject{}
-	if result := EvalAsMethod(t, as, this, args); result != nil {
+	if result := EvalAsMethod(th, as, this, args); result != nil {
 		ob.Add(result)
 	}
 	return ob
@@ -124,13 +124,13 @@ func ob_Find(this Value, val Value) Value {
 
 var _ = method(ob_GetDefault, "(member, block)")
 
-func ob_GetDefault(t *Thread, this Value, args []Value) Value {
+func ob_GetDefault(th *Thread, this Value, args []Value) Value {
 	ob := ToContainer(this)
-	if x := ob.GetIfPresent(t, args[0]); x != nil {
+	if x := ob.GetIfPresent(th, args[0]); x != nil {
 		return x
 	}
 	if args[1].Type() == types.Block {
-		return t.Call(args[1])
+		return th.Call(args[1])
 	}
 	return args[1]
 }
@@ -278,8 +278,8 @@ func ob_Size(this, arg1, arg2 Value) Value {
 
 var _ = method(ob_SortX, "(block = false)")
 
-func ob_SortX(t *Thread, this Value, args []Value) Value {
-	ToContainer(this).ToObject().Sort(t, args[0])
+func ob_SortX(th *Thread, this Value, args []Value) Value {
+	ToContainer(this).ToObject().Sort(th, args[0])
 	return this
 }
 
@@ -318,7 +318,7 @@ func addAt(ob Container, at int, iter ArgsIter) {
 	}
 }
 
-func putAt(t *Thread, ob Container, at Value, iter ArgsIter) {
+func putAt(th *Thread, ob Container, at Value, iter ArgsIter) {
 	k, v := iter()
 	if k != nil || v == nil {
 		return
@@ -326,7 +326,7 @@ func putAt(t *Thread, ob Container, at Value, iter ArgsIter) {
 	if k, v := iter(); k == nil && v != nil {
 		panic("can only Add multiple values to un-named or numeric positions")
 	}
-	ob.Put(t, at, v)
+	ob.Put(th, at, v)
 }
 
 func iterWhich(as *ArgSpec, args []Value) (list bool, named bool) {
@@ -346,7 +346,7 @@ func iterWhich(as *ArgSpec, args []Value) (list bool, named bool) {
 
 // EvalAsMethod runs a function as if it were a method of an object
 // i.e. object.Eval
-func EvalAsMethod(t *Thread, as *ArgSpec, ob Value, args []Value) Value {
+func EvalAsMethod(th *Thread, as *ArgSpec, ob Value, args []Value) Value {
 	// first argument is function
 	k, f := NewArgsIter(as, args)()
 	if k != nil || f == nil {
@@ -355,5 +355,5 @@ func EvalAsMethod(t *Thread, as *ArgSpec, ob Value, args []Value) Value {
 	if m, ok := f.(*SuMethod); ok {
 		f = m.GetFn()
 	}
-	return f.Call(t, ob, as.DropFirst())
+	return f.Call(th, ob, as.DropFirst())
 }

@@ -27,21 +27,21 @@ type methodForce struct {
 	SuMethod
 }
 
-func (m *methodForce) Call(t *Thread, _ Value, as *ArgSpec) Value {
-	return m.fn.Call(t, m.this, as)
+func (m *methodForce) Call(th *Thread, _ Value, as *ArgSpec) Value {
+	return m.fn.Call(th, m.this, as)
 }
 
 // Value interface --------------------------------------------------
 
 var _ Value = (*SuMethod)(nil)
 
-func (m *SuMethod) Call(t *Thread, _ Value, as *ArgSpec) Value {
-	return m.fn.Call(t, m.this, as)
+func (m *SuMethod) Call(th *Thread, _ Value, as *ArgSpec) Value {
+	return m.fn.Call(th, m.this, as)
 }
 
 // Lookup is used for .Params or .Disasm
-func (m *SuMethod) Lookup(t *Thread, method string) Callable {
-	if f := m.fn.Lookup(t, method); f != nil {
+func (m *SuMethod) Lookup(th *Thread, method string) Callable {
+	if f := m.fn.Lookup(th, method); f != nil {
 		return &methodForce{SuMethod{fn: f.(Value), this: m.fn}}
 	}
 	return nil

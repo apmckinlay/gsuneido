@@ -415,7 +415,7 @@ func eval(src string) {
 //-------------------------------------------------------------------
 
 // libload loads a name from the dbms
-func libload(t *Thread, name string) (result Value, e any) {
+func libload(th *Thread, name string) (result Value, e any) {
 	defer func() {
 		if e = recover(); e != nil {
 			// fmt.Println("INFO: error loading", name, e)
@@ -423,7 +423,7 @@ func libload(t *Thread, name string) (result Value, e any) {
 			result = nil
 		}
 	}()
-	defs := t.Dbms().LibGet(name)
+	defs := th.Dbms().LibGet(name)
 	if len(defs) == 0 {
 		// fmt.Println("LOAD", name, "MISSING")
 		return nil, nil

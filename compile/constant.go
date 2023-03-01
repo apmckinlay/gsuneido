@@ -32,9 +32,9 @@ func NamedConstant(lib, name, src string, prevDef Value) Value {
 	return result
 }
 
-func Checked(t *Thread, src string) (Value, []string) {
+func Checked(th *Thread, src string) (Value, []string) {
 	// can't do AST check after compile because that would miss nested functions
-	p := CheckParser(src, t)
+	p := CheckParser(src, th)
 	v := p.constant()
 	if p.Token != tok.Eof {
 		p.Error("did not parse all input")

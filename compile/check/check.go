@@ -23,7 +23,7 @@ import (
 )
 
 type Check struct {
-	t *Thread
+	th *Thread
 	// pos is used to store the position of the current statement
 	pos int
 	// AllInit is the set of variables assigned to, including conditionally
@@ -35,8 +35,8 @@ type Check struct {
 }
 
 // New returns a Check instance
-func New(t *Thread) *Check {
-	return &Check{t: t}
+func New(th *Thread) *Check {
+	return &Check{th: th}
 }
 
 // CheckFunc is the main entry point.
@@ -57,7 +57,7 @@ func (ck *Check) CheckFunc2(f *ast.Function) set {
 // CheckGlobal checks if a global name is defined.
 // It is also called by compile constant to check class base.
 func (ck *Check) CheckGlobal(name string, pos int) {
-	if nil == Global.Find(ck.t, Global.Num(name)) {
+	if nil == Global.Find(ck.th, Global.Num(name)) {
 		ck.CheckResult(pos, "ERROR: can't find: "+name)
 	}
 }

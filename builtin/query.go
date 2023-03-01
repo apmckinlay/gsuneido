@@ -12,20 +12,20 @@ import (
 
 var _ = builtin(Query1, "(@args)")
 
-func Query1(t *Thread, as *ArgSpec, args []Value) Value {
-	return queryOne(t, as, args, Only)
+func Query1(th *Thread, as *ArgSpec, args []Value) Value {
+	return queryOne(th, as, args, Only)
 }
 
 var _ = builtin(QueryFirst, "(@args)")
 
-func QueryFirst(t *Thread, as *ArgSpec, args []Value) Value {
-	return queryOne(t, as, args, Next)
+func QueryFirst(th *Thread, as *ArgSpec, args []Value) Value {
+	return queryOne(th, as, args, Next)
 }
 
 var _ = builtin(QueryLast, "(@args)")
 
-func QueryLast(t *Thread, as *ArgSpec, args []Value) Value {
-	return queryOne(t, as, args, Prev)
+func QueryLast(th *Thread, as *ArgSpec, args []Value) Value {
+	return queryOne(th, as, args, Prev)
 }
 
 var queryParams = params("(query)")

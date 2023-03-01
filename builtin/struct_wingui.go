@@ -92,8 +92,8 @@ type callableStruct struct {
 	suStructGlobal
 }
 
-func (cs *callableStruct) Call(t *Thread, this Value, as *ArgSpec) Value {
-	return cs.SuBuiltin.Call(t, this, as)
+func (cs *callableStruct) Call(th *Thread, this Value, as *ArgSpec) Value {
+	return cs.SuBuiltin.Call(th, this, as)
 }
 
 //-------------------------------------------------------------------
@@ -107,7 +107,7 @@ type Struct interface {
 // WARNING: address must be valid for type
 var _ = builtin(StructModify, "(type, address, block)")
 
-func StructModify(t *Thread, args []Value) Value {
+func StructModify(th *Thread, args []Value) Value {
 	typ, ok := args[0].(Struct)
 	if !ok {
 		panic("StructModify invalid type " + ErrType(args[0]))
@@ -117,7 +117,7 @@ func StructModify(t *Thread, args []Value) Value {
 		panic("StructModify: address can't be zero")
 	}
 	ob := typ.structToOb(p)
-	t.Call(args[2], ob) // call the block, which modifies ob
+	th.Call(args[2], ob) // call the block, which modifies ob
 	typ.updateStruct(ob, p)
 	return nil
 }

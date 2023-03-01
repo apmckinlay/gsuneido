@@ -42,8 +42,8 @@ type SuFunc struct {
 
 var _ Value = (*SuFunc)(nil)
 
-func (f *SuFunc) Call(t *Thread, this Value, as *ArgSpec) Value {
-	args := t.Args(&f.ParamSpec, as)
+func (f *SuFunc) Call(th *Thread, this Value, as *ArgSpec) Value {
+	args := th.Args(&f.ParamSpec, as)
 	for i, flag := range f.Flags {
 		if flag&DotParam == DotParam {
 			name := f.Names[i]
@@ -52,10 +52,10 @@ func (f *SuFunc) Call(t *Thread, this Value, as *ArgSpec) Value {
 			} else { // privatize
 				name = f.ClassName + "_" + name
 			}
-			this.Put(t, SuStr(name), args[i])
+			this.Put(th, SuStr(name), args[i])
 		}
 	}
-	return t.invoke(f, this)
+	return th.invoke(f, this)
 }
 
 func (f *SuFunc) Type() types.Type {

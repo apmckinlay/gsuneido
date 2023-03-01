@@ -104,11 +104,11 @@ func lowerRaw(x string) string {
 	return hacks.BStoS(buf)
 }
 
-func getRule(t *Thread, key string) Value {
-	if t == nil || !validRule(key) {
+func getRule(th *Thread, key string) Value {
+	if th == nil || !validRule(key) {
 		return nil
 	}
-	return Global.FindName(t, "Rule_"+key)
+	return Global.FindName(th, "Rule_"+key)
 }
 
 // getRaw2 gets a stored field.

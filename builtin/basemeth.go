@@ -14,21 +14,21 @@ var _ = exportMethods(&BaseMethods)
 
 var _ = method(base_Base, "()")
 
-func base_Base(t *Thread, this Value, args []Value) Value {
-	return base(t, this, func(v Value, _ *MemBase) Value { return v })
+func base_Base(th *Thread, this Value, args []Value) Value {
+	return base(th, this, func(v Value, _ *MemBase) Value { return v })
 }
 
 var _ = method(base_Eval, "(@args)")
 
-func base_Eval(t *Thread, as *ArgSpec, this Value, args []Value) Value {
-	return EvalAsMethod(t, as, this, args)
+func base_Eval(th *Thread, as *ArgSpec, this Value, args []Value) Value {
+	return EvalAsMethod(th, as, this, args)
 }
 
 var _ = method(base_Eval2, "(@args)")
 
-func base_Eval2(t *Thread, as *ArgSpec, this Value, args []Value) Value {
+func base_Eval2(th *Thread, as *ArgSpec, this Value, args []Value) Value {
 	ob := &SuObject{}
-	if result := EvalAsMethod(t, as, this, args); result != nil {
+	if result := EvalAsMethod(th, as, this, args); result != nil {
 		ob.Add(result)
 	}
 	return ob
@@ -36,21 +36,21 @@ func base_Eval2(t *Thread, as *ArgSpec, this Value, args []Value) Value {
 
 var _ = method(base_GetDefault, "(member, block)")
 
-func base_GetDefault(t *Thread, this Value, args []Value) Value {
-	if x := this.Get(t, args[0]); x != nil {
+func base_GetDefault(th *Thread, this Value, args []Value) Value {
+	if x := this.Get(th, args[0]); x != nil {
 		return x
 	}
 	if args[1].Type() == types.Block {
-		return t.Call(args[1])
+		return th.Call(args[1])
 	}
 	return args[1]
 }
 
 var _ = method(base_MemberQ, "(string)")
 
-func base_MemberQ(t *Thread, this Value, arg []Value) Value {
+func base_MemberQ(th *Thread, this Value, arg []Value) Value {
 	m := ToStr(arg[0])
-	result := this.(Findable).Finder(t, func(v Value, mb *MemBase) Value {
+	result := this.(Findable).Finder(th, func(v Value, mb *MemBase) Value {
 		if mb.Has(m) {
 			return True
 		}
@@ -61,12 +61,12 @@ func base_MemberQ(t *Thread, this Value, arg []Value) Value {
 
 var _ = method(base_Members, "(all = false)")
 
-func base_Members(t *Thread, this Value, args []Value) Value {
+func base_Members(th *Thread, this Value, args []Value) Value {
 	if args[0] == True {
 		args[0] = nil
 	}
 	list := &SuObject{}
-	this.(Findable).Finder(t, func(v Value, mb *MemBase) Value {
+	this.(Findable).Finder(th, func(v Value, mb *MemBase) Value {
 		mb.AddMembersTo(list)
 		return args[0]
 	})
@@ -77,16 +77,16 @@ func base_Members(t *Thread, this Value, args []Value) Value {
 
 var _ = method(base_Size, "()")
 
-func base_Size(t *Thread, this Value, args []Value) Value {
-	return this.(Findable).Finder(t, func(_ Value, mb *MemBase) Value {
+func base_Size(th *Thread, this Value, args []Value) Value {
+	return this.(Findable).Finder(th, func(_ Value, mb *MemBase) Value {
 		return IntVal(mb.Size())
 	})
 }
 
 // base skips the first
-func base(t *Thread, x Value, fn func(Value, *MemBase) Value) Value {
+func base(th *Thread, x Value, fn func(Value, *MemBase) Value) Value {
 	first := true
-	return nilToFalse(x.(Findable).Finder(t, func(v Value, mb *MemBase) Value {
+	return nilToFalse(x.(Findable).Finder(th, func(v Value, mb *MemBase) Value {
 		if first {
 			first = false
 			return nil

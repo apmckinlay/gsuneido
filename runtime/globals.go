@@ -164,13 +164,13 @@ func (typeGlobal) Exists(name string) bool {
 }
 
 // GetName returns the value for a global name, or panics
-func (typeGlobal) GetName(t *Thread, name string) Value {
-	return Global.Get(t, Global.Num(name))
+func (typeGlobal) GetName(th *Thread, name string) Value {
+	return Global.Get(th, Global.Num(name))
 }
 
 // Get returns the value for a global number, or panics
-func (typeGlobal) Get(t *Thread, gnum Gnum) (result Value) {
-	if x := Global.Find(t, gnum); x != nil {
+func (typeGlobal) Get(th *Thread, gnum Gnum) (result Value) {
+	if x := Global.Find(th, gnum); x != nil {
 		return x // common fast path
 	}
 	g.lock.RLock()
@@ -186,7 +186,7 @@ func (typeGlobal) Get(t *Thread, gnum Gnum) (result Value) {
 // Used to check if a trigger or rule exists.
 // Avoids creating a global if no definition is found.
 // Uses noDef to avoid repeatedly looking up nonexistent names.
-func (typeGlobal) FindName(t *Thread, name string) Value {
+func (typeGlobal) FindName(th *Thread, name string) Value {
 	g.lock.RLock()
 	if gn, ok := g.name2num[name]; ok { // name exists
 		x := g.values[gn]
@@ -202,7 +202,7 @@ func (typeGlobal) FindName(t *Thread, name string) Value {
 	g.lock.RUnlock()
 	// NOTE: can't hold lock during Libload
 	// since compile may need to access Global.
-	x, e := Libload(t, name)
+	x, e := Libload(th, name)
 	if e != nil {
 		g.lock.Lock()
 		defer g.lock.Unlock()
@@ -226,10 +226,10 @@ var Libload = func(*Thread, string) (Value, any) { return nil, nil }
 var gnPrint = Global.Num("Print")
 
 // Find returns the value for a global number, or nil if not found.
-func (typeGlobal) Find(t *Thread, gnum Gnum) (result Value) {
+func (typeGlobal) Find(th *Thread, gnum Gnum) (result Value) {
 	if x, ok := g.builtins[gnum]; ok {
-		if gnum == GnSuneido && t.Suneido != nil {
-			return t.Suneido
+		if gnum == GnSuneido && th.Suneido != nil {
+			return th.Suneido
 		}
 		return x // common fast path
 	}
@@ -248,7 +248,7 @@ func (typeGlobal) Find(t *Thread, gnum Gnum) (result Value) {
 	// since compile may need to access Global.
 	var e any
 	name := Global.Name(gnum)
-	x, e = Libload(t, name)
+	x, e = Libload(th, name)
 	if e != nil {
 		Global.SetErr(gnum, e)
 		panic("error loading " + name + " " + fmt.Sprint(e))

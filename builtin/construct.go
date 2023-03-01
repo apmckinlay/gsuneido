@@ -11,7 +11,7 @@ import (
 
 var _ = builtin(Construct, "(what, suffix='')")
 
-func Construct(t *Thread, args []Value) Value {
+func Construct(th *Thread, args []Value) Value {
 	what := args[0]
 	suffix := ToStr(args[1])
 	c, ok := what.ToContainer()
@@ -25,10 +25,10 @@ func Construct(t *Thread, args []Value) Value {
 		if !strings.HasSuffix(s, suffix) {
 			s += suffix
 		}
-		what = Global.GetName(t, s)
+		what = Global.GetName(th, s)
 	}
 	if c == nil {
-		return t.CallLookup(what, "*new*")
+		return th.CallLookup(what, "*new*")
 	}
-	return t.CallLookupEach1(what, "*new*", c)
+	return th.CallLookupEach1(what, "*new*", c)
 }

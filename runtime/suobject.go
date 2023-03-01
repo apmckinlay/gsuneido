@@ -105,7 +105,7 @@ func (ob *SuObject) Get(_ *Thread, key Value) Value {
 	// if ob.concurrent && !ob.readonly && IsConcurrent(val) == False {
 	// 	log.Println("ERROR: non-concurrent value in concurrent object",
 	// 		key, val)
-	// 	t.PrintStack()
+	// 	th.PrintStack()
 	// }
 	// return val
 }
@@ -455,18 +455,18 @@ func (ob *SuObject) String() string {
 	return ob.Display(nil)
 }
 
-func (ob *SuObject) Display(t *Thread) string {
+func (ob *SuObject) Display(th *Thread) string {
 	// locking is handled by ArgsIter
 	buf := limitBuf{}
-	ob.rstring(t, &buf, nil)
+	ob.rstring(th, &buf, nil)
 	return buf.String()
 }
 
-func (ob *SuObject) rstring(t *Thread, buf *limitBuf, inProgress vstack) {
-	ob.rstring2(t, buf, "#(", ")", inProgress)
+func (ob *SuObject) rstring(th *Thread, buf *limitBuf, inProgress vstack) {
+	ob.rstring2(th, buf, "#(", ")", inProgress)
 }
 
-func (ob *SuObject) rstring2(t *Thread, buf *limitBuf, before, after string,
+func (ob *SuObject) rstring2(th *Thread, buf *limitBuf, before, after string,
 	inProgress vstack) {
 	if !inProgress.Push(ob) {
 		buf.WriteString("...")
@@ -479,38 +479,38 @@ func (ob *SuObject) rstring2(t *Thread, buf *limitBuf, before, after string,
 		buf.WriteString(sep)
 		sep = ", "
 		if k == nil {
-			valstr(t, buf, v, inProgress)
+			valstr(th, buf, v, inProgress)
 		} else {
-			entstr(t, buf, k, v, inProgress)
+			entstr(th, buf, k, v, inProgress)
 		}
 	}
 	buf.WriteString(after)
 }
 
-func entstr(t *Thread, buf *limitBuf, k Value, v Value, inProgress vstack) {
+func entstr(th *Thread, buf *limitBuf, k Value, v Value, inProgress vstack) {
 	if ks := Unquoted(k); ks != "" {
 		buf.WriteString(string(ks))
 	} else {
-		valstr(t, buf, k, inProgress)
+		valstr(th, buf, k, inProgress)
 	}
 	buf.WriteString(":")
 	if v != True {
 		buf.WriteString(" ")
-		valstr(t, buf, v, inProgress)
+		valstr(th, buf, v, inProgress)
 	}
 }
 
 type recursable interface {
-	rstring(t *Thread, buf *limitBuf, inProgress vstack)
+	rstring(th *Thread, buf *limitBuf, inProgress vstack)
 }
 
 var _ recursable = (*SuObject)(nil)
 
-func valstr(t *Thread, buf *limitBuf, v Value, inProgress vstack) {
+func valstr(th *Thread, buf *limitBuf, v Value, inProgress vstack) {
 	if r, ok := v.(recursable); ok {
-		r.rstring(t, buf, inProgress)
+		r.rstring(th, buf, inProgress)
 	} else {
-		buf.WriteString(Display(t, v))
+		buf.WriteString(Display(th, v))
 	}
 }
 
@@ -694,8 +694,8 @@ var ObjectMethods Methods
 
 var gnObjects = Global.Num("Objects")
 
-func (*SuObject) Lookup(t *Thread, method string) Callable {
-	return Lookup(t, ObjectMethods, gnObjects, method)
+func (*SuObject) Lookup(th *Thread, method string) Callable {
+	return Lookup(th, ObjectMethods, gnObjects, method)
 }
 
 // Slice returns a copy of the object, omitting the first n list values
@@ -827,7 +827,7 @@ func (ob *SuObject) Iter() Iter {
 		result: func(k, v Value) Value { return v }}
 }
 
-func (ob *SuObject) ToRecord(t *Thread, hdr *Header) Record {
+func (ob *SuObject) ToRecord(th *Thread, hdr *Header) Record {
 	if ob.RLock() {
 		defer ob.RUnlock()
 	}
@@ -839,7 +839,7 @@ func (ob *SuObject) ToRecord(t *Thread, hdr *Header) Record {
 	for _, f := range fields {
 		if strings.HasSuffix(f, "_TS") { // also done in SuRecord ToRecord
 			tsField = f
-			ts = t.Dbms().Timestamp()
+			ts = th.Dbms().Timestamp()
 			rb.Add(ts)
 		} else {
 			x := ob.namedGet(SuStr(f))
@@ -856,7 +856,7 @@ func (ob *SuObject) ToRecord(t *Thread, hdr *Header) Record {
 	return rb.Trim().Build()
 }
 
-func (ob *SuObject) Sort(t *Thread, lt Value) {
+func (ob *SuObject) Sort(th *Thread, lt Value) {
 	ob.Lock()
 	defer ob.Unlock()
 	ob.mustBeMutable()
@@ -873,7 +873,7 @@ func (ob *SuObject) Sort(t *Thread, lt Value) {
 			ob.Unlock() // can't hold lock while calling arbitrary code
 			defer ob.Lock()
 			slices.SortStableFunc(ob.list, func(x, y Value) bool {
-				return True == t.Call(lt, x, y)
+				return True == th.Call(lt, x, y)
 			})
 			// note: could become concurrent while unlocked
 		}()
@@ -1026,7 +1026,7 @@ func (ob *SuObject) BinarySearch(value Value) int {
 }
 
 // BinarySearch2 does a binary search with a user specified less than function
-func (ob *SuObject) BinarySearch2(t *Thread, value, lt Value) int {
+func (ob *SuObject) BinarySearch2(th *Thread, value, lt Value) int {
 	ob.RLock()
 	defer ob.RUnlock()
 	defer ob.clockCheck(ob.clock, "BinarySearch")
@@ -1034,7 +1034,7 @@ func (ob *SuObject) BinarySearch2(t *Thread, value, lt Value) int {
 	return sort.Search(len(list), func(i int) bool {
 		ob.RUnlock() // can't hold lock while calling arbitrary code
 		defer ob.RLock()
-		return True != t.Call(lt, list[i], value)
+		return True != th.Call(lt, list[i], value)
 		// note: could become concurrent during lt
 	})
 }

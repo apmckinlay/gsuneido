@@ -11,7 +11,7 @@ var _ = exportMethods(&InstanceMethods)
 
 var _ = method(instance_BaseQ, "(class)")
 
-func instance_BaseQ(t *Thread, this Value, args []Value) Value {
+func instance_BaseQ(th *Thread, this Value, args []Value) Value {
 	instance := this.(*SuInstance)
 	if instance.Base() == args[0] { // handle anonymous base class
 		return True
@@ -22,7 +22,7 @@ func instance_BaseQ(t *Thread, this Value, args []Value) Value {
 		return False
 	}
 	name := c.Name
-	return nilToFalse(instance.Finder(t,
+	return nilToFalse(instance.Finder(th,
 		func(v Value, _ *MemBase) Value {
 			if c, ok := v.(*SuClass); ok && name == c.Name {
 				return True
@@ -39,7 +39,7 @@ func instance_Copy(this Value) Value {
 
 var _ = method(instance_Delete, "(@args)")
 
-func instance_Delete(t *Thread, as *ArgSpec, this Value, args []Value) Value {
+func instance_Delete(th *Thread, as *ArgSpec, this Value, args []Value) Value {
 	if all := getNamed(as, args, SuStr("all")); all == True {
 		this.(*SuInstance).Clear()
 	} else {

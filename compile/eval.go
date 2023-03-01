@@ -12,15 +12,15 @@ import (
 
 // EvalString executes string containing Suneido code
 // i.e. string.Eval()
-func EvalString(t *Thread, s string) Value {
+func EvalString(th *Thread, s string) Value {
 	s = strings.Trim(s, " \t\r\n")
 	if isGlobal(s) {
 		// optimize if just a global name
-		return Global.GetName(t, s)
+		return Global.GetName(th, s)
 	}
 	s = "function () {\n" + s + "\n}"
 	fn := NamedConstant("", "eval", s, nil).(*SuFunc)
-	return t.Call(fn)
+	return th.Call(fn)
 }
 
 // benchmark shows Suneido regex is faster than Go regexp for this
