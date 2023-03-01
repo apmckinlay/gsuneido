@@ -30,6 +30,10 @@ func (*suOpenPGP) String() string {
 	return "OpenPGP /* builtin class */"
 }
 
+func (pgp *suOpenPGP) Equal(other any) bool {
+	return pgp == other
+}
+
 func (*suOpenPGP) Lookup(_ *Thread, method string) Callable {
 	return openpgpMethods[method]
 }
