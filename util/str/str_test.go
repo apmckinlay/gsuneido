@@ -157,3 +157,25 @@ func BenchmarkEqualLower(b *testing.B) {
 }
 
 var B bool
+
+func TestToLower(t *testing.T) {
+	assert := assert.T(t)
+    assert.This(ToLower("foo")).Is("foo")
+    assert.This(ToLower("FOO")).Is("foo")
+    assert.This(ToLower("foo BAR")).Is("foo bar")
+}
+
+func TestToUpper(t *testing.T) {
+	assert := assert.T(t)
+    assert.This(ToUpper("FOO")).Is("FOO")
+    assert.This(ToUpper("foo")).Is("FOO")
+    assert.This(ToUpper("FOO bar")).Is("FOO BAR")
+}
+
+var S string
+
+func BenchmarkToLower(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+        S = ToLower("foo Bar")
+	}
+}

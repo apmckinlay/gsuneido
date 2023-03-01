@@ -10,6 +10,7 @@ import (
 
 	"github.com/apmckinlay/gsuneido/util/ascii"
 	"github.com/apmckinlay/gsuneido/util/generic/ord"
+	"github.com/apmckinlay/gsuneido/util/hacks"
 )
 
 // Capitalized returns true is the string starts with A-Z, otherwise false
@@ -226,28 +227,44 @@ func CmpLower(s1, s2 string) int {
 
 // ToLower is an ascii version of strings.ToLower
 func ToLower(s string) string {
-	var sb strings.Builder
-	sb.Grow(len(s))
-	for _, c := range []byte(s) {
+	for i := 0; i < len(s); i++ {
+		c := s[i]
 		if 'A' <= c && c <= 'Z' {
-			c += 'a' - 'A'
+			lower := make([]byte, len(s))
+			copy(lower, s[:i])
+			lower[i] = c + 32
+			for j := i + 1; j < len(s); j++ {
+				c := s[j]
+				if 'A' <= c && c <= 'Z' {
+					c += 32
+				}
+				lower[j] = c
+			}
+			return hacks.BStoS(lower)
 		}
-		sb.WriteByte(c)
 	}
-	return sb.String()
+	return s
 }
 
 // ToUpper is an ascii version os strings.ToUpper
 func ToUpper(s string) string {
-	var sb strings.Builder
-	sb.Grow(len(s))
-	for _, c := range []byte(s) {
+	for i := 0; i < len(s); i++ {
+		c := s[i]
 		if 'a' <= c && c <= 'z' {
-			c -= 'a' - 'A'
+			upper := make([]byte, len(s))
+			copy(upper, s[:i])
+			upper[i] = c - 32
+			for j := i + 1; j < len(s); j++ {
+				c := s[j]
+				if 'a' <= c && c <= 'z' {
+					c -= 32
+				}
+				upper[j] = c
+			}
+			return hacks.BStoS(upper)
 		}
-		sb.WriteByte(c)
 	}
-	return sb.String()
+	return s
 }
 
 // Contains returns whether the string contains the given byte.
