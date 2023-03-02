@@ -101,7 +101,9 @@ func (a *Binary) rawOp() bool {
 }
 
 func IsColumn(e Expr, cols []string) bool {
-	if id, ok := e.(*Ident); ok && slices.Contains(cols, id.Name) {
+	if id, ok := e.(*Ident); ok && (slices.Contains(cols, id.Name) ||
+		(strings.HasSuffix(id.Name, "_lower!") &&
+		slices.Contains(cols, strings.TrimSuffix(id.Name, "_lower!")))) {
 		return true
 	}
 	return false
