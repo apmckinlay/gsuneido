@@ -478,7 +478,7 @@ func TestJoin_splitSelect(t *testing.T) {
 		columns: []string{"c", "d", "e"},
 		indexes: [][]string{{"c"}},
 		keys:    [][]string{{"c"}},
-		fixed:   []Fixed{
+		fixed: []Fixed{
 			{col: "c", values: []string{"1"}},
 			{col: "e", values: []string{"2", ""}},
 		},

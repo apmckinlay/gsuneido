@@ -516,6 +516,7 @@ func (w *Where) optInit() {
 	w.tbl, _ = w.source.(*Table)
 	if !w.conflict && w.tbl != nil {
 		w.idxSels = w.colSelsToIdxSels(w.colSels)
+		// fmt.Printf("Where idxSels: %#v\n", w.idxSels)
 		w.exprMore = w.exprMore || len(w.idxSels) > 1
 		if !w.exprMore {
 			// check if any colSels were not used by idxSels
@@ -543,6 +544,7 @@ func (w *Where) extractCompares() []cmpExpr {
 			w.exprMore = true // expr not used by cmps
 		}
 	}
+	// fmt.Printf("Where cmps %#v\n", cmps)
 	return cmps
 }
 
