@@ -7,7 +7,7 @@ import "github.com/apmckinlay/gsuneido/util/ascii"
 
 // Character classes are compiled to either listSet or bitSet instructions
 // listSet is used for small numbers of characters
-// bitSet is 256 bits in 32 bytes
+// bitSet is either 128 bits in 16 bytes or 256 bits in 32 bytes
 
 // predefined character class instructions
 var (

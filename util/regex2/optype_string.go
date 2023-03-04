@@ -14,22 +14,23 @@ func _() {
 	_ = x[opSplitFirst-4]
 	_ = x[opSplitLast-5]
 	_ = x[opAny-6]
-	_ = x[opHalfSet-7]
-	_ = x[opFullSet-8]
-	_ = x[opListSet-9]
-	_ = x[opWordStart-10]
-	_ = x[opWordEnd-11]
-	_ = x[opLineStart-12]
-	_ = x[opLineEnd-13]
-	_ = x[opStrStart-14]
-	_ = x[opStrEnd-15]
-	_ = x[opSave-16]
-	_ = x[opStop-17]
+	_ = x[opAnyNotNL-7]
+	_ = x[opHalfSet-8]
+	_ = x[opFullSet-9]
+	_ = x[opListSet-10]
+	_ = x[opWordStart-11]
+	_ = x[opWordEnd-12]
+	_ = x[opLineStart-13]
+	_ = x[opLineEnd-14]
+	_ = x[opStrStart-15]
+	_ = x[opStrEnd-16]
+	_ = x[opSave-17]
+	_ = x[opDone-18]
 }
 
-const _opType_name = "opCharopCharIgnoreCaseopJumpopSplitFirstopSplitLastopAnyopHalfSetopFullSetopListSetopWordStartopWordEndopLineStartopLineEndopStrStartopStrEndopSaveopStop"
+const _opType_name = "opCharopCharIgnoreCaseopJumpopSplitFirstopSplitLastopAnyopAnyNotNLopHalfSetopFullSetopListSetopWordStartopWordEndopLineStartopLineEndopStrStartopStrEndopSaveopDone"
 
-var _opType_index = [...]uint8{0, 6, 22, 28, 40, 51, 56, 65, 74, 83, 94, 103, 114, 123, 133, 141, 147, 153}
+var _opType_index = [...]uint8{0, 6, 22, 28, 40, 51, 56, 66, 75, 84, 93, 104, 113, 124, 133, 143, 151, 157, 163}
 
 func (i opType) String() string {
 	i -= 1

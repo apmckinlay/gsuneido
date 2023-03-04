@@ -5,6 +5,7 @@ package regex2
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 )
 
@@ -21,6 +22,7 @@ const (
 	opSplitFirst
 	opSplitLast
 	opAny
+	opAnyNotNL
 	opHalfSet
 	opFullSet
 	opListSet
@@ -31,7 +33,7 @@ const (
 	opStrStart
 	opStrEnd
 	opSave
-	opStop
+	opDone
 )
 
 func (pat Pattern) String() string {
@@ -55,9 +57,9 @@ func (pat Pattern) opstr(pi int) (int, string) {
 		jmp := int16(pat[pi+1])<<8 | int16(pat[pi+2])
 		return 3, fmt.Sprint(opstr, " ", pi+int(jmp))
 	case opHalfSet:
-		return 1+16, opstr
+		return 1 + 16, opstr
 	case opFullSet:
-		return 1+32, opstr
+		return 1 + 32, opstr
 	case opListSet:
 		n := int(pat[pi+1])
 		return n + 2, fmt.Sprintf("List %q", string(pat[pi+2:pi+2+n]))
@@ -68,7 +70,7 @@ func (pat Pattern) opstr(pi int) (int, string) {
 	}
 }
 
-func (pat Pattern) opstr1(pi int) string {
-	_, s := pat.opstr(pi)
-	return s
+func (pat Pattern) opstr1(pi int16) string {
+	_, s := pat.opstr(int(pi))
+	return strconv.Itoa(int(pi)) + ": " + s
 }

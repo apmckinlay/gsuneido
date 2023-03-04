@@ -21,8 +21,8 @@ import (
  *
  *	element		:	^					opLineStart
  *				|	$					opLineEnd
- *				|	\A					opStringStart
- *				|	\Z					opStringEnd
+ *				|	\A					opStrStart
+ *				|	\Z					opStrEnd
  *				|	\<					opWordStart
  *				|	\>					opWordEnd
  *				|	(?i)				(only affects compile)
@@ -85,14 +85,21 @@ type compiler struct {
 	leftCount    int
 }
 
+// var prefix = Pattern(string([]int8{opSplitLast, 7, opAny, opJump, -4}))
+
 func (co *compiler) compile() Pattern {
+	// prefix with .*
+	co.emitOff(opSplitFirst, 7)
+	co.emit(opAny)
+	co.emitOff(opJump, -4)
+
 	co.emit(opSave, 0)
 	co.regex()
-	co.emit(opSave, 1)
-	co.emit(opStop)
 	if co.si < co.sn {
 		panic("regex: closing ) without opening (")
 	}
+	co.emit(opDone)
+
 	return Pattern(hacks.BStoS(co.prog))
 }
 
@@ -147,19 +154,20 @@ func (co *compiler) element() {
 		start := len(co.prog)
 		co.simple()
 		pn := len(co.prog) - start
-		if co.match("?") {
+		// need to match longer first
+		if co.match("??") {
 			co.insert(start, opSplitFirst, pn+3)
-		} else if co.match("??") {
+		} else if co.match("?") {
 			co.insert(start, opSplitLast, pn+3)
-		} else if co.match("+") {
-			co.emitOff(opSplitFirst, -pn)
 		} else if co.match("+?") {
 			co.emitOff(opSplitLast, -pn)
-		} else if co.match("*") {
-			co.emitOff(opJump, -pn)
-			co.insert(start, opSplitFirst, pn+6)
+		} else if co.match("+") {
+			co.emitOff(opSplitFirst, -pn)
 		} else if co.match("*?") {
-			co.emitOff(opJump, -pn)
+			co.emitOff(opJump, -pn-3)
+			co.insert(start, opSplitFirst, pn+6)
+		} else if co.match("*") {
+			co.emitOff(opJump, -pn-3)
 			co.insert(start, opSplitLast, pn+6)
 		}
 	}
@@ -194,7 +202,7 @@ func (co *compiler) leadingAnything() bool {
 
 func (co *compiler) simple() {
 	if co.match(".") {
-		co.emit(opAny)
+		co.emit(opAnyNotNL)
 	} else if co.match("\\d") {
 		co.emitCC(digit)
 	} else if co.match("\\D") {
@@ -280,7 +288,7 @@ func (co *compiler) charClass() {
 		cc.addChars(chars)
 	}
 	if !negate && len(cc.data) == 1 {
-		// optimization - treat single character class as just character
+		// optimization - treat single character class as just a character
 		co.emitChar(cc.data[0])
 		return
 	}
@@ -365,10 +373,10 @@ func (co *compiler) emitCC(b *builder) {
 		} else {
 			co.emit(opFullSet)
 		}
-		co.prog = append(co.prog, data...)
 	} else {
 		co.emit(opListSet, byte(len(data)))
 	}
+	co.prog = append(co.prog, data...)
 }
 
 func smallSet(data []byte) bool {
