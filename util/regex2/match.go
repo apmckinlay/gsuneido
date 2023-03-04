@@ -67,9 +67,9 @@ func (pat Pattern) prefixMatch(s string, cap *Captures, toEnd bool) bool {
 	trace.Println(pat)
 	var cur []state
 	var next []state
-	var ss = &SparseSet{}
-	cur = pat.addstate(s, 0, ss, cur, 0, dup(cap))
-	ss.Clear()
+	var live = &BitSet{}
+	cur = pat.addstate(s, 0, live, cur, 0, dup(cap))
+	live.Clear()
 	matched := false
 	for si := 0; ; si++ {
 		if si < len(s) {
@@ -135,7 +135,7 @@ func (pat Pattern) prefixMatch(s string, cap *Captures, toEnd bool) bool {
 				panic(assert.ShouldNotReachHere())
 			}
 			if add > 0 {
-				next = pat.addstate(s, si+1, ss, next, add, cur[ci].cap)
+				next = pat.addstate(s, si+1, live, next, add, cur[ci].cap)
 			}
 		}
 		if len(next) == 0 {
@@ -143,18 +143,18 @@ func (pat Pattern) prefixMatch(s string, cap *Captures, toEnd bool) bool {
 		}
 		cur, next = next, cur // swap
 		next = next[:0]       // clear
-		ss.Clear()
+		live.Clear()
 	}
 }
 
 // addstate adds a state and, recursively, all of its children.
 // It processes all zero width instructions
 // so the states added will point to character matching instructions.
-func (pat Pattern) addstate(s string, si int, ss *SparseSet, states []state,
+func (pat Pattern) addstate(s string, si int, live *BitSet, states []state,
 	pi int16, cap *Captures) []state {
 	// trace.Println("addstate ss", ss.dense)
 	for {
-		if !ss.AddNew(pi) {
+		if !live.AddNew(pi) {
 			return states
 		}
 		trace.Println("addstate loop", pat.opstr1(pi))
@@ -164,18 +164,18 @@ func (pat Pattern) addstate(s string, si int, ss *SparseSet, states []state,
 			pi += jmp
 		case opSplitFirst:
 			jmp := int16(pat[pi+1])<<8 | int16(pat[pi+2])
-			states = pat.addstate(s, si, ss, states, pi+jmp, cap)
+			states = pat.addstate(s, si, live, states, pi+jmp, cap)
 			pi += 3
 		case opSplitLast:
 			jmp := int16(pat[pi+1])<<8 | int16(pat[pi+2])
-			states = pat.addstate(s, si, ss, states, pi+3, cap)
+			states = pat.addstate(s, si, live, states, pi+3, cap)
 			pi += jmp
 		case opSave:
 			if cap != nil {
 				c := pat[pi+1]
 				orig := cap[c]
 				cap[c] = int32(si)
-				states = pat.addstate(s, si, ss, states, pi+2, cap)
+				states = pat.addstate(s, si, live, states, pi+2, cap)
 				cap[c] = orig
 				return states
 			}

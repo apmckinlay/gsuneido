@@ -10,32 +10,32 @@ import (
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
-func TestSparse(t *testing.T) {
-	ss := SparseSet{}
-	nums := []int16{0, 5, 7, 13}
+func TestBitSet(t *testing.T) {
+	bs := BitSet{}
+	nums := []int16{0, 7, 13, 99, 111}
 	for _, n := range nums {
-		assert.False(ss.Has(n))
+		assert.False(bs.Has(n))
 	}
 	for _, n := range nums {
-		ss.Add(n)
+		bs.Add(n)
 	}
 	for _, n := range nums {
-		assert.True(ss.Has(n))
+		assert.True(bs.Has(n))
 	}
-	ss.Clear()
+	bs.Clear()
 	for _, n := range nums {
-		assert.False(ss.Has(n))
+		assert.False(bs.Has(n))
 	}
 }
 
-var ss = SparseSet{}
+var bs BitSet
 
-func BenchmarkSparseSet(b *testing.B) {
+func BenchmarkBitSet(b *testing.B) {
 	for i := 0; i < b.N; i++ {
-		ss = SparseSet{}
+		bs = BitSet{}
 		for j := 0; j < 10; j++ {
-			ss.Add(int16(rand.Intn(100)))
+			bs.Add(int16(rand.Intn(100)))
 		}
-		ss.Clear()
+		bs.Clear()
 	}
 }

@@ -116,14 +116,21 @@ func Fill[E any](data []E, value E) {
 	}
 }
 
-// Grow grows the buffer to guarantee space for n more bytes.
-// NOTE: Unlike x/exp/slices.Grow it extends the length.
+// Grow grows the buffer to guarantee space for n more elements.
+// NOTE: Unlike x/exp/slices.Grow it extends the length, not the capacity.
 // Using append and make like x/exp/slices.Grow assuming that is optimized.
 func Grow[S ~[]E, E any](s S, n int) S {
 	if n <= 0 {
 		return s
 	}
 	return append(s, make(S, n)...)
+}
+
+// Allow increases the length of the slice to guarantee space for n elements.
+// NOTE: Unlike x/exp/slices.Grow it extends the length, not the capacity.
+// Using append and make like x/exp/slices.Grow assuming that is optimized.
+func Allow[S ~[]E, E any](s S, n int) S {
+	return Grow(s, n - len(s))
 }
 
 // With returns a copy of the list with the values appended
