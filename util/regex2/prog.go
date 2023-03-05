@@ -33,7 +33,8 @@ const (
 	opStrStart
 	opStrEnd
 	opSave
-	opDone
+	opDoneSave1
+	opOnePass
 )
 
 func (pat Pattern) String() string {

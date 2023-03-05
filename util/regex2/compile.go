@@ -9,6 +9,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/ascii"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/hacks"
+	"golang.org/x/exp/slices"
 )
 
 /*
@@ -25,10 +26,12 @@ import (
  *				|	\Z					opStrEnd
  *				|	\<					opWordStart
  *				|	\>					opWordEnd
- *				|	(?i)				(only affects compile)
- *				|	(?-i)				(only affects compile)
- *				|	(?q)				(only affects compile)
- *				|	(?-q)				(only affects compile)
+ *				|	(?i)				ignore case (handled by compile)
+ *				|	(?-i)				(handled by compile)
+ *				|	(?q)				quote (handled by compile)
+ *				|	(?-q)				(handled by compile)
+ *				|	(?m)				multi-line mode (handled by compile)
+ *				|	(?-m)				(handled by compile)
  *				|	simple
  *				|	simple ?			opSplitFirst simple
  *				|	simple ??			opSplitLast simple
@@ -72,34 +75,50 @@ import (
 
 // Compile converts a regular expression string to a Pattern
 func Compile(rx string) Pattern {
-	co := compiler{src: rx, sn: len(rx)}
+	co := compiler{src: rx, sn: len(rx), prog: make([]byte, 0, 10 + 2*len(rx)),
+		onePass: true}
 	return co.compile()
 }
 
 type compiler struct {
-	src          string
-	si           int
-	sn           int
-	prog         []byte
-	ignoringCase bool
-	leftCount    int
+	src        string
+	si         int
+	sn         int
+	prog       []byte
+	ignoreCase bool
+	multiLine  bool
+	leftCount  int
+	onePass    bool
 }
 
-// var prefix = Pattern(string([]int8{opSplitLast, 7, opAny, opJump, -4}))
+var preBytes []byte
+var preString string
 
 func (co *compiler) compile() Pattern {
-	// prefix with .*
-	co.emitOff(opSplitFirst, 7)
-	co.emit(opAny)
-	co.emitOff(opJump, -4)
+	if preBytes == nil {
+		var co compiler
+		co.emitOff(opSplitFirst, 7)
+		co.emit(opAny)
+		co.emitOff(opJump, -4)
+		preBytes = co.prog
+		preString = string(co.prog)
+	}
 
 	co.emit(opSave, 0)
 	co.regex()
 	if co.si < co.sn {
 		panic("regex: closing ) without opening (")
 	}
-	co.emit(opDone)
+	co.emit(opDoneSave1)
 
+	leftAnchored := opType(co.prog[2]) != opStrStart // 2 to skip Save 0
+	if co.onePass {
+		co.prog = slices.Insert(co.prog, 0, byte(opOnePass))
+	}
+	if leftAnchored {
+		// prefix with .*?
+		co.prog = slices.Insert(co.prog, 0, preBytes...)
+	}
 	return Pattern(hacks.BStoS(co.prog))
 }
 
@@ -131,9 +150,17 @@ func (co *compiler) sequence() {
 
 func (co *compiler) element() {
 	if co.match("^") {
-		co.emit(opLineStart)
+		if co.multiLine {
+			co.emit(opLineStart)
+		} else {
+			co.emit(opStrStart)
+		}
 	} else if co.match("$") {
-		co.emit(opLineEnd)
+		if co.multiLine {
+			co.emit(opLineEnd)
+		} else {
+			co.emit(opStrEnd)
+		}
 	} else if co.match("\\A") {
 		co.emit(opStrStart)
 	} else if co.match("\\Z") {
@@ -143,9 +170,13 @@ func (co *compiler) element() {
 	} else if co.match("\\>") {
 		co.emit(opWordEnd)
 	} else if co.match("(?i)") {
-		co.ignoringCase = true
+		co.ignoreCase = true
 	} else if co.match("(?-i)") {
-		co.ignoringCase = false
+		co.ignoreCase = false
+	} else if co.match("(?m)") {
+		co.multiLine = true
+	} else if co.match("(?-m)") {
+		co.multiLine = false
 	} else if co.match("(?q)") {
 		co.quoted()
 	} else if co.match("(?-q)") {
@@ -240,7 +271,7 @@ func (co *compiler) simple() {
 }
 
 func (co *compiler) emitChar(c byte) {
-	if co.ignoringCase {
+	if co.ignoreCase {
 		co.emit(opCharIgnoreCase, ascii.ToLower(c))
 	} else {
 		co.emit(opChar, c)
@@ -292,7 +323,7 @@ func (co *compiler) charClass() {
 		co.emitChar(cc.data[0])
 		return
 	}
-	if co.ignoringCase {
+	if co.ignoreCase {
 		cc.ignore()
 	}
 	if negate {
@@ -360,6 +391,7 @@ func (co *compiler) emit(op opType, arg ...byte) {
 }
 
 func (co *compiler) emitOff(op opType, n int) {
+	co.onePass = false
 	co.emit(op, byte(n>>8), byte(n))
 }
 
@@ -389,6 +421,7 @@ func smallSet(data []byte) bool {
 }
 
 func (co *compiler) insert(i int, op opType, n int) {
+	co.onePass = false
 	co.prog = append(co.prog, 0, 0, 0)
 	copy(co.prog[i+3:], co.prog[i:])
 	co.prog[i] = byte(op)

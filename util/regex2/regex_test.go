@@ -13,17 +13,17 @@ import (
 )
 
 func TestPlay(t *testing.T) {
-	s := "xyz\r\n\r\nxyz"
-	pat := Compile(`^[^x].*$`)
+	s := "abcd"
+	pat := Compile(`(..)(..)`)
 	fmt.Println(pat)
 	// pat := Compile(`ab|abcd`) "xyz\r\n\r\nxyz", "^[^x].*$", false
 
 	// fmt.Println(">>> part", pat.Matches(s))
 	// fmt.Println(">>> full", pat.Match(s, nil))
 	var cap Captures
-	// fmt.Println(">>> full capture", pat.Match(s, &cap))
+	fmt.Println(">>> full capture", pat.Match(s, &cap))
 	// cap.Print(s)
-	fmt.Println(">>> first capture", pat.FirstMatch(s, &cap))
+	// fmt.Println(">>> first capture", pat.FirstMatch(s, &cap))
 	// fmt.Println(">>> ", pat[npre:].prefixMatch(s, &cap, false))
 	cap.Print(s)
 }
@@ -133,6 +133,13 @@ func ExampleCompile() {
 	// 9: Jump 4
 	// 12: Char c
 	// 14: Done
+}
+
+func BenchmarkOnePass(b *testing.B) {
+	pat := Compile("abc")
+	for i := 0; i < b.N; i++ {
+		pat.Match("abc", nil)
+	}
 }
 
 // ptest support ---------------------------------------------------------------

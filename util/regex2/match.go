@@ -8,32 +8,35 @@ import (
 
 	"github.com/apmckinlay/gsuneido/util/ascii"
 	"github.com/apmckinlay/gsuneido/util/assert"
+	"github.com/apmckinlay/gsuneido/util/str"
 )
 
-type Captures [20]int32 // 10 * 2
+type Captures [20]int32 // 2 * 10 (\0 to \9)
 
 const npre = 7
 
 // Matches returns whether the pattern is found anywhere in the string
 func (pat Pattern) Matches(s string) bool {
 	// keep the .* prefix, toEnd = false
-	return optPre(pat, s).prefixMatch(s, nil, false)
+	return pat.prefixMatch(s, nil, false)
 }
 
 // Match returns whether the pattern matches the entire string.
 func (pat Pattern) Match(s string, cap *Captures) bool {
 	// omit the .* prefix, toEnd = true
-	return Pattern(pat[npre:]).prefixMatch(s, cap, true)
+	pat = Pattern(strings.TrimPrefix(string(pat), preString))
+	return Pattern(pat).prefixMatch(s, cap, true)
 }
 
 func (pat Pattern) FirstMatch(s string, cap *Captures) bool {
 	// keep the .* prefix, toEnd = false
-	return optPre(pat, s).prefixMatch(s, cap, false)
+	return pat.prefixMatch(s, cap, false)
 }
 
 func (pat Pattern) LastMatch(s string, cap *Captures) bool {
+	// inefficient, but rarely used
 	// omit the .* prefix, toEnd = false
-	pat = pat[npre:]
+	pat = Pattern(strings.TrimPrefix(string(pat), preString))
 	for i := len(s) - 1; i >= 0; i-- {
 		if pat.prefixMatch(s[:i], cap, false) {
 			return true
@@ -41,17 +44,6 @@ func (pat Pattern) LastMatch(s string, cap *Captures) bool {
 	}
 	return false
 	// could improve this by figuring out the minimum match length
-}
-
-// optPre removes the .* prefix if the pattern starts with \A
-// or if it starts with ^ and the string is short and doesn't contain \n
-func optPre(pat Pattern, s string) Pattern {
-	// +2 is to skip Save 0
-	if pat[npre+2] == byte(opStrStart) || (pat[npre+2] == byte(opLineStart) &&
-		len(s) < 1000 && !strings.Contains(s, "\n")) {
-		pat = pat[npre:]
-	}
-	return pat
 }
 
 type state struct {
@@ -65,6 +57,10 @@ type state struct {
 // If it returns true, the captures are updated.
 func (pat Pattern) prefixMatch(s string, cap *Captures, toEnd bool) bool {
 	trace.Println(pat)
+	if opType(pat[0]) == opOnePass {
+		pat = Pattern(pat[1:])
+		return pat.onePass(s, cap, toEnd)
+	}
 	var cur []state
 	var next []state
 	var live = &BitSet{}
@@ -117,7 +113,7 @@ func (pat Pattern) prefixMatch(s string, cap *Captures, toEnd bool) bool {
 				if si < len(s) && matchFullSet(pat[pi+1:], s[si]) {
 					add = pi + 1 + 32
 				}
-			case opDone:
+			case opDoneSave1:
 				if toEnd && si < len(s) {
 					break
 				}
@@ -186,6 +182,9 @@ func (pat Pattern) addstate(s string, si int, live *BitSet, states []state,
 			}
 			trace.Println("YES")
 			pi++
+		case opOnePass:
+			// ignore
+			pi++
 		default:
 			states = append(states, state{pi: pi, cap: dup(cap)})
 			return states
@@ -218,6 +217,80 @@ func dup(cap *Captures) *Captures {
 	}
 	cp := *cap
 	return &cp
+}
+
+// ------------------------------------------------------------------
+
+func (pat Pattern) onePass(s string, cap *Captures, toEnd bool) bool {
+	trace.Println("ONE PASS")
+	for si, pi := 0, 0; pi < len(pat); pi++ {
+		trace.Printf("si %v %q %v\n", si, str.Subn(s, si, 1), pat.opstr1(int16(pi)))
+		switch opType(pat[pi]) {
+		case opChar:
+			if si >= len(s) || s[si] != pat[pi+1] {
+				return false
+			}
+			pi++
+			si++
+		case opCharIgnoreCase:
+			if si >= len(s) || ascii.ToLower(s[si]) != pat[pi+1] {
+				return false
+			}
+			pi++
+			si++
+		case opAny:
+			if si >= len(s) {
+				return false
+			}
+			si++
+		case opAnyNotNL:
+			if si >= len(s) || s[si] == '\r' || s[si] == '\n' {
+				return false
+			}
+			si++
+		case opListSet:
+			n := int(pat[pi+1])
+			if si >= len(s) ||
+				-1 == strings.IndexByte(string(pat[pi+2:pi+2+n]), s[si]) {
+				return false
+			}
+			pi += 1 + n
+			si++
+		case opHalfSet:
+			if si >= len(s) || !matchHalfSet(pat[pi+1:], s[si]) {
+				return false
+			}
+			pi += 16
+			si++
+		case opFullSet:
+			if si >= len(s) && !matchFullSet(pat[pi+1:], s[si]) {
+				return false
+			}
+			pi += 32
+			si++
+		case opStrStart, opStrEnd, opLineStart, opLineEnd, opWordStart, opWordEnd:
+			if !boundary(s, si, pat[pi]) {
+				return false
+			}
+		case opSave:
+			if cap != nil {
+				c := pat[pi+1]
+				cap[c] = int32(si)
+			}
+			pi++
+		case opDoneSave1:
+			if toEnd && si < len(s) {
+				return false
+			}
+			if cap != nil {
+				cap[1] = int32(si)
+			}
+			return true
+		default:
+			panic(assert.ShouldNotReachHere())
+		}
+	}
+	return false
 }
 
 // ------------------------------------------------------------------
