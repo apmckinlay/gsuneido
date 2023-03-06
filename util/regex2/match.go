@@ -24,8 +24,7 @@ func (pat Pattern) Matches(s string) bool {
 // Match returns whether the pattern matches the entire string.
 func (pat Pattern) Match(s string, cap *Captures) bool {
 	// omit the .* prefix, toEnd = true
-	pat = Pattern(strings.TrimPrefix(string(pat), preString))
-	return Pattern(pat).prefixMatch(s, cap, true)
+	return omitUA(pat).prefixMatch(s, cap, true)
 }
 
 func (pat Pattern) FirstMatch(s string, cap *Captures) bool {
@@ -36,7 +35,7 @@ func (pat Pattern) FirstMatch(s string, cap *Captures) bool {
 func (pat Pattern) LastMatch(s string, cap *Captures) bool {
 	// inefficient, but rarely used
 	// omit the .* prefix, toEnd = false
-	pat = Pattern(strings.TrimPrefix(string(pat), preString))
+	pat = omitUA(pat)
 	for i := len(s) - 1; i >= 0; i-- {
 		if pat.prefixMatch(s[:i], cap, false) {
 			return true
@@ -44,6 +43,12 @@ func (pat Pattern) LastMatch(s string, cap *Captures) bool {
 	}
 	return false
 	// could improve this by figuring out the minimum match length
+}
+
+func omitUA(pat Pattern) Pattern {
+	s := strings.TrimPrefix(string(pat), preString)
+	s = strings.TrimPrefix(s, uaString)
+	return Pattern(s)
 }
 
 type state struct {
@@ -57,9 +62,11 @@ type state struct {
 // If it returns true, the captures are updated.
 func (pat Pattern) prefixMatch(s string, cap *Captures, toEnd bool) bool {
 	trace.Println(pat)
-	if opType(pat[0]) == opOnePass {
-		pat = Pattern(pat[1:])
-		return pat.onePass(s, cap, toEnd)
+	switch opType(pat[0]) {
+	case opOnePass:
+		return Pattern(pat[1:]).onePass(s, cap, toEnd)
+	case opLiteral, opUnanchored:
+		return pat.literalMatch(s, cap, toEnd)
 	}
 	var cur []state
 	var next []state
@@ -291,6 +298,27 @@ func (pat Pattern) onePass(s string, cap *Captures, toEnd bool) bool {
 		}
 	}
 	return false
+}
+
+// ------------------------------------------------------------------
+
+func (pat Pattern) literalMatch(s string, cap *Captures, toEnd bool) bool {
+	lit := string(pat[1:])
+	anchored := true
+	if opType(pat[0]) == opUnanchored {
+		anchored = false
+		lit = lit[1:]
+	}
+	//TODO capture
+	if anchored {
+		if toEnd {
+			return s == lit
+		}
+		return strings.HasPrefix(s, lit)
+	}
+	// else not anchored
+	i := strings.Index(s, lit)
+	return i >= 0
 }
 
 // ------------------------------------------------------------------

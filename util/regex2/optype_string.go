@@ -27,11 +27,13 @@ func _() {
 	_ = x[opSave-17]
 	_ = x[opDoneSave1-18]
 	_ = x[opOnePass-19]
+	_ = x[opLiteral-20]
+	_ = x[opUnanchored-21]
 }
 
-const _opType_name = "opCharopCharIgnoreCaseopJumpopSplitFirstopSplitLastopAnyopAnyNotNLopHalfSetopFullSetopListSetopWordStartopWordEndopLineStartopLineEndopStrStartopStrEndopSaveopDoneSave1opOnePass"
+const _opType_name = "opCharopCharIgnoreCaseopJumpopSplitFirstopSplitLastopAnyopAnyNotNLopHalfSetopFullSetopListSetopWordStartopWordEndopLineStartopLineEndopStrStartopStrEndopSaveopDoneSave1opOnePassopLiteralopUnanchored"
 
-var _opType_index = [...]uint8{0, 6, 22, 28, 40, 51, 56, 66, 75, 84, 93, 104, 113, 124, 133, 143, 151, 157, 168, 177}
+var _opType_index = [...]uint8{0, 6, 22, 28, 40, 51, 56, 66, 75, 84, 93, 104, 113, 124, 133, 143, 151, 157, 168, 177, 186, 198}
 
 func (i opType) String() string {
 	i -= 1

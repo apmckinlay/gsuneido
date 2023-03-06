@@ -4,106 +4,121 @@
 package regex2
 
 import (
+	"math"
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/util/ascii"
 	"github.com/apmckinlay/gsuneido/util/assert"
+	"github.com/apmckinlay/gsuneido/util/generic/ord"
 	"github.com/apmckinlay/gsuneido/util/hacks"
 	"golang.org/x/exp/slices"
 )
 
 /*
- * regular expression grammar and compiled form:
- *
- *	regex	:	sequence				LEFT0 ... RIGHT0
- *			|	sequence (| sequence)+	Branch sequence (Jump Branch sequence)+
- *
- *	sequence	:	element+
- *
- *	element		:	^					opLineStart
- *				|	$					opLineEnd
- *				|	\A					opStrStart
- *				|	\Z					opStrEnd
- *				|	\<					opWordStart
- *				|	\>					opWordEnd
- *				|	(?i)				ignore case (handled by compile)
- *				|	(?-i)				(handled by compile)
- *				|	(?q)				quote (handled by compile)
- *				|	(?-q)				(handled by compile)
- *				|	(?m)				multi-line mode (handled by compile)
- *				|	(?-m)				(handled by compile)
- *				|	simple
- *				|	simple ?			opSplitFirst simple
- *				|	simple ??			opSplitLast simple
- *				|	simple +			simple opSplitFirst
- *				|	simple +?			simple opSplitLast
- *				|	simple *			opSplitFirst simple opJump
- *				|	simple *?			opSplitLast simple opJump
- *
- *	simple		:	.					opAny
- *				|	[ charmatch+ ]		character class
- *				|	[^ charmatch+ ]		character class
- *				|	shortcut			character class
- *				|	( regex )			opSave ... opSave
- *				|	char				opChar
- *
- *	charmatch	:	shortcut			character class
- *				|	posix				character class
- *				|	char - char			character class
- *				|	char				character class
- *
- *	shortcut	:	\d					character class
- *				|	\D					character class
- *				|	\w					character class
- *				|	\W					character class
- *				|	\s					character class
- *				|	\S					character class
- *
- *	posix		|	[:alnum:]			character class
- *				|	[:alpha:]			character class
- *				|	[:blank:]			character class
- *				|	[:cntrl:]			character class
- *				|	[:digit:]			character class
- *				|	[:graph:]			character class
- *				|	[:lower:]			character class
- *				|	[:print:]			character class
- *				|	[:punct:]			character class
- *				|	[:space:]			character class
- *				|	[:upper:]			character class
- *				|	[:xdigit:]			character class
- */
+regular expression grammar and compiled form:
+
+regex		:	seq					Save 0 ... DoneSave1
+			|	seq (| seq)+		SplitFirst seq (Jump SplitFirst seq)+
+
+seq   		:	element+
+
+element		:	^					opLineStart
+			|	$					opLineEnd
+			|	\A					opStrStart
+			|	\Z					opStrEnd
+			|	\<					opWordStart
+			|	\>					opWordEnd
+			|	(?i)				ignore case (handled by compile)
+			|	(?-i)				(handled by compile)
+			|	(?q)				quote (handled by compile)
+			|	(?-q)				(handled by compile)
+			|	(?m)				multi-line mode (handled by compile)
+			|	(?-m)				(handled by compile)
+			|	simple
+			|	simple ?			SplitFirst simple
+			|	simple ??			SplitLast simple
+			|	simple +			simple SplitFirst
+			|	simple +?			simple SplitLast
+			|	simple *			SplitFirst simple Jump
+			|	simple *?			SplitLast simple Jump
+
+simple		:	.					opAny
+			|	char	 			Char c
+			|	( regex )			Save # ... Save #+1
+			|	[ charmatch+ ]		character class
+			|	[^ charmatch+ ]		character class
+			|	shortcut			character class
+
+charmatch	:	shortcut			character class
+			|	posix				character class
+			|	char - char			character class
+			|	char				character class
+
+shortcut	:	\d					character class
+			|	\D					character class
+			|	\w					character class
+			|	\W					character class
+			|	\s					character class
+			|	\S					character class
+
+posix		|	[:alnum:]			character class
+			|	[:alpha:]			character class
+			|	[:blank:]			character class
+			|	[:cntrl:]			character class
+			|	[:digit:]			character class
+			|	[:graph:]			character class
+			|	[:lower:]			character class
+			|	[:print:]			character class
+			|	[:punct:]			character class
+			|	[:space:]			character class
+			|	[:upper:]			character class
+			|	[:xdigit:]			character class
+
+If a pattern does not start with \A it will be prefixed with .*?
+
+If a pattern does not contain any splits, it will start with OnePass
+
+If the entire pattern is literal characters it is compiled to:
+	[opUnanchored] opLiteral characters
+
+If the pattern has a literal prefix it will be compiled to:
+	opLitPre len characters <remainder of pattern>
+*/
 
 // Compile converts a regular expression string to a Pattern
 func Compile(rx string) Pattern {
-	co := compiler{src: rx, sn: len(rx), prog: make([]byte, 0, 10 + 2*len(rx)),
-		onePass: true}
+	co := compiler{src: rx, sn: len(rx), prog: make([]byte, 0, 10+2*len(rx)),
+		onePass: true, firstTarget: math.MaxInt}
 	return co.compile()
 }
 
 type compiler struct {
-	src        string
-	si         int
-	sn         int
-	prog       []byte
-	ignoreCase bool
-	multiLine  bool
-	leftCount  int
-	onePass    bool
+	src         string
+	si          int
+	sn          int
+	prog        []byte
+	ignoreCase  bool
+	multiLine   bool
+	leftCount   int
+	onePass     bool
+	firstTarget int
+	leftAnchor  bool
 }
 
 var preBytes []byte
 var preString string
+var uaString = string(rune(opUnanchored))
+
+func init() {
+	var co compiler
+	co.emitOff(opSplitFirst, 7)
+	co.emit(opAny)
+	co.emitOff(opJump, -4)
+	preBytes = co.prog
+	preString = string(co.prog)
+}
 
 func (co *compiler) compile() Pattern {
-	if preBytes == nil {
-		var co compiler
-		co.emitOff(opSplitFirst, 7)
-		co.emit(opAny)
-		co.emitOff(opJump, -4)
-		preBytes = co.prog
-		preString = string(co.prog)
-	}
-
 	co.emit(opSave, 0)
 	co.regex()
 	if co.si < co.sn {
@@ -111,15 +126,39 @@ func (co *compiler) compile() Pattern {
 	}
 	co.emit(opDoneSave1)
 
-	leftAnchored := opType(co.prog[2]) != opStrStart // 2 to skip Save 0
-	if co.onePass {
-		co.prog = slices.Insert(co.prog, 0, byte(opOnePass))
-	}
-	if leftAnchored {
-		// prefix with .*?
-		co.prog = slices.Insert(co.prog, 0, preBytes...)
+	literalPrefix, allLiteral := co.literalPrefix()
+	if allLiteral {
+		co.prog = slices.Insert(literalPrefix, 0, byte(opLiteral))
+		if !co.leftAnchor {
+			co.prog = slices.Insert(co.prog, 0, byte(opUnanchored))
+		}
+	} else {
+		if co.onePass {
+			co.prog = slices.Insert(co.prog, 0, byte(opOnePass))
+		}
+		if !co.leftAnchor {
+			// prefix with .*?
+			co.prog = slices.Insert(co.prog, 0, preBytes...)
+		}
 	}
 	return Pattern(hacks.BStoS(co.prog))
+}
+
+func (co *compiler) literalPrefix() ([]byte, bool) {
+	prefix := []byte{}
+	i := 2 // 2 to skip Save 0
+	end := ord.Min(len(co.prog), co.firstTarget)
+	for ; i < end; i++ {
+		if opType(co.prog[i]) == opDoneSave1 {
+			return prefix, true
+		}
+		if opType(co.prog[i]) != opChar {
+			return prefix, false
+		}
+		prefix = append(prefix, co.prog[i+1])
+		i++
+	}
+	return prefix, false
 }
 
 func (co *compiler) regex() {
@@ -149,22 +188,18 @@ func (co *compiler) sequence() {
 }
 
 func (co *compiler) element() {
-	if co.match("^") {
-		if co.multiLine {
-			co.emit(opLineStart)
+	if co.match(`\A`) || (!co.multiLine && co.match("^")) {
+		if len(co.prog) == 2 { // 2 because of Save 0
+			co.leftAnchor = true
 		} else {
 			co.emit(opStrStart)
 		}
-	} else if co.match("$") {
-		if co.multiLine {
-			co.emit(opLineEnd)
-		} else {
-			co.emit(opStrEnd)
-		}
-	} else if co.match("\\A") {
-		co.emit(opStrStart)
-	} else if co.match("\\Z") {
+	} else if co.match(`\Z`) || (!co.multiLine && co.match("$")) {
 		co.emit(opStrEnd)
+	} else if co.match("^") {
+		co.emit(opLineStart)
+	} else if co.match("$") {
+		co.emit(opLineEnd)
 	} else if co.match("\\<") {
 		co.emit(opWordStart)
 	} else if co.match("\\>") {
@@ -190,8 +225,10 @@ func (co *compiler) element() {
 			co.insert(start, opSplitFirst, pn+3)
 		} else if co.match("?") {
 			co.insert(start, opSplitLast, pn+3)
+			co.firstTarget = ord.Min(co.firstTarget, start)
 		} else if co.match("+?") {
 			co.emitOff(opSplitLast, -pn)
+			co.firstTarget = ord.Min(co.firstTarget, start)
 		} else if co.match("+") {
 			co.emitOff(opSplitFirst, -pn)
 		} else if co.match("*?") {
@@ -215,20 +252,6 @@ func (co *compiler) quoted() {
 	for _, c := range []byte(co.src[start:co.si]) {
 		co.emitChar(c)
 	}
-}
-
-func (co *compiler) leadingAnything() bool {
-	for i := 0; i < co.si; i++ {
-		if co.src[i] != '(' {
-			return false
-		}
-	}
-	if co.si+2 > co.sn ||
-		co.src[co.si] != '.' ||
-		(co.src[co.si+1] != '*' && co.src[co.si+1] != '+') {
-		return false
-	}
-	return true
 }
 
 func (co *compiler) simple() {
@@ -276,10 +299,6 @@ func (co *compiler) emitChar(c byte) {
 	} else {
 		co.emit(opChar, c)
 	}
-}
-
-func (co *compiler) next1of(set string) bool {
-	return co.si < co.sn && strings.IndexByte(set, co.src[co.si]) != -1
 }
 
 func (co *compiler) charClass() {

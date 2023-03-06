@@ -5,7 +5,6 @@ package regex2
 
 import (
 	"fmt"
-	"regexp"
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/util/assert"
@@ -13,15 +12,15 @@ import (
 )
 
 func TestPlay(t *testing.T) {
-	s := "abcd"
-	pat := Compile(`(..)(..)`)
+	s := ""
+	pat := Compile(``)
 	fmt.Println(pat)
 	// pat := Compile(`ab|abcd`) "xyz\r\n\r\nxyz", "^[^x].*$", false
 
-	// fmt.Println(">>> part", pat.Matches(s))
+	fmt.Println(">>> part", pat.Matches(s))
 	// fmt.Println(">>> full", pat.Match(s, nil))
 	var cap Captures
-	fmt.Println(">>> full capture", pat.Match(s, &cap))
+	// fmt.Println(">>> full capture", pat.Match(s, &cap))
 	// cap.Print(s)
 	// fmt.Println(">>> first capture", pat.FirstMatch(s, &cap))
 	// fmt.Println(">>> ", pat[npre:].prefixMatch(s, &cap, false))
@@ -37,11 +36,11 @@ func (c *Captures) Print(s string) {
 	}
 }
 
-func TestGoRegexp(t *testing.T) {
-	pat := regexp.MustCompile(`(?m)^[^x].*$`)
-	cap := pat.FindStringSubmatch("xyz\r\n\r\nxyz")
-	fmt.Printf("%#v\n", cap)
-}
+// func TestGoRegexp(t *testing.T) {
+// 	pat := regexp.MustCompile(`(?m)^[^x].*$`)
+// 	cap := pat.FindStringSubmatch("xyz\r\n\r\nxyz")
+// 	fmt.Printf("%#v\n", cap)
+// }
 
 func TestCapture(t *testing.T) {
 	test := func(pat, str string, expected ...string) {
@@ -60,79 +59,107 @@ func TestCapture(t *testing.T) {
 }
 
 func TestMatch(t *testing.T) {
-	yes := func(pat string, str string) {
+	match := func(str string, pat string, expected bool) {
 		t.Helper()
-		assert.T(t).True(Compile(pat).Match(str, nil))
+		assert.T(t).This(Compile(pat).Match(str, nil)).Is(expected)
 	}
-	no := func(pat string, str string) {
+	matches := func(str string, pat string, expected bool) {
 		t.Helper()
-		assert.T(t).False(Compile(pat).Match(str, nil))
+		assert.T(t).This(Compile(pat).Matches(str)).Is(expected)
 	}
-	yes("a", "a")
-	no("a", "")
-	no("a", "b")
+	// literal
+	match("a", "a", true)
+	matches("a", "a", true)
+	matches("abc", "b", true)
+	matches("abc", `\Ab`, false)
+	matches("abc", `\Aa`, true)
+	match("abc", `\Aabc`, true)
+	match("a", "", false)
+	match("", "a", false)
+	match("a", "b", false)
 
-	yes(".", "a")
-	no(".", "")
+	// one pass
+	match("a", ".", true)
+	match("", ".", false)
+	match("abc", ".bc", true)
+	match("abc", ".bx", false)
 
-	yes("a|b", "a")
-	yes("a|b", "b")
-	no("a|b", "")
-	no("a|b", "c")
-
-	yes("a?", "")
-	yes("a?", "a")
+	// full
+	match("a", "a|b", true)
+	match("b", "a|b", true)
+	match("", "a|b", false)
+	match("c", "a|b", false)
+	match("", "a?", true)
+	match("a", "a?", true)
 }
 
-func ExampleCompile() {
-	test := func(rx string) {
-		fmt.Printf("/%v/\n%v\n", rx, Compile(rx)[7:])
+func TestCompile(t *testing.T) {
+	test := func(rx, expected string) {
+		t.Helper()
+		assert.T(t).This(Compile(rx).String()).Like(expected)
 	}
-	test("abc")
-	test("a|b")
-	test("ab?c")
-	test("ab+c")
-	test("ab*c")
-	// Output:
-	// /abc/
-	// 0: Save 0
-	// 2: Char a
-	// 4: Char b
-	// 6: Char c
-	// 8: Done
-	//
-	// /a|b/
-	// 0: Save 0
-	// 2: SplitFirst 10
-	// 5: Char a
-	// 7: Jump 12
-	// 10: Char b
-	// 12: Done
-	//
-	// /ab?c/
-	// 0: Save 0
-	// 2: Char a
-	// 4: SplitLast 9
-	// 7: Char b
-	// 9: Char c
-	// 11: Done
-	//
-	// /ab+c/
-	// 0: Save 0
-	// 2: Char a
-	// 4: Char b
-	// 6: SplitFirst 4
-	// 9: Char c
-	// 11: Done
-	//
-	// /ab*c/
-	// 0: Save 0
-	// 2: Char a
-	// 4: SplitLast 12
-	// 7: Char b
-	// 9: Jump 4
-	// 12: Char c
-	// 14: Done
+	test("xyz",
+		`0: Unanchored
+		1: Literal "xyz"
+		`)
+	test(`\Axyz`,
+		`0: Literal "xyz"
+		`)
+	test("a|b",
+		`0: SplitFirst 7
+		3: Any
+		4: Jump 0
+		7: Save 0
+		9: SplitFirst 17
+		12: Char a
+		14: Jump 19
+		17: Char b
+		19: DoneSave1`)
+	test("a|b|c",
+		`0: SplitFirst 7
+		3: Any
+		4: Jump 0
+		7: Save 0
+		9: SplitFirst 17
+		12: Char a
+		14: Jump 27
+		17: SplitFirst 25
+		20: Char b
+		22: Jump 27
+		25: Char c
+		27: DoneSave1`)
+	test("ab?c",
+		`0: SplitFirst 7
+		3: Any
+		4: Jump 0
+		7: Save 0
+		9: Char a
+		11: SplitLast 16
+		14: Char b
+		16: Char c
+		18: DoneSave1
+		`)
+	test("ab+c",
+		`0: SplitFirst 7
+		3: Any
+		4: Jump 0
+		7: Save 0
+		9: Char a
+		11: Char b
+		13: SplitFirst 11
+		16: Char c
+		18: DoneSave1`)
+	test("ab*c",
+		`0: SplitFirst 7
+		3: Any
+		4: Jump 0
+		7: Save 0
+		9: Char a
+		11: SplitLast 19
+		14: Char b
+		16: Jump 11
+		19: Char c
+		21: DoneSave1`)
 }
 
 func BenchmarkOnePass(b *testing.B) {
@@ -161,7 +188,7 @@ func TestPtest2(t *testing.T) {
 // or additional arguments can specify expected \0, \1, ...
 func ptMatch(args []string, _ []bool) bool {
 	s := args[0]
-	pat := Compile(args[1])
+	pat := Compile("(?m)" + args[1])
 	var cap Captures
 	result := pat.FirstMatch(s, &cap)
 	if len(args) > 2 {

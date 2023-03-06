@@ -35,6 +35,8 @@ const (
 	opSave
 	opDoneSave1
 	opOnePass
+	opLiteral
+	opUnanchored
 )
 
 func (pat Pattern) String() string {
@@ -66,6 +68,8 @@ func (pat Pattern) opstr(pi int) (int, string) {
 		return n + 2, fmt.Sprintf("List %q", string(pat[pi+2:pi+2+n]))
 	case opSave:
 		return 2, fmt.Sprintf("Save %d", int(pat[pi+1]))
+	case opLiteral:
+		return len(pat), fmt.Sprintf("Literal %q", string(pat[pi+1:]))
 	default:
 		return 1, opstr
 	}
