@@ -12,17 +12,16 @@ import (
 )
 
 func TestPlay(t *testing.T) {
-	s := ""
-	pat := Compile(``)
-	fmt.Println(pat)
+	s := "hello"
+	pat := Compile(`(?m)^ell`)
+	// fmt.Println(pat)
 	// pat := Compile(`ab|abcd`) "xyz\r\n\r\nxyz", "^[^x].*$", false
 
-	fmt.Println(">>> part", pat.Matches(s))
+	// fmt.Println(">>> part", pat.Matches(s))
 	// fmt.Println(">>> full", pat.Match(s, nil))
 	var cap Captures
 	// fmt.Println(">>> full capture", pat.Match(s, &cap))
-	// cap.Print(s)
-	// fmt.Println(">>> first capture", pat.FirstMatch(s, &cap))
+	fmt.Println(">>> first capture", pat.FirstMatch(s, &cap), cap[0])
 	// fmt.Println(">>> ", pat[npre:].prefixMatch(s, &cap, false))
 	cap.Print(s)
 }
@@ -100,66 +99,57 @@ func TestCompile(t *testing.T) {
 	}
 	test("xyz",
 		`0: Unanchored
-		1: Literal "xyz"
-		`)
+		1: Literal "xyz"`)
 	test(`\Axyz`,
-		`0: Literal "xyz"
-		`)
+		`0: Literal "xyz"`)
+	test(`.`,
+		`0: Unanchored
+		1: OnePass
+		2: AnyNotNL
+		3: DoneSave1`)
+	test(`\A.`,
+		`0: OnePass
+		1: AnyNotNL
+		2: DoneSave1`)
 	test("a|b",
-		`0: SplitFirst 7
-		3: Any
-		4: Jump 0
-		7: Save 0
-		9: SplitFirst 17
-		12: Char a
-		14: Jump 19
-		17: Char b
-		19: DoneSave1`)
+		`0: Unanchored
+		1: SplitFirst 9
+		4: Char a
+		6: Jump 11
+		9: Char b
+		11: DoneSave1`)
 	test("a|b|c",
-		`0: SplitFirst 7
-		3: Any
-		4: Jump 0
-		7: Save 0
+		`0: Unanchored
+		1: SplitFirst 9
+		4: Char a
+		6: Jump 19
 		9: SplitFirst 17
-		12: Char a
-		14: Jump 27
-		17: SplitFirst 25
-		20: Char b
-		22: Jump 27
-		25: Char c
-		27: DoneSave1`)
+		12: Char b
+		14: Jump 19
+		17: Char c
+		19: DoneSave1`)
 	test("ab?c",
-		`0: SplitFirst 7
-		3: Any
-		4: Jump 0
-		7: Save 0
-		9: Char a
-		11: SplitLast 16
-		14: Char b
-		16: Char c
-		18: DoneSave1
-		`)
+		`0: Unanchored
+		1: Char a
+		3: SplitLast 8
+		6: Char b
+		8: Char c
+		10: DoneSave1`)
 	test("ab+c",
-		`0: SplitFirst 7
-		3: Any
-		4: Jump 0
-		7: Save 0
-		9: Char a
-		11: Char b
-		13: SplitFirst 11
-		16: Char c
-		18: DoneSave1`)
+		`0: Unanchored
+		1: Char a
+		3: Char b
+		5: SplitFirst 3
+		8: Char c
+		10: DoneSave1`)
 	test("ab*c",
-		`0: SplitFirst 7
-		3: Any
-		4: Jump 0
-		7: Save 0
-		9: Char a
-		11: SplitLast 19
-		14: Char b
-		16: Jump 11
-		19: Char c
-		21: DoneSave1`)
+		`0: Unanchored
+		1: Char a
+		3: SplitLast 11
+		6: Char b
+		8: Jump 3
+		11: Char c
+		13: DoneSave1`)
 }
 
 func BenchmarkOnePass(b *testing.B) {
@@ -187,6 +177,7 @@ func TestPtest2(t *testing.T) {
 // an optional third argument can be "false" for matches that should fail
 // or additional arguments can specify expected \0, \1, ...
 func ptMatch(args []string, _ []bool) bool {
+	// fmt.Println(args)
 	s := args[0]
 	pat := Compile("(?m)" + args[1])
 	var cap Captures

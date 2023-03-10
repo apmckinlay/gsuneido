@@ -16,27 +16,28 @@ type Pattern string
 type opType byte
 
 const (
-	opChar opType = iota + 1
-	opCharIgnoreCase
-	opJump
-	opSplitFirst
-	opSplitLast
-	opAny
-	opAnyNotNL
-	opHalfSet
-	opFullSet
-	opListSet
-	opWordStart
-	opWordEnd
-	opLineStart
-	opLineEnd
-	opStrStart
-	opStrEnd
-	opSave
-	opDoneSave1
-	opOnePass
-	opLiteral
-	opUnanchored
+	_                opType = iota
+	opChar                  // char
+	opCharIgnoreCase        // char
+	opJump                  // int16
+	opSplitFirst            // int16
+	opSplitLast             // int16
+	opAny                   //
+	opAnyNotNL              //
+	opHalfSet               // [16]byte
+	opFullSet               // [32]byte
+	opListSet               // uint8 []byte
+	opWordStart             //
+	opWordEnd               //
+	opLineStart             //
+	opLineEnd               //
+	opStrStart              //
+	opStrEnd                //
+	opSave                  // byte
+	opDoneSave1             //
+	opOnePass               //
+	opLiteral               // []byte (to end)
+	opUnanchored            //
 )
 
 func (pat Pattern) String() string {

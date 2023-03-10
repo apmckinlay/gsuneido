@@ -4,6 +4,7 @@
 package regex2
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/util/ascii"
@@ -13,23 +14,21 @@ import (
 
 type Captures [20]int32 // 2 * 10 (\0 to \9)
 
-const npre = 7
-
 // Matches returns whether the pattern is found anywhere in the string
 func (pat Pattern) Matches(s string) bool {
 	// keep the .* prefix, toEnd = false
-	return pat.prefixMatch(s, nil, false)
+	return pat.match(s, nil, false)
 }
 
 // Match returns whether the pattern matches the entire string.
 func (pat Pattern) Match(s string, cap *Captures) bool {
 	// omit the .* prefix, toEnd = true
-	return omitUA(pat).prefixMatch(s, cap, true)
+	return omitUA(pat).match(s, cap, true)
 }
 
 func (pat Pattern) FirstMatch(s string, cap *Captures) bool {
 	// keep the .* prefix, toEnd = false
-	return pat.prefixMatch(s, cap, false)
+	return pat.match(s, cap, false)
 }
 
 func (pat Pattern) LastMatch(s string, cap *Captures) bool {
@@ -37,7 +36,7 @@ func (pat Pattern) LastMatch(s string, cap *Captures) bool {
 	// omit the .* prefix, toEnd = false
 	pat = omitUA(pat)
 	for i := len(s) - 1; i >= 0; i-- {
-		if pat.prefixMatch(s[:i], cap, false) {
+		if pat.match(s[:i], cap, false) {
 			return true
 		}
 	}
@@ -46,9 +45,7 @@ func (pat Pattern) LastMatch(s string, cap *Captures) bool {
 }
 
 func omitUA(pat Pattern) Pattern {
-	s := strings.TrimPrefix(string(pat), preString)
-	s = strings.TrimPrefix(s, uaString)
-	return Pattern(s)
+	return Pattern(strings.TrimPrefix(string(pat), uaString))
 }
 
 type state struct {
@@ -56,41 +53,63 @@ type state struct {
 	cap *Captures
 }
 
-// prefixMatch looks for a match starting at the beginning of the string.
+// match looks for a match anywhere in the string i.e. not anchored.
 // If toEnd is true, the match must go to the end of the string.
-// It return true if a match was found, and false otherwise.
+// It returns true if a match was found, and false otherwise.
 // If it returns true, the captures are updated.
-func (pat Pattern) prefixMatch(s string, cap *Captures, toEnd bool) bool {
-	trace.Println(pat)
-	switch opType(pat[0]) {
+func (pat Pattern) match(s string, cap *Captures, toEnd bool) bool {
+	_ = t && trace.Println(pat)
+	cap2 := dup(cap)
+	anchored := opType(pat[0]) != opUnanchored
+	piStart := int16(0)
+	if !anchored {
+		piStart = 1
+	}
+	switch opType(pat[piStart]) {
 	case opOnePass:
-		return Pattern(pat[1:]).onePass(s, cap, toEnd)
-	case opLiteral, opUnanchored:
+		piStart++
+		if anchored {
+			return Pattern(pat[piStart:]).onePass(s, cap, toEnd)
+		}
+	case opLiteral:
 		return pat.literalMatch(s, cap, toEnd)
 	}
 	var cur []state
 	var next []state
 	var live = &BitSet{}
-	cur = pat.addstate(s, 0, live, cur, 0, dup(cap))
-	live.Clear()
 	matched := false
-	for si := 0; ; si++ {
+	for si := 0; si <= len(s); si++ {
 		if si < len(s) {
-			trace.Println("--- si:", si, "c:", s[si:si+1])
+			_ = t && trace.Println("--- si:", si, "c:", s[si:si+1])
 		} else {
-			trace.Println("at end of string")
+			_ = t && trace.Println("at end of string")
 		}
-		// for i, c := range cur {
-		// 	trace.Printf("state [%v] %v\n", i, pat.opstr1(c.pi))
-		// }
+		if len(cur) == 0 {
+			if anchored && si > 0 {
+				return matched
+			}
+			if matched {
+				return true // finished exploring alternatives
+			}
+		}
+		if !matched {
+			if cap != nil {
+				cap2[0] = int32(si) // Save 0
+			}
+			cur = pat.addstate(s, si, live, cur, piStart, cap2)
+			live.Clear()
+		}
+		for i, c := range cur {
+			_ = t && trace.Printf("state [%v] %v\n", i, pat.opstr1(c.pi))
+		}
 		for ci := 0; ci < len(cur); ci++ { // for each state
 			pi := cur[ci].pi
-			trace.Printf("[%v] %v\n", ci, pat.opstr1(pi))
+			_ = t && trace.Printf("[%v] %v\n", ci, pat.opstr1(pi))
 			add := int16(0)
 			switch opType(pat[pi]) {
 			case opChar:
 				if si < len(s) && s[si] == pat[pi+1] {
-					trace.Println("YES")
+					_ = t && trace.Println("YES")
 					add = pi + 2
 				}
 			case opCharIgnoreCase:
@@ -141,13 +160,11 @@ func (pat Pattern) prefixMatch(s string, cap *Captures, toEnd bool) bool {
 				next = pat.addstate(s, si+1, live, next, add, cur[ci].cap)
 			}
 		}
-		if len(next) == 0 {
-			return matched
-		}
 		cur, next = next, cur // swap
 		next = next[:0]       // clear
 		live.Clear()
 	}
+	return matched
 }
 
 // addstate adds a state and, recursively, all of its children.
@@ -155,12 +172,11 @@ func (pat Pattern) prefixMatch(s string, cap *Captures, toEnd bool) bool {
 // so the states added will point to character matching instructions.
 func (pat Pattern) addstate(s string, si int, live *BitSet, states []state,
 	pi int16, cap *Captures) []state {
-	// trace.Println("addstate ss", ss.dense)
 	for {
 		if !live.AddNew(pi) {
 			return states
 		}
-		trace.Println("addstate loop", pat.opstr1(pi))
+		_ = t && trace.Println("addstate loop", pat.opstr1(pi))
 		switch opType(pat[pi]) {
 		case opJump:
 			jmp := int16(pat[pi+1])<<8 | int16(pat[pi+2])
@@ -187,10 +203,7 @@ func (pat Pattern) addstate(s string, si int, live *BitSet, states []state,
 			if !boundary(s, si, pat[pi]) {
 				return states
 			}
-			trace.Println("YES")
-			pi++
-		case opOnePass:
-			// ignore
+			_ = t && trace.Println("YES")
 			pi++
 		default:
 			states = append(states, state{pi: pi, cap: dup(cap)})
@@ -229,9 +242,9 @@ func dup(cap *Captures) *Captures {
 // ------------------------------------------------------------------
 
 func (pat Pattern) onePass(s string, cap *Captures, toEnd bool) bool {
-	trace.Println("ONE PASS")
+	_ = t && trace.Println("ONE PASS")
 	for si, pi := 0, 0; pi < len(pat); pi++ {
-		trace.Printf("si %v %q %v\n", si, str.Subn(s, si, 1), pat.opstr1(int16(pi)))
+		_ = t && trace.Printf("si %v %q %v\n", si, str.Subn(s, si, 1), pat.opstr1(int16(pi)))
 		switch opType(pat[pi]) {
 		case opChar:
 			if si >= len(s) || s[si] != pat[pi+1] {
@@ -323,14 +336,18 @@ func (pat Pattern) literalMatch(s string, cap *Captures, toEnd bool) bool {
 
 // ------------------------------------------------------------------
 
+const t = false
+
 type tracer struct{}
 
 var trace tracer
 
-func (tracer) Println(args ...any) {
-	// fmt.Println(args...)
+func (tracer) Println(args ...any) bool {
+	fmt.Println(args...)
+	return true
 }
 
-func (tracer) Printf(format string, args ...any) {
-	// fmt.Printf(format, args...)
+func (tracer) Printf(format string, args ...any) bool {
+	fmt.Printf(format, args...)
+	return true
 }

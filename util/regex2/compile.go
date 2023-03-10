@@ -17,7 +17,7 @@ import (
 /*
 regular expression grammar and compiled form:
 
-regex		:	seq					Save 0 ... DoneSave1
+regex		:	seq					... DoneSave1
 			|	seq (| seq)+		SplitFirst seq (Jump SplitFirst seq)+
 
 seq   		:	element+
@@ -105,21 +105,9 @@ type compiler struct {
 	leftAnchor  bool
 }
 
-var preBytes []byte
-var preString string
 var uaString = string(rune(opUnanchored))
 
-func init() {
-	var co compiler
-	co.emitOff(opSplitFirst, 7)
-	co.emit(opAny)
-	co.emitOff(opJump, -4)
-	preBytes = co.prog
-	preString = string(co.prog)
-}
-
 func (co *compiler) compile() Pattern {
-	co.emit(opSave, 0)
 	co.regex()
 	if co.si < co.sn {
 		panic("regex: closing ) without opening (")
@@ -129,26 +117,20 @@ func (co *compiler) compile() Pattern {
 	literalPrefix, allLiteral := co.literalPrefix()
 	if allLiteral {
 		co.prog = slices.Insert(literalPrefix, 0, byte(opLiteral))
-		if !co.leftAnchor {
-			co.prog = slices.Insert(co.prog, 0, byte(opUnanchored))
-		}
-	} else {
-		if co.onePass {
-			co.prog = slices.Insert(co.prog, 0, byte(opOnePass))
-		}
-		if !co.leftAnchor {
-			// prefix with .*?
-			co.prog = slices.Insert(co.prog, 0, preBytes...)
-		}
+	} else if co.onePass {
+		co.prog = slices.Insert(co.prog, 0, byte(opOnePass))
 	}
+	if !co.leftAnchor {
+		co.prog = slices.Insert(co.prog, 0, byte(opUnanchored))
+	}
+	//TODO LitPrefix
 	return Pattern(hacks.BStoS(co.prog))
 }
 
 func (co *compiler) literalPrefix() ([]byte, bool) {
 	prefix := []byte{}
-	i := 2 // 2 to skip Save 0
 	end := ord.Min(len(co.prog), co.firstTarget)
-	for ; i < end; i++ {
+	for i := 0; i < end; i++ {
 		if opType(co.prog[i]) == opDoneSave1 {
 			return prefix, true
 		}
@@ -189,7 +171,7 @@ func (co *compiler) sequence() {
 
 func (co *compiler) element() {
 	if co.match(`\A`) || (!co.multiLine && co.match("^")) {
-		if len(co.prog) == 2 { // 2 because of Save 0
+		if len(co.prog) == 0 {
 			co.leftAnchor = true
 		} else {
 			co.emit(opStrStart)
