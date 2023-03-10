@@ -4,7 +4,6 @@
 package regex2
 
 import (
-	"strings"
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/util/assert"
@@ -13,13 +12,8 @@ import (
 func TestCharClass(t *testing.T) {
 	test := func(b *builder, c byte, expected bool) {
 		t.Helper()
-		s := string(b.data)
-		if b.isSet {
-			pat := Pattern(s)
-			assert.T(t).This(matchFullSet(pat, c)).Is(expected)
-		} else {
-			assert.T(t).This(-1 != strings.IndexByte(s, c)).Is(expected)
-		}
+		pat := Pattern(b[:])
+		assert.T(t).This(matchFullSet(pat, c)).Is(expected)
 	}
 	test(digit, 'x', false)
 	test(digit, '0', true)
@@ -36,4 +30,12 @@ func TestCharClass(t *testing.T) {
 	test(space, '\n', true)
 	test(space, 'x', false)
 	test(space, '0', false)
+}
+
+func TestCharClass2(t *testing.T) {
+	assert.T(t).This(word.setLen()).Is(16)
+	assert.T(t).This(word.listLen()).Is(63)
+	assert.T(t).This(digit.listLen()).Is(10)
+	assert.T(t).This(digit.list()).
+		Is([]byte{'0', '1', '2', '3', '4', '5', '6', '7', '8', '9'})
 }

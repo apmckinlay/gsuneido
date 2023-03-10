@@ -240,9 +240,9 @@ func boundary(s string, si int, op byte) bool {
 		return si >= len(s) || s[si] == '\r' ||
 			(s[si] == '\n' && (si == 0 || s[si-1] != '\r'))
 	case opWordStart:
-		return si == 0 || (si <= len(s) && !matchHalfSet(wordSet, s[si-1]))
+		return si == 0 || (si <= len(s) && !matchFullSet(wordSet, s[si-1]))
 	case opWordEnd:
-		return si >= len(s) || !matchHalfSet(wordSet, s[si])
+		return si >= len(s) || !matchFullSet(wordSet, s[si])
 	}
 	panic(assert.ShouldNotReachHere())
 }

@@ -8,7 +8,6 @@ import (
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/util/ascii"
-	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/generic/ord"
 	"github.com/apmckinlay/gsuneido/util/hacks"
 	"golang.org/x/exp/slices"
@@ -327,9 +326,9 @@ func (co *compiler) charClass() {
 	if len(chars) > 0 {
 		cc.addChars(chars)
 	}
-	if !negate && len(cc.data) == 1 {
+	if !negate && cc.listLen() == 1 {
 		// optimization - treat single character class as just a character
-		co.emitChar(cc.data[0])
+		co.emitChar(cc.list()[0])
 		return
 	}
 	if co.ignoreCase {
@@ -405,28 +404,19 @@ func (co *compiler) emitOff(op opType, n int) {
 }
 
 func (co *compiler) emitCC(b *builder) {
-	data := b.data
-	if b.isSet {
-		assert.That(len(data) == 32)
-		if smallSet(data) {
-			co.emit(opHalfSet)
-			data = data[:16]
-		} else {
-			co.emit(opFullSet)
-		}
-	} else {
+	var data []byte
+	setLen := b.setLen()
+	if b.listLen() < setLen {
+		data = b.list()
 		co.emit(opListSet, byte(len(data)))
+	} else if setLen == 16 {
+		co.emit(opHalfSet)
+		data = b[:16]
+	} else {
+		co.emit(opFullSet)
+		data = b[:]
 	}
 	co.prog = append(co.prog, data...)
-}
-
-func smallSet(data []byte) bool {
-	for _, b := range data[16:] {
-		if b != 0 {
-			return false
-		}
-	}
-	return true
 }
 
 func (co *compiler) insert(i int, op opType, n int) {
