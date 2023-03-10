@@ -14,38 +14,15 @@ import (
 
 type Captures [20]int32 // 2 * 10 (\0 to \9)
 
-// Matches returns whether the pattern is found anywhere in the string
-func (pat Pattern) Matches(s string) bool {
-	// keep the .* prefix, toEnd = false
-	return pat.match(s, nil, false)
-}
-
-// Match returns whether the pattern matches the entire string.
-func (pat Pattern) Match(s string, cap *Captures) bool {
-	// omit the .* prefix, toEnd = true
-	return omitUA(pat).match(s, cap, true)
-}
-
-func (pat Pattern) FirstMatch(s string, cap *Captures) bool {
-	// keep the .* prefix, toEnd = false
-	return pat.match(s, cap, false)
-}
-
 func (pat Pattern) LastMatch(s string, cap *Captures) bool {
 	// inefficient, but rarely used
-	// omit the .* prefix, toEnd = false
-	pat = omitUA(pat)
 	for i := len(s) - 1; i >= 0; i-- {
-		if pat.match(s[:i], cap, false) {
+		if pat.Match(s[:i], cap) {
 			return true
 		}
 	}
 	return false
 	// could improve this by figuring out the minimum match length
-}
-
-func omitUA(pat Pattern) Pattern {
-	return Pattern(strings.TrimPrefix(string(pat), uaString))
 }
 
 type state struct {
@@ -57,31 +34,22 @@ type state struct {
 // If toEnd is true, the match must go to the end of the string.
 // It returns true if a match was found, and false otherwise.
 // If it returns true, the captures are updated.
-func (pat Pattern) match(s string, cap *Captures, toEnd bool) bool {
+func (pat Pattern) Match(s string, cap *Captures) bool {
 	_ = t && trace.Println(pat)
 	cap2 := dup(cap)
-	anchored := opType(pat[0]) != opUnanchored
 	piStart := int16(0)
-	if !anchored {
-		piStart = 1
-	}
 	prefix := ""
-	if opType(pat[piStart]) == opLitPrefix {
+	switch op := opType(pat[piStart]); op {
+	case opPrefix:
 		n := int16(pat[piStart+1])
-		if !anchored {
-			prefix = string(pat[piStart+2 : piStart+2+n])
-		}
+		prefix = string(pat[piStart+2 : piStart+2+n])
 		piStart += 2 + n
-	}
-	switch opType(pat[piStart]) {
 	case opOnePass:
-		piStart++
-		if anchored {
-			return Pattern(pat[piStart:]).onePass(s, cap, toEnd)
-		}
-	case opLiteral:
-		return pat.literalMatch(s, cap, toEnd)
+		return Pattern(pat[piStart+1:]).onePass(s, cap)
+	case opLiteralSubstr, opLiteralPrefix, opLiteralSuffix, opLiteralEqual:
+		return pat.literalMatch(op, s, cap)
 	}
+	anchored := opType(pat[piStart]) == opStrStart
 	var cur []state
 	var next []state
 	var live = &BitSet{}
@@ -156,9 +124,6 @@ func (pat Pattern) match(s string, cap *Captures, toEnd bool) bool {
 					add = pi + 1 + 32
 				}
 			case opDoneSave1:
-				if toEnd && si < len(s) {
-					break
-				}
 				if cap == nil {
 					// if not capturing, any match will do
 					return true
@@ -257,8 +222,8 @@ func dup(cap *Captures) *Captures {
 
 // ------------------------------------------------------------------
 
-func (pat Pattern) onePass(s string, cap *Captures, toEnd bool) bool {
-	_ = t && trace.Println("ONE PASS")
+func (pat Pattern) onePass(s string, cap *Captures) bool {
+	_ = t && trace.Println(">>> one pass")
 	for si, pi := 0, 0; pi < len(pat); pi++ {
 		_ = t && trace.Printf("si %v %q %v\n", si, str.Subn(s, si, 1), pat.opstr1(int16(pi)))
 		switch opType(pat[pi]) {
@@ -315,9 +280,6 @@ func (pat Pattern) onePass(s string, cap *Captures, toEnd bool) bool {
 			}
 			pi++
 		case opDoneSave1:
-			if toEnd && si < len(s) {
-				return false
-			}
 			if cap != nil {
 				cap[1] = int32(si)
 			}
@@ -331,30 +293,29 @@ func (pat Pattern) onePass(s string, cap *Captures, toEnd bool) bool {
 
 // ------------------------------------------------------------------
 
-func (pat Pattern) literalMatch(s string, cap *Captures, toEnd bool) bool {
-	_ = t && trace.Println("LITERAL")
+func (pat Pattern) literalMatch(op opType, s string, cap *Captures) bool {
+	_ = t && trace.Println(">>>", op)
 	lit := string(pat[1:])
-	anchored := true
-	if opType(pat[0]) == opUnanchored {
-		anchored = false
-		lit = lit[1:]
-	}
 	i := 0
-	if anchored {
-		if toEnd {
-			if s != lit {
-				return false
-			}
-		} else {
-			if !strings.HasPrefix(s, lit) {
-				return false
-			}
+	switch op {
+	case opLiteralEqual:
+		if s != lit {
+			return false
 		}
-	}
-	// else not anchored
-	i = strings.Index(s, lit)
-	if i < 0 {
-		return false
+	case opLiteralSubstr:
+		i = strings.Index(s, lit)
+		if i < 0 {
+			return false
+		}
+	case opLiteralPrefix:
+		if !strings.HasPrefix(s, lit) {
+			return false
+		}
+	case opLiteralSuffix:
+		if !strings.HasSuffix(s, lit) {
+			return false
+		}
+		i = len(s) - len(lit)
 	}
 	if cap != nil {
 		cap[0], cap[1] = int32(i), int32(i+len(lit))

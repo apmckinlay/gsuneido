@@ -102,9 +102,8 @@ type compiler struct {
 	onePass     bool
 	firstTarget int
 	leftAnchor  bool
+	rightAnchor bool
 }
-
-var uaString = string(rune(opUnanchored))
 
 func (co *compiler) compile() Pattern {
 	co.regex()
@@ -115,22 +114,26 @@ func (co *compiler) compile() Pattern {
 
 	literal, allLiteral := co.literalPrefix()
 	if allLiteral {
+		op := opLiteralSubstr
+		if co.leftAnchor && co.rightAnchor {
+			op = opLiteralEqual
+		} else if co.leftAnchor {
+			op = opLiteralPrefix
+		} else if co.rightAnchor {
+			op = opLiteralSuffix
+		}
 		// replace prog with literal
-		co.prog = slices.Insert(literal, 0, byte(opLiteral))
+		co.prog = slices.Insert(literal, 0, byte(op))
 	} else {
-		if co.onePass {
+		if co.onePass && co.leftAnchor {
 			co.prog = slices.Insert(co.prog, 0, byte(opOnePass))
 		}
-		if len(literal) > 0 {
-			co.prog = slices.Insert(co.prog, 0, byte(opLitPrefix),
+		if len(literal) > 0 && !co.leftAnchor {
+			co.prog = slices.Insert(co.prog, 0, byte(opPrefix),
 				byte(len(literal)))
 			co.prog = slices.Insert(co.prog, 2, literal...)
 		}
 	}
-	if !co.leftAnchor {
-		co.prog = slices.Insert(co.prog, 0, byte(opUnanchored))
-	}
-	//TODO LitPrefix
 	return Pattern(hacks.BStoS(co.prog))
 }
 
@@ -138,14 +141,17 @@ func (co *compiler) literalPrefix() ([]byte, bool) {
 	prefix := []byte{}
 	end := ord.Min(len(co.prog), co.firstTarget)
 	for i := 0; i < end; i++ {
-		if opType(co.prog[i]) == opDoneSave1 {
+		switch opType(co.prog[i]) {
+		case opChar:
+			prefix = append(prefix, co.prog[i+1])
+			i++
+		case opDoneSave1:
 			return prefix, true
-		}
-		if opType(co.prog[i]) != opChar {
+		case opStrStart, opStrEnd:
+			// ignore
+		default:
 			return prefix, false
 		}
-		prefix = append(prefix, co.prog[i+1])
-		i++
 	}
 	return prefix, false
 }
@@ -180,10 +186,12 @@ func (co *compiler) element() {
 	if co.match(`\A`) || (!co.multiLine && co.match("^")) {
 		if len(co.prog) == 0 {
 			co.leftAnchor = true
-		} else {
-			co.emit(opStrStart)
 		}
+		co.emit(opStrStart)
 	} else if co.match(`\Z`) || (!co.multiLine && co.match("$")) {
+		if co.si >= len(co.src) {
+			co.rightAnchor = true
+		}
 		co.emit(opStrEnd)
 	} else if co.match("^") {
 		co.emit(opLineStart)
