@@ -80,10 +80,26 @@ func hashRow(hdr *Header, fields []string, row Row) uint32 {
 	hash := uint32(0)
 	// fmt.Print(">>> ")
 	for _, fld := range fields {
-		hash = hash*31 + adler32.Checksum(hacks.Stobs(row.GetRaw(hdr, fld)))
+		hash = hash*31 + hashPacked(row.GetRaw(hdr, fld))
 		// fmt.Print(fld, ": ", Unpack(row.GetRaw(hdr, fld)), " ")
 	}
 	// fmt.Println()
+	return hash
+}
+
+func hashPacked(p string) uint32 {
+	if len(p) > 0 && p[0] >= PackObject {
+		return hashObject(p)
+	}
+	return adler32.Checksum(hacks.Stobs(p))
+}
+
+func hashObject(p string) uint32 {
+	hash := uint32(0)
+	for i := 0; i < len(p); i++ {
+		// use simple addition to be insensitive to member order
+		hash += uint32(p[i])
+	}
 	return hash
 }
 
