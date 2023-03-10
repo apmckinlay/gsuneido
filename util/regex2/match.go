@@ -322,16 +322,27 @@ func (pat Pattern) literalMatch(s string, cap *Captures, toEnd bool) bool {
 		anchored = false
 		lit = lit[1:]
 	}
-	//TODO capture
+	i := 0
 	if anchored {
 		if toEnd {
-			return s == lit
+			if s != lit {
+				return false
+			}
+		} else {
+			if !strings.HasPrefix(s, lit) {
+				return false
+			}
 		}
-		return strings.HasPrefix(s, lit)
 	}
 	// else not anchored
-	i := strings.Index(s, lit)
-	return i >= 0
+	i = strings.Index(s, lit)
+	if i < 0 {
+		return false
+	}
+	if cap != nil {
+		cap[0], cap[1] = int32(i), int32(i+len(lit))
+	}
+	return true
 }
 
 // ------------------------------------------------------------------

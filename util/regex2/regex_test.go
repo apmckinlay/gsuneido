@@ -12,8 +12,8 @@ import (
 )
 
 func TestPlay(t *testing.T) {
-	s := "hello"
-	pat := Compile(`(?m)^ell`)
+	s := "hello world"
+	pat := Compile(`world`)
 	// fmt.Println(pat)
 	// pat := Compile(`ab|abcd`) "xyz\r\n\r\nxyz", "^[^x].*$", false
 
@@ -42,7 +42,7 @@ func (c *Captures) Print(s string) {
 // }
 
 func TestCapture(t *testing.T) {
-	test := func(pat, str string, expected ...string) {
+	test := func(str, pat string, expected ...string) {
 		t.Helper()
 		var cap Captures
 		Compile(pat).Match(str, &cap)
@@ -51,10 +51,10 @@ func TestCapture(t *testing.T) {
 			assert.T(t).This(str[cap[i+2]:cap[i+3+1]]).Is(e)
 		}
 	}
-	test("(.+)(.+)", "abcd", "abc", "d")
-	test("(.+?)(.+)", "abcd", "a", "bcd")
-	test("(.*)(.*)", "abcd", "abcd", "")
-	test("(.*?)(.*)", "abcd", "", "abcd")
+	test("abcd", "(.+)(.+)", "abc", "d")
+	test("abcd", "(.+?)(.+)", "a", "bcd")
+	test("abcd", "(.*)(.*)", "abcd", "")
+	test("abcd", "(.*?)(.*)", "", "abcd")
 }
 
 func TestMatch(t *testing.T) {

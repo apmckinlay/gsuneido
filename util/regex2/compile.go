@@ -116,6 +116,7 @@ func (co *compiler) compile() Pattern {
 
 	literalPrefix, allLiteral := co.literalPrefix()
 	if allLiteral {
+		// replace prog with literal
 		co.prog = slices.Insert(literalPrefix, 0, byte(opLiteral))
 	} else if co.onePass {
 		co.prog = slices.Insert(co.prog, 0, byte(opOnePass))
