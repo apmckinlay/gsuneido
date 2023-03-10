@@ -65,6 +65,14 @@ func (pat Pattern) match(s string, cap *Captures, toEnd bool) bool {
 	if !anchored {
 		piStart = 1
 	}
+	prefix := ""
+	if opType(pat[piStart]) == opLitPrefix {
+		n := int16(pat[piStart+1])
+		if !anchored {
+			prefix = string(pat[piStart+2 : piStart+2+n])
+		}
+		piStart += 2 + n
+	}
 	switch opType(pat[piStart]) {
 	case opOnePass:
 		piStart++
@@ -90,6 +98,14 @@ func (pat Pattern) match(s string, cap *Captures, toEnd bool) bool {
 			}
 			if matched {
 				return true // finished exploring alternatives
+			}
+			if len(prefix) > 0 {
+				i := strings.Index(s[si:], prefix)
+				if i < 0 {
+					return false
+				}
+				_ = t && trace.Println("skip from", si, "to", si+i)
+				si += i
 			}
 		}
 		if !matched {
@@ -316,6 +332,7 @@ func (pat Pattern) onePass(s string, cap *Captures, toEnd bool) bool {
 // ------------------------------------------------------------------
 
 func (pat Pattern) literalMatch(s string, cap *Captures, toEnd bool) bool {
+	_ = t && trace.Println("LITERAL")
 	lit := string(pat[1:])
 	anchored := true
 	if opType(pat[0]) == opUnanchored {

@@ -114,12 +114,19 @@ func (co *compiler) compile() Pattern {
 	}
 	co.emit(opDoneSave1)
 
-	literalPrefix, allLiteral := co.literalPrefix()
+	literal, allLiteral := co.literalPrefix()
 	if allLiteral {
 		// replace prog with literal
-		co.prog = slices.Insert(literalPrefix, 0, byte(opLiteral))
-	} else if co.onePass {
-		co.prog = slices.Insert(co.prog, 0, byte(opOnePass))
+		co.prog = slices.Insert(literal, 0, byte(opLiteral))
+	} else {
+		if co.onePass {
+			co.prog = slices.Insert(co.prog, 0, byte(opOnePass))
+		}
+		if len(literal) > 0 {
+			co.prog = slices.Insert(co.prog, 0, byte(opLitPrefix),
+				byte(len(literal)))
+			co.prog = slices.Insert(co.prog, 2, literal...)
+		}
 	}
 	if !co.leftAnchor {
 		co.prog = slices.Insert(co.prog, 0, byte(opUnanchored))

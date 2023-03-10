@@ -38,6 +38,7 @@ const (
 	opOnePass               //
 	opLiteral               // []byte (to end)
 	opUnanchored            //
+	opLitPrefix             // uint8 []byte
 )
 
 func (pat Pattern) String() string {
@@ -64,11 +65,11 @@ func (pat Pattern) opstr(pi int) (int, string) {
 		return 1 + 16, opstr
 	case opFullSet:
 		return 1 + 32, opstr
-	case opListSet:
-		n := int(pat[pi+1])
-		return n + 2, fmt.Sprintf("List %q", string(pat[pi+2:pi+2+n]))
 	case opSave:
 		return 2, fmt.Sprintf("Save %d", int(pat[pi+1]))
+	case opListSet, opLitPrefix:
+		n := int(pat[pi+1])
+		return n + 2, fmt.Sprintf("%s %q", opstr, string(pat[pi+2:pi+2+n]))
 	case opLiteral:
 		return len(pat), fmt.Sprintf("Literal %q", string(pat[pi+1:]))
 	default:
