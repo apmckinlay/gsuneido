@@ -60,7 +60,7 @@ func (pat Pattern) opstr(pi int) (int, string) {
 	op := opType(pat[pi])
 	opstr := op.String()[2:]
 	switch op {
-	case opChar:
+	case opChar, opCharIgnoreCase:
 		return 2, fmt.Sprintf("Char %c", pat[pi+1])
 	case opJump, opSplitFirst, opSplitLast, opSplitNext, opSplitJump:
 		jmp := int16(pat[pi+1])<<8 | int16(pat[pi+2])

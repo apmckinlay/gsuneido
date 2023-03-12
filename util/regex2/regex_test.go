@@ -15,8 +15,8 @@ import (
 func TestPlay(t *testing.T) {
 	// s := "http://bar"
 	// pat := Compile(`^https?://(foo|bar)`)
-	s := ""
-	pat := Compile("^(a)$")
+	s := "0"
+	pat := Compile("0+000")
 	fmt.Println(pat)
 	var cap Captures
 	fmt.Println(">>>", pat.Match(s, &cap), cap[0])
@@ -176,18 +176,24 @@ func TestCompile(t *testing.T) {
 }
 
 func TestOnePass(t *testing.T) {
-	// co := compile("^((ab)+)$")
+	// co := compile("(?i)^\x05")
+	// Pattern(co.prog).String()
 	// fmt.Println(Pattern(co.prog))
 	// fmt.Println("left anchor", co.leftAnchor)
 	// fmt.Println("right anchor", co.rightAnchor)
 	// if co.onePass1() {
-	// 	fmt.Println("onePass1")
+	// 	fmt.Println("onePass1 true")
 	// 	if co.onePass2() {
-	// 		fmt.Println("onePass2")
+	// 		fmt.Println("onePass2 true")
 	// 		co.onePass3()
 	// 		fmt.Println(Pattern(co.prog))
+	// 	} else {
+	// 		fmt.Println("onePass2 false")
 	// 	}
+	// } else {
+	// 	fmt.Println("onePass1 false")
 	// }
+	// t.SkipNow()
 
 	test := func(rx string, expected bool) {
 		co := compile(rx)
@@ -205,6 +211,8 @@ func TestOnePass(t *testing.T) {
 	test("^ab?c", true)
 	test("^ab+c", true)
 	test("^ab*c", true)
+	test("^(0*)*7", false)
+	test("^(((0))*)((($))*1)", false)
 }
 
 var M bool
@@ -216,7 +224,41 @@ func BenchmarkOnePass(b *testing.B) {
 	}
 }
 
-// ptest support ---------------------------------------------------------------
+// fuzzing ----------------------------------------------------------
+
+func FuzzCompile(f *testing.F) {
+	f.Fuzz(func(t *testing.T, s string) {
+		defer func() {
+			if e := recover(); e != nil {
+				if err, ok := e.(string); ok &&
+					strings.HasPrefix(err, "regex: ") {
+					return
+				}
+				t.Error("pattern:", s, "=>", e)
+			}
+		}()
+		Compile(s)
+	})
+}
+
+func FuzzRegex(f *testing.F) {
+	f.Fuzz(func(t *testing.T, r, s string) {
+		defer func() {
+			if e := recover(); e != nil {
+				if err, ok := e.(string); ok &&
+					strings.HasPrefix(err, "regex: ") {
+					return
+				}
+				t.Error("pattern:", s, "=>", e)
+			}
+		}()
+		pat := Compile(r)
+		pat.Match(s, nil)
+		pat.Match(s, &Captures{})
+	})
+}
+
+// ptest support ----------------------------------------------------
 
 func TestPtest(t *testing.T) {
 	if !ptest.RunFile("regex.test") {

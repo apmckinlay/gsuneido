@@ -267,7 +267,7 @@ func (pat Pattern) onePass(s string, cap *Captures) bool {
 			pi += 16
 			si++
 		case opFullSet:
-			if si >= len(s) && !matchFullSet(pat[pi+1:], s[si]) {
+			if si >= len(s) || !matchFullSet(pat[pi+1:], s[si]) {
 				return false
 			}
 			pi += 32

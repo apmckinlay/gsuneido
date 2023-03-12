@@ -131,6 +131,9 @@ func (co *compiler) compile2() Pattern {
 			co.prog = slices.Insert(co.prog, 0, byte(opOnePass))
 		}
 		if len(literal) > 0 && !co.leftAnchor {
+			if len(literal) > 255 {
+				literal = literal[:255]
+			}
 			co.prog = slices.Insert(co.prog, 0, byte(opPrefix),
 				byte(len(literal)))
 			co.prog = slices.Insert(co.prog, 2, literal...)
@@ -275,13 +278,12 @@ func (co *compiler) simple() {
 			panic("regex: empty parenthesis not allowed")
 		}
 		co.leftCount++
-		if co.leftCount >= 16 {
+		if co.leftCount >= 10 {
 			panic("regex: too many parenthesized groups")
 		}
-		i := byte(co.leftCount)
-		co.emit(opSave, 2*i)
+		co.emit(opSave, 2*byte(co.leftCount))
 		co.regex() // recurse
-		co.emit(opSave, 2*i+1)
+		co.emit(opSave, 2*byte(co.leftCount)+1)
 		co.mustMatch(")")
 	} else {
 		if co.si+1 < co.sn {
@@ -444,7 +446,7 @@ func (co *compiler) insert(i int, op opType, n int) {
 // To avoid rewriting the pattern, it requires that each split
 // has one branch that leads immediately to a concrete operation (e.g. opChar)
 func (co *compiler) onePass() bool {
-	if co.leftAnchor && co.onePass1() && co.onePass2() {
+	if co.leftAnchor && len(co.prog) < 1000 && co.onePass1() && co.onePass2() {
 		co.onePass3()
 		return true
 	}
@@ -455,7 +457,7 @@ func (co *compiler) onePass() bool {
 func (co *compiler) onePass1() bool {
 	for i := 0; i < len(co.prog); i++ {
 		switch opType(co.prog[i]) {
-		case opChar, opSave:
+		case opChar, opCharIgnoreCase, opSave:
 			i += 1
 		case opJump:
 			i += 2
@@ -469,7 +471,7 @@ func (co *compiler) onePass1() bool {
 		case opFullSet:
 			i += 32
 		case opListSet:
-			i += int(co.prog[i+1])
+			i += 1 + int(co.prog[i+1])
 		}
 	}
 	return true
@@ -480,7 +482,10 @@ func (co *compiler) target(i int) int {
 }
 
 func (co *compiler) concrete(i int) bool {
-	for ; opType(co.prog[i]) == opSave; i += 2 {
+	for ; i < len(co.prog) && opType(co.prog[i]) == opSave; i += 2 {
+	}
+	if i >= len(co.prog) {
+		return false
 	}
 	switch opType(co.prog[i]) {
 	case opChar, opCharIgnoreCase, opListSet, opHalfSet, opFullSet:
@@ -491,17 +496,17 @@ func (co *compiler) concrete(i int) bool {
 
 // onePass2 checks if all splits are concrete and disjoint
 func (co *compiler) onePass2() bool {
-	// chars tracks the characters matchable at positions in the pattern
-	chars := make(map[int]*cclass)
-	// process splits
+	var inProgress BitSet
 	for pi := 0; pi < len(co.prog); pi++ {
 		switch opType(co.prog[pi]) {
-		case opChar, opSave:
+		case opChar, opCharIgnoreCase, opSave:
 			pi += 1
 		case opJump:
 			pi += 2
 		case opSplitFirst, opSplitLast:
-			if !co.chars(chars, pi) {
+			inProgress.Clear()
+			var cc cclass
+			if co.chars(pi, &cc, inProgress) == nil {
 				return false
 			}
 			pi += 2
@@ -510,59 +515,57 @@ func (co *compiler) onePass2() bool {
 		case opFullSet:
 			pi += 32
 		case opListSet:
-			pi += int(co.prog[pi+1])
+			pi += 1 + int(co.prog[pi+1])
 		}
 	}
 	return true
 }
 
-func (co *compiler) chars(chars map[int]*cclass, pi int) bool {
-	pat := co.prog
-	if chars[pi] != nil { // in progress or done
-		return true
+func (co *compiler) chars(pi int, cc *cclass, inProgress BitSet) *cclass {
+	if !inProgress.AddNew(int16(pi)) {
+		return nil
 	}
-	b := cc()
-	chars[pi] = b // mark as in progress
+	pat := co.prog
 	for {
 		switch opType(pat[pi]) {
 		case opChar:
-			b.addChars(string(rune(pat[pi+1])))
-			return true
+			return cc.addChars(string(rune(pat[pi+1])))
 		case opCharIgnoreCase:
-			b.addChars(string(rune(pat[pi+1]))).
+			return cc.addChars(string(rune(pat[pi+1]))).
 				addChars(string(rune(ascii.ToUpper(pat[pi+1]))))
-			return true
 		case opListSet:
 			n := int(pat[pi+1])
-			b.addChars(string(pat[pi+2 : pi+2+n]))
-			return true
+			return cc.addChars(string(pat[pi+2 : pi+2+n]))
 		case opHalfSet:
-			copy(b[:16], pat[pi+1:])
-			return true
+			copy(cc[:16], pat[pi+1:])
+			return cc
 		case opFullSet:
-			copy(b[:], pat[pi+1:])
-			return true
+			copy(cc[:], pat[pi+1:])
+			return cc
 		case opJump:
 			jmp := int(int16(pat[pi+1])<<8 | int16(pat[pi+2]))
 			pi += jmp // follow jump
 		case opSplitFirst, opSplitLast:
-			pi1 := pi + 3
-			pi2 := co.target(pi)
-			if !co.chars(chars, pi1) || !co.chars(chars, pi2) || // RECURSE
-				!disjoint(chars[pi1], chars[pi2]) {
-				return false
+			// although we recurse on both branches,
+			// by the time we get here, we know one branch is immediate
+			var cc1, cc2 cclass
+			c1 := co.chars(pi+3, &cc1, inProgress)          // RECURSE
+			c2 := co.chars(co.target(pi), &cc2, inProgress) // RECURSE
+			if c1 == nil || c2 == nil || !disjoint(c1, c2) {
+				return nil
 			}
-			chars[pi] = cc().add(chars[pi1]).add(chars[pi2])
-			return true
+			return cc.add(c1).add(c2)
 		case opDoneSave1:
-			// if !co.rightAnchor {
-			// 	fmt.Println("NOT RIGHT ANCHOR")
-			// }
-			return co.rightAnchor
+			if co.rightAnchor {
+				return cc
+			}
+			return nil
 		case opSave:
 			pi += 2
-		default:
+		case opWordStart, opWordEnd, opLineStart, opLineEnd, opStrStart, opStrEnd:
 			pi++
+		default:
+			return nil
 		}
 	}
 }
@@ -582,7 +585,7 @@ func disjoint(x, y *cclass) bool {
 func (co *compiler) onePass3() {
 	for pi := 0; pi < len(co.prog); pi++ {
 		switch opType(co.prog[pi]) {
-		case opChar, opSave:
+		case opChar, opCharIgnoreCase, opSave:
 			pi += 1
 		case opJump:
 			pi += 2
