@@ -269,6 +269,9 @@ func show(x any) string {
 	if _, ok := x.(string); ok {
 		return fmt.Sprintf("%#v", x)
 	}
+	if r, ok := x.(rune); ok {
+		return "'" + string(r) + "'"
+	}
 	s1 := fmt.Sprintf("%v", x)
 	s2 := fmt.Sprintf("%#v", x)
 	if s1[0] == '[' {
