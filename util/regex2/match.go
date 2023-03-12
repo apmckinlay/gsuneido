@@ -36,7 +36,6 @@ type state struct {
 // If it returns true, the captures are updated.
 func (pat Pattern) Match(s string, cap *Captures) bool {
 	_ = t && trace.Println(pat)
-	cap2 := dup(cap)
 	piStart := int16(0)
 	prefix := ""
 	switch op := opType(pat[piStart]); op {
@@ -50,6 +49,7 @@ func (pat Pattern) Match(s string, cap *Captures) bool {
 		return pat.literalMatch(op, s, cap)
 	}
 	anchored := opType(pat[piStart]) == opStrStart
+	cap2 := dup(cap)
 	var cur []state
 	var next []state
 	var live = &BitSet{}
@@ -212,6 +212,8 @@ func boundary(s string, si int, op byte) bool {
 	panic(assert.ShouldNotReachHere())
 }
 
+var wordSet = Pattern(word[:])
+
 func dup(cap *Captures) *Captures {
 	if cap == nil {
 		return nil
@@ -224,6 +226,7 @@ func dup(cap *Captures) *Captures {
 
 func (pat Pattern) onePass(s string, cap *Captures) bool {
 	_ = t && trace.Println(">>> one pass")
+	cap2 := dup(cap)
 	for si, pi := 0, 0; pi < len(pat); pi++ {
 		_ = t && trace.Printf("si %v %q %v\n", si, str.Subn(s, si, 1), pat.opstr1(int16(pi)))
 		switch opType(pat[pi]) {
@@ -276,19 +279,59 @@ func (pat Pattern) onePass(s string, cap *Captures) bool {
 		case opSave:
 			if cap != nil {
 				c := pat[pi+1]
-				cap[c] = int32(si)
+				cap2[c] = int32(si)
 			}
 			pi++
 		case opDoneSave1:
 			if cap != nil {
+				*cap = *cap2
 				cap[1] = int32(si)
 			}
 			return true
+		case opJump:
+			jmp := int(int16(pat[pi+1])<<8 | int16(pat[pi+2]))
+			pi += jmp - 1 // -1 because loop increments
+		case opSplitNext:
+			if onePass1(pat, pi+3, s, si) {
+				pi += 2
+			} else {
+				jmp := int(int16(pat[pi+1])<<8 | int16(pat[pi+2]))
+				pi += jmp - 1 // -1 because loop increments
+			}
+		case opSplitJump:
+			jmp := int(int16(pat[pi+1])<<8 | int16(pat[pi+2]))
+			if onePass1(pat, pi+jmp, s, si) {
+				pi += jmp - 1 // -1 because loop increments
+			} else {
+				pi += 2
+			}
 		default:
 			panic(assert.ShouldNotReachHere())
 		}
 	}
 	return false
+}
+
+func onePass1(pat Pattern, pi int, s string, si int) bool {
+	for ; opType(pat[pi]) == opSave; pi += 2 {
+	}
+	switch opType(pat[pi]) {
+	case opChar:
+		return si < len(s) && s[si] == pat[pi+1]
+	case opCharIgnoreCase:
+		return si < len(s) && ascii.ToLower(s[si]) == pat[pi+1]
+	case opListSet:
+		n := int(pat[pi+1])
+		return si < len(s) &&
+			-1 != strings.IndexByte(string(pat[pi+2:pi+2+n]), s[si])
+	case opHalfSet:
+		return si < len(s) && matchHalfSet(pat[pi+1:], s[si])
+	case opFullSet:
+		return si < len(s) && matchFullSet(pat[pi+1:], s[si])
+	case opDoneSave1:
+		return si >= len(s)
+	}
+	panic(assert.ShouldNotReachHere())
 }
 
 // ------------------------------------------------------------------

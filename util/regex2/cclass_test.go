@@ -10,7 +10,7 @@ import (
 )
 
 func TestCharClass(t *testing.T) {
-	test := func(b *builder, c byte, expected bool) {
+	test := func(b *cclass, c byte, expected bool) {
 		t.Helper()
 		pat := Pattern(b[:])
 		assert.T(t).This(matchFullSet(pat, c)).Is(expected)

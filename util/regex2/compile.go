@@ -73,23 +73,15 @@ posix		|	[:alnum:]			character class
 			|	[:upper:]			character class
 			|	[:xdigit:]			character class
 
-If a pattern does not start with \A it will be prefixed with .*?
-
-If a pattern does not contain any splits, it will start with OnePass
-
 If the entire pattern is literal characters it is compiled to:
-	[opUnanchored] opLiteral characters
+	opLiteralEqual/Prefix/Suffix/Substr characters
+
+If the pattern can be executed by onePass, it is compiled to:
+	opOnePass ...
 
 If the pattern has a literal prefix it will be compiled to:
-	opLitPre len characters <remainder of pattern>
+	opPrefix len characters ...
 */
-
-// Compile converts a regular expression string to a Pattern
-func Compile(rx string) Pattern {
-	co := compiler{src: rx, sn: len(rx), prog: make([]byte, 0, 10+2*len(rx)),
-		onePass: true, firstTarget: math.MaxInt}
-	return co.compile()
-}
 
 type compiler struct {
 	src         string
@@ -99,19 +91,29 @@ type compiler struct {
 	ignoreCase  bool
 	multiLine   bool
 	leftCount   int
-	onePass     bool
 	firstTarget int
 	leftAnchor  bool
 	rightAnchor bool
 }
 
-func (co *compiler) compile() Pattern {
+// Compile converts a regular expression string to a Pattern
+func Compile(rx string) Pattern {
+	co := compile(rx)
+	return co.compile2()
+}
+
+func compile(rx string) *compiler {
+	co := compiler{src: rx, sn: len(rx), prog: make([]byte, 0, 10+2*len(rx)),
+		firstTarget: math.MaxInt}
 	co.regex()
 	if co.si < co.sn {
 		panic("regex: closing ) without opening (")
 	}
 	co.emit(opDoneSave1)
+	return &co
+}
 
+func (co *compiler) compile2() Pattern {
 	literal, allLiteral := co.literalPrefix()
 	if allLiteral {
 		op := opLiteralSubstr
@@ -125,7 +127,7 @@ func (co *compiler) compile() Pattern {
 		// replace prog with literal
 		co.prog = slices.Insert(literal, 0, byte(op))
 	} else {
-		if co.onePass && co.leftAnchor {
+		if co.onePass() {
 			co.prog = slices.Insert(co.prog, 0, byte(opOnePass))
 		}
 		if len(literal) > 0 && !co.leftAnchor {
@@ -290,18 +292,10 @@ func (co *compiler) simple() {
 	}
 }
 
-func (co *compiler) emitChar(c byte) {
-	if co.ignoreCase {
-		co.emit(opCharIgnoreCase, ascii.ToLower(c))
-	} else {
-		co.emit(opChar, c)
-	}
-}
-
 func (co *compiler) charClass() {
 	negate := co.match("^")
 	chars := ""
-	var cc = builder{}
+	var cc = cclass{}
 	for co.si < co.sn {
 		if co.matchRange() {
 			cc.addRange(co.src[co.si-3], co.src[co.si-1])
@@ -356,7 +350,7 @@ func (co *compiler) matchRange() bool {
 	return false
 }
 
-func (co *compiler) posixClass() *builder {
+func (co *compiler) posixClass() *cclass {
 	if co.match("alpha:]") {
 		return alpha
 	} else if co.match("alnum:]") {
@@ -386,7 +380,7 @@ func (co *compiler) posixClass() *builder {
 	}
 }
 
-// helpers
+// matching
 
 func (co *compiler) match(s string) bool {
 	if strings.HasPrefix(co.src[co.si:], s) {
@@ -402,16 +396,25 @@ func (co *compiler) mustMatch(s string) {
 	}
 }
 
+// emit
+
+func (co *compiler) emitChar(c byte) {
+	if co.ignoreCase {
+		co.emit(opCharIgnoreCase, ascii.ToLower(c))
+	} else {
+		co.emit(opChar, c)
+	}
+}
+
 func (co *compiler) emit(op opType, arg ...byte) {
 	co.prog = append(append(co.prog, byte(op)), arg...)
 }
 
 func (co *compiler) emitOff(op opType, n int) {
-	co.onePass = false
 	co.emit(op, byte(n>>8), byte(n))
 }
 
-func (co *compiler) emitCC(b *builder) {
+func (co *compiler) emitCC(b *cclass) {
 	var data []byte
 	setLen := b.setLen()
 	if b.listLen() < setLen {
@@ -428,10 +431,174 @@ func (co *compiler) emitCC(b *builder) {
 }
 
 func (co *compiler) insert(i int, op opType, n int) {
-	co.onePass = false
 	co.prog = append(co.prog, 0, 0, 0)
 	copy(co.prog[i+3:], co.prog[i:])
 	co.prog[i] = byte(op)
 	co.prog[i+1] = byte(n >> 8)
 	co.prog[i+2] = byte(n)
+}
+
+//-------------------------------------------------------------------
+
+// onePass determines if the pattern can be executed in one pass.
+// To avoid rewriting the pattern, it requires that each split
+// has one branch that leads immediately to a concrete operation (e.g. opChar)
+func (co *compiler) onePass() bool {
+	if co.leftAnchor && co.onePass1() && co.onePass2() {
+		co.onePass3()
+		return true
+	}
+	return false
+}
+
+// onePass1 checks if all splits have an immediate concrete branch
+func (co *compiler) onePass1() bool {
+	for i := 0; i < len(co.prog); i++ {
+		switch opType(co.prog[i]) {
+		case opChar, opSave:
+			i += 1
+		case opJump:
+			i += 2
+		case opSplitFirst, opSplitLast:
+			if !co.concrete(i+3) && !co.concrete(co.target(i)) {
+				return false
+			}
+			i += 2
+		case opHalfSet:
+			i += 16
+		case opFullSet:
+			i += 32
+		case opListSet:
+			i += int(co.prog[i+1])
+		}
+	}
+	return true
+}
+
+func (co *compiler) target(i int) int {
+	return i + int(int16(co.prog[i+1])<<8|int16(co.prog[i+2]))
+}
+
+func (co *compiler) concrete(i int) bool {
+	for ; opType(co.prog[i]) == opSave; i += 2 {
+	}
+	switch opType(co.prog[i]) {
+	case opChar, opCharIgnoreCase, opListSet, opHalfSet, opFullSet:
+		return true
+	}
+	return false
+}
+
+// onePass2 checks if all splits are concrete and disjoint
+func (co *compiler) onePass2() bool {
+	// chars tracks the characters matchable at positions in the pattern
+	chars := make(map[int]*cclass)
+	// process splits
+	for pi := 0; pi < len(co.prog); pi++ {
+		switch opType(co.prog[pi]) {
+		case opChar, opSave:
+			pi += 1
+		case opJump:
+			pi += 2
+		case opSplitFirst, opSplitLast:
+			if !co.chars(chars, pi) {
+				return false
+			}
+			pi += 2
+		case opHalfSet:
+			pi += 16
+		case opFullSet:
+			pi += 32
+		case opListSet:
+			pi += int(co.prog[pi+1])
+		}
+	}
+	return true
+}
+
+func (co *compiler) chars(chars map[int]*cclass, pi int) bool {
+	pat := co.prog
+	if chars[pi] != nil { // in progress or done
+		return true
+	}
+	b := cc()
+	chars[pi] = b // mark as in progress
+	for {
+		switch opType(pat[pi]) {
+		case opChar:
+			b.addChars(string(rune(pat[pi+1])))
+			return true
+		case opCharIgnoreCase:
+			b.addChars(string(rune(pat[pi+1]))).
+				addChars(string(rune(ascii.ToUpper(pat[pi+1]))))
+			return true
+		case opListSet:
+			n := int(pat[pi+1])
+			b.addChars(string(pat[pi+2 : pi+2+n]))
+			return true
+		case opHalfSet:
+			copy(b[:16], pat[pi+1:])
+			return true
+		case opFullSet:
+			copy(b[:], pat[pi+1:])
+			return true
+		case opJump:
+			jmp := int(int16(pat[pi+1])<<8 | int16(pat[pi+2]))
+			pi += jmp // follow jump
+		case opSplitFirst, opSplitLast:
+			pi1 := pi + 3
+			pi2 := co.target(pi)
+			if !co.chars(chars, pi1) || !co.chars(chars, pi2) || // RECURSE
+				!disjoint(chars[pi1], chars[pi2]) {
+				return false
+			}
+			chars[pi] = cc().add(chars[pi1]).add(chars[pi2])
+			return true
+		case opDoneSave1:
+			// if !co.rightAnchor {
+			// 	fmt.Println("NOT RIGHT ANCHOR")
+			// }
+			return co.rightAnchor
+		case opSave:
+			pi += 2
+		default:
+			pi++
+		}
+	}
+}
+
+func disjoint(x, y *cclass) bool {
+	for i := range x {
+		if (x[i] & y[i]) != 0 {
+			return false
+		}
+	}
+	return true
+}
+
+// onePass3 modifies splits to
+// opSplitNext if the immediate concrete branch follows,
+// and opSplitJump means it's after the jump.
+func (co *compiler) onePass3() {
+	for pi := 0; pi < len(co.prog); pi++ {
+		switch opType(co.prog[pi]) {
+		case opChar, opSave:
+			pi += 1
+		case opJump:
+			pi += 2
+		case opSplitFirst, opSplitLast:
+			if co.concrete(pi + 3) {
+				co.prog[pi] = byte(opSplitNext)
+			} else {
+				co.prog[pi] = byte(opSplitJump)
+			}
+			pi += 2
+		case opHalfSet:
+			pi += 16
+		case opFullSet:
+			pi += 32
+		case opListSet:
+			pi += int(co.prog[pi+1])
+		}
+	}
 }

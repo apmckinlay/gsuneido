@@ -36,6 +36,8 @@ const (
 	opSave                  // byte
 	opDoneSave1             //
 	opOnePass               //
+	opSplitNext             // int16
+	opSplitJump             // int16
 	opLiteralSubstr         // []byte (to end)
 	opLiteralPrefix         // []byte (to end)
 	opLiteralSuffix         // []byte (to end)
@@ -60,7 +62,7 @@ func (pat Pattern) opstr(pi int) (int, string) {
 	switch op {
 	case opChar:
 		return 2, fmt.Sprintf("Char %c", pat[pi+1])
-	case opJump, opSplitFirst, opSplitLast:
+	case opJump, opSplitFirst, opSplitLast, opSplitNext, opSplitJump:
 		jmp := int16(pat[pi+1])<<8 | int16(pat[pi+2])
 		return 3, fmt.Sprint(opstr, " ", pi+int(jmp))
 	case opHalfSet:

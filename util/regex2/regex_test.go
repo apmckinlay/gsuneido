@@ -5,6 +5,7 @@ package regex2
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/util/assert"
@@ -12,8 +13,10 @@ import (
 )
 
 func TestPlay(t *testing.T) {
-	s := "abc"
-	pat := Compile(`ab$`)
+	// s := "http://bar"
+	// pat := Compile(`^https?://(foo|bar)`)
+	s := ""
+	pat := Compile("^(a)$")
 	fmt.Println(pat)
 	var cap Captures
 	fmt.Println(">>>", pat.Match(s, &cap), cap[0])
@@ -52,18 +55,22 @@ func TestCapture(t *testing.T) {
 }
 
 func TestMatch(t *testing.T) {
+	var rt rune
 	match := func(str string, pat string, expected bool) {
 		t.Helper()
 		// fmt.Printf("%q =~ %q -> %v\n", str, pat, expected)
-		assert.T(t).This(Compile(pat).Match(str, nil)).Is(expected)
+		rx := Compile(pat)
+		assert.This(rxType(rx)).Is(rt)
+		assert.T(t).This(rx.Match(str, nil)).Is(expected)
 	}
-	matchAll := func(str string, pat string, expected bool) {
-		t.Helper()
-		pat = `^` + pat + `$`
-		match(str, pat, expected)
+	full := func(pat string) string {
+		if strings.Contains(pat, "|") {
+			return "^(" + pat + ")$"
+		}
+		return "^" + pat + "$"
 	}
-	// literal
-	matchAll("a", "a", true)
+	rt = 'L'
+	match("a", full("a"), true)
 	match("a", "a", true)
 	match("abc", "b", true)
 	match("abc", `^b`, false)
@@ -72,23 +79,40 @@ func TestMatch(t *testing.T) {
 	match("abc", `b$`, false)
 	match("abc", `^abc$`, true)
 	match("abc", `^b$`, false)
-	matchAll("a", "", false)
-	matchAll("", "a", false)
-	matchAll("a", "b", false)
+	match("a", "^$", false)
+	match("", full("a"), false)
+	match("a", full("b"), false)
 
-	// one pass
-	matchAll("a", ".", true)
-	matchAll("", ".", false)
-	matchAll("abc", ".bc", true)
-	matchAll("abc", ".bx", false)
+	rt = '1'
+	match("a", full("."), true)
+	match("", full("."), false)
+	match("abc", full(".bc"), true)
+	match("abc", full(".bx"), false)
+	match("a", full("a|b"), true)
+	match("b", full("a|b"), true)
+	match("", full("a|b"), false)
+	match("c", full("a|b"), false)
+	match("", full("a?"), true)
+	match("a", full("a?"), true)
 
-	// full
-	matchAll("a", "a|b", true)
-	matchAll("b", "a|b", true)
-	matchAll("", "a|b", false)
-	matchAll("c", "a|b", false)
-	matchAll("", "a?", true)
-	matchAll("a", "a?", true)
+	rt = 'M'
+	match("a", "a|b", true)
+	match("b", "a|b", true)
+	match("", "a|b", false)
+	match("c", "a|b", false)
+	match("", "a?", true)
+	match("a", "a?", true)
+}
+
+func rxType(pat Pattern) rune {
+	switch opType(pat[0]) {
+	case opLiteralSubstr, opLiteralPrefix, opLiteralSuffix, opLiteralEqual:
+		return 'L'
+	case opOnePass:
+		return '1'
+	default:
+		return 'M'
+	}
 }
 
 func TestCompile(t *testing.T) {
@@ -151,10 +175,44 @@ func TestCompile(t *testing.T) {
 		15: DoneSave1`)
 }
 
+func TestOnePass(t *testing.T) {
+	// co := compile("^((ab)+)$")
+	// fmt.Println(Pattern(co.prog))
+	// fmt.Println("left anchor", co.leftAnchor)
+	// fmt.Println("right anchor", co.rightAnchor)
+	// if co.onePass1() {
+	// 	fmt.Println("onePass1")
+	// 	if co.onePass2() {
+	// 		fmt.Println("onePass2")
+	// 		co.onePass3()
+	// 		fmt.Println(Pattern(co.prog))
+	// 	}
+	// }
+
+	test := func(rx string, expected bool) {
+		co := compile(rx)
+		assert.This(co.onePass()).Is(expected)
+	}
+	test("abc", false)
+	test("^abc", true)
+	test("^abc$", true)
+	test("^(a|b)", true)
+	test("^(a|bc|de|f)", true)
+	test("^a?", false)
+	test("^a?$", true)
+	test("^a+$", true)
+	test("^a*$", true)
+	test("^ab?c", true)
+	test("^ab+c", true)
+	test("^ab*c", true)
+}
+
+var M bool
+
 func BenchmarkOnePass(b *testing.B) {
-	pat := Compile("abc")
+	pat := Compile("^a+b")
 	for i := 0; i < b.N; i++ {
-		pat.Match("abc", nil)
+		M = pat.Match("aaab", nil)
 	}
 }
 

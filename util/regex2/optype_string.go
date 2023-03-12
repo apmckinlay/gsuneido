@@ -27,16 +27,18 @@ func _() {
 	_ = x[opSave-17]
 	_ = x[opDoneSave1-18]
 	_ = x[opOnePass-19]
-	_ = x[opLiteralSubstr-20]
-	_ = x[opLiteralPrefix-21]
-	_ = x[opLiteralSuffix-22]
-	_ = x[opLiteralEqual-23]
-	_ = x[opPrefix-24]
+	_ = x[opSplitNext-20]
+	_ = x[opSplitJump-21]
+	_ = x[opLiteralSubstr-22]
+	_ = x[opLiteralPrefix-23]
+	_ = x[opLiteralSuffix-24]
+	_ = x[opLiteralEqual-25]
+	_ = x[opPrefix-26]
 }
 
-const _opType_name = "opCharopCharIgnoreCaseopJumpopSplitFirstopSplitLastopAnyopAnyNotNLopHalfSetopFullSetopListSetopWordStartopWordEndopLineStartopLineEndopStrStartopStrEndopSaveopDoneSave1opOnePassopLiteralSubstropLiteralPrefixopLiteralSuffixopLiteralEqualopPrefix"
+const _opType_name = "opCharopCharIgnoreCaseopJumpopSplitFirstopSplitLastopAnyopAnyNotNLopHalfSetopFullSetopListSetopWordStartopWordEndopLineStartopLineEndopStrStartopStrEndopSaveopDoneSave1opOnePassopSplitNextopSplitJumpopLiteralSubstropLiteralPrefixopLiteralSuffixopLiteralEqualopPrefix"
 
-var _opType_index = [...]uint8{0, 6, 22, 28, 40, 51, 56, 66, 75, 84, 93, 104, 113, 124, 133, 143, 151, 157, 168, 177, 192, 207, 222, 236, 244}
+var _opType_index = [...]uint16{0, 6, 22, 28, 40, 51, 56, 66, 75, 84, 93, 104, 113, 124, 133, 143, 151, 157, 168, 177, 188, 199, 214, 229, 244, 258, 266}
 
 func (i opType) String() string {
 	i -= 1

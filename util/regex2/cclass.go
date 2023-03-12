@@ -33,76 +33,66 @@ var (
 	cntrl    = cc().addRange('\u0000', '\u001f').addRange('\u007f', '\u009f')
 )
 
-var wordSet = Pattern(word[:])
+type cclass [32]byte // 256 / 8
 
-// builder
-
-type builder [32]byte // 256 / 8
-
-func cc() *builder {
-	return &builder{}
+func cc() *cclass {
+	return &cclass{}
 }
 
 // addRange adds a range of characters to a character class instruction
-func (b *builder) addRange(from, to byte) *builder {
+func (cc *cclass) addRange(from, to byte) *cclass {
 	if from > to {
-		return b
+		return cc
 	}
 	for c := from; ; c++ {
-		b[c>>3] |= (1 << (c & 7))
+		cc[c>>3] |= (1 << (c & 7))
 		if c >= to {
 			break
 		}
 	}
-	return b
+	return cc
 }
 
 // addChars adds characters to a character class instruction
-func (b *builder) addChars(s string) *builder {
+func (cc *cclass) addChars(s string) *cclass {
 	for i := 0; i < len(s); i++ {
 		c := s[i]
-		b[c>>3] |= (1 << (c & 7))
+		cc[c>>3] |= (1 << (c & 7))
 	}
-	return b
+	return cc
 }
 
-func (b *builder) add(b2 *builder) *builder {
-	for i := range b {
-		b[i] |= b2[i]
+// add or's the argument cclass into the receiver
+func (cc *cclass) add(b2 *cclass) *cclass {
+	for i := range cc {
+		cc[i] |= b2[i]
 	}
-	return b
+	return cc
 }
 
 // negate inverts a builder
-func (b *builder) negate() *builder {
-	for i := range b {
-		b[i] = ^b[i]
+func (cc *cclass) negate() *cclass {
+	for i := range cc {
+		cc[i] = ^cc[i]
 	}
-	return b
+	return cc
 }
 
 // ignore makes the character class ignore case
-func (b *builder) ignore() {
+func (cc *cclass) ignore() {
 	for lo := byte('a'); lo <= 'z'; lo++ {
 		up := ascii.ToUpper(lo)
-		if b[lo>>3]&(1<<(lo&7)) != 0 {
-			b[up>>3] |= (1 << (up & 7))
-		} else if b[up>>3]&(1<<(up&7)) != 0 {
-			b[lo>>3] |= (1 << (lo & 7))
+		if cc[lo>>3]&(1<<(lo&7)) != 0 {
+			cc[up>>3] |= (1 << (up & 7))
+		} else if cc[up>>3]&(1<<(up&7)) != 0 {
+			cc[lo>>3] |= (1 << (lo & 7))
 		}
 	}
 }
 
-func (b *builder) listLen() int {
-	n := 0
-	for _, x := range b {
-		n += bits.OnesCount8(x)
-	}
-	return n
-}
-
-func (b *builder) setLen() int {
-	for _, b := range b[16:] {
+// setLen returns the length of the cclass as a bit set (16 or 32)
+func (cc *cclass) setLen() int {
+	for _, b := range cc[16:] {
 		if b != 0 {
 			return 32
 		}
@@ -110,22 +100,32 @@ func (b *builder) setLen() int {
 	return 16
 }
 
-func (b *builder) list() []byte {
+// listLen returns the length of the cclass as a list of characters
+func (cc *cclass) listLen() int {
+	n := 0
+	for _, x := range cc {
+		n += bits.OnesCount8(x)
+	}
+	return n
+}
+
+// list returns the cclass as a list of characters
+func (cc *cclass) list() []byte {
 	list := make([]byte, 0, 16)
 	for i := 0; i < 256; i++ {
-		if b[i>>3]&(1<<(i&7)) != 0 {
+		if cc[i>>3]&(1<<(i&7)) != 0 {
 			list = append(list, byte(i))
 		}
 	}
 	return list
 }
 
-// matchHalfSet returns whether a character is in a bitset
+// matchHalfSet returns whether a character is in a half bit set (16 bytes)
 func matchHalfSet(set Pattern, c byte) bool {
 	return c < 128 && set[c>>3]&(1<<(c&7)) != 0
 }
 
-// matchSet returns whether a character is in a bitset
+// matchFullSet returns whether a character is in a full bit set (32 bytes)
 func matchFullSet(set Pattern, c byte) bool {
 	return set[c>>3]&(1<<(c&7)) != 0
 }
