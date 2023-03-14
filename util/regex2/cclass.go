@@ -12,6 +12,7 @@ import (
 // Character classes are compiled to either listSet or bitSet instructions
 // listSet is used for small numbers of characters
 // bitSet is either 128 bits in 16 bytes or 256 bits in 32 bytes
+// Note: this is for ASCII only
 
 // predefined character class instructions
 var (
@@ -59,6 +60,12 @@ func (cc *cclass) addChars(s string) *cclass {
 		c := s[i]
 		cc[c>>3] |= (1 << (c & 7))
 	}
+	return cc
+}
+
+// addChar add a single character to a character class instruction
+func (cc *cclass) addChar(c byte) *cclass {
+	cc[c>>3] |= (1 << (c & 7))
 	return cc
 }
 

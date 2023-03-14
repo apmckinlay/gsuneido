@@ -14,15 +14,20 @@ import (
 
 type Captures [20]int32 // 2 * 10 (\0 to \9)
 
+// Matches is a shortcut for Match(s, nil)
+func (pat Pattern) Matches(s string) bool {
+	return pat.Match(s, nil)
+}
+
+// LastMatch finds the last match in s.
+// It is inefficient, but rarely used.
 func (pat Pattern) LastMatch(s string, cap *Captures) bool {
-	// inefficient, but rarely used
-	for i := len(s) - 1; i >= 0; i-- {
+	for i := len(s); i >= 0; i-- {
 		if pat.Match(s[:i], cap) {
 			return true
 		}
 	}
 	return false
-	// could improve this by figuring out the minimum match length
 }
 
 type state struct {
@@ -162,13 +167,13 @@ func (pat Pattern) addstate(s string, si int, live *BitSet, states []state,
 		case opJump:
 			jmp := int16(pat[pi+1])<<8 | int16(pat[pi+2])
 			pi += jmp
-		case opSplitFirst:
+		case opSplitJump:
 			jmp := int16(pat[pi+1])<<8 | int16(pat[pi+2])
-			states = pat.addstate(s, si, live, states, pi+jmp, cap)
+			states = pat.addstate(s, si, live, states, pi+jmp, cap) // RECURSE
 			pi += 3
-		case opSplitLast:
+		case opSplitNext:
 			jmp := int16(pat[pi+1])<<8 | int16(pat[pi+2])
-			states = pat.addstate(s, si, live, states, pi+3, cap)
+			states = pat.addstate(s, si, live, states, pi+3, cap) // RECURSE
 			pi += jmp
 		case opSave:
 			if cap != nil {
@@ -285,20 +290,21 @@ func (pat Pattern) onePass(s string, cap *Captures) bool {
 		case opDoneSave1:
 			if cap != nil {
 				*cap = *cap2
+				cap[0] = 0
 				cap[1] = int32(si)
 			}
 			return true
 		case opJump:
 			jmp := int(int16(pat[pi+1])<<8 | int16(pat[pi+2]))
 			pi += jmp - 1 // -1 because loop increments
-		case opSplitNext:
+		case opBranchNext:
 			if onePass1(pat, pi+3, s, si) {
 				pi += 2
 			} else {
 				jmp := int(int16(pat[pi+1])<<8 | int16(pat[pi+2]))
 				pi += jmp - 1 // -1 because loop increments
 			}
-		case opSplitJump:
+		case opBranchJump:
 			jmp := int(int16(pat[pi+1])<<8 | int16(pat[pi+2]))
 			if onePass1(pat, pi+jmp, s, si) {
 				pi += jmp - 1 // -1 because loop increments

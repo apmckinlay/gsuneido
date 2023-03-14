@@ -11,8 +11,8 @@ func _() {
 	_ = x[opChar-1]
 	_ = x[opCharIgnoreCase-2]
 	_ = x[opJump-3]
-	_ = x[opSplitFirst-4]
-	_ = x[opSplitLast-5]
+	_ = x[opSplitNext-4]
+	_ = x[opSplitJump-5]
 	_ = x[opAny-6]
 	_ = x[opAnyNotNL-7]
 	_ = x[opHalfSet-8]
@@ -27,8 +27,8 @@ func _() {
 	_ = x[opSave-17]
 	_ = x[opDoneSave1-18]
 	_ = x[opOnePass-19]
-	_ = x[opSplitNext-20]
-	_ = x[opSplitJump-21]
+	_ = x[opBranchNext-20]
+	_ = x[opBranchJump-21]
 	_ = x[opLiteralSubstr-22]
 	_ = x[opLiteralPrefix-23]
 	_ = x[opLiteralSuffix-24]
@@ -36,9 +36,9 @@ func _() {
 	_ = x[opPrefix-26]
 }
 
-const _opType_name = "opCharopCharIgnoreCaseopJumpopSplitFirstopSplitLastopAnyopAnyNotNLopHalfSetopFullSetopListSetopWordStartopWordEndopLineStartopLineEndopStrStartopStrEndopSaveopDoneSave1opOnePassopSplitNextopSplitJumpopLiteralSubstropLiteralPrefixopLiteralSuffixopLiteralEqualopPrefix"
+const _opType_name = "opCharopCharIgnoreCaseopJumpopSplitNextopSplitJumpopAnyopAnyNotNLopHalfSetopFullSetopListSetopWordStartopWordEndopLineStartopLineEndopStrStartopStrEndopSaveopDoneSave1opOnePassopBranchNextopBranchJumpopLiteralSubstropLiteralPrefixopLiteralSuffixopLiteralEqualopPrefix"
 
-var _opType_index = [...]uint16{0, 6, 22, 28, 40, 51, 56, 66, 75, 84, 93, 104, 113, 124, 133, 143, 151, 157, 168, 177, 188, 199, 214, 229, 244, 258, 266}
+var _opType_index = [...]uint16{0, 6, 22, 28, 39, 50, 55, 65, 74, 83, 92, 103, 112, 123, 132, 142, 150, 156, 167, 176, 188, 200, 215, 230, 245, 259, 267}
 
 func (i opType) String() string {
 	i -= 1

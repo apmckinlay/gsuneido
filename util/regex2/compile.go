@@ -4,11 +4,10 @@
 package regex2
 
 import (
-	"math"
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/util/ascii"
-	"github.com/apmckinlay/gsuneido/util/generic/ord"
+	"github.com/apmckinlay/gsuneido/util/generic/cache"
 	"github.com/apmckinlay/gsuneido/util/hacks"
 	"golang.org/x/exp/slices"
 )
@@ -91,8 +90,6 @@ type compiler struct {
 	ignoreCase  bool
 	multiLine   bool
 	leftCount   int
-	firstTarget int
-	leftAnchor  bool
 	rightAnchor bool
 }
 
@@ -103,8 +100,7 @@ func Compile(rx string) Pattern {
 }
 
 func compile(rx string) *compiler {
-	co := compiler{src: rx, sn: len(rx), prog: make([]byte, 0, 10+2*len(rx)),
-		firstTarget: math.MaxInt}
+	co := compiler{src: rx, sn: len(rx), prog: make([]byte, 0, 10+2*len(rx))}
 	co.regex()
 	if co.si < co.sn {
 		panic("regex: closing ) without opening (")
@@ -113,13 +109,15 @@ func compile(rx string) *compiler {
 	return &co
 }
 
+// compile2 handles optimizations for all literal, one pass, and literal prefix
 func (co *compiler) compile2() Pattern {
+	leftAnchor := opType(co.prog[0]) == opStrStart
 	literal, allLiteral := co.literalPrefix()
 	if allLiteral {
 		op := opLiteralSubstr
-		if co.leftAnchor && co.rightAnchor {
+		if leftAnchor && co.rightAnchor {
 			op = opLiteralEqual
-		} else if co.leftAnchor {
+		} else if leftAnchor {
 			op = opLiteralPrefix
 		} else if co.rightAnchor {
 			op = opLiteralSuffix
@@ -130,7 +128,7 @@ func (co *compiler) compile2() Pattern {
 		if co.onePass() {
 			co.prog = slices.Insert(co.prog, 0, byte(opOnePass))
 		}
-		if len(literal) > 0 && !co.leftAnchor {
+		if len(literal) > 0 && !leftAnchor {
 			if len(literal) > 255 {
 				literal = literal[:255]
 			}
@@ -142,20 +140,28 @@ func (co *compiler) compile2() Pattern {
 	return Pattern(hacks.BStoS(co.prog))
 }
 
-func (co *compiler) literalPrefix() ([]byte, bool) {
-	prefix := []byte{}
-	end := ord.Min(len(co.prog), co.firstTarget)
-	for i := 0; i < end; i++ {
+func (co *compiler) literalPrefix() (prefix []byte, allLiteral bool) {
+	allLiteral = true
+	for i := 0; i < len(co.prog); i++ {
 		switch opType(co.prog[i]) {
+		case opStrStart:
+			if i != 0 {
+				return prefix, false
+			}
 		case opChar:
 			prefix = append(prefix, co.prog[i+1])
 			i++
-		case opDoneSave1:
-			return prefix, true
-		case opStrStart, opStrEnd:
-			// ignore
+		case opSave:
+			allLiteral = false
+			i++
 		default:
 			return prefix, false
+		case opStrEnd:
+			if i != len(co.prog)-2 { // immediately before final opDoneSave1
+				return prefix, false
+			}
+		case opDoneSave1:
+			return prefix, allLiteral
 		}
 	}
 	return prefix, false
@@ -167,11 +173,12 @@ func (co *compiler) regex() {
 	co.sequence()
 	for co.match("|") {
 		pn := len(co.prog) - start
-		co.insert(start, opSplitFirst, pn+6)
+		co.insert(start, opSplitNext, pn+6)
 		patch = append(patch, len(co.prog))
 		co.emitOff(opJump, 0)
 		start = len(co.prog)
 		co.sequence()
+		co.rightAnchor = false
 	}
 	n := len(co.prog)
 	for _, i := range patch {
@@ -189,15 +196,10 @@ func (co *compiler) sequence() {
 
 func (co *compiler) element() {
 	if co.match(`\A`) || (!co.multiLine && co.match("^")) {
-		if len(co.prog) == 0 {
-			co.leftAnchor = true
-		}
 		co.emit(opStrStart)
 	} else if co.match(`\Z`) || (!co.multiLine && co.match("$")) {
-		if co.si >= len(co.src) {
-			co.rightAnchor = true
-		}
 		co.emit(opStrEnd)
+		co.rightAnchor = (co.si == len(co.src)) // tentative
 	} else if co.match("^") {
 		co.emit(opLineStart)
 	} else if co.match("$") {
@@ -220,25 +222,30 @@ func (co *compiler) element() {
 		// handled by quoted
 	} else {
 		start := len(co.prog)
-		co.simple()
+		co.simple() // RECURSE
 		pn := len(co.prog) - start
 		// need to match longer first
 		if co.match("??") {
-			co.insert(start, opSplitFirst, pn+3)
+			co.insert(start, opSplitJump, pn+3)
+			co.rightAnchor = false
 		} else if co.match("?") {
-			co.insert(start, opSplitLast, pn+3)
-			co.firstTarget = ord.Min(co.firstTarget, start)
+			co.insert(start, opSplitNext, pn+3)
+			co.rightAnchor = false
 		} else if co.match("+?") {
-			co.emitOff(opSplitLast, -pn)
-			co.firstTarget = ord.Min(co.firstTarget, start)
+			co.emitOff(opSplitNext, -pn)
+			co.rightAnchor = false
 		} else if co.match("+") {
-			co.emitOff(opSplitFirst, -pn)
+			co.emitOff(opSplitJump, -pn)
+			co.rightAnchor = false
 		} else if co.match("*?") {
 			co.emitOff(opJump, -pn-3)
-			co.insert(start, opSplitFirst, pn+6)
+			co.insert(start, opSplitJump, pn+6)
+			co.rightAnchor = false
 		} else if co.match("*") {
-			co.emitOff(opJump, -pn-3)
-			co.insert(start, opSplitLast, pn+6)
+			//  compile x* as (x+)? as per golang.org/issue/46123
+			co.emitOff(opSplitJump, -pn)
+			co.insert(start, opSplitNext, pn+6)
+			co.rightAnchor = false
 		}
 	}
 }
@@ -282,7 +289,7 @@ func (co *compiler) simple() {
 			panic("regex: too many parenthesized groups")
 		}
 		co.emit(opSave, 2*byte(co.leftCount))
-		co.regex() // recurse
+		co.regex() // RECURSE
 		co.emit(opSave, 2*byte(co.leftCount)+1)
 		co.mustMatch(")")
 	} else {
@@ -296,7 +303,6 @@ func (co *compiler) simple() {
 
 func (co *compiler) charClass() {
 	negate := co.match("^")
-	chars := ""
 	var cc = cclass{}
 	for co.si < co.sn {
 		if co.matchRange() {
@@ -319,7 +325,7 @@ func (co *compiler) charClass() {
 			if co.si+1 < co.sn {
 				co.match("\\")
 			}
-			chars += co.src[co.si : co.si+1]
+			cc.addChar(co.src[co.si])
 			co.si++
 		}
 		if co.si >= co.sn || co.src[co.si] == ']' {
@@ -327,14 +333,6 @@ func (co *compiler) charClass() {
 		}
 	}
 	co.mustMatch("]")
-	if len(chars) > 0 {
-		cc.addChars(chars)
-	}
-	if !negate && cc.listLen() == 1 {
-		// optimization - treat single character class as just a character
-		co.emitChar(cc.list()[0])
-		return
-	}
 	if co.ignoreCase {
 		cc.ignore()
 	}
@@ -421,6 +419,11 @@ func (co *compiler) emitCC(b *cclass) {
 	setLen := b.setLen()
 	if b.listLen() < setLen {
 		data = b.list()
+		if len(data) == 1 {
+			// optimization - treat single character class as just a character
+			co.emitChar(data[0])
+			return
+		}
 		co.emit(opListSet, byte(len(data)))
 	} else if setLen == 16 {
 		co.emit(opHalfSet)
@@ -446,7 +449,8 @@ func (co *compiler) insert(i int, op opType, n int) {
 // To avoid rewriting the pattern, it requires that each split
 // has one branch that leads immediately to a concrete operation (e.g. opChar)
 func (co *compiler) onePass() bool {
-	if co.leftAnchor && len(co.prog) < 1000 && co.onePass1() && co.onePass2() {
+	leftAnchor := opType(co.prog[0]) == opStrStart
+	if leftAnchor && len(co.prog) < 1000 && co.onePass1() && co.onePass2() {
 		co.onePass3()
 		return true
 	}
@@ -461,7 +465,7 @@ func (co *compiler) onePass1() bool {
 			i += 1
 		case opJump:
 			i += 2
-		case opSplitFirst, opSplitLast:
+		case opSplitJump, opSplitNext:
 			if !co.concrete(i+3) && !co.concrete(co.target(i)) {
 				return false
 			}
@@ -503,7 +507,7 @@ func (co *compiler) onePass2() bool {
 			pi += 1
 		case opJump:
 			pi += 2
-		case opSplitFirst, opSplitLast:
+		case opSplitJump, opSplitNext:
 			inProgress.Clear()
 			var cc cclass
 			if co.chars(pi, &cc, inProgress) == nil {
@@ -545,7 +549,7 @@ func (co *compiler) chars(pi int, cc *cclass, inProgress BitSet) *cclass {
 		case opJump:
 			jmp := int(int16(pat[pi+1])<<8 | int16(pat[pi+2]))
 			pi += jmp // follow jump
-		case opSplitFirst, opSplitLast:
+		case opSplitJump, opSplitNext:
 			// although we recurse on both branches,
 			// by the time we get here, we know one branch is immediate
 			var cc1, cc2 cclass
@@ -555,14 +559,14 @@ func (co *compiler) chars(pi int, cc *cclass, inProgress BitSet) *cclass {
 				return nil
 			}
 			return cc.add(c1).add(c2)
-		case opDoneSave1:
-			if co.rightAnchor {
+		case opStrEnd:
+			if opType(co.prog[pi+1]) == opDoneSave1 {
 				return cc
 			}
 			return nil
 		case opSave:
 			pi += 2
-		case opWordStart, opWordEnd, opLineStart, opLineEnd, opStrStart, opStrEnd:
+		case opWordStart, opWordEnd, opLineStart, opLineEnd, opStrStart:
 			pi++
 		default:
 			return nil
@@ -589,11 +593,11 @@ func (co *compiler) onePass3() {
 			pi += 1
 		case opJump:
 			pi += 2
-		case opSplitFirst, opSplitLast:
+		case opSplitJump, opSplitNext:
 			if co.concrete(pi + 3) {
-				co.prog[pi] = byte(opSplitNext)
+				co.prog[pi] = byte(opBranchNext)
 			} else {
-				co.prog[pi] = byte(opSplitJump)
+				co.prog[pi] = byte(opBranchJump)
 			}
 			pi += 2
 		case opHalfSet:
@@ -601,7 +605,20 @@ func (co *compiler) onePass3() {
 		case opFullSet:
 			pi += 32
 		case opListSet:
-			pi += int(co.prog[pi+1])
+			pi += 1 + int(co.prog[pi+1])
 		}
 	}
+}
+
+// Cache ----------------------------------------------------------------------
+
+type Cache struct {
+	*cache.Cache[string, Pattern]
+}
+
+func (c *Cache) Get(s string) Pattern {
+	if c.Cache == nil {
+		c.Cache = cache.New(Compile)
+	}
+	return c.Cache.Get(s)
 }
