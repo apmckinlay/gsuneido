@@ -10,7 +10,7 @@ import (
 )
 
 // LiteralRep returns the string,true if rep is literal,
-// otherwise it returns"",false
+// otherwise it returns "",false
 func LiteralRep(rep string) (string, bool) {
 	if strings.HasPrefix(rep, "\\=") {
 		return rep[2:], true
