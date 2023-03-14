@@ -13,31 +13,44 @@ import (
 )
 
 func TestNumberPat(t *testing.T) {
-	assert := assert.T(t)
-	assert.True(numberPat.Matches("0"))
-	assert.True(numberPat.Matches("123"))
-	assert.True(numberPat.Matches("+123"))
-	assert.True(numberPat.Matches("-123"))
-	assert.True(numberPat.Matches(".123"))
-	assert.True(numberPat.Matches("123.465"))
-	assert.True(numberPat.Matches("-.5"))
-	assert.True(numberPat.Matches("-1.5"))
-	assert.True(numberPat.Matches("-1.5e2"))
-	assert.True(numberPat.Matches("1.5e-23"))
+	test := func (s string, expected bool) {
+		t.Helper()
+		assert := assert.T(t)
+		assert.This(numberPat.Matches(s)).Is(expected)
+		if expected == true {
+			assert.True(numberPat.Matches("+" + s))
+			assert.True(numberPat.Matches("-" + s))
+			assert.False(numberPat.Matches("x" + s))
+			assert.False(numberPat.Matches(s + "x"))
+		}
+	}
+	test("0", true)
+	test("6", true)
+	test("007", true)
+	test("123", true)
+	test("123.", true)
+	test(".123", true)
+	test("123.465", true)
+	test("1e6", true)
+	test("1.5e6", true)
+	test("1.5e-6", true)
+	test("1.5e+6", true)
+	test("1.5e-23", true)
 
-	assert.False(numberPat.Matches(""))
-	assert.False(numberPat.Matches("."))
-	assert.False(numberPat.Matches("+"))
-	assert.False(numberPat.Matches("-"))
-	assert.False(numberPat.Matches("-."))
-	assert.False(numberPat.Matches("+-."))
-	assert.False(numberPat.Matches("1.2.3"))
-	assert.False(numberPat.Matches("\n123"))
-	assert.False(numberPat.Matches("123\n"))
+	test("", false)
+	test(".", false)
+	test("+", false)
+	test("-", false)
+	test("-.", false)
+	test("+-.", false)
+	test("1.2.3", false)
+	test("\n123", false)
+	test("123\n", false)
+	test("e5", false)
 }
 
 func BenchmarkNumberPatRegexp(b *testing.B) {
-	numPat := regexp.MustCompile(`^[+-]?(\d+(\.\d*)?)|(\.\d+)([eE][+-]?\d\d?)?$`)
+	numPat := regexp.MustCompile(`^[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d\d?)?$`)
 	big := strings.Repeat("1", 80) + "x"
 	for i := 0; i < b.N; i++ {
 		numPat.MatchString("0")
@@ -48,7 +61,7 @@ func BenchmarkNumberPatRegexp(b *testing.B) {
 }
 
 func BenchmarkNumberPatRegex(b *testing.B) {
-	numPat := regex.Compile(`\A[+-]?(\d+(\.\d*)?)|(\.\d+)([eE][+-]?\d\d?)?\Z`)
+	numPat := regex.Compile(`\A[+-]?(\d+(\.\d*)?|\.\d+)([eE][+-]?\d\d?)?\Z`)
 	big := strings.Repeat("1", 80) + "x"
 	for i := 0; i < b.N; i++ {
 		numPat.Matches("0")
