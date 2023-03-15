@@ -1,3 +1,0 @@
-go test fuzz v1
-string("\xdbaA]0\xfcA")
-string("a")
