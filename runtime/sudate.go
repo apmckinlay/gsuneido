@@ -175,18 +175,17 @@ func (d SuDate) Plus(yr int, mon int, day int, hr int, min int, sec int, ms int)
 }
 
 func NormalizeDate(yr int, mon int, day int, hr int, min int, sec int, ms int) SuDate {
-	t := goTime(yr, mon, day, hr, min, sec, ms)
+	// use UTC to avoid timezone daylight savings issues
+	t := time.Date(yr, time.Month(mon), day, hr, min, sec, ms*1000000, time.UTC)
 	return fromGoTime(t)
 }
 
+// Increment is used by Timestamp to add one millisecond
+// more efficiently than Plus
 func (d SuDate) Increment() SuDate {
 	orig := d
 	d.time++ // millisecond
 	if d.Millisecond() < 1000 {
-		return d
-	}
-	d.time += 1024 - 1000
-	if d.Second() < mmSecond.max {
 		return d
 	}
 	return orig.Plus(0, 0, 0, 0, 0, 0, 1) // slower fallback

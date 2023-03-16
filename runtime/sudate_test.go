@@ -233,25 +233,34 @@ func TestParseDate(t *testing.T) {
 }
 
 func TestIncrement(t *testing.T) {
-	d := SuDate{}
-	assert.T(t).This(d.time).Is(0)
+	assert := assert.T(t).This
+	d := DateFromLiteral("#20230315")
+	assert(d.time).Is(0)
 	d = d.Increment()
-	assert.T(t).This(d.time).Is(1)
+	assert(d.time).Is(1)
 	d = d.Increment()
-	assert.T(t).This(d.time).Is(2)
+	assert(d.time).Is(2)
 	d.time = 999
 	d = d.Increment()
-	assert.T(t).This(d.Millisecond()).Is(0)
-	assert.T(t).This(d.Second()).Is(1)
+	assert(d.Millisecond()).Is(0)
+	assert(d.Second()).Is(1)
 	d.time = 1024 + 999
 	d = d.Increment()
-	assert.T(t).This(d.Millisecond()).Is(0)
-	assert.T(t).This(d.Second()).Is(2)
+	assert(d.Millisecond()).Is(0)
+	assert(d.Second()).Is(2)
 
-	d = NormalizeDate(2021, 5, 21, 23, 59, 59, 999)
+	d = NewDate(2021, 5, 21, 23, 59, 59, 999)
+	assert(d.Millisecond()).Is(999)
+	assert(d.Second()).Is(59)
 	d2 := d.Increment()
-	assert.T(t).This(d2.time).Is(0)
-	assert.T(t).This(d2.date).Is(d.date + 1)
+	assert(d2.time).Is(0)
+	assert(d2.date).Is(d.date + 1)
+
+	// spring daylight savings change
+	d = DateFromLiteral("#20230312.015959999")
+	d = d.Increment()
+	assert(d.Hour()).Is(2)
+	assert(d.Minute()).Is(0)
 }
 
 func FuzzParseDate(f *testing.F) {
