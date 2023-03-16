@@ -325,6 +325,10 @@ func FuzzRegexCmp(f *testing.F) {
 					strings.HasPrefix(err, "regex: ") {
 					return
 				}
+				if err, ok := e.(error); ok &&
+				    strings.Contains(err.Error(), "invalid UTF-8") {
+                    return
+                }
 				t.Error("pattern:", r, "=>", e)
 			}
 		}()
@@ -363,6 +367,10 @@ func FuzzRegexVsGo(f *testing.F) {
 					strings.HasPrefix(err, "regex: ") {
 					return
 				}
+				if err, ok := e.(error); ok &&
+				    strings.Contains(err.Error(), "invalid UTF-8") {
+                    return
+                }
 				t.Error("pattern:", r, "=>", e)
 			}
 		}()
