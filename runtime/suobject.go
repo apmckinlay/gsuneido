@@ -627,15 +627,10 @@ func (*SuObject) Type() types.Type {
 
 // Compare compares only list values (not named)
 func (ob *SuObject) Compare(other Value) int {
-	if cmp := ord.Compare(ordObject, Order(other)); cmp != 0 {
-		return cmp * 2
-	}
-	// now know other is an object so ToContainer won't panic
-	// locking is handled by children (from cmp2)
-	return cmp2(ob, ToContainer(other).ToObject())
+	return deepCompare(ob, other)
 }
 
-func cmp2(x Value, y Value) int {
+func deepCompare(x Value, y Value) int {
 	var tx, ty types.Type
 	inProgress := make(inProgressStack, 0, 8) // 8 should handle most cases
 	stack := make([]Value, 0, 32)             // 32 should handle most cases
@@ -652,7 +647,7 @@ func cmp2(x Value, y Value) int {
 		tx = order[x.Type()]
 		ty = order[y.Type()]
 		if tx != ty {
-			return ord.Compare(tx, ty)
+			return 2 * ord.Compare(tx, ty)
 		}
 		switch tx {
 		case types.Object:

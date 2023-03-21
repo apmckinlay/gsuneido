@@ -180,11 +180,12 @@ func (r *SuRecord) Show() string {
 }
 
 func (r *SuRecord) Compare(other Value) int {
-	return r.ToObject().Compare(other)
+	return deepCompare(r, other)
 }
 
 func (r *SuRecord) Equal(other any) bool {
-	return r.ToObject().Equal(other) //FIXME not symmetrical with SuObject.Equal
+	val, ok := other.(Value)
+	return ok && deepEqual(r, val)
 }
 
 func (r *SuRecord) Hash() uint32 {
