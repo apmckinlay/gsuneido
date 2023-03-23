@@ -74,7 +74,10 @@ func forEachDir(dir string, justfiles, details bool, fn func(entry Value)) {
 		}
 		for _, info := range list {
 			name := info.Name()
-			match, _ := filepath.Match(pat, name)
+			match, err := filepath.Match(pat, name)
+			if err != nil {
+				panic("Dir: " + err.Error())
+			}
 			if match && (!justfiles || !info.IsDir()) {
 				suffix := ""
 				if info.IsDir() {
