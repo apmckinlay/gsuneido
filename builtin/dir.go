@@ -49,6 +49,7 @@ func forEachDir(dir string, justfiles, details bool, fn func(entry Value)) {
 	if strings.HasSuffix(pat, "*.*") {
 		pat = pat[:len(pat)-2] // switch *.* to *
 	}
+	match := newMatcher(pat)
 	f, err := os.Open(dir)
 	if err != nil {
 		// should panic, but cSuneido doesn't
@@ -74,11 +75,7 @@ func forEachDir(dir string, justfiles, details bool, fn func(entry Value)) {
 		}
 		for _, info := range list {
 			name := info.Name()
-			match, err := filepath.Match(pat, name)
-			if err != nil {
-				panic("Dir: " + err.Error())
-			}
-			if match && (!justfiles || !info.IsDir()) {
+			if match(name) && (!justfiles || !info.IsDir()) {
 				suffix := ""
 				if info.IsDir() {
 					suffix = "/"
@@ -101,5 +98,25 @@ func forEachDir(dir string, justfiles, details bool, fn func(entry Value)) {
 				}()
 			}
 		}
+	}
+}
+
+type matcher func(name string) bool
+
+func newMatcher(pat string) matcher {
+	if strings.Count(pat, "*") > 1 {
+		panic("Dir only handles one '*'")
+	}
+	if strings.Contains(pat, "?") {
+		panic("Dir does not handle '?'")
+	}
+	before, after, found := strings.Cut(pat, "*")
+	if !found {
+		return func(name string) bool {
+			return pat == name
+		}
+	}
+	return func(name string) bool {
+		return strings.HasPrefix(name, before) && strings.HasSuffix(name, after)
 	}
 }
