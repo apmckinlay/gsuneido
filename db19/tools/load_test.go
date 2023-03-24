@@ -20,10 +20,13 @@ func TestLoadTable(*testing.T) {
 	if testing.Short() {
 		return
 	}
+	defer os.Remove("tmp.su")
+	_, err := DumpTable("../../suneido.db", "stdlib", "tmp.su")
+	assert.This(err).Is(nil)
 	t := time.Now()
 	defer os.Remove("tmp.db")
 	os.Remove("tmp.db")
-	n, err := LoadTable("stdlib", "tmp.db")
+	n, err := LoadTable("tmp", "tmp.db")
 	assert.This(err).Is(nil)
 	fmt.Println("loaded", n, "records in", time.Since(t).Round(time.Millisecond))
 	ck(CheckDatabase("tmp.db"))
