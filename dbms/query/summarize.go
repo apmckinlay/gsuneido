@@ -509,13 +509,6 @@ func (su *Summarize) addToSums(sums []sumOp, row Row, th *Thread, st *SuTran) {
 	}
 }
 
-func (su *Summarize) sumRow(row Row) Row {
-	if su.wholeRow {
-		return row
-	}
-	return nil
-}
-
 func (su *Summarize) sameBy(th *Thread, st *SuTran, row1, row2 Row) bool {
 	for _, f := range su.by {
 		if row1.GetRawVal(su.srcHdr, f, th, st) !=

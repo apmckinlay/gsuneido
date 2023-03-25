@@ -5,7 +5,6 @@ package compile
 
 import (
 	"github.com/apmckinlay/gsuneido/compile/ast"
-	. "github.com/apmckinlay/gsuneido/compile/lexer"
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
@@ -155,8 +154,6 @@ func (p *Parser) statements() []ast.Statement {
 	}
 	return list
 }
-
-var code = Item{Token: tok.LCurly, Text: "STMTS"}
 
 func (p *Parser) statement() (result ast.Statement) {
 	defer func(org int32) {

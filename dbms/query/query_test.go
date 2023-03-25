@@ -501,7 +501,6 @@ type TestQop struct {
 	fixed      []Fixed
 	indexes    [][]string
 	keys       [][]string
-	fastsingle bool
 	sel
 }
 

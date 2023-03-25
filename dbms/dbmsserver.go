@@ -203,14 +203,9 @@ func doRequest(wb *mux.WriteBuf, th *Thread, id uint64, req []byte) {
 }
 
 func (ss *serverSession) request() {
-	var icmd commands.Command = 255
+	var icmd commands.Command
 	defer func() {
 		if e := recover(); e != nil {
-			// pre := ""
-			// if icmd != 255 {
-			// 	pre = icmd.String() + ":"
-			// }
-			// ss.sc.serverLog(pre, e) //TEMP
 			LogInternalError(ss.thread, ss.sessionId, e)
 			ss.ResetWrite()
 			ss.PutBool(false).PutStr(fmt.Sprint(e)).EndMsg()
@@ -218,7 +213,6 @@ func (ss *serverSession) request() {
 	}()
 	icmd = ss.GetCmd()
 	if icmd == commands.Eof {
-		// ss.sc.serverLog("closing connection: Eof") //TEMP
 		ss.close()
 		return
 	}

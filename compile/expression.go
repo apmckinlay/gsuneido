@@ -7,7 +7,6 @@ import (
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/compile/ast"
-	. "github.com/apmckinlay/gsuneido/compile/lexer"
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/ascii"
@@ -349,8 +348,6 @@ var precedence = [tok.Ntokens]int8{
 	tok.BitAndEq: 16,
 	tok.BitXorEq: 16,
 }
-
-var call = Item{Text: "call"}
 
 func (p *Parser) arguments(opening tok.Token) []ast.Arg {
 	var args []ast.Arg

@@ -14,8 +14,6 @@ import (
 	"golang.org/x/exp/slices"
 )
 
-type iter = func() (string, uint64, bool)
-
 // Overlay is the composite in-memory representation of an index
 type Overlay struct {
 	// bt is the stored base btree

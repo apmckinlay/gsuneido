@@ -88,7 +88,6 @@ func (ti *Info) IsTomb() bool {
 
 //-------------------------------------------------------------------
 
-type btOver = *index.Overlay
 type MergeResult = index.MergeResult
 
 type MergeUpdate struct {

@@ -190,7 +190,6 @@ func readState(st *stor.Stor, off uint64) (offSchema, offInfo uint64, t int64) {
 	offSchema = stor.ReadSmallOffset(buf[i:])
 	i += stor.SmallOffsetLen
 	offInfo = stor.ReadSmallOffset(buf[i:])
-	i += stor.SmallOffsetLen
 	if offSchema >= off || offInfo >= off {
 		return 0, 0, 0
 	}
