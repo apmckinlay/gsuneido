@@ -14,6 +14,13 @@ import (
 // ArgSpec describes the arguments on the stack for a call
 // See also ParamSpec
 type ArgSpec struct {
+
+	// Spec has one entry per named argument, indexing into Names
+	Spec []byte
+
+	// Names is the argument names from the calling function
+	Names []Value
+
 	// Nargs is the number of values on the stack.
 	// Because of @args (each) it may not be the actual number of arguments.
 	Nargs byte
@@ -23,12 +30,6 @@ type ArgSpec struct {
 
 	// Signature is used for fast matching of simple Argspec to ParamSpec
 	Signature byte
-
-	// Spec has one entry per named argument, indexing into Names
-	Spec []byte
-
-	// Names is the argument names from the calling function
-	Names []Value
 }
 
 // values for ArgSpec.Each

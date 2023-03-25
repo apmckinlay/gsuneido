@@ -208,10 +208,10 @@ func Merge(ibs ...*ixbuf) *ixbuf {
 }
 
 type merge struct {
-	goal int
 	in   [][]chunk
 	buf  chunk
 	out  []chunk
+	goal int
 	size int
 }
 
@@ -432,18 +432,18 @@ type Range = iterator.Range
 
 // Iterator is a Suneido style iterator for an ixbuf.
 type Iterator struct {
-	ib       *ixbuf
-	modCount int32
-	state
-	// ci, i, and c point to the current slot = ib.chunks[ci][i]
-	ci int
-	i  int
-	c  chunk
+	ib *ixbuf
+	// rng is the Range of the iterator
+	rng Range
+	c   chunk
 	// cur is the current key and offset.
 	// We need to keep a copy of it because the ixbuf could change.
 	cur slot
-	// rng is the Range of the iterator
-	rng Range
+	// ci, i, and c point to the current slot = ib.chunks[ci][i]
+	ci       int
+	i        int
+	modCount int32
+	state
 }
 
 var _ iterator.T = (*Iterator)(nil)

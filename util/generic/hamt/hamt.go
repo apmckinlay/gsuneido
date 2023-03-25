@@ -32,11 +32,11 @@ type Hamt[K comparable, E Item[K]] struct {
 }
 
 type node[K comparable, E Item[K]] struct {
+	vals       []E
+	ptrs       []*node[K, E]
 	generation uint32
 	bmVal      uint32
 	bmPtr      uint32
-	vals       []E
-	ptrs       []*node[K, E]
 }
 
 const bitsPerItemNode = 5
@@ -409,9 +409,6 @@ func (ht Hamt[K, E]) read(st *stor.Stor, off uint64, tomb map[K]struct{},
 
 type Chain[K comparable, E Item[K]] struct {
 	Hamt[K, E]
-	// clock counts persists.
-	// lastMod is set to the current clock to mark an item as modified.
-	Clock int
 	// offs are the offsets in the database file
 	// of the item chunks in the current chain, oldest first.
 	// These are used for "merging" chunks to manage chain size.
@@ -419,6 +416,9 @@ type Chain[K comparable, E Item[K]] struct {
 	// ages are the oldest/min ages in the chunks.
 	// They are parallel to offs (same len).
 	Ages []int
+	// clock counts persists.
+	// lastMod is set to the current clock to mark an item as modified.
+	Clock int
 }
 
 // WriteChain writes a new chunk of items

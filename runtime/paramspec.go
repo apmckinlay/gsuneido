@@ -19,16 +19,6 @@ type sufunction struct{}
 type ParamSpec struct {
 	ValueBase[sufunction]
 
-	// Values contains any literals in the function
-	// starting with parameter defaults
-	Values []Value
-
-	// Flags specifies "types" of params
-	Flags []Flag
-
-	// Names normally starts with the parameters, followed by local variables
-	Names []string
-
 	// Lib is the library that the function came from
 	Lib string
 
@@ -38,6 +28,16 @@ type ParamSpec struct {
 	// It is primarily for debugging, i.e. call stack traces.
 	// See also: Name(value) builtin function
 	Name string
+
+	// Values contains any literals in the function
+	// starting with parameter defaults
+	Values []Value
+
+	// Flags specifies "types" of params
+	Flags []Flag
+
+	// Names normally starts with the parameters, followed by local variables
+	Names []string
 
 	// Nparams is the number of arguments required on the stack
 	Nparams uint8

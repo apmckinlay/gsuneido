@@ -24,23 +24,23 @@ import (
 
 // cgen is the context/results for compiling a function or block
 type cgen struct {
-	prevDef        Value
-	outerFn        *ast.Function
-	code           []byte
-	argspecs       []ArgSpec
-	base           Gnum
+	prevDef Value
+	outerFn *ast.Function
+	// srcPos contains pairs of source and code position deltas
+	srcPos   []byte
+	argspecs []ArgSpec
+	code     []byte
+	ParamSpec
+	base Gnum
+	// srcBase is the starting point for the srcPos source deltas
+	srcBase        int
+	srcPrev        int
+	codePrev       int
 	isNew          bool
 	isBlock        bool
 	firstStatement bool
-	ParamSpec
-	// srcPos contains pairs of source and code position deltas
-	srcPos []byte
-	// srcBase is the starting point for the srcPos source deltas
-	srcBase   int
-	srcPrev   int
-	codePrev  int
-	cover     bool
-	coverEmit bool
+	cover          bool
+	coverEmit      bool
 }
 
 type calltype int

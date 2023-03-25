@@ -22,30 +22,31 @@ import (
 // Use NewSuRecord since zero value doesn't set default.
 type SuRecord struct {
 	ValueBase[SuRecord]
-	ob SuObject
-	// observers is from record.Observer(fn)
-	observers ValueList
-	// invalidated accumulates keys needing observers called
-	invalidated str.Queue
+	// attachedRules is from record.AttachRule(key,fn)
+	attachedRules map[string]Value
+
+	// tran is the database transaction used to read the record
+	tran *SuTran
 	// invalid is the fields that need to be recalculated
 	invalid map[string]bool
 	// dependents are the fields that depend on a field
 	dependents map[string][]string
-	// activeObservers is used to prevent infinite recursion
-	activeObservers ActiveObserverList
-	// attachedRules is from record.AttachRule(key,fn)
-	attachedRules map[string]Value
+	// header is the Header for row
+	hdr *Header
+	// table is the table the record came from if it's updateable, else ""
+	table string
+	// invalidated accumulates keys needing observers called
+	invalidated str.Queue
 
 	// row is used when it is from the database
 	row Row
-	// header is the Header for row
-	hdr *Header
-	// tran is the database transaction used to read the record
-	tran *SuTran
+	// activeObservers is used to prevent infinite recursion
+	activeObservers ActiveObserverList
+	// observers is from record.Observer(fn)
+	observers ValueList
+	ob        SuObject
 	// recoff is the record offset in the database
 	recoff uint64
-	// table is the table the record came from if it's updateable, else ""
-	table string
 	// status
 	status Status
 	// userow is true when we want to use data in row as well as ob

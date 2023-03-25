@@ -16,10 +16,10 @@ import (
 
 type suRunPiped struct {
 	ValueBase[*suRunPiped]
-	command string
-	cmd     *exec.Cmd
 	w       io.WriteCloser
 	r       io.ReadCloser
+	cmd     *exec.Cmd
+	command string
 }
 
 var nRunPiped atomic.Int32

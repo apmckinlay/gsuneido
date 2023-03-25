@@ -13,11 +13,11 @@ import (
 // or user defined via Sequence
 type SuSequence struct {
 	ValueBase[SuSequence]
-	MayLock
 	// iter is the iterator we're wrapping
 	iter Iter
 	// ob is nil until the sequence is instantiated
 	ob *SuObject
+	MayLock
 	// duped tracks whether the sequence has been duplicated.
 	// This is set by Iter() and used by asSeq() to decide to instantiate
 	duped bool

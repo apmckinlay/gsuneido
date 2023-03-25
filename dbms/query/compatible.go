@@ -11,14 +11,14 @@ import (
 
 // Compatible is shared by Intersect, Minus, and Union
 type Compatible struct {
-	Query2
-	fixed    []Fixed // set by operations
-	allCols  []string
-	disjoint string
-	keyIndex []string
 	hdr1     *Header
 	hdr2     *Header
 	st       *SuTran
+	disjoint string
+	fixed    []Fixed // set by operations
+	allCols  []string
+	keyIndex []string
+	Query2
 }
 
 // init sets disjoint

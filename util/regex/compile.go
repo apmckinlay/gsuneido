@@ -75,11 +75,11 @@ func Compile(rx string) Pattern {
 
 type compiler struct {
 	src                 string
+	pat                 []inst
 	si                  int
 	sn                  int
-	pat                 []inst
-	ignoringCase        bool
 	leftCount           int
+	ignoringCase        bool
 	inChars             bool
 	inCharsIgnoringCase bool
 }

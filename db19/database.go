@@ -27,22 +27,21 @@ import (
 // checkdb.go, state.go, and tran.go
 
 type Database struct {
-	mode  stor.Mode
+	ck Checker
+	triggers
 	Store *stor.Stor
 
 	// state is the central immutable state of the database.
 	// It must only updated via UpdateState.
 	state stateHolder
 
-	ck Checker
-	triggers
+	rt.Sviews
+	mode stor.Mode
 	// schemaLock is used to prevent concurrent schema modification
 	schemaLock atomic.Bool
 
 	closed    atomic.Bool
 	corrupted atomic.Bool
-
-	rt.Sviews
 }
 
 const magic = "gsndo002"

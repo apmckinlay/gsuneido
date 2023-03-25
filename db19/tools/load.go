@@ -34,10 +34,10 @@ type slBuilder = sortlist.Builder[uint64]
 
 type loadJob struct {
 	db     *Database
+	list   *slBuilder
 	schema string
 	nrecs  int
 	size   uint64
-	list   *slBuilder
 }
 
 // LoadDatabase imports a dumped database from a file using a worker pool.

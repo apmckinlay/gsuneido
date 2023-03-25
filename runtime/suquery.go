@@ -11,8 +11,8 @@ import (
 
 // SuQueryCursor is the common base for SuQuery and SuCursor
 type SuQueryCursor struct {
-	query string
 	iqc   IQueryCursor
+	query string
 	eof   Dir
 }
 
@@ -77,8 +77,8 @@ func (qc *SuQueryCursor) Strategy(formatted bool) Value {
 // SuQuery is a database query
 type SuQuery struct {
 	ValueBase[SuQuery]
-	SuQueryCursor
 	tran *SuTran
+	SuQueryCursor
 }
 
 func NewSuQuery(th *Thread, tran *SuTran, query string, iquery IQuery) *SuQuery {

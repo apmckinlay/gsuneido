@@ -24,8 +24,8 @@ type Set struct {
 const nodeSize = 128
 
 type leafNode struct {
-	size  int
 	slots [nodeSize]string
+	size  int
 }
 
 type treeNode struct {
@@ -34,8 +34,8 @@ type treeNode struct {
 }
 
 type treeSlot struct {
-	key  string
 	leaf *leafNode
+	key  string
 }
 
 //-------------------------------------------------------------------

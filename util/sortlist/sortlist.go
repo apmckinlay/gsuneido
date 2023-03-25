@@ -35,12 +35,12 @@ type Builder[T any] struct {
 	zero      func(x T) bool
 	less      func(x, y T) bool
 	block     *block[T] // current block
-	i         int       // index in current block
-	blocks    []*block[T]
-	free      []*block[T]
 	work      chan void // send to tell worker there is something to do
 	done      chan any  // worker sends nil or error when finished
 	zeroBlock *block[T]
+	blocks    []*block[T]
+	free      []*block[T]
+	i         int // index in current block
 }
 
 // NewSorting returns a new list Builder with incremental sorting.
@@ -265,8 +265,8 @@ func (mo *mergeOutput[T]) add(x T) {
 // ablock handles sorting a possibly partial block
 type ablock[T any] struct {
 	*block[T]
-	n    int
 	less func(x, y T) bool
+	n    int
 }
 
 func (ab ablock[T]) Len() int {
@@ -312,9 +312,9 @@ func (b *Builder[T]) Iter() func() T {
 
 // Iter is used by tempindex
 type Iter[T any] struct {
+	less   iterLess[T]
 	blocks []*block[T]
 	size   int
-	less   iterLess[T]
 	i      int
 	state
 }

@@ -68,25 +68,26 @@ func (p *Parser) InitFuncInfo() {
 }
 
 type ParserBase struct {
+	Aspects
 	Lxr *Lexer
 
 	// Item is the current lexical token etc.
 	Item
 
-	// newline is true if the current token was preceeded by a newline
-	newline bool
-
 	// endPos is the end of the previous token
 	endPos int32
 
+	// newline is true if the current token was preceeded by a newline
+	newline bool
+
 	// EqToIs treats Eq as Is for queries
 	EqToIs bool
-
-	Aspects
 }
 
 type Parser struct {
-	ParserBase
+
+	// prevDef is used by libload for _Name
+	prevDef runtime.Value
 
 	// funcInfo is information gathered specific to a function
 	// it must be saved/reset/restored for nested functions
@@ -105,6 +106,8 @@ type Parser struct {
 	// e.g. foo = function () { ... }; Name(foo) => "foo"
 	assignName string
 
+	ParserBase
+
 	// expectingCompound is used to differentiate control statement body vs. block
 	// e.g. if expr {...}
 	// set by function.go used by expression.go
@@ -113,9 +116,6 @@ type Parser struct {
 	// itUsed records whether an "it" variable is used
 	// to know whether to add an automatic "it" parameter to blocks
 	itUsed bool
-
-	// prevDef is used by libload for _Name
-	prevDef runtime.Value
 }
 
 type funcInfo struct {

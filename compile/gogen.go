@@ -41,10 +41,10 @@ func (*gogenAspects) codegen(_, _ string, f *ast.Function, _ Value) Value {
 }
 
 type ggen struct {
-	str.Builder
-	next   int
-	init   strings.Builder
 	locals map[string]struct{}
+	init   strings.Builder
+	str.Builder
+	next int
 }
 
 func (g *ggen) function(fn *ast.Function) {

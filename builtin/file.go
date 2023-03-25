@@ -21,11 +21,11 @@ type iFile interface {
 
 type suFile struct {
 	ValueBase[*suFile]
-	name string
-	mode string
 	f    iFile
 	r    *bufio.Reader // only one of r or w will be used
 	w    *bufio.Writer
+	name string
+	mode string
 	// tell is used to track our own position in the file.
 	// We can't use f.Tell() because of buffering.
 	// Any reads or writes must update this.

@@ -90,10 +90,10 @@ loop:
 }
 
 type todo struct {
-	tables []string
 	meta   *meta.Meta
 	fn     func()
 	ret    chan any
+	tables []string
 }
 
 func (td *todo) isZero() bool {
@@ -255,10 +255,10 @@ func (ep *execPersistSingle) Results() []meta.PersistUpdate {
 //-------------------------------------------------------------------
 
 type execPersistMulti struct {
-	count      int
-	results    []meta.PersistUpdate
 	workChan   chan func() meta.PersistUpdate
 	resultChan chan meta.PersistUpdate
+	results    []meta.PersistUpdate
+	count      int
 }
 
 const nPersistWorkers = 8 // ???

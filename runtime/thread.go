@@ -33,20 +33,23 @@ const maxStack = 1024
 const maxFrames = 256
 
 type Thread struct {
-	// frames are the Frame's making up the call stack.
-	frames [maxFrames]Frame
-	// fp is the frame pointer, top is frames[fp-1]
-	fp int
-	// fpMax is the "high water" mark for fp
-	fpMax int
 
 	// stack is the Value stack for arguments and expressions.
 	// The end of the slice is the top of the stack.
 	stack [maxStack]Value
-	// sp is the stack pointer, top is stack[sp-1]
-	sp int
-	// spMax is the "high water" mark for sp
-	spMax int
+
+	// Session is the name of the database session for clients and standalone.
+	// Server tracks client session names separately.
+	// Needs atomic because we access MainThread from other threads.
+	session myatomic.String
+
+	// dbms is the database (client or local) for this Thread
+	dbms IDbms
+
+	// Suneido is a per-thread SuneidoObject that overrides the global one
+	Suneido *SuneidoObject
+
+	subThreadOf *Thread
 
 	// blockReturnFrame is the parent frame of the block that is returning
 	blockReturnFrame *Frame
@@ -56,44 +59,46 @@ type Thread struct {
 	// TrCache is per thread so no locking is required
 	TrCache tr.Cache
 
-	// rules is a stack of the currently running rules, used by SuRecord
-	rules activeRules
-
-	// dbms is the database (client or local) for this Thread
-	dbms IDbms
+	// Name is the name of the thread (default is Thread-#)
+	Name string
 
 	Nonce string
 
+	profile profile
+
+	// rules is a stack of the currently running rules, used by SuRecord
+	rules activeRules
+
+	// frames are the Frame's making up the call stack.
+	frames [maxFrames]Frame
+
+	// Quote is used by Display to request specific quotes
+	Quote int
+
+	// OpCount counts op codes in interp, for polling
+	OpCount int
+
+	// sp is the stack pointer, top is stack[sp-1]
+	sp int
+
+	// spMax is the "high water" mark for sp
+	spMax int
+
+	// fp is the frame pointer, top is frames[fp-1]
+	fp int
+
+	// fpMax is the "high water" mark for fp
+	fpMax int
+
 	// Num is a unique number assigned to the thread
 	Num int32
-
-	// Name is the name of the thread (default is Thread-#)
-	Name string
 
 	// UIThread is only set for the main UI thread.
 	// It controls whether interp checks for UI requests from other threads.
 	UIThread bool
 
-	// OpCount counts op codes in interp, for polling
-	OpCount int
-
-	// Quote is used by Display to request specific quotes
-	Quote int
-
 	// InHandler is used to detect nested handler calls
 	InHandler bool
-
-	// Session is the name of the database session for clients and standalone.
-	// Server tracks client session names separately.
-	// Needs atomic because we access MainThread from other threads.
-	session myatomic.String
-
-	// Suneido is a per-thread SuneidoObject that overrides the global one
-	Suneido *SuneidoObject
-
-	profile profile
-
-	subThreadOf *Thread
 }
 
 var nThread atomic.Int32

@@ -290,8 +290,8 @@ func (dc *dbmsClient) getRow(off int) Row {
 
 type TranClient struct {
 	dc       *dbmsClient
-	tn       int
 	conflict string
+	tn       int
 	ended    bool
 }
 
@@ -370,10 +370,10 @@ func (tc *TranClient) String() string {
 // clientQueryCursor is the common stuff for clientQuery and clientCursor
 type clientQueryCursor struct {
 	dc   *dbmsClient
-	id   int
-	qc   qcType
 	hdr  *Header
 	keys []string // cache
+	id   int
+	qc   qcType
 }
 
 type qcType byte

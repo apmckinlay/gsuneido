@@ -105,9 +105,9 @@ func disasm(nest int, fn *SuFunc, out outfn) {
 
 type dasm struct {
 	fn   *SuFunc
+	out  outfn
 	i    int
 	nest int
-	out  outfn
 }
 
 func (d *dasm) next() {

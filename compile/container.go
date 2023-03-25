@@ -118,12 +118,12 @@ func (astMaker) setPos(c container, pos1, pos2 int32) {
 
 type astContainer struct {
 	ast.SuAstNode
-	ast.TwoPos
-	pos1  int32
-	pos2  int32
 	which string
 	base  string
 	kv    []keyVal
+	ast.TwoPos
+	pos1 int32
+	pos2 int32
 }
 
 type keyVal struct {

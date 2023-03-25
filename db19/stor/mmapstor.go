@@ -20,8 +20,8 @@ const (
 
 type mmapStor struct {
 	file *os.File
-	mode Mode
 	ptrs []uintptr // needed on windows
+	mode Mode
 }
 
 const mmapChunkSize = 64 * 1024 * 1024 // 64 mb
@@ -54,7 +54,7 @@ func MmapStor(filename string, mode Mode) (*Stor, error) {
 	}
 	size := fi.Size()
 	nchunks := int(((size + mmapChunkSize - 1) / mmapChunkSize))
-	impl := &mmapStor{file, mode, nil}
+	impl := &mmapStor{file: file, mode: mode}
 	chunks := make([][]byte, nchunks)
 
 	last := nchunks - 1

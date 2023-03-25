@@ -290,8 +290,8 @@ func (ms *muxSession) getRow(off int) Row {
 
 type muxTran struct {
 	*muxSession
-	tn       int
 	conflict string
+	tn       int
 	ended    bool
 }
 
@@ -380,10 +380,10 @@ func (tc *muxTran) String() string {
 // muxQueryCursor is the common stuff for muxQuery and muxCursor
 type muxQueryCursor struct {
 	*muxSession
-	id   int
-	qc   qcType
 	hdr  *Header
 	keys []string // cache
+	id   int
+	qc   qcType
 }
 
 func (qc *muxQueryCursor) Close() {

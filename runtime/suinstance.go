@@ -11,9 +11,9 @@ import (
 // SuInstance is an instance of an SuClass
 type SuInstance struct {
 	ValueBase[*SuInstance]
+	class *SuClass
 	MemBase
 	parents       []*SuClass
-	class         *SuClass
 	useDeepEquals bool
 }
 

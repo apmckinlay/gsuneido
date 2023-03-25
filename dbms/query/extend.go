@@ -12,18 +12,18 @@ import (
 )
 
 type Extend struct {
-	Query1
+	t        QueryTran
+	hdr      *Header
+	ctx      ast.Context
 	cols     []string
 	exprs    []ast.Expr
 	exprCols []string
 	fixed    []Fixed
-	hasExprs bool
-	hdr      *Header
-	t        QueryTran
-	ctx      ast.Context
-	conflict bool
 	selCols  []string
 	selVals  []string
+	Query1
+	hasExprs bool
+	conflict bool
 }
 
 func NewExtend(src Query, cols []string, exprs []ast.Expr) *Extend {

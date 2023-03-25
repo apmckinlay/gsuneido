@@ -19,24 +19,24 @@ import (
 )
 
 type Summarize struct {
-	Query1
-	by []string
+	t      QueryTran
+	srcHdr *Header
+	get    func(th *Thread, su *Summarize, dir Dir) Row
+	st     *SuTran
+	by     []string
 	// cols, ops, and ons are parallel
-	cols     []string
-	ops      []string
-	ons      []string
-	wholeRow bool
+	cols []string
+	ops  []string
+	ons  []string
 	summarizeApproach
-	rewound bool
-	srcHdr  *Header
-	get     func(th *Thread, su *Summarize, dir Dir) Row
-	t       QueryTran
-	st      *SuTran
+	Query1
+	wholeRow bool
+	rewound  bool
 }
 
 type summarizeApproach struct {
-	strategy sumStrategy
 	index    []string
+	strategy sumStrategy
 	frac     float64
 }
 
@@ -440,10 +440,10 @@ func (su *Summarize) buildMap(th *Thread) []mapPair {
 //-------------------------------------------------------------------
 
 type sumSeqT struct {
-	curDir  Dir
 	curRow  Row
 	nextRow Row
 	sums    []sumOp
+	curDir  Dir
 }
 
 func (t *sumSeqT) getSeq(th *Thread, su *Summarize, dir Dir) Row {
@@ -614,8 +614,8 @@ func (sum *sumTotal) reset() {
 }
 
 type sumAverage struct {
-	count int
 	total Value
+	count int
 }
 
 func (sum *sumAverage) add(_ string, val Value, _ Row) {

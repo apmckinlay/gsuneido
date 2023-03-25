@@ -25,9 +25,9 @@ import (
 )
 
 type parser struct {
-	lxr *lex.Lexer
-	lex.Item
+	lxr     *lex.Lexer
 	comment string
+	lex.Item
 }
 
 var tdir string

@@ -244,8 +244,8 @@ func (t *ReadTran) Abort() string {
 //-------------------------------------------------------------------
 
 type UpdateTran struct {
+	ct *CkTran
 	ReadTran
-	ct         *CkTran
 	writeCount int
 }
 

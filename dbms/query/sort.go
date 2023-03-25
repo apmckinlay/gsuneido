@@ -11,10 +11,10 @@ import (
 )
 
 type Sort struct {
-	Query1
-	reverse bool
 	columns []string
 	sortApproach
+	Query1
+	reverse bool
 }
 
 type sortApproach struct {

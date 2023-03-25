@@ -30,8 +30,8 @@ type Ranges struct {
 const nodeSize = 128
 
 type leafNode struct {
-	size  int
 	slots [nodeSize]leafSlot
+	size  int
 }
 
 type leafSlot struct {
@@ -45,8 +45,8 @@ type treeNode struct {
 }
 
 type treeSlot struct {
-	val  string
 	leaf *leafNode
+	val  string
 }
 
 const existing = -1
@@ -104,8 +104,8 @@ func (rs *Ranges) Insert(from, to string) int {
 
 type iter struct {
 	tree *treeNode
-	ti   int
 	leaf *leafNode // == tree.slots[ti].leaf
+	ti   int
 	li   int
 }
 

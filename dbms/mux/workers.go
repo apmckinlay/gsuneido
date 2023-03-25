@@ -19,8 +19,8 @@ type Workers struct {
 
 type task struct {
 	c    *conn
-	id   uint64
 	data []byte
+	id   uint64
 }
 
 type workfn func(wb *WriteBuf, th *runtime.Thread, id uint64, rb []byte)

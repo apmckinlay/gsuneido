@@ -35,31 +35,31 @@ var serverConnsLock sync.Mutex // guards serverConns and idleCount
 
 // serverConn is one client connection which handles multiple sessions
 type serverConn struct {
-	// id is primarily used as a key to store the set of connections in a map
-	id           uint32
-	remoteAddr   string
-	dbms         IDbms
-	conn         net.Conn
-	sessionsLock sync.Mutex                // guards sessions
-	sessions     map[uint32]*serverSession // the sessions on this connection
+	dbms       IDbms
+	conn       net.Conn
+	sessions   map[uint32]*serverSession // the sessions on this connection
+	remoteAddr string
 	Sviews
-	idleCount int // guarded by serverConnsLock
+	idleCount    int        // guarded by serverConnsLock
+	sessionsLock sync.Mutex // guards sessions
+	// id is primarily used as a key to store the set of connections in a map
+	id uint32
 }
 
 // serverSession is one client session (thread)
 type serverSession struct {
 	sc *serverConn
-	mux.ReadBuf
 	*mux.WriteBuf
-	thread *Thread
-	// id is primarily used as a key to store the set of sessions in a map
-	id        uint32
-	sessionId string
-	nonce     string
+	thread    *Thread
 	trans     map[int]ITran
 	cursors   map[int]ICursor
 	queries   map[int]IQuery
-	lastNum   int // used for queries, cursors, and transactions
+	sessionId string
+	nonce     string
+	mux.ReadBuf
+	lastNum int // used for queries, cursors, and transactions
+	// id is primarily used as a key to store the set of sessions in a map
+	id uint32
 }
 
 // Server listens and accepts connections. It never returns.

@@ -25,8 +25,8 @@ type ckStart struct {
 type ckRead struct {
 	t        *CkTran
 	table    string
-	index    int
 	from, to string
+	index    int
 }
 
 type ckOutput struct {
@@ -38,16 +38,16 @@ type ckOutput struct {
 type ckDelete struct {
 	t     *CkTran
 	table string
-	off   uint64
 	keys  []string
+	off   uint64
 }
 
 type ckUpdate struct {
 	t       *CkTran
 	table   string
-	oldoff  uint64
 	oldkeys []string
 	newkeys []string
+	oldoff  uint64
 }
 
 type ckCounts struct {
@@ -66,13 +66,13 @@ type ckAbort struct {
 }
 
 type ckAddExcl struct {
-	table string
 	ret   chan bool
+	table string
 }
 
 type ckEndExcl struct {
-	table string
 	ret   chan struct{}
+	table string
 }
 
 type ckRunEndExcl struct {
@@ -80,9 +80,9 @@ type ckRunEndExcl struct {
 }
 
 type ckRunExcl struct {
-	table string
 	fn    func()
 	ret   chan any
+	table string
 }
 
 type ckPersist struct {

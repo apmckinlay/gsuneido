@@ -14,14 +14,14 @@ import (
 type InfoHamt = hamt.Hamt[string, *Info]
 
 type Info struct {
-	Table string
-	Nrows int
-	Size  uint64
+	Table   string
+	Indexes []*index.Overlay
+	Nrows   int
+	Size    uint64
 	// origNrows and origSize are used to determine the changes (delta)
 	// made by a transaction. They are not used outside transactions.
 	origNrows int
 	origSize  uint64
-	Indexes   []*index.Overlay
 	// lastMod must be set to Meta.infoClock on new or modified items.
 	// It is used for persist meta chaining/flattening.
 	lastMod int
@@ -93,8 +93,8 @@ type MergeResult = index.MergeResult
 
 type MergeUpdate struct {
 	table   string
-	nmerged int
 	results []MergeResult // per index
+	nmerged int
 }
 
 // Merge collects the updates which are then applied by Apply.

@@ -10,13 +10,13 @@ import (
 
 // SuClosure is an instance of a closure block
 type SuClosure struct {
-	SuFunc
-	locals     []Value // if concurrent, then read-only
-	this       Value
-	concurrent bool
+	this Value
 	// parent is the Frame of the outer function that created this closure.
 	// It is used by interp to handle block returns.
 	parent *Frame
+	locals []Value // if concurrent, then read-only
+	SuFunc
+	concurrent bool
 }
 
 // Value interface

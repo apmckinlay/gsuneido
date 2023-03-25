@@ -36,7 +36,7 @@ func TestNodeAppendRead(t *testing.T) {
 	var data []ent
 	add := func(offset uint64, npre int, diff string) {
 		nd = nd.append(offset, npre, diff)
-		data = append(data, ent{offset, npre, diff})
+		data = append(data, ent{offset: offset, npre: npre, diff: diff})
 	}
 	add(123, 999, "bar")
 	add(456, 11, "foo")

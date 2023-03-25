@@ -36,13 +36,13 @@ var Global typeGlobal
 //	Error: values[gnum] == nil, errors[gnum] == string
 //	Missing: values[gnum] == nil, errors[gnum] == false
 type globals struct {
-	lock     sync.RWMutex
 	name2num map[string]Gnum
-	names    []string
-	values   []Value
 	builtins map[Gnum]Value
 	errors   map[Gnum]any
 	noDef    map[string]struct{} // used by FindName
+	names    []string
+	values   []Value
+	lock     sync.RWMutex
 }
 
 var g = globals{

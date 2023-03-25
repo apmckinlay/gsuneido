@@ -336,10 +336,10 @@ func (nd node) Size() int {
 
 type nodeIter struct {
 	node   node
-	pos    int // position in node
-	npre   int
 	diff   []byte
 	known  []byte
+	pos    int // position in node
+	npre   int
 	offset uint64
 }
 

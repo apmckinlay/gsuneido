@@ -15,10 +15,10 @@ import (
 // limit will be "" on the right hand edge i.e. no limit.
 // If modified is true, node is an in-memory copy that has been modified.
 type merge struct {
-	off      uint64
-	node     node
-	pos      int
 	limit    string
+	node     node
+	off      uint64
+	pos      int
 	modified bool
 }
 

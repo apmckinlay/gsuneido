@@ -22,9 +22,9 @@ const HeaderSize = 4 + 4 + 1 /* size + id + final */
 
 type conn struct {
 	rw    io.ReadWriteCloser // the underlying connection
-	wlock sync.Mutex         // used by write to keep header and data together
-	hdr   [HeaderSize]byte   // used by write, guarded by wlock
 	err   myatomic.String
+	wlock sync.Mutex       // used by write to keep header and data together
+	hdr   [HeaderSize]byte // used by write, guarded by wlock
 }
 
 func (c *conn) Close() {
@@ -35,10 +35,10 @@ func (c *conn) Close() {
 }
 
 type ClientConn struct {
+	rchs map[uint32]respch // response channel per id, guarded by lock
 	conn
-	nextSession atomic.Uint32 // the next session id
 	lock        sync.Mutex
-	rchs        map[uint32]respch // response channel per id, guarded by lock
+	nextSession atomic.Uint32 // the next session id
 }
 
 type respch chan []byte
@@ -79,9 +79,9 @@ func (sc *ServerConn) Run(h handler) {
 }
 
 type ClientSession struct {
-	ReadWrite
 	cc  *ClientConn
 	rch respch
+	ReadWrite
 }
 
 // NewClientSession returns a new ClientSession

@@ -10,15 +10,15 @@ import (
 
 // Iterator is a Suneido style iterator with Next/Prev/Rewind
 type Iterator struct {
-	bt    *btree
-	state iterState
 	// stack is the path to the current position
 	// stack[0] is the leaf, stack[treeLevels] is the root
-	stack  [maxlevels + 1]iNodeIter
+	stack [maxlevels + 1]iNodeIter
+	bt    *btree
+	// rng is the Range of the iterator
+	rng    Range
 	curKey string
 	curOff uint64
-	// rng is the Range of the iterator
-	rng Range
+	state  iterState
 }
 
 type Range = iterator.Range

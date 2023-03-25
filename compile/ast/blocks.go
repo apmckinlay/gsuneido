@@ -24,8 +24,8 @@ type blok struct {
 }
 
 type bloks struct {
-	bloks []*blok
 	cur   *blok
+	bloks []*blok
 }
 
 // Blocks sets compileAsFunction

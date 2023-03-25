@@ -49,10 +49,10 @@ func IterAssocs(ob Container, list, named bool) Iter {
 
 type obIter struct {
 	ob     Container
-	list   bool
-	named  bool
 	iter   func() (Value, Value)
 	result func(Value, Value) Value
+	list   bool
+	named  bool
 }
 
 func (it *obIter) Next() Value {

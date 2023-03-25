@@ -159,8 +159,8 @@ func Opt(strs ...string) string {
 
 // CommaBuilder builds a comma separated list. Zero value is ready to use.
 type CommaBuilder struct {
-	sb  strings.Builder
 	sep string
+	sb  strings.Builder
 }
 
 // Add adds a string to the list

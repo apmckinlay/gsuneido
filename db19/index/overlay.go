@@ -20,11 +20,11 @@ type iter = func() (string, uint64, bool)
 type Overlay struct {
 	// bt is the stored base btree
 	bt *btree.T
+	// mut is the per transaction mutable top ixbuf.T, nil if read-only
+	mut *ixbuf.T
 	// layers is a base ixbuf of merged but not persisted changes,
 	// plus ixbuf's from completed but un-merged transactions
 	layers []*ixbuf.T
-	// mut is the per transaction mutable top ixbuf.T, nil if read-only
-	mut *ixbuf.T
 }
 
 func (ov *Overlay) Cksum() uint32 {

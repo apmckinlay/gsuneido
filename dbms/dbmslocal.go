@@ -451,9 +451,9 @@ func (t UpdateTranLocal) Action(th *Thread, action string, sv *Sviews) int {
 type queryLocal struct {
 	// Query is embedded so most methods are "inherited" directly
 	qry.Query
+	keys []string // cache
 	cost qry.Cost
 	mode qry.Mode
-	keys []string // cache
 }
 
 func (q queryLocal) Keys() []string {

@@ -7,22 +7,23 @@ import "golang.org/x/exp/slices"
 
 // Frame is the context for a function/method/block invocation.
 type Frame struct {
+
+	// this is the instance if we're running a method
+	this Value
+
 	// fn is the Function being executed
 	fn *SuFunc
 
-	// ip is the current index into the Function's code
-	ip int
+	// blockParent is used for block returns
+	blockParent *Frame
 
 	// locals are the local variables (including arguments)
 	// Normally they are on the thread stack
 	// but for closure blocks they are moved to the heap.
 	locals locals
 
-	// this is the instance if we're running a method
-	this Value
-
-	// blockParent is used for block returns
-	blockParent *Frame
+	// ip is the current index into the Function's code
+	ip int
 }
 
 type locals struct {

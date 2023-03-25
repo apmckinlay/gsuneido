@@ -14,9 +14,9 @@ import (
 )
 
 type Rename struct {
-	Query1
 	from []string
 	to   []string
+	Query1
 }
 
 func NewRename(src Query, from, to []string) *Rename {

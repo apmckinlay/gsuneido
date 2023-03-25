@@ -33,9 +33,9 @@ func propfold(fn *Function, final map[string]uint8) {
 type fold struct {
 	Folder
 	final  map[string]byte
+	lvalue string
 	values []pair
 	srcpos int
-	lvalue string
 }
 
 func (f *fold) visit(node Node) Node {
@@ -230,8 +230,8 @@ func (f *fold) findConst(node Node) Node {
 }
 
 type pair struct {
-	id  string
 	val Value
+	id  string
 }
 
 func (f *fold) push(id string, val Value) {

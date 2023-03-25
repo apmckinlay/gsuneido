@@ -206,8 +206,8 @@ type indexCheckers struct {
 	err    atomic.Value // any
 	work   chan indexCheck
 	stop   chan void
-	once   sync.Once
 	wg     sync.WaitGroup
+	once   sync.Once
 	closed bool
 }
 

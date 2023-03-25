@@ -13,8 +13,8 @@ import (
 // Its zero value is a valid empty table.
 // NOTE: Hmap is not thread safe.
 type Hmap[K any, V any, H Helper[K]] struct {
-	blocks   []block[K, V]
 	help     H
+	blocks   []block[K, V]
 	size     int32
 	version  uint16
 	capShift uint8
@@ -114,9 +114,9 @@ const (
 // The table is organized into blocks with separate arrays for meta,key,val
 // This is to eliminate padding while still maintaining locality
 type block[K any, V any] struct {
-	meta [blockSize]metaData
 	key  [blockSize]K
 	val  [blockSize]V
+	meta [blockSize]metaData
 }
 
 // cap returns the raw capacity

@@ -404,8 +404,8 @@ func SetApproach(q Query, index []string, frac float64, tran QueryTran) Query {
 // Query1 -----------------------------------------------------------
 
 type Query1 struct {
-	cache
 	source Query
+	cache
 }
 
 func (q1 *Query1) Columns() []string {
@@ -491,9 +491,9 @@ func (q1 *Query1) Source() Query {
 // Query2 -----------------------------------------------------------
 
 type Query2 struct {
-	cache
 	source1 Query
 	source2 Query
+	cache
 }
 
 func (q2 *Query2) String2(op string) string {
@@ -703,8 +703,8 @@ outer:
 // without having to redundantly check in advance.
 type optmod struct {
 	orig [][]string
-	i    int
 	mod  [][]string
+	i    int
 }
 
 func newOptMod(orig [][]string) *optmod {

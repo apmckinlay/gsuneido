@@ -10,9 +10,9 @@ var LibraryOverrides = &libraryOverrides{
 	originals: make(map[string]Value)}
 
 type libraryOverrides struct {
-	lock      sync.Mutex
 	overrides map[string]string // by key (lib:name)
 	originals map[string]Value  // by name
+	lock      sync.Mutex
 }
 
 func (lo *libraryOverrides) Put(lib, name, text string) {

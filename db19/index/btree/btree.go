@@ -23,6 +23,11 @@ type T = btree
 // To update a btree, the changes are added to an ixbuf
 // which is then merged to create a new btree.
 type btree struct {
+	// stor is where the btree is stored
+	stor *stor.Stor
+	// ixspec is an opaque value passed to GetLeafKey.
+	// It specifies which fields make up the key, based on the schema.
+	ixspec *ixkey.Spec
 	// treeLevels is how many levels of tree nodes there are (initially 0)
 	// Nodes do not store whether they are leaf or tree nodes.
 	// Since we always start at the root and descend,
@@ -32,11 +37,6 @@ type btree struct {
 	treeLevels int
 	// root is the offset of the root node
 	root uint64
-	// stor is where the btree is stored
-	stor *stor.Stor
-	// ixspec is an opaque value passed to GetLeafKey.
-	// It specifies which fields make up the key, based on the schema.
-	ixspec *ixkey.Spec
 }
 
 func (bt *btree) Cksum() uint32 {

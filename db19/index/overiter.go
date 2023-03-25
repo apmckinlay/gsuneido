@@ -18,20 +18,20 @@ type Range = iterator.Range
 //
 // OverIter also tracks read ranges for transaction conflict checking.
 type OverIter struct {
-	table  string
-	iIndex int
-	iters  []iterT
+	tran    oiTran
+	overlay *Overlay
+	rng     Range
+	table   string
 	// We need to keep our own curKey/Off independent of the source iterators
 	// because new source iterators may be returned by the callback.
 	curKey string
+	iters  []iterT
+	iIndex int
 	curOff uint64
 	// curIter is the iterator containing the current item = iters[curIter]
 	curIter int
 	state
 	lastDir dir
-	rng     Range
-	tran    oiTran
-	overlay *Overlay
 }
 
 type state byte

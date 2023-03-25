@@ -141,10 +141,10 @@ func (a *Ident) GetEnd() int {
 
 type Constant struct {
 	exprNodeT
-	TwoPos
 	Val Value
 	// Packed is used for queries. It is set by Binary.CanEvalRaw
 	Packed string
+	TwoPos
 }
 
 func (a *Constant) String() string {
@@ -172,9 +172,9 @@ type Symbol struct {
 
 type Unary struct {
 	exprNodeT
+	E Expr
 	TwoPos
 	Tok tok.Token
-	E   Expr
 }
 
 func (a *Unary) String() string {
@@ -270,8 +270,8 @@ func (a *Trinary) Children(fn func(Node) Node) {
 type Nary struct {
 	exprNodeT
 	noPos
-	Tok   tok.Token
 	Exprs []Expr
+	Tok   tok.Token
 }
 
 func (a *Nary) String() string {
@@ -414,8 +414,8 @@ type InRange struct {
 	noPos
 	E       Expr
 	Org     Expr // *Constant
-	OrgTok  tok.Token
 	End     Expr // *Constant
+	OrgTok  tok.Token
 	EndTok  tok.Token
 	evalRaw bool
 }
@@ -440,8 +440,8 @@ func (a *InRange) Children(fn func(Node) Node) {
 type Call struct {
 	exprNodeT
 	noPos
-	Args []Arg
 	Fn   Expr
+	Args []Arg
 	End  int32
 }
 
@@ -472,9 +472,9 @@ func (a *Call) Children(fn func(Node) Node) {
 
 type Arg struct {
 	SuAstNode
-	TwoPos
 	Name Value // nil if not named
 	E    Expr
+	TwoPos
 }
 
 func (a *Arg) String() string {
@@ -503,11 +503,11 @@ func (a *Arg) Echo() string {
 
 type Function struct {
 	exprNodeT
+	Final  map[string]uint8
+	Params []Param
+	Body   []Statement
+	Base   Gnum
 	TwoPos
-	Params      []Param
-	Body        []Statement
-	Final       map[string]uint8
-	Base        Gnum
 	Pos1        int32
 	Pos2        int32
 	HasBlocks   bool
@@ -573,8 +573,8 @@ func (a Params) String() string {
 
 type Param struct {
 	SuAstNode
-	Name   Ident // including prefix @ . _
 	DefVal Value // may be nil
+	Name   Ident // including prefix @ . _
 	End    int32
 	// Unused is set if the parameter was followed by /*unused*/
 	Unused bool
@@ -633,8 +633,8 @@ func (stmt *stmtNodeT) Position() int {
 }
 
 type Compound struct {
-	stmtNodeT
 	Body []Statement
+	stmtNodeT
 }
 
 func (a *Compound) String() string {
@@ -660,10 +660,10 @@ func (a *Compound) Children(fn func(Node) Node) {
 }
 
 type If struct {
+	Cond Expr
+	Then Statement
+	Else Statement // may be nil
 	stmtNodeT
-	Cond    Expr
-	Then    Statement
-	Else    Statement // may be nil
 	ElseEnd int32
 }
 
@@ -687,8 +687,8 @@ func (a *If) Children(fn func(Node) Node) {
 }
 
 type Return struct {
-	stmtNodeT
 	E Expr
+	stmtNodeT
 }
 
 func (a *Return) String() string {
@@ -704,8 +704,8 @@ func (a *Return) Children(fn func(Node) Node) {
 }
 
 type Throw struct {
-	stmtNodeT
 	E Expr
+	stmtNodeT
 }
 
 func (a *Throw) String() string {
@@ -717,13 +717,13 @@ func (a *Throw) Children(fn func(Node) Node) {
 }
 
 type TryCatch struct {
+	Try         Statement
+	Catch       Statement
+	CatchFilter string
+	CatchVar    Ident
 	stmtNodeT
-	Try            Statement
-	CatchVar       Ident
 	CatchPos       int32
 	CatchEnd       int32
-	CatchFilter    string
-	Catch          Statement
 	CatchVarUnused bool
 }
 
@@ -749,8 +749,8 @@ func (a *TryCatch) Children(fn func(Node) Node) {
 }
 
 type Forever struct {
-	stmtNodeT
 	Body Statement
+	stmtNodeT
 }
 
 func (a *Forever) String() string {
@@ -762,10 +762,10 @@ func (a *Forever) Children(fn func(Node) Node) {
 }
 
 type ForIn struct {
-	stmtNodeT
-	Var  Ident
 	E    Expr
 	Body Statement
+	Var  Ident
+	stmtNodeT
 }
 
 func (a *ForIn) String() string {
@@ -778,11 +778,11 @@ func (a *ForIn) Children(fn func(Node) Node) {
 }
 
 type For struct {
-	stmtNodeT
-	Init []Expr
 	Cond Expr
-	Inc  []Expr
 	Body Statement
+	Init []Expr
+	Inc  []Expr
+	stmtNodeT
 }
 
 func (a *For) String() string {
@@ -817,9 +817,9 @@ func (a *For) Children(fn func(Node) Node) {
 }
 
 type While struct {
-	stmtNodeT
 	Cond Expr
 	Body Statement
+	stmtNodeT
 }
 
 func (a *While) String() string {
@@ -832,9 +832,9 @@ func (a *While) Children(fn func(Node) Node) {
 }
 
 type DoWhile struct {
-	stmtNodeT
 	Body Statement
 	Cond Expr
+	stmtNodeT
 }
 
 func (a *DoWhile) String() string {
@@ -863,8 +863,8 @@ func (*Continue) String() string {
 }
 
 type ExprStmt struct {
-	stmtNodeT
 	E Expr
+	stmtNodeT
 }
 
 func (a *ExprStmt) String() string {
@@ -876,13 +876,13 @@ func (a *ExprStmt) Children(fn func(Node) Node) {
 }
 
 type Switch struct {
-	stmtNodeT
 	E       Expr
 	Cases   []Case
 	Default []Statement // may be nil
-	Pos1    int32
-	Pos2    int32
-	PosDef  int32
+	stmtNodeT
+	Pos1   int32
+	Pos2   int32
+	PosDef int32
 }
 
 type Case struct {

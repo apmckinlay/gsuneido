@@ -16,9 +16,9 @@ const cacheSize = 8 // preferably a power of 2
 type Cache[K comparable, E any] struct {
 	key    [cacheSize]K
 	val    [cacheSize]E
-	used   [cacheSize]bool
-	i      int
 	getter func(key K) E
+	i      int
+	used   [cacheSize]bool
 }
 
 func (c *Cache[K, E]) Get(key K) E {

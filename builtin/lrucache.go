@@ -143,9 +143,9 @@ func lru_GetMissRate(this Value) Value {
 
 type suLruCache struct {
 	ValueBase[*suLruCache]
+	Fn Value
+	Lc lruCache
 	MayLock
-	Lc            lruCache
-	Fn            Value
 	okForResetAll bool
 }
 
@@ -204,10 +204,10 @@ func (*suLruCache) Lookup(_ *Thread, method string) Callable {
 //-------------------------------------------------------------------
 
 type lruCache struct {
-	size    int
-	hm      HmapValue
 	lru     []uint8 // uint8 means max size of 256
 	entries []entry
+	hm      HmapValue
+	size    int
 	hits    int
 	misses  int
 }

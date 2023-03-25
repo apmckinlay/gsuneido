@@ -21,14 +21,14 @@ import (
 // Meta is the schema and info metadata.
 // See also: schema.go - Schema, info.go - Info
 type Meta struct {
+	// difInfo is per transaction updates, overrides info
+	difInfo map[string]*Info
 	// schema and info are immutable persistent hash tables.
 	// WARNING: do NOT modify the items from the hash tables.
 	// To modify an item, Get it, copy it, modify it, then Put the new version.
 	// Unfortunately, Go does not have any way to enforce this.
 	schema hamt.Chain[string, *Schema]
 	info   hamt.Chain[string, *Info]
-	// difInfo is per transaction updates, overrides info
-	difInfo map[string]*Info
 }
 
 func (m *Meta) Cksum() uint32 {

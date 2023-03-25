@@ -20,11 +20,11 @@ type cache struct {
 }
 
 type cacheEntry struct {
+	approach any
 	index    []string
-	frac     float32 // deliberately less precision
 	fixcost  Cost
 	varcost  Cost
-	approach any
+	frac     float32 // deliberately less precision
 }
 
 // cacheAdd adds an entry to the cache.

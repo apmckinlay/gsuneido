@@ -192,8 +192,8 @@ type tableCheckers struct {
 	state  *DbState
 	work   chan string
 	stop   chan void
-	once   sync.Once
 	wg     sync.WaitGroup
+	once   sync.Once
 	closed bool
 }
 

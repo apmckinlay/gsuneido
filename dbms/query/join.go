@@ -18,24 +18,24 @@ import (
 
 // joinLike is common stuff for Join, LeftJoin, and Times
 type joinLike struct {
+	hdr1    *Header
+	saIndex []string
+	fixed1  []Fixed
+	fixed2  []Fixed
 	Query2
-	hdr1      *Header
-	saIndex   []string
 	haveFixed bool
-	fixed1    []Fixed
-	fixed2    []Fixed
 	conflict1 bool
 	conflict2 bool
 }
 
 type Join struct {
-	joinLike
-	by []string
-	joinType
-	row1   Row
-	row2   Row // nil when we need a new row1
 	st     *SuTran
 	lookup *lookupInfo
+	by     []string
+	row1   Row
+	row2   Row // nil when we need a new row1
+	joinLike
+	joinType
 }
 
 type lookupInfo struct {
@@ -45,9 +45,9 @@ type lookupInfo struct {
 }
 
 type joinApproach struct {
-	reverse bool
 	index2  []string
 	frac2   float64
+	reverse bool
 }
 
 type joinType int
@@ -444,9 +444,9 @@ func (jn *Join) lookupFallback(sel1cols []string) bool {
 // LeftJoin ---------------------------------------------------------
 
 type LeftJoin struct {
+	empty2 Row
 	Join
 	row1out bool
-	empty2  Row
 }
 
 func NewLeftJoin(src1, src2 Query, by []string) *LeftJoin {

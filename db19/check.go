@@ -52,27 +52,27 @@ type Ranges = ranges.Ranges
 // See CheckCo for the concurrent channel based interface to Check.
 // See Checker for the common interface to Check and CheckCo
 type Check struct {
-	db     *Database
-	seq    int
-	oldest int
-	// clock is used to abort long transactions
-	clock int
+	db *Database
 	// trans hold the outstanding/overlapping update transactions
 	trans map[int]*CkTran
 	// exclusive controls access to tables
 	exclusive map[string]int
+	seq       int
+	oldest    int
+	// clock is used to abort long transactions
+	clock int
 }
 
 type CkTran struct {
+	// failure is written by CkTran.abort and read by UpdateTran.
+	// It is set to either a conflict or a timeout.
+	failure   atomic.String
+	tables    map[string]*cktbl
+	state     *DbState
 	start     int
 	end       int
 	birth     int
-	tables    map[string]*cktbl
 	readCount int
-	state     *DbState
-	// failure is written by CkTran.abort and read by UpdateTran.
-	// It is set to either a conflict or a timeout.
-	failure atomic.String
 }
 
 // readMax is higher than jSuneido to account for duplicate checks

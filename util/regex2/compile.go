@@ -84,12 +84,12 @@ If the pattern has a literal prefix it will be compiled to:
 
 type compiler struct {
 	src         string
+	prog        []byte
 	si          int
 	sn          int
-	prog        []byte
+	leftCount   int
 	ignoreCase  bool
 	multiLine   bool
-	leftCount   int
 	rightAnchor bool
 }
 

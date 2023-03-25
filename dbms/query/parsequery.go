@@ -13,10 +13,10 @@ import (
 )
 
 type queryParser struct {
-	compile.Parser
 	t        QueryTran
-	viewNest []string
 	sviews   *runtime.Sviews
+	viewNest []string
+	compile.Parser
 }
 
 func NewQueryParser(src string, t QueryTran, sv *runtime.Sviews) *queryParser {

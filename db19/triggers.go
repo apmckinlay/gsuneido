@@ -11,8 +11,8 @@ import (
 )
 
 type triggers struct {
-	lock     sync.Mutex
 	disabled map[string]int
+	lock     sync.Mutex
 }
 
 // MakeSuTran is injected by dbms to avoid import cycle

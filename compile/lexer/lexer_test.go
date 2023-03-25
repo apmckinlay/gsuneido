@@ -26,7 +26,7 @@ func TestLexer(t *testing.T) {
 	assert := assert.T(t).This
 	first := func(src string, text string, token tok.Token) {
 		t.Helper()
-		assert(NewLexer(src).Next()).Is(Item{text, 0, token})
+		assert(NewLexer(src).Next()).Is(Item{Text: text, Pos: 0, Token: token})
 	}
 	first("function", "function", tok.Function)
 	first("foo", "foo", tok.Identifier)

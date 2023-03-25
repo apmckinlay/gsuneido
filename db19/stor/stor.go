@@ -38,6 +38,9 @@ type storage interface {
 // Stor is the externally visible storage
 type Stor struct {
 	impl storage
+	// chunks must be initialized up to size,
+	// with at least one chunk if size is 0
+	chunks atomic.Value // [][]byte
 	// chunksize must be a power of two and must be initialized
 	chunksize uint64
 	// shift must be initialized to match chunksize
@@ -46,10 +49,7 @@ type Stor struct {
 	size atomic.Uint64
 	// allocChunk is the chunk we're currently allocating in
 	allocChunk atomic.Int64
-	// chunks must be initialized up to size,
-	// with at least one chunk if size is 0
-	chunks atomic.Value // [][]byte
-	lock   sync.Mutex   // guards extending the storage
+	lock       sync.Mutex // guards extending the storage
 }
 
 // closedSize needs to allow room to be incremented.

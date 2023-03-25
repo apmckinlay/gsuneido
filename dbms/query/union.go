@@ -17,25 +17,25 @@ import (
 )
 
 type Union struct {
-	Compatible
-	strategy  unionStrategy
-	rewound   bool
-	empty1    Row
-	empty2    Row
-	src1      bool
-	src2      bool
-	row1      Row
-	row2      Row
-	prevDir   Dir
-	mergeCols []string
 	src1get   func(*Thread, Dir) Row
 	src2get   func(*Thread, Dir) Row
+	row1      Row
+	mergeCols []string
+	empty1    Row
+	empty2    Row
+	row2      Row
+	Compatible
+	strategy unionStrategy
+	src2     bool
+	prevDir  Dir
+	src1     bool
+	rewound  bool
 }
 
 type unionApproach struct {
 	keyIndex   []string
-	strategy   unionStrategy
 	idx1, idx2 []string
+	strategy   unionStrategy
 	reverse    bool
 }
 
@@ -160,7 +160,7 @@ func (u *Union) calcFixed(fixed1, fixed2 []Fixed) []Fixed {
 		for _, f2 := range fixed2 {
 			if f1.col == f2.col {
 				fixed = append(fixed,
-					Fixed{f1.col, set.Union(f1.values, f2.values)})
+					Fixed{col: f1.col, values: set.Union(f1.values, f2.values)})
 				break
 			}
 		}
@@ -172,14 +172,14 @@ func (u *Union) calcFixed(fixed1, fixed2 []Fixed) []Fixed {
 	for _, f1 := range fixed1 {
 		if !slices.Contains(cols2, f1.col) {
 			fixed = append(fixed,
-				Fixed{f1.col, set.Union(f1.values, emptyStr)})
+				Fixed{col: f1.col, values: set.Union(f1.values, emptyStr)})
 		}
 	}
 	cols1 := u.source1.Columns()
 	for _, f2 := range fixed2 {
 		if !slices.Contains(cols1, f2.col) {
 			fixed = append(fixed,
-				Fixed{f2.col, set.Union(f2.values, emptyStr)})
+				Fixed{col: f2.col, values: set.Union(f2.values, emptyStr)})
 		}
 	}
 	return fixed

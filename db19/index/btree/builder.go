@@ -14,9 +14,9 @@ import (
 // The btree is built bottom up with no splitting or inserting.
 // All nodes will be "full" except for the right hand edge.
 type builder struct {
-	levels []*level // leaf is [0]
-	prev   string
 	stor   *stor.Stor
+	prev   string
+	levels []*level // leaf is [0]
 	count  int
 }
 
@@ -91,16 +91,16 @@ func (b *builder) Finish() *btree {
 //-------------------------------------------------------------------
 
 type nodeBuilder struct {
-	node     node
-	notFirst bool
-	pos      int
 	prev     string
 	known    string
+	known2   string
+	node     node
+	pos      int
 	offset   uint64
 	pos2     int
-	known2   string
 	offset2  uint64
 	count    int
+	notFirst bool
 }
 
 func (b *nodeBuilder) Add(key string, offset uint64, embedLen int) {

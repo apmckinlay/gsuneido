@@ -11,11 +11,11 @@ import (
 
 type suScanner struct {
 	ValueBase[*suScanner]
-	MayLock
-	lxr  lexer.Lexer
-	item lexer.Item
 	// name is either "Scanner" or "QueryScanner"
 	name string
+	item lexer.Item
+	lxr  lexer.Lexer
+	MayLock
 }
 
 var _ = builtin(Scanner, "(string)")

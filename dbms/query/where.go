@@ -26,45 +26,48 @@ import (
 // instead, construct a new one with NewWhere
 
 type Where struct {
-	Query1
-	expr       *ast.Nary // And
-	whereFixed []Fixed
-	fixed      []Fixed
-	t          QueryTran
+	t       QueryTran
+	colSels map[string]filter
 	// tbl will be set if the source is a Table, nil otherwise
-	tbl       *Table
-	optInited bool
-	ctx       ast.Context
-	// exprMore is whether expr has more than the minimum idxSel
-	exprMore bool
-	colSels  map[string]filter
-	// singleton is true if we know the result is at most one record
-	// because there is a single point select on a key
-	singleton bool
-	// nrows is the estimated number of result rows
-	nrows int
-	// srcpop is the source Nrows pop
-	srcpop  int
-	idxSels []idxSel
-	// conflict is true if the expression conflicts and selects nothing
-	conflict bool
+	tbl *Table
 	// idxSel is for the chosen index
 	idxSel *idxSel
-	// idxSelPos is the current index in idxSel.ptrngs
-	idxSelPos int
+	hdr    *runtime.Header
+	expr   *ast.Nary // And
 	// curPtrng is idxSel.ptrngs[idxSelPos] adjusted by Select (selOrg, selEnd)
 	curPtrng pointRange
-	hdr      *runtime.Header
 	// selOrg and selEnd are set by Select
 	selOrg string
 	selEnd string
-	selSet bool
+	ctx    ast.Context
 
 	selectCols []string
 	selectVals []string
 
+	idxSels    []idxSel
+	fixed      []Fixed
+	whereFixed []Fixed
+	Query1
+	// idxSelPos is the current index in idxSel.ptrngs
+	idxSelPos int
+	// srcpop is the source Nrows pop
+	srcpop int
+	// nrows is the estimated number of result rows
+	nrows int
+
 	nIn  int
 	nOut int
+
+	// conflict is true if the expression conflicts and selects nothing
+	conflict bool
+	// singleton is true if we know the result is at most one record
+	// because there is a single point select on a key
+	singleton bool
+	selSet    bool
+
+	// exprMore is whether expr has more than the minimum idxSel
+	exprMore  bool
+	optInited bool
 }
 
 type whereApproach struct {
@@ -880,9 +883,9 @@ func packToStr(s string) string {
 
 type idxSel struct {
 	index   []string
-	encoded bool
 	ptrngs  []pointRange
 	frac    float64
+	encoded bool
 }
 
 func (is idxSel) String() string {

@@ -20,8 +20,8 @@ const bufSize = 4 * 1024
 // WriteBuf is used to combine small writes
 type WriteBuf struct {
 	*conn
-	id  uint32
 	buf []byte
+	id  uint32
 }
 
 func newWriteBuf(c *conn, id uint32) *WriteBuf {
@@ -87,8 +87,8 @@ func (wb *WriteBuf) flush(final bool) {
 //-------------------------------------------------------------------
 
 type ReadWrite struct {
-	WriteBuf
 	ReadBuf
+	WriteBuf
 }
 
 const traceLimit = 100

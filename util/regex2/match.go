@@ -31,8 +31,8 @@ func (pat Pattern) LastMatch(s string, cap *Captures) bool {
 }
 
 type state struct {
-	pi  int16
 	cap *Captures
+	pi  int16
 }
 
 // match looks for a match anywhere in the string i.e. not anchored.

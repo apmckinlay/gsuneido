@@ -300,9 +300,9 @@ func (ss SuStr) Pack(_ *uint32, buf *pack.Encoder) {
 // iterator ---------------------------------------------------------
 
 type stringIter struct {
-	MayLock
 	s string
 	i int
+	MayLock
 }
 
 func (ss SuStr) Iter() Iter {

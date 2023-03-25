@@ -35,8 +35,8 @@ const setSize = 256 / 8
 // builder
 
 type builder struct {
-	isSet bool
 	data  []byte
+	isSet bool
 }
 
 func cc() *builder {

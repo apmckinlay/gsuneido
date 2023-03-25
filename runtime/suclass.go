@@ -18,12 +18,12 @@ import (
 // Classes are read-only so there is no locking.
 type SuClass struct {
 	ValueBase[*SuClass]
-	MemBase
+	parentsCache atomic.Value // used by SuInstance getParents
 	Lib          string
 	Name         string
-	Base         Gnum
-	parentsCache atomic.Value // used by SuInstance getParents
-	noGetter     bool
+	MemBase
+	Base     Gnum
+	noGetter bool
 }
 
 // NOTE: the parents argument on some SuClass methods is used by SuInstance
@@ -196,7 +196,7 @@ func (c *SuClass) lookup(th *Thread, method string, parents []*SuClass) Callable
 	}
 	//TODO explicit CallClass doesn't go to Default in cSuneido or jSuneido
 	if x := c.get2(th, "Default", parents); x != nil {
-		return &defaultAdapter{x, method}
+		return &defaultAdapter{fn: x, method: method}
 	}
 	return nil
 }

@@ -20,16 +20,16 @@ import (
 // Keys are not constructed for the index or Lookup/Select
 // so there are no size limits.
 type TempIndex struct {
+	tran   QueryTran
+	iter   rowIter
+	st     *SuTran
+	th     *Thread
+	hdr    *Header
+	order  []string
+	selOrg []string
+	selEnd []string
 	Query1
-	order   []string
-	tran    QueryTran
-	st      *SuTran
-	th      *Thread
-	hdr     *Header
-	iter    rowIter
 	rewound bool
-	selOrg  []string
-	selEnd  []string
 }
 
 var selMin = []string{ixkey.Min}

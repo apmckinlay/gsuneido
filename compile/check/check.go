@@ -24,14 +24,14 @@ import (
 
 type Check struct {
 	th *Thread
-	// pos is used to store the position of the current statement
-	pos int
 	// AllInit is the set of variables assigned to, including conditionally
 	AllInit map[string]int
 	// AllUsed is the set of variables read from, including conditionally
 	AllUsed   map[string]struct{}
 	results   []string
 	resultPos []int
+	// pos is used to store the position of the current statement
+	pos int
 }
 
 // New returns a Check instance

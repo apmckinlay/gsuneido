@@ -12,9 +12,9 @@ import (
 )
 
 type Times struct {
+	row1 Row
 	joinLike
 	rewound bool
-	row1    Row
 }
 
 func NewTimes(src1, src2 Query) *Times {

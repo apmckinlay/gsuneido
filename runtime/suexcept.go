@@ -6,8 +6,8 @@ package runtime
 import "github.com/apmckinlay/gsuneido/runtime/types"
 
 type SuExcept struct {
-	SuStr
 	Callstack *SuObject
+	SuStr
 }
 
 // BuiltinSuExcept is for special values for block break, continue, return

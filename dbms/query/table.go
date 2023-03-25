@@ -38,23 +38,23 @@ func NewTable(t QueryTran, name string) Query {
 }
 
 type Table struct {
-	cache
-	name      string
-	hdr       *runtime.Header
-	indexes   [][]string
-	keys      [][]string
-	primary   [][]string
-	singleton bool
-	tran      QueryTran
-	schema    *Schema
-	info      *meta.Info
+	tran    QueryTran
+	hdr     *runtime.Header
+	iter    *index.OverIter
+	info    *meta.Info
+	schema  *Schema
+	name    string
+	keys    [][]string
+	primary [][]string
 	// index is the index that will be used to access the data.
-	index       []string
+	index   []string
+	indexes [][]string
+	selcols []string
+	selvals []string
+	cache
 	iIndex      int
+	singleton   bool
 	indexEncode bool
-	iter        *index.OverIter
-	selcols     []string
-	selvals     []string
 }
 
 type tableApproach struct {

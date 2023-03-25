@@ -38,9 +38,9 @@ var EmptyObject = &SuObject{readonly: true}
 // Zero value is a valid empty object.
 type SuObject struct {
 	ValueBase[SuObject]
-	named  HmapValue
-	list   []Value
 	defval Value
+	list   []Value
+	named  HmapValue
 	rwMayLock
 	// version is incremented by operations that change one of the sizes.
 	// i.e. not by just updating a value in-place.

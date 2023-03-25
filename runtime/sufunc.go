@@ -12,14 +12,6 @@ import (
 
 // SuFunc is a compiled Suneido function, method, or block
 type SuFunc struct {
-	ParamSpec
-
-	// ArgSpecs used by calls in the code
-	ArgSpecs []ArgSpec
-
-	// cover is used for coverage tracking. nil means no tracking.
-	// If len(cover) < len(Code) then bool coverage else counts.
-	cover []uint16
 
 	// Code is the actual byte code
 	Code string
@@ -29,6 +21,16 @@ type SuFunc struct {
 
 	// SrcPos contains pairs of source and code position deltas
 	SrcPos string
+
+	// ArgSpecs used by calls in the code
+	ArgSpecs []ArgSpec
+
+	// cover is used for coverage tracking. nil means no tracking.
+	// If len(cover) < len(Code) then bool coverage else counts.
+	cover []uint16
+
+	ParamSpec
+
 	// SrcBase is the starting point for the SrcPos source deltas
 	SrcBase int
 

@@ -19,25 +19,25 @@ import (
 )
 
 type Project struct {
-	Query1
-	columns []string
-	unique  bool
-	projectApproach
-	rewound bool
-	prevRow Row
-	curRow  Row
 	srcHdr  *Header
 	projHdr *Header
-	indexed bool
 	results *mapType
 	st      *SuTran
+	columns []string
+	prevRow Row
+	curRow  Row
+	projectApproach
+	Query1
+	unique  bool
+	rewound bool
+	indexed bool
 }
 
 type mapType = hmap.Hmap[rowHash, struct{}, hmap.Funcs[rowHash]]
 
 type projectApproach struct {
-	strategy projectStrategy
 	index    []string
+	strategy projectStrategy
 }
 
 type projectStrategy int

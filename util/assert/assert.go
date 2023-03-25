@@ -142,8 +142,8 @@ func (a assert) This(v any) value {
 }
 
 type value struct {
-	assert assert
 	value  any
+	assert assert
 }
 
 // Is gives an error if the given expected value is not the same

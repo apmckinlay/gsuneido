@@ -16,10 +16,10 @@ import (
 // It is designed so the sequence of values returned
 // forms the complete source.
 type Lexer struct {
-	src     string
-	si      int
-	ahead   []Item
 	keyword func(s string) (tok.Token, string)
+	src     string
+	ahead   []Item
+	si      int
 	nlwhite bool
 }
 
@@ -118,7 +118,7 @@ func (lxr *Lexer) next() Item {
 		if p := lxr.peek(); p == '_' || IsLetter(p) {
 			lxr.matchIdentTail()
 			val := lxr.src[start+1 : lxr.si]
-			return Item{val, int32(start), tok.Symbol}
+			return Item{Text: val, Pos: int32(start), Token: tok.Symbol}
 		}
 		return it(tok.Hash)
 	case '(':
@@ -266,7 +266,7 @@ func (lxr *Lexer) next() Item {
 }
 
 func it(token tok.Token, pos int, txt string) Item {
-	return Item{txt, int32(pos), token}
+	return Item{Text: txt, Pos: int32(pos), Token: token}
 }
 
 func (lxr *Lexer) whitespace(start int, c byte) Item {
@@ -411,7 +411,7 @@ func (lxr *Lexer) identifier(start int) Item {
 	if lxr.peek() != ':' || val == "default" || val == "true" || val == "false" {
 		token, val = lxr.keyword(val)
 	}
-	return Item{val, int32(start), token}
+	return Item{Text: val, Pos: int32(start), Token: token}
 }
 
 // keyword returns the token for a string it is a keyword
