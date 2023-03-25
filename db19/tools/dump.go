@@ -23,6 +23,10 @@ import (
 	"github.com/apmckinlay/gsuneido/util/system"
 )
 
+const dumpVersion = "Suneido dump 3\n"
+const dumpVersionPrev = "Suneido dump 2\n"
+const dumpVersionBase = "Suneido dump"
+
 // DumpDatabase exports a dumped database to a file.
 // In the process it concurrently does a full check of the database.
 func DumpDatabase(dbfile, to string) (nTables, nViews int, err error) {
@@ -114,7 +118,7 @@ func dumpOpen() (*os.File, *bufio.Writer, error) {
 		return nil, nil, err
 	}
 	w := bufio.NewWriter(f)
-	w.WriteString("Suneido dump 2\n")
+	w.WriteString(dumpVersion)
 	return f, w, nil
 }
 

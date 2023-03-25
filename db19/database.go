@@ -23,6 +23,9 @@ import (
 	"github.com/apmckinlay/gsuneido/util/sortlist"
 )
 
+// Note: there are also Database methods in
+// checkdb.go, state.go, and tran.go
+
 type Database struct {
 	mode  stor.Mode
 	Store *stor.Stor
@@ -42,7 +45,9 @@ type Database struct {
 	rt.Sviews
 }
 
-const magic = "gsndo001"
+const magic = "gsndo002"
+const magicPrev = "gsndo001"
+const magicBase = "gsndo"
 
 // CreateDatabase creates an empty database in the named file.
 // NOTE: The returned Database does not have a checker.
@@ -70,13 +75,12 @@ func CreateDb(store *stor.Stor) (*Database, error) {
 }
 
 // OpenDatabase opens the database in the named file for read & write.
-// NOTE: The returned Database does not have a checker.
+// NOTE: The returned Database does not have a checker yet.
 func OpenDatabase(filename string) (*Database, error) {
 	return OpenDb(filename, stor.Update, true)
 }
 
 // OpenDatabaseRead opens the database in the named file for read only.
-// NOTE: The returned Database does not have a checker.
 func OpenDatabaseRead(filename string) (*Database, error) {
 	return OpenDb(filename, stor.Read, true)
 }
@@ -100,8 +104,17 @@ func OpenDbStor(store *stor.Stor, mode stor.Mode, check bool) (db *Database, err
 		}
 	}()
 	buf := store.Data(0)
-	if magic != string(buf[:len(magic)]) {
-		return nil, errors.New("bad magic")
+	if magicBase != string(buf[:len(magicBase)]) {
+		rt.Fatal("not a valid database file")
+	}
+	if magicPrev == string(buf[:len(magicPrev)]) {
+		if mode == stor.Update {
+			// use Write because all but the last chunk are mapped read-only
+			store.Write(0, []byte(magic))
+		}
+	} else if magic != string(buf[:len(magic)]) &&
+		magicPrev != string(buf[:len(magicPrev)]) {
+		rt.Fatal("invalid database version")
 	}
 	size := stor.ReadSmallOffset(buf[len(magic):])
 	if size != store.Size() {

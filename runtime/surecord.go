@@ -876,7 +876,7 @@ func (r *SuRecord) ToRecord(th *Thread, hdr *Header) Record {
 
 	rb := RecordBuilder{}
 	var tsField string
-	var ts SuDate
+	var ts PackableValue
 	for _, f := range fields {
 		if f == "-" {
 			rb.AddRaw("")
@@ -885,7 +885,7 @@ func (r *SuRecord) ToRecord(th *Thread, hdr *Header) Record {
 				panic("multiple _TS fields not supported")
 			}
 			tsField = f
-			ts = th.Dbms().Timestamp()
+			ts = th.Timestamp()
 			rb.Add(ts)
 		} else if d, ok := deps[f]; ok {
 			rb.Add(SuStr(strings.Join(d, ",")))

@@ -8,7 +8,9 @@ import (
 	"io"
 	"os"
 	"strconv"
+	"sync"
 	"sync/atomic"
+	"time"
 
 	"github.com/apmckinlay/gsuneido/options"
 	"github.com/apmckinlay/gsuneido/runtime/trace"
@@ -318,4 +320,49 @@ func (th *Thread) RunWithMainSuneido(fn func() Value) Value {
 	}(th.Suneido)
 	th.Suneido = nil
 	return fn()
+}
+
+//-------------------------------------------------------------------
+
+var tsCount int
+var tsLimit int
+var tsLast SuDate
+var tsLock sync.Mutex
+
+// Timestamp is a Thread method for convenience, so it has access to the dbms.
+// It is not "per thread".
+// This is the "client" version of Timestamp.
+func (th *Thread) Timestamp() PackableValue {
+	tsLock.Lock()
+	defer tsLock.Unlock()
+	if tsCount++; tsCount < tsLimit {
+		// fast path
+		if tsLimit == TsInitialBatch {
+			tsLast = tsLast.AddMs(1)
+			return tsLast
+		}
+		return SuTimestamp{SuDate: tsLast, extra: uint8(tsCount)}
+	}
+	// fetch a new timestamp, slow path
+	if tsLimit == 0 {
+		go tsExpire()
+	}
+	tsLast = th.Dbms().Timestamp()
+	tsCount = 0
+	if tsLast.Millisecond() < TsThreshold {
+		tsLimit = TsInitialBatch
+	} else {
+		tsLimit = 256
+	}
+	return tsLast
+}
+
+func tsExpire() {
+	for {
+		time.Sleep(1 * time.Second)
+		// clear tsLast to force fetching a new timestamp
+		tsLock.Lock()
+		tsCount = tsLimit + 1
+		tsLock.Unlock()
+	}
 }

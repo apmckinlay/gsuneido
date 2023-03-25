@@ -147,7 +147,14 @@ func open(filename string) (*os.File, *bufio.Reader) {
 		panic(err)
 	}
 	r := bufio.NewReader(f)
-	readLinePrefixed(r, "Suneido dump 2")
+	s, err := r.ReadString('\n')
+	ck(err)
+	if !strings.HasPrefix(s, dumpVersionBase) {
+		panic("not a valid dump file")
+	}
+	if s != dumpVersion && s != dumpVersionPrev {
+		panic("invalid dump version")
+	}
 	return f, r
 }
 
@@ -185,7 +192,7 @@ func loadTable2(db *Database, schema string,
 }
 
 func readLinePrefixed(r *bufio.Reader, pre string) string {
-	s, err := r.ReadString('\n') // file header
+	s, err := r.ReadString('\n')
 	if err == io.EOF {
 		return ""
 	}

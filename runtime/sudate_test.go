@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/util/assert"
+	"github.com/apmckinlay/gsuneido/util/generic/ord"
 )
 
 func TestOne(t *testing.T) {
@@ -30,6 +31,7 @@ func TestOne(t *testing.T) {
 func TestDateLiteral(t *testing.T) {
 	assert := assert.T(t).This
 	good := func(s string) {
+		t.Helper()
 		d := DateFromLiteral(s)
 		s = "#" + s
 		assert(d.String()).Is(s)
@@ -37,6 +39,7 @@ func TestDateLiteral(t *testing.T) {
 		assert(d.String()).Is(s)
 	}
 	bad := func(s string) {
+		t.Helper()
 		assert(DateFromLiteral(s)).Is(NilDate)
 		assert(DateFromLiteral("#" + s)).Is(NilDate)
 	}
@@ -55,6 +58,9 @@ func TestDateLiteral(t *testing.T) {
 	bad("20130229")
 	good("20120229") // leap year
 	bad("20160523.0-15")
+
+	s := "#20230316.123456777222"
+	assert(DateFromLiteral(s).String()).Is(s)
 }
 
 func TestDatePack(t *testing.T) {
@@ -75,28 +81,36 @@ func TestDatePack(t *testing.T) {
 
 func TestDateCompare(t *testing.T) {
 	assert := assert.T(t)
-	lt := func(s1 string, s2 string) {
-		d1 := DateFromLiteral(s1)
-		assert.This(d1).Is(DateFromLiteral(s1))
-		d2 := DateFromLiteral(s2)
-		assert.This(d2).Is(DateFromLiteral(s2))
-		assert.True(d1.Compare(d2) < 0)
-		assert.True(d2.Compare(d1) > 0)
-		assert.This(d1).Isnt(d2)
-		assert.This(d2).Isnt(d1)
+	dates := []string{"19990101", "20001231"}
+	times := []string{"080102333", "180102333"}
+	extra := []string{"", "123"}
+	vals := [8]Value{}
+	i := 0
+	for _, d := range dates {
+		for _, t := range times {
+			for _, e := range extra {
+				vals[i] = DateFromLiteral("#" + d + "." + t + e)
+				var y = DateFromLiteral("#" + d + "." + t + e)
+				assert.That(vals[i].Equal(y))
+				i++
+			}
+		}
 	}
-	lt("20140115", "20140116")
-	lt("19000101", "20140116")
-	lt("20140115", "24991231")
-	lt("20140115", "20140115.0100")
-	lt("20140115", "20140115.000000001")
+	for i := 0; i < len(vals); i++ {
+		for j := 0; j < len(vals); j++ {
+			assert.This(vals[i].Compare(vals[j])).Is(ord.Compare(i, j))
+			assert.This(vals[j].Compare(vals[i])).Is(ord.Compare(j, i))
+			assert.This(vals[i].Equal(vals[j])).Is(i == j)
+			assert.This(vals[j].Equal(vals[i])).Is(i == j)
+		}
+	}
 }
 
 func TestDatePlus(t *testing.T) {
 	plus := func(s string, year int, month int, day int,
 		hour int, minute int, second int, ms int, expected string) {
-		d := DateFromLiteral(s)
-		e := DateFromLiteral(expected)
+		d := DateFromLiteral(s).(SuDate)
+		e := DateFromLiteral(expected).(SuDate)
 		assert.T(t).
 			This(d.Plus(year, month, day, hour, minute, second, ms)).Is(e)
 	}
@@ -132,7 +146,8 @@ func TestDatePlus(t *testing.T) {
 
 func TestDateWeekDay(t *testing.T) {
 	weekday := func(s string, wd int) {
-		assert.T(t).This(DateFromLiteral(s).WeekDay()).Is(wd)
+		d := DateFromLiteral(s).(SuDate)
+		assert.T(t).This(d.WeekDay()).Is(wd)
 	}
 	weekday("20140112", 0)
 	weekday("20140115", 3)
@@ -142,8 +157,8 @@ func TestDateWeekDay(t *testing.T) {
 func TestDateMinusDays(t *testing.T) {
 	assert := assert.T(t).This
 	minusdays := func(s1 string, s2 string, expected int) {
-		d1 := DateFromLiteral(s1)
-		d2 := DateFromLiteral(s2)
+		d1 := DateFromLiteral(s1).(SuDate)
+		d2 := DateFromLiteral(s2).(SuDate)
 		assert(d1.MinusDays(d1)).Is(0)
 		assert(d2.MinusDays(d2)).Is(0)
 		assert(d1.MinusDays(d2)).Is(expected)
@@ -161,11 +176,11 @@ func TestDateMinusMs(t *testing.T) {
 		if len(s1) == 9 {
 			s1 = "20140115." + s1
 		}
-		d1 := DateFromLiteral(s1)
+		d1 := DateFromLiteral(s1).(SuDate)
 		if len(s2) == 9 {
 			s2 = "20140115." + s2
 		}
-		d2 := DateFromLiteral(s2)
+		d2 := DateFromLiteral(s2).(SuDate)
 		assert(d1.MinusMs(d1)).Is(int64(0))
 		assert(d2.MinusMs(d2)).Is(int64(0))
 		assert(d1.MinusMs(d2)).Is(expected)
@@ -183,7 +198,8 @@ func TestDateMinusMs(t *testing.T) {
 
 func TestDateFormat(t *testing.T) {
 	format := func(date string, format string, expected string) {
-		assert.T(t).This(DateFromLiteral(date).Format(format)).Is(expected)
+		d := DateFromLiteral(date).(SuDate)
+		assert.T(t).This(d.Format(format)).Is(expected)
 	}
 	format("20140108", "yy-M-d", "14-1-8")
 	format("20140116", "yy-MM-dd", "14-01-16")
@@ -234,31 +250,31 @@ func TestParseDate(t *testing.T) {
 
 func TestIncrement(t *testing.T) {
 	assert := assert.T(t).This
-	d := DateFromLiteral("#20230315")
+	d := DateFromLiteral("#20230315").(SuDate)
 	assert(d.time).Is(0)
-	d = d.Increment()
+	d = d.AddMs(1)
 	assert(d.time).Is(1)
-	d = d.Increment()
+	d = d.AddMs(1)
 	assert(d.time).Is(2)
 	d.time = 999
-	d = d.Increment()
+	d = d.AddMs(1)
 	assert(d.Millisecond()).Is(0)
 	assert(d.Second()).Is(1)
 	d.time = 1024 + 999
-	d = d.Increment()
+	d = d.AddMs(1)
 	assert(d.Millisecond()).Is(0)
 	assert(d.Second()).Is(2)
 
 	d = NewDate(2021, 5, 21, 23, 59, 59, 999)
 	assert(d.Millisecond()).Is(999)
 	assert(d.Second()).Is(59)
-	d2 := d.Increment()
+	d2 := d.AddMs(1)
 	assert(d2.time).Is(0)
 	assert(d2.date).Is(d.date + 1)
 
 	// spring daylight savings change
-	d = DateFromLiteral("#20230312.015959999")
-	d = d.Increment()
+	d = DateFromLiteral("#20230312.015959999").(SuDate)
+	d = d.AddMs(1)
 	assert(d.Hour()).Is(2)
 	assert(d.Minute()).Is(0)
 }

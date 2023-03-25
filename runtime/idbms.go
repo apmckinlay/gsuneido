@@ -210,3 +210,14 @@ type IQueryCursor interface {
 	// Strategy returns a description of the optimized query
 	Strategy(formatted bool) string
 }
+
+// For timestamps with milliseconds up to TsThreshold,
+// a client is allowed to increment the milliseconds TsInitialBatch times
+// before requesting another timestamp.
+// For timestamps with milliseconds >= TsThreshold,
+// a client should use SuTimestamp incrementing extra.
+// These values must match jSuneido.
+const (
+	TsInitialBatch = 5
+	TsThreshold    = 500
+)

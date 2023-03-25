@@ -13,15 +13,17 @@ import (
 var timestamp SuDate
 var tsLock sync.Mutex
 
+// StartTimestamp is called by gsuneido.go openDbms
 func StartTimestamps() {
-	timestamp = Now()
+	timestamp = Now().WithoutMs()
 	go ticker()
 }
 
+// ticker runs on the dbms i.e. server or standalone, not client
 func ticker() {
 	for {
 		time.Sleep(1 * time.Second)
-		t := Now()
+		t := Now().WithoutMs()
 		tsLock.Lock()
 		if t.Compare(timestamp) > 0 {
 			timestamp = t
@@ -30,9 +32,15 @@ func ticker() {
 	}
 }
 
+// Timestamp is the backend
 func Timestamp() SuDate {
 	tsLock.Lock()
 	defer tsLock.Unlock()
-	timestamp = timestamp.Increment()
-	return timestamp
+	ts := timestamp
+	if ts.Millisecond() < TsThreshold {
+		timestamp = timestamp.AddMs(TsInitialBatch)
+	} else {
+		timestamp = timestamp.AddMs(1)
+	}
+	return ts
 }

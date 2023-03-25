@@ -62,7 +62,7 @@ func (a *insertQueryAction) execute(th *Thread, ut *db19.UpdateTran) int {
 				if tsField != "" {
 					panic("multiple _TS fields not supported")
 				}
-				rb.Add(db19.Timestamp())
+				rb.Add(th.Timestamp())
 			} else {
 				rb.AddRaw(row.GetRaw(hdr, f))
 			}

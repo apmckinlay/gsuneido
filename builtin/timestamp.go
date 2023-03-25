@@ -10,5 +10,5 @@ import (
 var _ = builtin(Timestamp, "()")
 
 func Timestamp(th *Thread, args []Value) Value {
-	return th.Dbms().Timestamp()
+	return th.Timestamp()
 }

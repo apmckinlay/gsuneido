@@ -62,9 +62,10 @@ func Now() SuDate {
 	return FromTime(time.Now())
 }
 
-// DateFromLiteral returns a SuDate from the Suneido literal format
-// i.e. yyyymmdd[.hhmm[ss[mmm]]]
-func DateFromLiteral(s string) SuDate {
+// DateFromLiteral returns an SuDate or an SuTimestamp
+// from the Suneido literal format yyyymmdd[.hhmm[ss[mmm[ccc]]]]
+// It returns NilDate if the string is invalid.
+func DateFromLiteral(s string) PackableValue {
 	if s[0] == '#' {
 		s = s[1:]
 	}
@@ -75,8 +76,8 @@ func DateFromLiteral(s string) SuDate {
 	} else {
 		timelen = len(s) - datelen - 1
 	}
-	if datelen != 8 ||
-		(timelen != 0 && timelen != 4 && timelen != 6 && timelen != 9) {
+	if datelen != 8 || (timelen != 0 && timelen != 4 && timelen != 6 &&
+		timelen != 9 && timelen != 12) {
 		return NilDate
 	}
 
@@ -88,8 +89,15 @@ func DateFromLiteral(s string) SuDate {
 	minute := nsub(s, 11, 13)
 	second := nsub(s, 13, 15)
 	millisecond := nsub(s, 15, 18)
-
-	return NewDate(year, month, day, hour, minute, second, millisecond)
+	d := NewDate(year, month, day, hour, minute, second, millisecond)
+	if timelen == 12 {
+		extra := nsub(s, 18, 21)
+		if extra <= 0 || extra >= 256 {
+			return NilDate
+		}
+		return SuTimestamp{SuDate: d, extra: uint8(extra)}
+	}
+	return d
 }
 
 func nsub(s string, from int, to int) int {
@@ -180,15 +188,20 @@ func NormalizeDate(yr int, mon int, day int, hr int, min int, sec int, ms int) S
 	return fromGoTime(t)
 }
 
-// Increment is used by Timestamp to add one millisecond
-// more efficiently than Plus
-func (d SuDate) Increment() SuDate {
+// AddMs is used by Timestamp. It will usually be faster than Plus
+func (d SuDate) AddMs(ms int) SuDate {
+	assert.That(0 < ms && ms < 100)
 	orig := d
-	d.time++ // millisecond
-	if d.Millisecond() < 1000 {
+	if int(d.Millisecond())+ms < 1000 {
+		d.time += uint32(ms) // fast path
 		return d
 	}
 	return orig.Plus(0, 0, 0, 0, 0, 0, 1) // slower fallback
+}
+
+func (d SuDate) WithoutMs() SuDate {
+	d.time &^= 0x3ff
+	return d
 }
 
 // WeekDay returns the day of the week - Sun is 0, Sat is 6
@@ -737,6 +750,9 @@ func (d SuDate) Compare(other Value) int {
 	if cmp := ord.Compare(ordDate, Order(other)); cmp != 0 {
 		return cmp * 2
 	}
+	if st, ok := other.(SuTimestamp); ok {
+		return CompareSuTimestamp(SuTimestamp{SuDate: d}, st)
+	}
 	d2 := other.(SuDate)
 	if d.date < d2.date {
 		return -1
@@ -782,9 +798,13 @@ func (d SuDate) Pack(_ *uint32, buf *pack.Encoder) {
 }
 
 // UnpackDate unpacks a date from the supplied byte slice
-func UnpackDate(s string) SuDate {
+func UnpackDate(s string) Value {
 	d := pack.NewDecoder(s[1:])
 	date := d.Uint32()
 	time := d.Uint32()
-	return SuDate{date: date, time: time}
+	sd := SuDate{date: date, time: time}
+	if d.Remaining() > 0 {
+		return UnpackTimestamp(sd, d)
+	}
+	return sd
 }

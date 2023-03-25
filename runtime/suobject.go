@@ -830,11 +830,11 @@ func (ob *SuObject) ToRecord(th *Thread, hdr *Header) Record {
 	fields := hdr.Fields[0]
 	rb := RecordBuilder{}
 	var tsField string
-	var ts SuDate
+	var ts PackableValue
 	for _, f := range fields {
 		if strings.HasSuffix(f, "_TS") { // also done in SuRecord ToRecord
 			tsField = f
-			ts = th.Dbms().Timestamp()
+			ts = th.Timestamp()
 			rb.Add(ts)
 		} else {
 			x := ob.namedGet(SuStr(f))

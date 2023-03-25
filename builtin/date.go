@@ -9,6 +9,7 @@ import (
 
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/dnum"
+	"github.com/apmckinlay/gsuneido/util/regex"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
@@ -24,23 +25,26 @@ func init() {
 		BuiltinParams: BuiltinParams{ParamSpec: ps}}})
 }
 
+var tsPat = regex.Compile(`\A\d\d\d\d\d\d\d\d\.\d\d\d\d\d\d\d\d\d\d\d\d\Z`)
+
 func Date(_ *Thread, args []Value) Value {
 	if args[0] != False && hasFields(args) {
 		panic("usage: Date() or Date(string [, pattern]) or " +
 			"Date(year:, month:, day:, hour:, minute:, second:)")
 	}
 	if args[0] != False {
-		if _, ok := args[0].(SuDate); ok {
-			return args[0]
+		if d, ok := args[0].(SuDate); ok {
+			return d
 		}
-		var d SuDate
+		if t, ok := args[0].(SuTimestamp); ok {
+			return t
+		}
+		var d Value
 		s := AsStr(args[0])
-		if args[1] == False {
-			if strings.HasPrefix(s, "#") {
-				d = DateFromLiteral(s)
-			} else {
-				d = ParseDate(s, "yMd")
-			}
+		if strings.HasPrefix(s, "#") || tsPat.Matches(s) {
+			d = DateFromLiteral(s)
+		} else if args[1] == False {
+			d = ParseDate(s, "yMd")
 		} else {
 			d = ParseDate(s, AsStr(args[1]))
 		}
@@ -52,6 +56,23 @@ func Date(_ *Thread, args []Value) Value {
 		return named(args)
 	}
 	return Now()
+}
+
+func toDate(v Value) SuDate {
+	if d, ok := v.(SuDate); ok {
+		return d
+	}
+	return v.(SuTimestamp).SuDate
+}
+
+func asDate(v Value) (SuDate, bool) {
+	if d, ok := v.(SuDate); ok {
+		return d, true
+	}
+	if t, ok := v.(SuTimestamp); ok {
+		return t.SuDate, true
+	}
+	return NilDate, false
 }
 
 func hasFields(args []Value) bool {
@@ -143,8 +164,8 @@ var _ = exportMethods(&DateMethods)
 var _ = method(date_MinusDays, "(date)")
 
 func date_MinusDays(this Value, val Value) Value {
-	t1 := this.(SuDate)
-	if t2, ok := val.(SuDate); ok {
+	t1 := toDate(this)
+	if t2, ok := asDate(val); ok {
 		return IntVal(t1.MinusDays(t2))
 	}
 	panic("date.MinusDays requires date")
@@ -153,8 +174,8 @@ func date_MinusDays(this Value, val Value) Value {
 var _ = method(date_MinusSeconds, "(date)")
 
 func date_MinusSeconds(this Value, val Value) Value {
-	t1 := this.(SuDate)
-	if t2, ok := val.(SuDate); ok {
+	t1 := toDate(this)
+	if t2, ok := asDate(val); ok {
 		if t1.Year()-t2.Year() >= 50 {
 			panic("date.MinusSeconds interval too large")
 		}
@@ -167,7 +188,7 @@ func date_MinusSeconds(this Value, val Value) Value {
 var _ = method(date_FormatEn, "(format)")
 
 func date_FormatEn(this, arg Value) Value {
-	return SuStr(this.(SuDate).Format(ToStr(arg)))
+	return SuStr(toDate(this).Format(ToStr(arg)))
 }
 
 var _ = method(date_GetLocalGMTBias, "()")
@@ -181,58 +202,63 @@ var _ = method(date_Plus, "(years=0, months=0, days=0, "+
 	"hours=0, minutes=0, seconds=0, milliseconds=0)")
 
 func date_Plus(th *Thread, this Value, args []Value) Value {
-	return this.(SuDate).Plus(ToInt(args[0]), ToInt(args[1]),
+	d := toDate(this).Plus(ToInt(args[0]), ToInt(args[1]),
 		ToInt(args[2]), ToInt(args[3]), ToInt(args[4]),
 		ToInt(args[5]), ToInt(args[6]))
+	if ts, ok := this.(SuTimestamp); ok {
+		ts.SuDate = d
+		return ts
+	}
+	return d
 }
 
 var _ = method(date_WeekDay, "(firstDay='Sun')")
 
 func date_WeekDay(this, arg Value) Value {
 	i := dayOfWeek(arg)
-	return IntVal(((this.(SuDate).WeekDay() - i) + 7) % 7)
+	return IntVal(((toDate(this).WeekDay() - i) + 7) % 7)
 }
 
 var _ = method(date_Year, "()")
 
 func date_Year(this Value) Value {
-	return IntVal(this.(SuDate).Year())
+	return IntVal(toDate(this).Year())
 }
 
 var _ = method(date_Month, "()")
 
 func date_Month(this Value) Value {
-	return IntVal(this.(SuDate).Month())
+	return IntVal(toDate(this).Month())
 }
 
 var _ = method(date_Day, "()")
 
 func date_Day(this Value) Value {
-	return IntVal(this.(SuDate).Day())
+	return IntVal(toDate(this).Day())
 }
 
 var _ = method(date_Hour, "()")
 
 func date_Hour(this Value) Value {
-	return IntVal(this.(SuDate).Hour())
+	return IntVal(toDate(this).Hour())
 }
 
 var _ = method(date_Minute, "()")
 
 func date_Minute(this Value) Value {
-	return IntVal(this.(SuDate).Minute())
+	return IntVal(toDate(this).Minute())
 }
 
 var _ = method(date_Second, "()")
 
 func date_Second(this Value) Value {
-	return IntVal(this.(SuDate).Second())
+	return IntVal(toDate(this).Second())
 }
 
 var _ = method(date_Millisecond, "()")
 
 func date_Millisecond(this Value) Value {
-	return IntVal(this.(SuDate).Millisecond())
+	return IntVal(toDate(this).Millisecond())
 }
 
 func dayOfWeek(x Value) int {
