@@ -8,6 +8,7 @@ import (
 	"fmt"
 )
 
+// From converts any e.g. from recover() to an error
 func From(e any) error {
 	if err, ok := e.(error); ok {
 		return err
