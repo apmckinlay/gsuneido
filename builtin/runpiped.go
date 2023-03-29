@@ -111,7 +111,7 @@ func (rp *suRunPiped) Equal(other any) bool {
 
 func (*suRunPiped) SetConcurrent() {
 	//FIXME concurrency
-	// panic("RunPiped cannot be set to concurent")
+	// panic("RunPiped cannot be set to concurrent")
 }
 
 func (*suRunPiped) Lookup(_ *Thread, method string) Callable {
