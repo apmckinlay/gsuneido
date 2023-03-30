@@ -4,7 +4,7 @@
 package runtime
 
 import (
-	"github.com/apmckinlay/gsuneido/util2/regex"
+	"github.com/apmckinlay/gsuneido/util/regex"
 )
 
 // SuRegex is a compiled regular expression.

@@ -18,7 +18,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/dbg"
 	"github.com/apmckinlay/gsuneido/util/dnum"
 	"github.com/apmckinlay/gsuneido/util/hacks"
-	"github.com/apmckinlay/gsuneido/util2/regex"
+	"github.com/apmckinlay/gsuneido/util/regex"
 )
 
 var (

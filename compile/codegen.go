@@ -18,7 +18,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/generic/ord"
 	"github.com/apmckinlay/gsuneido/util/hacks"
-	"github.com/apmckinlay/gsuneido/util2/regex"
+	"github.com/apmckinlay/gsuneido/util/regex"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 

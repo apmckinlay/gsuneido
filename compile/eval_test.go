@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util2/regex"
+	"github.com/apmckinlay/gsuneido/util/regex"
 )
 
 func TestIsGlobal(t *testing.T) {

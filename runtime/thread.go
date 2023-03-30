@@ -16,7 +16,7 @@ import (
 	"github.com/apmckinlay/gsuneido/runtime/trace"
 	myatomic "github.com/apmckinlay/gsuneido/util/generic/atomic"
 	"github.com/apmckinlay/gsuneido/util/generic/ord"
-	"github.com/apmckinlay/gsuneido/util2/regex"
+	"github.com/apmckinlay/gsuneido/util/regex"
 	"github.com/apmckinlay/gsuneido/util/str"
 	"github.com/apmckinlay/gsuneido/util/tr"
 )

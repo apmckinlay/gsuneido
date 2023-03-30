@@ -9,11 +9,11 @@ import (
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util2/regex"
+	"github.com/apmckinlay/gsuneido/util/regex"
 )
 
 func TestNumberPat(t *testing.T) {
-	test := func (s string, expected bool) {
+	test := func(s string, expected bool) {
 		t.Helper()
 		assert := assert.T(t)
 		assert.This(numberPat.Matches(s)).Is(expected)

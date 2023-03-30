@@ -8,9 +8,9 @@ import (
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/util/generic/ord"
+	"github.com/apmckinlay/gsuneido/util/regex"
 	"github.com/apmckinlay/gsuneido/util/str"
 	"github.com/apmckinlay/gsuneido/util/tabs"
-	"github.com/apmckinlay/gsuneido/util2/regex"
 
 	"github.com/apmckinlay/gsuneido/util/ascii"
 	"github.com/apmckinlay/gsuneido/util/tr"
