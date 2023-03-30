@@ -22,7 +22,6 @@ const (
 	opJump                  // int16
 	opSplitNext             // int16
 	opSplitJump             // int16
-	opAny                   //
 	opAnyNotNL              //
 	opHalfSet               // [16]byte
 	opFullSet               // [32]byte

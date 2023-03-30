@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util/regex"
+	"github.com/apmckinlay/gsuneido/util2/regex"
 )
 
 func TestNumberPat(t *testing.T) {

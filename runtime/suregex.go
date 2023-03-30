@@ -4,8 +4,7 @@
 package runtime
 
 import (
-	"github.com/apmckinlay/gsuneido/util/regex"
-	"golang.org/x/exp/slices"
+	"github.com/apmckinlay/gsuneido/util2/regex"
 )
 
 // SuRegex is a compiled regular expression.
@@ -19,9 +18,16 @@ var _ Value = SuRegex{}
 
 func (rx SuRegex) Equal(other any) bool {
 	rx2, ok := other.(*SuRegex)
-	return ok && slices.Equal(rx.Pat, rx2.Pat)
+	return ok && rx.Pat == rx2.Pat
 }
 
 func (SuRegex) SetConcurrent() {
 	// immutable so ok
+}
+
+// RegexMethods is initialized by the builtin package
+var RegexMethods Methods
+
+func (SuRegex) Lookup(_ *Thread, method string) Callable {
+	return RegexMethods[method]
 }

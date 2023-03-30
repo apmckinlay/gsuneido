@@ -1,2 +1,0 @@
-go test fuzz v1
-string("()*?0i00*0*0")

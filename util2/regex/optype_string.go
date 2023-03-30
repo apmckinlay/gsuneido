@@ -13,32 +13,31 @@ func _() {
 	_ = x[opJump-3]
 	_ = x[opSplitNext-4]
 	_ = x[opSplitJump-5]
-	_ = x[opAny-6]
-	_ = x[opAnyNotNL-7]
-	_ = x[opHalfSet-8]
-	_ = x[opFullSet-9]
-	_ = x[opListSet-10]
-	_ = x[opWordStart-11]
-	_ = x[opWordEnd-12]
-	_ = x[opLineStart-13]
-	_ = x[opLineEnd-14]
-	_ = x[opStrStart-15]
-	_ = x[opStrEnd-16]
-	_ = x[opSave-17]
-	_ = x[opDoneSave1-18]
-	_ = x[opOnePass-19]
-	_ = x[opBranchNext-20]
-	_ = x[opBranchJump-21]
-	_ = x[opLiteralSubstr-22]
-	_ = x[opLiteralPrefix-23]
-	_ = x[opLiteralSuffix-24]
-	_ = x[opLiteralEqual-25]
-	_ = x[opPrefix-26]
+	_ = x[opAnyNotNL-6]
+	_ = x[opHalfSet-7]
+	_ = x[opFullSet-8]
+	_ = x[opListSet-9]
+	_ = x[opWordStart-10]
+	_ = x[opWordEnd-11]
+	_ = x[opLineStart-12]
+	_ = x[opLineEnd-13]
+	_ = x[opStrStart-14]
+	_ = x[opStrEnd-15]
+	_ = x[opSave-16]
+	_ = x[opDoneSave1-17]
+	_ = x[opOnePass-18]
+	_ = x[opBranchNext-19]
+	_ = x[opBranchJump-20]
+	_ = x[opLiteralSubstr-21]
+	_ = x[opLiteralPrefix-22]
+	_ = x[opLiteralSuffix-23]
+	_ = x[opLiteralEqual-24]
+	_ = x[opPrefix-25]
 }
 
-const _opType_name = "opCharopCharIgnoreCaseopJumpopSplitNextopSplitJumpopAnyopAnyNotNLopHalfSetopFullSetopListSetopWordStartopWordEndopLineStartopLineEndopStrStartopStrEndopSaveopDoneSave1opOnePassopBranchNextopBranchJumpopLiteralSubstropLiteralPrefixopLiteralSuffixopLiteralEqualopPrefix"
+const _opType_name = "opCharopCharIgnoreCaseopJumpopSplitNextopSplitJumpopAnyNotNLopHalfSetopFullSetopListSetopWordStartopWordEndopLineStartopLineEndopStrStartopStrEndopSaveopDoneSave1opOnePassopBranchNextopBranchJumpopLiteralSubstropLiteralPrefixopLiteralSuffixopLiteralEqualopPrefix"
 
-var _opType_index = [...]uint16{0, 6, 22, 28, 39, 50, 55, 65, 74, 83, 92, 103, 112, 123, 132, 142, 150, 156, 167, 176, 188, 200, 215, 230, 245, 259, 267}
+var _opType_index = [...]uint16{0, 6, 22, 28, 39, 50, 60, 69, 78, 87, 98, 107, 118, 127, 137, 145, 151, 162, 171, 183, 195, 210, 225, 240, 254, 262}
 
 func (i opType) String() string {
 	i -= 1

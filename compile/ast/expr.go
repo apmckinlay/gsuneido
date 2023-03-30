@@ -123,7 +123,7 @@ func (a *Binary) Eval(c *Context) Value {
 	if a.evalRaw {
 		return a.rawEval(c)
 	}
-	return a.eval(a.Lhs.Eval(c), a.Rhs.Eval(c))
+	return a.eval(c.Th, a.Lhs.Eval(c), a.Rhs.Eval(c))
 }
 
 func (a *Binary) rawEval(c *Context) Value {
@@ -155,16 +155,16 @@ func packedCmp(x, y string) int {
 	return cmp
 }
 
-func (a *Binary) eval(lhs, rhs Value) Value {
+func (a *Binary) eval(th *Thread, lhs, rhs Value) Value {
 	switch a.Tok {
 	case tok.Is:
 		return OpIs(lhs, rhs)
 	case tok.Isnt:
 		return OpIsnt(lhs, rhs)
 	case tok.Match:
-		return OpMatch(nil, lhs, rhs)
+		return OpMatch(th, lhs, rhs)
 	case tok.MatchNot:
-		return OpMatch(nil, lhs, rhs).Not()
+		return OpMatch(th, lhs, rhs).Not()
 	case tok.Lt:
 		return OpLt(lhs, rhs)
 	case tok.Lte:

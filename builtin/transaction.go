@@ -8,7 +8,7 @@ import (
 	"time"
 
 	. "github.com/apmckinlay/gsuneido/runtime"
-	"github.com/apmckinlay/gsuneido/util/regex"
+	"github.com/apmckinlay/gsuneido/util2/regex"
 )
 
 var _ = builtin(Transaction, "(read=nil, update=nil, block=false)")

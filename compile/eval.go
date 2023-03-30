@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	. "github.com/apmckinlay/gsuneido/runtime"
-	"github.com/apmckinlay/gsuneido/util/regex"
+	"github.com/apmckinlay/gsuneido/util2/regex"
 )
 
 // EvalString executes string containing Suneido code

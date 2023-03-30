@@ -50,7 +50,7 @@ func (f Folder) foldBinary(b *Binary) Expr {
 		b.Lhs, b.Rhs = b.Rhs, b.Lhs
 		b.Tok = reverseBinary[b.Tok]
 	} else if lconst && rconst {
-		return f.constant(b.eval(lhs.Val, rhs.Val))
+		return f.constant(b.eval(nil, lhs.Val, rhs.Val))
 	}
 	return b
 }

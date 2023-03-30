@@ -1,3 +1,0 @@
-go test fuzz v1
-string("0\xdb1\xdd*")
-string("0")

@@ -16,14 +16,17 @@ import (
 )
 
 func TestPlay(t *testing.T) {
-	s := "0a"
-	pat := Compile(`^+`)
+	if testing.Short() {
+		t.SkipNow()
+	}
+	// s := "now is the time"
+	pat := Compile(`\A_?[[:alpha:]]\w*[!?]?\Z`)
 	fmt.Println(pat)
-	var cap Captures
-	slc.Fill(cap[:], -1)
-	fmt.Println(">>>", pat.Match(s, &cap), cap[0])
-	fmt.Println("cap", cap)
-	cap.Print(s)
+	// var cap Captures
+	// ok := pat.LastMatch(s, len(s), &cap)
+	// fmt.Println(">>>", ok)
+	// fmt.Println("cap", cap)
+	// cap.Print(s)
 }
 
 func (c *Captures) Print(s string) {
@@ -35,17 +38,62 @@ func (c *Captures) Print(s string) {
 	}
 }
 
+func TestForEachMatch(t *testing.T) {
+	if testing.Short() {
+		t.SkipNow()
+	}
+	s := "function (a, b = 1)\n{\nSteppingDebugger(0);\n c = a + b\nSteppingDebugger(1);\n return c\n }"
+	pat := Compile(`^ *`)
+	fmt.Println(pat)
+	pat.ForEachMatch(s, func(cap *Captures) bool {
+		fmt.Println("cap", cap)
+		fmt.Printf("match %q\n", s[cap[0]:])
+		return true
+	})
+}
+
 func TestGoRegexp(t *testing.T) {
+	if testing.Short() {
+		t.SkipNow()
+	}
 	pat := regexp.MustCompile(`0b|0[bB]`)
 	cap := pat.FindStringIndex("0B")
 	fmt.Printf("%#v\n", cap)
 }
 
 func TestGoParse(t *testing.T) {
+	if testing.Short() {
+		t.SkipNow()
+	}
 	re, _ := syntax.Parse("^+", 0)
 	//re = re.Simplify()
 	prog, _ := syntax.Compile(re)
 	fmt.Println(prog)
+}
+
+func TestLeftAnchored(t *testing.T) {
+	test := func(rx string, expected bool) {
+		t.Helper()
+		// fmt.Printf("`%s`\n%v\n", rx, Compile(rx))
+		assert.T(t).This(Compile(rx).leftAnchored()).Is(expected)
+	}
+	test(``, false) // literal substr
+	test(`foo`, false) // literal substr
+	test(`foo\Z`, false) // literal suffix
+	test(`\w`, false) // one pass
+	test(`.*`, false) // full
+
+	test(`\A`, true) // literal prefix
+	test(`\Afoo`, true) // literal prefix
+	test(`\Afoo\Z`, true) // literal equal
+	test(`\A\w`, true) // one pass
+	test(`\A.*`, true) // full
+
+	pat := Compile(`\Afoo`)
+	var cap Captures
+	assert.T(t).False(pat.LastMatch("other foo", 8, &cap))
+	assert.T(t).True(pat.LastMatch("foo other foo", 8, &cap))
+	assert.T(t).This(cap[0]).Is(0)
 }
 
 func TestCapture(t *testing.T) {
@@ -75,21 +123,21 @@ func TestMatch(t *testing.T) {
 	}
 	full := func(pat string) string {
 		if strings.Contains(pat, "|") {
-			return "^(" + pat + ")$"
+			return `\A(` + pat + `)\Z`
 		}
-		return "^" + pat + "$"
+		return `\A` + pat + `\Z`
 	}
 	rt = 'L'
 	match("a", full("a"), true)
 	match("a", "a", true)
 	match("abc", "b", true)
-	match("abc", `^b`, false)
-	match("abc", `^ab`, true)
-	match("abc", `bc$`, true)
-	match("abc", `b$`, false)
-	match("abc", `^abc$`, true)
-	match("abc", `^b$`, false)
-	match("a", "^$", false)
+	match("abc", `\Ab`, false)
+	match("abc", `\Aab`, true)
+	match("abc", `bc\Z`, true)
+	match("abc", `b\Z`, false)
+	match("abc", full("abc"), true)
+	match("abc", full("b"), false)
+	match("a", full(""), false)
 	match("", full("a"), false)
 	match("a", full("b"), false)
 
@@ -132,16 +180,16 @@ func TestCompile(t *testing.T) {
 	}
 	test("xyz",
 		`0: LiteralSubstr "xyz"`)
-	test(`^xyz`,
+	test(`\Axyz`,
 		`0: LiteralPrefix "xyz"`)
-	test(`xyz$`,
+	test(`xyz\Z`,
 		`0: LiteralSuffix "xyz"`)
-	test(`^xyz$`,
+	test(`\Axyz\Z`,
 		`0: LiteralEqual "xyz"`)
 	test(`.`,
 		`0: AnyNotNL
 		1: DoneSave1`)
-	test(`^.`,
+	test(`\A.`,
 		`0: OnePass
 		1: StrStart
 		2: AnyNotNL
@@ -199,16 +247,16 @@ func TestRightAnchor(t *testing.T) {
 		co := compile(pat)
 		assert.T(t).Msg(pat).This(co.rightAnchor).Is(expected)
 	}
-	test("abc", false)
-	test("abc$", true)
-	test("(abc)$", true)
-	test("a|b$", false)
-	test("(a|b)$", true)
-	test("(a$)?", false)
-	test("(a$)+", false)
-	test("(a$)*", false)
-	test("a$b", false)
-	test("a$?", false)
+	test(`abc`, false)
+	test(`abc\Z`, true)
+	test(`(abc)\Z`, true)
+	test(`a|b\Z`, false)
+	test(`(a|b)\Z`, true)
+	test(`(a\Z)?`, false)
+	test(`(a\Z)+`, false)
+	test(`(a\Z)*`, false)
+	test(`a\Zb`, false)
+	test(`a\Z?`, false)
 }
 
 func TestOnePass(t *testing.T) {
@@ -234,20 +282,20 @@ func TestOnePass(t *testing.T) {
 		co := compile(rx)
 		assert.This(co.onePass()).Is(expected)
 	}
-	test("abc", false)
-	test("^abc", true)
-	test("^abc$", true)
-	test("^(a|b)", true)
-	test("^(a|bc|de|f)", true)
-	test("^a?", false)
-	test("^a?$", true)
-	test("^a+$", true)
-	test("^a*$", true)
-	test("^ab?c", true)
-	test("^ab+c", true)
-	test("^ab*c", true)
-	test("^(0*)*7", false)
-	test("^(((0))*)((($))*1)", false)
+	test(`abc`, false)
+	test(`\Aabc`, true)
+	test(`\Aabc\Z`, true)
+	test(`\A(a|b)`, true)
+	test(`\A(a|bc|de|f)`, true)
+	test(`\Aa?`, false)
+	test(`\Aa?\Z`, true)
+	test(`\Aa+\Z`, true)
+	test(`\Aa*\Z`, true)
+	test(`\Aab?c`, true)
+	test(`\Aab+c`, true)
+	test(`\Aab*c`, true)
+	test(`\A(0*)*7`, false)
+	test(`\A(((0))*)(((\Z))*1)`, false)
 }
 
 var M bool
@@ -326,9 +374,9 @@ func FuzzRegexCmp(f *testing.F) {
 					return
 				}
 				if err, ok := e.(error); ok &&
-				    strings.Contains(err.Error(), "invalid UTF-8") {
-                    return
-                }
+					strings.Contains(err.Error(), "invalid UTF-8") {
+					return
+				}
 				t.Error("pattern:", r, "=>", e)
 			}
 		}()
@@ -368,9 +416,9 @@ func FuzzRegexVsGo(f *testing.F) {
 					return
 				}
 				if err, ok := e.(error); ok &&
-				    strings.Contains(err.Error(), "invalid UTF-8") {
-                    return
-                }
+					strings.Contains(err.Error(), "invalid UTF-8") {
+					return
+				}
 				t.Error("pattern:", r, "=>", e)
 			}
 		}()
@@ -459,7 +507,6 @@ func TestLiteralRep(t *testing.T) {
 	test(`\2 \1`, false)
 }
 
-
 // ptest support ----------------------------------------------------
 
 func TestPtest(t *testing.T) {
@@ -488,7 +535,10 @@ func ptMatch(args []string, _ []bool) bool {
 			result = !result
 		} else {
 			for i, e := range args[2:] {
-				p := s[cap[i*2]:cap[i*2+1]]
+				p := ""
+				if cap[i*2] >= 0 {
+					p = s[cap[i*2]:cap[i*2+1]]
+				}
 				result = result && (e == p)
 			}
 		}

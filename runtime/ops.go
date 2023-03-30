@@ -18,7 +18,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/dbg"
 	"github.com/apmckinlay/gsuneido/util/dnum"
 	"github.com/apmckinlay/gsuneido/util/hacks"
-	"github.com/apmckinlay/gsuneido/util/regex"
+	"github.com/apmckinlay/gsuneido/util2/regex"
 )
 
 var (
@@ -226,10 +226,8 @@ func catToStr(th *Thread, v Value) string {
 
 func OpMatch(th *Thread, x Value, y Value) SuBool {
 	var pat regex.Pattern
-	if r, ok := y.(SuRegex); ok {
-		pat = r.Pat
-	} else if th != nil {
-		pat = th.RxCache.Get(ToStr(y))
+	if th != nil {
+		pat = th.Regex(y)
 	} else {
 		pat = regex.Compile(ToStr(y))
 	}

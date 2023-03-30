@@ -9,7 +9,7 @@ import (
 
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/dnum"
-	"github.com/apmckinlay/gsuneido/util/regex"
+	"github.com/apmckinlay/gsuneido/util2/regex"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 

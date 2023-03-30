@@ -12,7 +12,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/generic/list"
 	"github.com/apmckinlay/gsuneido/util/pack"
-	"github.com/apmckinlay/gsuneido/util/regex"
+	"github.com/apmckinlay/gsuneido/util2/regex"
 	"github.com/apmckinlay/gsuneido/util/str"
 	"golang.org/x/exp/slices"
 )

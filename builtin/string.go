@@ -8,9 +8,9 @@ import (
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/util/generic/ord"
-	"github.com/apmckinlay/gsuneido/util/regex"
 	"github.com/apmckinlay/gsuneido/util/str"
 	"github.com/apmckinlay/gsuneido/util/tabs"
+	"github.com/apmckinlay/gsuneido/util2/regex"
 
 	"github.com/apmckinlay/gsuneido/util/ascii"
 	"github.com/apmckinlay/gsuneido/util/tr"
@@ -63,6 +63,7 @@ func string_Asc(this Value) Value {
 	return SuInt(int(s[0]))
 }
 
+// TODO remove - deprecated
 var _ = method(string_Compile, "(errob = false)")
 
 func string_Compile(th *Thread, this Value, args []Value) Value {
@@ -117,22 +118,22 @@ func string_Eval2(th *Thread, this Value, args []Value) Value {
 
 var _ = method(string_Extract, "(pattern, part=false)")
 
-func string_Extract(this, arg1, arg2 Value) Value {
+func string_Extract(th *Thread, this Value, args []Value) Value {
 	s := ToStr(this)
-	pat := regex.Compile(ToStr(arg1))
-	var res regex.Result
-	if pat.FirstMatch(s, 0, &res) == -1 {
+	pat := th.Regex(args[0])
+	var cap regex.Captures
+	if !pat.Match(s, &cap) {
 		return False
 	}
-	var pos, end int
-	if arg2 == False {
-		pos, end = res[1].Range()
+	var pos, end int32
+	if args[1] == False {
+		pos, end = cap[2], cap[3]
 		if pos == -1 {
-			pos, end = res[0].Range()
+			pos, end = cap[0], cap[1]
 		}
 	} else {
-		part := ToInt(arg2)
-		pos, end = res[part].Range()
+		part := ToInt(args[1]) * 2
+		pos, end = cap[part], cap[part+1]
 	}
 	if pos == -1 {
 		return EmptyStr
@@ -289,32 +290,31 @@ func string_MapN(th *Thread, this Value, args []Value) Value {
 
 var _ = method(string_Match, "(pattern, pos=false, prev=false)")
 
-func string_Match(this, arg1, arg2, arg3 Value) Value {
+func string_Match(th *Thread, this Value, args []Value) Value {
 	s := ToStr(this)
-	pat := regex.Compile(ToStr(arg1))
-	prev := ToBool(arg3)
+	pat := th.Regex(args[0])
+	prev := ToBool(args[2])
 	pos := 0
-	if arg2 != False {
-		pos = IfInt(arg2)
+	if args[1] != False {
+		pos = IfInt(args[1])
 	} else if prev {
 		pos = len(s)
 	}
-	method := pat.FirstMatch
+	var cap regex.Captures
+	var ok bool
 	if prev {
-		method = pat.LastMatch
+		ok = pat.LastMatch(s, pos, &cap)
+	} else {
+		ok = pat.FirstMatch(s, pos, &cap)
 	}
-	var res regex.Result
-	if method(s, pos, &res) == -1 {
+	if !ok {
 		return False
 	}
 	ob := &SuObject{}
-	for i, part := range res {
-		pos, end := part.Range()
-		if pos >= 0 {
-			p := &SuObject{}
-			p.Add(IntVal(pos))
-			p.Add(IntVal(end - pos))
-			ob.Set(SuInt(i), p)
+	for i := 0; i < len(cap); i += 2 {
+		org, end := int(cap[i]), int(cap[i+1])
+		if org >= 0 {
+			ob.Set(SuInt(i/2), SuObjectOf(IntVal(org), IntVal(end-org)))
 		}
 	}
 	return ob
@@ -388,7 +388,7 @@ func string_Replace(th *Thread, this Value, args []Value) Value {
 	if args[2] != False {
 		count = ToInt(args[2])
 	}
-	return replace(th, ToStr(this), ToStr(args[0]), args[1], count)
+	return replace(th, ToStr(this), args[0], args[1], count)
 }
 
 var _ = method(string_Reverse, "()")
@@ -497,11 +497,11 @@ func string_UpperQ(this Value) Value {
 	return SuBool(result)
 }
 
-func replace(th *Thread, s string, patarg string, reparg Value, count int) Value {
-	if count <= 0 || (patarg == "" && reparg == EmptyStr) {
+func replace(th *Thread, s string, patarg Value, reparg Value, count int) Value {
+	if count <= 0 || (patarg == EmptyStr && reparg == EmptyStr) {
 		return SuStr(s)
 	}
-	pat := th.RxCache.Get(patarg)
+	pat := th.Regex(patarg)
 	rep := ""
 	if !isFunc(reparg) {
 		rep = AsStr(reparg)
@@ -517,21 +517,21 @@ func replace(th *Thread, s string, patarg string, reparg Value, count int) Value
 	from := 0
 	nreps := 0
 	var buf strings.Builder
-	pat.ForEachMatch(s, func(result *regex.Result) bool {
-		pos, end := result[0].Range()
+	pat.ForEachMatch(s, func(cap *regex.Captures) bool {
+		pos, end := cap[0], cap[1]
 		buf.WriteString(s[from:pos])
 		if reparg == nil {
-			t := regex.Replacement(s, rep, result)
+			t := regex.Replacement(s, rep, cap)
 			buf.WriteString(t)
 		} else {
-			r := result[0].Part(s)
+			r := s[pos:end]
 			v := th.Call(reparg, SuStr(r))
 			if v != nil {
 				r = AsStr(v)
 			}
 			buf.WriteString(r)
 		}
-		from = end
+		from = int(end)
 		nreps++
 		return nreps < count
 	})
@@ -539,7 +539,9 @@ func replace(th *Thread, s string, patarg string, reparg Value, count int) Value
 		// avoid copy if no replacements
 		return SuStr(s)
 	}
-	buf.WriteString(s[from:])
+	if from < len(s) {
+		buf.WriteString(s[from:])
+	}
 	return SuStr(buf.String())
 }
 

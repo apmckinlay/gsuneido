@@ -5,7 +5,7 @@ package regex
 
 import "github.com/apmckinlay/gsuneido/util/generic/slc"
 
-// BitSet is a set of integers stored in bits.
+// BitSet is a set of int16 stored in bits.
 // Zero value is ready to use.
 // Memory usages depends on the maximum integer value
 // so it should only be used for small values.

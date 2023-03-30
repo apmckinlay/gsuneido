@@ -99,8 +99,16 @@ func Compile(rx string) Pattern {
 	return co.compile2()
 }
 
+func (pat Pattern) Literal() (string, bool) {
+	if opType(pat[0]) == opLiteralSubstr {
+		return string(pat[1:]), true
+	}
+	return "", false
+}
+
 func compile(rx string) *compiler {
-	co := compiler{src: rx, sn: len(rx), prog: make([]byte, 0, 10+2*len(rx))}
+	co := compiler{src: rx, sn: len(rx), prog: make([]byte, 0, 10+2*len(rx)),
+		multiLine: true} //TEMP for backward compatibility
 	co.regex()
 	if co.si < co.sn {
 		panic("regex: closing ) without opening (")
@@ -264,40 +272,50 @@ func (co *compiler) quoted() {
 }
 
 func (co *compiler) simple() {
-	if co.match(".") {
+	switch c := co.next(); c {
+	case '.':
 		co.emit(opAnyNotNL)
-	} else if co.match("\\d") {
-		co.emitCC(digit)
-	} else if co.match("\\D") {
-		co.emitCC(notDigit)
-	} else if co.match("\\w") {
-		co.emitCC(word)
-	} else if co.match("\\W") {
-		co.emitCC(notWord)
-	} else if co.match("\\s") {
-		co.emitCC(space)
-	} else if co.match("\\S") {
-		co.emitCC(notSpace)
-	} else if co.match("[") {
+	case '\\':
+		if co.si >= co.sn {
+			co.emitChar('\\')
+			return
+		}
+		switch c := co.next(); c {
+		case 'd':
+			co.emitCC(digit)
+		case 'D':
+			co.emitCC(notDigit)
+		case 'w':
+			co.emitCC(word)
+		case 'W':
+			co.emitCC(notWord)
+		case 's':
+			co.emitCC(space)
+		case 'S':
+			co.emitCC(notSpace)
+		case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
+			panic("regex: backreferences not supported")
+		default:
+			co.emitChar(c)
+		}
+	case '[':
 		co.charClass()
-	} else if co.match("(") {
+	case '(':
 		if co.match(")") {
 			panic("regex: empty parenthesis not allowed")
 		}
 		co.leftCount++
-		if co.leftCount >= 10 {
-			panic("regex: too many parenthesized groups")
+		leftCount := co.leftCount
+		if leftCount < 10 {
+			co.emit(opSave, 2*byte(leftCount))
 		}
-		co.emit(opSave, 2*byte(co.leftCount))
 		co.regex() // RECURSE
-		co.emit(opSave, 2*byte(co.leftCount)+1)
-		co.mustMatch(")")
-	} else {
-		if co.si+1 < co.sn {
-			co.match("\\")
+		if leftCount < 10 {
+			co.emit(opSave, 2*byte(leftCount)+1)
 		}
-		co.emitChar(co.src[co.si])
-		co.si++
+		co.mustMatch(")")
+	default:
+		co.emitChar(c)
 	}
 }
 
@@ -394,6 +412,11 @@ func (co *compiler) mustMatch(s string) {
 	if !co.match(s) {
 		panic("regex: missing '" + s + "'")
 	}
+}
+
+func (co *compiler) next() byte {
+	co.si++
+	return co.src[co.si-1]
 }
 
 // emit

@@ -9,6 +9,8 @@ import (
 
 	"github.com/apmckinlay/gsuneido/util/ascii"
 	"github.com/apmckinlay/gsuneido/util/assert"
+	"github.com/apmckinlay/gsuneido/util/generic/ord"
+	"github.com/apmckinlay/gsuneido/util/generic/slc"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
@@ -20,14 +22,41 @@ func (pat Pattern) Matches(s string) bool {
 }
 
 // LastMatch finds the last match in s.
-// It is inefficient, but rarely used.
-func (pat Pattern) LastMatch(s string, cap *Captures) bool {
-	for i := len(s); i >= 0; i-- {
-		if pat.Match(s[:i], cap) {
+// It is less efficient, but rarely used.
+func (pat Pattern) LastMatch(s string, i int, cap *Captures) bool {
+	if pat.leftAnchored() {
+		// if left anchored, only need to try at the start
+		return pat.match(s, 0, cap, true)
+	}
+	for ; i >= 0; i-- {
+		if pat.match(s, i, cap, true) {
 			return true
 		}
 	}
 	return false
+}
+
+func (pat Pattern) leftAnchored() bool {
+	piStart := int16(0)
+	switch op := opType(pat[piStart]); op {
+	case opPrefix:
+		n := int16(pat[piStart+1])
+		piStart += 2 + n
+	case opOnePass, opLiteralPrefix, opLiteralEqual:
+		return true
+	case opLiteralSubstr, opLiteralSuffix:
+		return false
+	}
+	return opType(pat[piStart]) == opStrStart
+}
+
+// ForEachMatch calls action for each non-overlapping match in the string.
+// The action should return true to continue, false to stop.
+func (pat Pattern) ForEachMatch(s string, fn func(cap *Captures) bool) {
+	var cap Captures
+	for i := 0; i <= len(s) && pat.match(s, i, &cap, false) &&
+		fn(&cap); i = ord.Max(int(cap[1]), i+1) {
+	}
 }
 
 type state struct {
@@ -35,12 +64,23 @@ type state struct {
 	pi  int16
 }
 
-// match looks for a match anywhere in the string i.e. not anchored.
-// If toEnd is true, the match must go to the end of the string.
+// FirstMatch finds the first match at or after position i
+func (pat Pattern) FirstMatch(s string, i int, cap *Captures) bool {
+	return pat.match(s, i, cap, false)
+}
+
+// Match looks for a match anywhere in the string i.e. not anchored.
 // It returns true if a match was found, and false otherwise.
 // If it returns true, the captures are updated.
 func (pat Pattern) Match(s string, cap *Captures) bool {
+	return pat.match(s, 0, cap, false)
+}
+
+func (pat Pattern) match(s string, start int, cap *Captures, fixed bool) bool {
 	_ = t && trace.Println(pat)
+	if cap != nil {
+		slc.Fill(cap[:], -1)
+	}
 	piStart := int16(0)
 	prefix := ""
 	switch op := opType(pat[piStart]); op {
@@ -49,24 +89,30 @@ func (pat Pattern) Match(s string, cap *Captures) bool {
 		prefix = string(pat[piStart+2 : piStart+2+n])
 		piStart += 2 + n
 	case opOnePass:
+		if start != 0 {
+			return false // one pass is always left anchored
+		}
 		return Pattern(pat[piStart+1:]).onePass(s, cap)
 	case opLiteralSubstr, opLiteralPrefix, opLiteralSuffix, opLiteralEqual:
-		return pat.literalMatch(op, s, cap)
+		return pat.literalMatch(op, s, start, cap, fixed)
 	}
-	anchored := opType(pat[piStart]) == opStrStart
+	leftAnchor := opType(pat[piStart]) == opStrStart
+	if leftAnchor && start != 0 {
+		return false
+	}
 	cap2 := dup(cap)
 	var cur []state
 	var next []state
 	var live = &BitSet{}
 	matched := false
-	for si := 0; si <= len(s); si++ {
+	for si := start; si <= len(s); si++ {
 		if si < len(s) {
 			_ = t && trace.Println("--- si:", si, "c:", s[si:si+1])
 		} else {
 			_ = t && trace.Println("at end of string")
 		}
 		if len(cur) == 0 {
-			if anchored && si > 0 {
+			if (leftAnchor && si > 0) || (fixed && si > start) {
 				return matched
 			}
 			if matched {
@@ -104,10 +150,6 @@ func (pat Pattern) Match(s string, cap *Captures) bool {
 			case opCharIgnoreCase:
 				if si < len(s) && ascii.ToLower(s[si]) == pat[pi+1] {
 					add = pi + 2
-				}
-			case opAny:
-				if si < len(s) {
-					add = pi + 1
 				}
 			case opAnyNotNL:
 				if si < len(s) && s[si] != '\r' && s[si] != '\n' {
@@ -247,11 +289,6 @@ func (pat Pattern) onePass(s string, cap *Captures) bool {
 			}
 			pi++
 			si++
-		case opAny:
-			if si >= len(s) {
-				return false
-			}
-			si++
 		case opAnyNotNL:
 			if si >= len(s) || s[si] == '\r' || s[si] == '\n' {
 				return false
@@ -342,31 +379,46 @@ func onePass1(pat Pattern, pi int, s string, si int) bool {
 
 // ------------------------------------------------------------------
 
-func (pat Pattern) literalMatch(op opType, s string, cap *Captures) bool {
+func (pat Pattern) literalMatch(op opType, s string, start int, cap *Captures,
+	fixed bool) bool {
 	_ = t && trace.Println(">>>", op)
 	lit := string(pat[1:])
+	s = s[start:]
 	i := 0
 	switch op {
 	case opLiteralEqual:
-		if s != lit {
+		if start != 0 || s != lit {
 			return false
 		}
 	case opLiteralSubstr:
-		i = strings.Index(s, lit)
-		if i < 0 {
-			return false
+		if fixed {
+			if !strings.HasPrefix(s, lit) {
+				return false
+			}
+		} else {
+			i = strings.Index(s, lit)
+			if i < 0 {
+				return false
+			}
 		}
 	case opLiteralPrefix:
-		if !strings.HasPrefix(s, lit) {
+		if start != 0 || !strings.HasPrefix(s, lit) {
 			return false
 		}
 	case opLiteralSuffix:
-		if !strings.HasSuffix(s, lit) {
-			return false
+		if fixed {
+			if s != lit {
+				return false
+			}
+		} else {
+			if !strings.HasSuffix(s, lit) {
+				return false
+			}
+			i = len(s) - len(lit)
 		}
-		i = len(s) - len(lit)
 	}
 	if cap != nil {
+		i += start
 		cap[0], cap[1] = int32(i), int32(i+len(lit))
 	}
 	return true

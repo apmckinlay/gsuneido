@@ -12,6 +12,7 @@ import (
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/dnum"
+	"github.com/apmckinlay/gsuneido/util2/regex"
 )
 
 var _ = exportMethods(&SuneidoObjectMethods)
@@ -41,6 +42,12 @@ func suneido_Parse(th *Thread, args []Value) Value {
 		p.Error("did not parse all input")
 	}
 	return ast
+}
+
+var _ = staticMethod(suneido_Regex, "(pattern)")
+
+func suneido_Regex(arg Value) Value {
+	return SuRegex{Pat: regex.Compile(ToStr(arg))}
 }
 
 var _ = staticMethod(suneido_GoMetric, "(name)")
