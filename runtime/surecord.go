@@ -699,12 +699,14 @@ func (r *SuRecord) getSpecial(key string) Value {
 }
 
 func (r *SuRecord) callRule(th *Thread, key string) Value {
+	// this needs to be done first
+	// to handle non-rule fields that are set to invalid by invalidate
+	delete(r.invalid, key)
 	rule := r.getRule(th, key)
 	if rule == nil || th.rules.has(r, key) {
 		return nil
 	}
 	r.ensureDeps()
-	delete(r.invalid, key)
 	r.trace("call rule", key)
 	val := r.catchRule(th, rule, key)
 	if val != nil && !r.ob.readonly {
