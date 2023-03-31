@@ -5,6 +5,7 @@
 package slc
 
 import "golang.org/x/exp/slices"
+import . "golang.org/x/exp/constraints"
 
 func IndexFn[E any](list []E, e E, eq func(E, E) bool) int {
 	for i, e2 := range list {
@@ -167,4 +168,26 @@ func MapFn[S ~[]E, E any](list S, fn func(E) E) S {
 		dest[i] = fn(s)
 	}
 	return dest
+}
+
+// Min returns the minimum value in the list
+func Min[E Ordered](list []E) E {
+	min := list[0]
+    for _, x := range list {
+        if x < min {
+            min = x
+        }
+    }
+    return min
+}
+
+// Max returns the maximum value in the list
+func Max[E Ordered](list []E) E {
+	max := list[0]
+    for _, x := range list {
+        if x > max {
+            max = x
+        }
+    }
+    return max
 }
