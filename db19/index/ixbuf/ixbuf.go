@@ -568,6 +568,16 @@ func (ib *ixbuf) Print() {
 
 func (c chunk) print() {
 	for _, s := range c {
-		fmt.Printf("%q %x\n", s.key, s.off)
+		off := s.off
+		d := ""
+		if (off & Delete) == Delete {
+			off &^= Delete
+			d = "d"
+		}
+		if (off & Update) == Update {
+			off &^= Update
+			d += "u"
+		}
+		fmt.Printf("%q %d %s\n", s.key, off, d)
 	}
 }
