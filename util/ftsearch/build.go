@@ -1,0 +1,101 @@
+// Copyright Suneido Software Corp. All rights reserved.
+// Governed by the MIT license found in the LICENSE file.
+
+package ftsearch
+
+import (
+	"math"
+
+	"github.com/apmckinlay/gsuneido/util/assert"
+	"github.com/apmckinlay/gsuneido/util/generic/slc"
+)
+
+// Builder is an index using array for counts.
+type Builder struct {
+	Index
+}
+
+func NewBuilder() *Builder {
+	return &Builder{*NewIndex()}
+}
+
+func (b *Builder) Add(id int, title, text string) {
+	assert.That(id < math.MaxUint16)
+	nterms := b.add(id, title, 3) // boost title
+	nterms += b.add(id, text, 1)
+	if id >= len(b.ntermsPerDoc) {
+		b.ntermsPerDoc = slc.Allow(b.ntermsPerDoc, id+1)
+	}
+	b.ntermsPerDoc[id] = nterms
+	b.ndocsTotal++
+	b.ntermsTotal += nterms
+}
+
+func (b *Builder) add(id int, s string, n int) int {
+	nterms := 0
+	input := newInput(s)
+	for word := input.Next(); word != ""; word = input.Next() {
+		trm, ok := b.terms[word]
+		if !ok {
+			trm = &term{term: word, termCountPerDoc: &array{}}
+			b.terms[word] = trm
+		}
+		trm.add(id, n)
+		nterms++
+	}
+	return nterms
+}
+
+// array stores counts per document as a sparse array
+// indexed by document id (small dense integers).
+// This uses more memory but is faster to update during building.
+type array struct {
+	counts []uint8
+}
+
+func (a *array) add(id int, n int) bool {
+	if id >= len(a.counts) {
+		a.counts = slc.Allow(a.counts, id+1)
+	}
+	first := a.counts[id] == 0
+	n += int(a.counts[id])
+	if n > 255 {
+		n = 255
+	}
+	a.counts[id] = uint8(n)
+	return first
+}
+
+func (a *array) iterator() termIter {
+	i := 0
+	return func() (int, uint8) {
+		for ; i < len(a.counts); i++ {
+			if a.counts[i] > 0 {
+				i++
+				return i - 1, a.counts[i-1]
+			}
+		}
+		return math.MaxInt, 0
+	}
+}
+
+func (a *array) pack(buf []byte) []byte {
+	n := 0
+	for _, c := range a.counts {
+		if c > 0 {
+			n++
+		}
+	}
+	buf = packUint32(buf, n)
+	for i, c := range a.counts {
+		if c > 0 {
+			buf = packUint16(buf, uint16(i))
+		}
+	}
+	for _, c := range a.counts {
+		if c > 0 {
+			buf = append(buf, c)
+		}
+	}
+	return buf
+}
