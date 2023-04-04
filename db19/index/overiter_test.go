@@ -263,6 +263,7 @@ func TestOverIterRandom(*testing.T) {
 	data := new(dummy)
 	it := &dumIter{d: data}
 	which := map[string]int{}
+	keyoff := map[string]uint64{}
 	bt := btree.CreateBtree(stor.HeapStor(8192), nil)
 	ibs := []*ixbuf.T{{}, {}, {}}
 	ov := &Overlay{bt: bt, layers: ibs}
@@ -275,9 +276,10 @@ func TestOverIterRandom(*testing.T) {
 			it.Rewind()
 			mi.Rewind()
 		} else {
-			actual, _ := mi.Cur()
-			traceln(actual)
-			assert.This(actual).Is(it.Cur())
+			key, off := mi.Cur()
+			traceln(key, off)
+			assert.This(key).Is(it.Cur())
+			assert.This(off).Is(keyoff[key])
 		}
 	}
 	defer func() {
@@ -300,7 +302,7 @@ func TestOverIterRandom(*testing.T) {
 	}()
 	const sizing = 15
 	const N = 1_000_000
-	for n := 0; n < N; n++ {
+	for n := 1; n < N; n++ { // reserve 0 for deleted
 		trace(n, " ")
 		switch rand.Intn(7) {
 		case 0:
@@ -309,8 +311,9 @@ func TestOverIterRandom(*testing.T) {
 				key := gen.randKey()
 				data.Insert(key)
 				w := rand.Intn(len(ibs))
-				ibs[w].Insert(key, 1)
+				ibs[w].Insert(key, uint64(n))
 				which[key] = w
+				keyoff[key] = uint64(n)
 				traceln("insert", w, key, "len", data.Len())
 			} else {
 				// delete
@@ -320,7 +323,8 @@ func TestOverIterRandom(*testing.T) {
 				traceln("delete", w, key, "len", data.Len()-1)
 				data.Delete(key)
 				gen.delete(key)
-				ibs[w].Delete(key, 1)
+				ibs[w].Delete(key, keyoff[key])
+				keyoff[key] = 0
 			}
 		case 1: // rewind
 			traceln("rewind")
@@ -345,6 +349,100 @@ func TestOverIterRandom(*testing.T) {
 			size += ib.Len()
 		}
 		assert.This(size).Is(data.Len())
+	}
+}
+
+func TestOverIterRandom2(t *testing.T) {
+	const nlayers = 10
+	const nkeys = 100
+	const steps = 100_000
+
+	dum := new(dummy)
+	it := &dumIter{d: dum}
+	keyoff := map[string]uint64{}
+	bt := btree.CreateBtree(stor.HeapStor(8192), nil)
+	ibs := []*ixbuf.T{}
+	for i := 0; i < nlayers; i++ {
+		ibs = append(ibs, &ixbuf.T{})
+	}
+	ov := &Overlay{bt: bt, layers: ibs}
+	tran := &testTran{getIndex: func() *Overlay { return ov }}
+	mi := NewOverIter("", 0)
+
+	keys := make([]string, nkeys)
+	randkey := str.UniqueRandom(3, 3)
+	for i := 0; i < nkeys; i++ {
+		keys[i] = randkey()
+	}
+
+	nextoff := uint64(1)
+	for i := 0; i < nlayers; i++ {
+		for j := 0; j < nkeys/5; j++ {
+			key := keys[rand.Intn(nkeys)]
+			if off := keyoff[key]; off != 0 {
+				if rand.Intn(3) == 1 {
+					ibs[i].Delete(key, off)
+					dum.Delete(key)
+					keyoff[key] = 0
+				} else {
+					ibs[i].Update(key, nextoff)
+					keyoff[key] = nextoff
+					nextoff++
+				}
+			} else {
+				ibs[i].Insert(key, nextoff)
+				dum.Insert(key)
+				keyoff[key] = nextoff
+				nextoff++
+			}
+		}
+	}
+	// ov.Print()
+
+	// forward
+	for it.Next(); !it.Eof(); it.Next() {
+		mi.Next(tran)
+		assert.False(mi.Eof())
+		key, off := mi.Cur()
+		assert.This(key).Is(it.Cur())
+		assert.This(off).Is(keyoff[key])
+	}
+	mi.Next(tran)
+	assert.True(mi.Eof())
+
+	// reverse
+	it.Rewind()
+	mi.Rewind()
+	for it.Prev(); !it.Eof(); it.Prev() {
+		mi.Prev(tran)
+		assert.False(mi.Eof())
+		key, off := mi.Cur()
+		assert.This(key).Is(it.Cur())
+		assert.This(off).Is(keyoff[key])
+	}
+	mi.Prev(tran)
+	assert.True(mi.Eof())
+
+	// random walk
+	it.Rewind()
+	mi.Rewind()
+	for i := 0; i < steps; i++ {
+		if rand.Intn(2) == 1 {
+			it.Next()
+			mi.Next(tran)
+		} else {
+			it.Prev()
+			mi.Prev(tran)
+		}
+		if it.Eof() {
+			assert.That(mi.Eof())
+			it.Rewind()
+			mi.Rewind()
+		} else {
+			key, off := mi.Cur()
+			assert.This(key).Is(it.Cur())
+			assert.This(off).Is(keyoff[key])
+		}
 	}
 }
 
@@ -443,6 +541,29 @@ func TestOverIterBug3(*testing.T) {
 	it = NewOverIter("", 0)
 	it.Range(Range{Org: "5555", End: "55559999"})
 	it.Prev(tran)
+	assert.That(it.Eof())
+}
+
+func TestOverIterBug4(*testing.T) {
+	b := btree.Builder(stor.HeapStor(8192))
+	assert.That(b.Add("1", 1))
+	bt := b.Finish()
+	// bt.Print()
+	layers := []*ixbuf.T{{}}
+	layers[0].Update("1", 2)
+	// layers[0].Print()
+	ov := &Overlay{bt: bt, layers: layers}
+	btree.GetLeafKey = func(_ *stor.Stor, _ *ixkey.Spec, i uint64) string {
+		return strconv.Itoa(int(i))
+	}
+	tran := &testTran{getIndex: func() *Overlay { return ov }}
+	it := NewOverIter("", 0)
+	it.Prev(tran)
+	assert.That(!it.Eof())
+	key, off := it.Cur()
+	assert.This(key).Is("1")
+	assert.This(off).Is(2)
+	it.Next(tran)
 	assert.That(it.Eof())
 }
 

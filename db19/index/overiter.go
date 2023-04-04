@@ -69,7 +69,7 @@ func (mi *OverIter) Cur() (string, uint64) {
 	return mi.curKey, mi.curOff
 }
 
-func (mi *OverIter) Range(rng Range) { //TODO org & end params
+func (mi *OverIter) Range(rng Range) {
 	mi.rng = rng
 	mi.state = rewound
 	for _, it := range mi.iters {
@@ -77,6 +77,7 @@ func (mi *OverIter) Range(rng Range) { //TODO org & end params
 	}
 }
 
+// Next -------------------------------------------------------------
 func (mi *OverIter) Next(t oiTran) {
 	// NOTE: keep this code in sync with Prev
 	if mi.state == eof {
@@ -143,7 +144,7 @@ func (mi *OverIter) modNext(t oiTran) {
 		}
 		mi.tran = t
 	}
-	for i, it := range mi.iters {
+	for _, it := range mi.iters {
 		if modified || it.Modified() {
 			it.Seek(mi.curKey)
 			if !it.Eof() {
@@ -157,10 +158,18 @@ func (mi *OverIter) modNext(t oiTran) {
 				it.Rewind()
 			}
 			it.Next()
-		} else if i == mi.curIter {
+		} else if atKey(it, mi.curKey) {
 			it.Next()
 		}
 	}
+}
+
+func atKey(it iterator.T, key string) bool {
+	if it.Eof() {
+		return false
+	}
+	itkey, _ := it.Cur()
+	return itkey == key
 }
 
 func (mi *OverIter) keepIters(ov *Overlay) bool {
@@ -194,12 +203,10 @@ outer:
 				itMin = i
 				keyMin = key
 				offMin = off
-				// may get update first
-				// e.g. add, update => add, but then restart gets update
 			} else if key == keyMin {
 				off = ixbuf.Combine(offMin, off)
-				mi.iters[itMin].Next()
 				if off == 0 || off&ixbuf.Delete != 0 {
+					mi.ifKey(i, key, iterator.T.Next)
 					// delete so skip
 					// may not be the final minimum, but still need to skip
 					it.Next()
@@ -213,6 +220,19 @@ outer:
 	}
 }
 
+func (mi *OverIter) ifKey(i int, key string, fn func(iterator.T)) {
+	for j := 0; j < i; j++ {
+		itj := mi.iters[j]
+		if !itj.Eof() {
+			k, _ := itj.Cur()
+			if k == key {
+				fn(itj)
+			}
+		}
+	}
+}
+
+// Prev -------------------------------------------------------------
 func (mi *OverIter) Prev(t oiTran) {
 	// NOTE: keep this code in sync with Next
 	if mi.state == eof {
@@ -257,7 +277,7 @@ func (mi *OverIter) modPrev(t oiTran) {
 		}
 		mi.tran = t
 	}
-	for i, it := range mi.iters {
+	for _, it := range mi.iters {
 		if modified || it.Modified() {
 			it.SeekAll(mi.curKey)
 			if !it.Eof() {
@@ -271,7 +291,7 @@ func (mi *OverIter) modPrev(t oiTran) {
 				it.Rewind()
 			}
 			it.Prev()
-		} else if i == mi.curIter {
+		} else if atKey(it, mi.curKey) {
 			it.Prev()
 		}
 	}
@@ -296,9 +316,9 @@ outer:
 				offMax = off
 			} else if key == keyMax {
 				off = ixbuf.Combine(offMax, off)
-				mi.iters[itMax].Prev()
 				if off == 0 || off&ixbuf.Delete != 0 {
-					// add,delete so skip
+					mi.ifKey(i, key, iterator.T.Prev)
+					// delete so skip
 					// may not be the final minimum, but still need to skip
 					it.Prev()
 					continue outer
