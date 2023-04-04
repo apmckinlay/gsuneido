@@ -72,7 +72,3 @@ func zlib_Uncompress(arg Value) Value {
 	assert.That(int(n) == len(b.String()))
 	return SuStr(b.String())
 }
-
-func (z *suZlib) Call(*Thread, Value, *ArgSpec) Value {
-	panic("can't call Zlib")
-}
