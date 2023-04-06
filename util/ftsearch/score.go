@@ -29,6 +29,9 @@ func scoreTerms(ndocsTotal, avgDocLen int, docLen []int, terms []*term,
 		docs[i], counts[i] = iters[i]()
 	}
 	var res results
+	if len(docs) == 0 {
+		return res
+	}
 	for {
 		// find the next (minimum) doc
 		d := slc.Min(docs)

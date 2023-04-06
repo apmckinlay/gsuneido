@@ -10,11 +10,11 @@ import (
 )
 
 func TestTokens(t *testing.T) {
-	tzr := newInput("Now is (the) time for accumulations.")
+	tzr := newInput("Now is (the) 1 time for 123accumulations.")
 	var toks []string
 	for tok := tzr.Next(); tok != ""; tok = tzr.Next() {
 		toks = append(toks, tok)
 	}
 	assert.T(t).This(toks).
-		Is([]string{"now", "time", "accumul"})
+		Is([]string{"now", "time", "123", "accumul"})
 }

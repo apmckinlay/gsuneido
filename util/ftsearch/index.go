@@ -119,12 +119,18 @@ func (b *Index) String() string {
 			maxDocsPerTerm = t.ndocsWithTerm
 		}
 	}
-	avgDocsPerTerm := totalDocsPerTerm / len(b.terms)
-	return fmt.Sprint("ndocs: ", b.ndocsTotal,
+	avgDocsPerTerm := 0
+	if len(b.terms) > 0 {
+		avgDocsPerTerm = totalDocsPerTerm / len(b.terms)
+	}
+	avgTermsPerDoc := 0
+	if b.ndocsTotal > 0 {
+		avgTermsPerDoc = b.ntermsTotal / b.ndocsTotal
+	}
+	return fmt.Sprint("Ftsearch{ndocs: ", b.ndocsTotal,
 		", ntermsTotal: ", b.ntermsTotal,
 		", unique terms: ", len(b.terms),
-		", avgTermsPerDoc: ", b.ntermsTotal/b.ndocsTotal,
-		",\n\tavgDocsPerTerm: ", avgDocsPerTerm,
-		", maxDocsPerTerm: ", maxDocsPerTerm,
-	)
+		",\n\tavgTermsPerDoc: ", avgTermsPerDoc,
+		",avgDocsPerTerm: ", avgDocsPerTerm,
+		", maxDocsPerTerm: ", maxDocsPerTerm, "}")
 }

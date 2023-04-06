@@ -46,6 +46,10 @@ type suFtsBuilder struct {
 	b *ftsearch.Builder
 }
 
+func (fb *suFtsBuilder) String() string {
+    return fb.b.String()
+}
+
 func (*suFtsBuilder) Lookup(_ *Thread, method string) Callable {
 	return ftsBuilderMethods[method]
 }
@@ -74,8 +78,16 @@ type suFtsIndex struct {
 	idx *ftsearch.Index
 }
 
+func (fi *suFtsIndex) String() string {
+    return fi.idx.String()
+}
+
 func (*suFtsIndex) Lookup(_ *Thread, method string) Callable {
 	return ftsIndexMethods[method]
+}
+
+func (*suFtsIndex) SetConcurrent() {
+	// read-only so ok
 }
 
 var ftsIndexMethods = methods()

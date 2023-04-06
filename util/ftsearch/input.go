@@ -17,25 +17,37 @@ func newInput(text string) *input {
 	return &input{text, 0}
 }
 
-const maxTokenLength = 32
+const maxWordLength = 32
+const maxNumberLength = 16
 
 func (src *input) Next() string {
 	for {
 		// skip non-letter
-		for src.pos < len(src.text) && !ascii.IsLetter(src.text[src.pos]) {
+		for src.pos < len(src.text) && !ascii.IsLetter(src.text[src.pos]) &&
+		    !ascii.IsDigit(src.text[src.pos]) {
 			src.pos++
 		}
+		if src.pos >= len(src.text) {
+            return ""
+        }
 		pos := src.pos
-		for src.pos < len(src.text) && ascii.IsLetter(src.text[src.pos]) {
-			src.pos++
-		}
-		tok := src.text[pos:src.pos]
-		if tok == "" {
-			return ""
-		}
-		if len(tok) > 1 && len(tok) < maxTokenLength {
-			if _, ok := stopWords[tok]; !ok {
-				return snowballeng.Stem(tok, true)
+		if ascii.IsLetter(src.text[src.pos]) {
+			for src.pos < len(src.text) && ascii.IsLetter(src.text[src.pos]) {
+				src.pos++
+			}
+			tok := src.text[pos:src.pos]
+			if len(tok) > 1 && len(tok) < maxWordLength {
+				if _, ok := stopWords[tok]; !ok {
+					return snowballeng.Stem(tok, true)
+				}
+			}
+		} else if ascii.IsDigit(src.text[src.pos]) {
+			for src.pos < len(src.text) && ascii.IsDigit(src.text[src.pos]) {
+				src.pos++
+			}
+			tok := src.text[pos:src.pos]
+			if len(tok) >= 2 && len(tok) < maxNumberLength {
+				return tok
 			}
 		}
 	}
