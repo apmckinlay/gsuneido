@@ -25,6 +25,10 @@ func (*suZlib) String() string {
 	return "Zlib /* builtin class */"
 }
 
+func (z *suZlib) Equal(other any) bool {
+	return z == other
+}
+
 func (*suZlib) Lookup(_ *Thread, method string) Callable {
 	return zlibMethods[method]
 }
