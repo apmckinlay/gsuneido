@@ -85,7 +85,7 @@ func forEachDir(dir string, justfiles, details bool, fn func(entry Value)) {
 					ob := &SuObject{}
 					ob.Set(SuStr("name"), entry)
 					ob.Set(SuStr("size"), Int64Val(info.Size()))
-					ob.Set(SuStr("date"), FromTime(info.ModTime()))
+					ob.Set(SuStr("date"), FromGoTime(info.ModTime()))
 					entry = ob
 				}
 				func() {

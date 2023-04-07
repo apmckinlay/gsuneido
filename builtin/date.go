@@ -147,15 +147,15 @@ var msFactor = dnum.FromStr(".001")
 
 var dateStaticMethods = methods()
 
-var _ = method(date_Begin, "()")
+var _ = staticMethod(date_Begin, "()")
 
-func date_Begin(Value) Value {
+func date_Begin() Value {
 	return DateBegin
 }
 
-var _ = method(date_End, "()")
+var _ = staticMethod(date_End, "()")
 
-func date_End(Value) Value {
+func date_End() Value {
 	return DateEnd
 }
 
@@ -193,8 +193,8 @@ func date_FormatEn(this, arg Value) Value {
 
 var _ = method(date_GetLocalGMTBias, "()")
 
-func date_GetLocalGMTBias(this Value) Value { // should be static
-	_, offset := time.Now().Zone()
+func date_GetLocalGMTBias(this Value) Value {
+	_, offset := toDate(this).ToGoTime().Zone()
 	return IntVal(-offset / 60)
 }
 

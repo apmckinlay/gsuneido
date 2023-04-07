@@ -59,7 +59,7 @@ func NewDate(yr int, mon int, day int, hr int, min int, sec int, ms int) SuDate 
 
 /* Now returns a SuDate for the current local date & time */
 func Now() SuDate {
-	return FromTime(time.Now())
+	return FromGoTime(time.Now())
 }
 
 // DateFromLiteral returns an SuDate or an SuTimestamp
@@ -109,11 +109,6 @@ func nsub(s string, from int, to int) int {
 		return -1
 	}
 	return i
-}
-
-func FromTime(t time.Time) SuDate {
-	return NewDate(t.Year(), int(t.Month()), t.Day(),
-		t.Hour(), t.Minute(), t.Second(), t.Nanosecond()/1000000)
 }
 
 func valid(yr int, mon int, day int, hr int, min int, sec int, ms int) bool {
@@ -185,7 +180,7 @@ func (d SuDate) Plus(yr int, mon int, day int, hr int, min int, sec int, ms int)
 func NormalizeDate(yr int, mon int, day int, hr int, min int, sec int, ms int) SuDate {
 	// use UTC to avoid timezone daylight savings issues
 	t := time.Date(yr, time.Month(mon), day, hr, min, sec, ms*1000000, time.UTC)
-	return fromGoTime(t)
+	return FromGoTime(t)
 }
 
 // AddMs is used by Timestamp. It will usually be faster than Plus
@@ -206,7 +201,7 @@ func (d SuDate) WithoutMs() SuDate {
 
 // WeekDay returns the day of the week - Sun is 0, Sat is 6
 func (d SuDate) WeekDay() int {
-	return int(d.toGoTime().Weekday())
+	return int(d.ToGoTime().Weekday())
 }
 
 // MinusDays returns the difference between two Dates in days
@@ -245,14 +240,14 @@ func (d SuDate) timeAsMs() int64 {
 
 // UnixMilli returns the time in milliseconds since 1 Jan 1970
 func (d SuDate) UnixMilli() int64 {
-	return d.toGoTime().UnixMilli()
+	return d.ToGoTime().UnixMilli()
 }
 
 func SuDateFromUnixMilli(t int64) SuDate {
-	return fromGoTime(time.UnixMilli(t))
+	return FromGoTime(time.UnixMilli(t))
 }
 
-func (d SuDate) toGoTime() time.Time {
+func (d SuDate) ToGoTime() time.Time {
 	return goTime(d.Year(), d.Month(), d.Day(),
 		d.Hour(), d.Minute(), d.Second(), d.Millisecond())
 }
@@ -261,7 +256,7 @@ func goTime(yr int, mon int, day int, hr int, min int, sec int, ms int) time.Tim
 	return time.Date(yr, time.Month(mon), day, hr, min, sec, ms*1000000, time.Local)
 }
 
-func fromGoTime(t time.Time) SuDate {
+func FromGoTime(t time.Time) SuDate {
 	return NewDate(t.Year(), int(t.Month()), t.Day(),
 		t.Hour(), t.Minute(), t.Second(), t.Nanosecond()/1000000)
 }
