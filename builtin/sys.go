@@ -15,12 +15,6 @@ import (
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
-var _ = builtin(OperatingSystem, "()")
-
-func OperatingSystem() Value { // deprecated
-	return OSName()
-}
-
 var _ = builtin(MemoryArena, "()")
 
 func MemoryArena() Value {
