@@ -34,7 +34,6 @@ enum {
 	msg_timerid,
 	msg_runongoside,
 	msg_sunapp,
-	msg_traccel,
 	msg_queryidispatch,
 	msg_createinstance,
 	msg_invoke,

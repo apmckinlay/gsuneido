@@ -65,10 +65,6 @@ func Release(iunk uintptr) int {
 	return int(interact(C.msg_release, iunk))
 }
 
-func Traccel(ob int, msg unsafe.Pointer) int {
-	return int(interact(C.msg_traccel, uintptr(ob), uintptr(msg)))
-}
-
 func EmbedBrowserObject(hwnd, iunk, pptr uintptr) uintptr {
 	return interact(C.msg_embedbrowserobject, hwnd, iunk, pptr)
 }

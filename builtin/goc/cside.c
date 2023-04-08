@@ -191,10 +191,6 @@ uintptr interact() {
 			message_loop(args[1]);
 			args[0] = msg_result;
 			break;
-		case msg_traccel:
-			args[1] = traccel(args[1], args[2]);
-			args[0] = msg_result;
-			break;
 		case msg_queryidispatch:
 			args[1] = queryIDispatch(args[1]);
 			args[0] = msg_result;
