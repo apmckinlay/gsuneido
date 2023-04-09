@@ -72,24 +72,24 @@ func threadCallClass(th *Thread, args []Value) Value {
 
 var threadMethods = methods()
 
-var _ = method(thread_Name, "(name=false)")
+var _ = staticMethod(thread_Name, "(name=false)")
 
-func thread_Name(th *Thread, _ Value, args []Value) Value {
+func thread_Name(th *Thread, args []Value) Value {
 	if args[0] != False {
 		th.Name = str.BeforeFirst(th.Name, " ") + " " + ToStr(args[0])
 	}
 	return SuStr(th.Name)
 }
 
-var _ = method(thread_Count, "()")
+var _ = staticMethod(thread_Count, "()")
 
-func thread_Count(this Value) Value {
+func thread_Count() Value {
 	return IntVal(threads.count())
 }
 
-var _ = method(thread_List, "()")
+var _ = staticMethod(thread_List, "()")
 
-func thread_List(this Value) Value {
+func thread_List() Value {
 	ob := &SuObject{}
 	threads.lock.Lock()
 	defer threads.lock.Unlock()
@@ -99,16 +99,16 @@ func thread_List(this Value) Value {
 	return ob
 }
 
-var _ = method(thread_Sleep, "(ms)")
+var _ = staticMethod(thread_Sleep, "(ms)")
 
-func thread_Sleep(this, ms Value) Value {
+func thread_Sleep(ms Value) Value {
 	time.Sleep(time.Duration(ToInt(ms)) * time.Millisecond)
 	return nil
 }
 
-var _ = method(thread_Profile, "(block)")
+var _ = staticMethod(thread_Profile, "(block)")
 
-func thread_Profile(th *Thread, _ Value, args []Value) Value {
+func thread_Profile(th *Thread, args []Value) Value {
 	th.StartProfile()
 	defer th.StopProfile()
 	th.Call(args[0])
@@ -126,14 +126,14 @@ func thread_Profile(th *Thread, _ Value, args []Value) Value {
 	return prof
 }
 
-var _ = method(thread_NewSuneidoGlobal, "()")
+var _ = staticMethod(thread_NewSuneidoGlobal, "()")
 
-func thread_NewSuneidoGlobal(th *Thread, _ Value, _ []Value) Value {
+func thread_NewSuneidoGlobal(th *Thread, _ []Value) Value {
 	th.Suneido = new(SuneidoObject)
 	return nil
 }
 
-func (d *suThreadGlobal) Get(th *Thread, key Value) Value {
+func (d *suThreadGlobal) Get(_ *Thread, key Value) Value {
 	m := ToStr(key)
 	if fn, ok := threadMethods[m]; ok {
 		return fn.(Value)

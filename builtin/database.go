@@ -24,99 +24,99 @@ func Database(th *Thread, args []Value) Value {
 
 var databaseMethods = methods()
 
-var _ = method(db_Auth, "(data)")
+var _ = staticMethod(db_Auth, "(data)")
 
-func db_Auth(th *Thread, this Value, args []Value) Value {
+func db_Auth(th *Thread, args []Value) Value {
 	return SuBool(th.Dbms().Auth(th, ToStr(args[0])))
 }
 
-var _ = method(db_Check, "()")
+var _ = staticMethod(db_Check, "()")
 
-func db_Check(th *Thread, this Value, args []Value) Value {
+func db_Check(th *Thread, args []Value) Value {
 	return SuStr(th.Dbms().Check())
 }
 
-var _ = method(db_Connections, "()")
+var _ = staticMethod(db_Connections, "()")
 
-func db_Connections(th *Thread, this Value, args []Value) Value {
+func db_Connections(th *Thread, args []Value) Value {
 	return th.Dbms().Connections()
 }
 
-var _ = method(db_CurrentSize, "()")
+var _ = staticMethod(db_CurrentSize, "()")
 
-func db_CurrentSize(th *Thread, this Value, args []Value) Value {
+func db_CurrentSize(th *Thread, args []Value) Value {
 	return IntVal(int(th.Dbms().Size()))
 }
 
-var _ = method(db_Cursors, "()")
+var _ = staticMethod(db_Cursors, "()")
 
-func db_Cursors(th *Thread, this Value, args []Value) Value {
+func db_Cursors(th *Thread, args []Value) Value {
 	return IntVal(th.Dbms().Cursors())
 }
 
-var _ = method(db_Dump, "(table = '')")
+var _ = staticMethod(db_Dump, "(table = '')")
 
-func db_Dump(th *Thread, this Value, args []Value) Value {
+func db_Dump(th *Thread, args []Value) Value {
 	return SuStr(th.Dbms().Dump(ToStr(args[0])))
 }
 
-var _ = method(db_Final, "()")
+var _ = staticMethod(db_Final, "()")
 
-func db_Final(th *Thread, this Value, args []Value) Value {
+func db_Final(th *Thread, args []Value) Value {
 	return IntVal(th.Dbms().Final())
 }
 
-var _ = method(db_Info, "()")
+var _ = staticMethod(db_Info, "()")
 
-func db_Info(th *Thread, this Value, args []Value) Value {
+func db_Info(th *Thread, args []Value) Value {
 	return th.Dbms().Info()
 }
 
-var _ = method(db_Kill, "(sessionId)")
+var _ = staticMethod(db_Kill, "(sessionId)")
 
-func db_Kill(th *Thread, this Value, args []Value) Value {
+func db_Kill(th *Thread, args []Value) Value {
 	return IntVal(th.Dbms().Kill(ToStr(args[0])))
 }
 
-var _ = method(db_Load, "(table)")
+var _ = staticMethod(db_Load, "(table)")
 
-func db_Load(th *Thread, this Value, args []Value) Value {
+func db_Load(th *Thread, args []Value) Value {
 	return IntVal(th.Dbms().Load(ToStr(args[0])))
 }
 
-var _ = method(db_Nonce, "()")
+var _ = staticMethod(db_Nonce, "()")
 
-func db_Nonce(th *Thread, this Value, args []Value) Value {
+func db_Nonce(th *Thread, args []Value) Value {
 	return SuStr(th.Dbms().Nonce(th))
 }
 
-var _ = method(db_Schema, "(table)")
+var _ = staticMethod(db_Schema, "(table)")
 
-func db_Schema(th *Thread, this Value, args []Value) Value {
+func db_Schema(th *Thread, args []Value) Value {
 	return SuStr(th.Dbms().Schema(ToStr(args[0])))
 }
 
-var _ = method(db_SessionId, "(id = '')")
+var _ = staticMethod(db_SessionId, "(id = '')")
 
-func db_SessionId(th *Thread, this Value, args []Value) Value {
+func db_SessionId(th *Thread, args []Value) Value {
 	return SuStr(th.SessionId(ToStr(args[0])))
 }
 
-var _ = method(db_TempDest, "()")
+var _ = staticMethod(db_TempDest, "()")
 
-func db_TempDest(Value) Value {
+func db_TempDest() Value {
 	return Zero
 }
 
-var _ = method(db_Token, "()")
+var _ = staticMethod(db_Token, "()")
 
-func db_Token(th *Thread, this Value, args []Value) Value {
+func db_Token(th *Thread, args []Value) Value {
 	return SuStr(th.Dbms().Token())
 }
 
-var _ = method(db_Transactions, "()")
+var _ = staticMethod(db_Transactions, "()")
 
-func db_Transactions(th *Thread, this Value, args []Value) Value {
+func db_Transactions(th *Thread, args []Value) Value {
 	return th.Dbms().Transactions()
 }
 
