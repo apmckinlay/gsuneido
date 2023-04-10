@@ -7,6 +7,7 @@ package options
 
 import (
 	"runtime"
+	"strings"
 	"sync/atomic"
 
 	myatomic "github.com/apmckinlay/gsuneido/util/generic/atomic"
@@ -69,6 +70,7 @@ func init() {
 }
 
 func BuiltStr() string {
-	return BuiltDate +
-		" (" + runtime.Version() + " " + runtime.GOARCH + BuiltExtra + ")"
+	goos := strings.Replace(runtime.GOOS, "darwin", "macos", 1)
+	return BuiltDate + " (" + runtime.Version() + " " +
+		goos + "/" + runtime.GOARCH + BuiltExtra + ")"
 }
