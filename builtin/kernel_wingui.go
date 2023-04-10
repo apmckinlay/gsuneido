@@ -14,7 +14,6 @@ import (
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/str"
-	reg "golang.org/x/sys/windows/registry"
 )
 
 // NOTE: We want these functions to be available on secondary threads.
@@ -442,96 +441,4 @@ func GetVolumeName(a Value) Value {
 		return EmptyStr
 	}
 	return zstr(buf)
-}
-
-//-------------------------------------------------------------------
-
-var _ = builtin(OSName, "()")
-
-func OSName() Value {
-	k, err := reg.OpenKey(reg.LOCAL_MACHINE,
-		`SOFTWARE\Microsoft\Windows NT\CurrentVersion`, reg.QUERY_VALUE)
-	if err != nil {
-		return EmptyStr
-	}
-	defer k.Close()
-
-	s, _, err := k.GetStringValue("ProductName")
-	if err != nil {
-		return EmptyStr
-	}
-	return SuStr(s)
-}
-
-//-------------------------------------------------------------------
-
-var versionApi = MustLoadDLL("version.dll")
-
-var getFileVersionInfo = versionApi.MustFindProc("GetFileVersionInfoA").Addr()
-var getFileVersionInfoSize = versionApi.MustFindProc("GetFileVersionInfoSizeA").Addr()
-var verQueryValue = versionApi.MustFindProc("VerQueryValueA").Addr()
-
-var verFile = []byte("kernel32\x00")
-var verFileW = []byte("\\\x00")
-
-var _ = builtin(OSVersion, "()")
-
-func OSVersion() Value {
-	var dummy int32
-	size, _, _ := syscall.SyscallN(getFileVersionInfoSize,
-		uintptr(unsafe.Pointer(&verFile[0])),
-		uintptr(unsafe.Pointer(&dummy)))
-	if size == 0 {
-		return False
-	}
-	buf := make([]byte, size)
-	rtn, _, _ := syscall.SyscallN(getFileVersionInfo,
-		uintptr(unsafe.Pointer(&verFile[0])),
-		0,
-		size,
-		uintptr(unsafe.Pointer(&buf[0])))
-	if rtn == 0 {
-		return False
-	}
-	var pffi *stVsFixedFileInfo
-	var len int32
-	rtn, _, _ = syscall.SyscallN(verQueryValue,
-		uintptr(unsafe.Pointer(&buf[0])),
-		uintptr(unsafe.Pointer(&verFileW[0])),
-		uintptr(unsafe.Pointer(&pffi)),
-		uintptr(unsafe.Pointer(&len)))
-	if rtn == 0 {
-		return False
-	}
-	ob := &SuObject{}
-	ob.Add(IntVal(hiword(pffi.dwFileVersionMS)))
-	ob.Add(IntVal(loword(pffi.dwFileVersionMS)))
-	ob.Add(IntVal(hiword(pffi.dwFileVersionLS)))
-	ob.Add(IntVal(loword(pffi.dwFileVersionLS)))
-	return ob
-}
-
-func loword(n int32) int {
-	return int(n & 0xffff)
-}
-
-func hiword(n int32) int {
-	return int(n >> 16)
-}
-
-//lint:ignore U1000 Windows struct
-type stVsFixedFileInfo struct {
-	dwSignature        int32
-	dwStrucVersion     int32
-	dwFileVersionMS    int32
-	dwFileVersionLS    int32
-	dwProductVersionMS int32
-	dwProductVersionLS int32
-	dwFileFlagsMask    int32
-	dwFileFlags        int32
-	dwFileOS           int32
-	dwFileType         int32
-	dwFileSubtype      int32
-	dwFileDateMS       int32
-	dwFileDateLS       int32
 }

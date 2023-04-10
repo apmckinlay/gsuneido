@@ -146,3 +146,11 @@ func GetTempPath() Value {
 	}
 	return SuStr(s)
 }
+
+var _ = builtin(OSName, "()")
+
+func OSName() Value {
+	os := runtime.GOOS
+	os = strings.Replace(os, "darwin", "macos", 1)
+	return SuStr(os)
+}

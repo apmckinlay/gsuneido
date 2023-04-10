@@ -7,7 +7,6 @@ package builtin
 
 import (
 	"os"
-	"runtime"
 
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
@@ -26,12 +25,6 @@ func init() {
 }
 
 func Run() {
-}
-
-var _ = builtin(OSName, "()")
-
-func OSName() Value {
-	return SuStr(runtime.GOOS)
 }
 
 var _ = builtin(GetComputerName, "()")
