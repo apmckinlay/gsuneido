@@ -624,16 +624,19 @@ func cmdKill(ss *serverSession) {
 	ss.PutBool(true).PutInt(n)
 }
 
-func kill(remoteAddr string) int {
+func kill(sid string) int {
 	serverConnsLock.Lock()
 	defer serverConnsLock.Unlock()
 	nkilled := 0
 	for id, sc := range serverConns {
-		if sc.remoteAddr == remoteAddr {
-			sc.serverLog("dbms server: kill:", remoteAddr)
-			delete(serverConns, id)
-			sc.conn.Close()
-			nkilled++
+		for _, ss := range sc.sessions {
+			if ss.sessionId == sid {
+				sc.serverLog("dbms server: kill:", sid)
+				delete(serverConns, id)
+				sc.conn.Close()
+				nkilled++
+				break
+			}
 		}
 	}
 	return nkilled
