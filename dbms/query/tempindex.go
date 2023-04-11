@@ -337,7 +337,7 @@ func (ti *TempIndex) multi() rowIter {
 		panic(fmt.Sprintf("temp index: derived too large (%d > %d) nrows %d average %d",
 			derived, derivedMax, nrows, derived/nrows))
 	} else if derived > 2_000_000 {
-		log.Printf("INFO temp index: derived large %d nrows %d average %d",
+		log.Printf("WARNING temp index: derived large %d nrows %d average %d",
 			derived, nrows, derived/nrows)
 	}
 	lt := func(row Row, key []string) bool {
