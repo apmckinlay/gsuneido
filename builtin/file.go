@@ -239,7 +239,7 @@ var _ = method(file_Writeline, "(string)")
 
 func file_Writeline(this, arg Value) Value {
 	s := AsStr(arg)
-	sf := sfOpen(this)
+	sf := sfOpenWrite(this)
 	sf.w.WriteString(s)
 	_, err := sf.w.WriteString("\r\n")
 	if err != nil {
