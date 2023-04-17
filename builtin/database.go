@@ -4,6 +4,8 @@
 package builtin
 
 import (
+	"strings"
+
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
@@ -57,7 +59,10 @@ func db_Cursors(th *Thread, args []Value) Value {
 var _ = staticMethod(db_Dump, "(table = '')")
 
 func db_Dump(th *Thread, args []Value) Value {
-	return SuStr(th.Dbms().Dump(ToStr(args[0])))
+	if err := th.Dbms().Dump(ToStr(args[0])); err != "" {
+		panic(strings.Replace(err, "dump", "Database.Dump", 1))
+	}
+	return nil
 }
 
 var _ = staticMethod(db_Final, "()")
