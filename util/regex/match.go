@@ -55,7 +55,7 @@ func (pat Pattern) leftAnchored() bool {
 func (pat Pattern) ForEachMatch(s string, fn func(cap *Captures) bool) {
 	var cap Captures
 	for i := 0; i <= len(s) && pat.match(s, i, &cap, false) &&
-		fn(&cap); i = ord.Max(int(cap[1]), i+1) {
+		fn(&cap); i = ord.Max(int(cap[1]), int(cap[0])+1) {
 	}
 }
 

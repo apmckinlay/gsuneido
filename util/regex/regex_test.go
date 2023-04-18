@@ -39,17 +39,18 @@ func (c *Captures) Print(s string) {
 }
 
 func TestForEachMatch(t *testing.T) {
-	if testing.Short() {
-		t.SkipNow()
+	test := func(pat, s string, expected ...int32) {
+		var matches []int32
+		Compile(pat).ForEachMatch(s, func(cap *Captures) bool {
+			matches = append(matches, cap[0])
+			//fmt.Println(cap[0], str.BeforeFirst(s[cap[0]:], "\n"))
+			return true
+		})
+		assert.T(t).This(matches).Is(expected)
 	}
-	s := "function (a, b = 1)\n{\nSteppingDebugger(0);\n c = a + b\nSteppingDebugger(1);\n return c\n }"
-	pat := Compile(`^ *`)
-	fmt.Println(pat)
-	pat.ForEachMatch(s, func(cap *Captures) bool {
-		fmt.Println("cap", cap)
-		fmt.Printf("match %q\n", s[cap[0]:])
-		return true
-	})
+	test("^", "one\ntwo\r\nthree", 0, 4, 9)
+	test(`^ *`, "function (a, b = 1)\n{\nSteppingDebugger(0);\n c = a + b\nSteppingDebugger(1);\n return c\n }",
+		0, 20, 22, 43, 54, 75, 85)
 }
 
 func TestGoRegexp(t *testing.T) {
@@ -77,17 +78,17 @@ func TestLeftAnchored(t *testing.T) {
 		// fmt.Printf("`%s`\n%v\n", rx, Compile(rx))
 		assert.T(t).This(Compile(rx).leftAnchored()).Is(expected)
 	}
-	test(``, false) // literal substr
-	test(`foo`, false) // literal substr
+	test(``, false)      // literal substr
+	test(`foo`, false)   // literal substr
 	test(`foo\Z`, false) // literal suffix
-	test(`\w`, false) // one pass
-	test(`.*`, false) // full
+	test(`\w`, false)    // one pass
+	test(`.*`, false)    // full
 
-	test(`\A`, true) // literal prefix
-	test(`\Afoo`, true) // literal prefix
+	test(`\A`, true)      // literal prefix
+	test(`\Afoo`, true)   // literal prefix
 	test(`\Afoo\Z`, true) // literal equal
-	test(`\A\w`, true) // one pass
-	test(`\A.*`, true) // full
+	test(`\A\w`, true)    // one pass
+	test(`\A.*`, true)    // full
 
 	pat := Compile(`\Afoo`)
 	var cap Captures
