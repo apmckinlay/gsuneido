@@ -13,15 +13,19 @@ import (
 // Builder is an index using array for counts.
 type Builder struct {
 	Index
+	// converted is used by update
+	converted []*term
 }
 
 func NewBuilder() *Builder {
-	return &Builder{*NewIndex()}
+	return &Builder{Index: *NewIndex()}
 }
+
+const boost = 3
 
 func (b *Builder) Add(id int, title, text string) {
 	assert.That(id < math.MaxUint16)
-	nterms := b.add(id, title, 3) // boost title
+	nterms := b.add(id, title, boost)
 	nterms += b.add(id, text, 1)
 	if id >= len(b.ntermsPerDoc) {
 		b.ntermsPerDoc = slc.Allow(b.ntermsPerDoc, id+1)
@@ -39,12 +43,57 @@ func (b *Builder) add(id int, s string, n int) int {
 		if !ok {
 			trm = &term{term: word, termCountPerDoc: &array{}}
 			b.terms[word] = trm
+		} else if _, ok := trm.termCountPerDoc.(list); ok {
+			trm.toArray()
+			b.converted = append(b.converted, trm)
 		}
 		trm.add(id, n)
 		nterms++
 	}
 	return nterms
 }
+
+func (b *Builder) Delete(id int, title, text string) {
+	assert.That(id < math.MaxUint16)
+	nterms := b.delete(id, title, boost)
+	nterms += b.delete(id, text, 1)
+	assert.That(id < len(b.ntermsPerDoc))
+	b.ntermsPerDoc[id] = 0
+	b.ndocsTotal--
+	assert.That(b.ntermsTotal >= nterms)
+	b.ntermsTotal -= nterms
+}
+
+func (b *Builder) delete(id int, s string, n int) int {
+	nterms := 0
+	input := newInput(s)
+	for word := input.Next(); word != ""; word = input.Next() {
+		trm, ok := b.terms[word]
+		assert.That(ok)
+		if _, ok := trm.termCountPerDoc.(list); ok {
+			trm.toArray()
+			b.converted = append(b.converted, trm)
+		}
+		trm.del(id, n)
+		nterms++
+	}
+	return nterms
+}
+
+func (b *Builder) backToList() {
+    for _, trm := range b.converted {
+        trm.toList()
+	}
+}
+
+func (b *Builder) ToIndex() *Index {
+	for _, t := range b.Index.terms {
+		t.toList()
+	}
+	return &b.Index
+}
+
+//-------------------------------------------------------------------
 
 // array stores counts per document as a sparse array
 // indexed by document id (small dense integers).
@@ -60,10 +109,18 @@ func (a *array) add(id int, n int) bool {
 	first := a.counts[id] == 0
 	n += int(a.counts[id])
 	if n > 255 {
-		n = 255
+		n = 255 // stick at max
 	}
 	a.counts[id] = uint8(n)
 	return first
+}
+
+func (a *array) del(id int, n int) bool {
+	assert.That(a.counts[id] >= uint8(n))
+	if a.counts[id] < 255 { // stick at max
+		a.counts[id] -= uint8(n)
+	}
+	return a.counts[id] == 0
 }
 
 func (a *array) iterator() termIter {
@@ -86,7 +143,7 @@ func (a *array) pack(buf []byte) []byte {
 			n++
 		}
 	}
-	buf = packUint32(buf, n)
+	buf = packUint16(buf, n)
 	for i, c := range a.counts {
 		if c > 0 {
 			buf = packUint16(buf, uint16(i))

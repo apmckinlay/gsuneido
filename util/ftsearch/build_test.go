@@ -18,23 +18,47 @@ func TestBuild(t *testing.T) {
 	b.Add(3, "Pretty Flowers", "in spring time")
 	// fmt.Println(b)
 	packed := b.Pack()
-	assert.T(t).This(len(packed)).Is(261)
+	assert.T(t).This(len(packed)).Is(199)
 	idx := Unpack(packed)
 
-	avgtermsPerDoc := idx.ntermsTotal / idx.ndocsTotal
+	assert.T(t).This(idx.ndocsTotal).Is(3)
+	assert.T(t).This(idx.ntermsTotal).Is(13)
+
+	trm := idx.terms["big"]
+	assert.T(t).This(trm.ndocsWithTerm).Is(2)
+
 	test := func(words ...string) func(any) {
 		t.Helper()
-		ts := make([]*term, len(words))
-		for i, w := range words {
-			ts[i] = idx.terms[w]
+		avgtermsPerDoc := idx.ntermsTotal / idx.ndocsTotal
+		ts := make([]*term, 0, len(words))
+		for _, w := range words {
+			if t, ok := idx.terms[w]; ok {
+				ts = append(ts, t)
+			}
 		}
 		results := scoreTerms(idx.ndocsTotal, avgtermsPerDoc, idx.ntermsPerDoc,
 			ts, testScore)
 		return assert.T(t).This(fmt.Sprint(results)).Is
 	}
+	test("nada")("[]")
 	test("fir")("[{1 1}]")
 	test("big")("[{1 3} {2 1}]")
 	test("big", "pear")("[{1 3} {2 2}]")
+	test("flower")("[{3 3}]")
+
+	idx.Update(4, "", "", "New One", "nothing special apple") // add
+	assert.T(t).This(idx.ndocsTotal).Is(4)
+	test("new", "special")("[{4 4}]")
+
+	idx.Update(2, "Small Trees", "apple pear not big",
+		"Small Shubs", "all around the yard")
+	assert.T(t).This(idx.ndocsTotal).Is(4)
+	test("tree")("[{1 3}]")
+	test("yard")("[{2 1}]")
+
+	idx.Update(3, "Pretty Flowers", "in spring time", "", "") // delete
+	assert.T(t).This(idx.ndocsTotal).Is(3)
+	test("flower")("[]")
 }
 
 // following examples from

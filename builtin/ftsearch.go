@@ -47,7 +47,7 @@ type suFtsBuilder struct {
 }
 
 func (fb *suFtsBuilder) String() string {
-    return fb.b.String()
+	return fb.b.String()
 }
 
 func (*suFtsBuilder) Lookup(_ *Thread, method string) Callable {
@@ -62,6 +62,14 @@ func ftsBuilder_Add(this, id, title, text Value) Value {
 	b := this.(*suFtsBuilder).b
 	b.Add(ToInt(id), ToStr(title), ToStr(text))
 	return nil
+}
+
+var _ = method(ftsBuilder_Index, "()")
+
+func ftsBuilder_Index(this Value) Value {
+	b := this.(*suFtsBuilder).b
+	this.(*suFtsBuilder).b = ftsearch.NewBuilder()
+	return &suFtsIndex{idx: b.ToIndex()}
 }
 
 var _ = method(ftsBuilder_Pack, "()")
@@ -79,7 +87,7 @@ type suFtsIndex struct {
 }
 
 func (fi *suFtsIndex) String() string {
-    return fi.idx.String()
+	return fi.idx.String()
 }
 
 func (*suFtsIndex) Lookup(_ *Thread, method string) Callable {
@@ -110,4 +118,27 @@ func ftsIndex_Search(this, query, scores Value) Value {
 		}
 	}
 	return NewSuObject(list)
+}
+
+var _ = method(ftsIndex_Update, "(id, oldTitle, oldText, newTitle, newText)")
+
+func ftsIndex_Update(_ *Thread, this Value, args []Value) Value {
+	idx := this.(*suFtsIndex).idx
+	idx.Update(ToInt(args[0]), ToStr(args[1]), ToStr(args[2]), ToStr(args[3]),
+		ToStr(args[4]))
+	return nil
+}
+
+var _ = method(ftsIndex_Pack, "()")
+
+func ftsIndex_Pack(this Value) Value {
+	idx := this.(*suFtsIndex).idx
+	return SuStr(idx.Pack())
+}
+
+var _ = method(ftsIndex_WordInfo, "(word)")
+
+func ftsIndex_WordInfo(this, word Value) Value {
+	idx := this.(*suFtsIndex).idx
+	return SuStr(idx.WordInfo(ToStr(word)))
 }

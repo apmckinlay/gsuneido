@@ -16,7 +16,7 @@ type list struct {
 	counts []uint8
 }
 
-func (t *term) toList() list {
+func (t *term) toList() {
 	a := t.termCountPerDoc.(*array)
 	docIds := make([]uint16, t.ndocsWithTerm)
 	counts := make([]uint8, t.ndocsWithTerm)
@@ -29,10 +29,24 @@ func (t *term) toList() list {
 		}
 	}
 	assert.This(j).Is(t.ndocsWithTerm)
-	return list{docIds: docIds, counts: counts}
+	t.termCountPerDoc = list{docIds: docIds, counts: counts}
+}
+
+func (t *term) toArray() {
+	lst := t.termCountPerDoc.(list)
+	assert.This(len(lst.docIds)).Is(t.ndocsWithTerm)
+	a := array{}
+	for i, id := range lst.docIds {
+		a.add(int(id), int(lst.counts[i]))
+	}
+    t.termCountPerDoc = &a
 }
 
 func (cl list) add(int, int) bool {
+	panic(assert.ShouldNotReachHere())
+}
+
+func (cl list) del(int, int) bool {
 	panic(assert.ShouldNotReachHere())
 }
 
@@ -48,7 +62,8 @@ func (cl list) iterator() termIter {
 }
 
 func (cl list) pack(buf []byte) []byte {
-	buf = packUint32(buf, len(cl.counts))
+	assert.That(len(cl.counts) == len(cl.docIds))
+	buf = packUint16(buf, len(cl.counts))
 	for _, d := range cl.docIds {
 		buf = packUint16(buf, d)
 	}
@@ -58,17 +73,16 @@ func (cl list) pack(buf []byte) []byte {
 	return buf
 }
 
-func packUint16(buf []byte, n uint16) []byte {
+func packUint16[T int|uint16](buf []byte, n T) []byte {
+	assert.That(n >= 0 && n <= math.MaxUint16)
 	return append(buf, byte(n>>8), byte(n))
 }
 
 func unpackList[T bytes](buf T) (list, T) {
-	n := unpackUint32(buf)
-    buf = buf[4:]
+	n, buf := unpackUint16(buf)
     docIds := make([]uint16, n)
 	for i := range docIds {
-        docIds[i] = unpackUint16(buf)
-		buf = buf[2:]
+        docIds[i], buf = unpackUint16(buf)
     }
     counts := make([]uint8, n)
 	for i := range counts {
@@ -78,6 +92,6 @@ func unpackList[T bytes](buf T) (list, T) {
     return list{docIds: docIds, counts: counts}, buf
 }
 
-func unpackUint16[T bytes](buf T) uint16 {
-	return uint16(buf[0])<<8 | uint16(buf[1])
+func unpackUint16[T bytes](buf T) (uint16, T) {
+	return uint16(buf[0])<<8 | uint16(buf[1]), buf[2:]
 }

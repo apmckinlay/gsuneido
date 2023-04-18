@@ -10,15 +10,18 @@ Terminology:
 */
 package ftsearch
 
-func (idx *Index) Search(query string) []DocScore {
+func (ix *Index) Search(query string) []DocScore {
+	if ix.ndocsTotal == 0 {
+		return nil
+	}
 	ts := make([]*term, 0, 8)
 	input := newInput(query)
-	for word := input.Next(); word != ""; word = input.Next() {
-		if trm, ok := idx.terms[word]; ok {
+	for term := input.Next(); term != ""; term = input.Next() {
+		if trm, ok := ix.terms[term]; ok {
 			ts = append(ts, trm)
 		}
 	}
-	avgtermsPerDoc := idx.ntermsTotal / idx.ndocsTotal
-	return scoreTerms(idx.ndocsTotal, avgtermsPerDoc, idx.ntermsPerDoc,
+	avgtermsPerDoc := ix.ntermsTotal / ix.ndocsTotal
+	return scoreTerms(ix.ndocsTotal, avgtermsPerDoc, ix.ntermsPerDoc,
 		ts, bm25)
 }
