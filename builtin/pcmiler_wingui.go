@@ -26,6 +26,10 @@ func (*suPcmsrv64) String() string {
 	return "Pcmsrv64 /* builtin class */"
 }
 
+func (sp *suPcmsrv64) Equal(other any) bool {
+	return sp == other
+}
+
 func (*suPcmsrv64) Lookup(_ *Thread, method string) Callable {
 	return pcmMethods[method]
 }
