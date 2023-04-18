@@ -139,6 +139,7 @@ func (ix *Index) String() string {
 		avgTermsPerDoc = ix.ntermsTotal / ix.ndocsTotal
 	}
 	return fmt.Sprint("Ftsearch{ndocs: ", ix.ndocsTotal,
+		", unique terms: ", len(ix.terms),
 		", ntermsTotal: ", ix.ntermsTotal,
 		",\n\tavgTermsPerDoc: ", avgTermsPerDoc,
 		", avgDocsPerTerm: ", avgDocsPerTerm,
@@ -155,8 +156,8 @@ func (ix *Index) WordInfo(s string) string {
 			for _, count := it(); count != 0; _, count = it() {
 				n += int(count)
 			}
-			sb.WriteString(fmt.Sprintln(term, "occurs", n,
-				"times in", t.ndocsWithTerm, "documents"))
+			sb.WriteString(fmt.Sprintln(
+				term, "count", n, "in", t.ndocsWithTerm, "documents"))
 		} else {
 			sb.WriteString(fmt.Sprintln(term, "not found"))
 		}

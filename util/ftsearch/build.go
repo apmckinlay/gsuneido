@@ -75,6 +75,9 @@ func (b *Builder) delete(id int, s string, n int) int {
 			b.converted = append(b.converted, trm)
 		}
 		trm.del(id, n)
+		if trm.ndocsWithTerm == 0 {
+			delete(b.terms, word)
+		}
 		nterms++
 	}
 	return nterms

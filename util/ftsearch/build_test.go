@@ -26,6 +26,7 @@ func TestBuild(t *testing.T) {
 
 	trm := idx.terms["big"]
 	assert.T(t).This(trm.ndocsWithTerm).Is(2)
+	assert.T(t).This(len(idx.terms)).Is(11)
 
 	test := func(words ...string) func(any) {
 		t.Helper()
@@ -50,14 +51,15 @@ func TestBuild(t *testing.T) {
 	assert.T(t).This(idx.ndocsTotal).Is(4)
 	test("new", "special")("[{4 4}]")
 
-	idx.Update(2, "Small Trees", "apple pear not big",
-		"Small Shubs", "all around the yard")
+	idx.Update(2, "Small Trees", "apple pear not big", // update
+		"Small Shrubs", "all around the yard")
 	assert.T(t).This(idx.ndocsTotal).Is(4)
 	test("tree")("[{1 3}]")
 	test("yard")("[{2 1}]")
 
 	idx.Update(3, "Pretty Flowers", "in spring time", "", "") // delete
 	assert.T(t).This(idx.ndocsTotal).Is(3)
+	assert.T(t).This(len(idx.terms)).Is(13)
 	test("flower")("[]")
 }
 
