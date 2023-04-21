@@ -93,8 +93,8 @@ func (it *Intersect) Transform() Query {
 	return it
 }
 
-func (*Intersect) fastSingle() bool {
-	return false
+func (it *Intersect) fastSingle() bool {
+	return it.source1.fastSingle() && it.source2.fastSingle()
 }
 
 func (it *Intersect) optimize(mode Mode, index []string, frac float64) (Cost, Cost, any) {

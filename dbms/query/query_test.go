@@ -531,3 +531,7 @@ func (q *TestQop) Rewind() {
 func (q *TestQop) Select(cols, vals []string) {
 	q.sel = sel{cols: cols, vals: vals}
 }
+
+func (q *TestQop) fastSingle() bool {
+	return false
+}

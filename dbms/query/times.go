@@ -146,7 +146,7 @@ func (t *Times) Select(cols, vals []string) {
 		t.source1.Select(nil, nil)
 		return
 	}
-	sel1cols, sel1vals := t.splitSelect(cols, vals)
+	sel1cols, sel1vals := t.splitSelect(cols, vals, t.fastSingle())
 	if t.conflict1 || t.conflict2 {
 		return
 	}
@@ -154,7 +154,7 @@ func (t *Times) Select(cols, vals []string) {
 }
 
 func (t *Times) Lookup(th *Thread, cols, vals []string) Row {
-	sel1cols, sel1vals := t.splitSelect(cols, vals)
+	sel1cols, sel1vals := t.splitSelect(cols, vals, t.fastSingle())
 	if t.conflict1 || t.conflict2 {
 		return nil
 	}

@@ -23,9 +23,11 @@ type joinLike struct {
 	fixed1  []Fixed
 	fixed2  []Fixed
 	Query2
-	haveFixed bool
-	conflict1 bool
-	conflict2 bool
+	haveFixed      bool
+	conflict1      bool
+	conflict2      bool
+	haveFastSingle bool
+	fastSingleVal  bool
 }
 
 type Join struct {
@@ -146,8 +148,12 @@ func (jn *Join) Keys() [][]string {
 	}
 }
 
-func (*Join) fastSingle() bool {
-	return false
+func (jn *Join) fastSingle() bool {
+	if !jn.haveFastSingle {
+		jn.fastSingleVal = jn.source1.fastSingle() && jn.source2.fastSingle()
+		jn.haveFastSingle = true
+	}
+	return jn.fastSingleVal
 }
 
 func (jn *Join) Fixed() []Fixed {
@@ -362,7 +368,7 @@ func (jn *Join) Select(cols, vals []string) {
 		jn.source1.Select(nil, nil)
 		return
 	}
-	sel1cols, sel1vals := jn.splitSelect(cols, vals)
+	sel1cols, sel1vals := jn.splitSelect(cols, vals, jn.fastSingle())
 	if jn.conflict1 { // not conflict2 because of LeftJoin
 		return
 	}
@@ -371,7 +377,7 @@ func (jn *Join) Select(cols, vals []string) {
 
 func (jn *Join) Lookup(th *Thread, cols, vals []string) Row {
 	defer jn.Select(nil, nil) // clear select
-	sel1cols, sel1vals := jn.splitSelect(cols, vals)
+	sel1cols, sel1vals := jn.splitSelect(cols, vals, jn.fastSingle())
 	if jn.conflict1 || jn.conflict2 {
 		return nil
 	}
@@ -391,7 +397,8 @@ func (jn *Join) Lookup(th *Thread, cols, vals []string) Row {
 	return JoinRows(jn.row1, row2)
 }
 
-func (jn *joinLike) splitSelect(cols, vals []string) (sel1cols, sel1vals []string) {
+func (jn *joinLike) splitSelect(cols, vals []string, fastSingle bool) (
+	sel1cols, sel1vals []string) {
 	jn.ensureFixed()
 	jn.conflict1, jn.conflict2 = false, false
 	for i, col := range cols {
@@ -409,7 +416,7 @@ func (jn *joinLike) splitSelect(cols, vals []string) (sel1cols, sel1vals []strin
 			jn.conflict2 = true
 		}
 		// extra Select cols should be fixed
-		assert.That(len(fixVals1) == 1 || len(fixVals2) == 1)
+		assert.That(fastSingle || len(fixVals1) == 1 || len(fixVals2) == 1)
 	}
 	return
 }
@@ -476,6 +483,16 @@ func (lj *LeftJoin) Keys() [][]string {
 	default:
 		panic("unknown join type")
 	}
+}
+
+func (lj *LeftJoin) fastSingle() bool {
+	if !lj.haveFastSingle {
+		lj.fastSingleVal = lj.source1.fastSingle() &&
+			(lj.joinType == one_one || lj.joinType == n_one ||
+				lj.source2.fastSingle())
+		lj.haveFastSingle = true
+	}
+	return lj.fastSingleVal
 }
 
 func (lj *LeftJoin) Fixed() []Fixed {
@@ -607,7 +624,7 @@ func (lj *LeftJoin) shouldOutput(row Row) bool {
 
 func (lj *LeftJoin) Lookup(th *Thread, cols, vals []string) Row {
 	defer lj.Rewind()
-	sel1cols, sel1vals := lj.splitSelect(cols, vals)
+	sel1cols, sel1vals := lj.splitSelect(cols, vals, lj.fastSingle())
 	if lj.conflict1 {
 		return nil
 	}

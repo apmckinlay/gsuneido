@@ -219,6 +219,10 @@ func (u *Union) optimize(mode Mode, index []string, frac float64) (Cost, Cost, a
 		lookupFixCost, lookupVarCost, lookupApp,
 		lookupRevFixCost, lookupRevVarCost, lookupRevApp)
 	// trace.Println("UNION", mode, index, frac)
+	// trace.Println("    src1 keys", u.source1.Keys(), "indexes", u.source1.Indexes(),
+	// 	"fastSingle", u.source1.fastSingle())
+	// trace.Println("    src2 keys", u.source2.Keys(), "indexes", u.source2.Indexes(),
+	// 	"fastSingle", u.source2.fastSingle())
 	// trace.Println("    merge", mergeFixCost, "+", mergeVarCost,
 	// 	"=", mergeFixCost+mergeVarCost)
 	// trace.Println("    lookup", lookupFixCost, "+", lookupVarCost,
@@ -271,7 +275,7 @@ func (*Union) optMerge(src1, src2 Query, mode Mode, frac float64) (Cost, Cost, a
 	}
 	keys1 := withoutFixed2(src1.Keys(), fixed1)
 	keys2 := withoutFixed2(src2.Keys(), fixed2)
-	// interesect using set.Equal to ignore order
+	// intersect using set.Equal to ignore order
 	keys := set.IntersectFn(keys1, keys2, set.Equal[string])
 	mergeIndexes(keys, idxs1, idxs2, opt)
 	approach := &unionApproach{keyIndex: bestKey, strategy: unionMerge,
