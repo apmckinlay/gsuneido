@@ -254,6 +254,23 @@ func TestIter(t *testing.T) {
 	}
 }
 
+func TestIterSeek(t *testing.T) {
+	b := NewSorting(z, lt)
+	for j := 2; j <= 20; j += 2 {
+		b.Add(int(j))
+	}
+	list := b.Finish()
+	less := func(x int, key []string) bool {
+		y, _ := strconv.Atoi(key[0])
+		return x < int(y)
+	}
+	it := list.Iter(less)
+	it.Seek([]string{"5"})
+	assert.This(it.Cur()).Is(6)
+	it.Seek([]string{"6"})
+	assert.This(it.Cur()).Is(6)
+}
+
 //-------------------------------------------------------------------
 
 const nitems = 4 * blockSize // number of blocks must be power of 2 for merging

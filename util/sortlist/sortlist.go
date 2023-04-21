@@ -379,7 +379,7 @@ func (it *Iter[T]) Cur() T {
 	return it.blocks[it.i/blockSize][it.i%blockSize]
 }
 
-// Seek does a binary search
+// Seek does a binary search to find the first element greater than or equal
 func (it *Iter[T]) Seek(key []string) {
 	first := 0
 	n := it.size

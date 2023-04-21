@@ -10,6 +10,7 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
+	"github.com/apmckinlay/gsuneido/util/generic/ord"
 	"github.com/apmckinlay/gsuneido/util/sortlist"
 	"github.com/apmckinlay/gsuneido/util/str"
 	"golang.org/x/exp/slices"
@@ -32,7 +33,7 @@ type TempIndex struct {
 	rewound bool
 }
 
-var selMin = []string{ixkey.Min}
+var selMin []string
 var selMax = []string{ixkey.Max}
 
 func NewTempIndex(src Query, order []string, tran QueryTran) *TempIndex {
@@ -253,11 +254,15 @@ func (ti *TempIndex) less(th *Thread, xrow, yrow Row) bool {
 
 // less2 is used for Seek
 func (ti *TempIndex) less2(th *Thread, row Row, key []string) bool {
-	for i, col := range ti.order {
+	n := ord.Max(len(ti.order), len(key))
+	for i := 0; i < n; i++ {
 		if i >= len(key) {
 			return false
 		}
-		x := row.GetRawVal(ti.hdr, col, th, ti.st)
+		if i >= len(ti.order) {
+			return true
+		}
+		x := row.GetRawVal(ti.hdr, ti.order[i], th, ti.st)
 		y := key[i]
 		if x != y {
 			return x < y
