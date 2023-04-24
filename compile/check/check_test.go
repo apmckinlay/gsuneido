@@ -86,6 +86,8 @@ func TestCheckResults(t *testing.T) {
 		"ERROR: used but not initialized: a @18")
 	test("function () { a }",
 		"ERROR: used but not initialized: a @14")
+	test("function (f) { f(:a) }",
+		"ERROR: used but not initialized: a @18")
 
 	// if and ?:
 	test("function (a) { if a { b() } }",

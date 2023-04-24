@@ -414,12 +414,13 @@ func (p *Parser) argumentList(closing tok.Token) []ast.Arg {
 		pos = p.Pos
 		endPos := p.endPos
 		if p.MatchIf(tok.Colon) { // :name shortcut
+			pos = p.Pos
 			if !p.Token.IsIdent() || !ascii.IsLower(p.Text[0]) {
 				p.Error("expecting local variable name")
 			}
 			handlePending(p.Constant(True), endPos)
 			name := p.MatchIdent()
-			named(SuStr(name), &ast.Ident{Name: name}, pos, p.endPos)
+			named(SuStr(name), &ast.Ident{Name: name, Pos: pos}, pos, p.endPos)
 		} else {
 			expr := p.Expression() // could be name or value
 			if name := p.argname(expr); name != nil && p.MatchIf(tok.Colon) {
