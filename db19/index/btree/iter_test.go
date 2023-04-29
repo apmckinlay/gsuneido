@@ -41,7 +41,7 @@ func TestIterator(*testing.T) {
 	GetLeafKey = func(_ *stor.Stor, _ *ixkey.Spec, i uint64) string { return data[i-1] }
 	defer func(mns int) { MaxNodeSize = mns }(MaxNodeSize)
 	MaxNodeSize = 64
-	randKey := str.UniqueRandomOf(3, 6, "abcde")
+	randKey := str.UniqueRandomOf(4, 6, "abcde")
 	for i := 0; i < n; i++ {
 		data[i] = randKey()
 	}
