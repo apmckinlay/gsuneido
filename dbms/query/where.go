@@ -608,7 +608,7 @@ func (*Where) typeToRange(expr ast.Expr, cols []string, cmps []cmpExpr) []cmpExp
 						from = string(rune(runtime.PackDate))
 						to = string(rune(runtime.PackDate + 1))
 					default:
-						return nil
+						return cmps
 					}
 					return append(cmps,
 						cmpExpr{

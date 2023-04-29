@@ -118,6 +118,11 @@ func (t testTran) GetStore() *stor.Stor {
 }
 
 func (t testTran) RangeFrac(table string, iIndex int, org, end string) float64 {
+	if len(end) == 1 && end[0] < 10 {
+		// Number?, String?, Date? ranges
+		return .1
+	}
+
 	schema := t.GetSchema(table)
 	ix := schema.Indexes[iIndex]
 	decode := len(ix.Columns) > 1 || ix.Mode != 'k'
