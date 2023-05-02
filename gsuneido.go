@@ -352,6 +352,10 @@ func repl() {
 	showOptions()
 	prompt("Press Enter twice (i.e. blank line) to execute, q to quit")
 	r := bufio.NewReader(os.Stdin)
+
+	// array of string to hold repl history
+	repl_history := []string{}
+
 	for {
 		prompt("~~~")
 		src := ""
@@ -366,6 +370,7 @@ func repl() {
 			}
 			src += line + "\n"
 		}
+		repl_history = append(repl_history, src)
 		eval(src)
 	}
 }
