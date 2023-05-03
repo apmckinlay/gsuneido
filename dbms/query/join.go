@@ -28,6 +28,8 @@ type joinLike struct {
 	conflict2      bool
 	haveFastSingle bool
 	fastSingleVal  bool
+	sel2cols       []string
+	sel2vals       []string
 }
 
 type Join struct {
@@ -347,7 +349,9 @@ func (jn *Join) nextRow1(th *Thread, dir Dir) bool {
 	if jn.row1 == nil {
 		return false
 	}
-	jn.source2.Select(jn.by, jn.projectRow(th, jn.row1))
+	sel2cols := append(jn.sel2cols, jn.by...)
+	sel2vals := append(jn.sel2vals, jn.projectRow(th, jn.row1)...)
+	jn.source2.Select(sel2cols, sel2vals)
 	return true
 }
 
@@ -362,13 +366,19 @@ func (jn *Join) projectRow(th *Thread, row Row) []string {
 // Join Select is also used by LeftJoin
 
 func (jn *Join) Select(cols, vals []string) {
+	// fmt.Println(jn.stringOp(), "Select", cols, unpack(vals))
 	jn.Rewind()
 	if cols == nil { // clear
 		jn.conflict1, jn.conflict2 = false, false
 		jn.source1.Select(nil, nil)
+		jn.sel2cols, jn.sel2vals = nil, nil
 		return
 	}
-	sel1cols, sel1vals := jn.splitSelect(cols, vals, jn.fastSingle())
+	if jn.fastSingle() {
+		jn.sel2cols, jn.sel2vals = jn.selectByCols(cols, vals)
+		return
+	}
+	sel1cols, sel1vals := jn.splitSelect(cols, vals)
 	if jn.conflict1 { // not conflict2 because of LeftJoin
 		return
 	}
@@ -377,7 +387,11 @@ func (jn *Join) Select(cols, vals []string) {
 
 func (jn *Join) Lookup(th *Thread, cols, vals []string) Row {
 	defer jn.Select(nil, nil) // clear select
-	sel1cols, sel1vals := jn.splitSelect(cols, vals, jn.fastSingle())
+	if jn.fastSingle() {
+		jn.sel2cols, jn.sel2vals = jn.selectByCols(cols, vals)
+		return jn.Get(th, Next)
+	}
+	sel1cols, sel1vals := jn.splitSelect(cols, vals)
 	if jn.conflict1 || jn.conflict2 {
 		return nil
 	}
@@ -397,7 +411,7 @@ func (jn *Join) Lookup(th *Thread, cols, vals []string) Row {
 	return JoinRows(jn.row1, row2)
 }
 
-func (jn *joinLike) splitSelect(cols, vals []string, fastSingle bool) (
+func (jn *joinLike) splitSelect(cols, vals []string) (
 	sel1cols, sel1vals []string) {
 	jn.ensureFixed()
 	jn.conflict1, jn.conflict2 = false, false
@@ -416,7 +430,7 @@ func (jn *joinLike) splitSelect(cols, vals []string, fastSingle bool) (
 			jn.conflict2 = true
 		}
 		// extra Select cols should be fixed
-		assert.That(fastSingle || len(fixVals1) == 1 || len(fixVals2) == 1)
+		assert.That(len(fixVals1) == 1 || len(fixVals2) == 1)
 	}
 	return
 }
@@ -624,7 +638,11 @@ func (lj *LeftJoin) shouldOutput(row Row) bool {
 
 func (lj *LeftJoin) Lookup(th *Thread, cols, vals []string) Row {
 	defer lj.Rewind()
-	sel1cols, sel1vals := lj.splitSelect(cols, vals, lj.fastSingle())
+	if lj.fastSingle() {
+		lj.sel2cols, lj.sel2vals = lj.selectByCols(cols, vals)
+		return lj.Get(th, Next)
+	}
+	sel1cols, sel1vals := lj.splitSelect(cols, vals)
 	if lj.conflict1 {
 		return nil
 	}

@@ -549,6 +549,39 @@ func (q2 *Query2) Source2() Query {
 	return q2.source2
 }
 
+func (q2 *Query2) selectByCols(cols, vals []string) ([]string, []string) {
+	columns1 := q2.source1.Columns()
+	columns2 := q2.source2.Columns()
+	var cols1, vals1, cols2, vals2 []string
+	var done1, done2 bool
+	if set.Subset(columns1, cols) {
+		cols1, vals1, done1 = cols, vals, true
+	}
+	if set.Subset(columns2, cols) {
+		cols2, vals2, done2 = cols, vals, true
+	}
+	for i, col := range cols {
+		used := false
+		if slices.Contains(columns1, col) {
+			used = true
+			if !done1 {
+				cols1 = append(cols1, col)
+				vals1 = append(vals1, vals[i])
+			}
+		}
+		if slices.Contains(columns2, col) {
+			used = true
+			if !done2 {
+				cols2 = append(cols2, col)
+				vals2 = append(vals2, vals[i])
+			}
+		}
+		assert.That(used)
+	}
+	q2.source1.Select(cols1, vals1)
+	return slices.Clip(cols2), slices.Clip(vals2)
+}
+
 //-------------------------------------------------------------------
 
 // paren is a helper for Query String methods

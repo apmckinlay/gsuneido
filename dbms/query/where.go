@@ -1231,6 +1231,7 @@ func (w *Where) Rewind() {
 }
 
 func (w *Where) Select(cols, vals []string) {
+	// fmt.Println("Where", w.tbl.name, "Select", cols, unpack(vals))
 	w.Rewind()
 	w.selOrg, w.selEnd = "", ""
 	w.selSet = false
