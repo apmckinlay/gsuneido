@@ -244,6 +244,7 @@ func (e *Extend) extendRow(th *Thread, row Row) Row {
 }
 
 func (e *Extend) Select(cols, vals []string) {
+	// fmt.Println("Extend Select", cols, unpack(vals))
 	e.conflict = false
 	e.selCols, e.selVals = nil, nil
 	if cols == nil && vals == nil {
@@ -292,5 +293,7 @@ func (e *Extend) splitSelect(cols, vals []string) ([]string, []string) {
 		}
 	}
 	e.selCols, e.selVals = ecols, evals
+	// fmt.Println("Extend splitSelect",
+	// 	ecols, unpack(evals), srccols, unpack(srcvals))
 	return srccols, srcvals
 }

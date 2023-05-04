@@ -30,7 +30,7 @@ func TestQuery(t *testing.T) {
 		return nil
 	}
 	tran := db.NewReadTran()
-	s := `(cus join ((ivc join (((aln union (aln extend c3 = a1)) union bln) where bk is "16")) union (ivc join aln)))`
+	s := `((ivc where ik is "80") leftjoin (cus EXTEND b2 = c1)) join bln`
 	q := ParseQuery(s, tran, nil)
 	// trace.QueryOpt.Set()
 	// trace.JoinOpt.Set()

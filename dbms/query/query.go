@@ -27,9 +27,10 @@
 					Intersect
 					Minus
 			joinLike
-				Join
-					LeftJoin
 				Times
+				joinBase
+					Join
+					LeftJoin
 */
 package query
 

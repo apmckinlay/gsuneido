@@ -57,10 +57,6 @@ func (t *Times) Fixed() []Fixed {
 	return fixed
 }
 
-func (t *Times) rowSize() int {
-	return t.source1.rowSize() + t.source2.rowSize()
-}
-
 func (t *Times) Transform() Query {
 	src1 := t.source1.Transform()
 	if _, ok := src1.(*Nothing); ok {
