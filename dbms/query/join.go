@@ -678,7 +678,7 @@ func (lj *LeftJoin) Select(cols, vals []string) {
 }
 
 func (lj *LeftJoin) Lookup(th *Thread, cols, vals []string) Row {
-	defer lj.Rewind()
+	defer lj.Select(nil, nil) // clear select
 	if lj.fastSingle() {
 		lj.sel2cols, lj.sel2vals = lj.selectByCols(cols, vals)
 		return lj.Get(th, Next)
@@ -689,7 +689,6 @@ func (lj *LeftJoin) Lookup(th *Thread, cols, vals []string) Row {
 	}
 	if lj.lookupFallback(sel1cols) {
 		lj.Select(cols, vals)
-		defer lj.Select(nil, nil) // clear select
 		return lj.Get(th, Next)
 	}
 	row1 := lj.source1.Lookup(th, sel1cols, sel1vals)
@@ -700,7 +699,6 @@ func (lj *LeftJoin) Lookup(th *Thread, cols, vals []string) Row {
 		return JoinRows(row1, lj.empty2)
 	}
 	lj.source2.Select(lj.by, lj.projectRow(th, row1))
-	defer lj.source2.Select(nil, nil) // clear select
 	row2 := lj.source2.Get(th, Next)
 	if row2 == nil {
 		return JoinRows(row1, lj.empty2)
