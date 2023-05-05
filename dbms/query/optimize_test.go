@@ -35,6 +35,28 @@ func TestOptimize(t *testing.T) {
 	test("hist where date is 5",
 		"hist^(date) WHERE date is 5") // not WHERE*1
 
+	test("supplier",
+		"supplier^(supplier)")
+	test("supplier where city is 5",
+		"supplier^(city) WHERE city is 5")
+	test("supplier where supplier is 5",
+		"supplier^(supplier) WHERE*1 supplier is 5")
+	test("supplier where name is 5",
+		"supplier^(supplier) WHERE name is 5")
+	test("supplier where name is 5 and city is 5",
+		"supplier^(city) WHERE name is 5 and city is 5")
+	test("supplier where supplier is 3 and city is 5",
+		"supplier^(supplier) WHERE*1 supplier is 3 and city is 5")
+	test("supplier where String?(city)",
+		"supplier^(city) WHERE String?(city)")
+
+	test("supplier where Func(name)",
+		"supplier^(supplier) WHERE Func(name)")
+	test("supplier where city is 5 and Func(name)",
+		"supplier^(city) WHERE city is 5 and Func(name)") // previous bug
+	test("supplier where Func(name) and city is 5",
+		"supplier^(city) WHERE Func(name) and city is 5")
+
 	test("table rename b to bb sort c",
 		"table^(a) TEMPINDEX(c) RENAME b to bb")
 

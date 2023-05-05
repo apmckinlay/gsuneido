@@ -144,9 +144,14 @@ func (t *Times) Select(cols, vals []string) {
 	if cols == nil { // clear
 		t.conflict1, t.conflict2 = false, false
 		t.source1.Select(nil, nil)
+		t.source2.Select(nil, nil)
 		return
 	}
-	sel1cols, sel1vals := t.splitSelect(cols, vals, t.fastSingle())
+	if t.fastSingle() {
+		t.source2.Select(t.selectByCols(cols, vals))
+		return
+	}
+	sel1cols, sel1vals := t.splitSelect(cols, vals)
 	if t.conflict1 || t.conflict2 {
 		return
 	}
@@ -154,11 +159,15 @@ func (t *Times) Select(cols, vals []string) {
 }
 
 func (t *Times) Lookup(th *Thread, cols, vals []string) Row {
-	sel1cols, sel1vals := t.splitSelect(cols, vals, t.fastSingle())
-	if t.conflict1 || t.conflict2 {
-		return nil
+	if t.fastSingle() {
+		t.source2.Select(t.selectByCols(cols, vals))
+	} else {
+		sel1cols, sel1vals := t.splitSelect(cols, vals)
+		if t.conflict1 || t.conflict2 {
+			return nil
+		}
+		t.source1.Select(sel1cols, sel1vals)
 	}
-	t.source1.Select(sel1cols, sel1vals)
 	row := t.Get(th, Next)
 	t.Select(nil, nil) // clear select
 	return row

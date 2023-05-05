@@ -608,7 +608,7 @@ func (*Where) typeToRange(expr ast.Expr, cols []string, cmps []cmpExpr) []cmpExp
 						from = string(rune(runtime.PackDate))
 						to = string(rune(runtime.PackDate + 1))
 					default:
-						return nil
+						return cmps
 					}
 					return append(cmps,
 						cmpExpr{
@@ -1231,6 +1231,7 @@ func (w *Where) Rewind() {
 }
 
 func (w *Where) Select(cols, vals []string) {
+	// fmt.Println("Where", w.tbl.name, "Select", cols, unpack(vals))
 	w.Rewind()
 	w.selOrg, w.selEnd = "", ""
 	w.selSet = false
