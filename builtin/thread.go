@@ -21,7 +21,8 @@ type suThreadGlobal struct {
 func init() {
 	Global.Builtin("Thread", &suThreadGlobal{
 		SuBuiltin{Fn: threadCallClass,
-			BuiltinParams: BuiltinParams{ParamSpec: params("(block)")}}})
+			BuiltinParams: BuiltinParams{
+				ParamSpec: params("(block, name = false)")}}})
 }
 
 type threadList struct {
@@ -56,6 +57,7 @@ func threadCallClass(th *Thread, args []Value) Value {
 	fn := args[0]
 	fn.SetConcurrent()
 	t2 := NewThread(th)
+	thread_Name(t2, args[1:])
 	threads.add(t2)
 	go func() {
 		defer func() {
