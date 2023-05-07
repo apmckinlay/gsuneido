@@ -20,7 +20,6 @@ import (
 
 type Summarize struct {
 	t      QueryTran
-	srcHdr *Header
 	get    func(th *Thread, su *Summarize, dir Dir) Row
 	st     *SuTran
 	by     []string
@@ -75,6 +74,7 @@ func NewSummarize(src Query, by, cols, ops, ons []string) *Summarize {
 	sort.Stable(su)
 	// if single min or max, and on is a key, then we can give the whole row
 	su.wholeRow = su.minmax1() && slc.ContainsFn(src.Keys(), ons, set.Equal[string])
+	su.header = su.getHeader()
 	return su
 }
 
@@ -145,13 +145,6 @@ func (su *Summarize) stringOp() string {
 		}
 	}
 	return s
-}
-
-func (su *Summarize) Columns() []string {
-	if su.wholeRow {
-		return set.Union(su.source.Columns(), su.cols)
-	}
-	return set.Union(su.by, su.cols)
 }
 
 func (su *Summarize) Keys() [][]string {
@@ -303,19 +296,26 @@ func (su *Summarize) setApproach(_ []string, frac float64, approach any, tran Qu
 	}
 	su.source = SetApproach(su.source, su.index, su.frac, tran)
 	su.rewound = true
-	su.srcHdr = su.source.Header()
+	su.header = su.getHeader()
 }
 
 // execution --------------------------------------------------------
 
-func (su *Summarize) Header() *Header {
+func (su *Summarize) getHeader() *Header {
 	if su.wholeRow {
 		flds := su.source.Header().Fields
 		flds = slc.With(flds, su.cols)
-		return NewHeader(flds, su.Columns())
+		return NewHeader(flds, su.getColumns())
 	}
 	flds := append(su.by, su.cols...)
 	return NewHeader([][]string{flds}, flds)
+}
+
+func (su *Summarize) getColumns() []string {
+	if su.wholeRow {
+		return set.Union(su.source.Columns(), su.cols)
+	}
+	return set.Union(su.by, su.cols)
 }
 
 func (su *Summarize) Rewind() {
@@ -352,7 +352,7 @@ func getIdx(th *Thread, su *Summarize, _ Dir) Row {
 		return nil
 	}
 	var rb RecordBuilder
-	rb.AddRaw(row.GetRawVal(su.srcHdr, su.ons[0], th, su.st))
+	rb.AddRaw(row.GetRawVal(su.source.Header(), su.ons[0], th, su.st))
 	rec := rb.Build()
 	if su.wholeRow {
 		return append(row, DbRec{Record: rec})
@@ -393,7 +393,7 @@ func (t *sumMapT) getMap(th *Thread, su *Summarize, dir Dir) Row {
 	row := t.mapList[t.mapPos].row
 	var rb RecordBuilder
 	for _, col := range su.by {
-		rb.AddRaw(row.GetRawVal(su.srcHdr, col, th, su.st))
+		rb.AddRaw(row.GetRawVal(su.source.Header(), col, th, su.st))
 	}
 	ops := t.mapList[t.mapPos].ops
 	for i := range ops {
@@ -496,12 +496,12 @@ func (su *Summarize) addToSums(sums []sumOp, row Row, th *Thread, st *SuTran) {
 				sums[i].add("", nil, row)
 			case "list", "min", "max":
 				if raw == "*uninit*" {
-					raw = row.GetRawVal(su.srcHdr, col, th, st)
+					raw = row.GetRawVal(su.source.Header(), col, th, st)
 				}
 				sums[i].add(raw, nil, row)
 			default: // total, average
 				if val == nil {
-					val = row.GetVal(su.srcHdr, col, th, st)
+					val = row.GetVal(su.source.Header(), col, th, st)
 				}
 				sums[i].add("", val, row)
 			}
@@ -511,8 +511,8 @@ func (su *Summarize) addToSums(sums []sumOp, row Row, th *Thread, st *SuTran) {
 
 func (su *Summarize) sameBy(th *Thread, st *SuTran, row1, row2 Row) bool {
 	for _, f := range su.by {
-		if row1.GetRawVal(su.srcHdr, f, th, st) !=
-			row2.GetRawVal(su.srcHdr, f, th, st) {
+		if row1.GetRawVal(su.source.Header(), f, th, st) !=
+			row2.GetRawVal(su.source.Header(), f, th, st) {
 			return false
 		}
 	}
@@ -523,7 +523,7 @@ func (su *Summarize) seqRow(th *Thread, curRow Row, sums []sumOp) Row {
 	var rb RecordBuilder
 	if !su.wholeRow {
 		for _, fld := range su.by {
-			rb.AddRaw(curRow.GetRawVal(su.srcHdr, fld, th, su.st))
+			rb.AddRaw(curRow.GetRawVal(su.source.Header(), fld, th, su.st))
 		}
 	}
 	for _, sum := range sums {

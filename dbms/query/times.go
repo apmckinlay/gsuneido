@@ -22,9 +22,7 @@ func NewTimes(src1, src2 Query) *Times {
 		panic("times: common columns not allowed: " + str.Join(", ",
 			set.Intersect(src1.Columns(), src2.Columns())))
 	}
-	t := Times{rewound: true}
-	t.source1, t.source2 = src1, src2
-	return &t
+	return &Times{joinLike: newJoinLike(src1, src2), rewound: true}
 }
 
 func (t *Times) String() string {
@@ -33,10 +31,6 @@ func (t *Times) String() string {
 
 func (t *Times) stringOp() string {
 	return "TIMES"
-}
-
-func (t *Times) Columns() []string {
-	return set.Union(t.source1.Columns(), t.source2.Columns())
 }
 
 func (t *Times) Keys() [][]string {
@@ -96,6 +90,7 @@ func (t *Times) setApproach(index []string, frac float64, approach any, tran Que
 	t.saIndex = index
 	nrows1, _ := t.source1.Nrows()
 	t.source2 = SetApproach(t.source2, nil, frac*float64(nrows1), tran)
+	t.header = t.getHeader()
 }
 
 func (t *Times) Nrows() (int, int) {

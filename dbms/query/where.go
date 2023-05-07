@@ -32,7 +32,6 @@ type Where struct {
 	tbl *Table
 	// idxSel is for the chosen index
 	idxSel *idxSel
-	hdr    *runtime.Header
 	expr   *ast.Nary // And
 	// curPtrng is idxSel.ptrngs[idxSelPos] adjusted by Select (selOrg, selEnd)
 	curPtrng pointRange
@@ -84,6 +83,7 @@ func NewWhere(src Query, expr ast.Expr, t QueryTran) *Where {
 		expr = &ast.Nary{Tok: tok.And, Exprs: []ast.Expr{expr}}
 	}
 	w := &Where{Query1: Query1{source: src}, expr: expr.(*ast.Nary), t: t}
+	w.header = w.source.Header()
 	w.calcFixed()
 	if !w.conflict {
 		cmps := w.extractCompares()
@@ -698,8 +698,8 @@ func (w *Where) setApproach(index []string, frac float64, app any, tran QueryTra
 	} else { // filter
 		w.source = SetApproach(w.source, index, frac, tran)
 	}
-	w.hdr = w.source.Header()
-	w.ctx.Hdr = w.hdr
+	w.header = w.source.Header()
+	w.ctx.Hdr = w.header
 }
 
 // cmpExpr is <field> <op> <constant> or <field> in (<constants>)
@@ -1160,7 +1160,7 @@ func (w *Where) filter(th *runtime.Thread, row runtime.Row) bool {
 		return true
 	}
 	if w.selectCols != nil &&
-		!singletonFilter(w.hdr, row, w.selectCols, w.selectVals) {
+		!singletonFilter(w.header, row, w.selectCols, w.selectVals) {
 		return false
 	}
 	if w.ctx.Tran == nil {
@@ -1307,7 +1307,7 @@ func (w *Where) Lookup(th *runtime.Thread, cols, vals []string) runtime.Row {
 		// can't use source.Lookup because cols may not match source index
 		w.Rewind()
 		row := w.Get(th, runtime.Next)
-		if row == nil || !singletonFilter(w.hdr, row, cols, vals) {
+		if row == nil || !singletonFilter(w.header, row, cols, vals) {
 			return nil
 		}
 		return row

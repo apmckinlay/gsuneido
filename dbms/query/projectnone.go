@@ -81,8 +81,10 @@ func (*ProjectNone) Lookup(*runtime.Thread, []string, []string) runtime.Row {
 	return nil
 }
 
+var pjHeader = runtime.SimpleHeader([]string{})
+
 func (*ProjectNone) Header() *runtime.Header {
-	return runtime.SimpleHeader([]string{})
+	return pjHeader
 }
 
 func (*ProjectNone) Output(*runtime.Thread, runtime.Record) {

@@ -469,19 +469,11 @@ func BenchmarkOptMod(b *testing.B) {
 func TestJoin_splitSelect(t *testing.T) {
 	joinRev = impossible
 	defer func() { joinRev = 0 }()
-	q1 := &TestQop{
-		columns: []string{"a", "b", "c"},
-		indexes: [][]string{{"a"}},
-		keys:    [][]string{{"a"}},
-	}
-	q2 := &TestQop{
-		columns: []string{"c", "d", "e"},
-		indexes: [][]string{{"c"}},
-		keys:    [][]string{{"c"}},
-		fixed: []Fixed{
-			{col: "c", values: []string{"1"}},
-			{col: "e", values: []string{"2", ""}},
-		},
+	q1 := newTestQop([]string{"a", "b", "c"}, [][]string{{"a"}})
+	q2 := newTestQop([]string{"c", "d", "e"}, [][]string{{"c"}})
+	q2.fixed = []Fixed{
+		{col: "c", values: []string{"1"}},
+		{col: "e", values: []string{"2", ""}},
 	}
 	jn := NewJoin(q1, q2, nil)
 	assert.This(jn.by).Is([]string{"c"})
@@ -496,12 +488,20 @@ func TestJoin_splitSelect(t *testing.T) {
 }
 
 type TestQop struct {
-	Query      // satisfy Query interface
-	columns    []string
-	fixed      []Fixed
-	indexes    [][]string
-	keys       [][]string
+	Query // satisfy Query interface
+	queryBase
+	fixed   []Fixed
+	indexes [][]string
+	keys    [][]string
 	sel
+}
+
+func newTestQop(cols []string, keys [][]string) *TestQop {
+	q := &TestQop{}
+	q.header = rt.SimpleHeader(cols)
+	q.indexes = keys
+	q.keys = keys
+	return q
 }
 
 type sel struct {
@@ -509,8 +509,14 @@ type sel struct {
 	vals []string
 }
 
+// Columns is ambiguously embedded twice so we have to define it
 func (q *TestQop) Columns() []string {
-	return q.columns
+	return q.header.Columns
+}
+
+// Header is ambiguously embedded twice so we have to define it
+func (q *TestQop) Header() *rt.Header {
+	return q.header
 }
 
 func (q *TestQop) Fixed() []Fixed {

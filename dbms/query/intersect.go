@@ -22,10 +22,18 @@ type intersectApproach struct {
 }
 
 func NewIntersect(src1, src2 Query) *Intersect {
-	var it Intersect
-	it.source1, it.source2 = src1, src2
-	it.init(it.calcFixed)
+	it := Intersect{}
+	it.Compatible = *newCompatible(src1, src2)
+	it.fixed = it.calcFixed()
+	it.header = it.getHeader()
+	it.Header()
 	return &it
+}
+
+func (it *Intersect) getHeader() *Header {
+	hdr := it.source1.Header()
+	cols := set.Intersect(it.source1.Columns(), it.source2.Columns())
+	return NewHeader(hdr.Fields, cols)
 }
 
 func (it *Intersect) String() string {
@@ -36,9 +44,9 @@ func (it *Intersect) stringOp() string {
 	return it.Compatible.stringOp("INTERSECT", "")
 }
 
-func (it *Intersect) Columns() []string {
-	return set.Intersect(it.source1.Columns(), it.source2.Columns())
-}
+// func (it *Intersect) Columns() []string {
+// 	return set.Intersect(it.source1.Columns(), it.source2.Columns())
+// }
 
 func (it *Intersect) Keys() [][]string {
 	k := set.IntersectFn(it.source1.Keys(), it.source2.Keys(), set.Equal[string])
@@ -48,8 +56,8 @@ func (it *Intersect) Keys() [][]string {
 	return k
 }
 
-func (it *Intersect) calcFixed(fixed1, fixed2 []Fixed) []Fixed {
-	fixed, none := FixedIntersect(fixed1, fixed2)
+func (it *Intersect) calcFixed() []Fixed {
+	fixed, none := FixedIntersect(it.fixed1, it.fixed2)
 	if none {
 		it.conflict = true
 	}
@@ -126,11 +134,7 @@ func (it *Intersect) setApproach(index []string, frac float64, approach any,
 	}
 	it.source1 = SetApproach(it.source1, index, frac, tran)
 	it.source2 = SetApproach(it.source2, it.keyIndex, 0, tran)
-}
-
-func (it *Intersect) Header() *Header {
-	hdr := it.source1.Header()
-	return NewHeader(hdr.Fields, it.Columns())
+	it.header = it.getHeader()
 }
 
 func (it *Intersect) Get(th *Thread, dir Dir) Row {

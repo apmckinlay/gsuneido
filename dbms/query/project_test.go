@@ -35,7 +35,10 @@ func TestGrouped(t *testing.T) {
 }
 
 func TestRemove(t *testing.T) {
-	tbl := &Table{hdr: SimpleHeader([]string{"a", "a_deps", "b", "b_deps", "c", "c_deps", "d", "d_deps", "x_lower!"})}
+	tbl := &Table{}
+	cols := []string{"a", "a_deps", "b", "b_deps", "c", "c_deps",
+		"d", "d_deps", "x_lower!"}
+	tbl.header = SimpleHeader(cols)
 	proj := NewRemove(tbl, []string{"a", "c"})
 	assert.T(t).This(proj.columns).Is([]string{"b", "b_deps", "d", "d_deps"})
 }

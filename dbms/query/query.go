@@ -156,6 +156,23 @@ type Query interface {
 	fastSingle() bool
 }
 
+// queryBase is embedded by almost all Query types
+type queryBase struct {
+	// header must be set by constructors and setApproach.
+	// setApproach is necessary because the sources may get reversed
+	// which affects the order of Fields
+	header *runtime.Header
+	cache
+}
+
+func (q *queryBase) Columns() []string {
+	return q.header.Columns
+}
+
+func (q *queryBase) Header() *runtime.Header {
+	return q.header
+}
+
 // Mode is the transaction context - cursor, read, or update.
 // It affects the use of temporary indexes.
 type Mode int
@@ -406,11 +423,7 @@ func SetApproach(q Query, index []string, frac float64, tran QueryTran) Query {
 
 type Query1 struct {
 	source Query
-	cache
-}
-
-func (q1 *Query1) Columns() []string {
-	return q1.source.Columns()
+	queryBase
 }
 
 func (q1 *Query1) Keys() [][]string {
@@ -468,10 +481,6 @@ func (*Query1) Lookup(*runtime.Thread, []string, []string) runtime.Row {
 	panic("Lookup not implemented")
 }
 
-func (q1 *Query1) Header() *runtime.Header {
-	return q1.source.Header()
-}
-
 func (q1 *Query1) Output(th *runtime.Thread, rec runtime.Record) {
 	q1.source.Output(th, rec)
 }
@@ -494,7 +503,7 @@ func (q1 *Query1) Source() Query {
 type Query2 struct {
 	source1 Query
 	source2 Query
-	cache
+	queryBase
 }
 
 func (q2 *Query2) String2(op string) string {
@@ -504,10 +513,6 @@ func (q2 *Query2) String2(op string) string {
 func (q2 *Query2) SetTran(t QueryTran) {
 	q2.source1.SetTran(t)
 	q2.source2.SetTran(t)
-}
-
-func (q2 *Query2) Header() *runtime.Header {
-	return runtime.JoinHeaders(q2.source1.Header(), q2.source2.Header())
 }
 
 func (q2 *Query2) Updateable() string {

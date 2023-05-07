@@ -39,7 +39,6 @@ func NewTable(t QueryTran, name string) Query {
 
 type Table struct {
 	tran    QueryTran
-	hdr     *runtime.Header
 	iter    *index.OverIter
 	info    *meta.Info
 	schema  *Schema
@@ -51,7 +50,7 @@ type Table struct {
 	indexes [][]string
 	selcols []string
 	selvals []string
-	cache
+	queryBase
 	iIndex      int
 	singleton   bool
 	indexEncode bool
@@ -85,7 +84,7 @@ func (tbl *Table) SetTran(t QueryTran) {
 	for _, col := range tbl.schema.Derived {
 		cols = append(cols, str.UnCapitalize(col))
 	}
-	tbl.hdr = runtime.NewHeader([][]string{tbl.schema.Columns}, cols)
+	tbl.header = runtime.NewHeader([][]string{tbl.schema.Columns}, cols)
 
 	idxs := make([][]string, 0, len(tbl.schema.Indexes))
 	keys := make([][]string, 0, 1)
@@ -100,10 +99,6 @@ func (tbl *Table) SetTran(t QueryTran) {
 	}
 	tbl.indexes = idxs
 	tbl.keys = keys
-}
-
-func (tbl *Table) Columns() []string {
-	return tbl.hdr.Columns
 }
 
 func (tbl *Table) Indexes() [][]string {
@@ -214,7 +209,7 @@ func (tbl *Table) lookupCost() Cost {
 
 func (tbl *Table) Lookup(_ *runtime.Thread, cols, vals []string) runtime.Row {
 	assert.That(tbl.hasKey(cols))
-	assert.That(!selConflict(tbl.hdr.Columns, cols, vals))
+	assert.That(!selConflict(tbl.header.Columns, cols, vals))
 	key := selOrg(tbl.indexEncode, tbl.index, cols, vals, true)
 	return tbl.lookup(key)
 }
@@ -234,10 +229,6 @@ func (tbl *Table) lookup(key string) runtime.Row {
 		return nil
 	}
 	return runtime.Row{*rec}
-}
-
-func (tbl *Table) Header() *runtime.Header {
-	return tbl.hdr
 }
 
 func (tbl *Table) Output(th *runtime.Thread, rec runtime.Record) {
@@ -263,7 +254,7 @@ func (tbl *Table) Get(_ *runtime.Thread, dir runtime.Dir) runtime.Row {
 	_, off := tbl.iter.Cur()
 	rec := tbl.tran.GetRecord(off)
 	row := runtime.Row{runtime.DbRec{Record: rec, Off: off}}
-	if tbl.singleton && !singletonFilter(tbl.hdr, row, tbl.selcols, tbl.selvals) {
+	if tbl.singleton && !singletonFilter(tbl.header, row, tbl.selcols, tbl.selvals) {
 		return nil
 	}
 	return row
@@ -279,7 +270,7 @@ func (tbl *Table) Select(cols, vals []string) {
 		tbl.ensureIter().Range(iterator.All)
 		return
 	}
-	assert.That(!selConflict(tbl.hdr.Columns, cols, vals))
+	assert.That(!selConflict(tbl.header.Columns, cols, vals))
 	org, end := selKeys(tbl.indexEncode, tbl.index, cols, vals)
 	tbl.SelectRaw(org, end)
 }

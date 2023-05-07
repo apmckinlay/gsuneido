@@ -26,18 +26,17 @@ import (
 
 // joinLike is common stuff for Join, LeftJoin, and Times
 type joinLike struct {
-	hdr1    *Header
-	saIndex []string
-	fixed1  []Fixed
-	fixed2  []Fixed
+	saIndex  []string
+	fixed1   []Fixed
+	fixed2   []Fixed
+	sel2cols []string
+	sel2vals []string
 	Query2
 	haveFixed      bool
 	conflict1      bool
 	conflict2      bool
 	haveFastSingle bool
 	fastSingleVal  bool
-	sel2cols       []string
-	sel2vals       []string
 }
 
 // joinBase is common stuff for Join and LeftJoin
@@ -107,9 +106,8 @@ func newJoinBase(src1, src2 Query, by []string) joinBase {
 	} else if !set.Equal(by, b) {
 		panic("join: by does not match common columns")
 	}
-	jb := joinBase{}
+	jb := joinBase{joinLike: newJoinLike(src1, src2)}
 	jb.by = by
-	jb.source1, jb.source2 = src1, src2
 	k1 := containsKey(by, src1.Keys())
 	k2 := containsKey(by, src2.Keys())
 	if k1 && k2 {
@@ -122,6 +120,13 @@ func newJoinBase(src1, src2 Query, by []string) joinBase {
 		jb.joinType = n_n
 	}
 	return jb
+}
+
+func newJoinLike(src1, src2 Query) joinLike {
+	jl := joinLike{}
+	jl.source1, jl.source2 = src1, src2
+	jl.header = jl.getHeader()
+	return jl
 }
 
 func (jn *Join) String() string {
@@ -143,9 +148,13 @@ func (jb *joinBase) SetTran(t QueryTran) {
 	jb.st = MakeSuTran(t)
 }
 
-func (jb *joinBase) Columns() []string {
-	return set.Union(jb.source1.Columns(), jb.source2.Columns())
+func (jl *joinLike) getHeader() *Header {
+	return JoinHeaders(jl.source1.Header(), jl.source2.Header())
 }
+
+// func (jl *joinLike) Columns() []string {
+// 	return set.Union(jl.source1.Columns(), jl.source2.Columns())
+// }
 
 func (jn *Join) Indexes() [][]string {
 	// can really only provide source.indexes() but optimize may swap.
@@ -284,7 +293,7 @@ func (jn *Join) setApproach(index []string, frac float64, approach any, tran Que
 	}
 	jn.source1 = SetApproach(jn.source1, index, frac, tran)
 	jn.source2 = SetApproach(jn.source2, ap.index2, ap.frac2, tran)
-	jn.hdr1 = jn.source1.Header()
+	jn.header = jn.getHeader()
 	jn.saIndex = index
 }
 
@@ -376,7 +385,7 @@ func (jn *Join) nextRow1(th *Thread, dir Dir) bool {
 func (jb *joinBase) projectRow(th *Thread, row Row) []string {
 	key := make([]string, len(jb.by))
 	for i, col := range jb.by {
-		key[i] = row.GetRawVal(jb.hdr1, col, th, jb.st)
+		key[i] = row.GetRawVal(jb.source1.Header(), col, th, jb.st)
 	}
 	return key
 }
@@ -488,7 +497,6 @@ type LeftJoin struct {
 	empty2 Row
 	joinBase
 	row1out bool
-	hdr2    *Header
 }
 
 func NewLeftJoin(src1, src2 Query, by []string) *LeftJoin {
@@ -578,8 +586,7 @@ func (lj *LeftJoin) setApproach(index []string, frac float64, approach any, tran
 	lj.source1 = SetApproach(lj.source1, index, frac, tran)
 	lj.source2 = SetApproach(lj.source2, ap.index2, ap.frac2, tran)
 	lj.empty2 = make(Row, len(lj.source2.Header().Fields))
-	lj.hdr1 = lj.source1.Header()
-	lj.hdr2 = lj.source2.Header()
+	lj.header = lj.getHeader()
 	lj.saIndex = index
 }
 
@@ -664,7 +671,7 @@ func (lj *LeftJoin) shouldOutput(row Row) bool {
 func (lj *LeftJoin) filter(row1, row2 Row) Row {
 	if lj.fastSingle() {
 		for i, col := range lj.sel2cols {
-			if row2.GetRaw(lj.hdr2, col) != lj.sel2vals[i] {
+			if row2.GetRaw(lj.source2.Header(), col) != lj.sel2vals[i] {
 				return nil
 			}
 		}

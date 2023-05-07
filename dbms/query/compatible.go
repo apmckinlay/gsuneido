@@ -11,10 +11,10 @@ import (
 
 // Compatible is shared by Intersect, Minus, and Union
 type Compatible struct {
-	hdr1     *Header
-	hdr2     *Header
 	st       *SuTran
 	disjoint string
+	fixed1   []Fixed
+	fixed2   []Fixed
 	fixed    []Fixed // set by operations
 	allCols  []string
 	keyIndex []string
@@ -22,33 +22,35 @@ type Compatible struct {
 }
 
 // init sets disjoint
-func (c *Compatible) init(calcFixed func(fixed1, fixed2 []Fixed) []Fixed) {
+func newCompatible(src1, src2 Query) *Compatible {
+	c := &Compatible{}
+	c.source1, c.source2 = src1, src2
 	c.allCols = set.Union(c.source1.Columns(), c.source2.Columns())
-	fixed1 := c.source1.Fixed()
-	fixed2 := c.source2.Fixed()
-	c.fixed = calcFixed(fixed1, fixed2)
-	for _, f1 := range fixed1 {
-		for _, f2 := range fixed2 {
+	c.fixed1 = src1.Fixed()
+	c.fixed2 = src2.Fixed()
+	for _, f1 := range c.fixed1 {
+		for _, f2 := range c.fixed2 {
 			if f1.col == f2.col && set.Disjoint(f1.values, f2.values) {
 				c.disjoint = f1.col
-				return
+				return c
 			}
 		}
 	}
-	cols2 := c.source2.Columns()
-	for _, f1 := range fixed1 {
+	cols2 := src2.Columns()
+	for _, f1 := range c.fixed1 {
 		if !slices.Contains(cols2, f1.col) && !slices.Contains(f1.values, "") {
 			c.disjoint = f1.col
-			return
+			return c
 		}
 	}
-	cols1 := c.source1.Columns()
-	for _, f2 := range fixed2 {
+	cols1 := src1.Columns()
+	for _, f2 := range c.fixed2 {
 		if !slices.Contains(cols1, f2.col) && !slices.Contains(f2.values, "") {
 			c.disjoint = f2.col
-			return
+			return c
 		}
 	}
+	return c
 }
 
 func (c *Compatible) String2(op string) string {
@@ -75,13 +77,9 @@ func (c *Compatible) source2Has(th *Thread, row Row) bool {
 	if c.disjoint != "" {
 		return false
 	}
-	if c.hdr1 == nil { // once only
-		c.hdr1 = c.source1.Header()
-		c.hdr2 = c.source2.Header()
-	}
 	vals := make([]string, len(c.keyIndex))
 	for i, col := range c.keyIndex {
-		vals[i] = row.GetRawVal(c.hdr1, col, th, c.st)
+		vals[i] = row.GetRawVal(c.source1.Header(), col, th, c.st)
 	}
 	row2 := c.source2.Lookup(th, c.keyIndex, vals)
 	return row2 != nil && c.equal(th, row, row2)
@@ -91,7 +89,8 @@ func (c *Compatible) equal(th *Thread, row1, row2 Row) bool {
 	if c.disjoint != "" {
 		return false
 	}
-	return EqualRows(c.hdr1, row1, c.hdr2, row2, c.allCols, th, c.st)
+	return EqualRows(c.source1.Header(), row1, c.source2.Header(), row2,
+		c.allCols, th, c.st)
 }
 
 func bestKey2(src2 Query, mode Mode, nrows int) bestIndex {

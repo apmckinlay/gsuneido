@@ -13,7 +13,6 @@ import (
 
 type Extend struct {
 	t        QueryTran
-	hdr      *Header
 	ctx      ast.Context
 	cols     []string
 	exprs    []ast.Expr
@@ -41,6 +40,7 @@ func NewExtend(src Query, cols []string, exprs []ast.Expr) *Extend {
 		}
 	}
 	e.exprCols = exprCols
+	e.header = e.getHeader()
 	return e
 }
 
@@ -79,10 +79,6 @@ func (e *Extend) stringOp() string {
 		}
 	}
 	return s
-}
-
-func (e *Extend) Columns() []string {
-	return set.Union(e.source.Columns(), e.cols)
 }
 
 func (e *Extend) rowSize() int {
@@ -179,17 +175,14 @@ func (e *Extend) optimize(mode Mode, index []string, frac float64) (
 
 func (e *Extend) setApproach(index []string, frac float64, _ any, tran QueryTran) {
 	e.source = SetApproach(e.source, index, frac, tran)
-	e.hdr = e.Header() // cache for Get
-	e.ctx.Hdr = e.hdr
+	e.header = e.getHeader()
+	e.ctx.Hdr = e.header
 	e.fixed = e.Fixed() // cache
 }
 
 // execution --------------------------------------------------------
 
-func (e *Extend) Header() *Header {
-	if e.hdr != nil {
-		return e.hdr
-	}
+func (e *Extend) getHeader() *Header {
 	hdr := e.source.Header()
 	cols := append(hdr.Columns, e.cols...)
 	flds := hdr.Fields

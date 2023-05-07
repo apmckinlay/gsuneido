@@ -31,7 +31,14 @@ func NewRename(src Query, from, to []string) *Rename {
 	}
 	r := &Rename{Query1: Query1{source: src}, from: from, to: to}
 	r.renameDependencies(srcCols)
+	r.header = r.getHeader()
 	return r
+}
+
+func (r *Rename) getHeader() *runtime.Header {
+	flds := renameIndexes(r.source.Header().Fields, r.from, r.to)
+	cols := slc.Replace(r.source.Columns(), r.from, r.to)
+	return runtime.NewHeader(flds, cols)
 }
 
 func (r *Rename) renameDependencies(src []string) {
@@ -62,10 +69,6 @@ func (r *Rename) stringOp() string {
 		sep = ", "
 	}
 	return sb.String()
-}
-
-func (r *Rename) Columns() []string {
-	return slc.Replace(r.source.Columns(), r.from, r.to)
 }
 
 func (r *Rename) Keys() [][]string {
@@ -151,16 +154,10 @@ func (r *Rename) optimize(mode Mode, index []string, frac float64) (Cost, Cost, 
 
 func (r *Rename) setApproach(index []string, frac float64, _ any, tran QueryTran) {
 	r.source = SetApproach(r.source, slc.Replace(index, r.to, r.from), frac, tran)
+	r.header = r.getHeader()
 }
 
 // execution --------------------------------------------------------
-
-func (r *Rename) Header() *runtime.Header {
-	hdr := r.source.Header()
-	cols := slc.Replace(hdr.Columns, r.from, r.to)
-	flds := renameIndexes(hdr.Fields, r.from, r.to)
-	return runtime.NewHeader(flds, cols)
-}
 
 func (r *Rename) Get(th *runtime.Thread, dir runtime.Dir) runtime.Row {
 	return r.source.Get(th, dir)

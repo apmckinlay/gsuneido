@@ -11,7 +11,7 @@ import (
 )
 
 type Sort struct {
-	columns []string
+	order []string
 	sortApproach
 	Query1
 	reverse bool
@@ -26,7 +26,10 @@ func NewSort(src Query, reverse bool, cols []string) *Sort {
 		panic("sort: nonexistent columns: " +
 			str.Join(", ", set.Difference(cols, src.Columns())))
 	}
-	return &Sort{Query1: Query1{source: src}, reverse: reverse, columns: cols}
+	sort := Sort{reverse: reverse, order: cols}
+	sort.source = src
+	sort.header = src.Header()
+	return &sort
 }
 
 func (sort *Sort) String() string {
@@ -41,7 +44,7 @@ func (sort *Sort) stringOp() string {
 	if sort.index != nil {
 		return r
 	}
-	return "SORT " + str.Opt(r, " ") + str.Join(", ", sort.columns)
+	return "SORT " + str.Opt(r, " ") + str.Join(", ", sort.order)
 }
 
 func (sort *Sort) Transform() Query {
@@ -50,7 +53,7 @@ func (sort *Sort) Transform() Query {
 		return src
 	}
 	if src != sort.source {
-		return NewSort(src, sort.reverse, sort.columns)
+		return NewSort(src, sort.reverse, sort.order)
 	}
 	return sort
 }
@@ -58,10 +61,10 @@ func (sort *Sort) Transform() Query {
 func (sort *Sort) optimize(mode Mode, index []string, frac float64) (Cost, Cost, any) {
 	assert.That(index == nil)
 	src := sort.source
-	fixcost, varcost := Optimize(src, mode, sort.columns, frac) // adds temp index if needed
-	best := bestOrdered(src, src.Indexes(), sort.columns, mode, frac)
+	fixcost, varcost := Optimize(src, mode, sort.order, frac) // adds temp index if needed
+	best := bestOrdered(src, src.Indexes(), sort.order, mode, frac)
 	if fixcost+varcost < best.fixcost+best.varcost {
-		return fixcost, varcost, sortApproach{index: sort.columns}
+		return fixcost, varcost, sortApproach{index: sort.order}
 	}
 	return best.fixcost, best.varcost, sortApproach{index: best.index}
 }
@@ -84,6 +87,7 @@ func bestOrdered(q Query, indexes [][]string, order []string,
 func (sort *Sort) setApproach(_ []string, frac float64, approach any, tran QueryTran) {
 	sort.sortApproach = approach.(sortApproach)
 	sort.source = SetApproach(sort.source, sort.index, frac, tran)
+	sort.header = sort.source.Header()
 }
 
 // execution --------------------------------------------------------
@@ -103,5 +107,5 @@ func (sort *Sort) Select(cols, vals []string) {
 }
 
 func (sort *Sort) Ordering() []string {
-	return sort.columns
+	return sort.order
 }
