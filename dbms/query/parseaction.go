@@ -7,11 +7,11 @@ import (
 	"github.com/apmckinlay/gsuneido/compile/ast"
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
 	"github.com/apmckinlay/gsuneido/db19"
-	"github.com/apmckinlay/gsuneido/runtime"
+	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
 type Action interface {
-	execute(th *runtime.Thread, ut *db19.UpdateTran) int
+	execute(th *Thread, ut *db19.UpdateTran) int
 	String() string
 }
 
@@ -20,7 +20,7 @@ type actionParser struct {
 }
 
 // ParseAction parses insert, update, and delete actions
-func ParseAction(src string, t QueryTran, sv *runtime.Sviews) Action {
+func ParseAction(src string, t QueryTran, sv *Sviews) Action {
 	p := actionParser{*NewQueryParser(src, t, sv)}
 	result := p.action()
 	if p.Token != tok.Eof {
@@ -56,11 +56,11 @@ func (p *actionParser) insertRecord() Action {
 	return &insertRecordAction{record: record, query: query}
 }
 
-func (p *actionParser) record() *runtime.SuRecord {
+func (p *actionParser) record() *SuRecord {
 	if p.Token != tok.LCurly && p.Token != tok.LBracket {
 		p.Error("record expected e.g. { a: 1, b: 2 }")
 	}
-	return p.Const().(*runtime.SuRecord)
+	return p.Const().(*SuRecord)
 }
 
 func (p *actionParser) insertQuery() Action {

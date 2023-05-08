@@ -12,7 +12,7 @@ import (
 	"github.com/apmckinlay/gsuneido/compile/ast"
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
-	"github.com/apmckinlay/gsuneido/runtime"
+	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/runtime/trace"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/generic/ord"
@@ -388,7 +388,7 @@ func (w *Where) tablesLookup() Query {
 	return NewTablesLookup(tables.tran, s)
 }
 
-func (w *Where) lookup1() (string, runtime.Value) {
+func (w *Where) lookup1() (string, Value) {
 	if len(w.expr.Exprs) == 1 {
 		if b, ok := w.expr.Exprs[0].(*ast.Binary); ok && b.Tok == tok.Is {
 			if id, ok := b.Lhs.(*ast.Ident); ok {
@@ -425,7 +425,7 @@ func (w *Where) project(q Query) *ast.Nary {
 	return expr.(*ast.Nary)
 }
 
-var emptyConstant = ast.Constant{Val: runtime.EmptyStr}
+var emptyConstant = ast.Constant{Val: EmptyStr}
 
 func nEmpty(n int) []ast.Expr {
 	list := make([]ast.Expr, n)
@@ -507,7 +507,7 @@ func (w *Where) optimize(mode Mode, index []string, frac float64) (f Cost, v Cos
 func (w *Where) exprFalse() bool {
 	//TODO also check for always true
 	for _, expr := range w.expr.Exprs {
-		if c, ok := expr.(*ast.Constant); ok && c.Val == runtime.False {
+		if c, ok := expr.(*ast.Constant); ok && c.Val == False {
 			return true
 		}
 	}
@@ -596,17 +596,17 @@ func (*Where) typeToRange(expr ast.Expr, cols []string, cmps []cmpExpr) []cmpExp
 					stringQ := false
 					switch fn.Name {
 					case "Number?":
-						from = string(rune(runtime.PackMinus))
-						to = string(rune(runtime.PackPlus + 1))
+						from = string(rune(PackMinus))
+						to = string(rune(PackPlus + 1))
 					case "String?":
 						// from should be PackString but that wouldn't include ""
 						// TODO allow multiple ranges to handle this
 						from = ""
-						to = string(rune(runtime.PackString + 1))
+						to = string(rune(PackString + 1))
 						stringQ = true
 					case "Date?":
-						from = string(rune(runtime.PackDate))
-						to = string(rune(runtime.PackDate + 1))
+						from = string(rune(PackDate))
+						to = string(rune(PackDate + 1))
 					default:
 						return cmps
 					}
@@ -806,7 +806,7 @@ func (f *filter) andWith(f2 filter) {
 		if (f.org.stringQ && f2.org.val == "" && f2.org.inc == 1) ||
 			(f2.org.stringQ && f.org.val == "" && f.org.inc == 1) {
 			// shrink String? range if "" not allowed
-			f.org = limit{val: string(rune(runtime.PackString)), inc: 0}
+			f.org = limit{val: string(rune(PackString)), inc: 0}
 		}
 		if compare(f2.org, f.org) > 0 {
 			f.org = f2.org
@@ -876,7 +876,7 @@ func packToStr(s string) string {
 	if s[0] == 0xff {
 		return "<max>"
 	}
-	return runtime.Unpack(s).String()
+	return Unpack(s).String()
 }
 
 //-------------------------------------------------------------------
@@ -1126,9 +1126,9 @@ func (w *Where) idxFrac(idx []string, ptrngs []pointRange) float64 {
 // execution --------------------------------------------------------
 
 // MakeSuTran is injected by dbms to avoid import cycle
-var MakeSuTran func(qt QueryTran) *runtime.SuTran
+var MakeSuTran func(qt QueryTran) *SuTran
 
-func (w *Where) Get(th *runtime.Thread, dir runtime.Dir) runtime.Row {
+func (w *Where) Get(th *Thread, dir Dir) Row {
 	if w.selSet && w.selOrg == ixkey.Max && w.selEnd == "" {
 		return nil // conflict from Select
 	}
@@ -1144,7 +1144,7 @@ func (w *Where) Get(th *runtime.Thread, dir runtime.Dir) runtime.Row {
 	}
 }
 
-func (w *Where) get(th *runtime.Thread, dir runtime.Dir) runtime.Row {
+func (w *Where) get(th *Thread, dir Dir) Row {
 	if w.idxSel == nil {
 		w.nIn++
 		return w.source.Get(th, dir)
@@ -1155,7 +1155,7 @@ func (w *Where) get(th *runtime.Thread, dir runtime.Dir) runtime.Row {
 	return w.getPoint(dir)
 }
 
-func (w *Where) filter(th *runtime.Thread, row runtime.Row) bool {
+func (w *Where) filter(th *Thread, row Row) bool {
 	if row == nil {
 		return true
 	}
@@ -1169,10 +1169,10 @@ func (w *Where) filter(th *runtime.Thread, row runtime.Row) bool {
 	w.ctx.Th = th
 	w.ctx.Row = row
 	defer func() { w.ctx.Th, w.ctx.Row = nil, nil }()
-	return w.expr.Eval(&w.ctx) == runtime.True
+	return w.expr.Eval(&w.ctx) == True
 }
 
-func (w *Where) getRange(th *runtime.Thread, dir runtime.Dir) runtime.Row {
+func (w *Where) getRange(th *Thread, dir Dir) Row {
 	for {
 		if w.idxSelPos != -1 {
 			if row := w.tbl.Get(th, dir); row != nil {
@@ -1186,7 +1186,7 @@ func (w *Where) getRange(th *runtime.Thread, dir runtime.Dir) runtime.Row {
 	}
 }
 
-func (w *Where) getPoint(dir runtime.Dir) runtime.Row {
+func (w *Where) getPoint(dir Dir) Row {
 	for {
 		if !w.advance(dir) {
 			return nil
@@ -1198,14 +1198,14 @@ func (w *Where) getPoint(dir runtime.Dir) runtime.Row {
 	}
 }
 
-func (w *Where) advance(dir runtime.Dir) bool {
+func (w *Where) advance(dir Dir) bool {
 	if w.idxSelPos == -1 { // rewound
-		if dir == runtime.Prev {
+		if dir == Prev {
 			w.idxSelPos = len(w.idxSel.ptrngs)
 		}
 	}
 	for {
-		if dir == runtime.Prev {
+		if dir == Prev {
 			w.idxSelPos--
 		} else { // Next
 			w.idxSelPos++
@@ -1302,11 +1302,11 @@ func (w *Where) addFixed(cols []string, vals []string) ([]string, []string) {
 	return cols, vals
 }
 
-func (w *Where) Lookup(th *runtime.Thread, cols, vals []string) runtime.Row {
+func (w *Where) Lookup(th *Thread, cols, vals []string) Row {
 	if w.singleton {
 		// can't use source.Lookup because cols may not match source index
 		w.Rewind()
-		row := w.Get(th, runtime.Next)
+		row := w.Get(th, Next)
 		if row == nil || !singletonFilter(w.header, row, cols, vals) {
 			return nil
 		}
@@ -1321,7 +1321,7 @@ func (w *Where) Lookup(th *runtime.Thread, cols, vals []string) runtime.Row {
 }
 
 func singletonFilter(
-	hdr *runtime.Header, row runtime.Row, cols []string, vals []string) bool {
+	hdr *Header, row Row, cols []string, vals []string) bool {
 	for i, col := range cols {
 		if row.GetRaw(hdr, col) != vals[i] {
 			return false

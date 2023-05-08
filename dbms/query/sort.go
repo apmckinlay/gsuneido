@@ -4,7 +4,7 @@
 package query
 
 import (
-	"github.com/apmckinlay/gsuneido/runtime"
+	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/generic/set"
 	"github.com/apmckinlay/gsuneido/util/str"
@@ -95,7 +95,7 @@ func (sort *Sort) setApproach(_ []string, frac float64, approach any, tran Query
 // Only implements reverse.
 // The actual sorting is done with a TempIndex
 
-func (sort *Sort) Get(th *runtime.Thread, dir runtime.Dir) runtime.Row {
+func (sort *Sort) Get(th *Thread, dir Dir) Row {
 	if sort.reverse {
 		dir = dir.Reverse()
 	}

@@ -7,27 +7,27 @@ import (
 	"github.com/apmckinlay/gsuneido/compile"
 	"github.com/apmckinlay/gsuneido/compile/ast"
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
-	"github.com/apmckinlay/gsuneido/runtime"
+	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/str"
 	"golang.org/x/exp/slices"
 )
 
 type queryParser struct {
 	t        QueryTran
-	sviews   *runtime.Sviews
+	sviews   *Sviews
 	viewNest []string
 	compile.Parser
 }
 
-func NewQueryParser(src string, t QueryTran, sv *runtime.Sviews) *queryParser {
+func NewQueryParser(src string, t QueryTran, sv *Sviews) *queryParser {
 	return &queryParser{Parser: *compile.QueryParser(src), t: t, sviews: sv}
 }
 
-func ParseQuery(src string, t QueryTran, sv *runtime.Sviews) Query {
+func ParseQuery(src string, t QueryTran, sv *Sviews) Query {
 	return parseQuery(src, t, sv, nil)
 }
 
-func parseQuery(src string, t QueryTran, sv *runtime.Sviews, viewNest []string) Query {
+func parseQuery(src string, t QueryTran, sv *Sviews, viewNest []string) Query {
 	p := NewQueryParser(src, t, sv)
 	p.viewNest = viewNest
 	result := p.sort()

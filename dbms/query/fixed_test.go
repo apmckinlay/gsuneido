@@ -7,13 +7,13 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/apmckinlay/gsuneido/runtime"
+	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
 func TestFixed(t *testing.T) {
-	runtime.DefaultSingleQuotes = true
-	defer func() { runtime.DefaultSingleQuotes = false }()
+	DefaultSingleQuotes = true
+	defer func() { DefaultSingleQuotes = false }()
 	test := func(query, expected string) {
 		t.Helper()
 		q := ParseQuery(query, testTran{}, nil)

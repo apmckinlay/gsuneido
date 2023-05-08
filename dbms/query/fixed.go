@@ -4,7 +4,7 @@
 package query
 
 import (
-	"github.com/apmckinlay/gsuneido/runtime"
+	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/generic/set"
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
 	"golang.org/x/exp/slices"
@@ -16,8 +16,8 @@ type Fixed struct {
 	values []string
 }
 
-func NewFixed(col string, val runtime.Value) Fixed {
-	packed := runtime.Pack(val.(runtime.Packable))
+func NewFixed(col string, val Value) Fixed {
+	packed := Pack(val.(Packable))
 	return Fixed{col: col, values: []string{packed}}
 }
 
@@ -35,7 +35,7 @@ func (f *Fixed) String() string {
 	s := f.col + "=("
 	sep := ""
 	for _, v := range f.values {
-		s += sep + runtime.Unpack(v).String()
+		s += sep + Unpack(v).String()
 		sep = ","
 	}
 	return s + ")"

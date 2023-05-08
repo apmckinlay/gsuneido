@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	rt "github.com/apmckinlay/gsuneido/runtime"
+	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
 )
@@ -20,7 +20,7 @@ func TestTableLookup(t *testing.T) {
 	is := func(args ...int) []string {
 		ss := make([]string, len(args))
 		for i, n := range args {
-			ss[i] = rt.Pack(rt.IntVal(n))
+			ss[i] = Pack(IntVal(n))
 		}
 		return ss
 	}
@@ -36,19 +36,19 @@ func TestTableLookup(t *testing.T) {
 }
 
 func TestQueryGet(t *testing.T) {
-	MakeSuTran = func(qt QueryTran) *rt.SuTran { return nil }
-	th := &rt.Thread{}
+	MakeSuTran = func(qt QueryTran) *SuTran { return nil }
+	th := &Thread{}
 	db := testDb()
 	defer db.Close()
-	get := func(q Query, dir rt.Dir) string {
+	get := func(q Query, dir Dir) string {
 		t.Helper()
-		var rows []rt.Row
+		var rows []Row
 		q.Rewind()
 		for row := q.Get(th, dir); row != nil; row = q.Get(th, dir) {
 			assert.Msg("too many").That(len(rows) < 100)
 			rows = append(rows, row)
 		}
-		if dir == rt.Prev {
+		if dir == Prev {
 			slc.Reverse(rows)
 		}
 		hdr := q.Header()
@@ -79,8 +79,8 @@ func TestQueryGet(t *testing.T) {
 		q, _, _ = Setup(q, ReadMode, tran)
 		qs := strings.ReplaceAll(q.String(), `"`, "'")
 		assert.T(t).This(qs).Is(strategy)
-		assert.T(t).Msg("forward:", query).This(get(q, rt.Next)).Like(expected)
-		assert.T(t).Msg("reverse:", query).This(get(q, rt.Prev)).Like(expected)
+		assert.T(t).Msg("forward:", query).This(get(q, Next)).Like(expected)
+		assert.T(t).Msg("reverse:", query).This(get(q, Prev)).Like(expected)
 	}
 	test("indexes project table, columns, key",
 		"indexes PROJECT-COPY table,columns,key",

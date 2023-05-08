@@ -44,7 +44,7 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/meta"
 	"github.com/apmckinlay/gsuneido/db19/meta/schema"
 	"github.com/apmckinlay/gsuneido/db19/stor"
-	"github.com/apmckinlay/gsuneido/runtime"
+	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/runtime/trace"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/generic/ord"
@@ -104,7 +104,7 @@ type Query interface {
 
 	Rewind()
 
-	Get(th *runtime.Thread, dir runtime.Dir) runtime.Row
+	Get(th *Thread, dir Dir) Row
 
 	// Lookup returns the row matching the given key value, or nil if not found.
 	// It is used by Compatible (Intersect, Minus, Union). See also: Select
@@ -112,7 +112,7 @@ type Query interface {
 	// to implement Lookup with Select and Get
 	// in which case it should leave the select cleared.
 	// Lookup should rewind.
-	Lookup(th *runtime.Thread, cols, vals []string) runtime.Row
+	Lookup(th *Thread, cols, vals []string) Row
 
 	// Select restricts the query to records matching the given packed values.
 	// It is used by Join and LeftJoin. See also: Lookup
@@ -120,8 +120,8 @@ type Query interface {
 	// Select should rewind.
 	Select(cols, vals []string)
 
-	Header() *runtime.Header
-	Output(th *runtime.Thread, rec runtime.Record)
+	Header() *Header
+	Output(th *Thread, rec Record)
 
 	String() string
 
@@ -161,7 +161,7 @@ type queryBase struct {
 	// header must be set by constructors and setApproach.
 	// setApproach is necessary because the sources may get reversed
 	// which affects the order of Fields
-	header *runtime.Header
+	header *Header
 	cache
 }
 
@@ -169,7 +169,7 @@ func (q *queryBase) Columns() []string {
 	return q.header.Columns
 }
 
-func (q *queryBase) Header() *runtime.Header {
+func (q *queryBase) Header() *Header {
 	return q.header
 }
 
@@ -207,10 +207,10 @@ type QueryTran interface {
 	GetView(string) string
 	GetStore() *stor.Stor
 	RangeFrac(table string, iIndex int, org, end string) float64
-	Lookup(table string, iIndex int, key string) *runtime.DbRec
-	Output(th *runtime.Thread, table string, rec runtime.Record)
+	Lookup(table string, iIndex int, key string) *DbRec
+	Output(th *Thread, table string, rec Record)
 	GetIndexI(table string, iIndex int) *index.Overlay
-	GetRecord(off uint64) runtime.Record
+	GetRecord(off uint64) Record
 	MakeLess(is *ixkey.Spec) func(x, y uint64) bool
 	Read(string, int, string, string)
 }
@@ -477,11 +477,11 @@ func (q1 *Query1) lookupCost() Cost {
 }
 
 // Lookup default applies to Summarize and Sort
-func (*Query1) Lookup(*runtime.Thread, []string, []string) runtime.Row {
+func (*Query1) Lookup(*Thread, []string, []string) Row {
 	panic("Lookup not implemented")
 }
 
-func (q1 *Query1) Output(th *runtime.Thread, rec runtime.Record) {
+func (q1 *Query1) Output(th *Thread, rec Record) {
 	q1.source.Output(th, rec)
 }
 
@@ -527,7 +527,7 @@ func (*Query2) Ordering() []string {
 	return nil
 }
 
-func (*Query2) Output(*runtime.Thread, runtime.Record) {
+func (*Query2) Output(*Thread, Record) {
 	panic("can't output to this query")
 }
 
@@ -806,13 +806,13 @@ func format(q Query, indent int) string { // recursive
 }
 
 //lint:ignore U1000 for debugging
-func unpack(packed []string) []runtime.Value {
-	vals := make([]runtime.Value, len(packed))
+func unpack(packed []string) []Value {
+	vals := make([]Value, len(packed))
 	for i, p := range packed {
 		if p == ixkey.Max {
-			vals[i] = runtime.SuStr("<max>")
+			vals[i] = SuStr("<max>")
 		} else {
-			vals[i] = runtime.Unpack(p)
+			vals[i] = Unpack(p)
 		}
 	}
 	return vals

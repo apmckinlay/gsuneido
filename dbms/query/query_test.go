@@ -13,7 +13,7 @@ import (
 	"github.com/apmckinlay/gsuneido/db19"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/db19/stor"
-	rt "github.com/apmckinlay/gsuneido/runtime"
+	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
@@ -82,7 +82,7 @@ func TestForeignKeys(*testing.T) {
 	ck(err)
 	db19.StartConcur(db, 50*time.Millisecond)
 	defer db.Close()
-	MakeSuTran = func(qt QueryTran) *rt.SuTran { return nil }
+	MakeSuTran = func(qt QueryTran) *SuTran { return nil }
 	act := func(act string) {
 		ut := db.NewUpdateTran()
 		defer ut.Commit()
@@ -194,8 +194,8 @@ func queryAll2(q Query) string {
 	hdr := q.Header()
 	sep := ""
 	var sb strings.Builder
-	th := &rt.Thread{}
-	for row := q.Get(th, rt.Next); row != nil; row = q.Get(th, rt.Next) {
+	th := &Thread{}
+	for row := q.Get(th, Next); row != nil; row = q.Get(th, Next) {
 		sb.WriteString(sep)
 		sb.WriteString(row2str(hdr, row))
 		sep = " | "
@@ -203,7 +203,7 @@ func queryAll2(q Query) string {
 	return sb.String()
 }
 
-func row2str(hdr *rt.Header, row rt.Row) string {
+func row2str(hdr *Header, row Row) string {
 	if row == nil {
 		return "nil"
 	}
@@ -211,8 +211,8 @@ func row2str(hdr *rt.Header, row rt.Row) string {
 	sep := ""
 	for _, col := range hdr.Columns {
 		val := row.GetVal(hdr, col, nil, nil)
-		if val != rt.EmptyStr {
-			fmt.Fprint(&sb, sep, col, "=", rt.AsStr(val))
+		if val != EmptyStr {
+			fmt.Fprint(&sb, sep, col, "=", AsStr(val))
 			sep = " "
 		}
 	}
@@ -247,7 +247,7 @@ func TestQueryBug(*testing.T) {
 	ck(err)
 	db19.StartConcur(db, 50*time.Millisecond)
 	defer db.Close()
-	MakeSuTran = func(qt QueryTran) *rt.SuTran { return nil }
+	MakeSuTran = func(qt QueryTran) *SuTran { return nil }
 	act := func(act string) {
 		ut := db.NewUpdateTran()
 		defer ut.Commit()
@@ -260,7 +260,7 @@ func TestQueryBug(*testing.T) {
 }
 
 func TestExtendAllRules(*testing.T) {
-	MakeSuTran = func(qt QueryTran) *rt.SuTran { return nil }
+	MakeSuTran = func(qt QueryTran) *SuTran { return nil }
 	db := testDb()
 	defer db.Close()
 	tran := db.NewReadTran()
@@ -279,7 +279,7 @@ func TestDuplicateKey(*testing.T) {
 	ck(err)
 	db19.StartConcur(db, 50*time.Millisecond)
 	defer db.Close()
-	MakeSuTran = func(qt QueryTran) *rt.SuTran { return nil }
+	MakeSuTran = func(qt QueryTran) *SuTran { return nil }
 	act := func(act string) {
 		ut := db.NewUpdateTran()
 		defer ut.Commit()
@@ -303,7 +303,7 @@ func TestWhereSelectBug(t *testing.T) {
 	ck(err)
 	db19.StartConcur(db, 50*time.Millisecond)
 	defer db.Close()
-	MakeSuTran = func(qt QueryTran) *rt.SuTran { return nil }
+	MakeSuTran = func(qt QueryTran) *SuTran { return nil }
 	act := func(act string) {
 		ut := db.NewUpdateTran()
 		defer ut.Commit()
@@ -328,7 +328,7 @@ func TestWhereSelectBug(t *testing.T) {
 	_, _, app := q.optimize(ReadMode, idx, 1)
 	q.setApproach(idx, 1, app, tran)
 	assert.T(t).This(q.String()).Is("t1^(b) WHERE d is '1' and b < 'z'")
-	vals := []string{rt.Pack(rt.SuStr("1"))}
+	vals := []string{Pack(SuStr("1"))}
 	q.Select(idx, vals)
 	assert.T(t).This(queryAll2(q)).
 		Is("a=3 b=7 d=1 | a=5 b=7 d=1 | a=2 b=8 d=1 | a=4 b=8 d=1")
@@ -339,7 +339,7 @@ func TestJoinBug(t *testing.T) {
 	ck(err)
 	db19.StartConcur(db, 50*time.Millisecond)
 	defer db.Close()
-	MakeSuTran = func(qt QueryTran) *rt.SuTran { return nil }
+	MakeSuTran = func(qt QueryTran) *SuTran { return nil }
 	act := func(act string) {
 		ut := db.NewUpdateTran()
 		defer ut.Commit()
@@ -358,7 +358,7 @@ func TestSelectOnSingleton(t *testing.T) {
 	ck(err)
 	db19.StartConcur(db, 50*time.Millisecond)
 	defer db.Close()
-	MakeSuTran = func(qt QueryTran) *rt.SuTran { return nil }
+	MakeSuTran = func(qt QueryTran) *SuTran { return nil }
 	act := func(act string) {
 		ut := db.NewUpdateTran()
 		defer ut.Commit()
@@ -378,7 +378,7 @@ func TestSingleton(t *testing.T) {
 	ck(err)
 	db19.StartConcur(db, 50*time.Millisecond)
 	defer db.Close()
-	MakeSuTran = func(qt QueryTran) *rt.SuTran { return nil }
+	MakeSuTran = func(qt QueryTran) *SuTran { return nil }
 	act := func(act string) {
 		ut := db.NewUpdateTran()
 		defer ut.Commit()
@@ -394,13 +394,13 @@ func TestSingleton(t *testing.T) {
 	assert.This(q.String()).Is("tmp^(a) WHERE*1 a is 3") // singleton
 	// reading by a, but singleton so we can Select/Lookup on b
 	bcols := []string{"b"}
-	bvals := []string{rt.Pack(rt.SuInt(4))}
+	bvals := []string{Pack(SuInt(4))}
 	q.Select(bcols, bvals)
 	assert.This(queryAll2(q)).Is("a=3 b=4")
 	hdr := q.Header()
 	assert.This(row2str(hdr, q.Lookup(nil, bcols, bvals))).Is("a=3 b=4")
 
-	bvals = []string{rt.Pack(rt.SuInt(2))}
+	bvals = []string{Pack(SuInt(2))}
 	q.Select(bcols, bvals)
 	assert.This(queryAll2(q)).Is("")
 	assert.This(q.Lookup(nil, bcols, bvals)).Is(nil)
@@ -419,13 +419,13 @@ func TestWithoutDupsOrSupersets(t *testing.T) {
 }
 
 func TestWhereSplitBug(t *testing.T) {
-	rt.Global.TestDef("Rule_hx",
+	Global.TestDef("Rule_hx",
 		compile.Constant("function() { return .b }"))
 	db, err := db19.CreateDb(stor.HeapStor(8192))
 	ck(err)
 	db19.StartConcur(db, 50*time.Millisecond)
 	defer db.Close()
-	MakeSuTran = func(qt QueryTran) *rt.SuTran { return nil }
+	MakeSuTran = func(qt QueryTran) *SuTran { return nil }
 	doAdmin(db, "create tmp1 (a, b, hx) key (a)")
 	doAdmin(db, "create tmp2 (a, b) key (a)")
 
@@ -498,7 +498,7 @@ type TestQop struct {
 
 func newTestQop(cols []string, keys [][]string) *TestQop {
 	q := &TestQop{}
-	q.header = rt.SimpleHeader(cols)
+	q.header = SimpleHeader(cols)
 	q.indexes = keys
 	q.keys = keys
 	return q
@@ -515,7 +515,7 @@ func (q *TestQop) Columns() []string {
 }
 
 // Header is ambiguously embedded twice so we have to define it
-func (q *TestQop) Header() *rt.Header {
+func (q *TestQop) Header() *Header {
 	return q.header
 }
 

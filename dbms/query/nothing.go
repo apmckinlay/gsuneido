@@ -3,7 +3,7 @@
 
 package query
 
-import "github.com/apmckinlay/gsuneido/runtime"
+import . "github.com/apmckinlay/gsuneido/runtime"
 
 // Nothing is a null query that produces no output.
 // It results from a Join, Where, or Intersect with a Fixed conflict.
@@ -14,7 +14,7 @@ type Nothing struct {
 
 func NewNothing(columns []string) *Nothing {
 	no := Nothing{}
-	no.header = runtime.SimpleHeader(columns)
+	no.header = SimpleHeader(columns)
 	return &no
 }
 
@@ -78,15 +78,15 @@ func (*Nothing) lookupCost() Cost {
 	return 0
 }
 
-func (*Nothing) Lookup(*runtime.Thread, []string, []string) runtime.Row {
+func (*Nothing) Lookup(*Thread, []string, []string) Row {
 	return nil
 }
 
-func (*Nothing) Output(*runtime.Thread, runtime.Record) {
+func (*Nothing) Output(*Thread, Record) {
 	panic("can't Output to nil query")
 }
 
-func (*Nothing) Get(*runtime.Thread, runtime.Dir) runtime.Row {
+func (*Nothing) Get(*Thread, Dir) Row {
 	return nil
 }
 

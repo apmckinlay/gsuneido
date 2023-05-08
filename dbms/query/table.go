@@ -8,7 +8,7 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/index/iterator"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/db19/meta"
-	"github.com/apmckinlay/gsuneido/runtime"
+	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/runtime/trace"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/generic/set"
@@ -84,7 +84,7 @@ func (tbl *Table) SetTran(t QueryTran) {
 	for _, col := range tbl.schema.Derived {
 		cols = append(cols, str.UnCapitalize(col))
 	}
-	tbl.header = runtime.NewHeader([][]string{tbl.schema.Columns}, cols)
+	tbl.header = NewHeader([][]string{tbl.schema.Columns}, cols)
 
 	idxs := make([][]string, 0, len(tbl.schema.Indexes))
 	keys := make([][]string, 0, 1)
@@ -207,7 +207,7 @@ func (tbl *Table) lookupCost() Cost {
 
 // execution --------------------------------------------------------
 
-func (tbl *Table) Lookup(_ *runtime.Thread, cols, vals []string) runtime.Row {
+func (tbl *Table) Lookup(_ *Thread, cols, vals []string) Row {
 	assert.That(tbl.hasKey(cols))
 	assert.That(!selConflict(tbl.header.Columns, cols, vals))
 	key := selOrg(tbl.indexEncode, tbl.index, cols, vals, true)
@@ -223,15 +223,15 @@ func (tbl *Table) hasKey(cols []string) bool {
 	return false
 }
 
-func (tbl *Table) lookup(key string) runtime.Row {
+func (tbl *Table) lookup(key string) Row {
 	rec := tbl.tran.Lookup(tbl.name, tbl.iIndex, key)
 	if rec == nil {
 		return nil
 	}
-	return runtime.Row{*rec}
+	return Row{*rec}
 }
 
-func (tbl *Table) Output(th *runtime.Thread, rec runtime.Record) {
+func (tbl *Table) Output(th *Thread, rec Record) {
 	tbl.tran.Output(th, tbl.name, rec)
 }
 
@@ -241,9 +241,9 @@ func (tbl *Table) Rewind() {
 	}
 }
 
-func (tbl *Table) Get(_ *runtime.Thread, dir runtime.Dir) runtime.Row {
+func (tbl *Table) Get(_ *Thread, dir Dir) Row {
 	tbl.ensureIter()
-	if dir == runtime.Prev {
+	if dir == Prev {
 		tbl.iter.Prev(tbl.tran)
 	} else {
 		tbl.iter.Next(tbl.tran)
@@ -253,7 +253,7 @@ func (tbl *Table) Get(_ *runtime.Thread, dir runtime.Dir) runtime.Row {
 	}
 	_, off := tbl.iter.Cur()
 	rec := tbl.tran.GetRecord(off)
-	row := runtime.Row{runtime.DbRec{Record: rec, Off: off}}
+	row := Row{DbRec{Record: rec, Off: off}}
 	if tbl.singleton && !singletonFilter(tbl.header, row, tbl.selcols, tbl.selvals) {
 		return nil
 	}

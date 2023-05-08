@@ -6,14 +6,14 @@ package query
 import (
 	"testing"
 
-	"github.com/apmckinlay/gsuneido/runtime"
+	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
 func TestTransform(t *testing.T) {
-	runtime.DefaultSingleQuotes = true
-	defer func() { runtime.DefaultSingleQuotes = false }()
+	DefaultSingleQuotes = true
+	defer func() { DefaultSingleQuotes = false }()
 	test := func(from, expected string) {
 		t.Helper()
 		if expected == "" {

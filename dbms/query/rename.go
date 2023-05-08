@@ -6,7 +6,7 @@ package query
 import (
 	"strings"
 
-	"github.com/apmckinlay/gsuneido/runtime"
+	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/generic/set"
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
 	"github.com/apmckinlay/gsuneido/util/str"
@@ -35,10 +35,10 @@ func NewRename(src Query, from, to []string) *Rename {
 	return r
 }
 
-func (r *Rename) getHeader() *runtime.Header {
+func (r *Rename) getHeader() *Header {
 	flds := renameIndexes(r.source.Header().Fields, r.from, r.to)
 	cols := slc.Replace(r.source.Columns(), r.from, r.to)
-	return runtime.NewHeader(flds, cols)
+	return NewHeader(flds, cols)
 }
 
 func (r *Rename) renameDependencies(src []string) {
@@ -159,7 +159,7 @@ func (r *Rename) setApproach(index []string, frac float64, _ any, tran QueryTran
 
 // execution --------------------------------------------------------
 
-func (r *Rename) Get(th *runtime.Thread, dir runtime.Dir) runtime.Row {
+func (r *Rename) Get(th *Thread, dir Dir) Row {
 	return r.source.Get(th, dir)
 }
 
@@ -167,6 +167,6 @@ func (r *Rename) Select(cols, vals []string) {
 	r.source.Select(slc.Replace(cols, r.to, r.from), vals)
 }
 
-func (r *Rename) Lookup(th *runtime.Thread, cols, vals []string) runtime.Row {
+func (r *Rename) Lookup(th *Thread, cols, vals []string) Row {
 	return r.source.Lookup(th, slc.Replace(cols, r.to, r.from), vals)
 }
