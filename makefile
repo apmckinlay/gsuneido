@@ -24,11 +24,9 @@ help:
 	@echo "build"
 	@echo "    build gsuneido"
 	@echo "gsuneido"
-	@echo "    build gsuneido.exe"
+	@echo "    build gsuneido executable"
 	@echo "test"
-	@echo "    run tests"
-	@echo "release"
-	@echo "    build release version"
+	@echo "    run portable tests"
 	@echo "clean"
 	@echo "    remove built files"
 
