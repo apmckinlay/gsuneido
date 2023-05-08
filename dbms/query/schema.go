@@ -41,7 +41,7 @@ func (*schemaTable) Fixed() []Fixed {
 	return nil
 }
 
-func (*schemaTable) Ordering() []string {
+func (*schemaTable) Order() []string {
 	return nil
 }
 

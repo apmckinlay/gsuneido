@@ -47,7 +47,7 @@ func (*ProjectNone) rowSize() int {
 	return 0
 }
 
-func (*ProjectNone) Ordering() []string {
+func (*ProjectNone) Order() []string {
 	return nil
 }
 

@@ -48,10 +48,6 @@ func (*Nothing) fastSingle() bool {
 	return true
 }
 
-func (*Nothing) Ordering() []string {
-	return nil
-}
-
 func (*Nothing) Fixed() []Fixed {
 	return nil
 }

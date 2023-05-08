@@ -66,7 +66,8 @@ type Query interface {
 	// SetTran is used for cursors
 	SetTran(tran QueryTran)
 
-	Ordering() []string
+	// Order is nil for everything except Sort
+	Order() []string
 
 	// Fixed returns the field values that are constant from Extend or Where
 	Fixed() []Fixed
@@ -171,6 +172,10 @@ func (q *queryBase) Columns() []string {
 
 func (q *queryBase) Header() *Header {
 	return q.header
+}
+
+func (*queryBase) Order() []string {
+	return nil
 }
 
 // Mode is the transaction context - cursor, read, or update.
@@ -446,10 +451,6 @@ func (q1 *Query1) rowSize() int {
 	return q1.source.rowSize()
 }
 
-func (*Query1) Ordering() []string {
-	return nil
-}
-
 func (q1 *Query1) Fixed() []Fixed {
 	return q1.source.Fixed()
 }
@@ -521,10 +522,6 @@ func (q2 *Query2) Updateable() string {
 
 func (q2 *Query2) SingleTable() bool {
 	return false // not single
-}
-
-func (*Query2) Ordering() []string {
-	return nil
 }
 
 func (*Query2) Output(*Thread, Record) {

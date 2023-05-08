@@ -21,15 +21,20 @@ type sortApproach struct {
 	index []string
 }
 
-func NewSort(src Query, reverse bool, cols []string) *Sort {
-	if !set.Subset(src.Columns(), cols) {
+func NewSort(src Query, reverse bool, order []string) *Sort {
+	if !set.Subset(src.Columns(), order) {
 		panic("sort: nonexistent columns: " +
-			str.Join(", ", set.Difference(cols, src.Columns())))
+			str.Join(", ", set.Difference(order, src.Columns())))
 	}
-	sort := Sort{reverse: reverse, order: cols}
+	sort := Sort{reverse: reverse}
 	sort.source = src
+	sort.order = order
 	sort.header = src.Header()
 	return &sort
+}
+
+func (sort *Sort) Order() []string {
+	return sort.order
 }
 
 func (sort *Sort) String() string {
@@ -104,8 +109,4 @@ func (sort *Sort) Get(th *Thread, dir Dir) Row {
 
 func (sort *Sort) Select(cols, vals []string) {
 	sort.source.Select(cols, vals)
-}
-
-func (sort *Sort) Ordering() []string {
-	return sort.order
 }

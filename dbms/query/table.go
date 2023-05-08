@@ -117,10 +117,6 @@ func (tbl *Table) fastSingle() bool {
 	return len(keys) == 1 && len(keys[0]) == 0
 }
 
-func (*Table) Ordering() []string {
-	return nil
-}
-
 func (tbl *Table) Nrows() (int, int) {
 	return tbl.info.Nrows, tbl.info.Nrows
 }

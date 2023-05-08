@@ -488,8 +488,7 @@ func TestJoin_splitSelect(t *testing.T) {
 }
 
 type TestQop struct {
-	Query // satisfy Query interface
-	queryBase
+	Nothing
 	fixed   []Fixed
 	indexes [][]string
 	keys    [][]string
@@ -509,16 +508,6 @@ type sel struct {
 	vals []string
 }
 
-// Columns is ambiguously embedded twice so we have to define it
-func (q *TestQop) Columns() []string {
-	return q.header.Columns
-}
-
-// Header is ambiguously embedded twice so we have to define it
-func (q *TestQop) Header() *Header {
-	return q.header
-}
-
 func (q *TestQop) Fixed() []Fixed {
 	return q.fixed
 }
@@ -529,9 +518,6 @@ func (q *TestQop) Indexes() [][]string {
 
 func (q *TestQop) Keys() [][]string {
 	return q.keys
-}
-
-func (q *TestQop) Rewind() {
 }
 
 func (q *TestQop) Select(cols, vals []string) {
