@@ -397,6 +397,9 @@ func LookupCost(q Query, mode Mode, index []string, nrows int) (
 		}
 	} else {
 		lookupCost = q.lookupCost()
+		if lookupCost >= impossible {
+            return impossible, impossible
+        }
 	}
 	lookupCost *= nrows
 	// trace.Println("LookupCost", fixcost, "+", lookupCost, "=", fixcost+lookupCost)
