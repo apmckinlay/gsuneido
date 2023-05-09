@@ -203,6 +203,7 @@ func Disjoint[E comparable](x, y []E) bool {
 	return true
 }
 
+// StartsWithSet returns true if x starts with a permutation of y
 func StartsWithSet[E comparable](x, y []E) bool {
 	if len(x) < len(y) {
 		return false
