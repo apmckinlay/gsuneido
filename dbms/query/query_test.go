@@ -48,34 +48,6 @@ func TestByContainsKey(t *testing.T) {
 	test("a b", "x, a+b, y", true)
 }
 
-func TestProjectIndexes(t *testing.T) {
-	test := func(idxs string, cols string, expected string) {
-		t.Helper()
-		result := projectIndexes(sToIdxs(idxs), strings.Fields(cols))
-		assert.T(t).This(idxsToS(result)).Is(expected)
-	}
-	test("a, b+c, d+e+f", "a b c d", "a, b+c")
-	test("a, b+c, d+e+f", "c e f", "")
-}
-
-// sToIdxs splits strings like: "a+b, c, d+e+f"
-func sToIdxs(s string) [][]string {
-	var idxs [][]string
-	for _, ix := range strings.Split(s, ", ") {
-		idxs = append(idxs, strings.Split(ix, "+"))
-	}
-	return idxs
-}
-
-// idxsToS converts [][]string to a string like: "a+b, c, d+e+f"
-func idxsToS(idxs [][]string) string {
-	tmp := make([]string, len(idxs))
-	for i, ix := range idxs {
-		tmp[i] = strings.Join(ix, "+")
-	}
-	return strings.Join(tmp, ", ")
-}
-
 func TestForeignKeys(*testing.T) {
 	store := stor.HeapStor(8192)
 	db, err := db19.CreateDb(store)

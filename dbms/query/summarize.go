@@ -8,9 +8,11 @@ import (
 	"log"
 	"sort"
 	"strings"
+	"sync/atomic"
 
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
+	"github.com/apmckinlay/gsuneido/util/exit"
 	"github.com/apmckinlay/gsuneido/util/generic/hmap"
 	"github.com/apmckinlay/gsuneido/util/generic/ord"
 	"github.com/apmckinlay/gsuneido/util/generic/set"
@@ -19,10 +21,10 @@ import (
 )
 
 type Summarize struct {
-	t      QueryTran
-	get    func(th *Thread, su *Summarize, dir Dir) Row
-	st     *SuTran
-	by     []string
+	t   QueryTran
+	get func(th *Thread, su *Summarize, dir Dir) Row
+	st  *SuTran
+	by  []string
 	// cols, ops, and ons are parallel
 	cols []string
 	ops  []string
@@ -31,6 +33,7 @@ type Summarize struct {
 	Query1
 	wholeRow bool
 	rewound  bool
+	unique   bool
 }
 
 type summarizeApproach struct {
@@ -71,6 +74,7 @@ func NewSummarize(src Query, by, cols, ops, ons []string) *Summarize {
 	}
 	su := &Summarize{Query1: Query1{source: src},
 		by: by, cols: cols, ops: ops, ons: ons}
+	su.unique = hasKey(src.Keys(), cols, src.Fixed())
 	sort.Stable(su)
 	// if single min or max, and on is a key, then we can give the whole row
 	su.wholeRow = su.minmax1() && slc.ContainsFn(src.Keys(), ons, set.Equal[string])
@@ -148,24 +152,11 @@ func (su *Summarize) stringOp() string {
 }
 
 func (su *Summarize) Keys() [][]string {
-	if len(su.by) == 0 {
-		// singleton
-		return [][]string{{}} // intentionally {} not nil
-	}
 	return projectKeys(su.source.Keys(), su.by)
 }
 
 func (su *Summarize) Indexes() [][]string {
-	if len(su.by) == 0 || containsKey(su.by, su.source.Keys()) {
-		return su.source.Indexes()
-	}
-	var idxs [][]string
-	for _, src := range su.source.Indexes() {
-		if set.StartsWithSet(src, su.by) {
-			idxs = append(idxs, src)
-		}
-	}
-	return idxs
+	return projectIndexes(su.source.Indexes(), su.by)
 }
 
 // containsKey returns true if a set of columns contain one of the keys
@@ -178,12 +169,16 @@ func containsKey(cols []string, keys [][]string) bool {
 	return false
 }
 
+func (su *Summarize) Fixed() []Fixed {
+	return projectFixed(su.source.Fixed(), su.by)
+}
+
 func (su *Summarize) Nrows() (int, int) {
 	nr, pop := su.source.Nrows()
 	if len(su.by) == 0 {
 		nr = 1
-	} else if !containsKey(su.by, su.source.Keys()) {
-		nr /= 2 // ???
+	} else if !su.unique {
+		nr /= 10 // ??? (matches lookupCost)
 	}
 	return nr, pop
 }
@@ -323,8 +318,20 @@ func (su *Summarize) Rewind() {
 	su.rewound = true
 }
 
+var sumIn atomic.Uint32
+var sumOut atomic.Uint32
+
+func init() {
+	exit.Add(func() {
+		if sumOut.Load() > 0 {
+			fmt.Println("summarize", sumIn.Load()/sumOut.Load())
+		}
+	})
+}
+
 func (su *Summarize) Get(th *Thread, dir Dir) Row {
 	defer func() { su.rewound = false }()
+	sumOut.Add(1)
 	return su.get(th, su, dir)
 }
 
@@ -347,6 +354,7 @@ func getIdx(th *Thread, su *Summarize, _ Dir) Row {
 	if str.EqualCI(su.ops[0], "min") {
 		dir = Next
 	}
+	sumIn.Add(1)
 	row := su.source.Get(th, dir)
 	if row == nil {
 		return nil
@@ -358,6 +366,20 @@ func getIdx(th *Thread, su *Summarize, _ Dir) Row {
 		return append(row, DbRec{Record: rec})
 	}
 	return Row{DbRec{Record: rec}}
+}
+
+func (su *Summarize) Lookup(th *Thread, cols, vals []string) Row {
+	su.Select(cols, vals)
+	defer su.Select(nil, nil) // clear
+	return su.Get(th, Next)
+}
+
+func (su *Summarize) lookupCost() Cost {
+	srcCost := su.source.lookupCost()
+	if su.unique {
+		return srcCost
+	}
+	return 10 * srcCost // ??? (matches Nrows)
 }
 
 //-------------------------------------------------------------------
@@ -412,6 +434,7 @@ func (su *Summarize) buildMap(th *Thread) []mapPair {
 	}
 	sumMap := hmap.NewHmapFuncs[rowHash, []sumOp](hfn, eqfn)
 	for {
+		sumIn.Add(1)
 		row := su.source.Get(th, Next)
 		if row == nil {
 			break
@@ -451,6 +474,7 @@ func (t *sumSeqT) getSeq(th *Thread, su *Summarize, dir Dir) Row {
 		t.sums = su.newSums()
 		t.curDir = dir
 		t.curRow = nil
+		sumIn.Add(1)
 		t.nextRow = su.source.Get(th, dir)
 	}
 
@@ -460,6 +484,7 @@ func (t *sumSeqT) getSeq(th *Thread, su *Summarize, dir Dir) Row {
 			su.source.Rewind()
 		}
 		for {
+			sumIn.Add(1)
 			t.nextRow = su.source.Get(th, dir)
 			if t.nextRow == nil || !su.sameBy(th, su.st, t.curRow, t.nextRow) {
 				break
@@ -477,6 +502,7 @@ func (t *sumSeqT) getSeq(th *Thread, su *Summarize, dir Dir) Row {
 	}
 	for {
 		su.addToSums(t.sums, t.nextRow, th, su.st)
+		sumIn.Add(1)
 		t.nextRow = su.source.Get(th, dir)
 		if t.nextRow == nil || !su.sameBy(th, su.st, t.curRow, t.nextRow) {
 			break

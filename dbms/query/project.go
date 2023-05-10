@@ -4,12 +4,15 @@
 package query
 
 import (
+	"fmt"
 	"log"
 	"strings"
+	"sync/atomic"
 
 	"github.com/apmckinlay/gsuneido/compile/ast"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
+	"github.com/apmckinlay/gsuneido/util/exit"
 	"github.com/apmckinlay/gsuneido/util/generic/hmap"
 	"github.com/apmckinlay/gsuneido/util/generic/set"
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
@@ -155,10 +158,16 @@ func (p *Project) Keys() [][]string {
 	return projectKeys(p.source.Keys(), p.columns)
 }
 
+// projectKeys is also used by Summarize
 func projectKeys(keys [][]string, cols []string) [][]string {
-	keys2 := projectIndexes(keys, cols)
+	var keys2 [][]string
+	for _, ix := range keys {
+		if set.Subset(cols, ix) {
+			keys2 = append(keys2, ix)
+		}
+	}
 	if len(keys2) == 0 {
-		return [][]string{cols}
+		return [][]string{cols} // fallback on all columns
 	}
 	return keys2
 }
@@ -167,11 +176,16 @@ func (p *Project) Indexes() [][]string {
 	return projectIndexes(p.source.Indexes(), p.columns)
 }
 
+// projectIndexes is also used by Summarize
 func projectIndexes(idxs [][]string, cols []string) [][]string {
 	var idxs2 [][]string
-	for _, k := range idxs {
-		if set.Subset(cols, k) {
-			idxs2 = append(idxs2, k)
+	for _, ix := range idxs {
+		i := 0
+		for ; i < len(ix) && slices.Contains(cols, ix[i]); i++ {
+		}
+		pre := ix[:i]
+		if i > 0 && !slc.ContainsFn(idxs2, pre, slices.Equal[string]) {
+			idxs2 = append(idxs2, pre)
 		}
 	}
 	return idxs2
@@ -180,7 +194,7 @@ func projectIndexes(idxs [][]string, cols []string) [][]string {
 func (p *Project) Nrows() (int, int) {
 	nr, pop := p.source.Nrows()
 	if !p.unique {
-		nr /= 2 // ???
+		nr /= 2 // ??? (matches lookupCost)
 	}
 	return nr, pop
 }
@@ -353,10 +367,14 @@ func isConstant(e ast.Expr) bool {
 }
 
 func (p *Project) Fixed() []Fixed {
-	//TODO cache like extend and union ???
-	var fixed []Fixed
-	for _, f := range p.source.Fixed() {
-		if slices.Contains(p.columns, f.col) {
+	return projectFixed(p.source.Fixed(), p.columns)
+}
+
+// projectFixed is also used by Summarize
+func projectFixed(srcFixed []Fixed, cols []string) []Fixed {
+	fixed := []Fixed{}
+	for _, f := range srcFixed {
+		if slices.Contains(cols, f.col) {
 			fixed = append(fixed, f)
 		}
 	}
@@ -427,13 +445,26 @@ func (p *Project) Rewind() {
 	p.source.Rewind()
 }
 
+var projIn atomic.Uint32
+var projOut atomic.Uint32
+
+func init() {
+	exit.Add(func() {
+		if projOut.Load() > 0 {
+			fmt.Println("project", (projIn.Load())/projOut.Load())
+		}
+	})
+}
+
 func (p *Project) Get(th *Thread, dir Dir) Row {
 	switch p.strategy {
 	case projCopy:
 		return p.source.Get(th, dir)
 	case projSeq:
+		projOut.Add(1)
 		return p.getSeq(th, dir)
 	case projMap:
+		projOut.Add(1)
 		return p.getMap(th, dir)
 	}
 	panic("should not reach here")
@@ -444,6 +475,7 @@ func (p *Project) getSeq(th *Thread, dir Dir) Row {
 		// output the first of each group
 		// i.e. skip over rows the same as previous output
 		for {
+			projIn.Add(1)
 			row := p.source.Get(th, dir)
 			if row == nil {
 				return nil
@@ -460,6 +492,7 @@ func (p *Project) getSeq(th *Thread, dir Dir) Row {
 		// i.e. output when next record is different
 		// (to get the same records as NEXT)
 		if p.rewound {
+			projIn.Add(1)
 			p.prevRow = p.source.Get(th, dir)
 		}
 		p.rewound = false
@@ -468,6 +501,7 @@ func (p *Project) getSeq(th *Thread, dir Dir) Row {
 				return nil
 			}
 			row := p.prevRow
+			projIn.Add(1)
 			p.prevRow = p.source.Get(th, dir)
 			if p.prevRow == nil ||
 				!p.header.EqualRows(row, p.prevRow, th, p.st) {
@@ -500,6 +534,7 @@ func (p *Project) getMap(th *Thread, dir Dir) Row {
 		}
 	}
 	for {
+		projIn.Add(1)
 		row := p.source.Get(th, dir)
 		if row == nil {
 			break
@@ -542,6 +577,7 @@ func equalCols(x, y Row, hdr *Header, cols []string, th *Thread, st *SuTran) boo
 
 func (p *Project) buildMap(th *Thread) {
 	for {
+		projIn.Add(1)
 		row := p.source.Get(th, Next)
 		if row == nil {
 			break
@@ -576,7 +612,14 @@ func (p *Project) Lookup(th *Thread, cols, vals []string) Row {
 		return p.source.Lookup(th, cols, vals)
 	}
 	p.Select(cols, vals)
-	row := p.Get(th, Next)
-	p.Select(nil, nil) // clear select
-	return row
+	defer p.Select(nil, nil) // clear
+	return p.Get(th, Next)
+}
+
+func (p *Project) lookupCost() Cost {
+	srcCost := p.source.lookupCost()
+	if p.unique {
+		return srcCost
+	}
+	return 2 * srcCost // ??? (matches Nrows)
 }
