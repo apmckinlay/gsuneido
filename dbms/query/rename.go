@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	. "github.com/apmckinlay/gsuneido/runtime"
+	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/generic/set"
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
 	"github.com/apmckinlay/gsuneido/util/str"
@@ -88,17 +89,21 @@ func renameIndexes(idxs [][]string, from, to []string) [][]string {
 }
 
 func (r *Rename) Fixed() []Fixed {
-	fixed := r.source.Fixed()
-	result := make([]Fixed, len(fixed))
-	for i, fxd := range fixed {
-		j := slices.Index(r.from, fxd.col)
-		if j == -1 {
-			result[i] = fxd
-		} else {
-			result[i] = Fixed{col: r.to[j], values: fxd.values}
+	if r.fixed == nil {
+		srcFix := r.source.Fixed()
+		result := make([]Fixed, len(srcFix))
+		for i, fxd := range srcFix {
+			j := slices.Index(r.from, fxd.col)
+			if j == -1 {
+				result[i] = fxd
+			} else {
+				result[i] = Fixed{col: r.to[j], values: fxd.values}
+			}
 		}
+		r.fixed = result
+		assert.That(r.fixed != nil)
 	}
-	return result
+	return r.fixed
 }
 
 func (r *Rename) Transform() Query {

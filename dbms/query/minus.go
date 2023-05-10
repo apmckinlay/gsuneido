@@ -20,8 +20,8 @@ type minusApproach struct {
 func NewMinus(src1, src2 Query) *Minus {
 	var m Minus
 	m.Compatible = *newCompatible(src1, src2)
-	m.fixed = m.fixed1
 	m.header = m.source1.Header()
+	m.fixed = m.source1.Fixed()
 	return &m
 }
 

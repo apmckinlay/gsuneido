@@ -27,12 +27,9 @@ import (
 // joinLike is common stuff for Join, LeftJoin, and Times
 type joinLike struct {
 	saIndex  []string
-	fixed1   []Fixed
-	fixed2   []Fixed
 	sel2cols []string
 	sel2vals []string
 	Query2
-	haveFixed      bool
 	conflict1      bool
 	conflict2      bool
 	haveFastSingle bool
@@ -93,7 +90,9 @@ func (jt joinType) String() string {
 }
 
 func NewJoin(src1, src2 Query, by []string) *Join {
-	return &Join{joinBase: newJoinBase(src1, src2, by)}
+	jn := &Join{joinBase: newJoinBase(src1, src2, by)}
+	jn.fixed = jn.getFixed()
+	return jn
 }
 
 func newJoinBase(src1, src2 Query, by []string) joinBase {
@@ -185,9 +184,8 @@ func (jn *Join) fastSingle() bool {
 	return jn.fastSingleVal
 }
 
-func (jn *Join) Fixed() []Fixed {
-	jn.ensureFixed()
-	fixed, none := combineFixed(jn.fixed1, jn.fixed2)
+func (jn *Join) getFixed() []Fixed {
+	fixed, none := combineFixed(jn.source1.Fixed(), jn.source2.Fixed())
 	if none {
 		jn.conflict1 = true
 	}
@@ -442,7 +440,8 @@ func (jn *Join) Lookup(th *Thread, cols, vals []string) Row {
 
 func (jl *joinLike) splitSelect(cols, vals []string) (
 	sel1cols, sel1vals []string) {
-	jl.ensureFixed()
+	fixed1 := jl.source1.Fixed()
+	fixed2 := jl.source2.Fixed()
 	jl.conflict1, jl.conflict2 = false, false
 	for i, col := range cols {
 		if slices.Contains(jl.saIndex, col) {
@@ -450,11 +449,11 @@ func (jl *joinLike) splitSelect(cols, vals []string) (
 			sel1vals = append(sel1vals, vals[i])
 			continue
 		}
-		fixVals1 := getFixed(jl.fixed1, col)
+		fixVals1 := getFixed(fixed1, col)
 		if len(fixVals1) == 1 && fixVals1[0] != vals[i] {
 			jl.conflict1 = true
 		}
-		fixVals2 := getFixed(jl.fixed2, col)
+		fixVals2 := getFixed(fixed2, col)
 		if len(fixVals2) == 1 && fixVals2[0] != vals[i] {
 			jl.conflict2 = true
 		}
@@ -464,18 +463,11 @@ func (jl *joinLike) splitSelect(cols, vals []string) (
 	return
 }
 
-func (jl *joinLike) ensureFixed() {
-	if !jl.haveFixed {
-		jl.fixed1 = jl.source1.Fixed()
-		jl.fixed2 = jl.source2.Fixed()
-	}
-}
-
 func (jb *joinBase) lookupFallback(sel1cols []string) bool {
 	if jb.lookup == nil {
 		jb.lookup = &lookupInfo{
 			keys1:  jb.source1.Keys(),
-			fixed1: jb.fixed1,
+			fixed1: jb.source1.Fixed(),
 		}
 	}
 	if !hasKey(sel1cols, jb.lookup.keys1, jb.lookup.fixed1) {
@@ -500,7 +492,9 @@ type LeftJoin struct {
 }
 
 func NewLeftJoin(src1, src2 Query, by []string) *LeftJoin {
-	return &LeftJoin{joinBase: newJoinBase(src1, src2, by)}
+	lj := &LeftJoin{joinBase: newJoinBase(src1, src2, by)}
+	lj.fixed = lj.getFixed()
+	return lj
 }
 
 func (lj *LeftJoin) String() string {
@@ -538,16 +532,17 @@ func (lj *LeftJoin) fastSingle() bool {
 	return lj.fastSingleVal
 }
 
-func (lj *LeftJoin) Fixed() []Fixed {
-	lj.ensureFixed()
-	if len(lj.fixed2) == 0 {
-		return lj.fixed1
+func (lj *LeftJoin) getFixed() []Fixed {
+	fixed1 := lj.source1.Fixed()
+	fixed2 := lj.source2.Fixed()
+	if len(fixed2) == 0 {
+		return fixed1
 	}
-	result := make([]Fixed, 0, len(lj.fixed1)+len(lj.fixed2))
+	result := make([]Fixed, 0, len(fixed1)+len(fixed2))
 	// all of fixed1
-	result = append(result, lj.fixed1...)
+	result = append(result, fixed1...)
 	// fixed2 that are not common with source1
-	for _, f2 := range lj.fixed2 {
+	for _, f2 := range fixed2 {
 		if !slices.Contains(lj.by, f2.col) {
 			// add "" because source2 row can be empty
 			result = append(result, fixedWith(f2, ""))

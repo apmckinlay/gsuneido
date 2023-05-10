@@ -48,10 +48,6 @@ func (*Nothing) fastSingle() bool {
 	return true
 }
 
-func (*Nothing) Fixed() []Fixed {
-	return nil
-}
-
 func (*Nothing) Updateable() string {
 	return "nothing"
 }

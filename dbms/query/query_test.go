@@ -449,7 +449,6 @@ func TestJoin_splitSelect(t *testing.T) {
 
 type TestQop struct {
 	Nothing
-	fixed   []Fixed
 	indexes [][]string
 	keys    [][]string
 	sel
@@ -466,10 +465,6 @@ func newTestQop(cols []string, keys [][]string) *TestQop {
 type sel struct {
 	cols []string
 	vals []string
-}
-
-func (q *TestQop) Fixed() []Fixed {
-	return q.fixed
 }
 
 func (q *TestQop) Indexes() [][]string {

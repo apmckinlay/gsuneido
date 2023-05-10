@@ -6,6 +6,7 @@ package query
 import (
 	"github.com/apmckinlay/gsuneido/compile/ast"
 	. "github.com/apmckinlay/gsuneido/runtime"
+	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/generic/set"
 	"github.com/apmckinlay/gsuneido/util/str"
 	"golang.org/x/exp/slices"
@@ -17,7 +18,6 @@ type Extend struct {
 	cols     []string
 	exprs    []ast.Expr
 	exprCols []string
-	fixed    []Fixed
 	selCols  []string
 	selVals  []string
 	Query1
@@ -143,18 +143,18 @@ func (e *Extend) needRule2(col string) bool {
 }
 
 func (e *Extend) Fixed() []Fixed {
-	if e.fixed != nil {
-		return e.fixed
-	}
-	fixed := append([]Fixed{}, e.source.Fixed()...) // copy
-	for i := 0; i < len(e.cols); i++ {
-		if expr := e.exprs[i]; expr != nil {
-			if c, ok := expr.(*ast.Constant); ok {
-				fixed = append(fixed, NewFixed(e.cols[i], c.Val))
+	if e.fixed == nil {
+		e.fixed = append([]Fixed{}, e.source.Fixed()...) // non-nil copy
+		for i := 0; i < len(e.cols); i++ {
+			if expr := e.exprs[i]; expr != nil {
+				if c, ok := expr.(*ast.Constant); ok {
+					e.fixed = append(e.fixed, NewFixed(e.cols[i], c.Val))
+				}
 			}
 		}
+		assert.That(e.fixed != nil)
 	}
-	return fixed
+	return e.fixed
 }
 
 func (e *Extend) SingleTable() bool {

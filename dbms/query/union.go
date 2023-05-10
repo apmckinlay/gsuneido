@@ -50,7 +50,6 @@ const (
 
 func NewUnion(src1, src2 Query) *Union {
 	u := &Union{Compatible: *newCompatible(src1, src2)}
-	u.fixed = u.calcFixed()
 	u.header = JoinHeaders(src1.Header(), src2.Header())
 	return u
 }
@@ -149,11 +148,21 @@ func keepCols(src, nothing Query, hdr *Header) Query {
 	return NewExtend(src, cols, exprs).Transform()
 }
 
-func (u *Union) calcFixed() []Fixed {
-	fixed := make([]Fixed, 0, len(u.fixed1)+len(u.fixed2))
+func (u *Union) Fixed() []Fixed {
+	if u.fixed == nil {
+		u.fixed = u.getFixed()
+		assert.That(u.fixed != nil)
+	}
+	return u.fixed
+}
+
+func (u *Union) getFixed() []Fixed {
+	fixed1 := u.source1.Fixed()
+	fixed2 := u.source2.Fixed()
+	fixed := make([]Fixed, 0, len(fixed1)+len(fixed2))
 	// add ones that are in both
-	for _, f1 := range u.fixed1 {
-		for _, f2 := range u.fixed2 {
+	for _, f1 := range fixed1 {
+		for _, f2 := range fixed2 {
 			if f1.col == f2.col {
 				fixed = append(fixed,
 					Fixed{col: f1.col, values: set.Union(f1.values, f2.values)})
@@ -165,14 +174,14 @@ func (u *Union) calcFixed() []Fixed {
 	// can treat the other source as fixed = ""
 	cols2 := u.source2.Columns()
 	emptyStr := []string{""}
-	for _, f1 := range u.fixed1 {
+	for _, f1 := range fixed1 {
 		if !slices.Contains(cols2, f1.col) {
 			fixed = append(fixed,
 				Fixed{col: f1.col, values: set.Union(f1.values, emptyStr)})
 		}
 	}
 	cols1 := u.source1.Columns()
-	for _, f2 := range u.fixed2 {
+	for _, f2 := range fixed2 {
 		if !slices.Contains(cols1, f2.col) {
 			fixed = append(fixed,
 				Fixed{col: f2.col, values: set.Union(f2.values, emptyStr)})

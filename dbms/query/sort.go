@@ -30,11 +30,8 @@ func NewSort(src Query, reverse bool, order []string) *Sort {
 	sort.source = src
 	sort.order = order
 	sort.header = src.Header()
+	sort.fixed = src.Fixed()
 	return &sort
-}
-
-func (sort *Sort) Order() []string {
-	return sort.order
 }
 
 func (sort *Sort) String() string {
@@ -50,6 +47,10 @@ func (sort *Sort) stringOp() string {
 		return r
 	}
 	return "SORT " + str.Opt(r, " ") + str.Join(", ", sort.order)
+}
+
+func (sort *Sort) Order() []string {
+	return sort.order
 }
 
 func (sort *Sort) Transform() Query {

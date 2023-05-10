@@ -21,6 +21,8 @@ import (
 )
 
 type Summarize struct {
+	queryBase
+	source Query
 	t   QueryTran
 	get func(th *Thread, su *Summarize, dir Dir) Row
 	st  *SuTran
@@ -30,7 +32,6 @@ type Summarize struct {
 	ops  []string
 	ons  []string
 	summarizeApproach
-	Query1
 	wholeRow bool
 	rewound  bool
 	unique   bool
@@ -72,13 +73,13 @@ func NewSummarize(src Query, by, cols, ops, ons []string) *Summarize {
 			}
 		}
 	}
-	su := &Summarize{Query1: Query1{source: src},
-		by: by, cols: cols, ops: ops, ons: ons}
-	su.unique = hasKey(cols, src.Keys(), src.Fixed())
+	su := &Summarize{source: src, by: by, cols: cols, ops: ops, ons: ons}
 	sort.Stable(su)
+	su.unique = hasKey(cols, src.Keys(), src.Fixed())
 	// if single min or max, and on is a key, then we can give the whole row
 	su.wholeRow = su.minmax1() && slc.ContainsFn(src.Keys(), ons, set.Equal[string])
 	su.header = su.getHeader()
+	su.fixed = projectFixed(src.Fixed(), by)
 	return su
 }
 
@@ -159,10 +160,6 @@ func (su *Summarize) Indexes() [][]string {
 	return projectIndexes(su.source.Indexes(), su.by)
 }
 
-func (su *Summarize) Fixed() []Fixed {
-	return projectFixed(su.source.Fixed(), su.by)
-}
-
 func (su *Summarize) Nrows() (int, int) {
 	nr, pop := su.source.Nrows()
 	if len(su.by) == 0 {
@@ -178,10 +175,14 @@ func (su *Summarize) rowSize() int {
 }
 
 func (su *Summarize) Updateable() string {
-	return "" // override Query1 source.Updateable
+	return ""
 }
 
 func (su *Summarize) SingleTable() bool {
+	return false
+}
+
+func (su *Summarize) fastSingle() bool {
 	return false
 }
 

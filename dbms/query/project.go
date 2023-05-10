@@ -367,7 +367,11 @@ func isConstant(e ast.Expr) bool {
 }
 
 func (p *Project) Fixed() []Fixed {
-	return projectFixed(p.source.Fixed(), p.columns)
+	if p.fixed == nil {
+		p.fixed = projectFixed(p.source.Fixed(), p.columns)
+		assert.That(p.fixed != nil)
+	}
+	return p.fixed
 }
 
 // projectFixed is also used by Summarize
@@ -386,6 +390,10 @@ func (p *Project) Updateable() string {
 		return p.source.Updateable()
 	}
 	return ""
+}
+
+func (p *Project) fastSingle() bool {
+	return p.strategy == projCopy && p.source.fastSingle()
 }
 
 // optimize ---------------------------------------------------------

@@ -163,6 +163,7 @@ type queryBase struct {
 	// setApproach is necessary because the sources may get reversed
 	// which affects the order of Fields
 	header *Header
+	fixed []Fixed
 	cache
 }
 
@@ -176,6 +177,14 @@ func (q *queryBase) Header() *Header {
 
 func (*queryBase) Order() []string {
 	return nil
+}
+
+func (q *queryBase) Fixed() []Fixed {
+	return q.fixed
+}
+
+func (*queryBase) Updateable() string {
+	return ""
 }
 
 // Mode is the transaction context - cursor, read, or update.
@@ -454,10 +463,6 @@ func (q1 *Query1) rowSize() int {
 	return q1.source.rowSize()
 }
 
-func (q1 *Query1) Fixed() []Fixed {
-	return q1.source.Fixed()
-}
-
 func (q1 *Query1) Updateable() string {
 	return q1.source.Updateable()
 }
@@ -517,10 +522,6 @@ func (q2 *Query2) String2(op string) string {
 func (q2 *Query2) SetTran(t QueryTran) {
 	q2.source1.SetTran(t)
 	q2.source2.SetTran(t)
-}
-
-func (q2 *Query2) Updateable() string {
-	return ""
 }
 
 func (q2 *Query2) SingleTable() bool {

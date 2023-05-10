@@ -13,9 +13,6 @@ import (
 type Compatible struct {
 	st       *SuTran
 	disjoint string
-	fixed1   []Fixed
-	fixed2   []Fixed
-	fixed    []Fixed // set by operations
 	allCols  []string
 	keyIndex []string
 	Query2
@@ -26,10 +23,10 @@ func newCompatible(src1, src2 Query) *Compatible {
 	c := &Compatible{}
 	c.source1, c.source2 = src1, src2
 	c.allCols = set.Union(c.source1.Columns(), c.source2.Columns())
-	c.fixed1 = src1.Fixed()
-	c.fixed2 = src2.Fixed()
-	for _, f1 := range c.fixed1 {
-		for _, f2 := range c.fixed2 {
+	fixed1 := src1.Fixed()
+	fixed2 := src2.Fixed()
+	for _, f1 := range fixed1 {
+		for _, f2 := range fixed2 {
 			if f1.col == f2.col && set.Disjoint(f1.values, f2.values) {
 				c.disjoint = f1.col
 				return c
@@ -37,14 +34,14 @@ func newCompatible(src1, src2 Query) *Compatible {
 		}
 	}
 	cols2 := src2.Columns()
-	for _, f1 := range c.fixed1 {
+	for _, f1 := range fixed1 {
 		if !slices.Contains(cols2, f1.col) && !slices.Contains(f1.values, "") {
 			c.disjoint = f1.col
 			return c
 		}
 	}
 	cols1 := src1.Columns()
-	for _, f2 := range c.fixed2 {
+	for _, f2 := range fixed2 {
 		if !slices.Contains(cols1, f2.col) && !slices.Contains(f2.values, "") {
 			c.disjoint = f2.col
 			return c
@@ -66,10 +63,6 @@ func (c *Compatible) stringOp(op, strategy string) string {
 
 func (c *Compatible) SetTran(t QueryTran) {
 	c.st = MakeSuTran(t)
-}
-
-func (c *Compatible) Fixed() []Fixed {
-	return c.fixed // set by init
 }
 
 // source2Has returns true if a row from source exists in source2

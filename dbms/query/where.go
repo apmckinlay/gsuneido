@@ -44,7 +44,6 @@ type Where struct {
 	selectVals []string
 
 	idxSels    []idxSel
-	fixed      []Fixed
 	whereFixed []Fixed
 	Query1
 	// idxSelPos is the current index in idxSel.ptrngs
@@ -115,10 +114,6 @@ func (w *Where) stringOp() string {
 		s += " " + w.expr.Echo()
 	}
 	return s
-}
-
-func (w *Where) Fixed() []Fixed {
-	return w.fixed
 }
 
 // calcFixed sets w.whereFixed and w.fixed and may set w.conflict

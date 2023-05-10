@@ -24,9 +24,8 @@ type intersectApproach struct {
 func NewIntersect(src1, src2 Query) *Intersect {
 	it := Intersect{}
 	it.Compatible = *newCompatible(src1, src2)
-	it.fixed = it.calcFixed()
 	it.header = it.getHeader()
-	it.Header()
+	it.fixed = it.getFixed()
 	return &it
 }
 
@@ -56,8 +55,8 @@ func (it *Intersect) Keys() [][]string {
 	return k
 }
 
-func (it *Intersect) calcFixed() []Fixed {
-	fixed, none := FixedIntersect(it.fixed1, it.fixed2)
+func (it *Intersect) getFixed() []Fixed {
+	fixed, none := FixedIntersect(it.source1.Fixed(), it.source2.Fixed())
 	if none {
 		it.conflict = true
 	}

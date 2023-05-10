@@ -22,7 +22,9 @@ func NewTimes(src1, src2 Query) *Times {
 		panic("times: common columns not allowed: " + str.Join(", ",
 			set.Intersect(src1.Columns(), src2.Columns())))
 	}
-	return &Times{joinLike: newJoinLike(src1, src2), rewound: true}
+	t := &Times{joinLike: newJoinLike(src1, src2), rewound: true}
+	t.fixed = t.getFixed()
+	return t
 }
 
 func (t *Times) String() string {
@@ -44,9 +46,8 @@ func (t *Times) Indexes() [][]string {
 	return slc.With(t.source1.Indexes(), t.source2.Indexes()...)
 }
 
-func (t *Times) Fixed() []Fixed {
-	t.ensureFixed()
-	fixed, conflict := combineFixed(t.fixed1, t.fixed2)
+func (t *Times) getFixed() []Fixed {
+	fixed, conflict := combineFixed(t.source1.Fixed(), t.source2.Fixed())
 	assert.That(!conflict) // because no common columns
 	return fixed
 }
