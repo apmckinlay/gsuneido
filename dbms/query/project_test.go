@@ -81,3 +81,22 @@ func TestProjectKeys(t *testing.T) {
 	test("a, b+c, b+c+x, d+e+f", "a b c d", "a, b+c")
 	test("a, b+c, d+e+f", "c e f", "c+e+f") // fallback to all columns
 }
+
+func TestHasKey(t *testing.T) {
+	var fixed []Fixed
+	test := func(cols string, keys string, expected bool) {
+		t.Helper()
+		result := hasKey(strings.Fields(cols), sToIdxs(keys), fixed)
+		assert.T(t).This(result).Is(expected)
+	}
+	// no fixed
+	test("", "a+b, c", false)
+	test("a b", "a", true)
+	test("a b", "b", true)
+	test("a b", "x, a+b, y", true)
+
+	fixed = []Fixed{{col: "b", values: []string{"1"}}}
+	test("", "a", false)
+	test("", "b", true)
+	test("a c", "a+b+c", true)
+}

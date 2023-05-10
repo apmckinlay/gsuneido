@@ -541,7 +541,7 @@ func TestQueryGet(t *testing.T) {
         'e'	'emerald'	'vancouver'	''
         'i'	'intercon'	'saskatoon'	''`)
 	test("customer leftjoin (trans where date = 970101 and item = 'mouse')",
-		"customer^(id) LEFTJOIN 1:n by(id) "+
+		"customer^(id) LEFTJOIN 1:1 by(id) "+
 			"(trans^(date,item,id) WHERE date is 970101 and item is 'mouse')",
 		`id	name	city	item	cost	date
         'a'	'axon'	'saskatoon'	''	''	''

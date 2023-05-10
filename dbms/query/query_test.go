@@ -36,18 +36,6 @@ func TestKeys(t *testing.T) {
 	test("(bcd where b is 1) union (bcd where b is 2)", "b")
 }
 
-func TestByContainsKey(t *testing.T) {
-	test := func(by string, keys string, expected bool) {
-		t.Helper()
-		result := containsKey(strings.Fields(by), sToIdxs(keys))
-		assert.T(t).This(result).Is(expected)
-	}
-	test("", "a b, c", false)
-	test("a b", "a", true)
-	test("a b", "b", true)
-	test("a b", "x, a+b, y", true)
-}
-
 func TestForeignKeys(*testing.T) {
 	store := stor.HeapStor(8192)
 	db, err := db19.CreateDb(store)

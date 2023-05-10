@@ -108,8 +108,8 @@ func newJoinBase(src1, src2 Query, by []string) joinBase {
 	}
 	jb := joinBase{joinLike: newJoinLike(src1, src2)}
 	jb.by = by
-	k1 := containsKey(by, src1.Keys())
-	k2 := containsKey(by, src2.Keys())
+	k1 := hasKey(by, src1.Keys(), src1.Fixed())
+	k2 := hasKey(by, src2.Keys(), src2.Fixed())
 	if k1 && k2 {
 		jb.joinType = one_one
 	} else if k1 {
@@ -478,7 +478,7 @@ func (jb *joinBase) lookupFallback(sel1cols []string) bool {
 			fixed1: jb.fixed1,
 		}
 	}
-	if !hasKey(jb.lookup.keys1, sel1cols, jb.lookup.fixed1) {
+	if !hasKey(sel1cols, jb.lookup.keys1, jb.lookup.fixed1) {
 		// can't do lookup on source1
 		// this can happen (rarely) because there's no way to tell Optimize
 		// that we want to do lookups with the index

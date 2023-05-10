@@ -87,7 +87,7 @@ func newProject(src Query, cols []string) *Project {
 }
 func newProject2(src Query, cols []string, includeDeps bool) *Project {
 	p := &Project{Query1: Query1{source: src}, rewound: true}
-	if hasKey(src.Keys(), cols, src.Fixed()) {
+	if hasKey(cols, src.Keys(), src.Fixed()) {
 		p.unique = true
 		if includeDeps {
 			cols = p.includeDeps(cols, src.Columns())
@@ -120,7 +120,7 @@ func (p *Project) getHeader() *Header {
 
 // hasKey returns whether cols contains a key
 // taking fixed into consideration
-func hasKey(keys [][]string, cols []string, fixed []Fixed) bool {
+func hasKey(cols []string, keys [][]string, fixed []Fixed) bool {
 outer:
 	for _, key := range keys {
 		for _, k := range key {

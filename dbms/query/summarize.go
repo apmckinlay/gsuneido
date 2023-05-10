@@ -74,7 +74,7 @@ func NewSummarize(src Query, by, cols, ops, ons []string) *Summarize {
 	}
 	su := &Summarize{Query1: Query1{source: src},
 		by: by, cols: cols, ops: ops, ons: ons}
-	su.unique = hasKey(src.Keys(), cols, src.Fixed())
+	su.unique = hasKey(cols, src.Keys(), src.Fixed())
 	sort.Stable(su)
 	// if single min or max, and on is a key, then we can give the whole row
 	su.wholeRow = su.minmax1() && slc.ContainsFn(src.Keys(), ons, set.Equal[string])
@@ -159,16 +159,6 @@ func (su *Summarize) Indexes() [][]string {
 	return projectIndexes(su.source.Indexes(), su.by)
 }
 
-// containsKey returns true if a set of columns contain one of the keys
-func containsKey(cols []string, keys [][]string) bool {
-	for _, key := range keys {
-		if set.Subset(cols, key) {
-			return true
-		}
-	}
-	return false
-}
-
 func (su *Summarize) Fixed() []Fixed {
 	return projectFixed(su.source.Fixed(), su.by)
 }
@@ -235,7 +225,7 @@ func (su *Summarize) seqCost(mode Mode, index []string, frac float64) (Cost, Cos
 		frac = ord.Min(1, frac)
 	}
 	approach := &summarizeApproach{strategy: sumSeq, frac: frac}
-	if len(su.by) == 0 || containsKey(su.by, su.source.Keys()) {
+	if len(su.by) == 0 || hasKey(su.by, su.source.Keys(), su.source.Fixed()) {
 		if len(su.by) != 0 {
 			approach.index = index
 		}
