@@ -8,7 +8,7 @@ import (
 	"strings"
 	"testing"
 
-	rt "github.com/apmckinlay/gsuneido/runtime"
+	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
 )
@@ -20,7 +20,7 @@ func TestTableLookup(t *testing.T) {
 	is := func(args ...int) []string {
 		ss := make([]string, len(args))
 		for i, n := range args {
-			ss[i] = rt.Pack(rt.IntVal(n))
+			ss[i] = Pack(IntVal(n))
 		}
 		return ss
 	}
@@ -36,19 +36,19 @@ func TestTableLookup(t *testing.T) {
 }
 
 func TestQueryGet(t *testing.T) {
-	MakeSuTran = func(qt QueryTran) *rt.SuTran { return nil }
-	th := &rt.Thread{}
+	MakeSuTran = func(qt QueryTran) *SuTran { return nil }
+	th := &Thread{}
 	db := testDb()
 	defer db.Close()
-	get := func(q Query, dir rt.Dir) string {
+	get := func(q Query, dir Dir) string {
 		t.Helper()
-		var rows []rt.Row
+		var rows []Row
 		q.Rewind()
 		for row := q.Get(th, dir); row != nil; row = q.Get(th, dir) {
 			assert.Msg("too many").That(len(rows) < 100)
 			rows = append(rows, row)
 		}
-		if dir == rt.Prev {
+		if dir == Prev {
 			slc.Reverse(rows)
 		}
 		hdr := q.Header()
@@ -79,8 +79,8 @@ func TestQueryGet(t *testing.T) {
 		q, _, _ = Setup(q, ReadMode, tran)
 		qs := strings.ReplaceAll(q.String(), `"`, "'")
 		assert.T(t).This(qs).Is(strategy)
-		assert.T(t).Msg("forward:", query).This(get(q, rt.Next)).Like(expected)
-		assert.T(t).Msg("reverse:", query).This(get(q, rt.Prev)).Like(expected)
+		assert.T(t).Msg("forward:", query).This(get(q, Next)).Like(expected)
+		assert.T(t).Msg("reverse:", query).This(get(q, Prev)).Like(expected)
 	}
 	test("indexes project table, columns, key",
 		"indexes PROJECT-COPY table,columns,key",
@@ -471,7 +471,7 @@ func TestQueryGet(t *testing.T) {
 	test("(((co where tnum = 100) union (co where tnum = 102)) remove tnum)"+
 		" union "+
 		"(((co where tnum = 104) union (co where tnum = 106)) remove tnum)",
-		"(co^(tnum) WHERE*1 tnum is 100 UNION-DISJOINT(tnum)-MERGE(signed) (co^(tnum) WHERE*1 tnum is 102)) PROJECT-SEQ signed UNION-LOOKUP(signed) ((co^(tnum) WHERE*1 tnum is 104 UNION-DISJOINT(tnum)-MERGE(signed) (co^(tnum) WHERE*1 tnum is 106)) PROJECT-SEQ signed)",
+		"(co^(tnum) WHERE*1 tnum is 100 UNION-DISJOINT(tnum)-MERGE(signed) (co^(tnum) WHERE*1 tnum is 102)) PROJECT-SEQ signed UNION-MERGE(signed) ((co^(tnum) WHERE*1 tnum is 104 UNION-DISJOINT(tnum)-MERGE(signed) (co^(tnum) WHERE*1 tnum is 106)) PROJECT-SEQ signed)",
 		`signed
         990101
         990102
@@ -541,7 +541,7 @@ func TestQueryGet(t *testing.T) {
         'e'	'emerald'	'vancouver'	''
         'i'	'intercon'	'saskatoon'	''`)
 	test("customer leftjoin (trans where date = 970101 and item = 'mouse')",
-		"customer^(id) LEFTJOIN 1:n by(id) "+
+		"customer^(id) LEFTJOIN 1:1 by(id) "+
 			"(trans^(date,item,id) WHERE date is 970101 and item is 'mouse')",
 		`id	name	city	item	cost	date
         'a'	'axon'	'saskatoon'	''	''	''
@@ -709,4 +709,51 @@ func TestQueryGet(t *testing.T) {
 	test("tables minus tables",
 		"tables MINUS (tables TEMPINDEX(table))",
 		`table	tablename	nrows	totalsize`)
+
+	test("(customer project id) union (customer project id)",
+		"customer^(id) PROJECT-COPY id UNION-MERGE(id) (customer^(id) PROJECT-COPY id)",
+		`id
+		'a'
+		'c'
+		'e'
+		'i'`)
+	test("(trans project item,date) union (trans project date,item)",
+		"trans^(date,item,id) PROJECT-SEQ item,date UNION-MERGE(item,date) "+
+			"(trans^(date,item,id) PROJECT-SEQ date,item)",
+		`item		date
+		'mouse'		960204
+		'disk'		970101
+		'mouse'		970101
+		'eraser'	970201`)
+
+	test("(customer summarize id, count) union (customer summarize id, count)",
+		"customer^(id) SUMMARIZE-SEQ id, count = count UNION-MERGE(id) "+
+			"(customer^(id) SUMMARIZE-SEQ id, count = count)",
+		`id		count
+		'a'		1
+		'c'		1
+		'e'		1
+		'i'		1`)
+	test("(trans summarize item,date, count) union (trans summarize date,item, count)",
+		"trans^(date,item,id) SUMMARIZE-SEQ item, date, count = count "+
+			"UNION-MERGE(item,date) "+
+			"(trans^(date,item,id) SUMMARIZE-SEQ date, item, count = count)",
+		`item		date	count
+		'mouse'		960204	1
+		'disk'		970101	1
+		'mouse'		970101	1
+		'eraser'	970201	1`)
+
+	test("(customer project id) join (hist project id)",
+		"hist^(date) PROJECT-MAP id JOIN 1:1 by(id) (customer^(id) PROJECT-COPY id)",
+		`id
+		'a'
+		'e'
+		'c'`)
+	test("(customer summarize id,count) join (hist summarize id,count) sort id",
+		"customer^(id) SUMMARIZE-SEQ id, count = count JOIN 1:1 by(id,count) "+
+			"(hist^(date) SUMMARIZE-MAP id, count = count TEMPINDEX(id,count))",
+		`id	count
+		'a'	1
+		'c'	1`)
 }

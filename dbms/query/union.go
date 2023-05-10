@@ -17,13 +17,13 @@ import (
 )
 
 type Union struct {
-	src1get   func(*Thread, Dir) Row
 	src2get   func(*Thread, Dir) Row
-	row1      Row
+	src1get   func(*Thread, Dir) Row
 	mergeCols []string
+	row2      Row
 	empty1    Row
 	empty2    Row
-	row2      Row
+	row1      Row
 	Compatible
 	strategy unionStrategy
 	src2     bool
@@ -49,9 +49,8 @@ const (
 )
 
 func NewUnion(src1, src2 Query) *Union {
-	u := &Union{Compatible: Compatible{
-		Query2: Query2{source1: src1, source2: src2}}}
-	u.init(u.calcFixed)
+	u := &Union{Compatible: *newCompatible(src1, src2)}
+	u.header = JoinHeaders(src1.Header(), src2.Header())
 	return u
 }
 
@@ -73,10 +72,6 @@ func (u *Union) stringOp() string {
 		strategy += str.Join("(,)", u.keyIndex)
 	}
 	return u.Compatible.stringOp("UNION", strategy)
-}
-
-func (u *Union) Columns() []string {
-	return u.allCols
 }
 
 func (u *Union) Keys() [][]string {
@@ -125,11 +120,11 @@ func (u *Union) Transform() Query {
 	src2 := u.source2.Transform()
 	if _, ok := src1.(*Nothing); ok {
 		// remove unnecessary Union
-		return keepCols(src2, src1, u.Header())
+		return keepCols(src2, src1, u.header)
 	}
 	if _, ok := src2.(*Nothing); ok {
 		// remove unnecessary Union
-		return keepCols(src1, src2, u.Header())
+		return keepCols(src1, src2, u.header)
 	}
 	if src1 != u.source1 || src2 != u.source2 {
 		return NewUnion(src1, src2)
@@ -153,7 +148,17 @@ func keepCols(src, nothing Query, hdr *Header) Query {
 	return NewExtend(src, cols, exprs).Transform()
 }
 
-func (u *Union) calcFixed(fixed1, fixed2 []Fixed) []Fixed {
+func (u *Union) Fixed() []Fixed {
+	if u.fixed == nil {
+		u.fixed = u.getFixed()
+		assert.That(u.fixed != nil)
+	}
+	return u.fixed
+}
+
+func (u *Union) getFixed() []Fixed {
+	fixed1 := u.source1.Fixed()
+	fixed2 := u.source2.Fixed()
 	fixed := make([]Fixed, 0, len(fixed1)+len(fixed2))
 	// add ones that are in both
 	for _, f1 := range fixed1 {
@@ -342,6 +347,7 @@ func (u *Union) setApproach(_ []string, frac float64, approach any, tran QueryTr
 		frac = 0
 	}
 	u.source2 = SetApproach(u.source2, app.idx2, frac, tran)
+	u.header = JoinHeaders(u.source1.Header(), u.source2.Header())
 
 	u.empty1 = make(Row, len(u.source1.Header().Fields))
 	u.empty2 = make(Row, len(u.source2.Header().Fields))
@@ -406,10 +412,6 @@ func (u *Union) getLookup(th *Thread, dir Dir) Row {
 }
 
 func (u *Union) getMerge(th *Thread, dir Dir) (r Row) {
-	if u.hdr1 == nil {
-		u.hdr1 = u.source1.Header()
-		u.hdr2 = u.source2.Header()
-	}
 	if u.mergeCols == nil {
 		// compare keyIndex fields first
 		u.mergeCols = set.Union(u.keyIndex, u.allCols)
@@ -457,7 +459,7 @@ func (u *Union) getMerge(th *Thread, dir Dir) (r Row) {
 		u.src2 = true
 		return JoinRows(u.empty1, u.row2)
 	}
-	cmp := u.compare(th, u.row1, u.row2, u.hdr1, u.hdr2)
+	cmp := u.compare(th, u.row1, u.row2)
 	if cmp == 0 {
 		// rows identical, arbitrarily return row1
 		u.src1, u.src2 = true, true
@@ -475,10 +477,10 @@ func (u *Union) getMerge(th *Thread, dir Dir) (r Row) {
 	}
 }
 
-func (u *Union) compare(th *Thread, row1, row2 Row, hdr1, hdr2 *Header) int {
+func (u *Union) compare(th *Thread, row1, row2 Row) int {
 	for _, col := range u.mergeCols {
-		x1 := row1.GetRawVal(hdr1, col, th, u.st)
-		x2 := row2.GetRawVal(hdr2, col, th, u.st)
+		x1 := row1.GetRawVal(u.source1.Header(), col, th, u.st)
+		x2 := row2.GetRawVal(u.source2.Header(), col, th, u.st)
 		if c := strings.Compare(x1, x2); c != 0 {
 			return c
 		}
@@ -498,16 +500,12 @@ func (u *Union) Select(cols, vals []string) {
 		u.source2.Select(nil, nil)
 		return
 	}
-	if u.hdr1 == nil {
-		u.hdr1 = u.source1.Header()
-		u.hdr2 = u.source2.Header()
-	}
-	if selConflict(u.hdr1.Columns, cols, vals) {
+	if selConflict(u.source1.Columns(), cols, vals) {
 		u.src1get = nothing
 	} else {
 		u.source1.Select(cols, vals)
 	}
-	if selConflict(u.hdr2.Columns, cols, vals) {
+	if selConflict(u.source2.Columns(), cols, vals) {
 		u.src2get = nothing
 	} else {
 		u.source2.Select(cols, vals)

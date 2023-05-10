@@ -6,7 +6,8 @@ package query
 import (
 	"strings"
 
-	"github.com/apmckinlay/gsuneido/runtime"
+	. "github.com/apmckinlay/gsuneido/runtime"
+	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/generic/set"
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
 	"github.com/apmckinlay/gsuneido/util/str"
@@ -31,7 +32,14 @@ func NewRename(src Query, from, to []string) *Rename {
 	}
 	r := &Rename{Query1: Query1{source: src}, from: from, to: to}
 	r.renameDependencies(srcCols)
+	r.header = r.getHeader()
 	return r
+}
+
+func (r *Rename) getHeader() *Header {
+	flds := renameIndexes(r.source.Header().Fields, r.from, r.to)
+	cols := slc.Replace(r.source.Columns(), r.from, r.to)
+	return NewHeader(flds, cols)
 }
 
 func (r *Rename) renameDependencies(src []string) {
@@ -64,10 +72,6 @@ func (r *Rename) stringOp() string {
 	return sb.String()
 }
 
-func (r *Rename) Columns() []string {
-	return slc.Replace(r.source.Columns(), r.from, r.to)
-}
-
 func (r *Rename) Keys() [][]string {
 	return renameIndexes(r.source.Keys(), r.from, r.to)
 }
@@ -85,17 +89,21 @@ func renameIndexes(idxs [][]string, from, to []string) [][]string {
 }
 
 func (r *Rename) Fixed() []Fixed {
-	fixed := r.source.Fixed()
-	result := make([]Fixed, len(fixed))
-	for i, fxd := range fixed {
-		j := slices.Index(r.from, fxd.col)
-		if j == -1 {
-			result[i] = fxd
-		} else {
-			result[i] = Fixed{col: r.to[j], values: fxd.values}
+	if r.fixed == nil {
+		srcFix := r.source.Fixed()
+		result := make([]Fixed, len(srcFix))
+		for i, fxd := range srcFix {
+			j := slices.Index(r.from, fxd.col)
+			if j == -1 {
+				result[i] = fxd
+			} else {
+				result[i] = Fixed{col: r.to[j], values: fxd.values}
+			}
 		}
+		r.fixed = result
+		assert.That(r.fixed != nil)
 	}
-	return result
+	return r.fixed
 }
 
 func (r *Rename) Transform() Query {
@@ -151,18 +159,12 @@ func (r *Rename) optimize(mode Mode, index []string, frac float64) (Cost, Cost, 
 
 func (r *Rename) setApproach(index []string, frac float64, _ any, tran QueryTran) {
 	r.source = SetApproach(r.source, slc.Replace(index, r.to, r.from), frac, tran)
+	r.header = r.getHeader()
 }
 
 // execution --------------------------------------------------------
 
-func (r *Rename) Header() *runtime.Header {
-	hdr := r.source.Header()
-	cols := slc.Replace(hdr.Columns, r.from, r.to)
-	flds := renameIndexes(hdr.Fields, r.from, r.to)
-	return runtime.NewHeader(flds, cols)
-}
-
-func (r *Rename) Get(th *runtime.Thread, dir runtime.Dir) runtime.Row {
+func (r *Rename) Get(th *Thread, dir Dir) Row {
 	return r.source.Get(th, dir)
 }
 
@@ -170,6 +172,6 @@ func (r *Rename) Select(cols, vals []string) {
 	r.source.Select(slc.Replace(cols, r.to, r.from), vals)
 }
 
-func (r *Rename) Lookup(th *runtime.Thread, cols, vals []string) runtime.Row {
+func (r *Rename) Lookup(th *Thread, cols, vals []string) Row {
 	return r.source.Lookup(th, slc.Replace(cols, r.to, r.from), vals)
 }

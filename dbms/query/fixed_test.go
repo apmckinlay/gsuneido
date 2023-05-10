@@ -7,13 +7,13 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/apmckinlay/gsuneido/runtime"
+	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
 func TestFixed(t *testing.T) {
-	runtime.DefaultSingleQuotes = true
-	defer func() { runtime.DefaultSingleQuotes = false }()
+	DefaultSingleQuotes = true
+	defer func() { DefaultSingleQuotes = false }()
 	test := func(query, expected string) {
 		t.Helper()
 		q := ParseQuery(query, testTran{}, nil)
@@ -25,6 +25,8 @@ func TestFixed(t *testing.T) {
 	test("table extend f=1, g='s'", "[f=(1), g=('s')]")
 	test("table extend f=1 extend g=2", "[f=(1), g=(2)]")
 	test("table extend f=1 where f is 1", "[f=(1)]")
+	test("table extend f=1, g=2 where a=5",
+		"[f=(1), g=(2), a=(5)]")
 	test("table extend f=1, g=2 where g in (1,2,3) and a=5",
 		"[f=(1), g=(2), a=(5)]")
 
@@ -47,6 +49,9 @@ func TestFixed(t *testing.T) {
 
 	test("table extend x=1, y=2 leftjoin (table extend z=3, zz=4)",
 		"[x=(1), y=(2), z=(3,''), zz=(4,'')]")
+
+	test("table extend x=1, y=2 summarize x, count",
+		"[x=(1)]")
 
 	test2 := func(query string, expected string) {
 		t.Helper()

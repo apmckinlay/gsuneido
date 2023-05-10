@@ -10,7 +10,7 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/db19/meta"
 	"github.com/apmckinlay/gsuneido/db19/stor"
-	"github.com/apmckinlay/gsuneido/runtime"
+	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
 // testTran has hard coded table schemas for tests
@@ -147,7 +147,7 @@ func (t testTran) fracPos(key string, decode bool) float64 {
 		if s == ixkey.Max {
 			n = 10
 		} else {
-			n = runtime.ToInt(runtime.Unpack(s))
+			n = ToInt(Unpack(s))
 			if i+1 < len(vals) && vals[i+1] == "" {
 				n++
 			}
@@ -158,7 +158,7 @@ func (t testTran) fracPos(key string, decode bool) float64 {
 	return f
 }
 
-func (t testTran) Lookup(_ string, _ int, key string) *runtime.DbRec {
+func (t testTran) Lookup(_ string, _ int, key string) *DbRec {
 	// WARNING: assumes key columns match table columns
 	var vals []string
 	if strings.Contains(key, "\x00\x00") {
@@ -166,14 +166,14 @@ func (t testTran) Lookup(_ string, _ int, key string) *runtime.DbRec {
 	} else {
 		vals = []string{key}
 	}
-	var rb runtime.RecordBuilder
+	var rb RecordBuilder
 	for _, v := range vals {
 		rb.AddRaw(v)
 	}
-	return &runtime.DbRec{Record: rb.Build()}
+	return &DbRec{Record: rb.Build()}
 }
 
-func (t testTran) Output(*runtime.Thread, string, runtime.Record) {
+func (t testTran) Output(*Thread, string, Record) {
 	panic("should not be called")
 }
 
@@ -181,7 +181,7 @@ func (t testTran) GetIndexI(string, int) *index.Overlay {
 	panic("should not be called")
 }
 
-func (t testTran) GetRecord(uint64) runtime.Record {
+func (t testTran) GetRecord(uint64) Record {
 	panic("should not be called")
 }
 

@@ -6,6 +6,7 @@ package query
 import (
 	"github.com/apmckinlay/gsuneido/compile/ast"
 	. "github.com/apmckinlay/gsuneido/runtime"
+	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/generic/set"
 	"github.com/apmckinlay/gsuneido/util/str"
 	"golang.org/x/exp/slices"
@@ -13,12 +14,10 @@ import (
 
 type Extend struct {
 	t        QueryTran
-	hdr      *Header
 	ctx      ast.Context
 	cols     []string
 	exprs    []ast.Expr
 	exprCols []string
-	fixed    []Fixed
 	selCols  []string
 	selVals  []string
 	Query1
@@ -41,6 +40,7 @@ func NewExtend(src Query, cols []string, exprs []ast.Expr) *Extend {
 		}
 	}
 	e.exprCols = exprCols
+	e.header = e.getHeader()
 	return e
 }
 
@@ -79,10 +79,6 @@ func (e *Extend) stringOp() string {
 		}
 	}
 	return s
-}
-
-func (e *Extend) Columns() []string {
-	return set.Union(e.source.Columns(), e.cols)
 }
 
 func (e *Extend) rowSize() int {
@@ -147,18 +143,18 @@ func (e *Extend) needRule2(col string) bool {
 }
 
 func (e *Extend) Fixed() []Fixed {
-	if e.fixed != nil {
-		return e.fixed
-	}
-	fixed := append([]Fixed{}, e.source.Fixed()...) // copy
-	for i := 0; i < len(e.cols); i++ {
-		if expr := e.exprs[i]; expr != nil {
-			if c, ok := expr.(*ast.Constant); ok {
-				fixed = append(fixed, NewFixed(e.cols[i], c.Val))
+	if e.fixed == nil {
+		e.fixed = append([]Fixed{}, e.source.Fixed()...) // non-nil copy
+		for i := 0; i < len(e.cols); i++ {
+			if expr := e.exprs[i]; expr != nil {
+				if c, ok := expr.(*ast.Constant); ok {
+					e.fixed = append(e.fixed, NewFixed(e.cols[i], c.Val))
+				}
 			}
 		}
+		assert.That(e.fixed != nil)
 	}
-	return fixed
+	return e.fixed
 }
 
 func (e *Extend) SingleTable() bool {
@@ -179,17 +175,14 @@ func (e *Extend) optimize(mode Mode, index []string, frac float64) (
 
 func (e *Extend) setApproach(index []string, frac float64, _ any, tran QueryTran) {
 	e.source = SetApproach(e.source, index, frac, tran)
-	e.hdr = e.Header() // cache for Get
-	e.ctx.Hdr = e.hdr
+	e.header = e.getHeader()
+	e.ctx.Hdr = e.header
 	e.fixed = e.Fixed() // cache
 }
 
 // execution --------------------------------------------------------
 
-func (e *Extend) Header() *Header {
-	if e.hdr != nil {
-		return e.hdr
-	}
+func (e *Extend) getHeader() *Header {
 	hdr := e.source.Header()
 	cols := append(hdr.Columns, e.cols...)
 	flds := hdr.Fields
@@ -244,6 +237,7 @@ func (e *Extend) extendRow(th *Thread, row Row) Row {
 }
 
 func (e *Extend) Select(cols, vals []string) {
+	// fmt.Println("Extend Select", cols, unpack(vals))
 	e.conflict = false
 	e.selCols, e.selVals = nil, nil
 	if cols == nil && vals == nil {
@@ -292,5 +286,7 @@ func (e *Extend) splitSelect(cols, vals []string) ([]string, []string) {
 		}
 	}
 	e.selCols, e.selVals = ecols, evals
+	// fmt.Println("Extend splitSelect",
+	// 	ecols, unpack(evals), srccols, unpack(srcvals))
 	return srccols, srcvals
 }

@@ -9,13 +9,13 @@ import (
 
 	"github.com/apmckinlay/gsuneido/db19"
 	"github.com/apmckinlay/gsuneido/db19/stor"
-	"github.com/apmckinlay/gsuneido/runtime"
+	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
 func init() {
-	db19.MakeSuTran = func(ut *db19.UpdateTran) *runtime.SuTran {
-		return runtime.NewSuTran(nil, true)
+	db19.MakeSuTran = func(ut *db19.UpdateTran) *SuTran {
+		return NewSuTran(nil, true)
 	}
 }
 

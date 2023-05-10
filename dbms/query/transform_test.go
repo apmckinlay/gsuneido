@@ -6,14 +6,14 @@ package query
 import (
 	"testing"
 
-	"github.com/apmckinlay/gsuneido/runtime"
+	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/str"
 )
 
 func TestTransform(t *testing.T) {
-	runtime.DefaultSingleQuotes = true
-	defer func() { runtime.DefaultSingleQuotes = false }()
+	DefaultSingleQuotes = true
+	defer func() { DefaultSingleQuotes = false }()
 	test := func(from, expected string) {
 		t.Helper()
 		if expected == "" {
@@ -152,8 +152,10 @@ func TestTransform(t *testing.T) {
 	test("(tables leftjoin columns) where column isnt ''",
 		"tables JOIN 1:n by(table) (columns WHERE column isnt '')")
 	test("(tables leftjoin columns) where column is 123",
-		"tables JOIN 1:n by(table) (columns WHERE column is 123)")
+		// 1:1 because of `column is 123`
+		"tables JOIN 1:1 by(table) (columns WHERE column is 123)")
 	test("(tables leftjoin columns) where column in (123)",
+		// not 1:1 because `in (123)` isn't seen by Fixed()
 		"tables JOIN 1:n by(table) (columns WHERE column in (123))")
 	test("(tables leftjoin columns) where table isnt ''",
 		"tables WHERE table isnt '' LEFTJOIN 1:n by(table) columns")

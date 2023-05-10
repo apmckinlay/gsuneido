@@ -13,7 +13,7 @@ import (
 	"github.com/apmckinlay/gsuneido/db19"
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
 	"github.com/apmckinlay/gsuneido/db19/stor"
-	rt "github.com/apmckinlay/gsuneido/runtime"
+	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
@@ -36,53 +36,13 @@ func TestKeys(t *testing.T) {
 	test("(bcd where b is 1) union (bcd where b is 2)", "b")
 }
 
-func TestByContainsKey(t *testing.T) {
-	test := func(by string, keys string, expected bool) {
-		t.Helper()
-		result := containsKey(strings.Fields(by), sToIdxs(keys))
-		assert.T(t).This(result).Is(expected)
-	}
-	test("", "a b, c", false)
-	test("a b", "a", true)
-	test("a b", "b", true)
-	test("a b", "x, a+b, y", true)
-}
-
-func TestProjectIndexes(t *testing.T) {
-	test := func(idxs string, cols string, expected string) {
-		t.Helper()
-		result := projectIndexes(sToIdxs(idxs), strings.Fields(cols))
-		assert.T(t).This(idxsToS(result)).Is(expected)
-	}
-	test("a, b+c, d+e+f", "a b c d", "a, b+c")
-	test("a, b+c, d+e+f", "c e f", "")
-}
-
-// sToIdxs splits strings like: "a+b, c, d+e+f"
-func sToIdxs(s string) [][]string {
-	var idxs [][]string
-	for _, ix := range strings.Split(s, ", ") {
-		idxs = append(idxs, strings.Split(ix, "+"))
-	}
-	return idxs
-}
-
-// idxsToS converts [][]string to a string like: "a+b, c, d+e+f"
-func idxsToS(idxs [][]string) string {
-	tmp := make([]string, len(idxs))
-	for i, ix := range idxs {
-		tmp[i] = strings.Join(ix, "+")
-	}
-	return strings.Join(tmp, ", ")
-}
-
 func TestForeignKeys(*testing.T) {
 	store := stor.HeapStor(8192)
 	db, err := db19.CreateDb(store)
 	ck(err)
 	db19.StartConcur(db, 50*time.Millisecond)
 	defer db.Close()
-	MakeSuTran = func(qt QueryTran) *rt.SuTran { return nil }
+	MakeSuTran = func(qt QueryTran) *SuTran { return nil }
 	act := func(act string) {
 		ut := db.NewUpdateTran()
 		defer ut.Commit()
@@ -194,8 +154,8 @@ func queryAll2(q Query) string {
 	hdr := q.Header()
 	sep := ""
 	var sb strings.Builder
-	th := &rt.Thread{}
-	for row := q.Get(th, rt.Next); row != nil; row = q.Get(th, rt.Next) {
+	th := &Thread{}
+	for row := q.Get(th, Next); row != nil; row = q.Get(th, Next) {
 		sb.WriteString(sep)
 		sb.WriteString(row2str(hdr, row))
 		sep = " | "
@@ -203,7 +163,7 @@ func queryAll2(q Query) string {
 	return sb.String()
 }
 
-func row2str(hdr *rt.Header, row rt.Row) string {
+func row2str(hdr *Header, row Row) string {
 	if row == nil {
 		return "nil"
 	}
@@ -211,8 +171,8 @@ func row2str(hdr *rt.Header, row rt.Row) string {
 	sep := ""
 	for _, col := range hdr.Columns {
 		val := row.GetVal(hdr, col, nil, nil)
-		if val != rt.EmptyStr {
-			fmt.Fprint(&sb, sep, col, "=", rt.AsStr(val))
+		if val != EmptyStr {
+			fmt.Fprint(&sb, sep, col, "=", AsStr(val))
 			sep = " "
 		}
 	}
@@ -247,7 +207,7 @@ func TestQueryBug(*testing.T) {
 	ck(err)
 	db19.StartConcur(db, 50*time.Millisecond)
 	defer db.Close()
-	MakeSuTran = func(qt QueryTran) *rt.SuTran { return nil }
+	MakeSuTran = func(qt QueryTran) *SuTran { return nil }
 	act := func(act string) {
 		ut := db.NewUpdateTran()
 		defer ut.Commit()
@@ -260,7 +220,7 @@ func TestQueryBug(*testing.T) {
 }
 
 func TestExtendAllRules(*testing.T) {
-	MakeSuTran = func(qt QueryTran) *rt.SuTran { return nil }
+	MakeSuTran = func(qt QueryTran) *SuTran { return nil }
 	db := testDb()
 	defer db.Close()
 	tran := db.NewReadTran()
@@ -279,7 +239,7 @@ func TestDuplicateKey(*testing.T) {
 	ck(err)
 	db19.StartConcur(db, 50*time.Millisecond)
 	defer db.Close()
-	MakeSuTran = func(qt QueryTran) *rt.SuTran { return nil }
+	MakeSuTran = func(qt QueryTran) *SuTran { return nil }
 	act := func(act string) {
 		ut := db.NewUpdateTran()
 		defer ut.Commit()
@@ -303,7 +263,7 @@ func TestWhereSelectBug(t *testing.T) {
 	ck(err)
 	db19.StartConcur(db, 50*time.Millisecond)
 	defer db.Close()
-	MakeSuTran = func(qt QueryTran) *rt.SuTran { return nil }
+	MakeSuTran = func(qt QueryTran) *SuTran { return nil }
 	act := func(act string) {
 		ut := db.NewUpdateTran()
 		defer ut.Commit()
@@ -328,7 +288,7 @@ func TestWhereSelectBug(t *testing.T) {
 	_, _, app := q.optimize(ReadMode, idx, 1)
 	q.setApproach(idx, 1, app, tran)
 	assert.T(t).This(q.String()).Is("t1^(b) WHERE d is '1' and b < 'z'")
-	vals := []string{rt.Pack(rt.SuStr("1"))}
+	vals := []string{Pack(SuStr("1"))}
 	q.Select(idx, vals)
 	assert.T(t).This(queryAll2(q)).
 		Is("a=3 b=7 d=1 | a=5 b=7 d=1 | a=2 b=8 d=1 | a=4 b=8 d=1")
@@ -339,7 +299,7 @@ func TestJoinBug(t *testing.T) {
 	ck(err)
 	db19.StartConcur(db, 50*time.Millisecond)
 	defer db.Close()
-	MakeSuTran = func(qt QueryTran) *rt.SuTran { return nil }
+	MakeSuTran = func(qt QueryTran) *SuTran { return nil }
 	act := func(act string) {
 		ut := db.NewUpdateTran()
 		defer ut.Commit()
@@ -358,7 +318,7 @@ func TestSelectOnSingleton(t *testing.T) {
 	ck(err)
 	db19.StartConcur(db, 50*time.Millisecond)
 	defer db.Close()
-	MakeSuTran = func(qt QueryTran) *rt.SuTran { return nil }
+	MakeSuTran = func(qt QueryTran) *SuTran { return nil }
 	act := func(act string) {
 		ut := db.NewUpdateTran()
 		defer ut.Commit()
@@ -378,7 +338,7 @@ func TestSingleton(t *testing.T) {
 	ck(err)
 	db19.StartConcur(db, 50*time.Millisecond)
 	defer db.Close()
-	MakeSuTran = func(qt QueryTran) *rt.SuTran { return nil }
+	MakeSuTran = func(qt QueryTran) *SuTran { return nil }
 	act := func(act string) {
 		ut := db.NewUpdateTran()
 		defer ut.Commit()
@@ -394,13 +354,13 @@ func TestSingleton(t *testing.T) {
 	assert.This(q.String()).Is("tmp^(a) WHERE*1 a is 3") // singleton
 	// reading by a, but singleton so we can Select/Lookup on b
 	bcols := []string{"b"}
-	bvals := []string{rt.Pack(rt.SuInt(4))}
+	bvals := []string{Pack(SuInt(4))}
 	q.Select(bcols, bvals)
 	assert.This(queryAll2(q)).Is("a=3 b=4")
 	hdr := q.Header()
 	assert.This(row2str(hdr, q.Lookup(nil, bcols, bvals))).Is("a=3 b=4")
 
-	bvals = []string{rt.Pack(rt.SuInt(2))}
+	bvals = []string{Pack(SuInt(2))}
 	q.Select(bcols, bvals)
 	assert.This(queryAll2(q)).Is("")
 	assert.This(q.Lookup(nil, bcols, bvals)).Is(nil)
@@ -419,13 +379,13 @@ func TestWithoutDupsOrSupersets(t *testing.T) {
 }
 
 func TestWhereSplitBug(t *testing.T) {
-	rt.Global.TestDef("Rule_hx",
+	Global.TestDef("Rule_hx",
 		compile.Constant("function() { return .b }"))
 	db, err := db19.CreateDb(stor.HeapStor(8192))
 	ck(err)
 	db19.StartConcur(db, 50*time.Millisecond)
 	defer db.Close()
-	MakeSuTran = func(qt QueryTran) *rt.SuTran { return nil }
+	MakeSuTran = func(qt QueryTran) *SuTran { return nil }
 	doAdmin(db, "create tmp1 (a, b, hx) key (a)")
 	doAdmin(db, "create tmp2 (a, b) key (a)")
 
@@ -469,19 +429,11 @@ func BenchmarkOptMod(b *testing.B) {
 func TestJoin_splitSelect(t *testing.T) {
 	joinRev = impossible
 	defer func() { joinRev = 0 }()
-	q1 := &TestQop{
-		columns: []string{"a", "b", "c"},
-		indexes: [][]string{{"a"}},
-		keys:    [][]string{{"a"}},
-	}
-	q2 := &TestQop{
-		columns: []string{"c", "d", "e"},
-		indexes: [][]string{{"c"}},
-		keys:    [][]string{{"c"}},
-		fixed: []Fixed{
-			{col: "c", values: []string{"1"}},
-			{col: "e", values: []string{"2", ""}},
-		},
+	q1 := newTestQop([]string{"a", "b", "c"}, [][]string{{"a"}})
+	q2 := newTestQop([]string{"c", "d", "e"}, [][]string{{"c"}})
+	q2.fixed = []Fixed{
+		{col: "c", values: []string{"1"}},
+		{col: "e", values: []string{"2", ""}},
 	}
 	jn := NewJoin(q1, q2, nil)
 	assert.This(jn.by).Is([]string{"c"})
@@ -496,25 +448,23 @@ func TestJoin_splitSelect(t *testing.T) {
 }
 
 type TestQop struct {
-	Query      // satisfy Query interface
-	columns    []string
-	fixed      []Fixed
-	indexes    [][]string
-	keys       [][]string
+	Nothing
+	indexes [][]string
+	keys    [][]string
 	sel
+}
+
+func newTestQop(cols []string, keys [][]string) *TestQop {
+	q := &TestQop{}
+	q.header = SimpleHeader(cols)
+	q.indexes = keys
+	q.keys = keys
+	return q
 }
 
 type sel struct {
 	cols []string
 	vals []string
-}
-
-func (q *TestQop) Columns() []string {
-	return q.columns
-}
-
-func (q *TestQop) Fixed() []Fixed {
-	return q.fixed
 }
 
 func (q *TestQop) Indexes() [][]string {
@@ -523,9 +473,6 @@ func (q *TestQop) Indexes() [][]string {
 
 func (q *TestQop) Keys() [][]string {
 	return q.keys
-}
-
-func (q *TestQop) Rewind() {
 }
 
 func (q *TestQop) Select(cols, vals []string) {

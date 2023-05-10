@@ -22,9 +22,9 @@ func NewTimes(src1, src2 Query) *Times {
 		panic("times: common columns not allowed: " + str.Join(", ",
 			set.Intersect(src1.Columns(), src2.Columns())))
 	}
-	t := Times{rewound: true}
-	t.source1, t.source2 = src1, src2
-	return &t
+	t := &Times{joinLike: newJoinLike(src1, src2), rewound: true}
+	t.fixed = t.getFixed()
+	return t
 }
 
 func (t *Times) String() string {
@@ -33,10 +33,6 @@ func (t *Times) String() string {
 
 func (t *Times) stringOp() string {
 	return "TIMES"
-}
-
-func (t *Times) Columns() []string {
-	return set.Union(t.source1.Columns(), t.source2.Columns())
 }
 
 func (t *Times) Keys() [][]string {
@@ -50,15 +46,10 @@ func (t *Times) Indexes() [][]string {
 	return slc.With(t.source1.Indexes(), t.source2.Indexes()...)
 }
 
-func (t *Times) Fixed() []Fixed {
-	t.ensureFixed()
-	fixed, conflict := combineFixed(t.fixed1, t.fixed2)
+func (t *Times) getFixed() []Fixed {
+	fixed, conflict := combineFixed(t.source1.Fixed(), t.source2.Fixed())
 	assert.That(!conflict) // because no common columns
 	return fixed
-}
-
-func (t *Times) rowSize() int {
-	return t.source1.rowSize() + t.source2.rowSize()
 }
 
 func (t *Times) Transform() Query {
@@ -100,6 +91,7 @@ func (t *Times) setApproach(index []string, frac float64, approach any, tran Que
 	t.saIndex = index
 	nrows1, _ := t.source1.Nrows()
 	t.source2 = SetApproach(t.source2, nil, frac*float64(nrows1), tran)
+	t.header = t.getHeader()
 }
 
 func (t *Times) Nrows() (int, int) {

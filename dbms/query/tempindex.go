@@ -25,7 +25,6 @@ type TempIndex struct {
 	iter   rowIter
 	st     *SuTran
 	th     *Thread
-	hdr    *Header
 	order  []string
 	selOrg []string
 	selEnd []string
@@ -38,8 +37,10 @@ var selMax = []string{ixkey.Max}
 
 func NewTempIndex(src Query, order []string, tran QueryTran) *TempIndex {
 	order = withoutFixed(order, src.Fixed())
-	return &TempIndex{Query1: Query1{source: src}, order: order, tran: tran,
-		selOrg: selMin, selEnd: selMax}
+	ti := TempIndex{order: order, tran: tran, selOrg: selMin, selEnd: selMax}
+	ti.source = src
+	ti.header = src.Header().Dup() // dup because sortlist is concurrent
+	return &ti
 }
 
 func (ti *TempIndex) String() string {
@@ -112,8 +113,6 @@ func (ti *TempIndex) makeKey(cols, vals []string, full bool) []string {
 		j := slices.Index(cols, col)
 		if j == -1 {
 			if full {
-				fmt.Println("TempIndex makeKey order:", ti.order, "cols:", cols)
-				// fmt.Println(Format(ti))
 				panic("TempIndex makeKey not full")
 			}
 			break
@@ -125,7 +124,7 @@ func (ti *TempIndex) makeKey(cols, vals []string, full bool) []string {
 
 func (ti *TempIndex) matches(row Row, key []string) bool {
 	for i, col := range ti.order {
-		x := row.GetRawVal(ti.hdr, col, nil, ti.st)
+		x := row.GetRawVal(ti.header, col, nil, ti.st)
 		y := key[i]
 		if x != y {
 			return false
@@ -174,7 +173,7 @@ type rowIter interface {
 func (ti *TempIndex) makeIndex() rowIter {
 	ti.st = MakeSuTran(ti.tran)
 	// need to copy header to avoid data race from concurrent sortlist
-	ti.hdr = ti.source.Header().Dup()
+	ti.header = ti.source.Header().Dup()
 	if ti.source.SingleTable() {
 		return ti.single()
 	}
@@ -187,7 +186,7 @@ func (ti *TempIndex) selected(row Row) bool {
 	}
 	for i, sel := range ti.selOrg {
 		col := ti.order[i]
-		x := row.GetRawVal(ti.hdr, col, ti.th, ti.st)
+		x := row.GetRawVal(ti.header, col, ti.th, ti.st)
 		if x != sel {
 			return false
 		}
@@ -243,8 +242,8 @@ func (ti *TempIndex) single() rowIter {
 
 func (ti *TempIndex) less(th *Thread, xrow, yrow Row) bool {
 	for _, col := range ti.order {
-		x := xrow.GetRawVal(ti.hdr, col, th, ti.st)
-		y := yrow.GetRawVal(ti.hdr, col, th, ti.st)
+		x := xrow.GetRawVal(ti.header, col, th, ti.st)
+		y := yrow.GetRawVal(ti.header, col, th, ti.st)
 		if x != y {
 			return x < y
 		}
@@ -262,7 +261,7 @@ func (ti *TempIndex) less2(th *Thread, row Row, key []string) bool {
 		if i >= len(ti.order) {
 			return true
 		}
-		x := row.GetRawVal(ti.hdr, ti.order[i], th, ti.st)
+		x := row.GetRawVal(ti.header, ti.order[i], th, ti.st)
 		y := key[i]
 		if x != y {
 			return x < y

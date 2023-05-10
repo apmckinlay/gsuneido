@@ -259,7 +259,8 @@ func stopServer() {
 	httpServer.Close()
 	dbms.StopServer()
 	heap := builtin.HeapSys()
-	log.Println("server stopped, heap:", heap/(1024*1024), "mb")
+	log.Println("server stopped, heap:", heap/(1024*1024), "mb,",
+		"goroutines:", runtime.NumGoroutine())
 }
 
 var db *db19.Database

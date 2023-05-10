@@ -3,7 +3,7 @@
 
 package query
 
-import "github.com/apmckinlay/gsuneido/runtime"
+import . "github.com/apmckinlay/gsuneido/runtime"
 
 // ProjectNone produces a single empty row with no columns.
 // It results from a Project with no columns.
@@ -47,7 +47,7 @@ func (*ProjectNone) rowSize() int {
 	return 0
 }
 
-func (*ProjectNone) Ordering() []string {
+func (*ProjectNone) Order() []string {
 	return nil
 }
 
@@ -77,24 +77,26 @@ func (*ProjectNone) lookupCost() Cost {
 	return 0
 }
 
-func (*ProjectNone) Lookup(*runtime.Thread, []string, []string) runtime.Row {
+func (*ProjectNone) Lookup(*Thread, []string, []string) Row {
 	return nil
 }
 
-func (*ProjectNone) Header() *runtime.Header {
-	return runtime.SimpleHeader([]string{})
+var pjHeader = SimpleHeader([]string{})
+
+func (*ProjectNone) Header() *Header {
+	return pjHeader
 }
 
-func (*ProjectNone) Output(*runtime.Thread, runtime.Record) {
+func (*ProjectNone) Output(*Thread, Record) {
 	panic("can't Output to ProjectNone")
 }
 
-func (pn *ProjectNone) Get(*runtime.Thread, runtime.Dir) runtime.Row {
+func (pn *ProjectNone) Get(*Thread, Dir) Row {
 	if pn.done {
 		return nil
 	}
 	pn.done = true
-	return runtime.Row{runtime.DbRec{Record: runtime.Record("")}}
+	return Row{DbRec{Record: Record("")}}
 }
 
 func (*ProjectNone) Rewind() {

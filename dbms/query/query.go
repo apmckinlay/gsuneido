@@ -27,9 +27,10 @@
 					Intersect
 					Minus
 			joinLike
-				Join
-					LeftJoin
 				Times
+				joinBase
+					Join
+					LeftJoin
 */
 package query
 
@@ -43,7 +44,7 @@ import (
 	"github.com/apmckinlay/gsuneido/db19/meta"
 	"github.com/apmckinlay/gsuneido/db19/meta/schema"
 	"github.com/apmckinlay/gsuneido/db19/stor"
-	"github.com/apmckinlay/gsuneido/runtime"
+	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/runtime/trace"
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/generic/ord"
@@ -65,7 +66,8 @@ type Query interface {
 	// SetTran is used for cursors
 	SetTran(tran QueryTran)
 
-	Ordering() []string
+	// Order is nil for everything except Sort
+	Order() []string
 
 	// Fixed returns the field values that are constant from Extend or Where
 	Fixed() []Fixed
@@ -103,7 +105,7 @@ type Query interface {
 
 	Rewind()
 
-	Get(th *runtime.Thread, dir runtime.Dir) runtime.Row
+	Get(th *Thread, dir Dir) Row
 
 	// Lookup returns the row matching the given key value, or nil if not found.
 	// It is used by Compatible (Intersect, Minus, Union). See also: Select
@@ -111,7 +113,7 @@ type Query interface {
 	// to implement Lookup with Select and Get
 	// in which case it should leave the select cleared.
 	// Lookup should rewind.
-	Lookup(th *runtime.Thread, cols, vals []string) runtime.Row
+	Lookup(th *Thread, cols, vals []string) Row
 
 	// Select restricts the query to records matching the given packed values.
 	// It is used by Join and LeftJoin. See also: Lookup
@@ -119,8 +121,8 @@ type Query interface {
 	// Select should rewind.
 	Select(cols, vals []string)
 
-	Header() *runtime.Header
-	Output(th *runtime.Thread, rec runtime.Record)
+	Header() *Header
+	Output(th *Thread, rec Record)
 
 	String() string
 
@@ -153,6 +155,36 @@ type Query interface {
 	// This is mostly equivalent to whether it has an empty key().
 	// Join, Intersect, and Union return false because it depends on strategy.
 	fastSingle() bool
+}
+
+// queryBase is embedded by almost all Query types
+type queryBase struct {
+	// header must be set by constructors and setApproach.
+	// setApproach is necessary because the sources may get reversed
+	// which affects the order of Fields
+	header *Header
+	fixed []Fixed
+	cache
+}
+
+func (q *queryBase) Columns() []string {
+	return q.header.Columns
+}
+
+func (q *queryBase) Header() *Header {
+	return q.header
+}
+
+func (*queryBase) Order() []string {
+	return nil
+}
+
+func (q *queryBase) Fixed() []Fixed {
+	return q.fixed
+}
+
+func (*queryBase) Updateable() string {
+	return ""
 }
 
 // Mode is the transaction context - cursor, read, or update.
@@ -189,10 +221,10 @@ type QueryTran interface {
 	GetView(string) string
 	GetStore() *stor.Stor
 	RangeFrac(table string, iIndex int, org, end string) float64
-	Lookup(table string, iIndex int, key string) *runtime.DbRec
-	Output(th *runtime.Thread, table string, rec runtime.Record)
+	Lookup(table string, iIndex int, key string) *DbRec
+	Output(th *Thread, table string, rec Record)
 	GetIndexI(table string, iIndex int) *index.Overlay
-	GetRecord(off uint64) runtime.Record
+	GetRecord(off uint64) Record
 	MakeLess(is *ixkey.Spec) func(x, y uint64) bool
 	Read(string, int, string, string)
 }
@@ -374,6 +406,9 @@ func LookupCost(q Query, mode Mode, index []string, nrows int) (
 		}
 	} else {
 		lookupCost = q.lookupCost()
+		if lookupCost >= impossible {
+            return impossible, impossible
+        }
 	}
 	lookupCost *= nrows
 	// trace.Println("LookupCost", fixcost, "+", lookupCost, "=", fixcost+lookupCost)
@@ -405,11 +440,7 @@ func SetApproach(q Query, index []string, frac float64, tran QueryTran) Query {
 
 type Query1 struct {
 	source Query
-	cache
-}
-
-func (q1 *Query1) Columns() []string {
-	return q1.source.Columns()
+	queryBase
 }
 
 func (q1 *Query1) Keys() [][]string {
@@ -430,14 +461,6 @@ func (q1 *Query1) Nrows() (int, int) {
 
 func (q1 *Query1) rowSize() int {
 	return q1.source.rowSize()
-}
-
-func (*Query1) Ordering() []string {
-	return nil
-}
-
-func (q1 *Query1) Fixed() []Fixed {
-	return q1.source.Fixed()
 }
 
 func (q1 *Query1) Updateable() string {
@@ -463,15 +486,11 @@ func (q1 *Query1) lookupCost() Cost {
 }
 
 // Lookup default applies to Summarize and Sort
-func (*Query1) Lookup(*runtime.Thread, []string, []string) runtime.Row {
+func (*Query1) Lookup(*Thread, []string, []string) Row {
 	panic("Lookup not implemented")
 }
 
-func (q1 *Query1) Header() *runtime.Header {
-	return q1.source.Header()
-}
-
-func (q1 *Query1) Output(th *runtime.Thread, rec runtime.Record) {
+func (q1 *Query1) Output(th *Thread, rec Record) {
 	q1.source.Output(th, rec)
 }
 
@@ -493,7 +512,7 @@ func (q1 *Query1) Source() Query {
 type Query2 struct {
 	source1 Query
 	source2 Query
-	cache
+	queryBase
 }
 
 func (q2 *Query2) String2(op string) string {
@@ -505,23 +524,11 @@ func (q2 *Query2) SetTran(t QueryTran) {
 	q2.source2.SetTran(t)
 }
 
-func (q2 *Query2) Header() *runtime.Header {
-	return runtime.JoinHeaders(q2.source1.Header(), q2.source2.Header())
-}
-
-func (q2 *Query2) Updateable() string {
-	return ""
-}
-
 func (q2 *Query2) SingleTable() bool {
 	return false // not single
 }
 
-func (*Query2) Ordering() []string {
-	return nil
-}
-
-func (*Query2) Output(*runtime.Thread, runtime.Record) {
+func (*Query2) Output(*Thread, Record) {
 	panic("can't output to this query")
 }
 
@@ -800,13 +807,13 @@ func format(q Query, indent int) string { // recursive
 }
 
 //lint:ignore U1000 for debugging
-func unpack(packed []string) []runtime.Value {
-	vals := make([]runtime.Value, len(packed))
+func unpack(packed []string) []Value {
+	vals := make([]Value, len(packed))
 	for i, p := range packed {
 		if p == ixkey.Max {
-			vals[i] = runtime.SuStr("<max>")
+			vals[i] = SuStr("<max>")
 		} else {
-			vals[i] = runtime.Unpack(p)
+			vals[i] = Unpack(p)
 		}
 	}
 	return vals

@@ -9,7 +9,7 @@ import (
 	"github.com/apmckinlay/gsuneido/db19"
 	"github.com/apmckinlay/gsuneido/db19/meta"
 	"github.com/apmckinlay/gsuneido/db19/stor"
-	"github.com/apmckinlay/gsuneido/runtime"
+	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
 type heapdb struct {
@@ -22,10 +22,10 @@ func heapDb() heapdb {
 	db, err := db19.CreateDb(stor)
 	ck(err)
 	db19.StartConcur(db, 50*time.Millisecond)
-	db19.MakeSuTran = func(ut *db19.UpdateTran) *runtime.SuTran {
-		return runtime.NewSuTran(nil, true)
+	db19.MakeSuTran = func(ut *db19.UpdateTran) *SuTran {
+		return NewSuTran(nil, true)
 	}
-	MakeSuTran = func(qt QueryTran) *runtime.SuTran {
+	MakeSuTran = func(qt QueryTran) *SuTran {
 		return nil
 	}
 	return heapdb{stor: stor, Database: db}

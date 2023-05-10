@@ -182,6 +182,9 @@ func TestOptimize(t *testing.T) {
 	test("comp where a = 1 sort b",
 		"comp^(a,b,c) WHERE a is 1")
 
+	test("((inven extend x=1) where x is 2) union inven",
+		`inven^(item) EXTEND x = ""`)
+
 	mode = CursorMode
 	test("(trans union trans) join (inven union inven)",
 		"(trans^(date,item,id) UNION-MERGE(date,item,id) trans^(date,item,id)) "+

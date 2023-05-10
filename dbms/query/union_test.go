@@ -4,7 +4,6 @@
 package query
 
 import (
-	"fmt"
 	"math/rand"
 	"strings"
 	"testing"
@@ -52,7 +51,7 @@ func TestUnion_MergeSwitchDir(t *testing.T) {
 	tran := db.NewReadTran()
 	q := ParseQuery("one union two", tran, nil)
 	q, _, _ = Setup(q, ReadMode, tran)
-	fmt.Println(Format(q))
+	// fmt.Println(Format(q))
 	assert.That(strings.Contains(q.String(), "MERGE"))
 
 	get := func(dir Dir) Row {

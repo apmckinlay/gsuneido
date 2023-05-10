@@ -481,7 +481,7 @@ func (q queryLocal) Strategy(formatted bool) string {
 }
 
 func (q queryLocal) Order() []string {
-	return q.Query.Ordering()
+	return q.Query.Order()
 }
 
 func (q queryLocal) Get(th *Thread, dir Dir) (Row, string) {

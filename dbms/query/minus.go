@@ -19,8 +19,9 @@ type minusApproach struct {
 
 func NewMinus(src1, src2 Query) *Minus {
 	var m Minus
-	m.source1, m.source2 = src1, src2
-	m.init(m.calcFixed)
+	m.Compatible = *newCompatible(src1, src2)
+	m.header = m.source1.Header()
+	m.fixed = m.source1.Fixed()
 	return &m
 }
 
@@ -30,10 +31,6 @@ func (m *Minus) String() string {
 
 func (m *Minus) stringOp() string {
 	return m.Compatible.stringOp("MINUS", "")
-}
-
-func (m *Minus) Columns() []string {
-	return m.source1.Columns()
 }
 
 func (m *Minus) Keys() [][]string {
@@ -46,10 +43,6 @@ func (m *Minus) fastSingle() bool {
 
 func (m *Minus) Indexes() [][]string {
 	return m.source1.Indexes()
-}
-
-func (m *Minus) calcFixed(fixed1, fixed2 []Fixed) []Fixed {
-	return fixed1
 }
 
 func (m *Minus) Nrows() (int, int) {
@@ -96,10 +89,7 @@ func (m *Minus) setApproach(index []string, frac float64, approach any, tran Que
 	m.keyIndex = ap.keyIndex
 	m.source1 = SetApproach(m.source1, index, frac, tran)
 	m.source2 = SetApproach(m.source2, m.keyIndex, 0, tran)
-}
-
-func (m *Minus) Header() *Header {
-	return m.source1.Header()
+	m.header = m.source1.Header()
 }
 
 func (m *Minus) Get(th *Thread, dir Dir) Row {

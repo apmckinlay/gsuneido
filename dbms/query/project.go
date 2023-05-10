@@ -4,12 +4,15 @@
 package query
 
 import (
+	"fmt"
 	"log"
 	"strings"
+	"sync/atomic"
 
 	"github.com/apmckinlay/gsuneido/compile/ast"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
+	"github.com/apmckinlay/gsuneido/util/exit"
 	"github.com/apmckinlay/gsuneido/util/generic/hmap"
 	"github.com/apmckinlay/gsuneido/util/generic/set"
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
@@ -19,8 +22,6 @@ import (
 )
 
 type Project struct {
-	srcHdr  *Header
-	projHdr *Header
 	results *mapType
 	st      *SuTran
 	columns []string
@@ -64,20 +65,7 @@ func NewProject(src Query, cols []string) *Project {
 			panic("can't project _lower! fields")
 		}
 	}
-	p := newProject(src, cols)
-	if p.unique {
-		p.includeDeps(srcCols)
-	}
-	return p
-}
-
-func (p *Project) includeDeps(cols []string) {
-	for _, f := range p.columns {
-		deps := f + "_deps"
-		if slices.Contains(cols, deps) {
-			p.columns = set.AddUnique(p.columns, deps)
-		}
-	}
+	return newProject2(src, cols, true)
 }
 
 func NewRemove(src Query, cols []string) *Project {
@@ -95,16 +83,44 @@ func NewRemove(src Query, cols []string) *Project {
 
 // newProject is common to NewProject and NewRemove
 func newProject(src Query, cols []string) *Project {
-	p := &Project{Query1: Query1{source: src}, columns: cols, rewound: true}
-	if hasKey(src.Keys(), cols, src.Fixed()) {
+	return newProject2(src, cols, false)
+}
+func newProject2(src Query, cols []string, includeDeps bool) *Project {
+	p := &Project{Query1: Query1{source: src}, rewound: true}
+	if hasKey(cols, src.Keys(), src.Fixed()) {
 		p.unique = true
+		if includeDeps {
+			cols = p.includeDeps(cols, src.Columns())
+		}
 	}
+	p.columns = cols
+	p.header = p.getHeader()
 	return p
+}
+
+func (*Project) includeDeps(cols, srcCols []string) []string {
+	newCols := cols
+	for _, f := range cols {
+		deps := f + "_deps"
+		if slices.Contains(srcCols, deps) {
+			newCols = set.AddUnique(newCols, deps)
+		}
+	}
+	return newCols
+}
+
+func (p *Project) getHeader() *Header {
+	srcFlds := p.source.Header().Fields
+	newflds := make([][]string, len(srcFlds))
+	for i, fs := range srcFlds {
+		newflds[i] = projectFields(fs, p.columns)
+	}
+	return NewHeader(newflds, p.columns)
 }
 
 // hasKey returns whether cols contains a key
 // taking fixed into consideration
-func hasKey(keys [][]string, cols []string, fixed []Fixed) bool {
+func hasKey(cols []string, keys [][]string, fixed []Fixed) bool {
 outer:
 	for _, key := range keys {
 		for _, k := range key {
@@ -138,18 +154,20 @@ func (p *Project) SetTran(t QueryTran) {
 	p.st = MakeSuTran(t)
 }
 
-func (p *Project) Columns() []string {
-	return p.columns
-}
-
 func (p *Project) Keys() [][]string {
 	return projectKeys(p.source.Keys(), p.columns)
 }
 
+// projectKeys is also used by Summarize
 func projectKeys(keys [][]string, cols []string) [][]string {
-	keys2 := projectIndexes(keys, cols)
+	var keys2 [][]string
+	for _, ix := range keys {
+		if set.Subset(cols, ix) {
+			keys2 = append(keys2, ix)
+		}
+	}
 	if len(keys2) == 0 {
-		return [][]string{cols}
+		return [][]string{cols} // fallback on all columns
 	}
 	return keys2
 }
@@ -158,11 +176,16 @@ func (p *Project) Indexes() [][]string {
 	return projectIndexes(p.source.Indexes(), p.columns)
 }
 
+// projectIndexes is also used by Summarize
 func projectIndexes(idxs [][]string, cols []string) [][]string {
 	var idxs2 [][]string
-	for _, k := range idxs {
-		if set.Subset(cols, k) {
-			idxs2 = append(idxs2, k)
+	for _, ix := range idxs {
+		i := 0
+		for ; i < len(ix) && slices.Contains(cols, ix[i]); i++ {
+		}
+		pre := ix[:i]
+		if i > 0 && !slc.ContainsFn(idxs2, pre, slices.Equal[string]) {
+			idxs2 = append(idxs2, pre)
 		}
 	}
 	return idxs2
@@ -171,7 +194,7 @@ func projectIndexes(idxs [][]string, cols []string) [][]string {
 func (p *Project) Nrows() (int, int) {
 	nr, pop := p.source.Nrows()
 	if !p.unique {
-		nr /= 2 // ???
+		nr /= 2 // ??? (matches lookupCost)
 	}
 	return nr, pop
 }
@@ -344,10 +367,18 @@ func isConstant(e ast.Expr) bool {
 }
 
 func (p *Project) Fixed() []Fixed {
-	//TODO cache like extend and union ???
-	var fixed []Fixed
-	for _, f := range p.source.Fixed() {
-		if slices.Contains(p.columns, f.col) {
+	if p.fixed == nil {
+		p.fixed = projectFixed(p.source.Fixed(), p.columns)
+		assert.That(p.fixed != nil)
+	}
+	return p.fixed
+}
+
+// projectFixed is also used by Summarize
+func projectFixed(srcFixed []Fixed, cols []string) []Fixed {
+	fixed := []Fixed{}
+	for _, f := range srcFixed {
+		if slices.Contains(cols, f.col) {
 			fixed = append(fixed, f)
 		}
 	}
@@ -359,6 +390,10 @@ func (p *Project) Updateable() string {
 		return p.source.Updateable()
 	}
 	return ""
+}
+
+func (p *Project) fastSingle() bool {
+	return p.strategy == projCopy && p.source.fastSingle()
 }
 
 // optimize ---------------------------------------------------------
@@ -396,23 +431,10 @@ func (p *Project) mapCost(mode Mode, index []string, frac float64) (Cost, Cost) 
 func (p *Project) setApproach(_ []string, frac float64, approach any, tran QueryTran) {
 	p.projectApproach = *approach.(*projectApproach)
 	p.source = SetApproach(p.source, p.index, frac, tran)
-	p.projHdr = p.Header() // cache for Get
-	p.srcHdr = p.source.Header()
+	p.header = p.getHeader()
 }
 
 // execution --------------------------------------------------------
-
-func (p *Project) Header() *Header {
-	if p.projHdr != nil {
-		return p.projHdr
-	}
-	srcFlds := p.source.Header().Fields
-	newflds := make([][]string, len(srcFlds))
-	for i, fs := range srcFlds {
-		newflds[i] = projectFields(fs, p.columns)
-	}
-	return NewHeader(newflds, p.columns)
-}
 
 func projectFields(fs []string, pcols []string) []string {
 	flds := make([]string, len(fs))
@@ -431,13 +453,26 @@ func (p *Project) Rewind() {
 	p.source.Rewind()
 }
 
+var projIn atomic.Uint32
+var projOut atomic.Uint32
+
+func init() {
+	exit.Add(func() {
+		if projOut.Load() > 0 {
+			fmt.Println("project", (projIn.Load())/projOut.Load())
+		}
+	})
+}
+
 func (p *Project) Get(th *Thread, dir Dir) Row {
 	switch p.strategy {
 	case projCopy:
 		return p.source.Get(th, dir)
 	case projSeq:
+		projOut.Add(1)
 		return p.getSeq(th, dir)
 	case projMap:
+		projOut.Add(1)
 		return p.getMap(th, dir)
 	}
 	panic("should not reach here")
@@ -448,11 +483,12 @@ func (p *Project) getSeq(th *Thread, dir Dir) Row {
 		// output the first of each group
 		// i.e. skip over rows the same as previous output
 		for {
+			projIn.Add(1)
 			row := p.source.Get(th, dir)
 			if row == nil {
 				return nil
 			}
-			if p.rewound || !p.projHdr.EqualRows(row, p.curRow, th, p.st) {
+			if p.rewound || !p.header.EqualRows(row, p.curRow, th, p.st) {
 				p.rewound = false
 				p.prevRow = p.curRow
 				p.curRow = row
@@ -464,6 +500,7 @@ func (p *Project) getSeq(th *Thread, dir Dir) Row {
 		// i.e. output when next record is different
 		// (to get the same records as NEXT)
 		if p.rewound {
+			projIn.Add(1)
 			p.prevRow = p.source.Get(th, dir)
 		}
 		p.rewound = false
@@ -472,9 +509,10 @@ func (p *Project) getSeq(th *Thread, dir Dir) Row {
 				return nil
 			}
 			row := p.prevRow
+			projIn.Add(1)
 			p.prevRow = p.source.Get(th, dir)
 			if p.prevRow == nil ||
-				!p.projHdr.EqualRows(row, p.prevRow, th, p.st) {
+				!p.header.EqualRows(row, p.prevRow, th, p.st) {
 				// output the last row of a group
 				p.curRow = row
 				return row
@@ -495,7 +533,7 @@ func (p *Project) getMap(th *Thread, dir Dir) Row {
 			hfn := func(k rowHash) uint32 { return k.hash }
 			eqfn := func(x, y rowHash) bool {
 				return x.hash == y.hash &&
-					equalCols(x.row, y.row, p.srcHdr, p.columns, th, p.st)
+					equalCols(x.row, y.row, p.source.Header(), p.columns, th, p.st)
 			}
 			p.results = hmap.NewHmapFuncs[rowHash, struct{}](hfn, eqfn)
 		}
@@ -504,11 +542,13 @@ func (p *Project) getMap(th *Thread, dir Dir) Row {
 		}
 	}
 	for {
+		projIn.Add(1)
 		row := p.source.Get(th, dir)
 		if row == nil {
 			break
 		}
-		rh := rowHash{row: row, hash: hashCols(row, p.srcHdr, p.columns, th, p.st)}
+		rh := rowHash{row: row,
+			hash: hashCols(row, p.source.Header(), p.columns, th, p.st)}
 		k, _, ok := p.results.GetPut(rh, struct{}{})
 		if !ok {
 			if p.results.Size() > mapLimit {
@@ -545,11 +585,13 @@ func equalCols(x, y Row, hdr *Header, cols []string, th *Thread, st *SuTran) boo
 
 func (p *Project) buildMap(th *Thread) {
 	for {
+		projIn.Add(1)
 		row := p.source.Get(th, Next)
 		if row == nil {
 			break
 		}
-		rh := rowHash{row: row, hash: hashCols(row, p.srcHdr, p.columns, th, p.st)}
+		rh := rowHash{row: row,
+			hash: hashCols(row, p.source.Header(), p.columns, th, p.st)}
 		if !p.results.Has(rh) {
 			p.results.Put(rh, struct{}{})
 		}
@@ -578,7 +620,14 @@ func (p *Project) Lookup(th *Thread, cols, vals []string) Row {
 		return p.source.Lookup(th, cols, vals)
 	}
 	p.Select(cols, vals)
-	row := p.Get(th, Next)
-	p.Select(nil, nil) // clear select
-	return row
+	defer p.Select(nil, nil) // clear
+	return p.Get(th, Next)
+}
+
+func (p *Project) lookupCost() Cost {
+	srcCost := p.source.lookupCost()
+	if p.unique {
+		return srcCost
+	}
+	return 2 * srcCost // ??? (matches Nrows)
 }
