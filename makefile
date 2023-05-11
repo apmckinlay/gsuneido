@@ -19,17 +19,6 @@ ifdef PATHEXT
 	PORTABLE = export CGO_ENABLED=0 ; $(GO) $(BUILD) -o gsport.exe -ldflags "$(LDFLAGS)" -tags portable
 endif
 
-help:
-	@echo "make [target]"
-	@echo "build"
-	@echo "    build gsuneido"
-	@echo "gsuneido"
-	@echo "    build gsuneido executable"
-	@echo "test"
-	@echo "    run tests"
-	@echo "clean"
-	@echo "    remove built files"
-
 build:
 	@$(GO) version
 	@rm -f $(OUTPUT)
@@ -91,4 +80,15 @@ release:
 	  ../gsuneido -load suneidoc && \
 	  ../gsuneido -load imagebook
 
-.PHONY : build gsuneido portable test generate clean zap race racetest release
+help:
+	@echo "make [target]"
+	@echo "build"
+	@echo "    build gsuneido"
+	@echo "gsuneido"
+	@echo "    build gsuneido executable"
+	@echo "test"
+	@echo "    run tests"
+	@echo "clean"
+	@echo "    remove built files"
+
+.PHONY : build gsuneido portable test generate clean zap race racetest release help
