@@ -80,7 +80,8 @@ type Query interface {
 	// It is true if the query Get returns a single record stored in the database
 	SingleTable() bool
 
-	// Indexes returns all the indexes
+	// Indexes returns all the indexes.
+	// Unlike Keys, Indexes are physical i.e. fast access paths
 	Indexes() [][]string
 
 	// Keys returns sets of fields that are unique keys.
@@ -162,8 +163,10 @@ type queryBase struct {
 	// header must be set by constructors and setApproach.
 	// setApproach is necessary because the sources may get reversed
 	// which affects the order of Fields
-	header *Header
-	fixed []Fixed
+	header  *Header
+	keys    [][]string
+	indexes [][]string
+	fixed   []Fixed
 	cache
 }
 
@@ -173,6 +176,14 @@ func (q *queryBase) Columns() []string {
 
 func (q *queryBase) Header() *Header {
 	return q.header
+}
+
+func (q *queryBase) Keys() [][]string {
+	return q.keys
+}
+
+func (q *queryBase) Indexes() [][]string {
+	return q.indexes
 }
 
 func (*queryBase) Order() []string {
@@ -407,8 +418,8 @@ func LookupCost(q Query, mode Mode, index []string, nrows int) (
 	} else {
 		lookupCost = q.lookupCost()
 		if lookupCost >= impossible {
-            return impossible, impossible
-        }
+			return impossible, impossible
+		}
 	}
 	lookupCost *= nrows
 	// trace.Println("LookupCost", fixcost, "+", lookupCost, "=", fixcost+lookupCost)
@@ -443,16 +454,8 @@ type Query1 struct {
 	queryBase
 }
 
-func (q1 *Query1) Keys() [][]string {
-	return q1.source.Keys()
-}
-
 func (q1 *Query1) fastSingle() bool {
 	return q1.source.fastSingle()
-}
-
-func (q1 *Query1) Indexes() [][]string {
-	return q1.source.Indexes()
 }
 
 func (q1 *Query1) Nrows() (int, int) {

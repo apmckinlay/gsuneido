@@ -91,6 +91,8 @@ func (jt joinType) String() string {
 
 func NewJoin(src1, src2 Query, by []string) *Join {
 	jn := &Join{joinBase: newJoinBase(src1, src2, by)}
+	jn.keys = jn.getKeys()
+	jn.indexes = jn.getIndexes()
 	jn.fixed = jn.getFixed()
 	return jn
 }
@@ -151,17 +153,13 @@ func (jl *joinLike) getHeader() *Header {
 	return JoinHeaders(jl.source1.Header(), jl.source2.Header())
 }
 
-// func (jl *joinLike) Columns() []string {
-// 	return set.Union(jl.source1.Columns(), jl.source2.Columns())
-// }
-
-func (jn *Join) Indexes() [][]string {
+func (jn *Join) getIndexes() [][]string {
 	// can really only provide source.indexes() but optimize may swap.
 	// optimize will return impossible for source2 indexes.
 	return set.UnionFn(jn.source1.Indexes(), jn.source2.Indexes(), slices.Equal[string])
 }
 
-func (jn *Join) Keys() [][]string {
+func (jn *Join) getKeys() [][]string {
 	switch jn.joinType {
 	case one_one:
 		return set.UnionFn(jn.source1.Keys(), jn.source2.Keys(), set.Equal[string])
@@ -493,6 +491,8 @@ type LeftJoin struct {
 
 func NewLeftJoin(src1, src2 Query, by []string) *LeftJoin {
 	lj := &LeftJoin{joinBase: newJoinBase(src1, src2, by)}
+	lj.keys = lj.getKeys()
+	lj.indexes = lj.source1.Indexes()
 	lj.fixed = lj.getFixed()
 	return lj
 }
@@ -505,11 +505,7 @@ func (lj *LeftJoin) stringOp() string {
 	return "LEFTJOIN" + lj.bystr()
 }
 
-func (lj *LeftJoin) Indexes() [][]string {
-	return lj.source1.Indexes()
-}
-
-func (lj *LeftJoin) Keys() [][]string {
+func (lj *LeftJoin) getKeys() [][]string {
 	// can't use source2.Keys() like Join.Keys()
 	// because multiple right sides can be missing/blank
 	switch lj.joinType {

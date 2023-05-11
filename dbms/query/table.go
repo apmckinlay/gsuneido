@@ -43,11 +43,9 @@ type Table struct {
 	info    *meta.Info
 	schema  *Schema
 	name    string
-	keys    [][]string
-	primary [][]string
+	allKeys [][]string
 	// index is the index that will be used to access the data.
 	index   []string
-	indexes [][]string
 	selcols []string
 	selvals []string
 	queryBase
@@ -98,18 +96,8 @@ func (tbl *Table) SetTran(t QueryTran) {
 		}
 	}
 	tbl.indexes = idxs
-	tbl.keys = keys
-}
-
-func (tbl *Table) Indexes() [][]string {
-	return tbl.indexes
-}
-
-func (tbl *Table) Keys() [][]string {
-	if tbl.primary == nil {
-		tbl.primary = withoutDupsOrSupersets(tbl.keys)
-	}
-	return tbl.primary
+	tbl.allKeys = keys
+	tbl.keys = withoutDupsOrSupersets(keys)
 }
 
 func (tbl *Table) fastSingle() bool {
@@ -179,13 +167,13 @@ func (tbl *Table) setApproach(_ []string, _ float64, approach any, _ QueryTran) 
 
 func (tbl *Table) setIndex(index []string) {
 	if tbl.singleton {
-		index = tbl.keys[0]
+		index = tbl.allKeys[0]
 	}
 	tbl.index = index
 	tbl.iIndex = slc.IndexFn(tbl.indexes, tbl.index, slices.Equal[string])
 	assert.Msg("setIndex", tbl.name, index).That(tbl.iIndex >= 0)
 	tbl.indexEncode = len(tbl.index) > 1 ||
-		!slc.ContainsFn(tbl.keys, tbl.index, set.Equal[string])
+		!slc.ContainsFn(tbl.allKeys, tbl.index, set.Equal[string])
 }
 
 func (tbl *Table) lookupCost() Cost {
@@ -211,7 +199,7 @@ func (tbl *Table) Lookup(_ *Thread, cols, vals []string) Row {
 }
 
 func (tbl *Table) hasKey(cols []string) bool {
-	for _, key := range tbl.primary {
+	for _, key := range tbl.keys {
 		if set.Subset(cols, key) {
 			return true
 		}

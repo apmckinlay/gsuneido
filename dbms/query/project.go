@@ -95,6 +95,8 @@ func newProject2(src Query, cols []string, includeDeps bool) *Project {
 	}
 	p.columns = cols
 	p.header = p.getHeader()
+	p.keys = projectKeys(src.Keys(), p.columns)
+	p.indexes = projectIndexes(src.Indexes(), p.columns)
 	return p
 }
 
@@ -154,10 +156,6 @@ func (p *Project) SetTran(t QueryTran) {
 	p.st = MakeSuTran(t)
 }
 
-func (p *Project) Keys() [][]string {
-	return projectKeys(p.source.Keys(), p.columns)
-}
-
 // projectKeys is also used by Summarize
 func projectKeys(keys [][]string, cols []string) [][]string {
 	var keys2 [][]string
@@ -170,10 +168,6 @@ func projectKeys(keys [][]string, cols []string) [][]string {
 		return [][]string{cols} // fallback on all columns
 	}
 	return keys2
-}
-
-func (p *Project) Indexes() [][]string {
-	return projectIndexes(p.source.Indexes(), p.columns)
 }
 
 // projectIndexes is also used by Summarize

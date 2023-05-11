@@ -18,7 +18,7 @@ type Compatible struct {
 	Query2
 }
 
-// init sets disjoint
+// newCompatible sets disjoint
 func newCompatible(src1, src2 Query) *Compatible {
 	c := &Compatible{}
 	c.source1, c.source2 = src1, src2

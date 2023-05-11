@@ -147,14 +147,18 @@ func addFixed(fixed []Fixed, e ast.Expr) []Fixed {
 }
 
 func (w *Where) Keys() [][]string {
-	if !w.optInited {
-		w.optInit()
+	if w.keys == nil {
+		if !w.optInited {
+			w.optInit()
+		}
+		if w.singleton || w.conflict {
+			return [][]string{{}} // intentionally {} not nil
+		}
+		//TODO treat unique indexes with a where != "" as keys
+		w.keys = w.source.Keys()
+		assert.That(w.keys != nil)
 	}
-	if w.singleton || w.conflict {
-		return [][]string{{}} // intentionally {} not nil
-	}
-	//TODO treat unique indexes with a where != "" as keys
-	return w.source.Keys()
+	return w.keys
 }
 
 func (w *Where) fastSingle() bool {
@@ -168,13 +172,18 @@ func (w *Where) fastSingle() bool {
 }
 
 func (w *Where) Indexes() [][]string {
-	if !w.optInited {
-		w.optInit()
+	if w.indexes == nil {
+		if !w.optInited {
+			w.optInit()
+		}
+		if !w.singleton {
+			w.indexes = w.source.Indexes()
+		}
+		if w.indexes == nil {
+			w.indexes = [][]string{} // not nil
+		}
 	}
-	if w.singleton {
-		return [][]string{{}} // intentionally {} not nil
-	}
-	return w.source.Indexes()
+	return w.indexes
 }
 
 func (w *Where) Nrows() (int, int) {

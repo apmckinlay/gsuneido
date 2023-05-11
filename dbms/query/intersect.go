@@ -25,14 +25,10 @@ func NewIntersect(src1, src2 Query) *Intersect {
 	it := Intersect{}
 	it.Compatible = *newCompatible(src1, src2)
 	it.header = it.getHeader()
+	it.keys = it.getKeys()
+	it.indexes = it.getIndexes()
 	it.fixed = it.getFixed()
 	return &it
-}
-
-func (it *Intersect) getHeader() *Header {
-	hdr := it.source1.Header()
-	cols := set.Intersect(it.source1.Columns(), it.source2.Columns())
-	return NewHeader(hdr.Fields, cols)
 }
 
 func (it *Intersect) String() string {
@@ -43,16 +39,22 @@ func (it *Intersect) stringOp() string {
 	return it.Compatible.stringOp("INTERSECT", "")
 }
 
-// func (it *Intersect) Columns() []string {
-// 	return set.Intersect(it.source1.Columns(), it.source2.Columns())
-// }
+func (it *Intersect) getHeader() *Header {
+	hdr := it.source1.Header()
+	cols := set.Intersect(it.source1.Columns(), it.source2.Columns())
+	return NewHeader(hdr.Fields, cols)
+}
 
-func (it *Intersect) Keys() [][]string {
+func (it *Intersect) getKeys() [][]string {
 	k := set.IntersectFn(it.source1.Keys(), it.source2.Keys(), set.Equal[string])
 	if len(k) == 0 {
 		k = [][]string{it.Columns()}
 	}
 	return k
+}
+
+func (it *Intersect) getIndexes() [][]string {
+	return set.UnionFn(it.source1.Indexes(), it.source2.Indexes(), slices.Equal[string])
 }
 
 func (it *Intersect) getFixed() []Fixed {
@@ -61,10 +63,6 @@ func (it *Intersect) getFixed() []Fixed {
 		it.conflict = true
 	}
 	return fixed
-}
-
-func (it *Intersect) Indexes() [][]string {
-	return set.UnionFn(it.source1.Indexes(), it.source2.Indexes(), slices.Equal[string])
 }
 
 func (it *Intersect) Nrows() (int, int) {

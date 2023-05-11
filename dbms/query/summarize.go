@@ -79,6 +79,8 @@ func NewSummarize(src Query, by, cols, ops, ons []string) *Summarize {
 	// if single min or max, and on is a key, then we can give the whole row
 	su.wholeRow = su.minmax1() && slc.ContainsFn(src.Keys(), ons, set.Equal[string])
 	su.header = su.getHeader()
+	su.keys = projectKeys(src.Keys(), su.by)
+	su.indexes = projectIndexes(src.Indexes(), su.by)
 	su.fixed = projectFixed(src.Fixed(), by)
 	return su
 }
@@ -150,14 +152,6 @@ func (su *Summarize) stringOp() string {
 		}
 	}
 	return s
-}
-
-func (su *Summarize) Keys() [][]string {
-	return projectKeys(su.source.Keys(), su.by)
-}
-
-func (su *Summarize) Indexes() [][]string {
-	return projectIndexes(su.source.Indexes(), su.by)
 }
 
 func (su *Summarize) Nrows() (int, int) {

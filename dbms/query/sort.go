@@ -30,6 +30,7 @@ func NewSort(src Query, reverse bool, order []string) *Sort {
 	sort.source = src
 	sort.order = order
 	sort.header = src.Header()
+	sort.keys = src.Keys()
 	sort.fixed = src.Fixed()
 	return &sort
 }
@@ -51,6 +52,10 @@ func (sort *Sort) stringOp() string {
 
 func (sort *Sort) Order() []string {
 	return sort.order
+}
+
+func (*Sort) Indexes() [][]string {
+    panic(assert.ShouldNotReachHere())
 }
 
 func (sort *Sort) Transform() Query {

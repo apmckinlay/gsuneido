@@ -69,7 +69,7 @@ func TestTransform(t *testing.T) {
 	test("customer project id, city, name", "customer")
 	// remove disjoint difference
 	test("(customer where id is 3) minus (customer where id is 5)",
-		"customer WHERE id is 3")
+		"customer WHERE*1 id is 3")
 	// remove empty extends
 	test("customer extend zone = 3 project id, city",
 		"customer PROJECT id,city")
