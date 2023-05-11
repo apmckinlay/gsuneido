@@ -99,6 +99,9 @@ type Thread struct {
 
 	// InHandler is used to detect nested handler calls
 	InHandler bool
+
+	// returnThrow is set by op.ReturnThrow and used by op.Call*Discard
+	returnThrow bool
 }
 
 var nThread atomic.Int32

@@ -402,7 +402,11 @@ func (p *Parser) returnStmt() *ast.Return {
 	if p.newline || p.MatchIf(tok.Semicolon) || p.Token == tok.RCurly {
 		return &ast.Return{}
 	}
-	return &ast.Return{E: p.trailingExpr()}
+	returnThrow := false
+	if p.MatchIf(tok.Throw) {
+		returnThrow = true
+	}
+	return &ast.Return{E: p.trailingExpr(), ReturnThrow: returnThrow}
 }
 
 func (p *Parser) tryStmt() *ast.TryCatch {
