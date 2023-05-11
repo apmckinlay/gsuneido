@@ -218,6 +218,8 @@ const (
 	Return
 	// ReturnNil returns nil i.e. no return value
 	ReturnNil
+	// ReturnThrow, forces caller to check value
+	ReturnThrow
 
 	// blocks -------------------------------------------------------
 

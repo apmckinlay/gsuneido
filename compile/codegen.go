@@ -284,7 +284,7 @@ func (cg *cgen) statement(node ast.Statement, labels *Labels, lastStmt bool) {
 	case *ast.Compound:
 		cg.statements(node.Body, labels)
 	case *ast.Return:
-		cg.returnStmt(node.E, lastStmt)
+		cg.returnStmt(node, lastStmt)
 	case *ast.If:
 		cg.ifStmt(node, labels)
 	case *ast.Switch:
@@ -321,7 +321,8 @@ func (cg *cgen) statements(stmts []ast.Statement, labels *Labels) {
 	}
 }
 
-func (cg *cgen) returnStmt(expr ast.Expr, lastStmt bool) {
+func (cg *cgen) returnStmt(node *ast.Return, lastStmt bool) {
+	expr := node.E
 	if expr != nil {
 		cg.expr2(expr, callNilOk)
 	}
@@ -332,7 +333,9 @@ func (cg *cgen) returnStmt(expr ast.Expr, lastStmt bool) {
 			cg.emit(op.BlockReturn)
 		}
 	} else {
-		if !lastStmt {
+		if node.ReturnThrow {
+			cg.emit(op.ReturnThrow)
+		} else if !lastStmt {
 			if expr == nil {
 				cg.emit(op.ReturnNil)
 			} else {

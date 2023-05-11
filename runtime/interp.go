@@ -447,8 +447,11 @@ loop:
 			}
 		case op.ReturnNil:
 			th.Push(nil)
-			fallthrough
+			break loop
 		case op.Return:
+			break loop
+		case op.ReturnThrow:
+			th.returnThrow = true
 			break loop
 		case op.Try:
 			*catchJump = fr.ip + fetchInt16()
@@ -492,6 +495,17 @@ loop:
 			base := th.sp - int(argSpec.Nargs)
 			result := f.Call(th, nil, argSpec)
 			th.sp = base
+			if th.returnThrow {
+				if fr.ip < len(code) && op.Opcode(code[fr.ip]) != op.Return {
+					th.returnThrow = false
+				}
+				if oc == op.CallFuncDiscard && result != EmptyStr {
+					if s, ok := result.ToStr(); ok {
+						panic(s)
+					}
+					panic("return value must be used")
+				}
+			}
 			pushResult(result)
 		case op.Super:
 			super = fetchUint16()
@@ -531,6 +545,17 @@ loop:
 					// fmt.Println(strings.Repeat("   ", t.fp+1), f)
 					result := f.Call(th, this, argSpec)
 					th.sp = base
+					if th.returnThrow {
+						if fr.ip < len(code) && op.Opcode(code[fr.ip]) != op.Return {
+							th.returnThrow = false
+						}
+						if oc == op.CallFuncDiscard && result != EmptyStr {
+							if s, ok := result.ToStr(); ok {
+								panic(s)
+							}
+							panic("return value must be used")
+						}
+					}
 					pushResult(result)
 					break
 				}

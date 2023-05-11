@@ -689,10 +689,14 @@ func (a *If) Children(fn func(Node) Node) {
 type Return struct {
 	E Expr
 	stmtNodeT
+	ReturnThrow bool
 }
 
 func (a *Return) String() string {
 	s := "Return("
+	if a.ReturnThrow {
+		s = "ReturnThrow("
+	}
 	if a.E != nil {
 		s += a.E.String()
 	}

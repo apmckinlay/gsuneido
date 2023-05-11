@@ -88,6 +88,9 @@ func TestCodegen(t *testing.T) {
 	test("return", "")
 	test("return 123", "Int 123")
 
+	test("return throw 123; 123", "Int 123, ReturnThrow, Int 123")
+	test("return throw 123", "Int 123, ReturnThrow")
+
 	test("throw 'fubar'", "Value 'fubar', Throw")
 
 	test("f()", "Load f, CallFuncNilOk ()")

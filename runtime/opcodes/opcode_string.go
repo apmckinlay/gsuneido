@@ -81,16 +81,17 @@ func _() {
 	_ = x[Super-70]
 	_ = x[Return-71]
 	_ = x[ReturnNil-72]
-	_ = x[Closure-73]
-	_ = x[BlockBreak-74]
-	_ = x[BlockContinue-75]
-	_ = x[BlockReturn-76]
-	_ = x[BlockReturnNil-77]
+	_ = x[ReturnThrow-73]
+	_ = x[Closure-74]
+	_ = x[BlockBreak-75]
+	_ = x[BlockContinue-76]
+	_ = x[BlockReturn-77]
+	_ = x[BlockReturnNil-78]
 }
 
-const _Opcode_name = "NopPopDupSwapIntValueTrueFalseZeroOneMinusOneMaxIntEmptyStrLoadStoreLoadStoreDyloadGlobalGetPutGetPutRangeToRangeLenThisIsIsntMatchMatchNotLtLteGtGteAddSubCatMulDivModLeftShiftRightShiftBitOrBitAndBitXorBitNotNotUnaryPlusUnaryMinusInRangeOrAndBoolQMarkInCoverJumpJumpTrueJumpFalseJumpIsJumpIsntIterForInThrowTryCatchCallFuncDiscardCallFuncNoNilCallFuncNilOkCallMethDiscardCallMethNoNilCallMethNilOkSuperReturnReturnNilClosureBlockBreakBlockContinueBlockReturnBlockReturnNil"
+const _Opcode_name = "NopPopDupSwapIntValueTrueFalseZeroOneMinusOneMaxIntEmptyStrLoadStoreLoadStoreDyloadGlobalGetPutGetPutRangeToRangeLenThisIsIsntMatchMatchNotLtLteGtGteAddSubCatMulDivModLeftShiftRightShiftBitOrBitAndBitXorBitNotNotUnaryPlusUnaryMinusInRangeOrAndBoolQMarkInCoverJumpJumpTrueJumpFalseJumpIsJumpIsntIterForInThrowTryCatchCallFuncDiscardCallFuncNoNilCallFuncNilOkCallMethDiscardCallMethNoNilCallMethNilOkSuperReturnReturnNilReturnThrowClosureBlockBreakBlockContinueBlockReturnBlockReturnNil"
 
-var _Opcode_index = [...]uint16{0, 3, 6, 9, 13, 16, 21, 25, 30, 34, 37, 45, 51, 59, 63, 68, 77, 83, 89, 92, 95, 101, 108, 116, 120, 122, 126, 131, 139, 141, 144, 146, 149, 152, 155, 158, 161, 164, 167, 176, 186, 191, 197, 203, 209, 212, 221, 231, 238, 240, 243, 247, 252, 254, 259, 263, 271, 280, 286, 294, 298, 303, 308, 311, 316, 331, 344, 357, 372, 385, 398, 403, 409, 418, 425, 435, 448, 459, 473}
+var _Opcode_index = [...]uint16{0, 3, 6, 9, 13, 16, 21, 25, 30, 34, 37, 45, 51, 59, 63, 68, 77, 83, 89, 92, 95, 101, 108, 116, 120, 122, 126, 131, 139, 141, 144, 146, 149, 152, 155, 158, 161, 164, 167, 176, 186, 191, 197, 203, 209, 212, 221, 231, 238, 240, 243, 247, 252, 254, 259, 263, 271, 280, 286, 294, 298, 303, 308, 311, 316, 331, 344, 357, 372, 385, 398, 403, 409, 418, 429, 436, 446, 459, 470, 484}
 
 func (i Opcode) String() string {
 	if i >= Opcode(len(_Opcode_index)-1) {

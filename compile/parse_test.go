@@ -258,6 +258,8 @@ func TestParseStatements(t *testing.T) {
 	test("return a + \n b", "Return(Nary(Add a b))")
 	test("return \n while b \n c", "Return()\nWhile(b c)")
 
+	test("return throw 123", "ReturnThrow(123)")
+
 	test("forever\na", "Forever(a)")
 
 	// while
@@ -338,4 +340,5 @@ func TestParseStatements(t *testing.T) {
 	xtest("1+2 3+4", "syntax error")
 	xtest("return 1+2 3+4", "syntax error")
 	xtest("throw 1+2 3+4", "syntax error")
+	xtest("return throw", "syntax error")
 }
