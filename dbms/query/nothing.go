@@ -33,7 +33,7 @@ func (*Nothing) Keys() [][]string {
 }
 
 func (*Nothing) Indexes() [][]string {
-	return [][]string{{}}
+	return nil
 }
 
 func (*Nothing) Nrows() (int, int) {

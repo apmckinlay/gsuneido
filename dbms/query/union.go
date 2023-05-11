@@ -51,6 +51,7 @@ const (
 func NewUnion(src1, src2 Query) *Union {
 	u := &Union{Compatible: *newCompatible(src1, src2)}
 	u.header = JoinHeaders(src1.Header(), src2.Header())
+	u.indexes = u.getIndexes()
 	return u
 }
 
@@ -75,22 +76,27 @@ func (u *Union) stringOp() string {
 }
 
 func (u *Union) Keys() [][]string {
-	if u.disjoint == "" {
-		return [][]string{u.allCols}
+	if u.keys == nil {
+		if u.disjoint == "" {
+			u.keys = [][]string{u.allCols}
+		} else {
+			keys := u.keypairs()
+			for i := range keys {
+				// keypairs must ensure that appending is valid
+				keys[i] = set.AddUnique(keys[i], u.disjoint)
+			}
+			u.keys = withoutDupsOrSupersets(keys)
+		}
+		assert.That(u.keys != nil)
 	}
-	keys := u.keypairs()
-	for i := range keys {
-		// keypairs must ensure that appending is valid
-		keys[i] = set.AddUnique(keys[i], u.disjoint)
-	}
-	return withoutDupsOrSupersets(keys)
+	return u.keys
 }
 
 func (*Union) fastSingle() bool {
 	return false
 }
 
-func (u *Union) Indexes() [][]string {
+func (u *Union) getIndexes() [][]string {
 	// lookup can read via any index
 	return set.UnionFn(u.source1.Indexes(), u.source2.Indexes(),
 		slices.Equal[string])

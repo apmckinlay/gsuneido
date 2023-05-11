@@ -33,6 +33,8 @@ func NewRename(src Query, from, to []string) *Rename {
 	r := &Rename{Query1: Query1{source: src}, from: from, to: to}
 	r.renameDependencies(srcCols)
 	r.header = r.getHeader()
+	r.keys = renameIndexes(src.Keys(), r.from, r.to)
+	r.indexes = renameIndexes(src.Indexes(), r.from, r.to)
 	return r
 }
 
@@ -70,14 +72,6 @@ func (r *Rename) stringOp() string {
 		sep = ", "
 	}
 	return sb.String()
-}
-
-func (r *Rename) Keys() [][]string {
-	return renameIndexes(r.source.Keys(), r.from, r.to)
-}
-
-func (r *Rename) Indexes() [][]string {
-	return renameIndexes(r.source.Indexes(), r.from, r.to)
 }
 
 func renameIndexes(idxs [][]string, from, to []string) [][]string {

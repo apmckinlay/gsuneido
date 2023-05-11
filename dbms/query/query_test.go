@@ -449,8 +449,6 @@ func TestJoin_splitSelect(t *testing.T) {
 
 type TestQop struct {
 	Nothing
-	indexes [][]string
-	keys    [][]string
 	sel
 }
 
@@ -467,11 +465,11 @@ type sel struct {
 	vals []string
 }
 
-func (q *TestQop) Indexes() [][]string {
+func (q *TestQop) Indexes() [][]string { // override Nothing
 	return q.indexes
 }
 
-func (q *TestQop) Keys() [][]string {
+func (q *TestQop) Keys() [][]string { // override Nothing
 	return q.keys
 }
 
@@ -479,6 +477,6 @@ func (q *TestQop) Select(cols, vals []string) {
 	q.sel = sel{cols: cols, vals: vals}
 }
 
-func (q *TestQop) fastSingle() bool {
+func (q *TestQop) fastSingle() bool { // override Nothing
 	return false
 }

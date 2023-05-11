@@ -23,6 +23,8 @@ func NewTimes(src1, src2 Query) *Times {
 			set.Intersect(src1.Columns(), src2.Columns())))
 	}
 	t := &Times{joinLike: newJoinLike(src1, src2), rewound: true}
+	t.keys = t.getKeys()
+	t.indexes = t.getIndexes()
 	t.fixed = t.getFixed()
 	return t
 }
@@ -35,13 +37,13 @@ func (t *Times) stringOp() string {
 	return "TIMES"
 }
 
-func (t *Times) Keys() [][]string {
+func (t *Times) getKeys() [][]string {
 	// no columns in common so no keys in common
 	// so there won't be any duplicates in the result
 	return t.keypairs()
 }
 
-func (t *Times) Indexes() [][]string {
+func (t *Times) getIndexes() [][]string {
 	// no columns in common so no indexes in common
 	return slc.With(t.source1.Indexes(), t.source2.Indexes()...)
 }

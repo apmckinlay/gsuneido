@@ -20,8 +20,10 @@ type minusApproach struct {
 func NewMinus(src1, src2 Query) *Minus {
 	var m Minus
 	m.Compatible = *newCompatible(src1, src2)
-	m.header = m.source1.Header()
-	m.fixed = m.source1.Fixed()
+	m.header = src1.Header()
+	m.keys = src1.Keys()
+	m.indexes = src1.Indexes()
+	m.fixed = src1.Fixed()
 	return &m
 }
 
@@ -33,16 +35,8 @@ func (m *Minus) stringOp() string {
 	return m.Compatible.stringOp("MINUS", "")
 }
 
-func (m *Minus) Keys() [][]string {
-	return m.source1.Keys()
-}
-
 func (m *Minus) fastSingle() bool {
 	return m.source1.fastSingle()
-}
-
-func (m *Minus) Indexes() [][]string {
-	return m.source1.Indexes()
 }
 
 func (m *Minus) Nrows() (int, int) {

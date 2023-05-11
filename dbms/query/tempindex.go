@@ -40,6 +40,7 @@ func NewTempIndex(src Query, order []string, tran QueryTran) *TempIndex {
 	ti := TempIndex{order: order, tran: tran, selOrg: selMin, selEnd: selMax}
 	ti.source = src
 	ti.header = src.Header().Dup() // dup because sortlist is concurrent
+	ti.keys = src.Keys()
 	return &ti
 }
 
@@ -49,6 +50,10 @@ func (ti *TempIndex) String() string {
 
 func (ti *TempIndex) stringOp() string {
 	return "TEMPINDEX" + str.Join("(,)", ti.order)
+}
+
+func (*TempIndex) Indexes() [][]string {
+    panic(assert.ShouldNotReachHere())
 }
 
 func (ti *TempIndex) Transform() Query {
