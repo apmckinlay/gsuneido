@@ -94,6 +94,7 @@ func NewJoin(src1, src2 Query, by []string) *Join {
 	jn.keys = jn.getKeys()
 	jn.indexes = jn.getIndexes()
 	jn.fixed = jn.getFixed()
+	jn.nNrows, jn.pNrows = jn.getNrows()
 	return jn
 }
 
@@ -293,7 +294,7 @@ func (jn *Join) setApproach(index []string, frac float64, approach any, tran Que
 	jn.saIndex = index
 }
 
-func (jn *Join) Nrows() (int, int) {
+func (jn *Join) getNrows() (int, int) {
 	n1, p1 := jn.source1.Nrows()
 	n2, p2 := jn.source2.Nrows()
 	return jn.nrows(n1, p1, n2, p2), jn.pop(p1, p2)
@@ -494,6 +495,7 @@ func NewLeftJoin(src1, src2 Query, by []string) *LeftJoin {
 	lj.keys = lj.getKeys()
 	lj.indexes = lj.source1.Indexes()
 	lj.fixed = lj.getFixed()
+	lj.nNrows, lj.pNrows = lj.getNrows()
 	return lj
 }
 
@@ -581,7 +583,7 @@ func (lj *LeftJoin) setApproach(index []string, frac float64, approach any, tran
 	lj.saIndex = index
 }
 
-func (lj *LeftJoin) Nrows() (int, int) {
+func (lj *LeftJoin) getNrows() (int, int) {
 	n1, p1 := lj.source1.Nrows()
 	n2, p2 := lj.source2.Nrows()
 	return lj.nrows(n1, p1, n2, p2), lj.pop(p1, p2)

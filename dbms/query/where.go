@@ -48,10 +48,6 @@ type Where struct {
 	Query1
 	// idxSelPos is the current index in idxSel.ptrngs
 	idxSelPos int
-	// srcpop is the source Nrows pop
-	srcpop int
-	// nrows is the estimated number of result rows
-	nrows int
 
 	nIn  int
 	nOut int
@@ -528,7 +524,7 @@ func (w *Where) optInit() {
 			w.exprMore = w.exprMore || len(w.colSels) > 0
 		}
 	}
-	w.nrows, w.srcpop = w.calcNrows()
+	w.nNrows, w.pNrows = w.calcNrows()
 }
 
 // extractCompares finds sub-expressions like <field> <op> <constant>

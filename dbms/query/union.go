@@ -52,6 +52,7 @@ func NewUnion(src1, src2 Query) *Union {
 	u := &Union{Compatible: *newCompatible(src1, src2)}
 	u.header = JoinHeaders(src1.Header(), src2.Header())
 	u.indexes = u.getIndexes()
+	u.nNrows, u.pNrows = u.getNrows()
 	return u
 }
 
@@ -102,7 +103,7 @@ func (u *Union) getIndexes() [][]string {
 		slices.Equal[string])
 }
 
-func (u *Union) Nrows() (int, int) {
+func (u *Union) getNrows() (int, int) {
 	n1, p1 := u.source1.Nrows()
 	n2, p2 := u.source2.Nrows()
 	return u.nrowsCalc(n1, n2), u.nrowsCalc(p1, p2)

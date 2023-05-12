@@ -18,7 +18,7 @@ func TestParseAct(t *testing.T) {
 	}
 	test("insert [a: 1, b: 3] into table")
 	test("insert table into table1")
-	test("insert table where a is 1 into table1")
+	test("insert table where a > 1 into table1")
 
 	test("update table set a = 1")
 	test("update table set a = 1, b = 2")

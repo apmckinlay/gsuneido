@@ -43,6 +43,7 @@ func NewExtend(src Query, cols []string, exprs []ast.Expr) *Extend {
 	e.header = e.getHeader()
 	e.keys = src.Keys()
 	e.indexes = src.Indexes()
+	e.nNrows, e.pNrows = src.Nrows()
 	return e
 }
 

@@ -32,6 +32,7 @@ func NewSort(src Query, reverse bool, order []string) *Sort {
 	sort.header = src.Header()
 	sort.keys = src.Keys()
 	sort.fixed = src.Fixed()
+	sort.nNrows, sort.pNrows = src.Nrows()
 	return &sort
 }
 

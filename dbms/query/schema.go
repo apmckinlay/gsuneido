@@ -245,8 +245,9 @@ func (tl *TablesLookup) Get(*Thread, Dir) Row {
 type Columns struct {
 	schema []*meta.Schema
 	schemaTable
-	si int
-	ci int
+	si    int
+	ci    int
+	nrows int
 }
 
 func (*Columns) String() string {
@@ -273,6 +274,10 @@ func (*Columns) Header() *Header {
 
 func (cs *Columns) Nrows() (int, int) {
 	cs.ensure()
+	return cs.nrows, cs.nrows
+}
+
+func (cs *Columns) getNrows() int {
 	n := 0
 	for _, schema := range cs.schema {
 		for _, col := range schema.Columns {
@@ -282,7 +287,7 @@ func (cs *Columns) Nrows() (int, int) {
 		}
 		n += len(schema.Derived)
 	}
-	return n, n
+	return n
 }
 
 func (cs *Columns) SetTran(tran QueryTran) {
@@ -367,6 +372,7 @@ func (cs *Columns) ensure() {
 	)
 	sort.Slice(cs.schema,
 		func(i, j int) bool { return cs.schema[i].Table < cs.schema[j].Table })
+	cs.nrows = cs.getNrows()
 }
 
 //-------------------------------------------------------------------
@@ -375,8 +381,9 @@ func (cs *Columns) ensure() {
 type Indexes struct {
 	schema []*meta.Schema
 	schemaTable
-	si int
-	ci int
+	si     int
+	ci     int
+	nrows int
 }
 
 func (*Indexes) String() string {
@@ -404,11 +411,15 @@ func (*Indexes) Header() *Header {
 
 func (is *Indexes) Nrows() (int, int) {
 	is.ensure()
+	return is.nrows, is.nrows
+}
+
+func (is *Indexes) getNrows() int {
 	n := 0
 	for _, schema := range is.schema {
 		n += len(schema.Indexes)
 	}
-	return n, n
+	return n
 }
 
 func (is *Indexes) SetTran(tran QueryTran) {
@@ -487,6 +498,7 @@ func (is *Indexes) ensure() {
 	is.schema = is.tran.GetAllSchema()
 	sort.Slice(is.schema,
 		func(i, j int) bool { return is.schema[i].Table < is.schema[j].Table })
+	is.nrows = is.getNrows()
 }
 
 //-------------------------------------------------------------------

@@ -97,6 +97,7 @@ func newProject2(src Query, cols []string, includeDeps bool) *Project {
 	p.header = p.getHeader()
 	p.keys = projectKeys(src.Keys(), p.columns)
 	p.indexes = projectIndexes(src.Indexes(), p.columns)
+	p.nNrows, p.pNrows = p.getNrows()
 	return p
 }
 
@@ -185,7 +186,7 @@ func projectIndexes(idxs [][]string, cols []string) [][]string {
 	return idxs2
 }
 
-func (p *Project) Nrows() (int, int) {
+func (p *Project) getNrows() (int, int) {
 	nr, pop := p.source.Nrows()
 	if !p.unique {
 		nr /= 2 // ??? (matches lookupCost)

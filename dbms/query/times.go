@@ -26,6 +26,7 @@ func NewTimes(src1, src2 Query) *Times {
 	t.keys = t.getKeys()
 	t.indexes = t.getIndexes()
 	t.fixed = t.getFixed()
+	t.nNrows, t.pNrows = t.getNrows()
 	return t
 }
 
@@ -96,7 +97,7 @@ func (t *Times) setApproach(index []string, frac float64, approach any, tran Que
 	t.header = t.getHeader()
 }
 
-func (t *Times) Nrows() (int, int) {
+func (t *Times) getNrows() (int, int) {
 	n1, p1 := t.source1.Nrows()
 	n2, p2 := t.source2.Nrows()
 	return n1 * n2, p1 * p2

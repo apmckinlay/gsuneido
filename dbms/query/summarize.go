@@ -21,8 +21,7 @@ import (
 )
 
 type Summarize struct {
-	queryBase
-	source Query
+	Query1
 	t   QueryTran
 	get func(th *Thread, su *Summarize, dir Dir) Row
 	st  *SuTran
@@ -73,7 +72,8 @@ func NewSummarize(src Query, by, cols, ops, ons []string) *Summarize {
 			}
 		}
 	}
-	su := &Summarize{source: src, by: by, cols: cols, ops: ops, ons: ons}
+	su := &Summarize{by: by, cols: cols, ops: ops, ons: ons}
+	su.source = src
 	sort.Stable(su)
 	su.unique = hasKey(cols, src.Keys(), src.Fixed())
 	// if single min or max, and on is a key, then we can give the whole row
@@ -82,6 +82,7 @@ func NewSummarize(src Query, by, cols, ops, ons []string) *Summarize {
 	su.keys = projectKeys(src.Keys(), su.by)
 	su.indexes = projectIndexes(src.Indexes(), su.by)
 	su.fixed = projectFixed(src.Fixed(), by)
+	su.nNrows, su.pNrows = su.getNrows()
 	return su
 }
 
@@ -154,7 +155,7 @@ func (su *Summarize) stringOp() string {
 	return s
 }
 
-func (su *Summarize) Nrows() (int, int) {
+func (su *Summarize) getNrows() (int, int) {
 	nr, pop := su.source.Nrows()
 	if len(su.by) == 0 {
 		nr = 1

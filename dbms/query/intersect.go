@@ -28,6 +28,7 @@ func NewIntersect(src1, src2 Query) *Intersect {
 	it.keys = it.getKeys()
 	it.indexes = it.getIndexes()
 	it.fixed = it.getFixed()
+	it.nNrows, it.pNrows = it.getNrows()
 	return &it
 }
 
@@ -65,7 +66,7 @@ func (it *Intersect) getFixed() []Fixed {
 	return fixed
 }
 
-func (it *Intersect) Nrows() (int, int) {
+func (it *Intersect) getNrows() (int, int) {
 	if it.disjoint != "" {
 		return 0, 0
 	}

@@ -77,7 +77,7 @@ func (testTran) GetInfo(table string) *meta.Info {
 	if ti, ok := testInfo[table]; ok {
 		return ti
 	}
-	return &meta.Info{Nrows: 100, Size: 10000}
+	return &meta.Info{Table: table, Nrows: 100, Size: 10000}
 }
 
 func (testTran) GetAllInfo() []*meta.Info {
