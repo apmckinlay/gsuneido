@@ -30,7 +30,18 @@ func TestQuery(t *testing.T) {
 		return nil
 	}
 	tran := db.NewReadTran()
-	s := `((ivc extend x0="0") where x0 is "11") union ivc`
+	s := `(
+		(eta_trailer_moves
+			extend etamaster_num = etaworker_num1,
+				etapay_empty_mileage_cdn = etatm_w1pay_mileage,
+				etatm_w1pay_finalized, stmt = etatm_w1pay_finalized)
+		union
+			(eta_trailer_moves
+			extend etamaster_num = etaworker_num2,
+				etapay_empty_mileage_cdn = etatm_w2pay_mileage,
+				etatm_w2pay_finalized, stmt = etatm_w2pay_finalized))extend etapay_readyto_pay? = true,
+		etaassoc_start_date = etatm_from_date,
+		etaassoc_end_date = etatm_to_date where etamaster_num is #20230511.201100018where etapay_readyto_pay? is true and stmt is ""`
 	q := ParseQuery(s, tran, nil)
 	// trace.QueryOpt.Set()
 	// trace.JoinOpt.Set()

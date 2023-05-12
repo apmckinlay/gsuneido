@@ -180,7 +180,6 @@ func (e *Extend) setApproach(index []string, frac float64, _ any, tran QueryTran
 	e.source = SetApproach(e.source, index, frac, tran)
 	e.header = e.getHeader()
 	e.ctx.Hdr = e.header
-	e.fixed = e.Fixed() // cache
 }
 
 // execution --------------------------------------------------------
@@ -247,20 +246,9 @@ func (e *Extend) Select(cols, vals []string) {
 		e.source.Select(nil, nil) // clear select
 		return
 	}
-	fixed := e.Fixed()
-	satisfied := true
-	for i, col := range cols {
-		if fv := getFixed(fixed, col); len(fv) == 1 {
-			if fv[0] != vals[i] {
-				e.conflict = true
-				break
-			}
-		} else {
-			satisfied = false
-		}
-	}
-	if e.conflict {
-		return
+	satisfied, conflict := selectFixed(cols, vals, e.Fixed())
+	if conflict {
+		e.conflict = true
 	} else if satisfied {
 		e.source.Select(nil, nil) // clear select
 	} else {
@@ -269,6 +257,9 @@ func (e *Extend) Select(cols, vals []string) {
 }
 
 func (e *Extend) Lookup(th *Thread, cols, vals []string) Row {
+	if conflictFixed(cols, vals, e.Fixed()) {
+		return nil
+	}
 	defer func() {
 		e.selCols, e.selVals = nil, nil
 	}()
@@ -289,7 +280,5 @@ func (e *Extend) splitSelect(cols, vals []string) ([]string, []string) {
 		}
 	}
 	e.selCols, e.selVals = ecols, evals
-	// fmt.Println("Extend splitSelect",
-	// 	ecols, unpack(evals), srccols, unpack(srcvals))
 	return srccols, srcvals
 }

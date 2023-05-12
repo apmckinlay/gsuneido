@@ -85,8 +85,7 @@ func (ti *TempIndex) Select(cols, vals []string) {
 		ti.selOrg, ti.selEnd = selMin, selMax
 		return
 	}
-	fixed := ti.source.Fixed()
-	satisfied, conflict := selectFixed(cols, vals, fixed)
+	satisfied, conflict := selectFixed(cols, vals, ti.source.Fixed())
 	if conflict {
 		ti.selOrg, ti.selEnd = selMax, selMin
 		return
@@ -100,6 +99,9 @@ func (ti *TempIndex) Select(cols, vals []string) {
 }
 
 func (ti *TempIndex) Lookup(th *Thread, cols, vals []string) Row {
+	if conflictFixed(cols, vals, ti.source.Fixed()) {
+		return nil
+	}
 	ti.th = th
 	defer func() { ti.th = nil }()
 	if ti.iter == nil {

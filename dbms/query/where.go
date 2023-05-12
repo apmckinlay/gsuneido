@@ -1236,6 +1236,9 @@ func (w *Where) Select(cols, vals []string) {
 		}
 		return
 	}
+	// Note: conflict could come from any of expr, not just fixed.
+	// But to evaluate that would require building a Row.
+	// It should be rare.
 	satisfied, conflict := selectFixed(cols, vals, w.whereFixed)
 	if conflict {
 		w.selOrg, w.selEnd = ixkey.Max, ""
@@ -1266,23 +1269,6 @@ func (w *Where) Select(cols, vals []string) {
 	w.selSet = true
 }
 
-func selectFixed(cols, vals []string, fixed []Fixed) (satisfied, conflict bool) {
-	// Note: conflict could come from any of expr, not just fixed.
-	// But to evaluate that would require building a Row.
-	// It should be rare.
-	satisfied = true
-	for i, col := range cols {
-		if fv := getFixed(fixed, col); len(fv) == 1 {
-			if fv[0] != vals[i] {
-				return false, true // conflict
-			}
-		} else {
-			satisfied = false
-		}
-	}
-	return satisfied, false
-}
-
 func (w *Where) addFixed(cols []string, vals []string) ([]string, []string) {
 	cols = slices.Clip(cols)
 	vals = slices.Clip(vals)
@@ -1296,6 +1282,9 @@ func (w *Where) addFixed(cols []string, vals []string) ([]string, []string) {
 }
 
 func (w *Where) Lookup(th *Thread, cols, vals []string) Row {
+	if conflictFixed(cols, vals, w.Fixed()) {
+		return nil
+	}
 	if w.singleton {
 		// can't use source.Lookup because cols may not match source index
 		w.Rewind()
@@ -1305,7 +1294,7 @@ func (w *Where) Lookup(th *Thread, cols, vals []string) Row {
 		}
 		return row
 	}
-	cols, vals = w.addFixed(cols, vals)
+	cols, vals = w.addFixed(cols, vals) // ???
 	row := w.source.Lookup(th, cols, vals)
 	if !w.filter(th, row) {
 		row = nil
