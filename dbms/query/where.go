@@ -148,9 +148,7 @@ func addFixed(fixed []Fixed, e ast.Expr) []Fixed {
 
 func (w *Where) Keys() [][]string {
 	if w.keys == nil {
-		if !w.optInited {
-			w.optInit()
-		}
+		w.optInit()
 		if w.singleton || w.conflict {
 			return [][]string{{}} // intentionally {} not nil
 		}
@@ -165,17 +163,13 @@ func (w *Where) fastSingle() bool {
 	if w.source.fastSingle() {
 		return true
 	}
-	if !w.optInited {
-		w.optInit()
-	}
+	w.optInit()
 	return w.singleton || w.conflict
 }
 
 func (w *Where) Indexes() [][]string {
 	if w.indexes == nil {
-		if !w.optInited {
-			w.optInit()
-		}
+		w.optInit()
 		if !w.singleton {
 			w.indexes = w.source.Indexes()
 		}
@@ -187,10 +181,8 @@ func (w *Where) Indexes() [][]string {
 }
 
 func (w *Where) Nrows() (int, int) {
-	if !w.optInited {
-		w.optInit()
-	}
-	return w.nrows, w.srcpop
+	w.optInit()
+	return w.nNrows, w.pNrows
 }
 
 func (w *Where) calcNrows() (int, int) {
@@ -482,9 +474,7 @@ func (w *Where) split(q2 Query, newQ2 func(Query, Query) Query) Query {
 
 func (w *Where) optimize(mode Mode, index []string, frac float64) (f Cost, v Cost, a any) {
 	// defer func() { fmt.Println("Where opt", index, frac, "=", f, v, a) }()
-	if !w.optInited {
-		w.optInit()
-	}
+	w.optInit()
 	if w.conflict {
 		// fmt.Println("Where opt CONFLICT")
 		return 0, 0, nil
@@ -519,6 +509,9 @@ func (w *Where) exprFalse() bool {
 }
 
 func (w *Where) optInit() {
+	if w.optInited {
+		return
+	}
 	w.optInited = true
 	w.tbl, _ = w.source.(*Table)
 	if !w.conflict && w.tbl != nil {
