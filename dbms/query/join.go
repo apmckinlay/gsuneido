@@ -128,6 +128,7 @@ func newJoinLike(src1, src2 Query) joinLike {
 	jl := joinLike{}
 	jl.source1, jl.source2 = src1, src2
 	jl.header = jl.getHeader()
+	jl.rowSiz = jl.source1.rowSize() + jl.source2.rowSize()
 	return jl
 }
 
@@ -334,10 +335,6 @@ func (jn *Join) pop(p1, p2 int) int {
 	default:
 		panic(assert.ShouldNotReachHere())
 	}
-}
-
-func (jl *joinLike) rowSize() int {
-	return jl.source1.rowSize() + jl.source2.rowSize()
 }
 
 func (jb *joinBase) lookupCost() int {

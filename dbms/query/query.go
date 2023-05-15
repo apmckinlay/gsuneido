@@ -169,6 +169,7 @@ type queryBase struct {
 	fixed   []Fixed
 	nNrows  int
 	pNrows  int
+	rowSiz int
 	cache
 }
 
@@ -198,6 +199,10 @@ func (q *queryBase) Fixed() []Fixed {
 
 func (q *queryBase) Nrows() (int, int) {
 	return q.nNrows, q.pNrows
+}
+
+func (q *queryBase) rowSize() int {
+	return q.rowSiz
 }
 
 // Updateable is overriden by Query1
@@ -463,10 +468,6 @@ type Query1 struct {
 
 func (q1 *Query1) fastSingle() bool {
 	return q1.source.fastSingle()
-}
-
-func (q1 *Query1) rowSize() int {
-	return q1.source.rowSize()
 }
 
 func (q1 *Query1) Updateable() string {

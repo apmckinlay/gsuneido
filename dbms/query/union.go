@@ -53,6 +53,7 @@ func NewUnion(src1, src2 Query) *Union {
 	u.header = JoinHeaders(src1.Header(), src2.Header())
 	u.indexes = u.getIndexes()
 	u.nNrows, u.pNrows = u.getNrows()
+	u.rowSiz = (u.source1.rowSize() + u.source2.rowSize()) / 2
 	return u
 }
 
@@ -116,10 +117,6 @@ func (u *Union) nrowsCalc(n1, n2 int) int {
 	min := ord.Max(n1, n2) // smaller could be all duplicates
 	max := n1 + n2         // could be no duplicates
 	return (min + max) / 2 // estimate half way between
-}
-
-func (u *Union) rowSize() int {
-	return (u.source1.rowSize() + u.source2.rowSize()) / 2
 }
 
 func (u *Union) Transform() Query {

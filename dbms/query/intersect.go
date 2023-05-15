@@ -29,6 +29,7 @@ func NewIntersect(src1, src2 Query) *Intersect {
 	it.indexes = it.getIndexes()
 	it.fixed = it.getFixed()
 	it.nNrows, it.pNrows = it.getNrows()
+	it.rowSiz = src1.rowSize()
 	return &it
 }
 

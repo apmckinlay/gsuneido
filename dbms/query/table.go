@@ -72,6 +72,7 @@ func (tbl *Table) SetTran(t QueryTran) {
 		panic("nonexistent table: " + tbl.name)
 	}
 	tbl.info = t.GetInfo(tbl.name)
+	tbl.rowSiz = tbl.getRowSize()
 
 	cols := make([]string, 0, len(tbl.schema.Columns)+len(tbl.schema.Derived))
 	for _, col := range tbl.schema.Columns {
@@ -109,7 +110,7 @@ func (tbl *Table) Nrows() (int, int) {
 	return tbl.info.Nrows, tbl.info.Nrows
 }
 
-func (tbl *Table) rowSize() int {
+func (tbl *Table) getRowSize() int {
 	if tbl.info.Nrows == 0 {
 		return 0
 	}

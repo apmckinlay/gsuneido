@@ -44,6 +44,7 @@ func NewExtend(src Query, cols []string, exprs []ast.Expr) *Extend {
 	e.keys = src.Keys()
 	e.indexes = src.Indexes()
 	e.nNrows, e.pNrows = src.Nrows()
+	e.rowSiz = e.getRowSize()
 	return e
 }
 
@@ -84,10 +85,8 @@ func (e *Extend) stringOp() string {
 	return s
 }
 
-func (e *Extend) rowSize() int {
-	nsc := len(e.source.Columns())
-	nc := len(e.Columns())
-	return e.source.rowSize() * nc / nsc
+func (e *Extend) getRowSize() int {
+	return e.source.rowSize() + len(e.cols) * 16 // ???
 }
 
 func (e *Extend) Transform() Query {

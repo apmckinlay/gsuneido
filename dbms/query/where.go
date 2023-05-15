@@ -78,7 +78,8 @@ func NewWhere(src Query, expr ast.Expr, t QueryTran) *Where {
 		expr = &ast.Nary{Tok: tok.And, Exprs: []ast.Expr{expr}}
 	}
 	w := &Where{Query1: Query1{source: src}, expr: expr.(*ast.Nary), t: t}
-	w.header = w.source.Header()
+	w.header = src.Header()
+	w.rowSiz = src.rowSize()
 	w.calcFixed()
 	if !w.conflict {
 		cmps := w.extractCompares()

@@ -98,6 +98,7 @@ func newProject2(src Query, cols []string, includeDeps bool) *Project {
 	p.keys = projectKeys(src.Keys(), p.columns)
 	p.indexes = projectIndexes(src.Indexes(), p.columns)
 	p.nNrows, p.pNrows = p.getNrows()
+	p.rowSiz = src.rowSize()
 	return p
 }
 
@@ -175,6 +176,7 @@ func projectKeys(keys [][]string, cols []string) [][]string {
 func projectIndexes(idxs [][]string, cols []string) [][]string {
 	var idxs2 [][]string
 	for _, ix := range idxs {
+		// get the prefix of the index that is in cols
 		i := 0
 		for ; i < len(ix) && slices.Contains(cols, ix[i]); i++ {
 		}

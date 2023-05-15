@@ -83,6 +83,7 @@ func NewSummarize(src Query, by, cols, ops, ons []string) *Summarize {
 	su.indexes = projectIndexes(src.Indexes(), su.by)
 	su.fixed = projectFixed(src.Fixed(), by)
 	su.nNrows, su.pNrows = su.getNrows()
+	su.rowSiz = su.source.rowSize() + len(su.cols)*8 // ???
 	return su
 }
 
@@ -163,10 +164,6 @@ func (su *Summarize) getNrows() (int, int) {
 		nr /= 10 // ??? (matches lookupCost)
 	}
 	return nr, pop
-}
-
-func (su *Summarize) rowSize() int {
-	return su.source.rowSize() + len(su.cols)*8
 }
 
 func (su *Summarize) Updateable() string {
