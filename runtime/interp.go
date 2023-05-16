@@ -451,7 +451,7 @@ loop:
 		case op.Return:
 			break loop
 		case op.ReturnThrow:
-			th.returnThrow = true
+			th.ReturnThrow = true
 			break loop
 		case op.Try:
 			*catchJump = fr.ip + fetchInt16()
@@ -495,15 +495,16 @@ loop:
 			base := th.sp - int(argSpec.Nargs)
 			result := f.Call(th, nil, argSpec)
 			th.sp = base
-			if th.returnThrow {
+			if th.ReturnThrow {
 				if fr.ip < len(code) && op.Opcode(code[fr.ip]) != op.Return {
-					th.returnThrow = false
+					th.ReturnThrow = false
 				}
-				if oc == op.CallFuncDiscard && result != EmptyStr {
+				if oc == op.CallFuncDiscard &&
+					result != EmptyStr && result != True {
 					if s, ok := result.ToStr(); ok {
 						panic(s)
 					}
-					panic("return value must be used")
+					panic("return value not checked")
 				}
 			}
 			pushResult(result)
@@ -545,15 +546,16 @@ loop:
 					// fmt.Println(strings.Repeat("   ", t.fp+1), f)
 					result := f.Call(th, this, argSpec)
 					th.sp = base
-					if th.returnThrow {
+					if th.ReturnThrow {
 						if fr.ip < len(code) && op.Opcode(code[fr.ip]) != op.Return {
-							th.returnThrow = false
+							th.ReturnThrow = false
 						}
-						if oc == op.CallFuncDiscard && result != EmptyStr {
+						if oc == op.CallFuncDiscard &&
+							result != EmptyStr && result != True {
 							if s, ok := result.ToStr(); ok {
 								panic(s)
 							}
-							panic("return value must be used")
+							panic("return value not checked")
 						}
 					}
 					pushResult(result)
