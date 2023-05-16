@@ -22,6 +22,11 @@ import (
 // Use NewSuRecord since zero value doesn't set default.
 type SuRecord struct {
 	ValueBase[SuRecord]
+	suRec
+	ob SuObject
+}
+
+type suRec struct {
 	// attachedRules is from record.AttachRule(key,fn)
 	attachedRules map[string]Value
 
@@ -44,7 +49,6 @@ type SuRecord struct {
 	activeObservers ActiveObserverList
 	// observers is from record.Observer(fn)
 	observers ValueList
-	ob        SuObject
 	// recoff is the record offset in the database
 	recoff uint64
 	// status
@@ -76,8 +80,8 @@ func SuRecordFromObject(ob *SuObject) *SuRecord {
 }
 
 func SuRecordFromRow(row Row, hdr *Header, table string, tran *SuTran) *SuRecord {
-	rec := SuRecord{row: row, hdr: hdr, tran: tran,
-		ob: SuObject{defval: EmptyStr}, userow: true, status: OLD}
+	rec := SuRecord{ob: SuObject{defval: EmptyStr},
+		suRec: suRec{row: row, hdr: hdr, tran: tran, userow: true, status: OLD}}
 	if table != "" {
 		rec.table = table
 		rec.recoff = row[0].Off
@@ -123,13 +127,14 @@ func (r *SuRecord) Copy() Container {
 func (r *SuRecord) slice(n int) *SuRecord {
 	// keep row and hdr even if unpacked, to help ToRecord
 	return &SuRecord{
-		ob:         *r.ob.slice(n),
-		row:        r.row,
-		hdr:        r.safeHdr(),
-		userow:     r.userow,
-		status:     r.status,
-		dependents: r.copyDeps(),
-		invalid:    r.copyInvalid()}
+		ob: *r.ob.slice(n),
+		suRec: suRec{
+			row:        r.row,
+			hdr:        r.safeHdr(),
+			userow:     r.userow,
+			status:     r.status,
+			dependents: r.copyDeps(),
+			invalid:    r.copyInvalid()}}
 }
 
 func (r *SuRecord) safeHdr() *Header {
@@ -306,8 +311,8 @@ func (r *SuRecord) Clear() {
 	if r.Lock() {
 		defer r.Unlock()
 	}
-	r.ob.mustBeMutable()
-	*r = *NewSuRecord()
+	r.ob.deleteAll()
+	r.suRec = suRec{}
 }
 
 func (r *SuRecord) DeleteAll() {
