@@ -8,6 +8,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"sync/atomic"
 
 	"github.com/apmckinlay/gsuneido/compile/lexer"
 	"github.com/apmckinlay/gsuneido/runtime/types"
@@ -39,8 +40,16 @@ var EmptyObject = &SuObject{readonly: true}
 type SuObject struct {
 	ValueBase[SuObject]
 	defval Value
-	list   []Value
-	named  HmapValue
+	// copyCount is used to implement copy-on-write.
+	// If there are no other copies the count will be zero (or nil).
+	// The count is incremented when a lazy/deferred copy is made (in slice).
+	// If count > 0 then the list and named must be copied before updating.
+	// This is handled by startMutate.
+	// It must be atomic because it may be shared by muliple objects
+	// and therefore is not guarded by the object lock.
+	copyCount *atomic.Int32
+	list      []Value
+	named     HmapValue
 	rwMayLock
 	// version is incremented by operations that change one of the sizes.
 	// i.e. not by just updating a value in-place.
@@ -79,13 +88,24 @@ func (ob *SuObject) Copy() Container {
 	return ob.slice(0)
 }
 
-// slice returns a copy of an object, omitting the first n list values
+// slice returns a copy-on-write of an object, omitting the first n list values
 func (ob *SuObject) slice(n int) *SuObject {
+	ob.incCopyCount()
 	var list []Value
 	if n < len(ob.list) {
-		list = slices.Clone(ob.list[n:])
+		list = ob.list[n:]
 	}
-	return &SuObject{defval: ob.defval, named: *ob.named.Copy(), list: list}
+	return &SuObject{copyCount: ob.copyCount,
+		defval: ob.defval, named: ob.named, list: list}
+}
+
+func (ob *SuObject) incCopyCount() {
+	if ob.copyCount == nil {
+		// SetConcurrent initializes copyCount
+		// so if it's nil we're not concurrent, so it's ok to set it.
+		ob.copyCount = new(atomic.Int32)
+	}
+	ob.copyCount.Add(1)
 }
 
 var _ Container = (*SuObject)(nil) // includes Value and Lockable
@@ -424,6 +444,16 @@ func (ob *SuObject) mustBeMutable() {
 	}
 	if ob.sorting {
 		panic("can't modify object during sort")
+	}
+	if ob.copyCount != nil && ob.copyCount.Load() > 0 {
+		// copy on write i.e. unshare, disconnect
+		// two threads could (rarely) get in here at the same time
+		ob.list = slices.Clone(ob.list)
+		ob.named = *ob.named.Copy()
+		// must do this last because if count goes to zero
+		// then another thread could modify
+		ob.copyCount.Add(-1)
+		ob.copyCount = new(atomic.Int32)
 	}
 }
 
@@ -924,6 +954,9 @@ func (ob *SuObject) SetConcurrent() {
 			ob.shouldLock = true
 		}
 		ob.SetChildConc()
+		if ob.copyCount == nil {
+			ob.copyCount = new(atomic.Int32)
+		}
 	}
 }
 

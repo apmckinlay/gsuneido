@@ -6,6 +6,7 @@ package runtime
 import (
 	"fmt"
 	"strings"
+	"sync/atomic"
 
 	"github.com/apmckinlay/gsuneido/runtime/trace"
 	"github.com/apmckinlay/gsuneido/runtime/types"
@@ -221,6 +222,9 @@ func (r *SuRecord) SetConcurrent() {
 	if !r.ob.concurrent {
 		r.ob.concurrent = true
 		r.ob.shouldLock = true
+		if r.ob.copyCount == nil {
+			r.ob.copyCount = new(atomic.Int32)
+		}
 		// need to dup hdr because it may be shared by multiple SuRecords
 		// and because of its cache it is not readonly/threadsafe
 		r.hdr = r.hdr.Dup()
