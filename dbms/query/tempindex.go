@@ -44,6 +44,7 @@ func NewTempIndex(src Query, order []string, tran QueryTran) *TempIndex {
 	ti.fixed = src.Fixed()
 	ti.nNrows, ti.pNrows = src.Nrows()
 	ti.rowSiz = src.rowSize()
+	ti.singleTbl.Set(src.SingleTable())
 	return &ti
 }
 

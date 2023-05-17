@@ -164,14 +164,15 @@ type queryBase struct {
 	// header must be set by constructors and setApproach.
 	// setApproach is necessary because the sources may get reversed
 	// which affects the order of Fields
-	header  *Header
-	keys    [][]string
-	indexes [][]string
-	fixed   []Fixed
-	nNrows  int
-	pNrows  int
-	rowSiz  int
-	fast1   opt.Bool
+	header    *Header
+	keys      [][]string
+	indexes   [][]string
+	fixed     []Fixed
+	nNrows    int
+	pNrows    int
+	rowSiz    int
+	fast1     opt.Bool
+	singleTbl opt.Bool
 	cache
 }
 
@@ -209,6 +210,10 @@ func (q *queryBase) rowSize() int {
 
 func (q *queryBase) fastSingle() bool {
 	return q.fast1.Get()
+}
+
+func (q *queryBase) SingleTable() bool {
+	return q.singleTbl.Get()
 }
 
 // Updateable is overriden by Query1
@@ -474,10 +479,6 @@ type Query1 struct {
 
 func (q1 *Query1) Updateable() string {
 	return q1.source.Updateable()
-}
-
-func (q1 *Query1) SingleTable() bool {
-	return q1.source.SingleTable()
 }
 
 func (q1 *Query1) SetTran(t QueryTran) {

@@ -100,6 +100,7 @@ func newProject2(src Query, cols []string, includeDeps bool) *Project {
 	p.nNrows, p.pNrows = p.getNrows()
 	p.rowSiz = src.rowSize()
 	p.fast1.Set(src.fastSingle())
+	p.singleTbl.Set(src.SingleTable())
 	return p
 }
 
