@@ -30,10 +30,8 @@ type joinLike struct {
 	sel2cols []string
 	sel2vals []string
 	Query2
-	conflict1      bool
-	conflict2      bool
-	haveFastSingle bool
-	fastSingleVal  bool
+	conflict1 bool
+	conflict2 bool
 }
 
 // joinBase is common stuff for Join and LeftJoin
@@ -95,6 +93,7 @@ func NewJoin(src1, src2 Query, by []string) *Join {
 	jn.indexes = jn.getIndexes()
 	jn.fixed = jn.getFixed()
 	jn.nNrows, jn.pNrows = jn.getNrows()
+	jn.fast1.Set(src1.fastSingle() && src2.fastSingle())
 	return jn
 }
 
@@ -174,14 +173,6 @@ func (jn *Join) getKeys() [][]string {
 	default:
 		panic("unknown join type")
 	}
-}
-
-func (jn *Join) fastSingle() bool {
-	if !jn.haveFastSingle {
-		jn.fastSingleVal = jn.source1.fastSingle() && jn.source2.fastSingle()
-		jn.haveFastSingle = true
-	}
-	return jn.fastSingleVal
 }
 
 func (jn *Join) getFixed() []Fixed {
@@ -493,6 +484,8 @@ func NewLeftJoin(src1, src2 Query, by []string) *LeftJoin {
 	lj.indexes = lj.source1.Indexes()
 	lj.fixed = lj.getFixed()
 	lj.nNrows, lj.pNrows = lj.getNrows()
+	lj.fast1.Set(src1.fastSingle() &&
+		(lj.joinType == one_one || lj.joinType == n_one || src2.fastSingle()))
 	return lj
 }
 
@@ -515,16 +508,6 @@ func (lj *LeftJoin) getKeys() [][]string {
 	default:
 		panic("unknown join type")
 	}
-}
-
-func (lj *LeftJoin) fastSingle() bool {
-	if !lj.haveFastSingle {
-		lj.fastSingleVal = lj.source1.fastSingle() &&
-			(lj.joinType == one_one || lj.joinType == n_one ||
-				lj.source2.fastSingle())
-		lj.haveFastSingle = true
-	}
-	return lj.fastSingleVal
 }
 
 func (lj *LeftJoin) getFixed() []Fixed {

@@ -157,11 +157,15 @@ func (w *Where) Keys() [][]string {
 }
 
 func (w *Where) fastSingle() bool {
-	if w.source.fastSingle() {
-		return true
+	if w.fast1.NotSet() {
+		if w.source.fastSingle() {
+			w.fast1.Set(true)
+		} else {
+			w.optInit()
+			w.fast1.Set(w.singleton || w.conflict)
+		}
 	}
-	w.optInit()
-	return w.singleton || w.conflict
+	return w.fast1.Get()
 }
 
 func (w *Where) Indexes() [][]string {

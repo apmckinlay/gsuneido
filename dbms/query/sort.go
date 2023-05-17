@@ -34,6 +34,7 @@ func NewSort(src Query, reverse bool, order []string) *Sort {
 	sort.fixed = src.Fixed()
 	sort.nNrows, sort.pNrows = src.Nrows()
 	sort.rowSiz = src.rowSize()
+	sort.fast1.Set(src.fastSingle())
 	return &sort
 }
 

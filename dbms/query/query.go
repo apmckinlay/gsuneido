@@ -50,6 +50,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/generic/ord"
 	"github.com/apmckinlay/gsuneido/util/generic/set"
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
+	"github.com/apmckinlay/gsuneido/util/opt"
 	"golang.org/x/exp/slices"
 )
 
@@ -169,7 +170,8 @@ type queryBase struct {
 	fixed   []Fixed
 	nNrows  int
 	pNrows  int
-	rowSiz int
+	rowSiz  int
+	fast1   opt.Bool
 	cache
 }
 
@@ -203,6 +205,10 @@ func (q *queryBase) Nrows() (int, int) {
 
 func (q *queryBase) rowSize() int {
 	return q.rowSiz
+}
+
+func (q *queryBase) fastSingle() bool {
+	return q.fast1.Get()
 }
 
 // Updateable is overriden by Query1
@@ -464,10 +470,6 @@ func SetApproach(q Query, index []string, frac float64, tran QueryTran) Query {
 type Query1 struct {
 	source Query
 	queryBase
-}
-
-func (q1 *Query1) fastSingle() bool {
-	return q1.source.fastSingle()
 }
 
 func (q1 *Query1) Updateable() string {

@@ -84,6 +84,7 @@ func NewSummarize(src Query, by, cols, ops, ons []string) *Summarize {
 	su.fixed = projectFixed(src.Fixed(), by)
 	su.nNrows, su.pNrows = su.getNrows()
 	su.rowSiz = su.source.rowSize() + len(su.cols)*8 // ???
+	su.fast1.Set(src.fastSingle())
 	return su
 }
 
@@ -171,10 +172,6 @@ func (su *Summarize) Updateable() string {
 }
 
 func (su *Summarize) SingleTable() bool {
-	return false
-}
-
-func (su *Summarize) fastSingle() bool {
 	return false
 }
 

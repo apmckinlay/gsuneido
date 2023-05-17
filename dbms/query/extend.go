@@ -45,6 +45,7 @@ func NewExtend(src Query, cols []string, exprs []ast.Expr) *Extend {
 	e.indexes = src.Indexes()
 	e.nNrows, e.pNrows = src.Nrows()
 	e.rowSiz = e.getRowSize()
+	e.fast1.Set(src.fastSingle())
 	return e
 }
 
