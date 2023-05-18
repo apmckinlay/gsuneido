@@ -29,7 +29,7 @@ func NewIntersect(src1, src2 Query) *Intersect {
 	it.indexes = it.getIndexes()
 	it.fixed = it.getFixed()
 	it.setNrows(it.getNrows())
-	it.rowSiz = src1.rowSize()
+	it.rowSiz.Set(src1.rowSize())
 	it.fast1.Set(src1.fastSingle() && src2.fastSingle())
 	return &it
 }

@@ -53,7 +53,7 @@ func NewUnion(src1, src2 Query) *Union {
 	u.header = JoinHeaders(src1.Header(), src2.Header())
 	u.indexes = u.getIndexes()
 	u.setNrows(u.getNrows())
-	u.rowSiz = (u.source1.rowSize() + u.source2.rowSize()) / 2
+	u.rowSiz.Set((u.source1.rowSize() + u.source2.rowSize()) / 2)
 	return u
 }
 

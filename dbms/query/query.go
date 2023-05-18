@@ -170,7 +170,7 @@ type queryBase struct {
 	fixed     []Fixed
 	nNrows    opt.Int
 	pNrows    opt.Int
-	rowSiz    int
+	rowSiz    opt.Int
 	fast1     opt.Bool
 	singleTbl opt.Bool
 	lookCost  opt.Int
@@ -211,7 +211,7 @@ func (q *queryBase) setNrows(n, p int) {
 }
 
 func (q *queryBase) rowSize() int {
-	return q.rowSiz
+	return q.rowSiz.Get()
 }
 
 func (q *queryBase) fastSingle() bool {

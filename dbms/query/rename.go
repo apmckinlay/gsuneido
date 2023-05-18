@@ -36,7 +36,7 @@ func NewRename(src Query, from, to []string) *Rename {
 	r.keys = renameIndexes(src.Keys(), r.from, r.to)
 	r.indexes = renameIndexes(src.Indexes(), r.from, r.to)
 	r.setNrows(src.Nrows())
-	r.rowSiz = src.rowSize()
+	r.rowSiz.Set(src.rowSize())
 	r.fast1.Set(src.fastSingle())
 	r.singleTbl.Set(src.SingleTable())
 	r.lookCost.Set(src.lookupCost())

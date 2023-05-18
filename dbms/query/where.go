@@ -79,7 +79,7 @@ func NewWhere(src Query, expr ast.Expr, t QueryTran) *Where {
 	}
 	w := &Where{Query1: Query1{source: src}, expr: expr.(*ast.Nary), t: t}
 	w.header = src.Header()
-	w.rowSiz = src.rowSize()
+	w.rowSiz.Set(src.rowSize())
 	w.singleTbl.Set(src.SingleTable())
 	w.lookCost.Set(src.lookupCost())
 	w.calcFixed()

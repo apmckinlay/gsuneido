@@ -33,7 +33,7 @@ func NewSort(src Query, reverse bool, order []string) *Sort {
 	sort.keys = src.Keys()
 	sort.fixed = src.Fixed()
 	sort.setNrows(src.Nrows())
-	sort.rowSiz = src.rowSize()
+	sort.rowSiz.Set(src.rowSize())
 	sort.fast1.Set(src.fastSingle())
 	sort.singleTbl.Set(src.SingleTable())
 	return &sort
