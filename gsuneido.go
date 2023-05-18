@@ -129,8 +129,7 @@ func main() {
 		}
 		os.Exit(0)
 	case "version":
-		Alert("gSuneido " + builtDate + " (" + runtime.Version() + " " +
-			runtime.GOARCH + " " + runtime.GOOS + ")")
+		Alert("gSuneido " + options.BuiltStr())
 		os.Exit(0)
 	case "help":
 		Alert(help)
