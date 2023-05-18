@@ -26,7 +26,7 @@ func NewTimes(src1, src2 Query) *Times {
 	t.keys = t.getKeys()
 	t.indexes = t.getIndexes()
 	t.fixed = t.getFixed()
-	t.nNrows, t.pNrows = t.getNrows()
+	t.setNrows(t.getNrows())
 	t.fast1.Set(src1.fastSingle() && src2.fastSingle())
 	return t
 }

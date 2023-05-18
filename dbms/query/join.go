@@ -92,7 +92,7 @@ func NewJoin(src1, src2 Query, by []string) *Join {
 	jn.keys = jn.getKeys()
 	jn.indexes = jn.getIndexes()
 	jn.fixed = jn.getFixed()
-	jn.nNrows, jn.pNrows = jn.getNrows()
+	jn.setNrows(jn.getNrows())
 	jn.fast1.Set(src1.fastSingle() && src2.fastSingle())
 	return jn
 }
@@ -480,7 +480,7 @@ func NewLeftJoin(src1, src2 Query, by []string) *LeftJoin {
 	lj.keys = lj.getKeys()
 	lj.indexes = lj.source1.Indexes()
 	lj.fixed = lj.getFixed()
-	lj.nNrows, lj.pNrows = lj.getNrows()
+	lj.setNrows(lj.getNrows())
 	lj.fast1.Set(src1.fastSingle() &&
 		(lj.joinType == one_one || lj.joinType == n_one || src2.fastSingle()))
 	return lj

@@ -97,7 +97,7 @@ func newProject2(src Query, cols []string, includeDeps bool) *Project {
 	p.header = p.getHeader()
 	p.keys = projectKeys(src.Keys(), p.columns)
 	p.indexes = projectIndexes(src.Indexes(), p.columns)
-	p.nNrows, p.pNrows = p.getNrows()
+	p.setNrows(p.getNrows())
 	p.rowSiz = src.rowSize()
 	p.fast1.Set(src.fastSingle())
 	p.singleTbl.Set(src.SingleTable())

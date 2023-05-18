@@ -52,7 +52,7 @@ func NewUnion(src1, src2 Query) *Union {
 	u := &Union{Compatible: *newCompatible(src1, src2)}
 	u.header = JoinHeaders(src1.Header(), src2.Header())
 	u.indexes = u.getIndexes()
-	u.nNrows, u.pNrows = u.getNrows()
+	u.setNrows(u.getNrows())
 	u.rowSiz = (u.source1.rowSize() + u.source2.rowSize()) / 2
 	return u
 }

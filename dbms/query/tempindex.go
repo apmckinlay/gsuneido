@@ -42,7 +42,7 @@ func NewTempIndex(src Query, order []string, tran QueryTran) *TempIndex {
 	ti.header = src.Header().Dup() // dup because sortlist is concurrent
 	ti.keys = src.Keys()
 	ti.fixed = src.Fixed()
-	ti.nNrows, ti.pNrows = src.Nrows()
+	ti.setNrows(src.Nrows())
 	ti.rowSiz = src.rowSize()
 	ti.singleTbl.Set(src.SingleTable())
 	return &ti

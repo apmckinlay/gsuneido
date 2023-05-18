@@ -168,8 +168,8 @@ type queryBase struct {
 	keys      [][]string
 	indexes   [][]string
 	fixed     []Fixed
-	nNrows    int
-	pNrows    int
+	nNrows    opt.Int
+	pNrows    opt.Int
 	rowSiz    int
 	fast1     opt.Bool
 	singleTbl opt.Bool
@@ -202,7 +202,12 @@ func (q *queryBase) Fixed() []Fixed {
 }
 
 func (q *queryBase) Nrows() (int, int) {
-	return q.nNrows, q.pNrows
+	return q.nNrows.Get(), q.pNrows.Get()
+}
+
+func (q *queryBase) setNrows(n, p int) {
+	q.nNrows.Set(n)
+	q.pNrows.Set(p)
 }
 
 func (q *queryBase) rowSize() int {

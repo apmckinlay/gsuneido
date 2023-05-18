@@ -82,7 +82,7 @@ func NewSummarize(src Query, by, cols, ops, ons []string) *Summarize {
 	su.keys = projectKeys(src.Keys(), su.by)
 	su.indexes = projectIndexes(src.Indexes(), su.by)
 	su.fixed = projectFixed(src.Fixed(), by)
-	su.nNrows, su.pNrows = su.getNrows()
+	su.setNrows(su.getNrows())
 	su.rowSiz = su.source.rowSize() + len(su.cols)*8 // ???
 	su.fast1.Set(src.fastSingle())
 	su.lookCost.Set(su.getLookupCost())
