@@ -101,6 +101,7 @@ func newProject2(src Query, cols []string, includeDeps bool) *Project {
 	p.rowSiz = src.rowSize()
 	p.fast1.Set(src.fastSingle())
 	p.singleTbl.Set(src.SingleTable())
+	p.lookCost.Set(p.getLookupCost())
 	return p
 }
 
@@ -619,7 +620,7 @@ func (p *Project) Lookup(th *Thread, cols, vals []string) Row {
 	return p.Get(th, Next)
 }
 
-func (p *Project) lookupCost() Cost {
+func (p *Project) getLookupCost() Cost {
 	srcCost := p.source.lookupCost()
 	if p.unique {
 		return srcCost

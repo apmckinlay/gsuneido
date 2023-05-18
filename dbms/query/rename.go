@@ -39,6 +39,7 @@ func NewRename(src Query, from, to []string) *Rename {
 	r.rowSiz = src.rowSize()
 	r.fast1.Set(src.fastSingle())
 	r.singleTbl.Set(src.SingleTable())
+	r.lookCost.Set(src.lookupCost())
 	return r
 }
 

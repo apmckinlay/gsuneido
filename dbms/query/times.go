@@ -168,7 +168,3 @@ func (t *Times) Lookup(th *Thread, cols, vals []string) Row {
 	t.Select(nil, nil) // clear select
 	return row
 }
-
-func (t *Times) lookupCost() int {
-	return t.source1.lookupCost() * 2 // ???
-}

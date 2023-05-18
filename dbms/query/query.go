@@ -173,6 +173,7 @@ type queryBase struct {
 	rowSiz    int
 	fast1     opt.Bool
 	singleTbl opt.Bool
+	lookCost  opt.Int
 	cache
 }
 
@@ -214,6 +215,10 @@ func (q *queryBase) fastSingle() bool {
 
 func (q *queryBase) SingleTable() bool {
 	return q.singleTbl.Get()
+}
+
+func (q *queryBase) lookupCost() Cost {
+	return q.lookCost.Get()
 }
 
 // Updateable is overriden by Query1
@@ -489,10 +494,6 @@ func (q1 *Query1) optimize(mode Mode, index []string, frac float64) (
 	Cost, Cost, any) {
 	fixcost, varcost := Optimize(q1.source, mode, index, frac)
 	return fixcost, varcost, nil
-}
-
-func (q1 *Query1) lookupCost() Cost {
-	return q1.source.lookupCost()
 }
 
 // Lookup default applies to Summarize and Sort

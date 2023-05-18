@@ -85,6 +85,7 @@ func NewSummarize(src Query, by, cols, ops, ons []string) *Summarize {
 	su.nNrows, su.pNrows = su.getNrows()
 	su.rowSiz = su.source.rowSize() + len(su.cols)*8 // ???
 	su.fast1.Set(src.fastSingle())
+	su.lookCost.Set(su.getLookupCost())
 	return su
 }
 
@@ -354,12 +355,13 @@ func (su *Summarize) Lookup(th *Thread, cols, vals []string) Row {
 	return su.Get(th, Next)
 }
 
-func (su *Summarize) lookupCost() Cost {
+func (su *Summarize) getLookupCost() Cost {
 	srcCost := su.source.lookupCost()
 	if su.unique {
 		return srcCost
 	}
 	return 10 * srcCost // ??? (matches Nrows)
+	//TODO should be 1 lookup + 10 gets
 }
 
 //-------------------------------------------------------------------

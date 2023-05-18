@@ -47,6 +47,7 @@ func NewExtend(src Query, cols []string, exprs []ast.Expr) *Extend {
 	e.rowSiz = e.getRowSize()
 	e.fast1.Set(src.fastSingle())
 	e.singleTbl.Set(!e.hasExprs && src.SingleTable())
+	e.lookCost.Set(src.lookupCost())
 	return e
 }
 

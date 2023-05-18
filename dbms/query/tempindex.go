@@ -64,11 +64,7 @@ func (ti *TempIndex) Transform() Query {
 	return ti
 }
 
-func (ti *TempIndex) lookupCost() Cost {
-	panic(assert.ShouldNotReachHere())
-}
-
-func (q1 *Query1) setApproach([]string, float64, any, QueryTran) {
+func (*TempIndex) setApproach([]string, float64, any, QueryTran) {
 	assert.ShouldNotReachHere()
 }
 

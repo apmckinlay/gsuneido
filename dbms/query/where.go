@@ -81,6 +81,7 @@ func NewWhere(src Query, expr ast.Expr, t QueryTran) *Where {
 	w.header = src.Header()
 	w.rowSiz = src.rowSize()
 	w.singleTbl.Set(src.SingleTable())
+	w.lookCost.Set(src.lookupCost())
 	w.calcFixed()
 	if !w.conflict {
 		cmps := w.extractCompares()
