@@ -24,6 +24,9 @@ func NewMinus(src1, src2 Query) *Minus {
 	m.keys = src1.Keys()
 	m.indexes = src1.Indexes()
 	m.fixed = src1.Fixed()
+	m.nNrows, m.pNrows = m.getNrows()
+	m.rowSiz = src1.rowSize()
+	m.fast1.Set(src1.fastSingle())
 	return &m
 }
 
@@ -35,11 +38,7 @@ func (m *Minus) stringOp() string {
 	return m.Compatible.stringOp("MINUS", "")
 }
 
-func (m *Minus) fastSingle() bool {
-	return m.source1.fastSingle()
-}
-
-func (m *Minus) Nrows() (int, int) {
+func (m *Minus) getNrows() (int, int) {
 	n1, p1 := m.source1.Nrows()
 	n2, p2 := m.source2.Nrows()
 	calc := func(n1, n2 int) int {

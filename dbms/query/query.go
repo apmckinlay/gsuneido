@@ -50,6 +50,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/generic/ord"
 	"github.com/apmckinlay/gsuneido/util/generic/set"
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
+	"github.com/apmckinlay/gsuneido/util/opt"
 	"golang.org/x/exp/slices"
 )
 
@@ -95,7 +96,7 @@ type Query interface {
 	// from the entire table with p rows.
 	//
 	// Nrows should be the same regardless of the strategy.
-	// For symmetrical operations e.g. join or union
+	// For symmetrical/reversible operations e.g. join or union
 	// it should give the same result both ways.
 	//
 	// Nrows does *not* incorporate frac
@@ -167,6 +168,10 @@ type queryBase struct {
 	keys    [][]string
 	indexes [][]string
 	fixed   []Fixed
+	nNrows  int
+	pNrows  int
+	rowSiz  int
+	fast1   opt.Bool
 	cache
 }
 
@@ -194,6 +199,19 @@ func (q *queryBase) Fixed() []Fixed {
 	return q.fixed
 }
 
+func (q *queryBase) Nrows() (int, int) {
+	return q.nNrows, q.pNrows
+}
+
+func (q *queryBase) rowSize() int {
+	return q.rowSiz
+}
+
+func (q *queryBase) fastSingle() bool {
+	return q.fast1.Get()
+}
+
+// Updateable is overriden by Query1
 func (*queryBase) Updateable() string {
 	return ""
 }
@@ -452,18 +470,6 @@ func SetApproach(q Query, index []string, frac float64, tran QueryTran) Query {
 type Query1 struct {
 	source Query
 	queryBase
-}
-
-func (q1 *Query1) fastSingle() bool {
-	return q1.source.fastSingle()
-}
-
-func (q1 *Query1) Nrows() (int, int) {
-	return q1.source.Nrows()
-}
-
-func (q1 *Query1) rowSize() int {
-	return q1.source.rowSize()
 }
 
 func (q1 *Query1) Updateable() string {

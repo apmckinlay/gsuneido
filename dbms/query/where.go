@@ -48,10 +48,6 @@ type Where struct {
 	Query1
 	// idxSelPos is the current index in idxSel.ptrngs
 	idxSelPos int
-	// srcpop is the source Nrows pop
-	srcpop int
-	// nrows is the estimated number of result rows
-	nrows int
 
 	nIn  int
 	nOut int
@@ -82,7 +78,8 @@ func NewWhere(src Query, expr ast.Expr, t QueryTran) *Where {
 		expr = &ast.Nary{Tok: tok.And, Exprs: []ast.Expr{expr}}
 	}
 	w := &Where{Query1: Query1{source: src}, expr: expr.(*ast.Nary), t: t}
-	w.header = w.source.Header()
+	w.header = src.Header()
+	w.rowSiz = src.rowSize()
 	w.calcFixed()
 	if !w.conflict {
 		cmps := w.extractCompares()
@@ -148,9 +145,7 @@ func addFixed(fixed []Fixed, e ast.Expr) []Fixed {
 
 func (w *Where) Keys() [][]string {
 	if w.keys == nil {
-		if !w.optInited {
-			w.optInit()
-		}
+		w.optInit()
 		if w.singleton || w.conflict {
 			return [][]string{{}} // intentionally {} not nil
 		}
@@ -162,20 +157,20 @@ func (w *Where) Keys() [][]string {
 }
 
 func (w *Where) fastSingle() bool {
-	if w.source.fastSingle() {
-		return true
+	if w.fast1.NotSet() {
+		if w.source.fastSingle() {
+			w.fast1.Set(true)
+		} else {
+			w.optInit()
+			w.fast1.Set(w.singleton || w.conflict)
+		}
 	}
-	if !w.optInited {
-		w.optInit()
-	}
-	return w.singleton || w.conflict
+	return w.fast1.Get()
 }
 
 func (w *Where) Indexes() [][]string {
 	if w.indexes == nil {
-		if !w.optInited {
-			w.optInit()
-		}
+		w.optInit()
 		if !w.singleton {
 			w.indexes = w.source.Indexes()
 		}
@@ -187,10 +182,8 @@ func (w *Where) Indexes() [][]string {
 }
 
 func (w *Where) Nrows() (int, int) {
-	if !w.optInited {
-		w.optInit()
-	}
-	return w.nrows, w.srcpop
+	w.optInit()
+	return w.nNrows, w.pNrows
 }
 
 func (w *Where) calcNrows() (int, int) {
@@ -482,9 +475,7 @@ func (w *Where) split(q2 Query, newQ2 func(Query, Query) Query) Query {
 
 func (w *Where) optimize(mode Mode, index []string, frac float64) (f Cost, v Cost, a any) {
 	// defer func() { fmt.Println("Where opt", index, frac, "=", f, v, a) }()
-	if !w.optInited {
-		w.optInit()
-	}
+	w.optInit()
 	if w.conflict {
 		// fmt.Println("Where opt CONFLICT")
 		return 0, 0, nil
@@ -519,6 +510,9 @@ func (w *Where) exprFalse() bool {
 }
 
 func (w *Where) optInit() {
+	if w.optInited {
+		return
+	}
 	w.optInited = true
 	w.tbl, _ = w.source.(*Table)
 	if !w.conflict && w.tbl != nil {
@@ -535,7 +529,7 @@ func (w *Where) optInit() {
 			w.exprMore = w.exprMore || len(w.colSels) > 0
 		}
 	}
-	w.nrows, w.srcpop = w.calcNrows()
+	w.nNrows, w.pNrows = w.calcNrows()
 }
 
 // extractCompares finds sub-expressions like <field> <op> <constant>
@@ -1247,6 +1241,9 @@ func (w *Where) Select(cols, vals []string) {
 		}
 		return
 	}
+	// Note: conflict could come from any of expr, not just fixed.
+	// But to evaluate that would require building a Row.
+	// It should be rare.
 	satisfied, conflict := selectFixed(cols, vals, w.whereFixed)
 	if conflict {
 		w.selOrg, w.selEnd = ixkey.Max, ""
@@ -1277,23 +1274,6 @@ func (w *Where) Select(cols, vals []string) {
 	w.selSet = true
 }
 
-func selectFixed(cols, vals []string, fixed []Fixed) (satisfied, conflict bool) {
-	// Note: conflict could come from any of expr, not just fixed.
-	// But to evaluate that would require building a Row.
-	// It should be rare.
-	satisfied = true
-	for i, col := range cols {
-		if fv := getFixed(fixed, col); len(fv) == 1 {
-			if fv[0] != vals[i] {
-				return false, true // conflict
-			}
-		} else {
-			satisfied = false
-		}
-	}
-	return satisfied, false
-}
-
 func (w *Where) addFixed(cols []string, vals []string) ([]string, []string) {
 	cols = slices.Clip(cols)
 	vals = slices.Clip(vals)
@@ -1307,6 +1287,9 @@ func (w *Where) addFixed(cols []string, vals []string) ([]string, []string) {
 }
 
 func (w *Where) Lookup(th *Thread, cols, vals []string) Row {
+	if conflictFixed(cols, vals, w.Fixed()) {
+		return nil
+	}
 	if w.singleton {
 		// can't use source.Lookup because cols may not match source index
 		w.Rewind()
@@ -1316,7 +1299,7 @@ func (w *Where) Lookup(th *Thread, cols, vals []string) Row {
 		}
 		return row
 	}
-	cols, vals = w.addFixed(cols, vals)
+	cols, vals = w.addFixed(cols, vals) // ???
 	row := w.source.Lookup(th, cols, vals)
 	if !w.filter(th, row) {
 		row = nil

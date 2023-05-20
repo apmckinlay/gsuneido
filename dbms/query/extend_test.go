@@ -32,6 +32,7 @@ func TestExtendInit(t *testing.T) {
 }
 
 func TestExtendSelect(t *testing.T) {
+	assert := assert.T(t)
 	db := testDb()
 	MakeSuTran = func(qt QueryTran) *SuTran {
 		return nil
@@ -41,20 +42,30 @@ func TestExtendSelect(t *testing.T) {
 
 	q := ParseQuery("cus extend ex=1", rt, nil) // constant
 	zero := []string{Pack(Zero.(Packable))}
-	q.Select(ex, zero)
-	assert.T(t).This(q.Get(nil, Next)).Is(nil)
 	one := []string{Pack(One.(Packable))}
+
+	assert.This(q.Lookup(nil, ex, zero)).Is(nil)
+	q.Select(ex, zero)
+	assert.This(q.Get(nil, Next)).Is(nil)
+	q.Select(nil, nil)
+
 	q.Select(ex, one)
-	assert.T(t).That(q.Get(nil, Next) != nil)
+	assert.That(q.Get(nil, Next) != nil)
+	q.Select(nil, nil)
 
 	// where singleton
 	q = ParseQuery("cus where cnum=1 extend ex=cnum+1", rt, nil) // expression
 	q, _, _ = Setup(q, ReadMode, rt)
+	assert.That(q.fastSingle())
+
 	q.Select(ex, zero)
-	assert.T(t).This(q.Get(nil, Next)).Is(nil)
+	assert.This(q.Get(nil, Next)).Is(nil)
+	q.Select(nil, nil)
+
 	two := []string{Pack(IntVal(2))}
 	q.Select(ex, two)
-	assert.T(t).That(q.Get(nil, Next) != nil)
+	assert.That(q.Get(nil, Next) != nil)
+	q.Select(nil, nil)
 
-	assert.T(t).That(q.Lookup(nil, ex, two) != nil)
+	assert.That(q.Lookup(nil, ex, two) != nil)
 }

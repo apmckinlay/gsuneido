@@ -97,6 +97,9 @@ func newProject2(src Query, cols []string, includeDeps bool) *Project {
 	p.header = p.getHeader()
 	p.keys = projectKeys(src.Keys(), p.columns)
 	p.indexes = projectIndexes(src.Indexes(), p.columns)
+	p.nNrows, p.pNrows = p.getNrows()
+	p.rowSiz = src.rowSize()
+	p.fast1.Set(src.fastSingle())
 	return p
 }
 
@@ -174,6 +177,7 @@ func projectKeys(keys [][]string, cols []string) [][]string {
 func projectIndexes(idxs [][]string, cols []string) [][]string {
 	var idxs2 [][]string
 	for _, ix := range idxs {
+		// get the prefix of the index that is in cols
 		i := 0
 		for ; i < len(ix) && slices.Contains(cols, ix[i]); i++ {
 		}
@@ -185,7 +189,7 @@ func projectIndexes(idxs [][]string, cols []string) [][]string {
 	return idxs2
 }
 
-func (p *Project) Nrows() (int, int) {
+func (p *Project) getNrows() (int, int) {
 	nr, pop := p.source.Nrows()
 	if !p.unique {
 		nr /= 2 // ??? (matches lookupCost)
@@ -380,14 +384,10 @@ func projectFixed(srcFixed []Fixed, cols []string) []Fixed {
 }
 
 func (p *Project) Updateable() string {
-	if p.strategy == projCopy {
+	if p.unique {
 		return p.source.Updateable()
 	}
 	return ""
-}
-
-func (p *Project) fastSingle() bool {
-	return p.strategy == projCopy && p.source.fastSingle()
 }
 
 // optimize ---------------------------------------------------------

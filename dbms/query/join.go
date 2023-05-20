@@ -30,10 +30,8 @@ type joinLike struct {
 	sel2cols []string
 	sel2vals []string
 	Query2
-	conflict1      bool
-	conflict2      bool
-	haveFastSingle bool
-	fastSingleVal  bool
+	conflict1 bool
+	conflict2 bool
 }
 
 // joinBase is common stuff for Join and LeftJoin
@@ -94,6 +92,8 @@ func NewJoin(src1, src2 Query, by []string) *Join {
 	jn.keys = jn.getKeys()
 	jn.indexes = jn.getIndexes()
 	jn.fixed = jn.getFixed()
+	jn.nNrows, jn.pNrows = jn.getNrows()
+	jn.fast1.Set(src1.fastSingle() && src2.fastSingle())
 	return jn
 }
 
@@ -127,6 +127,7 @@ func newJoinLike(src1, src2 Query) joinLike {
 	jl := joinLike{}
 	jl.source1, jl.source2 = src1, src2
 	jl.header = jl.getHeader()
+	jl.rowSiz = jl.source1.rowSize() + jl.source2.rowSize()
 	return jl
 }
 
@@ -172,14 +173,6 @@ func (jn *Join) getKeys() [][]string {
 	default:
 		panic("unknown join type")
 	}
-}
-
-func (jn *Join) fastSingle() bool {
-	if !jn.haveFastSingle {
-		jn.fastSingleVal = jn.source1.fastSingle() && jn.source2.fastSingle()
-		jn.haveFastSingle = true
-	}
-	return jn.fastSingleVal
 }
 
 func (jn *Join) getFixed() []Fixed {
@@ -293,7 +286,7 @@ func (jn *Join) setApproach(index []string, frac float64, approach any, tran Que
 	jn.saIndex = index
 }
 
-func (jn *Join) Nrows() (int, int) {
+func (jn *Join) getNrows() (int, int) {
 	n1, p1 := jn.source1.Nrows()
 	n2, p2 := jn.source2.Nrows()
 	return jn.nrows(n1, p1, n2, p2), jn.pop(p1, p2)
@@ -333,10 +326,6 @@ func (jn *Join) pop(p1, p2 int) int {
 	default:
 		panic(assert.ShouldNotReachHere())
 	}
-}
-
-func (jl *joinLike) rowSize() int {
-	return jl.source1.rowSize() + jl.source2.rowSize()
 }
 
 func (jb *joinBase) lookupCost() int {
@@ -494,6 +483,9 @@ func NewLeftJoin(src1, src2 Query, by []string) *LeftJoin {
 	lj.keys = lj.getKeys()
 	lj.indexes = lj.source1.Indexes()
 	lj.fixed = lj.getFixed()
+	lj.nNrows, lj.pNrows = lj.getNrows()
+	lj.fast1.Set(src1.fastSingle() &&
+		(lj.joinType == one_one || lj.joinType == n_one || src2.fastSingle()))
 	return lj
 }
 
@@ -516,16 +508,6 @@ func (lj *LeftJoin) getKeys() [][]string {
 	default:
 		panic("unknown join type")
 	}
-}
-
-func (lj *LeftJoin) fastSingle() bool {
-	if !lj.haveFastSingle {
-		lj.fastSingleVal = lj.source1.fastSingle() &&
-			(lj.joinType == one_one || lj.joinType == n_one ||
-				lj.source2.fastSingle())
-		lj.haveFastSingle = true
-	}
-	return lj.fastSingleVal
 }
 
 func (lj *LeftJoin) getFixed() []Fixed {
@@ -581,7 +563,7 @@ func (lj *LeftJoin) setApproach(index []string, frac float64, approach any, tran
 	lj.saIndex = index
 }
 
-func (lj *LeftJoin) Nrows() (int, int) {
+func (lj *LeftJoin) getNrows() (int, int) {
 	n1, p1 := lj.source1.Nrows()
 	n2, p2 := lj.source2.Nrows()
 	return lj.nrows(n1, p1, n2, p2), lj.pop(p1, p2)

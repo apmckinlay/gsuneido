@@ -7,8 +7,6 @@ import (
 	"strings"
 	"testing"
 
-	. "github.com/apmckinlay/gsuneido/runtime"
-
 	"github.com/apmckinlay/gsuneido/util/assert"
 )
 
@@ -35,10 +33,9 @@ func TestGrouped(t *testing.T) {
 }
 
 func TestRemove(t *testing.T) {
-	tbl := &Table{}
 	cols := []string{"a", "a_deps", "b", "b_deps", "c", "c_deps",
 		"d", "d_deps", "x_lower!"}
-	tbl.header = SimpleHeader(cols)
+	tbl := newTestQop(cols)
 	proj := NewRemove(tbl, []string{"a", "c"})
 	assert.T(t).This(proj.columns).Is([]string{"b", "b_deps", "d", "d_deps"})
 }

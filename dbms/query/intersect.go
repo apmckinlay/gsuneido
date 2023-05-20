@@ -28,6 +28,9 @@ func NewIntersect(src1, src2 Query) *Intersect {
 	it.keys = it.getKeys()
 	it.indexes = it.getIndexes()
 	it.fixed = it.getFixed()
+	it.nNrows, it.pNrows = it.getNrows()
+	it.rowSiz = src1.rowSize()
+	it.fast1.Set(src1.fastSingle() && src2.fastSingle())
 	return &it
 }
 
@@ -65,7 +68,7 @@ func (it *Intersect) getFixed() []Fixed {
 	return fixed
 }
 
-func (it *Intersect) Nrows() (int, int) {
+func (it *Intersect) getNrows() (int, int) {
 	if it.disjoint != "" {
 		return 0, 0
 	}
@@ -96,10 +99,6 @@ func (it *Intersect) Transform() Query {
 		return NewIntersect(src1, src2)
 	}
 	return it
-}
-
-func (it *Intersect) fastSingle() bool {
-	return it.source1.fastSingle() && it.source2.fastSingle()
 }
 
 func (it *Intersect) optimize(mode Mode, index []string, frac float64) (Cost, Cost, any) {

@@ -41,6 +41,9 @@ func NewTempIndex(src Query, order []string, tran QueryTran) *TempIndex {
 	ti.source = src
 	ti.header = src.Header().Dup() // dup because sortlist is concurrent
 	ti.keys = src.Keys()
+	ti.fixed = src.Fixed()
+	ti.nNrows, ti.pNrows = src.Nrows()
+	ti.rowSiz = src.rowSize()
 	return &ti
 }
 
@@ -84,8 +87,7 @@ func (ti *TempIndex) Select(cols, vals []string) {
 		ti.selOrg, ti.selEnd = selMin, selMax
 		return
 	}
-	fixed := ti.source.Fixed()
-	satisfied, conflict := selectFixed(cols, vals, fixed)
+	satisfied, conflict := selectFixed(cols, vals, ti.source.Fixed())
 	if conflict {
 		ti.selOrg, ti.selEnd = selMax, selMin
 		return
@@ -99,6 +101,9 @@ func (ti *TempIndex) Select(cols, vals []string) {
 }
 
 func (ti *TempIndex) Lookup(th *Thread, cols, vals []string) Row {
+	if conflictFixed(cols, vals, ti.source.Fixed()) {
+		return nil
+	}
 	ti.th = th
 	defer func() { ti.th = nil }()
 	if ti.iter == nil {

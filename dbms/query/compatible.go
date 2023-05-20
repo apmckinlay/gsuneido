@@ -118,7 +118,3 @@ func (c1 *Compatible1) Rewind() {
 func (c1 *Compatible1) Select(cols, vals []string) {
 	c1.source1.Select(cols, vals)
 }
-
-func (c1 *Compatible1) rowSize() int {
-	return c1.source1.rowSize()
-}

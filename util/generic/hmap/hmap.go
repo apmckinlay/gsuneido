@@ -202,7 +202,7 @@ func (h *Hmap[K, V, H]) GetPut(key K, val V) (K, V, bool) {
 	return h.getPut(key, val, false)
 }
 
-// put returns whether it already existed
+// getPut returns whether it already existed
 func (h *Hmap[K, V, H]) getPut(key K, val V, update bool) (k K, v V, ok bool) {
 	h.version++
 	if h.cap() == 0 {
@@ -386,9 +386,8 @@ func (h *Hmap[K, V, H]) Clear() {
 
 // Copy returns a shallow copy of the Hmap
 func (h *Hmap[K, V, H]) Copy() *Hmap[K, V, H] {
-	hnew := Hmap[K, V, H]{size: h.size, capShift: h.capShift}
-	hnew.blocks = slices.Clone(h.blocks)
-	return &hnew
+	return &Hmap[K, V, H]{size: h.size, blocks: slices.Clone(h.blocks),
+		capShift: h.capShift, version: h.version}
 }
 
 // Iter returns a function (closure) that is called to get the next item.

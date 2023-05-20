@@ -429,8 +429,10 @@ func BenchmarkOptMod(b *testing.B) {
 func TestJoin_splitSelect(t *testing.T) {
 	joinRev = impossible
 	defer func() { joinRev = 0 }()
-	q1 := newTestQop([]string{"a", "b", "c"}, [][]string{{"a"}})
-	q2 := newTestQop([]string{"c", "d", "e"}, [][]string{{"c"}})
+	q1 := newTestQop([]string{"a", "b", "c"})
+	q1.indexes = [][]string{{"a"}}
+	q2 := newTestQop([]string{"c", "d", "e"})
+	q1.indexes = [][]string{{"c"}}
 	q2.fixed = []Fixed{
 		{col: "c", values: []string{"1"}},
 		{col: "e", values: []string{"2", ""}},
@@ -452,11 +454,9 @@ type TestQop struct {
 	sel
 }
 
-func newTestQop(cols []string, keys [][]string) *TestQop {
+func newTestQop(cols []string) *TestQop {
 	q := &TestQop{}
 	q.header = SimpleHeader(cols)
-	q.indexes = keys
-	q.keys = keys
 	return q
 }
 
@@ -470,6 +470,9 @@ func (q *TestQop) Indexes() [][]string { // override Nothing
 }
 
 func (q *TestQop) Keys() [][]string { // override Nothing
+	if q.keys == nil {
+		return q.indexes
+	}
 	return q.keys
 }
 

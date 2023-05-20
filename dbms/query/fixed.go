@@ -133,3 +133,22 @@ func fixedWith(fixed Fixed, val string) Fixed {
 	return Fixed{col: fixed.col,
 		values: append(slices.Clip(fixed.values), val)}
 }
+
+func selectFixed(cols, vals []string, fixed []Fixed) (satisfied, conflict bool) {
+	satisfied = true
+	for i, col := range cols {
+		if fv := getFixed(fixed, col); len(fv) == 1 {
+			if fv[0] != vals[i] {
+				return false, true // conflict
+			}
+		} else {
+			satisfied = false
+		}
+	}
+	return satisfied, false
+}
+
+func conflictFixed(cols, vals []string, fixed []Fixed) bool {
+	_, conflict := selectFixed(cols, vals, fixed)
+	return conflict
+}

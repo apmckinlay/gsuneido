@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/apmckinlay/gsuneido/util/assert"
+	"github.com/apmckinlay/gsuneido/util/generic/slc"
 	"github.com/apmckinlay/gsuneido/util/pack"
 )
 
@@ -272,4 +273,19 @@ func TestSuObjectCompare(t *testing.T) {
 		x.SetConcurrent()
 		y.SetConcurrent()
 	}
+}
+
+func TestSuObjectCopyOnWrite(t *testing.T) {
+	x := &SuObject{}
+	x.Add(IntVal(123))
+	x.Set(SuStr("abc"), IntVal(456))
+	assert.This(x.String()).Is("#(123, abc: 456)")
+	y := x.Copy().(*SuObject)
+	assert.This(y.String()).Is("#(123, abc: 456)")
+	assert.True(slc.Same(x.list, y.list))
+
+	x.Add(Zero)
+	assert.This(x.String()).Is("#(123, 0, abc: 456)")
+	assert.This(y.String()).Is("#(123, abc: 456)")
+	assert.False(slc.Same(x.list, y.list))
 }
