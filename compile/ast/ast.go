@@ -313,7 +313,15 @@ func (a *RangeTo) String() string {
 }
 
 func (a *RangeTo) Echo() string {
-	return a.E.String() + "[" + a.From.Echo() + ".." + a.To.Echo() + "]"
+	s := a.E.String() + "["
+	if a.From != nil {
+		s += a.From.Echo()
+	}
+	s += ".."
+	if a.To != nil {
+		s += a.To.Echo()
+	}
+	return s + "]"
 }
 
 func (a *RangeTo) Children(fn func(Node) Node) {

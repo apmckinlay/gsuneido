@@ -253,13 +253,13 @@ func TestQueryGet(t *testing.T) {
 		'c'	'calac'	'calgary'	'pencil'	7
 		'e'	'emerald'	'vancouver'	'pencil'	7
 		'i'	'intercon'	'saskatoon'	'pencil'	7`)
-	test("customer extend up = city.Upper() sort up",
-		"customer^(id) EXTEND up = city.Upper() TEMPINDEX(up)",
+	test("customer extend up = city[1..] sort up",
+		"customer^(id) EXTEND up = city[1..] TEMPINDEX(up)",
 		`id	name	city	up
-		'c'	'calac'	'calgary'	'CALGARY'
-		'a'	'axon'	'saskatoon'	'SASKATOON'
-		'i'	'intercon'	'saskatoon'	'SASKATOON'
-		'e'	'emerald'	'vancouver'	'VANCOUVER'`)
+		'c'	'calac'	'calgary'	'algary'
+		'e'	'emerald'	'vancouver'	'ancouver'
+		'a'	'axon'	'saskatoon'	'askatoon'
+		'i'	'intercon'	'saskatoon'	'askatoon'`)
 	test("trans minus hist sort id, cost",
 		"(trans^(item) MINUS hist^(date,item,id)) TEMPINDEX(id,cost)",
 		`item		id	cost	date

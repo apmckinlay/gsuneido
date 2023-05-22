@@ -103,7 +103,7 @@ func (a *Binary) rawOp() bool {
 func IsColumn(e Expr, cols []string) bool {
 	if id, ok := e.(*Ident); ok && (slices.Contains(cols, id.Name) ||
 		(strings.HasSuffix(id.Name, "_lower!") &&
-		slices.Contains(cols, strings.TrimSuffix(id.Name, "_lower!")))) {
+			slices.Contains(cols, strings.TrimSuffix(id.Name, "_lower!")))) {
 		return true
 	}
 	return false
@@ -279,8 +279,14 @@ func (a *RangeTo) Eval(c *Context) Value {
 }
 
 func (a *RangeTo) Columns() []string {
-	return set.Union(a.E.Columns(),
-		set.Union(a.From.Columns(), a.To.Columns()))
+	cols := a.E.Columns()
+	if a.From != nil {
+		cols = set.Union(cols, a.From.Columns())
+	}
+	if a.To != nil {
+		cols = set.Union(cols, a.To.Columns())
+	}
+	return cols
 }
 
 func (a *RangeLen) Eval(c *Context) Value {
