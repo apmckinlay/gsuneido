@@ -97,9 +97,11 @@ func newProject2(src Query, cols []string, includeDeps bool) *Project {
 	p.header = p.getHeader()
 	p.keys = projectKeys(src.Keys(), p.columns)
 	p.indexes = projectIndexes(src.Indexes(), p.columns)
-	p.nNrows, p.pNrows = p.getNrows()
-	p.rowSiz = src.rowSize()
+	p.setNrows(p.getNrows())
+	p.rowSiz.Set(src.rowSize())
 	p.fast1.Set(src.fastSingle())
+	p.singleTbl.Set(src.SingleTable())
+	p.lookCost.Set(p.getLookupCost())
 	return p
 }
 
@@ -618,7 +620,7 @@ func (p *Project) Lookup(th *Thread, cols, vals []string) Row {
 	return p.Get(th, Next)
 }
 
-func (p *Project) lookupCost() Cost {
+func (p *Project) getLookupCost() Cost {
 	srcCost := p.source.lookupCost()
 	if p.unique {
 		return srcCost

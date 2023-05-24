@@ -87,8 +87,9 @@ func (dbms *DbmsLocal) Cursor(query string, sv *Sviews) ICursor {
 	if sv == nil {
 		sv = &dbms.db.Sviews
 	}
-	q := qry.ParseQuery(query, dbms.db.NewReadTran(), sv)
-	q, fixcost, varcost := qry.Setup(q, qry.CursorMode, dbms.db.NewReadTran())
+	tran := dbms.db.NewReadTran()
+	q := qry.ParseQuery(query, tran, sv)
+	q, fixcost, varcost := qry.Setup(q, qry.CursorMode, tran)
 	trace.Query.Println("cursor", fixcost+varcost, "-", query)
 	return cursorLocal{queryLocal{
 		Query: q, cost: fixcost + varcost, mode: qry.CursorMode}}

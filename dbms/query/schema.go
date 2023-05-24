@@ -72,7 +72,7 @@ func (*schemaTable) setApproach([]string, float64, any, QueryTran) {
 }
 
 func (st *schemaTable) lookupCost() Cost {
-	// no indexes, so lookups only from TempIndex
+	// no indexes, so lookups will be handled by TempIndex
 	return 1000
 }
 

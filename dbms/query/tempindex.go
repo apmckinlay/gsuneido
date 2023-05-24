@@ -42,8 +42,9 @@ func NewTempIndex(src Query, order []string, tran QueryTran) *TempIndex {
 	ti.header = src.Header().Dup() // dup because sortlist is concurrent
 	ti.keys = src.Keys()
 	ti.fixed = src.Fixed()
-	ti.nNrows, ti.pNrows = src.Nrows()
-	ti.rowSiz = src.rowSize()
+	ti.setNrows(src.Nrows())
+	ti.rowSiz.Set(src.rowSize())
+	ti.singleTbl.Set(src.SingleTable())
 	return &ti
 }
 
@@ -63,11 +64,7 @@ func (ti *TempIndex) Transform() Query {
 	return ti
 }
 
-func (ti *TempIndex) lookupCost() Cost {
-	panic(assert.ShouldNotReachHere())
-}
-
-func (q1 *Query1) setApproach([]string, float64, any, QueryTran) {
+func (*TempIndex) setApproach([]string, float64, any, QueryTran) {
 	assert.ShouldNotReachHere()
 }
 

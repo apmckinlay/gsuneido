@@ -92,7 +92,7 @@ func NewJoin(src1, src2 Query, by []string) *Join {
 	jn.keys = jn.getKeys()
 	jn.indexes = jn.getIndexes()
 	jn.fixed = jn.getFixed()
-	jn.nNrows, jn.pNrows = jn.getNrows()
+	jn.setNrows(jn.getNrows())
 	jn.fast1.Set(src1.fastSingle() && src2.fastSingle())
 	return jn
 }
@@ -127,7 +127,8 @@ func newJoinLike(src1, src2 Query) joinLike {
 	jl := joinLike{}
 	jl.source1, jl.source2 = src1, src2
 	jl.header = jl.getHeader()
-	jl.rowSiz = jl.source1.rowSize() + jl.source2.rowSize()
+	jl.rowSiz.Set(jl.source1.rowSize() + jl.source2.rowSize())
+	jl.lookCost.Set(src1.lookupCost() * 2) // ???
 	return jl
 }
 
@@ -328,10 +329,6 @@ func (jn *Join) pop(p1, p2 int) int {
 	}
 }
 
-func (jb *joinBase) lookupCost() int {
-	return jb.source1.lookupCost() * 2 // ???
-}
-
 // execution
 
 func (jb *joinBase) Rewind() {
@@ -483,7 +480,7 @@ func NewLeftJoin(src1, src2 Query, by []string) *LeftJoin {
 	lj.keys = lj.getKeys()
 	lj.indexes = lj.source1.Indexes()
 	lj.fixed = lj.getFixed()
-	lj.nNrows, lj.pNrows = lj.getNrows()
+	lj.setNrows(lj.getNrows())
 	lj.fast1.Set(src1.fastSingle() &&
 		(lj.joinType == one_one || lj.joinType == n_one || src2.fastSingle()))
 	return lj

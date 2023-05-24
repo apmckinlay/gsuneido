@@ -25,28 +25,30 @@ func newCompatible(src1, src2 Query) *Compatible {
 	c.allCols = set.Union(c.source1.Columns(), c.source2.Columns())
 	fixed1 := src1.Fixed()
 	fixed2 := src2.Fixed()
+	cols1 := src1.Columns()
+	cols2 := src2.Columns()
 	for _, f1 := range fixed1 {
 		for _, f2 := range fixed2 {
 			if f1.col == f2.col && set.Disjoint(f1.values, f2.values) {
 				c.disjoint = f1.col
-				return c
+				goto done
 			}
 		}
 	}
-	cols2 := src2.Columns()
 	for _, f1 := range fixed1 {
 		if !slices.Contains(cols2, f1.col) && !slices.Contains(f1.values, "") {
 			c.disjoint = f1.col
-			return c
+			goto done
 		}
 	}
-	cols1 := src1.Columns()
 	for _, f2 := range fixed2 {
 		if !slices.Contains(cols1, f2.col) && !slices.Contains(f2.values, "") {
 			c.disjoint = f2.col
-			return c
+			goto done
 		}
 	}
+done:
+	c.lookCost.Set(c.getLookupCost())
 	return c
 }
 
@@ -95,7 +97,7 @@ func bestKey2(src2 Query, mode Mode, nrows int) bestIndex {
 	return best
 }
 
-func (c *Compatible) lookupCost() int {
+func (c *Compatible) getLookupCost() int {
 	cost := c.source1.lookupCost()
 	if c.disjoint == "" {
 		cost += c.source2.lookupCost()

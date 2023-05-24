@@ -26,7 +26,7 @@ func NewTimes(src1, src2 Query) *Times {
 	t.keys = t.getKeys()
 	t.indexes = t.getIndexes()
 	t.fixed = t.getFixed()
-	t.nNrows, t.pNrows = t.getNrows()
+	t.setNrows(t.getNrows())
 	t.fast1.Set(src1.fastSingle() && src2.fastSingle())
 	return t
 }
@@ -167,8 +167,4 @@ func (t *Times) Lookup(th *Thread, cols, vals []string) Row {
 	row := t.Get(th, Next)
 	t.Select(nil, nil) // clear select
 	return row
-}
-
-func (t *Times) lookupCost() int {
-	return t.source1.lookupCost() * 2 // ???
 }
