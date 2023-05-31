@@ -72,7 +72,7 @@ func (tbl *Table) SetTran(t QueryTran) {
 		panic("nonexistent table: " + tbl.name)
 	}
 	tbl.info = t.GetInfo(tbl.name)
-	tbl.rowSiz = tbl.getRowSize()
+	tbl.rowSiz.Set(tbl.getRowSize())
 
 	cols := make([]string, 0, len(tbl.schema.Columns)+len(tbl.schema.Derived))
 	for _, col := range tbl.schema.Columns {
@@ -181,9 +181,10 @@ func (tbl *Table) lookupCost() Cost {
 			levels = 2
 		}
 	} else {
-		levels = tbl.info.Indexes[tbl.iIndex].BtreeLevels()
+		levels = tbl.info.Indexes[0].BtreeLevels()
+		//TODO should be the actual index but we don't have it
 	}
-	return levels*800 - 300
+	return levels*800 - 300 // empirical
 }
 
 // execution --------------------------------------------------------

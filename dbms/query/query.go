@@ -164,14 +164,16 @@ type queryBase struct {
 	// header must be set by constructors and setApproach.
 	// setApproach is necessary because the sources may get reversed
 	// which affects the order of Fields
-	header  *Header
-	keys    [][]string
-	indexes [][]string
-	fixed   []Fixed
-	nNrows  int
-	pNrows  int
-	rowSiz  int
-	fast1   opt.Bool
+	header    *Header
+	keys      [][]string
+	indexes   [][]string
+	fixed     []Fixed
+	nNrows    opt.Int
+	pNrows    opt.Int
+	rowSiz    opt.Int
+	fast1     opt.Bool
+	singleTbl opt.Bool
+	lookCost  opt.Int
 	cache
 }
 
@@ -200,15 +202,28 @@ func (q *queryBase) Fixed() []Fixed {
 }
 
 func (q *queryBase) Nrows() (int, int) {
-	return q.nNrows, q.pNrows
+	return q.nNrows.Get(), q.pNrows.Get()
+}
+
+func (q *queryBase) setNrows(n, p int) {
+	q.nNrows.Set(n)
+	q.pNrows.Set(p)
 }
 
 func (q *queryBase) rowSize() int {
-	return q.rowSiz
+	return q.rowSiz.Get()
 }
 
 func (q *queryBase) fastSingle() bool {
 	return q.fast1.Get()
+}
+
+func (q *queryBase) SingleTable() bool {
+	return q.singleTbl.Get()
+}
+
+func (q *queryBase) lookupCost() Cost {
+	return q.lookCost.Get()
 }
 
 // Updateable is overriden by Query1
@@ -476,10 +491,6 @@ func (q1 *Query1) Updateable() string {
 	return q1.source.Updateable()
 }
 
-func (q1 *Query1) SingleTable() bool {
-	return q1.source.SingleTable()
-}
-
 func (q1 *Query1) SetTran(t QueryTran) {
 	q1.source.SetTran(t)
 }
@@ -488,10 +499,6 @@ func (q1 *Query1) optimize(mode Mode, index []string, frac float64) (
 	Cost, Cost, any) {
 	fixcost, varcost := Optimize(q1.source, mode, index, frac)
 	return fixcost, varcost, nil
-}
-
-func (q1 *Query1) lookupCost() Cost {
-	return q1.source.lookupCost()
 }
 
 // Lookup default applies to Summarize and Sort

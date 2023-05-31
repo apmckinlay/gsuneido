@@ -43,9 +43,11 @@ func NewExtend(src Query, cols []string, exprs []ast.Expr) *Extend {
 	e.header = e.getHeader()
 	e.keys = src.Keys()
 	e.indexes = src.Indexes()
-	e.nNrows, e.pNrows = src.Nrows()
-	e.rowSiz = e.getRowSize()
+	e.setNrows(src.Nrows())
+	e.rowSiz.Set(e.getRowSize())
 	e.fast1.Set(src.fastSingle())
+	e.singleTbl.Set(!e.hasExprs && src.SingleTable())
+	e.lookCost.Set(src.lookupCost())
 	return e
 }
 
@@ -87,7 +89,7 @@ func (e *Extend) stringOp() string {
 }
 
 func (e *Extend) getRowSize() int {
-	return e.source.rowSize() + len(e.cols) * 16 // ???
+	return e.source.rowSize() + len(e.cols)*16 // ???
 }
 
 func (e *Extend) Transform() Query {
@@ -158,13 +160,6 @@ func (e *Extend) Fixed() []Fixed {
 		assert.That(e.fixed != nil)
 	}
 	return e.fixed
-}
-
-func (e *Extend) SingleTable() bool {
-	if e.hasExprs {
-		return false
-	}
-	return e.source.SingleTable()
 }
 
 func (e *Extend) optimize(mode Mode, index []string, frac float64) (
