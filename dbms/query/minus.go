@@ -24,8 +24,8 @@ func NewMinus(src1, src2 Query) *Minus {
 	m.keys = src1.Keys()
 	m.indexes = src1.Indexes()
 	m.fixed = src1.Fixed()
-	m.nNrows, m.pNrows = m.getNrows()
-	m.rowSiz = src1.rowSize()
+	m.setNrows(m.getNrows())
+	m.rowSiz.Set(src1.rowSize())
 	m.fast1.Set(src1.fastSingle())
 	return &m
 }

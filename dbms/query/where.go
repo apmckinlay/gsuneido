@@ -79,7 +79,9 @@ func NewWhere(src Query, expr ast.Expr, t QueryTran) *Where {
 	}
 	w := &Where{Query1: Query1{source: src}, expr: expr.(*ast.Nary), t: t}
 	w.header = src.Header()
-	w.rowSiz = src.rowSize()
+	w.rowSiz.Set(src.rowSize())
+	w.singleTbl.Set(src.SingleTable())
+	w.lookCost.Set(src.lookupCost())
 	w.calcFixed()
 	if !w.conflict {
 		cmps := w.extractCompares()
@@ -183,7 +185,7 @@ func (w *Where) Indexes() [][]string {
 
 func (w *Where) Nrows() (int, int) {
 	w.optInit()
-	return w.nNrows, w.pNrows
+	return w.nNrows.Get(), w.pNrows.Get()
 }
 
 func (w *Where) calcNrows() (int, int) {
@@ -529,7 +531,7 @@ func (w *Where) optInit() {
 			w.exprMore = w.exprMore || len(w.colSels) > 0
 		}
 	}
-	w.nNrows, w.pNrows = w.calcNrows()
+	w.setNrows(w.calcNrows())
 }
 
 // extractCompares finds sub-expressions like <field> <op> <constant>

@@ -37,7 +37,7 @@ func (b Bool) Get() bool {
 	case OptBoolFalse:
 		return false
 	default:
-		panic("OptBool Get when not set")
+		panic("opt.Bool Get when not set")
 	}
 }
 
