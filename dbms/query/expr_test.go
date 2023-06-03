@@ -30,7 +30,7 @@ func TestExprEval(t *testing.T) {
 		expr := p.Expression()
 		assert.T(t).This(p.Token).Is(tok.Eof)
 		// fmt.Println(expr)
-		assert.This(expr.CanEvalRaw(hdr.Columns)).Is(raw)
+		assert.This(expr.CanEvalRaw(hdr.Physical())).Is(raw)
 		result := expr.Eval(&ast.Context{Th: th, Row: row, Hdr: hdr})
 		assert.T(t).Msg(src).This(result.String()).Is(expected)
 	}

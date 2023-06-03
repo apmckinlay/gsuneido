@@ -81,9 +81,9 @@ func (a *Binary) CouldEvalRaw() bool {
 
 // CanEvalRaw returns true if Eval doesn't need to unpack the values.
 // It sets evalRaw and Packed which are used later by Eval.
-func (a *Binary) CanEvalRaw(cols []string) bool {
+func (a *Binary) CanEvalRaw(flds []string) bool {
 	// depends on folder putting constant on the right
-	if a.rawOp() && IsColumn(a.Lhs, cols) && isConstant(a.Rhs) {
+	if a.rawOp() && IsColumn(a.Lhs, flds) && isConstant(a.Rhs) {
 		a.evalRaw = true
 		c := a.Rhs.(*Constant)
 		c.Packed = Pack(c.Val.(Packable))
@@ -314,8 +314,8 @@ func evalOr(e Expr, c *Context, v Value) Value {
 
 // CanEvalRaw returns true if Eval doesn't need to unpack the values.
 // It sets Packed which is later used by Eval.
-func (a *In) CanEvalRaw(cols []string) bool {
-	if !IsColumn(a.E, cols) {
+func (a *In) CanEvalRaw(flds []string) bool {
+	if !IsColumn(a.E, flds) {
 		return false
 	}
 	packed := make([]string, 0, len(a.Exprs))
@@ -381,9 +381,9 @@ func (a *InRange) CouldEvalRaw() bool {
 
 // CanEvalRaw returns true if Eval doesn't need to unpack the values.
 // It sets Packed which is later used by Eval.
-func (a *InRange) CanEvalRaw(cols []string) bool {
+func (a *InRange) CanEvalRaw(flds []string) bool {
 	// InRange already ensures valid operators and constants
-	if !IsColumn(a.E, cols) {
+	if !IsColumn(a.E, flds) {
 		a.evalRaw = false
 		return false
 	}
