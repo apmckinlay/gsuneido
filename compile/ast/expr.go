@@ -89,6 +89,7 @@ func (a *Binary) CanEvalRaw(cols []string) bool {
 		c.Packed = Pack(c.Val.(Packable))
 		return true
 	}
+	a.evalRaw = false
 	return false
 }
 
@@ -382,6 +383,7 @@ func (a *InRange) CouldEvalRaw() bool {
 func (a *InRange) CanEvalRaw(cols []string) bool {
 	// InRange already ensures valid operators and constants
 	if !IsColumn(a.E, cols) {
+		a.evalRaw = false
 		return false
 	}
 	a.evalRaw = true
