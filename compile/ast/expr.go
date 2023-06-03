@@ -101,6 +101,7 @@ func (a *Binary) rawOp() bool {
 	return false
 }
 
+// IsColumn handles _lower!
 func IsColumn(e Expr, cols []string) bool {
 	if id, ok := e.(*Ident); ok && (slices.Contains(cols, id.Name) ||
 		(strings.HasSuffix(id.Name, "_lower!") &&

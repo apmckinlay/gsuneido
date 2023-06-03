@@ -321,7 +321,7 @@ func (w *Where) Transform() Query {
 		src2 := NewWhere(q.source2, w.project(q.source2), w.t)
 		return NewUnion(src1, src2).Transform()
 	case *Times:
-		// split where over product
+		// split where over times
 		return w.split(q, func(src1, src2 Query) Query {
 			return NewTimes(src1, src2)
 		})

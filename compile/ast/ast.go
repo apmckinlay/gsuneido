@@ -81,7 +81,9 @@ type Expr interface {
 	// Eval, CanEvalRaw, and Columns are used by queries
 	Eval(*Context) Value
 	// CanEvalRaw returns true if Eval doesn't need to unpack the values.
-	// It sets Packed which is later used by Eval.
+	// and it sets the Expr so future Eval's will (or will not) be raw.
+	// It must be called before calling Eval.
+	// It is primarily for Where comparisons.
 	CanEvalRaw(flds []string) bool
 	Columns() []string
 }
