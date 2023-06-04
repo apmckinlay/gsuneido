@@ -4,6 +4,7 @@
 package lexer
 
 import (
+	"fmt"
 	"testing"
 
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
@@ -26,7 +27,12 @@ func TestLexer(t *testing.T) {
 	assert := assert.T(t).This
 	first := func(src string, text string, token tok.Token) {
 		t.Helper()
-		assert(NewLexer(src).Next()).Is(Item{Text: text, Pos: 0, Token: token})
+fmt.Println(src)
+		newLex := NewLexer(src)
+		newLexNext := newLex.Next()
+		assert(newLexNext).Is(Item{Text: text, Pos: 0, Token: token})
+
+//		assert(NewLexer(src).Next()).Is(Item{Text: text, Pos: 0, Token: token})
 	}
 	first("function", "function", tok.Function)
 	first("foo", "foo", tok.Identifier)
@@ -37,6 +43,11 @@ func TestLexer(t *testing.T) {
 	first("0xff", "0xff", tok.Number)
 	first("0xff.Chr()", "0xff", tok.Number)
 	first("0x8002 //foo", "0x8002", tok.Number)
+	first("1000", "1000", tok.Number)
+	first("1_000", "1000", tok.Number)
+	first("1_000_000", "1000000", tok.Number)
+	first("123_456_789", "123456789", tok.Number)
+	first("1_2", "12", tok.Number)
 	first("'hello'", "hello", tok.String)
 	first("'hello", "hello", tok.String)
 	first("`hello`", "hello", tok.String)

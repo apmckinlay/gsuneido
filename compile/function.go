@@ -314,10 +314,15 @@ func (p *Parser) dowhileStmt() *ast.DoWhile {
 
 func (p *Parser) forStmt() ast.Statement {
 	// easier to check before matching For so everything is ahead
+// ! maybee make some changes here
 	forIn := p.isForIn()
 	p.Match(tok.For)
 	if forIn {
 		return p.forIn()
+	}
+	forSlice := p.isForSlice()
+	if forSlice {
+		return p.forSlice()
 	}
 	return p.forClassic()
 }
@@ -333,6 +338,17 @@ func (p *Parser) isForIn() bool {
 	return p.Lxr.AheadSkip(i+1).Token == tok.In
 }
 
+func (p *Parser) isForSlice() bool {
+	i := 0
+	if p.Lxr.AheadSkip(i).Token == tok.LParen {
+		i++
+	}
+	if !p.Lxr.AheadSkip(i).Token.IsIdent() {
+		return false
+	}
+	return p.Lxr.AheadSkip(i+1).Token == tok.RangeTo
+}
+
 func (p *Parser) forIn() *ast.ForIn {
 	parens := p.MatchIf(tok.LParen)
 	id := p.Text
@@ -346,6 +362,10 @@ func (p *Parser) forIn() *ast.ForIn {
 	}
 	body := p.statement()
 	return &ast.ForIn{Var: ast.Ident{Name: id, Pos: pos}, E: expr, Body: body}
+}
+
+func (p *Parser) forSlice() *ast.ForSlice {
+	panic("not implemented")
 }
 
 func (p *Parser) forClassic() *ast.For {

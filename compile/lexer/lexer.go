@@ -379,6 +379,8 @@ func (lxr *Lexer) number(start int) Item {
 		lxr.matchWhile(IsDigit)
 		if lxr.match('.') {
 			lxr.matchWhile(IsDigit)
+		} else if lxr.match('_') {
+			lxr.matchWhile(IsDigitOrUnderscore)
 		}
 		exp := lxr.si
 		if lxr.matchOneOf("eE") {
@@ -392,7 +394,8 @@ func (lxr *Lexer) number(start int) Item {
 			lxr.si-- // don't absorb trailing dot
 		}
 	}
-	return it(tok.Number, start, lxr.src[start:lxr.si])
+	numStr := strings.ReplaceAll(lxr.src[start:lxr.si], "_", "")
+	return it(tok.Number, start, numStr)
 }
 
 func (lxr *Lexer) nonWhiteRemaining() bool {

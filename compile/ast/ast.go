@@ -765,6 +765,22 @@ func (a *Forever) Children(fn func(Node) Node) {
 	childStmt(fn, &a.Body)
 }
 
+type ForSlice struct {
+	E    Expr
+	Body Statement
+	Var  Ident
+	stmtNodeT
+}
+
+func (a *ForSlice) String() string {
+	return "ForSlice(" + a.Var.Name + " " + a.E.String() + "\n" + a.Body.String() + ")"
+}
+
+func (a *ForSlice) Children(fn func(Node) Node) {
+	childExpr(fn, &a.E)
+	childStmt(fn, &a.Body)
+}
+
 type ForIn struct {
 	E    Expr
 	Body Statement
