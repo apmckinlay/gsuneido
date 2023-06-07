@@ -24,6 +24,9 @@ func Number(th *Thread, args []Value) Value {
 		if strings.IndexByte(s, ',') >= 0 {
 			s = strings.ReplaceAll(s, ",", "")
 		}
+        if strings.IndexByte(s, '_') >= 0 {
+            s = strings.ReplaceAll(s, "_", "")
+        }
 		return numFromString(s)
 	}
 	if _, ok := val.(SuDnum); ok {
