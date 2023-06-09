@@ -303,6 +303,10 @@ func TestParseStatements(t *testing.T) {
 	test("for x in ob { stmt }", "ForIn(x ob\nstmt)")
 	test("for (x in ob) stmt", "ForIn(x ob\nstmt)")
 
+	// for-slice
+	test("for x in 0..=10\nstmt", "ForSlice(x RangeLen(nil, 0, 10)\nstmt)")
+	test("for x in 0..<10\nstmt", "ForSlice(x RangeLen(nil, 0, 9)\nstmt)")
+
 	// for
 	test("for (;;) stmt", "For(; ; \n stmt)")
 	test("for (i = 0; i < 9; ++i) stmt",

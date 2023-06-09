@@ -4,6 +4,8 @@
 package compile
 
 import (
+	"fmt"
+
 	"github.com/apmckinlay/gsuneido/compile/ast"
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
 	. "github.com/apmckinlay/gsuneido/runtime"
@@ -315,6 +317,8 @@ func (p *Parser) dowhileStmt() *ast.DoWhile {
 func (p *Parser) forStmt() ast.Statement {
 	// easier to check before matching For so everything is ahead
 	forIn := p.isForIn()
+	forSlice := p.isForSlice()
+	fmt.Println(forSlice)
 	p.Match(tok.For)
 	if forIn {
 		return p.forIn()
@@ -331,6 +335,20 @@ func (p *Parser) isForIn() bool {
 		return false
 	}
 	return p.Lxr.AheadSkip(i+1).Token == tok.In
+}
+
+func (p *Parser) isForSlice() bool {
+	i := 0
+	if p.Lxr.AheadSkip(i).Token == tok.LParen {
+		i++
+	}
+	if !p.Lxr.AheadSkip(i).Token.IsIdent() {
+		return false
+	}
+	if p.Lxr.AheadSkip(i+1).Token == tok.In {	
+		return  p.Lxr.AheadSkip(i+2).Token == tok.Number
+	}
+	return false
 }
 
 func (p *Parser) forIn() *ast.ForIn {
