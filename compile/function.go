@@ -318,9 +318,12 @@ func (p *Parser) forStmt() ast.Statement {
 	// easier to check before matching For so everything is ahead
 	forIn := p.isForIn()
 	forSlice := p.isForSlice()
-	fmt.Println(forSlice)
-	p.Match(tok.For)
-	if forIn {
+	if forSlice {
+fmt.Println("in forSlice")
+		p.Match(tok.For)
+		return p.forSlice()
+	} else if forIn {
+		p.Match(tok.For)
 		return p.forIn()
 	}
 	return p.forClassic()
@@ -363,7 +366,17 @@ func (p *Parser) forIn() *ast.ForIn {
 		p.Match(tok.RParen)
 	}
 	body := p.statement()
-	return &ast.ForIn{Var: ast.Ident{Name: id, Pos: pos}, E: expr, Body: body}
+	astConst := &ast.ForIn{Var: ast.Ident{Name: id, Pos: pos}, E: expr, Body: body}
+fmt.Println("astConst", astConst.String())
+	return astConst
+}
+
+func (p *Parser) forSlice() *ast.ForSlice {
+	// match this for loop structure:
+	// for i in 0..=10 { ... }
+	// for i in 0..<10 { ... }
+
+	return &ast.ForSlice{}
 }
 
 func (p *Parser) forClassic() *ast.For {
