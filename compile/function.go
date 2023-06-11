@@ -317,12 +317,15 @@ func (p *Parser) dowhileStmt() *ast.DoWhile {
 func (p *Parser) forStmt() ast.Statement {
 	// easier to check before matching For so everything is ahead
 	forIn := p.isForIn()
-	forSlice := p.isForSlice()
-	if forSlice {
-fmt.Println("in forSlice")
-		p.Match(tok.For)
-		return p.forSlice()
-	} else if forIn {
+//	forSlice := p.isForSlice()
+//	if forSlice {
+//		p.Match(tok.For)
+//		return p.forSlice()
+//	} else if forIn {
+//		p.Match(tok.For)
+//		return p.forIn()
+//	}
+	if forIn {
 		p.Match(tok.For)
 		return p.forIn()
 	}
@@ -366,15 +369,24 @@ func (p *Parser) forIn() *ast.ForIn {
 		p.Match(tok.RParen)
 	}
 	body := p.statement()
-	astConst := &ast.ForIn{Var: ast.Ident{Name: id, Pos: pos}, E: expr, Body: body}
-fmt.Println("astConst", astConst.String())
-	return astConst
+	return &ast.ForIn{Var: ast.Ident{Name: id, Pos: pos}, E: expr, Body: body}
 }
 
 func (p *Parser) forSlice() *ast.ForSlice {
 	// match this for loop structure:
 	// for i in 0..=10 { ... }
 	// for i in 0..<10 { ... }
+fmt.Println(p.String())
+	p.MatchIf(tok.LParen)
+	p.MatchIdent()
+	p.Match(tok.In)
+fmt.Println(p.String())
+	expr := p.exprExpecting(false)
+fmt.Println(p.String(), expr)
+	stmt := p.statements()
+fmt.Println(p.String(), stmt)
+	p.Match(tok.RangeLen)
+fmt.Println(p.String())
 
 	return &ast.ForSlice{}
 }
