@@ -303,16 +303,16 @@ func TestParseStatements(t *testing.T) {
 	test("for x in ob { stmt }", "ForIn(x ob\nstmt)")
 	test("for (x in ob) stmt", "ForIn(x ob\nstmt)")
 
-	// for-slice
-	// test("for x in 0..=10 { stmt }", "ForSlice(x RangeLen(nil, 0, 10)\nstmt)")
-	// test("for x in 0..<10 { stmt }", "ForSlice(x RangeLen(nil, 0, 9)\nstmt)")
-	// test("for x in 0..=10\nstmt", "ForSlice(x RangeLen(nil, 0, 10)\nstmt)")
-	// test("for x in 0..<10\nstmt", "ForSlice(x RangeLen(nil, 0, 9)\nstmt)")
-
 	// for
 	test("for (;;) stmt", "For(; ; \n stmt)")
 	test("for (i = 0; i < 9; ++i) stmt",
 		"For(Binary(Eq i 0); Binary(Lt i 9); Unary(Inc i) \n stmt)")
+
+	// for-slice
+	test("for x in 0..<10 { stmt }", "For(Binary(Eq x 0); Binary(Lt x 9);  Unary(Inc x) \n stmt))")
+	test("for x in 0..=10 { stmt }", "For(Binary(Eq x 0); Binary(Le x 10); Unary(Inc x) \n stmt)")
+	test("for x in 0..=10\nstmt", "ForSlice(x RangeLen(nil, 0, 10)\nstmt)")
+	test("for x in 0..<10\nstmt", "ForSlice(x RangeLen(nil, 0, 9)\nstmt)")
 
 	// try-catch
 	test("try stmt", "Try(stmt)")

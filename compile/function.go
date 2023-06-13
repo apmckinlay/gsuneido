@@ -317,16 +317,12 @@ func (p *Parser) dowhileStmt() *ast.DoWhile {
 func (p *Parser) forStmt() ast.Statement {
 	// easier to check before matching For so everything is ahead
 	forIn := p.isForIn()
-//	forSlice := p.isForSlice()
-//	if forSlice {
-//		p.Match(tok.For)
-//		return p.forSlice()
-//	} else if forIn {
-//		p.Match(tok.For)
-//		return p.forIn()
-//	}
-	if forIn {
+	forSlice := p.isForSlice()
+	p.Match(tok.For)
+	if forSlice {
 		p.Match(tok.For)
+		return p.forSlice()
+	} else if forIn {
 		return p.forIn()
 	}
 	return p.forClassic()
