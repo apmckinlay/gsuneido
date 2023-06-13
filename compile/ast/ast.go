@@ -782,19 +782,42 @@ func (a *ForIn) Children(fn func(Node) Node) {
 }
 
 type ForSlice struct {
-	E    Expr
+	Cond Expr
 	Body Statement
-	Var  Ident
+	Init []Expr
+	Inc  []Expr
 	stmtNodeT
 }
 
 func (a *ForSlice) String() string {
-	return "ForSlice(" + a.Var.Name + " " + a.E.String() + "\n" + a.Body.String() + ")"
+	s := "For("
+	sep := ""
+	for _, e := range a.Init {
+		s += sep + e.String()
+		sep = ","
+	}
+	s += "; "
+	if a.Cond != nil {
+		s += a.Cond.String()
+	}
+	s += "; "
+	sep = ""
+	for _, e := range a.Inc {
+		s += sep + e.String()
+		sep = ","
+	}
+	return s + "\n" + a.Body.String() + ")"
 }
 
 func (a *ForSlice) Children(fn func(Node) Node) {
-	childExpr(fn, &a.E)
+	for i := range a.Init {
+		childExpr(fn, &a.Init[i])
+	}
+	childExpr(fn, &a.Cond)
 	childStmt(fn, &a.Body)
+	for i := range a.Inc {
+		childExpr(fn, &a.Inc[i])
+	}
 }
 
 type For struct {

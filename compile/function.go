@@ -364,9 +364,7 @@ func (p *Parser) forIn() *ast.ForIn {
 		p.Match(tok.RParen)
 	}
 	body := p.statement()
-	astrepr := &ast.ForIn{Var: ast.Ident{Name: id, Pos: pos}, E: expr, Body: body}
-fmt.Println(astrepr.String())
-	return astrepr
+	return &ast.ForIn{Var: ast.Ident{Name: id, Pos: pos}, E: expr, Body: body}
 }
 
 func (p *Parser) forSlice() *ast.ForSlice {
@@ -388,8 +386,11 @@ fmt.Println(p.String())
 fmt.Println(p.String())
 	p.Match(tok.Number) 	// consume "10" (upper bound)
 fmt.Println(p.String())
+	body := p.statement() 	// consume within "{ ... }"
 
-	return &ast.ForSlice{}
+	astrepr := &ast.ForSlice{ Body: body}
+fmt.Println(astrepr.String())
+	return astrepr
 }
 
 func (p *Parser) forClassic() *ast.For {
@@ -404,7 +405,9 @@ func (p *Parser) forClassic() *ast.For {
 	inc := p.optExprList(tok.RParen)
 	p.Match(tok.RParen)
 	body := p.statement()
-	return &ast.For{Init: init, Cond: cond, Inc: inc, Body: body}
+	astrepr := &ast.For{Init: init, Cond: cond, Inc: inc, Body: body}
+fmt.Println(astrepr.String())
+	return astrepr
 }
 
 func (p *Parser) optExprList(after tok.Token) []ast.Expr {
