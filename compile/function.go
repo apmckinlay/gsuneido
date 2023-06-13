@@ -320,7 +320,6 @@ func (p *Parser) forStmt() ast.Statement {
 	forSlice := p.isForSlice()
 	p.Match(tok.For)
 	if forSlice {
-		p.Match(tok.For)
 		return p.forSlice()
 	} else if forIn {
 		return p.forIn()
@@ -365,7 +364,9 @@ func (p *Parser) forIn() *ast.ForIn {
 		p.Match(tok.RParen)
 	}
 	body := p.statement()
-	return &ast.ForIn{Var: ast.Ident{Name: id, Pos: pos}, E: expr, Body: body}
+	astrepr := &ast.ForIn{Var: ast.Ident{Name: id, Pos: pos}, E: expr, Body: body}
+fmt.Println(astrepr.String())
+	return astrepr
 }
 
 func (p *Parser) forSlice() *ast.ForSlice {
@@ -373,15 +374,19 @@ func (p *Parser) forSlice() *ast.ForSlice {
 	// for i in 0..=10 { ... }
 	// for i in 0..<10 { ... }
 fmt.Println(p.String())
-	p.MatchIf(tok.LParen)
-	p.MatchIdent()
-	p.Match(tok.In)
+	p.MatchIf(tok.LParen) 	// consume "(" if present
+	p.MatchIdent() 			// consume whitespace
+	p.Match(tok.In) 		// consume "in"
 fmt.Println(p.String())
-	expr := p.exprExpecting(false)
-fmt.Println(p.String(), expr)
-	stmt := p.statements()
-fmt.Println(p.String(), stmt)
-	p.Match(tok.RangeLen)
+	p.Match(tok.Number) 	// consume "0" (lower bound)
+fmt.Println(p.String())
+	p.Match(tok.RangeTo) 	// consume ".."
+fmt.Println(p.String())
+	p.MatchIf(tok.Eq) 		// consume "=" if present
+fmt.Println(p.String())
+	p.MatchIf(tok.Lt) 		// consume "<" if present
+fmt.Println(p.String())
+	p.Match(tok.Number) 	// consume "10" (upper bound)
 fmt.Println(p.String())
 
 	return &ast.ForSlice{}
