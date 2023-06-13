@@ -371,24 +371,29 @@ func (p *Parser) forSlice() *ast.ForSlice {
 	// match this for loop structure:
 	// for i in 0..=10 { ... }
 	// for i in 0..<10 { ... }
-fmt.Println(p.String())
 	p.MatchIf(tok.LParen) 	// consume "(" if present
-	p.MatchIdent() 			// consume whitespace
+	ident_var := ast.Ident{Name: p.MatchIdent(), Pos: p.Pos}
 	p.Match(tok.In) 		// consume "in"
-fmt.Println(p.String())
-	p.Match(tok.Number) 	// consume "0" (lower bound)
-fmt.Println(p.String())
-	p.Match(tok.RangeTo) 	// consume ".."
-fmt.Println(p.String())
-	p.MatchIf(tok.Eq) 		// consume "=" if present
-fmt.Println(p.String())
-	p.MatchIf(tok.Lt) 		// consume "<" if present
-fmt.Println(p.String())
-	p.Match(tok.Number) 	// consume "10" (upper bound)
-fmt.Println(p.String())
-	body := p.statement() 	// consume within "{ ... }"
 
-	astrepr := &ast.ForSlice{ Body: body}
+	// Init
+	// p.Match(tok.Number) 	// consume "0" (lower bound)
+	init := p.optExprList(tok.RangeTo)
+	p.Match(tok.RangeTo) 	// consume ".."
+
+	p.MatchIf(tok.Eq) 		// consume "=" if present
+	p.MatchIf(tok.Lt) 		// consume "<" if present
+
+
+	// p.Match(tok.Number) 	// consume "10" (upper bound)
+	cond := p.optExprList(tok.Whitespace)
+	body := p.statement() 	// consume within "{ ... }"
+	inc := []ast.Expr{&ast.Unary{Tok: tok.Inc, E: &ident_var}}
+
+	astrepr := &ast.ForSlice{ Init: init, Cond: cond[0], Inc: inc, Body: body }
+fmt.Println("forSlice Init", astrepr.Init)
+fmt.Println("forSlice Cond", astrepr.Cond)
+fmt.Println("forSlice Inc", astrepr.Inc)
+fmt.Println("forSlice Body", astrepr.Body)
 fmt.Println(astrepr.String())
 	return astrepr
 }
@@ -406,6 +411,10 @@ func (p *Parser) forClassic() *ast.For {
 	p.Match(tok.RParen)
 	body := p.statement()
 	astrepr := &ast.For{Init: init, Cond: cond, Inc: inc, Body: body}
+fmt.Println("Init", astrepr.Init)
+fmt.Println("Cond", astrepr.Cond)
+fmt.Println("Inc", astrepr.Inc)
+fmt.Println("Body", astrepr.Body)
 fmt.Println(astrepr.String())
 	return astrepr
 }
