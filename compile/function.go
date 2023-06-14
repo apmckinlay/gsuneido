@@ -378,18 +378,30 @@ func (p *Parser) forSlice() *ast.ForSlice {
 	// Init
 	// p.Match(tok.Number) 	// consume "0" (lower bound)
 	init := p.optExprList(tok.RangeTo)
+	// init_ast := &ast.Binary{Tok: tok.Eq, Lhs: &ident_var, Rhs: init[0],}
+	// make init_ast which is of type ast.Binary, make it of type
+	// []ast.Expr
+	init_ast := []ast.Expr{&ast.Binary{Tok: tok.Eq, Lhs: &ident_var, Rhs: init[0],}}
+
 	p.Match(tok.RangeTo) 	// consume ".."
 
-	p.MatchIf(tok.Eq) 		// consume "=" if present
 	p.MatchIf(tok.Lt) 		// consume "<" if present
-
 
 	// p.Match(tok.Number) 	// consume "10" (upper bound)
 	cond := p.optExprList(tok.Whitespace)
+
+	var cond_ast ast.Expr
+	if p.MatchIf(tok.Eq) {  // consume "=" if present
+		cond_ast = &ast.Binary{Tok: tok.Eq, Lhs: &ident_var, Rhs: cond[0],}
+	} else if p.MatchIf(tok.Lt) {
+		cond_ast = &ast.Binary{Tok: tok.Lt, Lhs: &ident_var, Rhs: cond[0],}
+	}
+
 	body := p.statement() 	// consume within "{ ... }"
+
 	inc := []ast.Expr{&ast.Unary{Tok: tok.Inc, E: &ident_var}}
 
-	astrepr := &ast.ForSlice{ Init: init, Cond: cond[0], Inc: inc, Body: body }
+	astrepr := &ast.ForSlice{ Init: init_ast, Cond: cond_ast, Inc: inc, Body: body }
 fmt.Println("forSlice Init", astrepr.Init)
 fmt.Println("forSlice Cond", astrepr.Cond)
 fmt.Println("forSlice Inc", astrepr.Inc)
