@@ -4,8 +4,6 @@
 package compile
 
 import (
-	"fmt"
-
 	"github.com/apmckinlay/gsuneido/compile/ast"
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
 	. "github.com/apmckinlay/gsuneido/runtime"
@@ -367,7 +365,7 @@ func (p *Parser) forIn() *ast.ForIn {
 	return &ast.ForIn{Var: ast.Ident{Name: id, Pos: pos}, E: expr, Body: body}
 }
 
-func (p *Parser) forSlice() *ast.ForSlice {
+func (p *Parser) forSlice() *ast.For {
 	// match this for loop structure:
 	// for i in 0..=10 { ... }
 	// for i in 0..<10 { ... }
@@ -375,9 +373,8 @@ func (p *Parser) forSlice() *ast.ForSlice {
 	ident_var := ast.Ident{Name: p.MatchIdent(), Pos: p.Pos}
 	p.Match(tok.In) 		// consume "in"
 
-	// Init
-	// p.Match(tok.Number) 	// consume "0" (lower bound)
 	init := p.optExprList(tok.RangeTo)
+
 	// init_ast := &ast.Binary{Tok: tok.Eq, Lhs: &ident_var, Rhs: init[0],}
 	// make init_ast which is of type ast.Binary, make it of type
 	// []ast.Expr
@@ -385,29 +382,19 @@ func (p *Parser) forSlice() *ast.ForSlice {
 
 	p.Match(tok.RangeTo) 	// consume ".."
 
-	p.MatchIf(tok.Lt) 		// consume "<" if present
-
-	// p.Match(tok.Number) 	// consume "10" (upper bound)
-	cond := p.optExprList(tok.Whitespace)
-
 	var cond_ast ast.Expr
 	if p.MatchIf(tok.Eq) {  // consume "=" if present
-		cond_ast = &ast.Binary{Tok: tok.Eq, Lhs: &ident_var, Rhs: cond[0],}
+		cond := p.optExprList(tok.Whitespace)
+		cond_ast = &ast.Binary{Tok: tok.Lte, Lhs: &ident_var, Rhs: cond[0],}
 	} else if p.MatchIf(tok.Lt) {
+		cond := p.optExprList(tok.Whitespace)
 		cond_ast = &ast.Binary{Tok: tok.Lt, Lhs: &ident_var, Rhs: cond[0],}
 	}
 
 	body := p.statement() 	// consume within "{ ... }"
-
 	inc := []ast.Expr{&ast.Unary{Tok: tok.Inc, E: &ident_var}}
 
-	astrepr := &ast.ForSlice{ Init: init_ast, Cond: cond_ast, Inc: inc, Body: body }
-fmt.Println("forSlice Init", astrepr.Init)
-fmt.Println("forSlice Cond", astrepr.Cond)
-fmt.Println("forSlice Inc", astrepr.Inc)
-fmt.Println("forSlice Body", astrepr.Body)
-fmt.Println(astrepr.String())
-	return astrepr
+	return &ast.For{ Init: init_ast, Cond: cond_ast, Inc: inc, Body: body }
 }
 
 func (p *Parser) forClassic() *ast.For {
@@ -422,13 +409,7 @@ func (p *Parser) forClassic() *ast.For {
 	inc := p.optExprList(tok.RParen)
 	p.Match(tok.RParen)
 	body := p.statement()
-	astrepr := &ast.For{Init: init, Cond: cond, Inc: inc, Body: body}
-fmt.Println("Init", astrepr.Init)
-fmt.Println("Cond", astrepr.Cond)
-fmt.Println("Inc", astrepr.Inc)
-fmt.Println("Body", astrepr.Body)
-fmt.Println(astrepr.String())
-	return astrepr
+	return &ast.For{Init: init, Cond: cond, Inc: inc, Body: body}
 }
 
 func (p *Parser) optExprList(after tok.Token) []ast.Expr {
