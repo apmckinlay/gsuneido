@@ -117,6 +117,7 @@ func createTables() []string {
 		}
 		schema := schema.Schema{Table: table, Columns: cols, Indexes: idxSchema}
 		ts := &meta.Schema{Schema: schema}
+		ts.SetBestKeys(0)
 		ti := &meta.Info{Table: table, Indexes: idxInfo}
 		db.AddNewTable(ts, ti)
 	}
