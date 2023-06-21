@@ -25,6 +25,7 @@ import (
 	"github.com/apmckinlay/gsuneido/util/exit"
 	"github.com/apmckinlay/gsuneido/util/regex"
 	"github.com/apmckinlay/gsuneido/util/system"
+	// sync "github.com/sasha-s/go-deadlock"
 )
 
 var builtDate = "Jan 23 2023 12:34" // set by: go build -ldflags "-X main.builtDate=..."
@@ -57,6 +58,7 @@ func main() {
 	}
 	if mode == "gui" {
 		redirect()
+		// sync.Opts.LogBuf = os.Stderr
 	}
 	if err := system.Service("gSuneido", redirect, exit.RunFuncs); err != nil {
 		Fatal(err)
