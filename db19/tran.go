@@ -500,9 +500,10 @@ func (t *UpdateTran) fkeyDeleteBlock(ts *meta.Schema, i int, key string) {
 }
 
 func (t *UpdateTran) fkeyDeleteExists(fk *schema.Fkey, key string) bool {
-	t.Read(fk.Table, fk.IIndex, key, rangeEnd(key, len(fk.Columns)))
-	idx := t.meta.GetRoInfo(fk.Table).Indexes[fk.IIndex]
-	return idx.PrefixExists(key)
+	iter := index.NewOverIter(fk.Table, fk.IIndex)
+	iter.Range(index.Range{Org: key, End: rangeEnd(key, len(fk.Columns))})
+	iter.Next(t)
+	return !iter.Eof()
 }
 
 // rangeEnd returns the end of the range for a key.

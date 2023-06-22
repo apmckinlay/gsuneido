@@ -41,11 +41,6 @@ func IsDigit(c byte) bool {
 	return '0' <= c && c <= '9'
 }
 
-// IsDigitOrUnderscore returns whether an ASCII character is a digit or underscore
-func IsDigitOrUnderscore(c byte) bool {
-	return IsDigit(c) || c == '_'
-}
-
 // IsSpace returns whether an ASCII character is white space
 func IsSpace(c byte) bool {
 	switch c {

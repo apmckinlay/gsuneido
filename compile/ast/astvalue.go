@@ -596,7 +596,7 @@ func (SuAstNode) Type() types.Type {
 	return types.AstNode
 }
 
-func (a SuAstNode) Equal(any) bool {
+func (SuAstNode) Equal(any) bool {
 	return false
 }
 

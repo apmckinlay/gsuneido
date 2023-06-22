@@ -59,6 +59,9 @@ func (aa *actionAspects) Unary(token tok.Token, expr Expr) Expr {
 	if token.IsIncDec() {
 		panic("increment/decrement operators are not allowed")
 	}
+	if token == tok.LParen {
+		return expr
+	}
 	return aa.cgAspects.Unary(token, expr)
 }
 
