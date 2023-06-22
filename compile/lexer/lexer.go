@@ -383,12 +383,16 @@ func (lxr *Lexer) number(start int) Item {
 		lxr.matchWhile(isDigitOrUnderscore)
 		if lxr.match('.') {
 <<<<<<< HEAD
+<<<<<<< HEAD
 			lxr.matchWhile(IsDigit)
 		} else if lxr.match('_') {
 			lxr.matchWhile(IsDigitOrUnderscore)
 =======
 			lxr.matchWhile(isDigitOrUnderscore)
 >>>>>>> 8b511b96907b4471efca1b80a29535b2dc33b845
+=======
+			lxr.matchWhile(isDigitOrUnderscore)
+>>>>>>> 4dae755142b0d41c79324c27ce201ded2c1a48ca
 		}
 		exp := lxr.si
 		if lxr.matchOneOf("eE") {

@@ -22,6 +22,7 @@ func Number(th *Thread, args []Value) Value {
 			return Zero
 		}
 <<<<<<< HEAD
+<<<<<<< HEAD
 		if strings.IndexByte(s, ',') >= 0 {
 			s = strings.ReplaceAll(s, ",", "")
 		}
@@ -32,6 +33,10 @@ func Number(th *Thread, args []Value) Value {
 		s = strings.ReplaceAll(s, ",", "")
         s = strings.ReplaceAll(s, "_", "")
 >>>>>>> 8b511b96907b4471efca1b80a29535b2dc33b845
+=======
+		s = strings.ReplaceAll(s, ",", "")
+        s = strings.ReplaceAll(s, "_", "")
+>>>>>>> 4dae755142b0d41c79324c27ce201ded2c1a48ca
 		return numFromString(s)
 	}
 	if _, ok := val.(SuDnum); ok {
