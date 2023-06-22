@@ -91,6 +91,8 @@ type Value interface {
 	// At the point where SetConcurrent is called it is still thread contained.
 	// SetConcurrent should be called on any other Value's reachable from this.
 	// Additional calls to SetConcurrent should be ignored.
+	// NOTE: SetConcurrent cannot call abitrary code
+	// because it is called when holding a lock.
 	SetConcurrent()
 }
 

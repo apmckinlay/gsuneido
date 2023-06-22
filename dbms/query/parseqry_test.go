@@ -96,6 +96,10 @@ func TestParseQuery2(t *testing.T) {
 	test("table where a > 1")
 	test("table where a and b and c")
 	test("table where a in (1, 2, 3)")
+	
+	s := "table where (((a > 1)))"
+	q := ParseQuery(s, testTran{}, nil)
+	assert.T(t).This(q.String()).Is("table WHERE a > 1")
 }
 
 func TestParseQueryView(t *testing.T) {

@@ -67,14 +67,6 @@ func TestBtreeBuilder(t *testing.T) {
 		assert.This(bt.Lookup(key)).Is(i)
 		assert.This(bt.Lookup(key + "0")).Is(0) // nonexistent
 	}
-
-	// PrefixExists
-	assert.False(bt.PrefixExists("1"))
-	assert.False(bt.PrefixExists("a"))
-	assert.True(bt.PrefixExists(keyfn(start)))
-	assert.True(bt.PrefixExists(keyfn(limit)))
-	assert.False(bt.PrefixExists("def"))
-	assert.False(bt.PrefixExists("123456789"))
 }
 
 func TestBuilder(t *testing.T) {

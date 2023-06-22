@@ -127,24 +127,6 @@ func (ov *Overlay) Lookup(key string) uint64 {
 	return 0
 }
 
-// PrefixExists returns true if the key exists as a prefix in the overlay keys.
-// This is used for foreign key delete blocking
-// where we have a key and we need to see if it exists in an index
-// with the index having extra fields on the end to make it unique.
-func (ov *Overlay) PrefixExists(key string) bool {
-	if ov.mut != nil {
-		if off := ov.mut.PrefixLookup(key); off != 0 {
-			return off&ixbuf.Delete == 0
-		}
-	}
-	for i := len(ov.layers) - 1; i >= 0; i-- {
-		if off := ov.layers[i].PrefixLookup(key); off != 0 {
-			return off&ixbuf.Delete == 0
-		}
-	}
-	return ov.bt.PrefixExists(key)
-}
-
 func (ov *Overlay) RangeFrac(org, end string) float32 {
 	return ov.bt.RangeFrac(org, end)
 }

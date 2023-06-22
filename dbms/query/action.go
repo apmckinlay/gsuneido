@@ -99,9 +99,6 @@ func (a *updateAction) execute(th *Thread, ut *db19.UpdateTran) int {
 		panic("update: query not updateable")
 	}
 	hdr := q.Header()
-	for _, expr := range a.exprs {
-		expr.CanEvalRaw(hdr.Columns)
-	}
 	tran := MakeSuTran(ut)
 	ctx := ast.Context{Th: th, Tran: tran, Hdr: hdr}
 	n := 0

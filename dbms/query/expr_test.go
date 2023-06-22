@@ -7,7 +7,6 @@ import (
 	"strings"
 	"testing"
 
-	_ "github.com/apmckinlay/gsuneido/builtin"
 	"github.com/apmckinlay/gsuneido/compile/ast"
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
 	"github.com/apmckinlay/gsuneido/options"
@@ -31,7 +30,7 @@ func TestExprEval(t *testing.T) {
 		expr := p.Expression()
 		assert.T(t).This(p.Token).Is(tok.Eof)
 		// fmt.Println(expr)
-		assert.This(expr.CanEvalRaw(hdr.Columns)).Is(raw)
+		assert.This(expr.CanEvalRaw(hdr.Physical())).Is(raw)
 		result := expr.Eval(&ast.Context{Th: th, Row: row, Hdr: hdr})
 		assert.T(t).Msg(src).This(result.String()).Is(expected)
 	}
@@ -61,9 +60,6 @@ func TestExprEval(t *testing.T) {
 	test("x < y or z", "true")
 	test("s $ t", `"foobar"`)
 	test("s is t", "false")
-	test("(s $ t).Size()", "6")
-	test("[a: 123].a", "123")
-	test("Object(s, x, :t)", `#("foo", 4, t: "bar")`)
 	test("t[1::1]", "'a'")
 	test("z > 0 and z < 10", "false")
 	test("z >= '' and z < 'z'", "true")
