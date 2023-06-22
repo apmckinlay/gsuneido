@@ -42,21 +42,6 @@ func TestLexer(t *testing.T) {
 	first("1_000", "1000", tok.Number)
 	first("1_000_000", "1000000", tok.Number)
 	first("123_456_789", "123456789", tok.Number)
-<<<<<<< HEAD
-<<<<<<< HEAD
-=======
-=======
->>>>>>> 4dae755142b0d41c79324c27ce201ded2c1a48ca
-	first("1_2.3", "12.3", tok.Number)
-	first("1_2.3_4", "12.34", tok.Number)
-	first("12.34_5", "12.345", tok.Number)
-	first("9_", "9", tok.Number)
-	first("9._2", "9.2", tok.Number)
-	first("9.3_", "9.3", tok.Number)
-<<<<<<< HEAD
->>>>>>> 8b511b96907b4471efca1b80a29535b2dc33b845
-=======
->>>>>>> 4dae755142b0d41c79324c27ce201ded2c1a48ca
 	first("'hello'", "hello", tok.String)
 	first("'hello", "hello", tok.String)
 	first("`hello`", "hello", tok.String)
