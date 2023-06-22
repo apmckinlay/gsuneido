@@ -321,7 +321,7 @@ func (w *Where) Transform() Query {
 		src2 := NewWhere(q.source2, w.project(q.source2), w.t)
 		return NewUnion(src1, src2).Transform()
 	case *Times:
-		// split where over product
+		// split where over times
 		return w.split(q, func(src1, src2 Query) Query {
 			return NewTimes(src1, src2)
 		})
@@ -536,13 +536,13 @@ func (w *Where) optInit() {
 
 // extractCompares finds sub-expressions like <field> <op> <constant>
 func (w *Where) extractCompares() []cmpExpr {
-	cols := w.source.Header().Physical()
+	flds := w.source.Header().Physical()
 	cmps := make([]cmpExpr, 0, 4)
 	for _, expr := range w.expr.Exprs {
 		n := len(cmps)
-		cmps = w.binaryCompare(expr, cols, cmps)
-		cmps = w.inRange(expr, cols, cmps)
-		cmps = w.typeToRange(expr, cols, cmps)
+		cmps = w.binaryCompare(expr, flds, cmps)
+		cmps = w.inRange(expr, flds, cmps)
+		cmps = w.typeToRange(expr, cmps)
 		if len(cmps) == n {
 			w.exprMore = true // expr not used by cmps
 		}
@@ -551,8 +551,8 @@ func (w *Where) extractCompares() []cmpExpr {
 	return cmps
 }
 
-func (*Where) inRange(expr ast.Expr, cols []string, cmps []cmpExpr) []cmpExpr {
-	if r, ok := expr.(*ast.InRange); ok && r.CanEvalRaw(cols) {
+func (*Where) inRange(expr ast.Expr, flds []string, cmps []cmpExpr) []cmpExpr {
+	if r, ok := expr.(*ast.InRange); ok && r.CanEvalRaw(flds) {
 		name := r.E.(*ast.Ident).Name
 		return append(cmps,
 			cmpExpr{col: name, op: r.OrgTok, val: r.Org.(*ast.Constant).Packed},
@@ -561,8 +561,8 @@ func (*Where) inRange(expr ast.Expr, cols []string, cmps []cmpExpr) []cmpExpr {
 	return cmps
 }
 
-func (*Where) binaryCompare(expr ast.Expr, cols []string, cmps []cmpExpr) []cmpExpr {
-	if expr.CanEvalRaw(cols) {
+func (*Where) binaryCompare(expr ast.Expr, flds []string, cmps []cmpExpr) []cmpExpr {
+	if expr.CanEvalRaw(flds) {
 		if bin, ok := expr.(*ast.Binary); ok {
 			op := bin.Tok
 			if op == tok.Isnt && bin.Rhs.(*ast.Constant).Packed == "" {
@@ -587,7 +587,7 @@ func (*Where) binaryCompare(expr ast.Expr, cols []string, cmps []cmpExpr) []cmpE
 	return cmps
 }
 
-func (*Where) typeToRange(expr ast.Expr, cols []string, cmps []cmpExpr) []cmpExpr {
+func (*Where) typeToRange(expr ast.Expr, cmps []cmpExpr) []cmpExpr {
 	if call, ok := expr.(*ast.Call); ok {
 		if fn, ok := call.Fn.(*ast.Ident); ok {
 			if len(call.Args) == 1 {

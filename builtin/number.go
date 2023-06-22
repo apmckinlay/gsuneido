@@ -21,12 +21,17 @@ func Number(th *Thread, args []Value) Value {
 		if s == "" {
 			return Zero
 		}
+<<<<<<< HEAD
 		if strings.IndexByte(s, ',') >= 0 {
 			s = strings.ReplaceAll(s, ",", "")
 		}
         if strings.IndexByte(s, '_') >= 0 {
             s = strings.ReplaceAll(s, "_", "")
         }
+=======
+		s = strings.ReplaceAll(s, ",", "")
+        s = strings.ReplaceAll(s, "_", "")
+>>>>>>> 8b511b96907b4471efca1b80a29535b2dc33b845
 		return numFromString(s)
 	}
 	if _, ok := val.(SuDnum); ok {

@@ -88,38 +88,6 @@ func TestMergeAndSave(*testing.T) {
 	d.CheckIter(bt.Iterator())
 }
 
-func TestBtreePrefixExists(*testing.T) {
-	defer func(mns int) { MaxNodeSize = mns }(MaxNodeSize)
-	MaxNodeSize = 200
-	key := func(i int) string {
-		s := "1"
-		if i >= 16 {
-			s = "2"
-		}
-		s += "\x00\x00" + fmt.Sprintf("%02d", i)
-		return s
-	}
-	GetLeafKey = func(_ *stor.Stor, _ *ixkey.Spec, i uint64) string {
-		return key(int(i))
-	}
-	b := Builder(stor.HeapStor(8192))
-	for i := 0; i < 22; i++ {
-		assert.That(b.Add(key(i), uint64(i)))
-	}
-	bt := b.Finish()
-
-	ib := &ixbuf.T{}
-	ib.Delete(key(16), 16)
-	bt = bt.MergeAndSave(ib.Iter())
-	// bt.Print()
-	// should be like:
-	// . "1|15"
-	// 7: 0 2|17
-	// . "2|17"
-
-	assert.That(bt.PrefixExists("2"))
-}
-
 //-------------------------------------------------------------------
 
 //lint:ignore U1000 for debugging

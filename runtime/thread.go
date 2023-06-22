@@ -49,6 +49,7 @@ type Thread struct {
 	// Suneido is a per-thread SuneidoObject that overrides the global one
 	Suneido *SuneidoObject
 
+	// subThreadOf is used for sessions
 	subThreadOf *Thread
 
 	// blockReturnFrame is the parent frame of the block that is returning

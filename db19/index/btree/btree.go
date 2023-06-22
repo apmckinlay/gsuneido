@@ -103,13 +103,6 @@ func (bt *btree) Lookup(key string) uint64 {
 	return off
 }
 
-func (bt *btree) PrefixExists(key string) bool {
-	iter := bt.Iterator()
-	iter.Range(Range{Org: key, End: key + ixkey.Sep + ixkey.Max})
-	iter.Next()
-	return !iter.Eof()
-}
-
 // putNode stores the node
 func (nd node) putNode(st *stor.Stor) uint64 {
 	n := len(nd)

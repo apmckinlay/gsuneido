@@ -372,15 +372,23 @@ func digit(c byte, radix int) int {
 	return -1
 }
 
+func isDigitOrUnderscore(c byte) bool {
+	return IsDigit(c) || c == '_'
+}
+
 func (lxr *Lexer) number(start int) Item {
 	if lxr.src[start] == '0' && lxr.matchOneOf("xX") {
 		lxr.matchWhile(IsHexDigit)
 	} else {
-		lxr.matchWhile(IsDigit)
+		lxr.matchWhile(isDigitOrUnderscore)
 		if lxr.match('.') {
+<<<<<<< HEAD
 			lxr.matchWhile(IsDigit)
 		} else if lxr.match('_') {
 			lxr.matchWhile(IsDigitOrUnderscore)
+=======
+			lxr.matchWhile(isDigitOrUnderscore)
+>>>>>>> 8b511b96907b4471efca1b80a29535b2dc33b845
 		}
 		exp := lxr.si
 		if lxr.matchOneOf("eE") {
