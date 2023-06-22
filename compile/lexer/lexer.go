@@ -372,13 +372,17 @@ func digit(c byte, radix int) int {
 	return -1
 }
 
+func isDigitOrUnderscore(c byte) bool {
+	return IsDigit(c) || c == '_'
+}
+
 func (lxr *Lexer) number(start int) Item {
 	if lxr.src[start] == '0' && lxr.matchOneOf("xX") {
 		lxr.matchWhile(IsHexDigit)
 	} else {
-		lxr.matchWhile(IsDigit)
+		lxr.matchWhile(isDigitOrUnderscore)
 		if lxr.match('.') {
-			lxr.matchWhile(IsDigit)
+			lxr.matchWhile(isDigitOrUnderscore)
 		}
 		exp := lxr.si
 		if lxr.matchOneOf("eE") {
@@ -392,7 +396,8 @@ func (lxr *Lexer) number(start int) Item {
 			lxr.si-- // don't absorb trailing dot
 		}
 	}
-	return it(tok.Number, start, lxr.src[start:lxr.si])
+	numStr := strings.ReplaceAll(lxr.src[start:lxr.si], "_", "")
+	return it(tok.Number, start, numStr)
 }
 
 func (lxr *Lexer) nonWhiteRemaining() bool {
