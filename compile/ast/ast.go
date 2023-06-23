@@ -791,55 +791,20 @@ func (a *ForIn) Children(fn func(Node) Node) {
 	childStmt(fn, &a.Body)
 }
 
-type ForSlice struct {
-	Cond Expr
-	Body Statement
-	Init []Expr
-	Inc  []Expr
-	stmtNodeT
-}
-
-func (a *ForSlice) String() string {
-	s := "For("
-	sep := ""
-	for _, e := range a.Init {
-		s += sep + e.String()
-		sep = ","
-	}
-	s += "; "
-	if a.Cond != nil {
-		s += a.Cond.String()
-	}
-	s += "; "
-	sep = ""
-	for _, e := range a.Inc {
-		s += sep + e.String()
-		sep = ","
-	}
-	return s + "\n" + a.Body.String() + ")"
-}
-
-func (a *ForSlice) Children(fn func(Node) Node) {
-	for i := range a.Init {
-		childExpr(fn, &a.Init[i])
-	}
-	childExpr(fn, &a.Cond)
-	childStmt(fn, &a.Body)
-	for i := range a.Inc {
-		childExpr(fn, &a.Inc[i])
-	}
-}
-
 type For struct {
-	Cond Expr
-	Body Statement
-	Init []Expr
-	Inc  []Expr
+	slice bool
+	Cond  Expr
+	Body  Statement
+	Init  []Expr
+	Inc   []Expr
 	stmtNodeT
 }
 
 func (a *For) String() string {
 	s := "For("
+	if a.slice {
+		s = "ForSlice("
+	}
 	sep := ""
 	for _, e := range a.Init {
 		s += sep + e.String()
