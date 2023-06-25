@@ -394,7 +394,7 @@ func (p *Parser) forSlice() *ast.For {
 	body := p.statement() 	// consume within "{ ... }"
 	inc := []ast.Expr{&ast.Unary{Tok: tok.Inc, E: &ident_var}}
 
-	return &ast.For{ Init: init_ast, Cond: cond_ast, Inc: inc, Body: body }
+	return &ast.For{ Slice: true, Init: init_ast, Cond: cond_ast, Inc: inc, Body: body }
 }
 
 func (p *Parser) forClassic() *ast.For {
@@ -409,7 +409,7 @@ func (p *Parser) forClassic() *ast.For {
 	inc := p.optExprList(tok.RParen)
 	p.Match(tok.RParen)
 	body := p.statement()
-	return &ast.For{Init: init, Cond: cond, Inc: inc, Body: body}
+	return &ast.For{Slice: false, Init: init, Cond: cond, Inc: inc, Body: body}
 }
 
 func (p *Parser) optExprList(after tok.Token) []ast.Expr {

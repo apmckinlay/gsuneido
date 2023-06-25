@@ -792,7 +792,7 @@ func (a *ForIn) Children(fn func(Node) Node) {
 }
 
 type For struct {
-	slice bool
+	Slice bool
 	Cond  Expr
 	Body  Statement
 	Init  []Expr
@@ -802,7 +802,7 @@ type For struct {
 
 func (a *For) String() string {
 	s := "For("
-	if a.slice {
+	if a.Slice {
 		s = "ForSlice("
 	}
 	sep := ""

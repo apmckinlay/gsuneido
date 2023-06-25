@@ -309,10 +309,10 @@ func TestParseStatements(t *testing.T) {
 		"For(Binary(Eq i 0); Binary(Lt i 9); Unary(Inc i) \n stmt)")
 
 	// for-slice
-	test("for x in 0..<10 { stmt }", "For(Binary(Eq x 0); Binary(Lt x 10); Unary(Inc x) \n stmt)")
-	test("for x in 0..=10 { stmt }", "For(Binary(Eq x 0); Binary(Lte x 10); Unary(Inc x) \n stmt)")
-	test("for x in 0..<10 stmt", "For(Binary(Eq x 0); Binary(Lt x 10); Unary(Inc x) \n stmt)")
-	test("for x in 0..=10 stmt", "For(Binary(Eq x 0); Binary(Lte x 10); Unary(Inc x) \n stmt)")
+	test("for x in 0..<10 { stmt }", "ForSlice(Binary(Eq x 0); Binary(Lt x 10); Unary(Inc x) \n stmt)")
+	test("for x in 0..=10 { stmt }", "ForSlice(Binary(Eq x 0); Binary(Lte x 10); Unary(Inc x) \n stmt)")
+	test("for x in 0..<10 stmt", "ForSlice(Binary(Eq x 0); Binary(Lt x 10); Unary(Inc x) \n stmt)")
+	test("for x in 0..=10 stmt", "ForSlice(Binary(Eq x 0); Binary(Lte x 10); Unary(Inc x) \n stmt)")
 
 	// try-catch
 	test("try stmt", "Try(stmt)")
