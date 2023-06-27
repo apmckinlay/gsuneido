@@ -31,6 +31,7 @@ import (
 // - SuIter - not directly accessible, but returned from e.g. object.Iter
 type Value interface {
 	// String returns a human readable string i.e. Suneido Display
+	// Note: strings will have quotes and be escaped
 	String() string
 
 	// AsStr converts SuBool, SuInt, SuDnum, SuStr, SuConcat, SuExcept to string
