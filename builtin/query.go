@@ -105,6 +105,7 @@ func query_Next(th *Thread, this Value, _ []Value) Value {
 }
 
 var _ = method(query_NewRecord, "(@args)") // deprecated
+
 func query_NewRecord(_ Value, arg Value) Value {
 	return SuRecordFromObject(arg.(*SuObject))
 }

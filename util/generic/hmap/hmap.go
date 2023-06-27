@@ -156,13 +156,13 @@ func (h *Hmap[K, V, H]) keepInRange(index int) int {
 	return index & (h.cap() - 1)
 }
 
-// Get returns the value for the Val or nil if not found
+// Get returns the value for the key or nil if not found
 func (h *Hmap[K, V, H]) Get(key K) V {
 	_, x, _ := h.Get2(key)
 	return x
 }
 
-// Get returns the value for the Val or nil if not found
+// Get returns the value for the key or nil if not found
 func (h *Hmap[K, V, H]) Has(key K) bool {
 	_, _, ok := h.Get2(key)
 	return ok
