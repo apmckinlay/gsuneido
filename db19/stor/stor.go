@@ -31,6 +31,8 @@ type Offset = uint64
 type storage interface {
 	// Get returns the i'th chunk of storage
 	Get(chunk int) []byte
+	// Flush attempts to write changes to disk
+	Flush(chunk []byte)
 	// Close closes the storage (if necessary)
 	Close(size int64, unmap bool)
 }
@@ -79,6 +81,8 @@ func (s *Stor) Alloc(n int) (Offset, []byte) {
 	const maxRetries = 3
 	for i := 0; i < maxRetries; i++ {
 		allocChunk := s.allocChunk.Load()
+		// another thread could Alloc at this point and advance to the next chunk
+		// which will be caught by the endchunk check (and retry)
 		newsize := s.size.Add(uint64(n)) // serializable
 		if newsize >= closedSize {
 			log.Println("Stor: Alloc after Close")
@@ -86,6 +90,9 @@ func (s *Stor) Alloc(n int) (Offset, []byte) {
 		}
 		endChunk := s.offsetToChunk(newsize - 1)
 		offset := newsize - uint64(n)
+		// this check catches two cases:
+		// - allocation straddled a chunk boundary
+		// - another thread bumped us into the next chunk
 		if endChunk == int(allocChunk) {
 			return offset, s.Data(offset)[:n:n]
 		}
@@ -117,7 +124,9 @@ func (s *Stor) extend(allocChunk int64) {
 	// it will loop and realloc, wasting the first increment
 	// but this should be rare and relatively harmless
 	s.allocChunk.Add(1)
-	// after incrementing allocChunk, Alloc will no
+	if allocChunk >= 0 {
+		s.impl.Flush(chunks[allocChunk]) // final flush of PREVIOUS chunk
+	}
 }
 
 // Data returns a byte slice starting at the given offset
@@ -195,6 +204,12 @@ func (s *Stor) Write(off uint64, data []byte) {
 	}
 }
 
+func (s *Stor) Flush() {
+	chunks := s.chunks.Load().([][]byte)
+	allocChunk := s.allocChunk.Load()
+	s.impl.Flush(chunks[allocChunk])
+}
+
 func (s *Stor) Close(unmap bool, callback ...func(uint64)) {
 	var size uint64
 	if _, ok := s.impl.(*heapStor); ok {
@@ -203,6 +218,7 @@ func (s *Stor) Close(unmap bool, callback ...func(uint64)) {
 		size = s.size.Swap(closedSize)
 	}
 	if size < closedSize {
+		s.Flush()
 		for _, f := range callback {
 			f(size)
 		}

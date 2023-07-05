@@ -4,6 +4,7 @@
 package stor
 
 import (
+	"log"
 	"syscall"
 	"unsafe"
 
@@ -49,10 +50,21 @@ func (ms *mmapStor) Get(chunk int) []byte {
 	}
 	syscall.CloseHandle(fm)
 	ms.ptrs = append(ms.ptrs, ptr)
-	return (*[mmapChunkSize]byte)(unsafe.Pointer(ptr))[:]
+	p := (*byte)(unsafe.Pointer(ptr))
+	return unsafe.Slice(p, mmapChunkSize)
 }
 
-func (ms mmapStor) Close(size int64, unmap bool) {
+func (ms *mmapStor) flush(chunk []byte) {
+	ptr := uintptr(unsafe.Pointer(unsafe.SliceData(chunk)))
+	if err := syscall.FlushViewOfFile(ptr, mmapChunkSize); err != nil {
+		log.Println("FlushViewOfFile:", err)
+	}
+	if err := syscall.FlushFileBuffers(syscall.Handle(ms.file.Fd())); err != nil {
+		log.Println("FlushFileBuffers:", err)
+	}
+}
+
+func (ms *mmapStor) close(size int64, unmap bool) {
 	// Things like -load need to unmap in order to close the file
 	// in order to rename it. But for the server we do NOT want to unmap
 	// because then threads get access violations during shutdown.

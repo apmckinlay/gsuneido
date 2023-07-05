@@ -6,12 +6,13 @@
 package stor
 
 import (
+	"log"
 	"syscall"
+
+	"golang.org/x/sys/unix"
 
 	"github.com/apmckinlay/gsuneido/db19/filelock"
 )
-
-// NOTE: no provision for unmapping (same as Java)
 
 // Get returns a memory mapped portion of a file.
 // It panics on error.
@@ -30,7 +31,13 @@ func (ms *mmapStor) Get(chunk int) []byte {
 	return mmap
 }
 
-func (ms *mmapStor) Close(size int64, _ bool) {
+func (ms *mmapStor) flush(chunk []byte) {
+	if err := unix.Msync(chunk, unix.MS_ASYNC); err != nil {
+		log.Println("Msync:", err)
+	}
+}
+
+func (ms *mmapStor) close(size int64, _ bool) {
 	// could Munmap but doesn't seem necessary, at least on Mac
 	ms.file.Truncate(size)
 	filelock.Unlock(ms.file)
