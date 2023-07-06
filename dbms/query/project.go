@@ -401,7 +401,6 @@ func (p *Project) optimize(mode Mode, index []string, frac float64) (Cost, Cost,
 		return fixcost, varcost, approach
 	}
 	seq := bestGrouped(p.source, mode, index, frac, p.columns)
-	//FIXME technically project-map should only be allowed in ReadMode
 	fixcostMap, varcostMap := p.mapCost(mode, index, frac)
 	if fixcostMap+varcostMap < seq.cost() {
 		return fixcostMap, varcostMap,

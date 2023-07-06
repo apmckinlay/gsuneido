@@ -57,7 +57,7 @@ func (ti *TempIndex) stringOp() string {
 }
 
 func (*TempIndex) Indexes() [][]string {
-    panic(assert.ShouldNotReachHere())
+	panic(assert.ShouldNotReachHere())
 }
 
 func (ti *TempIndex) Transform() Query {
