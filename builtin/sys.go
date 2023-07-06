@@ -15,6 +15,14 @@ import (
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
+var sysMem = systemMemory() // cache
+
+var _ = builtin(SystemMemory, "()")
+
+func SystemMemory() Value {
+	return Int64Val(int64(sysMem))
+}
+
 var _ = builtin(MemoryArena, "()")
 
 func MemoryArena() Value {
