@@ -4,15 +4,12 @@
 package query
 
 import (
-	"fmt"
 	"log"
 	"strings"
-	"sync/atomic"
 
 	"github.com/apmckinlay/gsuneido/compile/ast"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util/exit"
 	"github.com/apmckinlay/gsuneido/util/generic/hmap"
 	"github.com/apmckinlay/gsuneido/util/generic/set"
 	"github.com/apmckinlay/gsuneido/util/generic/slc"
@@ -448,26 +445,13 @@ func (p *Project) Rewind() {
 	p.source.Rewind()
 }
 
-var projIn atomic.Uint32
-var projOut atomic.Uint32
-
-func init() {
-	exit.Add(func() {
-		if projOut.Load() > 0 {
-			fmt.Println("project", (projIn.Load())/projOut.Load())
-		}
-	})
-}
-
 func (p *Project) Get(th *Thread, dir Dir) Row {
 	switch p.strategy {
 	case projCopy:
 		return p.source.Get(th, dir)
 	case projSeq:
-		projOut.Add(1)
 		return p.getSeq(th, dir)
 	case projMap:
-		projOut.Add(1)
 		return p.getMap(th, dir)
 	}
 	panic("should not reach here")
@@ -478,7 +462,6 @@ func (p *Project) getSeq(th *Thread, dir Dir) Row {
 		// output the first of each group
 		// i.e. skip over rows the same as previous output
 		for {
-			projIn.Add(1)
 			row := p.source.Get(th, dir)
 			if row == nil {
 				return nil
@@ -495,7 +478,6 @@ func (p *Project) getSeq(th *Thread, dir Dir) Row {
 		// i.e. output when next record is different
 		// (to get the same records as NEXT)
 		if p.rewound {
-			projIn.Add(1)
 			p.prevRow = p.source.Get(th, dir)
 		}
 		p.rewound = false
@@ -504,7 +486,6 @@ func (p *Project) getSeq(th *Thread, dir Dir) Row {
 				return nil
 			}
 			row := p.prevRow
-			projIn.Add(1)
 			p.prevRow = p.source.Get(th, dir)
 			if p.prevRow == nil ||
 				!p.header.EqualRows(row, p.prevRow, th, p.st) {
@@ -537,7 +518,6 @@ func (p *Project) getMap(th *Thread, dir Dir) Row {
 		}
 	}
 	for {
-		projIn.Add(1)
 		row := p.source.Get(th, dir)
 		if row == nil {
 			break
@@ -580,7 +560,6 @@ func equalCols(x, y Row, hdr *Header, cols []string, th *Thread, st *SuTran) boo
 
 func (p *Project) buildMap(th *Thread) {
 	for {
-		projIn.Add(1)
 		row := p.source.Get(th, Next)
 		if row == nil {
 			break

@@ -8,11 +8,9 @@ import (
 	"log"
 	"sort"
 	"strings"
-	"sync/atomic"
 
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/assert"
-	"github.com/apmckinlay/gsuneido/util/exit"
 	"github.com/apmckinlay/gsuneido/util/generic/hmap"
 	"github.com/apmckinlay/gsuneido/util/generic/ord"
 	"github.com/apmckinlay/gsuneido/util/generic/set"
@@ -299,20 +297,8 @@ func (su *Summarize) Rewind() {
 	su.rewound = true
 }
 
-var sumIn atomic.Uint32
-var sumOut atomic.Uint32
-
-func init() {
-	exit.Add(func() {
-		if sumOut.Load() > 0 {
-			fmt.Println("summarize", sumIn.Load()/sumOut.Load())
-		}
-	})
-}
-
 func (su *Summarize) Get(th *Thread, dir Dir) Row {
 	defer func() { su.rewound = false }()
-	sumOut.Add(1)
 	return su.get(th, su, dir)
 }
 
@@ -335,7 +321,6 @@ func getIdx(th *Thread, su *Summarize, _ Dir) Row {
 	if str.EqualCI(su.ops[0], "min") {
 		dir = Next
 	}
-	sumIn.Add(1)
 	row := su.source.Get(th, dir)
 	if row == nil {
 		return nil
@@ -416,7 +401,6 @@ func (su *Summarize) buildMap(th *Thread) []mapPair {
 	}
 	sumMap := hmap.NewHmapFuncs[rowHash, []sumOp](hfn, eqfn)
 	for {
-		sumIn.Add(1)
 		row := su.source.Get(th, Next)
 		if row == nil {
 			break
@@ -456,7 +440,6 @@ func (t *sumSeqT) getSeq(th *Thread, su *Summarize, dir Dir) Row {
 		t.sums = su.newSums()
 		t.curDir = dir
 		t.curRow = nil
-		sumIn.Add(1)
 		t.nextRow = su.source.Get(th, dir)
 	}
 
@@ -466,7 +449,6 @@ func (t *sumSeqT) getSeq(th *Thread, su *Summarize, dir Dir) Row {
 			su.source.Rewind()
 		}
 		for {
-			sumIn.Add(1)
 			t.nextRow = su.source.Get(th, dir)
 			if t.nextRow == nil || !su.sameBy(th, su.st, t.curRow, t.nextRow) {
 				break
@@ -484,7 +466,6 @@ func (t *sumSeqT) getSeq(th *Thread, su *Summarize, dir Dir) Row {
 	}
 	for {
 		su.addToSums(t.sums, t.nextRow, th, su.st)
-		sumIn.Add(1)
 		t.nextRow = su.source.Get(th, dir)
 		if t.nextRow == nil || !su.sameBy(th, su.st, t.curRow, t.nextRow) {
 			break
