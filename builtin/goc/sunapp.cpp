@@ -138,12 +138,7 @@ HRESULT STDMETHODCALLTYPE CSuneidoAPP::Start(
 	/* [in] */ HANDLE_PTR dwReserved) {
 	USES_CONVERSION;
 	const char* url = W2CA(szUrl);
-	ULONG buflen = strlen(url) + 10; // shouldn't get any bigger?
-	char* buf = new char[buflen];
-	InternetCanonicalizeUrl(url, buf, &buflen, ICU_DECODE | ICU_NO_ENCODE);
-
-	buf_t result = suneidoAPP(buf);
-	delete buf;
+	buf_t result = suneidoAPP((char*) url);
 	str = result.buf;
 	len = result.size;
 	pos = 0;
