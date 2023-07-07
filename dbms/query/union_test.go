@@ -87,3 +87,20 @@ func TestUnion_MergeSwitchDir(t *testing.T) {
 		}
 	}
 }
+
+func TestUnion_removeNonexistentEmpty(t *testing.T) {
+	srccols := []string{"a", "b", "c"}
+	test := func(colsIn, valsIn, colsOut, valsOut []string) {
+		cols, vals := removeNonexistentEmpty(srccols, colsIn, valsIn)
+		assert.This(cols).Is(colsOut)
+		assert.This(vals).Is(valsOut)
+	}
+	test(nil, nil, nil, nil)
+	test([]string{}, []string{}, []string{}, []string{})
+	test([]string{"a", "c", "x"}, []string{"1", "2", "3"},
+		[]string{"a", "c", "x"}, []string{"1", "2", "3"})
+	test([]string{"a", "n", "c", "x"}, []string{"1", "", "2", "3"},
+		[]string{"a", "c", "x"}, []string{"1", "2", "3"})
+	test([]string{"x", "y"}, []string{"", ""},
+		[]string{}, []string{})
+}
