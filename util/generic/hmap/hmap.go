@@ -196,7 +196,7 @@ func (h *Hmap[K, V, H]) Put(key K, val V) {
 	h.getPut(key, val, true)
 }
 
-// GetPut adds an entry if it doesn't exist, returns true if it was inserted.
+// GetPut adds an entry if it doesn't exist, returns true if it already existed.
 // Useful to avoid separate check and add.
 func (h *Hmap[K, V, H]) GetPut(key K, val V) (K, V, bool) {
 	return h.getPut(key, val, false)
