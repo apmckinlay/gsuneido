@@ -20,9 +20,10 @@ func Sequence(th *Thread, args []Value) Value {
 // No locking since not mutable.
 type wrapIter struct {
 	it Value
-	// th is nil when concurrent.
-	// When not concurrent we use the creating thread.
-	th *Thread
+	// When not concurrent we use the creating thread,
+	// when concurrent we use a temporary thread with th.Suneido
+	th         *Thread
+	concurrent bool
 }
 
 func (wi *wrapIter) Next() Value {
@@ -39,26 +40,29 @@ func (wi *wrapIter) Infinite() (result bool) {
 
 func (wi *wrapIter) Dup() Iter {
 	it := wi.call("Dup")
-	return &wrapIter{it: it, th: wi.th}
+	return &wrapIter{it: it, th: wi.th, concurrent: wi.concurrent}
 }
 
 func (wi *wrapIter) SetConcurrent() {
-	wi.th = nil
+	wi.concurrent = true
+	if suneido := wi.th.Suneido.Load(); suneido != nil {
+		suneido.SetConcurrent()
+	}
 	wi.it.SetConcurrent()
 }
 
 func (wi *wrapIter) IsConcurrent() Value {
-	return SuBool(wi.th == nil)
+	return SuBool(wi.concurrent)
 }
 
 func (wi *wrapIter) call(method string) Value {
-	t := wi.th
-	if t == nil {
-		t = &Thread{}
-		t.Name = "*internal*"
-		defer t.Close()
+	th := wi.th
+	if wi.concurrent { // concurrent
+		th = &Thread{Name: "*internal*"}
+		th.Suneido.Store(wi.th.Suneido.Load())
+		defer th.Close()
 	}
-	return t.CallLookup(wi.it, method)
+	return th.CallLookup(wi.it, method)
 }
 
 func (wi *wrapIter) Instantiate() *SuObject {

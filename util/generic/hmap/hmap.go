@@ -156,13 +156,13 @@ func (h *Hmap[K, V, H]) keepInRange(index int) int {
 	return index & (h.cap() - 1)
 }
 
-// Get returns the value for the Val or nil if not found
+// Get returns the value for the key or nil if not found
 func (h *Hmap[K, V, H]) Get(key K) V {
 	_, x, _ := h.Get2(key)
 	return x
 }
 
-// Get returns the value for the Val or nil if not found
+// Get returns the value for the key or nil if not found
 func (h *Hmap[K, V, H]) Has(key K) bool {
 	_, _, ok := h.Get2(key)
 	return ok
@@ -196,7 +196,7 @@ func (h *Hmap[K, V, H]) Put(key K, val V) {
 	h.getPut(key, val, true)
 }
 
-// GetPut adds an entry if it doesn't exist, returns true if it was inserted.
+// GetPut adds an entry if it doesn't exist, returns true if it already existed.
 // Useful to avoid separate check and add.
 func (h *Hmap[K, V, H]) GetPut(key K, val V) (K, V, bool) {
 	return h.getPut(key, val, false)

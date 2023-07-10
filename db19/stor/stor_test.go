@@ -4,9 +4,11 @@
 package stor
 
 import (
+	"fmt"
 	"math/rand"
 	"os"
 	"sync"
+	"sync/atomic"
 	"testing"
 	"time"
 
@@ -158,4 +160,49 @@ func TestSize(*testing.T) {
 			panic(err.Error())
 		}
 	}
+}
+
+func BenchmarkFlush(b *testing.B) {
+	s, err := MmapStor("stor.tmp", Create)
+	if err != nil {
+		panic(err.Error())
+	}
+	s.impl.(*mmapStor).mode = Update // flush doesn't run for Create
+	defer func() {
+		s.Close(true)
+		os.Remove("stor.tmp")
+	}()
+	var flushing atomic.Bool
+	for i := 0; i < b.N; i++ {
+		_, buf := s.Alloc(1)
+		slc.Fill(buf, 123)
+		if flushing.CompareAndSwap(false, true) {
+			go func() {
+				s.Flush()
+				flushing.Store(false)
+			}()
+		}
+	}
+}
+
+func TestFlag(t *testing.T) {
+	if testing.Short() {
+		t.SkipNow()
+	}
+	var flushing atomic.Bool
+	f := func() {
+		if flushing.CompareAndSwap(false, true) {
+			go func() {
+				fmt.Println("Flushing")
+				time.Sleep(time.Millisecond)
+				flushing.Store(false)
+			}()
+		}
+	}
+	f()
+	f()
+	time.Sleep(10 * time.Millisecond)
+	f()
+	f()
+	time.Sleep(10 * time.Millisecond)
 }

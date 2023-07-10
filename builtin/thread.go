@@ -131,7 +131,7 @@ func thread_Profile(th *Thread, args []Value) Value {
 var _ = staticMethod(thread_NewSuneidoGlobal, "()")
 
 func thread_NewSuneidoGlobal(th *Thread, _ []Value) Value {
-	th.Suneido = new(SuneidoObject)
+	th.Suneido.Store(new(SuneidoObject))
 	return nil
 }
 

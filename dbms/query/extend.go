@@ -221,8 +221,8 @@ func (e *Extend) extendRow(th *Thread, row Row) Row {
 			rb.Add(val.(Packable))
 		}
 	}
+	rec := rb.Trim().Build()
 	// filter for select/lookup
-	rec := rb.Build()
 	for i, col := range e.selCols {
 		j := slices.Index(e.cols, col)
 		x := rec.GetRaw(j)

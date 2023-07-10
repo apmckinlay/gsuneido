@@ -46,8 +46,9 @@ type Thread struct {
 	// dbms is the database (client or local) for this Thread
 	dbms IDbms
 
-	// Suneido is a per-thread SuneidoObject that overrides the global one
-	Suneido *SuneidoObject
+	// Suneido is a per-thread SuneidoObject that overrides the global one.
+	// Needs atomic because sequence.go wrapIter may access from other threads.
+	Suneido atomic.Pointer[SuneidoObject]
 
 	// subThreadOf is used for sessions
 	subThreadOf *Thread
@@ -115,9 +116,11 @@ func NewThread(parent *Thread) *Thread {
 	n := nThread.Add(1)
 	name := "Thread-" + strconv.Itoa(int(n))
 	th := &Thread{Num: n, Name: name}
-	if parent != nil && parent.Suneido != nil {
-		parent.Suneido.SetConcurrent()
-		th.Suneido = parent.Suneido
+	if parent != nil {
+		if suneido := parent.Suneido.Load(); suneido != nil {
+			suneido.SetConcurrent()
+			th.Suneido.Store(suneido)
+		}
 	}
 	mts := ""
 	if MainThread != nil {
@@ -173,7 +176,7 @@ func (th *Thread) Reset() {
 	th.Name = ""
 	th.blockReturnFrame = nil
 	th.InHandler = false
-	th.Suneido = nil
+	th.Suneido.Store(nil)
 	th.session.Store("")
 }
 
@@ -326,9 +329,9 @@ func (th *Thread) SessionId(id string) string {
 
 func (th *Thread) RunWithMainSuneido(fn func() Value) Value {
 	defer func(orig *SuneidoObject) {
-		th.Suneido = orig
-	}(th.Suneido)
-	th.Suneido = nil
+		th.Suneido.Store(orig)
+	}(th.Suneido.Load())
+	th.Suneido.Store(nil)
 	return fn()
 }
 

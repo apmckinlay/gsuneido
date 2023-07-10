@@ -8,13 +8,9 @@ package builtin
 import (
 	"encoding/binary"
 	"syscall"
-
-	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
-var _ = builtin(SystemMemory, "()")
-
-func SystemMemory() Value {
+func systemMemory() uint64 {
 	s, err := syscall.Sysctl("hw.memsize")
 	if err != nil {
 		panic(err)
@@ -22,5 +18,5 @@ func SystemMemory() Value {
 	var buf [8]byte
 	copy(buf[:], s)
 	m := binary.LittleEndian.Uint64(buf[:])
-	return Int64Val(int64(m))
+	return m
 }
