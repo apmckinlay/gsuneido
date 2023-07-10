@@ -208,7 +208,7 @@ func (ss *serverSession) request() {
 		if e := recover(); e != nil {
 			LogInternalError(ss.thread, ss.sessionId, e)
 			ss.ResetWrite()
-			ss.PutBool(false).PutStr(fmt.Sprint(e)).EndMsg()
+			ss.PutBool(false).PutStr(errToStr(e)).EndMsg()
 		}
 	}()
 	icmd = ss.GetCmd()
@@ -226,6 +226,15 @@ func (ss *serverSession) request() {
 	if icmd != commands.EndSession {
 		ss.EndMsg()
 	}
+}
+
+func errToStr(e any) string {
+	if t, ok := e.(interface{ ToStr() (string, bool) }); ok {
+		if s, ok := t.ToStr(); ok {
+			return s
+		}
+	}
+	return fmt.Sprint(e)
 }
 
 func (ss *serverSession) error(err string) {

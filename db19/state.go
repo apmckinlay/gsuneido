@@ -131,6 +131,7 @@ func (db *Database) persist(exec execPersist) *DbState {
 		state.Off = state.Write()
 		newState = state
 	})
+	db.Store.Flush()
 	return newState
 }
 

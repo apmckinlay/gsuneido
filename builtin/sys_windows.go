@@ -53,17 +53,15 @@ const nMemoryStatusEx = unsafe.Sizeof(stMemoryStatusEx{})
 
 var globalMemoryStatusEx = kernel32.MustFindProc("GlobalMemoryStatusEx").Addr()
 
-var _ = builtin(SystemMemory, "()")
-
-func SystemMemory() Value {
+func systemMemory() uint64 {
 	buf := make([]byte, nMemoryStatusEx)
 	(*stMemoryStatusEx)(unsafe.Pointer(&buf[0])).dwLength = uint32(nMemoryStatusEx)
 	rtn, _, _ := syscall.SyscallN(globalMemoryStatusEx,
 		uintptr(unsafe.Pointer(&buf[0])))
 	if rtn == 0 {
-		return Zero
+		return 0
 	}
-	return Int64Val(int64((*stMemoryStatusEx)(unsafe.Pointer(&buf[0])).ullTotalPhys))
+	return (*stMemoryStatusEx)(unsafe.Pointer(&buf[0])).ullTotalPhys
 }
 
 var copyFile = kernel32.MustFindProc("CopyFileA").Addr()

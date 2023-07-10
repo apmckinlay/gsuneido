@@ -228,8 +228,10 @@ var gnPrint = Global.Num("Print")
 // Find returns the value for a global number, or nil if not found.
 func (typeGlobal) Find(th *Thread, gnum Gnum) (result Value) {
 	if x, ok := g.builtins[gnum]; ok {
-		if gnum == GnSuneido && th.Suneido != nil {
-			return th.Suneido
+		if gnum == GnSuneido {
+			if suneido := th.Suneido.Load(); suneido != nil {
+				return suneido
+			}
 		}
 		return x // common fast path
 	}
