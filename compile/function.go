@@ -4,6 +4,8 @@
 package compile
 
 import (
+	"fmt"
+
 	"github.com/apmckinlay/gsuneido/compile/ast"
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
 	. "github.com/apmckinlay/gsuneido/runtime"
@@ -378,7 +380,8 @@ func (p *Parser) forSlice() *ast.For {
 	// init_ast := &ast.Binary{Tok: tok.Eq, Lhs: &ident_var, Rhs: init[0],}
 	// make init_ast which is of type ast.Binary, make it of type
 	// []ast.Expr
-	init_ast := []ast.Expr{&ast.Binary{Tok: tok.Eq, Lhs: &ident_var, Rhs: init[0],}}
+	var init_ast []ast.Expr
+	init_ast = []ast.Expr{&ast.Binary{Tok: tok.Eq, Lhs: &ident_var, Rhs: init[0],}}
 
 	p.Match(tok.RangeTo) 	// consume ".."
 
@@ -393,7 +396,7 @@ func (p *Parser) forSlice() *ast.For {
 
 	body := p.statement() 	// consume within "{ ... }"
 	inc := []ast.Expr{&ast.Unary{Tok: tok.Inc, E: &ident_var}}
-
+fmt.Println("ast := ", &ast.For{ Slice: true, Init: init_ast, Cond: cond_ast, Inc: inc, Body: body })
 	return &ast.For{ Slice: true, Init: init_ast, Cond: cond_ast, Inc: inc, Body: body }
 }
 
