@@ -22,6 +22,7 @@ type Project struct {
 	results *mapType
 	st      *SuTran
 	columns []string
+	remove  []string
 	prevRow Row
 	curRow  Row
 	projectApproach
@@ -78,7 +79,9 @@ func NewRemove(src Query, cols []string) *Project {
 	if len(proj) == 0 {
 		panic("remove: can't remove all columns")
 	}
-	return newProject(src, proj)
+	p := newProject(src, proj)
+	p.remove = cols
+	return p
 }
 
 // newProject is common to NewProject and NewRemove
@@ -155,6 +158,17 @@ func (p *Project) stringOp() string {
 		s += "-MAP"
 	}
 	return s + " " + str.Join(",", p.columns)
+}
+
+func (p *Project) format() string {
+	warn := ""
+	if !p.unique {
+		warn = "/*NOT UNIQUE*/ "
+	}
+	if p.remove != nil {
+		return "remove " + warn + str.Join(", ", p.remove)
+	}
+	return "project " + warn + str.Join(", ", p.columns)
 }
 
 func (p *Project) SetTran(t QueryTran) {

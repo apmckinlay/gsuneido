@@ -42,6 +42,10 @@ func (it *Intersect) stringOp() string {
 	return it.Compatible.stringOp("INTERSECT", "")
 }
 
+func (*Intersect) format() string {
+	return "intersect"
+}
+
 func (it *Intersect) getHeader() *Header {
 	hdr := it.source1.Header()
 	cols := set.Intersect(it.source1.Columns(), it.source2.Columns())

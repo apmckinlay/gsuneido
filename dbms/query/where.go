@@ -4,6 +4,7 @@
 package query
 
 import (
+	"fmt"
 	"math"
 	"sort"
 	"strconv"
@@ -112,7 +113,14 @@ func (w *Where) stringOp() string {
 	if len(w.expr.Exprs) > 0 {
 		s += " " + w.expr.Echo()
 	}
+	if w.slow() {
+		s += fmt.Sprintf(" /*SLOW %d->%d*/", w.nIn, w.nOut)
+	}
 	return s
+}
+
+func (w *Where) format() string {
+	return "where " + w.expr.Echo()
 }
 
 // calcFixed sets w.whereFixed and w.fixed and may set w.conflict
@@ -1320,10 +1328,13 @@ func singletonFilter(
 }
 
 func (w *Where) slowQueries() {
-	if w.nIn > 100 && w.nIn > w.nOut*100 && trace.SlowQuery.On() {
+	if w.slow() && trace.SlowQuery.On() {
 		trace.SlowQuery.Println(w.nIn, "->", w.nOut)
-		trace.Println(format(w, 1))
+		trace.Println(strategy(w, 1))
 		w.nIn = 0
 		w.nOut = 0
 	}
+}
+func (w *Where) slow() bool {
+	return w.nIn > 100 && w.nIn > w.nOut*100
 }

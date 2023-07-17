@@ -604,7 +604,7 @@ type History struct {
 }
 
 func (*History) String() string {
-	return "History"
+	return "history"
 }
 
 func (his *History) Transform() Query {

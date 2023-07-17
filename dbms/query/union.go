@@ -77,6 +77,13 @@ func (u *Union) stringOp() string {
 	return u.Compatible.stringOp("UNION", strategy)
 }
 
+func (u *Union) format() string {
+	if u.disjoint == "" {
+		return "union /*NOT DISJOINT*/"
+	}
+	return "union"
+}
+
 func (u *Union) Keys() [][]string {
 	if u.keys == nil {
 		if u.disjoint == "" {

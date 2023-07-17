@@ -13,9 +13,10 @@ import (
 )
 
 type queryParser struct {
-	t        QueryTran
-	sviews   *Sviews
-	viewNest []string
+	t         QueryTran
+	sviews    *Sviews
+	viewNest  []string
+	wrapViews bool
 	compile.Parser
 }
 
@@ -24,12 +25,13 @@ func NewQueryParser(src string, t QueryTran, sv *Sviews) *queryParser {
 }
 
 func ParseQuery(src string, t QueryTran, sv *Sviews) Query {
-	return parseQuery(src, t, sv, nil)
+	return parseQuery(src, t, sv, nil, false)
 }
 
-func parseQuery(src string, t QueryTran, sv *Sviews, viewNest []string) Query {
+func parseQuery(src string, t QueryTran, sv *Sviews, viewNest []string, wrapViews bool) Query {
 	p := NewQueryParser(src, t, sv)
 	p.viewNest = viewNest
+	p.wrapViews = wrapViews
 	result := p.sort()
 	if p.Token != tok.Eof {
 		p.Error("did not parse all input")
@@ -67,7 +69,12 @@ func (p *queryParser) table() Query {
 	table := p.MatchIdent()
 	if !slices.Contains(p.viewNest, table) {
 		if def := p.getView(table); def != "" {
-			return parseQuery(def, p.t, p.sviews, append(p.viewNest, table))
+			q := parseQuery(def, p.t, p.sviews, append(p.viewNest, table),
+				p.wrapViews)
+			if p.wrapViews {
+				q = NewView(table, q)
+			}
+			return q
 		}
 	}
 	return NewTable(p.t, table)

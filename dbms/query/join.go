@@ -140,6 +140,14 @@ func (jn *Join) stringOp() string {
 	return "JOIN" + jn.bystr()
 }
 
+func (jn *Join) format() string {
+	s := "join by" + str.Join("(,)", jn.by)
+	if jn.joinType == n_n {
+		s += " /*MANY TO MANY*/"
+	}
+	return s
+}
+
 func (jb *joinBase) bystr() string {
 	if len(jb.by) == 0 {
 		return ""
@@ -215,7 +223,7 @@ func (jn *Join) optimize(mode Mode, index []string, frac float64) (Cost, Cost, a
 		trace.JoinOpt.Println(mode, index, frac)
 		trace.Println("    fwd", fwd.index, "=", fwd.fixcost, fwd.varcost)
 		trace.Println("    rev", rev.index, "=", rev.fixcost, rev.varcost)
-		trace.Println(format(jn, 1))
+		trace.Println(strategy(jn, 1))
 	}
 	approach := &joinApproach{}
 	if rev.fixcost+rev.varcost < fwd.fixcost+fwd.varcost {
@@ -492,6 +500,14 @@ func (lj *LeftJoin) String() string {
 
 func (lj *LeftJoin) stringOp() string {
 	return "LEFTJOIN" + lj.bystr()
+}
+
+func (lj *LeftJoin) format() string {
+	s := "leftjoin by" + str.Join("(,)", lj.by)
+	if lj.joinType == n_n {
+		s += " /*MANY TO MANY*/"
+	}
+	return s
 }
 
 func (lj *LeftJoin) getKeys() [][]string {

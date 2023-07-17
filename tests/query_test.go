@@ -48,7 +48,7 @@ func TestQuery(t *testing.T) {
 	q, _, _ = Setup(q, ReadMode, tran)
 
 	fmt.Println("----------------")
-	fmt.Println(Format(q))
+	fmt.Println(Strategy(q))
 	// th := &Thread{}
 	// n := 0
 	// for q.Get(th, Next) != nil {
@@ -83,7 +83,7 @@ func TestQuery2(t *testing.T) {
 	q = SetApproach(q, index, frac, tran)
 
 	fmt.Println("----------------")
-	fmt.Println(Format(q))
+	fmt.Println(Strategy(q))
 	th := &Thread{}
 	fmt.Println(q.Get(th, Next))
 }
