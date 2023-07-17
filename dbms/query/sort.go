@@ -59,7 +59,7 @@ func (sort *Sort) Order() []string {
 }
 
 func (*Sort) Indexes() [][]string {
-    panic(assert.ShouldNotReachHere())
+	panic(assert.ShouldNotReachHere())
 }
 
 func (sort *Sort) Transform() Query {

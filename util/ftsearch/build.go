@@ -84,8 +84,8 @@ func (b *Builder) delete(id int, s string, n int) int {
 }
 
 func (b *Builder) backToList() {
-    for _, trm := range b.converted {
-        trm.toList()
+	for _, trm := range b.converted {
+		trm.toList()
 	}
 }
 

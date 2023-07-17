@@ -381,8 +381,8 @@ func (cs *Columns) ensure() {
 type Indexes struct {
 	schema []*meta.Schema
 	schemaTable
-	si     int
-	ci     int
+	si    int
+	ci    int
 	nrows int
 }
 

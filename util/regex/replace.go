@@ -60,7 +60,7 @@ func Replacement(s, rep string, cap *Captures) string {
 			c = rep[i]
 			switch rep[i] {
 			case '0', '1', '2', '3', '4', '5', '6', '7', '8', '9':
-				tr = add(int(c-'0'))
+				tr = add(int(c - '0'))
 			case 'n':
 				buf.WriteByte('\n')
 			case 't':
