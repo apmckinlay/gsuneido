@@ -4,7 +4,6 @@
 package query
 
 import (
-	"fmt"
 	"log"
 
 	"github.com/apmckinlay/gsuneido/db19/index/ixkey"
@@ -310,7 +309,8 @@ type multiIter struct {
 	iter *sortlist.Iter[Row]
 }
 
-const derivedMax = 8 * 1024 * 1024 // ???
+const tempindexWarn = 100_000 // ???
+const derivedWarn = 4_000_000 // derivedWarn is also used by Project
 
 func (ti *TempIndex) multi() rowIter {
 	// sortlist uses a goroutine
@@ -329,27 +329,25 @@ func (ti *TempIndex) multi() rowIter {
 		})
 	nrows := 0
 	derived := 0
+	derivedWarned := false
+	tempindexWarned := false
 	for {
 		row := ti.source.Get(ti.th, Next)
 		if row == nil {
 			break
 		}
 		nrows++
-		for _, dbrec := range row {
-			if dbrec.Off == 0 { // derived record e.g. from extend or summarize
-				derived += len(dbrec.Record)
-			}
+		if !tempindexWarned && nrows > tempindexWarn {
+			tempindexWarned = true
+			log.Printf("WARNING temp index large (> %d)", tempindexWarn)
 		}
-		if derived <= derivedMax {
-			b.Add(row)
+		derived += row.Derived()
+		if !derivedWarned && derived > derivedWarn {
+			derivedWarned = true
+			log.Printf("WARNING temp index derived large (> %d) average %d",
+				derivedWarn, derived/nrows)
 		}
-	}
-	if derived > derivedMax {
-		panic(fmt.Sprintf("temp index: derived too large (%d > %d) nrows %d average %d",
-			derived, derivedMax, nrows, derived/nrows))
-	} else if derived > 2_000_000 {
-		log.Printf("WARNING temp index: derived large %d nrows %d average %d",
-			derived, nrows, derived/nrows)
+		b.Add(row)
 	}
 	lt := func(row Row, key []string) bool {
 		return ti.less2(ti.th, row, key)

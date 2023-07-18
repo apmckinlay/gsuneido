@@ -26,9 +26,12 @@ type Project struct {
 	curRow  Row
 	projectApproach
 	Query1
-	unique  bool
-	rewound bool
-	indexed bool
+	unique        bool
+	rewound       bool
+	indexed       bool
+	warned        bool
+	derivedWarned bool
+	derived       int
 }
 
 type mapType = hmap.Hmap[rowHash, struct{}, hmap.Funcs[rowHash]]
@@ -407,11 +410,11 @@ func (p *Project) optimize(mode Mode, index []string, frac float64) (Cost, Cost,
 		&projectApproach{strategy: projSeq, index: seq.index}
 }
 
-const mapLimit = 16384 // ???
+const mapLimit = 16384 // mapLimit is also used by Summarize
 
 func (p *Project) mapCost(mode Mode, index []string, frac float64) (Cost, Cost) {
 	nrows, _ := p.Nrows()
-	if mode != ReadMode || nrows > mapLimit-mapLimit/3 {
+	if mode != ReadMode || nrows > mapLimit {
 		return impossible, impossible
 	}
 	// assume we're reading Next (normal)
@@ -522,16 +525,8 @@ func (p *Project) getMap(th *Thread, dir Dir) Row {
 		if row == nil {
 			break
 		}
-		rh := rowHash{row: row,
-			hash: hashCols(row, p.source.Header(), p.columns, th, p.st)}
-		k, _, ok := p.results.GetPut(rh, struct{}{})
-		if !ok {
-			if p.results.Size() > mapLimit {
-				log.Panicf("project-map too large (> %d)", mapLimit)
-			}
-			return row
-		}
-		if row.SameAs(k.row) {
+		oldRow, existed := p.addResult(th, row)
+		if !existed || row.SameAs(oldRow) {
 			return row
 		}
 	}
@@ -564,14 +559,32 @@ func (p *Project) buildMap(th *Thread) {
 		if row == nil {
 			break
 		}
-		rh := rowHash{row: row,
-			hash: hashCols(row, p.source.Header(), p.columns, th, p.st)}
-		if !p.results.Has(rh) {
-			p.results.Put(rh, struct{}{})
-		}
+		p.addResult(th, row)
 	}
 	p.source.Rewind()
 	p.indexed = true
+}
+
+// addResult returns the old row and true if it already existed,
+// else the new row and false
+func (p *Project) addResult(th *Thread, row Row) (Row, bool) {
+	rh := rowHash{row: row,
+		hash: hashCols(row, p.source.Header(), p.columns, th, p.st)}
+	k, _, existed := p.results.GetPut(rh, struct{}{})
+	if existed {
+		return k.row, true
+	} else {
+		if !p.warned && p.results.Size() > mapLimit {
+			p.warned = true
+			log.Printf("WARNING project-map large (> %d)", mapLimit)
+		}
+		if !p.derivedWarned && p.derived > derivedWarn {
+			p.derivedWarned = true
+			log.Printf("WARNING project-map derived large (> %d) average %d",
+				derivedWarn, p.derived/p.results.Size())
+		}
+		return row, false
+	}
 }
 
 func (p *Project) Output(th *Thread, rec Record) {

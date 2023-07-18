@@ -5,8 +5,6 @@ package builtin
 
 import (
 	"syscall"
-
-	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
 func systemMemory() uint64 {

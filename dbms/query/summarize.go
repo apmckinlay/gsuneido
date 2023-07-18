@@ -246,7 +246,7 @@ func (su *Summarize) idxCost(mode Mode) (Cost, Cost, any) {
 func (su *Summarize) mapCost(mode Mode, index []string, _ float64) (Cost, Cost, any) {
 	//FIXME technically, map should only be allowed in ReadMode
 	nrows, _ := su.Nrows()
-	if index != nil || nrows > mapLimit-mapLimit/3 {
+	if index != nil || nrows > mapLimit {
 		return impossible, impossible, nil
 	}
 	fixcost, varcost := Optimize(su.source, mode, nil, 1)
@@ -400,6 +400,7 @@ func (su *Summarize) buildMap(th *Thread) []mapPair {
 			equalCols(x.row, y.row, hdr, su.by, th, su.st)
 	}
 	sumMap := hmap.NewHmapFuncs[rowHash, []sumOp](hfn, eqfn)
+	warned := false
 	for {
 		row := su.source.Get(th, Next)
 		if row == nil {
@@ -410,8 +411,10 @@ func (su *Summarize) buildMap(th *Thread) []mapPair {
 		if sums == nil {
 			sums = su.newSums()
 			sumMap.Put(rh, sums)
-			if sumMap.Size() > mapLimit {
-				log.Panicf("summarize-map too large (> %d)", mapLimit)
+			if !warned && sumMap.Size() > mapLimit {
+				// log inside loop in case we run out of memory
+				warned = true
+				log.Printf("WARNING summarize-map large (> %d)", mapLimit)
 			}
 		}
 		su.addToSums(sums, row, th, su.st)
