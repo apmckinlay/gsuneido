@@ -21,15 +21,9 @@ func Number(th *Thread, args []Value) Value {
 		if s == "" {
 			return Zero
 		}
-<<<<<<< HEAD
 	s = strings.ReplaceAll(s, ",", "")
   	s = strings.ReplaceAll(s, "_", "")
 	return numFromString(s)
-=======
-		s = strings.ReplaceAll(s, ",", "")
-		s = strings.ReplaceAll(s, "_", "")
-		return numFromString(s)
->>>>>>> 3f31c5d975e671833591f03d8546cf9f34497776
 	}
 	if _, ok := val.(SuDnum); ok {
 		return val
