@@ -88,11 +88,18 @@ func (dbms *DbmsLocal) Cursor(query string, sv *Sviews) ICursor {
 		sv = &dbms.db.Sviews
 	}
 	tran := dbms.db.NewReadTran()
-	q := qry.ParseQuery(query, tran, sv)
-	q, fixcost, varcost := qry.Setup(q, qry.CursorMode, tran)
+	q, fixcost, varcost := buildQuery(query, tran, sv, qry.CursorMode)
 	trace.Query.Println("cursor", fixcost+varcost, "-", query)
 	return cursorLocal{queryLocal{
 		Query: q, cost: fixcost + varcost, mode: qry.CursorMode}}
+}
+
+func buildQuery(query string, tran qry.QueryTran, sv *Sviews,
+	mode qry.Mode) (qry.Query, int, int) {
+	q := qry.ParseQuery(query, tran, sv)
+	q, fixcost, varcost := qry.Setup(q, mode, tran)
+	qry.Warnings(query, q)
+	return q, fixcost, varcost
 }
 
 func (*DbmsLocal) Cursors() int {
@@ -150,8 +157,7 @@ func (dbms *DbmsLocal) Get(
 
 func get(th *Thread, tran qry.QueryTran, query string, dir Dir,
 	sv *Sviews) (Row, *Header, string) {
-	q := qry.ParseQuery(query, tran, sv)
-	q, fixcost, varcost := qry.Setup(q, qry.ReadMode, tran)
+	q, fixcost, varcost := buildQuery(query, tran, sv, qry.ReadMode)
 	if trace.Query.On() {
 		d := map[Dir]string{Only: "one", Next: "first", Prev: "last"}[dir]
 		trace.Query.Println(d, fixcost+varcost, "-", query)
@@ -355,6 +361,12 @@ func (dbms *DbmsLocal) Unwrap() IDbms {
 	return dbms
 }
 
+func (dbms *DbmsLocal) FormatQuery(query string) string {
+	t := dbms.db.NewReadTran()
+	defer t.Complete()
+	return qry.Format(t, query)
+}
+
 func (dbms *DbmsLocal) Close() {
 	dbms.db.Close()
 }
@@ -404,8 +416,7 @@ func (t ReadTranLocal) Query(query string, sv *Sviews) IQuery {
 	if sv == nil {
 		sv = t.GetSviews()
 	}
-	q := qry.ParseQuery(query, t.ReadTran, sv)
-	q, fixcost, varcost := qry.Setup(q, qry.ReadMode, t.ReadTran)
+	q, fixcost, varcost := buildQuery(query, t.ReadTran, sv, qry.ReadMode)
 	trace.Query.Println(fixcost+varcost, "-", query)
 	return queryLocal{Query: q, cost: fixcost + varcost, mode: qry.ReadMode}
 }
@@ -433,8 +444,7 @@ func (t UpdateTranLocal) Query(query string, sv *Sviews) IQuery {
 	if sv == nil {
 		sv = t.GetSviews()
 	}
-	q := qry.ParseQuery(query, t.UpdateTran, sv)
-	q, fixcost, varcost := qry.Setup(q, qry.UpdateMode, t.UpdateTran)
+	q, fixcost, varcost := buildQuery(query, t.UpdateTran, sv, qry.UpdateMode)
 	trace.Query.Println("update", fixcost+varcost, "-", query)
 	return queryLocal{Query: q, cost: fixcost + varcost, mode: qry.UpdateMode}
 }
@@ -472,7 +482,7 @@ func (q queryLocal) Keys() []string {
 func (q queryLocal) Strategy(formatted bool) string {
 	var strategy string
 	if formatted {
-		strategy = qry.Format(q.Query) + "\n"
+		strategy = qry.Strategy(q.Query) + "\n"
 	} else {
 		strategy = q.String() + " "
 	}

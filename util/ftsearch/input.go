@@ -24,12 +24,12 @@ func (src *input) Next() string {
 	for {
 		// skip non-letter
 		for src.pos < len(src.text) && !ascii.IsLetter(src.text[src.pos]) &&
-		    !ascii.IsDigit(src.text[src.pos]) {
+			!ascii.IsDigit(src.text[src.pos]) {
 			src.pos++
 		}
 		if src.pos >= len(src.text) {
-            return ""
-        }
+			return ""
+		}
 		pos := src.pos
 		if ascii.IsLetter(src.text[src.pos]) {
 			for src.pos < len(src.text) && ascii.IsLetter(src.text[src.pos]) {

@@ -76,6 +76,11 @@ func TestQueryGet(t *testing.T) {
 		t.Helper()
 		tran := sizeTran{db.NewReadTran()}
 		q := ParseQuery(query, tran, nil)
+
+		query2 := format(0, q, 0)
+		q2 := ParseQuery(query2, tran, nil)
+		assert.This(format(0, q2, 0)).Is(query2)
+
 		q, _, _ = Setup(q, ReadMode, tran)
 		qs := strings.ReplaceAll(q.String(), `"`, "'")
 		assert.T(t).This(qs).Is(strategy)
@@ -613,92 +618,90 @@ func TestQueryGet(t *testing.T) {
 
 	// summarize
 	test("customer summarize count",
-		"customer^(id) SUMMARIZE-TBL count = count",
+		"customer^(id) SUMMARIZE-TBL count",
 		`count
 		1000`)
 	test("hist summarize max date",
-		"hist^(date) SUMMARIZE-IDX max_date = max date",
+		"hist^(date) SUMMARIZE-IDX max date",
 		`max_date
 		970103`)
 	test("customer summarize max id",
-		"customer^(id) SUMMARIZE-IDX* max_id = max id",
+		"customer^(id) SUMMARIZE-IDX* max id",
 		`id	name		city		max_id
 		'i'	'intercon'	'saskatoon' 'i'`)
 	test("hist summarize item, total cost sort item",
-		"hist^(date) SUMMARIZE-MAP item, total_cost = total cost TEMPINDEX(item)",
+		"hist^(date) SUMMARIZE-MAP item, total cost TEMPINDEX(item)",
 		`item		total_cost
 		'disk'		300
 		'mouse'		200
 		'pencil'	300`)
 	test("hist summarize item, total cost, max id, average cost sort item",
-		"hist^(date) SUMMARIZE-MAP item, total_cost = total cost, "+
-			"average_cost = average cost, max_id = max id TEMPINDEX(item)",
+		"hist^(date) SUMMARIZE-MAP item, total cost, "+
+			"average cost, max id TEMPINDEX(item)",
 		`item		total_cost	average_cost max_id
         'disk'		300		    150			 'e'
         'mouse'		200		    200			 'c'
         'pencil'	300		    300			 'e'`)
 	test("hist summarize item, total cost sort total_cost, item",
-		"hist^(date) SUMMARIZE-MAP item, total_cost = total cost "+
+		"hist^(date) SUMMARIZE-MAP item, total cost "+
 			"TEMPINDEX(total_cost,item)",
 		`item		total_cost
 		'mouse'		200
 		'disk'		300
 		'pencil'	300`)
 	test("customer summarize max name",
-		"customer^(id) SUMMARIZE-SEQ max_name = max name",
+		"customer^(id) SUMMARIZE-SEQ max name",
 		`max_name
 		'intercon'`)
 	test("hist summarize min cost, average cost, max cost, sum = total cost",
-		"hist^(date) SUMMARIZE-SEQ min_cost = min cost, "+
-			"average_cost = average cost, max_cost = max cost, sum = total cost",
+		"hist^(date) SUMMARIZE-SEQ min cost, "+
+			"average cost, max cost, sum = total cost",
 		`min_cost	average_cost	max_cost	sum
 		100			200				300			800`)
 	test("hist summarize item, total cost, count sort item",
-		"hist^(date) SUMMARIZE-MAP item, count = count, total_cost = total cost"+
-			" TEMPINDEX(item)",
+		"hist^(date) SUMMARIZE-MAP item, count, total cost TEMPINDEX(item)",
 		`item		count	total_cost
 		'disk'		2		300
 		'mouse'		1		200
 		'pencil'	1    	300			`)
 	test("inven summarize max item",
-		"inven^(item) SUMMARIZE-IDX* max_item = max item",
+		"inven^(item) SUMMARIZE-IDX* max item",
 		`item	qty	max_item
 		'pencil'	7	'pencil'`)
 	test("hist summarize date, list id",
-		"hist^(date) SUMMARIZE-SEQ date, list_id = list id",
+		"hist^(date) SUMMARIZE-SEQ date, list id",
 		`date	list_id
 		970101	#('a', 'e')
 		970102	#('c')
 		970103	#('e')`)
 	test("hist summarize date, total cost sort total_cost",
-		"hist^(date) SUMMARIZE-SEQ date, total_cost = total cost "+
-			"TEMPINDEX(total_cost)",
+		"hist^(date) SUMMARIZE-SEQ date, total cost TEMPINDEX(total_cost)",
 		`date	total_cost
         970102	200
         970101	300
         970103	300`)
 	test("hist summarize list id",
-		"hist^(date) SUMMARIZE-SEQ list_id = list id",
+		"hist^(date) SUMMARIZE-SEQ list id",
 		`list_id
 		#('a', 'c', 'e')`)
 	test("cus summarize max cnum sort name",
-		"cus^(cnum) SUMMARIZE-IDX* max_cnum = max cnum",
+		"cus^(cnum) SUMMARIZE-IDX* max cnum",
 		`cnum	abbrev	name	max_cnum
 		4		'd'		'dick'	4`)
 	test("supplier summarize min city",
-		"supplier^(city) SUMMARIZE-IDX min_city = min city",
+		"supplier^(city) SUMMARIZE-IDX min city",
 		`min_city
 		'calgary'`)
 	test("supplier summarize max city",
-		"supplier^(city) SUMMARIZE-IDX max_city = max city",
+		"supplier^(city) SUMMARIZE-IDX max city",
 		`max_city
 		'vancouver'`)
 	test("supplier summarize min city, max city",
-		"supplier^(supplier) SUMMARIZE-SEQ min_city = min city, max_city = max city",
+		"supplier^(supplier) SUMMARIZE-SEQ min city, max city",
 		`min_city	max_city
 		'calgary'	'vancouver'`)
 	test("hist summarize max cost",
-		"hist^(date) SUMMARIZE-SEQ max_cost = max cost",
+		"hist^(date) SUMMARIZE-SEQ max cost",
 		`max_cost
 		300`)
 
@@ -727,17 +730,17 @@ func TestQueryGet(t *testing.T) {
 		'eraser'	970201`)
 
 	test("(customer summarize id, count) union (customer summarize id, count)",
-		"customer^(id) SUMMARIZE-SEQ id, count = count UNION-MERGE(id) "+
-			"(customer^(id) SUMMARIZE-SEQ id, count = count)",
+		"customer^(id) SUMMARIZE-SEQ id, count UNION-MERGE(id) "+
+			"(customer^(id) SUMMARIZE-SEQ id, count)",
 		`id		count
 		'a'		1
 		'c'		1
 		'e'		1
 		'i'		1`)
 	test("(trans summarize item,date, count) union (trans summarize date,item, count)",
-		"trans^(date,item,id) SUMMARIZE-SEQ item, date, count = count "+
+		"trans^(date,item,id) SUMMARIZE-SEQ item, date, count "+
 			"UNION-MERGE(item,date) "+
-			"(trans^(date,item,id) SUMMARIZE-SEQ date, item, count = count)",
+			"(trans^(date,item,id) SUMMARIZE-SEQ date, item, count)",
 		`item		date	count
 		'mouse'		960204	1
 		'disk'		970101	1
@@ -751,8 +754,8 @@ func TestQueryGet(t *testing.T) {
 		'e'
 		'c'`)
 	test("(customer summarize id,count) join (hist summarize id,count) sort id",
-		"customer^(id) SUMMARIZE-SEQ id, count = count JOIN 1:1 by(id,count) "+
-			"(hist^(date) SUMMARIZE-MAP id, count = count TEMPINDEX(id,count))",
+		"customer^(id) SUMMARIZE-SEQ id, count JOIN 1:1 by(id,count) "+
+			"(hist^(date) SUMMARIZE-MAP id, count TEMPINDEX(id,count))",
 		`id	count
 		'a'	1
 		'c'	1`)

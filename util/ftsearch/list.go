@@ -39,7 +39,7 @@ func (t *term) toArray() {
 	for i, id := range lst.docIds {
 		a.add(int(id), int(lst.counts[i]))
 	}
-    t.termCountPerDoc = &a
+	t.termCountPerDoc = &a
 }
 
 func (cl list) add(int, int) bool {
@@ -73,23 +73,23 @@ func (cl list) pack(buf []byte) []byte {
 	return buf
 }
 
-func packUint16[T int|uint16](buf []byte, n T) []byte {
+func packUint16[T int | uint16](buf []byte, n T) []byte {
 	assert.That(n >= 0 && n <= math.MaxUint16)
 	return append(buf, byte(n>>8), byte(n))
 }
 
 func unpackList[T bytes](buf T) (list, T) {
 	n, buf := unpackUint16(buf)
-    docIds := make([]uint16, n)
+	docIds := make([]uint16, n)
 	for i := range docIds {
-        docIds[i], buf = unpackUint16(buf)
-    }
-    counts := make([]uint8, n)
+		docIds[i], buf = unpackUint16(buf)
+	}
+	counts := make([]uint8, n)
 	for i := range counts {
-        counts[i] = buf[0]
+		counts[i] = buf[0]
 		buf = buf[1:]
-    }
-    return list{docIds: docIds, counts: counts}, buf
+	}
+	return list{docIds: docIds, counts: counts}, buf
 }
 
 func unpackUint16[T bytes](buf T) (uint16, T) {

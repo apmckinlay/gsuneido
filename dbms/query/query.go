@@ -345,7 +345,7 @@ func optTempIndex(q Query, mode Mode, index []string, frac float64) (
 		if trace.QueryOpt.On() {
 			args := append([]any{index, frac, "="}, more...)
 			trace.QueryOpt.Println(mode, args...)
-			trace.Println(format(q, 1))
+			trace.Println(strategy(q, 1))
 		}
 	}
 	if !set.Subset(q.Columns(), index) {
@@ -610,7 +610,8 @@ func (q2 *Query2) selectByCols(cols, vals []string) ([]string, []string) {
 // paren is a helper for Query String methods
 func paren(q Query) string {
 	switch q.(type) {
-	case *Table, *Tables, *Columns, *Indexes, *Nothing:
+	case *Table, *Tables, *TablesLookup, *Columns, *Indexes, *Views,
+		*Nothing, *ProjectNone:
 		return q.String()
 	}
 	return "(" + q.String() + ")"
@@ -787,13 +788,13 @@ func (b *optmod) result() [][]string {
 
 // ------------------------------------------------------------------
 
-func Format(q Query) string {
-	return format(q, 0)
+func Strategy(q Query) string {
+	return strategy(q, 0)
 }
 
 const indent1 = "    "
 
-func format(q Query, indent int) string { // recursive
+func strategy(q Query, indent int) string { // recursive
 	in := strings.Repeat(indent1, indent)
 	nrows, pop := q.Nrows()
 	frac, fixcost, varcost := q.cacheCost()
@@ -811,11 +812,11 @@ func format(q Query, indent int) string { // recursive
 	cost += "} "
 	switch q := q.(type) {
 	case q2i:
-		return format(q.Source(), indent+1) + "\n" +
+		return strategy(q.Source(), indent+1) + "\n" +
 			in + cost + q.stringOp() + "\n" +
-			format(q.Source2(), indent+1)
+			strategy(q.Source2(), indent+1)
 	case q1i:
-		return format(q.Source(), indent) + "\n" +
+		return strategy(q.Source(), indent) + "\n" +
 			in + cost + q.stringOp()
 	default:
 		return in + cost + q.String()

@@ -14,6 +14,11 @@ func TestOptimize(t *testing.T) {
 	test := func(query, expected string) {
 		t.Helper()
 		q := ParseQuery(query, testTran{}, nil)
+
+		query2 := format(0, q, 0)
+		q2 := ParseQuery(query2, testTran{}, nil)
+		assert.This(format(0, q2, 0)).Is(query2)
+
 		q, _, _ = Setup(q, mode, testTran{})
 		// fmt.Println("-----------------------------")
 		// fmt.Println(Format(q))
@@ -119,22 +124,22 @@ func TestOptimize(t *testing.T) {
 		"customer^(id) PROJECT-MAP city TEMPINDEX(city)")
 
 	test("trans summarize total cost", // by is empty
-		"trans^(date,item,id) SUMMARIZE-SEQ total_cost = total cost")
+		"trans^(date,item,id) SUMMARIZE-SEQ total cost")
 	test("trans summarize total cost sort total_cost", // ignore sort
-		"trans^(date,item,id) SUMMARIZE-SEQ total_cost = total cost")
+		"trans^(date,item,id) SUMMARIZE-SEQ total cost")
 	test("trans summarize item, total cost",
-		"trans^(item) SUMMARIZE-SEQ item, total_cost = total cost")
+		"trans^(item) SUMMARIZE-SEQ item, total cost")
 	test("trans summarize item, total cost sort total_cost",
-		"trans^(item) SUMMARIZE-SEQ item, total_cost = total cost"+
+		"trans^(item) SUMMARIZE-SEQ item, total cost"+
 			" TEMPINDEX(total_cost)")
 	test("trans summarize id, total cost",
-		"trans^(date,item,id) SUMMARIZE-MAP id, total_cost = total cost")
+		"trans^(date,item,id) SUMMARIZE-MAP id, total cost")
 	test("supplier summarize max supplier", // key
-		"supplier^(supplier) SUMMARIZE-IDX* max_supplier = max supplier")
+		"supplier^(supplier) SUMMARIZE-IDX* max supplier")
 	test("supplier summarize max supplier sort name", // ignore sort
-		"supplier^(supplier) SUMMARIZE-IDX* max_supplier = max supplier")
+		"supplier^(supplier) SUMMARIZE-IDX* max supplier")
 	test("supplier summarize max city", // index
-		"supplier^(city) SUMMARIZE-IDX max_city = max city")
+		"supplier^(city) SUMMARIZE-IDX max city")
 
 	test("customer times inven",
 		"customer^(id) TIMES inven^(item)")
