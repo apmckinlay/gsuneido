@@ -382,11 +382,6 @@ func (lxr *Lexer) number(start int) Item {
 	} else {
 		lxr.matchWhile(isDigitOrUnderscore)
 		if lxr.match('.') {
-<<<<<<< HEAD
-			lxr.matchWhile(IsDigit)
-		} else if lxr.match('_') {
-=======
->>>>>>> master
 			lxr.matchWhile(isDigitOrUnderscore)
 		}
 		exp := lxr.si
