@@ -422,50 +422,100 @@ func (lxr *Lexer) identifier(start int) Item {
 // keyword returns the token for a string it is a keyword
 // otherwise Identifier and a copy of the string
 func keyword(s string) (tok.Token, string) {
-	if 2 <= len(s) && len(s) <= 8 && s[0] >= 'a' {
-		for _, pair := range keywords {
-			if pair.kw == s {
-				return pair.tok, pair.kw
-			}
+	switch len(s) {
+	case 2:
+		if s == "if" {
+			return tok.If, "if"
+		}
+		if s == "is" {
+			return tok.Is, "is"
+		}
+		if s == "in" {
+			return tok.In, "in"
+		}
+		if s == "or" {
+			return tok.Or, "or"
+		}
+		if s == "do" {
+			return tok.Do, "do"
+		}
+	case 3:
+		if s == "and" {
+			return tok.And, "and"
+		}
+		if s == "for" {
+			return tok.For, "for"
+		}
+		if s == "not" {
+			return tok.Not, "not"
+		}
+		if s == "new" {
+			return tok.New, "new"
+		}
+		if s == "try" {
+			return tok.Try, "try"
+		}
+	case 4:
+		if s == "true" {
+			return tok.True, "true"
+		}
+		if s == "isnt" {
+			return tok.Isnt, "isnt"
+		}
+		if s == "else" {
+			return tok.Else, "else"
+		}
+		if s == "this" {
+			return tok.This, "this"
+		}
+		if s == "case" {
+			return tok.Case, "case"
+		}
+	case 5:
+		if s == "false" {
+			return tok.False, "false"
+		}
+		if s == "super" {
+			return tok.Super, "super"
+		}
+		if s == "class" {
+			return tok.Class, "class"
+		}
+		if s == "throw" {
+			return tok.Throw, "throw"
+		}
+		if s == "catch" {
+			return tok.Catch, "catch"
+		}
+		if s == "while" {
+			return tok.While, "while"
+		}
+		if s == "break" {
+			return tok.Break, "break"
+		}
+	case 6:
+		if s == "return" {
+			return tok.Return, "return"
+		}
+		if s == "switch" {
+			return tok.Switch, "switch"
+		}
+	case 7:
+		if s == "default" {
+			return tok.Default, "default"
+		}
+		if s == "forever" {
+			return tok.Forever, "forever"
+		}
+	case 8:
+		if s == "function" {
+			return tok.Function, "function"
+		}
+		if s == "continue" {
+			return tok.Continue, "continue"
 		}
 	}
 	return tok.Identifier, strings.Clone(s)
-}
-
-// keywords doesn't use a map because we want to reuse the keyword string literals
-// ordered by frequency of use to optimize successful searches
-var keywords = []struct {
-	kw  string
-	tok tok.Token
-}{
-	{"return", tok.Return},
-	{"if", tok.If},
-	{"false", tok.False},
-	{"is", tok.Is},
-	{"true", tok.True},
-	{"isnt", tok.Isnt},
-	{"and", tok.And},
-	{"function", tok.Function},
-	{"for", tok.For},
-	{"in", tok.In},
-	{"not", tok.Not},
-	{"super", tok.Super},
-	{"or", tok.Or},
-	{"else", tok.Else},
-	{"class", tok.Class},
-	{"this", tok.This},
-	{"case", tok.Case},
-	{"new", tok.New},
-	{"continue", tok.Continue},
-	{"throw", tok.Throw},
-	{"try", tok.Try},
-	{"catch", tok.Catch},
-	{"while", tok.While},
-	{"break", tok.Break},
-	{"switch", tok.Switch},
-	{"default", tok.Default},
-	{"do", tok.Do},
-	{"forever", tok.Forever},
 }
 
 func (lxr *Lexer) matchIdentTail() {
