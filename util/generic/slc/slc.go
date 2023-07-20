@@ -131,7 +131,7 @@ func Grow[S ~[]E, E any](s S, n int) S {
 // NOTE: Unlike x/exp/slices.Grow it extends the length, not the capacity.
 // Using append and make like x/exp/slices.Grow assuming that is optimized.
 func Allow[S ~[]E, E any](s S, n int) S {
-	return Grow(s, n - len(s))
+	return Grow(s, n-len(s))
 }
 
 // With returns a copy of the list with the values appended
@@ -173,21 +173,21 @@ func MapFn[S ~[]E, E any](list S, fn func(E) E) S {
 // Min returns the minimum value in the list
 func Min[E Ordered](list []E) E {
 	min := list[0]
-    for _, x := range list {
-        if x < min {
-            min = x
-        }
-    }
-    return min
+	for _, x := range list {
+		if x < min {
+			min = x
+		}
+	}
+	return min
 }
 
 // Max returns the maximum value in the list
 func Max[E Ordered](list []E) E {
 	max := list[0]
-    for _, x := range list {
-        if x > max {
-            max = x
-        }
-    }
-    return max
+	for _, x := range list {
+		if x > max {
+			max = x
+		}
+	}
+	return max
 }

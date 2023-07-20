@@ -57,12 +57,14 @@ var g = globals{
 
 const GnSuneido = 1
 
+var Suneido *SuneidoObject
+
 var _ = func() int { // needs to be var, init() is run later
 	assert.This(Global.Num("Suneido")).Is(GnSuneido)
-	suneido := new(SuneidoObject)
-	suneido.SetConcurrent()
-	Global.Set(GnSuneido, suneido)
-	g.builtins[GnSuneido] = suneido
+	Suneido = new(SuneidoObject)
+	Suneido.SetConcurrent()
+	Global.Set(GnSuneido, Suneido)
+	g.builtins[GnSuneido] = Suneido
 	return 0
 }()
 

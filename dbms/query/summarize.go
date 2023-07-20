@@ -63,11 +63,7 @@ func NewSummarize(src Query, by, cols, ops, ons []string) *Summarize {
 	check(ons)
 	for i := 0; i < len(cols); i++ {
 		if cols[i] == "" {
-			if ons[i] == "" {
-				cols[i] = "count"
-			} else {
-				cols[i] = ops[i] + "_" + ons[i]
-			}
+			cols[i] = defaultColName(ops[i], ons[i])
 		}
 	}
 	su := &Summarize{by: by, cols: cols, ops: ops, ons: ons}
@@ -85,6 +81,13 @@ func NewSummarize(src Query, by, cols, ops, ons []string) *Summarize {
 	su.fast1.Set(src.fastSingle())
 	su.lookCost.Set(su.getLookupCost())
 	return su
+}
+
+func defaultColName(op, on string) string {
+	if op == "count" {
+		return "count"
+	}
+	return op + "_" + on
 }
 
 // Len, Less, Swap implement sort.Interface
@@ -138,6 +141,11 @@ func (su *Summarize) stringOp() string {
 	if su.wholeRow {
 		s += "*"
 	}
+	return s + su.string2()
+}
+
+func (su *Summarize) string2() string {
+	s := ""
 	if len(su.by) > 0 {
 		s += " " + str.Join(", ", su.by) + ","
 	}
@@ -145,7 +153,7 @@ func (su *Summarize) stringOp() string {
 	for i := range su.cols {
 		s += sep
 		sep = ", "
-		if su.cols[i] != "" {
+		if su.cols[i] != defaultColName(su.ops[i], su.ons[i]) {
 			s += su.cols[i] + " = "
 		}
 		s += su.ops[i]
@@ -154,6 +162,10 @@ func (su *Summarize) stringOp() string {
 		}
 	}
 	return s
+}
+
+func (su *Summarize) format() string {
+	return "summarize" + su.string2()
 }
 
 func (su *Summarize) getNrows() (int, int) {
@@ -246,7 +258,7 @@ func (su *Summarize) idxCost(mode Mode) (Cost, Cost, any) {
 func (su *Summarize) mapCost(mode Mode, index []string, _ float64) (Cost, Cost, any) {
 	//FIXME technically, map should only be allowed in ReadMode
 	nrows, _ := su.Nrows()
-	if index != nil || nrows > mapLimit-mapLimit/3 {
+	if index != nil || nrows > mapLimit {
 		return impossible, impossible, nil
 	}
 	fixcost, varcost := Optimize(su.source, mode, nil, 1)
@@ -400,6 +412,7 @@ func (su *Summarize) buildMap(th *Thread) []mapPair {
 			equalCols(x.row, y.row, hdr, su.by, th, su.st)
 	}
 	sumMap := hmap.NewHmapFuncs[rowHash, []sumOp](hfn, eqfn)
+	warned := false
 	for {
 		row := su.source.Get(th, Next)
 		if row == nil {
@@ -410,8 +423,10 @@ func (su *Summarize) buildMap(th *Thread) []mapPair {
 		if sums == nil {
 			sums = su.newSums()
 			sumMap.Put(rh, sums)
-			if sumMap.Size() > mapLimit {
-				log.Panicf("summarize-map too large (> %d)", mapLimit)
+			if !warned && sumMap.Size() > mapLimit {
+				// log inside loop in case we run out of memory
+				warned = true
+				log.Printf("WARNING summarize-map large (> %d)", mapLimit)
 			}
 		}
 		su.addToSums(sums, row, th, su.st)

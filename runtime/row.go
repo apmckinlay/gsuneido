@@ -155,6 +155,16 @@ func (row Row) SameAs(row2 Row) bool {
 	return true
 }
 
+func (row Row) Derived() int {
+	n := 0
+	for _, dbrec := range row {
+		if dbrec.Off == 0 { // derived record e.g. from extend or summarize
+			n += len(dbrec.Record)
+		}
+	}
+	return n
+}
+
 //-------------------------------------------------------------------
 
 // Header specifies the fields (physical) and columns (logical) for a query

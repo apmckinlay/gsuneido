@@ -42,15 +42,15 @@ func TestParseQuery(t *testing.T) {
 	test("cus leftjoin by(cnum) task",
 		"cus leftjoin 1:n by(cnum) task")
 	test("table summarize count",
-		"table summarize count = count")
+		"table summarize count")
 	test("table summarize n = count")
 	test("table summarize total a",
-		"table summarize total_a = total a")
+		"table summarize total a")
 	test("table summarize t1 = total a")
 	test("table summarize count, total a, max b",
-		"table summarize count = count, total_a = total a, max_b = max b")
+		"table summarize count, total a, max b")
 	test("table summarize a, b, count",
-		"table summarize a, b, count = count")
+		"table summarize a, b, count")
 
 	test("(table union table2) join table2",
 		"(table union table2) join n:1 by(c,d,e) table2")
@@ -96,7 +96,7 @@ func TestParseQuery2(t *testing.T) {
 	test("table where a > 1")
 	test("table where a and b and c")
 	test("table where a in (1, 2, 3)")
-	
+
 	s := "table where (((a > 1)))"
 	q := ParseQuery(s, testTran{}, nil)
 	assert.T(t).This(q.String()).Is("table WHERE a > 1")

@@ -38,6 +38,10 @@ func (m *Minus) stringOp() string {
 	return m.Compatible.stringOp("MINUS", "")
 }
 
+func (*Minus) format() string {
+	return "minus"
+}
+
 func (m *Minus) getNrows() (int, int) {
 	n1, p1 := m.source1.Nrows()
 	n2, p2 := m.source2.Nrows()

@@ -24,7 +24,11 @@ func Number(th *Thread, args []Value) Value {
 <<<<<<< HEAD
 	
 		s = strings.ReplaceAll(s, ",", "")
+<<<<<<< HEAD
   		s = strings.ReplaceAll(s, "_", "")
+=======
+		s = strings.ReplaceAll(s, "_", "")
+>>>>>>> 3f31c5d975e671833591f03d8546cf9f34497776
 		return numFromString(s)
 =======
 	s = strings.ReplaceAll(s, ",", "")

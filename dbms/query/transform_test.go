@@ -123,7 +123,7 @@ func TestTransform(t *testing.T) {
 		"trans WHERE cost is 200 and id is 5 EXTEND x = 1")
 	// move where before summarize
 	test("hist summarize id, total cost where id is 3 and total_cost > 10",
-		"hist WHERE id is 3 SUMMARIZE id, total_cost = total cost "+
+		"hist WHERE id is 3 SUMMARIZE id, total cost "+
 			"WHERE total_cost > 10")
 
 	// distribute where over intersect
@@ -176,12 +176,12 @@ func TestTransform(t *testing.T) {
 	test("table summarize a, total b project a",
 		"table project a")
 	test("table summarize a, min b, max b project a, min_b",
-		"table summarize a, min_b = min b")
+		"table summarize a, min b")
 	test("table summarize a, total b project total_b",
-		"table summarize a, total_b = total b project total_b")
+		"table summarize a, total b project total_b")
 	// combine ... project ... summarize ...
 	test("table project a, b summarize a, total b", // project-copy
-		"table summarize a, total_b = total b")
+		"table summarize a, total b")
 	test("table project b, c summarize b, total c",
-		"table project b,c summarize b, total_c = total c")
+		"table project b,c summarize b, total c")
 }

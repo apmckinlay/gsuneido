@@ -133,7 +133,6 @@ func newServerConn(dbms *DbmsLocal, conn net.Conn) {
 	trace.ClientServer.Println("server connection")
 	conn.Write(hello())
 	if _, errmsg := checkHello(conn); errmsg != "" {
-		log.Println("dbms server: connect failed:", errmsg)
 		conn.Close()
 		return
 	}

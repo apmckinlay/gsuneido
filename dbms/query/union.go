@@ -77,6 +77,13 @@ func (u *Union) stringOp() string {
 	return u.Compatible.stringOp("UNION", strategy)
 }
 
+func (u *Union) format() string {
+	if u.disjoint == "" {
+		return "union /*NOT DISJOINT*/"
+	}
+	return "union"
+}
+
 func (u *Union) Keys() [][]string {
 	if u.keys == nil {
 		if u.disjoint == "" {
@@ -507,13 +514,32 @@ func (u *Union) Select(cols, vals []string) {
 	if selConflict(u.source1.Columns(), cols, vals) {
 		u.src1get = nothing
 	} else {
+		cols, vals = removeNonexistentEmpty(u.source1.Columns(), cols, vals)
 		u.source1.Select(cols, vals)
 	}
 	if selConflict(u.source2.Columns(), cols, vals) {
 		u.src2get = nothing
 	} else {
+		cols, vals = removeNonexistentEmpty(u.source2.Columns(), cols, vals)
 		u.source2.Select(cols, vals)
 	}
+}
+
+func removeNonexistentEmpty(srccols, cols, vals []string) ([]string, []string) {
+	for i, col := range cols {
+		if !slices.Contains(srccols, col) && vals[i] == "" {
+			newcols := slices.Clone(cols[:i])
+			newvals := slices.Clone(vals[:i])
+			for ; i < len(cols); i++ {
+				if slices.Contains(srccols, cols[i]) || vals[i] != "" {
+					newcols = append(newcols, cols[i])
+					newvals = append(newvals, vals[i])
+				}
+			}
+			return newcols, newvals
+		}
+	}
+	return cols, vals
 }
 
 func selConflict(srcCols, cols, vals []string) bool {

@@ -6,6 +6,7 @@ package builtin
 import (
 	"strings"
 
+	"github.com/apmckinlay/gsuneido/dbms"
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/runtime/trace"
 )
@@ -148,4 +149,13 @@ var _ = method(query_Strategy, "(formatted = false)")
 func query_Strategy(_ *Thread, this Value, args []Value) Value {
 	formatted := ToBool(args[0])
 	return this.(ISuQueryCursor).Strategy(formatted)
+}
+
+var _ = builtin(formatQuery, "(query)")
+
+func formatQuery(th *Thread, args []Value) Value {
+	if dbms, ok := th.Dbms().(*dbms.DbmsLocal); ok {
+		return SuStr(dbms.FormatQuery(ToStr(args[0])))
+	}
+	return th.Dbms().Exec(th, SuObjectOf(SuStr("FormatQuery"), args[0]))
 }
