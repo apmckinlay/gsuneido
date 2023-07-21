@@ -303,7 +303,7 @@ func (dbms *DbmsLocal) Transaction(update bool) ITran {
 		if t := dbms.db.NewUpdateTran(); t != nil {
 			return &UpdateTranLocal{UpdateTran: t}
 		}
-		return nil
+		panic("too many active transactions")
 	}
 	return &ReadTranLocal{ReadTran: dbms.db.NewReadTran()}
 }
