@@ -4,9 +4,6 @@
 package builtin
 
 import (
-	"math/rand"
-	"time"
-
 	. "github.com/apmckinlay/gsuneido/runtime"
 	"github.com/apmckinlay/gsuneido/util/regex"
 )
@@ -24,13 +21,6 @@ func Transaction(th *Thread, args []Value) Value {
 		update = !ToBool(args[0])
 	}
 	itran := th.Dbms().Transaction(update)
-	if itran == nil {
-		time.Sleep(time.Duration(rand.Intn(101)) * time.Millisecond)
-		itran = th.Dbms().Transaction(update)
-		if itran == nil {
-			panic("too many active transactions")
-		}
-	}
 	st := NewSuTran(itran, update)
 	if args[2] == False {
 		return st
