@@ -345,6 +345,7 @@ func string_NthLine(this, arg Value) Value {
 var _ = method(string_NumberQ, "()")
 
 func string_NumberQ(this Value) Value {
+	// see also Lexer.number
 	return SuBool(numberPat.Matches(ToStr(this)))
 }
 
