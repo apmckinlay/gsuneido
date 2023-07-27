@@ -47,6 +47,30 @@ func TestNumberPat(t *testing.T) {
 	test("\n123", false)
 	test("123\n", false)
 	test("e5", false)
+
+	test("_1", false)
+	test("1_", true)
+	test("1_2", true)
+	test("1__2", true)
+	test("1_2_3", true)
+	test("1_2_3_", true)
+	test("1_2_3__", true)
+	test("1_2_3__4", true)
+	test("1_2_3__4_", true)
+	test("1.0", true)
+	test("1._0", true)
+	test("1_.0", true)
+	test("1.0_", true)
+	test("1._0_", true)
+	test("1_.0_", true)
+	test("1.0__", true)
+	test("1.__0", true)
+	test("1.__0_", true)
+	test("1.__0__", true)
+	test("1.0__0", true)
+	test("__1.0__0_", false)
+	test("__1.0__0__", false)
+
 }
 
 func BenchmarkNumberPatRegexp(b *testing.B) {
