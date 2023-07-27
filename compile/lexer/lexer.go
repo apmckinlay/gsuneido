@@ -377,6 +377,7 @@ func isDigitOrUnderscore(c byte) bool {
 }
 
 func (lxr *Lexer) number(start int) Item {
+	// see also string_NumberQ
 	if lxr.src[start] == '0' && lxr.matchOneOf("xX") {
 		lxr.matchWhile(IsHexDigit)
 	} else {
