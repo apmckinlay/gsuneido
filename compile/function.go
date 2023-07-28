@@ -4,8 +4,6 @@
 package compile
 
 import (
-	"fmt"
-
 	"github.com/apmckinlay/gsuneido/compile/ast"
 	tok "github.com/apmckinlay/gsuneido/compile/tokens"
 	. "github.com/apmckinlay/gsuneido/runtime"
@@ -343,11 +341,11 @@ func (p *Parser) isForSlice() bool {
 	if p.Lxr.AheadSkip(i).Token == tok.LParen {
 		i++
 	}
-	if !p.Lxr.AheadSkip(i).Token.IsIdent() {
-		return false
-	}
-	if p.Lxr.AheadSkip(i+1).Token == tok.In {	
-		return  p.Lxr.AheadSkip(i+2).Token == tok.Number
+	hasInToken := p.Lxr.AheadSkip(i+1).Token == tok.In
+	hasIdentToken := p.Lxr.AheadSkip(i+2).Token == tok.Identifier
+	hasNumberToken := p.Lxr.AheadSkip(i+2).Token == tok.Number
+	if hasInToken && (hasIdentToken || hasNumberToken) {
+		return p.Lxr.AheadSkip(i+3).Token == tok.RangeTo 
 	}
 	return false
 }
@@ -368,7 +366,7 @@ func (p *Parser) forIn() *ast.ForIn {
 }
 
 func (p *Parser) forSlice() *ast.For {
-	// match this for loop structure:
+	// match these for loop structure:
 	// for i in 0..=10 { ... }
 	// for i in 0..<10 { ... }
 	p.MatchIf(tok.LParen) 	// consume "(" if present
@@ -376,12 +374,10 @@ func (p *Parser) forSlice() *ast.For {
 	p.Match(tok.In) 		// consume "in"
 
 	init := p.optExprList(tok.RangeTo)
-
 	// init_ast := &ast.Binary{Tok: tok.Eq, Lhs: &ident_var, Rhs: init[0],}
 	// make init_ast which is of type ast.Binary, make it of type
 	// []ast.Expr
-	var init_ast []ast.Expr
-	init_ast = []ast.Expr{&ast.Binary{Tok: tok.Eq, Lhs: &ident_var, Rhs: init[0],}}
+	var init_ast = []ast.Expr{&ast.Binary{Tok: tok.Eq, Lhs: &ident_var, Rhs: init[0],}}
 
 	p.Match(tok.RangeTo) 	// consume ".."
 
@@ -396,7 +392,6 @@ func (p *Parser) forSlice() *ast.For {
 
 	body := p.statement() 	// consume within "{ ... }"
 	inc := []ast.Expr{&ast.Unary{Tok: tok.Inc, E: &ident_var}}
-fmt.Println("ast := ", &ast.For{ Slice: true, Init: init_ast, Cond: cond_ast, Inc: inc, Body: body })
 	return &ast.For{ Slice: true, Init: init_ast, Cond: cond_ast, Inc: inc, Body: body }
 }
 
@@ -427,6 +422,13 @@ func (p *Parser) optExprList(after tok.Token) []ast.Expr {
 		}
 	}
 	return exprs
+}
+
+func (p *Parser) optExpr(after tok.Token) ast.Expr {
+	if p.Token == after {
+		return nil
+	}
+	return p.Expression()
 }
 
 // used by if, while, and do-while
