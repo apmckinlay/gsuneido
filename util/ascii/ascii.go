@@ -36,7 +36,7 @@ func IsLetter(c byte) bool {
 	return IsLower(c) || IsUpper(c)
 }
 
-// IsDigit returns whether an ASCII character is lower case (a-z)
+// IsDigit returns whether an ASCII character is a number (0-9)
 func IsDigit(c byte) bool {
 	return '0' <= c && c <= '9'
 }
