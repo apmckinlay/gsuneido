@@ -7,6 +7,8 @@ import (
 	"math"
 	"strings"
 
+	"github.com/apmckinlay/gsuneido/compile/lexer"
+	"github.com/apmckinlay/gsuneido/compile/tokens"
 	"github.com/apmckinlay/gsuneido/util/generic/ord"
 	"github.com/apmckinlay/gsuneido/util/regex"
 	"github.com/apmckinlay/gsuneido/util/str"
