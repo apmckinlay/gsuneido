@@ -366,32 +366,29 @@ func (p *Parser) forIn() *ast.ForIn {
 }
 
 func (p *Parser) forSlice() *ast.For {
-	// match these for loop structure:
-	// for i in 0..=10 { ... }
-	// for i in 0..<10 { ... }
-	p.MatchIf(tok.LParen) 	// consume "(" if present
-	ident_var := ast.Ident{Name: p.MatchIdent(), Pos: p.Pos}
-	p.Match(tok.In) 		// consume "in"
+	p.MatchIf(tok.LParen)
+	iter_var := ast.Ident{Name: p.MatchIdent(), Pos: p.Pos}
+	p.Match(tok.In)
 
-	init := p.optExprList(tok.RangeTo)
-	// init_ast := &ast.Binary{Tok: tok.Eq, Lhs: &ident_var, Rhs: init[0],}
-	// make init_ast which is of type ast.Binary, make it of type
-	// []ast.Expr
-	var init_ast = []ast.Expr{&ast.Binary{Tok: tok.Eq, Lhs: &ident_var, Rhs: init[0],}}
+//	init := p.optExprList(tok.RangeTo)
+	init := p.Expression()
+	var init_ast = []ast.Expr{&ast.Binary{Tok: tok.Eq, Lhs: &iter_var, Rhs: init,}}
 
-	p.Match(tok.RangeTo) 	// consume ".."
+	p.Match(tok.RangeTo)
 
 	var cond_ast ast.Expr
-	if p.MatchIf(tok.Eq) {  // consume "=" if present
-		cond := p.optExprList(tok.Whitespace)
-		cond_ast = &ast.Binary{Tok: tok.Lte, Lhs: &ident_var, Rhs: cond[0],}
+	if p.MatchIf(tok.Eq) {
+//		cond := p.optExprList(tok.Whitespace)
+		cond := p.Expression()
+		cond_ast = &ast.Binary{Tok: tok.Lte, Lhs: &iter_var, Rhs: cond,}
 	} else if p.MatchIf(tok.Lt) {
-		cond := p.optExprList(tok.Whitespace)
-		cond_ast = &ast.Binary{Tok: tok.Lt, Lhs: &ident_var, Rhs: cond[0],}
+//		cond := p.optExprList(tok.Whitespace)
+		cond := p.Expression()
+		cond_ast = &ast.Binary{Tok: tok.Lt, Lhs: &iter_var, Rhs: cond,}
 	}
 
-	body := p.statement() 	// consume within "{ ... }"
-	inc := []ast.Expr{&ast.Unary{Tok: tok.Inc, E: &ident_var}}
+	body := p.statement()
+	inc := []ast.Expr{&ast.Unary{Tok: tok.Inc, E: &iter_var}}
 	return &ast.For{ Slice: true, Init: init_ast, Cond: cond_ast, Inc: inc, Body: body }
 }
 
@@ -422,13 +419,6 @@ func (p *Parser) optExprList(after tok.Token) []ast.Expr {
 		}
 	}
 	return exprs
-}
-
-func (p *Parser) optExpr(after tok.Token) ast.Expr {
-	if p.Token == after {
-		return nil
-	}
-	return p.Expression()
 }
 
 // used by if, while, and do-while
