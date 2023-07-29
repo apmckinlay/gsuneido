@@ -60,18 +60,31 @@ func GetTempFileName(path, prefix Value) Value {
 	return SuStr(filename)
 }
 
-var _ = builtin(CreateDirectory, "(dirname)")
+var _ = builtin(CreateDir, "(dirname)")
 
-func CreateDirectory(arg Value) Value {
-	err := os.Mkdir(ToStr(arg), 0755)
-	return SuBool(err == nil)
+func CreateDir(th *Thread, args []Value) Value {
+	err := os.Mkdir(ToStr(args[0]), 0755)
+	if err == nil {
+		return True
+	}
+	th.ReturnThrow = true
+	return SuStr("CreateDir: " + err.Error())
+}
+
+func init() { // TEMP for transition
+	Global.Builtin("CreateDirectory",
+		builtinVal("CreateDirectory", CreateDir, "(dirname)"))
 }
 
 var _ = builtin(DeleteFileApi, "(filename)")
 
-func DeleteFileApi(arg Value) Value {
-	err := os.Remove(ToStr(arg))
-	return SuBool(err == nil)
+func DeleteFileApi(th *Thread, args []Value) Value {
+	err := os.Remove(ToStr(args[0]))
+	if err == nil {
+		return True
+	}
+	th.ReturnThrow = true
+	return SuStr("DeleteFileApi: " + err.Error())
 }
 
 var _ = builtin(FileExistsQ, "(filename)")
@@ -101,27 +114,31 @@ func DirExistsQ(arg Value) Value {
 
 var _ = builtin(MoveFile, "(from, to)")
 
-func MoveFile(from, to Value) Value {
-	err := os.Rename(ToStr(from), ToStr(to))
-	if err != nil {
-		panic("MoveFile: " + err.Error())
+func MoveFile(th *Thread, args []Value) Value {
+	from := ToStr(args[0])
+    to := ToStr(args[1])
+	err := os.Rename(from, to)
+	if err == nil {
+		return True
 	}
-	return True
+	th.ReturnThrow = true
+	return SuStr("MoveFile: " + err.Error())
 }
 
 var _ = builtin(DeleteDir, "(dir)")
 
-func DeleteDir(dir Value) Value {
-	dirname := ToStr(dir)
+func DeleteDir(th *Thread, args []Value) Value {
+	th.ReturnThrow = true
+	dirname := ToStr(args[0])
 	info, err := os.Stat(dirname)
 	if errors.Is(err, os.ErrNotExist) {
-		return False
+		return SuStr("DeleteDir: " + err.Error())
 	}
 	if err != nil {
-		panic("DeleteDir: " + err.Error())
+		return SuStr("DeleteDir: " + err.Error())
 	}
 	if !info.Mode().IsDir() {
-		return False
+		return SuStr("DeleteDir: not a directory")
 	}
 	err = os.RemoveAll(dirname)
 	if err != nil {

@@ -67,13 +67,14 @@ func systemMemory() uint64 {
 var copyFile = kernel32.MustFindProc("CopyFileA").Addr()
 var _ = builtin(CopyFile, "(from, to, failIfExists)")
 
-func CopyFile(a, b, c Value) Value {
-	from := zbuf(a)
-	to := zbuf(b)
+func CopyFile(th *Thread, args []Value) Value {
+	from := zbuf(args[0])
+	to := zbuf(args[1])
 	rtn, _, _ := syscall.SyscallN(copyFile,
 		uintptr(unsafe.Pointer(&from[0])),
 		uintptr(unsafe.Pointer(&to[0])),
-		boolArg(c))
+		boolArg(args[2]))
+	th.ReturnThrow = true
 	return boolRet(rtn)
 }
 
