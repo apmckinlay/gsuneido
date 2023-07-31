@@ -16,10 +16,10 @@ func Construct(th *Thread, args []Value) Value {
 	suffix := ToStr(args[1])
 	c, ok := what.ToContainer()
 	if ok {
-		what = c.ListGet(0)
-		if what == nil {
+		if c.ListSize() < 1 {
 			panic("Construct: object requires member 0")
 		}
+		what = c.ListGet(0)
 	}
 	if s, ok := what.ToStr(); ok {
 		if !strings.HasSuffix(s, suffix) {
