@@ -142,7 +142,7 @@ func DeleteDir(th *Thread, args []Value) Value {
 	}
 	err = os.RemoveAll(dirname)
 	if err != nil {
-		panic("DeleteDir: " + err.Error())
+		return SuStr("DeleteDir: " + err.Error())
 	}
 	return True
 }
