@@ -8,7 +8,7 @@ import (
 	"strings"
 
 	"github.com/apmckinlay/gsuneido/compile/lexer"
-	"github.com/apmckinlay/gsuneido/compile/tokens"
+	tok "github.com/apmckinlay/gsuneido/compile/tokens"
 	"github.com/apmckinlay/gsuneido/util/generic/ord"
 	"github.com/apmckinlay/gsuneido/util/regex"
 	"github.com/apmckinlay/gsuneido/util/str"
@@ -348,7 +348,15 @@ var _ = method(string_NumberQ, "()")
 
 func string_NumberQ(this Value) Value {
 	// see also Lexer.number
-	return SuBool(numberPat.Matches(ToStr(this)))
+	lexer := lexer.NewLexer(ToStr(this))
+	item := lexer.Next()
+	if item.Token == tok.Add || item.Token == tok.Sub {
+		item = lexer.Next()
+	}
+	if item.Token == tok.Number || item.Token == tok.Eof {
+		return True
+	}
+	return False
 }
 
 // benchmark shows Suneido regex is faster than Go regexp for this
