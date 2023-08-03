@@ -10,19 +10,17 @@ import (
 
 	"github.com/apmckinlay/gsuneido/util/assert"
 	"github.com/apmckinlay/gsuneido/util/regex"
+	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
 func TestNumberPat(t *testing.T) {
 	test := func(s string, expected bool) {
 		t.Helper()
-		assert := assert.T(t)
-		assert.This(numberPat.Matches(s)).Is(expected)
-		if expected == true {
-			assert.True(numberPat.Matches("+" + s))
-			assert.True(numberPat.Matches("-" + s))
-			assert.False(numberPat.Matches("x" + s))
-			assert.False(numberPat.Matches(s + "x"))
-		}
+		// write test cases to test string_NumberQ function
+		// don't test regex
+		// func string_NumberQ(this runtime.Value) runtime.Value
+		// convert string to Value type
+		assert.T(t).This(string_NumberQ(SuStr(s))).Is(SuBool(expected))
 	}
 	test("0", true)
 	test("6", true)
