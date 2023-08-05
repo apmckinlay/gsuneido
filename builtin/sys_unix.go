@@ -26,10 +26,22 @@ func GetDiskFreeSpace(arg Value) Value {
 
 var _ = builtin(CopyFile, "(from, to, failIfExists)")
 
-func CopyFile(a, b, c Value) Value {
-	from := ToStr(a)
-	to := ToStr(b)
-	failIfExists := ToBool(c)
+func CopyFile(th *Thread, args []Value) Value {
+	from := ToStr(args[0])
+	to := ToStr(args[1])
+	failIfExists := ToBool(args[2])
+	th.ReturnThrow = true
+
+	srcFile, err := os.Open(from)
+	if err != nil {
+		return SuStr("CopyFile: " + err.Error())
+	}
+	defer srcFile.Close()
+
+	fi, err := srcFile.Stat()
+	if err != nil {
+		return SuStr("CopyFile: " + err.Error())
+	}
 
 	flags := os.O_WRONLY | os.O_CREATE
 	if failIfExists {
@@ -37,21 +49,9 @@ func CopyFile(a, b, c Value) Value {
 	} else {
 		flags |= os.O_TRUNC
 	}
-
-	srcFile, err := os.Open(from)
-	if err != nil {
-		return False
-	}
-	defer srcFile.Close()
-
-	fi, err := srcFile.Stat()
-	if err != nil {
-		return False
-	}
-
 	destFile, err := os.OpenFile(to, flags, fi.Mode())
 	if err != nil {
-		return False
+		return SuStr("CopyFile: " + err.Error())
 	}
 	defer destFile.Close()
 	// needed when the destination is on a Samba network drive
@@ -61,8 +61,7 @@ func CopyFile(a, b, c Value) Value {
 
 	_, err = io.Copy(destFile, srcFile)
 	if err != nil {
-		log.Println("WARN CopyFile Copy", err)
-		return False
+		return SuStr("CopyFile: " + err.Error())
 	}
 
 	destFile.Close()

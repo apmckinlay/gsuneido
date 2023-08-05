@@ -5,7 +5,7 @@ package system
 
 import "os"
 
-func RenameBak(from string, to string) error { //TODO retry
+func RenameBak(from string, to string) error {
 	err := Retry(func() error { return os.Remove(to + ".bak") })
 	if err != nil && !os.IsNotExist(err) {
 		return err
