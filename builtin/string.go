@@ -65,7 +65,7 @@ func string_Asc(this Value) Value {
 	return SuInt(int(s[0]))
 }
 
-// TODO remove after we switch to Suneido.Compile (after jSuneido is gone)
+// TODO remove - deprecated
 var _ = method(string_Compile, "(errob = false)")
 
 func string_Compile(th *Thread, this Value, args []Value) Value {
@@ -355,9 +355,7 @@ func string_NumberQ(this Value) Value {
 	}
 	if item.Token == tok.Number {
 		item = lexer.Next()
-		if item.Token == tok.Eof {
-			return True
-		}
+		return SuBool(item.Token == tok.Eof)
 	}
 	return False
 }

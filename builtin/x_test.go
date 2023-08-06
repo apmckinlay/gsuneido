@@ -13,13 +13,9 @@ import (
 	. "github.com/apmckinlay/gsuneido/runtime"
 )
 
-func TestNumberPat(t *testing.T) {
+func TestNumberQ(t *testing.T) {
 	test := func(s string, expected bool) {
 		t.Helper()
-		// write test cases to test string_NumberQ function
-		// don't test regex
-		// func string_NumberQ(this runtime.Value) runtime.Value
-		// convert string to Value type
 		assert.T(t).This(string_NumberQ(SuStr(s))).Is(SuBool(expected))
 	}
 	test("0", true)
@@ -69,6 +65,15 @@ func TestNumberPat(t *testing.T) {
 	test("__1.0__0_", false)
 	test("__1.0__0__", false)
 
+	test("0x123", true)
+	test("-0x123", true)
+	test("_0x123", false)
+	test("0x123.456", false)
+	test("0x1_2_3", true)
+	test("0x1_2_3_", true)
+	test("0x1_2_3__", true)
+	test("0x1_2_3__4", true)
+	test("0xZ12", false)
 }
 
 func BenchmarkNumberPatRegexp(b *testing.B) {
