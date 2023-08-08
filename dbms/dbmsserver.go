@@ -12,6 +12,7 @@ import (
 	"sort"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/apmckinlay/gsuneido/dbms/commands"
@@ -32,6 +33,8 @@ var workers *mux.Workers
 
 var serverConns = make(map[uint32]*serverConn)
 var serverConnsLock sync.Mutex // guards serverConns and idleCount
+
+var lastNum atomic.Int64 // used for queries, cursors, and transactions
 
 // serverConn is one client connection which handles multiple sessions
 type serverConn struct {
@@ -57,7 +60,6 @@ type serverSession struct {
 	sessionId string
 	nonce     string
 	mux.ReadBuf
-	lastNum int // used for queries, cursors, and transactions
 	// id is primarily used as a key to store the set of sessions in a map
 	id uint32
 }
@@ -441,9 +443,9 @@ func connections() *SuObject {
 func cmdCursor(ss *serverSession) {
 	query := ss.GetStr()
 	q := ss.sc.dbms.Cursor(query, &ss.sc.Sviews)
-	ss.lastNum++
-	ss.cursors[ss.lastNum] = q
-	ss.PutBool(true).PutInt(ss.lastNum)
+	num := int(lastNum.Add(1))
+	ss.cursors[num] = q
+	ss.PutBool(true).PutInt(num)
 }
 
 func cmdCursors(ss *serverSession) {
@@ -709,9 +711,9 @@ func cmdQuery(ss *serverSession) {
 	tran := ss.getTran()
 	query := ss.GetStr()
 	q := tran.Query(query, &ss.sc.Sviews)
-	ss.lastNum++
-	ss.queries[ss.lastNum] = q
-	ss.PutBool(true).PutInt(ss.lastNum)
+	num := int(lastNum.Add(1))
+	ss.queries[num] = q
+	ss.PutBool(true).PutInt(num)
 }
 
 func cmdReadCount(ss *serverSession) {
@@ -770,12 +772,12 @@ func cmdTransaction(ss *serverSession) {
 }
 
 func (ss *serverSession) nextNum(update bool) int {
-	ss.lastNum++
+	num := int(lastNum.Add(1))
 	// update tran# are odd, read-only are even
-	if ((ss.lastNum % 2) == 1) != update {
-		ss.lastNum++
+	for ((num % 2) == 1) != update {
+		num = int(lastNum.Add(1))
 	}
-	return ss.lastNum
+	return num
 }
 
 func cmdTransactions(ss *serverSession) {
