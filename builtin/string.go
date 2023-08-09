@@ -353,11 +353,11 @@ func string_NumberQ(this Value) Value {
 	if item.Token == tok.Add || item.Token == tok.Sub {
 		item = lexer.Next()
 	}
-	if item.Token == tok.Number {
-		item = lexer.Next()
-		return SuBool(item.Token == tok.Eof)
+	if item.Token != tok.Number {
+		return False
 	}
-	return False
+	item = lexer.Next()
+	return SuBool(item.Token == tok.Eof)
 }
 
 var _ = method(string_NumericQ, "()")
