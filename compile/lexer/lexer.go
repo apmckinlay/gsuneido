@@ -376,14 +376,14 @@ func isDigitOrUnderscore(c byte) bool {
 	return IsDigit(c) || c == '_'
 }
 
-func IsHexDigitOrUnderscore(c byte) bool {
+func isHexDigitOrUnderscore(c byte) bool {
 	return IsHexDigit(c) || c == '_'
 }
 
 func (lxr *Lexer) number(start int) Item {
 	// see also string_NumberQ
 	if lxr.src[start] == '0' && lxr.matchOneOf("xX") {
-		lxr.matchWhile(IsHexDigitOrUnderscore)
+		lxr.matchWhile(isHexDigitOrUnderscore)
 	} else {
 		lxr.matchWhile(isDigitOrUnderscore)
 		if lxr.match('.') {
