@@ -257,6 +257,7 @@ func startServer() {
 }
 
 func stopServer() {
+	log.Println("server stopping")
 	httpServer.Close()
 	dbms.StopServer()
 	heap := builtin.HeapSys()
