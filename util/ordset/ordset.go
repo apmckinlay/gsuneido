@@ -108,7 +108,7 @@ func (set *Set) AnyInRange(from, to string) bool {
 	}
 	ti, leaf, li := set.search(from)
 	if li >= leaf.size {
-		if set.tree == nil || ti >= set.tree.size {
+		if set.tree == nil || ti+1 >= set.tree.size {
 			return false
 		}
 		// advance to next leaf

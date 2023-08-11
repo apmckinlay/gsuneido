@@ -15,13 +15,13 @@ import (
 )
 
 func TestRandom(t *testing.T) {
-	var nGenerate = 8
-	var nShuffle = 8
+	var nGenerate = 250
+	var nShuffle = 4
 	if testing.Short() {
 		nGenerate = 2
 		nShuffle = 2
 	}
-	const n = nodeSize * 80
+	const n = nodeSize * 75
 	data := make([]string, n)
 	for g := 0; g < nGenerate; g++ {
 		randKey := str.UniqueRandom(3, 10)
@@ -33,7 +33,7 @@ func TestRandom(t *testing.T) {
 				func(i, j int) { data[i], data[j] = data[j], data[i] })
 			var x Set
 			for _, k := range data {
-				x.Insert(k)
+				assert.That(x.Insert(k))
 			}
 			x.checkData(t, data)
 		}
@@ -140,8 +140,10 @@ func (set *Set) count() int {
 func (set *Set) checkData(t *testing.T, data []string) {
 	for _, key := range data {
 		assert.T(t).True(set.Contains(key))
-		assert.T(t).False(set.Contains(bigger(key)))
 		assert.T(t).False(set.Contains(smaller(key)))
+		bgr := bigger(key)
+		assert.T(t).False(set.Contains(bgr))
+		assert.T(t).False(set.AnyInRange(bgr, bigger(bgr)))
 	}
 }
 
