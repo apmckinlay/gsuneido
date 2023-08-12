@@ -372,28 +372,40 @@ func digit(c byte, radix int) int {
 	return -1
 }
 
-func isDigitOrUnderscore(c byte) bool {
-	return IsDigit(c) || c == '_'
-}
-
-func isHexDigitOrUnderscore(c byte) bool {
-	return IsHexDigit(c) || c == '_'
-}
-
 func (lxr *Lexer) number(start int) Item {
 	// see also string_NumberQ
 	if lxr.src[start] == '0' && lxr.matchOneOf("xX") {
-		lxr.matchWhile(isHexDigitOrUnderscore)
+		lxr.match('_') // seems inconsistent but Go allows it
+		if !lxr.matchWithUnderscores(IsHexDigit) {
+			return Item{Token: tok.Error}
+		}
 	} else {
-		lxr.matchWhile(isDigitOrUnderscore)
-		if lxr.match('.') {
-			lxr.matchWhile(isDigitOrUnderscore)
+		lxr.si = start
+		before, after := false, false
+		if lxr.peek() != '.' {
+			if !lxr.matchWithUnderscores(IsDigit) {
+				return Item{Token: tok.Error}
+			}
+			before = true
+		}
+		lxr.match('.')
+		if IsDigit(lxr.peek()) {
+			if !lxr.matchWithUnderscores(IsDigit) {
+				return Item{Token: tok.Error}
+			}
+			after = true
+		}
+		if !before && !after {
+			return Item{Token: tok.Error}
 		}
 		exp := lxr.si
 		if lxr.matchOneOf("eE") {
 			lxr.matchOneOf("+-")
-			lxr.matchWhile(IsDigit)
-			if lxr.si == exp+1 {
+			if IsDigit(lxr.peek()) {
+				if !lxr.matchWithUnderscores(IsDigit) {
+					return Item{Token: tok.Error}
+				}
+			} else {
 				lxr.si = exp
 			}
 		}
@@ -403,6 +415,22 @@ func (lxr *Lexer) number(start int) Item {
 	}
 	numStr := strings.ReplaceAll(lxr.src[start:lxr.si], "_", "")
 	return it(tok.Number, start, numStr)
+}
+
+// matchWithUnderscores returns true for valid matches
+func (lxr *Lexer) matchWithUnderscores(f func(c byte) bool) bool {
+	// f is either IsDigit or IsUnderscore.
+	// Only single underscores between digits are allowed.
+	start := lxr.si
+	for {
+		if !lxr.matchWhile(f) {
+			return false
+		}
+		if !lxr.match('_') {
+			break
+		}
+	}
+	return lxr.si > start
 }
 
 func (lxr *Lexer) nonWhiteRemaining() bool {
@@ -542,6 +570,9 @@ func (lxr *Lexer) read() byte {
 	}
 	c := lxr.src[lxr.si]
 	lxr.si++
+	if c == 0 {
+		return 0xff // because 0 is eof
+	}
 	return c
 }
 
@@ -569,9 +600,20 @@ func (lxr *Lexer) matchOneOf(valid string) bool {
 	return false
 }
 
-func (lxr *Lexer) matchWhile(f func(c byte) bool) {
+func (lxr *Lexer) matchIf(f func(c byte) bool) bool {
+	if f(lxr.peek()) {
+		lxr.si++
+		return true
+	}
+	return false
+}
+
+// matchWhile returns whether it matched anything
+func (lxr *Lexer) matchWhile(f func(c byte) bool) bool {
+	start := lxr.si
 	for ; f(lxr.peek()); lxr.si++ {
 	}
+	return lxr.si > start
 }
 
 func (lxr *Lexer) matchUntil(start int, s string) string {
