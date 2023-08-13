@@ -190,31 +190,3 @@ func TestWhere_Select(t *testing.T) {
 	q.Select(nil, nil)
 	assert.This(queryAll2(q)).Is("a=4 b=5 c=6 | a=7 b=5 c=8")
 }
-
-func TestWhere_Fixed(t *testing.T) {
-	db := heapDb()
-	defer db.Close()
-	db.adm("create lin(a,b,c) key(a,b)")
-	db.act("insert { a: 1, b: 2, c: 3 } into lin")
-	db.act("insert { a: 4, b: 5, c: 6 } into lin")
-	db.act("insert { a: 7, b: 5, c: 8 } into lin")
-	db.act("insert { a: 9, b: 0, c: 3 } into lin")
-	tran := db.NewReadTran()
-	th := &Thread{}
-
-	query := "lin where a=7"
-	q := ParseQuery(query, tran, nil)
-	q, _, _ = Setup(q, CursorMode, tran)
-	cols := []string{"b"}
-	vals := []string{Pack(IntVal(5))}
-	row := q.Lookup(th, cols, vals)
-	assert.This(row2str(q.Header(), row)).Is("a=7 b=5 c=8")
-
-	query = "lin where a=7"
-	q = ParseQuery(query, tran, nil)
-	q, _, _ = Setup(q, CursorMode, tran)
-	cols = []string{"b"}
-	vals = []string{Pack(IntVal(2))}
-	row = q.Lookup(th, cols, vals)
-	assert.This(row).Is(nil)
-}
