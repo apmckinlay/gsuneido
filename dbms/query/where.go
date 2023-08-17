@@ -1309,7 +1309,7 @@ func (w *Where) Lookup(th *Thread, cols, vals []string) Row {
 		}
 		return row
 	}
-	// do not need to add fixed because Lookup is on a physical key index
+	cols, vals = w.addFixed(cols, vals)
 	row := w.source.Lookup(th, cols, vals)
 	if !w.filter(th, row) {
 		row = nil

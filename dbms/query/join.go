@@ -449,8 +449,6 @@ func (jl *joinLike) splitSelect(cols, vals []string) (
 		if len(fixVals2) == 1 && fixVals2[0] != vals[i] {
 			jl.conflict2 = true
 		}
-		// extra Select cols should be fixed
-		assert.That(len(fixVals1) == 1 || len(fixVals2) == 1)
 	}
 	return
 }
